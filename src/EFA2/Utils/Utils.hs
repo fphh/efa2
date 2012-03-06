@@ -31,7 +31,9 @@ eachWithEvery xs = reverse res
   where f (before, y:ys, acc) _ = (y:before, ys, (y, before ++ ys):acc)
         (_, _, res) = L.foldl' f ([], xs, []) xs
 
-
 sameValue :: a -> Double
 sameValue _ = 1.0
 
+
+pairs :: [a] -> [(a, a)]
+pairs xs = zipWith (,) xs (tail xs)

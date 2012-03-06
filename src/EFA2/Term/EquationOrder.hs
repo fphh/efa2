@@ -25,6 +25,14 @@ dependencyGraph ss = g
         g :: Gr (S.Set a) ()
         g = mkGraph (map flipPair $ M.toList m) es
 
+makeDependencyGraph :: Gr NLabel ELabel -> Gr Term ()
+makeDependencyGraph g = deq
+  where ts = mkEdgeEq g ++ mkNodeEq g
+        vsets = map mkVarSet ts
+        mt = M.fromList (zip vsets ts)
+        dg = dependencyGraph vsets
+        deq = nmap (mt M.!) dg 
+
 mkArcs :: (Ord a) => S.Set a -> [S.Set a] -> [(S.Set a, S.Set a)]
 mkArcs s ss = catMaybes $ map g ss
   where g t | s `diffByOne` t = Just (s, t)

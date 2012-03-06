@@ -14,24 +14,20 @@ import EFA2.Term.EquationOrder
 
 import EFA2.Graph.Graph
 import EFA2.Utils.Utils
+import EFA2.Signal.SignalGraph
+import EFA2.Display.FileSave
 
+import EFA2.Example.Dreibein
+import EFA2.Example.Linear
 
-writeTopology :: (Show b, Show a) => Gr a b -> IO ()
-writeTopology g = writeFile "results/topograph.dot" (graphviz' g)
-
-writeDependencyGraph :: Gr NLabel ELabel -> IO ()
-writeDependencyGraph g = writeFile "results/depgraph.dot" (graphviz' (nmap toString deq))
-  where ts = mkEdgeEq g ++ mkNodeEq g
-        vsets = map mkVarSet ts
-        mt = M.fromList (zip vsets ts)
-        dg = dependencyGraph vsets
-        deq = nmap (mt M.!) dg 
 
 main :: IO ()
 main = do
   let input = S.fromList [Energy 4 3, Energy 0 1]
+      (g, sigs) = linear
   writeTopology g
   writeDependencyGraph g
+  print sigs
+  print (makeEtaEnv g sigs)
 
-
-  putStrLn (termsStr $ makeEquations g input (Energy 6 5))
+  --putStrLn (termsStr $ makeEquations dreibein input (Energy 6 5))

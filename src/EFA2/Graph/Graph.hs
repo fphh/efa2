@@ -4,7 +4,7 @@ module EFA2.Graph.Graph where
 
 import Data.Graph.Inductive
 
-
+import EFA2.Utils.Utils
 
 data NLabel = NLabel Int deriving (Show)
 
@@ -20,28 +20,25 @@ mkLNode :: Int -> LNode NLabel
 mkLNode x = (x, NLabel x)
 
 
-pairs :: [a] -> [(a, a)]
-pairs xs = zipWith (,) xs (tail xs)
+makeEdges :: [Int] -> [LEdge ELabel]
+makeEdges no = map (uncurry mkLEdge) (pairs no)
 
+makeNodes :: [Int] -> [LNode NLabel]
+makeNodes no = map mkLNode no
+
+
+{-
 no :: [Int]
 no = [0..4]
 
 no2 = [5..6]
+-}
 
-es :: [Int] -> [LEdge ELabel]
-es no = map (uncurry mkLEdge) (pairs no)
-
-ns :: [Int] -> [LNode NLabel]
-ns no = map mkLNode no
-
-g :: Gr NLabel ELabel
+--g :: Gr NLabel ELabel
 
 -- line
 --g = mkGraph (ns no) (es no)
 --g = mkGraph (ns no) (es no) where no = reverse [0..3]
-
--- dreibein
-g = mkGraph (ns no ++ ns no2) (es no ++ (es (2:no2)))
 
 -- loop
 --g = mkGraph (ns no ++ ns no2) (es no ++ (es (2:no2)) ++ [mkLEdge 5 3])
