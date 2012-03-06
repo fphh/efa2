@@ -4,10 +4,6 @@ module EFA2.Signal.SignalData where
 
 import qualified Data.Map as M
 import qualified Data.List as L
---import Data.Ord
---import Debug.Trace
-
---import Data.Monoid
 
 import qualified Data.Vector.Unboxed as UV
 import qualified Data.Vector.Generic as GV
@@ -36,6 +32,16 @@ newtype EEta = EEta Double
 type Signal a = UV.Vector a
 
 
+class (Sample a, Eta b) => SameUnit a b | a -> b, b -> a
+instance SameUnit ESample EEta 
+instance SameUnit PSample PEta
+
+
+
+-- When indexing for eta signals we don't care about xy or yx,
+-- because it's the same edge in the graph.
+-- The difference is only important when indexing for sample signals,
+-- because there are two sample signals per edge.
 
 data EtaIndex = EtaIndex !Int !Int deriving (Show)
 
@@ -65,11 +71,6 @@ instance IndexC SampleIndex where
          mkIdx = SampleIndex
 
 
-class (Sample a, Eta b) => SameUnit a b | a -> b, b -> a
-instance SameUnit ESample EEta 
-instance SameUnit PSample PEta
-
-
 class Sample a where
       fromSample :: a -> Double
       toSample :: Double -> a
@@ -94,9 +95,4 @@ instance Eta PEta where
          fromEta (PEta x) = x
          toEta x = PEta x
 
-hasOnlyOneSign :: (UV.Unbox a, Ord a, Num a) => UV.Vector a -> Bool
-hasOnlyOneSign xs = length (filter (== True) [allEQ xs, allGT xs, allLT xs]) == 1
-  where allEQ = UV.all (== 0)
-        allGT = UV.all (> 0)
-        allLT = UV.all (< 0)
 

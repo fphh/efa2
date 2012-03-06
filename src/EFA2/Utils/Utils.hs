@@ -2,6 +2,8 @@
 
 module EFA2.Utils.Utils where
 
+import qualified Data.Vector.Unboxed as UV
+
 import qualified Data.List as L
 import qualified Data.Set as S
 import qualified Data.Map as M
@@ -37,3 +39,18 @@ sameValue _ = 1.0
 
 pairs :: [a] -> [(a, a)]
 pairs xs = zipWith (,) xs (tail xs)
+
+class Transpose a where
+      transpose :: [a] -> [a]
+
+instance Transpose [a] where
+         transpose [] = []
+         transpose xs = map (flip map xs) fs
+           where fs = take min $ head : (map (. tail) fs)
+                 min = L.minimum $ map length xs
+
+instance UV.Unbox a => Transpose (UV.Vector a) where
+         transpose [] = []
+         transpose xs = map (UV.fromList . flip map xs) fs
+           where fs = take min $ map (flip (UV.!)) [0..]
+                 min = L.minimum $ map UV.length xs

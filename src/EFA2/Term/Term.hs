@@ -85,14 +85,18 @@ mkVarSet (Equation x y) = S.union (mkVarSet x) (mkVarSet y)
 mkVarSet _ = S.empty
 
 
+-- The following functions transform an equation.
+
 data Dir = L | R deriving (Show, Eq)
 
 type TPath = [Dir]
+
 
 v = Energy 1 2
 t = Add (Energy 1 2) (Energy 1 4) .= Mult (Energy 1 3) (Energy 1 5)
 s = Add (Minus (Energy 1 2)) (Energy 1 4) .= Energy 1 3
 u = Add (Energy 1 2) (Minus (Energy 1 4)) .= F (Energy 1 3)
+
 
 findVar :: Term -> Term -> Maybe TPath
 findVar t s | t == s = Just []
@@ -127,8 +131,14 @@ isolateVar' (Recip u) (L:p) = isolateVar' u p . Recip
 isolateVar' (F u) (L:p) = isolateVar' u p . B
 isolateVar' (B u) (L:p) = isolateVar' u p . F
 
+-- this is the main function for transforming Equations
+-- It takes an unknown variable and an equation.
+-- The resulting equation has
+-- the unknown variable isolated on its left hand side (lhs),
+-- such that we can evaluate the rhs in order to calculate
+-- the value of the unknown variable.
 transformEq :: Term -> Term -> Term
-transformEq v t
+transformEq unknown t
   | Nothing <- fv = t
-  | Just p <- fv = isolateVar v t p
-  where fv = findVar v t
+  | Just p <- fv = isolateVar unknown t p
+  where fv = findVar unknown t

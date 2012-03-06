@@ -22,8 +22,6 @@ import qualified Data.Vector.Generic as GV
 import System.Random
 
 import EFA2.Signal.SignalData
---import EFA.Utils.Utils
-
 
 
 type Stream = S.Stream
@@ -126,3 +124,10 @@ etaFunct eta = UV.map (toSample . f . fromSample)
   where f val | val > 0  = val*eta
         f val | val == 0 = 0   
         f val | val < 0  = val/eta  
+
+hasOnlyOneSign :: (UV.Unbox a, Ord a, Num a) => UV.Vector a -> Bool
+hasOnlyOneSign xs = length (filter (== True) [allEQ xs, allGT xs, allLT xs]) == 1
+  where allEQ = UV.all (== 0)
+        allGT = UV.all (> 0)
+        allLT = UV.all (< 0)
+
