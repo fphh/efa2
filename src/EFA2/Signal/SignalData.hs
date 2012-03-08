@@ -1,4 +1,4 @@
-{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, GeneralizedNewtypeDeriving, UndecidableInstances, FlexibleInstances, RankNTypes #-}
+{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, GeneralizedNewtypeDeriving, UndecidableInstances, FlexibleInstances,  RankNTypes #-}
 
 module EFA2.Signal.SignalData where
 
@@ -31,6 +31,9 @@ newtype EEta = EEta Double
 
 type Signal a = UV.Vector a
 
+--newtype EFlow = Eflow [ESample] 
+--  deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
+
 
 class (Sample a, Eta b) => SameUnit a b | a -> b, b -> a
 instance SameUnit ESample EEta 
@@ -43,7 +46,10 @@ instance SameUnit PSample PEta
 -- The difference is only important when indexing for sample signals,
 -- because there are two sample signals per edge.
 
+data PPosIndex = PPosIndex !Int !Int deriving (Show, Ord, Eq)
+
 data EtaIndex = EtaIndex !Int !Int deriving (Show)
+
 
 instance Eq EtaIndex where
          (EtaIndex a b) == (EtaIndex x y) = f a b == f x y
@@ -56,10 +62,8 @@ instance Ord EtaIndex where
 
 type EtaEnv a = (Eta a) => M.Map EtaIndex (Signal a)
 
+type PPosEnv a = (Sample a) => M.Map PPosIndex (Signal a)
 
-data SampleIndex = SampleIndex !Int !Int deriving (Show, Ord, Eq)
-
-type SampleEnv a = (Sample a) => M.Map SampleIndex (Signal a)
 
 class IndexC a where
       mkIdx :: Int -> Int -> a
@@ -67,8 +71,8 @@ class IndexC a where
 instance IndexC EtaIndex where
          mkIdx = EtaIndex
 
-instance IndexC SampleIndex where
-         mkIdx = SampleIndex
+instance IndexC PPosIndex where
+         mkIdx = PPosIndex
 
 
 class Sample a where

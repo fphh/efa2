@@ -1,5 +1,4 @@
 
-
 module EFA2.Graph.Graph where
 
 import Data.Graph.Inductive

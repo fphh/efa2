@@ -1,11 +1,8 @@
 {-# LANGUAGE MultiParamTypeClasses, FlexibleContexts, ScopedTypeVariables #-}
 
-module EFA.Signal.SignalAnalysis where
+module EFA2.Signal.SignalAnalysis where
 
 import Control.Monad
---import Control.Monad.Error.Class
---import Control.Exception (assert)
-
 import Data.List (zip5,zipWith4)
 
 import qualified Data.Map as M
@@ -17,29 +14,14 @@ import Data.Either
 
 import Debug.Trace
 
-import EFA.Graph.GraphData
-import EFA.Graph.TheGraph
+import EFA2.Graph.GraphData
 
-import EFA.Signal.SignalData
-import EFA.Signal.SplitSignal
+import EFA2.Signal.SignalData
+import EFA2.Signal.SplitSignal
 
-import EFA.Signal.SignalGraph
+import EFA2.Signal.SignalGraph
 
-import EFA.Utils.Utils
-
-
-l1 :: UV.Vector PSample
-l1 = UV.fromList [ 1,  2, 3, 3, -3, 3, -4, -1, -3, 3, 1, 3]
-
-l2 :: UV.Vector PSample
-l2 = UV.fromList [-1, -2, 0, 4, 5, 6,  4,  3,  3, 0, -0,  0]
-
-e2 :: UV.Vector EEta
-e2 = UV.fromList [-1, -2, 0, 4, 5, 6,  4,  3,  3, 0, 0,  0]
-
--- r = Record [(SignalIdent 0, l1), (SignalIdent 1, l2)]
-
-
+import EFA2.Utils.Utils
 
 checkLength :: Section a -> Either SectionError ()
 checkLength sec = when (secLen sec < 2) $ Left ShortSection
@@ -48,30 +30,10 @@ checkNaN :: (UV.Unbox a, RealFloat a) => Section a -> Either SectionError ()
 checkNaN sec = when (f (getSecVecs sec)) $ Left ContainsNaN
   where f es = or (map (UV.or . (UV.map isNaN)) es)
 
-{-
-checkInfinity :: Section PSample -> Either SectionError ()
-checkInfinity sec@(Section _ _ ss) = when (f ss) $ Left (ContainsInfinity sec)
-  where f es = or (map (UV.or . (UV.map isInfinite)) es)
-
-checkDenormalized :: Section PSample -> Either SectionError ()
-checkDenormalized (Section sid _ ss) = when (f ss) $ Left (ContainsDenormalized sid ss)
-  where f es = or (map (UV.or . (UV.map isDenormalized)) es)
-
-checkNegativeZero :: Section PSample -> Either SectionError ()
-checkNegativeZero (Section sid _ ss) = when (f ss) $ Left (ContainsNegativeZero sid ss)
-  where f es = or (map (UV.or . (UV.map isNegativeZero)) es)
--}
-
- 
 checkSections :: (UV.Unbox a, RealFloat a) => Section a -> Either SectionError ()
 checkSections sec = do
   checkLength sec
   checkNaN sec
-  --checkInfinity sec
-  --checkDenormalized sec
-  --checkNegativeZero sec
-
-
 
 recordToSectionRecord :: Record -> SectionRecord (Section PSample)
 recordToSectionRecord (Record time sigs) = SectionRecord res
@@ -166,11 +128,9 @@ mkStSection theGraph m [] (EtaSection sid len serr eerr st@(Just idx) inperc out
 mkStSection theGraph _ (s:ss) (EtaSection sid len serr eerr st@(Just idx) inperc outperc vecs etas) = (StorageSection sid len serr eerr st inperc outperc vecs etas stvec):s:ss
   where stvec = mkStorageVector theGraph idx (ssecStorage s) vecs
 
-
--- TODO: no error handling yet.
 recordToEtaRecord :: (SameUnit a b, UV.Unbox b, UV.Unbox a, Ord a, Integrate key PSample a, Fractional a, Show b, Show a)
                      => TheGraph -> Start key a -> SectionRecord (StorageSection key a b)
-recordToEtaRecord theGraph (Start rec stMap) = s3 -- step2 theGraph (step1 (recordToSectionRecord rec))
+recordToEtaRecord theGraph (Start rec stMap) = s3 
   where r = recordToSectionRecord rec
         s1 = step1 r
         s2 = step2 theGraph s1

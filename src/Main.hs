@@ -15,19 +15,28 @@ import EFA2.Term.EquationOrder
 import EFA2.Graph.Graph
 import EFA2.Utils.Utils
 import EFA2.Signal.SignalGraph
+import EFA2.Signal.SignalAnalysis
+
 import EFA2.Display.FileSave
+import EFA2.Display.DrawGraph
 
 import EFA2.Example.Dreibein
 import EFA2.Example.Linear
+
 
 
 main :: IO ()
 main = do
   let input = S.fromList [Energy 4 3, Energy 0 1]
       (g, sigs) = linear
+      sectRecord = recordToSectionRecord sigs
+      
   writeTopology g
+  drawTopologyX (g,sigs)
+  drawFlowX (g,sigs)
   writeDependencyGraph g
   print sigs
   print (makeEtaEnv g sigs)
+  print sectRecord
 
   --putStrLn (termsStr $ makeEquations dreibein input (Energy 6 5))

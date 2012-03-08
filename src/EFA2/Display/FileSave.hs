@@ -3,7 +3,7 @@
 module EFA2.Display.FileSave where
 
 import qualified Data.Map as M
-
+import Data.GraphViz
 import Data.Graph.Inductive
 
 import EFA2.Graph.Graph
@@ -19,4 +19,6 @@ writeTopology g = writeFile "results/topograph.dot" (graphviz' g)
 writeDependencyGraph :: Gr NLabel ELabel -> IO ()
 writeDependencyGraph g = writeFile "results/depgraph.dot" (graphviz' g')
   where g' = nmap toString $ makeDependencyGraph g
-
+        
+        
+        
