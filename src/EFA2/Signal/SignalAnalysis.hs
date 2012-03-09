@@ -17,7 +17,7 @@ import Debug.Trace
 -- import EFA2.Graph.GraphData
 
 import EFA2.Signal.SignalData
-import EFA2.Signal.SplitSignal
+import EFA2.Signal.Sequence
 
 -- import EFA2.Signal.SignalGraph
 
