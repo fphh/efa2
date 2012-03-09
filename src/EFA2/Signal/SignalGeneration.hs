@@ -28,6 +28,11 @@ type Stream = S.Stream
 
 data Base = Base !Index !Time
 
+newtype Time = Time { unTime :: Double } deriving (Show, Eq, Num, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
+
+newtype DTime =  DTime { unDTime :: Double } deriving (Show, Eq, Num, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
+
+
 start :: Int
 start = 0
 

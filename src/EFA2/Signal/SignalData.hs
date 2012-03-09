@@ -1,4 +1,4 @@
-{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, GeneralizedNewtypeDeriving, UndecidableInstances, FlexibleInstances,  RankNTypes #-}
+{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, GeneralizedNewtypeDeriving, UndecidableInstances, FlexibleInstances,  RankNTypes,  ImpredicativeTypes,  FlexibleContexts, GADTs #-}
 
 module EFA2.Signal.SignalData where
 
@@ -11,68 +11,70 @@ import qualified Data.Vector.Generic.Mutable as MV
 import qualified Data.Foldable as F
 
 
-newtype Time = Time { unTime :: Double } deriving (Show, Eq, Num, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
+-- newtype Index = Index Int deriving (Eq, Ord, Num, Enum, Show)
 
-newtype DTime =  DTime { unDTime :: Double } deriving (Show, Eq, Num, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
+-----------------------------------------------------------------------------------
+-- Time Signal Samples
 
-newtype Index = Index Int deriving (Eq, Ord, Num, Enum, Show)
+type Signal a =  (Show a, UV.Unbox a) => UV.Vector a 
 
+newtype TSample = TSample Double
+  deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
+           
 newtype PSample = PSample Double
   deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
 
-newtype PEta = PEta Double
+-- newtype PEta = PEta Double
+--   deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
+           
+------------------------------------------------------------------------------------           
+-- Flow Samples -- TODO -- differentiate flowsignal, histogram, energyflow ?
+-- flowsignal - precise power values
+-- histogram classes or clusters -- small variation of power 
+-- energy flow values -- wide variation of power values 
+
+type FlowVect a = (Show a, UV.Unbox a) => UV.Vector a 
+
+
+-- time step data
+newtype DTSample = DTSample Double
   deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
 
+-- energy flow data or storage content data -- TODO -- distringuish flow and storage of energy ?? (doubles all other sample types !!!)
 newtype ESample = ESample Double
   deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
 
+-- average power of energy flow
+newtype FPSample = FPSample Double
+  deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
+
+-- average efficiency of energy flow
 newtype EEta = EEta Double
   deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
 
-type Signal a = UV.Vector a
+-- energy flow mix data
+newtype MSample = MSample Double
+  deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
 
---newtype EFlow = Eflow [ESample] 
---  deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
+-- energy flow Split Share Data
+newtype XSample = XSample Double
+  deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
 
+-- energy flow collection Share Data
+newtype YSample = YSample Double
+  deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
+
+
+
+-----------------------------------------------------------------------------------
+-- Class for Type-Safe Math Operations & Conversion Functions 
 
 class (Sample a, Eta b) => SameUnit a b | a -> b, b -> a
 instance SameUnit ESample EEta 
-instance SameUnit PSample PEta
-
-
-
--- When indexing for eta signals we don't care about xy or yx,
--- because it's the same edge in the graph.
--- The difference is only important when indexing for sample signals,
--- because there are two sample signals per edge.
-
-data PPosIndex = PPosIndex !Int !Int deriving (Show, Ord, Eq)
-
-data EtaIndex = EtaIndex !Int !Int deriving (Show)
-
-
-instance Eq EtaIndex where
-         (EtaIndex a b) == (EtaIndex x y) = f a b == f x y
-           where f u v = if u < v then [u, v] else [v, u]
-
-instance Ord EtaIndex where
-         compare as@(EtaIndex a b) bs@(EtaIndex x y)
-           | as == bs = EQ
-           | otherwise = compare (a, b) (x, y)
-
-type EtaEnv a = (Eta a) => M.Map EtaIndex (Signal a)
-
-type PPosEnv a = (Sample a) => M.Map PPosIndex (Signal a)
-
-
-class IndexC a where
-      mkIdx :: Int -> Int -> a
-
-instance IndexC EtaIndex where
-         mkIdx = EtaIndex
-
-instance IndexC PPosIndex where
-         mkIdx = PPosIndex
+--instance SameUnit PSample PEta
+instance SameUnit XSample ESample
+--instance SameUnit YSample ESample
+--instance SameUnit MSample ESample
 
 
 class Sample a where
@@ -95,8 +97,23 @@ instance Eta EEta where
          fromEta (EEta x) = x
          toEta x = EEta x
 
-instance Eta PEta where
-         fromEta (PEta x) = x
-         toEta x = PEta x
+-----------------------------------------------------------------------------------
+-- Structure for Handling recorded data
+
+-- index for power signals from measurement file 
+data SigIdx = SigIdx !Int deriving (Show, Eq, Ord)
+
+-- data structure to house the data record or parts of it
+data Record = Record (UV.Vector TSample, M.Map SigIdx (UV.Vector PSample)) deriving (Show) -- TODO use Vector instead (had Problems with class instances)
+
+
+-- data structure to contain output of section analysis (cvutting history in slices)
+type SectionLength = DTSample
+type SectionError = Bool
+data Section  = Section {  secLen      :: SectionLength,
+                           secError    :: Maybe SectionError,
+                           -- secStateIdx :: FlowStateIdx                     -- TODO add flow state Index
+                           secRecord   :: Record } deriving (Show, Eq)
+
 
 

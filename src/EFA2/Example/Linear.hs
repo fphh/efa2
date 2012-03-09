@@ -21,7 +21,7 @@ sig 2 1 = UV.fromList [1]
 sig 2 3 = UV.fromList [0.4]
 sig 3 2 = UV.fromList [0.2]
 
-linear :: (Gr NLabel ELabel, SampleEnv PSample)
+linear :: (Gr NLabel ELabel, PowerEnv PSample, T)
 linear = (g, M.fromList sigs)
   where g = mkGraph (makeNodes no) (makeEdges no)
         no = [0..3]

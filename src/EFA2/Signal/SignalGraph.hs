@@ -12,12 +12,12 @@ import EFA2.Signal.SignalGeneration
 
 
 -- function 
-makeFlowEnv ::  (Sample a, Eta b, UV.Unbox a, UV.Unbox b, SameUnit a b) => Gr l n -> SampleEnv a -> FlowEnv b
-makeFlowEnv g sigs = M.fromList sigs
+makeFlowEnv ::  Gr l n -> PPosEnv PSample -> PPosEnv ESample
+makeFlowEnv g sigs = pSample2ESample dt sigs
 
 
 
-makeEtaEnv :: (Sample a, Eta b, UV.Unbox a, UV.Unbox b, SameUnit a b) => Gr l n -> SampleEnv a -> EtaEnv b
+makeEtaEnv :: (Sample a, Eta b, UV.Unbox a, UV.Unbox b, SameUnit a b) => Gr l n -> PPosEnv a -> EtaEnv b
 makeEtaEnv g samples = M.fromList etaList
   where ns = labEdges g
         etaList = map f ns
@@ -25,5 +25,4 @@ makeEtaEnv g samples = M.fromList etaList
         spl x y = UV.map fromSample $ samples M.! mkIdx x y
 
 
-makeNodeEnv ::
   
