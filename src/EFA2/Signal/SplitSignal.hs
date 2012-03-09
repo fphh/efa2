@@ -1,55 +1,83 @@
 
-
 module EFA2.Signal.SplitSignal where
 
+import Control.Monad
 
 import qualified Data.Set as S
 import qualified Data.List as L
 import qualified Data.Vector.Unboxed as UV
 
 import System.Random
-
 import EFA2.Utils.Utils
 import EFA2.Signal.SignalData
 
+-------------------------------------------------------------------------------------
+-- functions to split the record
+
 data Sign = PSign | ZSign | MSign deriving (Show, Eq)
 
+-- determine Signal Sign        
 sign :: (Eq a, Ord a, Num a) => a -> Sign
 sign x | x > 0 = PSign
        | x == 0 = ZSign
        | x < 0 = MSign
 
-makeSteps :: (UV.Unbox a, Ord a, Num a) => UV.Vector a -> [Int]
-makeSteps ss | UV.length ss == 0 = []
-makeSteps ss = 0 : (reverse (UV.length ss : (res $ UV.foldl f (s, 0, []) ss)))
-  where s = sign (UV.head ss)
-        res (_, _, acc) = acc
-        f (s, i, acc) x = if sign x == s then (s, i+1, acc) else (sign x, i+1, i:acc)
+-- generate Sequence Information   
+genSequ :: Record -> Sequ
+genSequ rec@(time,sigs) =   
+  
+-- make zero crossing Interpolation here  
+genSequRec :: Sequ -> Record -> SequData Record 
+genSequRec sequ rec
 
-makeStepList :: (UV.Unbox a, Ord a, Num a, Show a) => [UV.Vector a] -> [Int]
-makeStepList xs = S.toAscList s
-  where offs = map (makeSteps) xs
-        s = S.unions $ map S.fromList offs
+-- identify Sequence States  
+identifyFlowStates :: Sequ ->   
 
-splitList :: (UV.Unbox a, Show a) => [Int] -> UV.Vector a -> [UV.Vector a]
-splitList [] _ = []
-splitList _ vec | UV.length vec == 0 = []
-splitList os vec = map f idxs
-  where idxs = zip os (zipWith (-) (tail os) os)
-        f (from, to) = UV.slice from to vec
-
-
-equalLengths :: (UV.Unbox a) => [UV.Vector a] -> Bool
-equalLengths vec | length vec == 0 = True
-equalLengths xs = and (map (== n) ns)
-  where (n:ns) = map UV.length xs
+-------------------------------------------------------------------------------------
+-- Sequence Error Checking
+        
+data SectionError = ShortSection
+                  | ContainsNaN
+                  | ContainsInfinity
+                  | ContainsDenormalized
+                  | ContainsNegativeZero deriving (Show, Eq)
 
 
-toEqualLengths :: (UV.Unbox a) => [UV.Vector a] -> [UV.Vector a]
-toEqualLengths xs = map (UV.take min) xs
-  where min = L.minimum $ map UV.length xs
+checkLength :: Section a -> Either SectionError ()
+checkLength sec = when (secLen sec < 2) $ Left ShortSection
 
-splitVectors :: (UV.Unbox a, Ord a, Num a) => [UV.Vector a] -> [[UV.Vector a]]
-splitVectors ss = transpose $ map (splitList steps) ss'
-  where steps = makeStepList ss
-        ss' = toEqualLengths ss
+checkNaN :: (UV.Unbox a, RealFloat a) => Section a -> Either SectionError ()
+checkNaN sec = when (f (getSecVecs sec)) $ Left ContainsNaN
+  where f es = or (map (UV.or . (UV.map isNaN)) es)
+
+checkSections :: (UV.Unbox a, RealFloat a) => Section a -> Either SectionError ()
+checkSections sec = do
+  checkLength sec
+  checkNaN sec
+        
+-------------------------------------------------------------------------------------
+-- Section and Sequence Data Stucture
+
+-- data structure to contain output of section analysis (cvutting history in slices)
+type SectionLength = DTSample
+
+-- Section analysis result
+data Sequ = Sequ GV.Vector { secLen    ::  SectionLength,
+                             secIdxes  ::  (SampleIdx,SampleIdx),
+                             secError  ::  Maybe SectionError}
+
+-- Sequence Vector to Store Section Data  
+data SequData a = SequData (GV.Vector a) deriving Show
+
+
+recordToRecordSequ :: Record -> SequData Record
+recordToRecordSequ Record (time,sigs) = SequData res
+  where steps = makeStepList sigs
+        st = splitList steps time
+        ss = (transpose $ map (splitList steps) vecs)
+        slens = map (UV.length . head) ss
+        secs = L.zipWith4 (\a b c d -> (Section a b Nothing c d)) [0..] slens st (map (zip sids) ss)
+        errs = map checkSections secs
+        res = map f (zip errs secs)
+        f (Left err, sec) = sec { secError = Just err }
+        f (_, sec) = sec

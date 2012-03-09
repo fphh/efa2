@@ -14,7 +14,7 @@ import EFA2.Term.EquationOrder
 
 import EFA2.Graph.Graph
 import EFA2.Utils.Utils
-import EFA2.Signal.SignalGraph
+import EFA2.Graph.SignalGraph
 import EFA2.Signal.SignalAnalysis
 
 import EFA2.Display.FileSave

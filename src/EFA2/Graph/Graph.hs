@@ -5,6 +5,15 @@ import Data.Graph.Inductive
 
 import EFA2.Utils.Utils
 
+
+-----------------------------------------------------------------------------------
+-- Topology Graph
+-- | This is the main topology graph representation.
+
+data TopoGraph = Graph NodeTyp deriving (Show, Eq, Ord)
+
+data NodeTyp = Storage | Sink | Source | Crossing deriving (Show, Ord, Eq)
+
 data NLabel = NLabel Int deriving (Show)
 
 data ELabel = ELabel Int Int deriving (Show)

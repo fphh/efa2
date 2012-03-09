@@ -14,39 +14,16 @@ import Data.Either
 
 import Debug.Trace
 
-import EFA2.Graph.GraphData
+-- import EFA2.Graph.GraphData
 
 import EFA2.Signal.SignalData
 import EFA2.Signal.SplitSignal
 
-import EFA2.Signal.SignalGraph
+-- import EFA2.Signal.SignalGraph
 
 import EFA2.Utils.Utils
 
-checkLength :: Section a -> Either SectionError ()
-checkLength sec = when (secLen sec < 2) $ Left ShortSection
 
-checkNaN :: (UV.Unbox a, RealFloat a) => Section a -> Either SectionError ()
-checkNaN sec = when (f (getSecVecs sec)) $ Left ContainsNaN
-  where f es = or (map (UV.or . (UV.map isNaN)) es)
-
-checkSections :: (UV.Unbox a, RealFloat a) => Section a -> Either SectionError ()
-checkSections sec = do
-  checkLength sec
-  checkNaN sec
-
-recordToSectionRecord :: Record -> SectionRecord (Section PSample)
-recordToSectionRecord (Record time sigs) = SectionRecord res
-  where (sids, vecs) = unzip sigs
-        steps = makeStepList vecs
-        st = splitList steps time
-        ss = (transpose $ map (splitList steps) vecs)
-        slens = map (UV.length . head) ss
-        secs = zipWith4 (\a b c d -> (Section a b Nothing c d)) [0..] slens st (map (zip sids) ss)
-        errs = map checkSections secs
-        res = map f (zip errs secs)
-        f (Left err, sec) = sec { secError = Just err }
-        f (_, sec) = sec
 
 psampleDTime :: UV.Vector Time -> UV.Vector DTime
 psampleDTime time = UV.map (DTime . unTime) time

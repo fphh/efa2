@@ -18,15 +18,17 @@ import qualified Data.List as L
 import qualified Data.Vector.Fusion.Stream as S
 import qualified Data.Vector.Unboxed as UV
 import qualified Data.Vector.Generic as GV
+import qualified Data.Vector.Generic.Mutable as MV
 
 import System.Random
 
+import EFA2.Signal.SignalData
 import EFA2.Signal.SignalData
 
 
 type Stream = S.Stream
 
-data Base = Base !Index !Time
+data Base = Base !SampleIdx !Time
 
 newtype Time = Time { unTime :: Double } deriving (Show, Eq, Num, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
 
@@ -45,8 +47,8 @@ stepSize = Time 0.1
 defaultTimeLine :: Stream Time
 defaultTimeLine = timeLine (fromIntegral start) (fromIntegral sampleSize) stepSize
 
-defaultIndexLine :: Stream Index
-defaultIndexLine = S.unfoldrN sampleSize (\x -> Just (Index x, x+1)) start
+defaultIndexLine :: Stream SampleIdx
+defaultIndexLine = S.unfoldrN sampleSize (\x -> Just (SampleIdx x, x+1)) start
 
 timeLine :: Time -> Int -> Time -> Stream Time
 timeLine from n step = S.iterateN n (+step) from

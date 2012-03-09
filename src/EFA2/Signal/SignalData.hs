@@ -11,12 +11,12 @@ import qualified Data.Vector.Generic.Mutable as MV
 import qualified Data.Foldable as F
 
 
--- newtype Index = Index Int deriving (Eq, Ord, Num, Enum, Show)
+newtype SampleIdx = SampleIdx Int deriving (Eq, Ord, Num, Enum, Show)
 
 -----------------------------------------------------------------------------------
 -- Time Signal Samples
 
-type Signal a =  (Show a, UV.Unbox a) => UV.Vector a 
+-- type Signal a =  (Show a, UV.Unbox a) => UV.Vector a -- TODO automatic diriving doesn't work with type synonym Signal 
 
 newtype TSample = TSample Double
   deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
@@ -33,8 +33,8 @@ newtype PSample = PSample Double
 -- histogram classes or clusters -- small variation of power 
 -- energy flow values -- wide variation of power values 
 
-type FlowVect a = (Show a, UV.Unbox a) => UV.Vector a 
 
+-- type FlowVect a = (Show a, UV.Unbox a) => UV.Vector a -- TODO automatic deriving doesn't work with type Synonym FlowVect 
 
 -- time step data
 newtype DTSample = DTSample Double
@@ -72,30 +72,31 @@ newtype YSample = YSample Double
 class (Sample a, Eta b) => SameUnit a b | a -> b, b -> a
 instance SameUnit ESample EEta 
 --instance SameUnit PSample PEta
-instance SameUnit XSample ESample
---instance SameUnit YSample ESample
---instance SameUnit MSample ESample
+
+-- instance SameUnit XSample ESample
+-- --instance SameUnit YSample ESample
+-- --instance SameUnit MSample ESample
 
 
 class Sample a where
-      fromSample :: a -> Double
-      toSample :: Double -> a
+  fromSample :: a -> Double
+  toSample :: Double -> a
 
 instance Sample PSample where
-         fromSample (PSample x) = x
-         toSample x = PSample x
+  fromSample (PSample x) = x
+  toSample x = PSample x
 
 instance Sample ESample where
-         fromSample (ESample x) = x
-         toSample x = ESample x
+  fromSample (ESample x) = x
+  toSample x = ESample x
 
 class Eta a where
-         fromEta :: a -> Double
-         toEta :: Double -> a
+  fromEta :: a -> Double
+  toEta :: Double -> a
 
 instance Eta EEta where
-         fromEta (EEta x) = x
-         toEta x = EEta x
+  fromEta (EEta x) = x
+  toEta x = EEta x
 
 -----------------------------------------------------------------------------------
 -- Structure for Handling recorded data
@@ -104,16 +105,9 @@ instance Eta EEta where
 data SigIdx = SigIdx !Int deriving (Show, Eq, Ord)
 
 -- data structure to house the data record or parts of it
-data Record = Record (UV.Vector TSample, M.Map SigIdx (UV.Vector PSample)) deriving (Show) -- TODO use Vector instead (had Problems with class instances)
+data Record = Record (UV.Vector TSample, M.Map SigIdx (UV.Vector PSample)) deriving (Show,Eq) -- TODO use Vector instead (had Problems with class instances)
 
 
--- data structure to contain output of section analysis (cvutting history in slices)
-type SectionLength = DTSample
-type SectionError = Bool
-data Section  = Section {  secLen      :: SectionLength,
-                           secError    :: Maybe SectionError,
-                           -- secStateIdx :: FlowStateIdx                     -- TODO add flow state Index
-                           secRecord   :: Record } deriving (Show, Eq)
 
 
 
