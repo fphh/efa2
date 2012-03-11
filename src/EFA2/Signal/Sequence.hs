@@ -115,12 +115,12 @@ genSequ (Record time sigMap) = GV.fromList (zipWith genSecInfo (init stepList3) 
   where stepList1 = sort (concat (map (getSignalSteps . snd)  (M.toList sigMap))) -- get Steps from all Signals
         stepList2 = [(0,InitStep)] ++ stepList1 ++ [(SampleIdx (UV.length time) ,EndStep)] -- add steps for 1st and last sample in first and last section
         stepList3 = zip3 (fst (unzip stepList2)) stepTimes (snd(unzip stepList2))
-        stepTimes = map (map f (M.elems sigMap)) stepList3 -- calculate Step time
-          where f sig (stepIdx,InitStep) = time UV.! stepIdx
-                f sig (stepIdx,EndStep) = time UV.! (stepIdx+1)
-                f sig (stepIdx,LeavesZeroStep) = time UV.! stepIdx
-                f sig (stepIdx,BecomesZeroStep) = time UV.! (stepIdx+1) 
-                f sig (stepIdx,ZeroCrossingStep) = calcZeroTime (time UV.! stepIdx, sig UV.! stepIdx)  (time UV.! (stepIdx+1), sig UV.! (stepIdx+1)) 
+        stepTimes = map (map f stepList3) (M.elems sigMap)  -- calculate Step time
+          where f (stepIdx,InitStep) sig = time UV.! stepIdx
+                f (stepIdx,EndStep) sig = time UV.! (stepIdx+1)
+                f (stepIdx,LeavesZeroStep) sig = time UV.! stepIdx
+                f (stepIdx,BecomesZeroStep) sig = time UV.! (stepIdx+1) 
+                f (stepIdx,ZeroCrossingStep) sig = calcZeroTime (time UV.! stepIdx, sig UV.! stepIdx)  (time UV.! (stepIdx+1), sig UV.! (stepIdx+1)) 
 
 
 genSecRec :: Record -> Sec -> Record
@@ -131,13 +131,13 @@ genRecSequ sequ rec = SequData (GV.map (genSecRec rec) sequ)
                
 -- extract slice of one signal
 sliceSignal :: Sec -> UV.Vector PSample -> UV.Vector PSample
-sliceSignal sec sig  = (sigHead step1) UV.++ sigTrunk UV.++ (sigTail step2)
+sliceSignal sec sig  = UV.fromList (sigHead step1) UV.++ sigTrunk UV.++ UV.fromList (sigTail step2)
         where
-          sigTrunk = UV.slice (idx1+inc) (idx2-(idx1+inc)) -- get middle part which is always same 
+          sigTrunk = UV.slice (idx1+1) (idx2-(idx1+1)) sig -- get middle part which is always same 
           step1 = fst(secStepTypes sec)
           step2 =  snd (secStepTypes sec)
-          idx1 = fst(secStepIndices sec)
-          idx2 =  snd (secStepIndices sec)
+          idx1 = fromIdx (fst(secStepIndices sec))
+          idx2 =  fromIdx (snd (secStepIndices sec))
           inc = SampleIdx 1
                     
           sigHead LeavesZeroStep =  [sig UV.! idx1]
@@ -154,15 +154,15 @@ sliceSignal sec sig  = (sigHead step1) UV.++ sigTrunk UV.++ (sigTail step2)
           
 -- extract slice of one signal
 sliceTime :: UV.Vector TSample -> Sec -> UV.Vector TSample
-sliceTime sig sec = (sigHead step1) UV.++ sigTrunk UV.++ (sigTail step2)
+sliceTime sig sec = UV.fromList (sigHead step1) UV.++ sigTrunk UV.++ UV.fromList (sigTail step2)
         where
-          sigTrunk = UV.slice (idx1+1) (idx2-(idx1+1)) -- get middle part which is always same 
+          sigTrunk = UV.slice (idx1+1) (idx2-(idx1+1)) sig -- get middle part which is always same 
           step1 = fst(secStepTypes sec)
           step2 =  snd (secStepTypes sec)
           t1 = fst(secTimes sec)
           t2 = snd(secTimes sec)
-          idx1 = fst(secStepIndices sec)
-          idx2 =  snd (secStepIndices sec)
+          idx1 = fromIdx(fst(secStepIndices sec))
+          idx2 = fromIdx( snd (secStepIndices sec))
           
           sigHead LeavesZeroStep =  [sig UV.! idx1]
           sigHead InitStep =  [sig UV.! idx1]
@@ -172,8 +172,8 @@ sliceTime sig sec = (sigHead step1) UV.++ sigTrunk UV.++ (sigTail step2)
           
           sigTail LeavesZeroStep =  [0]
           sigTail InitStep = error ("Error in sliceSignal - initStep shouldn't occur here")
-          sigTail BecomesZeroStep =  [sig UV.! idx2+1]
-          sigTail EndStep =  [sig UV.! idx2+1]
+          sigTail BecomesZeroStep =  [sig UV.! (idx2+1)]
+          sigTail EndStep =  [sig UV.! (idx2+1)]
           sigTail ZeroCrossingStep =  [t2]
 
           

@@ -13,6 +13,21 @@ import qualified Data.Foldable as F
 
 newtype SampleIdx = SampleIdx Int deriving (Eq, Ord, Num, Enum, Show)
 
+idxInc :: SampleIdx -> SampleIdx
+idxInc (SampleIdx idx) = SampleIdx (idx+1) 
+
+(.!) :: (UV.Unbox a) => UV.Vector a -> SampleIdx -> a
+(.!) vec (SampleIdx idx) = vec UV.! idx
+
+class Index a where
+  fromIdx :: a -> Int 
+  toIdx :: Int -> a
+
+instance Index SampleIdx where
+  fromIdx (SampleIdx x) = x
+  toIdx x = SampleIdx x
+
+
 -----------------------------------------------------------------------------------
 -- Time Signal Samples
 
