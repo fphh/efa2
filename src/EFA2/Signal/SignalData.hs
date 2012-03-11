@@ -16,7 +16,10 @@ newtype SampleIdx = SampleIdx Int deriving (Eq, Ord, Num, Enum, Show)
 -----------------------------------------------------------------------------------
 -- Time Signal Samples
 
--- type Signal a =  (Show a, UV.Unbox a) => UV.Vector a -- TODO automatic diriving doesn't work with type synonym Signal 
+type Signal a =  (Show a, UV.Unbox a) => (UV.Vector a) 
+--   deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
+
+                    -- TODO automatic diriving doesn't work with type synonym Signal 
 
 newtype TSample = TSample Double
   deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
@@ -70,7 +73,11 @@ newtype YSample = YSample Double
 -- Class for Type-Safe Math Operations & Conversion Functions 
 
 class (Sample a, Eta b) => SameUnit a b | a -> b, b -> a
+
 instance SameUnit ESample EEta 
+-- instance SameUnit ESample XSample
+
+
 --instance SameUnit PSample PEta
 
 -- instance SameUnit XSample ESample
@@ -90,6 +97,16 @@ instance Sample ESample where
   fromSample (ESample x) = x
   toSample x = ESample x
 
+instance Sample TSample where
+  fromSample (TSample x) = x
+  toSample x = TSample x
+
+instance Sample DTSample where
+  fromSample (DTSample x) = x
+  toSample x = DTSample x
+
+
+
 class Eta a where
   fromEta :: a -> Double
   toEta :: Double -> a
@@ -98,14 +115,6 @@ instance Eta EEta where
   fromEta (EEta x) = x
   toEta x = EEta x
 
------------------------------------------------------------------------------------
--- Structure for Handling recorded data
-
--- index for power signals from measurement file 
-data SigIdx = SigIdx !Int deriving (Show, Eq, Ord)
-
--- data structure to house the data record or parts of it
-data Record = Record (UV.Vector TSample, M.Map SigIdx (UV.Vector PSample)) deriving (Show,Eq) -- TODO use Vector instead (had Problems with class instances)
 
 
 
