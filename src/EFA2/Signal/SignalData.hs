@@ -13,8 +13,8 @@ import qualified Data.Foldable as F
 
 newtype SampleIdx = SampleIdx Int deriving (Eq, Ord, Num, Enum, Show)
 
-idxInc :: SampleIdx -> SampleIdx
-idxInc (SampleIdx idx) = SampleIdx (idx+1) 
+-- idxInc :: SampleIdx -> SampleIdx
+-- idxInc (SampleIdx idx) = SampleIdx (idx+1) 
 
 (.!) :: (UV.Unbox a) => UV.Vector a -> SampleIdx -> a
 (.!) vec (SampleIdx idx) = vec UV.! idx
@@ -54,6 +54,9 @@ newtype PSample = PSample Double
 
 -- type FlowVect a = (Show a, UV.Unbox a) => UV.Vector a -- TODO automatic deriving doesn't work with type Synonym FlowVect 
 
+----------------------------------------------------------------------------
+-- Sample Types
+
 -- time step data
 newtype DTSample = DTSample Double
   deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
@@ -63,11 +66,11 @@ newtype ESample = ESample Double
   deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
 
 -- average power of energy flow
-newtype FPSample = FPSample Double
+newtype PESample = PESample Double
   deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
 
 -- average efficiency of energy flow
-newtype EEta = EEta Double
+newtype NSample = NSample Double
   deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
 
 -- energy flow mix data
@@ -82,30 +85,29 @@ newtype XSample = XSample Double
 newtype YSample = YSample Double
   deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
 
-
-
------------------------------------------------------------------------------------
--- Class for Type-Safe Math Operations & Conversion Functions 
-
-class (Sample a, Eta b) => SameUnit a b | a -> b, b -> a
-
--- instance SameUnit ESample EEta 
--- instance SameUnit ESample XSample
-instance SameUnit EEta ESample 
-instance SameUnit XSample ESample 
-
---instance SameUnit PSample PEta
-
--- instance SameUnit XSample ESample
--- --instance SameUnit YSample ESample
--- --instance SameUnit MSample ESample
-
+----------------------------------------------------------------------------
+-- Samples Based around Time Signals
 
 class Sample a where
   fromSample :: a -> Double
   toSample :: Double -> a
 
+instance Sample TSample where
+  fromSample (TSample x) = x
+  toSample x = TSample x
+
 instance Sample PSample where
+  fromSample (PSample x) = x
+  toSample x = PSample x
+
+----------------------------------------------------------------------------
+-- Samples Based around Energy Flow
+
+class FlowSample a where
+  fromSample :: a -> Double
+  toSample :: Double -> a
+
+instance (SampleMathDbl PSample) => Sample PSample where
   fromSample (PSample x) = x
   toSample x = PSample x
 
@@ -113,23 +115,119 @@ instance Sample ESample where
   fromSample (ESample x) = x
   toSample x = ESample x
 
-instance Sample TSample where
-  fromSample (TSample x) = x
-  toSample x = TSample x
 
 instance Sample DTSample where
   fromSample (DTSample x) = x
   toSample x = DTSample x
 
+instance Sample NSample where
+  fromSample (NSample x) = x
+  toSample x = NSample x
+  
+-- instance Sample Double where
+--   fromSample x = x
+--   toSample x = x
+  
+instance Sample XSample where
+  fromSample (XSample x) = x
+  toSample x = XSample x
+
+instance Sample YSample where
+  fromSample (YSample x) = x
+  toSample x = YSample x
+
+instance Sample MSample where
+  fromSample (MSample x) = x
+  toSample x = MSample x
+  
+instance Sample PESample where
+  fromSample (PESample x) = x
+  toSample x = PESample x
+
+----------------------------------------------------------------------------
+-- Mixed Arithmetics -- Sample & Double
+
+class (Sample a,Num a,Fractional a) => SampleMathDbl a where
+  (#+) :: a -> Double -> a
+  (#+) s d = s + toSample d 
+  
+  (#-) :: a -> Double -> a
+  (#-) s d = s - toSample d
+  
+  (#*) :: a -> Double -> a
+  (#*) s d = s * toSample d
+  
+  (#/) :: a -> Double -> a
+  (#/) s d = s / toSample d
+  
+
+----------------------------------------------------------------------------
+-- Mixed Arithmetics -- Different Sample Types with Remaining Type a
+
+class (Sample a, Sample b) => SampleMath a b where 
+  (!*) :: a -> b -> a
+  (!/) :: a -> b -> a
+  
+-- Calculate over efficiencies / devider- and collector and mix-ratios
+instance SampleMath ESample NSample where  
+  (!*) e x = toSample ((fromSample e) * (fromSample x))
+  (!/) e x = toSample ((fromSample e) / (fromSample x))
+  
+instance SampleMath ESample XSample where  
+  (!*) e x = toSample ((fromSample e) * (fromSample x))
+  (!/) e x = toSample ((fromSample e) / (fromSample x))
+ 
+instance SampleMath ESample YSample where  
+  (!*) e x = toSample ((fromSample e) * (fromSample x))
+  (!/) e x = toSample ((fromSample e) / (fromSample x))
+
+instance SampleMath ESample MSample where  
+  (!*) e x = toSample ((fromSample e) * (fromSample x))
+  (!/) e x = toSample ((fromSample e) / (fromSample x))
+
+-- Calculate over efficiencies / devider- and collector and mix-ratios
+instance SampleMath PESample NSample where  
+  (!*) e x = toSample ((fromSample e) * (fromSample x))
+  (!/) e x = toSample ((fromSample e) / (fromSample x))
+  
+instance SampleMath PESample XSample where  
+  (!*) e x = toSample ((fromSample e) * (fromSample x))
+  (!/) e x = toSample ((fromSample e) / (fromSample x))
+ 
+instance SampleMath PESample YSample where  
+  (!*) e x = toSample ((fromSample e) * (fromSample x))
+  (!/) e x = toSample ((fromSample e) / (fromSample x))
+
+instance SampleMath PESample MSample where  
+  (!*) e x = toSample ((fromSample e) * (fromSample x))
+  (!/) e x = toSample ((fromSample e) / (fromSample x))
+
+----------------------------------------------------------------------------
+-- Mixed Arithmetics -- With new Type c
+
+class (Sample a, Sample b, Sample c) => SampleMathConv a b c where 
+  (§*) :: a -> b -> c
+  (§/) :: a -> b -> c
+
+-- Power * TimeDuration = Energy
+instance SampleMathConv PESample DTSample ESample where  
+  (§*) e x = toSample ((fromSample e) * (fromSample x))
+  
+-- Power = Energy / Time Duration
+instance SampleMathConv ESample DTSample PESample where  
+  (§/) e x = toSample ((fromSample e) / (fromSample x))
+ 
+-- Time / Delta Time
+instance SampleMathConv TSample TSample DTSample where  
+  (§/) t1 t2 = toSample ((fromSample t1) - (fromSample t2))
 
 
-class Eta a where
-  fromEta :: a -> Double
-  toEta :: Double -> a
+----------------------------------------------------------------------------
+-- Integration
+integrateSample :: PSample -> PSample -> DTSample -> ESample
+integrateSample (PSample ps1) (PSample ps2) (DTSample dt) = toSample ((ps1+ps2)/2*dt)               
 
-instance Eta EEta where
-  fromEta (EEta x) = x
-  toEta x = EEta x
+               
 
 
 
