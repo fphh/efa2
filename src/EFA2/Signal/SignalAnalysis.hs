@@ -25,8 +25,8 @@ import EFA2.Utils.Utils
 
 
 
-psampleDTime :: UV.Vector Time -> UV.Vector DTime
-psampleDTime time = UV.map (DTime . unTime) time
+psampleDTime :: UV.Vector TSample -> UV.Vector DTime
+psampleDTime time = UV.map (DTSample . unTime) time
 
 esampleDTime :: UV.Vector Time -> UV.Vector DTime
 esampleDTime time = UV.map (DTime . unTime) $ UV.zipWith (-) (UV.tail time) time

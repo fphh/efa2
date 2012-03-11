@@ -95,32 +95,32 @@ calcZeroTime (TSample t1,PSample p1) (TSample t2,PSample p2) = if tzero < t2 && 
         tzero = t1+p1/m -- time of zero crossing 
                  
 -- detect Sign-Change per Signal / delivers indice of event and type of event
-getSignalSteps :: UV.Vector PSample -> [(SampleIdx,StepType)] 
-getSignalSteps sig = zip (map SampleIdx idxList) (map (crossSig GV.!) idxList )
+getSignalSteps :: UV.Vector TSample -> UV.Vector PSample -> [(SampleIdx,TSample,StepType)] 
+getSignalSteps time sig = zip3 (map SampleIdx idxList) (map g (zip idxList stepList)) stepList
   where sig2 = GV.fromList (tail (UV.toList sig)) -- vector shifted by one
         sig1 = GV.fromList (init (UV.toList sig)) -- shortened vector
-        
         crossSig = GV.zipWith f sig2 sig1
         idxList = GV.toList (GV.findIndices (/=NoStep) crossSig) -- find all events index of pint before change is delivered        
+        stepList = (map (crossSig GV.!) idxList )
         -- with f:
         f s2 s1 | sign s1==ZSign && sign s2 /= ZSign = LeavesZeroStep -- signal leaves zero
         f s2 s1 | sign s2==ZSign && sign s1 /= ZSign = BecomesZeroStep -- signal becomes zero
         f s2 s1 | sign s2==PSign && sign s1 /= NSign = ZeroCrossingStep  -- signal is crossing zero
         f s2 s1 | sign s1==PSign && sign s2 /= NSign = ZeroCrossingStep  -- signal is crossing zero
         f s2 s1 | otherwise = NoStep  -- nostep
+        -- with g:
+        g (stepIdx,InitStep) = time UV.! stepIdx
+        g (stepIdx,EndStep)  = time UV.! (stepIdx+1)
+        g (stepIdx,LeavesZeroStep) = time UV.! stepIdx
+        g (stepIdx,BecomesZeroStep) = time UV.! (stepIdx+1) 
+        g (stepIdx,ZeroCrossingStep) = calcZeroTime (time UV.! stepIdx, sig UV.! stepIdx)  (time UV.! (stepIdx+1), sig UV.! (stepIdx+1)) 
  
 -- generate Sequence Information   
 genSequ :: Record -> Sequ
-genSequ (Record time sigMap) = GV.fromList (zipWith genSecInfo (init stepList3) (tail stepList3))  
-  where stepList1 = sort (concat (map (getSignalSteps . snd)  (M.toList sigMap))) -- get Steps from all Signals
-        stepList2 = [(0,InitStep)] ++ stepList1 ++ [(SampleIdx (UV.length time) ,EndStep)] -- add steps for 1st and last sample in first and last section
-        stepList3 = zip3 (fst (unzip stepList2)) stepTimes (snd(unzip stepList2))
-        stepTimes = map (map f stepList3) (M.elems sigMap)  -- calculate Step time
-          where f (stepIdx,InitStep) sig = time UV.! stepIdx
-                f (stepIdx,EndStep) sig = time UV.! (stepIdx+1)
-                f (stepIdx,LeavesZeroStep) sig = time UV.! stepIdx
-                f (stepIdx,BecomesZeroStep) sig = time UV.! (stepIdx+1) 
-                f (stepIdx,ZeroCrossingStep) sig = calcZeroTime (time UV.! stepIdx, sig UV.! stepIdx)  (time UV.! (stepIdx+1), sig UV.! (stepIdx+1)) 
+genSequ (Record time sigMap) = GV.fromList (zipWith genSecInfo (init stepList2) (tail stepList2))  
+  where stepList1 = sort (concat (map ((getSignalSteps time) . snd)  (M.toList sigMap))) -- get Steps from all Signals
+        stepList2 = [(0,UV.head time, InitStep)] ++ stepList1 ++ [(SampleIdx (UV.length time),UV.last time ,EndStep)] -- add steps for 1st and last sample in first and last section
+
 
 
 genSecRec :: Record -> Sec -> Record

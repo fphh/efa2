@@ -89,9 +89,10 @@ newtype YSample = YSample Double
 
 class (Sample a, Eta b) => SameUnit a b | a -> b, b -> a
 
-instance SameUnit ESample EEta 
+-- instance SameUnit ESample EEta 
 -- instance SameUnit ESample XSample
-
+instance SameUnit EEta ESample 
+instance SameUnit XSample ESample 
 
 --instance SameUnit PSample PEta
 
