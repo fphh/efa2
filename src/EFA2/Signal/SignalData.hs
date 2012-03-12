@@ -1,4 +1,4 @@
-{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, GeneralizedNewtypeDeriving, UndecidableInstances, FlexibleInstances,  RankNTypes,  ImpredicativeTypes,  FlexibleContexts, GADTs #-}
+{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, GeneralizedNewtypeDeriving, UndecidableInstances, FlexibleInstances,  RankNTypes,  ImpredicativeTypes,  FlexibleContexts, GADTs, TypeFamilies  #-}
 
 module EFA2.Signal.SignalData where
 
@@ -13,9 +13,7 @@ import qualified Data.Foldable as F
 
 newtype SampleIdx = SampleIdx Int deriving (Eq, Ord, Num, Enum, Show)
 
--- idxInc :: SampleIdx -> SampleIdx
--- idxInc (SampleIdx idx) = SampleIdx (idx+1) 
-
+-- allow direct usage of SampleIndex
 (.!) :: (UV.Unbox a) => UV.Vector a -> SampleIdx -> a
 (.!) vec (SampleIdx idx) = vec UV.! idx
 
@@ -100,16 +98,9 @@ instance Sample PSample where
   fromSample (PSample x) = x
   toSample x = PSample x
 
-----------------------------------------------------------------------------
--- Samples Based around Energy Flow
-
-class FlowSample a where
-  fromSample :: a -> Double
-  toSample :: Double -> a
-
-instance (SampleMathDbl PSample) => Sample PSample where
-  fromSample (PSample x) = x
-  toSample x = PSample x
+instance Sample PESample where
+  fromSample (PESample x) = x
+  toSample x = PESample x
 
 instance Sample ESample where
   fromSample (ESample x) = x
@@ -124,10 +115,6 @@ instance Sample NSample where
   fromSample (NSample x) = x
   toSample x = NSample x
   
--- instance Sample Double where
---   fromSample x = x
---   toSample x = x
-  
 instance Sample XSample where
   fromSample (XSample x) = x
   toSample x = XSample x
@@ -140,29 +127,67 @@ instance Sample MSample where
   fromSample (MSample x) = x
   toSample x = MSample x
   
-instance Sample PESample where
-  fromSample (PESample x) = x
-  toSample x = PESample x
+instance Sample Double where
+  fromSample (x) = x
+  toSample x = x
+
+
+----------------------------------------------------------------------------
+-- Typed Arithmetics
+
+-- class UserDefined a b where
+--   unpack :: a
+--   pack :: a
+
+
+class (Sample a, Num a, Fractional a) =>  TNum a b where
+  type ResType a b
+  (.+.) :: a -> b -> ResType a b
+  (.-.) :: a -> b -> ResType a b
+  (.*.) :: a -> b -> ResType a b
+  (./.) :: a -> b -> ResType a b
+  
+
+----------------------------------------------------------------------------
+-- Each Type with Itself
+
+instance  (Sample a,  Num a, Fractional a) => TNum a a  where
+  type ResType a a  = a
+  (.+.) x y = toSample $ (fromSample x) + (fromSample y)
+  (.-.) x y = toSample $ (fromSample x) + (fromSample y)
 
 ----------------------------------------------------------------------------
 -- Mixed Arithmetics -- Sample & Double
 
-class (Sample a,Num a,Fractional a) => SampleMathDbl a where
-  (#+) :: a -> Double -> a
-  (#+) s d = s + toSample d 
+instance (Sample a,  Num a, Fractional a) => TNum a Double where
+  type ResType a Double = a
+  (.+.) x y = toSample $ (fromSample x) + y
+  (.-.) x y = toSample $ (fromSample x) + y
+  (.*.) x y = toSample $ (fromSample x) + y
+  (./.) x y = toSample $ (fromSample x) + y
   
-  (#-) :: a -> Double -> a
-  (#-) s d = s - toSample d
-  
-  (#*) :: a -> Double -> a
-  (#*) s d = s * toSample d
-  
-  (#/) :: a -> Double -> a
-  (#/) s d = s / toSample d
-  
+instance (Sample a,  Num a, Fractional a) => TNum Double a where
+  type ResType Double a = a
+  (.+.) y x = toSample $ (fromSample x) + y
+  (.-.) y x = toSample $ (fromSample x) + y
+  (.*.) y x = toSample $ (fromSample x) + y
+  (./.) y x = toSample $ (fromSample x) + y
+
 
 ----------------------------------------------------------------------------
--- Mixed Arithmetics -- Different Sample Types with Remaining Type a
+-- Mixed Arithmetics -- One Type Dominant
+  
+instance  (Sample a,  Num a, Fractional a, Sample b,  Num b, Fractional b) => TNum a b  where
+  type ResType a b  = a
+  (.*.) x y = toSample $ (fromSample x) + (fromSample y)
+  (./.) x y = toSample $ (fromSample x) + (fromSample y)
+
+
+
+
+
+
+
 
 class (Sample a, Sample b) => SampleMath a b where 
   (!*) :: a -> b -> a
