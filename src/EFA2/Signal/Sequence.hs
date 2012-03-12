@@ -23,29 +23,21 @@ import EFA2.Signal.SignalGeneration
 -- ident chosen as string to handle signal names, or just can be signal numer as string 
 data SignalIdent = SigIdent !String deriving (Show, Eq, Ord)
 
+type SigMap = (M.Map SignalIdent TimeSignal) 
+  
 -- data structure to house the data record or parts of it
-data Record = Record (UV.Vector TSample) (M.Map SignalIdent (UV.Vector PSample)) deriving (Show,Eq) 
+data Record = Record Time SigMap deriving (Show,Eq) 
 
 -- generate Record from data components
-genRecord :: UV.Vector TSample -> [(SignalIdent, UV.Vector PSample)] -> Record
+genRecord :: Time  -> [(SignalIdent, TimeSignal)] -> Record
 genRecord time sigIDList = if dataCheck time (map snd sigIDList) ==True then rec else error ("Error in genRecord - unequal length of input data vectors")
   where rec = Record time (M.fromList sigIDList)
                                               
 -- check Record Data -- TODO -- include check on time length == sign length                                                               
-dataCheck :: UV.Vector TSample ->   [UV.Vector PSample] -> Bool
+dataCheck :: Time ->   [TimeSignal] -> Bool
 dataCheck time sigs = all (UV.all sampleCheck) sigs && equalLengths sigs && (length sigs) > 0
     
--- check for NaN's of Infs in original Data
-sampleCheck :: PSample -> Bool     
-sampleCheck s = not (isNaN s)
-
--- check for same vector length
-equalLengths :: (UV.Unbox a) => [UV.Vector a] -> Bool
-equalLengths vec | length vec == 0 = True
-equalLengths xs = and (map (== n) ns)
-  where (n:ns) = map UV.length xs
-
-  
+ 
 -----------------------------------------------------------------------------------
 -- Section and Sequence -- Structures to handle Sequence Information and Data
 

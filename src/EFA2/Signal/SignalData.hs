@@ -22,6 +22,12 @@ diffVect v = (UV.tail v) - (UV.init v)
 dzipWith :: (Val -> Val -> Val ) -> UVec -> UVec
 dzipWith f v = UV.zipWith f (UV.tail v) (UV.init v)
 
+instance ValNum UVec where
+  (.+) v1 val = UV.map (+val) v1
+  (.-) v1 val = UV.map (+(negate val)) v1
+  (.*) v1 val = UV.map (*val) v1
+  (./) v1 val = UV.map (/val) v1
+
 instance Num UVec where
   (+) v1 v2 = UV.zipWith (+) v1 v2
   (-) v1 v2 = UV.zipWith (-) v1 v2
@@ -33,16 +39,77 @@ instance Num UVec where
 instance Fractional UVec where
   (/) v1 v2 = UV.zipWith (/) v1 v2
 
+
 -----------------------------------------------------------------------------------
--- Time Signal Samples
+-- Time Signal -- (original Measurement data)
 
-data TSignal = TSig UVec | PTSig UVec 
+data TimeSignal = PTSig UVec deriving (Show, Eq) -- more signals can be added if needed like for flow signals
+data Time = Time UVec deriving (Show, Eq)
+  
+genDTime (Time v) = DTSig (diffVect v)
 
-genDTime (TSig v) = DTSig (diffVect v)
-
-integratePartial (PTSig v1) (TSig v2) =  ESig $ (dzipWith f v1) / diffVect v2 
+integratePartial (PTSig v1) (Time v2) =  ESig $ (dzipWith f v1) / diffVect v2 
   where f p1 p2 = 0.5 * (p1+p2)
     
+-- Class to allow Scaling and shifting using Double
+class ValNum a where  
+  (.+) :: a -> Val -> a
+  (.-) :: a -> Val -> a  
+  (.*) :: a -> Val -> a
+  (./) :: a -> Val -> a
+  
+instance ValNum TimeSignal where  
+  (.+) sig  v = smap (+v) sig
+  (.-) sig  v = smap (+(negate v)) sig
+  (.*) sig  v = smap (*v) sig
+  (./) sig  v = smap (/v) sig
+  
+smap :: (Val -> Val) -> TimeSignal -> TimeSignal 
+smap f (PTSig vect) = PTSig (UV.map f vect)   
+
+
+instance Num TimeSignal where
+  abs s  = smap abs s
+  signum s = smap signum s
+
+
+-----------------------------------------------------------------------------------
+-- Flow Vals -- TODO
+
+-----------------------------------------------------------------------------------
+-- Flow Distributions - TODO
+
+-----------------------------------------------------------------------------------
+-- Flow Signal
+  
+data FlowSignal = PSig (UVec) | NSig (UVec) | ESig (UVec) | DTSig (UVec) | XSig (UVec) | YSig (UVec) | MSig (UVec) deriving (Show, Eq, Ord)
+
+instance Num FlowSignal where
+  (*) (PSig v1) (DTSig v2) = ESig (v1*v2)   -- Energy = Power * DTime
+  
+  -- Multiply Energy by ratios from right
+  (*) (ESig v1) (NSig v2) = ESig (v1*v2) -- Multiply with Efficiency  
+  (*) (ESig v1) (XSig v2) = ESig (v1*v2) -- Multiply with Splitter
+  (*) (ESig v1) (YSig v2) = ESig (v1*v2) -- Multiply with Devider
+  (*) (ESig v1) (MSig v2) = ESig (v1*v2) -- Multiply with Mix-Signal
+  
+  -- Multiply Energy by ratios from right
+  (*) (NSig v1) (ESig v2) = ESig (v1*v2) -- Multiply with Efficiency  
+  (*) (XSig v1) (ESig v2) = ESig (v1*v2) -- Multiply with Splitter
+  (*) (YSig v1) (ESig v2) = ESig (v1*v2) -- Multiply with Devider
+  (*) (MSig v1) (ESig v2) = ESig (v1*v2) -- Multiply with Mix-Signal
+  
+  (*) a b = error ("Error in Num FSignal - case for * not implemented " ++ show a ++ " " ++ show b)  
+
+instance Fractional FlowSignal where
+  (/) (ESig v1) (DTSig v2) = PSig (v1/v2)   -- Energy = Power * DTime
+  
+  -- Devide EnergyFlow by Ratios
+  (/) (ESig v1) (NSig v2) = ESig (v1/v2) -- Multiply with Efficiency  
+  (/) (ESig v1) (XSig v2) = ESig (v1/v2) -- Multiply with Splitter
+  (/) (ESig v1) (YSig v2) = ESig (v1/v2) -- Multiply with Devider
+  (/) (ESig v1) (MSig v2) = ESig (v1/v2) -- Multiply with Mix-Signal
+  
   
 -----------------------------------------------------------------------------------
 -- Signal Indexing
@@ -67,7 +134,7 @@ instance Index TSigIdx where
 instance Index FSigIdx where
   fromIdx (FSigIdx x) = x
 
-instance UVecBased FSignal where
+instance UVecBased FlowSignal where
   getVect (PSig v) = v
   getVect (NSig v) = v
   getVect (ESig v) = v
@@ -76,45 +143,15 @@ instance UVecBased FSignal where
   getVect (YSig v) = v
   getVect (MSig v) = v
 
-instance UVecBased TSignal where
+instance UVecBased TimeSignal where
   getVect (PTSig v) = v
-  getVect (TSig v) = v
 
 
-instance Indexible FSignal FSigIdx where    
-instance Indexible TSignal TSigIdx where    
 
+instance Indexible FlowSignal FSigIdx where    
+instance Indexible TimeSignal TSigIdx where    
 
------------------------------------------------------------------------------------
--- Flow Signal
   
-data FSignal = PSig (UVec) | NSig (UVec) | ESig (UVec) | DTSig (UVec) | XSig (UVec) | YSig (UVec) | MSig (UVec) deriving (Show, Eq, Ord)
-
-instance Num FSignal where
-  (*) (PSig v1) (DTSig v2) = ESig (v1*v2)   -- Energy = Power * DTime
-  
-  -- Multiply Energy by ratios from right
-  (*) (ESig v1) (NSig v2) = ESig (v1*v2) -- Multiply with Efficiency  
-  (*) (ESig v1) (XSig v2) = ESig (v1*v2) -- Multiply with Splitter
-  (*) (ESig v1) (YSig v2) = ESig (v1*v2) -- Multiply with Devider
-  (*) (ESig v1) (MSig v2) = ESig (v1*v2) -- Multiply with Mix-Signal
-  
-  -- Multiply Energy by ratios from right
-  (*) (NSig v1) (ESig v2) = ESig (v1*v2) -- Multiply with Efficiency  
-  (*) (XSig v1) (ESig v2) = ESig (v1*v2) -- Multiply with Splitter
-  (*) (YSig v1) (ESig v2) = ESig (v1*v2) -- Multiply with Devider
-  (*) (MSig v1) (ESig v2) = ESig (v1*v2) -- Multiply with Mix-Signal
-  
-  (*) a b = error ("Error in Num FSignal - case for * not implemented " ++ show a ++ " " ++ show b)  
-
-instance Fractional FSignal where
-  (/) (ESig v1) (DTSig v2) = PSig (v1/v2)   -- Energy = Power * DTime
-  
-  -- Devide EnergyFlow by Ratios
-  (/) (ESig v1) (NSig v2) = ESig (v1/v2) -- Multiply with Efficiency  
-  (/) (ESig v1) (XSig v2) = ESig (v1/v2) -- Multiply with Splitter
-  (/) (ESig v1) (YSig v2) = ESig (v1/v2) -- Multiply with Devider
-  (/) (ESig v1) (MSig v2) = ESig (v1/v2) -- Multiply with Mix-Signal
   
   
 

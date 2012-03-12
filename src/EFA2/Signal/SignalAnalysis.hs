@@ -24,3 +24,16 @@ import EFA2.Signal.Sequence
 import EFA2.Utils.Utils
 
 
+
+
+-- check for NaN's of Infs in original Data
+sampleCheck :: PSample -> Bool     
+sampleCheck s = not (isNaN s)
+
+-- check for same vector length
+equalLengths :: (UV.Unbox a) => [UV.Vector a] -> Bool
+equalLengths vec | length vec == 0 = True
+equalLengths xs = and (map (== n) ns)
+  where (n:ns) = map UV.length xs
+
+ 
