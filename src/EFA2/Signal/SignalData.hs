@@ -45,7 +45,8 @@ instance Fractional UVec where
 
 data TimeSignal = PTSig UVec deriving (Show, Eq) -- more signals can be added if needed like for flow signals
 data Time = Time UVec deriving (Show, Eq)
-  
+data TSample = TSample Val  
+
 genDTime (Time v) = DTSig (diffVect v)
 
 integratePartial (PTSig v1) (Time v2) =  ESig $ (dzipWith f v1) / diffVect v2 
@@ -83,6 +84,8 @@ instance Num TimeSignal where
 -- Flow Signal
   
 data FlowSignal = PSig (UVec) | NSig (UVec) | ESig (UVec) | DTSig (UVec) | XSig (UVec) | YSig (UVec) | MSig (UVec) deriving (Show, Eq, Ord)
+data FlowSample = PSample | NSample | ESample | DTSample | XSample | YSample | MSample  deriving (Show, Eq, Ord)
+
 
 instance Num FlowSignal where
   (*) (PSig v1) (DTSig v2) = ESig (v1*v2)   -- Energy = Power * DTime
@@ -114,8 +117,8 @@ instance Fractional FlowSignal where
 -----------------------------------------------------------------------------------
 -- Signal Indexing
 
-data TSigIdx = TSigIdx Int deriving (Show)
-data FSigIdx  = FSigIdx Int deriving (Show) 
+data TimeSampleIdx = TSigIdx Int deriving (Show)
+data FlowSampleIdx  = FSigIdx Int deriving (Show) 
 
 class Index a where
   fromIdx :: a -> Int
@@ -128,10 +131,10 @@ class (Index b, UVecBased a, Show b) => Indexible a b  | a -> b , b-> a where
   (!) v i = maybe (error $ "Error in Elem - index out of Range :" ++ show i) id ((getVect v) UV.!? (fromIdx i)) 
 
 
-instance Index TSigIdx where
+instance Index TimeSampleIdx where
   fromIdx (TSigIdx x) = x
   
-instance Index FSigIdx where
+instance Index FlowSampleIdx where
   fromIdx (FSigIdx x) = x
 
 instance UVecBased FlowSignal where
@@ -148,8 +151,8 @@ instance UVecBased TimeSignal where
 
 
 
-instance Indexible FlowSignal FSigIdx where    
-instance Indexible TimeSignal TSigIdx where    
+instance Indexible FlowSignal FlowSampleIdx where    
+instance Indexible TimeSignal TimeSampleIdx where    
 
   
   

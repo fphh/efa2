@@ -46,7 +46,7 @@ type Sequ = GV.Vector Sec
             
 data Sec = Sec { secLen         ::  SectionLength,
                  secTimes       ::  (TSample,TSample), 
-                 secStepIndices  ::  (SampleIdx,SampleIdx),
+                 secStepIndices  ::  (TimeSampleIdx,TimeSampleIdx),
                  secStepTypes    ::  (StepType,StepType)} deriving (Show, Eq)
 
 
@@ -87,7 +87,7 @@ calcZeroTime (TSample t1,PSample p1) (TSample t2,PSample p2) = if tzero < t2 && 
         tzero = t1+p1/m -- time of zero crossing 
                  
 -- detect Sign-Change per Signal / delivers indice of event and type of event
-getSignalSteps :: UV.Vector TSample -> UV.Vector PSample -> [(SampleIdx,TSample,StepType)] 
+getSignalSteps :: Time -> PTSig -> [(TimeSampleIdx,TSample,StepType)] 
 getSignalSteps time sig = zip3 (map SampleIdx idxList) (map g (zip idxList stepList)) stepList
   where sig2 = GV.fromList (tail (UV.toList sig)) -- vector shifted by one
         sig1 = GV.fromList (init (UV.toList sig)) -- shortened vector
@@ -122,7 +122,7 @@ genRecSequ :: Sequ -> Record -> SequData Record
 genRecSequ sequ rec = SequData (GV.map (genSecRec rec) sequ)  
                
 -- extract slice of one signal
-sliceSignal :: Sec -> UV.Vector PSample -> UV.Vector PSample
+sliceSignal :: Sec -> PTSig -> PTSig
 sliceSignal sec sig  = UV.fromList (sigHead step1) UV.++ sigTrunk UV.++ UV.fromList (sigTail step2)
         where
           sigTrunk = UV.slice (idx1+1) (idx2-(idx1+1)) sig -- get middle part which is always same 
@@ -145,7 +145,7 @@ sliceSignal sec sig  = UV.fromList (sigHead step1) UV.++ sigTrunk UV.++ UV.fromL
           sigTail ZeroCrossingStep =  [0]
           
 -- extract slice of one signal
-sliceTime :: UV.Vector TSample -> Sec -> UV.Vector TSample
+sliceTime :: Time -> Sec -> Time
 sliceTime sig sec = UV.fromList (sigHead step1) UV.++ sigTrunk UV.++ UV.fromList (sigTail step2)
         where
           sigTrunk = UV.slice (idx1+1) (idx2-(idx1+1)) sig -- get middle part which is always same 
@@ -175,6 +175,7 @@ sliceTime sig sec = UV.fromList (sigHead step1) UV.++ sigTrunk UV.++ UV.fromList
 -- checkLength sec = when (secLen sec < 2) $ Left ShortSection
 
 
-        
+
+  
 
 
