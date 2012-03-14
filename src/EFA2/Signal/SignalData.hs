@@ -1,4 +1,4 @@
-{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, GeneralizedNewtypeDeriving, UndecidableInstances, FlexibleInstances,  RankNTypes,  ImpredicativeTypes,  FlexibleContexts, GADTs, TypeFamilies  #-}
+{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, GeneralizedNewtypeDeriving, UndecidableInstances, FlexibleInstances,  RankNTypes,  ImpredicativeTypes,  FlexibleContexts, GADTs, TypeFamilies, TypeSynonymInstances  #-}
 
 module EFA2.Signal.SignalData where
 
@@ -140,34 +140,34 @@ instance Sample Double where
 --   pack :: a
 
 
-class (Sample a, Num a, Fractional a) =>  TNum a b where
-  type ResType a b
-  (.+.) :: a -> b -> ResType a b
-  (.-.) :: a -> b -> ResType a b
-  (.*.) :: a -> b -> ResType a b
-  (./.) :: a -> b -> ResType a b
+class (Sample a, Num a, Fractional a) =>  TNum a b c | a b -> c where
+--  type ResType a b
+  (.+.) :: a -> b -> c
+  (.-.) :: a -> b -> c
+  (.*.) :: a -> b -> c
+  (./.) :: a -> b -> c
   
 
 ----------------------------------------------------------------------------
 -- Each Type with Itself
 
-instance  (Sample a,  Num a, Fractional a) => TNum a a  where
-  type ResType a a  = a
+instance  (Sample a,  Num a, Fractional a) => TNum a a a where
+--  type ResType a a  = a
   (.+.) x y = toSample $ (fromSample x) + (fromSample y)
   (.-.) x y = toSample $ (fromSample x) + (fromSample y)
 
 ----------------------------------------------------------------------------
 -- Mixed Arithmetics -- Sample & Double
 
-instance (Sample a,  Num a, Fractional a) => TNum a Double where
-  type ResType a Double = a
+instance (Sample a,  Num a, Fractional a) => TNum a Double a where
+--  type ResType a Double = a
   (.+.) x y = toSample $ (fromSample x) + y
   (.-.) x y = toSample $ (fromSample x) + y
   (.*.) x y = toSample $ (fromSample x) + y
   (./.) x y = toSample $ (fromSample x) + y
   
-instance (Sample a,  Num a, Fractional a) => TNum Double a where
-  type ResType Double a = a
+instance (Sample a,  Num a, Fractional a) => TNum Double a a where
+--  type ResType Double a = a
   (.+.) y x = toSample $ (fromSample x) + y
   (.-.) y x = toSample $ (fromSample x) + y
   (.*.) y x = toSample $ (fromSample x) + y
@@ -177,13 +177,24 @@ instance (Sample a,  Num a, Fractional a) => TNum Double a where
 ----------------------------------------------------------------------------
 -- Mixed Arithmetics -- One Type Dominant
   
-instance  (Sample a,  Num a, Fractional a, Sample b,  Num b, Fractional b) => TNum a b  where
-  type ResType a b  = a
+instance  (Sample a,  Num a, Fractional a, Sample b,  Num b, Fractional b) => TNum a b a where
+--  type ResType a b  = a
   (.*.) x y = toSample $ (fromSample x) + (fromSample y)
   (./.) x y = toSample $ (fromSample x) + (fromSample y)
 
 
+----------------------------------------------------------------------------
+-- Mixed Arithmetics -- One Type Dominant
+  
+-- instance  (Sample a,  Num a, Fractional a, Sample b,  Num b, Fractional b) => TNum a b c where
+-- --  type ResType ESample XSample = ESample
+--   (.*.) x y = toSample $ (fromSample x) + (fromSample y)
+--   (./.) x y = toSample $ (fromSample x) + (fromSample y)
 
+instance  TNum ESample YSample ESample where
+--  type ResType ESample XSample = ESample
+  (.*.) x y = toSample $ (fromSample x) + (fromSample y)
+  (./.) x y = toSample $ (fromSample x) + (fromSample y)
 
 
 
