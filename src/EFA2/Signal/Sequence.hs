@@ -62,51 +62,6 @@ data StepType = NoStep | InitStep | LeavesZeroStep | BecomesZeroStep | ZeroCross
 
 -------------------------------------------------------------------------------------
 -- functions to split the record in section records
-
-data Sign = PSign | ZSign | NSign deriving (Show, Eq)
-
--- determine Signal Sign  
-sign :: (Eq a, Ord a, Num a) => a -> Sign
-sign x | x > 0 = PSign
-       | x == 0 = ZSign -- TODO add intervalls later on Zero - Detection       
-       | x < 0 = NSign
-                 
--- bild Section data structure from info of two steps 
-genSecInfo :: (SampleIdx,TSample,StepType) -> (SampleIdx,TSample,StepType) -> Sec
-genSecInfo (idx1,t1,step1) (idx2,t2,step2) =  Sec { secLen         = DTSample (fromSample (t2-t1)),
-                                                    secTimes       = (t1,t2),              
-                                                    secStepIndices  = (idx1,idx2),
-                                                    secStepTypes   = (step1,step2)}
-  
--- calculate exact time of Zero Crossing Point                 
-calcZeroTime :: (TSample,PSample) -> (TSample,PSample) -> TSample 
-calcZeroTime (TSample t1,PSample p1) (TSample t2,PSample p2) = if tzero < t2 && tzero > t1 then (toSample tzero) else error ("Zero Point out of Time-Intervall") 
-  where m = dp/ dt -- interpolation slope 
-        dp = p2-p1 -- delta power 
-        dt = t2-t1 -- delta time -- t1 comes in time before t2
-        tzero = t1+p1/m -- time of zero crossing 
-                 
--- detect Sign-Change per Signal / delivers indice of event and type of event
-getSignalSteps :: Time -> PTSig -> [(TimeSampleIdx,TSample,StepType)] 
-getSignalSteps time sig = zip3 (map SampleIdx idxList) (map g (zip idxList stepList)) stepList
-  where sig2 = GV.fromList (tail (UV.toList sig)) -- vector shifted by one
-        sig1 = GV.fromList (init (UV.toList sig)) -- shortened vector
-        crossSig = GV.zipWith f sig2 sig1
-        idxList = GV.toList (GV.findIndices (/=NoStep) crossSig) -- find all events index of pint before change is delivered        
-        stepList = (map (crossSig GV.!) idxList )
-        -- with f:
-        f s2 s1 | sign s1==ZSign && sign s2 /= ZSign = LeavesZeroStep -- signal leaves zero
-        f s2 s1 | sign s2==ZSign && sign s1 /= ZSign = BecomesZeroStep -- signal becomes zero
-        f s2 s1 | sign s2==PSign && sign s1 /= NSign = ZeroCrossingStep  -- signal is crossing zero
-        f s2 s1 | sign s1==PSign && sign s2 /= NSign = ZeroCrossingStep  -- signal is crossing zero
-        f s2 s1 | otherwise = NoStep  -- nostep
-        -- with g:
-        g (stepIdx,InitStep) = time UV.! stepIdx
-        g (stepIdx,EndStep)  = time UV.! (stepIdx+1)
-        g (stepIdx,LeavesZeroStep) = time UV.! stepIdx
-        g (stepIdx,BecomesZeroStep) = time UV.! (stepIdx+1) 
-        g (stepIdx,ZeroCrossingStep) = calcZeroTime (time UV.! stepIdx, sig UV.! stepIdx)  (time UV.! (stepIdx+1), sig UV.! (stepIdx+1)) 
- 
 -- generate Sequence Information   
 genSequ :: Record -> Sequ
 genSequ (Record time sigMap) = GV.fromList (zipWith genSecInfo (init stepList2) (tail stepList2))  
@@ -114,13 +69,23 @@ genSequ (Record time sigMap) = GV.fromList (zipWith genSecInfo (init stepList2) 
         stepList2 = [(0,UV.head time, InitStep)] ++ stepList1 ++ [(SampleIdx (UV.length time),UV.last time ,EndStep)] -- add steps for 1st and last sample in first and last section
 
 
-
-genSecRec :: Record -> Sec -> Record
-genSecRec (Record time sigMap) sec  = Record (sliceTime time sec) (M.map (sliceSignal sec) sigMap)  
+                
+-- bild Section data structure from info of two steps 
+genSecInfo :: (SampleIdx,TSample,StepType) -> (SampleIdx,TSample,StepType) -> Sec
+genSecInfo (idx1,t1,step1) (idx2,t2,step2) =  Sec { secLen         = DTSample (fromSample (t2-t1)),
+                                                    secTimes       = (t1,t2),              
+                                                    secStepIndices  = (idx1,idx2),
+                                                    secStepTypes   = (step1,step2)}
+  
+                
     
 genRecSequ :: Sequ -> Record -> SequData Record 
 genRecSequ sequ rec = SequData (GV.map (genSecRec rec) sequ)  
                
+genSecRec :: Record -> Sec -> Record
+genSecRec (Record time sigMap) sec  = Record (sliceTime time sec) (M.map (sliceSignal sec) sigMap)  
+
+
 -- extract slice of one signal
 sliceSignal :: Sec -> PTSig -> PTSig
 sliceSignal sec sig  = UV.fromList (sigHead step1) UV.++ sigTrunk UV.++ UV.fromList (sigTail step2)
@@ -144,6 +109,7 @@ sliceSignal sec sig  = UV.fromList (sigHead step1) UV.++ sigTrunk UV.++ UV.fromL
           sigTail EndStep =  [sig UV.! idx2+1]
           sigTail ZeroCrossingStep =  [0]
           
+
 -- extract slice of one signal
 sliceTime :: Time -> Sec -> Time
 sliceTime sig sec = UV.fromList (sigHead step1) UV.++ sigTrunk UV.++ UV.fromList (sigTail step2)

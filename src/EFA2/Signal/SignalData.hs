@@ -38,13 +38,16 @@ instance Num UVec where
 
 instance Fractional UVec where
   (/) v1 v2 = UV.zipWith (/) v1 v2
+  
+vmap = UV.map  
 
 
 -----------------------------------------------------------------------------------
 -- Time Signal -- (original Measurement data)
 
-data TimeSignal = PTSig UVec deriving (Show, Eq) -- more signals can be added if needed like for flow signals
 data Time = Time UVec deriving (Show, Eq)
+data TimeSignal = PTSig UVec deriving (Show, Eq) -- more signals can be added if needed like for flow signals
+
 data TSample = TSample Val  
 
 genDTime (Time v) = DTSig (diffVect v)
@@ -73,19 +76,23 @@ instance Num TimeSignal where
   abs s  = smap abs s
   signum s = smap signum s
 
+-----------------------------------------------------------------------------------
+-- Flow Samples
+
+data FlowSample = PSample | NSample | ESample | DTSample | XSample | YSample | MSample  deriving (Show, Eq, Ord)
 
 -----------------------------------------------------------------------------------
--- Flow Vals -- TODO
+-- Flows
+
 
 -----------------------------------------------------------------------------------
 -- Flow Distributions - TODO
+
 
 -----------------------------------------------------------------------------------
 -- Flow Signal
   
 data FlowSignal = PSig (UVec) | NSig (UVec) | ESig (UVec) | DTSig (UVec) | XSig (UVec) | YSig (UVec) | MSig (UVec) deriving (Show, Eq, Ord)
-data FlowSample = PSample | NSample | ESample | DTSample | XSample | YSample | MSample  deriving (Show, Eq, Ord)
-
 
 instance Num FlowSignal where
   (*) (PSig v1) (DTSig v2) = ESig (v1*v2)   -- Energy = Power * DTime
@@ -113,9 +120,22 @@ instance Fractional FlowSignal where
   (/) (ESig v1) (YSig v2) = ESig (v1/v2) -- Multiply with Devider
   (/) (ESig v1) (MSig v2) = ESig (v1/v2) -- Multiply with Mix-Signal
   
-  
+----------------------------------------------------------------------------------  
+-- Problem -- Loosing Type Safety here because of Unbox of FlowSample !!   
+flowMap :: (Val -> Val) -> FlowSignal -> FlowSignal
+flowMap f (ESig v) = ESig (vmap f v)    
+flowMap f (PSig v) = PSig (vmap f v)    
+flowMap f (NSig v) = NSig (vmap f v)    
+flowMap f (XSig v) = XSig (vmap f v)    
+flowMap f (YSig v) = YSig (vmap f v)    
+flowMap f (NSig v) = NSig (vmap f v)    
+flowMap f (DTSig v) = DTSig (vmap f v)    
+
+
+
+
 -----------------------------------------------------------------------------------
--- Signal Indexing
+-- TypeSafe Indexing
 
 data TimeSampleIdx = TSigIdx Int deriving (Show)
 data FlowSampleIdx  = FSigIdx Int deriving (Show) 
@@ -149,10 +169,10 @@ instance UVecBased FlowSignal where
 instance UVecBased TimeSignal where
   getVect (PTSig v) = v
 
-
-
 instance Indexible FlowSignal FlowSampleIdx where    
 instance Indexible TimeSignal TimeSampleIdx where    
+
+
 
   
   
