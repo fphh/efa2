@@ -1,49 +1,26 @@
-{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, GeneralizedNewtypeDeriving, UndecidableInstances, FlexibleInstances,  RankNTypes,  ImpredicativeTypes,  FlexibleContexts, GADTs, TypeFamilies, TypeSynonymInstances  #-}
+{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, GeneralizedNewtypeDeriving, UndecidableInstances, FlexibleInstances,  RankNTypes,  ImpredicativeTypes,  FlexibleContexts, GADTs, TypeFamilies, TypeSynonymInstances,IncoherentInstances    #-}
 
-module EFA2.Signal.SignalData where
-
-import qualified Data.Map as M
-import qualified Data.List as L
+module EFA2.Signal.SignalData (module EFA2.Signal.SignalData) where
 
 import qualified Data.Vector.Unboxed as UV
 import qualified Data.Vector.Generic as GV
 import qualified Data.Vector.Generic.Mutable as MV
 import qualified Data.Foldable as F
 
-
-----------------------------------------------------------------------------------
--- Basic Data Type
+-----------------------------------------------------------------------------------
+-- Base Data Type
 
 type Val = Double
 
-----------------------------------------------------------------------------------
--- Vector Usage
+-----------------------------------------------------------------------------------
+-- Vector Convenience
 
-type UVec a = (Show a, UV.Unbox a) => UV.Vector a
+type UVec a = UV.Vector a
 
--- diffVect :: Eq a => UVec a -> UVec a
--- diffVect v = (UV.tail v) - (UV.init v)
-
-dzipWith :: (a -> a -> a ) -> UVec a -> UVec a
-dzipWith f v = UV.zipWith f (UV.tail v) (UV.init v)
-
--- instance (UV.Unbox a, Show a, Eq a, Num a) => Num (UV.Vector a) where
---   (+) v1 v2 = UV.zipWith (+) v1 v2
---   (-) v1 v2 = UV.zipWith (-) v1 v2
---   (*) v1 v2 = UV.zipWith (*) v1 v2
---   abs v1  = UV.map abs v1
---   signum v1  = UV.map signum v1
--- --  fromInteger v1 = UV.map fromInteger v1
-
--- instance (UV.Unbox a, Show a, Eq a, Fractional a) => Fractional (UV.Vector a) where
---   (/) v1 v2 = UV.zipWith (/) v1 v2
-
-----------------------------------------------------------------------------
--- Typed Data Samples
-
-newtype PSample = PSample Double
-  deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
-
+-----------------------------------------------------------------------------------
+-- Flow Signal
+  
+-- time
 newtype TSample = TSample Double
   deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
 
@@ -51,8 +28,12 @@ newtype TSample = TSample Double
 newtype DTSample = DTSample Double
   deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
 
--- energy flow data or storage content data -- TODO -- distringuish flow and storage of energy ?? (doubles all other sample types !!!)
+-- energy flow data or storage content data 
 newtype ESample = ESample Double
+  deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
+
+-- average power of energy flow
+newtype PSample = PSample Double
   deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
 
 -- average power of energy flow
@@ -75,13 +56,16 @@ newtype XSample = XSample Double
 newtype YSample = YSample Double
   deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
 
-----------------------------------------------------------------------------
--- Data Access Funtions for Typed Samples
 
-class  (Num a, Fractional a, UV.Unbox a) => Sample a where fromSample :: a -> Double; toSample :: Double -> a
+--------------------------------------------------------------------------------------------
+-- Sample Access Class
 
+class (Eq a, Ord a, Fractional a, Num a, Enum a, Show a, Real a, Floating a, RealFloat a, RealFrac a, UV.Unbox a) => Sample a where
+  fromSample :: a -> Val
+  toSample :: Val -> a
+  
+instance Sample PSample where fromSample (PSample x) = x; toSample x = PSample x                               
 instance Sample TSample where fromSample (TSample x) = x; toSample x = TSample x
-instance Sample PSample where fromSample (PSample x) = x; toSample x = PSample x
 instance Sample PESample where fromSample (PESample x) = x; toSample x = PESample x
 instance Sample ESample where fromSample (ESample x) = x; toSample x = ESample x
 instance Sample DTSample where fromSample (DTSample x) = x; toSample x = DTSample x
@@ -92,93 +76,93 @@ instance Sample MSample where fromSample (MSample x) = x; toSample x = MSample x
 -- also for Double !!
 instance Sample Double where  fromSample (x) = x; toSample x = x
 
-----------------------------------------------------------------------------
--- Typed Arithmetics for Samples
+--------------------------------------------------------------------------------------------
+-- Sample Calculation Class
 
-class (Sample a, Sample b, Sample c) =>  SampleSum a b c | a b -> c where
-  (.+) :: a -> b -> c
-  (.+) x y = toSample (fromSample x + fromSample y)   
+class (Sample a, Sample b, Sample c) => SampleSum a b c  | a b -> c where
+  (.+.) :: a -> b -> c
+  (.+.) x y = toSample (fromSample x * fromSample y) 
+  (.-.) :: a -> b -> c
+  (.-.) x y = toSample (fromSample x * fromSample y) 
   
-  (.-) :: a -> b -> c
-  (.-) x y = toSample (fromSample x - fromSample y)   
-
 instance  SampleSum PESample PESample PESample
 instance  SampleSum PSample PSample PSample
 
 
-class (Sample a, Sample b, Sample c) =>  SampleMult a b c | a b -> c where
-  (.*) :: a -> b -> c
-  (.*) x y = toSample (fromSample x * fromSample y)   
-  
-instance  SampleMult PESample NSample PESample
-instance  SampleMult PESample XSample PESample
-instance  SampleMult PESample YSample PESample
-instance  SampleMult PESample MSample PESample
+class (Sample a, Sample b, Sample c) => SampleProd a b c  | a b -> c where
+  (.*.) :: a -> b -> c
+  (.*.) x y = toSample (fromSample x * fromSample y) 
 
-instance  SampleMult ESample NSample ESample
-instance  SampleMult ESample XSample ESample
-instance  SampleMult ESample YSample ESample
-instance  SampleMult ESample MSample ESample
+instance  SampleProd PESample NSample PESample
+instance  SampleProd PESample XSample PESample
+instance  SampleProd PESample YSample PESample
+instance  SampleProd PESample MSample PESample
 
-instance  SampleMult PESample DTSample ESample
+instance  SampleProd ESample NSample ESample
+instance  SampleProd ESample XSample ESample
+instance  SampleProd ESample YSample ESample
+instance  SampleProd ESample MSample ESample
+
+instance  SampleProd PESample DTSample ESample
 
 
-class (Sample a, Sample b, Sample c) =>  SampleDiv a b c | a b -> c where
-  (./) :: a -> b -> c
-  (./) x y = toSample (fromSample x / fromSample y)   
-  
-instance  SampleDiv ESample DTSample PESample
+class (Sample a, Sample b, Sample c) => SampleDiv a b c  | a b -> c where
+  (./.) :: a -> b -> c
+  (./.) x y = toSample (fromSample x * fromSample y) 
 
-----------------------------------------------------------------------------
--- Data Containers
 
-data Signal a = Signal (UVec a) -- Time signal
-data FSignal a = FSignal (UVec a) -- Flow Signal 
--- data FDistrib a = (Show a, UV.Unbox a) => FDistrib (UVec a) -- Flow Distribution
--- data MixFlow a = (Show a) => MixFlow (UVec a) -- Vector of Partial Flows
-data Flow a = Flow (UVec a) -- Single Flow Value
+instance SampleDiv PSample TSample ESample 
 
-----------------------------------------------------------------------------
--- Data Container Access
+--------------------------------------------------------------------------------------------
+-- Data Containers 
 
-class Data d a where fromData :: d -> UVec a; toData :: UVec a -> d
-
-instance (UV.Unbox a, Show a) => Data (Signal a) a where fromData (Signal x) = x; toData x = Signal x
-instance (UV.Unbox a, Show a) => Data (FSignal a) a where fromData (FSignal x) = x; toData x = FSignal x
-instance (UV.Unbox a, Show a) => Data (Flow a) a where fromData (Flow x) = x; toData x = Flow x
-
-----------------------------------------------------------------------------
--- Data Container Arithmetic for given Container Combinations
-
--- Zip two signals ord distributions
-class (SampleMult a b c) => SigProd a b c where
- (*.) :: a -> b ->  c
- 
-instance (SampleMult a b c) => SigProd a b c where
- (*.) (Signal v1)  (Signal v2) = (Signal (v1 * v2)) 
+data Signal a = Signal (UVec a) deriving (Show)
+data Distrib a = Distrib (UVec a) deriving (Show)
+data Flow a = Flow a deriving (Show)
 
 
 --------------------------------------------------------------------------------------------
--- Arithmetics Super Class
+-- Data Container Access Class
 
-class (Data x a, Data y b, Data z c) => Sum x a y b z c where
- (~+) :: x -> y ->  z
- (~-) :: x -> y ->  z
+class Data a b where
+  toData :: a -> UVec b
+  fromData :: UVec b -> a
 
-class (Data x a, Data y b, Data z c) => Prod x a y b z c where
- (~*) :: x -> y ->  z
+instance Data (Signal b) b where
+  toData (Signal x) = x
+  fromData x = Signal x
+  
+instance Data (Distrib b) b where  
+  toData (Distrib x) = x
+  fromData x = Distrib x
+  
+--------------------------------------------------------------------------------------------
+-- Generic Product Class with Instances
 
-instance (SigProd a b c) => Prod (Signal a) a (Signal b) b (Signal c) c where (~*) x y = x .* y 
+class Sum x y z  | x y -> z where  (.+) :: x -> y ->  z; (.-) :: x -> y ->  z 
+instance (SampleSum a b c) => Sum (Signal a) (Signal b) (Signal c) where 
+  (.+) (Signal x) (Signal y) = Signal (UV.zipWith (.+.) x y); (.-) (Signal x) (Signal y) = Signal (UV.zipWith (.-.) x y)
+
+class Prod x y z  | x y -> z where  (.*) :: x -> y ->  z
+instance (SampleProd a b c) => Prod (Signal a) (Signal b) (Signal c) where (.*) (Signal x) (Signal y) = Signal (UV.zipWith (.*.) x y) 
+
+class Div x y z  | x y -> z where  (./) :: x -> y ->  z
+instance (SampleDiv a b c) => Div (Signal a) (Signal b) (Signal c) where (./) (Signal x) (Signal y) =  Signal (UV.zipWith (./.) x y)
 
 
-class (Data x a, Data y b, Data z c) => Div x a y b z c where
- (~/) :: x -> y ->  z
+
+-- s1 = Signal (UV.fromList [PESample 0.5 , PESample 0.3]) 
+-- s2 = Signal (UV.fromList [DTSample 0.1 , DTSample 0.1])
+-- h1 = Signal (UV.fromList [PESample 0.5 , PESample 0.3])
+
+-- main = do
+
+--   let s4 = (s1.*s2) :: Signal ESample
+--   putStrLn $ show (s4) 
 
 
-----------------------------------------------------------------------------
--- Integration
-integrateSample :: PSample -> PSample -> DTSample -> ESample
-integrateSample (PSample ps1) (PSample ps2) (DTSample dt) = toSample ((ps1+ps2)/2*dt)               
+
+
 
                
 
