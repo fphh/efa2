@@ -5,10 +5,15 @@ import qualified Data.Vector.Generic as GV
 import qualified Data.Vector.Generic.Mutable as MV
 import qualified Data.Foldable as F
 
+-----------------------------------------------------------------------------------
+-- Base Data Type
 
+type Val = Double
+
+-----------------------------------------------------------------------------------
+-- Vector Convenience
 
 type UVec a = UV.Vector a
-type Val = Double
 
 -----------------------------------------------------------------------------------
 -- Flow Signal
@@ -21,7 +26,7 @@ newtype TSample = TSample Double
 newtype DTSample = DTSample Double
   deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
 
--- energy flow data or storage content data -- TODO -- distringuish flow and storage of energy ?? (doubles all other sample types !!!)
+-- energy flow data or storage content data 
 newtype ESample = ESample Double
   deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
 
@@ -51,7 +56,7 @@ newtype YSample = YSample Double
 
 
 --------------------------------------------------------------------------------------------
--- Sample Class
+-- Sample Access Class
 
 class (Eq a, Ord a, Fractional a, Num a, Enum a, Show a, Real a, Floating a, RealFloat a, RealFrac a, UV.Unbox a) => Sample a where
   fromSample :: a -> Val
@@ -103,9 +108,8 @@ class (Sample a, Sample b, Sample c) => SampleDiv a b c  | a b -> c where
   (./.) :: a -> b -> c
   (./.) x y = toSample (fromSample x * fromSample y) 
 
-instance SampleSum PSample TSample ESample 
 
-instance SampleProd PSample TSample ESample
+instance SampleDiv PSample TSample ESample 
 
 --------------------------------------------------------------------------------------------
 -- Data Containers 
@@ -116,7 +120,7 @@ data Flow a = Flow a deriving (Show)
 
 
 --------------------------------------------------------------------------------------------
--- Data Container Class
+-- Data Container Access Class
 
 class Data a b where
   toData :: a -> UVec b
@@ -131,70 +135,27 @@ instance Data (Distrib b) b where
   fromData x = Distrib x
   
 --------------------------------------------------------------------------------------------
--- Math on Specific Data Container Combinations 
-
--- Signal Sum
-class (SampleSum a b c) => SigSum a b c where
-  sigAdd :: Signal a -> Signal b -> Signal c
-  sigSub :: Signal a -> Signal b -> Signal c
-
-instance (SampleSum a b c) => SigSum a b c where
-  sigAdd (Signal v1)  (Signal v2) = (Signal (UV.zipWith (.+.) v1 v2)) 
-  sigSub (Signal v1)  (Signal v2) = (Signal (UV.zipWith (.-.) v1 v2)) 
-
-
--- Signal Product
-class (SampleProd a b c) => SigProd a b c where
-  sigProd :: Signal a -> Signal b -> Signal c
-
-instance (SampleProd a b c) => SigProd a b c where
-  sigProd (Signal v1)  (Signal v2) = (Signal (UV.zipWith (.*.) v1 v2)) 
-
--- Signal Division
-class (SampleDiv a b c) => SigDiv a b c where
-  sigDiv :: Signal a -> Signal b -> Signal c
-
-instance (SampleDiv a b c) => SigDiv a b c where
-  sigDiv (Signal v1)  (Signal v2) = (Signal (UV.zipWith (./.) v1 v2)) 
-
-
--- Distrib - Signal -- Only an Example !!
-class (SampleProd a b c) => DistSigProd a b c where
-  distSigProd :: Distrib a -> Signal b -> Signal c
-
-instance (SampleProd a b c) => DistSigProd a b c where
-  distSigProd (Distrib v1)  (Signal v2) = (Signal (UV.zipWith (.*.) v1 v2)) 
-
---------------------------------------------------------------------------------------------
 -- Generic Product Class with Instances
 
-class (Data x a, Data y b, Data z c) => Sum x a y b z c | a  b -> c where
-  (~+) :: x -> y ->  z
-  (~-) :: x -> y ->  z
+class Sum x y z  | x y -> z where  (.+) :: x -> y ->  z; (.-) :: x -> y ->  z 
+instance (SampleSum a b c) => Sum (Signal a) (Signal b) (Signal c) where 
+  (.+) (Signal x) (Signal y) = Signal (UV.zipWith (.+.) x y); (.-) (Signal x) (Signal y) = Signal (UV.zipWith (.-.) x y)
 
-instance (SigSum a b c) => Sum (Signal a) a (Signal b) b (Signal c) c where (~+) x y = sigAdd x y; (~-) x y = sigSub x y
+class Prod x y z  | x y -> z where  (.*) :: x -> y ->  z
+instance (SampleProd a b c) => Prod (Signal a) (Signal b) (Signal c) where (.*) (Signal x) (Signal y) = Signal (UV.zipWith (.*.) x y) 
 
-class (Data x a, Data y b, Data z c) => Prod x a y b z c where
- (~*) :: x -> y ->  z
-
-instance (SigProd a b c) => Prod (Signal a) a (Signal b) b (Signal c) c where (~*) x y = sigProd x y 
-instance (DistSigProd a b c) => Prod (Distrib a) a (Signal b) b (Signal c) c where (~*) x y = distSigProd x y
-
-class (Data x a, Data y b, Data z c) => Div x a y b z c where
- (~/) :: x -> y ->  z
-
-instance (SigDiv a b c) => Div (Signal a) a (Signal b) b (Signal c) c where (~/) x y = sigDiv x y 
+class Div x y z  | x y -> z where  (./) :: x -> y ->  z
+instance (SampleDiv a b c) => Div (Signal a) (Signal b) (Signal c) where (./) (Signal x) (Signal y) =  Signal (UV.zipWith (./.) x y)
 
 
 
-
-s1 = Signal (UV.fromList [PSample 0.5 , PSample 0.3]) 
-s2 = Signal (UV.fromList [TSample 0.1 , TSample 0.1])
-h1 = Signal (UV.fromList [PSample 0.5 , PSample 0.3])
+s1 = Signal (UV.fromList [PESample 0.5 , PESample 0.3]) 
+s2 = Signal (UV.fromList [DTSample 0.1 , DTSample 0.1])
+h1 = Signal (UV.fromList [PESample 0.5 , PESample 0.3])
 
 main = do
-  let s3 = sigProd s1 s2 -- (s1~+s2)
-  let s4 = (s1~*s2) :: Signal ESample     
-  putStrLn $ show (s3) 
---  putStrLn $ show (h1~*s2)
+
+  let s4 = (s1.*s2) :: Signal ESample
+  putStrLn $ show (s4) 
+
 
