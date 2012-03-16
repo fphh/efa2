@@ -45,7 +45,7 @@ instance Typ (E g) g where fromTyp (E x) = x; toTyp x = (E x)
 instance Typ (T g) g where fromTyp (T x) = x; toTyp x = (T x)      
 
 
-class (Typ a x, Typ b y, Typ c z, DMult x y z, Show z) => TypMult  a x b y c z  | a b -> c, x y -> z, a -> x, b -> y, c -> z where 
+class (Typ a x, Typ b y,Typ c z, DMult x y z, Show z) => TypMult  a x b y c z  | a -> x, b -> y  where 
     (.*) :: a -> b -> c 
 
 instance (DMult x y z, Typ a x, Typ b y, Typ c z, Show z) => TypMult a x b y c z  where  
