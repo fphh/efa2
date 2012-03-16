@@ -117,6 +117,7 @@ instance SampleDiv PSample TSample ESample
 -- Data Containers 
 
 data Signal a = Signal (UVec a) deriving (Show)
+data FSignal a = FSignal (UVec a) deriving (Show)
 data Distrib a = Distrib (UVec a) deriving (Show)
 data Flow a = Flow a deriving (Show)
 
@@ -151,6 +152,43 @@ instance (SampleDiv a b c) => Div (Signal a) (Signal b) (Signal c) where (./) (S
 
 
 
+-----------------------------------------------------------------------------------
+-- TypeSafe Indexing
+
+-- Index Types
+data SignalIdx = SignalIdx Int deriving (Show)
+data FSignalIdx  = FSignalIdx Int deriving (Show) 
+data DistribIdx  = DistribIdx Int deriving (Show) 
+
+-- Index Access Class
+class Index a where fromIdx :: a -> Int; toIdx :: Int -> a
+instance Index SignalIdx where fromIdx (SignalIdx x) = x; toIdx x = (SignalIdx x)
+instance Index FSignalIdx where fromIdx (FSignalIdx x) = x; toIdx x = (FSignalIdx x)
+instance Index DistribIdx where fromIdx (DistribIdx x) = x; toIdx x = (DistribIdx x)
+
+-- Indexible Data Containers
+class (Indexible a b) where 
+instance Indexible (Signal a) b
+instance Indexible (FSignal a) b
+instance Indexible (Distrib a) b
+
+-- Class to combine Index and Container & perform safe lookup
+class (Index a, Indexible b c) => IndexPair a b c  | a -> b , b-> a , a  b -> c where
+  (!) :: b -> a -> c 
+
+instance ( UV.Unbox c) => IndexPair SignalIdx (Signal c) c where 
+  (!) (Signal vect) (SignalIdx idx) =  maybe err id (vect UV.!? idx)
+    where err = error ("Error in SignalIndexing - Index out of Range :" ++ show idx)
+
+  
+instance ( UV.Unbox c) => IndexPair FSignalIdx (FSignal c) c where 
+  (!) (FSignal vect) (FSignalIdx idx) = maybe err id (vect UV.!? idx) 
+    where err = error ("Error in FSignalIndexing - Index out of Range :" ++ show idx)
+
+
+instance ( UV.Unbox c) => IndexPair DistribIdx (Distrib c) c where 
+  (!) (Distrib vect) (DistribIdx idx) = maybe err id (vect UV.!? idx) 
+    where err = error ("Error in DistribIndexing - Index out of Range :" ++ show idx)
 
 
   
