@@ -1,7 +1,5 @@
 {-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, GeneralizedNewtypeDeriving, UndecidableInstances, FlexibleInstances,  RankNTypes,  ImpredicativeTypes,  FlexibleContexts, GADTs, TypeFamilies, TypeSynonymInstances,IncoherentInstances    #-}
 
-module EFA2.Signal.SignalData (module EFA2.Signal.SignalData) where
-
 import qualified Data.Vector.Unboxed as UV
 import qualified Data.Vector.Generic as GV
 import qualified Data.Vector.Generic.Mutable as MV
@@ -151,6 +149,13 @@ instance (SampleDiv a b c) => Div (Signal a) (Signal b) (Signal c) where (./) (S
 
 
 
+s1 = Signal (UV.fromList [PESample 0.5 , PESample 0.3]) 
+s2 = Signal (UV.fromList [DTSample 0.1 , DTSample 0.1])
+h1 = Signal (UV.fromList [PESample 0.5 , PESample 0.3])
+
+main = do
+
+  let s4 = (s1.*s2) :: Signal ESample
+  putStrLn $ show (s4) 
 
 
-  
