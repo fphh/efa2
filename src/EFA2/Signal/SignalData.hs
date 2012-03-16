@@ -11,49 +11,41 @@ import qualified Data.Vector.Generic.Mutable as MV
 import qualified Data.Foldable as F
 
 
-newtype SampleIdx = SampleIdx Int deriving (Eq, Ord, Num, Enum, Show)
+----------------------------------------------------------------------------------
+-- Basic Data Type
 
--- allow direct usage of SampleIndex
-(.!) :: (UV.Unbox a) => UV.Vector a -> SampleIdx -> a
-(.!) vec (SampleIdx idx) = vec UV.! idx
+type Val = Double
 
-class Index a where
-  fromIdx :: a -> Int 
-  toIdx :: Int -> a
+----------------------------------------------------------------------------------
+-- Vector Usage
 
-instance Index SampleIdx where
-  fromIdx (SampleIdx x) = x
-  toIdx x = SampleIdx x
+type UVec a = (Show a, UV.Unbox a) => UV.Vector a
 
+-- diffVect :: Eq a => UVec a -> UVec a
+-- diffVect v = (UV.tail v) - (UV.init v)
 
------------------------------------------------------------------------------------
--- Time Signal Samples
+dzipWith :: (a -> a -> a ) -> UVec a -> UVec a
+dzipWith f v = UV.zipWith f (UV.tail v) (UV.init v)
 
-type Signal a =  (Show a, UV.Unbox a) => (UV.Vector a) 
---   deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
+-- instance (UV.Unbox a, Show a, Eq a, Num a) => Num (UV.Vector a) where
+--   (+) v1 v2 = UV.zipWith (+) v1 v2
+--   (-) v1 v2 = UV.zipWith (-) v1 v2
+--   (*) v1 v2 = UV.zipWith (*) v1 v2
+--   abs v1  = UV.map abs v1
+--   signum v1  = UV.map signum v1
+-- --  fromInteger v1 = UV.map fromInteger v1
 
-                    -- TODO automatic diriving doesn't work with type synonym Signal 
+-- instance (UV.Unbox a, Show a, Eq a, Fractional a) => Fractional (UV.Vector a) where
+--   (/) v1 v2 = UV.zipWith (/) v1 v2
 
-newtype TSample = TSample Double
-  deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
-           
+----------------------------------------------------------------------------
+-- Typed Data Samples
+
 newtype PSample = PSample Double
   deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
 
--- newtype PEta = PEta Double
---   deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
-           
-------------------------------------------------------------------------------------           
--- Flow Samples -- TODO -- differentiate flowsignal, histogram, energyflow ?
--- flowsignal - precise power values
--- histogram classes or clusters -- small variation of power 
--- energy flow values -- wide variation of power values 
-
-
--- type FlowVect a = (Show a, UV.Unbox a) => UV.Vector a -- TODO automatic deriving doesn't work with type Synonym FlowVect 
-
-----------------------------------------------------------------------------
--- Sample Types
+newtype TSample = TSample Double
+  deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
 
 -- time step data
 newtype DTSample = DTSample Double
@@ -84,178 +76,103 @@ newtype YSample = YSample Double
   deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
 
 ----------------------------------------------------------------------------
--- Samples Based around Time Signals
+-- Data Access Funtions for Typed Samples
 
-class Sample a where
-  fromSample :: a -> Double
-  toSample :: Double -> a
+class  (Num a, Fractional a, UV.Unbox a) => Sample a where fromSample :: a -> Double; toSample :: Double -> a
 
-instance Sample TSample where
-  fromSample (TSample x) = x
-  toSample x = TSample x
-
-instance Sample PSample where
-  fromSample (PSample x) = x
-  toSample x = PSample x
-
-instance Sample PESample where
-  fromSample (PESample x) = x
-  toSample x = PESample x
-
-instance Sample ESample where
-  fromSample (ESample x) = x
-  toSample x = ESample x
-
-
-instance Sample DTSample where
-  fromSample (DTSample x) = x
-  toSample x = DTSample x
-
-instance Sample NSample where
-  fromSample (NSample x) = x
-  toSample x = NSample x
-  
-instance Sample XSample where
-  fromSample (XSample x) = x
-  toSample x = XSample x
-
-instance Sample YSample where
-  fromSample (YSample x) = x
-  toSample x = YSample x
-
-instance Sample MSample where
-  fromSample (MSample x) = x
-  toSample x = MSample x
-  
-instance Sample Double where
-  fromSample (x) = x
-  toSample x = x
-
+instance Sample TSample where fromSample (TSample x) = x; toSample x = TSample x
+instance Sample PSample where fromSample (PSample x) = x; toSample x = PSample x
+instance Sample PESample where fromSample (PESample x) = x; toSample x = PESample x
+instance Sample ESample where fromSample (ESample x) = x; toSample x = ESample x
+instance Sample DTSample where fromSample (DTSample x) = x; toSample x = DTSample x
+instance Sample NSample where fromSample (NSample x) = x; toSample x = NSample x
+instance Sample XSample where fromSample (XSample x) = x; toSample x = XSample x
+instance Sample YSample where fromSample (YSample x) = x; toSample x = YSample x
+instance Sample MSample where fromSample (MSample x) = x; toSample x = MSample x
+-- also for Double !!
+instance Sample Double where  fromSample (x) = x; toSample x = x
 
 ----------------------------------------------------------------------------
--- Typed Arithmetics
+-- Typed Arithmetics for Samples
 
--- class UserDefined a b where
---   unpack :: a
---   pack :: a
-
-
-class (Sample a, Num a, Fractional a) =>  TNum a b c | a b -> c where
---  type ResType a b
-  (.+.) :: a -> b -> c
-  (.-.) :: a -> b -> c
-  (.*.) :: a -> b -> c
-  (./.) :: a -> b -> c
+class (Sample a, Sample b, Sample c) =>  SampleSum a b c | a b -> c where
+  (.+) :: a -> b -> c
+  (.+) x y = toSample (fromSample x + fromSample y)   
   
+  (.-) :: a -> b -> c
+  (.-) x y = toSample (fromSample x - fromSample y)   
+
+instance  SampleSum PESample PESample PESample
+instance  SampleSum PSample PSample PSample
+
+
+class (Sample a, Sample b, Sample c) =>  SampleMult a b c | a b -> c where
+  (.*) :: a -> b -> c
+  (.*) x y = toSample (fromSample x * fromSample y)   
+  
+instance  SampleMult PESample NSample PESample
+instance  SampleMult PESample XSample PESample
+instance  SampleMult PESample YSample PESample
+instance  SampleMult PESample MSample PESample
+
+instance  SampleMult ESample NSample ESample
+instance  SampleMult ESample XSample ESample
+instance  SampleMult ESample YSample ESample
+instance  SampleMult ESample MSample ESample
+
+instance  SampleMult PESample DTSample ESample
+
+
+class (Sample a, Sample b, Sample c) =>  SampleDiv a b c | a b -> c where
+  (./) :: a -> b -> c
+  (./) x y = toSample (fromSample x / fromSample y)   
+  
+instance  SampleDiv ESample DTSample PESample
 
 ----------------------------------------------------------------------------
--- Each Type with Itself
+-- Data Containers
 
-instance  (Sample a,  Num a, Fractional a) => TNum a a a where
---  type ResType a a  = a
-  (.+.) x y = toSample $ (fromSample x) + (fromSample y)
-  (.-.) x y = toSample $ (fromSample x) + (fromSample y)
-
-----------------------------------------------------------------------------
--- Mixed Arithmetics -- Sample & Double
-
-instance (Sample a,  Num a, Fractional a) => TNum a Double a where
---  type ResType a Double = a
-  (.+.) x y = toSample $ (fromSample x) + y
-  (.-.) x y = toSample $ (fromSample x) + y
-  (.*.) x y = toSample $ (fromSample x) + y
-  (./.) x y = toSample $ (fromSample x) + y
-  
-instance (Sample a,  Num a, Fractional a) => TNum Double a a where
---  type ResType Double a = a
-  (.+.) y x = toSample $ (fromSample x) + y
-  (.-.) y x = toSample $ (fromSample x) + y
-  (.*.) y x = toSample $ (fromSample x) + y
-  (./.) y x = toSample $ (fromSample x) + y
-
+data Signal a = Signal (UVec a) -- Time signal
+data FSignal a = FSignal (UVec a) -- Flow Signal 
+-- data FDistrib a = (Show a, UV.Unbox a) => FDistrib (UVec a) -- Flow Distribution
+-- data MixFlow a = (Show a) => MixFlow (UVec a) -- Vector of Partial Flows
+data Flow a = Flow (UVec a) -- Single Flow Value
 
 ----------------------------------------------------------------------------
--- Mixed Arithmetics -- One Type Dominant
-  
-instance  (Sample a,  Num a, Fractional a, Sample b,  Num b, Fractional b) => TNum a b a where
---  type ResType a b  = a
-  (.*.) x y = toSample $ (fromSample x) + (fromSample y)
-  (./.) x y = toSample $ (fromSample x) + (fromSample y)
+-- Data Container Access
 
+class Data d a where fromData :: d -> UVec a; toData :: UVec a -> d
+
+instance (UV.Unbox a, Show a) => Data (Signal a) a where fromData (Signal x) = x; toData x = Signal x
+instance (UV.Unbox a, Show a) => Data (FSignal a) a where fromData (FSignal x) = x; toData x = FSignal x
+instance (UV.Unbox a, Show a) => Data (Flow a) a where fromData (Flow x) = x; toData x = Flow x
 
 ----------------------------------------------------------------------------
--- Mixed Arithmetics -- One Type Dominant
-  
--- instance  (Sample a,  Num a, Fractional a, Sample b,  Num b, Fractional b) => TNum a b c where
--- --  type ResType ESample XSample = ESample
---   (.*.) x y = toSample $ (fromSample x) + (fromSample y)
---   (./.) x y = toSample $ (fromSample x) + (fromSample y)
+-- Data Container Arithmetic for given Container Combinations
 
-instance  TNum ESample YSample ESample where
---  type ResType ESample XSample = ESample
-  (.*.) x y = toSample $ (fromSample x) + (fromSample y)
-  (./.) x y = toSample $ (fromSample x) + (fromSample y)
-
-
-
-
-
-class (Sample a, Sample b) => SampleMath a b where 
-  (!*) :: a -> b -> a
-  (!/) :: a -> b -> a
-  
--- Calculate over efficiencies / devider- and collector and mix-ratios
-instance SampleMath ESample NSample where  
-  (!*) e x = toSample ((fromSample e) * (fromSample x))
-  (!/) e x = toSample ((fromSample e) / (fromSample x))
-  
-instance SampleMath ESample XSample where  
-  (!*) e x = toSample ((fromSample e) * (fromSample x))
-  (!/) e x = toSample ((fromSample e) / (fromSample x))
+-- Zip two signals ord distributions
+class (SampleMult a b c) => SigProd a b c where
+ (*.) :: a -> b ->  c
  
-instance SampleMath ESample YSample where  
-  (!*) e x = toSample ((fromSample e) * (fromSample x))
-  (!/) e x = toSample ((fromSample e) / (fromSample x))
+instance (SampleMult a b c) => SigProd a b c where
+ (*.) (Signal v1)  (Signal v2) = (Signal (v1 * v2)) 
 
-instance SampleMath ESample MSample where  
-  (!*) e x = toSample ((fromSample e) * (fromSample x))
-  (!/) e x = toSample ((fromSample e) / (fromSample x))
 
--- Calculate over efficiencies / devider- and collector and mix-ratios
-instance SampleMath PESample NSample where  
-  (!*) e x = toSample ((fromSample e) * (fromSample x))
-  (!/) e x = toSample ((fromSample e) / (fromSample x))
-  
-instance SampleMath PESample XSample where  
-  (!*) e x = toSample ((fromSample e) * (fromSample x))
-  (!/) e x = toSample ((fromSample e) / (fromSample x))
- 
-instance SampleMath PESample YSample where  
-  (!*) e x = toSample ((fromSample e) * (fromSample x))
-  (!/) e x = toSample ((fromSample e) / (fromSample x))
+--------------------------------------------------------------------------------------------
+-- Arithmetics Super Class
 
-instance SampleMath PESample MSample where  
-  (!*) e x = toSample ((fromSample e) * (fromSample x))
-  (!/) e x = toSample ((fromSample e) / (fromSample x))
+class (Data x a, Data y b, Data z c) => Sum x a y b z c where
+ (~+) :: x -> y ->  z
+ (~-) :: x -> y ->  z
 
-----------------------------------------------------------------------------
--- Mixed Arithmetics -- With new Type c
+class (Data x a, Data y b, Data z c) => Prod x a y b z c where
+ (~*) :: x -> y ->  z
 
-class (Sample a, Sample b, Sample c) => SampleMathConv a b c where 
-  (§*) :: a -> b -> c
-  (§/) :: a -> b -> c
+instance (SigProd a b c) => Prod (Signal a) a (Signal b) b (Signal c) c where (~*) x y = x .* y 
 
--- Power * TimeDuration = Energy
-instance SampleMathConv PESample DTSample ESample where  
-  (§*) e x = toSample ((fromSample e) * (fromSample x))
-  
--- Power = Energy / Time Duration
-instance SampleMathConv ESample DTSample PESample where  
-  (§/) e x = toSample ((fromSample e) / (fromSample x))
- 
--- Time / Delta Time
-instance SampleMathConv TSample TSample DTSample where  
-  (§/) t1 t2 = toSample ((fromSample t1) - (fromSample t2))
+
+class (Data x a, Data y b, Data z c) => Div x a y b z c where
+ (~/) :: x -> y ->  z
 
 
 ----------------------------------------------------------------------------
