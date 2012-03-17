@@ -23,44 +23,52 @@ uvmap = UV.map
 uvzip :: (UV.Unbox a, UV.Unbox b, UV.Unbox c) => (a -> b -> c) -> UV.Vector a -> UV.Vector b -> UV.Vector c
 uvzip = UV.zipWith
 
+uvdiffMap :: (UV.Unbox a, UV.Unbox b) => (a -> a -> b) -> UV.Vector a -> UV.Vector b 
+uvdiffMap f v = uvzip f (UV.tail v) (UV.init v)
+
 -----------------------------------------------------------------------------------
 -- Flow Signal
   
 -- time
-newtype TSample = TSample Double
+newtype TSample = TSample Val
   deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
 
 -- time step data
-newtype DTSample = DTSample Double
+newtype DTSample = DTSample Val
   deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
 
 -- energy flow data or storage content data 
-newtype ESample = ESample Double
+newtype ESample = ESample Val
   deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
 
 -- average power of energy flow
-newtype PSample = PSample Double
+newtype PSample = PSample Val
   deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
 
 -- average power of energy flow
-newtype PESample = PESample Double
+newtype PESample = PESample Val
   deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
 
 -- average efficiency of energy flow
-newtype NSample = NSample Double
+newtype NSample = NSample Val
   deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
 
 -- energy flow mix data
-newtype MSample = MSample Double
+newtype MSample = MSample Val
   deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
 
 -- energy flow Split Share Data
-newtype XSample = XSample Double
+newtype XSample = XSample Val
   deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
 
--- energy flow collection Share Data
-newtype YSample = YSample Double
+-- energy flow Collection Share Data Data
+newtype YSample = YSample Val
   deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
+
+-- Logical State Signal with several Values
+newtype ZSample = ZSample Val
+  deriving (Eq, Ord, Fractional, Num, Enum, Show, Real, Floating, RealFloat, RealFrac, UV.Unbox, GV.Vector UV.Vector, MV.MVector UV.MVector)
+
 
 
 --------------------------------------------------------------------------------------------
@@ -79,8 +87,9 @@ instance Sample NSample where fromSample (NSample x) = x; toSample x = NSample x
 instance Sample XSample where fromSample (XSample x) = x; toSample x = XSample x
 instance Sample YSample where fromSample (YSample x) = x; toSample x = YSample x
 instance Sample MSample where fromSample (MSample x) = x; toSample x = MSample x
--- also for Double !!
-instance Sample Double where  fromSample (x) = x; toSample x = x
+instance Sample ZSample where fromSample (ZSample x) = x; toSample x = ZSample x                              
+-- also for Val !!
+instance Sample Val where  fromSample (x) = x; toSample x = x
 
 --------------------------------------------------------------------------------------------
 -- Sample Calculation Class
@@ -177,9 +186,9 @@ instance (SampleDiv a b c) => Div (Signal a) (Signal b) (Signal c) where (./) (S
 -- TypeSafe Indexing
 
 -- Index Types
-data SignalIdx = SignalIdx Int deriving (Show)
-data FSignalIdx  = FSignalIdx Int deriving (Show) 
-data DistribIdx  = DistribIdx Int deriving (Show) 
+newtype SignalIdx = SignalIdx Int deriving (Show, Eq, Num)
+newtype FSignalIdx  = FSignalIdx Int deriving (Show, Eq, Num) 
+newtype DistribIdx  = DistribIdx Int deriving (Show, Eq, Num) 
 
 -- Index Access Class
 class Index a where fromIdx :: a -> Int; toIdx :: Int -> a
@@ -218,6 +227,10 @@ instance ( UV.Unbox c) => IndexPair DistribIdx (Distrib c) c where
 class (Sample a, Sample b, Data (cont a) a, Data (cont b) b) => DataMap cont a b where          
   dmap :: (a -> b) -> cont a -> cont b 
   dmap f d = toData $ uvmap f (fromData d)  
+  
+-- careful reduces Signal length by one and should change container type // therefore disabled  
+--  diffMap :: (a -> a -> b) -> cont a -> cont b 
+--  diffMap f d = toData $ uvzip f (UV.tail (fromData d)) (UV.init (fromData d))
 
 instance (Sample a, Sample b) => DataMap Signal a b 
 instance (Sample a, Sample b) => DataMap FSignal a b 
@@ -240,6 +253,9 @@ instance (Sample a) => DataAll Signal a
 instance (Sample a) => DataAll FSignal a  
 instance (Sample a) => DataAll Distrib a
 
+class (Sample a, Data (cont a) a, Index b, Indexible a b) => DataFindIndices cont a b where
+  dfindIndices :: (a -> Bool) -> cont a -> [b] 
+  dfindIndices f d = map (toIdx) $ UV.toList (UV.findIndices f (fromData d)) 
 
 -----------------------------------------------------------------------------------
 -- Type Synonyms

@@ -57,8 +57,6 @@ type SectionLength = DTSample
 -- Sequence Vector to Store Section Data  
 data SequData a = SequData (GV.Vector a) deriving Show
 
--- Init == first Sample / End == Last Sample
-data StepType = NoStep | InitStep | LeavesZeroStep | BecomesZeroStep | ZeroCrossingStep | EndStep deriving (Show,Eq,Ord)
 
 
 -------------------------------------------------------------------------------------

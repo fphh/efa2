@@ -1,4 +1,4 @@
-{-# LANGUAGE MultiParamTypeClasses, FlexibleContexts, ScopedTypeVariables #-}
+{-# LANGUAGE MultiParamTypeClasses, FlexibleContexts, ScopedTypeVariables, GeneralizedNewtypeDeriving #-}
 
 module EFA2.Signal.SignalAnalysis where
 
@@ -10,6 +10,8 @@ import qualified Data.Bimap as BM
 import qualified Data.Foldable as F
 
 import qualified Data.Vector.Unboxed as UV
+import qualified Data.Vector as GV
+
 import Data.Either
 
 import Debug.Trace
@@ -17,7 +19,7 @@ import Debug.Trace
 -- import EFA2.Graph.GraphData
 
 import EFA2.Signal.SignalData
-import EFA2.Signal.Sequence
+-- import EFA2.Signal.Sequence
 
 -- import EFA2.Signal.SignalGraph
 
@@ -26,15 +28,14 @@ import EFA2.Utils.Utils
 
 data Sign = PSign | ZSign | NSign deriving (Show, Eq)
 
-
 -- Generische Funktion für Daten - Container
 absd :: Sample a => Val -> Val -> Signal a -> Signal a
 absd  w phi time = dmap f time where f x = abs x
 
 
 -- check for NaN's 
-sampleCheck :: (Sample b, Data a b) => a -> Bool     
-sampleCheck d = all (not . isNaN) d
+sampleCheck :: (DataAll cont a) => cont a -> Bool     
+sampleCheck d = dall (not . isNaN) d
 
 
 
@@ -60,24 +61,29 @@ calcZeroTime (TSample t1,PSample p1) (TSample t2,PSample p2) = if tzero < t2 && 
         dt = t2-t1 -- delta time -- t1 comes in time before t2
         tzero = t1+p1/m -- time of zero crossing 
                   
+
+-- Init == first Sample / End == Last Sample
+type StepType = Int
+
 -- detect Sign-Change per Signal / delivers indice of event and type of event
-getSignalSteps :: Time -> PTSig -> [(TimeSampleIdx,TSample,StepType)] 
-getSignalSteps time sig = zip3 (map SampleIdx idxList) (map g (zip idxList stepList)) stepList
-  where sig2 = GV.fromList (tail (UV.toList sig)) -- vector shifted by one
-        sig1 = GV.fromList (init (UV.toList sig)) -- shortened vector
-        crossSig = GV.zipWith f sig2 sig1
-        idxList = GV.toList (GV.findIndices (/=NoStep) crossSig) -- find all events index of pint before change is delivered        
-        stepList = (map (crossSig GV.!) idxList )
+getSignalSteps :: Time -> Power -> [(SignalIdx,TSample,StepType)] 
+getSignalSteps time psig@(Signal pvec) = zip3 stepIdxListTyped stepTimeList stepList
+  where stepVec = uvdiffMap f pvec -- length reduced by one !!!
         -- with f:
-        f s2 s1 | sign s1==ZSign && sign s2 /= ZSign = LeavesZeroStep -- signal leaves zero
-        f s2 s1 | sign s2==ZSign && sign s1 /= ZSign = BecomesZeroStep -- signal becomes zero
-        f s2 s1 | sign s2==PSign && sign s1 /= NSign = ZeroCrossingStep  -- signal is crossing zero
-        f s2 s1 | sign s1==PSign && sign s2 /= NSign = ZeroCrossingStep  -- signal is crossing zero
-        f s2 s1 | otherwise = NoStep  -- nostep
+        f s2 s1 | sign s1==ZSign && sign s2 /= ZSign = 1 -- LeavesZeroStep -- signal leaves zero
+        f s2 s1 | sign s2==ZSign && sign s1 /= ZSign = 2 -- BecomesZeroStep -- signal becomes zero
+        f s2 s1 | sign s2==PSign && sign s1 /= NSign = 3 -- ZeroCrossingStep  -- signal is crossing zero
+        f s2 s1 | sign s1==PSign && sign s2 /= NSign = 3 -- ZeroCrossingStep  -- signal is crossing zero
+        f s2 s1 | otherwise = 0 -- 0 NoStep  -- nostep
         -- with g:
-        g (stepIdx,InitStep) = time UV.! stepIdx
-        g (stepIdx,EndStep)  = time UV.! (stepIdx+1)
-        g (stepIdx,LeavesZeroStep) = time UV.! stepIdx
-        g (stepIdx,BecomesZeroStep) = time UV.! (stepIdx+1) 
-        g (stepIdx,ZeroCrossingStep) = calcZeroTime (time UV.! stepIdx, sig UV.! stepIdx)  (time UV.! (stepIdx+1), sig UV.! (stepIdx+1)) 
+        -- finds all events indices at point before step in time signal
+        stepIdxList = UV.toList $ UV.findIndices ( /= 0) stepVec 
+        stepList = (map (stepVec UV.!) stepIdxList)        
+                   
+        stepIdxListTyped = map (SignalIdx) stepIdxList -- create typed Index List to allow Signal Usage
+        stepTimeList = map g (zip stepIdxListTyped stepList)
+        g (stepIdx,1) = time ! stepIdx
+        g (stepIdx,2) = time ! (stepIdx+1) 
+        -- mixed Indexing doesn't work !!! (on a signal with PSample and TSample in the same Name-Space)
+        g (stepIdx,3) = calcZeroTime (time ! stepIdx, pvec UV.! (fromIdx stepIdx))  (time ! (stepIdx+1), pvec UV.! (fromIdx (stepIdx+1))) 
                  
