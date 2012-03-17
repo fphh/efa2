@@ -27,11 +27,18 @@ import EFA2.Utils.Utils
 data Sign = PSign | ZSign | NSign deriving (Show, Eq)
 
 
--- Generische Signal - Funktionen -- brauchen daher keine Typ-Sicherheit
+-- Generische Funktion für Daten - Container
+absd :: Sample a => Val -> Val -> Signal a -> Signal a
+absd  w phi time = dmap f time where f x = abs x
 
--- check for NaN's of Infs in original Data
-sampleCheck :: TimeSignal -> Bool     
-sampleCheck s = UV.all (not . isNaN) (getVect s)
+
+-- check for NaN's 
+sampleCheck :: (Sample b, Data a b) => a -> Bool     
+sampleCheck d = all (not . isNaN) d
+
+
+
+
 
 -- check for same vector length
 equalLengths :: (UV.Unbox a) => [UV.Vector a] -> Bool

@@ -28,25 +28,47 @@ import EFA2.Utils.Utils
 
 
 -----------------------------------------------------------------------------------
--- Time Signal Generation
+-- Time Powersignal Generation
 
 -- generate Timeline
 genTime :: Val -> Val -> Time
-genTime dt maxTime = Time ((UV.fromList [0 .. (maxTime/dt)]).*dt)
-
--- Time Signal Calculations 
-sine :: Val -> Val -> Time -> TimeSignal
-sine  w phi (Time vect) = PTSig (UV.map f vect)
+genTime dt maxTime = Signal (uvmap f (UV.fromList [0 .. (maxTime/dt)]))
   where
-    f t = sin (w*t+phi)
-
--- Generate Zero Power Signal
-nullPSig :: Time -> TimeSignal
-nullPSig  (Time t) = PTSig t*0
+    f timeIndex = TSample (timeIndex*dt)  
 
 
-etaFunct :: Double -> TimeSignal -> TimeSignal
-etaFunct eta sig = smap f sig
-  where f val | val > 0  = val*eta
+-- convert Timeline to Power Conversion
+time2Power :: Time -> Power
+time2Power time = dmap f time
+  where
+    f (TSample x) = (PSample x)
+
+  -- Generate zero power signal
+genNullPower :: Time -> Power
+genNullPower time = dmap f time
+  where
+    f (TSample x) = (PSample 0)
+
+  -- Generate one Power Signal
+genOnePower :: Time -> Power
+genOnePower time = dmap f time
+  where
+    f (TSample x) = (PSample 1)
+
+
+--- Generation specific functions
+
+sine :: Val -> Val -> Power -> Power
+sine  w phi time = dmap f time where f x = sin (w.*.x.+.phi)
+
+etaFunct :: Val -> Power -> Power
+etaFunct eta sig = dmap f sig
+  where f val | val > 0  = val.*.eta
         f val | val == 0 = 0   
-        f val | val < 0  = val/eta  
+        f val | val < 0  = val./.eta  
+
+
+
+
+
+

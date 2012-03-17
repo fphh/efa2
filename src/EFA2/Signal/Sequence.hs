@@ -15,6 +15,7 @@ import System.Random
 import EFA2.Utils.Utils
 import EFA2.Signal.SignalData
 import EFA2.Signal.SignalGeneration
+import EFA2.Signal.SignalAnalysis
 
 -----------------------------------------------------------------------------------
 -- Record -- Structure for Handling recorded data
@@ -23,18 +24,18 @@ import EFA2.Signal.SignalGeneration
 -- ident chosen as string to handle signal names, or just can be signal numer as string 
 data SignalIdent = SigIdent !String deriving (Show, Eq, Ord)
 
-type SigMap = (M.Map SignalIdent TimeSignal) 
+type SigMap = (M.Map SignalIdent Signal) 
   
 -- data structure to house the data record or parts of it
 data Record = Record Time SigMap deriving (Show,Eq) 
 
 -- generate Record from data components
-genRecord :: Time  -> [(SignalIdent, TimeSignal)] -> Record
+genRecord :: Time  -> [(SignalIdent, Signal)] -> Record
 genRecord time sigIDList = if dataCheck time (map snd sigIDList) ==True then rec else error ("Error in genRecord - unequal length of input data vectors")
   where rec = Record time (M.fromList sigIDList)
                                               
 -- check Record Data -- TODO -- include check on time length == sign length                                                               
-dataCheck :: Time ->   [TimeSignal] -> Bool
+dataCheck :: Time ->   [Signal] -> Bool
 dataCheck time sigs = all (UV.all sampleCheck) sigs && equalLengths sigs && (length sigs) > 0
     
  
@@ -46,7 +47,7 @@ type Sequ = GV.Vector Sec
             
 data Sec = Sec { secLen         ::  SectionLength,
                  secTimes       ::  (TSample,TSample), 
-                 secStepIndices  ::  (TimeSampleIdx,TimeSampleIdx),
+                 secStepIndices  ::  (SignalIdx,SignalIdx),
                  secStepTypes    ::  (StepType,StepType)} deriving (Show, Eq)
 
 
@@ -66,12 +67,12 @@ data StepType = NoStep | InitStep | LeavesZeroStep | BecomesZeroStep | ZeroCross
 genSequ :: Record -> Sequ
 genSequ (Record time sigMap) = GV.fromList (zipWith genSecInfo (init stepList2) (tail stepList2))  
   where stepList1 = sort (concat (map ((getSignalSteps time) . snd)  (M.toList sigMap))) -- get Steps from all Signals
-        stepList2 = [(0,UV.head time, InitStep)] ++ stepList1 ++ [(SampleIdx (UV.length time),UV.last time ,EndStep)] -- add steps for 1st and last sample in first and last section
+        stepList2 = [(0,UV.head time, InitStep)] ++ stepList1 ++ [(SignalIdx (UV.length time),UV.last time ,EndStep)] -- add steps for 1st and last sample in first and last section
 
 
                 
 -- bild Section data structure from info of two steps 
-genSecInfo :: (SampleIdx,TSample,StepType) -> (SampleIdx,TSample,StepType) -> Sec
+genSecInfo :: (SignalIdx,TSample,StepType) -> (SignalIdx,TSample,StepType) -> Sec
 genSecInfo (idx1,t1,step1) (idx2,t2,step2) =  Sec { secLen         = DTSample (fromSample (t2-t1)),
                                                     secTimes       = (t1,t2),              
                                                     secStepIndices  = (idx1,idx2),
@@ -87,7 +88,7 @@ genSecRec (Record time sigMap) sec  = Record (sliceTime time sec) (M.map (sliceS
 
 
 -- extract slice of one signal
-sliceSignal :: Sec -> PTSig -> PTSig
+sliceSignal :: Sec -> Power -> Power
 sliceSignal sec sig  = UV.fromList (sigHead step1) UV.++ sigTrunk UV.++ UV.fromList (sigTail step2)
         where
           sigTrunk = UV.slice (idx1+1) (idx2-(idx1+1)) sig -- get middle part which is always same 
@@ -95,7 +96,7 @@ sliceSignal sec sig  = UV.fromList (sigHead step1) UV.++ sigTrunk UV.++ UV.fromL
           step2 =  snd (secStepTypes sec)
           idx1 = fromIdx (fst(secStepIndices sec))
           idx2 =  fromIdx (snd (secStepIndices sec))
-          inc = SampleIdx 1
+          inc = SignalIdx 1
                     
           sigHead LeavesZeroStep =  [sig UV.! idx1]
           sigHead InitStep =  [sig UV.! idx1]
