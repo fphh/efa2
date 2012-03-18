@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeSynonymInstances, MultiParamTypeClasses, FlexibleInstances, RankNTypes, FlexibleContexts #-}
+{-# LANGUAGE TypeSynonymInstances, MultiParamTypeClasses, FlexibleInstances, RankNTypes, FlexibleContexts, FunctionalDependencies, UndecidableInstances #-}
 
 -----------------------------------------------------------------------------
 -- |
@@ -23,7 +23,7 @@ import Debug.Trace
 import Data.Maybe (fromJust)
 
 import EFA2.Signal.SignalData
-
+import EFA2.Signal.Sequence
 
 -----------------------------------------------------------------------------------
 -- Maps Idexes and Index Method to store topology related data
@@ -42,21 +42,9 @@ newtype EdgeData a = EdgeData (M.Map EdgeIndex a)  deriving (Show,Eq)
 data EdgeIndex = EdgeIndex !Int !Int deriving  (Show)
 
 -- Generic Map on all Power Positions
-newtype PPosData a = PPosData (M.Map PPosIndex a)  deriving (Show,Eq)
-data PPosIndex = PPosIndex !Int !Int deriving (Show, Ord, Eq)
+newtype MPointData a = MPointData (M.Map MPointIndex a)  deriving (Show,Eq)
+data MPointIndex = MPointIndex !Int !Int deriving (Show, Ord, Eq)
 
--- Generic Map on all End-Nodes
-newtype EndNodeData a = EndNodeData (M.Map StoIndex a)  deriving (Show,Eq)
-data EndNodeIndex =  EndNodeIndex !Int deriving  (Show, Ord, Eq)
-
--- Generic Map on all Storages
-newtype StoData a = StoData (M.Map StoIndex a)  deriving (Show,Eq)
-data StoIndex = StoIndex !Int deriving  (Show, Ord, Eq)
-
--- Generic Map on all Crossing Nodes
-newtype CrossNodeData a = CrossNodeData (M.Map StoIndex a)  deriving (Show,Eq)
-data CrossNodeIndex =  CrossNodeIndex !Int deriving  (Show, Ord, Eq)
-   
 -----------------------------------------------------------------------------------
 -- Classes to allow Indexing of Edges and Power Positions
 
@@ -69,15 +57,31 @@ instance Ord EdgeIndex where
            | as == bs = EQ
            | otherwise = compare (a, b) (x, y)
 
-class IndexC a where
-      mkIdx :: Int -> Int -> a
+class IndexC a where mkIdx :: Int -> Int -> a
+instance IndexC EdgeIndex where mkIdx = EdgeIndex
+instance IndexC MPointIndex where mkIdx = MPointIndex
 
-instance IndexC EdgeIndex where
-         mkIdx = EdgeIndex
+-- type safe indexing on Graph data
+class (GIndexible a b) where 
+instance GIndexible (NodeData a) b
+instance GIndexible (EdgeData a) b
+instance GIndexible (MPointData a) b
 
-instance IndexC PPosIndex where
-         mkIdx = PPosIndex
+-- Class to combine Index and Container & perform safe lookup
+class GIndexPair a b c | a -> b, b-> a, a b -> c where
+  (~!) :: b -> a -> c 
 
+instance GIndexPair NodeIndex (NodeData c) c where 
+  (~!) (NodeData map) idx =  maybe err id (M.lookup idx map)
+    where err = error ("Error in NodeData Lookup - Item not found :" ++ show idx)
+
+instance GIndexPair EdgeIndex (EdgeData c) c where 
+  (~!) (EdgeData map) idx =  maybe err id (M.lookup idx map)
+    where err = error ("Error in EdgeData Lookup - Item not found :" ++ show idx)
+
+instance GIndexPair MPointIndex (MPointData c) c where 
+  (~!) (MPointData map) idx =  maybe err id (M.lookup idx map)
+    where err = error ("Error in MPointData Lookup - Item not found :" ++ show idx)
 
 -----------------------------------------------------------------------------------
 -- Topology Dataset -- given Topology with Names & Constraints
@@ -100,20 +104,38 @@ data PropDir = PropNeg  | PropZero | PropPos deriving (Show, Ord, Eq)
 -----------------------------------------------------------------------------------
 -- Signal Map -- assign Power signals (eventually later with calculation instructions)
 
-data SignalMap = SignalMap   {sigMap   :: PPosData (SigIdx, Sign)}
-data Sign = Leave | Flip
+data Mapping = Mapping  (MPointData (SignalIdent, FlipSign))
+data FlipSign = DontFlip | Flip
 
 -----------------------------------------------------------------------------------
 -- Flow State - Numeric Data flow data in flow direction of actual state -- TODO -- generate Bi-Flow Structure as well 
 
-data UniFlowSet = UniFlowSet   { dtimeEnv :: UV.Vector DTSample,
-                                 flowEnv :: PPosData (UV.Vector ESample),
-                                 etaEnv  :: EdgeData  (UV.Vector EEta),
-                                 stoEnv  :: EdgeData  (UV.Vector XSample)}
+data FlowData cont = FlowSet {dtime :: cont TSample, 
+                              flow :: MPointData (cont ESample), 
+                              eta  :: EdgeData (cont NSample), 
+                              sto  :: NodeData (cont ESample)}
+                                  
+
+-- type FlowSigSet = FlowSigSet   { dtSigEnv :: DTime, -- delta time data
+--                                  flowSigEnv :: MPointData (EFSignal),  -- energy flow data
+--                                  etaSigEnv  :: EdgeData  (NFSignal), -- efficiency data
+--                                  stoSigEnv  :: NodeData  (EFSignal)} -- storage content
                                                     
+-- type FlowValSet = FlowValSet   { dtValEnv :: DTime, -- delta time data
+--                                  flowValEnv :: MPointData (EFVal),  -- energy flow data
+--                                  etaValEnv  :: EdgeData  (NFVal), -- efficiency data
+--                                  stoValEnv  :: NodeData  (EFVal)} -- storage content
+
+-- type FlowDistSet = FlowDistSet   { dtDistEnv :: DTime, -- delta time data
+--                                    flowDistEnv :: MPointData (EFDistrib),  -- energy flow data
+--                                    etaDistEnv  :: EdgeData  (NFDistrib), -- efficiency data
+--                                    stoDistEnv  :: NodeData  (EFDistrib)} -- storage content
+
 -- -----------------------------------------------------------------------------------
--- -- Numeric Flow Values
+-- -- Numeric Delta Flow Values
 -- data DeltaSet =  DeltaSet     { dflowEnv :: PPosData ESample,
 --                                 detaEnv :: EtaData EEta}
 --                                 --flowChange :: DFlowEnv}       -- numeric flowChange vals to add here                                              
 
+instance Display EdgeIndex where disp (EdgeIndex idx1 idx2) = "E" ++ show idx1 ++"-" ++ show idx2
+instance Display NodeIndex where disp (NodeIndex idx) = "N" ++ show idx

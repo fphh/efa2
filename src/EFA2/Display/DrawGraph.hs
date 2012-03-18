@@ -16,17 +16,22 @@ import EFA2.Signal.SignalData
 import EFA2.Graph.Graph
 import EFA2.Term.Term
 import EFA2.Term.EquationOrder
+import EFA2.Graph.GraphData
 
 
 nodeColour = FillColor (RGB 230 230 240)
 clusFillColour = FillColor (RGB 250 250 200)
 
+-- Deaw Topology Graph on X_Canvas
 drawTopologyX :: (Show b, Show a) => Gr a b -> IO ()
-drawTopologyX g = runGraphvizCanvas Dot (mkDotGraph g (dispNode,dispEdge)) Xlib 
+drawTopologyX g = runGraphvizCanvas Dot (mkDotGraph g (dispNode, dispEdge)) Xlib 
 
-drawFlowX :: (Show b, Show a) => (Gr a b,SampleEnv PSample) -> IO ()
-drawFlowX (g,sigs) = runGraphvizCanvas Dot (mkDotGraph g (dispNode,dispEdgeVals sigs)) Xlib 
+-- Draw Topology with on X_Canvas Flow Values
+drawFlowX :: (Show b, Show a) => (Gr a b, FlowData Flow) -> IO ()
+drawFlowX (g,flowData) = runGraphvizCanvas Dot (mkDotGraph g (dispNode, dispEdgeVals (eta flowData))) Xlib 
 
+-- function to Generate Dot Graph
+-- mkDotGraph :: Gr a b -> 
 mkDotGraph g (dispFunctNode, dispFunctEdge) = DotGraph { strictGraph = False
                                                        , directedGraph = True
                                                        , graphID = Just (Int 1) 
@@ -34,22 +39,27 @@ mkDotGraph g (dispFunctNode, dispFunctEdge) = DotGraph { strictGraph = False
                                                                                     , subGraphs=[]
                                                                                     , nodeStmts = map (mkDotNode dispFunctNode) (labNodes g)
                                                                                     , edgeStmts = map (mkDotEdge dispFunctEdge) (labEdges g)}}
+ 
 
+-- Node display function without values 
+dispNode :: NodeIndex -> String
+dispNode nodeIdx = disp nodeIdx
 
+-- Edge display function without Values
+dispEdge :: EdgeIndex -> String
+dispEdge edgeIdx = disp edgeIdx
 
-dispNode id1 typ = "N"++show id1
+-- Edge display function with Values
+dispEdgeVals :: (Display a) => EdgeData a -> EdgeIndex -> String 
+dispEdgeVals vals edgeIdx = disp edgeIdx ++ ": " ++ disp (vals ~! edgeIdx)
 
-dispEdge id1 id2 typ = "T_"++ show id1 ++ "_" ++ show id2
-
-dispEdgeVals vals id1 id2 typ  = "T_"++ show id1 ++ "_" ++ show id2 ++ ": " ++ show (vals M.! (mkIdx id1 id2)) ++ show (vals M.! (mkIdx id2 id1))
-
--- mkDotNode:: Show a => LNode a  -> DotNode a  
+mkDotNode:: Show a => LNode a  -> DotNode a  
 mkDotNode  dispFunct  (x,label)= DotNode x [label,nodeColour,Style [SItem Filled []]] 
-  where label =  Label $ StrLabel $ T.pack $ dispFunct x label
+  where displabel =  Label $ StrLabel $ T.pack $ dispFunct (NodeIndex x) 
 
--- mkDotEdge :: (Show a) => LEdge a -> DotEdge a
+mkDotEdge :: (Show a) => LEdge a -> DotEdge a
 mkDotEdge dispFunct (x, y,label) = DotEdge x y [label]
-  where label = Label $ StrLabel $ T.pack $ dispFunct x y label
+  where displabel = Label $ StrLabel $ T.pack $ dispFunct (mkIdx x y) 
         
         
 

@@ -7,6 +7,8 @@ import qualified Data.Vector.Generic as GV
 import qualified Data.Vector.Generic.Mutable as MV
 import qualified Data.Foldable as F
 
+import Text.Printf
+
 -----------------------------------------------------------------------------------
 -- Base Data Type
 
@@ -142,28 +144,28 @@ instance  SampleDiv Val PSample PSample
 --------------------------------------------------------------------------------------------
 -- Data Containers 
 
-data Signal a = Signal (UVec a) deriving (Show)
-data FSignal a = FSignal (UVec a) deriving (Show)
-data Distrib a = Distrib (UVec a) deriving (Show)
-data Flow a = Flow a deriving (Show)
+data Signal a = Signal (UVec a) deriving (Show, Eq)
+data FSignal a = FSignal (UVec a) deriving (Show, Eq)
+data Distrib a = Distrib (UVec a) deriving (Show, Eq)
+data Flow a = Flow a deriving (Show, Eq)
 
 
 --------------------------------------------------------------------------------------------
 -- Data Container Access Class
 
-class Data a b where
+class (Sample b) => Data a b where
   fromData :: a -> UVec b
   toData :: UVec b -> a
 
-instance Data (Signal b) b where
+instance  (Sample b) => Data (Signal b) b where
   fromData (Signal x) = x
   toData x = Signal x
 
-instance Data (FSignal b) b where
+instance  (Sample b) => Data (FSignal b) b where
   fromData (FSignal x) = x
   toData x = FSignal x
   
-instance Data (Distrib b) b where  
+instance  (Sample b) => Data (Distrib b) b where  
   fromData (Distrib x) = x
   toData x = Distrib x
   
@@ -186,9 +188,9 @@ instance (SampleDiv a b c) => Div (Signal a) (Signal b) (Signal c) where (./) (S
 -- TypeSafe Indexing
 
 -- Index Types
-newtype SignalIdx = SignalIdx Int deriving (Show, Eq, Num)
-newtype FSignalIdx  = FSignalIdx Int deriving (Show, Eq, Num) 
-newtype DistribIdx  = DistribIdx Int deriving (Show, Eq, Num) 
+newtype SignalIdx = SignalIdx Int deriving (Show, Eq, Ord, Num)
+newtype FSignalIdx  = FSignalIdx Int deriving (Show, Eq, Ord, Num) 
+newtype DistribIdx  = DistribIdx Int deriving (Show, Eq, Ord, Num) 
 
 -- Index Access Class
 class Index a where fromIdx :: a -> Int; toIdx :: Int -> a
@@ -253,15 +255,97 @@ instance (Sample a) => DataAll Signal a
 instance (Sample a) => DataAll FSignal a  
 instance (Sample a) => DataAll Distrib a
 
-class (Sample a, Data (cont a) a, Index b, Indexible a b) => DataFindIndices cont a b where
-  dfindIndices :: (a -> Bool) -> cont a -> [b] 
-  dfindIndices f d = map (toIdx) $ UV.toList (UV.findIndices f (fromData d)) 
+-- class (Sample a, Data (cont a) a, Index b, Indexible a b) => DataFindIndices cont a b where
+--   dfindIndices :: (a -> Bool) -> cont a -> [b] 
+--   dfindIndices f d = map (toIdx) $ UV.toList (UV.findIndices f (fromData d)) 
+  
+class  (Sample a, Data (cont a) a) => DataLength cont a  where
+  dlength :: cont a -> Int 
+--   dlength d = UV.length (fromData d) -- funktioniert nicht
+  
+instance (Sample a) => DataLength Signal a  where dlength (Signal v) = UV.length v 
+instance (Sample a) => DataLength FSignal a where dlength (FSignal v) = UV.length v 
+instance (Sample a) => DataLength Distrib a where dlength (Distrib v) = UV.length v
+  
+class (Sample a, Data (cont a) a) => DataHead cont a where
+  dhead :: cont a -> a
+  dhead d = UV.head (fromData d)
+
+  dlast :: cont a -> a
+  dlast d = UV.last (fromData d)
+
+instance (Sample a) => DataHead Signal a  
+instance (Sample a) => DataHead FSignal a 
+instance (Sample a) => DataHead Distrib a 
+
+class (Sample a, Data (cont a) a) => DataTail cont a where
+  dinit :: cont a -> cont a
+--  dinit d = toData (UV.init (fromData d))
+
+  dtail :: cont a -> cont a
+--  dtail d = toData (UV.tail (fromData d))
+
+instance (Sample a) => DataTail Signal a where dinit (Signal v) = Signal $ UV.init v;  dtail (Signal v) = Signal $ UV.tail v  
+instance (Sample a) => DataTail FSignal a where dinit (FSignal v) = FSignal $ UV.init v; dtail (FSignal v) = FSignal $ UV.tail v 
+instance (Sample a) => DataTail Distrib a where dinit (Distrib v) = Distrib $ UV.init v; dtail (Distrib v) = Distrib $ UV.tail v 
+
+class  DataSlice cont a b where
+  dslice :: cont a -> (b,b) -> cont a
+  
+instance (Sample a) => DataSlice Signal a SignalIdx 
+     where dslice (Signal v) (SignalIdx idx1, SignalIdx idx2) = Signal $ UV.slice (idx1+1) (idx2-(idx1+1)) v
+           
+instance (Sample a) => DataSlice FSignal a FSignalIdx 
+     where dslice (FSignal v) (FSignalIdx idx1, FSignalIdx idx2) = FSignal $ UV.slice (idx1+1) (idx2-(idx1+1)) v
+           
+instance (Sample a) => DataSlice Distrib a DistribIdx 
+     where dslice (Distrib v) (DistribIdx idx1, DistribIdx idx2) = Distrib  $ UV.slice (idx1+1) (idx2-(idx1+1)) v
+
+class DataCat cont a where
+  (.++) :: cont a -> cont a -> cont a
+  
+instance (Sample a) => DataCat Signal a where (.++) (Signal v1) (Signal v2) = Signal (v1 UV.++ v2) 
+instance (Sample a) => DataCat FSignal a where (.++) (FSignal v1) (FSignal v2) = FSignal (v1 UV.++ v2) 
+instance (Sample a) => DataCat Distrib a where (.++) (Distrib v1) (Distrib v2) = Distrib (v1 UV.++ v2) 
+
+class (Data (cont a) a) => DataFromList cont a where
+  dfromList :: [a] -> cont a
+  dfromList l = toData (UV.fromList l)
+  dtoList :: cont a -> [a]
+  dtoList l = UV.toList (fromData l)
+  
+instance (Sample a) => DataFromList Signal a 
+instance (Sample a) => DataFromList FSignal a 
+instance (Sample a) => DataFromList Distrib a 
 
 -----------------------------------------------------------------------------------
--- Type Synonyms
+-- Type Synonyms for Convenience
 
 type Time = Signal TSample
 type DTime = FSignal DTSample
 
 type Power = Signal PSample
 
+type EFSignal = FSignal ESample
+type NFSignal = FSignal NSample
+type XFSignal = FSignal XSample
+type YFSignal = FSignal YSample
+type MFSignal = FSignal MSample
+
+
+-----------------------------------------------------------------------------------
+-- Display Functions -- For Graphical Output
+
+class Display a where  disp :: a -> String
+instance Display PSample where disp s = (printf "%6.7f" (fromSample s/1000)) ++ " kWh"  
+instance Display PESample where disp s = (printf "%6.7f" (fromSample s/1000)) ++ " kWh"  
+instance Display TSample where disp s = (printf "%6.7f" (fromSample s)) ++ " s"  
+instance Display DTSample where disp s = (printf "%6.7f" (fromSample s))  ++ " s"  
+
+instance Display ESample where disp s = (printf "%6.7f" (fromSample s/1000/3600)) ++ " kWh"  
+
+instance Display NSample where disp s = (printf "%6.7f" (fromSample s)) ++ "-- "  
+instance Display XSample where disp s = (printf "%6.7f" (fromSample s)) ++ "-- "  
+instance Display YSample where disp s = (printf "%6.7f" (fromSample s)) ++ "-- "  
+instance Display MSample where disp s = (printf "%6.7f" (fromSample s)) ++ "-- "  
+  

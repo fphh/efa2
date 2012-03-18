@@ -55,6 +55,12 @@ genOnePower time = dmap f time
   where
     f (TSample x) = (PSample 1)
 
+list2Power :: [Val] -> Power 
+list2Power list = dfromList (map toSample list) 
+
+list2Time :: [Val] -> Time 
+list2Time list = dfromList (map toSample list) 
+
 
 --- Generation specific functions
 

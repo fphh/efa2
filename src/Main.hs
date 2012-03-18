@@ -30,7 +30,7 @@ main = do
   let input = S.fromList [Energy 4 3, Energy 0 1]
       (g, sigs) = linear
       sectRecord = recordToSectionRecord sigs
-      
+       
   writeTopology g
   drawTopologyX (g,sigs)
   drawFlowX (g,sigs)
