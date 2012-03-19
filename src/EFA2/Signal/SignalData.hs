@@ -172,6 +172,11 @@ instance  (Sample b) => Data (Distrib b) b where
 --------------------------------------------------------------------------------------------
 -- Generic Product Class with Instances
 
+-- class Negate x where  dneg :: x -> x 
+-- instance (Sample a, SampleSum Val a a) => Negate (Signal a) where 
+--   dneg s = dmap (fromSample 0 .-.) s 
+
+
 class Sum x y z  | x y -> z where  (.+) :: x -> y ->  z; (.-) :: x -> y ->  z 
 instance (SampleSum a b c) => Sum (Signal a) (Signal b) (Signal c) where 
   (.+) (Signal x) (Signal y) = Signal (uvzip (.+.) x y); (.-) (Signal x) (Signal y) = Signal (uvzip (.-.) x y)
