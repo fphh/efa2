@@ -27,16 +27,20 @@ import EFA2.Example.Linear
 
 main :: IO ()
 main = do
-  let input = S.fromList [Energy 4 3, Energy 0 1]
-      (g, sigs) = linear
-      sectRecord = recordToSectionRecord sigs
+--  let input = S.fromList [Energy 4 3, Energy 0 1]
+    let  (g, rec, mapping) = linear
+--    sequ = genSequ rec     
+--    sequRec = genSequRec sequ rec
        
-  writeTopology g
-  drawTopologyX (g,sigs)
-  drawFlowX (g,sigs)
-  writeDependencyGraph g
-  print sigs
-  print (makeEtaEnv g sigs)
-  print sectRecord
+--  writeTopology g
+    drawTopologyX (g)
+    
+--    sectflowVals = calcFlowVals (g, sequRec) 
+    
+--    drawFlowX (g,rec)
+--  writeDependencyGraph g
+--  print sigs
+--  print (makeEtaEnv g sigs)
+--  print sectRecord
 
-  --putStrLn (termsStr $ makeEquations dreibein input (Energy 6 5))
+

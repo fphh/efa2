@@ -349,3 +349,16 @@ instance Display XSample where disp s = (printf "%6.7f" (fromSample s)) ++ "-- "
 instance Display YSample where disp s = (printf "%6.7f" (fromSample s)) ++ "-- "  
 instance Display MSample where disp s = (printf "%6.7f" (fromSample s)) ++ "-- "  
   
+
+
+instance Display (Flow PSample) where disp (Flow s) = (printf "%6.7f" (fromSample s/1000)) ++ " kWh"  
+instance Display (Flow PESample) where disp (Flow s) = (printf "%6.7f" (fromSample s/1000)) ++ " kWh"  
+instance Display (Flow TSample) where disp (Flow s) = (printf "%6.7f" (fromSample s)) ++ " s"  
+instance Display (Flow DTSample) where disp (Flow s) = (printf "%6.7f" (fromSample s))  ++ " s"  
+
+instance Display (Flow ESample) where disp (Flow s) = (printf "%6.7f" (fromSample s/1000/3600)) ++ " kWh"  
+
+instance Display (Flow NSample) where disp (Flow s) = (printf "%6.7f" (fromSample s)) ++ "-- "  
+instance Display (Flow XSample) where disp (Flow s) = (printf "%6.7f" (fromSample s)) ++ "-- "  
+instance Display (Flow YSample) where disp (Flow s) = (printf "%6.7f" (fromSample s)) ++ "-- "  
+instance Display (Flow MSample) where disp (Flow s) = (printf "%6.7f" (fromSample s)) ++ "-- "  

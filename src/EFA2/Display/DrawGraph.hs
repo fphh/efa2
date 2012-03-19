@@ -23,11 +23,11 @@ nodeColour = FillColor (RGB 230 230 240)
 clusFillColour = FillColor (RGB 250 250 200)
 
 -- Deaw Topology Graph on X_Canvas
-drawTopologyX :: (Show b, Show a) => Gr a b -> IO ()
+drawTopologyX :: Gr a b -> IO ()
 drawTopologyX g = runGraphvizCanvas Dot (mkDotGraph g (dispNode, dispEdge)) Xlib 
 
 -- Draw Topology with on X_Canvas Flow Values
-drawFlowX :: (Show b, Show a) => (Gr a b, FlowData Flow) -> IO ()
+drawFlowX :: (Gr String String, FlowData Flow) -> IO ()
 drawFlowX (g,flowData) = runGraphvizCanvas Dot (mkDotGraph g (dispNode, dispEdgeVals (eta flowData))) Xlib 
 
 -- function to Generate Dot Graph
@@ -37,8 +37,8 @@ mkDotGraph g (dispFunctNode, dispFunctEdge) = DotGraph { strictGraph = False
                                                        , graphID = Just (Int 1) 
                                                        , graphStatements = DotStmts { attrStmts = [] 
                                                                                     , subGraphs=[]
-                                                                                    , nodeStmts = map (mkDotNode dispFunctNode) (labNodes g)
-                                                                                    , edgeStmts = map (mkDotEdge dispFunctEdge) (labEdges g)}}
+                                                                                    , nodeStmts = map (mkDotNode dispFunctNode) (nodes g)
+                                                                                    , edgeStmts = map (mkDotEdge dispFunctEdge) (edges g)}}
  
 
 -- Node display function without values 
@@ -53,12 +53,12 @@ dispEdge edgeIdx = disp edgeIdx
 dispEdgeVals :: (Display a) => EdgeData a -> EdgeIndex -> String 
 dispEdgeVals vals edgeIdx = disp edgeIdx ++ ": " ++ disp (vals ~! edgeIdx)
 
-mkDotNode:: Show a => LNode a  -> DotNode a  
-mkDotNode  dispFunct  (x,label)= DotNode x [label,nodeColour,Style [SItem Filled []]] 
+mkDotNode:: (NodeIndex -> String) -> Node  -> DotNode Int
+mkDotNode  dispFunct  x = DotNode x [displabel,nodeColour,Style [SItem Filled []]] 
   where displabel =  Label $ StrLabel $ T.pack $ dispFunct (NodeIndex x) 
 
-mkDotEdge :: (Show a) => LEdge a -> DotEdge a
-mkDotEdge dispFunct (x, y,label) = DotEdge x y [label]
+mkDotEdge :: (EdgeIndex -> String) -> Edge -> DotEdge Int
+mkDotEdge dispFunct (x, y) = DotEdge x y [displabel]
   where displabel = Label $ StrLabel $ T.pack $ dispFunct (mkIdx x y) 
         
         

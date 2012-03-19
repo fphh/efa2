@@ -45,6 +45,10 @@ data EdgeIndex = EdgeIndex !Int !Int deriving  (Show)
 newtype MPointData a = MPointData (M.Map MPointIndex a)  deriving (Show,Eq)
 data MPointIndex = MPointIndex !Int !Int deriving (Show, Ord, Eq)
 
+mPointIndexFlip :: MPointIndex -> MPointIndex
+mPointIndexFlip (MPointIndex idx1 idx2) = MPointIndex idx2 idx1
+
+
 -----------------------------------------------------------------------------------
 -- Classes to allow Indexing of Edges and Power Positions
 
@@ -110,26 +114,14 @@ data FlipSign = DontFlip | Flip
 -----------------------------------------------------------------------------------
 -- Flow State - Numeric Data flow data in flow direction of actual state -- TODO -- generate Bi-Flow Structure as well 
 
-data FlowData cont = FlowSet {dtime :: cont TSample, 
+data SigData = SigData  {sdTime :: Time,
+                         sdSigs :: MPointData (Power)}
+
+data FlowData cont = FlowData {dtime :: cont DTSample, 
                               flow :: MPointData (cont ESample), 
                               eta  :: EdgeData (cont NSample), 
                               sto  :: NodeData (cont ESample)}
                                   
-
--- type FlowSigSet = FlowSigSet   { dtSigEnv :: DTime, -- delta time data
---                                  flowSigEnv :: MPointData (EFSignal),  -- energy flow data
---                                  etaSigEnv  :: EdgeData  (NFSignal), -- efficiency data
---                                  stoSigEnv  :: NodeData  (EFSignal)} -- storage content
-                                                    
--- type FlowValSet = FlowValSet   { dtValEnv :: DTime, -- delta time data
---                                  flowValEnv :: MPointData (EFVal),  -- energy flow data
---                                  etaValEnv  :: EdgeData  (NFVal), -- efficiency data
---                                  stoValEnv  :: NodeData  (EFVal)} -- storage content
-
--- type FlowDistSet = FlowDistSet   { dtDistEnv :: DTime, -- delta time data
---                                    flowDistEnv :: MPointData (EFDistrib),  -- energy flow data
---                                    etaDistEnv  :: EdgeData  (NFDistrib), -- efficiency data
---                                    stoDistEnv  :: NodeData  (EFDistrib)} -- storage content
 
 -- -----------------------------------------------------------------------------------
 -- -- Numeric Delta Flow Values
