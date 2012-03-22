@@ -26,7 +26,7 @@ import EFA2.Signal.SignalData
 import EFA2.Utils.Utils
 
 
-
+{-
 -----------------------------------------------------------------------------------
 -- Time Powersignal Generation
 
@@ -78,3 +78,4 @@ etaFunct eta sig = dmap f sig
 
 
 
+-}

@@ -11,17 +11,16 @@ import EFA2.Graph.Graph
 data Term = Eta Int Int
           | Energy Int Int
           | X Int Int
-          | Equation Term Term
+          | Term := Term
           | F Term
           | B Term
+          | Given Term
           | Minus Term
           | Recip Term
           | Add Term Term
           | Mult Term Term deriving (Show, Eq, Ord)
 
-infixl 1 .=
-(.=) :: Term -> Term -> Term
-(.=) = Equation
+infixl 1 :=
 
 mkEta :: Int -> Int -> Term
 mkEta = Eta
@@ -44,6 +43,7 @@ toString (Add x y) = "(" ++ toString x ++ " + " ++ toString y ++ ")"
 toString (Mult x y) = toString x ++ " * " ++ toString y
 toString (F x) = "f(" ++ toString x ++ ")"
 toString (B x) = "b(" ++ toString x ++ ")"
+toString (Given x) = "given(" ++ toString x ++ ")"
 toString (Recip x) = "1/(" ++ toString x ++ ")"
 toString (Minus x) = "-(" ++ toString x ++ ")"
 toString (Equation x y) = toString x ++ " = " ++ toString y
@@ -54,7 +54,7 @@ termsStr ts = L.intercalate "\n" $ map toString ts
 mkEdgeEq :: Gr a b -> [Term]
 mkEdgeEq g = map f ns
   where ns = labEdges g
-        f (x, y, _) = (mkEnergy y x) .= F (mkEnergy x y)
+        f (x, y, _) = (mkEnergy y x) := F (mkEnergy x y)
 
 mkNodeEq :: Gr NLabel ELabel -> [Term]
 mkNodeEq g = concatMap mkEq eqs
@@ -70,7 +70,7 @@ mkEq (i, os, is) = map f os
   where sos = sumEdges os
         sis = sumEdges (map reverseEdge is)
         reverseEdge (x, y, l) = (y, x, l)
-        f (x, y, _) = (mkEnergy x y) .= Mult (X i y) sis
+        f (x, y, _) = (mkEnergy x y) := Mult (X i y) sis
 
 
 mkVarSet :: Term -> S.Set Term

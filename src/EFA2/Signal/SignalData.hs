@@ -1,34 +1,36 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, MultiParamTypeClasses, TypeSynonymInstances, FunctionalDependencies, FlexibleInstances, UndecidableInstances, FlexibleContexts, StandaloneDeriving, ExistentialQuantification, KindSignatures, ScopedTypeVariables #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, MultiParamTypeClasses, TypeSynonymInstances, FunctionalDependencies, FlexibleInstances, UndecidableInstances, FlexibleContexts, StandaloneDeriving, ExistentialQuantification, KindSignatures, ScopedTypeVariables, TemplateHaskell #-}
 
 
-module Main where
+module EFA2.Signal.SignalData where
 
 
 import qualified Data.Vector.Unboxed as UV
 
+import EFA2.Signal.TH
 
-type Val = Double
+-- type Val = Double
 type Vec = UV.Vector
 type List = []
 newtype Single a = Single { unSingle :: a } deriving (Show, Eq, Ord, Num, Fractional)
 
-newtype ASample cont = ASample { unASample :: cont Val }
-deriving instance Show (cont Val) => Show (ASample cont)
-deriving instance Eq (cont Val) => Eq (ASample cont)
-deriving instance Num (cont Val) => Num (ASample cont)
+$(mkNewtypes samples)
+$(mkInstances sampleNames)
 
-newtype BSample cont = BSample { unBSample :: cont Val }
-deriving instance Show (cont Val) => Show (BSample cont)
-deriving instance Eq (cont Val) => Eq (BSample cont)
-deriving instance Num (cont Val) => Num (BSample cont)
+deriving instance Show (cont Val) => Show (PSample cont)
+deriving instance Eq (cont Val) => Eq (PSample cont)
+deriving instance Num (cont Val) => Num (PSample cont)
 
-newtype Signal (cont :: * -> *) dim = Signal (dim cont) deriving (Show, Eq, Num)
-newtype FSignal (cont :: * -> *) dim = FSignal (dim cont) deriving (Show, Eq, Num)
-newtype Distrib (cont :: * -> *) dim = Distrib (dim cont) deriving (Show, Eq, Num)
+deriving instance Show (cont Val) => Show (NSample cont)
+deriving instance Eq (cont Val) => Eq (NSample cont)
+deriving instance Num (cont Val) => Num (NSample cont)
 
-newtype Flow' (cont :: * -> *) dim = Flow' (dim cont) deriving (Show, Eq, Num)
-type Flow = Flow' Single
+--newtype ASample cont = ASample { unASample :: cont Val }
+--newtype BSample cont = BSample { unBSample :: cont Val }
 
+--deriving instance Show (cont Val) => Show (BSample cont)
+--deriving instance Eq (cont Val) => Eq (BSample cont)
+--deriving instance Num (cont Val) => Num (BSample cont)
+{-
 class Sample cont dim where
       fromSample :: dim cont -> cont Val
       toSample :: cont Val -> dim cont
@@ -40,6 +42,14 @@ instance Sample cont ASample where
 instance Sample cont BSample where
          fromSample = unBSample
          toSample = BSample
+-}
+
+newtype Signal (cont :: * -> *) dim = Signal (dim cont) deriving (Show, Eq, Num)
+newtype FSignal (cont :: * -> *) dim = FSignal (dim cont) deriving (Show, Eq, Num)
+newtype Distrib (cont :: * -> *) dim = Distrib (dim cont) deriving (Show, Eq, Num)
+
+newtype Flow' (cont :: * -> *) dim = Flow' (dim cont) deriving (Show, Eq, Num)
+type Flow = Flow' Single
 
 class Container (sig :: (* -> *) -> ((* -> *) -> *) -> *) cont dim where
       fromContainer :: sig cont dim -> dim cont
@@ -110,17 +120,20 @@ class Multiplicative cont dima dimb dimc | dima dimb -> dimc, dima dimc -> dimb,
       (./) :: (Container sig cont dima, Container sig cont dimb, Container sig cont dimc) 
               => sig cont dimc -> sig cont dimb -> sig cont dima
 
-instance Multiplicative Single ASample BSample BSample where
+instance Multiplicative Single PSample NSample PSample where
          x .* y = to $ from x * from y
          x ./ y = to $ from x / from y
 
-instance Multiplicative List ASample BSample BSample where
+instance Multiplicative List PSample NSample PSample where
          x .* y = to $ zipWith (*) (from x) (from y)
          x ./ y = to $ zipWith (/) (from x) (from y)
 
-instance Multiplicative Vec ASample BSample BSample where
+instance Multiplicative Vec PSample NSample PSample where
          x .* y = to $ UV.zipWith (*) (from x) (from y)
          x ./ y = to $ UV.zipWith (/) (from x) (from y)
+
+--instance (Multiplicative cont dima dimb dimc) => Multiplicative cont dimb dima dimc
+
 
 -- takes all necessary constraints in.
 class (Container sig cont dima, Container sig cont dimb, Container sig cont dimc,
@@ -129,15 +142,16 @@ class (Container sig cont dima, Container sig cont dimb, Container sig cont dimc
 
 
 -- has to be enhanced...
-instance Arithmetic Signal Single ASample BSample BSample
-instance Arithmetic FSignal Single ASample BSample BSample
+--instance Arithmetic Signal Single ASample BSample BSample
+--instance Arithmetic FSignal Single ASample BSample BSample
 
-instance Arithmetic Signal List ASample BSample BSample
-instance Arithmetic FSignal List ASample BSample BSample
+--instance Arithmetic Signal List ASample BSample BSample
+--instance Arithmetic FSignal List ASample BSample BSample
 
-instance Arithmetic Signal Vec ASample BSample BSample
-instance Arithmetic FSignal Vec ASample BSample BSample
+--instance Arithmetic Signal Vec ASample BSample BSample
+--instance Arithmetic FSignal Vec ASample BSample BSample
 
+{-
 a1 :: Signal Single ASample
 a1 = toSig 8
 
@@ -168,3 +182,5 @@ test3 = testf a1 fb
 
 -- will not work, ok!
 -- test4 = testf fb a1
+
+-}

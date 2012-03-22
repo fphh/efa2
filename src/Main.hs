@@ -30,7 +30,7 @@ import EFA2.Example.Circular
 
 main :: IO ()
 main = do
-  let given = S.fromList [Energy 2 2]
+  let given = S.fromList [ Energy 0 1 .= Given (Energy 0 1) ]
       (g, sigs) = dreibein
       depg = makeDependencyGraph g
       fs = graphToHorn (makeDependencyGraph g)

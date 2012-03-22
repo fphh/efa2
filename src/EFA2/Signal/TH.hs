@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell, StandaloneDeriving, FlexibleInstances, FlexibleContexts, UndecidableInstances, MultiParamTypeClasses, NoMonomorphismRestriction #-}
 
-module Test where
+module EFA2.Signal.TH where
 
 import Control.Monad
 
@@ -19,7 +19,7 @@ class Sample cont dim where
 printQ expr = runQ expr >>= putStrLn.pprint
 
 samples :: [String]
-samples = ["ASample", "BSample", "CSample"]
+samples = ["PSample", "NSample"]
 
 sampleNames :: [Name]
 sampleNames = map mkName samples

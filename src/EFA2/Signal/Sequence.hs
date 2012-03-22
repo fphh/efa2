@@ -16,7 +16,7 @@ import EFA2.Utils.Utils
 import EFA2.Signal.SignalData
 import EFA2.Signal.SignalGeneration
 import EFA2.Signal.SignalAnalysis
-
+{-
 -----------------------------------------------------------------------------------
 -- Record -- Structure for Handling recorded data
 
@@ -180,3 +180,5 @@ getSignalSteps time psig@(Signal pvec) = zip3 stepIdxListTyped stepTimeList step
 -- -- TODO -- include length checking !!
 -- checkLength :: Section a -> Either SectionError ()
 -- checkLength sec = when (secLen sec < 2) $ Left ShortSection
+
+-}
