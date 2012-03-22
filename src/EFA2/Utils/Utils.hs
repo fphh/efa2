@@ -25,8 +25,8 @@ flipPair (a, b) = (b, a)
 reverseMap :: (Ord b) => M.Map a b -> M.Map b a
 reverseMap = M.fromList . map flipPair . M.toList
 
-diffByOne :: (Eq a, Ord a) => S.Set a -> S.Set a -> Bool
-diffByOne s t = S.size (S.difference t s) == 1
+diffByAtMostOne :: (Eq a, Ord a) => S.Set a -> S.Set a -> Bool
+diffByAtMostOne s t =  S.isSubsetOf s t || S.size (S.difference t s) == 1
 
 eachWithEvery :: [a] -> [(a, [a])]
 eachWithEvery xs = reverse res

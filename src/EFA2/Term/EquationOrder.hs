@@ -35,7 +35,7 @@ makeDependencyGraph g = deq
 
 mkArcs :: (Ord a) => S.Set a -> [S.Set a] -> [(S.Set a, S.Set a)]
 mkArcs s ss = catMaybes $ map g ss
-  where g t | s `diffByOne` t = Just (s, t)
+  where g t | s `diffByAtMostOne` t = Just (s, t)
         g _ = Nothing
 
 makeOrder :: [[Node]] -> [Node]
@@ -60,9 +60,9 @@ orderEquations g target = Equations (reverse eqs) (reverseMap mt)
 
 
 directEquations :: S.Set Term -> Equations -> [Term]
-directEquations s (Equations ts m) = snd $ L.foldl' (f m) (s, []) ts 
+directEquations s (Equations ts m) = snd $ L.foldl' (eqFoldFunc m) (s, []) ts 
 
-f m (set, acc) eq
+eqFoldFunc m (set, acc) eq
   | [v] <- vdiff = (set', (transEq v):acc)
   | [] <- vdiff = (set, eq:acc)
   | otherwise = error $ "to many unknown variables in " ++ show eq ++ " (known: " ++ show set ++ ")"
