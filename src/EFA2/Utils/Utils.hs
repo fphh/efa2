@@ -10,7 +10,7 @@ import qualified Data.Map as M
 
 -- generalized unique
 gunique :: (Ord a) => S.Set a -> [a] -> [a]
-gunique s = go s
+gunique s = go s 
   where go _ [] = []
         go s (x:xs) | S.member x s = go s xs
                     | otherwise    = x : go (S.insert x s) xs
@@ -24,9 +24,6 @@ flipPair (a, b) = (b, a)
 
 reverseMap :: (Ord b) => M.Map a b -> M.Map b a
 reverseMap = M.fromList . map flipPair . M.toList
-
-diffByAtMostOne :: (Eq a, Ord a) => S.Set a -> S.Set a -> Bool
-diffByAtMostOne s t =  S.isSubsetOf s t || S.size (S.difference t s) == 1
 
 eachWithEvery :: [a] -> [(a, [a])]
 eachWithEvery xs = reverse res
@@ -54,3 +51,4 @@ instance UV.Unbox a => Transpose (UV.Vector a) where
          transpose xs = map (UV.fromList . flip map xs) fs
            where fs = take min $ map (flip (UV.!)) [0..]
                  min = L.minimum $ map UV.length xs
+

@@ -9,14 +9,18 @@ import qualified Data.Set as S
 import qualified Data.Map as M
 import Data.Maybe
 
-import EFA2.Term.Term
-import EFA2.Term.EquationOrder
+import EFA2.Term.Equation
 import EFA2.Term.Horn
+import EFA2.Term.DirEquation
+import EFA2.Term.EqInterpreter
 
 import EFA2.Graph.Graph
+import EFA2.Graph.DependencyGraph
+
 import EFA2.Utils.Utils
 import EFA2.Graph.SignalGraph
 import EFA2.Signal.SignalAnalysis
+import EFA2.Signal.SignalData
 
 import EFA2.Display.FileSave
 import EFA2.Display.DrawGraph
@@ -30,17 +34,18 @@ import EFA2.Example.Circular
 
 main :: IO ()
 main = do
-  let given = S.fromList [ Energy 0 1 .= Given (Energy 0 1) ]
-      (g, sigs) = dreibein
-      depg = makeDependencyGraph g
-      fs = graphToHorn (makeDependencyGraph g)
+  let given = give [ Energy 1 0 ] -- , Energy 5 4 := Given (Energy 5 4) ]
+      (g, sigs) = loop
+      depg = makeDependencyGraph g given
+      ho = hornOrder depg given
   writeTopology g
-  writeDependencyGraph g
-  print sigs
-  print (makeEtaEnv g sigs)
+  writeDependencyGraph g given
 
-  --putStrLn (termsStr $ makeEquations g input (Energy 3 2))
+  putStrLn (hornsToStr $ makeHornFormulae depg given)
 
-  putStrLn (hornsToStr $ makeHornFormulae given depg)
+  putStrLn (termsStr $ hornOrder depg given)
+  putStrLn ""
+  putStrLn (termsStr $ directEquations ho)
 
-  putStrLn (termsStr $ hornOrder given depg)
+  print (map (interpretLhs (M.empty :: PowerEnv (Signal List PSample)) M.empty M.empty) (directEquations ho))
+

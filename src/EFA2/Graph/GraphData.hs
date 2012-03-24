@@ -25,6 +25,7 @@ import Data.Maybe (fromJust)
 import EFA2.Signal.SignalData
 import EFA2.Signal.Sequence
 
+
 -----------------------------------------------------------------------------------
 -- Maps Idexes and Index Method to store topology related data
          
@@ -34,13 +35,12 @@ import EFA2.Signal.Sequence
 -- because there are two sample signals per edge.
 
 -- Generic Map on all Nodes
-newtype NodeData a = NodeData (M.Map NodeIndex a)  deriving (Show,Eq)
-data NodeIndex = NodeIndex !Int deriving (Show, Ord, Eq)
+--newtype NodeEnv a = NodeEnv (M.Map NodeIndex a)  deriving (Show,Eq)
 
 -- Generic Map on all Edges
-newtype EdgeData a = EdgeData (M.Map EdgeIndex a)  deriving (Show,Eq)
-data EdgeIndex = EdgeIndex !Int !Int deriving  (Show)
+--newtype EdgeData a = EdgeData (M.Map EdgeIndex a)  deriving (Show,Eq)
 
+{-
 -- Generic Map on all Power Positions
 newtype MPointData a = MPointData (M.Map MPointIndex a)  deriving (Show,Eq)
 data MPointIndex = MPointIndex !Int !Int deriving (Show, Ord, Eq)
@@ -48,6 +48,13 @@ data MPointIndex = MPointIndex !Int !Int deriving (Show, Ord, Eq)
 mPointIndexFlip :: MPointIndex -> MPointIndex
 mPointIndexFlip (MPointIndex idx1 idx2) = MPointIndex idx2 idx1
 
+-}
+{-
+data NodeIdx = NodeIdx !Int deriving (Show, Ord, Eq)
+data EdgeIdx = EdgeIdx !Int !Int deriving  (Show)
+
+type NodeEnv a = M.Map NodeIdx a
+type EdgeEnv a = M.Map EdgeIdx a
 
 -----------------------------------------------------------------------------------
 -- Classes to allow Indexing of Edges and Power Positions
@@ -61,9 +68,13 @@ instance Ord EdgeIndex where
            | as == bs = EQ
            | otherwise = compare (a, b) (x, y)
 
-class IndexC a where mkIdx :: Int -> Int -> a
-instance IndexC EdgeIndex where mkIdx = EdgeIndex
-instance IndexC MPointIndex where mkIdx = MPointIndex
+mkIdx x y = EdgeIndex x y
+-}
+
+{-
+instance IndexC MPointIndex
+         where mkIdx = MPointIndex
+
 
 -- type safe indexing on Graph data
 class (GIndexible a b) where 
@@ -131,3 +142,5 @@ data FlowData cont = FlowData {dtime :: cont DTSample,
 
 instance Display EdgeIndex where disp (EdgeIndex idx1 idx2) = "E" ++ show idx1 ++"-" ++ show idx2
 instance Display NodeIndex where disp (NodeIndex idx) = "N" ++ show idx
+
+-}

@@ -16,7 +16,7 @@ import EFA2.Signal.SignalAnalysis
 import EFA2.Signal.Sequence
 import Data.List 
 
-
+{-
 -- | generate List with MPointIndices from Graph in order to help to generate MPointData Map
 genMPointIdxList :: Gr l n -> [MPointIndex]
 genMPointIdxList g = sort ((map f (edges g)) ++ (map h (edges g))) 
@@ -38,7 +38,7 @@ genSigData g (Mapping mapp) (Record time sigs) = SigData {sdTime = time,
          -- correct signal sign                  
          h DontFlip s = s           
          h Flip (Signal vect) = UV.map (0.-.) vect 
-  
+ -}
 
 -- genFlowRecord :: Record -> FSigRecord
 -- genFlowRecord (time, sigs) = (genDTime time) (M.map pSample2ESample  

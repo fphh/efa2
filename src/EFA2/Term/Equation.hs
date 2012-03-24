@@ -1,5 +1,5 @@
 
-module EFA2.Term.Term where
+module EFA2.Term.Equation where
 
 import Data.Graph.Inductive
 
@@ -8,34 +8,41 @@ import qualified Data.List as L
 
 import EFA2.Graph.Graph
 
-data Term = Eta Int Int
+data EqTerm = EqTerm := EqTerm
+          | Eta Int Int
           | Energy Int Int
           | X Int Int
-          | Term := Term
-          | F Term
-          | B Term
-          | Given Term
-          | Minus Term
-          | Recip Term
-          | Add Term Term
-          | Mult Term Term deriving (Show, Eq, Ord)
+          | F EqTerm
+          | B EqTerm
+          | Given EqTerm
+          | Minus EqTerm
+          | Recip EqTerm
+          | Add EqTerm EqTerm
+          | Mult EqTerm EqTerm deriving (Show, Eq, Ord)
 
 infixl 1 :=
 
-mkEta :: Int -> Int -> Term
+mkEta :: Int -> Int -> EqTerm
 mkEta = Eta
 
-mkX :: Int -> Int -> Term
+mkX :: Int -> Int -> EqTerm
 mkX = X
 
-mkEnergy :: Int -> Int -> Term
+mkEnergy :: Int -> Int -> EqTerm
 mkEnergy = Energy
 
-sumEdges :: [LEdge ELabel] -> Term
+give :: [EqTerm] -> [EqTerm]
+give ts = map Given ts
+
+isGiven :: EqTerm -> Bool
+isGiven (Given _) = True
+isGiven _ = False
+
+sumEdges :: [LEdge ELabel] -> EqTerm
 sumEdges es = L.foldl1' Add es'
   where es' = map (\(x, y, _) -> Energy x y) es
 
-toString :: Term -> String
+toString :: EqTerm -> String
 toString (Energy x y) = "E_" ++ show x ++ "_" ++ show y
 toString (Eta x y) = "n_" ++ show x ++ "_" ++ show y
 toString (X x y) =  "x_" ++ show x ++ "_" ++ show y
@@ -46,24 +53,24 @@ toString (B x) = "b(" ++ toString x ++ ")"
 toString (Given x) = "given(" ++ toString x ++ ")"
 toString (Recip x) = "1/(" ++ toString x ++ ")"
 toString (Minus x) = "-(" ++ toString x ++ ")"
-toString (Equation x y) = toString x ++ " = " ++ toString y
+toString (x := y) = toString x ++ " = " ++ toString y
 
-termsStr :: [Term] -> String
+termsStr :: [EqTerm] -> String
 termsStr ts = L.intercalate "\n" $ map toString ts
 
-mkEdgeEq :: Gr a b -> [Term]
+mkEdgeEq :: Gr a b -> [EqTerm]
 mkEdgeEq g = map f ns
   where ns = labEdges g
         f (x, y, _) = (mkEnergy y x) := F (mkEnergy x y)
 
-mkNodeEq :: Gr NLabel ELabel -> [Term]
+mkNodeEq :: Gr NLabel ELabel -> [EqTerm]
 mkNodeEq g = concatMap mkEq eqs
   where ns = nodes g
         inns = map (inn g) ns
         outs = map (out g) ns
         eqs = zip3 ns outs inns
 
-mkEq :: (Node, [LEdge ELabel], [LEdge ELabel]) -> [Term]
+mkEq :: (Node, [LEdge ELabel], [LEdge ELabel]) -> [EqTerm]
 mkEq (_, [], _) = []
 mkEq (_, _, []) = []
 mkEq (i, os, is) = map f os
@@ -73,15 +80,16 @@ mkEq (i, os, is) = map f os
         f (x, y, _) = (mkEnergy x y) := Mult (X i y) sis
 
 
-mkVarSet :: Term -> S.Set Term
+mkVarSet :: EqTerm -> S.Set EqTerm
 mkVarSet v@(Energy _ _) = S.singleton v
 mkVarSet (Add x y) = S.union (mkVarSet x) (mkVarSet y)
 mkVarSet (Mult x y) = S.union (mkVarSet x) (mkVarSet y)
 mkVarSet (F x) = mkVarSet x
 mkVarSet (B x) = mkVarSet x
+mkVarSet (Given x) = mkVarSet x
 mkVarSet (Minus x) = mkVarSet x
 mkVarSet (Recip x) = mkVarSet x
-mkVarSet (Equation x y) = S.union (mkVarSet x) (mkVarSet y)
+mkVarSet (x := y) = S.union (mkVarSet x) (mkVarSet y)
 mkVarSet _ = S.empty
 
 
@@ -91,21 +99,21 @@ data Dir = L | R deriving (Show, Eq)
 
 type TPath = [Dir]
 
-
+{-
 v = Energy 1 2
-t = Add (Energy 1 2) (Energy 1 4) .= Mult (Energy 1 3) (Energy 1 5)
-s = Add (Minus (Energy 1 2)) (Energy 1 4) .= Energy 1 3
-u = Add (Energy 1 2) (Minus (Energy 1 4)) .= F (Energy 1 3)
+t = Add (Energy 1 2) (Energy 1 4) := Mult (Energy 1 3) (Energy 1 5)
+s = Add (Minus (Energy 1 2)) (Energy 1 4) := Energy 1 3
+u = Add (Energy 1 2) (Minus (Energy 1 4)) := F (Energy 1 3)
+-}
 
-
-findVar :: Term -> Term -> Maybe TPath
+findVar :: EqTerm -> EqTerm -> Maybe TPath
 findVar t s | t == s = Just []
 findVar t s
   | (Nothing, x) <- h = fmap (R:) x
   | (x, Nothing) <- h = fmap (L:) x
   | otherwise = error $ "error in looking for path to (" ++ show t ++ ") in (" ++ show s ++ ")"
   where h = help t s
-        help t (Equation u v) = (findVar t u, findVar t v)
+        help t (u := v) = (findVar t u, findVar t v)
         help t (Add u v) = (findVar t u, findVar t v)
         help t (Mult u v) = (findVar t u, findVar t v)
         help t (Minus u) = (findVar t u, Nothing)  -- coding: Minus has only left operand.
@@ -114,13 +122,13 @@ findVar t s
         help t (B u) = (findVar t u, Nothing)
         help _ _ = (Nothing, Nothing)
 
-isolateVar :: Term -> Term -> TPath -> Term
-isolateVar s t@(Equation u v) (L:p) = Equation s (transform v)
+isolateVar :: EqTerm -> EqTerm -> TPath -> EqTerm
+isolateVar s t@(u := v) (L:p) = (s := transform v)
   where transform = isolateVar' u p
-isolateVar s t@(Equation u v) (R:p) = Equation s (transform u)
+isolateVar s t@(u := v) (R:p) = (s := transform u)
   where transform = isolateVar' v p
 
-isolateVar' :: Term -> TPath -> (Term -> Term)
+isolateVar' :: EqTerm -> TPath -> (EqTerm -> EqTerm)
 isolateVar' _ [] = id
 isolateVar' (Add u v) (L:p) = isolateVar' u p . Add (Minus v)
 isolateVar' (Add u v) (R:p) = isolateVar' v p . Add (Minus u)
@@ -137,8 +145,10 @@ isolateVar' (B u) (L:p) = isolateVar' u p . F
 -- the unknown variable isolated on its left hand side (lhs),
 -- such that we can evaluate the rhs in order to calculate
 -- the value of the unknown variable.
-transformEq :: Term -> Term -> Term
+transformEq :: EqTerm -> EqTerm -> EqTerm
 transformEq unknown t
   | Nothing <- fv = t
   | Just p <- fv = isolateVar unknown t p
   where fv = findVar unknown t
+
+

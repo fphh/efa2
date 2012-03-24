@@ -11,7 +11,7 @@ import EFA2.Signal.TH
 -- type Val = Double
 type Vec = UV.Vector
 type List = []
-newtype Single a = Single { unSingle :: a } deriving (Show, Eq, Ord, Num, Fractional)
+newtype Value a = Value { unValue :: a } deriving (Show, Eq, Ord, Num, Fractional)
 
 $(mkNewtypes samples)
 $(mkInstances sampleNames)
@@ -23,6 +23,7 @@ deriving instance Num (cont Val) => Num (PSample cont)
 deriving instance Show (cont Val) => Show (NSample cont)
 deriving instance Eq (cont Val) => Eq (NSample cont)
 deriving instance Num (cont Val) => Num (NSample cont)
+
 
 --newtype ASample cont = ASample { unASample :: cont Val }
 --newtype BSample cont = BSample { unBSample :: cont Val }
@@ -48,8 +49,9 @@ newtype Signal (cont :: * -> *) dim = Signal (dim cont) deriving (Show, Eq, Num)
 newtype FSignal (cont :: * -> *) dim = FSignal (dim cont) deriving (Show, Eq, Num)
 newtype Distrib (cont :: * -> *) dim = Distrib (dim cont) deriving (Show, Eq, Num)
 
+
 newtype Flow' (cont :: * -> *) dim = Flow' (dim cont) deriving (Show, Eq, Num)
-type Flow = Flow' Single
+type Flow = Flow' Value
 
 class Container (sig :: (* -> *) -> ((* -> *) -> *) -> *) cont dim where
       fromContainer :: sig cont dim -> dim cont
@@ -83,11 +85,11 @@ fromVSig = UV.toList . from
 toVSig :: (Container sig Vec dim, Sample Vec dim) => [Val] -> sig Vec dim
 toVSig = to . UV.fromList
 
-fromSig :: (Container sig Single dim, Sample Single dim) => sig Single dim -> Val
-fromSig = unSingle . from
+fromSig :: (Container sig Value dim, Sample Value dim) => sig Value dim -> Val
+fromSig = unValue . from
 
-toSig :: (Container sig Single dim, Sample Single dim) => Val -> sig Single dim
-toSig = to . Single
+toSig :: (Container sig Value dim, Sample Value dim) => Val -> sig Value dim
+toSig = to . Value
 
 toLSig :: (Container sig List dim, Sample List dim) => [Val] -> sig List dim
 toLSig = to
@@ -98,7 +100,7 @@ class Additive cont dim where
       neg :: (Container sig cont dim) => sig cont dim -> sig cont dim
 
 
-instance (Sample Single dim) => Additive Single dim where
+instance (Sample Value dim) => Additive Value dim where
          x .+ y = to $ from x + from y
          x .- y = to $ from x + from y
          neg = to . negate . from
@@ -113,6 +115,12 @@ instance (Sample Vec dim) => Additive Vec dim where
          x .- y = to $ UV.zipWith (-) (from x) (from y)
          neg x = to (UV.map negate (from x))
 
+{-
+class Reciprocal cont dim where
+      reciprocal :: (Container sig cont dim) => sig cont dim -> sig cont dim
+
+instance Reciprocal cont dim
+-}
 
 class Multiplicative cont dima dimb dimc | dima dimb -> dimc, dima dimc -> dimb, dimb dimc -> dima where
       (.*) :: (Container sig cont dima, Container sig cont dimb, Container sig cont dimc) 
@@ -120,7 +128,7 @@ class Multiplicative cont dima dimb dimc | dima dimb -> dimc, dima dimc -> dimb,
       (./) :: (Container sig cont dima, Container sig cont dimb, Container sig cont dimc) 
               => sig cont dimc -> sig cont dimb -> sig cont dima
 
-instance Multiplicative Single PSample NSample PSample where
+instance Multiplicative Value PSample NSample PSample where
          x .* y = to $ from x * from y
          x ./ y = to $ from x / from y
 
@@ -135,15 +143,18 @@ instance Multiplicative Vec PSample NSample PSample where
 --instance (Multiplicative cont dima dimb dimc) => Multiplicative cont dimb dima dimc
 
 
--- takes all necessary constraints in.
 class (Container sig cont dima, Container sig cont dimb, Container sig cont dimc,
        Additive cont dima, Additive cont dimb, Additive cont dimc,
        Multiplicative cont dima dimb dimc) => Arithmetic sig cont dima dimb dimc
 
+-- takes all necessary constraints in.
+instance (Container sig cont dima, Container sig cont dimb, Container sig cont dimc,
+          Additive cont dima, Additive cont dimb, Additive cont dimc,
+          Multiplicative cont dima dimb dimc) => Arithmetic sig cont dima dimb dimc
 
 -- has to be enhanced...
---instance Arithmetic Signal Single ASample BSample BSample
---instance Arithmetic FSignal Single ASample BSample BSample
+--instance Arithmetic Signal Value ASample BSample BSample
+--instance Arithmetic FSignal Value ASample BSample BSample
 
 --instance Arithmetic Signal List ASample BSample BSample
 --instance Arithmetic FSignal List ASample BSample BSample
@@ -152,16 +163,16 @@ class (Container sig cont dima, Container sig cont dimb, Container sig cont dimc
 --instance Arithmetic FSignal Vec ASample BSample BSample
 
 {-
-a1 :: Signal Single ASample
+a1 :: Signal Value ASample
 a1 = toSig 8
 
 favec :: FSignal Vec ASample
 favec = toVSig [5, 6, 7]
 
-f1 :: FSignal Single ASample
+f1 :: FSignal Value ASample
 f1 = toSig 9
 
-fb :: Signal Single BSample
+fb :: Signal Value BSample
 fb = toSig 16
 
 flow :: Flow BSample

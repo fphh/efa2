@@ -10,13 +10,14 @@ import Data.GraphViz.Types.Canonical
 import Data.GraphViz.Attributes.Complete
 import qualified Data.Text.Lazy as T
 import qualified Data.Vector.Unboxed as UV
-
+{-
 
 import EFA2.Signal.SignalData
 import EFA2.Graph.Graph
 import EFA2.Term.Term
-import EFA2.Term.EquationOrder
+import EFA2.Graph.DependencyGraph
 import EFA2.Graph.GraphData
+
 
 
 nodeColour = FillColor (RGB 230 230 240)
@@ -62,7 +63,7 @@ mkDotEdge dispFunct (x, y) = DotEdge x y [displabel]
   where displabel = Label $ StrLabel $ T.pack $ dispFunct (mkIdx x y) 
         
         
-
+-}
 
         
 

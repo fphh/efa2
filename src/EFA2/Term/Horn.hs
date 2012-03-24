@@ -11,7 +11,8 @@ import Data.Graph.Inductive
 import Debug.Trace
 
 
-import EFA2.Term.Term
+import EFA2.Term.Equation
+import EFA2.Utils.Utils
 
 data Formula = Zero
              | One
@@ -69,42 +70,45 @@ horn' i vs fs
   where (vs', fs') = step i vs fs
         noZero = all ((Zero /=) . snd) (S.toList vs)
 
-
 horn :: [Formula] -> Maybe (S.Set (Step, Formula))
 horn fs = fmap atomsOnly res
   where atomsOnly = S.filter (isAtom . snd)
         res = horn' 0 S.empty fs
 
-makeAnd :: [Formula] -> Maybe Formula
-makeAnd [] = Nothing
-makeAnd fs = Just (L.foldl1' (:*) fs)
+makeAnd :: [Formula] -> Formula
+makeAnd fs = L.foldl1' (:*) fs
 
-graphToHorn :: Gr Term () -> [Formula]
-graphToHorn g = ufold foldFunc [] g
+graphToHorn :: Gr EqTerm () -> [Formula]
+graphToHorn g = L.foldl' foldFunc [] (zip3 ins ns outs)
+  where ns = nodes g
+        ins = map (pre g) ns
+        outs = map (suc g) ns
 
-foldFunc :: Context a b -> [Formula] -> [Formula]
-foldFunc (ins, x, _, outs) acc = res
+foldFunc :: [Formula] -> ([Node], Node, [Node]) -> [Formula]
+foldFunc acc ([], _, []) = acc
+foldFunc acc ([], x, outs) = map (\lits -> makeAnd lits :-> v) fs ++ acc
   where v = Atom x
-        outs' = map snd outs
-        outFs = map ((v :->) . Atom) outs'
-        insFs = map ((:-> v) . Atom) (map snd ins)
-        res = case makeAnd (map Atom outs') of
-                   Nothing -> outFs ++ acc
-                   Just ands -> (ands :-> v):(insFs ++ outFs ++ acc)
+        lits = map Atom outs
+        fs = filter f $ unique $ (map L.sort) $ sequence [lits, lits]
+        f [x, y] = x /= y
+foldFunc acc (ins, x, _) = insFs ++ acc
+  where v = Atom x
+        insFs = map (:-> v) (map Atom ins)
 
 
-makeHornFormulae :: S.Set Term -> Gr Term () -> [Formula]
-makeHornFormulae given g = given' ++ graphToHorn g
-  where given' = map (\(Energy x _) -> (One :-> Atom x)) (S.toList given)
+makeHornFormulae :: Gr EqTerm () -> [EqTerm] -> [Formula]
+makeHornFormulae g given = given' ++ graphToHorn g
+  where given' = L.foldl' f [] (labNodes g)
+        f acc (n, Given (Energy _ _)) = (One :-> Atom n):acc
+        f acc _ = acc
 
-
-makeHornOrder :: [Formula] -> Gr Term () -> [Term]
-makeHornOrder formulae g = catMaybes ts
+makeHornOrder :: Gr EqTerm () -> [Formula] -> [EqTerm]
+makeHornOrder g formulae = catMaybes ts
   where Just fs = horn formulae
         fs' = map snd (S.toList fs)
         ts = map (lab g . fromAtom) fs'
         fromAtom (Atom x) = x
 
-hornOrder :: S.Set Term -> Gr Term () -> [Term]
-hornOrder given g = makeHornOrder given' g
-  where given' = makeHornFormulae given g
+hornOrder :: Gr EqTerm () -> [EqTerm] -> [EqTerm]
+hornOrder g given = makeHornOrder g given'
+  where given' = makeHornFormulae g given
