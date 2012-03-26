@@ -7,27 +7,25 @@ import Data.Graph.Inductive
 import qualified Data.Map as M
 import qualified Data.Vector.Unboxed as UV
 
+import Control.Monad.Error
+
 import EFA2.Graph.Graph
---import EFA2.Graph.GraphData
 import EFA2.Signal.SignalData
---import EFA2.Signal.Sequence
---import EFA2.Signal.SignalGeneration
+import EFA2.Signal.TH
 
---t :: Time
---t = dfromList [TSample 0, TSample 1]
+sigs :: LRPowerEnv [Val]
+sigs (PowerIdx 0 1) = return [3.0, 3.0]
+sigs (PowerIdx 1 0) = return [2.2, 2.2]
+sigs (PowerIdx 1 2) = return [1.8, 1.8]
+sigs (PowerIdx 2 1) = return [1.0, 1.0]
+sigs (PowerIdx 1 3) = return [0.4, 0.4]
+sigs (PowerIdx 3 1) = return [0.2, 0.2]
+sigs idx = throwError (PowerIdxError idx)
 
-sig :: Int -> Int -> Signal Vec PSample
-sig 0 1 = toVSig [3.0, 3.0]
-sig 1 0 = toVSig [2.2, 2.2]
-sig 1 2 = toVSig [1.8, 1.8]
-sig 2 1 = toVSig [1.0, 1.0]
-sig 1 3 = toVSig [0.4, 0.4]
-sig 3 1 = toVSig [0.2, 0.2]
 
-dreibein :: (Gr NLabel ELabel, PowerEnv (Signal Vec PSample))
-dreibein = (g, M.fromList sigs)
+dreibein :: (Gr NLabel ELabel, LRPowerEnv [Val])
+dreibein = (g, sigs)
    where g = mkGraph (makeNodes no ++ makeNodes no2) (makeEdges no ++ makeEdges (1:no2))
          no = [0..2]
          no2 = [3]
-         sigs = concatMap f (edges g)
-         f (x, y) = [(mkPowerIdx x y, sig x y), (mkPowerIdx y x, sig y x)]
+ 

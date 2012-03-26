@@ -1,10 +1,20 @@
 
 module EFA2.Graph.Graph where
 
+import Data.Maybe
+import Data.Either
 import Data.Graph.Inductive
+
+import qualified Data.List as L
 import qualified Data.Map as M
 
+import Control.Monad.Error
+
+import Debug.Trace
+
 import EFA2.Utils.Utils
+
+import EFA2.Signal.TH
 
 
 -----------------------------------------------------------------------------------
@@ -43,11 +53,7 @@ data EtaIdx = EtaIdx !Int !Int deriving  (Show)
 data PowerIdx = PowerIdx !Int !Int deriving (Show, Ord, Eq)
 data XIdx = XIdx !Int !Int deriving (Show, Ord, Eq)
 
-type NodeEnv a = M.Map NodeIdx a
-type EtaEnv a = M.Map EtaIdx a
-type PowerEnv a = M.Map PowerIdx a
-type XEnv a = M.Map XIdx a
-
+-- EtaIdx x y == EtaIdx y x
 instance Eq EtaIdx where
          (EtaIdx a b) == (EtaIdx x y) = f a b == f x y
            where f u v = if u < v then [u, v] else [v, u]
@@ -60,3 +66,93 @@ instance Ord EtaIdx where
 mkNodeIdx x = NodeIdx x
 mkEtaIdx x y = EtaIdx x y
 mkPowerIdx x y = PowerIdx x y
+mkXIdx x y = XIdx x y
+
+data IdxError = PowerIdxError PowerIdx
+              | EtaIdxError EtaIdx
+              | XIdxError XIdx
+              | OtherError String deriving (Eq, Show)
+
+instance Error IdxError where
+         noMsg = OtherError "Unknown index error!" 
+         strMsg str = OtherError str
+
+type IdxErrorMonad = Either IdxError
+
+type MNodeEnv a = NodeIdx -> Either String a
+type LREtaEnv a = EtaIdx -> IdxErrorMonad a
+type LRPowerEnv a = PowerIdx -> IdxErrorMonad a
+type LRXEnv a = XIdx -> IdxErrorMonad a
+
+type NodeEnv a = NodeIdx -> a
+type EtaEnv a = EtaIdx -> a
+type PowerEnv a = PowerIdx -> a
+type XEnv a = XIdx -> a
+
+
+composeEnv :: (a -> IdxErrorMonad b) -> (a -> IdxErrorMonad b) -> (a -> IdxErrorMonad b)
+composeEnv env1 env2 x
+  | y@(Right _) <- env1 x = y
+  | otherwise = env2 x
+
+mkEnv :: (a -> IdxErrorMonad b) -> (a -> b)
+mkEnv env x
+  | Left err <- res = error (show err)
+  | Right y <- res = y
+  where res = env x
+
+checkIdx :: (Ord a) => (a -> IdxError) -> a -> M.Map a (IdxErrorMonad b) -> IdxErrorMonad b
+checkIdx err x vs | Just y <- M.lookup x vs = y
+                  | otherwise = throwError (err x)
+
+mkMEtaEnv :: Gr a b -> LRPowerEnv [Val] -> LREtaEnv [Val]
+mkMEtaEnv g penv x = checkIdx EtaIdxError x etas
+  where es = edges g
+        etas = M.fromList $ map h (zip es (map f es))
+        f (x, y) = do
+          p <- penv (PowerIdx x y)
+          q <- penv (PowerIdx y x)
+          return (zipWith (/) q p)
+        h ((x, y), v) = (EtaIdx x y, v)
+
+
+
+mkMXEnv :: Gr a b -> LRPowerEnv [Val] -> LRXEnv [Val]
+mkMXEnv g penv x = checkIdx XIdxError x xs
+  where xs = M.fromList $ foldGraph f [] g
+        f acc (ins, x, outs) = zip ixidx ixs ++ zip oxidx oxs ++ acc
+          where 
+                oes = zip (repeat x) outs
+                oxidx = map (uncurry mkXIdx) oes
+                opidx = map (uncurry mkPowerIdx) oes
+                ops = map penv opidx
+                opsums = L.foldl' add (Right (repeat 0)) opidx
+                oxs = map (flip div opsums) ops
+
+                ies = zip (repeat x) ins
+                ixidx = map (uncurry mkXIdx) ies
+                ipidx = map (uncurry mkPowerIdx) ies
+                ips = map penv ipidx
+                ipsums = L.foldl' add (Right (repeat 0)) ipidx
+                ixs = map (flip div ipsums) ips
+{-
+                g ns x = zip ixidx ixs                
+                  where ies = zip (repeat x) ins
+                        ixidx = map (uncurry mkXIdx) ies
+                        ipidx = map (uncurry mkPowerIdx) ies
+                        ips = map penv ipidx
+                        ipsums = L.foldl' add (Right (repeat 0)) ipidx
+                        ixs = map (flip div ipsums) ips
+-}
+
+        add (Right acc) idx = do
+          p <- penv idx
+          return (zipWith (+) p acc)
+        add err@(Left _) _ = err
+        div (Right as) (Right bs) = Right (zipWith (/) as bs)
+        div err@(Left _) _ = err
+        div _ err@(Left _) = err
+
+
+----------------------------------------------------------------------------------
+

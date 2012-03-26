@@ -9,6 +9,8 @@ import qualified Data.Set as S
 import qualified Data.Map as M
 import Data.Maybe
 
+import Control.Monad.Error
+
 import EFA2.Term.Equation
 import EFA2.Term.Horn
 import EFA2.Term.DirEquation
@@ -38,14 +40,19 @@ main = do
       (g, sigs) = loop
       depg = makeDependencyGraph g given
       ho = hornOrder depg given
+      xenv = mkMXEnv g sigs
+      eenv = mkMEtaEnv g sigs 
   writeTopology g
   writeDependencyGraph g given
 
-  putStrLn (hornsToStr $ makeHornFormulae depg given)
 
-  putStrLn (termsStr $ hornOrder depg given)
-  putStrLn ""
+  --putStrLn (hornsToStr $ makeHornFormulae depg given)
+
+  --putStrLn (termsStr $ hornOrder depg given)
+  --putStrLn ""
   putStrLn (termsStr $ directEquations ho)
 
-  print (map (interpretLhs (M.empty :: PowerEnv (Signal List PSample)) M.empty M.empty) (directEquations ho))
+  --print (eenv (XIdx 1 4))
+
+  --print (map (interpretLhs (M.empty :: PowerEnv (Signal List PSample)) M.empty M.empty) (directEquations ho))
 

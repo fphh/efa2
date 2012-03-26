@@ -79,10 +79,7 @@ makeAnd :: [Formula] -> Formula
 makeAnd fs = L.foldl1' (:*) fs
 
 graphToHorn :: Gr EqTerm () -> [Formula]
-graphToHorn g = L.foldl' foldFunc [] (zip3 ins ns outs)
-  where ns = nodes g
-        ins = map (pre g) ns
-        outs = map (suc g) ns
+graphToHorn g = foldGraph foldFunc [] g -- L.foldl' foldFunc [] (zip3 ins ns outs)
 
 foldFunc :: [Formula] -> ([Node], Node, [Node]) -> [Formula]
 foldFunc acc ([], _, []) = acc

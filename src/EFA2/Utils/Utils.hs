@@ -8,6 +8,8 @@ import qualified Data.List as L
 import qualified Data.Set as S
 import qualified Data.Map as M
 
+import Data.Graph.Inductive
+
 -- generalized unique
 gunique :: (Ord a) => S.Set a -> [a] -> [a]
 gunique s = go s 
@@ -52,3 +54,9 @@ instance UV.Unbox a => Transpose (UV.Vector a) where
            where fs = take min $ map (flip (UV.!)) [0..]
                  min = L.minimum $ map UV.length xs
 
+
+foldGraph :: (a -> ([Node], Node, [Node]) -> a) -> a -> Gr b c -> a
+foldGraph f start g = L.foldl' f start (zip3 ins ns outs)
+  where ns = nodes g
+        ins = map (pre g) ns
+        outs = map (suc g) ns
