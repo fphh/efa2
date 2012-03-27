@@ -60,3 +60,10 @@ foldGraph f start g = L.foldl' f start (zip3 ins ns outs)
   where ns = nodes g
         ins = map (pre g) ns
         outs = map (suc g) ns
+
+
+mapGraph :: (([Node], Node, [Node]) -> a) -> Gr b c -> [a]
+mapGraph f g = map f (zip3 ins ns outs)
+  where ns = nodes g
+        ins = map (pre g) ns
+        outs = map (suc g) ns

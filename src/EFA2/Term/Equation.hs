@@ -6,12 +6,15 @@ import Data.Graph.Inductive
 import qualified Data.Set as S
 import qualified Data.List as L
 
+import Debug.Trace
+
+import EFA2.Utils.Utils
 import EFA2.Graph.Graph
 
 data EqTerm = EqTerm := EqTerm
-          | Eta Int Int
-          | Energy Int Int
-          | X Int Int
+          | Eta EtaIdx
+          | Energy PowerIdx
+          | X XIdx
           | F EqTerm
           | B EqTerm
           | Given EqTerm
@@ -22,14 +25,16 @@ data EqTerm = EqTerm := EqTerm
 
 infixl 1 :=
 
+
 mkEta :: Int -> Int -> EqTerm
-mkEta = Eta
+mkEta x y = Eta (EtaIdx x y)
 
 mkX :: Int -> Int -> EqTerm
-mkX = X
+mkX x y = X (XIdx x y)
 
 mkEnergy :: Int -> Int -> EqTerm
-mkEnergy = Energy
+mkEnergy x y = Energy (PowerIdx x y)
+
 
 give :: [EqTerm] -> [EqTerm]
 give ts = map Given ts
@@ -38,50 +43,50 @@ isGiven :: EqTerm -> Bool
 isGiven (Given _) = True
 isGiven _ = False
 
-sumEdges :: [LEdge ELabel] -> EqTerm
-sumEdges es = L.foldl1' Add es'
-  where es' = map (\(x, y, _) -> Energy x y) es
 
-toString :: EqTerm -> String
-toString (Energy x y) = "E_" ++ show x ++ "_" ++ show y
-toString (Eta x y) = "n_" ++ show x ++ "_" ++ show y
-toString (X x y) =  "x_" ++ show x ++ "_" ++ show y
-toString (Add x y) = "(" ++ toString x ++ " + " ++ toString y ++ ")"
-toString (Mult x y) = toString x ++ " * " ++ toString y
-toString (F x) = "f(" ++ toString x ++ ")"
-toString (B x) = "b(" ++ toString x ++ ")"
-toString (Given x) = "given(" ++ toString x ++ ")"
-toString (Recip x) = "1/(" ++ toString x ++ ")"
-toString (Minus x) = "-(" ++ toString x ++ ")"
-toString (x := y) = toString x ++ " = " ++ toString y
+showEqTerm :: EqTerm -> String
+showEqTerm (Energy (PowerIdx x y)) = "E_" ++ show x ++ "_" ++ show y
+showEqTerm (Eta (EtaIdx x y)) = "n_" ++ show x ++ "_" ++ show y
+showEqTerm (X (XIdx x y)) =  "x_" ++ show x ++ "_" ++ show y
+showEqTerm (Add x y) = "(" ++ showEqTerm x ++ " + " ++ showEqTerm y ++ ")"
+showEqTerm (Mult x y) = showEqTerm x ++ " * " ++ showEqTerm y
+showEqTerm (F x) = "f(" ++ showEqTerm x ++ ")"
+showEqTerm (B x) = "b(" ++ showEqTerm x ++ ")"
+showEqTerm (Given x) = "given(" ++ showEqTerm x ++ ")"
+showEqTerm (Recip x) = "1/(" ++ showEqTerm x ++ ")"
+showEqTerm (Minus x) = "-(" ++ showEqTerm x ++ ")"
+showEqTerm (x := y) = showEqTerm x ++ " = " ++ showEqTerm y
 
-termsStr :: [EqTerm] -> String
-termsStr ts = L.intercalate "\n" $ map toString ts
+showEqTerms :: [EqTerm] -> String
+showEqTerms ts = L.intercalate "\n" $ map showEqTerm ts
 
 mkEdgeEq :: Gr a b -> [EqTerm]
 mkEdgeEq g = map f ns
-  where ns = labEdges g
-        f (x, y, _) = (mkEnergy y x) := F (mkEnergy x y)
+  where ns = edges g
+        f (x, y) = (mkEnergy y x) := F (mkEnergy x y)
 
 mkNodeEq :: Gr NLabel ELabel -> [EqTerm]
-mkNodeEq g = concatMap mkEq eqs
-  where ns = nodes g
-        inns = map (inn g) ns
-        outs = map (out g) ns
-        eqs = zip3 ns outs inns
+mkNodeEq g = concat $ mapGraph mkEq g
 
-mkEq :: (Node, [LEdge ELabel], [LEdge ELabel]) -> [EqTerm]
-mkEq (_, [], _) = []
+mkEq :: ([Node], Node, [Node]) -> [EqTerm]
+mkEq ([], _, _) = []
 mkEq (_, _, []) = []
-mkEq (i, os, is) = map f os
-  where sos = sumEdges os
-        sis = sumEdges (map reverseEdge is)
-        reverseEdge (x, y, l) = (y, x, l)
-        f (x, y, _) = (mkEnergy x y) := Mult (X i y) sis
+mkEq (ins, n, outs) = ieqs ++ oeqs
+  where ins' = zip (repeat n) ins
+        outs' = zip (repeat n) outs
+        xis = map (uncurry mkX) ins'
+        xos = map (uncurry mkX) outs'
+        eis = map (uncurry mkEnergy) ins'
+        eos = map (uncurry mkEnergy) outs'
+        isum = L.foldl1' Add $ map (uncurry mkEnergy) ins'
+        osum = L.foldl1' Add $ map (uncurry mkEnergy) outs'
+        ieqs = zipWith3 f eis xis (repeat osum)
+        oeqs = zipWith3 f eos xos (repeat isum)
+        f x y z = x := Mult y z
 
 
 mkVarSet :: EqTerm -> S.Set EqTerm
-mkVarSet v@(Energy _ _) = S.singleton v
+mkVarSet v@(Energy _) = S.singleton v
 mkVarSet (Add x y) = S.union (mkVarSet x) (mkVarSet y)
 mkVarSet (Mult x y) = S.union (mkVarSet x) (mkVarSet y)
 mkVarSet (F x) = mkVarSet x
@@ -98,13 +103,6 @@ mkVarSet _ = S.empty
 data Dir = L | R deriving (Show, Eq)
 
 type TPath = [Dir]
-
-{-
-v = Energy 1 2
-t = Add (Energy 1 2) (Energy 1 4) := Mult (Energy 1 3) (Energy 1 5)
-s = Add (Minus (Energy 1 2)) (Energy 1 4) := Energy 1 3
-u = Add (Energy 1 2) (Minus (Energy 1 4)) := F (Energy 1 3)
--}
 
 findVar :: EqTerm -> EqTerm -> Maybe TPath
 findVar t s | t == s = Just []

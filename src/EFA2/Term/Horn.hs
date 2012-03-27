@@ -79,15 +79,17 @@ makeAnd :: [Formula] -> Formula
 makeAnd fs = L.foldl1' (:*) fs
 
 graphToHorn :: Gr EqTerm () -> [Formula]
-graphToHorn g = foldGraph foldFunc [] g -- L.foldl' foldFunc [] (zip3 ins ns outs)
+graphToHorn g = foldGraph foldFunc [] g
 
 foldFunc :: [Formula] -> ([Node], Node, [Node]) -> [Formula]
 foldFunc acc ([], _, []) = acc
+{-
 foldFunc acc ([], x, outs) = map (\lits -> makeAnd lits :-> v) fs ++ acc
   where v = Atom x
         lits = map Atom outs
         fs = filter f $ unique $ (map L.sort) $ sequence [lits, lits]
         f [x, y] = x /= y
+-}
 foldFunc acc (ins, x, _) = insFs ++ acc
   where v = Atom x
         insFs = map (:-> v) (map Atom ins)
@@ -96,7 +98,7 @@ foldFunc acc (ins, x, _) = insFs ++ acc
 makeHornFormulae :: Gr EqTerm () -> [EqTerm] -> [Formula]
 makeHornFormulae g given = given' ++ graphToHorn g
   where given' = L.foldl' f [] (labNodes g)
-        f acc (n, Given (Energy _ _)) = (One :-> Atom n):acc
+        f acc (n, Given (Energy _)) = (One :-> Atom n):acc
         f acc _ = acc
 
 makeHornOrder :: Gr EqTerm () -> [Formula] -> [EqTerm]

@@ -1,4 +1,3 @@
-{-# LANGUAGE ImpredicativeTypes, FlexibleContexts #-}
 
 
 module EFA2.Example.Linear where

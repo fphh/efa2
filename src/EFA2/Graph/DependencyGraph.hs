@@ -32,7 +32,7 @@ mkArcs s ss = catMaybes $ map g ss
 
 -- If true, then we have an edge from s to t.
 diffByAtMostOne :: (Eq a, Ord a) => S.Set a -> S.Set a -> Bool
-diffByAtMostOne s t = (S.size t > 1) && (S.isSubsetOf s t || S.size (S.difference t s) == 1)
+diffByAtMostOne s t = (S.size t > 1) && (S.isSubsetOf t s || S.size (S.difference t s) == 1)
 
 
 makeDependencyGraph :: Gr NLabel ELabel -> [EqTerm] -> Gr EqTerm ()

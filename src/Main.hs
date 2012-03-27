@@ -31,28 +31,31 @@ import EFA2.Example.Dreibein
 import EFA2.Example.Linear
 import EFA2.Example.Loop
 import EFA2.Example.Circular
+import EFA2.Example.Vierbein
 
 
 
 main :: IO ()
 main = do
-  let given = give [ Energy 1 0 ] -- , Energy 5 4 := Given (Energy 5 4) ]
-      (g, sigs) = loop
+  let given = give [ Energy (PowerIdx 2 4) ] -- , Energy 5 4 := Given (Energy 5 4) ]
+      penv (PowerIdx 2 4) = return [1.4]
+      penv idx = error (show idx)
+
+      (g, sigs) = vierbein
       depg = makeDependencyGraph g given
       ho = hornOrder depg given
       xenv = mkMXEnv g sigs
       eenv = mkMEtaEnv g sigs 
+      dirEqs = directEquations ho
+      inTs :: [InTerm Abs]
+      inTs = toInTerms dirEqs
   writeTopology g
   writeDependencyGraph g given
 
 
-  --putStrLn (hornsToStr $ makeHornFormulae depg given)
+  putStrLn (hornsToStr $ makeHornFormulae depg given)
 
-  --putStrLn (termsStr $ hornOrder depg given)
-  --putStrLn ""
-  putStrLn (termsStr $ directEquations ho)
-
-  --print (eenv (XIdx 1 4))
-
-  --print (map (interpretLhs (M.empty :: PowerEnv (Signal List PSample)) M.empty M.empty) (directEquations ho))
-
+  putStrLn (showEqTerms $ hornOrder depg given)
+  putStrLn ""
+  putStrLn (showInTerms inTs)
+  putStrLn (show $ solveInTerms penv eenv xenv inTs)

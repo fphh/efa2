@@ -19,4 +19,4 @@ writeTopology g = writeFile "results/topograph.dot" (graphviz' g)
 writeDependencyGraph :: Gr NLabel ELabel -> [EqTerm] -> IO ()
 writeDependencyGraph g given = writeFile "results/depgraph.dot" (graphviz' g')
   where g' = gmap f $ makeDependencyGraph g given
-        f (ins, n, l, outs) = (ins, n, show n ++ ": " ++ toString l, outs)
+        f (ins, n, l, outs) = (ins, n, show n ++ ": " ++ showEqTerm l, outs)

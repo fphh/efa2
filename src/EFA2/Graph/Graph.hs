@@ -56,17 +56,20 @@ data XIdx = XIdx !Int !Int deriving (Show, Ord, Eq)
 -- EtaIdx x y == EtaIdx y x
 instance Eq EtaIdx where
          (EtaIdx a b) == (EtaIdx x y) = f a b == f x y
-           where f u v = if u < v then [u, v] else [v, u]
+           where f u v = if u < v then (u, v) else (v, u)
 
 instance Ord EtaIdx where
          compare as@(EtaIdx a b) bs@(EtaIdx x y)
            | as == bs = EQ
-           | otherwise = compare (a, b) (x, y)
+           | otherwise = compare (f a b) (f x y)
+               where f u v = if u < v then (u, v) else (v, u)
 
+{-
 mkNodeIdx x = NodeIdx x
 mkEtaIdx x y = EtaIdx x y
 mkPowerIdx x y = PowerIdx x y
 mkXIdx x y = XIdx x y
+-}
 
 data IdxError = PowerIdxError PowerIdx
               | EtaIdxError EtaIdx
@@ -101,7 +104,7 @@ mkEnv env x
   | Right y <- res = y
   where res = env x
 
-checkIdx :: (Ord a) => (a -> IdxError) -> a -> M.Map a (IdxErrorMonad b) -> IdxErrorMonad b
+checkIdx :: (Ord a, Show b) => (a -> IdxError) -> a -> M.Map a (IdxErrorMonad b) -> IdxErrorMonad b
 checkIdx err x vs | Just y <- M.lookup x vs = y
                   | otherwise = throwError (err x)
 
@@ -123,15 +126,15 @@ mkMXEnv g penv x = checkIdx XIdxError x xs
         f acc (ins, x, outs) = zip ixidx ixs ++ zip oxidx oxs ++ acc
           where 
                 oes = zip (repeat x) outs
-                oxidx = map (uncurry mkXIdx) oes
-                opidx = map (uncurry mkPowerIdx) oes
+                oxidx = map (uncurry XIdx) oes
+                opidx = map (uncurry PowerIdx) oes
                 ops = map penv opidx
                 opsums = L.foldl' add (Right (repeat 0)) opidx
                 oxs = map (flip div opsums) ops
 
                 ies = zip (repeat x) ins
-                ixidx = map (uncurry mkXIdx) ies
-                ipidx = map (uncurry mkPowerIdx) ies
+                ixidx = map (uncurry XIdx) ies
+                ipidx = map (uncurry PowerIdx) ies
                 ips = map penv ipidx
                 ipsums = L.foldl' add (Right (repeat 0)) ipidx
                 ixs = map (flip div ipsums) ips
