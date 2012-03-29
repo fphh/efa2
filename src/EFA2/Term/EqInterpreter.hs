@@ -1,4 +1,4 @@
-
+{-# LANGUAGE FlexibleInstances #-}
 
 module EFA2.Term.EqInterpreter where
 
@@ -10,30 +10,16 @@ import Control.Monad.Error
 
 import Debug.Trace
 
+import EFA2.Graph.GraphData
 import EFA2.Graph.Graph
 import EFA2.Term.Equation
+import EFA2.Term.TermData
 
 import EFA2.Signal.SignalData
 import EFA2.Signal.TH
 
+import EFA2.Term.TermData
 
---data NodeIdx = NodeIdx !Int deriving (Show, Ord, Eq)
---data EtaIdx = EtaIdx !Int !Int deriving  (Show)
---data PowerIdx = PowerIdx !Int !Int deriving (Show, Ord, Eq)
---data XIdx = XIdx !Int !Int deriving (Show, Ord, Eq)
-
-data Abs
-data Diff
-
-data InTerm a = PIdx PowerIdx
-              | EIdx EtaIdx
-              | ScaleIdx XIdx
-              | InConst Val
-              | InMinus (InTerm a)
-              | InRecip (InTerm a)
-              | InAdd (InTerm a) (InTerm a)
-              | InMult (InTerm a) (InTerm a)
-              | InEqual (InTerm a) (InTerm a) deriving (Eq, Ord, Show)
 
 showInTerm :: InTerm a -> String
 showInTerm (PIdx (PowerIdx x y)) = "E_" ++ show x ++ "_" ++ show y
@@ -67,35 +53,47 @@ eqTermToInTerm t = error ("Bad term: " ++ showEqTerm t)
 class EdgeFormula a where
       toEdgeFormula :: EqTerm -> InTerm a
 
-
 instance EdgeFormula Abs where
          toEdgeFormula (F (Energy idx@(PowerIdx x y))) = InMult (eqTermToInTerm (Eta (EtaIdx x y))) 
                                                                 (eqTermToInTerm (Energy idx))
          toEdgeFormula (B (Energy idx@(PowerIdx x y))) = InMult (eqTermToInTerm (Recip (Eta (EtaIdx x y))))
                                                                 (eqTermToInTerm (Energy idx))
 
+instance EdgeFormula Diff where
+         toEdgeFormula (F x) = undefined -- InConst 1.0
+         toEdgeFormula (B x) = undefined -- InMult (InConst 2.0) (InConst 4.0)
 
-absInterpret :: PowerEnv [Val] -> EtaEnv [Val] -> XEnv [Val] -> InTerm Abs -> [Val]
-absInterpret penv eenv xenv t = interpret t
+class AbsInterpreter a where
+      interpret :: PowerEnv a -> EtaEnv a -> XEnv a -> InTerm b -> a
+
+instance AbsInterpreter [Val] where
+         interpret = absValInterpret
+
+
+absValInterpret :: PowerEnv [Val] -> EtaEnv [Val] -> XEnv [Val] -> InTerm b -> [Val]
+absValInterpret penv eenv xenv t = interpret t
   where interpret (PIdx idx) = penv idx
         interpret (EIdx idx) = eenv idx
         interpret (ScaleIdx idx) = xenv idx
-        interpret (InConst x) = (repeat x)
+        interpret (InConst x) = repeat x                 -- Constants can only be multiplied with finite lists.
         interpret (InMinus t) = map negate (interpret t)
         interpret (InRecip t) = map recip (interpret t)
         interpret (InAdd s t) = zipWith (+) (interpret s) (interpret t)
         interpret (InMult s t) = zipWith (*) (interpret s) (interpret t)
 
+instance AbsInterpreter (InTerm a) where
+         interpret = undefined
+
 
 toInTerms :: (EdgeFormula a) => [EqTerm] -> [InTerm a]
 toInTerms ts = map eqTermToInTerm (filter (not . isGiven) ts)
 
-solveInTerms :: (M.Map PowerIdx [Val]) -> LREtaEnv [Val] -> LRXEnv [Val] -> [InTerm Abs] -> M.Map PowerIdx [Val]
+solveInTerms :: (AbsInterpreter a, EnvClass a) => (M.Map PowerIdx a) -> LREtaEnv a -> LRXEnv a -> [InTerm b] -> M.Map PowerIdx a
 solveInTerms penv eenv xenv ts = M.fromList $ snd $ L.foldl' f (penv', []) ts
   where eenv' = mkEnv eenv
         xenv' = mkEnv xenv
         penv' = mkPowerEnv penv
-        f (pacc, sol) (InEqual (PIdx idx) t) = (composeLREnv newPEnv pacc, (idx, val):sol)
-          where val = absInterpret (mkEnv pacc) eenv' xenv' t
+        f (pacc, sol) (InEqual (PIdx idx) t) = (newPEnv `composeLREnv` pacc, (idx, val):sol)
+          where val = interpret (mkEnv pacc) eenv' xenv' t
                 newPEnv x | idx == x = return val
                 newPEnv idx = throwError (PowerIdxError idx)

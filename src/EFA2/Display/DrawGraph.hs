@@ -15,6 +15,7 @@ import Text.Printf
 
 import Debug.Trace
 
+import EFA2.Graph.GraphData
 import EFA2.Graph.Graph
 import EFA2.Graph.DependencyGraph
 

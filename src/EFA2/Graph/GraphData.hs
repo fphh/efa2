@@ -15,7 +15,6 @@
 module EFA2.Graph.GraphData where
 
 
-import EFA2.Graph.Graph
 import qualified Data.Map as M
 import qualified Data.Vector.Unboxed as UV
 
@@ -24,6 +23,23 @@ import Data.Maybe (fromJust)
 
 import EFA2.Signal.SignalData
 import EFA2.Signal.Sequence
+
+
+data NodeIdx = NodeIdx !Int deriving (Show, Ord, Eq)
+data EtaIdx = EtaIdx !Int !Int deriving  (Show)
+data PowerIdx = PowerIdx !Int !Int deriving (Show, Ord, Eq)
+data XIdx = XIdx !Int !Int deriving (Show, Ord, Eq)
+
+-- EtaIdx x y == EtaIdx y x
+instance Eq EtaIdx where
+         (EtaIdx a b) == (EtaIdx x y) = f a b == f x y
+           where f u v = if u < v then (u, v) else (v, u)
+
+instance Ord EtaIdx where
+         compare as@(EtaIdx a b) bs@(EtaIdx x y)
+           | as == bs = EQ
+           | otherwise = compare (f a b) (f x y)
+               where f u v = if u < v then (u, v) else (v, u)
 
 
 -----------------------------------------------------------------------------------

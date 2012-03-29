@@ -15,7 +15,9 @@ import EFA2.Term.Equation
 import EFA2.Term.Horn
 import EFA2.Term.DirEquation
 import EFA2.Term.EqInterpreter
+import EFA2.Term.TermData
 
+import EFA2.Graph.GraphData
 import EFA2.Graph.Graph
 import EFA2.Graph.DependencyGraph
 
@@ -28,14 +30,14 @@ import EFA2.Signal.TH
 import EFA2.Display.FileSave
 import EFA2.Display.DrawGraph
 
-import EFA2.Example.Dreibein
+--import EFA2.Example.Dreibein
 import EFA2.Example.Linear
-import EFA2.Example.Loop
-import EFA2.Example.Circular
-import EFA2.Example.Vierbein
+--import EFA2.Example.Loop
+--import EFA2.Example.Circular
+--import EFA2.Example.Vierbein
 
 
-mkGivens :: [(PowerIdx, [Val])] -> ([EqTerm], M.Map PowerIdx [Val])
+mkGivens :: [(PowerIdx, a)] -> ([EqTerm], M.Map PowerIdx a)
 mkGivens xs = (give $ map (Energy . fst) xs, M.fromList xs)
 
 
@@ -45,9 +47,9 @@ main = do
       --penv (PowerIdx 2 4) = return [1.2, 1.4, 1.6]
       --penv idx = error (show idx)
 
-      (g, sigs) = circular
+      (g, sigs) = linear
 
-      (given, penv') = mkGivens [(PowerIdx 2 4, [1.2, 1.4, 1.6])]
+      (given, penv') = mkGivens [(PowerIdx 2 3, InConst 1.2)]
 
       depg = makeDependencyGraph g given
       ho = hornOrder depg given
@@ -59,6 +61,7 @@ main = do
       eenv = mkEtaEnv g sigs
       penv = mkPowerEnv penv'
 
+      sol :: M.Map PowerIdx (InTerm Abs)
       sol = M.union penv' (solveInTerms penv' eenv xenv inTs)
 
 
@@ -69,7 +72,9 @@ main = do
   putStrLn (hornsToStr $ makeHornFormulae depg given)
 
   putStrLn (showEqTerms $ hornOrder depg given)
+  putStrLn ""
   putStrLn (show given)
+  putStrLn ""
   putStrLn (showInTerms inTs)
   putStrLn (show sol)
 

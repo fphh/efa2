@@ -10,6 +10,7 @@ import qualified Data.List.HT as HTL
 import Debug.Trace
 
 import EFA2.Utils.Utils
+import EFA2.Graph.GraphData
 import EFA2.Graph.Graph
 
 data EqTerm = EqTerm := EqTerm

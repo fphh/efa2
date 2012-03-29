@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances #-}
 
 module EFA2.Graph.Graph where
 
@@ -12,9 +13,11 @@ import Control.Monad.Error
 
 import Debug.Trace
 
+import EFA2.Graph.GraphData
 import EFA2.Utils.Utils
 
 import EFA2.Signal.TH
+import EFA2.Term.TermData
 
 
 -----------------------------------------------------------------------------------
@@ -48,28 +51,6 @@ makeNodes no = map mkLNode no
 ----------------------------------------------------------------------------------
 -- Classes to allow indexing of power positions, etas and nodes
 
-data NodeIdx = NodeIdx !Int deriving (Show, Ord, Eq)
-data EtaIdx = EtaIdx !Int !Int deriving  (Show)
-data PowerIdx = PowerIdx !Int !Int deriving (Show, Ord, Eq)
-data XIdx = XIdx !Int !Int deriving (Show, Ord, Eq)
-
--- EtaIdx x y == EtaIdx y x
-instance Eq EtaIdx where
-         (EtaIdx a b) == (EtaIdx x y) = f a b == f x y
-           where f u v = if u < v then (u, v) else (v, u)
-
-instance Ord EtaIdx where
-         compare as@(EtaIdx a b) bs@(EtaIdx x y)
-           | as == bs = EQ
-           | otherwise = compare (f a b) (f x y)
-               where f u v = if u < v then (u, v) else (v, u)
-
-{-
-mkNodeIdx x = NodeIdx x
-mkEtaIdx x y = EtaIdx x y
-mkPowerIdx x y = PowerIdx x y
-mkXIdx x y = XIdx x y
--}
 
 data IdxError = PowerIdxError PowerIdx
               | EtaIdxError EtaIdx
@@ -108,11 +89,26 @@ checkIdx :: (Ord a, Show b) => (a -> IdxError) -> a -> M.Map a (IdxErrorMonad b)
 checkIdx err x vs | Just y <- M.lookup x vs = y
                   | otherwise = throwError (err x)
 
-mkPowerEnv :: (M.Map PowerIdx [Val]) -> LRPowerEnv [Val]
-mkPowerEnv m x = checkIdx PowerIdxError x (M.map Right m)
+class EnvClass a where
+      mkPowerEnv :: (M.Map PowerIdx a) -> LRPowerEnv a
+      mkEtaEnv :: Gr b c -> LRPowerEnv a -> LREtaEnv a
+      mkXEnv :: Gr b c -> LRPowerEnv a -> LRXEnv a
 
-mkEtaEnv :: Gr a b -> LRPowerEnv [Val] -> LREtaEnv [Val]
-mkEtaEnv g penv x = checkIdx EtaIdxError x etas
+instance EnvClass [Val] where
+         mkPowerEnv = mkPowerValEnv
+         mkEtaEnv = mkEtaValEnv
+         mkXEnv = mkXValEnv
+
+instance EnvClass (InTerm Abs) where
+         mkPowerEnv = undefined
+         mkEtaEnv = undefined
+         mkXEnv = undefined
+
+mkPowerValEnv :: (M.Map PowerIdx [Val]) -> LRPowerEnv [Val]
+mkPowerValEnv m x = checkIdx PowerIdxError x (M.map Right m)
+
+mkEtaValEnv :: Gr a b -> LRPowerEnv [Val] -> LREtaEnv [Val]
+mkEtaValEnv g penv x = checkIdx EtaIdxError x etas
   where es = edges g
         etas = M.fromList $ map h (zip es (map f es))
         f (x, y) = do
@@ -121,8 +117,8 @@ mkEtaEnv g penv x = checkIdx EtaIdxError x etas
           return (zipWith (/) q p)
         h ((x, y), v) = (EtaIdx x y, v)
 
-mkXEnv :: Gr a b -> LRPowerEnv [Val] -> LRXEnv [Val]
-mkXEnv g penv x = checkIdx XIdxError x xs
+mkXValEnv :: Gr a b -> LRPowerEnv [Val] -> LRXEnv [Val]
+mkXValEnv g penv x = checkIdx XIdxError x xs
   where xs = M.fromList $ foldGraph f [] g
         f acc (ins, x, outs) = zip ixidx ixs ++ zip oxidx oxs ++ acc
           where 
