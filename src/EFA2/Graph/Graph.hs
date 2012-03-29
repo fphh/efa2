@@ -82,7 +82,7 @@ instance Error IdxError where
 
 type IdxErrorMonad = Either IdxError
 
-type MNodeEnv a = NodeIdx -> Either String a
+type LRNodeEnv a = NodeIdx -> IdxErrorMonad a
 type LREtaEnv a = EtaIdx -> IdxErrorMonad a
 type LRPowerEnv a = PowerIdx -> IdxErrorMonad a
 type LRXEnv a = XIdx -> IdxErrorMonad a
@@ -93,8 +93,8 @@ type PowerEnv a = PowerIdx -> a
 type XEnv a = XIdx -> a
 
 
-composeEnv :: (a -> IdxErrorMonad b) -> (a -> IdxErrorMonad b) -> (a -> IdxErrorMonad b)
-composeEnv env1 env2 x
+composeLREnv :: (a -> IdxErrorMonad b) -> (a -> IdxErrorMonad b) -> (a -> IdxErrorMonad b)
+composeLREnv env1 env2 x
   | y@(Right _) <- env1 x = y
   | otherwise = env2 x
 
@@ -108,8 +108,11 @@ checkIdx :: (Ord a, Show b) => (a -> IdxError) -> a -> M.Map a (IdxErrorMonad b)
 checkIdx err x vs | Just y <- M.lookup x vs = y
                   | otherwise = throwError (err x)
 
-mkMEtaEnv :: Gr a b -> LRPowerEnv [Val] -> LREtaEnv [Val]
-mkMEtaEnv g penv x = checkIdx EtaIdxError x etas
+mkPowerEnv :: (M.Map PowerIdx [Val]) -> LRPowerEnv [Val]
+mkPowerEnv m x = checkIdx PowerIdxError x (M.map Right m)
+
+mkEtaEnv :: Gr a b -> LRPowerEnv [Val] -> LREtaEnv [Val]
+mkEtaEnv g penv x = checkIdx EtaIdxError x etas
   where es = edges g
         etas = M.fromList $ map h (zip es (map f es))
         f (x, y) = do
@@ -118,10 +121,8 @@ mkMEtaEnv g penv x = checkIdx EtaIdxError x etas
           return (zipWith (/) q p)
         h ((x, y), v) = (EtaIdx x y, v)
 
-
-
-mkMXEnv :: Gr a b -> LRPowerEnv [Val] -> LRXEnv [Val]
-mkMXEnv g penv x = checkIdx XIdxError x xs
+mkXEnv :: Gr a b -> LRPowerEnv [Val] -> LRXEnv [Val]
+mkXEnv g penv x = checkIdx XIdxError x xs
   where xs = M.fromList $ foldGraph f [] g
         f acc (ins, x, outs) = zip ixidx ixs ++ zip oxidx oxs ++ acc
           where 

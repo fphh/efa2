@@ -28,22 +28,25 @@ data Diff
 data InTerm a = PIdx PowerIdx
               | EIdx EtaIdx
               | ScaleIdx XIdx
+              | InConst Val
               | InMinus (InTerm a)
               | InRecip (InTerm a)
               | InAdd (InTerm a) (InTerm a)
               | InMult (InTerm a) (InTerm a)
               | InEqual (InTerm a) (InTerm a) deriving (Eq, Ord, Show)
 
+showInTerm :: InTerm a -> String
 showInTerm (PIdx (PowerIdx x y)) = "E_" ++ show x ++ "_" ++ show y
 showInTerm (EIdx (EtaIdx x y)) = "n_" ++ show x ++ "_" ++ show y
 showInTerm (ScaleIdx (XIdx x y)) = "x_" ++ show x ++ "_" ++ show y
+showInTerm (InConst x) = show x
 showInTerm (InMinus t) = "-(" ++ showInTerm t ++ ")"
 showInTerm (InRecip t) = "1/(" ++ showInTerm t ++ ")"
 showInTerm (InAdd s t) = "(" ++ showInTerm s ++ " + " ++ showInTerm t ++ ")"
 showInTerm (InMult s t) = showInTerm s ++ " * " ++ showInTerm t
 showInTerm (InEqual s t) = showInTerm s ++ " = " ++ showInTerm t
 
-
+showInTerms :: [InTerm a] -> String
 showInTerms ts = L.intercalate "\n" $ map showInTerm ts
 
 
@@ -51,6 +54,7 @@ eqTermToInTerm :: (EdgeFormula a) => EqTerm -> InTerm a
 eqTermToInTerm (Energy idx) = PIdx idx
 eqTermToInTerm (Eta idx) = EIdx idx
 eqTermToInTerm (X idx) = ScaleIdx idx
+eqTermToInTerm (Const x) = InConst x
 eqTermToInTerm (Minus t) = InMinus (eqTermToInTerm t)
 eqTermToInTerm (Recip t) = InRecip (eqTermToInTerm t)
 eqTermToInTerm (Add s t) = InAdd (eqTermToInTerm s) (eqTermToInTerm t)
@@ -76,6 +80,7 @@ absInterpret penv eenv xenv t = interpret t
   where interpret (PIdx idx) = penv idx
         interpret (EIdx idx) = eenv idx
         interpret (ScaleIdx idx) = xenv idx
+        interpret (InConst x) = (repeat x)
         interpret (InMinus t) = map negate (interpret t)
         interpret (InRecip t) = map recip (interpret t)
         interpret (InAdd s t) = zipWith (+) (interpret s) (interpret t)
@@ -85,11 +90,12 @@ absInterpret penv eenv xenv t = interpret t
 toInTerms :: (EdgeFormula a) => [EqTerm] -> [InTerm a]
 toInTerms ts = map eqTermToInTerm (filter (not . isGiven) ts)
 
-solveInTerms :: LRPowerEnv [Val] -> LREtaEnv [Val] -> LRXEnv [Val] -> [InTerm Abs] -> [(PowerIdx, [Val])]
-solveInTerms penv eenv xenv ts = reverse $ snd $ L.foldl' f (penv, []) ts
+solveInTerms :: (M.Map PowerIdx [Val]) -> LREtaEnv [Val] -> LRXEnv [Val] -> [InTerm Abs] -> M.Map PowerIdx [Val]
+solveInTerms penv eenv xenv ts = M.fromList $ snd $ L.foldl' f (penv', []) ts
   where eenv' = mkEnv eenv
         xenv' = mkEnv xenv
-        f (pacc, sol) (InEqual (PIdx idx) t) = (composeEnv newPEnv pacc, (idx, val):sol)
+        penv' = mkPowerEnv penv
+        f (pacc, sol) (InEqual (PIdx idx) t) = (composeLREnv newPEnv pacc, (idx, val):sol)
           where val = absInterpret (mkEnv pacc) eenv' xenv' t
                 newPEnv x | idx == x = return val
                 newPEnv idx = throwError (PowerIdxError idx)

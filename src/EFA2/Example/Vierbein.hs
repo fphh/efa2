@@ -18,9 +18,10 @@ sigs (PowerIdx 0 2) = return [3.0]
 sigs (PowerIdx 2 0) = return [2.2]
 sigs (PowerIdx 2 3) = return [1.0]
 sigs (PowerIdx 3 2) = return [0.6]
+
 sigs (PowerIdx 1 2) = return [2.0]
 sigs (PowerIdx 2 1) = return [1.8]
-sigs (PowerIdx 2 4) = return [1.4]
+sigs (PowerIdx 2 4) = return [3.0]
 sigs (PowerIdx 4 2) = return [1.0]
 sigs idx = throwError (PowerIdxError idx)
 
@@ -31,5 +32,4 @@ vierbein = (g, sigs)
          ns = [0..4]
          es1 = [1, 2, 3]
          es2 = [0, 2, 4]
-         -- es = [(0, 2), (1, 2), (2, 3), (2, 4)]
  

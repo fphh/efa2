@@ -5,6 +5,7 @@ import Data.Graph.Inductive
 
 import qualified Data.Set as S
 import qualified Data.List as L
+import qualified Data.List.HT as HTL
 
 import Debug.Trace
 
@@ -12,6 +13,7 @@ import EFA2.Utils.Utils
 import EFA2.Graph.Graph
 
 data EqTerm = EqTerm := EqTerm
+          | Const Double
           | Eta EtaIdx
           | Energy PowerIdx
           | X XIdx
@@ -45,6 +47,7 @@ isGiven _ = False
 
 
 showEqTerm :: EqTerm -> String
+showEqTerm (Const x) = show x
 showEqTerm (Energy (PowerIdx x y)) = "E_" ++ show x ++ "_" ++ show y
 showEqTerm (Eta (EtaIdx x y)) = "n_" ++ show x ++ "_" ++ show y
 showEqTerm (X (XIdx x y)) =  "x_" ++ show x ++ "_" ++ show y
@@ -71,7 +74,7 @@ mkNodeEq g = concat $ mapGraph mkEq g
 mkEq :: ([Node], Node, [Node]) -> [EqTerm]
 mkEq ([], _, _) = []
 mkEq (_, _, []) = []
-mkEq (ins, n, outs) = ieqs ++ oeqs
+mkEq (ins, n, outs) = ieqs' ++ oeqs' ++ ieqs ++ oeqs
   where ins' = zip (repeat n) ins
         outs' = zip (repeat n) outs
         xis = map (uncurry mkX) ins'
@@ -83,6 +86,13 @@ mkEq (ins, n, outs) = ieqs ++ oeqs
         ieqs = zipWith3 f eis xis (repeat osum)
         oeqs = zipWith3 f eos xos (repeat isum)
         f x y z = x := Mult y z
+
+        ieqs' | length eis > 1 = [g (head xis) (head eis) (tail eis)]
+              | otherwise = []
+        oeqs' | length eos > 1 = [g (head xos) (head eos) (tail eos)]
+              | otherwise = []
+
+        g x e es = e := (L.foldl1' Add $ map (Mult (Mult x (Recip (Add (Const 1.0) (Minus x))))) es)
 
 
 mkVarSet :: EqTerm -> S.Set EqTerm
@@ -103,6 +113,17 @@ mkVarSet _ = S.empty
 data Dir = L | R deriving (Show, Eq)
 
 type TPath = [Dir]
+
+
+-- test terms
+x1 = Energy (PowerIdx 0 1)
+x2 = Energy (PowerIdx 0 2)
+x3 = Energy (PowerIdx 0 3)
+x4 = Energy (PowerIdx 0 4)
+c = Const 1.0
+
+t = Add (Mult x1 x2) c := x4
+
 
 findVar :: EqTerm -> EqTerm -> Maybe TPath
 findVar t s | t == s = Just []

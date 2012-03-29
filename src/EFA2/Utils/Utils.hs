@@ -10,6 +10,13 @@ import qualified Data.Map as M
 
 import Data.Graph.Inductive
 
+import Debug.Trace
+
+-- A debugging function for displaying arguments in pointless style.
+showarg :: (Show a) => a -> a
+showarg x = trace (show x) x
+
+
 -- generalized unique
 gunique :: (Ord a) => S.Set a -> [a] -> [a]
 gunique s = go s 
@@ -27,13 +34,18 @@ flipPair (a, b) = (b, a)
 reverseMap :: (Ord b) => M.Map a b -> M.Map b a
 reverseMap = M.fromList . map flipPair . M.toList
 
+for :: [a] -> (a -> b) -> [b]
+for = flip map
+
+{-
 eachWithEvery :: [a] -> [(a, [a])]
 eachWithEvery xs = reverse res
   where f (before, y:ys, acc) _ = (y:before, ys, (y, before ++ ys):acc)
         (_, _, res) = L.foldl' f ([], xs, []) xs
+-}
 
 sameValue :: a -> Double
-sameValue _ = 1.0
+sameValue = const 1.0
 
 
 pairs :: [a] -> [(a, a)]

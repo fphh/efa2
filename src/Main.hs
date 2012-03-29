@@ -23,6 +23,7 @@ import EFA2.Utils.Utils
 import EFA2.Graph.SignalGraph
 import EFA2.Signal.SignalAnalysis
 import EFA2.Signal.SignalData
+import EFA2.Signal.TH
 
 import EFA2.Display.FileSave
 import EFA2.Display.DrawGraph
@@ -34,21 +35,33 @@ import EFA2.Example.Circular
 import EFA2.Example.Vierbein
 
 
+mkGivens :: [(PowerIdx, [Val])] -> ([EqTerm], M.Map PowerIdx [Val])
+mkGivens xs = (give $ map (Energy . fst) xs, M.fromList xs)
+
 
 main :: IO ()
 main = do
-  let given = give [ Energy (PowerIdx 2 4) ] -- , Energy 5 4 := Given (Energy 5 4) ]
-      penv (PowerIdx 2 4) = return [1.4]
-      penv idx = error (show idx)
+  let --given = give [ Energy (PowerIdx 2 4) ] -- , Energy 5 4 := Given (Energy 5 4) ]
+      --penv (PowerIdx 2 4) = return [1.2, 1.4, 1.6]
+      --penv idx = error (show idx)
 
-      (g, sigs) = vierbein
+      (g, sigs) = circular
+
+      (given, penv') = mkGivens [(PowerIdx 2 4, [1.2, 1.4, 1.6])]
+
       depg = makeDependencyGraph g given
       ho = hornOrder depg given
-      xenv = mkMXEnv g sigs
-      eenv = mkMEtaEnv g sigs 
       dirEqs = directEquations ho
       inTs :: [InTerm Abs]
       inTs = toInTerms dirEqs
+
+      xenv = mkXEnv g sigs
+      eenv = mkEtaEnv g sigs
+      penv = mkPowerEnv penv'
+
+      sol = M.union penv' (solveInTerms penv' eenv xenv inTs)
+
+
   writeTopology g
   writeDependencyGraph g given
 
@@ -56,6 +69,10 @@ main = do
   putStrLn (hornsToStr $ makeHornFormulae depg given)
 
   putStrLn (showEqTerms $ hornOrder depg given)
-  putStrLn ""
+  putStrLn (show given)
   putStrLn (showInTerms inTs)
-  putStrLn (show $ solveInTerms penv eenv xenv inTs)
+  putStrLn (show sol)
+
+  --drawTopologyX depg
+  drawDependency g given
+  drawTopology undefined (mkPowerEnv sol) eenv xenv g

@@ -1,73 +1,67 @@
-{-# LANGUAGE ImpredicativeTypes, FlexibleContexts #-}
-module EFA2.Display.DrawGraph (module EFA2.Display.DrawGraph) where
+
+
+module EFA2.Display.DrawGraph where
 
 import qualified Data.Map as M
+import qualified Data.List as L
 
-import Data.GraphViz
+import Data.Maybe
 import Data.Graph.Inductive
-import Data.GraphViz.Printing
-import Data.GraphViz.Types.Canonical
-import Data.GraphViz.Attributes.Complete
 import qualified Data.Text.Lazy as T
-import qualified Data.Vector.Unboxed as UV
-{-
+import Data.GraphViz
+import Data.GraphViz.Attributes.Complete
 
-import EFA2.Signal.SignalData
+import Text.Printf
+
+import Debug.Trace
+
 import EFA2.Graph.Graph
-import EFA2.Term.Term
 import EFA2.Graph.DependencyGraph
-import EFA2.Graph.GraphData
 
+import EFA2.Term.Equation
+import EFA2.Utils.Utils
 
-
+nodeColour :: Attribute 
 nodeColour = FillColor (RGB 230 230 240)
-clusFillColour = FillColor (RGB 250 250 200)
 
--- Deaw Topology Graph on X_Canvas
+clusterColour :: Attribute
+clusterColour = FillColor (RGB 250 250 200)
+
+mkDotGraph :: Gr a b -> (Node -> String, Edge -> String) -> DotGraph Int
+mkDotGraph g (nodef, edgef) = 
+  DotGraph { strictGraph = False,
+             directedGraph = True,
+             graphID = Just (Int 1),
+             graphStatements = stmts }
+  where stmts = DotStmts { attrStmts = [],
+                           subGraphs = [],
+                           nodeStmts = map (\n -> mkDotNode n $ nodef n) (nodes g),
+                           edgeStmts = map (\n -> mkDotEdge n $ edgef n) (edges g) }
+
+
+mkDotNode:: Node -> String -> DotNode Int
+mkDotNode x str = DotNode x [displabel, nodeColour, Style [SItem Filled []], Shape BoxShape ] 
+  where displabel =  Label $ StrLabel $ T.pack str
+
+mkDotEdge :: Edge -> String -> DotEdge Int
+mkDotEdge (x, y) str = DotEdge x y [displabel]
+  where displabel = Label $ StrLabel $ T.pack str
+
+
 drawTopologyX :: Gr a b -> IO ()
-drawTopologyX g = runGraphvizCanvas Dot (mkDotGraph g (dispNode, dispEdge)) Xlib 
+drawTopologyX g = runGraphvizCanvas Dot (mkDotGraph g (show, show)) Xlib
 
--- Draw Topology with on X_Canvas Flow Values
-drawFlowX :: (Gr String String, FlowData Flow) -> IO ()
-drawFlowX (g,flowData) = runGraphvizCanvas Dot (mkDotGraph g (dispNode, dispEdgeVals (eta flowData))) Xlib 
+drawTopology :: (PrintfArg a) => t -> LRPowerEnv [a] -> LREtaEnv [a] -> LRXEnv [a] -> Gr b c -> IO ()
+drawTopology nenv penv eenv xenv g = runGraphvizCanvas Dot (mkDotGraph g (show, eshow)) Xlib
+  where eshow1 (x, y) = [("p: ", penv (PowerIdx x y)), ("x: ", xenv (XIdx x y)), ("n: ", eenv (EtaIdx x y))]
+        eshow2 (x, y) = [("x: ", xenv (XIdx y x)), ("p: ", penv (PowerIdx y x))]
+        eshow ps = L.intercalate "\n" $ map (f . fmap fromRight) $ (eshow1 ps ++ eshow2 ps)
+        fromRight (Right x) = x
+        fromRight (Left x) = error (show x)
+        f (x, ys) = x ++ (concatMap (printf "%.2f    ") ys)
 
--- function to Generate Dot Graph
--- mkDotGraph :: Gr a b -> 
-mkDotGraph g (dispFunctNode, dispFunctEdge) = DotGraph { strictGraph = False
-                                                       , directedGraph = True
-                                                       , graphID = Just (Int 1) 
-                                                       , graphStatements = DotStmts { attrStmts = [] 
-                                                                                    , subGraphs=[]
-                                                                                    , nodeStmts = map (mkDotNode dispFunctNode) (nodes g)
-                                                                                    , edgeStmts = map (mkDotEdge dispFunctEdge) (edges g)}}
- 
-
--- Node display function without values 
-dispNode :: NodeIndex -> String
-dispNode nodeIdx = disp nodeIdx
-
--- Edge display function without Values
-dispEdge :: EdgeIndex -> String
-dispEdge edgeIdx = disp edgeIdx
-
--- Edge display function with Values
-dispEdgeVals :: (Display a) => EdgeData a -> EdgeIndex -> String 
-dispEdgeVals vals edgeIdx = disp edgeIdx ++ ": " ++ disp (vals ~! edgeIdx)
-
-mkDotNode:: (NodeIndex -> String) -> Node  -> DotNode Int
-mkDotNode  dispFunct  x = DotNode x [displabel,nodeColour,Style [SItem Filled []]] 
-  where displabel =  Label $ StrLabel $ T.pack $ dispFunct (NodeIndex x) 
-
-mkDotEdge :: (EdgeIndex -> String) -> Edge -> DotEdge Int
-mkDotEdge dispFunct (x, y) = DotEdge x y [displabel]
-  where displabel = Label $ StrLabel $ T.pack $ dispFunct (mkIdx x y) 
-        
-        
--}
-
-        
-
-
-
-
-
+drawDependency g given = runGraphvizCanvas Dot (mkDotGraph g' (nshow, (const ""))) Xlib
+  where g' = makeDependencyGraph g given
+        m = M.fromList $ ufold f [] g'
+        f (_, n, l, _) acc = (n, l):acc
+        nshow x = show x ++ ": " ++ showEqTerm (fromJust (M.lookup x m))
