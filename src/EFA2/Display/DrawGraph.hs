@@ -20,6 +20,9 @@ import EFA2.Graph.Graph
 import EFA2.Graph.DependencyGraph
 
 import EFA2.Term.Equation
+import EFA2.Term.EqInterpreter
+import EFA2.Term.TermData
+
 import EFA2.Utils.Utils
 
 nodeColour :: Attribute 
@@ -60,6 +63,18 @@ drawTopology nenv penv eenv xenv g = runGraphvizCanvas Dot (mkDotGraph g (show, 
         fromRight (Right x) = x
         fromRight (Left x) = error (show x)
         f (x, ys) = x ++ (concatMap (printf "%.2f    ") ys)
+        
+drawTopologyT :: t -> LRPowerEnv [InTerm a] -> LREtaEnv [InTerm a] -> LRXEnv [InTerm a] -> Gr b c -> IO ()
+drawTopologyT nenv penv eenv xenv g = runGraphvizCanvas Dot (mkDotGraph g (show, eshow)) Xlib
+  where eshow1 (x, y) = [("p", penv (PowerIdx x y)), ("x", xenv (XIdx x y)), ("n", eenv (EtaIdx x y))]
+        eshow2 (x, y) = [("x", xenv (XIdx y x)), ("p", penv (PowerIdx y x))]
+        eshow ps = L.intercalate "\n" $ map (f . fmap fromRight) $ (eshow1 ps ++ eshow2 ps)
+        fromRight (Right x) = x
+        fromRight (Left x) = error (show x)
+        tToVal [InConst x] = [x]
+        f (x, [ys]) = x ++ " = " ++ (showInTerm ys) ++ " = " ++ show (head res)
+          where res = interpret (tToVal . mkEnv penv) (tToVal . mkEnv eenv) (tToVal . mkEnv xenv) ys
+        
 
 drawDependency g given = runGraphvizCanvas Dot (mkDotGraph g' (nshow, (const ""))) Xlib
   where g' = makeDependencyGraph g given

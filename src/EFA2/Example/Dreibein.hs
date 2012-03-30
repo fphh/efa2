@@ -9,6 +9,7 @@ import qualified Data.Vector.Unboxed as UV
 import Control.Monad.Error
 
 import EFA2.Graph.Graph
+import EFA2.Graph.GraphData
 import EFA2.Signal.SignalData
 import EFA2.Signal.TH
 

@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleInstances, TypeSynonymInstances #-}
 
 module EFA2.Graph.Graph where
 
@@ -85,7 +85,7 @@ mkEnv env x
   | Right y <- res = y
   where res = env x
 
-checkIdx :: (Ord a, Show b) => (a -> IdxError) -> a -> M.Map a (IdxErrorMonad b) -> IdxErrorMonad b
+checkIdx :: (Ord a) => (a -> IdxError) -> a -> M.Map a (IdxErrorMonad b) -> IdxErrorMonad b
 checkIdx err x vs | Just y <- M.lookup x vs = y
                   | otherwise = throwError (err x)
 
@@ -94,62 +94,78 @@ class EnvClass a where
       mkEtaEnv :: Gr b c -> LRPowerEnv a -> LREtaEnv a
       mkXEnv :: Gr b c -> LRPowerEnv a -> LRXEnv a
 
-instance EnvClass [Val] where
+
+instance (Arith a) => EnvClass [a] where
          mkPowerEnv = mkPowerValEnv
          mkEtaEnv = mkEtaValEnv
          mkXEnv = mkXValEnv
 
-instance EnvClass (InTerm Abs) where
+{-
+instance EnvClass [InTerm Abs] where
          mkPowerEnv = undefined
          mkEtaEnv = undefined
          mkXEnv = undefined
+-}
 
-mkPowerValEnv :: (M.Map PowerIdx [Val]) -> LRPowerEnv [Val]
+class Arith a where
+      zero :: a
+      cst :: Double -> a
+      neg :: a -> a
+      rec :: a -> a
+      (.+) :: a -> a -> a
+      (.*) :: a -> a -> a
+      (./) :: a -> a -> a
+
+
+instance Arith Val where
+         zero = 0.0
+         cst = id
+         neg = negate
+         rec = recip
+         (.+) = (+)
+         (.*) = (*)
+         (./) = (/)
+
+instance Arith (InTerm a) where
+         zero = InConst 0.0
+         cst = InConst
+         neg = InMinus
+         rec = InRecip
+         (.+) = InAdd
+         (.*) = InMult
+         x ./ y = InMult x (InRecip y)
+
+
+mkPowerValEnv :: (M.Map PowerIdx [a]) -> LRPowerEnv [a]
 mkPowerValEnv m x = checkIdx PowerIdxError x (M.map Right m)
 
-mkEtaValEnv :: Gr a b -> LRPowerEnv [Val] -> LREtaEnv [Val]
+mkEtaValEnv :: (Arith c) => Gr a b -> LRPowerEnv [c] -> LREtaEnv [c]
 mkEtaValEnv g penv x = checkIdx EtaIdxError x etas
   where es = edges g
         etas = M.fromList $ map h (zip es (map f es))
         f (x, y) = do
           p <- penv (PowerIdx x y)
           q <- penv (PowerIdx y x)
-          return (zipWith (/) q p)
+          return (zipWith (./) q p)
         h ((x, y), v) = (EtaIdx x y, v)
 
-mkXValEnv :: Gr a b -> LRPowerEnv [Val] -> LRXEnv [Val]
+mkXValEnv :: (Arith c) => Gr a b -> LRPowerEnv [c] -> LRXEnv [c]
 mkXValEnv g penv x = checkIdx XIdxError x xs
   where xs = M.fromList $ foldGraph f [] g
-        f acc (ins, x, outs) = zip ixidx ixs ++ zip oxidx oxs ++ acc
-          where 
-                oes = zip (repeat x) outs
-                oxidx = map (uncurry XIdx) oes
-                opidx = map (uncurry PowerIdx) oes
-                ops = map penv opidx
-                opsums = L.foldl' add (Right (repeat 0)) opidx
-                oxs = map (flip div opsums) ops
-
-                ies = zip (repeat x) ins
-                ixidx = map (uncurry XIdx) ies
-                ipidx = map (uncurry PowerIdx) ies
-                ips = map penv ipidx
-                ipsums = L.foldl' add (Right (repeat 0)) ipidx
-                ixs = map (flip div ipsums) ips
-{-
-                g ns x = zip ixidx ixs                
-                  where ies = zip (repeat x) ins
-                        ixidx = map (uncurry mkXIdx) ies
-                        ipidx = map (uncurry mkPowerIdx) ies
-                        ips = map penv ipidx
-                        ipsums = L.foldl' add (Right (repeat 0)) ipidx
-                        ixs = map (flip div ipsums) ips
--}
+        f acc (ins, x, outs) = h ins x ++ h outs x ++ acc
+        h ns x = zip xidx xs
+          where es = zip (repeat x) ns
+                xidx = map (uncurry XIdx) es
+                pidx = map (uncurry PowerIdx) es
+                ps = map penv pidx
+                psums = L.foldl' add (Right (repeat zero)) pidx
+                xs = map (flip div psums) ps
 
         add (Right acc) idx = do
           p <- penv idx
-          return (zipWith (+) p acc)
+          return (zipWith (.+) p acc)
         add err@(Left _) _ = err
-        div (Right as) (Right bs) = Right (zipWith (/) as bs)
+        div (Right as) (Right bs) = Right (zipWith (./) as bs)
         div err@(Left _) _ = err
         div _ err@(Left _) = err
 

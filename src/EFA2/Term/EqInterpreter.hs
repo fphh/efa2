@@ -15,7 +15,7 @@ import EFA2.Graph.Graph
 import EFA2.Term.Equation
 import EFA2.Term.TermData
 
-import EFA2.Signal.SignalData
+--import EFA2.Signal.SignalData
 import EFA2.Signal.TH
 
 import EFA2.Term.TermData
@@ -26,6 +26,8 @@ showInTerm (PIdx (PowerIdx x y)) = "E_" ++ show x ++ "_" ++ show y
 showInTerm (EIdx (EtaIdx x y)) = "n_" ++ show x ++ "_" ++ show y
 showInTerm (ScaleIdx (XIdx x y)) = "x_" ++ show x ++ "_" ++ show y
 showInTerm (InConst x) = show x
+showInTerm (InRConst x) = show x
+
 showInTerm (InMinus t) = "-(" ++ showInTerm t ++ ")"
 showInTerm (InRecip t) = "1/(" ++ showInTerm t ++ ")"
 showInTerm (InAdd s t) = "(" ++ showInTerm s ++ " + " ++ showInTerm t ++ ")"
@@ -40,7 +42,7 @@ eqTermToInTerm :: (EdgeFormula a) => EqTerm -> InTerm a
 eqTermToInTerm (Energy idx) = PIdx idx
 eqTermToInTerm (Eta idx) = EIdx idx
 eqTermToInTerm (X idx) = ScaleIdx idx
-eqTermToInTerm (Const x) = InConst x
+eqTermToInTerm (Const x) = InRConst x
 eqTermToInTerm (Minus t) = InMinus (eqTermToInTerm t)
 eqTermToInTerm (Recip t) = InRecip (eqTermToInTerm t)
 eqTermToInTerm (Add s t) = InAdd (eqTermToInTerm s) (eqTermToInTerm t)
@@ -63,32 +65,29 @@ instance EdgeFormula Diff where
          toEdgeFormula (F x) = undefined -- InConst 1.0
          toEdgeFormula (B x) = undefined -- InMult (InConst 2.0) (InConst 4.0)
 
-class AbsInterpreter a where
+class Interpreter a where
       interpret :: PowerEnv a -> EtaEnv a -> XEnv a -> InTerm b -> a
 
-instance AbsInterpreter [Val] where
-         interpret = absValInterpret
+instance (Arith a) => Interpreter [a] where
+         interpret = valInterpret
 
 
-absValInterpret :: PowerEnv [Val] -> EtaEnv [Val] -> XEnv [Val] -> InTerm b -> [Val]
-absValInterpret penv eenv xenv t = interpret t
+valInterpret :: (Arith a) => PowerEnv [a] -> EtaEnv [a] -> XEnv [a] -> InTerm b -> [a]
+valInterpret penv eenv xenv t = interpret t
   where interpret (PIdx idx) = penv idx
         interpret (EIdx idx) = eenv idx
         interpret (ScaleIdx idx) = xenv idx
-        interpret (InConst x) = repeat x                 -- Constants can only be multiplied with finite lists.
-        interpret (InMinus t) = map negate (interpret t)
-        interpret (InRecip t) = map recip (interpret t)
-        interpret (InAdd s t) = zipWith (+) (interpret s) (interpret t)
-        interpret (InMult s t) = zipWith (*) (interpret s) (interpret t)
-
-instance AbsInterpreter (InTerm a) where
-         interpret = undefined
-
+        interpret (InConst x) = [cst x]
+        interpret (InRConst x) = repeat (cst x)      -- Constants can only be multiplied with finite lists.
+        interpret (InMinus t) = map neg (interpret t)
+        interpret (InRecip t) = map rec (interpret t)
+        interpret (InAdd s t) = zipWith (.+) (interpret s) (interpret t)
+        interpret (InMult s t) = zipWith (.*) (interpret s) (interpret t)
 
 toInTerms :: (EdgeFormula a) => [EqTerm] -> [InTerm a]
 toInTerms ts = map eqTermToInTerm (filter (not . isGiven) ts)
 
-solveInTerms :: (AbsInterpreter a, EnvClass a) => (M.Map PowerIdx a) -> LREtaEnv a -> LRXEnv a -> [InTerm b] -> M.Map PowerIdx a
+solveInTerms :: (Interpreter a, EnvClass a) => (M.Map PowerIdx a) -> LREtaEnv a -> LRXEnv a -> [InTerm b] -> M.Map PowerIdx a
 solveInTerms penv eenv xenv ts = M.fromList $ snd $ L.foldl' f (penv', []) ts
   where eenv' = mkEnv eenv
         xenv' = mkEnv xenv

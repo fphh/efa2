@@ -32,8 +32,8 @@ import EFA2.Display.DrawGraph
 
 --import EFA2.Example.Dreibein
 import EFA2.Example.Linear
---import EFA2.Example.Loop
---import EFA2.Example.Circular
+import EFA2.Example.Loop
+import EFA2.Example.Circular
 --import EFA2.Example.Vierbein
 
 
@@ -47,9 +47,10 @@ main = do
       --penv (PowerIdx 2 4) = return [1.2, 1.4, 1.6]
       --penv idx = error (show idx)
 
-      (g, sigs) = linear
+      (g, sigs) = circular
 
-      (given, penv') = mkGivens [(PowerIdx 2 3, InConst 1.2)]
+      -- (given, penv') = mkGivens [(PowerIdx 2 3, InConst 1.2)]
+      (given, penv') = mkGivens [(PowerIdx 4 5, [1.8, 2.4, 2.5, 2.6, 3.0])]
 
       depg = makeDependencyGraph g given
       ho = hornOrder depg given
@@ -61,7 +62,6 @@ main = do
       eenv = mkEtaEnv g sigs
       penv = mkPowerEnv penv'
 
-      sol :: M.Map PowerIdx (InTerm Abs)
       sol = M.union penv' (solveInTerms penv' eenv xenv inTs)
 
 
@@ -78,6 +78,6 @@ main = do
   putStrLn (showInTerms inTs)
   putStrLn (show sol)
 
-  --drawTopologyX depg
+  drawTopologyX g
   drawDependency g given
   drawTopology undefined (mkPowerEnv sol) eenv xenv g

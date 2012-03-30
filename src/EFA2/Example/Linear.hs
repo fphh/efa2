@@ -27,10 +27,15 @@ sigs (PowerIdx 2 3) = return [0.4, 0.4]
 sigs (PowerIdx 3 2) = return [0.2, 0.2]
 sigs idx = throwError (PowerIdxError idx)
 
-symSigs :: LRPowerEnv (InTerm Abs)
-symSigs (PowerIdx 0 1) = return (InConst 3.0)
+symSigs :: LRPowerEnv [InTerm Abs]
+symSigs (PowerIdx 0 1) = return [InConst 3.0]
+symSigs (PowerIdx 1 0) = return [InConst 2.2]
+symSigs (PowerIdx 1 2) = return [InConst 1.8]
+symSigs (PowerIdx 2 1) = return [InConst 1.0]
+symSigs (PowerIdx 2 3) = return [InConst 0.4]
+symSigs (PowerIdx 3 2) = return [InConst 0.2]
 
-linear :: (Gr NLabel ELabel, LRPowerEnv (InTerm Abs))
+linear :: (Gr NLabel ELabel, LRPowerEnv [InTerm Abs])
 linear = (g, symSigs)
   where g = mkGraph (makeNodes no) (makeEdges no)
         no = [0..3]
