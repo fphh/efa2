@@ -13,9 +13,9 @@ import qualified Data.List.HT as HTL
 
 import Debug.Trace
 
-import EFA2.Term.Equation
 import EFA2.Utils.Utils
-import EFA2.Graph.Graph
+import EFA2.Term.Equation
+import EFA2.Graph.GraphData
 
 dependencyGraph :: forall a. (Ord a) => [S.Set a] -> Gr (S.Set a) ()
 dependencyGraph ss = g

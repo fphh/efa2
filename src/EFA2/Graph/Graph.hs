@@ -13,10 +13,9 @@ import Control.Monad.Error
 
 import Debug.Trace
 
-import EFA2.Graph.GraphData
 import EFA2.Utils.Utils
-
-import EFA2.Signal.TH
+import EFA2.Graph.GraphData
+import EFA2.Signal.Arith
 import EFA2.Term.TermData
 
 
@@ -26,9 +25,6 @@ import EFA2.Term.TermData
 
 --data TopoGraph = Graph NodeTyp deriving (Show, Eq, Ord)
 --data NodeTyp = Storage | Sink | Source | Crossing deriving (Show, Ord, Eq)
-
-data NLabel = NLabel Int deriving (Show)
-data ELabel = ELabel Int Int deriving (Show)
 
 
 mkLEdge :: Int -> Int -> LEdge ELabel
@@ -52,27 +48,6 @@ makeNodes no = map mkLNode no
 -- Classes to allow indexing of power positions, etas and nodes
 
 
-data IdxError = PowerIdxError PowerIdx
-              | EtaIdxError EtaIdx
-              | XIdxError XIdx
-              | OtherError String deriving (Eq, Show)
-
-instance Error IdxError where
-         noMsg = OtherError "Unknown index error!" 
-         strMsg str = OtherError str
-
-type IdxErrorMonad = Either IdxError
-
-type LRNodeEnv a = NodeIdx -> IdxErrorMonad a
-type LREtaEnv a = EtaIdx -> IdxErrorMonad a
-type LRPowerEnv a = PowerIdx -> IdxErrorMonad a
-type LRXEnv a = XIdx -> IdxErrorMonad a
-
-type NodeEnv a = NodeIdx -> a
-type EtaEnv a = EtaIdx -> a
-type PowerEnv a = PowerIdx -> a
-type XEnv a = XIdx -> a
-
 
 composeLREnv :: (a -> IdxErrorMonad b) -> (a -> IdxErrorMonad b) -> (a -> IdxErrorMonad b)
 composeLREnv env1 env2 x
@@ -89,52 +64,10 @@ checkIdx :: (Ord a) => (a -> IdxError) -> a -> M.Map a (IdxErrorMonad b) -> IdxE
 checkIdx err x vs | Just y <- M.lookup x vs = y
                   | otherwise = throwError (err x)
 
-class EnvClass a where
-      mkPowerEnv :: (M.Map PowerIdx a) -> LRPowerEnv a
-      mkEtaEnv :: Gr b c -> LRPowerEnv a -> LREtaEnv a
-      mkXEnv :: Gr b c -> LRPowerEnv a -> LRXEnv a
-
-
 instance (Arith a) => EnvClass [a] where
          mkPowerEnv = mkPowerValEnv
          mkEtaEnv = mkEtaValEnv
          mkXEnv = mkXValEnv
-
-{-
-instance EnvClass [InTerm Abs] where
-         mkPowerEnv = undefined
-         mkEtaEnv = undefined
-         mkXEnv = undefined
--}
-
-class Arith a where
-      zero :: a
-      cst :: Double -> a
-      neg :: a -> a
-      rec :: a -> a
-      (.+) :: a -> a -> a
-      (.*) :: a -> a -> a
-      (./) :: a -> a -> a
-
-
-instance Arith Val where
-         zero = 0.0
-         cst = id
-         neg = negate
-         rec = recip
-         (.+) = (+)
-         (.*) = (*)
-         (./) = (/)
-
-instance Arith (InTerm a) where
-         zero = InConst 0.0
-         cst = InConst
-         neg = InMinus
-         rec = InRecip
-         (.+) = InAdd
-         (.*) = InMult
-         x ./ y = InMult x (InRecip y)
-
 
 mkPowerValEnv :: (M.Map PowerIdx [a]) -> LRPowerEnv [a]
 mkPowerValEnv m x = checkIdx PowerIdxError x (M.map Right m)
@@ -160,7 +93,6 @@ mkXValEnv g penv x = checkIdx XIdxError x xs
                 ps = map penv pidx
                 psums = L.foldl' add (Right (repeat zero)) pidx
                 xs = map (flip div psums) ps
-
         add (Right acc) idx = do
           p <- penv idx
           return (zipWith (.+) p acc)
@@ -169,6 +101,24 @@ mkXValEnv g penv x = checkIdx XIdxError x xs
         div err@(Left _) _ = err
         div _ err@(Left _) = err
 
+
+solveInTerms :: (Interpreter a, EnvClass a) => (M.Map PowerIdx a) -> LREtaEnv a -> LRXEnv a -> [InTerm b] -> M.Map PowerIdx a
+solveInTerms penv eenv xenv ts = M.fromList $ snd $ L.foldl' f (penv', []) ts
+  where eenv' = mkEnv eenv
+        xenv' = mkEnv xenv
+        penv' = mkPowerEnv penv
+        f (pacc, sol) (InEqual (PIdx idx) t) = (newPEnv `composeLREnv` pacc, (idx, val):sol)
+          where val = interpret (mkEnv pacc) eenv' xenv' t
+                newPEnv x | idx == x = return val
+                newPEnv idx = throwError (PowerIdxError idx)
+
+
+{-
+instance EnvClass [InTerm a] where
+         mkPowerEnv = undefined
+         mkEtaEnv = undefined
+         mkXEnv = undefined
+-}
 
 ----------------------------------------------------------------------------------
 

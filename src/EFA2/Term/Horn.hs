@@ -81,6 +81,15 @@ makeAnd fs = L.foldl1' (:*) fs
 graphToHorn :: Gr EqTerm () -> [Formula]
 graphToHorn g = foldGraph foldFunc [] g
 
+{- TODO:
+For an equation e that is not implied directly or indirectly by a set of equations ES 
+(e.g. there is no path in the dependency graph from ES to e) , we should
+look for a variable coverage for this equation E in the set of equations ES.
+The horn formula is then, for example: a and b and c -> e if the variables
+from a, b, c (a subset of ES) allow to compute e.
+
+That would be cool!
+-}
 foldFunc :: [Formula] -> ([Node], Node, [Node]) -> [Formula]
 foldFunc acc ([], _, []) = acc
 {-

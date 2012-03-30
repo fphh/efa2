@@ -11,14 +11,10 @@ import Control.Monad.Error
 import Debug.Trace
 
 import EFA2.Graph.GraphData
-import EFA2.Graph.Graph
 import EFA2.Term.Equation
 import EFA2.Term.TermData
+import EFA2.Signal.Arith
 
---import EFA2.Signal.SignalData
-import EFA2.Signal.TH
-
-import EFA2.Term.TermData
 
 
 showInTerm :: InTerm a -> String
@@ -65,9 +61,6 @@ instance EdgeFormula Diff where
          toEdgeFormula (F x) = undefined -- InConst 1.0
          toEdgeFormula (B x) = undefined -- InMult (InConst 2.0) (InConst 4.0)
 
-class Interpreter a where
-      interpret :: PowerEnv a -> EtaEnv a -> XEnv a -> InTerm b -> a
-
 instance (Arith a) => Interpreter [a] where
          interpret = valInterpret
 
@@ -86,13 +79,3 @@ valInterpret penv eenv xenv t = interpret t
 
 toInTerms :: (EdgeFormula a) => [EqTerm] -> [InTerm a]
 toInTerms ts = map eqTermToInTerm (filter (not . isGiven) ts)
-
-solveInTerms :: (Interpreter a, EnvClass a) => (M.Map PowerIdx a) -> LREtaEnv a -> LRXEnv a -> [InTerm b] -> M.Map PowerIdx a
-solveInTerms penv eenv xenv ts = M.fromList $ snd $ L.foldl' f (penv', []) ts
-  where eenv' = mkEnv eenv
-        xenv' = mkEnv xenv
-        penv' = mkPowerEnv penv
-        f (pacc, sol) (InEqual (PIdx idx) t) = (newPEnv `composeLREnv` pacc, (idx, val):sol)
-          where val = interpret (mkEnv pacc) eenv' xenv' t
-                newPEnv x | idx == x = return val
-                newPEnv idx = throwError (PowerIdxError idx)

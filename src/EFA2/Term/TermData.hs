@@ -1,10 +1,10 @@
+{-# LANGUAGE TypeSynonymInstances #-}
 
 
 module EFA2.Term.TermData where
 
 import EFA2.Graph.GraphData
-import EFA2.Signal.TH
-
+import EFA2.Signal.Arith
 
 data Abs
 data Diff
@@ -19,3 +19,15 @@ data InTerm a = PIdx PowerIdx
               | InAdd (InTerm a) (InTerm a)
               | InMult (InTerm a) (InTerm a)
               | InEqual (InTerm a) (InTerm a) deriving (Eq, Ord, Show)
+
+instance Arith (InTerm a) where
+         zero = InConst 0.0
+         cst = InConst
+         neg = InMinus
+         rec = InRecip
+         (.+) = InAdd
+         (.*) = InMult
+         x ./ y = InMult x (InRecip y)
+
+class Interpreter a where
+      interpret :: PowerEnv a -> EtaEnv a -> XEnv a -> InTerm b -> a

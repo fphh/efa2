@@ -72,7 +72,7 @@ drawTopologyT nenv penv eenv xenv g = runGraphvizCanvas Dot (mkDotGraph g (show,
         fromRight (Right x) = x
         fromRight (Left x) = error (show x)
         tToVal [InConst x] = [x]
-        f (x, [ys]) = x ++ " = " ++ (showInTerm ys) ++ " = " ++ show (head res)
+        f (x, [ys]) = x ++ " = " ++ (showInTerm ys) ++ " = " ++ (printf "%.2f" (head res))
           where res = interpret (tToVal . mkEnv penv) (tToVal . mkEnv eenv) (tToVal . mkEnv xenv) ys
         
 

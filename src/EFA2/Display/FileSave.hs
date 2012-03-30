@@ -6,7 +6,7 @@ import qualified Data.Map as M
 import Data.GraphViz
 import Data.Graph.Inductive
 
-import EFA2.Graph.Graph
+import EFA2.Graph.GraphData
 import EFA2.Graph.DependencyGraph
 import EFA2.Term.Equation
 

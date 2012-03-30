@@ -23,8 +23,6 @@ import EFA2.Graph.DependencyGraph
 
 import EFA2.Utils.Utils
 import EFA2.Graph.SignalGraph
-import EFA2.Signal.SignalAnalysis
-import EFA2.Signal.SignalData
 import EFA2.Signal.TH
 
 import EFA2.Display.FileSave
@@ -37,8 +35,8 @@ import EFA2.Example.Circular
 --import EFA2.Example.Vierbein
 
 
-mkGivens :: [(PowerIdx, a)] -> ([EqTerm], M.Map PowerIdx a)
-mkGivens xs = (give $ map (Energy . fst) xs, M.fromList xs)
+mkGiven :: (Signal a) => [(PowerIdx, [Val])] -> ([EqTerm], M.Map PowerIdx [a])
+mkGiven xs = (give $ map (Energy . fst) xs, M.fromList (map (fmap (map toSignal)) xs))
 
 
 main :: IO ()
@@ -47,10 +45,13 @@ main = do
       --penv (PowerIdx 2 4) = return [1.2, 1.4, 1.6]
       --penv idx = error (show idx)
 
-      (g, sigs) = circular
+      --sigs :: LRPowerEnv [Val]
+      sigs :: LRPowerEnv [InTerm Abs]
 
-      -- (given, penv') = mkGivens [(PowerIdx 2 3, InConst 1.2)]
-      (given, penv') = mkGivens [(PowerIdx 4 5, [1.8, 2.4, 2.5, 2.6, 3.0])]
+      (g, sigs) = loop
+
+      -- (given, penv') = mkGiven [(PowerIdx 2 3, InConst 1.2)]
+      (given, penv') = mkGiven [(PowerIdx 4 5, [1.8])]
 
       depg = makeDependencyGraph g given
       ho = hornOrder depg given
@@ -80,4 +81,4 @@ main = do
 
   drawTopologyX g
   drawDependency g given
-  drawTopology undefined (mkPowerEnv sol) eenv xenv g
+  drawTopologyT undefined (mkPowerEnv sol) eenv xenv g
