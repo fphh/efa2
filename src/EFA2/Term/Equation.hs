@@ -13,41 +13,46 @@ import EFA2.Utils.Utils
 import EFA2.Graph.GraphData
 import EFA2.Graph.Graph
 
-data EqTerm = EqTerm := EqTerm
+
+data Abs
+data Diff
+
+
+data EqTerm a = EqTerm a := EqTerm a
           | Const Double
           | Eta EtaIdx
           | Energy PowerIdx
           | X XIdx
-          | F EqTerm
-          | B EqTerm
-          | Given EqTerm
-          | Minus EqTerm
-          | Recip EqTerm
-          | Add EqTerm EqTerm
-          | Mult EqTerm EqTerm deriving (Show, Eq, Ord)
+          | F (EqTerm a)
+          | B (EqTerm a)
+          | Given (EqTerm a)
+          | Minus (EqTerm a)
+          | Recip (EqTerm a)
+          | Add (EqTerm a) (EqTerm a)
+          | Mult (EqTerm a) (EqTerm a) deriving (Show, Eq, Ord)
 
 infixl 1 :=
 
 
-mkEta :: Int -> Int -> EqTerm
+mkEta :: Int -> Int -> EqTerm a
 mkEta x y = Eta (EtaIdx x y)
 
-mkX :: Int -> Int -> EqTerm
+mkX :: Int -> Int -> EqTerm a
 mkX x y = X (XIdx x y)
 
-mkEnergy :: Int -> Int -> EqTerm
+mkEnergy :: Int -> Int -> EqTerm a
 mkEnergy x y = Energy (PowerIdx x y)
 
 
-give :: [EqTerm] -> [EqTerm]
+give :: [EqTerm a] -> [EqTerm a]
 give ts = map Given ts
 
-isGiven :: EqTerm -> Bool
+isGiven :: EqTerm a -> Bool
 isGiven (Given _) = True
 isGiven _ = False
 
 
-showEqTerm :: EqTerm -> String
+showEqTerm :: EqTerm a -> String
 showEqTerm (Const x) = show x
 showEqTerm (Energy (PowerIdx x y)) = "E_" ++ show x ++ "_" ++ show y
 showEqTerm (Eta (EtaIdx x y)) = "n_" ++ show x ++ "_" ++ show y
@@ -61,18 +66,18 @@ showEqTerm (Recip x) = "1/(" ++ showEqTerm x ++ ")"
 showEqTerm (Minus x) = "-(" ++ showEqTerm x ++ ")"
 showEqTerm (x := y) = showEqTerm x ++ " = " ++ showEqTerm y
 
-showEqTerms :: [EqTerm] -> String
+showEqTerms :: [EqTerm a] -> String
 showEqTerms ts = L.intercalate "\n" $ map showEqTerm ts
 
-mkEdgeEq :: Gr a b -> [EqTerm]
+mkEdgeEq :: Gr a b -> [EqTerm c]
 mkEdgeEq g = map f ns
   where ns = edges g
         f (x, y) = (mkEnergy y x) := F (mkEnergy x y)
 
-mkNodeEq :: Gr NLabel ELabel -> [EqTerm]
+mkNodeEq :: Gr a b -> [EqTerm c]
 mkNodeEq g = concat $ mapGraph mkEq g
 
-mkEq :: ([Node], Node, [Node]) -> [EqTerm]
+mkEq :: ([Node], Node, [Node]) -> [EqTerm a]
 mkEq ([], _, _) = []
 mkEq (_, _, []) = []
 mkEq (ins, n, outs) = ieqs' ++ oeqs' ++ ieqs ++ oeqs
@@ -96,7 +101,7 @@ mkEq (ins, n, outs) = ieqs' ++ oeqs' ++ ieqs ++ oeqs
         g x e es = e := (L.foldl1' Add $ map (Mult (Mult x (Recip (Add (Const 1.0) (Minus x))))) es)
 
 
-mkVarSet :: EqTerm -> S.Set EqTerm
+mkVarSet :: EqTerm a -> S.Set (EqTerm a)
 mkVarSet v@(Energy _) = S.singleton v
 mkVarSet (Add x y) = S.union (mkVarSet x) (mkVarSet y)
 mkVarSet (Mult x y) = S.union (mkVarSet x) (mkVarSet y)
@@ -126,7 +131,7 @@ c = Const 1.0
 t = Add (Mult x1 x2) c := x4
 
 
-findVar :: EqTerm -> EqTerm -> Maybe TPath
+findVar :: EqTerm a -> EqTerm a -> Maybe TPath
 findVar t s | t == s = Just []
 findVar t s
   | (Nothing, x) <- h = fmap (R:) x
@@ -142,13 +147,13 @@ findVar t s
         help t (B u) = (findVar t u, Nothing)
         help _ _ = (Nothing, Nothing)
 
-isolateVar :: EqTerm -> EqTerm -> TPath -> EqTerm
+isolateVar :: EqTerm a -> EqTerm a -> TPath -> EqTerm a
 isolateVar s t@(u := v) (L:p) = (s := transform v)
   where transform = isolateVar' u p
 isolateVar s t@(u := v) (R:p) = (s := transform u)
   where transform = isolateVar' v p
 
-isolateVar' :: EqTerm -> TPath -> (EqTerm -> EqTerm)
+isolateVar' :: EqTerm a -> TPath -> (EqTerm a -> EqTerm a)
 isolateVar' _ [] = id
 isolateVar' (Add u v) (L:p) = isolateVar' u p . Add (Minus v)
 isolateVar' (Add u v) (R:p) = isolateVar' v p . Add (Minus u)
@@ -165,7 +170,7 @@ isolateVar' (B u) (L:p) = isolateVar' u p . F
 -- the unknown variable isolated on its left hand side (lhs),
 -- such that we can evaluate the rhs in order to calculate
 -- the value of the unknown variable.
-transformEq :: EqTerm -> EqTerm -> EqTerm
+transformEq :: EqTerm a -> EqTerm a -> EqTerm a
 transformEq unknown t
   | Nothing <- fv = t
   | Just p <- fv = isolateVar unknown t p

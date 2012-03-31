@@ -16,7 +16,7 @@ import EFA2.Term.Equation
 writeTopology :: (Show b, Show a) => Gr a b -> IO ()
 writeTopology g = writeFile "results/topograph.dot" (graphviz' g)
 
-writeDependencyGraph :: Gr NLabel ELabel -> [EqTerm] -> IO ()
+writeDependencyGraph :: Gr NLabel ELabel -> [EqTerm NLabel] -> IO ()
 writeDependencyGraph g given = writeFile "results/depgraph.dot" (graphviz' g')
   where g' = gmap f $ makeDependencyGraph g given
         f (ins, n, l, outs) = (ins, n, show n ++ ": " ++ showEqTerm l, outs)

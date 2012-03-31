@@ -17,14 +17,13 @@ import EFA2.Utils.Utils
 import EFA2.Term.Equation
 import EFA2.Graph.GraphData
 
-dependencyGraph :: forall a. (Ord a) => [S.Set a] -> Gr (S.Set a) ()
+dependencyGraph :: [S.Set (EqTerm a)] -> Gr (S.Set (EqTerm a)) ()
 dependencyGraph ss = g
-  where --xs = eachWithEvery ss
-        xs = HTL.removeEach ss
+  where xs = HTL.removeEach ss
         ys = concatMap (uncurry mkArcs) xs
         m = M.fromList (zip ss [0..])
         es = unique $ map (\(x, y) -> (m M.! x, m M.! y, ())) ys
-        g :: Gr (S.Set a) ()
+       -- g :: Gr (S.Set a) ()
         g = mkGraph (map flipPair $ M.toList m) es
 
 mkArcs :: (Ord a) => S.Set a -> [S.Set a] -> [(S.Set a, S.Set a)]
@@ -34,14 +33,22 @@ mkArcs s ss = catMaybes $ map g ss
 
 -- If true, then we have an edge from s to t.
 diffByAtMostOne :: (Eq a, Ord a) => S.Set a -> S.Set a -> Bool
---diffByAtMostOne s t = (S.size t > 1) && S.size (S.difference t s) == 1
 diffByAtMostOne s t = (S.size t > 1) && (S.isSubsetOf t s || S.size (S.difference t s) == 1)
 
 
-makeDependencyGraph :: Gr NLabel ELabel -> [EqTerm] -> Gr EqTerm ()
+
+--makeDependencyGraph :: Gr NLabel ELabel -> [EqTerm Abs] -> Gr NLabel ()
+
+makeDependencyGraph :: Gr NLabel ELabel -> [EqTerm a] -> Gr (EqTerm a) ()
 makeDependencyGraph g given = deq
-  where ts = mkEdgeEq g ++ mkNodeEq g ++ given
+  where --ts :: [EqTerm a]
+        ts = mkEdgeEq g ++ mkNodeEq g ++ given
+        --vsets :: [S.Set (EqTerm a)]
         vsets = map mkVarSet ts
+        --mt :: M.Map (S.Set (EqTerm a)) (EqTerm a)
         mt = M.fromList (zip vsets ts)
+        --dg :: Gr (S.Set (EqTerm a)) ()
         dg = dependencyGraph vsets
-        deq = nmap (mt M.!) dg 
+        --deq :: Gr (EqTerm a) ()
+        deq = nmap (mt M.!) dg
+        --deq = nmap (const ()) dg

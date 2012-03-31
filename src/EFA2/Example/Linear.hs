@@ -14,7 +14,7 @@ import EFA2.Graph.Graph
 import EFA2.Example.SymSig
 
 
-sigs :: LRPowerEnv [Val]
+sigs :: LRPowerEnv [Val b]
 sigs (PowerIdx 0 1) = return [3.0, 3.0]
 sigs (PowerIdx 1 0) = return [2.2, 2.2]
 sigs (PowerIdx 1 2) = return [1.8, 1.8]

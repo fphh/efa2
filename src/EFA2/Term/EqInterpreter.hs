@@ -17,7 +17,7 @@ import EFA2.Signal.Arith
 
 
 
-showInTerm :: InTerm a -> String
+showInTerm :: InTerm -> String
 showInTerm (PIdx (PowerIdx x y)) = "E_" ++ show x ++ "_" ++ show y
 showInTerm (EIdx (EtaIdx x y)) = "n_" ++ show x ++ "_" ++ show y
 showInTerm (ScaleIdx (XIdx x y)) = "x_" ++ show x ++ "_" ++ show y
@@ -30,11 +30,11 @@ showInTerm (InAdd s t) = "(" ++ showInTerm s ++ " + " ++ showInTerm t ++ ")"
 showInTerm (InMult s t) = showInTerm s ++ " * " ++ showInTerm t
 showInTerm (InEqual s t) = showInTerm s ++ " = " ++ showInTerm t
 
-showInTerms :: [InTerm a] -> String
+showInTerms :: [InTerm] -> String
 showInTerms ts = L.intercalate "\n" $ map showInTerm ts
 
 
-eqTermToInTerm :: (EdgeFormula a) => EqTerm -> InTerm a
+eqTermToInTerm :: (EdgeFormula a) => EqTerm a -> InTerm
 eqTermToInTerm (Energy idx) = PIdx idx
 eqTermToInTerm (Eta idx) = EIdx idx
 eqTermToInTerm (X idx) = ScaleIdx idx
@@ -49,23 +49,32 @@ eqTermToInTerm (s := t) = InEqual (eqTermToInTerm s) (eqTermToInTerm t)
 eqTermToInTerm t = error ("Bad term: " ++ showEqTerm t)
 
 class EdgeFormula a where
-      toEdgeFormula :: EqTerm -> InTerm a
+      toEdgeFormula :: EqTerm a -> InTerm
 
 instance EdgeFormula Abs where
-         toEdgeFormula (F (Energy idx@(PowerIdx x y))) = InMult (eqTermToInTerm (Eta (EtaIdx x y))) 
-                                                                (eqTermToInTerm (Energy idx))
-         toEdgeFormula (B (Energy idx@(PowerIdx x y))) = InMult (eqTermToInTerm (Recip (Eta (EtaIdx x y))))
-                                                                (eqTermToInTerm (Energy idx))
+         toEdgeFormula (F (Energy idx@(PowerIdx x y))) = InMult (eqTermToInTerm s) (eqTermToInTerm t)
+           where s :: EqTerm Abs  -- why cant we derive this type?
+                 s = Eta (EtaIdx x y)
+                 t :: EqTerm Abs
+                 t = Energy idx
+
+         toEdgeFormula (B (Energy idx@(PowerIdx x y))) = InMult (eqTermToInTerm s) (eqTermToInTerm t)
+           where s :: EqTerm Abs
+                 s = Recip (Eta (EtaIdx x y))
+                 t :: EqTerm Abs
+                 t = Energy idx
+
+
 
 instance EdgeFormula Diff where
-         toEdgeFormula (F x) = undefined -- InConst 1.0
-         toEdgeFormula (B x) = undefined -- InMult (InConst 2.0) (InConst 4.0)
+         toEdgeFormula (F x) = InConst 1.0
+         toEdgeFormula (B x) = InMult (InConst 20.0) (InConst 40.0)
 
 instance (Arith a) => Interpreter [a] where
          interpret = valInterpret
 
 
-valInterpret :: (Arith a) => PowerEnv [a] -> EtaEnv [a] -> XEnv [a] -> InTerm b -> [a]
+valInterpret :: (Arith a) => PowerEnv [a] -> EtaEnv [a] -> XEnv [a] -> InTerm -> [a]
 valInterpret penv eenv xenv t = interpret t
   where interpret (PIdx idx) = penv idx
         interpret (EIdx idx) = eenv idx
@@ -77,5 +86,5 @@ valInterpret penv eenv xenv t = interpret t
         interpret (InAdd s t) = zipWith (.+) (interpret s) (interpret t)
         interpret (InMult s t) = zipWith (.*) (interpret s) (interpret t)
 
-toInTerms :: (EdgeFormula a) => [EqTerm] -> [InTerm a]
+toInTerms :: (EdgeFormula a) => [EqTerm a] -> [InTerm]
 toInTerms ts = map eqTermToInTerm (filter (not . isGiven) ts)

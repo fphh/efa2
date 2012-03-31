@@ -102,7 +102,7 @@ mkXValEnv g penv x = checkIdx XIdxError x xs
         div _ err@(Left _) = err
 
 
-solveInTerms :: (Interpreter a, EnvClass a) => (M.Map PowerIdx a) -> LREtaEnv a -> LRXEnv a -> [InTerm b] -> M.Map PowerIdx a
+solveInTerms :: (Interpreter a, EnvClass a) => (M.Map PowerIdx a) -> LREtaEnv a -> LRXEnv a -> [InTerm] -> M.Map PowerIdx a
 solveInTerms penv eenv xenv ts = M.fromList $ snd $ L.foldl' f (penv', []) ts
   where eenv' = mkEnv eenv
         xenv' = mkEnv xenv

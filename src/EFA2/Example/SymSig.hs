@@ -6,8 +6,13 @@ import EFA2.Graph.GraphData
 import EFA2.Term.TermData
 import EFA2.Signal.Arith
 
-symSig :: LRPowerEnv [Val] -> LRPowerEnv [InTerm a]
+symSig :: LRPowerEnv [Val] -> LRPowerEnv [InTerm]
 symSig sigs idx
   | Right xs <- res = Right (map InConst xs)
   | Left str <- res = Left str
   where res = sigs idx
+
+
+class Signal a where
+      signal :: LRPowerEnv [a]
+      toSignal :: Val -> a

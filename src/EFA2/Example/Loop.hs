@@ -33,16 +33,12 @@ sigs (PowerIdx 4 2) = return [0.2]
 sigs (PowerIdx 2 4) = return [0.1]
 sigs idx = throwError (PowerIdxError idx)
 
-class Signal a where
-      signal :: LRPowerEnv [a]
-      toSignal :: Val -> a
-
 instance Signal Val where
          signal = sigs
          toSignal = id
 
-instance Signal (InTerm a) where
-         signal = symSig signal
+instance Signal InTerm where
+         signal = symSig sigs
          toSignal = InConst
 
 loop :: (Signal a) => (Gr NLabel ELabel, LRPowerEnv [a])

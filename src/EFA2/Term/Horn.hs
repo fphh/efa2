@@ -17,17 +17,17 @@ import EFA2.Utils.Utils
 data Formula = Zero
              | One
              | Atom Int
-             | Formula :* Formula
+             | And Formula Formula
              | Formula :-> Formula deriving (Ord, Eq)
 
 infix 8 :->
-infix 9 :*
+-- infix 9 :*
 
 instance Show Formula where
          show Zero = "F"
          show One = "T"
          show (Atom x) = show x
-         show (f :* g) = "(" ++ show f ++ " ∧ " ++ show g ++ ")"
+         show (And f g) = "(" ++ show f ++ " ∧ " ++ show g ++ ")"
          show (f :-> g) = show f ++ " → " ++ show g
 
 type Step = Int
@@ -42,7 +42,7 @@ isAtom _ = False
 
 getAtoms :: Formula -> S.Set Formula
 getAtoms v@(Atom _) = S.singleton v
-getAtoms (f :* g) = S.union (getAtoms f) (getAtoms g)
+getAtoms (And f g) = S.union (getAtoms f) (getAtoms g)
 getAtoms (f :-> g) = S.union (getAtoms f) (getAtoms g)
 getAtoms _ = S.empty
 
@@ -76,9 +76,9 @@ horn fs = fmap atomsOnly res
         res = horn' 0 S.empty fs
 
 makeAnd :: [Formula] -> Formula
-makeAnd fs = L.foldl1' (:*) fs
+makeAnd fs = L.foldl1' And fs
 
-graphToHorn :: Gr EqTerm () -> [Formula]
+graphToHorn :: Gr (EqTerm a) () -> [Formula]
 graphToHorn g = foldGraph foldFunc [] g
 
 {- TODO:
@@ -104,19 +104,20 @@ foldFunc acc (ins, x, _) = insFs ++ acc
         insFs = map (:-> v) (map Atom ins)
 
 
-makeHornFormulae :: Gr EqTerm () -> [EqTerm] -> [Formula]
+makeHornFormulae :: Gr (EqTerm a) () -> [EqTerm a] -> [Formula]
 makeHornFormulae g given = given' ++ graphToHorn g
   where given' = L.foldl' f [] (labNodes g)
         f acc (n, Given (Energy _)) = (One :-> Atom n):acc
         f acc _ = acc
 
-makeHornOrder :: Gr EqTerm () -> [Formula] -> [EqTerm]
+makeHornOrder :: Gr (EqTerm a) () -> [Formula] -> [EqTerm a]
 makeHornOrder g formulae = catMaybes ts
   where Just fs = horn formulae
+        fs' :: [Formula]
         fs' = map snd (S.toList fs)
         ts = map (lab g . fromAtom) fs'
         fromAtom (Atom x) = x
 
-hornOrder :: Gr EqTerm () -> [EqTerm] -> [EqTerm]
+hornOrder :: Gr (EqTerm a) () -> [EqTerm a] -> [EqTerm a]
 hornOrder g given = makeHornOrder g given'
   where given' = makeHornFormulae g given
