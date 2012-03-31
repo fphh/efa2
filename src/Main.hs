@@ -46,7 +46,7 @@ main = do
       sigs :: LRPowerEnv [InTerm]
       (g, sigs) = loop
 
-      given :: [EqTerm Diff]
+      given :: [EqTerm Abs]
       (given, penv') = mkGiven [(PowerIdx 4 5, [1.8])]
 
       depg = makeDependencyGraph g given
