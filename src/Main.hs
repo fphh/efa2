@@ -43,11 +43,11 @@ mkGiven xs = (give $ map (Energy . fst) xs, M.fromList (map (fmap (map toSignal)
 main :: IO ()
 main = do
   let --sigs :: LRPowerEnv [Val]
-      sigs :: LRPowerEnv [InTerm]
+      sigs :: LRPowerEnv [Val]
       (g, sigs) = loop
 
-      given :: [EqTerm Diff]
-      (given, penv') = mkGiven [(PowerIdx 4 5, [1.8])]
+      given :: [EqTerm Abs]
+      (given, penv') = mkGiven [(PowerIdx 1 0, [2.2, 3.0, 4.0])]
 
       depg = makeDependencyGraph g given
       ho = hornOrder depg given
@@ -59,6 +59,7 @@ main = do
       penv = mkPowerEnv penv'
 
       sol = M.union penv' (solveInTerms penv' eenv xenv inTs)
+      --sol = M.union penv' (solveInTerms (mkSymPowerEnv numOf (PowerIdx 1 0)) mkSymEtaEnv mkSymXEnv inTs)
 
 
   --writeTopology g

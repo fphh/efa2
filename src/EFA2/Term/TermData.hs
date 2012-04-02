@@ -8,6 +8,8 @@ import EFA2.Signal.Arith
 
 data InTerm = PIdx PowerIdx
               | EIdx EtaIdx
+              | DPIdx DPowerIdx
+              | DEIdx DEtaIdx
               | ScaleIdx XIdx
               | InConst Val
               | InRConst Val  

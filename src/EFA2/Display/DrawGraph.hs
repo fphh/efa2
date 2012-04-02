@@ -24,7 +24,8 @@ import EFA2.Term.EqInterpreter
 import EFA2.Term.TermData
 import EFA2.Example.SymSig
 import EFA2.Signal.Arith
-import EFA2.Example.Loop
+--import EFA2.Example.Loop
+import EFA2.Example.Linear
 
 import EFA2.Utils.Utils
 
@@ -71,7 +72,7 @@ drawTopologyA nenv penv eenv xenv g = runGraphvizCanvas Dot (mkDotGraph g (show,
         eshow ps = L.intercalate "\n" $ map (f . fmap fromRight) $ (eshow1 ps ++ eshow2 ps)
         fromRight (Right x) = x
         fromRight (Left x) = error (show x)
-        f (x, ys) = x ++ (concatMap (printf "%.2f    ") ys)
+        f (x, ys) = x ++ (concatMap (printf "%.4f    ") ys)
 
 instance DrawTopology InTerm where
          drawTopology = drawTopologyT
@@ -83,10 +84,8 @@ drawTopologyT nenv penv eenv xenv g = runGraphvizCanvas Dot (mkDotGraph g (show,
         eshow ps = L.intercalate "\n" $ map (f . fmap fromRight) $ (eshow1 ps ++ eshow2 ps)
         fromRight (Right x) = x
         fromRight (Left x) = error (show x)
-        tToVal [InConst x] = [toSignal x :: Val]
-        f (x, [ys]) = x ++ " = " ++ (showInTerm ys) ++ " = " ++ (printf "%.2f" (head res))
-          where res = interpret (tToVal . mkEnv penv) (tToVal . mkEnv eenv) (tToVal . mkEnv xenv) ys
-    
+        f (x, e@(eq:_)) = x ++ " = " ++ (showInTerm eq)
+
 --drawDependencyGraph :: Gr NLabel ELabel -> [EqTerm NLabel] -> IO ()
 drawDependencyGraph g given = runGraphvizCanvas Dot (mkDotGraph g' (nshow, (const ""))) Xlib
   where -- g' :: Gr x y

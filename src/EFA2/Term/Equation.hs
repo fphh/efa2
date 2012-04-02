@@ -77,10 +77,11 @@ mkEdgeEq g = map f ns
 mkNodeEq :: Gr a b -> [EqTerm c]
 mkNodeEq g = concat $ mapGraph mkEq g
 
+{- TODO: Rethink equations ineqs' and oeqs'. Currently they are invalid. -}
 mkEq :: ([Node], Node, [Node]) -> [EqTerm a]
 mkEq ([], _, _) = []
 mkEq (_, _, []) = []
-mkEq (ins, n, outs) = ieqs' ++ oeqs' ++ ieqs ++ oeqs
+mkEq (ins, n, outs) = {- ieqs' ++ oeqs' ++ -} ieqs ++ oeqs
   where ins' = zip (repeat n) ins
         outs' = zip (repeat n) outs
         xis = map (uncurry mkX) ins'

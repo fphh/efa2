@@ -101,8 +101,24 @@ mkXValEnv g penv x = checkIdx XIdxError x xs
         div err@(Left _) _ = err
         div _ err@(Left _) = err
 
+mkSymPowerEnv :: Int -> PowerIdx -> M.Map PowerIdx [InTerm]
+mkSymPowerEnv n idx = M.singleton idx (replicate n (PIdx idx))
 
-solveInTerms :: (Interpreter a, EnvClass a) => (M.Map PowerIdx a) -> LREtaEnv a -> LRXEnv a -> [InTerm] -> M.Map PowerIdx a
+mkSymEtaEnv :: LREtaEnv [InTerm]
+mkSymEtaEnv idx = Right (repeat (EIdx idx))
+
+mkSymDPowerEnv :: Int -> DPowerIdx -> M.Map DPowerIdx [InTerm]
+mkSymDPowerEnv n idx = M.singleton idx (replicate n (DPIdx idx))
+
+mkSymDEtaEnv :: LRDEtaEnv [InTerm]
+mkSymDEtaEnv idx = Right (repeat (DEIdx idx))
+
+
+mkSymXEnv :: LRXEnv [InTerm]
+mkSymXEnv idx = Right (repeat (ScaleIdx idx))
+
+
+solveInTerms :: (Interpreter a, EnvClass a) => M.Map PowerIdx a -> LREtaEnv a -> LRXEnv a -> [InTerm] -> M.Map PowerIdx a
 solveInTerms penv eenv xenv ts = M.fromList $ snd $ L.foldl' f (penv', []) ts
   where eenv' = mkEnv eenv
         xenv' = mkEnv xenv
@@ -112,6 +128,17 @@ solveInTerms penv eenv xenv ts = M.fromList $ snd $ L.foldl' f (penv', []) ts
                 newPEnv x | idx == x = return val
                 newPEnv idx = throwError (PowerIdxError idx)
 
+{-
+solveDInTerms :: (Interpreter a, EnvClass a) => M.Map PowerIdx a -> LREtaEnv a -> LRXEnv a -> [InTerm] -> M.Map PowerIdx a
+solveDInTerms penv eenv xenv ts = M.fromList $ snd $ L.foldl' f (penv', []) ts
+  where eenv' = mkEnv eenv
+        xenv' = mkEnv xenv
+        penv' = mkPowerEnv penv
+        f (pacc, sol) (InEqual (PIdx idx) t) = (newPEnv `composeLREnv` pacc, (idx, val):sol)
+          where val = interpretD (mkEnv pacc) eenv' xenv' t
+                newPEnv x | idx == x = return val
+                newPEnv idx = throwError (PowerIdxError idx)
+-}
 
 {-
 instance EnvClass [InTerm a] where

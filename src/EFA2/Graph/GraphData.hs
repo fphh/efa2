@@ -35,6 +35,9 @@ data NodeIdx = NodeIdx !Int deriving (Show, Ord, Eq)
 data EtaIdx = EtaIdx !Int !Int deriving  (Show)
 data PowerIdx = PowerIdx !Int !Int deriving (Show, Ord, Eq)
 data XIdx = XIdx !Int !Int deriving (Show, Ord, Eq)
+data DEtaIdx = DEtaIdx !Int !Int deriving  (Show)
+data DPowerIdx = DPowerIdx !Int !Int deriving (Show, Ord, Eq)
+
 
 -- EtaIdx x y == EtaIdx y x
 instance Eq EtaIdx where
@@ -47,10 +50,23 @@ instance Ord EtaIdx where
            | otherwise = compare (f a b) (f x y)
                where f u v = if u < v then (u, v) else (v, u)
 
+instance Eq DEtaIdx where
+         (DEtaIdx a b) == (DEtaIdx x y) = f a b == f x y
+           where f u v = if u < v then (u, v) else (v, u)
+
+instance Ord DEtaIdx where
+         compare as@(DEtaIdx a b) bs@(DEtaIdx x y)
+           | as == bs = EQ
+           | otherwise = compare (f a b) (f x y)
+               where f u v = if u < v then (u, v) else (v, u)
+
+
 -- Errors
 
 data IdxError = PowerIdxError PowerIdx
               | EtaIdxError EtaIdx
+              | DPowerIdxError PowerIdx
+              | DEtaIdxError EtaIdx
               | XIdxError XIdx
               | OtherError String deriving (Eq, Show)
 
@@ -65,13 +81,16 @@ type IdxErrorMonad = Either IdxError
 type LRNodeEnv a = NodeIdx -> IdxErrorMonad a
 type LREtaEnv a = EtaIdx -> IdxErrorMonad a
 type LRPowerEnv a = PowerIdx -> IdxErrorMonad a
+type LRDEtaEnv a = DEtaIdx -> IdxErrorMonad a
+type LRDPowerEnv a = DPowerIdx -> IdxErrorMonad a
 type LRXEnv a = XIdx -> IdxErrorMonad a
 
 type NodeEnv a = NodeIdx -> a
 type EtaEnv a = EtaIdx -> a
 type PowerEnv a = PowerIdx -> a
+type DEtaEnv a = EtaIdx -> a
+type DPowerEnv a = PowerIdx -> a
 type XEnv a = XIdx -> a
-
 
 
 class EnvClass a where
