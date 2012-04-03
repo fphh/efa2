@@ -105,7 +105,6 @@ interpret dpenv deenv eenv xenv penv t = go t
         go (InRecip t) = map rec (go t)
         go (InAdd s t) = zipWith (.+) (go s) (go t)
         go (InMult s t) = zipWith (.*) (go s) (go t)
->>>>>>> listeval
 
 toInTerms :: (EdgeFormula a) => [EqTerm a] -> [InTerm]
 toInTerms ts = concatMap eqTermToInTerm (filter (not . isGiven) ts)
