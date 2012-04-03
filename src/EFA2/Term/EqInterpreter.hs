@@ -18,9 +18,11 @@ import EFA2.Signal.Arith
 
 
 showInTerm :: InTerm -> String
-showInTerm (PIdx (PowerIdx x y)) = "E_" ++ show x ++ "_" ++ show y
-showInTerm (EIdx (EtaIdx x y)) = "n_" ++ show x ++ "_" ++ show y
-showInTerm (ScaleIdx (XIdx x y)) = "x_" ++ show x ++ "_" ++ show y
+showInTerm (PIdx (PowerIdx x y)) = "E." ++ show x ++ "." ++ show y
+showInTerm (EIdx (EtaIdx x y)) = "n." ++ show x ++ "." ++ show y
+showInTerm (DPIdx (DPowerIdx x y)) = "dE." ++ show x ++ "." ++ show y
+showInTerm (DEIdx (DEtaIdx x y)) = "dn." ++ show x ++ "." ++ show y
+showInTerm (ScaleIdx (XIdx x y)) = "x." ++ show x ++ "." ++ show y
 showInTerm (InConst x) = show x
 showInTerm (InRConst x) = show x
 
@@ -34,57 +36,76 @@ showInTerms :: [InTerm] -> String
 showInTerms ts = L.intercalate "\n" $ map showInTerm ts
 
 
-eqTermToInTerm :: (EdgeFormula a) => EqTerm a -> InTerm
-eqTermToInTerm (Energy idx) = PIdx idx
-eqTermToInTerm (Eta idx) = EIdx idx
-eqTermToInTerm (X idx) = ScaleIdx idx
-eqTermToInTerm (Const x) = InRConst x
-eqTermToInTerm (Minus t) = InMinus (eqTermToInTerm t)
-eqTermToInTerm (Recip t) = InRecip (eqTermToInTerm t)
-eqTermToInTerm (Add s t) = InAdd (eqTermToInTerm s) (eqTermToInTerm t)
-eqTermToInTerm (Mult s t) = InMult (eqTermToInTerm s) (eqTermToInTerm t)
+eqTermToInTerm :: (EdgeFormula a) => EqTerm a -> [InTerm]
+eqTermToInTerm (Energy idx) = [PIdx idx]
+eqTermToInTerm (Eta idx) = [EIdx idx]
+eqTermToInTerm (DEnergy idx) = [DPIdx idx]
+eqTermToInTerm (DEta idx) = [DEIdx idx]
+eqTermToInTerm (X idx) = [ScaleIdx idx]
+eqTermToInTerm (Const x) = [InRConst x]
+eqTermToInTerm (Minus t) = map InMinus (eqTermToInTerm t)
+eqTermToInTerm (Recip t) = map InRecip (eqTermToInTerm t)
+eqTermToInTerm (Add s t) = addf [eqTermToInTerm s, eqTermToInTerm t]
+eqTermToInTerm (Mult s t) = multf [eqTermToInTerm s, eqTermToInTerm t]
 eqTermToInTerm t@(F _) = toEdgeFormula t
 eqTermToInTerm t@(B _) = toEdgeFormula t
-eqTermToInTerm (s := t) = InEqual (eqTermToInTerm s) (eqTermToInTerm t)
+eqTermToInTerm (s := t) = [InEqual (L.foldl1' InAdd $ eqTermToInTerm s) (L.foldl1' InAdd $ eqTermToInTerm t)]
 eqTermToInTerm t = error ("Bad term: " ++ showEqTerm t)
 
+addf :: [[InTerm]] -> [InTerm]
+addf xs = concat xs
+
+multf :: [[InTerm]] -> [InTerm]
+multf xs = map fgg (sequence xs)
+  where fgg ys = L.foldl1' InMult ys
+
+
 class EdgeFormula a where
-      toEdgeFormula :: EqTerm a -> InTerm
+      toEdgeFormula :: EqTerm a -> [InTerm]
 
 instance EdgeFormula Abs where
-         toEdgeFormula (F (Energy idx@(PowerIdx x y))) = InMult (eqTermToInTerm s) (eqTermToInTerm t)
+         toEdgeFormula (F (Energy idx@(PowerIdx x y))) = multf [eqTermToInTerm s, eqTermToInTerm t]
            where s :: EqTerm Abs  -- why cant we derive this type?
                  s = Eta (EtaIdx x y)
                  t :: EqTerm Abs
                  t = Energy idx
 
-         toEdgeFormula (B (Energy idx@(PowerIdx x y))) = InMult (eqTermToInTerm s) (eqTermToInTerm t)
+         toEdgeFormula (B (Energy idx@(PowerIdx x y))) = multf [eqTermToInTerm s, eqTermToInTerm t]
            where s :: EqTerm Abs
                  s = Recip (Eta (EtaIdx x y))
                  t :: EqTerm Abs
                  t = Energy idx
 
 
-
 instance EdgeFormula Diff where
-         toEdgeFormula (F x) = InConst 1.0
-         toEdgeFormula (B x) = InMult (InConst 20.0) (InConst 40.0)
+         toEdgeFormula (F e@(Energy idx@(PowerIdx x y))) = eqTermToInTerm (Mult de dn) 
+                                                           ++ multf [eqTermToInTerm e, eqTermToInTerm n]
+                                                           ++ multf [eqTermToInTerm e, eqTermToInTerm dn]
+           where n :: EqTerm Diff
+                 n = Eta (EtaIdx x y)
+                 de :: EqTerm Diff
+                 de = DEnergy (DPowerIdx x y)
+                 dn :: EqTerm Diff
+                 dn = DEta (DEtaIdx x y)
 
-instance (Arith a) => Interpreter [a] where
-         interpret = valInterpret
+
+         toEdgeFormula (B x) = [InMult (InConst 20.0) (InConst 40.0)]
 
 
-valInterpret :: (Arith a) => PowerEnv [a] -> EtaEnv [a] -> XEnv [a] -> InTerm -> [a]
-valInterpret penv eenv xenv t = interpret t
-  where interpret (PIdx idx) = penv idx
-        interpret (EIdx idx) = eenv idx
-        interpret (ScaleIdx idx) = xenv idx
-        interpret (InConst x) = [cst x]
-        interpret (InRConst x) = repeat (cst x)      -- This constants can only be multiplied with finite lists.
-        interpret (InMinus t) = map neg (interpret t)
-        interpret (InRecip t) = map rec (interpret t)
-        interpret (InAdd s t) = zipWith (.+) (interpret s) (interpret t)
-        interpret (InMult s t) = zipWith (.*) (interpret s) (interpret t)
+interpret :: (Arith a) => DPowerEnv [a] -> DEtaEnv [a] -> EtaEnv [a] -> XEnv [a] -> PowerEnv [a] -> InTerm -> [a]
+interpret dpenv deenv eenv xenv penv t = go t
+  where go (PIdx idx) = penv idx
+        go (EIdx idx) = eenv idx
+        go (DPIdx idx) = dpenv idx
+        go (DEIdx idx) = deenv idx
+        go (ScaleIdx idx) = xenv idx
+        go (InConst x) = [cst x]
+        go (InRConst x) = repeat (cst x)   -- This constants can only be multiplied with finite lists.
+        go (InMinus t) = (go t)
+        go (InRecip t) = map rec (go t)
+        go (InAdd s t) = zipWith (.+) (go s) (go t)
+        go (InMult s t) = zipWith (.*) (go s) (go t)
+>>>>>>> listeval
 
 toInTerms :: (EdgeFormula a) => [EqTerm a] -> [InTerm]
-toInTerms ts = map eqTermToInTerm (filter (not . isGiven) ts)
+toInTerms ts = concatMap eqTermToInTerm (filter (not . isGiven) ts)

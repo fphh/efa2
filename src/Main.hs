@@ -18,6 +18,7 @@ import EFA2.Term.Horn
 import EFA2.Term.DirEquation
 import EFA2.Term.EqInterpreter
 import EFA2.Term.TermData
+import EFA2.Term.Solver
 
 import EFA2.Graph.GraphData
 import EFA2.Graph.Graph
@@ -30,41 +31,34 @@ import EFA2.Utils.Utils
 import EFA2.Display.DrawGraph
 
 import EFA2.Example.SymSig
---import EFA2.Example.Dreibein
---import EFA2.Example.Linear
+
+import EFA2.Example.Dreibein
+import EFA2.Example.Linear
+import EFA2.Example.LinearOne
+import EFA2.Example.LinearX
+import EFA2.Example.LinearTwo
 import EFA2.Example.Loop
---import EFA2.Example.Circular
---import EFA2.Example.Vierbein
+import EFA2.Example.Circular
+import EFA2.Example.Vierbein
 
 
-mkGiven :: (Signal a) => [(PowerIdx, [Val])] -> ([EqTerm b], M.Map PowerIdx [a])
-mkGiven xs = (give $ map (Energy . fst) xs, M.fromList (map (fmap (map toSignal)) xs))
+
 
 main :: IO ()
 main = do
-  let --sigs :: LRPowerEnv [Val]
-      sigs :: LRPowerEnv [InTerm]
-      (g, sigs) = loop
+  let g = vierbein
+      given = [(PowerIdx 0 2, [2.2]) ]
 
-      given :: [EqTerm Abs]
-      (given, penv') = mkGiven [(PowerIdx 4 5, [1.8])]
+      env :: AbsEnv [Val]
+      --env = symbolicDiffEnv
+      env = environment g
 
-      depg = makeDependencyGraph g given
-      ho = hornOrder depg given
-      dirEqs = directEquations ho
-      inTs = toInTerms dirEqs
-
-      xenv = mkXEnv g sigs
-      eenv = mkEtaEnv g sigs
-      penv = mkPowerEnv penv'
-
-      sol = M.union penv' (solveInTerms penv' eenv xenv inTs)
-
+      sol = solve g env given
 
   --writeTopology g
   --writeDependencyGraph g given
 
-
+{-
   putStrLn (hornsToStr $ makeHornFormulae depg given)
 
   putStrLn (showEqTerms $ hornOrder depg given)
@@ -72,8 +66,10 @@ main = do
   putStrLn (show given)
   putStrLn ""
   putStrLn (showInTerms inTs)
+-}
   putStrLn (show sol)
+
 
   drawTopologyX g
   drawDependencyGraph g given
-  drawTopology undefined (mkPowerEnv sol) eenv xenv g
+  drawTopology undefined g env sol

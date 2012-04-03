@@ -20,8 +20,10 @@ data Diff
 
 data EqTerm a = EqTerm a := EqTerm a
           | Const Double
-          | Eta EtaIdx
           | Energy PowerIdx
+          | Eta EtaIdx
+          | DEnergy DPowerIdx
+          | DEta DEtaIdx
           | X XIdx
           | F (EqTerm a)
           | B (EqTerm a)
@@ -56,6 +58,8 @@ showEqTerm :: EqTerm a -> String
 showEqTerm (Const x) = show x
 showEqTerm (Energy (PowerIdx x y)) = "E_" ++ show x ++ "_" ++ show y
 showEqTerm (Eta (EtaIdx x y)) = "n_" ++ show x ++ "_" ++ show y
+showEqTerm (DEnergy (DPowerIdx x y)) = "dE_" ++ show x ++ "_" ++ show y
+showEqTerm (DEta (DEtaIdx x y)) = "dn_" ++ show x ++ "_" ++ show y
 showEqTerm (X (XIdx x y)) =  "x_" ++ show x ++ "_" ++ show y
 showEqTerm (Add x y) = "(" ++ showEqTerm x ++ " + " ++ showEqTerm y ++ ")"
 showEqTerm (Mult x y) = showEqTerm x ++ " * " ++ showEqTerm y
@@ -77,10 +81,12 @@ mkEdgeEq g = map f ns
 mkNodeEq :: Gr a b -> [EqTerm c]
 mkNodeEq g = concat $ mapGraph mkEq g
 
+{- TODO: Rethink equations ineqs' and oeqs'. Currently they are invalid. What is wrong? -}
 mkEq :: ([Node], Node, [Node]) -> [EqTerm a]
 mkEq ([], _, _) = []
 mkEq (_, _, []) = []
 mkEq (ins, n, outs) = ieqs' ++ oeqs' ++ ieqs ++ oeqs
+-- mkEq (ins, n, outs) = {- ieqs' ++ oeqs' ++ -} ieqs ++ oeqs
   where ins' = zip (repeat n) ins
         outs' = zip (repeat n) outs
         xis = map (uncurry mkX) ins'
