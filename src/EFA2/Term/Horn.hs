@@ -21,7 +21,6 @@ data Formula = Zero
              | Formula :-> Formula deriving (Ord, Eq)
 
 infix 8 :->
--- infix 9 :*
 
 instance Show Formula where
          show Zero = "F"

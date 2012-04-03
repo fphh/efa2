@@ -29,5 +29,24 @@ instance Arith InTerm where
          (.*) = InMult
          x ./ y = InMult x (InRecip y)
 
-class Interpreter a where
-      interpret :: PowerEnv a -> EtaEnv a -> XEnv a -> InTerm -> a
+
+{-
+type LRNodeEnv a = NodeIdx -> IdxErrorMonad a
+type LREtaEnv a = EtaIdx -> IdxErrorMonad a
+type LRPowerEnv a = PowerIdx -> IdxErrorMonad a
+type LRDEtaEnv a = DEtaIdx -> IdxErrorMonad a
+type LRDPowerEnv a = DPowerIdx -> IdxErrorMonad a
+type LRXEnv a = XIdx -> IdxErrorMonad a
+
+type NodeEnv a = NodeIdx -> a
+type EtaEnv a = EtaIdx -> a
+type PowerEnv a = PowerIdx -> a
+type DEtaEnv a = EtaIdx -> a
+type DPowerEnv a = PowerIdx -> a
+type XEnv a = XIdx -> a
+-}
+
+{-
+class Interpreter env where
+      interpret :: env -> InTerm -> a
+-}

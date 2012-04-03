@@ -18,9 +18,11 @@ import EFA2.Signal.Arith
 
 
 showInTerm :: InTerm -> String
-showInTerm (PIdx (PowerIdx x y)) = "E_" ++ show x ++ "_" ++ show y
-showInTerm (EIdx (EtaIdx x y)) = "n_" ++ show x ++ "_" ++ show y
-showInTerm (ScaleIdx (XIdx x y)) = "x_" ++ show x ++ "_" ++ show y
+showInTerm (PIdx (PowerIdx x y)) = "E." ++ show x ++ "." ++ show y
+showInTerm (EIdx (EtaIdx x y)) = "n." ++ show x ++ "." ++ show y
+showInTerm (DPIdx (DPowerIdx x y)) = "dE." ++ show x ++ "." ++ show y
+showInTerm (DEIdx (DEtaIdx x y)) = "dn." ++ show x ++ "." ++ show y
+showInTerm (ScaleIdx (XIdx x y)) = "x." ++ show x ++ "." ++ show y
 showInTerm (InConst x) = show x
 showInTerm (InRConst x) = show x
 
@@ -37,6 +39,8 @@ showInTerms ts = L.intercalate "\n" $ map showInTerm ts
 eqTermToInTerm :: (EdgeFormula a) => EqTerm a -> [InTerm]
 eqTermToInTerm (Energy idx) = [PIdx idx]
 eqTermToInTerm (Eta idx) = [EIdx idx]
+eqTermToInTerm (DEnergy idx) = [DPIdx idx]
+eqTermToInTerm (DEta idx) = [DEIdx idx]
 eqTermToInTerm (X idx) = [ScaleIdx idx]
 eqTermToInTerm (Const x) = [InRConst x]
 eqTermToInTerm (Minus t) = map InMinus (eqTermToInTerm t)
@@ -72,32 +76,35 @@ instance EdgeFormula Abs where
                  t :: EqTerm Abs
                  t = Energy idx
 
-{-
+
 instance EdgeFormula Diff where
-         toEdgeFormula (F x) = InConst 1.0
-         toEdgeFormula (B x) = InMult (InConst 20.0) (InConst 40.0)
--}
+         toEdgeFormula (F e@(Energy idx@(PowerIdx x y))) = eqTermToInTerm (Mult de dn) 
+                                                           ++ multf [eqTermToInTerm e, eqTermToInTerm n]
+                                                           ++ multf [eqTermToInTerm e, eqTermToInTerm dn]
+           where n :: EqTerm Diff
+                 n = Eta (EtaIdx x y)
+                 de :: EqTerm Diff
+                 de = DEnergy (DPowerIdx x y)
+                 dn :: EqTerm Diff
+                 dn = DEta (DEtaIdx x y)
 
--- interpreter for terms with only constants
-constInterpret :: [InTerm] -> [Val]
-constInterpret ts = map interpret ts
-  where interpret (InConst x) = x
-        interpret (InMinus t) = negate (interpret t)
-        interpret (InRecip t) = recip (interpret t)
-        interpret (InAdd s t) = interpret s + interpret t
-        interpret (InMult s t) = interpret s + interpret t
 
-instance (Arith a) => Interpreter [a] where
-         interpret penv eenv xenv t = interpret' t
-           where interpret' (PIdx idx) = penv idx
-                 interpret' (EIdx idx) = eenv idx
-                 interpret' (ScaleIdx idx) = xenv idx
-                 interpret' (InConst x) = [cst x]
-                 interpret' (InRConst x) = repeat (cst x)      -- This constants can only be multiplied with finite lists.
-                 interpret' (InMinus t) = (interpret' t)
-                 interpret' (InRecip t) = map rec (interpret' t)
-                 interpret' (InAdd s t) = zipWith (.+) (interpret' s) (interpret' t)
-                 interpret' (InMult s t) = zipWith (.*) (interpret' s) (interpret' t)
+         toEdgeFormula (B x) = [InMult (InConst 20.0) (InConst 40.0)]
+
+
+interpret :: (Arith a) => DPowerEnv [a] -> DEtaEnv [a] -> EtaEnv [a] -> XEnv [a] -> PowerEnv [a] -> InTerm -> [a]
+interpret dpenv deenv eenv xenv penv t = go t
+  where go (PIdx idx) = penv idx
+        go (EIdx idx) = eenv idx
+        go (DPIdx idx) = dpenv idx
+        go (DEIdx idx) = deenv idx
+        go (ScaleIdx idx) = xenv idx
+        go (InConst x) = [cst x]
+        go (InRConst x) = repeat (cst x)   -- This constants can only be multiplied with finite lists.
+        go (InMinus t) = (go t)
+        go (InRecip t) = map rec (go t)
+        go (InAdd s t) = zipWith (.+) (go s) (go t)
+        go (InMult s t) = zipWith (.*) (go s) (go t)
 
 toInTerms :: (EdgeFormula a) => [EqTerm a] -> [InTerm]
 toInTerms ts = concatMap eqTermToInTerm (filter (not . isGiven) ts)

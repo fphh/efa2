@@ -1,6 +1,6 @@
 
 
-module EFA2.Example.Circular where
+module EFA2.Example.Circular (circular) where
 
 import Data.Graph.Inductive
 import qualified Data.Map as M
@@ -14,7 +14,7 @@ import EFA2.Graph.Graph
 import EFA2.Example.SymSig
 
 
-numOf = 5
+numOf = 3
 
 
 sigs :: LRPowerEnv [Val]
@@ -35,8 +35,8 @@ sigs (PowerIdx 4 2) = return (replicate numOf 0.6)
 sigs idx = throwError (PowerIdxError idx)
 
 
-circular :: (Gr NLabel ELabel, LRPowerEnv [Val])
-circular = (g, sigs)
+circular :: (Signal a) => TheGraph [a]
+circular = TheGraph g (signal sigs)
   where g = mkGraph (makeNodes no ++ makeNodes no2) (makeEdges no ++ makeEdges (no2 ++ [1]) ++ makeEdges [2, 4])
         no = [0..3]
         no2 = [5, 4]

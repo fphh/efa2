@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
 
-module EFA2.Example.Loop where
+module EFA2.Example.Loop (loop) where
 
 import Data.Graph.Inductive
 import qualified Data.Map as M
@@ -35,17 +35,8 @@ sigs (PowerIdx 2 4) = return (replicate numOf 0.1)
 sigs idx = throwError (PowerIdxError idx)
 
 
-instance Signal Val where
-         signal = sigs
-         toSignal = id
-
-instance Signal InTerm where
-         signal = symSig sigs
-         toSignal = InConst
-
-
-loop :: (Signal a) => (Gr NLabel ELabel, LRPowerEnv [a])
-loop = (g, signal)
+loop :: (Signal a) => TheGraph [a]
+loop = TheGraph g (signal sigs)
   where g = mkGraph (makeNodes no ++ makeNodes no2) (makeEdges no ++ makeEdges (1:no2) ++ makeEdges [4, 2])
         no = [0..3]
         no2 = [4, 5]

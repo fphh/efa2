@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, UndecidableInstances, TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances, UndecidableInstances, TypeSynonymInstances, MultiParamTypeClasses #-}
 
 module EFA2.Display.DrawGraph where
 
@@ -22,12 +22,11 @@ import EFA2.Graph.DependencyGraph
 import EFA2.Term.Equation
 import EFA2.Term.EqInterpreter
 import EFA2.Term.TermData
+import EFA2.Term.Solver
+
 import EFA2.Example.SymSig
 import EFA2.Signal.Arith
---import EFA2.Example.Loop
-import EFA2.Example.Linear
 
-import EFA2.Utils.Utils
 
 nodeColour :: Attribute 
 nodeColour = FillColor (RGB 230 230 240)
@@ -55,41 +54,65 @@ mkDotEdge :: Edge -> String -> DotEdge Int
 mkDotEdge (x, y) str = DotEdge x y [displabel]
   where displabel = Label $ StrLabel $ T.pack str
 
+printGraph :: Gr a b -> (Node -> String) -> (Edge -> String) -> IO ()
+printGraph g nshow eshow = runGraphvizCanvas Dot (mkDotGraph g (nshow, eshow)) Xlib
 
-drawTopologyX :: Gr a b -> IO ()
-drawTopologyX g = runGraphvizCanvas Dot (mkDotGraph g (show, show)) Xlib
+drawTopologyX :: TheGraph a -> IO ()
+drawTopologyX (TheGraph g _) = runGraphvizCanvas Dot (mkDotGraph g (show, show)) Xlib
 
-class DrawTopology a where
-      drawTopology :: t -> LRPowerEnv [a] -> LREtaEnv [a] -> LRXEnv [a] -> Gr b c -> IO ()
 
-instance DrawTopology Val where
-         drawTopology = drawTopologyA
+data Line = PLine | XLine | NLine deriving (Eq, Ord)
 
-drawTopologyA :: (PrintfArg a) => t -> LRPowerEnv [a] -> LREtaEnv [a] -> LRXEnv [a] -> Gr b c -> IO ()
-drawTopologyA nenv penv eenv xenv g = runGraphvizCanvas Dot (mkDotGraph g (show, eshow)) Xlib
-  where eshow1 (x, y) = [("p: ", penv (PowerIdx x y)), ("x: ", xenv (XIdx x y)), ("n: ", eenv (EtaIdx x y))]
-        eshow2 (x, y) = [("x: ", xenv (XIdx y x)), ("p: ", penv (PowerIdx y x))]
-        eshow ps = L.intercalate "\n" $ map (f . fmap fromRight) $ (eshow1 ps ++ eshow2 ps)
-        fromRight (Right x) = x
-        fromRight (Left x) = error (show x)
-        f (x, ys) = x ++ (concatMap (printf "%.4f    ") ys)
+instance Show Line where
+         show PLine = "p"
+         show XLine = "x"
+         show NLine = "n"
 
-instance DrawTopology InTerm where
-         drawTopology = drawTopologyT
+-- The argument t is for node labels. Until now, it is not used.
+class DrawTopology env a where
+      drawTopology :: t -> TheGraph [a] -> env [a] -> M.Map PowerIdx [a] ->  IO ()
 
-drawTopologyT :: t -> LRPowerEnv [InTerm] -> LREtaEnv [InTerm] -> LRXEnv [InTerm] -> Gr a b -> IO ()
-drawTopologyT nenv penv eenv xenv g = runGraphvizCanvas Dot (mkDotGraph g (show, eshow)) Xlib
-  where eshow1 (x, y) = [("p", penv (PowerIdx x y)), ("x", xenv (XIdx x y)), ("n", eenv (EtaIdx x y))]
-        eshow2 (x, y) = [("x", xenv (XIdx y x)), ("p", penv (PowerIdx y x))]
-        eshow ps = L.intercalate "\n" $ map (f . fmap fromRight) $ (eshow1 ps ++ eshow2 ps)
-        fromRight (Right x) = x
-        fromRight (Left x) = error (show x)
-        f (x, e@(eq:_)) = x ++ " = " ++ (showInTerm eq)
+instance DrawTopology AbsEnv Val where
+         drawTopology = drawAbsTopology f
+           where f (x, ys) = show x ++ " = " ++ (concatMap (printf "%.3f    ") ys)
 
---drawDependencyGraph :: Gr NLabel ELabel -> [EqTerm NLabel] -> IO ()
-drawDependencyGraph g given = runGraphvizCanvas Dot (mkDotGraph g' (nshow, (const ""))) Xlib
-  where -- g' :: Gr x y
-        g' = makeDependencyGraph g given
-        m = M.fromList $ ufold f [] g'
-        f (_, n, l, _) acc = (n, l):acc
-        nshow x = show x ++ ": " ++ showEqTerm (fromJust (M.lookup x m))
+instance DrawTopology AbsEnv InTerm where
+         drawTopology = drawAbsTopology f
+           where f (PLine, es) = "p = " ++ (L.intercalate " | " $ map showInTerm es)
+                 f (XLine, e:_) = "x = " ++ showInTerm e
+                 f (NLine, e:_) = "n = " ++ showInTerm e
+ 
+drawAbsTopology :: (Arith a) => ((Line, [a]) -> String) -> t -> TheGraph [a] -> AbsEnv [a] -> M.Map PowerIdx [a] ->  IO ()
+drawAbsTopology f nenv (TheGraph g _) (AbsEnv eenv xenv) penv = printGraph g show eshow
+  where penv' = mkEnv $ mkPowerEnv penv
+        eshow ps = L.intercalate "\n" $ map f $ mkLst ps
+        mkLst (x, y) = [ (PLine, penv' (PowerIdx x y)), 
+                         (XLine, xenv (XIdx x y)),
+                         (NLine, eenv (EtaIdx x y)),
+                         (XLine, xenv (XIdx y x)),
+                         (PLine, penv' (PowerIdx y x)) ]
+
+instance DrawTopology DiffEnv InTerm where
+         drawTopology = drawDiffTopology f
+           where f (PLine, es) = "p = " ++ (L.intercalate " | " $ map showInTerm es)
+                 f (XLine, e:_) = "x = " ++ showInTerm e
+                 f (NLine, e:_) = "n = " ++ showInTerm e
+ 
+
+drawDiffTopology :: (Arith a) => ((Line, [a]) -> String) -> t -> TheGraph [a] -> DiffEnv [a] -> M.Map PowerIdx [a] ->  IO ()
+drawDiffTopology f nenv (TheGraph g _) (DiffEnv dpenv deenv eenv xenv) penv = printGraph g show eshow
+  where penv' = mkEnv $ mkPowerEnv penv
+        eshow ps = L.intercalate "\n" $ map f $ mkLst ps
+        mkLst (x, y) = [ (PLine, penv' (PowerIdx x y)), 
+                         (XLine, xenv (XIdx x y)),
+                         (NLine, eenv (EtaIdx x y)),
+                         (XLine, xenv (XIdx y x)),
+                         (PLine, penv' (PowerIdx y x)) ]
+
+
+drawDependencyGraph :: TheGraph t -> [(PowerIdx, b)] -> IO ()
+drawDependencyGraph (TheGraph g _) given = printGraph g' nshow (const "")
+  where gvs = give $ map (Energy . fst) given
+        g' = makeDependencyGraph g gvs
+        m = M.fromList $ labNodes g'
+        nshow x = show x ++ ": " ++ showEqTerm (m M.! x)

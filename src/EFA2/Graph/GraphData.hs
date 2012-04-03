@@ -65,8 +65,8 @@ instance Ord DEtaIdx where
 
 data IdxError = PowerIdxError PowerIdx
               | EtaIdxError EtaIdx
-              | DPowerIdxError PowerIdx
-              | DEtaIdxError EtaIdx
+              | DPowerIdxError DPowerIdx
+              | DEtaIdxError DEtaIdx
               | XIdxError XIdx
               | OtherError String deriving (Eq, Show)
 
@@ -88,8 +88,8 @@ type LRXEnv a = XIdx -> IdxErrorMonad a
 type NodeEnv a = NodeIdx -> a
 type EtaEnv a = EtaIdx -> a
 type PowerEnv a = PowerIdx -> a
-type DEtaEnv a = EtaIdx -> a
-type DPowerEnv a = PowerIdx -> a
+type DEtaEnv a = DEtaIdx -> a
+type DPowerEnv a = DPowerIdx -> a
 type XEnv a = XIdx -> a
 
 
