@@ -1,0 +1,24 @@
+
+import Data.Spreadsheet
+
+inPath = "./"
+name =  "linear_res.csv3"
+--name = "log_s2b_sect0-2.txt"
+
+parse :: String -> [[Double]]
+parse = map (map read . words) . lines
+
+parseHead :: String -> [[String]]
+parseHead = map (map read . words) . lines
+
+parseLines :: String -> [String]
+parseLines = lines
+
+main = do 
+  text <- readFile (inPath ++ name)
+  let lines =  parseLines text
+  putStrLn (show lines)    
+--  let hed = head (parseHead text)
+--  let dat =  reverse (init (parseData (reverse text)))    
+--  putStrLn (show hed)
+--  putStrLn (show dat)
