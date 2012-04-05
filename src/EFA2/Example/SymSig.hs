@@ -3,15 +3,17 @@
 module EFA2.Example.SymSig where
 
 import Data.Graph.Inductive
+import qualified Data.Map as M
 
 import EFA2.Graph.GraphData
 import EFA2.Term.TermData
 import EFA2.Signal.Arith
+import EFA2.Term.Env
 
-symSig :: LRPowerEnv [Val] -> LRPowerEnv [InTerm]
+symSig ::  LRPowerEnv [Val] -> LRPowerEnv [InTerm]
 symSig sigs idx
   | Right xs <- res = Right (map InConst xs)
-  | Left str <- res = Left str
+  | Left err <- res = Left (err { getMap = M.map (map InConst) (getMap err) })
   where res = sigs idx
 
 

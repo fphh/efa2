@@ -17,6 +17,7 @@ import EFA2.Utils.Utils
 import EFA2.Graph.GraphData
 import EFA2.Signal.Arith
 import EFA2.Term.TermData
+import EFA2.Term.Env
 
 
 -----------------------------------------------------------------------------------
@@ -48,27 +49,13 @@ makeNodes no = map mkLNode no
 -- Classes to allow indexing of power positions, etas and nodes
 
 
-
-composeLREnv :: (a -> IdxErrorMonad b) -> (a -> IdxErrorMonad b) -> (a -> IdxErrorMonad b)
-composeLREnv env1 env2 x
-  | y@(Right _) <- env1 x = y
-  | otherwise = env2 x
-
-mkEnv :: (a -> IdxErrorMonad b) -> (a -> b)
-mkEnv env x
-  | Left err <- res = error (show err)
-  | Right y <- res = y
-  where res = env x
-
-checkIdx :: (Ord a) => (a -> IdxError) -> a -> M.Map a (IdxErrorMonad b) -> IdxErrorMonad b
-checkIdx err x vs | Just y <- M.lookup x vs = y
-                  | otherwise = throwError (err x)
-
+{-
 instance (Arith a) => EnvClass [a] where
          mkPowerEnv = mkPowerValEnv
          mkEtaEnv = mkEtaValEnv
          mkXEnv = mkXValEnv
-
+-}
+{-
 mkPowerValEnv :: (M.Map PowerIdx [a]) -> LRPowerEnv [a]
 mkPowerValEnv m x = checkIdx PowerIdxError x (M.map Right m)
 
@@ -100,27 +87,7 @@ mkXValEnv g penv x = checkIdx XIdxError x xs
         div (Right as) (Right bs) = Right (zipWith (./) as bs)
         div err@(Left _) _ = err
         div _ err@(Left _) = err
-
---mkSymPowerEnv :: Int -> PowerIdx -> M.Map PowerIdx [InTerm]
---mkSymPowerEnv n idx = M.singleton idx (replicate n (PIdx idx))
-
-mkSymEtaEnv :: LREtaEnv [InTerm]
-mkSymEtaEnv idx = Right (repeat (EIdx idx))
-
---mkSymDPowerEnv :: Int -> DPowerIdx -> M.Map DPowerIdx [InTerm]
---mkSymDPowerEnv n idx = M.singleton idx (replicate n (DPIdx idx))
-
-mkSymDPowerEnv :: LRDPowerEnv [InTerm]
-mkSymDPowerEnv idx = Right (repeat (DPIdx idx))
-
-
-mkSymDEtaEnv :: LRDEtaEnv [InTerm]
-mkSymDEtaEnv idx = Right (repeat (DEIdx idx))
-
-
-mkSymXEnv :: LRXEnv [InTerm]
-mkSymXEnv idx = Right (repeat (ScaleIdx idx))
-
+-}
 
 ----------------------------------------------------------------------------------
 

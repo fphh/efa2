@@ -11,6 +11,9 @@ import qualified Data.Text.Lazy as T
 import Data.GraphViz
 import Data.GraphViz.Attributes.Complete
 
+import Control.Concurrent
+import Control.Exception
+
 import Text.Printf
 
 import Debug.Trace
@@ -23,6 +26,7 @@ import EFA2.Term.Equation
 import EFA2.Term.EqInterpreter
 import EFA2.Term.TermData
 import EFA2.Term.Solver
+import EFA2.Term.Env
 
 import EFA2.Example.SymSig
 import EFA2.Signal.Arith
@@ -57,9 +61,11 @@ mkDotEdge (x, y) str = DotEdge x y [displabel]
 printGraph :: Gr a b -> (Node -> String) -> (Edge -> String) -> IO ()
 printGraph g nshow eshow = runGraphvizCanvas Dot (mkDotGraph g (nshow, eshow)) Xlib
 
-drawTopologyX :: TheGraph a -> IO ()
-drawTopologyX (TheGraph g _) = runGraphvizCanvas Dot (mkDotGraph g (show, show)) Xlib
+drawTopologyX' :: Gr a b -> IO ()
+drawTopologyX' g = runGraphvizCanvas Dot (mkDotGraph g (show, show)) Xlib
 
+drawTopologyX :: TheGraph a -> IO ()
+drawTopologyX (TheGraph g _) = drawTopologyX' g
 
 data Line = PLine | XLine | NLine deriving (Eq, Ord)
 
@@ -82,7 +88,7 @@ instance DrawTopology AbsEnv InTerm where
                  f (XLine, e:_) = "x = " ++ showInTerm e
                  f (NLine, e:_) = "n = " ++ showInTerm e
  
-drawAbsTopology :: (Arith a) => ((Line, [a]) -> String) -> t -> TheGraph [a] -> AbsEnv [a] -> M.Map PowerIdx [a] ->  IO ()
+drawAbsTopology :: (Arith a, Show a) => ((Line, [a]) -> String) -> t -> TheGraph [a] -> AbsEnv [a] -> M.Map PowerIdx [a] ->  IO ()
 drawAbsTopology f nenv (TheGraph g _) (AbsEnv eenv xenv) penv = printGraph g show eshow
   where penv' = mkEnv $ mkPowerEnv penv
         eshow ps = L.intercalate "\n" $ map f $ mkLst ps
@@ -99,7 +105,7 @@ instance DrawTopology DiffEnv InTerm where
                  f (NLine, e:_) = "n = " ++ showInTerm e
  
 
-drawDiffTopology :: (Arith a) => ((Line, [a]) -> String) -> t -> TheGraph [a] -> DiffEnv [a] -> M.Map PowerIdx [a] ->  IO ()
+drawDiffTopology :: (Arith a, Show a) => ((Line, [a]) -> String) -> t -> TheGraph [a] -> DiffEnv [a] -> M.Map PowerIdx [a] ->  IO ()
 drawDiffTopology f nenv (TheGraph g _) (DiffEnv dpenv deenv eenv xenv) penv = printGraph g show eshow
   where penv' = mkEnv $ mkPowerEnv penv
         eshow ps = L.intercalate "\n" $ map f $ mkLst ps
@@ -111,8 +117,33 @@ drawDiffTopology f nenv (TheGraph g _) (DiffEnv dpenv deenv eenv xenv) penv = pr
 
 
 drawDependencyGraph :: TheGraph t -> [(PowerIdx, b)] -> IO ()
-drawDependencyGraph (TheGraph g _) given = printGraph g' nshow (const "")
+drawDependencyGraph theGraph@(TheGraph g _) given = printGraph g' nshow (const "")
   where gvs = give $ map (Energy . fst) given
-        g' = makeDependencyGraph g gvs
+        g' = makeDependencyGraph theGraph gvs
         m = M.fromList $ labNodes g'
         nshow x = show x ++ ": " ++ showEqTerm (m M.! x)
+
+drawDependencyGraphTransClose :: TheGraph t -> [(PowerIdx, b)] -> IO ()
+drawDependencyGraphTransClose theGraph@(TheGraph g _) given = printGraph (transClose g') nshow (const "")
+  where gvs = give $ map (Energy . fst) given
+        g' = makeDependencyGraph theGraph gvs
+        m = M.fromList $ labNodes g'
+        nshow x = show x ++ ": " ++ showEqTerm (m M.! x)
+
+transClose :: Gr a b -> Gr a ()
+transClose = efilter (\(x, y, _) -> x /= y) . trc
+
+
+newtype Async a = Async ( MVar a)
+
+async :: IO a -> IO ( Async a)
+async io = do
+  m <- newEmptyMVar
+  forkIO $ do r <- io; putMVar m r
+  return (Async m)
+
+wait :: Async a -> IO a
+wait (Async m) = readMVar m
+
+drawAll :: [IO a] -> IO [a]
+drawAll ds = mapM async ds >>= mapM wait

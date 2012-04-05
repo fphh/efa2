@@ -16,6 +16,7 @@ import Debug.Trace
 import EFA2.Utils.Utils
 import EFA2.Term.Equation
 import EFA2.Graph.GraphData
+import EFA2.Example.SymSig
 
 dependencyGraph :: [S.Set (EqTerm a)] -> Gr (S.Set (EqTerm a)) ()
 dependencyGraph ss = g
@@ -23,7 +24,6 @@ dependencyGraph ss = g
         ys = concatMap (uncurry mkArcs) xs
         m = M.fromList (zip ss [0..])
         es = unique $ map (\(x, y) -> (m M.! x, m M.! y, ())) ys
-       -- g :: Gr (S.Set a) ()
         g = mkGraph (map flipPair $ M.toList m) es
 
 mkArcs :: (Ord a) => S.Set a -> [S.Set a] -> [(S.Set a, S.Set a)]
@@ -37,18 +37,10 @@ diffByAtMostOne s t = (S.size t > 1) && (S.isSubsetOf t s || S.size (S.differenc
 
 
 
---makeDependencyGraph :: Gr NLabel ELabel -> [EqTerm Abs] -> Gr NLabel ()
-
-makeDependencyGraph :: Gr NLabel ELabel -> [EqTerm a] -> Gr (EqTerm a) ()
-makeDependencyGraph g given = deq
-  where --ts :: [EqTerm a]
-        ts = mkEdgeEq g ++ mkNodeEq g ++ given
-        --vsets :: [S.Set (EqTerm a)]
-        vsets = map mkVarSet ts
-        --mt :: M.Map (S.Set (EqTerm a)) (EqTerm a)
+makeDependencyGraph :: TheGraph b -> [EqTerm a] -> Gr (EqTerm a) ()
+makeDependencyGraph (TheGraph g _) given = deq
+  where ts = mkEdgeEq g ++ mkNodeEq g ++ given
+        vsets = map (mkVarSet isVar) ts
         mt = M.fromList (zip vsets ts)
-        --dg :: Gr (S.Set (EqTerm a)) ()
         dg = dependencyGraph vsets
-        --deq :: Gr (EqTerm a) ()
         deq = nmap (mt M.!) dg
-        --deq = nmap (const ()) dg

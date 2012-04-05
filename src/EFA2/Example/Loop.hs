@@ -10,6 +10,7 @@ import Control.Monad.Error
 
 import EFA2.Signal.Arith
 import EFA2.Term.TermData
+import EFA2.Term.Env
 import EFA2.Graph.GraphData
 import EFA2.Graph.Graph
 import EFA2.Example.SymSig
@@ -32,7 +33,7 @@ sigs (PowerIdx 5 4) = return (replicate numOf 0.05)
 
 sigs (PowerIdx 4 2) = return (replicate numOf 0.2)
 sigs (PowerIdx 2 4) = return (replicate numOf 0.1)
-sigs idx = throwError (PowerIdxError idx)
+sigs idx = throwError (PowerIdxError idx M.empty)
 
 
 loop :: (Signal a) => TheGraph [a]
