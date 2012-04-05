@@ -10,6 +10,7 @@ import qualified Data.List as L
 import qualified Data.Vector.Unboxed as UV
 import qualified Data.Vector as GV
 
+import EFA2.Graph.GraphData
 
 import System.Random
 import EFA2.Utils.Utils
@@ -20,12 +21,25 @@ import EFA2.Signal.Arith
 
 -- indent for power signals from measurement file 
 -- ident chosen as string to handle signal names, or just can be signal numer as string 
-data SignalIdent = SignalIdent !String deriving (Show, Eq, Ord)
-
-type SignalMap = (M.Map SignalIdent Power) 
+data SigId = SigId !String deriving (Show, Eq, Ord)
+type SignalMap = (M.Map SigId Power) 
   
 -- data structure to house the data record or parts of it
 data Record = Record Time SignalMap deriving (Show,Eq) 
+type PowerSigEnv = PowerEnv Power
+
+-----------------------------------------------------------------------------------
+-- Signal Map -- assign Power signals (eventually later with calculation instructions)
+
+type Mapping = PowerEnv (SigId, FlipSign)
+data FlipSign = DontFlip | Flip
+
+
+genPwrSignalEnv :: Record -> Mapping -> PowerSigEnv
+genPwrSignalEnv (Record time sigMap) mapping = M.map f mapping
+  where f (sigId,Flip) = neg $ sigMap M.! sigId 
+        f (sigId,DontFlip) =  sigMap M.! sigId
+    
 
 {-
 -- generate Record from data components

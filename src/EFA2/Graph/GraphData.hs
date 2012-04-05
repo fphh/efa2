@@ -98,6 +98,7 @@ class EnvClass a where
       mkEtaEnv :: Gr b c -> LRPowerEnv a -> LREtaEnv a
       mkXEnv :: Gr b c -> LRPowerEnv a -> LRXEnv a
 
+
 -----------------------------------------------------------------------------------
 -- Maps Idexes and Index Method to store topology related data
          
@@ -188,11 +189,6 @@ data FlowState = Negative | Zero | Positive deriving (Show, Ord, Eq)
 -- absolute PropDir
 data PropDir = PropNeg  | PropZero | PropPos deriving (Show, Ord, Eq)
 
------------------------------------------------------------------------------------
--- Signal Map -- assign Power signals (eventually later with calculation instructions)
-
-data Mapping = Mapping  (MPointData (SignalIdent, FlipSign))
-data FlipSign = DontFlip | Flip
 
 -----------------------------------------------------------------------------------
 -- Flow State - Numeric Data flow data in flow direction of actual state -- TODO -- generate Bi-Flow Structure as well 

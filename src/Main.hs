@@ -35,6 +35,7 @@ import EFA2.Example.SymSig
 import EFA2.Example.Dreibein
 import EFA2.Example.Linear
 import EFA2.Example.LinearOne
+import EFA2.Example.ModLinearOne
 import EFA2.Example.LinearX
 import EFA2.Example.LinearTwo
 import EFA2.Example.Loop
@@ -46,14 +47,15 @@ import EFA2.Example.Vierbein
 
 main :: IO ()
 main = do
-  let g = vierbein
-      given = [(PowerIdx 0 2, [2.2]) ]
+  let g = modLinearOne
+  -- let g = vierbein
+  --     given = [(PowerIdx 0 2, [2.2]) ]
 
-      env :: AbsEnv [Val]
-      --env = symbolicDiffEnv
-      env = environment g
+  --     env :: AbsEnv [Val]
+  --     --env = symbolicDiffEnv
+  --     env = environment g
 
-      sol = solve g env given
+  --     sol = solve g env given
 
   --writeTopology g
   --writeDependencyGraph g given
