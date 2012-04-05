@@ -5,6 +5,6 @@ inPath = "../input/"
 name =  "linear_res.csv3"
 
 main = do 
-  text <- readFile (inPath ++ name)
-  let map = csvImport text 
-  putStrLn (show map)
+--  text <- readFile (inPath ++ name)
+  rec <- modelicaCSVImport (inPath ++ name)
+  putStrLn (show rec)
