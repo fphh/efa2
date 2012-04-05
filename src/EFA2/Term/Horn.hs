@@ -116,11 +116,12 @@ hornOrder :: Gr (EqTerm a) () -> [EqTerm a] -> [EqTerm a]
 hornOrder g given = makeHornOrder g given'
   where given' = makeHornFormulae g given
 
-{-
-f :: [a] -> [[a]]
-f [] = []
-f xs = (xs:ys) ++ (concatMap f ys)
-  where ys = map snd (HTL.removeEach xs)
--}
+
+-- f :: (Ord a) => [a] -> [[a]]
+f xs = map (map fst) zs
+  where len = length xs
+        bits = filter ((0 <) . sum) $ sequence (replicate len [0, 1])
+        ys = map (zip xs) bits
+        zs = map (filter ((1 ==) . snd)) ys
 
 -- setCover :: S.Set a -> [S.Set a] -> [S.Set a]
