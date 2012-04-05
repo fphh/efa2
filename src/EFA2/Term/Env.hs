@@ -5,7 +5,7 @@ import Control.Monad.Error
 
 import qualified Data.Map as M
 
-
+-- Variable types of the solver.
 data EtaIdx = EtaIdx !Int !Int deriving  (Show)
 data PowerIdx = PowerIdx !Int !Int deriving (Show, Ord, Eq)
 data XIdx = XIdx !Int !Int deriving (Show, Ord, Eq)
@@ -92,19 +92,19 @@ mkEnv env x
   | Right y <- res = y
   where res = env x
 
-mkPowerEnv :: M.Map PowerIdx b -> PowerIdx -> IdxErrorMonad (PowerMap b) b
+mkPowerEnv :: M.Map PowerIdx a -> LRPowerEnv a -- PowerIdx -> IdxErrorMonad (PowerMap b) b
 mkPowerEnv m = checkIdx (flip PowerIdxError m) m
 
-mkEtaEnv ::  M.Map EtaIdx b -> EtaIdx -> IdxErrorMonad (EtaMap b) b
+mkEtaEnv ::  M.Map EtaIdx a -> LREtaEnv a -- EtaIdx -> IdxErrorMonad (EtaMap b) b
 mkEtaEnv m = checkIdx (flip EtaIdxError m) m
 
-mkDPowerEnv :: M.Map DPowerIdx b -> DPowerIdx -> IdxErrorMonad (DPowerMap b) b
+mkDPowerEnv :: M.Map DPowerIdx a -> LRDPowerEnv a -- DPowerIdx -> IdxErrorMonad (DPowerMap b) b
 mkDPowerEnv m = checkIdx (flip DPowerIdxError m) m
 
-mkDEtaEnv ::  M.Map DEtaIdx b -> DEtaIdx -> IdxErrorMonad (DEtaMap b) b
+mkDEtaEnv ::  M.Map DEtaIdx a -> LRDEtaEnv a -- DEtaIdx -> IdxErrorMonad (DEtaMap b) b
 mkDEtaEnv m = checkIdx (flip DEtaIdxError m) m
 
-mkXEnv ::  M.Map XIdx b -> XIdx -> IdxErrorMonad (XMap b) b
+mkXEnv ::  M.Map XIdx a -> LRXEnv a -- XIdx -> IdxErrorMonad (XMap b) b
 mkXEnv m = checkIdx (flip XIdxError m) m
 
 
