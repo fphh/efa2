@@ -13,27 +13,27 @@ import qualified Data.Vector as GV
 
 import System.Random
 import EFA2.Utils.Utils
-import EFA2.Signal.SignalData
-import EFA2.Signal.SignalGeneration
-import EFA2.Signal.SignalAnalysis
-{-
+import EFA2.Signal.Arith
+
 -----------------------------------------------------------------------------------
 -- Record -- Structure for Handling recorded data
 
 -- indent for power signals from measurement file 
 -- ident chosen as string to handle signal names, or just can be signal numer as string 
-data SignalIdent = SigIdent !String deriving (Show, Eq, Ord)
+data SignalIdent = SignalIdent !String deriving (Show, Eq, Ord)
 
 type SignalMap = (M.Map SignalIdent Power) 
   
 -- data structure to house the data record or parts of it
 data Record = Record Time SignalMap deriving (Show,Eq) 
 
+{-
 -- generate Record from data components
 genRecord :: Time  -> [(SignalIdent, Power)] -> Record
 genRecord time sigIDList = if recordCheck rec == True then rec else error ("Incorrect Data in Record-- either unequal length or NaN's")
   where rec = Record time (M.fromList sigIDList)
                                               
+
 -- check Record Data -- TODO -- include check on time length == sign length                                                               
 recordCheck :: Record -> Bool
 recordCheck (Record time sigMap) = smplCheck && equlengthCheck && lengthCheck
@@ -60,7 +60,9 @@ type SectionLength = DTSample
 
 -- Sequence Vector to Store Section Data  
 data SequData a = SequData (GV.Vector a) deriving Show
+-}
 
+{-
 -------------------------------------------------------------------------------------
 -- functions to split the record in section records
 -- generate Sequence Information   
