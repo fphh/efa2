@@ -29,18 +29,6 @@ type SignalMap = (M.Map SigId Power)
 data Record = Record Time SignalMap deriving (Show,Eq) 
 type PowerSigEnv = PowerMap Power
 
------------------------------------------------------------------------------------
--- Signal Map -- assign Power signals (eventually later with calculation instructions)
-
-type Mapping = PowerMap (SigId, FlipSign)
-data FlipSign = DontFlip | Flip
-
-
-genPwrSignalEnv :: Record -> Mapping -> PowerSigEnv
-genPwrSignalEnv (Record time sigMap) mapping = M.map f mapping
-  where f (sigId,Flip) = neg $ sigMap M.! sigId 
-        f (sigId,DontFlip) =  sigMap M.! sigId
-    
 
 {-
 -- generate Record from data components
