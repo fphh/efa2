@@ -3,8 +3,8 @@
 
 module EFA2.Term.TermData where
 
-import EFA2.Graph.GraphData
 import EFA2.Signal.Arith
+import EFA2.Term.Env
 
 data InTerm = PIdx PowerIdx
               | EIdx EtaIdx
@@ -30,23 +30,17 @@ instance Arith InTerm where
          x ./ y = InMult x (InRecip y)
 
 
-{-
-type LRNodeEnv a = NodeIdx -> IdxErrorMonad a
-type LREtaEnv a = EtaIdx -> IdxErrorMonad a
-type LRPowerEnv a = PowerIdx -> IdxErrorMonad a
-type LRDEtaEnv a = DEtaIdx -> IdxErrorMonad a
-type LRDPowerEnv a = DPowerIdx -> IdxErrorMonad a
-type LRXEnv a = XIdx -> IdxErrorMonad a
+mkSymPowerEnv :: PowerEnv [InTerm]
+mkSymPowerEnv idx = repeat (PIdx idx)
 
-type NodeEnv a = NodeIdx -> a
-type EtaEnv a = EtaIdx -> a
-type PowerEnv a = PowerIdx -> a
-type DEtaEnv a = EtaIdx -> a
-type DPowerEnv a = PowerIdx -> a
-type XEnv a = XIdx -> a
--}
+mkSymEtaEnv :: EtaEnv [InTerm]
+mkSymEtaEnv idx = repeat (EIdx idx)
 
-{-
-class Interpreter env where
-      interpret :: env -> InTerm -> a
--}
+mkSymDPowerEnv :: DPowerEnv [InTerm]
+mkSymDPowerEnv idx = repeat (DPIdx idx)
+
+mkSymDEtaEnv :: DEtaEnv [InTerm]
+mkSymDEtaEnv idx = repeat (DEIdx idx)
+
+mkSymXEnv :: XEnv [InTerm]
+mkSymXEnv idx = repeat (ScaleIdx idx)

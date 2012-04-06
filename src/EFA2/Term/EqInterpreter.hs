@@ -13,6 +13,7 @@ import Debug.Trace
 import EFA2.Graph.GraphData
 import EFA2.Term.Equation
 import EFA2.Term.TermData
+import EFA2.Term.Env
 import EFA2.Signal.Arith
 
 
@@ -89,7 +90,7 @@ instance EdgeFormula Diff where
                  dn = DEta (DEtaIdx x y)
 
 
-         toEdgeFormula (B x) = [InMult (InConst 20.0) (InConst 40.0)]
+         toEdgeFormula (B x) = [InMult (InConst 20.0) (InConst 40.0)]  -- vorlaeufig
 
 
 interpret :: (Arith a) => DPowerEnv [a] -> DEtaEnv [a] -> EtaEnv [a] -> XEnv [a] -> PowerEnv [a] -> InTerm -> [a]
@@ -101,7 +102,7 @@ interpret dpenv deenv eenv xenv penv t = go t
         go (ScaleIdx idx) = xenv idx
         go (InConst x) = [cst x]
         go (InRConst x) = repeat (cst x)   -- This constants can only be multiplied with finite lists.
-        go (InMinus t) = (go t)
+        go (InMinus t) = go t
         go (InRecip t) = map rec (go t)
         go (InAdd s t) = zipWith (.+) (go s) (go t)
         go (InMult s t) = zipWith (.*) (go s) (go t)

@@ -20,8 +20,7 @@ varsToCalculate ts = dropGiven $ concatMap sdiff (pairs res)
         sdiff (a, b) = S.toList $ S.difference b a
 
 dirFoldFunc :: [S.Set (EqTerm a)] -> EqTerm a -> [S.Set (EqTerm a)]
-dirFoldFunc acc@(a:_) t = (S.union (mkVarSet t) a):acc
-
+dirFoldFunc acc@(a:_) t = (S.union (mkVarSet isVar t) a):acc
 
 filterEquations :: [EqTerm a] -> [EqTerm a] -> [EqTerm a]
 filterEquations vars ts = res

@@ -12,6 +12,7 @@ import Debug.Trace
 import EFA2.Utils.Utils
 import EFA2.Graph.GraphData
 import EFA2.Graph.Graph
+import EFA2.Term.Env
 
 
 data Abs
@@ -85,16 +86,16 @@ mkNodeEq g = concat $ mapGraph mkEq g
 mkEq :: ([Node], Node, [Node]) -> [EqTerm a]
 mkEq ([], _, _) = []
 mkEq (_, _, []) = []
-mkEq (ins, n, outs) = ieqs' ++ oeqs' ++ ieqs ++ oeqs
--- mkEq (ins, n, outs) = {- ieqs' ++ oeqs' ++ -} ieqs ++ oeqs
+--mkEq (ins, n, outs) = ieqs' ++ oeqs' ++ ieqs ++ oeqs
+mkEq (ins, n, outs) = {- ieqs' ++ oeqs' ++ -} ieqs ++ oeqs ++ xieqs ++ xoeqs
   where ins' = zip (repeat n) ins
         outs' = zip (repeat n) outs
         xis = map (uncurry mkX) ins'
         xos = map (uncurry mkX) outs'
         eis = map (uncurry mkEnergy) ins'
         eos = map (uncurry mkEnergy) outs'
-        isum = L.foldl1' Add $ map (uncurry mkEnergy) ins'
-        osum = L.foldl1' Add $ map (uncurry mkEnergy) outs'
+        isum = L.foldl1' Add eis -- $ map (uncurry mkEnergy) ins'
+        osum = L.foldl1' Add eos -- $ map (uncurry mkEnergy) outs'
         ieqs = zipWith3 f eis xis (repeat osum)
         oeqs = zipWith3 f eos xos (repeat isum)
         f x y z = x := Mult y z
@@ -106,18 +107,29 @@ mkEq (ins, n, outs) = ieqs' ++ oeqs' ++ ieqs ++ oeqs
 
         g x e es = e := (L.foldl1' Add $ map (Mult (Mult x (Recip (Add (Const 1.0) (Minus x))))) es)
 
+        xieqs | length xis > 1 = [Const 1.0 := L.foldl1' Add xis]
+              | otherwise = []
+        xoeqs | length xos > 1 = [Const 1.0 := L.foldl1' Add xos]
+              | otherwise = []
 
-mkVarSet :: EqTerm a -> S.Set (EqTerm a)
-mkVarSet v@(Energy _) = S.singleton v
-mkVarSet (Add x y) = S.union (mkVarSet x) (mkVarSet y)
-mkVarSet (Mult x y) = S.union (mkVarSet x) (mkVarSet y)
-mkVarSet (F x) = mkVarSet x
-mkVarSet (B x) = mkVarSet x
-mkVarSet (Given x) = mkVarSet x
-mkVarSet (Minus x) = mkVarSet x
-mkVarSet (Recip x) = mkVarSet x
-mkVarSet (x := y) = S.union (mkVarSet x) (mkVarSet y)
-mkVarSet _ = S.empty
+
+isVar :: EqTerm a -> Bool
+isVar (Energy _) = True
+isVar (X _) = True
+isVar _ = False
+
+mkVarSet :: (EqTerm a -> Bool) -> EqTerm a -> S.Set (EqTerm a)
+mkVarSet p t = mkVarSet' t
+  where mkVarSet' v | p v = S.singleton v
+        mkVarSet' (Add x y) = S.union (mkVarSet' x) (mkVarSet' y)
+        mkVarSet' (Mult x y) = S.union (mkVarSet' x) (mkVarSet' y)
+        mkVarSet' (F x) = mkVarSet' x
+        mkVarSet' (B x) = mkVarSet' x
+        mkVarSet' (Given x) = mkVarSet' x
+        mkVarSet' (Minus x) = mkVarSet' x
+        mkVarSet' (Recip x) = mkVarSet' x
+        mkVarSet' (x := y) = S.union (mkVarSet' x) (mkVarSet' y)
+        mkVarSet' _ = S.empty
 
 
 -- The following functions transform an equation.

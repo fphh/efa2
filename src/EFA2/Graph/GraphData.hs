@@ -17,10 +17,9 @@ module EFA2.Graph.GraphData where
 import Data.Maybe (fromJust)
 
 import qualified Data.Map as M
-import Data.Graph.Inductive
 import Control.Monad.Error
 
-import EFA2.Signal.Arith
+import EFA2.Term.Env (IdxErrorMonad)
 
 import Debug.Trace
 
@@ -31,72 +30,14 @@ data ELabel = ELabel Int Int deriving (Show)
 
 -- Indexing
 
+-- mkIdx x y = EdgeIndex x y
+
+{-
 data NodeIdx = NodeIdx !Int deriving (Show, Ord, Eq)
-data EtaIdx = EtaIdx !Int !Int deriving  (Show)
-data PowerIdx = PowerIdx !Int !Int deriving (Show, Ord, Eq)
-data XIdx = XIdx !Int !Int deriving (Show, Ord, Eq)
-data DEtaIdx = DEtaIdx !Int !Int deriving  (Show)
-data DPowerIdx = DPowerIdx !Int !Int deriving (Show, Ord, Eq)
 
-
--- EtaIdx x y == EtaIdx y x
-instance Eq EtaIdx where
-         (EtaIdx a b) == (EtaIdx x y) = f a b == f x y
-           where f u v = if u < v then (u, v) else (v, u)
-
-instance Ord EtaIdx where
-         compare as@(EtaIdx a b) bs@(EtaIdx x y)
-           | as == bs = EQ
-           | otherwise = compare (f a b) (f x y)
-               where f u v = if u < v then (u, v) else (v, u)
-
-instance Eq DEtaIdx where
-         (DEtaIdx a b) == (DEtaIdx x y) = f a b == f x y
-           where f u v = if u < v then (u, v) else (v, u)
-
-instance Ord DEtaIdx where
-         compare as@(DEtaIdx a b) bs@(DEtaIdx x y)
-           | as == bs = EQ
-           | otherwise = compare (f a b) (f x y)
-               where f u v = if u < v then (u, v) else (v, u)
-
-
--- Errors
-
-data IdxError = PowerIdxError PowerIdx
-              | EtaIdxError EtaIdx
-              | DPowerIdxError DPowerIdx
-              | DEtaIdxError DEtaIdx
-              | XIdxError XIdx
-              | OtherError String deriving (Eq, Show)
-
-instance Error IdxError where
-         noMsg = OtherError "Unknown index error!" 
-         strMsg str = OtherError str
-
-type IdxErrorMonad = Either IdxError
-
--- Environments
-
-type LRNodeEnv a = NodeIdx -> IdxErrorMonad a
-type LREtaEnv a = EtaIdx -> IdxErrorMonad a
-type LRPowerEnv a = PowerIdx -> IdxErrorMonad a
-type LRDEtaEnv a = DEtaIdx -> IdxErrorMonad a
-type LRDPowerEnv a = DPowerIdx -> IdxErrorMonad a
-type LRXEnv a = XIdx -> IdxErrorMonad a
-
+type NodeEnv a = M.Map NodeIdx (IdxErrorMonad a)
 type NodeEnv a = NodeIdx -> a
-type EtaEnv a = EtaIdx -> a
-type PowerEnv a = PowerIdx -> a
-type DEtaEnv a = DEtaIdx -> a
-type DPowerEnv a = DPowerIdx -> a
-type XEnv a = XIdx -> a
-
-
-class EnvClass a where
-      mkPowerEnv :: (M.Map PowerIdx a) -> LRPowerEnv a
-      mkEtaEnv :: Gr b c -> LRPowerEnv a -> LREtaEnv a
-      mkXEnv :: Gr b c -> LRPowerEnv a -> LRXEnv a
+-}
 
 
 -----------------------------------------------------------------------------------
@@ -141,7 +82,7 @@ instance Ord EdgeIndex where
            | as == bs = EQ
            | otherwise = compare (a, b) (x, y)
 
-mkIdx x y = EdgeIndex x y
+
 -}
 
 {-

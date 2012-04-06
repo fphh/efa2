@@ -5,6 +5,7 @@ module EFA2.Term.Horn where
 
 import Data.Maybe
 import qualified Data.List as L
+import qualified Data.List.HT as HTL
 import qualified Data.Set as S
 import Data.Graph.Inductive
 
@@ -80,6 +81,7 @@ makeAnd fs = L.foldl1' And fs
 graphToHorn :: Gr (EqTerm a) () -> [Formula]
 graphToHorn g = foldGraph foldFunc [] g
 
+
 {- TODO:
 For an equation e that is not implied directly or indirectly by a set of equations ES 
 (e.g. there is no path in the dependency graph from ES to e) , we should
@@ -91,13 +93,6 @@ That would be cool!
 -}
 foldFunc :: [Formula] -> ([Node], Node, [Node]) -> [Formula]
 foldFunc acc ([], _, []) = acc
-{-
-foldFunc acc ([], x, outs) = map (\lits -> makeAnd lits :-> v) fs ++ acc
-  where v = Atom x
-        lits = map Atom outs
-        fs = filter f $ unique $ (map L.sort) $ sequence [lits, lits]
-        f [x, y] = x /= y
--}
 foldFunc acc (ins, x, _) = insFs ++ acc
   where v = Atom x
         insFs = map (:-> v) (map Atom ins)
@@ -120,3 +115,13 @@ makeHornOrder g formulae = catMaybes ts
 hornOrder :: Gr (EqTerm a) () -> [EqTerm a] -> [EqTerm a]
 hornOrder g given = makeHornOrder g given'
   where given' = makeHornFormulae g given
+
+
+-- f :: (Ord a) => [a] -> [[a]]
+f xs = map (map fst) zs
+  where len = length xs
+        bits = filter ((0 <) . sum) $ sequence (replicate len [0, 1])
+        ys = map (zip xs) bits
+        zs = map (filter ((1 ==) . snd)) ys
+
+-- setCover :: S.Set a -> [S.Set a] -> [S.Set a]

@@ -11,6 +11,7 @@ import qualified Data.Vector.Unboxed as UV
 import qualified Data.Vector as GV
 
 import EFA2.Graph.GraphData
+import EFA2.Term.Env
 
 import System.Random
 import EFA2.Utils.Utils
@@ -26,12 +27,12 @@ type SignalMap = (M.Map SigId Power)
   
 -- data structure to house the data record or parts of it
 data Record = Record Time SignalMap deriving (Show,Eq) 
-type PowerSigEnv = PowerEnv Power
+type PowerSigEnv = PowerMap Power
 
 -----------------------------------------------------------------------------------
 -- Signal Map -- assign Power signals (eventually later with calculation instructions)
 
-type Mapping = PowerEnv (SigId, FlipSign)
+type Mapping = PowerMap (SigId, FlipSign)
 data FlipSign = DontFlip | Flip
 
 
