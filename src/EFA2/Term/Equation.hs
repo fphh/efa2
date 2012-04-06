@@ -1,131 +1,109 @@
+{-# LANGUAGE TypeSynonymInstances #-}
+
 
 module EFA2.Term.Equation where
 
-import Data.Graph.Inductive
-
 import qualified Data.Set as S
 import qualified Data.List as L
-import qualified Data.List.HT as HTL
 
 import Debug.Trace
 
-import EFA2.Utils.Utils
-import EFA2.Graph.GraphData
-import EFA2.Graph.Graph
+import EFA2.Signal.Arith
 import EFA2.Term.Env
 
-
-data Abs
-data Diff
-
-
-data EqTerm a = EqTerm a := EqTerm a
-          | Const Double
-          | Energy PowerIdx
+data EqTerm = EqTerm := EqTerm
+          | Const Val
+          | Power PowerIdx
           | Eta EtaIdx
-          | DEnergy DPowerIdx
+          | DPower DPowerIdx
           | DEta DEtaIdx
           | X XIdx
-          | F (EqTerm a)
-          | B (EqTerm a)
-          | Given (EqTerm a)
-          | Minus (EqTerm a)
-          | Recip (EqTerm a)
-          | Add (EqTerm a) (EqTerm a)
-          | Mult (EqTerm a) (EqTerm a) deriving (Show, Eq, Ord)
+          | Var VarIdx
+          | FAbs { fAbsPower :: EqTerm, fAbsEta :: EqTerm }
+          | BAbs { bAbsPower :: EqTerm, bAbsEta :: EqTerm }
+          | FDiff { fDiffPower :: EqTerm, fDiffEta :: EqTerm, fDiffDPower :: EqTerm, fDiffDEta :: EqTerm }
+          | BDiff { bDiffPower :: EqTerm, bDiffEta :: EqTerm, bDiffDPower :: EqTerm, bDiffDEta :: EqTerm }
+          | Given [Val]
+          | Minus EqTerm
+          | Recip EqTerm
+          | EqTerm :+ EqTerm
+          | EqTerm :* EqTerm deriving (Show, Eq, Ord)
 
 infixl 1 :=
 
+class MkVarC a where
+      mkVar :: a -> EqTerm
 
-mkEta :: Int -> Int -> EqTerm a
-mkEta x y = Eta (EtaIdx x y)
+instance MkVarC PowerIdx where
+         mkVar = Power
 
-mkX :: Int -> Int -> EqTerm a
-mkX x y = X (XIdx x y)
+instance MkVarC EtaIdx where
+         mkVar = Eta
 
-mkEnergy :: Int -> Int -> EqTerm a
-mkEnergy x y = Energy (PowerIdx x y)
+instance MkVarC DPowerIdx where
+         mkVar = DPower
 
+instance MkVarC DEtaIdx where
+         mkVar = DEta
 
-give :: [EqTerm a] -> [EqTerm a]
-give ts = map Given ts
+instance MkVarC XIdx where
+         mkVar = X
 
-isGiven :: EqTerm a -> Bool
-isGiven (Given _) = True
-isGiven _ = False
+instance MkVarC VarIdx where
+         mkVar = Var
 
+(.=) :: (MkVarC a) => a -> [Val] -> EqTerm
+idx .= gs = mkVar idx := Given gs
 
-showEqTerm :: EqTerm a -> String
+isGiven :: EqTerm -> Bool
+isGiven t = S.size (mkVarSet isVar t) == 1
+
+add :: [EqTerm] -> EqTerm
+add = L.foldl1' (:+)
+
+mult :: [EqTerm] -> EqTerm
+mult = L.foldl1' (:*)
+
+showEqTerm :: EqTerm -> String
 showEqTerm (Const x) = show x
-showEqTerm (Energy (PowerIdx x y)) = "E_" ++ show x ++ "_" ++ show y
+showEqTerm (Power (PowerIdx x y)) = "E_" ++ show x ++ "_" ++ show y
 showEqTerm (Eta (EtaIdx x y)) = "n_" ++ show x ++ "_" ++ show y
-showEqTerm (DEnergy (DPowerIdx x y)) = "dE_" ++ show x ++ "_" ++ show y
+showEqTerm (DPower (DPowerIdx x y)) = "dE_" ++ show x ++ "_" ++ show y
 showEqTerm (DEta (DEtaIdx x y)) = "dn_" ++ show x ++ "_" ++ show y
 showEqTerm (X (XIdx x y)) =  "x_" ++ show x ++ "_" ++ show y
-showEqTerm (Add x y) = "(" ++ showEqTerm x ++ " + " ++ showEqTerm y ++ ")"
-showEqTerm (Mult x y) = showEqTerm x ++ " * " ++ showEqTerm y
-showEqTerm (F x) = "f(" ++ showEqTerm x ++ ")"
-showEqTerm (B x) = "b(" ++ showEqTerm x ++ ")"
-showEqTerm (Given x) = "given(" ++ showEqTerm x ++ ")"
+showEqTerm (Var (VarIdx x)) = "v_" ++ show x
+showEqTerm (x :+ y) = "(" ++ showEqTerm x ++ " + " ++ showEqTerm y ++ ")"
+showEqTerm (x :* y) = showEqTerm x ++ " * " ++ showEqTerm y
+showEqTerm (FAbs p e) = "f(" ++ showEqTerm p ++ ", " ++ showEqTerm e ++ ")"
+showEqTerm (BAbs p e) = "b(" ++ showEqTerm p ++ ", " ++ showEqTerm e  ++ ")"
+showEqTerm (FDiff p e dp de) = "f(" ++ showEqTerm p ++ ", " ++ showEqTerm e ++ ", " ++ showEqTerm dp ++ ", " ++ showEqTerm de ++")"
+showEqTerm (BDiff p e dp de) = "b(" ++ showEqTerm p ++ ", " ++ showEqTerm e ++ ", " ++ showEqTerm dp ++ ", " ++ showEqTerm de  ++ ")"
+showEqTerm (Given xs) = "given(" ++ (L.intercalate ", " $ map show xs) ++ ")"
 showEqTerm (Recip x) = "1/(" ++ showEqTerm x ++ ")"
 showEqTerm (Minus x) = "-(" ++ showEqTerm x ++ ")"
 showEqTerm (x := y) = showEqTerm x ++ " = " ++ showEqTerm y
 
-showEqTerms :: [EqTerm a] -> String
+showEqTerms :: [EqTerm] -> String
 showEqTerms ts = L.intercalate "\n" $ map showEqTerm ts
 
-mkEdgeEq :: Gr a b -> [EqTerm c]
-mkEdgeEq g = map f ns
-  where ns = edges g
-        f (x, y) = (mkEnergy y x) := F (mkEnergy x y)
-
-mkNodeEq :: Gr a b -> [EqTerm c]
-mkNodeEq g = concat $ mapGraph mkEq g
-
-{- TODO: Rethink equations ineqs' and oeqs'. Currently they are invalid. What is wrong? -}
-mkEq :: ([Node], Node, [Node]) -> [EqTerm a]
-mkEq ([], _, _) = []
-mkEq (_, _, []) = []
---mkEq (ins, n, outs) = ieqs' ++ oeqs' ++ ieqs ++ oeqs
-mkEq (ins, n, outs) = {- ieqs' ++ oeqs' ++ -} ieqs ++ oeqs ++ xieqs ++ xoeqs
-  where ins' = zip (repeat n) ins
-        outs' = zip (repeat n) outs
-        xis = map (uncurry mkX) ins'
-        xos = map (uncurry mkX) outs'
-        eis = map (uncurry mkEnergy) ins'
-        eos = map (uncurry mkEnergy) outs'
-        isum = L.foldl1' Add eis -- $ map (uncurry mkEnergy) ins'
-        osum = L.foldl1' Add eos -- $ map (uncurry mkEnergy) outs'
-        ieqs = zipWith3 f eis xis (repeat osum)
-        oeqs = zipWith3 f eos xos (repeat isum)
-        f x y z = x := Mult y z
-
-        ieqs' | length eis > 1 = [g (head xis) (head eis) (tail eis)]
-              | otherwise = []
-        oeqs' | length eos > 1 = [g (head xos) (head eos) (tail eos)]
-              | otherwise = []
-
-        g x e es = e := (L.foldl1' Add $ map (Mult (Mult x (Recip (Add (Const 1.0) (Minus x))))) es)
-
-        xieqs | length xis > 1 = [Const 1.0 := L.foldl1' Add xis]
-              | otherwise = []
-        xoeqs | length xos > 1 = [Const 1.0 := L.foldl1' Add xos]
-              | otherwise = []
-
-
-isVar :: EqTerm a -> Bool
-isVar (Energy _) = True
+isVar :: EqTerm -> Bool
+isVar (Power _) = True
+isVar (Eta _) = True
+isVar (DPower _) = True
+isVar (DEta _) = True
 isVar (X _) = True
+isVar (Var _) = True
 isVar _ = False
 
-mkVarSet :: (EqTerm a -> Bool) -> EqTerm a -> S.Set (EqTerm a)
+mkVarSet :: (EqTerm -> Bool) -> EqTerm -> S.Set EqTerm
 mkVarSet p t = mkVarSet' t
   where mkVarSet' v | p v = S.singleton v
-        mkVarSet' (Add x y) = S.union (mkVarSet' x) (mkVarSet' y)
-        mkVarSet' (Mult x y) = S.union (mkVarSet' x) (mkVarSet' y)
-        mkVarSet' (F x) = mkVarSet' x
-        mkVarSet' (B x) = mkVarSet' x
-        mkVarSet' (Given x) = mkVarSet' x
+        mkVarSet' (x :+ y) = S.union (mkVarSet' x) (mkVarSet' y)
+        mkVarSet' (x :* y) = S.union (mkVarSet' x) (mkVarSet' y)
+        mkVarSet' (FAbs x y) = S.union (mkVarSet' x) (mkVarSet' y)
+        mkVarSet' (BAbs x y) = S.union (mkVarSet' x) (mkVarSet' y)
+        mkVarSet' (FDiff p e dp de) = S.unions (map mkVarSet' [p, e, dp, de])
+        mkVarSet' (BDiff p e dp de) = S.unions (map mkVarSet' [p, e, dp, de])
         mkVarSet' (Minus x) = mkVarSet' x
         mkVarSet' (Recip x) = mkVarSet' x
         mkVarSet' (x := y) = S.union (mkVarSet' x) (mkVarSet' y)
@@ -140,16 +118,27 @@ type TPath = [Dir]
 
 
 -- test terms
-x1 = Energy (PowerIdx 0 1)
-x2 = Energy (PowerIdx 0 2)
-x3 = Energy (PowerIdx 0 3)
-x4 = Energy (PowerIdx 0 4)
+{-
+p1 = Power (PowerIdx 0 1)
+p2 = Power (PowerIdx 0 2)
+p3 = Power (PowerIdx 0 3)
+p4 = Power (PowerIdx 0 4)
+
+dp1 = DPower (DPowerIdx 0 1)
+dp2 = DPower (DPowerIdx 0 2)
+dp3 = DPower (DPowerIdx 0 3)
+dp4 = DPower (DPowerIdx 0 4)
+
+
 c = Const 1.0
 
-t = Add (Mult x1 x2) c := x4
+e = Eta (EtaIdx 0 1)
+de = DEta (DEtaIdx 0 1)
 
+t = dp2 := BDiff p1 e dp1 de
+-}
 
-findVar :: EqTerm a -> EqTerm a -> Maybe TPath
+findVar :: EqTerm -> EqTerm -> Maybe TPath
 findVar t s | t == s = Just []
 findVar t s
   | (Nothing, x) <- h = fmap (R:) x
@@ -157,30 +146,37 @@ findVar t s
   | otherwise = error $ "error in looking for path to (" ++ show t ++ ") in (" ++ show s ++ ")"
   where h = help t s
         help t (u := v) = (findVar t u, findVar t v)
-        help t (Add u v) = (findVar t u, findVar t v)
-        help t (Mult u v) = (findVar t u, findVar t v)
-        help t (Minus u) = (findVar t u, Nothing)  -- coding: Minus has only left operand.
-        help t (Recip u) = (findVar t u, Nothing)  -- coding: Recip has only left operand.
-        help t (F u) = (findVar t u, Nothing)      -- etc.
-        help t (B u) = (findVar t u, Nothing)
+        help t (u :+ v) = (findVar t u, findVar t v)
+        help t (u :* v) = (findVar t u, findVar t v)
+        help t (Minus u) = (findVar t u, Nothing)    -- coding: Minus has only left operand.
+        help t (Recip u) = (findVar t u, Nothing)    -- coding: Recip has only left operand.
+        help t u@(FAbs _ _) = (findVar t (fAbsPower u), Nothing)   -- etc.
+        help t u@(BAbs _ _) = (findVar t (bAbsPower u), Nothing)
+        help t u@(FDiff _ _ _ _) = (findVar t (fDiffDPower u), Nothing)
+        help t u@(BDiff _ _ _ _) = (findVar t (bDiffDPower u), Nothing)
         help _ _ = (Nothing, Nothing)
 
-isolateVar :: EqTerm a -> EqTerm a -> TPath -> EqTerm a
+isolateVar :: EqTerm -> EqTerm -> TPath -> EqTerm
 isolateVar s t@(u := v) (L:p) = (s := transform v)
   where transform = isolateVar' u p
 isolateVar s t@(u := v) (R:p) = (s := transform u)
   where transform = isolateVar' v p
 
-isolateVar' :: EqTerm a -> TPath -> (EqTerm a -> EqTerm a)
+isolateVar' :: EqTerm -> TPath -> (EqTerm -> EqTerm)
 isolateVar' _ [] = id
-isolateVar' (Add u v) (L:p) = isolateVar' u p . Add (Minus v)
-isolateVar' (Add u v) (R:p) = isolateVar' v p . Add (Minus u)
-isolateVar' (Mult u v) (L:p) = isolateVar' u p . Mult (Recip v)
-isolateVar' (Mult u v) (R:p) = isolateVar' v p . Mult (Recip u)
+isolateVar' (u :+ v) (L:p) = isolateVar' u p . ((Minus v) :+)
+isolateVar' (u :+ v) (R:p) = isolateVar' v p . ((Minus u) :+)
+isolateVar' (u :* v) (L:p) = isolateVar' u p . ((Recip v) :*)
+isolateVar' (u :* v) (R:p) = isolateVar' v p . ((Recip u) :*)
 isolateVar' (Minus u) (L:p) = isolateVar' u p . Minus
 isolateVar' (Recip u) (L:p) = isolateVar' u p . Recip
-isolateVar' (F u) (L:p) = isolateVar' u p . B
-isolateVar' (B u) (L:p) = isolateVar' u p . F
+isolateVar' (FAbs u v) (L:p) = isolateVar' u p . (flip BAbs v)
+isolateVar' (BAbs u v) (L:p) = isolateVar' u p . (flip FAbs v)
+isolateVar' (FDiff p' e dp de) (L:p) = isolateVar' dp p . f
+  where f x@(DPower (DPowerIdx a b)) = BDiff (Power (PowerIdx a b)) e x de
+isolateVar' (BDiff p' e dp de) (L:p) = isolateVar' dp p . f
+  where f x@(DPower (DPowerIdx a b)) = FDiff (Power (PowerIdx a b)) e x de
+
 
 -- this is the main function for transforming Equations
 -- It takes an unknown variable and an equation.
@@ -188,7 +184,7 @@ isolateVar' (B u) (L:p) = isolateVar' u p . F
 -- the unknown variable isolated on its left hand side (lhs),
 -- such that we can evaluate the rhs in order to calculate
 -- the value of the unknown variable.
-transformEq :: EqTerm a -> EqTerm a -> EqTerm a
+transformEq :: EqTerm -> EqTerm -> EqTerm
 transformEq unknown t
   | Nothing <- fv = t
   | Just p <- fv = isolateVar unknown t p

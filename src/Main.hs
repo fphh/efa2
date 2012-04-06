@@ -20,10 +20,10 @@ import EFA2.Term.EqInterpreter
 import EFA2.Term.TermData
 import EFA2.Term.Solver
 import EFA2.Term.Env
+import EFA2.Term.DependencyGraph
 
-import EFA2.Graph.GraphData
-import EFA2.Graph.Graph
-import EFA2.Graph.DependencyGraph
+--import EFA2.Graph.GraphData
+--import EFA2.Graph.Graph
 import EFA2.Signal.Arith
 
 import EFA2.Utils.Utils
@@ -31,15 +31,15 @@ import EFA2.Utils.Utils
 --import EFA2.Display.FileSave
 import EFA2.Display.DrawGraph
 
-import EFA2.Example.SymSig
+--import EFA2.Example.SymSig
 
-import EFA2.Example.Dreibein
-import EFA2.Example.Linear
+--import EFA2.Example.Dreibein
+--import EFA2.Example.Linear
 --import EFA2.Example.LinearOne
 --import EFA2.Example.LinearX
 --import EFA2.Example.LinearTwo
-import EFA2.Example.Loop
-import EFA2.Example.Circular
+--import EFA2.Example.Loop
+--import EFA2.Example.Circular
 --import EFA2.Example.Vierbein
 
 
@@ -47,10 +47,25 @@ import EFA2.Example.Circular
 
 main :: IO ()
 main = do
-  let g :: TheGraph [Val]
-      g@(TheGraph g' s) = circular
-      given = [(PowerIdx 0 1, [2.2]) ]
-      gvs :: [EqTerm Abs]
+  let --g :: TheGraph [Val]
+      --g@(TheGraph g' s) = circular
+      terms :: [EqTerm]
+      terms = [ PowerIdx 0 2 .= [2.2, 6, 2, 2.6 :: Val],
+                EtaIdx 0 1 .= [0.1, 0.2, 0.5, 0.8 :: Val],
+                mkVar (VarIdx 0) := mkVar (PowerIdx 0 2),
+                mkVar (PowerIdx 0 3) := FAbs (mkVar (PowerIdx 0 1)) (mkVar (EtaIdx 0 1)),
+                mkVar (VarIdx 0) := (mkVar (PowerIdx 0 1)) :* (mkVar (EtaIdx 0 1)) ]
+
+      depg = makeDependencyGraph terms
+      ho = hornOrder depg
+
+  drawAll [
+    drawDependencyGraph depg,
+    putStrLn (showEqTerms ho) ]
+
+
+{-
+      gvs :: [EqTerm]
       penv' :: PowerMap [Val]
       (gvs, penv') = mkGiven given
       depg = makeDependencyGraph g gvs
@@ -68,3 +83,4 @@ main = do
             print (mapGraph f tcg) ]
   return ()
   -- drawTopology undefined g env sol
+-}

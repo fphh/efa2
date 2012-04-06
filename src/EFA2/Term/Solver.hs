@@ -12,9 +12,9 @@ import Control.Monad.Error
 import EFA2.Term.TermData
 import EFA2.Term.EqInterpreter
 
-import EFA2.Graph.GraphData
-import EFA2.Graph.DependencyGraph
-import EFA2.Graph.Graph
+--import EFA2.Graph.GraphData
+--import EFA2.Graph.DependencyGraph
+--import EFA2.Graph.Graph
 import EFA2.Signal.Arith
 import EFA2.Example.SymSig
 import EFA2.Term.Equation
@@ -22,7 +22,7 @@ import EFA2.Term.Horn
 import EFA2.Term.DirEquation
 import EFA2.Term.Env
 
-
+{-
 data AbsEnv a = AbsEnv (EtaEnv a) (XEnv a)
 
 data DiffEnv a = DiffEnv (DPowerEnv a) (DEtaEnv a) (EtaEnv a) (XEnv a)
@@ -45,6 +45,7 @@ emptyLRXEnv idx = throwError (XIdxError idx M.empty)
 
 mkGiven :: (Signal a) => [(PowerIdx, [Val])] -> ([EqTerm b], M.Map PowerIdx [a])
 mkGiven xs = (give $ map (Energy . fst) xs, M.fromList (map (fmap (map toSignal)) xs))
+-}
 
 {-
 symbolicAbsEnv :: AbsEnv [InTerm]
@@ -53,14 +54,14 @@ symbolicAbsEnv = AbsEnv (mkEnv mkSymEtaEnv) (mkEnv mkSymXEnv)
 symbolicDiffEnv :: DiffEnv [InTerm]
 symbolicDiffEnv = DiffEnv (mkEnv mkSymDPowerEnv) (mkEnv mkSymDEtaEnv) (mkEnv mkSymEtaEnv) (mkEnv mkSymXEnv)
 -}
-
+{-
 class Solver env where
       --environment :: (Arith a) => TheGraph [a] -> env [a]
       solve :: (Signal a, Arith a, Show a) => TheGraph [a] -> env [a] -> [(PowerIdx, [Val])] -> M.Map PowerIdx [a]
 
 instance Solver AbsEnv where
          --environment (TheGraph g sigs) = AbsEnv (mkEnv $ mkEtaEnv g sigs) (mkEnv $ mkXEnv g sigs)
-{-
+
          solve (TheGraph g _) (AbsEnv eenv xenv) given = M.union penv' res
            where gvs :: [EqTerm Abs]
                  (gvs, penv') = mkGiven given
