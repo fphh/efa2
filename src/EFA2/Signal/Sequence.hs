@@ -17,6 +17,11 @@ import System.Random
 import EFA2.Utils.Utils
 import EFA2.Signal.Arith
 
+import EFA2.Signal.SignalAnalysis
+
+
+
+
 -----------------------------------------------------------------------------------
 -- Record -- Structure for Handling recorded data
 
@@ -28,6 +33,82 @@ type SignalMap = (M.Map SigId Power)
 -- data structure to house the data record or parts of it
 data Record = Record Time SignalMap deriving (Show,Eq) 
 type PowerSigEnv = PowerMap Power
+
+-----------------------------------------------------------------------------------
+-- Section and Sequence -- Structures to handle Sequence Information and Data
+
+-- Section analysis result
+type Sequ = [Sec] 
+            
+data Sec = Sec { secLen         ::  SectionLength,
+                 secTimes       ::  (TSample,TSample), 
+                 secStepIndices  ::  (SignalIdx,SignalIdx),
+                 secStepTypes    ::  (StepType,StepType)} deriving (Show, Eq)
+-- data structure to contain output of section analysis (cvutting history in slices)
+type SectionLength = DTSample
+
+-- Sequence Vector to Store Section Data  
+data SequData a = SequData [a] deriving Show
+
+data StepType = InitStep | EndStep | LeavesZeroStep | BecomesZeroStep | ZeroCrossingStep | NoStep deriving (Eq, Show)
+
+-----------------------------------------------------------------------------------
+-- 
+stepX :: PSample -> PSample -> StepType
+stepX s1 s2 | sign s1==ZSign && sign s2 /= ZSign = LeavesZeroStep -- signal leaves zero
+stepX s1 s2 | sign s1/=ZSign && sign s2 == ZSign = BecomesZeroStep -- signal becomes zero
+stepX s1 s2 | sign s1==PSign && sign s2 == NSign = ZeroCrossingStep  -- signal is crossing zero
+stepX s1 s2 | sign s1==NSign && sign s2 == PSign = ZeroCrossingStep  -- signal is crossing zero
+                                                   --InitStep -- will be added in analysis on all signals
+                                                   -- EndStep -- will be added in analysis on all signals
+stepX s2 s1 | otherwise = NoStep  -- nostep
+ 
+
+-- calculate exact time of Zero Crossing Point                 
+calcZeroTime :: StepType -> (TSample,PSample) -> (TSample,PSample) -> TSample 
+calcZeroTime stepType (t1,p1) (t2,p2) = f stepType
+  where m = dp/ dt -- interpolation slope 
+        dp = p2-p1 -- delta power 
+        dt = t2-t1 -- delta time -- t1 comes in time before t2
+        t = -p1/m+t1 -- time of zero crossing 
+        tzero = t -- if t < t2 && t > t1 then t else error m1
+        m1 = ("Zero Point out of Time-Intervall - t: " ++ show t ++ " m: " ++ show m ++ "t1: " ++ show t1 ++ "t2: " ++ show t2) 
+        f InitStep = t1
+        f EndStep = t2
+        f LeavesZeroStep = t1
+        f BecomesZeroStep = t2
+        f ZeroCrossingStep = tzero
+        f NoStep = error ("NoStep shouldn't occur here")
+
+
+-- makeSteps :: Time -> Power -> [(SignalIdx,StepType,TSample)]
+-- makeSteps time power | length power == 0 = []
+-- makeSteps time power = [(0,InitStep,head time)] ++ reverse (res $ foldl f (last ss, 0, []) ss) ++ [(length ss-1,EndStep,last time)]
+--   where ss  = zip time power
+--         res (_, _, acc) = acc
+--         f (x1@(t1,p1), i, acc) x2@(t2,p2) = if stepTyp == NoStep then (x2, i+1, acc) else (x2, i+1, (i+1,stepTyp,t):acc)
+--             where
+--                stepTyp = stepX p1 p2
+--                t = calcZeroTime stepTyp x1 x2
+
+makeSteps :: Time -> Power -> [(SignalIdx,StepType,TSample)]
+makeSteps time power | length power == 0 = []
+makeSteps time power = [(0,InitStep,head time)] ++ concat (dmap f ss) ++ [(length ss-1,EndStep,last time)]
+  where ss  = idxList (zip time power) 
+        f (idx1,(t1,p1)) (idx2,(t2,p2)) = if stepTyp == NoStep then [] else [(idx1,stepTyp,t)] 
+            where
+               stepTyp = stepX p1 p2
+               t = calcZeroTime stepTyp (t1,p1) (t2,p2)
+
+
+dmap :: (a -> a -> b) -> [a] -> [b]
+dmap f l = zipWith f (init l) (tail l)  
+
+listIdx :: [a] -> [Int]
+listIdx list = [0..(length list)-1]
+
+idxList :: [a] -> [(Int,a)] 
+idxList list = zip (listIdx list) list 
 
 
 {-
@@ -46,23 +127,7 @@ recordCheck (Record time sigMap) = smplCheck && equlengthCheck && lengthCheck
     equlengthCheck = equalLengths ([time2Power time] ++ list)  -- equal length on all signals
     lengthCheck = all (1 < ) $ map dlength list -- at least two samples per time Signal
  
------------------------------------------------------------------------------------
--- Section and Sequence -- Structures to handle Sequence Information and Data
 
--- Section analysis result
-type Sequ = GV.Vector Sec 
-            
-data Sec = Sec { secLen         ::  SectionLength,
-                 secTimes       ::  (TSample,TSample), 
-                 secStepIndices  ::  (SignalIdx,SignalIdx),
-                 secStepTypes    ::  (StepType,StepType)} deriving (Show, Eq)
-
-
--- data structure to contain output of section analysis (cvutting history in slices)
-type SectionLength = DTSample
-
--- Sequence Vector to Store Section Data  
-data SequData a = SequData (GV.Vector a) deriving Show
 -}
 
 {-
@@ -142,13 +207,6 @@ sliceTime time sec = dfromList (sigHead step1) .++ sigTrunk .++ dfromList (sigTa
           
           
 
--- calculate exact time of Zero Crossing Point                 
-calcZeroTime :: (TSample,PSample) -> (TSample,PSample) -> TSample 
-calcZeroTime (TSample t1,PSample p1) (TSample t2,PSample p2) = if tzero < t2 && tzero > t1 then (toSample tzero) else error ("Zero Point out of Time-Intervall") 
-  where m = dp/ dt -- interpolation slope 
-        dp = p2-p1 -- delta power 
-        dt = t2-t1 -- delta time -- t1 comes in time before t2
-        tzero = t1+p1/m -- time of zero crossing 
                   
 
 -- Init == first Sample / End == Last Sample

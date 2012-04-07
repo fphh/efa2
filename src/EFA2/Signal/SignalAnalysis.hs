@@ -25,8 +25,15 @@ import EFA2.Signal.SignalData
 
 import EFA2.Utils.Utils
 
-{-
 data Sign = PSign | ZSign | NSign deriving (Show, Eq)
+
+-- determine Signal Sign  
+sign :: (Eq a, Ord a, Num a) => a -> Sign
+sign x | x > 0 = PSign
+       | x == 0 = ZSign -- TODO add intervalls later on Zero - Detection       
+       | x < 0 = NSign
+
+{-
 
 -- Generische Funktion für Daten - Container
 absd :: Sample a => Val -> Val -> Signal a -> Signal a

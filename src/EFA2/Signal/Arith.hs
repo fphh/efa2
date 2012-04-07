@@ -3,9 +3,15 @@
 module EFA2.Signal.Arith where
 
 type Val = Double  
+type PSample = Val
+type TSample = Val
+type DTSample = Val
+
 type VSignal = [Val]
 type Power = VSignal
 type Time = VSignal
+
+type SignalIdx = Int
 
 class Arith a where
       zero :: a
