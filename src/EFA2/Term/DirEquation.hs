@@ -13,16 +13,16 @@ import EFA2.Utils.Utils
 
 -- This function takes equations already in order and
 -- returns a list of variables conforming to this order that allows for calculation.
-varsToCalculate :: [EqTerm a] -> [EqTerm a]
+varsToCalculate :: [EqTerm] -> [EqTerm]
 varsToCalculate ts = dropGiven $ concatMap sdiff (pairs res)
   where dropGiven = drop (length $ filter isGiven ts)
         res = reverse $ L.foldl' dirFoldFunc [S.empty] ts
         sdiff (a, b) = S.toList $ S.difference b a
 
-dirFoldFunc :: [S.Set (EqTerm a)] -> EqTerm a -> [S.Set (EqTerm a)]
+dirFoldFunc :: [S.Set EqTerm] -> EqTerm -> [S.Set (EqTerm)]
 dirFoldFunc acc@(a:_) t = (S.union (mkVarSet isVar t) a):acc
 
-filterEquations :: [EqTerm a] -> [EqTerm a] -> [EqTerm a]
+filterEquations :: [EqTerm] -> [EqTerm] -> [EqTerm]
 filterEquations vars ts = res
   where vsets = tail $ reverse $ L.foldl' dirFoldFunc [S.empty] ts
         notGiven = filter (not . isGiven . fst) (zip ts vsets)
@@ -32,7 +32,7 @@ filterEquations vars ts = res
         g acc eq = eq:acc
         res = map fst notGiven'
 
-directEquations :: [EqTerm a] -> [EqTerm a]
+directEquations :: [EqTerm] -> [EqTerm]
 directEquations ts = g ++ res
   where (g, ng) = L.partition isGiven ts
         unknown = varsToCalculate ts

@@ -5,7 +5,6 @@ module EFA2.Term.Horn where
 
 import Data.Maybe
 import qualified Data.List as L
-import qualified Data.List.HT as HTL
 import qualified Data.Set as S
 import Data.Graph.Inductive
 
@@ -55,6 +54,9 @@ rightMarked :: S.Set Formula -> Formula -> Bool
 rightMarked vs (_ :-> v) | S.member v vs = True
 rightMarked _ _ = False
 
+makeAnd :: [Formula] -> Formula
+makeAnd = L.foldl1' And
+
 step :: Step -> S.Set (Step, Formula) -> [Formula] -> (S.Set (Step, Formula), [Formula])
 step i vs fs = (unionVs, filter (not . rightMarked onlyVars') bs)
   where (as, bs) = L.partition (leftMarked onlyVars) fs
@@ -70,51 +72,46 @@ horn' i vs fs
   where (vs', fs') = step i vs fs
         noZero = all ((Zero /=) . snd) (S.toList vs)
 
+-- | Returns a set of 'Atom's that are have to be marked True in order to fulfill the 'Formula'e.
+--   To each 'Atom' is associated the 'Step' in which it was marked.
 horn :: [Formula] -> Maybe (S.Set (Step, Formula))
 horn fs = fmap atomsOnly res
   where atomsOnly = S.filter (isAtom . snd)
         res = horn' 0 S.empty fs
 
-makeAnd :: [Formula] -> Formula
-makeAnd fs = L.foldl1' And fs
+-- | Takes a dependency graph and returns Horn clauses from it, that is, every directed edge
+--   is taken for an implication.
+graphToHorn :: Gr EqTerm () -> [Formula]
+graphToHorn g = foldGraph f [] g
+  where f acc ([], _, []) = acc
+        f acc (ins, x, _) = (map (:-> Atom x) (map Atom ins)) ++ acc
 
-graphToHorn :: Gr (EqTerm a) () -> [Formula]
-graphToHorn g = foldGraph foldFunc [] g
-
-
-{- TODO:
-For an equation e that is not implied directly or indirectly by a set of equations ES 
-(e.g. there is no path in the dependency graph from ES to e) , we should
-look for a variable coverage for this equation E in the set of equations ES.
-The horn formula is then, for example: a and b and c -> e if the variables
-from a, b, c (a subset of ES) allow to compute e.
-
-That would be cool!
--}
-foldFunc :: [Formula] -> ([Node], Node, [Node]) -> [Formula]
-foldFunc acc ([], _, []) = acc
-foldFunc acc (ins, x, _) = insFs ++ acc
-  where v = Atom x
-        insFs = map (:-> v) (map Atom ins)
-
-
-makeHornFormulae :: Gr (EqTerm a) () -> [EqTerm a] -> [Formula]
-makeHornFormulae g given = given' ++ graphToHorn g
-  where given' = L.foldl' f [] (labNodes g)
-        f acc (n, Given (Energy _)) = (One :-> Atom n):acc
+-- | Takes a dependency graph and returns Horn clauses from it. /Given/ 'Formula'e will
+--   produce additional clauses of the form One :-> Atom x. 
+--   These are the starting clauses for the Horn marking algorithm.
+makeHornFormulae :: Gr EqTerm () -> [Formula]
+makeHornFormulae g = given ++ graphToHorn g
+  where given = L.foldl' f [] (labNodes g)
+        f acc (n, t) | isGiven t = (One :-> Atom n):acc
         f acc _ = acc
 
-makeHornOrder :: Gr (EqTerm a) () -> [Formula] -> [EqTerm a]
+-- | Takes a dependency graph and a list of 'Formula'e. With help of the horn marking algorithm
+--   it produces a list of 'EqTerm' equations that is ordered such, that it can be computed
+--   one by one. 
+makeHornOrder :: Gr EqTerm () -> [Formula] -> [EqTerm]
 makeHornOrder g formulae = catMaybes ts
   where Just fs = horn formulae
         fs' :: [Formula]
-        fs' = map snd (S.toList fs)
+        fs' = map snd (S.toAscList fs)
+        ts :: [Maybe EqTerm]
         ts = map (lab g . fromAtom) fs'
         fromAtom (Atom x) = x
 
-hornOrder :: Gr (EqTerm a) () -> [EqTerm a] -> [EqTerm a]
-hornOrder g given = makeHornOrder g given'
-  where given' = makeHornFormulae g given
+-- | Takes a dependency Graph and gives a list of orderd 'EqTerm' equations that can be
+--   computed one by one.
+hornOrder :: Gr EqTerm () -> [EqTerm]
+hornOrder g = makeHornOrder g fs
+  where fs = makeHornFormulae g
 
 
 -- f :: (Ord a) => [a] -> [[a]]

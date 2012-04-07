@@ -23,15 +23,27 @@ import EFA2.Signal.SignalData
 
 -- import EFA2.Signal.SignalGraph
 
+import EFA2.Signal.Arith
 import EFA2.Utils.Utils
 
 data Sign = PSign | ZSign | NSign deriving (Show, Eq)
 
--- determine Signal Sign  
+-- | determine Signal Sign  
 sign :: (Eq a, Ord a, Num a) => a -> Sign
 sign x | x > 0 = PSign
        | x == 0 = ZSign -- TODO add intervalls later on Zero - Detection       
        | x < 0 = NSign
+
+-- | check for NaN's 
+sampleCheck :: VSignal -> Bool     
+sampleCheck d = all (not . isNaN) d
+
+
+-- | check signals for same vector length
+equalLengths :: [VSignal] -> Bool
+equalLengths list | length list == 0 = True
+equalLengths xs = and (map (== n) ns)
+  where (n:ns) = map length xs
 
 {-
 
@@ -40,16 +52,6 @@ absd :: Sample a => Val -> Val -> Signal a -> Signal a
 absd  w phi time = dmap f time where f x = abs x
 
 
--- check for NaN's 
-sampleCheck :: (DataAll cont a) => cont a -> Bool     
-sampleCheck d = dall (not . isNaN) d
-
-
--- check for same vector length
-equalLengths :: (Sample a, Data (cont a) a,(DataLength cont a)) => [cont a] -> Bool
-equalLengths list | length list == 0 = True
-equalLengths xs = and (map (== n) ns)
-  where (n:ns) = map dlength xs
         
 
 -- determine Signal Sign  

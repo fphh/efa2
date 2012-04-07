@@ -8,6 +8,7 @@ import Data.Graph.Inductive
 
 import qualified Data.List as L
 import qualified Data.Map as M
+import qualified Data.List.HT as HTL
 
 import Control.Monad.Error
 
@@ -18,6 +19,7 @@ import EFA2.Graph.GraphData
 import EFA2.Signal.Arith
 import EFA2.Term.TermData
 import EFA2.Term.Env
+import EFA2.Term.Equation
 
 
 -----------------------------------------------------------------------------------
@@ -44,6 +46,58 @@ makeEdges no = map (uncurry mkLEdge) (pairs no)
 makeNodes :: [Int] -> [LNode NLabel]
 makeNodes no = map mkLNode no
 
+
+------------------------------------------------------------------------
+-- Making equations:
+
+mkEdgeEq :: Gr a b -> [EqTerm]
+mkEdgeEq g = map f ns
+  where ns = edges g
+        f (x, y) = mkVar (PowerIdx y x) := FAbs (mkVar (PowerIdx x y)) (mkVar (EtaIdx x y))
+
+{-
+mkNodeEq :: Gr a b -> [EqTerm]
+mkNodeEq g = concat $ mapGraph mkEq g
+
+{- TODO: Rethink equations ineqs' and oeqs'. Currently they are invalid. What is wrong? Is is necessary? -}
+{- ATTENTION: We must only produce equations, where every variable occurs only once.
+This has to do with transformEq, which can only factor out variables that occure only once. -}
+mkEq :: ([Node], Node, [Node]) -> [EqTerm]
+mkEq ([], _, _) = []
+mkEq (_, _, []) = []
+--mkEq (ins, n, outs) = ieqs' ++ oeqs' ++ ieqs ++ oeqs
+mkEq (ins, n, outs) = {- ieqs' ++ oeqs' ++ -} ieqs ++ oeqs ++ xieqs ++ xoeqs ++ ieqs'' ++ oeqs''
+  where ins' = zip (repeat n) ins
+        outs' = zip (repeat n) outs
+        xis = map (uncurry mkX) ins'
+        xos = map (uncurry mkX) outs'
+        eis = map (uncurry mkEnergy) ins'
+        eos = map (uncurry mkEnergy) outs'
+        isum = add eis
+        osum = add eos
+        ieqs = zipWith3 f eis xis (repeat osum)
+        oeqs = zipWith3 f eos xos (repeat isum)
+        f x y z = x := Mult y z
+
+        ieqs' | length eis > 1 = [g (head xis) (head eis) (tail eis)]
+              | otherwise = []
+        oeqs' | length eos > 1 = [g (head xos) (head eos) (tail eos)]
+              | otherwise = []
+        g x e es = e := (add $ map (Mult (Mult x (Recip (Add (Const 1.0) (Minus x))))) es)
+
+        xieqs | length xis > 1 = [Const 1.0 := add xis]
+              | otherwise = []
+        xoeqs | length xos > 1 = [Const 1.0 := add xos]
+              | otherwise = []
+
+        ieqs'' | length eis > 1 = map h (zip xis (HTL.removeEach eis))
+               | otherwise = []
+        oeqs'' | length eos > 1 = map h (zip xos (HTL.removeEach eos))
+               | otherwise = []
+        h (x, (y, z)) = add z := Mult y (Add (Recip x) (Minus (Const 1.0)))
+
+         
+-}
 
 ----------------------------------------------------------------------------------
 -- Classes to allow indexing of power positions, etas and nodes

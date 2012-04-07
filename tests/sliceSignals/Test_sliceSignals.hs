@@ -22,5 +22,7 @@ main = do
   putStrLn "" 
 
   putStrLn (myShowList sequ)
+  putStrLn (myShowList $ genSequTime time sequ)
+  putStrLn (myShowList $ genSequPowerMaps pmap sequ)
   
   

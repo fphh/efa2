@@ -18,18 +18,19 @@ import Text.Printf
 
 import Debug.Trace
 
-import EFA2.Graph.GraphData
-import EFA2.Graph.Graph
-import EFA2.Graph.DependencyGraph
+--import EFA2.Graph.GraphData
+--import EFA2.Graph.Graph
+
 
 import EFA2.Term.Equation
 import EFA2.Term.EqInterpreter
 import EFA2.Term.TermData
 import EFA2.Term.Solver
 import EFA2.Term.Env
+import EFA2.Term.DependencyGraph
 
-import EFA2.Example.SymSig
-import EFA2.Signal.Arith
+--import EFA2.Example.SymSig
+--import EFA2.Signal.Arith
 
 
 nodeColour :: Attribute 
@@ -62,10 +63,11 @@ printGraph :: Gr a b -> (Node -> String) -> (Edge -> String) -> IO ()
 printGraph g nshow eshow = runGraphvizCanvas Dot (mkDotGraph g (nshow, eshow)) Xlib
 
 drawTopologyX' :: Gr a b -> IO ()
-drawTopologyX' g = runGraphvizCanvas Dot (mkDotGraph g (show, show)) Xlib
+drawTopologyX' g = printGraph g show show -- runGraphvizCanvas Dot (mkDotGraph g (show, show)) Xlib
 
+{-
 drawTopologyX :: TheGraph a -> IO ()
-drawTopologyX (TheGraph g _) = drawTopologyX' g
+drawTopologyX (TheGraph g _) = printGraph g show show
 
 data Line = PLine | XLine | NLine deriving (Eq, Ord)
 
@@ -73,22 +75,24 @@ instance Show Line where
          show PLine = "p"
          show XLine = "x"
          show NLine = "n"
-
+-}
+{-
 -- The argument t is for node labels. Until now, it is not used.
-class DrawTopology env a where
-      drawTopology :: t -> TheGraph [a] -> env [a] -> M.Map PowerIdx [a] ->  IO ()
+class DrawTopology a where
+      drawTopology :: t -> TheGraph [a] -> [a] -> M.Map PowerIdx [a] ->  IO ()
 
-instance DrawTopology AbsEnv Val where
+instance DrawTopology Val where
          drawTopology = drawAbsTopology f
            where f (x, ys) = show x ++ " = " ++ (concatMap (printf "%.3f    ") ys)
 
-instance DrawTopology AbsEnv InTerm where
+instance DrawTopology InTerm where
          drawTopology = drawAbsTopology f
            where f (PLine, es) = "p = " ++ (L.intercalate " | " $ map showInTerm es)
                  f (XLine, e:_) = "x = " ++ showInTerm e
                  f (NLine, e:_) = "n = " ++ showInTerm e
  
-drawAbsTopology :: (Arith a, Show a) => ((Line, [a]) -> String) -> t -> TheGraph [a] -> AbsEnv [a] -> M.Map PowerIdx [a] ->  IO ()
+
+drawAbsTopology :: (Arith a, Show a) => ((Line, [a]) -> String) -> t -> TheGraph [a] -> [a] -> M.Map PowerIdx [a] ->  IO ()
 drawAbsTopology f nenv (TheGraph g _) (AbsEnv eenv xenv) penv = printGraph g show eshow
   where penv' = mkEnv $ mkPowerEnv penv
         eshow ps = L.intercalate "\n" $ map f $ mkLst ps
@@ -98,7 +102,7 @@ drawAbsTopology f nenv (TheGraph g _) (AbsEnv eenv xenv) penv = printGraph g sho
                          (XLine, xenv (XIdx y x)),
                          (PLine, penv' (PowerIdx y x)) ]
 
-instance DrawTopology DiffEnv InTerm where
+instance DrawTopology InTerm where
          drawTopology = drawDiffTopology f
            where f (PLine, es) = "p = " ++ (L.intercalate " | " $ map showInTerm es)
                  f (XLine, e:_) = "x = " ++ showInTerm e
@@ -115,14 +119,13 @@ drawDiffTopology f nenv (TheGraph g _) (DiffEnv dpenv deenv eenv xenv) penv = pr
                          (XLine, xenv (XIdx y x)),
                          (PLine, penv' (PowerIdx y x)) ]
 
+-}
 
-drawDependencyGraph :: TheGraph t -> [(PowerIdx, b)] -> IO ()
-drawDependencyGraph theGraph@(TheGraph g _) given = printGraph g' nshow (const "")
-  where gvs = give $ map (Energy . fst) given
-        g' = makeDependencyGraph theGraph gvs
-        m = M.fromList $ labNodes g'
+drawDependencyGraph :: Gr EqTerm () -> IO ()
+drawDependencyGraph g = printGraph g nshow (const "")
+  where m = M.fromList $ labNodes g
         nshow x = show x ++ ": " ++ showEqTerm (m M.! x)
-
+{-
 drawDependencyGraphTransClose :: TheGraph t -> [(PowerIdx, b)] -> IO ()
 drawDependencyGraphTransClose theGraph@(TheGraph g _) given = printGraph (transClose g') nshow (const "")
   where gvs = give $ map (Energy . fst) given
@@ -130,13 +133,12 @@ drawDependencyGraphTransClose theGraph@(TheGraph g _) given = printGraph (transC
         m = M.fromList $ labNodes g'
         nshow x = show x ++ ": " ++ showEqTerm (m M.! x)
 
-transClose :: Gr a b -> Gr a ()
-transClose = efilter (\(x, y, _) -> x /= y) . trc
+-}
 
 
-newtype Async a = Async ( MVar a)
+newtype Async a = Async (MVar a)
 
-async :: IO a -> IO ( Async a)
+async :: IO a -> IO (Async a)
 async io = do
   m <- newEmptyMVar
   forkIO $ do r <- io; putMVar m r
@@ -145,5 +147,5 @@ async io = do
 wait :: Async a -> IO a
 wait (Async m) = readMVar m
 
-drawAll :: [IO a] -> IO [a]
-drawAll ds = mapM async ds >>= mapM wait
+drawAll :: [IO a] -> IO ()
+drawAll ds = mapM async ds >>= mapM wait >> return ()

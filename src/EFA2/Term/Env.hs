@@ -5,13 +5,13 @@ import Control.Monad.Error
 
 import qualified Data.Map as M
 
-
+-- Variable types of the solver.
 data EtaIdx = EtaIdx !Int !Int deriving  (Show)
 data PowerIdx = PowerIdx !Int !Int deriving (Show, Ord, Eq)
 data XIdx = XIdx !Int !Int deriving (Show, Ord, Eq)
 data DEtaIdx = DEtaIdx !Int !Int deriving  (Show)
 data DPowerIdx = DPowerIdx !Int !Int deriving (Show, Ord, Eq)
-
+data VarIdx = VarIdx !Int deriving (Show, Ord, Eq)
 
 -- EtaIdx x y == EtaIdx y x
 instance Eq EtaIdx where
@@ -35,15 +35,18 @@ instance Ord DEtaIdx where
                where f u v = if u < v then (u, v) else (v, u)
 
 
-data IdxError a = PowerIdxError { getError :: PowerIdx, getMap :: a }
+data IdxError a = PowerIdxError { getIdx :: PowerIdx, getMap :: a }
                 | EtaIdxError EtaIdx a
                 | DPowerIdxError DPowerIdx a
                 | DEtaIdxError DEtaIdx a
                 | XIdxError XIdx a
+                | VarIdxError VarIdx a
                 | OtherError String deriving (Eq)
 
 instance (Show a) => Show (IdxError a) where
-         show (PowerIdxError m idx) = "(" ++ show idx ++ ") not found in " ++ show m
+         show err = "(" ++ show (getIdx err) ++ ") not found in: " ++ show (getMap err)
+
+
 
 instance Error (IdxError a) where
          noMsg = OtherError "Unknown index error!" 
@@ -57,23 +60,26 @@ type EtaMap a = M.Map EtaIdx a
 type DPowerMap a = M.Map DPowerIdx a
 type DEtaMap a = M.Map DEtaIdx a
 type XMap a = M.Map XIdx a
+type VarMap a = M.Map VarIdx a
 
 type LRPowerEnv a = PowerIdx -> IdxErrorMonad (PowerMap a) a
 type LREtaEnv a = EtaIdx -> IdxErrorMonad (EtaMap a) a
 type LRDPowerEnv a = DPowerIdx -> IdxErrorMonad (DPowerMap a) a
 type LRDEtaEnv a = DEtaIdx -> IdxErrorMonad (DEtaMap a) a
 type LRXEnv a = XIdx -> IdxErrorMonad (XMap a) a
+type LRVarEnv a = VarIdx -> IdxErrorMonad (VarMap a) a
 
 type EtaEnv a = EtaIdx -> a
 type PowerEnv a = PowerIdx -> a
 type DEtaEnv a = DEtaIdx -> a
 type DPowerEnv a = DPowerIdx -> a
 type XEnv a = XIdx -> a
+type VarEnv a = VarIdx -> a
 
-
+{-
 e1 = M.fromList [(PowerIdx 1 0, "abc"), (PowerIdx 2 0, "def")]
 e2 = M.fromList [(PowerIdx 2 0, "uvw"), (PowerIdx 3 0, "xyz")]
-
+-}
 
 composeLREnv :: (Ord k) => (a -> IdxErrorMonad (M.Map k v) b) -> (a -> IdxErrorMonad (M.Map k v) b) -> (a -> IdxErrorMonad (M.Map k v) b)
 composeLREnv env1 env2 x =
@@ -92,26 +98,17 @@ mkEnv env x
   | Right y <- res = y
   where res = env x
 
-mkPowerEnv :: M.Map PowerIdx b -> PowerIdx -> IdxErrorMonad (PowerMap b) b
+mkPowerEnv :: M.Map PowerIdx a -> LRPowerEnv a
 mkPowerEnv m = checkIdx (flip PowerIdxError m) m
 
-mkEtaEnv ::  M.Map EtaIdx b -> EtaIdx -> IdxErrorMonad (EtaMap b) b
+mkEtaEnv ::  M.Map EtaIdx a -> LREtaEnv a
 mkEtaEnv m = checkIdx (flip EtaIdxError m) m
 
-mkDPowerEnv :: M.Map DPowerIdx b -> DPowerIdx -> IdxErrorMonad (DPowerMap b) b
+mkDPowerEnv :: M.Map DPowerIdx a -> LRDPowerEnv a
 mkDPowerEnv m = checkIdx (flip DPowerIdxError m) m
 
-mkDEtaEnv ::  M.Map DEtaIdx b -> DEtaIdx -> IdxErrorMonad (DEtaMap b) b
+mkDEtaEnv ::  M.Map DEtaIdx a -> LRDEtaEnv a
 mkDEtaEnv m = checkIdx (flip DEtaIdxError m) m
 
-mkXEnv ::  M.Map XIdx b -> XIdx -> IdxErrorMonad (XMap b) b
+mkXEnv ::  M.Map XIdx a -> LRXEnv a
 mkXEnv m = checkIdx (flip XIdxError m) m
-
-
-{-
-class EnvClass a where
-      mkPowerEnv :: (M.Map PowerIdx a) -> LRPowerEnv a
-      mkEtaEnv :: Gr b c -> LRPowerEnv a -> LREtaEnv a
-      mkXEnv :: Gr b c -> LRPowerEnv a -> LRXEnv a
-
--}

@@ -10,11 +10,11 @@ import Control.Monad.Error
 
 import Debug.Trace
 
-import EFA2.Graph.GraphData
-import EFA2.Term.Equation
+--import EFA2.Graph.GraphData
+--import EFA2.Term.Equation
 import EFA2.Term.TermData
 import EFA2.Term.Env
-import EFA2.Signal.Arith
+--import EFA2.Signal.Arith
 
 
 
@@ -36,8 +36,8 @@ showInTerm (InEqual s t) = showInTerm s ++ " = " ++ showInTerm t
 showInTerms :: [InTerm] -> String
 showInTerms ts = L.intercalate "\n" $ map showInTerm ts
 
-
-eqTermToInTerm :: (EdgeFormula a) => EqTerm a -> [InTerm]
+{-
+eqTermToInTerm :: (EdgeFormula a) => EqTerm -> [InTerm]
 eqTermToInTerm (Energy idx) = [PIdx idx]
 eqTermToInTerm (Eta idx) = [EIdx idx]
 eqTermToInTerm (DEnergy idx) = [DPIdx idx]
@@ -62,7 +62,7 @@ multf xs = map fgg (sequence xs)
 
 
 class EdgeFormula a where
-      toEdgeFormula :: EqTerm a -> [InTerm]
+      toEdgeFormula :: EqTerm -> [InTerm]
 
 instance EdgeFormula Abs where
          toEdgeFormula (F (Energy idx@(PowerIdx x y))) = multf [eqTermToInTerm s, eqTermToInTerm t]
@@ -107,5 +107,6 @@ interpret dpenv deenv eenv xenv penv t = go t
         go (InAdd s t) = zipWith (.+) (go s) (go t)
         go (InMult s t) = zipWith (.*) (go s) (go t)
 
-toInTerms :: (EdgeFormula a) => [EqTerm a] -> [InTerm]
+toInTerms :: (EdgeFormula a) => [EqTerm] -> [InTerm]
 toInTerms ts = concatMap eqTermToInTerm (filter (not . isGiven) ts)
+-}

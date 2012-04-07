@@ -1,6 +1,6 @@
 {-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, GeneralizedNewtypeDeriving, UndecidableInstances, FlexibleInstances,  RankNTypes,  ImpredicativeTypes,  FlexibleContexts, GADTs, TypeFamilies  #-}
 
-module EFA2.Signal.SignalData where
+module EFA2.Signal.SignalVersuch where
 
 import qualified Data.Map as M
 import qualified Data.List as L
@@ -10,7 +10,7 @@ import qualified Data.Vector.Generic as GV
 import qualified Data.Vector.Generic.Mutable as MV
 import qualified Data.Foldable as F
 
-
+{-
 newtype SampleIdx = SampleIdx Int deriving (Eq, Ord, Num, Enum, Show)
 
 -- allow direct usage of SampleIndex
@@ -291,3 +291,4 @@ signm :: (UV.Unbox a, Num a) => UV.Vector a -> UV.Vector a
 signm = UV.map (signum)
 
 
+-}

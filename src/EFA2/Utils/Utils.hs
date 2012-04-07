@@ -91,3 +91,8 @@ myShowList list = unlines (map show list)
 -- | own list show function using specified show function for element
 myShowListFunct :: [a] -> (a -> String) -> String
 myShowListFunct list showFunct = unlines (map showFunct list) 
+
+
+transClose :: Gr a b -> Gr a ()
+transClose = efilter (\(x, y, _) -> x /= y) . trc
+
