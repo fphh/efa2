@@ -50,7 +50,7 @@ type SectionLength = DTSample
 -- Sequence Vector to Store Section Data  
 data SequData a = SequData [a] deriving Show
 
-data StepType = InitStep | EndStep | LeavesZeroStep | BecomesZeroStep | ZeroCrossingStep | NoStep deriving (Eq, Show)
+data StepType = InitStep | EndStep | LeavesZeroStep | BecomesZeroStep | ZeroCrossingStep | NoStep deriving (Eq, Show,Ord)
 
 -----------------------------------------------------------------------------------
 -- 
@@ -91,6 +91,7 @@ calcZeroTime stepType (t1,p1) (t2,p2) = f stepType
 --                stepTyp = stepX p1 p2
 --                t = calcZeroTime stepTyp x1 x2
 
+-- | Function to generate a list containing all signal steps with time and index information 
 makeSteps :: Time -> Power -> [(SignalIdx,StepType,TSample)]
 makeSteps time power | length power == 0 = []
 makeSteps time power = [(0,InitStep,head time)] ++ concat (dmap f ss) ++ [(length ss-1,EndStep,last time)]
@@ -100,18 +101,29 @@ makeSteps time power = [(0,InitStep,head time)] ++ concat (dmap f ss) ++ [(lengt
                stepTyp = stepX p1 p2
                t = calcZeroTime stepTyp (t1,p1) (t2,p2)
 
+-- | generate a steplist for a Powermap
+genSequ :: Time -> PowerMap Power -> Sequ
+genSequ time pmap = dmap genSecInfo (S.toAscList s)
+  where offs = map (makeSteps time) (M.elems pmap)
+        s = S.unions $ map S.fromList offs -- convert steplist to set to use unions functionality 
 
-dmap :: (a -> a -> b) -> [a] -> [b]
-dmap f l = zipWith f (init l) (tail l)  
-
-listIdx :: [a] -> [Int]
-listIdx list = [0..(length list)-1]
-
-idxList :: [a] -> [(Int,a)] 
-idxList list = zip (listIdx list) list 
-
+-- | function to generate section Info        
+genSecInfo :: (SignalIdx,StepType,TSample) -> (SignalIdx,StepType,TSample) -> Sec
+genSecInfo (idx1,step1,t1) (idx2,step2,t2) =  Sec { secLen         = t2-t1,
+                                                    secTimes       = (t1,t2),              
+                                                    secStepIndices  = (idx1,idx2),
+                                                    secStepTypes   = (step1,step2)}
 
 {-
+-------------------------------------------------------------------------------------
+-- functions to split the record in section records
+-- generate Sequence Information   
+genSequ :: Record -> Sequ
+genSequ (Record time sigMap) = GV.fromList (zipWith genSecInfo (init stepList2) (tail stepList2))  
+  where stepList1 = sort(concat (map ((getSignalSteps time) . snd)  (M.toList sigMap))) -- get Steps from all Signals
+        stepList2 = [(SignalIdx 0,dhead time, 4)] ++ stepList1 ++ [(SignalIdx $ dlength time, dlast time ,5)] -- add steps events for 1st and last sample in first and last section (1 = leaves zero / 2 == becomes zero)
+
+
 -- generate Record from data components
 genRecord :: Time  -> [(SignalIdent, Power)] -> Record
 genRecord time sigIDList = if recordCheck rec == True then rec else error ("Incorrect Data in Record-- either unequal length or NaN's")
@@ -131,22 +143,6 @@ recordCheck (Record time sigMap) = smplCheck && equlengthCheck && lengthCheck
 -}
 
 {-
--------------------------------------------------------------------------------------
--- functions to split the record in section records
--- generate Sequence Information   
-genSequ :: Record -> Sequ
-genSequ (Record time sigMap) = GV.fromList (zipWith genSecInfo (init stepList2) (tail stepList2))  
-  where stepList1 = sort(concat (map ((getSignalSteps time) . snd)  (M.toList sigMap))) -- get Steps from all Signals
-        stepList2 = [(SignalIdx 0,dhead time, 4)] ++ stepList1 ++ [(SignalIdx $ dlength time, dlast time ,5)] -- add steps events for 1st and last sample in first and last section (1 = leaves zero / 2 == becomes zero)
-
-
-                
--- bild Section data structure from info of two steps 
-genSecInfo :: (SignalIdx,TSample,StepType) -> (SignalIdx,TSample,StepType) -> Sec
-genSecInfo (idx1,t1,step1) (idx2,t2,step2) =  Sec { secLen         = DTSample (fromSample (t2-t1)),
-                                                    secTimes       = (t1,t2),              
-                                                    secStepIndices  = (idx1,idx2),
-                                                    secStepTypes   = (step1,step2)}
   
                 
     
