@@ -133,8 +133,6 @@ drawDependencyGraphTransClose theGraph@(TheGraph g _) given = printGraph (transC
         m = M.fromList $ labNodes g'
         nshow x = show x ++ ": " ++ showEqTerm (m M.! x)
 
-transClose :: Gr a b -> Gr a ()
-transClose = efilter (\(x, y, _) -> x /= y) . trc
 -}
 
 

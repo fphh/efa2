@@ -17,35 +17,32 @@ import EFA2.Utils.Utils
 import EFA2.Term.Equation
 
 
-dependencyGraph :: [S.Set EqTerm] -> Gr (S.Set EqTerm) ()
-dependencyGraph ss = g
+dependencyGraph :: (S.Set EqTerm -> S.Set EqTerm -> Bool) -> [S.Set EqTerm] -> Gr (S.Set EqTerm) ()
+dependencyGraph p ss = g
   where xs = HTL.removeEach ss
-        ys = concatMap (uncurry mkArcs) xs
+        ys = concatMap (uncurry (mkArcs p)) xs
         m = M.fromList (zip ss [0..])
         es = unique $ map (\(x, y) -> (m M.! x, m M.! y, ())) ys
         g = mkGraph (map flipPair $ M.toList m) es
 
-mkArcs :: (Ord a, Show a) => S.Set a -> [S.Set a] -> [(S.Set a, S.Set a)]
-mkArcs s ss = catMaybes $ map g ss
-  where g t | s `diffByAtMostOne` t = Just (s, t)
+mkArcs :: (Ord a, Show a) => (S.Set a -> S.Set a -> Bool) -> S.Set a -> [S.Set a] -> [(S.Set a, S.Set a)]
+mkArcs p s ss = catMaybes $ map g ss
+  where g t | p s t = Just (s, t)
         g _ = Nothing
 
--- If true, then we have an edge from s to t.
-diffByAtMostOne :: (Eq a, Ord a, Show a) => S.Set a -> S.Set a -> Bool
-diffByAtMostOne s t = (S.size t > 1) && (S.size (t S.\\ s) == 1)
 
-makeDependencyGraph :: [EqTerm] -> Gr EqTerm ()
-makeDependencyGraph ts = deq
+
+makeDependencyGraph :: (S.Set EqTerm -> S.Set EqTerm -> Bool) -> [EqTerm] -> Gr EqTerm ()
+makeDependencyGraph p ts = deq
   where vsets = map (mkVarSet isVar) ts
         mt = M.fromList (zip vsets ts)
-        dg = dependencyGraph vsets
+        dg = dependencyGraph p vsets
         deq = nmap (mt M.!) dg
-{-
-makeDependencyGraph :: TheGraph b -> [EqTerm] -> Gr EqTerm ()
-makeDependencyGraph (TheGraph g _) given = deq
-  where ts = mkEdgeEq g ++ mkNodeEq g ++ given
-        vsets = map (mkVarSet isVar) ts
-        mt = M.fromList (zip vsets ts)
-        dg = dependencyGraph vsets
-        deq = nmap (mt M.!) dg
--}
+
+dpgDiffByAtMostOne :: [EqTerm] -> Gr EqTerm ()
+dpgDiffByAtMostOne = makeDependencyGraph diffByAtMostOne
+  where diffByAtMostOne s t = (S.size t > 1) && (S.size (t S.\\ s) == 1)
+
+dpgHasSameVariable :: [EqTerm] -> Gr EqTerm ()
+dpgHasSameVariable = makeDependencyGraph hasSameVariable
+  where hasSameVariable s t = S.size (S.intersection s t) > 0

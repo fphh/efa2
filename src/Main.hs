@@ -53,15 +53,21 @@ main = do
       terms :: [EqTerm]
       terms = [ PowerIdx 0 2 .= [2.2, 6, 2, 2.6 :: Val],
                 EtaIdx 0 1 .= [0.1, 0.2, 0.5, 0.8 :: Val],
+                mkVar (VarIdx 1) := mkVar (VarIdx 0),
                 mkVar (VarIdx 0) := mkVar (PowerIdx 0 2),
                 mkVar (PowerIdx 0 3) := FAbs (mkVar (PowerIdx 0 1)) (mkVar (EtaIdx 0 1)),
                 mkVar (VarIdx 0) := (mkVar (PowerIdx 0 1)) :* (mkVar (EtaIdx 0 1)) ]
 
-      depg = makeDependencyGraph terms
-      ho = hornOrder depg
+      depg1 = dpgDiffByAtMostOne terms
+      depg2 = dpgHasSameVariable terms
+
+      ho = hornOrder depg1
 
   drawAll [
-    drawDependencyGraph depg,
+    drawDependencyGraph depg1,
+    drawDependencyGraph depg2,
+
+    -- drawDependencyGraph (transClose depg),
     putStrLn (showEqTerms ho) ]
 
 
