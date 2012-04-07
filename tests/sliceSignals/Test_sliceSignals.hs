@@ -7,7 +7,9 @@ import qualified Data.Map as M
 
 time = [0..9]
 p1 = [0,0,0,5,5,-5,-5,0,2,2]
-p2 = [0,0,1,1,1,1,2,2,2,2,2]
+p2 = [0,0,0,5,5,-5,-5,0,2,2]
+
+--p2 = [0,0,1,1,1,1,2,2,2,2,2]
 
 steps1 = makeSteps time p1
 steps2 = makeSteps time p2

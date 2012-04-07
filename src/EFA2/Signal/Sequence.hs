@@ -19,9 +19,6 @@ import EFA2.Signal.Arith
 
 import EFA2.Signal.SignalAnalysis
 
-
-
-
 -----------------------------------------------------------------------------------
 -- Record -- Structure for Handling recorded data
 
@@ -41,7 +38,7 @@ type PowerSigEnv = PowerMap Power
 type Sequ = [Sec] 
 data Sec = Sec (SignalIdx,StepType,TSample) (SignalIdx,StepType,TSample) deriving (Show)
 
--- data structure to contain output of section analysis (cvutting history in slices)
+-- data structure to contain output of section analysis (cutting history in slices)
 type SectionLength = DTSample
 
 -- Sequence Vector to Store Section Data  
@@ -130,14 +127,14 @@ genSequTime time sequ = map f sequ
     f (Sec (idx1,step1,t1) (idx2,step2,t2) )  = tHead step1 ++ tTrunk ++ tTail step2
         where
           tv = UV.fromList time
-          tTrunk = UV.toList $ UV.slice (idx1+1) (idx2-idx1+1) tv  -- get middle part which is always same 
+          tTrunk = UV.toList $ UV.slice (idx1+1) (idx2-idx1) tv  -- get middle part which is always same 
           tHead BecomesZeroStep =  [] -- BecomesZeroStep
-          tHead EndStep = error ("Error in sliceSignal - endStep shouldn't occur here") -- EndStep
-          tHead _ =  [t1] -- ZeroCrossingStep
+          tHead EndStep = error ("Error in sliceSignal - endStep shouldn't occur here")
+          tHead _ =  [t1]
           
           tTail LeavesZeroStep =  [] -- LeavesZeroStep
-          tTail InitStep = error ("Error in sliceSignal - initStep shouldn't occur here") -- InitStep
-          tTail _ =  [t2] -- BecomesZeroStep
+          tTail InitStep = error ("Error in sliceSignal - initStep shouldn't occur here") 
+          tTail _ =  [t2]
   
 
 genSequPowerMaps :: PowerMap Power -> Sequ -> SequData (PowerMap Power)
@@ -147,14 +144,17 @@ genSequPowerMaps pmap sequ = map f sequ
        where
           g psig =  pHead step1 ++ pTrunk ++ pTail step2
             where
-              pTrunk = UV.toList $ UV.slice (idx1+1) (idx2-idx1+1) $ UV.fromList psig -- get middle part which is always same 
+              pv = UV.fromList psig
+              pTrunk = UV.toList $ UV.slice (idx1+1) (idx2-idx1) pv  -- get middle part which is always same 
               pHead BecomesZeroStep =  [] -- BecomesZeroStep
-              pHead EndStep = error ("Error in sliceSignal - endStep shouldn't occur here") -- EndStep
-              pHead _ =  [t1] -- ZeroCrossingStep
+              pHead EndStep = error ("Error in sliceSignal - endStep shouldn't occur here")
+              pHead ZeroCrossingStep = [0]
+              pHead _ =  [pv UV.! idx1] 
           
               pTail LeavesZeroStep =  [] -- LeavesZeroStep
-              pTail InitStep = error ("Error in sliceSignal - initStep shouldn't occur here") -- InitStep
-              pTail _ =  [] -- BecomesZeroStep
+              pTail InitStep = error ("Error in sliceSignal - initStep shouldn't occur here") 
+              pTail ZeroCrossingStep = [0]
+              pTail _ =  [pv UV.! idx2]
           
 
 
