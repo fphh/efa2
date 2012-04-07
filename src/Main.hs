@@ -13,6 +13,7 @@ import Control.Monad.Error
 
 import Debug.Trace
 
+
 import EFA2.Solver.Equation
 import EFA2.Solver.Horn
 import EFA2.Solver.DirEquation
