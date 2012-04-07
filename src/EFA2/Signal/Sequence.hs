@@ -65,6 +65,33 @@ recordCheck (Record time sigMap) = smplCheck && equlengthCheck && lengthCheck
     lengthCheck = all (1 < ) $ map length list -- at least two samples per time Signal
  
 -----------------------------------------------------------------------------------
+-- | Generate Power Map
+
+genPowerMap :: Time -> M.Map Power -> PowerMap Power    
+genPowerMap time map = M.map f map
+  where
+    
+
+addZeroCrossingPoints ::  [(SignalIdx,TSample)] -> Time -> PowerMap Power -> (Time, PowerMap Power)    
+addZeroCrossingPoints time pmap = (map f time, M.map g pmap)    
+  where
+    f (idx,t) = 
+    
+    
+-- | Function to generate a list with all zero crossings
+zeroCrossings :: Time -> Power -> [(SignalIdx,TSample)]
+zeroCrossings time power = concat (dmap f $ idxList (zip time power) )
+  where f (idx1,(t1,p1)) (idx2,(t2,p2)) = g stepTyp 
+            where stepTyp = stepX p1 p2
+                  tzero = calcZeroTime (t1,p1) (t2,p2)
+                  g ZeroCrossingStep = [(idx1,stepTyp,tzero)]  
+                  g _ = [] 
+                  
+                  
+                  
+                  
+                  
+-----------------------------------------------------------------------------------
 -- | Generate Time Sequence
 stepX :: PSample -> PSample -> StepType
 stepX s1 s2 | sign s1==ZSign && sign s2 /= ZSign = LeavesZeroStep -- signal leaves zero
@@ -77,41 +104,33 @@ stepX s2 s1 | otherwise = NoStep  -- nostep
  
 
 -- calculate exact time of Zero Crossing Point                 
-calcZeroTime :: StepType -> (TSample,PSample) -> (TSample,PSample) -> TSample 
-calcZeroTime stepType (t1,p1) (t2,p2) = f stepType
+calcZeroTime :: (TSample,PSample) -> (TSample,PSample) -> TSample 
+calcZeroTime (t1,p1) (t2,p2) = f stepType
   where m = dp/ dt -- interpolation slope 
         dp = p2-p1 -- delta power 
         dt = t2-t1 -- delta time -- t1 comes in time before t2
         t = -p1/m+t1 -- time of zero crossing 
         tzero = t -- if t < t2 && t > t1 then t else error m1
         m1 = ("Zero Point out of Time-Intervall - t: " ++ show t ++ " m: " ++ show m ++ "t1: " ++ show t1 ++ "t2: " ++ show t2) 
-        f InitStep = t1
-        f EndStep = t2
-        f LeavesZeroStep = t1
-        f BecomesZeroStep = t2
-        f ZeroCrossingStep = tzero
-        f NoStep = error ("NoStep shouldn't occur here")
-
-
--- makeSteps :: Time -> Power -> [(SignalIdx,StepType,TSample)]
--- makeSteps time power | length power == 0 = []
--- makeSteps time power = [(0,InitStep,head time)] ++ reverse (res $ foldl f (last ss, 0, []) ss) ++ [(length ss-1,EndStep,last time)]
---   where ss  = zip time power
---         res (_, _, acc) = acc
---         f (x1@(t1,p1), i, acc) x2@(t2,p2) = if stepTyp == NoStep then (x2, i+1, acc) else (x2, i+1, (i+1,stepTyp,t):acc)
---             where
---                stepTyp = stepX p1 p2
---                t = calcZeroTime stepTyp x1 x2
 
 -- | Function to generate a list containing all signal steps with time and index information 
 makeSteps :: Time -> Power -> [(SignalIdx,StepType,TSample)]
 makeSteps time power | length power == 0 = []
 makeSteps time power = [(0,InitStep,head time)] ++ concat (dmap f ss) ++ [(length ss-1,EndStep,last time)]
   where ss  = idxList (zip time power) 
-        f (idx1,(t1,p1)) (idx2,(t2,p2)) = if stepTyp == NoStep then [] else [(idx1,stepTyp,t)] 
-            where
-               stepTyp = stepX p1 p2
-               t = calcZeroTime stepTyp (t1,p1) (t2,p2)
+        f (idx1,(t1,p1)) (idx2,(t2,p2)) = f stepTyp -- if stepTyp == NoStep then [] else 
+            where stepTyp = stepX p1 p2
+                  tzero = calcZeroTime (t1,p1) (t2,p2)
+                  f NoStep = []
+                  -- calculate zero crossing
+                  f ZeroCrossingStep = [(idx1,stepTyp,tzero)]  
+                  -- use first sample
+                  f InitStep = [(idx1,stepTyp,t1)]
+                  f LeavesZeroStep = [(idx1,stepTyp,t1)]
+                  -- use second sample
+                  f EndStep = [(idx2,stepTyp,t2)]
+                  f BecomesZeroStep = [(idx2,stepTyp,t2)]
+                    
 
 -- | generate a steplist for a Powermap
 genSequ :: Time -> PowerMap Power  -> Sequ
