@@ -1,13 +1,13 @@
 
 
-module EFA2.Term.DirEquation where
+module EFA2.Solver.DirEquation where
 
 import qualified Data.Set as S
 import qualified Data.List as L
 
 import Debug.Trace
 
-import EFA2.Term.Equation
+import EFA2.Solver.Equation
 
 import EFA2.Utils.Utils
 

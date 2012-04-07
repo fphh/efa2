@@ -1,5 +1,5 @@
 
-module EFA2.Term.Env where
+module EFA2.Solver.Env where
 
 import Control.Monad.Error
 

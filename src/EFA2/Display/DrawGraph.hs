@@ -22,12 +22,12 @@ import Debug.Trace
 --import EFA2.Graph.Graph
 
 
-import EFA2.Term.Equation
-import EFA2.Term.EqInterpreter
-import EFA2.Term.TermData
-import EFA2.Term.Solver
-import EFA2.Term.Env
-import EFA2.Term.DependencyGraph
+import EFA2.Solver.Equation
+import EFA2.Solver.EqInterpreter
+import EFA2.Solver.TermData
+import EFA2.Solver.Solve
+import EFA2.Solver.Env
+import EFA2.Solver.DependencyGraph
 
 --import EFA2.Example.SymSig
 --import EFA2.Signal.Arith

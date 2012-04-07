@@ -1,7 +1,7 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 
 
-module EFA2.Term.Equation where
+module EFA2.Solver.Equation where
 
 import qualified Data.Set as S
 import qualified Data.List as L
@@ -9,7 +9,7 @@ import qualified Data.List as L
 import Debug.Trace
 
 import EFA2.Signal.Arith
-import EFA2.Term.Env
+import EFA2.Solver.Env
 
 data EqTerm = EqTerm := EqTerm
           | Const Val

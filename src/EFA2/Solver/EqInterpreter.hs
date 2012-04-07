@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 
-module EFA2.Term.EqInterpreter where
+module EFA2.Solver.EqInterpreter where
 
 import Data.Maybe
 import qualified Data.Map as M
@@ -11,9 +11,9 @@ import Control.Monad.Error
 import Debug.Trace
 
 --import EFA2.Graph.GraphData
---import EFA2.Term.Equation
-import EFA2.Term.TermData
-import EFA2.Term.Env
+--import EFA2.Solver.Equation
+import EFA2.Solver.TermData
+import EFA2.Solver.Env
 --import EFA2.Signal.Arith
 
 

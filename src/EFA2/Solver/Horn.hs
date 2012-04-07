@@ -1,17 +1,18 @@
 {-# LANGUAGE FlexibleInstances #-}
 
 
-module EFA2.Term.Horn where
+module EFA2.Solver.Horn where
 
 import Data.Maybe
 import qualified Data.List as L
 import qualified Data.Set as S
+import qualified Data.Map as M
 import Data.Graph.Inductive
 
 import Debug.Trace
 
-
-import EFA2.Term.Equation
+import EFA2.Solver.DependencyGraph
+import EFA2.Solver.Equation
 import EFA2.Utils.Utils
 
 data Formula = Zero
@@ -38,6 +39,10 @@ hornsToStr fs = L.intercalate " ∧ " $ map (("(" ++) . (++ ")") . show) fs
 isAtom :: Formula -> Bool
 isAtom (Atom _) = True
 isAtom _ = False
+
+fromAtom :: Formula -> Int
+fromAtom (Atom x) = x
+fromAtom t = error ("Wrong term " ++ show t ++ " supplied to fromAtom.")
 
 getAtoms :: Formula -> S.Set Formula
 getAtoms v@(Atom _) = S.singleton v
@@ -98,27 +103,46 @@ makeHornFormulae g = given ++ graphToHorn g
 -- | Takes a dependency graph and a list of 'Formula'e. With help of the horn marking algorithm
 --   it produces a list of 'EqTerm' equations that is ordered such, that it can be computed
 --   one by one. 
-makeHornOrder :: Gr EqTerm () -> [Formula] -> [EqTerm]
-makeHornOrder g formulae = catMaybes ts
+makeHornOrder :: M.Map Node EqTerm -> [Formula] -> [EqTerm]
+makeHornOrder m formulae = map ((m M.!) . fromAtom) fs'
   where Just fs = horn formulae
-        fs' :: [Formula]
         fs' = map snd (S.toAscList fs)
-        ts :: [Maybe EqTerm]
-        ts = map (lab g . fromAtom) fs'
-        fromAtom (Atom x) = x
 
--- | Takes a dependency Graph and gives a list of orderd 'EqTerm' equations that can be
---   computed one by one.
-hornOrder :: Gr EqTerm () -> [EqTerm]
-hornOrder g = makeHornOrder g fs
-  where fs = makeHornFormulae g
+makeHornClauses :: [EqTerm] -> (M.Map Node EqTerm, [Formula])
+makeHornClauses ts = (m, fsdpg1 ++ fsdpg2)
+  where m = M.fromList (labNodes dpg1)
+        dpg1 = dpgDiffByAtMostOne ts
+        dpg2 = dpgHasSameVariable ts
+        dpg3 = L.foldl' (flip delEdge) dpg2 (edges dpg1)
+
+        fsdpg1 = makeHornFormulae dpg1
+        fsdpg2 = concat $ mapGraph g dpg3
+
+        mset = M.map (mkVarSet isVar) m
+        g (_, n, _) | isGiven (m M.! n) = []
+        g ([], _, _) = []
+        g (ins, n, _) = map f sc
+          where sc = setCoverBruteForce mset n ins
+                f xs = makeAnd (map Atom xs) :-> Atom n
 
 
--- f :: (Ord a) => [a] -> [[a]]
-f xs = map (map fst) zs
+hornOrder :: [EqTerm] -> [EqTerm]
+hornOrder = uncurry makeHornOrder . makeHornClauses
+
+
+allNotEmptyCombinations :: (Ord a) => [a] -> [[a]]
+allNotEmptyCombinations xs = filter (not .null) $ map (map fst) zs
   where len = length xs
-        bits = filter ((0 <) . sum) $ sequence (replicate len [0, 1])
+        bits = sequence (replicate len [False, True])
         ys = map (zip xs) bits
-        zs = map (filter ((1 ==) . snd)) ys
+        zs = map (filter ((True ==) . snd)) ys
 
--- setCover :: S.Set a -> [S.Set a] -> [S.Set a]
+
+setCoverBruteForce :: M.Map Node (S.Set EqTerm) -> Node -> [Node] -> [[Node]]
+--setCoverBruteForce _ _ ns | length ns > 6 = []
+setCoverBruteForce m n ns = map fst $ filter p xs
+  where s = m M.! n
+        combs = allNotEmptyCombinations ns
+        xs = zip combs (map f combs)
+        f ys = S.unions $ map (m M.!) ys
+        p (c, t) = S.size (s S.\\ t) < 2

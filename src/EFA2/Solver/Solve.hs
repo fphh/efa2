@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 
 
-module EFA2.Term.Solver where
+module EFA2.Solver.Solve where
 
 import qualified Data.Map as M
 import qualified Data.List as L
@@ -9,18 +9,18 @@ import Data.Graph.Inductive
 
 import Control.Monad.Error
 
-import EFA2.Term.TermData
-import EFA2.Term.EqInterpreter
 
 --import EFA2.Graph.GraphData
 --import EFA2.Graph.DependencyGraph
 --import EFA2.Graph.Graph
 import EFA2.Signal.Arith
-import EFA2.Example.SymSig
-import EFA2.Term.Equation
-import EFA2.Term.Horn
-import EFA2.Term.DirEquation
-import EFA2.Term.Env
+
+import EFA2.Solver.Equation
+import EFA2.Solver.Horn
+import EFA2.Solver.DirEquation
+import EFA2.Solver.Env
+import EFA2.Solver.TermData
+import EFA2.Solver.EqInterpreter
 
 {-
 data AbsEnv a = AbsEnv (EtaEnv a) (XEnv a)

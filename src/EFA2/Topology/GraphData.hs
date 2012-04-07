@@ -12,21 +12,21 @@
 -----------------------------------------------------------------------------
 
 
-module EFA2.Graph.GraphData where
+module EFA2.Topology.GraphData where
 
 import Data.Maybe (fromJust)
 
 import qualified Data.Map as M
 import Control.Monad.Error
 
-import EFA2.Term.Env (IdxErrorMonad)
+--import EFA2.Term.Env (IdxErrorMonad)
 
 import Debug.Trace
 
 -- Label
 
-data NLabel = NLabel Int deriving (Show)
-data ELabel = ELabel Int Int deriving (Show)
+data NLabel = NLabel Int deriving (Show, Eq, Ord)
+data ELabel = ELabel Int Int deriving (Show, Eq, Ord)
 
 -- Indexing
 {-

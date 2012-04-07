@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleInstances, TypeSynonymInstances #-}
 
-module EFA2.Graph.Graph where
+module EFA2.Topology.Graph where
 
 import Data.Maybe
 import Data.Either
@@ -15,11 +15,11 @@ import Control.Monad.Error
 import Debug.Trace
 
 import EFA2.Utils.Utils
-import EFA2.Graph.GraphData
+import EFA2.Topology.GraphData
 import EFA2.Signal.Arith
-import EFA2.Term.TermData
-import EFA2.Term.Env
-import EFA2.Term.Equation
+import EFA2.Solver.TermData
+import EFA2.Solver.Env
+import EFA2.Solver.Equation
 
 
 -----------------------------------------------------------------------------------
@@ -55,7 +55,7 @@ mkEdgeEq g = map f ns
   where ns = edges g
         f (x, y) = mkVar (PowerIdx y x) := FAbs (mkVar (PowerIdx x y)) (mkVar (EtaIdx x y))
 
-{-
+
 mkNodeEq :: Gr a b -> [EqTerm]
 mkNodeEq g = concat $ mapGraph mkEq g
 
@@ -69,22 +69,23 @@ mkEq (_, _, []) = []
 mkEq (ins, n, outs) = {- ieqs' ++ oeqs' ++ -} ieqs ++ oeqs ++ xieqs ++ xoeqs ++ ieqs'' ++ oeqs''
   where ins' = zip (repeat n) ins
         outs' = zip (repeat n) outs
-        xis = map (uncurry mkX) ins'
-        xos = map (uncurry mkX) outs'
-        eis = map (uncurry mkEnergy) ins'
-        eos = map (uncurry mkEnergy) outs'
+        xis = map (mkVar . uncurry XIdx) ins'
+        xos = map (mkVar . uncurry XIdx) outs'
+        eis = map (mkVar . uncurry PowerIdx) ins'
+        eos = map (mkVar . uncurry PowerIdx) outs'
         isum = add eis
         osum = add eos
         ieqs = zipWith3 f eis xis (repeat osum)
         oeqs = zipWith3 f eos xos (repeat isum)
-        f x y z = x := Mult y z
+        f x y z = x := y :* z
 
+{-
         ieqs' | length eis > 1 = [g (head xis) (head eis) (tail eis)]
               | otherwise = []
         oeqs' | length eos > 1 = [g (head xos) (head eos) (tail eos)]
               | otherwise = []
         g x e es = e := (add $ map (Mult (Mult x (Recip (Add (Const 1.0) (Minus x))))) es)
-
+-}
         xieqs | length xis > 1 = [Const 1.0 := add xis]
               | otherwise = []
         xoeqs | length xos > 1 = [Const 1.0 := add xos]
@@ -94,10 +95,10 @@ mkEq (ins, n, outs) = {- ieqs' ++ oeqs' ++ -} ieqs ++ oeqs ++ xieqs ++ xoeqs ++ 
                | otherwise = []
         oeqs'' | length eos > 1 = map h (zip xos (HTL.removeEach eos))
                | otherwise = []
-        h (x, (y, z)) = add z := Mult y (Add (Recip x) (Minus (Const 1.0)))
+        h (x, (y, z)) = add z := y :* ((Recip x) :+ (Minus (Const 1.0)))
 
          
--}
+
 
 ----------------------------------------------------------------------------------
 -- Classes to allow indexing of power positions, etas and nodes

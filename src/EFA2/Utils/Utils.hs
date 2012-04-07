@@ -72,5 +72,13 @@ mapGraph f g = map f (zip3 ins ns outs)
         ins = map (pre g) ns
         outs = map (suc g) ns
 
+
 transClose :: Gr a b -> Gr a ()
 transClose = efilter (\(x, y, _) -> x /= y) . trc
+
+
+diffByAtMostOne :: (Ord a) => S.Set a -> S.Set a -> Bool
+diffByAtMostOne s t = (S.size t > 1) && (S.size (t S.\\ s) == 1)
+
+hasSameVariable :: (Ord a) => S.Set a -> S.Set a -> Bool
+hasSameVariable s t = S.size (S.intersection s t) > 0

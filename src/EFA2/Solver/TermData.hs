@@ -1,10 +1,10 @@
 {-# LANGUAGE TypeSynonymInstances, ExistentialQuantification, StandaloneDeriving #-}
 
 
-module EFA2.Term.TermData where
+module EFA2.Solver.TermData where
 
 import EFA2.Signal.Arith
-import EFA2.Term.Env
+import EFA2.Solver.Env
 
 data InTerm = PIdx PowerIdx
               | EIdx EtaIdx
