@@ -107,14 +107,39 @@ interpPowers (t1,p1) (t2,p2) tzeroList = map f tzeroList
 -- -----------------------------------------------------------------------------------
 -- -- | Generate Time Sequence
 
--- genSequ ::  Time -> PowerMap Power -> (Sequ,SequData Time, SequData (PowerMap Power))
--- genSequ time pmap = (sequ, 
+genSequ ::  Time -> PowerMap Power -> (Sequ,SequData Time, SequData (PowerMap Power))
+genSequ time pmap = recyc xList (0,0,[] -- (sequ, sequTime,sequPmap)
+  where xList = zip time sampleRows 
+        sampleRows = transpose $ M.elems pmap -- list of all samples per time instance
+        recyc :: [(TSample,PSampleRow)] -> (Int,Int,[(TSample,PSampleRow)],[[(TSample,PSampleRow)]]) 
+        recyc [] acc = acc                                                            
+        recyc (x2:xlist) acc@(idx,lastIdx,sec@(_:x1),sequ,sequData) =  recyc xlist (stepDetect x1 x2)
+          where
+            -- if step detected push finished section into sequence
+            f True = (idx+1,idx,[],sequ++[(lastIdx,idx)],sequData++[sec])
+            -- if no step detected build up actual section
+            f False= (idx+1,lastIdx,sec++[x2],sequData)
+        stepDetect (_,row1) (_,row2) = any (/=NoStep) (zipWith stepX row1 row2)
+        
+       
+stepX :: PSample -> PSample -> StepType
+stepX s1 s2 | sign s1==ZSign && sign s2 /= ZSign = LeavesZeroStep -- signal leaves zero
+stepX s1 s2 | sign s1/=ZSign && sign s2 == ZSign = BecomesZeroStep -- signal becomes zero
+stepX s1 s2 | sign s1==PSign && sign s2 == NSign = error "Error in stepX - Zero Crossing"
+stepX s1 s2 | sign s1==NSign && sign s2 == PSign = error "Error in stepX - Zero Crossing"
+stepX s1 s2 | otherwise = NoStep  -- nostep
+
+        
+        
+         
+    
+    
 
 
 
 
 
-
+{-
 -----------------------------------------------------------------------------------
 -- | Generate Time Sequence
 
@@ -188,7 +213,7 @@ genSequPowerMaps pmap sequ = map f sequ
               pTail _ =  [pv UV.! idx2]
           
 
-
+-}
 
 
      
