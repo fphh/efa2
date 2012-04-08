@@ -5,9 +5,9 @@ import EFA2.Utils.Utils
 import qualified Data.Map as M 
 
 
-time = [0..9]
-p1 = [0,0,0,5,5,-5,-5,0,2,2]
-p2 = [0,0,0,5,5,-5,-5,0,2,2]
+time = [0..3]
+p1 = [0,-5,5,0] -- ,5,5,-5,-5,0,2,2]
+p2 = [0,-5,2,0] -- ,5,5,-5,-5,0,2,2]
 
 --p2 = [0,0,1,1,1,1,2,2,2,2,2]
 
@@ -19,12 +19,13 @@ sequ = genSequ time pmap
 
 main = do
   putStrLn (show $ zip time p1) 
-  putStrLn (show steps1)
-  putStrLn (show steps2)
+--  putStrLn (show steps1)
+--  putStrLn (show steps2)
   putStrLn "" 
 
   putStrLn (myShowList sequ)
-  putStrLn (myShowList $ genSequTime time sequ)
-  putStrLn (myShowList $ genSequPowerMaps pmap sequ)
+--  putStrLn (myShowList $ genSequTime time sequ)
+--  putStrLn (myShowList $ genSequPowerMaps pmap sequ)
   
+  putStrLn (show $ addZeroCrossingPoints time pmap)
   

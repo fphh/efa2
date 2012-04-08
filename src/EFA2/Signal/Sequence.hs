@@ -1,7 +1,7 @@
 
 module EFA2.Signal.Sequence where
 
-import Data.List
+-- import Data.List
 import qualified Data.Map as M
 import Control.Monad
 
@@ -46,6 +46,7 @@ type SequData a = [a] -- deriving Show
 
 data StepType = InitStep | EndStep | LeavesZeroStep | BecomesZeroStep | ZeroCrossingStep | NoStep deriving (Eq, Show,Ord)
 
+type PSampleRow = [PSample]
 -----------------------------------------------------------------------------------
 -- Generate & Check Signal Record
 
@@ -67,52 +68,63 @@ recordCheck (Record time sigMap) = smplCheck && equlengthCheck && lengthCheck
 -----------------------------------------------------------------------------------
 -- | Generate Power Map
 
-genPowerMap :: Time -> M.Map Power -> PowerMap Power    
-genPowerMap time map = M.map f map
-  where
+-- genPowerMap :: Time -> M.Map Power -> PowerMap Power    
+-- genPowerMap time map = M.map f map
+--   where
     
+-- | Function to add Zero Crossing Points into the signals and the time 
+addZeroCrossingPoints ::  Time -> PowerMap Power -> (Time, PowerMap Power)    
+addZeroCrossingPoints time pmap = (timeNew, M.fromList $ zipWith h2 (M.toList pmap) newSigs)    
+  where h2 (key,_) sig = (key,sig)  -- format the results 
+        newSigs = transpose $ sampleRowsNew :: [Power]
+        
+        -- convert input
+        sampleRows = transpose $ M.elems pmap -- list of all samples per time instance
+        (timeNew, sampleRowsNew) = unzip $ (concat $ dmap f  (zip time sampleRows)) ++ [(last time,last sampleRows)]
+    
+        f :: (TSample,PSampleRow) ->  (TSample,PSampleRow) -> [(TSample,PSampleRow)]
+        f (t1, row1) (t2, row2) = zip ([t1]++zeroCrossingTimes) ([row1]++zipWith g row1 row2)  
+          where 
+            zeroCrossingTimes = concat $ zipWith h row1 row2 :: [TSample]   -- create list of all zero crossing times
+            h p1 p2 | sign p1 == PSign && sign p2 == NSign = [calcZeroTime (t1,p1) (t2,p2)]
+            h p1 p2 | sign p1 == NSign && sign p2 == PSign = [calcZeroTime (t1,p1) (t2,p2)]
+            h _  _ = []
 
-addZeroCrossingPoints ::  [(SignalIdx,TSample)] -> Time -> PowerMap Power -> (Time, PowerMap Power)    
-addZeroCrossingPoints time pmap = (map f time, M.map g pmap)    
-  where
-    f (idx,t) = 
+            g :: PSample -> PSample -> [PSample]
+            g p1 p2 = [p1] ++ interpPowers (t1,p1) (t2,p2) zeroCrossingTimes
     
-    
--- | Function to generate a list with all zero crossings
-zeroCrossings :: Time -> Power -> [(SignalIdx,TSample)]
-zeroCrossings time power = concat (dmap f $ idxList (zip time power) )
-  where f (idx1,(t1,p1)) (idx2,(t2,p2)) = g stepTyp 
-            where stepTyp = stepX p1 p2
-                  tzero = calcZeroTime (t1,p1) (t2,p2)
-                  g ZeroCrossingStep = [(idx1,stepTyp,tzero)]  
-                  g _ = [] 
+-- | calculate time of Zero Crossing Point                 
+calcZeroTime :: (TSample,PSample) -> (TSample,PSample) -> TSample 
+calcZeroTime (t1,p1) (t2,p2) = -p1/m+t1 -- time of zero crossing 
+  where m = (p2-p1)/(t2-t1) -- interpolation slope 
                   
-                  
-                  
-                  
-                  
+-- | interpolate Powers at Zero Crossing times 
+interpPowers :: (TSample,PSample) -> (TSample,PSample) -> [TSample] -> [PSample]        
+interpPowers (t1,p1) (t2,p2) tzeroList = map f tzeroList
+  where f tzero = p1+m*(tzero-t1)
+        m = (p2-p1)/(t2-t1) -- interpolation slope 
+
+-- -----------------------------------------------------------------------------------
+-- -- | Generate Time Sequence
+
+-- genSequ ::  Time -> PowerMap Power -> (Sequ,SequData Time, SequData (PowerMap Power))
+-- genSequ time pmap = (sequ, 
+
+
+
+
+
+
 -----------------------------------------------------------------------------------
 -- | Generate Time Sequence
+
 stepX :: PSample -> PSample -> StepType
 stepX s1 s2 | sign s1==ZSign && sign s2 /= ZSign = LeavesZeroStep -- signal leaves zero
 stepX s1 s2 | sign s1/=ZSign && sign s2 == ZSign = BecomesZeroStep -- signal becomes zero
 stepX s1 s2 | sign s1==PSign && sign s2 == NSign = ZeroCrossingStep  -- signal is crossing zero
 stepX s1 s2 | sign s1==NSign && sign s2 == PSign = ZeroCrossingStep  -- signal is crossing zero
-                                                   --InitStep -- will be added in analysis on all signals
-                                                   -- EndStep -- will be added in analysis on all signals
 stepX s2 s1 | otherwise = NoStep  -- nostep
  
-
--- calculate exact time of Zero Crossing Point                 
-calcZeroTime :: (TSample,PSample) -> (TSample,PSample) -> TSample 
-calcZeroTime (t1,p1) (t2,p2) = f stepType
-  where m = dp/ dt -- interpolation slope 
-        dp = p2-p1 -- delta power 
-        dt = t2-t1 -- delta time -- t1 comes in time before t2
-        t = -p1/m+t1 -- time of zero crossing 
-        tzero = t -- if t < t2 && t > t1 then t else error m1
-        m1 = ("Zero Point out of Time-Intervall - t: " ++ show t ++ " m: " ++ show m ++ "t1: " ++ show t1 ++ "t2: " ++ show t2) 
-
 -- | Function to generate a list containing all signal steps with time and index information 
 makeSteps :: Time -> Power -> [(SignalIdx,StepType,TSample)]
 makeSteps time power | length power == 0 = []
