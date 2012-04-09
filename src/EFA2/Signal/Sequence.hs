@@ -36,7 +36,8 @@ type PowerSigEnv = PowerMap Power
 
 -- Section analysis result
 type Sequ = [Sec] 
-data Sec = Sec (SignalIdx,StepType,TSample) (SignalIdx,StepType,TSample) deriving (Show)
+type Sec = (SignalIdx,SignalIdx)
+--data Sec = Sec (SignalIdx,StepType,TSample) (SignalIdx,StepType,TSample) deriving (Show)
 
 -- data structure to contain output of section analysis (cutting history in slices)
 type SectionLength = DTSample
@@ -44,9 +45,13 @@ type SectionLength = DTSample
 -- Sequence Vector to Store Section Data  
 type SequData a = [a] -- deriving Show
 
-data StepType = InitStep | EndStep | LeavesZeroStep | BecomesZeroStep | ZeroCrossingStep | NoStep deriving (Eq, Show,Ord)
+data StepType = LeavesZeroStep | BecomesZeroStep | ZeroCrossingStep | NoStep deriving (Eq, Show,Ord)
+
+data EventType = LeftEvent | RightEvent | MixedEvent | NoEvent
 
 type PSampleRow = [PSample]
+type XSample = (TSample,PSampleRow)
+type XList = [XSample]
 -----------------------------------------------------------------------------------
 -- Generate & Check Signal Record
 
@@ -72,6 +77,16 @@ recordCheck (Record time sigMap) = smplCheck && equlengthCheck && lengthCheck
 -- genPowerMap time map = M.map f map
 --   where
     
+-- | Function to regenerate pMap from prows
+unpackXList :: PowerMap Power -> XList -> (Time,PowerMap Power)   
+unpackXList pmap xList  = (time, M.fromList $ zipWith h2 (M.toList pmap) sigs)
+  where (time,rows) = unzip xList
+        sigs = transpose rows
+        h2 (key,_) sig = (key,sig) -- format the results
+
+genXList :: Time -> PowerMap Power -> XList
+genXList time pmap =  zip time (transpose $ M.elems pmap)
+
 -- | Function to add Zero Crossing Points into the signals and the time 
 addZeroCrossingPoints ::  Time -> PowerMap Power -> (Time, PowerMap Power)    
 addZeroCrossingPoints time pmap = (timeNew, M.fromList $ zipWith h2 (M.toList pmap) newSigs)    
@@ -108,25 +123,38 @@ interpPowers (t1,p1) (t2,p2) tzeroList = map f tzeroList
 -- -- | Generate Time Sequence
 
 genSequ ::  Time -> PowerMap Power -> (Sequ,SequData Time, SequData (PowerMap Power))
-genSequ time pmap = recyc xList (0,0,[] -- (sequ, sequTime,sequPmap)
-  where xList = zip time sampleRows 
-        sampleRows = transpose $ M.elems pmap -- list of all samples per time instance
-        recyc :: [(TSample,PSampleRow)] -> (Int,Int,[(TSample,PSampleRow)],[[(TSample,PSampleRow)]]) 
-        recyc [] acc = acc                                                            
-        recyc (x2:xlist) acc@(idx,lastIdx,sec@(_:x1),sequ,sequData) =  recyc xlist (stepDetect x1 x2)
-          where
-            -- if step detected push finished section into sequence
-            f True = (idx+1,idx,[],sequ++[(lastIdx,idx)],sequData++[sec])
-            -- if no step detected build up actual section
-            f False= (idx+1,lastIdx,sec++[x2],sequData)
-        stepDetect (_,row1) (_,row2) = any (/=NoStep) (zipWith stepX row1 row2)
+genSequ time pmap = (sequ++[lastSec],seqDatTime,seqPmaps)
+  where xList = genXList time pmap 
+        (seqDatTime,seqPmaps) = unzip $ map (unpackXList pmap) (seqXList++[lastXSec])
+        (lastSec,sequ,lastXSec,seqXList) = recyc (tail xList) ((0,0),[],[head xList],[]) -- (sequ, sequTime,sequPmap)
         
-       
+        recyc :: XList -> (Sec,Sequ,XList,[XList]) -> (Sec,Sequ,XList,[XList])  
+        recyc [] acc = acc                                                            
+        recyc (x2:xlist) (sec,sequ,secXList,sequXList) =  recyc xlist (f $ stepDetect x1 x2)
+          where
+            x1 = last secXList
+            f :: EventType -> (Sec,Sequ,XList,[XList])
+            f LeftEvent = (restart sec,sequ++[sec],[x2],sequXList++[secXList])
+            f RightEvent = (restart sec,sequ++[sec],[x2],sequXList++[secXList])
+            f MixedEvent = (restart sec,sequ++[sec],[x2],sequXList++[secXList])
+            f NoStep = (inc sec,sequ,secXList++[x2],sequXList)
+            inc (lastIdx,idx) = (lastIdx,idx+1) 
+            restart (lastIdx,idx) = (idx,idx+1)
+            
+stepDetect :: XSample -> XSample -> [EventType] 
+stepDetect  (_,row1) (_,row2) = f stepList
+  where stepList = zipWith stepX row1 row2
+        f stepList | all (==NoStep) stepList = NoEvent
+        f stepList | any (==ZeroCrossingStep) stepList = error "Error in stepDetect - Zero Crossing"
+        f stepList | any (==LeavesZeroStep) stepList && not $ any (BecomesZeroStep) stepList = LeftEvent
+        f stepList | not $ any (==LeavesZeroStep) stepList && any (BecomesZeroStep) stepList = RightEvent
+        f stepList | any (==LeavesZeroStep) stepList && any (BecomesZeroStep) stepList = MixedEvent
+
 stepX :: PSample -> PSample -> StepType
 stepX s1 s2 | sign s1==ZSign && sign s2 /= ZSign = LeavesZeroStep -- signal leaves zero
 stepX s1 s2 | sign s1/=ZSign && sign s2 == ZSign = BecomesZeroStep -- signal becomes zero
-stepX s1 s2 | sign s1==PSign && sign s2 == NSign = error "Error in stepX - Zero Crossing"
-stepX s1 s2 | sign s1==NSign && sign s2 == PSign = error "Error in stepX - Zero Crossing"
+stepX s1 s2 | sign s1==PSign && sign s2 == NSign = ZeroCrossingStep
+stepX s1 s2 | sign s1==NSign && sign s2 == PSign = ZeroCrossingStep
 stepX s1 s2 | otherwise = NoStep  -- nostep
 
         
