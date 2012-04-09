@@ -137,13 +137,13 @@ genSequ time pmap = (sequ++[lastSec],seqDatTime,seqPmaps)
             x1 = last secXList
             f :: EventType -> (XList,[XList])
             f LeftEvent = ([x1,x2],sequXList++[secXList]) -- add actual Interval to next section
-            f RightEvent = ([x2],sequXList++[secXList++[x1]]) --add actual Interval to last section
+            f RightEvent = ([x2],sequXList++[secXList++[x2]]) --add actual Interval to last section
             f MixedEvent = ([x2],sequXList++[secXList]++[[x1,x2]]) -- make additional Mini--Section 
             f NoEvent = (secXList++[x2],sequXList) -- continue incrementing
             g :: EventType -> (Sec,Sequ)            
-            g LeftEvent = ((idx-1,idx+1),sequ++[(lastIdx,idx-1)])
-            g RightEvent = ((idx,idx+1),sequ++[(lastIdx,idx)])
-            g MixedEvent = ((idx,idx+1),sequ++[(lastIdx,idx)]++[(idx-1,idx)])
+            g LeftEvent = ((idx,idx+1),sequ++[(lastIdx,idx)])
+            g RightEvent = ((idx+1,idx+1),sequ++[(lastIdx,idx+1)])
+            g MixedEvent = ((idx+1,idx+1),sequ++[(lastIdx,idx)]++[(idx,idx+1)])
             g NoEvent = ((lastIdx,idx+1),sequ)
             inc (lastIdx,idx) = (lastIdx,idx+1) 
             restart (lastIdx,idx) = (idx,idx+1)
