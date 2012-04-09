@@ -1,7 +1,7 @@
 
 module EFA2.Signal.Sequence where
 
--- import Data.List
+import qualified Data.List as L
 import qualified Data.Map as M
 import Control.Monad
 
@@ -89,24 +89,24 @@ genXList time pmap =  zip time (transpose $ M.elems pmap)
 
 -- | Function to add Zero Crossing Points into the signals and the time 
 addZeroCrossingPoints ::  Time -> PowerMap Power -> (Time, PowerMap Power)    
-addZeroCrossingPoints time pmap = (timeNew, M.fromList $ zipWith h2 (M.toList pmap) newSigs)    
-  where h2 (key,_) sig = (key,sig)  -- format the results 
-        newSigs = transpose $ sampleRowsNew :: [Power]
-        
-        -- convert input
-        sampleRows = transpose $ M.elems pmap -- list of all samples per time instance
-        (timeNew, sampleRowsNew) = unzip $ (concat $ dmap f  (zip time sampleRows)) ++ [(last time,last sampleRows)]
+addZeroCrossingPoints time pmap = unpackXList pmap xListNew 
+  where xList = genXList time pmap
+        xListNew = (concat $ dmap f xList) ++ [last xList]
     
         f :: (TSample,PSampleRow) ->  (TSample,PSampleRow) -> [(TSample,PSampleRow)]
-        f (t1, row1) (t2, row2) = zip ([t1]++zeroCrossingTimes) ([row1]++zipWith g row1 row2)  
+        f (t1, row1) (t2, row2) = zip ([t1]++zeroCrossingTimes) ([row1]++zipWith g (zip row1 row2) zeroCrossings)  
           where 
-            zeroCrossingTimes = concat $ zipWith h row1 row2 :: [TSample]   -- create list of all zero crossing times
-            h p1 p2 | sign p1 == PSign && sign p2 == NSign = [calcZeroTime (t1,p1) (t2,p2)]
-            h p1 p2 | sign p1 == NSign && sign p2 == PSign = [calcZeroTime (t1,p1) (t2,p2)]
-            h _  _ = []
+            -- create list of all zero crossing times
+            zeroCrossingTimes = L.sort $ concat $ zeroCrossings :: [TSample]
+            zeroCrossings = zipWith h2 row1 row2 :: [[TSample]]
+            h2 :: PSample -> PSample -> Time 
+            h2 p1 p2 | sign p1 == PSign && sign p2 == NSign = [calcZeroTime (t1,p1) (t2,p2)]
+            h2 p1 p2 | sign p1 == NSign && sign p2 == PSign = [calcZeroTime (t1,p1) (t2,p2)]
+            h2 _  _ = []
 
-            g :: PSample -> PSample -> [PSample]
-            g p1 p2 = [p1] ++ interpPowers (t1,p1) (t2,p2) zeroCrossingTimes
+            g :: (PSample,PSample) -> [TSample] -> [PSample]
+            g (p1,p2) zeroCrossing = interpPowers (t1,p1) (t2,p2) zeroCrossingTimes zeroCrossing
+
     
 -- | calculate time of Zero Crossing Point                 
 calcZeroTime :: (TSample,PSample) -> (TSample,PSample) -> TSample 
@@ -114,9 +114,10 @@ calcZeroTime (t1,p1) (t2,p2) = -p1/m+t1 -- time of zero crossing
   where m = (p2-p1)/(t2-t1) -- interpolation slope 
                   
 -- | interpolate Powers at Zero Crossing times 
-interpPowers :: (TSample,PSample) -> (TSample,PSample) -> [TSample] -> [PSample]        
-interpPowers (t1,p1) (t2,p2) tzeroList = map f tzeroList
-  where f tzero = p1+m*(tzero-t1)
+interpPowers :: (TSample,PSample) -> (TSample,PSample) -> [TSample] -> [TSample] -> [PSample]        
+interpPowers (t1,p1) (t2,p2) tzeroList tzero = map f tzeroList
+  where f tz | [tz]==tzero = 0 -- avoid numeric error and make zero crossing power zero
+        f tz | otherwise = p1+m*(tz-t1) -- interpolate non zero powers
         m = (p2-p1)/(t2-t1) -- interpolation slope 
 
 -- -----------------------------------------------------------------------------------
@@ -126,29 +127,35 @@ genSequ ::  Time -> PowerMap Power -> (Sequ,SequData Time, SequData (PowerMap Po
 genSequ time pmap = (sequ++[lastSec],seqDatTime,seqPmaps)
   where xList = genXList time pmap 
         (seqDatTime,seqPmaps) = unzip $ map (unpackXList pmap) (seqXList++[lastXSec])
-        (lastSec,sequ,lastXSec,seqXList) = recyc (tail xList) ((0,0),[],[head xList],[]) -- (sequ, sequTime,sequPmap)
+        ((lastSec,sequ),(lastXSec,seqXList)) = recyc (tail xList) (((0,0),[]),([head xList],[])) 
+                                               
         
-        recyc :: XList -> (Sec,Sequ,XList,[XList]) -> (Sec,Sequ,XList,[XList])  
+        recyc :: XList -> ((Sec,Sequ),(XList,[XList])) -> ((Sec,Sequ),(XList,[XList]))  
         recyc [] acc = acc                                                            
-        recyc (x2:xlist) (sec,sequ,secXList,sequXList) =  recyc xlist (f $ stepDetect x1 x2)
+        recyc (x2:xlist) (((lastIdx,idx),sequ),(secXList,sequXList)) =  recyc xlist (g $ stepDetect x1 x2, f $ stepDetect x1 x2)
           where
             x1 = last secXList
-            f :: EventType -> (Sec,Sequ,XList,[XList])
-            f LeftEvent = (restart sec,sequ++[sec],[x2],sequXList++[secXList])
-            f RightEvent = (restart sec,sequ++[sec],[x2],sequXList++[secXList])
-            f MixedEvent = (restart sec,sequ++[sec],[x2],sequXList++[secXList])
-            f NoStep = (inc sec,sequ,secXList++[x2],sequXList)
+            f :: EventType -> (XList,[XList])
+            f LeftEvent = ([x1,x2],sequXList++[secXList]) -- add actual Interval to next section
+            f RightEvent = ([x2],sequXList++[secXList++[x1]]) --add actual Interval to last section
+            f MixedEvent = ([x2],sequXList++[secXList]++[[x1,x2]]) -- make additional Mini--Section 
+            f NoEvent = (secXList++[x2],sequXList) -- continue incrementing
+            g :: EventType -> (Sec,Sequ)            
+            g LeftEvent = ((idx-1,idx+1),sequ++[(lastIdx,idx-1)])
+            g RightEvent = ((idx,idx+1),sequ++[(lastIdx,idx)])
+            g MixedEvent = ((idx,idx+1),sequ++[(lastIdx,idx)]++[(idx-1,idx)])
+            g NoEvent = ((lastIdx,idx+1),sequ)
             inc (lastIdx,idx) = (lastIdx,idx+1) 
             restart (lastIdx,idx) = (idx,idx+1)
             
-stepDetect :: XSample -> XSample -> [EventType] 
+stepDetect :: XSample -> XSample -> EventType 
 stepDetect  (_,row1) (_,row2) = f stepList
   where stepList = zipWith stepX row1 row2
         f stepList | all (==NoStep) stepList = NoEvent
         f stepList | any (==ZeroCrossingStep) stepList = error "Error in stepDetect - Zero Crossing"
-        f stepList | any (==LeavesZeroStep) stepList && not $ any (BecomesZeroStep) stepList = LeftEvent
-        f stepList | not $ any (==LeavesZeroStep) stepList && any (BecomesZeroStep) stepList = RightEvent
-        f stepList | any (==LeavesZeroStep) stepList && any (BecomesZeroStep) stepList = MixedEvent
+        f stepList | any (==LeavesZeroStep) stepList && (not $ any (==BecomesZeroStep) stepList) = LeftEvent
+        f stepList | (not $ any (==LeavesZeroStep) stepList) && any (==BecomesZeroStep) stepList = RightEvent
+        f stepList | any (==LeavesZeroStep) stepList && any (==BecomesZeroStep) stepList = MixedEvent
 
 stepX :: PSample -> PSample -> StepType
 stepX s1 s2 | sign s1==ZSign && sign s2 /= ZSign = LeavesZeroStep -- signal leaves zero
