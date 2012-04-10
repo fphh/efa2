@@ -52,7 +52,7 @@ import EFA2.Display.DrawGraph
 
 main :: IO ()
 main = do
-  let g = randomTopology 12 1000 2.0
+  let g = randomTopology 12 10 2.0
 
 {-
       terms :: [EqTerm]
@@ -88,6 +88,8 @@ main = do
     putStrLn ("Solution order:\n" ++ showEqTerms ho) ]
 -}
 
+  putStrLn (showEqTerms ts)
+{-
   putStrLn ("Dir equations:\n" ++ showEqTerms dirs)
 
   putStrLn ("Number of nodes: " ++ show (noNodes g))
@@ -95,3 +97,4 @@ main = do
   putStrLn ("Number of equatins solved: " ++ show (length dirs))
   drawTopologyX' g
 
+-}

@@ -25,7 +25,8 @@ gunique s = go s
                     | otherwise    = x : go (S.insert x s) xs
 
 unique :: (Ord a) => [a] -> [a]
-unique = gunique S.empty
+unique = gunique S.empty  -- 
+-- unique = S.toList . S.fromList
 
 
 flipPair :: (a, b) -> (b, a)
@@ -72,10 +73,28 @@ mapGraph f g = map f (zip3 ins ns outs)
         ins = map (pre g) ns
         outs = map (suc g) ns
 
+-- | mapping a function over a list with using to neighbouring elements 
+dmap :: (a -> a -> b) -> [a] -> [b]
+dmap f l = zipWith f (init l) (tail l)  
+
+-- | generate an list of indices for a list  
+listIdx :: [a] -> [Int]
+listIdx list = take (length list) $ iterate (+1) 0
+
+-- | generate a indexed List
+idxList :: [a] -> [(Int,a)] 
+idxList list = zip (listIdx list) list 
+
+-- | own list show function to provide newline with each element
+myShowList :: Show a => [a] -> String
+myShowList list = unlines (map show list) 
+
+-- | own list show function using specified show function for element
+myShowListFunct :: [a] -> (a -> String) -> String
+myShowListFunct list showFunct = unlines (map showFunct list) 
 
 transClose :: Gr a b -> Gr a ()
 transClose = efilter (\(x, y, _) -> x /= y) . trc
-
 
 diffByAtMostOne :: (Ord a) => S.Set a -> S.Set a -> Bool
 diffByAtMostOne s t = (S.size t > 1) && (S.size (t S.\\ s) == 1)

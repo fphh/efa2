@@ -1,7 +1,7 @@
 
 module EFA2.Signal.Sequence where
 
-import Data.List
+import qualified Data.List as L
 import qualified Data.Map as M
 import Control.Monad
 
@@ -10,175 +10,263 @@ import qualified Data.List as L
 import qualified Data.Vector.Unboxed as UV
 import qualified Data.Vector as GV
 
+import EFA2.Topology.GraphData
+import EFA2.Solver.Env
 
 import System.Random
 import EFA2.Utils.Utils
-import EFA2.Signal.SignalData
-import EFA2.Signal.SignalGeneration
+import EFA2.Signal.Arith
+
 import EFA2.Signal.SignalAnalysis
-{-
+
 -----------------------------------------------------------------------------------
 -- Record -- Structure for Handling recorded data
 
 -- indent for power signals from measurement file 
 -- ident chosen as string to handle signal names, or just can be signal numer as string 
-data SignalIdent = SigIdent !String deriving (Show, Eq, Ord)
-
-type SignalMap = (M.Map SignalIdent Power) 
+data SigId = SigId !String deriving (Show, Eq, Ord)
+type SignalMap = (M.Map SigId Power) 
   
 -- data structure to house the data record or parts of it
-data Record = Record Time SignalMap deriving (Show,Eq) 
+data Record = Record Time SignalMap deriving (Show,Eq)
+data PowerRecord = PowerRecord Time (PowerMap Power)
+--type PowerSigEnv = PowerMap Power
+data FlowSigRecord = FlowSigRecord DTime (PowerMap Flow) 
+..             | FlowValRecord 
+..             | FlowDistRecord
 
--- generate Record from data components
-genRecord :: Time  -> [(SignalIdent, Power)] -> Record
-genRecord time sigIDList = if recordCheck rec == True then rec else error ("Incorrect Data in Record-- either unequal length or NaN's")
-  where rec = Record time (M.fromList sigIDList)
-                                              
--- check Record Data -- TODO -- include check on time length == sign length                                                               
-recordCheck :: Record -> Bool
-recordCheck (Record time sigMap) = smplCheck && equlengthCheck && lengthCheck
-  where 
-    list = [time2Power time] ++ M.elems sigMap -- all signals and time in one list
-    smplCheck = all (sampleCheck) list
-    equlengthCheck = equalLengths ([time2Power time] ++ list)  -- equal length on all signals
-    lengthCheck = all (1 < ) $ map dlength list -- at least two samples per time Signal
- 
+
+-----------------------------------
+-- TreeData
+
+data EnergyFlow = EnergyFlow { FlowSigRecord
+
+
+                
 -----------------------------------------------------------------------------------
 -- Section and Sequence -- Structures to handle Sequence Information and Data
 
 -- Section analysis result
-type Sequ = GV.Vector Sec 
-            
-data Sec = Sec { secLen         ::  SectionLength,
-                 secTimes       ::  (TSample,TSample), 
-                 secStepIndices  ::  (SignalIdx,SignalIdx),
-                 secStepTypes    ::  (StepType,StepType)} deriving (Show, Eq)
+type Sequ = [Sec] 
+type Sec = (SignalIdx,SignalIdx)
+--data Sec = Sec (SignalIdx,StepType,TSample) (SignalIdx,StepType,TSample) deriving (Show)
 
-
--- data structure to contain output of section analysis (cvutting history in slices)
+-- data structure to contain output of section analysis (cutting history in slices)
 type SectionLength = DTSample
 
 -- Sequence Vector to Store Section Data  
-data SequData a = SequData (GV.Vector a) deriving Show
+type SequData a = [a] -- deriving Show
 
--------------------------------------------------------------------------------------
--- functions to split the record in section records
--- generate Sequence Information   
-genSequ :: Record -> Sequ
-genSequ (Record time sigMap) = GV.fromList (zipWith genSecInfo (init stepList2) (tail stepList2))  
-  where stepList1 = sort(concat (map ((getSignalSteps time) . snd)  (M.toList sigMap))) -- get Steps from all Signals
-        stepList2 = [(SignalIdx 0,dhead time, 4)] ++ stepList1 ++ [(SignalIdx $ dlength time, dlast time ,5)] -- add steps events for 1st and last sample in first and last section (1 = leaves zero / 2 == becomes zero)
+data StepType = LeavesZeroStep | BecomesZeroStep | ZeroCrossingStep | NoStep deriving (Eq, Show,Ord)
 
+data EventType = LeftEvent | RightEvent | MixedEvent | NoEvent
 
-                
--- bild Section data structure from info of two steps 
-genSecInfo :: (SignalIdx,TSample,StepType) -> (SignalIdx,TSample,StepType) -> Sec
-genSecInfo (idx1,t1,step1) (idx2,t2,step2) =  Sec { secLen         = DTSample (fromSample (t2-t1)),
-                                                    secTimes       = (t1,t2),              
-                                                    secStepIndices  = (idx1,idx2),
-                                                    secStepTypes   = (step1,step2)}
-  
-                
+type PSampleRow = [PSample]
+type XSample = (TSample,PSampleRow)
+type XList = [XSample]
+-----------------------------------------------------------------------------------
+-- Generate & Check Signal Record
+
+-- | generate Record from data components
+genRecord :: Time  -> [(SigId, Power)] -> Record
+genRecord time sigIDList = if recordCheck rec == True then rec else error ("Incorrect Data in Record-- either unequal length or NaN's")
+  where rec = Record time (M.fromList sigIDList)
+                                              
+
+-- | check Record Data -- TODO -- include check on time length == sign length                                                               
+recordCheck :: Record -> Bool
+recordCheck (Record time sigMap) = smplCheck && equlengthCheck && lengthCheck
+  where 
+    list = [time] ++ M.elems sigMap -- all signals and time in one list
+    smplCheck = all (sampleCheck) list
+    equlengthCheck = equalLengths ([time] ++ list)  -- equal length on all signals
+    lengthCheck = all (1 < ) $ map length list -- at least two samples per time Signal
+ 
+-----------------------------------------------------------------------------------
+-- | Generate Power Map
+
+-- genPowerMap :: Time -> M.Map Power -> PowerMap Power    
+-- genPowerMap time map = M.map f map
+--   where
     
-genRecSequ :: Sequ -> Record -> SequData Record 
-genRecSequ sequ rec = SequData (GV.map (genSecRec rec) sequ)  
-               
-genSecRec :: Record -> Sec -> Record
-genSecRec (Record time sigMap) sec  = Record (sliceTime time sec) (M.map (sliceSignal sec) sigMap)  
+-- | Function to regenerate pMap from prows
+unpackXList :: PowerMap Power -> XList -> (Time,PowerMap Power)   
+unpackXList pmap xList  = (time, M.fromList $ zipWith h2 (M.toList pmap) sigs)
+  where (time,rows) = unzip xList
+        sigs = transpose rows
+        h2 (key,_) sig = (key,sig) -- format the results
 
+genXList :: Time -> PowerMap Power -> XList
+genXList time pmap =  zip time (transpose $ M.elems pmap)
 
--- extract slice of one signal
-sliceSignal :: Sec -> Power -> Power
-sliceSignal sec sig  = dfromList (sigHead step1) .++ sigTrunk .++ dfromList (sigTail step2)
-        where
-          sigTrunk = dslice sig (idx1+1,idx2-idx1+1) -- get middle part which is always same 
-          step1 = fst(secStepTypes sec)
-          step2 =  snd (secStepTypes sec)
-          idx1 = fst(secStepIndices sec)
-          idx2 =  snd (secStepIndices sec)
-                    
-          sigHead 1 =  [sig ! idx1] --  LeavesZeroStep
-          sigHead 4 =  [sig ! idx1] -- InitStep
-          sigHead 2 =  [] -- BecomesZeroStep
-          sigHead 5 = error ("Error in sliceSignal - endStep shouldn't occur here") -- EndStep
-          sigHead 3 =  [0] -- ZeroCrossingStep
-          
-          sigTail 1 =  [0] -- LeavesZeroStep
-          sigTail 4 = error ("Error in sliceSignal - initStep shouldn't occur here") -- InitStep
-          sigTail 2 =  [sig ! idx2+1] -- BecomesZeroStep
-          sigTail 5 =  [sig ! idx2+1] -- EndStep
-          sigTail 3 =  [0] -- ZeroCrossingStep
-          
+-- | Function to add Zero Crossing Points into the signals and the time 
+addZeroCrossingPoints ::  Time -> PowerMap Power -> (Time, PowerMap Power)    
+addZeroCrossingPoints time pmap = unpackXList pmap xListNew 
+  where xList = genXList time pmap
+        xListNew = (concat $ dmap f xList) ++ [last xList]
+    
+        f :: (TSample,PSampleRow) ->  (TSample,PSampleRow) -> [(TSample,PSampleRow)]
+        f (t1, row1) (t2, row2) = zip ([t1]++zeroCrossingTimes) ([row1]++zipWith g (zip row1 row2) zeroCrossings)  
+          where 
+            -- create list of all zero crossing times
+            zeroCrossingTimes = L.sort $ concat $ zeroCrossings :: [TSample]
+            zeroCrossings = zipWith h2 row1 row2 :: [[TSample]]
+            h2 :: PSample -> PSample -> Time 
+            h2 p1 p2 | sign p1 == PSign && sign p2 == NSign = [calcZeroTime (t1,p1) (t2,p2)]
+            h2 p1 p2 | sign p1 == NSign && sign p2 == PSign = [calcZeroTime (t1,p1) (t2,p2)]
+            h2 _  _ = []
 
--- extract slice of one signal
-sliceTime :: Time -> Sec -> Time
-sliceTime time sec = dfromList (sigHead step1) .++ sigTrunk .++ dfromList (sigTail step2)
-        where
-          sigTrunk = dslice time (idx1+1, idx2-idx1+1) -- get middle part which is always same 
-          step1 = fst(secStepTypes sec)
-          step2 =  snd (secStepTypes sec)
-          t1 = fst(secTimes sec)
-          t2 = snd(secTimes sec)
-          idx1 = fst(secStepIndices sec)
-          idx2 = snd (secStepIndices sec)
-          
-          sigHead 1 =  [time ! idx1] -- LeavesZeroStep
-          sigHead 4 =  [time  ! idx1] -- InitStep
-          sigHead 2 =  [] -- BecomesZeroStep
-          sigHead 5 = error ("Error in sliceSignal - endStep shouldn't occur here") -- EndStep
-          sigHead 3 =  [t1] -- ZeroCrossingStep
-          
-          sigTail 1 =  [0] -- LeavesZeroStep
-          sigTail 4 = error ("Error in sliceSignal - initStep shouldn't occur here") -- InitStep
-          sigTail 2 =  [time ! (idx2+1)] -- BecomesZeroStep
-          sigTail 5 =  [time ! (idx2+1)] -- EndStep
-          sigTail 3 =  [t2] -- ZeroCrossingStep
+            g :: (PSample,PSample) -> [TSample] -> [PSample]
+            g (p1,p2) zeroCrossing = interpPowers (t1,p1) (t2,p2) zeroCrossingTimes zeroCrossing
 
-          
-          
-
--- calculate exact time of Zero Crossing Point                 
+    
+-- | calculate time of Zero Crossing Point                 
 calcZeroTime :: (TSample,PSample) -> (TSample,PSample) -> TSample 
-calcZeroTime (TSample t1,PSample p1) (TSample t2,PSample p2) = if tzero < t2 && tzero > t1 then (toSample tzero) else error ("Zero Point out of Time-Intervall") 
-  where m = dp/ dt -- interpolation slope 
-        dp = p2-p1 -- delta power 
-        dt = t2-t1 -- delta time -- t1 comes in time before t2
-        tzero = t1+p1/m -- time of zero crossing 
+calcZeroTime (t1,p1) (t2,p2) = -p1/m+t1 -- time of zero crossing 
+  where m = (p2-p1)/(t2-t1) -- interpolation slope 
                   
+-- | interpolate Powers at Zero Crossing times 
+interpPowers :: (TSample,PSample) -> (TSample,PSample) -> [TSample] -> [TSample] -> [PSample]        
+interpPowers (t1,p1) (t2,p2) tzeroList tzero = map f tzeroList
+  where f tz | [tz]==tzero = 0 -- avoid numeric error and make zero crossing power zero
+        f tz | otherwise = p1+m*(tz-t1) -- interpolate non zero powers
+        m = (p2-p1)/(t2-t1) -- interpolation slope 
 
--- Init == first Sample / End == Last Sample
-type StepType = Int
+-- -----------------------------------------------------------------------------------
+-- -- | Generate Time Sequence
 
--- detect Sign-Change per Signal / delivers indice of event and type of event
-getSignalSteps :: Time -> Power -> [(SignalIdx,TSample,StepType)] 
-getSignalSteps time psig@(Signal pvec) = zip3 stepIdxListTyped stepTimeList stepList
-  where stepVec = uvdiffMap f pvec -- length reduced by one !!!
-        -- with f:
-        f s2 s1 | sign s1==ZSign && sign s2 /= ZSign = 1 -- LeavesZeroStep -- signal leaves zero
-        f s2 s1 | sign s2==ZSign && sign s1 /= ZSign = 2 -- BecomesZeroStep -- signal becomes zero
-        f s2 s1 | sign s2==PSign && sign s1 /= NSign = 3 -- ZeroCrossingStep  -- signal is crossing zero
-        f s2 s1 | sign s1==PSign && sign s2 /= NSign = 3 -- ZeroCrossingStep  -- signal is crossing zero
-                                                         -- 4 == InitStep -- will be added in analysis on all signals
-                                                         -- 5 = EndStep -- will be added in analysis on all signals
-        f s2 s1 | otherwise = 0 -- 0 NoStep  -- nostep
-        -- with g:
-        -- finds all events indices at point before step in time signal
-        stepIdxList = UV.toList $ UV.findIndices ( /= 0) stepVec 
-        stepList = (map (stepVec UV.!) stepIdxList)        
-                   
-        stepIdxListTyped = map (SignalIdx) stepIdxList -- create typed Index List to allow Signal Usage
-        stepTimeList = map g (zip stepIdxListTyped stepList)
-        g (stepIdx,1) = time ! stepIdx
-        g (stepIdx,2) = time ! (stepIdx+1) 
-        -- mixed Indexing doesn't work !!! (on a signal with PSample and TSample in the same Name-Space)
-        g (stepIdx,3) = calcZeroTime (time ! stepIdx, pvec UV.! (fromIdx stepIdx))  (time ! (stepIdx+1), pvec UV.! (fromIdx (stepIdx+1))) 
-   
+genSequ ::  Time -> PowerMap Power -> (Sequ,SequData Time, SequData (PowerMap Power))
+genSequ time pmap = (sequ++[lastSec],seqDatTime,seqPmaps)
+  where xList = genXList time pmap 
+        (seqDatTime,seqPmaps) = unzip $ map (unpackXList pmap) (seqXList++[lastXSec])
+        ((lastSec,sequ),(lastXSec,seqXList)) = recyc (tail xList) (((0,0),[]),([head xList],[])) 
+                                               
+        
+        recyc :: XList -> ((Sec,Sequ),(XList,[XList])) -> ((Sec,Sequ),(XList,[XList]))  
+        recyc [] acc = acc                                                            
+        recyc (x2:xlist) (((lastIdx,idx),sequ),(secXList,sequXList)) =  recyc xlist (g $ stepDetect x1 x2, f $ stepDetect x1 x2)
+          where
+            x1 = last secXList
+            f :: EventType -> (XList,[XList])
+            f LeftEvent = ([x1,x2],sequXList++[secXList]) -- add actual Interval to next section
+            f RightEvent = ([x2],sequXList++[secXList++[x2]]) --add actual Interval to last section
+            f MixedEvent = ([x2],sequXList++[secXList]++[[x1,x2]]) -- make additional Mini--Section 
+            f NoEvent = (secXList++[x2],sequXList) -- continue incrementing
+            g :: EventType -> (Sec,Sequ)            
+            g LeftEvent = ((idx,idx+1),sequ++[(lastIdx,idx)])
+            g RightEvent = ((idx+1,idx+1),sequ++[(lastIdx,idx+1)])
+            g MixedEvent = ((idx+1,idx+1),sequ++[(lastIdx,idx)]++[(idx,idx+1)])
+            g NoEvent = ((lastIdx,idx+1),sequ)
+            inc (lastIdx,idx) = (lastIdx,idx+1) 
+            restart (lastIdx,idx) = (idx,idx+1)
+            
+stepDetect :: XSample -> XSample -> EventType 
+stepDetect  (_,row1) (_,row2) = f stepList
+  where stepList = zipWith stepX row1 row2
+        f stepList | all (==NoStep) stepList = NoEvent
+        f stepList | any (==ZeroCrossingStep) stepList = error "Error in stepDetect - Zero Crossing"
+        f stepList | any (==LeavesZeroStep) stepList && (not $ any (==BecomesZeroStep) stepList) = LeftEvent
+        f stepList | (not $ any (==LeavesZeroStep) stepList) && any (==BecomesZeroStep) stepList = RightEvent
+        f stepList | any (==LeavesZeroStep) stepList && any (==BecomesZeroStep) stepList = MixedEvent
 
+stepX :: PSample -> PSample -> StepType
+stepX s1 s2 | sign s1==ZSign && sign s2 /= ZSign = LeavesZeroStep -- signal leaves zero
+stepX s1 s2 | sign s1/=ZSign && sign s2 == ZSign = BecomesZeroStep -- signal becomes zero
+stepX s1 s2 | sign s1==PSign && sign s2 == NSign = ZeroCrossingStep
+stepX s1 s2 | sign s1==NSign && sign s2 == PSign = ZeroCrossingStep
+stepX s1 s2 | otherwise = NoStep  -- nostep
+
+        
+        
+         
+    
+    
+
+
+
+
+
+{-
+-----------------------------------------------------------------------------------
+-- | Generate Time Sequence
+
+stepX :: PSample -> PSample -> StepType
+stepX s1 s2 | sign s1==ZSign && sign s2 /= ZSign = LeavesZeroStep -- signal leaves zero
+stepX s1 s2 | sign s1/=ZSign && sign s2 == ZSign = BecomesZeroStep -- signal becomes zero
+stepX s1 s2 | sign s1==PSign && sign s2 == NSign = ZeroCrossingStep  -- signal is crossing zero
+stepX s1 s2 | sign s1==NSign && sign s2 == PSign = ZeroCrossingStep  -- signal is crossing zero
+stepX s2 s1 | otherwise = NoStep  -- nostep
+ 
+-- | Function to generate a list containing all signal steps with time and index information 
+makeSteps :: Time -> Power -> [(SignalIdx,StepType,TSample)]
+makeSteps time power | length power == 0 = []
+makeSteps time power = [(0,InitStep,head time)] ++ concat (dmap f ss) ++ [(length ss-1,EndStep,last time)]
+  where ss  = idxList (zip time power) 
+        f (idx1,(t1,p1)) (idx2,(t2,p2)) = f stepTyp -- if stepTyp == NoStep then [] else 
+            where stepTyp = stepX p1 p2
+                  tzero = calcZeroTime (t1,p1) (t2,p2)
+                  f NoStep = []
+                  -- calculate zero crossing
+                  f ZeroCrossingStep = [(idx1,stepTyp,tzero)]  
+                  -- use first sample
+                  f InitStep = [(idx1,stepTyp,t1)]
+                  f LeavesZeroStep = [(idx1,stepTyp,t1)]
+                  -- use second sample
+                  f EndStep = [(idx2,stepTyp,t2)]
+                  f BecomesZeroStep = [(idx2,stepTyp,t2)]
+                    
+
+-- | generate a steplist for a Powermap
+genSequ :: Time -> PowerMap Power  -> Sequ
+genSequ time pmap = dmap Sec (S.toAscList s)
+  where offs = map (makeSteps time) (M.elems pmap)
+        s = S.unions $ map S.fromList offs -- convert steplist to set to use unions functionality 
+
+            
+-- | function to generate Sequence Time Vectors
+genSequTime :: Time -> Sequ -> SequData Time
+genSequTime time sequ = map f sequ 
+  where
+    f (Sec (idx1,step1,t1) (idx2,step2,t2) )  = tHead step1 ++ tTrunk ++ tTail step2
+        where
+          tv = UV.fromList time
+          tTrunk = UV.toList $ UV.slice (idx1+1) (idx2-idx1) tv  -- get middle part which is always same 
+          tHead BecomesZeroStep =  [] -- BecomesZeroStep
+          tHead EndStep = error ("Error in sliceSignal - endStep shouldn't occur here")
+          tHead _ =  [t1]
+          
+          tTail LeavesZeroStep =  [] -- LeavesZeroStep
+          tTail InitStep = error ("Error in sliceSignal - initStep shouldn't occur here") 
+          tTail _ =  [t2]
   
 
-
--- -- TODO -- include length checking !!
--- checkLength :: Section a -> Either SectionError ()
--- checkLength sec = when (secLen sec < 2) $ Left ShortSection
+genSequPowerMaps :: PowerMap Power -> Sequ -> SequData (PowerMap Power)
+genSequPowerMaps pmap sequ = map f sequ
+  where
+     f (Sec (idx1,step1,t1) (idx2,step2,t2)) = M.map g pmap
+       where
+          g psig =  pHead step1 ++ pTrunk ++ pTail step2
+            where
+              pv = UV.fromList psig
+              pTrunk = UV.toList $ UV.slice (idx1+1) (idx2-idx1) pv  -- get middle part which is always same 
+              pHead BecomesZeroStep =  [] -- BecomesZeroStep
+              pHead EndStep = error ("Error in sliceSignal - endStep shouldn't occur here")
+              pHead ZeroCrossingStep = [0]
+              pHead _ =  [pv UV.! idx1] 
+          
+              pTail LeavesZeroStep =  [] -- LeavesZeroStep
+              pTail InitStep = error ("Error in sliceSignal - initStep shouldn't occur here") 
+              pTail ZeroCrossingStep = [0]
+              pTail _ =  [pv UV.! idx2]
+          
 
 -}
+
+
+     
+
+          
+          
+
+                  
+

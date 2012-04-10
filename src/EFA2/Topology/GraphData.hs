@@ -29,12 +29,16 @@ data NLabel = NLabel Int deriving (Show, Eq, Ord)
 data ELabel = ELabel Int Int deriving (Show, Eq, Ord)
 
 -- Indexing
+
+-- mkIdx x y = EdgeIndex x y
+
 {-
 data NodeIdx = NodeIdx !Int deriving (Show, Ord, Eq)
 
 type NodeEnv a = M.Map NodeIdx (IdxErrorMonad a)
 type NodeEnv a = NodeIdx -> a
 -}
+
 
 -----------------------------------------------------------------------------------
 -- Maps Idexes and Index Method to store topology related data
@@ -78,7 +82,7 @@ instance Ord EdgeIndex where
            | as == bs = EQ
            | otherwise = compare (a, b) (x, y)
 
-mkIdx x y = EdgeIndex x y
+
 -}
 
 {-
@@ -126,11 +130,6 @@ data FlowState = Negative | Zero | Positive deriving (Show, Ord, Eq)
 -- absolute PropDir
 data PropDir = PropNeg  | PropZero | PropPos deriving (Show, Ord, Eq)
 
------------------------------------------------------------------------------------
--- Signal Map -- assign Power signals (eventually later with calculation instructions)
-
-data Mapping = Mapping  (MPointData (SignalIdent, FlipSign))
-data FlipSign = DontFlip | Flip
 
 -----------------------------------------------------------------------------------
 -- Flow State - Numeric Data flow data in flow direction of actual state -- TODO -- generate Bi-Flow Structure as well 

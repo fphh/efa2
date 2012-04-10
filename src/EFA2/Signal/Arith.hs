@@ -2,9 +2,16 @@
 
 module EFA2.Signal.Arith where
 
+type Val = Double  
+type PSample = Val
+type TSample = Val
+type DTSample = Val
 
-type Val = Double
+type VSignal = [Val]
+type Power = VSignal
+type Time = VSignal
 
+type SignalIdx = Int
 
 class Arith a where
       zero :: a
@@ -23,3 +30,12 @@ instance Arith Val where
          (.+) = (+)
          (.*) = (*)
          (./) = (/)
+
+instance Arith VSignal where
+  zero = repeat 0
+  cst x = repeat x
+  neg = map negate
+  rec = map recip
+  (.+) = zipWith (+)
+  (.*) = zipWith (*)
+  (./) = zipWith (/)
