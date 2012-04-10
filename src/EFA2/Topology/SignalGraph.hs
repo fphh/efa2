@@ -2,6 +2,7 @@
 
 module EFA2.Graph.SignalGraph where
 
+{-
 import qualified Data.Map as M
 
 import Data.Graph.Inductive
@@ -10,11 +11,12 @@ import qualified Data.Vector.Unboxed as UV
 import EFA2.Signal.SignalData
 import EFA2.Signal.SignalGeneration
 
-import EFA2.Graph.GraphData
+--import EFA2.Graph.GraphData
 import EFA2.Signal.SignalAnalysis
 
 import EFA2.Signal.Sequence
 import Data.List 
+-}
 
 {-
 -- | generate List with MPointIndices from Graph in order to help to generate MPointData Map

@@ -5,6 +5,7 @@ module EFA2.Solver.Equation where
 
 import qualified Data.Set as S
 import qualified Data.List as L
+import qualified Data.Map as M
 
 import Debug.Trace
 
@@ -86,12 +87,17 @@ showEqTerm (x := y) = showEqTerm x ++ " = " ++ showEqTerm y
 showEqTerms :: [EqTerm] -> String
 showEqTerms ts = L.intercalate "\n" $ map showEqTerm ts
 
+envToEqTerms :: (MkVarC a) => M.Map a [Val] -> [EqTerm]
+envToEqTerms m = map f lst
+  where lst = M.toList m
+        f (idx, x) = mkVar idx := Given x
+
 isVar :: EqTerm -> Bool
 isVar (Power _) = True
-isVar (Eta _) = True
+--isVar (Eta _) = True
 isVar (DPower _) = True
 isVar (DEta _) = True
-isVar (X _) = True
+--isVar (X _) = True
 isVar (Var _) = True
 isVar _ = False
 
@@ -108,6 +114,7 @@ mkVarSet p t = mkVarSet' t
         mkVarSet' (Recip x) = mkVarSet' x
         mkVarSet' (x := y) = S.union (mkVarSet' x) (mkVarSet' y)
         mkVarSet' _ = S.empty
+
 
 
 -- The following functions transform an equation.

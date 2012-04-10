@@ -112,3 +112,4 @@ mkDEtaEnv m = checkIdx (flip DEtaIdxError m) m
 
 mkXEnv ::  M.Map XIdx a -> LRXEnv a
 mkXEnv m = checkIdx (flip XIdxError m) m
+

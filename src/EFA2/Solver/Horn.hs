@@ -109,7 +109,7 @@ makeHornOrder m formulae = map ((m M.!) . fromAtom) fs'
         fs' = map snd (S.toAscList fs)
 
 makeHornClauses :: [EqTerm] -> (M.Map Node EqTerm, [Formula])
-makeHornClauses ts = (m, fsdpg1 ++ fsdpg2)
+makeHornClauses ts = (m, fsdpg1) --  ++ fsdpg2)
   where m = M.fromList (labNodes dpg1)
         dpg1 = dpgDiffByAtMostOne ts
         dpg2 = dpgHasSameVariable ts

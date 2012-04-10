@@ -52,7 +52,7 @@ import EFA2.Display.DrawGraph
 
 main :: IO ()
 main = do
-  let g = randomTopology 1 100 4.5
+  let g = randomTopology 12 1000 2.0
 
 {-
       terms :: [EqTerm]
@@ -64,12 +64,18 @@ main = do
                 mkVar (PowerIdx 0 3) := FAbs (mkVar (PowerIdx 0 1)) (mkVar (EtaIdx 0 1)),
                 mkVar (VarIdx 0) := (mkVar (PowerIdx 0 1)) :* (mkVar (EtaIdx 0 1)) ]
 -}
+      terms = [ PowerIdx 0 1 .= [2.2, 2.5, 2.7 :: Val] ]
 
-      ts = mkEdgeEq g ++ mkNodeEq g
+      xenvts = envToEqTerms (randomXEnv 0 3 g)
+      eenvts = envToEqTerms (randomEtaEnv 17 5 g)
+
+      ts = terms ++ xenvts ++ eenvts ++ mkEdgeEq g ++ mkNodeEq g
       depg1 = dpgDiffByAtMostOne ts
       depg2 = dpgHasSameVariable ts
 
       ho = hornOrder ts
+      dirs = directEquations ho
+
 {-
   drawAll [
     drawTopologyX' g,
@@ -77,10 +83,15 @@ main = do
     --drawDependencyGraph depg2,
     --drawDependencyGraph (dpg terms),
     --putStrLn (hornsToStr $ snd $ makeHornClauses ts),
-    putStrLn (showEqTerms ts),
+   -- putStrLn (showEqTerms ts),
     -- drawDependencyGraph (transClose depg),
-    putStrLn ("Solution order: " ++ showEqTerms ho) ]
+    putStrLn ("Solution order:\n" ++ showEqTerms ho) ]
 -}
-  putStrLn (showEqTerms ts)
 
-  putStrLn ("Solution order: " ++ showEqTerms ho)
+  putStrLn ("Dir equations:\n" ++ showEqTerms dirs)
+
+  putStrLn ("Number of nodes: " ++ show (noNodes g))
+  putStrLn ("Number of edges: " ++ show (length $ edges g))
+  putStrLn ("Number of equatins solved: " ++ show (length dirs))
+  drawTopologyX' g
+
