@@ -68,7 +68,7 @@ randomTopology seed n ratio = g
 randomEtaEnv :: Int -> Int -> Gr NLabel ELabel -> EtaMap [Val]
 randomEtaEnv seed len g = M.fromList (zip etas rs)
   where etas = concat $ mapGraph f g
-        f (_, n, outs) = zipWith EtaIdx (repeat n) outs
+        f (_, n, outs) = zipWith (EtaIdx 0 0) (repeat n) outs
         numOfEtas = length etas
         rs = LHT.sliceHorizontal numOfEtas $ take (numOfEtas*len) (randomRs (0.1, 0.9) (mkStdGen seed))
 
@@ -87,7 +87,7 @@ splitGens gen = iterate f gen
 randomXEnv :: Int -> Int -> Gr NLabel ELabel -> XMap [Val]
 randomXEnv seed len g = M.fromList $ concat zs
   where xs = concat $ mapGraph f g
-        f (ins, n, outs) = [zipWith XIdx (repeat n) ins, zipWith XIdx (repeat n) outs]
+        f (ins, n, outs) = [zipWith (XIdx 0 0) (repeat n) ins, zipWith (XIdx 0 0) (repeat n) outs]
         ys = snd $ L.foldl' (h len) (gens, []) xs
         gens = splitGens (mkStdGen seed)
         h len (gs, acc) cs = (bs, (as, cs):acc)

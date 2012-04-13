@@ -64,12 +64,12 @@ main = do
                 mkVar (PowerIdx 0 3) := FAbs (mkVar (PowerIdx 0 1)) (mkVar (EtaIdx 0 1)),
                 mkVar (VarIdx 0) := (mkVar (PowerIdx 0 1)) :* (mkVar (EtaIdx 0 1)) ]
 -}
-      terms = [ PowerIdx 0 1 .= [2.2, 2.5, 2.7 :: Val] ]
+      terms = [ PowerIdx 0 0 0 1 .= [2.2, 2.5, 2.7 :: Val] ]
 
       xenvts = envToEqTerms (randomXEnv 0 3 g)
       eenvts = envToEqTerms (randomEtaEnv 17 5 g)
 
-      ts = terms ++ xenvts ++ eenvts ++ mkEdgeEq g ++ mkNodeEq g
+      ts = terms ++ xenvts ++ eenvts ++ mkEdgeEq 0 0 g ++ mkNodeEq 0 0 g
       depg1 = dpgDiffByAtMostOne ts
       depg2 = dpgHasSameVariable ts
 

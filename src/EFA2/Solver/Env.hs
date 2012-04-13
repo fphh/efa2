@@ -5,33 +5,56 @@ import Control.Monad.Error
 
 import qualified Data.Map as M
 
--- Variable types of the solver.
-data EtaIdx = EtaIdx !Int !Int deriving  (Show)
-data PowerIdx = PowerIdx !Int !Int deriving (Show, Ord, Eq)
-data XIdx = XIdx !Int !Int deriving (Show, Ord, Eq)
-data DEtaIdx = DEtaIdx !Int !Int deriving  (Show)
-data DPowerIdx = DPowerIdx !Int !Int deriving (Show, Ord, Eq)
-data VarIdx = VarIdx !Int deriving (Show, Ord, Eq)
+-- | Variable types of the solver. The solver, in fact, is
+-- ignorant of the provenance of the variables. However, to
+-- facilitate life, we introduce variable types, that make
+-- it easy to express things needed in energy flow analysis,
+-- that is:
+--
+-- * a section number
+-- * a data record number
+-- * two numbers to identify a place in the topology
+data PowerIdx = PowerIdx !Int !Int !Int !Int deriving (Show, Ord, Eq)
+data EtaIdx = EtaIdx !Int !Int !Int !Int deriving  (Show)
+data XIdx = XIdx !Int !Int !Int !Int deriving (Show, Ord, Eq)
+data DEtaIdx = DEtaIdx !Int !Int !Int !Int deriving  (Show)
+data DPowerIdx = DPowerIdx !Int !Int !Int !Int deriving (Show, Ord, Eq)
+
+-- | This variable type can be used to express arbitrary relations.
+-- You can variables also make dependent on section and record.
+data VarIdx = VarIdx !Int !Int !Int deriving (Show, Ord, Eq)
+
+class EnvIndex a where
+      sectionNum :: a -> Int
+      recordNum :: a -> Int
+      fromNode :: a -> Int
+      toNode :: a -> Int
+
+instance EnvIndex PowerIdx where
+         sectionNum (PowerIdx x _ _ _) = x
+         recordNum (PowerIdx _ x _ _) = x
+         fromNode (PowerIdx _ _ x _) = x
+         toNode (PowerIdx _ _ _ x) = x
 
 -- EtaIdx x y == EtaIdx y x
 instance Eq EtaIdx where
-         (EtaIdx a b) == (EtaIdx x y) = f a b == f x y
+         (EtaIdx s1 r1 a b) == (EtaIdx s2 r2 x y) = (s1, r1, f a b) == (s2, r2, f x y)
            where f u v = if u < v then (u, v) else (v, u)
 
 instance Ord EtaIdx where
-         compare as@(EtaIdx a b) bs@(EtaIdx x y)
-           | as == bs = EQ
-           | otherwise = compare (f a b) (f x y)
+         compare as@(EtaIdx s1 r1 a b) bs@(EtaIdx s2 r2 x y)
+           | as == bs && s1 == s2 && r1 == r2 = EQ
+           | otherwise = compare (s1, r1, (f a b)) (s2, r2, (f x y))
                where f u v = if u < v then (u, v) else (v, u)
 
 instance Eq DEtaIdx where
-         (DEtaIdx a b) == (DEtaIdx x y) = f a b == f x y
+         (DEtaIdx s1 r1 a b) == (DEtaIdx s2 r2 x y) = (s1, r1, f a b) == (s2, r2, f x y)
            where f u v = if u < v then (u, v) else (v, u)
 
 instance Ord DEtaIdx where
-         compare as@(DEtaIdx a b) bs@(DEtaIdx x y)
-           | as == bs = EQ
-           | otherwise = compare (f a b) (f x y)
+         compare as@(DEtaIdx s1 r1 a b) bs@(DEtaIdx s2 r2 x y)
+           | as == bs && s1 == s2 && r1 == r2 = EQ
+           | otherwise = compare (s1, r1, (f a b)) (s2, r2, (f x y))
                where f u v = if u < v then (u, v) else (v, u)
 
 
@@ -76,10 +99,7 @@ type DPowerEnv a = DPowerIdx -> a
 type XEnv a = XIdx -> a
 type VarEnv a = VarIdx -> a
 
-{-
-e1 = M.fromList [(PowerIdx 1 0, "abc"), (PowerIdx 2 0, "def")]
-e2 = M.fromList [(PowerIdx 2 0, "uvw"), (PowerIdx 3 0, "xyz")]
--}
+
 
 composeLREnv :: (Ord k) => (a -> IdxErrorMonad (M.Map k v) b) -> (a -> IdxErrorMonad (M.Map k v) b) -> (a -> IdxErrorMonad (M.Map k v) b)
 composeLREnv env1 env2 x =

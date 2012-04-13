@@ -19,11 +19,11 @@ import EFA2.Solver.Env
 
 
 showInTerm :: InTerm -> String
-showInTerm (PIdx (PowerIdx x y)) = "E." ++ show x ++ "." ++ show y
-showInTerm (EIdx (EtaIdx x y)) = "n." ++ show x ++ "." ++ show y
-showInTerm (DPIdx (DPowerIdx x y)) = "dE." ++ show x ++ "." ++ show y
-showInTerm (DEIdx (DEtaIdx x y)) = "dn." ++ show x ++ "." ++ show y
-showInTerm (ScaleIdx (XIdx x y)) = "x." ++ show x ++ "." ++ show y
+showInTerm (PIdx (PowerIdx s r x y)) = "E:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
+showInTerm (EIdx (EtaIdx s r x y)) = "n:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
+showInTerm (DPIdx (DPowerIdx s r x y)) = "dE:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
+showInTerm (DEIdx (DEtaIdx s r x y)) = "dn:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
+showInTerm (ScaleIdx (XIdx s r x y)) = "x:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
 showInTerm (InConst x) = show x
 showInTerm (InRConst x) = show x
 

@@ -50,29 +50,29 @@ makeNodes no = map mkLNode no
 ------------------------------------------------------------------------
 -- Making equations:
 
-mkEdgeEq :: Gr a b -> [EqTerm]
-mkEdgeEq g = map f ns
+-- | Takes section, record, and a graph.
+mkEdgeEq :: Int -> Int -> Gr a b -> [EqTerm]
+mkEdgeEq s r g = map f ns
   where ns = edges g
-        f (x, y) = mkVar (PowerIdx y x) := FAbs (mkVar (PowerIdx x y)) (mkVar (EtaIdx x y))
+        f (x, y) = mkVar (PowerIdx s r y x) := FAbs (mkVar (PowerIdx s r x y)) (mkVar (EtaIdx s r x y))
 
 
-mkNodeEq :: Gr a b -> [EqTerm]
-mkNodeEq g = concat $ mapGraph mkEq g
+mkNodeEq :: Int -> Int -> Gr a b -> [EqTerm]
+mkNodeEq s r g = concat $ mapGraph (mkEq s r) g
 
 {- TODO: Rethink equations ineqs' and oeqs'. Currently they are invalid. What is wrong? Is is necessary? -}
-{- ATTENTION: We must only produce equations, where every variable occurs only once.
-This has to do with transformEq, which can only factor out variables that occure only once. -}
-mkEq :: ([Node], Node, [Node]) -> [EqTerm]
-mkEq ([], _, _) = []
-mkEq (_, _, []) = []
---mkEq (ins, n, outs) = ieqs' ++ oeqs' ++ ieqs ++ oeqs
-mkEq (ins, n, outs) = {- ieqs' ++ oeqs' ++ -} ieqs ++ oeqs ++ xieqs ++ xoeqs ++ ieqs'' ++ oeqs''
+-- | ATTENTION: We must only produce equations, where every variable occurs only once.
+-- This has to do with 'transformEq', which can only factor out variables that occure only once.
+mkEq :: Int -> Int -> ([Node], Node, [Node]) -> [EqTerm]
+mkEq _ _ ([], _, _) = []
+mkEq _ _ (_, _, []) = []
+mkEq s r (ins, n, outs) = ieqs ++ oeqs ++ xieqs ++ xoeqs ++ ieqs'' ++ oeqs''
   where ins' = zip (repeat n) ins
         outs' = zip (repeat n) outs
-        xis = map (mkVar . uncurry XIdx) ins'
-        xos = map (mkVar . uncurry XIdx) outs'
-        eis = map (mkVar . uncurry PowerIdx) ins'
-        eos = map (mkVar . uncurry PowerIdx) outs'
+        xis = map (mkVar . uncurry (XIdx s r)) ins'
+        xos = map (mkVar . uncurry (XIdx s r)) outs'
+        eis = map (mkVar . uncurry (PowerIdx s r)) ins'
+        eos = map (mkVar . uncurry (PowerIdx s r)) outs'
         isum = add eis
         osum = add eos
         ieqs = zipWith3 f eis xis (repeat osum)

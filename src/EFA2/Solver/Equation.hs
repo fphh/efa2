@@ -67,12 +67,12 @@ mult = L.foldl1' (:*)
 
 showEqTerm :: EqTerm -> String
 showEqTerm (Const x) = show x
-showEqTerm (Power (PowerIdx x y)) = "E_" ++ show x ++ "_" ++ show y
-showEqTerm (Eta (EtaIdx x y)) = "n_" ++ show x ++ "_" ++ show y
-showEqTerm (DPower (DPowerIdx x y)) = "dE_" ++ show x ++ "_" ++ show y
-showEqTerm (DEta (DEtaIdx x y)) = "dn_" ++ show x ++ "_" ++ show y
-showEqTerm (X (XIdx x y)) =  "x_" ++ show x ++ "_" ++ show y
-showEqTerm (Var (VarIdx x)) = "v_" ++ show x
+showEqTerm (Power (PowerIdx s r x y)) = "E_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
+showEqTerm (Eta (EtaIdx s r x y)) = "n_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
+showEqTerm (DPower (DPowerIdx s r x y)) = "dE_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
+showEqTerm (DEta (DEtaIdx s r x y)) = "dn_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
+showEqTerm (X (XIdx s r x y)) =  "x_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
+showEqTerm (Var (VarIdx s r x)) = "v_" ++ show s ++ "." ++ show r ++ "_" ++ show x
 showEqTerm (x :+ y) = "(" ++ showEqTerm x ++ " + " ++ showEqTerm y ++ ")"
 showEqTerm (x :* y) = showEqTerm x ++ " * " ++ showEqTerm y
 showEqTerm (FAbs p e) = "f(" ++ showEqTerm p ++ ", " ++ showEqTerm e ++ ")"
@@ -180,9 +180,9 @@ isolateVar' (Recip u) (L:p) = isolateVar' u p . Recip
 isolateVar' (FAbs u v) (L:p) = isolateVar' u p . (flip BAbs v)
 isolateVar' (BAbs u v) (L:p) = isolateVar' u p . (flip FAbs v)
 isolateVar' (FDiff p' e dp de) (L:p) = isolateVar' dp p . f
-  where f x@(DPower (DPowerIdx a b)) = BDiff (Power (PowerIdx a b)) e x de
+  where f x@(DPower (DPowerIdx s r a b)) = BDiff (Power (PowerIdx s r a b)) e x de
 isolateVar' (BDiff p' e dp de) (L:p) = isolateVar' dp p . f
-  where f x@(DPower (DPowerIdx a b)) = FDiff (Power (PowerIdx a b)) e x de
+  where f x@(DPower (DPowerIdx s r a b)) = FDiff (Power (PowerIdx s r a b)) e x de
 
 
 -- this is the main function for transforming Equations
