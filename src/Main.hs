@@ -55,8 +55,7 @@ topo = mkGraph (map mkLNode [0..4]) (map (uncurry mkLEdge) [(1, 0), (1, 2), (3, 
 
 main :: IO ()
 main = do
-  let --g = randomTopology 1213 8 3.0
-      g = randomTopology 1213 60 2.2
+  let g = randomTopology 12 4 4.6
 
 {-
       terms :: [EqTerm]
@@ -68,10 +67,11 @@ main = do
                 mkVar (PowerIdx 0 3) := FAbs (mkVar (PowerIdx 0 1)) (mkVar (EtaIdx 0 1)),
                 mkVar (VarIdx 0) := (mkVar (PowerIdx 0 1)) :* (mkVar (EtaIdx 0 1)) ]
 -}
-      terms = [ PowerIdx 0 0 0 1 .= [2.2, 2.5, 2.7 :: Val] ]
 
-      xenvts = envToEqTerms (randomXEnv 0 3 g)
-      eenvts = envToEqTerms (randomEtaEnv 17 5 g)
+      terms = [ PowerIdx 0 0 0 1 .= [2.2 :: Val] ]
+
+      xenvts = envToEqTerms (randomXEnv 0 1 g)
+      eenvts = envToEqTerms (randomEtaEnv 17 1 g)
 
       ts = terms ++ xenvts ++ eenvts ++ mkEdgeEq 0 0 g ++ mkNodeEq 0 0 g
       depg1 = dpgDiffByAtMostOne ts
@@ -81,18 +81,10 @@ main = do
       dirs = directEquations ho
       (a, fs) = makeHornClauses ts
 
-  --putStrLn (showEqTerms ts)
-{-
+
   putStrLn ("Dir equations:\n" ++ showEqTerms dirs)
 
   putStrLn ("Number of nodes: " ++ show (noNodes g))
   putStrLn ("Number of edges: " ++ show (length $ edges g))
   putStrLn ("Number of equations solved: " ++ show (length dirs))
   drawTopologyX' g
--}
-  --putStrLn (graphviz' g)
-  --drawAll [
-  --  drawTopologyX' g,
-  --  drawDependencyGraph depg1 ]
-  --putStrLn (graphviz' depg1)
-  putStrLn (hornsToStr fs)
