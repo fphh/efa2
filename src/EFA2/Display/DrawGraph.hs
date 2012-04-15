@@ -60,7 +60,7 @@ mkDotEdge (x, y) str = DotEdge x y [displabel]
   where displabel = Label $ StrLabel $ T.pack str
 
 printGraph :: Gr a b -> (Node -> String) -> (Edge -> String) -> IO ()
-printGraph g nshow eshow = runGraphvizCanvas Circo (mkDotGraph g (nshow, eshow)) Xlib
+printGraph g nshow eshow = runGraphvizCanvas Dot (mkDotGraph g (nshow, eshow)) Xlib
 
 drawTopologyX' :: Gr a b -> IO ()
 drawTopologyX' g = printGraph g show show -- runGraphvizCanvas Dot (mkDotGraph g (show, show)) Xlib

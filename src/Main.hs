@@ -25,6 +25,7 @@ import EFA2.Solver.DependencyGraph
 
 import EFA2.Topology.RandomTopology
 import EFA2.Topology.Graph
+import EFA2.Topology.GraphData
 
 --import EFA2.Graph.GraphData
 --import EFA2.Graph.Graph
@@ -47,12 +48,15 @@ import EFA2.Display.DrawGraph
 --import EFA2.Example.Vierbein
 
 
+topo :: Gr NLabel ELabel
+topo = mkGraph (map mkLNode [0..4]) (map (uncurry mkLEdge) [(1, 0), (1, 2), (3, 1), (4, 1)])
 
 
 
 main :: IO ()
 main = do
-  let g = randomTopology 12 10 2.0
+  let --g = randomTopology 1213 8 3.0
+      g = randomTopology 1213 60 2.2
 
 {-
       terms :: [EqTerm]
@@ -75,26 +79,20 @@ main = do
 
       ho = hornOrder ts
       dirs = directEquations ho
+      (a, fs) = makeHornClauses ts
 
-{-
-  drawAll [
-    drawTopologyX' g,
-    drawDependencyGraph depg1,
-    --drawDependencyGraph depg2,
-    --drawDependencyGraph (dpg terms),
-    --putStrLn (hornsToStr $ snd $ makeHornClauses ts),
-   -- putStrLn (showEqTerms ts),
-    -- drawDependencyGraph (transClose depg),
-    putStrLn ("Solution order:\n" ++ showEqTerms ho) ]
--}
-
-  putStrLn (showEqTerms ts)
+  --putStrLn (showEqTerms ts)
 {-
   putStrLn ("Dir equations:\n" ++ showEqTerms dirs)
 
   putStrLn ("Number of nodes: " ++ show (noNodes g))
   putStrLn ("Number of edges: " ++ show (length $ edges g))
-  putStrLn ("Number of equatins solved: " ++ show (length dirs))
+  putStrLn ("Number of equations solved: " ++ show (length dirs))
   drawTopologyX' g
-
 -}
+  --putStrLn (graphviz' g)
+  --drawAll [
+  --  drawTopologyX' g,
+  --  drawDependencyGraph depg1 ]
+  --putStrLn (graphviz' depg1)
+  putStrLn (hornsToStr fs)
