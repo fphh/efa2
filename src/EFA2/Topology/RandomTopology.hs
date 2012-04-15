@@ -40,7 +40,6 @@ nodesAndEdges :: Int -> Int -> ([Int], [(Int, Int)])
 nodesAndEdges seed n = (nds, eds)
   where (_, eds, nds) = L.foldl' f (init idx, [], [a]) as
         a:as = [0..n-1]
-        ss = shuffle seed n
         idx = reverse $ indices (17*seed - 1) n
         f (i:is, es, acc) s = (is, (s, acc !! i):es , s:acc)
 

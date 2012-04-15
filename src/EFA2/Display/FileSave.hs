@@ -7,8 +7,8 @@ import Data.GraphViz
 import Data.Graph.Inductive
 
 --import EFA2.Graph.GraphData
-import EFA2.Term.DependencyGraph
-import EFA2.Term.Equation
+--import EFA2.Term.DependencyGraph
+import EFA2.Solver.Equation
 
 -- dot -Tpdf topograph.dot -o topograph.pdf 
 {-
@@ -17,9 +17,8 @@ writeTopology :: (Show b, Show a) => Gr a b -> IO ()
 writeTopology g = writeFile "results/topograph.dot" (graphviz' g)
 -}
 
-{-
-writeDependencyGraph :: Gr NLabel ELabel -> [EqTerm] -> IO ()
-writeDependencyGraph g given = writeFile "results/depgraph.dot" (graphviz' g')
-  where g' = gmap f $ makeDependencyGraph g given
-        f (ins, n, l, outs) = (ins, n, show n ++ ": " ++ showEqTerm l, outs)
--}
+
+writeDependencyGraph :: Gr EqTerm () -> IO ()
+writeDependencyGraph g = writeFile "results/depgraph.dot" (graphviz' (nmap showEqTerm g))
+  where m = M.fromList $ labNodes g
+        nshow x = show x ++ ": " ++ showEqTerm (m M.! x)

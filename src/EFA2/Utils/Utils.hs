@@ -91,7 +91,13 @@ myShowList list = unlines (map show list)
 
 -- | own list show function using specified show function for element
 myShowListFunct :: [a] -> (a -> String) -> String
-myShowListFunct list showFunct = unlines (map showFunct list) 
+myShowListFunct list showFunct = unlines (map showFunct list)
+
+-- | Yet another zipping function. A somehow generalised version of 'dmap'.
+-- 'prop_ysaf' checks for this property:
+-- > length xs > 0 ==> yazf (,) xs xs == dmap (,) xs
+yazf :: (a -> b -> c) -> [a] -> [b] -> [c]
+yazf f xs ys = zipWith f (init xs) (tail ys)
 
 transClose :: Gr a b -> Gr a ()
 transClose = efilter (\(x, y, _) -> x /= y) . trc

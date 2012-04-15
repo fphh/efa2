@@ -67,8 +67,8 @@ mkEq :: Int -> Int -> ([Node], Node, [Node]) -> [EqTerm]
 mkEq s r (ins, n, outs)
   | length ins == 0 && length outs == 0 = []
   | length ins == 0 && length outs > 0 = xoeqs ++ oeqs'
-  | length ins > 0 && length outs == 0 = [] -- xieqs ++ ieqs'
-  | otherwise = [] -- ieqs ++ oeqs ++ xieqs ++ xoeqs ++ ieqs' ++ oeqs'
+  | length ins > 0 && length outs == 0 = xieqs ++ ieqs'
+  | otherwise = oeqs ++ ieqs ++ xoeqs ++ xieqs ++ oeqs' ++ ieqs' -- ieqs ++ oeqs ++ xieqs ++ xoeqs ++ ieqs' ++ oeqs'
   where ins' = zip (repeat n) ins
         outs' = zip (repeat n) outs
         xis = map (mkVar . uncurry (XIdx s r)) ins'
@@ -86,11 +86,11 @@ mkEq s r (ins, n, outs)
         xoeqs | length xos > 1 = [Const 1.0 := add xos]
               | otherwise = []
 
-        ieqs' | length eis > 1 = map h (zip xis (HTL.removeEach eis))
+        ieqs' | length eis > 1 = map k $ pairs $ zipWith (,) xis eis
               | otherwise = []
-        oeqs' | length eos > 1 = map h (zip xos (HTL.removeEach eos))
+        oeqs' | length eos > 1 = map k $ pairs $ zipWith (,) xos eos
               | otherwise = []
-        h (x, (y, z)) = add z := y :* ((Recip x) :+ (Minus (Const 1.0)))
+        k ((x1, e1), (x2, e2)) = x1 :* e2 := x2 :* e1
 
          
 

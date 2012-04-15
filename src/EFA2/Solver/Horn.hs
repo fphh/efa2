@@ -104,7 +104,7 @@ makeHornFormulae g = given ++ graphToHorn g
 --   it produces a list of 'EqTerm' equations that is ordered such, that it can be computed
 --   one by one. 
 makeHornOrder :: M.Map Node EqTerm -> [Formula] -> [EqTerm]
-makeHornOrder m formulae = trace (hornsToStr formulae) $ map ((m M.!) . fromAtom) fs'
+makeHornOrder m formulae = map ((m M.!) . fromAtom) fs'
   where Just fs = horn formulae
         fs' = map snd (S.toAscList fs)
 
@@ -112,19 +112,19 @@ makeHornClauses :: [EqTerm] -> (M.Map Node EqTerm, [Formula])
 makeHornClauses ts = (m, fsdpg1) --   ++ fsdpg2)
   where m = M.fromList (labNodes dpg1)
         dpg1 = dpgDiffByAtMostOne ts
-        dpg2 = dpgHasSameVariable ts
-        dpg3 = L.foldl' (flip delEdge) dpg2 (edges dpg1)
+        --dpg2 = dpgHasSameVariable ts
+        --dpg3 = L.foldl' (flip delEdge) dpg2 (edges dpg1)
 
         fsdpg1 = makeHornFormulae dpg1
-        fsdpg2 = concat $ mapGraph g dpg3
-
+        --fsdpg2 = concat $ mapGraph g dpg3
+{-
         mset = M.map (mkVarSet isVar) m
         g (_, n, _) | isGiven (m M.! n) = []
         g ([], _, _) = []
         g (ins, n, _) = map f sc
           where sc = setCoverBruteForce mset n ins
                 f xs = makeAnd (map Atom xs) :-> Atom n
-
+-}
 
 hornOrder :: [EqTerm] -> [EqTerm]
 hornOrder = uncurry makeHornOrder . makeHornClauses

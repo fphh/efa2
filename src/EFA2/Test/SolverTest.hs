@@ -22,9 +22,14 @@ import EFA2.Solver.DirEquation
 import EFA2.Signal.Arith
 
 
-prop_solver :: Int -> Double -> Bool
-prop_solver numOfNodes ratio | numOfNodes > 1 && numOfNodes < 300 && ratio > 2.0 && ratio < 5.0 = length dirs == 2*(length $ edges g)
-  where seed = 12
+-- | Given x and eta environments, the number of all solved (directed) equations should be equal the
+-- double of the number of edges in the graph, that is, every power position has been calculated.
+-- This is a good example for the use of various functions together.
+prop_solver :: Int -> Double -> Gen Prop
+prop_solver seed ratio =
+  ratio > 2.0 && ratio < 5.0 ==> length dirs == 2*(length $ edges g)
+  where numOfNodes = 50
+        --seed = 0
         g = randomTopology seed numOfNodes ratio
         terms = [ PowerIdx 0 0 0 1 .= [2.2 :: Val] ]
         xenvts = envToEqTerms (randomXEnv 0 0 g)
@@ -33,6 +38,5 @@ prop_solver numOfNodes ratio | numOfNodes > 1 && numOfNodes < 300 && ratio > 2.0
         ts = terms ++ xenvts ++ eenvts ++ mkEdgeEq 0 0 g ++ mkNodeEq 0 0 g
         ho = hornOrder ts
         dirs = directEquations ho
-prop_solver _ _ = True
 
 runTests = $quickCheckAll

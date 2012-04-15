@@ -57,5 +57,3 @@ genSigData g (Mapping mapp) (Record time sigs) = SigData {sdTime = time,
 --          f (x, y, _) = (mkIdx x y, UV.map toEta $ (spl y x) ./ (spl x y))
 --          spl x y = UV.map fromSample $ samples M.! mkIdx x y
 
-
-  

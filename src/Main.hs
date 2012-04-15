@@ -33,7 +33,7 @@ import EFA2.Signal.Arith
 
 import EFA2.Utils.Utils
 
---import EFA2.Display.FileSave
+import EFA2.Display.FileSave
 import EFA2.Display.DrawGraph
 
 --import EFA2.Example.SymSig
@@ -55,18 +55,7 @@ topo = mkGraph (map mkLNode [0..4]) (map (uncurry mkLEdge) [(1, 0), (1, 2), (3, 
 
 main :: IO ()
 main = do
-  let g = randomTopology 12 4 4.6
-
-{-
-      terms :: [EqTerm]
-      terms = [ 
-                mkVar (VarIdx 1) := mkVar (VarIdx 0),
-                mkVar (VarIdx 0) := mkVar (PowerIdx 0 2),
-                EtaIdx 0 1 .= [0.1, 0.2, 0.5, 0.8 :: Val],
-                PowerIdx 0 2 .= [2.2, 6, 2, 2.6 :: Val],
-                mkVar (PowerIdx 0 3) := FAbs (mkVar (PowerIdx 0 1)) (mkVar (EtaIdx 0 1)),
-                mkVar (VarIdx 0) := (mkVar (PowerIdx 0 1)) :* (mkVar (EtaIdx 0 1)) ]
--}
+  let g = randomTopology 4 4 3
 
       terms = [ PowerIdx 0 0 0 1 .= [2.2 :: Val] ]
 
@@ -81,10 +70,17 @@ main = do
       dirs = directEquations ho
       (a, fs) = makeHornClauses ts
 
-
+  --putStrLn (showEqTerms ts)
+{-
+  putStrLn ("Number of undir eq:" ++ show (length ts))
   putStrLn ("Dir equations:\n" ++ showEqTerms dirs)
 
   putStrLn ("Number of nodes: " ++ show (noNodes g))
   putStrLn ("Number of edges: " ++ show (length $ edges g))
   putStrLn ("Number of equations solved: " ++ show (length dirs))
-  drawTopologyX' g
+-}
+  --drawTopologyX' g
+--Number of undir eq:10457
+  --writeDependencyGraph depg1
+
+  putStrLn (hornsToStr ho)
