@@ -65,6 +65,7 @@ randomTopology seed n ratio = g
         edges = filter (\(x, y, _) -> x /= y) $ unique es'' --  (es' ++ es'')
 
 
+-- | Takes a seed, the length of the value list and a graph.
 randomEtaEnv :: Int -> Int -> Gr NLabel ELabel -> EtaMap [Val]
 randomEtaEnv seed len g = M.fromList (zip etas rs)
   where etas = concat $ mapGraph f g
@@ -84,6 +85,7 @@ splitGens :: (RandomGen g) => g -> [g]
 splitGens gen = iterate f gen
   where f = fst . split
 
+-- | Takes a seed, the length of the value list and a graph.
 randomXEnv :: Int -> Int -> Gr NLabel ELabel -> XMap [Val]
 randomXEnv seed len g = M.fromList $ concat zs
   where xs = concat $ mapGraph f g

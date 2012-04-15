@@ -52,7 +52,7 @@ import EFA2.Display.DrawGraph
 
 main :: IO ()
 main = do
-  let g = randomTopology 12 10 2.0
+  let g = randomTopology 12 4 4.6
 
 {-
       terms :: [EqTerm]
@@ -64,10 +64,10 @@ main = do
                 mkVar (PowerIdx 0 3) := FAbs (mkVar (PowerIdx 0 1)) (mkVar (EtaIdx 0 1)),
                 mkVar (VarIdx 0) := (mkVar (PowerIdx 0 1)) :* (mkVar (EtaIdx 0 1)) ]
 -}
-      terms = [ PowerIdx 0 1 .= [2.2, 2.5, 2.7 :: Val] ]
+      terms = [ PowerIdx 0 1 .= [2.2 :: Val] ]
 
-      xenvts = envToEqTerms (randomXEnv 0 3 g)
-      eenvts = envToEqTerms (randomEtaEnv 17 5 g)
+      xenvts = envToEqTerms (randomXEnv 0 1 g)
+      eenvts = envToEqTerms (randomEtaEnv 17 1 g)
 
       ts = terms ++ xenvts ++ eenvts ++ mkEdgeEq g ++ mkNodeEq g
       depg1 = dpgDiffByAtMostOne ts
@@ -89,7 +89,7 @@ main = do
 -}
 
   putStrLn (showEqTerms ts)
-{-
+  putStrLn ("Number of equations: " ++ (show $ length ts))
   putStrLn ("Dir equations:\n" ++ showEqTerms dirs)
 
   putStrLn ("Number of nodes: " ++ show (noNodes g))
@@ -97,4 +97,3 @@ main = do
   putStrLn ("Number of equatins solved: " ++ show (length dirs))
   drawTopologyX' g
 
--}

@@ -3,6 +3,8 @@
 
 module EFA2.Solver.Equation where
 
+import Control.Exception
+
 import qualified Data.Set as S
 import qualified Data.List as L
 import qualified Data.Map as M
@@ -60,7 +62,7 @@ isGiven :: EqTerm -> Bool
 isGiven t = S.size (mkVarSet isVar t) == 1
 
 add :: [EqTerm] -> EqTerm
-add = L.foldl1' (:+)
+add ts = assert (length ts > 0) (L.foldl1' (:+) ts)
 
 mult :: [EqTerm] -> EqTerm
 mult = L.foldl1' (:*)
