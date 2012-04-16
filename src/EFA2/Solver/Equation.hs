@@ -58,9 +58,6 @@ instance MkVarC VarIdx where
 (.=) :: (MkVarC a) => a -> [Val] -> EqTerm
 idx .= gs = mkVar idx := Given gs
 
-isGiven :: EqTerm -> Bool
-isGiven t = S.size (mkVarSet isVar t) == 1
-
 add :: [EqTerm] -> EqTerm
 add ts = assert (length ts > 0) (L.foldl1' (:+) ts)
 
@@ -94,6 +91,10 @@ envToEqTerms m = map f lst
   where lst = M.toList m
         f (idx, x) = mkVar idx := Given x
 
+isGiven :: (EqTerm -> Bool) -> EqTerm -> Bool
+isGiven isVar t = S.size (mkVarSet isVar t) <= 1
+
+-- | Predicate to indicate what should be viewed as a variable. Ask me for further explanation.
 isVar :: EqTerm -> Bool
 isVar (Power _) = True
 --isVar (Eta _) = True
@@ -103,6 +104,32 @@ isVar (DEta _) = True
 isVar (Var _) = True
 isVar _ = False
 
+-- | True for compound terms.
+isCompoundTerm :: EqTerm -> Bool
+isCompoundTerm (Power _) = False
+isCompoundTerm (Eta _) = False
+isCompoundTerm (DPower _) = False
+isCompoundTerm (DEta _) = False
+isCompoundTerm (X _) = False
+isCompoundTerm (Var _) = False
+isCompoundTerm _ = True
+
+-- | True for yntactic variables.
+-- > isStaticVar == not . isCompoundTerm
+isStaticVar :: EqTerm -> Bool
+isStaticVar = not . isCompoundTerm
+
+-- | True for variables that don't appear in 'Given' equations.
+isVarFromEqs :: [EqTerm] -> (EqTerm -> Bool)
+isVarFromEqs ts t = not (S.member t s || isCompoundTerm t) 
+  where s = L.foldl' f S.empty ts
+        f acc (v := Given _) = S.insert v acc
+        f acc _ = acc
+
+-- | This function takes a predicate p that determines, wether
+-- a term is a variable or not. It then takes a term and
+-- determines the set of variables contained in the term, 
+-- according to the predicate.
 mkVarSet :: (EqTerm -> Bool) -> EqTerm -> S.Set EqTerm
 mkVarSet p t = mkVarSet' t
   where mkVarSet' v | p v = S.singleton v
@@ -116,7 +143,6 @@ mkVarSet p t = mkVarSet' t
         mkVarSet' (Recip x) = mkVarSet' x
         mkVarSet' (x := y) = S.union (mkVarSet' x) (mkVarSet' y)
         mkVarSet' _ = S.empty
-
 
 
 -- The following functions transform an equation.

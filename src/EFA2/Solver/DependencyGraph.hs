@@ -30,8 +30,8 @@ mkArcs p s ss = catMaybes $ map g ss
   where g t | p s t = Just (s, t)
         g _ = Nothing
 
-makeDependencyGraph :: (S.Set EqTerm -> S.Set EqTerm -> Bool) -> [EqTerm] -> Gr EqTerm ()
-makeDependencyGraph p ts = deq
+makeDependencyGraph :: (EqTerm -> Bool) -> (S.Set EqTerm -> S.Set EqTerm -> Bool) -> [EqTerm] -> Gr EqTerm ()
+makeDependencyGraph isVar p ts = deq
   where vsets = map (mkVarSet isVar) ts
         mt = M.fromList (zip vsets ts)
         dg = dependencyGraph p vsets
@@ -39,16 +39,16 @@ makeDependencyGraph p ts = deq
 
 -- | The produced graph has an edge, iff the solution of one node allows for computing the solution 
 --   of the other node and the other node has exactly one unknown variable.
-dpgDiffByAtMostOne :: [EqTerm] -> Gr EqTerm ()
-dpgDiffByAtMostOne = makeDependencyGraph diffByAtMostOne
+dpgDiffByAtMostOne :: (EqTerm -> Bool) -> [EqTerm] -> Gr EqTerm ()
+dpgDiffByAtMostOne isVar = makeDependencyGraph isVar diffByAtMostOne
 
 -- | The resulting graph has an edge iff two nodes have one or more variables in common.
-dpgHasSameVariable :: [EqTerm] -> Gr EqTerm ()
-dpgHasSameVariable = makeDependencyGraph hasSameVariable
+dpgHasSameVariable :: (EqTerm -> Bool) -> [EqTerm] -> Gr EqTerm ()
+dpgHasSameVariable isVar = makeDependencyGraph isVar hasSameVariable
 
 -- | Produces a graph that has an edge iff there is a variable intersection between two nodes
 --   and there is no path in the 'dpgDiffByAtMostOne'-graph beween these two nodes.
-dpg :: [EqTerm] -> Gr EqTerm ()
-dpg ts = L.foldl' (flip delEdge) dpg2 (edges dpg1)
-  where dpg1 = dpgDiffByAtMostOne ts
-        dpg2 = dpgHasSameVariable ts
+dpg :: (EqTerm -> Bool) -> [EqTerm] -> Gr EqTerm ()
+dpg isVar ts = L.foldl' (flip delEdge) dpg2 (edges dpg1)
+  where dpg1 = dpgDiffByAtMostOne isVar ts
+        dpg2 = dpgHasSameVariable isVar ts

@@ -60,7 +60,6 @@ mkEdgeEq s r g = map f ns
 mkNodeEq :: Int -> Int -> Gr a b -> [EqTerm]
 mkNodeEq s r g = concat $ mapGraph (mkEq s r) g
 
-{- TODO: Rethink equations ineqs' and oeqs'. Currently they are invalid. What is wrong? Is is necessary? -}
 -- | ATTENTION: We must only produce equations, where every variable occurs only once.
 -- This has to do with 'transformEq', which can only factor out variables that occure only once.
 mkEq :: Int -> Int -> ([Node], Node, [Node]) -> [EqTerm]
@@ -68,7 +67,7 @@ mkEq s r (ins, n, outs)
   | length ins == 0 && length outs == 0 = []
   | length ins == 0 && length outs > 0 = xoeqs ++ oeqs'
   | length ins > 0 && length outs == 0 = xieqs ++ ieqs'
-  | otherwise = oeqs ++ ieqs ++ xoeqs ++ xieqs ++ oeqs' ++ ieqs' -- ieqs ++ oeqs ++ xieqs ++ xoeqs ++ ieqs' ++ oeqs'
+  | otherwise = oeqs ++ ieqs ++ xoeqs ++ xieqs ++ oeqs' ++ ieqs'
   where ins' = zip (repeat n) ins
         outs' = zip (repeat n) outs
         xis = map (mkVar . uncurry (XIdx s r)) ins'

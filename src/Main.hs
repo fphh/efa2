@@ -51,11 +51,13 @@ import EFA2.Display.DrawGraph
 topo :: Gr NLabel ELabel
 topo = mkGraph (map mkLNode [0..4]) (map (uncurry mkLEdge) [(1, 0), (1, 2), (3, 1), (4, 1)])
 
+ 
 
 
 main :: IO ()
 main = do
-  let g = randomTopology 4 4 3
+  let --g = randomTopology 4 4 3
+      g = randomTopology 0 1000 3.0
 
       terms = [ PowerIdx 0 0 0 1 .= [2.2 :: Val] ]
 
@@ -63,24 +65,30 @@ main = do
       eenvts = envToEqTerms (randomEtaEnv 17 1 g)
 
       ts = terms ++ xenvts ++ eenvts ++ mkEdgeEq 0 0 g ++ mkNodeEq 0 0 g
-      depg1 = dpgDiffByAtMostOne ts
-      depg2 = dpgHasSameVariable ts
+      isV = isVar -- isVarFromEqs ts
 
-      ho = hornOrder ts
-      dirs = directEquations ho
-      (a, fs) = makeHornClauses ts
+      depg1 = dpgDiffByAtMostOne isV (filter (not . isGiven isV) ts)
+      --depg2 = dpgHasSameVariable ts
 
-  --putStrLn (showEqTerms ts)
-{-
+      ho = hornOrder isV ts
+      dirs = directEquations isV ho
+      -- (a, fs) = makeHornClauses ts
+
+
+  -- putStrLn (showEqTerms (filter (not . isGiven isV) ts))
+
   putStrLn ("Number of undir eq:" ++ show (length ts))
-  putStrLn ("Dir equations:\n" ++ showEqTerms dirs)
+  --putStrLn ("Number of undir feq:" ++ show (length $ filter (not . isGiven isV) ts))
 
+  --putStrLn ("Dir equations:\n" ++ showEqTerms dirs)
+  
   putStrLn ("Number of nodes: " ++ show (noNodes g))
   putStrLn ("Number of edges: " ++ show (length $ edges g))
   putStrLn ("Number of equations solved: " ++ show (length dirs))
--}
+
   --drawTopologyX' g
---Number of undir eq:10457
+  --drawDependencyGraph depg1
+
   --writeDependencyGraph depg1
 
-  putStrLn (hornsToStr ho)
+  --putStrLn (hornsToStr ho)

@@ -94,10 +94,10 @@ graphToHorn g = foldGraph f [] g
 -- | Takes a dependency graph and returns Horn clauses from it. /Given/ 'Formula'e will
 --   produce additional clauses of the form One :-> Atom x. 
 --   These are the starting clauses for the Horn marking algorithm.
-makeHornFormulae :: Gr EqTerm () -> [Formula]
-makeHornFormulae g = given ++ graphToHorn g
+makeHornFormulae :: (EqTerm -> Bool) -> Gr EqTerm () -> [Formula]
+makeHornFormulae isVar g = given ++ graphToHorn g
   where given = L.foldl' f [] (labNodes g)
-        f acc (n, t) | isGiven t = (One :-> Atom n):acc
+        f acc (n, t) | isGiven isVar t = (One :-> Atom n):acc
         f acc _ = acc
 
 -- | Takes a dependency graph and a list of 'Formula'e. With help of the horn marking algorithm
@@ -108,14 +108,15 @@ makeHornOrder m formulae = map ((m M.!) . fromAtom) fs'
   where Just fs = horn formulae
         fs' = map snd (S.toAscList fs)
 
-makeHornClauses :: [EqTerm] -> (M.Map Node EqTerm, [Formula])
-makeHornClauses ts = (m, fsdpg1) --   ++ fsdpg2)
+makeHornClauses :: (EqTerm -> Bool) -> [EqTerm] -> (M.Map Node EqTerm, [Formula])
+makeHornClauses isVar ts = (m, fsdpg1) --   ++ fsdpg2)
   where m = M.fromList (labNodes dpg1)
-        dpg1 = dpgDiffByAtMostOne ts
-        --dpg2 = dpgHasSameVariable ts
+        ts' = ts -- filter (not . isGiven isVar) ts
+        dpg1 = dpgDiffByAtMostOne isVar ts'
+        --dpg2 = dpgHasSameVariable isVar ts
         --dpg3 = L.foldl' (flip delEdge) dpg2 (edges dpg1)
 
-        fsdpg1 = makeHornFormulae dpg1
+        fsdpg1 = makeHornFormulae isVar dpg1
         --fsdpg2 = concat $ mapGraph g dpg3
 {-
         mset = M.map (mkVarSet isVar) m
@@ -126,8 +127,8 @@ makeHornClauses ts = (m, fsdpg1) --   ++ fsdpg2)
                 f xs = makeAnd (map Atom xs) :-> Atom n
 -}
 
-hornOrder :: [EqTerm] -> [EqTerm]
-hornOrder = uncurry makeHornOrder . makeHornClauses
+hornOrder :: (EqTerm -> Bool) -> [EqTerm] -> [EqTerm]
+hornOrder isVar ts = (uncurry makeHornOrder) (makeHornClauses isVar ts)
 
 
 allNotEmptyCombinations :: (Ord a) => [a] -> [[a]]
