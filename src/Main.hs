@@ -57,7 +57,7 @@ topo = mkGraph (map mkLNode [0..4]) (map (uncurry mkLEdge) [(1, 0), (1, 2), (3, 
 main :: IO ()
 main = do
   let --g = randomTopology 4 4 3
-      g = randomTopology 0 1000 3.0
+      g = randomTopology 0 500 3.0
 
       terms = [ PowerIdx 0 0 0 1 .= [2.2 :: Val] ]
 
