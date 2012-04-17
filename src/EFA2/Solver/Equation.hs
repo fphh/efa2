@@ -94,15 +94,18 @@ envToEqTerms m = map f lst
 isGiven :: (EqTerm -> Bool) -> EqTerm -> Bool
 isGiven isVar t = S.size (mkVarSet isVar t) <= 1
 
+
 -- | Predicate to indicate what should be viewed as a variable. Ask me for further explanation.
-isVar :: EqTerm -> Bool
-isVar (Power _) = True
---isVar (Eta _) = True
-isVar (DPower _) = True
-isVar (DEta _) = True
+isVar' :: EqTerm -> Bool
+isVar' (Power (PowerIdx 0 0 0 1)) = False
+isVar' (Power _) = True
+--isVar' (Eta _) = True
+isVar' (DPower _) = True
+isVar' (DEta _) = True
 --isVar (X _) = True
-isVar (Var _) = True
-isVar _ = False
+isVar' (Var _) = True
+isVar' _ = False
+
 
 -- | True for compound terms.
 isCompoundTerm :: EqTerm -> Bool

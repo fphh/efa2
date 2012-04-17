@@ -22,6 +22,7 @@ import EFA2.Solver.TermData
 import EFA2.Solver.Solve
 import EFA2.Solver.Env
 import EFA2.Solver.DependencyGraph
+import EFA2.Solver.IsVar
 
 import EFA2.Topology.RandomTopology
 import EFA2.Topology.Graph
@@ -57,7 +58,7 @@ topo = mkGraph (map mkLNode [0..4]) (map (uncurry mkLEdge) [(1, 0), (1, 2), (3, 
 main :: IO ()
 main = do
   let --g = randomTopology 4 4 3
-      g = randomTopology 0 500 3.0
+      g = randomTopology 0 100 3.0
 
       terms = [ PowerIdx 0 0 0 1 .= [2.2 :: Val] ]
 
@@ -65,7 +66,8 @@ main = do
       eenvts = envToEqTerms (randomEtaEnv 17 1 g)
 
       ts = terms ++ xenvts ++ eenvts ++ mkEdgeEq 0 0 g ++ mkNodeEq 0 0 g
-      isV = isVar -- isVarFromEqs ts
+      --isV = isVar g ts -- isVarFromEqs ts
+      isV = isVar' --FromEqs ts
 
       depg1 = dpgDiffByAtMostOne isV (filter (not . isGiven isV) ts)
       --depg2 = dpgHasSameVariable ts
