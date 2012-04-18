@@ -16,17 +16,19 @@ import EFA2.Solver.Env
 
 data EqTerm = EqTerm := EqTerm
           | Const Val
+          | SymConst EqTerm
+          | Given [Val]
+          | SymGiven [EqTerm]
           | Power PowerIdx
           | Eta EtaIdx
           | DPower DPowerIdx
           | DEta DEtaIdx
           | X XIdx
           | Var VarIdx
-          | FAbs { fAbsPower :: EqTerm, fAbsEta :: EqTerm }
-          | BAbs { bAbsPower :: EqTerm, bAbsEta :: EqTerm }
+ --         | FAbs { fAbsPower :: EqTerm, fAbsEta :: EqTerm }
+ --         | BAbs { bAbsPower :: EqTerm, bAbsEta :: EqTerm }
           | FDiff { fDiffPower :: EqTerm, fDiffEta :: EqTerm, fDiffDPower :: EqTerm, fDiffDEta :: EqTerm }
           | BDiff { bDiffPower :: EqTerm, bDiffEta :: EqTerm, bDiffDPower :: EqTerm, bDiffDEta :: EqTerm }
-          | Given [Val]
           | Minus EqTerm
           | Recip EqTerm
           | EqTerm :+ EqTerm
@@ -55,6 +57,8 @@ instance MkVarC XIdx where
 instance MkVarC VarIdx where
          mkVar = Var
 
+mkConsts = map Const
+
 (.=) :: (MkVarC a) => a -> [Val] -> EqTerm
 idx .= gs = mkVar idx := Given gs
 
@@ -74,8 +78,8 @@ showEqTerm (X (XIdx s r x y)) =  "x_" ++ show s ++ "." ++ show r ++ "_" ++ show 
 showEqTerm (Var (VarIdx s r x)) = "v_" ++ show s ++ "." ++ show r ++ "_" ++ show x
 showEqTerm (x :+ y) = "(" ++ showEqTerm x ++ " + " ++ showEqTerm y ++ ")"
 showEqTerm (x :* y) = showEqTerm x ++ " * " ++ showEqTerm y
-showEqTerm (FAbs p e) = "f(" ++ showEqTerm p ++ ", " ++ showEqTerm e ++ ")"
-showEqTerm (BAbs p e) = "b(" ++ showEqTerm p ++ ", " ++ showEqTerm e  ++ ")"
+--showEqTerm (FAbs p e) = "f(" ++ showEqTerm p ++ ", " ++ showEqTerm e ++ ")"
+--showEqTerm (BAbs p e) = "b(" ++ showEqTerm p ++ ", " ++ showEqTerm e  ++ ")"
 showEqTerm (FDiff p e dp de) = "f(" ++ showEqTerm p ++ ", " ++ showEqTerm e ++ ", " ++ showEqTerm dp ++ ", " ++ showEqTerm de ++")"
 showEqTerm (BDiff p e dp de) = "b(" ++ showEqTerm p ++ ", " ++ showEqTerm e ++ ", " ++ showEqTerm dp ++ ", " ++ showEqTerm de  ++ ")"
 showEqTerm (Given xs) = "given(" ++ (L.intercalate ", " $ map show xs) ++ ")"
@@ -91,43 +95,6 @@ envToEqTerms m = map f lst
   where lst = M.toList m
         f (idx, x) = mkVar idx := Given x
 
-isGiven :: (EqTerm -> Bool) -> EqTerm -> Bool
-isGiven isVar t = S.size (mkVarSet isVar t) <= 1
-
-
--- | Predicate to indicate what should be viewed as a variable. Ask me for further explanation.
-isVar' :: EqTerm -> Bool
-isVar' (Power (PowerIdx 0 0 0 1)) = False
-isVar' (Power _) = True
---isVar' (Eta _) = True
-isVar' (DPower _) = True
-isVar' (DEta _) = True
---isVar (X _) = True
-isVar' (Var _) = True
-isVar' _ = False
-
-
--- | True for compound terms.
-isCompoundTerm :: EqTerm -> Bool
-isCompoundTerm (Power _) = False
-isCompoundTerm (Eta _) = False
-isCompoundTerm (DPower _) = False
-isCompoundTerm (DEta _) = False
-isCompoundTerm (X _) = False
-isCompoundTerm (Var _) = False
-isCompoundTerm _ = True
-
--- | True for yntactic variables.
--- > isStaticVar == not . isCompoundTerm
-isStaticVar :: EqTerm -> Bool
-isStaticVar = not . isCompoundTerm
-
--- | True for variables that don't appear in 'Given' equations.
-isVarFromEqs :: [EqTerm] -> (EqTerm -> Bool)
-isVarFromEqs ts t = not (S.member t s || isCompoundTerm t) 
-  where s = L.foldl' f S.empty ts
-        f acc (v := Given _) = S.insert v acc
-        f acc _ = acc
 
 -- | This function takes a predicate p that determines, wether
 -- a term is a variable or not. It then takes a term and
@@ -138,8 +105,8 @@ mkVarSet p t = mkVarSet' t
   where mkVarSet' v | p v = S.singleton v
         mkVarSet' (x :+ y) = S.union (mkVarSet' x) (mkVarSet' y)
         mkVarSet' (x :* y) = S.union (mkVarSet' x) (mkVarSet' y)
-        mkVarSet' (FAbs x y) = S.union (mkVarSet' x) (mkVarSet' y)
-        mkVarSet' (BAbs x y) = S.union (mkVarSet' x) (mkVarSet' y)
+        --mkVarSet' (FAbs x y) = S.union (mkVarSet' x) (mkVarSet' y)
+        --mkVarSet' (BAbs x y) = S.union (mkVarSet' x) (mkVarSet' y)
         mkVarSet' (FDiff p e dp de) = S.unions (map mkVarSet' [p, e, dp, de])
         mkVarSet' (BDiff p e dp de) = S.unions (map mkVarSet' [p, e, dp, de])
         mkVarSet' (Minus x) = mkVarSet' x
@@ -188,8 +155,8 @@ findVar t s
         help t (u :* v) = (findVar t u, findVar t v)
         help t (Minus u) = (findVar t u, Nothing)    -- coding: Minus has only left operand.
         help t (Recip u) = (findVar t u, Nothing)    -- coding: Recip has only left operand.
-        help t u@(FAbs _ _) = (findVar t (fAbsPower u), Nothing)   -- etc.
-        help t u@(BAbs _ _) = (findVar t (bAbsPower u), Nothing)
+        --help t u@(FAbs _ _) = (findVar t (fAbsPower u), Nothing)   -- etc.
+        --help t u@(BAbs _ _) = (findVar t (bAbsPower u), Nothing)
         help t u@(FDiff _ _ _ _) = (findVar t (fDiffDPower u), Nothing)
         help t u@(BDiff _ _ _ _) = (findVar t (bDiffDPower u), Nothing)
         help _ _ = (Nothing, Nothing)
@@ -208,8 +175,8 @@ isolateVar' (u :* v) (L:p) = isolateVar' u p . ((Recip v) :*)
 isolateVar' (u :* v) (R:p) = isolateVar' v p . ((Recip u) :*)
 isolateVar' (Minus u) (L:p) = isolateVar' u p . Minus
 isolateVar' (Recip u) (L:p) = isolateVar' u p . Recip
-isolateVar' (FAbs u v) (L:p) = isolateVar' u p . (flip BAbs v)
-isolateVar' (BAbs u v) (L:p) = isolateVar' u p . (flip FAbs v)
+--isolateVar' (FAbs u v) (L:p) = isolateVar' u p . (flip BAbs v)
+--isolateVar' (BAbs u v) (L:p) = isolateVar' u p . (flip FAbs v)
 isolateVar' (FDiff p' e dp de) (L:p) = isolateVar' dp p . f
   where f x@(DPower (DPowerIdx s r a b)) = BDiff (Power (PowerIdx s r a b)) e x de
 isolateVar' (BDiff p' e dp de) (L:p) = isolateVar' dp p . f

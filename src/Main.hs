@@ -37,10 +37,10 @@ import EFA2.Utils.Utils
 import EFA2.Display.FileSave
 import EFA2.Display.DrawGraph
 
---import EFA2.Example.SymSig
+import EFA2.Example.SymSig
 
 --import EFA2.Example.Dreibein
---import EFA2.Example.Linear
+import EFA2.Example.Linear
 --import EFA2.Example.LinearOne
 --import EFA2.Example.LinearX
 --import EFA2.Example.LinearTwo
@@ -57,40 +57,38 @@ topo = mkGraph (map mkLNode [0..4]) (map (uncurry mkLEdge) [(1, 0), (1, 2), (3, 
 
 main :: IO ()
 main = do
-  let --g = randomTopology 4 4 3
-      g = randomTopology 0 100 3.0
+  let --g = randomTopology 41 5 2
+      --g = randomTopology 0 10 3.0
+      TheGraph g sigs = linear
 
-      terms = [ PowerIdx 0 0 0 1 .= [2.2 :: Val] ]
+      --terms = [ PowerIdx 0 0 0 1 .= [2.2 :: Val] ]
 
-      xenvts = envToEqTerms (randomXEnv 0 1 g)
-      eenvts = envToEqTerms (randomEtaEnv 17 1 g)
+      penvts = envToEqTerms sigs
+      -- eenvts = envToEqTerms (randomEtaEnv 17 1 g)
 
-      ts = terms ++ xenvts ++ eenvts ++ mkEdgeEq 0 0 g ++ mkNodeEq 0 0 g
-      --isV = isVar g ts -- isVarFromEqs ts
-      isV = isVar' --FromEqs ts
+      ts = penvts ++ mkEdgeEq 0 0 g ++ mkNodeEq 0 0 g
+      isV = isVar g ts
+      (given, nov, givExt, rest) = splitTerms isV ts
+      ss = givExt ++ rest
 
-      depg1 = dpgDiffByAtMostOne isV (filter (not . isGiven isV) ts)
-      --depg2 = dpgHasSameVariable ts
-
-      ho = hornOrder isV ts
+      ho = hornOrder isV ss
       dirs = directEquations isV ho
-      -- (a, fs) = makeHornClauses ts
 
+      envs :: Envs Val
+      envs = interpretFromScratch (given ++ dirs)
 
-  -- putStrLn (showEqTerms (filter (not . isGiven isV) ts))
-
-  putStrLn ("Number of undir eq:" ++ show (length ts))
-  --putStrLn ("Number of undir feq:" ++ show (length $ filter (not . isGiven isV) ts))
-
-  --putStrLn ("Dir equations:\n" ++ showEqTerms dirs)
-  
   putStrLn ("Number of nodes: " ++ show (noNodes g))
   putStrLn ("Number of edges: " ++ show (length $ edges g))
+  putStrLn "===================="
+  putStrLn ("Number of undeq: " ++ show (length ts))
+  putStrLn ("Number of given: " ++ show (length given))
+  putStrLn ("Number of noVar: " ++ show (length nov))
+  putStrLn ("Number of gvExt: " ++ show (length givExt))
+  putStrLn ("Number of rest : " ++ show (length rest))
+  putStrLn "===================="
   putStrLn ("Number of equations solved: " ++ show (length dirs))
+  putStrLn (showEqTerms dirs)
+  print envs
 
-  --drawTopologyX' g
-  --drawDependencyGraph depg1
-
-  --writeDependencyGraph depg1
-
-  --putStrLn (hornsToStr ho)
+  drawTopologyX' g
+ 

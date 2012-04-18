@@ -54,7 +54,7 @@ makeNodes no = map mkLNode no
 mkEdgeEq :: Int -> Int -> Gr a b -> [EqTerm]
 mkEdgeEq s r g = map f ns
   where ns = edges g
-        f (x, y) = mkVar (PowerIdx s r y x) := FAbs (mkVar (PowerIdx s r x y)) (mkVar (EtaIdx s r x y))
+        f (x, y) = mkVar (PowerIdx s r y x) := (mkVar (PowerIdx s r x y)) :* (mkVar (EtaIdx s r x y))
 
 
 mkNodeEq :: Int -> Int -> Gr a b -> [EqTerm]
@@ -80,9 +80,9 @@ mkEq s r (ins, n, outs)
         oeqs = zipWith3 f eos xos (repeat isum)
         f x y z = x := y :* z
 
-        xieqs | length xis > 1 = [Const 1.0 := add xis]
+        xieqs | length xis > 0 = [Const 1.0 := add xis]
               | otherwise = []
-        xoeqs | length xos > 1 = [Const 1.0 := add xos]
+        xoeqs | length xos > 0 = [Const 1.0 := add xos]
               | otherwise = []
 
         ieqs' | length eis > 1 = map k $ pairs $ zipWith (,) xis eis

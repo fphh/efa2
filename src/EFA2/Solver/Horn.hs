@@ -13,6 +13,8 @@ import Debug.Trace
 
 import EFA2.Solver.DependencyGraph
 import EFA2.Solver.Equation
+import EFA2.Solver.IsVar
+
 import EFA2.Utils.Utils
 
 data Formula = Zero
@@ -91,14 +93,16 @@ graphToHorn g = foldGraph f [] g
   where f acc ([], _, []) = acc
         f acc (ins, x, _) = (map (:-> Atom x) (map Atom ins)) ++ acc
 
+{-
 -- | Takes a dependency graph and returns Horn clauses from it. /Given/ 'Formula'e will
 --   produce additional clauses of the form One :-> Atom x. 
 --   These are the starting clauses for the Horn marking algorithm.
 makeHornFormulae :: (EqTerm -> Bool) -> Gr EqTerm () -> [Formula]
 makeHornFormulae isVar g = given ++ graphToHorn g
   where given = L.foldl' f [] (labNodes g)
-        f acc (n, t) | isGiven isVar t = (One :-> Atom n):acc
+        f acc (n, t) | isGiven t = (One :-> Atom n):acc
         f acc _ = acc
+-}
 
 -- | Takes a dependency graph and a list of 'Formula'e. With help of the horn marking algorithm
 --   it produces a list of 'EqTerm' equations that is ordered such, that it can be computed
@@ -109,16 +113,20 @@ makeHornOrder m formulae = map ((m M.!) . fromAtom) fs'
         fs' = map snd (S.toAscList fs)
 
 makeHornClauses :: (EqTerm -> Bool) -> [EqTerm] -> (M.Map Node EqTerm, [Formula])
-makeHornClauses isVar ts = (m, fsdpg1) --   ++ fsdpg2)
-  where m = M.fromList (labNodes dpg1)
-        ts' = ts -- filter (not . isGiven isVar) ts
-        dpg1 = dpgDiffByAtMostOne isVar ts'
-        --dpg2 = dpgHasSameVariable isVar ts
-        --dpg3 = L.foldl' (flip delEdge) dpg2 (edges dpg1)
+makeHornClauses isVar ts = (m, startfs ++ fsdpg)
+  where m = M.fromList (labNodes dpg)
+        dpg = dpgDiffByAtMostOne isVar ts
+        fsdpg = graphToHorn dpg
 
-        fsdpg1 = makeHornFormulae isVar dpg1
-        --fsdpg2 = concat $ mapGraph g dpg3
+        givenExt = M.filter (isGivenExtended isVar) m
+        startfs = map (f . fst) $ M.toList givenExt
+        f x = One :-> Atom x
+
+
 {-
+        dpg2 = dpgHasSameVariable isVar ts
+        dpg3 = L.foldl' (flip delEdge) dpg2 (edges dpg1)
+        fsdpg2 = concat $ mapGraph g dpg3
         mset = M.map (mkVarSet isVar) m
         g (_, n, _) | isGiven (m M.! n) = []
         g ([], _, _) = []

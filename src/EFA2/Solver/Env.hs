@@ -24,6 +24,7 @@ data DPowerIdx = DPowerIdx !Int !Int !Int !Int deriving (Show, Ord, Eq)
 -- You can variables also make dependent on section and record.
 data VarIdx = VarIdx !Int !Int !Int deriving (Show, Ord, Eq)
 
+{-
 class EnvIndex a where
       sectionNum :: a -> Int
       recordNum :: a -> Int
@@ -35,6 +36,7 @@ instance EnvIndex PowerIdx where
          recordNum (PowerIdx _ x _ _) = x
          fromNode (PowerIdx _ _ x _) = x
          toNode (PowerIdx _ _ _ x) = x
+-}
 
 -- EtaIdx x y == EtaIdx y x
 instance Eq EtaIdx where
@@ -85,6 +87,10 @@ type DEtaMap a = M.Map DEtaIdx a
 type XMap a = M.Map XIdx a
 type VarMap a = M.Map VarIdx a
 
+
+
+
+{-
 type LRPowerEnv a = PowerIdx -> IdxErrorMonad (PowerMap a) a
 type LREtaEnv a = EtaIdx -> IdxErrorMonad (EtaMap a) a
 type LRDPowerEnv a = DPowerIdx -> IdxErrorMonad (DPowerMap a) a
@@ -98,7 +104,6 @@ type DEtaEnv a = DEtaIdx -> a
 type DPowerEnv a = DPowerIdx -> a
 type XEnv a = XIdx -> a
 type VarEnv a = VarIdx -> a
-
 
 
 composeLREnv :: (Ord k) => (a -> IdxErrorMonad (M.Map k v) b) -> (a -> IdxErrorMonad (M.Map k v) b) -> (a -> IdxErrorMonad (M.Map k v) b)
@@ -133,3 +138,4 @@ mkDEtaEnv m = checkIdx (flip DEtaIdxError m) m
 mkXEnv ::  M.Map XIdx a -> LRXEnv a
 mkXEnv m = checkIdx (flip XIdxError m) m
 
+-}

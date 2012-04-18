@@ -5,10 +5,10 @@ module EFA2.Example.SymSig where
 import Data.Graph.Inductive
 import qualified Data.Map as M
 
-import EFA2.Graph.GraphData
-import EFA2.Term.TermData
-import EFA2.Signal.Arith
-import EFA2.Term.Env
+import EFA2.Solver.Env
+import EFA2.Topology.GraphData
+
+{-
 
 symSig ::  LRPowerEnv [Val] -> LRPowerEnv [InTerm]
 symSig sigs idx
@@ -28,6 +28,7 @@ instance Signal Val where
 instance Signal InTerm where
          signal sigs = symSig sigs
          toSignal = InConst
+-}
 
 data TheGraph a = TheGraph { theGraph :: Gr NLabel ELabel,
-                             powerEnv :: LRPowerEnv a }
+                             powerEnv :: PowerMap a }

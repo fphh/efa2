@@ -5,9 +5,13 @@ module EFA2.Solver.IsVar where
 import Data.Graph.Inductive
 import qualified Data.Vector.Unboxed as UV
 import qualified Data.List as L
+import qualified Data.Set as S
+
+import Debug.Trace
 
 import EFA2.Solver.Equation
 import EFA2.Solver.Env
+import EFA2.Utils.Utils
 
 
 -- | Section, record, from, to.
@@ -16,6 +20,7 @@ data Tableau = Tableau (UV.Vector Bool) (UV.Vector Bool) (UV.Vector Bool) (UV.Ve
 mkTableau :: (UpdateAcc -> EqTerm -> UpdateAcc) -> Int -> [EqTerm] -> Tableau
 mkTableau updatef len ts = Tableau sec rec from to
   where empty = UV.replicate len False
+        x = show sec ++ "\n" ++ show rec ++ "\n" ++ show from ++ "\n" ++ show to ++ "\n"
         sec = UV.update empty us
         rec = UV.update empty ur
         from = UV.update empty uf
@@ -49,11 +54,11 @@ xUpdateVec acc _ = acc
 
 isVar :: Gr a b -> [EqTerm] -> (EqTerm -> Bool)
 isVar g ts t
-  | (Power (PowerIdx s r f t)) <- t = (ps UV.! s) && (pr UV.! r) && (pf UV.! f) && (pt UV.! t)
-  | (Eta (EtaIdx s r f t)) <- t = (ps UV.! s) && (pr UV.! r) && (pf UV.! f) && (pt UV.! t)
-  | (DPower (DPowerIdx s r f t)) <- t = (ps UV.! s) && (pr UV.! r) && (pf UV.! f) && (pt UV.! t)
-  | (DEta (DEtaIdx s r f t)) <- t = (ps UV.! s) && (pr UV.! r) && (pf UV.! f) && (pt UV.! t)
-  | (X (XIdx s r f t)) <- t = (ps UV.! s) && (pr UV.! r) && (pf UV.! f) && (pt UV.! t)
+  | (Power (PowerIdx s r f t)) <- t = not $ (ps UV.! s) && (pr UV.! r) && (pf UV.! f) && (pt UV.! t)
+  | (Eta (EtaIdx s r f t)) <- t = not $ (es UV.! s) && (er UV.! r) && (ef UV.! f) && (et UV.! t)
+  | (DPower (DPowerIdx s r f t)) <- t = not $ (dps UV.! s) && (dpr UV.! r) && (dpf UV.! f) && (dpt UV.! t)
+  | (DEta (DEtaIdx s r f t)) <- t = not $ (des UV.! s) && (der UV.! r) && (def UV.! f) && (det UV.! t)
+  | (X (XIdx s r f t)) <- t = not $ (xs UV.! s) && (xr UV.! r) && (xf UV.! f) && (xt UV.! t)
   | otherwise = False
   where len = length (nodes g)
         Tableau ps pr pf pt = mkTableau powerUpdateVec len ts
@@ -61,3 +66,66 @@ isVar g ts t
         Tableau dps dpr dpf dpt = mkTableau dpowerUpdateVec len ts
         Tableau des der def det = mkTableau detaUpdateVec len ts
         Tableau xs xr xf xt = mkTableau xUpdateVec len ts
+
+
+-- | True for 'EqTerm's that are of the form:
+-- > ... := Given ...
+isGiven :: EqTerm -> Bool
+isGiven (_ := Given _) = True
+isGiven _ = False
+
+-- | True for 'EqTerm's that don't contain variables and for which 'isGiven' is False.
+-- We assume for the given predicate (isVar :: EqTerm -> Bool) that: 
+-- > not (isVar t) == isGiven t
+noVar :: (EqTerm -> Bool) -> EqTerm -> Bool
+noVar isVar t = (not $ isGiven t) && (S.size (mkVarSet isVar t) == 0)
+
+
+-- | True for 'EqTerm's that contain exactly one variable and for which 'isGiven' is False.
+-- We assume for the given predicate (isVar :: EqTerm -> Bool) that: 
+-- > not (isVar t) == isGiven t
+isGivenExtended :: (EqTerm -> Bool) -> EqTerm -> Bool
+isGivenExtended isVar t = (not $ isGiven t) && (S.size (mkVarSet isVar t) == 1)
+
+
+splitTerms :: (EqTerm -> Bool) -> [EqTerm] -> ([EqTerm], [EqTerm], [EqTerm], [EqTerm])
+splitTerms isVar ts = (given, nov, givenExt, rest)
+  where (given, r0) = L.partition isGiven ts
+        (nov, r1) = L.partition (noVar isVar) r0
+        (givenExt, rest) = L.partition (isGivenExtended isVar) r1
+
+-- | Predicate to indicate what should be viewed as a variable. Ask me for further explanation.
+-- Static version for optimisation.
+isVar' :: EqTerm -> Bool
+isVar' (Power (PowerIdx 0 0 0 1)) = False
+isVar' (Power _) = True
+--isVar' (Eta _) = True
+isVar' (DPower _) = True
+isVar' (DEta _) = True
+--isVar (X _) = True
+isVar' (Var _) = True
+isVar' _ = False
+
+
+-- | True for compound terms.
+isCompoundTerm :: EqTerm -> Bool
+isCompoundTerm (Power _) = False
+isCompoundTerm (Eta _) = False
+isCompoundTerm (DPower _) = False
+isCompoundTerm (DEta _) = False
+isCompoundTerm (X _) = False
+isCompoundTerm (Var _) = False
+isCompoundTerm _ = True
+
+-- | True for yntactic variables.
+-- > isStaticVar == not . isCompoundTerm
+isStaticVar :: EqTerm -> Bool
+isStaticVar = not . isCompoundTerm
+
+-- | True for variables that don't appear in 'Given' equations.
+-- Used mainly as a reference implementation for 'isVar'.
+isVarFromEqs :: [EqTerm] -> (EqTerm -> Bool)
+isVarFromEqs ts t = not (S.member t s || isCompoundTerm t) 
+  where s = L.foldl' f S.empty ts
+        f acc (v := Given _) = S.insert v acc
+        f acc _ = acc

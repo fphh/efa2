@@ -19,7 +19,7 @@ data InTerm = PIdx PowerIdx
               | InMult InTerm InTerm
               | InEqual InTerm InTerm deriving (Eq, Ord, Show)
 
-
+{-
 instance Arith InTerm where
          zero = InConst 0.0
          cst = InConst
@@ -28,8 +28,9 @@ instance Arith InTerm where
          (.+) = InAdd
          (.*) = InMult
          x ./ y = InMult x (InRecip y)
+-}
 
-
+{-
 mkSymPowerEnv :: PowerEnv [InTerm]
 mkSymPowerEnv idx = repeat (PIdx idx)
 
@@ -44,3 +45,4 @@ mkSymDEtaEnv idx = repeat (DEIdx idx)
 
 mkSymXEnv :: XEnv [InTerm]
 mkSymXEnv idx = repeat (ScaleIdx idx)
+-}

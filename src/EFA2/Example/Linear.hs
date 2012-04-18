@@ -9,25 +9,24 @@ import qualified Data.Map as M
 import Control.Monad.Error
 
 import EFA2.Signal.Arith
-import EFA2.Term.TermData
-import EFA2.Term.Env
-import EFA2.Graph.GraphData
-import EFA2.Graph.Graph
+import EFA2.Solver.Env
+import EFA2.Solver.Equation
+import EFA2.Topology.Graph
 import EFA2.Example.SymSig
+
 
 numOf = 3
 
-sigs :: LRPowerEnv [Val]
-sigs (PowerIdx 0 1) = return (replicate numOf 3.0)
-sigs (PowerIdx 1 0) = return (replicate numOf 2.2)
-sigs (PowerIdx 1 2) = return (replicate numOf 2.2)
-sigs (PowerIdx 2 1) = return (replicate numOf 1.0)
-sigs (PowerIdx 2 3) = return (replicate numOf 1.0)
-sigs (PowerIdx 3 2) = return (replicate numOf 0.4)
-sigs idx = throwError (PowerIdxError idx M.empty)
+sigs :: PowerMap [Val]
+sigs = M.fromList [ (PowerIdx 0 0 0 1, replicate numOf 3.0),
+                    (PowerIdx 0 0 1 0, replicate numOf 2.2),
+                    (PowerIdx 0 0 1 2, replicate numOf 2.2),
+                    (PowerIdx 0 0 2 1, replicate numOf 1.0),
+                    (PowerIdx 0 0 2 3, replicate numOf 1.0),
+                    (PowerIdx 0 0 3 2, replicate numOf 0.4) ]
 
 
-linear :: (Signal a) => TheGraph [a]
-linear = TheGraph g (signal sigs)
+linear :: TheGraph [Val]
+linear = TheGraph g sigs
   where g = mkGraph (makeNodes no) (makeEdges no)
         no = [0..3]
