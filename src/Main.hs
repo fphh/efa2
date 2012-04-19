@@ -56,7 +56,7 @@ topo = mkGraph (map mkLNode [0..4]) (map (uncurry mkLEdge) [(1, 0), (1, 2), (3, 
 main :: IO ()
 main = do
   let --g = randomTopology 41 5 2
-      g = randomTopology 0 1000 4.0
+      g = randomTopology 0 10 4.0
       --TheGraph g sigs = vierbein
 
       sigs = M.fromList [ (PowerIdx 0 0 0 1, [2, 3, 4.5]) ]
@@ -93,9 +93,9 @@ main = do
   putStrLn "===================="
   putStrLn ("Number of equations solved: " ++ show (length dirs))
   --putStrLn stderr (showInTerms gd)
-  hPutStrLn stderr (show res)
+  --hPutStrLn stderr (show res)
 
- -- drawTopology g res
+  drawTopology g res
 
   --drawTopologyX' g
  
