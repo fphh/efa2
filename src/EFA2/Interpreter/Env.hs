@@ -1,5 +1,5 @@
 
-module EFA2.Solver.Env where
+module EFA2.Interpreter.Env where
 
 import Control.Monad.Error
 
@@ -59,7 +59,7 @@ instance Ord DEtaIdx where
            | otherwise = compare (s1, r1, (f a b)) (s2, r2, (f x y))
                where f u v = if u < v then (u, v) else (v, u)
 
-
+{-
 data IdxError a = PowerIdxError { getIdx :: PowerIdx, getMap :: a }
                 | EtaIdxError EtaIdx a
                 | DPowerIdxError DPowerIdx a
@@ -78,6 +78,7 @@ instance Error (IdxError a) where
          strMsg str = OtherError str
 
 type IdxErrorMonad a = Either (IdxError a)
+-}
 
 -- Environments
 type PowerMap a = M.Map PowerIdx a
@@ -87,7 +88,12 @@ type DEtaMap a = M.Map DEtaIdx a
 type XMap a = M.Map XIdx a
 type VarMap a = M.Map VarIdx a
 
-
+data Envs a = Envs { powerMap :: PowerMap a,
+                     etaMap :: EtaMap a,
+                     dpowerMap :: DPowerMap a,
+                     detaMap :: DEtaMap a,
+                     xMap :: XMap a,
+                     varMap :: VarMap a } deriving (Show)
 
 
 {-

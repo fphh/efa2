@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeSynonymInstances, ScopedTypeVariables #-}
 
-module EFA2.Signal.Arith where
+module EFA2.Interpreter.Arith where
 
 type Val = Double  
 type PSample = Val
@@ -15,7 +15,7 @@ type SignalIdx = Int
 
 class Arith a where
       zero :: a
-      cst :: a -> a
+      cst :: Double -> a
       neg :: a -> a
       rec :: a -> a
       (.+) :: a -> a -> a
@@ -31,11 +31,11 @@ instance Arith Val where
          (.*) = (*)
          (./) = (/)
 
-instance (Num a, Fractional a, Arith a) => Arith [a] where
+instance (Arith a) => Arith [a] where
          zero = repeat (zero :: a)
-         cst x = x
-         neg = map negate
-         rec = map recip
+         cst x = repeat (cst x :: a)
+         neg = map neg
+         rec = map rec
          (.+) = zipWith (.+)
          (.*) = zipWith (.*)
          (./) = zipWith (./)

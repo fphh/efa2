@@ -11,14 +11,17 @@ import qualified Data.Map as M
 
 import Debug.Trace
 
-import EFA2.Signal.Arith
-import EFA2.Solver.Env
+
+import EFA2.Interpreter.Env
+
+-- TOTHINK: Die Algorithmen aus dem Verzeichnis Solver sollten
+-- über den Datentyp EqTerm parametrisierbar sein. Die Abhängigkeisanalyse
+-- sollte nichts mit den konkreten Termen zu tun haben. Diese Entscheidung
+-- haette wahrscheinlich auch Einfluss auf InVar...
 
 data EqTerm = EqTerm := EqTerm
-          | Const Val
-          | SymConst EqTerm
-          | Given [Val]
-          | SymGiven [EqTerm]
+          | Const Double
+          | Given
           | Power PowerIdx
           | Eta EtaIdx
           | DPower DPowerIdx
@@ -38,6 +41,8 @@ infixl 1 :=
 
 class MkVarC a where
       mkVar :: a -> EqTerm
+      give :: a -> EqTerm
+      give idx = mkVar idx := Given
 
 instance MkVarC PowerIdx where
          mkVar = Power
@@ -57,11 +62,6 @@ instance MkVarC XIdx where
 instance MkVarC VarIdx where
          mkVar = Var
 
-mkConsts = map Const
-
-(.=) :: (MkVarC a) => a -> [Val] -> EqTerm
-idx .= gs = mkVar idx := Given gs
-
 add :: [EqTerm] -> EqTerm
 add ts = assert (length ts > 0) (L.foldl1' (:+) ts)
 
@@ -70,6 +70,7 @@ mult = L.foldl1' (:*)
 
 showEqTerm :: EqTerm -> String
 showEqTerm (Const x) = show x
+showEqTerm Given = "given"
 showEqTerm (Power (PowerIdx s r x y)) = "E_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
 showEqTerm (Eta (EtaIdx s r x y)) = "n_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
 showEqTerm (DPower (DPowerIdx s r x y)) = "dE_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
@@ -78,11 +79,8 @@ showEqTerm (X (XIdx s r x y)) =  "x_" ++ show s ++ "." ++ show r ++ "_" ++ show 
 showEqTerm (Var (VarIdx s r x)) = "v_" ++ show s ++ "." ++ show r ++ "_" ++ show x
 showEqTerm (x :+ y) = "(" ++ showEqTerm x ++ " + " ++ showEqTerm y ++ ")"
 showEqTerm (x :* y) = showEqTerm x ++ " * " ++ showEqTerm y
---showEqTerm (FAbs p e) = "f(" ++ showEqTerm p ++ ", " ++ showEqTerm e ++ ")"
---showEqTerm (BAbs p e) = "b(" ++ showEqTerm p ++ ", " ++ showEqTerm e  ++ ")"
 showEqTerm (FDiff p e dp de) = "f(" ++ showEqTerm p ++ ", " ++ showEqTerm e ++ ", " ++ showEqTerm dp ++ ", " ++ showEqTerm de ++")"
 showEqTerm (BDiff p e dp de) = "b(" ++ showEqTerm p ++ ", " ++ showEqTerm e ++ ", " ++ showEqTerm dp ++ ", " ++ showEqTerm de  ++ ")"
-showEqTerm (Given xs) = "given(" ++ (L.intercalate ", " $ map show xs) ++ ")"
 showEqTerm (Recip x) = "1/(" ++ showEqTerm x ++ ")"
 showEqTerm (Minus x) = "-(" ++ showEqTerm x ++ ")"
 showEqTerm (x := y) = showEqTerm x ++ " = " ++ showEqTerm y
@@ -90,10 +88,8 @@ showEqTerm (x := y) = showEqTerm x ++ " = " ++ showEqTerm y
 showEqTerms :: [EqTerm] -> String
 showEqTerms ts = L.intercalate "\n" $ map showEqTerm ts
 
-envToEqTerms :: (MkVarC a) => M.Map a [Val] -> [EqTerm]
-envToEqTerms m = map f lst
-  where lst = M.toList m
-        f (idx, x) = mkVar idx := Given x
+envToEqTerms :: (MkVarC k) => M.Map k v -> [EqTerm]
+envToEqTerms m = map (give . fst) (M.toList m)
 
 
 -- | This function takes a predicate p that determines, wether

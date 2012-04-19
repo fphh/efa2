@@ -5,7 +5,7 @@ module EFA2.Example.SymSig where
 import Data.Graph.Inductive
 import qualified Data.Map as M
 
-import EFA2.Solver.Env
+import EFA2.Interpreter.Env
 import EFA2.Topology.GraphData
 
 {-

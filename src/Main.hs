@@ -9,7 +9,7 @@ import qualified Data.Set as S
 import qualified Data.Map as M
 import Data.Maybe
 
-import Control.Monad.Error
+import System.IO
 
 import Debug.Trace
 
@@ -17,20 +17,18 @@ import Debug.Trace
 import EFA2.Solver.Equation
 import EFA2.Solver.Horn
 import EFA2.Solver.DirEquation
-import EFA2.Solver.EqInterpreter
-import EFA2.Solver.TermData
-import EFA2.Solver.Solve
-import EFA2.Solver.Env
 import EFA2.Solver.DependencyGraph
 import EFA2.Solver.IsVar
+import EFA2.Interpreter.Interpreter
+import EFA2.Interpreter.InTerm
+import EFA2.Interpreter.Env
+
 
 import EFA2.Topology.RandomTopology
 import EFA2.Topology.Graph
 import EFA2.Topology.GraphData
 
---import EFA2.Graph.GraphData
---import EFA2.Graph.Graph
-import EFA2.Signal.Arith
+import EFA2.Interpreter.Arith
 
 import EFA2.Utils.Utils
 
@@ -39,14 +37,14 @@ import EFA2.Display.DrawGraph
 
 import EFA2.Example.SymSig
 
---import EFA2.Example.Dreibein
+import EFA2.Example.Dreibein
 import EFA2.Example.Linear
 --import EFA2.Example.LinearOne
 --import EFA2.Example.LinearX
 --import EFA2.Example.LinearTwo
 --import EFA2.Example.Loop
 --import EFA2.Example.Circular
---import EFA2.Example.Vierbein
+import EFA2.Example.Vierbein
 
 
 topo :: Gr NLabel ELabel
@@ -58,24 +56,31 @@ topo = mkGraph (map mkLNode [0..4]) (map (uncurry mkLEdge) [(1, 0), (1, 2), (3, 
 main :: IO ()
 main = do
   let --g = randomTopology 41 5 2
-      --g = randomTopology 0 10 3.0
-      TheGraph g sigs = linear
+      g = randomTopology 0 1000 4.0
+      --TheGraph g sigs = vierbein
 
-      --terms = [ PowerIdx 0 0 0 1 .= [2.2 :: Val] ]
+      sigs = M.fromList [ (PowerIdx 0 0 0 1, [2, 3, 4.5]) ]
+      xsigs = randomXEnv 17 3 g
+      esigs = randomEtaEnv 17 3 g
 
       penvts = envToEqTerms sigs
-      -- eenvts = envToEqTerms (randomEtaEnv 17 1 g)
+      xenvts = envToEqTerms xsigs
+      eenvts = envToEqTerms esigs
 
-      ts = penvts ++ mkEdgeEq 0 0 g ++ mkNodeEq 0 0 g
+      --ts = penvts ++ mkEdgeEq 0 0 g ++ mkNodeEq 0 0 g
+      ts = penvts ++ xenvts ++ eenvts ++ mkEdgeEq 0 0 g ++ mkNodeEq 0 0 g
+
       isV = isVar g ts
       (given, nov, givExt, rest) = splitTerms isV ts
       ss = givExt ++ rest
 
       ho = hornOrder isV ss
       dirs = directEquations isV ho
+      envs = Envs sigs  esigs M.empty M.empty xsigs M.empty
+      gd = map (eqToInTerm envs) (given ++ dirs)
 
-      envs :: Envs Val
-      envs = interpretFromScratch (given ++ dirs)
+      res :: Envs [Val]
+      res = interpretFromScratch gd
 
   putStrLn ("Number of nodes: " ++ show (noNodes g))
   putStrLn ("Number of edges: " ++ show (length $ edges g))
@@ -87,8 +92,10 @@ main = do
   putStrLn ("Number of rest : " ++ show (length rest))
   putStrLn "===================="
   putStrLn ("Number of equations solved: " ++ show (length dirs))
-  putStrLn (showEqTerms dirs)
-  print envs
+  --putStrLn stderr (showInTerms gd)
+  hPutStrLn stderr (show res)
 
-  drawTopologyX' g
+ -- drawTopology g res
+
+  --drawTopologyX' g
  

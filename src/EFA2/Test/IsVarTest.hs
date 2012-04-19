@@ -30,7 +30,7 @@ prop_splitTerms seed = do
   ratio <- choose (2.0, 4.0)
   let numOfNodes = 50
       g = randomTopology seed numOfNodes ratio
-      terms = [ PowerIdx 0 0 0 1 .= [0.0 :: Val] ]
+      terms = map give [ PowerIdx 0 0 0 1 ]
       xenvts = envToEqTerms (randomXEnv 0 0 g)
       eenvts = envToEqTerms (randomEtaEnv 17 0 g)
       ts = terms ++ xenvts ++ eenvts ++ mkEdgeEq 0 0 g ++ mkNodeEq 0 0 g
@@ -44,7 +44,7 @@ prop_isVar seed = do
   ratio <- choose (2.0, 6.0)
   let numOfNodes = 50
       g = randomTopology seed numOfNodes ratio
-      terms = [ PowerIdx 0 0 0 1 .= [0.0 :: Val] ]
+      terms = map give [ PowerIdx 0 0 0 1 ]
       xenvts = envToEqTerms (randomXEnv 0 0 g)
       eenvts = envToEqTerms (randomEtaEnv 17 0 g)
       ts = terms ++ xenvts ++ eenvts ++ mkEdgeEq 0 0 g ++ mkNodeEq 0 0 g

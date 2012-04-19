@@ -10,9 +10,9 @@ import qualified Data.List.HT as LHT
 import Data.Graph.Inductive
 import System.Random
 
-import EFA2.Solver.Env
+import EFA2.Interpreter.Env
+import EFA2.Interpreter.Arith
 import EFA2.Topology.GraphData
-import EFA2.Signal.Arith
 import EFA2.Utils.Utils
 
 import Debug.Trace

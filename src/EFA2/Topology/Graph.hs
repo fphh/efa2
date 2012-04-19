@@ -16,11 +16,10 @@ import Debug.Trace
 
 import EFA2.Utils.Utils
 import EFA2.Topology.GraphData
-import EFA2.Signal.Arith
-import EFA2.Solver.TermData
-import EFA2.Solver.Env
 import EFA2.Solver.Equation
-
+import EFA2.Interpreter.InTerm
+import EFA2.Interpreter.Arith
+import EFA2.Interpreter.Env
 
 -----------------------------------------------------------------------------------
 -- Topology Graph

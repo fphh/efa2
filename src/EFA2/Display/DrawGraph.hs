@@ -18,19 +18,13 @@ import Text.Printf
 
 import Debug.Trace
 
---import EFA2.Graph.GraphData
---import EFA2.Graph.Graph
-
 
 import EFA2.Solver.Equation
-import EFA2.Solver.EqInterpreter
-import EFA2.Solver.TermData
-import EFA2.Solver.Solve
-import EFA2.Solver.Env
 import EFA2.Solver.DependencyGraph
-
---import EFA2.Example.SymSig
---import EFA2.Signal.Arith
+import EFA2.Interpreter.Interpreter
+import EFA2.Interpreter.InTerm
+import EFA2.Interpreter.Env
+import EFA2.Interpreter.Arith
 
 
 nodeColour :: Attribute 
@@ -68,47 +62,54 @@ drawTopologyX' g = printGraph g show show -- runGraphvizCanvas Dot (mkDotGraph g
 {-
 drawTopologyX :: TheGraph a -> IO ()
 drawTopologyX (TheGraph g _) = printGraph g show show
+-}
 
-data Line = PLine | XLine | NLine deriving (Eq, Ord)
+data Line = PLine Int Int
+          | XLine Int Int
+          | NLine Int Int deriving (Eq, Ord)
 
 instance Show Line where
-         show PLine = "p"
-         show XLine = "x"
-         show NLine = "n"
--}
-{-
+         show (PLine u v) = "p." ++ show u ++ "." ++ show v
+         show (XLine u v) = "x" ++ show u ++ "." ++ show v
+         show (NLine u v) = "n" ++ show u ++ "." ++ show v
+
+
+
+
 -- The argument t is for node labels. Until now, it is not used.
 class DrawTopology a where
-      drawTopology :: t -> TheGraph [a] -> [a] -> M.Map PowerIdx [a] ->  IO ()
+      drawTopology :: Gr b c -> Envs a ->  IO ()
 
-instance DrawTopology Val where
+instance DrawTopology [Val] where
          drawTopology = drawAbsTopology f
            where f (x, ys) = show x ++ " = " ++ (concatMap (printf "%.3f    ") ys)
 
+drawAbsTopology :: (Arith a, Show a) => ((Line, a) -> String) -> Gr b c -> Envs a ->  IO ()
+drawAbsTopology f g (Envs p e dp de x v) = printGraph g show eshow
+  where eshow ps = L.intercalate "\n" $ map f $ mkLst ps
+        mkLst (u, v) = [ (PLine u v, p M.! (PowerIdx 0 0 u v)), 
+                         (XLine u v, x M.! (XIdx 0 0 u v)),
+                         (NLine u v, e M.! (EtaIdx 0 0 u v)),
+                         (XLine v u, x M.! (XIdx 0 0 v u)),
+                         (PLine v u, p M.! (PowerIdx 0 0 v u)) ]
+{-
 instance DrawTopology InTerm where
          drawTopology = drawAbsTopology f
            where f (PLine, es) = "p = " ++ (L.intercalate " | " $ map showInTerm es)
                  f (XLine, e:_) = "x = " ++ showInTerm e
                  f (NLine, e:_) = "n = " ++ showInTerm e
  
+-}
 
-drawAbsTopology :: (Arith a, Show a) => ((Line, [a]) -> String) -> t -> TheGraph [a] -> [a] -> M.Map PowerIdx [a] ->  IO ()
-drawAbsTopology f nenv (TheGraph g _) (AbsEnv eenv xenv) penv = printGraph g show eshow
-  where penv' = mkEnv $ mkPowerEnv penv
-        eshow ps = L.intercalate "\n" $ map f $ mkLst ps
-        mkLst (x, y) = [ (PLine, penv' (PowerIdx x y)), 
-                         (XLine, xenv (XIdx x y)),
-                         (NLine, eenv (EtaIdx x y)),
-                         (XLine, xenv (XIdx y x)),
-                         (PLine, penv' (PowerIdx y x)) ]
-
+{-
 instance DrawTopology InTerm where
          drawTopology = drawDiffTopology f
            where f (PLine, es) = "p = " ++ (L.intercalate " | " $ map showInTerm es)
                  f (XLine, e:_) = "x = " ++ showInTerm e
                  f (NLine, e:_) = "n = " ++ showInTerm e
- 
+ -}
 
+{-
 drawDiffTopology :: (Arith a, Show a) => ((Line, [a]) -> String) -> t -> TheGraph [a] -> DiffEnv [a] -> M.Map PowerIdx [a] ->  IO ()
 drawDiffTopology f nenv (TheGraph g _) (DiffEnv dpenv deenv eenv xenv) penv = printGraph g show eshow
   where penv' = mkEnv $ mkPowerEnv penv

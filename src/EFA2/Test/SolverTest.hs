@@ -34,7 +34,7 @@ prop_solver seed = do
   ratio <- choose (2.0, 5.0)
   let g = randomTopology 0 50 ratio
 
-      terms = [ PowerIdx 0 0 0 1 .= [0.0 :: Val] ]
+      terms = map give [ PowerIdx 0 0 0 1 ]
 
       xenvts = envToEqTerms (randomXEnv 0 1 g)
       eenvts = envToEqTerms (randomEtaEnv 17 1 g)
@@ -55,7 +55,7 @@ prop_orderOfEqs seed = do
   ratio <- choose (2.0, 6.0)
   let g = randomTopology seed 50 ratio
 
-      terms = [ PowerIdx 0 0 0 1 .= [0.0 :: Val] ]
+      terms = map give [ PowerIdx 0 0 0 1 ]
 
       xenvts = envToEqTerms (randomXEnv 0 1 g)
       eenvts = envToEqTerms (randomEtaEnv 17 1 g)
