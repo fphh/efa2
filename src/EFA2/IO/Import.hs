@@ -1,7 +1,7 @@
 module EFA2.IO.Import (module EFA2.IO.Import) where
 
 import EFA2.Signal.Sequence
-import EFA2.Signal.Arith
+import EFA2.Interpreter.Arith
 import EFA2.Utils.Utils
 import EFA2.Signal.Sequence
 

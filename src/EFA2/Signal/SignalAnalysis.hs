@@ -23,7 +23,7 @@ import EFA2.Signal.SignalData
 
 -- import EFA2.Signal.SignalGraph
 
-import EFA2.Signal.Arith
+import EFA2.Interpreter.Arith
 import EFA2.Utils.Utils
 
 data Sign = PSign | ZSign | NSign deriving (Show, Eq)

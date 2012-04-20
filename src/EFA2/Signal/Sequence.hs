@@ -11,11 +11,11 @@ import qualified Data.Vector.Unboxed as UV
 import qualified Data.Vector as GV
 
 import EFA2.Topology.GraphData
-import EFA2.Solver.Env
+import EFA2.Interpreter.Env
 
 import System.Random
 import EFA2.Utils.Utils
-import EFA2.Signal.Arith
+import EFA2.Interpreter.Arith
 
 import EFA2.Signal.SignalAnalysis
 
@@ -30,17 +30,6 @@ type SignalMap = (M.Map SigId Power)
 -- data structure to house the data record or parts of it
 data Record = Record Time SignalMap deriving (Show,Eq)
 data PowerRecord = PowerRecord Time (PowerMap Power)
---type PowerSigEnv = PowerMap Power
-data FlowSigRecord = FlowSigRecord DTime (PowerMap Flow) 
-..             | FlowValRecord 
-..             | FlowDistRecord
-
-
------------------------------------
--- TreeData
-
-data EnergyFlow = EnergyFlow { FlowSigRecord
-
 
                 
 -----------------------------------------------------------------------------------
