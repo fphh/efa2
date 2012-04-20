@@ -7,6 +7,7 @@ import qualified Data.Vector.Unboxed as UV
 import qualified Data.List as L
 import qualified Data.Set as S
 import qualified Data.Map as M
+import Data.Maybe
 
 import Data.Graph.Inductive
 
@@ -66,12 +67,20 @@ foldGraph f start g = L.foldl' f start (zip3 ins ns outs)
         ins = map (pre g) ns
         outs = map (suc g) ns
 
-
+{-
 mapGraph :: (([Node], Node, [Node]) -> a) -> Gr b c -> [a]
 mapGraph f g = map f (zip3 ins ns outs)
   where ns = nodes g
         ins = map (pre g) ns
         outs = map (suc g) ns
+-}
+
+mapGraph :: (([b], b, [b]) -> a) -> Gr b c -> [a]
+mapGraph f g = map f (zip3 ins ls outs)
+  where (ns, ls) = unzip $ labNodes g
+        ins = map (map (fromJust . lab g) . pre g) ns
+        outs = map (map (fromJust . lab g) . suc g) ns
+
 
 -- | mapping a function over a list with using to neighbouring elements 
 dmap :: (a -> a -> b) -> [a] -> [b]

@@ -112,14 +112,14 @@ makeHornOrder m formulae = map ((m M.!) . fromAtom) fs'
   where Just fs = horn formulae
         fs' = map snd (S.toAscList fs)
 
-makeHornClauses :: (EqTerm -> Bool) -> [EqTerm] -> (M.Map Node EqTerm, [Formula])
-makeHornClauses isVar ts = (m, startfs ++ fsdpg)
+makeHornClauses :: (EqTerm -> Bool) -> [EqTerm] -> [EqTerm] -> [EqTerm] -> (M.Map Node EqTerm, [Formula])
+makeHornClauses isVar given givenExt ts = (m, startfs ++ fsdpg)
   where m = M.fromList (labNodes dpg)
-        dpg = dpgDiffByAtMostOne isVar ts
+        dpg = dpgDiffByAtMostOne isVar (given ++ givenExt ++ ts)
         fsdpg = graphToHorn dpg
 
-        givenExt = M.filter (isGivenExtended isVar) m
-        startfs = map (f . fst) $ M.toList givenExt
+        (given, _, givenExt, _) = splitTerms isVar m
+        startfs = map (f . fst) (M.union given ++ M.union givenExt)
         f x = One :-> Atom x
 
 
@@ -135,8 +135,8 @@ makeHornClauses isVar ts = (m, startfs ++ fsdpg)
                 f xs = makeAnd (map Atom xs) :-> Atom n
 -}
 
-hornOrder :: (EqTerm -> Bool) -> [EqTerm] -> [EqTerm]
-hornOrder isVar ts = (uncurry makeHornOrder) (makeHornClauses isVar ts)
+hornOrder :: (EqTerm -> Bool) -> [EqTerm] -> [EqTerm] -> [EqTerm] -> [EqTerm]
+hornOrder isVar given givenExt ts = (uncurry makeHornOrder) (makeHornClauses isVar given givenExt ts)
 
 
 allNotEmptyCombinations :: (Ord a) => [a] -> [[a]]

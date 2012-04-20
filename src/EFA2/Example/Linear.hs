@@ -8,9 +8,10 @@ import qualified Data.Map as M
 
 import Control.Monad.Error
 
+import EFA2.Topology.Topology
+
 import EFA2.Interpreter.Arith
 import EFA2.Interpreter.Env
-import EFA2.Topology.Graph
 import EFA2.Example.SymSig
 
 

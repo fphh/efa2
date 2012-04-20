@@ -16,13 +16,13 @@ import Debug.Trace
 
 
 import EFA2.Topology.RandomTopology
-import EFA2.Topology.Graph
+import EFA2.Topology.Topology
 import EFA2.Solver.Equation
 import EFA2.Solver.Horn
-import EFA2.Solver.Env
 import EFA2.Solver.IsVar
 import EFA2.Solver.DirEquation
-import EFA2.Signal.Arith
+import EFA2.Interpreter.Arith
+import EFA2.Interpreter.Env
 import EFA2.Utils.Utils
 
 
@@ -39,15 +39,17 @@ prop_solver seed = do
       xenvts = envToEqTerms (randomXEnv 0 1 g)
       eenvts = envToEqTerms (randomEtaEnv 17 1 g)
 
-      ts = terms ++ xenvts ++ eenvts ++ mkEdgeEq 0 0 g ++ mkNodeEq 0 0 g
+      ts = terms ++ xenvts ++ eenvts ++ mkEdgeEq g ++ mkNodeEq g
       isV = isVar g ts
       (given, nov, givExt, rest) = splitTerms isV ts
       ss = givExt ++ rest
 
       ho = hornOrder isV ss
       dirs = directEquations isV ho
+      noEdges = length (edges g)
 
-  return $ length dirs == 2*(length (edges g)) - 1 -- minus one, because one PowerIdx is given.
+  -- For every edge one x plus all PowerIdx minus one, because one PowerIdx is given.
+  return $ length dirs == noEdges + (2*noEdges - 1)
 
 
 prop_orderOfEqs :: Int ->  Gen Bool
@@ -60,7 +62,7 @@ prop_orderOfEqs seed = do
       xenvts = envToEqTerms (randomXEnv 0 1 g)
       eenvts = envToEqTerms (randomEtaEnv 17 1 g)
 
-      ts = terms ++ xenvts ++ eenvts ++ mkEdgeEq 0 0 g ++ mkNodeEq 0 0 g
+      ts = terms ++ xenvts ++ eenvts ++ mkEdgeEq g ++ mkNodeEq g
       isV = isVar g ts
       (given, nov, givExt, rest) = splitTerms isV ts
       ss = givExt ++ rest

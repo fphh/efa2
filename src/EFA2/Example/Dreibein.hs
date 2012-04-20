@@ -5,11 +5,11 @@ module EFA2.Example.Dreibein (dreibein) where
 import Data.Graph.Inductive
 import qualified Data.Map as M
 
+import EFA2.Topology.Topology
 import EFA2.Interpreter.Arith
 import EFA2.Interpreter.Env
-import EFA2.Topology.Graph
 import EFA2.Example.SymSig
-
+import EFA2.Utils.Utils
 
 
 numOf = 3
@@ -25,7 +25,7 @@ sigs = M.fromList [ (PowerIdx 0 0 0 1, replicate numOf 3.0),
 
 dreibein :: TheGraph [Val]
 dreibein = TheGraph g sigs
-   where g = mkGraph (makeNodes no ++ makeNodes no2) (makeEdges no ++ makeEdges (1:no2))
+   where g = mkGraph (makeNodes $ map f (no ++ no2)) (makeEdges (pairs no) ++ makeEdges (pairs (1:no2)))
          no = [0..2]
          no2 = [3]
- 
+         f x = (x, Crossing)

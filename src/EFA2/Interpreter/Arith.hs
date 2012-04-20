@@ -2,6 +2,7 @@
 
 module EFA2.Interpreter.Arith where
 
+
 type Val = Double  
 type PSample = Val
 type TSample = Val
@@ -39,3 +40,4 @@ instance (Arith a) => Arith [a] where
          (.+) = zipWith (.+)
          (.*) = zipWith (.*)
          (./) = zipWith (./)
+

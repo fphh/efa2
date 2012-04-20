@@ -15,12 +15,11 @@ import EFA2.Utils.Utils
 
 
 -- | Section, record, from, to.
-data Tableau = Tableau (UV.Vector Bool) (UV.Vector Bool) (UV.Vector Bool) (UV.Vector Bool)
+data Tableau = Tableau (UV.Vector Bool) (UV.Vector Bool) (UV.Vector Bool) (UV.Vector Bool) deriving (Show)
 
 mkTableau :: (UpdateAcc -> EqTerm -> UpdateAcc) -> Int -> [EqTerm] -> Tableau
 mkTableau updatef len ts = Tableau sec rec from to
   where empty = UV.replicate len False
-        x = show sec ++ "\n" ++ show rec ++ "\n" ++ show from ++ "\n" ++ show to ++ "\n"
         sec = UV.update empty us
         rec = UV.update empty ur
         from = UV.update empty uf
@@ -28,6 +27,11 @@ mkTableau updatef len ts = Tableau sec rec from to
         (s, r, f, t) = L.foldl' updatef ([], [], [], []) ts
         b = repeat True
         (us, ur, uf, ut) = (UV.fromList $ zip s b, UV.fromList $ zip r b, UV.fromList $ zip f b, UV.fromList $ zip t b)
+
+
+
+
+
 
 type UpdateAcc = ([Int], [Int], [Int], [Int])
 
@@ -51,21 +55,21 @@ xUpdateVec :: UpdateAcc -> EqTerm -> UpdateAcc
 xUpdateVec (s, r, f, t) (X (XIdx u v w x) := Given) = (u:s, v:s, w:f, x:t)
 xUpdateVec acc _ = acc
 
-
+-- TODO: Das Tableau wird bei jedem Aufruf neu generiert. Das muss nicht sein!
 isVar :: Gr a b -> [EqTerm] -> (EqTerm -> Bool)
 isVar g ts t
   | (Power (PowerIdx s r f t)) <- t = not $ (ps UV.! s) && (pr UV.! r) && (pf UV.! f) && (pt UV.! t)
   | (Eta (EtaIdx s r f t)) <- t = not $ (es UV.! s) && (er UV.! r) && (ef UV.! f) && (et UV.! t)
   | (DPower (DPowerIdx s r f t)) <- t = not $ (dps UV.! s) && (dpr UV.! r) && (dpf UV.! f) && (dpt UV.! t)
   | (DEta (DEtaIdx s r f t)) <- t = not $ (des UV.! s) && (der UV.! r) && (def UV.! f) && (det UV.! t)
-  | (X (XIdx s r f t)) <- t = not $ (xs UV.! s) && (xr UV.! r) && (xf UV.! f) && (xt UV.! t)
+  | (X (XIdx s r f t)) <- t = trace (show tab) $ not $ (xs UV.! s) && (xr UV.! r) && (xf UV.! f) && (xt UV.! t)
   | otherwise = False
-  where len = length (nodes g)
+  where len = 1 + (snd $ nodeRange g)
         Tableau ps pr pf pt = mkTableau powerUpdateVec len ts
         Tableau es er ef et = mkTableau etaUpdateVec len ts
         Tableau dps dpr dpf dpt = mkTableau dpowerUpdateVec len ts
         Tableau des der def det = mkTableau detaUpdateVec len ts
-        Tableau xs xr xf xt = mkTableau xUpdateVec len ts
+        tab@(Tableau xs xr xf xt) = mkTableau xUpdateVec len ts
 
 
 -- | True for 'EqTerm's that are of the form:

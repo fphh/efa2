@@ -84,8 +84,13 @@ instance DrawTopology [Val] where
          drawTopology = drawAbsTopology f
            where f (x, ys) = show x ++ " = " ++ (concatMap (printf "%.3f    ") ys)
 
+instance DrawTopology [InTerm Val] where
+         drawTopology = drawAbsTopology f
+           where f (x, ys) = show x ++ " = " ++ (concatMap showInTerm ys)
+
+
 drawAbsTopology :: (Arith a, Show a) => ((Line, a) -> String) -> Gr b c -> Envs a ->  IO ()
-drawAbsTopology f g (Envs p e dp de x v) = printGraph g show eshow
+drawAbsTopology f g (Envs p dp e de x v) = printGraph g show eshow
   where eshow ps = L.intercalate "\n" $ map f $ mkLst ps
         mkLst (u, v) = [ (PLine u v, p M.! (PowerIdx 0 0 u v)), 
                          (XLine u v, x M.! (XIdx 0 0 u v)),

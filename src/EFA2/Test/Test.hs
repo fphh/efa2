@@ -10,7 +10,7 @@ import qualified EFA2.Test.IsVarTest as IVT
 
 main :: IO ()
 main = do
-  UT.runTests
-  ST.runTests
+  --UT.runTests
+  --ST.runTests
   IVT.runTests
   return ()

@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleInstances, TypeSynonymInstances #-}
 
-module EFA2.Topology.Graph where
+module EFA2.Topology.Topology where
 
 import Data.Maybe
 import Data.Either
@@ -15,7 +15,6 @@ import Control.Monad.Error
 import Debug.Trace
 
 import EFA2.Utils.Utils
-import EFA2.Topology.GraphData
 import EFA2.Solver.Equation
 import EFA2.Interpreter.InTerm
 import EFA2.Interpreter.Arith
@@ -25,54 +24,65 @@ import EFA2.Interpreter.Env
 -- Topology Graph
 -- | This is the main topology graph representation.
 
---data TopoGraph = Graph NodeTyp deriving (Show, Eq, Ord)
---data NodeTyp = Storage | Sink | Source | Crossing deriving (Show, Ord, Eq)
+data NodeType = Storage | Sink | Source | Crossing deriving (Show, Ord, Eq)
+
+data NLabel = NLabel { sectionNLabel :: Int,
+                       recordNLabel :: Int,
+                       nodeNLabel :: Int,
+                       nodetypeNLabel :: NodeType } deriving (Show, Eq, Ord)
+
+--data ELabel = ELabel deriving (Show, Eq, Ord)
 
 
-mkLEdge :: Int -> Int -> LEdge ELabel
-mkLEdge x y = (x, y, ELabel x y)
+--mkLEdge :: Int -> Int -> LEdge ELabel
+--mkLEdge x y = (x, y, ELabel x y)
 
-flipLEdge :: LEdge ELabel -> LEdge ELabel
-flipLEdge (x, y, ELabel u v) = (y, x, ELabel v u)
+--flipLEdge :: LEdge ELabel -> LEdge ELabel
+--flipLEdge (x, y, ELabel u v) = (y, x, ELabel v u)
 
-mkLNode :: Int -> LNode NLabel
-mkLNode x = (x, NLabel x)
+--mkLNode :: Int -> LNode NLabel
+--mkLNode n = map (NLabel 0 0) ns
 
+makeNodes :: [(Int, NodeType)] -> [LNode NLabel]
+makeNodes ns = map f ns
+  where f (n, ty) = (n, NLabel 0 0 n ty)
 
-makeEdges :: [Int] -> [LEdge ELabel]
-makeEdges no = map (uncurry mkLEdge) (pairs no)
-
-makeNodes :: [Int] -> [LNode NLabel]
-makeNodes no = map mkLNode no
-
+makeEdges :: [(Int, Int)] -> [LEdge ()]
+makeEdges es = map f es
+  where f (a, b) = (a, b, ())
 
 ------------------------------------------------------------------------
 -- Making equations:
 
 -- | Takes section, record, and a graph.
-mkEdgeEq :: Int -> Int -> Gr a b -> [EqTerm]
-mkEdgeEq s r g = map f ns
+mkEdgeEq :: Gr NLabel () -> [EqTerm]
+mkEdgeEq g = map f ns
   where ns = edges g
-        f (x, y) = mkVar (PowerIdx s r y x) := (mkVar (PowerIdx s r x y)) :* (mkVar (EtaIdx s r x y))
+        f (x, y) = mkVar (PowerIdx ys yr yn xn) := (mkVar (PowerIdx xs xr xn yn)) :* (mkVar (EtaIdx xs xr xn yn))
+          where (NLabel xs xr xn _) = fromJust $ lab g x
+                (NLabel ys yr yn _) = fromJust $ lab g y
 
-
-mkNodeEq :: Int -> Int -> Gr a b -> [EqTerm]
-mkNodeEq s r g = concat $ mapGraph (mkEq s r) g
+mkNodeEq :: Gr NLabel () -> [EqTerm]
+mkNodeEq g = concat $ mapGraph mkEq g
 
 -- | ATTENTION: We must only produce equations, where every variable occurs only once.
 -- This has to do with 'transformEq', which can only factor out variables that occure only once.
-mkEq :: Int -> Int -> ([Node], Node, [Node]) -> [EqTerm]
-mkEq s r (ins, n, outs)
+mkEq :: ([NLabel], NLabel, [NLabel]) -> [EqTerm]
+mkEq (ins, n, outs)
   | length ins == 0 && length outs == 0 = []
   | length ins == 0 && length outs > 0 = xoeqs ++ oeqs'
   | length ins > 0 && length outs == 0 = xieqs ++ ieqs'
   | otherwise = oeqs ++ ieqs ++ xoeqs ++ xieqs ++ oeqs' ++ ieqs'
   where ins' = zip (repeat n) ins
         outs' = zip (repeat n) outs
-        xis = map (mkVar . uncurry (XIdx s r)) ins'
-        xos = map (mkVar . uncurry (XIdx s r)) outs'
-        eis = map (mkVar . uncurry (PowerIdx s r)) ins'
-        eos = map (mkVar . uncurry (PowerIdx s r)) outs'
+
+        xis = map (makeVar XIdx) ins'
+        xos = map (makeVar XIdx) outs'
+        eis = map (makeVar PowerIdx) ins'
+        eos = map (makeVar PowerIdx) outs'
+        -- For section and record, we focus on the current node n.
+        makeVar mkIdx ((NLabel s r n _), (NLabel _ _ n' _)) = mkVar $ mkIdx s r n n'
+
         isum = add eis
         osum = add eos
         ieqs = zipWith3 f eis xis (repeat osum)
@@ -84,11 +94,11 @@ mkEq s r (ins, n, outs)
         xoeqs | length xos > 0 = [Const 1.0 := add xos]
               | otherwise = []
 
-        ieqs' | length eis > 1 = map k $ pairs $ zipWith (,) xis eis
+        ieqs' | length eis > 1 = map g $ pairs $ zipWith (,) xis eis
               | otherwise = []
-        oeqs' | length eos > 1 = map k $ pairs $ zipWith (,) xos eos
+        oeqs' | length eos > 1 = map g $ pairs $ zipWith (,) xos eos
               | otherwise = []
-        k ((x1, e1), (x2, e2)) = x1 :* e2 := x2 :* e1
+        g ((x1, e1), (x2, e2)) = x1 :* e2 := x2 :* e1
 
          
 
