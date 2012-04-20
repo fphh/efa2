@@ -7,9 +7,9 @@ type PSample = Val
 type TSample = Val
 type DTSample = Val
 
-type VSignal = [Val]
-type Power = VSignal
-type Time = VSignal
+type Signal = [Val]
+type Power = Signal
+type Time = Signal
 
 type SignalIdx = Int
 

@@ -32,6 +32,8 @@ import EFA2.IO.Import
 import EFA2.Display.DrawGraph
 import EFA2.Example.SymSig
 
+import EFA2.Signal.Sequence
+
 -- define topology 
 g' :: Gr NLabel ELabel
 g' = mkGraph (makeNodes no) (makeEdges no) 
@@ -42,11 +44,31 @@ main :: IO ()
 main = do
   rec@(Record time sigMap) <- modelicaCSVImport "./linear_res.csv"
   let 
-      sigs :: (PowerMap Power)      
-      sigs =  M.fromList [ (PowerIdx 0 0 0 1,  sigMap M.! (SigId "eflow1.u")),
-                           (PowerIdx 0 0 1 0,  sigMap M.! (SigId "eflow2.u"))]
+    time = [0,10..100]
+    pRec = PowerRecord time pMap              
+    pMap =  M.fromList [ (PPosIdx 0 1,  sigMap M.! (SigId "eflow1.u")),
+                         (PPosIdx 1 0,  sigMap M.! (SigId "eflow2.u"))]
 
-  drawAll [drawTopologyX' g']
+
+--    pMap = M.fromList [ (PPosIdx 0 1,[0,1,2,2,3,4,5,-5,-3,-3,4])]
+--                        (PPosIdx 1 0,[0,1,2,-2,-3,4,5,-5,-3,-3,4])]   
+    
+    pRec0 = addZeroCrossings pRec        
+    sqRec = genSequ pRec0          
+
+      
+      
+
+--  drawAll [drawTopologyX' g']
+  
+  putStrLn "PowerRecord"
+  putStrLn (show pRec)
+
+  putStrLn "PowerRecord + ZeroPoints"
+  putStrLn (show pRec0)
+
+  putStrLn "Sequence"
+  putStrLn (show sqRec)
 
   return ()
 

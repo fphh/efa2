@@ -18,7 +18,7 @@ import Debug.Trace
 
 -- import EFA2.Graph.GraphData
 
-import EFA2.Signal.SignalData
+-- import EFA2.Signal.SignalData
 -- import EFA2.Signal.Sequence
 
 -- import EFA2.Signal.SignalGraph
@@ -35,12 +35,12 @@ sign x | x > 0 = PSign
        | x < 0 = NSign
 
 -- | check for NaN's 
-sampleCheck :: VSignal -> Bool     
+sampleCheck :: Signal -> Bool     
 sampleCheck d = all (not . isNaN) d
 
 
 -- | check signals for same vector length
-equalLengths :: [VSignal] -> Bool
+equalLengths :: [Signal] -> Bool
 equalLengths list | length list == 0 = True
 equalLengths xs = and (map (== n) ns)
   where (n:ns) = map length xs
