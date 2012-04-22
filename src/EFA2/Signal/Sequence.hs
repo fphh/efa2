@@ -43,7 +43,7 @@ type SequPwrRecord = SequData PowerRecord
 
 -- | Flow record to contain flow signals assigned to the tree
 type PPosFlows = PPosData Flow
-data FlowRecord = FlowRecord DTime (PPosFlows) deriving (Show)
+data FlowRecord = FlowRecord Time (PPosFlows) deriving (Show)
 type SequFlowRecord = SequData FlowRecord                
 
 -----------------------------------------------------------------------------------
@@ -82,7 +82,7 @@ genSequFlow (SequData sqPRec) = SequData (map recPartIntegrate sqPRec)
 
 -- | Pre-Integrate all Signals in Record  
 recPartIntegrate :: PowerRecord -> FlowRecord   
-recPartIntegrate pRec@(PowerRecord time pMap) = FlowRecord dtime fMap 
+recPartIntegrate pRec@(PowerRecord time pMap) = FlowRecord time fMap 
   where dtime = dmap' (-) time
         fMap = M.map (sigPartInt dtime) pMap  
         

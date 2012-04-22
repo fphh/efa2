@@ -24,9 +24,9 @@ genSequFState (SequData sqFRec) = SequData $ map genFlowState sqFRec
 
 -- | Function to extract the flow state out of a Flow Record  
 genFlowState :: FlowRecord ->  FlowState
-genFlowState fRec@(FlowRecord dtime flowMap) = FlowState $ M.map  f flowMap  
+genFlowState fRec@(FlowRecord time flowMap) = FlowState $ M.map  f flowMap  
   where f flow | all (== head flowSign) flowSign = head flowSign  where flowSign = map sign flow
-        f flow | otherwise = error ("Error in genFlowState -- different flow signs in one section")                                           
+        f flow | otherwise = error ("Error in genFlowState -- different flow signs in one section : " ++ show (zip time flow)) where flowSign = map sign flow                                       
          
         
 

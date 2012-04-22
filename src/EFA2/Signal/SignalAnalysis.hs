@@ -28,6 +28,9 @@ import EFA2.Utils.Utils
 
 data Sign = PSign | ZSign | NSign deriving (Show, Eq)
 
+-- | Limit for zeroDetection
+zeroDetectionLimit = 10 ^ (-9) 
+
 -- | determine Signal Sign  
 sign :: (Eq a, Ord a, Num a) => a -> Sign
 sign x | x > 0 = PSign

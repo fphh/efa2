@@ -29,16 +29,18 @@ modelicaCSVImport path = do
   return $ modelicaCSVParse text
 
 -- | Parse modelica-generated CSV - files with signal logs   
+-- TODO -- check whether Modelica always doubles the first and last time !!!  
 modelicaCSVParse :: String -> Record
 modelicaCSVParse text = rec
   where csvlines = lines text -- read get all lines
         header =  csvParseHeaderLine $ head csvlines  -- header with labels in first line       
         sigIdents = map SigId (tail header) -- first column is "time" / use Rest
-        columns = transpose (map csvParseDataLine $ tail csvlines) -- rest of lines contains data / transpose from columns to lines
+        -- TODO improve Quick-Fix: cut away first and last csvLine with head and init 
+        columns = transpose (map csvParseDataLine $ tail $ tail $ init csvlines) -- rest of lines contains data / transpose from columns to lines
         time = if (head header) == "time" then head columns else error $ "Error in csvImport - first column not time : " ++ (head header)
         sigs = tail columns -- generate signals from rest of columns
         rec = Record time  (M.fromList $ zip sigIdents sigs) -- generate Record with signal Map
-                                                                                 
+        
 -- | Parse CSV Header Line
 csvParseHeaderLine :: String -> [String]  
 csvParseHeaderLine line = init $ map read (splitOn "," line)   -- (init . tail) to get rid of Modelica " " quotes 
@@ -46,3 +48,4 @@ csvParseHeaderLine line = init $ map read (splitOn "," line)   -- (init . tail) 
 -- | Parse CSV Data Line
 csvParseDataLine :: String -> [Val]  
 csvParseDataLine line = init $ map read (splitOn "," line)  -- another init to get rid of final , per line
+
