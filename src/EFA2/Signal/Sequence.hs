@@ -96,7 +96,7 @@ sigPartInt dTime power = zipWith (*) dTime $ dmap (\ p1 p2 -> (p1+p2)/2) power
 genSequ ::  PowerRecord -> (Sequ,SequPwrRecord)
 genSequ pRec = removeNilSections (sequ++[lastSec],SequData pRecs)
   where xSig = genXSig pRec
-        pRecs = map (unpackXSig pRec) (seqXSig++[lastXSec])
+        pRecs = map (repackXSig pRec) (seqXSig++[lastXSec])
         ((lastSec,sequ),(lastXSec,seqXSig)) = recyc (tail xSig) (((0,0),[]),([head xSig],[])) 
         
         recyc :: XSig -> ((Sec,Sequ),(XSig,[XSig])) -> ((Sec,Sequ),(XSig,[XSig]))  
@@ -129,10 +129,10 @@ removeNilSections (sequ, SequData pRecs) = (fsequ,SequData fRecs)
             
 -- | Function to detect and classify a step over several signals
 stepDetect :: XSample -> XSample -> EventType 
-stepDetect  (_,row1) (_,row2) = f stepList
+stepDetect  (t1,row1) (t2,row2) = f stepList
   where stepList = zipWith stepX row1 row2
         f stepList | all (==NoStep) stepList = NoEvent
-        f stepList | any (==ZeroCrossingStep) stepList = error "Error in stepDetect - Zero Crossing"
+        f stepList | any (==ZeroCrossingStep) stepList = error $ "Error in stepDetect - Zero Crossing - t1: " ++ show t1 ++ " t2 :" ++ (show t2)
         f stepList | any (==LeavesZeroStep) stepList && (not $ any (==BecomesZeroStep) stepList) = LeftEvent
         f stepList | (not $ any (==LeavesZeroStep) stepList) && any (==BecomesZeroStep) stepList = RightEvent
         f stepList | any (==LeavesZeroStep) stepList && any (==BecomesZeroStep) stepList = MixedEvent
@@ -148,15 +148,15 @@ stepX s1 s2 | otherwise = NoStep  -- nostep
 -----------------------------------------------------------------------------------
 -- | Function to add Zero Crossing Points into the signals and the time 
 addZeroCrossings ::  PowerRecord -> PowerRecord    
-addZeroCrossings pRec = unpackXSig pRec xSigNew 
+addZeroCrossings pRec = repackXSig pRec xSigNew 
   where xSig = genXSig pRec
-        xSigNew = (concat $ dmap f xSig) ++ [last xSig]
+        xSigNew = mytraceList 0 "xSigNew" "" $ (concat $ dmap f xSig) ++ [last xSig]
     
         f :: (TSample,PSampleRow) ->  (TSample,PSampleRow) -> [(TSample,PSampleRow)]
-        f (t1, row1) (t2, row2) = zip ([t1]++zeroCrossingTimes) ([row1]++zipWith g (zip row1 row2) zeroCrossings)  
+        f (t1, row1) (t2, row2) = zip ([t1]++zeroCrossingTimes) ([row1]++(transpose $ zipWith g (zip row1 row2) zeroCrossings))  
           where 
             -- create list of all zero crossing times
-            zeroCrossingTimes = L.sort $ concat $ zeroCrossings :: [TSample]
+            zeroCrossingTimes = mytrace 0 "" "zeroCrossingTimes" $ L.sort $ concat $ zeroCrossings :: [TSample]
             zeroCrossings = zipWith h2 row1 row2 :: [[TSample]]
             h2 :: PSample -> PSample -> Time 
             h2 p1 p2 | sign p1 == PSign && sign p2 == NSign = [calcZeroTime (t1,p1) (t2,p2)]
@@ -164,7 +164,7 @@ addZeroCrossings pRec = unpackXSig pRec xSigNew
             h2 _  _ = []
 
             g :: (PSample,PSample) -> [TSample] -> [PSample]
-            g (p1,p2) zeroCrossing = interpPowers (t1,p1) (t2,p2) zeroCrossingTimes zeroCrossing
+            g (p1,p2) zeroCrossing = mytrace 0 "interp" "" $ interpPowers (t1,p1) (t2,p2) zeroCrossingTimes zeroCrossing
 
 -----------------------------------------------------------------------------------
 -- | Interpolation Functions
@@ -190,8 +190,8 @@ genXSig (PowerRecord time pmap) =  zip time (transpose $ M.elems pmap)
 
 
 -- | Function to regenerate pMap from pRows
-unpackXSig :: PowerRecord -> XSig -> PowerRecord
-unpackXSig (PowerRecord _ pmap) xSig  = PowerRecord time (M.fromList $ zipWith h2 (M.toList pmap) sigs)
+repackXSig :: PowerRecord -> XSig -> PowerRecord
+repackXSig (PowerRecord _ pmap) xSig  = PowerRecord time (M.fromList $ zipWith h2 (M.toList pmap) sigs)
   where (time,rows) = unzip xSig
         sigs = transpose rows
         h2 (key,_) sig = (key,sig) -- format the results

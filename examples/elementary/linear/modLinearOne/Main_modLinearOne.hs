@@ -47,13 +47,13 @@ main :: IO ()
 main = do
   rec@(Record time sigMap) <- modelicaCSVImport "./linear_res.csv"
   let 
-    time = [0,10..100]
+--    time = [0,10..100]
     pRec = PowerRecord time pMap              
---    pMap =  M.fromList [ (PPosIdx 0 1,  sigMap M.! (SigId "eflow1.u")),
---                         (PPosIdx 1 0,  sigMap M.! (SigId "eflow2.u"))]
+    pMap =  M.fromList [ (PPosIdx 0 1,  sigMap M.! (SigId "eflow1.u")),
+                         (PPosIdx 1 0,  sigMap M.! (SigId "eflow2.u"))]
 
 
-    pMap = M.fromList [ (PPosIdx 0 1,[0,1,2,2,3,4,5,-5,-3,-3,4])]
+--    pMap = M.fromList [ (PPosIdx 0 1,[0,1,2,2,3,4,5,-5,-3,-3,4])]
 --                        (PPosIdx 1 0,[0,1,2,-2,-3,4,5,-5,-3,-3,4])]   
     
     pRec0 = addZeroCrossings pRec        
@@ -68,10 +68,10 @@ main = do
 --  drawAll [drawTopologyX' g']
   
   putStrLn "PowerRecord"
-  putStrLn (show pRec)
+  putStrLn (myShowList $ genXSig pRec)
 
   putStrLn "PowerRecord + ZeroPoints"
-  putStrLn (show pRec0)
+  putStrLn (myShowList $ genXSig pRec0)
 
   putStrLn "Sequence"
   putStrLn (show sqPRec)
