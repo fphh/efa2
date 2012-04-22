@@ -26,6 +26,8 @@ import EFA2.Interpreter.InTerm
 import EFA2.Interpreter.Env
 import EFA2.Interpreter.Arith
 
+import EFA2.Topology.Flow
+import EFA2.Signal.Sequence
 
 nodeColour :: Attribute 
 nodeColour = FillColor (RGB 230 230 240)
@@ -58,6 +60,14 @@ printGraph g nshow eshow = runGraphvizCanvas Dot (mkDotGraph g (nshow, eshow)) X
 
 drawTopologyX' :: Gr a b -> IO ()
 drawTopologyX' g = printGraph g show show -- runGraphvizCanvas Dot (mkDotGraph g (show, show)) Xlib
+
+drawFlowTop :: FlowTopology -> IO ()
+drawFlowTop (FlowTopology g) = printGraph g show show -- runGraphvizCanvas Dot (mkDotGraph g (show, show)) Xlib
+
+drawSequFlowTops :: SequFlowTops -> IO ()
+drawSequFlowTops (SequData flowTops) = mapM_ drawFlowTop flowTops
+
+
 
 {-
 drawTopologyX :: TheGraph a -> IO ()

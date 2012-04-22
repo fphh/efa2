@@ -77,6 +77,11 @@ mapGraph f g = map f (zip3 ins ns outs)
 dmap :: (a -> a -> b) -> [a] -> [b]
 dmap f l = zipWith f (init l) (tail l)  
 
+-- | mapping a function over a list with using to neighbouring elements 
+dmap' :: (a -> a -> b) -> [a] -> [b]
+dmap' f l = zipWith f (tail l) (init l)  
+
+
 -- | generate an list of indices for a list  
 listIdx :: [a] -> [Int]
 listIdx list = take (length list) $ iterate (+1) 0

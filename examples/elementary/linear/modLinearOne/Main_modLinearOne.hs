@@ -33,6 +33,9 @@ import EFA2.Display.DrawGraph
 import EFA2.Example.SymSig
 
 import EFA2.Signal.Sequence
+import EFA2.Topology.Flow
+--import EFA2.Topology.Flow
+
 
 -- define topology 
 g' :: Gr NLabel ELabel
@@ -46,17 +49,20 @@ main = do
   let 
     time = [0,10..100]
     pRec = PowerRecord time pMap              
-    pMap =  M.fromList [ (PPosIdx 0 1,  sigMap M.! (SigId "eflow1.u")),
-                         (PPosIdx 1 0,  sigMap M.! (SigId "eflow2.u"))]
+--    pMap =  M.fromList [ (PPosIdx 0 1,  sigMap M.! (SigId "eflow1.u")),
+--                         (PPosIdx 1 0,  sigMap M.! (SigId "eflow2.u"))]
 
 
---    pMap = M.fromList [ (PPosIdx 0 1,[0,1,2,2,3,4,5,-5,-3,-3,4])]
+    pMap = M.fromList [ (PPosIdx 0 1,[0,1,2,2,3,4,5,-5,-3,-3,4])]
 --                        (PPosIdx 1 0,[0,1,2,-2,-3,4,5,-5,-3,-3,4])]   
     
     pRec0 = addZeroCrossings pRec        
-    sqRec = genSequ pRec0          
-
-      
+    (sequ,sqPRec) = genSequ pRec0          
+    
+    sqFRec = genSequFlow sqPRec
+    sqFStRec = genSequFState sqFRec
+    
+    sqFlowTops = genSequFlowTops g' sqFStRec
       
 
 --  drawAll [drawTopologyX' g']
@@ -68,7 +74,16 @@ main = do
   putStrLn (show pRec0)
 
   putStrLn "Sequence"
-  putStrLn (show sqRec)
+  putStrLn (show sqPRec)
 
+  putStrLn "Sequence Flow"
+  putStrLn (show sqFRec)
+
+  putStrLn "Sequence Flow"
+  putStrLn (show sqFStRec)
+  
+  drawSequFlowTops sqFlowTops
+  
+  
   return ()
 

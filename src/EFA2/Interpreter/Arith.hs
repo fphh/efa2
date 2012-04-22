@@ -3,13 +3,26 @@
 module EFA2.Interpreter.Arith where
 
 type Val = Double  
-type PSample = Val
-type TSample = Val
-type DTSample = Val
 
+-- Time Signal & Samples
 type Signal = [Val]
+
 type Power = Signal
 type Time = Signal
+
+type PSample = Val
+type TSample = Val
+
+-- Flow Signals and Samples
+type FSignal = [Val]
+
+type Flow = FSignal 
+type DTime = FSignal  
+  
+type DTSample = Val -- Time step
+type FPSample = Val -- Flow Power
+
+
 
 type SignalIdx = Int
 

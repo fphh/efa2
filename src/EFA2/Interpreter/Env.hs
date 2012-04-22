@@ -80,6 +80,10 @@ instance Error (IdxError a) where
 type IdxErrorMonad a = Either (IdxError a)
 -}
 
+
+
+
+
 -- Environments
 type PowerMap a = M.Map PowerIdx a
 type EtaMap a = M.Map EtaIdx a
@@ -88,7 +92,8 @@ type DEtaMap a = M.Map DEtaIdx a
 type XMap a = M.Map XIdx a
 type VarMap a = M.Map VarIdx a
 
-data Envs a = Envs { powerMap :: PowerMap a,
+data Envs a = Envs { --dtime :: a,
+                     powerMap :: PowerMap a,
                      etaMap :: EtaMap a,
                      dpowerMap :: DPowerMap a,
                      detaMap :: DEtaMap a,

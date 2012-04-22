@@ -18,8 +18,18 @@ import EFA2.Interpreter.Arith
 
 import EFA2.Signal.SignalAnalysis
 
+
 -----------------------------------------------------------------------------------
--- | Record & Power Record-- Structure for Handling recorded data
+-- | Indices for Record, Section and Power Position
+data RecIdx = RecIdx Int deriving (Show,Eq,Ord) -- dataset Index
+data SecIdx = SecIdx Int deriving (Show,Eq,Ord)
+data PPosIdx =  PPosIdx !Int !Int  deriving (Show, Eq, Ord)
+
+-----------------------------------------------------------------------------------
+-- | Signal Record & Power Record & Flow -- Structure for Handling recorded data
+
+type PPosData a =  (M.Map PPosIdx a)
+
 
 -- | Signal record to contain original time signals 
 data Record = Record Time SignalMap deriving (Show,Eq)  
@@ -27,23 +37,23 @@ data SigId = SigId !String deriving (Show, Eq, Ord)
 type SignalMap = (M.Map SigId Signal) 
 
 -- | Power record to contain power signals assigned to the tree
-data PPosIdx =  PPosIdx !Int !Int  deriving (Show, Eq, Ord)
-type PPosPowers = (M.Map PPosIdx Power)
+type PPosPowers = PPosData Power
 data PowerRecord = PowerRecord Time (PPosPowers) deriving (Show)
-type SequRecord = SequData PowerRecord                
+type SequPwrRecord = SequData PowerRecord                
+
+-- | Flow record to contain flow signals assigned to the tree
+type PPosFlows = PPosData Flow
+data FlowRecord = FlowRecord DTime (PPosFlows) deriving (Show)
+type SequFlowRecord = SequData FlowRecord                
 
 -----------------------------------------------------------------------------------
 -- Section and Sequence -- Structures to handle Sequence Information and Data
-
--- Section analysis result
+-- | Section analysis result
 type Sequ = [Sec] 
 type Sec = (SignalIdx,SignalIdx)
---data Sec = Sec (SignalIdx,StepType,TSample) (SignalIdx,StepType,TSample) deriving (Show)
 
--- data structure to contain output of section analysis (cutting history in slices)
-type SectionLength = DTSample
 
--- Sequence Vector to Store Section Data  
+-- | Sequence Vector to Store Section Data  
 data SequData a = SequData [a] deriving (Show) -- deriving Show
 data StepType = LeavesZeroStep | BecomesZeroStep | ZeroCrossingStep | NoStep deriving (Eq, Show,Ord)
 data EventType = LeftEvent | RightEvent | MixedEvent | NoEvent
@@ -55,31 +65,35 @@ type XSample = (TSample,PSampleRow)
 -- | Xlist = list of all xSamples
 type XSig = [XSample]
 
+-- | From PowerRecord
+fromFlowRecord :: RecIdx -> SecIdx -> FlowRecord -> Envs FSignal
+fromFlowRecord (RecIdx recIdx) (SecIdx secIdx) fRec@(FlowRecord dTime flowMap) = Envs {powerMap = M.fromList $ map f (M.toList flowMap),
+                                                                                       etaMap = M.empty,
+                                                                                       dpowerMap = M.empty,
+                                                                                       detaMap = M.empty,
+                                                                                       xMap = M.empty,
+                                                                                       varMap = M.empty} --dtime = dTime,
+  where f ((PPosIdx idx1 idx2),(flowSig)) = ((PowerIdx recIdx secIdx idx1 idx2),flowSig)    
 
------------------------------------------------------------------------------------
--- | Function to add Zero Crossing Points into the signals and the time 
-addZeroCrossings ::  PowerRecord -> PowerRecord    
-addZeroCrossings pRec = unpackXSig pRec xSigNew 
-  where xSig = genXSig pRec
-        xSigNew = (concat $ dmap f xSig) ++ [last xSig]
-    
-        f :: (TSample,PSampleRow) ->  (TSample,PSampleRow) -> [(TSample,PSampleRow)]
-        f (t1, row1) (t2, row2) = zip ([t1]++zeroCrossingTimes) ([row1]++zipWith g (zip row1 row2) zeroCrossings)  
-          where 
-            -- create list of all zero crossing times
-            zeroCrossingTimes = L.sort $ concat $ zeroCrossings :: [TSample]
-            zeroCrossings = zipWith h2 row1 row2 :: [[TSample]]
-            h2 :: PSample -> PSample -> Time 
-            h2 p1 p2 | sign p1 == PSign && sign p2 == NSign = [calcZeroTime (t1,p1) (t2,p2)]
-            h2 p1 p2 | sign p1 == NSign && sign p2 == PSign = [calcZeroTime (t1,p1) (t2,p2)]
-            h2 _  _ = []
 
-            g :: (PSample,PSample) -> [TSample] -> [PSample]
-            g (p1,p2) zeroCrossing = interpPowers (t1,p1) (t2,p2) zeroCrossingTimes zeroCrossing
+-- | Generate Sequence Flow 
+genSequFlow :: SequPwrRecord -> SequFlowRecord
+genSequFlow (SequData sqPRec) = SequData (map recPartIntegrate sqPRec)
+
+-- | Pre-Integrate all Signals in Record  
+recPartIntegrate :: PowerRecord -> FlowRecord   
+recPartIntegrate pRec@(PowerRecord time pMap) = FlowRecord dtime fMap 
+  where dtime = dmap' (-) time
+        fMap = M.map (sigPartInt dtime) pMap  
+        
+-- | Partial Signal Integration        
+sigPartInt ::  DTime -> Power -> Flow
+sigPartInt dTime power = zipWith (*) dTime $ dmap (\ p1 p2 -> (p1+p2)/2) power 
+  
 
 -----------------------------------------------------------------------------------
 -- | Function to Generate Time Sequence
-genSequ ::  PowerRecord -> (Sequ,SequRecord)
+genSequ ::  PowerRecord -> (Sequ,SequPwrRecord)
 genSequ pRec = removeNilSections (sequ++[lastSec],SequData pRecs)
   where xSig = genXSig pRec
         pRecs = map (unpackXSig pRec) (seqXSig++[lastXSec])
@@ -106,13 +120,14 @@ genSequ pRec = removeNilSections (sequ++[lastSec],SequData pRecs)
 --            h lastIdx idx | otherwise = recyc xlist (g $ stepDetect x1 x2, f $ stepDetect x1 x2)
             
 -- | Function to remove Nil-Sections which have same start and stop Index            
-removeNilSections :: (Sequ,SequRecord) ->   (Sequ,SequRecord)           
+removeNilSections :: (Sequ,SequPwrRecord) ->   (Sequ,SequPwrRecord)           
 removeNilSections (sequ, SequData pRecs) = (fsequ,SequData fRecs)
   where
     (fsequ,fRecs) = unzip $ filter f $ zip sequ pRecs
     f ((lastIdx,idx),_) | lastIdx == idx = False 
     f _ = True
             
+-- | Function to detect and classify a step over several signals
 stepDetect :: XSample -> XSample -> EventType 
 stepDetect  (_,row1) (_,row2) = f stepList
   where stepList = zipWith stepX row1 row2
@@ -121,13 +136,35 @@ stepDetect  (_,row1) (_,row2) = f stepList
         f stepList | any (==LeavesZeroStep) stepList && (not $ any (==BecomesZeroStep) stepList) = LeftEvent
         f stepList | (not $ any (==LeavesZeroStep) stepList) && any (==BecomesZeroStep) stepList = RightEvent
         f stepList | any (==LeavesZeroStep) stepList && any (==BecomesZeroStep) stepList = MixedEvent
-
+        
+-- | Function to detect and classify a step over one signal
 stepX :: PSample -> PSample -> StepType
 stepX s1 s2 | sign s1==ZSign && sign s2 /= ZSign = LeavesZeroStep -- signal leaves zero
 stepX s1 s2 | sign s1/=ZSign && sign s2 == ZSign = BecomesZeroStep -- signal becomes zero
 stepX s1 s2 | sign s1==PSign && sign s2 == NSign = ZeroCrossingStep
 stepX s1 s2 | sign s1==NSign && sign s2 == PSign = ZeroCrossingStep
 stepX s1 s2 | otherwise = NoStep  -- nostep
+
+-----------------------------------------------------------------------------------
+-- | Function to add Zero Crossing Points into the signals and the time 
+addZeroCrossings ::  PowerRecord -> PowerRecord    
+addZeroCrossings pRec = unpackXSig pRec xSigNew 
+  where xSig = genXSig pRec
+        xSigNew = (concat $ dmap f xSig) ++ [last xSig]
+    
+        f :: (TSample,PSampleRow) ->  (TSample,PSampleRow) -> [(TSample,PSampleRow)]
+        f (t1, row1) (t2, row2) = zip ([t1]++zeroCrossingTimes) ([row1]++zipWith g (zip row1 row2) zeroCrossings)  
+          where 
+            -- create list of all zero crossing times
+            zeroCrossingTimes = L.sort $ concat $ zeroCrossings :: [TSample]
+            zeroCrossings = zipWith h2 row1 row2 :: [[TSample]]
+            h2 :: PSample -> PSample -> Time 
+            h2 p1 p2 | sign p1 == PSign && sign p2 == NSign = [calcZeroTime (t1,p1) (t2,p2)]
+            h2 p1 p2 | sign p1 == NSign && sign p2 == PSign = [calcZeroTime (t1,p1) (t2,p2)]
+            h2 _  _ = []
+
+            g :: (PSample,PSample) -> [TSample] -> [PSample]
+            g (p1,p2) zeroCrossing = interpPowers (t1,p1) (t2,p2) zeroCrossingTimes zeroCrossing
 
 -----------------------------------------------------------------------------------
 -- | Interpolation Functions
@@ -159,8 +196,6 @@ unpackXSig (PowerRecord _ pmap) xSig  = PowerRecord time (M.fromList $ zipWith h
         sigs = transpose rows
         h2 (key,_) sig = (key,sig) -- format the results
 
-
-        
 -- -- | check Record Data -- TODO -- include check on time length == sign length                                                               
 -- recordCheck :: Record -> Bool
 -- recordCheck (Record time sigMap) = smplCheck && equlengthCheck && lengthCheck
