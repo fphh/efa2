@@ -86,6 +86,11 @@ mapGraph f g = map f (zip3 ins ls outs)
 dmap :: (a -> a -> b) -> [a] -> [b]
 dmap f l = zipWith f (init l) (tail l)  
 
+-- | mapping a function over a list with using to neighbouring elements 
+dmap' :: (a -> a -> b) -> [a] -> [b]
+dmap' f l = zipWith f (tail l) (init l)  
+
+
 -- | generate an list of indices for a list  
 listIdx :: [a] -> [Int]
 listIdx list = take (length list) $ iterate (+1) 0
@@ -116,3 +121,12 @@ diffByAtMostOne s t = (S.size t > 1) && (S.size (t S.\\ s) == 1)
 
 hasSameVariable :: (Ord a) => S.Set a -> S.Set a -> Bool
 hasSameVariable s t = S.size (S.intersection s t) > 0
+
+
+debugLevel = 0
+
+-- mytrace for single values
+mytrace dbgLevel function varName var = if debugLevel >= dbgLevel then trace ("myTrace: " ++ show function ++ "-" ++ show varName ++ " : " ++ show var) var else var
+
+-- mytrace for lists
+mytraceList dbgLevel function varName var = if debugLevel >= dbgLevel then trace ("myTraceList: " ++ show function ++ "-" ++ show varName ++ " : " ++ myShowList var) var else var

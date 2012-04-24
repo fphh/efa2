@@ -4,13 +4,27 @@ module EFA2.Interpreter.Arith where
 
 
 type Val = Double  
+
+-- Time Signal & Samples
+type Signal = [Val]
+
+type Power = Signal
+type Time = Signal
+
 type PSample = Val
 type TSample = Val
-type DTSample = Val
 
-type VSignal = [Val]
-type Power = VSignal
-type Time = VSignal
+-- Flow Signals and Samples
+type FSignal = [Val]
+
+type Flow = FSignal 
+type DTime = FSignal  
+  
+type DTSample = Val -- Time step
+type FPSample = Val -- Flow Power
+
+type Container = []
+
 
 type SignalIdx = Int
 
@@ -32,7 +46,7 @@ instance Arith Val where
          (.*) = (*)
          (./) = (/)
 
-instance (Arith a) => Arith [a] where
+instance (Arith a) => Arith (Container a) where
          zero = repeat (zero :: a)
          cst x = repeat (cst x :: a)
          neg = map neg

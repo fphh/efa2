@@ -46,6 +46,10 @@ instance Ord DEtaIdx where
                where f u v = if u < v then (u, v) else (v, u)
 
 
+
+
+
+
 -- Environments
 type PowerMap a = M.Map PowerIdx a
 type EtaMap a = M.Map EtaIdx a
@@ -53,6 +57,7 @@ type DPowerMap a = M.Map DPowerIdx a
 type DEtaMap a = M.Map DEtaIdx a
 type XMap a = M.Map XIdx a
 type VarMap a = M.Map VarIdx a
+
 
 data Envs a = Envs { powerMap :: PowerMap a,
                      dpowerMap :: DPowerMap a,
