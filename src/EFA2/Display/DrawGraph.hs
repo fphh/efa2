@@ -82,21 +82,23 @@ class DrawTopology a where
 
 instance DrawTopology [Val] where
          drawTopology = drawAbsTopology f
-           where f (x, ys) = show x ++ " = " ++ (concatMap (printf "%.3f    ") ys)
+           where f (x, Just ys) = show x ++ " = " ++ (concatMap (printf "%.3f    ") ys)
+                 f (x, Nothing) = show x ++ " = ♥"
 
 instance DrawTopology [InTerm Val] where
          drawTopology = drawAbsTopology f
-           where f (x, ys) = show x ++ " = " ++ (concatMap showInTerm ys)
+           where f (x, Just ys) = show x ++ " = " ++ (concatMap showInTerm ys)
+                 f (x, Nothing) = show x ++ " = ♥"
 
 
-drawAbsTopology :: (Arith a, Show a) => ((Line, a) -> String) -> Gr b c -> Envs a ->  IO ()
+drawAbsTopology :: (Arith a, Show a) => ((Line, Maybe a) -> String) -> Gr b c -> Envs a ->  IO ()
 drawAbsTopology f g (Envs p dp e de x v) = printGraph g show eshow
   where eshow ps = L.intercalate "\n" $ map f $ mkLst ps
-        mkLst (u, v) = [ (PLine u v, p M.! (PowerIdx 0 0 u v)), 
-                         (XLine u v, x M.! (XIdx 0 0 u v)),
-                         (NLine u v, e M.! (EtaIdx 0 0 u v)),
-                         (XLine v u, x M.! (XIdx 0 0 v u)),
-                         (PLine v u, p M.! (PowerIdx 0 0 v u)) ]
+        mkLst (u, v) = [ (PLine u v, M.lookup (PowerIdx 0 0 u v) p), 
+                         (XLine u v, M.lookup (XIdx 0 0 u v) x),
+                         (NLine u v, M.lookup (EtaIdx 0 0 u v) e),
+                         (XLine v u, M.lookup (XIdx 0 0 v u) x),
+                         (PLine v u, M.lookup (PowerIdx 0 0 v u) p) ]
 {-
 instance DrawTopology InTerm where
          drawTopology = drawAbsTopology f

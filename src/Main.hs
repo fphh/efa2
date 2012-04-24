@@ -37,7 +37,7 @@ import EFA2.Display.DrawGraph
 import EFA2.Example.SymSig
 
 import EFA2.Example.Dreibein
---import EFA2.Example.Linear
+import EFA2.Example.Linear
 --import EFA2.Example.LinearOne
 --import EFA2.Example.LinearX
 --import EFA2.Example.LinearTwo
@@ -54,13 +54,13 @@ import EFA2.Example.Vierbein
 
 main :: IO ()
 main = do
-  let --g = randomTopology 41 10 3
+  let g = randomTopology 41 10 3.0
       --g = randomTopology 0 100 4.0
-      TheGraph g _ = loop
+      --TheGraph g _ = loop
       --TheGraph g sigs = dreibein
       sigs = M.fromList [ (PowerIdx 0 0 0 1, [3.0]) ]
 
-      xsigs = randomXEnv 17 1 g
+      xsigs = (randomXEnv 17 1 g)
       esigs = randomEtaEnv 17 1 g
 
       penvts = envToEqTerms sigs
@@ -69,16 +69,18 @@ main = do
 
       --ts = penvts ++ mkEdgeEq g ++ mkNodeEq g
       ts = penvts ++ xenvts ++ eenvts ++ mkEdgeEq g ++ mkNodeEq g
-
-      --isV = isVar g ts
-      isV = isVarFromEqs ts
+      varset = L.foldl' f S.empty ts
+      f acc (v := Given) = S.insert v acc
+      f acc _ = acc
+      isV = isVarFromEqs varset
 
       (given, nov, givExt, rest) = splitTerms isV ts
-      ss = given ++ givExt ++ rest
 
-      dpg = dpgDiffByAtMostOne isV ss
+      dpg = dpgDiffByAtMostOne isV (givExt ++ rest)
+      dpg2 = dpgHasSameVariable isV (givExt ++ rest)
+      dpg3 = L.foldl' (flip delEdge) dpg2 (edges dpg)
 
-      ho = hornOrder isV ss
+      ho = hornOrder isV givExt rest
       dirs = directEquations isV ho
       envs = Envs sigs M.empty esigs M.empty xsigs M.empty
       --envs = Envs sigs M.empty M.empty M.empty M.empty M.empty
@@ -88,29 +90,25 @@ main = do
       res :: Envs [Val]
       res = interpretFromScratch gd
 
-  putStrLn (showEqTerms xenvts)
   putStrLn ("Number of nodes: " ++ show (noNodes g))
   putStrLn ("Number of edges: " ++ show (length $ edges g))
   putStrLn "===================="
   putStrLn ("Number of undeq: " ++ show (length ts))
   putStrLn ("Number of given: " ++ show (length given))
-  putStrLn (showEqTerms given)
-
   putStrLn ("Number of noVar: " ++ show (length nov))
-  putStrLn (showEqTerms nov)
 
   putStrLn ("Number of gvExt: " ++ show (length givExt))
-  putStrLn (showEqTerms givExt)
   putStrLn ("Number of rest : " ++ show (length rest))
-  putStrLn (showEqTerms rest)
 
   putStrLn "===================="
   putStrLn ("Number of equations solved: " ++ show (length dirs))
   --putStrLn (showEqTerms ts)
   putStrLn (showInTerms gd)
   --putStrLn stderr (show res)
+  --drawTopologyX' g
+
+
   drawAll [
     drawTopologyX' g,
 
-    drawTopology g res,
-    drawDependencyGraph dpg ]
+    drawTopology g res ]

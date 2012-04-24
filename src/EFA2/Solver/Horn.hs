@@ -7,7 +7,9 @@ import Data.Maybe
 import qualified Data.List as L
 import qualified Data.Set as S
 import qualified Data.Map as M
+
 import Data.Graph.Inductive
+import Data.Function
 
 import Debug.Trace
 
@@ -112,31 +114,38 @@ makeHornOrder m formulae = map ((m M.!) . fromAtom) fs'
   where Just fs = horn formulae
         fs' = map snd (S.toAscList fs)
 
-makeHornClauses :: (EqTerm -> Bool) -> [EqTerm] -> [EqTerm] -> [EqTerm] -> (M.Map Node EqTerm, [Formula])
-makeHornClauses isVar given givenExt ts = (m, startfs ++ fsdpg)
-  where m = M.fromList (labNodes dpg)
-        dpg = dpgDiffByAtMostOne isVar (given ++ givenExt ++ ts)
-        fsdpg = graphToHorn dpg
+-- | Filter equations which contain the same variables.
+-- Given terms are also filtered, as the contain no variables.
+filterUnneeded :: (EqTerm -> Bool) -> [EqTerm] -> [EqTerm]
+filterUnneeded isVar ts = map (fst . head) $ L.groupBy (\x y -> snd x == snd y) (map (\t -> (t, mkVarSet isVar t)) ts)
 
-        (given, _, givenExt, _) = splitTerms isVar m
-        startfs = map (f . fst) (M.union given ++ M.union givenExt)
+ 
+makeHornClauses :: (EqTerm -> Bool) -> [EqTerm] -> [EqTerm] -> (M.Map Node EqTerm, [Formula])
+makeHornClauses isVar givenExt rest = (m, startfs ++ fsdpg ++ fsdpg2)
+  where m = M.fromList (labNodes dpg)
+        ts = givenExt ++ rest
+        dpg = dpgDiffByAtMostOne isVar ts
+        fsdpg = graphToHorn dpg
+        ext = filter (flip elem givenExt . snd) (labNodes dpg)
+
+        startfs = map (f . fst) ext
         f x = One :-> Atom x
 
-
-{-
         dpg2 = dpgHasSameVariable isVar ts
-        dpg3 = L.foldl' (flip delEdge) dpg2 (edges dpg1)
-        fsdpg2 = concat $ mapGraph g dpg3
+        dpg3 = L.foldl' (flip delEdge) dpg2 (edges dpg)
+        fsdpg2 = concat $ mapGraphNodes g dpg3
         mset = M.map (mkVarSet isVar) m
-        g (_, n, _) | isGiven (m M.! n) = []
-        g ([], _, _) = []
-        g (ins, n, _) = map f sc
-          where sc = setCoverBruteForce mset n ins
-                f xs = makeAnd (map Atom xs) :-> Atom n
--}
 
-hornOrder :: (EqTerm -> Bool) -> [EqTerm] -> [EqTerm] -> [EqTerm] -> [EqTerm]
-hornOrder isVar given givenExt ts = (uncurry makeHornOrder) (makeHornClauses isVar given givenExt ts)
+        g ([], _, _) = []
+        g (ins, n, _) = catMaybes (map f sc)
+          where --sc = greedyCover mset n ins
+                sc = setCoverBruteForce mset n ins
+                f [] = Nothing
+                f xs = Just (makeAnd (map Atom xs) :-> Atom n)
+
+
+hornOrder :: (EqTerm -> Bool) -> [EqTerm] -> [EqTerm] -> [EqTerm]
+hornOrder isVar givenExt ts = (uncurry makeHornOrder) (makeHornClauses isVar givenExt ts)
 
 
 allNotEmptyCombinations :: (Ord a) => [a] -> [[a]]
@@ -148,10 +157,20 @@ allNotEmptyCombinations xs = filter (not .null) $ map (map fst) zs
 
 
 setCoverBruteForce :: M.Map Node (S.Set EqTerm) -> Node -> [Node] -> [[Node]]
---setCoverBruteForce _ _ ns | length ns > 6 = []
+setCoverBruteForce _ _ ns | length ns > 16 = trace (show (length ns)) []
 setCoverBruteForce m n ns = map fst $ filter p xs
   where s = m M.! n
         combs = allNotEmptyCombinations ns
         xs = zip combs (map f combs)
         f ys = S.unions $ map (m M.!) ys
         p (c, t) = S.size (s S.\\ t) < 2
+
+greedyCover :: M.Map Node (S.Set EqTerm) -> Node -> [Node] -> [[Node]]
+greedyCover m n ns = [go s ns]
+  where s = m M.! n
+        go s _ | S.size s < 2 = []
+        go _ [] = error "no set cover"
+        go s ns = x:(go (s S.\\ s') ns')
+          where sets = map (\a -> (a, m M.! a)) ns
+                (x, s') = head $ L.sortBy (compare `on` (S.size . (s S.\\) . snd)) sets
+                ns' = L.delete x ns

@@ -128,8 +128,15 @@ isStaticVar = not . isCompoundTerm
 
 -- | True for variables that don't appear in 'Given' equations.
 -- Used mainly as a reference implementation for 'isVar'.
+isVarFromEqs :: S.Set EqTerm -> (EqTerm -> Bool)
+isVarFromEqs s t = not (S.member t s || isCompoundTerm t) 
+
+{-
+-- | True for variables that don't appear in 'Given' equations.
+-- Used mainly as a reference implementation for 'isVar'.
 isVarFromEqs :: [EqTerm] -> (EqTerm -> Bool)
 isVarFromEqs ts t = not (S.member t s || isCompoundTerm t) 
   where s = L.foldl' f S.empty ts
         f acc (v := Given) = S.insert v acc
         f acc _ = acc
+-}

@@ -22,7 +22,7 @@ data DPowerIdx = DPowerIdx !Int !Int !Int !Int deriving (Show, Ord, Eq)
 
 -- | This variable type can be used to express arbitrary relations.
 -- You can variables also make dependent on section and record.
-data VarIdx = VarIdx !Int !Int !Int deriving (Show, Ord, Eq)
+data VarIdx = VarIdx !Int !Int !Int !Int deriving (Show, Ord, Eq)
 
 -- EtaIdx x y == EtaIdx y x
 instance Eq EtaIdx where

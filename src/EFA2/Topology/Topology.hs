@@ -94,12 +94,13 @@ mkEq (ins, n, outs)
         xoeqs | length xos > 0 = [Const 1.0 := add xos]
               | otherwise = []
 
-        ieqs' | length eis > 1 = map g $ pairs $ zipWith (,) xis eis
+        ieqs' | length eis > 1 = concatMap g $ pairs $ zipWith (,) xis eis
               | otherwise = []
-        oeqs' | length eos > 1 = map g $ pairs $ zipWith (,) xos eos
+        oeqs' | length eos > 1 = concatMap g $ pairs $ zipWith (,) xos eos
               | otherwise = []
-        g ((x1, e1), (x2, e2)) = x1 :* e2 := x2 :* e1
-
+        g ((x1@(X (XIdx s r x y)), e1), (x2, e2)) = [x1 :* e2 := x2 :* e1]
+        --g ((x1@(X (XIdx s r x y)), e1), (x2, e2)) = [x1 :* e2 := v, v := x2 :* e1]
+        --  where v = Var (VarIdx s r x y)
          
 
 

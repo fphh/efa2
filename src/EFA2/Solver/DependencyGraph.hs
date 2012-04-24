@@ -18,10 +18,10 @@ import EFA2.Solver.Equation
 
 
 dependencyGraph :: (S.Set EqTerm -> S.Set EqTerm -> Bool) -> [S.Set EqTerm] -> Gr (S.Set EqTerm) ()
-dependencyGraph p ss = g
-  where xs = HTL.removeEach ss
+dependencyGraph p vsets = g
+  where xs = HTL.removeEach vsets
         ys = concatMap (uncurry (mkArcs p)) xs
-        m = M.fromList (zip ss [0..])
+        m = M.fromList (zip vsets [0..])
         es = unique $ map (\(x, y) -> (m M.! x, m M.! y, ())) ys
         g = mkGraph (map flipPair $ M.toList m) es
 
@@ -37,18 +37,27 @@ makeDependencyGraph isVar p ts = deq
         dg = dependencyGraph p vsets
         deq = nmap (mt M.!) dg
 
+addToDependencyGraph :: [EqTerm] -> Gr EqTerm () -> Gr EqTerm ()
+addToDependencyGraph ts dpg = L.foldl' f dpg ns
+  where xs = newNodes (length ts) dpg
+        ns = zip xs ts
+        f g n = insNode n g
+
 -- | The produced graph has an edge, iff the solution of one node allows for computing the solution 
 --   of the other node and the other node has exactly one unknown variable.
 dpgDiffByAtMostOne :: (EqTerm -> Bool) -> [EqTerm] -> Gr EqTerm ()
 dpgDiffByAtMostOne isVar = makeDependencyGraph isVar diffByAtMostOne
 
+
 -- | The resulting graph has an edge iff two nodes have one or more variables in common.
 dpgHasSameVariable :: (EqTerm -> Bool) -> [EqTerm] -> Gr EqTerm ()
 dpgHasSameVariable isVar = makeDependencyGraph isVar hasSameVariable
 
+{-
 -- | Produces a graph that has an edge iff there is a variable intersection between two nodes
 --   and there is no path in the 'dpgDiffByAtMostOne'-graph beween these two nodes.
 dpg :: (EqTerm -> Bool) -> [EqTerm] -> Gr EqTerm ()
 dpg isVar ts = L.foldl' (flip delEdge) dpg2 (edges dpg1)
   where dpg1 = dpgDiffByAtMostOne isVar ts
         dpg2 = dpgHasSameVariable isVar ts
+-}
