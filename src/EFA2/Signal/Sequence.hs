@@ -55,6 +55,10 @@ type Sec = (SignalIdx,SignalIdx)
 
 -- | Sequence Vector to Store Section Data  
 data SequData a = SequData [a] deriving (Show) -- deriving Show
+
+instance Functor SequData where
+         fmap f (SequData xs) = SequData (map f xs)
+
 data StepType = LeavesZeroStep | BecomesZeroStep | ZeroCrossingStep | NoStep deriving (Eq, Show,Ord)
 data EventType = LeftEvent | RightEvent | MixedEvent | NoEvent
 type PSampleRow = [PSample]

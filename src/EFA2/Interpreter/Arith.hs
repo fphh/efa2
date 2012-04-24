@@ -23,6 +23,7 @@ type DTime = FSignal
 type DTSample = Val -- Time step
 type FPSample = Val -- Flow Power
 
+type Container = []
 
 
 type SignalIdx = Int
@@ -45,7 +46,7 @@ instance Arith Val where
          (.*) = (*)
          (./) = (/)
 
-instance (Arith a) => Arith [a] where
+instance (Arith a) => Arith (Container a) where
          zero = repeat (zero :: a)
          cst x = repeat (cst x :: a)
          neg = map neg

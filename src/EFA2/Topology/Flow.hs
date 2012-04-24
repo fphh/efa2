@@ -25,7 +25,7 @@ genSequFState (SequData sqFRec) = SequData $ map genFlowState sqFRec
 -- | Function to extract the flow state out of a Flow Record  
 genFlowState :: FlowRecord ->  FlowState
 genFlowState fRec@(FlowRecord time flowMap) = FlowState $ M.map  f flowMap  
-  where f flow = sign (foldl (+) 0 flow)
+  where f flow = sign (foldr (+) 0 flow)
 
 {-
 -- | Function to check flow state on validity
