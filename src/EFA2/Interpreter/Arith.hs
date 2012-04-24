@@ -2,6 +2,7 @@
 
 module EFA2.Interpreter.Arith where
 
+
 type Val = Double  
 
 -- Time Signal & Samples
@@ -52,3 +53,4 @@ instance (Arith a) => Arith [a] where
          (.+) = zipWith (.+)
          (.*) = zipWith (.*)
          (./) = zipWith (./)
+

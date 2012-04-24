@@ -12,7 +12,7 @@ import System.Random
 
 import EFA2.Interpreter.Env
 import EFA2.Interpreter.Arith
-import EFA2.Topology.GraphData
+import EFA2.Topology.Topology
 import EFA2.Utils.Utils
 
 import Debug.Trace
@@ -47,28 +47,27 @@ removeCyclesOfTwo xs = S.toList $ L.foldl' f S.empty xs
   where f acc (x, y) = if (not $ S.member (y, x) acc) then S.insert (x, y) acc else acc
 
 -- | Takes a rando seed, a number of nodes and the ratio edges/nodes. 
-randomTopology :: Int -> Int -> Double -> Gr NLabel ELabel
+randomTopology :: Int -> Int -> Double -> Gr NLabel ()
 randomTopology _ n ratio | cond = error str  
   where cond = ratio < (1.0 - (1 / fromIntegral n))
         str = "randomTopology: Impossible ratio (" ++ show ratio ++ ") for edges/nodes in a connected graph!"
 randomTopology seed n ratio = g
   where g = insEdges edges $ insNodes ns' empty
         (ns, es) = nodesAndEdges seed n
-        ns' = map (\x -> (x, NLabel x)) ns
-        --es' = map (\(x, y) -> (x, y, ELabel x y)) es
+        ns' = map (\x -> (x, NLabel 0 0 x Crossing)) ns
 
         edgeNumber = truncate $ ratio* (fromIntegral n) - (fromIntegral $ length es)
         xs' = pairs $ map (`mod` n) $ shuffle (19*seed-1) edgeNumber
-        es'' = map (\(x, y) -> (x, y, ELabel x y)) (removeCyclesOfTwo (xs' ++ es))
+        es'' = map (\(x, y) -> (x, y, ())) (removeCyclesOfTwo (xs' ++ es))
 
         edges = filter (\(x, y, _) -> x /= y) $ unique es'' --  (es' ++ es'')
 
 
 -- | Takes a seed, the length of the value list and a graph.
-randomEtaEnv :: Int -> Int -> Gr NLabel ELabel -> EtaMap [Val]
+randomEtaEnv :: Int -> Int -> Gr NLabel () -> EtaMap [Val]
 randomEtaEnv seed len g = M.fromList (zip etas rs)
   where etas = concat $ mapGraph f g
-        f (_, n, outs) = zipWith (EtaIdx 0 0) (repeat n) outs
+        f (_, n, outs) = zipWith (EtaIdx 0 0) (repeat (nodeNLabel n)) (map nodeNLabel outs)
         numOfEtas = length etas
         rs = LHT.sliceHorizontal numOfEtas $ take (numOfEtas*len) (randomRs (0.1, 0.9) (mkStdGen seed))
 
@@ -85,10 +84,12 @@ splitGens gen = iterate f gen
   where f = fst . split
 
 -- | Takes a seed, the length of the value list and a graph.
-randomXEnv :: Int -> Int -> Gr NLabel ELabel -> XMap [Val]
+randomXEnv :: Int -> Int -> Gr NLabel () -> XMap [Val]
 randomXEnv seed len g = M.fromList $ concat zs
   where xs = concat $ mapGraph f g
-        f (ins, n, outs) = [zipWith (XIdx 0 0) (repeat n) ins, zipWith (XIdx 0 0) (repeat n) outs]
+        f (ins, n, outs) = [ zipWith (XIdx 0 0) (repeat (nodeNLabel n)) (map nodeNLabel outs) ] 
+
+-- zipWith (XIdx 0 0) (repeat (nodeNLabel n)) (map nodeNLabel ins) ] -- , 
         ys = snd $ L.foldl' (h len) (gens, []) xs
         gens = splitGens (mkStdGen seed)
         h len (gs, acc) cs = (bs, (as, cs):acc)

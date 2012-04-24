@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, FlexibleContexts, ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleInstances, FlexibleContexts, ScopedTypeVariables, TypeSynonymInstances #-}
 
 module EFA2.Interpreter.Interpreter where
 
@@ -16,17 +16,8 @@ import EFA2.Interpreter.InTerm
 import EFA2.Interpreter.Env
 
 
-class ToConst a where
-      toConst :: [Val] -> a
-      toShow :: a -> String
-
-instance ToConst [Val] where
-         toConst = id
-         toShow xs = "[" ++ L.intercalate ", " (map show $ take 3 xs) ++ ", ...]"
-
-
-eqToInTerm :: (Arith a, ToConst a) => Envs a -> EqTerm -> InTerm a
-eqToInTerm envs (Const x) = InConst (toConst $ cst x)
+eqToInTerm :: (Arith a) => Envs a -> EqTerm -> InTerm a
+eqToInTerm envs (Const x) = InConst (cst x)
 eqToInTerm envs (Power idx := Given) = InEqual (PIdx idx) (InGiven (powerMap envs M.! idx))
 eqToInTerm envs (Eta idx := Given) = InEqual (EIdx idx) (InGiven (etaMap envs M.! idx))
 eqToInTerm envs (DPower idx := Given) = InEqual (DPIdx idx) (InGiven (dpowerMap envs M.! idx))
@@ -46,13 +37,13 @@ eqToInTerm envs (x :* y) = InMult (eqToInTerm envs x) (eqToInTerm envs y)
 eqToInTerm envs (x := y) = InEqual (eqToInTerm envs x) (eqToInTerm envs y)
 
 
-showInTerm :: (ToConst a, Show a) => InTerm a -> String
+showInTerm :: (Show a) => InTerm a -> String
 showInTerm (PIdx (PowerIdx s r x y)) = "E:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
 showInTerm (EIdx (EtaIdx s r x y)) = "n:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
 showInTerm (DPIdx (DPowerIdx s r x y)) = "dE:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
 showInTerm (DEIdx (DEtaIdx s r x y)) = "dn:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
 showInTerm (ScaleIdx (XIdx s r x y)) = "x:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
-showInTerm (InConst x) = toShow x
+showInTerm (InConst x) = take 20 (show x) ++ "..."
 showInTerm (InGiven xs) = "given" ++ show xs
 showInTerm (InMinus t) = "-(" ++ showInTerm t ++ ")"
 showInTerm (InRecip t) = "1/(" ++ showInTerm t ++ ")"
@@ -60,7 +51,7 @@ showInTerm (InAdd s t) = "(" ++ showInTerm s ++ " + " ++ showInTerm t ++ ")"
 showInTerm (InMult s t) = showInTerm s ++ " * " ++ showInTerm t
 showInTerm (InEqual s t) = showInTerm s ++ " = " ++ showInTerm t
 
-showInTerms :: (ToConst a, Show a) => [InTerm a] -> String
+showInTerms :: (Show a) => [InTerm a] -> String
 showInTerms ts = L.intercalate "\n" $ map showInTerm ts
 
 
@@ -94,7 +85,7 @@ interpretEq envs (InEqual (ScaleIdx idx) lhs) = envs { xMap = insert idx envs lh
 interpretEq envs (InEqual (VIdx idx) lhs) = envs { varMap = insert idx envs lhs (varMap envs) }
 
 
-interpretFromScratch :: (Num a, Show a, Arith a) => [InTerm [a]] -> Envs [a]
+interpretFromScratch :: (Show a, Arith a) => [InTerm [a]] -> Envs [a]
 interpretFromScratch ts = Envs (cut penv) (cut b) (cut c) (cut d) (cut e) (cut f)
   where Envs penv b c d e f = L.foldl' interpretEq emptyEnv ts
         minLen = minimum $ map snd $ M.toList (M.map length penv)
