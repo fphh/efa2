@@ -9,7 +9,7 @@ import qualified Data.List as L
 import qualified Data.Vector.Unboxed as UV
 import qualified Data.Vector as GV
 
-import EFA2.Topology.GraphData
+import EFA2.Topology.Topology
 import EFA2.Interpreter.Env
 
 import System.Random
@@ -150,13 +150,13 @@ stepX s1 s2 | otherwise = NoStep  -- nostep
 addZeroCrossings ::  PowerRecord -> PowerRecord    
 addZeroCrossings pRec = repackXSig pRec xSigNew 
   where xSig = genXSig pRec
-        xSigNew = mytraceList 0 "xSigNew" "" $ (concat $ dmap f xSig) ++ [last xSig]
+        xSigNew = (concat $ dmap f xSig) ++ [last xSig]
     
         f :: (TSample,PSampleRow) ->  (TSample,PSampleRow) -> [(TSample,PSampleRow)]
         f (t1, row1) (t2, row2) = zip ([t1]++zeroCrossingTimes) ([row1]++(transpose $ zipWith g (zip row1 row2) zeroCrossings))  
           where 
             -- create list of all zero crossing times
-            zeroCrossingTimes = mytrace 0 "" "zeroCrossingTimes" $ L.sort $ concat $ zeroCrossings :: [TSample]
+            zeroCrossingTimes = L.sort $ concat $ zeroCrossings :: [TSample]
             zeroCrossings = zipWith h2 row1 row2 :: [[TSample]]
             h2 :: PSample -> PSample -> Time 
             h2 p1 p2 | sign p1 == PSign && sign p2 == NSign = [calcZeroTime (t1,p1) (t2,p2)]
@@ -171,14 +171,21 @@ addZeroCrossings pRec = repackXSig pRec xSigNew
 
 -- | calculate time of Zero Crossing Point                 
 calcZeroTime :: (TSample,PSample) -> (TSample,PSample) -> TSample 
-calcZeroTime (t1,p1) (t2,p2) = -p1/m+t1 -- time of zero crossing 
+calcZeroTime (t1,p1) (t2,p2) = f t1 t2 
   where m = (p2-p1)/(t2-t1) -- interpolation slope 
+        f t1 t2 | t2 > t1 = -p1/m+t1 -- time of zero crossing 
+        f t1 t2 | t2 == t1 = t1
+        d t1 t2 | t2 < t1 = error ("Error in calcZeroTime- Discontinous time vector - t1: " ++ show t1 ++ " t2: " ++ show t2)
                   
 -- | interpolate Powers at Zero Crossing times 
 interpPowers :: (TSample,PSample) -> (TSample,PSample) -> [TSample] -> [TSample] -> [PSample]        
 interpPowers (t1,p1) (t2,p2) tzeroList tzero = map f tzeroList
   where f tz | [tz]==tzero = 0 -- avoid numeric error and make zero crossing power zero
-        f tz | otherwise = p1+m*(tz-t1) -- interpolate non zero powers
+        f tz | otherwise = g t1 t2 
+          where 
+            g t1 t2 | t2 > t1 = p1+m*(tz-t1) -- interpolate non zero powers
+            g t1 t2 | t2 == t1 = (p1+p2)/2 --
+            g t1 t2 | t2 < t1 =  error ("Error in interpPowers - Discontinous time vector - t1: " ++ show t1 ++ " t2: " ++ show t2)
         m = (p2-p1)/(t2-t1) -- interpolation slope 
 
 -----------------------------------------------------------------------------------

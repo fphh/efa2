@@ -18,18 +18,7 @@ package EFA_Blocks_simple
     connect(gain2.u,u) annotation(Line(points = {{-64.0711,-45.3947},{-79.9342,-45.3947},{-79.9342,-2.30263},{-86.8421,-2.30263}}));
     connect(u,y) annotation(Line(points = {{-86.8421,-2.30263},{74.6711,-2.30263},{74.6711,-1.64474},{83.8816,-1.64474}}));
   end powerCon;
-  block signalSource
-    Modelica.Blocks.Sources.Trapezoid trapezoid1(period = 1) annotation(Placement(visible = true, transformation(origin = {-68.75,26.6447}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-    Modelica.Blocks.Sources.Constant const(k = 0.2) annotation(Placement(visible = true, transformation(origin = {-68.75,-13.8158}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-    Modelica.Blocks.Math.Add add1 annotation(Placement(visible = true, transformation(origin = {39.4737,8.88158}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-    Modelica.Blocks.Interfaces.RealOutput y annotation(Placement(visible = true, transformation(origin = {86.5132,7.89474}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {86.5132,7.89474}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-    annotation(Diagram(), Icon(graphics = {Ellipse(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-63.7584,56.3758},{54.698,-54.3624}}),Text(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-31.5436,-14.094},{24.8322,19.1275}}, textString = "SignalSource")}));
-  equation
-    connect(trapezoid1.y,add1.u1) annotation(Line(points = {{-55.55,26.6447},{-9.53947,26.6447},{-9.53947,16.0816},{25.0737,16.0816}}));
-    connect(const.y,add1.u2) annotation(Line(points = {{-55.55,-13.8158},{-7.56579,-13.8158},{-7.56579,1.68158},{25.0737,1.68158}}));
-    connect(add1.y,y) annotation(Line(points = {{52.6737,8.88158},{76.3158,8.88158},{76.3158,7.89474},{86.5132,7.89474}}));
-  end signalSource;
-  annotation(Diagram(graphics = {Text(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-40.9396,-19.1275},{41.6107,29.1946}}, textString = "Simple EFA Blocks")}));
+  annotation(Diagram(graphics = {Text(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-40.9396,-19.1275},{41.6107,29.1946}}, textString = "Simple EFA Blocks")}), experiment(StartTime = 0.0, StopTime = 1.0, Tolerance = 0.000001));
   block ETA
     Modelica.Blocks.Interfaces.RealInput u annotation(Placement(visible = true, transformation(origin = {-68.0921,-1.64474}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {-68.0921,-1.64474}, extent = {{-12,-12},{12,12}}, rotation = 0)));
     annotation(Diagram(), Icon(graphics = {Rectangle(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-61.5132,48.3553},{73.0263,-62.1711}}),Text(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-15.7895,-7.23684},{-15.7895,-7.23684}}, textString = "eta", textStyle = {TextStyle.Bold}),Text(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-23.3553,-25.3289},{39.8026,22.0395}}, textString = "ETA", fontSize = 12, textStyle = {TextStyle.Bold})}));
@@ -50,5 +39,19 @@ package EFA_Blocks_simple
     connect(switch1.y,y) annotation(Line(points = {{52.6737,-2.96053},{72.6974,-2.96053},{72.6974,-4.60526},{82.2368,-4.60526}}));
     connect(const.y,greaterequal1.u2) annotation(Line(points = {{-53.9053,-26.9737},{-26.9737,-26.9737},{-26.9737,-13.2184},{-25.9132,-13.2184}}));
   end ETA;
+  block signalSource
+    Modelica.Blocks.Sources.Trapezoid trapezoid1(period = Period, amplitude = Amplitude, width = Period / 2) annotation(Placement(visible = true, transformation(origin = {-68.75,26.6447}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Blocks.Sources.Constant const(k = Offset) annotation(Placement(visible = true, transformation(origin = {-68.75,-13.8158}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Blocks.Math.Add add1 annotation(Placement(visible = true, transformation(origin = {39.4737,8.88158}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Blocks.Interfaces.RealOutput y annotation(Placement(visible = true, transformation(origin = {86.5132,7.89474}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {86.5132,7.89474}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    annotation(Diagram(), Icon(graphics = {Ellipse(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-63.7584,56.3758},{54.698,-54.3624}}),Text(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-31.5436,-14.094},{24.8322,19.1275}}, textString = "SignalSource")}));
+    parameter Real Period(start = 1) "Constant Period Value" annotation(Placement(visible = true, transformation(origin = {-57.0138,75.1788}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    parameter Real Amplitude(start = 1) "Constant Amplitude Value" annotation(Placement(visible = true, transformation(origin = {-12.383,75.8499}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    parameter Real Offset(start = 0) "Constant Offset Value" annotation(Placement(visible = true, transformation(origin = {30.5701,75.8499}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  equation
+    connect(trapezoid1.y,add1.u1) annotation(Line(points = {{-55.55,26.6447},{-9.53947,26.6447},{-9.53947,16.0816},{25.0737,16.0816}}));
+    connect(const.y,add1.u2) annotation(Line(points = {{-55.55,-13.8158},{-7.56579,-13.8158},{-7.56579,1.68158},{25.0737,1.68158}}));
+    connect(add1.y,y) annotation(Line(points = {{52.6737,8.88158},{76.3158,8.88158},{76.3158,7.89474},{86.5132,7.89474}}));
+  end signalSource;
 end EFA_Blocks_simple;
 

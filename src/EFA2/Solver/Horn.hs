@@ -113,14 +113,14 @@ makeHornOrder m formulae = map ((m M.!) . fromAtom) fs'
         fs' = map snd (S.toAscList fs)
 
 makeHornClauses :: (EqTerm -> Bool) -> [EqTerm] -> [EqTerm] -> [EqTerm] -> (M.Map Node EqTerm, [Formula])
-makeHornClauses isVar given givenExt ts = (m, startfs ++ fsdpg)
+makeHornClauses isVar given givenExt ts = undefined {-(m, startfs ++ fsdpg)
   where m = M.fromList (labNodes dpg)
         dpg = dpgDiffByAtMostOne isVar (given ++ givenExt ++ ts)
         fsdpg = graphToHorn dpg
 
         (given, _, givenExt, _) = splitTerms isVar m
         startfs = map (f . fst) (M.union given ++ M.union givenExt)
-        f x = One :-> Atom x
+        f x = One :-> Atom x -}
 
 
 {-

@@ -14,8 +14,8 @@ import Control.Monad.Error
 import Debug.Trace
 
 import EFA2.Topology.RandomTopology
-import EFA2.Topology.Graph
-import EFA2.Topology.GraphData
+import EFA2.Topology.Topology
+-- import EFA2.Topology.GraphData
 
 import EFA2.Solver.Equation
 import EFA2.Solver.Horn
@@ -37,20 +37,25 @@ import EFA2.Topology.Flow
 --import EFA2.Topology.Flow
 
 
+-- import EFA2.Example.LinearOne
+
 -- define topology 
-g' :: Gr NLabel ELabel
-g' = mkGraph (makeNodes no) (makeEdges no) 
-  where no = [0..1]
-        
+g' :: Gr NLabel ()
+g' = mkGraph (makeNodes nodes) (makeEdges edges) 
+   where nodes = [(0,Source),(1,Sink)]
+         edges = [(0,1)]
 
 main :: IO ()
 main = do
-  rec@(Record time sigMap) <- modelicaCSVImport "./linear_res.csv"
+  rec@(Record time sigMap) <- modelicaCSVImport "./mod_LinearOne_res_RectAng.csv"
+  
   let 
+    
+    
 --    time = [0,10..100]
     pRec = PowerRecord time pMap              
-    pMap =  M.fromList [ (PPosIdx 0 1,  sigMap M.! (SigId "eflow1.u")),
-                         (PPosIdx 1 0,  sigMap M.! (SigId "eflow2.u"))]
+    pMap =  M.fromList [ (PPosIdx 0 1,  sigMap M.! (SigId "powercon1.u")),
+                         (PPosIdx 1 0,  sigMap M.! (SigId "powercon2.u"))]
 
 
 --    pMap = M.fromList [ (PPosIdx 0 1,[0,1,2,2,3,4,5,-5,-3,-3,4])]
@@ -66,6 +71,9 @@ main = do
       
 
 --  drawAll [drawTopologyX' g']
+  
+  putStrLn "Sequence"
+  putStrLn (myShowList sequ)
   
   putStrLn "PowerRecord"
   putStrLn (myShowList $ genXSig pRec)
