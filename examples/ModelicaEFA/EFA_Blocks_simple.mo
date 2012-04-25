@@ -1,6 +1,4 @@
 package EFA_Blocks_simple
-  block w3_node
-  end w3_node;
   block powerCon
     annotation(Diagram(), Icon(graphics = {Line(points = {{-74.6711,-1.97368},{70.3947,-1.97368},{76.9737,-1.64474},{76.6447,-1.64474}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Text(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-32.5658,-1.31579},{21.7105,33.8816}}, textString = "Connector", fontSize = 12, textStyle = {TextStyle.Bold})}));
     Modelica.Blocks.Interfaces.RealInput u annotation(Placement(visible = true, transformation(origin = {-86.8421,-2.30263}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {-86.8421,-2.30263}, extent = {{-12,-12},{12,12}}, rotation = 0)));
@@ -68,5 +66,16 @@ package EFA_Blocks_simple
     connect(const.y,add1.u2) annotation(Line(points = {{-58.2436,2.00912},{-10.2594,2.00912},{-10.2594,16.8331},{-1.52563,16.8331}}));
     connect(trapezoid1.y,add1.u1) annotation(Line(points = {{-58.2436,42.4696},{-12.2331,42.4696},{-12.2331,31.2331},{-1.52563,31.2331}}));
   end signalSource;
+  block w3_node
+    Modelica.Blocks.Interfaces.RealInput u annotation(Placement(visible = true, transformation(origin = {-72.7273,65.3199}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {-72.7273,65.3199}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    annotation(Diagram(), Icon(graphics = {Line(points = {{-67.6768,66.6667},{-21.8855,2.3569},{52.5253,2.0202},{55.2189,1.6835}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Line(points = {{-21.8855,2.3569},{-74.0741,-61.2795},{-73.7374,-61.2795}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Text(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-23.2323,44.7811},{41.7508,67.0034}}, textString = "3-Way-2ins", fontSize = 12)}));
+    Modelica.Blocks.Interfaces.RealInput realinput2 annotation(Placement(visible = true, transformation(origin = {62.963,3.0303}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {62.963,3.0303}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Blocks.Interfaces.RealInput realinput1 annotation(Placement(visible = true, transformation(origin = {-77.1044,-61.2795}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {-77.1044,-61.2795}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Blocks.Math.Add add1 annotation(Placement(visible = true, transformation(origin = {-8.08081,6.73401}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  equation
+    connect(realinput1,add1.u2) annotation(Line(points = {{-77.1044,-61.2795},{-23.569,-61.2795},{-23.569,-0.465993},{-22.4808,-0.465993}}));
+    connect(u,add1.u1) annotation(Line(points = {{-72.7273,65.3199},{-22.8956,65.3199},{-22.8956,13.934},{-22.4808,13.934}}));
+    connect(add1.y,realinput2) annotation(Line(points = {{5.11919,6.73401},{68.0135,6.73401},{68.0135,3.0303},{62.963,3.0303}}));
+  end w3_node;
 end EFA_Blocks_simple;
 

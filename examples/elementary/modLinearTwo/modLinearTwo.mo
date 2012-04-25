@@ -7,6 +7,7 @@ package modLinearTwo
     EFA_Blocks_simple.powerCon powercon2 annotation(Placement(visible = true, transformation(origin = {14.1414,16.4983}, extent = {{-12,-12},{12,12}}, rotation = 0)));
     EFA_Blocks_simple.ETA eta2(eta = 0.8) annotation(Placement(visible = true, transformation(origin = {39.3939,16.4983}, extent = {{-12,-12},{12,12}}, rotation = 0)));
     EFA_Blocks_simple.powerCon powercon3 annotation(Placement(visible = true, transformation(origin = {64.3098,16.1616}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    annotation(experiment(StartTime = 0.0, StopTime = 1.0, Tolerance = 0.000001));
   equation
     connect(eta2.y,powercon3.u) annotation(Line(points = {{49.2624,15.9457},{54.2088,15.9457},{54.2088,15.8853},{53.8887,15.8853}}));
     connect(powercon2.y,eta2.u) annotation(Line(points = {{24.2072,16.3009},{31.9865,16.3009},{31.9865,16.3009},{31.2229,16.3009}}));
@@ -21,6 +22,7 @@ package modLinearTwo
     EFA_Blocks_simple.powerCon powercon2 annotation(Placement(visible = true, transformation(origin = {14.4781,16.4983}, extent = {{-12,-12},{12,12}}, rotation = 0)));
     EFA_Blocks_simple.ETA eta2(eta = 0.85) annotation(Placement(visible = true, transformation(origin = {38.7205,16.4983}, extent = {{-12,-12},{12,12}}, rotation = 0)));
     EFA_Blocks_simple.powerCon powercon3 annotation(Placement(visible = true, transformation(origin = {64.3098,15.8249}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    annotation(experiment(StartTime = 0.0, StopTime = 1.0, Tolerance = 0.000001));
   equation
     connect(eta2.y,powercon3.u) annotation(Line(points = {{48.589,15.9457},{54.5455,15.9457},{54.5455,15.5486},{53.8887,15.5486}}));
     connect(powercon2.y,eta2.u) annotation(Line(points = {{24.5439,16.3009},{31.6498,16.3009},{31.6498,16.3009},{30.5495,16.3009}}));
@@ -35,6 +37,7 @@ package modLinearTwo
     EFA_Blocks_simple.powerCon powercon2 annotation(Placement(visible = true, transformation(origin = {14.1414,16.4983}, extent = {{-12,-12},{12,12}}, rotation = 0)));
     EFA_Blocks_simple.ETA eta2(eta = 0.8) annotation(Placement(visible = true, transformation(origin = {39.3939,16.4983}, extent = {{-12,-12},{12,12}}, rotation = 0)));
     EFA_Blocks_simple.powerCon powercon3 annotation(Placement(visible = true, transformation(origin = {64.3098,16.1616}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    annotation(experiment(StartTime = 0.0, StopTime = 1.0, Tolerance = 0.000001));
   equation
     connect(eta2.y,powercon3.u) annotation(Line(points = {{49.2624,15.9457},{54.2088,15.9457},{54.2088,15.8853},{53.8887,15.8853}}));
     connect(powercon2.y,eta2.u) annotation(Line(points = {{24.2072,16.3009},{31.9865,16.3009},{31.9865,16.3009},{31.2229,16.3009}}));
@@ -49,6 +52,7 @@ package modLinearTwo
     EFA_Blocks_simple.powerCon powercon2 annotation(Placement(visible = true, transformation(origin = {14.4781,16.4983}, extent = {{-12,-12},{12,12}}, rotation = 0)));
     EFA_Blocks_simple.ETA eta2(eta = 0.85) annotation(Placement(visible = true, transformation(origin = {38.7205,16.4983}, extent = {{-12,-12},{12,12}}, rotation = 0)));
     EFA_Blocks_simple.powerCon powercon3 annotation(Placement(visible = true, transformation(origin = {64.3098,15.8249}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    annotation(experiment(StartTime = 0.0, StopTime = 1.0, Tolerance = 0.000001));
   equation
     connect(eta2.y,powercon3.u) annotation(Line(points = {{48.589,15.9457},{54.5455,15.9457},{54.5455,15.5486},{53.8887,15.5486}}));
     connect(powercon2.y,eta2.u) annotation(Line(points = {{24.5439,16.3009},{31.6498,16.3009},{31.6498,16.3009},{30.5495,16.3009}}));
@@ -63,6 +67,7 @@ package modLinearTwo
     EFA_Blocks_simple.powerCon powercon2 annotation(Placement(visible = true, transformation(origin = {14.1414,16.4983}, extent = {{-12,-12},{12,12}}, rotation = 0)));
     EFA_Blocks_simple.ETA eta2(eta = 0.8) annotation(Placement(visible = true, transformation(origin = {39.3939,16.4983}, extent = {{-12,-12},{12,12}}, rotation = 0)));
     EFA_Blocks_simple.powerCon powercon3 annotation(Placement(visible = true, transformation(origin = {64.3098,16.1616}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    annotation(experiment(StartTime = 0.0, StopTime = 1.0, Tolerance = 0.000001));
   equation
     connect(eta2.y,powercon3.u) annotation(Line(points = {{49.2624,15.9457},{54.2088,15.9457},{54.2088,15.8853},{53.8887,15.8853}}));
     connect(powercon2.y,eta2.u) annotation(Line(points = {{24.2072,16.3009},{31.9865,16.3009},{31.9865,16.3009},{31.2229,16.3009}}));
@@ -77,6 +82,7 @@ package modLinearTwo
     EFA_Blocks_simple.powerCon powercon2 annotation(Placement(visible = true, transformation(origin = {14.4781,16.4983}, extent = {{-12,-12},{12,12}}, rotation = 0)));
     EFA_Blocks_simple.ETA eta2(eta = 0.85) annotation(Placement(visible = true, transformation(origin = {38.7205,16.4983}, extent = {{-12,-12},{12,12}}, rotation = 0)));
     EFA_Blocks_simple.powerCon powercon3 annotation(Placement(visible = true, transformation(origin = {64.3098,15.8249}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    annotation(experiment(StartTime = 0.0, StopTime = 1.0, Tolerance = 0.000001));
   equation
     connect(eta2.y,powercon3.u) annotation(Line(points = {{48.589,15.9457},{54.5455,15.9457},{54.5455,15.5486},{53.8887,15.5486}}));
     connect(powercon2.y,eta2.u) annotation(Line(points = {{24.5439,16.3009},{31.6498,16.3009},{31.6498,16.3009},{30.5495,16.3009}}));
