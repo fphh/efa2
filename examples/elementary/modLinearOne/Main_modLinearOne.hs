@@ -50,7 +50,7 @@ g' = mkGraph (makeNodes nodes) (makeEdges edges)
 
 main :: IO ()
 main = do
-  rec@(Record time sigMap) <- modelicaCSVImport "./mod_LinearOne_res_RectAng.csv"
+  rec@(Record time sigMap) <- modelicaCSVImport "./modLinearOne.RectA_res.csv"
   
   let pRec = PowerRecord time pMap              
       pMap =  M.fromList [ (PPosIdx 0 1,  sigMap M.! (SigId "powercon1.u")),
