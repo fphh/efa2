@@ -77,5 +77,57 @@ package EFA_Blocks_simple
     connect(u,add1.u1) annotation(Line(points = {{-72.7273,65.3199},{-22.8956,65.3199},{-22.8956,13.934},{-22.4808,13.934}}));
     connect(add1.y,realinput2) annotation(Line(points = {{5.11919,6.73401},{68.0135,6.73401},{68.0135,3.0303},{62.963,3.0303}}));
   end w3_node;
+  block ETA_lin
+    parameter Real eta0(start = 1) "Start efficiency value" annotation(Placement(visible = false, transformation(origin = {80.0051,82.28}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    parameter Real etaSlope(start = 0) "Efficiency slope" annotation(Placement(visible = false, transformation(origin = {80.0051,82.28}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    annotation(Icon(graphics = {Rectangle(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-61.5132,48.3553},{73.0263,-62.1711}}),Text(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-15.7895,-7.23684},{-15.7895,-7.23684}}, textString = "ETA_lin", textStyle = {TextStyle.Bold}),Text(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-46.2509,-4.11678},{16.907,43.2516}}, textString = "ETA", fontSize = 12, textStyle = {TextStyle.Bold}),Line(points = {{-54.5455,-58.2492},{59.596,-6.73401},{59.2593,-7.07071}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Line(points = {{-54.8822,-58.2492},{64.9832,-58.2492},{65.9933,-58.2492}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Line(points = {{-54.2088,-57.5758},{-54.2088,40.404}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25)}), Diagram());
+    Modelica.Blocks.Interfaces.RealOutput y annotation(Placement(visible = true, transformation(origin = {82.2368,-4.60526}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {82.2368,-4.60526}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Blocks.Logical.GreaterEqual greaterequal1 annotation(Placement(visible = true, transformation(origin = {-11.5132,-3.61842}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Blocks.Sources.Constant const(k = 0) annotation(Placement(visible = true, transformation(origin = {-67.1053,-26.9737}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Blocks.Interfaces.RealInput u annotation(Placement(visible = true, transformation(origin = {-68.0921,-1.30804}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {-68.0921,-1.30804}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Blocks.Math.Gain Slope annotation(Placement(visible = true, transformation(origin = {-38.0471,70.3704}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Blocks.Math.Add add1 annotation(Placement(visible = true, transformation(origin = {-0.3367,61.9529}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Blocks.Logical.Switch switch1 annotation(Placement(visible = true, transformation(origin = {50.2481,-2.62383}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Blocks.Sources.Constant constant1(k = eta0) annotation(Placement(visible = true, transformation(origin = {-48.4848,34.6801}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Blocks.Sources.Constant constant2(k = 1) annotation(Placement(visible = true, transformation(origin = {-19.1919,-60.6061}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Blocks.Math.Division division1 annotation(Placement(visible = true, transformation(origin = {34.6801,-68.6869}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  equation
+    connect(division1.y,switch1.u3) annotation(Line(points = {{47.8801,-68.6869},{61.6162,-68.6869},{61.6162,-30.6397},{24.5791,-30.6397},{24.5791,-11.7845},{35.8481,-11.7845},{35.8481,-12.2238}}));
+    connect(division1.u2,add1.y) annotation(Line(points = {{20.2801,-75.8869},{12.7946,-75.8869},{12.7946,61.9529},{12.8633,61.9529}}));
+    connect(constant2.y,division1.u1) annotation(Line(points = {{-5.99192,-60.6061},{10.101,-60.6061},{10.101,-61.4869},{20.2801,-61.4869}}));
+    connect(Slope.y,add1.u1) annotation(Line(points = {{-24.8471,70.3704},{-15.4882,70.3704},{-15.4882,69.1529},{-14.7367,69.1529}}));
+    connect(constant1.y,add1.u2) annotation(Line(points = {{-35.2848,34.6801},{-16.1616,34.6801},{-16.1616,54.7529},{-14.7367,54.7529}}));
+    connect(add1.y,switch1.u1) annotation(Line(points = {{12.8633,61.9529},{34.3434,61.9529},{34.3434,6.97617},{35.8481,6.97617}}));
+    connect(switch1.y,y) annotation(Line(points = {{63.4481,-2.62383},{72.6974,-2.62383},{72.6974,-4.60526},{82.2368,-4.60526}}));
+    connect(greaterequal1.y,switch1.u2) annotation(Line(points = {{1.6868,-3.61842},{24.3421,-3.61842},{24.3421,-2.62383},{35.8481,-2.62383}}));
+    connect(Slope.u,u) annotation(Line(points = {{-52.4471,70.3704},{-65.6566,70.3704},{-65.6566,-1.30804},{-68.0921,-1.30804}}));
+    connect(greaterequal1.u1,u) annotation(Line(points = {{-25.9132,-3.61842},{-57.5658,-3.61842},{-57.5658,-1.30804},{-68.0921,-1.30804}}));
+    connect(const.y,greaterequal1.u2) annotation(Line(points = {{-53.9053,-26.9737},{-26.9737,-26.9737},{-26.9737,-13.2184},{-25.9132,-13.2184}}));
+  end ETA_lin;
+  block ETA_var
+    parameter Real etaOffset(start = 1) "Start efficiency value" annotation(Placement(visible = false, transformation(origin = {80.0051,82.28}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    annotation(Icon(graphics = {Rectangle(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-61.5132,48.3553},{73.0263,-62.1711}}),Text(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-15.7895,-7.23684},{-15.7895,-7.23684}}, textString = "ETA_lin", textStyle = {TextStyle.Bold}),Text(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-46.2509,-4.11678},{16.907,43.2516}}, textString = "ETA", fontSize = 12, textStyle = {TextStyle.Bold}),Line(points = {{-54.5455,-58.2492},{59.596,-6.73401},{59.2593,-7.07071}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Line(points = {{-54.8822,-58.2492},{64.9832,-58.2492},{65.9933,-58.2492}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Line(points = {{-54.2088,-57.5758},{-54.2088,40.404}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25)}), Diagram());
+    Modelica.Blocks.Interfaces.RealOutput y annotation(Placement(visible = true, transformation(origin = {82.2368,-4.60526}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {82.2368,-4.60526}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Blocks.Logical.GreaterEqual greaterequal1 annotation(Placement(visible = true, transformation(origin = {-11.5132,-3.61842}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Blocks.Sources.Constant const(k = 0) annotation(Placement(visible = true, transformation(origin = {-67.1053,-26.9737}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Blocks.Interfaces.RealInput u annotation(Placement(visible = true, transformation(origin = {-68.0921,-1.30804}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {-68.0921,-1.30804}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Blocks.Math.Add add1 annotation(Placement(visible = true, transformation(origin = {-0.3367,61.9529}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Blocks.Logical.Switch switch1 annotation(Placement(visible = true, transformation(origin = {50.2481,-2.62383}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Blocks.Sources.Constant constant1(k = etaOffset) annotation(Placement(visible = true, transformation(origin = {-48.4848,34.6801}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Blocks.Sources.Constant constant2(k = 1) annotation(Placement(visible = true, transformation(origin = {-19.1919,-60.6061}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Blocks.Math.Division division1 annotation(Placement(visible = true, transformation(origin = {34.6801,-68.6869}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Blocks.Tables.CombiTable1Ds combitable1ds1(table = [0,1;3,4], columns = 1) annotation(Placement(visible = true, transformation(origin = {-49.0566,69.8113}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  equation
+    connect(u,combitable1ds1.u) annotation(Line(points = {{-68.0921,-1.30804},{-72.327,-1.30804},{-72.327,69.1824},{-63.4566,69.1824},{-63.4566,69.8113}}));
+    connect(division1.y,switch1.u3) annotation(Line(points = {{47.8801,-68.6869},{61.6162,-68.6869},{61.6162,-30.6397},{24.5791,-30.6397},{24.5791,-11.7845},{35.8481,-11.7845},{35.8481,-12.2238}}));
+    connect(division1.u2,add1.y) annotation(Line(points = {{20.2801,-75.8869},{12.7946,-75.8869},{12.7946,61.9529},{12.8633,61.9529}}));
+    connect(constant2.y,division1.u1) annotation(Line(points = {{-5.99192,-60.6061},{10.101,-60.6061},{10.101,-61.4869},{20.2801,-61.4869}}));
+    connect(constant1.y,add1.u2) annotation(Line(points = {{-35.2848,34.6801},{-16.1616,34.6801},{-16.1616,54.7529},{-14.7367,54.7529}}));
+    connect(add1.y,switch1.u1) annotation(Line(points = {{12.8633,61.9529},{34.3434,61.9529},{34.3434,6.97617},{35.8481,6.97617}}));
+    connect(switch1.y,y) annotation(Line(points = {{63.4481,-2.62383},{72.6974,-2.62383},{72.6974,-4.60526},{82.2368,-4.60526}}));
+    connect(greaterequal1.y,switch1.u2) annotation(Line(points = {{1.6868,-3.61842},{24.3421,-3.61842},{24.3421,-2.62383},{35.8481,-2.62383}}));
+    connect(greaterequal1.u1,u) annotation(Line(points = {{-25.9132,-3.61842},{-57.5658,-3.61842},{-57.5658,-1.30804},{-68.0921,-1.30804}}));
+    connect(const.y,greaterequal1.u2) annotation(Line(points = {{-53.9053,-26.9737},{-26.9737,-26.9737},{-26.9737,-13.2184},{-25.9132,-13.2184}}));
+  end ETA_var;
 end EFA_Blocks_simple;
 
