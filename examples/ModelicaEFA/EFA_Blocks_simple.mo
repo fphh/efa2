@@ -24,7 +24,7 @@ package EFA_Blocks_simple
     annotation(Diagram(), Icon(graphics = {Rectangle(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-61.5132,48.3553},{73.0263,-62.1711}}),Text(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-15.7895,-7.23684},{-15.7895,-7.23684}}, textString = "eta", textStyle = {TextStyle.Bold}),Text(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-23.3553,-25.3289},{39.8026,22.0395}}, textString = "ETA", fontSize = 12, textStyle = {TextStyle.Bold})}));
     Modelica.Blocks.Interfaces.RealOutput y annotation(Placement(visible = true, transformation(origin = {82.2368,-4.60526}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {82.2368,-4.60526}, extent = {{-12,-12},{12,12}}, rotation = 0)));
     Modelica.Blocks.Math.Gain gain1(k = eta) annotation(Placement(visible = true, transformation(origin = {-20.0658,42.1053}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-    Modelica.Blocks.Math.Gain gain2 annotation(Placement(visible = true, transformation(origin = {-21.3816,-57.2368}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Blocks.Math.Gain gain2(k = 1 / eta) annotation(Placement(visible = true, transformation(origin = {-21.3816,-57.2368}, extent = {{-12,-12},{12,12}}, rotation = 0)));
     Modelica.Blocks.Logical.Switch switch1 annotation(Placement(visible = true, transformation(origin = {39.4737,-2.96053}, extent = {{-12,-12},{12,12}}, rotation = 0)));
     Modelica.Blocks.Logical.GreaterEqual greaterequal1 annotation(Placement(visible = true, transformation(origin = {-11.5132,-3.61842}, extent = {{-12,-12},{12,12}}, rotation = 0)));
     Modelica.Blocks.Sources.Constant const(k = 0) annotation(Placement(visible = true, transformation(origin = {-67.1053,-26.9737}, extent = {{-12,-12},{12,12}}, rotation = 0)));
@@ -40,18 +40,33 @@ package EFA_Blocks_simple
     connect(const.y,greaterequal1.u2) annotation(Line(points = {{-53.9053,-26.9737},{-26.9737,-26.9737},{-26.9737,-13.2184},{-25.9132,-13.2184}}));
   end ETA;
   block signalSource
-    Modelica.Blocks.Sources.Trapezoid trapezoid1(period = Period, amplitude = Amplitude, width = Period / 2) annotation(Placement(visible = true, transformation(origin = {-68.75,26.6447}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-    Modelica.Blocks.Sources.Constant const(k = Offset) annotation(Placement(visible = true, transformation(origin = {-68.75,-13.8158}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-    Modelica.Blocks.Math.Add add1 annotation(Placement(visible = true, transformation(origin = {39.4737,8.88158}, extent = {{-12,-12},{12,12}}, rotation = 0)));
     Modelica.Blocks.Interfaces.RealOutput y annotation(Placement(visible = true, transformation(origin = {86.5132,7.89474}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {86.5132,7.89474}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-    annotation(Diagram(), Icon(graphics = {Ellipse(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-63.7584,56.3758},{54.698,-54.3624}}),Text(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-31.5436,-14.094},{24.8322,19.1275}}, textString = "SignalSource")}));
-    parameter Real Period(start = 1) "Constant Period Value" annotation(Placement(visible = true, transformation(origin = {-57.0138,75.1788}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-    parameter Real Amplitude(start = 1) "Constant Amplitude Value" annotation(Placement(visible = true, transformation(origin = {-12.383,75.8499}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    annotation(Diagram(), Icon(graphics = {Text(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-23.4628,12.1686},{32.913,45.3901}}, textString = "SignalSource"),Line(points = {{-45.7912,-12.7946},{-20.202,10.7744},{0.673399,-12.4579},{21.2121,9.42757},{37.7104,-13.1313},{58.2491,8.75419}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Rectangle(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-67.0034,75.7576},{72.0539,-52.1886}})}));
+    parameter Real Rect_Period(start = 1) "Constant Period Value" annotation(Placement(visible = true, transformation(origin = {-57.0138,75.1788}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    parameter Real Rect_Amplitude(start = 0) "Constant Amplitude Value" annotation(Placement(visible = true, transformation(origin = {-12.383,75.8499}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    parameter Real Rect_StartTime(start = 0) "Constant Amplitude Value" annotation(Placement(visible = true, transformation(origin = {-12.383,75.8499}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    parameter Real Trap_Period(start = 1) "Constant Period Value" annotation(Placement(visible = true, transformation(origin = {-57.0138,75.1788}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    parameter Real Trap_Amplitude(start = 0) "Constant Amplitude Value" annotation(Placement(visible = true, transformation(origin = {-12.383,75.8499}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    parameter Real Trap_StartTime(start = 0) "Constant Amplitude Value" annotation(Placement(visible = true, transformation(origin = {-12.383,75.8499}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    parameter Real Sine_Period(start = 1) "Constant Period Value" annotation(Placement(visible = true, transformation(origin = {-57.0138,75.1788}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    parameter Real Sine_Amplitude(start = 0) "Constant Amplitude Value" annotation(Placement(visible = true, transformation(origin = {-12.383,75.8499}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    parameter Real Sine_StartTime(start = 0) "Constant Amplitude Value" annotation(Placement(visible = true, transformation(origin = {-12.383,75.8499}, extent = {{-12,-12},{12,12}}, rotation = 0)));
     parameter Real Offset(start = 0) "Constant Offset Value" annotation(Placement(visible = true, transformation(origin = {30.5701,75.8499}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Blocks.Sources.Trapezoid trapezoid1(period = Trap_Period, amplitude = Trap_Amplitude, width = Trap_Period / 2, rising = Trap_Period / 10, falling = Trap_Period / 10, startTime = Trap_StartTime) annotation(Placement(visible = true, transformation(origin = {-71.4436,42.4696}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Blocks.Sources.Constant const(k = Offset) annotation(Placement(visible = true, transformation(origin = {-71.4436,2.00912}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Blocks.Sources.Pulse pulse1(amplitude = Rect_Amplitude, width = Rect_Period * 50, startTime = Rect_StartTime, period = Rect_Period) annotation(Placement(visible = true, transformation(origin = {-71.3805,-39.3939}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Blocks.Math.Add add1 annotation(Placement(visible = true, transformation(origin = {12.8744,24.0331}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Blocks.Sources.Sine sine1(amplitude = Sine_Amplitude, freqHz = 1 / Sine_Period, phase = 0, startTime = Sine_StartTime) annotation(Placement(visible = true, transformation(origin = {-72.0539,-78.1145}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Blocks.Math.Add add2 annotation(Placement(visible = true, transformation(origin = {19.5286,-55.5556}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Blocks.Math.Add add3 annotation(Placement(visible = true, transformation(origin = {51.5152,-11.4478}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   equation
-    connect(trapezoid1.y,add1.u1) annotation(Line(points = {{-55.55,26.6447},{-9.53947,26.6447},{-9.53947,16.0816},{25.0737,16.0816}}));
-    connect(const.y,add1.u2) annotation(Line(points = {{-55.55,-13.8158},{-7.56579,-13.8158},{-7.56579,1.68158},{25.0737,1.68158}}));
-    connect(add1.y,y) annotation(Line(points = {{52.6737,8.88158},{76.3158,8.88158},{76.3158,7.89474},{86.5132,7.89474}}));
+    connect(add2.y,add3.u2) annotation(Line(points = {{32.7286,-55.5556},{37.037,-55.5556},{37.037,-18.6478},{37.1152,-18.6478}}));
+    connect(add1.y,add3.u1) annotation(Line(points = {{26.0744,24.0331},{37.037,24.0331},{37.037,-4.24781},{37.1152,-4.24781}}));
+    connect(add3.y,y) annotation(Line(points = {{64.7152,-11.4478},{75.7576,-11.4478},{75.7576,7.89474},{86.5132,7.89474}}));
+    connect(sine1.y,add2.u2) annotation(Line(points = {{-58.8539,-78.1145},{4.3771,-78.1145},{4.3771,-62.7556},{5.1286,-62.7556}}));
+    connect(pulse1.y,add2.u1) annotation(Line(points = {{-58.1805,-39.3939},{4.3771,-39.3939},{4.3771,-48.3556},{5.1286,-48.3556}}));
+    connect(const.y,add1.u2) annotation(Line(points = {{-58.2436,2.00912},{-10.2594,2.00912},{-10.2594,16.8331},{-1.52563,16.8331}}));
+    connect(trapezoid1.y,add1.u1) annotation(Line(points = {{-58.2436,42.4696},{-12.2331,42.4696},{-12.2331,31.2331},{-1.52563,31.2331}}));
   end signalSource;
 end EFA_Blocks_simple;
 
