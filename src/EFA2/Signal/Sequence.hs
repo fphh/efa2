@@ -75,18 +75,20 @@ type XSig = [XSample]
 
 -- | From PowerRecord
 fromFlowRecord :: SecIdx -> RecIdx -> FlowRecord -> Envs FSignal
-fromFlowRecord (SecIdx secIdx) (RecIdx recIdx) fRec@(FlowRecord dTime flowMap) = Envs {powerMap = M.fromList $ map f (M.toList flowMap),
-                                                                                       dpowerMap = M.empty,
-                                                                                       etaMap = M.empty,
-                                                                                       detaMap = M.empty,
-                                                                                       xMap = M.empty,
-                                                                                       varMap = M.empty} --dtime = dTime,
-  where f ((PPosIdx idx1 idx2),(flowSig)) = ((PowerIdx secIdx recIdx idx1 idx2),flowSig)    
+fromFlowRecord (SecIdx secIdx) (RecIdx recIdx) fRec@(FlowRecord dTime flowMap) = 
+  Envs { powerMap = M.fromList $ map f (M.toList flowMap),
+         dpowerMap = M.empty,
+         etaMap = M.empty,
+         detaMap = M.empty,
+         xMap = M.empty,
+         varMap = M.empty} --dtime = dTime,
+  where f ((PPosIdx idx1 idx2), (flowSig)) = ((PowerIdx secIdx recIdx idx1 idx2), flowSig)    
 
 
 -- | Generate Sequence Flow 
 genSequFlow :: SequPwrRecord -> SequFlowRecord
-genSequFlow (SequData sqPRec) = SequData (map recFullIntegrate sqPRec)
+--genSequFlow (SequData sqPRec) = SequData (map recFullIntegrate sqPRec)
+genSequFlow sqPRec = recFullIntegrate `fmap` sqPRec
 
 
 -- | Pre-Integrate all Signals in Record  
@@ -125,28 +127,27 @@ genSequ pRec = removeNilSections (sequ++[lastSec],SequData pRecs)
         recyc (x2:xlist) (((lastIdx,idx),sequ),(secXSig,sequXSig)) = recyc xlist (g $ stepDetect x1 x2, f $ stepDetect x1 x2)
           where
             x1 = last secXSig
-            f :: EventType -> (XSig,[XSig])
-            f LeftEvent = ([x1,x2],sequXSig++[secXSig]) -- add actual Interval to next section
-            f RightEvent = ([x2],sequXSig++[secXSig++[x2]]) --add actual Interval to last section
-            f MixedEvent = ([x2],sequXSig++[secXSig]++[[x1,x2]]) -- make additional Mini--Section 
-            f NoEvent = (secXSig++[x2],sequXSig) -- continue incrementing
-            g :: EventType -> (Sec,Sequ)            
-            g LeftEvent = ((idx,idx+1),sequ++[(lastIdx,idx)])
-            g RightEvent = ((idx+1,idx+1),sequ++[(lastIdx,idx+1)])
-            g MixedEvent = ((idx+1,idx+1),sequ++[(lastIdx,idx)]++[(idx,idx+1)])
-            g NoEvent = ((lastIdx,idx+1),sequ)
-            inc (lastIdx,idx) = (lastIdx,idx+1) 
-            restart (lastIdx,idx) = (idx,idx+1)
+            f :: EventType -> (XSig, [XSig])
+            f LeftEvent = ([x1,x2], sequXSig ++ [secXSig])           -- add actual Interval to next section
+            f RightEvent = ([x2], sequXSig ++ [secXSig ++ [x2]])     --add actual Interval to last section
+            f MixedEvent = ([x2], sequXSig ++ [secXSig]++ [[x1,x2]]) -- make additional Mini--Section 
+            f NoEvent = (secXSig ++ [x2], sequXSig)                  -- continue incrementing
+            g :: EventType -> (Sec, Sequ)            
+            g LeftEvent = ((idx, idx+1), sequ ++ [(lastIdx, idx)])
+            g RightEvent = ((idx+1, idx+1), sequ ++ [(lastIdx, idx+1)])
+            g MixedEvent = ((idx+1, idx+1), sequ ++ [(lastIdx, idx)] ++ [(idx, idx+1)])
+            g NoEvent = ((lastIdx, idx+1), sequ)
+            inc (lastIdx, idx) = (lastIdx, idx+1) 
+            restart (lastIdx, idx) = (idx, idx+1)
 --            h lastIdx idx | lastIdx == idx =  recyc xlist (g $ NoEvent, f $ NoEvent)
 --            h lastIdx idx | otherwise = recyc xlist (g $ stepDetect x1 x2, f $ stepDetect x1 x2)
             
 -- | Function to remove Nil-Sections which have same start and stop Index            
-removeNilSections :: (Sequ,SequPwrRecord) ->   (Sequ,SequPwrRecord)           
-removeNilSections (sequ, SequData pRecs) = (fsequ,SequData fRecs)
-  where
-    (fsequ,fRecs) = unzip $ filter f $ zip sequ pRecs
-    f ((lastIdx,idx),_) | lastIdx == idx = False 
-    f _ = True
+removeNilSections :: (Sequ,SequPwrRecord) ->   (Sequ, SequPwrRecord)           
+removeNilSections (sequ, SequData pRecs) = (fsequ, SequData fRecs)
+  where (fsequ, fRecs) = unzip $ filter f $ zip sequ pRecs
+        f ((lastIdx, idx), _) | lastIdx == idx = False 
+        f _ = True
             
 -- | Function to detect and classify a step over several signals
 stepDetect :: XSample -> XSample -> EventType 
