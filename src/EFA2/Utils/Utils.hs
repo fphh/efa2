@@ -1,4 +1,4 @@
-
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances #-}
 
 module EFA2.Utils.Utils where
 
@@ -45,6 +45,7 @@ sameValue = const 1.0
 pairs :: [a] -> [(a, a)]
 pairs xs = zipWith (,) xs (tail xs)
 
+{-
 class Transpose a where
       transpose :: [a] -> [a]
 
@@ -59,7 +60,7 @@ instance UV.Unbox a => Transpose (UV.Vector a) where
          transpose xs = map (UV.fromList . flip map xs) fs
            where fs = take min $ map (flip (UV.!)) [0..]
                  min = L.minimum $ map UV.length xs
-
+-}
 
 foldGraph :: (a -> ([Node], Node, [Node]) -> a) -> a -> Gr b c -> a
 foldGraph f start g = L.foldl' f start (zip3 ins ns outs)
@@ -81,14 +82,74 @@ mapGraph f g = map f (zip3 ins ls outs)
         ins = map (map (fromJust . lab g) . pre g) ns
         outs = map (map (fromJust . lab g) . suc g) ns
 
+class ContainerArithSingleton cont a where
+      csingleton :: a -> cont a
+      cappend :: cont a -> cont a -> cont a
+      cconcat :: [cont a] -> cont a
+      ctranspose :: [cont a] -> [cont a]
+      chead :: cont a -> a
+      ctail :: cont a -> cont a
+      clast :: cont a -> a
+
+class ContainerArith cont a b where
+      cmap :: (a -> b) -> cont a -> cont b
+      cfoldr :: (a -> b -> b) -> b -> cont a -> b
+      czip :: cont a -> cont b -> cont (a, b)
+      dmap :: (a -> a -> b) -> cont a -> cont b
+      dmap' :: (a -> a -> b) -> cont a -> cont b
+
+class ContainerArithZip cont a b c where
+      czipWith :: (a -> b -> c) -> cont a -> cont b -> cont c
+
+instance ContainerArithSingleton [] a where
+      csingleton x = [x]
+      cappend = (++)
+      cconcat = concat
+      ctranspose = L.transpose
+      chead = head
+      ctail = tail
+      clast = last
+
+instance ContainerArith [] a b where
+         cmap = map
+         cfoldr = foldr
+         czip = zip
+         dmap f l = zipWith f (init l) (tail l)
+         dmap' f l = zipWith f (tail l) (init l)
+
+instance ContainerArithZip [] a b c where
+         czipWith = zipWith
+
+instance (UV.Unbox a) => ContainerArithSingleton UV.Vector a where
+         csingleton x = UV.singleton x
+         cappend = (UV.++)
+         cconcat = UV.concat
+         ctranspose [] = []
+         ctranspose xs = map (UV.fromList . flip map xs) fs
+           where fs = take min $ map (flip (UV.!)) [0..]
+                 min = L.minimum $ map UV.length xs
+         chead = UV.head
+         ctail = UV.tail
+         clast = UV.last
+
+instance (UV.Unbox a, UV.Unbox b) => ContainerArith UV.Vector a b where
+         cmap = UV.map
+         cfoldr = UV.foldr
+         czip = UV.zip
+         dmap f l = UV.zipWith f (UV.init l) (UV.tail l)  
+         dmap' f l = UV.zipWith f (UV.tail l) (UV.init l)
+
+instance (UV.Unbox a, UV.Unbox b, UV.Unbox c) => ContainerArithZip UV.Vector a b c where
+         czipWith = UV.zipWith
+
 
 -- | mapping a function over a list with using to neighbouring elements 
-dmap :: (a -> a -> b) -> [a] -> [b]
-dmap f l = zipWith f (init l) (tail l)  
+-- dmap :: (a -> a -> b) -> [a] -> [b]
+-- dmap f l = zipWith f (init l) (tail l)  
 
 -- | mapping a function over a list with using to neighbouring elements 
-dmap' :: (a -> a -> b) -> [a] -> [b]
-dmap' f l = zipWith f (tail l) (init l)  
+--dmap' :: (a -> a -> b) -> [a] -> [b]
+--dmap' f l = zipWith f (tail l) (init l)  
 
 
 -- | generate an list of indices for a list  

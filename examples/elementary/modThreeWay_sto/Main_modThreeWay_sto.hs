@@ -14,9 +14,7 @@ import Control.Applicative
 
 import Debug.Trace
 
-import EFA2.Topology.RandomTopology
 import EFA2.Topology.Topology
--- import EFA2.Topology.GraphData
 
 import EFA2.Solver.Equation
 import EFA2.Solver.Horn
@@ -29,28 +27,26 @@ import EFA2.Interpreter.Interpreter
 import EFA2.Interpreter.Arith
 
 import EFA2.Utils.Utils
-import EFA2.Signal.Sequence
 import EFA2.IO.Import
 
 import EFA2.Display.DrawGraph
-import EFA2.Example.SymSig
 
 import EFA2.Signal.Sequence
+import EFA2.Signal.SequenceData
+
 import EFA2.Topology.Flow
---import EFA2.Topology.Flow
+import EFA2.Topology.TopologyData
 
-
--- import EFA2.Example.LinearOne
 
 -- define topology 
-g' :: Gr NLabel ()
-g' = mkGraph (makeNodes nodes) (makeEdges edges) 
-   where nodes = [(0,Source),(1,Crossing),(2,Sink),(3,Storage)]
-         edges = [(0,1),(1,2),(1,3)]
+topo :: Topology
+topo = mkGraph (makeNodes nodes) (makeEdges edges)
+  where nodes = [(0,Source),(1,Crossing),(2,Sink),(3,Storage)]
+        edges = [(0,1,ELabel),(1,2,ELabel),(1,3,ELabel)]
 
 main :: IO ()
 main = do
-  rec@(Record time sigMap) <- modelicaCSVImport "./modThreeWay_sto.RecA_res.csv"
+  Record time sigMap <- modelicaCSVImport "./modThreeWay_sto.RecA_res.csv"
   
   let pRec = PowerRecord time pMap              
       pMap =  M.fromList [ (PPosIdx 0 1,  sigMap M.! (SigId "powercon1.u")),
@@ -61,34 +57,17 @@ main = do
                            (PPosIdx 3 1,  sigMap M.! (SigId "powercon6.u"))]                            
 
 
-  --    pMap = M.fromList [ (PPosIdx 0 1,[0,1,2,2,3,4,5,-5,-3,-3,4])]
-  --                        (PPosIdx 1 0,[0,1,2,-2,-3,4,5,-5,-3,-3,4])]   
-      
-      pRec0 = addZeroCrossings pRec        
-      (sequ,sqPRec) = genSequ pRec0          
-      
-      sqFRec = genSequFlow sqPRec
-      sqFStRec = genSequFState sqFRec
-      
-      sqFlowTops = genSequFlowTops g' sqFStRec
-      sqSecTops = genSectionTopology sqFlowTops
-      sqTopo = mkSequenceTopology sqSecTops
-      
-      SequData sqEnvs = fmap (map (\(s, rec) -> fromFlowRecord s (RecIdx 0) rec) . zip (map SecIdx $ listIdx sequ)) sqFRec
+      (sqEnvs, sqTopo) = x pRec topo
       sigs = M.unions (map powerMap sqEnvs)
       
       
       ts = envToEqTerms sigs ++ mkEdgeEq sqTopo ++ mkNodeEq sqTopo
-      varset = L.foldl' f S.empty ts
-      f acc (v := Given) = S.insert v acc
-      f acc _ = acc
-      isV = isVarFromEqs varset
+
+      isV = isVarFromEqs ts
 
       (given, noVariables, givExt, rest) = splitTerms isV ts
-
       ho = hornOrder isV givExt rest
       dirs = directEquations isV ho
-      --envs = Envs sigs M.empty esigs M.empty xsigs M.empty
       envs = Envs sigs M.empty M.empty M.empty M.empty M.empty
 
       gd = map (eqToInTerm envs) (given ++ dirs)
@@ -96,7 +75,7 @@ main = do
       res :: Envs [Val]
       res = interpretFromScratch gd
 
-  
+  {-
   putStrLn "Sequence"
   putStrLn (myShowList sequ)
   
@@ -114,9 +93,9 @@ main = do
 
   putStrLn "Sequence Flow"
   putStrLn (show sqFStRec)
-  
+    -}
+
   putStrLn (showInTerms gd)
-  
   
   drawTopologyX' sqTopo
   

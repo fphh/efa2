@@ -1,36 +1,21 @@
-{-# LANGUAGE TypeSynonymInstances, ScopedTypeVariables #-}
+{-# LANGUAGE TypeSynonymInstances, ScopedTypeVariables, MultiParamTypeClasses, KindSignatures #-}
 
 module EFA2.Interpreter.Arith where
 
+import qualified Data.Vector.Unboxed as UV
 
-type Val = Double  
+import Data.Ratio
 
--- Time Signal & Samples
-type Signal = [Val]
-
-type Power = Signal
-type Time = Signal
-
-type PSample = Val
-type TSample = Val
-
--- Flow Signals and Samples
-type FSignal = [Val]
-
-type Flow = FSignal 
-type DTime = FSignal  
-  
-type DTSample = Val -- Time step
-type FPSample = Val -- Flow Power
+type Val = Ratio Integer
+--type Val = Double  
 
 type Container = []
+--type Container = UV.Vector
 
-
-type SignalIdx = Int
 
 class Arith a where
       zero :: a
-      cst :: Double -> a
+      cst :: Val -> a
       neg :: a -> a
       rec :: a -> a
       (.+) :: a -> a -> a
@@ -46,7 +31,7 @@ instance Arith Val where
          (.*) = (*)
          (./) = (/)
 
-instance (Arith a) => Arith (Container a) where
+instance (Arith a) => Arith [a] where
          zero = repeat (zero :: a)
          cst x = repeat (cst x :: a)
          neg = map neg
@@ -54,4 +39,13 @@ instance (Arith a) => Arith (Container a) where
          (.+) = zipWith (.+)
          (.*) = zipWith (.*)
          (./) = zipWith (./)
+
+instance (Arith a, UV.Unbox a) => Arith (UV.Vector a) where
+         zero = UV.singleton (zero :: a)  -- UV.repeat (zero :: a)
+         cst x = UV.singleton (cst x :: a) -- UV.repeat (cst x :: a)
+         neg = UV.map neg
+         rec = UV.map rec
+         (.+) = UV.zipWith (.+)
+         (.*) = UV.zipWith (.*)
+         (./) = UV.zipWith (./)
 

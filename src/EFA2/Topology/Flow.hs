@@ -5,20 +5,10 @@ import Data.Graph.Inductive
 import qualified Data.Map as M
 import qualified Data.List as L
 
--- import EFA2.Topology.GraphData
-import EFA2.Topology.Topology
-
-import EFA2.Signal.Sequence
-import EFA2.Signal.SignalAnalysis
-
-
-type Topology = Gr NLabel () -- ELabel
-newtype FlowTopology = FlowTopology (Gr NLabel ()) deriving (Show)
-newtype SecTopology = SecTopology { unSecTopology :: Gr NLabel () } deriving (Show)
-
-newtype FlowState = FlowState (PPosData Sign) deriving (Show)
-type SequFlowState = SequData [FlowState]
-type SequFlowTops = SequData [FlowTopology]
+import EFA2.Topology.TopologyData
+import EFA2.Signal.SequenceData
+import EFA2.Interpreter.Arith
+import EFA2.Utils.Utils
 
 -- | Function to calculate flow states for the whole sequence 
 genSequFState :: SequFlowRecord -> SequFlowState
@@ -26,8 +16,8 @@ genSequFState (SequData sqFRec) = SequData $ map genFlowState sqFRec
 
 -- | Function to extract the flow state out of a Flow Record  
 genFlowState :: FlowRecord ->  FlowState
-genFlowState fRec@(FlowRecord time flowMap) = FlowState $ M.map  f flowMap  
-  where f flow = sign (foldr (+) 0 flow)
+genFlowState fRec@(FlowRecord time flowMap) = FlowState $ M.map f flowMap
+  where f flow = sign (cfoldr (+) 0 flow)
 
 {-
 -- | Function to check flow state on validity
@@ -41,13 +31,13 @@ checkFlowState top@(gr nodes edges) (FlowState fs) = checkNodes && checkEdges
         
 -- | Function to generate Flow Topologies for all Sequences
 genSequFlowTops :: Topology -> SequFlowState -> SequFlowTops         
-genSequFlowTops top (SequData sequFlowStates) = SequData $ map (genFlowTopology top) sequFlowStates  
+genSequFlowTops topo (SequData sequFlowStates) = SequData $ map (genFlowTopology topo) sequFlowStates  
     
 
 
 -- | Function to generate Flow Topology -- only use one state per signal
 genFlowTopology:: Topology -> FlowState -> FlowTopology
-genFlowTopology top (FlowState fs) = FlowTopology $ mkGraph (labNodes top) (concat $ map f (labEdges top)) 
+genFlowTopology topo (FlowState fs) = mkGraph (labNodes topo) (concat $ map f (labEdges topo)) 
   where f edge@(idx1,idx2,_) | fs M.! (PPosIdx idx1 idx2) == PSign = [edge] 
         f edge@(idx1,idx2,lab) | fs M.! (PPosIdx idx1 idx2) == NSign = [(idx2,idx1,lab)]
         f edge@(idx1,idx2,_) | fs M.! (PPosIdx idx1 idx2) == ZSign = []
@@ -55,7 +45,7 @@ genFlowTopology top (FlowState fs) = FlowTopology $ mkGraph (labNodes top) (conc
 
 
 mkSectionTopology :: SecIdx -> FlowTopology -> SecTopology
-mkSectionTopology (SecIdx sid) (FlowTopology topo) = (SecTopology $ nmap f topo)
+mkSectionTopology (SecIdx sid) t@(FlowTopology topo) = SecTopology $ nmap f topo
   where f n = n { sectionNLabel = sid }
 
 genSectionTopology :: SequFlowTops -> SequData [SecTopology]

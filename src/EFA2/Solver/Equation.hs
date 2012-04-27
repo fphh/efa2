@@ -13,6 +13,7 @@ import Debug.Trace
 
 
 import EFA2.Interpreter.Env
+import EFA2.Interpreter.Arith
 
 -- TOTHINK: Die Algorithmen aus dem Verzeichnis Solver sollten
 -- über den Datentyp EqTerm parametrisierbar sein. Die Abhängigkeisanalyse
@@ -20,7 +21,7 @@ import EFA2.Interpreter.Env
 -- haette wahrscheinlich auch Einfluss auf InVar...
 
 data EqTerm = EqTerm := EqTerm
-          | Const Double
+          | Const Val -- Double
           | Given
           | Power PowerIdx
           | Eta EtaIdx

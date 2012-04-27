@@ -21,7 +21,7 @@ data InTerm a = PIdx PowerIdx
               | InEqual (InTerm a) (InTerm a) deriving (Eq, Ord, Show)
 
 
-instance Arith (InTerm Double) where
+instance Arith (InTerm Val) where
          zero = InConst 0.0
          cst = InConst
          neg = InMinus

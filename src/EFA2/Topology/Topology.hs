@@ -14,56 +14,36 @@ import Control.Monad.Error
 
 import Debug.Trace
 
-import EFA2.Utils.Utils
 import EFA2.Solver.Equation
-import EFA2.Interpreter.InTerm
-import EFA2.Interpreter.Arith
 import EFA2.Interpreter.Env
+import EFA2.Topology.TopologyData
+import EFA2.Utils.Utils
 
 -----------------------------------------------------------------------------------
 -- Topology Graph
 -- | This is the main topology graph representation.
 
-data NodeType = Storage | Sink | Source | Crossing deriving (Show, Ord, Eq)
-
-data NLabel = NLabel { sectionNLabel :: Int,
-                       recordNLabel :: Int,
-                       nodeNLabel :: Int,
-                       nodetypeNLabel :: NodeType } deriving (Show, Eq, Ord)
-
---data ELabel = ELabel deriving (Show, Eq, Ord)
-
-
---mkLEdge :: Int -> Int -> LEdge ELabel
---mkLEdge x y = (x, y, ELabel x y)
-
---flipLEdge :: LEdge ELabel -> LEdge ELabel
---flipLEdge (x, y, ELabel u v) = (y, x, ELabel v u)
-
---mkLNode :: Int -> LNode NLabel
---mkLNode n = map (NLabel 0 0) ns
-
 makeNodes :: [(Int, NodeType)] -> [LNode NLabel]
 makeNodes ns = map f ns
   where f (n, ty) = (n, NLabel 0 0 n ty)
 
-makeEdges :: [(Int, Int)] -> [LEdge ()]
+makeEdges :: [(Int, Int, ELabel)] -> [LEdge ELabel]
 makeEdges es = map f es
-  where f (a, b) = (a, b, ())
+  where f (a, b, l) = (a, b, l)
 
 ------------------------------------------------------------------------
 -- Making equations:
 
 -- | Takes section, record, and a graph.
-mkEdgeEq :: Gr NLabel () -> [EqTerm]
-mkEdgeEq g = map f ns
+mkEdgeEq :: Topology -> [EqTerm]
+mkEdgeEq (Topology g) = map f ns
   where ns = edges g
         f (x, y) = mkVar (PowerIdx ys yr yn xn) := (mkVar (PowerIdx xs xr xn yn)) :* (mkVar (EtaIdx xs xr xn yn))
           where (NLabel xs xr xn _) = fromJust $ lab g x
                 (NLabel ys yr yn _) = fromJust $ lab g y
 
-mkNodeEq :: Gr NLabel () -> [EqTerm]
-mkNodeEq g = concat $ mapGraph mkEq g
+mkNodeEq :: Topology -> [EqTerm]
+mkNodeEq (Topology g) = concat $ mapGraph mkEq g
 
 -- | ATTENTION: We must only produce equations, where every variable occurs only once.
 -- This has to do with 'transformEq', which can only factor out variables that occure only once.
