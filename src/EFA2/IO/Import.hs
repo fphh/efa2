@@ -1,4 +1,4 @@
-
+{-# LANGUAGE FlexibleInstances #-}
 
 module EFA2.IO.Import (module EFA2.IO.Import) where
 
@@ -50,11 +50,16 @@ modelicaCSVParse text = rec
 -- | Parse CSV Header Line
 csvParseHeaderLine :: String -> [String]  
 csvParseHeaderLine line = init $ map read (splitOn "," line)   -- (init . tail) to get rid of Modelica " " quotes 
-  
--- | Parse CSV Data Line
---csvParseDataLine :: String -> [Val]  
---csvParseDataLine line = init $ map read (splitOn "," line)  -- another init to get rid of final , per line
 
-csvParseDataLine :: String -> [Val]  
-csvParseDataLine line = init $ map (flip approxRational 0.001 . read) (splitOn "," line)
+class ParseCVS a where
+      csvParseDataLine :: String -> [a]
+
+
+instance ParseCVS Double where
+         -- | Parse CSV Data Line
+         csvParseDataLine line = init $ map read (splitOn "," line)  -- another init to get rid of final , per line
+
+
+instance ParseCVS (Ratio Integer) where
+         csvParseDataLine line = init $ map (flip approxRational 0.001 . read) (splitOn "," line)
 

@@ -5,7 +5,7 @@ module EFA2.Topology.TopologyData where
 import Data.Graph.Inductive
 
 
-data NodeType = Storage
+data NodeType = Storage Int
               | Sink
               | Source
               | Crossing deriving (Show, Ord, Eq)
@@ -15,7 +15,11 @@ data NLabel = NLabel { sectionNLabel :: Int,
                        nodeNLabel :: Int,
                        nodetypeNLabel :: NodeType } deriving (Show, Eq, Ord)
 
-data ELabel = ELabel deriving (Show)
+data FlowDirection = WithDir
+                   | AgainstDir
+                   | UnDir deriving (Show, Eq)
+
+data ELabel = ELabel FlowDirection deriving (Show)
 
 newtype Topology' a b = Topology { unTopology :: Gr a b } deriving (Show)
 type Topology = Topology' NLabel ELabel

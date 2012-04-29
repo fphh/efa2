@@ -36,32 +36,42 @@ import EFA2.Signal.SequenceData
 
 import EFA2.Topology.Flow
 import EFA2.Topology.TopologyData
+import EFA2.Example.Loop
+import EFA2.Example.SymSig
 
 
 -- define topology 
+
 topo :: Topology
 topo = mkGraph (makeNodes nodes) (makeEdges edges)
-  where nodes = [(0,Source),(1,Crossing),(2,Sink),(3,Storage)]
-        edges = [(0,1,ELabel),(1,2,ELabel),(1,3,ELabel)]
+  where nodes = [(0, Source), (1, Crossing), (2, Sink), (3, Storage 0)]
+        edges = [(0, 1, ELabel WithDir), (1, 2, ELabel WithDir),(1, 3, ELabel WithDir)]
+
 
 main :: IO ()
 main = do
+
   Record time sigMap <- modelicaCSVImport "./modThreeWay_sto.RecA_res.csv"
   
-  let pRec = PowerRecord time pMap              
+  let
+
+      pRec = PowerRecord time pMap              
       pMap =  M.fromList [ (PPosIdx 0 1,  sigMap M.! (SigId "powercon1.u")),
                            (PPosIdx 1 0,  sigMap M.! (SigId "powercon2.u")), 
                            (PPosIdx 1 2,  sigMap M.! (SigId "powercon3.u")),
                            (PPosIdx 2 1,  sigMap M.! (SigId "powercon4.u")),                            
-                           (PPosIdx 1 3,  sigMap M.! (SigId "powercon5.u")),
-                           (PPosIdx 3 1,  sigMap M.! (SigId "powercon6.u"))]                            
+                           (PPosIdx 1 3,  sigMap M.! (SigId "powercon6.u")),
+                           (PPosIdx 3 1,  sigMap M.! (SigId "powercon5.u")) ]
 
+      sigs = M.unions (map powerMap sqEnvs)
+
+
+      --TheGraph sqTopo sigs = loop
 
       (sqEnvs, sqTopo) = x pRec topo
-      sigs = M.unions (map powerMap sqEnvs)
-      
-      
-      ts = envToEqTerms sigs ++ mkEdgeEq sqTopo ++ mkNodeEq sqTopo
+
+      ts = envToEqTerms sigs ++ makeAllEquations sqTopo
+      --ts = envToEqTerms sigs ++ mkEdgeEq sqTopo ++ mkNodeEq sqTopo
 
       isV = isVarFromEqs ts
 
@@ -74,6 +84,7 @@ main = do
 
       res :: Envs [Val]
       res = interpretFromScratch gd
+      dirg = makeDirTopology sqTopo
 
   {-
   putStrLn "Sequence"
@@ -95,15 +106,15 @@ main = do
   putStrLn (show sqFStRec)
     -}
 
+  putStrLn (showEqTerms ts)
+
   putStrLn (showInTerms gd)
   
-  drawTopologyX' sqTopo
   
   -- drawSequFlowTops sqFlowTops
-  drawTopology sqTopo res
   print res
-  
-  
-  
-  return ()
 
+  drawAll [
+    --drawTopologyX' sqTopo,
+    drawTopology sqTopo res,
+    drawTopologyX' dirg ]

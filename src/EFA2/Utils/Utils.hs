@@ -62,25 +62,30 @@ instance UV.Unbox a => Transpose (UV.Vector a) where
                  min = L.minimum $ map UV.length xs
 -}
 
-foldGraph :: (a -> ([Node], Node, [Node]) -> a) -> a -> Gr b c -> a
+
+foldGraph :: Graph gr => (a -> ([Node], Node, [Node]) -> a) -> a -> gr b c -> a
 foldGraph f start g = L.foldl' f start (zip3 ins ns outs)
   where ns = nodes g
         ins = map (pre g) ns
         outs = map (suc g) ns
 
 
-mapGraphNodes :: (([Node], Node, [Node]) -> a) -> Gr b c -> [a]
+mapGraphNodes :: Graph gr => (([Node], Node, [Node]) -> a) -> gr b c -> [a]
 mapGraphNodes f g = map f (zip3 ins ns outs)
   where ns = nodes g
         ins = map (pre g) ns
         outs = map (suc g) ns
 
 
-mapGraph :: (([b], b, [b]) -> a) -> Gr b c -> [a]
+mapGraph :: Graph gr => (([b], b, [b]) -> a) -> gr b c -> [a]
 mapGraph f g = map f (zip3 ins ls outs)
   where (ns, ls) = unzip $ labNodes g
         ins = map (map (fromJust . lab g) . pre g) ns
         outs = map (map (fromJust . lab g) . suc g) ns
+
+
+
+
 
 class ContainerArithSingleton cont a where
       csingleton :: a -> cont a

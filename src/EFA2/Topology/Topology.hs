@@ -31,8 +31,18 @@ makeEdges :: [(Int, Int, ELabel)] -> [LEdge ELabel]
 makeEdges es = map f es
   where f (a, b, l) = (a, b, l)
 
+makeWithDirEdges :: [(Int, Int)] -> [LEdge ELabel]
+makeWithDirEdges es = map f es
+  where f (a, b) = (a, b, ELabel WithDir)
+
+
+
 ------------------------------------------------------------------------
 -- Making equations:
+
+makeAllEquations :: Topology -> [EqTerm]
+makeAllEquations topo = mkEdgeEq dirTopo ++ mkNodeEq dirTopo
+  where dirTopo = makeDirTopology topo
 
 -- | Takes section, record, and a graph.
 mkEdgeEq :: Topology -> [EqTerm]
@@ -43,7 +53,7 @@ mkEdgeEq (Topology g) = map f ns
                 (NLabel ys yr yn _) = fromJust $ lab g y
 
 mkNodeEq :: Topology -> [EqTerm]
-mkNodeEq (Topology g) = concat $ mapGraph mkEq g
+mkNodeEq topo = concat $ mapGraph mkEq topo
 
 -- | ATTENTION: We must only produce equations, where every variable occurs only once.
 -- This has to do with 'transformEq', which can only factor out variables that occure only once.
@@ -78,55 +88,19 @@ mkEq (ins, n, outs)
               | otherwise = []
         oeqs' | length eos > 1 = concatMap g $ pairs $ zipWith (,) xos eos
               | otherwise = []
-        g ((x1@(X (XIdx s r x y)), e1), (x2, e2)) = [x1 :* e2 := x2 :* e1]
-        --g ((x1@(X (XIdx s r x y)), e1), (x2, e2)) = [x1 :* e2 := v, v := x2 :* e1]
-        --  where v = Var (VarIdx s r x y)
+        --g ((x1@(X (XIdx s r x y)), e1), (x2, e2)) = [x1 :* e2 := x2 :* e1]
+        g ((x1@(X (XIdx s r x y)), e1), (x2, e2)) = [x1 :* e2 := v, v := x2 :* e1]
+          where v = Var (VarIdx s r x y)
          
 
-
-----------------------------------------------------------------------------------
--- Classes to allow indexing of power positions, etas and nodes
-
-
-{-
-instance (Arith a) => EnvClass [a] where
-         mkPowerEnv = mkPowerValEnv
-         mkEtaEnv = mkEtaValEnv
-         mkXEnv = mkXValEnv
--}
-{-
-mkPowerValEnv :: (M.Map PowerIdx [a]) -> LRPowerEnv [a]
-mkPowerValEnv m x = checkIdx PowerIdxError x (M.map Right m)
-
-mkEtaValEnv :: (Arith c) => Gr a b -> LRPowerEnv [c] -> LREtaEnv [c]
-mkEtaValEnv g penv x = checkIdx EtaIdxError x etas
-  where es = edges g
-        etas = M.fromList $ map h (zip es (map f es))
-        f (x, y) = do
-          p <- penv (PowerIdx x y)
-          q <- penv (PowerIdx y x)
-          return (zipWith (./) q p)
-        h ((x, y), v) = (EtaIdx x y, v)
-
-mkXValEnv :: (Arith c) => Gr a b -> LRPowerEnv [c] -> LRXEnv [c]
-mkXValEnv g penv x = checkIdx XIdxError x xs
-  where xs = M.fromList $ foldGraph f [] g
-        f acc (ins, x, outs) = h ins x ++ h outs x ++ acc
-        h ns x = zip xidx xs
-          where es = zip (repeat x) ns
-                xidx = map (uncurry XIdx) es
-                pidx = map (uncurry PowerIdx) es
-                ps = map penv pidx
-                psums = L.foldl' add (Right (repeat zero)) pidx
-                xs = map (flip div psums) ps
-        add (Right acc) idx = do
-          p <- penv idx
-          return (zipWith (.+) p acc)
-        add err@(Left _) _ = err
-        div (Right as) (Right bs) = Right (zipWith (./) as bs)
-        div err@(Left _) _ = err
-        div _ err@(Left _) = err
--}
-
-----------------------------------------------------------------------------------
-
+-- | We sort in and out going edges according to 'FlowDirection'.
+-- Undirected edges are filtered away.
+-- This is important for creating correct equations.
+makeDirTopology :: Topology -> Topology
+makeDirTopology topo = mkGraph ns es
+  where es = map flipAgainst $ filter onlyDirected $ labEdges topo
+        onlyDirected (_, _, ELabel UnDir) = False
+        onlyDirected _ = True
+        flipAgainst (x, y, ELabel AgainstDir) = (y, x, ELabel WithDir)
+        flipAgainst e = e
+        ns = unique (concatMap (\(x, y, _) -> [(x,  fromJust (lab topo x)), (y, fromJust (lab topo y))]) es)

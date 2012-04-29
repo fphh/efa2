@@ -38,11 +38,14 @@ genSequFlowTops topo (SequData sequFlowStates) = SequData $ map (genFlowTopology
 -- | Function to generate Flow Topology -- only use one state per signal
 genFlowTopology:: Topology -> FlowState -> FlowTopology
 genFlowTopology topo (FlowState fs) = mkGraph (labNodes topo) (concat $ map f (labEdges topo)) 
+  where f edge@(idx1,idx2,_) | fs M.! (PPosIdx idx1 idx2) == PSign = [(idx1, idx2, ELabel WithDir)] 
+        f edge@(idx1,idx2,_) | fs M.! (PPosIdx idx1 idx2) == NSign = [(idx1, idx2, ELabel AgainstDir)]
+        f edge@(idx1,idx2,_) | fs M.! (PPosIdx idx1 idx2) == ZSign = [(idx1, idx2, ELabel UnDir)]
+{-
   where f edge@(idx1,idx2,_) | fs M.! (PPosIdx idx1 idx2) == PSign = [edge] 
         f edge@(idx1,idx2,lab) | fs M.! (PPosIdx idx1 idx2) == NSign = [(idx2,idx1,lab)]
         f edge@(idx1,idx2,_) | fs M.! (PPosIdx idx1 idx2) == ZSign = []
-
-
+-}
 
 mkSectionTopology :: SecIdx -> FlowTopology -> SecTopology
 mkSectionTopology (SecIdx sid) t@(FlowTopology topo) = SecTopology $ nmap f topo

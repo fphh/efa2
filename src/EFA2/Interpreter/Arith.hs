@@ -6,8 +6,8 @@ import qualified Data.Vector.Unboxed as UV
 
 import Data.Ratio
 
-type Val = Ratio Integer
---type Val = Double  
+--type Val = Ratio Integer
+type Val = Double  
 
 type Container = []
 --type Container = UV.Vector
