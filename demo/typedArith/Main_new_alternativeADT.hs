@@ -7,7 +7,6 @@ import qualified Data.Foldable as F
 
 import qualified Data.Map as M
 import Text.Printf
-import Graphics.Gnuplot.Simple
 
 -----------------------------------------------------------------------------------
 -- Basic Data structures used 
@@ -107,127 +106,23 @@ instance DSum Sig Sig Sig where
 
 --------------------------------------------------------------------------------------------
 -- Data Sample Type
+data Typ a = B a | E a | I a | N a | M a | T a | X a  
+          | DB a | DE a | DI a  | DN a | DM a | DT a | DX a 
 
-data P a = P a deriving (Show)
-data E a = E a deriving (Show)
-data T a = T a deriving (Show)
-data X a = X a deriving (Show)
-data M a = M a deriving (Show)
-data N a = N a deriving (Show)
+(~*) ::  DProd a b c => Typ a -> Typ b -> Typ c
+(~/) ::  DProd a b c => Typ a -> Typ b -> Typ c
+ 
+(~*) (P x) (T y) = E (x*y)
+(~/) (E x) (T y) = P (x*y)
 
-data DP a = DP a deriving (Show)
-data DE a = DE a deriving (Show)
-data DT a = DT a deriving (Show)
-data DX a = DX a deriving (Show)
-data DM a = DM a deriving (Show)
-data DN a = DN a deriving (Show)
-
-
--- Type Class
-
-class Type (typ :: * -> *) x where
-  toType :: x -> typ x
-  fromType :: typ x -> x
-
-instance Type E a where  
-  fromType (E x) = x
-  toType x = E x
-
-instance Type M a where
-  toType x = (M x)
-  fromType (M x) = x
-
-instance Type N a where
-  toType x = (N x)
-  fromType (N x) = x
-
-instance Type P a where
-  toType x = (P x)
-  fromType (P x) = x
-  
-instance Type T a where  
-  fromType (T x) = x
-  toType x = T x
-
-instance Type X a where  
-  fromType (X x) = x
-  toType x = X x
-
-instance Type DE a where  
-  fromType (DE x) = x
-  toType x = DE x
-
-instance Type DM a where
-  toType x = (DM x)
-  fromType (DM x) = x
-
-instance Type DN a where
-  toType x = (DN x)
-  fromType (DN x) = x
-
-instance Type DP a where
-  toType x = (DP x)
-  fromType (DP x) = x
-  
-instance Type DT a where  
-  fromType (DT x) = x
-  toType x = DT x
-
-instance Type DX a where  
-  fromType (DX x) = x
-  toType x = DX x
-
--- Product Class
-class   (Type t1 a, Type t2 b, Type t3 c, DProd a b c)  => TProd t1 a t2 b t3 c | t1 t2 -> t3  where 
- (~*) ::  t1 a -> t2 b -> t3 c
- (~*) x y = toType ((fromType x) .* (fromType y)) 
- (~/) ::  t3 c -> t2 b -> t1 a
- (~/) x y = toType ((fromType x) ./ (fromType y)) 
-
-instance  DProd a b c => TProd P a DT b  E c where 
-instance  DProd a b c => TProd DT a P b  E c where 
-
-instance  DProd a b c => TProd P a N b  P c where 
-instance  DProd a b c => TProd N a P b  P c where 
-
-instance  DProd a b c => TProd P a M b  P c where 
-instance  DProd a b c => TProd M a P b  P c where 
-
-instance  DProd a b c => TProd X a P b  P c where 
-instance  DProd a b c => TProd P a X b  P c where 
 
 -- Sum Class  
-class   (Type t1 a, Type t2 b, Type t3 c, DSum a b c)  => TSum t1 a t2 b t3 c | t1 t2 -> t3  where 
- (~+) ::  t1 a -> t2 b -> t3 c
- (~+) x y = toType ((fromType x) .+ (fromType y)) 
- (~-) ::  t3 c -> t2 b -> t1 a
- (~-) x y = toType ((fromType x) .- (fromType y)) 
 
--- Absolute addition
-instance  DSum a b c => TSum E a E  b E c where 
-instance  DSum a b c => TSum P a P  b P c where 
-instance  DSum a b c => TSum M a M  b M c where 
-instance  DSum a b c => TSum N a N  b N c where
-instance  DSum a b c => TSum T a T  b T c where 
-instance  DSum a b c => TSum X a X  b X c where 
+(~+) :: DSum a b c =>   Typ a -> Typ b -> Typ c
+(~-) :: DSum a b c =>   Typ a -> Typ b -> Typ c
 
--- Abs + Delta  
-instance  DSum a b c => TSum DE a E  b E c where 
-instance  DSum a b c => TSum E a DE  b E c where 
-
-instance  DSum a b c => TSum DP a P  b P c where 
-instance  DSum a b c => TSum P a DP  b P c where 
-
-instance  DSum a b c => TSum DT a T  b T c where 
-instance  DSum a b c => TSum T a DT  b T c where 
-
--- Delta + Delta  
-instance  DSum a b c => TSum DE a DE  b DE c where 
-instance  DSum a b c => TSum DP a DP  b DP c where
-instance  DSum a b c => TSum DM a DM  b DM c where 
-instance  DSum a b c => TSum DN a DN  b DN c where 
-instance  DSum a b c => TSum DT a DT  b DT c where 
-instance  DSum a b c => TSum DX a DX  b DX c where 
+(~+) (P x) (DP y) = P (x*y)
+(~-) (P x) (P y) = DP (x*y)
 
 -- ############################ Display #############################
   
@@ -360,23 +255,17 @@ instance DataDisplay Sig  where
 class TypedDisplay (typ :: * -> *) a where
   tdisp :: typ a -> String
 
-instance (DataDisplay a) => TypedDisplay P a where tdisp (P d) = ddisp d PTyp 
-instance (DataDisplay a) => TypedDisplay E a where tdisp (E d) = ddisp d ETyp 
-
+instance (DataDisplay a) => TypedDisplay P a where
+  tdisp (P d) = ddisp d PTyp 
+  
+instance (DataDisplay a) => TypedDisplay E a where
+  tdisp (E d) = ddisp d ETyp 
 
 -- ########################## Signal Plotting #####################
 
-{-
-class DataPlot a where
-  dplot :: a -> IO ()
+
   
-instance DataPlot Sig where   
   
-class TypedPlot (typ :: * -> *) a where
-  plot :: a -> IO ()
-  
-instance TypedPlot P Sig where    
--}  
   
   
   
