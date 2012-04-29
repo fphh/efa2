@@ -228,116 +228,148 @@ instance  DSum a b c => TSum DN a DN  b DN c where
 instance  DSum a b c => TSum DT a DT  b DT c where 
 instance  DSum a b c => TSum DX a DX  b DX c where 
 
--- =================== Data   
-   
-{-  
-class DataInfo a b where 
-  dlength:: a -> b 
-  
-  
-instance DataInfo Sig where  
-  dlength (Signal v) = UV.length v  
-  dmaximum (Signal v)= UV.maxiumum v 
-  dminimum (Signal v)= UV.maxiumum v 
--}  
-    
-{-  
--- Sub Class  
-class   (Type t1 a, Type t2 b, Type t3 c, DSum a b c)  => TSub t1 a t2 b t3 c | t1 t2 -> t3  where 
- (~-) ::  t1 a -> t2 b -> t3 c
- (~-) x y = toType ((fromType x) .- (fromType y)) 
-
--- Delta Generation
-instance  DSum a b c => TSub P a P  b DP c where 
-instance  DSum a b c => TSub X a X  b DX c where 
-instance  DSum a b c => TSub E a E  b DE c where 
-instance  DSum a b c => TSub N a N  b DN c where 
-instance  DSum a b c => TSub T a T  b DT c where 
--} 
-
 -- ############################ Display #############################
   
-class (Show a, PrintfArg a,Fractional a) => TShow a
+  
+  
+  
+-- | Typ variable to control display  
+-- class (Show a, PrintfArg a,Fractional a) => TShow a
 
-data DispLength = Short | Middle | Long | Float 
+data DisplayLength = Short | Middle | Long | Float 
+data DisplayType = BTyp  -- boolean state 
+                 | ETyp 
+                 | ITyp  -- integer state
+                 | NTyp 
+                 | MTyp 
+                 | PTyp 
+                 | XTyp 
+                 | TTyp 
+                 | DBTyp  -- boolean state
+                 | DETyp 
+                 | DITyp -- delta integert state  
+                 | DNTyp 
+                 | DMTyp 
+                 | DPTyp 
+                 | DXTyp 
+                 | DTTyp
+                   
+                   
+data DisplayUnit = Unit_kWh | Unit_kW | Unit_Percent | Unit_none | Unit_sec
+data DisplayFormat = DisplayFormat String
+data UnitScale = UnitScale Val
 
 
-
+-- Central Display Class to Controll skaling and display of NULL 
 class Disp a where 
-  disp :: a -> String -> Val -> String
+  disp :: a -> DisplayFormat -> UnitScale -> String
 
 instance Disp Val where
   disp 0 _ _ = "Null"
-  disp x format scale = printf format $ x*scale
+  disp x (DisplayFormat f) (UnitScale s) = printf f $ x*s
 
-instance Disp Bool where
-  disp x format scale = printf format (show x)
+instance Disp Bool where 
+  disp x (DisplayFormat f) _ = printf f (show x)
 
 instance Disp Int where
-  disp x format scale = printf format (show x)
+  disp x (DisplayFormat f) _ = printf f (show x)
 
--- | choose a Form of Display
+-- ##################### Settings are here #####################
 dispLength = Short
 
--- | Map to choose display Unit per type
-dispUnitMap = M.fromList [("P","kW"),
-                      ("E","kWh"),
-                      ("X","%"),
-                      ("M","%"),
-                      ("N","/"), 
-                      ("T","s")]; 
+-- | Function to choose display Unit 
+getDisplayUnit :: DisplayType -> DisplayUnit
+getDisplayUnit ETyp = Unit_kWh
+getDisplayUnit MTyp = Unit_Percent
+getDisplayUnit TTyp = Unit_sec
+getDisplayUnit XTyp = Unit_Percent
+getDisplayUnit DETyp = Unit_kWh
+getDisplayUnit DMTyp = Unit_Percent
+getDisplayUnit DTTyp = Unit_sec
+getDisplayUnit DXTyp = Unit_Percent
+getDisplayUnit _ = Unit_none
 
--- | Map to lookup display scale per Unit 
-unitMap = M.fromList [("kW",1/1000),
-                      ("kWh",1/1000/3600),
-                      ("%",100),
-                      ("s",1),
-                      ("/",1)];
 
--- | Map to choose displayFormat for a Kombination of Type and Unit -- three Options -- short, middle, long, float                 
-displayFormatMap = M.fromList [(("P","kW"),("%6.7f","%6.7f","%6.7f","%6.7f")),
-                               (("E","kWh"),("%6.7f","%6.7f","%6.7f","%6.7f")),
-                               (("T","s"),("%6.7f","%6.7f","%6.7f","%6.7f")),
-                               (("X","%"),("%6.7f","%6.7f","%6.7f","%6.7f")),
-                               (("N","%"),("%6.7f","%6.7f","%6.7f","%6.7f")),
-                               (("M","/"),("%6.7f","%6.7f","%6.7f","%6.7f"))]
+-- | getDisplay formats
+getDisplayFormats :: DisplayType -> DisplayUnit -> (DisplayFormat,DisplayFormat,DisplayFormat,DisplayFormat)
+getDisplayFormats ETyp Unit_kWh = (DisplayFormat "%6.7f",DisplayFormat "%6.7f",DisplayFormat "%6.7f",DisplayFormat "%6.7f")
+getDisplayFormats _ _ = (DisplayFormat "%6.7f",DisplayFormat "%6.7f",DisplayFormat "%6.7f",DisplayFormat "%6.7f")
 
-formatSelect :: DispLength -> (String,String,String,String) -> String
+
+-- ##################### Settings are above #####################
+
+instance Show DisplayUnit where
+  show Unit_kWh  = "kWh" 
+  show Unit_kW   = "kW"
+  show Unit_Percent = "%"
+  show Unit_none = "/"
+
+instance Show DisplayType where
+  show ETyp = "E"
+  show MTyp = "M"
+  show NTyp = "N"
+  show TTyp = "T"
+  show XTyp = "X"
+  show DETyp = "DE"
+  show DMTyp = "DM"
+  show DNTyp = "DN"
+  show DTTyp = "DT"
+  show DXTyp = "DX"
+
+
+
+-- | get display scale per Unit 
+getUnitScale :: DisplayUnit -> UnitScale  
+getUnitScale Unit_kWh = UnitScale (1/1000/3600)
+getUnitScale Unit_none = UnitScale 1
+getUnitScale Unit_Percent = UnitScale 100
+getUnitScale Unit_sec = UnitScale 1
+getUnitScale u = error ("Error in getUnitScale -- no scale defined - Unit: " ++ show u)
+
+
+-- | choose display format
+formatSelect :: DisplayLength -> (DisplayFormat,DisplayFormat,DisplayFormat,DisplayFormat) -> DisplayFormat
 formatSelect Short (f1,f2,f3,f4) = f1
 formatSelect Middle (f1,f2,f3,f4) = f2
 formatSelect Long (f1,f2,f3,f4) = f3
 formatSelect Float (f1,f2,f3,f4) = f4
 
-  
-dispSingle :: Disp a => a -> String -> String
-dispSingle x typ = disp x format scale ++ " " ++ dunit
-           where dunit = dispUnitMap M.! typ
-                 scale = unitMap M.! dunit
-                 format = formatSelect dispLength $ displayFormatMap M.! (typ,dunit)
+-- | display a single value  
+dispSingle :: Disp a => a -> DisplayType -> String
+dispSingle x t = disp x f s  ++ " " ++ show u
+           where u = getDisplayUnit t
+                 s = getUnitScale u
+                 f = formatSelect dispLength $ getDisplayFormats t u 
 
-dispRange :: Disp a => a -> a -> String -> String
-dispRange x y typ = disp x format scale ++ "-" ++ disp y format scale ++ " " ++ dunit
-           where dunit = dispUnitMap M.! typ
-                 scale = unitMap M.! dunit
-                 format = formatSelect dispLength $ displayFormatMap M.! (typ,dunit)
-  
+-- | display a single value  
+dispRange :: Disp a => a -> a -> DisplayType -> String
+dispRange x y t = disp x f s  ++ " - " ++ disp y f s  ++ " " ++ show u
+           where u = getDisplayUnit t
+                 s = getUnitScale u
+                 f = formatSelect dispLength $ getDisplayFormats t u 
+ 
                                
 class DataDisplay a where
-  ddisp :: a -> (String) -> String
+  ddisp :: a -> DisplayType -> String
           
 instance DataDisplay Sig  where 
-  ddisp (Signal v) (typString) = dispRange (UV.minimum v) (UV.maximum v) typString
+  ddisp (Signal v) typ = dispRange (UV.minimum v) (UV.maximum v) typ
 
 
 class TypedDisplay (typ :: * -> *) a where
   tdisp :: typ a -> String
 
 instance (DataDisplay a) => TypedDisplay P a where
-  tdisp (P d) = ddisp d "P" 
+  tdisp (P d) = ddisp d PTyp 
   
 instance (DataDisplay a) => TypedDisplay E a where
-  tdisp (E d) = ddisp d "E" 
+  tdisp (E d) = ddisp d ETyp 
 
+-- ########################## Signal Plotting #####################
+
+
+  
+  
   
   
   
