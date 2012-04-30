@@ -10,6 +10,14 @@ data NodeType = Storage Int
               | Source
               | Crossing deriving (Show, Ord, Eq)
 
+isStorage :: NodeType -> Bool
+isStorage (Storage _) = True
+isStorage _ = False
+
+getStorageNumber :: NodeType -> Int
+getStorageNumber (Storage x) = x
+getStorageNumber x = error $ "getStorageNumber: " ++ show x ++ " is not a storage"
+
 data NLabel = NLabel { sectionNLabel :: Int,
                        recordNLabel :: Int,
                        nodeNLabel :: Int,
@@ -19,7 +27,28 @@ data FlowDirection = WithDir
                    | AgainstDir
                    | UnDir deriving (Show, Eq)
 
-data ELabel = ELabel FlowDirection deriving (Show)
+isInactive :: FlowDirection -> Bool
+isInactive UnDir = True
+isInactive _ = False
+
+isActive :: FlowDirection -> Bool
+isActive = not . isInactive
+
+data EdgeType = OriginalEdge
+              | IntersectionEdge deriving (Eq, Show)
+
+
+
+data ELabel = ELabel { edgeType :: EdgeType,
+                       flowDirection :: FlowDirection } deriving (Show)
+
+defaultELabel = ELabel OriginalEdge WithDir
+
+isActiveEdge :: ELabel -> Bool
+isActiveEdge = isActive . flowDirection
+
+isInactiveEdge :: ELabel -> Bool
+isInactiveEdge = isInactive . flowDirection
 
 newtype Topology' a b = Topology { unTopology :: Gr a b } deriving (Show)
 type Topology = Topology' NLabel ELabel

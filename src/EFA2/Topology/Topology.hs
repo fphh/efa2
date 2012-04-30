@@ -33,7 +33,7 @@ makeEdges es = map f es
 
 makeWithDirEdges :: [(Int, Int)] -> [LEdge ELabel]
 makeWithDirEdges es = map f es
-  where f (a, b) = (a, b, ELabel WithDir)
+  where f (a, b) = (a, b, defaultELabel)
 
 
 
@@ -58,12 +58,14 @@ mkNodeEq topo = concat $ mapGraph mkEq topo
 -- | ATTENTION: We must only produce equations, where every variable occurs only once.
 -- This has to do with 'transformEq', which can only factor out variables that occure only once.
 mkEq :: ([NLabel], NLabel, [NLabel]) -> [EqTerm]
-mkEq (ins, n, outs)
+mkEq (ins, n@(NLabel rec sec from to), outs)
   | length ins == 0 && length outs == 0 = []
-  | length ins == 0 && length outs > 0 = xoeqs ++ oeqs'
-  | length ins > 0 && length outs == 0 = xieqs ++ ieqs'
-  | otherwise = oeqs ++ ieqs ++ xoeqs ++ xieqs ++ oeqs' ++ ieqs'
-  where ins' = zip (repeat n) ins
+  | length ins == 0 && length outs > 0 = xoeqs ++ oeqs' ++ vosumeq
+  | length ins > 0 && length outs == 0 = xieqs ++ ieqs' ++ visumeq
+  | otherwise = vosumeq ++ oeqs ++ visumeq ++ ieqs ++ xoeqs ++ xieqs ++ oeqs' ++ ieqs'
+  where 
+
+        ins' = zip (repeat n) ins
         outs' = zip (repeat n) outs
 
         xis = map (makeVar XIdx) ins'
@@ -73,10 +75,16 @@ mkEq (ins, n, outs)
         -- For section and record, we focus on the current node n.
         makeVar mkIdx ((NLabel s r n _), (NLabel _ _ n' _)) = mkVar $ mkIdx s r n n'
 
-        isum = add eis
-        osum = add eos
-        ieqs = zipWith3 f eis xis (repeat osum)
-        oeqs = zipWith3 f eos xos (repeat isum)
+        visum = mkVar (VarIdx sec rec from 0)
+        visumeq = [visum := add eis]
+
+        vosum = mkVar (VarIdx sec rec from 1)
+        vosumeq = [vosum := add eos]
+
+        --isum = add eis
+        --osum = add eos
+        ieqs = zipWith3 f eis xis (repeat vosum)
+        oeqs = zipWith3 f eos xos (repeat visum)
         f x y z = x := y :* z
 
         xieqs | length xis > 0 = [Const 1.0 := add xis]
@@ -84,14 +92,24 @@ mkEq (ins, n, outs)
         xoeqs | length xos > 0 = [Const 1.0 := add xos]
               | otherwise = []
 
+        ieqs' | length eis > 1 = zipWith (g visum) xis eis
+              | otherwise = []
+        oeqs' | length eos > 1 = zipWith (g vosum) xos eos
+              | otherwise = []
+        g v x e = x := e :* Recip v
+
+{-
+        oeqs' | length eos > 1 = concatMap g $ pairs $ zipWith (,) xos eos
+              | otherwise = []
+-}
+
+{-
         ieqs' | length eis > 1 = concatMap g $ pairs $ zipWith (,) xis eis
               | otherwise = []
         oeqs' | length eos > 1 = concatMap g $ pairs $ zipWith (,) xos eos
               | otherwise = []
-        --g ((x1@(X (XIdx s r x y)), e1), (x2, e2)) = [x1 :* e2 := x2 :* e1]
-        g ((x1@(X (XIdx s r x y)), e1), (x2, e2)) = [x1 :* e2 := v, v := x2 :* e1]
-          where v = Var (VarIdx s r x y)
-         
+        g ((x1@(X (XIdx s r x y)), e1), (x2, e2)) = [x1 :* e2 := x2 :* e1]
+-} 
 
 -- | We sort in and out going edges according to 'FlowDirection'.
 -- Undirected edges are filtered away.
@@ -99,8 +117,8 @@ mkEq (ins, n, outs)
 makeDirTopology :: Topology -> Topology
 makeDirTopology topo = mkGraph ns es
   where es = map flipAgainst $ filter onlyDirected $ labEdges topo
-        onlyDirected (_, _, ELabel UnDir) = False
-        onlyDirected _ = True
-        flipAgainst (x, y, ELabel AgainstDir) = (y, x, ELabel WithDir)
-        flipAgainst e = e
+        onlyDirected (_, _, elabel) = flowDirection elabel /= UnDir
+        flipAgainst e@(x, y, elabel)
+          | AgainstDir <- flowDirection elabel = (y, x, elabel { flowDirection = WithDir })
+          | otherwise = e
         ns = unique (concatMap (\(x, y, _) -> [(x,  fromJust (lab topo x)), (y, fromJust (lab topo y))]) es)

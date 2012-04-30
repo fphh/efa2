@@ -1,9 +1,13 @@
+{-# LANGUAGE TupleSections #-}
+
 module EFA2.Topology.Flow (module EFA2.Topology.Flow) where
 
 
 import Data.Graph.Inductive
 import qualified Data.Map as M
 import qualified Data.List as L
+
+import Debug.Trace
 
 import EFA2.Topology.TopologyData
 import EFA2.Signal.SequenceData
@@ -38,9 +42,9 @@ genSequFlowTops topo (SequData sequFlowStates) = SequData $ map (genFlowTopology
 -- | Function to generate Flow Topology -- only use one state per signal
 genFlowTopology:: Topology -> FlowState -> FlowTopology
 genFlowTopology topo (FlowState fs) = mkGraph (labNodes topo) (concat $ map f (labEdges topo)) 
-  where f edge@(idx1,idx2,_) | fs M.! (PPosIdx idx1 idx2) == PSign = [(idx1, idx2, ELabel WithDir)] 
-        f edge@(idx1,idx2,_) | fs M.! (PPosIdx idx1 idx2) == NSign = [(idx1, idx2, ELabel AgainstDir)]
-        f edge@(idx1,idx2,_) | fs M.! (PPosIdx idx1 idx2) == ZSign = [(idx1, idx2, ELabel UnDir)]
+  where f edge@(idx1,idx2, l) | fs M.! (PPosIdx idx1 idx2) == PSign = [(idx1, idx2, l { flowDirection = WithDir })] 
+        f edge@(idx1,idx2, l) | fs M.! (PPosIdx idx1 idx2) == NSign = [(idx1, idx2, l { flowDirection = AgainstDir})]
+        f edge@(idx1,idx2, l) | fs M.! (PPosIdx idx1 idx2) == ZSign = [(idx1, idx2, l { flowDirection = UnDir})]
 {-
   where f edge@(idx1,idx2,_) | fs M.! (PPosIdx idx1 idx2) == PSign = [edge] 
         f edge@(idx1,idx2,lab) | fs M.! (PPosIdx idx1 idx2) == NSign = [(idx2,idx1,lab)]
@@ -55,8 +59,8 @@ genSectionTopology :: SequFlowTops -> SequData [SecTopology]
 genSectionTopology (SequData tops) = SequData (map (uncurry mkSectionTopology) (zip [0..] tops))
 
 
-mkSequenceTopology :: SequData [SecTopology] -> Topology
-mkSequenceTopology (SequData tops) = mkGraph (concat ns'') (concat es'')
+copySeqTopology :: SequData [SecTopology] -> Topology
+copySeqTopology (SequData tops) = mkGraph (concat ns'') (concat es'')
   where tops' = map unSecTopology tops
         ns = map labNodes tops'
         ns' = zip offsets ns
@@ -68,3 +72,26 @@ mkSequenceTopology (SequData tops) = mkGraph (concat ns'') (concat es'')
 
         offsets = reverse $ L.foldl' f [0] (map length ns)
         f (a:acc) l = (a+l):a:acc
+
+isActStore :: (Node, NLabel, [ELabel], [ELabel]) -> Bool
+isActStore a@(_, l, ins, outs) = isStorage (nodetypeNLabel l) && not (null (filter isActiveEdge es))
+--  | otherwise = error ("isActStore: " ++ show a ++ " has more or less then one neighbour.")
+  where es = ins ++ outs
+
+
+mkSequenceTopology :: SequData [SecTopology] -> Topology
+mkSequenceTopology sd = trace (show interSecEs) $ insEdges interSecEs sqTopo
+  where sqTopo = copySeqTopology sd
+        ns = map (\(n, l) -> (n, l, map snd (lpre sqTopo n), map snd (lsuc sqTopo n))) (labNodes sqTopo)
+
+        stores = filter isActStore ns
+        (instores, outstores) = L.partition p stores
+        p (n, _, [], [o]) = flowDirection o == AgainstDir
+        p (n, _, [i], []) = flowDirection i == WithDir
+        outs = map (\(n, l, _, _) -> (n, l)) outstores
+        ins = map (\(n, l, _, _) -> (n, l)) instores
+
+        es = map (\(n, l) -> (n, map fst (filter (q l) outs))) ins
+        q lin (_, lout) = sectionNLabel lout > sectionNLabel lin
+
+        interSecEs = concatMap (\(n, ns) -> map (n,, defaultELabel { edgeType = IntersectionEdge}) ns) es

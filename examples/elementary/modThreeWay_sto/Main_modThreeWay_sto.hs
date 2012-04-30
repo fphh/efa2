@@ -25,6 +25,7 @@ import EFA2.Solver.DependencyGraph
 import EFA2.Interpreter.Env
 import EFA2.Interpreter.Interpreter
 import EFA2.Interpreter.Arith
+import EFA2.Interpreter.InTerm
 
 import EFA2.Utils.Utils
 import EFA2.IO.Import
@@ -45,7 +46,7 @@ import EFA2.Example.SymSig
 topo :: Topology
 topo = mkGraph (makeNodes nodes) (makeEdges edges)
   where nodes = [(0, Source), (1, Crossing), (2, Sink), (3, Storage 0)]
-        edges = [(0, 1, ELabel WithDir), (1, 2, ELabel WithDir),(1, 3, ELabel WithDir)]
+        edges = [(0, 1, defaultELabel), (1, 2, defaultELabel),(1, 3, defaultELabel)]
 
 
 main :: IO ()
@@ -56,12 +57,12 @@ main = do
   let
 
       pRec = PowerRecord time pMap              
-      pMap =  M.fromList [ (PPosIdx 0 1,  sigMap M.! (SigId "powercon1.u")),
-                           (PPosIdx 1 0,  sigMap M.! (SigId "powercon2.u")), 
-                           (PPosIdx 1 2,  sigMap M.! (SigId "powercon3.u")),
-                           (PPosIdx 2 1,  sigMap M.! (SigId "powercon4.u")),                            
-                           (PPosIdx 1 3,  sigMap M.! (SigId "powercon6.u")),
-                           (PPosIdx 3 1,  sigMap M.! (SigId "powercon5.u")) ]
+      pMap =  M.fromList [ (PPosIdx 0 1, sigMap M.! (SigId "powercon1.u")),
+                           (PPosIdx 1 0, sigMap M.! (SigId "powercon2.u")), 
+                           (PPosIdx 1 2, sigMap M.! (SigId "powercon3.u")),
+                           (PPosIdx 2 1, sigMap M.! (SigId "powercon4.u")),
+                           (PPosIdx 1 3, sigMap M.! (SigId "powercon6.u")),
+                           (PPosIdx 3 1, sigMap M.! (SigId "powercon5.u")) ]
 
       sigs = M.unions (map powerMap sqEnvs)
 
@@ -106,15 +107,15 @@ main = do
   putStrLn (show sqFStRec)
     -}
 
-  putStrLn (showEqTerms ts)
+  --putStrLn (showEqTerms ts)
 
-  putStrLn (showInTerms gd)
+  --putStrLn (showInTerms gd)
   
   
   -- drawSequFlowTops sqFlowTops
-  print res
+  --print res
 
   drawAll [
-    --drawTopologyX' sqTopo,
+    drawTopologyX' sqTopo,
     drawTopology sqTopo res,
     drawTopologyX' dirg ]

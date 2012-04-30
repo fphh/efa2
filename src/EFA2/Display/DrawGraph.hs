@@ -39,6 +39,12 @@ nodeColour = FillColor (RGB 230 230 240)
 clusterColour :: Attribute
 clusterColour = FillColor (RGB 250 250 200)
 
+originalEdgeColour :: Attribute
+originalEdgeColour = Color [RGB 0 0 200]
+
+intersectionEdgeColour :: Attribute
+intersectionEdgeColour = Color [RGB 200 0 0]
+
 mkDotGraph :: Gr NLabel ELabel -> (LNode NLabel -> String) -> (LEdge ELabel -> String) -> DotGraph Int
 mkDotGraph g nshow eshow =
   DotGraph { strictGraph = False,
@@ -52,15 +58,20 @@ mkDotGraph g nshow eshow =
 
 
 mkDotNode:: (LNode NLabel -> String) -> LNode NLabel -> DotNode Int
-mkDotNode nshow n@(x, _) = DotNode x [displabel, nodeColour, Style [SItem Filled []], Shape BoxShape ] 
+mkDotNode nshow n@(x, _) = DotNode x [displabel, nodeColour, Style [SItem Filled []], Shape BoxShape ]
   where displabel =  Label $ StrLabel $ T.pack (nshow n)
 
 mkDotEdge :: (LEdge ELabel -> String) -> LEdge ELabel -> DotEdge Int
-mkDotEdge eshow e@(x, y, ELabel dir)
-  | AgainstDir <- dir = DotEdge x y [displabel, Dir Back]
-  | UnDir <- dir = DotEdge x y [Dir NoDir]
-  | otherwise = DotEdge x y [displabel, Dir Forward]
-  where displabel = Label $ StrLabel $ T.pack (eshow e)
+mkDotEdge eshow e@(x, y, elabel) = DotEdge x y [displabel, edir, colour]
+  where flowDir = flowDirection elabel
+        displabel | UnDir <- flowDir = Label $ StrLabel $ T.pack ""
+                  | otherwise = Label $ StrLabel $ T.pack (eshow e)
+        edir | AgainstDir <- flowDir = Dir Back
+             | WithDir <- flowDir = Dir Forward
+             | otherwise = Dir NoDir
+        etype = edgeType elabel
+        colour | OriginalEdge <- etype = originalEdgeColour
+               | IntersectionEdge <- etype = intersectionEdgeColour
 
 printGraph :: Gr NLabel ELabel -> (LNode NLabel -> String) -> (LEdge ELabel -> String) -> IO ()
 printGraph g nshow eshow = runGraphvizCanvas Dot (mkDotGraph g nshow eshow) Xlib
@@ -74,7 +85,7 @@ drawFlowTop (FlowTopology g) = printGraph g show show -- runGraphvizCanvas Dot (
 
 drawSequFlowTops :: SequFlowTops -> IO ()
 drawSequFlowTops (SequData flowTops) = mapM_ drawFlowTop flowTops
--}
+r-}
 
 
 {-
