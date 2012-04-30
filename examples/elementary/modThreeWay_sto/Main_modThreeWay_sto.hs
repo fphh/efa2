@@ -46,7 +46,7 @@ import EFA2.Example.SymSig
 topo :: Topology
 topo = mkGraph (makeNodes nodes) (makeEdges edges)
   where nodes = [(0, Source), (1, Crossing), (2, Sink), (3, Storage 0)]
-        edges = [(0, 1, defaultELabel), (1, 2, defaultELabel),(1, 3, defaultELabel)]
+        edges = [(0, 1, defaultELabel), (1, 2, defaultELabel), (1, 3, defaultELabel)]
 
 
 main :: IO ()
