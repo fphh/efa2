@@ -13,6 +13,7 @@ import Debug.Trace
 
 
 import EFA2.Interpreter.Env
+import EFA2.Interpreter.Arith
 
 -- TOTHINK: Die Algorithmen aus dem Verzeichnis Solver sollten
 -- über den Datentyp EqTerm parametrisierbar sein. Die Abhängigkeisanalyse
@@ -20,7 +21,7 @@ import EFA2.Interpreter.Env
 -- haette wahrscheinlich auch Einfluss auf InVar...
 
 data EqTerm = EqTerm := EqTerm
-          | Const Double
+          | Const Val -- Double
           | Given
           | Power PowerIdx
           | Eta EtaIdx
@@ -37,7 +38,18 @@ data EqTerm = EqTerm := EqTerm
           | EqTerm :+ EqTerm
           | EqTerm :* EqTerm deriving (Show, Eq, Ord)
 
-infixl 1 :=
+infixl 1 !=, :=
+infixl 7  !*, :*
+infixl 6  !+, :+
+
+(!+) :: (MkVarC a, MkVarC b) => a -> b -> EqTerm
+x !+ y = mkVar x :+ mkVar y
+
+(!*) :: (MkVarC a, MkVarC b) => a -> b -> EqTerm
+x !* y = mkVar x :* mkVar y
+
+(!=) :: (MkVarC a, MkVarC b) => a -> b -> EqTerm
+x != y = mkVar x := mkVar y
 
 class MkVarC a where
       mkVar :: a -> EqTerm
@@ -61,6 +73,12 @@ instance MkVarC XIdx where
 
 instance MkVarC VarIdx where
          mkVar = Var
+
+instance MkVarC Val where
+         mkVar = Const
+
+instance MkVarC EqTerm where
+         mkVar = id
 
 add :: [EqTerm] -> EqTerm
 add ts = assert (length ts > 0) (L.foldl1' (:+) ts)
@@ -162,6 +180,7 @@ isolateVar s t@(u := v) (L:p) = (s := transform v)
   where transform = isolateVar' u p
 isolateVar s t@(u := v) (R:p) = (s := transform u)
   where transform = isolateVar' v p
+isolateVar s t p = error $ "isolateVar:\n" ++ show s ++ "\n" ++ show t ++ "\n" ++ show p
 
 isolateVar' :: EqTerm -> TPath -> (EqTerm -> EqTerm)
 isolateVar' _ [] = id

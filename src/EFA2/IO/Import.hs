@@ -1,11 +1,17 @@
+{-# LANGUAGE FlexibleInstances #-}
+
 module EFA2.IO.Import (module EFA2.IO.Import) where
+
+import qualified Data.Map as M 
+
+import Data.Ratio
 
 import EFA2.Signal.Sequence
 import EFA2.Interpreter.Arith
 import EFA2.Utils.Utils
 import EFA2.Signal.Sequence
+import EFA2.Signal.SequenceData
 
-import qualified Data.Map as M 
 --import Text.ParserCombinators.Parsec
 import Data.List.Split
 
@@ -36,7 +42,7 @@ modelicaCSVParse text = rec
         header =  csvParseHeaderLine $ head csvlines  -- header with labels in first line       
         sigIdents = map SigId (tail header) -- first column is "time" / use Rest
         -- TODO improve Quick-Fix: cut away first and last csvLine with head and init 
-        columns = transpose (map csvParseDataLine $ tail csvlines) -- rest of lines contains data / transpose from columns to lines
+        columns = ctranspose (map csvParseDataLine $ tail csvlines) -- rest of lines contains data / transpose from columns to lines
         time = if (head header) == "time" then head columns else error $ "Error in csvImport - first column not time : " ++ (head header)
         sigs = tail columns -- generate signals from rest of columns
         rec = Record time  (M.fromList $ zip sigIdents sigs) -- generate Record with signal Map
@@ -44,8 +50,16 @@ modelicaCSVParse text = rec
 -- | Parse CSV Header Line
 csvParseHeaderLine :: String -> [String]  
 csvParseHeaderLine line = init $ map read (splitOn "," line)   -- (init . tail) to get rid of Modelica " " quotes 
-  
--- | Parse CSV Data Line
-csvParseDataLine :: String -> [Val]  
-csvParseDataLine line = init $ map read (splitOn "," line)  -- another init to get rid of final , per line
+
+class ParseCVS a where
+      csvParseDataLine :: String -> [a]
+
+
+instance ParseCVS Double where
+         -- | Parse CSV Data Line
+         csvParseDataLine line = init $ map read (splitOn "," line)  -- another init to get rid of final , per line
+
+
+instance ParseCVS (Ratio Integer) where
+         csvParseDataLine line = init $ map (flip approxRational 0.001 . read) (splitOn "," line)
 

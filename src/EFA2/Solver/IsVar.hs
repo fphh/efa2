@@ -13,6 +13,7 @@ import EFA2.Solver.Equation
 import EFA2.Interpreter.Env
 import EFA2.Utils.Utils
 
+{-- This algorithm is fast, but buggy.
 
 -- | Section, record, from, to.
 data Tableau = Tableau (UV.Vector Bool) (UV.Vector Bool) (UV.Vector Bool) (UV.Vector Bool) deriving (Show)
@@ -70,7 +71,7 @@ isVar g ts t
         Tableau dps dpr dpf dpt = mkTableau dpowerUpdateVec len ts
         Tableau des der def det = mkTableau detaUpdateVec len ts
         tab@(Tableau xs xr xf xt) = mkTableau xUpdateVec len ts
-
+-}
 
 -- | True for 'EqTerm's that are of the form:
 -- > ... := Given ...
@@ -126,12 +127,13 @@ isCompoundTerm _ = True
 isStaticVar :: EqTerm -> Bool
 isStaticVar = not . isCompoundTerm
 
+{-
 -- | True for variables that don't appear in 'Given' equations.
 -- Used mainly as a reference implementation for 'isVar'.
 isVarFromEqs :: S.Set EqTerm -> (EqTerm -> Bool)
 isVarFromEqs s t = not (S.member t s || isCompoundTerm t) 
+-}
 
-{-
 -- | True for variables that don't appear in 'Given' equations.
 -- Used mainly as a reference implementation for 'isVar'.
 isVarFromEqs :: [EqTerm] -> (EqTerm -> Bool)
@@ -139,4 +141,3 @@ isVarFromEqs ts t = not (S.member t s || isCompoundTerm t)
   where s = L.foldl' f S.empty ts
         f acc (v := Given) = S.insert v acc
         f acc _ = acc
--}

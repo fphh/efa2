@@ -24,41 +24,57 @@ import EFA2.Interpreter.InTerm
 import EFA2.Interpreter.Env
 import EFA2.Interpreter.Arith
 
-import EFA2.Topology.Topology
-
-import EFA2.Utils.Utils
-
-import EFA2.Display.FileSave
-import EFA2.Display.DrawGraph
-
-import EFA2.Example.SymSig
-import EFA2.Example.Zweibein
-
 
 main :: IO ()
 main = do
-  let TheGraph g sigs = zweibein
-      penvts = envToEqTerms sigs
-      ts = penvts ++ makeAllEquations g
- 
-      isV = isVarFromEqs ts
-      (given, nov, givExt, rest) = splitTerms isV ts
+  let x1 = XIdx 0 0 0 1
+      x2 = XIdx 0 0 0 2
+      x3 = XIdx 0 0 0 3
 
+      e1 = PowerIdx 0 0 0 1
+      e2 = PowerIdx 0 0 0 2
+      e3 = PowerIdx 0 0 0 3
+      values = M.fromList [(e1, [2]), (e2, [3]), (e3, [7])]
+
+{-
+      -- This will not solve, because we have at least two unknown variables per equation.
+
+      ts = [ give e1,
+             give e2,
+             x1 !+ x2 != (1 :: Val),
+             x1 !* e2 != x2 !* e1 ]
+-}
+      -- This will solve.
+{-
+      ts = [ give e1,
+             give e2,
+             x1 != Recip (e1 !+ e2) !* e1,
+             x1 !+ x2 != (1 :: Val) ]
+-}
+      -- This also will work.
+      ts = [ give e1,
+             give e2,
+             give e3,
+             x1 != Recip (e1 !+ e2 !+ e3) !* e1,
+             x2 != Recip (e1 !+ e2 !+ e3) !* e2,
+             x1 !+ x2 !+ x3 != (1.0 :: Val) ]
+
+      isV = isVarFromEqs ts
+
+      (given, nov, givExt, rest) = splitTerms isV ts
 
       ho = hornOrder isV givExt rest
       dirs = directEquations isV ho
-      envs = Envs sigs M.empty M.empty M.empty M.empty M.empty
+      envs = Envs values M.empty M.empty M.empty M.empty M.empty
 
       gd = map (eqToInTerm envs) (given ++ dirs)
 
       res :: Envs [Val]
       res = interpretFromScratch gd
 
-
-  putStrLn ("Number of nodes: " ++ show (noNodes g))
-  putStrLn ("Number of edges: " ++ show (length $ edges g))
   putStrLn (showEqTerms ts)
   putStrLn "===================="
+
   putStrLn ("Number of undeq: " ++ show (length ts))
   putStrLn ("Number of given: " ++ show (length given))
   putStrLn ("Number of noVar: " ++ show (length nov))
@@ -69,5 +85,5 @@ main = do
   putStrLn "===================="
   putStrLn ("Number of equations solved: " ++ show (length dirs))
   putStrLn (showInTerms gd)
-
-  drawTopology g res
+  putStrLn "===================="
+  print res

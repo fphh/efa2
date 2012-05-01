@@ -7,6 +7,7 @@ import qualified Data.Map as M
 
 import EFA2.Interpreter.Env
 import EFA2.Topology.Topology
+import EFA2.Topology.TopologyData
 
 {-
 
@@ -30,5 +31,5 @@ instance Signal InTerm where
          toSignal = InConst
 -}
 
-data TheGraph a = TheGraph { theGraph :: Gr NLabel (),
+data TheGraph a = TheGraph { theGraph :: Topology,
                              powerEnv :: PowerMap a }
