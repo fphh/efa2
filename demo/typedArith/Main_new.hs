@@ -24,7 +24,7 @@ newtype Signal a = Signal a deriving (Show, Eq)
 newtype FSignal a = FSignal a deriving (Show, Eq)
 newtype Distrib a = Distrib a deriving (Show, Eq)
 newtype Value a = Value a  deriving (Show, Eq)
-newtype Curve a = Curve a  deriving (Show, Eq)
+-- newtype Curve a = Curve a  deriving (Show, Eq)
 
 
 --------------------------------------------------------------------------------------------
@@ -34,12 +34,13 @@ type BVal = Value Bool
 type IVal = Value Int
 
 type Sig = Signal (UV.Vector Val)
+type FSig = FSignal (UV.Vector Val)
 type BSig = Signal (UV.Vector Bool)
 type ISig = Signal (UV.Vector Int)
 
 type Dist = Distrib (UV.Vector Val)
 
-type Cur = Curve (UV.Vector Val) 
+-- type Cur = Curve (UV.Vector Val) 
 
 --------------------------------------------------------------------------------------------
 -- Data Container Type
@@ -53,6 +54,10 @@ instance Data Signal b where
   fromData (Signal x) = x
   toData x = Signal x                               
 
+instance Data FSignal b where 
+  fromData (FSignal x) = x
+  toData x = FSignal x                               
+
 instance Data Distrib  b where 
   fromData (Distrib x) = x 
   toData x = Distrib x                               
@@ -61,9 +66,9 @@ instance Data Value  b where
   fromData (Value x) = x
   toData x = Value x                               
 
-instance Data Curve  b where 
-  fromData (Curve x) = x
-  toData x = Curve x                               
+-- instance Data Curve  b where 
+--   fromData (Curve x) = x
+--   toData x = Curve x                               
 
 -- Sample Calculation Class
 class DProd a b c | a b -> c where
@@ -74,12 +79,6 @@ instance DProd Sig Sig Sig where
   (.*) x y = toData (UV.zipWith (*) (fromData x) (fromData y))
   (./) x y = toData (UV.zipWith (/) (fromData x) (fromData y))
   
-instance DProd Cur Cur Cur where
-  (.*) x y = toData (UV.zipWith (*) (fromData x) (fromData y))
-  (./) x y = toData (UV.zipWith (/) (fromData x) (fromData y))
-  
-  
-
 instance DProd Sig DVal Sig where
   (.*) x y = toData (UV.map (*(fromData y)) (fromData x))
   (./) x y = toData (UV.map (/(fromData y)) (fromData x))
@@ -87,27 +86,37 @@ instance DProd Sig DVal Sig where
 instance DProd DVal Sig Sig where
   (.*) x y = toData (UV.map (*(fromData x)) (fromData y))
   (./) x y = toData (UV.map (/(fromData x)) (fromData y))
+
+instance DProd FSig FSig FSig where
+  (.*) x y = toData (UV.zipWith (*) (fromData x) (fromData y))
+  (./) x y = toData (UV.zipWith (/) (fromData x) (fromData y))
+  
+instance DProd FSig DVal FSig where
+  (.*) x y = toData (UV.map (*(fromData y)) (fromData x))
+  (./) x y = toData (UV.map (/(fromData y)) (fromData x))
+
+instance DProd DVal FSig FSig where
+  (.*) x y = toData (UV.map (*(fromData x)) (fromData y))
+  (./) x y = toData (UV.map (/(fromData x)) (fromData y))
   
 instance DProd DVal DVal DVal where
   (.*) x y = toData ((*) (fromData x) (fromData x))
   (./) x y = toData ((/) (fromData x) (fromData y))
+
+instance DProd DVal Dist Dist where
+  (.*) x y = toData (UV.map (*(fromData x)) (fromData y))
+  (./) x y = toData (UV.map (/(fromData x)) (fromData y))
+
+instance DProd Dist DVal Dist where
+  (.*) x y = toData (UV.map (*(fromData y)) (fromData x))
+  (./) x y = toData (UV.map (/(fromData y)) (fromData x))
+
+instance DProd Dist Dist Dist where
+  (.*) x y = toData (UV.zipWith (*) (fromData x) (fromData y))
+  (./) x y = toData (UV.zipWith (/) (fromData x) (fromData y))
   
-
--- Generating Curves & Calculating with curves 
-
-instance DProd Dist Cur Dist where
-  (.*) x y = toData (UV.zipWith (*) (fromData x) (fromData y))
-  (./) x y = toData (UV.zipWith (/) (fromData x) (fromData y))
-
-instance DProd Cur Dist Dist where
-  (.*) x y = toData (UV.zipWith (*) (fromData x) (fromData y))
-  (./) x y = toData (UV.zipWith (/) (fromData x) (fromData y))
-
-instance DProd Dist Dist Cur where
-  (./) x y = toData (UV.zipWith (/) (fromData x) (fromData y))
-
 {- use interp1 here to lookup efficiency in curve
-instance DProd USig Curve USig  where
+instance DProd UFSig Curve UFSig  where
   (.*) x y = toData (GV.zipWith interp1 (fromData x) (fromData y))
   (./) x y = toData (GV.zipWith (*) (fromData x) (fromData y))
 -}
@@ -115,7 +124,7 @@ instance DProd USig Curve USig  where
 class DSum a b c | a b -> c where
   (.+) :: a -> b -> c
   (.-) :: a -> b -> c
-  
+
 instance DSum Sig Sig Sig where
   (.+) x y = toData (UV.zipWith (+) (fromData x) (fromData y))
   (.-) x y = toData (UV.zipWith (-) (fromData x) (fromData y))
@@ -127,27 +136,41 @@ instance DSum Sig DVal Sig where
 instance DSum DVal Sig Sig where
   (.+) x y = toData (UV.map (+(fromData x)) (fromData y))
   (.-) x y = toData (UV.map (+(fromData $ dneg x)) (fromData y))
-
-instance DSum Dist Dist Dist where
+  
+instance DSum FSig FSig FSig where
   (.+) x y = toData (UV.zipWith (+) (fromData x) (fromData y))
   (.-) x y = toData (UV.zipWith (-) (fromData x) (fromData y))
+
+instance DSum FSig DVal FSig where
+  (.+) x y = toData (UV.map (+(fromData y)) (fromData x))
+  (.-) x y = toData (UV.map (+(fromData $ dneg y)) (fromData x))
+  
+instance DSum DVal FSig FSig where
+  (.+) x y = toData (UV.map (+(fromData x)) (fromData y))
+  (.-) x y = toData (UV.map (+(fromData $ dneg x)) (fromData y))
 
 instance DSum DVal DVal DVal where
   (.+) x y = toData ((+) (fromData x) (fromData y))
   (.-) x y = toData ((-) (fromData x) (fromData y))
 
+instance DSum DVal Dist Dist where
+  (.+) x y = toData (UV.map (+(fromData x)) (fromData y))
+  (.-) x y = toData (UV.map (+(fromData $ dneg x)) (fromData y))
 
 instance DSum Dist DVal Dist where
   (.+) x y = toData (UV.map (+(fromData y)) (fromData x))
   (.-) x y = toData (UV.map (+(fromData $ dneg y)) (fromData x))
 
+instance DSum Dist Dist Dist where
+  (.+) x y = toData (UV.zipWith (+) (fromData x) (fromData y))
+  (.-) x y = toData (UV.zipWith (-) (fromData x) (fromData y))
 
 
 class DSingleton a where
   dneg :: a -> a
   drezip :: a -> a
   
-instance DSingleton Sig where
+instance DSingleton FSig where
   dneg x = toData (UV.map negate $ fromData x)
   drezip x =  toData (UV.map (1/) $ fromData x)
   
@@ -157,7 +180,7 @@ instance DSingleton DVal where
 
 
 {-
-instance DSum Val Sig Sig where
+instance DSum Val FSig FSig where
   (.+) x y = toData (UV.zipWith (+) (fromData x) (fromData y))
   (.-) x y = toData (UV.zipWith (-) (fromData x) (fromData y))
 -}
@@ -165,19 +188,19 @@ instance DSum Val Sig Sig where
 --------------------------------------------------------------------------------------------
 -- Data Sample Type
 
-data P a = P a deriving (Show)
-data E a = E a deriving (Show)
-data T a = T a deriving (Show)
-data X a = X a deriving (Show)
-data M a = M a deriving (Show)
-data N a = N a deriving (Show)
+newtype P a = P a deriving (Show)
+newtype E a = E a deriving (Show)
+newtype T a = T a deriving (Show)
+newtype X a = X a deriving (Show)
+newtype M a = M a deriving (Show)
+newtype N a = N a deriving (Show)
 
-data DP a = DP a deriving (Show)
-data DE a = DE a deriving (Show)
-data DT a = DT a deriving (Show)
-data DX a = DX a deriving (Show)
-data DM a = DM a deriving (Show)
-data DN a = DN a deriving (Show)
+newtype DP a = DP a deriving (Show)
+newtype DE a = DE a deriving (Show)
+newtype DT a = DT a deriving (Show)
+newtype DX a = DX a deriving (Show)
+newtype DM a = DM a deriving (Show)
+newtype DN a = DN a deriving (Show)
 
 
 -- Type Class
@@ -330,7 +353,7 @@ instance Disp Int where
   disp x (DisplayFormat f) _ = printf f (show x)
 
 -- ##################### Settings are here #####################
-dispLength = Short
+dispLength = Middle
 
 -- | Function to choose display Unit 
 getDisplayUnit :: DisplayType -> DisplayUnit
@@ -346,9 +369,15 @@ getDisplayUnit _ = Unit_none
 
 
 -- | getDisplay formats
-getDisplayFormats :: DisplayType -> DisplayUnit -> (DisplayFormat,DisplayFormat,DisplayFormat,DisplayFormat)
-getDisplayFormats ETyp Unit_kWh = (DisplayFormat "%6.7f",DisplayFormat "%6.7f",DisplayFormat "%6.7f",DisplayFormat "%6.7f")
-getDisplayFormats _ _ = (DisplayFormat "%6.7f",DisplayFormat "%6.7f",DisplayFormat "%6.7f",DisplayFormat "%6.7f")
+getDisplayFormat ::  DisplayLength -> DisplayType -> DisplayUnit -> DisplayFormat
+-- normal formats
+getDisplayFormat Middle ETyp Unit_kWh = DisplayFormat "%6.7f"
+
+
+getDisplayFormat Short  _ _ = DisplayFormat "%3.2f"
+getDisplayFormat Middle _ _ = DisplayFormat "%5.3f"
+getDisplayFormat Long _ _ = DisplayFormat "%6.7f"
+getDisplayFormat Float _ _ = DisplayFormat "%6.7e"
 
 
 -- ##################### Settings are above #####################
@@ -379,40 +408,32 @@ getUnitScale Unit_Percent = UnitScale 100
 getUnitScale Unit_sec = UnitScale 1
 getUnitScale u = error ("Error in getUnitScale -- no scale defined - Unit: " ++ show u)
 
-
--- | choose display format
-formatSelect :: DisplayLength -> (DisplayFormat,DisplayFormat,DisplayFormat,DisplayFormat) -> DisplayFormat
-formatSelect Short (f1,f2,f3,f4) = f1
-formatSelect Middle (f1,f2,f3,f4) = f2
-formatSelect Long (f1,f2,f3,f4) = f3
-formatSelect Float (f1,f2,f3,f4) = f4
-
 -- | display a single value  
 dispSingle :: Disp a => a -> DisplayType -> String
 dispSingle x t = disp x f s  ++ " " ++ show u
            where u = getDisplayUnit t
                  s = getUnitScale u
-                 f = formatSelect dispLength $ getDisplayFormats t u 
+                 f = getDisplayFormat dispLength t u 
 
 -- | display a single value  
 dispRange :: Disp a => a -> a -> DisplayType -> String
 dispRange x y t = disp x f s  ++ " - " ++ disp y f s  ++ " " ++ show u
            where u = getDisplayUnit t
                  s = getUnitScale u
-                 f = formatSelect dispLength $ getDisplayFormats t u 
+                 f = getDisplayFormat dispLength t u
  
                                
 class DataDisplay a where
   ddisp :: a -> DisplayType -> String
           
-instance DataDisplay Sig  where 
-  ddisp (Signal v) typ = dispRange (UV.minimum v) (UV.maximum v) typ
+instance DataDisplay FSig  where 
+  ddisp (FSignal v) typ = dispRange (UV.minimum v) (UV.maximum v) typ
 
 instance DataDisplay Dist  where 
   ddisp (Distrib v) typ = dispRange (UV.minimum v) (UV.maximum v) typ
 
-instance DataDisplay Cur  where 
-  ddisp (Curve v) typ = dispRange (UV.minimum v) (UV.maximum v) typ
+-- instance DataDisplay Cur  where 
+--   ddisp (Curve v) typ = dispRange (UV.minimum v) (UV.maximum v) typ
 
 instance DataDisplay DVal  where 
   ddisp (Value v) typ = dispSingle v typ
@@ -440,8 +461,8 @@ l4 = [1,2]
 l5 = [ON,OFF]
 
 -- signals
-s1 = Signal (UV.fromList l1) :: Sig 
-s2 = Signal (UV.fromList l2) :: Sig
+s1 = FSignal (UV.fromList l1) :: FSig 
+s2 = FSignal (UV.fromList l2) :: FSig
 s3 = Signal (UV.fromList l3) :: BSig
 s4 = Signal (UV.fromList l4) :: ISig
 s5 = Signal (GV.fromList l5) :: StateSig
@@ -450,25 +471,26 @@ s5 = Signal (GV.fromList l5) :: StateSig
 s6 = s1.*s2
 s7 = s6./s2
 s8 = s7.-s1
+s13 = s1.+s2
 s9 = s1.*v2
 s10 = v2.*s1 
 s11 = s1.+v1
 s12 = v2.+s1
-sList = [s1,s2,s6,s7,s8,s9,s10,s11,s12]
+sList = [s1,s2,s6,s7,s8,s13,s9,s10,s11,s12]
 
 -- distributions
 d1 = Distrib (UV.fromList l1)
 d2 = Distrib (UV.fromList l2)
-d3 = d1.*c1
-d4 = d3.-d2
-d5 = d1.+d2
+d6 = d1.*d2
+d7 = d6./d2
+d8 = d7.-d1
+d13 = d1.+d2
+d9 = d1.*v2
+d10 = v2.*d1 
+d11 = d1.+v1
+d12 = v2.+d1
 
-dList =[d1,d2,d3,d4,d5]
-
--- Calculate with Curves & Distributions
-c1 = d2./d1 :: Cur
-cList = [c1]
-
+dList =[d1,d2,d6,d7,d8,d13,d10,d11,d12]
 
 -- values
 v1 = Value 1.1 :: DVal
@@ -485,17 +507,16 @@ vList = [v1,v2,v3,v4,v5]
 
 p = P s1
 t = DT s2
-e = p~*t :: E  (Signal (UV.Vector Val))
+e = p~*t 
 
 main = do
   putStrLn "Signals"
   putStrLn $ unlines $ map (tdisp . P) sList
   putStrLn "Values"  
   putStrLn $ unlines $ map (tdisp . P) vList
-  putStrLn "Distribtuions"  
+  putStrLn "Distribtions"  
   putStrLn $ unlines $ map (tdisp . P) dList
-  putStrLn "Curves"  
-  putStrLn $ unlines $ map (tdisp . P) cList
+
   
   putStrLn $ show (e)
   putStrLn $ tdisp (e)
