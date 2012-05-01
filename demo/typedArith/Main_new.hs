@@ -7,7 +7,7 @@ import qualified Data.Foldable as F
 
 import qualified Data.Map as M
 import Text.Printf
-import Graphics.Gnuplot.Simple
+-- import Graphics.Gnuplot.Simple
 
 -----------------------------------------------------------------------------------
 -- Basic Data structures used 
@@ -16,13 +16,12 @@ type UVec = UV.Vector
 type GVec = GV.Vector
 type LVec = []
 type Val = Double
-type IState = Int
-type State = Bool
 
 -----------------------------------------------------------------------------------
 -- Data Formats containing the data
   
 newtype Signal a = Signal a deriving (Show, Eq)
+newtype FSignal a = FSignal a deriving (Show, Eq)
 newtype Distrib a = Distrib a deriving (Show, Eq)
 newtype Value a = Value a  deriving (Show, Eq)
 newtype Curve a = Curve a  deriving (Show, Eq)
@@ -30,30 +29,17 @@ newtype Curve a = Curve a  deriving (Show, Eq)
 
 --------------------------------------------------------------------------------------------
 -- Helpful Type Synoymns
-type Sig = Signal (UV.Vector Val)
--- type LSig = Signal [Val]
--- type SignSig = Signal (GV.Vector Sign)
-
-
-type BSig = Signal (UV.Vector Bool)
--- type LBSig = Signal [Bool]
-
-type ISig = Signal (UV.Vector Int)
--- type LISig = Signal [Int]
-
-
-
 type DVal = Value Double
 type BVal = Value Bool
 type IVal = Value Int
 
+type Sig = Signal (UV.Vector Val)
+type BSig = Signal (UV.Vector Bool)
+type ISig = Signal (UV.Vector Int)
+
 type Dist = Distrib (UV.Vector Val)
 
 type Cur = Curve (UV.Vector Val) 
-
--- ?? Do we need a signal for user defined types here as well ?? --
--- type VISig a = (Num a) ... 
--- no hand-code specifically
 
 --------------------------------------------------------------------------------------------
 -- Data Container Type
@@ -63,32 +49,61 @@ class Data (cont :: * -> *) b where
    fromData :: cont a -> a
    toData :: a -> cont a
   
-instance Data Signal b where fromData (Signal x) = x; toData x = Signal x                               
-instance Data Distrib  b where fromData (Distrib x) = x; toData x = Distrib x                               
-instance Data Value  b where fromData (Value x) = x; toData x = Value x                               
-instance Data Curve  b where fromData (Curve x) = x; toData x = Curve x                               
+instance Data Signal b where 
+  fromData (Signal x) = x
+  toData x = Signal x                               
+
+instance Data Distrib  b where 
+  fromData (Distrib x) = x 
+  toData x = Distrib x                               
+
+instance Data Value  b where 
+  fromData (Value x) = x
+  toData x = Value x                               
+
+instance Data Curve  b where 
+  fromData (Curve x) = x
+  toData x = Curve x                               
 
 -- Sample Calculation Class
-class DProd a b c | a b -> c , b c -> a where
+class DProd a b c | a b -> c where
   (.*) :: a -> b -> c
-  (./) :: c -> b -> a
+  (./) :: a -> b -> c
   
 instance DProd Sig Sig Sig where
   (.*) x y = toData (UV.zipWith (*) (fromData x) (fromData y))
   (./) x y = toData (UV.zipWith (/) (fromData x) (fromData y))
-
--- instance DProd VSig VSig VSig where
---   (.*) x y = toData (GV.zipWith (*) (fromData x) (fromData y))
---   (./) x y = toData (GV.zipWith (/) (fromData x) (fromData y))
+  
+instance DProd Cur Cur Cur where
+  (.*) x y = toData (UV.zipWith (*) (fromData x) (fromData y))
+  (./) x y = toData (UV.zipWith (/) (fromData x) (fromData y))
+  
+  
 
 instance DProd Sig DVal Sig where
   (.*) x y = toData (UV.map (*(fromData y)) (fromData x))
   (./) x y = toData (UV.map (/(fromData y)) (fromData x))
 
+instance DProd DVal Sig Sig where
+  (.*) x y = toData (UV.map (*(fromData x)) (fromData y))
+  (./) x y = toData (UV.map (/(fromData x)) (fromData y))
+  
+instance DProd DVal DVal DVal where
+  (.*) x y = toData ((*) (fromData x) (fromData x))
+  (./) x y = toData ((/) (fromData x) (fromData y))
+  
+
 -- Generating Curves & Calculating with curves 
 
 instance DProd Dist Cur Dist where
   (.*) x y = toData (UV.zipWith (*) (fromData x) (fromData y))
+  (./) x y = toData (UV.zipWith (/) (fromData x) (fromData y))
+
+instance DProd Cur Dist Dist where
+  (.*) x y = toData (UV.zipWith (*) (fromData x) (fromData y))
+  (./) x y = toData (UV.zipWith (/) (fromData x) (fromData y))
+
+instance DProd Dist Dist Cur where
   (./) x y = toData (UV.zipWith (/) (fromData x) (fromData y))
 
 {- use interp1 here to lookup efficiency in curve
@@ -97,13 +112,55 @@ instance DProd USig Curve USig  where
   (./) x y = toData (GV.zipWith (*) (fromData x) (fromData y))
 -}
 
-class DSum a b c | a b -> c , b c -> a where
+class DSum a b c | a b -> c where
   (.+) :: a -> b -> c
-  (.-) :: c -> b -> a
+  (.-) :: a -> b -> c
   
 instance DSum Sig Sig Sig where
   (.+) x y = toData (UV.zipWith (+) (fromData x) (fromData y))
   (.-) x y = toData (UV.zipWith (-) (fromData x) (fromData y))
+
+instance DSum Sig DVal Sig where
+  (.+) x y = toData (UV.map (+(fromData y)) (fromData x))
+  (.-) x y = toData (UV.map (+(fromData $ dneg y)) (fromData x))
+  
+instance DSum DVal Sig Sig where
+  (.+) x y = toData (UV.map (+(fromData x)) (fromData y))
+  (.-) x y = toData (UV.map (+(fromData $ dneg x)) (fromData y))
+
+instance DSum Dist Dist Dist where
+  (.+) x y = toData (UV.zipWith (+) (fromData x) (fromData y))
+  (.-) x y = toData (UV.zipWith (-) (fromData x) (fromData y))
+
+instance DSum DVal DVal DVal where
+  (.+) x y = toData ((+) (fromData x) (fromData y))
+  (.-) x y = toData ((-) (fromData x) (fromData y))
+
+
+instance DSum Dist DVal Dist where
+  (.+) x y = toData (UV.map (+(fromData y)) (fromData x))
+  (.-) x y = toData (UV.map (+(fromData $ dneg y)) (fromData x))
+
+
+
+class DSingleton a where
+  dneg :: a -> a
+  drezip :: a -> a
+  
+instance DSingleton Sig where
+  dneg x = toData (UV.map negate $ fromData x)
+  drezip x =  toData (UV.map (1/) $ fromData x)
+  
+instance DSingleton DVal where
+  dneg x = toData (negate $ fromData x)
+  drezip x = toData (1/fromData x)
+
+
+{-
+instance DSum Val Sig Sig where
+  (.+) x y = toData (UV.zipWith (+) (fromData x) (fromData y))
+  (.-) x y = toData (UV.zipWith (-) (fromData x) (fromData y))
+-}
 
 --------------------------------------------------------------------------------------------
 -- Data Sample Type
@@ -178,61 +235,58 @@ instance Type DX a where
   toType x = DX x
 
 -- Product Class
-class   (Type t1 a, Type t2 b, Type t3 c, DProd a b c)  => TProd t1 a t2 b t3 c | t1 t2 -> t3  where 
+class   (Type t1 a, Type t2 b, Type t3 c, DProd a b c, DProd c b a)  => TProd t1 a t2 b t3 c | t1 t2 -> t3  where 
  (~*) ::  t1 a -> t2 b -> t3 c
  (~*) x y = toType ((fromType x) .* (fromType y)) 
  (~/) ::  t3 c -> t2 b -> t1 a
  (~/) x y = toType ((fromType x) ./ (fromType y)) 
 
-instance  DProd a b c => TProd P a DT b  E c where 
-instance  DProd a b c => TProd DT a P b  E c where 
+instance  (DProd a b c,  DProd c b a) => TProd P a DT b  E c 
+instance  (DProd a b c,  DProd c b a) => TProd DT a P b  E c   
 
-instance  DProd a b c => TProd P a N b  P c where 
-instance  DProd a b c => TProd N a P b  P c where 
+instance  (DProd a b c,  DProd c b a) => TProd P a N b  P c  
+instance  (DProd a b c,  DProd c b a) => TProd N a P b  P c  
 
-instance  DProd a b c => TProd P a M b  P c where 
-instance  DProd a b c => TProd M a P b  P c where 
+instance  (DProd a b c,  DProd c b a) => TProd P a M b  P c  
+instance  (DProd a b c,  DProd c b a) => TProd M a P b  P c  
 
-instance  DProd a b c => TProd X a P b  P c where 
-instance  DProd a b c => TProd P a X b  P c where 
+instance  (DProd a b c,  DProd c b a) => TProd X a P b  P c  
+instance  (DProd a b c,  DProd c b a) => TProd P a X b  P c  
 
 -- Sum Class  
-class   (Type t1 a, Type t2 b, Type t3 c, DSum a b c)  => TSum t1 a t2 b t3 c | t1 t2 -> t3  where 
+class   (Type t1 a, Type t2 b, Type t3 c,DSum a b c,DSum c b a)  => TSum t1 a t2 b t3 c | t1 t2 -> t3  where 
  (~+) ::  t1 a -> t2 b -> t3 c
  (~+) x y = toType ((fromType x) .+ (fromType y)) 
  (~-) ::  t3 c -> t2 b -> t1 a
  (~-) x y = toType ((fromType x) .- (fromType y)) 
 
 -- Absolute addition
-instance  DSum a b c => TSum E a E  b E c where 
-instance  DSum a b c => TSum P a P  b P c where 
-instance  DSum a b c => TSum M a M  b M c where 
-instance  DSum a b c => TSum N a N  b N c where
-instance  DSum a b c => TSum T a T  b T c where 
-instance  DSum a b c => TSum X a X  b X c where 
+instance  (DSum a b c,DSum c b a) => TSum E a E  b E c  
+instance  (DSum a b c,DSum c b a) => TSum P a P  b P c  
+instance  (DSum a b c,DSum c b a) => TSum M a M  b M c  
+instance  (DSum a b c,DSum c b a) => TSum N a N  b N c 
+instance  (DSum a b c,DSum c b a) => TSum T a T  b T c  
+instance  (DSum a b c,DSum c b a) => TSum X a X  b X c  
 
 -- Abs + Delta  
-instance  DSum a b c => TSum DE a E  b E c where 
-instance  DSum a b c => TSum E a DE  b E c where 
+instance  (DSum a b c,DSum c b a) => TSum DE a E  b E c  
+instance  (DSum a b c,DSum c b a) => TSum E a DE  b E c  
 
-instance  DSum a b c => TSum DP a P  b P c where 
-instance  DSum a b c => TSum P a DP  b P c where 
+instance  (DSum a b c,DSum c b a) => TSum DP a P  b P c  
+instance  (DSum a b c,DSum c b a) => TSum P a DP  b P c  
 
-instance  DSum a b c => TSum DT a T  b T c where 
-instance  DSum a b c => TSum T a DT  b T c where 
+instance  (DSum a b c,DSum c b a) => TSum DT a T  b T c  
+instance  (DSum a b c,DSum c b a) => TSum T a DT  b T c  
 
 -- Delta + Delta  
-instance  DSum a b c => TSum DE a DE  b DE c where 
-instance  DSum a b c => TSum DP a DP  b DP c where
-instance  DSum a b c => TSum DM a DM  b DM c where 
-instance  DSum a b c => TSum DN a DN  b DN c where 
-instance  DSum a b c => TSum DT a DT  b DT c where 
-instance  DSum a b c => TSum DX a DX  b DX c where 
+instance  (DSum a b c,DSum c b a) => TSum DE a DE  b DE c  
+instance  (DSum a b c,DSum c b a) => TSum DP a DP  b DP c 
+instance  (DSum a b c,DSum c b a) => TSum DM a DM  b DM c  
+instance  (DSum a b c,DSum c b a) => TSum DN a DN  b DN c  
+instance  (DSum a b c,DSum c b a) => TSum DT a DT  b DT c  
+instance  (DSum a b c,DSum c b a) => TSum DX a DX  b DX c  
 
 -- ############################ Display #############################
-  
-  
-  
   
 -- | Typ variable to control display  
 -- class (Show a, PrintfArg a,Fractional a) => TShow a
@@ -317,8 +371,6 @@ instance Show DisplayType where
   show DTTyp = "DT"
   show DXTyp = "DX"
 
-
-
 -- | get display scale per Unit 
 getUnitScale :: DisplayUnit -> UnitScale  
 getUnitScale Unit_kWh = UnitScale (1/1000/3600)
@@ -356,6 +408,14 @@ class DataDisplay a where
 instance DataDisplay Sig  where 
   ddisp (Signal v) typ = dispRange (UV.minimum v) (UV.maximum v) typ
 
+instance DataDisplay Dist  where 
+  ddisp (Distrib v) typ = dispRange (UV.minimum v) (UV.maximum v) typ
+
+instance DataDisplay Cur  where 
+  ddisp (Curve v) typ = dispRange (UV.minimum v) (UV.maximum v) typ
+
+instance DataDisplay DVal  where 
+  ddisp (Value v) typ = dispSingle v typ
 
 class TypedDisplay (typ :: * -> *) a where
   tdisp :: typ a -> String
@@ -363,43 +423,81 @@ class TypedDisplay (typ :: * -> *) a where
 instance (DataDisplay a) => TypedDisplay P a where tdisp (P d) = ddisp d PTyp 
 instance (DataDisplay a) => TypedDisplay E a where tdisp (E d) = ddisp d ETyp 
 
+-- ############################
+-- Testing the functionality
+  
+data State = ON | OFF
+type StateSig = Signal (GV.Vector State)
+instance Disp State where
+  disp ON _ _ = "ON"
+  disp OFF _ _ = "OFF"
 
--- ########################## Signal Plotting #####################
+-- lists % Vectors of different data types
+l1 = [0.3,0.5]                                                  
+l2 = [0.2,0.8]                                                 
+l3 = [True,False] 
+l4 = [1,2]
+l5 = [ON,OFF]
 
-{-
-class DataPlot a where
-  dplot :: a -> IO ()
-  
-instance DataPlot Sig where   
-  
-class TypedPlot (typ :: * -> *) a where
-  plot :: a -> IO ()
-  
-instance TypedPlot P Sig where    
--}  
-  
-  
-  
-  
-s1 = Signal (UV.fromList [0.5,0.3::Val]) 
-s2 = Signal (UV.fromList [0.8,0.2::Val])
-v = Value 2 :: Value Val
--- d = Signal (UV.fromList [0.5,0.3])
+-- signals
+s1 = Signal (UV.fromList l1) :: Sig 
+s2 = Signal (UV.fromList l2) :: Sig
+s3 = Signal (UV.fromList l3) :: BSig
+s4 = Signal (UV.fromList l4) :: ISig
+s5 = Signal (GV.fromList l5) :: StateSig
+
+-- Calculate with Signals
+s6 = s1.*s2
+s7 = s6./s2
+s8 = s7.-s1
+s9 = s1.*v2
+s10 = v2.*s1 
+s11 = s1.+v1
+s12 = v2.+s1
+sList = [s1,s2,s6,s7,s8,s9,s10,s11,s12]
+
+-- distributions
+d1 = Distrib (UV.fromList l1)
+d2 = Distrib (UV.fromList l2)
+d3 = d1.*c1
+d4 = d3.-d2
+d5 = d1.+d2
+
+dList =[d1,d2,d3,d4,d5]
+
+-- Calculate with Curves & Distributions
+c1 = d2./d1 :: Cur
+cList = [c1]
 
 
-s =  (s1.*s2) :: Signal (UV.Vector Val)
-s'=s.*v
+-- values
+v1 = Value 1.1 :: DVal
+v2 = Value 2 :: DVal
+v3 =v1.*v2
+v4 = v1.+v2
+v5 = v1.-v2
+
+vList = [v1,v2,v3,v4,v5]
+
+--Calculate with values
+
+
 
 p = P s1
 t = DT s2
 e = p~*t :: E  (Signal (UV.Vector Val))
 
 main = do
-  putStrLn $ show (s)
-  putStrLn $ show (s')
+  putStrLn "Signals"
+  putStrLn $ unlines $ map (tdisp . P) sList
+  putStrLn "Values"  
+  putStrLn $ unlines $ map (tdisp . P) vList
+  putStrLn "Distribtuions"  
+  putStrLn $ unlines $ map (tdisp . P) dList
+  putStrLn "Curves"  
+  putStrLn $ unlines $ map (tdisp . P) cList
+  
   putStrLn $ show (e)
   putStrLn $ tdisp (e)
   
-  
---  putStrLn $ show (d.*s2)
 
