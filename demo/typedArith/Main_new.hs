@@ -4,6 +4,7 @@ import qualified Data.Vector.Unboxed as UV
 import qualified Data.Vector as GV
 import qualified Data.Vector.Generic.Mutable as MV
 import qualified Data.Foldable as F
+import Control.Applicative
 
 import qualified Data.Map as M
 import Text.Printf
@@ -46,7 +47,7 @@ type Dist = Distrib (UV.Vector Val)
 -- Data Container Type
 -- ## TODO -- include automatic length check
 
-class Container (cont :: * -> *) b where
+class Container cont a where
    fromContainer :: cont a -> a
    toContainer :: a -> cont a
   
@@ -198,13 +199,21 @@ instance DSingleton DVal where
   cneg x = toContainer (negate $ fromContainer x)
   crezip x = toContainer (1/fromContainer x)
 --  cmap x =  toContainer . id . (fromContainer x)
-
+{-
 class ContainerMap (cont :: * -> *) (vec :: * -> *) a b where
   cmap :: (a -> b) -> cont (vec a) -> cont (vec b)
-{-  
+  -}
+
+class ContainerMap cont vec a b where
+  cmap :: (a -> b) -> cont (vec a) -> cont (vec b)
+
+-- instance ContainerArith vec => ContainerMap Signal vec a b where
+--   zmap f (Signal v) = Signal (cmap f v)
+
+  
 instance (UV.Unbox a, UV.Unbox b, Container cont (UV.Vector a),Container cont (UV.Vector b)) => ContainerMap cont UV.Vector a b where  
   cmap f x = toContainer $ UV.map f $ fromContainer x
--}
+
 
 instance (UV.Unbox a, UV.Unbox b) => ContainerMap Signal UV.Vector a b where  
   cmap f x = toContainer $ UV.map f $ fromContainer x
@@ -313,13 +322,13 @@ instance Type DX a where
   fromType (DX x) = x
   toType x = DX x
 
+
 -- Product Class
 class   (Type t1 a, Type t2 b, Type t3 c, DProd a b c, DProd c b a)  => TProd t1 a t2 b t3 c | t1 t2 -> t3  where 
  (~*) ::  t1 a -> t2 b -> t3 c
  (~*) x y = toType ((fromType x) .* (fromType y)) 
  (~/) ::  t3 c -> t2 b -> t1 a
  (~/) x y = toType ((fromType x) ./ (fromType y)) 
-
 instance  (DProd a b c,  DProd c b a) => TProd P a DT b  E c 
 instance  (DProd a b c,  DProd c b a) => TProd DT a P b  E c   
 
@@ -331,6 +340,26 @@ instance  (DProd a b c,  DProd c b a) => TProd M a P b  P c
 
 instance  (DProd a b c,  DProd c b a) => TProd X a P b  P c  
 instance  (DProd a b c,  DProd c b a) => TProd P a X b  P c  
+-}
+
+instance Functor P where
+  fmap f (P x) = P (f x)
+
+class App t1 t2 t3 where
+  pureApp :: t1 a
+
+instance Applicative P where
+  pure = P
+  (P f) <*> (P x) = P (f x)
+
+class  TProd t where 
+ (~*) :: (Applicative t, Num a, Num b, Num c) => t a -> t b -> t c
+ (~*) x y = (*) <$> x <*> y           -- liftA2 (*) x y 
+-- (~/) ::  t3 c -> t2 b -> t1 a
+-- (~/) x y = toType ((fromType x) ./ (fromType y)) 
+
+
+
 
 -- Sum Class  
 class   (Type t1 a, Type t2 b, Type t3 c,DSum a b c,DSum c b a)  => TSum t1 a t2 b t3 c | t1 t2 -> t3  where 
