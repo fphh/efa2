@@ -4,6 +4,7 @@ module EFA2.Topology.Flow (module EFA2.Topology.Flow) where
 
 
 import Data.Graph.Inductive
+import Data.Function
 import qualified Data.Map as M
 import qualified Data.List as L
 
@@ -73,25 +74,37 @@ copySeqTopology (SequData tops) = mkGraph (concat ns'') (concat es'')
         offsets = reverse $ L.foldl' f [0] (map length ns)
         f (a:acc) l = (a+l):a:acc
 
+-- TODO: Warn about Storages with more then one edge in or out!
 isActStore :: (Node, NLabel, [ELabel], [ELabel]) -> Bool
 isActStore a@(_, l, ins, outs) = isStorage (nodetypeNLabel l) && not (null (filter isActiveEdge es))
---  | otherwise = error ("isActStore: " ++ show a ++ " has more or less then one neighbour.")
   where es = ins ++ outs
 
 
-mkSequenceTopology :: SequData [SecTopology] -> Topology
-mkSequenceTopology sd = trace (show interSecEs) $ insEdges interSecEs sqTopo
-  where sqTopo = copySeqTopology sd
-        ns = map (\(n, l) -> (n, l, map snd (lpre sqTopo n), map snd (lsuc sqTopo n))) (labNodes sqTopo)
-
-        stores = filter isActStore ns
-        (instores, outstores) = L.partition p stores
+mkIntersectionEdges :: [(Node, NLabel, [ELabel], [ELabel])] -> [(Node, Node, ELabel)]
+mkIntersectionEdges stores = interSecEs
+  where (instores, outstores) = L.partition p stores
         p (n, _, [], [o]) = flowDirection o == AgainstDir
         p (n, _, [i], []) = flowDirection i == WithDir
-        outs = map (\(n, l, _, _) -> (n, l)) outstores
-        ins = map (\(n, l, _, _) -> (n, l)) instores
+
+        outs = map f outstores
+        ins = map f instores
+        f (n, l, _, _) = (n, l)
 
         es = map (\(n, l) -> (n, map fst (filter (q l) outs))) ins
         q lin (_, lout) = sectionNLabel lout > sectionNLabel lin
 
-        interSecEs = concatMap (\(n, ns) -> map (n,, defaultELabel { edgeType = IntersectionEdge}) ns) es
+        e = defaultELabel { edgeType = IntersectionEdge}
+        interSecEs = concatMap (\(n, ns) -> map (n,, e) ns) es
+
+
+mkSequenceTopology :: SequData [SecTopology] -> Topology
+mkSequenceTopology sd = trace (show grpStores) $ insEdges interSecEs sqTopo
+  where sqTopo = copySeqTopology sd
+        ns = map (\(n, l) -> (n, l, map snd (lpre sqTopo n), map snd (lsuc sqTopo n))) (labNodes sqTopo)
+
+        stores = filter isActStore ns
+        grpStores = L.groupBy cmp (L.sortBy (compare `on` stNum) stores)
+        cmp a b = stNum a == stNum b
+        stNum (_, l, _, _) | Storage x <- nodetypeNLabel l = x
+
+        interSecEs = concatMap mkIntersectionEdges grpStores

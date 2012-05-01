@@ -84,9 +84,6 @@ mapGraph f g = map f (zip3 ins ls outs)
         outs = map (map (fromJust . lab g) . suc g) ns
 
 
-
-
-
 class ContainerArithSingleton cont a where
       csingleton :: a -> cont a
       cappend :: cont a -> cont a -> cont a

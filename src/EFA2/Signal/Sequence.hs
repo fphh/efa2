@@ -54,8 +54,8 @@ fromFlowRecord (SecIdx secIdx) (RecIdx recIdx) fRec@(FlowRecord dTime flowMap) =
 genSequFlow :: SequPwrRecord -> SequFlowRecord
 genSequFlow sqPRec = (map recFullIntegrate) `fmap` sqPRec
 
-x :: PowerRecord -> Topology -> ([Envs FSignal], Topology)
-x pRec topo = (sqEnvs, sqTopo)
+makeSequence :: PowerRecord -> Topology -> ([Envs FSignal], Topology)
+makeSequence pRec topo = (sqEnvs, sqTopo)
   where pRec0 = addZeroCrossings pRec
         (sequ,sqPRec) = genSequ pRec0          
         sqFRec = genSequFlow sqPRec

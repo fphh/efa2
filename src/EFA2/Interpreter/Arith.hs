@@ -9,8 +9,8 @@ import Data.Ratio
 --type Val = Ratio Integer
 type Val = Double  
 
-type Container = []
---type Container = UV.Vector
+--type Container = []
+type Container = UV.Vector
 
 
 class Arith a where

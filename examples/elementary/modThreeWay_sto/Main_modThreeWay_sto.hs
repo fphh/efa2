@@ -45,7 +45,7 @@ import EFA2.Example.SymSig
 
 topo :: Topology
 topo = mkGraph (makeNodes nodes) (makeEdges edges)
-  where nodes = [(0, Source), (1, Crossing), (2, Sink), (3, Storage 0)]
+  where nodes = [(0, Storage 1), (1, Crossing), (2, Sink), (3, Storage 0)]
         edges = [(0, 1, defaultELabel), (1, 2, defaultELabel), (1, 3, defaultELabel)]
 
 
@@ -69,7 +69,7 @@ main = do
 
       --TheGraph sqTopo sigs = loop
 
-      (sqEnvs, sqTopo) = x pRec topo
+      (sqEnvs, sqTopo) = makeSequence pRec topo
 
       ts = envToEqTerms sigs ++ makeAllEquations sqTopo
       --ts = envToEqTerms sigs ++ mkEdgeEq sqTopo ++ mkNodeEq sqTopo
@@ -86,6 +86,12 @@ main = do
       res :: Envs [Val]
       res = interpretFromScratch gd
       dirg = makeDirTopology sqTopo
+
+  putStrLn (showEqTerms ts)
+  drawAll [
+    drawTopologyX' sqTopo,
+    drawTopology sqTopo res,
+    drawTopologyX' dirg ]
 
   {-
   putStrLn "Sequence"
@@ -115,7 +121,3 @@ main = do
   -- drawSequFlowTops sqFlowTops
   --print res
 
-  drawAll [
-    drawTopologyX' sqTopo,
-    drawTopology sqTopo res,
-    drawTopologyX' dirg ]
