@@ -46,29 +46,29 @@ type Dist = Distrib (UV.Vector Val)
 -- Data Container Type
 -- ## TODO -- include automatic length check
 
-class Data (cont :: * -> *) b where
-   fromData :: cont a -> a
-   toData :: a -> cont a
+class Container (cont :: * -> *) b where
+   fromContainer :: cont a -> a
+   toContainer :: a -> cont a
   
-instance Data Signal b where 
-  fromData (Signal x) = x
-  toData x = Signal x                               
+instance Container Signal b where 
+  fromContainer (Signal x) = x
+  toContainer x = Signal x                               
 
-instance Data FSignal b where 
-  fromData (FSignal x) = x
-  toData x = FSignal x                               
+instance Container FSignal b where 
+  fromContainer (FSignal x) = x
+  toContainer x = FSignal x                               
 
-instance Data Distrib  b where 
-  fromData (Distrib x) = x 
-  toData x = Distrib x                               
+instance Container Distrib  b where 
+  fromContainer (Distrib x) = x 
+  toContainer x = Distrib x                               
 
-instance Data Value  b where 
-  fromData (Value x) = x
-  toData x = Value x                               
+instance Container Value  b where 
+  fromContainer (Value x) = x
+  toContainer x = Value x                               
 
--- instance Data Curve  b where 
---   fromData (Curve x) = x
---   toData x = Curve x                               
+-- instance Container Curve  b where 
+--   fromContainer (Curve x) = x
+--   toContainer x = Curve x                               
 
 -- Sample Calculation Class
 class DProd a b c | a b -> c where
@@ -76,49 +76,67 @@ class DProd a b c | a b -> c where
   (./) :: a -> b -> c
   
 instance DProd Sig Sig Sig where
-  (.*) x y = toData (UV.zipWith (*) (fromData x) (fromData y))
-  (./) x y = toData (UV.zipWith (/) (fromData x) (fromData y))
+  (.*) x y = toContainer (UV.zipWith (*) (fromContainer x) (fromContainer y))
+  (./) x y = toContainer (UV.zipWith (/) (fromContainer x) (fromContainer y))
   
 instance DProd Sig DVal Sig where
-  (.*) x y = toData (UV.map (*(fromData y)) (fromData x))
-  (./) x y = toData (UV.map (/(fromData y)) (fromData x))
+  (.*) x y = toContainer (UV.map (*(fromContainer y)) (fromContainer x))
+  (./) x y = toContainer (UV.map (/(fromContainer y)) (fromContainer x))
 
 instance DProd DVal Sig Sig where
-  (.*) x y = toData (UV.map (*(fromData x)) (fromData y))
-  (./) x y = toData (UV.map (/(fromData x)) (fromData y))
+  (.*) x y = toContainer (UV.map (*(fromContainer x)) (fromContainer y))
+  (./) x y = toContainer (UV.map (/(fromContainer x)) (fromContainer y))
+  
+instance DProd BSig Sig Sig where
+  (.*) x y = toContainer (UV.zipWith (f) (fromContainer x) (fromContainer y)) 
+    where f True y = y
+          f False y = 0
+          
+  (./) x y = toContainer (UV.zipWith (f) (fromContainer x) (fromContainer y))
+    where f True y = 0
+          f False y = y
+
+instance DProd Sig BSig Sig where
+  (.*) x y = toContainer (UV.zipWith (f) (fromContainer x) (fromContainer y)) 
+    where f y True = y
+          f y False = 0
+          
+  (./) x y = toContainer (UV.zipWith (f) (fromContainer x) (fromContainer y))
+    where f y True = 0
+          f y False = y
 
 instance DProd FSig FSig FSig where
-  (.*) x y = toData (UV.zipWith (*) (fromData x) (fromData y))
-  (./) x y = toData (UV.zipWith (/) (fromData x) (fromData y))
+  (.*) x y = toContainer (UV.zipWith (*) (fromContainer x) (fromContainer y))
+  (./) x y = toContainer (UV.zipWith (/) (fromContainer x) (fromContainer y))
   
 instance DProd FSig DVal FSig where
-  (.*) x y = toData (UV.map (*(fromData y)) (fromData x))
-  (./) x y = toData (UV.map (/(fromData y)) (fromData x))
+  (.*) x y = toContainer (UV.map (*(fromContainer y)) (fromContainer x))
+  (./) x y = toContainer (UV.map (/(fromContainer y)) (fromContainer x))
 
 instance DProd DVal FSig FSig where
-  (.*) x y = toData (UV.map (*(fromData x)) (fromData y))
-  (./) x y = toData (UV.map (/(fromData x)) (fromData y))
+  (.*) x y = toContainer (UV.map (*(fromContainer x)) (fromContainer y))
+  (./) x y = toContainer (UV.map (/(fromContainer x)) (fromContainer y))
   
 instance DProd DVal DVal DVal where
-  (.*) x y = toData ((*) (fromData x) (fromData x))
-  (./) x y = toData ((/) (fromData x) (fromData y))
+  (.*) x y = toContainer ((*) (fromContainer x) (fromContainer x))
+  (./) x y = toContainer ((/) (fromContainer x) (fromContainer y))
 
 instance DProd DVal Dist Dist where
-  (.*) x y = toData (UV.map (*(fromData x)) (fromData y))
-  (./) x y = toData (UV.map (/(fromData x)) (fromData y))
+  (.*) x y = toContainer (UV.map (*(fromContainer x)) (fromContainer y))
+  (./) x y = toContainer (UV.map (/(fromContainer x)) (fromContainer y))
 
 instance DProd Dist DVal Dist where
-  (.*) x y = toData (UV.map (*(fromData y)) (fromData x))
-  (./) x y = toData (UV.map (/(fromData y)) (fromData x))
+  (.*) x y = toContainer (UV.map (*(fromContainer y)) (fromContainer x))
+  (./) x y = toContainer (UV.map (/(fromContainer y)) (fromContainer x))
 
 instance DProd Dist Dist Dist where
-  (.*) x y = toData (UV.zipWith (*) (fromData x) (fromData y))
-  (./) x y = toData (UV.zipWith (/) (fromData x) (fromData y))
+  (.*) x y = toContainer (UV.zipWith (*) (fromContainer x) (fromContainer y))
+  (./) x y = toContainer (UV.zipWith (/) (fromContainer x) (fromContainer y))
   
 {- use interp1 here to lookup efficiency in curve
 instance DProd UFSig Curve UFSig  where
-  (.*) x y = toData (GV.zipWith interp1 (fromData x) (fromData y))
-  (./) x y = toData (GV.zipWith (*) (fromData x) (fromData y))
+  (.*) x y = toContainer (GV.zipWith interp1 (fromContainer x) (fromContainer y))
+  (./) x y = toContainer (GV.zipWith (*) (fromContainer x) (fromContainer y))
 -}
 
 class DSum a b c | a b -> c where
@@ -126,64 +144,102 @@ class DSum a b c | a b -> c where
   (.-) :: a -> b -> c
 
 instance DSum Sig Sig Sig where
-  (.+) x y = toData (UV.zipWith (+) (fromData x) (fromData y))
-  (.-) x y = toData (UV.zipWith (-) (fromData x) (fromData y))
+  (.+) x y = toContainer (UV.zipWith (+) (fromContainer x) (fromContainer y))
+  (.-) x y = toContainer (UV.zipWith (-) (fromContainer x) (fromContainer y))
 
 instance DSum Sig DVal Sig where
-  (.+) x y = toData (UV.map (+(fromData y)) (fromData x))
-  (.-) x y = toData (UV.map (+(fromData $ dneg y)) (fromData x))
+  (.+) x y = toContainer (UV.map (+(fromContainer y)) (fromContainer x))
+  (.-) x y = toContainer (UV.map (+(fromContainer $ cneg y)) (fromContainer x))
   
 instance DSum DVal Sig Sig where
-  (.+) x y = toData (UV.map (+(fromData x)) (fromData y))
-  (.-) x y = toData (UV.map (+(fromData $ dneg x)) (fromData y))
+  (.+) x y = toContainer (UV.map (+(fromContainer x)) (fromContainer y))
+  (.-) x y = toContainer (UV.map (+(fromContainer $ cneg x)) (fromContainer y))
   
 instance DSum FSig FSig FSig where
-  (.+) x y = toData (UV.zipWith (+) (fromData x) (fromData y))
-  (.-) x y = toData (UV.zipWith (-) (fromData x) (fromData y))
+  (.+) x y = toContainer (UV.zipWith (+) (fromContainer x) (fromContainer y))
+  (.-) x y = toContainer (UV.zipWith (-) (fromContainer x) (fromContainer y))
 
 instance DSum FSig DVal FSig where
-  (.+) x y = toData (UV.map (+(fromData y)) (fromData x))
-  (.-) x y = toData (UV.map (+(fromData $ dneg y)) (fromData x))
+  (.+) x y = toContainer (UV.map (+(fromContainer y)) (fromContainer x))
+  (.-) x y = toContainer (UV.map (+(fromContainer $ cneg y)) (fromContainer x))
   
 instance DSum DVal FSig FSig where
-  (.+) x y = toData (UV.map (+(fromData x)) (fromData y))
-  (.-) x y = toData (UV.map (+(fromData $ dneg x)) (fromData y))
+  (.+) x y = toContainer (UV.map (+(fromContainer x)) (fromContainer y))
+  (.-) x y = toContainer (UV.map (+(fromContainer $ cneg x)) (fromContainer y))
 
 instance DSum DVal DVal DVal where
-  (.+) x y = toData ((+) (fromData x) (fromData y))
-  (.-) x y = toData ((-) (fromData x) (fromData y))
+  (.+) x y = toContainer ((+) (fromContainer x) (fromContainer y))
+  (.-) x y = toContainer ((-) (fromContainer x) (fromContainer y))
 
 instance DSum DVal Dist Dist where
-  (.+) x y = toData (UV.map (+(fromData x)) (fromData y))
-  (.-) x y = toData (UV.map (+(fromData $ dneg x)) (fromData y))
+  (.+) x y = toContainer (UV.map (+(fromContainer x)) (fromContainer y))
+  (.-) x y = toContainer (UV.map (+(fromContainer $ cneg x)) (fromContainer y))
 
 instance DSum Dist DVal Dist where
-  (.+) x y = toData (UV.map (+(fromData y)) (fromData x))
-  (.-) x y = toData (UV.map (+(fromData $ dneg y)) (fromData x))
+  (.+) x y = toContainer (UV.map (+(fromContainer y)) (fromContainer x))
+  (.-) x y = toContainer (UV.map (+(fromContainer $ cneg y)) (fromContainer x))
 
 instance DSum Dist Dist Dist where
-  (.+) x y = toData (UV.zipWith (+) (fromData x) (fromData y))
-  (.-) x y = toData (UV.zipWith (-) (fromData x) (fromData y))
+  (.+) x y = toContainer (UV.zipWith (+) (fromContainer x) (fromContainer y))
+  (.-) x y = toContainer (UV.zipWith (-) (fromContainer x) (fromContainer y))
 
 
 class DSingleton a where
-  dneg :: a -> a
-  drezip :: a -> a
+  cneg :: a -> a
+  crezip :: a -> a
+--  cnull:: a -> a 
   
 instance DSingleton FSig where
-  dneg x = toData (UV.map negate $ fromData x)
-  drezip x =  toData (UV.map (1/) $ fromData x)
+  cneg x = toContainer (UV.map negate $ fromContainer x)
+  crezip x =  toContainer (UV.map (1/) $ fromContainer x)
+--  cnull x = toContainer . (UV.map (0)) . (fromContainer x)
   
 instance DSingleton DVal where
-  dneg x = toData (negate $ fromData x)
-  drezip x = toData (1/fromData x)
+  cneg x = toContainer (negate $ fromContainer x)
+  crezip x = toContainer (1/fromContainer x)
+--  cmap x =  toContainer . id . (fromContainer x)
 
-
-{-
-instance DSum Val FSig FSig where
-  (.+) x y = toData (UV.zipWith (+) (fromData x) (fromData y))
-  (.-) x y = toData (UV.zipWith (-) (fromData x) (fromData y))
+class ContainerMap (cont :: * -> *) (vec :: * -> *) a b where
+  cmap :: (a -> b) -> cont (vec a) -> cont (vec b)
+{-  
+instance (UV.Unbox a, UV.Unbox b, Container cont (UV.Vector a),Container cont (UV.Vector b)) => ContainerMap cont UV.Vector a b where  
+  cmap f x = toContainer $ UV.map f $ fromContainer x
 -}
+
+instance (UV.Unbox a, UV.Unbox b) => ContainerMap Signal UV.Vector a b where  
+  cmap f x = toContainer $ UV.map f $ fromContainer x
+
+instance (UV.Unbox a, UV.Unbox b) => ContainerMap FSignal UV.Vector a b where  
+  cmap f x = toContainer $ UV.map f $ fromContainer x
+
+instance (UV.Unbox a, UV.Unbox b) => ContainerMap Distrib UV.Vector a b where  
+  cmap f x = toContainer $ UV.map f $ fromContainer x
+
+
+class ContainerZip (cont :: * -> *) (vec :: * -> *) a b c where
+  czipWith :: (a -> b -> c) -> cont (vec a) -> cont (vec b) -> cont (vec c)
+  
+instance (UV.Unbox a, UV.Unbox b, UV.Unbox c, ContainerMisc Signal UV.Vector a,  ContainerMisc Signal UV.Vector b, ContainerMisc Signal UV.Vector c) => ContainerZip Signal UV.Vector a b c where  
+  czipWith f x y | (clen x)== (clen y) = toContainer $ UV.zipWith f (fromContainer x) (fromContainer y)
+  czipWith f x y | otherwise = error "Error in  ContainerZip -- lengthCheck failed" 
+{-
+instance (UV.Unbox a, UV.Unbox b, UV.Unbox c) => ContainerZip FSignal UV.Vector a b c where  
+  czipWith f x y  | clengthCheck x y = toContainer $ UV.zipWith f (fromContainer x) (fromContainer y)
+  czipWith f x y | otherwise = error "Error in  ContainerZip -- lengthCheck failed" 
+
+instance (UV.Unbox a, UV.Unbox b, UV.Unbox c) => ContainerZip Distrib UV.Vector a b c where  
+  czipWith f x y  | clengthCheck x y = toContainer $ UV.zipWith f (fromContainer x) (fromContainer y)
+  czipWith f x y | otherwise = error "Error in  ContainerZip -- lengthCheck failed" 
+-}
+
+class ContainerMisc (cont :: * -> *) (vec :: * -> *) a where
+  clen :: cont (vec a) -> Int
+  
+{-
+instance (UV.Unbox a, Container cont (UV.Vector a)) => ContainerMisc cont UV.Vector a where
+  clen x = UV.length (fromContainer x)
+-}
+
 
 --------------------------------------------------------------------------------------------
 -- Data Sample Type
@@ -425,7 +481,13 @@ dispRange x y t = disp x f s  ++ " - " ++ disp y f s  ++ " " ++ show u
                                
 class DataDisplay a where
   ddisp :: a -> DisplayType -> String
-          
+
+instance DataDisplay Sig  where 
+  ddisp (Signal v) typ = dispRange (UV.minimum v) (UV.maximum v) typ
+
+instance DataDisplay BSig  where 
+  ddisp (Signal v) typ = dispRange (UV.minimum v) (UV.maximum v) typ
+
 instance DataDisplay FSig  where 
   ddisp (FSignal v) typ = dispRange (UV.minimum v) (UV.maximum v) typ
 
@@ -460,23 +522,30 @@ l3 = [True,False]
 l4 = [1,2]
 l5 = [ON,OFF]
 
--- signals
-s1 = FSignal (UV.fromList l1) :: FSig 
-s2 = FSignal (UV.fromList l2) :: FSig
+-- Calculate with Signals
+s1 = Signal (UV.fromList l1) :: Sig 
+s2 = Signal (UV.fromList l2) :: Sig
 s3 = Signal (UV.fromList l3) :: BSig
 s4 = Signal (UV.fromList l4) :: ISig
 s5 = Signal (GV.fromList l5) :: StateSig
 
--- Calculate with Signals
-s6 = s1.*s2
-s7 = s6./s2
-s8 = s7.-s1
-s13 = s1.+s2
-s9 = s1.*v2
-s10 = v2.*s1 
-s11 = s1.+v1
-s12 = v2.+s1
-sList = [s1,s2,s6,s7,s8,s13,s9,s10,s11,s12]
+
+s6 = s1.*s3 -- Multiply with Boolean Signal
+s7 = cmap abs s6
+sList = [s1,s2,s6]
+
+-- Calculate with FSignals
+fs1 = FSignal (UV.fromList l1) :: FSig 
+fs2 = FSignal (UV.fromList l2) :: FSig
+fs6 = fs1.*fs2
+fs7 = fs6./fs2
+fs8 = fs7.-fs1
+fs13 = fs1.+fs2
+fs9 = fs1.*v2
+fs10 = v2.*fs1 
+fs11 = fs1.+v1
+fs12 = v2.+fs1
+fsList = [fs1,fs2,fs6,fs7,fs8,fs13,fs9,fs10,fs11,fs12]
 
 -- distributions
 d1 = Distrib (UV.fromList l1)
@@ -505,13 +574,16 @@ vList = [v1,v2,v3,v4,v5]
 
 
 
-p = P s1
-t = DT s2
+p = P fs1
+t = DT fs2
 e = p~*t 
 
 main = do
   putStrLn "Signals"
   putStrLn $ unlines $ map (tdisp . P) sList
+  putStrLn $ (tdisp . P) s3  
+  putStrLn "FSignals"
+  putStrLn $ unlines $ map (tdisp . P) fsList
   putStrLn "Values"  
   putStrLn $ unlines $ map (tdisp . P) vList
   putStrLn "Distribtions"  
