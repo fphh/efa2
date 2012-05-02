@@ -166,9 +166,9 @@ instance EFunctor (EVal t c) d1 d2 where
 instance EFunctor (EList t c) d1 d2 where
   emap f (EList x) = EList (map f x)
   
--- convert to unboxed Vector
-instance (UV.Unbox d2) => EFunctor (EVec t c) d1 d2 where
-  emap f (EVec x) = EUVec GV.convert $ GV.map f x
+-- -- convert to unboxed Vector
+-- instance (UV.Unbox d2) => EFunctor (EVec t c) d1 d2 where
+--   emap f (EVec x) = EUVec GV.convert $ GV.map f x
 
 -- map over boxed Vector
 instance EFunctor (EVec t c) d1 d2 where
@@ -178,9 +178,9 @@ instance EFunctor (EVec t c) d1 d2 where
 instance (UV.Unbox d2) => EFunctor (EUVec t c) d1 d2 where
   emap f (EUVec x) = EUVec (UV.map f x)
   
--- convert to boxed Vector  
-instance EFunctor (EUVec t c) d1 d2 where
-  emap f (EUVec x) = EVec GV.convert (UV.map f x)
+-- -- convert to boxed Vector  
+-- instance EFunctor (EUVec t c) d1 d2 where
+--   emap f (EUVec x) = EVec GV.convert (UV.map f x)
 
 -- Map over 2dim List
 instance EFunctor (EList2 t c) d1 d2 where
@@ -197,56 +197,65 @@ class SipWith d1 d2 d3 s1 s2 s3 where
 -- | Rotate Arguments
 instance (SipWith d1 d2 d3 s1 s2 s3) =>  SipWith d1 d2 d3 s2 s1 s3 
 
--- | Zero Dimensional against anything
-instance (ZeroDim d1) => SipWith d1 d2 d3 s1 s2 s3 where
-   sipWith f x y = emap (f x) y   
+-- -- | Zero Dimensional against anything
+-- instance (ZeroDim d1) => SipWith d1 d2 d3 s1 s2 s3 where
+--    sipWith f x y = emap (f x) y   
    
+-- | Zero Dimensional against anything
+instance SipWith d1 d2 d3  (EVal t c) s2 s3 where
+   sipWith f x y = emap (f x) y   
+
+-- -- | One Dimensional against Two Dim
+-- instance (OneDim d1, TwoDim d1)  => SipWith d1 d2 d3 s1 s2 s3 where
+--    sipWith f x y = if lCheck then emap (f x) y else "Error in sipWith - different Length"  
+
 -- | One Dimensional against Two Dim
-instance (OneDim d1, TwoDim d1)  => SipWith d1 d2 d3 s1 s2 s3 where
-   sipWith f x y = if lCheck then emap (f x) y else "Error in sipWith - different Length"  
+instance (OneDim d1, TwoDim d1)  => SipWith d1 d2 d3 (EList t c)  (EList2 t c)  (EList2 t c) where
+    sipWith f x y = if lCheck then emap (f x) y else "Error in sipWith - different Length"  
+
+-- | One Dimensional against Two Dim
+instance (OneDim d1, TwoDim d1)  => SipWith d1 d2 d3 (EVec t c)  (EVec t c)  (EVec2 t c) where
+    sipWith f x y = if lCheck then emap (f x) y else "Error in sipWith - different Length"  
 
 -- | 1d - Lists against each other
-instance SipWith d1 d2 d3 EList EList EList where
+instance SipWith d1 d2 d3 (EList t c) (EList t c) (EList t c) where
    sipWith f (EList x) (EList y) = if lCheck then EList zipWith f x y else "Error in sipWith - different Length"  
 
 -- | 2d - Lists against each other
-instance SipWith d1 d2 d3 EList2 EList2 EList2 where
+instance SipWith d1 d2 d3 (EList2 t c) (EList2 t c) (EList2 t c) where
    sipWith f (EList x) (EList y) = if lCheck then EList zipWith (zipWith f) x y else "Error in sipWith - different Length"  
 
--- | Vectors with unboxed outcome
-instance (UV.Unbox d3) => SipWith d1 d2 d3 EVec EVec s3 where
-   sipWith f (EVec x) (EVec y) = if lCheck then  GV.convert $ GV.zipWith f x y else "Error in sipWith - different Length"  
-
-instance (UV.Unbox d3) => SipWith d1 d2 d3 EUVec EUVec s3 where
-   sipWith f (EUVec x) (EVec y) = if lCheck then  UV.zipWith f x y else "Error in sipWith - different Length"  
-
-instance (UV.Unbox d3) => SipWith d1 d2 d3 EVec EUVec s3 where
-   sipWith f (EUVec x) (EVec y) = if lCheck then  GV.convert $ GV.zipWith f x (GV.convert y) else "Error in sipWith - different Length"  
-
--- | Vectors with boxed outcome
-instance SipWith d1 d2 d3 EVec EVec s3 where
+-- | Vectors 
+-- | boxed   
+instance SipWith d1 d2 d3 (EVec t c) (EVec t c) (EVec t c) where
    sipWith f (EVec x) (EVec y) = if lCheck then  GV.zipWith f x y else "Error in sipWith - different Length"  
 
-instance SipWith d1 d2 d3 EUVec EUVec s3 where
-   sipWith f (EUVec x) (EVec y) = if lCheck then  GV.zipWith f (GV.convert x) (GV.convert y) else "Error in sipWith - different Length"  
+-- | Unboxed
+instance (UV.Unbox d3) => SipWith d1 d2 d3 (EUVec t c) (EUVec t c) (EUVec t c) where
+   sipWith f (EUVec x) (EUVec y) = if lCheck then  UV.zipWith f x y else "Error in sipWith - different Length"  
 
-instance SipWith d1 d2 d3 EVec EUVec s3 where
-   sipWith f (EUVec x) (EVec y) = if lCheck then  GV.convert $ GV.zipWith f x (GV.convert y) else "Error in sipWith - different Length"  
+-- | Mixed
+instance SipWith d1 d2 d3 (EUVec t c) (EVec t c) (EVec t c) where
+   sipWith f (EUVec x) (EVec y) = if lCheck then  GV.zipWith f x (GV.convert y) else "Error in sipWith - different Length"  
+
+-- | 2dim
+instance SipWith d1 d2 d3 (EVec2 t c) (EVec2 t c) (EVec2 t c) where
+   sipWith f (EUVec x) (EVec y) = if lCheck then  GV.zipWith (GV.zipWith f) x y else "Error in sipWith - different Length"  
 
 
 class GetLength a where
   len :: a -> Int
   
-instance GetLength EVal where 
+instance GetLength (EVal t c d) where 
   len x = 1
 
-instance GetLength EList where 
+instance GetLength (EList t c d) where 
   len x = length x
 
-instance GetLength EVec where 
+instance GetLength (EVec t c d)  where 
   len x = GV.length x
 
-instance GetLength EUVec where 
+instance GetLength (EUVec t c d)  where 
   len x = UV.length x
 
 
