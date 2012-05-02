@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses,FunctionalDependencies, TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses,FunctionalDependencies, TypeSynonymInstances, UndecidableInstances,KindSignatures #-}
 
 
 import qualified Data.Vector as GV
@@ -116,6 +116,25 @@ newtype EVec  t c d = EVec (Vec d)  deriving (Show)
 newtype EVec2  t c d = EVec2 (Vec (Vec d))  deriving (Show)
 newtype EUVec  t c d = EUVec (UVec d) deriving (Show)
 
+class ZeroDim a where
+instance ZeroDim (EVal t c d)
+
+class OneDim a where
+instance OneDim (EList t c d)
+instance OneDim (EVec t c d)
+instance OneDim (EUVec t c d)
+
+class TwoDim a where
+instance OneDim (EList2 t c d)
+instance OneDim (EVec2 t c d)
+  
+class Unboxed a where
+instance Unboxed (EUVec t c d)
+
+class Boxed a where
+instance Boxed (EVec t c d)
+instance Boxed (EVec2 t c d)
+
 -- class defs
 class QuickAppend a where
   (.++) :: [a] -> [a] -> [a]
@@ -127,25 +146,138 @@ instance Monoid (EList t c d) where
   mempty = EList [] 
   mappend (EList l1) (EList l2) = EList (l1++l2)  
 
-instance Functor (EList t c) where
-  fmap f (EList l) = EList (map f l)
+instance Monoid (EVec t c d) where 
+  mempty = EVec $ GV.fromList [] 
+  mappend (EVec l1) (EList l2) = EList (l1 GV.++ l2)  
 
-class SipWith f1 f2 f3 where
- sipWith :: (a -> b -> c) -> f1 a -> f2 b -> f3 c  
-   
-instance SipWith (EList t c) (EList t c) (EList t c) where   
-  sipWith f (EList l1) (EList l2)  = EList (zipWith f l1 l2)
+instance Monoid (EUVec t c d) where 
+  mempty = EVec $ UV.fromList [] 
+  mappend (EVec l1) (EList l2) = EList (l1 UV.++ l2)  
+
+-- Functor 
+class EFunctor (f:: * -> *) d1 d2 where
+  emap :: (d1 -> d2)  -> d1 -> d2 
+
+-- Val 
+instance EFunctor (EVal t c) d1 d2 where
+  emap f (EVal x) = EVal (f x)
+
+-- keep List 
+instance EFunctor (EList t c) d1 d2 where
+  emap f (EList x) = EList (map f x)
   
-class DS_Unboxed s
-instance DS_Unboxed (EUVec t c d)
+-- convert to unboxed Vector
+instance (UV.Unbox d2) => EFunctor (EVec t c) d1 d2 where
+  emap f (EVec x) = EUVec GV.convert $ GV.map f x
+
+-- map over boxed Vector
+instance EFunctor (EVec t c) d1 d2 where
+  emap f (EVec x) = EVec (GV.map f x)
+
+-- keep Unboxed Vector
+instance (UV.Unbox d2) => EFunctor (EUVec t c) d1 d2 where
+  emap f (EUVec x) = EUVec (UV.map f x)
+  
+-- convert to boxed Vector  
+instance EFunctor (EUVec t c) d1 d2 where
+  emap f (EUVec x) = EVec GV.convert (UV.map f x)
+
+-- Map over 2dim List
+instance EFunctor (EList2 t c) d1 d2 where
+  emap f (EList2 x) = EList2 (map (map f) x)
+
+-- Map over 2dim Vector
+instance EFunctor (EVec2 t c) d1 d2 where
+  emap f (EVec2 x) = EVec2 (GV.map (GV.map f) x)
+
+-- | specific zipWith
+class SipWith d1 d2 d3 s1 s2 s3 where
+  sipWith :: (d1 -> d2 -> d3) -> s1 a -> s2 b -> s3 c  
+   
+-- | Rotate Arguments
+instance (SipWith d1 d2 d3 s1 s2 s3) =>  SipWith d1 d2 d3 s2 s1 s3 
+
+-- | Zero Dimensional against anything
+instance (ZeroDim d1) => SipWith d1 d2 d3 s1 s2 s3 where
+   sipWith f x y = emap (f x) y   
+   
+-- | One Dimensional against Two Dim
+instance (OneDim d1, TwoDim d1)  => SipWith d1 d2 d3 s1 s2 s3 where
+   sipWith f x y = if lCheck then emap (f x) y else "Error in sipWith - different Length"  
+
+-- | 1d - Lists against each other
+instance SipWith d1 d2 d3 EList EList EList where
+   sipWith f (EList x) (EList y) = if lCheck then EList zipWith f x y else "Error in sipWith - different Length"  
+
+-- | 2d - Lists against each other
+instance SipWith d1 d2 d3 EList2 EList2 EList2 where
+   sipWith f (EList x) (EList y) = if lCheck then EList zipWith (zipWith f) x y else "Error in sipWith - different Length"  
+
+-- | Vectors with unboxed outcome
+instance (UV.Unbox d3) => SipWith d1 d2 d3 EVec EVec s3 where
+   sipWith f (EVec x) (EVec y) = if lCheck then  GV.convert $ GV.zipWith f x y else "Error in sipWith - different Length"  
+
+instance (UV.Unbox d3) => SipWith d1 d2 d3 EUVec EUVec s3 where
+   sipWith f (EUVec x) (EVec y) = if lCheck then  UV.zipWith f x y else "Error in sipWith - different Length"  
+
+instance (UV.Unbox d3) => SipWith d1 d2 d3 EVec EUVec s3 where
+   sipWith f (EUVec x) (EVec y) = if lCheck then  GV.convert $ GV.zipWith f x (GV.convert y) else "Error in sipWith - different Length"  
+
+-- | Vectors with boxed outcome
+instance SipWith d1 d2 d3 EVec EVec s3 where
+   sipWith f (EVec x) (EVec y) = if lCheck then  GV.zipWith f x y else "Error in sipWith - different Length"  
+
+instance SipWith d1 d2 d3 EUVec EUVec s3 where
+   sipWith f (EUVec x) (EVec y) = if lCheck then  GV.zipWith f (GV.convert x) (GV.convert y) else "Error in sipWith - different Length"  
+
+instance SipWith d1 d2 d3 EVec EUVec s3 where
+   sipWith f (EUVec x) (EVec y) = if lCheck then  GV.convert $ GV.zipWith f x (GV.convert y) else "Error in sipWith - different Length"  
+
+
+class GetLength a where
+  len :: a -> Int
+  
+instance GetLength EVal where 
+  len x = 1
+
+instance GetLength EList where 
+  len x = length x
+
+instance GetLength EVec where 
+  len x = GV.length x
+
+instance GetLength EUVec where 
+  len x = UV.length x
+
+
+class SameLength a b where
+  lCheck :: a -> b -> Bool
+  
+instance (SameLength a b) => SameLength b a 
+
+instance (ZeroDim a) => SameLength a b where
+  lCheck x y = True
+  
+instance (OneDim a, OneDim b) =>  SameLength a b where 
+  lCheck x y = len x == len y
+  
+instance (TwoDim a, TwoDim b, Functor a, Functor b) => SameLength a b where 
+  lCheck x y = len x == len y && all $ (map len x) == all (map len y)  
+  
 
 
 ----------------------------------------------------------
 -- | 5. Big Calculation Classes 
+{-
+class (TMult t1 t2 t3, CMult c1 c2 c3, DMult d1 d2 d3,SipWith d1 d2 d3 s1 s2 s3) => SMult t1 t2 t3 c1 c2 c3 d1 d2 d3 (s1 :: * -> * -> * )  (s2 :: * -> * -> * ) (s3 :: * -> * -> * ) where
+  (~*) :: s1 t1 c1 d1 -> s2 t2 c2 d2 -> s3 t3 c3 d3
+  (~*) x y = sipWith (.*) x y 
+-}    
+    
+class (TMult t1 t2 t3, CMult c1 c2 c3, DMult d1 d2 d3) => SMult t1 t2 t3 c1 c2 c3 d1 d2 d3 s1 s2 s3 where
+  (~*) :: s1 t1 c1 d1 -> s2 t2 c2 d2 -> s3 t3 c3 d3
 
-class SMult t1 t2 t3 c1 c2 c3 d1 d2 d3 s1 s2 s3  where
-  (~*) :: s1 t1 c1 d1 ->  s2 t2 c2 d2 ->  s3 t3 c3 d3
-  
+
 instance  (TMult t1 t2 t3, CMult c1 c2 c3, DMult d1 d2 d3) => SMult t1 t2 t3  c1 c2 c3   d1 d2 d3  EList EList EList where
   (~*) (EList x) (EList y) = EList $ zipWith (.*) x y
 
