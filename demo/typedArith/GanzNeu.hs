@@ -144,26 +144,26 @@ instance QuickAppend (EList t c d)
 
 instance Monoid (EList t c d) where 
   mempty = EList [] 
-  mappend (EList l1) (EList l2) = EList (l1++l2)  
+  mappend (EList x) (EList y) = EList (x++y)  
 
 instance Monoid (EVec t c d) where 
   mempty = EVec $ GV.fromList [] 
-  mappend (EVec l1) (EList l2) = EList (l1 GV.++ l2)  
+  mappend (EVec x) (EVec y) = EVec (x GV.++ y)  
 
-instance Monoid (EUVec t c d) where 
-  mempty = EVec $ UV.fromList [] 
-  mappend (EVec l1) (EList l2) = EList (l1 UV.++ l2)  
+instance UV.Unbox d => Monoid (EUVec t c d) where 
+  mempty = EUVec $ UV.fromList [] 
+  mappend (EUVec x) (EUVec y) = EUVec (x UV.++ y)  
 
 -- Functor 
-class EFunctor (f:: * -> *) d1 d2 where
-  emap :: (d1 -> d2)  -> d1 -> d2 
+class EFunctor s t c d1 d2 where
+  emap :: (d1 -> d2) ->  s t c d1 -> s t c d2 
 
 -- Val 
-instance EFunctor (EVal t c) d1 d2 where
+instance EFunctor EVal t c d1 d2 where
   emap f (EVal x) = EVal (f x)
 
 -- keep List 
-instance EFunctor (EList t c) d1 d2 where
+instance EFunctor EList t c d1 d2 where
   emap f (EList x) = EList (map f x)
   
 -- -- convert to unboxed Vector
@@ -171,11 +171,11 @@ instance EFunctor (EList t c) d1 d2 where
 --   emap f (EVec x) = EUVec GV.convert $ GV.map f x
 
 -- map over boxed Vector
-instance EFunctor (EVec t c) d1 d2 where
+instance EFunctor EVec t c d1 d2 where
   emap f (EVec x) = EVec (GV.map f x)
 
 -- keep Unboxed Vector
-instance (UV.Unbox d2) => EFunctor (EUVec t c) d1 d2 where
+instance (UV.Unbox d2) => EFunctor EUVec t c d1 d2 where
   emap f (EUVec x) = EUVec (UV.map f x)
   
 -- -- convert to boxed Vector  
@@ -183,26 +183,26 @@ instance (UV.Unbox d2) => EFunctor (EUVec t c) d1 d2 where
 --   emap f (EUVec x) = EVec GV.convert (UV.map f x)
 
 -- Map over 2dim List
-instance EFunctor (EList2 t c) d1 d2 where
+instance EFunctor EList2 t c d1 d2 where
   emap f (EList2 x) = EList2 (map (map f) x)
 
 -- Map over 2dim Vector
-instance EFunctor (EVec2 t c) d1 d2 where
+instance EFunctor EVec2 t c d1 d2 where
   emap f (EVec2 x) = EVec2 (GV.map (GV.map f) x)
 
 -- | specific zipWith
-class SipWith d1 d2 d3 s1 s2 s3 where
-  sipWith :: (d1 -> d2 -> d3) -> s1 a -> s2 b -> s3 c  
+class SipWith  t1 t2 t3 c1 c2 c3 d1 d2 d3 s1 s2 s3 where
+  sipWith :: (d1 -> d2 -> d3)  -> s1 t1 c1 d1 -> s2 t2 c2 d2 -> s3 t3 c3 d3
    
 -- | Rotate Arguments
-instance (SipWith d1 d2 d3 s1 s2 s3) =>  SipWith d1 d2 d3 s2 s1 s3 
+instance (SipWith  t1 t2 t3 c1 c2 c3 d1 d2 d3 s1 s2 s3) =>  SipWith t1 t2 t3 c1 c2 c3 d1 d2 d3 s2 s1 s3 
 
 -- -- | Zero Dimensional against anything
 -- instance (ZeroDim d1) => SipWith d1 d2 d3 s1 s2 s3 where
 --    sipWith f x y = emap (f x) y   
    
 -- | Zero Dimensional against anything
-instance SipWith d1 d2 d3  (EVal t c) s2 s3 where
+instance SipWith t1 t2 t3 c1 c2 c3 d1 d2 d3 EVal s2 s3 where
    sipWith f x y = emap (f x) y   
 
 -- -- | One Dimensional against Two Dim
@@ -210,36 +210,36 @@ instance SipWith d1 d2 d3  (EVal t c) s2 s3 where
 --    sipWith f x y = if lCheck then emap (f x) y else "Error in sipWith - different Length"  
 
 -- | One Dimensional against Two Dim
-instance (OneDim d1, TwoDim d1)  => SipWith d1 d2 d3 (EList t c)  (EList2 t c)  (EList2 t c) where
-    sipWith f x y = if lCheck then emap (f x) y else "Error in sipWith - different Length"  
+instance (OneDim d1, TwoDim d1)  => SipWith t1 t2 t3 c1 c2 c3 d1 d2 d3 EList EList2 EList2 where
+    sipWith f x y = if lCheck x y then emap (f x) y else "Error in sipWith - different Length"  
 
 -- | One Dimensional against Two Dim
-instance (OneDim d1, TwoDim d1)  => SipWith d1 d2 d3 (EVec t c)  (EVec t c)  (EVec2 t c) where
-    sipWith f x y = if lCheck then emap (f x) y else "Error in sipWith - different Length"  
+instance (OneDim d1, TwoDim d1)  => SipWith t1 t2 t3 c1 c2 c3 d1 d2 d3 EVec EVec EVec2  where
+    sipWith f x y = if lCheck x y then emap (f x) y else "Error in sipWith - different Length"  
 
 -- | 1d - Lists against each other
-instance SipWith d1 d2 d3 (EList t c) (EList t c) (EList t c) where
-   sipWith f (EList x) (EList y) = if lCheck then EList zipWith f x y else "Error in sipWith - different Length"  
+instance SipWith t1 t2 t3 c1 c2 c3 d1 d2 d3 EList EList EList where
+   sipWith f (EList x) (EList y) = if lCheck x y then EList zipWith f x y else "Error in sipWith - different Length"  
 
 -- | 2d - Lists against each other
-instance SipWith d1 d2 d3 (EList2 t c) (EList2 t c) (EList2 t c) where
-   sipWith f (EList x) (EList y) = if lCheck then EList zipWith (zipWith f) x y else "Error in sipWith - different Length"  
+instance SipWith t1 t2 t3 c1 c2 c3 d1 d2 d3  EList2 EList2 EList2 where
+   sipWith f (EList x) (EList y) = if lCheck x y then EList zipWith (zipWith f) x y else "Error in sipWith - different Length"  
 
 -- | Vectors 
 -- | boxed   
-instance SipWith d1 d2 d3 (EVec t c) (EVec t c) (EVec t c) where
+instance SipWith t1 t2 t3 c1 c2 c3 d1 d2 d3 EVec EVec EVec where
    sipWith f (EVec x) (EVec y) = if lCheck then  GV.zipWith f x y else "Error in sipWith - different Length"  
 
 -- | Unboxed
-instance (UV.Unbox d3) => SipWith d1 d2 d3 (EUVec t c) (EUVec t c) (EUVec t c) where
+instance (UV.Unbox d3) => SipWith t1 t2 t3 c1 c2 c3 d1 d2 d3 EUVec EUVec EUVec where
    sipWith f (EUVec x) (EUVec y) = if lCheck then  UV.zipWith f x y else "Error in sipWith - different Length"  
 
 -- | Mixed
-instance SipWith d1 d2 d3 (EUVec t c) (EVec t c) (EVec t c) where
+instance SipWith t1 t2 t3 c1 c2 c3 d1 d2 d3 EUVec EVec EVec where
    sipWith f (EUVec x) (EVec y) = if lCheck then  GV.zipWith f x (GV.convert y) else "Error in sipWith - different Length"  
 
 -- | 2dim
-instance SipWith d1 d2 d3 (EVec2 t c) (EVec2 t c) (EVec2 t c) where
+instance SipWith t1 t2 t3 c1 c2 c3 d1 d2 d3 EVec2 EVec2 EVec2 where
    sipWith f (EUVec x) (EVec y) = if lCheck then  GV.zipWith (GV.zipWith f) x y else "Error in sipWith - different Length"  
 
 
@@ -259,30 +259,42 @@ instance GetLength (EUVec t c d)  where
   len x = UV.length x
 
 
-class SameLength a b where
+class  SameLength a b where
   lCheck :: a -> b -> Bool
   
 instance (SameLength a b) => SameLength b a 
 
-instance (ZeroDim a) => SameLength a b where
-  lCheck x y = True
+instance SameLength (EVal t c d) b where lCheck = True
+
+instance SameLength  (EList t c d)  (EList t c d) where
+  lCheck x y = length x == length y
   
-instance (OneDim a, OneDim b) =>  SameLength a b where 
-  lCheck x y = len x == len y
+instance SameLength  (EVec t c d)  (EVec t c d) where
+  lCheck x y = GV.length x == GV.length y
+
+instance SameLength  (EUVec t c d)  (EUVec t c d) where
+  lCheck x y = UV.length x == UV.length y
+
+instance SameLength  (EUVec t c d)  (EVec t c d) where
+  lCheck x y = UV.length x == GV.length y
+
+instance SameLength (EList2 t1 c1 d1) (EList2  t2 c2 d2) where 
+  lCheck x y = length x == length y && all $ (map length x) == all (map length y)  
   
-instance (TwoDim a, TwoDim b, Functor a, Functor b) => SameLength a b where 
-  lCheck x y = len x == len y && all $ (map len x) == all (map len y)  
+instance SameLength (EVec2 t c d) (EVec2 t c d) where 
+  lCheck x y = GV.length x == GV.length y && GV.all $ (GV.map GV.length x) == GV.all (GV.map GV.length y)  
   
 
 
 ----------------------------------------------------------
 -- | 5. Big Calculation Classes 
-{-
-class (TMult t1 t2 t3, CMult c1 c2 c3, DMult d1 d2 d3,SipWith d1 d2 d3 s1 s2 s3) => SMult t1 t2 t3 c1 c2 c3 d1 d2 d3 (s1 :: * -> * -> * )  (s2 :: * -> * -> * ) (s3 :: * -> * -> * ) where
+
+class (TMult t1 t2 t3, CMult c1 c2 c3, DMult d1 d2 d3, SipWith t1 t2 t3 c1 c2 c3 d1 d2 d3 s1 s2 s3) => SMult t1 t2 t3 c1 c2 c3 d1 d2 d3 s1 s2 s3 where
   (~*) :: s1 t1 c1 d1 -> s2 t2 c2 d2 -> s3 t3 c3 d3
   (~*) x y = sipWith (.*) x y 
--}    
     
+    
+{-
 class (TMult t1 t2 t3, CMult c1 c2 c3, DMult d1 d2 d3) => SMult t1 t2 t3 c1 c2 c3 d1 d2 d3 s1 s2 s3 where
   (~*) :: s1 t1 c1 d1 -> s2 t2 c2 d2 -> s3 t3 c3 d3
 
@@ -311,7 +323,7 @@ instance  (TMult t1 t2 t3, CMult c1 c2 c3, DMult d1 d2 d3) => SMult t1 t2 t3  c1
 
 instance  (TMult t1 t2 t3, CMult c1 c2 c3, DMult d1 d2 d3) => SMult t1 t2 t3  c1 c2 c3  d1 d2 d3  EVal EVal EVal where
   (~*) (EVal x) (EVec y) = EUVec GV.map (.*x) y
-
+-}
 
 -- lists % Vectors of different data types
 l1 = [0.3,0.5]                                                  
