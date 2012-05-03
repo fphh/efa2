@@ -26,25 +26,33 @@ type BState = Bool
 data Sign = PSign | ZSign | NSign deriving Show
 
 class DMult d1 d2 d3 | d1 d2 -> d3 where
- (.*) :: d1 -> d2 -> d3
- (./) :: d1 -> d2 -> d3
+ (.*.) :: d1 -> d2 -> d3
+ (./.) :: d1 -> d2 -> d3
  
 instance DMult Val Val Val where
- (.*) x y = x*y
- (./) 0 0 = 0
- (./) x y = x/y
+ (.*.) x y = x*y
+ (./.) 0 0 = 0
+ (./.) x y = x/y
 
 instance DMult Val Bool Val where
- (.*) x True = x
- (.*) x False = 0
- (./) x False = 0
- (./) x True = x
+ (.*.) x True = x
+ (.*.) x False = 0
+ (./.) x False = 0
+ (./.) x True = x
  
 instance DMult Bool Bool Bool where
- (.*) x True = x
- (.*) x False = False
- (./) x False = False
- (./) x True = x
+ (.*.) x True = x
+ (.*.) x False = False
+ (./.) x False = False
+ (./.) x True = x
+
+class DSum d1 d2 d3 | d1 d2 -> d3 where
+ (.+.) :: d1 -> d2 -> d3
+ (.-.) :: d1 -> d2 -> d3
+
+instance DSum Val Val Val where
+ (.+.) x y = x+y
+ (.-.) x y = x-y
 
 ----------------------------------------------------------
 -- | 4. Data Structures
@@ -169,19 +177,30 @@ instance EZipWith EList EList2 EList2 d1 d2 d3  where
 instance EZipWith EVec EVec2 EVec2 d1 d2 d3  where
   ezipWith f (EVec x) (EVec2 y) = EVec2 $ V.map (V.zipWith f x) y  
 
+---------------------------------------------------------------
+-- Arith Funktionen  
 
-class CMult c1 d1 c2 d2 c3 d3 where
-  (~*) :: c1 d1 -> c2 d2 -> c3 d3
-  (~/) :: c1 d1 -> c2 d2 -> c3 d3
+class (EZipWith c1 c2 c3 d1 d2 d3, DMult d1 d2 d3) => CMult c1 d1 c2 d2 c3 d3 where
+  (.*) :: c1 d1 -> c2 d2 -> c3 d3
+  (./) :: c1 d1 -> c2 d2 -> c3 d3
+  (.*) x y = ezipWith (.*.) x y
+  (.*) x y = ezipWith (./.) x y
   
+instance (EZipWith c1 c2 c3 d1 d2 d3, DMult d1 d2 d3) => CMult c1 d1 c2 d2 c3 d3 
+
+
+class (EZipWith c1 c2 c3 d1 d2 d3, DSum d1 d2 d3) => CSum c1 d1 c2 d2 c3 d3 where
+  (.+) :: c1 d1 -> c2 d2 -> c3 d3
+  (.-) :: c1 d1 -> c2 d2 -> c3 d3
+  (.+) x y = ezipWith (.+.) x y
+  (.-) x y = ezipWith (.-.) x y
+
+instance (EZipWith c1 c2 c3 d1 d2 d3, DSum d1 d2 d3) => CSum c1 d1 c2 d2 c3 d3
 
 sign :: Val -> Sign 
 sign x | x == 0 = NSign
 sign x | x > 0 = PSign
 sign x | x < 0 = NSign
-
-instance CMult EVal Val EVal Val EVal Val where 
-  (~*) (EVal x) (EVal y) = EVal $ x.*y
 
 
 -- class CMult c1 d1 c2 d2 c3 d3 => Mult 
@@ -192,11 +211,9 @@ v1 = EVec $ V.fromList [0..1] :: EVec Val
 v2 = EVec $ V.fromList [0..1] :: EVec Val
 
 s3 = emap sign s1 :: EVec Sign
-s4 = ezipWith (.*) s1 s2 :: EUVec Val
--- s4 = ezipWith (.*) s1 s2 :: EUVec Val
+v4 = ezipWith (.*.) v1 v2 :: EVec Val
 
-v4 = ezipWith (.*) v1 v2 :: EVec Val
-
+v5 = v1 .* v2 :: EVec Val
 
 
 main = do 
