@@ -216,31 +216,39 @@ instance  (GetLength c1 d1, GetLength c2 d2) => SameLength c1 c2 d1 d2 where
 ---------------------------------------------------------------
 -- Monoid
 
--- class defs
-class QuickAppend a where
-  (.++) :: [a] -> [a] -> [a]
-  (.++) = (++)
-
-instance QuickAppend (EList t c d)
-
 class EMonoid c1 c2 d where
-  (.++) :: mempty
+  eempty :: c2 d 
+  (.++) :: c1 d -> c2 d -> c2 d
     
-instance EMonoid EList EList where 
-  mempty = EList [] 
-  mappend (EList x) (EList y) = EList (x++y)  
+instance EMonoid EList EList d where 
+  eempty = EList [] 
+  (.++) (EList x) (EList y) = EList (x++y)  
 
-instance EMonoid (EVec t c d) where 
-  mempty = EVec $ GV.fromList [] 
-  mappend (EVec x) (EVec y) = EVec (x GV.++ y)  
+instance EMonoid EList2 EList2 d where 
+  eempty = EList2 [] 
+  (.++) (EList2 x) (EList2 y) = EList2 (x++y)  
 
-instance EMonoid (EVec t c d) where 
-  mempty = EVec $ GV.fromList [] 
-  mappend (EVec x) (EVec y) = EVec (x GV.++ y)  
+instance EMonoid EList EList2 d where 
+  eempty = EList2 [[]] 
+  (.++) (EList x) (EList2 y) = EList2 (map (x++) y)  
 
-instance UV.Unbox d => Monoid (EUVec t c d) where 
-  mempty = EUVec $ UV.fromList [] 
-  mappend (EUVec x) (EUVec y) = EUVec (x UV.++ y)  
+instance EMonoid EVec EVec d where 
+  eempty = EVec $ GV.fromList [] 
+  (.++) (EVec x) (EVec y) = EVec (x GV.++ y)  
+
+instance EMonoid EVec2 EVec2 d where 
+  eempty = EVec2 $ GV.fromList [GV.fromList[]] 
+  (.++) (EVec2 x) (EVec2 y) = EVec2 (x GV.++ y)  
+
+instance EMonoid EVec EVec2 d where 
+  eempty = EVec2 $ GV.fromList [GV.fromList[]] 
+  (.++) (EVec x) (EVec2 y) = EVec2 $ GV.map (GV.++x) y  
+
+instance UV.Unbox d => EMonoid EUVec EUVec d where 
+  eempty = EUVec $ UV.fromList [] 
+  (.++) (EUVec x) (EUVec y) = EUVec (x UV.++ y)  
+
+
 
 ---------------------------------------------------------------
 -- Arith Funktionen  
