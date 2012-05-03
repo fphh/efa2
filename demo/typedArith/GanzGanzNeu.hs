@@ -129,24 +129,50 @@ instance (EFunctor EList2 EList2 (d2 -> d3) d3) => EZipWith EVal EList2 EList2 d
   
 -- With each other -- zip Needed
 instance (UV.Unbox d1, UV.Unbox d2, UV.Unbox d3) => EZipWith EUVec EUVec EUVec d1 d2 d3  where
-  ezipWith f (EUVec x) (EUVec y) = EUVec UV.zipWith f x y  
+  ezipWith f (EUVec x) (EUVec y) = EUVec $ UV.zipWith f x y  
   
-instance (UV.Unbox d1, UV.Unbox d2, UV.Unbox d3) => EZipWith EUVec EUVec EUVec d1 d2 d3  where
-  ezipWith f (EUVec x) (EUVec y) = EUVec UV.zipWith f x y  
+instance (UV.Unbox d1, UV.Unbox d2) => EZipWith EUVec EUVec EVec d1 d2 d3  where
+  ezipWith f (EUVec x) (EUVec y) = EVec $ V.zipWith f (V.convert x) (V.convert y)  
   
-instance (UV.Unbox d1, UV.Unbox d2, UV.Unbox d3) => EZipWith EUVec EUVec EUVec d1 d2 d3  where
-  ezipWith f (EUVec x) (EUVec y) = EUVec UV.zipWith f x y  
+instance (UV.Unbox d1) => EZipWith EUVec EVec EVec d1 d2 d3  where
+  ezipWith f (EUVec x) (EVec y) = EVec $ V.zipWith f (V.convert x) y  
 
-instance (UV.Unbox d1, UV.Unbox d2, UV.Unbox d3) => EZipWith EUVec EUVec EUVec d1 d2 d3  where
-  ezipWith f (EUVec x) (EUVec y) = EUVec UV.zipWith f x y  
+instance (UV.Unbox d2) => EZipWith EVec EUVec EVec d1 d2 d3  where
+  ezipWith f (EVec x) (EUVec y) = EVec $ V.zipWith f x (V.convert y)  
 
-instance (UV.Unbox d1, UV.Unbox d2, UV.Unbox d3) => EZipWith EUVec EUVec EUVec d1 d2 d3  where
-  ezipWith f (EUVec x) (EUVec y) = EUVec UV.zipWith f x y  
+instance (UV.Unbox d3) => EZipWith EVec EVec EUVec d1 d2 d3  where
+  ezipWith f (EVec x) (EVec y) = EUVec $ UV.convert $ V.zipWith f x y  
 
+instance (UV.Unbox d1,UV.Unbox d3) => EZipWith EUVec EVec EUVec d1 d2 d3  where
+  ezipWith f (EUVec x) (EVec y) = EUVec $ UV.convert $ V.zipWith f (V.convert x) y  
+
+instance (UV.Unbox d2,UV.Unbox d3) => EZipWith EVec EUVec EUVec d1 d2 d3  where
+  ezipWith f (EVec x) (EUVec y) = EUVec $ UV.convert $ V.zipWith f x (V.convert y)  
+
+-- boxed
+instance EZipWith EVec EVec EVec d1 d2 d3  where
+  ezipWith f (EVec x) (EVec y) = EVec $ V.zipWith f x y  
+
+instance EZipWith EVec2 EVec2 EVec2 d1 d2 d3  where
+  ezipWith f (EVec2 x) (EVec2 y) = EVec2 $ V.zipWith (V.zipWith f) x y  
+
+instance EZipWith EList EList EList d1 d2 d3  where
+  ezipWith f (EList x) (EList y) = EList $ zipWith f x y  
+
+instance EZipWith EList2 EList2 EList2 d1 d2 d3  where
+  ezipWith f (EList2 x) (EList2 y) = EList2 $ zipWith (zipWith f) x y  
+
+-- 1dim to 2dim
+instance EZipWith EList EList2 EList2 d1 d2 d3  where
+  ezipWith f (EList x) (EList2 y) = EList2 $ map (zipWith f x) y  
+  
+instance EZipWith EVec EVec2 EVec2 d1 d2 d3  where
+  ezipWith f (EVec x) (EVec2 y) = EVec2 $ V.map (V.zipWith f x) y  
 
 
 class CMult c1 d1 c2 d2 c3 d3 where
   (~*) :: c1 d1 -> c2 d2 -> c3 d3
+  (~/) :: c1 d1 -> c2 d2 -> c3 d3
   
 
 sign :: Val -> Sign 
