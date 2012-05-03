@@ -34,29 +34,25 @@ instance TMult P DT E
 -- d = derivative
 -- c = container
 
-newtype TC t d = TC d deriving (Show) 
-{-
--- class TC s 
-fromTC :: TC t s d -> s d  
-fromTC (TC x) = x
 
-toTC :: s d -> TC t s d
-toTC x = TC x
+newtype TC t c d = TC (c d) deriving (Show) 
 
-class TMult t1 t2 t3 => TzipWith s1 s2 s3 t1 t2 t3 d1 d2 d3 where
-  tzipWith :: (d1 -> d2 -> d3) -> TC t1 s1 d1 -> TC t3 s2 d2 -> TC t3 s3 d3  
-  tzipWith f x y = toTC $ ezipWith f (fromTC x) (fromTC y)
-  
-instance  TMult t1 t2 t3 => TzipWith s1 s2 s3 t1 t2 t3 d1 d2 d3
 
--}
-  
-
-apply2 :: (d1 -> d2 -> d3) -> TC t1 d1 -> TC t2 d2 -> TC t3 d3
+apply2 ::  (EZipWith c1 c2 c3 d1 d2 d3) => (c1 d1 -> c2 d2 -> c3 d3) -> TC t1 c1 d1 -> TC t2 c2 d2 -> TC t3 c3 d3
 apply2 f (TC x) (TC y) = TC $ f x y
   
   
--- (~*) :: TMult t1 t2 t3 => TC t1 d1 -> TC t2 d2 -> TC t3 d3
+(~*) :: (TMult t1 t2 t3, DMult d1 d2 d3) => TC t1 c1 d1 -> TC t2 c2 d2 -> TC t3 c3 d3 
 (~*) x y = apply2 (.*) x y 
 
+{-
+newtype TC t e = TC e deriving (Show) 
 
+class (EsipWith c1 c2 c3 d1 d2 d3) =>  Apply2 t1 t2 t3 e1 e2 e3 where 
+  apply2 :: (e1 -> e2 -> e3) -> TC t1 e1 -> TC t2 e2 -> TC t3 e3
+  apply2 f (TC x) (TC y) = TC $ f x y
+  
+  
+(~*) :: (TMult t1 t2 t3) => TC t1 e1 -> TC t2 e2 -> TC t3 e3
+(~*) x y = apply2 (.*) x y 
+-}
