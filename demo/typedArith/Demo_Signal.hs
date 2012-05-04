@@ -14,10 +14,9 @@ v3 = v1 .* v2 :: EList Val
 s3 = (apply2EC (.*) s1 s2) ::  TC E EList Val
 s4 = (s1 ~* s2)  ::  TC E EList Val
 
-(~*) :: (Show (c1 Val), Show (c2 Val)) => TC P c1 Val -> TC DT c2 Val -> TC E c3 Val
-(~*) x y = apply2EC (.*) x y
 
 main = do 
   putStrLn (show v3) 
   putStrLn (show s3)
   putStrLn (show s4)
+ 

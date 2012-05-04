@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses,FunctionalDependencies, TypeSynonymInstances, UndecidableInstances,KindSignatures, GeneralizedNewtypeDeriving,FlexibleContexts,IncoherentInstances #-} 
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses,FunctionalDependencies, TypeSynonymInstances, UndecidableInstances,KindSignatures, GeneralizedNewtypeDeriving,FlexibleContexts,OverlappingInstances #-} 
 
 module EFA2.Signal.Vector (module EFA2.Signal.Vector) where
 
@@ -123,8 +123,8 @@ class EZipWith c1 c2 c3 d1 d2 d3 where -- | d1 d2 -> d3, c1 c2 -> c3 where
 instance (EFunctor EUVec EUVec (d2 -> d3) d3, UV.Unbox d2, UV.Unbox d3) => EZipWith EVal EUVec EUVec d1 d2 d3  where
   ezipWith f (EVal x) y = emap (f x) y  
 
-instance (EFunctor EVec EVec (d2 -> d3) d3, UV.Unbox d3) => EZipWith EVal EVec EUVec d1 d2 d3  where
-  ezipWith f (EVal x) y = emap (f x) y  
+-- instance (EFunctor EVec EVec (d2 -> d3) d3, UV.Unbox d3) => EZipWith EVal EVec EUVec d1 d2 d3  where
+--   ezipWith f (EVal x) y = emap (f x) y  
   
 instance (EFunctor EVec EVec (d2 -> d3) d3, UV.Unbox d2) => EZipWith EVal EUVec EVec d1 d2 d3  where
   ezipWith f (EVal x) y = emap (f x) y  
@@ -147,9 +147,9 @@ instance (EFunctor EList2 EList2 (d2 -> d3) d3) => EZipWith EVal EList2 EList2 d
 -- zipWith with Length Check
 m1 = "Error in EZipWith -- unequal length"
 
--- With each other -- zip Needed
---instance (UV.Unbox d1, UV.Unbox d2, UV.Unbox d3) => EZipWith EUVec EUVec EUVec d1 d2 d3  where
---  ezipWith f u@(EUVec x) v@(EUVec y) = if lCheck u v then EUVec $ UV.zipWith f x y else error m1 
+-- -- With each other -- zip Needed
+-- instance (UV.Unbox d1, UV.Unbox d2, UV.Unbox d3) => EZipWith EUVec EUVec EUVec d1 d2 d3  where
+--   ezipWith f u@(EUVec x) v@(EUVec y) = if lCheck u v then EUVec $ UV.zipWith f x y else error m1 
   
   
  -- With each other -- zip Needed
@@ -197,8 +197,8 @@ instance EZipWith EList EList2 EList2 d1 d2 d3  where
 instance EZipWith EVec EVec2 EVec2 d1 d2 d3  where
   ezipWith f u@(EVec x) v@(EVec2 y) = if lCheck u v then EVec2 $ V.map (V.zipWith f x) y  else error m1
 
-instance  (EZipWith c1 c2 c3 d1 d2 d3,Show (c1 d1) , Show (c2 d2))  => EZipWith c2 c1 c3 d2 d1 d3 where
-  ezipWith f u v = error ("Fehler : " ++ show u ++ show v)
+-- tance  (EZipWith c1 c2 c3 d1 d2 d3,Show (c1 d1) , Show (c2 d2))  => EZipWith c2 c1 c3 d2 d1 d3 where
+--  ezipWith f u v = error ("Fehler : " ++ show u ++ show v)
 
 ---------------------------------------------------------------
 -- Length & Length Check
@@ -344,16 +344,15 @@ instance (EZipWith c1 c2 c3 d1 d2 d3, DSum d1 d2 d3) => CSum c1 c2 c3 d1 d2 d3 w
   (.+) x y = ezipWith (.+.) x y
   (.-) x y = ezipWith (.-.) x y
 
-
 class (EZipWith c1 c2 c3 d1 d2 d3, Eq d1,Ord d1, Ord d2 ) => CEq c1 c2 c3 d1 d2 d3 where
-  (.==) :: c1 d1 -> c2 d1 -> c3 Bool
-  (./=) :: c1 d1 -> c2 d1 -> c3 Bool
-  (.>=) :: c1 d1 -> c2 d1 -> c3 Bool
-  (.<=) :: c1 d1 -> c2 d1 -> c3 Bool
-  (.>) :: c1 d1 -> c2 d1 -> c3 Bool
-  (.<) :: c1 d1 -> c2 d1 -> c3 Bool
+  (.==) :: c1 d1 -> c2 d2 -> c3 Bool
+  (./=) :: c1 d1 -> c2 d2 -> c3 Bool
+  (.>=) :: c1 d1 -> c2 d2 -> c3 Bool
+  (.<=) :: c1 d1 -> c2 d2 -> c3 Bool
+  (.>) :: c1 d1 -> c2 d2 -> c3 Bool
+  (.<) :: c1 d1 -> c2 d2 -> c3 Bool
   
-instance (EZipWith c1 c2 c3 d1 d2 d3, Eq d1,Ord d1, Ord d2, Show (c1 d1), Show (c2 d2), Show (c2 d1), Show (c1 d2)) => CEq c1 c2 c3 d1 d2 d3 where
+instance (EZipWith c1 c2 c3 d1 d1 Bool, Eq d1,Ord d1) => CEq c1 c2 c3 d1 d1 Bool where
   (.==)  x y = ezipWith (==) x y
   (./=)  x y = ezipWith (/=) x y
   (.>=)  x y = ezipWith (>=) x y
