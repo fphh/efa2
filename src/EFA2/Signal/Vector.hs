@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses,FunctionalDependencies, TypeSynonymInstances, UndecidableInstances,KindSignatures,IncoherentInstances, GeneralizedNewtypeDeriving,FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses,FunctionalDependencies, TypeSynonymInstances, UndecidableInstances,KindSignatures, GeneralizedNewtypeDeriving,FlexibleContexts,IncoherentInstances #-} 
 
 module EFA2.Signal.Vector (module EFA2.Signal.Vector) where
 
@@ -9,6 +9,7 @@ import qualified Data.Vector.Generic.Mutable as MV
 
 import Data.Monoid
 import Control.Applicative
+import EFA2.Utils.Utils
 
 ----------------------------------------------------------
 -- | 1. Numeric Data types
@@ -70,7 +71,7 @@ newtype EList   d = EList [d] deriving (Show)
 newtype EList2  d = EList2 [[d]]  deriving (Show)
 newtype EVec    d = EVec (Vec d)  deriving (Show)
 newtype EVec2   d = EVec2 (Vec (Vec d))  deriving (Show)
-newtype (UV.Unbox d) => EUVec  d =  EUVec (UVec d) deriving (Show)
+newtype EUVec d =  EUVec (UVec d) deriving (Show)
 
 ---------------------------------------------------------------
 -- Functor
@@ -147,6 +148,11 @@ instance (EFunctor EList2 EList2 (d2 -> d3) d3) => EZipWith EVal EList2 EList2 d
 m1 = "Error in EZipWith -- unequal length"
 
 -- With each other -- zip Needed
+--instance (UV.Unbox d1, UV.Unbox d2, UV.Unbox d3) => EZipWith EUVec EUVec EUVec d1 d2 d3  where
+--  ezipWith f u@(EUVec x) v@(EUVec y) = if lCheck u v then EUVec $ UV.zipWith f x y else error m1 
+  
+  
+ -- With each other -- zip Needed
 instance (UV.Unbox d1, UV.Unbox d2, UV.Unbox d3) => EZipWith EUVec EUVec EUVec d1 d2 d3  where
   ezipWith f u@(EUVec x) v@(EUVec y) = if lCheck u v then EUVec $ UV.zipWith f x y else error m1 
   
@@ -192,7 +198,7 @@ instance EZipWith EVec EVec2 EVec2 d1 d2 d3  where
   ezipWith f u@(EVec x) v@(EVec2 y) = if lCheck u v then EVec2 $ V.map (V.zipWith f x) y  else error m1
 
 instance  (EZipWith c1 c2 c3 d1 d2 d3,Show (c1 d1) , Show (c2 d2))  => EZipWith c2 c1 c3 d2 d1 d3 where
---   ezipWith f u v = error ("Fehler : " ++ show u ++ show v)
+  ezipWith f u v = error ("Fehler : " ++ show u ++ show v)
 
 ---------------------------------------------------------------
 -- Length & Length Check
@@ -320,7 +326,7 @@ instance EConvert EList2 EVec2 d where
 -- Arith Funktionen  
 
 class (EZipWith c1 c2 c3 d1 d2 d3, DMult d1 d2 d3) => CMult c1 c2 c3 d1 d2 d3 where
-  (.*) :: c1 d1 -> c2 d2 -> c3 d3
+  (.*) :: DMult d1 d2 d3 => c1 d1 -> c2 d2 -> c3 d3
   (./) :: c1 d1 -> c2 d2 -> c3 d3
   
 instance (EZipWith c1 c2 c3 d1 d2 d3, DMult d1 d2 d3) => CMult c1 c2 c3 d1 d2 d3 where
