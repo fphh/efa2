@@ -197,7 +197,7 @@ instance EZipWith EList EList2 EList2 d1 d2 d3  where
 instance EZipWith EVec EVec2 EVec2 d1 d2 d3  where
   ezipWith f u@(EVec x) v@(EVec2 y) = if lCheck u v then EVec2 $ V.map (V.zipWith f x) y  else error m1
 
--- tance  (EZipWith c1 c2 c3 d1 d2 d3,Show (c1 d1) , Show (c2 d2))  => EZipWith c2 c1 c3 d2 d1 d3 where
+instance  (EZipWith c1 c2 c3 d1 d2 d3,Show (c1 d1) , Show (c2 d2))  => EZipWith c2 c1 c3 d2 d1 d3 where
 --  ezipWith f u v = error ("Fehler : " ++ show u ++ show v)
 
 ---------------------------------------------------------------

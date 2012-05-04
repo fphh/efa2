@@ -71,14 +71,19 @@ apply2EC f x y = toTC $ f (fromTC x) (fromTC y)
 
 newtype TC t c d = TC (c d) deriving (Show) 
 
-
 apply2EC ::  (EZipWith c1 c2 c3 d1 d2 d3) => (c1 d1 -> c2 d2 -> c3 d3) -> TC t1 c1 d1 -> TC t2 c2 d2 -> TC t3 c3 d3
 apply2EC f (TC x) (TC y) = TC $ f x y
   
-(~*) :: (EZipWith c1 c2 c3 Double Double Double) => TC P c1 Val -> TC DT c2 Val -> TC E c3 Val
+(~*) ::  (EZipWith c1 c2 c3 d1 d2 d3, DMult d1 d2 d3) => TC t1 c1 d1 -> TC t2 c2 d2 -> TC t3 c3 d3
 (~*) x y = apply2EC (.*) x y
 
 
+-- apply2EC ::  (EZipWith c1 c2 c3 d1 d2 d3) => (c1 d1 -> c2 d2 -> c3 d3) -> TC t1 c1 d1 -> TC t2 c2 d2 -> TC t3 c3 d3
+-- apply2EC f (TC x) (TC y) = TC $ f x y
+
+
+-- (~*) :: (EZipWith c1 c2 c3 d1 d2 d3, DMult d1 d2 d3) => TC t1 e1 -> TC t2 e2 -> TC t3 e3
+-- (~*) x y = apply2EC (.*) x y
 
 -- ############### Geht Das ? #################
 {-
