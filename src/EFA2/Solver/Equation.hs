@@ -106,9 +106,6 @@ showEqTerm (x := y) = showEqTerm x ++ " = " ++ showEqTerm y
 showEqTerms :: [EqTerm] -> String
 showEqTerms ts = L.intercalate "\n" $ map showEqTerm ts
 
-envToEqTerms :: (MkVarC k) => M.Map k v -> [EqTerm]
-envToEqTerms m = map (give . fst) (M.toList m)
-
 
 -- | This function takes a predicate p that determines, wether
 -- a term is a variable or not. It then takes a term and

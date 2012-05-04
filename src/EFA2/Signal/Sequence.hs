@@ -69,6 +69,9 @@ makeSequence pRec topo = (sqEnvs, sqTopo)
         sqSecTops = genSectionTopology sqFlowTops
         sqTopo = mkSequenceTopology sqSecTops
 
+
+
+
 -- | Pre-Integrate all Signals in Record  
 recFullIntegrate :: PowerRecord -> FlowRecord   
 recFullIntegrate pRec@(PowerRecord time pMap) = FlowRecord time fMap 

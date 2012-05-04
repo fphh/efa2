@@ -6,6 +6,7 @@ import Data.Graph.Inductive
 
 
 data NodeType = Storage Int
+              | InitStorage Int
               | Sink
               | Source
               | Crossing deriving (Show, Ord, Eq)
@@ -49,6 +50,9 @@ isActiveEdge = isActive . flowDirection
 
 isInactiveEdge :: ELabel -> Bool
 isInactiveEdge = isInactive . flowDirection
+
+isIntersectionEdge :: ELabel -> Bool
+isIntersectionEdge = (IntersectionEdge ==) . edgeType
 
 newtype Topology' a b = Topology { unTopology :: Gr a b } deriving (Show)
 type Topology = Topology' NLabel ELabel

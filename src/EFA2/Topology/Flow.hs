@@ -46,11 +46,7 @@ genFlowTopology topo (FlowState fs) = mkGraph (labNodes topo) (concat $ map f (l
   where f edge@(idx1,idx2, l) | fs M.! (PPosIdx idx1 idx2) == PSign = [(idx1, idx2, l { flowDirection = WithDir })] 
         f edge@(idx1,idx2, l) | fs M.! (PPosIdx idx1 idx2) == NSign = [(idx1, idx2, l { flowDirection = AgainstDir})]
         f edge@(idx1,idx2, l) | fs M.! (PPosIdx idx1 idx2) == ZSign = [(idx1, idx2, l { flowDirection = UnDir})]
-{-
-  where f edge@(idx1,idx2,_) | fs M.! (PPosIdx idx1 idx2) == PSign = [edge] 
-        f edge@(idx1,idx2,lab) | fs M.! (PPosIdx idx1 idx2) == NSign = [(idx2,idx1,lab)]
-        f edge@(idx1,idx2,_) | fs M.! (PPosIdx idx1 idx2) == ZSign = []
--}
+
 
 mkSectionTopology :: SecIdx -> FlowTopology -> SecTopology
 mkSectionTopology (SecIdx sid) t@(FlowTopology topo) = SecTopology $ nmap f topo
@@ -80,8 +76,8 @@ isActStore a@(_, l, ins, outs) = isStorage (nodetypeNLabel l) && not (null (filt
   where es = ins ++ outs
 
 
-mkIntersectionEdges :: [(Node, NLabel, [ELabel], [ELabel])] -> [(Node, Node, ELabel)]
-mkIntersectionEdges stores = interSecEs
+mkIntersectionEdges :: LNode NLabel -> [(Node, NLabel, [ELabel], [ELabel])] -> [(Node, Node, ELabel)]
+mkIntersectionEdges startNode stores = interSecEs
   where (instores, outstores) = L.partition p stores
         p (n, _, [], [o]) = flowDirection o == AgainstDir
         p (n, _, [i], []) = flowDirection i == WithDir
@@ -90,15 +86,15 @@ mkIntersectionEdges stores = interSecEs
         ins = map f instores
         f (n, l, _, _) = (n, l)
 
-        es = map (\(n, l) -> (n, map fst (filter (q l) outs))) ins
+        es = map (\(n, l) -> (n, map fst (filter (q l) outs))) (startNode:ins)
         q lin (_, lout) = sectionNLabel lout > sectionNLabel lin
 
-        e = defaultELabel { edgeType = IntersectionEdge}
+        e = defaultELabel { edgeType = IntersectionEdge }
         interSecEs = concatMap (\(n, ns) -> map (n,, e) ns) es
 
 
 mkSequenceTopology :: SequData [SecTopology] -> Topology
-mkSequenceTopology sd = trace (show grpStores) $ insEdges interSecEs sqTopo
+mkSequenceTopology sd = res
   where sqTopo = copySeqTopology sd
         ns = map (\(n, l) -> (n, l, map snd (lpre sqTopo n), map snd (lsuc sqTopo n))) (labNodes sqTopo)
 
@@ -107,4 +103,17 @@ mkSequenceTopology sd = trace (show grpStores) $ insEdges interSecEs sqTopo
         cmp a b = stNum a == stNum b
         stNum (_, l, _, _) | Storage x <- nodetypeNLabel l = x
 
-        interSecEs = concatMap mkIntersectionEdges grpStores
+        storeLabs = map g grpStores
+        g ((_, l, _, _):_) = l
+
+        maxNode = 1 + (snd $ nodeRange sqTopo)
+        startNodes = map f (zip [maxNode..] storeLabs)
+        f (nid, NLabel _ rec n (Storage sn)) = (nid, NLabel (-1) rec n (InitStorage sn))
+
+        interSecEs = concatMap (uncurry mkIntersectionEdges) (zip startNodes grpStores)
+
+        nodesHelp = startNodes ++ labNodes sqTopo
+        edgesHelp = interSecEs ++ labEdges sqTopo
+
+        res = mkGraph nodesHelp edgesHelp
+        --res = insEdges interSecEs (insNodes startNodes sqTopo)

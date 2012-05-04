@@ -13,7 +13,8 @@ import qualified Data.Map as M
 --
 -- * a section number
 -- * a data record number
--- * two numbers to identify a place in the topology
+-- * two numbers to identify a place in the topology 
+--   (for equation generation, we use the underlying fgl node ids.
 data PowerIdx = PowerIdx !Int !Int !Int !Int deriving (Show, Ord, Eq)
 data EtaIdx = EtaIdx !Int !Int !Int !Int deriving  (Show)
 data XIdx = XIdx !Int !Int !Int !Int deriving (Show, Ord, Eq)

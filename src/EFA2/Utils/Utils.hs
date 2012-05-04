@@ -77,11 +77,18 @@ mapGraphNodes f g = map f (zip3 ins ns outs)
         outs = map (suc g) ns
 
 
-mapGraph :: Graph gr => (([b], b, [b]) -> a) -> gr b c -> [a]
-mapGraph f g = map f (zip3 ins ls outs)
+mapGraphLabels :: Graph gr => (([b], b, [b]) -> a) -> gr b c -> [a]
+mapGraphLabels f g = map f (zip3 ins ls outs)
   where (ns, ls) = unzip $ labNodes g
         ins = map (map (fromJust . lab g) . pre g) ns
         outs = map (map (fromJust . lab g) . suc g) ns
+
+mapGraph :: Graph gr => (([LNode b], LNode b, [LNode b]) -> a) -> gr b c -> [a]
+mapGraph f g = map f (zip3 ins ns outs)
+  where ns = labNodes g
+        ins = map (\(n, _) -> map (\p -> (p, fromJust (lab g p))) (pre g n)) ns
+        outs = map (\(n, _) -> map (\p -> (p, fromJust (lab g p))) (suc g n)) ns
+
 
 
 class ContainerArithSingleton cont a where

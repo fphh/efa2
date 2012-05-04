@@ -45,7 +45,7 @@ import EFA2.Example.SymSig
 
 topo :: Topology
 topo = mkGraph (makeNodes nodes) (makeEdges edges)
-  where nodes = [(0, Storage 1), (1, Crossing), (2, Sink), (3, Storage 0)]
+  where nodes = [(0, Source), (1, Crossing), (2, Sink), (3, Storage 0)]
         edges = [(0, 1, defaultELabel), (1, 2, defaultELabel), (1, 3, defaultELabel)]
 
 
@@ -56,30 +56,63 @@ main = do
   
   let
 
-      pRec = PowerRecord time pMap              
+      --pRec = PowerRecord time pMap
+{-        
       pMap =  M.fromList [ (PPosIdx 0 1, sigMap M.! (SigId "powercon1.u")),
                            (PPosIdx 1 0, sigMap M.! (SigId "powercon2.u")), 
                            (PPosIdx 1 2, sigMap M.! (SigId "powercon3.u")),
                            (PPosIdx 2 1, sigMap M.! (SigId "powercon4.u")),
-                           (PPosIdx 1 3, sigMap M.! (SigId "powercon6.u")),
-                           (PPosIdx 3 1, sigMap M.! (SigId "powercon5.u")) ]
+                           (PPosIdx 1 3, sigMap M.! (SigId "powercon5.u")),
+                           (PPosIdx 3 1, sigMap M.! (SigId "powercon6.u")) ]
+-}
 
-      sigs = M.unions (map powerMap sqEnvs)
+      --time = [0, 0, 1, 1]
+      s01 = [0, 1, 1, 0]
+      s10 = [0, 0.4, 0.4, 0]
+      s12 = [0.3, 0.3, 0.3, 0.3]
+      s21 = [0.2, 0.2, 0.2, 0.2]
+      s13 = [0, 0.1, 0.1, 0]
+      s31 = [0, 0.05, 0.05, 0]
+      --time' = [1, 2, 2]
+      s01' = [0, 0, 0]
+      s10' = [0, 0, 0]
+      s12' = [0.3, 0.3, 0.3]
+      s21' = [0.2, 0.2, 0.2]
+      s13' = [-0.3, -0.3, -0.3]
+      s31' = [-0.6, -0.6, -0.6]
+      n = 2
+      --dtime = replicate n [0, 1, 0]
+      --time = foldl (+) 0 dtime
+      time = [0, 0] ++ (concatMap (replicate 3) [1..])
+
+      pMap =  M.fromList [ (PPosIdx 0 1, concat $ replicate n (s01 ++ s01')),
+                           (PPosIdx 1 0, concat $ replicate n (s10 ++ s10')), 
+                           (PPosIdx 1 2, concat $ replicate n (s12 ++ s12')),
+                           (PPosIdx 2 1, concat $ replicate n (s21 ++ s21')),
+                           (PPosIdx 1 3, concat $ replicate n (s13 ++ s13')),
+                           (PPosIdx 3 1, concat $ replicate n (s31 ++ s31')) ]
+
+      --(sqEnvs, sqTopo) = makeSequence pRec topo
+      (sqEnvs, sqTopo) = makeSequence (PowerRecord time pMap) topo 
+
+      --sigs = M.unions (map powerMap sqEnvs)
 
 
       --TheGraph sqTopo sigs = loop
 
-      (sqEnvs, sqTopo) = makeSequence pRec topo
 
-      ts = envToEqTerms sigs ++ makeAllEquations sqTopo
+      (sqEnvs', ts') = makeAllEquations sqTopo sqEnvs
       --ts = envToEqTerms sigs ++ mkEdgeEq sqTopo ++ mkNodeEq sqTopo
+      sigs = M.unions (map powerMap sqEnvs')
+      etas = M.fromList [ (EtaIdx 0 0 3 19, [1.0]) ]
+      ts = envToEqTerms etas ++ ts'
 
       isV = isVarFromEqs ts
 
       (given, noVariables, givExt, rest) = splitTerms isV ts
       ho = hornOrder isV givExt rest
       dirs = directEquations isV ho
-      envs = Envs sigs M.empty M.empty M.empty M.empty M.empty
+      envs = Envs sigs M.empty etas M.empty M.empty M.empty
 
       gd = map (eqToInTerm envs) (given ++ dirs)
 
@@ -87,11 +120,19 @@ main = do
       res = interpretFromScratch gd
       dirg = makeDirTopology sqTopo
 
-  putStrLn (showEqTerms ts)
+ -- putStrLn (showEqTerms ts)
+ -- putStrLn (showInTerms gd)
+  print sigs
+  --print res
+  drawTopology sqTopo res
+  drawTopologyX' sqTopo
+
+{-
   drawAll [
     drawTopologyX' sqTopo,
     drawTopology sqTopo res,
     drawTopologyX' dirg ]
+-}
 
   {-
   putStrLn "Sequence"
@@ -120,4 +161,3 @@ main = do
   
   -- drawSequFlowTops sqFlowTops
   --print res
-

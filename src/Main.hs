@@ -33,11 +33,12 @@ import EFA2.Display.DrawGraph
 
 import EFA2.Example.SymSig
 import EFA2.Example.Zweibein
+import EFA2.Example.Loop
 
 
 main :: IO ()
 main = do
-  let TheGraph g sigs = zweibein
+  let TheGraph g sigs = loop
       penvts = envToEqTerms sigs
       ts = penvts ++ makeAllEquations g
  
