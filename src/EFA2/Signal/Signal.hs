@@ -23,16 +23,15 @@ data UZ
 class TMult t1 t2 t3 | t1 t2 -> t2 where
 instance TMult P DT E
 
+data Signal
+data Scalar
+data Distrib
 
--- class SMult s1 s2 s3 | s1 s2 -> s3 where
--- instance SMult Signal Signal Signal
--- instance SMult Signal Scalar Signal
--- instance SMult s1 s2 s3 => SMult s2 s1 s3 
+class SMult s1 s2 s3 | s1 s2 -> s3 where
+instance SMult Signal Signal Signal
+instance SMult Signal Scalar Signal
+instance SMult s1 s2 s3 => SMult s2 s1 s3 
   
-newtype Signal t c d = Signal (c d) deriving Show
-newtype Scalar t c d = Scalar (c d) deriving Show
-newtype Distrib t c d = Distrib (c d) deriving Show
-
 ----------------------------------------------------------
 -- | 2. EFA data containers
 
@@ -41,32 +40,28 @@ newtype Distrib t c d = Distrib (c d) deriving Show
 -- c = container
 
 
--- newtype TC t c d = TC (c d) deriving (Show) 
+newtype TC s t c d = TC (c d) deriving (Show) 
 
-class TCont s t c d where
-  fromTC ::  s t c d -> c d
-  toTC :: c d -> s t c d 
+-- class TCont s t c d where
+--   fromTC ::  s t c d -> c d
+--   toTC :: c d -> s t c d 
   
-instance TCont Signal t c d where  
-  fromTC (Signal x) = x 
-  toTC x = Signal x 
+-- instance TCont Signal t c d where  
+--   fromTC (Signal x) = x 
+--   toTC x = Signal x 
 
-instance TCont Scalar t c d where  
-  fromTC (Scalar x) = x 
-  toTC x = Scalar x 
+-- instance TCont Scalar t c d where  
+--   fromTC (Scalar x) = x 
+--   toTC x = Scalar x 
 
-instance TCont Distrib t c d where  
-  fromTC (Distrib x) = x 
-  toTC x = Distrib x 
+-- instance TCont Distrib t c d where  
+--   fromTC (Distrib x) = x 
+--   toTC x = Distrib x 
 
-class (TCont s1 t1 c1 d1, TCont s2 t2 c2 d2, TCont s3 t3 c3 d3, EZipWith c1 c2 c3 d1 d2 d3) => Apply2 s1 s2 s3 t1 t2 t3 c1 c2 c3 d1 d2 d3 where 
-      apply2EC ::  (c1 d1 -> c2 d2 -> c3 d3) -> s1 t1 c1 d1 -> s2 t2 c2 d2 -> s3 t3 c3 d3
-      apply2EC f x y = toTC $ f (fromTC x) (fromTC y)
+apply2EC ::  (EZipWith c1 c2 c3 d1 d2 d3) => (c1 d1 -> c2 d2 -> c3 d3) -> TC s1 t1 c1 d1 -> TC s2 t2 c2 d2 -> TC s3 t3 c3 d3
+apply2EC f (TC x) (TC y) = TC $ f x y
       
-instance (TCont s1 t1 c1 d1, TCont s2 t2 c2 d2, TCont s3 t3 c3 d3,Show (c1 d1), Show (c2 d2)) => Apply2 Signal Signal Signal t1 t2 t3 c1 c2 c3 d1 d2 d3
-      
-
-(~*) :: (TMult t1 t2 t3, DMult d1 d2 d3,Apply2 s1 s2 s3 t1 t2 t3 c1 c2 c3 d1 d2 d3,TCont s1 t1 c1 d1, TCont s2 t2 c2 d2, TCont s3 t3 c3 d3) => s1 t1 c1 d1 -> s2 t2 c2 d2 -> s3 t3 c3 d3 
+(~*) :: (TMult t1 t2 t3, DMult d1 d2 d3,Show (c1 d1), SMult s1 s2 s3, Show (c2 d2)) => TC s1 t1 c1 d1 -> TC s2 t2 c2 d2 -> TC s3 t3 c3 d3 
 (~*) x y = apply2EC (.*) x y 
 
 
