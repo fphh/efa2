@@ -42,15 +42,15 @@ instance SMult s1 s2 s3 => SMult s2 s1 s3
 
 newtype TC s t c d = TC (c d) deriving (Show) 
 
-{-
+
 class TCont a s t c d where
-   fromTC ::  s t c d -> c d
-   toTC :: c d -> s t c d 
+   fromTC ::  a s t c d -> c d
+   toTC :: c d -> a s t c d 
   
-instance TCont TC t c d where  
+instance TCont TC s t c d where  
    fromTC (TC x) = x 
    toTC x = TC x 
--}
+
 -- instance TCont Scalar t c d where  
 --   fromTC (Scalar x) = x 
 --   toTC x = Scalar x 
@@ -60,7 +60,7 @@ instance TCont TC t c d where
 --   toTC x = Distrib x 
 
 apply2EC ::  (EZipWith c1 c2 c3 d1 d2 d3) => (c1 d1 -> c2 d2 -> c3 d3) -> TC s1 t1 c1 d1 -> TC s2 t2 c2 d2 -> TC s3 t3 c3 d3
-apply2EC f (TC x) (TC y) = TC $ f x y
+apply2EC f x y = toTC $ f (fromTC x) (fromTC y)
       
 (~*) :: (TMult t1 t2 t3, DMult d1 d2 d3,Show (c1 d1), SMult s1 s2 s3, Show (c2 d2)) => TC s1 t1 c1 d1 -> TC s2 t2 c2 d2 -> TC s3 t3 c3 d3 
 (~*) x y = apply2EC (.*) x y 

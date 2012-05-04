@@ -10,10 +10,10 @@ s2 = TC v2 :: TC Signal DT EList Val
 --s3 = s1 ~* s2 :: TC E EList Val
 v3 = v1 .* v2 :: EList Val
 
--- s3 = apply2EC (.*) s1 s2 ::  Signal P EList Val
+s3 = apply2EC (.*) s1 s2 ::  TC Signal P EList Val
 s4 = s1 ~* s2 ::  TC Signal E EList Val
 
 main = do 
---  putStrLn (show s3)
   putStrLn (show v3) 
+  putStrLn (show s3)
   putStrLn (show s4)
