@@ -112,7 +112,17 @@ instance  EFunctor EList2 EList2 d1 d2  where
 ---------------------------------------------------------------
 -- ZipWith
 
+class EZipWith c1 c2 c3 where
+  ezipWith :: (d1 -> d2 -> d3) -> c1 d1 -> c2 d2 -> c3 d3 
 
+
+-- Map Works  
+         -- Unboxed
+instance (EFunctor EUVec EUVec (d2 -> d3) d3, UV.Unbox d2, UV.Unbox d3) => EZipWith EVal EUVec EUVec d1 d2 d3  where
+  ezipWith f (EVal x) y = emap (f x) y  
+
+
+{-
 -- Zip Classe
 class EZipWith c1 c2 c3 d1 d2 d3 where -- | d1 d2 -> d3, c1 c2 -> c3 where 
   ezipWith :: (d1 -> d2 -> d3) -> c1 d1 -> c2 d2 -> c3 d3 
@@ -120,7 +130,7 @@ class EZipWith c1 c2 c3 d1 d2 d3 where -- | d1 d2 -> d3, c1 c2 -> c3 where
 
 -- Map Works  
          -- Unboxed
-instance (EFunctor EUVec EUVec (d2 -> d3) d3, UV.Unbox d2, UV.Unbox d3) => EZipWith EVal EUVec EUVec d1 d2 d3  where
+instance (EFunctor EUVec EUVec (d2 -> d3) d3, UV.Unbox d2, UV.Unbox d3) => EZipWith (EVal d1) EUVec EUVec d1 d2 d3  where
   ezipWith f (EVal x) y = emap (f x) y  
 
 -- instance (EFunctor EVec EVec (d2 -> d3) d3, UV.Unbox d3) => EZipWith EVal EVec EUVec d1 d2 d3  where
@@ -199,7 +209,7 @@ instance EZipWith EVec EVec2 EVec2 d1 d2 d3  where
 
 instance  (EZipWith c1 c2 c3 d1 d2 d3,Show (c1 d1) , Show (c2 d2))  => EZipWith c2 c1 c3 d2 d1 d3 where
 --  ezipWith f u v = error ("Fehler : " ++ show u ++ show v)
-
+-}
 ---------------------------------------------------------------
 -- Length & Length Check
 
@@ -272,17 +282,17 @@ class EC c1 c2 d where
   toEC :: c1 d -> c2 d  
   fromEC:: c2 d -> c1 d
 
-instance EC [] EList d where
+instance EC [] EList d where * -> * *
   toEC x = EList x  
   fromEC (EList x) = x
   
-instance EC [] EVec d where
+instance EC ([] []) EVec d where
   toEC x = EVec (V.fromList x)  
   fromEC (EVec x) = V.toList x
   
--- instance EC List EVec2 d where
---   toEC x = EVec2 $ V.fromList (map V.fromList x)  
---   fromEC (EVec2 x) = map V.toList x
+instance EC List EVec2 d where
+   toEC x = EVec2 $ V.fromList (map V.fromList x)  
+   fromEC (EVec2 x) = map V.toList x
   
 instance UV.Unbox d => EC [] EUVec d where
   toEC x = EUVec $ UV.fromList x  

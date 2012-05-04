@@ -77,13 +77,22 @@ apply2EC f (TC x) (TC y) = TC $ f x y
 (~*) ::  (EZipWith c1 c2 c3 d1 d2 d3, DMult d1 d2 d3) => TC t1 c1 d1 -> TC t2 c2 d2 -> TC t3 c3 d3
 (~*) x y = apply2EC (.*) x y
 
+-- Old working Version ##############################
+{-
+newtype TC t e = TC e deriving (Show) 
 
--- apply2EC ::  (EZipWith c1 c2 c3 d1 d2 d3) => (c1 d1 -> c2 d2 -> c3 d3) -> TC t1 c1 d1 -> TC t2 c2 d2 -> TC t3 c3 d3
--- apply2EC f (TC x) (TC y) = TC $ f x y
+class A c d e | c d -> e
+
+instance A a b (a b)
+
+apply2EC ::  (EZipWith e1 e2 e3, A c1 d1 e1) => (e1 -> e2 -> e3) -> TC t1 e1 -> TC t2 e1 -> TC t3 e1
+apply2EC f (TC x) (TC y) = TC $ f x y
+
+(~*) ::  (DMult d1 d2 d3, EZipWith c1 c2 c3 d1 d2 d3) => TC t1 c1 d1 -> TC t2 c2 d2 -> TC t3 c3 d3
+(~*) x y = apply2EC (.*) x y
+-}
 
 
--- (~*) :: (EZipWith c1 c2 c3 d1 d2 d3, DMult d1 d2 d3) => TC t1 e1 -> TC t2 e2 -> TC t3 e3
--- (~*) x y = apply2EC (.*) x y
 
 -- ############### Geht Das ? #################
 {-
