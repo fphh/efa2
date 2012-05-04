@@ -39,6 +39,7 @@ instance SMult s1 s2 s3 => SMult s2 s1 s3
 -- d = derivative
 -- c = container
 
+{-
 
 newtype TC s t c d = TC (c d) deriving (Show) 
 
@@ -64,7 +65,19 @@ apply2EC f x y = toTC $ f (fromTC x) (fromTC y)
       
 (~*) :: (TMult t1 t2 t3, DMult d1 d2 d3,Show (c1 d1), SMult s1 s2 s3, Show (c2 d2)) => TC s1 t1 c1 d1 -> TC s2 t2 c2 d2 -> TC s3 t3 c3 d3 
 (~*) x y = apply2EC (.*) x y 
+-}
 
+-- Old working Version ##############################
+
+newtype TC t c d = TC (c d) deriving (Show) 
+
+
+apply2EC ::  (EZipWith c1 c2 c3 d1 d2 d3) => (c1 d1 -> c2 d2 -> c3 d3) -> TC t1 c1 d1 -> TC t2 c2 d2 -> TC t3 c3 d3
+apply2EC f (TC x) (TC y) = TC $ f x y
+  
+  
+(~*) :: (TMult t1 t2 t3, DMult d1 d2 d3,Show (c1 d1), Show (c2 d2)) => TC t1 c1 d1 -> TC t2 c2 d2 -> TC t3 c3 d3 
+(~*) x y = apply2EC (.*) x y 
 
 
 -- ############### Geht Das ? #################
