@@ -34,10 +34,12 @@ instance DMult Val Bool Val where
  (./.) x True = x
  
 instance DMult Bool Bool Bool where
+-- And  
  (.*.) x True = x
  (.*.) x False = False
- (./.) x False = False
- (./.) x True = x
+-- Or 
+ (./.) x False = x
+ (./.) x True = True
 
 class DSum d1 d2 d3 | d1 d2 -> d3 where
  (.+.) :: d1 -> d2 -> d3
@@ -50,7 +52,7 @@ instance DSum Val Val Val where
 
 data Sign = PSign | ZSign | NSign deriving Show
 sign :: Val -> Sign 
-sign x | x == 0 = NSign
+sign x | x == 0 = ZSign
 sign x | x > 0 = PSign
 sign x | x < 0 = NSign
 
@@ -190,7 +192,7 @@ instance EZipWith EVec EVec2 EVec2 d1 d2 d3  where
   ezipWith f u@(EVec x) v@(EVec2 y) = if lCheck u v then EVec2 $ V.map (V.zipWith f x) y  else error m1
 
 instance  (EZipWith c1 c2 c3 d1 d2 d3,Show (c1 d1) , Show (c2 d2))  => EZipWith c2 c1 c3 d2 d1 d3 where
-   ezipWith f u v = error ("Fehler : " ++ show u ++ show v)
+--   ezipWith f u v = error ("Fehler : " ++ show u ++ show v)
 
 ---------------------------------------------------------------
 -- Length & Length Check
@@ -220,7 +222,7 @@ class  SameLength c1 c2 d1 d2 where
   lCheck :: c1 d1  -> c2 d2 -> Bool
   
 instance  (GetLength c1 d1, GetLength c2 d2) => SameLength c1 c2 d1 d2 where 
-  lCheck x y = len x == len x
+  lCheck x y = len x == len y
 
 ---------------------------------------------------------------
 -- Monoid
@@ -336,7 +338,7 @@ instance (EZipWith c1 c2 c3 d1 d2 d3, DSum d1 d2 d3) => CSum c1 c2 c3 d1 d2 d3 w
   (.+) x y = ezipWith (.+.) x y
   (.-) x y = ezipWith (.-.) x y
 
-{-
+
 class (EZipWith c1 c2 c3 d1 d2 d3, Eq d1,Ord d1, Ord d2 ) => CEq c1 c2 c3 d1 d2 d3 where
   (.==) :: c1 d1 -> c2 d1 -> c3 Bool
   (./=) :: c1 d1 -> c2 d1 -> c3 Bool
@@ -352,7 +354,7 @@ instance (EZipWith c1 c2 c3 d1 d2 d3, Eq d1,Ord d1, Ord d2, Show (c1 d1), Show (
   (.<=)  x y = ezipWith (<=) x y
   (.>)  x y = ezipWith (>) x y
   (.<)  x y = ezipWith (<) x y
--}  
+  
 
 
 

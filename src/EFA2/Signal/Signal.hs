@@ -75,9 +75,9 @@ newtype TC t c d = TC (c d) deriving (Show)
 apply2EC ::  (EZipWith c1 c2 c3 d1 d2 d3) => (c1 d1 -> c2 d2 -> c3 d3) -> TC t1 c1 d1 -> TC t2 c2 d2 -> TC t3 c3 d3
 apply2EC f (TC x) (TC y) = TC $ f x y
   
-  
-(~*) :: (TMult t1 t2 t3, DMult d1 d2 d3,Show (c1 d1), Show (c2 d2)) => TC t1 c1 d1 -> TC t2 c2 d2 -> TC t3 c3 d3 
-(~*) x y = apply2EC (.*) x y 
+-- (~*) :: (TMult t1 t2 t3, DMult d1 d2 d3,Show (c1 d1), Show (c2 d2)) => TC t1 c1 d1 -> TC t2 c2 d2 -> TC t3 c3 d3 
+-- (~*) x y = apply2EC (.*) x y 
+
 
 
 -- ############### Geht Das ? #################
