@@ -11,8 +11,18 @@ s4 = ezipWith (.*.) v1 v2 :: EVec Val
 
 v5 = v1 .* v2 :: EVec Val
 
+data Unbox
+
+f :: (DMult d1 d2 d3) => Unbox -> d1 -> d2 -> d3
+f _ x y = x.*.y
+
+x1 = 1 :: Val
+x2 = 2 :: Val 
+z = f undefined x1 x2  
+
 
 main = do 
   putStrLn (show s2)
   putStrLn (show s4)
   putStrLn (show s3)
+  putStrLn (show z) 
