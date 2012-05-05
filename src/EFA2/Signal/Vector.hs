@@ -81,9 +81,12 @@ sign _ x | x < 0 = NSign
 ----------------------------------------------------------
 -- | 2. Data Structures with 
  
-type Vec  = V.Vector
-type UVec  = UV.Vector
-type List a = [a]
+type Vec a  = V.Vector a
+type UVec a = UV.Vector a
+type UVec2 a = V.Vector (UV.Vector a) 
+type Vec2 a = V.Vector (V.Vector a) 
+type Lst a = [a]
+type Lst2 a = [[a]]
 
 newtype EVal   d = EVal d deriving (Show)
 newtype EList   d = EList [d] deriving (Show) 
@@ -233,11 +236,8 @@ instance UV.Unbox d => GetLength EUVec2 d where
 instance GetLength EList2 d where 
    len (EList2 x) = (length x,map length x)
    
-class  SameLength c1 c2 d1 d2 where
-  lCheck :: c1 d1  -> c2 d2 -> Bool
-  
-instance  (GetLength c1 d1, GetLength c2 d2) => SameLength c1 c2 d1 d2 where 
-  lCheck x y = len x == len y
+
+lCheck x y = len x == len y
 
 ---------------------------------------------------------------
 -- Monoid
@@ -263,14 +263,14 @@ instance UV.Unbox d => EMonoid EUVec EUVec d where
 -- Vector Packing 
   
 class EC c s d where
-  toEC :: s d -> c d  
-  fromEC:: c d -> s d
+  toEC :: (s d) -> (c d)  
+  fromEC:: (c d) -> (s d)
 
-instance EC EList [] d where 
+instance EC EList Lst d where 
   toEC x = EList x  
   fromEC (EList x) = x
   
-instance EC EVec Vec d where 
+instance EC (EVec d) Vec d where 
   toEC x = EVec x  
   fromEC (EVec x) = x
 
@@ -278,12 +278,25 @@ instance EC EUVec UVec d where
   toEC x = EUVec x  
   fromEC (EUVec x) = x
 
+instance EC EList2 Lst2 d where 
+  toEC x = EList2 x  
+  fromEC (EList2 x) = x
+  
+instance EC EVec2 Vec2 d where 
+  toEC x = EVec2 x  
+  fromEC (EVec2 x) = x
+
+instance EC EUVec2 UVec2 d where 
+  toEC x = EUVec2 x  
+  fromEC (EUVec2 x) = x
+
 --------------------------------------------------------------
 -- Vector Conversion
   
 class EConvert c1 c2 d where   
   econvert :: c1 d -> c2 d
   
+-- One D
 instance (UV.Unbox d) => EConvert EVec EUVec d where
    econvert (EVec x) = EUVec $ V.convert x 
 
@@ -302,12 +315,29 @@ instance EConvert EList EVec d where
 instance  (UV.Unbox d) => EConvert EList EUVec d where
   econvert (EList x)  = EUVec $ UV.fromList x
 
+-- Two D
+instance (UV.Unbox d) => EConvert EVec2 EUVec2 d where
+   econvert (EVec2 x) = EUVec2 $ V.map V.convert x 
+
+instance (UV.Unbox d) => EConvert EUVec2 EVec2 d where
+   econvert (EUVec2 x) = EVec2 $ V.map UV.convert x 
+
+instance EConvert EVec2 EList2 d where
+  econvert (EVec2 x)  = EList2 $ V.toList $ V.map V.toList x 
+
+instance  (UV.Unbox d) => EConvert EUVec2 EList2 d where
+  econvert (EUVec2 x)  = EList2 $ V.toList $ V.map UV.toList x
+  
+instance EConvert EList2 EVec2 d where
+  econvert (EList2 x)  = EVec2 $ V.fromList $ map V.fromList x 
+
+instance  (UV.Unbox d) => EConvert EList2 EUVec2 d where
+  econvert (EList2 x)  = EUVec2 $ V.fromList $ map UV.fromList x
 
 ---------------------------------------------------------------
 -- Arith Funktionen  
 
-
-class   CMult e1 e2 e3 | e1 e2 -> e3 where
+class CMult e1 e2 e3 | e1 e2 -> e3 where
   (.*) :: e1 -> e2 -> e3
   (./) :: e1 -> e2 -> e3
   
@@ -315,10 +345,11 @@ instance (EZipWith Unboxed c1 c2 c3 d1 d2 d3, DMult d1 d2 d3, EC c1 s1 d1, EC c2
   (.*) x y =  ezipWith dmult x y
   (./) x y = ezipWith ddiv x y
   
+{-
 instance CMult (EUVec Val) (EUVec Val) (EUVec Val) where
   (.*) x y =  ezipWith dmult x y
   (./) x y = ezipWith ddiv x y
-  
+-}  
  
 class  CSum e1 e2 e3 where
   (.+) :: e1 -> e2 -> e3
