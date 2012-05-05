@@ -125,25 +125,23 @@ class EZipWith u c1 c2 c3 d1 d2 d3 | u c1 c2 -> c3 where -- | d1 d2 -> d3, c1 c2
   ezipWith :: (u -> d1 -> d2 -> d3) -> c1 d1 -> c2 d2 -> c3 d3 
 
 
--- Map Works  
+-- Uses eMap
          -- Unboxed
-instance (EFunctor Unboxed EUVec EUVec (Unboxed -> d2 -> d3) d3, UV.Unbox d2, UV.Unbox d3) => EZipWith Unboxed EVal EUVec EUVec d1 d2 d3  where
-  ezipWith f (EVal x) y = emap (f x) y  
+instance (UV.Unbox d2, UV.Unbox d3) => EZipWith Unboxed EVal EUVec EUVec d1 d2 d3  where
+  ezipWith f (EVal x) (EUVec y) =  EUVec $ UV.map (f undefined x) y  
+  
+instance (UV.Unbox d3) => EZipWith Unboxed EVal EVec EUVec d1 d2 d3  where
+   ezipWith f (EVal x) (EVec y) = EUVec $ UV.convert $ V.map (f undefined x) y
+  
+instance (UV.Unbox d2) => EZipWith Boxed EVal EUVec EVec d1 d2 d3  where
+  ezipWith f (EVal x) (EUVec y) = EVec $ V.map  (f undefined x) $ UV.convert y
+  
+instance  EZipWith Boxed EVal EVec EVec d1 d2 d3  where
+  ezipWith f (EVal x) (EVec y) = EVec $ V.map (f undefined x) y  
+  
+instance  EZipWith u EVal EList EList d1 d2 d3  where
+  ezipWith f (EVal x) (EList y) = EList $ map (f undefined x) y  
 
-{-
-instance (EFunctor Unboxed EVec EVec (d2 -> d3) d3, UV.Unbox d3) => EZipWith Unboxed EVal EVec EUVec d1 d2 d3  where
-   ezipWith f (EVal x) y = emap (f x) y  
-  
-instance (EFunctor  Boxed EVec EVec (d2 -> d3) d3, UV.Unbox d2) => EZipWith Boxed EVal EUVec EVec d1 d2 d3  where
-  ezipWith f (EVal x) y = emap (f x) y  
-  
--- boxed
-instance (EFunctor  Boxed EVec EVec (d2 -> d3) d3) => EZipWith Boxed EVal EVec EVec d1 d2 d3  where
-  ezipWith f (EVal x) y = emap (f x) y  
-  
-instance (EFunctor u EList EList (d2 -> d3) d3) => EZipWith u EVal EList EList d1 d2 d3  where
-  ezipWith f (EVal x) y = emap (f x) y  
--}
 
 {-
 instance (EFunctor EVec2 EVec2 (d2 -> d3) d3) => EZipWith EVal EVec2 EVec2 d1 d2 d3  where
