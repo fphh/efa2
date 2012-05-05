@@ -17,45 +17,50 @@ type Val = Double -- or Ratio
 type IState = Int
 type BState = Bool 
 
+-- Phantom Type Flag to mark functions
+data Unboxed
+data Boxed
+
 
 -- | Calculation classes for basic Datatypes
 class DMult d1 d2 d3 | d1 d2 -> d3 where
- (.*.) :: d1 -> d2 -> d3
- (./.) :: d1 -> d2 -> d3
+ dmult :: Unboxed -> d1 ->  d2 -> d3
+ ddiv :: Unboxed -> d1 -> d2 -> d3
  
 instance DMult Val Val Val where
- (.*.) x y = x*y
- (./.) 0 0 = 0
- (./.) x y = x/y
+ dmult _ x y = x*y
+ ddiv _  0 0 = 0
+ ddiv _ x y = x/y
 
 instance DMult Val Bool Val where
- (.*.) x True = x
- (.*.) x False = 0
- (./.) x False = 0
- (./.) x True = x
+ dmult _ x True = x
+ dmult _ x False = 0
+ ddiv _ x False = 0
+ ddiv _ x True = x
  
 instance DMult Bool Bool Bool where
 -- And  
- (.*.) x True = x
- (.*.) x False = False
+ dmult _ x True = x
+ dmult _ x False = False
 -- Or 
- (./.) x False = x
- (./.) x True = True
+ ddiv _ x False = x
+ ddiv _ x True = True
 
 class DSum d1 d2 d3 | d1 d2 -> d3 where
- (.+.) :: d1 -> d2 -> d3
- (.-.) :: d1 -> d2 -> d3
+ dadd ::  Unboxed -> d1 -> d2 -> d3
+ dsub ::  Unboxed -> d1 -> d2 -> d3
 
 instance DSum Val Val Val where
- (.+.) x y = x+y
- (.-.) x y = x-y
+ dadd _ x y = x+y
+ dsub _ x y = x-y
 
 
 data Sign = PSign | ZSign | NSign deriving Show
-sign :: Val -> Sign 
-sign x | x == 0 = ZSign
-sign x | x > 0 = PSign
-sign x | x < 0 = NSign
+
+sign :: Boxed -> Val -> Sign 
+sign _ x | x == 0 = ZSign
+sign _ x | x > 0 = PSign
+sign _ x | x < 0 = NSign
 
 
 ----------------------------------------------------------
@@ -82,31 +87,27 @@ newtype EList2  d = EList2 [[d]]  deriving (Show)
 -- Functor
 
 -- Own Functor class which could swap containers
-class EFunctor c1 c2 d1 d2 where
-  emap :: (d1 -> d2) -> c1 d1 -> c2 d2 
+class EFunctor u c1 c2 d1 d2 | u c1 -> c2  where
+  emap :: (u -> d1 -> d2) -> c1 d1 -> c2 d2 
 
--- Unbox
-instance (UV.Unbox d2) => EFunctor EVal EUVec d1 d2  where   
-  emap f (EVal x) = EUVec $ UV.fromList [f x]
+instance  EFunctor u EVal EVal d1 d2 where
+  emap f (EVal x) = EVal (f undefined x)
 
-instance (UV.Unbox d1, UV.Unbox d2) => EFunctor EUVec EUVec d1 d2  where   
-  emap f (EUVec x) = EUVec $ UV.map f x
+instance (UV.Unbox d1, UV.Unbox d2) => EFunctor Unboxed EUVec EUVec d1 d2  where   
+  emap f (EUVec x) = EUVec $ UV.map (f undefined) x
 
-instance  (UV.Unbox d2) => EFunctor EVec EUVec d1 d2  where   
-  emap f (EVec x) = EUVec $ UV.convert $ V.map f x
+instance  (UV.Unbox d2) => EFunctor Unboxed EVec EUVec d1 d2  where   
+  emap f (EVec x) = EUVec $ UV.convert $ V.map (f undefined) x
 
-instance  (UV.Unbox d1) => EFunctor EUVec EVec d1 d2  where   
-  emap f (EUVec x) = EVec $ V.map f $ UV.convert x
+instance  (UV.Unbox d1) => EFunctor Boxed EUVec EVec d1 d2  where   
+   emap f (EUVec x) = EVec $ V.map (f undefined) $ UV.convert x
 
--- Equal to Equal
-instance  EFunctor EVec EVec d1 d2  where   
-  emap f (EVec x) = EVec $ V.map f x
+instance  EFunctor Boxed EVec EVec d1 d2  where   
+   emap f (EVec x) = EVec $ V.map (f undefined) x
 
-instance  EFunctor EList EList d1 d2  where   
-  emap f (EList x) = EList $ map f x
+instance  EFunctor u EList EList d1 d2  where   
+  emap f (EList x) = EList $ map (f undefined) x
 
-instance  EFunctor EVal EVal d1 d2 where
-  emap f (EVal x) = EVal (f x)
 
 {-
 instance  EFunctor EVec2 EVec2 d1 d2  where   
@@ -120,27 +121,29 @@ instance  EFunctor EList2 EList2 d1 d2  where
 
 
 -- Zip Classe
-class EZipWith c1 c2 c3 d1 d2 d3 where -- | d1 d2 -> d3, c1 c2 -> c3 where 
-  ezipWith :: (d1 -> d2 -> d3) -> c1 d1 -> c2 d2 -> c3 d3 
+class EZipWith u c1 c2 c3 d1 d2 d3 | u c1 c2 -> c3 where -- | d1 d2 -> d3, c1 c2 -> c3 where 
+  ezipWith :: (u -> d1 -> d2 -> d3) -> c1 d1 -> c2 d2 -> c3 d3 
 
 
 -- Map Works  
          -- Unboxed
-instance (EFunctor EUVec EUVec (d2 -> d3) d3, UV.Unbox d2, UV.Unbox d3) => EZipWith EVal EUVec EUVec d1 d2 d3  where
+instance (EFunctor Unboxed EUVec EUVec (Unboxed -> d2 -> d3) d3, UV.Unbox d2, UV.Unbox d3) => EZipWith Unboxed EVal EUVec EUVec d1 d2 d3  where
   ezipWith f (EVal x) y = emap (f x) y  
 
-instance (EFunctor EVec EVec (d2 -> d3) d3, UV.Unbox d2) => EZipWith EVal EUVec EVec d1 d2 d3  where
-  ezipWith f (EVal x) y = emap (f x) y  
-
-instance (EFunctor EVec EVec (d2 -> d3) d3, UV.Unbox d3) => EZipWith EVal EVec EUVec d1 d2 d3  where
+{-
+instance (EFunctor Unboxed EVec EVec (d2 -> d3) d3, UV.Unbox d3) => EZipWith Unboxed EVal EVec EUVec d1 d2 d3  where
    ezipWith f (EVal x) y = emap (f x) y  
   
-  -- boxed
-instance (EFunctor EVec EVec (d2 -> d3) d3) => EZipWith EVal EVec EVec d1 d2 d3  where
+instance (EFunctor  Boxed EVec EVec (d2 -> d3) d3, UV.Unbox d2) => EZipWith Boxed EVal EUVec EVec d1 d2 d3  where
   ezipWith f (EVal x) y = emap (f x) y  
   
-instance (EFunctor EList EList (d2 -> d3) d3) => EZipWith EVal EList EList d1 d2 d3  where
+-- boxed
+instance (EFunctor  Boxed EVec EVec (d2 -> d3) d3) => EZipWith Boxed EVal EVec EVec d1 d2 d3  where
   ezipWith f (EVal x) y = emap (f x) y  
+  
+instance (EFunctor u EList EList (d2 -> d3) d3) => EZipWith u EVal EList EList d1 d2 d3  where
+  ezipWith f (EVal x) y = emap (f x) y  
+-}
 
 {-
 instance (EFunctor EVec2 EVec2 (d2 -> d3) d3) => EZipWith EVal EVec2 EVec2 d1 d2 d3  where
@@ -154,37 +157,38 @@ instance (EFunctor EList2 EList2 (d2 -> d3) d3) => EZipWith EVal EList2 EList2 d
 -- zipWith with Length Check
 m1 = "Error in EZipWith -- unequal length"
 
+
  -- With each other -- zip Needed
-instance (UV.Unbox d1, UV.Unbox d2, UV.Unbox d3) => EZipWith EUVec EUVec EUVec d1 d2 d3  where
-  ezipWith f u@(EUVec x) v@(EUVec y) = if lCheck u v then EUVec $ UV.zipWith f x y else error m1 
+instance (UV.Unbox d1, UV.Unbox d2, UV.Unbox d3) => EZipWith Unboxed EUVec EUVec EUVec d1 d2 d3  where
+  ezipWith f u@(EUVec x) v@(EUVec y) = if lCheck u v then EUVec $ UV.zipWith (f undefined) x y else error m1 
   
-instance (UV.Unbox d1, UV.Unbox d2) => EZipWith EUVec EUVec EVec d1 d2 d3  where
-  ezipWith f u@(EUVec x) v@(EUVec y) = if lCheck u v then EVec $ V.zipWith f (V.convert x) (V.convert y) else error m1  
+
+instance (UV.Unbox d1, UV.Unbox d2) => EZipWith Boxed EUVec EUVec EVec d1 d2 d3  where
+  ezipWith f u@(EUVec x) v@(EUVec y) = if lCheck u v then EVec $ V.zipWith (f undefined) (V.convert x) (V.convert y) else error m1  
   
-instance (UV.Unbox d1) => EZipWith EUVec EVec EVec d1 d2 d3  where
-  ezipWith f u@(EUVec x) v@(EVec y) = if lCheck u v then EVec $ V.zipWith f (V.convert x) y  else error m1  
 
-instance (UV.Unbox d2) => EZipWith EVec EUVec EVec d1 d2 d3  where
-  ezipWith f u@(EVec x) v@(EUVec y) = if lCheck u v then EVec $ V.zipWith f x (V.convert y)else error m1   
+instance (UV.Unbox d1) => EZipWith Boxed EUVec EVec EVec d1 d2 d3  where
+  ezipWith f u@(EUVec x) v@(EVec y) = if lCheck u v then EVec $ V.zipWith (f undefined) (V.convert x) y  else error m1  
 
-instance (UV.Unbox d3) => EZipWith EVec EVec EUVec d1 d2 d3  where
-  ezipWith f u@(EVec x) v@(EVec y) = if lCheck u v then EUVec $ UV.convert $ V.zipWith f x y  else error m1
+instance (UV.Unbox d2) => EZipWith Boxed EVec EUVec EVec d1 d2 d3  where
+  ezipWith f u@(EVec x) v@(EUVec y) = if lCheck u v then EVec $ V.zipWith (f undefined) x (V.convert y)else error m1   
 
-instance (UV.Unbox d1,UV.Unbox d3) => EZipWith EUVec EVec EUVec d1 d2 d3  where
-  ezipWith f u@(EUVec x) v@(EVec y) = if lCheck u v then EUVec $ UV.convert $ V.zipWith f (V.convert x) y  else error m1
+instance (UV.Unbox d3) => EZipWith Unboxed EVec EVec EUVec d1 d2 d3  where
+  ezipWith f u@(EVec x) v@(EVec y) = if lCheck u v then EUVec $ UV.convert $ V.zipWith (f undefined) x y  else error m1
 
-instance (UV.Unbox d2,UV.Unbox d3) => EZipWith EVec EUVec EUVec d1 d2 d3  where
-  ezipWith f u@(EVec x) v@(EUVec y) = if lCheck u v then EUVec $ UV.convert $ V.zipWith f x (V.convert y)  else error m1
+instance (UV.Unbox d1,UV.Unbox d3) => EZipWith Unboxed EUVec EVec EUVec d1 d2 d3  where
+  ezipWith f u@(EUVec x) v@(EVec y) = if lCheck u v then EUVec $ UV.convert $ V.zipWith (f undefined) (V.convert x) y  else error m1
+
+instance (UV.Unbox d2,UV.Unbox d3) => EZipWith Unboxed EVec EUVec EUVec d1 d2 d3  where
+  ezipWith f u@(EVec x) v@(EUVec y) = if lCheck u v then EUVec $ UV.convert $ V.zipWith (f undefined) x (V.convert y)  else error m1
 
 -- boxed
-instance EZipWith EVec EVec EVec d1 d2 d3  where
-  ezipWith f u@(EVec x) v@(EVec y) =  if lCheck u v then EVec $ V.zipWith f x y else error m1 
+instance EZipWith Boxed EVec EVec EVec d1 d2 d3  where
+  ezipWith f u@(EVec x) v@(EVec y) =  if lCheck u v then EVec $ V.zipWith (f undefined) x y else error m1 
 
-instance EZipWith EList EList EList d1 d2 d3  where
-  ezipWith f u@(EList x) v@(EList y) = if lCheck u v then EList $ zipWith f x y  else error m1
+instance EZipWith Boxed EList EList EList d1 d2 d3  where
+  ezipWith f u@(EList x) v@(EList y) = if lCheck u v then EList $ zipWith (f undefined) x y  else error m1
 
-instance (Show (c1 d1) , Show (c2 d2), Show d1, Show d2) => EZipWith EList EList c3 d1 d2 d3  where
-  ezipWith f u v = error ("Fehler2 : " ++ show u ++ show v)
 
 {-
 -- 2dim
@@ -329,14 +333,15 @@ instance EConvert EList2 EVec2 d where
 ---------------------------------------------------------------
 -- Arith Funktionen  
 
-class  CMult c1 c2 c3 d1 d2 d3 where
+{-
+class  CMult u c1 c2 c3 d1 d2 d3 where
   (.*) :: c1 d1 -> c2 d2 -> c3 d3
   (./) :: c1 d1 -> c2 d2 -> c3 d3
   
-instance (EZipWith c1 c2 c3 d1 d2 d3, DMult d1 d2 d3) => CMult c1 c2 c3 d1 d2 d3 where
-  (.*) x y = ezipWith (.*.) x y
-  (./) x y = ezipWith (./.) x y
- 
+instance (EZipWith u c1 c2 c3 d1 d2 d3, DMult d1 d2 d3) => CMult u c1 c2 c3 d1 d2 d3 where
+  (.*) x y = ezipWith (.*.) x undefined y
+  (./) x y = ezipWith (./.) x undefined y
+-} 
 {-
 class (EZipWith c1 c2 c3 d1 d2 d3, DSum d1 d2 d3) => CSum c1 c2 c3 d1 d2 d3 where
   (.+) :: c1 d1 -> c2 d2 -> c3 d3
