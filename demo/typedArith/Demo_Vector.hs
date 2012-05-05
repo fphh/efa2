@@ -59,6 +59,9 @@ zb4 = ezipWith fzb v1 v2
 
 d3 = dmult undefined d1 False :: Val
 
+u10 = ezipWith dmult u1 u2
+
+
 main = do 
   putStrLn ("Demo Data-Arith")
   putStrLn (show d3)

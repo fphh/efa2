@@ -54,6 +54,21 @@ instance DSum Val Val Val where
  dadd _ x y = x+y
  dsub _ x y = x-y
 
+class (Eq a, Ord a) => DEq a where
+  (..==) :: u -> a -> a -> Bool
+  (../=) :: u -> a -> a -> Bool
+  (..>=) :: u -> a -> a -> Bool
+  (..<=) :: u -> a -> a -> Bool
+  (..>) ::  u -> a -> a -> Bool
+  (..<) ::  u -> a -> a -> Bool
+  
+instance  (Eq a, Ord a) => DEq a where
+  (..==) _ x y = x == y 
+  (../=) _ x y = x /= y
+  (..>=) _ x y = x >= y
+  (..<=) _ x y = x <= y
+  (..>) _  x y = x > y
+  (..<) _  x y = x < y
 
 data Sign = PSign | ZSign | NSign deriving Show
 
@@ -331,42 +346,44 @@ instance EConvert EList2 EVec2 d where
 ---------------------------------------------------------------
 -- Arith Funktionen  
 
-{-
-class  CMult u c1 c2 c3 d1 d2 d3 where
+
+class   (EZipWith Unboxed c1 c2 c3 d1 d2 d3) => CMult c1 c2 c3 d1 d2 d3 where
   (.*) :: c1 d1 -> c2 d2 -> c3 d3
   (./) :: c1 d1 -> c2 d2 -> c3 d3
   
-instance (EZipWith u c1 c2 c3 d1 d2 d3, DMult d1 d2 d3) => CMult u c1 c2 c3 d1 d2 d3 where
-  (.*) x y = ezipWith (.*.) x undefined y
-  (./) x y = ezipWith (./.) x undefined y
--} 
+instance (EZipWith Unboxed c1 c2 c3 d1 d2 d3, DMult d1 d2 d3) => CMult c1 c2 c3 d1 d2 d3 where
+  (.*) x y =  ezipWith dmult x y
+  (./) x y = ezipWith ddiv x y
+ 
 {-
-class (EZipWith c1 c2 c3 d1 d2 d3, DSum d1 d2 d3) => CSum c1 c2 c3 d1 d2 d3 where
+class (EZipWith Unboxed c1 c2 c3 d1 d2 d3, DSum d1 d2 d3) => CSum c1 c2 c3 d1 d2 d3 where
   (.+) :: c1 d1 -> c2 d2 -> c3 d3
   (.-) :: c1 d1 -> c2 d2 -> c3 d3
-  (.+) x y = ezipWith (.+.) x y
-  (.-) x y = ezipWith (.-.) x y
+  (.+) x y = ezipWith (dadd) x y
+  (.-) x y = ezipWith (dsub) x y
 
-instance (EZipWith c1 c2 c3 d1 d2 d3, DSum d1 d2 d3) => CSum c1 c2 c3 d1 d2 d3 where
-  (.+) x y = ezipWith (.+.) x y
-  (.-) x y = ezipWith (.-.) x y
+instance (EZipWith Unboxed c1 c2 c3 d1 d2 d3, DSum d1 d2 d3) => CSum c1 c2 c3 d1 d2 d3 where
+  (.+) x y = ezipWith (dadd) x y
+  (.-) x y = ezipWith (dsub) x y
+-}
 
-class (EZipWith c1 c2 c3 d1 d2 d3, Eq d1,Ord d1, Ord d2 ) => CEq c1 c2 c3 d1 d2 d3 where
-  (.==) :: c1 d1 -> c2 d2 -> c3 Bool
-  (./=) :: c1 d1 -> c2 d2 -> c3 Bool
-  (.>=) :: c1 d1 -> c2 d2 -> c3 Bool
-  (.<=) :: c1 d1 -> c2 d2 -> c3 Bool
-  (.>) :: c1 d1 -> c2 d2 -> c3 Bool
-  (.<) :: c1 d1 -> c2 d2 -> c3 Bool
+{-
+class CEq c1 c2 c3 d1 where
+  (.==) :: c1 d1 -> c2 d1 -> c3 Bool
+  (./=) :: c1 d1 -> c2 d1 -> c3 Bool
+  (.>=) :: c1 d1 -> c2 d1 -> c3 Bool
+  (.<=) :: c1 d1 -> c2 d1 -> c3 Bool
+  (.>) :: c1 d1 -> c2 d1 -> c3 Bool
+  (.<) :: c1 d1 -> c2 d1 -> c3 Bool
   
-instance (EZipWith c1 c2 c3 d1 d1 Bool, Eq d1,Ord d1) => CEq c1 c2 c3 d1 d1 Bool where
-  (.==)  x y = ezipWith (==) x y
-  (./=)  x y = ezipWith (/=) x y
-  (.>=)  x y = ezipWith (>=) x y
-  (.<=)  x y = ezipWith (<=) x y
-  (.>)  x y = ezipWith (>) x y
-  (.<)  x y = ezipWith (<) x y
--}  
+instance (EZipWith Unboxed c1 c2 c3 d1 d1 Bool, Eq d1,Ord d1) => CEq c1 c2 c3 d1  where
+  (.==)  x y = ezipWith (..==) x y
+  (./=)  x y = ezipWith (../=) x y
+  (.>=)  x y = ezipWith (..>=) x y
+  (.<=)  x y = ezipWith (..<=) x y
+  (.>)  x y = ezipWith (..>) x y
+  (.<)  x y = ezipWith (..<) x y
+-}
 
 
 
