@@ -1,5 +1,7 @@
 import EFA2.Signal.Vector
 
+import qualified Data.Vector as V
+import qualified Data.Vector.Unboxed as UV
 
 d1 = 1 :: Val
 d2 = 2 :: Val
@@ -10,11 +12,11 @@ val2 = EVal d2
 l1 = [1..3]
 l2 = [0..2]
 
-u1 = toEC l1 :: EUVec Val
-u2 = toEC l2 :: EUVec Val
+u1 = toEC $ UV.fromList l1 :: EUVec Val
+u2 = toEC $ UV.fromList l2 :: EUVec Val
 
-v1 = toEC l1 :: EVec Val
-v2 = toEC l2 :: EVec Val
+v1 = toEC  $ V.fromList l1 :: EVec Val
+v2 = toEC  $ V.fromList l2 :: EVec Val
 
 -- rv1 = emap sign u1  -- :: EVec Sign
 rv2 = emap sign u1

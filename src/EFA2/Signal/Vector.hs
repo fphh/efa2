@@ -290,31 +290,23 @@ instance EMonoid EVec EVec2 d where
 
 -}  
 ---------------------------------------------------------------
--- Vector Packing (Val und Vec2 von Vector Vector und [[]] nicht enthalten da problematisch)
+-- Vector Packing 
   
-class EC c1 c2 d where
-  toEC :: c1 d -> c2 d  
-  fromEC:: c2 d -> c1 d
+class EC c s d where
+  toEC :: s d -> c d  
+  fromEC:: c d -> s d
 
-instance EC [] EList d where 
+instance EC EList [] d where 
   toEC x = EList x  
   fromEC (EList x) = x
   
-instance EC [] EVec d where
-  toEC x = EVec (V.fromList x)  
-  fromEC (EVec x) = V.toList x
-  
-instance UV.Unbox d => EC [] EUVec d where
-  toEC x = EUVec $ UV.fromList x  
-  fromEC (EUVec x) = UV.toList x
-   
-instance UV.Unbox d => EC UVec EUVec d where
-  toEC x = EUVec x  
-  fromEC (EUVec x) = x
-
-instance EC Vec EVec d where
+instance EC EVec Vec d where 
   toEC x = EVec x  
   fromEC (EVec x) = x
+
+instance EC EUVec UVec d where 
+  toEC x = EUVec x  
+  fromEC (EUVec x) = x
 
 --------------------------------------------------------------
 -- Vector Conversion
@@ -322,8 +314,6 @@ instance EC Vec EVec d where
 class EConvert c1 c2 d where   
   econvert :: c1 d -> c2 d
   
-instance (EC c1 c2 d, EConvert c1 c2 d) => EConvert c2 c1 d where
-
 instance (UV.Unbox d) => EConvert EVec EUVec d where
    econvert (EVec x) = EUVec $ V.convert x 
 
@@ -336,6 +326,12 @@ instance EConvert EVec EList d where
 instance  (UV.Unbox d) => EConvert EUVec EList d where
   econvert (EUVec x)  = EList $ UV.toList x
   
+instance EConvert EList EVec d where
+  econvert (EList x)  = EVec $ V.fromList x 
+
+instance  (UV.Unbox d) => EConvert EList EUVec d where
+  econvert (EList x)  = EUVec $ UV.fromList x
+
 {-
 instance EConvert EVec2 EList2 d where
   econvert (EVec2 x)  = EList2 $ V.toList $ V.map (V.toList) x
@@ -347,25 +343,23 @@ instance EConvert EList2 EVec2 d where
 -- Arith Funktionen  
 
 
-class   (EZipWith Unboxed c1 c2 c3 d1 d2 d3) => CMult c1 c2 c3 d1 d2 d3 where
-  (.*) :: c1 d1 -> c2 d2 -> c3 d3
-  (./) :: c1 d1 -> c2 d2 -> c3 d3
+class   CMult e1 e2 e3 where
+  (.*) :: e1 -> e2 -> e3
+  (./) :: e1 -> e2 -> e3
   
-instance (EZipWith Unboxed c1 c2 c3 d1 d2 d3, DMult d1 d2 d3) => CMult c1 c2 c3 d1 d2 d3 where
+instance (EZipWith Unboxed c1 c2 c3 (s1 d1) (s2 d2) (s3 d3), DMult (s1 d1) (s2 d2) (s3 d3), EC c1 s1 d1, EC c2 s2 d2, EC c3 s3 d3) => CMult (c1 (s1 d1)) (c2 (s2 d2)) (c3 (s3 d3)) where
   (.*) x y =  ezipWith dmult x y
   (./) x y = ezipWith ddiv x y
  
-{-
-class (EZipWith Unboxed c1 c2 c3 d1 d2 d3, DSum d1 d2 d3) => CSum c1 c2 c3 d1 d2 d3 where
-  (.+) :: c1 d1 -> c2 d2 -> c3 d3
-  (.-) :: c1 d1 -> c2 d2 -> c3 d3
+
+class  CSum e1 e2 e3 where
+  (.+) :: e1 -> e2 -> e3
+  (.-) :: e1 -> e2 -> e3
+
+instance (EZipWith Unboxed c1 c2 c3 (s1 d1) (s2 d2) (s3 d3), DSum (s1 d1) (s2 d2) (s3 d3)) => CSum (c1 (s1 d1)) (c2 (s2 d2)) (c3 (s3 d3)) where
   (.+) x y = ezipWith (dadd) x y
   (.-) x y = ezipWith (dsub) x y
 
-instance (EZipWith Unboxed c1 c2 c3 d1 d2 d3, DSum d1 d2 d3) => CSum c1 c2 c3 d1 d2 d3 where
-  (.+) x y = ezipWith (dadd) x y
-  (.-) x y = ezipWith (dsub) x y
--}
 
 {-
 class CEq c1 c2 c3 d1 where
