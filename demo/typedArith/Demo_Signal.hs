@@ -6,15 +6,15 @@ import EFA2.Signal.Vector
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as UV
 
-v1 =  EUVec $ UV.fromList [0..3]
-v2 =  EUVec $ UV.fromList [0..3]
+v1 =  DC (UVec $ UV.fromList [0..3]) :: (DC D1 (UVec Val))
+v2 =  DC (UVec $ UV.fromList [0..3]) :: (DC D1 (UVec Val))
 
-s1 = TC v1 :: TC H P Signal (EUVec Val) 
-s2 = TC v2 :: TC H DT Signal (EUVec Val) 
+s1 = TC v1 :: TC H P Signal (DC D1 (UVec Val)) 
+s2 = TC v2 :: TC H DT Signal (DC D1 (UVec Val)) 
 
-v3 = v1 .* v2 
+v3 = v1 .* v2 :: DC D1 (UVec Val)
 
-s3 = (apply2EC (.*) s1 s2) 
+s3 = (apply2EC (.*) s1 s2)
 s4 = (s1 ~* s2)  
 
 

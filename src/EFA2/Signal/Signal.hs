@@ -72,13 +72,13 @@ instance HArith V2 V2 V2
 instance HArith h1 h2 h3 => HArith h2 h1 h3 
 
 
-class (CMult e1 e2 e3, SArith s1 s2 s3, TMult t1 t2 t3 ) => PhysArith h1 t1 s1 e1 h2 t2 s2 e2 h3 t3 s3 e3 | h1 h2 -> h3 where
+class (DCMult e1 e2 e3, SArith s1 s2 s3, TMult t1 t2 t3 ) => PhysArith h1 t1 s1 e1 h2 t2 s2 e2 h3 t3 s3 e3 | h1 h2 -> h3 where
   (~*) :: TC h1 t1 s1 e1 -> TC h2 t2 s2 e2 -> TC h3 t1 s3 e3 
   (~*) x y = apply2EC (.*) x y
 
-instance  (CMult e1 e2 e3, SArith s1 s2 s3, TMult t1 t2 t3,HArith h1 h2 h3) => PhysArith S t1 s1 e1 h2 t2 s2 e2 h3 t3 s3 e3
-instance  (CMult e1 e2 e3, SArith s1 s2 s3, TMult t1 t2 t3,HArith h1 h2 h3) => PhysArith H t1 s1 e1 H t2 s2 e2 h3 t3 s3 e3
-instance  (CMult e1 e2 e3, SArith s1 s2 s3, TMult t1 t2 t3,HArith h1 h2 h3) => PhysArith V t1 s1 e1 V t2 s2 e2 h3 t3 s3 e3
+instance  (DCMult e1 e2 e3, SArith s1 s2 s3, TMult t1 t2 t3,HArith h1 h2 h3) => PhysArith S t1 s1 e1 h2 t2 s2 e2 h3 t3 s3 e3
+instance  (DCMult e1 e2 e3, SArith s1 s2 s3, TMult t1 t2 t3,HArith h1 h2 h3) => PhysArith H t1 s1 e1 H t2 s2 e2 h3 t3 s3 e3
+instance  (DCMult e1 e2 e3, SArith s1 s2 s3, TMult t1 t2 t3,HArith h1 h2 h3) => PhysArith V t1 s1 e1 V t2 s2 e2 h3 t3 s3 e3
 -- instance  (CMult e1 e2 e3, SArith s1 s2 s3, TMult t1 t2 t3,HArith h1 h2 h3) => PhysArith V t1 s1 e1 H t2 s2 e2 h3 t3 s3 e3
 
 

@@ -54,15 +54,15 @@ instance DSum Val Val Val where
  dadd _ x y = x+y
  dsub _ x y = x-y
 
-class (Eq a, Ord a) => DEq a where
-  (..==) :: u -> a -> a -> Bool
-  (../=) :: u -> a -> a -> Bool
-  (..>=) :: u -> a -> a -> Bool
-  (..<=) :: u -> a -> a -> Bool
-  (..>) ::  u -> a -> a -> Bool
-  (..<) ::  u -> a -> a -> Bool
+class DEq d1 d2 d3 | d1 d2 -> d3 where
+  (..==) :: Unboxed -> d1 -> d2 -> d3
+  (../=) :: Unboxed -> d1 -> d2 -> d3
+  (..>=) :: Unboxed -> d1 -> d2 -> d3
+  (..<=) :: Unboxed -> d1 -> d2 -> d3
+  (..>) ::  Unboxed -> d1 -> d2 -> d3
+  (..<) ::  Unboxed -> d1 -> d2 -> d3
   
-instance  (Eq a, Ord a) => DEq a where
+instance DEq Val Val Bool where
   (..==) _ x y = x == y 
   (../=) _ x y = x /= y
   (..>=) _ x y = x >= y
@@ -89,20 +89,12 @@ newtype List a = List [a] deriving Show
 newtype List2 a = List2 [[a]] deriving Show
 newtype DVal a = DVal a deriving Show
 
--- newtype EVal   d = EVal d deriving (Show)
--- newtype EList   d = EList [d] deriving (Show) 
--- newtype EVec    d = EVec (Vec d)  deriving (Show)
--- newtype EUVec d =  EUVec (UVec d) deriving (Show)
--- newtype EList2   d = EList2 [[d]] deriving (Show) 
--- newtype EVec2    d = EVec2 (Vec (Vec d))  deriving (Show)
--- newtype EUVec2 d =  EUVec2 (Vec (UVec d)) deriving (Show)
-
--- Flags
-data H
-data V
-data N
-data H2
-data V2
+-- Dimension Flags 
+data D1 -- horizontal
+data D2 -- Vertical
+data D3 -- None
+-- data H2 -- Horizontal 2D
+-- data V2 -- Vertical 2D
   
 newtype DC h c = DC c deriving Show
 
@@ -160,7 +152,7 @@ instance  DFunctor u List2  List2  d1 d2  where
 -- ZipWith
 
 -- Zip Class
-class DZipWith u s1 s2 s3 d1 d2 d3 | u s1 s2 -> s3 where 
+class DZipWith u s1 s2 s3 d1 d2 d3  | u s1 s2 -> s3 where 
   dzipWith :: (u -> d1 -> d2 -> d3) -> DC h (s1 d1) -> DC h (s2 d2) -> DC h (s3 d3) 
 
 -- EValue against all
@@ -224,6 +216,18 @@ instance DZipWith Boxed Vec2 Vec2 Vec2 d1 d2 d3  where
 
 instance DZipWith Boxed List2 List2 List2 d1 d2 d3  where
   dzipWith f u@(DC(List2 x)) v@(DC(List2 y)) = if lCheck u v then DC $ List2 $ zipWith (zipWith (f undefined)) x y  else error m1
+
+----------------------------------------------------------------
+-- HV zipWith  
+
+-- -- Zip Class
+-- class HVZipWith u s1 s2 s3 d1 d2 d3 | u s1 s2 -> s3 where 
+--   hvzipWith :: (u -> d1 -> d2 -> d3) -> DC h (s1 d1) -> DC h (s2 d2) -> DC h (s3 d3) 
+  
+-- instance (UV.Unbox d1, UV.Unbox d2, UV.Unbox d3) => HVZipWith Unboxed UVec UVec UVec2 d1 d2 d3 where
+--   hvzipWith f u@(DC (UVec x)) v@(DC (UVec y)) = if lCheck u v then DC $ UVec2 $ V.map (UV.map (f undefined x)) $ V.replicate (UV.length x) (V.fromList [y]) else error m1 
+
+ 
 
 ---------------------------------------------------------------
 -- Length & Length Check
@@ -362,38 +366,30 @@ instance (DZipWith Unboxed s1 s2 s3 d1 d2 d3, DMult d1 d2 d3) => DCMult (DC h (s
   (.*) x y =  dzipWith dmult x y
   (./) x y = dzipWith ddiv x y
   
-{-
-instance CMult (UVec Val) (UVec Val) (UVec Val) where
-  (.*) x y =  dzipWith dmult x y
-  (./) x y = dzipWith ddiv x y
--}  
-{- 
 class  DCSum e1 e2 e3 where
   (.+) :: e1 -> e2 -> e3
   (.-) :: e1 -> e2 -> e3
 
-instance (DZipWith Unboxed s1 s2 s3 d1 d2 d3, DSum d1 d2 d3) => DCSum  (c1 d1) (c2 d2) (c3 d3) where
+instance (DZipWith Unboxed s1 s2 s3 d1 d2 d3, DSum d1 d2 d3) => DCSum (DC h (s1 d1)) (DC h (s2 d2)) (DC h (s3 d3)) where
   (.+) x y = dzipWith (dadd) x y
   (.-) x y = dzipWith (dsub) x y
--}
 
-{-
-class CEq s1 s2 s3 d1 where
-  (.==) :: s1 d1 -> s2 d1 -> s3 Bool
-  (./=) :: s1 d1 -> s2 d1 -> s3 Bool
-  (.>=) :: s1 d1 -> s2 d1 -> s3 Bool
-  (.<=) :: s1 d1 -> s2 d1 -> s3 Bool
-  (.>) :: s1 d1 -> s2 d1 -> s3 Bool
-  (.<) :: s1 d1 -> s2 d1 -> s3 Bool
+class DCEq e1 e2 e3 where
+  (.==) :: e1 -> e2 -> e3
+  (./=) :: e1 -> e2 -> e3 
+  (.>=) :: e1 -> e2 -> e3 
+  (.<=) :: e1 -> e2 -> e3
+  (.>)  :: e1 -> e2 -> e3
+  (.<)  :: e1 -> e2 -> e3
   
-instance (DZipWith Unboxed s1 s2 s3 d1 d1 Bool, Eq d1,Ord d1) => sEq s1 s2 s3 d1  where
+instance (DZipWith Unboxed s1 s2 s3 d1 d2 d3, DEq d1 d2 d3) => DCEq (DC h (s1 d1)) (DC h (s2 d2)) (DC h (s3 d3)) where
   (.==)  x y = dzipWith (..==) x y
   (./=)  x y = dzipWith (../=) x y
   (.>=)  x y = dzipWith (..>=) x y
   (.<=)  x y = dzipWith (..<=) x y
   (.>)  x y = dzipWith (..>) x y
   (.<)  x y = dzipWith (..<) x y
--}
+
 
 
 
