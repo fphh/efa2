@@ -3,27 +3,24 @@ import EFA2.Signal.Vector
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as UV
 
-d1 = 1 :: Val
-d2 = 2 :: Val
-
-val1 = EVal d1
-val2 = EVal d2
+val1 = DC $ DVal 1 :: DC H (DVal Val)
+val2 = DC $ DVal 2 :: DC H (DVal Val)
 
 l1 = [1..3]
 l2 = [0..2]
 
-u1 = toEC $ UV.fromList l1 :: EUVec Val
-u2 = toEC $ UV.fromList l2 :: EUVec Val
+u1 = DC $ UVec $ UV.fromList l1 :: DC H (UVec Val)
+u2 = DC $ UVec $ UV.fromList l2 :: DC H (UVec Val)
 
-v1 = toEC  $ V.fromList l1 :: EVec Val
-v2 = toEC  $ V.fromList l2 :: EVec Val
+v1 = DC  $ Vec $ V.fromList l1 :: DC H (Vec Val)
+v2 = DC  $ Vec $ V.fromList l2 :: DC H (Vec Val)
 
 -- rv1 = emap sign u1  -- :: EVec Sign
-rv2 = emap sign u1
-rv1 = emap fb v1
+rv2 = dfmap sign u1
+rv1 = dfmap fb v1
 
-ru1 = emap f u1 
-ru2 = emap f v1
+ru1 = dfmap f u1 
+ru2 = dfmap f v1
 
 f :: Unboxed -> Val -> Val 
 f _ x = x+1
@@ -37,31 +34,31 @@ fzu _ x y = x + y
 fzb :: Boxed -> Val -> Val -> Val
 fzb _ x y = x + y
 
-zu1 = ezipWith fzu u1 u2  
-zu2 = ezipWith fzu v1 u2  
-zu3 = ezipWith fzu u1 v2 
-zu4 = ezipWith fzu v1 v2 
+zu1 = dzipWith fzu u1 u2  
+zu2 = dzipWith fzu v1 u2  
+zu3 = dzipWith fzu u1 v2 
+zu4 = dzipWith fzu v1 v2 
 
-zau1 = ezipWith fzu val1 u1 
-zau2 = ezipWith fzu val1 v1 
+zau1 = dzipWith fzu val1 u1 
+zau2 = dzipWith fzu val1 v1 
 
-zav1 = ezipWith fzb val1 u1 
-zav2 = ezipWith fzb val1 v1 
+zav1 = dzipWith fzb val1 u1 
+zav2 = dzipWith fzb val1 v1 
 
 
 
 -- zu5 = emap ((flip fzu) 1) u1
 
-zb1 = ezipWith fzb u1 u2 
-zb2 = ezipWith fzb v1 u2 
-zb3 = ezipWith fzb u1 v2 
-zb4 = ezipWith fzb v1 v2 
+zb1 = dzipWith fzb u1 u2 
+zb2 = dzipWith fzb v1 u2 
+zb3 = dzipWith fzb u1 v2 
+zb4 = dzipWith fzb v1 v2 
 
 -- emap ((flip f) x) y
 
-d3 = dmult undefined d1 False :: Val
+-- d3 = dmult undefined val1 False :: Val
 
-u10 = ezipWith dmult u1 u2
+u10 = dzipWith dmult u1 u2
 -- u12 = 
 
 u11 = u1 .* u2
@@ -69,7 +66,7 @@ u11 = u1 .* u2
 
 main = do 
   putStrLn ("Demo Data-Arith")
-  putStrLn (show d3)
+--  putStrLn (show d3)
   
   putStrLn ("Demo emap")
   putStrLn (show rv1)
