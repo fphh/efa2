@@ -63,6 +63,8 @@ d3 = dmult undefined d1 False :: Val
 
 u10 = ezipWith dmult u1 u2
 
+u11 = u1 .* u2
+
 
 main = do 
   putStrLn ("Demo Data-Arith")

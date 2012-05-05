@@ -3,16 +3,19 @@
 import EFA2.Signal.Signal
 import EFA2.Signal.Vector
 
-v1 =  EList [0..3]
-v2 =  EList [0..3]
+import qualified Data.Vector as V
+import qualified Data.Vector.Unboxed as UV
 
-s1 = TC v1 :: TC P EList Val 
-s2 = TC v2 :: TC DT EList Val 
+v1 =  EUVec $ UV.fromList [0..3]
+v2 =  EUVec $ UV.fromList [0..3]
 
-v3 = v1 .* v2 :: EList Val
+s1 = TC v1 :: TC P Signal (EUVec Val) 
+s2 = TC v2 :: TC DT Signal (EUVec Val) 
 
-s3 = (apply2EC (.*) s1 s2) ::  TC E EList Val
-s4 = (s1 ~* s2)  ::  TC E EList Val
+v3 = v1 .* v2 
+
+s3 = (apply2EC (.*) s1 s2) :: TC P Signal (EUVec Val) 
+s4 = (s1 ~* s2)  :: TC P Signal (EUVec Val)
 
 
 main = do 

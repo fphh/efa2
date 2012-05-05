@@ -90,8 +90,6 @@ newtype EList   d = EList [d] deriving (Show)
 newtype EVec    d = EVec (Vec d)  deriving (Show)
 newtype EUVec d =  EUVec (UVec d) deriving (Show)
 
-newtype EList2  d = EList2 [[d]]  deriving (Show)
-
 ---------------------------------------------------------------
 -- Functor
 
@@ -117,10 +115,8 @@ instance  EFunctor Boxed EVec EVec d1 d2  where
 instance  EFunctor u EList EList d1 d2  where   
   emap f (EList x) = EList $ map (f undefined) x
 
-
 ---------------------------------------------------------------
 -- ZipWith
-
 
 -- Zip Classe
 class EZipWith u c1 c2 c3 d1 d2 d3 | u c1 c2 -> c3 where -- | d1 d2 -> d3, c1 c2 -> c3 where 
@@ -216,14 +212,6 @@ instance EMonoid EList EList d where
   eempty = EList [] 
   (.++) (EList x) (EList y) = EList (x++y)  
 
-instance EMonoid EList2 EList2 d where 
-  eempty = EList2 [] 
-  (.++) (EList2 x) (EList2 y) = EList2 (x++y)  
-
-instance EMonoid EList EList2 d where 
-  eempty = EList2 [[]] 
-  (.++) (EList x) (EList2 y) = EList2 (map (x++) y)  
-
 instance EMonoid EVec EVec d where 
   eempty = EVec $ GV.fromList [] 
   (.++) (EVec x) (EVec y) = EVec (x GV.++ y)  
@@ -276,25 +264,29 @@ instance EConvert EList EVec d where
 instance  (UV.Unbox d) => EConvert EList EUVec d where
   econvert (EList x)  = EUVec $ UV.fromList x
 
-}
+
 ---------------------------------------------------------------
 -- Arith Funktionen  
 
 
-class   CMult e1 e2 e3 where
+class   CMult e1 e2 e3 | e1 e2 -> e3 where
   (.*) :: e1 -> e2 -> e3
   (./) :: e1 -> e2 -> e3
   
-instance (EZipWith Unboxed c1 c2 c3 (s1 d1) (s2 d2) (s3 d3), DMult (s1 d1) (s2 d2) (s3 d3), EC c1 s1 d1, EC c2 s2 d2, EC c3 s3 d3) => CMult (c1 (s1 d1)) (c2 (s2 d2)) (c3 (s3 d3)) where
+instance (EZipWith Unboxed c1 c2 c3 d1 d2 d3, DMult d1 d2 d3, EC c1 s1 d1, EC c2 s2 d2, EC c3 s3 d3) => CMult (c1 d1) (c2 d2) (c3 d3) where
   (.*) x y =  ezipWith dmult x y
   (./) x y = ezipWith ddiv x y
+  
+instance CMult (EUVec Val) (EUVec Val) (EUVec Val) where
+  (.*) x y =  ezipWith dmult x y
+  (./) x y = ezipWith ddiv x y
+  
  
-
 class  CSum e1 e2 e3 where
   (.+) :: e1 -> e2 -> e3
   (.-) :: e1 -> e2 -> e3
 
-instance (EZipWith Unboxed c1 c2 c3 (s1 d1) (s2 d2) (s3 d3), DSum (s1 d1) (s2 d2) (s3 d3)) => CSum (c1 (s1 d1)) (c2 (s2 d2)) (c3 (s3 d3)) where
+instance (EZipWith Unboxed c1 c2 c3 d1 d2 d3, DSum d1 d2 d3, EC c1 s1 d1, EC c2 s2 d2, EC c3 s3 d3) => CSum  (c1 d1) (c2 d2) (c3 d3) where
   (.+) x y = ezipWith (dadd) x y
   (.-) x y = ezipWith (dsub) x y
 
