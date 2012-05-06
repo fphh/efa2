@@ -71,27 +71,39 @@ instance SArith Distrib Scalar Distrib
 
 ----------------------------------------------------------
 -- | Apply Function
+{-
+apply2TC :: (e1 -> e2 -> e3) -> TC  h1 e1 -> TC  h2 e2 -> TC  h3 e3
+apply2TC f (TC x) (TC y) = TC $ f x y
+
+class  PhysArith h1 h2 h3 e1 e2 e3 |  h1 h2 -> h3, e1 e2 -> e3  where
+  (~*) :: TC  h1 e1 -> TC h2 e2 -> TC  h3 e3 
+
+instance (DArith1 e1 e2 e3) => PhysArith H H H e1 e2 e3  where
+  (~*) x y = apply2TC (.*) x y
+-}
 
 apply2TC :: (e1 -> e2 -> e3) -> TC t1 s1 h1 e1 -> TC t2 s2 h2 e2 -> TC t3 s3 h3 e3
 apply2TC f (TC x) (TC y) = TC $ f x y
 
-class  PhysArith h1 h2 h3 t1 t2 t3 s1 s2 s3 e1 | t1 t2 -> t3, h1 h2 -> h3 where
-  (~*) :: TC t1 s1 h1 e1 -> TC t2 s2 h2 e1 -> TC t3 s3 h3 e1 
+class  PhysArith h1 h2 h3 t1 t2 t3 s1 s2 s3 e1 e2 e3 | t1 t2 -> t3, h1 h2 -> h3, e1 e2 -> e3  where
+  (~*) :: TC t1 s1 h1 e1 -> TC t2 s2 h2 e2 -> TC t3 s3 h3 e3 
 
-instance (SArith s1 s2 s3, TMult t1 t2 t3) => PhysArith H H H t1 t2 t3 s1 s2 s3  Val where
-  (~*) x y = apply2TC (*) x y
+instance (DArith1 e1 e2 e3, SArith s1 s2 s3, TMult t1 t2 t3) => PhysArith H H H t1 t2 t3 s1 s2 s3 e1 e2 e3  where
+  (~*) x y = apply2TC (.*) x y
 
-instance (SArith s1 s2 s3, TMult t1 t2 t3) => PhysArith H V H t1 t2 t3 s1 s2 s3  Val where
-  (~*) x y = apply2TC (/) x y
+instance (DArith1 e1 e2 e3, SArith s1 s2 s3, TMult t1 t2 t3) => PhysArith H V H t1 t2 t3 s1 s2 s3 e1 e2 e3  where
+  (~*) x y = apply2TC (./) x y
 
-instance (SArith s1 s2 s3, TMult t1 t2 t3) => PhysArith V H V t1 t2 t3 s1 s2 s3  Val where
-  (~*) x y = apply2TC (/) x y
+instance (DArith1 e1 e2 e3, SArith s1 s2 s3, TMult t1 t2 t3) => PhysArith V H V t1 t2 t3 s1 s2 s3  e1 e2 e3 where
+  (~*) x y = apply2TC (./) x y
 
-instance (SArith s1 s2 s3, TMult t1 t2 t3) => PhysArith V V V t1 t2 t3 s1 s2 s3  Val where
-  (~*) x y = apply2TC (*) x y
+instance (DArith1 e1 e2 e3, SArith s1 s2 s3, TMult t1 t2 t3) => PhysArith V V V t1 t2 t3 s1 s2 s3 e1 e2 e3 where
+  (~*) x y = apply2TC (.*) x y
 
+
+{-
 class Disp t s h e where
-  disp :: TC t s h e -> String
+  disp :: TC  h e -> String
 
 instance Disp P s h Val where
   disp x = "P" 
@@ -107,3 +119,4 @@ instance Disp t Signal Val h where
 
 instance Disp t Distrib Val h where  
   disp x = "Distrib"
+-}

@@ -7,12 +7,17 @@ import EFA2.Signal.Vector2
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as UV
 
+type Sig a b = TC a Signal H (DC D1 (UVec b)) 
+type Power = TC P Signal H (DC D1 (UVec Val)) 
+type DTime = TC DT Signal H (DC D1 (UVec Val)) 
+type Energy =  TC E Signal H (DC D1 (UVec Val))
+
 v1 =  DC (UV.fromList [0..3]) :: (DC D1 (UVec Val))
 v2 =  DC (UV.fromList [0..3]) :: (DC D1 (UVec Val))
 
-s1 = TC 1 :: TC P Signal H Val -- v1 :: TC E Signal (DC D1 (UVec Val)) 
-s2 = TC 2 :: TC DT Signal H Val -- v2 :: TC DT Signal (DC D1 (UVec Val)) 
-s3 = TC 3 :: TC DT Signal V Val -- v2 :: TC DT SampleVec (DC D1 (UVec Val)) 
+s1 = TC v1 :: Power
+s2 = TC v2 :: DTime
+s3 = TC v3 :: DTime
 
 v3 = v1 .* v2
 
