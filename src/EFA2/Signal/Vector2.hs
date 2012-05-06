@@ -88,9 +88,11 @@ type List = [] -- deriving Show
 newtype DVal a = DVal a -- deriving Show
 
 -- Dimension Flags 
-data Dim0
-data Dim1 -- horizontal
-data Dim2 -- Vertical
+data S -- Skalar
+data H
+data H2 -- horizontal
+data V -- Vertical
+data V2  
   
 newtype DC dim c = DC c deriving Show
 
@@ -105,7 +107,13 @@ dfmap f (DC x) = DC (smap f x)
 dzipWith :: (SipWith u s1 s2 s3 d1 d2 d3) => (u -> d1 -> d2 -> d3) ->  DC dim1 (s1 d1) -> DC dim2 (s2 d2) -> DC dim3 (s3 d3)
 dzipWith f (DC x) (DC y) = DC (sipWith f x y)
 
+dzipWith2 :: (SipWith u s1 s2 s3 d1 d2 d3) => (u -> d1 -> d2 -> d3) ->  DC dim1 (s1 d1) -> DC dim2 (s2 d2) -> DC dim3 (s3 d3)
+dzipWith2 f (DC x) (DC y) = DC (sipWith f x y)
 
+{-
+dzipWith0 :: (SipWith u s1 s2 s3 d1 d2 d3) => (u -> d1 -> d2 -> d3) ->  DC dim1 (s1 d1) -> DC dim2 (s2 d2) -> DC dim3 (s3 d3)
+dzipWith0 f (DC x) (DC y) = DC (sipWith f x y)
+-}
 -------------------------------------------------------------
 -- Functor
 
@@ -135,14 +143,14 @@ instance  SFunctor u List List d1 d2 where
 -- Functor
 
 -- Own Deep Functor class which could swap containers
-class DeepFunctor c1 u s1 d1 s2 d2 where
-  deepmap :: (u -> d1 -> d2) -> (c1 (s1 d1)) -> (c1 (s2 d2)) 
+class SFunctor2 c1 u s1 d1 s2 d2 where
+  smap2 :: (u -> d1 -> d2) -> (c1 (s1 d1)) -> (c1 (s2 d2)) 
 
-instance SFunctor u s1 s2 d1 d2 => DeepFunctor Vec u s1 d1 s2 d2 where   
-  deepmap f  x = V.map (smap f) x
+instance SFunctor u s1 s2 d1 d2 => SFunctor2 Vec u s1 d1 s2 d2 where   
+  smap2 f  x = V.map (smap f) x
 
-instance SFunctor u s1 s2 d1 d2 => DeepFunctor List u s1 d1 s2 d2 where   
-  deepmap f x = map (smap f ) x
+instance SFunctor u s1 s2 d1 d2 => SFunctor2 List u s1 d1 s2 d2 where   
+  smap2 f x = map (smap f ) x
   
 
 m1 = "Error in DZipWith -- unequal length"
@@ -150,6 +158,10 @@ m1 = "Error in DZipWith -- unequal length"
 -- Zip Class
 class SipWith u s1 s2 s3 d1 d2 d3  | u s1 s2 -> s3 where 
   sipWith :: (u -> d1 -> d2 -> d3) -> (s1 d1) -> (s2 d2) -> (s3 d3) 
+
+-- one Dimensional zip
+instance (UV.Unbox d1, UV.Unbox d2, UV.Unbox d3, GetLength (s2 d2), SFunctor Unboxed s2 s3 d2 d3) => SipWith Unboxed DVal s2 s3 d1 d2 d3 where
+  sipWith f x@(DVal x') y = if lCheck x y then smap ((flip f) x') y else error m1 
   
 -- one Dimensional zip
 instance (UV.Unbox d1, UV.Unbox d2, UV.Unbox d3) => SipWith Unboxed UVec UVec UVec d1 d2 d3 where
@@ -183,14 +195,25 @@ instance SipWith Boxed List List List d1 d2 d3  where
 -- ZipWith
 
 -- Zip Class
-class DeepZipWith c1 u s1 s2 s3 d1 d2 d3 where
-  deepZipWith :: (u -> d1 -> d2 -> d3) -> (c1 (s1 d1)) -> (c1 (s2 d2)) -> (c1 (s3 d3)) 
+class SipWith2 c1 u s1 s2 s3 d1 d2 d3 where
+  sipWith2 :: (u -> d1 -> d2 -> d3) -> (c1 (s1 d1)) -> (c1 (s2 d2)) -> (c1 (s3 d3)) 
 
-instance  SipWith u s1 s2 s3 d1 d2 d3 => DeepZipWith Vec u s1 s2 s3 d1 d2 d3  where
-  deepZipWith f x y = if lCheck x y then V.zipWith (sipWith f) x y else error m1 
+instance  SipWith u s1 s2 s3 d1 d2 d3 => SipWith2 Vec u s1 s2 s3 d1 d2 d3  where
+  sipWith2 f x y = if lCheck x y then V.zipWith (sipWith f) x y else error m1 
 
-instance  SipWith u s1 s2 s3 d1 d2 d3 => DeepZipWith List u s1 s2 s3 d1 d2 d3  where
-  deepZipWith f x y = if lCheck x y then zipWith (sipWith f) x y else error m1 
+instance  SipWith u s1 s2 s3 d1 d2 d3 => SipWith2 List u s1 s2 s3 d1 d2 d3  where
+  sipWith2 f x y = if lCheck x y then zipWith (sipWith f) x y else error m1 
+
+---------------------------------------------------------------
+-- ZipWith
+{-
+-- Zip Class
+class SipWith01 c1 u s1 s2 s3 d1 d2 d3 where
+  sipWith01 :: (u -> d1 -> d2 -> d3) -> (s1 d1) -> (c1 (s2 d2)) -> (c1 (s3 d3)) 
+
+instance  SipWith u s1 s2 s3 d1 d2 d3 => SipWith0 Vec u s1 s2 s3 d1 d2 d3  where
+  sipWith01 f x y = if lCheck x y then V.zipWith (sipWith f) x y else error m1 
+-}
 
 
 --------------------------------------------------------------
@@ -314,14 +337,43 @@ instance  (UV.Unbox d) => EConvert EList2 UVec2 d where
 ---------------------------------------------------------------
 -- Arith Funktionen  
 
+class Hzip h1 h2 h3 | h1 h2 -> h3
+instance Hzip D0 D1 D1
+instance Hzip D0 D2 D2
+instance Hzip D1 D1 D1
+instance Hzip12 D2 D2 D2 
+instance Hzip12 D1 D2 D2 
+-- aufspannen
+-- unten rein / oben drauf
+
+instance S H H
+instance S V V
+
+instance H H H
+instance V V V 
+
+instance H H H
+instance V V V 
+
+
+-- instance HArith h1 h2 h3 => HArith h2 h1 h3 
+
+
 class DCMult e1 e2 e3 | e1 e2 -> e3 where
   (.*) :: e1 -> e2 -> e3
   (./) :: e1 -> e2 -> e3
   
-instance (SipWith Unboxed s1 s2 s3 d1 d2 d3, DMult d1 d2 d3) => DCMult (DC h (s1 d1)) (DC h (s2 d2)) (DC h (s3 d3)) where
+instance (SipWith Unboxed s1 s2 s3 d1 d2 d3, DMult d1 d2 d3, Hzip h1 h2 h3) => DCMult (DC h1 (s1 d1)) (DC h2 (s2 d2)) (DC h3 (s3 d3)) where
   (.*) x y =  dzipWith dmult x y
   (./) x y = dzipWith ddiv x y
-  
+
+instance (SipWith Unboxed s1 s2 s3 d1 d2 d3, DMult d1 d2 d3, Hzip2 h1 h2 h3) => DCMult (DC h1 (s1 d1)) (DC h2 (s2 d2)) (DC h3 (s3 d3)) where
+  (.*) x y =  dzipWith2 dmult x y
+  (./) x y = dzipWith2 ddiv x y
+
+
+
+
 class  DCSum e1 e2 e3 where
   (.+) :: e1 -> e2 -> e3
   (.-) :: e1 -> e2 -> e3
