@@ -10,17 +10,14 @@ import qualified Data.Vector.Unboxed as UV
 v1 =  DC (UV.fromList [0..3]) :: (DC D1 (UVec Val))
 v2 =  DC (UV.fromList [0..3]) :: (DC D1 (UVec Val))
 
-s1 = TC 1 :: TC P Signal Val -- v1 :: TC E Signal (DC D1 (UVec Val)) 
-s2 = TC 2 :: TC DT Signal Val -- v2 :: TC DT Signal (DC D1 (UVec Val)) 
-s3 = TC 3 :: TC DT SampleVec Val -- v2 :: TC DT SampleVec (DC D1 (UVec Val)) 
+s1 = TC 1 :: TC P Signal H Val -- v1 :: TC E Signal (DC D1 (UVec Val)) 
+s2 = TC 2 :: TC DT Signal H Val -- v2 :: TC DT Signal (DC D1 (UVec Val)) 
+s3 = TC 3 :: TC DT Signal V Val -- v2 :: TC DT SampleVec (DC D1 (UVec Val)) 
 
 v3 = v1 .* v2
 
--- s3 = (apply2EC (.*) s1 s2)
 s4 = (s1 ~* s2) 
-
 s5 = (s1 ~* s3)   
--- s6 = (s1 ~* s3)   
 
 main = do 
   
