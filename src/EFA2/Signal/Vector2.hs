@@ -89,8 +89,11 @@ sign _ x | x < 0 = NSign
  
 type Vec  = V.Vector -- deriving Show
 type UVec = UV.Vector -- deriving Show
+type Vec2 a = V.Vector (V.Vector a)
+type UVec2 a = UV.Vector (UV.Vector a)
 
 type List = [] -- deriving Show
+type List2 a = [[a]] -- deriving Show
 newtype DVal a = DVal a -- deriving Show
 
 -- Dimension Flags 
@@ -114,14 +117,15 @@ dzipWith f (DC x) (DC y) = DC (sipWith f x y)
 dzipWith2 :: (SipWith2 u c1 s1 s2 s3 d1 d2 d3) => (u -> d1 -> d2 -> d3) ->  DC dim1 (c1 (s1 d1)) -> DC dim2 (c1 (s2 d2)) -> DC dim3 (c1 (s3 d3))
 dzipWith2 f (DC x) (DC y) = DC (sipWith2 f x y)
 
-
 dzipWith02 :: (SipWith02 u c1 s1 s2 s3 d1 d2 d3) => (u -> d1 -> d2 -> d3) ->  DC dim1 (s1 d1) -> DC dim2 (c1 (s2 d2)) -> DC dim3 (c1 (s3 d3))
 dzipWith02 f (DC x) (DC y) = DC (sipWith02 f x y)
 
-{-
-dzipWith0 :: (SipWith u s1 s2 s3 d1 d2 d3) => (u -> d1 -> d2 -> d3) ->  DC dim1 (s1 d1) -> DC dim2 (s2 d2) -> DC dim3 (s3 d3)
-dzipWith0 f (DC x) (DC y) = DC (sipWith f x y)
--}
+dzipWith12 :: (SipWith12 u c1 s1 s2 s3 d1 d2 d3) => (u -> d1 -> d2 -> d3) ->  DC dim1 (s1 d1) -> DC dim2 (c1 (s2 d2)) -> DC dim3 (c1 (s3 d3))
+dzipWith12 f (DC x) (DC y) = DC (sipWith12 f x y)
+
+-- dzipWith12' :: (SipWith12 u c1 s1 s2 s3 d1 d2 d3) => (u -> d1 -> d2 -> d3) ->  DC dim1 (s1 d1) -> DC dim2 (c1 (s2 d2)) -> DC dim3 (c1 (s3 d3))
+-- dzipWith12' f (DC x) (DC y) = DC (sipWith12' f x y)
+
 -------------------------------------------------------------
 -- Functor
 
@@ -225,6 +229,26 @@ instance  (SFunctor u s2 s3 d2 d3) => SipWith02 u Vec DVal s2 s3 d1 d2 d3  where
 instance   (SFunctor u s2 s3 d2 d3) => SipWith02 u List DVal s2 s3 d1 d2 d3  where
   sipWith02 f x@(DVal x') y = smap2 ((flip f) x') y 
 
+-- Zip Class
+class SipWith12 u c1 s1 s2 s3 d1 d2 d3 where
+  sipWith12 :: (u -> d1 -> d2 -> d3) -> (s1 d1) -> (c1 (s2 d2)) -> (c1 (s3 d3)) 
+
+instance SipWith u s1 s2 s3 d1 d2 d3 => SipWith12 u Vec s1 s2 s3 d1 d2 d3  where
+  sipWith12 f x y = V.map (sipWith f x) y 
+
+instance SipWith u s1 s2 s3 d1 d2 d3 => SipWith12 u List s1 s2 s3 d1 d2 d3  where
+  sipWith12 f x y = map (sipWith f x) y
+
+{-
+-- Zip12
+class SipWith12' u c1 s1 s2 s3 d1 d2 d3 where
+  sipWith12' :: (u -> d1 -> d2 -> d3) -> (s1 d1) -> (c1 (s2 d2)) -> (c1 (s3 d3)) 
+
+instance SipWith u DVal c1 c1 d1 d2 d3 => SipWith12' u c1 s1 s2 s2 d1 d2 d3  where
+  sipWith12' f x y = sipWith f' x y 
+    where f' x' y' = smap (f (DVal x')) y'
+-}
+
 --------------------------------------------------------------
 -- Length & Length Check
 
@@ -245,143 +269,95 @@ instance GetLength  (List d) where
 
 lCheck x y = len x == len y
 
-{-
+
 ---------------------------------------------------------------
 -- Monoid
+class DMonoid c d where
+ eempty :: (c d)
+ (.++) :: (c d) -> (c d) -> (c d)
+ 
+instance DMonoid List d where 
+  eempty = [] 
+  (.++) = (++)
 
-class EMonoid s1 s2 d where
-  eempty :: s2 d 
-  (.++) :: s1 d -> s2 d -> s2 d
-    
-instance EMonoid EList EList d where 
-  eempty = EList [] 
-  (.++) (EList x) (EList y) = EList (x++y)  
+instance DMonoid Vec d where 
+  eempty = V.empty
+  (.++) = (V.++)
 
-instance EMonoid Vec Vec d where 
-  eempty = Vec $ GV.fromList [] 
-  (.++) (Vec x) (Vec y) = Vec (x GV.++ y)  
-
-instance UV.Unbox d => EMonoid UVec UVec d where 
-  eempty = UVec $ UV.fromList [] 
-  (.++) (UVec x) (UVec y) = UVec (x UV.++ y)  
-
-  
----------------------------------------------------------------
--- Vector Packing 
-  
-class EC s s d where
-  toEC :: (s d) -> (c d)  
-  fromEC:: (c d) -> (s d)
-
-instance EC EList Lst d where 
-  toEC x = EList x  
-  fromEC (EList x) = x
-  
-instance EC (Vec d) Vec d where 
-  toEC x = Vec x  
-  fromEC (Vec x) = x
-
-instance EC UVec UVec d where 
-  toEC x = UVec x  
-  fromEC (UVec x) = x
-
-instance EC EList2 Lst2 d where 
-  toEC x = EList2 x  
-  fromEC (EList2 x) = x
-  
-instance EC Vec2 Vec2 d where 
-  toEC x = Vec2 x  
-  fromEC (Vec2 x) = x
-
-instance EC UVec2 UVec2 d where 
-  toEC x = UVec2 x  
-  fromEC (UVec2 x) = x
+instance UV.Unbox d => DMonoid UVec d where 
+  eempty = UV.empty
+  (.++) = (UV.++)
 
 --------------------------------------------------------------
--- Vector sonversion
+-- Vector conversion
   
-class EConvert s1 s2 d where   
-  econvert :: s1 d -> s2 d
+class DConvert a b where   
+  dconvert :: DC dim a -> DC dim b
   
 -- One D
-instance (UV.Unbox d) => EConvert Vec UVec d where
-   econvert (Vec x) = UVec $ V.convert x 
+instance (UV.Unbox d) => DConvert (Vec d) (UVec d) where
+  dconvert (DC x) = DC $ V.convert x 
 
-instance (UV.Unbox d) => EConvert UVec Vec d where
-   econvert (UVec x) = Vec $ UV.convert x 
+instance (UV.Unbox d) => DConvert (UVec d) (Vec d) where
+  dconvert (DC x) = DC $ UV.convert x 
 
-instance EConvert Vec EList d where
-  econvert (Vec x)  = EList $ V.toList x 
+instance DConvert (Vec d) (List d) where
+  dconvert (DC x) = DC $ V.toList x
 
-instance  (UV.Unbox d) => EConvert UVec EList d where
-  econvert (UVec x)  = EList $ UV.toList x
+instance DConvert (List d) (Vec d) where
+  dconvert (DC x) = DC $ V.fromList x
   
-instance EConvert EList Vec d where
-  econvert (EList x)  = Vec $ V.fromList x 
+instance (UV.Unbox d) => DConvert (List d) (UVec d) where
+  dconvert (DC x) = DC $ UV.fromList x
 
-instance  (UV.Unbox d) => EConvert EList UVec d where
-  econvert (EList x)  = UVec $ UV.fromList x
+instance (UV.Unbox d) => DConvert (UVec d) (List d) where
+  dconvert (DC x) = DC $ UV.toList x
 
 -- Two D
-instance (UV.Unbox d) => EConvert Vec2 UVec2 d where
-   econvert (Vec2 x) = UVec2 $ V.map V.convert x 
-
-instance (UV.Unbox d) => EConvert UVec2 Vec2 d where
-   econvert (UVec2 x) = Vec2 $ V.map UV.convert x 
-
-instance EConvert Vec2 EList2 d where
-  econvert (Vec2 x)  = EList2 $ V.toList $ V.map V.toList x 
-
-instance  (UV.Unbox d) => EConvert UVec2 EList2 d where
-  econvert (UVec2 x)  = EList2 $ V.toList $ V.map UV.toList x
-  
-instance EConvert EList2 Vec2 d where
-  econvert (EList2 x)  = Vec2 $ V.fromList $ map V.fromList x 
-
-instance  (UV.Unbox d) => EConvert EList2 UVec2 d where
-  econvert (EList2 x)  = UVec2 $ V.fromList $ map UV.fromList x
--}
-
-
----------------------------------------------------------------
--- Arith Funktionen  
+-- TODO   
 
 -- instance HArith h1 h2 h3 => HArith h2 h1 h3 
-class DCMult e1 e2 e3 | e1 e2 -> e3 where
-  (.*) :: e1 -> e2 -> e3
-  (./) :: e1 -> e2 -> e3
-  (.+) :: e1 -> e2 -> e3
-  (.-) :: e1 -> e2 -> e3
+class DArith1 e1 e2 e3 | e1 e2 -> e3 where
+   (.*) :: e1 -> e2 -> e3
+   (./) :: e1 -> e2 -> e3
+   (.+) :: e1 -> e2 -> e3
+   (.-) :: e1 -> e2 -> e3
 
-instance (SipWith Unboxed s1 s2 s3 d1 d2 d3, DMult d1 d2 d3) => DCMult (DC D0 (s1 d1)) (DC D0 (s2 d2)) (DC D0 (s3 d3)) where
-  (.*) x y =  dzipWith dmult x y
-  (./) x y = dzipWith ddiv x y
-  (.+) x y = dzipWith (dadd) x y
-  (.-) x y = dzipWith (dsub) x y
-  
-instance (SipWith Unboxed s1 s2 s3 d1 d2 d3, DMult d1 d2 d3) => DCMult (DC D0 (s1 d1)) (DC D1 (s2 d2)) (DC D1 (s3 d3)) where
+instance (SipWith Unboxed s1 s2 s3 d1 d2 d3, DMult d1 d2 d3) => DArith1 (DC D0 (s1 d1)) (DC D0 (s2 d2)) (DC D0 (s3 d3)) where
   (.*) x y =  dzipWith dmult x y
   (./) x y = dzipWith ddiv x y
   (.+) x y = dzipWith (dadd) x y
   (.-) x y = dzipWith (dsub) x y
 
-instance (SipWith Unboxed s1 s2 s3 d1 d2 d3, DMult d1 d2 d3) => DCMult (DC D1 (s1 d1)) (DC D1 (s2 d2)) (DC D1 (s3 d3)) where
+instance (SipWith Unboxed s1 s2 s3 d1 d2 d3, DMult d1 d2 d3) => DArith1 (DC D0 (s1 d1)) (DC D1 (s2 d2)) (DC D1 (s3 d3)) where
   (.*) x y =  dzipWith dmult x y
   (./) x y = dzipWith ddiv x y
   (.+) x y = dzipWith (dadd) x y
   (.-) x y = dzipWith (dsub) x y
 
-instance (SipWith2 Unboxed c1 s1 s2 s3 d1 d2 d3, DMult d1 d2 d3) => DCMult (DC D2 (c1 (s1 d1))) (DC D2 (c1(s2 d2))) (DC D2 (c1(s3 d3))) where
+instance (SipWith Unboxed s1 s2 s3 d1 d2 d3, DMult d1 d2 d3) => DArith1 (DC D1 (s1 d1)) (DC D1 (s2 d2)) (DC D1 (s3 d3)) where
+   (.*) x y =  dzipWith dmult x y
+   (./) x y = dzipWith ddiv x y
+   (.+) x y = dzipWith (dadd) x y
+   (.-) x y = dzipWith (dsub) x y
+
+instance (SipWith2 Unboxed c1 s1 s2 s3 d1 d2 d3, DMult d1 d2 d3) => DArith1 (DC D2 (c1 (s1 d1))) (DC D2 (c1(s2 d2))) (DC D2 (c1(s3 d3))) where
   (.*) x y =  dzipWith2 dmult x y
   (./) x y = dzipWith2 ddiv x y
   (.+) x y = dzipWith2 (dadd) x y
   (.-) x y = dzipWith2 (dsub) x y
 
-instance (SipWith02 Unboxed c1 s1 s2 s3 d1 d2 d3, DMult d1 d2 d3) => DCMult (DC D2 (s1 d1)) (DC D0 (c1(s2 d2))) (DC D2 (c1(s3 d3))) where
+instance (SipWith02 Unboxed c1 s1 s2 s3 d1 d2 d3, DMult d1 d2 d3) => DArith1 (DC D0 (s1 d1)) (DC D2 (c1(s2 d2))) (DC D2 (c1(s3 d3))) where
   (.*) x y = dzipWith02 dmult x y
   (./) x y = dzipWith02 ddiv x y
   (.+) x y = dzipWith02 (dadd) x y
   (.-) x y = dzipWith02 (dsub) x y
+
+instance (SipWith12 Unboxed c1 s1 s2 s3 d1 d2 d3, DMult d1 d2 d3) => DArith1 (DC D1 (s1 d1)) (DC D2 (c1(s2 d2))) (DC D2 (c1(s3 d3))) where
+  (.*) x y = dzipWith12 dmult x y
+  (./) x y = dzipWith12 ddiv x y
+  (.+) x y = dzipWith12 (dadd) x y
+  (.-) x y = dzipWith12 (dsub) x y
 
 
 {-
@@ -393,7 +369,7 @@ instance (SipWith Unboxed s1 s2 s3 d1 d2 d3, DSum d1 d2 d3) => DCSum (DC h (s1 d
   (.+) x y = dzipWith (dadd) x y
   (.-) x y = dzipWith (dsub) x y
 -}
-
+{-
 class DCEq e1 e2 e3 where
   (.==) :: e1 -> e2 -> e3
   (./=) :: e1 -> e2 -> e3 
@@ -409,7 +385,7 @@ instance (SipWith Unboxed s1 s2 s3 d1 d2 d3, DEq d1 d2 d3) => DCEq (DC h (s1 d1)
   (.<=)  x y = dzipWith (..<=) x y
   (.>)  x y = dzipWith (..>) x y
   (.<)  x y = dzipWith (..<) x y
-
+-}
 
 
 

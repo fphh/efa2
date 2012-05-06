@@ -61,11 +61,11 @@ apply2EC f (TC x) (TC y) = TC $ f x y
 
 
 
-class (DCMult e1 e2 e3, SArith s1 s2 s3, TMult t1 t2 t3 ) => PhysArith t1 s1 e1 t2 s2 e2 t3 s3 e3  where
+class (DArith1 e1 e2 e3, SArith s1 s2 s3, TMult t1 t2 t3 ) => PhysArith t1 s1 e1 t2 s2 e2 t3 s3 e3  where
   (~*) :: TC t1 s1 e1 -> TC t2 s2 e2 -> TC t1 s3 e3 
   (~*) x y = apply2EC (.*) x y
 
-instance  (DCMult e1 e2 e3, SArith s1 s2 s3, TMult t1 t2 t3) => PhysArith t1 s1 e1 t2 s2 e2 t3 s3 e3
+instance  (DArith1 e1 e2 e3, SArith s1 s2 s3, TMult t1 t2 t3) => PhysArith t1 s1 e1 t2 s2 e2 t3 s3 e3
 
 
 
