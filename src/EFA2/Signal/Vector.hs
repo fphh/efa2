@@ -81,104 +81,133 @@ sign _ x | x < 0 = NSign
 ----------------------------------------------------------
 -- | 2. Data Structures with 
  
-type Vec  = V.Vector -- deriving Show
-type UVec = UV.Vector -- deriving Show
-type List = [] -- deriving Show
-newtype DVal a = DVal a -- deriving Show
+newtype Vec a  = Vec (V.Vector a) deriving Show
+newtype UVec a = UVec (UV.Vector a) deriving Show
+newtype UVec2 a = UVec2 (V.Vector (UV.Vector a)) deriving Show
+newtype Vec2 a = Vec2 (V.Vector (V.Vector a)) deriving Show
+newtype List a = List [a] deriving Show
+newtype List2 a = List2 [[a]] deriving Show
+newtype DVal a = DVal a deriving Show
 
 -- Dimension Flags 
-data Dim0
-data Dim1 -- horizontal
-data Dim2 -- Vertical
+data D1 -- horizontal
+data D2 -- Vertical
+data D3 -- None
+-- data H2 -- Horizontal 2D
+-- data V2 -- Vertical 2D
   
-newtype DC dim c = DC c deriving Show
+newtype DC h c = DC c deriving Show
 
-class DCCont w s where
-   toCont :: w sim s d -> s d 
-   fromCont :: s d -> w h s d
-   
 
-dfmap :: DFunctor u s1 s2 d1 d2 => (u -> s1 d1 -> s2 d2) -> DC dim1 (s1 d1) -> DC dim2 (s2 d2)
-dfmap f (DC x) = DC (smap f x)
 
--- dzipWith2 :: (u -> d1 -> d2 -> d3) -> DC dim1 a -> DC dim2 b -> DC dim3 b
--- dzipWith2 f (DC x) (DC y) = DC (sipWith f x y)
-
+class Cont w s where
+  toCont :: w h s d -> s d 
+  fromCont :: s d -> w h s d
 
 -------------------------------------------------------------
--- Functor
+-- Normal Functor
 
 -- Own Functor class which could swap containers
 class DFunctor u s1 s2 d1 d2 | u s1 -> s2  where
-  smap :: (u -> s1 d1 -> s2 d2) -> (s1 d1) -> (s2 d2) 
+  dfmap :: (u -> d1 -> d2) -> DC h (s1 d1) -> DC h (s2 d2) 
 
+-- 0 dim
 instance  DFunctor u DVal DVal d1 d2 where
-  smap f x = (f undefined) x
+  dfmap f (DC (DVal x)) = DC $ DVal $ (f undefined) x
 
+-- 1 dim
+instance (UV.Unbox d1, UV.Unbox d2) => DFunctor Unboxed UVec UVec d1 d2 where   
+  dfmap f (DC (UVec x)) = DC $ UVec $ UV.map (f undefined) x
 
--- instance (UV.Unbox d1, UV.Unbox d2) => DFunctor Unboxed UVec UVec d1 d2 where   
---   dfmap f (DC (UVec x)) = DC $ UVec $ UV.map (f undefined) x
+instance  (UV.Unbox d2) => DFunctor Unboxed Vec UVec d1 d2  where   
+  dfmap f (DC (Vec x)) = DC $ UVec $ V.convert $ V.map (f undefined) x 
 
--- instance  (UV.Unbox d2) => DFunctor Unboxed Vec UVec d1 d2  where   
---   dfmap f (DC (Vec x)) = DC $ UVec $ V.convert $ V.map (f undefined) x 
+instance  (UV.Unbox d1) => DFunctor Boxed UVec Vec d1 d2  where   
+   dfmap f (DC (UVec x)) = DC $ Vec $ V.map (f undefined) $ UV.convert x
 
--- instance  (UV.Unbox d1) => DFunctor Boxed UVec Vec d1 d2  where   
---   dfmap f (DC (UVec x)) = DC $ Vec $ V.map (f undefined) $ UV.convert x
+instance  DFunctor Boxed Vec Vec d1 d2  where   
+   dfmap f (DC (Vec x)) = DC $ Vec $ V.map (f undefined) x  
 
--- instance  DFunctor Boxed Vec Vec d1 d2  where   
---  smap f x = V.map (smap f) x  
+instance  DFunctor u List List d1 d2  where   
+  dfmap f (DC (List x)) = DC $ List $  map (f undefined) x
+{-
+-- 2 dim  
+instance (UV.Unbox d1, UV.Unbox d2) => DFunctor Unboxed UVec2 UVec2 d1 d2  where   
+  dfmap f (DC (UVec2 x)) = DC $ UVec2 $ V.map (UV.map (f undefined)) x
 
-instance  DFunctor u List List d1 d2 where   
-  smap f x = (f undefined) x
+instance  (UV.Unbox d2) => DFunctor Unboxed Vec2  UVec2  d1 d2  where   
+  dfmap f (DC (Vec2 x)) = DC $ UVec2 $ V.map UV.convert $ V.map (V.map (f undefined)) x
 
--------------------------------------------------------------
--- Functor
+instance  (UV.Unbox d1) => DFunctor Boxed UVec2 Vec2  d1 d2  where   
+   dfmap f (DC (UVec2 x)) = DC $ Vec2 $ V.map (V.map (f undefined)) $ V.map UV.convert x
 
--- Own Deep Functor class which could swap containers
-class   DFunctor u s1 s2 d1 d2 => DAllFunctor u s1 s2 d1 d2 | u s1 -> s2  where -- | u s1 -> s2  where
-  dallmap :: (u -> s1 d1 -> s2 d2) -> (s1 d1) -> (s2 d2) 
+instance  DFunctor Boxed Vec2  Vec2  d1 d2  where   
+   dfmap f (DC (Vec2 x)) = DC $ Vec2 $ V.map (V.map (f undefined)) x
 
--- DVal object -- apply functor
-instance   DAllFunctor  u DVal DVal d2 d2 where
-  dallmap f x = f undefined x  
-    
--- DVal object inside -- apply functor
-instance  DFunctor u s1 s2 (DVal a) d2 => DAllFunctor u s1 s2 (DVal a) d2 where
-  dallmap f x = smap f x 
+instance  DFunctor u List2  List2  d1 d2  where   
+  dfmap f (DC (List2 x)) = DC $ List2 $ map (map (f undefined)) x
+-}
+---------------------------------------------------------------
+-- deep Funktor
+
+class DeepFunctor u s1 s2 d1 d2 | u s1 -> s2  where
+  deepmap :: (u -> d1 -> d2) -> DC h (s1 d1) -> DC h (s2 d2) 
   
--- Else go down deeper
-instance  DAllFunctor u s1 s2 d1 d2 => DAllFunctor u s1 s2 d1 d2 where
-  dallmap f x = dallmap (dallmap f) x 
+-- 2 dim  
+instance (UV.Unbox d1, UV.Unbox d2) => DeepFunctor Unboxed UVec2 UVec2 d1 d2  where   
+  deepmap f (DC (UVec2 x)) = DC $ UVec2 $ V.map (UV.map (f undefined)) x
+
+instance  (UV.Unbox d2) => DeepFunctor Unboxed Vec2  UVec2  d1 d2  where   
+  deepmap f (DC (Vec2 x)) = DC $ UVec2 $ V.map UV.convert $ V.map (V.map (f undefined)) x
+
+instance  (UV.Unbox d1) => DeepFunctor Boxed UVec2 Vec2  d1 d2  where   
+  deepmap f (DC (UVec2 x)) = DC $ Vec2 $ V.map (V.map (f undefined)) $ V.map UV.convert x
+
+instance  DeepFunctor Boxed Vec2  Vec2  d1 d2  where   
+  deepmap f (DC (Vec2 x)) = DC $ Vec2 $ V.map (V.map (f undefined)) x
+
+instance  DeepFunctor u List2  List2  d1 d2  where   
+  deepmap f (DC (List2 x)) = DC $ List2 $ map (map (f undefined)) x
+
+---------------------------------------------------------------
+-- deep Funktor
+
+class ShallowFunctor u s1 s2 d1 d2 | u s1 -> s2  where
+  shallowmap :: (u -> v1 d1 -> v2 d2) -> DC h (s1 (v1 d1)) -> DC h (s2 (v2 d2)) 
   
-  
--- instance (UV.Unbox d1, UV.Unbox d2) => DAllFunctor Dim2 Unboxed UVec2 UVec2 d1 d2  where   
---   dallmap f (DC (UVec2 x)) = DC $ UVec2 $ V.map (UV.map (f undefined)) x
+-- 2 dim  
+instance ShallowFunctor Unboxed UVec2 UVec2 d1 d2  where   
+  shallowmap f (DC (UVec2 x)) = DC $ UVec2 $ V.map (f undefined) x
 
--- instance  (UV.Unbox d2) => DAllFunctor Dim2  Unboxed Vec2  UVec2  d1 d2  where   
---   dallmap f (DC (Vec2 x)) = DC $ UVec2 $ V.map UV.convert $ V.map (V.map (f undefined)) x
+instance  ShallowFunctor Unboxed Vec2  UVec2  d1 d2  where   
+  shallowmap f (DC (Vec2 x)) = DC $ UVec2 $ V.map (f undefined) x
 
--- instance  (UV.Unbox d1) => DAllFunctor Dim2  Boxed UVec2 Vec2  d1 d2  where   
---    dallmap f (DC (UVec2 x)) = DC $ Vec2 $ V.map (V.map (f undefined)) $ V.map UV.convert x
+instance  ShallowFunctor Boxed UVec2 Vec2  d1 d2  where   
+  shallowmap f (DC (UVec2 x)) = DC $ Vec2 $ V.map (f undefined) x
 
--- instance  DAllFunctor Dim2 Boxed Vec2  Vec2  d1 d2  where   
---    dallmap f (DC (Vec2 x)) = DC $ Vec2 $ V.map (V.map (f undefined)) x
+instance  ShallowFunctor Boxed Vec2  Vec2  d1 d2  where   
+  shallowmap f (DC (Vec2 x)) = DC $ Vec2 $ V.map (f undefined) x
 
--- instance  DAllFunctor Dim2 u List2  List2  d1 d2  where   
---   dallmap f (DC (List2 x)) = DC $ List2 $ map (map (f undefined)) x
+instance  ShallowFunctor u List2  List2  d1 d2  where   
+  shallowmap f (DC (List2 x)) = DC $ List2 $ map (f undefined) x
 
  
 ---------------------------------------------------------------
 -- ZipWith
-{-
-m1 = "Error in DZipWith -- unequal length"
 
 -- Zip Class
 class DZipWith u s1 s2 s3 d1 d2 d3  | u s1 s2 -> s3 where 
-  dzipWith :: (u -> d1 -> d2 -> d3) -> DC dim (s1 d1) -> DC dim (s2 d2) -> DC dim (s3 d3) 
+  dzipWith :: (u -> d1 -> d2 -> d3) -> DC h (s1 d1) -> DC h (s2 d2) -> DC h (s3 d3) 
+
+-- EValue against all
+instance  (DFunctor u s2 s3 d2 d3) => DZipWith u DVal s2 s3 d1 d2 d3  where
+  dzipWith f (DC (DVal x)) y = dfmap ((flip f) x) y  
 
 -- one Dimensional zip
 instance (UV.Unbox d1, UV.Unbox d2, UV.Unbox d3) => DZipWith Unboxed UVec UVec UVec d1 d2 d3 where
   dzipWith f u@(DC (UVec x)) v@(DC (UVec y)) = if lCheck u v then DC $ UVec $ (UV.zipWith (f undefined)) x y else error m1 
+
+m1 = "Error in DZipWith -- unequal length"
 
 instance (UV.Unbox d1, UV.Unbox d2) => DZipWith Boxed UVec UVec Vec d1 d2 d3  where
   dzipWith f u@(DC (UVec x)) v@(DC (UVec y)) = if lCheck u v then DC $ Vec $ V.zipWith (f undefined) (V.convert x) (V.convert y) else error m1  
@@ -203,8 +232,7 @@ instance DZipWith Boxed Vec Vec Vec d1 d2 d3  where
 
 instance DZipWith Boxed List List List d1 d2 d3  where
   dzipWith f u@(DC (List x)) v@(DC(List y)) = if lCheck u v then DC $ List $ zipWith (f undefined) x y  else error m1
--}
-{-
+
 -- two Dimensional zip
 instance (UV.Unbox d1, UV.Unbox d2, UV.Unbox d3) => DZipWith Unboxed UVec2 UVec2 UVec2 d1 d2 d3  where
   dzipWith f u@(DC(UVec2 x)) v@(DC(UVec2 y)) = if lCheck u v then DC $ UVec2 $ V.zipWith (UV.zipWith (f undefined)) x y else error m1 
@@ -232,17 +260,7 @@ instance DZipWith Boxed Vec2 Vec2 Vec2 d1 d2 d3  where
 
 instance DZipWith Boxed List2 List2 List2 d1 d2 d3  where
   dzipWith f u@(DC(List2 x)) v@(DC(List2 y)) = if lCheck u v then DC $ List2 $ zipWith (zipWith (f undefined)) x y  else error m1
--}
-{-
-----------------------------------------------------------------
--- Zip Class zipping one value int
-class DAllZipWith u dim s1 s2 s3 d1 d2 d3  | u s1 s2 -> s3 where 
-  dallzipWith :: (u -> d1 -> d2 -> d3) -> DC dim (s1 d1) -> DC dim (s2 d2) -> DC dim (s3 d3) 
 
--- EValue against all
-instance  (DFunctor u s2 s3 d2 d3) => DAllZipWith dim u DVal s2 s3 d1 d2 d3  where
-  dallzipWith f (DC (DVal x)) y = dallmap ((flip f) x) y  
--}
 ----------------------------------------------------------------
 -- HV zipWith  
 
@@ -254,7 +272,7 @@ instance  (DFunctor u s2 s3 d2 d3) => DAllZipWith dim u DVal s2 s3 d1 d2 d3  whe
 --   hvzipWith f u@(DC (UVec x)) v@(DC (UVec y)) = if lCheck u v then DC $ UVec2 $ V.map (UV.map (f undefined x)) $ V.replicate (UV.length x) (V.fromList [y]) else error m1 
 
  
-{-
+
 ---------------------------------------------------------------
 -- Length & Length Check
 
@@ -272,8 +290,7 @@ instance UV.Unbox d => GetLength  (UVec d) where
 
 instance GetLength  (List d) where 
    len (DC (List x)) = (length x,[])
--}
-{-
+
 instance GetLength  (Vec2 d) where 
   len (DC ( Vec2 x)) = (V.length x,V.toList $ V.map V.length x)
 
@@ -282,9 +299,9 @@ instance UV.Unbox d => GetLength  (UVec2 d) where
 
 instance GetLength  (List2 d)  where 
    len (DC (List2 x)) = (length x,map length x)
--}   
+   
 
--- lCheck x y = len x == len y
+lCheck x y = len x == len y
 
 {-
 ---------------------------------------------------------------
@@ -382,8 +399,6 @@ instance EConvert EList2 Vec2 d where
 instance  (UV.Unbox d) => EConvert EList2 UVec2 d where
   econvert (EList2 x)  = UVec2 $ V.fromList $ map UV.fromList x
 -}
-
-{-
 ---------------------------------------------------------------
 -- Arith Funktionen  
 
@@ -419,6 +434,6 @@ instance (DZipWith Unboxed s1 s2 s3 d1 d2 d3, DEq d1 d2 d3) => DCEq (DC h (s1 d1
   (.>)  x y = dzipWith (..>) x y
   (.<)  x y = dzipWith (..<) x y
 
--}
+
 
 

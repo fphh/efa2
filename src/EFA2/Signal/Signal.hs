@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances, MultiParamTypeClasses,FunctionalDependencies, TypeSynonymInstances, UndecidableInstances,KindSignatures,IncoherentInstances, GeneralizedNewtypeDeriving,FlexibleContexts #-}
 
 module EFA2.Signal.Signal (module EFA2.Signal.Signal) where
-import EFA2.Signal.Vector
+import EFA2.Signal.Vector2
 
 --------------------------------
 -- type Wrapper 
