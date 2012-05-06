@@ -12,7 +12,7 @@ v2 =  DC (UVec $ UV.fromList [0..3]) :: (DC D1 (UVec Val))
 s1 = TC v1 :: TC H P Signal (DC D1 (UVec Val)) 
 s2 = TC v2 :: TC H DT Signal (DC D1 (UVec Val)) 
 
-v3 = v1 .* v2 :: DC D1 (UVec Val)
+v3 = v1 .* v2
 
 s3 = (apply2EC (.*) s1 s2)
 s4 = (s1 ~* s2)  
