@@ -7,11 +7,11 @@ import EFA2.Signal.Vector2
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as UV
 
-v1 =  DC (UV.fromList [0..3]) :: (DC H (UVec Val))
-v2 =  DC (UV.fromList [0..3]) :: (DC H (UVec Val))
+v1 =  DC (UV.fromList [0..3]) :: (DC D1 (UVec Val))
+v2 =  DC (UV.fromList [0..3]) :: (DC D1 (UVec Val))
 
-s1 = TC v1 :: TC P Signal (DC H (UVec Val)) 
-s2 = TC v2 :: TC DT Signal (DC H (UVec Val)) 
+s1 = TC v1 :: TC P Signal (DC D1 (UVec Val)) 
+s2 = TC v2 :: TC DT Signal (DC D1 (UVec Val)) 
 
 v3 = v1 .* v2
 
