@@ -1,19 +1,24 @@
-import EFA2.Signal.Vector
+import EFA2.Signal.Vector2
+import EFA2.Signal.Base
+import EFA2.Display.DispVector
+import EFA2.Display.DispBase
 
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as UV
 
-val1 = DC $ DVal 1 :: DC H (DVal Val)
-val2 = DC $ DVal 2 :: DC H (DVal Val)
+
+
+val1 = DC $ DVal 1 :: DC D0 (DVal Val)
+val2 = DC $ DVal 2 :: DC D0 (DVal Val)
 
 l1 = [1..3]
 l2 = [0..2]
 
-u1 = DC $ UVec $ UV.fromList l1 :: DC H (UVec Val)
-u2 = DC $ UVec $ UV.fromList l2 :: DC H (UVec Val)
+u1 = DC $  UV.fromList l1 :: DC D1 (UVec Val)
+u2 = DC $  UV.fromList l2 :: DC D1 (UVec Val)
 
-v1 = DC  $ Vec $ V.fromList l1 :: DC H (Vec Val)
-v2 = DC  $ Vec $ V.fromList l2 :: DC H (Vec Val)
+v1 = DC  $ V.fromList l1 :: DC D1 (Vec Val)
+v2 = DC  $ V.fromList l2 :: DC D1 (Vec Val)
 
 -- rv1 = emap sign u1  -- :: EVec Sign
 rv2 = dfmap sign u1
@@ -66,36 +71,36 @@ u11 = u1 .* u2
 
 main = do 
   putStrLn ("Demo Data-Arith")
---  putStrLn (show d3)
+--  putStrLn (ddisp d3)
   
   putStrLn ("Demo emap")
-  putStrLn (show rv1)
-  putStrLn (show rv2)
-  putStrLn (show ru1)
-  putStrLn (show ru2)
+  putStrLn (ddisp rv1)
+  putStrLn (ddisp rv2)
+  putStrLn (ddisp ru1)
+  putStrLn (ddisp ru2)
   
   putStrLn ("Demo ezipWith - unboxed")
-  putStrLn (show zu1)
-  putStrLn (show zu2)
-  putStrLn (show zu3)
-  putStrLn (show zu4)
+  putStrLn (ddisp zu1)
+  putStrLn (ddisp zu2)
+  putStrLn (ddisp zu3)
+  putStrLn (ddisp zu4)
   
   putStrLn ("Demo ezipWith - boxed")
-  putStrLn (show zb1)
-  putStrLn (show zb2)
-  putStrLn (show zb3)
-  putStrLn (show zb4)
+  putStrLn (ddisp zb1)
+  putStrLn (ddisp zb2)
+  putStrLn (ddisp zb3)
+  putStrLn (ddisp zb4)
   
   putStrLn ("Demo ezipWith val - unboxed/boxed")
-  putStrLn (show zau1)
-  putStrLn (show zau2)
-  putStrLn (show zav1)
-  putStrLn (show zav2)
+  putStrLn (ddisp zau1)
+  putStrLn (ddisp zau2)
+  putStrLn (ddisp zav1)
+  putStrLn (ddisp zav2)
 
   
-  -- putStrLn (show rv2)
-  -- putStrLn (show ru1)
-  -- putStrLn (show ru2)
+  -- putStrLn (ddisp rv2)
+  -- putStrLn (ddisp ru1)
+  -- putStrLn (ddisp ru2)
   
   
   

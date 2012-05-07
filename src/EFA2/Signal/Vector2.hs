@@ -10,12 +10,10 @@ import qualified Data.Vector.Generic.Mutable as MV
 import Data.Monoid
 import Control.Applicative
 import EFA2.Utils.Utils
+import qualified Data.List as L 
 
-----------------------------------------------------------
--- | 1. Numeric Data types
-type Val = Double -- or Ratio
-type IState = Int
-type BState = Bool 
+import EFA2.Signal.Base
+
 
 -- Phantom Type Flag to mark functions
 data Unboxed
@@ -76,7 +74,7 @@ instance DEq Val Val Bool where
   (..>) _  x y = x > y
   (..<) _  x y = x < y
 
-data Sign = PSign | ZSign | NSign deriving Show
+
 
 sign :: Boxed -> Val -> Sign 
 sign _ x | x == 0 = ZSign
@@ -95,7 +93,9 @@ type UVec2 a = UV.Vector (UV.Vector a)
 type List = [] -- deriving Show
 type List2 a = [[a]] -- deriving Show
 newtype DVal a = DVal a -- deriving Show
-
+data DValPair a = DValPair a a 
+newtype DSize a = DSize (a,[a]) 
+  
 -- Dimension Flags 
 data D0 -- Skalar
 data D1
@@ -103,10 +103,21 @@ data D2 -- horizontal
   
 newtype DC dim c = DC c deriving Show
 
-class DCCont w s where
-   toCont :: w sim s d -> s d 
-   fromCont :: s d -> w h s d
+class DCCont s d where
+    fromDC :: DC dim (s d) -> s d 
+    toDC :: s d -> DC dim (s d)
+
+class DValCont d where
+    fromDVal :: DVal d -> d 
+    toDVal :: d -> DVal d
+
+-- class DApply dim s1 d
+-- dapply :: DC dim a -> DC dim b
+-- dapply f (DC x) =  x
    
+-------------------------------------------------------------
+-- | External Interface
+
 
 dfmap :: SFunctor u s1 s2 d1 d2 => (u -> d1 -> d2) -> DC dim (s1 d1) -> DC dim (s2 d2)
 dfmap f (DC x) = DC (smap f x)
@@ -123,12 +134,30 @@ dzipWith02 f (DC x) (DC y) = DC (sipWith02 f x y)
 dzipWith12 :: (SipWith12 u c1 s1 s2 s3 d1 d2 d3) => (u -> d1 -> d2 -> d3) ->  DC dim1 (s1 d1) -> DC dim2 (c1 (s2 d2)) -> DC dim3 (c1 (s3 d3))
 dzipWith12 f (DC x) (DC y) = DC (sipWith12 f x y)
 
+dfoldr ::  (SFold s1 s2 d acc) => (d -> acc -> acc) -> DC D0 (s2 acc) ->  DC D1 (s1 d) -> DC D0 (s2 acc)
+dfoldr f (DC acc) (DC x) = DC $ sfoldr f acc x 
+
+dfoldl ::  (SFold s1 s2 d acc) => (acc -> d -> acc)  -> DC D0 (s2 acc) ->  DC D1 (s1 d) -> DC D0 (s2 acc)
+dfoldl f (DC acc) (DC x) = DC $ sfoldl f acc x 
+  
 -- dzipWith12' :: (SipWith12 u c1 s1 s2 s3 d1 d2 d3) => (u -> d1 -> d2 -> d3) ->  DC dim1 (s1 d1) -> DC dim2 (c1 (s2 d2)) -> DC dim3 (c1 (s3 d3))
 -- dzipWith12' f (DC x) (DC y) = DC (sipWith12' f x y)
 
+--------------------------------------------------------------
+-- Max / min - 1dimensional
+
+class DRange dim c d where
+  getRange :: DC dim (c d) -> (DC D0 (DVal (d,d)))
+
+instance  (SFold c DVal d (d, d), Ord d,NeutralElement d) => DRange D1 c  d where
+  getRange x =  dfoldl f (DC (DVal (neutral,neutral))) x
+    where f (low, up) x = (min x low, max x up) 
+
+-------------------------------------------------------------
 -------------------------------------------------------------
 -- Functor
 
+-- One Dim
 -- Own Functor class which could swap containers
 class SFunctor u s1 s2 d1 d2 | u s1 -> s2  where
   smap :: (u -> d1 -> d2) -> (s1 d1) -> (s2 d2) 
@@ -152,7 +181,7 @@ instance  SFunctor u List List d1 d2 where
   smap f x = map (f undefined) x
 
 -------------------------------------------------------------
--- Functor
+-- 2D
 
 -- Own Deep Functor class which could swap containers
 class SFunctor2 c1 u s1 d1 s2 d2 where
@@ -163,7 +192,31 @@ instance SFunctor u s1 s2 d1 d2 => SFunctor2 Vec u s1 d1 s2 d2 where
 
 instance SFunctor u s1 s2 d1 d2 => SFunctor2 List u s1 d1 s2 d2 where   
   smap2 f x = map (smap f ) x
-  
+
+-------------------------------------------------------------
+-------------------------------------------------------------
+-- fold   
+class SFold s1 s2 d acc  where  
+  sfoldl :: (acc -> d -> acc) ->  (s2 acc) -> (s1 d) ->  (s2 acc)
+  sfoldr :: (d -> acc -> acc) ->  (s2 acc) -> (s1 d) ->  (s2 acc)
+
+instance SFold List DVal d acc where
+  sfoldl f (DVal acc) x = DVal $ L.foldl f acc x    
+  sfoldr f (DVal acc) x = DVal $ foldr f acc x    
+
+instance SFold Vec DVal d acc where
+  sfoldl f (DVal acc) x = DVal $ V.foldl f acc x    
+  sfoldr f (DVal acc) x = DVal $ V.foldr f acc x    
+
+instance UV.Unbox d => SFold UVec DVal d acc where
+  sfoldl f (DVal acc) x = DVal $ UV.foldl f acc x    
+  sfoldr f (DVal acc) x = DVal $ UV.foldr f acc x    
+
+dlen (DC x) = len x 
+
+-------------------------------------------------------------
+-------------------------------------------------------------
+-- Zip
 
 m1 = "Error in DZipWith -- unequal length"
 
@@ -171,10 +224,13 @@ m1 = "Error in DZipWith -- unequal length"
 class SipWith u s1 s2 s3 d1 d2 d3  | u s1 s2 -> s3 where 
   sipWith :: (u -> d1 -> d2 -> d3) -> (s1 d1) -> (s2 d2) -> (s3 d3) 
 
--- one Dimensional zip
-instance (UV.Unbox d1, UV.Unbox d2, UV.Unbox d3, GetLength (s2 d2), SFunctor Unboxed s2 s3 d2 d3) => SipWith Unboxed DVal s2 s3 d1 d2 d3 where
+-- Val to one dimensional zip
+instance (UV.Unbox d3, GetLength (s2 d2), SFunctor Unboxed s2 s3 d2 d3) => SipWith Unboxed DVal s2 s3 d1 d2 d3 where
   sipWith f x@(DVal x') y = if lCheck x y then smap ((flip f) x') y else error m1 
   
+instance (GetLength (s2 d2), SFunctor Boxed s2 s3 d2 d3) => SipWith Boxed DVal s2 s3 d1 d2 d3 where
+  sipWith f x@(DVal x') y = if lCheck x y then smap ((flip f) x') y else error m1 
+
 -- one Dimensional zip
 instance (UV.Unbox d1, UV.Unbox d2, UV.Unbox d3) => SipWith Unboxed UVec UVec UVec d1 d2 d3 where
   sipWith f x y = if lCheck x y then UV.zipWith (f undefined) x y else error m1 
@@ -249,25 +305,6 @@ instance SipWith u DVal c1 c1 d1 d2 d3 => SipWith12' u c1 s1 s2 s2 d1 d2 d3  whe
     where f' x' y' = smap (f (DVal x')) y'
 -}
 
---------------------------------------------------------------
--- Length & Length Check
-
-class GetLength s where
-  len :: (s) -> Int
-
-instance GetLength  (DVal d) where 
-  len  x = 1
-
-instance GetLength  (Vec d) where 
-  len x =  V.length x
-
-instance UV.Unbox d => GetLength  (UVec d) where 
-  len x = UV.length x
-
-instance GetLength  (List d) where 
-  len x = length x
-
-lCheck x y = len x == len y
 
 
 ---------------------------------------------------------------
@@ -312,6 +349,29 @@ instance (UV.Unbox d) => DConvert (List d) (UVec d) where
 
 instance (UV.Unbox d) => DConvert (UVec d) (List d) where
   dconvert (DC x) = DC $ UV.toList x
+
+--------------------------------------------------------------
+-- Length & Length Check
+
+class GetLength s where
+  len :: (s) -> Int
+
+instance GetLength  (DVal d) where 
+  len  x = 1
+
+instance GetLength  (Vec d) where 
+  len x =  V.length x
+
+instance UV.Unbox d => GetLength  (UVec d) where 
+  len x = UV.length x
+
+instance GetLength  (List d) where 
+  len x = length x
+
+lCheck x y = len x == len y
+
+
+
 
 -- Two D
 -- TODO   
