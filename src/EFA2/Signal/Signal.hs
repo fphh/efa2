@@ -22,7 +22,7 @@ data BZ
 data IZ
 data UZ
 
-class TMult t1 t2 t3 | t1 t2 -> t3 where
+class TMult t1 t2 t3 | t1 t2 -> t3, t2 t3 -> t1, t1 t3 -> t1 where
     
 instance TMult N N N  
 instance TMult DT P E 
@@ -85,7 +85,7 @@ instance (DArith1 e1 e2 e3) => PhysArith H H H e1 e2 e3  where
 apply2TC :: (e1 -> e2 -> e3) -> TC t1 s1 h1 e1 -> TC t2 s2 h2 e2 -> TC t3 s3 h3 e3
 apply2TC f (TC x) (TC y) = TC $ f x y
 
-class  PhysArith h1 h2 h3 t1 t2 t3 s1 s2 s3 e1 e2 e3 | t1 t2 -> t3, h1 h2 -> h3, e1 e2 -> e3  where
+class  PhysArith h1 h2 h3 t1 t2 t3 s1 s2 s3 e1 e2 e3 | h1 h2 -> h3, h2 h3 -> h1  where
   (~*) :: TC t1 s1 h1 e1 -> TC t2 s2 h2 e2 -> TC t3 s3 h3 e3 
 
 instance (DArith1 e1 e2 e3, SArith s1 s2 s3, TMult t1 t2 t3) => PhysArith H H H t1 t2 t3 s1 s2 s3 e1 e2 e3  where

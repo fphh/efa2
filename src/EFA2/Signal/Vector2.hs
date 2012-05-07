@@ -159,7 +159,7 @@ instance  (SFold c d (d, d), Ord d,NeutralElement d) => DRange D1 c  d where
 
 -- One Dim
 -- Own Functor class which could swap containers
-class SFunctor u s1 s2 d1 d2 | u s1 -> s2  where
+class SFunctor u s1 s2 d1 d2 | u s1 -> s2, u s2 -> s1 where
   smap :: (u -> d1 -> d2) -> (s1 d1) -> (s2 d2) 
 
 instance  SFunctor u DVal DVal d1 d2 where
