@@ -4,6 +4,8 @@ import EFA2.Signal.Signal
 --import EFA2.Signal.Vector
 import EFA2.Signal.Vector2
 
+import EFA2.Signal.Base
+
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as UV
 

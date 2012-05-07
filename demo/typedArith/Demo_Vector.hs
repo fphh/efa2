@@ -22,7 +22,7 @@ v2 = DC  $ V.fromList l2 :: DC D1 (Vec Val)
 
 -- rv1 = emap sign u1  -- :: EVec Sign
 rv2 = dfmap sign u1
-rv1 = dfmap fb v1
+rv1 = dfmap fb v1 :: DC D1 (Vec Val)
 
 ru1 = dfmap f u1 
 ru2 = dfmap f v1
@@ -33,14 +33,18 @@ f _ x = x+1
 fb :: Boxed -> Val -> Val 
 fb _ x = x+1
 
-fzu :: Unboxed -> Val -> Val -> Val
-fzu _ x y = x + y
+-- fzu :: Unboxed -> Val -> Val -> Val
+-- fzu _ x y = x ..+ y
 
-fzb :: Boxed -> Val -> Val -> Val
-fzb _ x y = x + y
+-- fzb :: Boxed -> Val -> Val -> Val
+-- fzb _ x y = x + y
 
-zu1 = dzipWith fzu u1 u2  
-zu2 = dzipWith fzu v1 u2  
+fzu :: DArith1 e1 e2 e3 => e1 -> e2 -> e3
+fzu _ x y = (.*) x y
+fzb = (.*)
+
+zu1 = dzipWith fzu u1 u2   :: (DC D1 (UVec Val))
+zu2 = dzipWith fzu v1 u2   :: (DC D1 (UVec Val))
 zu3 = dzipWith fzu u1 v2 
 zu4 = dzipWith fzu v1 v2 
 
@@ -63,7 +67,7 @@ zb4 = dzipWith fzb v1 v2
 
 -- d3 = dmult undefined val1 False :: Val
 
-u10 = dzipWith dmult u1 u2
+u10 = dzipWith ..* u1 u2
 -- u12 = 
 
 u11 = u1 .* u2
@@ -80,11 +84,11 @@ main = do
   putStrLn (ddisp ru2)
   
   putStrLn ("Demo ezipWith - unboxed")
-  putStrLn (ddisp zu1)
+  putStrLn (ddisp zu1) 
   putStrLn (ddisp zu2)
   putStrLn (ddisp zu3)
   putStrLn (ddisp zu4)
-  
+{-  
   putStrLn ("Demo ezipWith - boxed")
   putStrLn (ddisp zb1)
   putStrLn (ddisp zb2)
@@ -102,5 +106,5 @@ main = do
   -- putStrLn (ddisp ru1)
   -- putStrLn (ddisp ru2)
   
-  
+-}  
   

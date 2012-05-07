@@ -22,40 +22,40 @@ data Boxed
 
 -- | Calculation classes for basic Datatypes
 class DMult d1 d2 d3 | d1 d2 -> d3 where
- dmult :: Unboxed -> d1 ->  d2 -> d3
- ddiv :: Unboxed -> d1 -> d2 -> d3
- dadd ::  Unboxed -> d1 -> d2 -> d3
- dsub ::  Unboxed -> d1 -> d2 -> d3
+ (..*) :: Unboxed -> d1 ->  d2 -> d3
+ (../) :: Unboxed -> d1 -> d2 -> d3
+ (..+) ::  Unboxed -> d1 -> d2 -> d3
+ (..-) ::  Unboxed -> d1 -> d2 -> d3
  
 instance DMult Val Val Val where
- dmult _ x y = x*y
- ddiv _  0 0 = 0
- ddiv _ x y = x/y
- dadd _ x y = x+y
- dsub _ x y = x-y
+ (..*) _ x y = x*y
+ (../) _  0 0 = 0
+ (../) _ x y = x/y
+ (..+) _ x y = x+y
+ (..-) _ x y = x-y
 
 instance DMult Val Bool Val where
- dmult _ x True = x
- dmult _ x False = 0
- ddiv _ x False = 0
- ddiv _ x True = x
+ (..*) _ x True = x
+ (..*) _ x False = 0
+ (../) _ x False = 0
+ (../) _ x True = x
  
 instance DMult Bool Bool Bool where
 -- And  
- dmult _ x True = x
- dmult _ x False = False
+ (..*) _ x True = x
+ (..*) _ x False = False
 -- Or 
- ddiv _ x False = x
- ddiv _ x True = True
+ (../) _ x False = x
+ (../) _ x True = True
 
 {-
 class DSum d1 d2 d3 | d1 d2 -> d3 where
- dadd ::  Unboxed -> d1 -> d2 -> d3
- dsub ::  Unboxed -> d1 -> d2 -> d3
+ ..+ ::  Unboxed -> d1 -> d2 -> d3
+ ..- ::  Unboxed -> d1 -> d2 -> d3
 
 instance DSum Val Val Val where
- dadd _ x y = x+y
- dsub _ x y = x-y
+ ..+ _ x y = x+y
+ ..- _ x y = x-y
 -}
 
 class DEq d1 d2 d3 | d1 d2 -> d3 where
@@ -134,10 +134,10 @@ dzipWith02 f (DC x) (DC y) = DC (sipWith02 f x y)
 dzipWith12 :: (SipWith12 u c1 s1 s2 s3 d1 d2 d3) => (u -> d1 -> d2 -> d3) ->  DC dim1 (s1 d1) -> DC dim2 (c1 (s2 d2)) -> DC dim3 (c1 (s3 d3))
 dzipWith12 f (DC x) (DC y) = DC (sipWith12 f x y)
 
-dfoldr ::  (SFold s1 s2 d acc) => (d -> acc -> acc) -> DC D0 (s2 acc) ->  DC D1 (s1 d) -> DC D0 (s2 acc)
+dfoldr ::  (SFold s d acc) => (d -> acc -> acc) -> DC D0 (DVal acc) ->  DC D1 (s d) -> DC D0 (DVal acc)
 dfoldr f (DC acc) (DC x) = DC $ sfoldr f acc x 
 
-dfoldl ::  (SFold s1 s2 d acc) => (acc -> d -> acc)  -> DC D0 (s2 acc) ->  DC D1 (s1 d) -> DC D0 (s2 acc)
+dfoldl ::  (SFold s d acc) => (acc -> d -> acc)  -> DC D0 (DVal acc) ->  DC D1 (s d) -> DC D0 (DVal acc)
 dfoldl f (DC acc) (DC x) = DC $ sfoldl f acc x 
   
 -- dzipWith12' :: (SipWith12 u c1 s1 s2 s3 d1 d2 d3) => (u -> d1 -> d2 -> d3) ->  DC dim1 (s1 d1) -> DC dim2 (c1 (s2 d2)) -> DC dim3 (c1 (s3 d3))
@@ -149,7 +149,7 @@ dfoldl f (DC acc) (DC x) = DC $ sfoldl f acc x
 class DRange dim c d where
   getRange :: DC dim (c d) -> (DC D0 (DVal (d,d)))
 
-instance  (SFold c DVal d (d, d), Ord d,NeutralElement d) => DRange D1 c  d where
+instance  (SFold c d (d, d), Ord d,NeutralElement d) => DRange D1 c  d where
   getRange x =  dfoldl f (DC (DVal (neutral,neutral))) x
     where f (low, up) x = (min x low, max x up) 
 
@@ -196,19 +196,19 @@ instance SFunctor u s1 s2 d1 d2 => SFunctor2 List u s1 d1 s2 d2 where
 -------------------------------------------------------------
 -------------------------------------------------------------
 -- fold   
-class SFold s1 s2 d acc  where  
-  sfoldl :: (acc -> d -> acc) ->  (s2 acc) -> (s1 d) ->  (s2 acc)
-  sfoldr :: (d -> acc -> acc) ->  (s2 acc) -> (s1 d) ->  (s2 acc)
+class SFold s  d acc  where  
+  sfoldl :: (acc -> d -> acc) ->  (DVal acc) -> (s d) ->  (DVal acc)
+  sfoldr :: (d -> acc -> acc) ->  (DVal acc) -> (s d) ->  (DVal acc)
 
-instance SFold List DVal d acc where
+instance SFold List  d acc where
   sfoldl f (DVal acc) x = DVal $ L.foldl f acc x    
   sfoldr f (DVal acc) x = DVal $ foldr f acc x    
 
-instance SFold Vec DVal d acc where
+instance SFold Vec  d acc where
   sfoldl f (DVal acc) x = DVal $ V.foldl f acc x    
   sfoldr f (DVal acc) x = DVal $ V.foldr f acc x    
 
-instance UV.Unbox d => SFold UVec DVal d acc where
+instance UV.Unbox d => SFold UVec  d acc where
   sfoldl f (DVal acc) x = DVal $ UV.foldl f acc x    
   sfoldr f (DVal acc) x = DVal $ UV.foldr f acc x    
 
@@ -221,7 +221,7 @@ dlen (DC x) = len x
 m1 = "Error in DZipWith -- unequal length"
 
 -- Zip Class
-class SipWith u s1 s2 s3 d1 d2 d3  | u s1 s2 -> s3 where 
+class SipWith u s1 s2 s3 d1 d2 d3  | u s1 s2 -> s3, d1 d2 -> d3  where 
   sipWith :: (u -> d1 -> d2 -> d3) -> (s1 d1) -> (s2 d2) -> (s3 d3) 
 
 -- Val to one dimensional zip
@@ -384,40 +384,40 @@ class DArith1 e1 e2 e3 | e1 e2 -> e3 where
    (.-) :: e1 -> e2 -> e3
 
 instance (SipWith Unboxed s1 s2 s3 d1 d2 d3, DMult d1 d2 d3) => DArith1 (DC D0 (s1 d1)) (DC D0 (s2 d2)) (DC D0 (s3 d3)) where
-  (.*) x y =  dzipWith dmult x y
-  (./) x y = dzipWith ddiv x y
-  (.+) x y = dzipWith (dadd) x y
-  (.-) x y = dzipWith (dsub) x y
+  (.*) x y =  dzipWith (..*) x y
+  (./) x y = dzipWith (../) x y
+  (.+) x y = dzipWith (..+) x y
+  (.-) x y = dzipWith (..-) x y
 
 instance (SipWith Unboxed s1 s2 s3 d1 d2 d3, DMult d1 d2 d3) => DArith1 (DC D0 (s1 d1)) (DC D1 (s2 d2)) (DC D1 (s3 d3)) where
-  (.*) x y =  dzipWith dmult x y
-  (./) x y = dzipWith ddiv x y
-  (.+) x y = dzipWith (dadd) x y
-  (.-) x y = dzipWith (dsub) x y
+  (.*) x y =  dzipWith (..*) x y
+  (./) x y = dzipWith (../) x y
+  (.+) x y = dzipWith (..+) x y
+  (.-) x y = dzipWith (..-) x y
 
 instance (SipWith Unboxed s1 s2 s3 d1 d2 d3, DMult d1 d2 d3) => DArith1 (DC D1 (s1 d1)) (DC D1 (s2 d2)) (DC D1 (s3 d3)) where
-   (.*) x y =  dzipWith dmult x y
-   (./) x y = dzipWith ddiv x y
-   (.+) x y = dzipWith (dadd) x y
-   (.-) x y = dzipWith (dsub) x y
+   (.*) x y =  dzipWith (..*) x y
+   (./) x y = dzipWith (../) x y
+   (.+) x y = dzipWith (..+) x y
+   (.-) x y = dzipWith (..-) x y
 
 instance (SipWith2 Unboxed c1 s1 s2 s3 d1 d2 d3, DMult d1 d2 d3) => DArith1 (DC D2 (c1 (s1 d1))) (DC D2 (c1(s2 d2))) (DC D2 (c1(s3 d3))) where
-  (.*) x y =  dzipWith2 dmult x y
-  (./) x y = dzipWith2 ddiv x y
-  (.+) x y = dzipWith2 (dadd) x y
-  (.-) x y = dzipWith2 (dsub) x y
+  (.*) x y =  dzipWith2 (..*) x y
+  (./) x y = dzipWith2 (../) x y
+  (.+) x y = dzipWith2 (..+) x y
+  (.-) x y = dzipWith2 (..-) x y
 
 instance (SipWith02 Unboxed c1 s1 s2 s3 d1 d2 d3, DMult d1 d2 d3) => DArith1 (DC D0 (s1 d1)) (DC D2 (c1(s2 d2))) (DC D2 (c1(s3 d3))) where
-  (.*) x y = dzipWith02 dmult x y
-  (./) x y = dzipWith02 ddiv x y
-  (.+) x y = dzipWith02 (dadd) x y
-  (.-) x y = dzipWith02 (dsub) x y
+  (.*) x y = dzipWith02 (..*) x y
+  (./) x y = dzipWith02 (../) x y
+  (.+) x y = dzipWith02 (..+) x y
+  (.-) x y = dzipWith02 (..-) x y
 
 instance (SipWith12 Unboxed c1 s1 s2 s3 d1 d2 d3, DMult d1 d2 d3) => DArith1 (DC D1 (s1 d1)) (DC D2 (c1(s2 d2))) (DC D2 (c1(s3 d3))) where
-  (.*) x y = dzipWith12 dmult x y
-  (./) x y = dzipWith12 ddiv x y
-  (.+) x y = dzipWith12 (dadd) x y
-  (.-) x y = dzipWith12 (dsub) x y
+  (.*) x y = dzipWith12 (..*) x y
+  (./) x y = dzipWith12 (../) x y
+  (.+) x y = dzipWith12 (..+) x y
+  (.-) x y = dzipWith12 (..-) x y
 
 
 {-
@@ -426,8 +426,8 @@ class  DCSum e1 e2 e3 where
   (.-) :: e1 -> e2 -> e3
 
 instance (SipWith Unboxed s1 s2 s3 d1 d2 d3, DSum d1 d2 d3) => DCSum (DC h (s1 d1)) (DC h (s2 d2)) (DC h (s3 d3)) where
-  (.+) x y = dzipWith (dadd) x y
-  (.-) x y = dzipWith (dsub) x y
+  (.+) x y = dzipWith (..+) x y
+  (.-) x y = dzipWith (..-) x y
 -}
 {-
 class DCEq e1 e2 e3 where
