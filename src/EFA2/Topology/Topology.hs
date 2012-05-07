@@ -4,7 +4,7 @@ module EFA2.Topology.Topology where
 
 import Data.Maybe
 import Data.Either
-import Data.Graph.Inductive
+--import Data.Graph.Inductive
 
 import qualified Data.List as L
 import qualified Data.Map as M
@@ -17,6 +17,7 @@ import Debug.Trace
 import EFA2.Solver.Equation
 import EFA2.Interpreter.Env
 import EFA2.Topology.TopologyData
+import EFA2.Topology.EfaGraph
 import EFA2.Utils.Utils
 
 -----------------------------------------------------------------------------------
@@ -134,12 +135,10 @@ mkEq (ins, n@(nid, NLabel sec rec _ _), outs)
 -- Undirected edges are filtered away.
 -- This is important for creating correct equations.
 makeDirTopology :: Topology -> Topology
-makeDirTopology topo = mkGraph ns es
+makeDirTopology topo@(Topology _) = mkGraph ns es
   where es = map flipAgainst $ filter onlyDirected $ labEdges topo
         onlyDirected a@(_, _, elabel) = flowDirection elabel /= UnDir
         flipAgainst e@(x, y, elabel)
           | AgainstDir <- flowDirection elabel = (y, x, elabel { flowDirection = WithDir })
           | otherwise = e
         ns = unique (concatMap (\(x, y, _) -> [(x,  fromJust (lab topo x)), (y, fromJust (lab topo y))]) es)
-
-

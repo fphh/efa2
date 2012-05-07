@@ -20,6 +20,8 @@ import EFA2.Signal.SequenceData
 
 import EFA2.Utils.Utils
 
+import Debug.Trace
+
 
 data StepType = LeavesZeroStep
               | BecomesZeroStep
@@ -68,8 +70,6 @@ makeSequence pRec topo = (sqEnvs, sqTopo)
         sqFlowTops = genSequFlowTops topo sqFStRec
         sqSecTops = genSectionTopology sqFlowTops
         sqTopo = mkSequenceTopology sqSecTops
-
-
 
 
 -- | Pre-Integrate all Signals in Record  

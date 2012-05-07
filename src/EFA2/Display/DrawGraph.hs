@@ -10,7 +10,7 @@ import Data.Ratio
 import Data.Function
 
 import Data.Maybe
-import Data.Graph.Inductive
+--import Data.Graph.Inductive
 import qualified Data.Text.Lazy as T
 import Data.GraphViz
 import Data.GraphViz.Attributes.Complete
@@ -30,6 +30,7 @@ import EFA2.Interpreter.InTerm
 import EFA2.Interpreter.Env
 import EFA2.Interpreter.Arith
 import EFA2.Topology.TopologyData
+import EFA2.Topology.EfaGraph
 
 import EFA2.Topology.Flow
 --import EFA2.Signal.Sequence
@@ -58,8 +59,8 @@ subGraphStmts :: DotStatements n
 -}     
 
 
-mkDotGraph :: Gr NLabel ELabel -> (LNode NLabel -> String) -> (LEdge ELabel -> String) -> DotGraph Int
-mkDotGraph g nshow eshow = trace ("-> " ++ show es)
+mkDotGraph :: EfaGraph NLabel ELabel -> (LNode NLabel -> String) -> (LEdge ELabel -> String) -> DotGraph Int
+mkDotGraph g nshow eshow =
   DotGraph { strictGraph = False,
              directedGraph = True,
              graphID = Just (Int 1),
@@ -101,11 +102,12 @@ mkDotEdge eshow e@(x, y, elabel) = DotEdge x y [displabel, edir, colour]
                | IntersectionEdge <- etype = intersectionEdgeColour
         --colour = originalEdgeColour
 
-printGraph :: Gr NLabel ELabel -> (LNode NLabel -> String) -> (LEdge ELabel -> String) -> IO ()
+printGraph :: EfaGraph NLabel ELabel -> (LNode NLabel -> String) -> (LEdge ELabel -> String) -> IO ()
 printGraph g nshow eshow = runGraphvizCanvas Dot (mkDotGraph g nshow eshow) Xlib
 
 drawTopologyX' :: Topology -> IO ()
-drawTopologyX' (Topology g) = printGraph g show show -- runGraphvizCanvas Dot (mkDotGraph g (show, show)) Xlib
+drawTopologyX' topo = printGraph g show show -- runGraphvizCanvas Dot (mkDotGraph g (show, show)) Xlib
+  where g = unTopology topo
 
 {-
 drawFlowTop :: FlowTopology -> IO ()

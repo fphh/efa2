@@ -9,12 +9,11 @@ import qualified Data.Set as S
 import qualified Data.Map as M
 import Data.Maybe
 
-import Control.Monad.Error
-import Control.Applicative
 
 import Debug.Trace
 
 import EFA2.Topology.Topology
+import EFA2.Topology.EfaGraph
 
 import EFA2.Solver.Equation
 import EFA2.Solver.Horn
@@ -48,6 +47,10 @@ topo = mkGraph (makeNodes nodes) (makeEdges edges)
   where nodes = [(0, Source), (1, Crossing), (2, Sink), (3, Storage 0)]
         edges = [(0, 1, defaultELabel), (1, 2, defaultELabel), (1, 3, defaultELabel)]
 
+test :: EfaGraph () ()
+test = mkGraph nodes edges
+  where nodes = [(0, ()), (1, ()), (2, ()), (3, ())]
+        edges = [(0, 1, ()), (1, 2, ()), (1, 3, ())]
 
 main :: IO ()
 main = do
@@ -100,19 +103,19 @@ main = do
 
       --TheGraph sqTopo sigs = loop
 
-
       (sqEnvs', ts') = makeAllEquations sqTopo sqEnvs
       --ts = envToEqTerms sigs ++ mkEdgeEq sqTopo ++ mkNodeEq sqTopo
       sigs = M.unions (map powerMap sqEnvs')
-      etas = M.fromList [ (EtaIdx 0 0 3 19, [1.0]) ]
-      ts = envToEqTerms etas ++ ts'
+      etas = M.fromList [ (EtaIdx (-1) 0 7 16, [1.0]), (EtaIdx (-1) 0 16 15, [1.0]), (EtaIdx 0 0 3 7, [1.0]),
+                          (EtaIdx 0 0 3 15, [1.0]), (EtaIdx 2 0 15 11, [1.0]) ]
+      ts = [give (PowerIdx (-1) 0 16 7)] ++ envToEqTerms etas ++ ts'
 
       isV = isVarFromEqs ts
 
       (given, noVariables, givExt, rest) = splitTerms isV ts
       ho = hornOrder isV givExt rest
       dirs = directEquations isV ho
-      envs = Envs sigs M.empty etas M.empty M.empty M.empty
+      envs = Envs (M.insert (PowerIdx (-1) 0 16 7) [3.0] sigs) M.empty etas M.empty M.empty M.empty
 
       gd = map (eqToInTerm envs) (given ++ dirs)
 
@@ -120,12 +123,23 @@ main = do
       res = interpretFromScratch gd
       dirg = makeDirTopology sqTopo
 
- -- putStrLn (showEqTerms ts)
+  putStrLn (showEqTerms ts)
  -- putStrLn (showInTerms gd)
-  print sigs
+  --print sigs
   --print res
   drawTopology sqTopo res
-  drawTopologyX' sqTopo
+  --print sqTopo
+
+ 
+  --drawTopologyX' sqTopo
+  --print (sqTopo)
+  
+  --print test
+  --print (fst $ matchAny test)
+  --print (fst $ matchAny (snd (matchAny test)))
+  --print (fst $ matchAny (snd (matchAny (snd (matchAny test)))))
+ -- print (fst $ matchAny (snd (matchAny (snd (matchAny (snd (matchAny test)))))))
+
 
 {-
   drawAll [

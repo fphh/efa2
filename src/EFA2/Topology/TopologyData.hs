@@ -1,9 +1,25 @@
 
 
-module EFA2.Topology.TopologyData where
+module EFA2.Topology.TopologyData (
+       module Data.Graph.Inductive, 
+       --EfaGraph,
+       NLabel (..),
+       ELabel (..),
+       NodeType (..),
+       FlowDirection (..),
+       EdgeType (..),
+       Topology,
+       Topology' (..),
+       FlowTopology,
+       SecTopology,
+       isStorage,
+       isActiveEdge,
+       isIntersectionEdge,
+       defaultELabel,
+       fromFlowToSecTopology) where
 
 import Data.Graph.Inductive
-
+import EFA2.Topology.EfaGraph
 
 data NodeType = Storage Int
               | InitStorage Int
@@ -26,7 +42,7 @@ data NLabel = NLabel { sectionNLabel :: Int,
 
 data FlowDirection = WithDir
                    | AgainstDir
-                   | UnDir deriving (Show, Eq)
+                   | UnDir deriving (Show, Eq, Ord)
 
 isInactive :: FlowDirection -> Bool
 isInactive UnDir = True
@@ -36,12 +52,12 @@ isActive :: FlowDirection -> Bool
 isActive = not . isInactive
 
 data EdgeType = OriginalEdge
-              | IntersectionEdge deriving (Eq, Show)
+              | IntersectionEdge deriving (Eq, Ord, Show)
 
 
 
 data ELabel = ELabel { edgeType :: EdgeType,
-                       flowDirection :: FlowDirection } deriving (Show)
+                       flowDirection :: FlowDirection } deriving (Eq, Ord, Show)
 
 defaultELabel = ELabel OriginalEdge WithDir
 
@@ -54,7 +70,7 @@ isInactiveEdge = isInactive . flowDirection
 isIntersectionEdge :: ELabel -> Bool
 isIntersectionEdge = (IntersectionEdge ==) . edgeType
 
-newtype Topology' a b = Topology { unTopology :: Gr a b } deriving (Show)
+newtype Topology' a b = Topology { unTopology :: EfaGraph a b } deriving (Show)
 type Topology = Topology' NLabel ELabel
 
 instance Graph Topology' where
@@ -64,12 +80,13 @@ instance Graph Topology' where
            where (mcont, g) = match n topo
          mkGraph ns es = Topology (mkGraph ns es)
          labNodes (Topology topo) = labNodes topo
+         labEdges (Topology topo) = labEdges topo
 
 instance DynGraph Topology' where
          cont & (Topology topo) = Topology (cont & topo)
 
 -- | 
-newtype FlowTopology' a b = FlowTopology { unFlowTopology :: Gr a b } deriving (Show)
+newtype FlowTopology' a b = FlowTopology { unFlowTopology :: EfaGraph a b } deriving (Show)
 type FlowTopology = FlowTopology' NLabel ELabel
 
 instance Graph FlowTopology' where
@@ -79,12 +96,13 @@ instance Graph FlowTopology' where
            where (mcont, g) = match n topo
          mkGraph ns es = FlowTopology (mkGraph ns es)
          labNodes (FlowTopology topo) = labNodes topo
+         labEdges (FlowTopology topo) = labEdges topo
 
 instance DynGraph FlowTopology' where
          cont & (FlowTopology topo) = FlowTopology (cont & topo)
 
 -- | 
-newtype SecTopology' a b = SecTopology { unSecTopology :: Gr a b } deriving (Show)
+newtype SecTopology' a b = SecTopology { unSecTopology :: EfaGraph a b } deriving (Show)
 type SecTopology = SecTopology' NLabel ELabel
 
 instance Graph SecTopology' where
@@ -94,6 +112,11 @@ instance Graph SecTopology' where
            where (mcont, g) = match n topo
          mkGraph ns es = SecTopology (mkGraph ns es)
          labNodes (SecTopology topo) = labNodes topo
+         labEdges (SecTopology topo) = labEdges topo
 
 instance DynGraph SecTopology' where
          cont & (SecTopology topo) = SecTopology (cont & topo)
+
+
+fromFlowToSecTopology :: FlowTopology -> SecTopology
+fromFlowToSecTopology (FlowTopology topo) = SecTopology topo
