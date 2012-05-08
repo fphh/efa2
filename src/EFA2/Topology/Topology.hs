@@ -43,8 +43,10 @@ makeWithDirEdges es = map f es
 
 makeAllEquations :: (Show a) => Topology -> [Envs a] -> ([Envs a], [EqTerm])
 makeAllEquations topo envs = (envs', ts)
-  where ts = mkEdgeEq dirTopo ++ mkNodeEq dirTopo ++ enveqs
+  where ts = mkEdgeEq dirTopo ++ mkNodeEq dirTopo ++ enveqs ++ interTs
         dirTopo = makeDirTopology topo
+
+        interTs = mkIntersectionEqs dirTopo
 
         m = M.fromList $ map g (labNodes topo)
         g (nid, NLabel s r oldNid _) = ((s, r, oldNid), nid)
@@ -84,16 +86,57 @@ envToEqTerms :: (MkVarC k) => M.Map k v -> [EqTerm]
 envToEqTerms m = map (give . fst) (M.toList m)
 
 
+mkIntersectionEqs :: Topology -> [EqTerm]
+mkIntersectionEqs topo = concat inEqs ++ concat outEqs
+  where actStores = getActiveStores topo 
+        (ins, outs) = unzip $ map (partitionInOutStatic topo) actStores
+        inEqs = concatMap (map mkInStoreEqs) ins
+        outEqs = concatMap (map mkOutStoreEqs) outs
+
+
+mkInStoreEqs :: InOutGraphFormat (LNode NLabel) -> [EqTerm]
+mkInStoreEqs (ins, n@(nid, NLabel sec rec _ _), outs@((o,_):_)) = startEq:osEqs
+  where startEq = mkVar (VarIdx sec rec nid 0) := mkVar (PowerIdx sec rec nid o)
+        osEqs = map f (pairs outs)
+        f (x, y) = mkVar (PowerIdx sec rec nid y') := 
+                     --mkVar (PowerIdx sec rec nid x') :+ (Minus (mkVar (PowerIdx xs xr x' nid)))
+                     mkVar (PowerIdx sec rec nid x') :+ (mkVar (PowerIdx xs xr x' nid))
+
+          where (x', NLabel xs xr _ _) = x
+                (y', _) = y
+mkInStoreEqs _ = []
+
+
+mkOutStoreEqs :: InOutGraphFormat (LNode NLabel) -> [EqTerm]
+mkOutStoreEqs (ins, n@(nid, NLabel sec rec _ _), o:_) = visumeq:xeqs ++ eieqs
+  where xis = map (makeVar XIdx) ins
+        eis = map (makeVar PowerIdx) ins
+        makeVar mkIdx (nid', l) = mkVar $ mkIdx (sectionNLabel l) (recordNLabel l) nid' nid
+
+        visum = mkVar (VarIdx sec rec nid 2)
+        visumeq = visum := add eis
+
+        xeqs = zipWith g xis eis
+        g x e = x := e :* Recip visum
+
+        eis' = map (makeVar' PowerIdx) ins
+        makeVar' mkIdx (nid', _) = mkVar $ mkIdx sec rec nid nid'
+
+        outv = mkVar (VarIdx sec rec nid 1)
+        eieqs = zipWith h eis' xis
+        h e x = e := x :* outv
+
 -- | Takes section, record, and a graph.
 mkEdgeEq :: Topology -> [EqTerm]
-mkEdgeEq (Topology g) = map f ns
-  where ns = edges g
+mkEdgeEq topo = map f (map unlabelEdge origEs)
+  where origEs = L.filter (\(_, _, l) -> not $ isIntersectionEdge l) (labEdges topo)
         f (x, y) = mkVar (PowerIdx ys yr y x) := (mkVar (PowerIdx xs xr x y)) :* (mkVar (EtaIdx xs xr x y))
-          where NLabel xs xr _ _ = fromJust $ lab g x
-                NLabel ys yr _ _ = fromJust $ lab g y
+          where NLabel xs xr _ _ = fromJust $ lab topo x
+                NLabel ys yr _ _ = fromJust $ lab topo y
 
 mkNodeEq :: Topology -> [EqTerm]
-mkNodeEq topo = concat $ mapGraph mkEq topo
+mkNodeEq topo = concat $ mapGraph mkEq (elfilter cond topo)
+  where cond x = isOriginalEdge x || isInnerStorageEdge x
 
 mkEq :: ([LNode NLabel], LNode NLabel, [LNode NLabel]) -> [EqTerm]
 mkEq (ins, n@(nid, NLabel sec rec _ _), outs)
@@ -108,10 +151,10 @@ mkEq (ins, n@(nid, NLabel sec rec _ _), outs)
         -- For section and record, we focus on the current node n.
         makeVar mkIdx (nid', _) = mkVar $ mkIdx sec rec nid nid'
 
-        visum = mkVar (VarIdx sec rec nid 0)
+        visum = mkVar (VarIdx sec rec nid 0) -- ATTENTION (not very safe): We need this variable in mkInStoreEq again!!!
         visumeq = [visum := add eis]
 
-        vosum = mkVar (VarIdx sec rec nid 1)
+        vosum = mkVar (VarIdx sec rec nid 1) -- ATTENTION (not very safe): We need this variable in mkOutStoreEq again!!!
         vosumeq = [vosum := add eos]
 
         ieqs = zipWith3 f eis xis (repeat vosum)

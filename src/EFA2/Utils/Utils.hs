@@ -29,6 +29,8 @@ unique :: (Ord a) => [a] -> [a]
 unique = gunique S.empty  -- 
 -- unique = S.toList . S.fromList
 
+thd :: (a, b, c) -> c
+thd (_, _, l) = l
 
 flipPair :: (a, b) -> (b, a)
 flipPair (a, b) = (b, a)
@@ -62,33 +64,58 @@ instance UV.Unbox a => Transpose (UV.Vector a) where
                  min = L.minimum $ map UV.length xs
 -}
 
-
+{-
 foldGraph :: Graph gr => (a -> ([Node], Node, [Node]) -> a) -> a -> gr b c -> a
 foldGraph f start g = L.foldl' f start (zip3 ins ns outs)
   where ns = nodes g
         ins = map (pre g) ns
         outs = map (suc g) ns
+-}
 
+type InOutGraphFormat a = ([a], a, [a])
 
-mapGraphNodes :: Graph gr => (([Node], Node, [Node]) -> a) -> gr b c -> [a]
-mapGraphNodes f g = map f (zip3 ins ns outs)
-  where ns = nodes g
-        ins = map (pre g) ns
-        outs = map (suc g) ns
+mkInOutGraphFormat :: Graph gr => (LNode a -> c) -> gr a b -> [InOutGraphFormat c]
+mkInOutGraphFormat f g = zip3 (map (map f) ins) (map f ns) (map (map f) outs)
+ where ns = labNodes g
+       ins = map (h pre) ns
+       outs = map (h suc) ns
+       h next (n, _) = map (\p -> (p, fromJust (lab g p))) (next g n)
 
+foldGraph :: Graph gr => (a -> InOutGraphFormat (LNode b) -> a) -> a -> gr b c -> a
+foldGraph f start g = L.foldl' f start (mkInOutGraphFormat id g)
 
-mapGraphLabels :: Graph gr => (([b], b, [b]) -> a) -> gr b c -> [a]
-mapGraphLabels f g = map f (zip3 ins ls outs)
-  where (ns, ls) = unzip $ labNodes g
-        ins = map (map (fromJust . lab g) . pre g) ns
-        outs = map (map (fromJust . lab g) . suc g) ns
+foldGraphNodes :: Graph gr => (a -> InOutGraphFormat Node -> a) -> a -> gr b c -> a
+foldGraphNodes f start g = L.foldl' f start (mkInOutGraphFormat fst g)
 
-mapGraph :: Graph gr => (([LNode b], LNode b, [LNode b]) -> a) -> gr b c -> [a]
-mapGraph f g = map f (zip3 ins ns outs)
-  where ns = labNodes g
-        ins = map (\(n, _) -> map (\p -> (p, fromJust (lab g p))) (pre g n)) ns
-        outs = map (\(n, _) -> map (\p -> (p, fromJust (lab g p))) (suc g n)) ns
+foldGraphLabels :: Graph gr => (a -> InOutGraphFormat b -> a) -> a -> gr b c -> a
+foldGraphLabels f start g = L.foldl' f start (mkInOutGraphFormat snd g)
 
+mapGraph :: Graph gr => (InOutGraphFormat (LNode b) -> a) -> gr b c -> [a]
+mapGraph f g = map f (mkInOutGraphFormat id g)
+
+mapGraphNodes :: Graph gr => (InOutGraphFormat Node -> a) -> gr b c -> [a]
+mapGraphNodes f g = map f (mkInOutGraphFormat fst g)
+
+mapGraphLabels :: Graph gr => (InOutGraphFormat b -> a) -> gr b c -> [a]
+mapGraphLabels f g = map f (mkInOutGraphFormat snd g)
+
+{-
+getLEdge :: Graph gr => gr a b -> Node -> Node -> Maybe (LEdge b)
+getLEdge g from to
+  | [x] <- res = Just x
+  | otherwise = Nothing
+  where res = filter f is
+        is = inn g to
+        f (x, _, _) = x /= from
+-}
+
+getLEdge :: (Graph gr) => gr a b -> Node -> Node -> Maybe (LEdge b)
+getLEdge g from to =
+  case filter f is of
+       (x:_) -> Just x
+       _ -> Nothing
+  where is = inn g to
+        f (x, _, _) = x == from
 
 
 class ContainerArithSingleton cont a where

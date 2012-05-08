@@ -91,7 +91,7 @@ horn fs = fmap atomsOnly res
 -- | Takes a dependency graph and returns Horn clauses from it, that is, every directed edge
 --   is taken for an implication.
 graphToHorn :: Gr EqTerm () -> [Formula]
-graphToHorn g = foldGraph f [] g
+graphToHorn g = foldGraphNodes f [] g
   where f acc ([], _, []) = acc
         f acc (ins, x, _) = (map (:-> Atom x) (map Atom ins)) ++ acc
 
@@ -157,7 +157,10 @@ allNotEmptyCombinations xs = filter (not .null) $ map (map fst) zs
 
 
 setCoverBruteForce :: M.Map Node (S.Set EqTerm) -> Node -> [Node] -> [[Node]]
-setCoverBruteForce _ _ ns | length ns > 16 = trace (show (length ns)) []
+setCoverBruteForce _ _ ns | l > n = trace msg []
+  where n = 16
+        l = length ns
+        msg = "Instance size " ++ show l ++ "; setCoverBruteForce doesn't like instances > " ++ show n
 setCoverBruteForce m n ns = map fst $ filter p xs
   where s = m M.! n
         combs = allNotEmptyCombinations ns

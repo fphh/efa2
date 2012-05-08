@@ -98,8 +98,8 @@ mkDotEdge eshow e@(x, y, elabel) = DotEdge x y [displabel, edir, colour]
              | WithDir <- flowDir = Dir Forward
              | otherwise = Dir NoDir
         etype = edgeType elabel
-        colour | OriginalEdge <- etype = originalEdgeColour
-               | IntersectionEdge <- etype = intersectionEdgeColour
+        colour | IntersectionEdge <- etype = intersectionEdgeColour
+               | otherwise = originalEdgeColour
         --colour = originalEdgeColour
 
 printGraph :: EfaGraph NLabel ELabel -> (LNode NLabel -> String) -> (LEdge ELabel -> String) -> IO ()
@@ -165,11 +165,16 @@ drawAbsTopology f (Topology g) (Envs p dp e de x v) = printGraph g nshow eshow
                                              "Type: " ++ show ty
 
         node n = nodeNLabel (fromJust (lab g n))
-        mkLst (uid, vid, _) = [ (PLine uid vid, M.lookup (PowerIdx usec urec uid vid) p), 
-                                (XLine uid vid, M.lookup (XIdx usec urec uid vid) x),
-                                (NLine uid vid, M.lookup (EtaIdx usec urec uid vid) e),
-                                (XLine vid uid, M.lookup (XIdx vsec vrec vid uid) x),
-                                (PLine vid uid, M.lookup (PowerIdx vsec vrec vid uid) p) ]
+        mkLst (uid, vid, l) 
+          | isOriginalEdge l = [ (PLine uid vid, M.lookup (PowerIdx usec urec uid vid) p), 
+                                 (XLine uid vid, M.lookup (XIdx usec urec uid vid) x),
+                                 (NLine uid vid, M.lookup (EtaIdx usec urec uid vid) e),
+                                 (XLine vid uid, M.lookup (XIdx vsec vrec vid uid) x),
+                                 (PLine vid uid, M.lookup (PowerIdx vsec vrec vid uid) p) ]
+          | isInnerStorageEdge l = [ (PLine vid uid, M.lookup (PowerIdx vsec vrec vid uid) p) ]
+          | otherwise = [ (PLine uid vid, M.lookup (PowerIdx usec urec uid vid) p),
+                          (XLine uid vid, M.lookup (XIdx usec urec uid vid) x),
+                          (PLine vid uid, M.lookup (PowerIdx vsec vrec vid uid) p) ]
           where NLabel usec urec _ _ = fromJust $ lab g uid
                 NLabel vsec vrec _ _ = fromJust $ lab g vid
 

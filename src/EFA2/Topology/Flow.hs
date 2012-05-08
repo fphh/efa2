@@ -4,7 +4,6 @@ module EFA2.Topology.Flow (module EFA2.Topology.Flow) where
 
 
 --import Data.Graph.Inductive
-import Data.Function
 import qualified Data.Map as M
 import qualified Data.List as L
 
@@ -58,8 +57,7 @@ genSectionTopology (SequData tops) = SequData (map (uncurry mkSectionTopology) (
 
 copySeqTopology :: SequData [SecTopology] -> Topology
 copySeqTopology (SequData tops) = mkGraph (concat ns'') (concat es'')
-  where -- tops' = map unSecTopology tops
-        ns = map labNodes tops
+  where ns = map labNodes tops
         ns' = zip offsets ns
         es' = zip offsets (map labEdges tops)
         ns'' = map g ns'
@@ -71,22 +69,13 @@ copySeqTopology (SequData tops) = mkGraph (concat ns'') (concat es'')
         f (a:acc) l = (a+l):a:acc
 
 
-
--- TODO: Warn about Storages with more then one edge in or out!
-isActStore :: (Node, NLabel, [ELabel], [ELabel]) -> Bool
-isActStore a@(_, l, ins, outs) = isStorage (nodetypeNLabel l) && not (null (filter isActiveEdge es))
-  where es = ins ++ outs
-
-
-mkIntersectionEdges :: LNode NLabel -> [(Node, NLabel, [ELabel], [ELabel])] -> [(Node, Node, ELabel)]
-mkIntersectionEdges startNode stores = interSecEs
-  where (instores, outstores) = L.partition p stores
-        p (n, _, [], [o]) = flowDirection o == AgainstDir
-        p (n, _, [i], []) = flowDirection i == WithDir
+mkIntersectionEdges :: Topology -> LNode NLabel -> [InOutGraphFormat (LNode NLabel)] -> [(Node, Node, ELabel)]
+mkIntersectionEdges topo startNode stores = interSecEs
+  where (instores, outstores) = partitionInOutStatic topo stores
 
         outs = map f outstores
         ins = map f instores
-        f (n, l, _, _) = (n, l)
+        f (_, x, _) = x
 
         es = map (\(n, l) -> (n, map fst (filter (q l) outs))) (startNode:ins)
         q lin (_, lout) = sectionNLabel lout > sectionNLabel lin
@@ -98,24 +87,19 @@ mkIntersectionEdges startNode stores = interSecEs
 mkSequenceTopology :: SequData [SecTopology] -> Topology
 mkSequenceTopology sd = res
   where sqTopo = copySeqTopology sd
-        ns = map (\(n, l) -> (n, l, map snd (lpre sqTopo n), map snd (lsuc sqTopo n))) (labNodes sqTopo)
 
-        stores = filter isActStore ns
-        grpStores = L.groupBy cmp (L.sortBy (compare `on` stNum) stores)
-        cmp a b = stNum a == stNum b
-        stNum (_, l, _, _) | Storage x <- nodetypeNLabel l = x
-
+        grpStores = getActiveStores sqTopo
         storeLabs = map g grpStores
-        g ((_, l, _, _):_) = l
+        g ((_, (_, l), _):_) = l
 
         maxNode = 1 + (snd $ nodeRange sqTopo)
-        startNodes = map f (zip [maxNode..] storeLabs)
-        f (nid, NLabel _ rec n (Storage sn)) = (nid, NLabel (-1) rec n (InitStorage sn))
+        startNodes = map f (zip (pairs [maxNode..]) storeLabs)
+        f ((nid1, nid2), NLabel _ rec n (Storage sn)) =
+          [ (nid1, NLabel (-1) rec n (InitStorage sn)), (nid2, NLabel (-1) rec (-1) Source) ]
 
-        interSecEs = concatMap (uncurry mkIntersectionEdges) (zip startNodes grpStores)
+        interSecEs = concatMap (uncurry (mkIntersectionEdges sqTopo)) (zip (map head startNodes) grpStores)
 
-        nodesHelp = L.sort $ startNodes ++ labNodes sqTopo
-        edgesHelp = L.sort $ labEdges sqTopo ++ interSecEs
+        e = defaultELabel { edgeType = InnerStorageEdge }
+        startEdges = map (\((nid1, _):(nid2, _):_) -> (nid2, nid1, e)) startNodes
+        res = insEdges (startEdges ++ interSecEs) (insNodes (concat startNodes) sqTopo)
 
-        res = mkGraph nodesHelp edgesHelp
-        --res = insEdges interSecEs (insNodes startNodes sqTopo)

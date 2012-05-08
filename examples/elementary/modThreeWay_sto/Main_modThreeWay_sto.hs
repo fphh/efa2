@@ -83,7 +83,7 @@ main = do
       s21' = [0.2, 0.2, 0.2]
       s13' = [-0.3, -0.3, -0.3]
       s31' = [-0.6, -0.6, -0.6]
-      n = 2
+      n = 8
       --dtime = replicate n [0, 1, 0]
       --time = foldl (+) 0 dtime
       time = [0, 0] ++ (concatMap (replicate 3) [1..])
@@ -102,20 +102,20 @@ main = do
 
 
       --TheGraph sqTopo sigs = loop
+      --storage0 = PowerIdx (-1) 0 24 25
+      storage0 = PowerIdx (-1) 0 64 65
 
       (sqEnvs', ts') = makeAllEquations sqTopo sqEnvs
       --ts = envToEqTerms sigs ++ mkEdgeEq sqTopo ++ mkNodeEq sqTopo
       sigs = M.unions (map powerMap sqEnvs')
-      etas = M.fromList [ (EtaIdx (-1) 0 7 16, [1.0]), (EtaIdx (-1) 0 16 15, [1.0]), (EtaIdx 0 0 3 7, [1.0]),
-                          (EtaIdx 0 0 3 15, [1.0]), (EtaIdx 2 0 15 11, [1.0]) ]
-      ts = [give (PowerIdx (-1) 0 16 7)] ++ envToEqTerms etas ++ ts'
+      ts = [give storage0] ++ ts'
 
       isV = isVarFromEqs ts
 
       (given, noVariables, givExt, rest) = splitTerms isV ts
       ho = hornOrder isV givExt rest
       dirs = directEquations isV ho
-      envs = Envs (M.insert (PowerIdx (-1) 0 16 7) [3.0] sigs) M.empty etas M.empty M.empty M.empty
+      envs = Envs (M.insert storage0 [3.0] sigs) M.empty M.empty M.empty M.empty M.empty
 
       gd = map (eqToInTerm envs) (given ++ dirs)
 
@@ -123,7 +123,7 @@ main = do
       res = interpretFromScratch gd
       dirg = makeDirTopology sqTopo
 
-  putStrLn (showEqTerms ts)
+  --putStrLn (showEqTerms ts)
  -- putStrLn (showInTerms gd)
   --print sigs
   --print res

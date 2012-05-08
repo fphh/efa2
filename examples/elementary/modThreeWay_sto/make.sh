@@ -7,4 +7,4 @@ SRC=/home/duck/programme/haskell/efa2/src
 
 
 cd $SRC
-ghc --make $CURRENT_PATH/$MAIN
+ghc --make $CURRENT_PATH/$MAIN # -fforce-recomp -O2
