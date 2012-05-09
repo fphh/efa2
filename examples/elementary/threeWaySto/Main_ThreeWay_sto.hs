@@ -70,19 +70,21 @@ main = do
 -}
 
       --time = [0, 0, 1, 1]
+
       s01 = [0, 2, 2, 0]
       s10 = [0, 0.8, 0.8, 0]
       s12 = [0.3, 0.3, 0.3, 0.3]
       s21 = [0.2, 0.2, 0.2, 0.2]
       s13 = [0, 0.5, 0.5, 0]
       s31 = [0, 0.25, 0.25, 0]
+
       --time' = [1, 2, 2]
-      s01' = [0, 0, 0]
-      s10' = [0, 0, 0]
-      s12' = [0.3, 0.3, 0.3]
-      s21' = [0.2, 0.2, 0.2]
-      s13' = [-0.3, -0.3, -0.3]
-      s31' = [-0.6, -0.6, -0.6]
+      s01' = [0, 0]
+      s10' = [0, 0]
+      s12' = [0.3, 0.3]
+      s21' = [0.2, 0.2]
+      s13' = [-0.3, -0.3]
+      s31' = [-0.6, -0.6]
       n = 3
       --dtime = replicate n [0, 1, 0]
       --time = foldl (+) 0 dtime
@@ -104,6 +106,7 @@ main = do
       --TheGraph sqTopo sigs = loop
       --storage0 = PowerIdx (-1) 0 24 25
       storage0 = PowerIdx (-1) 0 24 25
+      --storage0 = PowerIdx (-1) 0 16 17
 
       (sqEnvs', ts') = makeAllEquations sqTopo sqEnvs
       --ts = envToEqTerms sigs ++ mkEdgeEq sqTopo ++ mkNodeEq sqTopo
