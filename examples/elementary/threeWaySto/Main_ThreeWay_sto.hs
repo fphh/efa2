@@ -55,7 +55,7 @@ test = mkGraph nodes edges
 main :: IO ()
 main = do
 
-  Record time sigMap <- modelicaCSVImport "./modThreeWay_sto.RecA_res.csv"
+  --Record time sigMap <- modelicaCSVImport "./modThreeWay_sto.RecA_res.csv"
   
   let
 
@@ -115,7 +115,12 @@ main = do
       (given, noVariables, givExt, rest) = splitTerms isV ts
       ho = hornOrder isV givExt rest
       dirs = directEquations isV ho
-      envs = Envs (M.insert storage0 [3.0] sigs) M.empty M.empty M.empty M.empty M.empty
+
+      -- envs = Envs (M.insert storage0 [3.0] sigs) M.empty M.empty M.empty M.empty M.empty
+      f x | x < 0 = -x
+      f x = x
+      envs = emptyEnv { powerMap = M.insert storage0 [3.0] (M.map (map f) sigs) }
+
 
       gd = map (eqToInTerm envs) (given ++ dirs)
 
