@@ -149,10 +149,18 @@ dfoldl f (DC acc) (DC x) = DC $ sfoldl f acc x
 class DRange dim c d where
   getRange :: DC dim (c d) -> (DC D0 (DVal (d,d)))
 
-instance  (SFold c d (d, d), Ord d,NeutralElement d) => DRange D1 c  d where
+instance  (SFold Vec d (d, d), Ord d,NeutralElement d) => DRange D1 Vec  d where
   getRange x =  dfoldl f (DC (DVal (neutral,neutral))) x
     where f (low, up) x = (min x low, max x up) 
 
+instance  (SFold UVec d (d, d), Ord d,NeutralElement d, UV.Unbox d) => DRange D1 UVec  d where
+  getRange x =  dfoldl f (DC (DVal (neutral,neutral))) x
+    where f (low, up) x = (min x low, max x up) 
+
+instance  (SFold List d (d, d), Ord d,NeutralElement d) => DRange D1 List  d where
+  getRange x =  dfoldl f (DC (DVal (neutral,neutral))) x
+    where f (low, up) x = (min x low, max x up) 
+          
 -------------------------------------------------------------
 -------------------------------------------------------------
 -- Functor
@@ -201,12 +209,16 @@ class SFold s  d acc  where
   sfoldr :: (d -> acc -> acc) ->  (DVal acc) -> (s d) ->  (DVal acc)
 
 instance SFold List  d acc where
-  sfoldl f (DVal acc) x = DVal $ L.foldl f acc x    
+  sfoldl f (DVal acc) x = DVal $ L.foldl' f acc x    
   sfoldr f (DVal acc) x = DVal $ foldr f acc x    
 
 instance SFold Vec  d acc where
   sfoldl f (DVal acc) x = DVal $ V.foldl f acc x    
   sfoldr f (DVal acc) x = DVal $ V.foldr f acc x    
+
+instance SFold Vec  d (d,d) where
+--  sfoldl f (DVal acc) x = DVal $ V.foldl f acc x    
+--  sfoldr f (DVal acc) x = DVal $ V.foldr f acc x    
 
 instance UV.Unbox d => SFold UVec  d acc where
   sfoldl f (DVal acc) x = DVal $ UV.foldl f acc x    

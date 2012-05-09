@@ -32,7 +32,7 @@ fu _ x = x
 
 fb = sign
 
-rv1 = dfmap fb u1  -- :: EVec Sign
+rv1 = dfmap fb u1  
 rv2 = dfmap fb v1
 
 ru1 = dfmap fu u1 
@@ -54,10 +54,10 @@ zav1 = dzipWith fzb val1 u1
 zav2 = dzipWith fzb val1 v1 
 
 -- Vectors boxed and unboxed
-zu1 = dzipWith fzu u1 u2   :: (DC D1 (UVec Val))
-zu2 = dzipWith fzu v1 u2   :: (DC D1 (UVec Val))
-zu3 = dzipWith fzu u1 v2   :: (DC D1 (UVec Val))
-zu4 = dzipWith fzu v1 v2   :: (DC D1 (UVec Val))
+zu1 = dzipWith fzu u1 u2  
+zu2 = dzipWith fzu v1 u2  
+zu3 = dzipWith fzu u1 v2  
+zu4 = dzipWith fzu v1 v2   
 zb1 = dzipWith fzb u1 u2 
 zb2 = dzipWith fzb v1 u2 
 zb3 = dzipWith fzb u1 v2 
@@ -69,7 +69,9 @@ main = do
   putStrLn ("Demo fmap")
   putStrLn (ddisp rv1)
   putStrLn (ddisp rv2)
-  putStrLn (ddisp ru1)
+--  putStrLn (ddisp ru1)
+  
+{-  
   putStrLn (ddisp ru2)
   
   putStrLn ("Demo dzipWith - unboxed")
@@ -90,6 +92,6 @@ main = do
   putStrLn (ddisp zav1)
   putStrLn (ddisp zav2)
 
-    
+ -}   
 
   
