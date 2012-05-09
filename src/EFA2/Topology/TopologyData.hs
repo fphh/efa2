@@ -18,6 +18,7 @@ module EFA2.Topology.TopologyData (
        isOriginalEdge,
        isInnerStorageEdge,
        isIntersectionEdge,
+       getStorageNumber,
        defaultELabel,
        unlabelEdge,
        fromFlowToSecTopology,
@@ -49,6 +50,7 @@ isStorage _ = False
 
 getStorageNumber :: NodeType -> Int
 getStorageNumber (Storage x) = x
+getStorageNumber (InitStorage x) = x
 getStorageNumber x = error $ "getStorageNumber: " ++ show x ++ " is not a storage"
 
 data NLabel = NLabel { sectionNLabel :: Int,
@@ -155,10 +157,7 @@ instance DynGraph SecTopology' where
 fromFlowToSecTopology :: FlowTopology -> SecTopology
 fromFlowToSecTopology (FlowTopology topo) = SecTopology topo
 
--- | The store node, its label, its in coming and out going links.
---type StoreData = (Node, NLabel, [(Node, ELabel)], [(Node, ELabel)])
---type StoreData = ([LNode NLabel], LNode NLabel, [LNode NLabel])
-
+-- | Active storages, grouped by storage number, sorted by section number.
 getActiveStores :: Topology -> [[InOutGraphFormat (LNode NLabel)]]
 getActiveStores topo = map sectionSort groupedIof
   where actTopo = elfilter isActiveEdge topo
@@ -186,9 +185,9 @@ partitionInOutStatic topo iof = L.partition p iof
           where ins' = filter q ins
                 outs' = filter r outs
                 q (n, _) = flowDirection e == WithDir && (isOriginalEdge e || isInnerStorageEdge e)
-                  where e = thd $ fromJust (getLEdge topo n nid)
+                  where e = thd3 $ fromJust (getLEdge topo n nid)
                         cond = isOriginalEdge e || isInnerStorageEdge e
                 r (n, _) = flowDirection e == AgainstDir && (isOriginalEdge e || isInnerStorageEdge e)
-                  where e = thd $ fromJust (getLEdge topo nid n)
+                  where e = thd3 $ fromJust (getLEdge topo nid n)
                         cond = isOriginalEdge e || isInnerStorageEdge e
 

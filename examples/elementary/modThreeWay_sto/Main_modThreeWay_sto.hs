@@ -83,7 +83,7 @@ main = do
       s21' = [0.2, 0.2, 0.2]
       s13' = [-0.3, -0.3, -0.3]
       s31' = [-0.6, -0.6, -0.6]
-      n = 8
+      n = 3
       --dtime = replicate n [0, 1, 0]
       --time = foldl (+) 0 dtime
       time = [0, 0] ++ (concatMap (replicate 3) [1..])
@@ -102,8 +102,8 @@ main = do
 
 
       --TheGraph sqTopo sigs = loop
-      --storage0 = PowerIdx (-1) 0 24 25
-      storage0 = PowerIdx (-1) 0 64 65
+      storage0 = PowerIdx (-1) 0 24 25
+      --storage0 = PowerIdx (-1) 0 64 65
 
       (sqEnvs', ts') = makeAllEquations sqTopo sqEnvs
       --ts = envToEqTerms sigs ++ mkEdgeEq sqTopo ++ mkNodeEq sqTopo
@@ -115,7 +115,7 @@ main = do
       (given, noVariables, givExt, rest) = splitTerms isV ts
       ho = hornOrder isV givExt rest
       dirs = directEquations isV ho
-      envs = Envs (M.insert storage0 [3.0] sigs) M.empty M.empty M.empty M.empty M.empty
+      envs = emptyEnv { powerMap = M.insert storage0 [3.0] sigs }
 
       gd = map (eqToInTerm envs) (given ++ dirs)
 
@@ -124,11 +124,11 @@ main = do
       dirg = makeDirTopology sqTopo
 
   --putStrLn (showEqTerms ts)
- -- putStrLn (showInTerms gd)
   --print sigs
   --print res
   drawTopology sqTopo res
   --print sqTopo
+
 
  
   --drawTopologyX' sqTopo

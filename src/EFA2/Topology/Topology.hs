@@ -4,7 +4,7 @@ module EFA2.Topology.Topology where
 
 import Data.Maybe
 import Data.Either
---import Data.Graph.Inductive
+import Data.Function
 
 import qualified Data.List as L
 import qualified Data.Map as M
@@ -53,16 +53,17 @@ makeAllEquations topo envs = (envs', ts)
         envs' = map (shiftIndices m) envs
 
         enveqs = concatMap f envs'
-        f (Envs p dp e de x v) = envToEqTerms p
-                                 ++ envToEqTerms dp
-                                 ++ envToEqTerms e
-                                 ++ envToEqTerms de
-                                 ++ envToEqTerms x
-                                 ++ envToEqTerms v
+        f (Envs p dp e de x v st) = envToEqTerms p
+                                    ++ envToEqTerms dp
+                                    ++ envToEqTerms e
+                                    ++ envToEqTerms de
+                                    ++ envToEqTerms x
+                                    ++ envToEqTerms v
+                                    ++ envToEqTerms st
 
 
 shiftIndices :: (Show a) => M.Map (Int, Int, Int) Node -> Envs a -> Envs a
-shiftIndices m (Envs p dp e de x v) = Envs p' dp' e' de' x' v'
+shiftIndices m (Envs p dp e de x v st) = Envs p' dp' e' de' x' v' st'
   where p' = M.mapKeys pf p
         pf (PowerIdx s r f t) = PowerIdx s r (m M.! (s, r, f)) (m M.! (s, r, t))
 
@@ -81,17 +82,46 @@ shiftIndices m (Envs p dp e de x v) = Envs p' dp' e' de' x' v'
         v' = M.mapKeys vf v
         vf (VarIdx s r f t) = VarIdx s r (m M.! (s, r, f)) (m M.! (s, r, t))
 
+        st' = M.mapKeys stf st
+        stf (StorageIdx s r sto) = StorageIdx s r (m M.! (s, r, sto))
+
 
 envToEqTerms :: (MkVarC k) => M.Map k v -> [EqTerm]
 envToEqTerms m = map (give . fst) (M.toList m)
 
 
 mkIntersectionEqs :: Topology -> [EqTerm]
-mkIntersectionEqs topo = concat inEqs ++ concat outEqs
+mkIntersectionEqs topo = trace (showEqTerms stContentEqs) $ concat inEqs ++ concat outEqs ++ stContentEqs
   where actStores = getActiveStores topo 
-        (ins, outs) = unzip $ map (partitionInOutStatic topo) actStores
+        inouts = map (partitionInOutStatic topo) actStores
+        (ins, outs) = unzip inouts
         inEqs = concatMap (map mkInStoreEqs) ins
         outEqs = concatMap (map mkOutStoreEqs) outs
+        stContentEqs = concatMap mkStoreEqs inouts
+
+data IOStore = InStore (LNode NLabel)
+             | OutStore (LNode NLabel) deriving (Show)
+
+mkStoreEqs :: ([InOutGraphFormat (LNode NLabel)], [InOutGraphFormat (LNode NLabel)]) -> [EqTerm]
+mkStoreEqs (ins, outs) = startEq:eqs
+  where ins' = map (InStore . snd3) ins
+        outs' = map (OutStore . snd3) outs
+        both@(b:_) = L.sortBy  (compare `on` f) $ ins' ++ outs'
+        f (InStore (_, l)) = sectionNLabel l
+        f (OutStore (_, l)) = sectionNLabel l
+        startEq = k b
+        k (InStore (nid, NLabel sec rec _ (InitStorage st))) =
+          mkVar (StorageIdx sec rec st) := mkVar (VarIdx sec rec nid 0)
+        eqs = map (g . h) (pairs both)
+        h (InStore x, y) = (x, y)
+        h (OutStore x, y) = (x, y)
+        g ((nid, NLabel sec rec _ st), InStore (nid', NLabel sec' rec' _ st')) = 
+          mkVar (StorageIdx sec' rec' (getStorageNumber st')) := 
+            mkVar (VarIdx sec' rec' nid' 0) :+ mkVar (StorageIdx sec rec (getStorageNumber st))
+        g ((nid, NLabel sec rec _ st), OutStore (nid', NLabel sec' rec' _ st')) = 
+          mkVar (StorageIdx sec' rec' (getStorageNumber st')) := 
+            mkVar (VarIdx sec' rec' nid' 1) :+ mkVar (StorageIdx sec rec (getStorageNumber st))
+
 
 
 mkInStoreEqs :: InOutGraphFormat (LNode NLabel) -> [EqTerm]

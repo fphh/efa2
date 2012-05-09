@@ -29,8 +29,14 @@ unique :: (Ord a) => [a] -> [a]
 unique = gunique S.empty  -- 
 -- unique = S.toList . S.fromList
 
-thd :: (a, b, c) -> c
-thd (_, _, l) = l
+fst3 :: (a, b, c) -> a
+fst3 (x, _, _) = x
+
+snd3 :: (a, b, c) -> b
+snd3 (_, x, _) = x
+
+thd3 :: (a, b, c) -> c
+thd3 (_, _, x) = x
 
 flipPair :: (a, b) -> (b, a)
 flipPair (a, b) = (b, a)

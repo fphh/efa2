@@ -141,28 +141,37 @@ class DrawTopology a where
       drawTopology :: Topology -> Envs a ->  IO ()
 
 instance DrawTopology [Double] where
-         drawTopology = drawAbsTopology f
-           where f (x, Just ys) = show x ++ " = " ++ (concatMap (printf "%.3f    ") ys)
+         drawTopology = drawAbsTopology f formatStCont
+           where f (x, Just ys) = show x ++ " = " ++ (concatMap (printf "%.6f    ") ys)
                  f (x, Nothing) = show x ++ " = ♥"
+                 formatStCont (Just ys) = concatMap (printf "%.6f    ") ys
+                 formatStCont Nothing = "♥"
 
 instance (Integral a) => DrawTopology [Ratio a] where
-         drawTopology = drawAbsTopology f
+         drawTopology = drawAbsTopology f formatStCont
            where f (x, Just ys) = show x ++ " = " ++ (concatMap show ys)
                  f (x, Nothing) = show x ++ " = ♥"
+                 formatStCont (Just ys) = concatMap show ys
+                 formatStCont Nothing = "♥"
 
 instance DrawTopology [InTerm Val] where
-         drawTopology = drawAbsTopology f
+         drawTopology = drawAbsTopology f formatStCont
            where f (x, Just ys) = show x ++ " = " ++ (concatMap showInTerm ys)
                  f (x, Nothing) = show x ++ " = ♥"
+                 formatStCont (Just ys) = concatMap showInTerm ys
+                 formatStCont Nothing = "♥"
 
 
-drawAbsTopology :: (Show a) => ((Line, Maybe a) -> String) -> Topology -> Envs a ->  IO ()
-drawAbsTopology f (Topology g) (Envs p dp e de x v) = printGraph g nshow eshow
+
+drawAbsTopology :: (Show a) => ((Line, Maybe a) -> String) -> (Maybe a -> String) -> Topology -> Envs a ->  IO ()
+drawAbsTopology f content (Topology g) (Envs p dp e de x v st) = printGraph g nshow eshow
   where eshow ps = L.intercalate "\n" $ map f $ mkLst ps
-        nshow (num, NLabel sec rec nid ty) = "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\n" ++
-                                             -- "Section: " ++ show sec ++ "\n" ++
-                                             -- "Record: " ++ show rec ++ "\n" ++
-                                             "Type: " ++ show ty
+        nshow (num, NLabel sec rec nid ty) = 
+          "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\n" ++
+          "Type: " ++ show ty ++ stContent ty
+            where stContent (InitStorage n) = "\nContent: " ++ content (M.lookup (StorageIdx sec rec n) st)
+                  stContent (Storage n) = "\nContent: " ++ content (M.lookup (StorageIdx sec rec n) st)
+                  stContent _ = ""
 
         node n = nodeNLabel (fromJust (lab g n))
         mkLst (uid, vid, l) 

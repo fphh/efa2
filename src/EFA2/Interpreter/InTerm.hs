@@ -12,6 +12,7 @@ data InTerm a = PIdx PowerIdx
               | DEIdx DEtaIdx
               | ScaleIdx XIdx
               | VIdx VarIdx
+              | SIdx StorageIdx
               | InConst a
               | InGiven a
               | InMinus (InTerm a)
