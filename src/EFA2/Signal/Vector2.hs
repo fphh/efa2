@@ -159,7 +159,7 @@ instance  (SFold c d (d, d), Ord d,NeutralElement d) => DRange D1 c  d where
 
 -- One Dim
 -- Own Functor class which could swap containers
-class SFunctor u s1 s2 d1 d2 | u s1 -> s2, u s2 -> s1 where
+class SFunctor u s1 s2 d1 d2 | s1 u -> s2, s2 -> u where
   smap :: (u -> d1 -> d2) -> (s1 d1) -> (s2 d2) 
 
 instance  SFunctor u DVal DVal d1 d2 where
@@ -371,49 +371,58 @@ instance GetLength  (List d) where
 lCheck x y = len x == len y
 
 
+class Dim dim1 dim2 dim3 | dim1 dim2 -> dim3, dim1 dim3 -> dim2 where
+  
+instance Dim D0 D0 D0  
+instance Dim D0 D1 D1  
+instance Dim D1 D1 D1  
+instance Dim D0 D2 D2  
+instance Dim D1 D2 D2  
+instance Dim D2 D2 D2  
 
 
 -- Two D
 -- TODO   
 
 -- instance HArith h1 h2 h3 => HArith h2 h1 h3 
-class DArith1 e1 e2 e3 | e1 e2 -> e3 where
+class DArith1 e1 e2 e3 | e1 e2 -> e3   where
    (.*) :: e1 -> e2 -> e3
    (./) :: e1 -> e2 -> e3
    (.+) :: e1 -> e2 -> e3
    (.-) :: e1 -> e2 -> e3
 
-instance (SipWith Unboxed s1 s2 s3 d1 d2 d3, DMult d1 d2 d3) => DArith1 (DC D0 (s1 d1)) (DC D0 (s2 d2)) (DC D0 (s3 d3)) where
+instance (SipWith Unboxed s1 s2 s3 d1 d2 d3, DMult d1 d2 d3, Dim D0 D0 dim3) => DArith1 (DC D0 (s1 d1)) (DC D0 (s2 d2)) (DC dim3 (s3 d3)) where
   (.*) x y =  dzipWith (..*) x y
   (./) x y = dzipWith (../) x y
   (.+) x y = dzipWith (..+) x y
   (.-) x y = dzipWith (..-) x y
 
-instance (SipWith Unboxed s1 s2 s3 d1 d2 d3, DMult d1 d2 d3) => DArith1 (DC D0 (s1 d1)) (DC D1 (s2 d2)) (DC D1 (s3 d3)) where
+instance (SipWith Unboxed s1 s2 s3 d1 d2 d3, DMult d1 d2 d3,Dim D0 D1 dim3) => DArith1 (DC D0 (s1 d1)) (DC D1 (s2 d2)) (DC dim3 (s3 d3)) where
   (.*) x y =  dzipWith (..*) x y
   (./) x y = dzipWith (../) x y
   (.+) x y = dzipWith (..+) x y
   (.-) x y = dzipWith (..-) x y
 
-instance (SipWith Unboxed s1 s2 s3 d1 d2 d3, DMult d1 d2 d3) => DArith1 (DC D1 (s1 d1)) (DC D1 (s2 d2)) (DC D1 (s3 d3)) where
+instance (SipWith Unboxed s1 s2 s3 d1 d2 d3, DMult d1 d2 d3,Dim D1 D1 dim3) => DArith1 (DC D1 (s1 d1)) (DC D1 (s2 d2)) (DC dim3 (s3 d3)) where
    (.*) x y =  dzipWith (..*) x y
    (./) x y = dzipWith (../) x y
    (.+) x y = dzipWith (..+) x y
    (.-) x y = dzipWith (..-) x y
 
-instance (SipWith2 Unboxed c1 s1 s2 s3 d1 d2 d3, DMult d1 d2 d3) => DArith1 (DC D2 (c1 (s1 d1))) (DC D2 (c1(s2 d2))) (DC D2 (c1(s3 d3))) where
+{-
+instance (SipWith2 Unboxed c1 s1 s2 s3 d1 d2 d3, DMult d1 d2 d3) => DArith1 (DC D2 (c1 (s1 d1))) (DC D2 (c1(s2 d2))) (DC dim3 (c1(s3 d3))) where
   (.*) x y =  dzipWith2 (..*) x y
   (./) x y = dzipWith2 (../) x y
   (.+) x y = dzipWith2 (..+) x y
   (.-) x y = dzipWith2 (..-) x y
 
-instance (SipWith02 Unboxed c1 s1 s2 s3 d1 d2 d3, DMult d1 d2 d3) => DArith1 (DC D0 (s1 d1)) (DC D2 (c1(s2 d2))) (DC D2 (c1(s3 d3))) where
+instance (SipWith02 Unboxed c1 s1 s2 s3 d1 d2 d3, DMult d1 d2 d3) => DArith1 (DC D0 (s1 d1)) (DC D2 (c1(s2 d2))) (DC dim3 (c1(s3 d3))) where
   (.*) x y = dzipWith02 (..*) x y
   (./) x y = dzipWith02 (../) x y
   (.+) x y = dzipWith02 (..+) x y
   (.-) x y = dzipWith02 (..-) x y
 
-instance (SipWith12 Unboxed c1 s1 s2 s3 d1 d2 d3, DMult d1 d2 d3) => DArith1 (DC D1 (s1 d1)) (DC D2 (c1(s2 d2))) (DC D2 (c1(s3 d3))) where
+instance (SipWith12 Unboxed c1 s1 s2 s3 d1 d2 d3, DMult d1 d2 d3) => DArith1 (DC D1 (s1 d1)) (DC D2 (c1(s2 d2))) (DC dim3 (c1(s3 d3))) where
   (.*) x y = dzipWith12 (..*) x y
   (./) x y = dzipWith12 (../) x y
   (.+) x y = dzipWith12 (..+) x y
@@ -447,5 +456,5 @@ instance (SipWith Unboxed s1 s2 s3 d1 d2 d3, DEq d1 d2 d3) => DCEq (DC h (s1 d1)
   (.<)  x y = dzipWith (..<) x y
 -}
 
-
+-}
 

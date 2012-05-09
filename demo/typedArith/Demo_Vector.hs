@@ -6,105 +6,90 @@ import EFA2.Display.DispBase
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as UV
 
-
-
+-- | Define Input Elements to play with
 val1 = DC $ DVal 1 :: DC D0 (DVal Val)
 val2 = DC $ DVal 2 :: DC D0 (DVal Val)
 
+-- Lists to be used below
 l1 = [1..3]
 l2 = [0..2]
 
+-- Unboxed Vectors
 u1 = DC $  UV.fromList l1 :: DC D1 (UVec Val)
 u2 = DC $  UV.fromList l2 :: DC D1 (UVec Val)
 
+-- Boxed Vectors
 v1 = DC  $ V.fromList l1 :: DC D1 (Vec Val)
 v2 = DC  $ V.fromList l2 :: DC D1 (Vec Val)
 
--- rv1 = emap sign u1  -- :: EVec Sign
-rv2 = dfmap sign u1
-rv1 = dfmap fb v1 :: DC D1 (Vec Val)
+-- List Vectors
+vl1 = DC l1
+vl2 = DC l2
 
-ru1 = dfmap f u1 
-ru2 = dfmap f v1
+-- | Testing fmap
+fu :: Unboxed -> Val -> Val 
+fu _ x = x
 
-f :: Unboxed -> Val -> Val 
-f _ x = x+1
+fb = sign
 
-fb :: Boxed -> Val -> Val 
-fb _ x = x+1
+rv1 = dfmap fb u1  -- :: EVec Sign
+rv2 = dfmap fb v1
 
--- fzu :: Unboxed -> Val -> Val -> Val
--- fzu _ x y = x ..+ y
+ru1 = dfmap fu u1 
+ru2 = dfmap fu v1
 
--- fzb :: Boxed -> Val -> Val -> Val
--- fzb _ x y = x + y
 
-fzu :: DArith1 e1 e2 e3 => e1 -> e2 -> e3
-fzu _ x y = (.*) x y
-fzb = (.*)
+-- | Testing zipWith
 
-zu1 = dzipWith fzu u1 u2   :: (DC D1 (UVec Val))
-zu2 = dzipWith fzu v1 u2   :: (DC D1 (UVec Val))
-zu3 = dzipWith fzu u1 v2 
-zu4 = dzipWith fzu v1 v2 
+fzb :: Boxed -> Val -> Val -> Val
+fzb _ x y = (..*) undefined x y
 
+fzu :: Unboxed -> Val -> Val -> Val
+fzu _ x y = (..*) undefined x y
+
+-- Val Boxed and Unboxed
 zau1 = dzipWith fzu val1 u1 
 zau2 = dzipWith fzu val1 v1 
-
 zav1 = dzipWith fzb val1 u1 
 zav2 = dzipWith fzb val1 v1 
 
-
-
--- zu5 = emap ((flip fzu) 1) u1
-
+-- Vectors boxed and unboxed
+zu1 = dzipWith fzu u1 u2   :: (DC D1 (UVec Val))
+zu2 = dzipWith fzu v1 u2   :: (DC D1 (UVec Val))
+zu3 = dzipWith fzu u1 v2   :: (DC D1 (UVec Val))
+zu4 = dzipWith fzu v1 v2   :: (DC D1 (UVec Val))
 zb1 = dzipWith fzb u1 u2 
 zb2 = dzipWith fzb v1 u2 
 zb3 = dzipWith fzb u1 v2 
 zb4 = dzipWith fzb v1 v2 
 
--- emap ((flip f) x) y
-
--- d3 = dmult undefined val1 False :: Val
-
-u10 = dzipWith ..* u1 u2
--- u12 = 
-
-u11 = u1 .* u2
-
-
 main = do 
-  putStrLn ("Demo Data-Arith")
---  putStrLn (ddisp d3)
   
-  putStrLn ("Demo emap")
+  putStrLn ("Demo Data-Arith")
+  putStrLn ("Demo fmap")
   putStrLn (ddisp rv1)
   putStrLn (ddisp rv2)
   putStrLn (ddisp ru1)
   putStrLn (ddisp ru2)
   
-  putStrLn ("Demo ezipWith - unboxed")
+  putStrLn ("Demo dzipWith - unboxed")
   putStrLn (ddisp zu1) 
   putStrLn (ddisp zu2)
   putStrLn (ddisp zu3)
-  putStrLn (ddisp zu4)
-{-  
-  putStrLn ("Demo ezipWith - boxed")
+  putStrLn (ddisp zu4) 
+  
+  putStrLn ("Demo dzipWith - boxed")
   putStrLn (ddisp zb1)
   putStrLn (ddisp zb2)
   putStrLn (ddisp zb3)
   putStrLn (ddisp zb4)
   
-  putStrLn ("Demo ezipWith val - unboxed/boxed")
+  putStrLn ("Demo dzipWith Val - unboxed/boxed")
   putStrLn (ddisp zau1)
   putStrLn (ddisp zau2)
   putStrLn (ddisp zav1)
   putStrLn (ddisp zav2)
 
-  
-  -- putStrLn (ddisp rv2)
-  -- putStrLn (ddisp ru1)
-  -- putStrLn (ddisp ru2)
-  
--}  
+    
+
   
