@@ -120,7 +120,7 @@ mkStoreEqs (ins, outs) = startEq:eqs
             mkVar (VarIdx sec' rec' nid' 0) :+ mkVar (StorageIdx sec rec (getStorageNumber st))
         g ((nid, NLabel sec rec _ st), OutStore (nid', NLabel sec' rec' _ st')) = 
           mkVar (StorageIdx sec' rec' (getStorageNumber st')) := 
-            mkVar (VarIdx sec' rec' nid' 1) :+ mkVar (StorageIdx sec rec (getStorageNumber st))
+            Minus (mkVar (VarIdx sec' rec' nid' 1)) :+ mkVar (StorageIdx sec rec (getStorageNumber st))
 
 
 
