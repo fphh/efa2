@@ -48,20 +48,31 @@ fzu :: Unboxed -> Val -> Val -> Val
 fzu _ x y = (..*) undefined x y
 
 -- Val Boxed and Unboxed
-zau1 = dzipWith fzu val1 u1 
-zau2 = dzipWith fzu val1 v1 
-zav1 = dzipWith fzb val1 u1 
-zav2 = dzipWith fzb val1 v1 
+zau1 = dzipWith fzu val1 u1 :: DC D1 (UVec Val) -- ## Problem 1:: dzipWith only Works with Type Signature on output
+zau2 = dzipWith fzu val1 v1 :: DC D1 (Vec Val)
+zav1 = dzipWith fzb val1 u1 :: DC D1 (UVec Val) -- ## Problem2 :: Context reduction stack overflow -- see Message
+zav2 = dzipWith fzb val1 v1 :: DC D1 (Vec Val)
+
+    -- Compiler Message:
+    -- Context reduction stack overflow; size = 21
+    -- Use -fcontext-stack=N to increase stack size to N
+    --   $dSFunctor :: SFunctor Unboxed UV.Vector Vec Double Double
+    --   $dSFunctor :: SFunctor Boxed UV.Vector UVec Double Double
 
 -- Vectors boxed and unboxed
-zu1 = dzipWith fzu u1 u2  
-zu2 = dzipWith fzu v1 u2  
-zu3 = dzipWith fzu u1 v2  
-zu4 = dzipWith fzu v1 v2   
-zb1 = dzipWith fzb u1 u2 
-zb2 = dzipWith fzb v1 u2 
-zb3 = dzipWith fzb u1 v2 
-zb4 = dzipWith fzb v1 v2 
+-- zu1 = dzipWith fzu u1 u2  :: DC D1 (UVec Val)
+zu1 = u1 .* u2
+--zu2 = dzipWith fzu v1 u2  :: DC D1 (UVec Val)
+zu2 = v1 .* u1
+--zu3 = dzipWith fzu u1 v2  :: DC D1 (UVec Val)
+zu3 = u1 .* v2
+--zu4 = dzipWith fzu v1 v2   :: DC D1 (UVec Val)
+zu4 = v1.*v2
+
+zb1 = dzipWith fzb u1 u2 :: DC D1 (Vec Val)
+zb2 = dzipWith fzb v1 u2 :: DC D1 (Vec Val)
+zb3 = dzipWith fzb u1 v2 :: DC D1 (Vec Val)
+zb4 = dzipWith fzb v1 v2 :: DC D1 (Vec Val)
 
 main = do 
   
@@ -69,11 +80,12 @@ main = do
   putStrLn ("Demo fmap")
   putStrLn (ddisp rv1)
   putStrLn (ddisp rv2)
---  putStrLn (ddisp ru1)
+  putStrLn (ddisp ru1)
   
-{-  
+  
   putStrLn (ddisp ru2)
   
+
   putStrLn ("Demo dzipWith - unboxed")
   putStrLn (ddisp zu1) 
   putStrLn (ddisp zu2)
@@ -92,6 +104,6 @@ main = do
   putStrLn (ddisp zav1)
   putStrLn (ddisp zav2)
 
- -}   
+  
 
   

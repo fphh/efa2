@@ -5,6 +5,7 @@ import EFA2.Signal.Signal
 import EFA2.Signal.Vector2
 
 import EFA2.Signal.Base
+import EFA2.Display.DispVector
 
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as UV
@@ -23,6 +24,9 @@ s3 = TC v3 :: DTime
 
 v3 = v1 .* v2
 
+-- v4 :: (DC D1 (UVec Val))
+-- v4 = dzipWith ((..*) undefined) v1 v2
+
 s4 = (s1 ~* s2) 
 s5 = (s1 ~* s3)   
 
@@ -31,7 +35,9 @@ main = do
 --  putStrLn (show s1) 
 --  putStrLn (show s2) 
   
---  putStrLn (show v3) 
+  putStrLn (ddisp v3) 
+--  putStrLn (ddisp v4)  
+    
   putStrLn (show s4)
   putStrLn (show s5)
 --  putStrLn (show s6) 

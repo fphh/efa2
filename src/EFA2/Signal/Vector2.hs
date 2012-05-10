@@ -1,4 +1,7 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses,FunctionalDependencies, TypeSynonymInstances, UndecidableInstances,KindSignatures, GeneralizedNewtypeDeriving,FlexibleContexts,OverlappingInstances #-} 
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses,FunctionalDependencies, TypeSynonymInstances, UndecidableInstances,KindSignatures, GeneralizedNewtypeDeriving,FlexibleContexts #-} 
+
+
+-- {-# LANGUAGE FlexibleInstances, MultiParamTypeClasses,FunctionalDependencies, TypeSynonymInstances, UndecidableInstances,KindSignatures, GeneralizedNewtypeDeriving,FlexibleContexts,OverlappingInstances #-} 
 
 module EFA2.Signal.Vector2 (module EFA2.Signal.Vector2) where
 
@@ -153,7 +156,7 @@ instance  (SFold Vec d (d, d), Ord d,NeutralElement d) => DRange D1 Vec  d where
   getRange x =  dfoldl f (DC (DVal (neutral,neutral))) x
     where f (low, up) x = (min x low, max x up) 
 
-instance  (SFold UVec d (d, d), Ord d,NeutralElement d, UV.Unbox d) => DRange D1 UVec  d where
+instance  (SFold UVec d (d, d), Ord d,NeutralElement d) => DRange D1 UVec  d where
   getRange x =  dfoldl f (DC (DVal (neutral,neutral))) x
     where f (low, up) x = (min x low, max x up) 
 
@@ -216,7 +219,7 @@ instance SFold Vec  d acc where
   sfoldl f (DVal acc) x = DVal $ V.foldl f acc x    
   sfoldr f (DVal acc) x = DVal $ V.foldr f acc x    
 
-instance SFold Vec  d (d,d) where
+-- instance SFold Vec  d (d,d) where
 --  sfoldl f (DVal acc) x = DVal $ V.foldl f acc x    
 --  sfoldr f (DVal acc) x = DVal $ V.foldr f acc x    
 
@@ -237,10 +240,15 @@ class SipWith u s1 s2 s3 d1 d2 d3  | u s1 s2 -> s3, d1 d2 -> d3  where
   sipWith :: (u -> d1 -> d2 -> d3) -> (s1 d1) -> (s2 d2) -> (s3 d3) 
 
 -- Val to one dimensional zip
+{-
 instance (UV.Unbox d3, GetLength (s2 d2), SFunctor Unboxed s2 s3 d2 d3) => SipWith Unboxed DVal s2 s3 d1 d2 d3 where
   sipWith f x@(DVal x') y = if lCheck x y then smap ((flip f) x') y else error m1 
   
 instance (GetLength (s2 d2), SFunctor Boxed s2 s3 d2 d3) => SipWith Boxed DVal s2 s3 d1 d2 d3 where
+  sipWith f x@(DVal x') y = if lCheck x y then smap ((flip f) x') y else error m1 
+-}
+
+instance (GetLength (s2 d2), SFunctor u s2 s3 d2 d3) => SipWith u DVal s2 s3 d1 d2 d3 where
   sipWith f x@(DVal x') y = if lCheck x y then smap ((flip f) x') y else error m1 
 
 -- one Dimensional zip
