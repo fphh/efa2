@@ -122,7 +122,7 @@ class DValCont d where
 -- | External Interface
 
 
-dfmap :: SFunctor u s1 s2 d1 d2 => (u -> d1 -> d2) -> DC dim (s1 d1) -> DC dim (s2 d2)
+dfmap :: (SFunctor u s1 s2 d1 d2, Dim dim1 dim2 dim3) => (u -> d1 -> d2) -> DC dim (s1 d1) -> DC dim (s2 d2)
 dfmap f (DC x) = DC (smap f x)
 
 dzipWith :: (SipWith u s1 s2 s3 d1 d2 d3) => (u -> d1 -> d2 -> d3) ->  DC dim1 (s1 d1) -> DC dim2 (s2 d2) -> DC dim3 (s3 d3)
