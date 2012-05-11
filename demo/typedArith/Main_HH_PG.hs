@@ -74,7 +74,7 @@ class VZipper a b c f where
 instance VZipper a b c (Data Nil) where
          vzipWith f (Data (S0 x)) (Data (S0 y)) = Data (S0 (f x y))
          
-instance VZipper a b c V.Vector where
+instance VZipper a b c Data (UV.Vector :> Nil) where
          vzipWith f x y = V.zipWith f x y
 
 instance (UV.Unbox a, UV.Unbox b, UV.Unbox c) => VZipper a b c UV.Vector where
