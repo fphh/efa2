@@ -35,19 +35,19 @@ class FromTwo s v d where
 ----------------------------------------------------------
 -- Zipping for normal Arithmetics 
 
-class SipWith s1 s2 s3 d1 d2 d3 where
-  sipWith :: (d1 -> d2 -> d3) -> s1 (v1 d1) -> (s2 (v2 d2) -> (s3 (v3 d3))
+class SipWith s1 s2 s3 v1 v2 v3 d1 d2 d3 | s1 s2 -> s3, v1 v2 -> v3  where
+  sipWith :: (d1 -> d2 -> d3) -> (s1 (v1 d1)) -> (s2 (v2 d2)) -> (s3 (v3 d3))
   
 -- 0d - 0d
-instance (VZipper d1 d2 d3 v1) => SipWith (Scalar (v1 d1)) (Scalar (v1 d2)) (Scalar (v1 d3))  d1 d2 d3 where
+instance (VZipper d1 d2 d3 v1) => SipWith Scalar Scalar Scalar v1 v1 v1 d1 d2 d3 where
          sipWith f (Scalar x) (Scalar y) = Scalar $ vzipWith f x y 
 
 -- 0d - 1d
-instance (VFunctor d2 d3 v2) => SipWith (Scalar (Value d1)) (Signal (v2 d2)) (Signal (v2 d3)) d1 d2 d3  where
+instance (VFunctor d2 d3 v2) => SipWith Scalar Signal Signal Value v2 v2 d1 d2 d3  where
          sipWith f (Scalar (Value x)) (Signal y) = Signal $ vmap (f x) y 
 
 -- 1d - 1d
-instance (VZipper d1 d2 d3 v1) => SipWith (Signal (v1 d1)) (Signal (v1 d2)) (Signal (v1 d3)) d1 d2 d3 where
+instance (VZipper d1 d2 d3 v1) => SipWith Signal Signal Signal v1 v1 v1 d1 d2 d3 where
          sipWith f (Signal x) (Signal y) = Signal $ vzipWith f x y  
 
 {-
@@ -83,6 +83,6 @@ instance (SipWith (c1 (v1 d1)) (c2(v2 d2)) (c3 (v3 d3)) d1 d2 d3, DArith d1 d2 d
 class SArith s1 s2 s3 | s1 s2 -> s3   where
   (.*) :: s1 -> s2 -> s3
      
-instance  (SipWith (c1 (v1 d1)) (c2(v2 d2)) (c3 (v3 d3)) d1 d2 d3, DArith d1 d2 d3) =>  SArith (c1 (v1 d1)) (c2(v2 d2)) (c3 (v3 d3)) where
+instance  (SipWith c1 c2 c3 v1 v2 v3 d1 d2 d3, DArith d1 d2 d3) =>  SArith (c1 (v1 d1)) (c2(v2 d2)) (c3 (v3 d3)) where
           (.*) x y = sipWith (..*) x y
     
