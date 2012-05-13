@@ -38,14 +38,15 @@ data Nil' c = Nil' deriving (Show)
 
 type Nil = Nil' :> Nil'
 
+
 -- | Functor
 
 class VFunctor a b f where
-      vmap :: (a -> b) -> f a -> f b
-
+  vmap :: (a -> b) -> f a -> f b  
+  
 instance VFunctor a b (Data Nil) where
          vmap f (Data (S0 x)) = Data (S0 (f x))
-
+  
 instance VFunctor a b V.Vector where
          vmap f vec = V.map f vec
 
@@ -58,39 +59,66 @@ instance VFunctor a b [] where
 instance (VFunctor a b y) => VFunctor a b (Data (y :> Nil)) where
          vmap f (Data (S1 xs)) = Data (S1 (vmap f xs))
 
-instance (VFunctor (y a) (y b) x, VFunctor a b y) => VFunctor a b (Data (x :> y :> Nil)) where
-         vmap f (Data (S2 xs)) = Data (S2 (vmap (vmap f) xs))
+instance (VFunctor a b y) =>  VFunctor a b (Data (x :> y :> Nil)) where
+         vmap f (Data (S2 xs)) = Data (S2 (vmap f xs))
 
 instance (VFunctor (y (z a)) (y (z b)) x, VFunctor (z a) (z b) y, VFunctor a b z)
          => VFunctor a b (Data (x :> y :> z :> Nil)) where
-         vmap f (Data (S3 xs)) = Data (S3 (vmap (vmap (vmap f)) xs))
-
--- | Zip
+         vmap f (Data (S3 xs)) = Data (S3 (vmap f xs))
 
 
-class VZipper a b c f where
-      vzipWith :: (a -> b -> c) -> f a -> f b -> f c
+-- | Deep Functor
+
+class VDeepFunctor a b f where
+      vdeepmap :: (a -> b) -> f a -> f b
+
+instance VDeepFunctor a b (Data Nil) where
+         vdeepmap f (Data (S0 x)) = Data (S0 (f x))
+
+instance VDeepFunctor a b V.Vector where
+         vdeepmap f vec = V.map f vec
+
+instance (UV.Unbox a, UV.Unbox b) => VDeepFunctor a b UV.Vector where
+         vdeepmap f vec = UV.map f vec
+
+instance VDeepFunctor a b [] where
+         vdeepmap f xs = map f xs
+
+instance (VDeepFunctor a b y) => VDeepFunctor a b (Data (y :> Nil)) where
+         vdeepmap f (Data (S1 xs)) = Data (S1 (vdeepmap f xs))
+
+instance (VDeepFunctor (y a) (y b) x, VDeepFunctor a b y) => VDeepFunctor a b (Data (x :> y :> Nil)) where
+         vdeepmap f (Data (S2 xs)) = Data (S2 (vdeepmap (vdeepmap f) xs))
+
+instance (VDeepFunctor (y (z a)) (y (z b)) x, VDeepFunctor (z a) (z b) y, VDeepFunctor a b z)
+         => VDeepFunctor a b (Data (x :> y :> z :> Nil)) where
+         vdeepmap f (Data (S3 xs)) = Data (S3 (vdeepmap (vdeepmap (vdeepmap f)) xs))
+
+-- | Deep Zipper
+
+class VDeepZipper a b c f where
+      vdeepZipWith :: (a -> b -> c) -> f a -> f b -> f c
       
-instance VZipper a b c (Data Nil) where
-         vzipWith f (Data (S0 x)) (Data (S0 y)) = Data (S0 (f x y))
+instance VDeepZipper a b c (Data Nil) where
+         vdeepZipWith f (Data (S0 x)) (Data (S0 y)) = Data (S0 (f x y))
          
-instance VZipper a b c Data (UV.Vector :> Nil) where
-         vzipWith f x y = V.zipWith f x y
+instance VDeepZipper a b c V.Vector where
+         vdeepZipWith f x y = V.zipWith f x y
 
-instance (UV.Unbox a, UV.Unbox b, UV.Unbox c) => VZipper a b c UV.Vector where
-         vzipWith f x y = UV.zipWith f x y
+instance (UV.Unbox a, UV.Unbox b, UV.Unbox c) => VDeepZipper a b c UV.Vector where
+         vdeepZipWith f x y = UV.zipWith f x y
 
-instance VZipper a b c [] where
-         vzipWith f x y = zipWith f x y
+instance VDeepZipper a b c [] where
+         vdeepZipWith f x y = zipWith f x y
      
-instance (VZipper a b c y) => VZipper a b c (Data (y :> Nil)) where
-         vzipWith f (Data (S1 xs))  (Data (S1 ys)) = Data (S1 (vzipWith f xs ys))
+instance (VDeepZipper a b c y) => VDeepZipper a b c (Data (y :> Nil)) where
+         vdeepZipWith f (Data (S1 xs))  (Data (S1 ys)) = Data (S1 (vdeepZipWith f xs ys))
 
-instance (VZipper (y a) (y b) (y c) x, VZipper a b c y) => VZipper a b c (Data (x:> y :> Nil)) where
-         vzipWith f (Data (S2 xs))  (Data (S2 ys)) = Data (S2 (vzipWith (vzipWith f) xs ys))
+instance (VDeepZipper (y a) (y b) (y c) x, VDeepZipper a b c y) => VDeepZipper a b c (Data (x:> y :> Nil)) where
+         vdeepZipWith f (Data (S2 xs))  (Data (S2 ys)) = Data (S2 (vdeepZipWith (vdeepZipWith f) xs ys))
 
-instance (VZipper (y (z a)) (y (z b)) (y (z c)) x,VZipper (z a) (z b) (z c) y, VZipper a b c z) => VZipper a b c (Data (x:> y :> z :> Nil)) where
-         vzipWith f (Data (S3 xs))  (Data (S3 ys)) = Data (S3 (vzipWith (vzipWith (vzipWith f)) xs ys))
+instance (VDeepZipper (y (z a)) (y (z b)) (y (z c)) x,VDeepZipper (z a) (z b) (z c) y, VDeepZipper a b c z) => VDeepZipper a b c (Data (x:> y :> z :> Nil)) where
+         vdeepZipWith f (Data (S3 xs))  (Data (S3 ys)) = Data (S3 (vdeepZipWith (vdeepZipWith (vdeepZipWith f)) xs ys))
 
 
 
@@ -172,8 +200,8 @@ f :: Ord a => Num a => a -> Bool
 f x = x < 9
 -}
 
-func :: (Ord a, Num a, VFunctor a Bool f) => a -> f a -> f Bool
-func x xs = vmap f xs
+func :: (Ord a, Num a, VDeepFunctor a Bool f) => a -> f a -> f Bool
+func x xs = vdeepmap f xs
   where f y = (x < y) && (y < 2*x)
 
 main :: IO ()
