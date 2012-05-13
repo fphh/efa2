@@ -59,33 +59,28 @@ instance VFunctor a b [] where
 instance (VFunctor a b y) => VFunctor a b (Data (y :> Nil)) where
          vmap f (Data (S1 xs)) = Data (S1 (vmap f xs))
 
+instance (VFunctor a b x) =>  VFunctor a b (Data (x :> y :> Nil)) where
+         vmap f (Data (S2 xs)) = Data (S2 (vmap f xs))
+
+{-
 instance (VFunctor a b y) =>  VFunctor a b (Data (x :> y :> Nil)) where
          vmap f (Data (S2 xs)) = Data (S2 (vmap f xs))
 
 instance (VFunctor (y (z a)) (y (z b)) x, VFunctor (z a) (z b) y, VFunctor a b z)
          => VFunctor a b (Data (x :> y :> z :> Nil)) where
          vmap f (Data (S3 xs)) = Data (S3 (vmap f xs))
-
+-}
 
 -- | Deep Functor
 
 class VDeepFunctor a b f where
       vdeepmap :: (a -> b) -> f a -> f b
 
-instance VDeepFunctor a b (Data Nil) where
-         vdeepmap f (Data (S0 x)) = Data (S0 (f x))
+instance  (VFunctor a b (Data Nil)) => VDeepFunctor a b (Data Nil) where
+         vdeepmap = vmap
 
-instance VDeepFunctor a b V.Vector where
-         vdeepmap f vec = V.map f vec
-
-instance (UV.Unbox a, UV.Unbox b) => VDeepFunctor a b UV.Vector where
-         vdeepmap f vec = UV.map f vec
-
-instance VDeepFunctor a b [] where
-         vdeepmap f xs = map f xs
-
-instance (VDeepFunctor a b y) => VDeepFunctor a b (Data (y :> Nil)) where
-         vdeepmap f (Data (S1 xs)) = Data (S1 (vdeepmap f xs))
+instance (VFunctor a b y) => VDeepFunctor a b (Data (y :> Nil)) where
+         vdeepmap = vmap
 
 instance (VDeepFunctor (y a) (y b) x, VDeepFunctor a b y) => VDeepFunctor a b (Data (x :> y :> Nil)) where
          vdeepmap f (Data (S2 xs)) = Data (S2 (vdeepmap (vdeepmap f) xs))
