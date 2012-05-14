@@ -62,23 +62,23 @@ instance VZipper a b c Value where
 
 -------------------------------------------------------------
 -- fold   
-{-         
-class VFold a c1 c2 where
-      vfoldl :: (acc -> a -> acc) -> acc -> a -> acc 
-      vfoldr :: (a -> acc -> acc) -> acc -> a -> acc
 
-instance UV.Unbox a => VFold a (Data Nil) UV.Vector where
+class VFold v a where
+      vfoldl :: (acc -> a -> acc) -> acc -> v a -> acc 
+      vfoldr :: (a -> acc -> acc) -> acc -> v a -> acc
+
+instance UV.Unbox a => VFold UV.Vector a where
          vfoldl = UV.foldl'
          vfoldr = UV.foldr
 
-instance VFold a (Data Nil) V.Vector where
+instance VFold V.Vector a where
          vfoldl = V.foldl'
          vfoldr = V.foldr
 
-instance VFold a (Data Nil)  [] where
+instance VFold [] a where
          vfoldl = L.foldl'
          vfoldr = foldr
--}
+
 ---------------------------------------------------------------
 -- Monoid
 class VMonoid c d where

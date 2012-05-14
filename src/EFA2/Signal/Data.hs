@@ -93,3 +93,26 @@ instance CrossWith (Data (v1 :> Nil)) (Data (v1 :> Nil))  (Data (v1 :> v1 :> Nil
            where g y' = vmap (f y') x  
 -}
 
+
+----------------------------------------------------------
+-- fold Functions
+         
+class DFold c ca d where
+      dfoldl :: (acc -> d -> acc) -> ca acc -> c d -> ca acc 
+      dfoldr :: (d -> acc -> acc) -> ca acc -> c d -> ca acc
+
+instance  (VFold y d) => DFold (Data (y :> Nil))  (Data Nil) d where
+         dfoldl f (Data ( D0 acc)) (Data (D1 x)) = Data $ D0 $ vfoldl f acc x
+         dfoldr f (Data (D0 acc)) (Data (D1 x)) = Data $ D0 $ vfoldr f acc x
+
+----------------------------------------------------------
+-- get data Range
+
+class DGetRange c1 c2 d where
+  dgetRange :: c1 d -> c2 (d,d) 
+  
+instance  (Bounded d,Ord d,VFold y d) => DGetRange (Data (y :> Nil)) (Data Nil) d where 
+  dgetRange x = dfoldl f (Data $ D0 $ (minBound, maxBound)) x
+    where f (omin, omax) x' = (max omin x', min omax x') 
+        
+        
