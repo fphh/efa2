@@ -27,7 +27,6 @@ import EFA2.Interpreter.Env
 import EFA2.Interpreter.Arith
 
 import EFA2.Topology.Topology
-import EFA2.Topology.RandomTopology
 
 import EFA2.Utils.Utils
 
@@ -40,29 +39,25 @@ import EFA2.Example.Loop
 
 main :: IO ()
 main = do
-  let -- TheGraph g sigs = loop
-      g = randomTopology 12 1000 3.0
-      xenv = randomXEnv 14 3 g
-      nenv = randomEtaEnv 34 3 g
-      sigs = M.fromList [(PowerIdx 0 0 0 1, [1])]
+  let TheGraph g sigs = loop
+      -- penvts = envToEqTerms sigs
       (_, ts) = makeAllEquations g [envs]
 
-
-      envs = emptyEnv { powerMap = sigs, xMap = xenv, etaMap = nenv }
+      envs = emptyEnv { powerMap = sigs }
       ts' = map (eqToInTerm envs) (order ts)
 
       res :: Envs [Val]
       res = interpretFromScratch ts'
 
+
   putStrLn ("Number of nodes: " ++ show (noNodes g))
   putStrLn ("Number of edges: " ++ show (length $ edges g))
   putStrLn "===================="
-  putStrLn (showEqTerms ts)
-  putStrLn "===================="
+
   putStrLn (showInTerms ts')
   putStrLn "===================="
   putStrLn ("Number of undeq: " ++ show (length ts))
   putStrLn ("Number of deq:   " ++ show (length ts'))
 
 
-  --drawTopology g res
+  drawTopology g res

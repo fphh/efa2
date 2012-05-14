@@ -35,6 +35,7 @@ import EFA2.Topology.EfaGraph
 import EFA2.Topology.Flow
 --import EFA2.Signal.Sequence
 import EFA2.Signal.SequenceData
+import EFA2.Utils.Utils
 
 nodeColour :: Attribute 
 nodeColour = FillColor (RGB 230 230 240)
