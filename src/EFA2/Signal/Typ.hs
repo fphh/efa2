@@ -1,11 +1,11 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, FunctionalDependencies, TypeSynonymInstances, UndecidableInstances #-}
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, FunctionalDependencies, TypeSynonymInstances, UndecidableInstances, OverlappingInstances #-}
 
-module EFA2.Signal.Signal (module EFA2.Signal.Signal) where
-import EFA2.Signal.Vector2
+module EFA2.Signal.Typ (module EFA2.Signal.Typ) where
+
 
 --------------------------------
 -- type Wrapper 
-newtype TC t s s = TC s deriving (Show) 
+data Typ d p 
 
 --------------------------------
 -- | Physical Types & Classification
@@ -38,60 +38,37 @@ data D -- Delta
 data DD -- Delta Delta
 data DDD -- Delta Delta Delta
 
+{-
 class Succ d1 d2 | d1 -> d2, d2 -> d1 
-instance A D
-instance D DD
-instance DD DDD
+instance Succ A D
+instance Succ D DD
+instance Succ DD DDD
 
-class Prec d1 d2 | d1 -> d2, d2 -> d1 
-instance D A
-instance DD D
-instance DDD DD
-  
+class Prec d1 d2 
+instance Succ d1 d2 => Prec d2 d1
+-}  
 -------------------------------------
 -- | Delta Flag
 
-class TMult t1 t2 t3 | t1 t2 -> t3, t2 t3 -> t1, t1 t3 -> t1 
+class TProd t1 t2 t3 | t1 t2 -> t3, t2 t3 -> t1, t1 t3 -> t1 
     
-instance TMult (d F) (d F) (d N)  
-instance TMult (d E) (d E) (d NE)  
-instance TMult (d F) (d FI) (d Y)  
-instance TMult (d F) (d FO) (d X)  
+instance  TProd (Typ D T) (Typ A P) (Typ A E)
+instance TProd (Typ d F) (Typ d N) (Typ d F) 
+
+instance TProd (Typ d E) (Typ d M) (Typ d E)
+--instance TProd (Typ d E) (Typ d M) (Typ d E)
 
 
-instance  Succ d1 d2 => TMult (d2 T) (d1 P) (d1 E)
-
-
-
-instance  TMult t1 t2 t3 => TMult t2 t1 t3 
 
 -- Addition & Subtraction
 class TSum t1 t2 t3 |  t1 t2 -> t3, t2 t3 -> t1, t1 t3 -> t1 
   
-instance Succ d1 d2 => TSum (d1 t) (d2 t) (d1 t)   -- Absolut + Delta = Absolut
-instance Succ d1 d2 => TSum (d2 t) (d1 t) (d1 t)   -- Delta + Absolut = Absolut
+instance TSum (Typ A t) (Typ D t) (Typ A t)
+instance TSum (Typ D t) (Typ A t) (Typ A t)
 
-class TSub t1 t2 t3 |  t1 t2 -> t3, t2 t3 -> t1, t1 t3 -> t1 
-instance  TSum t1 t2 t3 => TSub t1 t3 t2 -- Abolut - Abolut  = Delta
-  
+instance TSum (Typ D t) (Typ DD t) (Typ D t)
+instance TSum (Typ DD t) (Typ D t) (Typ D t)
 
-apply2TC :: (s1 -> s2 -> s3) -> TC t1 s1 -> TC t2 s2 -> TC t3 s3
-apply2TC f (TC x) (TC y) = TC $ f x y
-
-
-class  PhysArith h1 h2 h3 t1 t2 t3 s1 s2 s3 e1 e2 e3 | h1 h2 -> h3, h2 h3 -> h1  where
-  (~*) :: TC t1 s1 h1 e1 -> TC t2 s2 h2 e2 -> TC t3 s3 h3 e3 
-
-instance (DArith1 e1 e2 e3, SArith s1 s2 s3, TMult t1 t2 t3) => PhysArith H H H t1 t2 t3 s1 s2 s3 e1 e2 e3  where
-  (~*) x y = apply2TC (.*) x y
-
-instance (DArith1 e1 e2 e3, SArith s1 s2 s3, TMult t1 t2 t3) => PhysArith H V H t1 t2 t3 s1 s2 s3 e1 e2 e3  where
-  (~*) x y = apply2TC (./) x y
-
-instance (DArith1 e1 e2 e3, SArith s1 s2 s3, TMult t1 t2 t3) => PhysArith V H V t1 t2 t3 s1 s2 s3  e1 e2 e3 where
-  (~*) x y = apply2TC (./) x y
-
-instance (DArith1 e1 e2 e3, SArith s1 s2 s3, TMult t1 t2 t3) => PhysArith V V V t1 t2 t3 s1 s2 s3 e1 e2 e3 where
-  (~*) x y = apply2TC (.*) x y
-
+instance TSum (Typ DD t) (Typ DDD t) (Typ DD t)
+instance TSum (Typ DDD t) (Typ DD t) (Typ DD t)
 

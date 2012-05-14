@@ -3,7 +3,7 @@
 import EFA2.Signal.Signal
 import EFA2.Signal.Vector
 import EFA2.Signal.Data
-
+import EFA2.Signal.Typ
 import EFA2.Signal.Base
 --import EFA2.Display.DispVector
 
@@ -18,15 +18,17 @@ import qualified Data.Vector.Unboxed as UV
 v1 =  (UV.fromList [0..3]) 
 v2 =  (UV.fromList [0..3]) 
 
-s1 = TC $ Data $ D1 v1 :: TC Signal (Data (UVec :> Nil) Val)
-s2 = TC $ Data $ D1 v2 :: TC Signal (Data (UVec :> Nil) Val)
+p1 = TC $ Data $ D1 v1 :: TC (Typ A P) Signal (Data (UVec :> Nil) Val)
+dt = TC $ Data $ D1 v2 :: TC (Typ D T) Signal (Data (UVec :> Nil) Val)
+dp = TC $ Data $ D1 v2 :: TC (Typ D P) Signal (Data (UVec :> Nil) Val)
 
 
-s3 = s1 .* s2
+e = dt .* p1
+p2 = p1 .+ dp
 
 
 
 main = do 
   
-
-  putStrLn (show s3)
+  putStrLn (show e)
+  putStrLn (show p2)
