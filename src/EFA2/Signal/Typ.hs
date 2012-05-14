@@ -48,7 +48,7 @@ class Prec d1 d2
 instance Succ d1 d2 => Prec d2 d1
 -}  
 -------------------------------------
--- | Delta Flag
+--  |Type Arithmetic
 
 class TProd t1 t2 t3 | t1 t2 -> t3, t2 t3 -> t1, t1 t3 -> t1 
     
