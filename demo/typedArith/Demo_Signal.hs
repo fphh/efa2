@@ -2,6 +2,7 @@
 
 import EFA2.Signal.Signal
 import EFA2.Signal.Vector
+import EFA2.Signal.Data
 
 import EFA2.Signal.Base
 --import EFA2.Display.DispVector
@@ -14,11 +15,11 @@ import qualified Data.Vector.Unboxed as UV
 -- type DTime = TC DT Signal H (DC D1 (UVec Val)) 
 -- type Energy =  TC E Signal H (DC D1 (UVec Val))
 
-v1 =  (UV.fromList [0..3]) :: (UVec Val)
-v2 =  (UV.fromList [0..3]) :: (UVec Val)
+v1 =  (UV.fromList [0..3]) 
+v2 =  (UV.fromList [0..3]) 
 
-s1 = Data v1 :: Data (UVec :> Nil) Val
-s2 = Data v2 :: Data (UVec :> Nil) Val
+s1 = TC $ Data $ D1 v1 :: TC Signal (Data (UVec :> Nil) Val)
+s2 = TC $ Data $ D1 v2 :: TC Signal (Data (UVec :> Nil) Val)
 
 
 s3 = s1 .* s2
