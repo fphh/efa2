@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts, TypeOperators #-}
 
 import EFA2.Signal.Signal
 import EFA2.Signal.Vector
@@ -17,8 +17,8 @@ import qualified Data.Vector.Unboxed as UV
 v1 =  (UV.fromList [0..3]) :: (UVec Val)
 v2 =  (UV.fromList [0..3]) :: (UVec Val)
 
-s1 = Signal v1 :: Signal (UVec Val)
-s2 = Signal v2 :: Signal (UVec Val)
+s1 = Data v1 :: Data (UVec :> Nil) Val
+s2 = Data v2 :: Data (UVec :> Nil) Val
 
 
 s3 = s1 .* s2

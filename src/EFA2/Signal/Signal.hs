@@ -1,9 +1,60 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, FunctionalDependencies, TypeSynonymInstances, UndecidableInstances #-}
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, FunctionalDependencies, TypeSynonymInstances, UndecidableInstances,KindSignatures, TypeOperators,  GADTs #-}
 
 module EFA2.Signal.Signal (module EFA2.Signal.Signal) where
 import EFA2.Signal.Vector
 import EFA2.Signal.Base
 
+----------------------------------------------------------
+-- | EFA data containers
+
+newtype Data a b = Data (a b) deriving (Show, Eq, Ord)
+--newtype Signal a b = Signal (a b) deriving (Show, Eq, Ord)
+
+data ((a :: * -> *) :> (b :: * -> *)) :: * -> * where
+     D0 :: v0 -> Nil v0 
+     D1 :: v1 v0 -> (v1 :> Nil) v0
+     D2 :: v2 (v1 v0) -> (v2 :> v1 :> Nil) v0
+     D3 :: v3 (v2 (v1 v0)) -> (v3 :> v2 :> v1 :> Nil) v0
+
+infixr 9 :>
+
+data Nil' c = Nil' deriving (Show)
+
+type Nil = Nil' :> Nil'
+{-
+type D0 =  Nil v0
+type D1 = (v1 :> Nil) v0
+type D2 = (v2 :> v1 :> Nil) v0
+type D3 = (v3 :> v2 :> v1 :> Nil) v0
+-}
+----------------------------------------------------------
+-- Zipping for normal Arithmetics 
+
+class SipWith c1 c2 d1 d2 d3  where
+  sipWith :: (d1 -> d2 -> d3) -> c1 d1 -> c2 d2 -> c2 d3
+
+-- 0d - 0d
+instance SipWith (Data Nil) (Data Nil) d1 d2 d3 where
+         sipWith f (Data (D0 x)) (Data (D0 y)) = Data $ D0 $ f x y 
+
+-- 0d - 1d
+instance (VFunctor d2 d3 v1) => SipWith (Data Nil) (Data (v1 :> Nil))  d1 d2 d3  where
+         sipWith f  (Data (D0 x)) (Data (D1 y)) = Data $ D1 $ vmap (f x) y 
+
+-- 1d - 1d
+instance (VZipper d1 d2 d3 v1) => SipWith (Data (v1 :> Nil)) (Data (v1 :> Nil))  d1 d2 d3  where
+         sipWith f  (Data (D1 x)) (Data (D1 y)) = Data $ D1 $ vzipWith f x y 
+
+-- 1d - 2d
+instance (VZipper d1 d2 d3 v1, VFunctor (v1 d2) (v1 d3) v2) => SipWith (Data (v1 :> Nil)) (Data (v2 :> v1 :> Nil))  d1 d2 d3  where
+         sipWith f  (Data (D1 x)) (Data (D2 y)) = Data $ D2 $ vmap (vzipWith f x) y 
+
+-- 2d - 2d
+instance (VZipper d1 d2 d3 v1, VZipper (v1 d1) (v1 d2) (v1 d3) v2) => SipWith (Data (v2 :> v1 :> Nil)) (Data (v2 :> v1 :> Nil))  d1 d2 d3  where
+         sipWith f  (Data (D2 x)) (Data (D2 y)) = Data $ D2 $ vzipWith (vzipWith f) x y 
+
+
+{-
 ----------------------------------------------------------
 -- | EFA data containers
 
@@ -34,7 +85,7 @@ instance (VFunctor d2 d3 v2) => SipWith Scalar Signal Signal Value v2 v2 d1 d2 d
 -- 1d - 1d
 instance (VZipper d1 d2 d3 v1) => SipWith Signal Signal Signal v1 v1 v1 d1 d2 d3 where
          sipWith f (Signal x) (Signal y) = Signal $ vzipWith f x y  
-
+-}
 
 {-
  -- 1d - 2d
@@ -47,7 +98,7 @@ instance (VZipper d1 d2 d3 v1, VZipper (v1 d1) (v1 d2) (v1 d3) v1) => SipWith (S
          sipWith f (Signal2 x) (Signal2 y) = Signal2 $ vzipWith (vzipWith f) x y  
 -}
 
-
+{-
 ----------------------------------------------------------
 -- Signal Aritmetics
 
@@ -62,4 +113,4 @@ instance  (SipWith c1 c2 c3 v1 v2 v3 d1 d2 d3, DArith d1 d2 d3) =>  SArith (c1 (
           (./) x y = sipWith (../) x y
           (.+) x y = sipWith (..+) x y
           (.-) x y = sipWith (..-) x y
-    
+-}    
