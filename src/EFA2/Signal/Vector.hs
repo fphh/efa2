@@ -19,9 +19,9 @@ import EFA2.Signal.Base
 ---------------------------------------------------------
 -- | 2. Data Structures with 
  
-type Vec  = V.Vector -- deriving Show
-type UVec = UV.Vector -- deriving Show
-type List = [] -- deriving Show
+-- type Vec  = V.Vector -- deriving Show
+-- type UVec = UV.Vector -- deriving Show
+-- type List = [] -- deriving Show
 newtype Value a = Value a -- deriving Show
   
 ------------------------------------------------------------
@@ -85,15 +85,11 @@ class VMonoid c d where
  vempty :: (c d)
  (.++) :: (c d) -> (c d) -> (c d)
  
-instance VMonoid List d where 
-  vempty = [] 
-  (.++) = (++)
-
-instance VMonoid Vec d where 
+instance VMonoid V.Vector d where 
   vempty = V.empty
   (.++) = (V.++)
 
-instance UV.Unbox d => VMonoid UVec d where 
+instance UV.Unbox d => VMonoid UV.Vector d where 
   vempty = UV.empty
   (.++) = (UV.++)
 
@@ -117,13 +113,13 @@ instance VConvert a [] [] where
 class GetLength s where
   vlen :: (s) -> Int
 
-instance GetLength  (Vec d) where 
+instance GetLength  (V.Vector d) where 
   vlen x =  V.length x
 
-instance UV.Unbox d => GetLength  (UVec d) where 
+instance UV.Unbox d => GetLength  (UV.Vector d) where 
   vlen x = UV.length x
 
-instance GetLength  (List d) where 
+instance GetLength  [d] where 
   vlen x = length x
 
 vlenCheck x y = vlen x == vlen y

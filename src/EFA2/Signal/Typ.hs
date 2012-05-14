@@ -72,3 +72,4 @@ instance TSum (Typ DD t) (Typ D t) (Typ D t)
 instance TSum (Typ DD t) (Typ DDD t) (Typ DD t)
 instance TSum (Typ DDD t) (Typ DD t) (Typ DD t)
 
+

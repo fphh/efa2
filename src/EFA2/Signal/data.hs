@@ -21,6 +21,19 @@ data Nil' c = Nil' deriving (Show)
 type Nil = Nil' :> Nil'
 
 ----------------------------------------------------------
+-- Type Synonym Convenience
+
+type DVal a = Data Nil a
+type UVec a = (Data (UVec :> Nil) a)
+type UVec2 a = (Data (Vec :> UVec :> Nil) a)
+type UVec3 a = (Data (Vec :> Vec :> UVec :> Nil) a)
+
+type Vec a = (Data (Vec :> Nil) a)
+type Vec2 a = (Data (Vec :> Vec :> Nil) a)
+type Vec3 a = (Data (Vec :> Vec :> Vec :> Nil) a)
+
+
+----------------------------------------------------------
 -- Zipping for normal Arithmetics 
 
 class DZipWith c1 c2 d1 d2 d3  where

@@ -4,11 +4,13 @@ module EFA2.Signal.Data (module EFA2.Signal.Data) where
 import EFA2.Signal.Vector
 import EFA2.Signal.Base
 
+import qualified Data.Vector.Unboxed as UV
+import qualified Data.Vector as V
+
 ----------------------------------------------------------
 -- | EFA data containers
 
 newtype Data a b = Data (a b) deriving (Show, Eq, Ord)
---newtype Signal a b = Signal (a b) deriving (Show, Eq, Ord)
 
 data ((a :: * -> *) :> (b :: * -> *)) :: * -> * where
      D0 :: v0 -> Nil v0 
@@ -33,7 +35,23 @@ instance (Show (v3 (v2 (v1 v0)))) => Show ((v3 :> v2 :> v1 :> Nil) v0) where
          show (D3 x) = show x
 
 ----------------------------------------------------------
--- Zipping for normal Arithmetics 
+-- | Type Synonym Convenience
+
+type DVal a = Data Nil a
+type UVec a = (Data (UV.Vector :> Nil) a)
+type UVec2 a = (Data (V.Vector :> UV.Vector :> Nil) a)
+type UVec3 a = (Data (V.Vector :> V.Vector :> UV.Vector :> Nil) a)
+
+type Vec a = (Data (V.Vector :> Nil) a)
+type Vec2 a = (Data (V.Vector :> V.Vector :> Nil) a)
+type Vec3 a = (Data (V.Vector :> V.Vector :> V.Vector :> Nil) a)
+
+type List a = (Data ([] :> Nil) a)
+type List2 a = (Data ([] :> [] :> Nil) a)
+type List3 a = (Data ([]:> [] :> []:> Nil) a)
+
+----------------------------------------------------------
+-- | Zipping for normal Arithmetics 
 
 class DZipWith c1 c2 d1 d2 d3  where
   dzipWith :: (d1 -> d2 -> d3) -> c1 d1 -> c2 d2 -> c2 d3

@@ -10,7 +10,7 @@ import EFA2.Signal.Typ
 ----------------------------------------------------------
 -- | Signal & Company
 
-newtype TC t s d = TC d  deriving (Show, Eq, Ord)
+newtype TC s t d = TC d  deriving (Show, Eq, Ord)
 
 data Scalar
 
@@ -43,18 +43,31 @@ instance SArith FClass FClass FClass
 ----------------------------------------------------------
 -- Signal Arithmetics
 
-class Prod t1 t2 t3 s1 s2 s3 c1 c2 c3 | s1 s2 -> s3, c1 c2 -> c3   where
-  (.*) :: TC t1 s1 c1 -> TC t2 s2 c2 -> TC t3 s3 c3
-  (./) :: TC t3 s1 c1 -> TC t2 s2 c2 -> TC t1 s3 c3
+class Prod s1 s2 s3 t1 t2 t3 c1 c2 c3 | s1 s2 -> s3, c1 c2 -> c3   where
+  (.*) :: TC s1 t1 c1 -> TC s2 t2 c2 -> TC s3 t3 c3
+  (./) :: TC s1 t3 c1 -> TC s2 t2 c2 -> TC s3 t1 c3
      
-instance  (DZipWith v1 v2 d1 d2 d3, DArith d1 d2 d3, SArith s1 s2 s3, TProd t1 t2 t3) =>  Prod t1 t2 t3 s1 s2 s3 (v1 d1) (v2 d2) (v2 d3) where
+instance  (DZipWith v1 v2 d1 d2 d3, DArith d1 d2 d3, SArith s1 s2 s3, TProd t1 t2 t3) =>  Prod s1 s2 s3 t1 t2 t3 (v1 d1) (v2 d2) (v2 d3) where
           (.*) (TC x) (TC y) = TC $ dzipWith (..*) x y
           (./) (TC x) (TC y) = TC $ dzipWith (..*) x y
 
-class Sum t1 t2 t3 s1 s2 s3 c1 c2 c3 | s1 s2 -> s3, c1 c2 -> c3   where
-  (.+) ::  TC t1 s1 c1 -> TC t2 s2 c2 -> TC t3 s3 c3
-  (.-) ::  TC t3 s1 c1 -> TC t2 s2 c2 -> TC t1 s3 c3
+class Sum s1 s2 s3 t1 t2 t3 c1 c2 c3 | s1 s2 -> s3, c1 c2 -> c3   where
+  (.+) ::  TC s1 t1 c1 -> TC s2 t2 c2 -> TC s3 t3 c3
+  (.-) ::  TC s1 t3 c1 -> TC s2 t2 c2 -> TC s3 t1 c3
 
-instance  (DZipWith v1 v2 d1 d2 d3, DArith d1 d2 d3, SArith s1 s2 s3, TSum t1 t2 t3) =>  Sum t1 t2 t3 s1 s2 s3 (v1 d1) (v2 d2) (v2 d3) where
+instance  (DZipWith v1 v2 d1 d2 d3, DArith d1 d2 d3, SArith s1 s2 s3, TSum t1 t2 t3) =>  Sum s1 s2 s3 t1 t2 t3 (v1 d1) (v2 d2) (v2 d3) where
           (.+) (TC x) (TC y) = TC $ dzipWith (..+) x y
           (.-) (TC x) (TC y) = TC $ dzipWith (..-) x y
+
+
+----------------------------------------------------------
+-- Convenience
+
+type Sig1 typ = TC Signal typ (UVec Val)
+type FSig1 typ = TC FSignal typ (UVec2 Val)
+
+type Sig2 typ = TC Signal typ (Vec Val)
+type FSig2 typ = TC FSignal typ (Vec2 Val)
+
+-- type PSig = 
+
