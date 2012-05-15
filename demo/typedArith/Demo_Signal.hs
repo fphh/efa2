@@ -33,3 +33,6 @@ main = do
   putStrLn (show dp)
   putStrLn (show dt)
   putStrLn (sdisp dt)
+  putStrLn (sdisp e)
+  putStrLn (sdisp p1)
+  putStrLn (sdisp p2)

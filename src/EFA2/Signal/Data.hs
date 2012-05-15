@@ -10,7 +10,7 @@ import qualified Data.Vector as V
 ----------------------------------------------------------
 -- | EFA data containers
 
-newtype Data a b = Data (a b) deriving (Show, Eq, Ord)
+newtype Data ab c = Data (ab c) deriving (Show, Eq, Ord)
 
 data ((a :: * -> *) :> (b :: * -> *)) :: * -> * where
      D0 :: v0 -> Nil v0 
@@ -108,11 +108,20 @@ instance  (VFold y d) => DFold (Data (y :> Nil))  (Data Nil) d where
 ----------------------------------------------------------
 -- get data Range
 
-class DGetRange c1 c2 d where
+class DGetRange c1 c2 d | c1 -> c2 where
   dgetRange :: c1 d -> c2 (d,d) 
   
 instance  (Bounded d,Ord d,VFold y d) => DGetRange (Data (y :> Nil)) (Data Nil) d where 
   dgetRange x = dfoldl f (Data $ D0 $ (minBound, maxBound)) x
     where f (omin, omax) x' = (max omin x', min omax x') 
         
+----------------------------------------------------------
+-- get data Range
         
+class DSingleton c1 c2 d | c1 -> c2 where
+  dmaximum :: c1 d -> c2 d
+  dminimum :: c1 d -> c2 d
+  
+instance (VSingleton y d) => DSingleton (Data (y :> Nil)) (Data Nil) d where
+  dmaximum (Data (D1 x)) =  Data $ D0 $ vmaximum x          
+  dminimum (Data (D1 x)) =  Data $ D0 $ vminimum x          

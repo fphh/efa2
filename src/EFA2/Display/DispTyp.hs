@@ -27,6 +27,7 @@ instance DisplayTyp (Typ d E p) where getDisplayType x = Typ_E
 instance DisplayTyp (Typ d F p) where getDisplayType x = Typ_F
 instance DisplayTyp (Typ d N p) where getDisplayType x = Typ_N
 instance DisplayTyp (Typ d M p) where getDisplayType x = Typ_M
+instance DisplayTyp (Typ d T p) where getDisplayType x = Typ_T
 instance DisplayTyp (Typ d X p) where getDisplayType x = Typ_X
 instance DisplayTyp (Typ d Y p) where getDisplayType x = Typ_Y
 instance DisplayTyp (Typ d BZ p) where getDisplayType x = Typ_BZ

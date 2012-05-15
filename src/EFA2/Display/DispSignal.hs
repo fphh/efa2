@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, GADTs #-}
+{-# LANGUAGE FlexibleInstances, GADTs, MultiParamTypeClasses,FlexibleContexts,UndecidableInstances, TypeOperators#-}
 
 module EFA2.Display.DispSignal (module EFA2.Display.DispSignal) where
 
@@ -8,6 +8,7 @@ import EFA2.Display.DispBase
 import EFA2.Signal.Data
 import EFA2.Signal.Typ
 import EFA2.Signal.Signal
+import EFA2.Signal.Vector
 
 
 -- | display a single value  
@@ -28,11 +29,14 @@ dispRange x y t = disp x f s  ++ " - " ++ disp y f s  ++ " " ++ show u
 class SDisplay a where
   sdisp :: a -> String
 
-instance (DeltaDisp t, DisplayTyp t, PartDisp t) => SDisplay (TC Signal t d)  where 
+instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d,VSingleton y d) => SDisplay (TC Signal t (Data (y :> Nil) d)) where 
   sdisp x@(TC dat)  = "Signal - " ++ tdisp x ++ ": " ++ dispRange dmin dmax dtyp ++ " " ++ udisp x  
     where dtyp = getDisplayType x
-          (D0 (dmin, dmax)) = dgetRange dat
-          
+--        r = dgetRange dat 
+--        (Data (D0 (dmin, dmax))) = r
+-- DGetRange (Data (y :> Nil)) (Data Nil) d,          
+          (Data (D0 dmin)) = dminimum dat
+          (Data (D0 dmax)) = dmaximum dat       
 
 
   

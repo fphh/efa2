@@ -125,6 +125,26 @@ instance GetLength  [d] where
 vlenCheck x y = vlen x == vlen y
 
 
+--------------------------------------------------------------
+-- Max & Min
+
+class VSingleton v d where
+  vmaximum :: (v d) -> d
+  vminimum :: (v d) -> d
+
+instance (Ord d) => VSingleton V.Vector d where 
+  vmaximum x =  V.maximum x
+  vminimum x =  V.minimum x
+
+instance (Ord d, UV.Unbox d) => VSingleton UV.Vector d where 
+  vmaximum x = UV.maximum x
+  vminimum x = UV.minimum x
+
+instance (Ord d) => VSingleton  [] d where 
+  vmaximum x = maximum x
+  vminimum x = minimum x
+
+
 
 
 
