@@ -44,7 +44,7 @@ main = do
       s21' = [0.2, 0.2]
       s13' = [-0.3, -0.3]
       s31' = [-0.6, -0.6]
-      n = 3
+      n = 8
 
 
       time = [0, 0] ++ (concatMap (replicate 3) [1..])
@@ -58,8 +58,8 @@ main = do
 
       (sqEnvs, sqTopo) = makeSequence (PowerRecord time pMap) topo 
 
-      storage0 = PowerIdx (-1) 0 24 25
-      --storage0 = PowerIdx (-1) 0 16 17
+      --storage0 = PowerIdx (-1) 0 24 25
+      storage0 = PowerIdx (-1) 0 64 65
 
       (sqEnvs', ts') = makeAllEquations sqTopo sqEnvs
       sigs = M.unions (map powerMap sqEnvs')
@@ -77,5 +77,6 @@ main = do
 
 
   putStrLn (showInTerms gd)
-  drawTopology sqTopo res
 
+  putStrLn (show $ length gd)
+  --drawTopology sqTopo res

@@ -125,7 +125,7 @@ mkStoreEqs (ins, outs) = startEq:eqs
 
 
 mkInStoreEqs :: InOutGraphFormat (LNode NLabel) -> [EqTerm]
-mkInStoreEqs (ins, n@(nid, NLabel sec rec _ _), outs@((o,_):_)) = trace (showEqTerms (startEq:osEqs)) (startEq:osEqs)
+mkInStoreEqs (ins, n@(nid, NLabel sec rec _ _), outs@((o,_):_)) = (startEq:osEqs)
   where startEq = mkVar (VarIdx sec rec nid 0) := mkVar (PowerIdx sec rec nid o)
         osEqs = map f (pairs outs)
         f (x, y) = mkVar (PowerIdx sec rec nid y') := 
@@ -138,7 +138,7 @@ mkInStoreEqs _ = []
 
 
 mkOutStoreEqs :: InOutGraphFormat (LNode NLabel) -> [EqTerm]
-mkOutStoreEqs (ins, n@(nid, NLabel sec rec _ _), o:_) = trace (showEqTerms (visumeq:xeqs ++ eieqs)) $ visumeq:xeqs ++ eieqs
+mkOutStoreEqs (ins, n@(nid, NLabel sec rec _ _), o:_) = visumeq:xeqs ++ eieqs
   where xis = map (makeVar XIdx) ins
         eis = map (makeVar PowerIdx) ins
         makeVar mkIdx (nid', l) = mkVar $ mkIdx (sectionNLabel l) (recordNLabel l) nid' nid
