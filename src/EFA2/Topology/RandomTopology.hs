@@ -12,7 +12,8 @@ import System.Random
 
 import EFA2.Interpreter.Env
 import EFA2.Interpreter.Arith
-import EFA2.Topology.Topology
+import EFA2.Topology.TopologyData
+
 import EFA2.Utils.Utils
 
 import Debug.Trace
@@ -47,10 +48,11 @@ removeCyclesOfTwo xs = S.toList $ L.foldl' f S.empty xs
   where f acc (x, y) = if (not $ S.member (y, x) acc) then S.insert (x, y) acc else acc
 
 -- | Takes a rando seed, a number of nodes and the ratio edges/nodes. 
-randomTopology :: Int -> Int -> Double -> Gr NLabel ()
+randomTopology :: Int -> Int -> Double -> Topology -- Gr NLabel ()
 randomTopology _ n ratio | cond = error str  
   where cond = ratio < (1.0 - (1 / fromIntegral n))
-        str = "randomTopology: Impossible ratio (" ++ show ratio ++ ") for edges/nodes in a connected graph!"
+        str = "randomTopology: Impossible ratio (" ++ show ratio 
+              ++ ") for edges/nodes in a connected graph!"
 randomTopology seed n ratio = g
   where g = insEdges edges $ insNodes ns' empty
         (ns, es) = nodesAndEdges seed n
@@ -58,15 +60,15 @@ randomTopology seed n ratio = g
 
         edgeNumber = truncate $ ratio* (fromIntegral n) - (fromIntegral $ length es)
         xs' = pairs $ map (`mod` n) $ shuffle (19*seed-1) edgeNumber
-        es'' = map (\(x, y) -> (x, y, ())) (removeCyclesOfTwo (xs' ++ es))
+        es'' = map (\(x, y) -> (x, y, defaultELabel)) (removeCyclesOfTwo (xs' ++ es))
 
         edges = filter (\(x, y, _) -> x /= y) $ unique es'' --  (es' ++ es'')
 
 
 -- | Takes a seed, the length of the value list and a graph.
-randomEtaEnv :: Int -> Int -> Gr NLabel () -> EtaMap [Val]
+randomEtaEnv :: Int -> Int -> Topology -> EtaMap [Val]
 randomEtaEnv seed len g = M.fromList (zip etas rs)
-  where etas = concat $ mapGraph f g
+  where etas = concat $ mapGraphLabels f g
         f (_, n, outs) = zipWith (EtaIdx 0 0) (repeat (nodeNLabel n)) (map nodeNLabel outs)
         numOfEtas = length etas
         rs = LHT.sliceHorizontal numOfEtas $ take (numOfEtas*len) (randomRs (0.1, 0.9) (mkStdGen seed))
@@ -84,10 +86,10 @@ splitGens gen = iterate f gen
   where f = fst . split
 
 -- | Takes a seed, the length of the value list and a graph.
-randomXEnv :: Int -> Int -> Gr NLabel () -> XMap [Val]
+randomXEnv :: Int -> Int -> Topology -> XMap [Val]
 randomXEnv seed len g = M.fromList $ concat zs
-  where xs = concat $ mapGraph f g
-        f (ins, n, outs) = [ zipWith (XIdx 0 0) (repeat (nodeNLabel n)) (map nodeNLabel outs) ] 
+  where xs = concat $ mapGraphLabels f g
+        f (ins, n, outs) = [ zipWith (XIdx 0 0) (map nodeNLabel outs) (repeat (nodeNLabel n)) ] 
 
 -- zipWith (XIdx 0 0) (repeat (nodeNLabel n)) (map nodeNLabel ins) ] -- , 
         ys = snd $ L.foldl' (h len) (gens, []) xs
@@ -95,5 +97,5 @@ randomXEnv seed len g = M.fromList $ concat zs
         h len (gs, acc) cs = (bs, (as, cs):acc)
           where (as, bs) = splitAt len gs
         zs = map j ys
-        j (gs, cs) = zip cs (transpose ys)
+        j (gs, cs) = zip cs (L.transpose ys)
           where ys = map (flip randomXs (length cs)) gs

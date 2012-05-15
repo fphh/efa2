@@ -29,6 +29,7 @@ data EqTerm = EqTerm := EqTerm
           | DEta DEtaIdx
           | X XIdx
           | Var VarIdx
+          | Store StorageIdx
  --         | FAbs { fAbsPower :: EqTerm, fAbsEta :: EqTerm }
  --         | BAbs { bAbsPower :: EqTerm, bAbsEta :: EqTerm }
           | FDiff { fDiffPower :: EqTerm, fDiffEta :: EqTerm, fDiffDPower :: EqTerm, fDiffDEta :: EqTerm }
@@ -74,6 +75,9 @@ instance MkVarC XIdx where
 instance MkVarC VarIdx where
          mkVar = Var
 
+instance MkVarC StorageIdx where
+         mkVar = Store
+
 instance MkVarC Val where
          mkVar = Const
 
@@ -95,6 +99,7 @@ showEqTerm (DPower (DPowerIdx s r x y)) = "dE_" ++ show s ++ "." ++ show r ++ "_
 showEqTerm (DEta (DEtaIdx s r x y)) = "dn_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
 showEqTerm (X (XIdx s r x y)) =  "x_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
 showEqTerm (Var (VarIdx s r x y)) = "v_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
+showEqTerm (Store (StorageIdx s r n)) = "s_" ++ show s ++ "." ++ show r ++ "_" ++ show n
 showEqTerm (x :+ y) = "(" ++ showEqTerm x ++ " + " ++ showEqTerm y ++ ")"
 showEqTerm (x :* y) = showEqTerm x ++ " * " ++ showEqTerm y
 showEqTerm (FDiff p e dp de) = "f(" ++ showEqTerm p ++ ", " ++ showEqTerm e ++ ", " ++ showEqTerm dp ++ ", " ++ showEqTerm de ++")"
@@ -105,9 +110,6 @@ showEqTerm (x := y) = showEqTerm x ++ " = " ++ showEqTerm y
 
 showEqTerms :: [EqTerm] -> String
 showEqTerms ts = L.intercalate "\n" $ map showEqTerm ts
-
-envToEqTerms :: (MkVarC k) => M.Map k v -> [EqTerm]
-envToEqTerms m = map (give . fst) (M.toList m)
 
 
 -- | This function takes a predicate p that determines, wether

@@ -4,11 +4,13 @@ module EFA2.Display.DrawGraph where
 
 import qualified Data.Map as M
 import qualified Data.List as L
+import qualified Data.List.HT as HTL
 
 import Data.Ratio
+import Data.Function
 
 import Data.Maybe
-import Data.Graph.Inductive
+--import Data.Graph.Inductive
 import qualified Data.Text.Lazy as T
 import Data.GraphViz
 import Data.GraphViz.Attributes.Complete
@@ -28,10 +30,12 @@ import EFA2.Interpreter.InTerm
 import EFA2.Interpreter.Env
 import EFA2.Interpreter.Arith
 import EFA2.Topology.TopologyData
+import EFA2.Topology.EfaGraph
 
 import EFA2.Topology.Flow
 --import EFA2.Signal.Sequence
 import EFA2.Signal.SequenceData
+import EFA2.Utils.Utils
 
 nodeColour :: Attribute 
 nodeColour = FillColor (RGB 230 230 240)
@@ -45,16 +49,41 @@ originalEdgeColour = Color [RGB 0 0 200]
 intersectionEdgeColour :: Attribute
 intersectionEdgeColour = Color [RGB 200 0 0]
 
-mkDotGraph :: Gr NLabel ELabel -> (LNode NLabel -> String) -> (LEdge ELabel -> String) -> DotGraph Int
+{-
+DotSG	 
+
+isCluster :: Bool
+     
+subGraphID :: Maybe GraphID
+     
+subGraphStmts :: DotStatements n
+-}     
+
+
+mkDotGraph :: EfaGraph NLabel ELabel -> (LNode NLabel -> String) -> (LEdge ELabel -> String) -> DotGraph Int
 mkDotGraph g nshow eshow =
   DotGraph { strictGraph = False,
              directedGraph = True,
              graphID = Just (Int 1),
              graphStatements = stmts }
-  where stmts = DotStmts { attrStmts = [],
-                           subGraphs = [],
-                           nodeStmts = map (mkDotNode nshow) (labNodes g),
-                           edgeStmts = map (mkDotEdge eshow) (labEdges g) }
+  where es = labEdges g
+        (interEs, origEs) = L.partition (\(_, _, e) -> isIntersectionEdge e) es
+        g' = delEdges (map (\(x, y, _) -> (x, y)) interEs) g
+        cs = HTL.removeEach (L.groupBy sameSection (labNodes g))
+        sameSection (_, l1) (_, l2) = sectionNLabel l1 == sectionNLabel l2
+        comps = map sg cs
+        sg ns@(x:_, _) = DotSG True (Just (Int sl)) (ds sl rl ns)
+          where sl = sectionNLabel $ snd x
+                rl = recordNLabel $ snd x
+        ds sl rl (ns, ms) = DotStmts gattrs [] xs ys
+          where xs = map (mkDotNode nshow) ns
+                ys = map (mkDotEdge eshow) (labEdges (delNodes (map fst (concat ms)) g'))
+                gattrs = [GraphAttrs [Label (StrLabel (T.pack str))]]
+                str = "Section " ++ show sl ++ " / " ++ "Record " ++ show rl
+        stmts = DotStmts { attrStmts = [],
+                           subGraphs = comps,
+                           nodeStmts = [],
+                           edgeStmts = map (mkDotEdge eshow) interEs }
 
 
 mkDotNode:: (LNode NLabel -> String) -> LNode NLabel -> DotNode Int
@@ -70,14 +99,16 @@ mkDotEdge eshow e@(x, y, elabel) = DotEdge x y [displabel, edir, colour]
              | WithDir <- flowDir = Dir Forward
              | otherwise = Dir NoDir
         etype = edgeType elabel
-        colour | OriginalEdge <- etype = originalEdgeColour
-               | IntersectionEdge <- etype = intersectionEdgeColour
+        colour | IntersectionEdge <- etype = intersectionEdgeColour
+               | otherwise = originalEdgeColour
+        --colour = originalEdgeColour
 
-printGraph :: Gr NLabel ELabel -> (LNode NLabel -> String) -> (LEdge ELabel -> String) -> IO ()
+printGraph :: EfaGraph NLabel ELabel -> (LNode NLabel -> String) -> (LEdge ELabel -> String) -> IO ()
 printGraph g nshow eshow = runGraphvizCanvas Dot (mkDotGraph g nshow eshow) Xlib
 
 drawTopologyX' :: Topology -> IO ()
-drawTopologyX' (Topology g) = printGraph g show show -- runGraphvizCanvas Dot (mkDotGraph g (show, show)) Xlib
+drawTopologyX' topo = printGraph g show show -- runGraphvizCanvas Dot (mkDotGraph g (show, show)) Xlib
+  where g = unTopology topo
 
 {-
 drawFlowTop :: FlowTopology -> IO ()
@@ -111,37 +142,52 @@ class DrawTopology a where
       drawTopology :: Topology -> Envs a ->  IO ()
 
 instance DrawTopology [Double] where
-         drawTopology = drawAbsTopology f
-           where f (x, Just ys) = show x ++ " = " ++ (concatMap (printf "%.3f    ") ys)
+         drawTopology = drawAbsTopology f formatStCont
+           where f (x, Just ys) = show x ++ " = " ++ (concatMap (printf "%.6f    ") ys)
                  f (x, Nothing) = show x ++ " = ♥"
+                 formatStCont (Just ys) = concatMap (printf "%.6f    ") ys
+                 formatStCont Nothing = "♥"
 
 instance (Integral a) => DrawTopology [Ratio a] where
-         drawTopology = drawAbsTopology f
+         drawTopology = drawAbsTopology f formatStCont
            where f (x, Just ys) = show x ++ " = " ++ (concatMap show ys)
                  f (x, Nothing) = show x ++ " = ♥"
+                 formatStCont (Just ys) = concatMap show ys
+                 formatStCont Nothing = "♥"
 
 instance DrawTopology [InTerm Val] where
-         drawTopology = drawAbsTopology f
+         drawTopology = drawAbsTopology f formatStCont
            where f (x, Just ys) = show x ++ " = " ++ (concatMap showInTerm ys)
                  f (x, Nothing) = show x ++ " = ♥"
+                 formatStCont (Just ys) = concatMap showInTerm ys
+                 formatStCont Nothing = "♥"
 
 
-drawAbsTopology :: (Show a) => ((Line, Maybe a) -> String) -> Topology -> Envs a ->  IO ()
-drawAbsTopology f (Topology g) (Envs p dp e de x v) = printGraph g nshow eshow
+
+drawAbsTopology :: (Show a) => ((Line, Maybe a) -> String) -> (Maybe a -> String) -> Topology -> Envs a ->  IO ()
+drawAbsTopology f content (Topology g) (Envs p dp e de x v st) = printGraph g nshow eshow
   where eshow ps = L.intercalate "\n" $ map f $ mkLst ps
-        nshow (num, NLabel sec rec nid ty) = "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\n" ++ 
-                                             "Section: " ++ show sec ++ "\n" ++ 
-                                             "Record: " ++ show rec ++ "\n" ++ 
-                                             "Type: " ++ show ty
+        nshow (num, NLabel sec rec nid ty) = 
+          "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\n" ++
+          "Type: " ++ show ty ++ stContent ty
+            where stContent (InitStorage n) = "\nContent: " ++ content (M.lookup (StorageIdx sec rec n) st)
+                  stContent (Storage n) = "\nContent: " ++ content (M.lookup (StorageIdx sec rec n) st)
+                  stContent _ = ""
 
         node n = nodeNLabel (fromJust (lab g n))
-        mkLst (u, v, _) = [ (PLine (node u) (node v), M.lookup (PowerIdx usec urec uid vid) p), 
-                            (XLine (node u) (node v), M.lookup (XIdx usec urec uid vid) x),
-                            (NLine (node u) (node v), M.lookup (EtaIdx usec urec uid vid) e),
-                            (XLine (node v) (node u), M.lookup (XIdx vsec vrec vid uid) x),
-                            (PLine (node v) (node u), M.lookup (PowerIdx vsec vrec vid uid) p) ]
-                          where NLabel usec urec uid _ = fromJust $ lab g u
-                                NLabel vsec vrec vid _ = fromJust $ lab g v
+        mkLst (uid, vid, l) 
+          | isOriginalEdge l = [ (PLine uid vid, M.lookup (PowerIdx usec urec uid vid) p), 
+                                 (XLine uid vid, M.lookup (XIdx usec urec uid vid) x),
+                                 (NLine uid vid, M.lookup (EtaIdx usec urec uid vid) e),
+                                 (XLine vid uid, M.lookup (XIdx vsec vrec vid uid) x),
+                                 (PLine vid uid, M.lookup (PowerIdx vsec vrec vid uid) p) ]
+          | isInnerStorageEdge l = [ (PLine vid uid, M.lookup (PowerIdx vsec vrec vid uid) p) ]
+          | otherwise = [ (PLine uid vid, M.lookup (PowerIdx usec urec uid vid) p),
+                          (XLine uid vid, M.lookup (XIdx usec urec uid vid) x),
+                          (PLine vid uid, M.lookup (PowerIdx vsec vrec vid uid) p) ]
+          where NLabel usec urec _ _ = fromJust $ lab g uid
+                NLabel vsec vrec _ _ = fromJust $ lab g vid
+
 {-
 instance DrawTopology InTerm where
          drawTopology = drawAbsTopology f
@@ -204,3 +250,4 @@ wait (Async m) = readMVar m
 
 drawAll :: [IO a] -> IO ()
 drawAll ds = mapM async ds >>= mapM wait >> return ()
+

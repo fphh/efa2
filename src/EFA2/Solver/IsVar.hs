@@ -120,6 +120,7 @@ isCompoundTerm (DPower _) = False
 isCompoundTerm (DEta _) = False
 isCompoundTerm (X _) = False
 isCompoundTerm (Var _) = False
+isCompoundTerm (Store _) = False
 isCompoundTerm _ = True
 
 -- | True for yntactic variables.

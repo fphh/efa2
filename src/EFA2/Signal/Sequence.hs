@@ -20,6 +20,8 @@ import EFA2.Signal.SequenceData
 
 import EFA2.Utils.Utils
 
+import Debug.Trace
+
 
 data StepType = LeavesZeroStep
               | BecomesZeroStep
@@ -41,13 +43,8 @@ type XSig = Container XSample
 
 -- | From PowerRecord
 fromFlowRecord :: SecIdx -> RecIdx -> FlowRecord -> Envs FSignal
-fromFlowRecord (SecIdx secIdx) (RecIdx recIdx) fRec@(FlowRecord dTime flowMap) = 
-  Envs { powerMap = M.fromList $ map f (M.toList flowMap),
-         dpowerMap = M.empty,
-         etaMap = M.empty,
-         detaMap = M.empty,
-         xMap = M.empty,
-         varMap = M.empty } --dtime = dTime,
+fromFlowRecord (SecIdx secIdx) (RecIdx recIdx) fRec@(FlowRecord dTime flowMap) =
+  emptyEnv { powerMap = M.fromList $ map f (M.toList flowMap) }
   where f ((PPosIdx idx1 idx2), (flowSig)) = ((PowerIdx secIdx recIdx idx1 idx2), flowSig)    
 
 -- | Generate Sequence Flow 
@@ -68,6 +65,7 @@ makeSequence pRec topo = (sqEnvs, sqTopo)
         sqFlowTops = genSequFlowTops topo sqFStRec
         sqSecTops = genSectionTopology sqFlowTops
         sqTopo = mkSequenceTopology sqSecTops
+
 
 -- | Pre-Integrate all Signals in Record  
 recFullIntegrate :: PowerRecord -> FlowRecord   

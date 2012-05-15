@@ -13,12 +13,16 @@ import qualified Data.Map as M
 --
 -- * a section number
 -- * a data record number
--- * two numbers to identify a place in the topology
+-- * two numbers to identify a place in the topology 
+--   (for equation generation, we use the underlying fgl node ids.
 data PowerIdx = PowerIdx !Int !Int !Int !Int deriving (Show, Ord, Eq)
 data EtaIdx = EtaIdx !Int !Int !Int !Int deriving  (Show)
 data XIdx = XIdx !Int !Int !Int !Int deriving (Show, Ord, Eq)
 data DEtaIdx = DEtaIdx !Int !Int !Int !Int deriving  (Show)
 data DPowerIdx = DPowerIdx !Int !Int !Int !Int deriving (Show, Ord, Eq)
+
+-- | Section number, record number, storage number.
+data StorageIdx = StorageIdx !Int !Int !Int deriving (Show, Ord, Eq)
 
 -- | This variable type can be used to express arbitrary relations.
 -- You can variables also make dependent on section and record.
@@ -57,6 +61,7 @@ type DPowerMap a = M.Map DPowerIdx a
 type DEtaMap a = M.Map DEtaIdx a
 type XMap a = M.Map XIdx a
 type VarMap a = M.Map VarIdx a
+type StorageMap a = M.Map StorageIdx a
 
 
 data Envs a = Envs { powerMap :: PowerMap a,
@@ -64,5 +69,10 @@ data Envs a = Envs { powerMap :: PowerMap a,
                      etaMap :: EtaMap a,
                      detaMap :: DEtaMap a,
                      xMap :: XMap a,
-                     varMap :: VarMap a } deriving (Show)
+                     varMap :: VarMap a,
+                     storageMap :: StorageMap a } deriving (Show)
 
+
+
+emptyEnv :: Envs a
+emptyEnv = Envs M.empty M.empty M.empty M.empty M.empty M.empty M.empty

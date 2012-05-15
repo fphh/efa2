@@ -55,7 +55,7 @@ test = mkGraph nodes edges
 main :: IO ()
 main = do
 
-  Record time sigMap <- modelicaCSVImport "./modThreeWay_sto.RecA_res.csv"
+  --Record time sigMap <- modelicaCSVImport "./modThreeWay_sto.RecA_res.csv"
   
   let
 
@@ -70,19 +70,21 @@ main = do
 -}
 
       --time = [0, 0, 1, 1]
-      s01 = [0, 1, 1, 0]
-      s10 = [0, 0.4, 0.4, 0]
+
+      s01 = [0, 2, 2, 0]
+      s10 = [0, 0.8, 0.8, 0]
       s12 = [0.3, 0.3, 0.3, 0.3]
       s21 = [0.2, 0.2, 0.2, 0.2]
-      s13 = [0, 0.1, 0.1, 0]
-      s31 = [0, 0.05, 0.05, 0]
+      s13 = [0, 0.5, 0.5, 0]
+      s31 = [0, 0.25, 0.25, 0]
+
       --time' = [1, 2, 2]
-      s01' = [0, 0, 0]
-      s10' = [0, 0, 0]
-      s12' = [0.3, 0.3, 0.3]
-      s21' = [0.2, 0.2, 0.2]
-      s13' = [-0.3, -0.3, -0.3]
-      s31' = [-0.6, -0.6, -0.6]
+      s01' = [0, 0]
+      s10' = [0, 0]
+      s12' = [0.3, 0.3]
+      s21' = [0.2, 0.2]
+      s13' = [-0.3, -0.3]
+      s31' = [-0.6, -0.6]
       n = 3
       --dtime = replicate n [0, 1, 0]
       --time = foldl (+) 0 dtime
@@ -102,8 +104,9 @@ main = do
 
 
       --TheGraph sqTopo sigs = loop
+      --storage0 = PowerIdx (-1) 0 24 25
       storage0 = PowerIdx (-1) 0 24 25
-      --storage0 = PowerIdx (-1) 0 64 65
+      --storage0 = PowerIdx (-1) 0 16 17
 
       (sqEnvs', ts') = makeAllEquations sqTopo sqEnvs
       --ts = envToEqTerms sigs ++ mkEdgeEq sqTopo ++ mkNodeEq sqTopo
@@ -115,7 +118,12 @@ main = do
       (given, noVariables, givExt, rest) = splitTerms isV ts
       ho = hornOrder isV givExt rest
       dirs = directEquations isV ho
-      envs = emptyEnv { powerMap = M.insert storage0 [3.0] sigs }
+
+      -- envs = Envs (M.insert storage0 [3.0] sigs) M.empty M.empty M.empty M.empty M.empty
+      f x | x < 0 = -x
+      f x = x
+      envs = emptyEnv { powerMap = M.insert storage0 [3.0] (M.map (map f) sigs) }
+
 
       gd = map (eqToInTerm envs) (given ++ dirs)
 
@@ -124,11 +132,11 @@ main = do
       dirg = makeDirTopology sqTopo
 
   --putStrLn (showEqTerms ts)
+ -- putStrLn (showInTerms gd)
   --print sigs
   --print res
   drawTopology sqTopo res
   --print sqTopo
-
 
  
   --drawTopologyX' sqTopo
