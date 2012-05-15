@@ -44,11 +44,19 @@ instance DZipWith (Data Nil) (Data Nil) d1 d2 d3 where
          dzipWith f (Data (D0 x)) (Data (D0 y)) = Data $ D0 $ f x y 
 
 -- 0d - 1d
-instance (VFunctor d2 d3 v1) => DZipWith (Data Nil) (Data (v1 :> Nil))  d1 d2 d3  where
-         dzipWith f  (Data (D0 x)) (Data (D1 y)) = Data $ D1 $ vmap (f x) y 
+--instance (VFunctor d2 d3 v1) => DZipWith (Data Nil) (Data (v1 :> Nil))  d1 d2 d3  where
+--         dzipWith f  (Data (D0 x)) (Data (D1 y)) = Data $ D1 $ vmap (f x) y 
+
+-- 1d - 0d
+instance (VFunctor d1 d2 v1) => DZipWith (Data (v1 :> Nil)) (Data Nil) d1 d2 d3  where
+         dzipWith f  (Data (D1 x)) (Data (D0 y)) = Data $ D1 $ vmap (f y) x 
 
 -- 0d - 2d
 instance (VFunctor d2 d3 v1,VFunctor (v1 d2) (v1 d3) v2) => DZipWith (Data Nil) (Data (v2 :> v1 :> Nil))  d1 d2 d3  where
+         dzipWith f  (Data (D0 x)) (Data (D2 y)) = Data $ D2 $ vmap (vmap (f x)) y 
+
+-- 2d - 0d
+instance (VFunctor d2 d3 v1,VFunctor (v1 d2) (v1 d3) v2) => DZipWith  (Data (v2 :> v1 :> Nil))  (Data Nil) d1 d2 d3  where
          dzipWith f  (Data (D0 x)) (Data (D2 y)) = Data $ D2 $ vmap (vmap (f x)) y 
 
 -- 1d - 1d
@@ -57,6 +65,10 @@ instance (VZipper d1 d2 d3 v1) => DZipWith (Data (v1 :> Nil)) (Data (v1 :> Nil))
 
 -- 1d - 2d
 instance (VZipper d1 d2 d3 v1, VFunctor (v1 d2) (v1 d3) v2) => DZipWith (Data (v1 :> Nil)) (Data (v2 :> v1 :> Nil))  d1 d2 d3  where
+         dzipWith f  (Data (D1 x)) (Data (D2 y)) = Data $ D2 $ vmap (vzipWith f x) y 
+
+-- 2d - 1d
+instance (VZipper d1 d2 d3 v1, VFunctor (v1 d2) (v1 d3) v2) => DZipWith (Data (v2 :> v1 :> Nil)) (Data (v1 :> Nil)) d1 d2 d3  where
          dzipWith f  (Data (D1 x)) (Data (D2 y)) = Data $ D2 $ vmap (vzipWith f x) y 
 
 -- 2d - 2d

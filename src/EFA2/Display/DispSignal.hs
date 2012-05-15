@@ -29,15 +29,19 @@ dispRange x y t = disp x f s  ++ " - " ++ disp y f s  ++ " " ++ show u
 class SDisplay a where
   sdisp :: a -> String
 
-instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d,VSingleton y d) => SDisplay (TC Signal t (Data (y :> Nil) d)) where 
-  sdisp x@(TC dat)  = "Signal - " ++ tdisp x ++ ": " ++ dispRange dmin dmax dtyp ++ " " ++ udisp x  
+instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d,VSingleton v1 d) => SDisplay (TC Signal t (Data (v1 :> Nil) d)) where 
+  sdisp x@(TC (Data (D1 v)))  = "Signal-D1 " ++ tdisp x ++ ": " ++ dispRange dmin dmax dtyp 
     where dtyp = getDisplayType x
+          dmin = vminimum v
+          dmax = vmaximum v
+          
 --        r = dgetRange dat 
 --        (Data (D0 (dmin, dmax))) = r
 -- DGetRange (Data (y :> Nil)) (Data Nil) d,          
-          (Data (D0 dmin)) = dminimum dat
-          (Data (D0 dmax)) = dmaximum dat       
 
-
-  
+instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d,VSingleton v1 d,VSingleton v2 (v1 d)) => SDisplay (TC Signal t (Data (v2 :> v1 :> Nil) d)) where 
+  sdisp x@(TC(Data (D2 v)))  = "Signal-D2 " ++ tdisp x ++ ": " ++ dispRange dmin dmax dtyp 
+    where dtyp = getDisplayType x
+          dmin = vminimum $ vminimum v
+          dmax = vmaximum $ vminimum v
  

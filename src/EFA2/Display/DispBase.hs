@@ -22,6 +22,7 @@ instance Show DisplayUnit where
   show Unit_kW   = "kW"
   show Unit_Percent = "%"
   show Unit_None = "/"
+  show Unit_Sec = "s"
 
 -- | get display scale per Unit 
 getUnitScale :: DisplayUnit -> UnitScale  
@@ -29,6 +30,7 @@ getUnitScale Unit_kWh = UnitScale (1/1000/3600)
 getUnitScale Unit_None = UnitScale 1
 getUnitScale Unit_Percent = UnitScale 100
 getUnitScale Unit_Sec = UnitScale 1
+getUnitScale Unit_kW = UnitScale (1/1000)
 getUnitScale u = error ("Error in getUnitScale -- no scale defined - Unit: " ++ show u)
 
  -- ============ Setting - Switch global display length =============

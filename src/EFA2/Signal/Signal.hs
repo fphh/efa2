@@ -33,6 +33,12 @@ instance SArith Scalar FSample FSample
 instance SArith Scalar FDistrib FDistrib
 instance SArith Scalar FClass FClass
 
+instance SArith Signal Scalar Signal
+instance SArith FSignal Scalar FSignal
+instance SArith FSample Scalar FSample
+instance SArith FDistrib Scalar FDistrib
+instance SArith FClass Scalar FClass
+
 instance SArith Signal Signal Signal
 instance SArith FSignal FSignal FSignal
 instance SArith FSample FSample FSample

@@ -41,7 +41,8 @@ getDisplayUnit Typ_M = Unit_Percent
 getDisplayUnit Typ_T = Unit_Sec
 getDisplayUnit Typ_X = Unit_Percent
 getDisplayUnit Typ_Y = Unit_Percent
-getDisplayUnit _ = Unit_None
+getDisplayUnit Typ_P = Unit_kW
+getDisplayUnit Typ_F = Unit_kWh
 
 
 -- | Define Display Format for each unit depending on selected display length
@@ -51,23 +52,23 @@ getDisplayFormat _ _ _ = getDefaultFormat
 
 
 tdisp :: (DeltaDisp t,PartDisp t,  DisplayTyp t) => TC s t d -> String 
-tdisp x = tddisp x ++ "_" ++ dispPhTyp (getDisplayType x) ++ "_" ++ tpdisp x
+tdisp x = tddisp x  ++ dispPhTyp (getDisplayType x) ++ tpdisp x
   
 udisp :: (DeltaDisp t,PartDisp t,  DisplayTyp t) => TC s t d -> String 
 udisp x = show $ getDisplayUnit (getDisplayType x)
 
 
 -- Class to Display Partial Flag
-class DeltaDisp t where   tddisp :: TC s t d -> String 
-instance DeltaDisp (Typ d t Tt) where tddisp x = "Total"
-instance DeltaDisp (Typ d t Pt) where tddisp x = "Partial"
+class PartDisp t where   tpdisp :: TC s t d -> String 
+instance PartDisp (Typ d t Tt) where tpdisp x = "_total"
+instance PartDisp (Typ d t Pt) where tpdisp x = "_partial"
 
 -- Class to Display Delta Flag
-class PartDisp t where tpdisp :: TC s t d -> String 
-instance PartDisp (Typ A t p) where tpdisp x = "A"
-instance PartDisp (Typ D t p) where tpdisp x = "D"
-instance PartDisp (Typ DD t p) where tpdisp x = "DD"
-instance PartDisp (Typ DDD t p) where tpdisp x = "DDD"
+class DeltaDisp t where tddisp :: TC s t d -> String 
+instance DeltaDisp (Typ A t p) where tddisp x = ""
+instance DeltaDisp (Typ D t p) where tddisp x = "d"
+instance DeltaDisp (Typ DD t p) where tddisp x = "dd"
+instance DeltaDisp (Typ DDD t p) where tddisp x = "ddd"
   
   
 dispPhTyp ::  DisplayType -> String
