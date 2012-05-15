@@ -61,23 +61,23 @@ instance DZipWith (Data Nil) (Data Nil) d1 d2 d3 where
          dzipWith f (Data (D0 x)) (Data (D0 y)) = Data $ D0 $ f x y 
 
 -- 0d - 1d
-instance (VFunctor d2 d3 v1) => DZipWith (Data Nil) (Data (v1 :> Nil))  d1 d2 d3  where
+instance (VFunctor v1 d2 d3) => DZipWith (Data Nil) (Data (v1 :> Nil))  d1 d2 d3  where
          dzipWith f  (Data (D0 x)) (Data (D1 y)) = Data $ D1 $ vmap (f x) y 
 
 -- 0d - 2d
-instance (VFunctor d2 d3 v1,VFunctor (v1 d2) (v1 d3) v2) => DZipWith (Data Nil) (Data (v2 :> v1 :> Nil))  d1 d2 d3  where
+instance (VFunctor v1 d2 d3,VFunctor v2 (v1 d2) (v1 d3)) => DZipWith (Data Nil) (Data (v2 :> v1 :> Nil))  d1 d2 d3  where
          dzipWith f  (Data (D0 x)) (Data (D2 y)) = Data $ D2 $ vmap (vmap (f x)) y 
 
 -- 1d - 1d
-instance (VZipper d1 d2 d3 v1) => DZipWith (Data (v1 :> Nil)) (Data (v1 :> Nil))  d1 d2 d3  where
+instance (VZipper v1 d1 d2 d3) => DZipWith (Data (v1 :> Nil)) (Data (v1 :> Nil))  d1 d2 d3  where
          dzipWith f  (Data (D1 x)) (Data (D1 y)) = Data $ D1 $ vzipWith f x y 
 
 -- 1d - 2d
-instance (VZipper d1 d2 d3 v1, VFunctor (v1 d2) (v1 d3) v2) => DZipWith (Data (v1 :> Nil)) (Data (v2 :> v1 :> Nil))  d1 d2 d3  where
+instance (VZipper v1 d1 d2 d3, VFunctor v2 (v1 d2) (v1 d3) ) => DZipWith (Data (v1 :> Nil)) (Data (v2 :> v1 :> Nil))  d1 d2 d3  where
          dzipWith f  (Data (D1 x)) (Data (D2 y)) = Data $ D2 $ vmap (vzipWith f x) y 
 
 -- 2d - 2d
-instance (VZipper d1 d2 d3 v1, VZipper (v1 d1) (v1 d2) (v1 d3) v2) => DZipWith (Data (v2 :> v1 :> Nil)) (Data (v2 :> v1 :> Nil))  d1 d2 d3  where
+instance (VZipper v1 d1 d2 d3, VZipper v2 (v1 d1) (v1 d2) (v1 d3)) => DZipWith (Data (v2 :> v1 :> Nil)) (Data (v2 :> v1 :> Nil))  d1 d2 d3  where
          dzipWith f  (Data (D2 x)) (Data (D2 y)) = Data $ D2 $ vzipWith (vzipWith f) x y 
 
 
@@ -96,12 +96,12 @@ instance CrossWith (Data (v1 :> Nil)) (Data (v1 :> Nil))  (Data (v1 :> v1 :> Nil
 
 ----------------------------------------------------------
 -- fold Functions
-         
-class DFold c ca d where
+{-         
+class DFold c ca d acc where
       dfoldl :: (acc -> d -> acc) -> ca acc -> c d -> ca acc 
       dfoldr :: (d -> acc -> acc) -> ca acc -> c d -> ca acc
 
-instance  (VFold y d) => DFold (Data (y :> Nil))  (Data Nil) d where
+instance  (VFunctor y d1 d2) => DFold (Data (y :> Nil))  (Data Nil) d acc where
          dfoldl f (Data ( D0 acc)) (Data (D1 x)) = Data $ D0 $ vfoldl f acc x
          dfoldr f (Data (D0 acc)) (Data (D1 x)) = Data $ D0 $ vfoldr f acc x
 
@@ -111,10 +111,10 @@ instance  (VFold y d) => DFold (Data (y :> Nil))  (Data Nil) d where
 class DGetRange c1 c2 d | c1 -> c2 where
   dgetRange :: c1 d -> c2 (d,d) 
   
-instance  (Bounded d,Ord d,VFold y d) => DGetRange (Data (y :> Nil)) (Data Nil) d where 
+instance  (Bounded d,Ord d,VFunctor y d) => DGetRange (Data (y :> Nil)) (Data Nil) d where 
   dgetRange x = dfoldl f (Data $ D0 $ (minBound, maxBound)) x
     where f (omin, omax) x' = (max omin x', min omax x') 
-        
+-}        
 ----------------------------------------------------------
 -- get data Range
         

@@ -83,7 +83,7 @@ mapGraph f g = map f (zip3 ins ls outs)
         ins = map (map (fromJust . lab g) . pre g) ns
         outs = map (map (fromJust . lab g) . suc g) ns
 
-
+{-
 class ContainerArithSingleton cont a where
       csingleton :: a -> cont a
       cappend :: cont a -> cont a -> cont a
@@ -143,7 +143,7 @@ instance (UV.Unbox a, UV.Unbox b) => ContainerArith UV.Vector a b where
 
 instance (UV.Unbox a, UV.Unbox b, UV.Unbox c) => ContainerArithZip UV.Vector a b c where
          czipWith = UV.zipWith
-
+-}
 
 -- | mapping a function over a list with using to neighbouring elements 
 -- dmap :: (a -> a -> b) -> [a] -> [b]
