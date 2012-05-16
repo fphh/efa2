@@ -26,7 +26,7 @@ newtype Value a = Value a -- deriving Show
   
 ------------------------------------------------------------
 -- | Functor
-class VFunctor vec a b where
+class VWalker vec a b where
       vmap :: (a -> b) -> vec a -> vec b
       vfoldr :: (a -> b -> b) -> b -> vec a -> b
       vfoldl :: (a -> b -> a) -> a -> vec b -> a
@@ -34,7 +34,7 @@ class VFunctor vec a b where
       vdmap :: (a -> a -> b) -> vec a -> vec b
       vdmap' :: (a -> a -> b) -> vec a -> vec b
 
-instance VFunctor [] a b where
+instance VWalker [] a b where
          vmap = map
          vfoldr = foldr
          vfoldl = L.foldl'
@@ -42,7 +42,7 @@ instance VFunctor [] a b where
          vdmap f l = zipWith f (init l) (tail l)
          vdmap' f l = zipWith f (tail l) (init l)
 
-instance (UV.Unbox a, UV.Unbox b) => VFunctor UV.Vector a b where
+instance (UV.Unbox a, UV.Unbox b) => VWalker UV.Vector a b where
          vmap = UV.map
          vfoldr = UV.foldr
          vfoldl = UV.foldl'
@@ -50,7 +50,7 @@ instance (UV.Unbox a, UV.Unbox b) => VFunctor UV.Vector a b where
          vdmap f l = UV.zipWith f (UV.init l) (UV.tail l)  
          vdmap' f l = UV.zipWith f (UV.tail l) (UV.init l)
 
-instance VFunctor V.Vector a b where
+instance VWalker V.Vector a b where
          vmap = V.map
          vfoldr = V.foldr
          vfoldl = V.foldl'
