@@ -49,6 +49,14 @@ data D -- Delta
 data DD -- Delta Delta
 data DDD -- Delta Delta Delta
 
+--data Neutral
+--data Zero
+--data Succ a
+
+--type A = Zero
+--type D = Succ Zero
+--type DD = Succ (Succ Zero)
+
 -------------------------------------
 -- | Partial Flag
 
@@ -102,6 +110,13 @@ class TSum t1 t2 t3 |  t1 t2 -> t3, t2 t3 -> t1, t1 t3 -> t1
   
 instance TSum (Typ A t p) (Typ D t p) (Typ A t p)
 instance TSum (Typ D t p) (Typ A t p) (Typ A t p)
+--instance TSum (Typ Zero t p) (Typ (Succ Zero) t p) (Typ Zero t p)
+
+--instance (TSum (Typ d t p) (Type (Succ d) t p) (Type d t p)) => TSum (Typ (Succ d) t p) (Typ (Succ (Succ d)) t p) (Typ (Succ d) t p)
+
+--instance TSum (Typ DD t p) (Typ D t p) (Typ D t p)
+
+
 
 instance TSum (Typ D t p) (Typ DD t p) (Typ D t p)
 instance TSum (Typ DD t p) (Typ D t p) (Typ D t p)

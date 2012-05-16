@@ -79,4 +79,4 @@ main = do
   putStrLn (showInTerms gd)
 
   putStrLn (show $ length gd)
-  --drawTopology sqTopo res
+  drawTopology sqTopo res

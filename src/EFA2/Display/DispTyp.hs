@@ -48,6 +48,9 @@ getDisplayUnit Typ_F = Unit_kWh
 -- | Define Display Format for each unit depending on selected display length
 getDisplayFormat ::  DisplayLength -> DisplayType -> DisplayUnit -> DisplayFormat
 getDisplayFormat Middle Typ_E Unit_kWh = DisplayFormat "%6.7f"
+getDisplayFormat Middle Typ_P Unit_kWh = DisplayFormat "%6.7f"
+
+
 getDisplayFormat _ _ _ = getDefaultFormat
 
 

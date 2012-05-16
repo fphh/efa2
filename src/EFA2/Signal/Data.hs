@@ -23,10 +23,10 @@ data Nil' c = Nil' deriving (Show)
 type Nil = Nil' :> Nil'
 
 instance (Show v0) => Show (Nil v0) where
-         show (D0 x) = show x
+         show (D0 x) = "D0 (" ++ show x ++ ")"
 
 instance (Show (v1 v0)) => Show ((v1 :> Nil) v0) where
-         show (D1 x) = show x
+         show (D1 x) = "D1 (" ++ show x ++ ")"
 
 instance (Show (v2 (v1 v0))) => Show ((v2 :> v1 :> Nil) v0) where
          show (D2 x) = show x

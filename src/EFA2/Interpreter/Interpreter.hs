@@ -58,33 +58,33 @@ showInTerm (InEqual s t) = showInTerm s ++ " = " ++ showInTerm t
 showInTerms :: (Show a) => [InTerm a] -> String
 showInTerms ts = L.intercalate "\n" $ map showInTerm ts
 
-interpretLhs :: (Arith a, Show a) => Envs a -> InTerm a -> a
-interpretLhs _ (InConst xs) = xs
-interpretLhs _ (InGiven xs) = xs
-interpretLhs envs (PIdx idx) = powerMap envs M.! idx
-interpretLhs envs (EIdx idx) = etaMap envs M.! idx
-interpretLhs envs (DPIdx idx) = dpowerMap envs M.! idx
-interpretLhs envs (DEIdx idx) = detaMap envs M.! idx
-interpretLhs envs (ScaleIdx idx) = xMap envs M.! idx
-interpretLhs envs (VIdx idx) = varMap envs M.! idx
-interpretLhs envs (SIdx idx) = storageMap envs M.! idx
-interpretLhs envs (InMinus t) = neg (interpretLhs envs t)
-interpretLhs envs (InRecip t) = rec (interpretLhs envs t)
-interpretLhs envs (InAdd s t) = (interpretLhs envs s) .+ (interpretLhs envs t)
-interpretLhs envs (InMult s t) = (interpretLhs envs s) .* (interpretLhs envs t)
-interpretLhs _ t = error (show t)
+interpretRhs :: (Arith a, Show a) => Envs a -> InTerm a -> a
+interpretRhs _ (InConst xs) = xs
+interpretRhs _ (InGiven xs) = xs
+interpretRhs envs (PIdx idx) = powerMap envs M.! idx
+interpretRhs envs (EIdx idx) = etaMap envs M.! idx
+interpretRhs envs (DPIdx idx) = dpowerMap envs M.! idx
+interpretRhs envs (DEIdx idx) = detaMap envs M.! idx
+interpretRhs envs (ScaleIdx idx) = xMap envs M.! idx
+interpretRhs envs (VIdx idx) = varMap envs M.! idx
+interpretRhs envs (SIdx idx) = storageMap envs M.! idx
+interpretRhs envs (InMinus t) = neg (interpretRhs envs t)
+interpretRhs envs (InRecip t) = rec (interpretRhs envs t)
+interpretRhs envs (InAdd s t) = (interpretRhs envs s) .+ (interpretRhs envs t)
+interpretRhs envs (InMult s t) = (interpretRhs envs s) .* (interpretRhs envs t)
+interpretRhs _ t = error (show t)
 
 insert :: (Arith a, Show a, Ord k) => k -> Envs a -> InTerm a -> M.Map k a -> M.Map k a
-insert idx envs lhs m = M.insert idx (interpretLhs envs lhs) m
+insert idx envs rhs m = M.insert idx (interpretRhs envs rhs) m
 
 interpretEq :: (Show a, Arith a) => Envs a -> InTerm a -> Envs a
-interpretEq envs (InEqual (PIdx idx) lhs) = envs { powerMap = insert idx envs lhs (powerMap envs) }
-interpretEq envs (InEqual (EIdx idx) lhs) = envs { etaMap = insert idx envs lhs (etaMap envs) }
-interpretEq envs (InEqual (DPIdx idx) lhs) = envs { dpowerMap = insert idx envs lhs (dpowerMap envs) }
-interpretEq envs (InEqual (DEIdx idx) lhs) = envs { detaMap = insert idx envs lhs (detaMap envs) }
-interpretEq envs (InEqual (ScaleIdx idx) lhs) = envs { xMap = insert idx envs lhs (xMap envs) }
-interpretEq envs (InEqual (VIdx idx) lhs) = envs { varMap = insert idx envs lhs (varMap envs) }
-interpretEq envs (InEqual (SIdx idx) lhs) = envs { storageMap = insert idx envs lhs (storageMap envs) }
+interpretEq envs (InEqual (PIdx idx) rhs) = envs { powerMap = insert idx envs rhs (powerMap envs) }
+interpretEq envs (InEqual (EIdx idx) rhs) = envs { etaMap = insert idx envs rhs (etaMap envs) }
+interpretEq envs (InEqual (DPIdx idx) rhs) = envs { dpowerMap = insert idx envs rhs (dpowerMap envs) }
+interpretEq envs (InEqual (DEIdx idx) rhs) = envs { detaMap = insert idx envs rhs (detaMap envs) }
+interpretEq envs (InEqual (ScaleIdx idx) rhs) = envs { xMap = insert idx envs rhs (xMap envs) }
+interpretEq envs (InEqual (VIdx idx) rhs) = envs { varMap = insert idx envs rhs (varMap envs) }
+interpretEq envs (InEqual (SIdx idx) rhs) = envs { storageMap = insert idx envs rhs (storageMap envs) }
 
 
 interpretFromScratch :: (Show a, Arith a) => [InTerm [a]] -> Envs [a]
