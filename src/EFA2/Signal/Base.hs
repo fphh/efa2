@@ -8,7 +8,7 @@ module EFA2.Signal.Base (module EFA2.Signal.Base) where
 ----------------------------------------------------------
 -- | 1. Data types
 type Val = Double -- or Ratio
-data Sign = PSign | ZSign | NSign deriving (Show, Eq, Ord)
+
 
 
 -- | Calculation classes for basic Datatypes
@@ -56,8 +56,20 @@ instance DEq Val Val Bool where
   (..<)   x y = x < y
 
 
+-- Own User Defined Sign Variable
+data Sign = PSign | ZSign | NSign deriving (Show, Eq)
+-- data Sign = PSign | ZSign | NSign deriving (Show, Eq, Ord)
 
-sign :: Val -> Sign 
-sign x | x == 0 = ZSign
+-- | determine Signal Sign  
+sign :: (Eq a, Ord a, Num a) => a -> Sign
 sign x | x > 0 = PSign
-sign x | x < 0 = NSign
+       | x == 0 = ZSign -- TODO add intervalls later on Zero - Detection       
+       | x < 0 = NSign
+
+
+type PSample = Val
+type TSample = Val
+type DTSample = Val -- Time step
+type FPSample = Val -- Flow Power
+
+

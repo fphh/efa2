@@ -40,6 +40,9 @@ import EFA2.Example.Loop
 import EFA2.Example.SymSig
 
 
+import EFA2.Signal.Signal
+
+
 -- define topology 
 
 topo :: Topology
@@ -71,7 +74,7 @@ main = do
 
       --time = [0, 0, 1, 1]
 
-      s01 = [0, 2, 2, 0]
+      s01 = sfromList [0, 2, 2, 0] :: TC Signal (Typ A P Tt) (UVec Val)
       s10 = [0, 0.8, 0.8, 0]
       s12 = [0.3, 0.3, 0.3, 0.3]
       s21 = [0.2, 0.2, 0.2, 0.2]

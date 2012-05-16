@@ -123,7 +123,7 @@ getLEdge g from to =
   where is = inn g to
         f (x, _, _) = x == from
 
-
+{-
 class ContainerArithSingleton cont a where
       csingleton :: a -> cont a
       cappend :: cont a -> cont a -> cont a
@@ -183,7 +183,7 @@ instance (UV.Unbox a, UV.Unbox b) => ContainerArith UV.Vector a b where
 
 instance (UV.Unbox a, UV.Unbox b, UV.Unbox c) => ContainerArithZip UV.Vector a b c where
          czipWith = UV.zipWith
-
+-}
 
 -- | mapping a function over a list with using to neighbouring elements 
 -- dmap :: (a -> a -> b) -> [a] -> [b]

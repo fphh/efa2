@@ -33,7 +33,26 @@ instance (Show (v2 (v1 v0))) => Show ((v2 :> v1 :> Nil) v0) where
 
 instance (Show (v3 (v2 (v1 v0)))) => Show ((v3 :> v2 :> v1 :> Nil) v0) where
          show (D3 x) = show x
+{-
+----------------------------------------------------------
+-- | access class
+         
+class FromToData c d where
+  fromData :: c d -> d
+  toData :: d -> c d 
 
+instance FromToData (Data Nil) d where
+         fromData (Data (D0 x)) = x 
+         toData x = Data $ D0 $ x 
+
+instance FromToData (Data (v1 :> Nil)) d where
+         fromData (Data (D1 x)) = x 
+         toData x = Data $ D1 $ x 
+
+instance FromToData (Data (v2 :> v1 :> Nil)) d where
+         fromData (Data (D0 x)) = x 
+         toData x = Data $ D0 $ x 
+-}
 ----------------------------------------------------------
 -- | Type Synonym Convenience
 
@@ -147,6 +166,12 @@ instance (VWalker v2 (v1 d1) (v1 d2)) => D1Fold (Data (v1 :> Nil)) (Data (v2 :> 
          d1foldl f (Data (D1 x)) (Data (D2 y)) = Data $ D1 $ vfoldl f x y
 
 ----------------------------------------------------------
+-- Data Map
+         
+dmap :: (VWalker c d1 d2) => (d1 -> d2) ->  c d1 -> c d2         
+dmap f x = vmap f x
+
+----------------------------------------------------------
 -- Append Class
 
 class DAppend c1 c2 c3 d | c1 c2 -> c3 where
@@ -215,3 +240,34 @@ class DSingleton c1 c2 d | c1 -> c2 where
 instance (VSingleton y d) => DSingleton (Data (y :> Nil)) (Data Nil) d where
   dmaximum (Data (D1 x)) =  Data $ D0 $ vmaximum x          
   dminimum (Data (D1 x)) =  Data $ D0 $ vminimum x          
+  
+  
+----------------------------------------------------------
+-- From / To List
+  
+class FromToList c d where
+  dfromList :: [d] -> c d
+  dtoList :: c d -> [d] 
+  
+instance  (UV.Unbox d) => FromToList (Data (UV.Vector :> Nil)) d where  
+  dfromList x = Data $ D1 $ UV.fromList x
+  dtoList (Data (D1 x)) = UV.toList x
+  
+instance FromToList (Data (V.Vector :> Nil)) d where  
+  dfromList x = Data $ D1 $ V.fromList x
+  dtoList (Data (D1 x)) = V.toList x  
+  
+instance FromToList (Data ([] :> Nil)) d where  
+  dfromList x = Data $ D1 $ x
+  dtoList (Data (D1 x)) = x
+  
+  
+  
+----------------------------------------------------------
+-- Sum
+  
+class DSum c1 c2 d where  
+  dsum :: c1 d -> c2 d
+  
+instance (VWalker v1 Double Double) => DSum (Data (v1:> Nil)) (Data Nil) Val where
+  dsum x = d0foldl (..+) (Data $ D0 0) x  

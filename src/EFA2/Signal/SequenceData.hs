@@ -4,39 +4,11 @@ module EFA2.Signal.SequenceData where
 
 import qualified Data.Map as M
 
-import EFA2.Interpreter.Arith
+-- import EFA2.Interpreter.Arith
 import EFA2.Topology.TopologyData
 
--- Time Signal & Samples
-type Signal =  Container Val
-
-type Power = Signal
-type Time = Signal
-
-type PSample = Val
-type TSample = Val
-
--- Flow Signals and Samples
-type FSignal = Container Val
-
-type Flow = FSignal 
-type DTime = FSignal  
-  
-type DTSample = Val -- Time step
-type FPSample = Val -- Flow Power
-
-type SignalIdx = Int
-
-
-data Sign = PSign | ZSign | NSign deriving (Show, Eq)
-
--- | determine Signal Sign  
-sign :: (Eq a, Ord a, Num a) => a -> Sign
-sign x | x > 0 = PSign
-       | x == 0 = ZSign -- TODO add intervalls later on Zero - Detection       
-       | x < 0 = NSign
-
-
+import EFA2.Signal.Base
+import EFA2.Signal.Signal
 
 -----------------------------------------------------------------------------------
 -- | Indices for Record, Section and Power Position
@@ -51,9 +23,9 @@ type PPosData a = M.Map PPosIdx a
 
 
 -- | Signal record to contain original time signals 
-data Record = Record Time SignalMap deriving (Show,Eq)
+data Record = Record Time SignalMap deriving (Show)
 data SigId = SigId String deriving (Show, Eq, Ord)
-type SignalMap = M.Map SigId Signal
+type SignalMap = M.Map SigId (UTSignal Val)
 
 -- | Power record to contain power signals assigned to the tree
 type PPosPowers = PPosData Power
