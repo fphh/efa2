@@ -31,32 +31,32 @@ class VWalker vec a b where
       vfoldr :: (a -> b -> b) -> b -> vec a -> b
       vfoldl :: (a -> b -> a) -> a -> vec b -> a
       vzip :: vec a -> vec b -> vec (a, b)
-      vdmap :: (a -> a -> b) -> vec a -> vec b
-      vdmap' :: (a -> a -> b) -> vec a -> vec b
+      vdeltaMap :: (a -> a -> b) -> vec a -> vec b
+      vdeltaMap' :: (a -> a -> b) -> vec a -> vec b
 
 instance VWalker [] a b where
          vmap = map
          vfoldr = foldr
          vfoldl = L.foldl'
          vzip = zip
-         vdmap f l = zipWith f (init l) (tail l)
-         vdmap' f l = zipWith f (tail l) (init l)
+         vdeltaMap f l = zipWith f (init l) (tail l)
+         vdeltaMap' f l = zipWith f (tail l) (init l)
 
 instance (UV.Unbox a, UV.Unbox b) => VWalker UV.Vector a b where
          vmap = UV.map
          vfoldr = UV.foldr
          vfoldl = UV.foldl'
          vzip = UV.zip
-         vdmap f l = UV.zipWith f (UV.init l) (UV.tail l)  
-         vdmap' f l = UV.zipWith f (UV.tail l) (UV.init l)
+         vdeltaMap f l = UV.zipWith f (UV.init l) (UV.tail l)  
+         vdeltaMap' f l = UV.zipWith f (UV.tail l) (UV.init l)
 
 instance VWalker V.Vector a b where
          vmap = V.map
          vfoldr = V.foldr
          vfoldl = V.foldl'
          vzip = V.zip
-         vdmap f l = V.zipWith f (V.init l) (V.tail l)  
-         vdmap' f l = V.zipWith f (V.tail l) (V.init l)
+         vdeltaMap f l = V.zipWith f (V.init l) (V.tail l)  
+         vdeltaMap' f l = V.zipWith f (V.tail l) (V.init l)
 
 -- instance VFunctor a b Value where
 --          vmap f (Value x) = Value $ f x
@@ -159,6 +159,7 @@ class VSingleton vec d where
       vhead :: vec d -> d
       vtail :: vec d -> vec d
       vlast :: vec d -> d
+      vinit :: vec d -> vec d
 
 instance (Ord d) => VSingleton V.Vector d where 
          vmaximum x =  V.maximum x
@@ -174,6 +175,7 @@ instance (Ord d) => VSingleton V.Vector d where
          vhead = V.head
          vtail = V.tail
          vlast = V.last
+         vinit = V.init
 
 instance (Ord d, UV.Unbox d) => VSingleton UV.Vector d where 
          vmaximum x = UV.maximum x
@@ -189,6 +191,7 @@ instance (Ord d, UV.Unbox d) => VSingleton UV.Vector d where
          vhead = UV.head
          vtail = UV.tail
          vlast = UV.last
+         vinit = UV.init
 
 instance (Ord d) => VSingleton [] d where 
          vmaximum x = maximum x
@@ -201,6 +204,7 @@ instance (Ord d) => VSingleton [] d where
          vhead = head
          vtail = tail
          vlast = last
+         vinit = init
 
 
 

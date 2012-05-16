@@ -52,6 +52,11 @@ data D -- Delta
 data DD -- Delta Delta
 data DDD -- Delta Delta Delta
 
+class DSucc d1 d2 | d1 -> d2 
+instance DSucc A D
+instance DSucc D DD
+instance DSucc DD DDD
+  
 
 --data Neutral
 --data Zero

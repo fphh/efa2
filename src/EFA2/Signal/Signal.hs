@@ -93,13 +93,18 @@ type FSig2 typ a = TC FSignal typ (Vec2 a)
 
 -- specific
 type UTSignal a = Sig1 (Typ UT UT UT) a
+type FUTSignal = FSig1 (Typ UT UT UT) Val
 
 -- type UTSignal a = Sig1 (Typ UT UT UT) a
-type Power = Sig1 (Typ A P Tt) Val
-type Time = Sig1 (Typ A T Tt) Val
-type Flow = FSig1 (Typ A F Tt) Val
-type DTime = FSig1 (Typ D T Tt) Val 
+type PSig = Sig1 (Typ A P Tt) Val
+type TSig = Sig1 (Typ A T Tt) Val
+type FSig = FSig1 (Typ A F Tt) Val
+type DTSig = FSig1 (Typ D T Tt) Val 
   
+type PVal = Scal (Typ A P Tt) Val
+type TVal = Scal (Typ A T Tt) Val
+type FVal = Scal (Typ A F Tt) Val
+type DTVal = Scal (Typ D T Tt) Val 
 
 type SignalIdx = Int
 
@@ -115,6 +120,8 @@ fromScalar (TC (Data (D0 x))) = x
 toScalar :: d -> TC Scalar typ (Data Nil d) 
 toScalar x = TC $ Data $ D0 x
 
+----------------------------------------------------------
+-- SMap
 
 class SMap s c d1 d2 where
       smap :: (d1 -> d2) -> TC s typ (c d1) -> TC s typ (c d2)
@@ -126,11 +133,50 @@ instance (VWalker c d1 d2) => SMap s c d1 d2 where
 class SFold s1 s2 c1 c2 d1 d2 where
   sfoldl :: (d1 -> d2 -> d1) ->  TC s1 typ (c1 d1) -> TC s2 typ (c2 d2) -> TC s1 typ (c1 d1)  
 
-instance (D0Fold c1 c2 d1 d2) => SFold Signal Scalar c1 c2 d1 d2 where
+instance (D0Fold c1 c2 d1 d2) => SFold Scalar Signal c1 c2 d1 d2 where
   sfoldl f (TC x) (TC y) = TC $ d0foldl f x y 
 
-instance (D0Fold c1 c2 d1 d2) => SFold FSignal Scalar c1 c2 d1 d2 where
+instance (D0Fold c1 c2 d1 d2) => SFold Scalar FSignal c1 c2 d1 d2 where
   sfoldl f (TC x) (TC y) = TC $ d0foldl f x y 
+
+-- geht nicht hier fehlt die typ info !!!
+-- ----------------------------------------------------------
+-- -- sipWith 
+
+-- class SipWith s1 s2 c1 c2 d1 d2 where
+--       sipWith ::  TC s1 typ1 (c1 d1) -> TC s2 typ2 (c1 d2) -> TC s2 typ3 (c1 d2)
+
+----------------------------------------------------------
+-- DeltaMap
+
+class SDeltaMap s1 s2 c1 d1 d2 | s1 -> s2 where
+      sdeltaMap ::  (d1 -> d1 -> d2) -> TC s1 typ1 (c1 d1) -> TC s2 typ2 (c1 d2)
+      sdeltaMap' ::  (d1 -> d1 -> d2) -> TC s1 typ1 (c1 d1) -> TC s2 typ2 (c1 d2)
+
+instance (VWalker v1 d1 d2) => SDeltaMap Signal FSignal (Data (v1 :> Nil)) d1 d2 where
+      sdeltaMap f (TC (Data (D1 x))) = TC $ Data $ D1 $ vdeltaMap f x 
+      sdeltaMap' f (TC (Data (D1 x))) = TC $ Data $ D1 $ vdeltaMap' f x 
+
+----------------------------------------------------------
+-- SHead & STail
+
+class SHead s1 s2 c1 c2 d1 where
+      shead ::  TC s1 typ (c1 d1) -> TC s2 typ (c2 d1)
+      slast ::  TC s1 typ (c1 d1) -> TC s2 typ (c2 d1)
+
+instance (VSingleton v1 d1) => SHead Signal Scalar (Data (v1 :> Nil)) (Data Nil) d1 where
+         shead (TC (Data (D1 x))) = TC $ Data $ D0 $ vhead x   
+         slast (TC (Data (D1 x))) = TC $ Data $ D0 $ vlast x   
+
+class SInit s1 c1 d1 where
+      sinit ::  TC s1 typ (c1 d1) -> TC s1 typ (c1 d1)
+      stail ::  TC s1 typ (c1 d1) -> TC s1 typ (c1 d1)
+
+instance (VSingleton v1 d1) => SInit Signal (Data (v1 :> Nil)) d1 where
+         sinit (TC (Data (D1 x))) = TC $ Data $ D1 $ vinit x   
+         stail (TC (Data (D1 x))) = TC $ Data $ D1 $ vtail x   
+
+
 
 ----------------------------------------------------------
 -- signal sign
@@ -140,18 +186,8 @@ sigSign x = smap sign x
 
 ----------------------------------------------------------
 -- sum all signal value
-{-
-class SigSum s1 s2 where
-  sigSum :: s1 -> s2
 
-instance DSum c1 c2 d => SigSum (TC Signal typ (c1 d)) (TC Scalar typ (c2 d)) where
-         sigSum (TC x) = TC (dsum x) 
-
-instance DSum c1 c2 d => SigSum (TC FSignal typ (c1 d)) (TC Scalar typ (c2 d)) where
-         sigSum (TC x) = TC (dsum x) 
--}
-
-class (DArith d1 d1 d1, Num d1) => SigSum s1 s2 c1 c2 d1 where
+class (DArith d1 d1 d1, Num d1) => SigSum s1 s2 c1 c2 d1 | s1 -> s2, c1 -> c2  where
       sigSum :: TC s1 typ (c1 d1) -> TC s2 typ (c2 d1)
     
 instance (SFold Scalar Signal (Data Nil) (Data (v1 :> Nil)) d1 d1, DArith d1 d1 d1, Num d1) => SigSum Signal Scalar (Data (v1 :> Nil)) (Data Nil) d1 where
@@ -159,3 +195,29 @@ instance (SFold Scalar Signal (Data Nil) (Data (v1 :> Nil)) d1 d1, DArith d1 d1 
 
 instance  (SFold Scalar FSignal (Data Nil) (Data (v1 :> Nil)) d1 d1, DArith d1 d1 d1, Num d1) => SigSum FSignal Scalar (Data (v1 :> Nil)) (Data Nil) d1 where
          sigSum x = sfoldl (..+) (toScalar 0) x 
+
+----------------------------------------------------------
+-- Delta and 2Point Average of Signal
+
+class (DSucc delta1 delta2) => DeltaSig s1 s2 c1 delta1 delta2 d1  | s1 -> s2 where
+      deltaSig :: TC s1 (Typ delta1 t1 p1) (c1 d1) -> TC s2 (Typ delta2 t1 p1) (c1 d1)
+      avSig ::  TC s1 (Typ delta1 t1 p1) (c1 d1) -> TC s2 (Typ delta1 t1 p1) (c1 d1)
+
+instance (SDeltaMap Signal FSignal c1 Val Val, DSucc delta1 delta2) => DeltaSig Signal FSignal c1 delta1 delta2 Val where
+      deltaSig x = sdeltaMap' (..-) x
+      avSig x = sdeltaMap' (\ x1 x2 -> (x1..+x2)../ (2::Val)) x
+
+----------------------------------------------------------
+-- Part & Full Integrate 
+
+-- DeltaSig Signal FSignal (Data (v1 :> Nil)) A D Val => 
+-- | Partial Signal Integration        
+sigPartInt ::  TSig -> PSig -> FSig
+sigPartInt time power = (deltaSig time) .* (avSig power)
+-- czipWith (*) dTime $ dmap (\ p1 p2 -> (p1+p2)/2) power 
+
+
+-- | Partial Signal Integration
+sigFullInt ::  TSig -> PSig -> FVal
+sigFullInt time power = sigSum $ sigPartInt time power -- csingleton (cfoldr (+) 0  $ czipWith (*) dTime $ dmap (\ p1 p2 -> (p1+p2)/2) power)
+

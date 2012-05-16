@@ -23,18 +23,18 @@ type PPosData a = M.Map PPosIdx a
 
 
 -- | Signal record to contain original time signals 
-data Record = Record Time SignalMap deriving (Show)
+data Record = Record TSig SignalMap deriving (Show)
 data SigId = SigId String deriving (Show, Eq, Ord)
 type SignalMap = M.Map SigId (UTSignal Val)
 
 -- | Power record to contain power signals assigned to the tree
-type PPosPowers = PPosData Power
-data PowerRecord = PowerRecord Time PPosPowers deriving (Show)
+type PPosPowers = PPosData PSig
+data PowerRecord = PowerRecord TSig PPosPowers deriving (Show)
 type SequPwrRecord = SequData [PowerRecord]
 
 -- | Flow record to contain flow signals assigned to the tree
-type PPosFlows = PPosData Flow
-data FlowRecord = FlowRecord Time (PPosFlows) deriving (Show)
+type PPosFlows = PPosData FSig
+data FlowRecord = FlowRecord TSig (PPosFlows) deriving (Show)
 type SequFlowRecord = SequData [FlowRecord]
 
 newtype FlowState = FlowState (PPosData Sign) deriving (Show)

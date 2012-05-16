@@ -17,6 +17,8 @@ import EFA2.Topology.Flow
 import EFA2.Topology.TopologyData
 
 import EFA2.Signal.SequenceData
+import EFA2.Signal.Base
+import EFA2.Signal.Signal
 
 import EFA2.Utils.Utils
 
@@ -42,7 +44,7 @@ type XSample = (TSample, PSampleRow)
 type XSig = Container XSample
 
 -- | From PowerRecord
-fromFlowRecord :: SecIdx -> RecIdx -> FlowRecord -> Envs FSignal
+fromFlowRecord :: SecIdx -> RecIdx -> FlowRecord -> Envs FUTSignal
 fromFlowRecord (SecIdx secIdx) (RecIdx recIdx) fRec@(FlowRecord dTime flowMap) =
   emptyEnv { powerMap = M.fromList $ map f (M.toList flowMap) }
   where f ((PPosIdx idx1 idx2), (flowSig)) = ((PowerIdx secIdx recIdx idx1 idx2), flowSig)    
@@ -51,7 +53,7 @@ fromFlowRecord (SecIdx secIdx) (RecIdx recIdx) fRec@(FlowRecord dTime flowMap) =
 genSequFlow :: SequPwrRecord -> SequFlowRecord
 genSequFlow sqPRec = (map recFullIntegrate) `fmap` sqPRec
 
-makeSequence :: PowerRecord -> Topology -> ([Envs FSignal], Topology)
+makeSequence :: PowerRecord -> Topology -> ([Envs FUTSignal], Topology)
 makeSequence pRec topo = (sqEnvs, sqTopo)
   where pRec0 = addZeroCrossings pRec
         (sequ,sqPRec) = genSequ pRec0          
@@ -70,24 +72,15 @@ makeSequence pRec topo = (sqEnvs, sqTopo)
 -- | Pre-Integrate all Signals in Record  
 recFullIntegrate :: PowerRecord -> FlowRecord   
 recFullIntegrate pRec@(PowerRecord time pMap) = FlowRecord time fMap 
-  where dtime = dmap' (-) time
-        fMap = M.map (sigFullInt dtime) pMap  
+  where fMap = M.map (sigFullInt time) pMap  
         
--- | Partial Signal Integration
-sigFullInt ::  DTime -> Power -> Flow
-sigFullInt dTime power = csingleton (cfoldr (+) 0  $ czipWith (*) dTime $ dmap (\ p1 p2 -> (p1+p2)/2) power)
-
 
 
 -- | Pre-Integrate all Signals in Record  
 recPartIntegrate :: PowerRecord -> FlowRecord   
 recPartIntegrate pRec@(PowerRecord time pMap) = FlowRecord time fMap 
-  where dtime = dmap' (-) time
-        fMap = M.map (sigPartInt dtime) pMap  
+  where fMap = M.map (sigPartInt time) pMap  
         
--- | Partial Signal Integration        
-sigPartInt ::  DTime -> Power -> Flow
-sigPartInt dTime power = czipWith (*) dTime $ dmap (\ p1 p2 -> (p1+p2)/2) power 
   
 
 -----------------------------------------------------------------------------------
