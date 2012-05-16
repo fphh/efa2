@@ -80,39 +80,6 @@ instance VZipper [] a b c  where
 instance VZipper Value a b c  where
          vzipWith f (Value x) (Value y) = Value (f x y)
 
--- -------------------------------------------------------------
--- -- fold   
-
--- class VFold v a where
---       vfoldl :: (acc -> a -> acc) -> acc -> v a -> acc 
---       vfoldr :: (a -> acc -> acc) -> acc -> v a -> acc
-
--- instance UV.Unbox a => VFold UV.Vector a where
---          vfoldl = UV.foldl'
---          vfoldr = UV.foldr
-
--- instance VFold V.Vector a where
---          vfoldl = V.foldl'
---          vfoldr = V.foldr
-
--- instance VFold [] a where
---          vfoldl = L.foldl'
---          vfoldr = foldr
-
--- ---------------------------------------------------------------
--- -- Monoid
--- class VMonoid c d where
---  vempty :: (c d)
---  (.++) :: (c d) -> (c d) -> (c d)
- 
--- instance VMonoid V.Vector d where 
---   vempty = V.empty
---   (.++) = (V.++)
-
--- instance UV.Unbox d => VMonoid UV.Vector d where 
---   vempty = UV.empty
---   (.++) = (UV.++)
-
 --------------------------------------------------------------
 -- Vector conversion
 class VConvert a c1 c2 where
@@ -146,7 +113,30 @@ vlenCheck x y = vlen x == vlen y
 
 
 --------------------------------------------------------------
--- Max & Min
+-- TRanspose Classe
+class VTRanspose v1 v2 d where
+      vtranspose :: (v2 (v1 d)) -> (v2 (v1 d))
+
+
+instance VTRanspose V.Vector V.Vector d where
+  vtranspose xs = V.map (flip V.map xs) fs
+            where fs = V.take min $ V.map (flip (V.!)) $ V.fromList [0..]
+                  min = V.minimum $ V.map V.length xs
+
+instance (UV.Unbox d) =>  VTRanspose  UV.Vector V.Vector d where
+  vtranspose xs = V.map (vunbox . flip V.map xs) fs
+            where fs = V.take min $ V.map (flip (UV.!)) $ V.fromList [0..]
+                  min = V.minimum $ V.map UV.length xs
+         -- vtranspose [] = []
+         -- vtranspose xs = map (UV.fromList . flip map xs) fs
+         --   where fs = take min $ map (flip (UV.!)) [0..]
+         --         min = L.minimum $ map UV.length xs
+
+instance VTRanspose [] [] d where
+  vtranspose = L.transpose
+
+--------------------------------------------------------------
+-- Singleton Class
 
 class VSingleton vec d where
       vmaximum :: (vec d) -> d
@@ -155,7 +145,7 @@ class VSingleton vec d where
       vempty :: (vec d)
       vappend :: vec d -> vec d -> vec d
       vconcat :: [vec d] -> vec d
-      vtranspose :: [vec d] -> [vec d]
+--      vtranspose :: (vec1 (vec2 d)) -> (vec1 (vec2 d))
       vhead :: vec d -> d
       vtail :: vec d -> vec d
       vlast :: vec d -> d
@@ -168,10 +158,10 @@ instance (Ord d) => VSingleton V.Vector d where
          vempty = V.empty
          vappend = (V.++)
          vconcat = V.concat
-         vtranspose [] = []
-         vtranspose xs = map (V.fromList . flip map xs) fs
-           where fs = take min $ map (flip (V.!)) [0..]
-                 min = L.minimum $ map V.length xs
+         -- vtranspose [] = []
+         -- vtranspose xs = V.map (xs V.!) (V.fromList [0..])
+         --   where fs = take min $ map (flip (V.!)) [0..]
+         --         min = L.minimum $ map V.length xs
          vhead = V.head
          vtail = V.tail
          vlast = V.last
@@ -184,10 +174,10 @@ instance (Ord d, UV.Unbox d) => VSingleton UV.Vector d where
          vempty = UV.empty
          vappend = (UV.++)
          vconcat = UV.concat
-         vtranspose [] = []
-         vtranspose xs = map (UV.fromList . flip map xs) fs
-           where fs = take min $ map (flip (UV.!)) [0..]
-                 min = L.minimum $ map UV.length xs
+         -- vtranspose [] = []
+         -- vtranspose xs = map (UV.fromList . flip map xs) fs
+         --   where fs = take min $ map (flip (UV.!)) [0..]
+         --         min = L.minimum $ map UV.length xs
          vhead = UV.head
          vtail = UV.tail
          vlast = UV.last
@@ -200,7 +190,7 @@ instance (Ord d) => VSingleton [] d where
          vempty = []
          vappend = (++)
          vconcat = concat
-         vtranspose = L.transpose
+--         vtranspose = L.transpose
          vhead = head
          vtail = tail
          vlast = last

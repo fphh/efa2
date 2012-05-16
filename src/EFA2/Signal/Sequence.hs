@@ -89,7 +89,7 @@ genSequ ::  PowerRecord -> (Sequ,SequPwrRecord)
 genSequ pRec = removeNilSections (sequ++[lastSec],SequData pRecs)
   where xSig = genXSig pRec
         pRecs = map (repackXSig pRec) (seqXSig ++ [lastXSec])
-        ((lastSec,sequ),(lastXSec,seqXSig)) = recyc (ctail xSig) (((0,0),[]),([chead xSig],[])) 
+        ((lastSec,sequ),(lastXSec,seqXSig)) = recyc (stail xSig) (((0,0),[]),([shead xSig],[])) 
         
         --recyc :: XSig -> ((Sec,Sequ), (XSig, [XSig])) -> ((Sec,Sequ), (XSig, [XSig]))  
         recyc [] acc = acc                                                            
@@ -141,11 +141,11 @@ stepX s1 s2 | otherwise = NoStep  -- nostep
 addZeroCrossings ::  PowerRecord -> PowerRecord    
 addZeroCrossings pRec = repackXSig pRec xSigNew 
   where xSig = genXSig pRec
-        xSigNew = (concat $ dmap f xSig) ++ [last xSig]
+        xSigNew = (concat $ sdeltaMap f xSig) ++ [slast xSig]
     
         --f :: (TSample,PSampleRow) ->  (TSample,PSampleRow) -> [(TSample,PSampleRow)]
-        f (t1, row1) (t2, row2) = zip (csingleton t1 `cappend` zeroCrossingTimes)
-                                      (csingleton row1 `cappend` (ctranspose $ czipWith g (czip row1 row2) zeroCrossings))
+        f (t1, row1) (t2, row2) = zip (t1 .++ zeroCrossingTimes)
+                                      (row1 .++ (ctranspose $ czipWith g (czip row1 row2) zeroCrossings))
           where 
             -- create list of all zero crossing times
             zeroCrossingTimes = L.sort $ concat $ zeroCrossings -- :: [TSample]
@@ -185,7 +185,7 @@ interpPowers (t1,p1) (t2,p2) tzeroList tzero = map f tzeroList
 
 -- | Generate X-List from Power Record
 genXSig :: PowerRecord -> XSig
-genXSig (PowerRecord time pmap) = czip time (ctranspose $ M.elems pmap)
+genXSig (PowerRecord time pmap) = czip time (vtranspose $ V.fromList $ M.elems pmap)
 
 
 -- | Function to regenerate pMap from pRows

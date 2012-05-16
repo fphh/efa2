@@ -176,46 +176,46 @@ dmap f x = vmap f x
 
 class DAppend c1 c2 c3 d | c1 c2 -> c3 where
   dempty :: c3 d
-  (.++) :: c1 d -> c2 d -> c3 d
+  dappend :: c1 d -> c2 d -> c3 d
   
 -- 0d - 1d
 instance VSingleton v1 d => DAppend (Data (v1 :> Nil))  (Data Nil)  (Data (v1 :> Nil)) d where
   dempty = Data $ D1 $ vempty
-  (.++) (Data (D1 x)) (Data (D0 y)) = Data $ D1 $ vappend x (vsingleton y)
+  dappend (Data (D1 x)) (Data (D0 y)) = Data $ D1 $ vappend x (vsingleton y)
   
 -- 1d -- 0d
 instance VSingleton v1 d => DAppend  (Data Nil) (Data (v1 :> Nil)) (Data (v1 :> Nil)) d where
   dempty = Data $ D1 $ vempty
-  (.++) (Data (D0 x)) (Data (D1 y)) = Data $ D1 $ vappend (vsingleton x) y
+  dappend (Data (D0 x)) (Data (D1 y)) = Data $ D1 $ vappend (vsingleton x) y
 
 -- 1d -- 1d 
 instance VSingleton v1 d => DAppend (Data (v1 :> Nil))  (Data (v1 :> Nil))  (Data (v1 :> Nil)) d where
   dempty = Data $ D1 $ vempty
-  (.++) (Data (D1 x)) (Data (D1 y)) =  Data $ D1 $ vappend x y
+  dappend (Data (D1 x)) (Data (D1 y)) =  Data $ D1 $ vappend x y
 
 -- 2d -- 2d 
 instance (VSingleton v1 d, VSingleton v2 (v1 d), VZipper v2 (v1 d) (v1 d) (v1 d)) => DAppend (Data (v2 :> v1 :> Nil))  (Data (v2 :> v1 :> Nil))  (Data (v2 :> v1 :> Nil)) d where
   dempty = Data $ D2 $ vempty
-  (.++) (Data (D2 x)) (Data (D2 y)) =  Data $ D2 $ vzipWith vappend x y
+  dappend (Data (D2 x)) (Data (D2 y)) =  Data $ D2 $ vzipWith vappend x y
   
 
 ----------------------------------------------------------
 -- Alternative Append Class
 
 class DAppendAlt c1 c2 c3 d | c1 c2 -> c3 where
-  (.++/) :: c1 d -> c2 d -> c3 d
+ dappend' :: c1 d -> c2 d -> c3 d
 
 -- 1d -- 2d 
 instance (VSingleton v1 d,VSingleton v2 (v1 d)) => DAppendAlt (Data (v1 :> Nil))  (Data (v2 :> v1 :> Nil))  (Data (v2 :> v1 :> Nil)) d where
-  (.++/) (Data (D1 x)) (Data (D2 y)) =  Data $ D2 $ vappend (vsingleton x) y
+ dappend' (Data (D1 x)) (Data (D2 y)) =  Data $ D2 $ vappend (vsingleton x) y
 
 -- 2d -- 1d 
 instance (VSingleton v1 d,VSingleton v2 (v1 d)) => DAppendAlt (Data (v2 :> v1 :> Nil)) (Data (v1 :> Nil)) (Data (v2 :> v1 :> Nil)) d where
-  (.++/) (Data (D2 x)) (Data (D1 y)) =  Data $ D2 $ vappend  x (vsingleton y)
+ dappend' (Data (D2 x)) (Data (D1 y)) =  Data $ D2 $ vappend  x (vsingleton y)
 
 -- 2d -- 2d 
 instance (VSingleton v1 d,VSingleton v2 (v1 d)) => DAppendAlt (Data (v2 :> v1 :> Nil))  (Data (v2 :> v1 :> Nil))  (Data (v2 :> v1 :> Nil)) d where
-  (.++/) (Data (D2 x)) (Data (D2 y)) =  Data $ D2 $ vappend x y
+ dappend' (Data (D2 x)) (Data (D2 y)) =  Data $ D2 $ vappend x y
 
 
 {-

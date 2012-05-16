@@ -6,7 +6,7 @@ import EFA2.Signal.Base
 import EFA2.Signal.Data
 import EFA2.Signal.Typ
 -- import EFA2.Signal.Vector
-
+import qualified Data.Vector as V
 
 ----------------------------------------------------------
 -- | Signal & Company
@@ -120,6 +120,14 @@ fromScalar (TC (Data (D0 x))) = x
 toScalar :: d -> TC Scalar typ (Data Nil d) 
 toScalar x = TC $ Data $ D0 x
 
+getSigVec :: TC Signal typ (Data (v1 :> Nil) d) -> v1 d
+getSigVec (TC (Data (D1 x))) = x
+
+fromSigList :: [TC Signal typ (Data (v1 :> Nil) d)] -> TC Signal typ (Data (V.Vector :> v1 :> Nil) d)
+fromSigList slist = TC $ Data $ D2 $ V.fromList vecList
+            where vecList = map getSigVec slist
+
+
 ----------------------------------------------------------
 -- SMap
 
@@ -176,7 +184,33 @@ instance (VSingleton v1 d1) => SInit Signal (Data (v1 :> Nil)) d1 where
          sinit (TC (Data (D1 x))) = TC $ Data $ D1 $ vinit x   
          stail (TC (Data (D1 x))) = TC $ Data $ D1 $ vtail x   
 
+----------------------------------------------------------
+-- SHead & STail
 
+class STranspose s1 s2 c1 c2 d1 | s1 -> s2, s2 -> s1  where
+      stranspose ::  TC s1 typ (c1 d1) -> TC s2 typ (c2 d1)
+
+instance STranspose FSignal FSample (Data (v1 :> Nil)) (Data (v1 :> Nil)) d1 where
+         stranspose (TC (Data (D1 x))) = (TC (Data (D1 x))) 
+
+instance VTRanspose v1 v2 d1 => STranspose FSignal FSample (Data (v2 :> v1 :> Nil)) (Data (v2 :> v1 :> Nil)) d1 where
+         stranspose (TC (Data (D2 x))) = TC $ Data $ D2 $ vtranspose x 
+
+----------------------------------------------------------
+-- SAppend
+         
+class SAppend s1 s2 s3 c1 c2 c3 d1 | s1 s2 -> s3, c1 c2 -> c3  where
+  (.++) ::  TC s1 typ (c1 d1) -> TC s2 typ (c2 d1) ->  TC s3 typ (c3 d1)
+         
+
+instance (VSingleton v1 d1) => SAppend Signal Signal Signal (Data (v1 :> Nil)) (Data (v1 :> Nil)) (Data (v1 :> Nil)) d1 where
+  (.++) (TC x) (TC y) =  TC $ dappend x y
+
+instance (VSingleton v1 d1) => SAppend Signal Scalar Signal (Data (v1 :> Nil)) (Data Nil) (Data (v1 :> Nil)) d1 where
+  (.++)  (TC x) (TC y)  =  TC $ dappend x y
+
+instance (VSingleton v1 d1) => SAppend Scalar Signal Signal (Data Nil) (Data (v1 :> Nil)) (Data (v1 :> Nil)) d1 where
+  (.++)  (TC x) (TC y)  =  TC $ dappend x y
 
 ----------------------------------------------------------
 -- signal sign
