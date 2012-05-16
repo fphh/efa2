@@ -53,46 +53,66 @@ type List3 a = (Data ([]:> [] :> []:> Nil) a)
 ----------------------------------------------------------
 -- | Zipping for normal Arithmetics 
 
-class DZipWith c1 c2 d1 d2 d3  where
-  dzipWith :: (d1 -> d2 -> d3) -> c1 d1 -> c2 d2 -> c2 d3
+class DZipWith c1 c2 c3 d1 d2 d3 | c1 c2 -> c3 where
+  dzipWith :: (d1 -> d2 -> d3) -> c1 d1 -> c2 d2 -> c3 d3
 
 -- 0d - 0d
-instance DZipWith (Data Nil) (Data Nil) d1 d2 d3 where
+instance DZipWith (Data Nil) (Data Nil) (Data Nil) d1 d2 d3 where
          dzipWith f (Data (D0 x)) (Data (D0 y)) = Data $ D0 $ f x y 
 
 -- 0d - 1d
-instance (VFunctor v1 d2 d3) => DZipWith (Data Nil) (Data (v1 :> Nil))  d1 d2 d3  where
+instance (VFunctor v1 d2 d3) => DZipWith (Data Nil) (Data (v1 :> Nil))  (Data (v1 :> Nil)) d1 d2 d3  where
          dzipWith f  (Data (D0 x)) (Data (D1 y)) = Data $ D1 $ vmap (f x) y 
 
+-- 1d - 0d
+instance (VFunctor v1 d1 d3) => DZipWith  (Data (v1 :> Nil)) (Data Nil) (Data (v1 :> Nil)) d1 d2 d3  where
+         dzipWith f  (Data (D1 x))  (Data (D0 y)) = Data $ D1 $ vmap ((flip f) y) x 
+
 -- 0d - 2d
-instance (VFunctor v1 d2 d3,VFunctor v2 (v1 d2) (v1 d3)) => DZipWith (Data Nil) (Data (v2 :> v1 :> Nil))  d1 d2 d3  where
+instance (VFunctor v1 d2 d3,VFunctor v2 (v1 d2) (v1 d3)) => DZipWith (Data Nil) (Data (v2 :> v1 :> Nil)) (Data (v2 :> v1 :> Nil)) d1 d2 d3  where
          dzipWith f  (Data (D0 x)) (Data (D2 y)) = Data $ D2 $ vmap (vmap (f x)) y 
 
+-- 2d - 0d
+instance (VFunctor v1 d1 d3,VFunctor v2 (v1 d1) (v1 d3)) => DZipWith (Data (v2 :> v1 :> Nil))  (Data Nil) (Data (v2 :> v1 :> Nil)) d1 d2 d3  where
+         dzipWith f  (Data (D2 x)) (Data (D0 y)) = Data $ D2 $ vmap (vmap ((flip f) y)) x 
+
 -- 1d - 1d
-instance (VZipper v1 d1 d2 d3) => DZipWith (Data (v1 :> Nil)) (Data (v1 :> Nil))  d1 d2 d3  where
+instance (VZipper v1 d1 d2 d3) => DZipWith (Data (v1 :> Nil)) (Data (v1 :> Nil)) (Data (v1 :> Nil)) d1 d2 d3  where
          dzipWith f  (Data (D1 x)) (Data (D1 y)) = Data $ D1 $ vzipWith f x y 
 
 -- 1d - 2d
-instance (VZipper v1 d1 d2 d3, VFunctor v2 (v1 d2) (v1 d3) ) => DZipWith (Data (v1 :> Nil)) (Data (v2 :> v1 :> Nil))  d1 d2 d3  where
+instance (VZipper v1 d1 d2 d3, VFunctor v2 (v1 d2) (v1 d3) ) => DZipWith (Data (v1 :> Nil)) (Data (v2 :> v1 :> Nil))   (Data (v2 :> v1 :> Nil)) d1 d2 d3  where
          dzipWith f  (Data (D1 x)) (Data (D2 y)) = Data $ D2 $ vmap (vzipWith f x) y 
 
+-- 2d - 1d
+instance (VZipper v1 d2 d1 d3, VFunctor v2 (v1 d1) (v1 d3)) => DZipWith  (Data (v2 :> v1 :> Nil)) (Data (v1 :> Nil))  (Data (v2 :> v1 :> Nil)) d1 d2 d3  where
+         dzipWith f  (Data (D2 x)) (Data (D1 y)) = Data $ D2 $ vmap (vzipWith (flip f) y) x 
+
 -- 2d - 2d
-instance (VZipper v1 d1 d2 d3, VZipper v2 (v1 d1) (v1 d2) (v1 d3)) => DZipWith (Data (v2 :> v1 :> Nil)) (Data (v2 :> v1 :> Nil))  d1 d2 d3  where
+instance (VZipper v1 d1 d2 d3, VZipper v2 (v1 d1) (v1 d2) (v1 d3)) => DZipWith (Data (v2 :> v1 :> Nil)) (Data (v2 :> v1 :> Nil))  (Data (v2 :> v1 :> Nil)) d1 d2 d3  where
          dzipWith f  (Data (D2 x)) (Data (D2 y)) = Data $ D2 $ vzipWith (vzipWith f) x y 
 
 
 ----------------------------------------------------------
 -- Zipping for cross Arithmetics 
-{-
-class CrossWith c1 c2 c3 d1 d2 d3  where
+
+class CrossWith c1 c2 c3 d1 d2 d3 | c1 c2 -> c3 where
   crossWith :: (d1 -> d2 -> d3) -> c1 d1 -> c2 d2 -> c3 d3
 
--- 1d - 1d
-instance CrossWith (Data (v1 :> Nil)) (Data (v1 :> Nil))  (Data (v1 :> v1 :> Nil))  d1 d2 d3  where
-         crossWith f  (Data (D1 x)) (Data (D1 y)) = Data $ D2 $ (vmap g) y
-           where g y' = vmap (f y') x  
--}
+-- 1d - 1d -> 2d
+instance (VFunctor v2 d1 (v1 d3), VFunctor v1 d2 d3) => CrossWith (Data (v2 :> Nil)) (Data (v1 :> Nil))  (Data (v2 :> v1 :> Nil))  d1 d2 d3  where
+         crossWith f  (Data (D1 x)) (Data (D1 y)) = Data $ D2 $ (vmap g) x
+           where g xi = vmap (f xi) y  
 
+-- 1d - 2d
+instance (VZipper v2 d1 (v1 d2) (v1 d3), VFunctor v1 d2 d3) => CrossWith (Data (v2 :> Nil)) (Data (v2 :> v1 :> Nil))   (Data (v2 :> v1 :> Nil)) d1 d2 d3  where
+         crossWith f  (Data (D1 x)) (Data (D2 y)) = Data $ D2 $ vzipWith g x y
+           where g xi yi = vmap (f xi) yi 
+
+-- 1d - 2d
+instance (VZipper v2 (v1 d1) d2 (v1 d3), VFunctor v1 d1 d3) => CrossWith (Data (v2 :> v1 :> Nil))  (Data (v2 :> Nil))  (Data (v2 :> v1 :> Nil)) d1 d2 d3  where
+         crossWith f  (Data (D2 x)) (Data (D1 y)) = Data $ D2 $ vzipWith g x y
+           where g xi yi = vmap ((flip f) yi) xi 
 
 ----------------------------------------------------------
 -- fold Functions

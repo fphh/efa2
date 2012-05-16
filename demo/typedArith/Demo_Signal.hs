@@ -28,11 +28,11 @@ dt = TC $ Data $ D1 v2 :: TC Signal (Typ D T Tt) (UVec Val)
 pm1 = TC $ Data $ D2 v3 :: TC Signal (Typ D P Tt) (UVec2 Val)  
 
 
-TC (Data D1 (fromList [0.0,1.0,4.0,9.0]))
+-- TC (Data D1 (fromList [0.0,1.0,4.0,9.0]))
 
 ps3 = ps1.+dps2
 p4 = dps2.+p1
--- p4' = p1.+dps2 
+p4' = p1.+dps2 
 e = dt .* p1
 --p3 = p1 .+ dp
 dp = p1 .- p2
