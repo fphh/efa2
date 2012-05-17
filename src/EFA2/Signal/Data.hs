@@ -168,8 +168,8 @@ instance (VWalker v2 (v1 d1) (v1 d2)) => D1Fold (Data (v1 :> Nil)) (Data (v2 :> 
 ----------------------------------------------------------
 -- Data Map
          
-dmap :: (VWalker c d1 d2) => (d1 -> d2) ->  c d1 -> c d2         
-dmap f x = vmap f x
+-- dmap :: (VWalker d1 d2) => (d1 -> d2) ->  c v d1 -> c v d2         
+-- dmap f (Data x = vmap f x
 
 ----------------------------------------------------------
 -- Append Class

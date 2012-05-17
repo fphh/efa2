@@ -34,8 +34,12 @@ type SequPwrRecord = SequData [PowerRecord]
 
 -- | Flow record to contain flow signals assigned to the tree
 type PPosFlows = PPosData FSig
-data FlowRecord = FlowRecord TSig (PPosFlows) deriving (Show)
+data FlowRecord = FlowRecord DTSig (PPosData FSig) deriving (Show)
 type SequFlowRecord = SequData [FlowRecord]
+
+-- | Flow record to contain flow signals assigned to the tree
+data FlowValRecord = FlowValRecord DTVal (PPosData FVal) deriving (Show)
+type SequFlowValRecord = SequData [FlowValRecord]
 
 newtype FlowState = FlowState (PPosData Sign) deriving (Show)
 type SequFlowState = SequData [FlowState]

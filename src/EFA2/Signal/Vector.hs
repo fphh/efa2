@@ -82,15 +82,15 @@ instance VZipper Value a b c  where
 
 --------------------------------------------------------------
 -- Vector conversion
-class VConvert a c1 c2 where
+class VBox c1 c2 a where
       vbox :: c1 a -> c2 a
       vunbox :: c2 a -> c1 a
 
-instance UV.Unbox a => VConvert a UV.Vector V.Vector where
+instance UV.Unbox a => VBox UV.Vector V.Vector a where
          vbox x = UV.convert x
          vunbox x = V.convert x
 
-instance VConvert a [] [] where
+instance VBox [] [] a where
          vbox = id
          vunbox = id
   

@@ -41,7 +41,8 @@ import EFA2.Example.SymSig
 
 
 import EFA2.Signal.Signal
-
+import EFA2.Signal.Typ
+import EFA2.Signal.Data
 
 -- define topology 
 
@@ -58,23 +59,12 @@ test = mkGraph nodes edges
 main :: IO ()
 main = do
 
-  --Record time sigMap <- modelicaCSVImport "./modThreeWay_sto.RecA_res.csv"
-  
-  let
 
-      --pRec = PowerRecord time pMap
-{-        
-      pMap =  M.fromList [ (PPosIdx 0 1, sigMap M.! (SigId "powercon1.u")),
-                           (PPosIdx 1 0, sigMap M.! (SigId "powercon2.u")), 
-                           (PPosIdx 1 2, sigMap M.! (SigId "powercon3.u")),
-                           (PPosIdx 2 1, sigMap M.! (SigId "powercon4.u")),
-                           (PPosIdx 1 3, sigMap M.! (SigId "powercon5.u")),
-                           (PPosIdx 3 1, sigMap M.! (SigId "powercon6.u")) ]
--}
+  let
 
       --time = [0, 0, 1, 1]
 
-      s01 = sfromList [0, 2, 2, 0] :: TC Signal (Typ A P Tt) (UVec Val)
+      s01 = [0, 2, 2, 0] 
       s10 = [0, 0.8, 0.8, 0]
       s12 = [0.3, 0.3, 0.3, 0.3]
       s21 = [0.2, 0.2, 0.2, 0.2]
@@ -93,15 +83,15 @@ main = do
       --time = foldl (+) 0 dtime
       time = [0, 0] ++ (concatMap (replicate 3) [1..])
 
-      pMap =  M.fromList [ (PPosIdx 0 1, concat $ replicate n (s01 ++ s01')),
-                           (PPosIdx 1 0, concat $ replicate n (s10 ++ s10')), 
-                           (PPosIdx 1 2, concat $ replicate n (s12 ++ s12')),
-                           (PPosIdx 2 1, concat $ replicate n (s21 ++ s21')),
-                           (PPosIdx 1 3, concat $ replicate n (s13 ++ s13')),
-                           (PPosIdx 3 1, concat $ replicate n (s31 ++ s31')) ]
+      pMap =  M.fromList [ (PPosIdx 0 1, sfromList $ concat $ replicate n (s01 ++ s01')),
+                           (PPosIdx 1 0, sfromList $ concat $ replicate n (s10 ++ s10')), 
+                           (PPosIdx 1 2, sfromList $ concat $ replicate n (s12 ++ s12')),
+                           (PPosIdx 2 1, sfromList $ concat $ replicate n (s21 ++ s21')),
+                           (PPosIdx 1 3, sfromList $ concat $ replicate n (s13 ++ s13')),
+                           (PPosIdx 3 1, sfromList $ concat $ replicate n (s31 ++ s31')) ]
 
       --(sqEnvs, sqTopo) = makeSequence pRec topo
-      (sqEnvs, sqTopo) = makeSequence (PowerRecord time pMap) topo 
+      (sqEnvs, sqTopo) = makeSequence (PowerRecord (sfromList time) pMap) topo 
 
       --sigs = M.unions (map powerMap sqEnvs)
 

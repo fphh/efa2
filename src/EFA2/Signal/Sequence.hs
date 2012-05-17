@@ -11,7 +11,7 @@ import qualified Data.List as L
 import qualified Data.Vector as GV
 
 import EFA2.Interpreter.Env
-import EFA2.Interpreter.Arith
+-- import EFA2.Interpreter.Arith
 
 import EFA2.Topology.Flow
 import EFA2.Topology.TopologyData
@@ -19,8 +19,12 @@ import EFA2.Topology.TopologyData
 import EFA2.Signal.SequenceData
 import EFA2.Signal.Base
 import EFA2.Signal.Signal
+import EFA2.Signal.Typ
+import EFA2.Signal.Data
+import EFA2.Signal.Vector
 
 import EFA2.Utils.Utils
+
 
 import Debug.Trace
 
@@ -35,23 +39,25 @@ data EventType = LeftEvent
                | MixedEvent
                | NoEvent
 
-type PSampleRow = [PSample]
+type PSampleRow = [PSample] --TC Sample (Typ A P Tt) (UVec Val)
+type TSample = Val -- TC Sample (Typ D T Tt) (DVal Val)
 
 -- | XSample contains time and values of all power signals for one time step 
 type XSample = (TSample, PSampleRow)
 
 -- | Xlist = list of all xSamples
-type XSig = Container XSample
+type XSig =  [XSample] 
+
 
 -- | From PowerRecord
 fromFlowRecord :: SecIdx -> RecIdx -> FlowRecord -> Envs FUTSignal
 fromFlowRecord (SecIdx secIdx) (RecIdx recIdx) fRec@(FlowRecord dTime flowMap) =
   emptyEnv { powerMap = M.fromList $ map f (M.toList flowMap) }
-  where f ((PPosIdx idx1 idx2), (flowSig)) = ((PowerIdx secIdx recIdx idx1 idx2), flowSig)    
+  where f ((PPosIdx idx1 idx2), (flowSig)) = ((PowerIdx secIdx recIdx idx1 idx2), untype flowSig)    
 
 -- | Generate Sequence Flow 
 genSequFlow :: SequPwrRecord -> SequFlowRecord
-genSequFlow sqPRec = (map recFullIntegrate) `fmap` sqPRec
+genSequFlow sqPRec = (map recPartIntegrate) `fmap` sqPRec
 
 makeSequence :: PowerRecord -> Topology -> ([Envs FUTSignal], Topology)
 makeSequence pRec topo = (sqEnvs, sqTopo)
@@ -70,26 +76,22 @@ makeSequence pRec topo = (sqEnvs, sqTopo)
 
 
 -- | Pre-Integrate all Signals in Record  
-recFullIntegrate :: PowerRecord -> FlowRecord   
-recFullIntegrate pRec@(PowerRecord time pMap) = FlowRecord time fMap 
+recFullIntegrate :: PowerRecord -> FlowValRecord   
+recFullIntegrate pRec@(PowerRecord time pMap) = FlowValRecord (sigSum $ deltaSig time) fMap 
   where fMap = M.map (sigFullInt time) pMap  
-        
-
 
 -- | Pre-Integrate all Signals in Record  
 recPartIntegrate :: PowerRecord -> FlowRecord   
-recPartIntegrate pRec@(PowerRecord time pMap) = FlowRecord time fMap 
+recPartIntegrate pRec@(PowerRecord time pMap) = FlowRecord (deltaSig time) fMap 
   where fMap = M.map (sigPartInt time) pMap  
         
-  
-
 -----------------------------------------------------------------------------------
 -- | Function to Generate Time Sequence
 genSequ ::  PowerRecord -> (Sequ,SequPwrRecord)
 genSequ pRec = removeNilSections (sequ++[lastSec],SequData pRecs)
   where xSig = genXSig pRec
         pRecs = map (repackXSig pRec) (seqXSig ++ [lastXSec])
-        ((lastSec,sequ),(lastXSec,seqXSig)) = recyc (stail xSig) (((0,0),[]),([shead xSig],[])) 
+        ((lastSec,sequ),(lastXSec,seqXSig)) = recyc (tail xSig) (((0,0),[]),([head xSig],[])) 
         
         --recyc :: XSig -> ((Sec,Sequ), (XSig, [XSig])) -> ((Sec,Sequ), (XSig, [XSig]))  
         recyc [] acc = acc                                                            
@@ -141,11 +143,11 @@ stepX s1 s2 | otherwise = NoStep  -- nostep
 addZeroCrossings ::  PowerRecord -> PowerRecord    
 addZeroCrossings pRec = repackXSig pRec xSigNew 
   where xSig = genXSig pRec
-        xSigNew = (concat $ sdeltaMap f xSig) ++ [slast xSig]
+        xSigNew = (concat $ vdeltaMap f xSig) ++ [last xSig]
     
         --f :: (TSample,PSampleRow) ->  (TSample,PSampleRow) -> [(TSample,PSampleRow)]
-        f (t1, row1) (t2, row2) = zip (t1 .++ zeroCrossingTimes)
-                                      (row1 .++ (ctranspose $ czipWith g (czip row1 row2) zeroCrossings))
+        f (t1, row1) (t2, row2) = zip ([t1] ++ zeroCrossingTimes)
+                                      ([row1] ++ (vtranspose $ zipWith g (zip row1 row2) zeroCrossings))
           where 
             -- create list of all zero crossing times
             zeroCrossingTimes = L.sort $ concat $ zeroCrossings -- :: [TSample]
@@ -185,14 +187,14 @@ interpPowers (t1,p1) (t2,p2) tzeroList tzero = map f tzeroList
 
 -- | Generate X-List from Power Record
 genXSig :: PowerRecord -> XSig
-genXSig (PowerRecord time pmap) = czip time (vtranspose $ V.fromList $ M.elems pmap)
+genXSig (PowerRecord time pmap) = zip (stoList time) (vtranspose $ map stoList $ M.elems pmap)
 
 
 -- | Function to regenerate pMap from pRows
 repackXSig :: PowerRecord -> XSig -> PowerRecord
-repackXSig (PowerRecord _ pmap) xSig = PowerRecord time (M.fromList $ zipWith h2 (M.toList pmap) sigs)
+repackXSig (PowerRecord _ pmap) xSig = PowerRecord (sfromList time) ( M.fromList $ zipWith h2 (M.toList pmap) $ map sfromList sigs)
   where (time,rows) = unzip xSig
-        sigs = ctranspose rows
+        sigs = vtranspose rows
         h2 (key,_) sig = (key,sig) -- format the results
 
 -- -- | check Record Data -- TODO -- include check on time length == sign length                                                               

@@ -67,9 +67,9 @@ sign x | x > 0 = PSign
        | x < 0 = NSign
 
 
-type PSample = Val
-type TSample = Val
-type DTSample = Val -- Time step
-type FPSample = Val -- Flow Power
+-- type PSample = Val
+-- -- type TSample = Val
+-- type DTSample = Val -- Time step
+-- type FPSample = Val -- Flow Power
 
 

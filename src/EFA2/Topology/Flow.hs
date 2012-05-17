@@ -26,11 +26,12 @@ import qualified Data.Vector.Generic.Mutable as MV
 
 
 -- | Function to calculate flow states for the whole sequence 
-genSequFState :: (SFold Scalar FSignal (Data Nil) (Data (UV.Vector :> Nil)) Val Val,VWalker (Data Nil) Val Sign) => SequFlowRecord -> SequFlowState
+genSequFState :: SequFlowRecord -> SequFlowState
 genSequFState (SequData sqFRec) = SequData $ map genFlowState sqFRec
 
+--  (SFold Scalar FSignal (Data Nil) (Data (UV.Vector :> Nil)) Val Val)
 -- | Function to extract the flow state out of a Flow Record  
-genFlowState ::  (SFold Scalar FSignal (Data Nil) (Data (UV.Vector :> Nil)) Val Val, VWalker (Data Nil) Val Sign) => FlowRecord ->  FlowState
+genFlowState ::  FlowRecord ->  FlowState
 genFlowState fRec@(FlowRecord time flowMap) = FlowState $ M.map f flowMap
   where f flow = fromScalar $ sigSign (sigSum flow)
 
