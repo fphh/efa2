@@ -15,17 +15,34 @@ import qualified Data.Map as M
 -- * a data record number
 -- * two numbers to identify a place in the topology 
 --   (for equation generation, we use the underlying fgl node ids.
+
+-- | Energy variables.
+data EnergyIdx = EnergyIdx !Int !Int !Int !Int deriving (Show, Ord, Eq)
+data DEnergyIdx = DEnergyIdx !Int !Int !Int !Int deriving (Show, Ord, Eq)
+
+-- | Power variables.
 data PowerIdx = PowerIdx !Int !Int !Int !Int deriving (Show, Ord, Eq)
-data EtaIdx = EtaIdx !Int !Int !Int !Int deriving  (Show)
-data XIdx = XIdx !Int !Int !Int !Int deriving (Show, Ord, Eq)
-data DEtaIdx = DEtaIdx !Int !Int !Int !Int deriving  (Show)
 data DPowerIdx = DPowerIdx !Int !Int !Int !Int deriving (Show, Ord, Eq)
+
+-- | Eta variables.
+data EtaIdx = EtaIdx !Int !Int !Int !Int deriving  (Show)
+data DEtaIdx = DEtaIdx !Int !Int !Int !Int deriving  (Show)
+
+-- | Splitting factors.
+data XIdx = XIdx !Int !Int !Int !Int deriving (Show, Ord, Eq)
+
+-- | Delta time variables, depending solely on their section and record number.
+data DTimeIdx = DTimeIdx !Int !Int deriving (Show, Ord, Eq)
+
 
 -- | Section number, record number, storage number.
 data StorageIdx = StorageIdx !Int !Int !Int deriving (Show, Ord, Eq)
 
 -- | This variable type can be used to express arbitrary relations.
 -- You can variables also make dependent on section and record.
+-- ATTENTION: Some of them are used for equation generation for
+-- performance issues. You have to make sure yourself if your
+-- variable is unique in the equational system.
 data VarIdx = VarIdx !Int !Int !Int !Int deriving (Show, Ord, Eq)
 
 -- EtaIdx x y == EtaIdx y x
@@ -55,19 +72,29 @@ instance Ord DEtaIdx where
 
 
 -- Environments
+type EnergyMap a = M.Map EnergyIdx a
+type DEnergyMap a = M.Map DEnergyIdx a
+
 type PowerMap a = M.Map PowerIdx a
-type EtaMap a = M.Map EtaIdx a
 type DPowerMap a = M.Map DPowerIdx a
+
+type EtaMap a = M.Map EtaIdx a
 type DEtaMap a = M.Map DEtaIdx a
+
+type DTimeMap a = M.Map DTimeIdx a
+
 type XMap a = M.Map XIdx a
 type VarMap a = M.Map VarIdx a
 type StorageMap a = M.Map StorageIdx a
 
 
-data Envs a = Envs { powerMap :: PowerMap a,
+data Envs a = Envs { energyMap :: EnergyMap a,
+                     denergyMap :: DEnergyMap a,
+                     powerMap :: PowerMap a,
                      dpowerMap :: DPowerMap a,
                      etaMap :: EtaMap a,
                      detaMap :: DEtaMap a,
+                     dtimeMap :: DTimeMap a,
                      xMap :: XMap a,
                      varMap :: VarMap a,
                      storageMap :: StorageMap a } deriving (Show)
@@ -75,4 +102,4 @@ data Envs a = Envs { powerMap :: PowerMap a,
 
 
 emptyEnv :: Envs a
-emptyEnv = Envs M.empty M.empty M.empty M.empty M.empty M.empty M.empty
+emptyEnv = Envs M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty

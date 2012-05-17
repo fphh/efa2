@@ -53,28 +53,41 @@ makeAllEquations topo envs = (envs', ts)
         envs' = map (shiftIndices m) envs
 
         enveqs = concatMap f envs'
-        f (Envs p dp e de x v st) = envToEqTerms p
-                                    ++ envToEqTerms dp
-                                    ++ envToEqTerms e
-                                    ++ envToEqTerms de
-                                    ++ envToEqTerms x
-                                    ++ envToEqTerms v
-                                    ++ envToEqTerms st
+        f (Envs e de p dp n dn t x v st) = envToEqTerms e
+                                           ++ envToEqTerms de
+                                           ++ envToEqTerms p
+                                           ++ envToEqTerms dp
+                                           ++ envToEqTerms n
+                                           ++ envToEqTerms dn
+                                           ++ envToEqTerms t
+                                           ++ envToEqTerms x
+                                           ++ envToEqTerms v
+                                           ++ envToEqTerms st
 
 
+-- ATTENTION: DTimeIdx must not shift?
 shiftIndices :: (Show a) => M.Map (Int, Int, Int) Node -> Envs a -> Envs a
-shiftIndices m (Envs p dp e de x v st) = Envs p' dp' e' de' x' v' st'
-  where p' = M.mapKeys pf p
+shiftIndices m (Envs e de p dp n dn t x v st) = Envs e' de' p' dp' n' dn' t x' v' st'
+  where e' = M.mapKeys ef e
+        ef (EnergyIdx s r f t) = EnergyIdx s r (m M.! (s, r, f)) (m M.! (s, r, t))
+
+        de' = M.mapKeys def de
+        def (DEnergyIdx s r f t) = DEnergyIdx s r (m M.! (s, r, f)) (m M.! (s, r, t))
+
+        p' = M.mapKeys pf p
         pf (PowerIdx s r f t) = PowerIdx s r (m M.! (s, r, f)) (m M.! (s, r, t))
 
         dp' = M.mapKeys dpf dp
         dpf (DPowerIdx s r f t) = DPowerIdx s r (m M.! (s, r, f)) (m M.! (s, r, t))
 
-        e' = M.mapKeys ef e
-        ef (EtaIdx s r f t) = EtaIdx s r (m M.! (s, r, f)) (m M.! (s, r, t))
+        n' = M.mapKeys nf n
+        nf (EtaIdx s r f t) = EtaIdx s r (m M.! (s, r, f)) (m M.! (s, r, t))
 
-        de' = M.mapKeys def de
-        def (DEtaIdx s r f t) = DEtaIdx s r (m M.! (s, r, f)) (m M.! (s, r, t))
+        dn' = M.mapKeys dnf dn
+        dnf (DEtaIdx s r f t) = DEtaIdx s r (m M.! (s, r, f)) (m M.! (s, r, t))
+
+        --t' = M.mapKeys tf t
+        --tf (DTimeIdx s r) = DTimeIdx s r (m M.! (s, r, f)) (m M.! (s, r, t))
 
         x' = M.mapKeys xf x
         xf (XIdx s r f t) = XIdx s r (m M.! (s, r, f)) (m M.! (s, r, t))
@@ -126,11 +139,11 @@ mkStoreEqs (ins, outs) = startEq:eqs
 
 mkInStoreEqs :: InOutGraphFormat (LNode NLabel) -> [EqTerm]
 mkInStoreEqs (ins, n@(nid, NLabel sec rec _ _), outs@((o,_):_)) = (startEq:osEqs)
-  where startEq = mkVar (VarIdx sec rec nid 0) := mkVar (PowerIdx sec rec nid o)
+  where startEq = mkVar (VarIdx sec rec nid 0) := mkVar (EnergyIdx sec rec nid o)
         osEqs = map f (pairs outs)
-        f (x, y) = mkVar (PowerIdx sec rec nid y') := 
-                     mkVar (PowerIdx sec rec nid x') :+ (Minus (mkVar (PowerIdx xs xr x' nid)))
-                     --mkVar (PowerIdx sec rec nid x') :+ (mkVar (PowerIdx xs xr x' nid))
+        f (x, y) = mkVar (EnergyIdx sec rec nid y') := 
+                     mkVar (EnergyIdx sec rec nid x') :+ (Minus (mkVar (EnergyIdx xs xr x' nid)))
+                     --mkVar (EnergyIdx sec rec nid x') :+ (mkVar (EnergyIdx xs xr x' nid))
 
           where (x', NLabel xs xr _ _) = x
                 (y', _) = y
@@ -140,7 +153,7 @@ mkInStoreEqs _ = []
 mkOutStoreEqs :: InOutGraphFormat (LNode NLabel) -> [EqTerm]
 mkOutStoreEqs (ins, n@(nid, NLabel sec rec _ _), o:_) = visumeq:xeqs ++ eieqs
   where xis = map (makeVar XIdx) ins
-        eis = map (makeVar PowerIdx) ins
+        eis = map (makeVar EnergyIdx) ins
         makeVar mkIdx (nid', l) = mkVar $ mkIdx (sectionNLabel l) (recordNLabel l) nid' nid
 
         visum = mkVar (VarIdx sec rec nid 2)
@@ -149,7 +162,7 @@ mkOutStoreEqs (ins, n@(nid, NLabel sec rec _ _), o:_) = visumeq:xeqs ++ eieqs
         xeqs = zipWith g xis eis
         g x e = x := e :* Recip visum
 
-        eis' = map (makeVar' PowerIdx) ins
+        eis' = map (makeVar' EnergyIdx) ins
         makeVar' mkIdx (nid', _) = mkVar $ mkIdx sec rec nid nid'
 
         outv = mkVar (VarIdx sec rec nid 1)
@@ -160,7 +173,7 @@ mkOutStoreEqs (ins, n@(nid, NLabel sec rec _ _), o:_) = visumeq:xeqs ++ eieqs
 mkEdgeEq :: Topology -> [EqTerm]
 mkEdgeEq topo = map f (map unlabelEdge origEs)
   where origEs = L.filter (\(_, _, l) -> not $ isIntersectionEdge l) (labEdges topo)
-        f (x, y) = mkVar (PowerIdx ys yr y x) := (mkVar (PowerIdx xs xr x y)) :* (mkVar (EtaIdx xs xr x y))
+        f (x, y) = mkVar (EnergyIdx ys yr y x) := (mkVar (EnergyIdx xs xr x y)) :* (mkVar (EtaIdx xs xr x y))
           where NLabel xs xr _ _ = fromJust $ lab topo x
                 NLabel ys yr _ _ = fromJust $ lab topo y
 
@@ -176,8 +189,8 @@ mkEq (ins, n@(nid, NLabel sec rec _ _), outs)
   | otherwise = vosumeq ++ oeqs ++ visumeq ++ ieqs ++ xoeqs ++ xieqs ++ oeqs' ++ ieqs'
   where xis = map (makeVar XIdx) ins
         xos = map (makeVar XIdx) outs
-        eis = map (makeVar PowerIdx) ins
-        eos = map (makeVar PowerIdx) outs
+        eis = map (makeVar EnergyIdx) ins
+        eos = map (makeVar EnergyIdx) outs
         -- For section and record, we focus on the current node n.
         makeVar mkIdx (nid', _) = mkVar $ mkIdx sec rec nid nid'
 

@@ -102,10 +102,10 @@ splitTerms isVar ts = (given, nov, givenExt, rest)
 -- | Predicate to indicate what should be viewed as a variable. Ask me for further explanation.
 -- Static version for optimisation.
 isVar' :: EqTerm -> Bool
-isVar' (Power (PowerIdx 0 0 0 1)) = False
-isVar' (Power _) = True
+isVar' (Energy (EnergyIdx 0 0 0 1)) = False
+isVar' (Energy _) = True
 --isVar' (Eta _) = True
-isVar' (DPower _) = True
+isVar' (DEnergy _) = True
 isVar' (DEta _) = True
 --isVar (X _) = True
 isVar' (Var _) = True
@@ -114,9 +114,9 @@ isVar' _ = False
 
 -- | True for compound terms.
 isCompoundTerm :: EqTerm -> Bool
-isCompoundTerm (Power _) = False
+isCompoundTerm (Energy _) = False
 isCompoundTerm (Eta _) = False
-isCompoundTerm (DPower _) = False
+isCompoundTerm (DEnergy _) = False
 isCompoundTerm (DEta _) = False
 isCompoundTerm (X _) = False
 isCompoundTerm (Var _) = False

@@ -23,10 +23,13 @@ import EFA2.Interpreter.Arith
 data EqTerm = EqTerm := EqTerm
           | Const Val -- Double
           | Given
+          | Energy EnergyIdx
+          | DEnergy DEnergyIdx
           | Power PowerIdx
-          | Eta EtaIdx
           | DPower DPowerIdx
+          | Eta EtaIdx
           | DEta DEtaIdx
+          | DTime DTimeIdx
           | X XIdx
           | Var VarIdx
           | Store StorageIdx
@@ -57,17 +60,26 @@ class MkVarC a where
       give :: a -> EqTerm
       give idx = mkVar idx := Given
 
+instance MkVarC EnergyIdx where
+         mkVar = Energy
+
+instance MkVarC DEnergyIdx where
+         mkVar = DEnergy
+
 instance MkVarC PowerIdx where
          mkVar = Power
-
-instance MkVarC EtaIdx where
-         mkVar = Eta
 
 instance MkVarC DPowerIdx where
          mkVar = DPower
 
+instance MkVarC EtaIdx where
+         mkVar = Eta
+
 instance MkVarC DEtaIdx where
          mkVar = DEta
+
+instance MkVarC DTimeIdx where
+         mkVar = DTime
 
 instance MkVarC XIdx where
          mkVar = X
@@ -93,10 +105,18 @@ mult = L.foldl1' (:*)
 showEqTerm :: EqTerm -> String
 showEqTerm (Const x) = show x
 showEqTerm Given = "given"
-showEqTerm (Power (PowerIdx s r x y)) = "E_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
+
+showEqTerm (Energy (EnergyIdx s r x y)) = "E_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
+showEqTerm (DEnergy (DEnergyIdx s r x y)) = "dE_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
+
+showEqTerm (Power (PowerIdx s r x y)) = "P_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
+showEqTerm (DPower (DPowerIdx s r x y)) = "dP_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
+
 showEqTerm (Eta (EtaIdx s r x y)) = "n_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
-showEqTerm (DPower (DPowerIdx s r x y)) = "dE_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
 showEqTerm (DEta (DEtaIdx s r x y)) = "dn_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
+
+showEqTerm (DTime (DTimeIdx s r)) =  "t_" ++ show s ++ "." ++ show r
+
 showEqTerm (X (XIdx s r x y)) =  "x_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
 showEqTerm (Var (VarIdx s r x y)) = "v_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
 showEqTerm (Store (StorageIdx s r n)) = "s_" ++ show s ++ "." ++ show r ++ "_" ++ show n
@@ -140,15 +160,15 @@ type TPath = [Dir]
 
 -- test terms
 {-
-p1 = Power (PowerIdx 0 1)
-p2 = Power (PowerIdx 0 2)
-p3 = Power (PowerIdx 0 3)
-p4 = Power (PowerIdx 0 4)
+p1 = Energy (EnergyIdx 0 1)
+p2 = Energy (EnergyIdx 0 2)
+p3 = Energy (EnergyIdx 0 3)
+p4 = Energy (EnergyIdx 0 4)
 
-dp1 = DPower (DPowerIdx 0 1)
-dp2 = DPower (DPowerIdx 0 2)
-dp3 = DPower (DPowerIdx 0 3)
-dp4 = DPower (DPowerIdx 0 4)
+dp1 = DEnergy (DEnergyIdx 0 1)
+dp2 = DEnergy (DEnergyIdx 0 2)
+dp3 = DEnergy (DEnergyIdx 0 3)
+dp4 = DEnergy (DEnergyIdx 0 4)
 
 
 c = Const 1.0
@@ -195,9 +215,9 @@ isolateVar' (Recip u) (L:p) = isolateVar' u p . Recip
 --isolateVar' (FAbs u v) (L:p) = isolateVar' u p . (flip BAbs v)
 --isolateVar' (BAbs u v) (L:p) = isolateVar' u p . (flip FAbs v)
 isolateVar' (FDiff p' e dp de) (L:p) = isolateVar' dp p . f
-  where f x@(DPower (DPowerIdx s r a b)) = BDiff (Power (PowerIdx s r a b)) e x de
+  where f x@(DEnergy (DEnergyIdx s r a b)) = BDiff (Energy (EnergyIdx s r a b)) e x de
 isolateVar' (BDiff p' e dp de) (L:p) = isolateVar' dp p . f
-  where f x@(DPower (DPowerIdx s r a b)) = FDiff (Power (PowerIdx s r a b)) e x de
+  where f x@(DEnergy (DEnergyIdx s r a b)) = FDiff (Energy (EnergyIdx s r a b)) e x de
 
 
 -- this is the main function for transforming Equations

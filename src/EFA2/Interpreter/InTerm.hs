@@ -6,10 +6,10 @@ module EFA2.Interpreter.InTerm where
 import EFA2.Interpreter.Arith
 import EFA2.Interpreter.Env
 
-data InTerm a = PIdx PowerIdx
-              | EIdx EtaIdx
-              | DPIdx DPowerIdx
-              | DEIdx DEtaIdx
+data InTerm a = EIdx EnergyIdx
+              | NIdx EtaIdx
+              | DEIdx DEnergyIdx
+              | DNIdx DEtaIdx
               | ScaleIdx XIdx
               | VIdx VarIdx
               | SIdx StorageIdx

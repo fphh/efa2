@@ -124,13 +124,13 @@ drawTopologyX :: TheGraph a -> IO ()
 drawTopologyX (TheGraph g _) = printGraph g show show
 -}
 
-data Line = PLine Int Int
+data Line = ELine Int Int
           | XLine Int Int
           | NLine Int Int deriving (Eq, Ord)
 
 
 instance Show Line where
-         show (PLine u v) = "p_" ++ show u ++ "_" ++ show v
+         show (ELine u v) = "e_" ++ show u ++ "_" ++ show v
          show (XLine u v) = "x_" ++ show u ++ "_" ++ show v
          show (NLine u v) = "n_" ++ show u ++ "_" ++ show v
 
@@ -165,7 +165,7 @@ instance DrawTopology [InTerm Val] where
 
 
 drawAbsTopology :: (Show a) => ((Line, Maybe a) -> String) -> (Maybe a -> String) -> Topology -> Envs a ->  IO ()
-drawAbsTopology f content (Topology g) (Envs p dp e de x v st) = printGraph g nshow eshow
+drawAbsTopology f content (Topology g) (Envs e de p dp n dn t x v st) = printGraph g nshow eshow
   where eshow ps = L.intercalate "\n" $ map f $ mkLst ps
         nshow (num, NLabel sec rec nid ty) = 
           "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\n" ++
@@ -176,15 +176,15 @@ drawAbsTopology f content (Topology g) (Envs p dp e de x v st) = printGraph g ns
 
         node n = nodeNLabel (fromJust (lab g n))
         mkLst (uid, vid, l) 
-          | isOriginalEdge l = [ (PLine uid vid, M.lookup (PowerIdx usec urec uid vid) p), 
+          | isOriginalEdge l = [ (ELine uid vid, M.lookup (EnergyIdx usec urec uid vid) e), 
                                  (XLine uid vid, M.lookup (XIdx usec urec uid vid) x),
-                                 (NLine uid vid, M.lookup (EtaIdx usec urec uid vid) e),
+                                 (NLine uid vid, M.lookup (EtaIdx usec urec uid vid) n),
                                  (XLine vid uid, M.lookup (XIdx vsec vrec vid uid) x),
-                                 (PLine vid uid, M.lookup (PowerIdx vsec vrec vid uid) p) ]
-          | isInnerStorageEdge l = [ (PLine vid uid, M.lookup (PowerIdx vsec vrec vid uid) p) ]
-          | otherwise = [ (PLine uid vid, M.lookup (PowerIdx usec urec uid vid) p),
+                                 (ELine vid uid, M.lookup (EnergyIdx vsec vrec vid uid) e) ]
+          | isInnerStorageEdge l = [ (ELine vid uid, M.lookup (EnergyIdx vsec vrec vid uid) e) ]
+          | otherwise = [ (ELine uid vid, M.lookup (EnergyIdx usec urec uid vid) e),
                           (XLine uid vid, M.lookup (XIdx usec urec uid vid) x),
-                          (PLine vid uid, M.lookup (PowerIdx vsec vrec vid uid) p) ]
+                          (ELine vid uid, M.lookup (EnergyIdx vsec vrec vid uid) e) ]
           where NLabel usec urec _ _ = fromJust $ lab g uid
                 NLabel vsec vrec _ _ = fromJust $ lab g vid
 
@@ -206,15 +206,15 @@ instance DrawTopology InTerm where
  -}
 
 {-
-drawDiffTopology :: (Arith a, Show a) => ((Line, [a]) -> String) -> t -> TheGraph [a] -> DiffEnv [a] -> M.Map PowerIdx [a] ->  IO ()
+drawDiffTopology :: (Arith a, Show a) => ((Line, [a]) -> String) -> t -> TheGraph [a] -> DiffEnv [a] -> M.Map EnergyIdx [a] ->  IO ()
 drawDiffTopology f nenv (TheGraph g _) (DiffEnv dpenv deenv eenv xenv) penv = printGraph g show eshow
-  where penv' = mkEnv $ mkPowerEnv penv
+  where penv' = mkEnv $ mkEnergyEnv penv
         eshow ps = L.intercalate "\n" $ map f $ mkLst ps
-        mkLst (x, y) = [ (PLine, penv' (PowerIdx x y)), 
+        mkLst (x, y) = [ (PLine, penv' (EnergyIdx x y)), 
                          (XLine, xenv (XIdx x y)),
                          (NLine, eenv (EtaIdx x y)),
                          (XLine, xenv (XIdx y x)),
-                         (PLine, penv' (PowerIdx y x)) ]
+                         (PLine, penv' (EnergyIdx y x)) ]
 
 -}
 
@@ -227,7 +227,7 @@ drawDependencyGraph g = printGraph g nshow (const "")
 -}
 
 {-
-drawDependencyGraphTransClose :: TheGraph t -> [(PowerIdx, b)] -> IO ()
+drawDependencyGraphTransClose :: TheGraph t -> [(EnergyIdx, b)] -> IO ()
 drawDependencyGraphTransClose theGraph@(TheGraph g _) given = printGraph (transClose g') nshow (const "")
   where gvs = give $ map (Energy . fst) given
         g' = makeDependencyGraph theGraph gvs

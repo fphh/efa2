@@ -32,4 +32,4 @@ instance Signal InTerm where
 -}
 
 data TheGraph a = TheGraph { theGraph :: Topology,
-                             powerEnv :: PowerMap a }
+                             powerEnv :: EnergyMap a }

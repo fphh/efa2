@@ -40,29 +40,37 @@ import EFA2.Example.Loop
 
 main :: IO ()
 main = do
-  let -- TheGraph g sigs = loop
-      g = randomTopology 12 1000 3.0
-      xenv = randomXEnv 14 3 g
-      nenv = randomEtaEnv 34 3 g
-      sigs = M.fromList [(PowerIdx 0 0 0 1, [1])]
+  let TheGraph g sigs = loop
+      -- g = randomTopology 12 100 3.0
+      --xenv = randomXEnv 14 3 g
+      --nenv = randomEtaEnv 34 3 g
+      -- sigs = M.fromList [(EnergyIdx 0 0 0 1, [1])]
       (_, ts) = makeAllEquations g [envs]
 
 
-      envs = emptyEnv { powerMap = sigs, xMap = xenv, etaMap = nenv }
+      envs = emptyEnv { energyMap = sigs }
       ts' = map (eqToInTerm envs) (order ts)
 
       res :: Envs [Val]
       res = interpretFromScratch ts'
 
+      e = emptyEnv { energyMap = M.fromList [(EnergyIdx 0 0 0 1, [1, 2, 3])], xMap = xMap res, etaMap = etaMap res }
+      (_, ts'') = makeAllEquations g [e]
+      ts''' = map (eqToInTerm e) (order ts'')
+
+      res2 :: Envs [Val]
+
+      res2 = interpretFromScratch ts'''
+
   putStrLn ("Number of nodes: " ++ show (noNodes g))
   putStrLn ("Number of edges: " ++ show (length $ edges g))
   putStrLn "===================="
-  putStrLn (showEqTerms ts)
+  putStrLn (showEqTerms ts'')
   putStrLn "===================="
-  putStrLn (showInTerms ts')
+  putStrLn (showInTerms ts''')
   putStrLn "===================="
   putStrLn ("Number of undeq: " ++ show (length ts))
-  putStrLn ("Number of deq:   " ++ show (length ts'))
+  putStrLn ("Number of deq:   " ++ show (length ts'''))
 
-
-  --drawTopology g res
+  print res2
+  drawTopology g res2
