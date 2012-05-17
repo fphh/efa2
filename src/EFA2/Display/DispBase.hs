@@ -12,7 +12,7 @@ import EFA2.Signal.Base
 -- | Central Place for basic Unit & Display settings
 
 -- | Variables for DisplayUnit and Display Scale 
-data DisplayUnit = Unit_kWh | Unit_kW | Unit_Percent | Unit_None | Unit_Sec
+data DisplayUnit = Unit_kWh | Unit_kW | Unit_Percent | Unit_None | Unit_Sec | Unit_UT
 data UnitScale = UnitScale Val
 
 
@@ -23,6 +23,7 @@ instance Show DisplayUnit where
   show Unit_Percent = "%"
   show Unit_None = "/"
   show Unit_Sec = "s"
+  show Unit_UT = "UT"
 
 -- | get display scale per Unit 
 getUnitScale :: DisplayUnit -> UnitScale  
@@ -31,7 +32,8 @@ getUnitScale Unit_None = UnitScale 1
 getUnitScale Unit_Percent = UnitScale 100
 getUnitScale Unit_Sec = UnitScale 1
 getUnitScale Unit_kW = UnitScale (1/1000)
-getUnitScale u = error ("Error in getUnitScale -- no scale defined - Unit: " ++ show u)
+getUnitScale Unit_UT = UnitScale 1
+-- getUnitScale u = error ("Error in getUnitScale -- no scale defined - Unit: " ++ show u)
 
  -- ============ Setting - Switch global display length =============
 
@@ -56,7 +58,7 @@ getDefaultFormat = f dispLength
 
 
 -- | Simple Display Function
-sdisp x = disp x getDefaultFormat  (UnitScale 1)
+xdisp x = disp x getDefaultFormat  (UnitScale 1)
 
 -- | Display Class using Format & Scale
 class Disp a where 

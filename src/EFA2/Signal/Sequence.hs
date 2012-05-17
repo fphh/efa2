@@ -50,16 +50,16 @@ type XSig =  [XSample]
 
 
 -- | From PowerRecord
-fromFlowRecord :: SecIdx -> RecIdx -> FlowRecord -> Envs FUTSignal
+fromFlowRecord :: SecIdx -> RecIdx -> FlowRecord -> Envs [Val]
 fromFlowRecord (SecIdx secIdx) (RecIdx recIdx) fRec@(FlowRecord dTime flowMap) =
   emptyEnv { powerMap = M.fromList $ map f (M.toList flowMap) }
-  where f ((PPosIdx idx1 idx2), (flowSig)) = ((PowerIdx secIdx recIdx idx1 idx2), untype flowSig)    
+  where f ((PPosIdx idx1 idx2), (flowSig)) = ((PowerIdx secIdx recIdx idx1 idx2), [fromScalar $ sigSum flowSig])    
 
 -- | Generate Sequence Flow 
 genSequFlow :: SequPwrRecord -> SequFlowRecord
 genSequFlow sqPRec = (map recPartIntegrate) `fmap` sqPRec
 
-makeSequence :: PowerRecord -> Topology -> ([Envs FUTSignal], Topology)
+makeSequence :: PowerRecord -> Topology -> ([Envs [Val]], Topology)
 makeSequence pRec topo = (sqEnvs, sqTopo)
   where pRec0 = addZeroCrossings pRec
         (sequ,sqPRec) = genSequ pRec0          

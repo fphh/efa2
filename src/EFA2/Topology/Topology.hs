@@ -138,6 +138,7 @@ mkInStoreEqs _ = []
 
 
 mkOutStoreEqs :: InOutGraphFormat (LNode NLabel) -> [EqTerm]
+-- mkOutStoreEqs x = error ("Error :" ++ show x)
 mkOutStoreEqs (ins, n@(nid, NLabel sec rec _ _), o:_) = visumeq:xeqs ++ eieqs
   where xis = map (makeVar XIdx) ins
         eis = map (makeVar PowerIdx) ins

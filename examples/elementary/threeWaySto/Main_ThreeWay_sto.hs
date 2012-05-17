@@ -44,6 +44,8 @@ import EFA2.Signal.Signal
 import EFA2.Signal.Typ
 import EFA2.Signal.Data
 
+import EFA2.Display.ReportSequence
+
 -- define topology 
 
 topo :: Topology
@@ -64,7 +66,7 @@ main = do
 
       --time = [0, 0, 1, 1]
 
-      s01 = [0, 2, 2, 0] 
+      s01 = [0, 2, 2, 0] :: [Val]
       s10 = [0, 0.8, 0.8, 0]
       s12 = [0.3, 0.3, 0.3, 0.3]
       s21 = [0.2, 0.2, 0.2, 0.2]
@@ -81,7 +83,8 @@ main = do
       n = 3
       --dtime = replicate n [0, 1, 0]
       --time = foldl (+) 0 dtime
-      time = [0, 0] ++ (concatMap (replicate 3) [1..])
+      l = fromIntegral $ length $ replicate n (s01 ++ s01') :: Val
+      time = [0, 0] ++ (concatMap (replicate 3) [1.0..l]) 
 
       pMap =  M.fromList [ (PPosIdx 0 1, sfromList $ concat $ replicate n (s01 ++ s01')),
                            (PPosIdx 1 0, sfromList $ concat $ replicate n (s10 ++ s10')), 
@@ -91,7 +94,10 @@ main = do
                            (PPosIdx 3 1, sfromList $ concat $ replicate n (s31 ++ s31')) ]
 
       --(sqEnvs, sqTopo) = makeSequence pRec topo
-      (sqEnvs, sqTopo) = makeSequence (PowerRecord (sfromList time) pMap) topo 
+      pRec = (PowerRecord (sfromList time) pMap)
+      
+      (sequ,sequPwrRecord) = genSequ pRec
+      (sqEnvs, sqTopo) = makeSequence  pRec topo 
 
       --sigs = M.unions (map powerMap sqEnvs)
 
@@ -115,6 +121,9 @@ main = do
       -- envs = Envs (M.insert storage0 [3.0] sigs) M.empty M.empty M.empty M.empty M.empty
       f x | x < 0 = -x
       f x = x
+  
+
+      
       envs = emptyEnv { powerMap = M.insert storage0 [3.0] (M.map (map f) sigs) }
 
 
@@ -123,16 +132,18 @@ main = do
       res :: Envs [Val]
       res = interpretFromScratch gd
       dirg = makeDirTopology sqTopo
-
+      
+  -- print $ toTable show pRec
+  printTableToScreen show pRec
   --putStrLn (showEqTerms ts)
  -- putStrLn (showInTerms gd)
   --print sigs
   --print res
-  drawTopology sqTopo res
+  --drawTopology sqTopo res
   --print sqTopo
 
  
-  --drawTopologyX' sqTopo
+--  drawTopologyX' sqTopo
   --print (sqTopo)
   
   --print test
