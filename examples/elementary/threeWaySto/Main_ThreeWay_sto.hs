@@ -46,6 +46,8 @@ import EFA2.Signal.Data
 
 import EFA2.Display.ReportSequence
 
+import EFA2.Display.Plot
+
 -- define topology 
 
 topo :: Topology
@@ -141,7 +143,8 @@ main = do
   --print res
   --drawTopology sqTopo res
   --print sqTopo
-
+  sigPlot pRec
+  sigPlot sequPwrRecord
  
 --  drawTopologyX' sqTopo
   --print (sqTopo)
