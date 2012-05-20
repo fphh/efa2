@@ -53,7 +53,8 @@ type XSig =  [XSample]
 fromFlowRecord :: SecIdx -> RecIdx -> FlowRecord -> Envs [Val]
 fromFlowRecord (SecIdx secIdx) (RecIdx recIdx) fRec@(FlowRecord dTime flowMap) =
   emptyEnv { powerMap = M.fromList $ map f (M.toList flowMap) }
-  where f ((PPosIdx idx1 idx2), (flowSig)) = ((PowerIdx secIdx recIdx idx1 idx2), [fromScalar $ sigSum flowSig])    
+  where f ((PPosIdx idx1 idx2), (flowSig)) = ((PowerIdx secIdx recIdx idx1 idx2), [sigSum flowSig])    
+  --where f ((PPosIdx idx1 idx2), (flowSig)) = ((PowerIdx secIdx recIdx idx1 idx2), [fromScalar $ sigSum flowSig])    
 
 -- | Generate Sequence Flow 
 genSequFlow :: SequPwrRecord -> SequFlowRecord
