@@ -13,6 +13,8 @@ type Container = []
 --type Container = UV.Vector
 
 
+-- ATTENTION on operator presedence: TODO!!!
+
 class Arith a where
       zero :: a
       cst :: Val -> a
@@ -21,6 +23,11 @@ class Arith a where
       (.+) :: a -> a -> a
       (.*) :: a -> a -> a
       (./) :: a -> a -> a
+      (.-) :: a -> a -> a
+      x .- y = x .+ (neg y)
+      absol :: (Ord a, Num a) => a -> a
+      absol x | x < 0 = -x
+      absol x = x
 
 instance Arith Val where
          zero = 0.0
@@ -29,7 +36,8 @@ instance Arith Val where
          rec = recip
          (.+) = (+)
          (.*) = (*)
-         (./) = (/)
+         x ./ 0 = 0
+         x ./ y = x / y
 
 instance (Arith a) => Arith [a] where
          zero = repeat (zero :: a)

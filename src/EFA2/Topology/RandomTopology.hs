@@ -64,15 +64,15 @@ randomTopology seed n ratio = g
 
         edges = filter (\(x, y, _) -> x /= y) $ unique es'' --  (es' ++ es'')
 
-
+{- TODO:
 -- | Takes a seed, the length of the value list and a graph.
-randomEtaEnv :: Int -> Int -> Topology -> EtaMap [Val]
+randomEtaEnv :: Int -> Int -> Topology -> FEtaMap [Val]
 randomEtaEnv seed len g = M.fromList (zip etas rs)
   where etas = concat $ mapGraphLabels f g
-        f (_, n, outs) = zipWith (EtaIdx 0 0) (repeat (nodeNLabel n)) (map nodeNLabel outs)
+        f (_, n, outs) = zipWith (FEtaIdx 0 0) (repeat (nodeNLabel n)) (map nodeNLabel outs)
         numOfEtas = length etas
         rs = LHT.sliceHorizontal numOfEtas $ take (numOfEtas*len) (randomRs (0.1, 0.9) (mkStdGen seed))
-
+-}
 
 randomXs :: (RandomGen g) => g -> Int -> [Val]
 randomXs gen n = (1 - sum rs):rs

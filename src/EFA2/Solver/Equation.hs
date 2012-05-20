@@ -27,7 +27,7 @@ data EqTerm = EqTerm := EqTerm
           | DEnergy DEnergyIdx
           | Power PowerIdx
           | DPower DPowerIdx
-          | Eta EtaIdx
+          | FEta FEtaIdx EqTerm
           | DEta DEtaIdx
           | DTime DTimeIdx
           | X XIdx
@@ -72,8 +72,11 @@ instance MkVarC PowerIdx where
 instance MkVarC DPowerIdx where
          mkVar = DPower
 
-instance MkVarC EtaIdx where
-         mkVar = Eta
+--instance MkVarC EtaIdx where
+--         mkVar = Eta
+
+instance MkVarC FEtaIdx where
+         mkVar idx@(FEtaIdx s r f t) = FEta idx (mkVar (PowerIdx s r f t))
 
 instance MkVarC DEtaIdx where
          mkVar = DEta
@@ -112,10 +115,11 @@ showEqTerm (DEnergy (DEnergyIdx s r x y)) = "dE_" ++ show s ++ "." ++ show r ++ 
 showEqTerm (Power (PowerIdx s r x y)) = "P_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
 showEqTerm (DPower (DPowerIdx s r x y)) = "dP_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
 
-showEqTerm (Eta (EtaIdx s r x y)) = "n_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
+--showEqTerm (Eta (EtaIdx s r x y)) = "n_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
+showEqTerm (FEta (FEtaIdx s r x y) p) = "n_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y ++ "(" ++ showEqTerm p ++ ")"
 showEqTerm (DEta (DEtaIdx s r x y)) = "dn_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
 
-showEqTerm (DTime (DTimeIdx s r)) =  "t_" ++ show s ++ "." ++ show r
+showEqTerm (DTime (DTimeIdx s r)) =  "dt_" ++ show s ++ "." ++ show r
 
 showEqTerm (X (XIdx s r x y)) =  "x_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
 showEqTerm (Var (VarIdx s r x y)) = "v_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
@@ -139,6 +143,7 @@ showEqTerms ts = L.intercalate "\n" $ map showEqTerm ts
 mkVarSet :: (EqTerm -> Bool) -> EqTerm -> S.Set EqTerm
 mkVarSet p t = mkVarSet' t
   where mkVarSet' v | p v = S.singleton v
+        mkVarSet' fn@(FEta _ p) = S.insert fn (mkVarSet' p)
         mkVarSet' (x :+ y) = S.union (mkVarSet' x) (mkVarSet' y)
         mkVarSet' (x :* y) = S.union (mkVarSet' x) (mkVarSet' y)
         --mkVarSet' (FAbs x y) = S.union (mkVarSet' x) (mkVarSet' y)

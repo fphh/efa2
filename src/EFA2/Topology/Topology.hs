@@ -43,7 +43,7 @@ makeWithDirEdges es = map f es
 
 makeAllEquations :: (Show a) => Topology -> [Envs a] -> ([Envs a], [EqTerm])
 makeAllEquations topo envs = (envs', ts)
-  where ts = mkEdgeEq dirTopo ++ mkNodeEq dirTopo ++ enveqs ++ interTs
+  where ts = mkEdgeEq dirTopo ++ mkNodeEq dirTopo ++ interTs ++ powerEqs ++ enveqs
         dirTopo = makeDirTopology topo
 
         interTs = mkIntersectionEqs dirTopo
@@ -51,23 +51,24 @@ makeAllEquations topo envs = (envs', ts)
         m = M.fromList $ map g (labNodes topo)
         g (nid, NLabel s r oldNid _) = ((s, r, oldNid), nid)
         envs' = map (shiftIndices m) envs
-
+        
+        powerEqs = mkPowerEqs dirTopo
         enveqs = concatMap f envs'
-        f (Envs e de p dp n dn t x v st) = envToEqTerms e
-                                           ++ envToEqTerms de
-                                           ++ envToEqTerms p
-                                           ++ envToEqTerms dp
-                                           ++ envToEqTerms n
-                                           ++ envToEqTerms dn
-                                           ++ envToEqTerms t
-                                           ++ envToEqTerms x
-                                           ++ envToEqTerms v
-                                           ++ envToEqTerms st
+        f (Envs e de p dp fn dn t x v st) = envToEqTerms e
+                                            ++ envToEqTerms de
+                                            ++ envToEqTerms p
+                                            ++ envToEqTerms dp
+                                            ++ envToEqTerms fn
+                                            ++ envToEqTerms dn
+                                            ++ envToEqTerms t
+                                            ++ envToEqTerms x
+                                            ++ envToEqTerms v
+                                            ++ envToEqTerms st
 
 
 -- ATTENTION: DTimeIdx must not shift?
 shiftIndices :: (Show a) => M.Map (Int, Int, Int) Node -> Envs a -> Envs a
-shiftIndices m (Envs e de p dp n dn t x v st) = Envs e' de' p' dp' n' dn' t x' v' st'
+shiftIndices m (Envs e de p dp fn dn t x v st) = Envs e' de' p' dp' fn' dn' t x' v' st'
   where e' = M.mapKeys ef e
         ef (EnergyIdx s r f t) = EnergyIdx s r (m M.! (s, r, f)) (m M.! (s, r, t))
 
@@ -80,8 +81,11 @@ shiftIndices m (Envs e de p dp n dn t x v st) = Envs e' de' p' dp' n' dn' t x' v
         dp' = M.mapKeys dpf dp
         dpf (DPowerIdx s r f t) = DPowerIdx s r (m M.! (s, r, f)) (m M.! (s, r, t))
 
-        n' = M.mapKeys nf n
-        nf (EtaIdx s r f t) = EtaIdx s r (m M.! (s, r, f)) (m M.! (s, r, t))
+        --n' = M.mapKeys nf n
+        --nf (EtaIdx s r f t) = EtaIdx s r (m M.! (s, r, f)) (m M.! (s, r, t))
+
+        fn' = M.mapKeys fnf fn
+        fnf (FEtaIdx s r f t) = FEtaIdx s r (m M.! (s, r, f)) (m M.! (s, r, t))
 
         dn' = M.mapKeys dnf dn
         dnf (DEtaIdx s r f t) = DEtaIdx s r (m M.! (s, r, f)) (m M.! (s, r, t))
@@ -101,6 +105,21 @@ shiftIndices m (Envs e de p dp n dn t x v st) = Envs e' de' p' dp' n' dn' t x' v
 
 envToEqTerms :: (MkVarC k) => M.Map k v -> [EqTerm]
 envToEqTerms m = map (give . fst) (M.toList m)
+
+mkPowerEqs :: Topology -> [EqTerm]
+mkPowerEqs topo = concat $ mapGraph mkPEqs topo
+
+mkPEqs :: ([LNode NLabel], LNode NLabel, [LNode NLabel]) -> [EqTerm]
+mkPEqs (ins, n@(nid, NLabel sec rec _ _), outs) = ieqs ++ oeqs
+  where dt = DTime $ DTimeIdx sec rec
+        eis = map (makeVar EnergyIdx) ins
+        eos = map (makeVar EnergyIdx) outs
+        pis = map (makeVar PowerIdx) ins
+        pos = map (makeVar PowerIdx) outs
+        makeVar mkIdx (nid', _) = mkVar $ mkIdx sec rec nid nid'
+        ieqs = zipWith f eis pis
+        oeqs = zipWith f eos pos
+        f e p = e := p :* dt 
 
 
 mkIntersectionEqs :: Topology -> [EqTerm]
@@ -173,7 +192,7 @@ mkOutStoreEqs (ins, n@(nid, NLabel sec rec _ _), o:_) = visumeq:xeqs ++ eieqs
 mkEdgeEq :: Topology -> [EqTerm]
 mkEdgeEq topo = map f (map unlabelEdge origEs)
   where origEs = L.filter (\(_, _, l) -> not $ isIntersectionEdge l) (labEdges topo)
-        f (x, y) = mkVar (EnergyIdx ys yr y x) := (mkVar (EnergyIdx xs xr x y)) :* (mkVar (EtaIdx xs xr x y))
+        f (x, y) = mkVar (PowerIdx ys yr y x) := (mkVar (PowerIdx xs xr x y)) :* (mkVar (FEtaIdx xs xr x y))
           where NLabel xs xr _ _ = fromJust $ lab topo x
                 NLabel ys yr _ _ = fromJust $ lab topo y
 

@@ -17,6 +17,7 @@ import Data.GraphViz.Attributes.Complete
 
 import Control.Concurrent
 import Control.Exception
+import Control.Applicative
 
 import Text.Printf
 
@@ -165,7 +166,7 @@ instance DrawTopology [InTerm Val] where
 
 
 drawAbsTopology :: (Show a) => ((Line, Maybe a) -> String) -> (Maybe a -> String) -> Topology -> Envs a ->  IO ()
-drawAbsTopology f content (Topology g) (Envs e de p dp n dn t x v st) = printGraph g nshow eshow
+drawAbsTopology f content (Topology g) (Envs e de p dp fn dn t x v st) = printGraph g nshow eshow
   where eshow ps = L.intercalate "\n" $ map f $ mkLst ps
         nshow (num, NLabel sec rec nid ty) = 
           "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\n" ++
@@ -178,7 +179,7 @@ drawAbsTopology f content (Topology g) (Envs e de p dp n dn t x v st) = printGra
         mkLst (uid, vid, l) 
           | isOriginalEdge l = [ (ELine uid vid, M.lookup (EnergyIdx usec urec uid vid) e), 
                                  (XLine uid vid, M.lookup (XIdx usec urec uid vid) x),
-                                 (NLine uid vid, M.lookup (EtaIdx usec urec uid vid) n),
+                                 (NLine uid vid, Nothing), -- M.lookup (FEtaIdx usec urec uid vid) fn <*> Just 1),
                                  (XLine vid uid, M.lookup (XIdx vsec vrec vid uid) x),
                                  (ELine vid uid, M.lookup (EnergyIdx vsec vrec vid uid) e) ]
           | isInnerStorageEdge l = [ (ELine vid uid, M.lookup (EnergyIdx vsec vrec vid uid) e) ]

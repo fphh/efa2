@@ -115,9 +115,15 @@ isVar' _ = False
 -- | True for compound terms.
 isCompoundTerm :: EqTerm -> Bool
 isCompoundTerm (Energy _) = False
-isCompoundTerm (Eta _) = False
 isCompoundTerm (DEnergy _) = False
+
+isCompoundTerm (Power _) = False
+isCompoundTerm (DPower _) = False
+
+isCompoundTerm (FEta _ _) = False
 isCompoundTerm (DEta _) = False
+
+isCompoundTerm (DTime _) = False
 isCompoundTerm (X _) = False
 isCompoundTerm (Var _) = False
 isCompoundTerm (Store _) = False

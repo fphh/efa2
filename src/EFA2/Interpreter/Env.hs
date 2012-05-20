@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
 
 module EFA2.Interpreter.Env where
 
@@ -25,8 +26,9 @@ data PowerIdx = PowerIdx !Int !Int !Int !Int deriving (Show, Ord, Eq)
 data DPowerIdx = DPowerIdx !Int !Int !Int !Int deriving (Show, Ord, Eq)
 
 -- | Eta variables.
-data EtaIdx = EtaIdx !Int !Int !Int !Int deriving  (Show)
-data DEtaIdx = DEtaIdx !Int !Int !Int !Int deriving  (Show)
+--data EtaIdx = EtaIdx !Int !Int !Int !Int deriving (Show)
+data FEtaIdx = FEtaIdx !Int !Int !Int !Int deriving (Show, Ord, Eq)
+data DEtaIdx = DEtaIdx !Int !Int !Int !Int deriving (Show, Ord, Eq)
 
 -- | Splitting factors.
 data XIdx = XIdx !Int !Int !Int !Int deriving (Show, Ord, Eq)
@@ -45,6 +47,7 @@ data StorageIdx = StorageIdx !Int !Int !Int deriving (Show, Ord, Eq)
 -- variable is unique in the equational system.
 data VarIdx = VarIdx !Int !Int !Int !Int deriving (Show, Ord, Eq)
 
+{-
 -- EtaIdx x y == EtaIdx y x
 instance Eq EtaIdx where
          (EtaIdx s1 r1 a b) == (EtaIdx s2 r2 x y) = (s1, r1, f a b) == (s2, r2, f x y)
@@ -65,7 +68,7 @@ instance Ord DEtaIdx where
            | as == bs && s1 == s2 && r1 == r2 = EQ
            | otherwise = compare (s1, r1, (f a b)) (s2, r2, (f x y))
                where f u v = if u < v then (u, v) else (v, u)
-
+-}
 
 
 
@@ -78,7 +81,8 @@ type DEnergyMap a = M.Map DEnergyIdx a
 type PowerMap a = M.Map PowerIdx a
 type DPowerMap a = M.Map DPowerIdx a
 
-type EtaMap a = M.Map EtaIdx a
+--type EtaMap a = M.Map EtaIdx a
+type FEtaMap a = M.Map FEtaIdx (a -> a)
 type DEtaMap a = M.Map DEtaIdx a
 
 type DTimeMap a = M.Map DTimeIdx a
@@ -88,18 +92,44 @@ type VarMap a = M.Map VarIdx a
 type StorageMap a = M.Map StorageIdx a
 
 
+
 data Envs a = Envs { energyMap :: EnergyMap a,
                      denergyMap :: DEnergyMap a,
                      powerMap :: PowerMap a,
                      dpowerMap :: DPowerMap a,
-                     etaMap :: EtaMap a,
+                     -- etaMap :: EtaMap a,
+                     fetaMap :: FEtaMap a,
                      detaMap :: DEtaMap a,
                      dtimeMap :: DTimeMap a,
                      xMap :: XMap a,
                      varMap :: VarMap a,
                      storageMap :: StorageMap a } deriving (Show)
 
+{-
+instance (Show a) => Show (Envs a) where
+         show envs = "Envs {\nenergyMap = " ++ show (energyMap envs) ++ ",\n" ++
+                     "denergyMap = " ++ show (denergyMap envs) ++ ",\n" ++
+                     "powerMap = " ++ show (powerMap envs) ++ ",\n" ++
+                     "dpowerMap = " ++ show (dpowerMap envs) ++ ",\n" ++
+                     "etaMap = " ++ show (etaMap envs) ++ ",\n" ++
+                     "etaFuncMap = <SORRY, FUNCTIONS!>,\n" ++
+                     "detaMap = " ++ show (detaMap envs) ++ ",\n" ++
+                     "dtimeMap = " ++ show (dtimeMap envs) ++ ",\n" ++
+                     "xMap = " ++ show (xMap envs) ++ ",\n" ++
+                     "varMap = " ++ show (varMap envs) ++ ",\n" ++
+                     "storageMap = " ++ show (storageMap envs) ++ "}"
+-}
 
+
+instance (Show a) => Show (a -> a) where
+         show _ = "<function (a -> a)>"
+
+instance Eq (a -> a) where
+         _ == _ = True
+
+instance Ord (a -> a) where
+         compare _ _ = EQ
 
 emptyEnv :: Envs a
-emptyEnv = Envs M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty
+emptyEnv = Envs M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty -- M.empty
+
