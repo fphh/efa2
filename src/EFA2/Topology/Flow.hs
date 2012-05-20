@@ -1,4 +1,4 @@
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TupleSections, TypeOperators, FlexibleContexts #-}
 
 module EFA2.Topology.Flow (module EFA2.Topology.Flow) where
 
@@ -11,17 +11,29 @@ import Debug.Trace
 
 import EFA2.Topology.TopologyData
 import EFA2.Signal.SequenceData
-import EFA2.Interpreter.Arith
+-- import EFA2.Interpreter.Arith
 import EFA2.Utils.Utils
+
+import EFA2.Signal.Base 
+import EFA2.Signal.Data
+import EFA2.Signal.Signal
+import EFA2.Signal.Vector
+
+import qualified Data.Vector.Unboxed as UV
+import qualified Data.Vector as V
+import qualified Data.Vector.Generic as GV
+import qualified Data.Vector.Generic.Mutable as MV
+
 
 -- | Function to calculate flow states for the whole sequence 
 genSequFState :: SequFlowRecord -> SequFlowState
 genSequFState (SequData sqFRec) = SequData $ map genFlowState sqFRec
 
+--  (SFold Scalar FSignal (Data Nil) (Data (UV.Vector :> Nil)) Val Val)
 -- | Function to extract the flow state out of a Flow Record  
-genFlowState :: FlowRecord ->  FlowState
+genFlowState ::  FlowRecord ->  FlowState
 genFlowState fRec@(FlowRecord time flowMap) = FlowState $ M.map f flowMap
-  where f flow = sign (cfoldr (+) 0 flow)
+  where f flow = fromScalar $ sigSign (sigSum flow)
 
 {-
 -- | Function to check flow state on validity

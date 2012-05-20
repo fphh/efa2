@@ -16,7 +16,8 @@ data DisplayType = Typ_BZ
                 | Typ_T  
                 | Typ_X  
                 | Typ_Y  
-                | Typ_UZ  deriving Show
+                | Typ_UZ  
+                | Typ_UT deriving Show
 
 -- | Convert Type Information ADT
 class DisplayTyp t where 
@@ -33,6 +34,7 @@ instance DisplayTyp (Typ d Y p) where getDisplayType x = Typ_Y
 instance DisplayTyp (Typ d BZ p) where getDisplayType x = Typ_BZ
 instance DisplayTyp (Typ d IZ p) where getDisplayType x = Typ_IZ
 instance DisplayTyp (Typ d UZ p) where getDisplayType x = Typ_UZ
+instance DisplayTyp (Typ d UT p) where getDisplayType x = Typ_UT
 
 -- | Function to choose display Unit per Type
 getDisplayUnit :: DisplayType -> DisplayUnit
@@ -43,6 +45,7 @@ getDisplayUnit Typ_X = Unit_Percent
 getDisplayUnit Typ_Y = Unit_Percent
 getDisplayUnit Typ_P = Unit_kW
 getDisplayUnit Typ_F = Unit_kWh
+getDisplayUnit Typ_UT = Unit_UT
 
 
 -- | Define Display Format for each unit depending on selected display length
@@ -65,6 +68,7 @@ udisp x = show $ getDisplayUnit (getDisplayType x)
 class PartDisp t where   tpdisp :: TC s t d -> String 
 instance PartDisp (Typ d t Tt) where tpdisp x = "_total"
 instance PartDisp (Typ d t Pt) where tpdisp x = "_partial"
+instance PartDisp (Typ d t UT) where tpdisp x = "_UT"
 
 -- Class to Display Delta Flag
 class DeltaDisp t where tddisp :: TC s t d -> String 
@@ -72,6 +76,7 @@ instance DeltaDisp (Typ A t p) where tddisp x = ""
 instance DeltaDisp (Typ D t p) where tddisp x = "d"
 instance DeltaDisp (Typ DD t p) where tddisp x = "dd"
 instance DeltaDisp (Typ DDD t p) where tddisp x = "ddd"
+instance DeltaDisp (Typ UT t p) where tddisp x = "UT"
   
   
 dispPhTyp ::  DisplayType -> String

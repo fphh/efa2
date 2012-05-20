@@ -14,6 +14,8 @@ data Typ d t p
 -- p = partial flag
 -- a = average flag
 
+data UT -- Untyped
+
 --------------------------------
 -- | Physical Types & Classification
 
@@ -42,12 +44,19 @@ data BZ -- Bool State
 data IZ -- Int State
 data UZ -- User Defined State
 
+
 -------------------------------------
 -- | Delta Flag
 data A -- Absolut
 data D -- Delta
 data DD -- Delta Delta
 data DDD -- Delta Delta Delta
+
+class DSucc d1 d2 | d1 -> d2 
+instance DSucc A D
+instance DSucc D DD
+instance DSucc DD DDD
+  
 
 --data Neutral
 --data Zero
@@ -62,6 +71,7 @@ data DDD -- Delta Delta Delta
 
 data Tt -- Total 
 data Pt -- Partial
+
 
 
 {-
@@ -101,6 +111,10 @@ instance TProd (Typ d X Tt) (Typ d FO Tt) (Typ d F Pt)
 instance TProd (Typ d FI Tt) (Typ d Y Tt) (Typ d F Pt)
 instance TProd (Typ d Y Tt) (Typ d FI Tt) (Typ d F Pt)
 
+-- Untyped remains untyped
+instance TProd (Typ UT UT UT) (Typ UT UT UT) (Typ UT UT UT)
+
+
 
 -- Addition & Subtraction
 
@@ -124,4 +138,5 @@ instance TSum (Typ DD t p) (Typ D t p) (Typ D t p)
 instance TSum (Typ DD t p) (Typ DDD t p) (Typ DD t p)
 instance TSum (Typ DDD t p) (Typ DD t p) (Typ DD t p)
 
-
+-- Untyped remains untyped
+instance TSum (Typ UT UT UT) (Typ UT UT UT) (Typ UT UT UT)
