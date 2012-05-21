@@ -24,116 +24,6 @@ import EFA2.Signal.Base
 -- type List = [] -- deriving Show
 newtype Value a = Value a -- deriving Show
   
-------------------------------------------------------------
--- | Functor
-class VWalker vec a b where
-      vmap :: (a -> b) -> vec a -> vec b
-      vfoldr :: (a -> b -> b) -> b -> vec a -> b
-      vfoldl :: (a -> b -> a) -> a -> vec b -> a
-      vzip :: vec a -> vec b -> vec (a, b)
-      vdeltaMap :: (a -> a -> b) -> vec a -> vec b
-      vdeltaMap' :: (a -> a -> b) -> vec a -> vec b
-
-instance VWalker [] a b where
-         vmap = map
-         vfoldr = foldr
-         vfoldl = L.foldl'
-         vzip = zip
-         vdeltaMap f l = zipWith f (init l) (tail l)
-         vdeltaMap' f l = zipWith f (tail l) (init l)
-
-instance (UV.Unbox a, UV.Unbox b) => VWalker UV.Vector a b where
-         vmap = UV.map
-         vfoldr = UV.foldr
-         vfoldl = UV.foldl'
-         vzip = UV.zip
-         vdeltaMap f l = UV.zipWith f (UV.init l) (UV.tail l)  
-         vdeltaMap' f l = UV.zipWith f (UV.tail l) (UV.init l)
-
-instance VWalker V.Vector a b where
-         vmap = V.map
-         vfoldr = V.foldr
-         vfoldl = V.foldl'
-         vzip = V.zip
-         vdeltaMap f l = V.zipWith f (V.init l) (V.tail l)  
-         vdeltaMap' f l = V.zipWith f (V.tail l) (V.init l)
-
--- instance VFunctor a b Value where
---          vmap f (Value x) = Value $ f x
-
-
-------------------------------------------------------------
--- | Zipper
-
-class VZipper vec a b c where
-      vzipWith :: (a -> b -> c) -> vec a -> vec b -> vec c
-      
-instance VZipper V.Vector a b c  where
-         vzipWith = V.zipWith
-
-instance (UV.Unbox a, UV.Unbox b, UV.Unbox c) => VZipper UV.Vector a b c  where
-         vzipWith = UV.zipWith
-
-instance VZipper [] a b c  where
-         vzipWith = zipWith
-
-instance VZipper Value a b c  where
-         vzipWith f (Value x) (Value y) = Value (f x y)
-
---------------------------------------------------------------
--- Vector conversion
-class VBox c1 c2 a where
-      vbox :: c1 a -> c2 a
-      vunbox :: c2 a -> c1 a
-
-instance UV.Unbox a => VBox UV.Vector V.Vector a where
-         vbox x = UV.convert x
-         vunbox x = V.convert x
-
-instance VBox [] [] a where
-         vbox = id
-         vunbox = id
-  
---------------------------------------------------------------
--- Length & Length Check
-
-class GetLength s where
-  vlen :: (s) -> Int
-
-instance GetLength  (V.Vector d) where 
-  vlen x =  V.length x
-
-instance UV.Unbox d => GetLength  (UV.Vector d) where 
-  vlen x = UV.length x
-
-instance GetLength  [d] where 
-  vlen x = length x
-
-vlenCheck x y = vlen x == vlen y
-
-
---------------------------------------------------------------
--- TRanspose Classe
-class VTRanspose v1 v2 d where
-      vtranspose :: (v2 (v1 d)) -> (v2 (v1 d))
-
-
-instance VTRanspose V.Vector V.Vector d where
-  vtranspose xs = V.map (flip V.map xs) fs
-            where fs = V.take min $ V.map (flip (V.!)) $ V.fromList [0..]
-                  min = V.minimum $ V.map V.length xs
-
-instance (UV.Unbox d) =>  VTRanspose  UV.Vector V.Vector d where
-  vtranspose xs = V.map (vunbox . flip V.map xs) fs
-            where fs = V.take min $ V.map (flip (UV.!)) $ V.fromList [0..]
-                  min = V.minimum $ V.map UV.length xs
-         -- vtranspose [] = []
-         -- vtranspose xs = map (UV.fromList . flip map xs) fs
-         --   where fs = take min $ map (flip (UV.!)) [0..]
-         --         min = L.minimum $ map UV.length xs
-
-instance VTRanspose [] [] d where
-  vtranspose = L.transpose
 
 --------------------------------------------------------------
 -- Singleton Class
@@ -197,7 +87,114 @@ instance (Ord d) => VSingleton [] d where
          vinit = init
 
 
+------------------------------------------------------------
+-- | Functor
+class VWalker vec a b where
+      vmap :: (a -> b) -> vec a -> vec b
+      vfoldr :: (a -> b -> b) -> b -> vec a -> b
+      vfoldl :: (a -> b -> a) -> a -> vec b -> a
+      vzip :: vec a -> vec b -> vec (a, b)
 
+instance VWalker [] a b where
+         vmap = map
+         vfoldr = foldr
+         vfoldl = L.foldl'
+         vzip = zip
+
+instance (UV.Unbox a, UV.Unbox b) => VWalker UV.Vector a b where
+         vmap = UV.map
+         vfoldr = UV.foldr
+         vfoldl = UV.foldl'
+         vzip = UV.zip
+
+instance VWalker V.Vector a b where
+         vmap = V.map
+         vfoldr = V.foldr
+         vfoldl = V.foldl'
+         vzip = V.zip
+
+
+------------------------------------------------------------
+-- | Zipper
+
+class VZipper vec a b c where
+      vzipWith :: (a -> b -> c) -> vec a -> vec b -> vec c
+      
+instance VZipper V.Vector a b c  where
+         vzipWith = V.zipWith
+
+instance (UV.Unbox a, UV.Unbox b, UV.Unbox c) => VZipper UV.Vector a b c  where
+         vzipWith = UV.zipWith
+
+instance VZipper [] a b c  where
+         vzipWith = zipWith
+
+instance VZipper Value a b c  where
+         vzipWith f (Value x) (Value y) = Value (f x y)
+
+
+vdeltaMap :: (VSingleton vec b, VZipper vec b b c) => (b -> b -> c) -> vec b -> vec c
+vdeltaMap f l = vzipWith f l (vtail l)
+
+vdeltaMapReverse :: (VSingleton vec b, VZipper vec b b c) => (b -> b -> c) -> vec b -> vec c
+vdeltaMapReverse f l = vzipWith f (vtail l) l
+
+
+--------------------------------------------------------------
+-- Vector conversion
+class VBox c1 c2 a where
+      vbox :: c1 a -> c2 a
+      vunbox :: c2 a -> c1 a
+
+instance UV.Unbox a => VBox UV.Vector V.Vector a where
+         vbox x = UV.convert x
+         vunbox x = V.convert x
+
+instance VBox [] [] a where
+         vbox = id
+         vunbox = id
+  
+--------------------------------------------------------------
+-- Length & Length Check
+
+class GetLength s where
+  vlen :: s -> Int
+
+instance GetLength  (V.Vector d) where 
+  vlen x =  V.length x
+
+instance UV.Unbox d => GetLength  (UV.Vector d) where 
+  vlen x = UV.length x
+
+instance GetLength  [d] where 
+  vlen x = length x
+
+
+vlenCheck x y = vlen x == vlen y
+
+
+--------------------------------------------------------------
+-- TRanspose Classe
+class VTRanspose v1 v2 d where
+      vtranspose :: (v2 (v1 d)) -> (v2 (v1 d))
+
+
+instance VTRanspose V.Vector V.Vector d where
+  vtranspose xs = error "vtranspose: TODO" -- V.map (flip V.map xs) fs
+       --     where fs = V.take min $ V.map (flip (V.!)) $ V.fromList [0..]
+        --          min = V.minimum $ V.map V.length xs
+
+instance (UV.Unbox d) =>  VTRanspose  UV.Vector V.Vector d where
+  vtranspose xs = error "vtranspose: TODO" -- V.map (vunbox . flip V.map xs) fs
+        --    where fs = V.take min $ V.map (flip (UV.!)) $ V.fromList [0..]
+        --          min = V.minimum $ V.map UV.length xs
+         -- vtranspose [] = []
+         -- vtranspose xs = map (UV.fromList . flip map xs) fs
+         --   where fs = take min $ map (flip (UV.!)) [0..]
+         --         min = L.minimum $ map UV.length xs
+
+instance VTRanspose [] [] d where
+  vtranspose = L.transpose
 
 
 

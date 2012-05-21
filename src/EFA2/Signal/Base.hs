@@ -7,8 +7,15 @@ module EFA2.Signal.Base (module EFA2.Signal.Base) where
 
 ----------------------------------------------------------
 -- | 1. Data types
-type Val = Double -- or Ratio
+type Val = Double -- or Ratio Integer
 
+class DArith0 d where
+      neg :: d -> d
+      rec :: d -> d
+
+instance DArith0 Val where
+         neg = negate
+         rec = recip
 
 
 -- | Calculation classes for basic Datatypes
@@ -20,7 +27,7 @@ class DArith d1 d2 d3 | d1 d2 -> d3 where
  
 instance DArith Val Val Val where
  (..*) x y = x*y
- (../)  0 0 = 0
+ (../) 0 0 = 0
  (../) x y = x/y
  (..+) x y = x+y
  (..-) x y = x-y
@@ -57,7 +64,9 @@ instance DEq Val Val Bool where
 
 
 -- Own User Defined Sign Variable
-data Sign = PSign | ZSign | NSign deriving (Show, Eq)
+data Sign = PSign 
+          | ZSign
+          | NSign deriving (Show, Eq, Enum)
 -- data Sign = PSign | ZSign | NSign deriving (Show, Eq, Ord)
 
 -- | determine Signal Sign  
@@ -66,6 +75,8 @@ sign x | x > 0 = PSign
        | x == 0 = ZSign -- TODO add intervalls later on Zero - Detection       
        | x < 0 = NSign
 
+--sign' :: (Eq a, Ord a, Num a) => a -> Ordering
+--sign' x = compare x 0
 
 -- type PSample = Val
 -- -- type TSample = Val

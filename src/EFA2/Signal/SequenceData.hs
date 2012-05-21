@@ -25,7 +25,7 @@ type PPosData a = M.Map PPosIdx a
 -- | Signal record to contain original time signals 
 data Record = Record TSig SignalMap deriving (Show)
 data SigId = SigId String deriving (Show, Eq, Ord)
-type SignalMap = M.Map SigId (UTSignal Val)
+type SignalMap = M.Map SigId (UTSig Val)
 
 -- | Power record to contain power signals assigned to the tree
 type PPosPowers = PPosData PSig

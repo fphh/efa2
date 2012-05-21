@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, FunctionalDependencies, TypeSynonymInstances, UndecidableInstances,KindSignatures, TypeOperators,  GADTs #-}
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, FunctionalDependencies, TypeSynonymInstances, UndecidableInstances,KindSignatures, TypeOperators,  GADTs, StandaloneDeriving #-}
 
 module EFA2.Signal.Data (module EFA2.Signal.Data) where
 import EFA2.Signal.Vector
@@ -12,6 +12,7 @@ import qualified Data.Vector as V
 
 newtype Data ab c = Data (ab c) deriving (Show, Eq, Ord)
 
+
 data ((a :: * -> *) :> (b :: * -> *)) :: * -> * where
      D0 :: v0 -> Nil v0 
      D1 :: v1 v0 -> (v1 :> Nil) v0
@@ -22,6 +23,7 @@ infixr 9 :>
 data Nil' c = Nil' deriving (Show)
 type Nil = Nil' :> Nil'
 
+
 instance (Show v0) => Show (Nil v0) where
          show (D0 x) = "D0 (" ++ show x ++ ")"
 
@@ -29,10 +31,12 @@ instance (Show (v1 v0)) => Show ((v1 :> Nil) v0) where
          show (D1 x) = "D1 (" ++ show x ++ ")"
 
 instance (Show (v2 (v1 v0))) => Show ((v2 :> v1 :> Nil) v0) where
-         show (D2 x) = show x
+         show (D2 x) = "D2 (" ++ show x ++ ")"
 
 instance (Show (v3 (v2 (v1 v0)))) => Show ((v3 :> v2 :> v1 :> Nil) v0) where
-         show (D3 x) = show x
+         show (D3 x) = "D3 (" ++ show x ++ ")"
+
+
 {-
 ----------------------------------------------------------
 -- | access class
@@ -73,7 +77,7 @@ type List3 a = (Data ([]:> [] :> []:> Nil) a)
 -- | Zipping for normal Arithmetics 
 
 class DZipWith c1 c2 c3 d1 d2 d3 | c1 c2 -> c3 where
-  dzipWith :: (d1 -> d2 -> d3) -> c1 d1 -> c2 d2 -> c3 d3
+      dzipWith :: (d1 -> d2 -> d3) -> c1 d1 -> c2 d2 -> c3 d3
 
 -- 0d - 0d
 instance DZipWith (Data Nil) (Data Nil) (Data Nil) d1 d2 d3 where
@@ -120,7 +124,7 @@ class CrossWith c1 c2 c3 d1 d2 d3 | c1 c2 -> c3 where
 
 -- 1d - 1d -> 2d
 instance (VWalker v2 d1 (v1 d3), VWalker v1 d2 d3) => CrossWith (Data (v2 :> Nil)) (Data (v1 :> Nil))  (Data (v2 :> v1 :> Nil))  d1 d2 d3  where
-         crossWith f  (Data (D1 x)) (Data (D1 y)) = Data $ D2 $ (vmap g) x
+         crossWith f  (Data (D1 x)) (Data (D1 y)) = Data $ D2 $ vmap g x
            where g xi = vmap (f xi) y  
 
 -- 1d - 2d
@@ -135,14 +139,16 @@ instance (VZipper v2 (v1 d1) d2 (v1 d3), VWalker v1 d1 d3) => CrossWith (Data (v
 
 ----------------------------------------------------------
 -- fold Functions
-         
+
 class D0Fold c1 c2 d1 d2 where
+      --d0foldl :: (d1 -> d2 -> d1) -> d1 -> c2 d2 -> d1 
+
       d0foldl :: (d1 -> d2 -> d1) -> c1 d1 -> c2 d2 -> c1 d1 
       d0foldr :: (d1 -> d2 -> d2) -> c1 d2 -> c2 d1 -> c1 d2
 
 -- 1d -> 0d
 instance  VWalker v1 d1 d2 => D0Fold (Data Nil) (Data (v1 :> Nil)) d1 d2 where
-         d0foldl f (Data ( D0 x)) (Data (D1 y)) = Data $ D0 $ vfoldl f x y
+         d0foldl f (Data (D0 x)) (Data (D1 y)) = Data $ D0 $ vfoldl f x y
          d0foldr f (Data (D0 x)) (Data (D1 y)) = Data $ D0 $ vfoldr f x y
 
 -- 2d -> 0d
@@ -201,7 +207,7 @@ instance (VSingleton v1 d, VSingleton v2 (v1 d), VZipper v2 (v1 d) (v1 d) (v1 d)
 
 ----------------------------------------------------------
 -- Alternative Append Class
-
+{-
 class DAppendAlt c1 c2 c3 d | c1 c2 -> c3 where
  dappend' :: c1 d -> c2 d -> c3 d
 
@@ -216,7 +222,7 @@ instance (VSingleton v1 d,VSingleton v2 (v1 d)) => DAppendAlt (Data (v2 :> v1 :>
 -- 2d -- 2d 
 instance (VSingleton v1 d,VSingleton v2 (v1 d)) => DAppendAlt (Data (v2 :> v1 :> Nil))  (Data (v2 :> v1 :> Nil))  (Data (v2 :> v1 :> Nil)) d where
  dappend' (Data (D2 x)) (Data (D2 y)) =  Data $ D2 $ vappend x y
-
+-}
 
 {-
 

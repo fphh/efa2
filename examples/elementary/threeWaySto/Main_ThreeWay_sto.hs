@@ -125,14 +125,14 @@ main = do
       f x = x
   
 
-      
-      envs = emptyEnv { powerMap = M.insert storage0 [3.0] (M.map (map f) sigs) }
+      envs :: Envs UTFSig
+      envs = emptyEnv { powerMap = M.map (smap f) sigs }
 
 
       gd = map (eqToInTerm envs) (given ++ dirs)
 
-      res :: Envs [Val]
-      res = interpretFromScratch gd
+      res :: Envs UTFSig
+      res = interpretFromScratch 6 gd
       dirg = makeDirTopology sqTopo
       
   -- print $ toTable show pRec

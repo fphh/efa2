@@ -12,7 +12,7 @@ type Val = Double
 type Container = []
 --type Container = UV.Vector
 
-
+{-
 -- ATTENTION on operator presedence: TODO!!!
 
 class Arith a where
@@ -57,3 +57,4 @@ instance (Arith a, UV.Unbox a) => Arith (UV.Vector a) where
          (.*) = UV.zipWith (.*)
          (./) = UV.zipWith (./)
 
+-}

@@ -131,5 +131,5 @@ instance Ord (a -> a) where
          compare _ _ = EQ
 
 emptyEnv :: Envs a
-emptyEnv = Envs M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty -- M.empty
+emptyEnv = Envs M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty
 

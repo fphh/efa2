@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, TypeOperators #-}
 
 module EFA2.Signal.Sequence where
 
@@ -50,17 +50,20 @@ type XSig =  [XSample]
 
 
 -- | From PowerRecord
-fromFlowRecord :: SecIdx -> RecIdx -> FlowRecord -> Envs [Val]
+--fromFlowRecord :: SecIdx -> RecIdx -> FlowRecord -> Envs FSig -- [Val]
+
+fromFlowRecord :: SecIdx -> RecIdx -> FlowRecord -> Envs UTFSig
 fromFlowRecord (SecIdx secIdx) (RecIdx recIdx) fRec@(FlowRecord dTime flowMap) =
-  emptyEnv { powerMap = M.fromList $ map f (M.toList flowMap) }
-  where f ((PPosIdx idx1 idx2), (flowSig)) = ((PowerIdx secIdx recIdx idx1 idx2), [sigSum flowSig])    
+  emptyEnv { powerMap = M.map untype $ M.mapKeys f flowMap }
+  where f (PPosIdx idx1 idx2) = PowerIdx secIdx recIdx idx1 idx2
+
   --where f ((PPosIdx idx1 idx2), (flowSig)) = ((PowerIdx secIdx recIdx idx1 idx2), [fromScalar $ sigSum flowSig])    
 
 -- | Generate Sequence Flow 
 genSequFlow :: SequPwrRecord -> SequFlowRecord
 genSequFlow sqPRec = (map recPartIntegrate) `fmap` sqPRec
 
-makeSequence :: PowerRecord -> Topology -> ([Envs [Val]], Topology)
+makeSequence :: PowerRecord -> Topology -> ([Envs UTFSig], Topology)
 makeSequence pRec topo = (sqEnvs, sqTopo)
   where pRec0 = addZeroCrossings pRec
         (sequ,sqPRec) = genSequ pRec0          

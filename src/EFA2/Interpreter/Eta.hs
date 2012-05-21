@@ -11,6 +11,7 @@ import Data.Ratio
 
 import EFA2.Interpreter.Arith
 import EFA2.Utils.Utils
+import EFA2.Signal.Signal
 
 import Debug.Trace
 
@@ -27,20 +28,20 @@ instance MakePoint Container Val where
          makePoint = zipWith Pt
 -}
 
-mkVariableEta :: (Arith a, Ord a, Show a) => [Pt a] -> VariableEta a
+--mkVariableEta :: (Arith a, Ord a, Show a) => [Pt a] -> VariableEta a
 mkVariableEta ps = M.fromList $ zip lst (map (uncurry func) pps)
   where lst = map xPt ps
         pps = pairs ps
 
 -- | Linear interpolation between two points.
-func :: (Arith a, Show a) =>  Pt a -> Pt a -> a -> a
+--func :: (Arith a, Show a) =>  Pt a -> Pt a -> a -> a
 func a@(Pt x1 y1) b@(Pt x2 y2) x = m .* x .+ t
   where m = (y2 .- y1)./(x2 .- x1)
         t = y1 .- (m .* x1)
         str = show m ++ " * " ++ show x ++ " + " ++ show t
 
 -- TODO: How should we extrapolate?
-getValue :: (Arith a, Ord a, Show a) => VariableEta a -> a -> a
+--getValue :: (Arith a, Ord a, Show a) => VariableEta a -> a -> a
 getValue m x
   | (Just (_, f), Just _) <- (bot, top) = f x
   | (_, Just (_, g)) <- (bot, top) = error "getValue: tried to extrapolate eta to the left!"
@@ -54,14 +55,16 @@ getValue m x
 -- Given a list of points, it returns an interpolation function.
 -- See above for issues of extrapolation.
 
+{-
 class MkEtaFunc a where
       mkEtaFunc :: Pt a -> (a -> a)
 
-instance (Arith a, Ord a, Show a) => MkEtaFunc [a] where
+instance MkEtaFunc [a] where
          mkEtaFunc = mkEtaFunc'
+-}
 
-mkEtaFunc' :: (Arith a, Ord a, Show a) => Pt [a] -> ([a] -> [a])
-mkEtaFunc' (Pt xs ys) = trace ("\n-------------------\n" ++ prettyPts pts ++ "-----------\n") $  map (getValue ve)
+--mkEtaFunc' :: (Arith a, Ord a, Show a) => Pt [a] -> ([a] -> [a])
+mkEtaFunc (Pt xs ys) = trace ("\n-------------------\n" ++ prettyPts pts ++ "-----------\n") $  map (getValue ve)
   where pts = zipWith Pt xs ys
         pts' = L.sortBy (comparing xPt) pts
         ve = mkVariableEta pts'
@@ -80,13 +83,13 @@ reverseEta ps = map f ps
         bigNumber = cst 10000000
 -}
 
-reversePts :: (Arith a, Eq a) => Pt [a] -> Pt [a]
+--reversePts :: (Arith a, Eq a) => Pt [a] -> Pt [a]
 reversePts (Pt x n) = Pt (n .* x) (if n == cst 0 then error "reversePts: inverse of 0 eta unknown!" else cst 1 ./ n)
 
 
 -- | Kurve mit Stuetzstellen
 -- Je enger die Stuetzstellen, desto genauer wird die Umkehrfunktion
-eta :: Pt [Val]
+--eta :: Pt [Val]
 eta = Pt (take n lst) (take n vs)
   where n = 50
         lst = map cst [1..]
@@ -124,7 +127,7 @@ g :: [Val] -> [Val]
 g = mkEtaFunc (reversePts eta)
 -}
 
-check :: (Arith a, Ord a, Num a, Eq a) => Pt [a] -> a -> [a] -> Bool
+--check :: (Arith a, Ord a, Num a, Eq a) => Pt [a] -> a -> [a] -> Bool
 check pts eps x = trace str $ all (< eps) $ map absol (x .- y)
   where x' = x .* f x
         y = x' .* g x'
@@ -143,5 +146,5 @@ checkRev pts eps x' = absol (x' .- y) < eps
 -}
 
 -- | This test is better with Ratio, because of numeric issues.
-reverseTest :: (Arith a, Eq a) => Pt [a] -> Bool
+--reverseTest :: (Arith a, Eq a) => Pt [a] -> Bool
 reverseTest pts = reversePts (reversePts pts) == pts

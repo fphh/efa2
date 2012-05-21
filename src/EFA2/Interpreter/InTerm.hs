@@ -3,8 +3,10 @@
 
 module EFA2.Interpreter.InTerm where
 
-import EFA2.Interpreter.Arith
+-- import EFA2.Interpreter.Arith
 import EFA2.Interpreter.Env
+import EFA2.Signal.Base
+
 
 data InTerm a = EIdx EnergyIdx
               | DEIdx DEnergyIdx
@@ -17,7 +19,8 @@ data InTerm a = EIdx EnergyIdx
               | DTIdx DTimeIdx
               | VIdx VarIdx
               | SIdx StorageIdx
-              | InConst a
+              -- | InConst a
+              | InConst Val
               | InGiven a
               | InFunc (a -> a)
               | InMinus (InTerm a)
@@ -26,7 +29,7 @@ data InTerm a = EIdx EnergyIdx
               | InMult (InTerm a) (InTerm a)
               | InEqual (InTerm a) (InTerm a) deriving (Eq, Ord, Show)
 
-
+{-
 instance Arith (InTerm Val) where
          zero = InConst 0.0
          cst = InConst
@@ -36,3 +39,4 @@ instance Arith (InTerm Val) where
          (.*) = InMult
          x ./ y = InMult x (InRecip y)
 
+-}

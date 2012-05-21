@@ -53,12 +53,21 @@ instance SArith FClass FClass FClass
 ----------------------------------------------------------
 -- Signal Arithmetics
 
+class SipWith s1 s2 s3 c1 c2 c3 d1 d2 d3 | s1 s2 -> s3, c1 c2 -> c3  where
+       sipWith ::  (d1 -> d2 -> d3) -> TC s1 typ1 (c1 d1) -> TC s2 typ2 (c2 d2) -> TC s3 typ3 (c3 d3)
+       
+instance (VZipper v1 d1 d2 d3) => SipWith Sample Sample Sample (Data (v1 :> Nil)) (Data (v1 :> Nil)) (Data (v1 :> Nil)) d1 d2 d3 where      
+         sipWith f (TC da1) (TC da2) = TC $ dzipWith f da1 da2
+
+
 class Prod s1 s2 s3 t1 t2 t3 c1 c2 c3 | s1 s2 -> s3, c1 c2 -> c3   where
   (.*) :: TC s1 t1 c1 -> TC s2 t2 c2 -> TC s3 t3 c3
   (./) :: TC s1 t3 c1 -> TC s2 t2 c2 -> TC s3 t1 c3
      
 instance  (DZipWith v1 v2 v3 d1 d2 d3, DArith d1 d2 d3, SArith s1 s2 s2, TProd t1 t2 t3) =>  Prod s1 s2 s2 t1 t2 t3 (v1 d1) (v2 d2) (v3 d3) where
           (.*) (TC x) (TC y) = TC $ dzipWith (..*) x y
+          -- (.*) (TC x) (TC y) = szipWith (..*) x y
+
           (./) (TC x) (TC y) = TC $ dzipWith (..*) x y
 
 class Sum s1 s2 s3 t1 t2 t3 c1 c2 c3 | s1 s2 -> s3, c1 c2 -> c3   where
@@ -85,15 +94,17 @@ type FSig2 typ a = TC FSignal typ (Vec2 a)
 
 
 -- specific
-type UTSignal a = Sig1 (Typ UT UT UT) a
-type FUTSignal = FSig1 (Typ UT UT UT) Val
+--type UTSignal a = Sig1 (Typ UT UT UT) a
+--type FUTSignal = FSig1 (Typ UT UT UT) Val
 
 -- type UTSignal a = Sig1 (Typ UT UT UT) a
 type PSig = Sig1 (Typ A P Tt) Val
 type TSig = Sig1 (Typ A T Tt) Val
 type FSig = FSig1 (Typ A F Tt) Val
-type DTSig = FSig1 (Typ D T Tt) Val 
-  
+type DTSig = FSig1 (Typ D T Tt) Val
+type UTSig a = Sig1 (Typ UT UT UT) a
+type UTFSig = FSig1 (Typ UT UT UT) Val
+
 type PVal = Scal (Typ A P Tt) Val
 type TVal = Scal (Typ A T Tt) Val
 type FVal = Scal (Typ A F Tt) Val
@@ -112,7 +123,13 @@ type PSample = Val
 ----------------------------------------------------------
 -- from/to List
 
-sfromList x = TC $ dfromList x 
+sfromList :: FromToList c d => [d] -> TC s t (c d)
+sfromList x = TC $ dfromList x
+
+sfromVal :: FromToList c d => Int -> d -> TC s t (c d)
+sfromVal len x = sfromList (replicate len x) 
+
+stoList :: FromToList c d => TC t t1 (c d) -> [d]
 stoList (TC x) = dtoList x
 
 fromScalar :: TC Scalar typ (Data Nil d) -> d 
@@ -137,7 +154,21 @@ toSigList (TC (Data (D2 x))) = map vec2Sig vecList
 
 ----------------------------------------------------------
 -- SMap
+class SMap c d1 d2 where
+      smap :: (d1 -> d2) -> TC s typ (c d1) -> TC s typ (c d2)
 
+{- TODO: ??
+instance (DMap c d1 d1) => SMap c d1 d2 where 
+         smap f (TC x) = TC $ dmap f x
+
+-}
+instance SMap (Data Nil) d1 d2 where 
+         smap f (TC (Data (D0 x))) = TC $ Data $ D0 $ f x
+
+instance (VWalker v1 d1 d2) => SMap (Data (v1 :> Nil)) d1 d2 where 
+         smap f (TC (Data (D1 x))) = TC $ Data $ D1 $ vmap f x
+
+{-
 class SMap s c d1 d2 where
       smap :: (d1 -> d2) -> TC s typ (c d1) -> TC s typ (c d2)
 
@@ -147,6 +178,9 @@ instance SMap Scalar (Data Nil) d1 d2 where
 instance (VWalker v1 d1 d2) => SMap Signal (Data (v1 :> Nil)) d1 d2 where 
          smap f (TC (Data (D1 x))) = TC $ Data $ D1 $ vmap f x
 
+instance (VWalker v1 d1 d2) => SMap FSignal (Data (v1 :> Nil)) d1 d2 where 
+         smap f (TC (Data (D1 x))) = TC $ Data $ D1 $ vmap f x
+-}
 
 class SFold s1 s2 c1 c2 d1 d2 where
   sfoldl :: (d1 -> d2 -> d1) ->  TC s1 typ (c1 d1) -> TC s2 typ (c2 d2) -> TC s1 typ (c1 d1)  
@@ -161,22 +195,24 @@ instance (D0Fold c1 c2 d1 d2) => SFold Scalar FSignal c1 c2 d1 d2 where
 -- ----------------------------------------------------------
 -- -- sipWith 
 
+{-
 class SipWith s1 s2 s3 c1 c2 c3 d1 d2 d3 | s1 s2 -> s3, c1 c2 -> c3  where
-       sipWith ::  (d1 -> d2 -> d3) ->TC s1 typ1 (c1 d1) -> TC s2 typ2 (c2 d2) -> TC s3 typ3 (c3 d3)
+       sipWith ::  (d1 -> d2 -> d3) -> TC s1 typ1 (c1 d1) -> TC s2 typ2 (c2 d2) -> TC s3 typ3 (c3 d3)
        
 instance (VZipper v1 d1 d2 d3) => SipWith Sample Sample Sample (Data (v1 :> Nil)) (Data (v1 :> Nil)) (Data (v1 :> Nil)) d1 d2 d3 where      
          sipWith f (TC da1) (TC da2) = TC $ dzipWith f da1 da2
+-}
 
 ----------------------------------------------------------
 -- DeltaMap
 
 class SDeltaMap s1 s2 c1 d1 d2 | s1 -> s2 where
-      sdeltaMap ::  (d1 -> d1 -> d2) -> TC s1 typ1 (c1 d1) -> TC s2 typ2 (c1 d2)
+      sdeltaMap :: (d1 -> d1 -> d2) -> TC s1 typ1 (c1 d1) -> TC s2 typ2 (c1 d2)
       sdeltaMap' ::  (d1 -> d1 -> d2) -> TC s1 typ1 (c1 d1) -> TC s2 typ2 (c1 d2)
 
-instance (VWalker v1 d1 d2) => SDeltaMap Signal FSignal (Data (v1 :> Nil)) d1 d2 where
+instance (VWalker v1 d1 d2, VSingleton v1 d1, VZipper v1 d1 d1 d2) => SDeltaMap Signal FSignal (Data (v1 :> Nil)) d1 d2 where
       sdeltaMap f (TC (Data (D1 x))) = TC $ Data $ D1 $ vdeltaMap f x 
-      sdeltaMap' f (TC (Data (D1 x))) = TC $ Data $ D1 $ vdeltaMap' f x 
+      sdeltaMap' f (TC (Data (D1 x))) = TC $ Data $ D1 $ vdeltaMapReverse f x 
 
 ----------------------------------------------------------
 -- SHead & STail
@@ -228,7 +264,7 @@ instance (VSingleton v1 d1) => SAppend Scalar Signal Signal (Data Nil) (Data (v1
 ----------------------------------------------------------
 -- signal sign
 
-sigSign :: (Ord d1, Num d1, SBox s c c d1, SMap s c d1 Sign) => TC s typ (c d1) -> TC s typ (c Sign)
+--sigSign :: (Ord d1, Num d1, SBox s c c d1, SMap s c d1 Sign) => TC s typ (c d1) -> TC s typ (c Sign)
 sigSign x = smap sign $ sbox x
 
 ----------------------------------------------------------
@@ -289,3 +325,12 @@ sigFullInt time power = sigSum $ sigPartInt time power -- csingleton (cfoldr (+)
 
 untype ::  TC s1 (Typ delta1 t1 p1) (c1 d1) -> TC s1 (Typ UT UT UT) (c1 d1)
 untype (TC x) = TC x
+
+
+--sneg :: (DArith0 d, SMap s c d d) => TC s typ (c d) -> TC s typ (c d)
+sneg :: (DArith0 d, SMap c d d) => TC s typ (c d) -> TC s typ (c d)
+sneg = smap neg
+
+--srec :: (DArith0 d, SMap s c d d) => TC s typ (c d) -> TC s typ (c d)
+srec :: (DArith0 d, SMap c d d) => TC s typ (c d) -> TC s typ (c d)
+srec = smap rec
