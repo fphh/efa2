@@ -58,21 +58,21 @@ getDefaultFormat = f dispLength
 
 
 -- | Simple Display Function
-xdisp x = disp x getDefaultFormat  (UnitScale 1)
+xdisp x = disp getDefaultFormat (UnitScale 1) x
 
 -- | Display Class using Format & Scale
 class Disp a where 
-  disp :: a -> DisplayFormat -> UnitScale -> String
+  disp :: DisplayFormat -> UnitScale -> a -> String
 
 instance Disp Val where
-  disp 0 _ _ = "Null"
-  disp x (DisplayFormat f) (UnitScale s) = printf f $ x*s
+  disp _ _ 0 = "null"
+  disp (DisplayFormat f) (UnitScale s) x = printf f $ x*s
 
 instance Disp Bool where 
-  disp x (DisplayFormat f) _ = printf f (show x)
+  disp (DisplayFormat f) _ x = printf f (show x)
 
 instance Disp Int where
-  disp x (DisplayFormat f) _ = printf f (show x)
+  disp (DisplayFormat f) _ x = printf f (show x)
 
 instance Disp Sign where
-  disp x (DisplayFormat f) _ = show x
+  disp (DisplayFormat f) _ x = show x

@@ -32,6 +32,10 @@ import EFA2.Interpreter.Env
 import EFA2.Interpreter.Arith
 import EFA2.Topology.TopologyData
 import EFA2.Topology.EfaGraph
+import EFA2.Signal.Signal
+import EFA2.Display.DispSignal
+
+
 
 import EFA2.Topology.Flow
 --import EFA2.Signal.Sequence
@@ -163,6 +167,12 @@ instance DrawTopology [InTerm Val] where
                  formatStCont (Just ys) = concatMap showInTerm ys
                  formatStCont Nothing = "♥"
 
+instance DrawTopology UTFSig where
+         drawTopology = drawAbsTopology f formatStCont
+           where f (x, Just ys) = show x ++ " = " ++ sdisp ys
+                 f (x, Nothing) = show x ++ " = ♥"
+                 formatStCont (Just ys) = sdisp ys
+                 formatStCont Nothing = "♥"
 
 
 drawAbsTopology :: (Show a) => ((Line, Maybe a) -> String) -> (Maybe a -> String) -> Topology -> Envs a ->  IO ()

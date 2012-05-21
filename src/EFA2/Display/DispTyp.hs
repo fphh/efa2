@@ -68,7 +68,7 @@ udisp x = show $ getDisplayUnit (getDisplayType x)
 class PartDisp t where   tpdisp :: TC s t d -> String 
 instance PartDisp (Typ d t Tt) where tpdisp x = "_total"
 instance PartDisp (Typ d t Pt) where tpdisp x = "_partial"
-instance PartDisp (Typ d t UT) where tpdisp x = "_UT"
+instance PartDisp (Typ d t UT) where tpdisp x = "_x"
 
 -- Class to Display Delta Flag
 class DeltaDisp t where tddisp :: TC s t d -> String 
@@ -76,7 +76,7 @@ instance DeltaDisp (Typ A t p) where tddisp x = ""
 instance DeltaDisp (Typ D t p) where tddisp x = "d"
 instance DeltaDisp (Typ DD t p) where tddisp x = "dd"
 instance DeltaDisp (Typ DDD t p) where tddisp x = "ddd"
-instance DeltaDisp (Typ UT t p) where tddisp x = "UT"
+instance DeltaDisp (Typ UT t p) where tddisp x = "x"
   
   
 dispPhTyp ::  DisplayType -> String

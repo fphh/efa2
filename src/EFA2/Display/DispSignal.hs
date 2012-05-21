@@ -10,10 +10,12 @@ import EFA2.Signal.Typ
 import EFA2.Signal.Signal
 import EFA2.Signal.Vector
 
+import qualified Data.List as L 
+
 
 -- | display a single value  
 dispSingle ::  Disp a => a -> DisplayType -> String
-dispSingle x t = disp x f s  ++ " " ++ show u
+dispSingle x t = disp f s x ++ " " ++ show u
            where u = getDisplayUnit t
                  s = getUnitScale u
                  f = getDisplayFormat dispLength t u 
@@ -21,23 +23,31 @@ dispSingle x t = disp x f s  ++ " " ++ show u
 
 -- | display a single value  
 dispRange :: Disp a => a -> a -> DisplayType -> String
-dispRange x y t = disp x f s  ++ " - " ++ disp y f s  ++ " " ++ show u
+dispRange x y t = disp f s x ++ " - " ++ disp f s y ++ " " ++ show u
            where u = getDisplayUnit t
                  s = getUnitScale u
                  f = getDisplayFormat dispLength t u
+
+dispAll :: Disp a => [a] -> DisplayType -> String
+dispAll xs t = (L.intercalate " " $ map (disp f s) xs) ++  " " ++ show u
+           where u = getDisplayUnit t
+                 s = getUnitScale u
+                 f = getDisplayFormat dispLength t u
+
  
 class SDisplay a where
   sdisp :: a -> String
 
-instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d,VSingleton v1 d) => SDisplay (TC Signal t (Data (v1 :> Nil) d)) where 
-  sdisp x@(TC (Data (D1 v)))  = "Signal-D1 " ++ tdisp x ++ ": " ++ dispRange dmin dmax dtyp 
+instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d,VSingleton v1 d, FromToList (Data (v1 :> Nil)) d)
+         => SDisplay (TC s t (Data (v1 :> Nil) d)) where 
+  sdisp x@(TC (Data (D1 v)))  = "Sig-D1 " ++ tdisp x ++ ": " ++ dispAll (stoList x) dtyp -- dispRange dmin dmax dtyp 
     where dtyp = getDisplayType x
           dmin = vminimum v
           dmax = vmaximum v
 
 
-instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d,VSingleton v1 d,VSingleton v2 (v1 d)) => SDisplay (TC Signal t (Data (v2 :> v1 :> Nil) d)) where 
-  sdisp x@(TC(Data (D2 v)))  = "Signal-D2 " ++ tdisp x ++ ": " ++ dispRange dmin dmax dtyp 
+instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d,VSingleton v1 d,VSingleton v2 (v1 d), FromToList (Data (v2 :> (v1 :> Nil))) d) => SDisplay (TC s t (Data (v2 :> v1 :> Nil) d)) where 
+  sdisp x@(TC(Data (D2 v)))  = "Sig-D2 " ++ tdisp x ++ ": " ++ dispAll (stoList x) dtyp -- dispRange dmin dmax dtyp 
     where dtyp = getDisplayType x
           dmin = vminimum $ vminimum v
           dmax = vmaximum $ vminimum v

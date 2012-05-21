@@ -54,7 +54,7 @@ type XSig =  [XSample]
 
 fromFlowRecord :: SecIdx -> RecIdx -> FlowRecord -> Envs UTFSig
 fromFlowRecord (SecIdx secIdx) (RecIdx recIdx) fRec@(FlowRecord dTime flowMap) =
-  emptyEnv { powerMap = M.map untype $ M.mapKeys f flowMap }
+  emptyEnv { powerMap = M.map untype $ M.mapKeys f flowMap, dtimeMap = M.fromList [(DTimeIdx secIdx recIdx, untype dTime)] }
   where f (PPosIdx idx1 idx2) = PowerIdx secIdx recIdx idx1 idx2
 
   --where f ((PPosIdx idx1 idx2), (flowSig)) = ((PowerIdx secIdx recIdx idx1 idx2), [fromScalar $ sigSum flowSig])    

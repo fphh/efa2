@@ -85,7 +85,7 @@ shiftIndices m (Envs e de p dp fn dn t x v st) = Envs e' de' p' dp' fn' dn' t x'
         --nf (EtaIdx s r f t) = EtaIdx s r (m M.! (s, r, f)) (m M.! (s, r, t))
 
         fn' = M.mapKeys fnf fn
-        fnf (FEtaIdx s r f t) = FEtaIdx s r (m M.! (s, r, f)) (m M.! (s, r, t))
+        fnf (FEtaIdx s r f t) = FEtaIdx s r (m `safeLookup` (s, r, f)) (m `safeLookup` (s, r, t))
 
         dn' = M.mapKeys dnf dn
         dnf (DEtaIdx s r f t) = DEtaIdx s r (m M.! (s, r, f)) (m M.! (s, r, t))

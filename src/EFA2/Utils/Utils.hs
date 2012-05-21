@@ -17,6 +17,10 @@ import Debug.Trace
 showarg :: (Show a) => a -> a
 showarg x = trace (show x) x
 
+safeLookup :: (Ord k, Show k) => M.Map k v -> k -> v
+safeLookup m k = case M.lookup k m of
+                      Nothing -> error $ "safeLookup: " ++ show k
+                      Just x -> x
 
 -- generalized unique
 gunique :: (Ord a) => S.Set a -> [a] -> [a]
