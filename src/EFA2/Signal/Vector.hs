@@ -175,26 +175,25 @@ vlenCheck x y = vlen x == vlen y
 
 --------------------------------------------------------------
 -- TRanspose Classe
-class VTRanspose v1 v2 d where
+class VTranspose v1 v2 d where
       vtranspose :: (v2 (v1 d)) -> (v2 (v1 d))
 
 
-instance VTRanspose V.Vector V.Vector d where
-  vtranspose xs = error "vtranspose: TODO" -- V.map (flip V.map xs) fs
-       --     where fs = V.take min $ V.map (flip (V.!)) $ V.fromList [0..]
-        --          min = V.minimum $ V.map V.length xs
+instance VTranspose V.Vector V.Vector d where
+  vtranspose xs = if V.all (== len) lens then V.map (flip V.map xs) fs else error "Error in VTranspose -- unequal length"
+    where fs = V.map (flip (V.!)) $ V.fromList [0..len-1]
+          lens = V.map vlen xs  
+          len = V.head lens  
+    
+instance (UV.Unbox d) =>  VTranspose  UV.Vector V.Vector d where
+  vtranspose xs = if V.all (== len) lens then V.map (vunbox . flip V.map xs) fs else error "Error in VTranspose -- unequal length"
+    where fs = V.map (flip (UV.!)) $ V.fromList [0..len-1]
+          lens = V.map vlen xs  
+          len = V.head lens  
 
-instance (UV.Unbox d) =>  VTRanspose  UV.Vector V.Vector d where
-  vtranspose xs = error "vtranspose: TODO" -- V.map (vunbox . flip V.map xs) fs
-        --    where fs = V.take min $ V.map (flip (UV.!)) $ V.fromList [0..]
-        --          min = V.minimum $ V.map UV.length xs
-         -- vtranspose [] = []
-         -- vtranspose xs = map (UV.fromList . flip map xs) fs
-         --   where fs = take min $ map (flip (UV.!)) [0..]
-         --         min = L.minimum $ map UV.length xs
-
-instance VTRanspose [] [] d where
-  vtranspose = L.transpose
+instance VTranspose [] [] d where
+  vtranspose x = if all (== head lens) lens then  L.transpose x else error "Error in VTranspose -- unequal length"
+                         where lens = map vlen x
 
 
 

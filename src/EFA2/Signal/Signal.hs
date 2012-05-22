@@ -242,7 +242,7 @@ class STranspose s1 s2 c1 c2 d1 | s1 -> s2, s2 -> s1  where
 instance STranspose FSignal FSample (Data (v1 :> Nil)) (Data (v1 :> Nil)) d1 where
          stranspose (TC (Data (D1 x))) = (TC (Data (D1 x))) 
 
-instance VTRanspose v1 v2 d1 => STranspose FSignal FSample (Data (v2 :> v1 :> Nil)) (Data (v2 :> v1 :> Nil)) d1 where
+instance VTranspose v1 v2 d1 => STranspose FSignal FSample (Data (v2 :> v1 :> Nil)) (Data (v2 :> v1 :> Nil)) d1 where
          stranspose (TC (Data (D2 x))) = TC $ Data $ D2 $ vtranspose x 
 
 ----------------------------------------------------------
