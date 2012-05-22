@@ -3,6 +3,7 @@
 module EFA2.Signal.Data (module EFA2.Signal.Data) where
 import EFA2.Signal.Vector
 import EFA2.Signal.Base
+import Data.Monoid
 
 import qualified Data.Vector.Unboxed as UV
 import qualified Data.Vector as V
@@ -36,28 +37,7 @@ instance (Show (v2 (v1 v0))) => Show ((v2 :> v1 :> Nil) v0) where
 instance (Show (v3 (v2 (v1 v0)))) => Show ((v3 :> v2 :> v1 :> Nil) v0) where
          show (D3 x) = "D3 (" ++ show x ++ ")"
 
-
-{-
-----------------------------------------------------------
--- | access class
-         
-class FromToData c d where
-  fromData :: c d -> d
-  toData :: d -> c d 
-
-instance FromToData (Data Nil) d where
-         fromData (Data (D0 x)) = x 
-         toData x = Data $ D0 $ x 
-
-instance FromToData (Data (v1 :> Nil)) d where
-         fromData (Data (D1 x)) = x 
-         toData x = Data $ D1 $ x 
-
-instance FromToData (Data (v2 :> v1 :> Nil)) d where
-         fromData (Data (D0 x)) = x 
-         toData x = Data $ D0 $ x 
--}
-----------------------------------------------------------
+---------------------------------------------------------
 -- | Type Synonym Convenience
 
 type DVal a = Data Nil a
@@ -72,6 +52,21 @@ type Vec3 a = (Data (V.Vector :> V.Vector :> V.Vector :> Nil) a)
 type List a = (Data ([] :> Nil) a)
 type List2 a = (Data ([] :> [] :> Nil) a)
 type List3 a = (Data ([]:> [] :> []:> Nil) a)
+
+----------------------------------------------------------
+-- | mapping
+
+class DMap c d1 d2 where
+  dmap :: (d1 -> d2) -> c d1 -> c d2
+  
+instance DMap (Data Nil) d1 d2 where  
+  dmap f (Data (D0 x)) = Data $ D0 $ f x
+  
+instance (VWalker v1 d1 d2) => DMap (Data (v1 :> Nil)) d1 d2 where  
+  dmap f (Data (D1 x)) = Data $ D1 $ vmap f x
+
+instance (VWalker v1 d1 d2, VWalker v2 (v1 d1) (v1 d2)) => DMap (Data (v2 :> v1 :> Nil)) d1 d2 where  
+  dmap f (Data (D2 x)) = Data $ D2 $ vmap (vmap f) x
 
 ----------------------------------------------------------
 -- | Zipping for normal Arithmetics 
@@ -119,123 +114,60 @@ instance (VZipper v1 d1 d2 d3, VZipper v2 (v1 d1) (v1 d2) (v1 d3)) => DZipWith (
 ----------------------------------------------------------
 -- Zipping for cross Arithmetics 
 
-class CrossWith c1 c2 c3 d1 d2 d3 | c1 c2 -> c3 where
-  crossWith :: (d1 -> d2 -> d3) -> c1 d1 -> c2 d2 -> c3 d3
+class DCrossWith c1 c2 c3 d1 d2 d3 | c1 c2 -> c3 where
+  dcrossWith :: (d1 -> d2 -> d3) -> c1 d1 -> c2 d2 -> c3 d3
 
 -- 1d - 1d -> 2d
-instance (VWalker v2 d1 (v1 d3), VWalker v1 d2 d3) => CrossWith (Data (v2 :> Nil)) (Data (v1 :> Nil))  (Data (v2 :> v1 :> Nil))  d1 d2 d3  where
-         crossWith f  (Data (D1 x)) (Data (D1 y)) = Data $ D2 $ vmap g x
+instance (VWalker v2 d1 (v1 d3), VWalker v1 d2 d3) => DCrossWith (Data (v2 :> Nil)) (Data (v1 :> Nil))  (Data (v2 :> v1 :> Nil))  d1 d2 d3  where
+         dcrossWith f  (Data (D1 x)) (Data (D1 y)) = Data $ D2 $ vmap g x
            where g xi = vmap (f xi) y  
 
 -- 1d - 2d
-instance (VZipper v2 d1 (v1 d2) (v1 d3), VWalker v1 d2 d3) => CrossWith (Data (v2 :> Nil)) (Data (v2 :> v1 :> Nil))   (Data (v2 :> v1 :> Nil)) d1 d2 d3  where
-         crossWith f  (Data (D1 x)) (Data (D2 y)) = Data $ D2 $ vzipWith g x y
+instance (VZipper v2 d1 (v1 d2) (v1 d3), VWalker v1 d2 d3) => DCrossWith (Data (v2 :> Nil)) (Data (v2 :> v1 :> Nil))   (Data (v2 :> v1 :> Nil)) d1 d2 d3  where
+         dcrossWith f  (Data (D1 x)) (Data (D2 y)) = Data $ D2 $ vzipWith g x y
            where g xi yi = vmap (f xi) yi 
 
 -- 2d - 1d
-instance (VZipper v2 (v1 d1) d2 (v1 d3), VWalker v1 d1 d3) => CrossWith (Data (v2 :> v1 :> Nil))  (Data (v2 :> Nil))  (Data (v2 :> v1 :> Nil)) d1 d2 d3  where
-         crossWith f  (Data (D2 x)) (Data (D1 y)) = Data $ D2 $ vzipWith g x y
+instance (VZipper v2 (v1 d1) d2 (v1 d3), VWalker v1 d1 d3) => DCrossWith (Data (v2 :> v1 :> Nil))  (Data (v2 :> Nil))  (Data (v2 :> v1 :> Nil)) d1 d2 d3  where
+         dcrossWith f  (Data (D2 x)) (Data (D1 y)) = Data $ D2 $ vzipWith g x y
            where g xi yi = vmap ((flip f) yi) xi 
 
 ----------------------------------------------------------
 -- fold Functions
 
-class D0Fold c1 c2 d1 d2 where
-      --d0foldl :: (d1 -> d2 -> d1) -> d1 -> c2 d2 -> d1 
+class DFold c d1 d2 where
+      dfoldl :: (d1 -> d2 -> d1) -> d1 -> c d2 -> d1 
+      dfoldr :: (d1 -> d2 -> d2) -> d2 -> c d1 -> d2
+      
+instance (VWalker v1 d1 d2) => DFold (Data (v1 :> Nil)) d1 d2 where
+         dfoldl f x  (Data (D1 y)) = vfoldl f x y 
+         dfoldr f x  (Data (D1 y)) = vfoldr f x y 
+     
+instance (VWalker v2 d1 (v1 d2), VWalker v1 d1 d2, VWalker v2 (v1 d1) d2) =>  DFold (Data (v2 :> v1 :> Nil)) d1 d2 where
+         dfoldl f x  (Data (D2 y)) = vfoldl (vfoldl f) x y 
+         dfoldr f x  (Data (D2 y)) = vfoldr (flip (vfoldr f)) x  y 
 
-      d0foldl :: (d1 -> d2 -> d1) -> c1 d1 -> c2 d2 -> c1 d1 
-      d0foldr :: (d1 -> d2 -> d2) -> c1 d2 -> c2 d1 -> c1 d2
 
--- 1d -> 0d
-instance  VWalker v1 d1 d2 => D0Fold (Data Nil) (Data (v1 :> Nil)) d1 d2 where
-         d0foldl f (Data (D0 x)) (Data (D1 y)) = Data $ D0 $ vfoldl f x y
-         d0foldr f (Data (D0 x)) (Data (D1 y)) = Data $ D0 $ vfoldr f x y
-
--- 2d -> 0d
-instance (VWalker v1 d1 d2, VWalker v2 d1 (v1 d2)) => D0Fold (Data Nil) (Data (v2 :> v1 :> Nil)) d1 d2 where
-         d0foldl f (Data ( D0 x)) (Data (D2 y)) = Data $ D0 $ vfoldl (vfoldl f) x y
---         d0foldr f (Data ( D0 x)) (Data (D2 y)) = Data $ D0 $ vfoldr (vfoldr f) x y
-{-         
-         dfoldr f (Data (D0 x)) (Data (D2 y)) = Data $ D0 $ vfoldr (vfoldr f) x y
-    Could not deduce (d2 ~ v3 d1)
-    from the context (VWalker v1 d1 d2, VWalker v2 d1 (v1 d2))
-      bound by the instance declaration at EFA2/Signal/Data.hs:130:10-101
-    or from (Nil' ~ Nil', Nil' ~ Nil')
--}
-
-class D1Fold c1 c2 v1 d1 d2 where
-      d1foldl :: (v1 d1 -> v1 d2 -> v1 d1) -> c1 d1 -> c2 d2 -> c1 d1 
---      d0foldr :: (v1 d1 -> v2 d2 -> v2 d2) -> c1 d2 -> c2 d1 -> c1 d2
+class D1Fold c v1 d1 d2 where
+      d1foldl :: (v1 d1 -> v1 d2 -> v1 d1) -> (v1 d1) -> c d2 -> (v1 d1) 
+      d1foldr :: (v1 d1 -> v1 d2 -> v1 d2) -> (v1 d2) -> c d1 -> (v1 d2) 
 
 -- 2d -> 1d
-instance (VWalker v2 (v1 d1) (v1 d2)) => D1Fold (Data (v1 :> Nil)) (Data (v2 :> v1 :> Nil)) v1 d1 d2  where
-         d1foldl f (Data (D1 x)) (Data (D2 y)) = Data $ D1 $ vfoldl f x y
+instance (VWalker v2 (v1 d1) (v1 d2)) => D1Fold (Data (v2 :> v1 :> Nil)) v1 d1 d2  where
+         d1foldl f x (Data (D2 y)) = vfoldl f x y
+         d1foldr f x (Data (D2 y)) = vfoldr f x y
 
 ----------------------------------------------------------
--- Data Map
-         
--- dmap :: (VWalker d1 d2) => (d1 -> d2) ->  c v d1 -> c v d2         
--- dmap f (Data x = vmap f x
+-- Monoid
 
-----------------------------------------------------------
--- Append Class
+instance (VSingleton v1 d) => Monoid (Data (v1 :> Nil) d) where
+   mempty = Data $ D1 $ vempty        
+   mappend (Data (D1 x)) (Data (D1 y)) = Data $ D1 $ vappend x y    
 
-class DAppend c1 c2 c3 d | c1 c2 -> c3 where
-  dempty :: c3 d
-  dappend :: c1 d -> c2 d -> c3 d
-  
--- 0d - 1d
-instance VSingleton v1 d => DAppend (Data (v1 :> Nil))  (Data Nil)  (Data (v1 :> Nil)) d where
-  dempty = Data $ D1 $ vempty
-  dappend (Data (D1 x)) (Data (D0 y)) = Data $ D1 $ vappend x (vsingleton y)
-  
--- 1d -- 0d
-instance VSingleton v1 d => DAppend  (Data Nil) (Data (v1 :> Nil)) (Data (v1 :> Nil)) d where
-  dempty = Data $ D1 $ vempty
-  dappend (Data (D0 x)) (Data (D1 y)) = Data $ D1 $ vappend (vsingleton x) y
+instance (VSingleton v2 (v1 d)) => Monoid (Data (v2 :> v1 :> Nil) d) where
+   mempty = Data $ D2 $ vempty        
+   mappend (Data (D2 x)) (Data (D2 y)) = Data $ D2 $ vappend x y    
 
--- 1d -- 1d 
-instance VSingleton v1 d => DAppend (Data (v1 :> Nil))  (Data (v1 :> Nil))  (Data (v1 :> Nil)) d where
-  dempty = Data $ D1 $ vempty
-  dappend (Data (D1 x)) (Data (D1 y)) =  Data $ D1 $ vappend x y
-
--- 2d -- 2d 
-instance (VSingleton v1 d, VSingleton v2 (v1 d), VZipper v2 (v1 d) (v1 d) (v1 d)) => DAppend (Data (v2 :> v1 :> Nil))  (Data (v2 :> v1 :> Nil))  (Data (v2 :> v1 :> Nil)) d where
-  dempty = Data $ D2 $ vempty
-  dappend (Data (D2 x)) (Data (D2 y)) =  Data $ D2 $ vzipWith vappend x y
-  
-
-----------------------------------------------------------
--- Alternative Append Class
-{-
-class DAppendAlt c1 c2 c3 d | c1 c2 -> c3 where
- dappend' :: c1 d -> c2 d -> c3 d
-
--- 1d -- 2d 
-instance (VSingleton v1 d,VSingleton v2 (v1 d)) => DAppendAlt (Data (v1 :> Nil))  (Data (v2 :> v1 :> Nil))  (Data (v2 :> v1 :> Nil)) d where
- dappend' (Data (D1 x)) (Data (D2 y)) =  Data $ D2 $ vappend (vsingleton x) y
-
--- 2d -- 1d 
-instance (VSingleton v1 d,VSingleton v2 (v1 d)) => DAppendAlt (Data (v2 :> v1 :> Nil)) (Data (v1 :> Nil)) (Data (v2 :> v1 :> Nil)) d where
- dappend' (Data (D2 x)) (Data (D1 y)) =  Data $ D2 $ vappend  x (vsingleton y)
-
--- 2d -- 2d 
-instance (VSingleton v1 d,VSingleton v2 (v1 d)) => DAppendAlt (Data (v2 :> v1 :> Nil))  (Data (v2 :> v1 :> Nil))  (Data (v2 :> v1 :> Nil)) d where
- dappend' (Data (D2 x)) (Data (D2 y)) =  Data $ D2 $ vappend x y
--}
-
-{-
-
-----------------------------------------------------------
--- get data Range
-
-class DGetRange c1 c2 d | c1 -> c2 where
-  dgetRange :: c1 d -> c2 (d,d) 
-  
-instance  (Bounded d,Ord d,VWalker y d) => DGetRange (Data (y :> Nil)) (Data Nil) d where 
-  dgetRange x = dfoldl f (Data $ D0 $ (minBound, maxBound)) x
-    where f (omin, omax) x' = (max omin x', min omax x') 
--}        
 ----------------------------------------------------------
 -- get data Range
         
@@ -268,12 +200,3 @@ instance FromToList (Data ([] :> Nil)) d where
   dtoList (Data (D1 x)) = x
   
   
-  
-----------------------------------------------------------
--- Sum
-  
-class DSum c1 c2 d where  
-  dsum :: c1 d -> c2 d
-  
-instance (VWalker v1 Double Double) => DSum (Data (v1:> Nil)) (Data Nil) Val where
-  dsum x = d0foldl (..+) (Data $ D0 0) x  
