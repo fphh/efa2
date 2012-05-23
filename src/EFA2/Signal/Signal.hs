@@ -26,6 +26,8 @@ data FSample
 data FDistrib
 data FClass
 
+data TestRow
+  
 ----------------------------------------------------------------
 -- Signal Zipwith with Rule of Signal Inheritance
 class SArith s1 s2 s3 | s1 s2 -> s3
@@ -51,6 +53,9 @@ instance SArith FSample FSample FSample
 instance SArith FDistrib FDistrib FDistrib
 instance SArith FClass FClass FClass
 
+instance SArith TestRow TestRow TestRow
+instance SArith Scalar TestRow TestRow
+instance SArith TestRow Scalar TestRow
 
 class (SArith s1 s2 s3, DZipWith c1 c2 c3 d1 d2 d3) => SZipWith s1 s2 s3 c1 c2 c3 d1 d2 d3 | s1 s2 -> s3, c1 c2 -> c3  where
        szipWith ::  (d1 -> d2 -> d3) -> TC s1 typ1 (c1 d1) -> TC s2 typ2 (c2 d2) -> TC s3 typ3 (c3 d3)
@@ -138,9 +143,11 @@ type Scal typ a = TC Scalar typ (DVal a)
 type Sig1 typ a = TC Signal typ (UVec a)
 type FSig1 typ a = TC FSignal typ (UVec a)
 
-type Sig2 typ a = TC Signal typ (Vec a)
+type Sig2 typ a = TC Signal typ (Vec2 a)
 type FSig2 typ a = TC FSignal typ (Vec2 a)
 
+type Test1 typ a = TC TestRow typ (UVec a)
+type Test2 typ a = TC TestRow typ (Vec2 a)
 
 -- specific
 --type UTSignal a = Sig1 (Typ UT UT UT) a
@@ -271,6 +278,9 @@ instance VTranspose v1 v2 d1 => STranspose FSignal FSample (Data (v2 :> v1 :> Ni
 instance Monoid c => Monoid (TC s typ c) where
   mempty = TC $ mempty
   mappend (TC x) (TC y) = TC $ mappend x y 
+
+(.++) ::  Monoid c => (TC s typ c) -> (TC s typ c) -> (TC s typ c)
+(.++) x y = mappend x y
 
 ----------------------------------------------------------
 -- signal sign
