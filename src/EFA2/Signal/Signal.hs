@@ -147,7 +147,7 @@ type Sig2 typ a = TC Signal typ (Vec2 a)
 type FSig2 typ a = TC FSignal typ (Vec2 a)
 
 type Test1 typ a = TC TestRow typ (UVec a)
-type Test2 typ a = TC TestRow typ (Vec2 a)
+type Test2 typ a = TC TestRow typ (UVec2 a)
 
 -- specific
 --type UTSignal a = Sig1 (Typ UT UT UT) a
@@ -350,6 +350,10 @@ untype (TC x) = TC x
 -- | make typed
 setType ::  TC s1 (Typ UT UT UT) (c1 d1) -> TC s1 (Typ delta1 t1 p1) (c1 d1)
 setType (TC x) = TC x
+
+setTypeTestRow ::  TC sig ty val -> TC TestRow ty val
+setTypeTestRow (TC x) = TC x
+
 
 -- | sneg :: (DArith0 d, SMap s c d d) => TC s typ (c d) -> TC s typ (c d)
 sneg :: (DArith0 d, SMap c d d) => TC s typ (c d) -> TC s typ (c d)

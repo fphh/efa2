@@ -121,13 +121,13 @@ class VZipper vec a b c where
       vzipWith :: (a -> b -> c) -> vec a -> vec b -> vec c
       
 instance VZipper V.Vector a b c  where
-         vzipWith f x y = if vlenCheck x y then V.zipWith f x y else error "Error in vlenCheck V -- unequal Length" 
+         vzipWith f x y = V.zipWith f x y -- if vlenCheck x y then V.zipWith f x y else error "Error in vlenCheck V -- unequal Length" 
 
 instance (UV.Unbox a, UV.Unbox b, UV.Unbox c) => VZipper UV.Vector a b c  where
-         vzipWith  f x y =  if vlenCheck x y then UV.zipWith f x y else error "Error in vlenCheck UV -- unequal Length"
+         vzipWith  f x y = UV.zipWith f x y --if vlenCheck x y then UV.zipWith f x y else error "Error in vlenCheck UV -- unequal Length"
 
 instance VZipper [] a b c  where
-         vzipWith  f x y =  if vlenCheck x y then zipWith f x y else error "Error in vlenCheck List -- unequal Length"
+         vzipWith  f x y = zipWith f x y -- if vlenCheck x y then zipWith f x y else error "Error in vlenCheck List -- unequal Length"
 
 instance VZipper Value a b c  where
          vzipWith f (Value x) (Value y) = Value (f x y)
