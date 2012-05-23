@@ -25,6 +25,11 @@ instance (FromToList (Data (v1 :> Nil)) Val, DisplayTyp t) => SPlotData Signal t
           u = getDisplayUnit t
           (UnitScale s) = getUnitScale u
           
+instance (FromToList (Data (v1 :> Nil)) Val, DisplayTyp t) => SPlotData TestRow t  (Data (v1 :> Nil)) Val where 
+  sPlotData x = map (*s) $ stoList x  
+    where t = getDisplayType x
+          u = getDisplayUnit t
+          (UnitScale s) = getUnitScale u
           
 class Plot a where          
   sigPlot :: a -> IO ()
@@ -38,4 +43,8 @@ instance Plot PowerRecord where
   
 instance Plot SequPwrRecord where   
   sigPlot (SequData recs) = mapM_ sigPlot recs
+  
+instance SPlotData TestRow t (Data (v1 :> Nil)) Val => Plot (TC TestRow t  (Data (v1 :> Nil) Val))  where 
+  sigPlot x = do   
+     plotList [] (sPlotData x)
   
