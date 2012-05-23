@@ -316,8 +316,10 @@ sigPartInt time power = (deltaSig time) .* (avSig power)
 
 
 -- | Partial Signal Integration
-sigFullInt ::  TSig -> PSig -> FVal
-sigFullInt time power = sigSum $ sigPartInt time power -- csingleton (cfoldr (+) 0  $ czipWith (*) dTime $ dmap (\ p1 p2 -> (p1+p2)/2) power)
+sigFullInt ::  TSig -> PSig -> FSig
+sigFullInt time power = sfromList [fromScalar $ sigSum $ sigPartInt time power]
+
+-- csingleton (cfoldr (+) 0  $ czipWith (*) dTime $ dmap (\ p1 p2 -> (p1+p2)/2) power)
 
 ----------------------------------------------------------
 -- make untyped

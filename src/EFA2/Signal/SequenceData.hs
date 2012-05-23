@@ -14,7 +14,7 @@ import EFA2.Signal.Signal
 -- | Indices for Record, Section and Power Position
 newtype RecIdx = RecIdx Int deriving (Show,Eq,Ord) -- dataset Index
 newtype SecIdx = SecIdx Int deriving (Show,Eq,Ord, Num, Enum)
-data PPosIdx =  PPosIdx !Int !Int  deriving (Show, Eq, Ord)
+data PPosIdx =  PPosIdx !Int !Int deriving (Show, Eq, Ord)
 
 -----------------------------------------------------------------------------------
 -- | Signal Record & Power Record & Flow -- Structure for Handling recorded data
@@ -27,19 +27,29 @@ data Record = Record TSig SignalMap deriving (Show)
 data SigId = SigId String deriving (Show, Eq, Ord)
 type SignalMap = M.Map SigId (UTSig Val)
 
+
+data FlRecord a b = FlRecord a (PPosData b)
+
+type FlowRecord = FlRecord DTSig FSig
+type FlowValRecord = FlRecord DTVal FVal
+
+
 -- | Power record to contain power signals assigned to the tree
 type PPosPowers = PPosData PSig
 data PowerRecord = PowerRecord TSig PPosPowers deriving (Show)
 type SequPwrRecord = SequData [PowerRecord]
-
+{-
 -- | Flow record to contain flow signals assigned to the tree
 type PPosFlows = PPosData FSig
 data FlowRecord = FlowRecord DTSig (PPosData FSig) deriving (Show)
-type SequFlowRecord = SequData [FlowRecord]
+
+data FlowValRecord = FlowValRecord DTVal (PPosData FVal) deriving (Show)
+-}
+
+type SequFlowRecord a = SequData [a]
 
 -- | Flow record to contain flow signals assigned to the tree
-data FlowValRecord = FlowValRecord DTVal (PPosData FVal) deriving (Show)
-type SequFlowValRecord = SequData [FlowValRecord]
+--type SequFlowValRecord = SequData [FlowValRecord]
 
 newtype FlowState = FlowState (PPosData Sign) deriving (Show)
 type SequFlowState = SequData [FlowState]

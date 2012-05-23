@@ -41,9 +41,10 @@ makeWithDirEdges es = map f es
 ------------------------------------------------------------------------
 -- Making equations:
 
-makeAllEquations :: (Show a) => Topology -> [Envs a] -> ([Envs a], [EqTerm])
-makeAllEquations topo envs = (envs', ts)
-  where ts = mkEdgeEq dirTopo ++ mkNodeEq dirTopo ++ interTs ++ powerEqs ++ enveqs
+-- TODO: Check that envUnion preserves all variables.
+makeAllEquations :: (Show a) => Topology -> [Envs a] -> (Envs a, [EqTerm])
+makeAllEquations topo envs = (envUnion envs', ts)
+  where ts = mkEdgeEq dirTopo ++ mkNodeEq dirTopo ++ interTs  ++ powerEqs ++ enveqs
         dirTopo = makeDirTopology topo
 
         interTs = mkIntersectionEqs dirTopo
@@ -66,41 +67,34 @@ makeAllEquations topo envs = (envs', ts)
                                             ++ envToEqTerms st
 
 
--- ATTENTION: DTimeIdx must not shift?
 shiftIndices :: (Show a) => M.Map (Int, Int, Int) Node -> Envs a -> Envs a
 shiftIndices m (Envs e de p dp fn dn t x v st) = Envs e' de' p' dp' fn' dn' t x' v' st'
   where e' = M.mapKeys ef e
-        ef (EnergyIdx s r f t) = EnergyIdx s r (m M.! (s, r, f)) (m M.! (s, r, t))
+        ef (EnergyIdx s r f t) = EnergyIdx s r (m `safeLookup` (s, r, f)) (m `safeLookup` (s, r, t))
 
         de' = M.mapKeys def de
-        def (DEnergyIdx s r f t) = DEnergyIdx s r (m M.! (s, r, f)) (m M.! (s, r, t))
+        def (DEnergyIdx s r f t) = DEnergyIdx s r (m `safeLookup` (s, r, f)) (m `safeLookup` (s, r, t))
 
         p' = M.mapKeys pf p
-        pf (PowerIdx s r f t) = PowerIdx s r (m M.! (s, r, f)) (m M.! (s, r, t))
+        pf (PowerIdx s r f t) = PowerIdx s r (m `safeLookup` (s, r, f)) (m `safeLookup` (s, r, t))
 
         dp' = M.mapKeys dpf dp
-        dpf (DPowerIdx s r f t) = DPowerIdx s r (m M.! (s, r, f)) (m M.! (s, r, t))
-
-        --n' = M.mapKeys nf n
-        --nf (EtaIdx s r f t) = EtaIdx s r (m M.! (s, r, f)) (m M.! (s, r, t))
+        dpf (DPowerIdx s r f t) = DPowerIdx s r (m `safeLookup` (s, r, f)) (m `safeLookup` (s, r, t))
 
         fn' = M.mapKeys fnf fn
         fnf (FEtaIdx s r f t) = FEtaIdx s r (m `safeLookup` (s, r, f)) (m `safeLookup` (s, r, t))
 
         dn' = M.mapKeys dnf dn
-        dnf (DEtaIdx s r f t) = DEtaIdx s r (m M.! (s, r, f)) (m M.! (s, r, t))
-
-        --t' = M.mapKeys tf t
-        --tf (DTimeIdx s r) = DTimeIdx s r (m M.! (s, r, f)) (m M.! (s, r, t))
+        dnf (DEtaIdx s r f t) = DEtaIdx s r (m `safeLookup` (s, r, f)) (m `safeLookup` (s, r, t))
 
         x' = M.mapKeys xf x
-        xf (XIdx s r f t) = XIdx s r (m M.! (s, r, f)) (m M.! (s, r, t))
+        xf (XIdx s r f t) = XIdx s r (m `safeLookup` (s, r, f)) (m `safeLookup` (s, r, t))
 
         v' = M.mapKeys vf v
-        vf (VarIdx s r f t) = VarIdx s r (m M.! (s, r, f)) (m M.! (s, r, t))
+        vf (VarIdx s r f t) = VarIdx s r (m `safeLookup` (s, r, f)) (m `safeLookup` (s, r, t))
 
         st' = M.mapKeys stf st
-        stf (StorageIdx s r sto) = StorageIdx s r (m M.! (s, r, sto))
+        stf (StorageIdx s r sto) = StorageIdx s r (m `safeLookup` (s, r, sto))
 
 
 envToEqTerms :: (MkVarC k) => M.Map k v -> [EqTerm]
@@ -162,15 +156,12 @@ mkInStoreEqs (ins, n@(nid, NLabel sec rec _ _), outs@((o,_):_)) = (startEq:osEqs
         osEqs = map f (pairs outs)
         f (x, y) = mkVar (EnergyIdx sec rec nid y') := 
                      mkVar (EnergyIdx sec rec nid x') :+ (Minus (mkVar (EnergyIdx xs xr x' nid)))
-                     --mkVar (EnergyIdx sec rec nid x') :+ (mkVar (EnergyIdx xs xr x' nid))
-
           where (x', NLabel xs xr _ _) = x
                 (y', _) = y
 mkInStoreEqs _ = []
 
 
 mkOutStoreEqs :: InOutGraphFormat (LNode NLabel) -> [EqTerm]
--- mkOutStoreEqs x = error ("Error :" ++ show x)
 mkOutStoreEqs (ins, n@(nid, NLabel sec rec _ _), o:_) = visumeq:xeqs ++ eieqs
   where xis = map (makeVar XIdx) ins
         eis = map (makeVar EnergyIdx) ins
@@ -188,6 +179,7 @@ mkOutStoreEqs (ins, n@(nid, NLabel sec rec _ _), o:_) = visumeq:xeqs ++ eieqs
         outv = mkVar (VarIdx sec rec nid 1)
         eieqs = zipWith h eis' xis
         h e x = e := x :* outv
+mkOutStoreEqs _ = []
 
 -- | Takes section, record, and a graph.
 mkEdgeEq :: Topology -> [EqTerm]
@@ -206,7 +198,7 @@ mkEq (ins, n@(nid, NLabel sec rec _ _), outs)
   | length ins == 0 && length outs == 0 = []
   | length ins == 0 && length outs > 0 = xoeqs ++ oeqs' ++ vosumeq
   | length ins > 0 && length outs == 0 = xieqs ++ ieqs' ++ visumeq
-  | otherwise = vosumeq ++ oeqs ++ visumeq ++ ieqs ++ xoeqs ++ xieqs ++ oeqs' ++ ieqs'
+  | otherwise = vosumeq ++ oeqs ++ visumeq ++ ieqs ++ xoeqs ++ xieqs ++ oeqs' ++ ieqs' ++ pisumeq
   where xis = map (makeVar XIdx) ins
         xos = map (makeVar XIdx) outs
         eis = map (makeVar EnergyIdx) ins
@@ -219,6 +211,14 @@ mkEq (ins, n@(nid, NLabel sec rec _ _), outs)
 
         vosum = mkVar (VarIdx sec rec nid 1) -- ATTENTION (not very safe): We need this variable in mkOutStoreEq again!!!
         vosumeq = [vosum := add eos]
+
+
+        pis = map (makeVar PowerIdx) ins
+        pos = map (makeVar PowerIdx) outs
+
+        pisumeq = [add pos := add pis]
+
+
 
         ieqs = zipWith3 f eis xis (repeat vosum)
         oeqs = zipWith3 f eos xos (repeat visum)

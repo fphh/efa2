@@ -17,9 +17,9 @@ import Debug.Trace
 showarg :: (Show a) => a -> a
 showarg x = trace (show x) x
 
-safeLookup :: (Ord k, Show k) => M.Map k v -> k -> v
+safeLookup :: (Ord k, Show k, Show v) => M.Map k v -> k -> v
 safeLookup m k = case M.lookup k m of
-                      Nothing -> error $ "safeLookup: " ++ show k
+                      Nothing -> error $ "safeLookup: " ++ show k ++ "\n" ++ show m
                       Just x -> x
 
 -- generalized unique
@@ -216,6 +216,7 @@ myShowListFunct list showFunct = unlines (map showFunct list)
 
 -- | Yet another zipping function. A somehow generalised version of 'dmap'.
 -- 'prop_ysaf' checks for this property:
+--
 -- > length xs > 0 ==> yazf (,) xs xs == dmap (,) xs
 yazf :: (a -> b -> c) -> [a] -> [b] -> [c]
 yazf f xs ys = zipWith f (init xs) (tail ys)

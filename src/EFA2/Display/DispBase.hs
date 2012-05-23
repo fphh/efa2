@@ -12,13 +12,15 @@ import EFA2.Signal.Base
 -- | Central Place for basic Unit & Display settings
 
 -- | Variables for DisplayUnit and Display Scale 
-data DisplayUnit = Unit_kWh | Unit_kW | Unit_Percent | Unit_None | Unit_Sec | Unit_UT
+data DisplayUnit = Unit_kWh | Unit_Joule | Unit_kJoule | Unit_kW | Unit_Percent | Unit_None | Unit_Sec | Unit_UT
 data UnitScale = UnitScale Val
 
 
 -- | Unit Show Instance
 instance Show DisplayUnit where
-  show Unit_kWh  = "kWh" 
+  show Unit_kWh  = "kWh"
+  show Unit_Joule  = "J"
+  show Unit_kJoule  = "kJ"
   show Unit_kW   = "kW"
   show Unit_Percent = "%"
   show Unit_None = "/"
@@ -28,6 +30,8 @@ instance Show DisplayUnit where
 -- | get display scale per Unit 
 getUnitScale :: DisplayUnit -> UnitScale  
 getUnitScale Unit_kWh = UnitScale (1/1000/3600)
+getUnitScale Unit_Joule = UnitScale 1
+getUnitScale Unit_kJoule = UnitScale (1/1000)
 getUnitScale Unit_None = UnitScale 1
 getUnitScale Unit_Percent = UnitScale 100
 getUnitScale Unit_Sec = UnitScale 1

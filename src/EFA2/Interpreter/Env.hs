@@ -133,3 +133,15 @@ instance Ord (a -> a) where
 emptyEnv :: Envs a
 emptyEnv = Envs M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty
 
+
+envUnion :: [Envs a] -> Envs a
+envUnion envs = Envs { energyMap = M.unions $ map energyMap envs,
+                       denergyMap = M.unions $ map denergyMap envs,
+                       powerMap = M.unions $ map powerMap envs,
+                       dpowerMap = M.unions $ map dpowerMap envs,
+                       fetaMap = M.unions $ map fetaMap envs,
+                       detaMap = M.unions $ map detaMap envs,
+                       dtimeMap = M.unions $ map dtimeMap envs,
+                       xMap = M.unions $ map xMap envs,
+                       varMap = M.unions $ map varMap envs,
+                       storageMap = M.unions $ map storageMap envs }

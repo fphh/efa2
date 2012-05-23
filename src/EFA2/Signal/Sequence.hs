@@ -52,18 +52,34 @@ type XSig =  [XSample]
 -- | From PowerRecord
 --fromFlowRecord :: SecIdx -> RecIdx -> FlowRecord -> Envs FSig -- [Val]
 
-fromFlowRecord :: SecIdx -> RecIdx -> FlowRecord -> Envs UTFSig
-fromFlowRecord (SecIdx secIdx) (RecIdx recIdx) fRec@(FlowRecord dTime flowMap) =
-  emptyEnv { powerMap = M.map untype $ M.mapKeys f flowMap, dtimeMap = M.fromList [(DTimeIdx secIdx recIdx, untype dTime)] }
-  where f (PPosIdx idx1 idx2) = PowerIdx secIdx recIdx idx1 idx2
+--fromFlowRecord :: SecIdx -> RecIdx -> FlRecord a b -> Envs a --UTFSig
+fromFlowRecord (SecIdx secIdx) (RecIdx recIdx) fRec@(FlRecord dTime flowMap) =
+  emptyEnv { energyMap = M.map untype $ M.mapKeys f flowMap, dtimeMap = M.fromList [(DTimeIdx secIdx recIdx, untype dTime)] }
+  where f (PPosIdx idx1 idx2) = EnergyIdx secIdx recIdx idx1 idx2
 
   --where f ((PPosIdx idx1 idx2), (flowSig)) = ((PowerIdx secIdx recIdx idx1 idx2), [fromScalar $ sigSum flowSig])    
 
--- | Generate Sequence Flow 
-genSequFlow :: SequPwrRecord -> SequFlowRecord
-genSequFlow sqPRec = (map recPartIntegrate) `fmap` sqPRec
 
-makeSequence :: PowerRecord -> Topology -> ([Envs UTFSig], Topology)
+
+-- | Pre-Integrate all Signals in Record  
+recFullIntegrate :: PowerRecord -> FlowRecord
+recFullIntegrate pRec@(PowerRecord time pMap) = FlRecord (sfromList [fromScalar $ sigSum $ deltaSig time]) fMap
+  where fMap = M.map (sigFullInt time) pMap  
+
+-- | Pre-Integrate all Signals in Record  
+recPartIntegrate :: PowerRecord -> FlowRecord   
+recPartIntegrate pRec@(PowerRecord time pMap) = FlRecord (deltaSig time) fMap 
+  where fMap = M.map (sigPartInt time) pMap  
+
+-- | Generate Sequence Flow 
+genSequFlow :: SequPwrRecord -> SequFlowRecord FlowRecord
+genSequFlow sqPRec = (map recFullIntegrate) `fmap` sqPRec
+
+-- TODO: Umschalten zwischen recFullIntegrate und recPartIntegrate.
+--genSequFlow :: SequPwrRecord -> SequFlowRecord FlowRecord
+--genSequFlow sqPRec = (map recFullIntegrate) `fmap` sqPRec
+
+--makeSequence :: PowerRecord -> Topology -> ([Envs (Scal (Typ UT UT UT) Val)], Topology)
 makeSequence pRec topo = (sqEnvs, sqTopo)
   where pRec0 = addZeroCrossings pRec
         (sequ,sqPRec) = genSequ pRec0          
@@ -78,20 +94,10 @@ makeSequence pRec topo = (sqEnvs, sqTopo)
         sqSecTops = genSectionTopology sqFlowTops
         sqTopo = mkSequenceTopology sqSecTops
 
-
--- | Pre-Integrate all Signals in Record  
-recFullIntegrate :: PowerRecord -> FlowValRecord   
-recFullIntegrate pRec@(PowerRecord time pMap) = FlowValRecord (sigSum $ deltaSig time) fMap 
-  where fMap = M.map (sigFullInt time) pMap  
-
--- | Pre-Integrate all Signals in Record  
-recPartIntegrate :: PowerRecord -> FlowRecord   
-recPartIntegrate pRec@(PowerRecord time pMap) = FlowRecord (deltaSig time) fMap 
-  where fMap = M.map (sigPartInt time) pMap  
-        
+      
 -----------------------------------------------------------------------------------
 -- | Function to Generate Time Sequence
-genSequ ::  PowerRecord -> (Sequ,SequPwrRecord)
+genSequ ::  PowerRecord -> (Sequ, SequPwrRecord)
 genSequ pRec = removeNilSections (sequ++[lastSec],SequData pRecs)
   where xSig = genXSig pRec
         pRecs = map (repackXSig pRec) (seqXSig ++ [lastXSec])

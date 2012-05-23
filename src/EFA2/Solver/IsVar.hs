@@ -74,20 +74,23 @@ isVar g ts t
 -}
 
 -- | True for 'EqTerm's that are of the form:
+--
 -- > ... := Given ...
 isGiven :: EqTerm -> Bool
 isGiven (_ := Given) = True
 isGiven _ = False
 
 -- | True for 'EqTerm's that don't contain variables and for which 'isGiven' is False.
--- We assume for the given predicate (isVar :: EqTerm -> Bool) that: 
+-- We assume for the given predicate (isVar :: EqTerm -> Bool) that:
+--
 -- > not (isVar t) == isGiven t
 noVar :: (EqTerm -> Bool) -> EqTerm -> Bool
 noVar isVar t = (not $ isGiven t) && (S.size (mkVarSet isVar t) == 0)
 
 
 -- | True for 'EqTerm's that contain exactly one variable and for which 'isGiven' is False.
--- We assume for the given predicate (isVar :: EqTerm -> Bool) that: 
+-- We assume for the given predicate (isVar :: EqTerm -> Bool) that:
+--
 -- > not (isVar t) == isGiven t
 isGivenExtended :: (EqTerm -> Bool) -> EqTerm -> Bool
 isGivenExtended isVar t = (not $ isGiven t) && (S.size (mkVarSet isVar t) == 1)
@@ -120,7 +123,7 @@ isCompoundTerm (DEnergy _) = False
 isCompoundTerm (Power _) = False
 isCompoundTerm (DPower _) = False
 
-isCompoundTerm (FEta _ _) = False
+isCompoundTerm (FEta _) = False
 isCompoundTerm (DEta _) = False
 
 isCompoundTerm (DTime _) = False
@@ -130,6 +133,7 @@ isCompoundTerm (Store _) = False
 isCompoundTerm _ = True
 
 -- | True for yntactic variables.
+--
 -- > isStaticVar == not . isCompoundTerm
 isStaticVar :: EqTerm -> Bool
 isStaticVar = not . isCompoundTerm

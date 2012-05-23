@@ -1,4 +1,4 @@
-
+{-# OPTIONS_HADDOCK ignore-exports #-}
 
 module EFA2.Topology.TopologyData (
        module Data.Graph.Inductive, 

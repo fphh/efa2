@@ -7,17 +7,17 @@ import EFA2.Signal.Signal
 import EFA2.Display.DispBase
 
 data DisplayType = Typ_BZ
-                | Typ_E  
-                | Typ_F 
-                | Typ_IZ  
-                | Typ_N  
-                | Typ_M  
-                | Typ_P   
-                | Typ_T  
-                | Typ_X  
-                | Typ_Y  
-                | Typ_UZ  
-                | Typ_UT deriving Show
+                 | Typ_E  
+                 | Typ_F 
+                 | Typ_IZ  
+                 | Typ_N  
+                 | Typ_M  
+                 | Typ_P   
+                 | Typ_T  
+                 | Typ_X  
+                 | Typ_Y  
+                 | Typ_UZ  
+                 | Typ_UT deriving Show
 
 -- | Convert Type Information ADT
 class DisplayTyp t where 
@@ -38,15 +38,21 @@ instance DisplayTyp (Typ d UT p) where getDisplayType x = Typ_UT
 
 -- | Function to choose display Unit per Type
 getDisplayUnit :: DisplayType -> DisplayUnit
-getDisplayUnit Typ_E = Unit_kWh
+--getDisplayUnit Typ_E = Unit_kWh
+--getDisplayUnit Typ_E = Unit_kJoule
+getDisplayUnit Typ_E = Unit_Joule
+
 getDisplayUnit Typ_M = Unit_Percent
 getDisplayUnit Typ_T = Unit_Sec
 getDisplayUnit Typ_X = Unit_Percent
 getDisplayUnit Typ_Y = Unit_Percent
 getDisplayUnit Typ_P = Unit_kW
-getDisplayUnit Typ_F = Unit_kWh
-getDisplayUnit Typ_UT = Unit_UT
+--getDisplayUnit Typ_F = Unit_kWh
+--getDisplayUnit Typ_F = Unit_kJoule
+getDisplayUnit Typ_F = Unit_Joule
 
+getDisplayUnit Typ_UT = Unit_UT
+getDisplayUnit ty = error $ "getDisplayUnit: not implemented" ++ show ty
 
 -- | Define Display Format for each unit depending on selected display length
 getDisplayFormat ::  DisplayLength -> DisplayType -> DisplayUnit -> DisplayFormat

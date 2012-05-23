@@ -1,3 +1,4 @@
+{-# LANGUAGE GADTs #-}
 
 module Main where
 
@@ -20,6 +21,7 @@ import EFA2.Interpreter.Arith
 import EFA2.Display.DrawGraph
 
 import EFA2.Signal.Signal
+import EFA2.Signal.Data
 
 import EFA2.Signal.Sequence
 import EFA2.Signal.SequenceData
@@ -32,84 +34,120 @@ topo = mkGraph (makeNodes nodes) (makeEdges edges)
   where nodes = [(0, Source), (1, Crossing), (2, Sink), (3, Storage 0)]
         edges = [(0, 1, defaultELabel), (1, 2, defaultELabel), (1, 3, defaultELabel)]
 
-
+mkSig :: Int -> ([Val] -> PSig)
 mkSig n = sfromList . concat . replicate n
 
-etaf x = x/(x+1)
+etaf x = x/(x+5)
 
 revetaf x = (x+1)/x
 
-sigsXYZ = M.fromList [ (PowerIdx 0 0 0 1, sfromList [2.0]) ]
+--revFunc :: (a -> a) (a -> a)
+--revFunc f x = 1/(f x)
 
+
+--variation :: Topology -> Val -> [Envs UTFSig]
+variation sqTopo x = interpretFromScratch 1 gd
+  where 
+        givenEnv0 = emptyEnv { dtimeMap = M.fromList [ (DTimeIdx 0 0, sfromList [1.0]) ],
+                               powerMap = M.fromList [ (PowerIdx 0 0 3 1, sfromList [x]),
+                                                       (PowerIdx 0 0 2 1, sfromList [0.6] :: UTFSig) ],
+                               fetaMap = M.fromList [ (FEtaIdx 0 0 0 1, smap etaf), (FEtaIdx 0 0 1 0, smap revetaf),
+                                                      (FEtaIdx 0 0 1 2, smap (const 0.7)), (FEtaIdx 0 0 2 1, smap (const 1.7)),
+                                                      (FEtaIdx 0 0 1 3, smap (const 0.7)), (FEtaIdx 0 0 3 1, smap (const 1.7)) ] }
+
+        givenEnv1 = emptyEnv { --dtimeMap = M.fromList [ (DTimeIdx 1 0, sfromList [1.0]) ],
+                               energyMap = M.fromList [ (EnergyIdx 1 0 3 1, sfromList [x]) ],
+                               powerMap = M.fromList [ (PowerIdx 1 0 2 1, sfromList [0.6]) ],
+                               fetaMap = M.fromList [ (FEtaIdx 1 0 0 1, smap etaf), (FEtaIdx 1 0 1 0, smap revetaf),
+                                                      (FEtaIdx 1 0 1 2, smap (const 0.7)), (FEtaIdx 1 0 2 1, smap (const 1.7)),
+                                                      (FEtaIdx 1 0 1 3, smap (const 1.7)), (FEtaIdx 1 0 3 1, smap (const 0.7)) ] }
+{-
+        givenEnv2 = emptyEnv { dtimeMap = M.fromList [ (DTimeIdx 2 0, sfromList [1.0]) ],
+                               powerMap = M.fromList [ (PowerIdx 2 0 3 1, sfromList [x]), (PowerIdx 2 0 2 1, sfromList [0.6]) ],
+                               fetaMap = M.fromList [ (FEtaIdx 2 0 0 1, smap etaf), (FEtaIdx 2 0 1 0, smap revetaf),
+                                                      (FEtaIdx 2 0 1 2, smap (const 0.7)), (FEtaIdx 2 0 2 1, smap (const 1.7)),
+                                                      (FEtaIdx 2 0 1 3, smap (const 0.7)), (FEtaIdx 2 0 3 1, smap (const 1.7)) ] }
+
+        givenEnv3 = emptyEnv { --dtimeMap = M.fromList [ (DTimeIdx 3 0, sfromList [1.0]) ],
+                               energyMap = M.fromList [ (EnergyIdx 1 0 3 1, sfromList [x]) ],
+                               powerMap = M.fromList [ (PowerIdx 1 0 2 1, sfromList [0.6]) ],
+                               fetaMap = M.fromList [ (FEtaIdx 3 0 0 1, smap etaf), (FEtaIdx 3 0 1 0, smap revetaf),
+                                                      (FEtaIdx 3 0 1 2, smap (const 0.7)), (FEtaIdx 3 0 2 1, smap (const 1.7)),
+                                                      (FEtaIdx 3 0 1 3, smap (const 1.7)), (FEtaIdx 3 0 3 1, smap (const 0.7)) ] }
+
+-}
+      
+        (sqEnvs, ts') = makeAllEquations sqTopo [givenEnv0, givenEnv1 ] -- , givenEnv2, givenEnv3 ]
+
+
+        storage0 = EnergyIdx (-1) 0 8 9
+        dtime0 = DTimeIdx (-1) 0
+        ts = [give storage0, give dtime0] ++ ts'
+
+        sqEnvs' = sqEnvs { dtimeMap = M.insert (DTimeIdx (-1) 0) (sfromList [1.0]) (dtimeMap sqEnvs),
+                           energyMap = M.insert storage0 (sfromList [3.0]) (energyMap sqEnvs) }
+
+        gd = map (eqToInTerm sqEnvs') (order ts)
 
 main :: IO ()
 main = do
-  
-  let s01 = [0, 2, 2, 0]
-      s10 = [0, 0.8, 0.8, 0]
-      s12 = [0.3, 0.3, 0.3, 0.3]
-      s21 = [0.2, 0.2, 0.2, 0.2]
-      s13 = [0, 0.5, 0.5, 0]
-      s31 = [0, 0.25, 0.25, 0]
+  let s01 = [0, 2, 2, 0, 0, 0]
+      s10 = [0, 0.8, 0.8, 0, 0, 0]
+      s12 = [0.3, 0.3, 0.3, 0.3, 0.3, 0.3]
+      s21 = [0.2, 0.2, 0.2, 0.2, 0.2, 0.2]
+      s13 = [0, 0.5, 0.5, 0, -0.3, -0.3]
+      s31 = [0, 0.25, 0.25, 0, -0.6, -0.6]
 
-      s01' = [0, 0]
-      s10' = [0, 0]
-      s12' = [0.3, 0.3]
-      s21' = [0.2, 0.2]
-      s13' = [-0.3, -0.3]
-      s31' = [-0.6, -0.6]
-      n = 2
+      n = 1
+      --l = fromIntegral $ length $ replicate n (s01 ++ s01')
+      --time = [0, 0] ++ (concatMap (replicate 3) [1.0 .. l])
+      time = take 200 [0 ..]
 
-      time = take (length (s01 ++ s01') * n) $ [0, 0] ++ (concatMap (replicate 3) [1..])
+      pMap =  M.fromList [ (PPosIdx 0 1, mkSig n s01 .++ (sfromList [head s01] :: PSig)),
+                           (PPosIdx 1 0, mkSig n s10 .++ (sfromList [head s10] :: PSig)), 
+                           (PPosIdx 1 2, mkSig n s12 .++ (sfromList [head s12] :: PSig)),
+                           (PPosIdx 2 1, mkSig n s21 .++ (sfromList [head s21] :: PSig)),
+                           (PPosIdx 1 3, mkSig n s13 .++ (sfromList [head s13] :: PSig)),
+                           (PPosIdx 3 1, mkSig n s31 .++ (sfromList [head s31] :: PSig)) ]
 
-      pMap =  M.fromList [ (PPosIdx 0 1, mkSig n (s01 ++ s01')),
-                           (PPosIdx 1 0, mkSig n (s10 ++ s10')), 
-                           (PPosIdx 1 2, mkSig n (s12 ++ s12')),
-                           (PPosIdx 2 1, mkSig n (s21 ++ s21')),
-                           (PPosIdx 1 3, mkSig n (s13 ++ s13')),
-                           (PPosIdx 3 1, mkSig n (s31 ++ s31')) ]
+      pRec = PowerRecord (sfromList time) pMap
+      (_, sqTopo) = makeSequence pRec topo
 
-      pRec = (PowerRecord (sfromList time) pMap)
-      (sequ,sequPwrRecord) = genSequ pRec
+      lst = [0.01, 0.02 .. 1.0]
+      res = map (variation sqTopo) lst
+      pdt = map dtimeMap res
+      dt = map (head . stoList . (M.! DTimeIdx 1 0)) pdt
 
-      (sqEnvs, sqTopo) = makeSequence pRec topo 
+      metas = map fetaMap res
+      etas = map (M.! FEtaIdx 0 0 0 1) metas
 
-      --storage0 = PowerIdx (-1) 0 24 25
-      storage0 = EnergyIdx (-1) 0 16 17
+      ems = map energyMap res
+      e0001' = map (M.! EnergyIdx 0 0 0 1) ems
+      e0001 = map (head . stoList) e0001'
 
-      (sqEnvs', ts') = makeAllEquations sqTopo [envs]
+      ns = zipWith f lst $ map (head . stoList) (zipWith ($) etas e0001')
 
+      dts = zipWith f lst dt
+      f x y = show x ++ " " ++ show y
 
-      sigs = M.unions (map powerMap sqEnvs')
-      dtimes = M.unions (map dtimeMap sqEnvs')
-      ts = [give storage0] ++ ts'
+      e0001s = zipWith f lst e0001
 
-      f x | x < 0 = -x
-      f x = x
-      envs = emptyEnv { dtimeMap = dtimes, 
-                        powerMap = M.map (smap f) sigsXYZ,
-                        fetaMap = M.fromList [ (FEtaIdx 0 0 0 1, smap etaf), (FEtaIdx 0 0 1 0, smap revetaf),
-                                               (FEtaIdx 0 0 1 2, smap etaf), (FEtaIdx 0 0 2 1, smap revetaf),
-                                               (FEtaIdx 0 0 1 3, smap (const 0.6)), (FEtaIdx 0 0 3 1, smap (const (1/0.6))) ],
-                        energyMap = M.insert storage0 (sfromList [1.0,1.0,1.0]) M.empty   }
+      e0021 = map (head . stoList . (M.! EnergyIdx 0 0 2 1)) ems
+      e1021 = map (head . stoList . (M.! EnergyIdx 1 0 6 5)) ems
 
+      nsys = zipWith f lst (zipWith3 g e0001 e0021 e1021)
+      g e0001 e0021 e1021 = (e0021 + e1021)/e0001
 
-      gd = map (eqToInTerm envs) (order ts)
+  --print (head res)
+  --mapM_ (drawTopology sqTopo) res
 
-      res :: Envs UTFSig
-      res = interpretFromScratch 3 gd
-  --printTableToScreen show pRec
+  --putStrLn (L.intercalate "\n" dts)
+  --putStrLn (L.intercalate "\n" e01s)
+  --putStrLn (L.intercalate "\n" ns)
+  putStrLn (L.intercalate "\n" nsys)
+  --print e1021
 
-  --print sigs
-  --print sqEnvs'
-  putStrLn (showEqTerms ts)
+  --print (head ems)
+  --print (zipWith (\x y -> y - x) pws (tail pws))
 
-  --print sqEnvs'
-  --sigPlot pRec
-  --sigPlot sequPwrRecord
- 
-
-  --putStrLn (showInTerms gd)
-
-  --putStrLn (show $ length gd)
-  --drawTopology sqTopo res
+  --print "That's it!"

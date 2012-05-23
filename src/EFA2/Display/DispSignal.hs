@@ -9,6 +9,7 @@ import EFA2.Signal.Data
 import EFA2.Signal.Typ
 import EFA2.Signal.Signal
 import EFA2.Signal.Vector
+import Debug.Trace
 
 import qualified Data.List as L 
 

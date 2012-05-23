@@ -27,7 +27,7 @@ data EqTerm = EqTerm := EqTerm
           | DEnergy DEnergyIdx
           | Power PowerIdx
           | DPower DPowerIdx
-          | FEta FEtaIdx EqTerm
+          | FEta FEtaIdx
           | DEta DEtaIdx
           | DTime DTimeIdx
           | X XIdx
@@ -76,7 +76,8 @@ instance MkVarC DPowerIdx where
 --         mkVar = Eta
 
 instance MkVarC FEtaIdx where
-         mkVar idx@(FEtaIdx s r f t) = FEta idx (mkVar (PowerIdx s r f t))
+         --mkVar idx@(FEtaIdx s r f t) = FEta idx (mkVar (PowerIdx s r f t))
+         mkVar = FEta
 
 instance MkVarC DEtaIdx where
          mkVar = DEta
@@ -116,7 +117,7 @@ showEqTerm (Power (PowerIdx s r x y)) = "P_" ++ show s ++ "." ++ show r ++ "_" +
 showEqTerm (DPower (DPowerIdx s r x y)) = "dP_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
 
 --showEqTerm (Eta (EtaIdx s r x y)) = "n_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
-showEqTerm (FEta (FEtaIdx s r x y) p) = "n_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y ++ "(" ++ showEqTerm p ++ ")"
+showEqTerm (FEta (FEtaIdx s r x y)) = "n_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y -- ++ "(" ++ showEqTerm p ++ ")"
 showEqTerm (DEta (DEtaIdx s r x y)) = "dn_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
 
 showEqTerm (DTime (DTimeIdx s r)) =  "dt_" ++ show s ++ "." ++ show r
@@ -143,7 +144,7 @@ showEqTerms ts = L.intercalate "\n" $ map showEqTerm ts
 mkVarSet :: (EqTerm -> Bool) -> EqTerm -> S.Set EqTerm
 mkVarSet p t = mkVarSet' t
   where mkVarSet' v | p v = S.singleton v
-        mkVarSet' fn@(FEta _ p) = S.insert fn (mkVarSet' p)
+        -- mkVarSet' fn@(FEta _) = S.insert fn (mkVarSet' p)
         mkVarSet' (x :+ y) = S.union (mkVarSet' x) (mkVarSet' y)
         mkVarSet' (x :* y) = S.union (mkVarSet' x) (mkVarSet' y)
         --mkVarSet' (FAbs x y) = S.union (mkVarSet' x) (mkVarSet' y)
@@ -213,8 +214,13 @@ isolateVar' :: EqTerm -> TPath -> (EqTerm -> EqTerm)
 isolateVar' _ [] = id
 isolateVar' (u :+ v) (L:p) = isolateVar' u p . ((Minus v) :+)
 isolateVar' (u :+ v) (R:p) = isolateVar' v p . ((Minus u) :+)
+
+isolateVar' (u :* (FEta (FEtaIdx s r f t))) (L:p) = isolateVar' u p . ((Recip (FEta (FEtaIdx s r t f))) :*)
+isolateVar' ((FEta (FEtaIdx s r f t)) :* v) (R:p) = isolateVar' v p . ((Recip (FEta (FEtaIdx s r t f))) :*)
+
 isolateVar' (u :* v) (L:p) = isolateVar' u p . ((Recip v) :*)
 isolateVar' (u :* v) (R:p) = isolateVar' v p . ((Recip u) :*)
+
 isolateVar' (Minus u) (L:p) = isolateVar' u p . Minus
 isolateVar' (Recip u) (L:p) = isolateVar' u p . Recip
 --isolateVar' (FAbs u v) (L:p) = isolateVar' u p . (flip BAbs v)

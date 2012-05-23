@@ -13,7 +13,7 @@ data InTerm a = EIdx EnergyIdx
               | PIdx PowerIdx
               | DPIdx DPowerIdx
               -- | NIdx EtaIdx
-              | FNIdx FEtaIdx (InTerm a)
+              | FNIdx FEtaIdx -- (InTerm a)
               | DNIdx DEtaIdx
               | ScaleIdx XIdx
               | DTIdx DTimeIdx

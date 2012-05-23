@@ -33,6 +33,7 @@ import EFA2.Interpreter.Arith
 import EFA2.Topology.TopologyData
 import EFA2.Topology.EfaGraph
 import EFA2.Signal.Signal
+import EFA2.Signal.Typ
 import EFA2.Display.DispSignal
 
 
@@ -169,7 +170,10 @@ instance DrawTopology [InTerm Val] where
 
 instance DrawTopology UTFSig where
          drawTopology = drawAbsTopology f formatStCont
-           where f (x, Just ys) = show x ++ " = " ++ sdisp ys
+           where f (x@(ELine _ _), Just (TC ys)) = show x ++ " = " ++ sdisp (TC ys :: FSig)
+                 f (x@(XLine _ _), Just (TC ys)) = show x ++ " = " ++ sdisp (TC ys :: FSig1 (Typ A X Tt) Val)
+                 f (x@(NLine _ _), Just (TC ys)) = show x ++ " = " ++ sdisp (TC ys :: FSig1 (Typ A N Tt) Val)
+
                  f (x, Nothing) = show x ++ " = ♥"
                  formatStCont (Just ys) = sdisp ys
                  formatStCont Nothing = "♥"
