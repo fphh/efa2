@@ -269,6 +269,7 @@ instance VTranspose v1 v2 d1 => STranspose FSignal FSample (Data (v2 :> v1 :> Ni
 ----------------------------------------------------------
 -- Monoid
 instance Monoid c => Monoid (TC s typ c) where
+  mempty = TC $ mempty
   mappend (TC x) (TC y) = TC $ mappend x y 
 
 ----------------------------------------------------------
@@ -330,17 +331,18 @@ sigFullInt ::  TSig -> PSig -> FVal
 sigFullInt time power = sigSum $ sigPartInt time power -- csingleton (cfoldr (+) 0  $ czipWith (*) dTime $ dmap (\ p1 p2 -> (p1+p2)/2) power)
 
 ----------------------------------------------------------
--- make untyped
-
-
+-- | make untyped
 untype ::  TC s1 (Typ delta1 t1 p1) (c1 d1) -> TC s1 (Typ UT UT UT) (c1 d1)
 untype (TC x) = TC x
 
+-- | make typed
+setType ::  TC s1 (Typ UT UT UT) (c1 d1) -> TC s1 (Typ delta1 t1 p1) (c1 d1)
+setType (TC x) = TC x
 
---sneg :: (DArith0 d, SMap s c d d) => TC s typ (c d) -> TC s typ (c d)
+-- | sneg :: (DArith0 d, SMap s c d d) => TC s typ (c d) -> TC s typ (c d)
 sneg :: (DArith0 d, SMap c d d) => TC s typ (c d) -> TC s typ (c d)
 sneg = smap neg
 
---srec :: (DArith0 d, SMap s c d d) => TC s typ (c d) -> TC s typ (c d)
+-- | srec :: (DArith0 d, SMap s c d d) => TC s typ (c d) -> TC s typ (c d)
 srec :: (DArith0 d, SMap c d d) => TC s typ (c d) -> TC s typ (c d)
 srec = smap rec
