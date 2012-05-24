@@ -20,34 +20,38 @@ instance DArith0 Val where
 infix 7 ..*, ../
 infix 6 ..+, ..-
 
-
 -- | Calculation classes for basic Datatypes
-class DArith d1 d2 d3 | d1 d2 -> d3 where
+class BProd d1 d2 d3 | d1 d2 -> d3 where
  (..*) ::  d1 ->  d2 -> d3
  (../) ::  d1 -> d2 -> d3
- (..+) ::  d1 -> d2 -> d3
- (..-) ::  d1 -> d2 -> d3
  
-instance DArith Val Val Val where
+instance BProd Val Val Val where
  (..*) x y = x*y
  (../) 0 0 = 0
  (../) x y = x/y
- (..+) x y = x+y
- (..-) x y = x-y
 
-instance DArith Val Bool Val where
+instance BProd Val Bool Val where
  (..*) x True = x
  (..*) x False = 0
  (../) x False = 0
  (../) x True = x
  
-instance DArith Bool Bool Bool where
+instance BProd Bool Bool Bool where
 -- And  
  (..*) x True = x
  (..*) x False = False
 -- Or 
  (../) x False = x
  (../) x True = True
+
+-- | Calculation classes for basic Datatypes
+class BSum d1 d2 d3 | d1 d2 -> d3 where
+ (..+) ::  d1 -> d2 -> d3
+ (..-) ::  d1 -> d2 -> d3
+ 
+instance BSum Val Val Val where
+ (..+) x y = x+y
+ (..-) x y = x-y
 
 class DEq d1 d2 d3 | d1 d2 -> d3 where
   (..==) :: d1 -> d2 -> d3
@@ -79,13 +83,4 @@ sign :: (Eq a, Ord a, Num a) => a -> Sign
 sign x | x > 0 = PSign
        | x == 0 = ZSign -- TODO add intervalls later on Zero - Detection       
        | x < 0 = NSign
-
---sign' :: (Eq a, Ord a, Num a) => a -> Ordering
---sign' x = compare x 0
-
--- type PSample = Val
--- -- type TSample = Val
--- type DTSample = Val -- Time step
--- type FPSample = Val -- Flow Power
-
 

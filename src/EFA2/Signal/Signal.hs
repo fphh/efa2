@@ -86,7 +86,7 @@ class ZipProd s1 s2 s3 t1 t2 t3 c1 c2 c3 | s1 s2 -> s3, c1 c2 -> c3   where
   (.*) :: TC s1 t1 c1 -> TC s2 t2 c2 -> TC s3 t3 c3
   (./) :: TC s1 t3 c1 -> TC s2 t2 c2 -> TC s3 t1 c3
      
-instance  (DZipWith v1 v2 v3 d1 d2 d3, DArith d1 d2 d3, SArith s1 s2 s2, TProd t1 t2 t3) =>  ZipProd s1 s2 s2 t1 t2 t3 (v1 d1) (v2 d2) (v3 d3) where
+instance  (DZipWith v1 v2 v3 d1 d2 d3, BProd d1 d2 d3, SArith s1 s2 s2, TProd t1 t2 t3) =>  ZipProd s1 s2 s2 t1 t2 t3 (v1 d1) (v2 d2) (v3 d3) where
           (.*) x y = szipWith (..*) x y
           (./) x y = szipWith (../) x y
 
@@ -94,7 +94,7 @@ class ZipSum s1 s2 s3 t1 t2 t3 c1 c2 c3 | s1 s2 -> s3, c1 c2 -> c3   where
   (.+) ::  TC s1 t1 c1 -> TC s2 t2 c2 -> TC s3 t3 c3
   (.-) ::  TC s1 t3 c1 -> TC s2 t2 c2 -> TC s3 t1 c3
 
-instance  (DZipWith v1 v2 v3 d1 d2 d3, DArith d1 d2 d3, SArith s1 s2 s3, TSum t1 t2 t3) =>  ZipSum s1 s2 s3 t1 t2 t3 (v1 d1) (v2 d2) (v3 d3) where
+instance  (DZipWith v1 v2 v3 d1 d2 d3, BSum d1 d2 d3, SArith s1 s2 s3, TSum t1 t2 t3) =>  ZipSum s1 s2 s3 t1 t2 t3 (v1 d1) (v2 d2) (v3 d3) where
           (.+) x y = szipWith (..+) x y
           (.-) x y = szipWith (..-) x y
 
@@ -109,7 +109,7 @@ class CrossProd s1 s2 s3 t1 t2 t3 c1 c2 c3 | s1 s2 -> s3, c1 c2 -> c3   where
   (&*) :: TC s1 t1 c1 -> TC s2 t2 c2 -> TC s3 t3 c3
   (&/) :: TC s1 t3 c1 -> TC s2 t2 c2 -> TC s3 t1 c3
      
-instance  (SCrossWith s1 s2 s3 v1 v2 v3 d1 d2 d3, DArith d1 d2 d3, TProd t1 t2 t3) =>  CrossProd s1 s2 s3 t1 t2 t3 (v1 d1) (v2 d2) (v3 d3) where
+instance  (SCrossWith s1 s2 s3 v1 v2 v3 d1 d2 d3, BProd d1 d2 d3, TProd t1 t2 t3) =>  CrossProd s1 s2 s3 t1 t2 t3 (v1 d1) (v2 d2) (v3 d3) where
           (&*) x y = scrossWith (..*) x y
           (&/) x y = scrossWith (../) x y
 
@@ -117,9 +117,9 @@ class CrossSum s1 s2 s3 t1 t2 t3 c1 c2 c3 | s1 s2 -> s3, c1 c2 -> c3   where
   (&+) :: TC s1 t1 c1 -> TC s2 t2 c2 -> TC s3 t3 c3
   (&-) :: TC s1 t3 c1 -> TC s2 t2 c2 -> TC s3 t1 c3
      
-instance  (SCrossWith s1 s2 s3 v1 v2 v3 d1 d2 d3, DArith d1 d2 d3, TProd t1 t2 t3) =>  CrossSum s1 s2 s3 t1 t2 t3 (v1 d1) (v2 d2) (v3 d3) where
-          (&+) x y = scrossWith (..*) x y
-          (&-) x y = scrossWith (../) x y
+instance  (SCrossWith s1 s2 s3 v1 v2 v3 d1 d2 d3, BSum d1 d2 d3, TProd t1 t2 t3) =>  CrossSum s1 s2 s3 t1 t2 t3 (v1 d1) (v2 d2) (v3 d3) where
+          (&+) x y = scrossWith (..+) x y
+          (&-) x y = scrossWith (..-) x y
           
 
 infix 7 &*, &/
@@ -299,13 +299,13 @@ instance (UV.Unbox d1) => SBox Scalar c1 c1 d1 where
 ----------------------------------------------------------
 -- sum all signal value
 
-class (DArith d1 d1 d1, Num d1) => SigSum s1 s2 c1 c2 d1 | s1 -> s2, c1 -> c2  where
+class (BSum d1 d1 d1, Num d1) => SigSum s1 s2 c1 c2 d1 | s1 -> s2, c1 -> c2  where
       sigSum :: TC s1 typ (c1 d1) -> TC s2 typ (c2 d1)
     
-instance  (DArith d1 d1 d1, Num d1, VWalker v1 d1 d1) => SigSum Signal Scalar (Data (v1 :> Nil)) (Data Nil) d1 where
+instance  (BSum d1 d1 d1, Num d1, VWalker v1 d1 d1) => SigSum Signal Scalar (Data (v1 :> Nil)) (Data Nil) d1 where
          sigSum x = TC $ Data $ D0 $ sfoldl (..+) 0 x 
 
-instance  (DArith d1 d1 d1, Num d1, VWalker v1 d1 d1) =>  SigSum FSignal Scalar (Data (v1 :> Nil)) (Data Nil) d1 where
+instance  (BSum d1 d1 d1, Num d1, VWalker v1 d1 d1) =>  SigSum FSignal Scalar (Data (v1 :> Nil)) (Data Nil) d1 where
          sigSum x = TC $ Data $ D0 $ sfoldl (..+) 0 x 
 
 ----------------------------------------------------------
