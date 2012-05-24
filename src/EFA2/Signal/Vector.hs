@@ -157,31 +157,20 @@ instance VBox [] [] a where
 --------------------------------------------------------------
 -- Length & Length Check
 
-class GetLength v d where
-  vlen :: v d -> Int
+class GetLength s where
+  vlen :: s -> Int
 
-instance GetLength  V.Vector d where 
+instance GetLength  (V.Vector d) where 
   vlen x =  V.length x
 
-instance UV.Unbox d => GetLength  UV.Vector d where 
+instance UV.Unbox d => GetLength  (UV.Vector d) where 
   vlen x = UV.length x
 
-instance GetLength  [] d where 
+instance GetLength  [d] where 
   vlen x = length x
 
---------------------------------------------------------------
--- Length Check
 
--- 1d - 1d
-class (GetLength v1 d1, GetLength v2 d2) => VLenCheck v1 v2 d1 d2 where
-  vlenCheck :: v1 d1 -> v2 d2 -> Bool
-  
-instance  (GetLength v1 d1, GetLength v2 d2) => VLenCheck v1 v2 d1 d2 where
-  vlenCheck x y = vlen x == vlen y 
-
-vlenCheck2 :: v1 d1 -> v2 d2 -> Bool
-vlenCheck2 x y = vlenCheck x y && vall (==True) $ vmap (vzipWith vlenCheck x) y
-
+vlenCheck x y = vlen x == vlen y 
 
 
 --------------------------------------------------------------
@@ -207,18 +196,4 @@ instance VTranspose [] [] d where
                          where lens = map vlen x
 
 
---------------------------------------------------------------
--- All Class
-                               
-class VAll v d where 
-      vall:: (d -> Bool) -> v d -> Bool
-
-instance VAll [] d where 
-  vall = all
-  
-instance VAll V.Vector d where 
-  vall = V.all
-
-instance (UV.Unbox d) => VAll UV.Vector d where 
-  vall = UV.all
 

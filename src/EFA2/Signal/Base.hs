@@ -17,6 +17,9 @@ instance DArith0 Val where
          neg = negate
          rec = recip
 
+infix 7 ..*, ../
+infix 6 ..+, ..-
+
 
 -- | Calculation classes for basic Datatypes
 class DArith d1 d2 d3 | d1 d2 -> d3 where
@@ -62,6 +65,8 @@ instance DEq Val Val Bool where
   (..>)   x y = x > y
   (..<)   x y = x < y
 
+
+infix 4 ..==, ../= , ..>= , ..<= , ..> , ..< 
 
 -- Own User Defined Sign Variable
 data Sign = PSign 

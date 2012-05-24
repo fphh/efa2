@@ -98,23 +98,10 @@ instance  (DZipWith v1 v2 v3 d1 d2 d3, DArith d1 d2 d3, SArith s1 s2 s3, TSum t1
           (.+) x y = szipWith (..+) x y
           (.-) x y = szipWith (..-) x y
 
-{-
-class Prod s1 s2 s3 t1 t2 t3 c1 c2 c3 | s1 s2 -> s3, c1 c2 -> c3   where
-  (.*) :: TC s1 t1 c1 -> TC s2 t2 c2 -> TC s3 t3 c3
-  (./) :: TC s1 t3 c1 -> TC s2 t2 c2 -> TC s3 t1 c3
-     
-instance  (DZipWith v1 v2 v3 d1 d2 d3, DArith d1 d2 d3, SArith s1 s2 s2, TProd t1 t2 t3) =>  Prod s1 s2 s2 t1 t2 t3 (v1 d1) (v2 d2) (v3 d3) where
-          (.*) (TC x) (TC y) = TC $ dzipWith (..*) x y
-          (./) (TC x) (TC y) = TC $ dzipWith (..*) x y
+infix 7 .*, ./
+infix 6 .+,.-
 
-class Sum s1 s2 s3 t1 t2 t3 c1 c2 c3 | s1 s2 -> s3, c1 c2 -> c3   where
-  (.+) ::  TC s1 t1 c1 -> TC s2 t2 c2 -> TC s3 t3 c3
-  (.-) ::  TC s1 t3 c1 -> TC s2 t2 c2 -> TC s3 t1 c3
 
-instance  (DZipWith v1 v2 v3 d1 d2 d3, DArith d1 d2 d3, SArith s1 s2 s3, TSum t1 t2 t3) =>  Sum s1 s2 s3 t1 t2 t3 (v1 d1) (v2 d2) (v3 d3) where
-          (.+) (TC x) (TC y) = TC $ dzipWith (..+) x y
-          (.-) (TC x) (TC y) = TC $ dzipWith (..-) x y
--}
 ----------------------------------------------------------
 -- Cross Arithmetics - based on crossWith
 
@@ -134,6 +121,10 @@ instance  (SCrossWith s1 s2 s3 v1 v2 v3 d1 d2 d3, DArith d1 d2 d3, TProd t1 t2 t
           (&+) x y = scrossWith (..*) x y
           (&-) x y = scrossWith (../) x y
           
+
+infix 7 &*, &/
+infix 6 &+, &-
+
 ----------------------------------------------------------
 -- Convenience Type Synonyms
 
@@ -281,6 +272,8 @@ instance Monoid c => Monoid (TC s typ c) where
 
 (.++) ::  Monoid c => (TC s typ c) -> (TC s typ c) -> (TC s typ c)
 (.++) x y = mappend x y
+
+infix 5 .++
 
 ----------------------------------------------------------
 -- signal sign
