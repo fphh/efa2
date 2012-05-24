@@ -13,7 +13,6 @@ import qualified Data.Vector as V
 
 newtype Data ab c = Data (ab c) deriving (Show, Eq, Ord)
 
-
 data ((a :: * -> *) :> (b :: * -> *)) :: * -> * where
      D0 :: v0 -> Nil v0 
      D1 :: v1 v0 -> (v1 :> Nil) v0
