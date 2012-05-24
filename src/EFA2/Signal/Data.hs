@@ -11,7 +11,7 @@ import qualified Data.Vector as V
 ----------------------------------------------------------
 -- | EFA data containers
 
-newtype Data ab c = Data (ab c) deriving (Show, Eq, Ord)
+data  Data ab c = Data (ab c) | DZipErr (ab c) deriving (Show, Eq, Ord)
 
 data ((a :: * -> *) :> (b :: * -> *)) :: * -> * where
      D0 :: v0 -> Nil v0 
@@ -94,16 +94,24 @@ instance (VWalker v1 d1 d3,VWalker v2 (v1 d1) (v1 d3)) => DZipWith (Data (v2 :> 
          dzipWith f  (Data (D2 x)) (Data (D0 y)) = Data $ D2 $ vmap (vmap ((flip f) y)) x 
 
 -- 1d - 1d
-instance (VZipper v1 d1 d2 d3) => DZipWith (Data (v1 :> Nil)) (Data (v1 :> Nil)) (Data (v1 :> Nil)) d1 d2 d3  where
-         dzipWith f  (Data (D1 x)) (Data (D1 y)) = Data $ D1 $ vzipWith f x y 
+instance (VZipper v1 d1 d2 d3, VLenCheck v1 v1 d1 d2) => DZipWith (Data (v1 :> Nil)) (Data (v1 :> Nil)) (Data (v1 :> Nil)) d1 d2 d3  where
+         dzipWith f  (Data (D1 x)) (Data (D1 y)) | lenCheck = Data $ D1 $ vzipWith f x y 
+                                                 | otherwise = DZipErr $ D1 $ vzipWith f x y 
+                 where lenCheck = vlenCheck x y 
+
+
 
 -- 1d - 2d
-instance (VZipper v1 d1 d2 d3, VWalker v2 (v1 d2) (v1 d3) ) => DZipWith (Data (v1 :> Nil)) (Data (v2 :> v1 :> Nil))   (Data (v2 :> v1 :> Nil)) d1 d2 d3  where
-         dzipWith f  (Data (D1 x)) (Data (D2 y)) = Data $ D2 $ vmap (vzipWith f x) y 
+instance (VZipper v1 d1 d2 d3, VWalker v2 (v1 d2) (v1 d3)) => DZipWith (Data (v1 :> Nil)) (Data (v2 :> v1 :> Nil))   (Data (v2 :> v1 :> Nil)) d1 d2 d3  where
+         dzipWith f  (Data (D1 x)) (Data (D2 y)) | lenCheck = Data $ D2 $ vmap (vzipWith f x) y
+                                                 | otherwise = DZipErr $ D2 $ vmap (vzipWith f x) y
+                 where lenCheck = vall $ vmap (vzipWith vlenCheck x) y 
 
 -- 2d - 1d
 instance (VZipper v1 d2 d1 d3, VWalker v2 (v1 d1) (v1 d3)) => DZipWith  (Data (v2 :> v1 :> Nil)) (Data (v1 :> Nil))  (Data (v2 :> v1 :> Nil)) d1 d2 d3  where
-         dzipWith f  (Data (D2 x)) (Data (D1 y)) = Data $ D2 $ vmap (vzipWith (flip f) y) x 
+         dzipWith f  (Data (D2 x)) (Data (D1 y)) | lenCheck = Data $ D2 $ vmap (vzipWith (flip f) y) x 
+                                                 | otherwise =  DZipErr $ D2 $ vmap (vzipWith (flip f) y) x 
+                 where lenCheck = vall $ vmap (vlenCheck y) x
 
 -- 2d - 2d
 instance (VZipper v1 d1 d2 d3, VZipper v2 (v1 d1) (v1 d2) (v1 d3)) => DZipWith (Data (v2 :> v1 :> Nil)) (Data (v2 :> v1 :> Nil))  (Data (v2 :> v1 :> Nil)) d1 d2 d3  where
