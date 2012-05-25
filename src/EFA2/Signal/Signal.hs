@@ -170,6 +170,9 @@ type PSample = Val
 ----------------------------------------------------------
 -- from/to List
 
+sunpack :: TC s t (c d) -> (c d) 
+sunpack (TC x) = x
+
 sfromList :: FromToList c d => [d] -> TC s t (c d)
 sfromList x = TC $ dfromList x
 
@@ -206,6 +209,14 @@ class DMap c d1 d2 => SMap c d1 d2 where
 
 instance DMap c d1 d2 => SMap c d1 d2 where
          smap f (TC x) = TC $ dmap f x 
+
+----------------------------------------------------------
+-- Getyptes SMap
+class SMap c d1 d2 => STMap c d1 d2 typ1 typ2 | typ1 -> typ2, typ2 -> typ1 where
+      stmap :: (TC Scalar typ1 (Data Nil d1) -> TC Scalar typ2 (Data Nil d2)) -> TC  s typ1 (c d1) -> TC s typ2 (c d2)
+
+instance SMap c d1 d2 => STMap c d1 d2 typ1 typ2 where
+         stmap f xs = reType $ smap (fromScalar . f . toScalar) xs
 
 ----------------------------------------------------------
 -- sFold
@@ -346,6 +357,10 @@ setType (TC x) = TC x
 
 setTypeTestRow ::  TC sig ty val -> TC TestRow ty val
 setTypeTestRow (TC x) = TC x
+
+-- | change the Type
+reType :: TC s typ1 (c d) -> TC s typ2 (c d)
+reType (TC x) = TC x
 
 
 -- | sneg :: (DArith0 d, SMap s c d d) => TC s typ (c d) -> TC s typ (c d)
