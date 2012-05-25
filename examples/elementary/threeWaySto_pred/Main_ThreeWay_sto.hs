@@ -42,11 +42,11 @@ topo = mkGraph (makeNodes nodes) (makeEdges edges)
 mkSig :: Int -> ([Val] -> PSig)
 mkSig n = sfromList . concat . replicate n
 
---etaf x = x/(x+5)
---revetaf x = (x+5)/x
+etaf x = x/(x+5)
+revetaf x = (x+5)/x
 
-etaf x = sqrt x
-revetaf x = 1/(sqrt x)
+--etaf x = sqrt x
+--revetaf x = 1/(sqrt x)
 
 --revFunc :: (a -> a) (a -> a)
 --revFunc f x = 1/(f x)
@@ -131,15 +131,16 @@ main = do
       pRec = PowerRecord (sfromList time) pMap
       (_, sqTopo) = makeSequence pRec topo
 
-      lst = [0, 0.5 .. 5.0]
-      etas = [ 0.7, 0.72 .. 0.9 ]
+      lst = [0, 0.3 .. 4.0]
+      etas = [ 0.3, 0.31 .. 0.75 ]
       --res :: [[Envs UTFSig]]
       --res :: [[(Val, Val, Val)]]
       res = map f (sequence [lst, etas])
-      f (x:y:_) = [(x, y, g (head $ stoList $ ((energyMap $ variation sqTopo x y) M.! (EnergyIdx 0 0 0 1)))
+      f (x:y:_) = [(y, x, g (head $ stoList $ ((energyMap $ variation sqTopo x y) M.! (EnergyIdx 0 0 0 1)))
                             (head $ stoList $ ((energyMap $ variation sqTopo x y) M.! (EnergyIdx 0 0 2 1)))
                             (head $ stoList $ ((energyMap $ variation sqTopo x y) M.! (EnergyIdx 1 0 6 5))) )]
       g e0001 e0021 e1021 = (e0021 + e1021)/e0001
+      env = map (variation sqTopo 0.2) [0.7, 0.8, 0.9]
 
 {-
       cwith f x y = map g x
@@ -182,7 +183,8 @@ main = do
 
   --sigPlot res2
   --print (head res)
-  --mapM_ (drawTopology sqTopo) res
+  --mapM_ (drawTopology sqTopo) (map head res)
+  mapM_ (drawTopology sqTopo) env
 
   --putStrLn (L.intercalate "\n" dts)
   --putStrLn (L.intercalate "\n" e01s)
@@ -192,6 +194,6 @@ main = do
 
   --print (head ems)
   --print (zipWith (\x y -> y - x) pws (tail pws))
-  plotMesh3d [] [] res
+  --plotMesh3d [] [] res
 
-  print "That's it!"
+  --print "That's it!"

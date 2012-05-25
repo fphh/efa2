@@ -29,14 +29,10 @@ data InTerm a = EIdx EnergyIdx
               | InMult (InTerm a) (InTerm a)
               | InEqual (InTerm a) (InTerm a) deriving (Eq, Ord, Show)
 
-{-
-instance Arith (InTerm Val) where
-         zero = InConst 0.0
-         cst = InConst
-         neg = InMinus
-         rec = InRecip
-         (.+) = InAdd
-         (.*) = InMult
-         x ./ y = InMult x (InRecip y)
 
--}
+instance (Show a, Eq a) => Num (InTerm a) where
+         (+) = InAdd
+         (*) = InMult
+         abs = undefined
+         signum = undefined
+         fromInteger = undefined

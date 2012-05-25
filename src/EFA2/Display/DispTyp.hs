@@ -52,7 +52,9 @@ getDisplayUnit Typ_P = Unit_kW
 getDisplayUnit Typ_F = Unit_Joule
 
 getDisplayUnit Typ_UT = Unit_UT
-getDisplayUnit ty = error $ "getDisplayUnit: not implemented" ++ show ty
+getDisplayUnit Typ_N = Unit_Percent
+
+getDisplayUnit ty = error $ "getDisplayUnit: not implemented " ++ show ty
 
 -- | Define Display Format for each unit depending on selected display length
 getDisplayFormat ::  DisplayLength -> DisplayType -> DisplayUnit -> DisplayFormat
