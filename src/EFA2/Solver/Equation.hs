@@ -215,8 +215,8 @@ isolateVar' _ [] = id
 isolateVar' (u :+ v) (L:p) = isolateVar' u p . ((Minus v) :+)
 isolateVar' (u :+ v) (R:p) = isolateVar' v p . ((Minus u) :+)
 
-isolateVar' (u :* (FEta (FEtaIdx s r f t))) (L:p) = isolateVar' u p . ((Recip (FEta (FEtaIdx s r t f))) :*)
-isolateVar' ((FEta (FEtaIdx s r f t)) :* v) (R:p) = isolateVar' v p . ((Recip (FEta (FEtaIdx s r t f))) :*)
+--isolateVar' (u :* (FEta (FEtaIdx s r f t))) (L:p) = isolateVar' u p . ((Recip (FEta (FEtaIdx s r t f))) :*)
+--isolateVar' ((FEta (FEtaIdx s r f t)) :* v) (R:p) = isolateVar' v p . ((Recip (FEta (FEtaIdx s r t f))) :*)
 
 isolateVar' (u :* v) (L:p) = isolateVar' u p . ((Recip v) :*)
 isolateVar' (u :* v) (R:p) = isolateVar' v p . ((Recip u) :*)
