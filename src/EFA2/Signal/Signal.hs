@@ -161,7 +161,9 @@ type SignalIdx = Int
 
 type PSample2 = TC Sample (Typ A P Tt) (UVec2 Val)
 type PSample1 =  TC Scalar (Typ A P Tt) (DVal Val)
-type PSample = Val
+
+type PSample =  TC Scalar (Typ A P Tt) (DVal Val)
+type DTSample =  TC Scalar (Typ D T Tt) (DVal Val)
 
 -- type TSample0 =  TC Scalar (Typ A P Tt) (DVal Val))
 -- type PSample0 =  TC Scalar (Typ A P Tt) (DVal Val))
@@ -216,9 +218,32 @@ class SMap c d1 d2 => STMap c d1 d2 typ1 typ2 | typ1 -> typ2, typ2 -> typ1 where
       stmap :: (TC Scalar typ1 (Data Nil d1) -> TC Scalar typ2 (Data Nil d2)) -> TC  s typ1 (c d1) -> TC s typ2 (c d2)
 
 instance SMap c d1 d2 => STMap c d1 d2 typ1 typ2 where
-         stmap f xs = reType $ smap (fromScalar . f . toScalar) xs
+         stmap f xs = changeType $ smap (fromScalar . f . toScalar) xs
 
 ----------------------------------------------------------
+-- DeltaMap
+
+class SDeltaMap s1 s2 c d1 d2 where
+      sdeltaMap :: (d1 -> d1 -> d2) -> TC s1 typ (c d1) -> TC s2 typ (c d2)
+      sdeltaMapReverse ::  (d1 -> d1 -> d2) -> TC s1 typ (c d1) -> TC s2 typ (c d2)
+
+instance (DZipWith c c c d1 d1 d2, SInit Signal c d1) => SDeltaMap Signal FSignal c d1 d2 where
+      sdeltaMap f x = changeSignalType $ szipWith f  x (stail x) 
+      sdeltaMapReverse f x = changeSignalType $ szipWith f (stail x) x 
+
+----------------------------------------------------------
+-- Getyptes DeltaMap
+
+class STDeltaMap s1 s2 c d1 d2 where
+      stdeltaMap :: (TC Scalar typ1 (Data Nil d1) -> TC Scalar typ1 (Data Nil d1) -> TC Scalar typ2 (Data Nil d2)) -> TC s1 typ1 (c d1) -> TC s2 typ2 (c d2)
+      stdeltaMapReverse :: (TC Scalar typ1 (Data Nil d1) -> TC Scalar typ1 (Data Nil d1) -> TC Scalar typ2 (Data Nil d2)) -> TC s1 typ1 (c d1) -> TC s2 typ2 (c d2)
+
+instance (SDeltaMap s1 s2 c d1 d2) => STDeltaMap s1 s2 c d1 d2 where
+      stdeltaMap f xs = changeType $ sdeltaMap g xs where g x y = fromScalar $ f (toScalar x) (toScalar y)
+      stdeltaMapReverse f xs = changeType $ sdeltaMapReverse g xs where g x y = fromScalar $ f (toScalar x) (toScalar y)
+
+
+---------------------------------------------------------
 -- sFold
 
 class (DFold c d1 d2) => SFold s c d1 d2 where
@@ -233,16 +258,15 @@ instance (DFold c d1 d2) => SFold FSample c d1 d2 where
 instance (DFold c d1 d2) => SFold FDistrib c d1 d2 where
 instance (DFold c d1 d2) => SFold FClass c d1 d2 where
 
-----------------------------------------------------------
--- DeltaMap
+{-
+  ----------------------------------------------------------
+-- sTFold
+class STFold s1 s2 c1 c2 d1 d2 where
+  stfoldl :: (TC s1 typ1 (c1 d1) -> TC s2 typ2 (c2 d2) -> TC s1 typ1 (c1 d1)) ->  TC s1 typ1 (c1 d1) -> TC s2 typ2 (c2 d2) -> TC s1 typ1 (c1 d1)
 
-class SDeltaMap s1 s2 c1 d1 d2 | s1 -> s2 where
-      sdeltaMap :: (d1 -> d1 -> d2) -> TC s1 typ1 (c1 d1) -> TC s2 typ2 (c1 d2)
-      sdeltaMap' ::  (d1 -> d1 -> d2) -> TC s1 typ1 (c1 d1) -> TC s2 typ2 (c1 d2)
-
-instance (VWalker v1 d1 d2, VSingleton v1 d1, VZipper v1 d1 d1 d2) => SDeltaMap Signal FSignal (Data (v1 :> Nil)) d1 d2 where
-      sdeltaMap f (TC (Data (D1 x))) = TC $ Data $ D1 $ vdeltaMap f x 
-      sdeltaMap' f (TC (Data (D1 x))) = TC $ Data $ D1 $ vdeltaMapReverse f x 
+instance (SFold Scalar (Data Nil) d1 d2) => STFold Scalar s2 (Data Nil) c2 d1 d2 where
+   stfoldl f a x = toScalar $ sfoldl g (fromScalar a) x where g a x = fromScalar $ f (toScalar a) (sunpack x)
+-}
 
 ----------------------------------------------------------
 -- SHead & STail
@@ -327,8 +351,8 @@ class (DSucc delta1 delta2) => DeltaSig s1 s2 c1 delta1 delta2 d1  | s1 -> s2 wh
       avSig ::  TC s1 (Typ delta1 t1 p1) (c1 d1) -> TC s2 (Typ delta1 t1 p1) (c1 d1)
 
 instance (SDeltaMap Signal FSignal c1 Val Val, DSucc delta1 delta2) => DeltaSig Signal FSignal c1 delta1 delta2 Val where
-      deltaSig x = sdeltaMap' (..-) x
-      avSig x = sdeltaMap' (\ x1 x2 -> (x1..+x2)../ (2::Val)) x
+      deltaSig x = changeDelta $ sdeltaMapReverse (..-) x
+      avSig x = changeDelta $ sdeltaMapReverse (\ x1 x2 -> (x1..+x2)../ (2::Val)) x
 
 ----------------------------------------------------------
 -- Part & Full Integrate 
@@ -355,13 +379,21 @@ untype (TC x) = TC x
 setType ::  TC s1 (Typ UT UT UT) (c1 d1) -> TC s1 (Typ delta1 t1 p1) (c1 d1)
 setType (TC x) = TC x
 
+-- | 
 setTypeTestRow ::  TC sig ty val -> TC TestRow ty val
 setTypeTestRow (TC x) = TC x
 
 -- | change the Type
-reType :: TC s typ1 (c d) -> TC s typ2 (c d)
-reType (TC x) = TC x
+changeType :: TC s typ1 (c d) -> TC s typ2 (c d)
+changeType (TC x) = TC x
 
+-- | change the Type
+changeDelta :: TC s (Typ delta1 t p) (c d) -> TC s (Typ delta2 t p) (c d)
+changeDelta (TC x) = TC x
+
+-- | change the signal type
+changeSignalType :: TC s1 typ (c d) ->  TC s2 typ (c d)
+changeSignalType (TC x) = TC x
 
 -- | sneg :: (DArith0 d, SMap s c d d) => TC s typ (c d) -> TC s typ (c d)
 sneg :: (DArith0 d, SMap c d d) => TC s typ (c d) -> TC s typ (c d)
@@ -370,3 +402,5 @@ sneg = smap neg
 -- | srec :: (DArith0 d, SMap s c d d) => TC s typ (c d) -> TC s typ (c d)
 srec :: (DArith0 d, SMap c d d) => TC s typ (c d) -> TC s typ (c d)
 srec = smap rec
+
+

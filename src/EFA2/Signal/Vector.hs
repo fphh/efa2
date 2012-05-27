@@ -118,7 +118,28 @@ vdeltaMap f l = vzipWith f l (vtail l)
 vdeltaMapReverse :: (VSingleton vec b, VZipper vec b b c) => (b -> b -> c) -> vec b -> vec c
 vdeltaMapReverse f l = vzipWith f (vtail l) l
 
+------------------------------------------------------------
+-- | Zipper4
 
+class VZipper4 vec a b c d e where
+      vzipWith4 :: (a -> b -> c -> d -> e) -> vec a -> vec b -> vec c -> vec d -> vec e
+      
+instance VZipper4 V.Vector a b c d e where
+         vzipWith4 f w x y z = V.zipWith4 f w x y z -- if vlenCheck x y then V.zipWith f x y else error "Error in vlenCheck V -- unequal Length" 
+
+instance (UV.Unbox a, UV.Unbox b, UV.Unbox c, UV.Unbox e, UV.Unbox d) => VZipper4 UV.Vector a b c d e   where
+         vzipWith4  f w x y z = UV.zipWith4 f w x y z --if vlenCheck x y then UV.zipWith f x y else error "Error in vlenCheck UV -- unequal Length"
+
+instance VZipper4 [] a b c d e  where
+         vzipWith4  f w x y z = L.zipWith4 f w x y z -- if vlenCheck x y then zipWith f x y else error "Error in vlenCheck List -- unequal Length"
+
+{-
+vdeltaMap2:: (a -> a -> b -> b -> c)  -> vec a -> vec a -> vec b  -> vec b -> vec c
+vdeltaMap2 f xs ys = vzipWith4 f xs (vtail xs) ys (vtail ys)
+
+vdeltaMapReverse2 :: (a -> a -> b -> b -> c) -> vec a -> vec a -> vec b  -> vec b -> vec c
+vdeltaMapReverse2 f xs ys = vzipWith4 f (vtail xs) xs (vtail ys) ys
+-}
 --------------------------------------------------------------
 -- Vector conversion
 class VBox c1 c2 a where
