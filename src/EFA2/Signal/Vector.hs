@@ -16,15 +16,6 @@ import qualified Data.List as L
 import EFA2.Signal.Base
 
 
----------------------------------------------------------
--- | 2. Data Structures with 
- 
--- type Vec  = V.Vector -- deriving Show
--- type UVec = UV.Vector -- deriving Show
--- type List = [] -- deriving Show
-newtype Value a = Value a -- deriving Show
-  
-
 --------------------------------------------------------------
 -- Singleton Class
 
@@ -48,10 +39,6 @@ instance (Ord d) => VSingleton V.Vector d where
          vempty = V.empty
          vappend = (V.++)
          vconcat = V.concat
-         -- vtranspose [] = []
-         -- vtranspose xs = V.map (xs V.!) (V.fromList [0..])
-         --   where fs = take min $ map (flip (V.!)) [0..]
-         --         min = L.minimum $ map V.length xs
          vhead = V.head
          vtail = V.tail
          vlast = V.last
@@ -64,10 +51,6 @@ instance (Ord d, UV.Unbox d) => VSingleton UV.Vector d where
          vempty = UV.empty
          vappend = (UV.++)
          vconcat = UV.concat
-         -- vtranspose [] = []
-         -- vtranspose xs = map (UV.fromList . flip map xs) fs
-         --   where fs = take min $ map (flip (UV.!)) [0..]
-         --         min = L.minimum $ map UV.length xs
          vhead = UV.head
          vtail = UV.tail
          vlast = UV.last
@@ -80,7 +63,6 @@ instance (Ord d) => VSingleton [] d where
          vempty = []
          vappend = (++)
          vconcat = concat
---         vtranspose = L.transpose
          vhead = head
          vtail = tail
          vlast = last
@@ -128,9 +110,6 @@ instance (UV.Unbox a, UV.Unbox b, UV.Unbox c) => VZipper UV.Vector a b c  where
 
 instance VZipper [] a b c  where
          vzipWith  f x y = zipWith f x y -- if vlenCheck x y then zipWith f x y else error "Error in vlenCheck List -- unequal Length"
-
-instance VZipper Value a b c  where
-         vzipWith f (Value x) (Value y) = Value (f x y)
 
 
 vdeltaMap :: (VSingleton vec b, VZipper vec b b c) => (b -> b -> c) -> vec b -> vec c

@@ -86,7 +86,7 @@ class ZipProd s1 s2 s3 t1 t2 t3 c1 c2 c3 | s1 s2 -> s3, c1 c2 -> c3   where
   (.*) :: TC s1 t1 c1 -> TC s2 t2 c2 -> TC s3 t3 c3
   (./) :: TC s1 t3 c1 -> TC s2 t2 c2 -> TC s3 t1 c3
      
-instance  (DZipWith v1 v2 v3 d1 d2 d3, DArith d1 d2 d3, SArith s1 s2 s2, TProd t1 t2 t3) =>  ZipProd s1 s2 s2 t1 t2 t3 (v1 d1) (v2 d2) (v3 d3) where
+instance  (DZipWith v1 v2 v3 d1 d2 d3, BProd d1 d2 d3, SArith s1 s2 s2, TProd t1 t2 t3) =>  ZipProd s1 s2 s2 t1 t2 t3 (v1 d1) (v2 d2) (v3 d3) where
           (.*) x y = szipWith (..*) x y
           (./) x y = szipWith (../) x y
 
@@ -94,27 +94,14 @@ class ZipSum s1 s2 s3 t1 t2 t3 c1 c2 c3 | s1 s2 -> s3, c1 c2 -> c3   where
   (.+) ::  TC s1 t1 c1 -> TC s2 t2 c2 -> TC s3 t3 c3
   (.-) ::  TC s1 t3 c1 -> TC s2 t2 c2 -> TC s3 t1 c3
 
-instance  (DZipWith v1 v2 v3 d1 d2 d3, DArith d1 d2 d3, SArith s1 s2 s3, TSum t1 t2 t3) =>  ZipSum s1 s2 s3 t1 t2 t3 (v1 d1) (v2 d2) (v3 d3) where
+instance  (DZipWith v1 v2 v3 d1 d2 d3, BSum d1 d2 d3, SArith s1 s2 s3, TSum t1 t2 t3) =>  ZipSum s1 s2 s3 t1 t2 t3 (v1 d1) (v2 d2) (v3 d3) where
           (.+) x y = szipWith (..+) x y
           (.-) x y = szipWith (..-) x y
 
-{-
-class Prod s1 s2 s3 t1 t2 t3 c1 c2 c3 | s1 s2 -> s3, c1 c2 -> c3   where
-  (.*) :: TC s1 t1 c1 -> TC s2 t2 c2 -> TC s3 t3 c3
-  (./) :: TC s1 t3 c1 -> TC s2 t2 c2 -> TC s3 t1 c3
-     
-instance  (DZipWith v1 v2 v3 d1 d2 d3, DArith d1 d2 d3, SArith s1 s2 s2, TProd t1 t2 t3) =>  Prod s1 s2 s2 t1 t2 t3 (v1 d1) (v2 d2) (v3 d3) where
-          (.*) (TC x) (TC y) = TC $ dzipWith (..*) x y
-          (./) (TC x) (TC y) = TC $ dzipWith (..*) x y
+infix 7 .*, ./
+infix 6 .+,.-
 
-class Sum s1 s2 s3 t1 t2 t3 c1 c2 c3 | s1 s2 -> s3, c1 c2 -> c3   where
-  (.+) ::  TC s1 t1 c1 -> TC s2 t2 c2 -> TC s3 t3 c3
-  (.-) ::  TC s1 t3 c1 -> TC s2 t2 c2 -> TC s3 t1 c3
 
-instance  (DZipWith v1 v2 v3 d1 d2 d3, DArith d1 d2 d3, SArith s1 s2 s3, TSum t1 t2 t3) =>  Sum s1 s2 s3 t1 t2 t3 (v1 d1) (v2 d2) (v3 d3) where
-          (.+) (TC x) (TC y) = TC $ dzipWith (..+) x y
-          (.-) (TC x) (TC y) = TC $ dzipWith (..-) x y
--}
 ----------------------------------------------------------
 -- Cross Arithmetics - based on crossWith
 
@@ -122,7 +109,7 @@ class CrossProd s1 s2 s3 t1 t2 t3 c1 c2 c3 | s1 s2 -> s3, c1 c2 -> c3   where
   (&*) :: TC s1 t1 c1 -> TC s2 t2 c2 -> TC s3 t3 c3
   (&/) :: TC s1 t3 c1 -> TC s2 t2 c2 -> TC s3 t1 c3
      
-instance  (SCrossWith s1 s2 s3 v1 v2 v3 d1 d2 d3, DArith d1 d2 d3, TProd t1 t2 t3) =>  CrossProd s1 s2 s3 t1 t2 t3 (v1 d1) (v2 d2) (v3 d3) where
+instance  (SCrossWith s1 s2 s3 v1 v2 v3 d1 d2 d3, BProd d1 d2 d3, TProd t1 t2 t3) =>  CrossProd s1 s2 s3 t1 t2 t3 (v1 d1) (v2 d2) (v3 d3) where
           (&*) x y = scrossWith (..*) x y
           (&/) x y = scrossWith (../) x y
 
@@ -130,10 +117,14 @@ class CrossSum s1 s2 s3 t1 t2 t3 c1 c2 c3 | s1 s2 -> s3, c1 c2 -> c3   where
   (&+) :: TC s1 t1 c1 -> TC s2 t2 c2 -> TC s3 t3 c3
   (&-) :: TC s1 t3 c1 -> TC s2 t2 c2 -> TC s3 t1 c3
      
-instance  (SCrossWith s1 s2 s3 v1 v2 v3 d1 d2 d3, DArith d1 d2 d3, TProd t1 t2 t3) =>  CrossSum s1 s2 s3 t1 t2 t3 (v1 d1) (v2 d2) (v3 d3) where
-          (&+) x y = scrossWith (..*) x y
-          (&-) x y = scrossWith (../) x y
+instance  (SCrossWith s1 s2 s3 v1 v2 v3 d1 d2 d3, BSum d1 d2 d3, TProd t1 t2 t3) =>  CrossSum s1 s2 s3 t1 t2 t3 (v1 d1) (v2 d2) (v3 d3) where
+          (&+) x y = scrossWith (..+) x y
+          (&-) x y = scrossWith (..-) x y
           
+
+infix 7 &*, &/
+infix 6 &+, &-
+
 ----------------------------------------------------------
 -- Convenience Type Synonyms
 
@@ -179,6 +170,9 @@ type PSample = Val
 ----------------------------------------------------------
 -- from/to List
 
+sunpack :: TC s t (c d) -> (c d) 
+sunpack (TC x) = x
+
 sfromList :: FromToList c d => [d] -> TC s t (c d)
 sfromList x = TC $ dfromList x
 
@@ -215,6 +209,14 @@ class DMap c d1 d2 => SMap c d1 d2 where
 
 instance DMap c d1 d2 => SMap c d1 d2 where
          smap f (TC x) = TC $ dmap f x 
+
+----------------------------------------------------------
+-- Getyptes SMap
+class SMap c d1 d2 => STMap c d1 d2 typ1 typ2 | typ1 -> typ2, typ2 -> typ1 where
+      stmap :: (TC Scalar typ1 (Data Nil d1) -> TC Scalar typ2 (Data Nil d2)) -> TC  s typ1 (c d1) -> TC s typ2 (c d2)
+
+instance SMap c d1 d2 => STMap c d1 d2 typ1 typ2 where
+         stmap f xs = reType $ smap (fromScalar . f . toScalar) xs
 
 ----------------------------------------------------------
 -- sFold
@@ -282,6 +284,8 @@ instance Monoid c => Monoid (TC s typ c) where
 (.++) ::  Monoid c => (TC s typ c) -> (TC s typ c) -> (TC s typ c)
 (.++) x y = mappend x y
 
+infix 5 .++
+
 ----------------------------------------------------------
 -- signal sign
 
@@ -306,13 +310,13 @@ instance (UV.Unbox d1) => SBox Scalar c1 c1 d1 where
 ----------------------------------------------------------
 -- sum all signal value
 
-class (DArith d1 d1 d1, Num d1) => SigSum s1 s2 c1 c2 d1 | s1 -> s2, c1 -> c2  where
+class (BSum d1 d1 d1, Num d1) => SigSum s1 s2 c1 c2 d1 | s1 -> s2, c1 -> c2  where
       sigSum :: TC s1 typ (c1 d1) -> TC s2 typ (c2 d1)
     
-instance  (DArith d1 d1 d1, Num d1, VWalker v1 d1 d1) => SigSum Signal Scalar (Data (v1 :> Nil)) (Data Nil) d1 where
+instance  (BSum d1 d1 d1, Num d1, VWalker v1 d1 d1) => SigSum Signal Scalar (Data (v1 :> Nil)) (Data Nil) d1 where
          sigSum x = TC $ Data $ D0 $ sfoldl (..+) 0 x 
 
-instance  (DArith d1 d1 d1, Num d1, VWalker v1 d1 d1) =>  SigSum FSignal Scalar (Data (v1 :> Nil)) (Data Nil) d1 where
+instance  (BSum d1 d1 d1, Num d1, VWalker v1 d1 d1) =>  SigSum FSignal Scalar (Data (v1 :> Nil)) (Data Nil) d1 where
          sigSum x = TC $ Data $ D0 $ sfoldl (..+) 0 x 
 
 ----------------------------------------------------------
@@ -353,6 +357,10 @@ setType (TC x) = TC x
 
 setTypeTestRow ::  TC sig ty val -> TC TestRow ty val
 setTypeTestRow (TC x) = TC x
+
+-- | change the Type
+reType :: TC s typ1 (c d) -> TC s typ2 (c d)
+reType (TC x) = TC x
 
 
 -- | sneg :: (DArith0 d, SMap s c d d) => TC s typ (c d) -> TC s typ (c d)
