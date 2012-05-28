@@ -45,6 +45,8 @@ type UVec a = (Data (UV.Vector :> Nil) a)
 type UVec2 a = (Data (V.Vector :> UV.Vector :> Nil) a)
 type UVec3 a = (Data (V.Vector :> V.Vector :> UV.Vector :> Nil) a)
 
+type UVec2L a = (Data ([] :> UV.Vector :> Nil) a)
+
 type Vec a = (Data (V.Vector :> Nil) a)
 type Vec2 a = (Data (V.Vector :> V.Vector :> Nil) a)
 type Vec3 a = (Data (V.Vector :> V.Vector :> V.Vector :> Nil) a)
@@ -199,4 +201,7 @@ instance FromToList (Data ([] :> Nil)) d where
   dfromList x = Data $ D1 $ x
   dtoList (Data (D1 x)) = x
   
+instance FromToList (Data ([] :> UV.Vector :> Nil)) d where  
+  dfromList x = Data $ D2 $ x
+  dtoList (Data (D2 x)) = x
   

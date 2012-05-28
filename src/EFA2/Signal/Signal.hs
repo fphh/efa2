@@ -133,6 +133,7 @@ type Scal typ a = TC Scalar typ (DVal a)
           
 type Sig1 typ a = TC Signal typ (UVec a)
 type FSig1 typ a = TC FSignal typ (UVec a)
+type Sig1L typ a = TC Signal typ (List a)
 
 type Sig2 typ a = TC Signal typ (Vec2 a)
 type FSig2 typ a = TC FSignal typ (Vec2 a)
@@ -141,17 +142,22 @@ type Test1 typ a = TC TestRow typ (UVec a)
 type Test2 typ a = TC TestRow typ (UVec2 a)
 
 -- specific
---type UTSignal a = Sig1 (Typ UT UT UT) a
+--type UTignal a = Sig1 (Typ UT UT UT) a
 --type FUTSignal = FSig1 (Typ UT UT UT) Val
 
 -- type UTSignal a = Sig1 (Typ UT UT UT) a
 type PSig = Sig1 (Typ A P Tt) Val
+type PSigL = Sig1L (Typ A P Tt) Val
+
 type TSig = Sig1 (Typ A T Tt) Val
+type TSigL = Sig1L (Typ A T Tt) Val
 type FSig = FSig1 (Typ A F Tt) Val
 type DTSig = FSig1 (Typ D T Tt) Val
-type UTSig a = Sig1 (Typ UT UT UT) a
-type UTFSig = FSig1 (Typ UT UT UT) Val
+type UTSig = Sig1 (Typ UT UT UT) Val
 
+type UTFSig = FSig1 (Typ UT UT UT) Val
+type UTSigL = Sig1L (Typ UT UT UT) Val
+  
 type PVal = Scal (Typ A P Tt) Val
 type TVal = Scal (Typ A T Tt) Val
 type FVal = Scal (Typ A F Tt) Val
@@ -159,15 +165,15 @@ type DTVal = Scal (Typ D T Tt) Val
 
 type SignalIdx = Int
 
+type TSample = TC Scalar (Typ A T Tt) (DVal Val)
 type PSample2 = TC Sample (Typ A P Tt) (UVec2 Val)
-type PSample1 =  TC Scalar (Typ A P Tt) (DVal Val)
+type PSample1 =  TC Scalar (Typ A P Tt) (UVec Val)
+
+type PSample2L = TC Sample (Typ A P Tt) (UVec2L Val)
+type DTSampleL = TC Sample (Typ D T Tt) (List Val) 
 
 type PSample =  TC Scalar (Typ A P Tt) (DVal Val)
 type DTSample =  TC Scalar (Typ D T Tt) (DVal Val)
-
--- type TSample0 =  TC Scalar (Typ A P Tt) (DVal Val))
--- type PSample0 =  TC Scalar (Typ A P Tt) (DVal Val))
-
 
 ----------------------------------------------------------
 -- from/to List
@@ -241,6 +247,12 @@ class STDeltaMap s1 s2 c d1 d2 where
 instance (SDeltaMap s1 s2 c d1 d2) => STDeltaMap s1 s2 c d1 d2 where
       stdeltaMap f xs = changeType $ sdeltaMap g xs where g x y = fromScalar $ f (toScalar x) (toScalar y)
       stdeltaMapReverse f xs = changeType $ sdeltaMapReverse g xs where g x y = fromScalar $ f (toScalar x) (toScalar y)
+
+----------------------------------------------------------
+-- Zip
+                                                                        
+szip :: (SArith s s s, DZipWith c c c d1 d2 (d1, d2)) => TC s typ (c d1) ->  TC s typ (c d2) ->  TC s typ (c (d1,d2))
+szip x y = szipWith ((,)) x y                
 
 
 ---------------------------------------------------------

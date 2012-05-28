@@ -18,39 +18,24 @@ data PPosIdx =  PPosIdx !Int !Int deriving (Show, Eq, Ord)
 
 -----------------------------------------------------------------------------------
 -- | Signal Record & Power Record & Flow -- Structure for Handling recorded data
-
 type PPosData a = M.Map PPosIdx a
 
-
 -- | Signal record to contain original time signals 
-data Record = Record TSig SignalMap deriving (Show)
+data Record = Record TSigL (M.Map SigId UTSigL) deriving (Show)
 data SigId = SigId String deriving (Show, Eq, Ord)
-type SignalMap = M.Map SigId (UTSig Val)
 
+-- | Power record to contain power signals assigned to the tree as Lists
+data PowerRecord = PowerRecord TSigL (PPosData PSigL) deriving (Show)
+type SequPwrRecord = SequData [PowerRecord]
 
+-- | Sequence Flow Record
+type SequFlowRecord a = SequData [a]
 data FlRecord a b = FlRecord a (PPosData b)
-
 type FlowRecord = FlRecord DTSig FSig
 type FlowValRecord = FlRecord DTVal FVal
 
-
--- | Power record to contain power signals assigned to the tree
-type PPosPowers = PPosData PSig
-data PowerRecord = PowerRecord TSig PPosPowers deriving (Show)
-type SequPwrRecord = SequData [PowerRecord]
-{-
--- | Flow record to contain flow signals assigned to the tree
-type PPosFlows = PPosData FSig
-data FlowRecord = FlowRecord DTSig (PPosData FSig) deriving (Show)
-
-data FlowValRecord = FlowValRecord DTVal (PPosData FVal) deriving (Show)
--}
-
-type SequFlowRecord a = SequData [a]
-
 -- | Flow record to contain flow signals assigned to the tree
 --type SequFlowValRecord = SequData [FlowValRecord]
-
 newtype FlowState = FlowState (PPosData Sign) deriving (Show)
 type SequFlowState = SequData [FlowState]
 type SequFlowTops = SequData [FlowTopology]
