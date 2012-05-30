@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, FunctionalDependencies, TypeSynonymInstances, UndecidableInstances,KindSignatures, TypeOperators,  GADTs, OverlappingInstances, FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, FunctionalDependencies, TypeSynonymInstances, UndecidableInstances,KindSignatures, TypeOperators,  GADTs, OverlappingInstances, FlexibleContexts, ScopedTypeVariables #-}
 
 module EFA2.Signal.Signal (module EFA2.Signal.Signal) where
 import EFA2.Signal.Vector
@@ -265,9 +265,9 @@ instance (SDeltaMap s1 s2 c d1 d2) => STDeltaMap s1 s2 c d1 d2 where
 -- Doppeltes Getyptes DeltaMap
 
 stdeltaMap2 :: (DZipWith c c c (d1, d1) (d2, d2) d3, SDeltaMap s1 s2 c d1 (d1, d1)) =>(TC Scalar typ1 (Data Nil (d1,d1))-> TC Scalar typ2 (Data Nil (d2,d2)) -> TC Scalar typ3 (Data Nil d3))  ->  TC s1 typ1 (c d1) ->  TC s1 typ2 (c d2) ->  TC s2 typ3 (c d3)
-stdeltaMap2 f xs ys = changeSignalType $ stzipWith f dxs dys 
+stdeltaMap2 f xs ys = (stzipWith f dxs dys)   
   where dxs = sdeltaMap ((,)) xs -- ::  TC s2 typ1 (c (d1,d1))
-        dys = sdeltaMap ((,)) ys -- :: TC s2 typ2 (c (d2,d2))
+        dys = sdeltaMap ((,)) ys  -- :: TC s2 typ2 (c (d2,d2))
 
 ---------------------------------------------------------
 -- sFold
