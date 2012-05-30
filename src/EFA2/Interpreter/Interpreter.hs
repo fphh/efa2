@@ -76,11 +76,14 @@ showInTerm (InEqual s t) = showInTerm s ++ " = " ++ showInTerm t
 showInTerms :: (Show a) => [InTerm a] -> String
 showInTerms ts = L.intercalate "\n" $ map showInTerm ts
 
+
 interpretRhs :: ( SArith s s s, SMap c Val Val, TProd t t t, TSum t t t, DZipWith c c c Val Val Val,
                   FromToList c Val, Show (c Val)) =>
                   Int -> Envs (TC s t (c Val)) -> InTerm (TC s t (c Val)) -> TC s t (c Val)
 interpretRhs len envs term = interpretRhs' term
-  where interpretRhs' (InConst x) = sfromVal len x
+  where --interpretRhs' (InConst x) = sfromVal len [x] -- Wichtig für delta Rechnung?
+        --interpretRhs' (InGiven xs) = smap (:[]) xs
+        interpretRhs' (InConst x) = sfromVal len x
         interpretRhs' (InGiven xs) = xs
         interpretRhs' (EIdx idx) = energyMap envs `safeLookup` idx
         interpretRhs' (DEIdx idx) = denergyMap envs `safeLookup` idx
@@ -117,7 +120,6 @@ interpretEq len envs (InEqual (DEIdx idx) rhs) = envs { denergyMap = insert len 
 interpretEq len envs (InEqual (PIdx idx) rhs) = envs { powerMap = insert len idx envs rhs (powerMap envs) }
 interpretEq len envs (InEqual (DPIdx idx) rhs) = envs { dpowerMap = insert len idx envs rhs (dpowerMap envs) }
 interpretEq len envs (InEqual (FNIdx idx@(FEtaIdx s r f t)) (InFunc feta)) = envs { fetaMap = M.insert idx feta (fetaMap envs) }
-
 {-
 interpretEq envs (InEqual (FNIdx idx@(FEtaIdx s r f t) _) (InMult (InRecip (PIdx pidx1)) (PIdx pidx2))) = envs''
   where envs' = envs { fetaMap = M.insert idx (mkEtaFunc pts) (fetaMap envs) }
