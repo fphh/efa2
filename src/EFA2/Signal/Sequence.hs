@@ -156,10 +156,10 @@ stepX s1 s2 | otherwise = NoStep  -- nostep
 addZeroCrossings ::  PowerRecord -> PowerRecord    
 addZeroCrossings pRec = repackXSig pRec xSigNew 
   where xSig = genXSig pRec
-        xSigNew = (concat $ vdeltaMap f xSig) ++ [last xSig]
+        xSigNew = (sconcat $ sdeltaMap2 f xSig) ++ [last xSig]
     
         --f :: (TSample,PSampleRow) ->  (TSample,PSampleRow) -> [(TSample,PSampleRow)]
-        f (t1, row1) (t2, row2) = zip ([t1] ++ zeroCrossingTimes)
+        f (t1, t2) (row1, row2) = zip ([t1] ++ zeroCrossingTimes)
                                       ([row1] ++ (vtranspose $ zipWith g (zip row1 row2) zeroCrossings))
           where 
             -- create list of all zero crossing times

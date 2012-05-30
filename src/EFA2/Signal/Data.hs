@@ -201,7 +201,8 @@ instance FromToList (Data ([] :> Nil)) d where
   dfromList x = Data $ D1 $ x
   dtoList (Data (D1 x)) = x
   
+{-  
 instance FromToList (Data ([] :> UV.Vector :> Nil)) d where  
   dfromList x = Data $ D2 $ x
   dtoList (Data (D2 x)) = x
-  
+-}  
