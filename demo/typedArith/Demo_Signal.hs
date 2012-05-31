@@ -58,7 +58,7 @@ main = do
   putStrLn (sdisp e)
   putStrLn (sdisp p1)
   putStrLn (sdisp p2)
-  putStrLn (sdisp pm2)
+  -- putStrLn (sdisp pm2)
 --  putStrLn (sdisp pm3)
 
   putStrLn x

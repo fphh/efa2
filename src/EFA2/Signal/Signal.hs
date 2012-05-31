@@ -140,6 +140,7 @@ type Scal typ a = TC Scalar typ (DVal a)
 type Sig1 typ a = TC Signal typ (UVec a)
 type FSig1 typ a = TC FSignal typ (UVec a)
 type Sig1L typ a = TC Signal typ (List a)
+type Sig2L typ a = TC Signal typ (List2 a)
 
 type Sig2 typ a = TC Signal typ (Vec2 a)
 type FSig2 typ a = TC FSignal typ (Vec2 a)
@@ -155,6 +156,7 @@ type Test2 typ a = TC TestRow typ (UVec2 a)
 type PSig = Sig1 (Typ A P Tt) Val
 type PSig2 = Sig2 (Typ A P Tt) Val
 type PSigL = Sig1L (Typ A P Tt) Val
+type PSig2L = Sig2L (Typ A P Tt) Val
 
 
 type TSig = Sig1 (Typ A T Tt) Val
@@ -466,7 +468,7 @@ srec :: (DArith0 d, SMap c d d) => TC s typ (c d) -> TC s typ (c d)
 srec = smap rec
 
 
--- | data Conversion function
+-- | data ConversiSon function
 fromSigList ::VFromList v2 (v1 d)=> [TC s typ (Data (v1 :> Nil) d)] -> TC s typ (Data (v2 :> v1 :> Nil) d) 
 fromSigList xs = TC $ Data $ D2 $ vfromList $ map f xs
   where f (TC (Data (D1 x))) = x

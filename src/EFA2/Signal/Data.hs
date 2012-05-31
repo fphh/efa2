@@ -183,6 +183,15 @@ instance (VSingleton v1 d) => DAppend (Data (v1 :> Nil)) (Data Nil) (Data (v1 :>
 instance (VSingleton v1 d) => DAppend (Data Nil) (Data (v1 :> Nil)) (Data (v1 :> Nil)) d where  
   dappend (Data (D0 x)) (Data (D1 y)) = Data $ D1 $ vappend (vsingleton x) y
 
+instance (VSingleton v2 (v1 d)) => DAppend (Data (v2 :> v1 :> Nil)) (Data (v2 :> v1 :> Nil)) (Data (v2 :> v1 :> Nil)) d where  
+  dappend (Data (D2 x)) (Data (D2 y)) = Data $ D2 $ vappend x y
+
+instance (VSingleton v2 (v1 d)) => DAppend (Data (v2 :> v1 :> Nil)) (Data (v1 :> Nil)) (Data (v2 :> v1 :> Nil)) d where  
+  dappend (Data (D2 x)) (Data (D1 y)) = Data $ D2 $ vappend x (vsingleton y)
+
+instance (VSingleton v2 (v1 d)) => DAppend (Data (v1 :> Nil)) (Data (v2 :> v1 :> Nil)) (Data (v2 :> v1 :> Nil)) d where  
+  dappend (Data (D1 x)) (Data (D2 y)) = Data $ D2 $ vappend (vsingleton x) y
+
 ----------------------------------------------------------
 -- get data Range
         
