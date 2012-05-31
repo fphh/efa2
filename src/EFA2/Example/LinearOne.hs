@@ -1,7 +1,7 @@
 {-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
 
 
-module EFA2.Example.LinearOne (linearOne, dtimes) where
+module EFA2.Example.LinearOne where
 
 import Data.Graph.Inductive
 import qualified Data.Map as M
@@ -13,16 +13,25 @@ import EFA2.Interpreter.Arith
 import EFA2.Interpreter.Env
 import EFA2.Example.SymSig
 import EFA2.Utils.Utils
+import EFA2.Signal.Signal
 
-dtimes = M.fromList [(DTimeIdx 0 0, take 50 (repeat 1.0))]
 
-numOf = 3
-sigs :: EnergyMap [Val]
-sigs = M.fromList [ (EnergyIdx 0 0 0 1, take 50 ([0, 2] ++ [3, 3.1 ..])),
-                    (EnergyIdx 0 0 1 0, take 50 ([0, 1] ++ [2, 2.1 ..])) ]
+dtimes0 :: DTimeMap UTFSig
+dtimes0 = M.fromList [(DTimeIdx 0 0, sfromList [1.0])]
 
-linearOne :: TheGraph [Val]
-linearOne = TheGraph g sigs
+sigs0 :: EnergyMap UTFSig
+sigs0 = M.fromList [ (EnergyIdx 0 0 0 1, sfromList [3]) ]
+
+dtimes1 :: DTimeMap UTFSig
+dtimes1 = M.fromList [(DTimeIdx 0 1, sfromList [1.2])]
+
+
+sigs1 :: EnergyMap UTFSig
+sigs1 = M.fromList [ (EnergyIdx 0 1 0 1, sfromList [3.3]) ]
+
+
+linearOne :: TheGraph UTFSig
+linearOne = TheGraph g sigs0
   where g = mkGraph ns es
         ns = makeNodes [(0, Source), (1, Sink)]
         es = makeEdges [(0, 1, defaultELabel)]
