@@ -163,6 +163,38 @@ instance VBox [] [] a where
          vunbox = id
   
 --------------------------------------------------------------
+-- Vector conversion
+class VConvert c1 c2 a where
+      vconvert :: c1 a -> c2 a
+
+instance UV.Unbox a => VConvert UV.Vector V.Vector a where
+         vconvert x = UV.convert x
+
+instance UV.Unbox a => VConvert V.Vector UV.Vector a where
+         vconvert x = V.convert x
+
+instance UV.Unbox a => VConvert UV.Vector UV.Vector a where
+         vconvert x = V.convert x
+
+instance VConvert V.Vector V.Vector a where
+         vconvert = id
+
+instance VConvert [] [] a where
+         vconvert = id
+
+instance UV.Unbox a => VConvert [] UV.Vector a where
+         vconvert x = UV.fromList x
+
+instance VConvert [] V.Vector a where
+         vconvert x = V.fromList x
+
+instance VConvert V.Vector [] a where
+         vconvert x = V.toList x
+
+instance UV.Unbox a => VConvert UV.Vector [] a where
+         vconvert x = UV.toList x
+
+--------------------------------------------------------------
 -- Length & Length Check
 
 class GetLength s where
@@ -205,5 +237,18 @@ instance VTranspose [] [] d where
 
 
 
-deltaMap :: (a -> a -> b) -> [a] -> [b]
-deltaMap f x = zipWith f x (tail x)
+class VFromList v d where
+  vfromList :: [d] -> v d
+  vtoList :: v d -> [d]
+  
+instance (UV.Unbox d) => VFromList UV.Vector d where
+  vfromList x = UV.fromList x
+  vtoList x = UV.toList x
+  
+instance VFromList V.Vector d where
+  vfromList x = V.fromList x
+  vtoList x = V.toList x  
+  
+instance VFromList [] d where
+  vfromList x = x
+  vtoList x = x  

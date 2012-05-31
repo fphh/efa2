@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, TypeOperators, ScopedTypeVariables,GADTs #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, TypeOperators, ScopedTypeVariables,GADTs, FlexibleContexts #-}
 
 module EFA2.Signal.Sequence where
 
@@ -27,7 +27,7 @@ import EFA2.Utils.Utils
 
 
 import Debug.Trace
-
+import Data.Monoid
 
 data StepType = LeavesZeroStep
               | BecomesZeroStep
@@ -153,13 +153,15 @@ stepX s1 s2 | otherwise = NoStep  -- nostep
 
 -----------------------------------------------------------------------------------
 -- | Function to add Zero Crossing Points into the signals and the time 
-addZeroCrossings ::  PowerRecord -> PowerRecord    
-addZeroCrossings pRec = repackXSig pRec xSigNew 
-  where xSig = genXSig pRec
-        xSigNew = (concat $ deltaMap f xSig) ++ [last xSig]
+-- addZeroCrossings  :: (VFromList v1 (TC Signal (Typ A P Tt) (Data ([] :> (Nil' :> Nil')) Val)),
+--                     VWalker v1 [Val] (TC Signal (Typ A P Tt) (Data ([] :> (Nil' :> Nil')) Val)))
+--                     => PowerRecord -> PowerRecord    
+addZeroCrossings (PowerRecord time pMap) = PowerRecord (time .++ slast time) (updateMap pMap (toSigList $ mSigNew .++ slast mSig))
+  where mSig = fromSigList $ M.elems pMap
+        (timeNew, mSigNew) = (mconcat $ stdeltaMap2Reverse getZeroCrossings time mSig) -- ++ [last xSig]
     
-        --f :: (TSample,PSampleRow) ->  (TSample,PSampleRow) -> [(TSample,PSampleRow)]
-        f (t1, row1) (t2, row2) = zip ([t1] ++ zeroCrossingTimes)
+getZeroCrossings :: (TSample,TSample) -> (PSample1,PSample1) -> (TSigL,PSample2)         
+getZeroCrossings (t1, t2) (row1, row2) = zip ([t1] ++ zeroCrossingTimes)
                                       ([row1] ++ (L.transpose $ zipWith g (zip row1 row2) zeroCrossings))
           where 
             -- create list of all zero crossing times
@@ -199,36 +201,12 @@ interpPowers (t1,p1) (t2,p2) tzeroList tzero = map f tzeroList
 -- | Helper Functions
 
 -- | Generate X-List from Power Record
-genXSig :: PowerRecord -> XSig
-genXSig (PowerRecord time pmap) = zip (map toScalar $ stoList time) (map sfromList $ vtranspose $ map stoList $ M.elems pmap)
+updateMap :: M.Map key a -> [a] -> M.Map key a
+updateMap map xs = if check then M.fromList $ zip keys xs else "Error in updateMap - map and List length don't match"   
+  where keys = map snd $ M.fromList map
+        check = length keys == length xs 
 
 
--- | Function to regenerate pMap from pRows
-repackXSig :: PowerRecord -> XSig -> PowerRecord
-repackXSig (PowerRecord _ pmap) xSig = PowerRecord (sfromList time) ( M.fromList $ zipWith h2 (M.toList pmap) $ map sfromList sigs)
-  where (time,rows) = unzip xSig
-        sigs = vtranspose rows
-        h2 (key,_) sig = (key,sig) -- format the results
-
--- | Function to regenerate pMap from pRows
-repackXSig2 :: PowerRecord -> XSig -> SecPowerRecord
-repackXSig2 (PowerRecord _ pmap) xSig = SecPowerRecord (sfromList time) ( M.fromList $ zipWith h2 (M.toList pmap) $ map sfromList sigs)
-  where (time,rows) = unzip xSig
-        sigs = vtranspose rows
-        h2 (key,_) sig = (key,sig) -- format the results
-
-
-
--- -- | check Record Data -- TODO -- include check on time length == sign length                                                               
--- recordCheck :: Record -> Bool
--- recordCheck (Record time sigMap) = smplCheck && equlengthCheck && lengthCheck
---   where 
---     list = [time] ++ M.elems sigMap -- all signals and time in one list
---     smplCheck = all (sampleCheck) list
---     equlengthCheck = equalLengths ([time] ++ list)  -- equal length on all signals
---     lengthCheck = all (1 < ) $ map length list -- at least two samples per time Signal
-         
-    
     
 
                   

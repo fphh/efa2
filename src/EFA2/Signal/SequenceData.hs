@@ -24,7 +24,7 @@ data Record = Record TSig (M.Map SigId UTSigL) deriving (Show)
 data SigId = SigId String deriving (Show, Eq, Ord)
 
 -- | Power record to contain power signals assigned to the tree
-data PowerRecord = PowerRecord TSig (M.Map PPosIdx PSigL) deriving (Show)
+data PowerRecord = PowerRecord TSigL (M.Map PPosIdx PSigL) deriving (Show)
 
 -- | Power Record to contain Power signals after cutting
 data SecPowerRecord = SecPowerRecord TSig (M.Map PPosIdx PSig) deriving (Show)
