@@ -1,6 +1,8 @@
 import EFA2.Signal.Sequence
+import EFA2.Signal.SequenceData
 import  EFA2.Interpreter.Env
 import EFA2.Utils.Utils
+import EFA2.Signal.Signal
 
 import qualified Data.Map as M 
 
@@ -33,10 +35,10 @@ p2 = [-7, 2]
 {-
 -}
 -- data points working
-time = [0,1]
+time = sfromList [0,1]
 
-p1 = [-1, 1]
-p2 = [-1, 3]
+p1 = sfromList [-1, 1]
+p2 = sfromList [-1, 3]
 
 
 {-

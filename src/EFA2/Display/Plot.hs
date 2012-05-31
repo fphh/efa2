@@ -47,6 +47,9 @@ instance SPlotData FSignal t (Data (v1 :> Nil)) Val => Plot (TC FSignal t  (Data
 instance Plot PowerRecord where   
   sigPlot (PowerRecord time pMap) = plotLists [] (map sPlotData $ M.elems pMap)
   
+instance Plot Record where   
+  sigPlot (Record time sigMap) = plotLists [] (map sPlotData $ M.elems sigMap)
+
 instance Plot SequPwrRecord where   
   sigPlot (SequData recs) = mapM_ sigPlot recs
 

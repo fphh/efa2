@@ -171,14 +171,14 @@ type DTVal = Scal (Typ D T Tt) Val
 
 type SignalIdx = Int
 
-type TSample = TC Scalar (Typ A T Tt) (DVal Val)
+-- type TSample = TC Scalar (Typ A T Tt) (DVal Val)
 type PSample2 = TC Sample (Typ A P Tt) (UVec2 Val)
 type PSample1 =  TC Scalar (Typ A P Tt) (UVec Val)
 
 type PSample2L = TC Sample (Typ A P Tt) (UVec2L Val)
 type DTSampleL = TC Sample (Typ D T Tt) (List Val) 
 
-type PSample =  TC Scalar (Typ A P Tt) (DVal Val)
+-- type PSample =  TC Scalar (Typ A P Tt) (DVal Val)
 type DTSample =  TC Scalar (Typ D T Tt) (DVal Val)
 
 ----------------------------------------------------------

@@ -39,16 +39,17 @@ data EventType = LeftEvent
                | MixedEvent
                | NoEvent
 
--- type PSampleRow = [PSample] --TC Sample (Typ A P Tt) (UVec Val)
--- type TSample = Val -- TC Sample (Typ D T Tt) (DVal Val)
+type PSample = Val
+type PSampleRow = [PSample] --TC Sample (Typ A P Tt) (UVec Val)
+type TSample = Val -- TC Sample (Typ D T Tt) (DVal Val)
 
 -- | XSample contains time and values of all power signals for one time step 
--- type XSample = (TSample, PSampleRow)
+type XSample = (TSample, PSampleRow)
 
 -- | Xlist = list of all xSamples
-type  XSig = (TSigL, PSample2L) 
+type XSig =  [XSample] 
 
-{-
+
 -- | From PowerRecord
 --fromFlowRecord :: SecIdx -> RecIdx -> FlowRecord -> Envs FSig -- [Val]
 
@@ -131,8 +132,8 @@ removeNilSections (sequ, SequData pRecs) = (fsequ, SequData fRecs)
         f _ = True
             
 -- | Function to detect and classify a step over several signals
-stepDetect :: (TSample,TSample) -> (PSample1,PSample1) -> EventType 
-stepDetect  (t1,t2) (row1,row2) = f stepList
+stepDetect :: XSample -> XSample -> EventType 
+stepDetect  (t1,row1) (t2,row2) = f stepList
   where stepList = zipWith stepX row1 row2
         f stepList | all (==NoStep) stepList = NoEvent
         f stepList | any (==ZeroCrossingStep) stepList = error $ "Error in stepDetect - Zero Crossing - t1: " ++ show t1 ++ " t2 :" ++ (show t2)
@@ -148,18 +149,15 @@ stepX s1 s2 | sign s1==PSign && sign s2 == NSign = ZeroCrossingStep
 stepX s1 s2 | sign s1==NSign && sign s2 == PSign = ZeroCrossingStep
 stepX s1 s2 | otherwise = NoStep  -- nostep
 
--}
-
-
 -----------------------------------------------------------------------------------
 -- | Function to add Zero Crossing Points into the signals and the time 
 addZeroCrossings ::  PowerRecord -> PowerRecord    
 addZeroCrossings pRec = repackXSig pRec xSigNew 
   where xSig = genXSig pRec
-        xSigNew = (sconcat $ sdeltaMap2 f xSig) ++ [last xSig]
+        xSigNew = (concat $ vdeltaMap f xSig) ++ [last xSig]
     
         --f :: (TSample,PSampleRow) ->  (TSample,PSampleRow) -> [(TSample,PSampleRow)]
-        f (t1, t2) (row1, row2) = zip ([t1] ++ zeroCrossingTimes)
+        f (t1, row1) (t2, row2) = zip ([t1] ++ zeroCrossingTimes)
                                       ([row1] ++ (vtranspose $ zipWith g (zip row1 row2) zeroCrossings))
           where 
             -- create list of all zero crossing times
@@ -200,7 +198,7 @@ interpPowers (t1,p1) (t2,p2) tzeroList tzero = map f tzeroList
 
 -- | Generate X-List from Power Record
 genXSig :: PowerRecord -> XSig
-genXSig (PowerRecord time pmap) = (time, M.elems pmap)
+genXSig (PowerRecord time pmap) = zip (stoList time) (vtranspose $ map stoList $ M.elems pmap)
 
 
 -- | Function to regenerate pMap from pRows
