@@ -260,14 +260,18 @@ instance (SDeltaMap s1 s2 c d1 d2) => STDeltaMap s1 s2 c d1 d2 where
       stdeltaMap f xs = changeType $ sdeltaMap g xs where g x y = fromScalar $ f (toScalar x) (toScalar y)
       stdeltaMapReverse f xs = changeType $ sdeltaMapReverse g xs where g x y = fromScalar $ f (toScalar x) (toScalar y)
 
-
+{-
 ----------------------------------------------------------
 -- Doppeltes Getyptes DeltaMap
 
-stdeltaMap2 :: (DZipWith c c c (d1, d1) (d2, d2) d3, SDeltaMap s1 s2 c d1 (d1, d1)) =>(TC Scalar typ1 (Data Nil (d1,d1))-> TC Scalar typ2 (Data Nil (d2,d2)) -> TC Scalar typ3 (Data Nil d3))  ->  TC s1 typ1 (c d1) ->  TC s1 typ2 (c d2) ->  TC s2 typ3 (c d3)
-stdeltaMap2 f xs ys = (stzipWith f dxs dys)   
-  where dxs = sdeltaMap ((,)) xs -- ::  TC s2 typ1 (c (d1,d1))
-        dys = sdeltaMap ((,)) ys  -- :: TC s2 typ2 (c (d2,d2))
+class  (SZipWith s2 s2 s2 c c c (d1,d1) (d2,d2) d3, SDeltaMap s1 s2 c d1 (d1, d1)) => StDeltaMap2 s1 s2 c d1 d2 d3 where
+      stdeltaMap2 :: (TC Scalar typ1 (Data Nil (d1,d1))-> TC Scalar typ2 (Data Nil (d2,d2)) -> TC Scalar typ3 (Data Nil d3))  ->  TC s1 typ1 (c d1) ->  TC s1 typ2 (c d2) ->  TC s2 typ3 (c d3)
+      
+instance (SZipWith s2 s2 s2 c c c (d1,d1) (d2,d2) d3, SDeltaMap s1 s2 c d1 (d1, d1), SDeltaMap s3 s1 c d1 (d1, d1)) => StDeltaMap2 s1 s2 c d1 d2 d3 where
+  stdeltaMap2 f xs ys = changeSignalType $ (stzipWith f dxs dys)   
+    where dxs = sdeltaMap ((,)) xs -- ::  TC s2 typ1 (c (d1,d1))
+          dys = sdeltaMap ((,)) ys  -- :: TC s2 typ2 (c (d2,d2))
+-}
 
 ---------------------------------------------------------
 -- sFold
