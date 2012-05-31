@@ -63,13 +63,13 @@ fromFlowRecord (SecIdx secIdx) (RecIdx recIdx) fRec@(FlRecord dTime flowMap) =
 
 
 -- | Pre-Integrate all Signals in Record  
-recFullIntegrate :: PowerRecord -> FlowRecord
-recFullIntegrate pRec@(PowerRecord time pMap) = FlRecord (sfromList [fromScalar $ sigSum $ deltaSig time]) fMap
+recFullIntegrate :: SecPowerRecord -> FlowRecord
+recFullIntegrate pRec@(SecPowerRecord time pMap) = FlRecord (sfromList [fromScalar $ sigSum $ deltaSig time]) fMap
   where fMap = M.map (sigFullInt time) pMap  
 
 -- | Pre-Integrate all Signals in Record  
-recPartIntegrate :: PowerRecord -> FlowRecord   
-recPartIntegrate pRec@(PowerRecord time pMap) = FlRecord (deltaSig time) fMap 
+recPartIntegrate :: SecPowerRecord -> FlowRecord   
+recPartIntegrate pRec@(SecPowerRecord time pMap) = FlRecord (deltaSig time) fMap 
   where fMap = M.map (sigPartInt time) pMap  
 
 -- | Generate Sequence Flow 
@@ -101,7 +101,7 @@ makeSequence pRec topo = (sqEnvs, sqTopo)
 genSequ ::  PowerRecord -> (Sequ, SequPwrRecord)
 genSequ pRec = removeNilSections (sequ++[lastSec],SequData pRecs)
   where xSig = genXSig pRec
-        pRecs = map (repackXSig pRec) (seqXSig ++ [lastXSec])
+        pRecs = map (repackXSig2 pRec) (seqXSig ++ [lastXSec])
         ((lastSec,sequ),(lastXSec,seqXSig)) = recyc (tail xSig) (((0,0),[]),([head xSig],[])) 
         
         --recyc :: XSig -> ((Sec,Sequ), (XSig, [XSig])) -> ((Sec,Sequ), (XSig, [XSig]))  
@@ -207,6 +207,15 @@ repackXSig (PowerRecord _ pmap) xSig = PowerRecord (sfromList time) ( M.fromList
   where (time,rows) = unzip xSig
         sigs = vtranspose rows
         h2 (key,_) sig = (key,sig) -- format the results
+
+-- | Function to regenerate pMap from pRows
+repackXSig2 :: PowerRecord -> XSig -> SecPowerRecord
+repackXSig2 (PowerRecord _ pmap) xSig = SecPowerRecord (sfromList time) ( M.fromList $ zipWith h2 (M.toList pmap) $ map sfromList sigs)
+  where (time,rows) = unzip xSig
+        sigs = vtranspose rows
+        h2 (key,_) sig = (key,sig) -- format the results
+
+
 
 -- -- | check Record Data -- TODO -- include check on time length == sign length                                                               
 -- recordCheck :: Record -> Bool
