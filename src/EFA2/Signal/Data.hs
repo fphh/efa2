@@ -206,3 +206,26 @@ instance FromToList (Data ([] :> UV.Vector :> Nil)) d where
   dfromList x = Data $ D2 $ x
   dtoList (Data (D2 x)) = x
 -}  
+
+----------------------------------------------------------
+-- All
+
+class DAll c d where
+  dall :: (d -> Bool) -> c d -> Bool
+  dany :: (d -> Bool) -> c d -> Bool
+  
+instance (VSingleton v d) => DAll (Data (v :> Nil)) d where  
+  dall f (Data (D1 x)) = vall f x
+  dany f (Data (D1 x)) = vany f x
+  
+----------------------------------------------------------
+-- Transpose
+  
+class DTranspose c d where  
+  dtranspose :: c d -> c d
+  
+instance DTranspose (Data (v1 :> Nil)) d where    
+  dtranspose x = x
+  
+instance VTranspose v1 v2 d => DTranspose (Data (v2 :> v1 :> Nil)) d where    
+  dtranspose (Data (D2 x)) = Data $ D2 $ vtranspose x

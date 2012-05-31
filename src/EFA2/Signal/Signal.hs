@@ -260,18 +260,21 @@ instance (SDeltaMap s1 s2 c d1 d2) => STDeltaMap s1 s2 c d1 d2 where
       stdeltaMap f xs = changeType $ sdeltaMap g xs where g x y = fromScalar $ f (toScalar x) (toScalar y)
       stdeltaMapReverse f xs = changeType $ sdeltaMapReverse g xs where g x y = fromScalar $ f (toScalar x) (toScalar y)
 
-{-
-----------------------------------------------------------
--- Doppeltes Getyptes DeltaMap
 
-class  (SZipWith s2 s2 s2 c c c (d1,d1) (d2,d2) d3, SDeltaMap s1 s2 c d1 (d1, d1)) => StDeltaMap2 s1 s2 c d1 d2 d3 where
-      stdeltaMap2 :: (TC Scalar typ1 (Data Nil (d1,d1))-> TC Scalar typ2 (Data Nil (d2,d2)) -> TC Scalar typ3 (Data Nil d3))  ->  TC s1 typ1 (c d1) ->  TC s1 typ2 (c d2) ->  TC s2 typ3 (c d3)
+----------------------------------------------------------
+-- Doppeltes Getyptes DeltaMap -- deltaMap ueber powerRecord
+
+class  StDeltaMap2 s1 s2 s3 c1 c2 c3 d1 d2 d3 where
+      stdeltaMap2 :: (TC Scalar typ1 (Data Nil (d1,d1))-> TC Scalar typ2 (Data Nil (d2,d2)) -> TC Scalar typ3 (Data Nil d3))  ->  TC s1 typ1 (c1 d1) ->  TC s2 typ2 (c2 d2) ->  TC s3 typ3 (c3 d3)
+      stdeltaMap2Reverse :: (TC Scalar typ1 (Data Nil (d1,d1))-> TC Scalar typ2 (Data Nil (d2,d2)) -> TC Scalar typ3 (Data Nil d3))  ->  TC s1 typ1 (c1 d1) ->  TC s2 typ2 (c2 d2) ->  TC s3 typ3 (c3 d3)
       
-instance (SZipWith s2 s2 s2 c c c (d1,d1) (d2,d2) d3, SDeltaMap s1 s2 c d1 (d1, d1), SDeltaMap s3 s1 c d1 (d1, d1)) => StDeltaMap2 s1 s2 c d1 d2 d3 where
+instance (SArith s1 s1 s1, DZipWith c1 c1 c1 (d1, d1) (d2, d2) d3, DZipWith c1 c1 c1 d1 d1 (d1, d1), DZipWith c1 c1 c1 d2 d2 (d2, d2), SInit s1 c1 d1, SInit s1 c1 d2) =>  StDeltaMap2 s1 s1 s1 c1 c1 c1 d1 d2 d3 where
   stdeltaMap2 f xs ys = changeSignalType $ (stzipWith f dxs dys)   
-    where dxs = sdeltaMap ((,)) xs -- ::  TC s2 typ1 (c (d1,d1))
-          dys = sdeltaMap ((,)) ys  -- :: TC s2 typ2 (c (d2,d2))
--}
+    where dxs = szipWith ((,)) xs (stail xs)
+          dys = szipWith ((,)) ys (stail ys)
+  stdeltaMap2Reverse f xs ys = changeSignalType $ (stzipWith f dxs dys)   
+    where dxs = szipWith ((,)) (stail xs) xs
+          dys = szipWith ((,)) (stail ys) ys
 
 ---------------------------------------------------------
 -- sFold
@@ -320,14 +323,14 @@ instance (VSingleton v1 d1) => SInit Signal (Data (v1 :> Nil)) d1 where
 ----------------------------------------------------------
 -- SHead & STail
 
-class STranspose s1 s2 c1 c2 d1 | s1 -> s2, s2 -> s1  where
-      stranspose ::  TC s1 typ (c1 d1) -> TC s2 typ (c2 d1)
-
-instance STranspose FSignal FSample (Data (v1 :> Nil)) (Data (v1 :> Nil)) d1 where
-         stranspose (TC (Data (D1 x))) = (TC (Data (D1 x))) 
-
-instance VTranspose v1 v2 d1 => STranspose FSignal FSample (Data (v2 :> v1 :> Nil)) (Data (v2 :> v1 :> Nil)) d1 where
-         stranspose (TC (Data (D2 x))) = TC $ Data $ D2 $ vtranspose x 
+class (DTranspose c d) => STranspose s1 s2 c d | s1 -> s2, s2 -> s1 where
+      stranspose ::  TC s1 typ (c d) -> TC s2 typ (c d)
+      stranspose (TC x) = TC $ dtranspose x
+      
+instance (DTranspose c d) => STranspose Signal Sample  c d
+instance (DTranspose c d) => STranspose Sample Signal  c d
+instance (DTranspose c d) => STranspose FSignal FSample  c d
+instance (DTranspose c d) => STranspose FSample FSignal  c d
 
 ----------------------------------------------------------
 -- Monoid
@@ -340,6 +343,17 @@ instance Monoid c => Monoid (TC s typ c) where
 
 infix 5 .++
 
+----------------------------------------------------------
+-- All & Co
+
+class SAll s c d where
+  sall :: (d -> Bool) -> TC s typ (c d) -> Bool
+  sany :: (d -> Bool) -> TC s typ (c d) -> Bool
+
+instance DAll c d => SAll s c d where
+  sall f (TC x) = dall f x 
+  sany f (TC x) = dany f x 
+    
 ----------------------------------------------------------
 -- signal sign
 

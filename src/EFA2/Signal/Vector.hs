@@ -31,6 +31,8 @@ class VSingleton vec d where
       vtail :: vec d -> vec d
       vlast :: vec d -> d
       vinit :: vec d -> vec d
+      vall :: (d-> Bool)-> vec d -> Bool
+      vany :: (d-> Bool)-> vec d -> Bool
 
 instance (Ord d) => VSingleton V.Vector d where 
          vmaximum x =  V.maximum x
@@ -43,6 +45,8 @@ instance (Ord d) => VSingleton V.Vector d where
          vtail = V.tail
          vlast = V.last
          vinit = V.init
+         vall = V.all
+         vany = V.any
 
 instance (Ord d, UV.Unbox d) => VSingleton UV.Vector d where 
          vmaximum x = UV.maximum x
@@ -55,6 +59,8 @@ instance (Ord d, UV.Unbox d) => VSingleton UV.Vector d where
          vtail = UV.tail
          vlast = UV.last
          vinit = UV.init
+         vall = UV.all
+         vany = UV.any
 
 instance (Ord d) => VSingleton [] d where 
          vmaximum x = maximum x
@@ -67,6 +73,8 @@ instance (Ord d) => VSingleton [] d where
          vtail = tail
          vlast = last
          vinit = init
+         vall = all
+         vany = any
 
 
 ------------------------------------------------------------
@@ -197,3 +205,5 @@ instance VTranspose [] [] d where
 
 
 
+deltaMap :: (a -> a -> b) -> [a] -> [b]
+deltaMap f x = zipWith f x (tail x)
