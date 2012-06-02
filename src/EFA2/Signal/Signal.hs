@@ -268,9 +268,22 @@ instance (SDeltaMap s1 s2 c d1 d2) => STDeltaMap s1 s2 c d1 d2 where
 
 ----------------------------------------------------------
 -- Doppeltes Getyptes DeltaMap -- deltaMap ueber powerRecord
-
+{-
 class  StDeltaMap2 s1 s2 s3 c1 c2 c3 d1 d2 d3 where
       stdeltaMap2 :: (TC Scalar typ1 (Data Nil (d1,d1))-> TC Scalar typ2 (Data Nil (d2,d2)) -> TC Scalar typ3 (Data Nil d3))  ->  TC s1 typ1 (c1 d1) ->  TC s2 typ2 (c2 d2) ->  TC s3 typ3 (c3 d3)
+      stdeltaMap2Reverse :: (TC Scalar typ1 (Data Nil (d1,d1))-> TC Scalar typ2 (Data Nil (d2,d2)) -> TC Scalar typ3 (Data Nil d3))  ->  TC s1 typ1 (c1 d1) ->  TC s2 typ2 (c2 d2) ->  TC s3 typ3 (c3 d3)
+      
+instance (SArith s1 s1 s1, DZipWith c1 c1 c1 (d1, d1) (d2, d2) d3, DZipWith c1 c1 c1 d1 d1 (d1, d1), DZipWith c1 c1 c1 d2 d2 (d2, d2), STail s1 c1 d1, STail s1 c1 d2) =>  StDeltaMap2 s1 s1 s1 c1 c1 c1 d1 d2 d3 where
+  stdeltaMap2 f xs ys = changeSignalType $ (stzipWith f dxs dys)   
+    where dxs = szipWith ((,)) xs (stail xs)
+          dys = szipWith ((,)) ys (stail ys)
+  stdeltaMap2Reverse f xs ys = changeSignalType $ (stzipWith f dxs dys)   
+    where dxs = szipWith ((,)) (stail xs) xs
+          dys = szipWith ((,)) (stail ys) ys
+-} 
+
+class  StDeltaMap2 s1 s2 s3 c1 c2 c3 d1 d2 d3 where
+      stdeltaMap2 :: (TC Scalar typ1 (Data Nil (d1,d1))-> TC Scalar typ2 (Data Nil (d2,d2)) -> TC Scalar typ3 (Data Nil d3))  ->  TC s1 typ1 (c1 d1) ->  TC s2 typ2 (c2 d2) ->  (TC s3 typ3 (c3 d3),
       stdeltaMap2Reverse :: (TC Scalar typ1 (Data Nil (d1,d1))-> TC Scalar typ2 (Data Nil (d2,d2)) -> TC Scalar typ3 (Data Nil d3))  ->  TC s1 typ1 (c1 d1) ->  TC s2 typ2 (c2 d2) ->  TC s3 typ3 (c3 d3)
       
 instance (SArith s1 s1 s1, DZipWith c1 c1 c1 (d1, d1) (d2, d2) d3, DZipWith c1 c1 c1 d1 d1 (d1, d1), DZipWith c1 c1 c1 d2 d2 (d2, d2), STail s1 c1 d1, STail s1 c1 d2) =>  StDeltaMap2 s1 s1 s1 c1 c1 c1 d1 d2 d3 where
