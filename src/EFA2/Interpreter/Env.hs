@@ -5,6 +5,7 @@ module EFA2.Interpreter.Env where
 import Control.Monad.Error
 
 import qualified Data.Map as M
+import qualified Data.List as L
 
 -- | Variable types of the solver. The solver, in fact, is
 -- ignorant of the provenance of the variables. However, to
@@ -93,32 +94,17 @@ type StorageMap a = M.Map StorageIdx a
 
 
 
-data Envs a = Envs { energyMap :: EnergyMap a,
+data Envs a = Envs { recordNumber :: RecordNumber,
+                     energyMap :: EnergyMap a,
                      denergyMap :: DEnergyMap a,
                      powerMap :: PowerMap a,
                      dpowerMap :: DPowerMap a,
-                     -- etaMap :: EtaMap a,
                      fetaMap :: FEtaMap a,
                      detaMap :: DEtaMap a,
                      dtimeMap :: DTimeMap a,
                      xMap :: XMap a,
                      varMap :: VarMap a,
                      storageMap :: StorageMap a } deriving (Show)
-
-{-
-instance (Show a) => Show (Envs a) where
-         show envs = "Envs {\nenergyMap = " ++ show (energyMap envs) ++ ",\n" ++
-                     "denergyMap = " ++ show (denergyMap envs) ++ ",\n" ++
-                     "powerMap = " ++ show (powerMap envs) ++ ",\n" ++
-                     "dpowerMap = " ++ show (dpowerMap envs) ++ ",\n" ++
-                     "etaMap = " ++ show (etaMap envs) ++ ",\n" ++
-                     "etaFuncMap = <SORRY, FUNCTIONS!>,\n" ++
-                     "detaMap = " ++ show (detaMap envs) ++ ",\n" ++
-                     "dtimeMap = " ++ show (dtimeMap envs) ++ ",\n" ++
-                     "xMap = " ++ show (xMap envs) ++ ",\n" ++
-                     "varMap = " ++ show (varMap envs) ++ ",\n" ++
-                     "storageMap = " ++ show (storageMap envs) ++ "}"
--}
 
 
 instance (Show a) => Show (a -> a) where
@@ -131,11 +117,32 @@ instance Ord (a -> a) where
          compare _ _ = EQ
 
 emptyEnv :: Envs a
-emptyEnv = Envs M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty
+emptyEnv = Envs NoRecord M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty
 
+
+data RecordNumber = NoRecord
+                  | SingleRecord Int
+                  | MixedRecord [Int] deriving (Eq, Ord, Show)
+
+isSingleRecord :: RecordNumber -> Bool
+isSingleRecord (SingleRecord _) = True
+isSingleRecord _ = False
+
+fromSingleRecord :: RecordNumber -> Int
+fromSingleRecord (SingleRecord x) = x
+fromSingleRecord x = error $ "fromSingleRecord: not a single record: " ++ show x
+
+uniteRecordNumbers :: [RecordNumber] -> RecordNumber
+uniteRecordNumbers [] = NoRecord
+uniteRecordNumbers rs = L.foldl' f (MixedRecord []) rs
+  where f NoRecord _ = NoRecord
+        f _ NoRecord = NoRecord
+        f (MixedRecord xs) (SingleRecord x) = MixedRecord (xs ++ [x])
+        f (MixedRecord xs) (MixedRecord ys) = MixedRecord (xs ++ ys) 
 
 envUnion :: [Envs a] -> Envs a
-envUnion envs = Envs { energyMap = M.unions $ map energyMap envs,
+envUnion envs = Envs { recordNumber = uniteRecordNumbers (map recordNumber envs),
+                       energyMap = M.unions $ map energyMap envs,
                        denergyMap = M.unions $ map denergyMap envs,
                        powerMap = M.unions $ map powerMap envs,
                        dpowerMap = M.unions $ map dpowerMap envs,

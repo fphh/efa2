@@ -139,5 +139,5 @@ interpretEq len envs t = error ("interpretEq: " ++ showInTerm t)
 
 interpretFromScratch :: ( Show (c Val), SArith s s s, SMap c Val Val, DZipWith c c c Val Val Val,
                           FromToList c Val, TProd t t t, TSum t t t) => 
-                          Int -> [InTerm (TC s t (c Val))] -> Envs (TC s t (c Val))
-interpretFromScratch len ts = L.foldl' (interpretEq len) emptyEnv ts
+                          RecordNumber -> Int -> [InTerm (TC s t (c Val))] -> Envs (TC s t (c Val))
+interpretFromScratch rec len ts = (L.foldl' (interpretEq len) emptyEnv ts) { recordNumber = rec }

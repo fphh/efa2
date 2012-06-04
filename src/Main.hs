@@ -43,18 +43,22 @@ import EFA2.Example.LinearOne
 
 main :: IO ()
 main = do
-  let TheGraph g sigs = linearOne
-      (_, ts) = makeAllEquations g [envs0]
+  let TheGraph g _ = linearOne
 
-      envs0 = emptyEnv { energyMap = sigs0, dtimeMap = dtimes0, 
+      envs0 = emptyEnv { recordNumber = SingleRecord 0,
+                         energyMap = sigs0, 
+                         dtimeMap = dtimes0, 
                          fetaMap = M.fromList [(FEtaIdx 0 0 1 0, smap (const 0.8)), (FEtaIdx 0 0 0 1, smap (const 0.7))] }
 
-      envs1 = emptyEnv { energyMap = sigs1, dtimeMap = dtimes1, fetaMap = M.fromList [(FEtaIdx 0 1 1 0, id)] }
+      envs1 = emptyEnv { recordNumber = SingleRecord 1,
+                         energyMap = sigs1,
+                         dtimeMap = dtimes1,
+                         fetaMap = M.fromList [(FEtaIdx 0 1 1 0, smap (const 0.8)), (FEtaIdx 0 1 0 1, smap (const 0.7))] }
 
+      (envs, ts) = makeAllEquations g [envs0, envs1]
+      ts' = map (eqToInTerm envs) (order ts)
 
-      ts' = map (eqToInTerm envs0) (order ts)
-
-      res = interpretFromScratch 1 ts'
+      res = interpretFromScratch (recordNumber envs) 1 ts'
 
   putStrLn ("Number of nodes: " ++ show (noNodes g))
   putStrLn ("Number of edges: " ++ show (length $ edges g))
@@ -66,4 +70,6 @@ main = do
   putStrLn ("Number of undeq: " ++ show (length ts'))
   putStrLn ("Number of deq:   " ++ show (length ts'))
 
-  drawTopology g res
+  --drawTopology g res --  (res { recordNumber = SingleRecord 0 })
+  print envs
+  print (envUnion [envs0, envs1])

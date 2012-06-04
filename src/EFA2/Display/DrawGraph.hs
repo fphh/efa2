@@ -59,9 +59,15 @@ originalEdgeColour = Color [RGB 0 0 200]
 intersectionEdgeColour :: Attribute
 intersectionEdgeColour = Color [RGB 200 0 0]
 
+-- coding
+noRecord :: RecordNumber
+noRecord = SingleRecord (-99)
 
-mkDotGraph :: EfaGraph NLabel ELabel -> (Int -> Int -> String) -> (LNode NLabel -> String) -> (LEdge ELabel -> String) -> DotGraph Int
-mkDotGraph g timef nshow eshow =
+
+mkDotGraph :: EfaGraph NLabel ELabel -> RecordNumber -> (Int -> Int -> String) -> (LNode NLabel -> String) -> (LEdge ELabel -> String) -> DotGraph Int
+mkDotGraph g (MixedRecord _) timef nshow eshow = mkDotGraph g noRecord timef nshow eshow
+mkDotGraph g (NoRecord) timef nshow eshow = mkDotGraph g noRecord timef nshow eshow
+mkDotGraph g (SingleRecord recordNum) timef nshow eshow =
   DotGraph { strictGraph = False,
              directedGraph = True,
              graphID = Just (Int 1),
@@ -72,14 +78,13 @@ mkDotGraph g timef nshow eshow =
         cs = HTL.removeEach (L.groupBy sameSection (labNodes g))
         sameSection (_, l1) (_, l2) = sectionNLabel l1 == sectionNLabel l2
         comps = map sg cs
-        sg ns@(x:_, _) = DotSG True (Just (Int sl)) (ds sl rl ns)
+        sg ns@(x:_, _) = DotSG True (Just (Int sl)) (ds sl recordNum ns)
           where sl = sectionNLabel $ snd x
-                rl = recordNLabel $ snd x
         ds sl rl (ns, ms) = DotStmts gattrs [] xs ys
           where xs = map (mkDotNode nshow) ns
                 ys = map (mkDotEdge eshow) (labEdges (delNodes (map fst (concat ms)) g'))
                 gattrs = [GraphAttrs [Label (StrLabel (T.pack str))]]
-                str = "Section " ++ show sl ++ " / Record " ++ show rl ++ " / Time " ++ timef sl rl
+                str = "Section " ++ show sl ++ " / Record " ++ show recordNum ++ " / Time " ++ timef sl recordNum
         stmts = DotStmts { attrStmts = [],
                            subGraphs = comps,
                            nodeStmts = [],
@@ -103,11 +108,11 @@ mkDotEdge eshow e@(x, y, elabel) = DotEdge x y [displabel, edir, colour]
                | otherwise = originalEdgeColour
         --colour = originalEdgeColour
 
-printGraph :: EfaGraph NLabel ELabel -> (Int -> Int -> String) -> (LNode NLabel -> String) -> (LEdge ELabel -> String) -> IO ()
-printGraph g tshow nshow eshow = runGraphvizCanvas Dot (mkDotGraph g tshow nshow eshow) Xlib
+printGraph :: EfaGraph NLabel ELabel -> RecordNumber -> (Int -> Int -> String) -> (LNode NLabel -> String) -> (LEdge ELabel -> String) -> IO ()
+printGraph g recordNum tshow nshow eshow = runGraphvizCanvas Dot (mkDotGraph g recordNum tshow nshow eshow) Xlib
 
 drawTopologyX' :: Topology -> IO ()
-drawTopologyX' topo = printGraph g (const2 "♥") show show -- runGraphvizCanvas Dot (mkDotGraph g (show, show)) Xlib
+drawTopologyX' topo = printGraph g noRecord (const2 "♥") show show
   where g = unTopology topo
 
 {-
@@ -126,15 +131,14 @@ drawTopologyX (TheGraph g _) = printGraph g show show
 
 data Line = ELine Int Int
           | XLine Int Int
-          | NLine Int Int deriving (Eq, Ord)
-
+          | NLine Int Int
+          | ErrorLine String deriving (Eq, Ord)
 
 instance Show Line where
          show (ELine u v) = "e_" ++ show u ++ "_" ++ show v
          show (XLine u v) = "x_" ++ show u ++ "_" ++ show v
          show (NLine u v) = "n_" ++ show u ++ "_" ++ show v
-
-
+         show (ErrorLine str) = str
 
 
 -- The argument t is for node labels. Until now, it is not used.
@@ -164,33 +168,35 @@ instance DrawTopology [InTerm Val] where
 
 
 drawAbsTopology :: (Show a, Num a, Ord a) => ((Line, Maybe [a]) -> String) -> (Maybe [a] -> String) -> Topology -> Envs [a] ->  IO ()
-drawAbsTopology f content (Topology g) (Envs e de p dp fn dn dt x v st) = printGraph g tshow nshow eshow
-  where eshow ps = L.intercalate "\n" $ map f $ mkLst ps
+drawAbsTopology f content (Topology g) (Envs rec e de p dp fn dn dt x v st) = printGraph g rec tshow nshow eshow
+  where eshow ps = L.intercalate "\n" $ map f $ mkLst rec ps
         tshow s r = show $ dt M.! (DTimeIdx s r)
-        nshow (num, NLabel sec rec nid ty) = 
+        nshow (num, NLabel sec nid ty) = 
           "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\n" ++
-          "Type: " ++ show ty ++ stContent ty
-            where stContent (InitStorage n) = "\nContent: " ++ content (M.lookup (StorageIdx sec rec n) st)
-                  stContent (Storage n) = "\nContent: " ++ content (M.lookup (StorageIdx sec rec n) st)
-                  stContent _ = ""
+          "Type: " ++ show ty ++ stContent rec ty
+            where stContent (SingleRecord rec) (InitStorage n) 
+                    = "\nContent: " ++ content (M.lookup (StorageIdx sec rec n) st)
+                  stContent (SingleRecord rec) (Storage n) = "\nContent: " ++ content (M.lookup (StorageIdx sec rec n) st)
+                  stContent rn (InitStorage n) = "\nContent: Problem with record number: " ++ show rn
+                  stContent rn (Storage n) = "\nContent: Problem with record number: " ++ show rn
+                  stContent _ _ = ""
 
         node n = nodeNLabel (fromJust (lab g n))
-        mkLst (uid, vid, l) 
-          | isOriginalEdge l = [ (ELine uid vid, M.lookup (EnergyIdx usec urec uid vid) e), 
-                                 (XLine uid vid, M.lookup (XIdx usec urec uid vid) x),
-                                 --(NLine uid vid, M.lookup (FEtaIdx usec urec uid vid) fn <*> Just [1]),
+        mkLst (SingleRecord rec) (uid, vid, l)
+          | isOriginalEdge l = [ (ELine uid vid, M.lookup (EnergyIdx usec rec uid vid) e), 
+                                 (XLine uid vid, M.lookup (XIdx usec rec uid vid) x),
                                  ndirlab (flowDirection l),
-                                 --(NLine vid uid, M.lookup (FEtaIdx vsec vrec vid uid) fn <*> Just [1]),
-                                 (XLine vid uid, M.lookup (XIdx vsec vrec vid uid) x),
-                                 (ELine vid uid, M.lookup (EnergyIdx vsec vrec vid uid) e) ]
-          | isInnerStorageEdge l = [ (ELine vid uid, M.lookup (EnergyIdx vsec vrec vid uid) e) ]
-          | otherwise = [ (ELine uid vid, M.lookup (EnergyIdx usec urec uid vid) e),
-                          (XLine uid vid, M.lookup (XIdx usec urec uid vid) x),
-                          (ELine vid uid, M.lookup (EnergyIdx vsec vrec vid uid) e) ]
-          where NLabel usec urec _ _ = fromJust $ lab g uid
-                NLabel vsec vrec _ _ = fromJust $ lab g vid
-                ndirlab WithDir = (NLine vid uid, M.lookup (FEtaIdx vsec vrec vid uid) fn <*> Just [1])
-                ndirlab _ = (NLine uid vid, M.lookup (FEtaIdx usec urec uid vid) fn <*> Just [1])
+                                 (XLine vid uid, M.lookup (XIdx vsec rec vid uid) x),
+                                 (ELine vid uid, M.lookup (EnergyIdx vsec rec vid uid) e) ]
+          | isInnerStorageEdge l = [ (ELine vid uid, M.lookup (EnergyIdx vsec rec vid uid) e) ]
+          | otherwise = [ (ELine uid vid, M.lookup (EnergyIdx usec rec uid vid) e),
+                          (XLine uid vid, M.lookup (XIdx usec rec uid vid) x),
+                          (ELine vid uid, M.lookup (EnergyIdx vsec rec vid uid) e) ]
+          where NLabel usec _ _ = fromJust $ lab g uid
+                NLabel vsec _ _ = fromJust $ lab g vid
+                ndirlab WithDir = (NLine vid uid, M.lookup (FEtaIdx vsec rec vid uid) fn <*> Just [1])
+                ndirlab _ = (NLine uid vid, M.lookup (FEtaIdx usec rec uid vid) fn <*> Just [1])
+        mkLst _ _ = [ (ErrorLine "Problem with record number", Nothing) ]
 
 
 instance DrawTopology UTFSig where
@@ -198,44 +204,45 @@ instance DrawTopology UTFSig where
            where f (x@(ELine _ _), Just (TC ys)) = show x ++ " = " ++ sdisp (TC ys :: FSig)
                  f (x@(XLine _ _), Just (TC ys)) = show x ++ " = " ++ sdisp (TC ys :: FSig1 (Typ A X Tt) Val)
                  f (x@(NLine _ _), Just (TC ys)) = show x ++ " = " ++ sdisp (TC ys :: FSig1 (Typ A N Tt) Val)
-
+                 f (ErrorLine str, _) = str
                  f (x, Nothing) = show x ++ " = ♥"
                  formatStCont (Just ys) = sdisp ys
                  formatStCont Nothing = "♥"
 
 
 drawAbsTopology' :: ((Line, Maybe UTFSig) -> String) -> (Maybe UTFSig -> String) -> Topology -> Envs UTFSig ->  IO ()
-drawAbsTopology' f content (Topology g) (Envs e de p dp fn dn dt x v st) = printGraph g tshow nshow eshow
-  where eshow ps = L.intercalate "\n" $ map f $ mkLst ps
+drawAbsTopology' f content (Topology g) (Envs rec e de p dp fn dn dt x v st) = printGraph g rec tshow nshow eshow
+  where eshow ps = L.intercalate "\n" $ map f $ mkLst rec ps
         tshow s r = case M.lookup (DTimeIdx s r) dt of
                          Just (TC ts) -> sdisp (TC ts :: FSig1 (Typ D T Tt) Val)
                          Nothing -> "♥"
-        nshow (num, NLabel sec rec nid ty) = 
+        nshow (num, NLabel sec nid ty) = 
           "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\n" ++
-          "Type: " ++ show ty ++ stContent ty
-            where stContent (InitStorage n) = "\nContent: " ++ content (M.lookup (StorageIdx sec rec n) st)
-                  stContent (Storage n) = "\nContent: " ++ content (M.lookup (StorageIdx sec rec n) st)
-                  stContent _ = ""
+          "Type: " ++ show ty ++ stContent rec ty
+            where stContent (SingleRecord rec) (InitStorage n) = "\nContent: " ++ content (M.lookup (StorageIdx sec rec n) st)
+                  stContent (SingleRecord rec) (Storage n) = "\nContent: " ++ content (M.lookup (StorageIdx sec rec n) st)
+                  stContent rn (InitStorage n) = "\nContent: Problem with record number: " ++ show rn
+                  stContent rn (Storage n) = "\nContent: Problem with record number: " ++ show rn
+                  stContent _ _ = ""
 
         node n = nodeNLabel (fromJust (lab g n))
-        mkLst (uid, vid, l) 
-          | isOriginalEdge l = [ (ELine uid vid, M.lookup (EnergyIdx usec urec uid vid) e), 
-                                 (XLine uid vid, M.lookup (XIdx usec urec uid vid) x),
-                                 --(NLine uid vid, M.lookup (FEtaIdx usec urec uid vid) fn <*> e1),
+        mkLst (SingleRecord rec) (uid, vid, l)
+          | isOriginalEdge l = [ (ELine uid vid, M.lookup (EnergyIdx usec rec uid vid) e), 
+                                 (XLine uid vid, M.lookup (XIdx usec rec uid vid) x),
                                  ndirlab (flowDirection l),
-                                 --(NLine vid uid, M.lookup (FEtaIdx vsec vrec vid uid) fn <*> e2),
-                                 (XLine vid uid, M.lookup (XIdx vsec vrec vid uid) x),
-                                 (ELine vid uid, M.lookup (EnergyIdx vsec vrec vid uid) e) ]
-          | isInnerStorageEdge l = [ (ELine vid uid, M.lookup (EnergyIdx vsec vrec vid uid) e) ]
-          | otherwise = [ (ELine uid vid, M.lookup (EnergyIdx usec urec uid vid) e),
-                          (XLine uid vid, M.lookup (XIdx usec urec uid vid) x),
-                          (ELine vid uid, M.lookup (EnergyIdx vsec vrec vid uid) e) ]
-          where NLabel usec urec _ _ = fromJust $ lab g uid
-                NLabel vsec vrec _ _ = fromJust $ lab g vid
-                e1 = M.lookup (EnergyIdx usec urec uid vid) e
-                e2 = M.lookup (EnergyIdx vsec vrec vid uid) e
-                ndirlab AgainstDir = (NLine vid uid, M.lookup (FEtaIdx vsec vrec vid uid) fn <*> e1)
-                ndirlab _ = (NLine uid vid, M.lookup (FEtaIdx usec urec uid vid) fn <*> e2)
+                                 (XLine vid uid, M.lookup (XIdx vsec rec vid uid) x),
+                                 (ELine vid uid, M.lookup (EnergyIdx vsec rec vid uid) e) ]
+          | isInnerStorageEdge l = [ (ELine vid uid, M.lookup (EnergyIdx vsec rec vid uid) e) ]
+          | otherwise = [ (ELine uid vid, M.lookup (EnergyIdx usec rec uid vid) e),
+                          (XLine uid vid, M.lookup (XIdx usec rec uid vid) x),
+                          (ELine vid uid, M.lookup (EnergyIdx vsec rec vid uid) e) ]
+          where NLabel usec _ _ = fromJust $ lab g uid
+                NLabel vsec _ _ = fromJust $ lab g vid
+                e1 = M.lookup (EnergyIdx usec rec uid vid) e
+                e2 = M.lookup (EnergyIdx vsec rec vid uid) e
+                ndirlab AgainstDir = (NLine vid uid, M.lookup (FEtaIdx vsec rec vid uid) fn <*> e1)
+                ndirlab _ = (NLine uid vid, M.lookup (FEtaIdx usec rec uid vid) fn <*> e2)
+        mkLst _ _ = [ (ErrorLine "No single record number!", Nothing) ]
 
 {-
 instance DrawTopology InTerm where

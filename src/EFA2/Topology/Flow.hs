@@ -110,8 +110,10 @@ mkSequenceTopology sd = res
 
         maxNode = 1 + (snd $ nodeRange sqTopo)
         startNodes = map f (zip (pairs [maxNode..]) storeLabs)
-        f ((nid1, nid2), NLabel _ rec n (Storage sn)) =
-          [ (nid1, NLabel (-1) rec n (InitStorage sn)), (nid2, NLabel (-1) rec (-1) Source) ]
+--        f ((nid1, nid2), NLabel _ rec n (Storage sn)) =
+--          [ (nid1, NLabel (-1) rec n (InitStorage sn)), (nid2, NLabel (-1) rec (-1) Source) ]
+        f ((nid1, nid2), NLabel _ n (Storage sn)) =
+          [ (nid1, NLabel (-1) n (InitStorage sn)), (nid2, NLabel (-1) (-1) Source) ]
 
         interSecEs = concatMap (uncurry (mkIntersectionEdges sqTopo)) (zip (map head startNodes) grpStores)
 

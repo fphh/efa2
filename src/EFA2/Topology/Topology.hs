@@ -26,7 +26,7 @@ import EFA2.Utils.Utils
 
 makeNodes :: [(Int, NodeType)] -> [LNode NLabel]
 makeNodes ns = map f ns
-  where f (n, ty) = (n, NLabel 0 0 n ty)
+  where f (n, ty) = (n, NLabel 0 n ty)
 
 makeEdges :: [(Int, Int, ELabel)] -> [LEdge ELabel]
 makeEdges es = map f es
@@ -41,70 +41,89 @@ makeWithDirEdges es = map f es
 ------------------------------------------------------------------------
 -- Making equations:
 
+missingRecordNumbers :: [Envs a] -> Bool
+missingRecordNumbers envs = not $ and bs
+  where bs = map (isSingleRecord . recordNumber) envs
+
+
 -- TODO: Check that envUnion preserves all variables.
 makeAllEquations :: (Show a) => Topology -> [Envs a] -> (Envs a, [EqTerm])
-makeAllEquations topo envs = (envUnion envs', ts)
-  where ts = mkEdgeEq dirTopo ++ mkNodeEq dirTopo ++ interTs  ++ powerEqs ++ enveqs
+makeAllEquations topo envs | missingRecordNumbers envs = 
+  error ("makeAllEquations: only single records are allowed in " ++ show envs)
+makeAllEquations topo envs = ((envUnion envs') { recordNumber = MixedRecord newRecNums }, ts)
+  where newRecNums = map (fromSingleRecord . recordNumber) envs
+        recNum env = fromSingleRecord $ recordNumber env
         dirTopo = makeDirTopology topo
 
-        interTs = mkIntersectionEqs dirTopo
+        ts = edgeEqs ++ nodeEqs ++ interEqs  ++ powerEqs ++ envEqs
 
+        edgeEqs = concatMap mkEdEq envs
+        mkEdEq env = mkEdgeEq (recNum env) dirTopo
+
+        nodeEqs = concatMap mkNdEq envs
+        mkNdEq env = mkNodeEq (recNum env) dirTopo
+
+        interEqs = concatMap mkInterEqs envs
+        mkInterEqs env = mkIntersectionEqs (recNum env) dirTopo
+
+        powerEqs = concatMap mkPowEqs envs
+        mkPowEqs env = mkPowerEqs (recNum env) dirTopo
+
+        envEqs = concatMap f envs'
         m = M.fromList $ map g (labNodes topo)
-        g (nid, NLabel s r oldNid _) = ((s, r, oldNid), nid)
+        g (nid, NLabel s oldNid _) = ((s, oldNid), nid)
         envs' = map (shiftIndices m) envs
-        
-        powerEqs = mkPowerEqs dirTopo
-        enveqs = concatMap f envs'
-        f (Envs e de p dp fn dn t x v st) = envToEqTerms e
-                                            ++ envToEqTerms de
-                                            ++ envToEqTerms p
-                                            ++ envToEqTerms dp
-                                            ++ envToEqTerms fn
-                                            ++ envToEqTerms dn
-                                            ++ envToEqTerms t
-                                            ++ envToEqTerms x
-                                            ++ envToEqTerms v
-                                            ++ envToEqTerms st
+        f (Envs _ e de p dp fn dn t x v st) = envToEqTerms e
+                                              ++ envToEqTerms de
+                                              ++ envToEqTerms p
+                                              ++ envToEqTerms dp
+                                              ++ envToEqTerms fn
+                                              ++ envToEqTerms dn
+                                              ++ envToEqTerms t
+                                              ++ envToEqTerms x
+                                              ++ envToEqTerms v
+                                              ++ envToEqTerms st
 
 
-shiftIndices :: (Show a) => M.Map (Int, Int, Int) Node -> Envs a -> Envs a
-shiftIndices m (Envs e de p dp fn dn t x v st) = Envs e' de' p' dp' fn' dn' t x' v' st'
+shiftIndices :: (Show a) => M.Map (Int, Int) Node -> Envs a -> Envs a
+shiftIndices m (Envs (SingleRecord rec) e de p dp fn dn t x v st) =
+  Envs (SingleRecord rec) e' de' p' dp' fn' dn' t x' v' st'
   where e' = M.mapKeys ef e
-        ef (EnergyIdx s r f t) = EnergyIdx s r (m `safeLookup` (s, r, f)) (m `safeLookup` (s, r, t))
+        ef (EnergyIdx s _ f t) = EnergyIdx s rec (m `safeLookup` (s, f)) (m `safeLookup` (s, t))
 
         de' = M.mapKeys def de
-        def (DEnergyIdx s r f t) = DEnergyIdx s r (m `safeLookup` (s, r, f)) (m `safeLookup` (s, r, t))
+        def (DEnergyIdx s _ f t) = DEnergyIdx s rec (m `safeLookup` (s, f)) (m `safeLookup` (s, t))
 
         p' = M.mapKeys pf p
-        pf (PowerIdx s r f t) = PowerIdx s r (m `safeLookup` (s, r, f)) (m `safeLookup` (s, r, t))
+        pf (PowerIdx s _ f t) = PowerIdx s rec (m `safeLookup` (s, f)) (m `safeLookup` (s, t))
 
         dp' = M.mapKeys dpf dp
-        dpf (DPowerIdx s r f t) = DPowerIdx s r (m `safeLookup` (s, r, f)) (m `safeLookup` (s, r, t))
+        dpf (DPowerIdx s _ f t) = DPowerIdx s rec (m `safeLookup` (s, f)) (m `safeLookup` (s, t))
 
         fn' = M.mapKeys fnf fn
-        fnf (FEtaIdx s r f t) = FEtaIdx s r (m `safeLookup` (s, r, f)) (m `safeLookup` (s, r, t))
+        fnf (FEtaIdx s _ f t) = FEtaIdx s rec (m `safeLookup` (s, f)) (m `safeLookup` (s, t))
 
         dn' = M.mapKeys dnf dn
-        dnf (DEtaIdx s r f t) = DEtaIdx s r (m `safeLookup` (s, r, f)) (m `safeLookup` (s, r, t))
+        dnf (DEtaIdx s _ f t) = DEtaIdx s rec (m `safeLookup` (s, f)) (m `safeLookup` (s, t))
 
         x' = M.mapKeys xf x
-        xf (XIdx s r f t) = XIdx s r (m `safeLookup` (s, r, f)) (m `safeLookup` (s, r, t))
+        xf (XIdx s _ f t) = XIdx s rec (m `safeLookup` (s, f)) (m `safeLookup` (s, t))
 
         v' = M.mapKeys vf v
-        vf (VarIdx s r f t) = VarIdx s r (m `safeLookup` (s, r, f)) (m `safeLookup` (s, r, t))
+        vf (VarIdx s _ f t) = VarIdx s rec (m `safeLookup` (s, f)) (m `safeLookup` (s, t))
 
         st' = M.mapKeys stf st
-        stf (StorageIdx s r sto) = StorageIdx s r (m `safeLookup` (s, r, sto))
+        stf (StorageIdx s _ sto) = StorageIdx s rec (m `safeLookup` (s, sto))
 
 
 envToEqTerms :: (MkVarC k) => M.Map k v -> [EqTerm]
 envToEqTerms m = map (give . fst) (M.toList m)
 
-mkPowerEqs :: Topology -> [EqTerm]
-mkPowerEqs topo = concat $ mapGraph mkPEqs topo
+mkPowerEqs :: Int -> Topology -> [EqTerm]
+mkPowerEqs rec topo = concat $ mapGraph (mkPEqs rec) topo
 
-mkPEqs :: ([LNode NLabel], LNode NLabel, [LNode NLabel]) -> [EqTerm]
-mkPEqs (ins, n@(nid, NLabel sec rec _ _), outs) = ieqs ++ oeqs
+mkPEqs :: Int -> ([LNode NLabel], LNode NLabel, [LNode NLabel]) -> [EqTerm]
+mkPEqs rec (ins, n@(nid, NLabel sec _ _), outs) = ieqs ++ oeqs
   where dt = DTime $ DTimeIdx sec rec
         eis = map (makeVar EnergyIdx) ins
         eos = map (makeVar EnergyIdx) outs
@@ -116,85 +135,86 @@ mkPEqs (ins, n@(nid, NLabel sec rec _ _), outs) = ieqs ++ oeqs
         f e p = e := p :* dt 
 
 
-mkIntersectionEqs :: Topology -> [EqTerm]
-mkIntersectionEqs topo = concat inEqs ++ concat outEqs ++ stContentEqs
+mkIntersectionEqs :: Int -> Topology -> [EqTerm]
+mkIntersectionEqs recordNum topo = concat inEqs ++ concat outEqs ++ stContentEqs
   where actStores = getActiveStores topo 
         inouts = map (partitionInOutStatic topo) actStores
         (ins, outs) = unzip inouts
-        inEqs = concatMap (map mkInStoreEqs) ins
-        outEqs = concatMap (map mkOutStoreEqs) outs
-        stContentEqs = concatMap mkStoreEqs inouts
+        inEqs = concatMap (map (mkInStoreEqs recordNum)) ins
+        outEqs = concatMap (map (mkOutStoreEqs recordNum)) outs
+        stContentEqs = concatMap (mkStoreEqs recordNum) inouts
 
 data IOStore = InStore (LNode NLabel)
              | OutStore (LNode NLabel) deriving (Show)
 
-mkStoreEqs :: ([InOutGraphFormat (LNode NLabel)], [InOutGraphFormat (LNode NLabel)]) -> [EqTerm]
-mkStoreEqs (ins, outs) = startEq:eqs
+mkStoreEqs :: Int -> ([InOutGraphFormat (LNode NLabel)], [InOutGraphFormat (LNode NLabel)]) -> [EqTerm]
+mkStoreEqs recordNum (ins, outs) = startEq:eqs
   where ins' = map (InStore . snd3) ins
         outs' = map (OutStore . snd3) outs
         both@(b:_) = L.sortBy  (compare `on` f) $ ins' ++ outs'
         f (InStore (_, l)) = sectionNLabel l
         f (OutStore (_, l)) = sectionNLabel l
         startEq = k b
-        k (InStore (nid, NLabel sec rec _ (InitStorage st))) =
-          mkVar (StorageIdx sec rec st) := mkVar (VarIdx sec rec nid 0)
+        k (InStore (nid, NLabel sec _ (InitStorage st))) =
+          mkVar (StorageIdx sec recordNum st) := mkVar (VarIdx sec recordNum nid 0)
         eqs = map (g . h) (pairs both)
         h (InStore x, y) = (x, y)
         h (OutStore x, y) = (x, y)
-        g ((nid, NLabel sec rec _ st), InStore (nid', NLabel sec' rec' _ st')) = 
-          mkVar (StorageIdx sec' rec' (getStorageNumber st')) := 
-            mkVar (VarIdx sec' rec' nid' 0) :+ mkVar (StorageIdx sec rec (getStorageNumber st))
-        g ((nid, NLabel sec rec _ st), OutStore (nid', NLabel sec' rec' _ st')) = 
-          mkVar (StorageIdx sec' rec' (getStorageNumber st')) := 
-            Minus (mkVar (VarIdx sec' rec' nid' 1)) :+ mkVar (StorageIdx sec rec (getStorageNumber st))
+        g ((nid, NLabel sec _ st), InStore (nid', NLabel sec' _ st')) = 
+          mkVar (StorageIdx sec' recordNum (getStorageNumber st')) := 
+            mkVar (VarIdx sec' recordNum nid' 0) :+ mkVar (StorageIdx sec recordNum (getStorageNumber st))
+        g ((nid, NLabel sec _ st), OutStore (nid', NLabel sec' _ st')) = 
+          mkVar (StorageIdx sec' recordNum (getStorageNumber st')) := 
+            Minus (mkVar (VarIdx sec' recordNum nid' 1)) :+ mkVar (StorageIdx sec recordNum (getStorageNumber st))
 
 
 
-mkInStoreEqs :: InOutGraphFormat (LNode NLabel) -> [EqTerm]
-mkInStoreEqs (ins, n@(nid, NLabel sec rec _ _), outs@((o,_):_)) = (startEq:osEqs)
-  where startEq = mkVar (VarIdx sec rec nid 0) := mkVar (EnergyIdx sec rec nid o)
+mkInStoreEqs :: Int -> InOutGraphFormat (LNode NLabel) -> [EqTerm]
+mkInStoreEqs recordNum (ins, n@(nid, NLabel sec _ _), outs@((o,_):_)) = (startEq:osEqs)
+  where startEq = mkVar (VarIdx sec recordNum nid 0) := mkVar (EnergyIdx sec recordNum nid o)
         osEqs = map f (pairs outs)
-        f (x, y) = mkVar (EnergyIdx sec rec nid y') := 
-                     mkVar (EnergyIdx sec rec nid x') :+ (Minus (mkVar (EnergyIdx xs xr x' nid)))
-          where (x', NLabel xs xr _ _) = x
+        f (x, y) = mkVar (EnergyIdx sec recordNum nid y') := 
+                     mkVar (EnergyIdx sec recordNum nid x') :+ (Minus (mkVar (EnergyIdx xs recordNum x' nid)))
+          where (x', NLabel xs _ _) = x
                 (y', _) = y
-mkInStoreEqs _ = []
+mkInStoreEqs _ _ = []
 
 
-mkOutStoreEqs :: InOutGraphFormat (LNode NLabel) -> [EqTerm]
-mkOutStoreEqs (ins, n@(nid, NLabel sec rec _ _), o:_) = visumeq:xeqs ++ eieqs
+mkOutStoreEqs :: Int -> InOutGraphFormat (LNode NLabel) -> [EqTerm]
+mkOutStoreEqs recordNum (ins, n@(nid, NLabel sec _ _), o:_) = visumeq:xeqs ++ eieqs
   where xis = map (makeVar XIdx) ins
         eis = map (makeVar EnergyIdx) ins
-        makeVar mkIdx (nid', l) = mkVar $ mkIdx (sectionNLabel l) (recordNLabel l) nid' nid
+        makeVar mkIdx (nid', l) = mkVar $ mkIdx (sectionNLabel l) recordNum nid' nid
 
-        visum = mkVar (VarIdx sec rec nid 2)
+        visum = mkVar (VarIdx sec recordNum nid 2)
         visumeq = visum := add eis
 
         xeqs = zipWith g xis eis
         g x e = x := e :* Recip visum
 
         eis' = map (makeVar' EnergyIdx) ins
-        makeVar' mkIdx (nid', _) = mkVar $ mkIdx sec rec nid nid'
+        makeVar' mkIdx (nid', _) = mkVar $ mkIdx sec recordNum nid nid'
 
-        outv = mkVar (VarIdx sec rec nid 1)
+        outv = mkVar (VarIdx sec recordNum nid 1)
         eieqs = zipWith h eis' xis
         h e x = e := x :* outv
-mkOutStoreEqs _ = []
+mkOutStoreEqs _ _ = []
 
 -- | Takes section, record, and a graph.
-mkEdgeEq :: Topology -> [EqTerm]
-mkEdgeEq topo = map f (map unlabelEdge origEs)
+mkEdgeEq :: Int -> Topology -> [EqTerm]
+mkEdgeEq recordNum topo = map f (map unlabelEdge origEs)
   where origEs = L.filter (\(_, _, l) -> not $ isIntersectionEdge l) (labEdges topo)
-        f (x, y) = mkVar (PowerIdx ys yr y x) := (mkVar (PowerIdx xs xr x y)) :* (mkVar (FEtaIdx xs xr x y))
-          where NLabel xs xr _ _ = fromJust $ lab topo x
-                NLabel ys yr _ _ = fromJust $ lab topo y
+        f (x, y) = mkVar (PowerIdx ys recordNum y x) :=
+                         (mkVar (PowerIdx xs recordNum x y)) :* (mkVar (FEtaIdx xs recordNum x y))
+          where NLabel xs _ _ = fromJust $ lab topo x
+                NLabel ys _ _ = fromJust $ lab topo y
 
-mkNodeEq :: Topology -> [EqTerm]
-mkNodeEq topo = concat $ mapGraph mkEq (elfilter cond topo)
+mkNodeEq :: Int -> Topology -> [EqTerm]
+mkNodeEq recordNum topo = concat $ mapGraph (mkEq recordNum) (elfilter cond topo)
   where cond x = isOriginalEdge x || isInnerStorageEdge x
 
-mkEq :: ([LNode NLabel], LNode NLabel, [LNode NLabel]) -> [EqTerm]
-mkEq (ins, n@(nid, NLabel sec rec _ _), outs)
+mkEq :: Int -> ([LNode NLabel], LNode NLabel, [LNode NLabel]) -> [EqTerm]
+mkEq recordNum (ins, n@(nid, NLabel sec _ _), outs)
   | length ins == 0 && length outs == 0 = []
   | length ins == 0 && length outs > 0 = xoeqs ++ oeqs' ++ vosumeq
   | length ins > 0 && length outs == 0 = xieqs ++ ieqs' ++ visumeq
@@ -204,21 +224,20 @@ mkEq (ins, n@(nid, NLabel sec rec _ _), outs)
         eis = map (makeVar EnergyIdx) ins
         eos = map (makeVar EnergyIdx) outs
         -- For section and record, we focus on the current node n.
-        makeVar mkIdx (nid', _) = mkVar $ mkIdx sec rec nid nid'
+        makeVar mkIdx (nid', _) = mkVar $ mkIdx sec recordNum nid nid'
 
-        visum = mkVar (VarIdx sec rec nid 0) -- ATTENTION (not very safe): We need this variable in mkInStoreEq again!!!
+        -- ATTENTION (not very safe): We need this variable in mkInStoreEq again!!!
+        visum = mkVar (VarIdx sec recordNum nid 0) 
         visumeq = [visum := add eis]
 
-        vosum = mkVar (VarIdx sec rec nid 1) -- ATTENTION (not very safe): We need this variable in mkOutStoreEq again!!!
+        -- ATTENTION (not very safe): We need this variable in mkOutStoreEq again!!!
+        vosum = mkVar (VarIdx sec recordNum nid 1)
         vosumeq = [vosum := add eos]
-
 
         pis = map (makeVar PowerIdx) ins
         pos = map (makeVar PowerIdx) outs
 
         pisumeq = [add pos := add pis]
-
-
 
         ieqs = zipWith3 f eis xis (repeat vosum)
         oeqs = zipWith3 f eos xos (repeat visum)
