@@ -161,7 +161,7 @@ instance (VWalker v2 (v1 d1) (v1 d2)) => D1Fold (Data (v2 :> v1 :> Nil)) v1 d1 d
 
 ----------------------------------------------------------
 -- Monoid
-{-
+
 instance (VSingleton v1 d) => Monoid (Data (v1 :> Nil) d) where
    mempty = Data $ D1 $ vempty        
    mappend (Data (D1 x)) (Data (D1 y)) = Data $ D1 $ vappend x y    
@@ -169,7 +169,7 @@ instance (VSingleton v1 d) => Monoid (Data (v1 :> Nil) d) where
 instance (VSingleton v2 (v1 d)) => Monoid (Data (v2 :> v1 :> Nil) d) where
    mempty = Data $ D2 $ vempty        
    mappend (Data (D2 x)) (Data (D2 y)) = Data $ D2 $ vappend x y    
--}
+
 
 class DAppend c1 c2 c3 d | c1 c2 -> c3  where 
   dappend :: c1 d -> c2 d -> c3 d
@@ -211,7 +211,7 @@ class DFromList c d where
   dfromList :: [d] -> c d
   dtoList :: c d -> [d] 
   
-instance  (UV.Unbox d,VFromList v d) => DFromList (Data (v :> Nil)) d where  
+instance  (VFromList v d) => DFromList (Data (v :> Nil)) d where  
   dfromList x = Data $ D1 $ vfromList x
   dtoList (Data (D1 x)) = vtoList x
   

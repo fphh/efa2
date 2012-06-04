@@ -21,7 +21,7 @@ infix 7 ..*, ../
 infix 6 ..+, ..-
 
 -- | Calculation classes for basic Datatypes
-class BProd d1 d2 d3 | d1 d2 -> d3 where
+class BProd d1 d2 d3 | d1 d2 -> d3  where
  (..*) ::  d1 ->  d2 -> d3
  (../) ::  d1 -> d2 -> d3
  
@@ -36,6 +36,7 @@ instance BProd Val Bool Val where
  (../) x False = 0
  (../) x True = x
  
+
 instance BProd Bool Bool Bool where
 -- And  
  (..*) x True = x

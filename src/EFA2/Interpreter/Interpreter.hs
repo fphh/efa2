@@ -76,14 +76,17 @@ showInTerm (InEqual s t) = showInTerm s ++ " = " ++ showInTerm t
 showInTerms :: (Show a) => [InTerm a] -> String
 showInTerms ts = L.intercalate "\n" $ map showInTerm ts
 
-
+{-
 interpretRhs :: ( SArith s s s, SMap c Val Val, TProd t t t, TSum t t t, DZipWith c c c Val Val Val,
-                  FromToList c Val, Show (c Val)) =>
+                  DFromList c Val, Show (c Val)) =>
                   Int -> Envs (TC s t (c Val)) -> InTerm (TC s t (c Val)) -> TC s t (c Val)
+
+-}
 interpretRhs len envs term = interpretRhs' term
   where --interpretRhs' (InConst x) = sfromVal len [x] -- Wichtig für delta Rechnung?
         --interpretRhs' (InGiven xs) = smap (:[]) xs
-        interpretRhs' (InConst x) = sfromVal len x
+        --interpretRhs' (InConst x) = sfromVal len x
+        interpretRhs' (InConst x) = toConst len x
         interpretRhs' (InGiven xs) = xs
         interpretRhs' (EIdx idx) = energyMap envs `safeLookup` idx
         interpretRhs' (DEIdx idx) = denergyMap envs `safeLookup` idx
@@ -104,17 +107,18 @@ interpretRhs len envs term = interpretRhs' term
         interpretRhs' (InAdd s t) = (interpretRhs' s) .+ (interpretRhs' t)
         interpretRhs' (InMult s t) = (interpretRhs' s) .* (interpretRhs' t)
         interpretRhs' t = error (show t)
-
-
+{-
 insert :: ( SArith s s s, SMap c Val Val, TProd t t t, TSum t t t, DZipWith c c c Val Val Val,
-            FromToList c Val, Show (c Val), Ord k) =>
+            DFromList c Val, Show (c Val), Ord k) =>
             Int -> k -> Envs (TC s t (c Val)) -> InTerm (TC s t (c Val)) -> M.Map k (TC s t (c Val)) -> M.Map k (TC s t (c Val))
+-}
 insert len idx envs rhs m = M.insert idx (interpretRhs len envs rhs) m
 
-
+{-
 interpretEq :: ( SArith s s s, SMap c Val Val, TProd t t t, TSum t t t,
-                 DZipWith c c c Val Val Val, FromToList c Val, Show (c Val)) =>
+                 DZipWith c c c Val Val Val, DFromList c Val, Show (c Val)) =>
                  Int -> Envs (TC s t (c Val)) -> InTerm (TC s t (c Val)) -> Envs (TC s t (c Val))
+-}
 interpretEq len envs (InEqual (EIdx idx) rhs) = envs { energyMap = insert len idx envs rhs (energyMap envs) }
 interpretEq len envs (InEqual (DEIdx idx) rhs) = envs { denergyMap = insert len idx envs rhs (denergyMap envs) }
 interpretEq len envs (InEqual (PIdx idx) rhs) = envs { powerMap = insert len idx envs rhs (powerMap envs) }
@@ -136,8 +140,9 @@ interpretEq len envs (InEqual (SIdx idx) rhs) = envs { storageMap = insert len i
 interpretEq len envs t = error ("interpretEq: " ++ showInTerm t)
 
 
-
+{-
 interpretFromScratch :: ( Show (c Val), SArith s s s, SMap c Val Val, DZipWith c c c Val Val Val,
-                          FromToList c Val, TProd t t t, TSum t t t) => 
+                          DFromList c Val, TProd t t t, TSum t t t) => 
                           Int -> [InTerm (TC s t (c Val))] -> Envs (TC s t (c Val))
+-}
 interpretFromScratch len ts = L.foldl' (interpretEq len) emptyEnv ts

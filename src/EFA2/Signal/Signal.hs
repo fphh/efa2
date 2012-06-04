@@ -206,6 +206,19 @@ fromScalar (TC (Data (D0 x))) = x
 toScalar :: d -> TC Scalar typ (Data Nil d) 
 toScalar x = TC $ Data $ D0 x
 
+
+class SConst s c d where 
+      toConst :: Int -> d -> TC s (Typ UT UT UT) (c d) 
+  
+instance (VFromList v1 Double) => SConst Signal (Data (v1 :> Nil)) Val where   
+         toConst len x =  sfromVal len x
+  
+instance (VFromList v1 Double) => SConst FSignal (Data (v1 :> Nil)) Val where   
+         toConst len x =  sfromVal len x
+
+instance SConst Scalar (Data Nil) Val where   
+         toConst len x =  toScalar x
+
 getSigVec :: TC Signal typ (Data (v1 :> Nil) d) -> v1 d
 getSigVec (TC (Data (D1 x))) = x
 
@@ -356,15 +369,16 @@ instance (DTranspose c d) => STranspose FSample FSignal  c d
 
 ----------------------------------------------------------
 -- Monoid
-{-
+
 instance Monoid c => Monoid (TC s typ c) where
   mempty = TC $ mempty
   mappend (TC x) (TC y) = TC $ mappend x y 
--} 
+ 
 
 class DAppend c1 c2 c3 d => SAppend s1 s2 s3 c1 c2 c3 d | s1 s2 -> s3 where
   sappend :: TC s1 t (c1 d) -> TC s2 t (c2 d) -> TC s3 t (c3 d)
   sappend (TC x) (TC y) = TC $ dappend x y   
+
   
 instance DAppend c1 c2 c3 d => SAppend Signal Signal Signal c1 c2 c3 d 
 instance DAppend c1 c2 c3 d => SAppend Signal Sample Signal c1 c2 c3 d
