@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, TypeOperators, ScopedTypeVariables,GADTs, FlexibleContexts #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, TypeOperators #-}
 
 module EFA2.Signal.Sequence where
 
@@ -27,7 +27,7 @@ import EFA2.Utils.Utils
 
 
 import Debug.Trace
-import Data.Monoid
+
 
 data StepType = LeavesZeroStep
               | BecomesZeroStep
@@ -39,9 +39,8 @@ data EventType = LeftEvent
                | MixedEvent
                | NoEvent
 
-type PSample = Val
-type PSampleRow = TC Sample (Typ A P Tt) (UVec Val)
-type TSample = TC Sample (Typ D T Tt) (DVal Val)
+type PSampleRow = [PSample] --TC Sample (Typ A P Tt) (UVec Val)
+type TSample = Val -- TC Sample (Typ D T Tt) (DVal Val)
 
 -- | XSample contains time and values of all power signals for one time step 
 type XSample = (TSample, PSampleRow)
@@ -49,7 +48,7 @@ type XSample = (TSample, PSampleRow)
 -- | Xlist = list of all xSamples
 type XSig =  [XSample] 
 
-{-
+
 -- | From PowerRecord
 --fromFlowRecord :: SecIdx -> RecIdx -> FlowRecord -> Envs FSig -- [Val]
 
@@ -63,13 +62,13 @@ fromFlowRecord (SecIdx secIdx) (RecIdx recIdx) fRec@(FlRecord dTime flowMap) =
 
 
 -- | Pre-Integrate all Signals in Record  
-recFullIntegrate :: SecPowerRecord -> FlowRecord
-recFullIntegrate pRec@(SecPowerRecord time pMap) = FlRecord (sfromList [fromScalar $ sigSum $ deltaSig time]) fMap
+recFullIntegrate :: PowerRecord -> FlowRecord
+recFullIntegrate pRec@(PowerRecord time pMap) = FlRecord (sfromList [fromScalar $ sigSum $ deltaSig time]) fMap
   where fMap = M.map (sigFullInt time) pMap  
 
 -- | Pre-Integrate all Signals in Record  
-recPartIntegrate :: SecPowerRecord -> FlowRecord   
-recPartIntegrate pRec@(SecPowerRecord time pMap) = FlRecord (deltaSig time) fMap 
+recPartIntegrate :: PowerRecord -> FlowRecord   
+recPartIntegrate pRec@(PowerRecord time pMap) = FlRecord (deltaSig time) fMap 
   where fMap = M.map (sigPartInt time) pMap  
 
 -- | Generate Sequence Flow 
@@ -101,7 +100,7 @@ makeSequence pRec topo = (sqEnvs, sqTopo)
 genSequ ::  PowerRecord -> (Sequ, SequPwrRecord)
 genSequ pRec = removeNilSections (sequ++[lastSec],SequData pRecs)
   where xSig = genXSig pRec
-        pRecs = map (repackXSig2 pRec) (seqXSig ++ [lastXSec])
+        pRecs = map (repackXSig pRec) (seqXSig ++ [lastXSec])
         ((lastSec,sequ),(lastXSec,seqXSig)) = recyc (tail xSig) (((0,0),[]),([head xSig],[])) 
         
         --recyc :: XSig -> ((Sec,Sequ), (XSig, [XSig])) -> ((Sec,Sequ), (XSig, [XSig]))  
@@ -132,14 +131,14 @@ removeNilSections (sequ, SequData pRecs) = (fsequ, SequData fRecs)
         f _ = True
             
 -- | Function to detect and classify a step over several signals
--- stepDetect :: XSample -> XSample -> EventType 
+stepDetect :: XSample -> XSample -> EventType 
 stepDetect  (t1,row1) (t2,row2) = f stepList
-  where stepList = szipWith stepX (sunbox row1) (sunbox row2)
-        f stepList | sall (==NoStep) stepList = NoEvent
-        f (TC(Data(D1(stepList)))) | sany (==ZeroCrossingStep) stepList = error $ "Error in stepDetect - Zero Crossing - t1: " ++ show t1 ++ " t2 :" ++ (show t2)
-        f (TC(Data(D1(stepList)))) | sany (==LeavesZeroStep) stepList && (not $ sany (==BecomesZeroStep) stepList) = LeftEvent
-        f (TC(Data(D1(stepList)))) | (not $ sany (==LeavesZeroStep) stepList) && sany (==BecomesZeroStep) stepList = RightEvent
-        f (TC(Data(D1(stepList)))) | sany (==LeavesZeroStep) stepList && sany (==BecomesZeroStep) stepList = MixedEvent
+  where stepList = zipWith stepX row1 row2
+        f stepList | all (==NoStep) stepList = NoEvent
+        f stepList | any (==ZeroCrossingStep) stepList = error $ "Error in stepDetect - Zero Crossing - t1: " ++ show t1 ++ " t2 :" ++ (show t2)
+        f stepList | any (==LeavesZeroStep) stepList && (not $ any (==BecomesZeroStep) stepList) = LeftEvent
+        f stepList | (not $ any (==LeavesZeroStep) stepList) && any (==BecomesZeroStep) stepList = RightEvent
+        f stepList | any (==LeavesZeroStep) stepList && any (==BecomesZeroStep) stepList = MixedEvent
         
 -- | Function to detect and classify a step over one signal
 stepX :: PSample -> PSample -> StepType
@@ -149,20 +148,16 @@ stepX s1 s2 | sign s1==PSign && sign s2 == NSign = ZeroCrossingStep
 stepX s1 s2 | sign s1==NSign && sign s2 == PSign = ZeroCrossingStep
 stepX s1 s2 | otherwise = NoStep  -- nostep
 
--}
-
 -----------------------------------------------------------------------------------
 -- | Function to add Zero Crossing Points into the signals and the time 
--- addZeroCrossings  :: (VFromList v1 (TC Signal (Typ A P Tt) (Data ([] :> (Nil' :> Nil')) Val)),
---                     VWalker v1 [Val] (TC Signal (Typ A P Tt) (Data ([] :> (Nil' :> Nil')) Val)))
---                     => PowerRecord -> PowerRecord    
-addZeroCrossings (PowerRecord time pMap) = PowerRecord (time .++ slast time) (updateMap pMap (toSigList $ mSigNew .++ slast mSig))
-  where mSig = fromSigList $ M.elems pMap
-        (timeNew, mSigNew) = (mconcat $ stdeltaMap2Reverse getZeroCrossings time mSig) -- ++ [last xSig]
+addZeroCrossings ::  PowerRecord -> PowerRecord    
+addZeroCrossings pRec = repackXSig pRec xSigNew 
+  where xSig = genXSig pRec
+        xSigNew = (concat $ vdeltaMap f xSig) ++ [last xSig]
     
-getZeroCrossings :: (TSample,TSample) -> (PSample1,PSample1) -> (TSigL,PSample2)         
-getZeroCrossings (t1, t2) (row1, row2) = zip ([t1] ++ zeroCrossingTimes)
-                                      ([row1] ++ (L.transpose $ zipWith g (zip row1 row2) zeroCrossings))
+        --f :: (TSample,PSampleRow) ->  (TSample,PSampleRow) -> [(TSample,PSampleRow)]
+        f (t1, row1) (t2, row2) = zip ([t1] ++ zeroCrossingTimes)
+                                      ([row1] ++ (vtranspose $ zipWith g (zip row1 row2) zeroCrossings))
           where 
             -- create list of all zero crossing times
             zeroCrossingTimes = L.sort $ concat $ zeroCrossings -- :: [TSample]
@@ -201,12 +196,27 @@ interpPowers (t1,p1) (t2,p2) tzeroList tzero = map f tzeroList
 -- | Helper Functions
 
 -- | Generate X-List from Power Record
-updateMap :: M.Map key a -> [a] -> M.Map key a
-updateMap map xs = if check then M.fromList $ zip keys xs else "Error in updateMap - map and List length don't match"   
-  where keys = map snd $ M.fromList map
-        check = length keys == length xs 
+genXSig :: PowerRecord -> XSig
+genXSig (PowerRecord time pmap) = zip (stoList time) (vtranspose $ map stoList $ M.elems pmap)
 
 
+-- | Function to regenerate pMap from pRows
+repackXSig :: PowerRecord -> XSig -> PowerRecord
+repackXSig (PowerRecord _ pmap) xSig = PowerRecord (sfromList time) ( M.fromList $ zipWith h2 (M.toList pmap) $ map sfromList sigs)
+  where (time,rows) = unzip xSig
+        sigs = vtranspose rows
+        h2 (key,_) sig = (key,sig) -- format the results
+
+-- -- | check Record Data -- TODO -- include check on time length == sign length                                                               
+-- recordCheck :: Record -> Bool
+-- recordCheck (Record time sigMap) = smplCheck && equlengthCheck && lengthCheck
+--   where 
+--     list = [time] ++ M.elems sigMap -- all signals and time in one list
+--     smplCheck = all (sampleCheck) list
+--     equlengthCheck = equalLengths ([time] ++ list)  -- equal length on all signals
+--     lengthCheck = all (1 < ) $ map length list -- at least two samples per time Signal
+         
+    
     
 
                   
