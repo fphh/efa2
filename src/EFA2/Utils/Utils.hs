@@ -57,6 +57,8 @@ sameValue = const 1.0
 pairs :: [a] -> [(a, a)]
 pairs xs = zipWith (,) xs (tail xs)
 
+const2 x _ _ = x
+
 {-
 class Transpose a where
       transpose :: [a] -> [a]

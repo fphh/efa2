@@ -42,14 +42,17 @@ topo = mkGraph (makeNodes nodes) (makeEdges edges)
 mkSig :: Int -> ([Val] -> PSig)
 mkSig n = sfromList . concat . replicate n
 
---etaf x = x/(x+5)
---revetaf x = (x+5)/x
+etaf x = x/(x+5)
+revetaf x = (x+5)/x
 
-etaf x = sqrt x
-revetaf x = 1/(sqrt x)
+--etaf x = sqrt x
+--revetaf x = 1/(sqrt x)
 
 --revFunc :: (a -> a) (a -> a)
 --revFunc f x = 1/(f x)
+
+--f2 x = sqrt(x)/35
+f2 x = x/(x+10)
 
 
 --variation :: Topology -> Val -> [Envs UTFSig]
@@ -58,16 +61,19 @@ variation sqTopo x y = interpretFromScratch 1 gd
         givenEnv0 = emptyEnv { dtimeMap = M.fromList [ (DTimeIdx 0 0, sfromList [1.0]) ],
                                powerMap = M.fromList [ (PowerIdx 0 0 3 1, sfromList [x]),
                                                        (PowerIdx 0 0 2 1, sfromList [0.6] :: UTFSig) ],
-                               fetaMap = M.fromList [ (FEtaIdx 0 0 0 1, smap etaf), (FEtaIdx 0 0 1 0, smap revetaf),
-                                                      (FEtaIdx 0 0 1 2, smap (const 0.7)), (FEtaIdx 0 0 2 1, smap (const 1.7)),
-                                                      (FEtaIdx 0 0 1 3, smap (const y)), (FEtaIdx 0 0 3 1, smap (const (1/y))) ] }
+                               fetaMap = M.fromList [ (FEtaIdx 0 0 0 1, smap etaf), (FEtaIdx 0 0 1 0, smap etaf),
+                                                      (FEtaIdx 0 0 1 2, smap (const 0.7)), (FEtaIdx 0 0 2 1, smap (const 0.7)),
+                                                 --     (FEtaIdx 0 0 1 3, smap (const y)), (FEtaIdx 0 0 3 1, smap (const (y-0.1))) ] }
+                                                      (FEtaIdx 0 0 1 3, smap f2), (FEtaIdx 0 0 3 1, smap f2) ] }
 
         givenEnv1 = emptyEnv { --dtimeMap = M.fromList [ (DTimeIdx 1 0, sfromList [1.0]) ],
                                energyMap = M.fromList [ (EnergyIdx 1 0 3 1, sfromList [x]) ],
                                powerMap = M.fromList [ (PowerIdx 1 0 2 1, sfromList [0.6]) ],
-                               fetaMap = M.fromList [ (FEtaIdx 1 0 0 1, smap etaf), (FEtaIdx 1 0 1 0, smap revetaf),
-                                                      (FEtaIdx 1 0 1 2, smap (const 0.7)), (FEtaIdx 1 0 2 1, smap (const 1.7)),
-                                                      (FEtaIdx 1 0 1 3, smap (const (1/y))), (FEtaIdx 1 0 3 1, smap (const y)) ] }
+                               fetaMap = M.fromList [ (FEtaIdx 1 0 0 1, smap etaf), (FEtaIdx 1 0 1 0, smap etaf),
+                                                      (FEtaIdx 1 0 1 2, smap (const 0.7)), (FEtaIdx 1 0 2 1, smap (const 0.7)),
+                                                      --(FEtaIdx 1 0 1 3, smap (const y)), (FEtaIdx 1 0 3 1, smap (const (y-0.1))) ] }
+                                                      (FEtaIdx 1 0 1 3, smap f2), (FEtaIdx 1 0 3 1, smap f2) ] }
+
 {-
         givenEnv2 = emptyEnv { dtimeMap = M.fromList [ (DTimeIdx 2 0, sfromList [1.0]) ],
                                powerMap = M.fromList [ (PowerIdx 2 0 3 1, sfromList [x]), (PowerIdx 2 0 2 1, sfromList [0.6]) ],
@@ -131,8 +137,8 @@ main = do
       pRec = PowerRecord (sfromList time) pMap
       (_, sqTopo) = makeSequence pRec topo
 
-      lst = [0, 0.5 .. 5.0]
-      etas = [ 0.7, 0.72 .. 0.9 ]
+      lst = [1 .. 1000]
+      etas = [ 0.2]
       --res :: [[Envs UTFSig]]
       --res :: [[(Val, Val, Val)]]
       res = map f (sequence [lst, etas])
@@ -140,6 +146,7 @@ main = do
                             (head $ stoList $ ((energyMap $ variation sqTopo x y) M.! (EnergyIdx 0 0 2 1)))
                             (head $ stoList $ ((energyMap $ variation sqTopo x y) M.! (EnergyIdx 1 0 6 5))) )]
       g e0001 e0021 e1021 = (e0021 + e1021)/e0001
+      env = map (\(x:y:_) -> variation sqTopo x y) (sequence [[1.07, 1.08 .. 1.5], [0.7]])
 
 {-
       cwith f x y = map g x
@@ -182,7 +189,8 @@ main = do
 
   --sigPlot res2
   --print (head res)
-  --mapM_ (drawTopology sqTopo) res
+  --mapM_ (drawTopology sqTopo) (map head res)
+  --mapM_ (drawTopology sqTopo) env
 
   --putStrLn (L.intercalate "\n" dts)
   --putStrLn (L.intercalate "\n" e01s)
@@ -194,4 +202,4 @@ main = do
   --print (zipWith (\x y -> y - x) pws (tail pws))
   plotMesh3d [] [] res
 
-  print "That's it!"
+  --print "That's it!"

@@ -26,6 +26,8 @@ import EFA2.Interpreter.InTerm
 import EFA2.Interpreter.Env
 import EFA2.Interpreter.Arith
 
+import EFA2.Signal.Signal
+
 import EFA2.Topology.Topology
 --import EFA2.Topology.RandomTopology
 
@@ -42,33 +44,17 @@ import EFA2.Example.LinearOne
 main :: IO ()
 main = do
   let TheGraph g sigs = linearOne
-      -- g = randomTopology 12 100 3.0
-      --xenv = randomXEnv 14 3 g
-      --nenv = randomEtaEnv 34 3 g
-      -- sigs = M.fromList [(EnergyIdx 0 0 0 1, [1, 2, 3])]
-      (_, ts) = makeAllEquations g [envs]
+      (_, ts) = makeAllEquations g [envs0]
+
+      envs0 = emptyEnv { energyMap = sigs0, dtimeMap = dtimes0, 
+                         fetaMap = M.fromList [(FEtaIdx 0 0 1 0, smap (const 0.8)), (FEtaIdx 0 0 0 1, smap (const 0.7))] }
+
+      envs1 = emptyEnv { energyMap = sigs1, dtimeMap = dtimes1, fetaMap = M.fromList [(FEtaIdx 0 1 1 0, id)] }
 
 
-      envs = emptyEnv { energyMap = sigs, dtimeMap = dtimes, fetaMap = M.fromList [(FEtaIdx 0 0 1 0, id)] }
-      ts' = map (eqToInTerm envs) (order ts)
+      ts' = map (eqToInTerm envs0) (order ts)
 
-      --res :: Envs [Val]
-      --res = interpretFromScratch 1 ts'
-      --etaFs = fetaMap res
-      fn = etaFs M.! (FEtaIdx 0 0 1 0)
-      etaFs = undefined
-{-
-      e = emptyEnv { energyMap = M.fromList [(EnergyIdx 0 0 0 1, [1, 2, 3])],
-                     xMap = xMap res,
-                     powerMap = pows,
-                     fetaMap = etas }
-      (_, ts'') = makeAllEquations g [e]
-      ts''' = map (eqToInTerm e) (order ts'')
-
-      res2 :: Envs [Val]
-
-      res2 = interpretFromScratch ts'''
--}
+      res = interpretFromScratch 1 ts'
 
   putStrLn ("Number of nodes: " ++ show (noNodes g))
   putStrLn ("Number of edges: " ++ show (length $ edges g))
@@ -80,12 +66,4 @@ main = do
   putStrLn ("Number of undeq: " ++ show (length ts'))
   putStrLn ("Number of deq:   " ++ show (length ts'))
 
-  --print res2
-  --drawTopology g res
-  --print res
-  --print (M.size etaFs)
-{-
-  let range = [0.5, 0.6 .. 5]
-      f (x, y) = show x ++ " " ++ show y
-  putStrLn (L.intercalate "\n" (map f $ zip range $ fn range))
--}
+  drawTopology g res

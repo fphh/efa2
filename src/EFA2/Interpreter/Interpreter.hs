@@ -65,8 +65,8 @@ showInTerm (ScaleIdx (XIdx s r x y)) = "x:" ++ show s ++ "." ++ show r ++ ":" ++
 showInTerm (VIdx (VarIdx s r x y)) = "v:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
 showInTerm (SIdx (StorageIdx s r n)) = "s:" ++ show s ++ "." ++ show r ++ ":" ++ show n
 showInTerm (InConst x) = take 20 (show x) ++ "..."
-showInTerm (InGiven xs) = "given" ++ show xs
-showInTerm (InFunc xs) = "given <function>"
+showInTerm (InGiven xs) = "given " ++ show xs
+showInTerm (InFunc _) = "given <function>"
 showInTerm (InMinus t) = "-(" ++ showInTerm t ++ ")"
 showInTerm (InRecip t) = "1/(" ++ showInTerm t ++ ")"
 showInTerm (InAdd s t) = "(" ++ showInTerm s ++ " + " ++ showInTerm t ++ ")"
@@ -76,11 +76,14 @@ showInTerm (InEqual s t) = showInTerm s ++ " = " ++ showInTerm t
 showInTerms :: (Show a) => [InTerm a] -> String
 showInTerms ts = L.intercalate "\n" $ map showInTerm ts
 
+
 interpretRhs :: ( SArith s s s, SMap c Val Val, TProd t t t, TSum t t t, DZipWith c c c Val Val Val,
                   FromToList c Val, Show (c Val)) =>
                   Int -> Envs (TC s t (c Val)) -> InTerm (TC s t (c Val)) -> TC s t (c Val)
 interpretRhs len envs term = interpretRhs' term
-  where interpretRhs' (InConst x) = sfromVal len x
+  where --interpretRhs' (InConst x) = sfromVal len [x] -- Wichtig für delta Rechnung?
+        --interpretRhs' (InGiven xs) = smap (:[]) xs
+        interpretRhs' (InConst x) = sfromVal len x
         interpretRhs' (InGiven xs) = xs
         interpretRhs' (EIdx idx) = energyMap envs `safeLookup` idx
         interpretRhs' (DEIdx idx) = denergyMap envs `safeLookup` idx
@@ -94,8 +97,8 @@ interpretRhs len envs term = interpretRhs' term
         interpretRhs' (VIdx idx) = varMap envs `safeLookup` idx
         interpretRhs' (SIdx idx) = storageMap envs `safeLookup` idx
         interpretRhs' (InMinus t) = sneg (interpretRhs' t)
-        interpretRhs' (InRecip (FNIdx idx@(FEtaIdx s r f t))) = (fetaMap envs `safeLookup` idx) pval
-          where pidx = PowerIdx s r f t
+        interpretRhs' (InRecip (FNIdx idx@(FEtaIdx s r f t))) = srec $ (fetaMap envs `safeLookup` idx) pval
+          where pidx = PowerIdx s r t f
                 pval = powerMap envs `safeLookup` pidx
         interpretRhs' (InRecip t) = srec (interpretRhs' t)
         interpretRhs' (InAdd s t) = (interpretRhs' s) .+ (interpretRhs' t)
@@ -117,7 +120,6 @@ interpretEq len envs (InEqual (DEIdx idx) rhs) = envs { denergyMap = insert len 
 interpretEq len envs (InEqual (PIdx idx) rhs) = envs { powerMap = insert len idx envs rhs (powerMap envs) }
 interpretEq len envs (InEqual (DPIdx idx) rhs) = envs { dpowerMap = insert len idx envs rhs (dpowerMap envs) }
 interpretEq len envs (InEqual (FNIdx idx@(FEtaIdx s r f t)) (InFunc feta)) = envs { fetaMap = M.insert idx feta (fetaMap envs) }
-
 {-
 interpretEq envs (InEqual (FNIdx idx@(FEtaIdx s r f t) _) (InMult (InRecip (PIdx pidx1)) (PIdx pidx2))) = envs''
   where envs' = envs { fetaMap = M.insert idx (mkEtaFunc pts) (fetaMap envs) }
