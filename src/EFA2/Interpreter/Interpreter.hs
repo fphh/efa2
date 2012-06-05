@@ -29,7 +29,7 @@ eqToInTerm envs term = eqToInTerm' term
         eqToInTerm' (Power idx := Given) = InEqual (PIdx idx) (InGiven (powerMap envs `safeLookup` idx))
         eqToInTerm' (DPower idx := Given) = InEqual (DPIdx idx) (InGiven (dpowerMap envs `safeLookup` idx))
         eqToInTerm' (FEta idx := Given) = InEqual (FNIdx idx) (InFunc (fetaMap envs `safeLookup` idx))
-        eqToInTerm' (DEta idx := Given) = InEqual (DNIdx idx) (InGiven (detaMap envs `safeLookup` idx))
+        eqToInTerm' (DEta idx := Given) = InEqual (DNIdx idx) (InFunc (detaMap envs `safeLookup` idx))
         eqToInTerm' (DTime idx := Given) = InEqual (DTIdx idx) (InGiven (dtimeMap envs `safeLookup` idx))
         eqToInTerm' (X idx := Given) = InEqual (ScaleIdx idx) (InGiven (xMap envs `safeLookup` idx))
         eqToInTerm' (Var idx := Given) = InEqual (VIdx idx) (InGiven (varMap envs `safeLookup` idx))
@@ -91,7 +91,9 @@ interpretRhs len envs term = interpretRhs' term
         interpretRhs' (DPIdx idx) = dpowerMap envs `safeLookup` idx
         interpretRhs' (FNIdx idx@(FEtaIdx s r f t)) = (fetaMap envs `safeLookup` idx) (powerMap envs `safeLookup` pidx)
           where pidx = PowerIdx s r f t
-        interpretRhs' (DNIdx idx) = detaMap envs `safeLookup` idx
+--        interpretRhs' (DNIdx idx) = detaMap envs `safeLookup` idx
+        interpretRhs' (DNIdx idx@(DEtaIdx s r f t)) = (detaMap envs `safeLookup` idx) (powerMap envs `safeLookup` pidx)
+          where pidx = PowerIdx s r f t
         interpretRhs' (DTIdx idx) = dtimeMap envs `safeLookup` idx
         interpretRhs' (ScaleIdx idx) = xMap envs `safeLookup` idx
         interpretRhs' (VIdx idx) = varMap envs `safeLookup` idx
@@ -128,7 +130,8 @@ interpretEq envs (InEqual (FNIdx idx@(FEtaIdx s r f t) _) (InMult (InRecip (PIdx
         p2 = powerMap envs M.! pidx2
         pts = Pt p2 (p2 ./ p1) 
 -}
-interpretEq len envs (InEqual (DNIdx idx) rhs) = envs { detaMap = insert len idx envs rhs (detaMap envs) }
+--interpretEq len envs (InEqual (DNIdx idx) rhs) = envs { detaMap = insert len idx envs rhs (detaMap envs) }
+interpretEq len envs (InEqual (DNIdx idx@(DEtaIdx s r f t)) (InFunc deta)) = envs { detaMap = M.insert idx deta (detaMap envs) }
 interpretEq len envs (InEqual (DTIdx idx) rhs) = envs { dtimeMap = insert len idx envs rhs (dtimeMap envs) }
 interpretEq len envs (InEqual (ScaleIdx idx) rhs) = envs { xMap = insert len idx envs rhs (xMap envs) }
 interpretEq len envs (InEqual (VIdx idx) rhs) = envs { varMap = insert len idx envs rhs (varMap envs) }

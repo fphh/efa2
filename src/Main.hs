@@ -60,6 +60,8 @@ main = do
 
       res = interpretFromScratch (recordNumber envs) 1 ts'
 
+      [res0, res1] = separateEnvs res
+
   putStrLn ("Number of nodes: " ++ show (noNodes g))
   putStrLn ("Number of edges: " ++ show (length $ edges g))
   putStrLn "===================="
@@ -72,4 +74,8 @@ main = do
 
   --drawTopology g res --  (res { recordNumber = SingleRecord 0 })
   print envs
-  print (envUnion [envs0, envs1])
+  --drawTopology g res0
+  --drawTopology g res1
+  print (res1 `minusEnv` res0)
+
+

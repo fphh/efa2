@@ -23,7 +23,7 @@ sigs0 :: EnergyMap UTFSig
 sigs0 = M.fromList [ (EnergyIdx 0 0 0 1, sfromList [3]) ]
 
 dtimes1 :: DTimeMap UTFSig
-dtimes1 = M.fromList [(DTimeIdx 0 1, sfromList [1.2])]
+dtimes1 = M.fromList [(DTimeIdx 0 1, sfromList [1.0])]
 
 
 sigs1 :: EnergyMap UTFSig

@@ -3,9 +3,12 @@
 module EFA2.Interpreter.Env where
 
 import Control.Monad.Error
+import Control.Applicative
 
 import qualified Data.Map as M
 import qualified Data.List as L
+
+import EFA2.Signal.Signal
 
 -- | Variable types of the solver. The solver, in fact, is
 -- ignorant of the provenance of the variables. However, to
@@ -27,7 +30,6 @@ data PowerIdx = PowerIdx !Int !Int !Int !Int deriving (Show, Ord, Eq)
 data DPowerIdx = DPowerIdx !Int !Int !Int !Int deriving (Show, Ord, Eq)
 
 -- | Eta variables.
---data EtaIdx = EtaIdx !Int !Int !Int !Int deriving (Show)
 data FEtaIdx = FEtaIdx !Int !Int !Int !Int deriving (Show, Ord, Eq)
 data DEtaIdx = DEtaIdx !Int !Int !Int !Int deriving (Show, Ord, Eq)
 
@@ -48,32 +50,53 @@ data StorageIdx = StorageIdx !Int !Int !Int deriving (Show, Ord, Eq)
 -- variable is unique in the equational system.
 data VarIdx = VarIdx !Int !Int !Int !Int deriving (Show, Ord, Eq)
 
-{-
--- EtaIdx x y == EtaIdx y x
-instance Eq EtaIdx where
-         (EtaIdx s1 r1 a b) == (EtaIdx s2 r2 x y) = (s1, r1, f a b) == (s2, r2, f x y)
-           where f u v = if u < v then (u, v) else (v, u)
+class IdxRecNum a where
+      getIdxRecNum :: a -> Int
 
-instance Ord EtaIdx where
-         compare as@(EtaIdx s1 r1 a b) bs@(EtaIdx s2 r2 x y)
-           | as == bs && s1 == s2 && r1 == r2 = EQ
-           | otherwise = compare (s1, r1, (f a b)) (s2, r2, (f x y))
-               where f u v = if u < v then (u, v) else (v, u)
+instance IdxRecNum EnergyIdx where
+         getIdxRecNum (EnergyIdx _ r _ _) = r
 
-instance Eq DEtaIdx where
-         (DEtaIdx s1 r1 a b) == (DEtaIdx s2 r2 x y) = (s1, r1, f a b) == (s2, r2, f x y)
-           where f u v = if u < v then (u, v) else (v, u)
+instance IdxRecNum DEnergyIdx where
+         getIdxRecNum (DEnergyIdx _ r _ _) = r
 
-instance Ord DEtaIdx where
-         compare as@(DEtaIdx s1 r1 a b) bs@(DEtaIdx s2 r2 x y)
-           | as == bs && s1 == s2 && r1 == r2 = EQ
-           | otherwise = compare (s1, r1, (f a b)) (s2, r2, (f x y))
-               where f u v = if u < v then (u, v) else (v, u)
--}
+instance IdxRecNum PowerIdx where
+         getIdxRecNum (PowerIdx _ r _ _) = r
 
+instance IdxRecNum DPowerIdx where
+         getIdxRecNum (DPowerIdx _ r _ _) = r
 
+instance IdxRecNum FEtaIdx where
+         getIdxRecNum (FEtaIdx _ r _ _) = r
 
+instance IdxRecNum DEtaIdx where
+         getIdxRecNum (DEtaIdx _ r _ _) = r
 
+instance IdxRecNum XIdx where
+         getIdxRecNum (XIdx _ r _ _) = r
+
+instance IdxRecNum DTimeIdx where
+         getIdxRecNum (DTimeIdx _ r) = r
+
+instance IdxRecNum StorageIdx where
+         getIdxRecNum (StorageIdx _ r _) = r
+
+instance IdxRecNum VarIdx where
+         getIdxRecNum (VarIdx _ r _ _) = r
+
+class IdxEq a where
+      ignoreRecEq :: a -> a -> Bool
+
+instance IdxEq PowerIdx where
+         ignoreRecEq (PowerIdx a _ b c) (PowerIdx x _ y z) = a == x && b == y && c == z
+
+instance IdxEq EnergyIdx where
+         ignoreRecEq (EnergyIdx a _ b c) (EnergyIdx x _ y z) = a == x && b == y && c == z
+
+instance IdxEq FEtaIdx where
+         ignoreRecEq (FEtaIdx a _ b c) (FEtaIdx x _ y z) = a == x && b == y && c == z
+
+instance IdxEq StorageIdx where
+         ignoreRecEq (StorageIdx a _ b) (StorageIdx x _ y) = a == x && b == y
 
 -- Environments
 type EnergyMap a = M.Map EnergyIdx a
@@ -82,9 +105,8 @@ type DEnergyMap a = M.Map DEnergyIdx a
 type PowerMap a = M.Map PowerIdx a
 type DPowerMap a = M.Map DPowerIdx a
 
---type EtaMap a = M.Map EtaIdx a
 type FEtaMap a = M.Map FEtaIdx (a -> a)
-type DEtaMap a = M.Map DEtaIdx a
+type DEtaMap a = M.Map DEtaIdx (a -> a)
 
 type DTimeMap a = M.Map DTimeIdx a
 
@@ -152,3 +174,44 @@ envUnion envs = Envs { recordNumber = uniteRecordNumbers (map recordNumber envs)
                        xMap = M.unions $ map xMap envs,
                        varMap = M.unions $ map varMap envs,
                        storageMap = M.unions $ map storageMap envs }
+
+
+separateEnvs :: Envs a -> [Envs a]
+separateEnvs envs | MixedRecord lst <- recordNumber envs = map f (L.sort lst)
+  where p n k _ = n == getIdxRecNum k
+        f n = emptyEnv { recordNumber = SingleRecord n,
+                         energyMap = M.filterWithKey (p n) (energyMap envs),
+                         denergyMap = M.filterWithKey (p n) (denergyMap envs),
+                         powerMap = M.filterWithKey (p n) (powerMap envs),
+                         dpowerMap = M.filterWithKey (p n) (dpowerMap envs),
+                         fetaMap = M.filterWithKey (p n) (fetaMap envs),
+                         detaMap = M.filterWithKey (p n) (detaMap envs),
+                         dtimeMap = M.filterWithKey (p n) (dtimeMap envs),
+                         xMap = M.filterWithKey (p n) (xMap envs),
+                         varMap = M.filterWithKey (p n) (varMap envs),
+                         storageMap = M.filterWithKey (p n) (storageMap envs) }
+separateEnvs _ = error "separateEnvs: no mixed env"
+
+checkEnvsForDelta :: Envs a -> Envs a -> Bool
+checkEnvsForDelta env fnv = and lst
+  where lst = [ energyMap env .== energyMap fnv,
+                powerMap env .== powerMap fnv,
+                fetaMap env .== fetaMap fnv,
+                storageMap env .== storageMap fnv ]
+        (.==) x y = and $ zipWith ignoreRecEq (M.keys x) (M.keys y)
+
+minusEnv :: ZipSum s s s t t t c c c => Envs (TC s t c) -> Envs (TC s t c) -> Envs (TC s t c)
+minusEnv laterEnv formerEnv | checkEnvsForDelta laterEnv formerEnv = gnv
+  where minus x y = M.fromList $ zipWith minush (M.toList x) (M.toList y)
+        minush (k0, x) (k1, y) = (k0, x .- y)
+
+        fminus x y = M.fromList $ zipWith fminush (M.toList x) (M.toList y)
+        fminush (k0, fx) (k1, fy) = (k0, \z -> fx z .- fy z)
+
+        edk (EnergyIdx a b c d) = DEnergyIdx a b c d
+        pdk (PowerIdx a b c d) = DPowerIdx a b c d
+        etadk (FEtaIdx a b c d) = DEtaIdx a b c d
+
+        gnv = laterEnv { denergyMap = M.mapKeys edk $ energyMap laterEnv `minus` energyMap formerEnv,
+                         dpowerMap = M.mapKeys pdk $ powerMap laterEnv `minus` powerMap formerEnv,
+                         detaMap = M.mapKeys etadk $ fetaMap laterEnv `fminus` fetaMap formerEnv }
