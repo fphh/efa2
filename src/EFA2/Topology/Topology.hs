@@ -200,6 +200,7 @@ mkOutStoreEqs recordNum (ins, n@(nid, NLabel sec _ _), o:_) = visumeq:xeqs ++ ei
         h e x = e := x :* outv
 mkOutStoreEqs _ _ = []
 
+{-
 -- | Takes section, record, and a graph.
 mkEdgeEq :: Int -> Topology -> [EqTerm]
 mkEdgeEq recordNum topo = map f (map unlabelEdge origEs)
@@ -208,6 +209,16 @@ mkEdgeEq recordNum topo = map f (map unlabelEdge origEs)
                          (mkVar (PowerIdx xs recordNum x y)) :* (mkVar (FEtaIdx xs recordNum x y))
           where NLabel xs _ _ = fromJust $ lab topo x
                 NLabel ys _ _ = fromJust $ lab topo y
+-}
+-- | Takes section, record, and a graph.
+mkEdgeEq :: Int -> Topology -> [EqTerm]
+mkEdgeEq recordNum topo = map f (map unlabelEdge origEs)
+  where origEs = L.filter (\(_, _, l) -> not $ isIntersectionEdge l) (labEdges topo)
+        f (x, y) = mkVar (PowerIdx ys recordNum y x) :=
+                         FEdge (mkVar (PowerIdx xs recordNum x y)) (mkVar (FEtaIdx xs recordNum x y))
+          where NLabel xs _ _ = fromJust $ lab topo x
+                NLabel ys _ _ = fromJust $ lab topo y
+
 
 mkNodeEq :: Int -> Topology -> [EqTerm]
 mkNodeEq recordNum topo = concat $ mapGraph (mkEq recordNum) (elfilter cond topo)
@@ -253,6 +264,45 @@ mkEq recordNum (ins, n@(nid, NLabel sec _ _), outs)
         oeqs' | length eos > 1 = zipWith (g vosum) xos eos
               | otherwise = []
         g v x e = x := e :* Recip v
+
+
+
+mkAllDiffEqs :: Int -> Int -> Topology -> [EqTerm]
+mkAllDiffEqs laterRec formerRec topo = {- edgeEqs ++ -} nodeEqs
+  where edgeEqs = concat $ mapGraph (mkDiffEdgeEqs laterRec formerRec) topo
+        nodeEqs = concat $ mapGraph (mkDiffNodeEqs laterRec formerRec) topo
+
+mkDiffEdgeEqs :: Int -> Int -> ([LNode NLabel], LNode NLabel, [LNode NLabel]) -> [EqTerm]
+mkDiffEdgeEqs laterRec formerRec (ins, n@(nid, NLabel sec _ _), outs)
+  | length ins == 0 && length outs == 0 = []
+  | length ins == 0 && length outs > 0 = doeqs ++ dnoeqs
+  | length ins > 0 && length outs == 0 = dieqs
+  | otherwise = dieqs ++ doeqs ++ dnoeqs
+  where makeVar r mkIdx (nid', _) = mkVar $ mkIdx sec r nid nid'
+        leis = map (makeVar laterRec PowerIdx) ins
+        feis = map (makeVar formerRec PowerIdx) ins
+        dieqs = zipWith3 f leis feis ins
+
+        leos = map (makeVar laterRec PowerIdx) outs
+        feos = map (makeVar formerRec PowerIdx) outs
+        doeqs = zipWith3 f leos feos outs
+        f x y i = (makeVar laterRec DPowerIdx i) := x :+ (Minus y)
+
+        lnos = map (makeVar laterRec FEtaIdx) outs
+        fnos = map (makeVar formerRec FEtaIdx) outs
+        dnoeqs = zipWith3 g lnos fnos outs
+        g x y i = (makeVar laterRec DEtaIdx i) := x :+ (Minus y)
+
+
+mkDiffNodeEqs :: Int -> Int -> ([LNode NLabel], LNode NLabel, [LNode NLabel]) -> [EqTerm]
+mkDiffNodeEqs laterRec formerRec (ins, n@(nid, NLabel sec _ _), outs)
+  | length ins > 0 && length outs > 0 = sumeq
+  | otherwise = []
+  where makeVar r mkIdx (nid', _) = mkVar $ mkIdx sec r nid nid'
+        dleis = map (makeVar laterRec DPowerIdx) ins
+        dleos = map (makeVar laterRec DPowerIdx) outs
+        sumeq = [add dleos := add dleis]
+
 
 
 

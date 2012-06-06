@@ -31,6 +31,8 @@ class VSingleton vec d where
       vtail :: vec d -> vec d
       vlast :: vec d -> d
       vinit :: vec d -> vec d
+      vall :: (d-> Bool)-> vec d -> Bool
+      vany :: (d-> Bool)-> vec d -> Bool
 
 instance (Ord d) => VSingleton V.Vector d where 
          vmaximum x =  V.maximum x
@@ -43,6 +45,8 @@ instance (Ord d) => VSingleton V.Vector d where
          vtail = V.tail
          vlast = V.last
          vinit = V.init
+         vall = V.all
+         vany = V.any
 
 instance (Ord d, UV.Unbox d) => VSingleton UV.Vector d where 
          vmaximum x = UV.maximum x
@@ -55,6 +59,8 @@ instance (Ord d, UV.Unbox d) => VSingleton UV.Vector d where
          vtail = UV.tail
          vlast = UV.last
          vinit = UV.init
+         vall = UV.all
+         vany = UV.any
 
 instance (Ord d) => VSingleton [] d where 
          vmaximum x = maximum x
@@ -67,6 +73,8 @@ instance (Ord d) => VSingleton [] d where
          vtail = tail
          vlast = last
          vinit = init
+         vall = all
+         vany = any
 
 
 ------------------------------------------------------------
@@ -118,7 +126,28 @@ vdeltaMap f l = vzipWith f l (vtail l)
 vdeltaMapReverse :: (VSingleton vec b, VZipper vec b b c) => (b -> b -> c) -> vec b -> vec c
 vdeltaMapReverse f l = vzipWith f (vtail l) l
 
+------------------------------------------------------------
+-- | Zipper4
 
+class VZipper4 vec a b c d e where
+      vzipWith4 :: (a -> b -> c -> d -> e) -> vec a -> vec b -> vec c -> vec d -> vec e
+      
+instance VZipper4 V.Vector a b c d e where
+         vzipWith4 f w x y z = V.zipWith4 f w x y z -- if vlenCheck x y then V.zipWith f x y else error "Error in vlenCheck V -- unequal Length" 
+
+instance (UV.Unbox a, UV.Unbox b, UV.Unbox c, UV.Unbox e, UV.Unbox d) => VZipper4 UV.Vector a b c d e   where
+         vzipWith4  f w x y z = UV.zipWith4 f w x y z --if vlenCheck x y then UV.zipWith f x y else error "Error in vlenCheck UV -- unequal Length"
+
+instance VZipper4 [] a b c d e  where
+         vzipWith4  f w x y z = L.zipWith4 f w x y z -- if vlenCheck x y then zipWith f x y else error "Error in vlenCheck List -- unequal Length"
+
+{-
+vdeltaMap2:: (a -> a -> b -> b -> c)  -> vec a -> vec a -> vec b  -> vec b -> vec c
+vdeltaMap2 f xs ys = vzipWith4 f xs (vtail xs) ys (vtail ys)
+
+vdeltaMapReverse2 :: (a -> a -> b -> b -> c) -> vec a -> vec a -> vec b  -> vec b -> vec c
+vdeltaMapReverse2 f xs ys = vzipWith4 f (vtail xs) xs (vtail ys) ys
+-}
 --------------------------------------------------------------
 -- Vector conversion
 class VBox c1 c2 a where
@@ -133,6 +162,38 @@ instance VBox [] [] a where
          vbox = id
          vunbox = id
   
+--------------------------------------------------------------
+-- Vector conversion
+class VConvert c1 c2 a where
+      vconvert :: c1 a -> c2 a
+
+instance UV.Unbox a => VConvert UV.Vector V.Vector a where
+         vconvert x = UV.convert x
+
+instance UV.Unbox a => VConvert V.Vector UV.Vector a where
+         vconvert x = V.convert x
+
+instance UV.Unbox a => VConvert UV.Vector UV.Vector a where
+         vconvert x = V.convert x
+
+instance VConvert V.Vector V.Vector a where
+         vconvert = id
+
+instance VConvert [] [] a where
+         vconvert = id
+
+instance UV.Unbox a => VConvert [] UV.Vector a where
+         vconvert x = UV.fromList x
+
+instance VConvert [] V.Vector a where
+         vconvert x = V.fromList x
+
+instance VConvert V.Vector [] a where
+         vconvert x = V.toList x
+
+instance UV.Unbox a => VConvert UV.Vector [] a where
+         vconvert x = UV.toList x
+
 --------------------------------------------------------------
 -- Length & Length Check
 
@@ -176,3 +237,18 @@ instance VTranspose [] [] d where
 
 
 
+class VFromList v d where
+  vfromList :: [d] -> v d
+  vtoList :: v d -> [d]
+  
+instance (UV.Unbox d) => VFromList UV.Vector d where
+  vfromList x = UV.fromList x
+  vtoList x = UV.toList x
+  
+instance VFromList V.Vector d where
+  vfromList x = V.fromList x
+  vtoList x = V.toList x  
+  
+instance VFromList [] d where
+  vfromList x = x
+  vtoList x = x  

@@ -39,6 +39,7 @@ data EventType = LeftEvent
                | MixedEvent
                | NoEvent
 
+type PSample = Val
 type PSampleRow = [PSample] --TC Sample (Typ A P Tt) (UVec Val)
 type TSample = Val -- TC Sample (Typ D T Tt) (DVal Val)
 

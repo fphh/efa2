@@ -33,10 +33,11 @@ data EqTerm = EqTerm := EqTerm
           | X XIdx
           | Var VarIdx
           | Store StorageIdx
- --         | FAbs { fAbsPower :: EqTerm, fAbsEta :: EqTerm }
- --         | BAbs { bAbsPower :: EqTerm, bAbsEta :: EqTerm }
-          | FDiff { fDiffPower :: EqTerm, fDiffEta :: EqTerm, fDiffDPower :: EqTerm, fDiffDEta :: EqTerm }
-          | BDiff { bDiffPower :: EqTerm, bDiffEta :: EqTerm, bDiffDPower :: EqTerm, bDiffDEta :: EqTerm }
+          | FEdge EqTerm EqTerm -- power, eta
+          | BEdge EqTerm EqTerm
+          | NEdge EqTerm EqTerm
+--          | FDiff { fDiffPower :: EqTerm, fDiffEta :: EqTerm, fDiffDPower :: EqTerm, fDiffDEta :: EqTerm }
+--          | BDiff { bDiffPower :: EqTerm, bDiffEta :: EqTerm, bDiffDPower :: EqTerm, bDiffDEta :: EqTerm }
           | Minus EqTerm
           | Recip EqTerm
           | EqTerm :+ EqTerm
@@ -127,8 +128,12 @@ showEqTerm (Var (VarIdx s r x y)) = "v_" ++ show s ++ "." ++ show r ++ "_" ++ sh
 showEqTerm (Store (StorageIdx s r n)) = "s_" ++ show s ++ "." ++ show r ++ "_" ++ show n
 showEqTerm (x :+ y) = "(" ++ showEqTerm x ++ " + " ++ showEqTerm y ++ ")"
 showEqTerm (x :* y) = showEqTerm x ++ " * " ++ showEqTerm y
-showEqTerm (FDiff p e dp de) = "f(" ++ showEqTerm p ++ ", " ++ showEqTerm e ++ ", " ++ showEqTerm dp ++ ", " ++ showEqTerm de ++")"
-showEqTerm (BDiff p e dp de) = "b(" ++ showEqTerm p ++ ", " ++ showEqTerm e ++ ", " ++ showEqTerm dp ++ ", " ++ showEqTerm de  ++ ")"
+--showEqTerm (FDiff p e dp de) = "f(" ++ showEqTerm p ++ ", " ++ showEqTerm e ++ ", " ++ showEqTerm dp ++ ", " ++ showEqTerm de ++")"
+--showEqTerm (BDiff p e dp de) = "b(" ++ showEqTerm p ++ ", " ++ showEqTerm e ++ ", " ++ showEqTerm dp ++ ", " ++ showEqTerm de  ++ ")"
+showEqTerm (FEdge power eta) = "f(" ++ showEqTerm power ++ ", " ++ showEqTerm eta ++ ")"
+showEqTerm (BEdge power eta) = "b(" ++ showEqTerm power ++ ", " ++ showEqTerm eta ++ ")"
+showEqTerm (NEdge power0 power1) = "n(" ++ showEqTerm power0 ++ ", " ++ showEqTerm power1 ++ ")"
+
 showEqTerm (Recip x) = "1/(" ++ showEqTerm x ++ ")"
 showEqTerm (Minus x) = "-(" ++ showEqTerm x ++ ")"
 showEqTerm (x := y) = showEqTerm x ++ " = " ++ showEqTerm y
@@ -147,10 +152,10 @@ mkVarSet p t = mkVarSet' t
         -- mkVarSet' fn@(FEta _) = S.insert fn (mkVarSet' p)
         mkVarSet' (x :+ y) = S.union (mkVarSet' x) (mkVarSet' y)
         mkVarSet' (x :* y) = S.union (mkVarSet' x) (mkVarSet' y)
-        --mkVarSet' (FAbs x y) = S.union (mkVarSet' x) (mkVarSet' y)
-        --mkVarSet' (BAbs x y) = S.union (mkVarSet' x) (mkVarSet' y)
-        mkVarSet' (FDiff p e dp de) = S.unions (map mkVarSet' [p, e, dp, de])
-        mkVarSet' (BDiff p e dp de) = S.unions (map mkVarSet' [p, e, dp, de])
+        mkVarSet' (FEdge x y) = S.union (mkVarSet' x) (mkVarSet' y)
+        mkVarSet' (BEdge x y) = S.union (mkVarSet' x) (mkVarSet' y)
+        --mkVarSet' (FDiff p e dp de) = S.unions (map mkVarSet' [p, e, dp, de])
+        --mkVarSet' (BDiff p e dp de) = S.unions (map mkVarSet' [p, e, dp, de])
         mkVarSet' (Minus x) = mkVarSet' x
         mkVarSet' (Recip x) = mkVarSet' x
         mkVarSet' (x := y) = S.union (mkVarSet' x) (mkVarSet' y)
@@ -165,25 +170,25 @@ type TPath = [Dir]
 
 
 -- test terms
-{-
-p1 = Energy (EnergyIdx 0 1)
-p2 = Energy (EnergyIdx 0 2)
-p3 = Energy (EnergyIdx 0 3)
-p4 = Energy (EnergyIdx 0 4)
 
-dp1 = DEnergy (DEnergyIdx 0 1)
-dp2 = DEnergy (DEnergyIdx 0 2)
-dp3 = DEnergy (DEnergyIdx 0 3)
-dp4 = DEnergy (DEnergyIdx 0 4)
+p1 = Power (PowerIdx 0 0 0 1)
+p2 = Power (PowerIdx 0 0 0 2)
+p3 = Power (PowerIdx 0 0 0 3)
+p4 = Power (PowerIdx 0 0 0 4)
+
+dp1 = DPower (DPowerIdx 0 0 0 1)
+dp2 = DPower (DPowerIdx 0 0 0 2)
+dp3 = DPower (DPowerIdx 0 0 0 3)
+dp4 = DPower (DPowerIdx 0 0 0 4)
 
 
 c = Const 1.0
 
-e = Eta (EtaIdx 0 1)
-de = DEta (DEtaIdx 0 1)
+e = FEta (FEtaIdx 0 0 0 1)
+de = DEta (DEtaIdx 0 0 0 1)
 
-t = dp2 := BDiff p1 e dp1 de
--}
+t =  p2 := FEdge p1 e
+
 
 findVar :: EqTerm -> EqTerm -> Maybe TPath
 findVar t s | t == s = Just []
@@ -197,10 +202,10 @@ findVar t s
         help t (u :* v) = (findVar t u, findVar t v)
         help t (Minus u) = (findVar t u, Nothing)    -- coding: Minus has only left operand.
         help t (Recip u) = (findVar t u, Nothing)    -- coding: Recip has only left operand.
-        --help t u@(FAbs _ _) = (findVar t (fAbsPower u), Nothing)   -- etc.
-        --help t u@(BAbs _ _) = (findVar t (bAbsPower u), Nothing)
-        help t u@(FDiff _ _ _ _) = (findVar t (fDiffDPower u), Nothing)
-        help t u@(BDiff _ _ _ _) = (findVar t (bDiffDPower u), Nothing)
+        help t (FEdge power eta) = (findVar t power, findVar t eta)
+        help t (BEdge power eta) = (findVar t power, findVar t eta)
+        --help t u@(FDiff _ _ _ _) = (findVar t (fDiffDPower u), Nothing)
+        --help t u@(BDiff _ _ _ _) = (findVar t (bDiffDPower u), Nothing)
         help _ _ = (Nothing, Nothing)
 
 isolateVar :: EqTerm -> EqTerm -> TPath -> EqTerm
@@ -215,21 +220,30 @@ isolateVar' _ [] = id
 isolateVar' (u :+ v) (L:p) = isolateVar' u p . ((Minus v) :+)
 isolateVar' (u :+ v) (R:p) = isolateVar' v p . ((Minus u) :+)
 
---isolateVar' (u :* (FEta (FEtaIdx s r f t))) (L:p) = isolateVar' u p . ((Recip (FEta (FEtaIdx s r t f))) :*)
---isolateVar' ((FEta (FEtaIdx s r f t)) :* v) (R:p) = isolateVar' v p . ((Recip (FEta (FEtaIdx s r t f))) :*)
-
 isolateVar' (u :* v) (L:p) = isolateVar' u p . ((Recip v) :*)
 isolateVar' (u :* v) (R:p) = isolateVar' v p . ((Recip u) :*)
 
 isolateVar' (Minus u) (L:p) = isolateVar' u p . Minus
 isolateVar' (Recip u) (L:p) = isolateVar' u p . Recip
---isolateVar' (FAbs u v) (L:p) = isolateVar' u p . (flip BAbs v)
---isolateVar' (BAbs u v) (L:p) = isolateVar' u p . (flip FAbs v)
+
+-- e = u * v
+isolateVar' (FEdge u v) (L:p) = isolateVar' u p . (flip BEdge v)
+isolateVar' (FEdge u v) (R:p) = isolateVar' v p . (flip NEdge u)
+
+-- e = u / v
+isolateVar' (BEdge u v) (L:p) = isolateVar' u p . (flip FEdge v)
+isolateVar' (BEdge u v) (R:p) = isolateVar' v p . (flip NEdge u)
+
+-- n = u/v
+isolateVar' (NEdge u v) (L:p) = isolateVar' u p . (flip FEdge v)
+isolateVar' (NEdge u v) (R:p) = isolateVar' v p . (flip BEdge u)
+
+{-
 isolateVar' (FDiff p' e dp de) (L:p) = isolateVar' dp p . f
   where f x@(DEnergy (DEnergyIdx s r a b)) = BDiff (Energy (EnergyIdx s r a b)) e x de
 isolateVar' (BDiff p' e dp de) (L:p) = isolateVar' dp p . f
   where f x@(DEnergy (DEnergyIdx s r a b)) = FDiff (Energy (EnergyIdx s r a b)) e x de
-
+-}
 
 -- this is the main function for transforming Equations
 -- It takes an unknown variable and an equation.

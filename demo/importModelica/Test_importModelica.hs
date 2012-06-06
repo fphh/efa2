@@ -1,5 +1,7 @@
 
 import EFA2.IO.Import
+import EFA2.Display.DispSignal
+import EFA2.Display.Plot
 
 name1 =  "linear_res.csv" -- hand generated cvs file
 name2 =  "linear_res_manual.csv" -- full modelica cvs file
@@ -19,5 +21,5 @@ main = do
   putStrLn ""
   putStrLn (show rec2)
   
-  
+  sigPlot rec1
   

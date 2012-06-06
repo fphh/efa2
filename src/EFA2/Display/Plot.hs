@@ -19,7 +19,7 @@ import qualified Data.Map as M
 class SPlotData s typ c d where 
   sPlotData :: TC s typ (c d) -> [d]
   
-instance (FromToList (Data (v1 :> Nil)) Val, DisplayTyp t) => SPlotData sig t  (Data (v1 :> Nil)) Val where 
+instance (DFromList (Data (v1 :> Nil)) Val, DisplayTyp t) => SPlotData sig t  (Data (v1 :> Nil)) Val where 
   sPlotData x = map (*s) $ stoList x  
     where t = getDisplayType x
           u = getDisplayUnit t
@@ -40,13 +40,22 @@ class Plot a where
 instance SPlotData Signal t (Data (v1 :> Nil)) Val => Plot (TC Signal t  (Data (v1 :> Nil) Val))  where 
   sigPlot x = plotList [] (sPlotData x)
 
+instance (DisplayTyp t, VFromList v1 Double, VFromList v2 (TC Signal t (Data (v1 :> (Nil' :> Nil')) Val)),
+                      VWalker v2 (v1 Val) (TC Signal t (Data (v1 :> (Nil' :> Nil')) Val))) => Plot (TC Signal t  (Data (v2 :> v1 :> Nil) Val))  where 
+  sigPlot x = mapM_ sigPlot $ toSigList x  
 
 instance SPlotData FSignal t (Data (v1 :> Nil)) Val => Plot (TC FSignal t  (Data (v1 :> Nil) Val))  where 
   sigPlot x = plotList [] (sPlotData x)
 
 instance Plot PowerRecord where   
   sigPlot (PowerRecord time pMap) = plotLists [] (map sPlotData $ M.elems pMap)
-  
+{-  
+instance Plot SecPowerRecord where   
+  sigPlot (SecPowerRecord time pMap) = plotLists [] (map sPlotData $ M.elems pMap)
+-}
+instance Plot Record where   
+  sigPlot (Record time sigMap) = plotLists [] (map sPlotData $ M.elems sigMap)
+
 instance Plot SequPwrRecord where   
   sigPlot (SequData recs) = mapM_ sigPlot recs
 

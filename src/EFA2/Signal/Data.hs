@@ -45,6 +45,8 @@ type UVec a = (Data (UV.Vector :> Nil) a)
 type UVec2 a = (Data (V.Vector :> UV.Vector :> Nil) a)
 type UVec3 a = (Data (V.Vector :> V.Vector :> UV.Vector :> Nil) a)
 
+type UVec2L a = (Data ([] :> UV.Vector :> Nil) a)
+
 type Vec a = (Data (V.Vector :> Nil) a)
 type Vec2 a = (Data (V.Vector :> V.Vector :> Nil) a)
 type Vec3 a = (Data (V.Vector :> V.Vector :> V.Vector :> Nil) a)
@@ -168,6 +170,28 @@ instance (VSingleton v2 (v1 d)) => Monoid (Data (v2 :> v1 :> Nil) d) where
    mempty = Data $ D2 $ vempty        
    mappend (Data (D2 x)) (Data (D2 y)) = Data $ D2 $ vappend x y    
 
+
+class DAppend c1 c2 c3 d | c1 c2 -> c3  where 
+  dappend :: c1 d -> c2 d -> c3 d
+  
+instance (VSingleton v1 d, VConvert v1 v1 d) => DAppend (Data (v1 :> Nil)) (Data (v1 :> Nil)) (Data (v1 :> Nil)) d where  
+  dappend (Data (D1 x)) (Data (D1 y)) = Data $ D1 $ vappend x (vconvert y)
+
+instance (VSingleton v1 d) => DAppend (Data (v1 :> Nil)) (Data Nil) (Data (v1 :> Nil)) d where  
+  dappend (Data (D1 x)) (Data (D0 y)) = Data $ D1 $ vappend x (vsingleton y)
+
+instance (VSingleton v1 d) => DAppend (Data Nil) (Data (v1 :> Nil)) (Data (v1 :> Nil)) d where  
+  dappend (Data (D0 x)) (Data (D1 y)) = Data $ D1 $ vappend (vsingleton x) y
+
+instance (VSingleton v2 (v1 d)) => DAppend (Data (v2 :> v1 :> Nil)) (Data (v2 :> v1 :> Nil)) (Data (v2 :> v1 :> Nil)) d where  
+  dappend (Data (D2 x)) (Data (D2 y)) = Data $ D2 $ vappend x y
+
+instance (VSingleton v2 (v1 d)) => DAppend (Data (v2 :> v1 :> Nil)) (Data (v1 :> Nil)) (Data (v2 :> v1 :> Nil)) d where  
+  dappend (Data (D2 x)) (Data (D1 y)) = Data $ D2 $ vappend x (vsingleton y)
+
+instance (VSingleton v2 (v1 d)) => DAppend (Data (v1 :> Nil)) (Data (v2 :> v1 :> Nil)) (Data (v2 :> v1 :> Nil)) d where  
+  dappend (Data (D1 x)) (Data (D2 y)) = Data $ D2 $ vappend (vsingleton x) y
+
 ----------------------------------------------------------
 -- get data Range
         
@@ -183,20 +207,75 @@ instance (VSingleton y d) => DSingleton (Data (y :> Nil)) (Data Nil) d where
 ----------------------------------------------------------
 -- From / To List
   
-class FromToList c d where
+class DFromList c d where
   dfromList :: [d] -> c d
-  dtoList :: c d -> [d] 
+  dtoList :: c d -> [d]
+
+instance  (VFromList v d) => DFromList (Data (v :> Nil)) d where  
+  dfromList x = Data $ D1 $ vfromList x
+  dtoList (Data (D1 x)) = vtoList x
   
-instance  (UV.Unbox d) => FromToList (Data (UV.Vector :> Nil)) d where  
-  dfromList x = Data $ D1 $ UV.fromList x
-  dtoList (Data (D1 x)) = UV.toList x
+
+class DFromList2 c d where
+  dfromList2 :: [[d]] -> c d
+  dtoList2 :: c d -> [[d]] 
+
+instance (VFromList v1 d, VFromList v2 (v1 d), VFromList v2 [d], VWalker v2 (v1 d) [d])=> DFromList2 (Data (v2 :> v1 :> Nil)) d where  
+  dfromList2 x = Data $ D2 $ vfromList $ vmap vfromList x
+  dtoList2 (Data (D2 x)) = vtoList $ vmap vtoList x
   
-instance FromToList (Data (V.Vector :> Nil)) d where  
-  dfromList x = Data $ D1 $ V.fromList x
-  dtoList (Data (D1 x)) = V.toList x  
+
+----------------------------------------------------------
+-- All
+
+class DAll c d where
+  dall :: (d -> Bool) -> c d -> Bool
+  dany :: (d -> Bool) -> c d -> Bool
   
-instance FromToList (Data ([] :> Nil)) d where  
-  dfromList x = Data $ D1 $ x
-  dtoList (Data (D1 x)) = x
+instance (VSingleton v d) => DAll (Data (v :> Nil)) d where  
+  dall f (Data (D1 x)) = vall f x
+  dany f (Data (D1 x)) = vany f x
+  
+----------------------------------------------------------
+-- Transpose
+  
+class DTranspose c d where  
+  dtranspose :: c d -> c d
+  
+instance DTranspose (Data (v1 :> Nil)) d where    
+  dtranspose x = x
+  
+instance VTranspose v1 v2 d => DTranspose (Data (v2 :> v1 :> Nil)) d where    
+  dtranspose (Data (D2 x)) = Data $ D2 $ vtranspose x
+
+
+----------------------------------------------------------
+-- Head & Tail
+  
+class DHead c1 c2 d | c1 -> c2, c2 -> c1 where  
+  dhead :: c1 d -> c2 d
+  dlast :: c1 d -> c2 d
+  
+instance VSingleton v1 d => DHead (Data (v1 :> Nil)) (Data Nil) d where
+  dhead (Data (D1 x)) = Data $ D0 $ vhead x
+  dlast (Data (D1 x)) = Data $ D0 $ vlast x
+
+instance (VSingleton v2 (v1 d))=> DHead (Data (v2 :> v1 :> Nil)) (Data (v1 :> Nil)) d where
+  dhead (Data (D2 x)) = Data $ D1 $ vhead x
+  dlast (Data (D2 x)) = Data $ D1 $ vlast x
+
+
+
+class DTail c1 c2 d | c1 -> c2, c2 -> c1  where
+  dtail :: c1 d -> c2 d
+  dinit :: c1 d -> c2 d
+  
+instance  (VSingleton v1 d) => DTail (Data (v1 :> Nil)) (Data (v1 :> Nil)) d where
+  dtail (Data (D1 x)) = Data $ D1 $ vtail x 
+  dinit (Data (D1 x)) = Data $ D1 $ vinit x
+
+instance (VSingleton v2 (v1 d)) => DTail (Data (v2 :> v1 :> Nil)) (Data (v2 :> v1 :> Nil)) d where
+  dtail (Data (D2 x)) = Data $ D2 $ vtail x
+  dinit (Data (D2 x)) = Data $ D2 $ vinit x
   
   

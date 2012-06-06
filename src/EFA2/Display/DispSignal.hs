@@ -39,40 +39,48 @@ dispAll xs t = (L.intercalate " " $ map (disp f s) xs) ++  " " ++ show u
 class SDisplay a where
   sdisp :: a -> String
 
-instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d,VSingleton v1 d, FromToList (Data (v1 :> Nil)) d)
+instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d, VSingleton v1 d, DFromList (Data Nil) d)
+         => SDisplay (TC Scalar t (Data Nil d)) where 
+  sdisp x@(TC (Data (D0 v)))  = "Sig-D0 " -- ++ tdisp x ++ ": " ++ dispAll (stoList x) dtyp -- dispRange dmin dmax dtyp 
+--    where dtyp = getDisplayType x
+--          dmin = vminimum v
+--          dmax = vmaximum v
+
+
+instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d,VSingleton v1 d, DFromList (Data (v1 :> Nil)) d)
          => SDisplay (TC Signal t (Data (v1 :> Nil) d)) where 
   sdisp x@(TC (Data (D1 v)))  = "Sig-D1 " ++ tdisp x ++ ": " ++ dispAll (stoList x) dtyp -- dispRange dmin dmax dtyp 
     where dtyp = getDisplayType x
           dmin = vminimum v
           dmax = vmaximum v
 
-instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d,VSingleton v1 d, FromToList (Data (v1 :> Nil)) d)
+instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d,VSingleton v1 d, DFromList (Data (v1 :> Nil)) d)
          => SDisplay (TC FSignal t (Data (v1 :> Nil) d)) where 
   sdisp x@(TC (Data (D1 v)))  = "FSig-D1 " ++ tdisp x ++ ": " ++ dispAll (stoList x) dtyp -- dispRange dmin dmax dtyp 
     where dtyp = getDisplayType x
           dmin = vminimum v
           dmax = vmaximum v
 
-instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d,VSingleton v1 d, FromToList (Data (v1 :> Nil)) d)
+instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d,VSingleton v1 d, DFromList (Data (v1 :> Nil)) d)
          => SDisplay (TC TestRow t (Data (v1 :> Nil) d)) where 
   sdisp x@(TC (Data (D1 v)))  = "TestRow-D1 " ++ tdisp x ++ ": " ++ dispAll (stoList x) dtyp -- dispRange dmin dmax dtyp 
     where dtyp = getDisplayType x
           dmin = vminimum v
           dmax = vmaximum v
 
-instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d,VSingleton v1 d,VSingleton v2 (v1 d), FromToList (Data (v2 :> (v1 :> Nil))) d) => SDisplay (TC Signal t (Data (v2 :> v1 :> Nil) d)) where 
+instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d,VSingleton v1 d,VSingleton v2 (v1 d), DFromList (Data (v2 :> (v1 :> Nil))) d) => SDisplay (TC Signal t (Data (v2 :> v1 :> Nil) d)) where 
   sdisp x@(TC(Data (D2 v)))  = "Sig-D2 " ++ tdisp x ++ ": " ++ dispAll (stoList x) dtyp -- dispRange dmin dmax dtyp 
     where dtyp = getDisplayType x
           dmin = vminimum $ vminimum v
           dmax = vmaximum $ vminimum v
  
-instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d,VSingleton v1 d,VSingleton v2 (v1 d), FromToList (Data (v2 :> (v1 :> Nil))) d) => SDisplay (TC FSignal t (Data (v2 :> v1 :> Nil) d)) where 
+instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d,VSingleton v1 d,VSingleton v2 (v1 d), DFromList (Data (v2 :> (v1 :> Nil))) d) => SDisplay (TC FSignal t (Data (v2 :> v1 :> Nil) d)) where 
   sdisp x@(TC(Data (D2 v)))  = "Sig-D2 " ++ tdisp x ++ ": " ++ dispAll (stoList x) dtyp -- dispRange dmin dmax dtyp 
     where dtyp = getDisplayType x
           dmin = vminimum $ vminimum v
           dmax = vmaximum $ vminimum v
 
-instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d,VSingleton v1 d,VSingleton v2 (v1 d), FromToList (Data (v2 :> (v1 :> Nil))) d) => SDisplay (TC TestRow t (Data (v2 :> v1 :> Nil) d)) where 
+instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d,VSingleton v1 d,VSingleton v2 (v1 d), DFromList (Data (v2 :> (v1 :> Nil))) d) => SDisplay (TC TestRow t (Data (v2 :> v1 :> Nil) d)) where 
   sdisp x@(TC(Data (D2 v)))  = "Test-D2 " ++ tdisp x ++ ": " ++ dispAll (stoList x) dtyp -- dispRange dmin dmax dtyp 
     where dtyp = getDisplayType x
           dmin = vminimum $ vminimum v

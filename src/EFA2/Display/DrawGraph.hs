@@ -115,20 +115,6 @@ drawTopologyX' :: Topology -> IO ()
 drawTopologyX' topo = printGraph g noRecord (const2 "♥") show show
   where g = unTopology topo
 
-{-
-drawFlowTop :: FlowTopology -> IO ()
-drawFlowTop (FlowTopology g) = printGraph g show show -- runGraphvizCanvas Dot (mkDotGraph g (show, show)) Xlib
-
-drawSequFlowTops :: SequFlowTops -> IO ()
-drawSequFlowTops (SequData flowTops) = mapM_ drawFlowTop flowTops
-r-}
-
-
-{-
-drawTopologyX :: TheGraph a -> IO ()
-drawTopologyX (TheGraph g _) = printGraph g show show
--}
-
 data Line = ELine Int Int
           | XLine Int Int
           | NLine Int Int
@@ -208,7 +194,6 @@ instance DrawTopology UTFSig where
                  f (x, Nothing) = show x ++ " = ♥"
                  formatStCont (Just ys) = sdisp ys
                  formatStCont Nothing = "♥"
-
 
 drawAbsTopology' :: ((Line, Maybe UTFSig) -> String) -> (Maybe UTFSig -> String) -> Topology -> Envs UTFSig ->  IO ()
 drawAbsTopology' f content (Topology g) (Envs rec e de p dp fn dn dt x v st) = printGraph g rec tshow nshow eshow

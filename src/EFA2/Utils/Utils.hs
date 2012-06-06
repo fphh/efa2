@@ -59,30 +59,6 @@ pairs xs = zipWith (,) xs (tail xs)
 
 const2 x _ _ = x
 
-{-
-class Transpose a where
-      transpose :: [a] -> [a]
-
-instance Transpose [a] where
-         transpose [] = []
-         transpose xs = map (flip map xs) fs
-           where fs = take min $ head : (map (. tail) fs)
-                 min = L.minimum $ map length xs
-
-instance UV.Unbox a => Transpose (UV.Vector a) where
-         transpose [] = []
-         transpose xs = map (UV.fromList . flip map xs) fs
-           where fs = take min $ map (flip (UV.!)) [0..]
-                 min = L.minimum $ map UV.length xs
--}
-
-{-
-foldGraph :: Graph gr => (a -> ([Node], Node, [Node]) -> a) -> a -> gr b c -> a
-foldGraph f start g = L.foldl' f start (zip3 ins ns outs)
-  where ns = nodes g
-        ins = map (pre g) ns
-        outs = map (suc g) ns
--}
 
 type InOutGraphFormat a = ([a], a, [a])
 
@@ -111,16 +87,6 @@ mapGraphNodes f g = map f (mkInOutGraphFormat fst g)
 mapGraphLabels :: Graph gr => (InOutGraphFormat b -> a) -> gr b c -> [a]
 mapGraphLabels f g = map f (mkInOutGraphFormat snd g)
 
-{-
-getLEdge :: Graph gr => gr a b -> Node -> Node -> Maybe (LEdge b)
-getLEdge g from to
-  | [x] <- res = Just x
-  | otherwise = Nothing
-  where res = filter f is
-        is = inn g to
-        f (x, _, _) = x /= from
--}
-
 getLEdge :: (Graph gr) => gr a b -> Node -> Node -> Maybe (LEdge b)
 getLEdge g from to =
   case filter f is of
@@ -128,77 +94,6 @@ getLEdge g from to =
        _ -> Nothing
   where is = inn g to
         f (x, _, _) = x == from
-
-{-
-class ContainerArithSingleton cont a where
-      csingleton :: a -> cont a
-      cappend :: cont a -> cont a -> cont a
-      cconcat :: [cont a] -> cont a
-      ctranspose :: [cont a] -> [cont a]
-      chead :: cont a -> a
-      ctail :: cont a -> cont a
-      clast :: cont a -> a
-
-class ContainerArith cont a b where
-      cmap :: (a -> b) -> cont a -> cont b
-      cfoldr :: (a -> b -> b) -> b -> cont a -> b
-      czip :: cont a -> cont b -> cont (a, b)
-      dmap :: (a -> a -> b) -> cont a -> cont b
-      dmap' :: (a -> a -> b) -> cont a -> cont b
-
-class ContainerArithZip cont a b c where
-      czipWith :: (a -> b -> c) -> cont a -> cont b -> cont c
-
-instance ContainerArithSingleton [] a where
-      csingleton x = [x]
-      cappend = (++)
-      cconcat = concat
-      ctranspose = L.transpose
-      chead = head
-      ctail = tail
-      clast = last
-
-instance ContainerArith [] a b where
-         cmap = map
-         cfoldr = foldr
-         czip = zip
-         dmap f l = zipWith f (init l) (tail l)
-         dmap' f l = zipWith f (tail l) (init l)
-
-instance ContainerArithZip [] a b c where
-         czipWith = zipWith
-
-instance (UV.Unbox a) => ContainerArithSingleton UV.Vector a where
-         csingleton x = UV.singleton x
-         cappend = (UV.++)
-         cconcat = UV.concat
-         ctranspose [] = []
-         ctranspose xs = map (UV.fromList . flip map xs) fs
-           where fs = take min $ map (flip (UV.!)) [0..]
-                 min = L.minimum $ map UV.length xs
-         chead = UV.head
-         ctail = UV.tail
-         clast = UV.last
-
-instance (UV.Unbox a, UV.Unbox b) => ContainerArith UV.Vector a b where
-         cmap = UV.map
-         cfoldr = UV.foldr
-         czip = UV.zip
-         dmap f l = UV.zipWith f (UV.init l) (UV.tail l)  
-         dmap' f l = UV.zipWith f (UV.tail l) (UV.init l)
-
-instance (UV.Unbox a, UV.Unbox b, UV.Unbox c) => ContainerArithZip UV.Vector a b c where
-         czipWith = UV.zipWith
--}
-
--- | mapping a function over a list with using to neighbouring elements 
--- dmap :: (a -> a -> b) -> [a] -> [b]
--- dmap f l = zipWith f (init l) (tail l)  
-
--- | mapping a function over a list with using to neighbouring elements 
---dmap' :: (a -> a -> b) -> [a] -> [b]
---dmap' f l = zipWith f (tail l) (init l)  
-
 
 -- | generate an list of indices for a list  
 listIdx :: [a] -> [Int]
@@ -236,7 +131,11 @@ hasSameVariable s t = S.size (S.intersection s t) > 0
 debugLevel = 0
 
 -- mytrace for single values
-mytrace dbgLevel function varName var = if debugLevel >= dbgLevel then trace ("myTrace: " ++ show function ++ "-" ++ show varName ++ " : " ++ show var) var else var
+mytrace dbgLevel function varName var | debugLevel >= dbgLevel = 
+  trace ("myTrace: " ++ show function ++ "-" ++ show varName ++ " : " ++ show var) var 
+mytrace _ _ _ var = var
 
 -- mytrace for lists
-mytraceList dbgLevel function varName var = if debugLevel >= dbgLevel then trace ("myTraceList: " ++ show function ++ "-" ++ show varName ++ " : " ++ myShowList var) var else var
+mytraceList dbgLevel function varName var | debugLevel >= dbgLevel = 
+  trace ("myTraceList: " ++ show function ++ "-" ++ show varName ++ " : " ++ myShowList var) var
+mytraceList _ _ _ var = var

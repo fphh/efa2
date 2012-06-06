@@ -9,6 +9,7 @@ import qualified Data.Map as M
 import qualified Data.List as L
 
 import EFA2.Signal.Signal
+import EFA2.Signal.Data
 
 -- | Variable types of the solver. The solver, in fact, is
 -- ignorant of the provenance of the variables. However, to
@@ -215,3 +216,18 @@ minusEnv laterEnv formerEnv | checkEnvsForDelta laterEnv formerEnv = gnv
         gnv = laterEnv { denergyMap = M.mapKeys edk $ energyMap laterEnv `minus` energyMap formerEnv,
                          dpowerMap = M.mapKeys pdk $ powerMap laterEnv `minus` powerMap formerEnv,
                          detaMap = M.mapKeys etadk $ fetaMap laterEnv `fminus` fetaMap formerEnv }
+
+
+
+mapEnv :: (DMap c a b) => (a -> b) -> Envs (TC s t (c a)) -> Envs (TC s t (c b))
+mapEnv f env = emptyEnv { recordNumber = recordNumber env,
+                          energyMap = M.map (smap f) (energyMap env),
+                          denergyMap = M.map (smap f) (denergyMap env),
+                          powerMap = M.map (smap f) (powerMap env),
+                          dpowerMap = M.map (smap f) (dpowerMap env),
+                          --fetaMap = M.map (smap f .) (fetaMap env),
+                          --detaMap = M.map (smap f .) (detaMap env),
+                          dtimeMap = M.map (smap f) (dtimeMap env),
+                          xMap = M.map (smap f) (xMap env),
+                          varMap = M.map (smap f) (varMap env),
+                          storageMap = M.map (smap f) (storageMap env) }

@@ -1,11 +1,13 @@
 import EFA2.Signal.Sequence
+import EFA2.Signal.SequenceData
 import  EFA2.Interpreter.Env
 import EFA2.Utils.Utils
+import EFA2.Signal.Signal
 
 import qualified Data.Map as M 
 
 
-time = [0,10..50]
+time = sfromList [0,10..50]
 
 t1 = "left event"
 pa1 = [1,2,3,0,0,0]
@@ -63,7 +65,7 @@ pmap12 = M.fromList [(PPosIdx 0 1,p12)]
 
 -- Create lists over all test cases
 titleList = [t1,t2,t3,t4,t5,t6,t7,t9,t10,t8,t11,t12]
-pmapList = [pmap1,pmap2,pmap3,pmap4,pmap5,pmap6,pmap7,pmap9,pmap10,pmap8,pmap11,pmap12]
+pmapList = map (M.map sfromList) [pmap1,pmap2,pmap3,pmap4,pmap5,pmap6,pmap7,pmap9,pmap10,pmap8,pmap11,pmap12]
 recList = map (PowerRecord time) pmapList  
 list = idxList $ zip titleList (zip recList (map  (genSequ) (map addZeroCrossings recList)))
 

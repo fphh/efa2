@@ -38,44 +38,50 @@ import EFA2.Display.DrawGraph
 
 import EFA2.Example.SymSig
 --import EFA2.Example.Loop
-import EFA2.Example.LinearOne
+import EFA2.Example.LinearTwo
 
 
 main :: IO ()
 main = do
-  let TheGraph g _ = linearOne
+  let TheGraph g _ = linearTwo
 
       envs0 = emptyEnv { recordNumber = SingleRecord 0,
-                         energyMap = sigs0, 
-                         dtimeMap = dtimes0, 
-                         fetaMap = M.fromList [(FEtaIdx 0 0 1 0, smap (const 0.8)), (FEtaIdx 0 0 0 1, smap (const 0.7))] }
+                         energyMap = sigs0ss,
+                         dtimeMap = dtimes0ss,
+                         fetaMap = eta0ss }
 
       envs1 = emptyEnv { recordNumber = SingleRecord 1,
-                         energyMap = sigs1,
-                         dtimeMap = dtimes1,
-                         fetaMap = M.fromList [(FEtaIdx 0 1 1 0, smap (const 0.8)), (FEtaIdx 0 1 0 1, smap (const 0.7))] }
+                         energyMap = sigs1ss,
+                         dpowerMap = dpower1ss,
+                         detaMap = deta1ss,
+                         dtimeMap = dtimes1ss,
+                         fetaMap = eta1ss }
 
-      (envs, ts) = makeAllEquations g [envs0, envs1]
-      ts' = map (eqToInTerm envs) (order ts)
 
-      res = interpretFromScratch (recordNumber envs) 1 ts'
+      (envs0', ts0) = makeAllEquations g [envs0]
+      (envs1', ts1) = makeAllEquations g [envs1]
+      envs = envUnion [envs0', envs1']
+      t = map (eqToInTerm envs) $ mkAllDiffEqs 1 0 g
 
-      [res0, res1] = separateEnvs res
+      ts = map (eqToInTerm envs) (order (ts0 ++ ts1))
+
+      ts' = ts ++ [x] ++ t ++ [y] 
+      [x, y] = mkDiffEquations 1 (map (eqToInTerm envs) ts1)
+
+      res = interpretFromScratch (recordNumber envs) 1 (toAbsEquations ts')
 
   putStrLn ("Number of nodes: " ++ show (noNodes g))
   putStrLn ("Number of edges: " ++ show (length $ edges g))
+  putStrLn (showEqTerms $ mkAllDiffEqs 1 0 g)
   putStrLn "===================="
-  putStrLn (showEqTerms ts)
+  putStrLn (showEqTerms (ts0 ++ ts1))
   putStrLn "===================="
   putStrLn (showInTerms ts')
   putStrLn "===================="
+
   putStrLn ("Number of undeq: " ++ show (length ts'))
   putStrLn ("Number of deq:   " ++ show (length ts'))
 
   --drawTopology g res --  (res { recordNumber = SingleRecord 0 })
-  print envs
-  --drawTopology g res0
-  --drawTopology g res1
-  print (res1 `minusEnv` res0)
-
+  print (mapEnv showInTerm res)
 
