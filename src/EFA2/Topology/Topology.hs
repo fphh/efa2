@@ -55,7 +55,7 @@ makeAllEquations topo envs = ((envUnion envs') { recordNumber = MixedRecord newR
         recNum env = fromSingleRecord $ recordNumber env
         dirTopo = makeDirTopology topo
 
-        ts = edgeEqs ++ nodeEqs ++ interEqs  ++ powerEqs ++ envEqs
+        ts = envEqs ++ edgeEqs ++ nodeEqs ++ interEqs ++ powerEqs
 
         edgeEqs = concatMap mkEdEq envs
         mkEdEq env = mkEdgeEq (recNum env) dirTopo
@@ -148,7 +148,7 @@ data IOStore = InStore (LNode NLabel)
              | OutStore (LNode NLabel) deriving (Show)
 
 mkStoreEqs :: Int -> ([InOutGraphFormat (LNode NLabel)], [InOutGraphFormat (LNode NLabel)]) -> [EqTerm]
-mkStoreEqs recordNum (ins, outs) = startEq:eqs
+mkStoreEqs recordNum (ins, outs) = startEq ++ eqs
   where ins' = map (InStore . snd3) ins
         outs' = map (OutStore . snd3) outs
         both@(b:_) = L.sortBy  (compare `on` f) $ ins' ++ outs'
@@ -156,7 +156,8 @@ mkStoreEqs recordNum (ins, outs) = startEq:eqs
         f (OutStore (_, l)) = sectionNLabel l
         startEq = k b
         k (InStore (nid, NLabel sec _ (InitStorage st))) =
-          mkVar (StorageIdx sec recordNum st) := mkVar (VarIdx sec recordNum nid 0)
+          [ mkVar (StorageIdx sec recordNum st) := mkVar (VarIdx sec recordNum nid 0) ]
+        k _ = []
         eqs = map (g . h) (pairs both)
         h (InStore x, y) = (x, y)
         h (OutStore x, y) = (x, y)
@@ -268,26 +269,31 @@ mkEq recordNum (ins, n@(nid, NLabel sec _ _), outs)
 
 
 mkAllDiffEqs :: Int -> Int -> Topology -> [EqTerm]
-mkAllDiffEqs laterRec formerRec topo = {- edgeEqs ++ -} nodeEqs
-  where edgeEqs = concat $ mapGraph (mkDiffEdgeEqs laterRec formerRec) topo
+mkAllDiffEqs laterRec formerRec topo = {- edgeEqs ++ -} nodeEqs ++ etaEqs
+  where -- edgeEqs = concat $ mapGraph (mkDiffPowerEqs laterRec formerRec) topo
         nodeEqs = concat $ mapGraph (mkDiffNodeEqs laterRec formerRec) topo
+        etaEqs = concat $ mapGraph (mkDiffEtaEqs laterRec formerRec) topo
 
-mkDiffEdgeEqs :: Int -> Int -> ([LNode NLabel], LNode NLabel, [LNode NLabel]) -> [EqTerm]
-mkDiffEdgeEqs laterRec formerRec (ins, n@(nid, NLabel sec _ _), outs)
+mkDiffPowerEqs :: Int -> Int -> ([LNode NLabel], LNode NLabel, [LNode NLabel]) -> [EqTerm]
+mkDiffPowerEqs laterRec formerRec (ins, n@(nid, NLabel sec _ _), outs)
   | length ins == 0 && length outs == 0 = []
-  | length ins == 0 && length outs > 0 = doeqs ++ dnoeqs
+  | length ins == 0 && length outs > 0 = doeqs
   | length ins > 0 && length outs == 0 = dieqs
-  | otherwise = dieqs ++ doeqs ++ dnoeqs
+  | otherwise = dieqs ++ doeqs
   where makeVar r mkIdx (nid', _) = mkVar $ mkIdx sec r nid nid'
-        leis = map (makeVar laterRec PowerIdx) ins
-        feis = map (makeVar formerRec PowerIdx) ins
-        dieqs = zipWith3 f leis feis ins
+        lpis = map (makeVar laterRec PowerIdx) ins
+        fpis = map (makeVar formerRec PowerIdx) ins
+        dieqs = zipWith3 f lpis fpis ins
 
-        leos = map (makeVar laterRec PowerIdx) outs
-        feos = map (makeVar formerRec PowerIdx) outs
-        doeqs = zipWith3 f leos feos outs
+        lpos = map (makeVar laterRec PowerIdx) outs
+        fpos = map (makeVar formerRec PowerIdx) outs
+        doeqs = zipWith3 f lpos fpos outs
         f x y i = (makeVar laterRec DPowerIdx i) := x :+ (Minus y)
 
+
+mkDiffEtaEqs :: Int -> Int -> ([LNode NLabel], LNode NLabel, [LNode NLabel]) -> [EqTerm]
+mkDiffEtaEqs laterRec formerRec (ins, n@(nid, NLabel sec _ _), outs) = dnoeqs
+  where makeVar r mkIdx (nid', _) = mkVar $ mkIdx sec r nid nid'
         lnos = map (makeVar laterRec FEtaIdx) outs
         fnos = map (makeVar formerRec FEtaIdx) outs
         dnoeqs = zipWith3 g lnos fnos outs
@@ -301,7 +307,7 @@ mkDiffNodeEqs laterRec formerRec (ins, n@(nid, NLabel sec _ _), outs)
   where makeVar r mkIdx (nid', _) = mkVar $ mkIdx sec r nid nid'
         dleis = map (makeVar laterRec DPowerIdx) ins
         dleos = map (makeVar laterRec DPowerIdx) outs
-        sumeq = [add dleos := add dleis]
+        sumeq = [add dleis := add dleos]
 
 
 
@@ -317,3 +323,4 @@ makeDirTopology topo@(Topology _) = mkGraph ns es
           | AgainstDir <- flowDirection elabel = (y, x, elabel { flowDirection = WithDir })
           | otherwise = e
         ns = unique (concatMap (\(x, y, _) -> [(x,  fromJust (lab topo x)), (y, fromJust (lab topo y))]) es)
+

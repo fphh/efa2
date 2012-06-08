@@ -31,8 +31,11 @@ eqToInTerm envs term = eqToInTerm' term
         eqToInTerm' (DPower idx := Given) = InEqual (DPIdx idx) (InGiven (dpowerMap envs `safeLookup` idx))
         eqToInTerm' (FEta idx := Given) = InEqual (FNIdx idx) (InFunc (fetaMap envs `safeLookup` idx))
         eqToInTerm' (DEta idx := Given) = InEqual (DNIdx idx) (InFunc (detaMap envs `safeLookup` idx))
-        eqToInTerm' (DEta idx := (x :+ (Minus y))) = InEqual (DNIdx idx) (InFunc id)
-
+{- 
+        eqToInTerm' (DEta idx := ((FEta x) :+ (Minus (FEta y)))) = InEqual (DNIdx idx) (InFunc (\z -> fx z .- fy z))
+          where fx = fetaMap envs `safeLookup` x
+                fy = fetaMap envs `safeLookup` y
+-}
         eqToInTerm' (DTime idx := Given) = InEqual (DTIdx idx) (InGiven (dtimeMap envs `safeLookup` idx))
         eqToInTerm' (X idx := Given) = InEqual (ScaleIdx idx) (InGiven (xMap envs `safeLookup` idx))
         eqToInTerm' (Var idx := Given) = InEqual (VIdx idx) (InGiven (varMap envs `safeLookup` idx))
@@ -41,7 +44,7 @@ eqToInTerm envs term = eqToInTerm' term
         eqToInTerm' (DEnergy idx) = DEIdx idx
         eqToInTerm' (Power idx) = PIdx idx
         eqToInTerm' (DPower idx) = DPIdx idx
-        eqToInTerm' (FEta idx) = FNIdx idx -- (eqToInTerm' p)
+        eqToInTerm' (FEta idx) = FNIdx idx
         eqToInTerm' (DEta idx) = DNIdx idx
         eqToInTerm' (DTime idx) = DTIdx idx
         eqToInTerm' (X idx) = ScaleIdx idx
@@ -97,8 +100,8 @@ interpretRhs len envs term = interpretRhs' term
   where --interpretRhs' (InConst x) = sfromVal len [x] -- Wichtig für delta Rechnung?
         --interpretRhs' (InGiven xs) = smap (:[]) xs
         --interpretRhs' (InConst x) = sfromVal len x
-        -- interpretRhs' (InConst x) = toConst len x
-        interpretRhs' (InConst x) = toScalar (InConst x)
+        interpretRhs' (InConst x) = toConst len x
+        --interpretRhs' (InConst x) = toScalar (InConst x)
 
         interpretRhs' (InGiven xs) = xs
         interpretRhs' (EIdx idx) = energyMap envs `safeLookup` idx
@@ -162,3 +165,7 @@ interpretFromScratch :: ( SArith s s s, TProd t t t, TSum t t t, DMap c d d, DZi
                      => RecordNumber -> Int -> [InTerm (TC s t (c d))] -> Envs (TC s t (c d))
 -}
 interpretFromScratch rec len ts = (L.foldl' (interpretEq len) emptyEnv ts) { recordNumber = rec }
+
+
+--interpretWithEnv :: Int -> Envs a -> InTerm a -> a
+interpretWithEnv len envs t = interpretRhs len envs t

@@ -19,47 +19,91 @@ import EFA2.Signal.Signal
 import EFA2.Signal.Typ
 import EFA2.Signal.Base
 import EFA2.Signal.Data
+import EFA2.Solver.Equation
 
 
 
-type InTermScalar = TC Scalar (Typ UT UT UT) (Data Nil (InTerm Val))
+--type InTermScalar = TC Scalar (Typ UT UT UT) (Data Nil (InTerm Val))
+
+type Sc = Scal (Typ UT UT UT) Val
+
+dtimes0num :: DTimeMap Sc
+dtimes0num = M.fromList [ (DTimeIdx 0 0, toScalar 1.0) ]
+
+sigs0num :: PowerMap Sc
+sigs0num = M.fromList [ (PowerIdx 0 0 0 1, toScalar 3.0) ]
 
 
-dtimes0ss :: DTimeMap InTermScalar
-dtimes0ss = M.fromList [ (DTimeIdx 0 0, toScalar (DTIdx (DTimeIdx 0 0))) ]
+eta0num :: FEtaMap Sc
+eta0num = M.fromList [ (FEtaIdx 0 0 1 0, smap $ const 0.8), 
+                       (FEtaIdx 0 0 0 1, smap $ const 0.8),
+                       (FEtaIdx 0 0 1 2, smap $ const 0.8), 
+                       (FEtaIdx 0 0 2 1, smap $ const 0.8) ]
 
-sigs0ss :: EnergyMap InTermScalar
-sigs0ss = M.fromList [ (EnergyIdx 0 0 0 1, toScalar (EIdx (EnergyIdx 0 0 0 1))) ]
+x0num :: XMap Sc
+x0num = M.fromList []
 
-eta0ss :: FEtaMap InTermScalar
-eta0ss = M.fromList [ (FEtaIdx 0 0 1 0, smap $ const (FNIdx (FEtaIdx 0 0 1 0))), 
-                      (FEtaIdx 0 0 0 1, smap $ const (FNIdx (FEtaIdx 0 0 0 1))),
-                      (FEtaIdx 0 0 1 2, smap $ const (FNIdx (FEtaIdx 0 0 1 2))), 
-                      (FEtaIdx 0 0 2 1, smap $ const (FNIdx (FEtaIdx 0 0 2 1))) ]
+dtimes1num:: DTimeMap Sc
+dtimes1num = M.fromList [ (DTimeIdx 0 1, toScalar 1.0) ]
 
-dtimes1ss:: DTimeMap InTermScalar
-dtimes1ss = M.fromList [ (DTimeIdx 0 1, toScalar (DTIdx (DTimeIdx 0 1))) ]
+sigs1num :: PowerMap Sc
+sigs1num = M.fromList [ (PowerIdx 0 1 0 1, toScalar 3.5) ]
 
-sigs1ss :: EnergyMap InTermScalar
-sigs1ss = M.fromList [ (EnergyIdx 0 1 0 1, toScalar (EIdx (EnergyIdx 0 1 0 1))) ]
+dpower1num :: DPowerMap Sc
+dpower1num = M.fromList [ (DPowerIdx 0 1 0 1, toScalar 0.5) ]
 
-dpower1ss :: DPowerMap InTermScalar
-dpower1ss = M.fromList [ (DPowerIdx 0 1 0 1, toScalar (DPIdx (DPowerIdx 0 1 0 1))) ]
+eta1num :: FEtaMap Sc
+eta1num = M.fromList [ (FEtaIdx 0 1 1 0, smap $ const 0.9), 
+                      (FEtaIdx 0 1 0 1, smap $ const 0.9),
+                      (FEtaIdx 0 1 1 2, smap $ const 0.9), 
+                      (FEtaIdx 0 1 2 1, smap $ const 0.9) ]
 
-eta1ss :: FEtaMap InTermScalar
-eta1ss = M.fromList [ (FEtaIdx 0 1 1 0, smap $ const (FNIdx (FEtaIdx 0 1 1 0))), 
-                      (FEtaIdx 0 1 0 1, smap $ const (FNIdx (FEtaIdx 0 1 0 1))),
-                      (FEtaIdx 0 1 1 2, smap $ const (FNIdx (FEtaIdx 0 1 1 2))), 
-                      (FEtaIdx 0 1 2 1, smap $ const (FNIdx (FEtaIdx 0 1 2 1))) ]
+x1num :: XMap Sc
+x1num = M.fromList []
 
-deta1ss :: DEtaMap InTermScalar
-deta1ss = M.fromList [ (DEtaIdx 0 1 1 0, smap $ const (DNIdx (DEtaIdx 0 1 1 0))), 
-                       (DEtaIdx 0 1 0 1, smap $ const (DNIdx (DEtaIdx 0 1 0 1))),
-                       (DEtaIdx 0 1 1 2, smap $ const (DNIdx (DEtaIdx 0 1 1 2))), 
-                       (DEtaIdx 0 1 2 1, smap $ const (DNIdx (DEtaIdx 0 1 2 1))) ]
+deta1num :: DEtaMap Sc
+deta1num = M.fromList [ (DEtaIdx 0 1 1 0, smap $ const 0.1), 
+                       (DEtaIdx 0 1 0 1, smap $ const 0.1),
+                       (DEtaIdx 0 1 1 2, smap $ const 0.1), 
+                       (DEtaIdx 0 1 2 1, smap $ const 0.1) ]
+
+---------------------------------------------------------------------------------
+
+dtimes0eq :: DTimeMap EqTerm
+dtimes0eq = M.fromList [ (DTimeIdx 0 0, DTime (DTimeIdx 0 0)) ]
+
+sigs0eq :: PowerMap EqTerm
+sigs0eq = M.fromList [ (PowerIdx 0 0 0 1, Power (PowerIdx 0 0 0 1)) ]
+
+eta0eq :: FEtaMap EqTerm
+eta0eq = M.fromList [ (FEtaIdx 0 0 1 0, const $ FEta (FEtaIdx 0 0 1 0)), 
+                      (FEtaIdx 0 0 0 1, const $ FEta (FEtaIdx 0 0 0 1)),
+                      (FEtaIdx 0 0 1 2, const $ FEta (FEtaIdx 0 0 1 2)), 
+                      (FEtaIdx 0 0 2 1, const $ FEta (FEtaIdx 0 0 2 1)) ]
+
+dtimes1eq:: DTimeMap EqTerm
+dtimes1eq = M.fromList [ (DTimeIdx 0 1, DTime (DTimeIdx 0 1)) ]
+
+sigs1eq :: PowerMap EqTerm
+sigs1eq = M.fromList [ (PowerIdx 0 1 0 1, Power (PowerIdx 0 1 0 1)) ]
+
+dpower1eq :: DPowerMap EqTerm
+dpower1eq = M.fromList [ (DPowerIdx 0 1 0 1, DPower (DPowerIdx 0 1 0 1)) ]
+
+eta1eq :: FEtaMap EqTerm
+eta1eq = M.fromList [ (FEtaIdx 0 1 1 0, const $ FEta (FEtaIdx 0 1 1 0)), 
+                      (FEtaIdx 0 1 0 1, const $ FEta (FEtaIdx 0 1 0 1)),
+                      (FEtaIdx 0 1 1 2, const $ FEta (FEtaIdx 0 1 1 2)), 
+                      (FEtaIdx 0 1 2 1, const $ FEta (FEtaIdx 0 1 2 1)) ]
+
+deta1eq :: DEtaMap EqTerm
+deta1eq = M.fromList [ (DEtaIdx 0 1 1 0, const $ DEta (DEtaIdx 0 1 1 0)), 
+                       (DEtaIdx 0 1 0 1, const $ DEta (DEtaIdx 0 1 0 1)),
+                       (DEtaIdx 0 1 1 2, const $ DEta (DEtaIdx 0 1 1 2)), 
+                       (DEtaIdx 0 1 2 1, const $ DEta (DEtaIdx 0 1 2 1)) ]
 
 
-linearTwo :: TheGraph InTermScalar
+linearTwo :: TheGraph EqTerm
 linearTwo = TheGraph g undefined
   where g = mkGraph ns es
         ns = makeNodes [(0, Source), (1, Crossing), (2, Sink)]

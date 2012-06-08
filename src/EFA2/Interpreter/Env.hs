@@ -231,3 +231,4 @@ mapEnv f env = emptyEnv { recordNumber = recordNumber env,
                           xMap = M.map (smap f) (xMap env),
                           varMap = M.map (smap f) (varMap env),
                           storageMap = M.map (smap f) (storageMap env) }
+

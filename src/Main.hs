@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeSynonymInstances #-}
 
 module Main where
 
@@ -13,6 +14,7 @@ import System.IO
 
 import Debug.Trace
 
+import Text.Printf
 
 import EFA2.Solver.Equation
 import EFA2.Solver.Horn
@@ -29,6 +31,8 @@ import EFA2.Interpreter.Arith
 import EFA2.Signal.Signal
 
 import EFA2.Topology.Topology
+import EFA2.Topology.TopologyData
+
 --import EFA2.Topology.RandomTopology
 
 import EFA2.Utils.Utils
@@ -38,50 +42,156 @@ import EFA2.Display.DrawGraph
 
 import EFA2.Example.SymSig
 --import EFA2.Example.Loop
-import EFA2.Example.LinearTwo
+--import EFA2.Example.LinearTwo
+--import EFA2.Example.Dreibein
+--import EFA2.Example.Dreibein2
+import EFA2.Example.Dreibein3
+
+symbolic :: Topology -> Envs EqTerm
+symbolic g = res
+  where envs0 = emptyEnv { recordNumber = SingleRecord 0,
+                           powerMap = sigs0eq,
+                           dtimeMap = dtimes0eq,
+                           xMap = x0eq,
+                           fetaMap = eta0eq }
+
+        envs1 = emptyEnv { recordNumber = SingleRecord 1,
+                           powerMap = sigs1eq,
+                           dpowerMap = dpower1eq,
+                           detaMap = deta1eq,
+                           dtimeMap = dtimes1eq,
+                           xMap = x1eq,
+                           fetaMap = eta1eq }
+
+        (envs0', ts0) = makeAllEquations g [envs0]
+        (envs1', ts1) = makeAllEquations g [envs1]
+        diffts = mkAllDiffEqs 1 0 g
+
+        ts = toAbsEqTermEquations $ order $ diffts ++ ts0 ++ ts1 ++ mkDiffEqTermEquations 1 ts0
+        res = interpretEqTermFromScratch ts
+
+numeric :: Topology -> Envs Sc
+numeric g = res
+  where envs0 = emptyEnv { recordNumber = SingleRecord 0,
+                           powerMap = sigs0num,
+                           dtimeMap = dtimes0num,
+                           xMap = x0num,
+                           fetaMap = eta0num }
+
+        envs1 = emptyEnv { recordNumber = SingleRecord 1,
+                           powerMap = sigs1num,
+                           dpowerMap = dpower1num,
+                           detaMap = deta1num,
+                           dtimeMap = dtimes1num,
+                           xMap = x1num,
+                           fetaMap = eta1num }
+
+        (envs0', ts0) = makeAllEquations g [envs0]
+        (envs1', ts1) = makeAllEquations g [envs1]
+        envs = envUnion [envs0', envs1']
+        diffts = mkAllDiffEqs 1 0 g
+
+        ts = toAbsEqTermEquations $ order $ diffts ++ ts0 ++ ts1 ++ mkDiffEqTermEquations 1 ts0
+        res = interpretFromScratch (recordNumber envs) 1 (map (eqToInTerm envs) ts)
+
+deltaEnv :: Topology -> Envs Sc
+deltaEnv g = res1 `minusEnv` res0
+  where envs0 = emptyEnv { recordNumber = SingleRecord 0,
+                           powerMap = sigs0num,
+                           dtimeMap = dtimes0num,
+                           xMap = x0num,
+                           fetaMap = eta0num }
+
+        envs1 = emptyEnv { recordNumber = SingleRecord 1,
+                           powerMap = sigs1num,
+                           --dpowerMap = dpower1num,
+                           --detaMap = deta1num,
+                           dtimeMap = dtimes1num,
+                           xMap = x1num,
+                           fetaMap = eta1num }
+
+        (envs0', ts0) = makeAllEquations g [envs0]
+        (envs1', ts1) = makeAllEquations g [envs1]
+
+        ts0' = toAbsEqTermEquations $ order ts0
+        ts1' = toAbsEqTermEquations $ order ts1
+
+        res0 = interpretFromScratch (recordNumber envs0') 1 (map (eqToInTerm envs0') ts0')
+        res1 = interpretFromScratch (recordNumber envs1') 1 (map (eqToInTerm envs1') ts1')
+
+
+class MyShow a where
+      myshow :: a -> String
+
+
+
+instance MyShow Val where
+         myshow = printf "%.6f"
+
+instance MyShow Sc where
+         myshow = show
+
+instance MyShow DPowerIdx where
+         myshow (DPowerIdx s r f t) = "dp_" ++ show s ++ "." ++ show r ++ "_" ++ show f ++ "." ++ show t
+
+instance (Show a) => MyShow (InTerm a) where
+         myshow = showInTerm
+
+instance MyShow EqTerm where
+         myshow = showEqTerm
+
+instance MyShow a => MyShow [a] where
+         myshow xs = "[ " ++ L.intercalate ", " (map myshow xs) ++ " ]"
+
+format :: (MyShow a, MyShow b) => [(a, b)] -> String
+format xs = L.intercalate "\n" (map f xs)
+  where f (x, y) = myshow x ++ " = " ++ myshow y
 
 
 main :: IO ()
 main = do
-  let TheGraph g _ = linearTwo
+  let --TheGraph g _ = linearTwo
+      --TheGraph g _ = dreibein
+      --TheGraph g _ = dreibein2
+      TheGraph g _ = dreibein3
 
-      envs0 = emptyEnv { recordNumber = SingleRecord 0,
-                         energyMap = sigs0ss,
-                         dtimeMap = dtimes0ss,
-                         fetaMap = eta0ss }
-
-      envs1 = emptyEnv { recordNumber = SingleRecord 1,
-                         energyMap = sigs1ss,
-                         dpowerMap = dpower1ss,
-                         detaMap = deta1ss,
-                         dtimeMap = dtimes1ss,
-                         fetaMap = eta1ss }
+      sym = symbolic g
+      num = numeric g
 
 
-      (envs0', ts0) = makeAllEquations g [envs0]
-      (envs1', ts1) = makeAllEquations g [envs1]
-      envs = envUnion [envs0', envs1']
-      t = map (eqToInTerm envs) $ mkAllDiffEqs 1 0 g
+      dpnum = dpowerMap num
+      dpsym = dpowerMap sym
+      dpsymEq = M.map pushMult dpsym
 
-      ts = map (eqToInTerm envs) (order (ts0 ++ ts1))
+      dpsymIn = M.map (eqToInTerm emptyEnv) dpsym
+      dpsyminterp = M.map (interpretWithEnv 1 num) dpsymIn
 
-      ts' = ts ++ [x] ++ t ++ [y] 
-      [x, y] = mkDiffEquations 1 (map (eqToInTerm envs) ts1)
+      detailsSym = M.map additiveTerms dpsymEq
 
-      res = interpretFromScratch (recordNumber envs) 1 (toAbsEquations ts')
+      details :: M.Map DPowerIdx [Val]
+      details = M.map (map (fromScalar . interpretWithEnv 1 num . eqToInTerm emptyEnv)) detailsSym
+      
+      sumdetails = M.map sum details
 
-  putStrLn ("Number of nodes: " ++ show (noNodes g))
-  putStrLn ("Number of edges: " ++ show (length $ edges g))
-  putStrLn (showEqTerms $ mkAllDiffEqs 1 0 g)
-  putStrLn "===================="
-  putStrLn (showEqTerms (ts0 ++ ts1))
-  putStrLn "===================="
-  putStrLn (showInTerms ts')
-  putStrLn "===================="
+      control = dpowerMap (deltaEnv g)
 
-  putStrLn ("Number of undeq: " ++ show (length ts'))
-  putStrLn ("Number of deq:   " ++ show (length ts'))
+  putStrLn "\n== Control delta environment (later env - former env, computed independently) =="
+  putStrLn (format $ M.toList control)
 
-  --drawTopology g res --  (res { recordNumber = SingleRecord 0 })
-  print (mapEnv showInTerm res)
+  putStrLn "\n== Numeric solution =="
+  putStrLn (format $ M.toList dpnum)
 
+  putStrLn "\n== Symbolic solution =="
+  putStrLn (format $ M.toList dpsymEq)
+
+  putStrLn "\n== Numeric interpretation of symbolic solution =="
+  putStrLn (format $ M.toList dpsyminterp)
+
+  putStrLn "\n== Symbolic additive terms =="
+  putStrLn (format $ M.toList detailsSym)
+
+  putStrLn "\n== Numeric additive terms =="
+  putStrLn (format $ M.toList details)
+
+  putStrLn "\n== Sums of numeric additive terms =="
+  putStrLn (format $ M.toList sumdetails)
