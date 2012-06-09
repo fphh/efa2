@@ -35,11 +35,16 @@ p2 = [-7, 2]
 {-
 -}
 -- data points working
-time = sfromList [0,1]
+-- time = sfromList [0,1]
+-- p1 = sfromList [-1, 1]
+-- p2 = sfromList [-1, 3]
 
-p1 = sfromList [-1, 1]
-p2 = sfromList [-1, 3]
 
+t1 = toSample 0 :: TSample
+p1 = toSample (-1) :: PSample
+
+t2 = toSample 1 :: TSample
+p2 = toSample 3 :: PSample
 
 {-
 
@@ -59,13 +64,14 @@ p2 = [-1, 1]
 
 
 
-pRec = PowerRecord time (M.fromList [(PPosIdx 0 1,p1),(PPosIdx 1 0, p2)])
-pRec0 = addZeroCrossings pRec
+-- pRec = PowerRecord time (M.fromList [(PPosIdx 0 1,p1),(PPosIdx 1 0, p2)])
+-- pRec0 = addZeroCrossings pRec
 
 
-
-
+zT = calcZeroTime (t1,p1) (t2,p2)
+zP = interpPowers (t1,p1) (t2,p2) (sfromList [0.1,0.25,0.5]) (toSample 0.25)
 
 main = do
-  putStrLn (myShowList $ genXSig pRec) 
-  putStrLn (myShowList $ genXSig pRec0)
+  putStrLn (show zT)
+  putStrLn (show zP)
+

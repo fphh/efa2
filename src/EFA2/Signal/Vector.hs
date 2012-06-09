@@ -252,3 +252,29 @@ instance VFromList V.Vector d where
 instance VFromList [] d where
   vfromList x = x
   vtoList x = x  
+  
+  
+class VSort v d where  
+  vsort :: v d -> v d
+  
+instance Ord d => VSort [] d where  
+  vsort = L.sort
+  
+instance (Ord d, UV.Unbox d) => VSort UV.Vector d where  
+  vsort x = UV.fromList $ L.sort $ UV.toList x 
+  
+instance Ord d => VSort V.Vector d where  
+  vsort x = V.fromList $ L.sort $ V.toList x
+  
+  
+class VFilter v d where  
+  vfilter :: (d -> Bool) -> v d -> v d
+  
+instance VFilter [] d where  
+  vfilter f x = filter f x
+  
+instance VFilter V.Vector d where  
+  vfilter f x = V.filter f x
+  
+instance UV.Unbox d => VFilter UV.Vector d where  
+  vfilter f x = UV.filter f x
