@@ -1,3 +1,6 @@
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, FunctionalDependencies, TypeSynonymInstances, UndecidableInstances,KindSignatures, TypeOperators,  GADTs, OverlappingInstances, FlexibleContexts, ScopedTypeVariables #-}
+
+
 import EFA2.Signal.Sequence
 import EFA2.Signal.SequenceData
 import  EFA2.Interpreter.Env
@@ -5,6 +8,12 @@ import EFA2.Utils.Utils
 import EFA2.Signal.Signal
 
 import qualified Data.Map as M 
+
+import EFA2.Signal.Base
+import EFA2.Signal.Typ
+import EFA2.Signal.Data
+
+import Data.Monoid
 
 {-
 time = [0..5]
@@ -40,11 +49,6 @@ p2 = [-7, 2]
 -- p2 = sfromList [-1, 3]
 
 
-t1 = toSample 0 :: TSample
-p1 = toSample (-1) :: PSample
-
-t2 = toSample 1 :: TSample
-p2 = toSample 3 :: PSample
 
 {-
 
@@ -67,11 +71,41 @@ p2 = [-1, 1]
 -- pRec = PowerRecord time (M.fromList [(PPosIdx 0 1,p1),(PPosIdx 1 0, p2)])
 -- pRec0 = addZeroCrossings pRec
 
+t1 = toSample 0 :: TSample
+p1 = toSample (-1) :: PSample
+
+t2 = toSample 1 :: TSample
+p2 = toSample 3 :: PSample
 
 zT = calcZeroTime (t1,p1) (t2,p2)
-zP = interpPowers (t1,p1) (t2,p2) (sfromList [0.1,0.25,0.5]) (toSample 0.25)
+zP = interpPowers (t1,p1) (t2,p2) (sfromList [0.1,0.25,0.5]) zeroCrossing
+
+zeroCrossing = (toSample $ ZeroCrossing 0.25) :: TZeroSample
+
+ps1 = sfromList [-1,1] :: PSample1L
+ps2 = sfromList [3,3] :: PSample1L
+
+
+zeroCrossingTimes = filterTZero zeroCrossings :: TSigL
+zeroCrossings = stzipWith h2 ps1 ps2 :: TZeroSample1L 
+
+
+-- | Zero crossing time per signal, if zero crossing happens otherwise empty
+h2 :: PSample -> PSample -> TZeroSample
+h2 p1 p2 | ssign p1 == toSample PSign && ssign p2 == toSample NSign = calcZeroTime (t1,p1) (t2,p2)
+h2 p1 p2 | ssign p1 == toSample NSign && ssign p2 == toSample PSign = calcZeroTime (t1,p1) (t2,p2)
+h2 _  _ = toSample NoCrossing
+
+
+g :: (PSample,PSample)  -> PSigL
+g (p1, p2)  = interpPowers (t1,p1) (t2,p2) zeroCrossingTimes zeroCrossing 
+
+powers = g (p1, p2)
+
 
 main = do
   putStrLn (show zT)
   putStrLn (show zP)
-
+  putStrLn (show zeroCrossings)
+  putStrLn (show zeroCrossingTimes)
+  putStrLn (show powers)

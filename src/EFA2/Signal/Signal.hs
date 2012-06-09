@@ -67,8 +67,8 @@ instance (SArith s1 s2 s3, DZipWith c1 c2 c3 d1 d2 d3) => SZipWith s1 s2 s3 c1 c
 
 ----------------------------------------------------------------
 -- Getyptes ZipWith
-stzipWith ::SZipWith s1 s2 s3 c1 c2 c3 d1 d2 d3 => (TC Scalar typ1 (Data Nil d1) -> TC Scalar typ2 (Data Nil d2) -> TC Scalar typ3 (Data Nil d3)) -> TC s1 typ1 (c1 d1) -> TC s2 typ2 (c2 d2) -> TC s3 typ3 (c3 d3)        
-stzipWith f xs ys = szipWith g xs ys where g x y = fromScalar $ f (toScalar x) (toScalar y) 
+stzipWith ::SZipWith s1 s2 s3 c1 c2 c3 d1 d2 d3 => (TC Sample typ1 (Data Nil d1) -> TC Sample typ2 (Data Nil d2) -> TC Sample typ3 (Data Nil d3)) -> TC s1 typ1 (c1 d1) -> TC s2 typ2 (c2 d2) -> TC s3 typ3 (c3 d3)        
+stzipWith f xs ys = szipWith g xs ys where g x y = fromSample $ f (toSample x) (toSample y) 
 
 
 ----------------------------------------------------------------
@@ -193,6 +193,8 @@ type DTSample =  TC Sample (Typ D T Tt) (DVal Val)
 type TSample =  TC Sample (Typ A T Tt) (DVal Val)
 type TSample1 =  TC Sample (Typ A T Tt) (UVec Val)
 type TSample1L =  TC Sample (Typ A T Tt) (List Val)
+type TZeroSample = TC Sample (Typ A T Tt) (Data Nil ZeroCrossing)
+type TZeroSample1L = TC Sample (Typ A T Tt) (Data ([] :> Nil) ZeroCrossing)
 
 
 ------------------------------------
@@ -584,5 +586,7 @@ sampleAverage :: Fractional d => TC Sample typ (Data Nil d) -> TC Sample typ (Da
 sampleAverage (TC (Data (D0 x))) (TC (Data (D0 y))) = TC $ Data $ D0 $ (x+y)/2
 
 
+ssign :: (DMap c d Sign, Ord d, Num d) => TC s typ (c d) -> TC s (Typ A SZ UT) (c Sign)  
+ssign x = changeType $ smap (sign) x
   
-  
+

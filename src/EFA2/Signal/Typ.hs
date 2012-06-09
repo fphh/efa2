@@ -45,7 +45,7 @@ data M -- Storage Mix
 data BZ -- Bool State
 data IZ -- Int State
 data UZ -- User Defined State
-
+data SZ -- sign State
 
 -------------------------------------
 -- | Delta Flag

@@ -85,3 +85,4 @@ sign x | x > 0 = PSign
        | x == 0 = ZSign -- TODO add intervalls later on Zero - Detection       
        | x < 0 = NSign
 
+data ZeroCrossing = ZeroCrossing Val | NoCrossing deriving (Show, Eq)

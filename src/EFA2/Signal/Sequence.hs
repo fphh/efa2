@@ -165,43 +165,47 @@ recurse mempty _  rList = rList
 recurse rSig rold rList = recurse (rtail rSig) rnew ((getZeroCrossings rold rnew) .++ rList)  
   where rnew = rhead rSig  
                                       
+-}
                                       
 getZeroCrossings :: RSample1 -> RSample1 -> RSig         
 getZeroCrossings (t1, ps1) (t2, ps2) = ((ssingleton t1) .++ zeroCrossingTimes,
-                                      ((ssingleton ps1) .++ (szipWith g (szip ps1 ps2) zeroCrossings)))
+                                      ((ssingleton ps1) .++ (stzipWith g (szip ps1 ps2) zeroCrossings)))
           where 
             -- | create ascending list containing all zero crossing times
-            zeroCrossingTimes = ssort $ sfilter (/=mempty) (zeroCrossings) :: TSigL
-            zeroCrossings = szipWith h2 ps1 ps2 :: TSample1L
+            -- zeroCrossingTimes = ssort $ sfilter (/=mempty) (zeroCrossings) :: TSigL
+            -- zeroCrossings = szipWith h2 ps1 ps2 :: TSample1L
+            zeroCrossingTimes = filterTZero zeroCrossings :: TSigL
+            zeroCrossings = stzipWith h2 ps1 ps2 :: TZeroSample1L 
             
             -- | Zero crossing time per signal, if zero crossing happens otherwise empty
-            h2 :: PSample -> PSample -> TSample  
-            h2 p1 p2 | sign p1 == PSign && sign p2 == NSign = calcZeroTime (t1,p1) (t2,p2)
-            h2 p1 p2 | sign p1 == NSign && sign p2 == PSign = calcZeroTime (t1,p1) (t2,p2)
-            h2 _  _ = mempty
+            h2 :: PSample -> PSample -> TZeroSample
+            h2 p1 p2 | ssign p1 == toSample PSign && ssign p2 == toSample NSign = calcZeroTime (t1,p1) (t2,p2)
+            h2 p1 p2 | ssign p1 == toSample NSign && ssign p2 == toSample PSign = calcZeroTime (t1,p1) (t2,p2)
+            h2 _  _ = toSample NoCrossing
 
-            g :: (PSample,PSample) -> TSample1L -> PSample1L
+            g :: (PSample,PSample) -> TZeroSample -> PSigL
             g (p1, p2) zeroCrossing = interpPowers (t1,p1) (t2,p2) zeroCrossingTimes zeroCrossing
--}
 
 -----------------------------------------------------------------------------------
 -- | Interpolation Functions
 
 -- | calculate time of Zero Crossing Point                  
-calcZeroTime :: (TSample,PSample) -> (TSample,PSample) -> TSample 
+calcZeroTime :: (TSample,PSample) -> (TSample,PSample) -> TZeroSample 
 calcZeroTime (t1,p1) (t2,p2) = f t1 t2 
   where m = (p2.-p1)./(t2.-t1) -- interpolation slope 
-        f :: TSample -> TSample -> TSample
-        f t1 t2 | t2 > t1 = dt.+t1 where dt = changeType $ ((sneg p1)./m) :: DTSample -- time of zero crossing 
-        f t1 t2 | t2 == t1 = t1
+        f :: TSample -> TSample -> TZeroSample
+        f t1 t2 | t2 > t1 = makeTZero $ dt.+t1 where dt = changeType $ ((sneg p1)./m) :: DTSample -- time of zero crossing 
+        f t1 t2 | t2 == t1 = makeTZero t1
         f t1 t2 | t2 < t1 = error ("Error in calcZeroTime- Discontinous time vector t1: " ++ show t1 ++ " t2: " ++ show t2)
                   
 
+
+
 -- | interpolate Powers at Zero Crossing times 
-interpPowers :: (TSample,PSample) -> (TSample,PSample) -> TSample1L -> TSample -> PSample1L        
+interpPowers :: (TSample,PSample) -> (TSample,PSample) -> TSigL -> TZeroSample -> PSigL        
 interpPowers (t1,p1) (t2,p2) tzeroList tzero = stmap f tzeroList
   where f :: TSample -> PSample
-        f tz | tz==tzero = (toSample 0) -- avoid numeric error and make zero crossing power zero
+        f tz | (makeTZero tz)==tzero = (toSample 0) -- avoid numeric error and make zero crossing power zero
         f tz | otherwise = g t1 t2 
           where 
             g :: TSample -> TSample -> PSample
@@ -209,6 +213,13 @@ interpPowers (t1,p1) (t2,p2) tzeroList tzero = stmap f tzeroList
             g t1 t2 | t2 == t1 = sampleAverage p1 p2
             g t1 t2 | t2 < t1 =  error ("Error in interpPowers - Discontinous time vector - t1: " ++ show t1 ++ " t2: " ++ show t2)
         m = (p2.-p1)./(t2.-t1) -- interpolation slope 
+
+
+makeTZero :: TSample -> TZeroSample
+makeTZero (TC (Data (D0 x))) = TC $ Data $ D0 $ ZeroCrossing x 
+
+filterTZero :: TZeroSample1L -> TSigL
+filterTZero x = stranspose $ smap (\ (ZeroCrossing x) -> x) $ sfilter (/=NoCrossing) x  
 
 
 {-
