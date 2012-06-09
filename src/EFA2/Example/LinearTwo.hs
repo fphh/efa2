@@ -54,18 +54,18 @@ dpower1num = M.fromList [ (DPowerIdx 0 1 0 1, toScalar 0.5) ]
 
 eta1num :: FEtaMap Sc
 eta1num = M.fromList [ (FEtaIdx 0 1 1 0, smap $ const 0.9), 
-                      (FEtaIdx 0 1 0 1, smap $ const 0.9),
-                      (FEtaIdx 0 1 1 2, smap $ const 0.9), 
-                      (FEtaIdx 0 1 2 1, smap $ const 0.9) ]
+                       (FEtaIdx 0 1 0 1, smap $ const 0.9),
+                       (FEtaIdx 0 1 1 2, smap $ const 0.9), 
+                       (FEtaIdx 0 1 2 1, smap $ const 0.9) ]
 
 x1num :: XMap Sc
 x1num = M.fromList []
 
 deta1num :: DEtaMap Sc
 deta1num = M.fromList [ (DEtaIdx 0 1 1 0, smap $ const 0.1), 
-                       (DEtaIdx 0 1 0 1, smap $ const 0.1),
-                       (DEtaIdx 0 1 1 2, smap $ const 0.1), 
-                       (DEtaIdx 0 1 2 1, smap $ const 0.1) ]
+                        (DEtaIdx 0 1 0 1, smap $ const 0.1),
+                        (DEtaIdx 0 1 1 2, smap $ const 0.1), 
+                        (DEtaIdx 0 1 2 1, smap $ const 0.1) ]
 
 ---------------------------------------------------------------------------------
 
@@ -81,6 +81,9 @@ eta0eq = M.fromList [ (FEtaIdx 0 0 1 0, const $ FEta (FEtaIdx 0 0 1 0)),
                       (FEtaIdx 0 0 1 2, const $ FEta (FEtaIdx 0 0 1 2)), 
                       (FEtaIdx 0 0 2 1, const $ FEta (FEtaIdx 0 0 2 1)) ]
 
+x0eq :: XMap EqTerm
+x0eq = M.fromList []
+
 dtimes1eq:: DTimeMap EqTerm
 dtimes1eq = M.fromList [ (DTimeIdx 0 1, DTime (DTimeIdx 0 1)) ]
 
@@ -95,6 +98,9 @@ eta1eq = M.fromList [ (FEtaIdx 0 1 1 0, const $ FEta (FEtaIdx 0 1 1 0)),
                       (FEtaIdx 0 1 0 1, const $ FEta (FEtaIdx 0 1 0 1)),
                       (FEtaIdx 0 1 1 2, const $ FEta (FEtaIdx 0 1 1 2)), 
                       (FEtaIdx 0 1 2 1, const $ FEta (FEtaIdx 0 1 2 1)) ]
+
+x1eq :: XMap EqTerm
+x1eq = M.fromList []
 
 deta1eq :: DEtaMap EqTerm
 deta1eq = M.fromList [ (DEtaIdx 0 1 1 0, const $ DEta (DEtaIdx 0 1 1 0)), 

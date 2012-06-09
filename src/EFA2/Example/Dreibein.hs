@@ -87,6 +87,8 @@ eta0eq = M.fromList [ (FEtaIdx 0 0 1 0, const $ FEta (FEtaIdx 0 0 1 0)),
                       (FEtaIdx 0 0 2 1, const $ FEta (FEtaIdx 0 0 2 1)),
                       (FEtaIdx 0 0 1 3, const $ FEta (FEtaIdx 0 0 1 3)), 
                       (FEtaIdx 0 0 3 1, const $ FEta (FEtaIdx 0 0 3 1)) ]
+x0eq :: XMap EqTerm
+x0eq = M.fromList []
 
 dtimes1eq:: DTimeMap EqTerm
 dtimes1eq = M.fromList [ (DTimeIdx 0 1, DTime (DTimeIdx 0 1)) ]
@@ -106,6 +108,8 @@ eta1eq = M.fromList [ (FEtaIdx 0 1 1 0, const $ FEta (FEtaIdx 0 1 1 0)),
                       (FEtaIdx 0 1 2 1, const $ FEta (FEtaIdx 0 1 2 1)),
                       (FEtaIdx 0 1 1 3, const $ FEta (FEtaIdx 0 1 1 3)), 
                       (FEtaIdx 0 1 3 1, const $ FEta (FEtaIdx 0 1 3 1)) ]
+x1eq :: XMap EqTerm
+x1eq = M.fromList []
 
 deta1eq :: DEtaMap EqTerm
 deta1eq = M.fromList [ (DEtaIdx 0 1 1 0, const $ DEta (DEtaIdx 0 1 1 0)), 

@@ -110,7 +110,8 @@ shiftIndices m (Envs (SingleRecord rec) e de p dp fn dn t x v st) =
         xf (XIdx s _ f t) = XIdx s rec (m `safeLookup` (s, f)) (m `safeLookup` (s, t))
 
         v' = M.mapKeys vf v
-        vf (VarIdx s _ f t) = VarIdx s rec (m `safeLookup` (s, f)) (m `safeLookup` (s, t))
+        --vf (VarIdx s _ f t) = VarIdx s rec (m `safeLookup` (s, f)) (m `safeLookup` (s, t))
+        vf (VarIdx s _ use t) = VarIdx s rec use (m `safeLookup` (s, t))
 
         st' = M.mapKeys stf st
         stf (StorageIdx s _ sto) = StorageIdx s rec (m `safeLookup` (s, sto))
@@ -156,23 +157,23 @@ mkStoreEqs recordNum (ins, outs) = startEq ++ eqs
         f (OutStore (_, l)) = sectionNLabel l
         startEq = k b
         k (InStore (nid, NLabel sec _ (InitStorage st))) =
-          [ mkVar (StorageIdx sec recordNum st) := mkVar (VarIdx sec recordNum nid 0) ]
+          [ mkVar (StorageIdx sec recordNum st) := mkVar (VarIdx sec recordNum A nid) ]
         k _ = []
         eqs = map (g . h) (pairs both)
         h (InStore x, y) = (x, y)
         h (OutStore x, y) = (x, y)
         g ((nid, NLabel sec _ st), InStore (nid', NLabel sec' _ st')) = 
           mkVar (StorageIdx sec' recordNum (getStorageNumber st')) := 
-            mkVar (VarIdx sec' recordNum nid' 0) :+ mkVar (StorageIdx sec recordNum (getStorageNumber st))
+            mkVar (VarIdx sec' recordNum A nid') :+ mkVar (StorageIdx sec recordNum (getStorageNumber st))
         g ((nid, NLabel sec _ st), OutStore (nid', NLabel sec' _ st')) = 
           mkVar (StorageIdx sec' recordNum (getStorageNumber st')) := 
-            Minus (mkVar (VarIdx sec' recordNum nid' 1)) :+ mkVar (StorageIdx sec recordNum (getStorageNumber st))
+            Minus (mkVar (VarIdx sec' recordNum B nid')) :+ mkVar (StorageIdx sec recordNum (getStorageNumber st))
 
 
 
 mkInStoreEqs :: Int -> InOutGraphFormat (LNode NLabel) -> [EqTerm]
 mkInStoreEqs recordNum (ins, n@(nid, NLabel sec _ _), outs@((o,_):_)) = (startEq:osEqs)
-  where startEq = mkVar (VarIdx sec recordNum nid 0) := mkVar (EnergyIdx sec recordNum nid o)
+  where startEq = mkVar (VarIdx sec recordNum A nid) := mkVar (EnergyIdx sec recordNum nid o)
         osEqs = map f (pairs outs)
         f (x, y) = mkVar (EnergyIdx sec recordNum nid y') := 
                      mkVar (EnergyIdx sec recordNum nid x') :+ (Minus (mkVar (EnergyIdx xs recordNum x' nid)))
@@ -187,7 +188,7 @@ mkOutStoreEqs recordNum (ins, n@(nid, NLabel sec _ _), o:_) = visumeq:xeqs ++ ei
         eis = map (makeVar EnergyIdx) ins
         makeVar mkIdx (nid', l) = mkVar $ mkIdx (sectionNLabel l) recordNum nid' nid
 
-        visum = mkVar (VarIdx sec recordNum nid 2)
+        visum = mkVar (VarIdx sec recordNum C nid)
         visumeq = visum := add eis
 
         xeqs = zipWith g xis eis
@@ -196,7 +197,7 @@ mkOutStoreEqs recordNum (ins, n@(nid, NLabel sec _ _), o:_) = visumeq:xeqs ++ ei
         eis' = map (makeVar' EnergyIdx) ins
         makeVar' mkIdx (nid', _) = mkVar $ mkIdx sec recordNum nid nid'
 
-        outv = mkVar (VarIdx sec recordNum nid 1)
+        outv = mkVar (VarIdx sec recordNum B nid)
         eieqs = zipWith h eis' xis
         h e x = e := x :* outv
 mkOutStoreEqs _ _ = []
@@ -239,11 +240,11 @@ mkEq recordNum (ins, n@(nid, NLabel sec _ _), outs)
         makeVar mkIdx (nid', _) = mkVar $ mkIdx sec recordNum nid nid'
 
         -- ATTENTION (not very safe): We need this variable in mkInStoreEq again!!!
-        visum = mkVar (VarIdx sec recordNum nid 0) 
+        visum = mkVar (VarIdx sec recordNum A nid) 
         visumeq = [visum := add eis]
 
         -- ATTENTION (not very safe): We need this variable in mkOutStoreEq again!!!
-        vosum = mkVar (VarIdx sec recordNum nid 1)
+        vosum = mkVar (VarIdx sec recordNum B nid)
         vosumeq = [vosum := add eos]
 
         pis = map (makeVar PowerIdx) ins

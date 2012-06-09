@@ -49,7 +49,14 @@ data StorageIdx = StorageIdx !Int !Int !Int deriving (Show, Ord, Eq)
 -- ATTENTION: Some of them are used for equation generation for
 -- performance issues. You have to make sure yourself if your
 -- variable is unique in the equational system.
-data VarIdx = VarIdx !Int !Int !Int !Int deriving (Show, Ord, Eq)
+--data VarIdx = VarIdx !Int !Int !Int !Int deriving (Show, Ord, Eq)
+
+data Use = A
+         | B
+         | C
+         | D deriving (Show, Eq, Ord)
+
+data VarIdx = VarIdx !Int !Int Use !Int deriving (Show, Ord, Eq)
 
 class IdxRecNum a where
       getIdxRecNum :: a -> Int
