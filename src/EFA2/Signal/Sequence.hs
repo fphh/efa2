@@ -39,17 +39,8 @@ data EventType = LeftEvent
                | MixedEvent
                | NoEvent
 
---type PSample = Val
---type PSampleRow = TC Sample (Typ A P Tt) (UVec Val)
---type TSample = TC Sample (Typ D T Tt) (DVal Val)
 
--- | RSample contains time and values of all power signals for one time step 
---type RSample = (TSample, PSampleRow)
 
--- | Xlist = list of all xSamples
---type RSig =  [RSample] 
-
-{-
 -- | From PowerRecord
 --fromFlowRecord :: SecIdx -> RecIdx -> FlowRecord -> Envs FSig -- [Val]
 
@@ -80,7 +71,8 @@ genSequFlow sqPRec = (map recFullIntegrate) `fmap` sqPRec
 --genSequFlow :: SequPwrRecord -> SequFlowRecord FlowRecord
 --genSequFlow sqPRec = (map recFullIntegrate) `fmap` sqPRec
 
---makeSequence :: PowerRecord -> Topology -> ([Envs (Scal (Typ UT UT UT) Val)], Topology)
+
+-- makeSequence :: PowerRecord -> Topology -> ([Envs (Scal (Typ UT UT UT) Val)], Topology)
 makeSequence pRec topo = (sqEnvs, sqTopo)
   where pRec0 = addZeroCrossings pRec
         (sequ,sqPRec) = genSequ pRec0          
@@ -94,78 +86,83 @@ makeSequence pRec topo = (sqEnvs, sqTopo)
         sqFlowTops = genSequFlowTops topo sqFStRec
         sqSecTops = genSectionTopology sqFlowTops
         sqTopo = mkSequenceTopology sqSecTops
-
       
 -----------------------------------------------------------------------------------
 -- | Function to Generate Time Sequence
 genSequ ::  PowerRecord -> (Sequ, SequPwrRecord)
 genSequ pRec = removeNilSections (sequ++[lastSec],SequData pRecs)
-  where xSig = genRSig pRec
-        pRecs = map (repackRSig2 pRec) (seqRSig ++ [lastXSec])
-        ((lastSec,sequ),(lastXSec,seqRSig)) = recyc (tail xSig) (((0,0),[]),([head xSig],[])) 
+  where rSig = record2RSig pRec
+        pRecs = map (rsig2SecRecord pRec) (seqRSig ++ [lastRSec])
+        ((lastSec,sequ),(lastRSec,seqRSig)) = recyc (rtail rSig) (rhead rSig) (((0,0),[]),(rsingleton $ rhead rSig,[])) 
         
-        --recyc :: RSig -> ((Sec,Sequ), (RSig, [RSig])) -> ((Sec,Sequ), (RSig, [RSig]))  
-        recyc [] acc = acc                                                            
-        recyc (x2:xlist) (((lastIdx,idx),sequ),(secRSig, sequRSig)) = recyc xlist (g $ stepDetect x1 x2, f $ stepDetect x1 x2)
+        recyc :: RSig -> RSample1 -> ((Sec,Sequ), (RSig, [RSig])) -> ((Sec,Sequ), (RSig, [RSig]))  
+        recyc rSig x1 (((lastIdx,idx),sequ),(secRSig, sequRSig)) | rSig /= mempty = recyc (rtail rSig) (rhead rSig) (g $ stepDetect x1 x2, f $ stepDetect x1 x2)
           where
-            x1 = last secRSig
-            --f :: EventType -> (RSig, [RSig])
-            f LeftEvent = ([x1,x2], sequRSig ++ [secRSig])           -- add actual Interval to next section
-            f RightEvent = ([x2], sequRSig ++ [secRSig ++ [x2]])     --add actual Interval to last section
-            f MixedEvent = ([x2], sequRSig ++ [secRSig]++ [[x1,x2]]) -- make additional Mini--Section 
-            f NoEvent = (secRSig ++ [x2], sequRSig)                  -- continue incrementing
-            --g :: EventType -> (Sec, Sequ)            
+            x2 = rhead rSig
+            xs1 = rsingleton x1
+            xs2 = rsingleton x2
+
+            
+            f :: EventType -> (RSig, [RSig])
+            f LeftEvent = (xs1.++xs2, sequRSig ++ [secRSig])           -- add actual Interval to next section
+            f RightEvent = (xs2, sequRSig ++ [secRSig .++ xs2])     --add actual Interval to last section
+            f MixedEvent = (xs2, sequRSig ++ [secRSig] ++ [xs1 .++ xs2]) -- make additional Mini--Section 
+            f NoEvent = (secRSig .++ xs2, sequRSig)                  -- continue incrementing
+            
+            g :: EventType -> (Sec, Sequ)            
             g LeftEvent = ((idx, idx+1), sequ ++ [(lastIdx, idx)])
             g RightEvent = ((idx+1, idx+1), sequ ++ [(lastIdx, idx+1)])
             g MixedEvent = ((idx+1, idx+1), sequ ++ [(lastIdx, idx)] ++ [(idx, idx+1)])
             g NoEvent = ((lastIdx, idx+1), sequ)
+
             inc (lastIdx, idx) = (lastIdx, idx+1) 
             restart (lastIdx, idx) = (idx, idx+1)
---            h lastIdx idx | lastIdx == idx =  recyc xlist (g $ NoEvent, f $ NoEvent)
---            h lastIdx idx | otherwise = recyc xlist (g $ stepDetect x1 x2, f $ stepDetect x1 x2)
-            
+        recyc _ _ acc | otherwise = acc                                                            
+
+
 -- | Function to remove Nil-Sections which have same start and stop Index            
 removeNilSections :: (Sequ,SequPwrRecord) ->   (Sequ, SequPwrRecord)           
 removeNilSections (sequ, SequData pRecs) = (fsequ, SequData fRecs)
   where (fsequ, fRecs) = unzip $ filter f $ zip sequ pRecs
         f ((lastIdx, idx), _) | lastIdx == idx = False 
         f _ = True
-            
+
+
 -- | Function to detect and classify a step over several signals
--- stepDetect :: RSample -> RSample -> EventType 
-stepDetect  (t1,row1) (t2,row2) = f stepList
-  where stepList = szipWith stepX (sunbox row1) (sunbox row2)
+stepDetect :: RSample1 -> RSample1 -> EventType 
+stepDetect  (t1,ps1) (t2,ps2) = f stepList
+  where stepList = stzipWith stepX ps1 ps2 :: Samp1L (Typ A STy Tt) StepType
+
+        f ::  Samp1L (Typ A STy Tt) StepType -> EventType
         f stepList | sall (==NoStep) stepList = NoEvent
-        f (TC(Data(D1(stepList)))) | sany (==ZeroCrossingStep) stepList = error $ "Error in stepDetect - Zero Crossing - t1: " ++ show t1 ++ " t2 :" ++ (show t2)
-        f (TC(Data(D1(stepList)))) | sany (==LeavesZeroStep) stepList && (not $ sany (==BecomesZeroStep) stepList) = LeftEvent
-        f (TC(Data(D1(stepList)))) | (not $ sany (==LeavesZeroStep) stepList) && sany (==BecomesZeroStep) stepList = RightEvent
-        f (TC(Data(D1(stepList)))) | sany (==LeavesZeroStep) stepList && sany (==BecomesZeroStep) stepList = MixedEvent
-        
+        f stepList | sany (==ZeroCrossingStep) stepList = error $ "Error in stepDetect - Zero Crossing - t1: " ++ show t1 ++ " t2 :" ++ (show t2)
+        f stepList | sany (==LeavesZeroStep) stepList && (not $ sany (==BecomesZeroStep) stepList) = LeftEvent
+        f stepList | (not $ sany (==LeavesZeroStep) stepList) && sany (==BecomesZeroStep) stepList = RightEvent
+        f stepList | sany (==LeavesZeroStep) stepList && sany (==BecomesZeroStep) stepList = MixedEvent
+
+
 -- | Function to detect and classify a step over one signal
-stepX :: PSample -> PSample -> StepType
-stepX s1 s2 | sign s1==ZSign && sign s2 /= ZSign = LeavesZeroStep -- signal leaves zero
-stepX s1 s2 | sign s1/=ZSign && sign s2 == ZSign = BecomesZeroStep -- signal becomes zero
-stepX s1 s2 | sign s1==PSign && sign s2 == NSign = ZeroCrossingStep
-stepX s1 s2 | sign s1==NSign && sign s2 == PSign = ZeroCrossingStep
-stepX s1 s2 | otherwise = NoStep  -- nostep
-
--} 
-
+stepX :: PSample -> PSample -> Samp (Typ A STy Tt) StepType
+stepX p1 p2 | ssign p1== toSample ZSign && ssign p2 /= toSample ZSign = toSample LeavesZeroStep -- signal leaves zero
+stepX p1 p2 | ssign p1/=toSample ZSign && ssign p2 == toSample ZSign = toSample BecomesZeroStep -- signal becomes zero
+stepX p1 p2 | ssign p1==toSample PSign && ssign p2 == toSample NSign = toSample ZeroCrossingStep
+stepX p1 p2 | ssign p1==toSample NSign && ssign p2 == toSample PSign = toSample ZeroCrossingStep
+stepX p1 p2 | otherwise = toSample NoStep  -- nostep
 
 
 addZeroCrossings :: PowerRecord -> PowerRecord
 addZeroCrossings r = rsig2Record rSigNew r
   where rSig = record2RSig r 
-        rSigNew = (recurse rSig (rhead rSig) mempty) .++ (rsingleton $ rlast rSig)
+        rSigNew = (f (rtail rSig) (rhead rSig) mempty) .++ (rsingleton $ rlast rSig)
         (timeNew,mSigNew) = rSigNew
 
+        f :: RSig -> RSample1 -> RSig -> RSig
+        f rSig rold rSigNew | rSig /= mempty = f (rtail rSig) rnew (rSigNew .++ (getZeroCrossings rold rnew))  
+          where rnew = rhead rSig  
+        f rSig  _ rSigNew |  otherwise = rSigNew                                         
 
-recurse :: RSig -> RSample1 -> RSig -> RSig
-recurse rSig rold rSigNew | rSig /= mempty = recurse (rtail rSig) rnew ((getZeroCrossings rold rnew))  
-  where rnew = rhead rSig  
-recurse rSig  _ rSigNew |  otherwise = rSigNew                                         
 -----------------------------------------------------------------------------------
--- | Function for caluclating zero Crossings 
+-- | Function for calculating zero Crossings 
                                       
 getZeroCrossings :: RSample1 -> RSample1 -> RSig         
 getZeroCrossings rs1@(t1,ps1) rs2@(t2,ps2) = ((ssingleton t1) .++ zeroCrossingTimes,(ssingleton ps1) .++ zeroPowers)
@@ -242,7 +239,6 @@ updateMap pmap xs = if check then M.fromList $ zip keys xs else error "Error in 
   where keys = map fst $ M.toList pmap
         check = length keys == length xs 
 
-
 record2RSig :: PowerRecord -> RSig    
 record2RSig (PowerRecord t pMap) = (t, stranspose $ fromSigList $ M.elems pMap) 
 
@@ -250,3 +246,6 @@ rsig2Record :: RSig -> PowerRecord -> PowerRecord
 rsig2Record (t, ps) (PowerRecord _ pMap) = PowerRecord t  (M.fromList (zip  keys  (toSigList  $ stranspose ps))) 
    where keys = map fst (M.toList pMap)
 
+rsig2SecRecord :: PowerRecord -> RSig -> SecPowerRecord                  
+rsig2SecRecord  (PowerRecord _ pMap) (t, ps) = SecPowerRecord (sconvert t)  (M.fromList (zip  keys  (map sconvert $ toSigList  $ stranspose ps))) 
+   where keys = map fst (M.toList pMap)

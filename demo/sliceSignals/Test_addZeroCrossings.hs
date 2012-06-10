@@ -67,11 +67,12 @@ p2 = [-1, 1]
 -- (0.6283185310363775,[3.184188667620415e-9,2.865769800858373e-9])
 -- (0.6300000000000004,[1.681390048435415e-2,1.513251043591874e-2])
 
-t = sfromList [0,1] :: TSigL
-p1 = sfromList [-1,1] :: PSigL
-p2 = sfromList [-1,3] :: PSigL
+t = sfromList [0,1,2] :: TSigL
+p1 = sfromList [-1,1,1] :: PSigL
+p2 = sfromList [-1,3,3] :: PSigL
+p3 = sfromList [-1,6,-6] :: PSigL
 
-pRec = PowerRecord t (M.fromList [(PPosIdx 0 1,p1),(PPosIdx 1 0, p2)])
+pRec = PowerRecord t (M.fromList [(PPosIdx 0 1,p1),(PPosIdx 1 0, p2),(PPosIdx 1 2, p3)])
 pRec0 = addZeroCrossings pRec
 
 main = do

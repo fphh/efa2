@@ -151,6 +151,7 @@ type Test1 typ a = TC TestRow typ (UVec a)
 type Test2 typ a = TC TestRow typ (UVec2 a)
 
 type Samp typ a = TC Sample typ (DVal a)
+type Samp1L typ a = TC Sample typ (List a)
 
 -- specific
 --type UTignal a = Sig1 (Typ UT UT UT) a
@@ -491,6 +492,11 @@ instance (UV.Unbox d1) => SBox Scalar c1 c1 d1 where
          sbox x = x
          sunbox x = x
 
+-- | Convert between List and different Vector formats 
+sconvert :: (DConvert c1 c2 d) => TC s typ (c1 d) -> TC s typ (c2 d)
+sconvert (TC x) = TC $ dconvert x
+
+
 ----------------------------------------------------------
 -- sum all signal value
 
@@ -594,3 +600,4 @@ ssign x = changeType $ smap (sign) x
 
 suntuple :: TC Sample typ (Data Nil (d,d)) -> (TC Sample typ (Data Nil d), TC Sample typ (Data Nil d)) 
 suntuple (TC (Data (D0 (x,y)))) = (TC $ Data $ D0 x,TC $ Data $ D0 y)
+

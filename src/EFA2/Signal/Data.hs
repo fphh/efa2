@@ -279,6 +279,9 @@ instance (VSingleton v2 (v1 d)) => DTail (Data (v2 :> v1 :> Nil)) (Data (v2 :> v
   dinit (Data (D2 x)) = Data $ D2 $ vinit x
   
   
+----------------------------------------------------------
+-- Singleton
+
 class DSingleton c1 c2 d where
   dsingleton :: c1 d -> c2 d
   
@@ -289,12 +292,18 @@ instance  (VSingleton v1 d) => DSingleton (Data Nil) (Data (v1 :> Nil)) d where
   dsingleton (Data (D0 x)) = Data $ D1 $ vsingleton x
   
   
+----------------------------------------------------------
+-- Sort
+
 class DSort c d where
   dsort :: c d -> c d 
   
 instance (VSort v1 d) => DSort (Data (v1 :> Nil)) d where   
   dsort (Data (D1 x)) = Data $ D1 $ vsort x
   
+
+----------------------------------------------------------
+-- Filter
 
 class DFilter c d where  
   dfilter :: (d -> Bool) -> c d -> c d
@@ -303,6 +312,8 @@ instance VFilter v1 d => DFilter (Data (v1 :> Nil)) d where
   dfilter f (Data (D1 x)) = Data $ D1 $ vfilter f x
   
   
+----------------------------------------------------------
+-- Eq
 
 instance Eq d => Eq (Data Nil d) where
   (==) (Data (D0 x)) (Data (D0 y)) = x == y
@@ -323,3 +334,20 @@ instance Ord d => Ord (Data Nil d) where
   (<=) (Data (D0 x)) (Data (D0 y)) = x <= y
 
 
+----------------------------------------------------------
+-- Convert
+  
+class DConvert  c1 c2 d where  
+  dconvert :: c1 d -> c2 d
+
+instance UV.Unbox d => DConvert (Data ([] :> Nil)) (Data (UV.Vector :> Nil)) d where
+  dconvert (Data (D1 x)) = Data $ D1 $ vconvert x
+  
+instance DConvert (Data ([] :> Nil)) (Data (V.Vector :> Nil)) d where
+  dconvert (Data (D1 x)) = Data $ D1 $ vconvert x  
+  
+instance UV.Unbox d => DConvert (Data (UV.Vector :> Nil)) (Data ([] :> Nil)) d where
+  dconvert (Data (D1 x)) = Data $ D1 $ vconvert x    
+  
+instance DConvert (Data (V.Vector :> Nil)) (Data ([] :> Nil)) d where
+  dconvert (Data (D1 x)) = Data $ D1 $ vconvert x      

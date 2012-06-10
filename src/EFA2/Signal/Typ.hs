@@ -45,7 +45,12 @@ data M -- Storage Mix
 data BZ -- Bool State
 data IZ -- Int State
 data UZ -- User Defined State
+
+
+-- Zero Crossing
 data SZ -- sign State
+data STy -- step stype
+data ETy -- event type
 
 -------------------------------------
 -- | Delta Flag
