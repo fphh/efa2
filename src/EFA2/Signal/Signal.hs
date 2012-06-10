@@ -150,6 +150,8 @@ type FSig2 typ a = TC FSignal typ (Vec2 a)
 type Test1 typ a = TC TestRow typ (UVec a)
 type Test2 typ a = TC TestRow typ (UVec2 a)
 
+type Samp typ a = TC Sample typ (DVal a)
+
 -- specific
 --type UTignal a = Sig1 (Typ UT UT UT) a
 --type FUTSignal = FSig1 (Typ UT UT UT) Val
@@ -590,3 +592,5 @@ ssign :: (DMap c d Sign, Ord d, Num d) => TC s typ (c d) -> TC s (Typ A SZ UT) (
 ssign x = changeType $ smap (sign) x
   
 
+suntuple :: TC Sample typ (Data Nil (d,d)) -> (TC Sample typ (Data Nil d), TC Sample typ (Data Nil d)) 
+suntuple (TC (Data (D0 (x,y)))) = (TC $ Data $ D0 x,TC $ Data $ D0 y)

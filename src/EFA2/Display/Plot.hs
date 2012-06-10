@@ -26,14 +26,7 @@ instance (DFromList (Data (v1 :> Nil)) Val, DisplayTyp t) => SPlotData sig t  (D
           (UnitScale s) = getUnitScale u
 
 
-{-         
-instance (FromToList (Data (v1 :> Nil)) Val, DisplayTyp t) => SPlotData TestRow t  (Data (v1 :> Nil)) Val where 
-  sPlotData x = map (*s) $ stoList x  
-    where t = getDisplayType x
-          u = getDisplayUnit t
-          (UnitScale s) = getUnitScale u
--}
-          
+-- Simple Plotting -- without time axis
 class Plot a where          
   sigPlot :: a -> IO ()
 
@@ -47,17 +40,8 @@ instance (DisplayTyp t, VFromList v1 Double, VFromList v2 (TC Signal t (Data (v1
 instance SPlotData FSignal t (Data (v1 :> Nil)) Val => Plot (TC FSignal t  (Data (v1 :> Nil) Val))  where 
   sigPlot x = plotList [] (sPlotData x)
 
-instance Plot PowerRecord where   
-  sigPlot (PowerRecord time pMap) = plotLists [] (map sPlotData $ M.elems pMap)
-{-  
-instance Plot SecPowerRecord where   
-  sigPlot (SecPowerRecord time pMap) = plotLists [] (map sPlotData $ M.elems pMap)
--}
-instance Plot Record where   
-  sigPlot (Record time sigMap) = plotLists [] (map sPlotData $ M.elems sigMap)
-
-instance Plot SequPwrRecord where   
-  sigPlot (SequData recs) = mapM_ sigPlot recs
+instance Plot (TC s0 TestRow (x (UVec Val))) where
+  sigPlot x = undefined
 
 instance SPlotData TestRow t (Data (v1 :> Nil)) Val => Plot (TC TestRow t  (Data (v1 :> Nil) Val))  where 
   sigPlot x = plotList [] (sPlotData x)
@@ -65,4 +49,20 @@ instance SPlotData TestRow t (Data (v1 :> Nil)) Val => Plot (TC TestRow t  (Data
 instance SPlotData TestRow t (Data (v1 :> Nil)) Val => Plot (TC TestRow t  (Data (v2 :> v1 :> Nil) Val))  where 
   sigPlot x = undefined -- plotList [] (sPlotData x)
 
-instance Plot (TC s0 TestRow (x (UVec Val)))
+
+class XYPlot a b where
+  xyplot :: a -> b -> IO ()
+  
+instance (DisplayTyp t, VFromList v1 Double) => XYPlot (TC Signal t (Data (v1 :> Nil) Val)) (TC Signal t (Data (v1 :> Nil) Val)) where 
+  xyplot x y = plotPath [LineStyle 1 [PointSize 2]] (zip (sPlotData x) (sPlotData y))
+
+
+-- Plotting Records
+class RPlot a where
+  rPlot :: a -> IO ()
+
+instance RPlot PowerRecord where   
+  rPlot (PowerRecord time pMap) = plotPaths [LineStyle 10 [PointType 2, PointSize 20]] xydata
+    where ydata = map sPlotData $ M.elems pMap
+          xydata = map (zip (sPlotData time)) ydata 
+

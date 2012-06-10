@@ -12,8 +12,10 @@ import qualified Data.Map as M
 import EFA2.Signal.Base
 import EFA2.Signal.Typ
 import EFA2.Signal.Data
+import EFA2.Display.Plot
 
 import Data.Monoid
+import EFA2.Display.DispSignal
 
 {-
 time = [0..5]
@@ -61,51 +63,18 @@ p2 = [-1, 1]
 
 -- (0.0,[0.0,0.0])
 -- (0.6280000000000004,[-3.185301793133549e-3,-3.539224214592833e-3])
--- (0.6283185300827032,[-6.352554283279264e-9,-7.058393648088072e-9])
+-- (0.6283185300827calcZeroTimes032,[-6.352554283279264e-9,-7.058393648088072e-9])
 -- (0.6283185310363775,[3.184188667620415e-9,2.865769800858373e-9])
 -- (0.6300000000000004,[1.681390048435415e-2,1.513251043591874e-2])
 
+t = sfromList [0,1] :: TSigL
+p1 = sfromList [-1,1] :: PSigL
+p2 = sfromList [-1,3] :: PSigL
 
-
-
--- pRec = PowerRecord time (M.fromList [(PPosIdx 0 1,p1),(PPosIdx 1 0, p2)])
--- pRec0 = addZeroCrossings pRec
-
-t1 = toSample 0 :: TSample
-p1 = toSample (-1) :: PSample
-
-t2 = toSample 1 :: TSample
-p2 = toSample 3 :: PSample
-
-zT = calcZeroTime (t1,p1) (t2,p2)
-zP = interpPowers (t1,p1) (t2,p2) (sfromList [0.1,0.25,0.5]) zeroCrossing
-
-zeroCrossing = (toSample $ ZeroCrossing 0.25) :: TZeroSample
-
-ps1 = sfromList [-1,1] :: PSample1L
-ps2 = sfromList [3,3] :: PSample1L
-
-
-zeroCrossingTimes = filterTZero zeroCrossings :: TSigL
-zeroCrossings = stzipWith h2 ps1 ps2 :: TZeroSample1L 
-
-
--- | Zero crossing time per signal, if zero crossing happens otherwise empty
-h2 :: PSample -> PSample -> TZeroSample
-h2 p1 p2 | ssign p1 == toSample PSign && ssign p2 == toSample NSign = calcZeroTime (t1,p1) (t2,p2)
-h2 p1 p2 | ssign p1 == toSample NSign && ssign p2 == toSample PSign = calcZeroTime (t1,p1) (t2,p2)
-h2 _  _ = toSample NoCrossing
-
-
-g :: (PSample,PSample)  -> PSigL
-g (p1, p2)  = interpPowers (t1,p1) (t2,p2) zeroCrossingTimes zeroCrossing 
-
-powers = g (p1, p2)
-
+pRec = PowerRecord t (M.fromList [(PPosIdx 0 1,p1),(PPosIdx 1 0, p2)])
+pRec0 = addZeroCrossings pRec
 
 main = do
-  putStrLn (show zT)
-  putStrLn (show zP)
-  putStrLn (show zeroCrossings)
-  putStrLn (show zeroCrossingTimes)
-  putStrLn (show powers)
+  putStrLn (show pRec)
+  putStrLn (show pRec0)
+  rPlot pRec0

@@ -151,7 +151,7 @@ stepX s1 s2 | otherwise = NoStep  -- nostep
 
 -} 
 
-{-
+
 
 addZeroCrossings :: PowerRecord -> PowerRecord
 addZeroCrossings r = rsig2Record rSigNew r
@@ -160,34 +160,43 @@ addZeroCrossings r = rsig2Record rSigNew r
         (timeNew,mSigNew) = rSigNew
 
 
-recurse :: RSig -> RSample1 -> RSig -> RSig   
-recurse mempty _  rList = rList 
-recurse rSig rold rList = recurse (rtail rSig) rnew ((getZeroCrossings rold rnew) .++ rList)  
+recurse :: RSig -> RSample1 -> RSig -> RSig
+recurse rSig rold rSigNew | rSig /= mempty = recurse (rtail rSig) rnew ((getZeroCrossings rold rnew))  
   where rnew = rhead rSig  
-                                      
--}
+recurse rSig  _ rSigNew |  otherwise = rSigNew                                         
+-----------------------------------------------------------------------------------
+-- | Function for caluclating zero Crossings 
                                       
 getZeroCrossings :: RSample1 -> RSample1 -> RSig         
-getZeroCrossings (t1, ps1) (t2, ps2) = ((ssingleton t1) .++ zeroCrossingTimes,
-                                      ((ssingleton ps1) .++ (stzipWith g (szip ps1 ps2) zeroCrossings)))
+getZeroCrossings rs1@(t1,ps1) rs2@(t2,ps2) = ((ssingleton t1) .++ zeroCrossingTimes,(ssingleton ps1) .++ zeroPowers)
           where 
-            -- | create ascending list containing all zero crossing times
-            -- zeroCrossingTimes = ssort $ sfilter (/=mempty) (zeroCrossings) :: TSigL
-            -- zeroCrossings = szipWith h2 ps1 ps2 :: TSample1L
-            zeroCrossingTimes = filterTZero zeroCrossings :: TSigL
-            zeroCrossings = stzipWith h2 ps1 ps2 :: TZeroSample1L 
+             (zeroCrossings, zeroCrossingTimes) = calcZeroTimes rs1 rs2
+             zeroPowers = calcZeroPowers rs1 rs2 zeroCrossingTimes zeroCrossings
+
+
+calcZeroPowers :: RSample1 -> RSample1 -> TSigL -> TZeroSample1L -> PSample2LL  
+calcZeroPowers (t1,(TC (Data (D1 ps1)))) (t2,(TC (Data (D1 ps2)))) zeroCrossingTimes (TC (Data (D1 tz))) = stranspose $ fromSigList sigList 
+               where g p1 p2 tz = f (toSample p1) (toSample p2) (toSample tz) 
+                     sigList = L.zipWith3 g ps1 ps2 tz :: [PSigL]
+                    
+                     f :: PSample -> PSample -> TZeroSample -> PSigL
+                     f p1 p2 zeroCrossing = interpPowers (t1,p1) (t2,p2) zeroCrossingTimes zeroCrossing
+
+calcZeroTimes :: RSample1 -> RSample1 -> (TZeroSample1L,TSigL)
+calcZeroTimes (t1,ps1) (t2,ps2)  = (zeroCrossings, zeroCrossingTimes)                                            
+              where
+                -- | create ascending list containing all zero crossing times
+                 zeroCrossingTimes = ssort $ filterTZero zeroCrossings :: TSigL
+                 zeroCrossings = stzipWith h2 ps1 ps2 :: TZeroSample1L 
             
-            -- | Zero crossing time per signal, if zero crossing happens otherwise empty
-            h2 :: PSample -> PSample -> TZeroSample
-            h2 p1 p2 | ssign p1 == toSample PSign && ssign p2 == toSample NSign = calcZeroTime (t1,p1) (t2,p2)
-            h2 p1 p2 | ssign p1 == toSample NSign && ssign p2 == toSample PSign = calcZeroTime (t1,p1) (t2,p2)
-            h2 _  _ = toSample NoCrossing
-
-            g :: (PSample,PSample) -> TZeroSample -> PSigL
-            g (p1, p2) zeroCrossing = interpPowers (t1,p1) (t2,p2) zeroCrossingTimes zeroCrossing
-
+                 -- | Zero crossing time per signal, if zero crossing happens otherwise empty
+                 h2 :: PSample -> PSample -> TZeroSample
+                 h2 p1 p2 | ssign p1 == toSample PSign && ssign p2 == toSample NSign = calcZeroTime (t1,p1) (t2,p2)
+                 h2 p1 p2 | ssign p1 == toSample NSign && ssign p2 == toSample PSign = calcZeroTime (t1,p1) (t2,p2)
+                 h2 _  _ = toSample NoCrossing
+                                              
 -----------------------------------------------------------------------------------
--- | Interpolation Functions
+-- | Interpolation Functions for one Signal
 
 -- | calculate time of Zero Crossing Point                  
 calcZeroTime :: (TSample,PSample) -> (TSample,PSample) -> TZeroSample 
@@ -198,7 +207,6 @@ calcZeroTime (t1,p1) (t2,p2) = f t1 t2
         f t1 t2 | t2 == t1 = makeTZero t1
         f t1 t2 | t2 < t1 = error ("Error in calcZeroTime- Discontinous time vector t1: " ++ show t1 ++ " t2: " ++ show t2)
                   
-
 
 
 -- | interpolate Powers at Zero Crossing times 
@@ -214,6 +222,8 @@ interpPowers (t1,p1) (t2,p2) tzeroList tzero = stmap f tzeroList
             g t1 t2 | t2 < t1 =  error ("Error in interpPowers - Discontinous time vector - t1: " ++ show t1 ++ " t2: " ++ show t2)
         m = (p2.-p1)./(t2.-t1) -- interpolation slope 
 
+-----------------------------------------------------------------------------------
+-- | Helper Functions
 
 makeTZero :: TSample -> TZeroSample
 makeTZero (TC (Data (D0 x))) = TC $ Data $ D0 $ ZeroCrossing x 
@@ -222,14 +232,14 @@ filterTZero :: TZeroSample1L -> TSigL
 filterTZero x = stranspose $ smap (\ (ZeroCrossing x) -> x) $ sfilter (/=NoCrossing) x  
 
 
-{-
+
 -----------------------------------------------------------------------------------
 -- | Helper Functions
 
--- | Generate X-List from Power Record
-updateMap :: Ord key => M.Map key a -> [a] -> M.Map key a
+-- | Generate rSig from Power Record
+updateMap :: Ord k => M.Map k a -> [a] -> M.Map k a
 updateMap pmap xs = if check then M.fromList $ zip keys xs else error "Error in updateMap - map and List length don't match"   
-  where keys = map snd $ M.toList pmap
+  where keys = map fst $ M.toList pmap
         check = length keys == length xs 
 
 
@@ -240,4 +250,3 @@ rsig2Record :: RSig -> PowerRecord -> PowerRecord
 rsig2Record (t, ps) (PowerRecord _ pMap) = PowerRecord t  (M.fromList (zip  keys  (toSigList  $ stranspose ps))) 
    where keys = map fst (M.toList pMap)
 
--}
