@@ -36,6 +36,7 @@ data DEtaIdx = DEtaIdx !Int !Int !Int !Int deriving (Show, Ord, Eq)
 
 -- | Splitting factors.
 data XIdx = XIdx !Int !Int !Int !Int deriving (Show, Ord, Eq)
+data DXIdx = DXIdx !Int !Int !Int !Int deriving (Show, Ord, Eq)
 
 -- | Delta time variables, depending solely on their section and record number.
 data DTimeIdx = DTimeIdx !Int !Int deriving (Show, Ord, Eq)
@@ -51,8 +52,8 @@ data StorageIdx = StorageIdx !Int !Int !Int deriving (Show, Ord, Eq)
 -- variable is unique in the equational system.
 --data VarIdx = VarIdx !Int !Int !Int !Int deriving (Show, Ord, Eq)
 
-data Use = A
-         | B
+data Use = InSum
+         | OutSum
          | C
          | D deriving (Show, Eq, Ord)
 
@@ -82,6 +83,9 @@ instance IdxRecNum DEtaIdx where
 instance IdxRecNum XIdx where
          getIdxRecNum (XIdx _ r _ _) = r
 
+instance IdxRecNum DXIdx where
+         getIdxRecNum (DXIdx _ r _ _) = r
+
 instance IdxRecNum DTimeIdx where
          getIdxRecNum (DTimeIdx _ r) = r
 
@@ -103,6 +107,9 @@ instance IdxEq EnergyIdx where
 instance IdxEq FEtaIdx where
          ignoreRecEq (FEtaIdx a _ b c) (FEtaIdx x _ y z) = a == x && b == y && c == z
 
+instance IdxEq XIdx where
+         ignoreRecEq (XIdx a _ b c) (XIdx x _ y z) = a == x && b == y && c == z
+
 instance IdxEq StorageIdx where
          ignoreRecEq (StorageIdx a _ b) (StorageIdx x _ y) = a == x && b == y
 
@@ -119,6 +126,8 @@ type DEtaMap a = M.Map DEtaIdx (a -> a)
 type DTimeMap a = M.Map DTimeIdx a
 
 type XMap a = M.Map XIdx a
+type DXMap a = M.Map DXIdx a
+
 type VarMap a = M.Map VarIdx a
 type StorageMap a = M.Map StorageIdx a
 
@@ -133,6 +142,7 @@ data Envs a = Envs { recordNumber :: RecordNumber,
                      detaMap :: DEtaMap a,
                      dtimeMap :: DTimeMap a,
                      xMap :: XMap a,
+                     dxMap :: DXMap a,
                      varMap :: VarMap a,
                      storageMap :: StorageMap a } deriving (Show)
 
@@ -147,7 +157,7 @@ instance Ord (a -> a) where
          compare _ _ = EQ
 
 emptyEnv :: Envs a
-emptyEnv = Envs NoRecord M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty
+emptyEnv = Envs NoRecord M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty
 
 
 data RecordNumber = NoRecord
@@ -180,6 +190,7 @@ envUnion envs = Envs { recordNumber = uniteRecordNumbers (map recordNumber envs)
                        detaMap = M.unions $ map detaMap envs,
                        dtimeMap = M.unions $ map dtimeMap envs,
                        xMap = M.unions $ map xMap envs,
+                       dxMap = M.unions $ map dxMap envs,
                        varMap = M.unions $ map varMap envs,
                        storageMap = M.unions $ map storageMap envs }
 
@@ -196,6 +207,7 @@ separateEnvs envs | MixedRecord lst <- recordNumber envs = map f (L.sort lst)
                          detaMap = M.filterWithKey (p n) (detaMap envs),
                          dtimeMap = M.filterWithKey (p n) (dtimeMap envs),
                          xMap = M.filterWithKey (p n) (xMap envs),
+                         dxMap = M.filterWithKey (p n) (dxMap envs),
                          varMap = M.filterWithKey (p n) (varMap envs),
                          storageMap = M.filterWithKey (p n) (storageMap envs) }
 separateEnvs _ = error "separateEnvs: no mixed env"
@@ -205,6 +217,7 @@ checkEnvsForDelta env fnv = and lst
   where lst = [ energyMap env .== energyMap fnv,
                 powerMap env .== powerMap fnv,
                 fetaMap env .== fetaMap fnv,
+                xMap env .== xMap fnv,
                 storageMap env .== storageMap fnv ]
         (.==) x y = and $ zipWith ignoreRecEq (M.keys x) (M.keys y)
 
@@ -219,9 +232,11 @@ minusEnv laterEnv formerEnv | checkEnvsForDelta laterEnv formerEnv = gnv
         edk (EnergyIdx a b c d) = DEnergyIdx a b c d
         pdk (PowerIdx a b c d) = DPowerIdx a b c d
         etadk (FEtaIdx a b c d) = DEtaIdx a b c d
+        xdk (XIdx a b c d) = DXIdx a b c d
 
         gnv = laterEnv { denergyMap = M.mapKeys edk $ energyMap laterEnv `minus` energyMap formerEnv,
                          dpowerMap = M.mapKeys pdk $ powerMap laterEnv `minus` powerMap formerEnv,
+                         dxMap = M.mapKeys xdk $ xMap laterEnv `minus` xMap formerEnv,
                          detaMap = M.mapKeys etadk $ fetaMap laterEnv `fminus` fetaMap formerEnv }
 
 
@@ -236,6 +251,7 @@ mapEnv f env = emptyEnv { recordNumber = recordNumber env,
                           --detaMap = M.map (smap f .) (detaMap env),
                           dtimeMap = M.map (smap f) (dtimeMap env),
                           xMap = M.map (smap f) (xMap env),
+                          dxMap = M.map (smap f) (dxMap env),
                           varMap = M.map (smap f) (varMap env),
                           storageMap = M.map (smap f) (storageMap env) }
 

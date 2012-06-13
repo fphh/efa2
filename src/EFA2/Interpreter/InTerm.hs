@@ -21,15 +21,24 @@ data InTerm a = EIdx EnergyIdx
               | FNIdx FEtaIdx
               | DNIdx DEtaIdx
               | ScaleIdx XIdx
+              | DScaleIdx DXIdx
+
               | DTIdx DTimeIdx
               | VIdx VarIdx
               | SIdx StorageIdx
               | InConst Val
               | InGiven a
               | InFunc (a -> a)
+
               | InFEdge (InTerm a) (InTerm a)
               | InBEdge (InTerm a) (InTerm a)
               | InNEdge (InTerm a) (InTerm a)
+
+              | InFNode (InTerm a) (InTerm a)
+              | InBNode (InTerm a) (InTerm a)
+              | InXNode (InTerm a) (InTerm a)
+
+
               | InMinus (InTerm a)
               | InRecip (InTerm a)
               | InAdd (InTerm a) (InTerm a)

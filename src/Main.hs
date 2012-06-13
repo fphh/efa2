@@ -42,10 +42,10 @@ import EFA2.Display.DrawGraph
 
 import EFA2.Example.SymSig
 --import EFA2.Example.Loop
---import EFA2.Example.LinearTwo
+import EFA2.Example.LinearTwo
 --import EFA2.Example.Dreibein
 --import EFA2.Example.Dreibein2
-import EFA2.Example.Dreibein3
+--import EFA2.Example.Dreibein3
 
 symbolic :: Topology -> Envs EqTerm
 symbolic g = res
@@ -65,9 +65,13 @@ symbolic g = res
 
         (envs0', ts0) = makeAllEquations g [envs0]
         (envs1', ts1) = makeAllEquations g [envs1]
-        diffts = mkAllDiffEqs 1 0 g
 
-        ts = toAbsEqTermEquations $ order $ diffts ++ ts0 ++ ts1 ++ mkDiffEqTermEquations 1 ts0
+        ts0o = order ts0
+        ts1o = order ts1
+        diffts = mkAllDiffEqs 1 0 g
+        difftseq = mkDiffEqTermEquations 1 ts0o
+
+        ts = toAbsEqTermEquations $ order (difftseq ++ diffts ++ ts0o ++ ts1o)
         res = interpretEqTermFromScratch ts
 
 numeric :: Topology -> Envs Sc
@@ -88,10 +92,17 @@ numeric g = res
 
         (envs0', ts0) = makeAllEquations g [envs0]
         (envs1', ts1) = makeAllEquations g [envs1]
-        envs = envUnion [envs0', envs1']
-        diffts = mkAllDiffEqs 1 0 g
 
-        ts = toAbsEqTermEquations $ order $ diffts ++ ts0 ++ ts1 ++ mkDiffEqTermEquations 1 ts0
+        ts0o = order ts0
+        ts1o = order ts1
+        diffts = mkAllDiffEqs 1 0 g
+        difftseq = mkDiffEqTermEquations 1 ts0o
+
+        envs = envUnion [envs0', envs1']
+        --diffts = mkAllDiffEqs 1 0 g
+        --difftseq = mkDiffEqTermEquations 1 ts0
+
+        ts = toAbsEqTermEquations $ order (difftseq ++ diffts ++ ts0 ++ ts1)
         res = interpretFromScratch (recordNumber envs) 1 (map (eqToInTerm envs) ts)
 
 deltaEnv :: Topology -> Envs Sc
@@ -132,7 +143,7 @@ instance MyShow Sc where
          myshow = show
 
 instance MyShow DPowerIdx where
-         myshow (DPowerIdx s r f t) = "dp_" ++ show s ++ "." ++ show r ++ "_" ++ show f ++ "." ++ show t
+         myshow (DPowerIdx s r f t) = "dP_" ++ show s ++ "." ++ show r ++ "_" ++ show f ++ "." ++ show t
 
 instance (Show a) => MyShow (InTerm a) where
          myshow = showInTerm
@@ -150,10 +161,10 @@ format xs = L.intercalate "\n" (map f xs)
 
 main :: IO ()
 main = do
-  let --TheGraph g _ = linearTwo
+  let TheGraph g _ = linearTwo
       --TheGraph g _ = dreibein
       --TheGraph g _ = dreibein2
-      TheGraph g _ = dreibein3
+      --TheGraph g _ = dreibein3
 
       sym = symbolic g
       num = numeric g
@@ -195,3 +206,5 @@ main = do
 
   putStrLn "\n== Sums of numeric additive terms =="
   putStrLn (format $ M.toList sumdetails)
+
+

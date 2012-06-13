@@ -33,13 +33,17 @@ data EqTerm = EqTerm := EqTerm
           | DEta DEtaIdx
           | DTime DTimeIdx
           | X XIdx
+          | DX DXIdx
           | Var VarIdx
           | Store StorageIdx
           | FEdge EqTerm EqTerm -- power, eta
           | BEdge EqTerm EqTerm
           | NEdge EqTerm EqTerm
---          | FDiff { fDiffPower :: EqTerm, fDiffEta :: EqTerm, fDiffDPower :: EqTerm, fDiffDEta :: EqTerm }
---          | BDiff { bDiffPower :: EqTerm, bDiffEta :: EqTerm, bDiffDPower :: EqTerm, bDiffDEta :: EqTerm }
+
+          | FNode EqTerm EqTerm -- node equations
+          | BNode EqTerm EqTerm
+          | XNode EqTerm EqTerm
+
           | Minus EqTerm
           | Recip EqTerm
           | EqTerm :+ EqTerm
@@ -75,11 +79,7 @@ instance MkVarC PowerIdx where
 instance MkVarC DPowerIdx where
          mkVar = DPower
 
---instance MkVarC EtaIdx where
---         mkVar = Eta
-
 instance MkVarC FEtaIdx where
-         --mkVar idx@(FEtaIdx s r f t) = FEta idx (mkVar (PowerIdx s r f t))
          mkVar = FEta
 
 instance MkVarC DEtaIdx where
@@ -90,6 +90,9 @@ instance MkVarC DTimeIdx where
 
 instance MkVarC XIdx where
          mkVar = X
+
+instance MkVarC DXIdx where
+         mkVar = DX
 
 instance MkVarC VarIdx where
          mkVar = Var
@@ -119,22 +122,25 @@ showEqTerm (DEnergy (DEnergyIdx s r x y)) = "dE_" ++ show s ++ "." ++ show r ++ 
 showEqTerm (Power (PowerIdx s r x y)) = "P_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
 showEqTerm (DPower (DPowerIdx s r x y)) = "dP_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
 
---showEqTerm (Eta (EtaIdx s r x y)) = "n_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
-showEqTerm (FEta (FEtaIdx s r x y)) = "n_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y -- ++ "(" ++ showEqTerm p ++ ")"
+showEqTerm (FEta (FEtaIdx s r x y)) = "n_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
 showEqTerm (DEta (DEtaIdx s r x y)) = "dn_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
 
 showEqTerm (DTime (DTimeIdx s r)) =  "dt_" ++ show s ++ "." ++ show r
 
 showEqTerm (X (XIdx s r x y)) =  "x_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
+showEqTerm (DX (DXIdx s r x y)) =  "dx_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
+
 showEqTerm (Var (VarIdx s r x y)) = "v_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
 showEqTerm (Store (StorageIdx s r n)) = "s_" ++ show s ++ "." ++ show r ++ "_" ++ show n
 showEqTerm (x :+ y) = "(" ++ showEqTerm x ++ " + " ++ showEqTerm y ++ ")"
 showEqTerm (x :* y) = showEqTerm x ++ " * " ++ showEqTerm y
---showEqTerm (FDiff p e dp de) = "f(" ++ showEqTerm p ++ ", " ++ showEqTerm e ++ ", " ++ showEqTerm dp ++ ", " ++ showEqTerm de ++")"
---showEqTerm (BDiff p e dp de) = "b(" ++ showEqTerm p ++ ", " ++ showEqTerm e ++ ", " ++ showEqTerm dp ++ ", " ++ showEqTerm de  ++ ")"
 showEqTerm (FEdge power eta) = "f(" ++ showEqTerm power ++ ", " ++ showEqTerm eta ++ ")"
 showEqTerm (BEdge power eta) = "b(" ++ showEqTerm power ++ ", " ++ showEqTerm eta ++ ")"
 showEqTerm (NEdge power0 power1) = "n(" ++ showEqTerm power0 ++ ", " ++ showEqTerm power1 ++ ")"
+
+showEqTerm (FNode power eta) = "fn(" ++ showEqTerm power ++ ", " ++ showEqTerm eta ++ ")"
+showEqTerm (BNode power eta) = "bn(" ++ showEqTerm power ++ ", " ++ showEqTerm eta ++ ")"
+showEqTerm (XNode power0 power1) = "xn(" ++ showEqTerm power0 ++ ", " ++ showEqTerm power1 ++ ")"
 
 showEqTerm (Recip x) = "1/(" ++ showEqTerm x ++ ")"
 showEqTerm (Minus x) = "-(" ++ showEqTerm x ++ ")"
@@ -156,8 +162,12 @@ mkVarSet p t = mkVarSet' t
         mkVarSet' (x :* y) = S.union (mkVarSet' x) (mkVarSet' y)
         mkVarSet' (FEdge x y) = S.union (mkVarSet' x) (mkVarSet' y)
         mkVarSet' (BEdge x y) = S.union (mkVarSet' x) (mkVarSet' y)
-        --mkVarSet' (FDiff p e dp de) = S.unions (map mkVarSet' [p, e, dp, de])
-        --mkVarSet' (BDiff p e dp de) = S.unions (map mkVarSet' [p, e, dp, de])
+        mkVarSet' (NEdge x y) = S.union (mkVarSet' x) (mkVarSet' y)
+
+        mkVarSet' (FNode x y) = S.union (mkVarSet' x) (mkVarSet' y)
+        mkVarSet' (BNode x y) = S.union (mkVarSet' x) (mkVarSet' y)
+        mkVarSet' (XNode x y) = S.union (mkVarSet' x) (mkVarSet' y)
+
         mkVarSet' (Minus x) = mkVarSet' x
         mkVarSet' (Recip x) = mkVarSet' x
         mkVarSet' (x := y) = S.union (mkVarSet' x) (mkVarSet' y)
@@ -206,8 +216,12 @@ findVar t s
         help t (Recip u) = (findVar t u, Nothing)    -- coding: Recip has only left operand.
         help t (FEdge power eta) = (findVar t power, findVar t eta)
         help t (BEdge power eta) = (findVar t power, findVar t eta)
-        --help t u@(FDiff _ _ _ _) = (findVar t (fDiffDPower u), Nothing)
-        --help t u@(BDiff _ _ _ _) = (findVar t (bDiffDPower u), Nothing)
+        help t (NEdge power eta) = (findVar t power, findVar t eta)
+
+        help t (FNode power eta) = (findVar t power, findVar t eta)
+        help t (BNode power eta) = (findVar t power, findVar t eta)
+        help t (XNode power eta) = (findVar t power, findVar t eta)
+
         help _ _ = (Nothing, Nothing)
 
 isolateVar :: EqTerm -> EqTerm -> TPath -> EqTerm
@@ -239,6 +253,21 @@ isolateVar' (BEdge u v) (R:p) = isolateVar' v p . (flip NEdge u)
 -- n = u/v
 isolateVar' (NEdge u v) (L:p) = isolateVar' u p . (flip FEdge v)
 isolateVar' (NEdge u v) (R:p) = isolateVar' v p . (flip BEdge u)
+
+-- e = u * v
+isolateVar' (FNode u v) (L:p) = isolateVar' u p . (flip BNode v)
+isolateVar' (FNode u v) (R:p) = isolateVar' v p . (flip XNode u)
+
+-- e = u / v
+isolateVar' (BNode u v) (L:p) = isolateVar' u p . (flip FNode v)
+isolateVar' (BNode u v) (R:p) = isolateVar' v p . (flip XNode u)
+
+-- n = u/v
+isolateVar' (XNode u v) (L:p) = isolateVar' u p . (flip FNode v)
+isolateVar' (XNode u v) (R:p) = isolateVar' v p . (flip BNode u)
+
+
+
 
 {-
 isolateVar' (FDiff p' e dp de) (L:p) = isolateVar' dp p . f
@@ -292,6 +321,11 @@ toAbsEqTerm :: EqTerm -> EqTerm
 toAbsEqTerm (FEdge p n) = p :* n
 toAbsEqTerm (BEdge p n) = p :* (Recip n)
 toAbsEqTerm (NEdge p0 p1) = p0 :* (Recip p1)
+
+toAbsEqTerm (FNode p n) = p :* n
+toAbsEqTerm (BNode p n) = p :* (Recip n)
+toAbsEqTerm (XNode p0 p1) = p0 :* (Recip p1)
+
 toAbsEqTerm (Minus x) = Minus (toAbsEqTerm x)
 toAbsEqTerm (Recip x) = Recip (toAbsEqTerm x)
 toAbsEqTerm (x :+ y) = toAbsEqTerm x :+ toAbsEqTerm y
@@ -305,12 +339,39 @@ toAbsEqTermEquations ts = map toAbsEqTerm ts
 
 
 mkDiffEqTerm :: Int -> EqTerm -> Maybe EqTerm
-mkDiffEqTerm rec ( Power (PowerIdx s'' _ f'' t'') :=
-                   (FEdge p@(Power (PowerIdx s x f t)) n@(FEta (FEtaIdx s' _ f' t')))) = Just res
+mkDiffEqTerm rec z@( Power (PowerIdx s'' _ f'' t'') :=
+                   (FEdge p@(Power (PowerIdx s _ f t)) n@(FEta (FEtaIdx s' _ f' t')))) = Just res
   where res = dq := (dp :* n) :+ (p :* dn) :+ (dp :* dn)
         dq = mkVar $ DPowerIdx s'' rec f'' t''
         dn = mkVar $ DEtaIdx s' rec f' t'
         dp = mkVar $ DPowerIdx s rec f t
+
+
+mkDiffEqTerm rec z@( Power (PowerIdx s'' _ f'' t'') :=
+                   (FNode v@(Var (VarIdx s _ use t)) x@(X (XIdx s' r f' t')))) = Just res
+  where res = dq := (dv :* x) :+ (v :* dx) :+ (dv :* dx)
+        dq = mkVar $ DPowerIdx s'' rec f'' t''
+        dx = mkVar $ DXIdx s' rec f' t'
+        dv = (mkVar $ VarIdx s' rec use t) :+ Minus (mkVar $ VarIdx s r use t)
+
+
+{- works a little bit...
+mkDiffEqTerm rec ( Power (PowerIdx s'' _ f'' t'') :=
+                   (FNode (Var (VarIdx s _ use t)) x@(X (XIdx s' r f' t')))) = trace (showEqTerm res) $ Just res
+  where res = dq := (dp :* x) :+ (p :* dx) :+ (dp :* dx)
+        dq = mkVar $ DPowerIdx s'' rec f'' t''
+        dx = mkVar $ DXIdx s' rec f' t'
+        p = mkVar $ PowerIdx s'' rec (f''-1) (t''-1)
+        dp = mkVar $ DPowerIdx s' rec (t''-1) (f''-1)
+-}
+
+mkDiffEqTerm rec ((Var (VarIdx s _ use t)) := BNode p@(Power (PowerIdx s'' _ f'' t'')) x@(X (XIdx s' r f' t'))) = Just res
+  where res = v := (dp :* (Recip x)) :+ (Minus ((p :* dx) :* nom)) :+ (Minus ((dp :* dx) :* nom))
+        v = mkVar $ VarIdx s rec use t
+        dp = mkVar $ DPowerIdx s'' rec f'' t''
+        dx = mkVar $ DXIdx s' rec f' t'
+        nom = ((dx :* x) :+ (x :* x))
+
 mkDiffEqTerm rec ( Power (PowerIdx s'' _ f'' t'') :=
                    (BEdge p@(Power (PowerIdx s _ f t)) n@(FEta (FEtaIdx s' _ f' t')))) = Just res
   where res = dq := (dp :* (Recip n)) :+ (Minus ((p :* dn) :* nom)) :+ (Minus ((dp :* dn) :* nom))
@@ -318,6 +379,8 @@ mkDiffEqTerm rec ( Power (PowerIdx s'' _ f'' t'') :=
         dn = mkVar $ DEtaIdx s' rec f' t'
         dp = mkVar $ DPowerIdx s rec f t
         nom = Recip ((dn :* n) :+ (n :* n))
+
+
 mkDiffEqTerm _ t@(_ := (NEdge _ _)) = error $ "mkDiffEq: " ++ showEqTerm t ++ " cannot be computed with Differenzenrechnung"
 mkDiffEqTerm _ _ = Nothing
 
@@ -367,8 +430,9 @@ interpretEqTermEq envs (Energy idx := rhs) = envs { energyMap = insertEqTerm idx
 interpretEqTermEq envs (DEnergy idx := rhs) = envs { denergyMap = insertEqTerm idx envs rhs (denergyMap envs) }
 interpretEqTermEq envs (FEta idx := rhs) = envs { fetaMap = M.insert idx (const rhs) (fetaMap envs) }
 interpretEqTermEq envs (DEta idx := rhs) = envs { detaMap = M.insert idx (const rhs) (detaMap envs) }
-interpretEqTermEq envs (Var idx := rhs) = envs { varMap = insertEqTerm idx envs rhs (varMap envs) }
 interpretEqTermEq envs (X idx := rhs) = envs { xMap = insertEqTerm idx envs rhs (xMap envs) }
+interpretEqTermEq envs (DX idx := rhs) = envs { dxMap = insertEqTerm idx envs rhs (dxMap envs) }
+interpretEqTermEq envs (Var idx := rhs) = envs { varMap = insertEqTerm idx envs rhs (varMap envs) }
 interpretEqTermEq envs (Store idx := rhs) = envs { storageMap = insertEqTerm idx envs rhs (storageMap envs) }
 interpretEqTermEq envs (DTime idx := rhs) = envs { dtimeMap = insertEqTerm idx envs rhs (dtimeMap envs) }
 interpretEqTermEq envs t = error $ "interpretEqTerm: " ++ show t
@@ -392,4 +456,3 @@ mapEqTermEnv f env = emptyEnv { recordNumber = recordNumber env,
 
 
 --------------------------------------------------------------------
-

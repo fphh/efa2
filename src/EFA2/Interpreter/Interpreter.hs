@@ -48,6 +48,8 @@ eqToInTerm envs term = eqToInTerm' term
         eqToInTerm' (DEta idx) = DNIdx idx
         eqToInTerm' (DTime idx) = DTIdx idx
         eqToInTerm' (X idx) = ScaleIdx idx
+        eqToInTerm' (DX idx) = DScaleIdx idx
+
         eqToInTerm' (Var idx) = VIdx idx
         eqToInTerm' (Store idx) = SIdx idx
         eqToInTerm' (Recip x) = InRecip (eqToInTerm' x)
@@ -55,6 +57,12 @@ eqToInTerm envs term = eqToInTerm' term
         eqToInTerm' (FEdge x y) = InFEdge (eqToInTerm' x) (eqToInTerm' y)
         eqToInTerm' (BEdge x y) = InBEdge (eqToInTerm' x) (eqToInTerm' y)
         eqToInTerm' (NEdge x y) = InNEdge (eqToInTerm' x) (eqToInTerm' y)
+
+        eqToInTerm' (FNode x y) = InFNode (eqToInTerm' x) (eqToInTerm' y)
+        eqToInTerm' (BNode x y) = InBNode (eqToInTerm' x) (eqToInTerm' y)
+        eqToInTerm' (XNode x y) = InXNode (eqToInTerm' x) (eqToInTerm' y)
+
+
         eqToInTerm' (x :+ y) = InAdd (eqToInTerm' x) (eqToInTerm' y)
         eqToInTerm' (x :* y) = InMult (eqToInTerm' x) (eqToInTerm' y)
         eqToInTerm' (x := y) = InEqual (eqToInTerm' x) (eqToInTerm' y)
@@ -71,6 +79,8 @@ showInTerm (FNIdx (FEtaIdx s r x y)) = "n:" ++ show s ++ "." ++ show r ++ ":" ++
 showInTerm (DNIdx (DEtaIdx s r x y)) = "dn:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
 showInTerm (DTIdx (DTimeIdx s r)) = "dt:" ++ show s ++ "." ++ show r
 showInTerm (ScaleIdx (XIdx s r x y)) = "x:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
+showInTerm (DScaleIdx (DXIdx s r x y)) = "dx:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
+
 showInTerm (VIdx (VarIdx s r x y)) = "v:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
 showInTerm (SIdx (StorageIdx s r n)) = "s:" ++ show s ++ "." ++ show r ++ ":" ++ show n
 showInTerm (InConst x) = show x -- take 20 (show x) ++ "..."
@@ -82,6 +92,10 @@ showInTerm (InRecip t) = "1/(" ++ showInTerm t ++ ")"
 showInTerm (InFEdge s t) = "f(" ++ showInTerm s ++ ", " ++ showInTerm t ++ ")"
 showInTerm (InBEdge s t) = "b(" ++ showInTerm s ++ ", " ++ showInTerm t ++ ")"
 showInTerm (InNEdge s t) = "n(" ++ showInTerm s ++ ", " ++ showInTerm t ++ ")"
+
+showInTerm (InFNode s t) = "fn(" ++ showInTerm s ++ ", " ++ showInTerm t ++ ")"
+showInTerm (InBNode s t) = "bn(" ++ showInTerm s ++ ", " ++ showInTerm t ++ ")"
+showInTerm (InXNode s t) = "xn(" ++ showInTerm s ++ ", " ++ showInTerm t ++ ")"
 
 showInTerm (InAdd s t) = "(" ++ showInTerm s ++ " + " ++ showInTerm t ++ ")"
 showInTerm (InMult s t) = showInTerm s ++ " * " ++ showInTerm t
@@ -115,6 +129,7 @@ interpretRhs len envs term = interpretRhs' term
           where pidx = PowerIdx s r f t
         interpretRhs' (DTIdx idx) = dtimeMap envs `safeLookup` idx
         interpretRhs' (ScaleIdx idx) = xMap envs `safeLookup` idx
+        interpretRhs' (DScaleIdx idx) = dxMap envs `safeLookup` idx
         interpretRhs' (VIdx idx) = varMap envs `safeLookup` idx
         interpretRhs' (SIdx idx) = storageMap envs `safeLookup` idx
         interpretRhs' (InMinus t) = sneg (interpretRhs' t)
@@ -154,8 +169,10 @@ interpretEq envs (InEqual (FNIdx idx@(FEtaIdx s r f t) _) (InMult (InRecip (PIdx
 interpretEq len envs (InEqual (DNIdx idx@(DEtaIdx s r f t)) (InFunc deta)) = envs { detaMap = M.insert idx deta (detaMap envs) }
 interpretEq len envs (InEqual (DTIdx idx) rhs) = envs { dtimeMap = insert len idx envs rhs (dtimeMap envs) }
 interpretEq len envs (InEqual (ScaleIdx idx) rhs) = envs { xMap = insert len idx envs rhs (xMap envs) }
+interpretEq len envs (InEqual (DScaleIdx idx) rhs) = envs { dxMap = insert len idx envs rhs (dxMap envs) }
 interpretEq len envs (InEqual (VIdx idx) rhs) = envs { varMap = insert len idx envs rhs (varMap envs) }
 interpretEq len envs (InEqual (SIdx idx) rhs) = envs { storageMap = insert len idx envs rhs (storageMap envs) }
+
 interpretEq len envs t = error ("interpretEq: " ++ showInTerm t)
 
 

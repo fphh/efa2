@@ -154,7 +154,7 @@ instance DrawTopology [InTerm Val] where
 
 
 drawAbsTopology :: (Show a, Num a, Ord a) => ((Line, Maybe [a]) -> String) -> (Maybe [a] -> String) -> Topology -> Envs [a] ->  IO ()
-drawAbsTopology f content (Topology g) (Envs rec e de p dp fn dn dt x v st) = printGraph g rec tshow nshow eshow
+drawAbsTopology f content (Topology g) (Envs rec e de p dp fn dn dt x dx v st) = printGraph g rec tshow nshow eshow
   where eshow ps = L.intercalate "\n" $ map f $ mkLst rec ps
         tshow s r = show $ dt M.! (DTimeIdx s r)
         nshow (num, NLabel sec nid ty) = 
@@ -195,8 +195,9 @@ instance DrawTopology UTFSig where
                  formatStCont (Just ys) = sdisp ys
                  formatStCont Nothing = "♥"
 
+
 drawAbsTopology' :: ((Line, Maybe UTFSig) -> String) -> (Maybe UTFSig -> String) -> Topology -> Envs UTFSig ->  IO ()
-drawAbsTopology' f content (Topology g) (Envs rec e de p dp fn dn dt x v st) = printGraph g rec tshow nshow eshow
+drawAbsTopology' f content (Topology g) (Envs rec e de p dp fn dn dt x dx v st) = printGraph g rec tshow nshow eshow
   where eshow ps = L.intercalate "\n" $ map f $ mkLst rec ps
         tshow s r = case M.lookup (DTimeIdx s r) dt of
                          Just (TC ts) -> sdisp (TC ts :: FSig1 (Typ D T Tt) Val)

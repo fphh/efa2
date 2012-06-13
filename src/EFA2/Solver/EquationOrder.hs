@@ -4,6 +4,8 @@ module EFA2.Solver.EquationOrder where
 
 import qualified Data.List as L
 import qualified Data.Set as S
+import Data.Maybe
+import Debug.Trace
 
 import EFA2.Solver.Equation
 import EFA2.Solver.IsVar
@@ -85,3 +87,4 @@ order ts = map g sol
         sol = solve $ map (uncurry Derived) (zip vs ts)
         g (Derived v eq) = transformEq (head $ S.toList v) eq
         
+
