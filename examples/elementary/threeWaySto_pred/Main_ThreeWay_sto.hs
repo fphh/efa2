@@ -39,7 +39,7 @@ topo = mkGraph (makeNodes nodes) (makeEdges edges)
   where nodes = [(0, Source), (1, Crossing), (2, Sink), (3, Storage 0)]
         edges = [(0, 1, defaultELabel), (1, 2, defaultELabel), (1, 3, defaultELabel)]
 
-mkSig :: Int -> ([Val] -> PSig)
+mkSig :: Int -> ([Val] -> PSigL)
 mkSig n = sfromList . concat . replicate n
 
 etaf x = x/(x+5)
@@ -127,12 +127,12 @@ main = do
       --time = [0, 0] ++ (concatMap (replicate 3) [1.0 .. l])
       time = take 7 [0 ..]
 
-      pMap =  M.fromList [ (PPosIdx 0 1, mkSig n s01 .++ (sfromList [head s01] :: PSig)),
-                           (PPosIdx 1 0, mkSig n s10 .++ (sfromList [head s10] :: PSig)), 
-                           (PPosIdx 1 2, mkSig n s12 .++ (sfromList [head s12] :: PSig)),
-                           (PPosIdx 2 1, mkSig n s21 .++ (sfromList [head s21] :: PSig)),
-                           (PPosIdx 1 3, mkSig n s13 .++ (sfromList [head s13] :: PSig)),
-                           (PPosIdx 3 1, mkSig n s31 .++ (sfromList [head s31] :: PSig)) ]
+      pMap =  M.fromList [ (PPosIdx 0 1, mkSig n s01 .++ (sfromList [head s01] :: PSigL)),
+                           (PPosIdx 1 0, mkSig n s10 .++ (sfromList [head s10] :: PSigL)), 
+                           (PPosIdx 1 2, mkSig n s12 .++ (sfromList [head s12] :: PSigL)),
+                           (PPosIdx 2 1, mkSig n s21 .++ (sfromList [head s21] :: PSigL)),
+                           (PPosIdx 1 3, mkSig n s13 .++ (sfromList [head s13] :: PSigL)),
+                           (PPosIdx 3 1, mkSig n s31 .++ (sfromList [head s31] :: PSigL)) ]
 
       pRec = PowerRecord (sfromList time) pMap
       (_, sqTopo) = makeSequence pRec topo

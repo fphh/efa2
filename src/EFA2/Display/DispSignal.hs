@@ -77,3 +77,10 @@ instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d,VSingleton v1 d,VSinglet
     where dtyp = getDisplayType x
           dmin = vminimum $ vminimum v
           dmax = vmaximum $ vminimum v
+          
+{-          
+class RDisp a where          
+  rdisp :: a -> String
+
+instance RDisp PowerRecord where
+  rdisp PowerRecord time pmap = "PowerRecord: \n  Time: " ++ sdisp time ++ " \n Signals: \   -}
