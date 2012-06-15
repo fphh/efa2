@@ -4,6 +4,19 @@
 module EFA2.Display.Plot (module EFA2.Display.Plot) where
 
 import Graphics.Gnuplot.Simple
+
+import qualified Graphics.Gnuplot.Plot.TwoDimensional as Plot2D
+import qualified Graphics.Gnuplot.Advanced as Plot
+import qualified Graphics.Gnuplot.Terminal.X11 as X11
+import qualified Graphics.Gnuplot.Graph.TwoDimensional as Graph2D
+
+import qualified Graphics.Gnuplot.LineSpecification as LineSpec
+
+import qualified Graphics.Gnuplot.Frame as Frame
+import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
+import qualified Graphics.Gnuplot.Frame.OptionSet.Style as OptsStyle
+
+
 import EFA2.Signal.Signal
 import EFA2.Signal.Data
 import EFA2.Signal.Vector
@@ -57,12 +70,21 @@ instance (DisplayTyp t, VFromList v1 Double) => XYPlot (TC Signal t (Data (v1 :>
   xyplot x y = plotPath [LineStyle 1 [PointSize 2]] (zip (sPlotData x) (sPlotData y))
 
 
+rPlotStyle legend =  (PlotStyle {plotType = LinesPoints, lineSpec = CustomStyle [LineTitle legend,LineWidth 2, PointType 7, PointSize 1.5]})
+
 -- Plotting Records
 class RPlot a where
-  rPlot :: a -> IO ()
+  rPlot :: String -> a -> IO ()
 
 instance RPlot PowerRecord where   
-  rPlot (PowerRecord time pMap) = plotPaths [LineStyle 10 [PointType 2, PointSize 20]] xydata
+  rPlot rName (PowerRecord time pMap) = plotPathsStyle attrList (zip styleList xydata)
     where ydata = map sPlotData $ M.elems pMap
           xydata = map (zip (sPlotData time)) ydata 
+          keys = map fst $ M.toList pMap
+          styleList = map (rPlotStyle . show) keys
+          attrList = [Title ("PowerRecord: " ++ rName), 
+                      Grid $ Just [], 
+                      XLabel ("Time [" ++ (show $ getDisplayUnit Typ_T) ++ "]"),
+                      YLabel ("Power [" ++ (show $ getDisplayUnit Typ_P) ++ "]"), 
+                      Size $ Scale 0.7]
 
