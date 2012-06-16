@@ -601,3 +601,8 @@ ssign x = changeType $ smap (sign) x
 suntuple :: TC Sample typ (Data Nil (d,d)) -> (TC Sample typ (Data Nil d), TC Sample typ (Data Nil d)) 
 suntuple (TC (Data (D0 (x,y)))) = (TC $ Data $ D0 x,TC $ Data $ D0 y)
 
+smaximum :: (DMaximum c1 c2 d) => TC s typ (c1 d) -> TC Scalar typ (c2 d)
+smaximum (TC x) = TC $ dmaximum x  
+
+sminimum :: (DMaximum c1 c2 d) => TC s typ (c1 d) -> TC Scalar typ (c2 d)
+sminimum (TC x) = TC $ dminimum x  

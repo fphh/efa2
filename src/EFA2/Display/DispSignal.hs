@@ -1,10 +1,11 @@
-{-# LANGUAGE FlexibleInstances, GADTs, MultiParamTypeClasses,FlexibleContexts,UndecidableInstances, TypeOperators#-}
+{-# LANGUAGE FlexibleInstances, GADTs, MultiParamTypeClasses,FlexibleContexts,UndecidableInstances, TypeOperators, TypeSynonymInstances#-}
 
 module EFA2.Display.DispSignal (module EFA2.Display.DispSignal) where
 
 import EFA2.Display.DispTyp
 import EFA2.Display.DispBase
 
+import EFA2.Signal.Base
 import EFA2.Signal.Data
 import EFA2.Signal.Typ
 import EFA2.Signal.Signal
@@ -16,7 +17,7 @@ import qualified Data.List as L
 
 -- | display a single value  
 dispSingle ::  Disp a => a -> DisplayType -> String
-dispSingle x t = disp f s x ++ " " ++ show u
+dispSingle x t = disp f s x
            where u = getDisplayUnit t
                  s = getUnitScale u
                  f = getDisplayFormat dispLength t u 
@@ -30,10 +31,11 @@ dispRange x y t = disp f s x ++ " - " ++ disp f s y ++ " " ++ show u
                  f = getDisplayFormat dispLength t u
 
 dispAll :: Disp a => [a] -> DisplayType -> String
-dispAll xs t = (L.intercalate " " $ map (disp f s) xs) ++  " " ++ show u
+dispAll xs t = (L.intercalate " " $ map (disp f s) xs)
            where u = getDisplayUnit t
                  s = getUnitScale u
                  f = getDisplayFormat dispLength t u
+
 
  
 class SDisplay a where
@@ -78,9 +80,3 @@ instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d,VSingleton v1 d,VSinglet
           dmin = vminimum $ vminimum v
           dmax = vmaximum $ vminimum v
           
-{-          
-class RDisp a where          
-  rdisp :: a -> String
-
-instance RDisp PowerRecord where
-  rdisp PowerRecord time pmap = "PowerRecord: \n  Time: " ++ sdisp time ++ " \n Signals: \   -}

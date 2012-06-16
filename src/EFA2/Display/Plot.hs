@@ -28,6 +28,7 @@ import EFA2.Signal.SequenceData
 
 import qualified Data.Map as M
 
+-- | Get Signal Plot Data (Unit Conversion)  ---------------------------------------------------------------
 
 class SPlotData s typ c d where 
   sPlotData :: TC s typ (c d) -> [d]
@@ -39,7 +40,8 @@ instance (DFromList (Data (v1 :> Nil)) Val, DisplayTyp t) => SPlotData sig t  (D
           (UnitScale s) = getUnitScale u
 
 
--- Simple Plotting -- without time axis
+-- | Simple Signal Plotting -- without time axis --------------------------------------------------------------
+
 class Plot a where          
   sigPlot :: a -> IO ()
 
@@ -63,6 +65,9 @@ instance SPlotData TestRow t (Data (v1 :> Nil)) Val => Plot (TC TestRow t  (Data
   sigPlot x = undefined -- plotList [] (sPlotData x)
 
 
+
+-- | Plotting Signals against each other --------------------------------------------------------------
+
 class XYPlot a b where
   xyplot :: a -> b -> IO ()
   
@@ -70,21 +75,39 @@ instance (DisplayTyp t, VFromList v1 Double) => XYPlot (TC Signal t (Data (v1 :>
   xyplot x y = plotPath [LineStyle 1 [PointSize 2]] (zip (sPlotData x) (sPlotData y))
 
 
+
+-- | Plotting Records ---------------------------------------------------------------
+
+-- | Line Style
 rPlotStyle legend =  (PlotStyle {plotType = LinesPoints, lineSpec = CustomStyle [LineTitle legend,LineWidth 2, PointType 7, PointSize 1.5]})
 
--- Plotting Records
+-- | Plot Attributes
+rPlotAttrs name = [Title ("PowerRecord: " ++ name), 
+                   Grid $ Just [], 
+                   XLabel ("Time [" ++ (show $ getDisplayUnit Typ_T) ++ "]"),
+                   YLabel ("Power [" ++ (show $ getDisplayUnit Typ_P) ++ "]"), 
+                   Size $ Scale 0.7]
+
+
+-- | Class fror Plotting Records 
 class RPlot a where
-  rPlot :: String -> a -> IO ()
+  rPlot :: (String,a) -> IO ()
 
 instance RPlot PowerRecord where   
-  rPlot rName (PowerRecord time pMap) = plotPathsStyle attrList (zip styleList xydata)
+  rPlot (rName, (PowerRecord time pMap)) = plotPathsStyle (rPlotAttrs rName) (zip styleList xydata)
     where ydata = map sPlotData $ M.elems pMap
           xydata = map (zip (sPlotData time)) ydata 
           keys = map fst $ M.toList pMap
           styleList = map (rPlotStyle . show) keys
-          attrList = [Title ("PowerRecord: " ++ rName), 
-                      Grid $ Just [], 
-                      XLabel ("Time [" ++ (show $ getDisplayUnit Typ_T) ++ "]"),
-                      YLabel ("Power [" ++ (show $ getDisplayUnit Typ_P) ++ "]"), 
-                      Size $ Scale 0.7]
 
+instance RPlot SecPowerRecord where   
+  rPlot (rName, (SecPowerRecord time pMap)) = plotPathsStyle (rPlotAttrs rName) (zip styleList xydata)
+    where ydata = map sPlotData $ M.elems pMap
+          xydata = map (zip (sPlotData time)) ydata 
+          keys = map fst $ M.toList pMap
+          styleList = map (rPlotStyle . show) keys
+
+instance RPlot SequPwrRecord where   
+  rPlot (sqName, (SequData rs)) = mapM_ rPlot $ zip nameList rs
+    where
+      nameList = map (\ x -> "PowerRecord of Section: " ++ show x) [1..length rs]  
