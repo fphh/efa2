@@ -21,6 +21,7 @@ import System.IO
 import EFA2.Signal.SequenceData
 import EFA2.Display.DispSignal
 
+{-
 type Title = String
 type ColumnTitle = String
 
@@ -104,7 +105,9 @@ instance ToTable PowerRecord where
            where rows = map (\(x, y) ->  SigRange (show x) (sdisp y)) $ M.toList sigs
 -} 
 
+
+
 instance ToTable PowerRecord where
          toTable (PowerRecord time sigs) = TableDoc [Table "Signals" [] rows]
            where rows = map (\(x, y) ->  ListRow (show x) (stoList y)) $ M.toList sigs
-  
+-}  

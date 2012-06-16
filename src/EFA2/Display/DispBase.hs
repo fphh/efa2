@@ -7,6 +7,7 @@ import Text.Printf
 
 
 import EFA2.Signal.Base
+-- import EFA2.Display.DispTyp
 
 
 -- | Central Place for basic Unit & Display settings
@@ -80,3 +81,6 @@ instance Disp Int where
 
 instance Disp Sign where
   disp (DisplayFormat f) _ x = show x
+  
+        
+ 
