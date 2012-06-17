@@ -9,52 +9,143 @@ import EFA2.Utils.Utils
 
 import System.IO
 
+-- | Report Options 
+data ROpt = RVertical | RAll | RTimeMask | RIndexMask deriving (Show,Eq)
+type ROpts = [ROpt]
+
 -- | Table with Table Format and Table Data
-type Table = (TableFormat, TableData) 
+data Table = Table { tableTitle :: Title,
+                     tableFormat :: TableFormat,
+                     tableData :: TableData,
+                     tableSubTitle :: SubTitle} 
 
--- | Table Format
-type TableFormat = (ColFormat, RowFormat) 
-
--- col-Format
-data ColFormat = ColFormat [(Width,Align)] deriving Show
-type Width = Int 
-data Align = HLeft | HMid | HRight deriving Show
-
--- row-Format
-data RowFormat = RowFormat [Rows]  deriving Show
-type Rows = Int -- Nr of Rows to be left free before
+instance Eq PP.Doc where
+  (==) x y = (PP.render x) == (PP.render y)
+             
+type Title = String
+type SubTitle = String
 
 -- | Table-Data including string length
-data TableData = TableData [[(Length,PP.Doc)]] deriving Show
+data TableData = TableData {tableBody :: [[(Length,PP.Doc)]], 
+                            titleRow :: [[(Length,PP.Doc)]], 
+                            titleCols :: [[(Length, PP.Doc)]], 
+                            endCols :: [[(Length, PP.Doc)]]} deriving (Show,Eq)
 type Length = Int
 
--- | Generate doc from Table
-makeTable :: Table -> PP.Doc
-makeTable  ((cf,rf),TableData t) = makeCol rf $ map (makeRow cf) t 
+
+-- | Table Format
+data TableFormat = TableFormat {colFormat :: ColFormat,
+                                rowFormat :: RowFormat} 
+                                                              
+type ColFormat = [(Width,Align)]
+type RowFormat = [Rows]
+
+type Width = Int 
+data Align = HLeft | HMid | HRight deriving Show
+type Rows = Int -- Nr of Rows to be left free before
+
+tvcat :: [Table] -> Table
+tvcat [x] = x
+tvcat (x:xs) = foldl tvapp x xs
+
+tvapp :: Table -> Table -> Table
+tvapp x1 x2 = if check then Table {tableTitle = tableTitle x1 ++ " ++  " ++ tableTitle x2,
+                                   tableFormat = f (tableFormat x1) (tableFormat x2),
+                                   tableData = g (tableData x1) (tableData x2),              
+                                   tableSubTitle = tableSubTitle x1 ++ " ++  " ++ tableSubTitle x2} else error m 
+                                   where 
+                                         g :: TableData -> TableData -> TableData
+                                         g x1 x2 = TableData {titleRow = titleRow x1, 
+                                                             tableBody = tableBody x1 ++ tableBody x2,
+                                                             titleCols = titleCols x1 ++ titleCols x2,
+                                                             endCols = endCols x1 ++ endCols x2}           
     
+                                         f :: TableFormat -> TableFormat -> TableFormat
+                                         f x1 x2 = TableFormat {colFormat = maxColWidth (colFormat x1) (colFormat x2),
+                                                               rowFormat = rowFormat x1 ++ (tail $ rowFormat x2)}
+
+                                         check = (titleRow $ tableData x1) ==  (titleRow $ tableData x2)
+
+
+                                         m = "Error in tvCat -- not same column labels"
+                
+thcat :: [Table] -> Table
+thcat [x] = x
+thcat (x:xs) = foldl thapp x xs
+
+thapp :: Table -> Table -> Table
+thapp x1 x2 = if check then Table {tableTitle = tableTitle x1 ++ " ++  " ++ tableTitle x2,
+                                   tableFormat = f (tableFormat x1) (tableFormat x2),
+                                   tableData = g (tableData x1) (tableData x2),              
+                                   tableSubTitle = tableSubTitle x1 ++ " ++  " ++ tableSubTitle x2} else error m             
+              where g :: TableData -> TableData -> TableData
+                    g x1 x2 = TableData {titleRow = titleRow x1++titleRow x2, 
+                                        tableBody = L.transpose $ (L.transpose $ tableBody x1)++(L.transpose $ tableBody x2),
+                                        titleCols = titleCols x1,
+                                        endCols = endCols x1}           
+    
+                    f :: TableFormat -> TableFormat -> TableFormat
+                    f x1 x2 = TableFormat {colFormat = (init $ colFormat x1)++(init $ tail $ colFormat x2)++[(last $ colFormat x2)],
+                                           rowFormat = rowFormat x1}
+                    check = (titleCols $ tableData x1) == (titleCols $ tableData x2) && (endCols $ tableData x1) == (endCols $ tableData x2)  
+                    m = "Error in thcat - not same column title and end row"                           
+
+
+maxColWidth :: ColFormat -> ColFormat -> ColFormat
+maxColWidth cf1 cf2 = zipWith f cf1 cf2 
+  where f (w1,a) (w2,_) = (max w1 w2,a) 
+
+getMaxColWidth :: ColFormat -> Width
+getMaxColWidth cf = maximum $ map fst cf
+
+-- | Generate doc from Table
+makeTable :: ROpts -> Table -> PP.Doc
+makeTable  os t = PP.text (tableTitle t) PP.$$ (makeCol os rf $ map (makeRow os cft) xt) PP.$$ PP.text (tableSubTitle t) 
+  where
+    rf = rowFormat $ tableFormat t
+    cf = colFormat $ tableFormat t
+    cft = if transpose then maxColWidth cf (repeat (getMaxColWidth cf,HLeft)) else cf
+    td = tableData t
+    x = buildDocTable $ tableData t
+    transpose = L.elem (RVertical) os
+    xt = if transpose then L.transpose x else x 
+
+-- | Generate doc table including title rows and colums    
+buildDocTable :: TableData -> [[(Length, PP.Doc)]]
+buildDocTable td = titleRow td ++ L.transpose ((L.transpose (titleCols td)) ++ (L.transpose $ tableBody td) ++ (L.transpose (endCols td)))
+
 -- | Generate Table Row     
-makeRow :: ColFormat -> [(Length,PP.Doc)] -> PP.Doc    
-makeRow (ColFormat cf) cs = PP.hcat (zipWith makeCell cf cs)  
+makeRow :: ROpts -> ColFormat -> [(Length,PP.Doc)]  -> PP.Doc    
+makeRow os cf cs = PP.hcat (zipWith (makeCell os) cf cs)  
+
+        
 
 -- | Generate Table Cell
-makeCell :: (Width,Align) -> (Length,PP.Doc) -> PP.Doc
-makeCell (w,HLeft) (l,c) = PP.hcat (replicate (w-l) PP.space ++[c])                        
-makeCell (w,HRight) (l,c) = PP.hcat ([c]++replicate (w-l) PP.space)
+makeCell :: ROpts -> (Width,Align) -> (Length,PP.Doc) -> PP.Doc
+makeCell os (w,HRight) (l,c) = PP.hcat (replicate (w-l) PP.space ++[c])                        
+makeCell os (w,HLeft) (l,c) = PP.hcat ([c]++replicate (w-l) PP.space)
 --formatCell (w,HMid) (l,c) = PP.hcat ([c]++replicate (w-l) PP.space) where h = (w-l)/2
         
 -- | Generate Table Column                            
-makeCol :: RowFormat -> [PP.Doc] -> PP.Doc 
-makeCol rf rs = PP.vcat rs
+makeCol :: ROpts -> RowFormat -> [PP.Doc] -> PP.Doc 
+makeCol os rf rs = PP.vcat rs
+
 
 -- | To Table Class to defining generation of Documents  --------------------------------------------
 class ToTable a where
-      toTable :: a -> Table
+      toTable :: ROpts -> (String,a) -> Table
 
 instance ToTable [[Double]] where
-      toTable xs = (tf,td)
-        where td = TableData $ map (map (toDoc show)) xs
-              tf = autoFormat td
+      toTable os (ti,xs)  = Table {tableTitle = "Matrix - " ++ ti,
+                                    tableFormat = tf,
+                                    tableData = td,
+                                    tableSubTitle = ""}
 
+        where td = TableData {tableBody = map (map (toDoc show)) xs,
+                              titleCols = [],
+                              titleRow = [],
+                              endCols = []}
+              tf = autoFormat td
 
 -- | convert raw data to doc elements, using given function 
 toDoc :: (a->String) -> a -> (Length,PP.Doc)
@@ -62,15 +153,16 @@ toDoc f xs = (length $ f xs, PP.text $ f xs)
 
 -- | generate Auto Format from Table data
 autoFormat :: TableData -> TableFormat
-autoFormat (TableData td) = (ColFormat $ zip cf (repeat HLeft), RowFormat rf)
-  where                      
-    cf = map f $ L.transpose td
-    f col = (maximum $ map fst col)+2
-    rf = replicate (length td) 0
+autoFormat td = TableFormat {colFormat = zip cf (repeat HLeft),
+                             rowFormat = replicate (length x) 0}
+  where
+    x = buildDocTable td                      
+    cf = map f $ L.transpose x where f col = (maximum $ map fst col)+2
+
     
 
 -- | OutPut Functions  --------------------------------------------
 -- | TODO: write formatDocHor versions of this functions.
-report :: (ToTable a) => a -> IO ()
-report = putStrLn . PP.render . makeTable  . toTable 
+report :: (ToTable a) => ROpts -> (String,a) -> IO ()
+report os = putStrLn . PP.render . (makeTable os) . (toTable os) 
   

@@ -26,6 +26,15 @@ vdisp x = printf f $ s*val
         (DisplayFormat f) = getDisplayFormat dispLength t u 
         (TC (Data (D0 val))) = x
 
+-- | Display single values
+sdisp :: (DisplayTyp t, VFromList v Double) => TC s t (Data (v :> Nil) Val)  -> [String]
+sdisp xs = map g l
+  where g x = printf f (s*x)              
+        t = getDisplayType xs
+        u = getDisplayUnit t
+        (UnitScale s) = getUnitScale u
+        (DisplayFormat f) = getDisplayFormat dispLength t u 
+        l = stoList xs
 
         
 -- | Display Signal Type        
@@ -51,12 +60,21 @@ instance SigDisp Signal (Data (V.Vector :> V.Vector :> Nil)) where
          sigDisp x = "Sig2V" 
 
 
-instance (VSingleton v Double,UDisp t, SigDisp s (Data (v :> Nil))) => ToTable (TC s t (Data (v :> Nil) Val)) where
-      toTable x = (tf,td)
-        where td = TableData $ map (map (toDoc id)) [xs]
-              xs = [sigDisp x,tdisp x,vdisp min ++ " - " ++ vdisp max, udisp x]
+instance (VFromList v Val,VSingleton v Double,UDisp t, SigDisp s (Data (v :> Nil))) => ToTable (TC s t (Data (v :> Nil) Val)) where
+      toTable os (ti,x) = Table {tableTitle = "",
+                         tableFormat = tf,
+                         tableData = td,
+                         tableSubTitle = ""}
+        where td = TableData {tableBody =  [map (toDoc id ) (f x) ],
+                              titleRow = [],
+                              titleCols = [map (toDoc id) [ti,sigDisp x,tdisp x]],
+                              endCols = [[toDoc id $ udisp x]]}
+
               max = smaximum x
               min = sminimum x
               tf = autoFormat td
+              
+              f x | L.elem RAll os = sdisp x
+              f x | otherwise = [(vdisp min) ++ " - " ++ (vdisp max)]
 
 
