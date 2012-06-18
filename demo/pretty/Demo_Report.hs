@@ -27,8 +27,8 @@ main = do
   
   putStrLn $ show t
   
-  report [] ("TestMatrix",ll) 
-  report [] ("Power1",p1) 
-  report [RVertical,RAll] ("PowerRecord",r) 
+  report [RVertical] ("TestMatrix",ll) 
+  report [RVertical] ("Power1",p1) 
+  report [RVertical] ("PowerRecord",r) 
 
   

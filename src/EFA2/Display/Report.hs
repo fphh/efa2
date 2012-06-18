@@ -65,8 +65,6 @@ tvapp x1 x2 = if check then Table {tableTitle = tableTitle x1 ++ " ++  " ++ tabl
                                                                rowFormat = rowFormat x1 ++ (tail $ rowFormat x2)}
 
                                          check = (titleRow $ tableData x1) ==  (titleRow $ tableData x2)
-
-
                                          m = "Error in tvCat -- not same column labels"
                 
 thcat :: [Table] -> Table
@@ -158,7 +156,6 @@ autoFormat td = TableFormat {colFormat = zip cf (repeat HLeft),
   where
     x = buildDocTable td                      
     cf = map f $ L.transpose x where f col = (maximum $ map fst col)+2
-
     
 
 -- | OutPut Functions  --------------------------------------------
