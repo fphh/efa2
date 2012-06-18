@@ -54,8 +54,14 @@ data StorageIdx = StorageIdx !Int !Int !Int deriving (Show, Ord, Eq)
 
 data Use = InSum
          | OutSum
+         | InDiffSum
+         | OutDiffSum
          | C
          | D deriving (Show, Eq, Ord)
+
+toDiffUse :: Use -> Use
+toDiffUse InSum = InDiffSum
+toDiffUse OutSum = OutDiffSum
 
 data VarIdx = VarIdx !Int !Int Use !Int deriving (Show, Ord, Eq)
 

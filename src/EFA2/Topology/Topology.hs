@@ -55,7 +55,7 @@ makeAllEquations topo envs = ((envUnion envs') { recordNumber = MixedRecord newR
         recNum env = fromSingleRecord $ recordNumber env
         dirTopo = makeDirTopology topo
 
-        ts = envEqs ++ edgeEqs ++ nodeEqs ++ interEqs ++ powerEqs
+        ts = edgeEqs ++ nodeEqs ++ interEqs ++ powerEqs ++ envEqs
 
         edgeEqs = concatMap mkEdEq envs
         mkEdEq env = mkEdgeEq (recNum env) dirTopo
@@ -257,23 +257,23 @@ mkEq recordNum (ins, n@(nid, NLabel sec _ _), outs)
 
         pisumeq = [vosum := visum]
 
-        ieqs = zipWith (h vosum) pis xis
-        oeqs = zipWith (h visum) pos xos
+        ieqs =  [] -- zipWith (f visum) pis xis
+        oeqs = zipWith (f vosum) pos xos
         --f v p x = p := x :* v
-        --f v p x = p := BNode v x
-        h v p x = p := FNode v x
+        f v p x = p := FEdge v x
+        --h v p x = p := FNode v x
 
         xieqs | length xis > 0 = [Const 1.0 := add xis]
               | otherwise = []
         xoeqs | length xos > 0 = [Const 1.0 := add xos]
               | otherwise = []
 
-        ieqs' | length pis > 1 = zipWith (g visum) xis pis
+        ieqs' | length pis > 1 = [] -- zipWith (g visum) xis pis
               | otherwise = []
-        oeqs' | length pos > 1 = zipWith (g vosum) xos pos
+        oeqs' | length pos > 1 = [] -- zipWith (g vosum) xos pos
               | otherwise = []
-        g v x e = x := e :* Recip v
-
+        --g v x e = x := e :* Recip v
+        g v x e = e := v :* x
 
 
 mkAllDiffEqs :: Int -> Int -> Topology -> [EqTerm]

@@ -49,72 +49,73 @@ import EFA2.Example.LinearTwo
 
 symbolic :: Topology -> Envs EqTerm
 symbolic g = res
-  where envs0 = emptyEnv { recordNumber = SingleRecord 0,
-                           powerMap = sigs0eq,
+  where
+
+        envs0 = emptyEnv { recordNumber = SingleRecord 0,
+                           powerMap = power0eq,
                            dtimeMap = dtimes0eq,
                            xMap = x0eq,
                            fetaMap = eta0eq }
 
         envs1 = emptyEnv { recordNumber = SingleRecord 1,
-                           powerMap = sigs1eq,
+                           powerMap = power1eq,
                            dpowerMap = dpower1eq,
+                           fetaMap = eta1eq,
                            detaMap = deta1eq,
-                           dtimeMap = dtimes1eq,
                            xMap = x1eq,
-                           fetaMap = eta1eq }
+                           dxMap = dx1eq,
+                           dtimeMap = dtimes1eq }
 
         (envs0', ts0) = makeAllEquations g [envs0]
         (envs1', ts1) = makeAllEquations g [envs1]
 
         ts0o = order ts0
         ts1o = order ts1
-        diffts = mkAllDiffEqs 1 0 g
-        difftseq = mkDiffEqTermEquations 1 ts0o
+        difftseq = mkDiffEqTermEquations 0 ts1o
 
-        ts = toAbsEqTermEquations $ order (difftseq ++ diffts ++ ts0o ++ ts1o)
+        ts = toAbsEqTermEquations $ order (ts0o ++ ts1o ++ difftseq)
         res = interpretEqTermFromScratch ts
 
 numeric :: Topology -> Envs Sc
-numeric g = res
+numeric g = trace ("---------\n" ++ showEqTerms ts1o ++ "\n------\n") res
   where envs0 = emptyEnv { recordNumber = SingleRecord 0,
-                           powerMap = sigs0num,
+                           powerMap = power0num,
                            dtimeMap = dtimes0num,
                            xMap = x0num,
                            fetaMap = eta0num }
 
         envs1 = emptyEnv { recordNumber = SingleRecord 1,
-                           powerMap = sigs1num,
+                           powerMap = power1num,
                            dpowerMap = dpower1num,
+                           fetaMap = eta1num,
                            detaMap = deta1num,
-                           dtimeMap = dtimes1num,
                            xMap = x1num,
-                           fetaMap = eta1num }
+                           dxMap = dx1num,
+                           dtimeMap = dtimes1num }
 
         (envs0', ts0) = makeAllEquations g [envs0]
         (envs1', ts1) = makeAllEquations g [envs1]
 
         ts0o = order ts0
         ts1o = order ts1
-        diffts = mkAllDiffEqs 1 0 g
-        difftseq = mkDiffEqTermEquations 1 ts0o
+        difftseq = mkDiffEqTermEquations 0 ts1o
 
         envs = envUnion [envs0', envs1']
-        --diffts = mkAllDiffEqs 1 0 g
-        --difftseq = mkDiffEqTermEquations 1 ts0
 
-        ts = toAbsEqTermEquations $ order (difftseq ++ diffts ++ ts0 ++ ts1)
+        ts = toAbsEqTermEquations $ ts0o ++ ts1o ++ difftseq
         res = interpretFromScratch (recordNumber envs) 1 (map (eqToInTerm envs) ts)
 
 deltaEnv :: Topology -> Envs Sc
 deltaEnv g = res1 `minusEnv` res0
-  where envs0 = emptyEnv { recordNumber = SingleRecord 0,
-                           powerMap = sigs0num,
+  where 
+        envs0 = emptyEnv { recordNumber = SingleRecord 0,
+                           powerMap = power0num,
                            dtimeMap = dtimes0num,
                            xMap = x0num,
                            fetaMap = eta0num }
 
         envs1 = emptyEnv { recordNumber = SingleRecord 1,
-                           powerMap = sigs1num,
+                           powerMap = power1num,
                            --dpowerMap = dpower1num,
                            --detaMap = deta1num,
                            dtimeMap = dtimes1num,
@@ -186,14 +187,19 @@ main = do
 
       control = dpowerMap (deltaEnv g)
 
+
   putStrLn "\n== Control delta environment (later env - former env, computed independently) =="
   putStrLn (format $ M.toList control)
+
 
   putStrLn "\n== Numeric solution =="
   putStrLn (format $ M.toList dpnum)
 
+
   putStrLn "\n== Symbolic solution =="
   putStrLn (format $ M.toList dpsymEq)
+
+
 
   putStrLn "\n== Numeric interpretation of symbolic solution =="
   putStrLn (format $ M.toList dpsyminterp)
@@ -206,5 +212,3 @@ main = do
 
   putStrLn "\n== Sums of numeric additive terms =="
   putStrLn (format $ M.toList sumdetails)
-
-

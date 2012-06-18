@@ -25,9 +25,8 @@ type Sc = Scal (Typ UT UT UT) Val
 dtimes0num :: DTimeMap Sc
 dtimes0num = M.fromList [ (DTimeIdx 0 0, toScalar 1.0) ]
 
-sigs0num :: PowerMap Sc
-sigs0num = M.fromList [ (PowerIdx 0 0 0 1, toScalar 3.0),
-                        (PowerIdx 0 0 3 1, toScalar 2.0) ]
+power0num :: PowerMap Sc
+power0num = M.fromList [ (PowerIdx 0 0 0 1, toScalar 3.0) ]
 
 eta0num :: FEtaMap Sc
 eta0num = M.fromList [ (FEtaIdx 0 0 1 0, smap $ const 0.8), 
@@ -38,29 +37,37 @@ eta0num = M.fromList [ (FEtaIdx 0 0 1 0, smap $ const 0.8),
                       (FEtaIdx 0 0 3 1, smap $ const 0.8) ]
 
 x0num :: XMap Sc
-x0num = M.fromList []
+x0num = M.fromList [ (XIdx 0 0 1 2, toScalar 0.4) ]
+                     -- (XIdx 0 0 1 3, toScalar 0.6) ]
 
 dtimes1num:: DTimeMap Sc
 dtimes1num = M.fromList [ (DTimeIdx 0 1, toScalar 1.0) ]
 
-sigs1num :: PowerMap Sc
-sigs1num = M.fromList [ (PowerIdx 0 1 0 1, toScalar 2.5),
-                        (PowerIdx 0 1 3 1, toScalar 3.0) ]
+power1num :: PowerMap Sc
+power1num = M.fromList [ (PowerIdx 0 1 0 1, toScalar 3.5) ]
 
 dpower1num :: DPowerMap Sc
-dpower1num = M.fromList [ (DPowerIdx 0 1 0 1, toScalar (-0.5)),
-                          (DPowerIdx 0 1 3 1, toScalar 1.0) ]
+dpower1num = M.fromList [ (DPowerIdx 0 1 0 1, toScalar 0.5) ]
 
 eta1num :: FEtaMap Sc
 eta1num = M.fromList [ (FEtaIdx 0 1 1 0, smap $ const 0.9), 
-                      (FEtaIdx 0 1 0 1, smap $ const 0.9),
-                      (FEtaIdx 0 1 1 2, smap $ const 0.9), 
-                      (FEtaIdx 0 1 2 1, smap $ const 0.9),
-                      (FEtaIdx 0 1 1 3, smap $ const 0.9), 
-                      (FEtaIdx 0 1 3 1, smap $ const 0.9) ]
+                       (FEtaIdx 0 1 0 1, smap $ const 0.9),
+                       (FEtaIdx 0 1 1 2, smap $ const 0.9), 
+                       (FEtaIdx 0 1 2 1, smap $ const 0.9),
+                       (FEtaIdx 0 1 1 3, smap $ const 0.9), 
+                       (FEtaIdx 0 1 3 1, smap $ const 0.9) ]
 
 x1num :: XMap Sc
-x1num = M.fromList []
+x1num = M.fromList [ (XIdx 0 1 1 2, toScalar 0.3) ]
+                     -- (XIdx 0 1 1 3, toScalar 0.7)]
+
+dx1num :: DXMap Sc
+dx1num = M.fromList [ (DXIdx 0 1 1 0, toScalar 0.0), 
+                      (DXIdx 0 1 0 1, toScalar 0.0),
+                      (DXIdx 0 1 1 2, toScalar (-0.1)), 
+                      (DXIdx 0 1 2 1, toScalar 0.0),
+                      (DXIdx 0 1 1 3, toScalar 0.1), 
+                      (DXIdx 0 1 3 1, toScalar 0.0) ]
 
 deta1num :: DEtaMap Sc
 deta1num = M.fromList [ (DEtaIdx 0 1 1 0, smap $ const 0.1), 
@@ -76,9 +83,8 @@ deta1num = M.fromList [ (DEtaIdx 0 1 1 0, smap $ const 0.1),
 dtimes0eq :: DTimeMap EqTerm
 dtimes0eq = M.fromList [ (DTimeIdx 0 0, DTime (DTimeIdx 0 0)) ]
 
-sigs0eq :: PowerMap EqTerm
-sigs0eq = M.fromList [ (PowerIdx 0 0 0 1, Power (PowerIdx 0 0 0 1)),
-                       (PowerIdx 0 0 3 1, Power (PowerIdx 0 0 3 1)) ]
+power0eq :: PowerMap EqTerm
+power0eq = M.fromList [ (PowerIdx 0 0 0 1, Power (PowerIdx 0 0 0 1)) ]
 
 eta0eq :: FEtaMap EqTerm
 eta0eq = M.fromList [ (FEtaIdx 0 0 1 0, const $ FEta (FEtaIdx 0 0 1 0)), 
@@ -88,18 +94,17 @@ eta0eq = M.fromList [ (FEtaIdx 0 0 1 0, const $ FEta (FEtaIdx 0 0 1 0)),
                       (FEtaIdx 0 0 1 3, const $ FEta (FEtaIdx 0 0 1 3)), 
                       (FEtaIdx 0 0 3 1, const $ FEta (FEtaIdx 0 0 3 1)) ]
 x0eq :: XMap EqTerm
-x0eq = M.fromList []
+x0eq = M.fromList [ (XIdx 0 0 1 2, X (XIdx 0 0 1 2)) ]
+                    -- (XIdx 0 0 1 3, X (XIdx 0 0 1 3))]
 
 dtimes1eq:: DTimeMap EqTerm
 dtimes1eq = M.fromList [ (DTimeIdx 0 1, DTime (DTimeIdx 0 1)) ]
 
-sigs1eq :: PowerMap EqTerm
-sigs1eq = M.fromList [ (PowerIdx 0 1 0 1, Power (PowerIdx 0 1 0 1)),
-                       (PowerIdx 0 1 3 1, Power (PowerIdx 0 1 3 1)) ]
+power1eq :: PowerMap EqTerm
+power1eq = M.fromList [ (PowerIdx 0 1 0 1, Power (PowerIdx 0 1 0 1)) ]
 
 dpower1eq :: DPowerMap EqTerm
-dpower1eq = M.fromList [ (DPowerIdx 0 1 0 1, DPower (DPowerIdx 0 1 0 1)),
-                         (DPowerIdx 0 1 3 1, DPower (DPowerIdx 0 1 3 1)) ]
+dpower1eq = M.fromList [ (DPowerIdx 0 1 0 1, DPower (DPowerIdx 0 1 0 1)) ]
 
 eta1eq :: FEtaMap EqTerm
 eta1eq = M.fromList [ (FEtaIdx 0 1 1 0, const $ FEta (FEtaIdx 0 1 1 0)), 
@@ -109,7 +114,18 @@ eta1eq = M.fromList [ (FEtaIdx 0 1 1 0, const $ FEta (FEtaIdx 0 1 1 0)),
                       (FEtaIdx 0 1 1 3, const $ FEta (FEtaIdx 0 1 1 3)), 
                       (FEtaIdx 0 1 3 1, const $ FEta (FEtaIdx 0 1 3 1)) ]
 x1eq :: XMap EqTerm
-x1eq = M.fromList []
+x1eq = M.fromList [ (XIdx 0 1 1 2, X (XIdx 0 1 1 2)) ]
+                    -- (XIdx 0 1 1 3, X (XIdx 0 1 1 3)) ]
+
+
+dx1eq :: DXMap EqTerm
+dx1eq = M.fromList [ (DXIdx 0 1 1 0, DX (DXIdx 0 1 1 0)), 
+                     (DXIdx 0 1 0 1, DX (DXIdx 0 1 0 1)),
+                     (DXIdx 0 1 1 2, DX (DXIdx 0 1 1 2)), 
+                     (DXIdx 0 1 2 1, DX (DXIdx 0 1 2 1)),
+                     (DXIdx 0 1 1 3, DX (DXIdx 0 1 1 3)), 
+                     (DXIdx 0 1 3 1, DX (DXIdx 0 1 3 1)) ]
+
 
 deta1eq :: DEtaMap EqTerm
 deta1eq = M.fromList [ (DEtaIdx 0 1 1 0, const $ DEta (DEtaIdx 0 1 1 0)), 
@@ -124,5 +140,39 @@ deta1eq = M.fromList [ (DEtaIdx 0 1 1 0, const $ DEta (DEtaIdx 0 1 1 0)),
 dreibein :: TheGraph EqTerm
 dreibein = TheGraph g undefined
   where g = mkGraph ns es
-        ns = makeNodes [(0, Source), (1, Crossing), (2, Sink), (3, Source)]
-        es = makeEdges [(0, 1, defaultELabel), (1, 2, defaultELabel), (3, 1, defaultELabel)]
+        ns = makeNodes [(0, Source), (1, Crossing), (2, Sink), (3, Sink)]
+        es = makeEdges [(0, 1, defaultELabel), (1, 2, defaultELabel), (1, 3, defaultELabel)]
+
+
+{-
+dP_0.1_0.1 * n_0.0_0.1 * -(x_0.0_1.2) * n_0.0_1.3, 
+dP_0.1_0.1 * n_0.0_0.1 * 1.0 * n_0.0_1.3,
+ 
+P_0.0_0.1 * dn_0.1_0.1 * -(x_0.0_1.2) * n_0.0_1.3, 
+P_0.0_0.1 * dn_0.1_0.1 * 1.0 * n_0.0_1.3, 
+
+dP_0.1_0.1 * dn_0.1_0.1 * -(x_0.0_1.2) * n_0.0_1.3, 
+dP_0.1_0.1 * dn_0.1_0.1 * 1.0 * n_0.0_1.3, 
+
+P_0.0_0.1 * n_0.0_0.1 * dx_0.1_1.3 * n_0.0_1.3, 
+dP_0.1_0.1 * n_0.0_0.1 * dx_0.1_1.3 * n_0.0_1.3, 
+P_0.0_0.1 * dn_0.1_0.1 * dx_0.1_1.3 * n_0.0_1.3, 
+dP_0.1_0.1 * dn_0.1_0.1 * dx_0.1_1.3 * n_0.0_1.3,
+ 
+P_0.0_0.1 * n_0.0_0.1 * -(x_0.0_1.2) * dn_0.1_1.3, 
+P_0.0_0.1 * n_0.0_0.1 * 1.0 * dn_0.1_1.3, 
+
+dP_0.1_0.1 * n_0.0_0.1 * -(x_0.0_1.2) * dn_0.1_1.3, 
+dP_0.1_0.1 * n_0.0_0.1 * 1.0 * dn_0.1_1.3, 
+
+P_0.0_0.1 * dn_0.1_0.1 * -(x_0.0_1.2) * dn_0.1_1.3, 
+P_0.0_0.1 * dn_0.1_0.1 * 1.0 * dn_0.1_1.3, 
+
+dP_0.1_0.1 * dn_0.1_0.1 * -(x_0.0_1.2) * dn_0.1_1.3, 
+dP_0.1_0.1 * dn_0.1_0.1 * 1.0 * dn_0.1_1.3, 
+
+P_0.0_0.1 * n_0.0_0.1 * dx_0.1_1.3 * dn_0.1_1.3, 
+dP_0.1_0.1 * n_0.0_0.1 * dx_0.1_1.3 * dn_0.1_1.3, 
+P_0.0_0.1 * dn_0.1_0.1 * dx_0.1_1.3 * dn_0.1_1.3, 
+dP_0.1_0.1 * dn_0.1_0.1 * dx_0.1_1.3 * dn_0.1_1.3
+-}

@@ -254,6 +254,7 @@ isolateVar' (BEdge u v) (R:p) = isolateVar' v p . (flip NEdge u)
 isolateVar' (NEdge u v) (L:p) = isolateVar' u p . (flip FEdge v)
 isolateVar' (NEdge u v) (R:p) = isolateVar' v p . (flip BEdge u)
 
+{-
 -- e = u * v
 isolateVar' (FNode u v) (L:p) = isolateVar' u p . (flip BNode v)
 isolateVar' (FNode u v) (R:p) = isolateVar' v p . (flip XNode u)
@@ -265,7 +266,7 @@ isolateVar' (BNode u v) (R:p) = isolateVar' v p . (flip XNode u)
 -- n = u/v
 isolateVar' (XNode u v) (L:p) = isolateVar' u p . (flip FNode v)
 isolateVar' (XNode u v) (R:p) = isolateVar' v p . (flip BNode u)
-
+-}
 
 
 
@@ -337,8 +338,9 @@ toAbsEqTermEquations :: [EqTerm] -> [EqTerm]
 toAbsEqTermEquations ts = map toAbsEqTerm ts
  
 
-
+{-
 mkDiffEqTerm :: Int -> EqTerm -> Maybe EqTerm
+
 mkDiffEqTerm rec z@( Power (PowerIdx s'' _ f'' t'') :=
                    (FEdge p@(Power (PowerIdx s _ f t)) n@(FEta (FEtaIdx s' _ f' t')))) = Just res
   where res = dq := (dp :* n) :+ (p :* dn) :+ (dp :* dn)
@@ -348,29 +350,23 @@ mkDiffEqTerm rec z@( Power (PowerIdx s'' _ f'' t'') :=
 
 
 mkDiffEqTerm rec z@( Power (PowerIdx s'' _ f'' t'') :=
-                   (FNode v@(Var (VarIdx s _ use t)) x@(X (XIdx s' r f' t')))) = Just res
+                     (FNode v@(Var (VarIdx s _ use t)) x@(X (XIdx s' r f' t')))) = Just res
   where res = dq := (dv :* x) :+ (v :* dx) :+ (dv :* dx)
         dq = mkVar $ DPowerIdx s'' rec f'' t''
         dx = mkVar $ DXIdx s' rec f' t'
-        dv = (mkVar $ VarIdx s' rec use t) :+ Minus (mkVar $ VarIdx s r use t)
+        dv = mkVar $ VarIdx s' rec (toDiffUse use) t
 
-
-{- works a little bit...
-mkDiffEqTerm rec ( Power (PowerIdx s'' _ f'' t'') :=
-                   (FNode (Var (VarIdx s _ use t)) x@(X (XIdx s' r f' t')))) = trace (showEqTerm res) $ Just res
-  where res = dq := (dp :* x) :+ (p :* dx) :+ (dp :* dx)
-        dq = mkVar $ DPowerIdx s'' rec f'' t''
-        dx = mkVar $ DXIdx s' rec f' t'
-        p = mkVar $ PowerIdx s'' rec (f''-1) (t''-1)
-        dp = mkVar $ DPowerIdx s' rec (t''-1) (f''-1)
--}
-
-mkDiffEqTerm rec ((Var (VarIdx s _ use t)) := BNode p@(Power (PowerIdx s'' _ f'' t'')) x@(X (XIdx s' r f' t'))) = Just res
+{-
+mkDiffEqTerm rec ( Var (VarIdx s _ use t) := 
+                   (BNode p@(Power (PowerIdx s'' _ f'' t'')) x@(X (XIdx s' r f' t')))) = trace (showEqTerm res) $ Just res
   where res = v := (dp :* (Recip x)) :+ (Minus ((p :* dx) :* nom)) :+ (Minus ((dp :* dx) :* nom))
-        v = mkVar $ VarIdx s rec use t
+        v = mkVar $ VarIdx s rec (toDiffUse use) t
         dp = mkVar $ DPowerIdx s'' rec f'' t''
         dx = mkVar $ DXIdx s' rec f' t'
         nom = ((dx :* x) :+ (x :* x))
+-}
+
+--mkDiffEqTerm _ (Var _ := BNode _ _) = error "blaadfs"
 
 mkDiffEqTerm rec ( Power (PowerIdx s'' _ f'' t'') :=
                    (BEdge p@(Power (PowerIdx s _ f t)) n@(FEta (FEtaIdx s' _ f' t')))) = Just res
@@ -381,8 +377,86 @@ mkDiffEqTerm rec ( Power (PowerIdx s'' _ f'' t'') :=
         nom = Recip ((dn :* n) :+ (n :* n))
 
 
+mkDiffEqTerm rec t@(Var (VarIdx s _ use to) := Power (PowerIdx a b c d)) = trace ("+: " ++ showEqTerm t) $ Just res
+  where res = v := dp
+        v = mkVar $ VarIdx s rec (toDiffUse use) to
+        dp = DPower (DPowerIdx a rec c d)
+
+mkDiffEqTerm rec t@(Var (VarIdx s _ use to) := Var (VarIdx s' _ use' to')) = Just res
+  where res = v0 := v1
+        v0 = mkVar $ VarIdx s rec (toDiffUse use) to
+        v1 = mkVar $ VarIdx s' rec (toDiffUse use') to'
+
 mkDiffEqTerm _ t@(_ := (NEdge _ _)) = error $ "mkDiffEq: " ++ showEqTerm t ++ " cannot be computed with Differenzenrechnung"
-mkDiffEqTerm _ _ = Nothing
+-}
+
+mkDiffEqTerm :: Int -> EqTerm -> Maybe EqTerm
+
+-- v_0.1_OutSum.0 = P_0.1_0.1
+mkDiffEqTerm _ z@(Var (VarIdx s r use n) := Power (PowerIdx _ _ f t)) = 
+  {- trace (showEqTerm z ++ " => " ++ showEqTerm res) $ -} Just res
+  where res = v := dp
+        v = mkVar $ VarIdx s r (toDiffUse use) n
+        dp = mkVar $ DPowerIdx s r f t
+
+mkDiffEqTerm _ z@(Power (PowerIdx _ _ f t) := Var (VarIdx s r use n)) = 
+  trace (showEqTerm z ++ " => " ++ showEqTerm res) $ Just res
+  where res = dp := v
+        v = mkVar $ VarIdx s r (toDiffUse use) n
+        dp = mkVar $ DPowerIdx s r f t
+
+
+-- v_0.1_OutSum.1 = v_0.1_InSum.1
+mkDiffEqTerm _ z@(Var (VarIdx s r use0 n) := Var (VarIdx _ _ use1 _)) = 
+  {- trace (showEqTerm z ++ " => " ++ showEqTerm res) $ -} Just res
+  where res = v0 := v1
+        v0 = mkVar $ VarIdx s r (toDiffUse use0) n
+        v1 = mkVar $ VarIdx s r (toDiffUse use1) n
+
+-- P_0.1_1.0 = f(P_0.1_0.1, n_0.1_0.1)
+mkDiffEqTerm oldrec z@(Power (PowerIdx s newrec f t) := FEdge (Power _) _) = 
+  {- trace (showEqTerm z ++ " => " ++ showEqTerm res) $ -} Just res
+  where res = dq := (dp :* n) :+ (p :* dn) :+ (dp :* dn)
+        dq = mkVar $ DPowerIdx s newrec f t
+        dp = mkVar $ DPowerIdx s newrec t f
+        n = mkVar $ FEtaIdx s oldrec t f
+        dn = mkVar $ DEtaIdx s newrec t f
+        p = mkVar $ PowerIdx s oldrec t f
+
+-- P_0.1_1.2 = f(v_0.1_OutSum.1, x_0.1_1.2)
+mkDiffEqTerm oldrec z@(Power (PowerIdx s newrec f t) := FEdge (Var (VarIdx _ _ use _)) _) = 
+  {- trace (showEqTerm z ++ " => " ++ showEqTerm res) $ -} Just res
+  where res = dq := (dv :* x) :+ (v :* dx) :+ (dv :* dx)
+        dq = mkVar $ DPowerIdx s newrec f t
+        dv = mkVar $ VarIdx s newrec (toDiffUse use) f
+        x = mkVar $ XIdx s oldrec f t
+        dx = mkVar $ DXIdx s newrec f t
+        v = mkVar $ VarIdx s oldrec use f
+
+-- P_0.1_1.2 = b(P_0.1_2.1, n_0.1_1.2)
+mkDiffEqTerm oldrec z@(Power (PowerIdx s newrec f t) := BEdge _ (FEta _)) = 
+  trace (showEqTerm z ++ " => " ++ showEqTerm res) $ Just res
+  where res = dq := (dp :* (Recip n)) :+ (Minus ((p :* dn) :* nom)) :+ (Minus ((dp :* dn) :* nom))
+        dq = mkVar $ DPowerIdx s newrec f t
+        dp = mkVar $ DPowerIdx s newrec t f
+        p = mkVar $ PowerIdx s oldrec t f
+        n = mkVar $ FEtaIdx s oldrec f t
+        dn = mkVar $ DEtaIdx s newrec f t
+        nom = Recip ((dn :* n) :+ (n :* n))
+
+-- v_0.1_OutSum.1 = b(P_0.1_1.2, x_0.1_1.2)
+mkDiffEqTerm oldRec z@(Var (VarIdx s newRec use n) := BEdge (Power (PowerIdx _ _ f t)) _) =
+  trace (showEqTerm z ++ " => " ++ showEqTerm res) $ Just res
+  where res = v := (dp :* (Recip x)) :+ (Minus ((p :* dx) :* nom)) :+ (Minus ((dp :* dx) :* nom))
+        v = mkVar $ VarIdx s newRec (toDiffUse use) f
+        p = mkVar $ PowerIdx s oldRec f t
+        dp = mkVar $ DPowerIdx s newRec f t
+        x = mkVar $ XIdx s oldRec f t
+        dx = mkVar $ DXIdx s newRec f t
+        nom = Recip ((dx :* x) :+ (x :* x))
+
+
+mkDiffEqTerm _ t = Nothing
 
 
 mkDiffEqTermEquations :: Int -> [EqTerm] -> [EqTerm]
@@ -390,7 +464,6 @@ mkDiffEqTermEquations rec ts = catMaybes (map (mkDiffEqTerm rec) ts)
 
 --------------------------------------------------------------------
 -- interpretEq len envs (InEqual (EIdx idx) rhs) = envs { energyMap = insert len idx envs rhs (energyMap envs) }
-
 
 interpretEqTermRhs :: Envs EqTerm -> EqTerm -> EqTerm
 interpretEqTermRhs envs (Power idx) | Just s <- M.lookup idx (powerMap envs) = s
@@ -440,7 +513,6 @@ interpretEqTermEq envs t = error $ "interpretEqTerm: " ++ show t
 interpretEqTermFromScratch :: [EqTerm] -> Envs EqTerm
 interpretEqTermFromScratch ts = L.foldl' interpretEqTermEq emptyEnv ts
 
-
 mapEqTermEnv :: (a -> b) -> Envs a -> Envs b
 mapEqTermEnv f env = emptyEnv { recordNumber = recordNumber env,
                                 energyMap = M.map f (energyMap env),
@@ -456,3 +528,4 @@ mapEqTermEnv f env = emptyEnv { recordNumber = recordNumber env,
 
 
 --------------------------------------------------------------------
+

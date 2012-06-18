@@ -38,6 +38,7 @@ eqToInTerm envs term = eqToInTerm' term
 -}
         eqToInTerm' (DTime idx := Given) = InEqual (DTIdx idx) (InGiven (dtimeMap envs `safeLookup` idx))
         eqToInTerm' (X idx := Given) = InEqual (ScaleIdx idx) (InGiven (xMap envs `safeLookup` idx))
+        eqToInTerm' (DX idx := Given) = InEqual (DScaleIdx idx) (InGiven (dxMap envs `safeLookup` idx))
         eqToInTerm' (Var idx := Given) = InEqual (VIdx idx) (InGiven (varMap envs `safeLookup` idx))
         eqToInTerm' (Store idx := Given) = InEqual (SIdx idx) (InGiven (storageMap envs `safeLookup` idx))
         eqToInTerm' (Energy idx) = EIdx idx
