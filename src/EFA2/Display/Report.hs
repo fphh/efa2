@@ -10,7 +10,7 @@ import EFA2.Utils.Utils
 import System.IO
 
 -- | Report Options 
-data ROpt = RVertical | RAll | RTimeMask | RIndexMask deriving (Show,Eq)
+data ROpt = RVertical | RAll | RTimeMask | RIndexMask | RIndices [Int] deriving (Show,Eq)
 type ROpts = [ROpt]
 
 -- | Table with Table Format and Table Data

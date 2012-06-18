@@ -27,15 +27,14 @@ vdisp x = printf f $ s*val
         (TC (Data (D0 val))) = x
 
 -- | Display single values
-sdisp :: (DisplayTyp t, VFromList v Double) => ROpts -> TC s t (Data (v :> Nil) Val)  -> [String]
-sdisp os xs = map g l -- (f l)
+sdisp :: (DisplayTyp t, VFromList v Double) => TC s t (Data (v :> Nil) Val)  -> [String]
+sdisp xs = map g l -- (f l)
   where g x = printf f (s*x)              
         t = getDisplayType xs
         u = getDisplayUnit t
         (UnitScale s) = getUnitScale u
         (DisplayFormat f) = getDisplayFormat dispLength t u 
         l = stoList xs
---        f sig | L.elem (RIndices _) os = 
 
         
 -- | Display Signal Type        
@@ -74,8 +73,14 @@ instance (VFromList v Val,VSingleton v Double,UDisp t, SigDisp s (Data (v :> Nil
               max = smaximum x
               min = sminimum x
               tf = autoFormat td
-              
-              f x | L.elem RAll os = sdisp x
+{-              
+              (Just (RIndices iv)) = L.find match os
+              match (RIndices _) = True 
+              match _ = False
+              f x | L.elem RAll os && L.elem RIndices os = sdisp $ subSignal1D x iv               
+-}              
+
+              f x | L.elem RAll os = sdisp x              
               f x | otherwise = [(vdisp min) ++ " - " ++ (vdisp max)]
 
 
