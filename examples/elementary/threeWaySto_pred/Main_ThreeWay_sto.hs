@@ -56,23 +56,22 @@ f2 x = x/(x+10)
 
 
 --variation :: Topology -> Val -> [Envs UTFSig]
-variation sqTopo x y = interpretFromScratch 1 gd
-  where 
-        givenEnv0 = emptyEnv { dtimeMap = M.fromList [ (DTimeIdx 0 0, sfromList [1.0]) ],
+variation sqTopo x y = interpretFromScratch (SingleRecord 0) 1 gd
+  where givenEnv0 = emptyEnv { recordNumber = SingleRecord 0,
+                               dtimeMap = M.fromList [ (DTimeIdx 0 0, sfromList [1.0] :: UTFSig) ],
                                powerMap = M.fromList [ (PowerIdx 0 0 3 1, sfromList [x]),
-                                                       (PowerIdx 0 0 2 1, sfromList [0.6] :: UTFSig) ],
-                               fetaMap = M.fromList [ (FEtaIdx 0 0 0 1, smap etaf), (FEtaIdx 0 0 1 0, smap etaf),
-                                                      (FEtaIdx 0 0 1 2, smap (const 0.7)), (FEtaIdx 0 0 2 1, smap (const 0.7)),
-                                                 --     (FEtaIdx 0 0 1 3, smap (const y)), (FEtaIdx 0 0 3 1, smap (const (y-0.1))) ] }
-                                                      (FEtaIdx 0 0 1 3, smap f2), (FEtaIdx 0 0 3 1, smap f2) ] }
+                                                       (PowerIdx 0 0 2 1, sfromList [0.6]) ],
+                               fetaMap =  M.fromList [ (FEtaIdx  0 0 0 1, smap etaf), (FEtaIdx 0 0 1 0, smap etaf),
+                                                       (FEtaIdx  0 0 1 2, smap (const 0.7)), (FEtaIdx 0 0 2 1, smap (const 0.7)),
+                                                       (FEtaIdx  0 0 1 3, smap f2), (FEtaIdx 0 0 3 1, smap f2) ] }
 
-        givenEnv1 = emptyEnv { --dtimeMap = M.fromList [ (DTimeIdx 1 0, sfromList [1.0]) ],
-                               energyMap = M.fromList [ (EnergyIdx 1 0 3 1, sfromList [x]) ],
-                               powerMap = M.fromList [ (PowerIdx 1 0 2 1, sfromList [0.6]) ],
-                               fetaMap = M.fromList [ (FEtaIdx 1 0 0 1, smap etaf), (FEtaIdx 1 0 1 0, smap etaf),
-                                                      (FEtaIdx 1 0 1 2, smap (const 0.7)), (FEtaIdx 1 0 2 1, smap (const 0.7)),
-                                                      --(FEtaIdx 1 0 1 3, smap (const y)), (FEtaIdx 1 0 3 1, smap (const (y-0.1))) ] }
-                                                      (FEtaIdx 1 0 1 3, smap f2), (FEtaIdx 1 0 3 1, smap f2) ] }
+        givenEnv1 = emptyEnv { recordNumber = SingleRecord 1,
+                               --dtimeMap = M.fromList [ (DTimeIdx 1 0, sfromList [1.0]) ],
+                               energyMap = M.fromList [ (EnergyIdx 1 0 3 1, sfromList [x] :: UTFSig) ],
+                               powerMap =  M.fromList [ (PowerIdx 1 0 2 1, sfromList [0.6]) ],
+                               fetaMap =   M.fromList [ (FEtaIdx 1 0 0 1, smap etaf), (FEtaIdx 1 0 1 0, smap etaf),
+                                                        (FEtaIdx 1 0 1 2, smap (const 0.7)), (FEtaIdx 1 0 2 1, smap (const 0.7)),
+                                                        (FEtaIdx 1 0 1 3, smap f2), (FEtaIdx 1 0 3 1, smap f2) ] }
 
 {-
         givenEnv2 = emptyEnv { dtimeMap = M.fromList [ (DTimeIdx 2 0, sfromList [1.0]) ],
@@ -90,7 +89,7 @@ variation sqTopo x y = interpretFromScratch 1 gd
 
 -}
       
-        (sqEnvs, ts') = makeAllEquations sqTopo [givenEnv0, givenEnv1 ] -- , givenEnv2, givenEnv3 ]
+        (sqEnvs, ts') = makeAllEquations sqTopo [givenEnv0]
 
 
         storage0 = EnergyIdx (-1) 0 8 9

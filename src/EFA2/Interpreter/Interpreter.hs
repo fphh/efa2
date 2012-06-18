@@ -19,6 +19,7 @@ import EFA2.Signal.Signal
 import EFA2.Signal.Typ
 import EFA2.Utils.Utils
 import EFA2.Signal.Data
+import EFA2.Signal.Base
 
 
 --eqToInTerm :: Envs a -> EqTerm -> InTerm a
@@ -29,27 +30,44 @@ eqToInTerm envs term = eqToInTerm' term
         eqToInTerm' (Power idx := Given) = InEqual (PIdx idx) (InGiven (powerMap envs `safeLookup` idx))
         eqToInTerm' (DPower idx := Given) = InEqual (DPIdx idx) (InGiven (dpowerMap envs `safeLookup` idx))
         eqToInTerm' (FEta idx := Given) = InEqual (FNIdx idx) (InFunc (fetaMap envs `safeLookup` idx))
-        eqToInTerm' (DEta idx := Given) = InEqual (DNIdx idx) (InGiven (detaMap envs `safeLookup` idx))
+        eqToInTerm' (DEta idx := Given) = InEqual (DNIdx idx) (InFunc (detaMap envs `safeLookup` idx))
+{- 
+        eqToInTerm' (DEta idx := ((FEta x) :+ (Minus (FEta y)))) = InEqual (DNIdx idx) (InFunc (\z -> fx z .- fy z))
+          where fx = fetaMap envs `safeLookup` x
+                fy = fetaMap envs `safeLookup` y
+-}
         eqToInTerm' (DTime idx := Given) = InEqual (DTIdx idx) (InGiven (dtimeMap envs `safeLookup` idx))
         eqToInTerm' (X idx := Given) = InEqual (ScaleIdx idx) (InGiven (xMap envs `safeLookup` idx))
+        eqToInTerm' (DX idx := Given) = InEqual (DScaleIdx idx) (InGiven (dxMap envs `safeLookup` idx))
         eqToInTerm' (Var idx := Given) = InEqual (VIdx idx) (InGiven (varMap envs `safeLookup` idx))
         eqToInTerm' (Store idx := Given) = InEqual (SIdx idx) (InGiven (storageMap envs `safeLookup` idx))
         eqToInTerm' (Energy idx) = EIdx idx
         eqToInTerm' (DEnergy idx) = DEIdx idx
         eqToInTerm' (Power idx) = PIdx idx
         eqToInTerm' (DPower idx) = DPIdx idx
-        eqToInTerm' (FEta idx) = FNIdx idx -- (eqToInTerm' p)
+        eqToInTerm' (FEta idx) = FNIdx idx
         eqToInTerm' (DEta idx) = DNIdx idx
         eqToInTerm' (DTime idx) = DTIdx idx
         eqToInTerm' (X idx) = ScaleIdx idx
+        eqToInTerm' (DX idx) = DScaleIdx idx
+
         eqToInTerm' (Var idx) = VIdx idx
         eqToInTerm' (Store idx) = SIdx idx
         eqToInTerm' (Recip x) = InRecip (eqToInTerm' x)
         eqToInTerm' (Minus x) = InMinus (eqToInTerm' x)
+        eqToInTerm' (FEdge x y) = InFEdge (eqToInTerm' x) (eqToInTerm' y)
+        eqToInTerm' (BEdge x y) = InBEdge (eqToInTerm' x) (eqToInTerm' y)
+        eqToInTerm' (NEdge x y) = InNEdge (eqToInTerm' x) (eqToInTerm' y)
+
+        eqToInTerm' (FNode x y) = InFNode (eqToInTerm' x) (eqToInTerm' y)
+        eqToInTerm' (BNode x y) = InBNode (eqToInTerm' x) (eqToInTerm' y)
+        eqToInTerm' (XNode x y) = InXNode (eqToInTerm' x) (eqToInTerm' y)
+
+
         eqToInTerm' (x :+ y) = InAdd (eqToInTerm' x) (eqToInTerm' y)
         eqToInTerm' (x :* y) = InMult (eqToInTerm' x) (eqToInTerm' y)
         eqToInTerm' (x := y) = InEqual (eqToInTerm' x) (eqToInTerm' y)
-        eqToInTerm' t = error (show t)
+        eqToInTerm' t = error ("eqToInTerm: " ++ show t)
 
 
 showInTerm :: (Show a) => InTerm a -> String
@@ -62,13 +80,24 @@ showInTerm (FNIdx (FEtaIdx s r x y)) = "n:" ++ show s ++ "." ++ show r ++ ":" ++
 showInTerm (DNIdx (DEtaIdx s r x y)) = "dn:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
 showInTerm (DTIdx (DTimeIdx s r)) = "dt:" ++ show s ++ "." ++ show r
 showInTerm (ScaleIdx (XIdx s r x y)) = "x:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
+showInTerm (DScaleIdx (DXIdx s r x y)) = "dx:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
+
 showInTerm (VIdx (VarIdx s r x y)) = "v:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
 showInTerm (SIdx (StorageIdx s r n)) = "s:" ++ show s ++ "." ++ show r ++ ":" ++ show n
-showInTerm (InConst x) = take 20 (show x) ++ "..."
+showInTerm (InConst x) = show x -- take 20 (show x) ++ "..."
 showInTerm (InGiven xs) = "given " ++ show xs
 showInTerm (InFunc _) = "given <function>"
 showInTerm (InMinus t) = "-(" ++ showInTerm t ++ ")"
 showInTerm (InRecip t) = "1/(" ++ showInTerm t ++ ")"
+
+showInTerm (InFEdge s t) = "f(" ++ showInTerm s ++ ", " ++ showInTerm t ++ ")"
+showInTerm (InBEdge s t) = "b(" ++ showInTerm s ++ ", " ++ showInTerm t ++ ")"
+showInTerm (InNEdge s t) = "n(" ++ showInTerm s ++ ", " ++ showInTerm t ++ ")"
+
+showInTerm (InFNode s t) = "fn(" ++ showInTerm s ++ ", " ++ showInTerm t ++ ")"
+showInTerm (InBNode s t) = "bn(" ++ showInTerm s ++ ", " ++ showInTerm t ++ ")"
+showInTerm (InXNode s t) = "xn(" ++ showInTerm s ++ ", " ++ showInTerm t ++ ")"
+
 showInTerm (InAdd s t) = "(" ++ showInTerm s ++ " + " ++ showInTerm t ++ ")"
 showInTerm (InMult s t) = showInTerm s ++ " * " ++ showInTerm t
 showInTerm (InEqual s t) = showInTerm s ++ " = " ++ showInTerm t
@@ -87,6 +116,8 @@ interpretRhs len envs term = interpretRhs' term
         --interpretRhs' (InGiven xs) = smap (:[]) xs
         --interpretRhs' (InConst x) = sfromVal len x
         interpretRhs' (InConst x) = toConst len x
+        --interpretRhs' (InConst x) = toScalar (InConst x)
+
         interpretRhs' (InGiven xs) = xs
         interpretRhs' (EIdx idx) = energyMap envs `safeLookup` idx
         interpretRhs' (DEIdx idx) = denergyMap envs `safeLookup` idx
@@ -94,9 +125,12 @@ interpretRhs len envs term = interpretRhs' term
         interpretRhs' (DPIdx idx) = dpowerMap envs `safeLookup` idx
         interpretRhs' (FNIdx idx@(FEtaIdx s r f t)) = (fetaMap envs `safeLookup` idx) (powerMap envs `safeLookup` pidx)
           where pidx = PowerIdx s r f t
-        interpretRhs' (DNIdx idx) = detaMap envs `safeLookup` idx
+--        interpretRhs' (DNIdx idx) = detaMap envs `safeLookup` idx
+        interpretRhs' (DNIdx idx@(DEtaIdx s r f t)) = (detaMap envs `safeLookup` idx) (powerMap envs `safeLookup` pidx)
+          where pidx = PowerIdx s r f t
         interpretRhs' (DTIdx idx) = dtimeMap envs `safeLookup` idx
         interpretRhs' (ScaleIdx idx) = xMap envs `safeLookup` idx
+        interpretRhs' (DScaleIdx idx) = dxMap envs `safeLookup` idx
         interpretRhs' (VIdx idx) = varMap envs `safeLookup` idx
         interpretRhs' (SIdx idx) = storageMap envs `safeLookup` idx
         interpretRhs' (InMinus t) = sneg (interpretRhs' t)
@@ -106,7 +140,7 @@ interpretRhs len envs term = interpretRhs' term
         interpretRhs' (InRecip t) = srec (interpretRhs' t)
         interpretRhs' (InAdd s t) = (interpretRhs' s) .+ (interpretRhs' t)
         interpretRhs' (InMult s t) = (interpretRhs' s) .* (interpretRhs' t)
-        interpretRhs' t = error (show t)
+        interpretRhs' t = error ("interpretRhs': " ++ show t)
 {-
 insert :: ( SArith s s s, SMap c Val Val, TProd t t t, TSum t t t, DZipWith c c c Val Val Val,
             DFromList c Val, Show (c Val), Ord k) =>
@@ -132,17 +166,24 @@ interpretEq envs (InEqual (FNIdx idx@(FEtaIdx s r f t) _) (InMult (InRecip (PIdx
         p2 = powerMap envs M.! pidx2
         pts = Pt p2 (p2 ./ p1) 
 -}
-interpretEq len envs (InEqual (DNIdx idx) rhs) = envs { detaMap = insert len idx envs rhs (detaMap envs) }
+--interpretEq len envs (InEqual (DNIdx idx) rhs) = envs { detaMap = insert len idx envs rhs (detaMap envs) }
+interpretEq len envs (InEqual (DNIdx idx@(DEtaIdx s r f t)) (InFunc deta)) = envs { detaMap = M.insert idx deta (detaMap envs) }
 interpretEq len envs (InEqual (DTIdx idx) rhs) = envs { dtimeMap = insert len idx envs rhs (dtimeMap envs) }
 interpretEq len envs (InEqual (ScaleIdx idx) rhs) = envs { xMap = insert len idx envs rhs (xMap envs) }
+interpretEq len envs (InEqual (DScaleIdx idx) rhs) = envs { dxMap = insert len idx envs rhs (dxMap envs) }
 interpretEq len envs (InEqual (VIdx idx) rhs) = envs { varMap = insert len idx envs rhs (varMap envs) }
 interpretEq len envs (InEqual (SIdx idx) rhs) = envs { storageMap = insert len idx envs rhs (storageMap envs) }
+
 interpretEq len envs t = error ("interpretEq: " ++ showInTerm t)
 
 
 {-
-interpretFromScratch :: ( Show (c Val), SArith s s s, SMap c Val Val, DZipWith c c c Val Val Val,
-                          DFromList c Val, TProd t t t, TSum t t t) => 
-                          Int -> [InTerm (TC s t (c Val))] -> Envs (TC s t (c Val))
+interpretFromScratch :: ( SArith s s s, TProd t t t, TSum t t t, DMap c d d, DZipWith c c c d d d, 
+                          BProd d d d, BSum d d d, DArith0 d, Show (c d)) 
+                     => RecordNumber -> Int -> [InTerm (TC s t (c d))] -> Envs (TC s t (c d))
 -}
-interpretFromScratch len ts = L.foldl' (interpretEq len) emptyEnv ts
+interpretFromScratch rec len ts = (L.foldl' (interpretEq len) emptyEnv ts) { recordNumber = rec }
+
+
+--interpretWithEnv :: Int -> Envs a -> InTerm a -> a
+interpretWithEnv len envs t = interpretRhs len envs t

@@ -5,6 +5,7 @@ module EFA2.Solver.DirEquation where
 import qualified Data.Set as S
 import qualified Data.List as L
 
+import Data.Maybe
 import Debug.Trace
 
 import EFA2.Solver.Equation

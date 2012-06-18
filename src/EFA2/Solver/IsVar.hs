@@ -128,6 +128,8 @@ isCompoundTerm (DEta _) = False
 
 isCompoundTerm (DTime _) = False
 isCompoundTerm (X _) = False
+isCompoundTerm (DX _) = False
+
 isCompoundTerm (Var _) = False
 isCompoundTerm (Store _) = False
 isCompoundTerm _ = True

@@ -209,8 +209,8 @@ instance (VSingleton y d) => DMaximum (Data (y :> Nil)) (Data Nil) d where
   
 class DFromList c d where
   dfromList :: [d] -> c d
-  dtoList :: c d -> [d] 
-  
+  dtoList :: c d -> [d]
+
 instance  (VFromList v d) => DFromList (Data (v :> Nil)) d where  
   dfromList x = Data $ D1 $ vfromList x
   dtoList (Data (D1 x)) = vtoList x

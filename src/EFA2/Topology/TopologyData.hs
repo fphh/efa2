@@ -54,7 +54,7 @@ getStorageNumber (InitStorage x) = x
 getStorageNumber x = error $ "getStorageNumber: " ++ show x ++ " is not a storage"
 
 data NLabel = NLabel { sectionNLabel :: Int,
-                       recordNLabel :: Int,
+                       -- recordNLabel :: Int,
                        nodeNLabel :: Int,
                        nodetypeNLabel :: NodeType } deriving (Show, Eq, Ord)
 
