@@ -606,3 +606,8 @@ smaximum (TC x) = TC $ dmaximum x
 
 sminimum :: (DMaximum c1 c2 d) => TC s typ (c1 d) -> TC Scalar typ (c2 d)
 sminimum (TC x) = TC $ dminimum x  
+
+{-
+subSignal :: TC s typ (Data (v :> Nil) d) -> [SignalIdx] -> TC s typ (Data (v :> Nil) d)
+subSignal (TC (Data (D1 x))) idxs = vlookUp x idxs  
+-}

@@ -27,14 +27,15 @@ vdisp x = printf f $ s*val
         (TC (Data (D0 val))) = x
 
 -- | Display single values
-sdisp :: (DisplayTyp t, VFromList v Double) => TC s t (Data (v :> Nil) Val)  -> [String]
-sdisp xs = map g l
+sdisp :: (DisplayTyp t, VFromList v Double) => ROpts -> TC s t (Data (v :> Nil) Val)  -> [String]
+sdisp os xs = map g l -- (f l)
   where g x = printf f (s*x)              
         t = getDisplayType xs
         u = getDisplayUnit t
         (UnitScale s) = getUnitScale u
         (DisplayFormat f) = getDisplayFormat dispLength t u 
         l = stoList xs
+--        f sig | L.elem (RIndices _) os = 
 
         
 -- | Display Signal Type        

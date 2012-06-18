@@ -278,3 +278,30 @@ instance VFilter V.Vector d where
   
 instance UV.Unbox d => VFilter UV.Vector d where  
   vfilter f x = UV.filter f x
+
+
+class VLookup v d where
+  vlookUp :: v d -> [Int] -> v d  
+  
+instance (Eq d) => VLookup [] d where  
+  vlookUp xs idxs = if check then map f m else error "Error in vLookup - indices out of Range"   
+    where
+      f (Just x) = x
+      check = all (/=Nothing) m
+      m = map ((V.fromList xs) V.!? ) idxs    
+  
+instance (Eq d) => VLookup V.Vector d where  
+  vlookUp xs idxs = if check then V.map f m else error "Error in vLookup - indices out of Range"   
+    where
+      f (Just x) = x
+      check = V.all (/=Nothing) m   
+      m = V.map (xs V.!?) $ V.fromList idxs    
+  
+instance (UV.Unbox d, Eq d,  UV.Unbox (Maybe d)) => VLookup UV.Vector d where  
+  vlookUp xs idxs = if check then UV.map f m else error "Error in vLookup - indices out of Range"   
+    where
+      f (Just x) = x
+      check = UV.all (/=Nothing) m   
+      m = UV.map (xs UV.!? ) $ UV.fromList idxs    
+  
+  
