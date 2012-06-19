@@ -38,7 +38,6 @@ eta0num = M.fromList [ (FEtaIdx 0 0 1 0, smap $ const 0.8),
 
 x0num :: XMap Sc
 x0num = M.fromList [ (XIdx 0 0 1 2, toScalar 0.4) ]
-                     -- (XIdx 0 0 1 3, toScalar 0.6) ]
 
 dtimes1num:: DTimeMap Sc
 dtimes1num = M.fromList [ (DTimeIdx 0 1, toScalar 1.0) ]
@@ -59,7 +58,6 @@ eta1num = M.fromList [ (FEtaIdx 0 1 1 0, smap $ const 0.9),
 
 x1num :: XMap Sc
 x1num = M.fromList [ (XIdx 0 1 1 2, toScalar 0.3) ]
-                     -- (XIdx 0 1 1 3, toScalar 0.7)]
 
 dx1num :: DXMap Sc
 dx1num = M.fromList [ (DXIdx 0 1 1 0, toScalar 0.0), 
@@ -95,7 +93,6 @@ eta0eq = M.fromList [ (FEtaIdx 0 0 1 0, const $ FEta (FEtaIdx 0 0 1 0)),
                       (FEtaIdx 0 0 3 1, const $ FEta (FEtaIdx 0 0 3 1)) ]
 x0eq :: XMap EqTerm
 x0eq = M.fromList [ (XIdx 0 0 1 2, X (XIdx 0 0 1 2)) ]
-                    -- (XIdx 0 0 1 3, X (XIdx 0 0 1 3))]
 
 dtimes1eq:: DTimeMap EqTerm
 dtimes1eq = M.fromList [ (DTimeIdx 0 1, DTime (DTimeIdx 0 1)) ]
@@ -115,8 +112,6 @@ eta1eq = M.fromList [ (FEtaIdx 0 1 1 0, const $ FEta (FEtaIdx 0 1 1 0)),
                       (FEtaIdx 0 1 3 1, const $ FEta (FEtaIdx 0 1 3 1)) ]
 x1eq :: XMap EqTerm
 x1eq = M.fromList [ (XIdx 0 1 1 2, X (XIdx 0 1 1 2)) ]
-                    -- (XIdx 0 1 1 3, X (XIdx 0 1 1 3)) ]
-
 
 dx1eq :: DXMap EqTerm
 dx1eq = M.fromList [ (DXIdx 0 1 1 0, DX (DXIdx 0 1 1 0)), 
@@ -136,43 +131,9 @@ deta1eq = M.fromList [ (DEtaIdx 0 1 1 0, const $ DEta (DEtaIdx 0 1 1 0)),
                        (DEtaIdx 0 1 3 1, const $ DEta (DEtaIdx 0 1 3 1)) ]
 
 
--- Energie wird am Knoten 1 zusammengefuehrt.
-dreibein :: TheGraph EqTerm
-dreibein = TheGraph g undefined
-  where g = mkGraph ns es
-        ns = makeNodes [(0, Source), (1, Crossing), (2, Sink), (3, Sink)]
+-- Energie wird am Knoten 1 geteilt.
+graph :: Topology
+graph = mkGraph ns es
+  where ns = makeNodes [(0, Source), (1, Crossing), (2, Sink), (3, Sink)]
         es = makeEdges [(0, 1, defaultELabel), (1, 2, defaultELabel), (1, 3, defaultELabel)]
 
-
-{-
-dP_0.1_0.1 * n_0.0_0.1 * -(x_0.0_1.2) * n_0.0_1.3, 
-dP_0.1_0.1 * n_0.0_0.1 * 1.0 * n_0.0_1.3,
- 
-P_0.0_0.1 * dn_0.1_0.1 * -(x_0.0_1.2) * n_0.0_1.3, 
-P_0.0_0.1 * dn_0.1_0.1 * 1.0 * n_0.0_1.3, 
-
-dP_0.1_0.1 * dn_0.1_0.1 * -(x_0.0_1.2) * n_0.0_1.3, 
-dP_0.1_0.1 * dn_0.1_0.1 * 1.0 * n_0.0_1.3, 
-
-P_0.0_0.1 * n_0.0_0.1 * dx_0.1_1.3 * n_0.0_1.3, 
-dP_0.1_0.1 * n_0.0_0.1 * dx_0.1_1.3 * n_0.0_1.3, 
-P_0.0_0.1 * dn_0.1_0.1 * dx_0.1_1.3 * n_0.0_1.3, 
-dP_0.1_0.1 * dn_0.1_0.1 * dx_0.1_1.3 * n_0.0_1.3,
- 
-P_0.0_0.1 * n_0.0_0.1 * -(x_0.0_1.2) * dn_0.1_1.3, 
-P_0.0_0.1 * n_0.0_0.1 * 1.0 * dn_0.1_1.3, 
-
-dP_0.1_0.1 * n_0.0_0.1 * -(x_0.0_1.2) * dn_0.1_1.3, 
-dP_0.1_0.1 * n_0.0_0.1 * 1.0 * dn_0.1_1.3, 
-
-P_0.0_0.1 * dn_0.1_0.1 * -(x_0.0_1.2) * dn_0.1_1.3, 
-P_0.0_0.1 * dn_0.1_0.1 * 1.0 * dn_0.1_1.3, 
-
-dP_0.1_0.1 * dn_0.1_0.1 * -(x_0.0_1.2) * dn_0.1_1.3, 
-dP_0.1_0.1 * dn_0.1_0.1 * 1.0 * dn_0.1_1.3, 
-
-P_0.0_0.1 * n_0.0_0.1 * dx_0.1_1.3 * dn_0.1_1.3, 
-dP_0.1_0.1 * n_0.0_0.1 * dx_0.1_1.3 * dn_0.1_1.3, 
-P_0.0_0.1 * dn_0.1_0.1 * dx_0.1_1.3 * dn_0.1_1.3, 
-dP_0.1_0.1 * dn_0.1_0.1 * dx_0.1_1.3 * dn_0.1_1.3
--}

@@ -42,8 +42,8 @@ import EFA2.Display.DrawGraph
 
 import EFA2.Example.SymSig
 --import EFA2.Example.Loop
-import EFA2.Example.LinearTwo
---import EFA2.Example.Dreibein
+--import EFA2.Example.LinearTwo
+import EFA2.Example.Dreibein
 --import EFA2.Example.Dreibein2
 --import EFA2.Example.Dreibein3
 
@@ -155,6 +155,9 @@ instance MyShow EqTerm where
 instance MyShow a => MyShow [a] where
          myshow xs = "[ " ++ L.intercalate ", " (map myshow xs) ++ " ]"
 
+instance MyShow a => MyShow (S.Set a) where
+         myshow s = myshow $ S.toList s
+
 format :: (MyShow a, MyShow b) => [(a, b)] -> String
 format xs = L.intercalate "\n" (map f xs)
   where f (x, y) = myshow x ++ " = " ++ myshow y
@@ -162,10 +165,7 @@ format xs = L.intercalate "\n" (map f xs)
 
 main :: IO ()
 main = do
-  let TheGraph g _ = linearTwo
-      --TheGraph g _ = dreibein
-      --TheGraph g _ = dreibein2
-      --TheGraph g _ = dreibein3
+  let g = graph
 
       sym = symbolic g
       num = numeric g
@@ -186,7 +186,7 @@ main = do
       sumdetails = M.map sum details
 
       control = dpowerMap (deltaEnv g)
-
+      vars = M.map (map (mkVarSet isStaticVar)) detailsSym
 
   putStrLn "\n== Control delta environment (later env - former env, computed independently) =="
   putStrLn (format $ M.toList control)
@@ -212,3 +212,16 @@ main = do
 
   putStrLn "\n== Sums of numeric additive terms =="
   putStrLn (format $ M.toList sumdetails)
+
+  putStrLn "\n== Variables per stack term =="
+  putStrLn (format $ M.toList vars)
+
+
+{-
+dP_0.1_0.1 = 0.500000
+dP_0.1_1.0 = 0.750000
+dP_0.1_1.2 = -0.015000
+dP_0.1_1.3 = 0.765000
+dP_0.1_2.1 = 0.082500
+dP_0.1_3.1 = 0.832500
+-}

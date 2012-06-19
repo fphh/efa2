@@ -30,16 +30,16 @@ type Sc = Scal (Typ UT UT UT) Val
 dtimes0num :: DTimeMap Sc
 dtimes0num = M.fromList [ (DTimeIdx 0 0, toScalar 1.0) ]
 
-{-
+
 -- forward
 power0num :: PowerMap Sc
 power0num = M.fromList [ (PowerIdx 0 0 0 1, toScalar 3.0) ]
--}
 
+{-
 -- backward
 power0num :: PowerMap Sc
 power0num = M.fromList [ (PowerIdx 0 0 2 1, toScalar 3.0) ]
-
+-}
 
 eta0num :: FEtaMap Sc
 eta0num = M.fromList [ (FEtaIdx 0 0 1 0, smap $ const 0.8), 
@@ -53,22 +53,22 @@ x0num = M.fromList []
 dtimes1num:: DTimeMap Sc
 dtimes1num = M.fromList [ (DTimeIdx 0 1, toScalar 1.0) ]
 
-{-
+
 -- forward
 power1num :: PowerMap Sc
 power1num = M.fromList [ (PowerIdx 0 1 0 1, toScalar 3.5) ]
 
 dpower1num :: DPowerMap Sc
 dpower1num = M.fromList [ (DPowerIdx 0 1 0 1, toScalar 0.5) ]
--}
 
+{-
 -- backward
 power1num :: PowerMap Sc
 power1num = M.fromList [ (PowerIdx 0 1 2 1, toScalar 3.5) ]
 
 dpower1num :: DPowerMap Sc
 dpower1num = M.fromList [ (DPowerIdx 0 1 2 1, toScalar 0.5) ]
-
+-}
 
 eta1num :: FEtaMap Sc
 eta1num = M.fromList [ (FEtaIdx 0 1 1 0, smap $ const 0.9), 
@@ -95,16 +95,17 @@ deta1num = M.fromList [ (DEtaIdx 0 1 1 0, smap $ const 0.1),
 dtimes0eq :: DTimeMap EqTerm
 dtimes0eq = M.fromList [ (DTimeIdx 0 0, DTime (DTimeIdx 0 0)) ]
 
-{-
+
 -- forward
 power0eq :: PowerMap EqTerm
 power0eq = M.fromList [ (PowerIdx 0 0 0 1, Power (PowerIdx 0 0 0 1)) ]
--}
 
+
+{-
 -- backwards
 power0eq :: PowerMap EqTerm
 power0eq = M.fromList [ (PowerIdx 0 0 2 1, Power (PowerIdx 0 0 2 1)) ]
-
+-}
 
 
 eta0eq :: FEtaMap EqTerm
@@ -119,21 +120,22 @@ x0eq = M.fromList []
 dtimes1eq:: DTimeMap EqTerm
 dtimes1eq = M.fromList [ (DTimeIdx 0 1, DTime (DTimeIdx 0 1)) ]
 
-{-
+
 -- forward
 power1eq :: PowerMap EqTerm
 power1eq = M.fromList [ (PowerIdx 0 1 0 1, Power (PowerIdx 0 1 0 1)) ]
 
 dpower1eq :: DPowerMap EqTerm
 dpower1eq = M.fromList [ (DPowerIdx 0 1 0 1, DPower (DPowerIdx 0 1 0 1)) ]
--}
 
+{-
+-- backward
 power1eq :: PowerMap EqTerm
 power1eq = M.fromList [ (PowerIdx 0 1 2 1, Power (PowerIdx 0 1 2 1)) ]
 
 dpower1eq :: DPowerMap EqTerm
 dpower1eq = M.fromList [ (DPowerIdx 0 1 2 1, DPower (DPowerIdx 0 1 2 1)) ]
-
+-}
 
 eta1eq :: FEtaMap EqTerm
 eta1eq = M.fromList [ (FEtaIdx 0 1 1 0, const $ FEta (FEtaIdx 0 1 1 0)), 
@@ -156,8 +158,8 @@ deta1eq = M.fromList [ (DEtaIdx 0 1 1 0, const $ DEta (DEtaIdx 0 1 1 0)),
                        (DEtaIdx 0 1 2 1, const $ DEta (DEtaIdx 0 1 2 1)) ]
 
 
-linearTwo :: TheGraph EqTerm
-linearTwo = TheGraph g undefined
-  where g = mkGraph ns es
-        ns = makeNodes [(0, Source), (1, Crossing), (2, Sink)]
+graph :: Topology
+graph = mkGraph ns es
+  where ns = makeNodes [(0, Source), (1, Crossing), (2, Sink)]
         es = makeEdges [(0, 1, defaultELabel), (1, 2, defaultELabel)]
+

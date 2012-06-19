@@ -399,6 +399,7 @@ mkDiffEqTerm _ z@(Var (VarIdx s r use n) := Power (PowerIdx _ _ f t)) =
         v = mkVar $ VarIdx s r (toDiffUse use) n
         dp = mkVar $ DPowerIdx s r f t
 
+-- P_0.1_0.1 = v_0.1_OutSum.0
 mkDiffEqTerm _ z@(Power (PowerIdx _ _ f t) := Var (VarIdx s r use n)) = 
   trace (showEqTerm z ++ " => " ++ showEqTerm res) $ Just res
   where res = dp := v
