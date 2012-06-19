@@ -75,6 +75,19 @@ instance (DisplayTyp t, VFromList v1 Double) => XYPlot (TC Signal t (Data (v1 :>
   xyplot x y = plotPath [LineStyle 1 [PointSize 2]] (zip (sPlotData x) (sPlotData y))
 
 
+-- | Plotting Signals against each other --------------------------------------------------------------
+class Plot3d a b c where
+  
+  
+instance Plot3d (TC TestRow t1 (Data (v2 :> v1 :> Nil) Val)) (TC TestRow t2 (Data (v2 :> v1 :> Nil) Val)) (TC TestRow t3 (Data (v2 :> v1 :> Nil) Val)) where
+  plot3d ti x y z = plotMesh3d (plotAttrs) [Plot3dType Surface] res
+    where
+      plotAttrs        = [Title ("Surface"), 
+                        Grid $ Just [], 
+                        XLabel ("Power [" ++ (show $ getDisplayUnit $ getDisplayType x) ++ "]"),
+                        YLabel ("Efficiency [" ++ (show $ getDisplayUnit $ getDisplayType y) ++ "]"), 
+                        ZLabel ("Efficiency [" ++ (show $ getDisplayUnit $ getDisplayType z) ++ "]"), 
+                        Size $ Scale 0.7]
 
 -- | Plotting Records ---------------------------------------------------------------
 

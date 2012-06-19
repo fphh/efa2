@@ -6,6 +6,7 @@ import qualified Data.List as L
 import qualified Data.Set as S
 import qualified Data.Map as M
 import qualified Data.Vector as V
+import Debug.Trace
 import Data.Maybe
 import Data.Monoid
 import Graphics.Gnuplot.Simple
@@ -49,7 +50,7 @@ etaf x = 1-1/(1+x)
 
 
 --variation :: Topology -> Val -> [Envs UTFSig]
-variation sqTopo x y = interpretFromScratch (SingleRecord 0) 1 gd
+variation sqTopo x y = trace (showInTerms gd ) $ interpretFromScratch (SingleRecord 0) 1 gd
   where givenEnv0 = emptyEnv { recordNumber = SingleRecord 0,
                                dtimeMap = M.fromList [ (DTimeIdx 0 0, sfromList [1.0] :: UTFSig) ],
                                powerMap = M.fromList [ (PowerIdx 0 0 3 1, sfromList [x]),
@@ -68,7 +69,8 @@ variation sqTopo x y = interpretFromScratch (SingleRecord 0) 1 gd
         sqEnvs' = sqEnvs { dtimeMap = M.insert (DTimeIdx (-1) 0) (sfromList [1.0]) (dtimeMap sqEnvs),
                            energyMap = M.insert storage0 (sfromList [3.0]) (energyMap sqEnvs) }
 
-        gd = map (eqToInTerm sqEnvs') (order ts)
+        gd = map (eqToInTerm sqEnvs') (gleichungen)
+        gleichungen = toAbsEqTermEquations $ order ts
 
 
 genVariationMatrix :: [a] -> [b] -> [[(a,b)]]
@@ -90,6 +92,8 @@ fconv xs = TC (V.fromList $ map f xs)
 
 main :: IO ()
 main = do
+  
+
 
   let s01 = [0, 2, 2, 0, 0, 0]
       s10 = [0, 0.8, 0.8, 0, 0, 0]
@@ -110,19 +114,19 @@ main = do
 
       pRec = PowerRecord (sfromList time) pMap
       (_, sqTopo) = makeSequence pRec topo
-
       powers = [1 .. 10] :: [Double]
       etas = [0.1 .. 10]:: [Double]
       
       m = genVariationMatrix powers etas
 
       res = map (map f) m -- (sequence [lst, etas])
-      f (x,y) = (x,y,g x y (x+y))
 {-      
-      f (x,y) = (x, y, g (head $ stoList $ ((energyMap $ variation sqTopo x y) M.! (EnergyIdx 0 0 0 1)))
-                            (head $ stoList $ ((energyMap $ variation sqTopo x y) M.! (EnergyIdx 0 0 2 1)))
-                            (head $ stoList $ ((energyMap $ variation sqTopo x y) M.! (EnergyIdx 1 0 6 5))) )
+      f (x,y) = (x,y,g x y (x+y))
 -}
+      f (x,y) = (x, y, g (head $ stoList $ ((energyMap $ variation sqTopo x y) `safeLookup` (EnergyIdx 0 0 0 1)))
+                            (head $ stoList $ ((energyMap $ variation sqTopo x y) `safeLookup` (EnergyIdx 0 0 2 1)))
+                            (head $ stoList $ ((energyMap $ variation sqTopo x y) `safeLookup` (EnergyIdx 1 0 6 5))) )
+
       g e0001 e0021 e1021 = (e0021 + e1021)/e0001
   
   
@@ -132,7 +136,8 @@ main = do
                     YLabel ("Efficiency [" ++ (show $ getDisplayUnit Typ_N) ++ "]"), 
                     Size $ Scale 0.7]
 
-  
+  drawTopologyX' sqTopo
+
   report [] ("Res",res)
   plotMesh3d (plotAttrs "Surface") [Plot3dType Surface] res
   plotMesh3d (plotAttrs "ColorMap") [Plot3dType ColorMap] res

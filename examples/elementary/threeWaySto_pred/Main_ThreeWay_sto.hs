@@ -99,7 +99,7 @@ variation sqTopo x y = interpretFromScratch (SingleRecord 0) 1 gd
         sqEnvs' = sqEnvs { dtimeMap = M.insert (DTimeIdx (-1) 0) (sfromList [1.0]) (dtimeMap sqEnvs),
                            energyMap = M.insert storage0 (sfromList [3.0]) (energyMap sqEnvs) }
 
-        gd = map (eqToInTerm sqEnvs') (order ts)
+        gd = map (eqToInTerm sqEnvs') (toAbsEqTermEquations $ order ts)
 
 
 getEnergy :: EnergyIdx -> [Envs UTFSig] -> Test1 (Typ A F Tt) Val
