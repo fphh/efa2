@@ -257,11 +257,11 @@ mkEq recordNum (ins, n@(nid, NLabel sec _ _), outs)
 
         pisumeq = [vosum := visum]
 
-        ieqs =  [] -- zipWith (f visum) pis xis
+        ieqs = zipWith (f visum) pis xis
+        h v p x = v := BEdge p x
+
         oeqs = zipWith (f vosum) pos xos
-        --f v p x = p := x :* v
         f v p x = p := FEdge v x
-        --h v p x = p := FNode v x
 
         xieqs | length xis > 0 = [Const 1.0 := add xis]
               | otherwise = []
@@ -347,4 +347,3 @@ makeDirTopology topo@(Topology _) = mkGraph ns es
           | AgainstDir <- flowDirection elabel = (y, x, elabel { flowDirection = WithDir })
           | otherwise = e
         ns = unique (concatMap (\(x, y, _) -> [(x,  fromJust (lab topo x)), (y, fromJust (lab topo y))]) es)
-

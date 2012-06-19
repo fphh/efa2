@@ -73,23 +73,8 @@ variation sqTopo x y = interpretFromScratch (SingleRecord 0) 1 gd
                                                         (FEtaIdx 1 0 1 2, smap (const 0.7)), (FEtaIdx 1 0 2 1, smap (const 0.7)),
                                                         (FEtaIdx 1 0 1 3, smap f2), (FEtaIdx 1 0 3 1, smap f2) ] }
 
-{-
-        givenEnv2 = emptyEnv { dtimeMap = M.fromList [ (DTimeIdx 2 0, sfromList [1.0]) ],
-                               powerMap = M.fromList [ (PowerIdx 2 0 3 1, sfromList [x]), (PowerIdx 2 0 2 1, sfromList [0.6]) ],
-                               fetaMap = M.fromList [ (FEtaIdx 2 0 0 1, smap etaf), (FEtaIdx 2 0 1 0, smap revetaf),
-                                                      (FEtaIdx 2 0 1 2, smap (const 0.7)), (FEtaIdx 2 0 2 1, smap (const 1.7)),
-                                                      (FEtaIdx 2 0 1 3, smap (const 0.7)), (FEtaIdx 2 0 3 1, smap (const 1.7)) ] }
 
-        givenEnv3 = emptyEnv { --dtimeMap = M.fromList [ (DTimeIdx 3 0, sfromList [1.0]) ],
-                               energyMap = M.fromList [ (EnergyIdx 1 0 3 1, sfromList [x]) ],
-                               powerMap = M.fromList [ (PowerIdx 1 0 2 1, sfromList [0.6]) ],
-                               fetaMap = M.fromList [ (FEtaIdx 3 0 0 1, smap etaf), (FEtaIdx 3 0 1 0, smap revetaf),
-                                                      (FEtaIdx 3 0 1 2, smap (const 0.7)), (FEtaIdx 3 0 2 1, smap (const 1.7)),
-                                                      (FEtaIdx 3 0 1 3, smap (const 1.7)), (FEtaIdx 3 0 3 1, smap (const 0.7)) ] }
-
--}
-      
-        (sqEnvs, ts') = makeAllEquations sqTopo [givenEnv0]
+        (sqEnvs, ts') = makeAllEquations sqTopo [givenEnv0, givenEnv1]
 
 
         storage0 = EnergyIdx (-1) 0 8 9
@@ -99,7 +84,7 @@ variation sqTopo x y = interpretFromScratch (SingleRecord 0) 1 gd
         sqEnvs' = sqEnvs { dtimeMap = M.insert (DTimeIdx (-1) 0) (sfromList [1.0]) (dtimeMap sqEnvs),
                            energyMap = M.insert storage0 (sfromList [3.0]) (energyMap sqEnvs) }
 
-        gd = map (eqToInTerm sqEnvs') (order ts)
+        gd = map (eqToInTerm sqEnvs') (toAbsEqTermEquations $ order ts)
 
 
 getEnergy :: EnergyIdx -> [Envs UTFSig] -> Test1 (Typ A F Tt) Val
@@ -136,69 +121,21 @@ main = do
       pRec = PowerRecord (sfromList time) pMap
       (_, sqTopo) = makeSequence pRec topo
 
-      lst = [1 .. 1000]
-      etas = [ 0.2]
-      --res :: [[Envs UTFSig]]
-      --res :: [[(Val, Val, Val)]]
+      lst = [1 .. 10]
+      etas = [0.2]
+ 
+
       res = map f (sequence [lst, etas])
-      f (x:y:_) = [(x, y, g (head $ stoList $ ((energyMap $ variation sqTopo x y) M.! (EnergyIdx 0 0 0 1)))
-                            (head $ stoList $ ((energyMap $ variation sqTopo x y) M.! (EnergyIdx 0 0 2 1)))
-                            (head $ stoList $ ((energyMap $ variation sqTopo x y) M.! (EnergyIdx 1 0 6 5))) )]
+      f (x:y:_) = [(x, y, g (head $ stoList $ m `safeLookup` (EnergyIdx 0 0 0 1))
+                            (head $ stoList $ m `safeLookup` (EnergyIdx 0 0 2 1))
+                            (head $ stoList $ m `safeLookup` (EnergyIdx 1 1 6 5))) ]
+                            where m = energyMap $ variation sqTopo x y
+
       g e0001 e0021 e1021 = (e0021 + e1021)/e0001
-      env = map (\(x:y:_) -> variation sqTopo x y) (sequence [[1.07, 1.08 .. 1.5], [0.7]])
+      -- env = map (\(x:y:_) -> variation sqTopo x y) (sequence [[1.07, 1.08 .. 1.1], [0.7]])
 
-{-
-      cwith f x y = map g x
-        where g xi = map (f xi) y
-      --res2 :: [Test1 ..]
-      --res2 = fconv $ map (getEnergy (EnergyIdx 0 0 0 1)) res
 
-      s :: [(Val, Val)]
-      s = map (\(x:y:_) -> (x, y)) $ sequence [lst, etas]
 
-      res2 :: [[Val]]
-      res2 = map (stoList . getEnergy (EnergyIdx 0 0 0 1)) res
--}
-
-{-
-      pdt = map dtimeMap res
-      dt = map (head . stoList . (M.! DTimeIdx 1 0)) pdt
-
-      metas = map fetaMap res
-      etas = map (M.! FEtaIdx 0 0 0 1) metas
-
-      ems = map energyMap res
-      e0001' = map (M.! EnergyIdx 0 0 0 1) ems
-      e0001 = map (head . stoList) e0001'
-
-      ns = zipWith f lst $ map (head . stoList) (zipWith ($) etas e0001')
-
-      dts = zipWith f lst dt
-      f x y = show x ++ " " ++ show y
-
-      e0001s = zipWith f lst e0001
-
-      e0021 = map (head . stoList . (M.! EnergyIdx 0 0 2 1)) ems
-      e1021 = map (head . stoList . (M.! EnergyIdx 1 0 6 5)) ems
-
-      nsys = zipWith f lst (zipWith3 g e0001 e0021 e1021)
-      g e0001 e0021 e1021 = (e0021 + e1021)/e0001
--}
-      --energies = getEnergy (EnergyIdx 0 0 0 1) res
-
-  --sigPlot res2
-  --print (head res)
-  --mapM_ (drawTopology sqTopo) (map head res)
-  --mapM_ (drawTopology sqTopo) env
-
-  --putStrLn (L.intercalate "\n" dts)
-  --putStrLn (L.intercalate "\n" e01s)
-  --putStrLn (L.intercalate "\n" ns)
-  --putStrLn (L.intercalate "\n" nsys)
-  --print e1021
-
-  --print (head ems)
-  --print (zipWith (\x y -> y - x) pws (tail pws))
+  drawTopologyX' sqTopo
   plotMesh3d [] [] res
-
-  --print "That's it!"
+  
