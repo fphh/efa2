@@ -42,8 +42,9 @@ topo = mkGraph (makeNodes nodes) (makeEdges edges)
 mkSig :: Int -> ([Val] -> PSigL)
 mkSig n = sfromList . concat . replicate n
 
-etaf x = x/(x+5)
-revetaf x = (x+5)/x
+etaf x = 1 -- 1-1/(1+x)-- x/(x+5)
+-- etaf x = x/(x+5)
+-- revetaf x = (x+5)/x
 
 --etaf x = sqrt x
 --revetaf x = 1/(sqrt x)
@@ -52,7 +53,7 @@ revetaf x = (x+5)/x
 --revFunc f x = 1/(f x)
 
 --f2 x = sqrt(x)/35
-f2 x = x/(x+10)
+-- f2 x = 1-x/(x+10)
 
 
 --variation :: Topology -> Val -> [Envs UTFSig]
@@ -62,16 +63,16 @@ variation sqTopo x y = interpretFromScratch (SingleRecord 0) 1 gd
                                powerMap = M.fromList [ (PowerIdx 0 0 3 1, sfromList [x]),
                                                        (PowerIdx 0 0 2 1, sfromList [0.6]) ],
                                fetaMap =  M.fromList [ (FEtaIdx  0 0 0 1, smap etaf), (FEtaIdx 0 0 1 0, smap etaf),
-                                                       (FEtaIdx  0 0 1 2, smap (const 0.7)), (FEtaIdx 0 0 2 1, smap (const 0.7)),
-                                                       (FEtaIdx  0 0 1 3, smap f2), (FEtaIdx 0 0 3 1, smap f2) ] }
+                                                       (FEtaIdx  0 0 1 2, smap (const 0.9)), (FEtaIdx 0 0 2 1, smap (const 0.9)),
+                                                       (FEtaIdx  0 0 1 3, smap (const y)), (FEtaIdx 0 0 3 1, smap (const y)) ] }
 
         givenEnv1 = emptyEnv { recordNumber = SingleRecord 1,
                                --dtimeMap = M.fromList [ (DTimeIdx 1 0, sfromList [1.0]) ],
                                energyMap = M.fromList [ (EnergyIdx 1 0 3 1, sfromList [x] :: UTFSig) ],
                                powerMap =  M.fromList [ (PowerIdx 1 0 2 1, sfromList [0.6]) ],
                                fetaMap =   M.fromList [ (FEtaIdx 1 0 0 1, smap etaf), (FEtaIdx 1 0 1 0, smap etaf),
-                                                        (FEtaIdx 1 0 1 2, smap (const 0.7)), (FEtaIdx 1 0 2 1, smap (const 0.7)),
-                                                        (FEtaIdx 1 0 1 3, smap f2), (FEtaIdx 1 0 3 1, smap f2) ] }
+                                                        (FEtaIdx 1 0 1 2, smap (const 0.9)), (FEtaIdx 1 0 2 1, smap (const 0.9)),
+                                                        (FEtaIdx 1 0 1 3, smap (const y)), (FEtaIdx 1 0 3 1, smap (const y)) ] }
 
 
         (sqEnvs, ts') = makeAllEquations sqTopo [givenEnv0, givenEnv1]
@@ -97,6 +98,10 @@ fconv :: [TC t t1 a] -> TC s t (V.Vector a)
 fconv xs = TC (V.fromList $ map f xs)
   where f (TC ys) = ys
 
+genVariationMatrix :: [a] -> [b] -> [[(a,b)]]
+genVariationMatrix xs ys = map ((flip zip ys) . repeat) xs;
+
+
 main :: IO ()
 main = do
   let s01 = [0, 2, 2, 0, 0, 0]
@@ -121,21 +126,25 @@ main = do
       pRec = PowerRecord (sfromList time) pMap
       (_, sqTopo) = makeSequence pRec topo
 
-      lst = [1 .. 10]
-      etas = [0.2]
+      powers = [0.5,1 .. 10]::[Double]
+      etas = [0.7,
+              0.6,0.5]::[Double]
  
+      m = genVariationMatrix powers etas
 
-      res = map f (sequence [lst, etas])
-      f (x:y:_) = [(x, y, g (head $ stoList $ m `safeLookup` (EnergyIdx 0 0 0 1))
+      res = map (map f) m
+      f (x,y) = (x, y, g (head $ stoList $ m `safeLookup` (EnergyIdx 0 0 0 1))
                             (head $ stoList $ m `safeLookup` (EnergyIdx 0 0 2 1))
-                            (head $ stoList $ m `safeLookup` (EnergyIdx 1 1 6 5))) ]
+                            (head $ stoList $ m `safeLookup` (EnergyIdx 1 1 6 5)))
                             where m = energyMap $ variation sqTopo x y
 
       g e0001 e0021 e1021 = (e0021 + e1021)/e0001
       -- env = map (\(x:y:_) -> variation sqTopo x y) (sequence [[1.07, 1.08 .. 1.1], [0.7]])
 
 
-
-  drawTopologyX' sqTopo
-  plotMesh3d [] [] res
+  print m
+  -- drawTopologyX' sqTopo
+  --plotMesh3d [] [] res
+  plotPaths [] $ map (map (\(x,y,z) -> (x,z))) (L.transpose res)
+  
   
