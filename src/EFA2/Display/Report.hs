@@ -6,18 +6,30 @@ import qualified Data.List as L
 import Data.Monoid
 import qualified Text.PrettyPrint as PP
 import EFA2.Utils.Utils
+import EFA2.Signal.Base
 
 import System.IO
 
 -- | Report Options 
-data ROpt = RVertical | RAll | RTimeMask | RIndexMask | RIndices [Int] deriving (Show,Eq)
+data ROpt = RVertical | RAll | RTimeMask Val Val | RIndexMask [Int] deriving (Show,Eq)
 type ROpts = [ROpt]
 
+{- geht nicht
+checkOpt :: ROpts -> ROpt -> 
+checkOpt os o = L.find g os
+  where
+    g o = 
+-}
+
+-- | Report  
+type Report = [Table]
+
+
 -- | Table with Table Format and Table Data
-data Table = Table { tableTitle :: Title,
-                     tableFormat :: TableFormat,
-                     tableData :: TableData,
-                     tableSubTitle :: SubTitle} 
+data Table  = Table { tableTitle :: Title,                       
+                      tableFormat :: TableFormat,
+                      tableData :: TableData,
+                      tableSubTitle :: SubTitle} 
 
 instance Eq PP.Doc where
   (==) x y = (PP.render x) == (PP.render y)
@@ -44,9 +56,11 @@ type Width = Int
 data Align = HLeft | HMid | HRight deriving Show
 type Rows = Int -- Nr of Rows to be left free before
 
+-- | 
 tvcat :: [Table] -> Table
 tvcat [x] = x
 tvcat (x:xs) = foldl tvapp x xs
+
 
 tvapp :: Table -> Table -> Table
 tvapp x1 x2 = if check then Table {tableTitle = tableTitle x1 ++ " ++  " ++ tableTitle x2,
@@ -96,6 +110,11 @@ maxColWidth cf1 cf2 = zipWith f cf1 cf2
 getMaxColWidth :: ColFormat -> Width
 getMaxColWidth cf = maximum $ map fst cf
 
+-- | Generate report from Table List 
+makeReport :: ROpts -> [Table] -> PP.Doc
+makeReport os ts = PP.vcat$ L.intersperse PP.empty $ map (makeTable os) ts 
+
+
 -- | Generate doc from Table
 makeTable :: ROpts -> Table -> PP.Doc
 makeTable  os t = PP.text (tableTitle t) PP.$$ (makeCol os rf $ map (makeRow os cft) xt) PP.$$ PP.text (tableSubTitle t) 
@@ -116,8 +135,6 @@ buildDocTable td = titleRow td ++ L.transpose ((L.transpose (titleCols td)) ++ (
 makeRow :: ROpts -> ColFormat -> [(Length,PP.Doc)]  -> PP.Doc    
 makeRow os cf cs = PP.hcat (zipWith (makeCell os) cf cs)  
 
-        
-
 -- | Generate Table Cell
 makeCell :: ROpts -> (Width,Align) -> (Length,PP.Doc) -> PP.Doc
 makeCell os (w,HRight) (l,c) = PP.hcat (replicate (w-l) PP.space ++[c])                        
@@ -129,15 +146,15 @@ makeCol :: ROpts -> RowFormat -> [PP.Doc] -> PP.Doc
 makeCol os rf rs = PP.vcat rs
 
 
--- | To Table Class to defining generation of Documents  --------------------------------------------
+-- | To Table Class to defining generation of Documents  
 class ToTable a where
-      toTable :: ROpts -> (String,a) -> Table
+      toTable :: ROpts -> (String,a) -> [Table]
 
-instance ToTable [[Double]] where
-      toTable os (ti,xs)  = Table {tableTitle = "Matrix - " ++ ti,
+instance (Show a) => ToTable [[a]] where
+      toTable os (ti,xs)  = [Table {tableTitle = "Matrix - " ++ ti,
                                     tableFormat = tf,
                                     tableData = td,
-                                    tableSubTitle = ""}
+                                    tableSubTitle = ""}]
 
         where td = TableData {tableBody = map (map (toDoc show)) xs,
                               titleCols = [],
@@ -161,5 +178,5 @@ autoFormat td = TableFormat {colFormat = zip cf (repeat HLeft),
 -- | OutPut Functions  --------------------------------------------
 -- | TODO: write formatDocHor versions of this functions.
 report :: (ToTable a) => ROpts -> (String,a) -> IO ()
-report os = putStrLn . PP.render . (makeTable os) . (toTable os) 
+report os = putStrLn . PP.render . (makeReport os) . (toTable os) 
   

@@ -27,8 +27,8 @@ vdisp x = printf f $ s*val
         (TC (Data (D0 val))) = x
 
 -- | Display single values
-sdisp :: (DisplayTyp t, VFromList v Double) => TC s t (Data (v :> Nil) Val)  -> [String]
-sdisp xs = map g l -- (f l)
+srdisp :: (DisplayTyp t, VFromList v Double) => TC s t (Data (v :> Nil) Val)  -> [String]
+srdisp xs = map g l -- (f l)
   where g x = printf f (s*x)              
         t = getDisplayType xs
         u = getDisplayUnit t
@@ -61,10 +61,10 @@ instance SigDisp Signal (Data (V.Vector :> V.Vector :> Nil)) where
 
 
 instance (VFromList v Val,VSingleton v Double,UDisp t, SigDisp s (Data (v :> Nil))) => ToTable (TC s t (Data (v :> Nil) Val)) where
-      toTable os (ti,x) = Table {tableTitle = "",
+      toTable os (ti,x) = [Table {tableTitle = "",
                          tableFormat = tf,
                          tableData = td,
-                         tableSubTitle = ""}
+                         tableSubTitle = ""}]
         where td = TableData {tableBody =  [map (toDoc id ) (f x) ],
                               titleRow = [],
                               titleCols = [map (toDoc id) [ti,sigDisp x,tdisp x]],
@@ -80,12 +80,10 @@ instance (VFromList v Val,VSingleton v Double,UDisp t, SigDisp s (Data (v :> Nil
               f x | L.elem RAll os && L.elem RIndices os = sdisp $ subSignal1D x iv               
 -}              
 
-              f x | L.elem RAll os = sdisp x              
+              f x | L.elem RAll os = srdisp x              
               f x | otherwise = [(vdisp min) ++ " - " ++ (vdisp max)]
 
-{-
-<<<<<<< HEAD
-=======
+
 -- | display a single value  
 dispSingle ::  Disp a => a -> DisplayType -> String
 dispSingle x t = disp f s x ++ " " ++ show u
@@ -157,5 +155,3 @@ instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d,VSingleton v1 d,VSinglet
     where dtyp = getDisplayType x
           dmin = vminimum $ vminimum v
           dmax = vmaximum $ vminimum v
->>>>>>> master
--}

@@ -3,6 +3,8 @@ import EFA2.Signal.SequenceData
 import  EFA2.Interpreter.Env
 import EFA2.Utils.Utils
 import EFA2.Signal.Signal
+import EFA2.Display.Report
+import EFA2.Display.DispSequence
 
 import qualified Data.Map as M 
 
@@ -72,10 +74,14 @@ list = idxList $ zip titleList (zip recList (map  (genSequ) (map addZeroCrossing
 f (idx,(title,(pRec,(sq,sqRec)))) = do
   putStrLn ""
   putStrLn $ "Test " ++ show (idx+1) ++ ": " ++ title
-  putStrLn ("pRec: \n" ++ (show pRec))   
-  putStrLn ("pRec0: \n" ++ (show $ addZeroCrossings pRec))   
-  putStrLn ("Sequence: " ++  show sq) 
-  putStrLn ("SequRec: " ++  show sqRec) 
+  report [RAll] (title,pRec)
+  report [RAll] (title,addZeroCrossings pRec)
+  report [] (title, sq) --putStrLn ("Sequence: " ++  show sq) 
+  report [RAll] (title,sqRec)
+  
+--  putStrLn ("pRec: \n" ++ (show pRec))   
+--  putStrLn ("pRec0: \n" ++ (show $ addZeroCrossings pRec))   
+--  putStrLn ("SequRec: " ++  show sqRec) 
   --putStrLn ("sequPMaps: " ++  show sqPmaps)
   
 
