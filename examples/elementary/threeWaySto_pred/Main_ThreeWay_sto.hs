@@ -6,6 +6,7 @@ import qualified Data.List as L
 import qualified Data.Set as S
 import qualified Data.Map as M
 import qualified Data.Vector as V
+import Debug.Trace
 import Data.Maybe
 import Data.Monoid
 import Graphics.Gnuplot.Simple
@@ -56,20 +57,20 @@ f2 x = x/(x+10)
 
 
 --variation :: Topology -> Val -> [Envs UTFSig]
-variation sqTopo x y = interpretFromScratch (SingleRecord 0) 1 gd
+variation sqTopo x y = trace (showEqTerms ts'') $ interpretFromScratch (SingleRecord 0) 1 gd
   where givenEnv0 = emptyEnv { recordNumber = SingleRecord 0,
                                dtimeMap = M.fromList [ (DTimeIdx 0 0, sfromList [1.0] :: UTFSig) ],
                                powerMap = M.fromList [ (PowerIdx 0 0 3 1, sfromList [x]),
                                                        (PowerIdx 0 0 2 1, sfromList [0.6]) ],
-                               fetaMap =  M.fromList [ (FEtaIdx  0 0 0 1, smap etaf), (FEtaIdx 0 0 1 0, smap etaf),
+                               fetaMap =  M.fromList [ (FEtaIdx  0 0 0 1, smap (const 0.4)), (FEtaIdx 0 0 1 0, smap (const 0.6)),
                                                        (FEtaIdx  0 0 1 2, smap (const 0.7)), (FEtaIdx 0 0 2 1, smap (const 0.7)),
                                                        (FEtaIdx  0 0 1 3, smap f2), (FEtaIdx 0 0 3 1, smap f2) ] }
 
-        givenEnv1 = emptyEnv { recordNumber = SingleRecord 1,
+        givenEnv1 = emptyEnv { recordNumber = SingleRecord 0,
                                --dtimeMap = M.fromList [ (DTimeIdx 1 0, sfromList [1.0]) ],
                                energyMap = M.fromList [ (EnergyIdx 1 0 3 1, sfromList [x] :: UTFSig) ],
                                powerMap =  M.fromList [ (PowerIdx 1 0 2 1, sfromList [0.6]) ],
-                               fetaMap =   M.fromList [ (FEtaIdx 1 0 0 1, smap etaf), (FEtaIdx 1 0 1 0, smap etaf),
+                               fetaMap =   M.fromList [ (FEtaIdx 1 0 0 1, smap (const 0.4)), (FEtaIdx 1 0 1 0, smap (const 0.6)),
                                                         (FEtaIdx 1 0 1 2, smap (const 0.7)), (FEtaIdx 1 0 2 1, smap (const 0.7)),
                                                         (FEtaIdx 1 0 1 3, smap f2), (FEtaIdx 1 0 3 1, smap f2) ] }
 
@@ -84,7 +85,8 @@ variation sqTopo x y = interpretFromScratch (SingleRecord 0) 1 gd
         sqEnvs' = sqEnvs { dtimeMap = M.insert (DTimeIdx (-1) 0) (sfromList [1.0]) (dtimeMap sqEnvs),
                            energyMap = M.insert storage0 (sfromList [3.0]) (energyMap sqEnvs) }
 
-        gd = map (eqToInTerm sqEnvs') (toAbsEqTermEquations $ order ts)
+        ts'' = toAbsEqTermEquations $ order ts
+        gd = map (eqToInTerm sqEnvs') ts''
 
 
 getEnergy :: EnergyIdx -> [Envs UTFSig] -> Test1 (Typ A F Tt) Val
@@ -121,21 +123,26 @@ main = do
       pRec = PowerRecord (sfromList time) pMap
       (_, sqTopo) = makeSequence pRec topo
 
-      lst = [1 .. 10]
+      lst = [1 .. 100]
       etas = [0.2]
  
 
       res = map f (sequence [lst, etas])
+      f [x, y] = variation sqTopo x y
+{-
       f (x:y:_) = [(x, y, g (head $ stoList $ m `safeLookup` (EnergyIdx 0 0 0 1))
                             (head $ stoList $ m `safeLookup` (EnergyIdx 0 0 2 1))
-                            (head $ stoList $ m `safeLookup` (EnergyIdx 1 1 6 5))) ]
+                            (head $ stoList $ m `safeLookup` (EnergyIdx 1 0 6 5))) ]
                             where m = energyMap $ variation sqTopo x y
+-}
 
       g e0001 e0021 e1021 = (e0021 + e1021)/e0001
       -- env = map (\(x:y:_) -> variation sqTopo x y) (sequence [[1.07, 1.08 .. 1.1], [0.7]])
 
 
 
-  drawTopologyX' sqTopo
-  plotMesh3d [] [] res
-  
+  --drawTopologyX' sqTopo
+  --plotMesh3d [] [] res
+  --print (head res)
+  --mapM_ (drawTopology sqTopo) res
+  drawTopology sqTopo (head res)

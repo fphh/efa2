@@ -56,8 +56,7 @@ data Use = InSum
          | OutSum
          | InDiffSum
          | OutDiffSum
-         | C
-         | D deriving (Show, Eq, Ord)
+         | St deriving (Show, Eq, Ord)
 
 toDiffUse :: Use -> Use
 toDiffUse InSum = InDiffSum
