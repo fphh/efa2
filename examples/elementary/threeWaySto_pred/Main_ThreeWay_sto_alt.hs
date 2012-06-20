@@ -75,8 +75,9 @@ sqTopo = sqTopo
 
 -- | C. System solving
 solve3Way :: Topology -> Val -> Val -> Envs UTFSig
-solve3Way sqTopo x y = interpretFromScratch (SingleRecord 0) 1 gd -- interprete and solve equations
+solve3Way sqTopo y n = interpretFromScratch (SingleRecord 0) 1 gd -- interprete and solve equations
 
+{-
   -- Sequence 0 Primary Source Active additionally charging storage
   where givenEnv0 = emptyEnv { recordNumber = SingleRecord 0,
                                dtimeMap = M.fromList [ (DTimeIdx 0 0, sfromList [1.0]) ],
@@ -93,9 +94,31 @@ solve3Way sqTopo x y = interpretFromScratch (SingleRecord 0) 1 gd -- interprete 
                                fetaMap =   M.fromList [ (FEtaIdx 1 0 0 1, smap etaf), (FEtaIdx 1 0 1 0, undefined),
                                                         (FEtaIdx 1 0 1 2, smap (const 1)), (FEtaIdx 1 0 2 1, smap (const 1)),
                                                         (FEtaIdx 1 0 1 3, smap (const y)), (FEtaIdx 1 0 3 1, smap (const y)) ] }
+-}
                     
-        -- Variable Efficiency function at Source (backwards lookup)            
+  -- Sequence 0 Primary Source Active additionally charging storage
+  where givenEnv0 = emptyEnv { recordNumber = SingleRecord 0,
+                               dtimeMap = M.fromList [ (DTimeIdx 0 0, sfromList [(1-y)*dt]) ],
+                               powerMap = M.fromList [ (PowerIdx 0 0 2 1, sfromList [pCons])],
+                               energyMap = M.fromList [ (EnergyIdx 0 0 3 1, sfromList [(dt*y*pCons/n/0.9)])],
+                               fetaMap =  M.fromList [ (FEtaIdx  0 0 0 1, smap etaf), (FEtaIdx 0 0 1 0, undefined),
+                                                       (FEtaIdx  0 0 1 2, smap (const 0.9)), (FEtaIdx 0 0 2 1, smap (const 0.9)),
+                                                       (FEtaIdx  0 0 1 3, smap (const n)), (FEtaIdx 0 0 3 1, smap (const n)) ] }
+        -- Sequence 1 -- using storage only
+        givenEnv1 = emptyEnv { recordNumber = SingleRecord 0,
+                               dtimeMap = M.fromList [ (DTimeIdx 1 0, sfromList [y*dt])],
+                               energyMap = M.fromList [ ],
+                               powerMap =  M.fromList [ (PowerIdx 1 0 2 1, sfromList [pCons])],
+                               fetaMap =   M.fromList [ (FEtaIdx 1 0 0 1, smap etaf), (FEtaIdx 1 0 1 0, undefined),
+                                                        (FEtaIdx 1 0 1 2, smap (const 0.9)), (FEtaIdx 1 0 2 1, smap (const 0.9)),
+                                                        (FEtaIdx 1 0 1 3, smap (const n)), (FEtaIdx 1 0 3 1, smap (const n)) ] }
+                    
+         -- Variable Efficiency function at Source (backwards lookup)            
         etaf x = 1/((x+sqrt(x*x+4*x))/(2*x))
+        pCons = 1.0
+        dt = 1
+        
+
 
         -- Generate Equations for both Sections
         (sqEnvs, ts') = makeAllEquations sqTopo [givenEnv0, givenEnv1]
@@ -151,17 +174,17 @@ main :: IO ()
 main = do
   let 
     -- define Variation
-    powers = [0.1,0.2 .. 0.7] :: [Val]
-    etas = [0.9,0.91 .. 1] :: [Val]
+    yIndir = [0.1,0.2 .. 1] :: [Val]
+    etas = [0.6,0.7 .. 1] :: [Val]
 
     -- generate Variation Grid
-    (varP,varN) = genVariationMatrix powers etas
+    (varY,varN) = genVariationMatrix yIndir etas
     
     -- solve System over Variation Grid
-    varEnvs = zipWith (zipWith (solve3Way sqTopo)) varP varN :: [[Envs UTFSig]]
+    varEnvs = zipWith (zipWith (solve3Way sqTopo)) varY varN :: [[Envs UTFSig]]
     
     -- Result of Energies out 
-    storagePower = sfromList2 varP :: Test2 (Typ A P Tt) Val 
+    storagePerc = sfromList2 varY :: Test2 (Typ A Y Tt) Val 
     storageEfficiency = sfromList2 varN :: Test2 (Typ A N Tt) Val 
     
     powerConsumptionS0 = getVarPower varEnvs (PowerIdx 0 0 2 1)
@@ -206,15 +229,19 @@ main = do
   
 --  surfPlot "energyConsumption" storagePower storageEfficiency energyConsumption
     
-  surfPlot "System Efficiency" storagePower storageEfficiency etaSYS
-  surfPlot "System1 Efficiency" storagePower storageEfficiency etaSYS1
-  surfPlot "System2 Efficiency" storagePower storageEfficiency etaSYS2
+  surfPlot "System Efficiency" storagePerc storageEfficiency etaSYS
+  surfPlot "System1 Efficiency" storagePerc storageEfficiency etaSYS1
+  surfPlot "System2 Efficiency" storagePerc storageEfficiency etaSYS2
 
-  surfPlot "System Loss" storagePower storageEfficiency lossSYS 
-  surfPlot "System1 Loss" storagePower storageEfficiency  lossSYS1 
-  surfPlot "System2 Loss" storagePower storageEfficiency  lossSYS2 
+  surfPlot "System Loss" storagePerc storageEfficiency lossSYS 
+  surfPlot "System1 Loss" storagePerc storageEfficiency  lossSYS1 
+  surfPlot "System2 Loss" storagePerc storageEfficiency  lossSYS2 
   
   let lossListSYS1 = toSigList lossSYS1
       lossListSYS2 = toSigList lossSYS2
   sigPlots [head lossListSYS1,  head lossListSYS2]
   sigPlots [last lossListSYS1,  last lossListSYS2]
+  
+  let etaListSYS = toSigList etaSYS
+      
+  xyplots (sfromList yIndir :: Test1 (Typ A Y Tt) Val) etaListSYS

@@ -36,6 +36,14 @@ instance DisplayTyp (Typ d IZ p) where getDisplayType x = Typ_IZ
 instance DisplayTyp (Typ d UZ p) where getDisplayType x = Typ_UZ
 instance DisplayTyp (Typ d UT p) where getDisplayType x = Typ_UT
 
+
+getDisplayTypName Typ_P = "Power"
+getDisplayTypName Typ_E = "Energy"
+getDisplayTypName Typ_X = "Splitting-Ratio"
+getDisplayTypName Typ_Y = "Collection-Ratio"
+getDisplayTypName Typ_N = "Efficiency"
+
+
 -- | Function to choose display Unit per Type
 getDisplayUnit :: DisplayType -> DisplayUnit
 --getDisplayUnit Typ_E = Unit_kWh
