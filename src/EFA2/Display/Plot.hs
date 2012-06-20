@@ -4,6 +4,7 @@
 module EFA2.Display.Plot (module EFA2.Display.Plot) where
 
 import Graphics.Gnuplot.Simple
+import qualified Data.List as L
 
 import qualified Graphics.Gnuplot.Plot.TwoDimensional as Plot2D
 import qualified Graphics.Gnuplot.Advanced as Plot
@@ -33,11 +34,22 @@ import qualified Data.Map as M
 class SPlotData s typ c d where 
   sPlotData :: TC s typ (c d) -> [d]
   
-instance (DFromList (Data (v1 :> Nil)) Val, DisplayTyp t) => SPlotData sig t  (Data (v1 :> Nil)) Val where 
+instance (DFromList (Data (v1 :> Nil)) Val, DisplayTyp t) => SPlotData s t  (Data (v1 :> Nil)) Val where 
   sPlotData x = map (*s) $ stoList x  
     where t = getDisplayType x
           u = getDisplayUnit t
           (UnitScale s) = getUnitScale u
+          
+
+class SPlotData2 s typ c d where 
+  sPlotData2 :: TC s typ (c d) -> [[d]]
+  
+instance (DFromList2 (Data (v2 :> v1 :> Nil)) Val, DisplayTyp t) => SPlotData2 s t  (Data (v2 :> v1 :> Nil)) Val where 
+  sPlotData2 x = map (map (*s)) $ stoList2 x  
+    where t = getDisplayType x
+          u = getDisplayUnit t
+          (UnitScale s) = getUnitScale u
+          
 
 
 -- | Simple Signal Plotting -- without time axis --------------------------------------------------------------
@@ -76,19 +88,38 @@ instance (DisplayTyp t, VFromList v1 Double) => XYPlot (TC Signal t (Data (v1 :>
 
 
 -- | Plotting Signals against each other --------------------------------------------------------------
-class Plot3d a b c where
+class SurfPlot a b c where
+  surfPlot :: String -> a -> b -> c -> IO ()
   
-{-  
-instance Plot3d (TC TestRow t1 (Data (v2 :> v1 :> Nil) Val)) (TC TestRow t2 (Data (v2 :> v1 :> Nil) Val)) (TC TestRow t3 (Data (v2 :> v1 :> Nil) Val)) where
-  plot3d ti x y z = plotMesh3d (plotAttrs) [Plot3dType Surface] res
+  
+instance (VFromList v2 (v1 Double),
+          VFromList v1 Double,
+          VFromList v2 [Double],
+          VWalker v2 (v1 Double) [Double], 
+          VFromList v3 [Double],
+          VFromList v4 Double,
+          VFromList v3 (v4 Double),
+          VWalker v3 (v4 Double) [Double], 
+          VFromList v5 (v6 Double),
+          VFromList v6 Double,
+          VFromList v5 [Double],
+          VWalker v5 (v6 Double) [Double], 
+          DisplayTyp t1,
+          DisplayTyp t2,
+          DisplayTyp t3) => SurfPlot (TC s1 t1 (Data (v2 :> v1 :> Nil) Val)) (TC s2 t2 (Data (v3 :> v4 :> Nil) Val)) (TC s3 t3 (Data (v5 :> v6 :> Nil) Val)) where
+  surfPlot ti x y z = plotMesh3d (plotAttrs) [Plot3dType Surface] (L.zipWith3 zip3 (stoList2 x) (stoList2 y) (stoList2 z))
     where
       plotAttrs        = [Title ("Surface"), 
                         Grid $ Just [], 
                         XLabel ("Power [" ++ (show $ getDisplayUnit $ getDisplayType x) ++ "]"),
                         YLabel ("Efficiency [" ++ (show $ getDisplayUnit $ getDisplayType y) ++ "]"), 
-                        ZLabel ("Efficiency [" ++ (show $ getDisplayUnit $ getDisplayType z) ++ "]"), 
+                        -- ZLabel ("Efficiency [" ++ (show $ getDisplayUnit $ getDisplayType z) ++ "]"), 
                         Size $ Scale 0.7]
--}
+
+
+
+
+
 -- | Plotting Records ---------------------------------------------------------------
 
 -- | Line Style

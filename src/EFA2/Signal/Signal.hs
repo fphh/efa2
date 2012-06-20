@@ -147,8 +147,12 @@ type Sig2L typ a = TC Signal typ (List2 a)
 type Sig2 typ a = TC Signal typ (Vec2 a)
 type FSig2 typ a = TC FSignal typ (Vec2 a)
 
+type Test typ a = TC TestRow typ (DVal a)
 type Test1 typ a = TC TestRow typ (UVec a)
 type Test2 typ a = TC TestRow typ (UVec2 a)
+type Test1L typ a = TC TestRow typ (List a)
+type Test2L typ a = TC TestRow typ (List2 a)
+
 
 type Samp typ a = TC Sample typ (DVal a)
 type Samp1L typ a = TC Sample typ (List a)
@@ -162,6 +166,16 @@ type PSig = Sig1 (Typ A P Tt) Val
 type PSig2 = Sig2 (Typ A P Tt) Val
 type PSigL = Sig1L (Typ A P Tt) Val
 type PSig2L = Sig2L (Typ A P Tt) Val
+
+type ESig = Sig1 (Typ A E Tt) Val
+type ESig2 = Sig2 (Typ A E Tt) Val
+type ESigL = Sig1L (Typ A E Tt) Val
+type ESig2L = Sig2L (Typ A E Tt) Val
+
+type NSig = Sig1 (Typ A N Tt) Val
+type NSig2 = Sig2 (Typ A N Tt) Val
+type NSigL = Sig1L (Typ A N Tt) Val
+type NSig2L = Sig2L (Typ A N Tt) Val
 
 type TSig = Sig1 (Typ A T Tt) Val
 type TSigL = Sig1L (Typ A T Tt) Val
@@ -179,47 +193,66 @@ type DTVal = Scal (Typ D T Tt) Val
 
 type SignalIdx = Int
 
--- type TSample = TC Scalar (Typ A T Tt) (DVal Val)
-type PSample2 = TC Sample (Typ A P Tt) (UVec2 Val)
-type PSample1 =  TC Sample (Typ A P Tt) (UVec Val)
-type PSample1L =  TC Sample (Typ A P Tt) (List Val)
-type PSample2L = TC Sample (Typ A P Tt) (UVec2L Val)
-type PSample2LL = TC Sample (Typ A P Tt) (List2 Val)
-type PSample = TC Sample (Typ A P Tt) (DVal Val)
+type PSamp2 = TC Sample (Typ A P Tt) (UVec2 Val)
+type PSamp1 =  TC Sample (Typ A P Tt) (UVec Val)
+type PSamp1L =  TC Sample (Typ A P Tt) (List Val)
+type PSamp2L = TC Sample (Typ A P Tt) (UVec2L Val)
+type PSamp2LL = TC Sample (Typ A P Tt) (List2 Val)
+type PSamp = TC Sample (Typ A P Tt) (DVal Val)
 
+-- Flow Signal Samples
+type ESamp2 = TC FSample (Typ A E Tt) (UVec2 Val)
+type ESamp1 =  TC FSample (Typ A E Tt) (UVec Val)
+type ESamp1L =  TC FSample (Typ A E Tt) (List Val)
+type ESamp2L = TC FSample (Typ A E Tt) (UVec2L Val)
+type ESamp2LL = TC FSample (Typ A E Tt) (List2 Val)
+type ESamp = TC FSample (Typ A E Tt) (DVal Val)
 
+type FSamp2 = TC FSample (Typ A F Tt) (UVec2 Val)
+type FSamp1 =  TC FSample (Typ A F Tt) (UVec Val)
+type FSamp1L =  TC FSample (Typ A F Tt) (List Val)
+type FSamp2L = TC FSample (Typ A F Tt) (UVec2L Val)
+type FSamp2LL = TC FSample (Typ A F Tt) (List2 Val)
+type FSamp = TC FSample (Typ A F Tt) (DVal Val)
+
+type PFSamp2 = TC FSample (Typ A P Tt) (UVec2 Val)
+type PFSamp1 =  TC FSample (Typ A P Tt) (UVec Val)
+type PFSamp1L =  TC FSample (Typ A P Tt) (List Val)
+type PFSamp2L = TC FSample (Typ A P Tt) (UVec2L Val)
+type PFSamp2LL = TC FSample (Typ A P Tt) (List2 Val)
+type PFSamp = TC FSample (Typ A P Tt) (DVal Val)
+
+-- Time Sample
 type DTSampleL = TC Sample (Typ D T Tt) (List Val) 
 
-
 -- type PSample =  TC Scalar (Typ A P Tt) (DVal Val)
-type DTSample =  TC Sample (Typ D T Tt) (DVal Val)
-type TSample =  TC Sample (Typ A T Tt) (DVal Val)
-type TSample1 =  TC Sample (Typ A T Tt) (UVec Val)
-type TSample1L =  TC Sample (Typ A T Tt) (List Val)
-type TZeroSample = TC Sample (Typ A T Tt) (Data Nil ZeroCrossing)
-type TZeroSample1L = TC Sample (Typ A T Tt) (Data ([] :> Nil) ZeroCrossing)
-
+type DTSamp =  TC Sample (Typ D T Tt) (DVal Val)
+type TSamp =  TC Sample (Typ A T Tt) (DVal Val)
+type TSamp1 =  TC Sample (Typ A T Tt) (UVec Val)
+type TSamp1L =  TC Sample (Typ A T Tt) (List Val)
+type TZeroSamp = TC Sample (Typ A T Tt) (Data Nil ZeroCrossing)
+type TZeroSamp1L = TC Sample (Typ A T Tt) (Data ([] :> Nil) ZeroCrossing)
 
 ------------------------------------
 
-type RSig = (TSigL, PSample2LL)
-type RSample1 = (TSample, PSample1L)
-type RSample = (TSample, PSample)
+type RSig = (TSigL, PSamp2LL)
+type RSamp1 = (TSamp, PSamp1L)
+type RSamp = (TSamp, PSamp)
 
 
-rhead :: RSig -> RSample1  
+rhead :: RSig -> RSamp1  
 rhead (t,ps) = (shead t, shead ps) 
 
 rtail :: RSig -> RSig
 rtail (t,ps) = (stail t, stail ps) 
   
-rlast :: RSig -> RSample1
+rlast :: RSig -> RSamp1
 rlast (t,ps) = (slast t, slast ps) 
 
 rinit :: RSig -> RSig
 rinit (t,ps) = (sinit t, sinit ps) 
 
-rsingleton :: RSample1 -> RSig
+rsingleton :: RSamp1 -> RSig
 rsingleton (t,ps) = (ssingleton t, ssingleton ps)
   
   
@@ -242,11 +275,17 @@ sunpack (TC x) = x
 sfromList :: DFromList c d => [d] -> TC s t (c d)
 sfromList x = TC $ dfromList x
 
+stoList :: DFromList c d => TC s t (c d) -> [d]
+stoList (TC x) = dtoList x
+
+sfromList2 :: DFromList2 c d => [[d]] -> TC s t (c d)
+sfromList2 x = TC $ dfromList2 x
+
+stoList2 :: DFromList2 c d => TC s t (c d) -> [[d]]
+stoList2 (TC x) = dtoList2 x
+
 sfromVal :: DFromList c d => Int -> d -> TC s t (c d)
 sfromVal len x = sfromList (replicate len x) 
-
-stoList :: DFromList c d => TC t t1 (c d) -> [d]
-stoList (TC x) = dtoList x
 
 fromScalar :: TC Scalar typ (Data Nil d) -> d 
 fromScalar (TC (Data (D0 x))) = x
@@ -423,6 +462,8 @@ instance (DTranspose c d) => STranspose Sample Signal  c d
 instance (DTranspose c d) => STranspose FSignal FSample  c d
 instance (DTranspose c d) => STranspose FSample FSignal  c d
 
+instance (DTranspose c d) => STranspose TestRow TestRow  c d
+
 ----------------------------------------------------------
 -- Monoid
 
@@ -585,6 +626,10 @@ toSigList :: (VFromList v2 (TC s typ (Data (v1 :> (Nil' :> Nil')) d)), VWalker v
 toSigList (TC (Data (D2 xs))) = vtoList $ vmap f xs
   where f x = TC $ Data $ D1 x
        
+sfromCells :: (DConvert (Data ([] :> ([] :> Nil))) (Data (v2 :> (v1 :> Nil))) d) => [[TC s typ (Data Nil d)]] -> TC s typ (Data (v2 :> v1 :> Nil) d)
+sfromCells xss = sconvert $ TC $ Data $ D2 $ map (map f) xss 
+  where f (TC (Data (D0 x))) = x 
+
 
 sfilter ::  (VFilter v1 d) => (d -> Bool) -> TC s typ (Data (v1 :> Nil) d) -> TC s typ (Data (v1 :> Nil) d)
 sfilter f (TC x) = TC $ dfilter f x
@@ -611,3 +656,9 @@ sminimum (TC x) = TC $ dminimum x
 subSignal1D :: (VLookup v d)=> TC s typ (Data (v :> Nil) d) -> [SignalIdx] -> TC s typ (Data (v :> Nil) d)
 subSignal1D (TC (Data (D1 x))) idxs = TC $ Data $ D1 $ vlookUp x idxs  
 
+slength :: (DLength c d) => TC s typ (c d) -> Int
+slength (TC x) = dlength x  
+
+
+makeDelta ::  TC s (Typ A p t) (c d) -> TC s (Typ D p t) (c d)
+makeDelta (TC x) = TC x

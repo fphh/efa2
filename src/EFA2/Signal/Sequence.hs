@@ -95,7 +95,7 @@ genSequ pRec = removeNilSections (sequ++[lastSec],SequData pRecs)
         pRecs = map (rsig2SecRecord pRec) (seqRSig ++ [lastRSec])
         ((lastSec,sequ),(lastRSec,seqRSig)) = recyc (rtail rSig) (rhead rSig) (((0,0),[]),(rsingleton $ rhead rSig,[])) 
         
-        recyc :: RSig -> RSample1 -> ((Sec,Sequ), (RSig, [RSig])) -> ((Sec,Sequ), (RSig, [RSig]))  
+        recyc :: RSig -> RSamp1 -> ((Sec,Sequ), (RSig, [RSig])) -> ((Sec,Sequ), (RSig, [RSig]))  
         recyc rSig x1 (((lastIdx,idx),sequ),(secRSig, sequRSig)) | rSig /= mempty = recyc (rtail rSig) (rhead rSig) (g $ stepDetect x1 x2, f $ stepDetect x1 x2)
           where
             x2 = rhead rSig
@@ -129,7 +129,7 @@ removeNilSections (sequ, SequData pRecs) = (fsequ, SequData fRecs)
 
 
 -- | Function to detect and classify a step over several signals
-stepDetect :: RSample1 -> RSample1 -> EventType 
+stepDetect :: RSamp1 -> RSamp1 -> EventType 
 stepDetect  (t1,ps1) (t2,ps2) = f stepList
   where stepList = stzipWith stepX ps1 ps2 :: Samp1L (Typ A STy Tt) StepType
 
@@ -142,7 +142,7 @@ stepDetect  (t1,ps1) (t2,ps2) = f stepList
 
 
 -- | Function to detect and classify a step over one signal
-stepX :: PSample -> PSample -> Samp (Typ A STy Tt) StepType
+stepX :: PSamp -> PSamp -> Samp (Typ A STy Tt) StepType
 stepX p1 p2 | ssign p1== toSample ZSign && ssign p2 /= toSample ZSign = toSample LeavesZeroStep -- signal leaves zero
 stepX p1 p2 | ssign p1/=toSample ZSign && ssign p2 == toSample ZSign = toSample BecomesZeroStep -- signal becomes zero
 stepX p1 p2 | ssign p1==toSample PSign && ssign p2 == toSample NSign = toSample ZeroCrossingStep
@@ -156,7 +156,7 @@ addZeroCrossings r = rsig2Record rSigNew r
         rSigNew = (f (rtail rSig) (rhead rSig) mempty) .++ (rsingleton $ rlast rSig)
         (timeNew,mSigNew) = rSigNew
 
-        f :: RSig -> RSample1 -> RSig -> RSig
+        f :: RSig -> RSamp1 -> RSig -> RSig
         f rSig rold rSigNew | rSig /= mempty = f (rtail rSig) rnew (rSigNew .++ (getZeroCrossings rold rnew))  
           where rnew = rhead rSig  
         f rSig  _ rSigNew |  otherwise = rSigNew                                         
@@ -164,30 +164,30 @@ addZeroCrossings r = rsig2Record rSigNew r
 -----------------------------------------------------------------------------------
 -- | Function for calculating zero Crossings 
                                       
-getZeroCrossings :: RSample1 -> RSample1 -> RSig         
+getZeroCrossings :: RSamp1 -> RSamp1 -> RSig         
 getZeroCrossings rs1@(t1,ps1) rs2@(t2,ps2) = ((ssingleton t1) .++ zeroCrossingTimes,(ssingleton ps1) .++ zeroPowers)
           where 
              (zeroCrossings, zeroCrossingTimes) = calcZeroTimes rs1 rs2
              zeroPowers = calcZeroPowers rs1 rs2 zeroCrossingTimes zeroCrossings
 
 
-calcZeroPowers :: RSample1 -> RSample1 -> TSigL -> TZeroSample1L -> PSample2LL  
+calcZeroPowers :: RSamp1 -> RSamp1 -> TSigL -> TZeroSamp1L -> PSamp2LL  
 calcZeroPowers (t1,(TC (Data (D1 ps1)))) (t2,(TC (Data (D1 ps2)))) zeroCrossingTimes (TC (Data (D1 tz))) = stranspose $ fromSigList sigList 
                where g p1 p2 tz = f (toSample p1) (toSample p2) (toSample tz) 
                      sigList = L.zipWith3 g ps1 ps2 tz :: [PSigL]
                     
-                     f :: PSample -> PSample -> TZeroSample -> PSigL
+                     f :: PSamp -> PSamp -> TZeroSamp -> PSigL
                      f p1 p2 zeroCrossing = interpPowers (t1,p1) (t2,p2) zeroCrossingTimes zeroCrossing
 
-calcZeroTimes :: RSample1 -> RSample1 -> (TZeroSample1L,TSigL)
+calcZeroTimes :: RSamp1 -> RSamp1 -> (TZeroSamp1L,TSigL)
 calcZeroTimes (t1,ps1) (t2,ps2)  = (zeroCrossings, zeroCrossingTimes)                                            
               where
                 -- | create ascending list containing all zero crossing times
                  zeroCrossingTimes = ssort $ filterTZero zeroCrossings :: TSigL
-                 zeroCrossings = stzipWith h2 ps1 ps2 :: TZeroSample1L 
+                 zeroCrossings = stzipWith h2 ps1 ps2 :: TZeroSamp1L 
             
                  -- | Zero crossing time per signal, if zero crossing happens otherwise empty
-                 h2 :: PSample -> PSample -> TZeroSample
+                 h2 :: PSamp -> PSamp -> TZeroSamp
                  h2 p1 p2 | ssign p1 == toSample PSign && ssign p2 == toSample NSign = calcZeroTime (t1,p1) (t2,p2)
                  h2 p1 p2 | ssign p1 == toSample NSign && ssign p2 == toSample PSign = calcZeroTime (t1,p1) (t2,p2)
                  h2 _  _ = toSample NoCrossing
@@ -196,24 +196,24 @@ calcZeroTimes (t1,ps1) (t2,ps2)  = (zeroCrossings, zeroCrossingTimes)
 -- | Interpolation Functions for one Signal
 
 -- | calculate time of Zero Crossing Point                  
-calcZeroTime :: (TSample,PSample) -> (TSample,PSample) -> TZeroSample 
+calcZeroTime :: (TSamp,PSamp) -> (TSamp,PSamp) -> TZeroSamp 
 calcZeroTime (t1,p1) (t2,p2) = f t1 t2 
   where m = (p2.-p1)./(t2.-t1) -- interpolation slope 
-        f :: TSample -> TSample -> TZeroSample
-        f t1 t2 | t2 > t1 = makeTZero $ dt.+t1 where dt = changeType $ ((sneg p1)./m) :: DTSample -- time of zero crossing 
+        f :: TSamp -> TSamp -> TZeroSamp
+        f t1 t2 | t2 > t1 = makeTZero $ dt.+t1 where dt = changeType $ ((sneg p1)./m) :: DTSamp -- time of zero crossing 
         f t1 t2 | t2 == t1 = makeTZero t1
         f t1 t2 | t2 < t1 = error ("Error in calcZeroTime- Discontinous time vector t1: " ++ show t1 ++ " t2: " ++ show t2)
                   
 
 
 -- | interpolate Powers at Zero Crossing times 
-interpPowers :: (TSample,PSample) -> (TSample,PSample) -> TSigL -> TZeroSample -> PSigL        
+interpPowers :: (TSamp,PSamp) -> (TSamp,PSamp) -> TSigL -> TZeroSamp -> PSigL        
 interpPowers (t1,p1) (t2,p2) tzeroList tzero = stmap f tzeroList
-  where f :: TSample -> PSample
+  where f :: TSamp -> PSamp
         f tz | (makeTZero tz)==tzero = (toSample 0) -- avoid numeric error and make zero crossing power zero
         f tz | otherwise = g t1 t2 
           where 
-            g :: TSample -> TSample -> PSample
+            g :: TSamp -> TSamp -> PSamp
             g t1 t2 | t2 > t1 = p1.+m.*(tz.-t1) -- interpolate non zero powers
             g t1 t2 | t2 == t1 = sampleAverage p1 p2
             g t1 t2 | t2 < t1 =  error ("Error in interpPowers - Discontinous time vector - t1: " ++ show t1 ++ " t2: " ++ show t2)
@@ -222,10 +222,10 @@ interpPowers (t1,p1) (t2,p2) tzeroList tzero = stmap f tzeroList
 -----------------------------------------------------------------------------------
 -- | Helper Functions
 
-makeTZero :: TSample -> TZeroSample
+makeTZero :: TSamp -> TZeroSamp
 makeTZero (TC (Data (D0 x))) = TC $ Data $ D0 $ ZeroCrossing x 
 
-filterTZero :: TZeroSample1L -> TSigL
+filterTZero :: TZeroSamp1L -> TSigL
 filterTZero x = stranspose $ smap (\ (ZeroCrossing x) -> x) $ sfilter (/=NoCrossing) x  
 
 

@@ -25,16 +25,16 @@ data Nil' c = Nil' -- deriving (Show,Eq,Ord)
 type Nil = Nil' :> Nil'
 
 
-instance (Show v0) => Show (Nil v0) where
+instance (Show d) => Show (Nil d) where
          show (D0 x) = "D0 (" ++ show x ++ ")"
 
-instance (Show (v1 v0)) => Show ((v1 :> Nil) v0) where
+instance (Show (v1 d)) => Show ((v1 :> Nil) d) where
          show (D1 x) = "D1 (" ++ show x ++ ")"
 
-instance (Show (v2 (v1 v0))) => Show ((v2 :> v1 :> Nil) v0) where
+instance (Show (v2 (v1 d))) => Show ((v2 :> v1 :> Nil) d) where
          show (D2 x) = "D2 (" ++ show x ++ ")"
 
-instance (Show (v3 (v2 (v1 v0)))) => Show ((v3 :> v2 :> v1 :> Nil) v0) where
+instance (Show (v3 (v2 (v1 d)))) => Show ((v3 :> v2 :> v1 :> Nil) d) where
          show (D3 x) = "D3 (" ++ show x ++ ")"
 
 ---------------------------------------------------------
@@ -351,3 +351,18 @@ instance UV.Unbox d => DConvert (Data (UV.Vector :> Nil)) (Data ([] :> Nil)) d w
   
 instance DConvert (Data (V.Vector :> Nil)) (Data ([] :> Nil)) d where
   dconvert (Data (D1 x)) = Data $ D1 $ vconvert x      
+
+instance UV.Unbox d => DConvert (Data ([] :> [] :> Nil)) (Data (V.Vector :> UV.Vector :> Nil)) d where
+  dconvert (Data (D2 x)) = Data $ D2 $ vconvert (map vconvert x)      
+
+----------------------------------------------------------
+-- Length
+  
+class DLength c d where  
+ dlength :: c d -> Int  
+ 
+instance GetLength (v d) => DLength (Data (v :> Nil)) d where
+  dlength (Data (D1 x)) = vlen x
+  
+instance  GetLength (v2 (v1 d)) => DLength (Data (v2 :> v1 :> Nil)) d where
+  dlength (Data (D2 x)) = vlen x
