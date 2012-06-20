@@ -81,18 +81,19 @@ solve3Way sqTopo x y = interpretFromScratch (SingleRecord 0) 1 gd -- interprete 
   where givenEnv0 = emptyEnv { recordNumber = SingleRecord 0,
                                dtimeMap = M.fromList [ (DTimeIdx 0 0, sfromList [1.0]) ],
                                powerMap = M.fromList [ (PowerIdx 0 0 3 1, sfromList [x]),
-                                                       (PowerIdx 0 0 2 1, sfromList [0.06])],
+                                                       (PowerIdx 0 0 2 1, sfromList [0.6])],
                                fetaMap =  M.fromList [ (FEtaIdx  0 0 0 1, smap etaf), (FEtaIdx 0 0 1 0, undefined),
-                                                       (FEtaIdx  0 0 1 2, smap (const 0.9)), (FEtaIdx 0 0 2 1, smap (const 0.9)),
+                                                       (FEtaIdx  0 0 1 2, smap (const 1)), (FEtaIdx 0 0 2 1, smap (const 1)),
                                                        (FEtaIdx  0 0 1 3, smap (const y)), (FEtaIdx 0 0 3 1, smap (const y)) ] }
         -- Sequence 1 -- using storage only
         givenEnv1 = emptyEnv { recordNumber = SingleRecord 0,
-                               dtimeMap = M.fromList [ (DTimeIdx 1 0, sfromList [1.0]) ],
+                           --    dtimeMap = M.fromList [ (DTimeIdx 1 0, sfromList [1.0]) ],
                                energyMap = M.fromList [ (EnergyIdx 1 0 3 1, sfromList [x] :: UTFSig) ],
-                               powerMap =  M.fromList [ (PowerIdx 1 0 2 1, sfromList [0.06]) ],
-                               fetaMap =   M.fromList [ (FEtaIdx 1 0 0 1, smap etaf), (FEtaIdx 1 0 1 0, smap etaf),
-                                                        (FEtaIdx 1 0 1 2, smap (const 0.9)), (FEtaIdx 1 0 2 1, smap (const 0.9)),
+                               powerMap =  M.fromList [ (PowerIdx 1 0 2 1, sfromList [0.6]) ],
+                               fetaMap =   M.fromList [ (FEtaIdx 1 0 0 1, smap etaf), (FEtaIdx 1 0 1 0, undefined),
+                                                        (FEtaIdx 1 0 1 2, smap (const 1)), (FEtaIdx 1 0 2 1, smap (const 1)),
                                                         (FEtaIdx 1 0 1 3, smap (const y)), (FEtaIdx 1 0 3 1, smap (const y)) ] }
+                    
         -- Variable Efficiency function at Source (backwards lookup)            
         etaf x = 1/((x+sqrt(x*x+4*x))/(2*x))
 
