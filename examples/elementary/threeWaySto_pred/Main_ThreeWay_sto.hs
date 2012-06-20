@@ -42,7 +42,8 @@ topo = mkGraph (makeNodes nodes) (makeEdges edges)
 mkSig :: Int -> ([Val] -> PSigL)
 mkSig n = sfromList . concat . replicate n
 
-etaf x = 1 -- 1-1/(1+x)-- x/(x+5)
+etaf x = (x+sqrt(x*x+4*x))/(2*x)
+
 -- etaf x = x/(x+5)
 -- revetaf x = (x+5)/x
 
@@ -62,12 +63,12 @@ variation sqTopo x y = interpretFromScratch (SingleRecord 0) 1 gd
                                dtimeMap = M.fromList [ (DTimeIdx 0 0, sfromList [1.0] :: UTFSig) ],
                                powerMap = M.fromList [ (PowerIdx 0 0 3 1, sfromList [x]),
                                                        (PowerIdx 0 0 2 1, sfromList [0.6]) ],
-                               fetaMap =  M.fromList [ (FEtaIdx  0 0 0 1, smap etaf), (FEtaIdx 0 0 1 0, smap etaf),
+                               fetaMap =  M.fromList [ (FEtaIdx  0 0 0 1, smap etaf), (FEtaIdx 0 0 1 0, undefined),
                                                        (FEtaIdx  0 0 1 2, smap (const 0.9)), (FEtaIdx 0 0 2 1, smap (const 0.9)),
                                                        (FEtaIdx  0 0 1 3, smap (const y)), (FEtaIdx 0 0 3 1, smap (const y)) ] }
 
-        givenEnv1 = emptyEnv { recordNumber = SingleRecord 1,
-                               --dtimeMap = M.fromList [ (DTimeIdx 1 0, sfromList [1.0]) ],
+        givenEnv1 = emptyEnv { recordNumber = SingleRecord 0,
+                               dtimeMap = M.fromList [ (DTimeIdx 1 0, sfromList [1.0]) ],
                                energyMap = M.fromList [ (EnergyIdx 1 0 3 1, sfromList [x] :: UTFSig) ],
                                powerMap =  M.fromList [ (PowerIdx 1 0 2 1, sfromList [0.6]) ],
                                fetaMap =   M.fromList [ (FEtaIdx 1 0 0 1, smap etaf), (FEtaIdx 1 0 1 0, smap etaf),
@@ -126,25 +127,27 @@ main = do
       pRec = PowerRecord (sfromList time) pMap
       (_, sqTopo) = makeSequence pRec topo
 
-      powers = [0.5,1 .. 10]::[Double]
-      etas = [0.7,
-              0.6,0.5]::[Double]
+      powers = [0.01,0.02 .. 1]::[Double]
+      etas = [0.8,0.85 .. 1]::[Double]
  
       m = genVariationMatrix powers etas
 
       res = map (map f) m
+      
       f (x,y) = (x, y, g (head $ stoList $ m `safeLookup` (EnergyIdx 0 0 0 1))
                             (head $ stoList $ m `safeLookup` (EnergyIdx 0 0 2 1))
-                            (head $ stoList $ m `safeLookup` (EnergyIdx 1 1 6 5)))
+                            (head $ stoList $ m `safeLookup` (EnergyIdx 1 0 6 5)))
                             where m = energyMap $ variation sqTopo x y
-
+     
+--      f (x, y) = variation sqTopo x y
+  
       g e0001 e0021 e1021 = (e0021 + e1021)/e0001
       -- env = map (\(x:y:_) -> variation sqTopo x y) (sequence [[1.07, 1.08 .. 1.1], [0.7]])
 
 
   print m
   -- drawTopologyX' sqTopo
-  --plotMesh3d [] [] res
-  plotPaths [] $ map (map (\(x,y,z) -> (x,z))) (L.transpose res)
-  
+  plotMesh3d [] [] res
+  -- plotPaths [] $ map (map (\(x,y,z) -> (x,z))) (L.transpose res)
+--  mapM_ (drawTopology sqTopo) res
   
