@@ -109,7 +109,7 @@ instance (VFromList v2 (v1 Double),
           DisplayTyp t3) => SurfPlot (TC s1 t1 (Data (v2 :> v1 :> Nil) Val)) (TC s2 t2 (Data (v3 :> v4 :> Nil) Val)) (TC s3 t3 (Data (v5 :> v6 :> Nil) Val)) where
   surfPlot ti x y z = plotMesh3d (plotAttrs) [Plot3dType Surface] (L.zipWith3 zip3 (stoList2 x) (stoList2 y) (stoList2 z))
     where
-      plotAttrs        = [Title ("Surface"), 
+      plotAttrs        = [Title ("Surface -" ++ ti), 
                         Grid $ Just [], 
                         XLabel ("Power [" ++ (show $ getDisplayUnit $ getDisplayType x) ++ "]"),
                         YLabel ("Efficiency [" ++ (show $ getDisplayUnit $ getDisplayType y) ++ "]"), 

@@ -630,6 +630,12 @@ sfromCells :: (DConvert (Data ([] :> ([] :> Nil))) (Data (v2 :> (v1 :> Nil))) d)
 sfromCells xss = sconvert $ TC $ Data $ D2 $ map (map f) xss 
   where f (TC (Data (D0 x))) = x 
 
+stoCells :: (VFromList v2 (v1 d),
+                      VFromList v1 d,
+                      VFromList v2 [d],
+                      VWalker v2 (v1 d) [d]) => TC s typ (Data (v2 :> v1 :> Nil) d) -> [[TC s typ (Data Nil d)]]
+stoCells xss = map (map f) $ stoList2 xss
+  where f x = TC $ Data $ D0 x 
 
 sfilter ::  (VFilter v1 d) => (d -> Bool) -> TC s typ (Data (v1 :> Nil) d) -> TC s typ (Data (v1 :> Nil) d)
 sfilter f (TC x) = TC $ dfilter f x

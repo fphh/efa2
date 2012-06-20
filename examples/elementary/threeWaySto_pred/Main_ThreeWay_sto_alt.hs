@@ -36,6 +36,8 @@ import EFA2.Display.Plot
 import EFA2.Utils.Utils
 
 import EFA2.Display.Report
+import EFA2.Display.DispSignal
+
 
 
 -- | A. Generate System Topology definition
@@ -125,6 +127,12 @@ getVarEnergy varEnvs idx = changeSignalType $ sfromCells $ map (map f ) varEnvs
   where f ::  Envs UTFSig ->   FSamp
         f envs = changeType $ shead $ ((safeLookup (energyMap envs) idx)) 
 
+-- | Safe Lookup Functions
+getVarPower :: [[Envs UTFSig]] ->  PowerIdx -> Test2 (Typ A P Tt) Val 
+getVarPower varEnvs idx = changeSignalType $ sfromCells $ map (map f ) varEnvs  
+  where f ::  Envs UTFSig ->   PFSamp
+        f envs = changeType $ shead $ ((safeLookup (powerMap envs) idx)) 
+
 {-
 -- | Safe Lookup Functions
 getPower :: Envs UTFSig ->  PowerIdx -> PFSamp
@@ -142,8 +150,8 @@ main :: IO ()
 main = do
   let 
     -- define Variation
-    powers = [0.01,0.02 .. 1] :: [Val]
-    etas = [0.8,0.85 .. 1] :: [Val]
+    powers = [0.2,0.4 .. 1] :: [Val]
+    etas = [0.8,0.9 .. 1] :: [Val]
 
     -- generate Variation Grid
     (varP,varN) = genVariationMatrix powers etas
@@ -155,9 +163,12 @@ main = do
     storagePower = sfromList2 varP :: Test2 (Typ A P Tt) Val 
     storageEfficiency = sfromList2 varN :: Test2 (Typ A N Tt) Val 
     
-    energyConsumption = getVarEnergy varEnvs  (EnergyIdx 0 0 0 1) 
+    powerConsumptionS0 = getVarPower varEnvs (PowerIdx 0 0 2 1)
+    powerConsumptionS1 = getVarPower varEnvs (PowerIdx 0 0 6 5)
     
-    energySource = (getVarEnergy varEnvs  (EnergyIdx 0 0 2 1)) .+  makeDelta (getVarEnergy varEnvs  (EnergyIdx 0 0 6 5)) 
+    energySource = getVarEnergy varEnvs  (EnergyIdx 0 0 0 1) 
+    
+    energyConsumption = (getVarEnergy varEnvs  (EnergyIdx 0 0 2 1)) .+  makeDelta (getVarEnergy varEnvs  (EnergyIdx 0 0 6 5)) 
     
 {- 
     f (x,y) = (x, y, g (head $ stoList $ m `safeLookup` (EnergyIdx 0 0 0 1))
@@ -168,11 +179,11 @@ main = do
     g e0001 e0021 e1021 = (e0021 + e1021)/e0001
 -}
 --  print m
-  -- drawTopologyX' sqTopo
---  plotMesh3d [] [] res
-  -- plotPaths [] $ map (map (\(x,y,z) -> (x,z))) (L.transpose res)
---  mapM_ (drawTopology sqTopo) res
---  print res
-  -- report ("Consumption",energyConsumption) 
-  surfPlot "Consumption" storagePower storageEfficiency energyConsumption
+--  drawTopologyX' sqTopo
+--  surfPlot "powerConsumptionS0" storagePower storageEfficiency powerConsumptionS0
+--  surfPlot "powerConsumptionS1" storagePower storageEfficiency powerConsumptionS1
+  report [] ("powerConsumptionS0",powerConsumptionS0)  
+--  report [] ("powerConsumptionS1",powerConsumptionS1)  
+  
+--  surfPlot "energyConsumption" storagePower storageEfficiency energyConsumption
     

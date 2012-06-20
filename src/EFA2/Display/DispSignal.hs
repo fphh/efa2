@@ -59,6 +59,8 @@ instance SigDisp Signal (Data (V.Vector :> UV.Vector :> Nil)) where
 instance SigDisp Signal (Data (V.Vector :> V.Vector :> Nil)) where      
          sigDisp x = "Sig2V" 
 
+instance SigDisp TestRow (Data (V.Vector :> UV.Vector :> Nil)) where      
+         sigDisp x = "Test2U" 
 
 instance (VFromList v Val,VSingleton v Double,UDisp t, SigDisp s (Data (v :> Nil))) => ToTable (TC s t (Data (v :> Nil) Val)) where
       toTable os (ti,x) = [Table {tableTitle = "",
@@ -73,16 +75,28 @@ instance (VFromList v Val,VSingleton v Double,UDisp t, SigDisp s (Data (v :> Nil
               max = smaximum x
               min = sminimum x
               tf = autoFormat td
-{-              
-              (Just (RIndices iv)) = L.find match os
-              match (RIndices _) = True 
-              match _ = False
-              f x | L.elem RAll os && L.elem RIndices os = sdisp $ subSignal1D x iv               
--}              
 
               f x | L.elem RAll os = srdisp x              
               f x | otherwise = [(vdisp min) ++ " - " ++ (vdisp max)]
 
+instance (UDisp t, 
+          SigDisp s (Data (v2 :> (v1 :> Nil))), 
+          VFromList v1 Val,
+          VFromList v2 [Val],
+          VFromList v2 (v1 Val),
+          VWalker v2 (v1 Val) [Val]) => ToTable (TC s t (Data (v2 :> v1 :> Nil) Val)) where
+      toTable os (ti,xss) = [Table {tableTitle = ti ++ "   " ++ sigDisp xss ++ tdisp xss ++ udisp xss,
+                         tableFormat = tf,
+                         tableData = td,
+                         tableSubTitle = ""}]
+        where td = TableData {tableBody =  map (map (toDoc id .f) ) (stoCells xss),
+                              titleRow = [],
+                              titleCols = [],
+                              endCols = []}
+
+              tf = autoFormat td
+              f x = vdisp x
+--              f x | otherwise = [(vdisp min) ++ " - " ++ (vdisp max)]
 
 -- | display a single value  
 dispSingle ::  Disp a => a -> DisplayType -> String
