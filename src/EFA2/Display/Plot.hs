@@ -51,6 +51,13 @@ instance (DFromList2 (Data (v2 :> v1 :> Nil)) Val, DisplayTyp t) => SPlotData2 s
           (UnitScale s) = getUnitScale u
           
 
+class Plots a where          
+  sigPlots :: [a] -> IO ()
+
+instance  (DisplayTyp t, VFromList v1 Double, SPlotData Signal t (Data (v1 :> Nil)) Val) => Plots (TC s t  (Data (v1 :> Nil) Val))  where 
+  sigPlots x = plotLists [] (map sPlotData x)
+
+
 
 -- | Simple Signal Plotting -- without time axis --------------------------------------------------------------
 
@@ -114,7 +121,7 @@ instance (VFromList v2 (v1 Double),
                         XLabel ("Power [" ++ (show $ getDisplayUnit $ getDisplayType x) ++ "]"),
                         YLabel ("Efficiency [" ++ (show $ getDisplayUnit $ getDisplayType y) ++ "]"), 
                         -- ZLabel ("Efficiency [" ++ (show $ getDisplayUnit $ getDisplayType z) ++ "]"), 
-                        Size $ Scale 0.7]
+                        Size $ Scale 1]
 
 
 

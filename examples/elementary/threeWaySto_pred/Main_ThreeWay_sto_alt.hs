@@ -37,7 +37,7 @@ import EFA2.Utils.Utils
 
 import EFA2.Display.Report
 import EFA2.Display.DispSignal
-
+import EFA2.Display.DrawGraph
 
 
 -- | A. Generate System Topology definition
@@ -81,7 +81,7 @@ solve3Way sqTopo x y = interpretFromScratch (SingleRecord 0) 1 gd -- interprete 
   where givenEnv0 = emptyEnv { recordNumber = SingleRecord 0,
                                dtimeMap = M.fromList [ (DTimeIdx 0 0, sfromList [1.0]) ],
                                powerMap = M.fromList [ (PowerIdx 0 0 3 1, sfromList [x]),
-                                                       (PowerIdx 0 0 2 1, sfromList [0.6])],
+                                                       (PowerIdx 0 0 2 1, sfromList [0.06])],
                                fetaMap =  M.fromList [ (FEtaIdx  0 0 0 1, smap etaf), (FEtaIdx 0 0 1 0, undefined),
                                                        (FEtaIdx  0 0 1 2, smap (const 0.9)), (FEtaIdx 0 0 2 1, smap (const 0.9)),
                                                        (FEtaIdx  0 0 1 3, smap (const y)), (FEtaIdx 0 0 3 1, smap (const y)) ] }
@@ -89,12 +89,12 @@ solve3Way sqTopo x y = interpretFromScratch (SingleRecord 0) 1 gd -- interprete 
         givenEnv1 = emptyEnv { recordNumber = SingleRecord 0,
                                dtimeMap = M.fromList [ (DTimeIdx 1 0, sfromList [1.0]) ],
                                energyMap = M.fromList [ (EnergyIdx 1 0 3 1, sfromList [x] :: UTFSig) ],
-                               powerMap =  M.fromList [ (PowerIdx 1 0 2 1, sfromList [0.6]) ],
+                               powerMap =  M.fromList [ (PowerIdx 1 0 2 1, sfromList [0.06]) ],
                                fetaMap =   M.fromList [ (FEtaIdx 1 0 0 1, smap etaf), (FEtaIdx 1 0 1 0, smap etaf),
                                                         (FEtaIdx 1 0 1 2, smap (const 0.9)), (FEtaIdx 1 0 2 1, smap (const 0.9)),
                                                         (FEtaIdx 1 0 1 3, smap (const y)), (FEtaIdx 1 0 3 1, smap (const y)) ] }
         -- Variable Efficiency function at Source (backwards lookup)            
-        etaf x = (x+sqrt(x*x+4*x))/(2*x)
+        etaf x = 1/((x+sqrt(x*x+4*x))/(2*x))
 
         -- Generate Equations for both Sections
         (sqEnvs, ts') = makeAllEquations sqTopo [givenEnv0, givenEnv1]
@@ -150,8 +150,8 @@ main :: IO ()
 main = do
   let 
     -- define Variation
-    powers = [0.2,0.4 .. 1] :: [Val]
-    etas = [0.8,0.9 .. 1] :: [Val]
+    powers = [0.1,0.2 .. 0.7] :: [Val]
+    etas = [0.9,0.91 .. 1] :: [Val]
 
     -- generate Variation Grid
     (varP,varN) = genVariationMatrix powers etas
@@ -164,26 +164,56 @@ main = do
     storageEfficiency = sfromList2 varN :: Test2 (Typ A N Tt) Val 
     
     powerConsumptionS0 = getVarPower varEnvs (PowerIdx 0 0 2 1)
-    powerConsumptionS1 = getVarPower varEnvs (PowerIdx 0 0 6 5)
+    powerConsumptionS1 = getVarPower varEnvs (PowerIdx 1 0 6 5)
+    
+    powerInt = getVarPower varEnvs (PowerIdx 0 0 1 0)
+    energyInt = (getVarEnergy varEnvs (EnergyIdx 0 0 1 0)) -- .+  (makeDelta $ getVarEnergy varEnvs (EnergyIdx 1 0 1 0))
+    
     
     energySource = getVarEnergy varEnvs  (EnergyIdx 0 0 0 1) 
+    energyConsumption = (getVarEnergy varEnvs  (EnergyIdx 0 0 2 1)) .+  makeDelta (getVarEnergy varEnvs  (EnergyIdx 1 0 6 5)) 
     
-    energyConsumption = (getVarEnergy varEnvs  (EnergyIdx 0 0 2 1)) .+  makeDelta (getVarEnergy varEnvs  (EnergyIdx 0 0 6 5)) 
+    etaSYS =  energyConsumption./energySource 
+    etaSYS1 =  energyInt./energySource 
+    etaSYS2 =  energySource./energyInt 
     
-{- 
-    f (x,y) = (x, y, g (head $ stoList $ m `safeLookup` (EnergyIdx 0 0 0 1))
-                            (head $ stoList $ m `safeLookup` (EnergyIdx 0 0 2 1))
-                            (head $ stoList $ m `safeLookup` (EnergyIdx 1 0 6 5)))
-                            where m = energyMap $ variation sqTopo x y
-     
-    g e0001 e0021 e1021 = (e0021 + e1021)/e0001
--}
---  print m
+    lossSYS = energySource .- energyConsumption 
+    lossSYS1 = energySource .- energyInt 
+    lossSYS2 = energyInt .- energyConsumption 
+        
+ 
 --  drawTopologyX' sqTopo
+  drawTopology  sqTopo (head(head(varEnvs))) 
+  drawTopology  sqTopo (last(head(varEnvs))) 
+  drawTopology  sqTopo (head(last(varEnvs))) 
+  drawTopology  sqTopo (last(last(varEnvs))) 
+  
+  
+--  report [] ("powerConsumptionS0",powerConsumptionS0)  
+--  report [] ("powerConsumptionS1",powerConsumptionS1)  
+  report [] ("energyConsumption",energyConsumption)  
+  report [] ("energyInt",energyInt)  
+  report [] ("energySource",energySource)  
+  
+  report [] ("System Efficiency",  etaSYS)
+  report [] ("System1 Efficiency", etaSYS1)
+  report [] ("System2 Efficiency", etaSYS2)
+  
+  
 --  surfPlot "powerConsumptionS0" storagePower storageEfficiency powerConsumptionS0
 --  surfPlot "powerConsumptionS1" storagePower storageEfficiency powerConsumptionS1
-  report [] ("powerConsumptionS0",powerConsumptionS0)  
---  report [] ("powerConsumptionS1",powerConsumptionS1)  
   
 --  surfPlot "energyConsumption" storagePower storageEfficiency energyConsumption
     
+  surfPlot "System Efficiency" storagePower storageEfficiency etaSYS
+  surfPlot "System1 Efficiency" storagePower storageEfficiency etaSYS1
+  surfPlot "System2 Efficiency" storagePower storageEfficiency etaSYS2
+
+  surfPlot "System Loss" storagePower storageEfficiency lossSYS 
+  surfPlot "System1 Loss" storagePower storageEfficiency  lossSYS1 
+  surfPlot "System2 Loss" storagePower storageEfficiency  lossSYS2 
+  
+  let lossListSYS1 = toSigList lossSYS1
+      lossListSYS2 = toSigList lossSYS2
+  sigPlots [head lossListSYS1,  head lossListSYS2]
+  sigPlots [last lossListSYS1,  last lossListSYS2]

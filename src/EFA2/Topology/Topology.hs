@@ -161,49 +161,69 @@ mkStoreEqs recordNum (ins, outs) = startEq ++ eqs
         f (OutStore (_, l)) = sectionNLabel l
         startEq = k b
         k (InStore (nid, NLabel sec _ (InitStorage st))) =
-          [ mkVar (StorageIdx sec recordNum st) := mkVar (VarIdx sec recordNum InSum nid) ]
+          [ mkVar (StorageIdx sec recordNum st) := mkVar (VarIdx sec recordNum InSum nid) :* dt]
+          where dt = mkVar $ DTimeIdx sec recordNum
         k _ = []
         eqs = map (g . h) (pairs both)
         h (InStore x, y) = (x, y)
         h (OutStore x, y) = (x, y)
-        g ((nid, NLabel sec _ st), InStore (nid', NLabel sec' _ st')) = 
+
+        g ((nid, NLabel sec _ st), InStore (nid', NLabel sec' _ st')) = stnew := (v :* dt) :+ stold
+{-
           mkVar (StorageIdx sec' recordNum (getStorageNumber st')) := 
-            mkVar (VarIdx sec' recordNum InSum nid') :+ mkVar (StorageIdx sec recordNum (getStorageNumber st))
-        g ((nid, NLabel sec _ st), OutStore (nid', NLabel sec' _ st')) = 
+            (mkVar (VarIdx sec' recordNum InSum nid') :* dt)
+              :+ mkVar (StorageIdx sec recordNum (getStorageNumber st))
+-}
+          where stnew = mkVar $ StorageIdx sec' recordNum (getStorageNumber st')
+                stold = mkVar $ StorageIdx sec recordNum (getStorageNumber st)
+                v = mkVar $ VarIdx sec' recordNum InSum nid'
+                dt = mkVar $ DTimeIdx sec' recordNum
+
+        g ((nid, NLabel sec _ st), OutStore (nid', NLabel sec' _ st')) = stnew := Minus (v :* dt) :+ stold
+{-
           mkVar (StorageIdx sec' recordNum (getStorageNumber st')) := 
-            Minus (mkVar (VarIdx sec' recordNum OutSum nid')) :+ mkVar (StorageIdx sec recordNum (getStorageNumber st))
+            Minus (mkVar (VarIdx sec' recordNum OutSum nid') :* dt) :+ (mkVar (StorageIdx sec recordNum (getStorageNumber st)))
+-}
+          where stnew = mkVar $ StorageIdx sec' recordNum (getStorageNumber st')
+                stold = mkVar $ StorageIdx sec recordNum (getStorageNumber st)
+                v = mkVar $ VarIdx sec' recordNum OutSum nid'
+                dt = mkVar $ DTimeIdx sec' recordNum
 
 
 
 mkInStoreEqs :: Int -> InOutGraphFormat (LNode NLabel) -> [EqTerm]
 mkInStoreEqs recordNum (ins, n@(nid, NLabel sec _ _), outs@((o,_):_)) = (startEq:osEqs)
-  where startEq = mkVar (VarIdx sec recordNum InSum nid) := mkVar (EnergyIdx sec recordNum nid o)
+  where startEq = mkVar (VarIdx sec recordNum InSum nid) := mkVar (PowerIdx sec recordNum nid o)
         osEqs = map f (pairs outs)
-        f (x, y) = mkVar (EnergyIdx sec recordNum nid y') := 
-                     mkVar (EnergyIdx sec recordNum nid x') :+ (Minus (mkVar (EnergyIdx xs recordNum x' nid)))
+        f (x, y) = mkVar (PowerIdx sec recordNum nid y') := 
+                     mkVar (PowerIdx sec recordNum nid x') :+ (Minus (mkVar (PowerIdx xs recordNum x' nid)))
           where (x', NLabel xs _ _) = x
                 (y', _) = y
 mkInStoreEqs _ _ = []
 
 
 mkOutStoreEqs :: Int -> InOutGraphFormat (LNode NLabel) -> [EqTerm]
-mkOutStoreEqs recordNum (ins, n@(nid, NLabel sec _ _), o:_) = visumeq:xeqs ++ eieqs
+mkOutStoreEqs recordNum (ins, n@(nid, NLabel sec _ _), o:_) = visumeq:xeqs ++ pieqs
   where xis = map (makeVar XIdx) ins
-        eis = map (makeVar EnergyIdx) ins
+        --eis = map (makeVar EnergyIdx) ins
+        pis = map (makeVar PowerIdx) ins
         makeVar mkIdx (nid', l) = mkVar $ mkIdx (sectionNLabel l) recordNum nid' nid
 
-        visum = mkVar (VarIdx sec recordNum C nid)
-        visumeq = visum := add eis
+        --visum = mkVar (VarIdx sec recordNum St nid)
+        visum = mkVar (VarIdx sec recordNum InSum nid)
 
-        xeqs = zipWith g xis eis
+        visumeq = visum := add pis
+
+        xeqs = zipWith g xis pis
         g x e = x := e :* Recip visum
 
-        eis' = map (makeVar' EnergyIdx) ins
+        pis' = map (makeVar' PowerIdx) ins
         makeVar' mkIdx (nid', _) = mkVar $ mkIdx sec recordNum nid nid'
 
         outv = mkVar (VarIdx sec recordNum OutSum nid)
-        eieqs = zipWith h eis' xis
+        pieqs = zipWith h pis' xis
         h e x = e := x :* outv
+
 mkOutStoreEqs _ _ = []
 
 {-
@@ -347,3 +367,4 @@ makeDirTopology topo@(Topology _) = mkGraph ns es
           | AgainstDir <- flowDirection elabel = (y, x, elabel { flowDirection = WithDir })
           | otherwise = e
         ns = unique (concatMap (\(x, y, _) -> [(x,  fromJust (lab topo x)), (y, fromJust (lab topo y))]) es)
+
