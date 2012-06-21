@@ -39,9 +39,13 @@ instance DisplayTyp (Typ d UT p) where getDisplayType x = Typ_UT
 
 getDisplayTypName Typ_P = "Power"
 getDisplayTypName Typ_E = "Energy"
-getDisplayTypName Typ_X = "Splitting-Ratio"
-getDisplayTypName Typ_Y = "Collection-Ratio"
+getDisplayTypName Typ_X = "Split-Share"
+getDisplayTypName Typ_Y = "Collection-Share"
 getDisplayTypName Typ_N = "Efficiency"
+getDisplayTypName Typ_F = "Energy Flow"
+
+getDisplayTypName t = error ("Error in getDisplayTypName - no Pattern Match on Typ: " ++ show  t)
+
 
 
 -- | Function to choose display Unit per Type

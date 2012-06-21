@@ -46,8 +46,8 @@ getUnitScale Unit_UT = UnitScale 1
 data DisplayLength = Short | Middle | Long | Float 
 -- dispLength = Short
 -- dispLength = Middle
--- dispLength = Long
-dispLength = Float
+dispLength = Middle
+-- dispLength = Float
 
 -- ============ Setting - Switch global display length =============
 
@@ -56,9 +56,9 @@ data DisplayFormat = DisplayFormat String
 
 getDefaultFormat :: DisplayFormat
 getDefaultFormat = f dispLength
-  where f Long = DisplayFormat "%3.2f"
+  where f Short = DisplayFormat "%3.2f"
         f Middle = DisplayFormat "%5.3f"
-        f Short = DisplayFormat "%6.7f"
+        f Long = DisplayFormat "%6.7f"
         f Float = DisplayFormat "%6.7e"
 
 

@@ -88,22 +88,22 @@ instance SPlotData TestRow t (Data (v1 :> Nil)) Val => Plot (TC TestRow t  (Data
 -- | Plotting Signals against each other --------------------------------------------------------------
 
 class XYPlot a b where
-  xyplot :: a -> b -> IO ()
+  xyplot ::  String -> a -> b -> IO ()
   
 instance (DisplayTyp t, VFromList v1 Double) => XYPlot (TC Signal t (Data (v1 :> Nil) Val)) (TC Signal t (Data (v1 :> Nil) Val)) where 
-  xyplot x y = plotPath [LineStyle 1 [PointSize 2]] (zip (sPlotData x) (sPlotData y))
+  xyplot ti x y = plotPath [Title ti,LineStyle 1 [PointSize 2], XLabel $ genAxLabel x,YLabel $ genAxLabel y] (zip (sPlotData x) (sPlotData y))
 
 class XYPlots a b where
-  xyplots :: a -> [b] -> IO ()
+  xyplots :: String -> a -> [b] -> IO ()
   
 instance (DisplayTyp t1,DisplayTyp t2, VFromList v1 Double, VFromList v2 Double) => XYPlots (TC s1 t1 (Data (v2 :> Nil) Val)) (TC s2 t2 (Data (v1 :> Nil) Val)) where 
-  xyplots x ys = plotPaths [LineStyle 1 [PointSize 2], XLabel (getDisplayTypName $ getDisplayType x), YLabel (getDisplayTypName $ getDisplayType (head ys))] (map (\ y -> zip (sPlotData x) (sPlotData y)) ys)
+  xyplots ti x ys = plotPaths [Title ti,LineStyle 1 [PointSize 2], XLabel $ genAxLabel x,YLabel $ genAxLabel $ head ys] (map (\ y -> zip (sPlotData x) (sPlotData y)) ys)
 
 class XYPlots2 a b where
-  xyplots2 :: [a] -> [b] -> IO ()
+  xyplots2 ::  String -> [a] -> [b] -> IO ()
   
 instance (DisplayTyp t1,DisplayTyp t2, VFromList v1 Double, VFromList v2 Double) => XYPlots2 (TC s1 t1 (Data (v2 :> Nil) Val)) (TC s2 t2 (Data (v1 :> Nil) Val)) where 
-  xyplots2 xs ys = plotPaths [LineStyle 1 [PointSize 2], XLabel (getDisplayTypName $ getDisplayType (head xs)), YLabel (getDisplayTypName $ getDisplayType (head ys))] (zipWith (\ x y -> zip (sPlotData x) (sPlotData y)) xs ys)
+  xyplots2 ti xs ys = plotPaths [Title ti,LineStyle 1 [PointSize 2], XLabel $ genAxLabel $ head xs,YLabel $ genAxLabel $ head ys] (zipWith (\ x y -> zip (sPlotData x) (sPlotData y)) xs ys)
 
 -- | Plotting Signals against each other --------------------------------------------------------------
 class SurfPlot a b c where
@@ -127,10 +127,10 @@ instance (VFromList v2 (v1 Double),
           DisplayTyp t3) => SurfPlot (TC s1 t1 (Data (v2 :> v1 :> Nil) Val)) (TC s2 t2 (Data (v3 :> v4 :> Nil) Val)) (TC s3 t3 (Data (v5 :> v6 :> Nil) Val)) where
   surfPlot ti x y z = plotMesh3d (plotAttrs) [Plot3dType Surface] (L.zipWith3 zip3 (stoList2 x) (stoList2 y) (stoList2 z))
     where
-      plotAttrs        = [Title ("Surface -" ++ ti), 
+      plotAttrs        = [Title ti, 
                         Grid $ Just [], 
-                        XLabel ((getDisplayTypName $ getDisplayType x) ++ " [" ++ (show $ getDisplayUnit $ getDisplayType x) ++ "]"),
-                        YLabel ((getDisplayTypName $ getDisplayType y) ++ " [" ++ (show $ getDisplayUnit $ getDisplayType y) ++ "]"), 
+                        XLabel $ genAxLabel x,
+                        YLabel $ genAxLabel y,
                         -- ZLabel ("Efficiency [" ++ (show $ getDisplayUnit $ getDisplayType z) ++ "]"), 
                         Size $ Scale 1]
 
@@ -173,3 +173,7 @@ instance RPlot SequPwrRecord where
   rPlot (sqName, (SequData rs)) = mapM_ rPlot $ zip nameList rs
     where
       nameList = map (\ x -> "PowerRecord of Section: " ++ show x) [1..length rs]  
+
+
+genAxLabel :: (DisplayTyp t) => TC s t (c d) -> String 
+genAxLabel x = (getDisplayTypName $ getDisplayType x) ++ " [" ++ (show $ getDisplayUnit $ getDisplayType x) ++ "]"

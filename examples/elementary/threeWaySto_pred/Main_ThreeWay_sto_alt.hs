@@ -160,7 +160,7 @@ main = do
     -- | A. -- Define Grid and solve system ------------------------------------    
     
     -- define Variation
-    yIndir = [0.1,0.2 .. 1] :: [Val]
+    yIndir = [0,0.2 .. 0.9] :: [Val]
     etas = [0.6,0.7 .. 1] :: [Val]
 
     -- generate Variation Grid
@@ -193,7 +193,7 @@ main = do
     -- system efficiencie
     etaSYS =  energyConsumption./energySource 
     etaSYS1 =  energyInt./energySource 
-    etaSYS2 =  energySource./energyInt 
+    etaSYS2 =  energyConsumption./energyInt 
     
     -- eta1 efficiency check
     pOne = toScalar 1 :: TC Scalar (Typ A P Tt) (Data Nil Val) 
@@ -235,37 +235,40 @@ main = do
   report [] ("System1 Efficiency", etaSYS1)
   report [] ("System2 Efficiency", etaSYS2)
     
-  -- | F. -- Surface Plots
-  
-  
+  -- | F. -- Surface & Trend Plots
     
-
-
-  
+  -- additional dataFormat for trend plots
   let lossListSYS1 = toSigList lossSYS1
       lossListSYS2 = toSigList lossSYS2
-  sigPlots [head lossListSYS1,  head lossListSYS2]
-  sigPlots [last lossListSYS1,  last lossListSYS2]
+      lossListSYS = toSigList lossSYS
+--  sigPlots [head lossListSYS1,  head lossListSYS2]
+--  sigPlots [last lossListSYS1,  last lossListSYS2]
+      
   
   let etaListSYS = toSigList etaSYS
       etaListSYS1 = toSigList etaSYS1
       powerListSource = toSigList powerSource
       powerListInt = toSigList powerInt
+  
+  
+  xyplots "SystemLoss" (sfromList yIndir :: Test1 (Typ A Y Tt) Val) (lossListSYS)
+      
+  xyplots "SystemLoss1 & SystemLoss2"(sfromList yIndir :: Test1 (Typ A Y Tt) Val) (lossListSYS1 ++ lossListSYS2)
        
-  surfPlot "System Loss" storagePerc storageEfficiency lossSYS 
+--  surfPlot "System Loss" storagePerc storageEfficiency lossSYS 
   surfPlot "System1 Loss" storagePerc storageEfficiency  lossSYS1 
   surfPlot "System2 Loss" storagePerc storageEfficiency  lossSYS2 
   
-  xyplots (sfromList yIndir :: Test1 (Typ A Y Tt) Val) etaListSYS
-  xyplots2 powerListInt etaListSYS1
+  xyplots "System Efficiency" (sfromList yIndir :: Test1 (Typ A Y Tt) Val) etaListSYS
+--  xyplots2 powerListInt etaListSYS
 
   surfPlot "System Efficiency" storagePerc storageEfficiency etaSYS
   surfPlot "System1 Efficiency" storagePerc storageEfficiency etaSYS1
   surfPlot "System2 Efficiency" storagePerc storageEfficiency etaSYS2
   
-  surfPlot "energyFlowShare" storagePerc storageEfficiency storagePerc
+  surfPlot "Energy Flow Share" storagePerc storageEfficiency storagePerc
 
-  surfPlot "energyConsumption" storagePerc storageEfficiency energyConsumption
+  surfPlot "Energy Consumption" storagePerc storageEfficiency energyConsumption
 --  surfPlot "powerConsumptionS1" storagePerc storageEfficiency powerConsumptionS1
 --  surfPlot "powerConsumptionS0" storagePerc storageEfficiency powerConsumptionS0  
     
