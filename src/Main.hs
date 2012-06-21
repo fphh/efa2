@@ -48,7 +48,7 @@ import EFA2.Example.Dreibein
 --import EFA2.Example.Dreibein3
 
 symbolic :: Topology -> Envs EqTerm
-symbolic g = res
+symbolic g = mapEqTermEnv (setEqTerms (emptyEnv { dxMap = dx1eq })) res
   where
 
         envs0 = emptyEnv { recordNumber = SingleRecord 0,
@@ -77,7 +77,7 @@ symbolic g = res
         res = interpretEqTermFromScratch ts
 
 numeric :: Topology -> Envs Sc
-numeric g = trace ("---------\n" ++ showEqTerms ts1o ++ "\n------\n") res
+numeric g =  trace ("---------\n" ++ showEqTerms ts1o ++ "\n------\n") res
   where envs0 = emptyEnv { recordNumber = SingleRecord 0,
                            powerMap = power0num,
                            dtimeMap = dtimes0num,
@@ -135,7 +135,8 @@ deltaEnv g = res1 `minusEnv` res0
 class MyShow a where
       myshow :: a -> String
 
-
+instance MyShow Int where
+         myshow = show
 
 instance MyShow Val where
          myshow = printf "%.6f"
@@ -186,7 +187,7 @@ main = do
       sumdetails = M.map sum details
 
       control = dpowerMap (deltaEnv g)
-      vars = M.map (map (mkVarSet isStaticVar)) detailsSym
+      vars = M.map (length . map (mkVarSet isStaticVar)) detailsSym
 
   putStrLn "\n== Control delta environment (later env - former env, computed independently) =="
   putStrLn (format $ M.toList control)
@@ -213,15 +214,10 @@ main = do
   putStrLn "\n== Sums of numeric additive terms =="
   putStrLn (format $ M.toList sumdetails)
 
-  putStrLn "\n== Variables per stack term =="
+  putStrLn "\n== Additive terms per stack =="
   putStrLn (format $ M.toList vars)
 
+  --print (mapEqTermEnv showEqTerm sym)
+  drawTopology g ((mapEqTermEnv ((:[]) . simplify) sym) { recordNumber = SingleRecord 0 })
+  drawDeltaTopology g ((mapEqTermEnv additiveTerms sym) { recordNumber = SingleRecord 1 })
 
-{-
-dP_0.1_0.1 = 0.500000
-dP_0.1_1.0 = 0.750000
-dP_0.1_1.2 = -0.015000
-dP_0.1_1.3 = 0.765000
-dP_0.1_2.1 = 0.082500
-dP_0.1_3.1 = 0.832500
--}

@@ -146,10 +146,10 @@ eta1eq = M.fromList [ (FEtaIdx 0 1 1 0, const $ FEta (FEtaIdx 0 1 1 0)),
 x1eq :: XMap EqTerm
 x1eq = M.fromList []
 
-dx1eq = M.fromList [ (DXIdx 0 1 0 1, DX (DXIdx 0 1 0 1)),
-                     (DXIdx 0 1 1 0, DX (DXIdx 0 1 1 0)),
-                     (DXIdx 0 1 1 2, DX (DXIdx 0 1 1 2)),
-                     (DXIdx 0 1 2 1, DX (DXIdx 0 1 2 1)) ]
+dx1eq = M.fromList [ (DXIdx 0 1 0 1, Const 0.0),
+                     (DXIdx 0 1 1 0, Const 0.0),
+                     (DXIdx 0 1 1 2, Const 0.0),
+                     (DXIdx 0 1 2 1, Const 0.0) ]
 
 deta1eq :: DEtaMap EqTerm
 deta1eq = M.fromList [ (DEtaIdx 0 1 1 0, const $ DEta (DEtaIdx 0 1 1 0)), 

@@ -144,5 +144,5 @@ main = do
   --drawTopologyX' sqTopo
   --plotMesh3d [] [] res
   --print (head res)
-  --mapM_ (drawTopology sqTopo) res
-  drawTopology sqTopo (head res)
+  mapM_ (drawTopology sqTopo) res
+  --drawTopology sqTopo (head res)

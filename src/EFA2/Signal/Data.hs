@@ -214,7 +214,12 @@ class DFromList c d where
 instance  (VFromList v d) => DFromList (Data (v :> Nil)) d where  
   dfromList x = Data $ D1 $ vfromList x
   dtoList (Data (D1 x)) = vtoList x
-  
+
+{-
+instance DFromList (Data Nil) d where  
+  dfromList [x] = Data $ D0 x
+  dtoList (Data (D0 x)) = [x]
+  -}
 
 class DFromList2 c d where
   dfromList2 :: [[d]] -> c d

@@ -136,6 +136,8 @@ infix 6 &+, &-
 
 -- generic
 type Scal typ a = TC Scalar typ (DVal a)
+
+type Sc = Scal (Typ UT UT UT) Val
           
 type Sig1 typ a = TC Signal typ (UVec a)
 type FSig1 typ a = TC FSignal typ (UVec a)

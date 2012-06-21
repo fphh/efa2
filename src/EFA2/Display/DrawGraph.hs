@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, UndecidableInstances, TypeSynonymInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleInstances, UndecidableInstances, TypeSynonymInstances, MultiParamTypeClasses, ScopedTypeVariables, FlexibleContexts #-}
 
 module EFA2.Display.DrawGraph where
 
@@ -129,34 +129,78 @@ instance Show Line where
 
 -- The argument t is for node labels. Until now, it is not used.
 class DrawTopology a where
-      drawTopology :: Topology -> Envs a ->  IO ()
+      drawTopology :: Topology -> Envs a -> IO ()
+      drawDeltaTopology :: Topology -> Envs a -> IO ()
 
 instance DrawTopology [Double] where
-         drawTopology = drawAbsTopology f formatStCont
+         drawTopology = drawAbsTopology f formatStCont tshow
            where f (x, Just ys) = show x ++ " = " ++ (concatMap (printf "%.6f    ") ys)
                  f (x, Nothing) = show x ++ " = ♥"
                  formatStCont (Just ys) = concatMap (printf "%.6f    ") ys
                  formatStCont Nothing = "♥"
+                 tshow dt s r = show $ dt `safeLookup` (DTimeIdx s r)
+
+         drawDeltaTopology = drawDeltaTopology' f formatStCont tshow
+           where -- f (x, Just ys) = showDelta x ++ " = [ " ++ L.intercalate ", " (map showEqTerm ys) ++ " ]"
+                 f (x, Just ys) = showDelta x ++ " = \n" ++  L.intercalate "\n" (map show ys)
+
+                 f (x, Nothing) = showDelta x ++ " = ♥"
+                 formatStCont (Just ys) = "[ " ++ L.intercalate ", " (map show ys) ++ " ]"
+                 formatStCont Nothing = "♥"
+                 --tshow dt s r = showEqTerm $ dt `safeLookup` (DTimeIdx s r)
+
+                 showDelta (ELine u v) = "de_" ++ show u ++ "_" ++ show v
+                 showDelta (XLine u v) = "dx_" ++ show u ++ "_" ++ show v
+                 showDelta (NLine u v) = "dn_" ++ show u ++ "_" ++ show v
+                 showDelta (ErrorLine str) = str
+                 tshow dt s r = show $ dt `safeLookup` (DTimeIdx s r)
 
 instance (Integral a) => DrawTopology [Ratio a] where
-         drawTopology = drawAbsTopology f formatStCont
+         drawTopology = drawAbsTopology f formatStCont tshow
            where f (x, Just ys) = show x ++ " = " ++ (concatMap show ys)
                  f (x, Nothing) = show x ++ " = ♥"
                  formatStCont (Just ys) = concatMap show ys
                  formatStCont Nothing = "♥"
+                 tshow dt s r = show $ dt `safeLookup` (DTimeIdx s r)
 
 instance DrawTopology [InTerm Val] where
-         drawTopology = drawAbsTopology f formatStCont
+         drawTopology = drawAbsTopology f formatStCont tshow
            where f (x, Just ys) = show x ++ " = " ++ (concatMap showInTerm ys)
                  f (x, Nothing) = show x ++ " = ♥"
                  formatStCont (Just ys) = concatMap showInTerm ys
                  formatStCont Nothing = "♥"
+                 tshow dt s r = showInTerms $ dt `safeLookup` (DTimeIdx s r)
+
+instance Num EqTerm
+
+instance DrawTopology [EqTerm] where
+         drawTopology = drawAbsTopology f formatStCont tshow
+           where f (x, Just ys) = show x ++ " = " ++ showEqTerms ys
+                 f (x, Nothing) = show x ++ " = ♥"
+                 formatStCont (Just ys) = showEqTerms ys
+                 formatStCont Nothing = "♥"
+                 tshow dt s r = showEqTerms $ dt `safeLookup` (DTimeIdx s r)
+
+         drawDeltaTopology = drawDeltaTopology' f formatStCont tshow
+           where -- f (x, Just ys) = showDelta x ++ " = [ " ++ L.intercalate ", " (map showEqTerm ys) ++ " ]"
+                 f (x, Just ys) = showDelta x ++ " = \n" ++ showEqTerms ys
+
+                 f (x, Nothing) = showDelta x ++ " = ♥"
+                 formatStCont (Just ys) = "[ " ++ L.intercalate ", " (map showEqTerm ys) ++ " ]"
+                 formatStCont Nothing = "♥"
+                 --tshow dt s r = showEqTerm $ dt `safeLookup` (DTimeIdx s r)
+
+                 showDelta (ELine u v) = "de_" ++ show u ++ "_" ++ show v
+                 showDelta (XLine u v) = "dx_" ++ show u ++ "_" ++ show v
+                 showDelta (NLine u v) = "dn_" ++ show u ++ "_" ++ show v
+                 showDelta (ErrorLine str) = str
+                 tshow dt s r = showEqTerms $ dt `safeLookup` (DTimeIdx s r)
 
 
-drawAbsTopology :: (Show a, Num a, Ord a) => ((Line, Maybe [a]) -> String) -> (Maybe [a] -> String) -> Topology -> Envs [a] ->  IO ()
-drawAbsTopology f content (Topology g) (Envs rec e de p dp fn dn dt x dx v st) = printGraph g rec tshow nshow eshow
+--drawAbsTopology :: (Show a, Num a, Ord a) => ((Line, Maybe [a]) -> String) -> (Maybe [a] -> String) -> Topology -> Envs [a] -> IO ()
+drawAbsTopology f content tshow (Topology g) (Envs rec e de p dp fn dn dt x dx v st) = printGraph g rec (tshow dt) nshow eshow
   where eshow ps = L.intercalate "\n" $ map f $ mkLst rec ps
-        tshow s r = show $ dt M.! (DTimeIdx s r)
+        --tshow' = tshow dt
         nshow (num, NLabel sec nid ty) = 
           "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\n" ++
           "Type: " ++ show ty ++ stContent rec ty
@@ -180,27 +224,87 @@ drawAbsTopology f content (Topology g) (Envs rec e de p dp fn dn dt x dx v st) =
                           (ELine vid uid, M.lookup (EnergyIdx vsec rec vid uid) e) ]
           where NLabel usec _ _ = fromJust $ lab g uid
                 NLabel vsec _ _ = fromJust $ lab g vid
-                ndirlab WithDir = (NLine vid uid, M.lookup (FEtaIdx vsec rec vid uid) fn <*> Just [1])
-                ndirlab _ = (NLine uid vid, M.lookup (FEtaIdx usec rec uid vid) fn <*> Just [1])
+                ndirlab WithDir = (NLine uid vid, M.lookup (FEtaIdx vsec rec vid uid) fn <*> Just [1])
+                ndirlab _ = (NLine vid uid, M.lookup (FEtaIdx usec rec uid vid) fn <*> Just [1])
         mkLst _ _ = [ (ErrorLine "Problem with record number", Nothing) ]
+
+
+--drawDeltaTopology' :: (Show a, Num a, Ord a) => ((Line, Maybe [a]) -> String) -> (Maybe [a] -> String) -> Topology -> Envs [a] -> IO ()
+drawDeltaTopology' f content tshow (Topology g) (Envs rec e de p dp fn dn dt x dx v st) = printGraph g rec (tshow dt) nshow eshow
+  where eshow ps = L.intercalate "\n" $ map f $ mkLst rec ps
+        -- tshow s r = show $ dt `safeLookup` (DTimeIdx s r)
+        nshow (num, NLabel sec nid ty) = 
+          "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\n" ++
+          "Type: " ++ show ty ++ stContent rec ty
+            where stContent (SingleRecord rec) (InitStorage n) 
+                    = "\nContent: " ++ content (M.lookup (StorageIdx sec rec n) st)
+                  stContent (SingleRecord rec) (Storage n) = "\nContent: " ++ content (M.lookup (StorageIdx sec rec n) st)
+                  stContent rn (InitStorage n) = "\nContent: Problem with record number: " ++ show rn
+                  stContent rn (Storage n) = "\nContent: Problem with record number: " ++ show rn
+                  stContent _ _ = ""
+
+        node n = nodeNLabel (fromJust (lab g n))
+        mkLst (SingleRecord rec) (uid, vid, l)
+          | isOriginalEdge l = [ (ELine uid vid, M.lookup (DEnergyIdx usec rec uid vid) de), 
+                                 (XLine uid vid, M.lookup (DXIdx usec rec uid vid) dx),
+                                 ndirlab (flowDirection l),
+                                 (XLine vid uid, M.lookup (DXIdx vsec rec vid uid) dx),
+                                 (ELine vid uid, M.lookup (DEnergyIdx vsec rec vid uid) de) ]
+          | isInnerStorageEdge l = [ (ELine vid uid, M.lookup (DEnergyIdx vsec rec vid uid) de) ]
+          | otherwise = [ (ELine uid vid, M.lookup (DEnergyIdx usec rec uid vid) de),
+                          (XLine uid vid, M.lookup (DXIdx usec rec uid vid) dx),
+                          (ELine vid uid, M.lookup (DEnergyIdx vsec rec vid uid) de) ]
+          where NLabel usec _ _ = fromJust $ lab g uid
+                NLabel vsec _ _ = fromJust $ lab g vid
+                ndirlab WithDir = (NLine uid vid, M.lookup (DEtaIdx vsec rec vid uid) dn <*> Just [1])
+                ndirlab _ = (NLine vid uid, M.lookup (DEtaIdx usec rec uid vid) dn <*> Just [1])
+        mkLst _ _ = [ (ErrorLine "Problem with record number", Nothing) ]
+
 
 
 instance DrawTopology UTFSig where
          drawTopology = drawAbsTopology' f formatStCont
-           where f (x@(ELine _ _), Just (TC ys)) = show x ++ " = " ++ sdisp (TC ys :: FSig)
-                 f (x@(XLine _ _), Just (TC ys)) = show x ++ " = " ++ sdisp (TC ys :: FSig1 (Typ A X Tt) Val)
-                 f (x@(NLine _ _), Just (TC ys)) = show x ++ " = " ++ sdisp (TC ys :: FSig1 (Typ A N Tt) Val)
+           where f (x@(ELine _ _), Just (TC ys)) = show x ++ " = " ++ sdisp (TC ys :: UTFSig)
+                 f (x@(XLine _ _), Just (TC ys)) = show x ++ " = " ++ sdisp (TC ys :: UTFSig)
+                 f (x@(NLine _ _), Just (TC ys)) = show x ++ " = " ++ sdisp (TC ys :: UTFSig)
                  f (ErrorLine str, _) = str
                  f (x, Nothing) = show x ++ " = ♥"
                  formatStCont (Just ys) = sdisp ys
                  formatStCont Nothing = "♥"
 
 
-drawAbsTopology' :: ((Line, Maybe UTFSig) -> String) -> (Maybe UTFSig -> String) -> Topology -> Envs UTFSig ->  IO ()
+instance DrawTopology Sc where
+         drawTopology = drawAbsTopology' f formatStCont
+           where f (x@(ELine _ _), Just (TC ys)) = show x ++ " = " ++ sdisp (TC ys :: Sc)
+                 f (x@(XLine _ _), Just (TC ys)) = show x ++ " = " ++ sdisp (TC ys :: Sc)
+                 f (x@(NLine _ _), Just (TC ys)) = show x ++ " = " ++ sdisp (TC ys :: Sc)
+                 f (ErrorLine str, _) = str
+                 f (x, Nothing) = show x ++ " = ♥"
+                 --formatStCont (Just ys) = sdisp ys
+                 formatStCont Nothing = "♥"
+
+         drawDeltaTopology = drawDeltaTopologyD f formatStCont
+           where -- f (x, Just ys) = showDelta x ++ " = [ " ++ L.intercalate ", " (map showEqTerm ys) ++ " ]"
+                 f (x, Just ys) = showDelta x ++ " = " ++ sdisp ys
+
+                 f (x, Nothing) = showDelta x ++ " = ♥"
+                 formatStCont (Just ys) = sdisp ys
+                 formatStCont Nothing = "♥"
+                 --tshow dt s r = showEqTerm $ dt `safeLookup` (DTimeIdx s r)
+
+                 showDelta (ELine u v) = "de_" ++ show u ++ "_" ++ show v
+                 showDelta (XLine u v) = "dx_" ++ show u ++ "_" ++ show v
+                 showDelta (NLine u v) = "dn_" ++ show u ++ "_" ++ show v
+                 showDelta (ErrorLine str) = str
+                -- tshow dt s r = showEqTerms $ dt `safeLookup` (DTimeIdx s r)
+
+
+drawAbsTopology' :: forall s t a. SDisplay (TC s t a) =>
+                  ((Line, Maybe (TC s t a)) -> String) -> (Maybe (TC s t a) -> String) -> Topology -> Envs (TC s t a) ->  IO ()
 drawAbsTopology' f content (Topology g) (Envs rec e de p dp fn dn dt x dx v st) = printGraph g rec tshow nshow eshow
   where eshow ps = L.intercalate "\n" $ map f $ mkLst rec ps
         tshow s r = case M.lookup (DTimeIdx s r) dt of
-                         Just (TC ts) -> sdisp (TC ts :: FSig1 (Typ D T Tt) Val)
+                         Just (TC ts) -> sdisp (TC ts :: TC s t a)
                          Nothing -> "♥"
         nshow (num, NLabel sec nid ty) = 
           "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\n" ++
@@ -226,58 +330,49 @@ drawAbsTopology' f content (Topology g) (Envs rec e de p dp fn dn dt x dx v st) 
                 NLabel vsec _ _ = fromJust $ lab g vid
                 e1 = M.lookup (EnergyIdx usec rec uid vid) e
                 e2 = M.lookup (EnergyIdx vsec rec vid uid) e
-                ndirlab AgainstDir = (NLine vid uid, M.lookup (FEtaIdx vsec rec vid uid) fn <*> e1)
-                ndirlab _ = (NLine uid vid, M.lookup (FEtaIdx usec rec uid vid) fn <*> e2)
+                ndirlab WithDir = (NLine uid vid , M.lookup (FEtaIdx usec rec uid vid) fn <*> e2)
+                ndirlab _ = (NLine vid uid, M.lookup (FEtaIdx vsec rec vid uid) fn <*> e1)
         mkLst _ _ = [ (ErrorLine "No single record number!", Nothing) ]
 
-{-
-instance DrawTopology InTerm where
-         drawTopology = drawAbsTopology f
-           where f (PLine, es) = "p = " ++ (L.intercalate " | " $ map showInTerm es)
-                 f (XLine, e:_) = "x = " ++ showInTerm e
-                 f (NLine, e:_) = "n = " ++ showInTerm e
- 
--}
 
-{-
-instance DrawTopology InTerm where
-         drawTopology = drawDiffTopology f
-           where f (PLine, es) = "p = " ++ (L.intercalate " | " $ map showInTerm es)
-                 f (XLine, e:_) = "x = " ++ showInTerm e
-                 f (NLine, e:_) = "n = " ++ showInTerm e
- -}
+drawDeltaTopologyD :: forall s t a. SDisplay (TC s t a) =>
+                  ((Line, Maybe (TC s t a)) -> String) -> (Maybe (TC s t a) -> String) -> Topology -> Envs (TC s t a) ->  IO ()
+drawDeltaTopologyD f content (Topology g) (Envs rec e de p dp fn dn dt x dx v st) = printGraph g rec tshow nshow eshow
+  where eshow ps = L.intercalate "\n" $ map f $ mkLst rec ps
+        tshow s r = case M.lookup (DTimeIdx s r) dt of
+                         Just (TC ts) -> sdisp (TC ts :: TC s t a)
+                         Nothing -> "♥"
+        nshow (num, NLabel sec nid ty) = 
+          "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\n" ++
+          "Type: " ++ show ty ++ stContent rec ty
+            where stContent (SingleRecord rec) (InitStorage n) = "\nContent: " ++ content (M.lookup (StorageIdx sec rec n) st)
+                  stContent (SingleRecord rec) (Storage n) = "\nContent: " ++ content (M.lookup (StorageIdx sec rec n) st)
+                  stContent rn (InitStorage n) = "\nContent: Problem with record number: " ++ show rn
+                  stContent rn (Storage n) = "\nContent: Problem with record number: " ++ show rn
+                  stContent _ _ = ""
 
-{-
-drawDiffTopology :: (Arith a, Show a) => ((Line, [a]) -> String) -> t -> TheGraph [a] -> DiffEnv [a] -> M.Map EnergyIdx [a] ->  IO ()
-drawDiffTopology f nenv (TheGraph g _) (DiffEnv dpenv deenv eenv xenv) penv = printGraph g show eshow
-  where penv' = mkEnv $ mkEnergyEnv penv
-        eshow ps = L.intercalate "\n" $ map f $ mkLst ps
-        mkLst (x, y) = [ (PLine, penv' (EnergyIdx x y)), 
-                         (XLine, xenv (XIdx x y)),
-                         (NLine, eenv (EtaIdx x y)),
-                         (XLine, xenv (XIdx y x)),
-                         (PLine, penv' (EnergyIdx y x)) ]
+        node n = nodeNLabel (fromJust (lab g n))
+        mkLst (SingleRecord rec) (uid, vid, l)
+          | isOriginalEdge l = [ (ELine uid vid, M.lookup (DEnergyIdx usec rec uid vid) de), 
+                                 (XLine uid vid, M.lookup (DXIdx usec rec uid vid) dx),
+                                 ndirlab (flowDirection l),
+                                 (XLine vid uid, M.lookup (DXIdx vsec rec vid uid) dx),
+                                 (ELine vid uid, M.lookup (DEnergyIdx vsec rec vid uid) de) ]
+          | isInnerStorageEdge l = [ (ELine vid uid, M.lookup (DEnergyIdx vsec rec vid uid) de) ]
+          | otherwise = [ (ELine uid vid, M.lookup (DEnergyIdx usec rec uid vid) de),
+                          (XLine uid vid, M.lookup (DXIdx usec rec uid vid) dx),
+                          (ELine vid uid, M.lookup (DEnergyIdx vsec rec vid uid) de) ]
+          where NLabel usec _ _ = fromJust $ lab g uid
+                NLabel vsec _ _ = fromJust $ lab g vid
+                e1 = M.lookup (DEnergyIdx usec rec uid vid) de
+                e2 = M.lookup (DEnergyIdx vsec rec vid uid) de
+                ndirlab WithDir = (NLine uid vid , M.lookup (DEtaIdx usec rec uid vid) dn <*> e2)
+                ndirlab _ = (NLine vid uid, M.lookup (DEtaIdx vsec rec vid uid) dn <*> e1)
+        mkLst _ _ = [ (ErrorLine "No single record number!", Nothing) ]
 
--}
 
-{-
-drawDependencyGraph :: Gr EqTerm () -> IO ()
-drawDependencyGraph g = printGraph g nshow (const "")
-  where m = M.fromList $ labNodes g
-        nshow (x, _) = show x ++ ": " ++ showEqTerm (m M.! x)
-       -- x = nmap nshow g
--}
 
-{-
-drawDependencyGraphTransClose :: TheGraph t -> [(EnergyIdx, b)] -> IO ()
-drawDependencyGraphTransClose theGraph@(TheGraph g _) given = printGraph (transClose g') nshow (const "")
-  where gvs = give $ map (Energy . fst) given
-        g' = makeDependencyGraph theGraph gvs
-        m = M.fromList $ labNodes g'
-        nshow x = show x ++ ": " ++ showEqTerm (m M.! x)
-
--}
-
+-------------------------------------------------------------------------------------------
 
 newtype Async a = Async (MVar a)
 

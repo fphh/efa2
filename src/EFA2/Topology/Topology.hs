@@ -128,16 +128,23 @@ mkPowerEqs :: Int -> Topology -> [EqTerm]
 mkPowerEqs rec topo = concat $ mapGraph (mkPEqs rec) topo
 
 mkPEqs :: Int -> ([LNode NLabel], LNode NLabel, [LNode NLabel]) -> [EqTerm]
-mkPEqs rec (ins, n@(nid, NLabel sec _ _), outs) = ieqs ++ oeqs
-  where dt = DTime $ DTimeIdx sec rec
+mkPEqs rec (ins, n@(nid, NLabel sec _ _), outs) = ieqs ++ oeqs -- ++ dieqs ++ doeqs
+  where makeVar mkIdx (nid', _) = mkVar $ mkIdx sec rec nid nid'
+        dt = DTime $ DTimeIdx sec rec
         eis = map (makeVar EnergyIdx) ins
         eos = map (makeVar EnergyIdx) outs
+        --deis = map (makeVar DEnergyIdx) ins
+        --deos = map (makeVar DEnergyIdx) outs
         pis = map (makeVar PowerIdx) ins
         pos = map (makeVar PowerIdx) outs
-        makeVar mkIdx (nid', _) = mkVar $ mkIdx sec rec nid nid'
+        --dpis = map (makeVar DPowerIdx) ins
+        --dpos = map (makeVar DPowerIdx) outs
+        
         ieqs = zipWith f eis pis
         oeqs = zipWith f eos pos
-        f e p = e := p :* dt 
+        --dieqs = zipWith f deis dpis
+        --doeqs = zipWith f deos dpos
+        f e p = e := p :* dt
 
 
 mkIntersectionEqs :: Int -> Topology -> [EqTerm]
@@ -367,4 +374,5 @@ makeDirTopology topo@(Topology _) = mkGraph ns es
           | AgainstDir <- flowDirection elabel = (y, x, elabel { flowDirection = WithDir })
           | otherwise = e
         ns = unique (concatMap (\(x, y, _) -> [(x,  fromJust (lab topo x)), (y, fromJust (lab topo y))]) es)
+
 

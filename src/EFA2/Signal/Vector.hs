@@ -76,7 +76,6 @@ instance (Ord d) => VSingleton [] d where
          vall = all
          vany = any
 
-
 ------------------------------------------------------------
 -- | Functor
 class VWalker vec a b where
