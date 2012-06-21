@@ -134,11 +134,9 @@ main = do
     drawTopology graph num0,
     drawTopology graph num1,
     drawTopology graph symSimple,
-    drawDeltaTopology graph denv ]
-{-
+    drawDeltaTopology graph denv,
     drawDeltaTopology graph symSimple,
     drawDeltaTopology graph symSimpleNum ]
--}
 
   print (mapEqTermEnv (length . additiveTerms . simplify) sym)
 
