@@ -99,6 +99,12 @@ class XYPlots a b where
 instance (DisplayTyp t1,DisplayTyp t2, VFromList v1 Double, VFromList v2 Double) => XYPlots (TC s1 t1 (Data (v2 :> Nil) Val)) (TC s2 t2 (Data (v1 :> Nil) Val)) where 
   xyplots x ys = plotPaths [LineStyle 1 [PointSize 2], XLabel (getDisplayTypName $ getDisplayType x), YLabel (getDisplayTypName $ getDisplayType (head ys))] (map (\ y -> zip (sPlotData x) (sPlotData y)) ys)
 
+class XYPlots2 a b where
+  xyplots2 :: [a] -> [b] -> IO ()
+  
+instance (DisplayTyp t1,DisplayTyp t2, VFromList v1 Double, VFromList v2 Double) => XYPlots2 (TC s1 t1 (Data (v2 :> Nil) Val)) (TC s2 t2 (Data (v1 :> Nil) Val)) where 
+  xyplots2 xs ys = plotPaths [LineStyle 1 [PointSize 2], XLabel (getDisplayTypName $ getDisplayType (head xs)), YLabel (getDisplayTypName $ getDisplayType (head ys))] (zipWith (\ x y -> zip (sPlotData x) (sPlotData y)) xs ys)
+
 -- | Plotting Signals against each other --------------------------------------------------------------
 class SurfPlot a b c where
   surfPlot :: String -> a -> b -> c -> IO ()

@@ -134,12 +134,6 @@ solve3Way sqTopo y n = interpretFromScratch (SingleRecord 0) 1 gd -- interprete 
         gd = map (eqToInTerm sqEnvs') (toAbsEqTermEquations $ order ts)
         
 
-{-
--- | D. Function to generate Variation Matrix
-genVariationMatrix :: (UV.Unbox d2, UV.Unbox d1) => Test1 t1 d1 -> Test1 t2 d2 ->  (Test2 t1 d1, Test2 t2 d2)
-genVariationMatrix xs ys = (fromSigList $ replicate (slength ys) xs,stranspose $ fromSigList $ replicate (slength xs) ys)
--}
-
 -- | D. Function to generate Variation Matrix
 genVariationMatrix :: [a] -> [b] -> ([[a]], [[b]])
 genVariationMatrix xs ys = (replicate (length ys) xs, L.transpose $ replicate (length xs) ys)
@@ -157,22 +151,14 @@ getVarPower varEnvs idx = changeSignalType $ sfromCells $ map (map f ) varEnvs
   where f ::  Envs UTFSig ->   PFSamp
         f envs = changeType $ shead $ ((safeLookup (powerMap envs) idx)) 
 
-{-
--- | Safe Lookup Functions
-getPower :: Envs UTFSig ->  PowerIdx -> PFSamp
-getPower envs idx = changeType $ shead $ safeLookup (powerMap envs) idx 
--}
-{-
--- | Safe Lookup Functions
-getEff :: (Envs UTFSig) ->  EtaIdx -> NSig 
-getEff envs idx = safeLookUp envs idx 
--}
-
-
+-- | Main Function ================================================================== 
 
 main :: IO ()
 main = do
   let 
+
+    -- | A. -- Define Grid and solve system ------------------------------------    
+    
     -- define Variation
     yIndir = [0.1,0.2 .. 1] :: [Val]
     etas = [0.6,0.7 .. 1] :: [Val]
@@ -183,28 +169,45 @@ main = do
     -- solve System over Variation Grid
     varEnvs = zipWith (zipWith (solve3Way sqTopo)) varY varN :: [[Envs UTFSig]]
     
-    -- Result of Energies out 
+    -- | B. -- Extract Values for further calulations
+    
+    -- result of energies out 
     storagePerc = sfromList2 varY :: Test2 (Typ A Y Tt) Val 
     storageEfficiency = sfromList2 varN :: Test2 (Typ A N Tt) Val 
     
+    -- consumer
     powerConsumptionS0 = getVarPower varEnvs (PowerIdx 0 0 2 1)
     powerConsumptionS1 = getVarPower varEnvs (PowerIdx 1 0 6 5)
+    energyConsumption = (getVarEnergy varEnvs  (EnergyIdx 0 0 2 1)) .+  makeDelta (getVarEnergy varEnvs  (EnergyIdx 1 0 6 5)) 
     
+    -- internal power (Between System 1 and 2)
     powerInt = getVarPower varEnvs (PowerIdx 0 0 1 0)
     energyInt = (getVarEnergy varEnvs (EnergyIdx 0 0 1 0)) -- .+  (makeDelta $ getVarEnergy varEnvs (EnergyIdx 1 0 1 0))
     
-    
+    -- energy source
+    powerSource = getVarPower varEnvs (PowerIdx 0 0 0 1)
     energySource = getVarEnergy varEnvs  (EnergyIdx 0 0 0 1) 
-    energyConsumption = (getVarEnergy varEnvs  (EnergyIdx 0 0 2 1)) .+  makeDelta (getVarEnergy varEnvs  (EnergyIdx 1 0 6 5)) 
     
+    -- | C. -- Calculate Additional Values
+    
+    -- system efficiencie
     etaSYS =  energyConsumption./energySource 
     etaSYS1 =  energyInt./energySource 
     etaSYS2 =  energySource./energyInt 
     
+    -- eta1 efficiency check
+    pOne = toScalar 1 :: TC Scalar (Typ A P Tt) (Data Nil Val) 
+    etaOne =  toScalar 1 :: TC Scalar (Typ A N Tt) (Data Nil Val) 
+    etaSYS1_Check = makeAbsolut $ etaOne .- (pOne./ ((makeDelta pOne) .+powerSource)) ::  Test2 (Typ A N Tt) Val
+    check = etaSYS1_Check .- etaSYS1
+      
+    -- calculating system losses
     lossSYS = energySource .- energyConsumption 
     lossSYS1 = energySource .- energyInt 
     lossSYS2 = energyInt .- energyConsumption 
         
+    
+  -- | D. -- Selected Energy Flow Plots
  
 --  drawTopologyX' sqTopo
   drawTopology  sqTopo (head(head(varEnvs))) 
@@ -212,30 +215,32 @@ main = do
   drawTopology  sqTopo (head(last(varEnvs))) 
   drawTopology  sqTopo (last(last(varEnvs))) 
   
+  -- | E. -- Reporting the Numbers
   
---  report [] ("powerConsumptionS0",powerConsumptionS0)  
---  report [] ("powerConsumptionS1",powerConsumptionS1)  
+  putStrLn "Efficiency Eta1 and Check"
+  report [] ("etaSYS1", etaSYS1)
+  report [] ("etaSYS1_check", etaSYS1_Check)
+  report [] ("Check", check)  
+
+  putStrLn "Consumer"
   report [] ("energyConsumption",energyConsumption)  
   report [] ("energyInt",energyInt)  
   report [] ("energySource",energySource)  
   
+  putStrLn "Consumer"
+  report [] ("powerInt", powerInt)
+  report [] ("powerSource", powerSource)
+  
   report [] ("System Efficiency",  etaSYS)
   report [] ("System1 Efficiency", etaSYS1)
   report [] ("System2 Efficiency", etaSYS2)
-  
-  
---  surfPlot "powerConsumptionS0" storagePower storageEfficiency powerConsumptionS0
---  surfPlot "powerConsumptionS1" storagePower storageEfficiency powerConsumptionS1
-  
---  surfPlot "energyConsumption" storagePower storageEfficiency energyConsumption
     
-  surfPlot "System Efficiency" storagePerc storageEfficiency etaSYS
-  surfPlot "System1 Efficiency" storagePerc storageEfficiency etaSYS1
-  surfPlot "System2 Efficiency" storagePerc storageEfficiency etaSYS2
+  -- | F. -- Surface Plots
+  
+  
+    
 
-  surfPlot "System Loss" storagePerc storageEfficiency lossSYS 
-  surfPlot "System1 Loss" storagePerc storageEfficiency  lossSYS1 
-  surfPlot "System2 Loss" storagePerc storageEfficiency  lossSYS2 
+
   
   let lossListSYS1 = toSigList lossSYS1
       lossListSYS2 = toSigList lossSYS2
@@ -243,5 +248,26 @@ main = do
   sigPlots [last lossListSYS1,  last lossListSYS2]
   
   let etaListSYS = toSigList etaSYS
-      
+      etaListSYS1 = toSigList etaSYS1
+      powerListSource = toSigList powerSource
+      powerListInt = toSigList powerInt
+       
+  surfPlot "System Loss" storagePerc storageEfficiency lossSYS 
+  surfPlot "System1 Loss" storagePerc storageEfficiency  lossSYS1 
+  surfPlot "System2 Loss" storagePerc storageEfficiency  lossSYS2 
+  
   xyplots (sfromList yIndir :: Test1 (Typ A Y Tt) Val) etaListSYS
+  xyplots2 powerListInt etaListSYS1
+
+  surfPlot "System Efficiency" storagePerc storageEfficiency etaSYS
+  surfPlot "System1 Efficiency" storagePerc storageEfficiency etaSYS1
+  surfPlot "System2 Efficiency" storagePerc storageEfficiency etaSYS2
+  
+  surfPlot "energyFlowShare" storagePerc storageEfficiency storagePerc
+
+  surfPlot "energyConsumption" storagePerc storageEfficiency energyConsumption
+--  surfPlot "powerConsumptionS1" storagePerc storageEfficiency powerConsumptionS1
+--  surfPlot "powerConsumptionS0" storagePerc storageEfficiency powerConsumptionS0  
+    
+
+

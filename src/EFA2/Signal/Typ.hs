@@ -113,6 +113,9 @@ instance TProd (Typ A P p) (Typ D T p) (Typ A F p)
 instance TProd (Typ d F p) (Typ d N p) (Typ d F p) 
 instance TProd (Typ d N p) (Typ d F p) (Typ d F p) 
 
+instance TProd (Typ d P p) (Typ d N p) (Typ d P p) 
+instance TProd (Typ d N p) (Typ d P p) (Typ d P p) 
+
 -- E=M*E -- Energy mix and Mix Part
 instance TProd (Typ d E Tt) (Typ d M Tt) (Typ d E Pt)
 instance TProd (Typ d M Tt) (Typ d E Tt) (Typ d E Pt)

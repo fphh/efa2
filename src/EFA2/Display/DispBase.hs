@@ -45,9 +45,9 @@ getUnitScale Unit_UT = UnitScale 1
 -- | Central Place to switch Display Formats througght the system
 data DisplayLength = Short | Middle | Long | Float 
 -- dispLength = Short
-dispLength = Middle
+-- dispLength = Middle
 -- dispLength = Long
--- dispLength = Float
+dispLength = Float
 
 -- ============ Setting - Switch global display length =============
 

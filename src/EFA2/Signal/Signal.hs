@@ -437,6 +437,7 @@ class (DHead c1 c2 d) => SHead s1 s2 c1 c2 d | s1 -> s2 where
 instance (DHead c1 c2 d) => SHead Signal Sample c1 c2 d where
 instance (DHead c1 c2 d) => SHead FSignal FSample c1 c2 d where
 instance (DHead c1 c2 d) => SHead Sample Sample c1 c2 d where
+instance (DHead c1 c2 d) => SHead TestRow TestRow c1 c2 d where
 
 
 class (DTail c c d) => STail s c d where
@@ -668,3 +669,6 @@ slength (TC x) = dlength x
 
 makeDelta ::  TC s (Typ A p t) (c d) -> TC s (Typ D p t) (c d)
 makeDelta (TC x) = TC x
+
+makeAbsolut ::  TC s (Typ D p t) (c d) -> TC s (Typ A p t) (c d)
+makeAbsolut (TC x) = TC x
