@@ -8,6 +8,9 @@ import qualified Data.Map as M
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as UV
 
+import System.Process
+import System.Exit
+
 import Data.Maybe
 import Data.Monoid
 import Graphics.Gnuplot.Simple
@@ -153,6 +156,18 @@ getVarPower varEnvs idx = changeSignalType $ sfromCells $ map (map f ) varEnvs
   where f ::  Envs UTFSig ->   PFSamp
         f envs = changeType $ shead $ ((safeLookup (powerMap envs) idx)) 
 
+clearCurves ::  IO ExitCode
+clearCurves = do
+  system ("rm curve.gp")
+  system ("rm *.csv")
+  
+
+-- | 
+saveCurves :: String -> IO ExitCode
+saveCurves dirName = do   
+  system ("mv curve.gp " ++ dirName)
+  system ("mv *.csv " ++ dirName)
+
 -- | Main Function ================================================================== 
 
 main :: IO ()
@@ -252,28 +267,41 @@ main = do
       powerListSource = toSigList powerSource
       powerListInt = toSigList powerInt
   
-  xyplots "Efficiency ETA1" (sfromList yIndir :: Test1 (Typ A Y Tt) Val) (etaListSYS1)
+  xyplots "Efficiency System1" (sfromList yIndir :: Test1 (Typ A Y Tt) Val) (etaListSYS1)
   xyplots "InternalPower" (sfromList yIndir :: Test1 (Typ A Y Tt) Val) (powerListInt)
   
   xyplots "SystemLoss" (sfromList yIndir :: Test1 (Typ A Y Tt) Val) (lossListSYS)
       
   -- xyplots "SystemLoss1 & SystemLoss2"(sfromList yIndir :: Test1 (Typ A Y Tt) Val) (lossListSYS1 ++ (map sreverse lossListSYS2))
-  xyplots "Loss ETA1 & Loss ETA2 + ETA3"(sfromList yIndir :: Test1 (Typ A Y Tt) Val) (lossListSYS1 ++ lossListSYS2)
+  xyplots "Loss System1 & Loss System2"(sfromList yIndir :: Test1 (Typ A Y Tt) Val) (lossListSYS1 ++ lossListSYS2)
        
+  clearCurves   
+  
 --  surfPlot "System Loss" storagePerc storageEfficiency lossSYS 
-  surfPlot "ETA1 Loss" storagePerc storageEfficiency  lossSYS1 
-  surfPlot "ETA2 + ETA3 Loss" storagePerc storageEfficiency  lossSYS2 
+  surfPlot "System1 Loss" storagePerc storageEfficiency  lossSYS1 
+  saveCurves "System1Loss"  
+  
+  surfPlot "System2 Loss" storagePerc storageEfficiency  lossSYS2 
+  saveCurves "System2Loss"  
   
   xyplots "System Efficiency" (sfromList yIndir :: Test1 (Typ A Y Tt) Val) etaListSYS
 --  xyplots2 powerListInt etaListSYS
+  
+  clearCurves 
 
   surfPlot "System Efficiency" storagePerc storageEfficiency etaSYS
-  surfPlot "ETA1 Efficiency" storagePerc storageEfficiency etaSYS1
-  surfPlot "ETA2+ETA3 Efficiency" storagePerc storageEfficiency etaSYS2
+  saveCurves "SystemEfficiency"  
+  
+  surfPlot "System1 Efficiency" storagePerc storageEfficiency etaSYS1
+  saveCurves "System1Efficiency"  
+  
+  surfPlot "System2 Efficiency" storagePerc storageEfficiency etaSYS2
+  saveCurves "System2Efficiency"  
   
   surfPlot "Flow Share over Storage" storagePerc storageEfficiency storagePerc
 
   surfPlot "Energy Consumption" storagePerc storageEfficiency energyConsumption
+
 --  surfPlot "powerConsumptionS1" storagePerc storageEfficiency powerConsumptionS1
 --  surfPlot "powerConsumptionS0" storagePerc storageEfficiency powerConsumptionS0  
     
