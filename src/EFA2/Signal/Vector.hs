@@ -305,3 +305,14 @@ instance (UV.Unbox d, Eq d,  UV.Unbox (Maybe d)) => VLookup UV.Vector d where
       m = UV.map (xs UV.!? ) $ UV.fromList idxs    
   
   
+class VReverse v d where
+  vreverse :: v d -> v d
+  
+instance VReverse [] d where  
+  vreverse = reverse
+  
+instance VReverse V.Vector d where  
+  vreverse = V.reverse
+  
+instance  (UV.Unbox d) => VReverse UV.Vector d where  
+  vreverse = UV.reverse

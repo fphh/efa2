@@ -366,3 +366,13 @@ instance GetLength (v d) => DLength (Data (v :> Nil)) d where
   
 instance  GetLength (v2 (v1 d)) => DLength (Data (v2 :> v1 :> Nil)) d where
   dlength (Data (D2 x)) = vlen x
+
+----------------------------------------------------------
+-- Reverse
+  
+class DReverse c d where  
+  dreverse :: c d -> c d 
+  
+instance VReverse v d => DReverse (Data (v :> Nil)) d where
+  dreverse (Data (D1 x)) = Data $ D1 $ vreverse x 
+  

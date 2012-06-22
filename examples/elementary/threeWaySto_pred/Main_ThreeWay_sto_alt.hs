@@ -114,7 +114,9 @@ solve3Way sqTopo y n = interpretFromScratch (SingleRecord 0) 1 gd -- interprete 
                                                         (FEtaIdx 1 0 1 3, smap (const n)), (FEtaIdx 1 0 3 1, smap (const n)) ] }
                     
          -- Variable Efficiency function at Source (backwards lookup)            
+--        etaf x = 1/((x+sqrt(x*x+4*x))/(2*x))
         etaf x = 1/((x+sqrt(x*x+4*x))/(2*x))
+        
         pCons = 1.0
         dt = 1
         
@@ -250,23 +252,26 @@ main = do
       powerListSource = toSigList powerSource
       powerListInt = toSigList powerInt
   
+  xyplots "Efficiency ETA1" (sfromList yIndir :: Test1 (Typ A Y Tt) Val) (etaListSYS1)
+  xyplots "InternalPower" (sfromList yIndir :: Test1 (Typ A Y Tt) Val) (powerListInt)
   
   xyplots "SystemLoss" (sfromList yIndir :: Test1 (Typ A Y Tt) Val) (lossListSYS)
       
-  xyplots "SystemLoss1 & SystemLoss2"(sfromList yIndir :: Test1 (Typ A Y Tt) Val) (lossListSYS1 ++ lossListSYS2)
+  -- xyplots "SystemLoss1 & SystemLoss2"(sfromList yIndir :: Test1 (Typ A Y Tt) Val) (lossListSYS1 ++ (map sreverse lossListSYS2))
+  xyplots "Loss ETA1 & Loss ETA2 + ETA3"(sfromList yIndir :: Test1 (Typ A Y Tt) Val) (lossListSYS1 ++ lossListSYS2)
        
 --  surfPlot "System Loss" storagePerc storageEfficiency lossSYS 
-  surfPlot "System1 Loss" storagePerc storageEfficiency  lossSYS1 
-  surfPlot "System2 Loss" storagePerc storageEfficiency  lossSYS2 
+  surfPlot "ETA1 Loss" storagePerc storageEfficiency  lossSYS1 
+  surfPlot "ETA2 + ETA3 Loss" storagePerc storageEfficiency  lossSYS2 
   
   xyplots "System Efficiency" (sfromList yIndir :: Test1 (Typ A Y Tt) Val) etaListSYS
 --  xyplots2 powerListInt etaListSYS
 
   surfPlot "System Efficiency" storagePerc storageEfficiency etaSYS
-  surfPlot "System1 Efficiency" storagePerc storageEfficiency etaSYS1
-  surfPlot "System2 Efficiency" storagePerc storageEfficiency etaSYS2
+  surfPlot "ETA1 Efficiency" storagePerc storageEfficiency etaSYS1
+  surfPlot "ETA2+ETA3 Efficiency" storagePerc storageEfficiency etaSYS2
   
-  surfPlot "Energy Flow Share" storagePerc storageEfficiency storagePerc
+  surfPlot "Flow Share over Storage" storagePerc storageEfficiency storagePerc
 
   surfPlot "Energy Consumption" storagePerc storageEfficiency energyConsumption
 --  surfPlot "powerConsumptionS1" storagePerc storageEfficiency powerConsumptionS1

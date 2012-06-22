@@ -91,19 +91,19 @@ class XYPlot a b where
   xyplot ::  String -> a -> b -> IO ()
   
 instance (DisplayTyp t, VFromList v1 Double) => XYPlot (TC Signal t (Data (v1 :> Nil) Val)) (TC Signal t (Data (v1 :> Nil) Val)) where 
-  xyplot ti x y = plotPath [Title ti,LineStyle 1 [PointSize 2], XLabel $ genAxLabel x,YLabel $ genAxLabel y] (zip (sPlotData x) (sPlotData y))
+  xyplot ti x y = plotPath [Title ti,LineStyle 1 [PointSize 2], XLabel $ genAxLabel x,YLabel $ genAxLabel y,Grid $ Just []] (zip (sPlotData x) (sPlotData y))
 
 class XYPlots a b where
   xyplots :: String -> a -> [b] -> IO ()
   
 instance (DisplayTyp t1,DisplayTyp t2, VFromList v1 Double, VFromList v2 Double) => XYPlots (TC s1 t1 (Data (v2 :> Nil) Val)) (TC s2 t2 (Data (v1 :> Nil) Val)) where 
-  xyplots ti x ys = plotPaths [Title ti,LineStyle 1 [PointSize 2], XLabel $ genAxLabel x,YLabel $ genAxLabel $ head ys] (map (\ y -> zip (sPlotData x) (sPlotData y)) ys)
+  xyplots ti x ys = plotPaths [Title ti,LineStyle 1 [PointSize 2], XLabel $ genAxLabel x,YLabel $ genAxLabel $ head ys,Grid $ Just []] (map (\ y -> zip (sPlotData x) (sPlotData y)) ys)
 
 class XYPlots2 a b where
   xyplots2 ::  String -> [a] -> [b] -> IO ()
   
 instance (DisplayTyp t1,DisplayTyp t2, VFromList v1 Double, VFromList v2 Double) => XYPlots2 (TC s1 t1 (Data (v2 :> Nil) Val)) (TC s2 t2 (Data (v1 :> Nil) Val)) where 
-  xyplots2 ti xs ys = plotPaths [Title ti,LineStyle 1 [PointSize 2], XLabel $ genAxLabel $ head xs,YLabel $ genAxLabel $ head ys] (zipWith (\ x y -> zip (sPlotData x) (sPlotData y)) xs ys)
+  xyplots2 ti xs ys = plotPaths [Title ti,LineStyle 1 [PointSize 2], XLabel $ genAxLabel $ head xs,YLabel $ genAxLabel $ head ys, Grid $ Just []] (zipWith (\ x y -> zip (sPlotData x) (sPlotData y)) xs ys)
 
 -- | Plotting Signals against each other --------------------------------------------------------------
 class SurfPlot a b c where

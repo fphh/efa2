@@ -672,3 +672,6 @@ makeDelta (TC x) = TC x
 
 makeAbsolut ::  TC s (Typ D p t) (c d) -> TC s (Typ A p t) (c d)
 makeAbsolut (TC x) = TC x
+
+sreverse :: (DReverse c d) => TC s t (c d) ->  TC s t (c d)
+sreverse (TC x) = TC $ dreverse x 
