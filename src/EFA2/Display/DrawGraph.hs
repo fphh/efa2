@@ -335,7 +335,7 @@ drawAbsTopology' f content (Topology g) (Envs rec e de p dp fn dn dt x dx v st) 
         mkLst _ _ = [ (ErrorLine "No single record number!", Nothing) ]
 
 
-drawDeltaTopologyD :: forall s t a. SDisplay (TC s t a) =>
+drawDeltaTopologyD :: forall s t a. (SDisplay (TC s t a), Show a) =>
                   ((Line, Maybe (TC s t a)) -> String) -> (Maybe (TC s t a) -> String) -> Topology -> Envs (TC s t a) ->  IO ()
 drawDeltaTopologyD f content (Topology g) (Envs rec e de p dp fn dn dt x dx v st) = printGraph g rec tshow nshow eshow
   where eshow ps = L.intercalate "\n" $ map f $ mkLst rec ps

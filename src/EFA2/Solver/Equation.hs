@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE TypeSynonymInstances, ScopedTypeVariables #-}
 
 
 module EFA2.Solver.Equation where
@@ -17,6 +17,7 @@ import Debug.Trace
 import EFA2.Interpreter.Env
 import EFA2.Interpreter.Arith
 import EFA2.Utils.Utils
+import EFA2.Signal.Signal
 
 -- TOTHINK: Die Algorithmen aus dem Verzeichnis Solver sollten
 -- über den Datentyp EqTerm parametrisierbar sein. Die Abhängigkeisanalyse
@@ -541,18 +542,18 @@ interpretEqTermEq envs t = error $ "interpretEqTerm: " ++ show t
 interpretEqTermFromScratch :: [EqTerm] -> Envs EqTerm
 interpretEqTermFromScratch ts = L.foldl' interpretEqTermEq emptyEnv ts
 
-mapEqTermEnv :: (a -> b) -> Envs a -> Envs b
+mapEqTermEnv :: forall a b. (a -> b) -> Envs a -> Envs b
 mapEqTermEnv f env = emptyEnv { recordNumber = recordNumber env,
                                 energyMap = M.map f (energyMap env),
                                 denergyMap = M.map f (denergyMap env),
                                 powerMap = M.map f (powerMap env),
                                 dpowerMap = M.map f (dpowerMap env),
-                                --fetaMap = M.map (smap f .) (fetaMap env),
+                                --fetaMap = M.map (f .) (fetaMap env),  -- geht nicht?
                                 --detaMap = M.map (smap f .) (detaMap env),
                                 dtimeMap = M.map f (dtimeMap env),
                                 xMap = M.map f (xMap env),
+                                dxMap = M.map f (dxMap env),
                                 varMap = M.map f (varMap env),
                                 storageMap = M.map f (storageMap env) }
-
 
 --------------------------------------------------------------------

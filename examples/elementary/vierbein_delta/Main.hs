@@ -42,7 +42,7 @@ import EFA2.Display.DrawGraph
 
 
 symbolic :: Topology -> Envs EqTerm
-symbolic g = mapEqTermEnv (setEqTerms (emptyEnv { dxMap = dx1sym })) (res { fetaMap = eta1sym, recordNumber = SingleRecord 1 })
+symbolic g = res' { recordNumber = SingleRecord 1, dxMap = dx1sym, detaMap = deta1sym, fetaMap = eta1sym }
   where (envs0', ts0) = makeAllEquations g [envs0sym]
         (envs1', ts1) = makeAllEquations g [envs1sym]
 
@@ -52,6 +52,8 @@ symbolic g = mapEqTermEnv (setEqTerms (emptyEnv { dxMap = dx1sym })) (res { feta
 
         ts = toAbsEqTermEquations $ order (ts0o ++ ts1o ++ difftseq)
         res = interpretEqTermFromScratch ts
+        --res' = mapEqTermEnv (setEqTerms (emptyEnv { dxMap = dx1sym })) (res { fetaMap = eta1sym, recordNumber = SingleRecord 1 })
+        res' = mapEqTermEnv (setEqTerms (emptyEnv { dxMap = dx1sym })) res
 
 numeric :: Topology -> Envs Sc
 numeric g = {- trace ("---------\n" ++ showEqTerms ts ++ "\n------\n") $ -} res
@@ -117,28 +119,29 @@ main :: IO ()
 main = do
   let
       sym = symbolic graph
-      symSimple = mapEqTermEnv (additiveTerms . simplify) sym
+      symSimple = mapEqTermEnv ((:[]) . simplify) sym
+      symSimpleDelta = mapEqTermEnv (concatMap additiveTerms) symSimple
 
       [num0, num1] = separateEnvs $ numeric graph
       denv = deltaEnv graph
       control = dpowerMap denv
 
-      symSimpleNum = mapEqTermEnv (map (fromScalar . interpretWithEnv 1 (envUnion [num0, num1]) . eqToInTerm emptyEnv)) symSimple
+      symSimpleNum = mapEqTermEnv (map (fromScalar . interpretWithEnv 1 (envUnion [num0, num1]) . eqToInTerm emptyEnv)) symSimpleDelta
 
 
   putStrLn "\n== Control delta environment (later env - former env, computed independently) =="
   putStrLn (format $ M.toList control)
 
-  print denv
+  print (dxMap sym)
   drawAll [
     drawTopology graph num0,
     drawTopology graph num1,
     drawTopology graph symSimple,
     drawDeltaTopology graph denv,
-    drawDeltaTopology graph symSimple,
+    drawDeltaTopology graph symSimpleDelta,
     drawDeltaTopology graph symSimpleNum ]
 
-  print (mapEqTermEnv (length . additiveTerms . simplify) sym)
+  --print (M.size $ fetaMap sym)
 
 -- Numeric =====================================================================
 
@@ -159,8 +162,8 @@ eta0num = M.fromList [ (FEtaIdx 0 0 0 2, smap $ const 0.8),
                        (FEtaIdx 0 0 4 2, smap $ const 0.8) ]
 
 x0num :: XMap Sc
-x0num = M.fromList [ (XIdx 0 0 2 0, toScalar 0.4),
-                     (XIdx 0 0 2 3, toScalar 0.3) ]
+x0num = M.fromList [ (XIdx 0 0 2 0, toScalar 0.3),
+                     (XIdx 0 0 2 3, toScalar 0.4) ]
 
 
 envs0num = emptyEnv { recordNumber = SingleRecord 0,
@@ -202,8 +205,8 @@ deta1num = M.fromList [ (DEtaIdx 0 1 0 2, smap $ const 0.05),
                         (DEtaIdx 0 1 4 2, smap $ const 0.05) ]
 
 x1num :: XMap Sc
-x1num = M.fromList [ (XIdx 0 1 2 0, toScalar 0.4),
-                     (XIdx 0 1 2 3, toScalar 0.3) ]
+x1num = M.fromList [ (XIdx 0 1 2 0, toScalar 0.3),
+                     (XIdx 0 1 2 3, toScalar 0.4) ]
 
 
 dx1num :: DXMap Sc
@@ -315,4 +318,6 @@ graph :: Topology
 graph = mkGraph ns es
   where ns = makeNodes [(0, Source), (1, Source), (2, Crossing), (3, Sink), (4, Sink)]
         es = makeEdges [(0, 2, defaultELabel), (1, 2, defaultELabel), (2, 3, defaultELabel), (2, 4, defaultELabel)]
+
+
 
