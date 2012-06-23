@@ -267,13 +267,13 @@ main = do
       powerListSource = toSigList powerSource
       powerListInt = toSigList powerInt
   
-  xyplots "Efficiency System1" (sfromList yIndir :: Test1 (Typ A Y Tt) Val) (etaListSYS1)
-  xyplots "InternalPower" (sfromList yIndir :: Test1 (Typ A Y Tt) Val) (powerListInt)
+  xyplot "Efficiency System1" (sfromList yIndir :: Test1 (Typ A Y Tt) Val) (etaSYS1)
+  xyplot "InternalPower" (sfromList yIndir :: Test1 (Typ A Y Tt) Val) (powerInt)
   
-  xyplots "SystemLoss" (sfromList yIndir :: Test1 (Typ A Y Tt) Val) (lossListSYS)
+  xyplot "SystemLoss" (sfromList yIndir :: Test1 (Typ A Y Tt) Val) (lossSYS)
       
   -- xyplots "SystemLoss1 & SystemLoss2"(sfromList yIndir :: Test1 (Typ A Y Tt) Val) (lossListSYS1 ++ (map sreverse lossListSYS2))
-  xyplots "Loss System1 & Loss System2"(sfromList yIndir :: Test1 (Typ A Y Tt) Val) (lossListSYS1 ++ lossListSYS2)
+  xyplot "Loss System1 & Loss System2"(sfromList yIndir :: Test1 (Typ A Y Tt) Val) (lossSYS1 .++ lossSYS2)
        
   clearCurves   
   
@@ -284,7 +284,7 @@ main = do
   surfPlot "System2 Loss" storagePerc storageEfficiency  lossSYS2 
   saveCurves "System2Loss"  
   
-  xyplots "System Efficiency" (sfromList yIndir :: Test1 (Typ A Y Tt) Val) etaListSYS
+  xyplot "System Efficiency" (sfromList yIndir :: Test1 (Typ A Y Tt) Val) etaListSYS
 --  xyplots2 powerListInt etaListSYS
   
   clearCurves 

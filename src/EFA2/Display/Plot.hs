@@ -33,14 +33,21 @@ import qualified Data.Map as M
 
 class SPlotData s typ c d where 
   sPlotData :: TC s typ (c d) -> [d]
-  
+    
 instance (DFromList (Data (v1 :> Nil)) Val, DisplayTyp t) => SPlotData s t  (Data (v1 :> Nil)) Val where 
+--  type TF d = [d]
   sPlotData x = map (*s) $ stoList x  
     where t = getDisplayType x
           u = getDisplayUnit t
           (UnitScale s) = getUnitScale u
-          
-
+{-          
+instance (DFromList2 (Data (v2 :> v1 :> Nil)) Val, DisplayTyp t) => SPlotData s t  (Data (v2 :> v1 :> Nil)) Val where 
+  type TF d = [[d]]
+  sPlotData x = map (map (*s)) $ stoList2 x  
+    where t = getDisplayType x
+          u = getDisplayUnit t
+          (UnitScale s) = getUnitScale u
+-}
 class SPlotData2 s typ c d where 
   sPlotData2 :: TC s typ (c d) -> [[d]]
   
@@ -61,54 +68,65 @@ instance  (DisplayTyp t, VFromList v1 Double, SPlotData Signal t (Data (v1 :> Ni
 
 -- | Simple Signal Plotting -- without time axis --------------------------------------------------------------
 
-class Plot a where          
-  sigPlot :: a -> IO ()
+-- | Plotting Signals against each other --------------------------------------------------------------
+sigPlotAttr :: (DisplayTyp t) => String -> TC s t (Data (v1 :> Nil) Val) ->  [Attribute]
+sigPlotAttr ti x = [Title ti,LineStyle 1 [PointSize 2], XLabel $ "Sample-Nr []",YLabel $ genAxLabel x,Grid $ Just []]
 
-instance SPlotData Signal t (Data (v1 :> Nil)) Val => Plot (TC Signal t  (Data (v1 :> Nil) Val))  where 
-  sigPlot x = plotList [] (sPlotData x)
+class SigPlot a where          
+  sigPlot :: String -> a -> IO ()
 
-instance (DisplayTyp t, VFromList v1 Double, VFromList v2 (TC Signal t (Data (v1 :> (Nil' :> Nil')) Val)),
-                      VWalker v2 (v1 Val) (TC Signal t (Data (v1 :> (Nil' :> Nil')) Val))) => Plot (TC Signal t  (Data (v2 :> v1 :> Nil) Val))  where 
-  sigPlot x = mapM_ sigPlot $ toSigList x  
+instance (SPlotData s t (Data (v1 :> Nil)) Val,DisplayTyp t) => SigPlot (TC s t  (Data (v1 :> Nil) Val))  where 
+  sigPlot ti x = plotList (sigPlotAttr ti x) (sPlotData x)
 
-instance SPlotData FSignal t (Data (v1 :> Nil)) Val => Plot (TC FSignal t  (Data (v1 :> Nil) Val))  where 
-  sigPlot x = plotList [] (sPlotData x)
+instance (SPlotData s t (Data (v1 :> Nil)) Val,DisplayTyp t) => SigPlot [(TC s t  (Data (v1 :> Nil) Val))]  where 
+  sigPlot ti xs = plotLists (sigPlotAttr ti (head xs)) (map sPlotData xs)
 
-instance Plot (TC s0 TestRow (x (UVec Val))) where
-  sigPlot x = undefined
-
-instance SPlotData TestRow t (Data (v1 :> Nil)) Val => Plot (TC TestRow t  (Data (v1 :> Nil) Val))  where 
-  sigPlot x = plotList [] (sPlotData x)
-
-instance SPlotData TestRow t (Data (v1 :> Nil)) Val => Plot (TC TestRow t  (Data (v2 :> v1 :> Nil) Val))  where 
-  sigPlot x = undefined -- plotList [] (sPlotData x)
+instance (DisplayTyp t, 
+          VFromList v1 Double, 
+          VFromList v2 (TC s t (Data (v1 :> (Nil' :> Nil')) Val)),
+          VWalker v2 (v1 Val) (TC  s t (Data (v1 :> (Nil' :> Nil')) Val))) => SigPlot (TC s t (Data (v2 :> v1 :> Nil) Val))  where 
+  sigPlot ti x = sigPlot ti $ toSigList x  
 
 
 
 -- | Plotting Signals against each other --------------------------------------------------------------
+xyPlotAttr :: (DisplayTyp t1, DisplayTyp t2) => String -> TC s t1 (Data (v1 :> Nil) Val) ->  TC s t2 (Data (v2 :> Nil) Val) -> [Attribute]
+xyPlotAttr ti x y = [Title ti,LineStyle 1 [PointSize 2], XLabel $ genAxLabel x,YLabel $ genAxLabel y,Grid $ Just []]
 
 class XYPlot a b where
   xyplot ::  String -> a -> b -> IO ()
   
-instance (DisplayTyp t, VFromList v1 Double) => XYPlot (TC Signal t (Data (v1 :> Nil) Val)) (TC Signal t (Data (v1 :> Nil) Val)) where 
-  xyplot ti x y = plotPath [Title ti,LineStyle 1 [PointSize 2], XLabel $ genAxLabel x,YLabel $ genAxLabel y,Grid $ Just []] (zip (sPlotData x) (sPlotData y))
+instance (DisplayTyp t1, DisplayTyp t2, VFromList v1 Double,VFromList v2 Double) => XYPlot (TC Signal t1 (Data (v1 :> Nil) Val)) (TC Signal t2 (Data (v2 :> Nil) Val)) where 
+  xyplot ti x y = plotPath (xyPlotAttr ti x y) (zip (sPlotData x) (sPlotData y))
 
-class XYPlots a b where
-  xyplots :: String -> a -> [b] -> IO ()
-  
-instance (DisplayTyp t1,DisplayTyp t2, VFromList v1 Double, VFromList v2 Double) => XYPlots (TC s1 t1 (Data (v2 :> Nil) Val)) (TC s2 t2 (Data (v1 :> Nil) Val)) where 
-  xyplots ti x ys = plotPaths [Title ti,LineStyle 1 [PointSize 2], XLabel $ genAxLabel x,YLabel $ genAxLabel $ head ys,Grid $ Just []] (map (\ y -> zip (sPlotData x) (sPlotData y)) ys)
+instance (DisplayTyp t1,DisplayTyp t2, VFromList v1 Double, VFromList v2 Double) => XYPlot (TC s t1 (Data (v2 :> Nil) Val)) [(TC s t2 (Data (v1 :> Nil) Val))] where 
+  xyplot ti x ys = plotPaths (xyPlotAttr ti x (head ys)) (map (\ y -> zip (sPlotData x) (sPlotData y)) ys)
 
-class XYPlots2 a b where
-  xyplots2 ::  String -> [a] -> [b] -> IO ()
-  
-instance (DisplayTyp t1,DisplayTyp t2, VFromList v1 Double, VFromList v2 Double) => XYPlots2 (TC s1 t1 (Data (v2 :> Nil) Val)) (TC s2 t2 (Data (v1 :> Nil) Val)) where 
-  xyplots2 ti xs ys = plotPaths [Title ti,LineStyle 1 [PointSize 2], XLabel $ genAxLabel $ head xs,YLabel $ genAxLabel $ head ys, Grid $ Just []] (zipWith (\ x y -> zip (sPlotData x) (sPlotData y)) xs ys)
+instance (DisplayTyp t1,DisplayTyp t2, VFromList v1 Double, VFromList v2 Double) => XYPlot [(TC s t1 (Data (v2 :> Nil) Val))] [(TC s t2 (Data (v1 :> Nil) Val))] where 
+  xyplot ti xs ys = plotPaths (xyPlotAttr ti (head xs) (head ys)) (zipWith (\ x y -> zip (sPlotData x) (sPlotData y)) xs ys)
 
--- | Plotting Signals against each other --------------------------------------------------------------
+instance (DisplayTyp t1,
+          DisplayTyp t2, 
+          VFromList v1 Double,
+          VFromList v3 Double,
+          VFromList v4 (TC s t2 (Data (v3 :> (Nil' :> Nil')) Val)),
+          VWalker v4 (v3 Val) (TC s t2 (Data (v3 :> (Nil' :> Nil')) Val))) => XYPlot (TC s t1 (Data (v1 :> Nil) Val)) (TC s t2 (Data (v4 :> v3 :> Nil) Val)) where 
+  xyplot ti x y = xyplot ti x (toSigList y)
+
+instance (DisplayTyp t1,
+          DisplayTyp t2, 
+          VFromList v1 Double, 
+          VFromList v3 Double,
+          VFromList v2 (TC s t1 (Data (v1 :> (Nil' :> Nil')) Val)),
+          VWalker v2 (v1 Val) (TC s t1 (Data (v1 :> (Nil' :> Nil')) Val)), 
+          VFromList v4 (TC s t2 (Data (v3 :> (Nil' :> Nil')) Val)),
+          VWalker v4 (v3 Val) (TC s t2 (Data (v3 :> (Nil' :> Nil')) Val))) => XYPlot (TC s t1 (Data (v2 :> v1 :> Nil) Val)) (TC s t2 (Data (v4 :> v3 :> Nil) Val)) where 
+  xyplot ti x y = xyplot ti (toSigList x) (toSigList y)
+
+
+-- | Plotting Surfaces
 class SurfPlot a b c where
   surfPlot :: String -> a -> b -> c -> IO ()
-  
   
 instance (VFromList v2 (v1 Double),
           VFromList v1 Double,
@@ -131,11 +149,7 @@ instance (VFromList v2 (v1 Double),
                         Grid $ Just [], 
                         XLabel $ genAxLabel x,
                         YLabel $ genAxLabel y,
-                        -- ZLabel ("Efficiency [" ++ (show $ getDisplayUnit $ getDisplayType z) ++ "]"), 
                         Size $ Scale 1]
-
-
-
 
 
 -- | Plotting Records ---------------------------------------------------------------
@@ -177,3 +191,11 @@ instance RPlot SequPwrRecord where
 
 genAxLabel :: (DisplayTyp t) => TC s t (c d) -> String 
 genAxLabel x = (getDisplayTypName $ getDisplayType x) ++ " [" ++ (show $ getDisplayUnit $ getDisplayType x) ++ "]"
+
+{-
+-- | clean old gnu-Plot files from current dir
+clearCurves ::  IO ExitCode
+clearCurves = do
+  system ("rm curve.gp")
+  system ("rm curve*.csv")
+-}
