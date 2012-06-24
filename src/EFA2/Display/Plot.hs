@@ -31,40 +31,20 @@ import qualified Data.Map as M
 
 -- | Get Signal Plot Data (Unit Conversion)  ---------------------------------------------------------------
 
-class SPlotData s typ c d where 
-  sPlotData :: TC s typ (c d) -> [d]
+class SPlotData s typ c1 d e where 
+  sPlotData :: TC s typ (c1 d) -> e
     
-instance (DFromList (Data (v1 :> Nil)) Val, DisplayTyp t) => SPlotData s t  (Data (v1 :> Nil)) Val where 
---  type TF d = [d]
-  sPlotData x = map (*s) $ stoList x  
-    where t = getDisplayType x
-          u = getDisplayUnit t
-          (UnitScale s) = getUnitScale u
-{-          
-instance (DFromList2 (Data (v2 :> v1 :> Nil)) Val, DisplayTyp t) => SPlotData s t  (Data (v2 :> v1 :> Nil)) Val where 
-  type TF d = [[d]]
+instance (DisplayTyp t) => SPlotData s t  (Data Nil) Val Val where 
+  sPlotData x@(TC (Data (D0 v))) = v*s  
+    where (UnitScale s) = getUnitScale $ getDisplayUnit $ getDisplayType x
+
+instance (DFromList (Data (v1 :> Nil)) Val, DisplayTyp t) => SPlotData s t  (Data (v1 :> Nil)) Val [Val] where 
+  sPlotData x = map (*s) $ (stoList x ::[Val])  
+    where (UnitScale s) = getUnitScale $ getDisplayUnit $ getDisplayType x
+
+instance (DFromList2 (Data (v2 :> v1 :> Nil)) Val, DisplayTyp t) => SPlotData s t  (Data (v2 :> v1 :> Nil)) Val [[Val]]where 
   sPlotData x = map (map (*s)) $ stoList2 x  
-    where t = getDisplayType x
-          u = getDisplayUnit t
-          (UnitScale s) = getUnitScale u
--}
-class SPlotData2 s typ c d where 
-  sPlotData2 :: TC s typ (c d) -> [[d]]
-  
-instance (DFromList2 (Data (v2 :> v1 :> Nil)) Val, DisplayTyp t) => SPlotData2 s t  (Data (v2 :> v1 :> Nil)) Val where 
-  sPlotData2 x = map (map (*s)) $ stoList2 x  
-    where t = getDisplayType x
-          u = getDisplayUnit t
-          (UnitScale s) = getUnitScale u
-          
-
-class Plots a where          
-  sigPlots :: [a] -> IO ()
-
-instance  (DisplayTyp t, VFromList v1 Double, SPlotData Signal t (Data (v1 :> Nil)) Val) => Plots (TC s t  (Data (v1 :> Nil) Val))  where 
-  sigPlots x = plotLists [] (map sPlotData x)
-
-
+    where (UnitScale s) = getUnitScale $ getDisplayUnit $ getDisplayType x
 
 -- | Simple Signal Plotting -- without time axis --------------------------------------------------------------
 
@@ -75,19 +55,17 @@ sigPlotAttr ti x = [Title ti,LineStyle 1 [PointSize 2], XLabel $ "Sample-Nr []",
 class SigPlot a where          
   sigPlot :: String -> a -> IO ()
 
-instance (SPlotData s t (Data (v1 :> Nil)) Val,DisplayTyp t) => SigPlot (TC s t  (Data (v1 :> Nil) Val))  where 
-  sigPlot ti x = plotList (sigPlotAttr ti x) (sPlotData x)
+instance (SPlotData s t (Data (v1 :> Nil)) Val [Val],DisplayTyp t) => SigPlot (TC s t  (Data (v1 :> Nil) Val))  where 
+  sigPlot ti x = plotList (sigPlotAttr ti x) (sPlotData x :: [Val])
 
-instance (SPlotData s t (Data (v1 :> Nil)) Val,DisplayTyp t) => SigPlot [(TC s t  (Data (v1 :> Nil) Val))]  where 
-  sigPlot ti xs = plotLists (sigPlotAttr ti (head xs)) (map sPlotData xs)
+instance (SPlotData s t (Data (v1 :> Nil)) Val [Val],DisplayTyp t) => SigPlot [(TC s t  (Data (v1 :> Nil) Val))]  where 
+  sigPlot ti xs = plotLists (sigPlotAttr ti (head xs)) ((map sPlotData xs) :: [[Val]])
 
 instance (DisplayTyp t, 
           VFromList v1 Double, 
           VFromList v2 (TC s t (Data (v1 :> (Nil' :> Nil')) Val)),
           VWalker v2 (v1 Val) (TC  s t (Data (v1 :> (Nil' :> Nil')) Val))) => SigPlot (TC s t (Data (v2 :> v1 :> Nil) Val))  where 
   sigPlot ti x = sigPlot ti $ toSigList x  
-
-
 
 -- | Plotting Signals against each other --------------------------------------------------------------
 xyPlotAttr :: (DisplayTyp t1, DisplayTyp t2) => String -> TC s t1 (Data (v1 :> Nil) Val) ->  TC s t2 (Data (v2 :> Nil) Val) -> [Attribute]
@@ -97,13 +75,13 @@ class XYPlot a b where
   xyplot ::  String -> a -> b -> IO ()
   
 instance (DisplayTyp t1, DisplayTyp t2, VFromList v1 Double,VFromList v2 Double) => XYPlot (TC Signal t1 (Data (v1 :> Nil) Val)) (TC Signal t2 (Data (v2 :> Nil) Val)) where 
-  xyplot ti x y = plotPath (xyPlotAttr ti x y) (zip (sPlotData x) (sPlotData y))
+  xyplot ti x y = plotPath (xyPlotAttr ti x y) (zip (sPlotData x ::[Val]) (sPlotData y :: [Val]))
 
 instance (DisplayTyp t1,DisplayTyp t2, VFromList v1 Double, VFromList v2 Double) => XYPlot (TC s t1 (Data (v2 :> Nil) Val)) [(TC s t2 (Data (v1 :> Nil) Val))] where 
-  xyplot ti x ys = plotPaths (xyPlotAttr ti x (head ys)) (map (\ y -> zip (sPlotData x) (sPlotData y)) ys)
+  xyplot ti x ys = plotPaths (xyPlotAttr ti x (head ys)) (map (\ y -> zip (sPlotData x::[Val]) (sPlotData y::[Val])) ys)
 
 instance (DisplayTyp t1,DisplayTyp t2, VFromList v1 Double, VFromList v2 Double) => XYPlot [(TC s t1 (Data (v2 :> Nil) Val))] [(TC s t2 (Data (v1 :> Nil) Val))] where 
-  xyplot ti xs ys = plotPaths (xyPlotAttr ti (head xs) (head ys)) (zipWith (\ x y -> zip (sPlotData x) (sPlotData y)) xs ys)
+  xyplot ti xs ys = plotPaths (xyPlotAttr ti (head xs) (head ys)) (zipWith (\ x y -> zip (sPlotData x::[Val]) (sPlotData y::[Val])) xs ys)
 
 instance (DisplayTyp t1,
           DisplayTyp t2, 
@@ -165,20 +143,20 @@ rPlotAttrs name = [Title ("PowerRecord: " ++ name),
                    Size $ Scale 0.7]
 
 
--- | Class fror Plotting Records 
+-- | Class for Plotting Records 
 class RPlot a where
   rPlot :: (String,a) -> IO ()
 
 instance RPlot PowerRecord where   
   rPlot (rName, (PowerRecord time pMap)) = plotPathsStyle (rPlotAttrs rName) (zip styleList xydata)
-    where ydata = map sPlotData $ M.elems pMap
+    where ydata = map sPlotData $ M.elems pMap :: [[Val]]
           xydata = map (zip (sPlotData time)) ydata 
           keys = map fst $ M.toList pMap
           styleList = map (rPlotStyle . show) keys
 
 instance RPlot SecPowerRecord where   
   rPlot (rName, (SecPowerRecord time pMap)) = plotPathsStyle (rPlotAttrs rName) (zip styleList xydata)
-    where ydata = map sPlotData $ M.elems pMap
+    where ydata = map sPlotData $ M.elems pMap :: [[Val]]
           xydata = map (zip (sPlotData time)) ydata 
           keys = map fst $ M.toList pMap
           styleList = map (rPlotStyle . show) keys
