@@ -275,28 +275,20 @@ main = do
   -- xyplots "SystemLoss1 & SystemLoss2"(sfromList yIndir :: Test1 (Typ A Y Tt) Val) (lossListSYS1 ++ (map sreverse lossListSYS2))
   xyplot "Loss System1 & Loss System2"(sfromList yIndir :: Test1 (Typ A Y Tt) Val) (lossSYS1 .++ lossSYS2)
        
-  clearCurves   
-  
 --  surfPlot "System Loss" storagePerc storageEfficiency lossSYS 
   surfPlot "System1 Loss" storagePerc storageEfficiency  lossSYS1 
-  saveCurves "System1Loss"  
   
   surfPlot "System2 Loss" storagePerc storageEfficiency  lossSYS2 
-  saveCurves "System2Loss"  
   
   xyplot "System Efficiency" (sfromList yIndir :: Test1 (Typ A Y Tt) Val) etaListSYS
 --  xyplots2 powerListInt etaListSYS
   
-  clearCurves 
 
   surfPlot "System Efficiency" storagePerc storageEfficiency etaSYS
-  saveCurves "SystemEfficiency"  
   
   surfPlot "System1 Efficiency" storagePerc storageEfficiency etaSYS1
-  saveCurves "System1Efficiency"  
   
   surfPlot "System2 Efficiency" storagePerc storageEfficiency etaSYS2
-  saveCurves "System2Efficiency"  
   
   surfPlot "Flow Share over Storage" storagePerc storageEfficiency storagePerc
 

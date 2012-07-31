@@ -3,6 +3,8 @@
 
 module EFA2.Display.Plot (module EFA2.Display.Plot) where
 
+import System.Process
+import System.Exit
 import Graphics.Gnuplot.Simple
 import qualified Data.List as L
 
@@ -26,6 +28,7 @@ import EFA2.Signal.Typ
 import EFA2.Display.DispTyp
 import EFA2.Display.DispBase
 import EFA2.Signal.SequenceData
+import EFA2.Utils.Utils
 
 import qualified Data.Map as M
 
@@ -71,24 +74,39 @@ instance (DisplayTyp t,
 xyPlotAttr :: (DisplayTyp t1, DisplayTyp t2) => String -> TC s t1 (Data (v1 :> Nil) Val) ->  TC s t2 (Data (v2 :> Nil) Val) -> [Attribute]
 xyPlotAttr ti x y = [Title ti,LineStyle 1 [PointSize 2], XLabel $ genAxLabel x,YLabel $ genAxLabel y,Grid $ Just []]
 
+xyPlotStyle legend =  (PlotStyle {plotType = LinesPoints, lineSpec = CustomStyle [LineTitle legend,LineWidth 2, PointType 7, PointSize 1.5]})
+
 class XYPlot a b where
   xyplot ::  String -> a -> b -> IO ()
   
-instance (DisplayTyp t1, DisplayTyp t2, VFromList v1 Double,VFromList v2 Double) => XYPlot (TC Signal t1 (Data (v1 :> Nil) Val)) (TC Signal t2 (Data (v2 :> Nil) Val)) where 
+instance (DisplayTyp t1,
+          DisplayTyp t2,
+          VFromList v1 Double,
+          VFromList v2 Double) => 
+         XYPlot (TC Signal t1 (Data (v1 :> Nil) Val)) (TC Signal t2 (Data (v2 :> Nil) Val)) where 
   xyplot ti x y = plotPath (xyPlotAttr ti x y) (zip (sPlotData x ::[Val]) (sPlotData y :: [Val]))
 
-instance (DisplayTyp t1,DisplayTyp t2, VFromList v1 Double, VFromList v2 Double) => XYPlot (TC s t1 (Data (v2 :> Nil) Val)) [(TC s t2 (Data (v1 :> Nil) Val))] where 
-  xyplot ti x ys = plotPaths (xyPlotAttr ti x (head ys)) (map (\ y -> zip (sPlotData x::[Val]) (sPlotData y::[Val])) ys)
+instance (DisplayTyp t1,
+          DisplayTyp t2, 
+          VFromList v1 Double, 
+          VFromList v2 Double) => XYPlot (TC s t1 (Data (v2 :> Nil) Val)) [(TC s t2 (Data (v1 :> Nil) Val))] where 
+  xyplot ti x ys = plotPathsStyle (xyPlotAttr ti x (head ys)) (zip styleList (map (\ y -> zip (sPlotData x::[Val]) (sPlotData y::[Val])) ys))
+    where styleList = map (xyPlotStyle . show) (map (\ n -> "Signal"++ show n) $ listIdx ys)  
 
-instance (DisplayTyp t1,DisplayTyp t2, VFromList v1 Double, VFromList v2 Double) => XYPlot [(TC s t1 (Data (v2 :> Nil) Val))] [(TC s t2 (Data (v1 :> Nil) Val))] where 
-  xyplot ti xs ys = plotPaths (xyPlotAttr ti (head xs) (head ys)) (zipWith (\ x y -> zip (sPlotData x::[Val]) (sPlotData y::[Val])) xs ys)
+instance (DisplayTyp t1,
+          DisplayTyp t2, 
+          VFromList v1 Double, 
+          VFromList v2 Double) => XYPlot [(TC s t1 (Data (v2 :> Nil) Val))] [(TC s t2 (Data (v1 :> Nil) Val))] where 
+  xyplot ti xs ys = plotPathsStyle (xyPlotAttr ti (head xs) (head ys)) (zip styleList (zipWith (\ x y -> zip (sPlotData x::[Val]) (sPlotData y::[Val])) xs ys))
+    where styleList = map (xyPlotStyle . show) (map (\ n -> "Signal"++ show n) $ listIdx ys)
 
 instance (DisplayTyp t1,
           DisplayTyp t2, 
           VFromList v1 Double,
           VFromList v3 Double,
           VFromList v4 (TC s t2 (Data (v3 :> (Nil' :> Nil')) Val)),
-          VWalker v4 (v3 Val) (TC s t2 (Data (v3 :> (Nil' :> Nil')) Val))) => XYPlot (TC s t1 (Data (v1 :> Nil) Val)) (TC s t2 (Data (v4 :> v3 :> Nil) Val)) where 
+          VWalker v4 (v3 Val) (TC s t2 (Data (v3 :> (Nil' :> Nil')) Val))) => 
+         XYPlot (TC s t1 (Data (v1 :> Nil) Val)) (TC s t2 (Data (v4 :> v3 :> Nil) Val)) where 
   xyplot ti x y = xyplot ti x (toSigList y)
 
 instance (DisplayTyp t1,
@@ -98,7 +116,8 @@ instance (DisplayTyp t1,
           VFromList v2 (TC s t1 (Data (v1 :> (Nil' :> Nil')) Val)),
           VWalker v2 (v1 Val) (TC s t1 (Data (v1 :> (Nil' :> Nil')) Val)), 
           VFromList v4 (TC s t2 (Data (v3 :> (Nil' :> Nil')) Val)),
-          VWalker v4 (v3 Val) (TC s t2 (Data (v3 :> (Nil' :> Nil')) Val))) => XYPlot (TC s t1 (Data (v2 :> v1 :> Nil) Val)) (TC s t2 (Data (v4 :> v3 :> Nil) Val)) where 
+          VWalker v4 (v3 Val) (TC s t2 (Data (v3 :> (Nil' :> Nil')) Val))) => 
+         XYPlot (TC s t1 (Data (v2 :> v1 :> Nil) Val)) (TC s t2 (Data (v4 :> v3 :> Nil) Val)) where 
   xyplot ti x y = xyplot ti (toSigList x) (toSigList y)
 
 
@@ -120,20 +139,28 @@ instance (VFromList v2 (v1 Double),
           VWalker v5 (v6 Double) [Double], 
           DisplayTyp t1,
           DisplayTyp t2,
-          DisplayTyp t3) => SurfPlot (TC s1 t1 (Data (v2 :> v1 :> Nil) Val)) (TC s2 t2 (Data (v3 :> v4 :> Nil) Val)) (TC s3 t3 (Data (v5 :> v6 :> Nil) Val)) where
-  surfPlot ti x y z = plotMesh3d (plotAttrs) [Plot3dType Surface] (L.zipWith3 zip3 (stoList2 x) (stoList2 y) (stoList2 z))
-    where
-      plotAttrs        = [Title ti, 
-                        Grid $ Just [], 
-                        XLabel $ genAxLabel x,
-                        YLabel $ genAxLabel y,
-                        Size $ Scale 1]
+          DisplayTyp t3) => 
+         SurfPlot (TC s1 t1 (Data (v2 :> v1 :> Nil) Val)) (TC s2 t2 (Data (v3 :> v4 :> Nil) Val)) (TC s3 t3 (Data (v5 :> v6 :> Nil) Val)) where
+  surfPlot ti x y z = do
+      clearCurves     
+      let plotAttrs      = [Title ti, 
+                            Grid $ Just [], 
+                            XLabel $ genAxLabel x,
+                            YLabel $ genAxLabel y,
+                            Size $ Scale 1]
+      plotMesh3d (plotAttrs) [Plot3dType Surface] (L.zipWith3 zip3 (stoList2 x) (stoList2 y) (stoList2 z))      
+      saveCurves ti
+      return ()
 
 
 -- | Plotting Records ---------------------------------------------------------------
 
 -- | Line Style
-rPlotStyle legend =  (PlotStyle {plotType = LinesPoints, lineSpec = CustomStyle [LineTitle legend,LineWidth 2, PointType 7, PointSize 1.5]})
+rPlotStyle legend = (PlotStyle {plotType = LinesPoints, 
+                                lineSpec = CustomStyle [LineTitle legend,
+                                                        LineWidth 2, 
+                                                        PointType 7, 
+                                                        PointSize 1.5]})
 
 -- | Plot Attributes
 rPlotAttrs name = [Title ("PowerRecord: " ++ name), 
@@ -170,10 +197,17 @@ instance RPlot SequPwrRecord where
 genAxLabel :: (DisplayTyp t) => TC s t (c d) -> String 
 genAxLabel x = (getDisplayTypName $ getDisplayType x) ++ " [" ++ (show $ getDisplayUnit $ getDisplayType x) ++ "]"
 
-{-
+
 -- | clean old gnu-Plot files from current dir
 clearCurves ::  IO ExitCode
 clearCurves = do
   system ("rm curve.gp")
   system ("rm curve*.csv")
--}
+
+saveCurves :: String -> IO ExitCode
+saveCurves ti = do 
+  system ("mkdir gnuplot")
+  system ("mkdir gnuplot/"++ti) 
+  system ("mv curve.gp gnuplot/" ++ ti) 
+  system ("mv curve*.csv gnuplot/" ++ ti) 
+  
