@@ -12,6 +12,7 @@ import qualified Data.List as L
 import qualified Data.Map as M
 
 import Debug.Trace
+import Text.Printf
 
 
 import EFA2.Interpreter.Env
@@ -134,6 +135,7 @@ showEqTerm (DX (DXIdx s r x y)) =  "dx_" ++ show s ++ "." ++ show r ++ "_" ++ sh
 
 showEqTerm (Var (VarIdx s r x y)) = "v_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
 showEqTerm (Store (StorageIdx s r n)) = "s_" ++ show s ++ "." ++ show r ++ "_" ++ show n
+
 showEqTerm (x :+ y) = "(" ++ showEqTerm x ++ " + " ++ showEqTerm y ++ ")"
 showEqTerm (x :* y) = showEqTerm x ++ " * " ++ showEqTerm y
 showEqTerm (FEdge power eta) = "f(" ++ showEqTerm power ++ ", " ++ showEqTerm eta ++ ")"
@@ -150,6 +152,48 @@ showEqTerm (x := y) = showEqTerm x ++ " = " ++ showEqTerm y
 
 showEqTerms :: [EqTerm] -> String
 showEqTerms ts = L.intercalate "\n" $ map showEqTerm ts
+
+
+newtype LatexString = LatexString { unLatexString :: String } deriving (Show, Eq)
+
+toLatexString' :: EqTerm -> String
+toLatexString' (Const x) = printf "%.6f   " x
+toLatexString' Given = "\\mbox{given}"
+
+toLatexString' (Energy (EnergyIdx s r x y)) = "E_{" ++ show s ++ "." ++ show r ++ "." ++ show x ++ "." ++ show y ++ "}"
+toLatexString' (DEnergy (DEnergyIdx s r x y)) = "\\Delta E_{" ++ show s ++ "." ++ show r ++ "." ++ show x ++ "." ++ show y ++ "}"
+
+toLatexString' (Power (PowerIdx s r x y)) = "P_{" ++ show s ++ "." ++ show r ++ "." ++ show x ++ "." ++ show y ++ "}"
+toLatexString' (DPower (DPowerIdx s r x y)) = "\\Delta P_{" ++ show s ++ "." ++ show r ++ "." ++ show x ++ "." ++ show y ++ "}"
+
+toLatexString' (FEta (FEtaIdx s r x y)) = "\\eta_{" ++ show s ++ "." ++ show r ++ "." ++ show x ++ "." ++ show y ++ "}"
+toLatexString' (DEta (DEtaIdx s r x y)) = "\\Delta \\eta_{" ++ show s ++ "." ++ show r ++ "." ++ show x ++ "." ++ show y ++ "}"
+
+toLatexString' (DTime (DTimeIdx s r)) =  "\\Delta t_{" ++ show s ++ "." ++ show r ++ "}"
+
+toLatexString' (X (XIdx s r x y)) =  "x_{" ++ show s ++ "." ++ show r ++ "." ++ show x ++ "." ++ show y ++ "}"
+toLatexString' (DX (DXIdx s r x y)) =  "\\Delta x_{" ++ show s ++ "." ++ show r ++ "." ++ show x ++ "." ++ show y ++ "}"
+
+toLatexString' (Var (VarIdx s r x y)) = "v_{" ++ show s ++ "." ++ show r ++ "." ++ show x ++ "." ++ show y ++ "}"
+toLatexString' (Store (StorageIdx s r n)) = "s_{" ++ show s ++ "." ++ show r ++ "." ++ show n ++ "}"
+
+
+toLatexString' (x :+ y) = "(" ++ toLatexString' x ++ " + " ++ toLatexString' y ++ ")"
+toLatexString' (x :* y) = toLatexString' x ++ " * " ++ toLatexString' y
+toLatexString' (FEdge power eta) = "f(" ++ toLatexString' power ++ ", " ++ toLatexString' eta ++ ")"
+toLatexString' (BEdge power eta) = "b(" ++ toLatexString' power ++ ", " ++ toLatexString' eta ++ ")"
+toLatexString' (NEdge power0 power1) = "n(" ++ toLatexString' power0 ++ ", " ++ toLatexString' power1 ++ ")"
+
+toLatexString' (FNode power eta) = "fn(" ++ toLatexString' power ++ ", " ++ toLatexString' eta ++ ")"
+toLatexString' (BNode power eta) = "bn(" ++ toLatexString' power ++ ", " ++ toLatexString' eta ++ ")"
+toLatexString' (XNode power0 power1) = "xn(" ++ toLatexString' power0 ++ ", " ++ toLatexString' power1 ++ ")"
+
+toLatexString' (Recip x) = "\\frac{1}{" ++ toLatexString' x ++ "}"
+toLatexString' (Minus x) = "-(" ++ toLatexString' x ++ ")"
+toLatexString' (x := y) = toLatexString' x ++ " = " ++ toLatexString' y
+
+toLatexString :: EqTerm -> LatexString
+toLatexString t = LatexString $ "$" ++ toLatexString' t ++ "$"
 
 
 -- | This function takes a predicate p that determines, wether

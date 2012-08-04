@@ -27,28 +27,13 @@ import qualified Data.Vector.Generic.Mutable as MV
 
 -- | Function to calculate flow states for the whole sequence 
 genSequFState :: SequFlowRecord FlowRecord -> SequFlowState
---genSequFState :: (SBox Scalar c (Data Nil) d, SigSum s Scalar c2 c d, Ord d, Functor f) =>
---                 f [FlRecord t (TC s typ (c2 d))] -> f [FlowState]
 genSequFState sqFRec = map genFlowState `fmap` sqFRec
 
---  (SFold Scalar FSignal (Data Nil) (Data (UV.Vector :> Nil)) Val Val)
 -- | Function to extract the flow state out of a Flow Record  
 genFlowState ::  FlowRecord -> FlowState
---genFlowState :: (SBox Scalar c (Data Nil) d, SigSum s Scalar c2 c d, Ord d) =>
---                FlRecord t (TC s typ (c2 d)) -> FlowState
 genFlowState fRec@(FlRecord time flowMap) = FlowState $ M.map f flowMap
   where f flow = fromScalar $ sigSign (sigSum flow)
 
-{-
--- | Function to check flow state on validity
-checkFlowState :: Topology -> FlowState -> Bool
-checkFlowState top@(gr nodes edges) (FlowState fs) = checkNodes && checkEdges 
-  where checkNodes = map f nodes
-        checkEdges = map g edges
-        
-        g edge@(idx1,idx2) | fs M.! (PPosIdx idx1 idx2) ==  fs M.! (PPosIdx idx2 idx1)
--}        
-        
 -- | Function to generate Flow Topologies for all Sequences
 genSequFlowTops :: Topology -> SequFlowState -> SequFlowTops         
 genSequFlowTops topo (SequData sequFlowStates) = SequData $ map (genFlowTopology topo) sequFlowStates  
@@ -109,9 +94,7 @@ mkSequenceTopology sd = res
         g ((_, (_, l), _):_) = l
 
         maxNode = 1 + (snd $ nodeRange sqTopo)
-        startNodes = map f (zip (pairs [maxNode..]) storeLabs)
---        f ((nid1, nid2), NLabel _ rec n (Storage sn)) =
---          [ (nid1, NLabel (-1) rec n (InitStorage sn)), (nid2, NLabel (-1) rec (-1) Source) ]
+        startNodes = map f (zip (map (,maxNode) [maxNode+1 ..]) storeLabs)
         f ((nid1, nid2), NLabel _ n (Storage sn)) =
           [ (nid1, NLabel (-1) n (InitStorage sn)), (nid2, NLabel (-1) (-1) Source) ]
 
@@ -120,4 +103,3 @@ mkSequenceTopology sd = res
         e = defaultELabel { edgeType = InnerStorageEdge }
         startEdges = map (\((nid1, _):(nid2, _):_) -> (nid2, nid1, e)) startNodes
         res = insEdges (startEdges ++ interSecEs) (insNodes (concat startNodes) sqTopo)
-

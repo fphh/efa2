@@ -22,6 +22,10 @@ safeLookup m k = case M.lookup k m of
                       Nothing -> error $ "safeLookup: " ++ show k ++ "\n" ++ show m
                       Just x -> x
 
+checkJust :: String -> Maybe a -> a
+checkJust _ (Just x) = x
+checkJust str _ = error ("checkJust called from " ++ str)
+
 -- generalized unique
 gunique :: (Ord a) => S.Set a -> [a] -> [a]
 gunique s = go s 
@@ -68,6 +72,22 @@ mkInOutGraphFormat f g = zip3 (map (map f) ins) (map f ns) (map (map f) outs)
        ins = map (h pre) ns
        outs = map (h suc) ns
        h next (n, _) = map (\p -> (p, fromJust (lab g p))) (next g n)
+
+getInOutGraphFormatFromNode :: Graph gr => (LNode a -> c) -> gr a b -> Node -> InOutGraphFormat c
+getInOutGraphFormatFromNode f g n = (map f lins, f l, map f louts)
+  where l = (n, fromJust $ lab g n)
+        ins = pre g n
+        lins = zip ins (map (fromJust . lab g) ins)
+        outs = suc g n
+        louts = zip outs (map (fromJust . lab g) outs)
+
+-- | Breadth first.
+mkInOutGraphFormatBfs :: Graph gr => (LNode a -> c) -> gr a b -> [InOutGraphFormat c]
+mkInOutGraphFormatBfs f g = map (getInOutGraphFormatFromNode f g) ns
+  where ns = bfs n g
+        ((_, n, _, _), _) = matchAny g
+  
+
 
 foldGraph :: Graph gr => (a -> InOutGraphFormat (LNode b) -> a) -> a -> gr b c -> a
 foldGraph f start g = L.foldl' f start (mkInOutGraphFormat id g)

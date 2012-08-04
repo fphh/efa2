@@ -85,7 +85,7 @@ makeAllEquations topo envs = ((envUnion envs') { recordNumber = MixedRecord newR
                                                  ++ envToEqTerms v
                                                  ++ envToEqTerms st
 
-
+-- TODO: use patternmatching instead of safeLookup
 shiftIndices :: (Show a) => M.Map (Int, Int) Node -> Envs a -> Envs a
 shiftIndices m (Envs (SingleRecord rec) e de p dp fn dn t x dx v st) =
   Envs (SingleRecord rec) e' de' p' dp' fn' dn' t x' dx' v' st'
@@ -164,6 +164,8 @@ mkStoreEqs recordNum (ins, outs) = startEq ++ eqs
   where ins' = map (InStore . snd3) ins
         outs' = map (OutStore . snd3) outs
         both@(b:_) = L.sortBy  (compare `on` f) $ ins' ++ outs'
+             
+
         f (InStore (_, l)) = sectionNLabel l
         f (OutStore (_, l)) = sectionNLabel l
         startEq = k b
@@ -374,5 +376,4 @@ makeDirTopology topo@(Topology _) = mkGraph ns es
           | AgainstDir <- flowDirection elabel = (y, x, elabel { flowDirection = WithDir })
           | otherwise = e
         ns = unique (concatMap (\(x, y, _) -> [(x,  fromJust (lab topo x)), (y, fromJust (lab topo y))]) es)
-
 

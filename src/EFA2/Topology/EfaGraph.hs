@@ -58,7 +58,7 @@ instance Graph EfaGraph where
            where lab = (nodeLabels g) IM.! n
                  cont = (mkInAdj g n, n, lab, mkOutAdj g n)
                  g' = delEfaNode g n
-         mkGraph ns es = L.foldl (flip (&)) empty (map (context res) (map fst ns))
+         mkGraph ns es = L.foldl' (flip (&)) empty (map (context res) (map fst ns))
            where res = EfaGraph  (IM.fromList outs) (IM.fromList ins)
                                  (IM.fromList ns) (M.fromList (map f es))
                  f (x, y, l) = ((x, y), l)
@@ -74,17 +74,20 @@ instance Graph EfaGraph where
 
 
 instance DynGraph EfaGraph where
-         (ins, n, lab, outs) & (EfaGraph os is ls es) = EfaGraph resOs resIs newLs newEs
+         (ins, n, lab, outs) & (EfaGraph os is ls es) = 
+           {- trace (show os ++ "\n" ++ show resOs ++ "\n" ++ show n++ "\n----\n") -} EfaGraph resOs resIs newLs newEs
            where newLs = IM.insert n lab ls
                  newIns = map (\(l, i) -> ((i, n), l)) ins
                  newOuts = map (\(l, o) -> ((n, o), l)) outs 
                  newEs = foldr (uncurry M.insert) es (newIns ++ newOuts)
 
                  ins' = map snd ins
-                 is' = IM.insert n (S.fromList ins') is
+                 -- is' = IM.insert n (S.fromList ins') is
+                 is' = IM.insertWith S.union n (S.fromList ins') is
 
                  outs' = map snd outs
-                 os' = IM.insert n (S.fromList outs') os
+                 --os' = IM.insert n (S.fromList outs') os
+                 os' = IM.insertWith S.union n (S.fromList outs') os
 
                  resIs = L.foldl' f is' outs'
                  resOs = L.foldl' f os' ins'

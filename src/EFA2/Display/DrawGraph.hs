@@ -110,10 +110,46 @@ mkDotEdge eshow e@(x, y, elabel) = DotEdge x y [displabel, edir, colour]
 
 printGraph :: EfaGraph NLabel ELabel -> RecordNumber -> (Int -> Int -> String) -> (LNode NLabel -> String) -> (LEdge ELabel -> String) -> IO ()
 printGraph g recordNum tshow nshow eshow = runGraphvizCanvas Dot (mkDotGraph g recordNum tshow nshow eshow) Xlib
+{-
+printGraph g recordNum tshow nshow eshow = do
+  runGraphvizCommand Dot (mkDotGraph g recordNum tshow nshow eshow) XDot "result/graph.dot"
+  return ()
+-}
 
 drawTopologyX' :: Topology -> IO ()
 drawTopologyX' topo = printGraph g noRecord (const2 "♥") show show
   where g = unTopology topo
+
+
+drawTopologySimple :: Topology -> IO ()
+drawTopologySimple topo = printGraph g noRecord (const2 "♥") nshow eshow
+  where g = unTopology topo
+        nshow (n, l) = show n ++ " - " ++ show (nodetypeNLabel l)
+        eshow _ = ""
+
+dsg :: Int -> Topology -> DotSubGraph String
+dsg ident topo = DotSG True (Just (Int ident)) stmts
+  where stmts = DotStmts attrs [] ns es
+        attrs = [GraphAttrs [labelf ident]]
+        ns = map mkNode (labNodes topo)
+        idf x = show ident ++ "_" ++ show x
+        labelf x = Label $ StrLabel $ T.pack (show x)
+        mkNode x@(n, _) = DotNode (idf n) (nattrs x)
+        nattrs x = [labNodef x, nodeColour, Style [SItem Filled []], Shape BoxShape ]
+        labNodef (n, l) = Label $ StrLabel $ T.pack (show n ++ " - " ++ show (nodetypeNLabel l))
+        es = map mkEdge (labEdges topo)
+        mkEdge (x, y, l) 
+          | WithDir <- fd = DotEdge (idf x) (idf y) [Dir Forward]
+          | AgainstDir <- fd = DotEdge (idf x) (idf y) [Dir Back]
+          | otherwise = DotEdge (idf x) (idf y) [Dir NoDir]
+          where fd = flowDirection l
+
+drawTopologyXs' :: [Topology] -> IO ()
+drawTopologyXs' ts = runGraphvizCanvas Dot g Xlib
+  where g = DotGraph False True Nothing stmts
+        stmts = DotStmts attrs subgs [] []
+        subgs = zipWith dsg [0..] ts
+        attrs = []
 
 data Line = ELine Int Int
           | XLine Int Int
@@ -163,6 +199,62 @@ instance (Integral a) => DrawTopology [Ratio a] where
                  formatStCont Nothing = "♥"
                  tshow dt s r = show $ dt `safeLookup` (DTimeIdx s r)
 
+instance DrawTopology String where
+         drawTopology = drawAbsTopology f formatStCont tshow
+           where f (x, Just ys) = show x ++ " = " ++ ys
+                 f (x, Nothing) = show x ++ " = +"
+                 formatStCont (Just ys) = ys
+                 formatStCont Nothing = "+"
+                 tshow dt s r = dt `safeLookup` (DTimeIdx s r)
+
+instance Num LatexString
+
+instance DrawTopology [LatexString] where
+         drawTopology = drawAbsTopologyLatex f formatStCont tshow
+           where f (x, Just ys) = showX x ++ " = " ++ unLatexString (head ys)
+                 f (x, Nothing) = showX x ++ " = +"
+                 formatStCont (Just ys) = unLatexString (head ys)
+                 formatStCont Nothing = "+"
+                 tshow dt s r = unLatexString $ head $ dt `safeLookup` (DTimeIdx s r)
+
+                 showX (ELine u v) = "$e_{" ++ show u ++ "." ++ show v ++ "}$"
+                 showX (XLine u v) = "$x_{" ++ show u ++ "." ++ show v ++ "}$"
+                 showX (NLine u v) = "$n_{" ++ show u ++ "." ++ show v ++ "}$"
+                 showX (ErrorLine str) = str
+
+
+drawAbsTopologyLatex f content tshow (Topology g) (Envs rec e de p dp fn dn dt x dx v st) = printGraph g rec (tshow dt) nshow eshow
+  where eshow ps = L.intercalate "\n " $ map f $ mkLst rec ps
+        --tshow' = tshow dt
+        nshow (num, NLabel sec nid ty) = 
+          "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\\\\ " ++
+          "Type: " ++ show ty ++ stContent rec ty
+            where stContent (SingleRecord rec) (InitStorage n) 
+                    = "\\\\ Content: " ++ content (M.lookup (StorageIdx sec rec n) st)
+                  stContent (SingleRecord rec) (Storage n) = "\\\\ Content: " ++ content (M.lookup (StorageIdx sec rec n) st)
+                  stContent rn (InitStorage n) = "\\\\ Content: Problem with record number: " ++ show rn
+                  stContent rn (Storage n) = "\\\\ Content: Problem with record number: " ++ show rn
+                  stContent _ _ = ""
+
+        node n = nodeNLabel (fromJust (lab g n))
+        mkLst (SingleRecord rec) (uid, vid, l)
+          | isOriginalEdge l = [ (ELine uid vid, M.lookup (EnergyIdx usec rec uid vid) e), 
+                                 (XLine uid vid, M.lookup (XIdx usec rec uid vid) x),
+                                 ndirlab (flowDirection l),
+                                 (XLine vid uid, M.lookup (XIdx vsec rec vid uid) x),
+                                 (ELine vid uid, M.lookup (EnergyIdx vsec rec vid uid) e) ]
+          | isInnerStorageEdge l = [ (ELine vid uid, M.lookup (EnergyIdx vsec rec vid uid) e) ]
+          | otherwise = [ (ELine uid vid, M.lookup (EnergyIdx usec rec uid vid) e),
+                          (XLine uid vid, M.lookup (XIdx usec rec uid vid) x),
+                          (ELine vid uid, M.lookup (EnergyIdx vsec rec vid uid) e) ]
+          where NLabel usec _ _ = fromJust $ lab g uid
+                NLabel vsec _ _ = fromJust $ lab g vid
+                ndirlab WithDir = (NLine uid vid, M.lookup (FEtaIdx vsec rec vid uid) fn <*> Just [1])
+                ndirlab _ = (NLine vid uid, M.lookup (FEtaIdx usec rec uid vid) fn <*> Just [1])
+        mkLst _ _ = [ (ErrorLine "Problem with record number", Nothing) ]
+
+
+
 instance DrawTopology [InTerm Val] where
          drawTopology = drawAbsTopology f formatStCont tshow
            where f (x, Just ys) = show x ++ " = " ++ (concatMap showInTerm ys)
@@ -172,6 +264,7 @@ instance DrawTopology [InTerm Val] where
                  tshow dt s r = showInTerms $ dt `safeLookup` (DTimeIdx s r)
 
 instance Num EqTerm
+instance Num Char
 
 instance DrawTopology [EqTerm] where
          drawTopology = drawAbsTopology f formatStCont tshow
@@ -280,7 +373,7 @@ instance DrawTopology Sc where
                  f (x@(NLine _ _), Just (TC ys)) = show x ++ " = " ++ sdisp (TC ys :: Sc)
                  f (ErrorLine str, _) = str
                  f (x, Nothing) = show x ++ " = ♥"
-                 --formatStCont (Just ys) = sdisp ys
+                 formatStCont (Just ys) = sdisp ys
                  formatStCont Nothing = "♥"
 
          drawDeltaTopology = drawDeltaTopologyD f formatStCont

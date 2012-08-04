@@ -14,7 +14,7 @@ import Control.Applicative
 
 import Debug.Trace
 
-import EFA2.Topology.RandomTopology
+--import EFA2.Topology.RandomTopology
 import EFA2.Topology.Topology
 -- import EFA2.Topology.GraphData
 

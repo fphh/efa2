@@ -1,3 +1,4 @@
+{-# LANGUAGE TupleSections #-}
 {-# OPTIONS_HADDOCK ignore-exports #-}
 
 module EFA2.Topology.TopologyData (
@@ -14,15 +15,19 @@ module EFA2.Topology.TopologyData (
        SecTopology,
        isStorage,
        isActiveEdge,
+       isInactiveEdge,
        isOtherSection,
        isOriginalEdge,
        isInnerStorageEdge,
        isIntersectionEdge,
+       flipFlowDirection,
        getStorageNumber,
        defaultELabel,
+       defaultNLabel,
        unlabelEdge,
        fromFlowToSecTopology,
        getActiveStores,
+       topoToFlowTopo,
        partitionInOutStatic) where
 
 import Data.Graph.Inductive
@@ -40,8 +45,12 @@ import qualified Data.List as L
 data NodeType = Storage Int
               | InitStorage Int
               | Sink
+              | AlwaysSink
               | Source
-              | Crossing deriving (Show, Ord, Eq)
+              | AlwaysSource
+              | Crossing
+              | DeadNode
+              | NoRestriction deriving (Show, Ord, Eq)
 
 isStorage :: NodeType -> Bool
 isStorage (Storage _) = True
@@ -54,9 +63,11 @@ getStorageNumber (InitStorage x) = x
 getStorageNumber x = error $ "getStorageNumber: " ++ show x ++ " is not a storage"
 
 data NLabel = NLabel { sectionNLabel :: Int,
-                       -- recordNLabel :: Int,
                        nodeNLabel :: Int,
                        nodetypeNLabel :: NodeType } deriving (Show, Eq, Ord)
+
+defaultNLabel :: NLabel
+defaultNLabel = NLabel 0 0 NoRestriction
 
 data FlowDirection = WithDir
                    | AgainstDir
@@ -81,6 +92,7 @@ data EdgeType = OriginalEdge
 data ELabel = ELabel { edgeType :: EdgeType,
                        flowDirection :: FlowDirection } deriving (Eq, Ord, Show)
 
+defaultELabel :: ELabel
 defaultELabel = ELabel OriginalEdge WithDir
 
 isActiveEdge :: ELabel -> Bool
@@ -99,6 +111,10 @@ isInnerStorageEdge = (InnerStorageEdge ==) . edgeType
 isIntersectionEdge :: ELabel -> Bool
 isIntersectionEdge = (IntersectionEdge ==) . edgeType
 
+flipFlowDirection :: FlowDirection -> FlowDirection
+flipFlowDirection WithDir = AgainstDir
+flipFlowDirection AgainstDir = WithDir
+flipFlowDirection UnDir = UnDir
 
 
 
@@ -124,6 +140,9 @@ instance DynGraph Topology' where
 -- | 
 newtype FlowTopology' a b = FlowTopology { unFlowTopology :: EfaGraph a b } deriving (Show)
 type FlowTopology = FlowTopology' NLabel ELabel
+
+topoToFlowTopo :: Topology -> FlowTopology
+topoToFlowTopo = FlowTopology . unTopology
 
 instance Graph FlowTopology' where
          empty = FlowTopology empty
@@ -159,9 +178,8 @@ fromFlowToSecTopology (FlowTopology topo) = SecTopology topo
 
 -- | Active storages, grouped by storage number, sorted by section number.
 getActiveStores :: Topology -> [[InOutGraphFormat (LNode NLabel)]]
-getActiveStores topo = map sectionSort groupedIof
-  where actTopo = elfilter isActiveEdge topo
-        iof = mkInOutGraphFormat id actTopo
+getActiveStores topo = map (sectionSort . filter (isActiveSt topo)) groupedIof
+  where iof = mkInOutGraphFormat id topo
         sortedIof = L.sortBy (compare `on` stNum) (filter isSt iof)
         isSt (_, (_, l), _) = isStorage (nodetypeNLabel l)
         stNum (_, (_, l), _) | Storage x <- nodetypeNLabel l = x
@@ -171,14 +189,19 @@ getActiveStores topo = map sectionSort groupedIof
         sectionSort = L.sortBy (compare `on` sec)
         sec (_, (_, l), _) = sectionNLabel l
 
-
+isActiveSt :: Topology -> InOutGraphFormat (LNode NLabel) -> Bool     
+isActiveSt topo (ins, (nid, _), outs) = res
+  where inEs = map ((,nid) . fst) ins
+        outEs = map ((nid,) . fst) outs
+        es = catMaybes $ map (uncurry (getLEdge topo)) (inEs ++ outEs)
+        res = any isActiveEdge (map (\(_, _, el) -> el) es)
 
 -- | Partition the storages in in and out storages, looking only at edges, not at values.
 -- This means that nodes with in AND out edges cannot be treated.
 partitionInOutStatic :: 
   Topology -> [InOutGraphFormat (LNode NLabel)] -> ([InOutGraphFormat (LNode NLabel)], [InOutGraphFormat (LNode NLabel)])
 partitionInOutStatic topo iof = L.partition p iof
-  where p ([], _, []) = False
+  where p t@([], _, []) = False
         p (ins, (nid, l), outs) | ((_:_), []) <- (ins', outs') = True
                                 | ([], (_:_)) <- (ins', outs') = True
                                 | otherwise = False
@@ -190,4 +213,5 @@ partitionInOutStatic topo iof = L.partition p iof
                 r (n, _) = flowDirection e == AgainstDir && (isOriginalEdge e || isInnerStorageEdge e)
                   where e = thd3 $ fromJust (getLEdge topo nid n)
                         cond = isOriginalEdge e || isInnerStorageEdge e
+
 
