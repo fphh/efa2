@@ -40,7 +40,7 @@ topo = mkGraph (makeNodes nodes) (makeEdges edges)
   where nodes = [(0, Source), (1, Crossing), (2, Sink), (3, Storage 0)]
         edges = [(0, 1, defaultELabel), (1, 2, defaultELabel), (1, 3, defaultELabel)]
 
-mkSig :: Int -> ([Val] -> PSig)
+mkSig :: Int -> ([Val] -> PSigL)
 mkSig n = sfromList . concat . replicate n
 
 etaf x = x/(x+5)
@@ -129,6 +129,7 @@ main = do
       --l = fromIntegral $ length $ replicate n (s01 ++ s01')
       --time = [0, 0] ++ (concatMap (replicate 3) [1.0 .. l])
       time = take 40 [0 ..]
+
 
       pMap =  M.fromList [ (PPosIdx 0 1, mkSig n s01 .++ (sfromList [head s01] :: PSigL)),
                            (PPosIdx 1 0, mkSig n s10 .++ (sfromList [head s10] :: PSigL)), 

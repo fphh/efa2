@@ -19,7 +19,7 @@ Die algebraischen Eigenschaften der Mengen der Zuständen kann man sich vielleic
 Auch transformEq (EFA2/Solver/Equation.hs) sollte davon profitieren können. Limitierend ist hier, dass nach einer Variable nur aufgelöst werden kann, wenn sie nur einmal in einer Gleichung vorkommt. Es gibt aber Gleichungen, wo variablen zusammengefasst werden können und eine Auflösung dann möglich ist.
 
 
-7.
+7. fromJust, head, tail, etc. ersetzen durch pattern-Matching.
 
 1000. Testen mit SmallCheck und QuickCheck. Aufbau einer TestSuite.
 

@@ -88,12 +88,6 @@ main = do
       sigs = powerMap sqEnvs'
       ts = [give storage0] ++ ts'
 
-     -- isV = isVarFromEqs ts
-
-     -- (given, noVariables, givExt, rest) = splitTerms isV ts
-     -- ho = hornOrder isV givExt rest
-     -- dirs = directEquations isV ho
-
       orderedTs = order ts
       envs = emptyEnv { powerMap = M.insert storage0 (sfromList [3.0]) sigs }
 
@@ -103,52 +97,3 @@ main = do
       dirg = makeDirTopology sqTopo
 
   drawTopology sqTopo res
-  --print sqTopo
-  --putStrLn (showEqTerms orderedTs)
-  --drawTopologyX' dirg
- 
-  --drawTopologyX' sqTopo
-  --print (sqTopo)
-  
-  --print test
-  --print (fst $ matchAny test)
-  --print (fst $ matchAny (snd (matchAny test)))
-  --print (fst $ matchAny (snd (matchAny (snd (matchAny test)))))
- -- print (fst $ matchAny (snd (matchAny (snd (matchAny (snd (matchAny test)))))))
-
-
-{-
-  drawAll [
-    drawTopologyX' sqTopo,
-    drawTopology sqTopo res,
-    drawTopologyX' dirg ]
--}
-
-  {-
-  putStrLn "Sequence"
-  putStrLn (myShowList sequ)
-  
-  putStrLn "PowerRecord"
-  putStrLn (myShowList $ genXSig pRec)
-
-  putStrLn "PowerRecord + ZeroPoints"
-  putStrLn (myShowList $ genXSig pRec0)
-
-  putStrLn "Sequence"
-  putStrLn (show sqPRec)
-
-  putStrLn "Sequence Flow"
-  putStrLn (show sqFRec)
-
-  putStrLn "Sequence Flow"
-  putStrLn (show sqFStRec)
-    -}
-
-  --putStrLn (showEqTerms ts)
-
-  --putStrLn (showInTerms gd)
-  
-  
-  -- drawSequFlowTops sqFlowTops
-  --print res
-

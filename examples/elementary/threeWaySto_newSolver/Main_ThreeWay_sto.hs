@@ -30,6 +30,11 @@ topo = mkGraph (makeNodes nodes) (makeEdges edges)
   where nodes = [(0, Source), (1, Crossing), (2, Sink), (3, Storage 0)]
         edges = [(0, 1, defaultELabel), (1, 2, defaultELabel), (1, 3, defaultELabel)]
 
+
+mkSig :: Int -> ([Val] -> PSigL)
+mkSig n = sfromList . concat . replicate n
+
+
 main :: IO ()
 main = do
   
@@ -48,15 +53,15 @@ main = do
       s31' = [-0.6, -0.6]
       n = 2
 
-      time :: TSig
+      time :: TSigL
       time = sfromList ([0, 0] ++ take 20 [1..])
 
-      pMap =  M.fromList [ (PPosIdx 0 1, sfromList (concat $ replicate n (s01 ++ s01'))),
-                           (PPosIdx 1 0, sfromList $ concat $ replicate n (s10 ++ s10')), 
-                           (PPosIdx 1 2, sfromList $ concat $ replicate n (s12 ++ s12')),
-                           (PPosIdx 2 1, sfromList $ concat $ replicate n (s21 ++ s21')),
-                           (PPosIdx 1 3, sfromList $ concat $ replicate n (s13 ++ s13')),
-                           (PPosIdx 3 1, sfromList $ concat $ replicate n (s31 ++ s31')) ]
+      pMap =  M.fromList [ (PPosIdx 0 1, mkSig n (s01 ++ s01')),
+                           (PPosIdx 1 0, mkSig n (s10 ++ s10')), 
+                           (PPosIdx 1 2, mkSig n (s12 ++ s12')),
+                           (PPosIdx 2 1, mkSig n (s21 ++ s21')),
+                           (PPosIdx 1 3, mkSig n (s13 ++ s13')),
+                           (PPosIdx 3 1, mkSig n (s31 ++ s31')) ]
 
       (sqEnvs, sqTopo) = makeSequence (PowerRecord time pMap) topo 
 

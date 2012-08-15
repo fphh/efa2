@@ -45,7 +45,7 @@ topo = mkGraph (makeNodes nodes) (makeEdges edges)
                   (2, 5, defaultELabel) ]
 
 
-mkSig :: Int -> ([Val] -> PSig)
+mkSig :: Int -> ([Val] -> PSigL)
 mkSig n = sfromList . concat . replicate n
 
 symbolic :: Topology -> Envs EqTerm
