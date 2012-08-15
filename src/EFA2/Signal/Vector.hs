@@ -251,3 +251,67 @@ instance VFromList V.Vector d where
 instance VFromList [] d where
   vfromList x = x
   vtoList x = x  
+  
+  
+class VSort v d where  
+  vsort :: v d -> v d
+  
+instance Ord d => VSort [] d where  
+  vsort = L.sort
+  
+instance (Ord d, UV.Unbox d) => VSort UV.Vector d where  
+  vsort x = UV.fromList $ L.sort $ UV.toList x 
+  
+instance Ord d => VSort V.Vector d where  
+  vsort x = V.fromList $ L.sort $ V.toList x
+  
+  
+class VFilter v d where  
+  vfilter :: (d -> Bool) -> v d -> v d
+  
+instance VFilter [] d where  
+  vfilter f x = filter f x
+  
+instance VFilter V.Vector d where  
+  vfilter f x = V.filter f x
+  
+instance UV.Unbox d => VFilter UV.Vector d where  
+  vfilter f x = UV.filter f x
+
+
+class VLookup v d where
+  vlookUp :: v d -> [Int] -> v d  
+  
+instance (Eq d) => VLookup [] d where  
+  vlookUp xs idxs = if check then map f m else error "Error in vLookup - indices out of Range"   
+    where
+      f (Just x) = x
+      check = all (/=Nothing) m
+      m = map ((V.fromList xs) V.!? ) idxs    
+  
+instance (Eq d) => VLookup V.Vector d where  
+  vlookUp xs idxs = if check then V.map f m else error "Error in vLookup - indices out of Range"   
+    where
+      f (Just x) = x
+      check = V.all (/=Nothing) m   
+      m = V.map (xs V.!?) $ V.fromList idxs    
+  
+instance (UV.Unbox d, Eq d,  UV.Unbox (Maybe d)) => VLookup UV.Vector d where  
+  vlookUp xs idxs = if check then UV.map f m else error "Error in vLookup - indices out of Range"   
+    where
+      f (Just x) = x
+      check = UV.all (/=Nothing) m   
+      m = UV.map (xs UV.!? ) $ UV.fromList idxs    
+  
+  
+class VReverse v d where
+  vreverse :: v d -> v d
+  
+instance VReverse [] d where  
+  vreverse = reverse
+  
+instance VReverse V.Vector d where  
+  vreverse = V.reverse
+  
+instance  (UV.Unbox d) => VReverse UV.Vector d where  
+  vreverse = UV.reverse

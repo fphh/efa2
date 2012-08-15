@@ -136,7 +136,7 @@ main = do
       dirg = makeDirTopology sqTopo
       
   -- print $ toTable show pRec
-  printTableToScreen show pRec
+  -- printTableToScreen show pRec
   --putStrLn (showEqTerms ts)
  -- putStrLn (showInTerms gd)
   --print sigs

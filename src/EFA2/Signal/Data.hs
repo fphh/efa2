@@ -11,30 +11,30 @@ import qualified Data.Vector as V
 ----------------------------------------------------------
 -- | EFA data containers
 
-newtype Data ab c = Data (ab c) deriving (Show, Eq, Ord)
+newtype Data ab c = Data (ab c) deriving (Show)
 
 
 data ((a :: * -> *) :> (b :: * -> *)) :: * -> * where
      D0 :: v0 -> Nil v0 
      D1 :: v1 v0 -> (v1 :> Nil) v0
      D2 :: v2 (v1 v0) -> (v2 :> v1 :> Nil) v0
-     D3 :: v3 (v2 (v1 v0)) -> (v3 :> v2 :> v1 :> Nil) v0
+     D3 :: v3 (v2 (v1 v0)) -> (v3 :> v2 :> v1 :> Nil) v0 -- deriving (Show, Eq Ord)
 
 infixr 9 :>
-data Nil' c = Nil' deriving (Show)
+data Nil' c = Nil' -- deriving (Show,Eq,Ord)
 type Nil = Nil' :> Nil'
 
 
-instance (Show v0) => Show (Nil v0) where
+instance (Show d) => Show (Nil d) where
          show (D0 x) = "D0 (" ++ show x ++ ")"
 
-instance (Show (v1 v0)) => Show ((v1 :> Nil) v0) where
+instance (Show (v1 d)) => Show ((v1 :> Nil) d) where
          show (D1 x) = "D1 (" ++ show x ++ ")"
 
-instance (Show (v2 (v1 v0))) => Show ((v2 :> v1 :> Nil) v0) where
+instance (Show (v2 (v1 d))) => Show ((v2 :> v1 :> Nil) d) where
          show (D2 x) = "D2 (" ++ show x ++ ")"
 
-instance (Show (v3 (v2 (v1 v0)))) => Show ((v3 :> v2 :> v1 :> Nil) v0) where
+instance (Show (v3 (v2 (v1 d)))) => Show ((v3 :> v2 :> v1 :> Nil) d) where
          show (D3 x) = "D3 (" ++ show x ++ ")"
 
 ---------------------------------------------------------
@@ -195,11 +195,11 @@ instance (VSingleton v2 (v1 d)) => DAppend (Data (v1 :> Nil)) (Data (v2 :> v1 :>
 ----------------------------------------------------------
 -- get data Range
         
-class DSingleton c1 c2 d | c1 -> c2 where
+class DMaximum c1 c2 d | c1 -> c2 where
   dmaximum :: c1 d -> c2 d
   dminimum :: c1 d -> c2 d
   
-instance (VSingleton y d) => DSingleton (Data (y :> Nil)) (Data Nil) d where
+instance (VSingleton y d) => DMaximum (Data (y :> Nil)) (Data Nil) d where
   dmaximum (Data (D1 x)) =  Data $ D0 $ vmaximum x          
   dminimum (Data (D1 x)) =  Data $ D0 $ vminimum x          
   
@@ -257,7 +257,7 @@ instance VTranspose v1 v2 d => DTranspose (Data (v2 :> v1 :> Nil)) d where
 ----------------------------------------------------------
 -- Head & Tail
   
-class DHead c1 c2 d | c1 -> c2, c2 -> c1 where  
+class DHead c1 c2 d where  
   dhead :: c1 d -> c2 d
   dlast :: c1 d -> c2 d
   
@@ -283,4 +283,101 @@ instance (VSingleton v2 (v1 d)) => DTail (Data (v2 :> v1 :> Nil)) (Data (v2 :> v
   dtail (Data (D2 x)) = Data $ D2 $ vtail x
   dinit (Data (D2 x)) = Data $ D2 $ vinit x
   
+  
+----------------------------------------------------------
+-- Singleton
+
+class DSingleton c1 c2 d where
+  dsingleton :: c1 d -> c2 d
+  
+instance  (VSingleton v2 (v1 d)) => DSingleton (Data (v1 :> Nil)) (Data (v2 :> v1 :> Nil)) d where  
+  dsingleton (Data (D1 x)) = Data $ D2 $ vsingleton x
+
+instance  (VSingleton v1 d) => DSingleton (Data Nil) (Data (v1 :> Nil)) d where  
+  dsingleton (Data (D0 x)) = Data $ D1 $ vsingleton x
+  
+  
+----------------------------------------------------------
+-- Sort
+
+class DSort c d where
+  dsort :: c d -> c d 
+  
+instance (VSort v1 d) => DSort (Data (v1 :> Nil)) d where   
+  dsort (Data (D1 x)) = Data $ D1 $ vsort x
+  
+
+----------------------------------------------------------
+-- Filter
+
+class DFilter c d where  
+  dfilter :: (d -> Bool) -> c d -> c d
+  
+instance VFilter v1 d => DFilter (Data (v1 :> Nil)) d where  
+  dfilter f (Data (D1 x)) = Data $ D1 $ vfilter f x
+  
+  
+----------------------------------------------------------
+-- Eq
+
+instance Eq d => Eq (Data Nil d) where
+  (==) (Data (D0 x)) (Data (D0 y)) = x == y
+  (/=) (Data (D0 x)) (Data (D0 y)) = x /= y
+
+instance (Eq (v1 d), Eq d) => Eq (Data (v1 :> Nil) d) where
+  (==) (Data (D1 xs)) (Data (D1 ys)) = xs == ys
+  (/=) (Data (D1 xs)) (Data (D1 ys)) = xs /= ys
+
+instance (Eq (v2 (v1 d)), Eq (v1 d), Eq d) => Eq (Data (v2 :> v1 :> Nil) d) where
+  (==) (Data (D2 xs)) (Data (D2 ys)) = xs == ys
+  (/=) (Data (D2 xs)) (Data (D2 ys)) = xs /= ys
+
+instance Ord d => Ord (Data Nil d) where
+  (>) (Data (D0 x)) (Data (D0 y)) = x > y
+  (<) (Data (D0 x)) (Data (D0 y)) = x < y
+  (>=) (Data (D0 x)) (Data (D0 y)) = x >= y
+  (<=) (Data (D0 x)) (Data (D0 y)) = x <= y
+
+
+----------------------------------------------------------
+-- Convert
+  
+class DConvert  c1 c2 d where  
+  dconvert :: c1 d -> c2 d
+
+instance UV.Unbox d => DConvert (Data ([] :> Nil)) (Data (UV.Vector :> Nil)) d where
+  dconvert (Data (D1 x)) = Data $ D1 $ vconvert x
+  
+instance DConvert (Data ([] :> Nil)) (Data (V.Vector :> Nil)) d where
+  dconvert (Data (D1 x)) = Data $ D1 $ vconvert x  
+  
+instance UV.Unbox d => DConvert (Data (UV.Vector :> Nil)) (Data ([] :> Nil)) d where
+  dconvert (Data (D1 x)) = Data $ D1 $ vconvert x    
+  
+instance DConvert (Data (V.Vector :> Nil)) (Data ([] :> Nil)) d where
+  dconvert (Data (D1 x)) = Data $ D1 $ vconvert x      
+
+instance UV.Unbox d => DConvert (Data ([] :> [] :> Nil)) (Data (V.Vector :> UV.Vector :> Nil)) d where
+  dconvert (Data (D2 x)) = Data $ D2 $ vconvert (map vconvert x)      
+
+----------------------------------------------------------
+-- Length
+  
+class DLength c d where  
+ dlength :: c d -> Int  
+ 
+instance GetLength (v d) => DLength (Data (v :> Nil)) d where
+  dlength (Data (D1 x)) = vlen x
+  
+instance  GetLength (v2 (v1 d)) => DLength (Data (v2 :> v1 :> Nil)) d where
+  dlength (Data (D2 x)) = vlen x
+
+----------------------------------------------------------
+-- Reverse
+  
+class DReverse c d where  
+  dreverse :: c d -> c d 
+  
+instance VReverse v d => DReverse (Data (v :> Nil)) d where
+  dreverse (Data (D1 x)) = Data $ D1 $ vreverse x 
   

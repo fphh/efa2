@@ -21,7 +21,9 @@ data UT -- Untyped
 
 -- Time Variables
 data T -- Time
-data P
+data P -- Power
+data P' -- Power Derivate dP/dt
+
 
 -- Flow Variable (Edges)
 -- data PF -- Power 
@@ -44,6 +46,11 @@ data BZ -- Bool State
 data IZ -- Int State
 data UZ -- User Defined State
 
+
+-- Zero Crossing
+data SZ -- sign State
+data STy -- step stype
+data ETy -- event type
 
 -------------------------------------
 -- | Delta Flag
@@ -91,13 +98,23 @@ instance Succ d1 d2 => Prec d2 d1
 class TProd t1 t2 t3 | t1 t2 -> t3, t2 t3 -> t1, t1 t3 -> t1 
 
 -- F = P*dt - Flow and Power
+-- Power Slope -- Interpolation
+instance  TProd (Typ A P' p) (Typ D T p) (Typ D P p)
+instance  TProd (Typ D T p) (Typ A P' p) (Typ D P p)
+
+instance  TProd (Typ A P' p) (Typ A T p) (Typ A P p)
+instance  TProd (Typ A T p) (Typ A P' p) (Typ A P p)
+
 -- Time to Flow
 instance  TProd (Typ D T p) (Typ A P p) (Typ A F p)
-instance TProd (Typ A P p) (Typ D T p) (Typ A E p)
+instance TProd (Typ A P p) (Typ D T p) (Typ A F p)
 
 -- F=N*F -- Flow and Flow Efficiency
 instance TProd (Typ d F p) (Typ d N p) (Typ d F p) 
 instance TProd (Typ d N p) (Typ d F p) (Typ d F p) 
+
+instance TProd (Typ d P p) (Typ d N p) (Typ d P p) 
+instance TProd (Typ d N p) (Typ d P p) (Typ d P p) 
 
 -- E=M*E -- Energy mix and Mix Part
 instance TProd (Typ d E Tt) (Typ d M Tt) (Typ d E Pt)

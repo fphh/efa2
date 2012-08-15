@@ -7,6 +7,7 @@ import Text.Printf
 
 
 import EFA2.Signal.Base
+-- import EFA2.Display.DispTyp
 
 
 -- | Central Place for basic Unit & Display settings
@@ -44,8 +45,8 @@ getUnitScale Unit_UT = UnitScale 1
 -- | Central Place to switch Display Formats througght the system
 data DisplayLength = Short | Middle | Long | Float 
 -- dispLength = Short
+-- dispLength = Middle
 dispLength = Middle
--- dispLength = Long
 -- dispLength = Float
 
 -- ============ Setting - Switch global display length =============
@@ -55,9 +56,9 @@ data DisplayFormat = DisplayFormat String
 
 getDefaultFormat :: DisplayFormat
 getDefaultFormat = f dispLength
-  where f Long = DisplayFormat "%3.2f"
+  where f Short = DisplayFormat "%3.2f"
         f Middle = DisplayFormat "%5.3f"
-        f Short = DisplayFormat "%6.7f"
+        f Long = DisplayFormat "%6.7f"
         f Float = DisplayFormat "%6.7e"
 
 
@@ -80,3 +81,6 @@ instance Disp Int where
 
 instance Disp Sign where
   disp (DisplayFormat f) _ x = show x
+  
+        
+ 

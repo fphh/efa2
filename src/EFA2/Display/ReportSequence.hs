@@ -21,9 +21,12 @@ import System.IO
 import EFA2.Signal.SequenceData
 import EFA2.Display.DispSignal
 
+{-
 type Title = String
 type ColumnTitle = String
 
+
+-- | Table Data Type --------------------------------------------
 data Table = Table Title [ColumnTitle] [Row]
            | TableDoc [Table] deriving (Show)
 
@@ -38,14 +41,8 @@ data Row = VectorRow Title (UV.Vector Double)
          | ListRow Title [Double] 
          | SigRange Title String deriving (Show)
                                            
-class ToTable a where
-      toTable :: (SigId -> String) -> a -> Table
 
-instance ToTable PowerRecord where
-         toTable _ (PowerRecord time sigs) = TableDoc [Table "Signals" [] rows]
-           where rows = map (\(x, y) ->  SigRange (show x) (sdisp y)) $ M.toList sigs
-
--- TODO: correct formating
+-- | Formatting Functions  --------------------------------------------
 formatDocHor :: Table -> String
 formatDocHor (TableDoc ts) = PP.render $ PP.vcat rows'
   where rows = L.transpose $ map formatTable ts
@@ -69,27 +66,48 @@ formatRow (VectorRow ti vec) = (PP.nest 0 (PP.text ti)) PP.$$ (foldl (PP.$$) PP.
 formatRow (SigRange ti vec) = (PP.nest 0 (PP.text ti)) PP.$$ (foldl (PP.$$) PP.empty (map f (zip colBegins lst)))
   where lst = map PP.text [vec]
         f (x, t) = PP.nest x t
-        colBegins = 10:(map (+22) colBegins)
+        colBegins = 5:(map (+22) colBegins)
 
+--formatRow (ListRow ti xs) = (PP.nest 0 (PP.text ti)) PP.$$ (foldl (PP.$$) PP.empty (map f (zip colBegins lst)))
 
-formatRow (ListRow ti xs) = (PP.nest 0 (PP.text ti)) PP.$$ (foldl (PP.$$) PP.empty (map f (zip colBegins lst)))
+formatRow (ListRow ti xs) = (foldl (PP.$$) (PP.nest 0 (PP.text ti)) (map f (zip colBegins lst)))
   where lst = map PP.double xs
         f (x, t) = PP.nest x t
-        colBegins = 10:(map (+22) colBegins)
+        colBegins = 10:(map (+10) colBegins)
 
--- TODO: write formatDocHor versions of this functions.
-printTable :: (ToTable a) => Handle -> (SigId -> String) -> a -> IO ()
-printTable h f = hPutStrLn h . formatDocVer . toTable f
 
-printTableToScreen :: (ToTable a) => (SigId -> String) -> a -> IO ()
+-- | OutPut Functions  --------------------------------------------
+-- | TODO: write formatDocHor versions of this functions.
+printTable :: (ToTable a) => Handle -> a -> IO ()
+printTable h = hPutStrLn h . formatDocHor . toTable
+
+printTableToScreen :: (ToTable a) => a -> IO ()
 printTableToScreen = printTable stdout
 
-printTableToFile :: (ToTable a) => FilePath -> (SigId -> String) ->  a -> IO ()
-printTableToFile fileName f t = do
+printTableToFile :: (ToTable a) => FilePath -> a -> IO ()
+printTableToFile fileName t = do
   h <- openFile fileName WriteMode
-  printTable h f t
+  printTable h t
   hClose h
 
 
-  
-  
+-- | To Table Class to defining generation of Documents  --------------------------------------------
+class ToTable a where
+      toTable :: a -> Table
+{-
+instance ToTable (TC Signal typ (Data ([] :> Nil) Val) where
+         toTable x = TableDoc [Table "Signal" [] rows]
+                  where rows =  
+
+
+instance ToTable PowerRecord where
+         toTable (PowerRecord time sigs) = TableDoc [Table "Signals" [] rows]
+           where rows = map (\(x, y) ->  SigRange (show x) (sdisp y)) $ M.toList sigs
+-} 
+
+
+
+instance ToTable PowerRecord where
+         toTable (PowerRecord time sigs) = TableDoc [Table "Signals" [] rows]
+           where rows = map (\(x, y) ->  ListRow (show x) (stoList y)) $ M.toList sigs
+-}  

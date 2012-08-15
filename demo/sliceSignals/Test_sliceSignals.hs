@@ -3,6 +3,8 @@ import EFA2.Signal.SequenceData
 import  EFA2.Interpreter.Env
 import EFA2.Utils.Utils
 import EFA2.Signal.Signal
+import EFA2.Display.Report
+import EFA2.Display.DispSequence
 
 import qualified Data.Map as M 
 
@@ -18,46 +20,46 @@ pa2 = [0,0,0,4,4,4]
 pmap2 = M.fromList [(PPosIdx 0 1,pa2)]
 
 t3 = "only one start point"
-pa3 = [1,0,0,0,0]
+pa3 = [1,0,0,0,0,0]
 pmap3 = M.fromList [(PPosIdx 0 1,pa3)]
 
 t4 = "only one end point"
-pa4 = [0,0,0,0,1]
+pa4 = [0,0,0,0,0,1]
 pmap4 = M.fromList [(PPosIdx 0 1,pa4)]
 
 t5 = "only one middle Point"
-pa5 = [0,0,1,0,0]
+pa5 = [0,0,1,0,0,0]
 pmap5 = M.fromList [(PPosIdx 0 1,pa5)]
 
 t6 = "two signals shifted to zero"
-pa6 = [1,2,0,0,0]
-pb6 = [3,4,3,0,0]
+pa6 = [1,2,0,0,0,0]
+pb6 = [3,4,3,0,0,0]
 pmap6 = M.fromList [(PPosIdx 0 1,pa6),(PPosIdx 1 0, pb6)]
 
 t7 = "two signals mixed event"
-pa7 = [2,2,0,0,0]
-pb7 = [0,0,3,3,3]
+pa7 = [2,2,0,0,0,0]
+pb7 = [0,0,3,3,3,3]
 pmap7 = M.fromList [(PPosIdx 0 1,pa7),(PPosIdx 1 0, pb7)]
 
 t8 = "zero crossing"
-p8 = [2,2,2,-2,-2]
+p8 = [2,2,2,-2,-2,-2]
 pmap8 = M.fromList [(PPosIdx 0 1,p8)]
 
 t9 = "zero start Point"
-p9 = [0,2,2,2,2]
+p9 = [0,2,2,2,2,2]
 pmap9 = M.fromList [(PPosIdx 0 1,p9)]
 
 t10 = "zero end Point"
-p10 = [2,2,2,2,0]
+p10 = [2,2,2,2,2,0]
 pmap10 = M.fromList [(PPosIdx 0 1,p10)]
 
 t11 = "two events sametime"
-p11a = [2,2,0,0,0]
-p11b = [0,0,0,2,2]
+p11a = [2,2,0,0,0,0]
+p11b = [0,0,0,2,2,2]
 pmap11 = M.fromList [(PPosIdx 0 1,p11a),(PPosIdx 1 0,p11b)]
 
 t12 = "single Zero Point"
-p12 = [2,2,0,2,2]
+p12 = [2,2,0,2,2,2]
 pmap12 = M.fromList [(PPosIdx 0 1,p12)]
 
 
@@ -72,9 +74,14 @@ list = idxList $ zip titleList (zip recList (map  (genSequ) (map addZeroCrossing
 f (idx,(title,(pRec,(sq,sqRec)))) = do
   putStrLn ""
   putStrLn $ "Test " ++ show (idx+1) ++ ": " ++ title
-  putStrLn ("XList: \n" ++ (myShowList $ idxList $ genXSig (addZeroCrossings pRec)))   
-  putStrLn ("Sequence: " ++  show sq) 
-  putStrLn ("SequRec: " ++  show sqRec) 
+  report [RAll] (title,pRec)
+  report [RAll] (title,addZeroCrossings pRec)
+  report [] (title, sq) --putStrLn ("Sequence: " ++  show sq) 
+  report [RAll] (title,sqRec)
+  
+--  putStrLn ("pRec: \n" ++ (show pRec))   
+--  putStrLn ("pRec0: \n" ++ (show $ addZeroCrossings pRec))   
+--  putStrLn ("SequRec: " ++  show sqRec) 
   --putStrLn ("sequPMaps: " ++  show sqPmaps)
   
 

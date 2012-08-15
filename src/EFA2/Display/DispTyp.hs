@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleInstances, UndecidableInstances #-}
 
 module EFA2.Display.DispTyp (module EFA2.Display.DispTyp) where
 
@@ -36,6 +36,18 @@ instance DisplayTyp (Typ d IZ p) where getDisplayType x = Typ_IZ
 instance DisplayTyp (Typ d UZ p) where getDisplayType x = Typ_UZ
 instance DisplayTyp (Typ d UT p) where getDisplayType x = Typ_UT
 
+
+getDisplayTypName Typ_P = "Power"
+getDisplayTypName Typ_E = "Energy"
+getDisplayTypName Typ_X = "Split-Share"
+getDisplayTypName Typ_Y = "Collection-Share"
+getDisplayTypName Typ_N = "Efficiency"
+getDisplayTypName Typ_F = "Energy Flow"
+
+getDisplayTypName t = error ("Error in getDisplayTypName - no Pattern Match on Typ: " ++ show  t)
+
+
+
 -- | Function to choose display Unit per Type
 getDisplayUnit :: DisplayType -> DisplayUnit
 --getDisplayUnit Typ_E = Unit_kWh
@@ -68,8 +80,11 @@ getDisplayFormat _ _ _ = getDefaultFormat
 tdisp :: (DeltaDisp t,PartDisp t,  DisplayTyp t) => TC s t d -> String 
 tdisp x = tddisp x  ++ dispPhTyp (getDisplayType x) ++ tpdisp x
   
-udisp :: (DeltaDisp t,PartDisp t,  DisplayTyp t) => TC s t d -> String 
-udisp x = show $ getDisplayUnit (getDisplayType x)
+class (DeltaDisp t,PartDisp t,  DisplayTyp t) => UDisp t where
+  udisp :: TC s t d -> String 
+  
+instance (DeltaDisp t,PartDisp t,  DisplayTyp t) => UDisp t where  
+  udisp x = show $ getDisplayUnit (getDisplayType x)
 
 
 -- Class to Display Partial Flag

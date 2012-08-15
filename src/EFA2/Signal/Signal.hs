@@ -9,7 +9,7 @@ import EFA2.Signal.Typ
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as UV
 import Data.Monoid
-
+import qualified Data.List as L
 ----------------------------------------------------------
 -- | Signal & Company
 
@@ -35,12 +35,14 @@ class SArith s1 s2 s3 | s1 s2 -> s3
 instance SArith Scalar Scalar Scalar
 
 instance SArith Scalar Signal Signal
+instance SArith Scalar Sample Sample
 instance SArith Scalar FSignal FSignal
 instance SArith Scalar FSample FSample
 instance SArith Scalar FDistrib FDistrib
 instance SArith Scalar FClass FClass
 
 instance SArith Signal Scalar Signal
+instance SArith Sample Scalar Sample
 instance SArith FSignal Scalar FSignal
 instance SArith FSample Scalar FSample
 instance SArith FDistrib Scalar FDistrib
@@ -65,8 +67,8 @@ instance (SArith s1 s2 s3, DZipWith c1 c2 c3 d1 d2 d3) => SZipWith s1 s2 s3 c1 c
 
 ----------------------------------------------------------------
 -- Getyptes ZipWith
-stzipWith ::SZipWith s1 s2 s3 c1 c2 c3 d1 d2 d3 => (TC Scalar typ1 (Data Nil d1) -> TC Scalar typ2 (Data Nil d2) -> TC Scalar typ3 (Data Nil d3)) -> TC s1 typ1 (c1 d1) -> TC s2 typ2 (c2 d2) -> TC s3 typ3 (c3 d3)        
-stzipWith f xs ys = szipWith g xs ys where g x y = fromScalar $ f (toScalar x) (toScalar y) 
+stzipWith ::SZipWith s1 s2 s3 c1 c2 c3 d1 d2 d3 => (TC Sample typ1 (Data Nil d1) -> TC Sample typ2 (Data Nil d2) -> TC Sample typ3 (Data Nil d3)) -> TC s1 typ1 (c1 d1) -> TC s2 typ2 (c2 d2) -> TC s3 typ3 (c3 d3)        
+stzipWith f xs ys = szipWith g xs ys where g x y = fromSample $ f (toSample x) (toSample y) 
 
 
 ----------------------------------------------------------------
@@ -147,8 +149,15 @@ type Sig2L typ a = TC Signal typ (List2 a)
 type Sig2 typ a = TC Signal typ (Vec2 a)
 type FSig2 typ a = TC FSignal typ (Vec2 a)
 
+type Test typ a = TC TestRow typ (DVal a)
 type Test1 typ a = TC TestRow typ (UVec a)
 type Test2 typ a = TC TestRow typ (UVec2 a)
+type Test1L typ a = TC TestRow typ (List a)
+type Test2L typ a = TC TestRow typ (List2 a)
+
+
+type Samp typ a = TC Sample typ (DVal a)
+type Samp1L typ a = TC Sample typ (List a)
 
 -- specific
 --type UTignal a = Sig1 (Typ UT UT UT) a
@@ -160,6 +169,15 @@ type PSig2 = Sig2 (Typ A P Tt) Val
 type PSigL = Sig1L (Typ A P Tt) Val
 type PSig2L = Sig2L (Typ A P Tt) Val
 
+type ESig = Sig1 (Typ A E Tt) Val
+type ESig2 = Sig2 (Typ A E Tt) Val
+type ESigL = Sig1L (Typ A E Tt) Val
+type ESig2L = Sig2L (Typ A E Tt) Val
+
+type NSig = Sig1 (Typ A N Tt) Val
+type NSig2 = Sig2 (Typ A N Tt) Val
+type NSigL = Sig1L (Typ A N Tt) Val
+type NSig2L = Sig2L (Typ A N Tt) Val
 
 type TSig = Sig1 (Typ A T Tt) Val
 type TSigL = Sig1L (Typ A T Tt) Val
@@ -177,15 +195,78 @@ type DTVal = Scal (Typ D T Tt) Val
 
 type SignalIdx = Int
 
--- type TSample = TC Scalar (Typ A T Tt) (DVal Val)
-type PSample2 = TC Sample (Typ A P Tt) (UVec2 Val)
-type PSample1 =  TC Scalar (Typ A P Tt) (UVec Val)
+type PSamp2 = TC Sample (Typ A P Tt) (UVec2 Val)
+type PSamp1 =  TC Sample (Typ A P Tt) (UVec Val)
+type PSamp1L =  TC Sample (Typ A P Tt) (List Val)
+type PSamp2L = TC Sample (Typ A P Tt) (UVec2L Val)
+type PSamp2LL = TC Sample (Typ A P Tt) (List2 Val)
+type PSamp = TC Sample (Typ A P Tt) (DVal Val)
 
-type PSample2L = TC Sample (Typ A P Tt) (UVec2L Val)
+-- Flow Signal Samples
+type ESamp2 = TC FSample (Typ A E Tt) (UVec2 Val)
+type ESamp1 =  TC FSample (Typ A E Tt) (UVec Val)
+type ESamp1L =  TC FSample (Typ A E Tt) (List Val)
+type ESamp2L = TC FSample (Typ A E Tt) (UVec2L Val)
+type ESamp2LL = TC FSample (Typ A E Tt) (List2 Val)
+type ESamp = TC FSample (Typ A E Tt) (DVal Val)
+
+type FSamp2 = TC FSample (Typ A F Tt) (UVec2 Val)
+type FSamp1 =  TC FSample (Typ A F Tt) (UVec Val)
+type FSamp1L =  TC FSample (Typ A F Tt) (List Val)
+type FSamp2L = TC FSample (Typ A F Tt) (UVec2L Val)
+type FSamp2LL = TC FSample (Typ A F Tt) (List2 Val)
+type FSamp = TC FSample (Typ A F Tt) (DVal Val)
+
+type PFSamp2 = TC FSample (Typ A P Tt) (UVec2 Val)
+type PFSamp1 =  TC FSample (Typ A P Tt) (UVec Val)
+type PFSamp1L =  TC FSample (Typ A P Tt) (List Val)
+type PFSamp2L = TC FSample (Typ A P Tt) (UVec2L Val)
+type PFSamp2LL = TC FSample (Typ A P Tt) (List2 Val)
+type PFSamp = TC FSample (Typ A P Tt) (DVal Val)
+
+-- Time Sample
 type DTSampleL = TC Sample (Typ D T Tt) (List Val) 
 
 -- type PSample =  TC Scalar (Typ A P Tt) (DVal Val)
-type DTSample =  TC Scalar (Typ D T Tt) (DVal Val)
+type DTSamp =  TC Sample (Typ D T Tt) (DVal Val)
+type TSamp =  TC Sample (Typ A T Tt) (DVal Val)
+type TSamp1 =  TC Sample (Typ A T Tt) (UVec Val)
+type TSamp1L =  TC Sample (Typ A T Tt) (List Val)
+type TZeroSamp = TC Sample (Typ A T Tt) (Data Nil ZeroCrossing)
+type TZeroSamp1L = TC Sample (Typ A T Tt) (Data ([] :> Nil) ZeroCrossing)
+
+------------------------------------
+
+type RSig = (TSigL, PSamp2LL)
+type RSamp1 = (TSamp, PSamp1L)
+type RSamp = (TSamp, PSamp)
+
+
+rhead :: RSig -> RSamp1  
+rhead (t,ps) = (shead t, shead ps) 
+
+rtail :: RSig -> RSig
+rtail (t,ps) = (stail t, stail ps) 
+  
+rlast :: RSig -> RSamp1
+rlast (t,ps) = (slast t, slast ps) 
+
+rinit :: RSig -> RSig
+rinit (t,ps) = (sinit t, sinit ps) 
+
+rsingleton :: RSamp1 -> RSig
+rsingleton (t,ps) = (ssingleton t, ssingleton ps)
+  
+  
+  
+-- xappend :: RSig -> RSig -> RSig
+-- xappend (t1,ps1) (t2,ps2) = (t1.++t2, ps1.++ps2)
+
+-- xconcat xs = L.foldl' (xappend) []
+
+-- instance Monoid RSig where
+--   mempty = (mempty,mempty) 
+--   mappend (t1,ps1) (t2,ps2) = (t1 .++ t2, ps1 .++ ps2) 
 
 ----------------------------------------------------------
 -- from/to List
@@ -196,17 +277,29 @@ sunpack (TC x) = x
 sfromList :: DFromList c d => [d] -> TC s t (c d)
 sfromList x = TC $ dfromList x
 
+stoList :: DFromList c d => TC s t (c d) -> [d]
+stoList (TC x) = dtoList x
+
+sfromList2 :: DFromList2 c d => [[d]] -> TC s t (c d)
+sfromList2 x = TC $ dfromList2 x
+
+stoList2 :: DFromList2 c d => TC s t (c d) -> [[d]]
+stoList2 (TC x) = dtoList2 x
+
 sfromVal :: DFromList c d => Int -> d -> TC s t (c d)
 sfromVal len x = sfromList (replicate len x) 
-
-stoList :: DFromList c d => TC t t1 (c d) -> [d]
-stoList (TC x) = dtoList x
 
 fromScalar :: TC Scalar typ (Data Nil d) -> d 
 fromScalar (TC (Data (D0 x))) = x
 
 toScalar :: d -> TC Scalar typ (Data Nil d) 
 toScalar x = TC $ Data $ D0 x
+
+toSample :: d -> TC Sample typ (Data Nil d)
+toSample x = TC $ Data $ D0 x
+
+fromSample :: TC Sample typ (Data Nil d) -> d
+fromSample (TC (Data (D0 x))) = x
 
 
 class SConst s c d where 
@@ -253,10 +346,10 @@ instance DMap c d1 d2 => SMap c d1 d2 where
 ----------------------------------------------------------
 -- Getyptes SMap
 class SMap c d1 d2 => STMap c d1 d2 typ1 typ2 | typ1 -> typ2, typ2 -> typ1 where
-      stmap :: (TC Scalar typ1 (Data Nil d1) -> TC Scalar typ2 (Data Nil d2)) -> TC  s typ1 (c d1) -> TC s typ2 (c d2)
+      stmap :: (TC Sample typ1 (Data Nil d1) -> TC Sample typ2 (Data Nil d2)) -> TC  s typ1 (c d1) -> TC s typ2 (c d2)
 
 instance SMap c d1 d2 => STMap c d1 d2 typ1 typ2 where
-         stmap f xs = changeType $ smap (fromScalar . f . toScalar) xs
+         stmap f xs = changeType $ smap (fromSample . f . toSample) xs
 
 ----------------------------------------------------------
 -- DeltaMap
@@ -345,6 +438,8 @@ class (DHead c1 c2 d) => SHead s1 s2 c1 c2 d | s1 -> s2 where
 
 instance (DHead c1 c2 d) => SHead Signal Sample c1 c2 d where
 instance (DHead c1 c2 d) => SHead FSignal FSample c1 c2 d where
+instance (DHead c1 c2 d) => SHead Sample Sample c1 c2 d where
+instance (DHead c1 c2 d) => SHead TestRow TestRow c1 c2 d where
 
 
 class (DTail c c d) => STail s c d where
@@ -355,6 +450,7 @@ class (DTail c c d) => STail s c d where
 
 instance (DTail c c d) => STail Signal c d where
 instance (DTail c c d) => STail FSignal c d where
+instance (DTail c c d) => STail Sample c d where
 
 
 ----------------------------------------------------------
@@ -369,6 +465,8 @@ instance (DTranspose c d) => STranspose Sample Signal  c d
 instance (DTranspose c d) => STranspose FSignal FSample  c d
 instance (DTranspose c d) => STranspose FSample FSignal  c d
 
+instance (DTranspose c d) => STranspose TestRow TestRow  c d
+
 ----------------------------------------------------------
 -- Monoid
 
@@ -382,13 +480,27 @@ class DAppend c1 c2 c3 d => SAppend s1 s2 s3 c1 c2 c3 d | s1 s2 -> s3 where
   sappend (TC x) (TC y) = TC $ dappend x y   
 
   
+class SSingleton s1 s2 c1 c2 d | s2 -> s1, c1 -> c2, c2 -> c1  where 
+  ssingleton :: TC s1 t (c1 d) -> TC s2 t (c2 d)
+  
+instance (VSingleton v1 d) => SSingleton Sample Signal (Data (Nil)) (Data (v1:> Nil)) d where  
+  ssingleton (TC x) = TC $ dsingleton x 
+
+instance (VSingleton v2 (v1 d)) => SSingleton Sample Signal (Data (v1 :> Nil)) (Data (v2 :> v1:> Nil)) d where  
+  ssingleton (TC x) = TC $ dsingleton x 
+
+instance (VSingleton v2 (v1 d)) => SSingleton Sample Sample (Data (v1 :> Nil)) (Data (v2 :> v1:> Nil)) d where  
+  ssingleton (TC x) = TC $ dsingleton x 
+
 instance DAppend c1 c2 c3 d => SAppend Signal Signal Signal c1 c2 c3 d 
 instance DAppend c1 c2 c3 d => SAppend Signal Sample Signal c1 c2 c3 d
 instance DAppend c1 c2 c3 d => SAppend Sample Signal Signal c1 c2 c3 d
 
 
-(.++) :: SAppend s1 s2 s3 c1 c2 c3 d =>  (TC s1 typ (c1 d)) -> (TC s2 typ (c2 d)) -> (TC s3 typ (c3 d))
-(.++) x y = sappend x y
+-- (.++) :: SAppend s1 s2 s3 c1 c2 c3 d =>  (TC s1 typ (c1 d)) -> (TC s2 typ (c2 d)) -> (TC s3 typ (c3 d))
+-- (.++) x y = sappend x y
+
+(.++) x y = mappend x y 
 
 infix 5 .++
 
@@ -424,6 +536,11 @@ instance (UV.Unbox d1) => SBox Scalar c1 c1 d1 where
          sbox x = x
          sunbox x = x
 
+-- | Convert between List and different Vector formats 
+sconvert :: (DConvert c1 c2 d) => TC s typ (c1 d) -> TC s typ (c2 d)
+sconvert (TC x) = TC $ dconvert x
+
+
 ----------------------------------------------------------
 -- sum all signal value
 
@@ -446,6 +563,11 @@ class (DSucc delta1 delta2) => DeltaSig s1 s2 c1 delta1 delta2 d1  | s1 -> s2 wh
 instance (SDeltaMap Signal FSignal c1 Val Val, DSucc delta1 delta2) => DeltaSig Signal FSignal c1 delta1 delta2 Val where
       deltaSig x = changeDelta $ sdeltaMapReverse (..-) x
       avSig x = changeDelta $ sdeltaMapReverse (\ x1 x2 -> (x1..+x2)../ (2::Val)) x
+
+
+ssort ::  (DSort c1 d1) =>  TC s1 typ (c1 d1) ->  TC s1 typ (c1 d1)
+ssort (TC x) = TC $ dsort x 
+
 
 ----------------------------------------------------------
 -- Part & Full Integrate 
@@ -507,3 +629,51 @@ toSigList :: (VFromList v2 (TC s typ (Data (v1 :> (Nil' :> Nil')) d)), VWalker v
 toSigList (TC (Data (D2 xs))) = vtoList $ vmap f xs
   where f x = TC $ Data $ D1 x
        
+sfromCells :: (DConvert (Data ([] :> ([] :> Nil))) (Data (v2 :> (v1 :> Nil))) d) => [[TC s typ (Data Nil d)]] -> TC s typ (Data (v2 :> v1 :> Nil) d)
+sfromCells xss = sconvert $ TC $ Data $ D2 $ map (map f) xss 
+  where f (TC (Data (D0 x))) = x 
+
+stoCells :: (VFromList v2 (v1 d),
+                      VFromList v1 d,
+                      VFromList v2 [d],
+                      VWalker v2 (v1 d) [d]) => TC s typ (Data (v2 :> v1 :> Nil) d) -> [[TC s typ (Data Nil d)]]
+stoCells xss = map (map f) $ stoList2 xss
+  where f x = TC $ Data $ D0 x 
+
+sfilter ::  (VFilter v1 d) => (d -> Bool) -> TC s typ (Data (v1 :> Nil) d) -> TC s typ (Data (v1 :> Nil) d)
+sfilter f (TC x) = TC $ dfilter f x
+
+
+sampleAverage :: Fractional d => TC Sample typ (Data Nil d) -> TC Sample typ (Data Nil d) -> TC Sample typ (Data Nil d)
+sampleAverage (TC (Data (D0 x))) (TC (Data (D0 y))) = TC $ Data $ D0 $ (x+y)/2
+
+
+ssign :: (DMap c d Sign, Ord d, Num d) => TC s typ (c d) -> TC s (Typ A SZ UT) (c Sign)  
+ssign x = changeType $ smap (sign) x
+  
+
+suntuple :: TC Sample typ (Data Nil (d,d)) -> (TC Sample typ (Data Nil d), TC Sample typ (Data Nil d)) 
+suntuple (TC (Data (D0 (x,y)))) = (TC $ Data $ D0 x,TC $ Data $ D0 y)
+
+smaximum :: (DMaximum c1 c2 d) => TC s typ (c1 d) -> TC Scalar typ (c2 d)
+smaximum (TC x) = TC $ dmaximum x  
+
+sminimum :: (DMaximum c1 c2 d) => TC s typ (c1 d) -> TC Scalar typ (c2 d)
+sminimum (TC x) = TC $ dminimum x  
+
+
+subSignal1D :: (VLookup v d)=> TC s typ (Data (v :> Nil) d) -> [SignalIdx] -> TC s typ (Data (v :> Nil) d)
+subSignal1D (TC (Data (D1 x))) idxs = TC $ Data $ D1 $ vlookUp x idxs  
+
+slength :: (DLength c d) => TC s typ (c d) -> Int
+slength (TC x) = dlength x  
+
+
+makeDelta ::  TC s (Typ A p t) (c d) -> TC s (Typ D p t) (c d)
+makeDelta (TC x) = TC x
+
+makeAbsolut ::  TC s (Typ D p t) (c d) -> TC s (Typ A p t) (c d)
+makeAbsolut (TC x) = TC x
+
+sreverse :: (DReverse c d) => TC s t (c d) ->  TC s t (c d)
+sreverse (TC x) = TC $ dreverse x 
