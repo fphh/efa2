@@ -67,18 +67,35 @@ variation sqTopo x y = trace (showEqTerms ts'') $ interpretFromScratch (SingleRe
                                                        (FEtaIdx  0 0 1 3, smap f2), (FEtaIdx 0 0 3 1, smap f2) ] }
 
         givenEnv1 = emptyEnv { recordNumber = SingleRecord 0,
-                               --dtimeMap = M.fromList [ (DTimeIdx 1 0, sfromList [1.0]) ],
+                               dtimeMap = M.fromList [ (DTimeIdx 1 0, sfromList [1.0]) ],
                                energyMap = M.fromList [ (EnergyIdx 1 0 3 1, sfromList [x] :: UTFSig) ],
                                powerMap =  M.fromList [ (PowerIdx 1 0 2 1, sfromList [0.6]) ],
                                fetaMap =   M.fromList [ (FEtaIdx 1 0 0 1, smap (const 0.4)), (FEtaIdx 1 0 1 0, smap (const 0.6)),
                                                         (FEtaIdx 1 0 1 2, smap (const 0.7)), (FEtaIdx 1 0 2 1, smap (const 0.7)),
                                                         (FEtaIdx 1 0 1 3, smap f2), (FEtaIdx 1 0 3 1, smap f2) ] }
 
+        givenEnv2 = emptyEnv { recordNumber = SingleRecord 0,
+                               dtimeMap = M.fromList [ (DTimeIdx 2 0, sfromList [1.0]) ],
+                               energyMap = M.fromList [ (EnergyIdx 2 0 3 1, sfromList [x] :: UTFSig) ],
+                               powerMap =  M.fromList [ (PowerIdx 2 0 2 1, sfromList [0.6]) ],
+                               fetaMap =   M.fromList [ (FEtaIdx 2 0 0 1, smap (const 0.4)), (FEtaIdx 2 0 1 0, smap (const 0.6)),
+                                                        (FEtaIdx 2 0 1 2, smap (const 0.7)), (FEtaIdx 2 0 2 1, smap (const 0.7)),
+                                                        (FEtaIdx 2 0 1 3, smap f2), (FEtaIdx 2 0 3 1, smap f2) ] }
 
-        (sqEnvs, ts') = makeAllEquations sqTopo [givenEnv0, givenEnv1]
+        givenEnv3 = emptyEnv { recordNumber = SingleRecord 0,
+                               dtimeMap = M.fromList [ (DTimeIdx 3 0, sfromList [1.0]) ],
+                               energyMap = M.fromList [ (EnergyIdx 3 0 3 1, sfromList [x] :: UTFSig) ],
+                               powerMap =  M.fromList [ (PowerIdx 3 0 2 1, sfromList [0.6]) ],
+                               fetaMap =   M.fromList [ (FEtaIdx 3 0 0 1, smap (const 0.4)), (FEtaIdx 3 0 1 0, smap (const 0.6)),
+                                                        (FEtaIdx 3 0 1 2, smap (const 0.7)), (FEtaIdx 3 0 2 1, smap (const 0.7)),
+                                                        (FEtaIdx 3 0 1 3, smap f2), (FEtaIdx 3 0 3 1, smap f2) ] }
 
 
-        storage0 = EnergyIdx (-1) 0 8 9
+
+        (sqEnvs, ts') = makeAllEquations sqTopo [givenEnv0, givenEnv1, givenEnv2, givenEnv3]
+
+
+        storage0 = EnergyIdx (-1) 0 17 16
         dtime0 = DTimeIdx (-1) 0
         ts = [give storage0, give dtime0] ++ ts'
 
@@ -108,10 +125,10 @@ main = do
       s13 = [0, 0.5, 0.5, 0, -0.3, -0.3]
       s31 = [0, 0.25, 0.25, 0, -0.6, -0.6]
 
-      n = 1
+      n = 2
       --l = fromIntegral $ length $ replicate n (s01 ++ s01')
       --time = [0, 0] ++ (concatMap (replicate 3) [1.0 .. l])
-      time = take 7 [0 ..]
+      time = take 40 [0 ..]
 
       pMap =  M.fromList [ (PPosIdx 0 1, mkSig n s01 .++ (sfromList [head s01] :: PSig)),
                            (PPosIdx 1 0, mkSig n s10 .++ (sfromList [head s10] :: PSig)), 
@@ -123,7 +140,7 @@ main = do
       pRec = PowerRecord (sfromList time) pMap
       (_, sqTopo) = makeSequence pRec topo
 
-      lst = [1 .. 100]
+      lst = [1, 2]
       etas = [0.2]
  
 
