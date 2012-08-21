@@ -192,7 +192,7 @@ instance DrawTopology [Double] where
                  showDelta (ErrorLine str) = str
                  tshow dt s r = show $ dt `safeLookup` (DTimeIdx s r)
 
-instance (Integral a) => DrawTopology [Ratio a] where
+instance (Integral a, Show a) => DrawTopology [Ratio a] where
          drawTopology = drawAbsTopology f formatStCont tshow
            where f (x, Just ys) = show x ++ " = " ++ (concatMap show ys)
                  f (x, Nothing) = show x ++ " = ♥"
