@@ -1,4 +1,4 @@
-
+{-# LANGUAGE PatternGuards #-}
 
 module EFA2.Solver.EquationOrder where
 

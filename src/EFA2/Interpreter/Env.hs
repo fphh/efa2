@@ -1,5 +1,5 @@
 {-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
-
+{-# LANGUAGE PatternGuards #-}
 module EFA2.Interpreter.Env where
 
 import Control.Monad.Error

@@ -1,4 +1,5 @@
 {-# LANGUAGE TypeSynonymInstances, ScopedTypeVariables #-}
+{-# LANGUAGE PatternGuards #-}
 
 
 module EFA2.Solver.Equation where

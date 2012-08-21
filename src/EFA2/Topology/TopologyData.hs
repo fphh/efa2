@@ -1,4 +1,5 @@
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE PatternGuards #-}
 {-# OPTIONS_HADDOCK ignore-exports #-}
 
 module EFA2.Topology.TopologyData (

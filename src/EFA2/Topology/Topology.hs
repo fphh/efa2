@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleInstances, TypeSynonymInstances #-}
+{-# LANGUAGE PatternGuards #-}
 
 module EFA2.Topology.Topology where
 

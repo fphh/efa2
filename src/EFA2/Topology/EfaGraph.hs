@@ -1,4 +1,4 @@
-
+{-# LANGUAGE PatternGuards #-}
 
 module EFA2.Topology.EfaGraph (EfaGraph) where
 
