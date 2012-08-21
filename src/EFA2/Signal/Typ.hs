@@ -1,6 +1,4 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, FunctionalDependencies, TypeSynonymInstances #-}
-
--- UndecidableInstances, OverlappingInstances
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, FunctionalDependencies, EmptyDataDecls #-}
 
 module EFA2.Signal.Typ (module EFA2.Signal.Typ) where
 

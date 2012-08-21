@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, GADTs, MultiParamTypeClasses,FlexibleContexts,UndecidableInstances, TypeOperators, TypeSynonymInstances#-}
+{-# LANGUAGE FlexibleInstances, GADTs, MultiParamTypeClasses, FlexibleContexts, UndecidableInstances, TypeOperators #-}
 
 
 module EFA2.Display.Plot (module EFA2.Display.Plot) where

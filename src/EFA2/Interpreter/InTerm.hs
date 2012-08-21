@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeSynonymInstances, FlexibleInstances, MultiParamTypeClasses, TypeOperators #-}
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, TypeOperators #-}
 
 
 module EFA2.Interpreter.InTerm where

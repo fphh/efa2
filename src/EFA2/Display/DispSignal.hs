@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, GADTs, MultiParamTypeClasses,FlexibleContexts,UndecidableInstances, TypeOperators, TypeSynonymInstances#-}
+{-# LANGUAGE FlexibleInstances, GADTs, MultiParamTypeClasses, FlexibleContexts, TypeOperators #-}
 
 module EFA2.Display.DispSignal (module EFA2.Display.DispSignal) where
 

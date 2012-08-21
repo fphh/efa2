@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
-
 module EFA2.Example.Loop (loop, etas, pows, dtimes) where
 
 import Data.Graph.Inductive

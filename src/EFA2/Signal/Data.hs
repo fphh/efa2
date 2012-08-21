@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, FunctionalDependencies, TypeSynonymInstances, UndecidableInstances,KindSignatures, TypeOperators,  GADTs, StandaloneDeriving #-}
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, FunctionalDependencies, UndecidableInstances, KindSignatures, TypeOperators, GADTs #-}
 
 module EFA2.Signal.Data (module EFA2.Signal.Data) where
 import EFA2.Signal.Vector

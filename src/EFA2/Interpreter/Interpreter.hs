@@ -1,5 +1,3 @@
-{-# LANGUAGE FlexibleInstances, FlexibleContexts, ScopedTypeVariables, TypeSynonymInstances, MultiParamTypeClasses, ScopedTypeVariables #-}
-
 module EFA2.Interpreter.Interpreter where
 
 import Data.Maybe

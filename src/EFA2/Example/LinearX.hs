@@ -1,6 +1,3 @@
-{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
-
-
 module EFA2.Example.LinearX (linearX) where
 
 import Data.Graph.Inductive
