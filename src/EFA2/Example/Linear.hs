@@ -5,6 +5,7 @@ import qualified Data.Map as M
 
 import Control.Monad.Error
 
+import EFA2.Topology.TopologyData (NodeType(Crossing))
 import EFA2.Topology.Topology
 
 import EFA2.Interpreter.Arith

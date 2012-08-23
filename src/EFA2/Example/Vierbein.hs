@@ -6,6 +6,7 @@ module EFA2.Example.Vierbein (vierbein) where
 import Data.Graph.Inductive
 import qualified Data.Map as M
 
+import EFA2.Topology.TopologyData (NodeType(Crossing))
 import EFA2.Topology.Topology
 
 import EFA2.Interpreter.Arith
