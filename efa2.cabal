@@ -33,7 +33,6 @@ Library
     base ==4.5.*
   Hs-Source-Dirs:      src
   Exposed-Modules:
---    Main
 --    EFA2.IO.Import
 --    EFA2.Test.UtilsTest
 -- benötigt RandomTopology
@@ -98,3 +97,11 @@ Library
     EFA2.Interpreter.Interpreter
     EFA2.Interpreter.InTerm
   -- Other-Modules:       
+
+Executable efa
+  Main-Is: src/Main.hs
+  GHC-Options: -Wall
+  Build-Depends:
+    efa2,
+    base
+
