@@ -167,6 +167,8 @@ instance Show Line where
 -- The argument t is for node labels. Until now, it is not used.
 class DrawTopology a where
       drawTopology :: Topology -> Envs a -> IO ()
+
+class DrawTopology a => DrawDeltaTopology a where
       drawDeltaTopology :: Topology -> Envs a -> IO ()
 
 instance DrawTopology [Double] where
@@ -177,6 +179,7 @@ instance DrawTopology [Double] where
                  formatStCont Nothing = "♥"
                  tshow dt s r = show $ dt `safeLookup` (DTimeIdx s r)
 
+instance DrawDeltaTopology [Double] where
          drawDeltaTopology = drawDeltaTopology' f formatStCont tshow
            where -- f (x, Just ys) = showDelta x ++ " = [ " ++ L.intercalate ", " (map showEqTerm ys) ++ " ]"
                  f (x, Just ys) = showDelta x ++ " = \n" ++  L.intercalate "\n" (map show ys)
@@ -275,6 +278,7 @@ instance DrawTopology [EqTerm] where
                  formatStCont Nothing = "♥"
                  tshow dt s r = showEqTerms $ dt `safeLookup` (DTimeIdx s r)
 
+instance DrawDeltaTopology [EqTerm] where
          drawDeltaTopology = drawDeltaTopology' f formatStCont tshow
            where -- f (x, Just ys) = showDelta x ++ " = [ " ++ L.intercalate ", " (map showEqTerm ys) ++ " ]"
                  f (x, Just ys) = showDelta x ++ " = \n" ++ showEqTerms ys
@@ -377,6 +381,7 @@ instance DrawTopology Sc where
                  formatStCont (Just ys) = sdisp ys
                  formatStCont Nothing = "♥"
 
+instance DrawDeltaTopology Sc where
          drawDeltaTopology = drawDeltaTopologyD f formatStCont
            where -- f (x, Just ys) = showDelta x ++ " = [ " ++ L.intercalate ", " (map showEqTerm ys) ++ " ]"
                  f (x, Just ys) = showDelta x ++ " = " ++ sdisp ys
