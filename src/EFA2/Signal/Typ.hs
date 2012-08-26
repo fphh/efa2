@@ -93,7 +93,7 @@ instance Succ d1 d2 => Prec d2 d1
 -- Typ aendert sich 
 -- delta und partial spielen hin und wieder eine Rolle
 
-class TProd t1 t2 t3 | t1 t2 -> t3, t2 t3 -> t1, t1 t3 -> t1 
+class TProd t1 t2 t3 | t1 t2 -> t3, t2 t3 -> t1, t1 t3 -> t2
 
 -- F = P*dt - Flow and Power
 -- Power Slope -- Interpolation
