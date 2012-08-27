@@ -1,3 +1,4 @@
+
 package EFA_Blocks_simple
   block powerCon
     annotation(Diagram(), Icon(graphics = {Line(points = {{-74.6711,-1.97368},{70.3947,-1.97368},{76.9737,-1.64474},{76.6447,-1.64474}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Text(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-32.5658,-1.31579},{21.7105,33.8816}}, textString = "Connector", fontSize = 12, textStyle = {TextStyle.Bold})}));
