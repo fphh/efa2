@@ -49,10 +49,10 @@ import EFA2.Signal.SequenceData
 import EFA2.Utils.Utils
 
 nodeColour :: Attribute 
-nodeColour = FillColor (RGB 230 230 240)
+nodeColour = FillColor [RGB 230 230 240]
 
 clusterColour :: Attribute
-clusterColour = FillColor (RGB 250 250 200)
+clusterColour = FillColor [RGB 250 250 200]
 
 originalEdgeColour :: Attribute
 originalEdgeColour = Color [RGB 0 0 200]
