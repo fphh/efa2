@@ -163,16 +163,16 @@ instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d,VSingleton v1 d,VSinglet
   sdisp x@(TC(Data (D2 v)))  = "Sig-D2 " ++ tdisp x ++ ": " ++ dispAll (stoList x) dtyp -- dispRange dmin dmax dtyp 
     where dtyp = getDisplayType x
           dmin = vminimum $ vminimum v
-          dmax = vmaximum $ vminimum v
+          dmax = vmaximum $ vmaximum v
  
 instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d,VSingleton v1 d,VSingleton v2 (v1 d), DFromList (Data (v2 :> (v1 :> Nil))) d) => SDisplay (TC FSignal t (Data (v2 :> v1 :> Nil) d)) where 
   sdisp x@(TC(Data (D2 v)))  = "Sig-D2 " ++ tdisp x ++ ": " ++ dispAll (stoList x) dtyp -- dispRange dmin dmax dtyp 
     where dtyp = getDisplayType x
           dmin = vminimum $ vminimum v
-          dmax = vmaximum $ vminimum v
+          dmax = vmaximum $ vmaximum v
 
 instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d,VSingleton v1 d,VSingleton v2 (v1 d), DFromList (Data (v2 :> (v1 :> Nil))) d) => SDisplay (TC TestRow t (Data (v2 :> v1 :> Nil) d)) where 
   sdisp x@(TC(Data (D2 v)))  = "Test-D2 " ++ tdisp x ++ ": " ++ dispAll (stoList x) dtyp -- dispRange dmin dmax dtyp 
     where dtyp = getDisplayType x
           dmin = vminimum $ vminimum v
-          dmax = vmaximum $ vminimum v
+          dmax = vmaximum $ vmaximum v
