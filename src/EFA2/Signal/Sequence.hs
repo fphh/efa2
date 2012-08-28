@@ -21,7 +21,6 @@ import EFA2.Signal.Base
 import EFA2.Signal.Signal
 import EFA2.Signal.Typ
 import EFA2.Signal.Data
-import EFA2.Signal.Vector
 
 import EFA2.Utils.Utils
 

@@ -22,7 +22,7 @@ import qualified Graphics.Gnuplot.Frame.OptionSet.Style as OptsStyle
 
 import EFA2.Signal.Signal
 import EFA2.Signal.Data
-import EFA2.Signal.Vector
+import qualified EFA2.Signal.Vector as SV
 import EFA2.Signal.Base
 import EFA2.Signal.Typ
 import EFA2.Display.DispTyp
@@ -55,20 +55,20 @@ instance (DFromList2 (Data (v2 :> v1 :> Nil)) Val, DisplayTyp t) => SPlotData s 
 sigPlotAttr :: (DisplayTyp t) => String -> TC s t (Data (v1 :> Nil) Val) ->  [Attribute]
 sigPlotAttr ti x = [Title ti,LineStyle 1 [PointSize 2], XLabel $ "Sample-Nr []",YLabel $ genAxLabel x,Grid $ Just []]
 
-class SigPlot a where          
+class SigPlot a where
   sigPlot :: String -> a -> IO ()
 
-instance (SPlotData s t (Data (v1 :> Nil)) Val [Val],DisplayTyp t) => SigPlot (TC s t  (Data (v1 :> Nil) Val))  where 
+instance (SPlotData s t (Data (v1 :> Nil)) Val [Val],DisplayTyp t) => SigPlot (TC s t  (Data (v1 :> Nil) Val))  where
   sigPlot ti x = plotList (sigPlotAttr ti x) (sPlotData x :: [Val])
 
-instance (SPlotData s t (Data (v1 :> Nil)) Val [Val],DisplayTyp t) => SigPlot [(TC s t  (Data (v1 :> Nil) Val))]  where 
+instance (SPlotData s t (Data (v1 :> Nil)) Val [Val],DisplayTyp t) => SigPlot [(TC s t  (Data (v1 :> Nil) Val))]  where
   sigPlot ti xs = plotLists (sigPlotAttr ti (head xs)) ((map sPlotData xs) :: [[Val]])
 
-instance (DisplayTyp t, 
-          VFromList v1 Double, 
-          VFromList v2 (TC s t (Data (v1 :> (Nil' :> Nil')) Val)),
-          VWalker v2 (v1 Val) (TC  s t (Data (v1 :> (Nil' :> Nil')) Val))) => SigPlot (TC s t (Data (v2 :> v1 :> Nil) Val))  where 
-  sigPlot ti x = sigPlot ti $ toSigList x  
+instance (DisplayTyp t,
+          SV.FromList v1 Double,
+          SV.FromList v2 (TC s t (Data (v1 :> (Nil' :> Nil')) Val)),
+          SV.Walker v2 (v1 Val) (TC  s t (Data (v1 :> (Nil' :> Nil')) Val))) => SigPlot (TC s t (Data (v2 :> v1 :> Nil) Val))  where
+  sigPlot ti x = sigPlot ti $ toSigList x
 
 -- | Plotting Signals against each other --------------------------------------------------------------
 xyPlotAttr :: (DisplayTyp t1, DisplayTyp t2) => String -> TC s t1 (Data (v1 :> Nil) Val) ->  TC s t2 (Data (v2 :> Nil) Val) -> [Attribute]
@@ -81,62 +81,62 @@ class XYPlot a b where
   
 instance (DisplayTyp t1,
           DisplayTyp t2,
-          VFromList v1 Double,
-          VFromList v2 Double) => 
-         XYPlot (TC Signal t1 (Data (v1 :> Nil) Val)) (TC Signal t2 (Data (v2 :> Nil) Val)) where 
+          SV.FromList v1 Double,
+          SV.FromList v2 Double) =>
+         XYPlot (TC Signal t1 (Data (v1 :> Nil) Val)) (TC Signal t2 (Data (v2 :> Nil) Val)) where
   xyplot ti x y = plotPath (xyPlotAttr ti x y) (zip (sPlotData x ::[Val]) (sPlotData y :: [Val]))
 
 instance (DisplayTyp t1,
-          DisplayTyp t2, 
-          VFromList v1 Double, 
-          VFromList v2 Double) => XYPlot (TC s t1 (Data (v2 :> Nil) Val)) [(TC s t2 (Data (v1 :> Nil) Val))] where 
+          DisplayTyp t2,
+          SV.FromList v1 Double,
+          SV.FromList v2 Double) => XYPlot (TC s t1 (Data (v2 :> Nil) Val)) [(TC s t2 (Data (v1 :> Nil) Val))] where
   xyplot ti x ys = plotPathsStyle (xyPlotAttr ti x (head ys)) (zip styleList (map (\ y -> zip (sPlotData x::[Val]) (sPlotData y::[Val])) ys))
     where styleList = map (xyPlotStyle . show) (map (\ n -> "Signal"++ show n) $ listIdx ys)  
 
 instance (DisplayTyp t1,
-          DisplayTyp t2, 
-          VFromList v1 Double, 
-          VFromList v2 Double) => XYPlot [(TC s t1 (Data (v2 :> Nil) Val))] [(TC s t2 (Data (v1 :> Nil) Val))] where 
+          DisplayTyp t2,
+          SV.FromList v1 Double,
+          SV.FromList v2 Double) => XYPlot [(TC s t1 (Data (v2 :> Nil) Val))] [(TC s t2 (Data (v1 :> Nil) Val))] where
   xyplot ti xs ys = plotPathsStyle (xyPlotAttr ti (head xs) (head ys)) (zip styleList (zipWith (\ x y -> zip (sPlotData x::[Val]) (sPlotData y::[Val])) xs ys))
     where styleList = map (xyPlotStyle . show) (map (\ n -> "Signal"++ show n) $ listIdx ys)
 
 instance (DisplayTyp t1,
-          DisplayTyp t2, 
-          VFromList v1 Double,
-          VFromList v3 Double,
-          VFromList v4 (TC s t2 (Data (v3 :> (Nil' :> Nil')) Val)),
-          VWalker v4 (v3 Val) (TC s t2 (Data (v3 :> (Nil' :> Nil')) Val))) => 
-         XYPlot (TC s t1 (Data (v1 :> Nil) Val)) (TC s t2 (Data (v4 :> v3 :> Nil) Val)) where 
+          DisplayTyp t2,
+          SV.FromList v1 Double,
+          SV.FromList v3 Double,
+          SV.FromList v4 (TC s t2 (Data (v3 :> (Nil' :> Nil')) Val)),
+          SV.Walker v4 (v3 Val) (TC s t2 (Data (v3 :> (Nil' :> Nil')) Val))) =>
+         XYPlot (TC s t1 (Data (v1 :> Nil) Val)) (TC s t2 (Data (v4 :> v3 :> Nil) Val)) where
   xyplot ti x y = xyplot ti x (toSigList y)
 
 instance (DisplayTyp t1,
-          DisplayTyp t2, 
-          VFromList v1 Double, 
-          VFromList v3 Double,
-          VFromList v2 (TC s t1 (Data (v1 :> (Nil' :> Nil')) Val)),
-          VWalker v2 (v1 Val) (TC s t1 (Data (v1 :> (Nil' :> Nil')) Val)), 
-          VFromList v4 (TC s t2 (Data (v3 :> (Nil' :> Nil')) Val)),
-          VWalker v4 (v3 Val) (TC s t2 (Data (v3 :> (Nil' :> Nil')) Val))) => 
-         XYPlot (TC s t1 (Data (v2 :> v1 :> Nil) Val)) (TC s t2 (Data (v4 :> v3 :> Nil) Val)) where 
+          DisplayTyp t2,
+          SV.FromList v1 Double,
+          SV.FromList v3 Double,
+          SV.FromList v2 (TC s t1 (Data (v1 :> (Nil' :> Nil')) Val)),
+          SV.Walker v2 (v1 Val) (TC s t1 (Data (v1 :> (Nil' :> Nil')) Val)),
+          SV.FromList v4 (TC s t2 (Data (v3 :> (Nil' :> Nil')) Val)),
+          SV.Walker v4 (v3 Val) (TC s t2 (Data (v3 :> (Nil' :> Nil')) Val))) =>
+         XYPlot (TC s t1 (Data (v2 :> v1 :> Nil) Val)) (TC s t2 (Data (v4 :> v3 :> Nil) Val)) where
   xyplot ti x y = xyplot ti (toSigList x) (toSigList y)
 
 
 -- | Plotting Surfaces
 class SurfPlot a b c where
   surfPlot :: String -> a -> b -> c -> IO ()
-  
-instance (VFromList v2 (v1 Double),
-          VFromList v1 Double,
-          VFromList v2 [Double],
-          VWalker v2 (v1 Double) [Double], 
-          VFromList v3 [Double],
-          VFromList v4 Double,
-          VFromList v3 (v4 Double),
-          VWalker v3 (v4 Double) [Double], 
-          VFromList v5 (v6 Double),
-          VFromList v6 Double,
-          VFromList v5 [Double],
-          VWalker v5 (v6 Double) [Double], 
+
+instance (SV.FromList v2 (v1 Double),
+          SV.FromList v1 Double,
+          SV.FromList v2 [Double],
+          SV.Walker v2 (v1 Double) [Double],
+          SV.FromList v3 [Double],
+          SV.FromList v4 Double,
+          SV.FromList v3 (v4 Double),
+          SV.Walker v3 (v4 Double) [Double],
+          SV.FromList v5 (v6 Double),
+          SV.FromList v6 Double,
+          SV.FromList v5 [Double],
+          SV.Walker v5 (v6 Double) [Double],
           DisplayTyp t1,
           DisplayTyp t2,
           DisplayTyp t3) => 

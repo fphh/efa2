@@ -17,7 +17,6 @@ import EFA2.Utils.Utils
 import EFA2.Signal.Base 
 import EFA2.Signal.Data
 import EFA2.Signal.Signal
-import EFA2.Signal.Vector
 
 import qualified Data.Vector.Unboxed as UV
 import qualified Data.Vector as V

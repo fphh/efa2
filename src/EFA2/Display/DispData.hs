@@ -3,7 +3,6 @@
 module EFA2.Display.DispVector (module EFA2.Display.DispVector) where
 
 import EFA2.Display.DispBase
---import EFA2.Signal.Vector2
 import EFA2.Signal.Base
 import qualified Data.Vector.Unboxed as UV 
 

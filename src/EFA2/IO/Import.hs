@@ -13,7 +13,7 @@ import EFA2.Signal.SequenceData
 --import Text.ParserCombinators.Parsec
 import Data.List.HT (chop)
 
-import EFA2.Signal.Vector
+import qualified EFA2.Signal.Vector as SV
 import EFA2.Signal.Signal
 
 
@@ -40,7 +40,7 @@ modelicaCSVParse text = rec
   where csvlines = lines text -- read get all lines
         header =  csvParseHeaderLine $ head csvlines  -- header with labels in first line       
         sigIdents = map SigId (tail header) -- first column is "time" / use Rest
-        columns = vtranspose (map csvParseDataLine $ tail csvlines) -- rest of lines contains data / transpose from columns to lines
+        columns = SV.transpose (map csvParseDataLine $ tail csvlines) -- rest of lines contains data / transpose from columns to lines
         time = if (head header) == "time" then head columns else error $ "Error in csvImport - first column not time : " ++ (head header)
         sigs = tail columns -- generate signals from rest of columns
         rec = Record (sfromList time)  (M.fromList $ zip sigIdents (map sfromList sigs)) -- generate Record with signal Map

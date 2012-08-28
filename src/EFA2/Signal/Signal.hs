@@ -1,11 +1,12 @@
 {-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, FunctionalDependencies, UndecidableInstances, KindSignatures, TypeOperators, GADTs, FlexibleContexts, ScopedTypeVariables, EmptyDataDecls #-}
 
 module EFA2.Signal.Signal (module EFA2.Signal.Signal) where
-import EFA2.Signal.Vector
+
+import qualified EFA2.Signal.Vector as SV
 import EFA2.Signal.Base
 import EFA2.Signal.Data
 import EFA2.Signal.Typ
--- import EFA2.Signal.Vector
+
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as UV
 import Data.Monoid
@@ -302,13 +303,13 @@ fromSample :: TC Sample typ (Data Nil d) -> d
 fromSample (TC (Data (D0 x))) = x
 
 
-class SConst s c d where 
-      toConst :: Int -> d -> TC s (Typ UT UT UT) (c d) 
-  
-instance (VFromList v1 Double) => SConst Signal (Data (v1 :> Nil)) Val where   
+class SConst s c d where
+      toConst :: Int -> d -> TC s (Typ UT UT UT) (c d)
+
+instance (SV.FromList v1 Double) => SConst Signal (Data (v1 :> Nil)) Val where
          toConst len x =  sfromVal len x
-  
-instance (VFromList v1 Double) => SConst FSignal (Data (v1 :> Nil)) Val where   
+
+instance (SV.FromList v1 Double) => SConst FSignal (Data (v1 :> Nil)) Val where
          toConst len x =  sfromVal len x
 
 instance SConst Scalar (Data Nil) Val where   
@@ -483,14 +484,15 @@ class DAppend c1 c2 c3 d => SAppend s1 s2 s3 c1 c2 c3 d | s1 s2 -> s3 where
 class SSingleton s1 s2 c1 c2 d | s2 -> s1, c1 -> c2, c2 -> c1  where 
   ssingleton :: TC s1 t (c1 d) -> TC s2 t (c2 d)
   
-instance (VSingleton v1 d) => SSingleton Sample Signal (Data (Nil)) (Data (v1:> Nil)) d where  
-  ssingleton (TC x) = TC $ dsingleton x 
 
-instance (VSingleton v2 (v1 d)) => SSingleton Sample Signal (Data (v1 :> Nil)) (Data (v2 :> v1:> Nil)) d where  
-  ssingleton (TC x) = TC $ dsingleton x 
+instance (SV.Singleton v1 d) => SSingleton Sample Signal (Data (Nil)) (Data (v1:> Nil)) d where
+  ssingleton (TC x) = TC $ dsingleton x
 
-instance (VSingleton v2 (v1 d)) => SSingleton Sample Sample (Data (v1 :> Nil)) (Data (v2 :> v1:> Nil)) d where  
-  ssingleton (TC x) = TC $ dsingleton x 
+instance (SV.Singleton v2 (v1 d)) => SSingleton Sample Signal (Data (v1 :> Nil)) (Data (v2 :> v1:> Nil)) d where
+  ssingleton (TC x) = TC $ dsingleton x
+
+instance (SV.Singleton v2 (v1 d)) => SSingleton Sample Sample (Data (v1 :> Nil)) (Data (v2 :> v1:> Nil)) d where
+  ssingleton (TC x) = TC $ dsingleton x
 
 instance DAppend c1 c2 c3 d => SAppend Signal Signal Signal c1 c2 c3 d 
 instance DAppend c1 c2 c3 d => SAppend Signal Sample Signal c1 c2 c3 d
@@ -529,8 +531,8 @@ class SBox s1 c1 c2 d1 where
    sunbox :: TC s1 typ (c2 d1) -> TC s1 typ (c1 d1)
 
 instance (UV.Unbox d1) => SBox Signal (Data (UV.Vector :> Nil)) (Data (V.Vector :> Nil)) d1  where
-         sbox (TC(Data(D1 x))) = TC $ Data $ D1 $ vbox x
-         sunbox (TC(Data(D1 x))) = TC $ Data $ D1 $ vunbox x
+         sbox (TC(Data(D1 x))) = TC $ Data $ D1 $ SV.box x
+         sunbox (TC(Data(D1 x))) = TC $ Data $ D1 $ SV.unbox x
 
 instance (UV.Unbox d1) => SBox Scalar c1 c1 d1 where
          sbox x = x
@@ -546,12 +548,12 @@ sconvert (TC x) = TC $ dconvert x
 
 class (BSum d1 d1 d1, Num d1) => SigSum s1 s2 c1 c2 d1 | s1 -> s2, c1 -> c2  where
       sigSum :: TC s1 typ (c1 d1) -> TC s2 typ (c2 d1)
-    
-instance  (BSum d1 d1 d1, Num d1, VWalker v1 d1 d1) => SigSum Signal Scalar (Data (v1 :> Nil)) (Data Nil) d1 where
-         sigSum x = TC $ Data $ D0 $ sfoldl (..+) 0 x 
 
-instance  (BSum d1 d1 d1, Num d1, VWalker v1 d1 d1) =>  SigSum FSignal Scalar (Data (v1 :> Nil)) (Data Nil) d1 where
-         sigSum x = TC $ Data $ D0 $ sfoldl (..+) 0 x 
+instance  (BSum d1 d1 d1, Num d1, SV.Walker v1 d1 d1) => SigSum Signal Scalar (Data (v1 :> Nil)) (Data Nil) d1 where
+         sigSum x = TC $ Data $ D0 $ sfoldl (..+) 0 x
+
+instance  (BSum d1 d1 d1, Num d1, SV.Walker v1 d1 d1) =>  SigSum FSignal Scalar (Data (v1 :> Nil)) (Data Nil) d1 where
+         sigSum x = TC $ Data $ D0 $ sfoldl (..+) 0 x
 
 ----------------------------------------------------------
 -- Delta and 2Point Average of Signal
@@ -620,27 +622,27 @@ srec = smap rec
 
 
 -- | data ConversiSon function
-fromSigList ::VFromList v2 (v1 d)=> [TC s typ (Data (v1 :> Nil) d)] -> TC s typ (Data (v2 :> v1 :> Nil) d) 
-fromSigList xs = TC $ Data $ D2 $ vfromList $ map f xs
+fromSigList ::SV.FromList v2 (v1 d)=> [TC s typ (Data (v1 :> Nil) d)] -> TC s typ (Data (v2 :> v1 :> Nil) d)
+fromSigList xs = TC $ Data $ D2 $ SV.fromList $ map f xs
   where f (TC (Data (D1 x))) = x
         
 -- | data Conversion function
-toSigList :: (VFromList v2 (TC s typ (Data (v1 :> (Nil' :> Nil')) d)), VWalker v2 (v1 d) (TC s typ (Data (v1 :> (Nil' :> Nil')) d))) => TC s typ (Data (v2 :> v1 :> Nil) d) -> [TC s typ (Data (v1 :> Nil) d)]
-toSigList (TC (Data (D2 xs))) = vtoList $ vmap f xs
+toSigList :: (SV.FromList v2 (TC s typ (Data (v1 :> (Nil' :> Nil')) d)), SV.Walker v2 (v1 d) (TC s typ (Data (v1 :> (Nil' :> Nil')) d))) => TC s typ (Data (v2 :> v1 :> Nil) d) -> [TC s typ (Data (v1 :> Nil) d)]
+toSigList (TC (Data (D2 xs))) = SV.toList $ SV.map f xs
   where f x = TC $ Data $ D1 x
        
 sfromCells :: (DConvert (Data ([] :> ([] :> Nil))) (Data (v2 :> (v1 :> Nil))) d) => [[TC s typ (Data Nil d)]] -> TC s typ (Data (v2 :> v1 :> Nil) d)
 sfromCells xss = sconvert $ TC $ Data $ D2 $ map (map f) xss 
   where f (TC (Data (D0 x))) = x 
 
-stoCells :: (VFromList v2 (v1 d),
-                      VFromList v1 d,
-                      VFromList v2 [d],
-                      VWalker v2 (v1 d) [d]) => TC s typ (Data (v2 :> v1 :> Nil) d) -> [[TC s typ (Data Nil d)]]
+stoCells :: (SV.FromList v2 (v1 d),
+                      SV.FromList v1 d,
+                      SV.FromList v2 [d],
+                      SV.Walker v2 (v1 d) [d]) => TC s typ (Data (v2 :> v1 :> Nil) d) -> [[TC s typ (Data Nil d)]]
 stoCells xss = map (map f) $ stoList2 xss
   where f x = TC $ Data $ D0 x 
 
-sfilter ::  (VFilter v1 d) => (d -> Bool) -> TC s typ (Data (v1 :> Nil) d) -> TC s typ (Data (v1 :> Nil) d)
+sfilter ::  (SV.Filter v1 d) => (d -> Bool) -> TC s typ (Data (v1 :> Nil) d) -> TC s typ (Data (v1 :> Nil) d)
 sfilter f (TC x) = TC $ dfilter f x
 
 
@@ -662,8 +664,8 @@ sminimum :: (DMaximum c1 c2 d) => TC s typ (c1 d) -> TC Scalar typ (c2 d)
 sminimum (TC x) = TC $ dminimum x  
 
 
-subSignal1D :: (VLookup v d)=> TC s typ (Data (v :> Nil) d) -> [SignalIdx] -> TC s typ (Data (v :> Nil) d)
-subSignal1D (TC (Data (D1 x))) idxs = TC $ Data $ D1 $ vlookUp x idxs  
+subSignal1D :: (SV.Lookup v d)=> TC s typ (Data (v :> Nil) d) -> [SignalIdx] -> TC s typ (Data (v :> Nil) d)
+subSignal1D (TC (Data (D1 x))) idxs = TC $ Data $ D1 $ SV.lookUp x idxs
 
 slength :: (DLength c d) => TC s typ (c d) -> Int
 slength (TC x) = dlength x  
