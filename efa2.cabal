@@ -101,4 +101,5 @@ Executable sequenzflussgraph
   GHC-Options: -Wall
   Build-Depends:
     efa2,
+    utility-ht,
     base
