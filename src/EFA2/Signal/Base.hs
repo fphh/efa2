@@ -81,8 +81,10 @@ data Sign = PSign
 
 -- | determine Signal Sign  
 sign :: (Eq a, Ord a, Num a) => a -> Sign
-sign x | x > 0 = PSign
-       | x == 0 = ZSign -- TODO add intervalls later on Zero - Detection       
-       | x < 0 = NSign
+sign x =
+   case compare x 0 of
+      GT -> PSign
+      EQ -> ZSign -- TODO add intervalls later on Zero - Detection       
+      LT -> NSign
 
 data ZeroCrossing = ZeroCrossing Val | NoCrossing deriving (Show, Eq)

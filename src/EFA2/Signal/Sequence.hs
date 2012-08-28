@@ -195,28 +195,27 @@ calcZeroTimes (t1,ps1) (t2,ps2)  = (zeroCrossings, zeroCrossingTimes)
 -- | Interpolation Functions for one Signal
 
 -- | calculate time of Zero Crossing Point                  
-calcZeroTime :: (TSamp,PSamp) -> (TSamp,PSamp) -> TZeroSamp 
-calcZeroTime (t1,p1) (t2,p2) = f t1 t2 
-  where m = (p2.-p1)./(t2.-t1) -- interpolation slope 
-        f :: TSamp -> TSamp -> TZeroSamp
-        f t1 t2 | t2 > t1 = makeTZero $ dt.+t1 where dt = changeType $ ((sneg p1)./m) :: DTSamp -- time of zero crossing 
-        f t1 t2 | t2 == t1 = makeTZero t1
-        f t1 t2 | t2 < t1 = error ("Error in calcZeroTime- Discontinous time vector t1: " ++ show t1 ++ " t2: " ++ show t2)
-                  
+calcZeroTime :: (TSamp,PSamp) -> (TSamp,PSamp) -> TZeroSamp
+calcZeroTime (t1,p1) (t2,p2) = s
+  where m = (p2.-p1)./(t2.-t1) -- interpolation slope
+        s =
+           case compare t2 t1 of
+              GT -> makeTZero $ dt.+t1 where dt = changeType $ ((sneg p1)./m) :: DTSamp -- time of zero crossing
+              EQ -> makeTZero t1
+              LT -> error ("Error in calcZeroTime- Discontinous time vector t1: " ++ show t1 ++ " t2: " ++ show t2)
 
 
--- | interpolate Powers at Zero Crossing times 
-interpPowers :: (TSamp,PSamp) -> (TSamp,PSamp) -> TSigL -> TZeroSamp -> PSigL        
+-- | interpolate Powers at Zero Crossing times
+interpPowers :: (TSamp,PSamp) -> (TSamp,PSamp) -> TSigL -> TZeroSamp -> PSigL
 interpPowers (t1,p1) (t2,p2) tzeroList tzero = stmap f tzeroList
   where f :: TSamp -> PSamp
         f tz | (makeTZero tz)==tzero = (toSample 0) -- avoid numeric error and make zero crossing power zero
-        f tz | otherwise = g t1 t2 
-          where 
-            g :: TSamp -> TSamp -> PSamp
-            g t1 t2 | t2 > t1 = p1.+m.*(tz.-t1) -- interpolate non zero powers
-            g t1 t2 | t2 == t1 = sampleAverage p1 p2
-            g t1 t2 | t2 < t1 =  error ("Error in interpPowers - Discontinous time vector - t1: " ++ show t1 ++ " t2: " ++ show t2)
-        m = (p2.-p1)./(t2.-t1) -- interpolation slope 
+             | otherwise =
+                 case compare t2 t1 of
+                    GT -> p1.+m.*(tz.-t1) -- interpolate non zero powers
+                    EQ -> sampleAverage p1 p2
+                    LT -> error ("Error in interpPowers - Discontinous time vector - t1: " ++ show t1 ++ " t2: " ++ show t2)
+        m = (p2.-p1)./(t2.-t1) -- interpolation slope
 
 -----------------------------------------------------------------------------------
 -- | Helper Functions

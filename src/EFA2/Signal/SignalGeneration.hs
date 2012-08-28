@@ -69,13 +69,9 @@ sine  w phi time = dmap f time where f x = sin (w.*.x.+.phi)
 
 etaFunct :: Val -> Power -> Power
 etaFunct eta sig = dmap f sig
-  where f val | val > 0  = val.*.eta
-        f val | val == 0 = 0   
-        f val | val < 0  = val./.eta  
-
-
-
-
-
-
+  where f val =
+           case compare val 0 of
+              GT -> val.*.eta
+              EQ -> 0
+              LT -> val./.eta
 -}
