@@ -73,11 +73,9 @@ main = do
       sigs = powerMap sqEnvs'
       ts = [give storage0] ++ ts'
 
-      f x | x < 0 = -x
-      f x = x
       envs = sqEnvs' { recordNumber = SingleRecord 0,
-                       powerMap = M.insert storage0 (sfromList [3.0]) (M.map (smap f) sigs),
-                       fetaMap = M.fromList [ (FEtaIdx 3 0 15 13, smap (const 0.4)) ] }
+                       powerMap = M.insert storage0 (sfromList [3.0]) (M.map (smap abs) sigs),
+                       fetaMap = M.singleton (FEtaIdx 3 0 15 13) (smap (const 0.4)) }
 
 
       gd = map (eqToInTerm envs) (toAbsEqTermEquations $ order ts)
