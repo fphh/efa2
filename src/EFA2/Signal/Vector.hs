@@ -5,15 +5,9 @@ module EFA2.Signal.Vector (module EFA2.Signal.Vector) where
 
 import qualified Data.Vector.Unboxed as UV
 import qualified Data.Vector as V
-import qualified Data.Vector.Generic as GV
-import qualified Data.Vector.Generic.Mutable as MV
 
-import Data.Monoid
-import Control.Applicative
-import EFA2.Utils.Utils
-import qualified Data.List as L 
-
-import EFA2.Signal.Base
+import qualified Data.List as L
+import qualified Data.List.HT as LH
 
 
 --------------------------------------------------------------
@@ -280,30 +274,25 @@ instance UV.Unbox d => VFilter UV.Vector d where
 
 
 class VLookup v d where
-  vlookUp :: v d -> [Int] -> v d  
-  
-instance (Eq d) => VLookup [] d where  
-  vlookUp xs idxs = if check then map f m else error "Error in vLookup - indices out of Range"   
-    where
-      f (Just x) = x
-      check = all (/=Nothing) m
-      m = map ((V.fromList xs) V.!? ) idxs    
-  
-instance (Eq d) => VLookup V.Vector d where  
-  vlookUp xs idxs = if check then V.map f m else error "Error in vLookup - indices out of Range"   
-    where
-      f (Just x) = x
-      check = V.all (/=Nothing) m   
-      m = V.map (xs V.!?) $ V.fromList idxs    
-  
-instance (UV.Unbox d, Eq d,  UV.Unbox (Maybe d)) => VLookup UV.Vector d where  
-  vlookUp xs idxs = if check then UV.map f m else error "Error in vLookup - indices out of Range"   
-    where
-      f (Just x) = x
-      check = UV.all (/=Nothing) m   
-      m = UV.map (xs UV.!? ) $ UV.fromList idxs    
-  
-  
+  vlookUp :: v d -> [Int] -> v d
+
+instance (Eq d) => VLookup [] d where
+  vlookUp xs = vlookUpGen (V.fromList xs V.!? )
+
+instance (Eq d) => VLookup V.Vector d where
+  vlookUp xs = V.fromList . vlookUpGen (xs V.!?)
+
+instance (UV.Unbox d, Eq d) => VLookup UV.Vector d where
+  vlookUp xs = UV.fromList . vlookUpGen (xs UV.!?)
+
+{-# INLINE vlookUpGen #-}
+vlookUpGen :: (i -> Maybe a) -> [i] -> [a]
+vlookUpGen look idxs =
+  case LH.partitionMaybe look idxs of
+    (ys, []) -> ys
+    _ -> error "Error in vLookup - indices out of Range"
+
+
 class VReverse v d where
   vreverse :: v d -> v d
   
