@@ -1,0 +1,105 @@
+Name:                efa2
+Version:             0.1
+Synopsis:            Energy flow analysis
+Description:         Energy flow analysis
+Homepage:            http://energiefluss.info/
+License:             AllRightsReserved
+License-File:        LICENSE
+Author:              Philipp Guttenberg
+Maintainer:          guttenberg@energiefluss.info
+-- Copyright:           
+Category:            Engineering
+Build-type:          Simple
+Cabal-version:       >=1.8
+
+Library
+  Build-Depends:
+    graphviz ==2999.13.*,
+    fgl ==5.4.*,
+    vector ==0.9.*,
+    gnuplot ==0.5.*,
+    text ==0.11.*,
+    pretty-show >=1.2 && <1.3,
+    pretty ==1.1.*,
+    mtl ==2.1.*,
+    template-haskell ==2.7.*,
+    process ==1.1.*,
+    random ==1.0.*,
+    containers ==0.4.*,
+    utility-ht ==0.0.*,
+    QuickCheck ==2.5.*,
+    base ==4.5.*
+  Hs-Source-Dirs:      src
+  Exposed-Modules:
+--    EFA2.IO.Import
+--    EFA2.Test.UtilsTest
+-- benötigt RandomTopology
+--    EFA2.Test.SolverTest
+--    EFA2.Test.Test
+--    EFA2.Test.IsVarTest
+    EFA2.Utils.Utils
+    EFA2.StateAnalysis.StateAnalysis
+    EFA2.Signal.Base
+    EFA2.Signal.TH
+    EFA2.Signal.SequenceData
+    EFA2.Signal.SignalVersuch
+    EFA2.Signal.Typ
+    EFA2.Signal.Data
+    EFA2.Signal.Vector
+    EFA2.Signal.Signal
+    EFA2.Signal.SignalData
+    EFA2.Signal.Sequence
+    EFA2.Signal.SignalGeneration
+    EFA2.Solver.IsVar
+    EFA2.Solver.Equation
+    EFA2.Solver.Horn
+    EFA2.Solver.DirEquation
+    EFA2.Solver.EquationOrder
+    EFA2.Solver.DependencyGraph
+    EFA2.Display.FileSave
+--    EFA2.Display.DispData
+    EFA2.Display.DispSequence
+    EFA2.Display.Plot
+    EFA2.Display.DrawGraph
+    EFA2.Display.DispTyp
+    EFA2.Display.ReportSequence
+    EFA2.Display.DispBase
+    EFA2.Display.DispSignal
+    EFA2.Display.Report
+    EFA2.Topology.TopologyData
+-- gibt 4 Argumente an NLabel obwohl das nur (noch) 3 hat
+--    EFA2.Topology.RandomTopology
+    EFA2.Topology.EfaGraph
+    EFA2.Topology.Flow
+    EFA2.Topology.Topology
+    EFA2.Example.Examples
+    EFA2.Example.LinearOne
+    EFA2.Example.LinearTwo
+-- EFA2.Graph-Verzeichnis fehlt
+--    EFA2.Example.Circular
+-- einige Typen passen nicht
+--    EFA2.Example.Linear
+    EFA2.Example.Dreibein
+    EFA2.Example.Loop
+    EFA2.Example.SymSig
+    EFA2.Example.Dreibein2
+    EFA2.Example.Dreibein3
+-- einige Typen passen nicht
+--    EFA2.Example.Vierbein
+--    EFA2.Example.Zweibein
+--    EFA2.Example.LinearX
+    EFA2.Interpreter.Env
+-- cst nicht importiert
+--    EFA2.Interpreter.Eta
+    EFA2.Interpreter.Arith
+    EFA2.Interpreter.Interpreter
+    EFA2.Interpreter.InTerm
+  -- Other-Modules:       
+
+Executable sequenzflussgraph
+  Main-Is: examples/elementary/sequenzflussgraph/Main.hs
+  GHC-Options: -Wall
+  Build-Depends:
+    efa2,
+    utility-ht,
+    base

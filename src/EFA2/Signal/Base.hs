@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses,FunctionalDependencies, TypeSynonymInstances, UndecidableInstances,KindSignatures, GeneralizedNewtypeDeriving,FlexibleContexts,OverlappingInstances #-} 
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, FunctionalDependencies, KindSignatures, GeneralizedNewtypeDeriving, FlexibleContexts #-} 
 
 
 module EFA2.Signal.Base (module EFA2.Signal.Base) where

@@ -1,5 +1,3 @@
-{-# LANGUAGE FlexibleInstances #-}
-
 module EFA2.IO.Import (module EFA2.IO.Import) where
 
 import qualified Data.Map as M 
@@ -13,9 +11,9 @@ import EFA2.Signal.Sequence
 import EFA2.Signal.SequenceData
 
 --import Text.ParserCombinators.Parsec
-import Data.List.Split
+import Data.List.HT (chop)
 
-import EFA2.Signal.Vector
+import qualified EFA2.Signal.Vector as SV
 import EFA2.Signal.Signal
 
 
@@ -42,14 +40,14 @@ modelicaCSVParse text = rec
   where csvlines = lines text -- read get all lines
         header =  csvParseHeaderLine $ head csvlines  -- header with labels in first line       
         sigIdents = map SigId (tail header) -- first column is "time" / use Rest
-        columns = vtranspose (map csvParseDataLine $ tail csvlines) -- rest of lines contains data / transpose from columns to lines
+        columns = SV.transpose (map csvParseDataLine $ tail csvlines) -- rest of lines contains data / transpose from columns to lines
         time = if (head header) == "time" then head columns else error $ "Error in csvImport - first column not time : " ++ (head header)
         sigs = tail columns -- generate signals from rest of columns
         rec = Record (sfromList time)  (M.fromList $ zip sigIdents (map sfromList sigs)) -- generate Record with signal Map
         
 -- | Parse CSV Header Line
 csvParseHeaderLine :: String -> [String]  
-csvParseHeaderLine line = init $ map read (splitOn "," line)   -- (init . tail) to get rid of Modelica " " quotes 
+csvParseHeaderLine line = init $ map read (chop (','==) line)   -- (init . tail) to get rid of Modelica " " quotes 
 
 class ParseCVS a where
       csvParseDataLine :: String -> [a]
@@ -57,9 +55,7 @@ class ParseCVS a where
 
 instance ParseCVS Double where
          -- | Parse CSV Data Line
-         csvParseDataLine line = init $ map read (splitOn "," line)  -- another init to get rid of final , per line
+         csvParseDataLine line = init $ map read (chop (','==) line)  -- another init to get rid of final , per line
 
-
-instance ParseCVS (Ratio Integer) where
-         csvParseDataLine line = init $ map (flip approxRational 0.001 . read) (splitOn "," line)
-
+instance Integral int => ParseCVS (Ratio int) where
+         csvParseDataLine line = init $ map (realToFrac . flip approxRational 0.001 . read) (chop (','==) line)

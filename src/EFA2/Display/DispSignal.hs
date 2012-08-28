@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, GADTs, MultiParamTypeClasses,FlexibleContexts,UndecidableInstances, TypeOperators, TypeSynonymInstances#-}
+{-# LANGUAGE FlexibleInstances, GADTs, MultiParamTypeClasses, FlexibleContexts, TypeOperators #-}
 
 module EFA2.Display.DispSignal (module EFA2.Display.DispSignal) where
 
@@ -10,7 +10,7 @@ import EFA2.Signal.Base
 import EFA2.Signal.Data
 import EFA2.Signal.Typ
 import EFA2.Signal.Signal
-import EFA2.Signal.Vector
+import qualified EFA2.Signal.Vector as SV
 import Debug.Trace
 import Text.Printf
 import qualified Data.List as L 
@@ -27,7 +27,7 @@ vdisp x = printf f $ s*val
         (TC (Data (D0 val))) = x
 
 -- | Display single values
-srdisp :: (DisplayTyp t, VFromList v Double) => TC s t (Data (v :> Nil) Val)  -> [String]
+srdisp :: (DisplayTyp t, SV.FromList v Double) => TC s t (Data (v :> Nil) Val)  -> [String]
 srdisp xs = map g l -- (f l)
   where g x = printf f (s*x)              
         t = getDisplayType xs
@@ -62,7 +62,7 @@ instance SigDisp Signal (Data (V.Vector :> V.Vector :> Nil)) where
 instance SigDisp TestRow (Data (V.Vector :> UV.Vector :> Nil)) where      
          sigDisp x = "Test2U" 
 
-instance (VFromList v Val,VSingleton v Double,UDisp t, SigDisp s (Data (v :> Nil))) => ToTable (TC s t (Data (v :> Nil) Val)) where
+instance (SV.FromList v Val, SV.Singleton v Double, UDisp t, SigDisp s (Data (v :> Nil))) => ToTable (TC s t (Data (v :> Nil) Val)) where
       toTable os (ti,x) = [Table {tableTitle = "",
                          tableFormat = tf,
                          tableData = td,
@@ -79,12 +79,12 @@ instance (VFromList v Val,VSingleton v Double,UDisp t, SigDisp s (Data (v :> Nil
               f x | L.elem RAll os = srdisp x              
               f x | otherwise = [(vdisp min) ++ " - " ++ (vdisp max)]
 
-instance (UDisp t, 
-          SigDisp s (Data (v2 :> (v1 :> Nil))), 
-          VFromList v1 Val,
-          VFromList v2 [Val],
-          VFromList v2 (v1 Val),
-          VWalker v2 (v1 Val) [Val]) => ToTable (TC s t (Data (v2 :> v1 :> Nil) Val)) where
+instance (UDisp t,
+          SigDisp s (Data (v2 :> (v1 :> Nil))),
+          SV.FromList v1 Val,
+          SV.FromList v2 [Val],
+          SV.FromList v2 (v1 Val),
+          SV.Walker v2 (v1 Val) [Val]) => ToTable (TC s t (Data (v2 :> v1 :> Nil) Val)) where
       toTable os (ti,xss) = [Table {tableTitle = ti ++ "   " ++ sigDisp xss ++ tdisp xss ++ udisp xss,
                          tableFormat = tf,
                          tableData = td,
@@ -124,12 +124,12 @@ class SDisplay a where
   sdisp :: a -> String
 
 {-
-instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d, VSingleton v1 d, DFromList (Data Nil) d)
-         => SDisplay (TC Scalar t (Data Nil d)) where 
-  sdisp x@(TC (Data (D0 v)))  = "Sig-D0 " -- ++ tdisp x ++ ": " ++ dispAll (stoList x) dtyp -- dispRange dmin dmax dtyp 
+instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d, SV.Singleton v1 d, DFromList (Data Nil) d)
+         => SDisplay (TC Scalar t (Data Nil d)) where
+  sdisp x@(TC (Data (D0 v)))  = "Sig-D0 " -- ++ tdisp x ++ ": " ++ dispAll (stoList x) dtyp -- dispRange dmin dmax dtyp
 --    where dtyp = getDisplayType x
---          dmin = vminimum v
---          dmax = vmaximum v
+--          dmin = SV.minimum v
+--          dmax = SV.maximum v
 
 -}
 instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d)
@@ -138,41 +138,41 @@ instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d)
     where dtyp = getDisplayType x
 
 
-instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d,VSingleton v1 d, DFromList (Data (v1 :> Nil)) d)
-         => SDisplay (TC Signal t (Data (v1 :> Nil) d)) where 
-  sdisp x@(TC (Data (D1 v)))  = "Sig-D1 " ++ tdisp x ++ ": " ++ dispAll (stoList x) dtyp -- dispRange dmin dmax dtyp 
+instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d, SV.Singleton v1 d, DFromList (Data (v1 :> Nil)) d)
+         => SDisplay (TC Signal t (Data (v1 :> Nil) d)) where
+  sdisp x@(TC (Data (D1 v)))  = "Sig-D1 " ++ tdisp x ++ ": " ++ dispAll (stoList x) dtyp -- dispRange dmin dmax dtyp
     where dtyp = getDisplayType x
-          dmin = vminimum v
-          dmax = vmaximum v
+          dmin = SV.minimum v
+          dmax = SV.maximum v
 
-instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d,VSingleton v1 d, DFromList (Data (v1 :> Nil)) d)
-         => SDisplay (TC FSignal t (Data (v1 :> Nil) d)) where 
-  sdisp x@(TC (Data (D1 v)))  = "FSig-D1 " ++ tdisp x ++ ": " ++ dispAll (stoList x) dtyp -- dispRange dmin dmax dtyp 
+instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d, SV.Singleton v1 d, DFromList (Data (v1 :> Nil)) d)
+         => SDisplay (TC FSignal t (Data (v1 :> Nil) d)) where
+  sdisp x@(TC (Data (D1 v)))  = "FSig-D1 " ++ tdisp x ++ ": " ++ dispAll (stoList x) dtyp -- dispRange dmin dmax dtyp
     where dtyp = getDisplayType x
-          dmin = vminimum v
-          dmax = vmaximum v
+          dmin = SV.minimum v
+          dmax = SV.maximum v
 
-instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d,VSingleton v1 d, DFromList (Data (v1 :> Nil)) d)
-         => SDisplay (TC TestRow t (Data (v1 :> Nil) d)) where 
-  sdisp x@(TC (Data (D1 v)))  = "TestRow-D1 " ++ tdisp x ++ ": " ++ dispAll (stoList x) dtyp -- dispRange dmin dmax dtyp 
+instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d, SV.Singleton v1 d, DFromList (Data (v1 :> Nil)) d)
+         => SDisplay (TC TestRow t (Data (v1 :> Nil) d)) where
+  sdisp x@(TC (Data (D1 v)))  = "TestRow-D1 " ++ tdisp x ++ ": " ++ dispAll (stoList x) dtyp -- dispRange dmin dmax dtyp
     where dtyp = getDisplayType x
-          dmin = vminimum v
-          dmax = vmaximum v
+          dmin = SV.minimum v
+          dmax = SV.maximum v
 
-instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d,VSingleton v1 d,VSingleton v2 (v1 d), DFromList (Data (v2 :> (v1 :> Nil))) d) => SDisplay (TC Signal t (Data (v2 :> v1 :> Nil) d)) where 
-  sdisp x@(TC(Data (D2 v)))  = "Sig-D2 " ++ tdisp x ++ ": " ++ dispAll (stoList x) dtyp -- dispRange dmin dmax dtyp 
+instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d, SV.Singleton v1 d, SV.Singleton v2 (v1 d), DFromList (Data (v2 :> (v1 :> Nil))) d) => SDisplay (TC Signal t (Data (v2 :> v1 :> Nil) d)) where
+  sdisp x@(TC(Data (D2 v)))  = "Sig-D2 " ++ tdisp x ++ ": " ++ dispAll (stoList x) dtyp -- dispRange dmin dmax dtyp
     where dtyp = getDisplayType x
-          dmin = vminimum $ vminimum v
-          dmax = vmaximum $ vminimum v
- 
-instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d,VSingleton v1 d,VSingleton v2 (v1 d), DFromList (Data (v2 :> (v1 :> Nil))) d) => SDisplay (TC FSignal t (Data (v2 :> v1 :> Nil) d)) where 
-  sdisp x@(TC(Data (D2 v)))  = "Sig-D2 " ++ tdisp x ++ ": " ++ dispAll (stoList x) dtyp -- dispRange dmin dmax dtyp 
-    where dtyp = getDisplayType x
-          dmin = vminimum $ vminimum v
-          dmax = vmaximum $ vminimum v
+          dmin = SV.minimum $ SV.minimum v
+          dmax = SV.maximum $ SV.maximum v
 
-instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d,VSingleton v1 d,VSingleton v2 (v1 d), DFromList (Data (v2 :> (v1 :> Nil))) d) => SDisplay (TC TestRow t (Data (v2 :> v1 :> Nil) d)) where 
-  sdisp x@(TC(Data (D2 v)))  = "Test-D2 " ++ tdisp x ++ ": " ++ dispAll (stoList x) dtyp -- dispRange dmin dmax dtyp 
+instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d, SV.Singleton v1 d, SV.Singleton v2 (v1 d), DFromList (Data (v2 :> (v1 :> Nil))) d) => SDisplay (TC FSignal t (Data (v2 :> v1 :> Nil) d)) where
+  sdisp x@(TC(Data (D2 v)))  = "Sig-D2 " ++ tdisp x ++ ": " ++ dispAll (stoList x) dtyp -- dispRange dmin dmax dtyp
     where dtyp = getDisplayType x
-          dmin = vminimum $ vminimum v
-          dmax = vmaximum $ vminimum v
+          dmin = SV.minimum $ SV.minimum v
+          dmax = SV.maximum $ SV.maximum v
+
+instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d, SV.Singleton v1 d, SV.Singleton v2 (v1 d), DFromList (Data (v2 :> (v1 :> Nil))) d) => SDisplay (TC TestRow t (Data (v2 :> v1 :> Nil) d)) where
+  sdisp x@(TC(Data (D2 v)))  = "Test-D2 " ++ tdisp x ++ ": " ++ dispAll (stoList x) dtyp -- dispRange dmin dmax dtyp
+    where dtyp = getDisplayType x
+          dmin = SV.minimum $ SV.minimum v
+          dmax = SV.maximum $ SV.maximum v

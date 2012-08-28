@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeSynonymInstances #-}
-
 module Main where
 
 import EFA2.Example.Examples
@@ -9,34 +7,29 @@ import EFA2.Display.DrawGraph
 import EFA2.Topology.TopologyData
 import EFA2.Topology.Flow
 import EFA2.Signal.SequenceData
-import EFA2.Signal.Base
 
-import Debug.Trace
-import Data.Char
+import Data.List.HT (chop)
+
 
 interactIO :: String -> (String -> IO a) -> IO a
 interactIO qstr f = do
   putStrLn qstr
-  str <- getLine
-  f str
+  f =<< getLine
 
 interactA :: String -> (String -> a) -> IO a
 interactA qstr f = do
   putStrLn qstr
-  str <- getLine
-  return (f str)
+  fmap f getLine
 
 parse :: String -> [Int]
-parse str = map (read . check) $ foldr f [[]] str
-  where f ' ' acc = acc
-        f ',' acc = []:acc
-        f c (a:acc) = (c:a):acc
-        check xs | all isDigit xs = xs
-                 | otherwise = error "parse error: not a number!"
+parse str = map readNum $ chop (','==) $ filter (' '/=) str
+  where readNum s =
+           case reads s of
+              [(n, "")] -> n
+              _ -> error "parse error: not a number!"
 
 select :: [Topology] -> [Int] -> [Topology]
-select _ [] = []
-select ts (x:xs) = (ts !! x):(select ts xs)
+select ts = map (ts!!)
 
 idx :: [SecIdx]
 idx = map SecIdx [0..]
@@ -54,7 +47,7 @@ main :: IO ()
 main = do
   let sol = map reorderEdges $ stateAnalysis topoDreibein
 
-  drawAll [
-    drawTopologyXs' sol,
-    drawSeqGraph sol ]
-
+  drawAll $
+    drawTopologyXs' sol :
+    drawSeqGraph sol :
+    []

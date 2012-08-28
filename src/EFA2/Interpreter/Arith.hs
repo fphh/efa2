@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeSynonymInstances, ScopedTypeVariables, MultiParamTypeClasses, KindSignatures #-}
+{-# LANGUAGE ScopedTypeVariables, MultiParamTypeClasses, KindSignatures #-}
 
 module EFA2.Interpreter.Arith where
 

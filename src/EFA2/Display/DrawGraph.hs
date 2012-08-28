@@ -1,4 +1,5 @@
-{-# LANGUAGE FlexibleInstances, UndecidableInstances, TypeSynonymInstances, MultiParamTypeClasses, ScopedTypeVariables, FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, ScopedTypeVariables, FlexibleContexts #-}
+{-# LANGUAGE PatternGuards #-}
 
 module EFA2.Display.DrawGraph where
 
@@ -48,10 +49,10 @@ import EFA2.Signal.SequenceData
 import EFA2.Utils.Utils
 
 nodeColour :: Attribute 
-nodeColour = FillColor (RGB 230 230 240)
+nodeColour = FillColor [RGB 230 230 240]
 
 clusterColour :: Attribute
-clusterColour = FillColor (RGB 250 250 200)
+clusterColour = FillColor [RGB 250 250 200]
 
 originalEdgeColour :: Attribute
 originalEdgeColour = Color [RGB 0 0 200]
@@ -163,10 +164,20 @@ instance Show Line where
          show (ErrorLine str) = str
 
 
+-- provide a mock for '1' also for non-Num types
+-- FIXME: this is still a hack because 'one' is often undefined
+class One a where
+  one :: a
+
 -- The argument t is for node labels. Until now, it is not used.
 class DrawTopology a where
       drawTopology :: Topology -> Envs a -> IO ()
+
+class DrawTopology a => DrawDeltaTopology a where
       drawDeltaTopology :: Topology -> Envs a -> IO ()
+
+
+instance One Double where one = 1
 
 instance DrawTopology [Double] where
          drawTopology = drawAbsTopology f formatStCont tshow
@@ -176,6 +187,7 @@ instance DrawTopology [Double] where
                  formatStCont Nothing = "♥"
                  tshow dt s r = show $ dt `safeLookup` (DTimeIdx s r)
 
+instance DrawDeltaTopology [Double] where
          drawDeltaTopology = drawDeltaTopology' f formatStCont tshow
            where -- f (x, Just ys) = showDelta x ++ " = [ " ++ L.intercalate ", " (map showEqTerm ys) ++ " ]"
                  f (x, Just ys) = showDelta x ++ " = \n" ++  L.intercalate "\n" (map show ys)
@@ -191,7 +203,9 @@ instance DrawTopology [Double] where
                  showDelta (ErrorLine str) = str
                  tshow dt s r = show $ dt `safeLookup` (DTimeIdx s r)
 
-instance (Integral a) => DrawTopology [Ratio a] where
+instance (Integral a) => One (Ratio a) where one = 1
+
+instance (Integral a, Show a) => DrawTopology [Ratio a] where
          drawTopology = drawAbsTopology f formatStCont tshow
            where f (x, Just ys) = show x ++ " = " ++ (concatMap show ys)
                  f (x, Nothing) = show x ++ " = ♥"
@@ -207,7 +221,8 @@ instance DrawTopology String where
                  formatStCont Nothing = "+"
                  tshow dt s r = dt `safeLookup` (DTimeIdx s r)
 
-instance Num LatexString
+instance One LatexString where
+  one = error "LatexString 1"
 
 instance DrawTopology [LatexString] where
          drawTopology = drawAbsTopologyLatex f formatStCont tshow
@@ -223,6 +238,14 @@ instance DrawTopology [LatexString] where
                  showX (ErrorLine str) = str
 
 
+drawAbsTopologyLatex ::
+  One t =>
+  ((Line, Maybe [t]) -> String) ->
+  (Maybe [t] -> String) ->
+  (DTimeMap [t] -> Int -> Int -> String) ->
+  Topology' NLabel ELabel ->
+  Envs [t] ->
+  IO ()
 drawAbsTopologyLatex f content tshow (Topology g) (Envs rec e de p dp fn dn dt x dx v st) = printGraph g rec (tshow dt) nshow eshow
   where eshow ps = L.intercalate "\n " $ map f $ mkLst rec ps
         --tshow' = tshow dt
@@ -249,11 +272,13 @@ drawAbsTopologyLatex f content tshow (Topology g) (Envs rec e de p dp fn dn dt x
                           (ELine vid uid, M.lookup (EnergyIdx vsec rec vid uid) e) ]
           where NLabel usec _ _ = fromJust $ lab g uid
                 NLabel vsec _ _ = fromJust $ lab g vid
-                ndirlab WithDir = (NLine uid vid, M.lookup (FEtaIdx vsec rec vid uid) fn <*> Just [1])
-                ndirlab _ = (NLine vid uid, M.lookup (FEtaIdx usec rec uid vid) fn <*> Just [1])
+                ndirlab WithDir = (NLine uid vid, M.lookup (FEtaIdx vsec rec vid uid) fn <*> Just [one])
+                ndirlab _ = (NLine vid uid, M.lookup (FEtaIdx usec rec uid vid) fn <*> Just [one])
         mkLst _ _ = [ (ErrorLine "Problem with record number", Nothing) ]
 
 
+
+instance One (InTerm Val) where one = 1
 
 instance DrawTopology [InTerm Val] where
          drawTopology = drawAbsTopology f formatStCont tshow
@@ -263,8 +288,8 @@ instance DrawTopology [InTerm Val] where
                  formatStCont Nothing = "♥"
                  tshow dt s r = showInTerms $ dt `safeLookup` (DTimeIdx s r)
 
-instance Num EqTerm
-instance Num Char
+instance One EqTerm where one = error "EqTerm 1"
+instance One Char where one = error "Char 1"
 
 instance DrawTopology [EqTerm] where
          drawTopology = drawAbsTopology f formatStCont tshow
@@ -274,6 +299,7 @@ instance DrawTopology [EqTerm] where
                  formatStCont Nothing = "♥"
                  tshow dt s r = showEqTerms $ dt `safeLookup` (DTimeIdx s r)
 
+instance DrawDeltaTopology [EqTerm] where
          drawDeltaTopology = drawDeltaTopology' f formatStCont tshow
            where -- f (x, Just ys) = showDelta x ++ " = [ " ++ L.intercalate ", " (map showEqTerm ys) ++ " ]"
                  f (x, Just ys) = showDelta x ++ " = \n" ++ showEqTerms ys
@@ -290,7 +316,14 @@ instance DrawTopology [EqTerm] where
                  tshow dt s r = showEqTerms $ dt `safeLookup` (DTimeIdx s r)
 
 
---drawAbsTopology :: (Show a, Num a, Ord a) => ((Line, Maybe [a]) -> String) -> (Maybe [a] -> String) -> Topology -> Envs [a] -> IO ()
+drawAbsTopology ::
+  One t =>
+  ((Line, Maybe [t]) -> String) ->
+  (Maybe [t] -> String) ->
+  (DTimeMap [t] -> Int -> Int -> String) ->
+  Topology' NLabel ELabel ->
+  Envs [t] ->
+  IO ()
 drawAbsTopology f content tshow (Topology g) (Envs rec e de p dp fn dn dt x dx v st) = printGraph g rec (tshow dt) nshow eshow
   where eshow ps = L.intercalate "\n" $ map f $ mkLst rec ps
         --tshow' = tshow dt
@@ -317,8 +350,8 @@ drawAbsTopology f content tshow (Topology g) (Envs rec e de p dp fn dn dt x dx v
                           (ELine vid uid, M.lookup (EnergyIdx vsec rec vid uid) e) ]
           where NLabel usec _ _ = fromJust $ lab g uid
                 NLabel vsec _ _ = fromJust $ lab g vid
-                ndirlab WithDir = (NLine uid vid, M.lookup (FEtaIdx vsec rec vid uid) fn <*> Just [1])
-                ndirlab _ = (NLine vid uid, M.lookup (FEtaIdx usec rec uid vid) fn <*> Just [1])
+                ndirlab WithDir = (NLine uid vid, M.lookup (FEtaIdx vsec rec vid uid) fn <*> Just [one])
+                ndirlab _ = (NLine vid uid, M.lookup (FEtaIdx usec rec uid vid) fn <*> Just [one])
         mkLst _ _ = [ (ErrorLine "Problem with record number", Nothing) ]
 
 
@@ -349,8 +382,8 @@ drawDeltaTopology' f content tshow (Topology g) (Envs rec e de p dp fn dn dt x d
                           (ELine vid uid, M.lookup (DEnergyIdx vsec rec vid uid) de) ]
           where NLabel usec _ _ = fromJust $ lab g uid
                 NLabel vsec _ _ = fromJust $ lab g vid
-                ndirlab WithDir = (NLine uid vid, M.lookup (DEtaIdx vsec rec vid uid) dn <*> Just [1])
-                ndirlab _ = (NLine vid uid, M.lookup (DEtaIdx usec rec uid vid) dn <*> Just [1])
+                ndirlab WithDir = (NLine uid vid, M.lookup (DEtaIdx vsec rec vid uid) dn <*> Just [one])
+                ndirlab _ = (NLine vid uid, M.lookup (DEtaIdx usec rec uid vid) dn <*> Just [one])
         mkLst _ _ = [ (ErrorLine "Problem with record number", Nothing) ]
 
 
@@ -376,6 +409,7 @@ instance DrawTopology Sc where
                  formatStCont (Just ys) = sdisp ys
                  formatStCont Nothing = "♥"
 
+instance DrawDeltaTopology Sc where
          drawDeltaTopology = drawDeltaTopologyD f formatStCont
            where -- f (x, Just ys) = showDelta x ++ " = [ " ++ L.intercalate ", " (map showEqTerm ys) ++ " ]"
                  f (x, Just ys) = showDelta x ++ " = " ++ sdisp ys

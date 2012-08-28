@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeSynonymInstances #-}
-
 module EFA2.Example.SymSig where
 
 import Data.Graph.Inductive

@@ -1,6 +1,3 @@
-{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
-
-
 module EFA2.Example.LinearTwo where
 
 import Data.Graph.Inductive
@@ -15,7 +12,7 @@ import EFA2.Interpreter.InTerm
 import EFA2.Interpreter.Env
 import EFA2.Example.SymSig
 import EFA2.Utils.Utils
-import EFA2.Signal.Signal
+import EFA2.Signal.Signal (Scal, smap, toScalar)
 import EFA2.Signal.Typ
 import EFA2.Signal.Base
 import EFA2.Signal.Data
