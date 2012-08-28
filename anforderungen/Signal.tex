@@ -1,0 +1,129 @@
+\documentclass[11pt]{article}
+
+\usepackage[latin1]{inputenc}
+\usepackage{ngerman}
+
+\title{Datenkontainer-Bibliothek}
+\author{Dr.-Ing. Philipp Guttenberg}
+
+\begin{document}
+\maketitle
+
+\section{Funktionale Anforderungen}
+
+\begin{enumerate}
+\item Rechnen mit Skalaren, ein- und mehrdimensionalen Datenelementen muss bis mindestens drei Dimensionen m\"oglich sein.
+\item Ein Check auf konsistente Laenge aller Unterelementevektoren einer Dimension eines Mehrdimensionalen Kontainers w\"are erw\"unscht. 
+\item Das Verwenden der Elemente in Rechnungen auf der Komando-Zeile sollte dem Rechnen mit Matrizen in Matlab nahe kommen.
+\item Die Rechnung muss mittels Typsystem oder Laufzeitabfragen abgesichert werden in Bezug auf:
+  \begin {enumerate}
+  \item die korrekte Verwendung und Kombination von Kontainertypen (Signal, Distribution, ...) 
+  \item die physikalische Verwendung und Kombination von pkysikalischen Energiefluss-Gr\"ossen.
+  \item der korrekte Verwendung und Kombination von Dimensionen und Vektorl\"angen.
+  \item die Absicherung sollte nach M\"oglichkeit auch in gemappten Funktionen erhalten bleiben.   
+  \end{enumerate} 
+\item Werte in Graphiken, Diagrammen und Reports m\"ussen mittels Energiefluss-Typ und Einheit dargestellt werden.
+\item Das Anzeigeformat (printf) muss f\"ur jede Kombination von Energiefluss-Typ und Anzeige-Einheit eingestellt werden k\"onnen.
+\item Die Wahl der Anzeigeformate muss leicht \"anderbar sein, d.h. an einer zentralen Stelle erfolgen.
+\item Der Standard-Datentyp (momentan double) f\"ur Gleitkommazahlen soll w\"ahlbar sein, z.B. single oder ratio.
+\item Der Datenkontainer soll in jeder Instanz u\"ber Plot- und Report-Funktionen verf\"ugen.
+\item Der Datenkontainer sollte auch benutzer-definierte Datentypen Unterst\"utzen (die eventuell nicht unboxed sein k\"onnen).
+\item Die Rechnung mit dem Datenkontainer sind idealerweise effizient, lassen sich gut parallelisieren und ermoeglichen auch die Rechnung auf GPU's. 
+
+\end{enumerate}
+
+
+\section{Anforderungen zur Implementierung}
+
+\begin{enumerate}
+\item Der Datenkontainer sollte verschiedene Datenstrukturen verwenden k\"onnen, 
+\begin{enumerate}
+\item um lazy Evaluation zu erm\"oglichen (Liste)
+\item effiziente Vektoren zu unterstuetzen (Unboxed Vector)
+\item benutzerdefinierte Daten verwenden zu k\"onnen (Boxed Vector)
+\item die Verwendung des Datentyps Ratio zu unterst\"utzen
+\item Insbesondere ist eine zentrale Umschaltung der Rechnung auf Ratio vorzusehen.
+\item Die Umschaltung zwischen Boxed und unboxed Vektor kann nach Bedarf erfolgen.
+\end{enumerate}
+\end{enumerate}
+
+\section{Anforderungen zu physikalischen Typen}
+
+Zu Unterscheiden sind:
+
+\begin{enumerate}
+\item verschiedene Energieflussgr\"o\"ssen
+\item Absolut und Delta-Werte bis mindestens dritter Potenz
+\item Totale und partielle Gr\"ossen
+\end{enumerate}
+
+\subsection{Energieflussgr\"o\"ssen}
+Die Unterscheidung der physikalischen Gr\"o\"ssen ist nicht genug, 
+da Teilungsfaktoren und Wirkungsgrade dimensionslos sind. Zudem ist 
+Energiefluss mit Mix und Teilungsfaktoren und gespeicherte Energie mit 
+Mix und Teilungsfaktoren zu unterscheiden. 
+
+TODO -- hier wird noch am Konzept gedacht  
+
+\section{Anforderungen zur Rechnung}
+
+Die \"ublichen Rechenoperationen sollten unterst\"utzt sein.
+\begin{itemize}
+\item Summe
+\item Produkt
+\item verschiedene Trigonometrische Fuktionen
+\item Absolut und Signum, ..
+\item Logische Operationen -- gr\"osser, kleiner, ..
+\item Integral und Ableitung
+\end{itemize}
+
+\section{Anforderungen zu Vektor-Operationen}
+Die \"ublichen Listen und Vektor-Operationen sollten unterst\"utzt sein.
+
+\begin{itemize}
+\item folds and zips
+\item head and tail
+\item indizierung einzelner Werte oder von subvectoren
+\end{itemize}
+
+\section{Anforderungen zu Kontainer-Typen}
+
+Folgende Kontainertypen sollen unterschieden werden k\"onnen:
+
+\begin{itemize}
+\item Skalare -- einzelner unabh\"angiger Wert
+\item Signale und deren Zeitsamples
+\item Distributionen und deren Samples (eventuell auch Histogramme und Kurven)  
+\item Testreihen und deren Samples
+\item Eine Unterscheidung der jeweiligen verk\"urzten Delta-Vektoren, falls L\"angenpr\"ufung nicht m\"oglich sein sollte.
+\end{itemize}
+
+Folgende Rechnungen auf Kontainern soll m\"oglich sein:
+\begin{itemize}
+\item Multiplikation und Addition mit Skalaren (elementweise) 
+\item elementweise Operationen auf von Kontainer-Paaren mit gleicher Gr\"osse (Dimensionen und L\"angen)
+\item wiederholt elementweise Operationen zwischen einem n-dimensionalen Kontainer mit einem n+1 dimensionalen 
+Kontainer mit ansonsten gleichen Dimensionen und L\"angen
+\item Aufblasen eines n-dimensionalen Kontainers auf n+1 Dimensionen 
+\end{itemize} 
+... TODO 
+
+\section{Anforderungen zur Ausgabe}
+\begin{itemize}
+\item Plots und Reports einzelner Kontainer sollten leicht Kombinierbar sein.
+\end{itemize} 
+
+\section{Anforderungen in Bezug auf Wiederverwendbarkeit}
+\begin{itemize}
+\item die Containerbibliothek sollte eine eigenst\"andige Bibliothek sein, interne Funktionen sollten weitgehend versteckt werden
+\item Abh\"angigkeiten auf andere Bibliotheken sollten minimiert werden
+\item Eine Kombinierbarkeit bzw. Erweiterbarkeit auf ein physikalisches Typisierung-Modul w\"aere sehr w\"unschenswert.
+\item Die Abh\"angigkeit von einzelnen konkreten Datenstrukturbibliotheken (Vector) wird indealerweise minimiert.
+\end{itemize} 
+
+\section{Anforderungen in Bezug auf Lizenzen}
+\begin{itemize}
+\item idealerweise nur Bibliotheken mit BSD3 Lizenz verwenden
+\end{itemize}
+
+\end{document}
