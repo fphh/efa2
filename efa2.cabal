@@ -96,10 +96,9 @@ Library
     EFA2.Interpreter.InTerm
   -- Other-Modules:       
 
-Executable efa
-  Main-Is: src/Main.hs
+Executable sequenzflussgraph
+  Main-Is: examples/elementary/sequenzflussgraph/Main.hs
   GHC-Options: -Wall
   Build-Depends:
     efa2,
     base
-
