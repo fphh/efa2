@@ -1,5 +1,3 @@
-{-# LANGUAGE FlexibleInstances #-}
-
 module EFA2.IO.Import (module EFA2.IO.Import) where
 
 import qualified Data.Map as M 
@@ -13,7 +11,7 @@ import EFA2.Signal.Sequence
 import EFA2.Signal.SequenceData
 
 --import Text.ParserCombinators.Parsec
-import Data.List.Split
+import Data.List.HT (chop)
 
 import EFA2.Signal.Vector
 import EFA2.Signal.Signal
@@ -49,7 +47,7 @@ modelicaCSVParse text = rec
         
 -- | Parse CSV Header Line
 csvParseHeaderLine :: String -> [String]  
-csvParseHeaderLine line = init $ map read (splitOn "," line)   -- (init . tail) to get rid of Modelica " " quotes 
+csvParseHeaderLine line = init $ map read (chop (','==) line)   -- (init . tail) to get rid of Modelica " " quotes 
 
 class ParseCVS a where
       csvParseDataLine :: String -> [a]
@@ -57,9 +55,7 @@ class ParseCVS a where
 
 instance ParseCVS Double where
          -- | Parse CSV Data Line
-         csvParseDataLine line = init $ map read (splitOn "," line)  -- another init to get rid of final , per line
+         csvParseDataLine line = init $ map read (chop (','==) line)  -- another init to get rid of final , per line
 
-
-instance ParseCVS (Ratio Integer) where
-         csvParseDataLine line = init $ map (flip approxRational 0.001 . read) (splitOn "," line)
-
+instance Integral int => ParseCVS (Ratio int) where
+         csvParseDataLine line = init $ map (realToFrac . flip approxRational 0.001 . read) (chop (','==) line)
