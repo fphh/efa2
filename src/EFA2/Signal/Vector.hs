@@ -225,8 +225,10 @@ instance (UV.Unbox d) =>  VTranspose  UV.Vector V.Vector d where
           len = V.head lens  
 
 instance VTranspose [] [] d where
-  vtranspose x = if all (== head lens) lens then  L.transpose x else error "Error in VTranspose -- unequal length"
-                         where lens = map vlen x
+  vtranspose x =
+    if LH.allEqual $ map vlen x
+      then L.transpose x
+      else error "Error in VTranspose -- unequal length"
 
 
 
