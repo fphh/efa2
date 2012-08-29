@@ -194,7 +194,7 @@ isActiveSt :: Topology -> InOutGraphFormat (LNode NLabel) -> Bool
 isActiveSt topo (ins, (nid, _), outs) = res
   where inEs = map ((,nid) . fst) ins
         outEs = map ((nid,) . fst) outs
-        es = catMaybes $ map (uncurry (getLEdge topo)) (inEs ++ outEs)
+        es = mapMaybe (uncurry (getLEdge topo)) (inEs ++ outEs)
         res = any isActiveEdge (map (\(_, _, el) -> el) es)
 
 -- | Partition the storages in in and out storages, looking only at edges, not at values.

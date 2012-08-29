@@ -137,7 +137,7 @@ makeHornClauses isVar givenExt rest = (m, startfs ++ fsdpg ++ fsdpg2)
         mset = M.map (mkVarSet isVar) m
 
         g ([], _, _) = []
-        g (ins, n, _) = catMaybes (map f sc)
+        g (ins, n, _) = mapMaybe f sc
           where --sc = greedyCover mset n ins
                 sc = setCoverBruteForce mset n ins
                 f [] = Nothing

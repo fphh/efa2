@@ -106,5 +106,4 @@ mkDiffEq _ (InEqual _ (InNEdge _ _)) = error "mkDiffEq: eta cannot be computed w
 mkDiffEq _ _ = Nothing
 
 mkDiffEquations :: Int -> [InTerm a] -> [InTerm a]
-mkDiffEquations rec ts = catMaybes (map (mkDiffEq rec) ts)
-
+mkDiffEquations rec ts = mapMaybe (mkDiffEq rec) ts

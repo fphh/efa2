@@ -26,7 +26,7 @@ dependencyGraph p vsets = g
         g = mkGraph (map flipPair $ M.toList m) es
 
 mkArcs :: (Ord a, Show a) => (S.Set a -> S.Set a -> Bool) -> S.Set a -> [S.Set a] -> [(S.Set a, S.Set a)]
-mkArcs p s ss = catMaybes $ map g ss
+mkArcs p s ss = mapMaybe g ss
   where g t | p s t = Just (s, t)
         g _ = Nothing
 

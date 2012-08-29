@@ -534,7 +534,7 @@ mkDiffEqTerm _ t = Nothing
 
 
 mkDiffEqTermEquations :: Int -> [EqTerm] -> [EqTerm]
-mkDiffEqTermEquations rec ts = concat $ catMaybes (map (mkDiffEqTerm rec) ts)
+mkDiffEqTermEquations rec ts = concat $ mapMaybe (mkDiffEqTerm rec) ts
 
 --------------------------------------------------------------------
 -- interpretEq len envs (InEqual (EIdx idx) rhs) = envs { energyMap = insert len idx envs rhs (energyMap envs) }
