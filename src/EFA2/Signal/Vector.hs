@@ -9,11 +9,9 @@ import qualified Data.Vector as V
 import qualified Data.List as L
 import qualified Data.List.HT as LH
 
-import EFA2.Signal.Base
-
-import Data.Eq (Eq((/=), (==)))
+import Data.Eq (Eq((==)))
 import Data.Function ((.), ($), id, flip)
-import Data.Maybe (Maybe(Nothing, Just), isJust)
+import Data.Maybe (Maybe)
 import Prelude (Bool, Int, Ord, error, (++), (-))
 
 
