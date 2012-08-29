@@ -1,26 +1,17 @@
-{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module Main where
-
 
 import Data.Graph.Inductive
 
 import qualified Data.List as L
-import qualified Data.Set as S
+import qualified Data.Set as Set
 import qualified Data.Map as M
-import Data.Maybe
-
-import System.IO
-
-import Debug.Trace
+import Data.Set (Set)
 
 import Text.Printf
 
 import EFA2.Solver.Equation
-import EFA2.Solver.Horn
-import EFA2.Solver.DirEquation
-import EFA2.Solver.DependencyGraph
-import EFA2.Solver.IsVar
 import EFA2.Solver.EquationOrder
 
 import EFA2.Interpreter.Interpreter
@@ -28,16 +19,12 @@ import EFA2.Interpreter.InTerm
 import EFA2.Interpreter.Env
 import EFA2.Interpreter.Arith
 
-import EFA2.Signal.Signal
-import EFA2.Signal.Typ
+import qualified EFA2.Signal.Signal as S
+import EFA2.Signal.Signal (Sc, toScalar, fromScalar)
 
 import EFA2.Topology.Topology
 import EFA2.Topology.TopologyData
 
-
-import EFA2.Utils.Utils
-
-import EFA2.Display.FileSave
 import EFA2.Display.DrawGraph
 
 
@@ -106,8 +93,8 @@ instance MyShow EqTerm where
 instance MyShow a => MyShow [a] where
          myshow xs = "[ " ++ L.intercalate ", " (map myshow xs) ++ " ]"
 
-instance MyShow a => MyShow (S.Set a) where
-         myshow s = myshow $ S.toList s
+instance MyShow a => MyShow (Set a) where
+         myshow s = myshow $ Set.toList s
 
 format :: (MyShow a, MyShow b) => [(a, b)] -> String
 format xs = L.intercalate "\n" (map f xs)
@@ -152,14 +139,14 @@ power0num :: PowerMap Sc
 power0num = M.fromList [ (PowerIdx 0 0 0 2, toScalar 3.0) ]
 
 eta0num :: FEtaMap Sc
-eta0num = M.fromList [ (FEtaIdx 0 0 0 2, smap $ const 0.8),
-                       (FEtaIdx 0 0 2 0, smap $ const 0.8),
-                       (FEtaIdx 0 0 1 2, smap $ const 0.8),
-                       (FEtaIdx 0 0 2 1, smap $ const 0.8),
-                       (FEtaIdx 0 0 2 3, smap $ const 0.8),
-                       (FEtaIdx 0 0 3 2, smap $ const 0.82),
-                       (FEtaIdx 0 0 2 4, smap $ const 0.8),
-                       (FEtaIdx 0 0 4 2, smap $ const 0.8) ]
+eta0num = M.fromList [ (FEtaIdx 0 0 0 2, S.map $ const 0.8),
+                       (FEtaIdx 0 0 2 0, S.map $ const 0.8),
+                       (FEtaIdx 0 0 1 2, S.map $ const 0.8),
+                       (FEtaIdx 0 0 2 1, S.map $ const 0.8),
+                       (FEtaIdx 0 0 2 3, S.map $ const 0.8),
+                       (FEtaIdx 0 0 3 2, S.map $ const 0.82),
+                       (FEtaIdx 0 0 2 4, S.map $ const 0.8),
+                       (FEtaIdx 0 0 4 2, S.map $ const 0.8) ]
 
 x0num :: XMap Sc
 x0num = M.fromList [ (XIdx 0 0 2 0, toScalar 0.3),
@@ -185,24 +172,24 @@ dpower1num = M.fromList [ (DPowerIdx 0 1 0 2, toScalar 1.0) ]
 
 
 eta1num :: FEtaMap Sc
-eta1num = M.fromList [ (FEtaIdx 0 1 0 2, smap $ const 0.85),
-                       (FEtaIdx 0 1 2 0, smap $ const 0.85),
-                       (FEtaIdx 0 1 1 2, smap $ const 0.85),
-                       (FEtaIdx 0 1 2 1, smap $ const 0.85),
-                       (FEtaIdx 0 1 2 3, smap $ const 0.85),
-                       (FEtaIdx 0 1 3 2, smap $ const 0.85),
-                       (FEtaIdx 0 1 2 4, smap $ const 0.85),
-                       (FEtaIdx 0 1 4 2, smap $ const 0.85) ]
+eta1num = M.fromList [ (FEtaIdx 0 1 0 2, S.map $ const 0.85),
+                       (FEtaIdx 0 1 2 0, S.map $ const 0.85),
+                       (FEtaIdx 0 1 1 2, S.map $ const 0.85),
+                       (FEtaIdx 0 1 2 1, S.map $ const 0.85),
+                       (FEtaIdx 0 1 2 3, S.map $ const 0.85),
+                       (FEtaIdx 0 1 3 2, S.map $ const 0.85),
+                       (FEtaIdx 0 1 2 4, S.map $ const 0.85),
+                       (FEtaIdx 0 1 4 2, S.map $ const 0.85) ]
 
 deta1num :: DEtaMap Sc
-deta1num = M.fromList [ (DEtaIdx 0 1 0 2, smap $ const 0.05),
-                        (DEtaIdx 0 1 2 0, smap $ const 0.05),
-                        (DEtaIdx 0 1 1 2, smap $ const 0.05),
-                        (DEtaIdx 0 1 2 1, smap $ const 0.05),
-                        (DEtaIdx 0 1 2 3, smap $ const 0.05),
-                        (DEtaIdx 0 1 3 2, smap $ const 0.05),
-                        (DEtaIdx 0 1 2 4, smap $ const 0.05),
-                        (DEtaIdx 0 1 4 2, smap $ const 0.05) ]
+deta1num = M.fromList [ (DEtaIdx 0 1 0 2, S.map $ const 0.05),
+                        (DEtaIdx 0 1 2 0, S.map $ const 0.05),
+                        (DEtaIdx 0 1 1 2, S.map $ const 0.05),
+                        (DEtaIdx 0 1 2 1, S.map $ const 0.05),
+                        (DEtaIdx 0 1 2 3, S.map $ const 0.05),
+                        (DEtaIdx 0 1 3 2, S.map $ const 0.05),
+                        (DEtaIdx 0 1 2 4, S.map $ const 0.05),
+                        (DEtaIdx 0 1 4 2, S.map $ const 0.05) ]
 
 x1num :: XMap Sc
 x1num = M.fromList [ (XIdx 0 1 2 0, toScalar 0.3),

@@ -3,14 +3,14 @@
 
 module EFA2.Interpreter.InTerm where
 
-
-import Data.Maybe
-
--- import EFA2.Interpreter.Arith
 import EFA2.Interpreter.Env
-import EFA2.Signal.Base
-import EFA2.Signal.Signal
-import EFA2.Signal.Data
+import qualified EFA2.Signal.Signal as S
+import qualified EFA2.Signal.Base as B
+import EFA2.Signal.Signal (Scalar)
+import EFA2.Signal.Data (Data, Nil)
+import EFA2.Signal.Base (Val)
+
+import Data.Maybe (mapMaybe)
 
 
 
@@ -53,22 +53,22 @@ instance (Show a, Eq a) => Num (InTerm a) where
          abs = undefined
          signum = undefined
          fromInteger = undefined
-     
-         
-instance BProd (InTerm a) (InTerm a) (InTerm a) where
+
+
+instance B.BProd (InTerm a) (InTerm a) (InTerm a) where
          (..*) = InMult
          x ../ y = InMult x (InRecip y)
 
-instance BSum (InTerm a) (InTerm a) (InTerm a) where
+instance B.BSum (InTerm a) (InTerm a) (InTerm a) where
          (..+) = InAdd
          x ..- y = InAdd x (InMinus y)
- 
-instance DArith0 (InTerm a) where
+
+instance B.DArith0 (InTerm a) where
          neg = InMinus
          rec = InRecip
 
-instance SConst Scalar (Data Nil) (InTerm a) where   
-         toConst _ x = undefined --toScalar x 
+instance S.Const Scalar (Data Nil) (InTerm a) where
+         toConst _ _x = undefined --toScalar x
 
 
 toAbsEq :: InTerm a -> InTerm a
@@ -88,15 +88,15 @@ toAbsEquations ts = map toAbsEq ts
 
 
 mkDiffEq :: Int -> InTerm a -> Maybe (InTerm a)
-mkDiffEq rec (InEqual q@(PIdx (PowerIdx s'' _ f'' t'')) 
+mkDiffEq rec (InEqual (PIdx (PowerIdx s'' _ f'' t''))
                       (InFEdge p@(PIdx (PowerIdx s _ f t)) n@(FNIdx (FEtaIdx s' _ f' t')))) = Just res
   where res = InEqual dq (InAdd (InAdd (InMult dp n) (InMult p dn)) (InMult dp dn))
         dq = DPIdx (DPowerIdx s'' rec f'' t'')
         dn = DNIdx (DEtaIdx s' rec f' t')
         dp = DPIdx (DPowerIdx s rec f t)
-mkDiffEq rec (InEqual q@(PIdx (PowerIdx s'' _ f'' t'')) 
+mkDiffEq rec (InEqual (PIdx (PowerIdx s'' _ f'' t''))
                       (InBEdge p@(PIdx (PowerIdx s _ f t)) n@(FNIdx (FEtaIdx s' _ f' t')))) = Just res
-  where res = InEqual dq (InAdd (InAdd (InMult dp (InRecip n)) (InMinus (InMult (InMult p dn) nom))) 
+  where res = InEqual dq (InAdd (InAdd (InMult dp (InRecip n)) (InMinus (InMult (InMult p dn) nom)))
                                 (InMinus (InMult (InMult dp dn) nom)))
         dq = DPIdx (DPowerIdx s'' rec f'' t'')
         nom = InRecip (InAdd (InMult dn n) (InMult n n))

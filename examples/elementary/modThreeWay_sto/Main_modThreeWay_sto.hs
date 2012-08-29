@@ -4,16 +4,9 @@ module Main where
 
 import Data.Graph.Inductive
 
-import qualified Data.List as L
-import qualified Data.Set as S
 import qualified Data.Map as M
-import Data.Maybe
-
-
-import Debug.Trace
 
 import EFA2.Topology.Topology
-import EFA2.Topology.EfaGraph
 
 import EFA2.Solver.Equation
 import EFA2.Solver.EquationOrder
@@ -26,19 +19,14 @@ import EFA2.Solver.DependencyGraph
 
 import EFA2.Interpreter.Env
 import EFA2.Interpreter.Interpreter
-import EFA2.Interpreter.Arith
 import EFA2.Interpreter.InTerm
-
-import EFA2.Utils.Utils
-import EFA2.IO.Import
 
 import EFA2.Display.DrawGraph
 
 import EFA2.Signal.Sequence
 import EFA2.Signal.SequenceData
-import EFA2.Signal.Signal
+import qualified EFA2.Signal.Signal as S
 
-import EFA2.Topology.Flow
 import EFA2.Topology.TopologyData
 
 
@@ -70,16 +58,16 @@ main = do
       s31' = [-0.6, -0.6, -0.6]
       n = 3
 
-      time = sfromList ([0, 0] ++ (concatMap (replicate 3) [1..10]))
+      time = S.fromList ([0, 0] ++ (concatMap (replicate 3) [1..10]))
 
-      pMap =  M.fromList [ (PPosIdx 0 1, sfromList $ concat $ replicate n (s01 ++ s01')),
-                           (PPosIdx 1 0, sfromList $ concat $ replicate n (s10 ++ s10')), 
-                           (PPosIdx 1 2, sfromList $ concat $ replicate n (s12 ++ s12')),
-                           (PPosIdx 2 1, sfromList $ concat $ replicate n (s21 ++ s21')),
-                           (PPosIdx 1 3, sfromList $ concat $ replicate n (s13 ++ s13')),
-                           (PPosIdx 3 1, sfromList $ concat $ replicate n (s31 ++ s31')) ]
+      pMap =  M.fromList [ (PPosIdx 0 1, S.fromList $ concat $ replicate n (s01 ++ s01')),
+                           (PPosIdx 1 0, S.fromList $ concat $ replicate n (s10 ++ s10')),
+                           (PPosIdx 1 2, S.fromList $ concat $ replicate n (s12 ++ s12')),
+                           (PPosIdx 2 1, S.fromList $ concat $ replicate n (s21 ++ s21')),
+                           (PPosIdx 1 3, S.fromList $ concat $ replicate n (s13 ++ s13')),
+                           (PPosIdx 3 1, S.fromList $ concat $ replicate n (s31 ++ s31')) ]
 
-      (sqEnvs, sqTopo) = makeSequence (PowerRecord time pMap) topo 
+      (sqEnvs, sqTopo) = makeSequence (PowerRecord time pMap) topo
 
       storage0 = PowerIdx (-1) 0 24 25
 
@@ -89,11 +77,11 @@ main = do
       ts = [give storage0] ++ ts'
 
       orderedTs = order ts
-      envs = emptyEnv { powerMap = M.insert storage0 (sfromList [3.0]) sigs }
+      envs = emptyEnv { powerMap = M.insert storage0 (S.fromList [3.0]) sigs }
 
       gd = toAbsEquations $ map (eqToInTerm envs) orderedTs
 
       res = interpretFromScratch (SingleRecord 0) 1 gd
-      dirg = makeDirTopology sqTopo
+      -- dirg = makeDirTopology sqTopo
 
   drawTopology sqTopo res

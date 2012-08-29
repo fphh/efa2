@@ -52,7 +52,7 @@ data ETy -- event type
 
 -------------------------------------
 -- | Delta Flag
-data A -- Absolut
+data A -- Absolute
 data D -- Delta
 data DD -- Delta Delta
 data DDD -- Delta Delta Delta

@@ -3,18 +3,10 @@
 module Main where
 
 import qualified Data.List as L
-import qualified Data.Set as S
 import qualified Data.Map as M
-import qualified Data.Vector as V
-import qualified Data.Vector.Unboxed as UV
 
-import System.Process
-import System.Exit
-
-import Data.Maybe
-import Data.Monoid
-import Graphics.Gnuplot.Simple
-
+import System.Exit (ExitCode)
+import System.Cmd (system)
 
 import EFA2.Topology.Topology
 import EFA2.Topology.TopologyData
@@ -26,21 +18,21 @@ import EFA2.Interpreter.Env
 import EFA2.Interpreter.Interpreter
 import EFA2.Interpreter.Arith
 
+import EFA2.Display.Report (report)
+import EFA2.Display.Plot (surfPlot, xyplot)
 import EFA2.Display.DrawGraph
 
-import EFA2.Signal.Signal
-import EFA2.Signal.Data
-import EFA2.Signal.Typ
-
+import qualified EFA2.Signal.Signal as S
 import EFA2.Signal.Sequence
 import EFA2.Signal.SequenceData
-import EFA2.Display.ReportSequence
-import EFA2.Display.Plot
-import EFA2.Utils.Utils
+import EFA2.Signal.Signal
+          (TC, Scalar, FSamp, PFSamp, PSigL, UTFSig, Test1, Test2,
+           toSigList, toScalar, makeDelta, makeAbsolute,
+           (.-), (.+), (./), (.++))
+import EFA2.Signal.Data (Data, Nil)
+import EFA2.Signal.Typ
 
-import EFA2.Display.Report
-import EFA2.Display.DispSignal
-import EFA2.Display.DrawGraph
+import EFA2.Utils.Utils
 
 
 -- | A. Generate System Topology definition
@@ -63,18 +55,18 @@ sqTopo = sqTopo
       n = 1
       time = take 7 [0 ..]
 
-      pMap =  M.fromList [ (PPosIdx 0 1, mkSig n s01 .++ (sfromList [head s01] :: PSigL)),
-                           (PPosIdx 1 0, mkSig n s10 .++ (sfromList [head s10] :: PSigL)), 
-                           (PPosIdx 1 2, mkSig n s12 .++ (sfromList [head s12] :: PSigL)),
-                           (PPosIdx 2 1, mkSig n s21 .++ (sfromList [head s21] :: PSigL)),
-                           (PPosIdx 1 3, mkSig n s13 .++ (sfromList [head s13] :: PSigL)),
-                           (PPosIdx 3 1, mkSig n s31 .++ (sfromList [head s31] :: PSigL)) ]
+      pMap =  M.fromList [ (PPosIdx 0 1, mkSig n s01 .++ (S.fromList [head s01] :: PSigL)),
+                           (PPosIdx 1 0, mkSig n s10 .++ (S.fromList [head s10] :: PSigL)),
+                           (PPosIdx 1 2, mkSig n s12 .++ (S.fromList [head s12] :: PSigL)),
+                           (PPosIdx 2 1, mkSig n s21 .++ (S.fromList [head s21] :: PSigL)),
+                           (PPosIdx 1 3, mkSig n s13 .++ (S.fromList [head s13] :: PSigL)),
+                           (PPosIdx 3 1, mkSig n s31 .++ (S.fromList [head s31] :: PSigL)) ]
 
-      pRec = PowerRecord (sfromList time) pMap
+      pRec = PowerRecord (S.fromList time) pMap
       (_, sqTopo) = makeSequence pRec topo
 
       mkSig :: Int -> ([Val] -> PSigL)
-      mkSig n = sfromList . concat . replicate n
+      mkSig n = S.fromList . concat . replicate n
 
 -- | C. System solving
 solve3Way :: Topology -> Val -> Val -> Envs UTFSig
@@ -83,38 +75,38 @@ solve3Way sqTopo y n = interpretFromScratch (SingleRecord 0) 1 gd -- interprete 
 {-
   -- Sequence 0 Primary Source Active additionally charging storage
   where givenEnv0 = emptyEnv { recordNumber = SingleRecord 0,
-                               dtimeMap = M.fromList [ (DTimeIdx 0 0, sfromList [1.0]) ],
-                               powerMap = M.fromList [ (PowerIdx 0 0 3 1, sfromList [x]),
-                                                       (PowerIdx 0 0 2 1, sfromList [0.6])],
-                               fetaMap =  M.fromList [ (FEtaIdx  0 0 0 1, smap etaf), (FEtaIdx 0 0 1 0, undefined),
-                                                       (FEtaIdx  0 0 1 2, smap (const 1)), (FEtaIdx 0 0 2 1, smap (const 1)),
-                                                       (FEtaIdx  0 0 1 3, smap (const y)), (FEtaIdx 0 0 3 1, smap (const y)) ] }
+                               dtimeMap = M.fromList [ (DTimeIdx 0 0, S.fromList [1.0]) ],
+                               powerMap = M.fromList [ (PowerIdx 0 0 3 1, S.fromList [x]),
+                                                       (PowerIdx 0 0 2 1, S.fromList [0.6])],
+                               fetaMap =  M.fromList [ (FEtaIdx  0 0 0 1, S.map etaf), (FEtaIdx 0 0 1 0, undefined),
+                                                       (FEtaIdx  0 0 1 2, S.map (const 1)), (FEtaIdx 0 0 2 1, S.map (const 1)),
+                                                       (FEtaIdx  0 0 1 3, S.map (const y)), (FEtaIdx 0 0 3 1, S.map (const y)) ] }
         -- Sequence 1 -- using storage only
         givenEnv1 = emptyEnv { recordNumber = SingleRecord 0,
-                           --    dtimeMap = M.fromList [ (DTimeIdx 1 0, sfromList [1.0]) ],
-                               energyMap = M.fromList [ (EnergyIdx 1 0 3 1, sfromList [x] :: UTFSig) ],
-                               powerMap =  M.fromList [ (PowerIdx 1 0 2 1, sfromList [0.6]) ],
-                               fetaMap =   M.fromList [ (FEtaIdx 1 0 0 1, smap etaf), (FEtaIdx 1 0 1 0, undefined),
-                                                        (FEtaIdx 1 0 1 2, smap (const 1)), (FEtaIdx 1 0 2 1, smap (const 1)),
-                                                        (FEtaIdx 1 0 1 3, smap (const y)), (FEtaIdx 1 0 3 1, smap (const y)) ] }
+                           --    dtimeMap = M.fromList [ (DTimeIdx 1 0, S.fromList [1.0]) ],
+                               energyMap = M.fromList [ (EnergyIdx 1 0 3 1, S.fromList [x] :: UTFSig) ],
+                               powerMap =  M.fromList [ (PowerIdx 1 0 2 1, S.fromList [0.6]) ],
+                               fetaMap =   M.fromList [ (FEtaIdx 1 0 0 1, S.map etaf), (FEtaIdx 1 0 1 0, undefined),
+                                                        (FEtaIdx 1 0 1 2, S.map (const 1)), (FEtaIdx 1 0 2 1, S.map (const 1)),
+                                                        (FEtaIdx 1 0 1 3, S.map (const y)), (FEtaIdx 1 0 3 1, S.map (const y)) ] }
 -}
                     
   -- Sequence 0 Primary Source Active additionally charging storage
   where givenEnv0 = emptyEnv { recordNumber = SingleRecord 0,
-                               dtimeMap = M.fromList [ (DTimeIdx 0 0, sfromList [(1-y)*dt]) ],
-                               powerMap = M.fromList [ (PowerIdx 0 0 2 1, sfromList [pCons])],
-                               energyMap = M.fromList [ (EnergyIdx 0 0 3 1, sfromList [(dt*y*pCons/n/0.9)])],
-                               fetaMap =  M.fromList [ (FEtaIdx  0 0 0 1, smap etaf), (FEtaIdx 0 0 1 0, undefined),
-                                                       (FEtaIdx  0 0 1 2, smap (const 0.9)), (FEtaIdx 0 0 2 1, smap (const 0.9)),
-                                                       (FEtaIdx  0 0 1 3, smap (const n)), (FEtaIdx 0 0 3 1, smap (const n)) ] }
+                               dtimeMap = M.fromList [ (DTimeIdx 0 0, S.fromList [(1-y)*dt]) ],
+                               powerMap = M.fromList [ (PowerIdx 0 0 2 1, S.fromList [pCons])],
+                               energyMap = M.fromList [ (EnergyIdx 0 0 3 1, S.fromList [(dt*y*pCons/n/0.9)])],
+                               fetaMap =  M.fromList [ (FEtaIdx  0 0 0 1, S.map etaf), (FEtaIdx 0 0 1 0, undefined),
+                                                       (FEtaIdx  0 0 1 2, S.map (const 0.9)), (FEtaIdx 0 0 2 1, S.map (const 0.9)),
+                                                       (FEtaIdx  0 0 1 3, S.map (const n)), (FEtaIdx 0 0 3 1, S.map (const n)) ] }
         -- Sequence 1 -- using storage only
         givenEnv1 = emptyEnv { recordNumber = SingleRecord 0,
-                               dtimeMap = M.fromList [ (DTimeIdx 1 0, sfromList [y*dt])],
+                               dtimeMap = M.fromList [ (DTimeIdx 1 0, S.fromList [y*dt])],
                                energyMap = M.fromList [ ],
-                               powerMap =  M.fromList [ (PowerIdx 1 0 2 1, sfromList [pCons])],
-                               fetaMap =   M.fromList [ (FEtaIdx 1 0 0 1, smap etaf), (FEtaIdx 1 0 1 0, undefined),
-                                                        (FEtaIdx 1 0 1 2, smap (const 0.9)), (FEtaIdx 1 0 2 1, smap (const 0.9)),
-                                                        (FEtaIdx 1 0 1 3, smap (const n)), (FEtaIdx 1 0 3 1, smap (const n)) ] }
+                               powerMap =  M.fromList [ (PowerIdx 1 0 2 1, S.fromList [pCons])],
+                               fetaMap =   M.fromList [ (FEtaIdx 1 0 0 1, S.map etaf), (FEtaIdx 1 0 1 0, undefined),
+                                                        (FEtaIdx 1 0 1 2, S.map (const 0.9)), (FEtaIdx 1 0 2 1, S.map (const 0.9)),
+                                                        (FEtaIdx 1 0 1 3, S.map (const n)), (FEtaIdx 1 0 3 1, S.map (const n)) ] }
                     
          -- Variable Efficiency function at Source (backwards lookup)            
 --        etaf x = 1/((x+sqrt(x*x+4*x))/(2*x))
@@ -132,8 +124,8 @@ solve3Way sqTopo y n = interpretFromScratch (SingleRecord 0) 1 gd -- interprete 
         storage0 = EnergyIdx (-1) 0 8 9
         dtime0 = DTimeIdx (-1) 0
         ts = [give storage0, give dtime0] ++ ts'
-        sqEnvs' = sqEnvs { dtimeMap = M.insert (DTimeIdx (-1) 0) (sfromList [1.0]) (dtimeMap sqEnvs),
-                           energyMap = M.insert storage0 (sfromList [3.0]) (energyMap sqEnvs) }
+        sqEnvs' = sqEnvs { dtimeMap = M.insert (DTimeIdx (-1) 0) (S.fromList [1.0]) (dtimeMap sqEnvs),
+                           energyMap = M.insert storage0 (S.fromList [3.0]) (energyMap sqEnvs) }
                   
         -- rearrange equations       
         gd = map (eqToInTerm sqEnvs') (toAbsEqTermEquations $ order ts)
@@ -145,16 +137,16 @@ genVariationMatrix xs ys = (replicate (length ys) xs, L.transpose $ replicate (l
 
 
 -- | Safe Lookup Functions
-getVarEnergy :: [[Envs UTFSig]] ->  EnergyIdx -> Test2 (Typ A F Tt) Val 
-getVarEnergy varEnvs idx = changeSignalType $ sfromCells $ map (map f ) varEnvs  
+getVarEnergy :: [[Envs UTFSig]] ->  EnergyIdx -> Test2 (Typ A F Tt) Val
+getVarEnergy varEnvs idx = S.changeSignalType $ S.fromCells $ map (map f ) varEnvs
   where f ::  Envs UTFSig ->   FSamp
-        f envs = changeType $ shead $ ((safeLookup (energyMap envs) idx)) 
+        f envs = S.changeType $ S.head $ ((safeLookup (energyMap envs) idx))
 
 -- | Safe Lookup Functions
-getVarPower :: [[Envs UTFSig]] ->  PowerIdx -> Test2 (Typ A P Tt) Val 
-getVarPower varEnvs idx = changeSignalType $ sfromCells $ map (map f ) varEnvs  
+getVarPower :: [[Envs UTFSig]] ->  PowerIdx -> Test2 (Typ A P Tt) Val
+getVarPower varEnvs idx = S.changeSignalType $ S.fromCells $ map (map f ) varEnvs
   where f ::  Envs UTFSig ->   PFSamp
-        f envs = changeType $ shead $ ((safeLookup (powerMap envs) idx)) 
+        f envs = S.changeType $ S.head $ ((safeLookup (powerMap envs) idx))
 
 clearCurves ::  IO ExitCode
 clearCurves = do
@@ -187,11 +179,11 @@ main = do
     varEnvs = zipWith (zipWith (solve3Way sqTopo)) varY varN :: [[Envs UTFSig]]
     
     -- | B. -- Extract Values for further calulations
-    
-    -- result of energies out 
-    storagePerc = sfromList2 varY :: Test2 (Typ A Y Tt) Val 
-    storageEfficiency = sfromList2 varN :: Test2 (Typ A N Tt) Val 
-    
+
+    -- result of energies out
+    storagePerc = S.fromList2 varY :: Test2 (Typ A Y Tt) Val
+    storageEfficiency = S.fromList2 varN :: Test2 (Typ A N Tt) Val
+
     -- consumer
     powerConsumptionS0 = getVarPower varEnvs (PowerIdx 0 0 2 1)
     powerConsumptionS1 = getVarPower varEnvs (PowerIdx 1 0 6 5)
@@ -209,13 +201,13 @@ main = do
     
     -- system efficiencie
     etaSYS =  energyConsumption./energySource 
-    etaSYS1 =  energyInt./energySource 
+    etaSYS1 =  energyInt./energySource
     etaSYS2 =  energyConsumption./energyInt 
     
     -- eta1 efficiency check
     pOne = toScalar 1 :: TC Scalar (Typ A P Tt) (Data Nil Val) 
     etaOne =  toScalar 1 :: TC Scalar (Typ A N Tt) (Data Nil Val) 
-    etaSYS1_Check = makeAbsolut $ etaOne .- (pOne./ ((makeDelta pOne) .+powerSource)) ::  Test2 (Typ A N Tt) Val
+    etaSYS1_Check = makeAbsolute $ etaOne .- (pOne./ ((makeDelta pOne) .+powerSource)) ::  Test2 (Typ A N Tt) Val
     check = etaSYS1_Check .- etaSYS1
       
     -- calculating system losses
@@ -267,20 +259,20 @@ main = do
       powerListSource = toSigList powerSource
       powerListInt = toSigList powerInt
   
-  xyplot "Efficiency System1" (sfromList yIndir :: Test1 (Typ A Y Tt) Val) (etaSYS1)
-  xyplot "InternalPower" (sfromList yIndir :: Test1 (Typ A Y Tt) Val) (powerInt)
+  xyplot "Efficiency System1" (S.fromList yIndir :: Test1 (Typ A Y Tt) Val) (etaSYS1)
+  xyplot "InternalPower" (S.fromList yIndir :: Test1 (Typ A Y Tt) Val) (powerInt)
   
-  xyplot "SystemLoss" (sfromList yIndir :: Test1 (Typ A Y Tt) Val) (lossSYS)
+  xyplot "SystemLoss" (S.fromList yIndir :: Test1 (Typ A Y Tt) Val) (lossSYS)
       
-  -- xyplots "SystemLoss1 & SystemLoss2"(sfromList yIndir :: Test1 (Typ A Y Tt) Val) (lossListSYS1 ++ (map sreverse lossListSYS2))
-  xyplot "Loss System1 & Loss System2"(sfromList yIndir :: Test1 (Typ A Y Tt) Val) (lossSYS1 .++ lossSYS2)
+  -- xyplots "SystemLoss1 & SystemLoss2"(S.fromList yIndir :: Test1 (Typ A Y Tt) Val) (lossListSYS1 ++ (map S.reverse lossListSYS2))
+  xyplot "Loss System1 & Loss System2"(S.fromList yIndir :: Test1 (Typ A Y Tt) Val) (lossSYS1 .++ lossSYS2)
        
 --  surfPlot "System Loss" storagePerc storageEfficiency lossSYS 
   surfPlot "System1 Loss" storagePerc storageEfficiency  lossSYS1 
   
   surfPlot "System2 Loss" storagePerc storageEfficiency  lossSYS2 
   
-  xyplot "System Efficiency" (sfromList yIndir :: Test1 (Typ A Y Tt) Val) etaListSYS
+  xyplot "System Efficiency" (S.fromList yIndir :: Test1 (Typ A Y Tt) Val) etaListSYS
 --  xyplots2 powerListInt etaListSYS
   
 

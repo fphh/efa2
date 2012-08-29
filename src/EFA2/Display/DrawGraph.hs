@@ -6,10 +6,8 @@ module EFA2.Display.DrawGraph where
 import qualified Data.Map as M
 import qualified Data.List as L
 import qualified Data.List.HT as HTL
-import qualified Data.Vector.Unboxed as UV
 
 import Data.Ratio
-import Data.Function
 
 import Data.Maybe
 --import Data.Graph.Inductive
@@ -18,34 +16,21 @@ import Data.GraphViz
 import Data.GraphViz.Attributes.Complete
 
 import Control.Concurrent
-import Control.Exception
 import Control.Applicative
 
 import Text.Printf
 
-import Debug.Trace
-
-
 import EFA2.Solver.Equation
-import EFA2.Solver.DependencyGraph
 import EFA2.Interpreter.Interpreter
 import EFA2.Interpreter.InTerm
 import EFA2.Interpreter.Env
---import EFA2.Interpreter.Arith
 import EFA2.Topology.TopologyData
 import EFA2.Topology.EfaGraph
-import EFA2.Topology.Topology
 
-import EFA2.Signal.Signal
-import EFA2.Signal.Typ
 import EFA2.Display.DispSignal
+import EFA2.Signal.Signal (TC(TC), Sc, UTFSig)
 import EFA2.Signal.Base
-import EFA2.Signal.Data
 
-
-import EFA2.Topology.Flow
---import EFA2.Signal.Sequence
-import EFA2.Signal.SequenceData
 import EFA2.Utils.Utils
 
 nodeColour :: Attribute 

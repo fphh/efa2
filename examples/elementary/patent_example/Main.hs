@@ -2,15 +2,7 @@
 
 module Main where
 
-import qualified Data.List as L
-import qualified Data.Set as S
 import qualified Data.Map as M
-import qualified Data.Vector as V
-import Debug.Trace
-import Data.Maybe
-import Data.Monoid
-import Graphics.Gnuplot.Simple
-
 
 import EFA2.Topology.Topology
 import EFA2.Topology.TopologyData
@@ -24,15 +16,11 @@ import EFA2.Interpreter.Arith
 
 import EFA2.Display.DrawGraph
 
-import EFA2.Signal.Signal
-import EFA2.Signal.Data
-import EFA2.Signal.Typ
+import qualified EFA2.Signal.Signal as S
+import EFA2.Signal.Signal (Sc, PSigL, toScalar)
 
 import EFA2.Signal.Sequence
 import EFA2.Signal.SequenceData
-import EFA2.Display.ReportSequence
-import EFA2.Display.Plot
-import EFA2.Utils.Utils
 
 
 topo :: Topology
@@ -46,7 +34,7 @@ topo = mkGraph (makeNodes nodes) (makeEdges edges)
 
 
 mkSig :: Int -> ([Val] -> PSigL)
-mkSig n = sfromList . concat . replicate n
+mkSig n = S.fromList . concat . replicate n
 
 symbolic :: Topology -> Envs EqTerm
 symbolic g = res { recordNumber = SingleRecord 0 }
@@ -93,7 +81,7 @@ main = do
 
 
 
-      pRec = PowerRecord (sfromList time) pMap
+      pRec = PowerRecord (S.fromList time) pMap
       (_, sqTopo) = makeSequence pRec topo
 
       resSym = mapEqTermEnv ((:[]) . simplify) $ symbolic sqTopo
@@ -170,23 +158,23 @@ power0num = M.fromList [ (PowerIdx (-1) 0 4 (-1), toScalar 8.0),
                          (PowerIdx 1 0 3 2, toScalar 2.5) ]
 
 eta0num :: FEtaMap Sc
-eta0num = M.fromList [ (FEtaIdx 0 0 0 1, smap $ const 0.8), (FEtaIdx 0 0 1 0, smap $ const 0.8),
-                       (FEtaIdx 0 0 1 2, smap $ const 0.8), (FEtaIdx 0 0 2 1, smap $ const 0.8),
-                       (FEtaIdx 0 0 2 3, smap $ const 0.8), (FEtaIdx 0 0 3 2, smap $ const 0.8),
-                       (FEtaIdx 0 0 1 4, smap $ const 0.8), (FEtaIdx 0 0 4 1, smap $ const 0.8),
-                       (FEtaIdx 0 0 2 5, smap $ const 0.8), (FEtaIdx 0 0 5 2, smap $ const 0.8),
+eta0num = M.fromList [ (FEtaIdx 0 0 0 1, S.map $ const 0.8), (FEtaIdx 0 0 1 0, S.map $ const 0.8),
+                       (FEtaIdx 0 0 1 2, S.map $ const 0.8), (FEtaIdx 0 0 2 1, S.map $ const 0.8),
+                       (FEtaIdx 0 0 2 3, S.map $ const 0.8), (FEtaIdx 0 0 3 2, S.map $ const 0.8),
+                       (FEtaIdx 0 0 1 4, S.map $ const 0.8), (FEtaIdx 0 0 4 1, S.map $ const 0.8),
+                       (FEtaIdx 0 0 2 5, S.map $ const 0.8), (FEtaIdx 0 0 5 2, S.map $ const 0.8),
 
-                       (FEtaIdx 1 0 0 1, smap $ const 0.8), (FEtaIdx 1 0 1 0, smap $ const 0.8),
-                       (FEtaIdx 1 0 1 2, smap $ const 0.8), (FEtaIdx 1 0 2 1, smap $ const 0.8),
-                       (FEtaIdx 1 0 2 3, smap $ const 0.8), (FEtaIdx 1 0 3 2, smap $ const 0.8),
-                       (FEtaIdx 1 0 1 4, smap $ const 0.8), (FEtaIdx 1 0 4 1, smap $ const 0.8),
-                       (FEtaIdx 1 0 2 5, smap $ const 0.8), (FEtaIdx 1 0 5 2, smap $ const 0.8),
+                       (FEtaIdx 1 0 0 1, S.map $ const 0.8), (FEtaIdx 1 0 1 0, S.map $ const 0.8),
+                       (FEtaIdx 1 0 1 2, S.map $ const 0.8), (FEtaIdx 1 0 2 1, S.map $ const 0.8),
+                       (FEtaIdx 1 0 2 3, S.map $ const 0.8), (FEtaIdx 1 0 3 2, S.map $ const 0.8),
+                       (FEtaIdx 1 0 1 4, S.map $ const 0.8), (FEtaIdx 1 0 4 1, S.map $ const 0.8),
+                       (FEtaIdx 1 0 2 5, S.map $ const 0.8), (FEtaIdx 1 0 5 2, S.map $ const 0.8),
 
-                       (FEtaIdx 2 0 0 1, smap $ const 0.8), (FEtaIdx 2 0 1 0, smap $ const 0.8),
-                       (FEtaIdx 2 0 1 2, smap $ const 0.8), (FEtaIdx 2 0 2 1, smap $ const 0.8),
-                       (FEtaIdx 2 0 2 3, smap $ const 0.8), (FEtaIdx 2 0 3 2, smap $ const 0.8),
-                       (FEtaIdx 2 0 1 4, smap $ const 0.8), (FEtaIdx 2 0 4 1, smap $ const 0.8),
-                       (FEtaIdx 2 0 2 5, smap $ const 0.8), (FEtaIdx 2 0 5 2, smap $ const 0.8) ]
+                       (FEtaIdx 2 0 0 1, S.map $ const 0.8), (FEtaIdx 2 0 1 0, S.map $ const 0.8),
+                       (FEtaIdx 2 0 1 2, S.map $ const 0.8), (FEtaIdx 2 0 2 1, S.map $ const 0.8),
+                       (FEtaIdx 2 0 2 3, S.map $ const 0.8), (FEtaIdx 2 0 3 2, S.map $ const 0.8),
+                       (FEtaIdx 2 0 1 4, S.map $ const 0.8), (FEtaIdx 2 0 4 1, S.map $ const 0.8),
+                       (FEtaIdx 2 0 2 5, S.map $ const 0.8), (FEtaIdx 2 0 5 2, S.map $ const 0.8) ]
 
 x0num :: XMap Sc
 x0num = M.fromList [ (XIdx 0 0 1 2, toScalar 0.6),

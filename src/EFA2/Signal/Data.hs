@@ -1,385 +1,430 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, FunctionalDependencies, UndecidableInstances, KindSignatures, TypeOperators, GADTs #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module EFA2.Signal.Data (module EFA2.Signal.Data) where
 
 import qualified EFA2.Signal.Vector as SV
-import EFA2.Signal.Base
-import Data.Monoid
+import Data.Monoid (Monoid(mempty, mappend))
 
 import qualified Data.Vector.Unboxed as UV
 import qualified Data.Vector as V
 
+import qualified Data.List as L
+
+import Data.Eq (Eq((==), (/=)))
+import Data.Ord (Ord, (<), (>), (<=), (>=))
+import Data.Function ((.), ($), id, flip)
+import Prelude (Bool, Int, error, (++), (-))
+import qualified Prelude as P
+
+
 ----------------------------------------------------------
 -- | EFA data containers
 
-newtype Data ab c = Data (ab c) deriving (Show)
+newtype Data ab c = Data {getData :: Apply ab c}
 
-
-data ((a :: * -> *) :> (b :: * -> *)) :: * -> * where
-     D0 :: v0 -> Nil v0 
-     D1 :: v1 v0 -> (v1 :> Nil) v0
-     D2 :: v2 (v1 v0) -> (v2 :> v1 :> Nil) v0
-     D3 :: v3 (v2 (v1 v0)) -> (v3 :> v2 :> v1 :> Nil) v0 -- deriving (Show, Eq Ord)
+data Nil a
+data ((a :: * -> *)  :>  (b :: * -> *)) c
 
 infixr 9 :>
-data Nil' c = Nil' -- deriving (Show,Eq,Ord)
-type Nil = Nil' :> Nil'
+
+-- | apply nested functor to the functor argument
+type family Apply (a :: * -> *) c
+
+type instance Apply Nil a = a
+type instance Apply (a :> b) c = a (Apply b c)
+
+{-
+Data [['a']] :: Data ([] :> [] :> Nil) Char
+-}
+
+{- |
+Smart 'Data' constructor
+that uses the first argument only for type inference.
+-}
+subData :: Data (v2 :> v1) a -> Apply v1 a -> Data v1 a
+subData _ = Data
+
+{- |
+Smart deconstructor
+-}
+getSubData :: Data (v2 :> v1) a -> Data v1 a -> Apply v1 a
+getSubData _ = getData
 
 
-instance (Show d) => Show (Nil d) where
-         show (D0 x) = "D0 (" ++ show x ++ ")"
+instance P.Show (Apply ab c) => P.Show (Data ab c) where
+   showsPrec n (Data x) =
+      P.showParen (n>=10)
+         (P.showString "Data " . P.shows x)
 
-instance (Show (v1 d)) => Show ((v1 :> Nil) d) where
-         show (D1 x) = "D1 (" ++ show x ++ ")"
-
-instance (Show (v2 (v1 d))) => Show ((v2 :> v1 :> Nil) d) where
-         show (D2 x) = "D2 (" ++ show x ++ ")"
-
-instance (Show (v3 (v2 (v1 d)))) => Show ((v3 :> v2 :> v1 :> Nil) d) where
-         show (D3 x) = "D3 (" ++ show x ++ ")"
 
 ---------------------------------------------------------
 -- | Type Synonym Convenience
 
-type DVal a = Data Nil a
-type UVec a = (Data (UV.Vector :> Nil) a)
-type UVec2 a = (Data (V.Vector :> UV.Vector :> Nil) a)
-type UVec3 a = (Data (V.Vector :> V.Vector :> UV.Vector :> Nil) a)
+type DVal = Data Nil
+type UVec = Data (UV.Vector :> Nil)
+type UVec2 = Data (V.Vector :> UV.Vector :> Nil)
+type UVec3 = Data (V.Vector :> V.Vector :> UV.Vector :> Nil)
 
-type UVec2L a = (Data ([] :> UV.Vector :> Nil) a)
+type UVec2L = Data ([] :> UV.Vector :> Nil)
 
-type Vec a = (Data (V.Vector :> Nil) a)
-type Vec2 a = (Data (V.Vector :> V.Vector :> Nil) a)
-type Vec3 a = (Data (V.Vector :> V.Vector :> V.Vector :> Nil) a)
+type Vec = Data (V.Vector :> Nil)
+type Vec2 = Data (V.Vector :> V.Vector :> Nil)
+type Vec3 = Data (V.Vector :> V.Vector :> V.Vector :> Nil)
 
-type List a = (Data ([] :> Nil) a)
-type List2 a = (Data ([] :> [] :> Nil) a)
-type List3 a = (Data ([]:> [] :> []:> Nil) a)
+type List = Data ([] :> Nil)
+type List2 = Data ([] :> [] :> Nil)
+type List3 = Data ([] :> [] :> [] :> Nil)
+
 
 ----------------------------------------------------------
 -- | mapping
 
-class DMap c d1 d2 where
-  dmap :: (d1 -> d2) -> c d1 -> c d2
-  
-instance DMap (Data Nil) d1 d2 where  
-  dmap f (Data (D0 x)) = Data $ D0 $ f x
-  
+class Functor v where
+   fmap :: (d1 -> d2) -> Data v d1 -> Data v d2
 
-instance (SV.Walker v1 d1 d2) => DMap (Data (v1 :> Nil)) d1 d2 where
-  dmap f (Data (D1 x)) = Data $ D1 $ SV.map f x
+instance Functor Nil where
+   fmap f (Data x) = Data $ f x
 
-instance (SV.Walker v1 d1 d2, SV.Walker v2 (v1 d1) (v1 d2)) => DMap (Data (v2 :> v1 :> Nil)) d1 d2 where
-  dmap f (Data (D2 x)) = Data $ D2 $ SV.map (SV.map f) x
+instance (P.Functor v2, Functor v1) => Functor (v2 :> v1) where
+   fmap f xd@(Data x) =
+      Data $ P.fmap (getData . fmap f . subData xd) x
+
+instance (Functor v) => P.Functor (Data v) where
+   fmap = fmap
+
+
+class Map c d1 d2 where
+   map :: (d1 -> d2) -> Data c d1 -> Data c d2
+
+instance Map Nil d1 d2 where
+   map f (Data x) = Data $ f x
+
+instance
+   (SV.Walker v2 (Apply v1 d1) (Apply v1 d2), Map v1 d1 d2) =>
+      Map (v2 :> v1) d1 d2 where
+   map f xd@(Data x) =
+      Data $ SV.map (getData . map f . subData xd) x
+
 
 ----------------------------------------------------------
 -- | Zipping for normal Arithmetics
 
-class DZipWith c1 c2 c3 d1 d2 d3 | c1 c2 -> c3 where
-      dzipWith :: (d1 -> d2 -> d3) -> c1 d1 -> c2 d2 -> c3 d3
+{- |
+needed for ZipWith and Append class
+-}
+type family Zip (c1 :: * -> *) (c2 :: * -> *) :: (* -> *)
+type instance Zip Nil Nil = Nil
+type instance Zip Nil (v2 :> v1) = v2 :> v1
+type instance Zip (v2 :> v1) Nil = v2 :> v1
+type instance Zip (v :> v1) (v :> v2) = v :> Zip v1 v2
+
+
+class ZipWith c1 c2 d1 d2 d3 where
+   zipWith :: (d1 -> d2 -> d3) -> Data c1 d1 -> Data c2 d2 -> Data (Zip c1 c2) d3
 
 -- 0d - 0d
-instance DZipWith (Data Nil) (Data Nil) (Data Nil) d1 d2 d3 where
-         dzipWith f (Data (D0 x)) (Data (D0 y)) = Data $ D0 $ f x y
+instance ZipWith Nil Nil d1 d2 d3 where
+   zipWith f (Data x) (Data y) = Data $ f x y
 
--- 0d - 1d
-instance (SV.Walker v1 d2 d3) => DZipWith (Data Nil) (Data (v1 :> Nil))  (Data (v1 :> Nil)) d1 d2 d3  where
-         dzipWith f  (Data (D0 x)) (Data (D1 y)) = Data $ D1 $ SV.map (f x) y
+-- 0d - (n+1)d
+instance
+   (SV.Walker v2 (Apply v1 d2) (Apply v1 d3), Map v1 d2 d3) =>
+      ZipWith Nil (v2 :> v1) d1 d2 d3 where
+   zipWith f (Data x) y = map (f x) y
 
--- 1d - 0d
-instance (SV.Walker v1 d1 d3) => DZipWith  (Data (v1 :> Nil)) (Data Nil) (Data (v1 :> Nil)) d1 d2 d3  where
-         dzipWith f  (Data (D1 x))  (Data (D0 y)) = Data $ D1 $ SV.map ((flip f) y) x
+-- (n+1)d - 0d
+instance
+   (SV.Walker v2 (Apply v1 d1) (Apply v1 d3), Map v1 d1 d3) =>
+      ZipWith (v2 :> v1) Nil d1 d2 d3 where
+   zipWith f x (Data y) = map (flip f y) x
 
--- 0d - 2d
-instance (SV.Walker v1 d2 d3,SV.Walker v2 (v1 d2) (v1 d3)) => DZipWith (Data Nil) (Data (v2 :> v1 :> Nil)) (Data (v2 :> v1 :> Nil)) d1 d2 d3  where
-         dzipWith f  (Data (D0 x)) (Data (D2 y)) = Data $ D2 $ SV.map (SV.map (f x)) y
+-- (n+1)d - (n+1)d
+instance
+   (SV.Zipper v2 (Apply v0 d1) (Apply v1 d2) (Apply (Zip v0 v1) d3),
+    ZipWith v0 v1 d1 d2 d3) =>
+      ZipWith (v2 :> v0) (v2 :> v1) d1 d2 d3 where
+   zipWith f xd@(Data x) yd@(Data y) =
+      Data $ SV.zipWith (\xc yc -> getData $ zipWith f (subData xd xc) (subData yd yc)) x y
 
--- 2d - 0d
-instance (SV.Walker v1 d1 d3,SV.Walker v2 (v1 d1) (v1 d3)) => DZipWith (Data (v2 :> v1 :> Nil))  (Data Nil) (Data (v2 :> v1 :> Nil)) d1 d2 d3  where
-         dzipWith f  (Data (D2 x)) (Data (D0 y)) = Data $ D2 $ SV.map (SV.map ((flip f) y)) x
 
--- 1d - 1d
-instance (SV.Zipper v1 d1 d2 d3) => DZipWith (Data (v1 :> Nil)) (Data (v1 :> Nil)) (Data (v1 :> Nil)) d1 d2 d3  where
-         dzipWith f  (Data (D1 x)) (Data (D1 y)) = Data $ D1 $ SV.zipWith f x y
+----------------------------------------------------------
+-- | Tensor products
 
--- 1d - 2d
-instance (SV.Zipper v1 d1 d2 d3, SV.Walker v2 (v1 d2) (v1 d3) ) => DZipWith (Data (v1 :> Nil)) (Data (v2 :> v1 :> Nil))   (Data (v2 :> v1 :> Nil)) d1 d2 d3  where
-         dzipWith f  (Data (D1 x)) (Data (D2 y)) = Data $ D2 $ SV.map (SV.zipWith f x) y
+class TensorProduct c1 c2 d1 d2 d3 where
+   type Stack c1 c2 :: (* -> *)
+   tensorProduct :: (d1 -> d2 -> d3) -> Data c1 d1 -> Data c2 d2 -> Data (Stack c1 c2) d3
 
--- 2d - 1d
-instance (SV.Zipper v1 d2 d1 d3, SV.Walker v2 (v1 d1) (v1 d3)) => DZipWith  (Data (v2 :> v1 :> Nil)) (Data (v1 :> Nil))  (Data (v2 :> v1 :> Nil)) d1 d2 d3  where
-         dzipWith f  (Data (D2 x)) (Data (D1 y)) = Data $ D2 $ SV.map (SV.zipWith (flip f) y) x
+-- 0d - nd
+instance
+   (Map v d2 d3) =>
+      TensorProduct Nil v d1 d2 d3 where
+   type Stack Nil v = v
+   tensorProduct f (Data x) y = map (f x) y
 
--- 2d - 2d
-instance (SV.Zipper v1 d1 d2 d3, SV.Zipper v2 (v1 d1) (v1 d2) (v1 d3)) => DZipWith (Data (v2 :> v1 :> Nil)) (Data (v2 :> v1 :> Nil))  (Data (v2 :> v1 :> Nil)) d1 d2 d3  where
-         dzipWith f  (Data (D2 x)) (Data (D2 y)) = Data $ D2 $ SV.zipWith (SV.zipWith f) x y
+-- (m+1)d - nd
+instance
+   (SV.Walker v1 (Apply v2 d1) (Apply (Stack v2 v) d3),
+    TensorProduct v2 v d1 d2 d3) =>
+      TensorProduct (v1 :> v2) v d1 d2 d3 where
+   type Stack (v1 :> v2) v = v1 :> Stack v2 v
+   tensorProduct f xd@(Data x) yd =
+      Data $ SV.map (\xc -> getData $ tensorProduct f (subData xd xc) yd) x
 
 
 ----------------------------------------------------------
 -- Zipping for cross Arithmetics
 
-class DCrossWith c1 c2 c3 d1 d2 d3 | c1 c2 -> c3 where
-  dcrossWith :: (d1 -> d2 -> d3) -> c1 d1 -> c2 d2 -> c3 d3
+crossWith1_1 ::
+   (SV.Walker v1 d1 (v2 d3), SV.Walker v2 d2 d3) =>
+   (d1 -> d2 -> d3) ->
+   Data (v1 :> Nil) d1 ->
+   Data (v2 :> Nil) d2 ->
+   Data (v1 :> v2 :> Nil) d3
+crossWith1_1 = tensorProduct
 
--- 1d - 1d -> 2d
-instance (SV.Walker v2 d1 (v1 d3), SV.Walker v1 d2 d3) => DCrossWith (Data (v2 :> Nil)) (Data (v1 :> Nil))  (Data (v2 :> v1 :> Nil))  d1 d2 d3  where
-         dcrossWith f  (Data (D1 x)) (Data (D1 y)) = Data $ D2 $ SV.map g x
-           where g xi = SV.map (f xi) y
+crossWith1_2 ::
+   (SV.Zipper v2 d1 (v1 d2) (v1 d3), SV.Walker v1 d2 d3) =>
+   (d1 -> d2 -> d3) ->
+   Data (v2 :> Nil) d1 ->
+   Data (v2 :> v1 :> Nil) d2 ->
+   Data (v2 :> v1 :> Nil) d3
+crossWith1_2 = zipWith
 
--- 1d - 2d
-instance (SV.Zipper v2 d1 (v1 d2) (v1 d3), SV.Walker v1 d2 d3) => DCrossWith (Data (v2 :> Nil)) (Data (v2 :> v1 :> Nil))   (Data (v2 :> v1 :> Nil)) d1 d2 d3  where
-         dcrossWith f  (Data (D1 x)) (Data (D2 y)) = Data $ D2 $ SV.zipWith g x y
-           where g xi yi = SV.map (f xi) yi
+crossWith2_1 ::
+   (SV.Zipper v2 (v1 d1) d2 (v1 d3), SV.Walker v1 d1 d3) =>
+   (d1 -> d2 -> d3) ->
+   Data (v2 :> v1 :> Nil) d1 ->
+   Data (v2 :> Nil) d2 ->
+   Data (v2 :> v1 :> Nil) d3
+crossWith2_1 = zipWith
 
--- 2d - 1d
-instance (SV.Zipper v2 (v1 d1) d2 (v1 d3), SV.Walker v1 d1 d3) => DCrossWith (Data (v2 :> v1 :> Nil))  (Data (v2 :> Nil))  (Data (v2 :> v1 :> Nil)) d1 d2 d3  where
-         dcrossWith f  (Data (D2 x)) (Data (D1 y)) = Data $ D2 $ SV.zipWith g x y
-           where g xi yi = SV.map ((flip f) yi) xi
 
 ----------------------------------------------------------
 -- fold Functions
 
-class DFold c d1 d2 where
-      dfoldl :: (d2 -> d1 -> d2) -> d2 -> c d1 -> d2
-      dfoldr :: (d1 -> d2 -> d2) -> d2 -> c d1 -> d2
+class Fold c d1 d2 where
+   foldl :: (d1 -> d2 -> d1) -> d1 -> Data c d2 -> d1
+   foldr :: (d2 -> d1 -> d1) -> d1 -> Data c d2 -> d1
 
-instance (SV.Walker v1 d1 d2) => DFold (Data (v1 :> Nil)) d1 d2 where
-         dfoldl f x  (Data (D1 y)) = SV.foldl f x y
-         dfoldr f x  (Data (D1 y)) = SV.foldr f x y
+instance Fold Nil d1 d2 where
+   foldl f x (Data y) = f x y
+   foldr f x (Data y) = f y x
 
-instance (SV.Walker v1 d1 d2, SV.Walker v2 (v1 d1) d2) =>  DFold (Data (v2 :> v1 :> Nil)) d1 d2 where
-         dfoldl f x  (Data (D2 y)) = SV.foldl (SV.foldl f) x y
-         dfoldr f x  (Data (D2 y)) = SV.foldr (flip (SV.foldr f)) x  y
+instance
+   (SV.Walker v2 (Apply v1 d2) d1, Fold v1 d1 d2) =>
+      Fold (v2 :> v1) d1 d2 where
+   foldl f x yd@(Data y) = SV.foldl (\xc yc -> foldl f xc (subData yd yc)) x y
+   foldr f x yd@(Data y) = SV.foldr (flip (foldr f) . subData yd) x y
 
 
-class D1Fold c v1 d1 d2 where
-      d1foldl :: (v1 d2 -> v1 d1 -> v1 d2) -> (v1 d2) -> c d1 -> (v1 d2)
-      d1foldr :: (v1 d1 -> v1 d2 -> v1 d2) -> (v1 d2) -> c d1 -> (v1 d2)
+foldl1d ::
+   (SV.Walker v2 (Apply v1 d2) (Apply v1 d1)) =>
+   (Apply v1 d1 -> Apply v1 d2 -> Apply v1 d1) ->
+   Apply v1 d1 ->
+   Data (v2 :> v1) d2 ->
+   Apply v1 d1
+foldl1d f x (Data y) = SV.foldl f x y
 
--- 2d -> 1d
-instance (SV.Walker v2 (v1 d1) (v1 d2)) => D1Fold (Data (v2 :> v1 :> Nil)) v1 d1 d2  where
-         d1foldl f x (Data (D2 y)) = SV.foldl f x y
-         d1foldr f x (Data (D2 y)) = SV.foldr f x y
+foldr1d ::
+   (SV.Walker v2 (Apply v1 d1) (Apply v1 d2)) =>
+   (Apply v1 d1 -> Apply v1 d2 -> Apply v1 d2) ->
+   Apply v1 d2 ->
+   Data (v2 :> v1) d1 ->
+   Apply v1 d2
+foldr1d f x (Data y) = SV.foldr f x y
 
 ----------------------------------------------------------
 -- Monoid
 
-instance (SV.Singleton v1 d) => Monoid (Data (v1 :> Nil) d) where
-   mempty = Data $ D1 $ SV.empty
-   mappend (Data (D1 x)) (Data (D1 y)) = Data $ D1 $ SV.append x y
-
-instance (SV.Singleton v2 (v1 d)) => Monoid (Data (v2 :> v1 :> Nil) d) where
-   mempty = Data $ D2 $ SV.empty
-   mappend (Data (D2 x)) (Data (D2 y)) = Data $ D2 $ SV.append x y
+instance (SV.Singleton v2 (Apply v1 d)) => Monoid (Data (v2 :> v1) d) where
+   mempty = Data SV.empty
+   mappend (Data x) (Data y) = Data $ SV.append x y
 
 
-class DAppend c1 c2 c3 d | c1 c2 -> c3  where
-  dappend :: c1 d -> c2 d -> c3 d
+class Append c1 c2 d  where
+   append :: Data c1 d -> Data c2 d -> Data (Zip c1 c2) d
 
-instance (SV.Singleton v1 d, SV.Convert v1 v1 d) => DAppend (Data (v1 :> Nil)) (Data (v1 :> Nil)) (Data (v1 :> Nil)) d where
-  dappend (Data (D1 x)) (Data (D1 y)) = Data $ D1 $ SV.append x (SV.convert y)
+instance
+   (SV.Singleton v2 (Apply v1 d), v1 ~ Zip v1 v1) =>
+      Append (v2 :> v1) (v2 :> v1) d where
+   append (Data x) (Data y) = Data $ SV.append x y
 
-instance (SV.Singleton v1 d) => DAppend (Data (v1 :> Nil)) (Data Nil) (Data (v1 :> Nil)) d where
-  dappend (Data (D1 x)) (Data (D0 y)) = Data $ D1 $ SV.append x (SV.singleton y)
+instance (SV.Singleton v1 d) => Append (v1 :> Nil) Nil d where
+   append (Data x) (Data y) = Data $ SV.append x (SV.singleton y)
 
-instance (SV.Singleton v1 d) => DAppend (Data Nil) (Data (v1 :> Nil)) (Data (v1 :> Nil)) d where
-  dappend (Data (D0 x)) (Data (D1 y)) = Data $ D1 $ SV.append (SV.singleton x) y
+instance (SV.Singleton v1 d) => Append Nil (v1 :> Nil) d where
+   append (Data x) (Data y) = Data $ SV.append (SV.singleton x) y
 
-instance (SV.Singleton v2 (v1 d)) => DAppend (Data (v2 :> v1 :> Nil)) (Data (v2 :> v1 :> Nil)) (Data (v2 :> v1 :> Nil)) d where
-  dappend (Data (D2 x)) (Data (D2 y)) = Data $ D2 $ SV.append x y
-
-instance (SV.Singleton v2 (v1 d)) => DAppend (Data (v2 :> v1 :> Nil)) (Data (v1 :> Nil)) (Data (v2 :> v1 :> Nil)) d where
-  dappend (Data (D2 x)) (Data (D1 y)) = Data $ D2 $ SV.append x (SV.singleton y)
-
-instance (SV.Singleton v2 (v1 d)) => DAppend (Data (v1 :> Nil)) (Data (v2 :> v1 :> Nil)) (Data (v2 :> v1 :> Nil)) d where
-  dappend (Data (D1 x)) (Data (D2 y)) = Data $ D2 $ SV.append (SV.singleton x) y
 
 ----------------------------------------------------------
 -- get data Range
 
-class DMaximum c1 c2 d | c1 -> c2 where
-  dmaximum :: c1 d -> c2 d
-  dminimum :: c1 d -> c2 d
+class Maximum v2 v1 d where
+   maximum :: Data (v2 :> v1) d -> Data v1 d
+   minimum :: Data (v2 :> v1) d -> Data v1 d
 
-instance (SV.Singleton y d) => DMaximum (Data (y :> Nil)) (Data Nil) d where
-  dmaximum (Data (D1 x)) =  Data $ D0 $ SV.maximum x
-  dminimum (Data (D1 x)) =  Data $ D0 $ SV.minimum x
+instance (SV.Singleton v2 (Apply v1 d)) => Maximum v2 v1 d where
+   maximum (Data x) =  Data $ SV.maximum x
+   minimum (Data x) =  Data $ SV.minimum x
 
 
 ----------------------------------------------------------
 -- From / To List
 
-class DFromList c d where
-  dfromList :: [d] -> c d
-  dtoList :: c d -> [d]
+class FromList c d where
+   type NestedList c d :: *
+   fromList :: NestedList c d -> Data c d
+   toList :: Data c d -> NestedList c d
 
-instance  (SV.FromList v d) => DFromList (Data (v :> Nil)) d where
-  dfromList x = Data $ D1 $ SV.fromList x
-  dtoList (Data (D1 x)) = SV.toList x
+instance FromList Nil d where
+   type NestedList Nil d = d
+   fromList x = Data x
+   toList (Data x) = x
 
-{-
-instance DFromList (Data Nil) d where
-  dfromList [x] = Data $ D0 x
-  dtoList (Data (D0 x)) = [x]
-  -}
-
-class DFromList2 c d where
-  dfromList2 :: [[d]] -> c d
-  dtoList2 :: c d -> [[d]]
-
-instance (SV.FromList v1 d, SV.FromList v2 (v1 d), SV.FromList v2 [d], SV.Walker v2 (v1 d) [d])=> DFromList2 (Data (v2 :> v1 :> Nil)) d where
-  dfromList2 x = Data $ D2 $ SV.fromList $ SV.map SV.fromList x
-  dtoList2 (Data (D2 x)) = SV.toList $ SV.map SV.toList x
+instance
+   (SV.FromList v2 (Apply v1 d), FromList v1 d) =>
+      FromList (v2 :> v1) d where
+   type NestedList (v2 :> v1) d = [NestedList v1 d]
+   fromList x =
+      let y = Data $ SV.fromList $ L.map (getSubData y . fromList) x
+      in  y
+   toList xd@(Data x) = L.map (toList . subData xd) $ SV.toList x
 
 
 ----------------------------------------------------------
 -- All
 
-class DAll c d where
-  dall :: (d -> Bool) -> c d -> Bool
-  dany :: (d -> Bool) -> c d -> Bool
+class All c d where
+   all :: (d -> Bool) -> Data c d -> Bool
+   any :: (d -> Bool) -> Data c d -> Bool
 
-instance (SV.Singleton v d) => DAll (Data (v :> Nil)) d where
-  dall f (Data (D1 x)) = SV.all f x
-  dany f (Data (D1 x)) = SV.any f x
+instance All Nil d where
+   all f (Data x) = f x
+   any f (Data x) = f x
+
+instance (SV.Singleton v2 (Apply v1 d), All v1 d) => All (v2 :> v1) d where
+   all f xd@(Data x) = SV.all (all f . subData xd) x
+   any f xd@(Data x) = SV.any (any f . subData xd) x
 
 ----------------------------------------------------------
 -- Transpose
 
-class DTranspose c d where
-  dtranspose :: c d -> c d
+transpose1 :: Data (v1 :> Nil) d -> Data (v1 :> Nil) d
+transpose1 x = x
 
-instance DTranspose (Data (v1 :> Nil)) d where
-  dtranspose x = x
-
-instance SV.Transpose v1 v2 d => DTranspose (Data (v2 :> v1 :> Nil)) d where
-  dtranspose (Data (D2 x)) = Data $ D2 $ SV.transpose x
+transpose2 ::
+   (SV.Transpose v1 v2 d) =>
+   Data (v2 :> v1 :> Nil) d -> Data (v2 :> v1 :> Nil) d
+transpose2 (Data x) = Data $ SV.transpose x
 
 
 ----------------------------------------------------------
 -- Head & Tail
 
-class DHead c1 c2 d where
-  dhead :: c1 d -> c2 d
-  dlast :: c1 d -> c2 d
+head, last ::
+   (SV.Singleton v2 (Apply v1 d)) => Data (v2 :> v1) d -> Data v1 d
+head (Data x) = Data $ SV.head x
+last (Data x) = Data $ SV.last x
 
-instance SV.Singleton v1 d => DHead (Data (v1 :> Nil)) (Data Nil) d where
-  dhead (Data (D1 x)) = Data $ D0 $ SV.head x
-  dlast (Data (D1 x)) = Data $ D0 $ SV.last x
-
-instance (SV.Singleton v2 (v1 d))=> DHead (Data (v2 :> v1 :> Nil)) (Data (v1 :> Nil)) d where
-  dhead (Data (D2 x)) = Data $ D1 $ SV.head x
-  dlast (Data (D2 x)) = Data $ D1 $ SV.last x
-
-
-
-class DTail c1 c2 d | c1 -> c2, c2 -> c1  where
-  dtail :: c1 d -> c2 d
-  dinit :: c1 d -> c2 d
-
-instance  (SV.Singleton v1 d) => DTail (Data (v1 :> Nil)) (Data (v1 :> Nil)) d where
-  dtail (Data (D1 x)) = Data $ D1 $ SV.tail x
-  dinit (Data (D1 x)) = Data $ D1 $ SV.init x
-
-instance (SV.Singleton v2 (v1 d)) => DTail (Data (v2 :> v1 :> Nil)) (Data (v2 :> v1 :> Nil)) d where
-  dtail (Data (D2 x)) = Data $ D2 $ SV.tail x
-  dinit (Data (D2 x)) = Data $ D2 $ SV.init x
+tail, init ::
+   (SV.Singleton v2 (Apply v1 d)) => Data (v2 :> v1) d -> Data (v2 :> v1) d
+tail (Data x) = Data $ SV.tail x
+init (Data x) = Data $ SV.init x
 
 
 ----------------------------------------------------------
 -- Singleton
 
-class DSingleton c1 c2 d where
-  dsingleton :: c1 d -> c2 d
-
-instance  (SV.Singleton v2 (v1 d)) => DSingleton (Data (v1 :> Nil)) (Data (v2 :> v1 :> Nil)) d where
-  dsingleton (Data (D1 x)) = Data $ D2 $ SV.singleton x
-
-instance  (SV.Singleton v1 d) => DSingleton (Data Nil) (Data (v1 :> Nil)) d where
-  dsingleton (Data (D0 x)) = Data $ D1 $ SV.singleton x
+singleton :: (SV.Singleton v2 (Apply v1 d)) => Data v1 d -> Data (v2 :> v1) d
+singleton (Data x) = Data $ SV.singleton x
 
 
 ----------------------------------------------------------
 -- Sort
 
-class DSort c d where
-  dsort :: c d -> c d
-
-instance (SV.Sort v1 d) => DSort (Data (v1 :> Nil)) d where
-  dsort (Data (D1 x)) = Data $ D1 $ SV.sort x
+sort :: (SV.Sort v1 d) => Data (v1 :> Nil) d -> Data (v1 :> Nil) d
+sort (Data x) = Data $ SV.sort x
 
 
 ----------------------------------------------------------
 -- Filter
 
-class DFilter c d where
-  dfilter :: (d -> Bool) -> c d -> c d
+class Filter c d where
+   filter :: (d -> Bool) -> Data c d -> Data c d
 
-instance SV.Filter v1 d => DFilter (Data (v1 :> Nil)) d where
-  dfilter f (Data (D1 x)) = Data $ D1 $ SV.filter f x
+instance Filter1 v2 v1 d => Filter (v2 :> v1) d where
+   filter = filter1
+
+
+class Filter1 c2 c1 d where
+   filter1 :: (d -> Bool) -> Data (c2 :> c1) d -> Data (c2 :> c1) d
+
+instance SV.Filter v d => Filter1 v Nil d where
+   filter1 f (Data x) = Data $ SV.filter f x
+
+instance
+   (SV.Walker v3 (v2 (Apply v1 d)) (v2 (Apply v1 d)), Filter1 v2 v1 d) =>
+      Filter1 v3 (v2 :> v1) d where
+   filter1 f xd@(Data x) = Data $ SV.map (getData . filter f . subData xd) x
 
 
 ----------------------------------------------------------
 -- Eq
 
-instance Eq d => Eq (Data Nil d) where
-  (==) (Data (D0 x)) (Data (D0 y)) = x == y
-  (/=) (Data (D0 x)) (Data (D0 y)) = x /= y
-
-instance (Eq (v1 d), Eq d) => Eq (Data (v1 :> Nil) d) where
-  (==) (Data (D1 xs)) (Data (D1 ys)) = xs == ys
-  (/=) (Data (D1 xs)) (Data (D1 ys)) = xs /= ys
-
-instance (Eq (v2 (v1 d)), Eq (v1 d), Eq d) => Eq (Data (v2 :> v1 :> Nil) d) where
-  (==) (Data (D2 xs)) (Data (D2 ys)) = xs == ys
-  (/=) (Data (D2 xs)) (Data (D2 ys)) = xs /= ys
+instance Eq (Apply v d) => Eq (Data v d) where
+   (==) (Data x) (Data y)  =  x == y
+   (/=) (Data x) (Data y)  =  x /= y
 
 instance Ord d => Ord (Data Nil d) where
-  (>) (Data (D0 x)) (Data (D0 y)) = x > y
-  (<) (Data (D0 x)) (Data (D0 y)) = x < y
-  (>=) (Data (D0 x)) (Data (D0 y)) = x >= y
-  (<=) (Data (D0 x)) (Data (D0 y)) = x <= y
+   (>)  (Data x) (Data y)  =  x > y
+   (<)  (Data x) (Data y)  =  x < y
+   (>=) (Data x) (Data y)  =  x >= y
+   (<=) (Data x) (Data y)  =  x <= y
 
 
 ----------------------------------------------------------
 -- Convert
 
-class DConvert  c1 c2 d where
-  dconvert :: c1 d -> c2 d
+class Convert c1 c2 d where
+   convert :: Data c1 d -> Data c2 d
 
-instance UV.Unbox d => DConvert (Data ([] :> Nil)) (Data (UV.Vector :> Nil)) d where
-  dconvert (Data (D1 x)) = Data $ D1 $ SV.convert x
+instance Convert Nil Nil d where
+   convert = id
 
-instance DConvert (Data ([] :> Nil)) (Data (V.Vector :> Nil)) d where
-  dconvert (Data (D1 x)) = Data $ D1 $ SV.convert x
+instance
+   (SV.Convert v1 v2 (Apply v2r d),
+    SV.Walker v1 (Apply v1r d) (Apply v2r d),
+    Convert v1r v2r d) =>
+      Convert (v1 :> v1r) (v2 :> v2r) d where
+   convert xd@(Data x) =
+      let yd = Data $ SV.convert $ SV.map (getSubData yd . convert . subData xd) x
+      in  yd
 
-instance UV.Unbox d => DConvert (Data (UV.Vector :> Nil)) (Data ([] :> Nil)) d where
-  dconvert (Data (D1 x)) = Data $ D1 $ SV.convert x
-
-instance DConvert (Data (V.Vector :> Nil)) (Data ([] :> Nil)) d where
-  dconvert (Data (D1 x)) = Data $ D1 $ SV.convert x
-
-instance UV.Unbox d => DConvert (Data ([] :> [] :> Nil)) (Data (V.Vector :> UV.Vector :> Nil)) d where
-  dconvert (Data (D2 x)) = Data $ D2 $ SV.convert (map SV.convert x)
 
 ----------------------------------------------------------
 -- Length
 
-class DLength c d where
- dlength :: c d -> Int
+class Length c d where
+   length :: Data c d -> Int
 
-instance SV.Length (v d) => DLength (Data (v :> Nil)) d where
-  dlength (Data (D1 x)) = SV.len x
+instance Length Nil d where
+   length (Data _) = 1
 
-instance  SV.Length (v2 (v1 d)) => DLength (Data (v2 :> v1 :> Nil)) d where
-  dlength (Data (D2 x)) = SV.len x
+instance SV.Length (v2 (Apply v1 d)) => Length (v2 :> v1) d where
+   length (Data x) = SV.len x
+
 
 ----------------------------------------------------------
 -- Reverse
 
-class DReverse c d where
-  dreverse :: c d -> c d
+class Reverse c d where
+   reverse :: Data c d -> Data c d
 
-instance SV.Reverse v d => DReverse (Data (v :> Nil)) d where
-  dreverse (Data (D1 x)) = Data $ D1 $ SV.reverse x
-
+instance SV.Reverse v2 (Apply v1 d) => Reverse (v2 :> v1) d where
+   reverse (Data x) = Data $ SV.reverse x

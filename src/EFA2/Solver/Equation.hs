@@ -19,7 +19,6 @@ import Text.Printf
 import EFA2.Interpreter.Env
 import EFA2.Interpreter.Arith
 import EFA2.Utils.Utils
-import EFA2.Signal.Signal
 
 -- TOTHINK: Die Algorithmen aus dem Verzeichnis Solver sollten
 -- über den Datentyp EqTerm parametrisierbar sein. Die Abhängigkeisanalyse
@@ -594,7 +593,7 @@ mapEqTermEnv f env = emptyEnv { recordNumber = recordNumber env,
                                 powerMap = M.map f (powerMap env),
                                 dpowerMap = M.map f (dpowerMap env),
                                 --fetaMap = M.map (f .) (fetaMap env),  -- geht nicht?
-                                --detaMap = M.map (smap f .) (detaMap env),
+                                --detaMap = M.map (S.map f .) (detaMap env),
                                 dtimeMap = M.map f (dtimeMap env),
                                 xMap = M.map f (xMap env),
                                 dxMap = M.map f (dxMap env),

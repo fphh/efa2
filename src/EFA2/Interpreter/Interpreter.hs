@@ -1,23 +1,14 @@
 module EFA2.Interpreter.Interpreter where
 
-import Data.Maybe
 import qualified Data.Map as M
 import qualified Data.List as L
 
-import Control.Monad.Error
-
-import Debug.Trace
-
+import qualified EFA2.Signal.Signal as S
 import EFA2.Solver.Equation
-import EFA2.Interpreter.Arith
 import EFA2.Interpreter.InTerm
 import EFA2.Interpreter.Env
---import EFA2.Interpreter.Eta
-import EFA2.Signal.Signal
-import EFA2.Signal.Typ
+import EFA2.Signal.Signal (toConst, (.+), (.*))
 import EFA2.Utils.Utils
-import EFA2.Signal.Data
-import EFA2.Signal.Base
 
 
 --eqToInTerm :: Envs a -> EqTerm -> InTerm a
@@ -104,15 +95,15 @@ showInTerms :: (Show a) => [InTerm a] -> String
 showInTerms ts = L.intercalate "\n" $ map showInTerm ts
 
 {-
-interpretRhs :: ( SArith s s s, SMap c Val Val, TProd t t t, TSum t t t, DZipWith c c c Val Val Val,
-                  DFromList c Val, Show (c Val)) =>
+interpretRhs :: ( S.Arith s s s, SMap c Val Val, TProd t t t, TSum t t t, D.ZipWith c c c Val Val Val,
+                  D.FromList c Val, Show (c Val)) =>
                   Int -> Envs (TC s t (c Val)) -> InTerm (TC s t (c Val)) -> TC s t (c Val)
 
 -}
 interpretRhs len envs term = interpretRhs' term
-  where --interpretRhs' (InConst x) = sfromVal len [x] -- Wichtig für delta Rechnung?
-        --interpretRhs' (InGiven xs) = smap (:[]) xs
-        --interpretRhs' (InConst x) = sfromVal len x
+  where --interpretRhs' (InConst x) = S.fromVal len [x] -- Wichtig für delta Rechnung?
+        --interpretRhs' (InGiven xs) = S.map (:[]) xs
+        --interpretRhs' (InConst x) = S.fromVal len x
         interpretRhs' (InConst x) = toConst len x
         --interpretRhs' (InConst x) = toScalar (InConst x)
 
@@ -131,24 +122,24 @@ interpretRhs len envs term = interpretRhs' term
         interpretRhs' (DScaleIdx idx) = dxMap envs `safeLookup` idx
         interpretRhs' (VIdx idx) = varMap envs `safeLookup` idx
         interpretRhs' (SIdx idx) = storageMap envs `safeLookup` idx
-        interpretRhs' (InMinus t) = sneg (interpretRhs' t)
-        interpretRhs' (InRecip (FNIdx idx@(FEtaIdx s r f t))) = srec $ (fetaMap envs `safeLookup` idx) pval
+        interpretRhs' (InMinus t) = S.neg (interpretRhs' t)
+        interpretRhs' (InRecip (FNIdx idx@(FEtaIdx s r f t))) = S.rec $ (fetaMap envs `safeLookup` idx) pval
           where pidx = PowerIdx s r t f
                 pval = powerMap envs `safeLookup` pidx
-        interpretRhs' (InRecip t) = srec (interpretRhs' t)
+        interpretRhs' (InRecip t) = S.rec (interpretRhs' t)
         interpretRhs' (InAdd s t) = (interpretRhs' s) .+ (interpretRhs' t)
         interpretRhs' (InMult s t) = (interpretRhs' s) .* (interpretRhs' t)
         interpretRhs' t = error ("interpretRhs': " ++ show t)
 {-
-insert :: ( SArith s s s, SMap c Val Val, TProd t t t, TSum t t t, DZipWith c c c Val Val Val,
-            DFromList c Val, Show (c Val), Ord k) =>
+insert :: ( S.Arith s s s, SMap c Val Val, TProd t t t, TSum t t t, D.ZipWith c c c Val Val Val,
+            D.FromList c Val, Show (c Val), Ord k) =>
             Int -> k -> Envs (TC s t (c Val)) -> InTerm (TC s t (c Val)) -> M.Map k (TC s t (c Val)) -> M.Map k (TC s t (c Val))
 -}
 insert len idx envs rhs m = M.insert idx (interpretRhs len envs rhs) m
 
 {-
-interpretEq :: ( SArith s s s, SMap c Val Val, TProd t t t, TSum t t t,
-                 DZipWith c c c Val Val Val, DFromList c Val, Show (c Val)) =>
+interpretEq :: ( S.Arith s s s, SMap c Val Val, TProd t t t, TSum t t t,
+                 D.ZipWith c c c Val Val Val, D.FromList c Val, Show (c Val)) =>
                  Int -> Envs (TC s t (c Val)) -> InTerm (TC s t (c Val)) -> Envs (TC s t (c Val))
 -}
 interpretEq len envs (InEqual (EIdx idx) rhs) = envs { energyMap = insert len idx envs rhs (energyMap envs) }
@@ -176,7 +167,7 @@ interpretEq len envs t = error ("interpretEq: " ++ showInTerm t)
 
 
 {-
-interpretFromScratch :: ( SArith s s s, TProd t t t, TSum t t t, DMap c d d, DZipWith c c c d d d, 
+interpretFromScratch :: ( S.Arith s s s, TProd t t t, TSum t t t, D.Map c d d, D.ZipWith c c c d d d, 
                           BProd d d d, BSum d d d, DArith0 d, Show (c d)) 
                      => RecordNumber -> Int -> [InTerm (TC s t (c d))] -> Envs (TC s t (c d))
 -}

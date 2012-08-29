@@ -12,7 +12,7 @@ import EFA2.Signal.SequenceData
 -- import EFA2.Interpreter.Arith
 import EFA2.Utils.Utils
 
-import EFA2.Signal.Signal
+import EFA2.Signal.Signal (fromScalar, sigSign, sigSum)
 import EFA2.Signal.Base (Sign(PSign, NSign, ZSign))
 
 

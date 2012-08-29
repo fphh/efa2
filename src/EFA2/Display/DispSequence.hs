@@ -4,9 +4,7 @@ module EFA2.Display.DispSequence (module EFA2.Display.DispSequence) where
 
 import EFA2.Display.Report
 import EFA2.Signal.SequenceData
-import EFA2.Display.DispSignal
-import EFA2.Signal.Base
-import EFA2.Signal.Signal
+import EFA2.Display.DispSignal ()
 
 import qualified Data.Map as M 
 
