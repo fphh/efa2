@@ -7,21 +7,13 @@ module EFA2.Topology.Flow (module EFA2.Topology.Flow) where
 import qualified Data.Map as M
 import qualified Data.List as L
 
-import Debug.Trace
-
 import EFA2.Topology.TopologyData
 import EFA2.Signal.SequenceData
 -- import EFA2.Interpreter.Arith
 import EFA2.Utils.Utils
 
-import EFA2.Signal.Base 
-import EFA2.Signal.Data
 import EFA2.Signal.Signal
-
-import qualified Data.Vector.Unboxed as UV
-import qualified Data.Vector as V
-import qualified Data.Vector.Generic as GV
-import qualified Data.Vector.Generic.Mutable as MV
+import EFA2.Signal.Base (Sign(PSign, NSign, ZSign))
 
 
 -- | Function to calculate flow states for the whole sequence 
@@ -30,7 +22,7 @@ genSequFState sqFRec = map genFlowState `fmap` sqFRec
 
 -- | Function to extract the flow state out of a Flow Record  
 genFlowState ::  FlowRecord -> FlowState
-genFlowState fRec@(FlRecord time flowMap) = FlowState $ M.map f flowMap
+genFlowState (FlRecord _time flowMap) = FlowState $ M.map f flowMap
   where f flow = fromScalar $ sigSign (sigSum flow)
 
 -- | Function to generate Flow Topologies for all Sequences
@@ -41,10 +33,12 @@ genSequFlowTops topo (SequData sequFlowStates) = SequData $ map (genFlowTopology
 genFlowTopology:: Topology -> FlowState -> FlowTopology
 genFlowTopology topo (FlowState fs) = res 
   where res :: FlowTopology
-        res = mkGraph (labNodes topo) (concat $ map f (labEdges topo))
-        f edge@(idx1,idx2, l) | fs M.! (PPosIdx idx1 idx2) == PSign = [(idx1, idx2, l { flowDirection = WithDir })] 
-        f edge@(idx1,idx2, l) | fs M.! (PPosIdx idx1 idx2) == NSign = [(idx1, idx2, l { flowDirection = AgainstDir})]
-        f edge@(idx1,idx2, l) | fs M.! (PPosIdx idx1 idx2) == ZSign = [(idx1, idx2, l { flowDirection = UnDir})]
+        res = mkGraph (labNodes topo) (concatMap f $ labEdges topo)
+        f (idx1, idx2, l) =
+           case fs M.! (PPosIdx idx1 idx2) of
+              PSign -> [(idx1, idx2, l { flowDirection = WithDir })] 
+              NSign -> [(idx1, idx2, l { flowDirection = AgainstDir})]
+              ZSign -> [(idx1, idx2, l { flowDirection = UnDir})]
 
 
 mkSectionTopology :: SecIdx -> FlowTopology -> SecTopology
