@@ -407,10 +407,10 @@ instance (SArith s1 s1 s1, DZipWith c1 c1 c1 (d1, d1) (d2, d2) d3, DZipWith c1 c
 -- sFold
 
 class (DFold c d1 d2) => SFold s c d1 d2 where
-  sfoldl :: (d1 -> d2 -> d1) ->  d1 -> TC s typ (c d2) -> d1
+  sfoldl :: (d2 -> d1 -> d2) ->  d2 -> TC s typ (c d1) -> d2
   sfoldr :: (d1 -> d2 -> d2) ->  d2 -> TC s typ (c d1) -> d2
-  sfoldl f x (TC y) = dfoldl f x y 
-  sfoldr f x (TC y) = dfoldr f x y 
+  sfoldl f x (TC y) = dfoldl f x y
+  sfoldr f x (TC y) = dfoldr f x y
 
 instance (DFold c d1 d2) => SFold Signal c d1 d2 where
 instance (DFold c d1 d2) => SFold FSignal c d1 d2 where

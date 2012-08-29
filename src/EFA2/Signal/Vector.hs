@@ -79,7 +79,7 @@ instance (Ord d) => Singleton [] d where
 class Walker vec a b where
    map :: (a -> b) -> vec a -> vec b
    foldr :: (a -> b -> b) -> b -> vec a -> b
-   foldl :: (a -> b -> a) -> a -> vec b -> a
+   foldl :: (b -> a -> b) -> b -> vec a -> b
    zip :: vec a -> vec b -> vec (a, b)
 
 instance Walker [] a b where

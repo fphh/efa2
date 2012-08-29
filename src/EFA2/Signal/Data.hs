@@ -140,20 +140,20 @@ instance (SV.Zipper v2 (v1 d1) d2 (v1 d3), SV.Walker v1 d1 d3) => DCrossWith (Da
 -- fold Functions
 
 class DFold c d1 d2 where
-      dfoldl :: (d1 -> d2 -> d1) -> d1 -> c d2 -> d1
+      dfoldl :: (d2 -> d1 -> d2) -> d2 -> c d1 -> d2
       dfoldr :: (d1 -> d2 -> d2) -> d2 -> c d1 -> d2
 
 instance (SV.Walker v1 d1 d2) => DFold (Data (v1 :> Nil)) d1 d2 where
          dfoldl f x  (Data (D1 y)) = SV.foldl f x y
          dfoldr f x  (Data (D1 y)) = SV.foldr f x y
 
-instance (SV.Walker v2 d1 (v1 d2), SV.Walker v1 d1 d2, SV.Walker v2 (v1 d1) d2) =>  DFold (Data (v2 :> v1 :> Nil)) d1 d2 where
+instance (SV.Walker v1 d1 d2, SV.Walker v2 (v1 d1) d2) =>  DFold (Data (v2 :> v1 :> Nil)) d1 d2 where
          dfoldl f x  (Data (D2 y)) = SV.foldl (SV.foldl f) x y
          dfoldr f x  (Data (D2 y)) = SV.foldr (flip (SV.foldr f)) x  y
 
 
 class D1Fold c v1 d1 d2 where
-      d1foldl :: (v1 d1 -> v1 d2 -> v1 d1) -> (v1 d1) -> c d2 -> (v1 d1)
+      d1foldl :: (v1 d2 -> v1 d1 -> v1 d2) -> (v1 d2) -> c d1 -> (v1 d2)
       d1foldr :: (v1 d1 -> v1 d2 -> v1 d2) -> (v1 d2) -> c d1 -> (v1 d2)
 
 -- 2d -> 1d
