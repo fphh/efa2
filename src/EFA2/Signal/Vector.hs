@@ -207,6 +207,9 @@ instance Length  [d] where
    len x = L.length x
 
 
+lenCheck ::
+   (Length v1, Length v2) =>
+   v1 -> v2 -> Bool
 lenCheck x y = len x == len y
 
 
