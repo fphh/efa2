@@ -12,7 +12,7 @@ import qualified Data.List.HT as LH
 import Data.Eq (Eq((==)))
 import Data.Function ((.), ($), id, flip)
 import Data.Maybe (Maybe)
-import Prelude (Bool, Int, Ord, error, (++), (-))
+import Prelude (Bool, Int, Ord, error, (++), (-), Show, show)
 
 
 --------------------------------------------------------------
@@ -281,23 +281,24 @@ instance UV.Unbox d => Filter UV.Vector d where
 
 
 class Lookup v d where
-  lookUp :: v d -> [Int] -> v d
+   lookUp :: v d -> [Int] -> v d
 
 instance (Eq d) => Lookup [] d where
-  lookUp xs = lookUpGen (V.fromList xs V.!? )
+   lookUp xs = lookUpGen (V.fromList xs V.!? )
 
 instance (Eq d) => Lookup V.Vector d where
-  lookUp xs = V.fromList . lookUpGen (xs V.!?)
+   lookUp xs = V.fromList . lookUpGen (xs V.!?)
 
 instance (UV.Unbox d, Eq d) => Lookup UV.Vector d where
-  lookUp xs = UV.fromList . lookUpGen (xs UV.!?)
+   lookUp xs = UV.fromList . lookUpGen (xs UV.!?)
 
 {-# INLINE lookUpGen #-}
-lookUpGen :: (i -> Maybe a) -> [i] -> [a]
+lookUpGen :: Show i => (i -> Maybe a) -> [i] -> [a]
 lookUpGen look idxs =
-  case LH.partitionMaybe look idxs of
-    (ys, []) -> ys
-    _ -> error "Error in vLookup - indices out of Range"
+   case LH.partitionMaybe look idxs of
+      (ys, []) -> ys
+      (_, invalidIdxs) ->
+         error $ "Error in vLookup - indices out of Range: " ++ show invalidIdxs
 
 
 class Reverse v d where
