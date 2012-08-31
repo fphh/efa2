@@ -265,13 +265,19 @@ instance (SV.Singleton v1 d) => Append Nil (v1 :> Nil) d where
 ----------------------------------------------------------
 -- get data Range
 
-class Maximum v2 v1 d where
-   maximum :: Data (v2 :> v1) d -> Data v1 d
-   minimum :: Data (v2 :> v1) d -> Data v1 d
+class Maximum c d where
+   maximum :: Data c d -> d
+   minimum :: Data c d -> d
 
-instance (SV.Singleton v2 (Apply v1 d)) => Maximum v2 v1 d where
-   maximum (Data x) =  Data $ SV.maximum x
-   minimum (Data x) =  Data $ SV.minimum x
+instance Maximum Nil d where
+   maximum (Data x) = x
+   minimum (Data x) = x
+
+instance
+   (SV.Singleton v2 d, SV.Walker v2 (Apply v1 d) d, Maximum v1 d) =>
+      Maximum (v2 :> v1) d where
+   maximum xd@(Data x) = SV.maximum $ SV.map (maximum . subData xd) x
+   minimum xd@(Data x) = SV.minimum $ SV.map (minimum . subData xd) x
 
 
 ----------------------------------------------------------

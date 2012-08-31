@@ -752,10 +752,10 @@ untuple :: TC Sample typ (Data Nil (d,d)) -> (TC Sample typ (Data Nil d), TC Sam
 untuple (TC (Data (x,y))) = (TC $ Data x, TC $ Data y)
 
 maximum, minimum ::
-   (D.Maximum v2 v1 d) =>
-   TC s typ (Data (v2 :> v1) d) -> TC Scalar typ (Data v1 d)
-maximum (TC x) = TC $ D.maximum x
-minimum (TC x) = TC $ D.minimum x
+   (D.Maximum c d) =>
+   TC s typ (Data c d) -> TC Scalar typ (Data Nil d)
+maximum (TC x) = TC $ Data $ D.maximum x
+minimum (TC x) = TC $ Data $ D.minimum x
 
 
 subSignal1D :: (SV.Lookup v d)=> TC s typ (Data (v :> Nil) d) -> [SignalIdx] -> TC s typ (Data (v :> Nil) d)
