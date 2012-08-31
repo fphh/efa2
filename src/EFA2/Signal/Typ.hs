@@ -135,8 +135,8 @@ instance TProd (Typ UT UT UT) (Typ UT UT UT) (Typ UT UT UT)
 
 -- Alles muss Identisch sein, nur Delta veraendert sich
 
-class TSum t1 t2 t3 |  t1 t2 -> t3, t2 t3 -> t1, t1 t3 -> t1 
-  
+class TSum t1 t2 t3 | t1 t2 -> t3, t2 t3 -> t1, t1 t3 -> t2
+
 instance TSum (Typ A t p) (Typ D t p) (Typ A t p)
 instance TSum (Typ D t p) (Typ A t p) (Typ A t p)
 --instance TSum (Typ Zero t p) (Typ (Succ Zero) t p) (Typ Zero t p)
