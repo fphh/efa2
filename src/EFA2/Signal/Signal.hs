@@ -629,13 +629,23 @@ convert (TC x) = TC $ D.convert x
 ----------------------------------------------------------
 -- sum all signal value
 
-class (BSum d1, Num d1) => SigSum s1 s2 c1 c2 d1 | s1 -> s2, c1 -> c2  where
-   sigSum :: TC s1 typ (Data c1 d1) -> TC s2 typ (Data c2 d1)
+type family SigSumC (c :: * -> *) :: * -> *
+type instance SigSumC (v :> Nil) = Nil
 
-instance (BSum d1, Num d1, SV.Walker v1 d1 d1) => SigSum Signal Scalar (v1 :> Nil) Nil d1 where
+class (BSum d, Num d) => SigSum s (c :: * -> *) d where
+   type SigSumS s :: *
+   sigSum :: TC s typ (Data c d) -> TC (SigSumS s) typ (Data (SigSumC c) d)
+
+instance
+   (BSum d, Num d, SV.Walker v d d) =>
+      SigSum Signal (v :> Nil) d where
+   type SigSumS Signal = Scalar
    sigSum x = TC $ Data $ foldl (..+) 0 x
 
-instance (BSum d1, Num d1, SV.Walker v1 d1 d1) => SigSum FSignal Scalar (v1 :> Nil) Nil d1 where
+instance
+   (BSum d, Num d, SV.Walker v d d) =>
+      SigSum FSignal (v :> Nil) d where
+   type SigSumS FSignal = Scalar
    sigSum x = TC $ Data $ foldl (..+) 0 x
 
 ----------------------------------------------------------
