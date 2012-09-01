@@ -64,7 +64,8 @@ instance SigDisp TestRow (V.Vector :> UV.Vector :> Nil) where
          sigDisp _ = "Test2U"
 
 instance
-      (SV.FromList v Val, SV.Singleton v Double, UDisp t, SigDisp s (v :> Nil)) =>
+      (SV.FromList v Val, SV.Singleton v Double, SV.Walker v Double Double,
+       UDisp t, SigDisp s (v :> Nil)) =>
           ToTable (TC s t (Data (v :> Nil) Val)) where
       toTable os (ti,x) = [Table {tableTitle = "",
                          tableFormat = autoFormat td,

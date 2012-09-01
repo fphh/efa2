@@ -19,7 +19,7 @@ import qualified Data.List as L
 import Data.Eq (Eq((==), (/=)))
 import Data.Ord (Ord, (<), (>), (<=), (>=))
 import Data.Function ((.), ($), id, flip)
-import Prelude (Bool, Int, error, (++), (-))
+import Prelude (Bool, Int, (+))
 import qualified Prelude as P
 
 
@@ -265,13 +265,19 @@ instance (SV.Singleton v1 d) => Append Nil (v1 :> Nil) d where
 ----------------------------------------------------------
 -- get data Range
 
-class Maximum v2 v1 d where
-   maximum :: Data (v2 :> v1) d -> Data v1 d
-   minimum :: Data (v2 :> v1) d -> Data v1 d
+class Maximum c d where
+   maximum :: Data c d -> d
+   minimum :: Data c d -> d
 
-instance (SV.Singleton v2 (Apply v1 d)) => Maximum v2 v1 d where
-   maximum (Data x) =  Data $ SV.maximum x
-   minimum (Data x) =  Data $ SV.minimum x
+instance Maximum Nil d where
+   maximum (Data x) = x
+   minimum (Data x) = x
+
+instance
+   (SV.Singleton v2 d, SV.Walker v2 (Apply v1 d) d, Maximum v1 d) =>
+      Maximum (v2 :> v1) d where
+   maximum xd@(Data x) = SV.maximum $ SV.map (maximum . subData xd) x
+   minimum xd@(Data x) = SV.minimum $ SV.map (minimum . subData xd) x
 
 
 ----------------------------------------------------------
@@ -410,14 +416,21 @@ instance
 ----------------------------------------------------------
 -- Length
 
-class Length c d where
-   length :: Data c d -> Int
 
-instance Length Nil d where
-   length (Data _) = 1
+length :: SV.Length (Apply c d) => Data c d -> Int
+length (Data x) = SV.len x
 
-instance SV.Length (v2 (Apply v1 d)) => Length (v2 :> v1) d where
-   length (Data x) = SV.len x
+
+class Size c d where
+   size :: Data c d -> Int
+
+instance Size Nil d where
+   size (Data _) = 1
+
+instance
+   (SV.Walker v2 Int Int, SV.Walker v2 (Apply v1 d) Int, Size v1 d) =>
+      Size (v2 :> v1) d where
+   size xd@(Data x) = SV.foldl (+) 0 $ SV.map (size . subData xd) x
 
 
 ----------------------------------------------------------

@@ -228,12 +228,11 @@ checkEnvsForDelta env fnv = and lst
                 storageMap env .== storageMap fnv ]
         (.==) x y = and $ zipWith ignoreRecEq (M.keys x) (M.keys y)
 
-{-
-minusEnv :: ZipSum s s s t t t c c c => Envs (TC s t c) -> Envs (TC s t c) -> Envs (TC s t c)
--}
 minusEnv ::
-   (S.Arith s s s, TSum t t t, c ~ Zip c c, BSum a a a, D.ZipWith c c a a a) =>
-   Envs (TC s t (Data c a)) -> Envs (TC s t (Data c a)) -> Envs (TC s t (Data c a))
+   (S.Arith s s ~ s, TSum t t t, c ~ Zip c c, BSum a, D.ZipWith c c a a a) =>
+   Envs (TC s t (Data c a)) ->
+   Envs (TC s t (Data c a)) ->
+   Envs (TC s t (Data c a))
 minusEnv laterEnv formerEnv | checkEnvsForDelta laterEnv formerEnv = gnv
   where minus x y = M.fromList $ zipWith minush (M.toList x) (M.toList y)
         minush (k0, x) (k1, y) = (k0, x .- y)
