@@ -4,7 +4,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE GADTs #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE EmptyDataDecls #-}
@@ -49,54 +49,55 @@ data TestRow
 
 ----------------------------------------------------------------
 -- Signal Zipwith with Rule of Signal Inheritance
-class Arith s1 s2 s3 | s1 s2 -> s3
+-- type family
+type family Arith s1 s2 :: *
 
-instance Arith Scalar Scalar Scalar
+type instance Arith Scalar Scalar = Scalar
 
-instance Arith Scalar Signal Signal
-instance Arith Scalar Sample Sample
-instance Arith Scalar FSignal FSignal
-instance Arith Scalar FSample FSample
-instance Arith Scalar FDistrib FDistrib
-instance Arith Scalar FClass FClass
+type instance Arith Scalar Signal = Signal
+type instance Arith Scalar Sample = Sample
+type instance Arith Scalar FSignal = FSignal
+type instance Arith Scalar FSample = FSample
+type instance Arith Scalar FDistrib = FDistrib
+type instance Arith Scalar FClass = FClass
 
-instance Arith Signal Scalar Signal
-instance Arith Sample Scalar Sample
-instance Arith FSignal Scalar FSignal
-instance Arith FSample Scalar FSample
-instance Arith FDistrib Scalar FDistrib
-instance Arith FClass Scalar FClass
+type instance Arith Signal Scalar = Signal
+type instance Arith Sample Scalar = Sample
+type instance Arith FSignal Scalar = FSignal
+type instance Arith FSample Scalar = FSample
+type instance Arith FDistrib Scalar = FDistrib
+type instance Arith FClass Scalar = FClass
 
-instance Arith Signal Signal Signal
-instance Arith Sample Sample Sample
-instance Arith FSignal FSignal FSignal
-instance Arith FSample FSample FSample
-instance Arith FDistrib FDistrib FDistrib
-instance Arith FClass FClass FClass
+type instance Arith Signal Signal = Signal
+type instance Arith Sample Sample = Sample
+type instance Arith FSignal FSignal = FSignal
+type instance Arith FSample FSample = FSample
+type instance Arith FDistrib FDistrib = FDistrib
+type instance Arith FClass FClass = FClass
 
-instance Arith TestRow TestRow TestRow
-instance Arith Scalar TestRow TestRow
-instance Arith TestRow Scalar TestRow
+type instance Arith TestRow TestRow = TestRow
+type instance Arith Scalar TestRow = TestRow
+type instance Arith TestRow Scalar = TestRow
 
 zipWith ::
-   (Arith s1 s2 s3, D.ZipWith c1 c2 d1 d2 d3) =>
+   (D.ZipWith c1 c2 d1 d2 d3) =>
    (d1 -> d2 -> d3) ->
    TC s1 typ1 (Data c1 d1) ->
    TC s2 typ2 (Data c2 d2) ->
-   TC s3 typ3 (Data (Zip c1 c2) d3)
+   TC (Arith s1 s2) typ3 (Data (Zip c1 c2) d3)
 zipWith f (TC da1) (TC da2) =
    TC $ D.zipWith f da1 da2
 
 ----------------------------------------------------------------
 -- Getyptes ZipWith
 tzipWith ::
-   (Arith s1 s2 s3, D.ZipWith c1 c2 d1 d2 d3) =>
+   (D.ZipWith c1 c2 d1 d2 d3) =>
    (TC Sample typ1 (Data Nil d1) ->
     TC Sample typ2 (Data Nil d2) ->
     TC Sample typ3 (Data Nil d3)) ->
    TC s1 typ1 (Data c1 d1) ->
    TC s2 typ2 (Data c2 d2) ->
-   TC s3 typ3 (Data (Zip c1 c2) d3)
+   TC (Arith s1 s2) typ3 (Data (Zip c1 c2) d3)
 tzipWith f xs ys = zipWith g xs ys
    where g x y = fromSample $ f (toSample x) (toSample y)
 
@@ -123,31 +124,31 @@ instance (CrossArith s1 s2 s3, DCrossWith c1 c2 c3 d1 d2 d3) => CrossWith s1 s2 
 -- Normal Arithmetics - based on zip
 
 (.*) ::
-   (Arith s1 s2 s3, TProd t1 t2 t3, D.ZipWith c1 c2 a1 a2 a1, BProd a1 a2) =>
+   (TProd t1 t2 t3, D.ZipWith c1 c2 a1 a2 a1, BProd a1 a2) =>
    TC s1 t1 (Data c1 a1) ->
    TC s2 t2 (Data c2 a2) ->
-   TC s3 t3 (Data (Zip c1 c2) a1)
+   TC (Arith s1 s2) t3 (Data (Zip c1 c2) a1)
 (.*) x y = zipWith (..*) x y
 
 (./) ::
-   (Arith s1 s2 s3, TProd t1 t2 t3, D.ZipWith c1 c2 a1 a2 a1, BProd a1 a2) =>
+   (TProd t1 t2 t3, D.ZipWith c1 c2 a1 a2 a1, BProd a1 a2) =>
    TC s1 t3 (Data c1 a1) ->
    TC s2 t2 (Data c2 a2) ->
-   TC s3 t1 (Data (Zip c1 c2) a1)
+   TC (Arith s1 s2) t1 (Data (Zip c1 c2) a1)
 (./) x y = zipWith (../) x y
 
 (.+) ::
-   (Arith s1 s2 s3, TSum t1 t2 t3, D.ZipWith c1 c2 a a a, BSum a) =>
+   (TSum t1 t2 t3, D.ZipWith c1 c2 a a a, BSum a) =>
    TC s1 t1 (Data c1 a) ->
    TC s2 t2 (Data c2 a) ->
-   TC s3 t3 (Data (Zip c1 c2) a)
+   TC (Arith s1 s2) t3 (Data (Zip c1 c2) a)
 (.+) x y = zipWith (..+) x y
 
 (.-) ::
-   (Arith s1 s2 s3, TSum t1 t2 t3, D.ZipWith c1 c2 a a a, BSum a) =>
+   (TSum t1 t2 t3, D.ZipWith c1 c2 a a a, BSum a) =>
    TC s1 t3 (Data c1 a) ->
    TC s2 t2 (Data c2 a) ->
-   TC s3 t1 (Data (Zip c1 c2) a)
+   TC (Arith s1 s2) t1 (Data (Zip c1 c2) a)
 (.-) x y = zipWith (..-) x y
 
 
@@ -396,8 +397,10 @@ toSigList (TC (Data (D2 x))) = map vec2Sig vecList
 -- Zip
 
 zip ::
-   (Arith s s s, c ~ Zip c c, D.ZipWith c c d1 d2 (d1, d2)) =>
-   TC s typ (Data c d1) ->  TC s typ (Data c d2) ->  TC s typ (Data c (d1,d2))
+   (c ~ Zip c c, D.ZipWith c c d1 d2 (d1, d2)) =>
+   TC s typ (Data c d1) ->
+   TC s typ (Data c d2) ->
+   TC (Arith s s) typ (Data c (d1,d2))
 zip x y = zipWith (,) x y
 
 ----------------------------------------------------------
