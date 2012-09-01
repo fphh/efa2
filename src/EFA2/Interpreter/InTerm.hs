@@ -1,5 +1,6 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, TypeOperators #-}
-
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module EFA2.Interpreter.InTerm where
 
@@ -55,11 +56,11 @@ instance (Show a, Eq a) => Num (InTerm a) where
          fromInteger = undefined
 
 
-instance B.BProd (InTerm a) (InTerm a) (InTerm a) where
+instance B.BProd (InTerm a) (InTerm a) where
          (..*) = InMult
          x ../ y = InMult x (InRecip y)
 
-instance B.BSum (InTerm a) (InTerm a) (InTerm a) where
+instance B.BSum (InTerm a) where
          (..+) = InAdd
          x ..- y = InAdd x (InMinus y)
 

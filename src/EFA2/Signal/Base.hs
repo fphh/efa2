@@ -1,5 +1,6 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, FunctionalDependencies, KindSignatures, GeneralizedNewtypeDeriving, FlexibleContexts #-} 
-
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module EFA2.Signal.Base (module EFA2.Signal.Base) where
 
@@ -21,57 +22,60 @@ infix 7 ..*, ../
 infix 6 ..+, ..-
 
 -- | Calculation classes for basic Datatypes
-class BProd d1 d2 d3 | d1 d2 -> d3  where
- (..*) ::  d1 ->  d2 -> d3
- (../) ::  d1 -> d2 -> d3
- 
-instance BProd Val Val Val where
- (..*) x y = x*y
- (../) 0 0 = 0
- (../) x y = x/y
+class BProd d1 d2 where
+   (..*) :: d1 -> d2 -> d1
+   (../) :: d1 -> d2 -> d1
 
-instance BProd Val Bool Val where
- (..*) x True = x
- (..*) _ False = 0
- (../) _ False = 0
- (../) x True = x
- 
+instance BProd Val Val where
+   (..*) x y = x*y
+   (../) 0 0 = 0
+   (../) x y = x/y
 
-instance BProd Bool Bool Bool where
--- And  
- (..*) x True = x
- (..*) _ False = False
--- Or 
- (../) x False = x
- (../) _ True = True
+instance BProd Val Bool where
+   (..*) x True = x
+   (..*) _ False = 0
+   (../) _ False = 0
+   (../) x True = x
+
+instance BProd Bool Bool where
+   -- And
+   (..*) x True = x
+   (..*) _ False = False
+   -- Or
+   (../) x False = x
+   (../) _ True = True
+
 
 -- | Calculation classes for basic Datatypes
-class BSum d1 d2 d3 | d1 d2 -> d3 where
- (..+) ::  d1 -> d2 -> d3
- (..-) ::  d1 -> d2 -> d3
- 
-instance BSum Val Val Val where
- (..+) x y = x+y
- (..-) x y = x-y
+class BSum d1 where
+   (..+) :: d1 -> d1 -> d1
+   (..-) :: d1 -> d1 -> d1
 
-class DEq d1 d2 d3 | d1 d2 -> d3 where
-  (..==) :: d1 -> d2 -> d3
-  (../=) :: d1 -> d2 -> d3
-  (..>=) :: d1 -> d2 -> d3
-  (..<=) :: d1 -> d2 -> d3
-  (..>) ::  d1 -> d2 -> d3
-  (..<) ::  d1 -> d2 -> d3
-  
-instance DEq Val Val Bool where
-  (..==)  x y = x == y 
-  (../=)  x y = x /= y
-  (..>=)  x y = x >= y
-  (..<=)  x y = x <= y
-  (..>)   x y = x > y
-  (..<)   x y = x < y
+instance BSum Val where
+   (..+) x y = x+y
+   (..-) x y = x-y
 
 
-infix 4 ..==, ../= , ..>= , ..<= , ..> , ..< 
+class DEq d1 where
+   type Equal d1 :: *
+   (..==) :: d1 -> d1 -> Equal d1
+   (../=) :: d1 -> d1 -> Equal d1
+   (..>=) :: d1 -> d1 -> Equal d1
+   (..<=) :: d1 -> d1 -> Equal d1
+   (..>) ::  d1 -> d1 -> Equal d1
+   (..<) ::  d1 -> d1 -> Equal d1
+
+instance DEq Val where
+   type Equal Val = Bool
+   (..==)  x y = x == y
+   (../=)  x y = x /= y
+   (..>=)  x y = x >= y
+   (..<=)  x y = x <= y
+   (..>)   x y = x > y
+   (..<)   x y = x < y
+
+
+infix 4 ..==, ../= , ..>= , ..<= , ..> , ..<
 
 -- Own User Defined Sign Variable
 data Sign = PSign 

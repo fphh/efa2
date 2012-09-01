@@ -123,31 +123,31 @@ instance (CrossArith s1 s2 s3, DCrossWith c1 c2 c3 d1 d2 d3) => CrossWith s1 s2 
 -- Normal Arithmetics - based on zip
 
 (.*) ::
-   (Arith s1 s2 s3, TProd t1 t2 t3, D.ZipWith c1 c2 a1 a2 a3, BProd a1 a2 a3) =>
+   (Arith s1 s2 s3, TProd t1 t2 t3, D.ZipWith c1 c2 a1 a2 a1, BProd a1 a2) =>
    TC s1 t1 (Data c1 a1) ->
    TC s2 t2 (Data c2 a2) ->
-   TC s3 t3 (Data (Zip c1 c2) a3)
+   TC s3 t3 (Data (Zip c1 c2) a1)
 (.*) x y = zipWith (..*) x y
 
 (./) ::
-   (Arith s1 s2 s3, TProd t1 t2 t3, D.ZipWith c1 c2 a1 a2 a3, BProd a1 a2 a3) =>
+   (Arith s1 s2 s3, TProd t1 t2 t3, D.ZipWith c1 c2 a1 a2 a1, BProd a1 a2) =>
    TC s1 t3 (Data c1 a1) ->
    TC s2 t2 (Data c2 a2) ->
-   TC s3 t1 (Data (Zip c1 c2) a3)
+   TC s3 t1 (Data (Zip c1 c2) a1)
 (./) x y = zipWith (../) x y
 
 (.+) ::
-   (Arith s1 s2 s3, TSum t1 t2 t3, D.ZipWith c1 c2 a1 a2 a3, BSum a1 a2 a3) =>
-   TC s1 t1 (Data c1 a1) ->
-   TC s2 t2 (Data c2 a2) ->
-   TC s3 t3 (Data (Zip c1 c2) a3)
+   (Arith s1 s2 s3, TSum t1 t2 t3, D.ZipWith c1 c2 a a a, BSum a) =>
+   TC s1 t1 (Data c1 a) ->
+   TC s2 t2 (Data c2 a) ->
+   TC s3 t3 (Data (Zip c1 c2) a)
 (.+) x y = zipWith (..+) x y
 
 (.-) ::
-   (Arith s1 s2 s3, TSum t1 t2 t3, D.ZipWith c1 c2 a1 a2 a3, BSum a1 a2 a3) =>
-   TC s1 t3 (Data c1 a1) ->
-   TC s2 t2 (Data c2 a2) ->
-   TC s3 t1 (Data (Zip c1 c2) a3)
+   (Arith s1 s2 s3, TSum t1 t2 t3, D.ZipWith c1 c2 a a a, BSum a) =>
+   TC s1 t3 (Data c1 a) ->
+   TC s2 t2 (Data c2 a) ->
+   TC s3 t1 (Data (Zip c1 c2) a)
 (.-) x y = zipWith (..-) x y
 
 
@@ -626,13 +626,13 @@ convert (TC x) = TC $ D.convert x
 ----------------------------------------------------------
 -- sum all signal value
 
-class (BSum d1 d1 d1, Num d1) => SigSum s1 s2 c1 c2 d1 | s1 -> s2, c1 -> c2  where
+class (BSum d1, Num d1) => SigSum s1 s2 c1 c2 d1 | s1 -> s2, c1 -> c2  where
    sigSum :: TC s1 typ (Data c1 d1) -> TC s2 typ (Data c2 d1)
 
-instance (BSum d1 d1 d1, Num d1, SV.Walker v1 d1 d1) => SigSum Signal Scalar (v1 :> Nil) Nil d1 where
+instance (BSum d1, Num d1, SV.Walker v1 d1 d1) => SigSum Signal Scalar (v1 :> Nil) Nil d1 where
    sigSum x = TC $ Data $ foldl (..+) 0 x
 
-instance (BSum d1 d1 d1, Num d1, SV.Walker v1 d1 d1) => SigSum FSignal Scalar (v1 :> Nil) Nil d1 where
+instance (BSum d1, Num d1, SV.Walker v1 d1 d1) => SigSum FSignal Scalar (v1 :> Nil) Nil d1 where
    sigSum x = TC $ Data $ foldl (..+) 0 x
 
 ----------------------------------------------------------

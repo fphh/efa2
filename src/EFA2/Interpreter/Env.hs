@@ -232,7 +232,7 @@ checkEnvsForDelta env fnv = and lst
 minusEnv :: ZipSum s s s t t t c c c => Envs (TC s t c) -> Envs (TC s t c) -> Envs (TC s t c)
 -}
 minusEnv ::
-   (S.Arith s s s, TSum t t t, c ~ Zip c c, BSum a a a, D.ZipWith c c a a a) =>
+   (S.Arith s s s, TSum t t t, c ~ Zip c c, BSum a, D.ZipWith c c a a a) =>
    Envs (TC s t (Data c a)) -> Envs (TC s t (Data c a)) -> Envs (TC s t (Data c a))
 minusEnv laterEnv formerEnv | checkEnvsForDelta laterEnv formerEnv = gnv
   where minus x y = M.fromList $ zipWith minush (M.toList x) (M.toList y)
