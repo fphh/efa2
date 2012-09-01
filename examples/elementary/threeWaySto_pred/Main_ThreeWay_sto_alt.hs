@@ -54,7 +54,7 @@ sqTopo = sqTopo
     s13 = [0, 0.5, 0.5, 0, -0.3, -0.3]
     s31 = [0, 0.25, 0.25, 0, -0.6, -0.6]
        
-    n = 2    
+    n = 1   
     
     time = take 7 [0 ..]
 
@@ -220,11 +220,11 @@ main = do
     lossSYS1 = energySource .- energyInt 
     lossSYS2 = energyInt .- energyConsumption 
         
-  putStrLn (show sqTopo)
+
   
   -- | D. -- Selected Energy Flow Plots
-{- 
-  drawTopologyX' sqTopo
+
+--  drawTopologyX' sqTopo
   drawTopology  sqTopo (head(head(varEnvs))) 
   drawTopology  sqTopo (last(head(varEnvs))) 
   drawTopology  sqTopo (head(last(varEnvs))) 
@@ -295,5 +295,5 @@ main = do
 --  surfPlot "powerConsumptionS1" storagePerc storageEfficiency powerConsumptionS1
 --  surfPlot "powerConsumptionS0" storagePerc storageEfficiency powerConsumptionS0  
     
--}
+
 
