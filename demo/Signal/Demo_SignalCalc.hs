@@ -16,7 +16,7 @@ import EFA2.Signal.Data
 
 import EFA2.Signal.Signal
           (TC, Scalar, Signal, FSignal, FSamp, PFSamp, PSigL, UTFSig, Test1, Test2,
-           PSig,TSig, Scal, FSig,  FSig1,
+           PSig,TSig, Scal, FFSig,  FSig1,
            (.-), (.+), (./), (.*), (.++)) -- (&-), (&+), (&/), (&*), (&++))
           
 import EFA2.Signal.Data (Data, Nil)
@@ -43,8 +43,8 @@ pSig1 = ((S.changeType (S.map sin time)).-offset).*((S.toScalar 1000):: Scal (Ty
 pSig2 = pSig1.*n1
 
 -- Make Time-Step-Integration to get 1D energy flow signals
-fSig1 = S.sigPartInt time pSig1  :: FSig
-fSig2 = S.sigPartInt time pSig2  :: FSig
+fSig1 = S.sigPartInt time pSig1  :: FFSig
+fSig2 = S.sigPartInt time pSig2  :: FFSig
 
 {-
 -- Calculate 1D average Power Signal 
@@ -64,7 +64,7 @@ nVal1 = (S.sigFullInt time pSig2)./(S.sigFullInt time pSig1) ::  Scal (Typ A N T
 nVal2 = (S.sigSum fSig2)./S.sigSum(fSig1) ::  Scal (Typ A N Tt) Val
 
 main = do  
-  
+   
   xyplot "Power" time pSig1  
   
 {-  

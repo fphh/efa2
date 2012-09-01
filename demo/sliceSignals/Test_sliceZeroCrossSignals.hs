@@ -1,14 +1,19 @@
 import EFA2.Signal.Sequence
+import EFA2.Signal.SequenceData
+
+import qualified EFA2.Signal.Signal as S
+import EFA2.Signal.Signal (TSigL, PSigL)
+
 import  EFA2.Interpreter.Env
 import EFA2.Utils.Utils
 
 import qualified Data.Map as M 
 
 
-time = [0,10..50]
+time = S.fromList [0,10..50] :: TSigL
 
 t8 = "zero crossing"
-p8 = [2,2,2,-2,-2]
+p8 = S.fromList [2,2,2,-2,-2] :: PSigL
 pmap8 = M.fromList [(PPosIdx 0 1,p8)]
 
 -- Create lists over all test cases
@@ -20,8 +25,8 @@ list = idxList $ zip titleList (zip recList (map  (genSequ) (map addZeroCrossing
 f (idx,(title,(pRec,(sq,sqRec)))) = do
   putStrLn ""
   putStrLn $ "Test " ++ show (idx+1) ++ ": " ++ title
-  putStrLn ("XList: \n" ++ (myShowList $ idxList $ genXSig pRec))   
-  putStrLn ("XList: \n" ++ (myShowList $ idxList $ genXSig (addZeroCrossings pRec)))   
+  putStrLn ("XList: \n" ++ (show pRec))   
+  putStrLn ("XList: \n" ++ (show (addZeroCrossings pRec)))   
   putStrLn ("Sequence: " ++  show sq) 
   putStrLn ("SequRec: " ++  show sqRec) 
   --putStrLn ("sequPMaps: " ++  show sqPmaps)
