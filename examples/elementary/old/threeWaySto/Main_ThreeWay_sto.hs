@@ -5,7 +5,6 @@ module Main where
 import Data.Graph.Inductive
 
 import qualified Data.List as L
-import qualified Data.Set as S
 import qualified Data.Map as M
 import Data.Maybe
 
@@ -40,9 +39,10 @@ import EFA2.Example.Loop
 import EFA2.Example.SymSig
 
 
-import EFA2.Signal.Signal
+import qualified EFA2.Signal.Signal as S
+import qualified EFA2.Signal.Data as D
+import EFA2.Signal.Signal (UTFSig)
 import EFA2.Signal.Typ
-import EFA2.Signal.Data
 
 import EFA2.Display.ReportSequence
 
@@ -88,15 +88,15 @@ main = do
       l = fromIntegral $ length $ replicate n (s01 ++ s01') :: Val
       time = [0, 0] ++ (concatMap (replicate 3) [1.0..l]) 
 
-      pMap =  M.fromList [ (PPosIdx 0 1, sfromList $ concat $ replicate n (s01 ++ s01')),
-                           (PPosIdx 1 0, sfromList $ concat $ replicate n (s10 ++ s10')), 
-                           (PPosIdx 1 2, sfromList $ concat $ replicate n (s12 ++ s12')),
-                           (PPosIdx 2 1, sfromList $ concat $ replicate n (s21 ++ s21')),
-                           (PPosIdx 1 3, sfromList $ concat $ replicate n (s13 ++ s13')),
-                           (PPosIdx 3 1, sfromList $ concat $ replicate n (s31 ++ s31')) ]
+      pMap =  M.fromList [ (PPosIdx 0 1, S.fromList $ concat $ replicate n (s01 ++ s01')),
+                           (PPosIdx 1 0, S.fromList $ concat $ replicate n (s10 ++ s10')),
+                           (PPosIdx 1 2, S.fromList $ concat $ replicate n (s12 ++ s12')),
+                           (PPosIdx 2 1, S.fromList $ concat $ replicate n (s21 ++ s21')),
+                           (PPosIdx 1 3, S.fromList $ concat $ replicate n (s13 ++ s13')),
+                           (PPosIdx 3 1, S.fromList $ concat $ replicate n (s31 ++ s31')) ]
 
       --(sqEnvs, sqTopo) = makeSequence pRec topo
-      pRec = (PowerRecord (sfromList time) pMap)
+      pRec = (PowerRecord (S.fromList time) pMap)
       
       (sequ,sequPwrRecord) = genSequ pRec
       (sqEnvs, sqTopo) = makeSequence  pRec topo 
@@ -126,7 +126,7 @@ main = do
   
 
       envs :: Envs UTFSig
-      envs = emptyEnv { powerMap = M.map (smap f) sigs }
+      envs = emptyEnv { powerMap = M.map (S.map f) sigs }
 
 
       gd = map (eqToInTerm envs) (given ++ dirs)

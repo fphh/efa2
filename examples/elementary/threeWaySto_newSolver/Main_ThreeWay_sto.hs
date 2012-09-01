@@ -1,11 +1,7 @@
 
 module Main where
 
-import qualified Data.List as L
-import qualified Data.Set as S
 import qualified Data.Map as M
-import Data.Maybe
-
 
 import EFA2.Topology.Topology
 import EFA2.Topology.TopologyData
@@ -19,11 +15,11 @@ import EFA2.Interpreter.Arith
 
 import EFA2.Display.DrawGraph
 
+import qualified EFA2.Signal.Signal as S
 import EFA2.Signal.Sequence
 import EFA2.Signal.SequenceData
-import EFA2.Signal.Signal
-import EFA2.Signal.Data
-import EFA2.Signal.Typ
+import EFA2.Signal.Signal (PSigL, TSigL)
+
 
 topo :: Topology
 topo = mkGraph (makeNodes nodes) (makeEdges edges)
@@ -32,7 +28,7 @@ topo = mkGraph (makeNodes nodes) (makeEdges edges)
 
 
 mkSig :: Int -> ([Val] -> PSigL)
-mkSig n = sfromList . concat . replicate n
+mkSig n = S.fromList . concat . replicate n
 
 
 main :: IO ()
@@ -54,7 +50,7 @@ main = do
       n = 2
 
       time :: TSigL
-      time = sfromList ([0, 0] ++ take 20 [1..])
+      time = S.fromList ([0, 0] ++ take 20 [1..])
 
       pMap =  M.fromList [ (PPosIdx 0 1, mkSig n (s01 ++ s01')),
                            (PPosIdx 1 0, mkSig n (s10 ++ s10')), 
@@ -74,8 +70,8 @@ main = do
       ts = [give storage0] ++ ts'
 
       envs = sqEnvs' { recordNumber = SingleRecord 0,
-                       powerMap = M.insert storage0 (sfromList [3.0]) (M.map (smap abs) sigs),
-                       fetaMap = M.singleton (FEtaIdx 3 0 15 13) (smap (const 0.4)) }
+                       powerMap = M.insert storage0 (S.fromList [3.0]) (M.map (S.map abs) sigs),
+                       fetaMap = M.singleton (FEtaIdx 3 0 15 13) (S.map (const 0.4)) }
 
 
       gd = map (eqToInTerm envs) (toAbsEqTermEquations $ order ts)

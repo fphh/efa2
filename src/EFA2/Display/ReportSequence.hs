@@ -109,5 +109,5 @@ instance ToTable PowerRecord where
 
 instance ToTable PowerRecord where
          toTable (PowerRecord time sigs) = TableDoc [Table "Signals" [] rows]
-           where rows = map (\(x, y) ->  ListRow (show x) (stoList y)) $ M.toList sigs
+           where rows = map (\(x, y) ->  ListRow (show x) (S.toList y)) $ M.toList sigs
 -}  

@@ -1,15 +1,17 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PatternGuards #-}
+{-# LANGUAGE TypeFamilies #-}
 module EFA2.Interpreter.Env where
-
-import Control.Monad.Error
-import Control.Applicative
 
 import qualified Data.Map as M
 import qualified Data.List as L
 
-import EFA2.Signal.Signal
-import EFA2.Signal.Data
+import qualified EFA2.Signal.Data as D
+import qualified EFA2.Signal.Signal as S
+import EFA2.Signal.Signal (TC, (.-))
+import EFA2.Signal.Data (Data, Zip)
+import EFA2.Signal.Typ (TSum)
+import EFA2.Signal.Base (BSum)
 
 -- | Variable types of the solver. The solver, in fact, is
 -- ignorant of the provenance of the variables. However, to
@@ -226,7 +228,11 @@ checkEnvsForDelta env fnv = and lst
                 storageMap env .== storageMap fnv ]
         (.==) x y = and $ zipWith ignoreRecEq (M.keys x) (M.keys y)
 
-minusEnv :: ZipSum s s s t t t c c c => Envs (TC s t c) -> Envs (TC s t c) -> Envs (TC s t c)
+minusEnv ::
+   (S.Arith s s ~ s, TSum t t t, c ~ Zip c c, BSum a, D.ZipWith c c a a a) =>
+   Envs (TC s t (Data c a)) ->
+   Envs (TC s t (Data c a)) ->
+   Envs (TC s t (Data c a))
 minusEnv laterEnv formerEnv | checkEnvsForDelta laterEnv formerEnv = gnv
   where minus x y = M.fromList $ zipWith minush (M.toList x) (M.toList y)
         minush (k0, x) (k1, y) = (k0, x .- y)
@@ -246,17 +252,17 @@ minusEnv laterEnv formerEnv | checkEnvsForDelta laterEnv formerEnv = gnv
 
 
 
-mapEnv :: (DMap c a b) => (a -> b) -> Envs (TC s t (c a)) -> Envs (TC s t (c b))
+mapEnv :: (D.Map c a b) => (a -> b) -> Envs (TC s t (Data c a)) -> Envs (TC s t (Data c b))
 mapEnv f env = emptyEnv { recordNumber = recordNumber env,
-                          energyMap = M.map (smap f) (energyMap env),
-                          denergyMap = M.map (smap f) (denergyMap env),
-                          powerMap = M.map (smap f) (powerMap env),
-                          dpowerMap = M.map (smap f) (dpowerMap env),
-                          --fetaMap = M.map (smap f .) (fetaMap env),
-                          --detaMap = M.map (smap f .) (detaMap env),
-                          dtimeMap = M.map (smap f) (dtimeMap env),
-                          xMap = M.map (smap f) (xMap env),
-                          dxMap = M.map (smap f) (dxMap env),
-                          varMap = M.map (smap f) (varMap env),
-                          storageMap = M.map (smap f) (storageMap env) }
+                          energyMap = M.map (S.map f) (energyMap env),
+                          denergyMap = M.map (S.map f) (denergyMap env),
+                          powerMap = M.map (S.map f) (powerMap env),
+                          dpowerMap = M.map (S.map f) (dpowerMap env),
+                          --fetaMap = M.map (S.map f .) (fetaMap env),
+                          --detaMap = M.map (S.map f .) (detaMap env),
+                          dtimeMap = M.map (S.map f) (dtimeMap env),
+                          xMap = M.map (S.map f) (xMap env),
+                          dxMap = M.map (S.map f) (dxMap env),
+                          varMap = M.map (S.map f) (varMap env),
+                          storageMap = M.map (S.map f) (storageMap env) }
 

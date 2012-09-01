@@ -9,12 +9,10 @@ import qualified Data.Vector as V
 import qualified Data.List as L
 import qualified Data.List.HT as LH
 
-import EFA2.Signal.Base
-
-import Data.Eq (Eq((/=), (==)))
+import Data.Eq (Eq((==)))
 import Data.Function ((.), ($), id, flip)
-import Data.Maybe (Maybe(Nothing, Just), isJust)
-import Prelude (Bool, Int, Ord, error, (++), (-))
+import Data.Maybe (Maybe)
+import Prelude (Bool, Int, Ord, error, (++), (-), Show, show)
 
 
 --------------------------------------------------------------
@@ -81,7 +79,7 @@ instance (Ord d) => Singleton [] d where
 class Walker vec a b where
    map :: (a -> b) -> vec a -> vec b
    foldr :: (a -> b -> b) -> b -> vec a -> b
-   foldl :: (a -> b -> a) -> a -> vec b -> a
+   foldl :: (b -> a -> b) -> b -> vec a -> b
    zip :: vec a -> vec b -> vec (a, b)
 
 instance Walker [] a b where
@@ -209,6 +207,9 @@ instance Length  [d] where
    len x = L.length x
 
 
+lenCheck ::
+   (Length v1, Length v2) =>
+   v1 -> v2 -> Bool
 lenCheck x y = len x == len y
 
 
@@ -280,23 +281,24 @@ instance UV.Unbox d => Filter UV.Vector d where
 
 
 class Lookup v d where
-  lookUp :: v d -> [Int] -> v d
+   lookUp :: v d -> [Int] -> v d
 
 instance (Eq d) => Lookup [] d where
-  lookUp xs = lookUpGen (V.fromList xs V.!? )
+   lookUp xs = lookUpGen (V.fromList xs V.!? )
 
 instance (Eq d) => Lookup V.Vector d where
-  lookUp xs = V.fromList . lookUpGen (xs V.!?)
+   lookUp xs = V.fromList . lookUpGen (xs V.!?)
 
 instance (UV.Unbox d, Eq d) => Lookup UV.Vector d where
-  lookUp xs = UV.fromList . lookUpGen (xs UV.!?)
+   lookUp xs = UV.fromList . lookUpGen (xs UV.!?)
 
 {-# INLINE lookUpGen #-}
-lookUpGen :: (i -> Maybe a) -> [i] -> [a]
+lookUpGen :: Show i => (i -> Maybe a) -> [i] -> [a]
 lookUpGen look idxs =
-  case LH.partitionMaybe look idxs of
-    (ys, []) -> ys
-    _ -> error "Error in vLookup - indices out of Range"
+   case LH.partitionMaybe look idxs of
+      (ys, []) -> ys
+      (_, invalidIdxs) ->
+         error $ "Error in vLookup - indices out of Range: " ++ show invalidIdxs
 
 
 class Reverse v d where

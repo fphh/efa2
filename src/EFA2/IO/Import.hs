@@ -4,17 +4,13 @@ import qualified Data.Map as M
 
 import Data.Ratio
 
-import EFA2.Signal.Sequence
-import EFA2.Interpreter.Arith
-import EFA2.Utils.Utils
-import EFA2.Signal.Sequence
 import EFA2.Signal.SequenceData
 
 --import Text.ParserCombinators.Parsec
 import Data.List.HT (chop)
 
+import qualified EFA2.Signal.Signal as S
 import qualified EFA2.Signal.Vector as SV
-import EFA2.Signal.Signal
 
 
 -- Modelica CSV Import -----------------------------------------------------------------  
@@ -43,7 +39,7 @@ modelicaCSVParse text = rec
         columns = SV.transpose (map csvParseDataLine $ tail csvlines) -- rest of lines contains data / transpose from columns to lines
         time = if (head header) == "time" then head columns else error $ "Error in csvImport - first column not time : " ++ (head header)
         sigs = tail columns -- generate signals from rest of columns
-        rec = Record (sfromList time)  (M.fromList $ zip sigIdents (map sfromList sigs)) -- generate Record with signal Map
+        rec = Record (S.fromList time)  (M.fromList $ zip sigIdents (map S.fromList sigs)) -- generate Record with signal Map
         
 -- | Parse CSV Header Line
 csvParseHeaderLine :: String -> [String]  
@@ -58,4 +54,4 @@ instance ParseCVS Double where
          csvParseDataLine line = init $ map read (chop (','==) line)  -- another init to get rid of final , per line
 
 instance Integral int => ParseCVS (Ratio int) where
-         csvParseDataLine line = init $ map (realToFrac . flip approxRational 0.001 . read) (chop (','==) line)
+         csvParseDataLine line = init $ map (realToFrac . flip approxRational (0.001::Rational) . read) (chop (','==) line)

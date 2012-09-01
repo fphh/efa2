@@ -3,19 +3,14 @@ module EFA2.Example.LinearTwo where
 import Data.Graph.Inductive
 import qualified Data.Map as M
 
-import Control.Monad.Error
-
 import EFA2.Topology.Topology
 import EFA2.Topology.TopologyData
 
-import EFA2.Interpreter.InTerm
 import EFA2.Interpreter.Env
-import EFA2.Example.SymSig
-import EFA2.Utils.Utils
-import EFA2.Signal.Signal (Scal, smap, toScalar)
+import qualified EFA2.Signal.Signal as S
+import EFA2.Signal.Signal (Scal, toScalar)
 import EFA2.Signal.Typ
 import EFA2.Signal.Base
-import EFA2.Signal.Data
 import EFA2.Solver.Equation
 
 
@@ -39,10 +34,10 @@ power0num = M.fromList [ (PowerIdx 0 0 2 1, toScalar 3.0) ]
 -}
 
 eta0num :: FEtaMap Sc
-eta0num = M.fromList [ (FEtaIdx 0 0 1 0, smap $ const 0.8), 
-                       (FEtaIdx 0 0 0 1, smap $ const 0.8),
-                       (FEtaIdx 0 0 1 2, smap $ const 0.8), 
-                       (FEtaIdx 0 0 2 1, smap $ const 0.8) ]
+eta0num = M.fromList [ (FEtaIdx 0 0 1 0, S.map $ const 0.8),
+                       (FEtaIdx 0 0 0 1, S.map $ const 0.8),
+                       (FEtaIdx 0 0 1 2, S.map $ const 0.8),
+                       (FEtaIdx 0 0 2 1, S.map $ const 0.8) ]
 
 x0num :: XMap Sc
 x0num = M.fromList []
@@ -68,10 +63,10 @@ dpower1num = M.fromList [ (DPowerIdx 0 1 2 1, toScalar 0.5) ]
 -}
 
 eta1num :: FEtaMap Sc
-eta1num = M.fromList [ (FEtaIdx 0 1 1 0, smap $ const 0.9), 
-                       (FEtaIdx 0 1 0 1, smap $ const 0.9),
-                       (FEtaIdx 0 1 1 2, smap $ const 0.9), 
-                       (FEtaIdx 0 1 2 1, smap $ const 0.9) ]
+eta1num = M.fromList [ (FEtaIdx 0 1 1 0, S.map $ const 0.9),
+                       (FEtaIdx 0 1 0 1, S.map $ const 0.9),
+                       (FEtaIdx 0 1 1 2, S.map $ const 0.9),
+                       (FEtaIdx 0 1 2 1, S.map $ const 0.9) ]
 
 x1num :: XMap Sc
 x1num = M.fromList []
@@ -82,10 +77,10 @@ dx1num = M.fromList [ (DXIdx 0 1 0 1, toScalar 0.0),
                       (DXIdx 0 1 2 1, toScalar 0.0) ]
 
 deta1num :: DEtaMap Sc
-deta1num = M.fromList [ (DEtaIdx 0 1 1 0, smap $ const 0.1), 
-                        (DEtaIdx 0 1 0 1, smap $ const 0.1),
-                        (DEtaIdx 0 1 1 2, smap $ const 0.1), 
-                        (DEtaIdx 0 1 2 1, smap $ const 0.1) ]
+deta1num = M.fromList [ (DEtaIdx 0 1 1 0, S.map $ const 0.1),
+                        (DEtaIdx 0 1 0 1, S.map $ const 0.1),
+                        (DEtaIdx 0 1 1 2, S.map $ const 0.1),
+                        (DEtaIdx 0 1 2 1, S.map $ const 0.1) ]
 
 ---------------------------------------------------------------------------------
 
