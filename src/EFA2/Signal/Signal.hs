@@ -499,16 +499,16 @@ instance (SFold Scalar (Data Nil) d1 d2) => TFold Scalar s2 (Data Nil) c2 d1 d2 
 -- SHead & STail
 
 head, last ::
-   (HeadType s1 s2, SV.Singleton v1 (Apply v2 d)) =>
-   TC s1 typ (Data (v1 :> v2) d) -> TC s2 typ (Data v2 d)
+   (SV.Singleton v1 (Apply v2 d)) =>
+   TC s typ (Data (v1 :> v2) d) -> TC (Head s) typ (Data v2 d)
 head (TC x) = TC $ D.head x
 last (TC x) = TC $ D.last x
 
-class HeadType s1 s2 | s1 -> s2
-instance HeadType Signal Sample
-instance HeadType FSignal FSample
-instance HeadType Sample Sample
-instance HeadType TestRow TestRow
+type family Head s1
+type instance Head Signal = Sample
+type instance Head FSignal = FSample
+type instance Head Sample = Sample
+type instance Head TestRow = TestRow
 
 
 init, tail ::
@@ -557,13 +557,13 @@ instance Monoid c => Monoid (TC s typ c) where
 append ::
    D.Append c1 c2 d =>
    TC s1 t (Data c1 d) -> TC s2 t (Data c2 d) ->
-   TC s3 t (Data (Zip c1 c2) d)
+   TC (Append s1 s2) t (Data (Zip c1 c2) d)
 append (TC x) (TC y) = TC $ D.append x y
 
-class AppendType s1 s2 s3 | s1 s2 -> s3
-instance AppendType Signal Signal Signal
-instance AppendType Signal Sample Signal
-instance AppendType Sample Signal Signal
+type family Append s1 s2
+type instance Append Signal Signal = Signal
+type instance Append Signal Sample = Signal
+type instance Append Sample Signal = Signal
 
 
 class (SV.Singleton v (Apply c d)) => Singleton s1 s2 v c d | s2 -> s1 where
