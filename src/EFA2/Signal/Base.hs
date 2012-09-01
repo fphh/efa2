@@ -32,18 +32,18 @@ instance BProd Val Val Val where
 
 instance BProd Val Bool Val where
  (..*) x True = x
- (..*) x False = 0
- (../) x False = 0
+ (..*) _ False = 0
+ (../) _ False = 0
  (../) x True = x
  
 
 instance BProd Bool Bool Bool where
 -- And  
  (..*) x True = x
- (..*) x False = False
+ (..*) _ False = False
 -- Or 
  (../) x False = x
- (../) x True = True
+ (../) _ True = True
 
 -- | Calculation classes for basic Datatypes
 class BSum d1 d2 d3 | d1 d2 -> d3 where
