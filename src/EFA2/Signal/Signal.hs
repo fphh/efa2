@@ -95,7 +95,7 @@ class ZipProd s1 s2 s3 t1 t2 t3 c1 c2 c3 | s1 s2 -> s3, c1 c2 -> c3   where
   (.*) :: TC s1 t1 c1 -> TC s2 t2 c2 -> TC s3 t3 c3
   (./) :: TC s1 t3 c1 -> TC s2 t2 c2 -> TC s3 t1 c3
      
-instance  (DZipWith v1 v2 v3 d1 d2 d3, BProd d1 d2 d3, SArith s1 s2 s2, TProd t1 t2 t3) =>  ZipProd s1 s2 s2 t1 t2 t3 (v1 d1) (v2 d2) (v3 d3) where
+instance  (DZipWith v1 v2 v3 d1 d2 d3, BProd d1 d2 d3, SArith s1 s2 s3, TProd t1 t2 t3) =>  ZipProd s1 s2 s3 t1 t2 t3 (v1 d1) (v2 d2) (v3 d3) where
           (.*) x y = szipWith (..*) x y
           (./) x y = szipWith (../) x y
 

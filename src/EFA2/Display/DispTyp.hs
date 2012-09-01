@@ -43,6 +43,8 @@ getDisplayTypName Typ_X = "Split-Share"
 getDisplayTypName Typ_Y = "Collection-Share"
 getDisplayTypName Typ_N = "Efficiency"
 getDisplayTypName Typ_F = "Energy Flow"
+getDisplayTypName Typ_UT = "Ungetypt"
+
 
 getDisplayTypName t = error ("Error in getDisplayTypName - no Pattern Match on Typ: " ++ show  t)
 
