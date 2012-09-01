@@ -19,7 +19,7 @@ import qualified Data.List as L
 import Data.Eq (Eq((==), (/=)))
 import Data.Ord (Ord, (<), (>), (<=), (>=))
 import Data.Function ((.), ($), id, flip)
-import Prelude (Bool, Int, error, (++), (-))
+import Prelude (Bool, Int, (+))
 import qualified Prelude as P
 
 
@@ -416,14 +416,21 @@ instance
 ----------------------------------------------------------
 -- Length
 
-class Length c d where
-   length :: Data c d -> Int
 
-instance Length Nil d where
-   length (Data _) = 1
+length :: SV.Length (Apply c d) => Data c d -> Int
+length (Data x) = SV.len x
 
-instance SV.Length (v2 (Apply v1 d)) => Length (v2 :> v1) d where
-   length (Data x) = SV.len x
+
+class Size c d where
+   size :: Data c d -> Int
+
+instance Size Nil d where
+   size (Data _) = 1
+
+instance
+   (SV.Walker v2 Int Int, SV.Walker v2 (Apply v1 d) Int, Size v1 d) =>
+      Size (v2 :> v1) d where
+   size xd@(Data x) = SV.foldl (+) 0 $ SV.map (size . subData xd) x
 
 
 ----------------------------------------------------------

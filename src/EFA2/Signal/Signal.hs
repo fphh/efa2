@@ -761,7 +761,7 @@ minimum (TC x) = TC $ Data $ D.minimum x
 subSignal1D :: (SV.Lookup v d)=> TC s typ (Data (v :> Nil) d) -> [SignalIdx] -> TC s typ (Data (v :> Nil) d)
 subSignal1D (TC (Data x)) idxs = TC $ Data $ SV.lookUp x idxs
 
-length :: (D.Length c d) => TC s typ (Data c d) -> Int
+length :: (SV.Length (D.Apply c d)) => TC s typ (Data c d) -> Int
 length (TC x) = D.length x
 
 
