@@ -109,3 +109,10 @@ Executable demo-signalcalc
   Build-Depends:
     efa2,
     base
+
+Executable demo-sequence
+  Main-Is: demo/Signal/Demo_Sequence.hs
+  GHC-Options: -Wall
+  Build-Depends:
+    efa2,
+    base
