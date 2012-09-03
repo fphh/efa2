@@ -2,21 +2,17 @@
 
 module EFA2.Topology.Topology where
 
-import Data.Maybe
-import Data.Either
-import Data.Function
-
-import qualified Data.List as L
-import qualified Data.Map as M
-import qualified Data.List.HT as HTL
-
-import Debug.Trace
-
 import EFA2.Solver.Equation
 import EFA2.Interpreter.Env
 import EFA2.Topology.TopologyData
-import EFA2.Topology.EfaGraph
 import EFA2.Utils.Utils
+
+import qualified Data.List as L
+import qualified Data.Map as M
+import Data.Tuple.HT (snd3)
+import Data.Maybe (fromJust)
+import Data.Ord (comparing)
+
 
 -----------------------------------------------------------------------------------
 -- Topology Graph
@@ -161,8 +157,7 @@ mkStoreEqs :: Int -> ([InOutGraphFormat (LNode NLabel)], [InOutGraphFormat (LNod
 mkStoreEqs recordNum (ins, outs) = startEq ++ eqs
   where ins' = map (InStore . snd3) ins
         outs' = map (OutStore . snd3) outs
-        both@(b:_) = L.sortBy  (compare `on` f) $ ins' ++ outs'
-             
+        both@(b:_) = L.sortBy (comparing f) $ ins' ++ outs'
 
         f (InStore (_, l)) = sectionNLabel l
         f (OutStore (_, l)) = sectionNLabel l

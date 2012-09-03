@@ -31,17 +31,15 @@ module EFA2.Topology.TopologyData (
        topoToFlowTopo,
        partitionInOutStatic) where
 
-import Data.Graph.Inductive
-import Data.Function
-import Data.Maybe
-
 import EFA2.Topology.EfaGraph
 import EFA2.Utils.Utils
 
-import Debug.Trace
-
-
 import qualified Data.List as L
+import Data.Graph.Inductive
+import Data.Ord (comparing)
+import Data.Maybe (mapMaybe, fromJust)
+import Data.Tuple.HT (thd3)
+
 
 data NodeType = Storage Int
               | InitStorage Int
@@ -181,16 +179,16 @@ fromFlowToSecTopology (FlowTopology topo) = SecTopology topo
 getActiveStores :: Topology -> [[InOutGraphFormat (LNode NLabel)]]
 getActiveStores topo = map (sectionSort . filter (isActiveSt topo)) groupedIof
   where iof = mkInOutGraphFormat id topo
-        sortedIof = L.sortBy (compare `on` stNum) (filter isSt iof)
+        sortedIof = L.sortBy (comparing stNum) (filter isSt iof)
         isSt (_, (_, l), _) = isStorage (nodetypeNLabel l)
         stNum (_, (_, l), _) | Storage x <- nodetypeNLabel l = x
                              | InitStorage x <- nodetypeNLabel l = x
         groupedIof = L.groupBy cmp sortedIof
         cmp a b = stNum a == stNum b
-        sectionSort = L.sortBy (compare `on` sec)
+        sectionSort = L.sortBy (comparing sec)
         sec (_, (_, l), _) = sectionNLabel l
 
-isActiveSt :: Topology -> InOutGraphFormat (LNode NLabel) -> Bool     
+isActiveSt :: Topology -> InOutGraphFormat (LNode NLabel) -> Bool
 isActiveSt topo (ins, (nid, _), outs) = res
   where inEs = map ((,nid) . fst) ins
         outEs = map ((nid,) . fst) outs
@@ -199,7 +197,7 @@ isActiveSt topo (ins, (nid, _), outs) = res
 
 -- | Partition the storages in in and out storages, looking only at edges, not at values.
 -- This means that nodes with in AND out edges cannot be treated.
-partitionInOutStatic :: 
+partitionInOutStatic ::
   Topology -> [InOutGraphFormat (LNode NLabel)] -> ([InOutGraphFormat (LNode NLabel)], [InOutGraphFormat (LNode NLabel)])
 partitionInOutStatic topo iof = L.partition p iof
   where p t@([], _, []) = False
