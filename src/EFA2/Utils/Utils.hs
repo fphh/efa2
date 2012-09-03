@@ -132,7 +132,7 @@ diffByAtMostOne :: (Ord a) => S.Set a -> S.Set a -> Bool
 diffByAtMostOne s t = (S.size t > 1) && (S.size (t S.\\ s) == 1)
 
 hasSameVariable :: (Ord a) => S.Set a -> S.Set a -> Bool
-hasSameVariable s t = S.size (S.intersection s t) > 0
+hasSameVariable s t = not $ S.null (S.intersection s t)
 
 
 debugLevel = 0
