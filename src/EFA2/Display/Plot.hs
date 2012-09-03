@@ -174,14 +174,21 @@ class RPlot a where
   rPlot :: (String,a) -> IO ()
 
 instance RPlot PowerRecord where
-  rPlot (rName, (PowerRecord time pMap)) = plotPathsStyle (rPlotAttrs rName) (zip styleList xydata)
-    where ydata = map sPlotData $ M.elems pMap :: [[Val]]
-          xydata = map (zip (sPlotData time)) ydata
-          keys = map fst $ M.toList pMap
-          styleList = map (rPlotStyle . show) keys
+  rPlot (rName, (PowerRecord time pMap)) =
+     rPlotSingle rName time pMap
 
 instance RPlot SecPowerRecord where
-  rPlot (rName, (SecPowerRecord time pMap)) = plotPathsStyle (rPlotAttrs rName) (zip styleList xydata)
+  rPlot (rName, (SecPowerRecord time pMap)) =
+     rPlotSingle rName time pMap
+
+rPlotSingle ::
+   (Show k, DisplayTyp typ0, DisplayTyp typ1,
+    SV.FromList v Val, SV.Walker v Val Val) =>
+   String ->
+   TC s typ0 (Data (v :> Nil) Val) ->
+   M.Map k (TC s typ1 (Data (v :> Nil) Val)) ->
+   IO ()
+rPlotSingle rName time pMap = plotPathsStyle (rPlotAttrs rName) (zip styleList xydata)
     where ydata = map sPlotData $ M.elems pMap :: [[Val]]
           xydata = map (zip (sPlotData time)) ydata
           keys = map fst $ M.toList pMap
