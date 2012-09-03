@@ -4,6 +4,7 @@ module EFA2.Utils.Utils where
 
 import qualified Data.Vector.Unboxed as UV
 
+import qualified Data.List.Match as Match
 import qualified Data.List as L
 import qualified Data.Set as S
 import qualified Data.Map as M
@@ -111,13 +112,13 @@ getLEdge :: (Graph gr) => gr a b -> Node -> Node -> Maybe (LEdge b)
 getLEdge g from to =
   listToMaybe $ filter ((from ==) . fst3) $ inn g to
 
--- | generate an list of indices for a list  
+-- | generate an list of indices for a list
 listIdx :: [a] -> [Int]
-listIdx list = take (length list) $ iterate (+1) 0
+listIdx list = Match.take list $ iterate (+1) 0
 
 -- | generate a indexed List
 idxList :: [a] -> [(Int,a)] 
-idxList list = zip (listIdx list) list 
+idxList list = zip [0..] list 
 
 -- | own list show function to provide newline with each element
 myShowList :: Show a => [a] -> String
