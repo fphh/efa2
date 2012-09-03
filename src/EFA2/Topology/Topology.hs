@@ -10,8 +10,6 @@ import qualified Data.List as L
 import qualified Data.Map as M
 import qualified Data.List.HT as HTL
 
-import Control.Monad.Error
-
 import Debug.Trace
 
 import EFA2.Solver.Equation

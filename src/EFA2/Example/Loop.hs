@@ -3,8 +3,6 @@ module EFA2.Example.Loop (loop, etas, pows, dtimes) where
 import Data.Graph.Inductive
 import qualified Data.Map as M
 
-import Control.Monad.Error
-
 
 import EFA2.Topology.Topology
 import EFA2.Topology.TopologyData
