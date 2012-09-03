@@ -112,40 +112,13 @@ type instance CrossArith FSample FSignal = FSample
 type instance CrossArith FDistrib FClass = FDistrib
 type instance CrossArith FClass FDistrib = FClass
 
-{-
-prototype of a crossWith function
-
 crossWith ::
+   (D.CrossWith c1 c2 d1 d2 d3) =>
    (d1 -> d2 -> d3) ->
    TC s1 typ1 (Data c1 d1) ->
    TC s2 typ2 (Data c2 d2) ->
-   TC (CrossArith s1 s2) typ3 (Data c3 d3)
+   TC (CrossArith s1 s2) typ3 (Data (D.Cross c1 c2) d3)
 crossWith f (TC da1) (TC da2) = TC $ D.crossWith f da1 da2
--}
-
-crossWith1_1 ::
-   (SV.Walker v1 d1 (v2 d3), SV.Walker v2 d2 d3) =>
-   (d1 -> d2 -> d3) ->
-   TC s1 typ1 (Data (v1 :> Nil) d1) ->
-   TC s2 typ2 (Data (v2 :> Nil) d2) ->
-   TC (CrossArith s1 s2) typ3 (Data (v1 :> v2 :> Nil) d3)
-crossWith1_1 f (TC da1) (TC da2) = TC $ D.crossWith1_1 f da1 da2
-
-crossWith1_2 ::
-   (SV.Zipper v2 d1 (v1 d2) (v1 d3), SV.Walker v1 d2 d3) =>
-   (d1 -> d2 -> d3) ->
-   TC s1 typ1 (Data (v2 :> Nil) d1) ->
-   TC s2 typ2 (Data (v2 :> v1 :> Nil) d2) ->
-   TC (CrossArith s1 s2) typ3 (Data (v2 :> v1 :> Nil) d3)
-crossWith1_2 f (TC da1) (TC da2) = TC $ D.crossWith1_2 f da1 da2
-
-crossWith2_1 ::
-   (SV.Zipper v2 (v1 d1) d2 (v1 d3), SV.Walker v1 d1 d3) =>
-   (d1 -> d2 -> d3) ->
-   TC s1 typ1 (Data (v2 :> v1 :> Nil) d1) ->
-   TC s2 typ2 (Data (v2 :> Nil) d2) ->
-   TC (CrossArith s1 s2) typ3 (Data (v2 :> v1 :> Nil) d3)
-crossWith2_1 f (TC da1) (TC da2) = TC $ D.crossWith2_1 f da1 da2
 
 
 ----------------------------------------------------------
@@ -184,30 +157,42 @@ infix 7 .*, ./
 infix 6 .+,.-
 
 
-{-
 ----------------------------------------------------------
 -- Cross Arithmetics - based on crossWith
 
-class CrossProd s1 s2 s3 t1 t2 t3 c1 c2 c3 | s1 s2 -> s3, c1 c2 -> c3   where
-  (&*) :: TC s1 t1 c1 -> TC s2 t2 c2 -> TC s3 t3 c3
-  (&/) :: TC s1 t3 c1 -> TC s2 t2 c2 -> TC s3 t1 c3
+(&*) ::
+   (D.CrossWith c1 c2 d1 d2 d1, TProd t1 t2 t3, BProd d1 d2) =>
+   TC s1 t1 (Data c1 d1) ->
+   TC s2 t2 (Data c2 d2) ->
+   TC (CrossArith s1 s2) t3 (Data (D.Cross c1 c2) d1)
+(&*) = crossWith (..*)
 
-instance  (CrossWith s1 s2 s3 v1 v2 v3 d1 d2 d3, BProd d1 d2 d3, TProd t1 t2 t3) =>  CrossProd s1 s2 s3 t1 t2 t3 (v1 d1) (v2 d2) (v3 d3) where
-          (&*) x y = crossWith (..*) x y
-          (&/) x y = crossWith (../) x y
+(&/) ::
+   (D.CrossWith c1 c2 d1 d2 d1, TProd t1 t2 t3, BProd d1 d2) =>
+   TC s1 t3 (Data c1 d1) ->
+   TC s2 t2 (Data c2 d2) ->
+   TC (CrossArith s1 s2) t1 (Data (D.Cross c1 c2) d1)
+(&/) = crossWith (../)
 
-class CrossSum s1 s2 s3 t1 t2 t3 c1 c2 c3 | s1 s2 -> s3, c1 c2 -> c3   where
-  (&+) :: TC s1 t1 c1 -> TC s2 t2 c2 -> TC s3 t3 c3
-  (&-) :: TC s1 t3 c1 -> TC s2 t2 c2 -> TC s3 t1 c3
 
-instance  (CrossWith s1 s2 s3 v1 v2 v3 d1 d2 d3, BSum d1 d2 d3, TProd t1 t2 t3) =>  CrossSum s1 s2 s3 t1 t2 t3 (v1 d1) (v2 d2) (v3 d3) where
-          (&+) x y = crossWith (..+) x y
-          (&-) x y = crossWith (..-) x y
+(&+) ::
+   (D.CrossWith c1 c2 d d d, TSum t1 t2 t3, BSum d) =>
+   TC s1 t3 (Data c1 d) ->
+   TC s2 t2 (Data c2 d) ->
+   TC (CrossArith s1 s2) t1 (Data (D.Cross c1 c2) d)
+(&+) = crossWith (..+)
+
+(&-) ::
+   (D.CrossWith c1 c2 d d d, TSum t1 t2 t3, BSum d) =>
+   TC s1 t3 (Data c1 d) ->
+   TC s2 t2 (Data c2 d) ->
+   TC (CrossArith s1 s2) t1 (Data (D.Cross c1 c2) d)
+(&-) = crossWith (..-)
 
 
 infix 7 &*, &/
 infix 6 &+, &-
--}
+
 
 ----------------------------------------------------------
 -- Convenience Type Synonyms

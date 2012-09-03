@@ -180,29 +180,30 @@ instance
 ----------------------------------------------------------
 -- Zipping for cross Arithmetics
 
-crossWith1_1 ::
+-- this class does not scale well to arbitrary nesting depths
+class CrossWith c1 c2 d1 d2 d3 where
+   type Cross c1 c2 :: (* -> *)
+   crossWith ::
+      (d1 -> d2 -> d3) ->
+      Data c1 d1 -> Data c2 d2 -> Data (Cross c1 c2) d3
+
+instance
    (SV.Walker v1 d1 (v2 d3), SV.Walker v2 d2 d3) =>
-   (d1 -> d2 -> d3) ->
-   Data (v1 :> Nil) d1 ->
-   Data (v2 :> Nil) d2 ->
-   Data (v1 :> v2 :> Nil) d3
-crossWith1_1 = tensorProduct
+      CrossWith (v1 :> Nil) (v2 :> Nil) d1 d2 d3 where
+   type Cross (v1 :> Nil) (v2 :> Nil) = v1 :> v2 :> Nil
+   crossWith = tensorProduct
 
-crossWith1_2 ::
+instance
    (SV.Zipper v2 d1 (v1 d2) (v1 d3), SV.Walker v1 d2 d3) =>
-   (d1 -> d2 -> d3) ->
-   Data (v2 :> Nil) d1 ->
-   Data (v2 :> v1 :> Nil) d2 ->
-   Data (v2 :> v1 :> Nil) d3
-crossWith1_2 = zipWith
+      CrossWith (v2 :> Nil) (v2 :> v1 :> Nil) d1 d2 d3 where
+   type Cross (v2 :> Nil) (v2 :> v1 :> Nil) = v2 :> v1 :> Nil
+   crossWith = zipWith
 
-crossWith2_1 ::
+instance
    (SV.Zipper v2 (v1 d1) d2 (v1 d3), SV.Walker v1 d1 d3) =>
-   (d1 -> d2 -> d3) ->
-   Data (v2 :> v1 :> Nil) d1 ->
-   Data (v2 :> Nil) d2 ->
-   Data (v2 :> v1 :> Nil) d3
-crossWith2_1 = zipWith
+      CrossWith (v2 :> v1 :> Nil) (v2 :> Nil) d1 d2 d3 where
+   type Cross (v2 :> v1 :> Nil) (v2 :> Nil) = v2 :> v1 :> Nil
+   crossWith = zipWith
 
 
 ----------------------------------------------------------
