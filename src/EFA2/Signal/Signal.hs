@@ -19,13 +19,16 @@ import EFA2.Signal.Base (BSum(..), BProd(..), DArith0(..), Val, ZeroCrossing)
 import EFA2.Signal.Typ
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as UV
+
+import Control.Monad (liftM2)
 import Data.Monoid (Monoid, mempty, mappend)
+import Data.Tuple.HT (mapPair)
 
 import qualified Data.List as L
 import Data.Function ((.), ($))
 import Prelude
-          (Show, Eq, Ord, Bool,
-           Int, error, (++), Num, Fractional, (+), (-), (/), (*))
+          (Show, Eq, Ord, Maybe, Bool, error,
+           Int, (++), Num, Fractional, (+), (-), (/), (*))
 import qualified Prelude as P
 
 
@@ -328,6 +331,9 @@ type RSamp1 = (TSamp, PSamp1L)
 type RSamp = (TSamp, PSamp)
 
 
+{-# DEPRECATED rhead, rtail "use rviewL instead" #-}
+{-# DEPRECATED rlast, rinit "use rviewR instead" #-}
+
 rhead :: RSig -> RSamp1
 rhead (t,ps) = (head t, head ps)
 
@@ -339,6 +345,17 @@ rlast (t,ps) = (last t, last ps)
 
 rinit :: RSig -> RSig
 rinit (t,ps) = (init t, init ps)
+
+rviewL :: RSig -> Maybe (RSamp1, RSig)
+rviewL (t,ps) =
+   liftM2 zipPairs (viewL t) (viewL ps)
+
+rviewR :: RSig -> Maybe (RSig, RSamp1)
+rviewR (t,ps) =
+   liftM2 zipPairs (viewR t) (viewR ps)
+
+zipPairs :: (a,b) -> (c,d) -> ((a,c), (b,d))
+zipPairs (a,b) (c,d) = ((a,c), (b,d))
 
 rlen :: RSig -> Int
 rlen  (t,ps) = P.min (length t) (length ps)
@@ -537,7 +554,10 @@ instance (SFold Scalar (Data Nil) d1 d2) => TFold Scalar s2 (Data Nil) c2 d1 d2 
 -}
 
 ----------------------------------------------------------
--- SHead & STail
+-- Head & Tail
+
+{-# DEPRECATED head, tail "use viewL instead" #-}
+{-# DEPRECATED last, init "use viewR instead" #-}
 
 head, last ::
    (SV.Singleton v1 (Apply v2 d)) =>
@@ -545,7 +565,7 @@ head, last ::
 head (TC x) = TC $ D.head x
 last (TC x) = TC $ D.last x
 
-type family Head s1
+type family Head s
 type instance Head Signal = Sample
 type instance Head FSignal = FSample
 type instance Head Sample = Sample
@@ -562,6 +582,22 @@ class TailType s where
 instance TailType Signal where
 instance TailType FSignal where
 instance TailType Sample where
+
+
+
+viewL ::
+   (TailType s, SV.Singleton v1 (Apply v2 d)) =>
+   TC s typ (Data (v1 :> v2) d) ->
+   Maybe (TC (Head s) typ (Data v2 d), TC s typ (Data (v1 :> v2) d))
+viewL (TC x) =
+   P.fmap (mapPair (TC, TC)) $ D.viewL x
+
+viewR ::
+   (TailType s, SV.Singleton v1 (Apply v2 d)) =>
+   TC s typ (Data (v1 :> v2) d) ->
+   Maybe (TC s typ (Data (v1 :> v2) d), TC (Head s) typ (Data v2 d))
+viewR (TC x) =
+   P.fmap (mapPair (TC, TC)) $ D.viewR x
 
 
 ----------------------------------------------------------

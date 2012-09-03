@@ -15,11 +15,12 @@ import qualified Data.Vector.Unboxed as UV
 import qualified Data.Vector as V
 
 import qualified Data.List as L
+import Data.Tuple.HT (mapPair)
 
 import Data.Eq (Eq((==), (/=)))
 import Data.Ord (Ord, (<), (>), (<=), (>=))
 import Data.Function ((.), ($), id, flip)
-import Prelude (Bool, Int, (+))
+import Prelude (Maybe, Bool, Int, (+))
 import qualified Prelude as P
 
 
@@ -334,6 +335,9 @@ transpose2 (Data x) = Data $ SV.transpose x
 ----------------------------------------------------------
 -- Head & Tail
 
+{-# DEPRECATED head, tail "use viewL instead" #-}
+{-# DEPRECATED last, init "use viewR instead" #-}
+
 head, last ::
    (SV.Singleton v2 (Apply v1 d)) => Data (v2 :> v1) d -> Data v1 d
 head (Data x) = Data $ SV.head x
@@ -343,6 +347,17 @@ tail, init ::
    (SV.Singleton v2 (Apply v1 d)) => Data (v2 :> v1) d -> Data (v2 :> v1) d
 tail (Data x) = Data $ SV.tail x
 init (Data x) = Data $ SV.init x
+
+viewL ::
+   (SV.Singleton v2 (Apply v1 d)) =>
+   Data (v2 :> v1) d -> Maybe (Data v1 d, Data (v2 :> v1) d)
+viewL (Data x) = P.fmap (mapPair (Data, Data)) $ SV.viewL x
+
+viewR ::
+   (SV.Singleton v2 (Apply v1 d)) =>
+   Data (v2 :> v1) d -> Maybe (Data (v2 :> v1) d, Data v1 d)
+viewR (Data x) = P.fmap (mapPair (Data, Data)) $ SV.viewR x
+
 
 
 ----------------------------------------------------------

@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, FunctionalDependencies, UndecidableInstances, KindSignatures, GeneralizedNewtypeDeriving, FlexibleContexts #-} 
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, FunctionalDependencies, UndecidableInstances, KindSignatures, GeneralizedNewtypeDeriving, FlexibleContexts #-}
 
 
 module EFA2.Signal.Vector (module EFA2.Signal.Vector) where
@@ -9,14 +9,18 @@ import qualified Data.Vector as V
 import qualified Data.List as L
 import qualified Data.List.HT as LH
 
+import Data.Maybe.HT (toMaybe)
 import Data.Eq (Eq((==)))
 import Data.Function ((.), ($), id, flip)
 import Data.Maybe (Maybe)
-import Prelude (Bool, Int, Ord, error, (++), (-), Show, show)
+import Prelude (Bool, Int, Ord, error, (++), (-), Show, show, not)
 
 
 --------------------------------------------------------------
 -- Singleton Class
+
+{-# DEPRECATED head, tail "use viewL instead" #-}
+{-# DEPRECATED last, init "use viewR instead" #-}
 
 class Singleton vec d where
    maximum :: vec d -> d
@@ -29,6 +33,8 @@ class Singleton vec d where
    tail :: vec d -> vec d
    last :: vec d -> d
    init :: vec d -> vec d
+   viewL :: vec d -> Maybe (d, vec d)
+   viewR :: vec d -> Maybe (vec d, d)
    all :: (d -> Bool) -> vec d -> Bool
    any :: (d -> Bool) -> vec d -> Bool
 
@@ -43,6 +49,8 @@ instance (Ord d) => Singleton V.Vector d where
    tail = V.tail
    last = V.last
    init = V.init
+   viewL xs = toMaybe (not $ V.null xs) (V.head xs, V.tail xs)
+   viewR xs = toMaybe (not $ V.null xs) (V.init xs, V.last xs)
    all = V.all
    any = V.any
 
@@ -57,6 +65,8 @@ instance (Ord d, UV.Unbox d) => Singleton UV.Vector d where
    tail = UV.tail
    last = UV.last
    init = UV.init
+   viewL xs = toMaybe (not $ UV.null xs) (UV.head xs, UV.tail xs)
+   viewR xs = toMaybe (not $ UV.null xs) (UV.init xs, UV.last xs)
    all = UV.all
    any = UV.any
 
@@ -71,6 +81,8 @@ instance (Ord d) => Singleton [] d where
    tail = L.tail
    last = L.last
    init = L.init
+   viewL = LH.viewL
+   viewR = LH.viewR
    all = L.all
    any = L.any
 

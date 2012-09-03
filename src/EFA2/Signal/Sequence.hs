@@ -18,8 +18,7 @@ import EFA2.Signal.Signal
           (TC(TC), RSig, TSigL, TZeroSamp1L, TZeroSamp, TSamp, PSamp, PSigL,
            RSamp1, DTSamp, PSamp2LL, Samp, Samp1L, FSignal,
            (.+), (.-), (.*), (./), (.++),
-           rhead, rlast, rtail, rsingleton,
-           sampleAverage, deltaSig, sigPartInt, sigFullInt,
+           rsingleton, sampleAverage, deltaSig, sigPartInt, sigFullInt,
            changeType, untype, fromScalar, toSample, sigSum, toSigList, fromSigList)
 import EFA2.Signal.Typ
 import EFA2.Signal.Data (Data(Data), Nil, (:>))
@@ -28,7 +27,8 @@ import qualified Data.Vector.Unboxed as UV
 
 import EFA2.Utils.Utils
 
-import Data.Monoid
+import Control.Monad (liftM2)
+import Data.Monoid (Monoid, mempty)
 
 
 data StepType = LeavesZeroStep
@@ -110,14 +110,14 @@ genSequ ::  PowerRecord -> (Sequ, SequPwrRecord)
 genSequ pRec = removeNilSections (sequ++[lastSec],SequData pRecs)
   where rSig = record2RSig pRec
         pRecs = map (rsig2SecRecord pRec) (seqRSig ++ [lastRSec])
-        ((lastSec,sequ),(lastRSec,seqRSig)) = recyc (rtail rSig) (rhead rSig) (((0,0),[]),(rsingleton $ rhead rSig,[]))
+        ((lastSec,sequ),(lastRSec,seqRSig)) = recyc (S.rtail rSig) (S.rhead rSig) (((0,0),[]),(rsingleton $ S.rhead rSig,[]))
 
         recyc :: RSig -> RSamp1 -> ((Sec,Sequ), (RSig, [RSig])) -> ((Sec,Sequ), (RSig, [RSig]))
-        -- recyc rSig x1 (((lastIdx,idx),sequ),(secRSig, sequRSig)) | rSig /= mempty = recyc (rtail rSig) (rhead rSig) (g $ stepDetect x1 x2, f $ stepDetect x1 x2)
-        -- Incoming rSig is at least two samples long -- detect changes 
-        recyc rSig x1 (((lastIdx,idx),sequ),(secRSig, sequRSig)) | (S.rlen rSig) >=2 = recyc (rtail rSig) (rhead rSig) (g $ stepDetect x1 x2, f $ stepDetect x1 x2)        
+        -- recyc rSig x1 (((lastIdx,idx),sequ),(secRSig, sequRSig)) | rSig /= mempty = recyc (S.rtail rSig) (S.rhead rSig) (g $ stepDetect x1 x2, f $ stepDetect x1 x2)
+        -- Incoming rSig is at least two samples long -- detect changes
+        recyc rSig x1 (((lastIdx,idx),sequ),(secRSig, sequRSig)) | (S.rlen rSig) >=2 = recyc (S.rtail rSig) (S.rhead rSig) (g $ stepDetect x1 x2, f $ stepDetect x1 x2)
           where
-            x2 = rhead rSig
+            x2 = S.rhead rSig
             xs1 = rsingleton x1
             xs2 = rsingleton x2
 
@@ -172,14 +172,21 @@ stepX p1 p2
 
 
 addZeroCrossings :: PowerRecord -> PowerRecord
-addZeroCrossings r = rsig2Record rSigNew r
-  where rSig = record2RSig r
-        rSigNew = (f (rtail rSig) (rhead rSig) mempty) .++ (rsingleton $ rlast rSig)
+addZeroCrossings r = rsig2Record rSigNew0 r
+  where rSigNew0 =
+           case record2RSig r of
+              rSig ->
+                 case liftM2 (,) (S.rviewL rSig) (S.rviewR rSig) of
+                    Nothing -> error "addZeroCrossings: empty signal"
+                    Just ((rhead, rtail), (_, rlast)) ->
+                       f rtail rhead mempty .++ rsingleton rlast
 
         f :: RSig -> RSamp1 -> RSig -> RSig
-        f rSig rold rSigNew | rSig /= mempty = f (rtail rSig) rnew (rSigNew .++ (getZeroCrossings rold rnew))
-          where rnew = rhead rSig
-        f _ _ rSigNew |  otherwise = rSigNew
+        f rSig rold rSigNew =
+           case S.rviewL rSig of
+              Nothing -> rSigNew
+              Just (rnew, rtail) ->
+                 f rtail rnew (rSigNew .++ getZeroCrossings rold rnew)
 
 -----------------------------------------------------------------------------------
 -- | Function for calculating zero Crossings
