@@ -103,6 +103,15 @@ Executable sequenzflussgraph
     utility-ht,
     base
 
+Executable threewaysto
+  Main-Is: examples/elementary/threeWaySto_pred/Main_ThreeWay_sto_alt.hs
+  GHC-Options: -Wall
+  Build-Depends:
+    efa2,
+    process,
+    containers,
+    base
+
 Executable demo-signalcalc
   Main-Is: demo/Signal/Demo_SignalCalc.hs
   GHC-Options: -Wall
