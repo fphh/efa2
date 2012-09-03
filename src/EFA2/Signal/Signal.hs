@@ -102,23 +102,51 @@ tzipWith f xs ys = zipWith g xs ys
    where g x y = fromSample $ f (toSample x) (toSample y)
 
 
-{-
 ----------------------------------------------------------------
 -- Signal crosswith with Rule of Signal Inheritance
-class CrossArith s1 s2 s3 | s1 s2 -> s3
-instance CrossArith Signal Sample Signal
-instance CrossArith Sample Signal Sample
-instance CrossArith FSignal FSample FSignal
-instance CrossArith FSample FSignal FSample
-instance CrossArith FDistrib FClass FDistrib
-instance CrossArith FClass FDistrib FClass
+type family CrossArith s1 s2
+type instance CrossArith Signal Sample = Signal
+type instance CrossArith Sample Signal = Sample
+type instance CrossArith FSignal FSample = FSignal
+type instance CrossArith FSample FSignal = FSample
+type instance CrossArith FDistrib FClass = FDistrib
+type instance CrossArith FClass FDistrib = FClass
 
-class (CrossArith s1 s2 s3, DCrossWith c1 c2 c3 d1 d2 d3) => CrossWith s1 s2 s3 c1 c2 c3 d1 d2 d3 | s1 s2 -> s3, c1 c2 -> c3  where
-       crossWith ::  (d1 -> d2 -> d3) -> TC s1 typ1 (c1 d1) -> TC s2 typ2 (c2 d2) -> TC s3 typ3 (c3 d3)
+{-
+prototype of a crossWith function
 
-instance (CrossArith s1 s2 s3, DCrossWith c1 c2 c3 d1 d2 d3) => CrossWith s1 s2 s3 c1 c2 c3 d1 d2 d3 where
-       crossWith f (TC da1) (TC da2) = TC $ dcrossWith f da1 da2
+crossWith ::
+   (d1 -> d2 -> d3) ->
+   TC s1 typ1 (Data c1 d1) ->
+   TC s2 typ2 (Data c2 d2) ->
+   TC (CrossArith s1 s2) typ3 (Data c3 d3)
+crossWith f (TC da1) (TC da2) = TC $ D.crossWith f da1 da2
 -}
+
+crossWith1_1 ::
+   (SV.Walker v1 d1 (v2 d3), SV.Walker v2 d2 d3) =>
+   (d1 -> d2 -> d3) ->
+   TC s1 typ1 (Data (v1 :> Nil) d1) ->
+   TC s2 typ2 (Data (v2 :> Nil) d2) ->
+   TC (CrossArith s1 s2) typ3 (Data (v1 :> v2 :> Nil) d3)
+crossWith1_1 f (TC da1) (TC da2) = TC $ D.crossWith1_1 f da1 da2
+
+crossWith1_2 ::
+   (SV.Zipper v2 d1 (v1 d2) (v1 d3), SV.Walker v1 d2 d3) =>
+   (d1 -> d2 -> d3) ->
+   TC s1 typ1 (Data (v2 :> Nil) d1) ->
+   TC s2 typ2 (Data (v2 :> v1 :> Nil) d2) ->
+   TC (CrossArith s1 s2) typ3 (Data (v2 :> v1 :> Nil) d3)
+crossWith1_2 f (TC da1) (TC da2) = TC $ D.crossWith1_2 f da1 da2
+
+crossWith2_1 ::
+   (SV.Zipper v2 (v1 d1) d2 (v1 d3), SV.Walker v1 d1 d3) =>
+   (d1 -> d2 -> d3) ->
+   TC s1 typ1 (Data (v2 :> v1 :> Nil) d1) ->
+   TC s2 typ2 (Data (v2 :> Nil) d2) ->
+   TC (CrossArith s1 s2) typ3 (Data (v2 :> v1 :> Nil) d3)
+crossWith2_1 f (TC da1) (TC da2) = TC $ D.crossWith2_1 f da1 da2
+
 
 ----------------------------------------------------------
 -- Normal Arithmetics - based on zip
