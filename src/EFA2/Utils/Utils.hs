@@ -7,7 +7,7 @@ import qualified Data.Vector.Unboxed as UV
 import qualified Data.List as L
 import qualified Data.Set as S
 import qualified Data.Map as M
-import Data.Maybe
+import Data.Maybe (fromJust, listToMaybe)
 
 import Data.Graph.Inductive
 
@@ -109,11 +109,7 @@ mapGraphLabels f g = map f (mkInOutGraphFormat snd g)
 
 getLEdge :: (Graph gr) => gr a b -> Node -> Node -> Maybe (LEdge b)
 getLEdge g from to =
-  case filter f is of
-       (x:_) -> Just x
-       _ -> Nothing
-  where is = inn g to
-        f (x, _, _) = x == from
+  listToMaybe $ filter ((from ==) . fst3) $ inn g to
 
 -- | generate an list of indices for a list  
 listIdx :: [a] -> [Int]
