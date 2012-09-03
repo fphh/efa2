@@ -148,12 +148,10 @@ hornOrder :: (EqTerm -> Bool) -> [EqTerm] -> [EqTerm] -> [EqTerm]
 hornOrder isVar givenExt ts = (uncurry makeHornOrder) (makeHornClauses isVar givenExt ts)
 
 
+-- using a NonEmptyList, the 'tail' could be total
 allNotEmptyCombinations :: (Ord a) => [a] -> [[a]]
-allNotEmptyCombinations xs = filter (not .null) $ map (map fst) zs
-  where len = length xs
-        bits = sequence (replicate len [False, True])
-        ys = map (zip xs) bits
-        zs = map (filter ((True ==) . snd)) ys
+allNotEmptyCombinations =
+   tail . map catMaybes . mapM (\x -> [Nothing, Just x])
 
 
 setCoverBruteForce :: M.Map Node (S.Set EqTerm) -> Node -> [Node] -> [[Node]]
