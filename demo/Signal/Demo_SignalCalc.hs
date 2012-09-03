@@ -48,23 +48,17 @@ fSig1, fSig2 :: FFSig
 fSig1 = S.sigPartInt time pSig1
 fSig2 = S.sigPartInt time pSig2
 
-{-
 -- Calculate 1D average Power Signal
 pavSig1 :: FSig1 (Typ A P Tt) Val
-pavSig1 = fSig1./dtime
--}
+pavSig1 = fSig1 ./ dtime
 
-{-
 -- Calculate 1D efficiency signal
 nSig :: FSig1 (Typ A N Tt) Val
-nSig = fSig2./fSig1
--}
+nSig = fSig2 ./ fSig1
 
-{-
 -- calculate effective efficiency value in two ways
-nVal1 :: Scal (Typ A N Tt) Val
+nVal1 :: FSig1 (Typ A N Tt) Val
 nVal1 = S.sigFullInt time pSig2 ./ S.sigFullInt time pSig1
--}
 
 nVal2 :: Scal (Typ A N Tt) Val
 nVal2 = S.sigSum fSig2 ./ S.sigSum fSig1
