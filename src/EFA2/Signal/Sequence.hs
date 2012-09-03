@@ -143,9 +143,7 @@ genSequ pRec = removeNilSections (sequ++[lastSec],SequData pRecs)
 -- | Function to remove Nil-Sections which have same start and stop Index
 removeNilSections :: (Sequ,SequPwrRecord) ->   (Sequ, SequPwrRecord)
 removeNilSections (sequ, SequData pRecs) = (fsequ, SequData fRecs)
-  where (fsequ, fRecs) = unzip $ filter f $ zip sequ pRecs
-        f ((lastIdx, idx), _) | lastIdx == idx = False
-        f _ = True
+  where (fsequ, fRecs) = unzip $ filter (uncurry (/=) . fst) $ zip sequ pRecs
 
 
 -- | Function to detect and classify a step over several signals
