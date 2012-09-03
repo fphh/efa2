@@ -102,3 +102,10 @@ Executable sequenzflussgraph
     efa2,
     utility-ht,
     base
+
+Executable demo-signalcalc
+  Main-Is: demo/Signal/Demo_SignalCalc.hs
+  GHC-Options: -Wall
+  Build-Depends:
+    efa2,
+    base
