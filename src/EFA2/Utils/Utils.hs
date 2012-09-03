@@ -5,10 +5,12 @@ module EFA2.Utils.Utils where
 import qualified Data.Vector.Unboxed as UV
 
 import qualified Data.List.Match as Match
+import qualified Data.List.HT as LH
 import qualified Data.List as L
 import qualified Data.Set as S
 import qualified Data.Map as M
 import Data.Maybe (fromJust, listToMaybe)
+import Data.Tuple.HT (swap, fst3)
 
 import Data.Graph.Inductive
 
@@ -38,20 +40,8 @@ unique :: (Ord a) => [a] -> [a]
 unique = gunique S.empty  -- 
 -- unique = S.toList . S.fromList
 
-fst3 :: (a, b, c) -> a
-fst3 (x, _, _) = x
-
-snd3 :: (a, b, c) -> b
-snd3 (_, x, _) = x
-
-thd3 :: (a, b, c) -> c
-thd3 (_, _, x) = x
-
-flipPair :: (a, b) -> (b, a)
-flipPair (a, b) = (b, a)
-
 reverseMap :: (Ord b) => M.Map a b -> M.Map b a
-reverseMap = M.fromList . map flipPair . M.toList
+reverseMap = M.fromList . map swap . M.toList
 
 for :: [a] -> (a -> b) -> [b]
 for = flip map
@@ -60,7 +50,7 @@ sameValue :: a -> Double
 sameValue = const 1.0
 
 pairs :: [a] -> [(a, a)]
-pairs xs = zipWith (,) xs (tail xs)
+pairs = LH.mapAdjacent (,)
 
 const2 x _ _ = x
 

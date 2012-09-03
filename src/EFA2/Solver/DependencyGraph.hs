@@ -1,20 +1,16 @@
-{-# LANGUAGE ScopedTypeVariables #-}
-
-
 module EFA2.Solver.DependencyGraph where
 
+import EFA2.Solver.Equation (EqTerm, mkVarSet)
+import EFA2.Utils.Utils
+
 import Data.Graph.Inductive
-import Data.Maybe
+import Data.Maybe (mapMaybe)
+import Data.Tuple.HT (swap)
 
 import qualified Data.Set as S
 import qualified Data.Map as M
 import qualified Data.List as L
 import qualified Data.List.HT as HTL
-
-import Debug.Trace
-
-import EFA2.Utils.Utils
-import EFA2.Solver.Equation
 
 
 dependencyGraph :: (S.Set EqTerm -> S.Set EqTerm -> Bool) -> [S.Set EqTerm] -> Gr (S.Set EqTerm) ()
@@ -23,7 +19,7 @@ dependencyGraph p vsets = g
         ys = concatMap (uncurry (mkArcs p)) xs
         m = M.fromList (zip vsets [0..])
         es = unique $ map (\(x, y) -> (m M.! x, m M.! y, ())) ys
-        g = mkGraph (map flipPair $ M.toList m) es
+        g = mkGraph (map swap $ M.toList m) es
 
 mkArcs :: (Ord a, Show a) => (S.Set a -> S.Set a -> Bool) -> S.Set a -> [S.Set a] -> [(S.Set a, S.Set a)]
 mkArcs p s ss = mapMaybe g ss
