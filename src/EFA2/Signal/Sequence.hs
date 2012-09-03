@@ -113,12 +113,13 @@ genSequ pRec = removeNilSections (sequ++[lastSec],SequData pRecs)
         ((lastSec,sequ),(lastRSec,seqRSig)) = recyc (rtail rSig) (rhead rSig) (((0,0),[]),(rsingleton $ rhead rSig,[]))
 
         recyc :: RSig -> RSamp1 -> ((Sec,Sequ), (RSig, [RSig])) -> ((Sec,Sequ), (RSig, [RSig]))
-        recyc rSig x1 (((lastIdx,idx),sequ),(secRSig, sequRSig)) | rSig /= mempty = recyc (rtail rSig) (rhead rSig) (g $ stepDetect x1 x2, f $ stepDetect x1 x2)
+        -- recyc rSig x1 (((lastIdx,idx),sequ),(secRSig, sequRSig)) | rSig /= mempty = recyc (rtail rSig) (rhead rSig) (g $ stepDetect x1 x2, f $ stepDetect x1 x2)
+        -- Incoming rSig is at least two samples long -- detect changes 
+        recyc rSig x1 (((lastIdx,idx),sequ),(secRSig, sequRSig)) | (S.rlen rSig) >=2 = recyc (rtail rSig) (rhead rSig) (g $ stepDetect x1 x2, f $ stepDetect x1 x2)        
           where
             x2 = rhead rSig
             xs1 = rsingleton x1
             xs2 = rsingleton x2
-
 
             f :: EventType -> (RSig, [RSig])
             f LeftEvent = (xs1.++xs2, sequRSig ++ [secRSig])           -- add actual Interval to next section
@@ -131,7 +132,13 @@ genSequ pRec = removeNilSections (sequ++[lastSec],SequData pRecs)
             g RightEvent = ((idx+1, idx+1), sequ ++ [(lastIdx, idx+1)])
             g MixedEvent = ((idx+1, idx+1), sequ ++ [(lastIdx, idx)] ++ [(idx, idx+1)])
             g NoEvent = ((lastIdx, idx+1), sequ)
-        recyc _ _ acc | otherwise = acc
+            
+        -- Incoming rList is only one Point long -- append last sample to last section
+        recyc rSig x1 (((lastIdx,idx),sequ),(secRSig, sequRSig)) | (S.rlen rSig) >=1 = (((lastIdx,idx+1),sequ),(secRSig .++ rSig, sequRSig))
+        
+        -- Incoming rList is empty -- return result
+        recyc _ _ acc = acc
+        
 
 -- | Function to remove Nil-Sections which have same start and stop Index
 removeNilSections :: (Sequ,SequPwrRecord) ->   (Sequ, SequPwrRecord)

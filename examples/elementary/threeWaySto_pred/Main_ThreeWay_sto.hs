@@ -121,7 +121,7 @@ main = do
       n = 2
       --l = fromIntegral $ length $ replicate n (s01 ++ s01')
       --time = [0, 0] ++ (concatMap (replicate 3) [1.0 .. l])
-      time = take 40 [0 ..]
+      time = take 13 [0 ..]
 
 
       pMap =  M.fromList [ (PPosIdx 0 1, mkSig n s01 .++ (S.fromList [head s01] :: PSigL)),
@@ -151,9 +151,11 @@ main = do
       -- env = map (\(x:y:_) -> variation sqTopo x y) (sequence [[1.07, 1.08 .. 1.1], [0.7]])
 
 
-
-  --drawTopologyX' sqTopo
-  --plotMesh3d [] [] res
-  --print (head res)
+  putStrLn (show time)
+  putStrLn (show pRec) 
+  putStrLn (show sqTopo)
+  drawTopologyX' sqTopo
+--  plotMesh3d [] [] res
+  print (head res)
   mapM_ (drawTopology sqTopo) res
-  --drawTopology sqTopo (head res)
+  drawTopology sqTopo (head res)

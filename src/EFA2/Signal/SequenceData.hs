@@ -34,7 +34,7 @@ type SequPwrRecord = SequData [SecPowerRecord]
 
 -- | Flow record to contain flow signals assigned to the tree
 data FlRecord a b = FlRecord a (M.Map PPosIdx b)
-type FlowRecord = FlRecord DTSig FSig
+type FlowRecord = FlRecord DTFSig FFSig
 type FlowValRecord = FlRecord DTVal FVal
 
 

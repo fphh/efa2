@@ -43,8 +43,11 @@ getDisplayTypName Typ_X = "Split-Share"
 getDisplayTypName Typ_Y = "Collection-Share"
 getDisplayTypName Typ_N = "Efficiency"
 getDisplayTypName Typ_F = "Energy Flow"
+getDisplayTypName Typ_UT = "Ungetypt"
+getDisplayTypName Typ_T = "Time"
 
-getDisplayTypName t = error ("Error in getDisplayTypName - no Pattern Match on Typ: " ++ show  t)
+
+getDisplayTypName t = error ("Error in EFA2.Display.DispTyp - getDisplayTypName - no Pattern Match on Typ: " ++ show  t)
 
 
 

@@ -33,40 +33,45 @@ import EFA2.Signal.Data (Data, Nil)
 import EFA2.Signal.Typ
 
 import EFA2.Utils.Utils
-
-
+      
+mkSig :: Int -> ([Val] -> PSigL)
+mkSig n = S.fromList . concat . replicate n
+ 
 -- | A. Generate System Topology definition
 topo :: Topology
 topo = mkGraph (makeNodes nodes) (makeEdges edges)
   where nodes = [(0, Source), (1, Crossing), (2, Sink), (3, Storage 0)]
         edges = [(0, 1, defaultELabel), (1, 2, defaultELabel), (1, 3, defaultELabel)]
         
--- | B. Generating a sequence Topology using a fake dataset
+-- -- | B. Generating a sequence Topology using a fake dataset
 sqTopo :: Topology
 sqTopo = sqTopo
   where
-      s01 = [0, 2, 2, 0, 0, 0]
-      s10 = [0, 0.8, 0.8, 0, 0, 0]
-      s12 = [0.3, 0.3, 0.3, 0.3, 0.3, 0.3]
-      s21 = [0.2, 0.2, 0.2, 0.2, 0.2, 0.2]
-      s13 = [0, 0.5, 0.5, 0, -0.3, -0.3]
-      s31 = [0, 0.25, 0.25, 0, -0.6, -0.6]
+    s01 = [0, 2, 2, 0, 0, 0]
+    s10 = [0, 0.8, 0.8, 0, 0, 0]
+    s12 = [0.3, 0.3, 0.3, 0.3, 0.3, 0.3]
+    s21 = [0.2, 0.2, 0.2, 0.2, 0.2, 0.2]
+    s13 = [0, 0.5, 0.5, 0, -0.3, -0.3]
+    s31 = [0, 0.25, 0.25, 0, -0.6, -0.6]
+       
+    n = 1   
+    
+    time = take 7 [0 ..]
 
-      n = 1
-      time = take 7 [0 ..]
+    pMap =  M.fromList [ (PPosIdx 0 1, mkSig n s01 .++ (S.fromList [head s01] :: PSigL)),
+                         (PPosIdx 1 0, mkSig n s10 .++ (S.fromList [head s10] :: PSigL)),
+                         (PPosIdx 1 2, mkSig n s12 .++ (S.fromList [head s12] :: PSigL)),
+                         (PPosIdx 2 1, mkSig n s21 .++ (S.fromList [head s21] :: PSigL)),
+                         (PPosIdx 1 3, mkSig n s13 .++ (S.fromList [head s13] :: PSigL)),
+                         (PPosIdx 3 1, mkSig n s31 .++ (S.fromList [head s31] :: PSigL)) ]
 
-      pMap =  M.fromList [ (PPosIdx 0 1, mkSig n s01 .++ (S.fromList [head s01] :: PSigL)),
-                           (PPosIdx 1 0, mkSig n s10 .++ (S.fromList [head s10] :: PSigL)),
-                           (PPosIdx 1 2, mkSig n s12 .++ (S.fromList [head s12] :: PSigL)),
-                           (PPosIdx 2 1, mkSig n s21 .++ (S.fromList [head s21] :: PSigL)),
-                           (PPosIdx 1 3, mkSig n s13 .++ (S.fromList [head s13] :: PSigL)),
-                           (PPosIdx 3 1, mkSig n s31 .++ (S.fromList [head s31] :: PSigL)) ]
-
-      pRec = PowerRecord (S.fromList time) pMap
-      (_, sqTopo) = makeSequence pRec topo
-
-      mkSig :: Int -> ([Val] -> PSigL)
-      mkSig n = S.fromList . concat . replicate n
+       
+    pRec = PowerRecord (S.fromList time) pMap
+       
+    (_, sqTopo) = makeSequence pRec topo
+       
+    mkSig :: Int -> ([Val] -> PSigL)
+    mkSig n = S.fromList . concat . replicate n
 
 -- | C. System solving
 solve3Way :: Topology -> Val -> Val -> Envs UTFSig
@@ -215,9 +220,10 @@ main = do
     lossSYS1 = energySource .- energyInt 
     lossSYS2 = energyInt .- energyConsumption 
         
-    
+
+  
   -- | D. -- Selected Energy Flow Plots
- 
+
 --  drawTopologyX' sqTopo
   drawTopology  sqTopo (head(head(varEnvs))) 
   drawTopology  sqTopo (last(head(varEnvs))) 

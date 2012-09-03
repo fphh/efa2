@@ -2,8 +2,9 @@ import EFA2.Signal.Sequence
 import EFA2.Signal.SequenceData
 import  EFA2.Interpreter.Env
 import EFA2.Utils.Utils
-import EFA2.Signal.Signal
+import qualified EFA2.Signal.Signal as S
 import EFA2.Display.Report
+import EFA2.Signal.Signal (PSigL)
 
 import qualified Data.Map as M 
 import EFA2.Display.ReportSequence
@@ -11,10 +12,10 @@ import EFA2.Display.DispSequence
 
 import EFA2.Display.Plot
 
-time = sfromList [0,10..50]
+time = S.fromList [0,10..50]
 
-p1 = sfromList [1,0,0,1,0,0] :: PSigL
-p2 = sfromList [1,0,1,1,1,0] :: PSigL
+p1 = S.fromList [1,0,0,1,0,0] :: PSigL
+p2 = S.fromList [1,0,1,1,1,0] :: PSigL
 
 pmap = M.fromList [(PPosIdx 0 1,p1),(PPosIdx 1 0,p2)]
 

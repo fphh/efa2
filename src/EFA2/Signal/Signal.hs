@@ -184,18 +184,24 @@ infix 6 &+, &-
 ----------------------------------------------------------
 -- Convenience Type Synonyms
 
--- generic
+-- generic Type Synonyms
+
 type Scal typ a = TC Scalar typ (DVal a)
 
 type Sc = Scal (Typ UT UT UT) Val
 
 type Sig1 typ a = TC Signal typ (UVec a)
-type FSig1 typ a = TC FSignal typ (UVec a)
+type Sig2 typ a = TC Signal typ (Vec2 a)
 type Sig1L typ a = TC Signal typ (List a)
 type Sig2L typ a = TC Signal typ (List2 a)
 
-type Sig2 typ a = TC Signal typ (Vec2 a)
+type Samp typ a = TC Sample typ (DVal a)
+type Samp1L typ a = TC Sample typ (List a)
+
+type FSig1 typ a = TC FSignal typ (UVec a)
 type FSig2 typ a = TC FSignal typ (Vec2 a)
+type FSig1L typ a = TC FSignal typ (List a)
+type FSig2L typ a = TC FSignal typ (List2 a)
 
 type Test typ a = TC TestRow typ (DVal a)
 type Test1 typ a = TC TestRow typ (UVec a)
@@ -204,44 +210,36 @@ type Test1L typ a = TC TestRow typ (List a)
 type Test2L typ a = TC TestRow typ (List2 a)
 
 
-type Samp typ a = TC Sample typ (DVal a)
-type Samp1L typ a = TC Sample typ (List a)
+type SignalIdx = Int
 
--- specific
---type UTignal a = Sig1 (Typ UT UT UT) a
---type FUTSignal = FSig1 (Typ UT UT UT) Val
+-- specific Type Synonyms
 
--- type UTSignal a = Sig1 (Typ UT UT UT) a
+-- #######################
+-- Time Signals
+-- time
+type TSig = Sig1 (Typ A T Tt) Val
+type TSigL = Sig1L (Typ A T Tt) Val
+
+--power
 type PSig = Sig1 (Typ A P Tt) Val
 type PSig2 = Sig2 (Typ A P Tt) Val
 type PSigL = Sig1L (Typ A P Tt) Val
 type PSig2L = Sig2L (Typ A P Tt) Val
 
-type ESig = Sig1 (Typ A E Tt) Val
-type ESig2 = Sig2 (Typ A E Tt) Val
-type ESigL = Sig1L (Typ A E Tt) Val
-type ESig2L = Sig2L (Typ A E Tt) Val
-
-type NSig = Sig1 (Typ A N Tt) Val
-type NSig2 = Sig2 (Typ A N Tt) Val
-type NSigL = Sig1L (Typ A N Tt) Val
-type NSig2L = Sig2L (Typ A N Tt) Val
-
-type TSig = Sig1 (Typ A T Tt) Val
-type TSigL = Sig1L (Typ A T Tt) Val
-type FSig = FSig1 (Typ A F Tt) Val
-type DTSig = FSig1 (Typ D T Tt) Val
+-- untyped
 type UTSig = Sig1 (Typ UT UT UT) Val
-
-type UTFSig = FSig1 (Typ UT UT UT) Val
 type UTSigL = Sig1L (Typ UT UT UT) Val
 
-type PVal = Scal (Typ A P Tt) Val
-type TVal = Scal (Typ A T Tt) Val
-type FVal = Scal (Typ A F Tt) Val
-type DTVal = Scal (Typ D T Tt) Val
-
-type SignalIdx = Int
+-- #######################
+-- Time Samples
+-- Time Sample
+type DTSampleL = TC Sample (Typ D T Tt) (List Val)
+type DTSamp =  TC Sample (Typ D T Tt) (DVal Val)
+type TSamp =  TC Sample (Typ A T Tt) (DVal Val)
+type TSamp1 =  TC Sample (Typ A T Tt) (UVec Val)
+type TSamp1L =  TC Sample (Typ A T Tt) (List Val)
+type TZeroSamp = TC Sample (Typ A T Tt) (Data Nil ZeroCrossing)
+type TZeroSamp1L = TC Sample (Typ A T Tt) (Data ([] :> Nil) ZeroCrossing)
 
 type PSamp2 = TC Sample (Typ A P Tt) (UVec2 Val)
 type PSamp1 =  TC Sample (Typ A P Tt) (UVec Val)
@@ -250,6 +248,35 @@ type PSamp2L = TC Sample (Typ A P Tt) (UVec2L Val)
 type PSamp2LL = TC Sample (Typ A P Tt) (List2 Val)
 type PSamp = TC Sample (Typ A P Tt) (DVal Val)
 
+
+-- #######################
+-- Flow Signals 
+
+-- time
+type DTFSig = FSig1 (Typ D T Tt) Val
+
+-- energy Flow
+type FFSig = FSig1 (Typ A F Tt) Val
+type FFSig2 = FSig2 (Typ A F Tt) Val
+type FFSigL = FSig1L (Typ A F Tt) Val
+type FFSig2L = FSig2L (Typ A F Tt) Val
+
+-- mean Power
+type PFSig = FSig1 (Typ A P Tt) Val
+type PFSig2 = FSig2 (Typ A P Tt) Val
+type PFSigL = FSig1L (Typ A P Tt) Val
+type PFSig2L = FSig2L (Typ A P Tt) Val
+
+-- efficiency
+type NFSig = FSig1 (Typ A N Tt) Val
+type NFSig2 = FSig2 (Typ A N Tt) Val
+type NFSigL = FSig1L (Typ A N Tt) Val
+type NFSig2L = FSig2L (Typ A N Tt) Val
+
+-- untyped
+type UTFSig = FSig1 (Typ UT UT UT) Val
+
+-- ######################
 -- Flow Signal Samples
 type ESamp2 = TC FSample (Typ A E Tt) (UVec2 Val)
 type ESamp1 =  TC FSample (Typ A E Tt) (UVec Val)
@@ -272,16 +299,14 @@ type PFSamp2L = TC FSample (Typ A P Tt) (UVec2L Val)
 type PFSamp2LL = TC FSample (Typ A P Tt) (List2 Val)
 type PFSamp = TC FSample (Typ A P Tt) (DVal Val)
 
--- Time Sample
-type DTSampleL = TC Sample (Typ D T Tt) (List Val)
 
--- type PSample =  TC Scalar (Typ A P Tt) (DVal Val)
-type DTSamp =  TC Sample (Typ D T Tt) (DVal Val)
-type TSamp =  TC Sample (Typ A T Tt) (DVal Val)
-type TSamp1 =  TC Sample (Typ A T Tt) (UVec Val)
-type TSamp1L =  TC Sample (Typ A T Tt) (List Val)
-type TZeroSamp = TC Sample (Typ A T Tt) (Data Nil ZeroCrossing)
-type TZeroSamp1L = TC Sample (Typ A T Tt) (Data ([] :> Nil) ZeroCrossing)
+-- ########################
+-- Scalars
+type PVal = Scal (Typ A P Tt) Val
+type TVal = Scal (Typ A T Tt) Val
+type FVal = Scal (Typ A F Tt) Val
+type DTVal = Scal (Typ D T Tt) Val
+
 
 ------------------------------------
 
@@ -301,6 +326,9 @@ rlast (t,ps) = (last t, last ps)
 
 rinit :: RSig -> RSig
 rinit (t,ps) = (init t, init ps)
+
+rlen :: RSig -> Int
+rlen  (t,ps) = P.min (length t) (length ps)
 
 rsingleton :: RSamp1 -> RSig
 rsingleton (t,ps) = (singleton t, singleton ps)
@@ -677,13 +705,13 @@ sort (TC x) = TC $ D.sort x
 
 -- DeltaSig Signal FSignal (Data (v1 :> Nil)) A D Val =>
 -- | Partial Signal Integration
-sigPartInt ::  TSig -> PSig -> FSig
+sigPartInt ::  TSig -> PSig -> FFSig
 sigPartInt time power = (deltaSig time) .* (avSig power)
 -- czipWith (*) dTime $ D.map (\ p1 p2 -> (p1+p2)/2) power
 
 
 -- | Partial Signal Integration
-sigFullInt ::  TSig -> PSig -> FSig
+sigFullInt ::  TSig -> PSig -> FFSig
 sigFullInt time power = fromList [fromScalar $ sigSum $ sigPartInt time power]
 
 -- csingleton (cfoldr (+) 0  $ czipWith (*) dTime $ D.map (\ p1 p2 -> (p1+p2)/2) power)
