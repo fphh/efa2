@@ -111,8 +111,9 @@ Executable demo-signalcalc
     base
 
 Executable demo-sequence
-  Main-Is: demo/Signal/Demo_Sequence.hs
+  Main-Is: demo/sliceSignals/Demo_Sequence.hs
   GHC-Options: -Wall
   Build-Depends:
     efa2,
+    containers,
     base
