@@ -22,14 +22,18 @@ import EFA2.Signal.Data (Data(Data), Nil, (:>))
 
 import qualified Data.Vector.Unboxed as UV
 
-import EFA2.Utils.Utils
+import EFA2.Utils.Utils (listIdx)
 
 import qualified Data.List as L
 import qualified Data.Map as M
+import qualified Data.List.HT as HTL
 
+import Data.Bool.HT (if')
+import Data.Ord.HT (comparing)
 import Control.Functor.HT (void)
 import Control.Monad (liftM2)
 import Data.Monoid (Monoid, mempty)
+import Data.Maybe (catMaybes)
 
 
 data StepType = LeavesZeroStep
@@ -280,3 +284,76 @@ rsig2SecRecord :: PowerRecord -> RSig -> SecPowerRecord
 rsig2SecRecord (PowerRecord _ pMap) (t, ps) =
    SecPowerRecord (S.convert t) $
    updateMap pMap $ map S.convert $ toSigList $ S.transpose2 ps
+
+
+-----------------------------------------------------------------------------------
+-- * Alternative approach
+
+checkZeroCrossing :: (RealFrac a) => a -> a -> Maybe a
+checkZeroCrossing x0 x1 =
+   let i = -x0/(x1-x0)
+   in  case (compare x0 0, compare x1 0) of
+          (EQ, _) -> Just 0 -- avoid division by zero
+          (LT, GT) -> Just i
+          (GT, LT) -> Just i
+          _ -> Nothing
+
+{- |
+The resulting list is sorted.
+We cannot use a Map since this would eliminate duplicates, too.
+-}
+multiZeroCrossings :: (RealFrac a) => [a] -> [a] -> [(a, Int)]
+multiZeroCrossings xs ys =
+   L.sortBy (comparing fst) $ catMaybes $
+   zipWith (fmap . flip (,)) [0..] $
+   zipWith checkZeroCrossing xs ys
+{-
+   zipWith3 (\i x y -> fmap (flip (,) i) $ checkZeroCrossing x y) [0..] xs ys
+-}
+
+{- |
+This version touches more elements than necessary
+but I hope that it is easier to fuse.
+-}
+clearAt :: Num a => Int -> [a] -> [a]
+clearAt n = zipWith (\i -> if' (i==n) 0) [0..]
+
+interpolate :: (RealFrac a) => a -> a -> a -> a
+interpolate i x y = (1-i)*x + i*y
+
+{-
+clearAt is used to insert exact zeros
+where we detected zero crossings.
+If you compute with exact number types, clearAt can be omitted.
+-}
+sample :: (RealFrac a) => (a, Int) -> [a] -> [a] -> [a]
+sample (i,n) xs ys = clearAt n $ zipWith (interpolate i) xs ys
+
+expandIntervals :: (a -> b) -> (a -> a -> [b]) -> [a] -> [b]
+expandIntervals g f xs0 =
+   case xs0 of
+      [] -> []
+      xt@(x:xs) ->
+         g x : concat (zipWith (\x0 x1 -> f x0 x1 ++ [g x1]) xt xs)
+
+chopAtZeroCrossings :: (RealFrac a) => [[a]] -> [[[a]]]
+chopAtZeroCrossings =
+   map (map snd) .
+   HTL.segmentBefore fst .
+   expandIntervals
+      ((,) False)
+      (\xs ys ->
+         concatMap
+            (\s ->
+               let ss = sample s xs ys
+               in  [(False, ss), (True, ss)]) $
+         multiZeroCrossings xs ys)
+
+zeroCrossingsPerInterval :: (RealFrac a) => [[a]] -> [[[a]]]
+zeroCrossingsPerInterval =
+   HTL.mapAdjacent
+      (\xs ys ->
+         xs :
+         map (\s -> sample s xs ys) (multiZeroCrossings xs ys) ++
+         ys :
+         [])
