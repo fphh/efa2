@@ -1,9 +1,6 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, TypeOperators, ScopedTypeVariables,GADTs, FlexibleContexts #-}
+{-# LANGUAGE TypeOperators #-}
 
 module EFA2.Signal.Sequence where
-
-import qualified Data.List as L
-import qualified Data.Map as M
 
 import EFA2.Interpreter.Env
 
@@ -27,6 +24,10 @@ import qualified Data.Vector.Unboxed as UV
 
 import EFA2.Utils.Utils
 
+import qualified Data.List as L
+import qualified Data.Map as M
+
+import Control.Functor.HT (void)
 import Control.Monad (liftM2)
 import Data.Monoid (Monoid, mempty)
 
@@ -220,7 +221,7 @@ calcZeroTimes (t1,ps1) (t2,ps2)  = (zeroCrossings, zeroCrossingTimes)
                  h2 _  _ = toSample NoCrossing
 
 -----------------------------------------------------------------------------------
--- | Interpolation Functions for one Signal
+-- * Interpolation Functions for one Signal
 
 -- | calculate time of Zero Crossing Point
 calcZeroTime :: (TSamp,PSamp) -> (TSamp,PSamp) -> TZeroSamp
@@ -246,7 +247,7 @@ interpPowers (t1,p1) (t2,p2) tzeroList tzero = S.tmap f tzeroList
         m = (p2.-p1)./(t2.-t1) -- interpolation slope
 
 -----------------------------------------------------------------------------------
--- | Helper Functions
+-- * TZero helper Functions
 
 makeTZero :: TSamp -> TZeroSamp
 makeTZero (TC (Data x)) = TC $ Data $ ZeroCrossing x
@@ -257,21 +258,25 @@ filterTZero = S.transpose1 . S.map (\ (ZeroCrossing x) -> x) . S.filter (/=NoCro
 
 
 -----------------------------------------------------------------------------------
--- | Helper Functions
+-- * Conversions between RSig and Record
 
 -- | Generate rSig from Power Record
-updateMap :: Ord k => M.Map k a -> [a] -> M.Map k a
-updateMap pmap xs = if check then M.fromList $ zip keys xs else error "Error in updateMap - map and List length don't match"
-  where keys = map fst $ M.toList pmap
-        check = length keys == length xs
+updateMap :: Ord k => M.Map k a -> [b] -> M.Map k b
+updateMap pmap xs =
+   case M.keys pmap of
+      keys ->
+         if void keys == void xs
+           then M.fromList $ zip keys xs
+           else error "Error in updateMap - map and List length don't match"
 
 record2RSig :: PowerRecord -> RSig
 record2RSig (PowerRecord t pMap) = (t, S.transpose2 $ fromSigList $ M.elems pMap)
 
 rsig2Record :: RSig -> PowerRecord -> PowerRecord
-rsig2Record (t, ps) (PowerRecord _ pMap) = PowerRecord t  (M.fromList (zip  keys  (toSigList  $ S.transpose2 ps)))
-   where keys = map fst (M.toList pMap)
+rsig2Record (t, ps) (PowerRecord _ pMap) =
+   PowerRecord t $ updateMap pMap $ toSigList $ S.transpose2 ps
 
 rsig2SecRecord :: PowerRecord -> RSig -> SecPowerRecord
-rsig2SecRecord  (PowerRecord _ pMap) (t, ps) = SecPowerRecord (S.convert t)  (M.fromList (zip  keys  (map S.convert $ toSigList  $ S.transpose2 ps)))
-   where keys = map fst (M.toList pMap)
+rsig2SecRecord (PowerRecord _ pMap) (t, ps) =
+   SecPowerRecord (S.convert t) $
+   updateMap pMap $ map S.convert $ toSigList $ S.transpose2 ps
