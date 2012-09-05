@@ -24,9 +24,11 @@ import qualified Data.Vector.Unboxed as UV
 
 import EFA2.Utils.Utils (listIdx)
 
+import qualified Data.List.HT as HTL
 import qualified Data.List as L
 import qualified Data.Map as M
-import qualified Data.List.HT as HTL
+import qualified Data.IntSet as IntSet
+import Data.IntSet (IntSet)
 
 import Data.Bool.HT (if')
 import Data.Ord.HT (comparing)
@@ -299,14 +301,10 @@ checkZeroCrossing x0 x1 =
           (GT, LT) -> Just i
           _ -> Nothing
 
-{- |
-The resulting list is sorted.
-We cannot use a Map since this would eliminate duplicates, too.
--}
-multiZeroCrossings :: (RealFrac a) => [a] -> [a] -> [(a, Int)]
+multiZeroCrossings :: (RealFrac a) => [a] -> [a] -> M.Map a IntSet
 multiZeroCrossings xs ys =
-   L.sortBy (comparing fst) $ catMaybes $
-   zipWith (fmap . flip (,)) [0..] $
+   M.fromListWith IntSet.union $ catMaybes $
+   zipWith (fmap . flip (,) . IntSet.singleton) [0..] $
    zipWith checkZeroCrossing xs ys
 {-
    zipWith3 (\i x y -> fmap (flip (,) i) $ checkZeroCrossing x y) [0..] xs ys
@@ -316,8 +314,8 @@ multiZeroCrossings xs ys =
 This version touches more elements than necessary
 but I hope that it is easier to fuse.
 -}
-clearAt :: Num a => Int -> [a] -> [a]
-clearAt n = zipWith (\i -> if' (i==n) 0) [0..]
+clearAt :: Num a => IntSet -> [a] -> [a]
+clearAt ns = zipWith (\i -> if' (IntSet.member i ns) 0) [0..]
 
 interpolate :: (RealFrac a) => a -> a -> a -> a
 interpolate i x y = (1-i)*x + i*y
@@ -327,8 +325,8 @@ clearAt is used to insert exact zeros
 where we detected zero crossings.
 If you compute with exact number types, clearAt can be omitted.
 -}
-sample :: (RealFrac a) => (a, Int) -> [a] -> [a] -> [a]
-sample (i,n) xs ys = clearAt n $ zipWith (interpolate i) xs ys
+sample :: (RealFrac a) => (a, IntSet) -> [a] -> [a] -> [a]
+sample (i,ns) xs ys = clearAt ns $ zipWith (interpolate i) xs ys
 
 expandIntervals :: (a -> b) -> (a -> a -> [b]) -> [a] -> [b]
 expandIntervals g f xs0 =
@@ -348,6 +346,7 @@ chopAtZeroCrossings =
             (\s ->
                let ss = (interpolate (fst s) xt yt, sample s xs ys)
                in  [(False, ss), (True, ss)]) $
+         M.toAscList $
          multiZeroCrossings xs ys)
 
 zeroCrossingsPerInterval :: (RealFrac a) => [[a]] -> [[[a]]]
@@ -355,7 +354,8 @@ zeroCrossingsPerInterval =
    HTL.mapAdjacent
       (\xs ys ->
          xs :
-         map (\s -> sample s xs ys) (multiZeroCrossings xs ys) ++
+         (map (\s -> sample s xs ys) $
+          M.toAscList $ multiZeroCrossings xs ys) ++
          ys :
          [])
 
