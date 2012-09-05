@@ -5,9 +5,17 @@ import EFA2.Signal.Sequence (addZeroCrossings, genSequ)
 import EFA2.Signal.SequenceData (PPosIdx(PPosIdx), PowerRecord(PowerRecord), Sequ, SequPwrRecord)
 import EFA2.Signal.Signal (PSigL, (.++))
 import EFA2.Signal.Base (Val)
-import EFA2.Display.Plot (rPlot)
+import EFA2.Display.Plot (rPlot, rPlotCore)
+import EFA2.Utils.Utils (divUp)
+
+import qualified Graphics.Gnuplot.Advanced as Plot
+import qualified Graphics.Gnuplot.Terminal.PostScript as PS
+import qualified Graphics.Gnuplot.MultiPlot as MultiPlot
+import qualified Graphics.Gnuplot.Frame as Frame
 
 import qualified Data.Map as M
+import qualified Data.Array as Array
+import Control.Functor.HT (void)
 
 
 mkSig :: Int -> [Val] -> PSigL
@@ -59,5 +67,17 @@ main = do
 
   putStrLn (show sequ)
 
-  rPlot ("PowerRecord",pRec)
-  rPlot ("Sequ",sequRec)
+  rPlot ("PowerRecord", pRec)
+  rPlot ("Sequ", sequRec)
+
+  {-
+  The result looks awful, because many parts overlap.
+  -}
+  void $ Plot.plot (PS.cons "sequence.eps") $
+     (\xs ->
+        MultiPlot.simpleFromPartArray $
+        let width = 3
+        in  Array.listArray ((1,1), (divUp (length xs) width, width)) $
+            map MultiPlot.partFromFrame xs ++
+            repeat (MultiPlot.partFromFrame Frame.empty)) $
+     rPlotCore "Sequ" sequRecB

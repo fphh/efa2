@@ -127,4 +127,7 @@ Executable demo-sequence
   Build-Depends:
     efa2,
     containers,
+    array >=0.4 && <0.5,
+    gnuplot,
+    utility-ht,
     base
