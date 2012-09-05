@@ -37,6 +37,7 @@ import Control.Functor.HT (void)
 import Control.Monad (liftM2)
 import Data.Monoid (Monoid, mempty)
 import Data.Maybe (catMaybes)
+import Data.Maybe.HT (toMaybe)
 
 
 data StepType = LeavesZeroStep
@@ -292,14 +293,15 @@ rsig2SecRecord (PowerRecord _ pMap) (t, ps) =
 -----------------------------------------------------------------------------------
 -- * Alternative approach
 
+{- |
+A crossing like [1,0,-1] will be counted twice
+and will be filtered out by chopAtZeroCrossingsRSig using allEqual.
+This allows for consistency with [1,0,0,-1]
+where we actually want to count two crossings.
+-}
 checkZeroCrossing :: (RealFrac a) => a -> a -> Maybe a
 checkZeroCrossing x0 x1 =
-   let i = -x0/(x1-x0)
-   in  case (compare x0 0, compare x1 0) of
-          (EQ, _) -> Just 0 -- avoid division by zero
-          (LT, GT) -> Just i
-          (GT, LT) -> Just i
-          _ -> Nothing
+   toMaybe (compare x0 0 /= compare x1 0) (-x0/(x1-x0))
 
 multiZeroCrossings :: (RealFrac a) => [a] -> [a] -> M.Map a IntSet
 multiZeroCrossings xs ys =
