@@ -54,6 +54,14 @@ pairs = LH.mapAdjacent (,)
 
 const2 x _ _ = x
 
+{- |
+integer division where the quotient is rounded up
+(In contrast to that, 'div' rounds down.)
+-}
+divUp :: (Integral a) => a -> a -> a
+divUp x y = - div (-x) y
+
+
 
 type InOutGraphFormat a = ([a], a, [a])
 
