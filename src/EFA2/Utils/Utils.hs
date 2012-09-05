@@ -1,8 +1,4 @@
-{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances #-}
-
 module EFA2.Utils.Utils where
-
-import qualified Data.Vector.Unboxed as UV
 
 import qualified Data.List.Match as Match
 import qualified Data.List.HT as LH
@@ -31,7 +27,7 @@ checkJust str _ = error ("checkJust called from " ++ str)
 
 -- generalized unique
 gunique :: (Ord a) => S.Set a -> [a] -> [a]
-gunique s = go s 
+gunique = go
   where go _ [] = []
         go s (x:xs) | S.member x s = go s xs
                     | otherwise    = x : go (S.insert x s) xs
@@ -52,6 +48,10 @@ sameValue = const 1.0
 pairs :: [a] -> [(a, a)]
 pairs = LH.mapAdjacent (,)
 
+{- |
+@const2@ can also be written as @const . const@
+-}
+const2 :: a -> b -> c -> a
 const2 x _ _ = x
 
 
@@ -135,14 +135,23 @@ hasSameVariable :: (Ord a) => S.Set a -> S.Set a -> Bool
 hasSameVariable s t = not $ S.null (S.intersection s t)
 
 
+debugLevel :: Integer
 debugLevel = 0
 
 -- mytrace for single values
-mytrace dbgLevel function varName var | debugLevel >= dbgLevel = 
-  trace ("myTrace: " ++ show function ++ "-" ++ show varName ++ " : " ++ show var) var 
-mytrace _ _ _ var = var
+mytrace ::
+   (Show a, Show b, Show c) =>
+   Integer -> b -> c -> a -> a
+mytrace dbgLevel function varName var =
+   if debugLevel >= dbgLevel
+     then trace ("myTrace: " ++ show function ++ "-" ++ show varName ++ " : " ++ show var) var
+     else var
 
 -- mytrace for lists
-mytraceList dbgLevel function varName var | debugLevel >= dbgLevel = 
-  trace ("myTraceList: " ++ show function ++ "-" ++ show varName ++ " : " ++ myShowList var) var
-mytraceList _ _ _ var = var
+mytraceList ::
+   (Show a, Show b, Show c) =>
+   Integer -> b -> c -> [a] -> [a]
+mytraceList dbgLevel function varName var =
+   if debugLevel >= dbgLevel
+     then trace ("myTraceList: " ++ show function ++ "-" ++ show varName ++ " : " ++ myShowList var) var
+     else var
