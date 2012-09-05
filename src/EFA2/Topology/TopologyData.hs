@@ -32,7 +32,7 @@ module EFA2.Topology.TopologyData (
        partitionInOutStatic) where
 
 import EFA2.Topology.EfaGraph
-import EFA2.Utils.Utils
+import EFA2.Utils.Graph
 
 import qualified Data.List as L
 import Data.Graph.Inductive

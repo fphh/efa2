@@ -5,6 +5,7 @@ module EFA2.Topology.Topology where
 import EFA2.Solver.Equation
 import EFA2.Interpreter.Env
 import EFA2.Topology.TopologyData
+import EFA2.Utils.Graph
 import EFA2.Utils.Utils
 
 import qualified Data.List as L
