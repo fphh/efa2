@@ -17,7 +17,8 @@ import EFA2.Solver.DependencyGraph
 import EFA2.Solver.Equation
 import EFA2.Solver.IsVar
 
-import EFA2.Utils.Utils
+import EFA2.Utils.Graph
+
 
 data Formula = Zero
              | One
