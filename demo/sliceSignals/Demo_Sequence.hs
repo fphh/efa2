@@ -1,7 +1,7 @@
 module Main where
 
 import qualified EFA2.Signal.Signal as S
-import EFA2.Signal.Sequence (addZeroCrossings, genSequ)
+import qualified EFA2.Signal.Sequence as Sequ
 import EFA2.Signal.SequenceData (PPosIdx(PPosIdx), PowerRecord(PowerRecord), Sequ, SequPwrRecord)
 import EFA2.Signal.Signal (PSigL, (.++))
 import EFA2.Signal.Base (Val)
@@ -52,11 +52,13 @@ pMap =
 pRec, pRec0 :: PowerRecord
 
 pRec = PowerRecord (S.fromList time) pMap
-pRec0 = addZeroCrossings pRec
+pRec0 = Sequ.addZeroCrossings pRec
 
 sequ :: Sequ
-sequRec :: SequPwrRecord
-(sequ,sequRec) = genSequ pRec0
+sequRecA, sequRecB :: SequPwrRecord
+(sequ,sequRecA) = Sequ.genSequ pRec0
+
+sequRecB = Sequ.chopAtZeroCrossingsPowerRecord pRec
 
 
 main :: IO ()
@@ -68,7 +70,8 @@ main = do
   putStrLn (show sequ)
 
   rPlot ("PowerRecord", pRec)
-  rPlot ("Sequ", sequRec)
+  rPlot ("SequA", sequRecA)
+  rPlot ("SequB", sequRecB)
 
   {-
   The result looks awful, because many parts overlap.

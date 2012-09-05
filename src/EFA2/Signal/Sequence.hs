@@ -30,6 +30,7 @@ import qualified Data.List.HT as HTL
 
 import Data.Bool.HT (if')
 import Data.Ord.HT (comparing)
+import Data.Tuple.HT (mapPair)
 import Control.Functor.HT (void)
 import Control.Monad (liftM2)
 import Data.Monoid (Monoid, mempty)
@@ -336,16 +337,16 @@ expandIntervals g f xs0 =
       xt@(x:xs) ->
          g x : concat (zipWith (\x0 x1 -> f x0 x1 ++ [g x1]) xt xs)
 
-chopAtZeroCrossings :: (RealFrac a) => [[a]] -> [[[a]]]
+chopAtZeroCrossings :: (RealFrac a) => [(a, [a])] -> [[(a, [a])]]
 chopAtZeroCrossings =
    map (map snd) .
    HTL.segmentBefore fst .
    expandIntervals
       ((,) False)
-      (\xs ys ->
+      (\(xt,xs) (yt,ys) ->
          concatMap
             (\s ->
-               let ss = sample s xs ys
+               let ss = (interpolate (fst s) xt yt, sample s xs ys)
                in  [(False, ss), (True, ss)]) $
          multiZeroCrossings xs ys)
 
@@ -357,3 +358,17 @@ zeroCrossingsPerInterval =
          map (\s -> sample s xs ys) (multiZeroCrossings xs ys) ++
          ys :
          [])
+
+chopAtZeroCrossingsRSig :: RSig -> [RSig]
+chopAtZeroCrossingsRSig (TC (Data times), TC (Data vectorSignal)) =
+   map (mapPair (TC . Data, TC . Data)) $
+   filter (not . HTL.allEqual . fst) $
+   map unzip $
+   chopAtZeroCrossings $
+   zip times vectorSignal
+
+chopAtZeroCrossingsPowerRecord :: PowerRecord -> SequPwrRecord
+chopAtZeroCrossingsPowerRecord rSig =
+   SequData $ map (rsig2SecRecord rSig) $
+   chopAtZeroCrossingsRSig $
+   record2RSig rSig
