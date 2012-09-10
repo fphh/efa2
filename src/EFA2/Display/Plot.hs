@@ -28,7 +28,6 @@ import EFA2.Display.DispBase
 import EFA2.Signal.SequenceData
 
 import System.Process (system)
-import System.Exit (ExitCode)
 
 import qualified Data.List as L
 import qualified Data.Map as M
@@ -281,15 +280,17 @@ instance (AxisLabel tc) => AxisLabel [tc] where
    genAxLabel x = genAxLabel $ head x
 
 
--- | clean old gnu-Plot files from current dir
-clearCurves ::  IO ExitCode
+-- | clean old gnuplot files from current dir
+clearCurves ::  IO ()
 clearCurves = do
   system ("rm curve.gp")
   system ("rm curve*.csv")
+  return ()
 
-saveCurves :: String -> IO ExitCode
+saveCurves :: String -> IO ()
 saveCurves ti = do
   system ("mkdir gnuplot")
   system ("mkdir gnuplot/"++ti)
   system ("mv curve.gp gnuplot/" ++ ti)
   system ("mv curve*.csv gnuplot/" ++ ti)
+  return ()
