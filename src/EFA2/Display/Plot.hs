@@ -52,17 +52,22 @@ sigPlotAttr ::
    String -> tc -> Opts.T graph
 sigPlotAttr ti x =
    Opts.title ti $
---   Opts.lineStyle 1 [PointSize 2] $
    Opts.xLabel "Sample-Nr []" $
    Opts.yLabel (genAxLabel x) $
    Opts.grid True $
    Opts.deflt
 
+sigPlotStyle :: Graph2D.T x y -> Graph2D.T x y
+sigPlotStyle =
+   Graph2D.lineSpec $
+      LineSpec.pointSize 2 $
+      LineSpec.deflt
+
 sigPlot :: SigPlot a => String -> a -> IO ()
 sigPlot ti x =
    void $ Plot.plotDefault $
    Frame.cons (sigPlotAttr ti x) $
-   sigPlotCore x
+   fmap sigPlotStyle $ sigPlotCore x
 
 class AxisLabel a => SigPlot a where
    sigPlotCore :: a -> Plot2D.T Int Val
@@ -90,7 +95,6 @@ xyPlotAttr ::
    String -> tcX -> tcY -> Opts.T graph
 xyPlotAttr ti x y =
    Opts.title ti $
---   Opts.lineStyle 1 [PointSize 2] $
    Opts.xLabel (genAxLabel x) $
    Opts.yLabel (genAxLabel y) $
    Opts.grid True $
@@ -175,16 +179,15 @@ instance (DisplayTyp t1,
 surfPlot :: SurfPlot a b c => String -> a -> b -> c -> IO ()
 surfPlot ti x y z = do
    clearCurves
-   let plotAttrs =
+   let attrs =
           Opts.title ti $
-          -- Opts.lineStyle 1 [PointSize 2] $
           Opts.xLabel (genAxLabel x) $
           Opts.yLabel (genAxLabel y) $
           Opts.grid True $
           Opts.size 1 1 $
           Opts.deflt
    void $ Plot.plotDefault $
-      Frame.cons plotAttrs $ surfPlotCore x y z
+      Frame.cons attrs $ surfPlotCore x y z
    saveCurves ti
    return ()
 
