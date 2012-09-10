@@ -57,7 +57,7 @@ sigPlotAttr ti x =
 --   Opts.lineStyle 1 [PointSize 2] $
    Opts.xLabel "Sample-Nr []" $
    Opts.yLabel (genAxLabel x) $
---   Opts.grid (Just []) $
+   Opts.grid True $
    Opts.deflt
 
 sigPlot :: SigPlot a => String -> a -> IO ()
@@ -95,7 +95,7 @@ xyPlotAttr ti x y =
 --   Opts.lineStyle 1 [PointSize 2] $
    Opts.xLabel (genAxLabel x) $
    Opts.yLabel (genAxLabel y) $
---   Opts.grid (Just []) $
+   Opts.grid True $
    Opts.deflt
 
 xyPlotStyle ::
@@ -182,7 +182,7 @@ surfPlot ti x y z = do
           -- Opts.lineStyle 1 [PointSize 2] $
           Opts.xLabel (genAxLabel x) $
           Opts.yLabel (genAxLabel y) $
-          -- Opts.grid (Just []) $
+          Opts.grid True $
           Opts.size 1 1 $
           Opts.deflt
    Plot.plot WX.cons $
@@ -224,7 +224,7 @@ rPlotAttr ::
    String -> Opts.T graph
 rPlotAttr name =
    Opts.title ("PowerRecord: " ++ name) $
---   Opts.grid (Just []) $
+   Opts.grid True $
    Opts.xLabel ("Time [" ++ (show $ getDisplayUnit Typ_T) ++ "]") $
    Opts.yLabel ("Power [" ++ (show $ getDisplayUnit Typ_P) ++ "]") $
 --   Opts.size (Scale 0.7) $
