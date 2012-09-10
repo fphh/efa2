@@ -31,6 +31,7 @@ import qualified Data.IntSet as IntSet
 import Data.IntSet (IntSet)
 
 import Data.Bool.HT (if')
+import Data.Eq.HT (equating)
 import Data.Ord.HT (comparing)
 import Data.Tuple.HT (mapPair)
 import Control.Functor.HT (void)
@@ -337,6 +338,18 @@ expandIntervals g f xs0 =
       xt@(x:xs) ->
          g x : concat (zipWith (\x0 x1 -> f x0 x1 ++ [g x1]) xt xs)
 
+{-
+This removes duplicate nodes
+when zero crossings coincide with original nodes.
+For floating point arithmetic
+we may get rounding errors at the original nodes.
+But for real world data we still need a way to handle
+jitter around zero crossings anyway.
+-}
+removeDuplicates :: (Eq b) => (a -> b) -> [a] -> [a]
+removeDuplicates f = map head . HTL.groupBy (equating f)
+
+
 chopAtZeroCrossings :: (RealFrac a) => [(a, [a])] -> [[(a, [a])]]
 chopAtZeroCrossings =
    map (map snd) .
@@ -364,8 +377,9 @@ zeroCrossingsPerInterval =
 chopAtZeroCrossingsRSig :: RSig -> [RSig]
 chopAtZeroCrossingsRSig (TC (Data times), TC (Data vectorSignal)) =
    map (mapPair (TC . Data, TC . Data)) $
-   filter (not . HTL.allEqual . fst) $
    map unzip $
+   filter (HTL.lengthAtLeast 2) $
+   map (removeDuplicates fst) $
    chopAtZeroCrossings $
    zip times vectorSignal
 
