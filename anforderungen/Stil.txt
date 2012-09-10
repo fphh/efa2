@@ -30,6 +30,15 @@
 
 >    import EFA2.Signal.Signal
 
+  Grund: Wenn in Modul der Bezeichner `PSig` auftaucht,
+  hat man keine Ahnung, woher der Bezeichner stammt.
+  Er kann GHCi anwerfen und nachschauen.
+  Funktioniert nur, wenn das Modul noch intakt ist.
+  Wurde es lange nicht mehr gepflegt und
+  `PSig` wird nicht mehr von EFA2.Signal.Signal exportiert,
+  so hat man als Leser keinerlei Anhaltspunkt mehr.
+  Siehe auch PVP (unten).
+
 * Bezeichner so wählen, dass sie mit Modulpräfix sinnvolle Bezeichnung ergeben
 
   Beispiel: Signal.plot, Signal.toList, Signal.fromList
@@ -138,7 +147,7 @@
   stattdessen Typen, die genau das erlauben, was gebraucht wird
 
 
-# Versionverwaltung
+# Versionsverwaltung
 
 * Jede Änderung an `master` sollte lauffähig sein.
   D.h. `cabal install` (und später `cabal test`) soll fehlerfrei durchlaufen
@@ -175,3 +184,76 @@
 
   oder so:
     Es war einmal ein kleines süßes Mädchen, das hatte jedermann lieb, der es nur ansah, am allerliebsten aber seine Großmutter, die wusste gar nicht, was sie alles dem Kinde geben sollte. Einmal schenkte sie ihm ein Käppchen von rotem Samt, und weil ihm das so wohl stand, und es nichts anders mehr tragen wollte, hieß es nur das Rotkäppchen.
+
+
+# Cabal
+
+* alle importierten Pakete mit unteren und oberen Versionsschranken:
+
+  Beispiel:
+
+    Build-Depends: gnuplot >=0.5.1 && <0.6
+
+  bedeutet:
+    mit 0.5.1 habe ich es erfolgreich getestet
+    ich importiere nur qualifiziert oder explizit aus gnuplot,
+    deswegen darf ich alle Versionen ab 0.5.1 benutzen, die mit 0.5 beginnen.
+
+  Beispiel:
+
+    Build-Depends: gnuplot >=0.5.1 && <0.5.2
+
+  bedeutet:
+    mit 0.5.1 habe ich es erfolgreich getestet
+    ich importiere unqualifiziert alle Bezeichner eines gnuplot-Moduls,
+    deswegen darf ich nur Versionen benutzen, die mit 0.5.1 beginnen.
+    D.h. Fehlerkorrekturen nehme ich mit,
+    aber beim Hinzufügen von gnuplot-Funktionen
+    würde ich Namenskollisionen mit eigenen Bezeichnern riskieren,
+    deswegen muss ich alle Versionen mit neuen gnuplot-Funktionen ausschließen.
+
+  Von der zweiten Variante rate ich ab,
+  weil man zu häufig die Versionen anpassen muss
+  und die Module schlecht lesbar sind.
+  Siehe oben.
+
+* zur Frage, welche Änderung am Paket welche Versionserhöhung erfordert,
+  verweise ich auf die Package Versioning Policy
+
+  Kurzfassung:
+   * 0.0.0.0 -> 0.0.0.1 bei:
+     Änderungen an Cabal-Datei (Anpassung auf neue GHC-Version)
+     Änderungen an Kommentaren
+     Fehlerkorrekturen
+     verbesserte Implementierung ohne Änderung der Schnittstelle
+
+   * 0.0.0 -> 0.0.1 bei:
+     abwärtskompatiblen Änderungen
+        (sofern Nutzer qualifiziert oder explizit importiert)
+     also: Hinzufügen von Modulen, Funktionen, Typen
+
+   * 0.0 -> 0.1 bei:
+     Änderungen an der Schnittstelle
+     Warnung:
+        Auch Verallgemeinern des Typs einer Funktion
+        ist nicht abwärtskompatibel
+        da es möglicherweise zusätzlich Typannotationen erfordert.
+
+* Cabal-Pakete-Versionen und Git-Tags sollten wie folgt synchronisiert werden:
+
+  In Cabal-Datei steht Paket-Version 0.5.
+  Das heißt, aich arbeite aktuell an der Version 0.5.
+  Daraus folgt, dass alle veröffentlichten Versionen
+  (auf Hackage) kleiner sind als 0.5.
+
+  Nun veröffentliche ich die Version 0.5 auf Hackage.
+  Damit ich später den Zustand bei Veröffentlichung wiederherstellen kann,
+  setze ich sofort nach dem Hochladen das Git-Tag 0.5.
+  Außerdem erhöhe ich die Cabal-Version,
+  damit ich es nicht vergesse, wenigstens auf 0.5.0.1.
+  Bei jeder Änderung kontrolliere ich,
+  ob diese Änderung eine weitere Erhöhung der Version erfordert,
+  bezogen auf die letzte Hackage-Veröffentlichung.
+
+  Damit ich Cabal-Versionen und Git-Tags synchronisieren kann,
+  benutze ich genau ein Git-Archiv pro Cabal-Paket.
