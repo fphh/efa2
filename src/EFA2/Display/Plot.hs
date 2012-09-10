@@ -6,7 +6,6 @@
 module EFA2.Display.Plot (module EFA2.Display.Plot) where
 
 import qualified Graphics.Gnuplot.Advanced as Plot
-import qualified Graphics.Gnuplot.Terminal.WXT as WX
 import qualified Graphics.Gnuplot.Plot.TwoDimensional as Plot2D
 import qualified Graphics.Gnuplot.Plot.ThreeDimensional as Plot3D
 import qualified Graphics.Gnuplot.Graph.TwoDimensional as Graph2D
@@ -62,7 +61,7 @@ sigPlotAttr ti x =
 
 sigPlot :: SigPlot a => String -> a -> IO ()
 sigPlot ti x =
-   void $ Plot.plot WX.cons $
+   void $ Plot.plotDefault $
    Frame.cons (sigPlotAttr ti x) $
    sigPlotCore x
 
@@ -110,7 +109,7 @@ xyPlotStyle n =
 
 xyplot :: (XYPlot a b) => String -> a -> b -> IO ()
 xyplot ti x y =
-   void $ Plot.plot WX.cons $
+   void $ Plot.plotDefault $
    Frame.cons (xyPlotAttr ti x y) $
    xyplotCore x y
 
@@ -185,7 +184,7 @@ surfPlot ti x y z = do
           Opts.grid True $
           Opts.size 1 1 $
           Opts.deflt
-   Plot.plot WX.cons $
+   void $ Plot.plotDefault $
       Frame.cons plotAttrs $ surfPlotCore x y z
    saveCurves ti
    return ()
@@ -232,7 +231,7 @@ rPlotAttr name =
 
 rPlot :: (RPlot a) => (String, a) -> IO ()
 rPlot (name, r) =
-   mapM_ (Plot.plot WX.cons) $ rPlotCore name r
+   mapM_ Plot.plotDefault $ rPlotCore name r
 
 -- | Class for Plotting Records
 class RPlot a where
