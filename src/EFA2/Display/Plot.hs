@@ -6,7 +6,6 @@
 module EFA2.Display.Plot (module EFA2.Display.Plot) where
 
 import qualified Graphics.Gnuplot.Advanced as Plot
-import qualified Graphics.Gnuplot.Terminal.WXT as WX
 import qualified Graphics.Gnuplot.Plot.TwoDimensional as Plot2D
 import qualified Graphics.Gnuplot.Plot.ThreeDimensional as Plot3D
 import qualified Graphics.Gnuplot.Graph.TwoDimensional as Graph2D
@@ -29,7 +28,6 @@ import EFA2.Display.DispBase
 import EFA2.Signal.SequenceData
 
 import System.Process (system)
-import System.Exit (ExitCode)
 
 import qualified Data.List as L
 import qualified Data.Map as M
@@ -54,17 +52,22 @@ sigPlotAttr ::
    String -> tc -> Opts.T graph
 sigPlotAttr ti x =
    Opts.title ti $
---   Opts.lineStyle 1 [PointSize 2] $
    Opts.xLabel "Sample-Nr []" $
    Opts.yLabel (genAxLabel x) $
---   Opts.grid (Just []) $
+   Opts.grid True $
    Opts.deflt
+
+sigPlotStyle :: Graph2D.T x y -> Graph2D.T x y
+sigPlotStyle =
+   Graph2D.lineSpec $
+      LineSpec.pointSize 2 $
+      LineSpec.deflt
 
 sigPlot :: SigPlot a => String -> a -> IO ()
 sigPlot ti x =
-   void $ Plot.plot WX.cons $
+   void $ Plot.plotDefault $
    Frame.cons (sigPlotAttr ti x) $
-   sigPlotCore x
+   fmap sigPlotStyle $ sigPlotCore x
 
 class AxisLabel a => SigPlot a where
    sigPlotCore :: a -> Plot2D.T Int Val
@@ -92,10 +95,9 @@ xyPlotAttr ::
    String -> tcX -> tcY -> Opts.T graph
 xyPlotAttr ti x y =
    Opts.title ti $
---   Opts.lineStyle 1 [PointSize 2] $
    Opts.xLabel (genAxLabel x) $
    Opts.yLabel (genAxLabel y) $
---   Opts.grid (Just []) $
+   Opts.grid True $
    Opts.deflt
 
 xyPlotStyle ::
@@ -110,7 +112,7 @@ xyPlotStyle n =
 
 xyplot :: (XYPlot a b) => String -> a -> b -> IO ()
 xyplot ti x y =
-   void $ Plot.plot WX.cons $
+   void $ Plot.plotDefault $
    Frame.cons (xyPlotAttr ti x y) $
    xyplotCore x y
 
@@ -177,16 +179,15 @@ instance (DisplayTyp t1,
 surfPlot :: SurfPlot a b c => String -> a -> b -> c -> IO ()
 surfPlot ti x y z = do
    clearCurves
-   let plotAttrs =
+   let attrs =
           Opts.title ti $
-          -- Opts.lineStyle 1 [PointSize 2] $
           Opts.xLabel (genAxLabel x) $
           Opts.yLabel (genAxLabel y) $
-          -- Opts.grid (Just []) $
+          Opts.grid True $
           Opts.size 1 1 $
           Opts.deflt
-   Plot.plot WX.cons $
-      Frame.cons plotAttrs $ surfPlotCore x y z
+   void $ Plot.plotDefault $
+      Frame.cons attrs $ surfPlotCore x y z
    saveCurves ti
    return ()
 
@@ -224,7 +225,7 @@ rPlotAttr ::
    String -> Opts.T graph
 rPlotAttr name =
    Opts.title ("PowerRecord: " ++ name) $
---   Opts.grid (Just []) $
+   Opts.grid True $
    Opts.xLabel ("Time [" ++ (show $ getDisplayUnit Typ_T) ++ "]") $
    Opts.yLabel ("Power [" ++ (show $ getDisplayUnit Typ_P) ++ "]") $
 --   Opts.size (Scale 0.7) $
@@ -232,7 +233,7 @@ rPlotAttr name =
 
 rPlot :: (RPlot a) => (String, a) -> IO ()
 rPlot (name, r) =
-   mapM_ (Plot.plot WX.cons) $ rPlotCore name r
+   mapM_ Plot.plotDefault $ rPlotCore name r
 
 -- | Class for Plotting Records
 class RPlot a where
@@ -282,15 +283,17 @@ instance (AxisLabel tc) => AxisLabel [tc] where
    genAxLabel x = genAxLabel $ head x
 
 
--- | clean old gnu-Plot files from current dir
-clearCurves ::  IO ExitCode
+-- | clean old gnuplot files from current dir
+clearCurves ::  IO ()
 clearCurves = do
   system ("rm curve.gp")
   system ("rm curve*.csv")
+  return ()
 
-saveCurves :: String -> IO ExitCode
+saveCurves :: String -> IO ()
 saveCurves ti = do
   system ("mkdir gnuplot")
   system ("mkdir gnuplot/"++ti)
   system ("mv curve.gp gnuplot/" ++ ti)
   system ("mv curve*.csv gnuplot/" ++ ti)
+  return ()
