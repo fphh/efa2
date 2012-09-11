@@ -5,9 +5,9 @@ module EFA2.Signal.SequenceData where
 import qualified Data.Map as M
 
 -- import EFA2.Interpreter.Arith
-import EFA2.Topology.TopologyData
+import EFA2.Topology.TopologyData (FlowTopology)
 
-import EFA2.Signal.Base
+import EFA2.Signal.Base (Sign)
 import EFA2.Signal.Signal
 
 -----------------------------------------------------------------------------------
