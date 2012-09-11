@@ -14,7 +14,8 @@ import EFA2.Interpreter.Env
 import EFA2.Interpreter.Arith
 import EFA2.Topology.TopologyData
 
-import EFA2.Utils.Utils
+import EFA2.Utils.Utils (pairs, unique)
+import EFA2.Utils.Graph (mapGraphLabels)
 
 import Debug.Trace
 
