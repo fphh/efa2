@@ -31,11 +31,6 @@ Library
   Hs-Source-Dirs:      src
   Exposed-Modules:
     EFA2.IO.Import
---    EFA2.Test.UtilsTest
--- benötigt RandomTopology
---    EFA2.Test.SolverTest
---    EFA2.Test.Test
---    EFA2.Test.IsVarTest
     EFA2.Utils.Utils
     EFA2.Utils.Graph
     EFA2.Utils.Trace
@@ -96,6 +91,25 @@ Library
     EFA2.Interpreter.Interpreter
     EFA2.Interpreter.InTerm
   -- Other-Modules:       
+
+
+-- sollte man auf Cabal-Test umstellen,
+-- sobald Cabal-Test vernünftig läuft
+Executable test-efa
+  Main-Is: EFA2/Test/Test.hs
+  GHC-Options: -Wall
+  Hs-Source-Dirs: src
+  Build-Depends:
+    efa2,
+    QuickCheck,
+    containers,
+    utility-ht,
+    base
+  Other-Modules:
+    EFA2.Test.UtilsTest
+-- benötigt RandomTopology
+--    EFA2.Test.SolverTest
+--    EFA2.Test.IsVarTest
 
 Executable sequenzflussgraph
   Main-Is: examples/elementary/sequenzflussgraph/Main.hs
