@@ -9,7 +9,7 @@
 module EFA2.Signal.Data (module EFA2.Signal.Data) where
 
 import qualified EFA2.Signal.Vector as SV
-import Data.Monoid (Monoid(mempty, mappend))
+import Data.Monoid (Monoid(mempty, mappend, mconcat))
 
 import qualified Data.Vector.Unboxed as UV
 import qualified Data.Vector as V
@@ -246,6 +246,7 @@ foldr1d f x (Data y) = SV.foldr f x y
 instance (SV.Singleton v2 (Apply v1 d)) => Monoid (Data (v2 :> v1) d) where
    mempty = Data SV.empty
    mappend (Data x) (Data y) = Data $ SV.append x y
+   mconcat = Data . SV.concat . L.map getData
 
 
 class Append c1 c2 d  where
