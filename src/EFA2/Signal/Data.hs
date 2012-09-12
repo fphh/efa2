@@ -321,6 +321,12 @@ instance (SV.Singleton v2 (Apply v1 d), All v1 d) => All (v2 :> v1) d where
    all f xd@(Data x) = SV.all (all f . subData xd) x
    any f xd@(Data x) = SV.any (any f . subData xd) x
 
+equalBy ::
+   (SV.Walker v a b) =>
+   (a -> b -> Bool) -> Data (v :> Nil) a -> Data (v :> Nil) b -> Bool
+equalBy f (Data x) (Data y) = SV.equalBy f x y
+
+
 ----------------------------------------------------------
 -- Transpose
 

@@ -13,7 +13,8 @@ import Data.Maybe.HT (toMaybe)
 import Data.Eq (Eq((==)))
 import Data.Function ((.), ($), id, flip)
 import Data.Maybe (Maybe)
-import Prelude (Bool, Int, Ord, error, (++), (-), Show, show, not)
+import Data.Bool (Bool(False, True), (&&), not)
+import Prelude (Int, Ord, error, (++), (-), Show, show)
 
 
 --------------------------------------------------------------
@@ -93,24 +94,39 @@ class Walker vec a b where
    foldr :: (a -> b -> b) -> b -> vec a -> b
    foldl :: (b -> a -> b) -> b -> vec a -> b
    zip :: vec a -> vec b -> vec (a, b)
+   {- |
+   For fully defined values it holds
+   @equalBy f xs ys  ==  (and (zipWith f xs ys) && length xs == length ys)@
+   but for lists @equalBy@ is lazier.
+   -}
+   equalBy :: (a -> b -> Bool) -> vec a -> vec b -> Bool
 
 instance Walker [] a b where
    map = L.map
    foldr = L.foldr
    foldl = L.foldl'
    zip = L.zip
+   equalBy f =
+      let go (x:xs) (y:ys) = f x y && go xs ys
+          go [] [] = True
+          go _ _ = False
+      in  go
 
 instance (UV.Unbox a, UV.Unbox b) => Walker UV.Vector a b where
    map = UV.map
    foldr = UV.foldr
    foldl = UV.foldl'
    zip = UV.zip
+   equalBy f xs ys =
+      UV.length xs == UV.length ys  &&  UV.and (UV.zipWith f xs ys)
 
 instance Walker V.Vector a b where
    map = V.map
    foldr = V.foldr
    foldl = V.foldl'
    zip = V.zip
+   equalBy f xs ys =
+      V.length xs == V.length ys  &&  V.and (V.zipWith f xs ys)
 
 
 ------------------------------------------------------------

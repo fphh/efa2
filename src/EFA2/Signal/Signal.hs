@@ -848,6 +848,14 @@ maximum, minimum ::
 maximum (TC x) = TC $ Data $ D.maximum x
 minimum (TC x) = TC $ Data $ D.minimum x
 
+equalBy ::
+   (SV.Walker v a b) =>
+   (a -> b -> Bool) ->
+   TC s t (Data (v :> Nil) a) ->
+   TC s t (Data (v :> Nil) b) ->
+   Bool
+equalBy f (TC x) (TC y) = D.equalBy f x y
+
 
 subSignal1D :: (SV.Lookup v d)=> TC s typ (Data (v :> Nil) d) -> [SignalIdx] -> TC s typ (Data (v :> Nil) d)
 subSignal1D (TC (Data x)) idxs = TC $ Data $ SV.lookUp x idxs
