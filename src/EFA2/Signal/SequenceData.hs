@@ -9,6 +9,16 @@ import EFA2.Topology.TopologyData (FlowTopology)
 
 import EFA2.Signal.Base (Sign)
 import EFA2.Signal.Signal
+          (TC(TC), DTFSig, DTVal, FFSig, FVal, PSig, PSigL,
+           SignalIdx, TSig, TSigL, UTSigL)
+import EFA2.Signal.Data (Data(Data))
+
+import qualified Test.QuickCheck as QC
+
+import qualified Data.List.HT as HTL
+import qualified Data.List.Match as Match
+import Data.List (transpose)
+import Control.Monad (liftM2)
 
 -----------------------------------------------------------------------------------
 -- | Indices for Record, Section and Power Position
@@ -19,7 +29,7 @@ data PPosIdx =  PPosIdx !Int !Int deriving (Show, Eq, Ord)
 -----------------------------------------------------------------------------------
 -- | Signal Record & Power Record & Flow -- Structure for Handling recorded data
 
--- | Signal record to contain original time signals 
+-- | Signal record to contain original time signals
 data Record = Record TSig (M.Map SigId UTSigL) deriving (Show)
 data SigId = SigId String deriving (Show, Eq, Ord)
 
@@ -58,12 +68,29 @@ type SequFlowTops = SequData [FlowTopology]
 -----------------------------------------------------------------------------------
 -- Section and Sequence -- Structures to handle Sequence Information and Data
 -- | Section analysis result
-type Sequ = [Sec] 
+type Sequ = [Sec]
 type Sec = (SignalIdx,SignalIdx)
 
 
--- | Sequence Vector to Store Section Data  
+-- | Sequence Vector to Store Section Data
 data SequData a = SequData a deriving (Show) -- deriving Show
 
 instance Functor SequData where
          fmap f (SequData xs) = SequData (f xs)
+
+
+instance QC.Arbitrary PPosIdx where
+   arbitrary = liftM2 PPosIdx (QC.choose (0,10)) (QC.choose (0,10))
+   shrink (PPosIdx from to) = map (uncurry PPosIdx) $ QC.shrink (from, to)
+
+instance QC.Arbitrary PowerRecord where
+   arbitrary = do
+      xs <- QC.listOf (QC.choose (-1,1))
+      n <- QC.choose (1,5)
+      ppos <- QC.vectorOf n QC.arbitrary
+      let vectorSamples =
+             HTL.switchR [] (\equalSized _ -> equalSized) $
+             HTL.sliceVertical n xs
+      return $
+         PowerRecord (TC $ Data $ Match.take vectorSamples [0..]) $
+         M.fromList $ zip ppos $ map (TC . Data) $ transpose vectorSamples

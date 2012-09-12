@@ -107,6 +107,7 @@ Executable test-efa
     base
   Other-Modules:
     EFA2.Test.UtilsTest
+    EFA2.Test.SequenceTest
 -- benötigt RandomTopology
 --    EFA2.Test.SolverTest
 --    EFA2.Test.IsVarTest

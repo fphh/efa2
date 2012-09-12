@@ -8,6 +8,7 @@ import EFA2.Topology.Flow
 import EFA2.Topology.TopologyData (Topology)
 
 import qualified EFA2.Signal.Signal as S
+import qualified EFA2.Signal.Vector as V
 
 import EFA2.Signal.SequenceData
 import EFA2.Signal.Base
@@ -24,6 +25,7 @@ import qualified Data.Vector.Unboxed as UV
 
 import EFA2.Utils.Utils (listIdx)
 
+import qualified Data.Foldable as Fold
 import qualified Data.List.HT as HTL
 import qualified Data.List as L
 import qualified Data.Map as M
@@ -32,12 +34,11 @@ import Data.IntSet (IntSet)
 
 import Data.Bool.HT (if')
 import Data.Eq.HT (equating)
-import Data.Ord.HT (comparing)
 import Data.Tuple.HT (mapPair)
 import Control.Functor.HT (void)
 import Control.Monad (liftM2)
-import Data.Monoid (Monoid, mempty)
-import Data.Maybe (catMaybes)
+import Data.Monoid (Monoid, mempty, mconcat)
+import Data.Maybe (catMaybes, mapMaybe)
 import Data.Maybe.HT (toMaybe)
 
 
@@ -115,6 +116,11 @@ makeSequence pRec topo = (sqEnvs, sqTopo)
         sqTopo = mkSequenceTopology sqSecTops
 
 -----------------------------------------------------------------------------------
+{-
+ToDo:
+Must be fixed for empty signals and
+must correctly handle the last section.
+-}
 -- | Function to Generate Time Sequence
 genSequ ::  PowerRecord -> (Sequ, SequPwrRecord)
 genSequ pRec = removeNilSections (sequ++[lastSec],SequData pRecs)
@@ -388,3 +394,43 @@ chopAtZeroCrossingsPowerRecord rSig =
    SequData $ map (rsig2SecRecord rSig) $
    chopAtZeroCrossingsRSig $
    record2RSig rSig
+
+concatPowerRecords :: SequPwrRecord -> SecPowerRecord
+concatPowerRecords (SequData recs) =
+   case recs of
+      [] -> SecPowerRecord mempty M.empty
+      SecPowerRecord time0 pMap0 : recs0 ->
+         let recs1 = map tailPowerRecord recs0
+         in  SecPowerRecord
+                (mconcat $ time0 : map (\(SecPowerRecord times _) -> times) recs1)
+                (M.mapWithKey
+                    (\idx pSig ->
+                       mconcat $ pSig :
+                       mapMaybe (\(SecPowerRecord _ pMap) -> M.lookup idx pMap) recs1)
+                    pMap0)
+
+tailPowerRecord :: SecPowerRecord -> SecPowerRecord
+tailPowerRecord (SecPowerRecord times pMap) =
+   SecPowerRecord
+      (maybe mempty snd $ S.viewL times)
+      (fmap (maybe mempty snd . S.viewL) pMap)
+
+
+approxSequPwrRecord ::
+   Val -> SequPwrRecord -> SequPwrRecord -> Bool
+approxSequPwrRecord eps (SequData xs) (SequData ys) =
+   V.equalBy (approxSecPowerRecord eps) xs ys
+
+approxSecPowerRecord ::
+   Val -> SecPowerRecord -> SecPowerRecord -> Bool
+approxSecPowerRecord eps
+      (SecPowerRecord xt xm) (SecPowerRecord yt ym) =
+   S.equalBy (approxAbs eps) xt yt
+   &&
+   M.keys xm == M.keys ym
+   &&
+   Fold.and (M.intersectionWith (S.equalBy (approxAbs eps)) xm ym)
+
+approxAbs :: (Real a) => a -> a -> a -> Bool
+approxAbs eps x y =
+   abs (x-y) <= eps
