@@ -117,11 +117,11 @@ instance Zipper [] a b c  where
    zipWith f x y = L.zipWith f x y -- if V.lenCheck x y then zipWith f x y else error "Error in V.lenCheck List -- unequal Length"
 
 
-vdeltaMap :: (Singleton vec b, Zipper vec b b c) => (b -> b -> c) -> vec b -> vec c
-vdeltaMap f l = zipWith f l (tail l)
+deltaMap :: (Singleton vec b, Zipper vec b b c) => (b -> b -> c) -> vec b -> vec c
+deltaMap f l = zipWith f l (tail l)
 
-vdeltaMapReverse :: (Singleton vec b, Zipper vec b b c) => (b -> b -> c) -> vec b -> vec c
-vdeltaMapReverse f l = zipWith f (tail l) l
+deltaMapReverse :: (Singleton vec b, Zipper vec b b c) => (b -> b -> c) -> vec b -> vec c
+deltaMapReverse f l = zipWith f (tail l) l
 
 ------------------------------------------------------------
 -- | Zipper4
@@ -139,11 +139,11 @@ instance Zipper4 [] a b c d e  where
    zipWith4 f w x y z = L.zipWith4 f w x y z -- if V.lenCheck x y then zipWith f x y else error "Error in V.lenCheck List -- unequal Length"
 
 {-
-vdeltaMap2:: (a -> a -> b -> b -> c)  -> vec a -> vec a -> vec b  -> vec b -> vec c
-vdeltaMap2 f xs ys = zipWith4 f xs (tail xs) ys (tail ys)
+deltaMap2:: (a -> a -> b -> b -> c)  -> vec a -> vec a -> vec b  -> vec b -> vec c
+deltaMap2 f xs ys = zipWith4 f xs (tail xs) ys (tail ys)
 
-vdeltaMapReverse2 :: (a -> a -> b -> b -> c) -> vec a -> vec a -> vec b  -> vec b -> vec c
-vdeltaMapReverse2 f xs ys = zipWith4 f (tail xs) xs (tail ys) ys
+deltaMapReverse2 :: (a -> a -> b -> b -> c) -> vec a -> vec a -> vec b  -> vec b -> vec c
+deltaMapReverse2 f xs ys = zipWith4 f (tail xs) xs (tail ys) ys
 -}
 --------------------------------------------------------------
 -- Vector conversion
