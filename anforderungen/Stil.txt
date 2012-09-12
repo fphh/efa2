@@ -1,0 +1,259 @@
+# Bezeichner
+
+* konsistent englische Bezeichner
+
+* bei Wahrheitswerten: positiv formulierte Bezeichner
+  Bei negativ formulierten Bezeichnern
+  braucht man doppelte Verneinung für positiven Fall.
+
+  Beispiel: `showIntro = True` statt `skipIntro = False`.
+
+* camel case (jede Komponente eines Bezeichners beginnt mit Großbuchstaben)
+  Wie geht man mit Abkürzungen um?
+
+* `safe` oder `unsafe` sollte stehen für `pure` bzw. `impure`.
+  Dagegen sollten nicht-totale Funktionen mit spezialisierter Fehlermeldung
+  besser `checked` heißen.
+
+  Beispiele:
+>    unsafeNewIORef x = unsafePerformIO $ newIORef
+>    checkedLookup x m = M.findWithDefault (error "x not in Map m") x m
+
+* qualifizierte oder explizite Importe
+
+  Beispiele:
+
+>    import qualified EFA2.Signal.Signal as Signal
+>    import EFA2.Signal.Signal (PSig)
+
+  statt
+
+>    import EFA2.Signal.Signal
+
+  Grund: Wenn in Modul der Bezeichner `PSig` auftaucht,
+  hat man keine Ahnung, woher der Bezeichner stammt.
+  Er kann GHCi anwerfen und nachschauen.
+  Funktioniert nur, wenn das Modul noch intakt ist.
+  Wurde es lange nicht mehr gepflegt und
+  `PSig` wird nicht mehr von EFA2.Signal.Signal exportiert,
+  so hat man als Leser keinerlei Anhaltspunkt mehr.
+  Siehe auch PVP (unten).
+
+* Bezeichner so wählen, dass sie mit Modulpräfix sinnvolle Bezeichnung ergeben
+
+  Beispiel: Signal.plot, Signal.toList, Signal.fromList
+
+
+# Syntax
+
+* Reihenfolge der Importe: Spezialmodule vor allgemeinen Modulen
+  Beispiel: erst `EFA2.Signal.Signal`, dann `Data.List`
+  (siehe GHC-Richtlinien)
+  So sieht man leichter, wenn man Module versehentlich mehrfach importiert.
+
+* für jede Erweiterung eigenes LANGUAGE-Pragma
+  (leichter zu editieren, besser für Diff, Git, ...)
+
+  Besser so:
+     {-# LANGUAGE MultiParamTypeClasses #-}
+     {-# LANGUAGE TypeFamilies #-}
+     {-# LANGUAGE FlexibleInstances #-}
+  als so:
+     {-# LANGUAGE MultiParamTypeClasses, TypeFamilies, FlexibleInstances #-}
+
+* mehrzeilige Kommentare mit {- -}
+  nicht jede Zeile mit -- beginnen (schwieriger zu editieren)
+
+* keine Leerzeichen am Ende von Zeilen
+
+* keine Tabulatoren (es gibt auch eine Warnung dafür)
+  sonst kommt GHC bei Konstrukten durcheinander,
+  wo es auf die Einrückung ankommt.
+
+
+# Typen
+
+* Typsignaturen für alle globalen Bezeichner
+
+  Hinweis: Typannotation ersetzt keine Typsignatur
+  Deswegen immer so:
+>     n :: Int
+>     n = 5
+  statt so
+>     n = 5 :: Int
+
+* Type-Synonyme maximal eta-reduzieren, d.h.
+
+>    type MyList = []
+
+  statt
+
+>    type MyList a = [a]
+
+  Auf diese Weise kann man auch mal `MyList` als Typparameter verwenden,
+  wo ein Typkonstruktor gebraucht wird.
+
+
+# Typklassen
+
+* möglichst keine verwaisten Typklassenausprägungen (orphan instances)
+  Gefahr von Konflikten zwischen Ausprägungen
+
+* möglichst alle Methoden einer Typklasse implementieren,
+  sonst Typklassen verkleinern
+  Beispiel: DrawTopology vs. DrawDeltaTopology
+
+* bestimmte Erweiterungen vermeiden:
+    OverlappingInstances
+    UndecidableInstances lassen sich manchmal mit Typfamilien vermeiden
+    TypeSynonymInstances lassen sich durch zusätzliche Klasse vermeiden
+    FlexibleInstances lassen sich durch zusätzliche Klasse vermeiden
+
+* Klasse mit nur einer 'instance' sollte es eigentlich nicht geben.
+  Überhaupt sollte es keine 'catch-all instance' geben,
+  also eine Klassenausprägung, bei der nur Typvariablen als Parameter vorkommen.
+
+  Beispiel:
+     SZipWith s1 s2 s3 c1 c2 d1 d2 d3
+
+  Dann besser gar keine Klasse und stattdessen eine polymorphe Funktion.
+  Oder sollte man Klassensynonyme nehmen? (relativ neue Typerweiterung)
+
+
+
+# andere Programmiertipps
+
+* GHC-Warnungen einschalten und beachten (Option -Wall)
+   (noch mehr Warnungsoptionen ...)
+
+* Show instance sollte Haskell-Code ausgeben, nichts formatiertes
+
+* `mapM_ f xs` ist effizienter als `void $ mapM f xs`
+  beachte Warnung vor ignorierten monadischen Ergebnissen
+
+* Rekursion richtig aufziehen
+     falsch: wiederholt an Akkumulator mit (++) ein einzelnes Element hintendran hängen
+                (quadratische Laufzeit, nicht lazy)
+     falsch: wiederholt an Akkumulator vorne mit (:) anhängen und zum Schluss mit reverse umdrehen
+                (lineare Laufzeit, aber immer noch nicht lazy)
+     richtig: ohne Akkumulator vor Rest der Rekursion hängen
+
+* besser Maybe, Either & Co. als Spezialwerte,
+  wie bei ">=0 bedeutet Anzahl geschriebene Bytes, <0 Errorcode"
+  Spezialwerte zu fehleranfällig
+  schlechtes Beispiel: noRecord
+
+* möglichst kein error, head, fromJust, irrefutable matching,
+  stattdessen Typen, die genau das erlauben, was gebraucht wird
+
+
+# Versionsverwaltung
+
+* Jede Änderung an `master` sollte lauffähig sein.
+  D.h. `cabal install` (und später `cabal test`) soll fehlerfrei durchlaufen
+
+* Git-Kommentar mit betroffenem Modul beginnen
+  Beispiel:
+
+>   Modul: Änderung
+
+* Binärdateien vermeiden, große erst recht
+  temporäre oder erzeugte Dateien sollten nicht in Versionsverwaltung,
+  stattdessen in .gitignore aufnehmen.
+
+* In Programmkommentaren und LaTeX-Dokumenten:
+  Texte immer in Sinneinheiten umbrechen,
+  keine Blockformatierung, nicht den ganzen Absatz auf eine Zeile.
+  So funktioniert Diff besser.
+
+  So:
+    Es war einmal ein kleines süßes Mädchen,
+    das hatte jedermann lieb, der es nur ansah,
+    am allerliebsten aber seine Großmutter,
+    die wusste gar nicht, was sie alles dem Kinde geben sollte.
+    Einmal schenkte sie ihm ein Käppchen von rotem Samt,
+    und weil ihm das so wohl stand, und es nichts anders mehr tragen wollte,
+    hieß es nur das Rotkäppchen.
+
+  statt so:
+    Es war einmal ein kleines süßes Mädchen, das hatte jedermann lieb, der es nur
+    ansah, am allerliebsten aber seine Großmutter, die wusste gar nicht, was sie
+    alles dem Kinde geben sollte. Einmal schenkte sie ihm ein Käppchen von rotem
+    Samt, und weil ihm das so wohl stand, und es nichts anders mehr tragen wollte,
+    hieß es nur das Rotkäppchen.
+
+  oder so:
+    Es war einmal ein kleines süßes Mädchen, das hatte jedermann lieb, der es nur ansah, am allerliebsten aber seine Großmutter, die wusste gar nicht, was sie alles dem Kinde geben sollte. Einmal schenkte sie ihm ein Käppchen von rotem Samt, und weil ihm das so wohl stand, und es nichts anders mehr tragen wollte, hieß es nur das Rotkäppchen.
+
+
+# Cabal
+
+* alle importierten Pakete mit unteren und oberen Versionsschranken:
+
+  Beispiel:
+
+    Build-Depends: gnuplot >=0.5.1 && <0.6
+
+  bedeutet:
+    mit 0.5.1 habe ich es erfolgreich getestet
+    ich importiere nur qualifiziert oder explizit aus gnuplot,
+    deswegen darf ich alle Versionen ab 0.5.1 benutzen, die mit 0.5 beginnen.
+
+  Beispiel:
+
+    Build-Depends: gnuplot >=0.5.1 && <0.5.2
+
+  bedeutet:
+    mit 0.5.1 habe ich es erfolgreich getestet
+    ich importiere unqualifiziert alle Bezeichner eines gnuplot-Moduls,
+    deswegen darf ich nur Versionen benutzen, die mit 0.5.1 beginnen.
+    D.h. Fehlerkorrekturen nehme ich mit,
+    aber beim Hinzufügen von gnuplot-Funktionen
+    würde ich Namenskollisionen mit eigenen Bezeichnern riskieren,
+    deswegen muss ich alle Versionen mit neuen gnuplot-Funktionen ausschließen.
+
+  Von der zweiten Variante rate ich ab,
+  weil man zu häufig die Versionen anpassen muss
+  und die Module schlecht lesbar sind.
+  Siehe oben.
+
+* zur Frage, welche Änderung am Paket welche Versionserhöhung erfordert,
+  verweise ich auf die Package Versioning Policy
+
+  Kurzfassung:
+   * 0.0.0.0 -> 0.0.0.1 bei:
+     Änderungen an Cabal-Datei (Anpassung auf neue GHC-Version)
+     Änderungen an Kommentaren
+     Fehlerkorrekturen
+     verbesserte Implementierung ohne Änderung der Schnittstelle
+
+   * 0.0.0 -> 0.0.1 bei:
+     abwärtskompatiblen Änderungen
+        (sofern Nutzer qualifiziert oder explizit importiert)
+     also: Hinzufügen von Modulen, Funktionen, Typen
+
+   * 0.0 -> 0.1 bei:
+     Änderungen an der Schnittstelle
+     Warnung:
+        Auch Verallgemeinern des Typs einer Funktion
+        ist nicht abwärtskompatibel
+        da es möglicherweise zusätzlich Typannotationen erfordert.
+
+* Cabal-Pakete-Versionen und Git-Tags sollten wie folgt synchronisiert werden:
+
+  In Cabal-Datei steht Paket-Version 0.5.
+  Das heißt, aich arbeite aktuell an der Version 0.5.
+  Daraus folgt, dass alle veröffentlichten Versionen
+  (auf Hackage) kleiner sind als 0.5.
+
+  Nun veröffentliche ich die Version 0.5 auf Hackage.
+  Damit ich später den Zustand bei Veröffentlichung wiederherstellen kann,
+  setze ich sofort nach dem Hochladen das Git-Tag 0.5.
+  Außerdem erhöhe ich die Cabal-Version,
+  damit ich es nicht vergesse, wenigstens auf 0.5.0.1.
+  Bei jeder Änderung kontrolliere ich,
+  ob diese Änderung eine weitere Erhöhung der Version erfordert,
+  bezogen auf die letzte Hackage-Veröffentlichung.
+
+  Damit ich Cabal-Versionen und Git-Tags synchronisieren kann,
+  benutze ich genau ein Git-Archiv pro Cabal-Paket.
