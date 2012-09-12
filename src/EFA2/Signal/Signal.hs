@@ -21,7 +21,7 @@ import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as UV
 
 import Control.Monad (liftM2)
-import Data.Monoid (Monoid, mempty, mappend)
+import Data.Monoid (Monoid, mempty, mappend, mconcat)
 import Data.Tuple.HT (mapPair)
 
 import qualified Data.List as L
@@ -377,7 +377,7 @@ rsingleton (t,ps) = (singleton t, singleton ps)
 ----------------------------------------------------------
 -- from/to List
 
-unpack :: TC s t (Data c d) -> (Data c d)
+unpack :: TC s t a -> a
 unpack (TC x) = x
 
 fromList :: D.FromList c d => NestedList c d -> TC s t (Data c d)
@@ -629,6 +629,7 @@ instance TransposeType TestRow TestRow
 instance Monoid c => Monoid (TC s typ c) where
    mempty = TC $ mempty
    mappend (TC x) (TC y) = TC $ mappend x y
+   mconcat = TC . mconcat . L.map unpack
 
 
 append ::
