@@ -284,18 +284,21 @@ updateMap pmap xs =
            then M.fromList $ zip keys xs
            else error "Error in updateMap - map and List length don't match"
 
-record2RSig :: ListPowerRecord -> RSig
+type RSigX a =
+        (TC S.Signal (Typ A T Tt) (Data ([] :> Nil) a),
+         TC S.Sample (Typ A P Tt) (Data ([] :> [] :> Nil) a))
+
+record2RSig :: PowerRecord [] a -> RSigX a
 record2RSig (PowerRecord t pMap) = (t, S.transpose2 $ fromSigList $ M.elems pMap)
 
-rsig2Record :: RSig -> ListPowerRecord -> ListPowerRecord
+rsig2Record :: RSigX a -> PowerRecord [] a -> PowerRecord [] a
 rsig2Record (t, ps) (PowerRecord _ pMap) =
    PowerRecord t $ updateMap pMap $ toSigList $ S.transpose2 ps
 
 rsig2SecRecord ::
    (V.Convert [] v a) =>
    PowerRecord [] a ->
-   (TC S.Signal (Typ A T Tt) (Data ([] :> Nil) a),
-    TC S.Sample (Typ A P Tt) (Data ([] :> [] :> Nil) a)) ->
+   RSigX a ->
    PowerRecord v a
 rsig2SecRecord (PowerRecord _ pMap) (t, ps) =
    PowerRecord (S.convert t) $
@@ -385,7 +388,7 @@ zeroCrossingsPerInterval =
          ys :
          [])
 
-chopAtZeroCrossingsRSig :: RSig -> [RSig]
+chopAtZeroCrossingsRSig :: (RealFrac a) => RSigX a -> [RSigX a]
 chopAtZeroCrossingsRSig (TC (Data times), TC (Data vectorSignal)) =
    map (mapPair (TC . Data, TC . Data)) $
    map unzip $
@@ -395,8 +398,8 @@ chopAtZeroCrossingsRSig (TC (Data times), TC (Data vectorSignal)) =
    zip times vectorSignal
 
 chopAtZeroCrossingsPowerRecord ::
-   (V.Convert [] v Val) =>
-   ListPowerRecord -> SequData (PowerRecord v Val)
+   (V.Convert [] v a, RealFrac a) =>
+   PowerRecord [] a -> SequData (PowerRecord v a)
 chopAtZeroCrossingsPowerRecord rSig =
    SequData $ map (rsig2SecRecord rSig) $
    chopAtZeroCrossingsRSig $

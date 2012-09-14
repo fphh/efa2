@@ -4,8 +4,6 @@
 
 module EFA2.Signal.SequenceData where
 
-import qualified Data.Map as M
-
 -- import EFA2.Interpreter.Arith
 import EFA2.Topology.TopologyData (FlowTopology)
 
@@ -20,9 +18,11 @@ import EFA2.Signal.Base (Sign, Val)
 import qualified Test.QuickCheck as QC
 import System.Random (Random)
 
+import qualified Data.Map as M
 import qualified Data.Vector.Unboxed as UV
 import qualified Data.List.HT as HTL
 import qualified Data.List.Match as Match
+import Data.Ratio (Ratio, (%))
 import Data.List (transpose)
 import Control.Monad (liftM2)
 
@@ -43,7 +43,7 @@ data PowerRecord v a =
    PowerRecord
       (TC Signal (Typ A T Tt) (Data (v :> Nil) a))
       (M.Map PPosIdx (TC Signal (Typ A P Tt) (Data (v :> Nil) a)))
-   deriving (Show)
+   deriving (Show, Eq)
 
 -- | Power record to contain power signals assigned to the tree
 type ListPowerRecord = PowerRecord [] Val
@@ -85,7 +85,7 @@ type Sec = (SignalIdx,SignalIdx)
 
 
 -- | Sequence Vector to Store Section Data
-newtype SequData a = SequData [a] deriving (Show) -- deriving Show
+newtype SequData a = SequData [a] deriving (Show, Eq)
 
 instance Functor SequData where
    fmap f (SequData xs) = SequData (map f xs)
@@ -96,10 +96,10 @@ instance QC.Arbitrary PPosIdx where
    shrink (PPosIdx from to) = map (uncurry PPosIdx) $ QC.shrink (from, to)
 
 instance
-   (Show (v a), Random a, Num a, V.FromList v a) =>
+   (Show (v a), Sample a, V.FromList v a) =>
       QC.Arbitrary (PowerRecord v a) where
    arbitrary = do
-      xs <- QC.listOf (QC.choose (-1,1))
+      xs <- QC.listOf arbitrarySample
       n <- QC.choose (1,5)
       ppos <- QC.vectorOf n QC.arbitrary
       let vectorSamples =
@@ -108,3 +108,20 @@ instance
       return $
          PowerRecord (S.fromList $ Match.take vectorSamples $ iterate (1+) 0) $
          M.fromList $ zip ppos $ map S.fromList $ transpose vectorSamples
+
+{-
+we need this class,
+because QC.choose requires a Random instance
+but there is no Random Ratio instance
+-}
+class Num a => Sample a where arbitrarySample :: QC.Gen a
+instance Sample Double where arbitrarySample = QC.choose (-1,1)
+instance (Random a, Integral a) => Sample (Ratio a) where
+   arbitrarySample = do
+      x <- QC.choose (-100,100)
+      y <- QC.choose (-100,100)
+      return $
+         case compare (abs x) (abs y) of
+            LT -> x%y
+            GT -> y%x
+            EQ -> 1 -- prevent 0/0
