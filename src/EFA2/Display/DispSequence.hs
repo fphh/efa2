@@ -43,10 +43,11 @@ instance
 
                                            where t = tvcat $ (toTable os ("Time",time)) ++ concatMap (toTable os . mapFst show) (M.toList sigs)
 
-instance ToTable SequPwrRecord where
-         toTable os (ti,(SequData rs)) = concat $ map (toTable os) (zipWith f [0..] rs)
-           where f idx r = ("Section " ++ show idx,r)
-                                                                           
+instance (ToTable a) => ToTable (SequData a) where
+         toTable os (_ti, SequData rs) = concatMap (toTable os) (zip (map f [0..]) rs)
+           where f :: Int -> String
+                 f idx = "Section " ++ show idx
+
 
 instance ToTable Sequ where
          toTable os (ti,xs) = [Table {tableTitle = "Sequence: " ++ ti,
