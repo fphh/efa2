@@ -711,24 +711,9 @@ instance D.All c => All s c where
 -- signal sign
 
 sigSign ::
-   (Ord d1, Num d1, Box s c c, D.Map c, D.Storage c d1, D.Storage c B.Sign) =>
-   TC s typ (Data c d1) -> TC s typ (Data c B.Sign)
-sigSign x = map B.sign $ box x
-
-----------------------------------------------------------
--- box / unbox a signal
-
-class Box s c1 c2 where
-   box :: (D.Storage c1 d1) => TC s typ (Data c1 d1) -> TC s typ (Data c2 d1)
-   unbox :: (D.Storage c1 d1) => TC s typ (Data c2 d1) -> TC s typ (Data c1 d1)
-
-instance Box Signal (UV.Vector :> Nil) (V.Vector :> Nil) where
-   box (TC xd) = TC $ Data $ D.withNestedData (SV.readUnbox SV.box) xd
-   unbox (TC (Data x)) = TC $ D.nestedData (SV.writeUnbox (SV.unbox x))
-
-instance Box Scalar c1 c1 where
-   box x = x
-   unbox x = x
+   (Ord d, Num d, D.Map c, D.Storage c d, D.Storage c B.Sign) =>
+   TC s typ (Data c d) -> TC s typ (Data c B.Sign)
+sigSign x = map B.sign x
 
 -- | Convert between List and different Vector formats
 convert ::

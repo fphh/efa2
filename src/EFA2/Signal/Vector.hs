@@ -225,19 +225,6 @@ deltaMap2 f xs ys = zipWith4 f xs (tail xs) ys (tail ys)
 deltaMapReverse2 :: (a -> a -> b -> b -> c) -> vec a -> vec a -> vec b  -> vec b -> vec c
 deltaMapReverse2 f xs ys = zipWith4 f (tail xs) xs (tail ys) ys
 -}
---------------------------------------------------------------
--- Vector conversion
-class Box c1 c2 where
-   box :: (Storage c1 a, Storage c2 a) => c1 a -> c2 a
-   unbox :: (Storage c1 a, Storage c2 a) => c2 a -> c1 a
-
-instance Box UV.Vector V.Vector where
-   box x = readUnbox UV.convert x
-   unbox x = writeUnbox (V.convert x)
-
-instance Box [] [] where
-   box = id
-   unbox = id
 
 --------------------------------------------------------------
 -- Vector conversion
@@ -329,7 +316,7 @@ instance Transpose UV.Vector V.Vector where
                 lens = V.map len xs
                 len0 = V.head lens
             in  if all (== len0) lens
-                  then V.map (unbox . flip V.map xs) fs
+                  then V.map (convert . flip V.map xs) fs
                   else error "Error in V.Transpose -- unequal length"
 
 
