@@ -12,7 +12,7 @@ import qualified EFA2.Signal.Signal as S
 import qualified EFA2.Signal.Vector as V
 
 import EFA2.Signal.SequenceData
-          (SequData(..), Sequ, Sec,
+          (SequData(..), Sequ(..), Sec,
            PowerRecord(..), ListPowerRecord, SequPwrRecord, SecPowerRecord,
            FlowRecord, FlRecord(FlRecord), SequFlowRecord,
            RecIdx(..), SecIdx(..), PPosIdx(..))
@@ -28,8 +28,6 @@ import EFA2.Signal.Typ (Typ, UT, STy, Tt, T, P, A)
 import EFA2.Signal.Data (Data(Data), Nil, (:>))
 
 import qualified Data.Vector.Unboxed as UV
-
-import EFA2.Utils.Utils (listIdx)
 
 import qualified Data.Foldable as Fold
 import qualified Data.List.HT as HTL
@@ -108,12 +106,9 @@ makeSequence ::
           (Data (UV.Vector :> Nil) Val))],
     Topology)
 makeSequence pRec topo = (sqEnvs, sqTopo)
-  where pRec0 = addZeroCrossings pRec
-        (sequ,sqPRec) = genSequ pRec0
-        sqFRec = genSequFlow sqPRec
-        sqEnvs = case sqFRec of SequData sq -> map g $ zip h sq
+  where sqFRec = genSequFlow $ snd $ genSequ $ addZeroCrossings pRec
+        sqEnvs = case sqFRec of SequData sq -> map g $ zip (map SecIdx [0..]) sq
         g (s, rec) = fromFlowRecord s (RecIdx 0) rec
-        h = map SecIdx $ listIdx sequ
 
         sqFStRec = Flow.genSequFState sqFRec
         sqFlowTops = Flow.genSequFlowTops topo sqFStRec
@@ -128,12 +123,15 @@ must correctly handle the last section.
 -}
 -- | Function to Generate Time Sequence
 genSequ ::  ListPowerRecord -> (Sequ, SequPwrRecord)
-genSequ pRec = removeNilSections (sequ++[lastSec],SequData pRecs)
+genSequ pRec = removeNilSections (Sequ $ sequ++[lastSec], SequData pRecs)
   where rSig = record2RSig pRec
         pRecs = map (rsig2SecRecord pRec) (seqRSig ++ [lastRSec])
         ((lastSec,sequ),(lastRSec,seqRSig)) = recyc (S.rtail rSig) (S.rhead rSig) (((0,0),[]),(rsingleton $ S.rhead rSig,[]))
 
-        recyc :: RSig -> RSamp1 -> ((Sec,Sequ), (RSig, [RSig])) -> ((Sec,Sequ), (RSig, [RSig]))
+        recyc ::
+           RSig -> RSamp1 ->
+           ((Sec, [Sec]), (RSig, [RSig])) ->
+           ((Sec, [Sec]), (RSig, [RSig]))
         -- recyc rSig x1 (((lastIdx,idx),sequ),(secRSig, sequRSig)) | rSig /= mempty = recyc (S.rtail rSig) (S.rhead rSig) (g $ stepDetect x1 x2, f $ stepDetect x1 x2)
         -- Incoming rSig is at least two samples long -- detect changes
         recyc rSig x1 (((lastIdx,idx),sequ),(secRSig, sequRSig)) | (S.rlen rSig) >=2 = recyc (S.rtail rSig) (S.rhead rSig) (g $ stepDetect x1 x2, f $ stepDetect x1 x2)
@@ -148,22 +146,22 @@ genSequ pRec = removeNilSections (sequ++[lastSec],SequData pRecs)
             f MixedEvent = (xs2, sequRSig ++ [secRSig] ++ [xs1 .++ xs2]) -- make additional Mini--Section
             f NoEvent = (secRSig .++ xs2, sequRSig)                  -- continue incrementing
 
-            g :: EventType -> (Sec, Sequ)
+            g :: EventType -> (Sec, [Sec])
             g LeftEvent = ((idx, idx+1), sequ ++ [(lastIdx, idx)])
             g RightEvent = ((idx+1, idx+1), sequ ++ [(lastIdx, idx+1)])
             g MixedEvent = ((idx+1, idx+1), sequ ++ [(lastIdx, idx)] ++ [(idx, idx+1)])
             g NoEvent = ((lastIdx, idx+1), sequ)
-            
+
         -- Incoming rList is only one Point long -- append last sample to last section
         recyc rSig x1 (((lastIdx,idx),sequ),(secRSig, sequRSig)) | (S.rlen rSig) >=1 = (((lastIdx,idx+1),sequ),(secRSig .++ rSig, sequRSig))
-        
+
         -- Incoming rList is empty -- return result
         recyc _ _ acc = acc
-        
+
 
 -- | Function to remove Nil-Sections which have same start and stop Index
 removeNilSections :: (Sequ,SequPwrRecord) ->   (Sequ, SequPwrRecord)
-removeNilSections (sequ, SequData pRecs) = (fsequ, SequData fRecs)
+removeNilSections (Sequ sequ, SequData pRecs) = (Sequ fsequ, SequData fRecs)
   where (fsequ, fRecs) = unzip $ filter (uncurry (/=) . fst) $ zip sequ pRecs
 
 

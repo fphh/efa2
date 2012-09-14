@@ -1,4 +1,3 @@
-{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -50,7 +49,7 @@ instance (ToTable a) => ToTable (SequData a) where
 
 
 instance ToTable Sequ where
-         toTable os (ti,xs) = [Table {tableTitle = "Sequence: " ++ ti,
+   toTable _os (ti, Sequ xs) = [Table {tableTitle = "Sequence: " ++ ti,
                                       tableData = td,
                                       tableFormat = autoFormat td,
                                       tableSubTitle = ""}]
@@ -59,6 +58,6 @@ instance ToTable Sequ where
                                           titleRow  = [[toDoc id "Section:"]++map (\x -> toDoc id ("Sec" ++ show x)) [0..(length xs -1)]],
                                           titleCols = [[toDoc id "Index"]],
                                           endCols  = []}
-                          
+
                           -- f :: (Int,Int) -> TableData
                           f (i1, i2) = toDoc id $ (show i1) ++ " - " ++ (show i2) 

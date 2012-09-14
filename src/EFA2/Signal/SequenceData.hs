@@ -80,7 +80,7 @@ type SequFlowTops = SequData FlowTopology
 -----------------------------------------------------------------------------------
 -- Section and Sequence -- Structures to handle Sequence Information and Data
 -- | Section analysis result
-type Sequ = [Sec]
+newtype Sequ = Sequ [Sec] deriving Show
 type Sec = (SignalIdx,SignalIdx)
 
 
