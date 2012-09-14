@@ -3,10 +3,10 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE EmptyDataDecls #-}
 
 module EFA2.Signal.Signal (module EFA2.Signal.Signal) where
@@ -50,6 +50,15 @@ data FClass
 
 data TestRow
 
+
+writeNested ::
+   ((SV.Storage v2 (Apply v1 a), D.Storage v1 a) => TC s t (Data (v2 :> v1) a)) ->
+   (D.Storage (v2 :> v1) a => TC s t (Data (v2 :> v1) a))
+writeNested x =
+   let z@(TC y) = case D.constraints y of D.ComposeConstraints -> x
+   in  z
+
+
 ----------------------------------------------------------------
 -- Signal Zipwith with Rule of Signal Inheritance
 -- type family
@@ -82,8 +91,9 @@ type instance Arith TestRow TestRow = TestRow
 type instance Arith Scalar TestRow = TestRow
 type instance Arith TestRow Scalar = TestRow
 
+
 zipWith ::
-   (D.ZipWith c1 c2 d1 d2 d3) =>
+   (D.ZipWith c1 c2, D.Storage c1 d1, D.Storage c2 d2, D.Storage (Zip c1 c2) d3) =>
    (d1 -> d2 -> d3) ->
    TC s1 typ1 (Data c1 d1) ->
    TC s2 typ2 (Data c2 d2) ->
@@ -94,7 +104,7 @@ zipWith f (TC da1) (TC da2) =
 ----------------------------------------------------------------
 -- Getyptes ZipWith
 tzipWith ::
-   (D.ZipWith c1 c2 d1 d2 d3) =>
+   (D.ZipWith c1 c2, D.Storage c1 d1, D.Storage c2 d2, D.Storage (Zip c1 c2) d3) =>
    (TC Sample typ1 (Data Nil d1) ->
     TC Sample typ2 (Data Nil d2) ->
     TC Sample typ3 (Data Nil d3)) ->
@@ -116,7 +126,8 @@ type instance CrossArith FDistrib FClass = FDistrib
 type instance CrossArith FClass FDistrib = FClass
 
 crossWith ::
-   (D.CrossWith c1 c2 d1 d2 d3) =>
+   (D.CrossWith c1 c2,
+    D.Storage c1 d1, D.Storage c2 d2, D.Storage (D.Cross c1 c2) d3) =>
    (d1 -> d2 -> d3) ->
    TC s1 typ1 (Data c1 d1) ->
    TC s2 typ2 (Data c2 d2) ->
@@ -128,28 +139,32 @@ crossWith f (TC da1) (TC da2) = TC $ D.crossWith f da1 da2
 -- Normal Arithmetics - based on zip
 
 (.*) ::
-   (TProd t1 t2 t3, D.ZipWith c1 c2 a1 a2 a1, BProd a1 a2) =>
+   (TProd t1 t2 t3, D.ZipWith c1 c2,
+    D.Storage c1 a1, D.Storage c2 a2, D.Storage (Zip c1 c2) a1, BProd a1 a2) =>
    TC s1 t1 (Data c1 a1) ->
    TC s2 t2 (Data c2 a2) ->
    TC (Arith s1 s2) t3 (Data (Zip c1 c2) a1)
 (.*) x y = zipWith (..*) x y
 
 (./) ::
-   (TProd t1 t2 t3, D.ZipWith c1 c2 a1 a2 a1, BProd a1 a2) =>
+   (TProd t1 t2 t3, D.ZipWith c1 c2,
+    D.Storage c1 a1, D.Storage c2 a2, D.Storage (Zip c1 c2) a1, BProd a1 a2) =>
    TC s1 t3 (Data c1 a1) ->
    TC s2 t2 (Data c2 a2) ->
    TC (Arith s1 s2) t1 (Data (Zip c1 c2) a1)
 (./) x y = zipWith (../) x y
 
 (.+) ::
-   (TSum t1 t2 t3, D.ZipWith c1 c2 a a a, BSum a) =>
+   (TSum t1 t2 t3, D.ZipWith c1 c2,
+    D.Storage c1 a, D.Storage c2 a, D.Storage (Zip c1 c2) a, BSum a) =>
    TC s1 t1 (Data c1 a) ->
    TC s2 t2 (Data c2 a) ->
    TC (Arith s1 s2) t3 (Data (Zip c1 c2) a)
 (.+) x y = zipWith (..+) x y
 
 (.-) ::
-   (TSum t1 t2 t3, D.ZipWith c1 c2 a a a, BSum a) =>
+   (TSum t1 t2 t3, D.ZipWith c1 c2,
+    D.Storage c1 a, D.Storage c2 a, D.Storage (Zip c1 c2) a, BSum a) =>
    TC s1 t3 (Data c1 a) ->
    TC s2 t2 (Data c2 a) ->
    TC (Arith s1 s2) t1 (Data (Zip c1 c2) a)
@@ -164,32 +179,36 @@ infix 6 .+,.-
 -- Cross Arithmetics - based on crossWith
 
 (&*) ::
-   (D.CrossWith c1 c2 d1 d2 d1, TProd t1 t2 t3, BProd d1 d2) =>
-   TC s1 t1 (Data c1 d1) ->
-   TC s2 t2 (Data c2 d2) ->
-   TC (CrossArith s1 s2) t3 (Data (D.Cross c1 c2) d1)
+   (TProd t1 t2 t3, D.CrossWith c1 c2,
+    D.Storage c1 a1, D.Storage c2 a2, D.Storage (D.Cross c1 c2) a1, BProd a1 a2) =>
+   TC s1 t1 (Data c1 a1) ->
+   TC s2 t2 (Data c2 a2) ->
+   TC (CrossArith s1 s2) t3 (Data (D.Cross c1 c2) a1)
 (&*) = crossWith (..*)
 
 (&/) ::
-   (D.CrossWith c1 c2 d1 d2 d1, TProd t1 t2 t3, BProd d1 d2) =>
-   TC s1 t3 (Data c1 d1) ->
-   TC s2 t2 (Data c2 d2) ->
-   TC (CrossArith s1 s2) t1 (Data (D.Cross c1 c2) d1)
+   (TProd t1 t2 t3, D.CrossWith c1 c2,
+    D.Storage c1 a1, D.Storage c2 a2, D.Storage (D.Cross c1 c2) a1, BProd a1 a2) =>
+   TC s1 t3 (Data c1 a1) ->
+   TC s2 t2 (Data c2 a2) ->
+   TC (CrossArith s1 s2) t1 (Data (D.Cross c1 c2) a1)
 (&/) = crossWith (../)
 
 
 (&+) ::
-   (D.CrossWith c1 c2 d d d, TSum t1 t2 t3, BSum d) =>
-   TC s1 t3 (Data c1 d) ->
-   TC s2 t2 (Data c2 d) ->
-   TC (CrossArith s1 s2) t1 (Data (D.Cross c1 c2) d)
+   (TSum t1 t2 t3, D.CrossWith c1 c2,
+    D.Storage c1 a, D.Storage c2 a, D.Storage (D.Cross c1 c2) a, BSum a) =>
+   TC s1 t3 (Data c1 a) ->
+   TC s2 t2 (Data c2 a) ->
+   TC (CrossArith s1 s2) t1 (Data (D.Cross c1 c2) a)
 (&+) = crossWith (..+)
 
 (&-) ::
-   (D.CrossWith c1 c2 d d d, TSum t1 t2 t3, BSum d) =>
-   TC s1 t3 (Data c1 d) ->
-   TC s2 t2 (Data c2 d) ->
-   TC (CrossArith s1 s2) t1 (Data (D.Cross c1 c2) d)
+   (TSum t1 t2 t3, D.CrossWith c1 c2,
+    D.Storage c1 a, D.Storage c2 a, D.Storage (D.Cross c1 c2) a, BSum a) =>
+   TC s1 t3 (Data c1 a) ->
+   TC s2 t2 (Data c2 a) ->
+   TC (CrossArith s1 s2) t1 (Data (D.Cross c1 c2) a)
 (&-) = crossWith (..-)
 
 
@@ -358,7 +377,7 @@ zipPairs :: (a,b) -> (c,d) -> ((a,c), (b,d))
 zipPairs (a,b) (c,d) = ((a,c), (b,d))
 
 rlen :: RSig -> Int
-rlen  (t,ps) = P.min (length t) (length ps)
+rlen  (t,ps) = P.min (len t) (len ps)
 
 rsingleton :: RSamp1 -> RSig
 rsingleton (t,ps) = (singleton t, singleton ps)
@@ -380,10 +399,10 @@ rsingleton (t,ps) = (singleton t, singleton ps)
 unpack :: TC s t a -> a
 unpack (TC x) = x
 
-fromList :: D.FromList c d => NestedList c d -> TC s t (Data c d)
+fromList :: (D.FromList c, D.Storage c d) => NestedList c d -> TC s t (Data c d)
 fromList x = TC $ D.fromList x
 
-toList :: D.FromList c d => TC s t (Data c d) -> NestedList c d
+toList :: (D.FromList c, D.Storage c d) => TC s t (Data c d) -> NestedList c d
 toList (TC x) = D.toList x
 
 {-
@@ -396,17 +415,17 @@ toList (TC x) = D.toList x
 
 -- subsumed by general fromList
 fromList2 ::
-   (SV.FromList c1 (c2 d), SV.FromList c2 d) =>
+   (SV.FromList c1, SV.Storage c1 (c2 d), SV.FromList c2, SV.Storage c2 d) =>
    [[d]] -> TC s t (Data (c1 :> c2 :> Nil) d)
 fromList2 x = TC $ D.fromList x
 
 -- subsumed by general toList
 toList2 ::
-   (SV.FromList c1 (c2 d), SV.FromList c2 d) =>
+   (SV.FromList c1, SV.Storage c1 (c2 d), SV.FromList c2, SV.Storage c2 d) =>
    TC s t (Data (c1 :> c2 :> Nil) d) -> [[d]]
 toList2 (TC x) = D.toList x
 
-fromVal :: SV.FromList c d => Int -> d -> TC s t (Data (c :> Nil) d)
+fromVal :: (SV.FromList c, SV.Storage c d) => Int -> d -> TC s t (Data (c :> Nil) d)
 fromVal len x = fromList (L.replicate len x)
 
 fromScalar :: TC Scalar typ (Data Nil d) -> d
@@ -422,17 +441,18 @@ fromSample :: TC Sample typ (Data Nil d) -> d
 fromSample (TC (Data x)) = x
 
 
-class Const s c d where
-      toConst :: Int -> d -> TC s (Typ UT UT UT) (Data c d)
+class Const s c where
+   toConst :: D.Storage c d => Int -> d -> TC s (Typ UT UT UT) (Data c d)
 
-instance (SV.FromList v1 Val) => Const Signal (v1 :> Nil) Val where
-         toConst len x =  fromVal len x
+instance (SV.FromList v1) => Const Signal (v1 :> Nil) where
+   toConst len x = writeNested (fromVal len x)
 
-instance (SV.FromList v1 Val) => Const FSignal (v1 :> Nil) Val where
-         toConst len x =  fromVal len x
+instance (SV.FromList v1) => Const FSignal (v1 :> Nil) where
+   toConst len x = writeNested (fromVal len x)
 
-instance Const Scalar Nil Val where
-         toConst _len x =  toScalar x
+instance Const Scalar Nil where
+   toConst _len x = toScalar x
+
 
 {-
 getSigVec :: TC Signal typ (Data (v1 :> Nil) d) -> v1 d
@@ -455,7 +475,8 @@ toSigList (TC (Data (D2 x))) = map vec2Sig vecList
 -- Zip
 
 zip ::
-   (c ~ Zip c c, D.ZipWith c c d1 d2 (d1, d2)) =>
+   (c ~ Zip c c, D.ZipWith c c,
+    D.Storage c d1, D.Storage c d2, D.Storage c (d1, d2)) =>
    TC s typ (Data c d1) ->
    TC s typ (Data c d2) ->
    TC (Arith s s) typ (Data c (d1,d2))
@@ -463,13 +484,15 @@ zip x y = zipWith (,) x y
 
 ----------------------------------------------------------
 -- SMap
-map :: D.Map c d1 d2 => (d1 -> d2) -> TC s typ (Data c d1) -> TC s typ (Data c d2)
+map ::
+   (D.Map c, D.Storage c d1, D.Storage c d2) =>
+   (d1 -> d2) -> TC s typ (Data c d1) -> TC s typ (Data c d2)
 map f (TC x) = TC $ D.map f x
 
 ----------------------------------------------------------
 -- Getyptes SMap
 tmap ::
-   (D.Map c d1 d2) =>
+   (D.Map c, D.Storage c d1, D.Storage c d2) =>
    (TC Sample typ1 (Data Nil d1) -> TC Sample typ2 (Data Nil d2)) ->
    TC s typ1 (Data c d1) -> TC s typ2 (Data c d2)
 tmap f xs = changeType $ map (fromSample . f . toSample) xs
@@ -478,8 +501,9 @@ tmap f xs = changeType $ map (fromSample . f . toSample) xs
 -- DeltaMap
 
 deltaMap, deltaMapReverse ::
-   (SV.Singleton v2 (Apply v1 d1),
-    v1 ~ Zip v1 v1, D.ZipWith (v2 :> v1) (v2 :> v1) d1 d1 d2) =>
+   (SV.Singleton v2, SV.Storage v2 (Apply v1 d1),
+    v1 ~ Zip v1 v1, D.ZipWith (v2 :> v1) (v2 :> v1),
+    D.Storage (v2 :> v1) d1, D.Storage (v2 :> v1) d2) =>
    (d1 -> d1 -> d2) ->
    TC Signal typ (Data (v2 :> v1) d1) ->
    TC FSignal typ (Data (v2 :> v1) d2)
@@ -531,8 +555,12 @@ instance (Arith s1 s1 s1, D.ZipWith c1 c1 c1 (d1, d1) (d2, d2) d3, D.ZipWith c1 
 ---------------------------------------------------------
 -- sFold
 
-foldl :: (FoldType s, D.Fold c d1 d2) => (d1 -> d2 -> d1) -> d1 -> TC s typ (Data c d2) -> d1
-foldr :: (FoldType s, D.Fold c d1 d2) => (d2 -> d1 -> d1) -> d1 -> TC s typ (Data c d2) -> d1
+foldl ::
+   (FoldType s, D.Fold c, D.Storage c d1, D.Storage c d2) =>
+   (d1 -> d2 -> d1) -> d1 -> TC s typ (Data c d2) -> d1
+foldr ::
+   (FoldType s, D.Fold c, D.Storage c d1, D.Storage c d2) =>
+   (d2 -> d1 -> d1) -> d1 -> TC s typ (Data c d2) -> d1
 foldl f x (TC y) = D.foldl f x y
 foldr f x (TC y) = D.foldr f x y
 
@@ -560,7 +588,7 @@ instance (SFold Scalar (Data Nil) d1 d2) => TFold Scalar s2 (Data Nil) c2 d1 d2 
 {-# DEPRECATED last, init "use viewR instead" #-}
 
 head, last ::
-   (SV.Singleton v1 (Apply v2 d)) =>
+   (SV.Singleton v1, SV.Storage v1 (Apply v2 d)) =>
    TC s typ (Data (v1 :> v2) d) -> TC (Head s) typ (Data v2 d)
 head (TC x) = TC $ D.head x
 last (TC x) = TC $ D.last x
@@ -573,8 +601,8 @@ type instance Head TestRow = TestRow
 
 
 init, tail ::
-   (TailType s, SV.Singleton v2 (Apply v1 d)) =>
-   TC s typ (Data (v2 :> v1) d) -> TC s typ (Data (v2 :> v1) d)
+   (TailType s, SV.Singleton v1, SV.Storage v1 (Apply v2 d)) =>
+   TC s typ (Data (v1 :> v2) d) -> TC s typ (Data (v1 :> v2) d)
 init (TC x) = TC $ D.init x
 tail (TC x) = TC $ D.tail x
 
@@ -586,19 +614,18 @@ instance TailType Sample where
 
 
 viewL ::
-   (TailType s, SV.Singleton v1 (Apply v2 d)) =>
+   (TailType s, SV.Singleton v1, SV.Storage v1 (Apply v2 d)) =>
    TC s typ (Data (v1 :> v2) d) ->
    Maybe (TC (Head s) typ (Data v2 d), TC s typ (Data (v1 :> v2) d))
 viewL (TC x) =
    P.fmap (mapPair (TC, TC)) $ D.viewL x
 
 viewR ::
-   (TailType s, SV.Singleton v1 (Apply v2 d)) =>
+   (TailType s, SV.Singleton v1, SV.Storage v1 (Apply v2 d)) =>
    TC s typ (Data (v1 :> v2) d) ->
    Maybe (TC s typ (Data (v1 :> v2) d), TC (Head s) typ (Data v2 d))
 viewR (TC x) =
    P.fmap (mapPair (TC, TC)) $ D.viewR x
-
 
 ----------------------------------------------------------
 -- STranspose
@@ -610,7 +637,7 @@ transpose1 ::
 transpose1 (TC x) = TC $ D.transpose1 x
 
 transpose2 ::
-   (TransposeType s1 s2, SV.Transpose v1 v2 d) =>
+   (TransposeType s1 s2, SV.Transpose v1 v2, SV.Storage v1 d) =>
    TC s1 typ (Data (v2 :> v1 :> Nil) d) ->
    TC s2 typ (Data (v2 :> v1 :> Nil) d)
 transpose2 (TC x) = TC $ D.transpose2 x
@@ -633,7 +660,7 @@ instance Monoid c => Monoid (TC s typ c) where
 
 
 append ::
-   D.Append c1 c2 d =>
+   (D.Append c1 c2, D.Storage c1 d, D.Storage c2 d) =>
    TC s1 t (Data c1 d) -> TC s2 t (Data c2 d) ->
    TC (Append s1 s2) t (Data (Zip c1 c2) d)
 append (TC x) (TC y) = TC $ D.append x y
@@ -648,13 +675,13 @@ type family SingletonSource s
 type instance SingletonSource Signal = Sample
 type instance SingletonSource Sample = Sample
 
-class (SV.Singleton v (Apply c d)) => Singleton s v c d where
-instance (SV.Singleton v1 d)      => Singleton Signal v1 Nil d where
-instance (SV.Singleton v2 (v1 d)) => Singleton Signal v2 (v1 :> Nil) d where
-instance (SV.Singleton v2 (v1 d)) => Singleton Sample v2 (v1 :> Nil) d where
+class (SV.Singleton v) => Singleton s v (c :: * -> *) where
+instance (SV.Singleton v1) => Singleton Signal v1 Nil where
+instance (SV.Singleton v2) => Singleton Signal v2 (v1 :> Nil) where
+instance (SV.Singleton v2) => Singleton Sample v2 (v1 :> Nil) where
 
 singleton ::
-   Singleton s v c d =>
+   (Singleton s v c, SV.Storage v (Apply c d)) =>
    TC (SingletonSource s) t (Data c d) -> TC s t (Data (v :> c) d)
 singleton (TC x) = TC $ D.singleton x
 
@@ -671,11 +698,10 @@ infix 5 .++
 ----------------------------------------------------------
 -- All & Co
 
-class All s c d where
-  all :: (d -> Bool) -> TC s typ (Data c d) -> Bool
-  any :: (d -> Bool) -> TC s typ (Data c d) -> Bool
+class All s c where
+  all, any :: D.Storage c d => (d -> Bool) -> TC s typ (Data c d) -> Bool
 
-instance D.All c d => All s c d where
+instance D.All c => All s c where
   all f (TC x) = D.all f x
   any f (TC x) = D.any f x
 
@@ -684,27 +710,29 @@ instance D.All c d => All s c d where
 -- signal sign
 
 sigSign ::
-   (Ord d1, Num d1, Box s c c d1, D.Map c d1 B.Sign) =>
+   (Ord d1, Num d1, Box s c c, D.Map c, D.Storage c d1, D.Storage c B.Sign) =>
    TC s typ (Data c d1) -> TC s typ (Data c B.Sign)
 sigSign x = map B.sign $ box x
 
 ----------------------------------------------------------
 -- box / unbox a signal
 
-class Box s1 c1 c2 d1 where
-   box :: TC s1 typ (Data c1 d1) -> TC s1 typ (Data c2 d1)
-   unbox :: TC s1 typ (Data c2 d1) -> TC s1 typ (Data c1 d1)
+class Box s c1 c2 where
+   box :: (D.Storage c1 d1) => TC s typ (Data c1 d1) -> TC s typ (Data c2 d1)
+   unbox :: (D.Storage c1 d1) => TC s typ (Data c2 d1) -> TC s typ (Data c1 d1)
 
-instance (UV.Unbox d1) => Box Signal (UV.Vector :> Nil) (V.Vector :> Nil) d1 where
-   box (TC (Data x)) = TC $ Data $ SV.box x
-   unbox (TC (Data x)) = TC $ Data $ SV.unbox x
+instance Box Signal (UV.Vector :> Nil) (V.Vector :> Nil) where
+   box (TC xd) = TC $ Data $ D.withNestedData (SV.readUnbox SV.box) xd
+   unbox (TC (Data x)) = TC $ D.nestedData (SV.writeUnbox (SV.unbox x))
 
-instance (UV.Unbox d1) => Box Scalar c1 c1 d1 where
+instance Box Scalar c1 c1 where
    box x = x
    unbox x = x
 
 -- | Convert between List and different Vector formats
-convert :: (D.Convert c1 c2 d) => TC s typ (Data c1 d) -> TC s typ (Data c2 d)
+convert ::
+   (D.Convert c1 c2, D.Storage c1 d, D.Storage c2 d) =>
+   TC s typ (Data c1 d) -> TC s typ (Data c2 d)
 convert (TC x) = TC $ D.convert x
 
 
@@ -714,43 +742,42 @@ convert (TC x) = TC $ D.convert x
 type family SigSumC (c :: * -> *) :: * -> *
 type instance SigSumC (v :> Nil) = Nil
 
-class (BSum d, Num d) => SigSum s (c :: * -> *) d where
+class SigSum s (c :: * -> *) where
    type SigSumS s :: *
-   sigSum :: TC s typ (Data c d) -> TC (SigSumS s) typ (Data (SigSumC c) d)
+   sigSum ::
+      (D.Storage  c d, BSum d, Num d) =>
+      TC s typ (Data c d) -> TC (SigSumS s) typ (Data (SigSumC c) d)
 
-instance
-   (BSum d, Num d, SV.Walker v d d) =>
-      SigSum Signal (v :> Nil) d where
+instance (SV.Walker v) => SigSum Signal (v :> Nil) where
    type SigSumS Signal = Scalar
    sigSum x = TC $ Data $ foldl (..+) 0 x
 
-instance
-   (BSum d, Num d, SV.Walker v d d) =>
-      SigSum FSignal (v :> Nil) d where
+instance (SV.Walker v) => SigSum FSignal (v :> Nil) where
    type SigSumS FSignal = Scalar
    sigSum x = TC $ Data $ foldl (..+) 0 x
+
 
 ----------------------------------------------------------
 -- Delta and 2Point Average of Signal
 
 deltaSig ::
-    (z ~ Apply v1 Val, SV.Zipper v2 z z z, SV.Singleton v2 z,
-     v1 ~ Zip v1 v1, D.ZipWith v1 v1 Val Val Val, DSucc delta1 delta2) =>
+    (z ~ Apply v1 Val, SV.Zipper v2, SV.Singleton v2, SV.Storage v2 z,
+     v1 ~ Zip v1 v1, D.ZipWith v1 v1, D.Storage v1 Val, DSucc delta1 delta2) =>
     TC Signal (Typ delta1 t1 p1) (Data (v2 :> v1) Val) ->
     TC FSignal (Typ delta2 t1 p1) (Data (v2 :> v1) Val)
 deltaSig x = changeDelta $ deltaMapReverse (..-) x
 
 avSig ::
-    (z ~ Apply v1 Val, SV.Zipper v2 z z z, SV.Singleton v2 z,
-     v1 ~ Zip v1 v1, D.ZipWith v1 v1 Val Val Val) =>
+    (z ~ Apply v1 Val, SV.Zipper v2, SV.Singleton v2, SV.Storage v2 z,
+     v1 ~ Zip v1 v1, D.ZipWith v1 v1, D.Storage v1 Val) =>
     TC Signal (Typ delta1 t1 p1) (Data (v2 :> v1) Val) ->
     TC FSignal (Typ delta1 t1 p1) (Data (v2 :> v1) Val)
 avSig x = changeDelta $ deltaMapReverse (\ x1 x2 -> (x1..+x2)../ (2::Val)) x
 
 sort ::
-   (SV.Sort v1 d) =>
-   TC s1 typ (Data (v1 :> Nil) d) ->
-   TC s1 typ (Data (v1 :> Nil) d)
+   (SV.Sort v, SV.Storage v d, Ord d) =>
+   TC s1 typ (Data (v :> Nil) d) ->
+   TC s1 typ (Data (v :> Nil) d)
 sort (TC x) = TC $ D.sort x
 
 
@@ -795,41 +822,41 @@ changeDelta (TC x) = TC x
 changeSignalType :: TC s1 typ (Data c d) ->  TC s2 typ (Data c d)
 changeSignalType (TC x) = TC x
 
-neg :: (DArith0 d, D.Map c d d) => TC s typ (Data c d) -> TC s typ (Data c d)
+neg :: (DArith0 d, D.Map c, D.Storage c d) => TC s typ (Data c d) -> TC s typ (Data c d)
 neg = map B.neg
 
-rec :: (DArith0 d, D.Map c d d) => TC s typ (Data c d) -> TC s typ (Data c d)
+rec :: (DArith0 d, D.Map c, D.Storage c d) => TC s typ (Data c d) -> TC s typ (Data c d)
 rec = map B.rec
-
 
 -- | data ConversiSon function
 fromSigList ::
-   SV.FromList v2 (Apply v1 d) =>
+   (SV.Storage v2 (Apply v1 d), SV.FromList v2) =>
    [TC s typ (Data v1 d)] -> TC s typ (Data (v2 :> v1) d)
 fromSigList xs =
    TC $ Data $ SV.fromList $ L.map (\(TC (Data x)) -> x) xs
 
 -- | data Conversion function
 toSigList ::
-   SV.FromList v2 (Apply v1 d) =>
+   (SV.Storage v2 (Apply v1 d), SV.FromList v2) =>
    TC s typ (Data (v2 :> v1) d) -> [TC s typ (Data v1 d)]
 toSigList (TC (Data xs)) =
    SV.map (TC . Data) $ SV.toList xs
 
 
 fromCells ::
-   (SV.FromList v1 d, SV.FromList v2 (v1 d)) =>
+   (SV.FromList v1, SV.FromList v2, SV.Storage v2 (v1 d), SV.Storage v1 d) =>
    [[TC s typ (Data Nil d)]] -> TC s typ (Data (v2 :> v1 :> Nil) d)
 fromCells xss =
    fromList2 $ L.map (L.map (\(TC (Data x)) -> x)) xss
 
 toCells ::
-   (SV.FromList v2 (v1 d), SV.FromList v1 d, SV.FromList v2 [d],
-    SV.Walker v2 (v1 d) [d]) =>
+   (SV.FromList v1, SV.FromList v2, SV.Storage v2 (v1 d), SV.Storage v1 d) =>
    TC s typ (Data (v2 :> v1 :> Nil) d) -> [[TC s typ (Data Nil d)]]
 toCells xss = L.map (L.map (TC . Data)) $ toList2 xss
 
-filter ::  (SV.Filter v1 d) => (d -> Bool) -> TC s typ (Data (v1 :> Nil) d) -> TC s typ (Data (v1 :> Nil) d)
+filter ::
+   (SV.Filter v, SV.Storage v d) =>
+   (d -> Bool) -> TC s typ (Data (v :> Nil) d) -> TC s typ (Data (v :> Nil) d)
 filter f (TC x) = TC $ D.filter f x
 
 
@@ -838,22 +865,24 @@ sampleAverage (TC (Data x)) (TC (Data y)) = TC $ Data $ (x+y)/2
 
 
 sign ::
-   (D.Map c d B.Sign, Ord d, Num d) =>
+   (D.Map c, D.Storage c d, D.Storage c B.Sign, Ord d, Num d) =>
    TC s typ (Data c d) -> TC s (Typ A SZ UT) (Data c B.Sign)
 sign x = changeType $ map B.sign x
 
 
-untuple :: TC Sample typ (Data Nil (d,d)) -> (TC Sample typ (Data Nil d), TC Sample typ (Data Nil d))
+untuple ::
+   TC Sample typ (Data Nil (d,d)) ->
+   (TC Sample typ (Data Nil d), TC Sample typ (Data Nil d))
 untuple (TC (Data (x,y))) = (TC $ Data x, TC $ Data y)
 
 maximum, minimum ::
-   (D.Maximum c d) =>
+   (D.Maximum c, D.Storage c d, Ord d) =>
    TC s typ (Data c d) -> TC Scalar typ (Data Nil d)
 maximum (TC x) = TC $ Data $ D.maximum x
 minimum (TC x) = TC $ Data $ D.minimum x
 
 equalBy ::
-   (SV.Walker v a b) =>
+   (SV.Walker v, SV.Storage v a, SV.Storage v b) =>
    (a -> b -> Bool) ->
    TC s t (Data (v :> Nil) a) ->
    TC s t (Data (v :> Nil) b) ->
@@ -861,11 +890,13 @@ equalBy ::
 equalBy f (TC x) (TC y) = D.equalBy f x y
 
 
-subSignal1D :: (SV.Lookup v d)=> TC s typ (Data (v :> Nil) d) -> [SignalIdx] -> TC s typ (Data (v :> Nil) d)
+subSignal1D ::
+   (SV.Lookup v, SV.Storage v d, Eq d) =>
+   TC s typ (Data (v :> Nil) d) -> [SignalIdx] -> TC s typ (Data (v :> Nil) d)
 subSignal1D (TC (Data x)) idxs = TC $ Data $ SV.lookUp x idxs
 
-length :: (SV.Length (D.Apply c d)) => TC s typ (Data c d) -> Int
-length (TC x) = D.length x
+len :: (SV.Len (D.Apply c d)) => TC s typ (Data c d) -> Int
+len (TC x) = D.len x
 
 
 makeDelta ::  TC s (Typ A p t) (Data c d) -> TC s (Typ D p t) (Data c d)
@@ -874,5 +905,5 @@ makeDelta (TC x) = TC x
 makeAbsolute ::  TC s (Typ D p t) (Data c d) -> TC s (Typ A p t) (Data c d)
 makeAbsolute (TC x) = TC x
 
-reverse :: (D.Reverse c d) => TC s t (Data c d) ->  TC s t (Data c d)
+reverse :: (D.Reverse c, D.Storage c d) => TC s t (Data c d) ->  TC s t (Data c d)
 reverse (TC x) = TC $ D.reverse x

@@ -28,7 +28,7 @@ vdisp x = printf f $ s*val
         (TC (Data val)) = x
 
 -- | Display single values
-srdisp :: (DisplayTyp t, SV.FromList v Double) => TC s t (Data (v :> Nil) Val)  -> [String]
+srdisp :: (DisplayTyp t, SV.FromList v, SV.Storage v Val) => TC s t (Data (v :> Nil) Val)  -> [String]
 srdisp xs = map g l -- (f l)
   where g x = printf f (s*x)
         t = getDisplayType xs
@@ -64,7 +64,7 @@ instance SigDisp TestRow (V.Vector :> UV.Vector :> Nil) where
          sigDisp _ = "Test2U"
 
 instance
-      (SV.FromList v Val, SV.Singleton v Double, SV.Walker v Double Double,
+      (SV.FromList v, SV.Singleton v, SV.Walker v, SV.Storage v Val,
        UDisp t, SigDisp s (v :> Nil)) =>
           ToTable (TC s t (Data (v :> Nil) Val)) where
       toTable os (ti,x) = [Table {tableTitle = "",
@@ -81,11 +81,10 @@ instance
                  | otherwise = [vdisp (S.minimum x) ++ " - " ++ vdisp (S.maximum y)]
 
 instance (UDisp t,
-          SigDisp s (v2 :> (v1 :> Nil)),
-          SV.FromList v1 Val,
-          SV.FromList v2 [Val],
-          SV.FromList v2 (v1 Val),
-          SV.Walker v2 (v1 Val) [Val]) => ToTable (TC s t (Data (v2 :> v1 :> Nil) Val)) where
+          SigDisp s (v2 :> v1 :> Nil),
+          SV.FromList v1, SV.Storage v1 Val,
+          SV.FromList v2, SV.Storage v2 (v1 Val),
+          SV.Walker v2) => ToTable (TC s t (Data (v2 :> v1 :> Nil) Val)) where
       toTable _os (ti,xss) = [Table {tableTitle = ti ++ "   " ++ sigDisp xss ++ tdisp xss ++ udisp xss,
                          tableFormat = tf,
                          tableData = td,
@@ -139,22 +138,28 @@ instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d)
     where dtyp = getDisplayType x
 
 
-instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d, SV.Singleton v1 d, SV.FromList v1 d)
-         => SDisplay (TC Signal t (Data (v1 :> Nil) d)) where
+instance
+   (DeltaDisp t, DisplayTyp t, PartDisp t,
+    SV.Singleton v1, SV.FromList v1, SV.Storage v1 d, Disp d, Ord d) =>
+         SDisplay (TC Signal t (Data (v1 :> Nil) d)) where
   sdisp x@(TC (Data v))  = "Sig-D1 " ++ tdisp x ++ ": " ++ dispAll (S.toList x) dtyp -- dispRange dmin dmax dtyp
     where dtyp = getDisplayType x
           _dmin = SV.minimum v
           _dmax = SV.maximum v
 
-instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d, SV.Singleton v1 d, SV.FromList v1 d)
-         => SDisplay (TC FSignal t (Data (v1 :> Nil) d)) where
+instance
+   (DeltaDisp t, DisplayTyp t, PartDisp t,
+    SV.Singleton v1, SV.FromList v1, SV.Storage v1 d, Disp d, Ord d) =>
+         SDisplay (TC FSignal t (Data (v1 :> Nil) d)) where
   sdisp x@(TC (Data v))  = "FSig-D1 " ++ tdisp x ++ ": " ++ dispAll (S.toList x) dtyp -- dispRange dmin dmax dtyp
     where dtyp = getDisplayType x
           _dmin = SV.minimum v
           _dmax = SV.maximum v
 
-instance (DeltaDisp t, DisplayTyp t, PartDisp t, Disp d, SV.Singleton v1 d, SV.FromList v1 d)
-         => SDisplay (TC TestRow t (Data (v1 :> Nil) d)) where
+instance
+   (DeltaDisp t, DisplayTyp t, PartDisp t,
+    SV.Singleton v1, SV.FromList v1, SV.Storage v1 d, Disp d, Ord d) =>
+         SDisplay (TC TestRow t (Data (v1 :> Nil) d)) where
   sdisp x@(TC (Data v))  = "TestRow-D1 " ++ tdisp x ++ ": " ++ dispAll (S.toList x) dtyp -- dispRange dmin dmax dtyp
     where dtyp = getDisplayType x
           _dmin = SV.minimum v

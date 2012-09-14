@@ -1,4 +1,8 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, FunctionalDependencies, UndecidableInstances, KindSignatures, GeneralizedNewtypeDeriving, FlexibleContexts #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE Rank2Types #-}
 
 
 module EFA2.Signal.Vector (module EFA2.Signal.Vector) where
@@ -17,29 +21,62 @@ import Data.Bool (Bool(False, True), (&&), not)
 import Prelude (Int, Ord, error, (++), (-), Show, show)
 
 
+{- |
+We could replace this by suitable:Suitable.
+-}
+class Storage vector y where
+   data Constraints vector y :: *
+   constraints :: vector y -> Constraints vector y
+
+instance Storage [] y where
+   data Constraints [] y = ListConstraints
+   constraints _ = ListConstraints
+
+instance Storage V.Vector y where
+   data Constraints V.Vector y = VectorConstraints
+   constraints _ = VectorConstraints
+
+instance (UV.Unbox y) => Storage UV.Vector y where
+   data Constraints UV.Vector y = UV.Unbox y => UnboxedVectorConstraints
+   constraints _ = UnboxedVectorConstraints
+
+readUnbox ::
+   (UV.Unbox a => UV.Vector a -> b) ->
+   (Storage UV.Vector a => UV.Vector a -> b)
+readUnbox f x = case constraints x of UnboxedVectorConstraints -> f x
+
+writeUnbox ::
+   (UV.Unbox a => UV.Vector a) ->
+   (Storage UV.Vector a => UV.Vector a)
+writeUnbox x =
+   let z = case constraints z of UnboxedVectorConstraints -> x
+   in  z
+
+
+
 --------------------------------------------------------------
 -- Singleton Class
 
 {-# DEPRECATED head, tail "use viewL instead" #-}
 {-# DEPRECATED last, init "use viewR instead" #-}
 
-class Singleton vec d where
-   maximum :: vec d -> d
-   minimum :: vec d -> d
-   singleton :: d -> vec d
-   empty :: vec d
-   append :: vec d -> vec d -> vec d
-   concat :: [vec d] -> vec d
-   head :: vec d -> d
-   tail :: vec d -> vec d
-   last :: vec d -> d
-   init :: vec d -> vec d
-   viewL :: vec d -> Maybe (d, vec d)
-   viewR :: vec d -> Maybe (vec d, d)
-   all :: (d -> Bool) -> vec d -> Bool
-   any :: (d -> Bool) -> vec d -> Bool
+class Singleton vec where
+   maximum :: (Ord d, Storage vec d) => vec d -> d
+   minimum :: (Ord d, Storage vec d) => vec d -> d
+   singleton :: (Storage vec d) => d -> vec d
+   empty :: (Storage vec d) => vec d
+   append :: (Storage vec d) => vec d -> vec d -> vec d
+   concat :: (Storage vec d) => [vec d] -> vec d
+   head :: (Storage vec d) => vec d -> d
+   tail :: (Storage vec d) => vec d -> vec d
+   last :: (Storage vec d) => vec d -> d
+   init :: (Storage vec d) => vec d -> vec d
+   viewL :: (Storage vec d) => vec d -> Maybe (d, vec d)
+   viewR :: (Storage vec d) => vec d -> Maybe (vec d, d)
+   all :: (Storage vec d) => (d -> Bool) -> vec d -> Bool
+   any :: (Storage vec d) => (d -> Bool) -> vec d -> Bool
 
-instance (Ord d) => Singleton V.Vector d where
+instance Singleton V.Vector where
    maximum x = V.maximum x
    minimum x = V.minimum x
    singleton x = V.singleton x
@@ -55,23 +92,23 @@ instance (Ord d) => Singleton V.Vector d where
    all = V.all
    any = V.any
 
-instance (Ord d, UV.Unbox d) => Singleton UV.Vector d where
-   maximum x = UV.maximum x
-   minimum x = UV.minimum x
-   singleton x = UV.singleton x
-   empty = UV.empty
-   append = (UV.++)
-   concat = UV.concat
-   head = UV.head
-   tail = UV.tail
-   last = UV.last
-   init = UV.init
-   viewL xs = toMaybe (not $ UV.null xs) (UV.head xs, UV.tail xs)
-   viewR xs = toMaybe (not $ UV.null xs) (UV.init xs, UV.last xs)
-   all = UV.all
-   any = UV.any
+instance Singleton UV.Vector where
+   maximum x = readUnbox UV.maximum x
+   minimum x = readUnbox UV.minimum x
+   singleton x = writeUnbox (UV.singleton x)
+   empty = writeUnbox UV.empty
+   append = readUnbox (UV.++)
+   concat xs = writeUnbox (UV.concat xs)
+   head = readUnbox UV.head
+   tail = readUnbox UV.tail
+   last = readUnbox UV.last
+   init = readUnbox UV.init
+   viewL = readUnbox (\xs -> toMaybe (not $ UV.null xs) (UV.head xs, UV.tail xs))
+   viewR = readUnbox (\xs -> toMaybe (not $ UV.null xs) (UV.init xs, UV.last xs))
+   all f = readUnbox (UV.all f)
+   any f = readUnbox (UV.any f)
 
-instance (Ord d) => Singleton [] d where
+instance Singleton [] where
    maximum x = L.maximum x
    minimum x = L.minimum x
    singleton x = [x]
@@ -87,21 +124,22 @@ instance (Ord d) => Singleton [] d where
    all = L.all
    any = L.any
 
+
 ------------------------------------------------------------
 -- | Functor
-class Walker vec a b where
-   map :: (a -> b) -> vec a -> vec b
-   foldr :: (a -> b -> b) -> b -> vec a -> b
-   foldl :: (b -> a -> b) -> b -> vec a -> b
-   zip :: vec a -> vec b -> vec (a, b)
+class Walker vec where
+   map :: (Storage vec a, Storage vec b) => (a -> b) -> vec a -> vec b
+   foldr :: (Storage vec a) => (a -> b -> b) -> b -> vec a -> b
+   foldl :: (Storage vec a) => (b -> a -> b) -> b -> vec a -> b
+   zip :: (Storage vec a, Storage vec b, Storage vec (a,b)) => vec a -> vec b -> vec (a, b)
    {- |
    For fully defined values it holds
    @equalBy f xs ys  ==  (and (zipWith f xs ys) && length xs == length ys)@
    but for lists @equalBy@ is lazier.
    -}
-   equalBy :: (a -> b -> Bool) -> vec a -> vec b -> Bool
+   equalBy :: (Storage vec a, Storage vec b) => (a -> b -> Bool) -> vec a -> vec b -> Bool
 
-instance Walker [] a b where
+instance Walker [] where
    map = L.map
    foldr = L.foldr
    foldl = L.foldl'
@@ -112,15 +150,17 @@ instance Walker [] a b where
           go _ _ = False
       in  go
 
-instance (UV.Unbox a, UV.Unbox b) => Walker UV.Vector a b where
-   map = UV.map
-   foldr = UV.foldr
-   foldl = UV.foldl'
-   zip = UV.zip
-   equalBy f xs ys =
-      UV.length xs == UV.length ys  &&  UV.and (UV.zipWith f xs ys)
+instance Walker UV.Vector where
+   map f xs = writeUnbox (readUnbox (UV.map f) xs)
+   foldr f a = readUnbox (UV.foldr f a)
+   foldl f a = readUnbox (UV.foldl' f a)
+   zip xs ys = writeUnbox (readUnbox (readUnbox UV.zip xs) ys)
+   equalBy f =
+      readUnbox (\xs ->
+      readUnbox (\ys ->
+         UV.length xs == UV.length ys  &&  UV.and (UV.zipWith f xs ys)))
 
-instance Walker V.Vector a b where
+instance Walker V.Vector where
    map = V.map
    foldr = V.foldr
    foldl = V.foldl'
@@ -132,39 +172,51 @@ instance Walker V.Vector a b where
 ------------------------------------------------------------
 -- | Zipper
 
-class Zipper vec a b c where
-   zipWith :: (a -> b -> c) -> vec a -> vec b -> vec c
+class Zipper vec where
+   zipWith ::
+      (Storage vec a, Storage vec b, Storage vec c) =>
+      (a -> b -> c) -> vec a -> vec b -> vec c
 
-instance Zipper V.Vector a b c  where
-   zipWith f x y = V.zipWith f x y -- if V.lenCheck x y then V.zipWith f x y else error "Error in V.lenCheck V -- unequal Length"
-
-instance (UV.Unbox a, UV.Unbox b, UV.Unbox c) => Zipper UV.Vector a b c  where
-   zipWith f x y = UV.zipWith f x y --if V.lenCheck x y then UV.zipWith f x y else error "Error in V.lenCheck UV -- unequal Length"
-
-instance Zipper [] a b c  where
+instance Zipper [] where
    zipWith f x y = L.zipWith f x y -- if V.lenCheck x y then zipWith f x y else error "Error in V.lenCheck List -- unequal Length"
 
+instance Zipper V.Vector where
+   zipWith f x y = V.zipWith f x y -- if V.lenCheck x y then V.zipWith f x y else error "Error in V.lenCheck V -- unequal Length"
 
-deltaMap :: (Singleton vec b, Zipper vec b b c) => (b -> b -> c) -> vec b -> vec c
+instance Zipper UV.Vector where
+   zipWith f xs ys = writeUnbox (readUnbox (readUnbox (UV.zipWith f) xs) ys)
+   -- if V.lenCheck x y then UV.zipWith f x y else error "Error in V.lenCheck UV -- unequal Length"
+
+
+deltaMap ::
+   (Storage vec b, Storage vec c, Singleton vec, Zipper vec) =>
+   (b -> b -> c) -> vec b -> vec c
 deltaMap f l = zipWith f l (tail l)
 
-deltaMapReverse :: (Singleton vec b, Zipper vec b b c) => (b -> b -> c) -> vec b -> vec c
+deltaMapReverse ::
+   (Storage vec b, Storage vec c, Singleton vec, Zipper vec) =>
+   (b -> b -> c) -> vec b -> vec c
 deltaMapReverse f l = zipWith f (tail l) l
+
 
 ------------------------------------------------------------
 -- | Zipper4
 
-class Zipper4 vec a b c d e where
-   zipWith4 :: (a -> b -> c -> d -> e) -> vec a -> vec b -> vec c -> vec d -> vec e
+class Zipper4 vec where
+   zipWith4 ::
+      (Storage vec a, Storage vec b, Storage vec c, Storage vec d, Storage vec e) =>
+      (a -> b -> c -> d -> e) -> vec a -> vec b -> vec c -> vec d -> vec e
 
-instance Zipper4 V.Vector a b c d e where
+instance Zipper4 [] where
+   zipWith4 f w x y z = L.zipWith4 f w x y z -- if V.lenCheck x y then zipWith f x y else error "Error in V.lenCheck List -- unequal Length"
+
+instance Zipper4 V.Vector where
    zipWith4 f w x y z = V.zipWith4 f w x y z -- if V.lenCheck x y then V.zipWith f x y else error "Error in V.lenCheck V -- unequal Length"
 
-instance (UV.Unbox a, UV.Unbox b, UV.Unbox c, UV.Unbox e, UV.Unbox d) => Zipper4 UV.Vector a b c d e   where
-   zipWith4 f w x y z = UV.zipWith4 f w x y z --if V.lenCheck x y then UV.zipWith f x y else error "Error in V.lenCheck UV -- unequal Length"
+instance Zipper4 UV.Vector where
+   zipWith4 f w x y z =
+      writeUnbox (readUnbox (readUnbox (readUnbox (readUnbox (UV.zipWith4 f) w) x) y) z) -- if V.lenCheck x y then UV.zipWith f x y else error "Error in V.lenCheck UV -- unequal Length"
 
-instance Zipper4 [] a b c d e  where
-   zipWith4 f w x y z = L.zipWith4 f w x y z -- if V.lenCheck x y then zipWith f x y else error "Error in V.lenCheck List -- unequal Length"
 
 {-
 deltaMap2:: (a -> a -> b -> b -> c)  -> vec a -> vec a -> vec b  -> vec b -> vec c
@@ -175,150 +227,169 @@ deltaMapReverse2 f xs ys = zipWith4 f (tail xs) xs (tail ys) ys
 -}
 --------------------------------------------------------------
 -- Vector conversion
-class Box c1 c2 a where
-   box :: c1 a -> c2 a
-   unbox :: c2 a -> c1 a
+class Box c1 c2 where
+   box :: (Storage c1 a, Storage c2 a) => c1 a -> c2 a
+   unbox :: (Storage c1 a, Storage c2 a) => c2 a -> c1 a
 
-instance UV.Unbox a => Box UV.Vector V.Vector a where
-   box x = UV.convert x
-   unbox x = V.convert x
+instance Box UV.Vector V.Vector where
+   box x = readUnbox UV.convert x
+   unbox x = writeUnbox (V.convert x)
 
-instance Box [] [] a where
+instance Box [] [] where
    box = id
    unbox = id
 
 --------------------------------------------------------------
 -- Vector conversion
-class Convert c1 c2 a where
-   convert :: c1 a -> c2 a
+class Convert c1 c2 where
+   convert :: (Storage c1 a, Storage c2 a) => c1 a -> c2 a
 
-instance UV.Unbox a => Convert UV.Vector V.Vector a where
-   convert x = UV.convert x
+instance Convert UV.Vector V.Vector where
+   convert x = readUnbox UV.convert x
 
-instance UV.Unbox a => Convert V.Vector UV.Vector a where
-   convert x = V.convert x
+instance Convert V.Vector UV.Vector where
+   convert x = writeUnbox (V.convert x)
 
-instance UV.Unbox a => Convert UV.Vector UV.Vector a where
-   convert x = V.convert x
-
-instance Convert V.Vector V.Vector a where
+instance Convert UV.Vector UV.Vector where
    convert = id
 
-instance Convert [] [] a where
+instance Convert V.Vector V.Vector where
    convert = id
 
-instance UV.Unbox a => Convert [] UV.Vector a where
-   convert x = UV.fromList x
+instance Convert [] [] where
+   convert = id
 
-instance Convert [] V.Vector a where
+instance Convert [] UV.Vector where
+   convert x = writeUnbox (UV.fromList x)
+
+instance Convert [] V.Vector where
    convert x = V.fromList x
 
-instance Convert V.Vector [] a where
+instance Convert V.Vector [] where
    convert x = V.toList x
 
-instance UV.Unbox a => Convert UV.Vector [] a where
-   convert x = UV.toList x
+instance Convert UV.Vector [] where
+   convert x = readUnbox UV.toList x
 
 --------------------------------------------------------------
 -- Length & Length Check
 
-class Length s where
+class Len s where
    len :: s -> Int
 
-instance Length (V.Vector d) where
-   len x = V.length x
+instance Len [d] where
+   len = L.length
 
-instance UV.Unbox d => Length  (UV.Vector d) where
-   len x = UV.length x
+instance Len (V.Vector d) where
+   len = V.length
 
-instance Length  [d] where
-   len x = L.length x
+instance UV.Unbox d => Len (UV.Vector d) where
+   len = UV.length
 
 
 lenCheck ::
-   (Length v1, Length v2) =>
+   (Len v1, Len v2) =>
    v1 -> v2 -> Bool
 lenCheck x y = len x == len y
 
 
+class Length vec where
+   length :: Storage vec a => vec a -> Int
+
+instance Length [] where
+   length = L.length
+
+instance Length V.Vector where
+   length = V.length
+
+instance Length UV.Vector where
+   length = readUnbox UV.length
+
+
 --------------------------------------------------------------
--- Transpose Classe
-class Transpose v1 v2 d where
-   transpose :: (v2 (v1 d)) -> (v2 (v1 d))
+-- Transpose Class
+class Transpose v1 v2 where
+   transpose :: (Storage v1 d) => v2 (v1 d) -> v2 (v1 d)
 
+instance Transpose [] [] where
+   transpose x = if L.all (== L.head lens) lens then L.transpose x else error "Error in V.Transpose -- unequal length"
+                         where lens = map len x
 
-instance Transpose V.Vector V.Vector d where
+instance Transpose V.Vector V.Vector where
    transpose xs = if all (== len0) lens then V.map (flip V.map xs) fs else error "Error in V.Transpose -- unequal length"
     where fs = V.map (flip (V.!)) $ V.fromList [0..len0-1]
           lens = V.map len xs
           len0 = V.head lens
 
-instance (UV.Unbox d) => Transpose UV.Vector V.Vector d where
-   transpose xs = if all (== len0) lens then V.map (unbox . flip V.map xs) fs else error "Error in V.Transpose -- unequal length"
-    where fs = V.map (flip (UV.!)) $ V.fromList [0..len0-1]
-          lens = V.map len xs
-          len0 = V.head lens
+instance Transpose UV.Vector V.Vector where
+   transpose xs =
+      case constraints $ head xs of
+         UnboxedVectorConstraints ->
+            let fs = V.map (flip (UV.!)) $ V.fromList [0..len0-1]
+                lens = V.map len xs
+                len0 = V.head lens
+            in  if all (== len0) lens
+                  then V.map (unbox . flip V.map xs) fs
+                  else error "Error in V.Transpose -- unequal length"
 
-instance Transpose [] [] d where
-   transpose x = if L.all (== L.head lens) lens then L.transpose x else error "Error in V.Transpose -- unequal length"
-                         where lens = map len x
 
 
+class FromList vec where
+   fromList :: (Storage vec d) => [d] -> vec d
+   toList :: (Storage vec d) => vec d -> [d]
 
-class FromList v d where
-   fromList :: [d] -> v d
-   toList :: v d -> [d]
-
-instance (UV.Unbox d) => FromList UV.Vector d where
-   fromList x = UV.fromList x
-   toList x = UV.toList x
-
-instance FromList V.Vector d where
-   fromList x = V.fromList x
-   toList x = V.toList x
-
-instance FromList [] d where
+instance FromList [] where
    fromList x = x
    toList x = x
 
+instance FromList V.Vector where
+   fromList = V.fromList
+   toList = V.toList
 
-class Sort v d where
-   sort :: v d -> v d
+instance FromList UV.Vector where
+   fromList x = writeUnbox (UV.fromList x)
+   toList x = readUnbox UV.toList x
 
-instance Ord d => Sort [] d where
+
+
+class Sort vec where
+   sort :: (Ord d, Storage vec d) => vec d -> vec d
+
+instance Sort [] where
    sort = L.sort
 
-instance (Ord d, UV.Unbox d) => Sort UV.Vector d where
-   sort x = UV.fromList $ L.sort $ UV.toList x
+instance Sort V.Vector where
+   sort = V.fromList . L.sort . V.toList
 
-instance Ord d => Sort V.Vector d where
-   sort x = V.fromList $ L.sort $ V.toList x
-
-
-class Filter v d where
-   filter :: (d -> Bool) -> v d -> v d
-
-instance Filter [] d where
-   filter f x = L.filter f x
-
-instance Filter V.Vector d where
-   filter f x = V.filter f x
-
-instance UV.Unbox d => Filter UV.Vector d where
-   filter f x = UV.filter f x
+instance Sort UV.Vector where
+   sort = readUnbox (UV.fromList . L.sort . UV.toList)
 
 
-class Lookup v d where
-   lookUp :: v d -> [Int] -> v d
+class Filter vec where
+   filter :: Storage vec d => (d -> Bool) -> vec d -> vec d
 
-instance (Eq d) => Lookup [] d where
+instance Filter [] where
+   filter = L.filter
+
+instance Filter V.Vector where
+   filter = V.filter
+
+instance Filter UV.Vector where
+   filter f = readUnbox (UV.filter f)
+
+
+class Lookup vec where
+   lookUp :: (Storage vec d, Eq d) => vec d -> [Int] -> vec d
+
+instance Lookup [] where
    lookUp xs = lookUpGen (V.fromList xs V.!? )
 
-instance (Eq d) => Lookup V.Vector d where
+instance Lookup V.Vector where
    lookUp xs = V.fromList . lookUpGen (xs V.!?)
 
-instance (UV.Unbox d, Eq d) => Lookup UV.Vector d where
-   lookUp xs = UV.fromList . lookUpGen (xs UV.!?)
+instance Lookup UV.Vector where
+   lookUp =
+      readUnbox (\xs -> UV.fromList . lookUpGen (xs UV.!?))
 
 {-# INLINE lookUpGen #-}
 lookUpGen :: Show i => (i -> Maybe a) -> [i] -> [a]
@@ -329,14 +400,14 @@ lookUpGen look idxs =
          error $ "Error in vLookup - indices out of Range: " ++ show invalidIdxs
 
 
-class Reverse v d where
-   reverse :: v d -> v d
+class Reverse v where
+   reverse :: (Storage v d) => v d -> v d
 
-instance Reverse [] d where
+instance Reverse [] where
    reverse = L.reverse
 
-instance Reverse V.Vector d where
+instance Reverse V.Vector where
    reverse = V.reverse
 
-instance  (UV.Unbox d) => Reverse UV.Vector d where
-   reverse = UV.reverse
+instance Reverse UV.Vector where
+   reverse = readUnbox UV.reverse

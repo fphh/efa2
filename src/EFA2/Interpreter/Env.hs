@@ -229,7 +229,7 @@ checkEnvsForDelta env fnv = and lst
         (.==) x y = and $ zipWith ignoreRecEq (M.keys x) (M.keys y)
 
 minusEnv ::
-   (S.Arith s s ~ s, TSum t t t, c ~ Zip c c, BSum a, D.ZipWith c c a a a) =>
+   (S.Arith s s ~ s, TSum t t t, c ~ Zip c c, D.ZipWith c c, D.Storage c a, BSum a) =>
    Envs (TC s t (Data c a)) ->
    Envs (TC s t (Data c a)) ->
    Envs (TC s t (Data c a))
@@ -252,7 +252,9 @@ minusEnv laterEnv formerEnv | checkEnvsForDelta laterEnv formerEnv = gnv
 
 
 
-mapEnv :: (D.Map c a b) => (a -> b) -> Envs (TC s t (Data c a)) -> Envs (TC s t (Data c b))
+mapEnv ::
+   (D.Map c, D.Storage c a, D.Storage c b) =>
+   (a -> b) -> Envs (TC s t (Data c a)) -> Envs (TC s t (Data c b))
 mapEnv f env = emptyEnv { recordNumber = recordNumber env,
                           energyMap = M.map (S.map f) (energyMap env),
                           denergyMap = M.map (S.map f) (denergyMap env),
