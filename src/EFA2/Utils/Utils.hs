@@ -16,16 +16,13 @@ checkJust :: String -> Maybe a -> a
 checkJust _ (Just x) = x
 checkJust str _ = error ("checkJust called from " ++ str)
 
--- generalized unique
-gunique :: (Ord a) => S.Set a -> [a] -> [a]
-gunique = go
-  where go _ [] = []
-        go s (x:xs) | S.member x s = go s xs
-                    | otherwise    = x : go (S.insert x s) xs
 
+{-
+This function could become unnecessary
+if we store the node set of a graph in a Set.
+-}
 unique :: (Ord a) => [a] -> [a]
-unique = gunique S.empty  --
--- unique = S.toList . S.fromList
+unique = S.toList . S.fromList
 
 reverseMap :: (Ord b) => M.Map a b -> M.Map b a
 reverseMap = M.fromList . map swap . M.toList
