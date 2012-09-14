@@ -441,13 +441,14 @@ fromSample :: TC Sample typ (Data Nil d) -> d
 fromSample (TC (Data x)) = x
 
 
+class ConstSignal s
+instance ConstSignal Signal
+instance ConstSignal FSignal
+
 class Const s c where
    toConst :: D.Storage c d => Int -> d -> TC s (Typ UT UT UT) (Data c d)
 
-instance (SV.FromList v1) => Const Signal (v1 :> Nil) where
-   toConst len x = writeNested (fromVal len x)
-
-instance (SV.FromList v1) => Const FSignal (v1 :> Nil) where
+instance (SV.FromList v1, ConstSignal s) => Const s (v1 :> Nil) where
    toConst len x = writeNested (fromVal len x)
 
 instance Const Scalar Nil where
