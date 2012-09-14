@@ -261,7 +261,7 @@ instance Fold Nil where
    foldr f x (Data y) = f y x
 
 instance (SV.Walker v2, Fold v1) => Fold (v2 :> v1) where
-   foldl f x yd = withNestedData (foldlMap (foldl f) x (subData yd)) yd
+   foldl f x yd = withNestedData (vecFoldlMap (foldl f) x (subData yd)) yd
    foldr f x yd = withNestedData (SV.foldr (flip (foldr f) . subData yd) x) yd
 
 
@@ -280,6 +280,21 @@ foldr1d ::
    Data (v2 :> v1) d1 ->
    Apply v1 d2
 foldr1d f x (Data y) = SV.foldr f x y
+
+
+{- |
+vecFoldlMap f x g = foldl f x . map g
+but this function requires no storage constraint for the result of 'map'.
+-}
+vecFoldlMap ::
+   (SV.Walker vec, SV.Storage vec a) =>
+   (c -> b -> c) -> c -> (a -> b) -> vec a -> c
+vecFoldlMap f x0 g = SV.foldl (\acc x -> f acc (g x)) x0
+
+foldlMap ::
+   (Fold vec, Storage vec a) =>
+   (c -> b -> c) -> c -> (a -> b) -> Data vec a -> c
+foldlMap f x0 g = foldl (\acc x -> f acc (g x)) x0
 
 
 ----------------------------------------------------------
@@ -318,43 +333,15 @@ instance (SV.Singleton v1) => Append Nil (v1 :> Nil) where
 ----------------------------------------------------------
 -- get data Range
 
-{-
-maximum :: (Storage c d, Fold c, Ord d) => Data c d -> d
-maximum = foldl P.max P.undefined
+_maximum, _minimum :: (Storage c d, Fold c, Ord d) => Data c d -> d
+_maximum =
+   fromMaybe (error "Data.maximum: empty data") .
+   foldlMap (liftOrd P.max) Nothing Just
 
-minimum :: (Storage c d, Fold c, Ord d) => Data c d -> d
-minimum = foldl P.min P.undefined
--}
-{-
-class Maximum c where
-   maximumMap :: (Storage c a, Ord b) => (a -> b) -> Data c a -> b
-   minimumMap :: (Storage c a, Ord b) => (a -> b) -> Data c a -> b
+_minimum =
+   fromMaybe (error "Data.minimum: empty data") .
+   foldlMap (liftOrd P.min) Nothing Just
 
-instance Maximum Nil where
-   maximumMap (Data x) = x
-   minimumMap (Data x) = x
-
-instance
-   (SV.Singleton v2, SV.Walker v2, Maximum v1) =>
-      Maximum (v2 :> v1) where
-   maximumMap xd = withNestedData (SV.maximum . SV.map (maximum . subData xd)) xd
-   minimumMap xd = withNestedData (SV.minimum . SV.map (minimum . subData xd)) xd
--}
-{-
-class Maximum c where
-   maximum :: (Storage c d, Ord d) => Data c d -> d
-   minimum :: (Storage c d, Ord d) => Data c d -> d
-
-instance Maximum Nil where
-   maximum (Data x) = x
-   minimum (Data x) = x
-
-instance
-   (SV.Singleton v2, SV.Walker v2, Maximum v1) =>
-      Maximum (v2 :> v1) where
-   maximum xd = withNestedData (SV.maximum . SV.map (maximum . subData xd)) xd
-   minimum xd = withNestedData (SV.minimum . SV.map (minimum . subData xd)) xd
--}
 
 class Maximum c where
    maximum, minimum :: (Storage c d, Ord d) => Data c d -> d
@@ -382,8 +369,8 @@ instance SV.Singleton v => Maximum1 v Nil where
    minimum1 = Just . withNestedData SV.minimum
 
 instance (SV.Walker v3, Maximum1 v2 v1) => Maximum1 v3 (v2 :> v1) where
-   maximum1 xd = withNestedData (foldlMap (liftOrd P.max) Nothing (maximum1 . subData xd)) xd
-   minimum1 xd = withNestedData (foldlMap (liftOrd P.min) Nothing (minimum1 . subData xd)) xd
+   maximum1 xd = withNestedData (vecFoldlMap (liftOrd P.max) Nothing (maximum1 . subData xd)) xd
+   minimum1 xd = withNestedData (vecFoldlMap (liftOrd P.min) Nothing (minimum1 . subData xd)) xd
 
 
 liftOrd :: (a -> a -> a) -> Maybe a -> Maybe a -> Maybe a
@@ -559,23 +546,21 @@ instance Ord d => Ord (Data Nil d) where
    (>=) (Data x) (Data y)  =  x >= y
    (<=) (Data x) (Data y)  =  x <= y
 
-{-
+
 ----------------------------------------------------------
 -- Convert
 
-class Convert c1 c2 where
-   convert :: (Storage c1 d, Storage c2 d) => Data c1 d -> Data c2 d
-
-instance Convert Nil Nil where
-   convert = id
-
-instance
-   (SV.Convert v1 v2, SV.Walker v1, Convert c1 c2) =>
-      Convert (v1 :> c1) (v2 :> c2) where
-   convert xd =
-      let yd = nestedData $ SV.convert $ withNestedData (SV.map (getSubData yd . convert . subData xd)) xd
-      in  yd
+{- |
+Most simple implementation
+but it will not take advantage of specialised conversions
+at the most-inner vector.
 -}
+_convert ::
+   (NestedList c1 d ~ NestedList c2 d,
+    Storage c2 d, FromList c2,
+    Storage c1 d, FromList c1) =>
+   Data c1 d -> Data c2 d
+_convert = fromList . toList
 
 class Convert c1 c2 where
    convert :: (Storage c1 d, Storage c2 d) => Data c1 d -> Data c2 d
@@ -601,10 +586,6 @@ instance
    convert1 xd =
       let yd = nestedData (withNestedData (SV.fromList . L.map (getSubData yd . convert1 . subData xd) . SV.toList) xd)
       in  yd
-{-
-      let yd = nestedData (SV.fromList $ L.map (getSubData yd . convert1 . subData xd) $ withNestedData SV.toList xd)
-      in  yd
--}
 
 
 ----------------------------------------------------------
@@ -617,6 +598,13 @@ len (Data x) = SV.len x
 length :: (SV.Length v, SV.Storage v (Apply c d)) => Data (v :> c) d -> Int
 length (Data x) = SV.length x
 
+
+{- |
+Most simple implementation
+but inefficient since it counts the elements one by one.
+-}
+_size :: (Fold c, Storage c d) => Data c d -> Int
+_size = foldlMap (+) 0 (P.const 1)
 
 class Size c where
    size :: (Storage c d) => Data c d -> Int
@@ -636,17 +624,7 @@ instance SV.Length v => Size1 v Nil where
 
 instance (SV.Walker v3, Size1 v2 v1) => Size1 v3 (v2 :> v1) where
    size1 xd =
-      withNestedData (foldlMap (+) 0 (size1 . subData xd)) xd
-
-
-{- |
-foldlMap f x g = foldl f x . map g
-but this function requires no storage constraint for the result of 'map'.
--}
-foldlMap ::
-   (SV.Walker vec, SV.Storage vec a) =>
-   (c -> b -> c) -> c -> (a -> b) -> vec a -> c
-foldlMap f x0 g = SV.foldl (\acc x -> f acc (g x)) x0
+      withNestedData (vecFoldlMap (+) 0 (size1 . subData xd)) xd
 
 
 ----------------------------------------------------------
