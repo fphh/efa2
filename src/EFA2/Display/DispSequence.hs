@@ -21,18 +21,17 @@ import Data.Tuple.HT (mapFst)
 
 
 instance ToTable Record where
-         toTable os (ti,(Record time sigs)) = [Table {tableTitle = "Record - " ++ ti , 
+         toTable os (ti,(Record time sigs)) = [Table {tableTitle = "Record - " ++ ti ,
                                                   tableData = tableData t,
-                                                  tableFormat = tableFormat t,            
-                                                  tableSubTitle = ""}]              
-                                                    
-                                           where t = tvcat $ (toTable os ("Time",time)) ++ concat (map (toTable os . f) (M.toList sigs))
-                                                 f (x,y) = (show x,y)
+                                                  tableFormat = tableFormat t,
+                                                  tableSubTitle = ""}]
+
+                                           where t = tvcat $ (toTable os ("Time",time)) ++ concatMap (toTable os . mapFst show) (M.toList sigs)
 
 
 
 instance
-   (SV.Walker v Val Val, SV.Singleton v Val, SV.FromList v Val,
+   (SV.Walker v, SV.Singleton v, SV.FromList v, SV.Storage v Val,
     Disp.SigDisp S.Signal (v :> D.Nil)) =>
    ToTable (PowerRecord v Val) where
          toTable os (ti, PowerRecord time sigs) = [Table {tableTitle = "PowerRecord - " ++ ti ,
@@ -59,5 +58,5 @@ instance ToTable Sequ where
                                           titleCols = [[toDoc id "Index"]],
                                           endCols  = []}
 
-                          -- f :: (Int,Int) -> TableData
-                          f (i1, i2) = toDoc id $ (show i1) ++ " - " ++ (show i2) 
+                          -- f :: Sec -> TableData
+                          f (i1, i2) = toDoc id $ show i1 ++ " - " ++ show i2

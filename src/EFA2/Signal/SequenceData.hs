@@ -96,7 +96,7 @@ instance QC.Arbitrary PPosIdx where
    shrink (PPosIdx from to) = map (uncurry PPosIdx) $ QC.shrink (from, to)
 
 instance
-   (Show (v a), Sample a, V.FromList v a) =>
+   (Show (v a), Sample a, V.FromList v, V.Storage v a) =>
       QC.Arbitrary (PowerRecord v a) where
    arbitrary = do
       xs <- QC.listOf arbitrarySample

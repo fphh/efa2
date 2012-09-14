@@ -299,7 +299,7 @@ rsig2Record (t, ps) (PowerRecord _ pMap) =
    PowerRecord t $ updateMap pMap $ toSigList $ S.transpose2 ps
 
 rsig2SecRecord ::
-   (V.Convert [] v a) =>
+   (V.Convert [] v, V.Storage v a) =>
    PowerRecord [] a ->
    RSigX a ->
    PowerRecord v a
@@ -401,7 +401,7 @@ chopAtZeroCrossingsRSig (TC (Data times), TC (Data vectorSignal)) =
    zip times vectorSignal
 
 chopAtZeroCrossingsPowerRecord ::
-   (V.Convert [] v a, RealFrac a) =>
+   (V.Convert [] v, V.Storage v a, RealFrac a) =>
    PowerRecord [] a -> SequData (PowerRecord v a)
 chopAtZeroCrossingsPowerRecord rSig =
    SequData $ map (rsig2SecRecord rSig) $
@@ -409,7 +409,7 @@ chopAtZeroCrossingsPowerRecord rSig =
    record2RSig rSig
 
 concatPowerRecords ::
-   (V.Singleton v a) =>
+   (V.Singleton v, V.Storage v a) =>
    SequData (PowerRecord v a) -> PowerRecord v a
 concatPowerRecords (SequData recs) =
    case recs of
@@ -425,7 +425,7 @@ concatPowerRecords (SequData recs) =
                     pMap0)
 
 tailPowerRecord ::
-   (V.Singleton v a) =>
+   (V.Singleton v, V.Storage v a) =>
    PowerRecord v a -> PowerRecord v a
 tailPowerRecord (PowerRecord times pMap) =
    PowerRecord
@@ -434,13 +434,13 @@ tailPowerRecord (PowerRecord times pMap) =
 
 
 approxSequPwrRecord ::
-   (V.Walker v a a, Real a) =>
+   (V.Walker v, V.Storage v a, Real a) =>
    a -> SequData (PowerRecord v a) -> SequData (PowerRecord v a) -> Bool
 approxSequPwrRecord eps (SequData xs) (SequData ys) =
    V.equalBy (approxSecPowerRecord eps) xs ys
 
 approxSecPowerRecord ::
-   (V.Walker v a a, Real a) =>
+   (V.Walker v, V.Storage v a, Real a) =>
    a -> PowerRecord v a -> PowerRecord v a -> Bool
 approxSecPowerRecord eps
       (PowerRecord xt xm) (PowerRecord yt ym) =

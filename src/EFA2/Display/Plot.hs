@@ -241,7 +241,7 @@ class RPlot a where
    rPlotCore :: String -> a -> [Frame.T (Graph2D.T Val Val)]
 
 instance
-   (SV.FromList v Val, SV.Walker v Val Val) =>
+   (SV.Walker v, SV.FromList v, SV.Storage v Val) =>
       RPlot (PowerRecord v Double) where
    rPlotCore rName (PowerRecord time pMap) =
       [rPlotSingle rName time pMap]
