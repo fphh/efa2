@@ -35,7 +35,7 @@ prop_chopMatchingCuts prec =
 
 prop_chopProjective :: SeqData.ListPowerRecord -> Bool
 prop_chopProjective prec =
-   let secs :: SeqData.SequData [SeqData.ListPowerRecord]
+   let secs :: SeqData.SequData SeqData.ListPowerRecord
        secs = Seq.chopAtZeroCrossingsPowerRecord prec
    in  Seq.approxSequPwrRecord (1e-8)
           secs

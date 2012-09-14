@@ -52,7 +52,7 @@ type ListPowerRecord = PowerRecord [] Val
 type SecPowerRecord = PowerRecord UV.Vector Val
 
 
-type SequPwrRecord = SequData [SecPowerRecord]
+type SequPwrRecord = SequData SecPowerRecord
 
 -- | Flow record to contain flow signals assigned to the tree
 data FlRecord a b = FlRecord a (M.Map PPosIdx b)
@@ -68,14 +68,14 @@ data FlowRecord = FlowRecord DTSig (PPosData FSig) deriving (Show)
 data FlowValRecord = FlowValRecord DTVal (PPosData FVal) deriving (Show)
 -}
 
-type SequFlowRecord a = SequData [a]
+type SequFlowRecord a = SequData a
 
 -- | Flow record to contain flow signals assigned to the tree
 --type SequFlowValRecord = SequData [FlowValRecord]
 
 newtype FlowState = FlowState (M.Map PPosIdx Sign) deriving (Show)
-type SequFlowState = SequData [FlowState]
-type SequFlowTops = SequData [FlowTopology]
+type SequFlowState = SequData FlowState
+type SequFlowTops = SequData FlowTopology
 
 -----------------------------------------------------------------------------------
 -- Section and Sequence -- Structures to handle Sequence Information and Data
@@ -85,10 +85,10 @@ type Sec = (SignalIdx,SignalIdx)
 
 
 -- | Sequence Vector to Store Section Data
-data SequData a = SequData a deriving (Show) -- deriving Show
+newtype SequData a = SequData [a] deriving (Show) -- deriving Show
 
 instance Functor SequData where
-         fmap f (SequData xs) = SequData (f xs)
+   fmap f (SequData xs) = SequData (map f xs)
 
 
 instance QC.Arbitrary PPosIdx where

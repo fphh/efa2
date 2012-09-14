@@ -86,11 +86,11 @@ recPartIntegrate (PowerRecord time pMap) = FlRecord (deltaSig time) fMap
 
 -- | Generate Sequence Flow
 genSequFlow :: SequPwrRecord -> SequFlowRecord FlowRecord
-genSequFlow sqPRec = (map recFullIntegrate) `fmap` sqPRec
+genSequFlow sqPRec = fmap recFullIntegrate sqPRec
 
 -- TODO: Umschalten zwischen recFullIntegrate und recPartIntegrate.
 --genSequFlow :: SequPwrRecord -> SequFlowRecord FlowRecord
---genSequFlow sqPRec = (map recFullIntegrate) `fmap` sqPRec
+--genSequFlow sqPRec = fmap recFullIntegrate sqPRec
 
 -- makeSequence :: PowerRecord -> Topology -> ([Envs (Scal (Typ UT UT UT) Val)], Topology)
 makeSequence ::
@@ -106,8 +106,7 @@ makeSequence pRec topo = (sqEnvs, sqTopo)
   where pRec0 = addZeroCrossings pRec
         (sequ,sqPRec) = genSequ pRec0
         sqFRec = genSequFlow sqPRec
-        SequData sqEnvs = fmap f sqFRec
-        f = map g . zip h
+        sqEnvs = case sqFRec of SequData sq -> map g $ zip h sq
         g (s, rec) = fromFlowRecord s (RecIdx 0) rec
         h = map SecIdx $ listIdx sequ
 
@@ -397,7 +396,7 @@ chopAtZeroCrossingsRSig (TC (Data times), TC (Data vectorSignal)) =
 
 chopAtZeroCrossingsPowerRecord ::
    (V.Convert [] v Val) =>
-   ListPowerRecord -> SequData [PowerRecord v Val]
+   ListPowerRecord -> SequData (PowerRecord v Val)
 chopAtZeroCrossingsPowerRecord rSig =
    SequData $ map (rsig2SecRecord rSig) $
    chopAtZeroCrossingsRSig $
@@ -405,7 +404,7 @@ chopAtZeroCrossingsPowerRecord rSig =
 
 concatPowerRecords ::
    (V.Singleton v a) =>
-   SequData [PowerRecord v a] -> PowerRecord v a
+   SequData (PowerRecord v a) -> PowerRecord v a
 concatPowerRecords (SequData recs) =
    case recs of
       [] -> PowerRecord mempty M.empty
@@ -430,7 +429,7 @@ tailPowerRecord (PowerRecord times pMap) =
 
 approxSequPwrRecord ::
    (V.Walker v a a, Real a) =>
-   a -> SequData [PowerRecord v a] -> SequData [PowerRecord v a] -> Bool
+   a -> SequData (PowerRecord v a) -> SequData (PowerRecord v a) -> Bool
 approxSequPwrRecord eps (SequData xs) (SequData ys) =
    V.equalBy (approxSecPowerRecord eps) xs ys
 
