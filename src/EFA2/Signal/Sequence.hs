@@ -1,4 +1,5 @@
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module EFA2.Signal.Sequence where
 
@@ -62,9 +63,9 @@ fromFlowRecord ::
    SecIdx ->
    RecIdx ->
    FlRecord
-      (TC s1 (Typ delta2 t2 p2) (c1 d1))
-      (TC s1 (Typ delta1 t1 p1) (c1 d1)) ->
-   Envs (TC s1 (Typ UT UT UT) (c1 d1))
+      (TC s1 (Typ delta2 t2 p2) (Data c1 d1))
+      (TC s1 (Typ delta1 t1 p1) (Data c1 d1)) ->
+   Envs (TC s1 (Typ UT UT UT) (Data c1 d1))
 fromFlowRecord (SecIdx secIdx) (RecIdx recIdx) (FlRecord dTime flowMap) =
   emptyEnv { energyMap = M.map untype $ M.mapKeys f flowMap, dtimeMap = M.fromList [(DTimeIdx secIdx recIdx, untype dTime)] }
   where f (PPosIdx idx1 idx2) = EnergyIdx secIdx recIdx idx1 idx2
@@ -75,12 +76,12 @@ fromFlowRecord (SecIdx secIdx) (RecIdx recIdx) (FlRecord dTime flowMap) =
 
 -- | Pre-Integrate all Signals in Record
 recFullIntegrate :: SecPowerRecord -> FlowRecord
-recFullIntegrate (SecPowerRecord time pMap) = FlRecord (S.fromList [fromScalar $ sigSum $ deltaSig time]) fMap
+recFullIntegrate (PowerRecord time pMap) = FlRecord (S.fromList [fromScalar $ sigSum $ deltaSig time]) fMap
   where fMap = M.map (sigFullInt time) pMap
 
 -- | Pre-Integrate all Signals in Record
 recPartIntegrate :: SecPowerRecord -> FlowRecord
-recPartIntegrate (SecPowerRecord time pMap) = FlRecord (deltaSig time) fMap
+recPartIntegrate (PowerRecord time pMap) = FlRecord (deltaSig time) fMap
   where fMap = M.map (sigPartInt time) pMap
 
 -- | Generate Sequence Flow
@@ -93,7 +94,7 @@ genSequFlow sqPRec = (map recFullIntegrate) `fmap` sqPRec
 
 -- makeSequence :: PowerRecord -> Topology -> ([Envs (Scal (Typ UT UT UT) Val)], Topology)
 makeSequence ::
-   PowerRecord ->
+   ListPowerRecord ->
    Topology ->
    ([Envs
        (TC
@@ -122,7 +123,7 @@ Must be fixed for empty signals and
 must correctly handle the last section.
 -}
 -- | Function to Generate Time Sequence
-genSequ ::  PowerRecord -> (Sequ, SequPwrRecord)
+genSequ ::  ListPowerRecord -> (Sequ, SequPwrRecord)
 genSequ pRec = removeNilSections (sequ++[lastSec],SequData pRecs)
   where rSig = record2RSig pRec
         pRecs = map (rsig2SecRecord pRec) (seqRSig ++ [lastRSec])
@@ -187,7 +188,7 @@ stepX p1 p2
    | otherwise = toSample NoStep  -- nostep
 
 
-addZeroCrossings :: PowerRecord -> PowerRecord
+addZeroCrossings :: ListPowerRecord -> ListPowerRecord
 addZeroCrossings r = rsig2Record rSigNew0 r
   where rSigNew0 =
            case record2RSig r of
@@ -284,16 +285,21 @@ updateMap pmap xs =
            then M.fromList $ zip keys xs
            else error "Error in updateMap - map and List length don't match"
 
-record2RSig :: PowerRecord -> RSig
+record2RSig :: ListPowerRecord -> RSig
 record2RSig (PowerRecord t pMap) = (t, S.transpose2 $ fromSigList $ M.elems pMap)
 
-rsig2Record :: RSig -> PowerRecord -> PowerRecord
+rsig2Record :: RSig -> ListPowerRecord -> ListPowerRecord
 rsig2Record (t, ps) (PowerRecord _ pMap) =
    PowerRecord t $ updateMap pMap $ toSigList $ S.transpose2 ps
 
-rsig2SecRecord :: PowerRecord -> RSig -> SecPowerRecord
+rsig2SecRecord ::
+   (V.Convert [] v a) =>
+   PowerRecord [] a ->
+   (TC S.Signal (Typ A T Tt) (Data ([] :> Nil) a),
+    TC S.Sample (Typ A P Tt) (Data ([] :> [] :> Nil) a)) ->
+   PowerRecord v a
 rsig2SecRecord (PowerRecord _ pMap) (t, ps) =
-   SecPowerRecord (S.convert t) $
+   PowerRecord (S.convert t) $
    updateMap pMap $ map S.convert $ toSigList $ S.transpose2 ps
 
 
@@ -389,42 +395,50 @@ chopAtZeroCrossingsRSig (TC (Data times), TC (Data vectorSignal)) =
    chopAtZeroCrossings $
    zip times vectorSignal
 
-chopAtZeroCrossingsPowerRecord :: PowerRecord -> SequPwrRecord
+chopAtZeroCrossingsPowerRecord ::
+   (V.Convert [] v Val) =>
+   ListPowerRecord -> SequData [PowerRecord v Val]
 chopAtZeroCrossingsPowerRecord rSig =
    SequData $ map (rsig2SecRecord rSig) $
    chopAtZeroCrossingsRSig $
    record2RSig rSig
 
-concatPowerRecords :: SequPwrRecord -> SecPowerRecord
+concatPowerRecords ::
+   (V.Singleton v a) =>
+   SequData [PowerRecord v a] -> PowerRecord v a
 concatPowerRecords (SequData recs) =
    case recs of
-      [] -> SecPowerRecord mempty M.empty
-      SecPowerRecord time0 pMap0 : recs0 ->
+      [] -> PowerRecord mempty M.empty
+      PowerRecord time0 pMap0 : recs0 ->
          let recs1 = map tailPowerRecord recs0
-         in  SecPowerRecord
-                (mconcat $ time0 : map (\(SecPowerRecord times _) -> times) recs1)
+         in  PowerRecord
+                (mconcat $ time0 : map (\(PowerRecord times _) -> times) recs1)
                 (M.mapWithKey
                     (\idx pSig ->
                        mconcat $ pSig :
-                       mapMaybe (\(SecPowerRecord _ pMap) -> M.lookup idx pMap) recs1)
+                       mapMaybe (\(PowerRecord _ pMap) -> M.lookup idx pMap) recs1)
                     pMap0)
 
-tailPowerRecord :: SecPowerRecord -> SecPowerRecord
-tailPowerRecord (SecPowerRecord times pMap) =
-   SecPowerRecord
+tailPowerRecord ::
+   (V.Singleton v a) =>
+   PowerRecord v a -> PowerRecord v a
+tailPowerRecord (PowerRecord times pMap) =
+   PowerRecord
       (maybe mempty snd $ S.viewL times)
       (fmap (maybe mempty snd . S.viewL) pMap)
 
 
 approxSequPwrRecord ::
-   Val -> SequPwrRecord -> SequPwrRecord -> Bool
+   (V.Walker v a a, Real a) =>
+   a -> SequData [PowerRecord v a] -> SequData [PowerRecord v a] -> Bool
 approxSequPwrRecord eps (SequData xs) (SequData ys) =
    V.equalBy (approxSecPowerRecord eps) xs ys
 
 approxSecPowerRecord ::
-   Val -> SecPowerRecord -> SecPowerRecord -> Bool
+   (V.Walker v a a, Real a) =>
+   a -> PowerRecord v a -> PowerRecord v a -> Bool
 approxSecPowerRecord eps
-      (SecPowerRecord xt xm) (SecPowerRecord yt ym) =
+      (PowerRecord xt xm) (PowerRecord yt ym) =
    S.equalBy (approxAbs eps) xt yt
    &&
    M.keys xm == M.keys ym

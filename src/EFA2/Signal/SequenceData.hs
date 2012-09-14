@@ -1,4 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeOperators #-}
 
 module EFA2.Signal.SequenceData where
 
@@ -7,14 +9,18 @@ import qualified Data.Map as M
 -- import EFA2.Interpreter.Arith
 import EFA2.Topology.TopologyData (FlowTopology)
 
-import EFA2.Signal.Base (Sign)
+import qualified EFA2.Signal.Signal as S
+import qualified EFA2.Signal.Vector as V
 import EFA2.Signal.Signal
-          (TC(TC), DTFSig, DTVal, FFSig, FVal, PSig, PSigL,
-           SignalIdx, TSig, TSigL, UTSigL)
-import EFA2.Signal.Data (Data(Data))
+          (TC, Signal, SignalIdx, DTVal, FVal, TSig, DTFSig, FFSig, UTSigL)
+import EFA2.Signal.Typ (Typ, A, P, T, Tt)
+import EFA2.Signal.Data (Data, (:>), Nil)
+import EFA2.Signal.Base (Sign, Val)
 
 import qualified Test.QuickCheck as QC
+import System.Random (Random)
 
+import qualified Data.Vector.Unboxed as UV
 import qualified Data.List.HT as HTL
 import qualified Data.List.Match as Match
 import Data.List (transpose)
@@ -33,11 +39,17 @@ data PPosIdx =  PPosIdx !Int !Int deriving (Show, Eq, Ord)
 data Record = Record TSig (M.Map SigId UTSigL) deriving (Show)
 data SigId = SigId String deriving (Show, Eq, Ord)
 
+data PowerRecord v a =
+   PowerRecord
+      (TC Signal (Typ A T Tt) (Data (v :> Nil) a))
+      (M.Map PPosIdx (TC Signal (Typ A P Tt) (Data (v :> Nil) a)))
+   deriving (Show)
+
 -- | Power record to contain power signals assigned to the tree
-data PowerRecord = PowerRecord TSigL (M.Map PPosIdx PSigL) deriving (Show)
+type ListPowerRecord = PowerRecord [] Val
 
 -- | Power Record to contain Power signals after cutting
-data SecPowerRecord = SecPowerRecord TSig (M.Map PPosIdx PSig) deriving (Show)
+type SecPowerRecord = PowerRecord UV.Vector Val
 
 
 type SequPwrRecord = SequData [SecPowerRecord]
@@ -83,7 +95,9 @@ instance QC.Arbitrary PPosIdx where
    arbitrary = liftM2 PPosIdx (QC.choose (0,10)) (QC.choose (0,10))
    shrink (PPosIdx from to) = map (uncurry PPosIdx) $ QC.shrink (from, to)
 
-instance QC.Arbitrary PowerRecord where
+instance
+   (Show (v a), Random a, Num a, V.FromList v a) =>
+      QC.Arbitrary (PowerRecord v a) where
    arbitrary = do
       xs <- QC.listOf (QC.choose (-1,1))
       n <- QC.choose (1,5)
@@ -92,5 +106,5 @@ instance QC.Arbitrary PowerRecord where
              HTL.switchR [] (\equalSized _ -> equalSized) $
              HTL.sliceVertical n xs
       return $
-         PowerRecord (TC $ Data $ Match.take vectorSamples [0..]) $
-         M.fromList $ zip ppos $ map (TC . Data) $ transpose vectorSamples
+         PowerRecord (S.fromList $ Match.take vectorSamples $ iterate (1+) 0) $
+         M.fromList $ zip ppos $ map S.fromList $ transpose vectorSamples

@@ -1,6 +1,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE TypeOperators #-}
 
 module EFA2.Display.Plot (module EFA2.Display.Plot) where
@@ -239,12 +240,10 @@ rPlot (name, r) =
 class RPlot a where
    rPlotCore :: String -> a -> [Frame.T (Graph2D.T Val Val)]
 
-instance RPlot PowerRecord where
+instance
+   (SV.FromList v Val, SV.Walker v Val Val) =>
+      RPlot (PowerRecord v Double) where
    rPlotCore rName (PowerRecord time pMap) =
-      [rPlotSingle rName time pMap]
-
-instance RPlot SecPowerRecord where
-   rPlotCore rName (SecPowerRecord time pMap) =
       [rPlotSingle rName time pMap]
 
 rPlotSingle ::

@@ -2,7 +2,9 @@ module Main where
 
 import qualified EFA2.Signal.Signal as S
 import qualified EFA2.Signal.Sequence as Sequ
-import EFA2.Signal.SequenceData (PPosIdx(PPosIdx), PowerRecord(PowerRecord), Sequ, SequPwrRecord)
+import EFA2.Signal.SequenceData
+          (PPosIdx(PPosIdx), PowerRecord(PowerRecord), ListPowerRecord,
+           Sequ, SequPwrRecord)
 import EFA2.Signal.Signal (PSigL, (.++))
 import EFA2.Signal.Base (Val)
 import EFA2.Display.Plot (rPlot, rPlotCore)
@@ -49,7 +51,7 @@ pMap =
       (PPosIdx 3 1, mkSigEnd n s31) :
       []
 
-pRec, pRec0 :: PowerRecord
+pRec, pRec0 :: ListPowerRecord
 
 pRec = PowerRecord (S.fromList time) pMap
 pRec0 = Sequ.addZeroCrossings pRec
