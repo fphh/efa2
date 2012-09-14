@@ -3,23 +3,28 @@
 
 module EFA2.Signal.Sequence where
 
-import EFA2.Interpreter.Env
+import EFA2.Interpreter.Env (Envs(..), DTimeIdx(..), EnergyIdx(..), emptyEnv)
 
-import EFA2.Topology.Flow
+import qualified EFA2.Topology.Flow as Flow
 import EFA2.Topology.TopologyData (Topology)
 
 import qualified EFA2.Signal.Signal as S
 import qualified EFA2.Signal.Vector as V
 
 import EFA2.Signal.SequenceData
+          (SequData(..), Sequ, Sec,
+           PowerRecord(..), ListPowerRecord, SequPwrRecord, SecPowerRecord,
+           FlowRecord, FlRecord(FlRecord), SequFlowRecord,
+           RecIdx(..), SecIdx(..), PPosIdx(..))
 import EFA2.Signal.Base
+          (Val, Sign(..), ZeroCrossing(..))
 import EFA2.Signal.Signal
           (TC(TC), RSig, TSigL, TZeroSamp1L, TZeroSamp, TSamp, PSamp, PSigL,
            RSamp1, DTSamp, PSamp2LL, Samp, Samp1L, FSignal,
            (.+), (.-), (.*), (./), (.++),
            rsingleton, sampleAverage, deltaSig, sigPartInt, sigFullInt,
            changeType, untype, fromScalar, toSample, sigSum, toSigList, fromSigList)
-import EFA2.Signal.Typ
+import EFA2.Signal.Typ (Typ, UT, STy, Tt, T, P, A)
 import EFA2.Signal.Data (Data(Data), Nil, (:>))
 
 import qualified Data.Vector.Unboxed as UV
@@ -110,10 +115,10 @@ makeSequence pRec topo = (sqEnvs, sqTopo)
         g (s, rec) = fromFlowRecord s (RecIdx 0) rec
         h = map SecIdx $ listIdx sequ
 
-        sqFStRec = genSequFState sqFRec
-        sqFlowTops = genSequFlowTops topo sqFStRec
-        sqSecTops = genSectionTopology sqFlowTops
-        sqTopo = mkSequenceTopology sqSecTops
+        sqFStRec = Flow.genSequFState sqFRec
+        sqFlowTops = Flow.genSequFlowTops topo sqFStRec
+        sqSecTops = Flow.genSectionTopology sqFlowTops
+        sqTopo = Flow.mkSequenceTopology sqSecTops
 
 -----------------------------------------------------------------------------------
 {-
