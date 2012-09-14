@@ -68,7 +68,7 @@ instance B.DArith0 (InTerm a) where
          neg = InMinus
          rec = InRecip
 
-instance S.Const Scalar (Data Nil) (InTerm a) where
+instance S.Const Scalar (Data Nil) where
          toConst _ _x = undefined --toScalar x
 
 
