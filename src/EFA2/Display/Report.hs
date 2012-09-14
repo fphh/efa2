@@ -92,7 +92,7 @@ thapp x1 x2 = if check then Table {tableTitle = tableTitle x1 ++ " ++  " ++ tabl
                                    tableSubTitle = tableSubTitle x1 ++ " ++  " ++ tableSubTitle x2} else error m             
               where g :: TableData -> TableData -> TableData
                     g x1 x2 = TableData {titleRow = titleRow x1++titleRow x2, 
-                                        tableBody = L.transpose $ (L.transpose $ tableBody x1)++(L.transpose $ tableBody x2),
+                                        tableBody = L.zipWith (++) (tableBody x1) (tableBody x2),
                                         titleCols = titleCols x1,
                                         endCols = endCols x1}           
     
@@ -129,7 +129,10 @@ makeTable  os t = PP.text (tableTitle t) PP.$$ (makeCol os rf $ map (makeRow os 
 
 -- | Generate doc table including title rows and colums    
 buildDocTable :: TableData -> [[(Length, PP.Doc)]]
-buildDocTable td = titleRow td ++ L.transpose ((L.transpose (titleCols td)) ++ (L.transpose $ tableBody td) ++ (L.transpose (endCols td)))
+buildDocTable td =
+   titleRow td ++
+   L.zipWith3 (\x y z -> x ++ y ++ z)
+      (titleCols td) (tableBody td) (endCols td)
 
 -- | Generate Table Row     
 makeRow :: ROpts -> ColFormat -> [(Length,PP.Doc)]  -> PP.Doc    
