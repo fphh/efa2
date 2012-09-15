@@ -1,4 +1,3 @@
-{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE PatternGuards #-}
 
 module EFA2.Solver.Equation where
@@ -102,7 +101,7 @@ instance MkVarC VarIdx where
 instance MkVarC StorageIdx where
          mkVar = Store
 
-instance MkVarC Val where
+instance MkVarC Double where
          mkVar = Const
 
 instance MkVarC EqTerm where
