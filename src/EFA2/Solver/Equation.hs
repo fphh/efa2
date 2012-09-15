@@ -364,23 +364,26 @@ additiveTerms = additiveTerms' . simplify . pushMult
 
 
 setEqTerms :: Envs EqTerm -> EqTerm -> EqTerm
-setEqTerms envs (Power idx) | Just t <- M.lookup idx (powerMap envs) = t
-setEqTerms envs (DPower idx) | Just t <- M.lookup idx (dpowerMap envs) = t
-setEqTerms envs (Energy idx) | Just t <- M.lookup idx (energyMap envs) = t
-setEqTerms envs (DEnergy idx) | Just t <- M.lookup idx (denergyMap envs) = t
-setEqTerms envs (FEta idx) | Just t <- M.lookup idx (fetaMap envs) = trace "setEqTerms" $ t undefined
-setEqTerms envs (DEta idx) | Just t <- M.lookup idx (detaMap envs) = trace "setEqTerms" $ t undefined
-setEqTerms envs (X idx) | Just t <- M.lookup idx (xMap envs) = t
-setEqTerms envs (DX idx) | Just t <- M.lookup idx (dxMap envs) = t
-setEqTerms envs (Var idx) | Just t <- M.lookup idx (varMap envs) = t
-setEqTerms envs (Store idx) | Just t <- M.lookup idx (storageMap envs) = t
-setEqTerms envs (DTime idx) | Just t <- M.lookup idx (dtimeMap envs) = t
-setEqTerms envs (Minus t) = Minus (setEqTerms envs t)
-setEqTerms envs (Recip t) = Recip (setEqTerms envs t)
-setEqTerms envs (s :+ t) = setEqTerms envs s :+ setEqTerms envs t
-setEqTerms envs (s :* t) = setEqTerms envs s :* setEqTerms envs t
-setEqTerms envs (s := t) = setEqTerms envs s := setEqTerms envs t
-setEqTerms _ t = t
+setEqTerms envs term =
+   case term of
+      (Power idx) | Just t <- M.lookup idx (powerMap envs) -> t
+      (DPower idx) | Just t <- M.lookup idx (dpowerMap envs) -> t
+      (Energy idx) | Just t <- M.lookup idx (energyMap envs) -> t
+      (DEnergy idx) | Just t <- M.lookup idx (denergyMap envs) -> t
+      (FEta idx) | Just t <- M.lookup idx (fetaMap envs) -> trace "setEqTerms" $ t undefined
+      (DEta idx) | Just t <- M.lookup idx (detaMap envs) -> trace "setEqTerms" $ t undefined
+      (X idx) | Just t <- M.lookup idx (xMap envs) -> t
+      (DX idx) | Just t <- M.lookup idx (dxMap envs) -> t
+      (Var idx) | Just t <- M.lookup idx (varMap envs) -> t
+      (Store idx) | Just t <- M.lookup idx (storageMap envs) -> t
+      (DTime idx) | Just t <- M.lookup idx (dtimeMap envs) -> t
+      (Minus t) -> Minus (setEqTerms envs t)
+      (Recip t) -> Recip (setEqTerms envs t)
+      (s :+ t) -> setEqTerms envs s :+ setEqTerms envs t
+      (s :* t) -> setEqTerms envs s :* setEqTerms envs t
+      (s := t) -> setEqTerms envs s := setEqTerms envs t
+      _ -> term
+
 --------------------------------------------------------------------
 
 toAbsEqTerm :: EqTerm -> EqTerm
