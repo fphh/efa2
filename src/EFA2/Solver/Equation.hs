@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeSynonymInstances, ScopedTypeVariables #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE PatternGuards #-}
 
 
@@ -573,7 +573,7 @@ interpretEqTermEq _ t = error $ "interpretEqTerm: " ++ show t
 interpretEqTermFromScratch :: [EqTerm] -> Envs EqTerm
 interpretEqTermFromScratch ts = L.foldl' interpretEqTermEq emptyEnv ts
 
-mapEqTermEnv :: forall a b. (a -> b) -> Envs a -> Envs b
+mapEqTermEnv :: (a -> b) -> Envs a -> Envs b
 mapEqTermEnv f env = emptyEnv { recordNumber = recordNumber env,
                                 energyMap = M.map f (energyMap env),
                                 denergyMap = M.map f (denergyMap env),
