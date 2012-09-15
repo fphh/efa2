@@ -516,49 +516,56 @@ mkDiffEqTermEquations rec ts = concat $ mapMaybe (mkDiffEqTerm rec) ts
 -- interpretEq len envs (InEqual (EIdx idx) rhs) = envs { energyMap = insert len idx envs rhs (energyMap envs) }
 
 interpretEqTermRhs :: Envs EqTerm -> EqTerm -> EqTerm
-interpretEqTermRhs envs (Power idx) | Just s <- M.lookup idx (powerMap envs) = s
-interpretEqTermRhs envs (DPower idx) | Just s <- M.lookup idx (dpowerMap envs) = s
-interpretEqTermRhs envs (Energy idx) | Just s <- M.lookup idx (energyMap envs) = s
-interpretEqTermRhs envs (DEnergy idx) | Just s <- M.lookup idx (denergyMap envs) = s
-interpretEqTermRhs envs (FEta idx) | Just s <- M.lookup idx (fetaMap envs) = s undefined
-interpretEqTermRhs envs (DEta idx) | Just s <- M.lookup idx (detaMap envs) = s undefined
-interpretEqTermRhs envs (Var idx) | Just s <- M.lookup idx (varMap envs) = s
-interpretEqTermRhs envs (X idx) | Just s <- M.lookup idx (xMap envs) = s
-interpretEqTermRhs envs (Store idx) | Just s <- M.lookup idx (storageMap envs) = s
-interpretEqTermRhs envs (DTime idx) | Just s <- M.lookup idx (dtimeMap envs) = s
-interpretEqTermRhs envs (Minus x) = Minus $ interpretEqTermRhs envs x
-interpretEqTermRhs envs (Recip x) = Recip $ interpretEqTermRhs envs x
-interpretEqTermRhs envs (x :+ y) = interpretEqTermRhs envs x :+ interpretEqTermRhs envs y
-interpretEqTermRhs envs (x :* y) = interpretEqTermRhs envs x :* interpretEqTermRhs envs y
-interpretEqTermRhs _ t = t
+interpretEqTermRhs envs t =
+   case t of
+      (Power idx) | Just s <- M.lookup idx (powerMap envs) -> s
+      (DPower idx) | Just s <- M.lookup idx (dpowerMap envs) -> s
+      (Energy idx) | Just s <- M.lookup idx (energyMap envs) -> s
+      (DEnergy idx) | Just s <- M.lookup idx (denergyMap envs) -> s
+      (FEta idx) | Just s <- M.lookup idx (fetaMap envs) -> s undefined
+      (DEta idx) | Just s <- M.lookup idx (detaMap envs) -> s undefined
+      (Var idx) | Just s <- M.lookup idx (varMap envs) -> s
+      (X idx) | Just s <- M.lookup idx (xMap envs) -> s
+      (Store idx) | Just s <- M.lookup idx (storageMap envs) -> s
+      (DTime idx) | Just s <- M.lookup idx (dtimeMap envs) -> s
+      (Minus x) -> Minus $ interpretEqTermRhs envs x
+      (Recip x) -> Recip $ interpretEqTermRhs envs x
+      (x :+ y) -> interpretEqTermRhs envs x :+ interpretEqTermRhs envs y
+      (x :* y) -> interpretEqTermRhs envs x :* interpretEqTermRhs envs y
+      _ -> t
 
 insertEqTerm idx envs rhs m = M.insert idx (interpretEqTermRhs envs rhs) m
 
 interpretEqTermEq :: Envs EqTerm -> EqTerm -> Envs EqTerm
 
-interpretEqTermEq envs (t@(Power idx) := Given) = envs { powerMap = insertEqTerm idx envs t (powerMap envs) }
-interpretEqTermEq envs (t@(DPower idx) := Given) = envs { dpowerMap = insertEqTerm idx envs t (dpowerMap envs) }
-interpretEqTermEq envs (t@(Energy idx) := Given) = envs { energyMap = insertEqTerm idx envs t (energyMap envs) }
-interpretEqTermEq envs (t@(DEnergy idx) := Given) = envs { denergyMap = insertEqTerm idx envs t (denergyMap envs) }
-interpretEqTermEq envs (t@(FEta idx) := Given) = envs { fetaMap = M.insert idx (const t) (fetaMap envs) }
-interpretEqTermEq envs (t@(DEta idx) := Given) = envs { detaMap = M.insert idx (const t) (detaMap envs) }
-interpretEqTermEq envs (t@(Var idx) := Given) = envs { varMap = insertEqTerm idx envs t (varMap envs) }
-interpretEqTermEq envs (t@(X idx) := Given) = envs { xMap = insertEqTerm idx envs t (xMap envs) }
-interpretEqTermEq envs (t@(Store idx) := Given) = envs { storageMap = insertEqTerm idx envs t (storageMap envs) }
-interpretEqTermEq envs (t@(DTime idx) := Given) = envs { dtimeMap = insertEqTerm idx envs t (dtimeMap envs) }
+interpretEqTermEq envs (t := Given) =
+   case t of
+      Power idx -> envs { powerMap = insertEqTerm idx envs t (powerMap envs) }
+      DPower idx -> envs { dpowerMap = insertEqTerm idx envs t (dpowerMap envs) }
+      Energy idx -> envs { energyMap = insertEqTerm idx envs t (energyMap envs) }
+      DEnergy idx -> envs { denergyMap = insertEqTerm idx envs t (denergyMap envs) }
+      FEta idx -> envs { fetaMap = M.insert idx (const t) (fetaMap envs) }
+      DEta idx -> envs { detaMap = M.insert idx (const t) (detaMap envs) }
+      Var idx -> envs { varMap = insertEqTerm idx envs t (varMap envs) }
+      X idx -> envs { xMap = insertEqTerm idx envs t (xMap envs) }
+      Store idx -> envs { storageMap = insertEqTerm idx envs t (storageMap envs) }
+      DTime idx -> envs { dtimeMap = insertEqTerm idx envs t (dtimeMap envs) }
 
-interpretEqTermEq envs (Power idx := rhs) = envs { powerMap = insertEqTerm idx envs rhs (powerMap envs) }
-interpretEqTermEq envs (DPower idx := rhs) = envs { dpowerMap = insertEqTerm idx envs rhs (dpowerMap envs) }
-interpretEqTermEq envs (Energy idx := rhs) = envs { energyMap = insertEqTerm idx envs rhs (energyMap envs) }
-interpretEqTermEq envs (DEnergy idx := rhs) = envs { denergyMap = insertEqTerm idx envs rhs (denergyMap envs) }
-interpretEqTermEq envs (FEta idx := rhs) = envs { fetaMap = M.insert idx (const rhs) (fetaMap envs) }
-interpretEqTermEq envs (DEta idx := rhs) = envs { detaMap = M.insert idx (const rhs) (detaMap envs) }
-interpretEqTermEq envs (X idx := rhs) = envs { xMap = insertEqTerm idx envs rhs (xMap envs) }
-interpretEqTermEq envs (DX idx := rhs) = envs { dxMap = insertEqTerm idx envs rhs (dxMap envs) }
-interpretEqTermEq envs (Var idx := rhs) = envs { varMap = insertEqTerm idx envs rhs (varMap envs) }
-interpretEqTermEq envs (Store idx := rhs) = envs { storageMap = insertEqTerm idx envs rhs (storageMap envs) }
-interpretEqTermEq envs (DTime idx := rhs) = envs { dtimeMap = insertEqTerm idx envs rhs (dtimeMap envs) }
-interpretEqTermEq envs t = error $ "interpretEqTerm: " ++ show t
+interpretEqTermEq envs (t := rhs) =
+   case t of
+      Power idx -> envs { powerMap = insertEqTerm idx envs rhs (powerMap envs) }
+      DPower idx -> envs { dpowerMap = insertEqTerm idx envs rhs (dpowerMap envs) }
+      Energy idx -> envs { energyMap = insertEqTerm idx envs rhs (energyMap envs) }
+      DEnergy idx -> envs { denergyMap = insertEqTerm idx envs rhs (denergyMap envs) }
+      FEta idx -> envs { fetaMap = M.insert idx (const rhs) (fetaMap envs) }
+      DEta idx -> envs { detaMap = M.insert idx (const rhs) (detaMap envs) }
+      X idx -> envs { xMap = insertEqTerm idx envs rhs (xMap envs) }
+      DX idx -> envs { dxMap = insertEqTerm idx envs rhs (dxMap envs) }
+      Var idx -> envs { varMap = insertEqTerm idx envs rhs (varMap envs) }
+      Store idx -> envs { storageMap = insertEqTerm idx envs rhs (storageMap envs) }
+      DTime idx -> envs { dtimeMap = insertEqTerm idx envs rhs (dtimeMap envs) }
+
+interpretEqTermEq _ t = error $ "interpretEqTerm: " ++ show t
 
 interpretEqTermFromScratch :: [EqTerm] -> Envs EqTerm
 interpretEqTermFromScratch ts = L.foldl' interpretEqTermEq emptyEnv ts
