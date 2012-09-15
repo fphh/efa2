@@ -21,11 +21,12 @@ import EFA2.Utils.Utils (pairs)
 -- sollte nichts mit den konkreten Termen zu tun haben. Diese Entscheidung
 -- haette wahrscheinlich auch Einfluss auf InVar...
 
-data Equation = EqTerm := EqTerm deriving (Show, Eq, Ord)
+data Equation =
+            EqTerm := EqTerm
+          | Given EqTerm deriving (Show, Eq, Ord)
 
 data EqTerm =
             Const Val -- Double
-          | Given
           | Energy EnergyIdx
           | DEnergy DEnergyIdx
           | Power PowerIdx
@@ -63,10 +64,11 @@ x !* y = mkVar x :* mkVar y
 (!=) :: (MkVarC a, MkVarC b) => a -> b -> Equation
 x != y = mkVar x := mkVar y
 
+give :: MkVarC a => a -> Equation
+give idx = Given (mkVar idx)
+
 class MkVarC a where
       mkVar :: a -> EqTerm
-      give :: a -> Equation
-      give idx = mkVar idx := Given
 
 instance MkVarC EnergyIdx where
          mkVar = Energy
@@ -115,7 +117,6 @@ mult = L.foldl1' (:*)
 
 showEqTerm :: EqTerm -> String
 showEqTerm (Const x) = show x
-showEqTerm Given = "given"
 
 showEqTerm (Energy (EnergyIdx s r x y)) = "E_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
 showEqTerm (DEnergy (DEnergyIdx s r x y)) = "dE_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
@@ -148,6 +149,7 @@ showEqTerm (Recip x) = "1/(" ++ showEqTerm x ++ ")"
 showEqTerm (Minus x) = "-(" ++ showEqTerm x ++ ")"
 
 showEquation :: Equation -> String
+showEquation (Given x) = showEqTerm x ++ " given"
 showEquation (x := y) = showEqTerm x ++ " = " ++ showEqTerm y
 
 showEqTerms :: [EqTerm] -> String
@@ -158,7 +160,6 @@ newtype LatexString = LatexString { unLatexString :: String } deriving (Show, Eq
 
 toLatexString' :: EqTerm -> String
 toLatexString' (Const x) = printf "%.6f   " x
-toLatexString' Given = "\\mbox{given}"
 
 toLatexString' (Energy (EnergyIdx s r x y)) = "E_{" ++ show s ++ "." ++ show r ++ "." ++ show x ++ "." ++ show y ++ "}"
 toLatexString' (DEnergy (DEnergyIdx s r x y)) = "\\Delta E_{" ++ show s ++ "." ++ show r ++ "." ++ show x ++ "." ++ show y ++ "}"
@@ -192,6 +193,7 @@ toLatexString' (Recip x) = "\\frac{1}{" ++ toLatexString' x ++ "}"
 toLatexString' (Minus x) = "-(" ++ toLatexString' x ++ ")"
 
 eqToLatexString' :: Equation -> String
+eqToLatexString' (Given x) = toLatexString' x ++ " \\mbox{given}"
 eqToLatexString' (x := y) = toLatexString' x ++ " = " ++ toLatexString' y
 
 toLatexString :: EqTerm -> LatexString
@@ -206,6 +208,7 @@ eqToLatexString t = LatexString $ "$" ++ eqToLatexString' t ++ "$"
 -- determines the set of variables contained in the term,
 -- according to the predicate.
 mkVarSetEq :: (EqTerm -> Bool) -> Equation -> S.Set EqTerm
+mkVarSetEq p (Given x) = mkVarSet p x
 mkVarSetEq p (x := y) = S.union (mkVarSet p x) (mkVarSet p y)
 
 mkVarSet :: (EqTerm -> Bool) -> EqTerm -> S.Set EqTerm
@@ -244,6 +247,9 @@ prepStep t s p =
       _ -> error $ "error in looking for path to (" ++ show t ++ ") in (" ++ show s ++ ")"
 
 findVarEq :: EqTerm -> Equation -> Maybe TPath
+findVarEq t s@(Given u) =
+   prepStep t s (findVar t u, Nothing)
+--   if t == u then Just [] else Nothing
 findVarEq t s@(u := v) =
    prepStep t s (findVar t u, findVar t v)
 
@@ -268,6 +274,8 @@ findVar t s =
            _ -> (Nothing, Nothing)
 
 isolateVar :: EqTerm -> Equation -> TPath -> Equation
+isolateVar s (Given u) [L] = (Given s)
+isolateVar s (Given u) [R] = (s := u)
 isolateVar s (u := v) (L:p) = (s := isolateVar' u p v)
 isolateVar s (u := v) (R:p) = (s := isolateVar' v p u)
 isolateVar s t p = error $ "isolateVar:\n" ++ show s ++ "\n" ++ show t ++ "\n" ++ show p
@@ -377,6 +385,7 @@ simplify = fst . head . dropWhile (uncurry (/=)) . pairs . iterate simplify' . p
         simplify' x = x
 
 simplifyEq :: Equation -> Equation
+simplifyEq (Given x) = Given (simplify x)
 simplifyEq (x := y) = simplify x := simplify y
 
 additiveTerms :: EqTerm -> [EqTerm]
@@ -406,6 +415,7 @@ setEqTerms envs term =
       _ -> term
 
 setEquations :: Envs EqTerm -> Equation -> Equation
+setEquations envs (Given s)  =  Given (setEqTerms envs s)
 setEquations envs (s := t)  =  setEqTerms envs s := setEqTerms envs t
 
 --------------------------------------------------------------------
@@ -429,6 +439,7 @@ toAbsEqTermEquations :: [EqTerm] -> [EqTerm]
 toAbsEqTermEquations ts = map toAbsEqTerm ts
 
 toAbsEquation :: Equation -> Equation
+toAbsEquation (Given x) = Given (toAbsEqTerm x)
 toAbsEquation (x := y) = toAbsEqTerm x := toAbsEqTerm y
 
 toAbsEquations :: [Equation] -> [Equation]
@@ -572,7 +583,7 @@ insertEqTerm ::
 insertEqTerm idx envs rhs m = M.insert idx (interpretEqTermRhs envs rhs) m
 
 interpretEqTermEq :: Envs EqTerm -> Equation -> Envs EqTerm
-interpretEqTermEq envs (t := Given) =
+interpretEqTermEq envs (Given t) =
    case t of
       Power idx -> envs { powerMap = insertEqTerm idx envs t (powerMap envs) }
       DPower idx -> envs { dpowerMap = insertEqTerm idx envs t (dpowerMap envs) }

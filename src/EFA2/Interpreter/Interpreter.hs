@@ -12,7 +12,7 @@ import EFA2.Utils.Utils
 
 
 eqToInTerm :: Show a => Envs a -> Equation -> InTerm a
-eqToInTerm envs (t := Given) =
+eqToInTerm envs (Given t) =
    case t of
       (Energy idx) -> InEqual (EIdx idx) (InGiven (energyMap envs `safeLookup` idx))
       (DEnergy idx) -> InEqual (DEIdx idx) (InGiven (denergyMap envs `safeLookup` idx))
@@ -62,7 +62,6 @@ eqTermToInTerm term =
 
       (x :+ y) -> InAdd (eqTermToInTerm x) (eqTermToInTerm y)
       (x :* y) -> InMult (eqTermToInTerm x) (eqTermToInTerm y)
-      t -> error ("eqTermToInTerm: " ++ show t)
 
 
 showInTerm :: (Show a) => InTerm a -> String

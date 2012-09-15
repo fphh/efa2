@@ -6,6 +6,7 @@ import Data.Graph.Inductive
 import qualified Data.Vector.Unboxed as UV
 import qualified Data.List as L
 import qualified Data.Set as S
+import Data.Maybe (mapMaybe)
 
 import Debug.Trace
 
@@ -77,7 +78,7 @@ isVar g ts t
 --
 -- > ... := Given ...
 isGiven :: Equation -> Bool
-isGiven (_ := Given) = True
+isGiven (Given _) = True
 isGiven _ = False
 
 -- | True for 'EqTerm's that don't contain variables and for which 'isGiven' is False.
@@ -151,6 +152,5 @@ isVarFromEqs s t = not (S.member t s || isCompoundTerm t)
 -- Used mainly as a reference implementation for 'isVar'.
 isVarFromEqs :: [Equation] -> EqTerm -> Bool
 isVarFromEqs ts t = not (S.member t s || isCompoundTerm t) 
-  where s = L.foldl' f S.empty ts
-        f acc (v := Given) = S.insert v acc
-        f acc _ = acc
+  where s = S.fromList $
+               mapMaybe (\eq -> case eq of Given v -> Just v; _ -> Nothing) ts
