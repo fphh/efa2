@@ -142,28 +142,30 @@ interpretEq :: ( S.Arith s s s, SMap c Val Val, TProd t t t, TSum t t t,
                  D.ZipWith c c c Val Val Val, D.FromList c Val, Show (c Val)) =>
                  Int -> Envs (TC s t (c Val)) -> InTerm (TC s t (c Val)) -> Envs (TC s t (c Val))
 -}
-interpretEq len envs (InEqual (EIdx idx) rhs) = envs { energyMap = insert len idx envs rhs (energyMap envs) }
-interpretEq len envs (InEqual (DEIdx idx) rhs) = envs { denergyMap = insert len idx envs rhs (denergyMap envs) }
-interpretEq len envs (InEqual (PIdx idx) rhs) = envs { powerMap = insert len idx envs rhs (powerMap envs) }
-interpretEq len envs (InEqual (DPIdx idx) rhs) = envs { dpowerMap = insert len idx envs rhs (dpowerMap envs) }
-interpretEq len envs (InEqual (FNIdx idx@(FEtaIdx s r f t)) (InFunc feta)) = envs { fetaMap = M.insert idx feta (fetaMap envs) }
+interpretEq len envs eq =
+   case eq of
+      (InEqual (EIdx idx) rhs) -> envs { energyMap = insert len idx envs rhs (energyMap envs) }
+      (InEqual (DEIdx idx) rhs) -> envs { denergyMap = insert len idx envs rhs (denergyMap envs) }
+      (InEqual (PIdx idx) rhs) -> envs { powerMap = insert len idx envs rhs (powerMap envs) }
+      (InEqual (DPIdx idx) rhs) -> envs { dpowerMap = insert len idx envs rhs (dpowerMap envs) }
+      (InEqual (FNIdx idx@(FEtaIdx _s _r _f _t)) (InFunc feta)) -> envs { fetaMap = M.insert idx feta (fetaMap envs) }
 {-
-interpretEq envs (InEqual (FNIdx idx@(FEtaIdx s r f t) _) (InMult (InRecip (PIdx pidx1)) (PIdx pidx2))) = envs''
+      (InEqual (FNIdx idx@(FEtaIdx s r f t) _) (InMult (InRecip (PIdx pidx1)) (PIdx pidx2))) -> envs''
   where envs' = envs { fetaMap = M.insert idx (mkEtaFunc pts) (fetaMap envs) }
         envs'' = envs' { fetaMap = M.insert (FEtaIdx s r t f) (mkEtaFunc (reversePts pts)) (fetaMap envs') }
         p1 = powerMap envs M.! pidx1
         p2 = powerMap envs M.! pidx2
         pts = Pt p2 (p2 ./ p1) 
 -}
---interpretEq len envs (InEqual (DNIdx idx) rhs) = envs { detaMap = insert len idx envs rhs (detaMap envs) }
-interpretEq len envs (InEqual (DNIdx idx@(DEtaIdx s r f t)) (InFunc deta)) = envs { detaMap = M.insert idx deta (detaMap envs) }
-interpretEq len envs (InEqual (DTIdx idx) rhs) = envs { dtimeMap = insert len idx envs rhs (dtimeMap envs) }
-interpretEq len envs (InEqual (ScaleIdx idx) rhs) = envs { xMap = insert len idx envs rhs (xMap envs) }
-interpretEq len envs (InEqual (DScaleIdx idx) rhs) = envs { dxMap = insert len idx envs rhs (dxMap envs) }
-interpretEq len envs (InEqual (VIdx idx) rhs) = envs { varMap = insert len idx envs rhs (varMap envs) }
-interpretEq len envs (InEqual (SIdx idx) rhs) = envs { storageMap = insert len idx envs rhs (storageMap envs) }
+--      (InEqual (DNIdx idx) rhs) -> envs { detaMap = insert len idx envs rhs (detaMap envs) }
+      (InEqual (DNIdx idx@(DEtaIdx _s _r _f _t)) (InFunc deta)) -> envs { detaMap = M.insert idx deta (detaMap envs) }
+      (InEqual (DTIdx idx) rhs) -> envs { dtimeMap = insert len idx envs rhs (dtimeMap envs) }
+      (InEqual (ScaleIdx idx) rhs) -> envs { xMap = insert len idx envs rhs (xMap envs) }
+      (InEqual (DScaleIdx idx) rhs) -> envs { dxMap = insert len idx envs rhs (dxMap envs) }
+      (InEqual (VIdx idx) rhs) -> envs { varMap = insert len idx envs rhs (varMap envs) }
+      (InEqual (SIdx idx) rhs) -> envs { storageMap = insert len idx envs rhs (storageMap envs) }
 
-interpretEq len envs t = error ("interpretEq: " ++ showInTerm t)
+      _ -> error ("interpretEq: " ++ showInTerm eq)
 
 
 {-
