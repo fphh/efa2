@@ -1,22 +1,28 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeOperators #-}
 
 module EFA2.Signal.SequenceData where
-
-import qualified Data.Map as M
 
 -- import EFA2.Interpreter.Arith
 import EFA2.Topology.TopologyData (FlowTopology)
 
-import EFA2.Signal.Base (Sign)
+import qualified EFA2.Signal.Signal as S
+import qualified EFA2.Signal.Vector as V
 import EFA2.Signal.Signal
-          (TC(TC), DTFSig, DTVal, FFSig, FVal, PSig, PSigL,
-           SignalIdx, TSig, TSigL, UTSigL)
-import EFA2.Signal.Data (Data(Data))
+          (TC, Signal, SignalIdx, DTVal, FVal, TSig, DTFSig, FFSig, UTSigL)
+import EFA2.Signal.Typ (Typ, A, P, T, Tt)
+import EFA2.Signal.Data (Data, (:>), Nil)
+import EFA2.Signal.Base (Sign, Val)
 
 import qualified Test.QuickCheck as QC
+import System.Random (Random)
 
+import qualified Data.Map as M
+import qualified Data.Vector.Unboxed as UV
 import qualified Data.List.HT as HTL
 import qualified Data.List.Match as Match
+import Data.Ratio (Ratio, (%))
 import Data.List (transpose)
 import Control.Monad (liftM2)
 
@@ -33,14 +39,20 @@ data PPosIdx =  PPosIdx !Int !Int deriving (Show, Eq, Ord)
 data Record = Record TSig (M.Map SigId UTSigL) deriving (Show)
 data SigId = SigId String deriving (Show, Eq, Ord)
 
+data PowerRecord v a =
+   PowerRecord
+      (TC Signal (Typ A T Tt) (Data (v :> Nil) a))
+      (M.Map PPosIdx (TC Signal (Typ A P Tt) (Data (v :> Nil) a)))
+   deriving (Show, Eq)
+
 -- | Power record to contain power signals assigned to the tree
-data PowerRecord = PowerRecord TSigL (M.Map PPosIdx PSigL) deriving (Show)
+type ListPowerRecord = PowerRecord [] Val
 
 -- | Power Record to contain Power signals after cutting
-data SecPowerRecord = SecPowerRecord TSig (M.Map PPosIdx PSig) deriving (Show)
+type SecPowerRecord = PowerRecord UV.Vector Val
 
 
-type SequPwrRecord = SequData [SecPowerRecord]
+type SequPwrRecord = SequData SecPowerRecord
 
 -- | Flow record to contain flow signals assigned to the tree
 data FlRecord a b = FlRecord a (M.Map PPosIdx b)
@@ -56,41 +68,60 @@ data FlowRecord = FlowRecord DTSig (PPosData FSig) deriving (Show)
 data FlowValRecord = FlowValRecord DTVal (PPosData FVal) deriving (Show)
 -}
 
-type SequFlowRecord a = SequData [a]
+type SequFlowRecord a = SequData a
 
 -- | Flow record to contain flow signals assigned to the tree
 --type SequFlowValRecord = SequData [FlowValRecord]
 
 newtype FlowState = FlowState (M.Map PPosIdx Sign) deriving (Show)
-type SequFlowState = SequData [FlowState]
-type SequFlowTops = SequData [FlowTopology]
+type SequFlowState = SequData FlowState
+type SequFlowTops = SequData FlowTopology
 
 -----------------------------------------------------------------------------------
 -- Section and Sequence -- Structures to handle Sequence Information and Data
 -- | Section analysis result
-type Sequ = [Sec]
+newtype Sequ = Sequ [Sec] deriving Show
 type Sec = (SignalIdx,SignalIdx)
 
 
 -- | Sequence Vector to Store Section Data
-data SequData a = SequData a deriving (Show) -- deriving Show
+newtype SequData a = SequData [a] deriving (Show, Eq)
 
 instance Functor SequData where
-         fmap f (SequData xs) = SequData (f xs)
+   fmap f (SequData xs) = SequData (map f xs)
 
 
 instance QC.Arbitrary PPosIdx where
    arbitrary = liftM2 PPosIdx (QC.choose (0,10)) (QC.choose (0,10))
    shrink (PPosIdx from to) = map (uncurry PPosIdx) $ QC.shrink (from, to)
 
-instance QC.Arbitrary PowerRecord where
+instance
+   (Show (v a), Sample a, V.FromList v, V.Storage v a) =>
+      QC.Arbitrary (PowerRecord v a) where
    arbitrary = do
-      xs <- QC.listOf (QC.choose (-1,1))
+      xs <- QC.listOf arbitrarySample
       n <- QC.choose (1,5)
       ppos <- QC.vectorOf n QC.arbitrary
       let vectorSamples =
              HTL.switchR [] (\equalSized _ -> equalSized) $
              HTL.sliceVertical n xs
       return $
-         PowerRecord (TC $ Data $ Match.take vectorSamples [0..]) $
-         M.fromList $ zip ppos $ map (TC . Data) $ transpose vectorSamples
+         PowerRecord (S.fromList $ Match.take vectorSamples $ iterate (1+) 0) $
+         M.fromList $ zip ppos $ map S.fromList $ transpose vectorSamples
+
+{-
+we need this class,
+because QC.choose requires a Random instance
+but there is no Random Ratio instance
+-}
+class Num a => Sample a where arbitrarySample :: QC.Gen a
+instance Sample Double where arbitrarySample = QC.choose (-1,1)
+instance (Random a, Integral a) => Sample (Ratio a) where
+   arbitrarySample = do
+      x <- QC.choose (-100,100)
+      y <- QC.choose (-100,100)
+      return $
+         case compare (abs x) (abs y) of
+            LT -> x%y
+            GT -> y%x
+            EQ -> 1 -- prevent 0/0

@@ -1,6 +1,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE TypeOperators #-}
 
 module EFA2.Display.Plot (module EFA2.Display.Plot) where
@@ -38,7 +39,7 @@ import Data.Monoid (mconcat)
 -- | Get Signal Plot Data (Unit Conversion)  ---------------------------------------------------------------
 
 sPlotData ::
-   (D.FromList c Val, D.Map c Val Val, DisplayTyp typ) =>
+   (D.FromList c, D.Map c, D.Storage c Val, DisplayTyp typ) =>
    TC s typ (Data c Val) -> NestedList c Val
 sPlotData x = S.toList $ S.map (*s) x
    where (UnitScale s) = getUnitScale $ getDisplayUnit $ getDisplayType x
@@ -73,7 +74,7 @@ class AxisLabel a => SigPlot a where
    sigPlotCore :: a -> Plot2D.T Int Val
 
 instance
-   (SV.Walker v1 Val Val, SV.FromList v1 Val, DisplayTyp t) =>
+   (SV.Walker v1, SV.FromList v1, SV.Storage v1 Val, DisplayTyp t) =>
       SigPlot (TC s t (Data (v1 :> Nil) Val))  where
    sigPlotCore x =
       Plot2D.list Graph2D.listLines $ sPlotData x
@@ -83,7 +84,7 @@ instance (SigPlot tc) => SigPlot [tc]  where
       mconcat $ map sigPlotCore xs
 
 instance
-   (SV.Walker v1 Val Val, SV.FromList v1 Val, SV.FromList v2 (v1 Val),
+   (SV.Walker v1, SV.FromList v1, SV.Storage v1 Val, SV.FromList v2, SV.Storage v2 (v1 Val),
     DisplayTyp t) =>
       SigPlot (TC s t (Data (v2 :> v1 :> Nil) Val))  where
    sigPlotCore x = sigPlotCore $ toSigList x
@@ -120,8 +121,8 @@ class (AxisLabel a, AxisLabel b) => XYPlot a b where
    xyplotCore :: a -> b -> Plot2D.T Val Val
 
 xyplotBasic ::
-   (DisplayTyp t1, SV.FromList v1 Val, SV.Walker v1 Val Val,
-    DisplayTyp t2, SV.FromList v2 Val, SV.Walker v2 Val Val) =>
+   (DisplayTyp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 Val,
+    DisplayTyp t2, SV.Walker v2, SV.FromList v2, SV.Storage v2 Val) =>
    (TC s t1 (Data (v1 :> Nil) Val)) ->
    (TC s t2 (Data (v2 :> Nil) Val)) ->
    Plot2D.T Val Val
@@ -129,14 +130,14 @@ xyplotBasic x y =
    Plot2D.list Graph2D.linesPoints $ zip (sPlotData x) (sPlotData y)
 
 instance
-   (DisplayTyp t1, SV.FromList v1 Val, SV.Walker v1 Val Val,
-    DisplayTyp t2, SV.FromList v2 Val, SV.Walker v2 Val Val) =>
+   (DisplayTyp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 Val,
+    DisplayTyp t2, SV.Walker v2, SV.FromList v2, SV.Storage v2 Val) =>
    XYPlot (TC Signal t1 (Data (v1 :> Nil) Val)) (TC Signal t2 (Data (v2 :> Nil) Val)) where
    xyplotCore = xyplotBasic
 
 instance
-   (DisplayTyp t1, SV.FromList v1 Val, SV.Walker v1 Val Val,
-    DisplayTyp t2, SV.FromList v2 Val, SV.Walker v2 Val Val) =>
+   (DisplayTyp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 Val,
+    DisplayTyp t2, SV.Walker v2, SV.FromList v2, SV.Storage v2 Val) =>
    XYPlot (TC s t1 (Data (v2 :> Nil) Val)) [(TC s t2 (Data (v1 :> Nil) Val))] where
    xyplotCore x ys =
       mconcat $
@@ -145,8 +146,8 @@ instance
          [(0::Int)..] ys
 
 instance
-   (DisplayTyp t1, SV.FromList v1 Val, SV.Walker v1 Val Val,
-    DisplayTyp t2, SV.FromList v2 Val, SV.Walker v2 Val Val) =>
+   (DisplayTyp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 Val,
+    DisplayTyp t2, SV.Walker v2, SV.FromList v2, SV.Storage v2 Val) =>
    XYPlot [(TC s t1 (Data (v2 :> Nil) Val))] [(TC s t2 (Data (v1 :> Nil) Val))] where
    xyplotCore xs ys =
       mconcat $
@@ -155,20 +156,20 @@ instance
          [(0::Int)..] xs ys
 
 instance
-   (DisplayTyp t1, SV.FromList v1 Val, SV.Walker v1 Val Val,
-    DisplayTyp t2, SV.FromList v2 Val, SV.Walker v2 Val Val,
-    SV.FromList v3 (v2 Val)) =>
+   (DisplayTyp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 Val,
+    DisplayTyp t2, SV.Walker v2, SV.FromList v2, SV.Storage v2 Val,
+    SV.FromList v3, SV.Storage v3 (v2 Val)) =>
    XYPlot (TC s t1 (Data (v1 :> Nil) Val)) (TC s t2 (Data (v3 :> v2 :> Nil) Val)) where
    xyplotCore x y = xyplotCore x (toSigList y)
 
 instance (DisplayTyp t1,
           DisplayTyp t2,
-          SV.FromList v1 Val,
-          SV.FromList v3 Val,
-          SV.FromList v2 (v1 Val),
-          SV.FromList v4 (v3 Val),
-          SV.Walker v1 Val Val,
-          SV.Walker v3 Val Val) =>
+          SV.Walker v1,
+          SV.Walker v3,
+          SV.FromList v1, SV.Storage v1 Val,
+          SV.FromList v3, SV.Storage v3 Val,
+          SV.FromList v2, SV.Storage v2 (v1 Val),
+          SV.FromList v4, SV.Storage v4 (v3 Val)) =>
    XYPlot
       (TC s t1 (Data (v2 :> v1 :> Nil) Val))
       (TC s t2 (Data (v4 :> v3 :> Nil) Val)) where
@@ -195,9 +196,9 @@ class (AxisLabel a, AxisLabel b, AxisLabel c) => SurfPlot a b c where
    surfPlotCore :: a -> b -> c -> Plot3D.T Val Val Val
 
 instance
-   (SV.FromList v1 Val, SV.FromList v2 (v1 Val), DisplayTyp t1,
-    SV.FromList v3 Val, SV.FromList v4 (v3 Val), DisplayTyp t2,
-    SV.FromList v5 Val, SV.FromList v6 (v5 Val), DisplayTyp t3) =>
+   (SV.FromList v1, SV.Storage v1 Val, SV.FromList v2, SV.Storage v2 (v1 Val), DisplayTyp t1,
+    SV.FromList v3, SV.Storage v3 Val, SV.FromList v4, SV.Storage v4 (v3 Val), DisplayTyp t2,
+    SV.FromList v5, SV.Storage v5 Val, SV.FromList v6, SV.Storage v6 (v5 Val), DisplayTyp t3) =>
       SurfPlot
          (TC s1 t1 (Data (v2 :> v1 :> Nil) Val))
          (TC s2 t2 (Data (v4 :> v3 :> Nil) Val))
@@ -239,17 +240,15 @@ rPlot (name, r) =
 class RPlot a where
    rPlotCore :: String -> a -> [Frame.T (Graph2D.T Val Val)]
 
-instance RPlot PowerRecord where
+instance
+   (SV.Walker v, SV.FromList v, SV.Storage v Val) =>
+      RPlot (PowerRecord v Double) where
    rPlotCore rName (PowerRecord time pMap) =
-      [rPlotSingle rName time pMap]
-
-instance RPlot SecPowerRecord where
-   rPlotCore rName (SecPowerRecord time pMap) =
       [rPlotSingle rName time pMap]
 
 rPlotSingle ::
    (Show k, DisplayTyp typ0, DisplayTyp typ1,
-    SV.FromList v Val, SV.Walker v Val Val) =>
+    SV.Walker v, SV.FromList v, SV.Storage v Val) =>
    String ->
    TC s typ0 (Data (v :> Nil) Val) ->
    M.Map k (TC s typ1 (Data (v :> Nil) Val)) ->

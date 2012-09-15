@@ -16,11 +16,11 @@ import EFA2.Signal.Signal (fromScalar, sigSign, sigSum)
 import EFA2.Signal.Base (Sign(PSign, NSign, ZSign))
 
 
--- | Function to calculate flow states for the whole sequence 
+-- | Function to calculate flow states for the whole sequence
 genSequFState :: SequFlowRecord FlowRecord -> SequFlowState
-genSequFState sqFRec = map genFlowState `fmap` sqFRec
+genSequFState sqFRec = fmap genFlowState sqFRec
 
--- | Function to extract the flow state out of a Flow Record  
+-- | Function to extract the flow state out of a Flow Record
 genFlowState ::  FlowRecord -> FlowState
 genFlowState (FlRecord _time flowMap) = FlowState $ M.map f flowMap
   where f flow = fromScalar $ sigSign (sigSum flow)
@@ -45,11 +45,11 @@ mkSectionTopology :: SecIdx -> FlowTopology -> SecTopology
 mkSectionTopology (SecIdx sid) t = fromFlowToSecTopology $ nmap f t
   where f n = n { sectionNLabel = sid }
 
-genSectionTopology :: SequFlowTops -> SequData [SecTopology]
+genSectionTopology :: SequFlowTops -> SequData SecTopology
 genSectionTopology (SequData tops) = SequData (map (uncurry mkSectionTopology) (zip [0..] tops))
 
 
-copySeqTopology :: SequData [SecTopology] -> Topology
+copySeqTopology :: SequData SecTopology -> Topology
 copySeqTopology (SequData tops) = mkGraph (concat ns'') (concat es'')
   where ns = map labNodes tops
         ns' = zip offsets ns
@@ -78,7 +78,7 @@ mkIntersectionEdges topo startNode stores = interSecEs
         interSecEs = concatMap (\(n, ns) -> map (n,, e) ns) es
 
 
-mkSequenceTopology :: SequData [SecTopology] -> Topology
+mkSequenceTopology :: SequData SecTopology -> Topology
 mkSequenceTopology sd = res
   where sqTopo = copySeqTopology sd
 
