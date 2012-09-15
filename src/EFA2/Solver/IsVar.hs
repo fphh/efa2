@@ -1,18 +1,14 @@
 
-
 module EFA2.Solver.IsVar where
 
-import Data.Graph.Inductive
-import qualified Data.Vector.Unboxed as UV
 import qualified Data.List as L
 import qualified Data.Set as S
 import Data.Maybe (mapMaybe)
 
-import Debug.Trace
+-- import Debug.Trace
 
-import EFA2.Solver.Equation
-import EFA2.Interpreter.Env
-import EFA2.Utils.Utils
+import EFA2.Solver.Equation (Equation(..), EqTerm(..), mkVarSetEq)
+import EFA2.Interpreter.Env (EnergyIdx(..))
 
 {-- This algorithm is fast, but buggy.
 
