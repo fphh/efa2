@@ -4,28 +4,26 @@ module EFA2.Solver.EquationOrder where
 
 import qualified Data.List as L
 import qualified Data.Set as S
-import Data.Maybe
-import Debug.Trace
 
-import EFA2.Solver.Equation
-import EFA2.Solver.IsVar
+import EFA2.Solver.Equation (EqTerm, Equation, mkVarSetEq, transformEq)
+import EFA2.Solver.IsVar (isStaticVar)
 
-data Derived = Derived (S.Set EqTerm) EqTerm deriving (Show, Ord)
+data Derived = Derived (S.Set EqTerm) Equation deriving (Show, Ord)
 
 instance Eq (Derived) where
     Derived as _ == Derived bs _ = as == bs
 
-without :: (Ord a) => S.Set a -> a -> S.Set a
-without as b = S.delete b as
-
 
 isSingleton :: S.Set a -> Maybe a
-isSingleton xs = if S.size xs == 1 then Just (S.findMin xs) else Nothing
+isSingleton xs =
+   case S.toList xs of
+      [x] -> Just x
+      _ -> Nothing
 
 resolve :: Derived -> Derived -> [Derived]
-resolve (Derived as aplan) (Derived bs bplan) | Just a <- isSingleton as = 
-    if S.member a bs then  [Derived (bs `without` a) bplan] else []
-resolve  x (Derived as ys) | Just a <- isSingleton as = resolve (Derived as ys) x
+resolve (Derived as _aplan) (Derived bs bplan) | Just a <- isSingleton as = 
+    if S.member a bs then  [Derived (S.delete a bs) bplan] else []
+resolve  x (Derived as ys) | Just _a <- isSingleton as = resolve (Derived as ys) x
 resolve _ _ = []
 
 
@@ -81,9 +79,9 @@ solve2 vs eqns = snd $ L.foldr f (vs, []) (consequences eqns)
 -}
 
 
-order :: [EqTerm] -> [EqTerm]
+order :: [Equation] -> [Equation]
 order ts = map g sol
-  where vs = map (mkVarSet isStaticVar) ts
+  where vs = map (mkVarSetEq isStaticVar) ts
         sol = solve $ map (uncurry Derived) (zip vs ts)
         g (Derived v eq) = transformEq (head $ S.toList v) eq
         

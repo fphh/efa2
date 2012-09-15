@@ -133,8 +133,8 @@ solve3Way sqTopo y n = interpretFromScratch (SingleRecord 0) 1 gd -- interprete 
                            energyMap = M.insert storage0 (S.fromList [3.0]) (energyMap sqEnvs) }
                   
         -- rearrange equations       
-        gd = map (eqToInTerm sqEnvs') (toAbsEqTermEquations $ order ts)
-        
+        gd = map (eqToInTerm sqEnvs') $ toAbsEquations $ order ts
+
 
 -- | D. Function to generate Variation Matrix
 genVariationMatrix :: [a] -> [b] -> ([[a]], [[b]])

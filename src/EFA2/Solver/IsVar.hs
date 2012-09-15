@@ -76,7 +76,7 @@ isVar g ts t
 -- | True for 'EqTerm's that are of the form:
 --
 -- > ... := Given ...
-isGiven :: EqTerm -> Bool
+isGiven :: Equation -> Bool
 isGiven (_ := Given) = True
 isGiven _ = False
 
@@ -84,19 +84,19 @@ isGiven _ = False
 -- We assume for the given predicate (isVar :: EqTerm -> Bool) that:
 --
 -- > not (isVar t) == isGiven t
-noVar :: (EqTerm -> Bool) -> EqTerm -> Bool
-noVar isVar t = (not $ isGiven t) && (S.size (mkVarSet isVar t) == 0)
+noVar :: (EqTerm -> Bool) -> Equation -> Bool
+noVar isVar t = (not $ isGiven t) && (S.null (mkVarSetEq isVar t))
 
 
 -- | True for 'EqTerm's that contain exactly one variable and for which 'isGiven' is False.
 -- We assume for the given predicate (isVar :: EqTerm -> Bool) that:
 --
 -- > not (isVar t) == isGiven t
-isGivenExtended :: (EqTerm -> Bool) -> EqTerm -> Bool
-isGivenExtended isVar t = (not $ isGiven t) && (S.size (mkVarSet isVar t) == 1)
+isGivenExtended :: (EqTerm -> Bool) -> Equation -> Bool
+isGivenExtended isVar t = (not $ isGiven t) && (S.size (mkVarSetEq isVar t) == 1)
 
 
-splitTerms :: (EqTerm -> Bool) -> [EqTerm] -> ([EqTerm], [EqTerm], [EqTerm], [EqTerm])
+splitTerms :: (EqTerm -> Bool) -> [Equation] -> ([Equation], [Equation], [Equation], [Equation])
 splitTerms isVar ts = (given, nov, givenExt, rest)
   where (given, r0) = L.partition isGiven ts
         (nov, r1) = L.partition (noVar isVar) r0
@@ -149,7 +149,7 @@ isVarFromEqs s t = not (S.member t s || isCompoundTerm t)
 
 -- | True for variables that don't appear in 'Given' equations.
 -- Used mainly as a reference implementation for 'isVar'.
-isVarFromEqs :: [EqTerm] -> (EqTerm -> Bool)
+isVarFromEqs :: [Equation] -> EqTerm -> Bool
 isVarFromEqs ts t = not (S.member t s || isCompoundTerm t) 
   where s = L.foldl' f S.empty ts
         f acc (v := Given) = S.insert v acc

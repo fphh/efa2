@@ -11,52 +11,58 @@ import EFA2.Signal.Signal (toConst, (.+), (.*))
 import EFA2.Utils.Utils
 
 
---eqToInTerm :: Envs a -> EqTerm -> InTerm a
-eqToInTerm envs term = eqToInTerm' term
-  where eqToInTerm' (Const x) = InConst x
-        eqToInTerm' (Energy idx := Given) = InEqual (EIdx idx) (InGiven (energyMap envs `safeLookup` idx))
-        eqToInTerm' (DEnergy idx := Given) = InEqual (DEIdx idx) (InGiven (denergyMap envs `safeLookup` idx))
-        eqToInTerm' (Power idx := Given) = InEqual (PIdx idx) (InGiven (powerMap envs `safeLookup` idx))
-        eqToInTerm' (DPower idx := Given) = InEqual (DPIdx idx) (InGiven (dpowerMap envs `safeLookup` idx))
-        eqToInTerm' (FEta idx := Given) = InEqual (FNIdx idx) (InFunc (fetaMap envs `safeLookup` idx))
-        eqToInTerm' (DEta idx := Given) = InEqual (DNIdx idx) (InFunc (detaMap envs `safeLookup` idx))
-{- 
-        eqToInTerm' (DEta idx := ((FEta x) :+ (Minus (FEta y)))) = InEqual (DNIdx idx) (InFunc (\z -> fx z .- fy z))
+eqToInTerm :: Show a => Envs a -> Equation -> InTerm a
+eqToInTerm envs (t := Given) =
+   case t of
+      (Energy idx) -> InEqual (EIdx idx) (InGiven (energyMap envs `safeLookup` idx))
+      (DEnergy idx) -> InEqual (DEIdx idx) (InGiven (denergyMap envs `safeLookup` idx))
+      (Power idx) -> InEqual (PIdx idx) (InGiven (powerMap envs `safeLookup` idx))
+      (DPower idx) -> InEqual (DPIdx idx) (InGiven (dpowerMap envs `safeLookup` idx))
+      (FEta idx) -> InEqual (FNIdx idx) (InFunc (fetaMap envs `safeLookup` idx))
+      (DEta idx) -> InEqual (DNIdx idx) (InFunc (detaMap envs `safeLookup` idx))
+{-
+      (DEta idx := ((FEta x) :+ (Minus (FEta y)))) -> InEqual (DNIdx idx) (InFunc (\z -> fx z .- fy z))
           where fx = fetaMap envs `safeLookup` x
                 fy = fetaMap envs `safeLookup` y
 -}
-        eqToInTerm' (DTime idx := Given) = InEqual (DTIdx idx) (InGiven (dtimeMap envs `safeLookup` idx))
-        eqToInTerm' (X idx := Given) = InEqual (ScaleIdx idx) (InGiven (xMap envs `safeLookup` idx))
-        eqToInTerm' (DX idx := Given) = InEqual (DScaleIdx idx) (InGiven (dxMap envs `safeLookup` idx))
-        eqToInTerm' (Var idx := Given) = InEqual (VIdx idx) (InGiven (varMap envs `safeLookup` idx))
-        eqToInTerm' (Store idx := Given) = InEqual (SIdx idx) (InGiven (storageMap envs `safeLookup` idx))
-        eqToInTerm' (Energy idx) = EIdx idx
-        eqToInTerm' (DEnergy idx) = DEIdx idx
-        eqToInTerm' (Power idx) = PIdx idx
-        eqToInTerm' (DPower idx) = DPIdx idx
-        eqToInTerm' (FEta idx) = FNIdx idx
-        eqToInTerm' (DEta idx) = DNIdx idx
-        eqToInTerm' (DTime idx) = DTIdx idx
-        eqToInTerm' (X idx) = ScaleIdx idx
-        eqToInTerm' (DX idx) = DScaleIdx idx
+      (DTime idx) -> InEqual (DTIdx idx) (InGiven (dtimeMap envs `safeLookup` idx))
+      (X idx) -> InEqual (ScaleIdx idx) (InGiven (xMap envs `safeLookup` idx))
+      (DX idx) -> InEqual (DScaleIdx idx) (InGiven (dxMap envs `safeLookup` idx))
+      (Var idx) -> InEqual (VIdx idx) (InGiven (varMap envs `safeLookup` idx))
+      (Store idx) -> InEqual (SIdx idx) (InGiven (storageMap envs `safeLookup` idx))
 
-        eqToInTerm' (Var idx) = VIdx idx
-        eqToInTerm' (Store idx) = SIdx idx
-        eqToInTerm' (Recip x) = InRecip (eqToInTerm' x)
-        eqToInTerm' (Minus x) = InMinus (eqToInTerm' x)
-        eqToInTerm' (FEdge x y) = InFEdge (eqToInTerm' x) (eqToInTerm' y)
-        eqToInTerm' (BEdge x y) = InBEdge (eqToInTerm' x) (eqToInTerm' y)
-        eqToInTerm' (NEdge x y) = InNEdge (eqToInTerm' x) (eqToInTerm' y)
+eqToInTerm _envs (x := y) =
+   InEqual (eqTermToInTerm x) (eqTermToInTerm y)
 
-        eqToInTerm' (FNode x y) = InFNode (eqToInTerm' x) (eqToInTerm' y)
-        eqToInTerm' (BNode x y) = InBNode (eqToInTerm' x) (eqToInTerm' y)
-        eqToInTerm' (XNode x y) = InXNode (eqToInTerm' x) (eqToInTerm' y)
+eqTermToInTerm :: EqTerm -> InTerm a
+eqTermToInTerm term =
+   case term of
+      (Const x) -> InConst x
+      (Energy idx) -> EIdx idx
+      (DEnergy idx) -> DEIdx idx
+      (Power idx) -> PIdx idx
+      (DPower idx) -> DPIdx idx
+      (FEta idx) -> FNIdx idx
+      (DEta idx) -> DNIdx idx
+      (DTime idx) -> DTIdx idx
+      (X idx) -> ScaleIdx idx
+      (DX idx) -> DScaleIdx idx
 
+      (Var idx) -> VIdx idx
+      (Store idx) -> SIdx idx
+      (Recip x) -> InRecip (eqTermToInTerm x)
+      (Minus x) -> InMinus (eqTermToInTerm x)
+      (FEdge x y) -> InFEdge (eqTermToInTerm x) (eqTermToInTerm y)
+      (BEdge x y) -> InBEdge (eqTermToInTerm x) (eqTermToInTerm y)
+      (NEdge x y) -> InNEdge (eqTermToInTerm x) (eqTermToInTerm y)
 
-        eqToInTerm' (x :+ y) = InAdd (eqToInTerm' x) (eqToInTerm' y)
-        eqToInTerm' (x :* y) = InMult (eqToInTerm' x) (eqToInTerm' y)
-        eqToInTerm' (x := y) = InEqual (eqToInTerm' x) (eqToInTerm' y)
-        eqToInTerm' t = error ("eqToInTerm: " ++ show t)
+      (FNode x y) -> InFNode (eqTermToInTerm x) (eqTermToInTerm y)
+      (BNode x y) -> InBNode (eqTermToInTerm x) (eqTermToInTerm y)
+      (XNode x y) -> InXNode (eqTermToInTerm x) (eqTermToInTerm y)
+
+      (x :+ y) -> InAdd (eqTermToInTerm x) (eqTermToInTerm y)
+      (x :* y) -> InMult (eqTermToInTerm x) (eqTermToInTerm y)
+      t -> error ("eqTermToInTerm: " ++ show t)
 
 
 showInTerm :: (Show a) => InTerm a -> String
