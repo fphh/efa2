@@ -227,27 +227,6 @@ data Dir = L | R deriving (Show, Eq)
 type TPath = [Dir]
 
 
--- test terms
-
-p1 = Power (PowerIdx 0 0 0 1)
-p2 = Power (PowerIdx 0 0 0 2)
-p3 = Power (PowerIdx 0 0 0 3)
-p4 = Power (PowerIdx 0 0 0 4)
-
-dp1 = DPower (DPowerIdx 0 0 0 1)
-dp2 = DPower (DPowerIdx 0 0 0 2)
-dp3 = DPower (DPowerIdx 0 0 0 3)
-dp4 = DPower (DPowerIdx 0 0 0 4)
-
-
-c = Const 1.0
-
-e = FEta (FEtaIdx 0 0 0 1)
-de = DEta (DEtaIdx 0 0 0 1)
-
-t =  p2 := FEdge p1 e
-
-
 findVar :: EqTerm -> EqTerm -> Maybe TPath
 findVar t s | t == s = Just []
 findVar t s
@@ -348,8 +327,6 @@ pushMult t
         pushMult' (u :+ v) = pushMult' u ++ pushMult' v
         pushMult' (u :* v) = map mult (sequence [pushMult' u, pushMult' v])
         pushMult' t = [t]
-
-testt = de :* (Recip e) :* (Recip e)
 
 simplify :: EqTerm -> EqTerm
 simplify = fst . head . dropWhile pred . pairs . iterate simplify' . pushMult

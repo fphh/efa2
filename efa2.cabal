@@ -90,7 +90,8 @@ Library
     EFA2.Interpreter.Arith
     EFA2.Interpreter.Interpreter
     EFA2.Interpreter.InTerm
-  -- Other-Modules:       
+  Other-Modules:
+    EFA2.Solver.EquationTest
 
 
 -- sollte man auf Cabal-Test umstellen,
