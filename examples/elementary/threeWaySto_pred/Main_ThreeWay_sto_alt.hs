@@ -1,5 +1,3 @@
-{-# LANGUAGE GADTs, FlexibleContexts, TypeOperators  #-}
-
 module Main where
 
 import qualified Data.List as L
@@ -8,32 +6,34 @@ import qualified Data.Map as M
 import System.Exit (ExitCode)
 import System.Cmd (system)
 
-import EFA2.Topology.Topology
+import EFA2.Topology.Topology (makeNodes, makeEdges, makeAllEquations)
 import EFA2.Topology.TopologyData
+          (NodeType(Crossing, Sink, Source, Storage), Topology, defaultELabel, mkGraph)
 
-import EFA2.Solver.Equation
-import EFA2.Solver.EquationOrder
+import EFA2.Solver.Equation (give, toAbsEquations)
+import EFA2.Solver.EquationOrder (order)
 
 import EFA2.Interpreter.Env
-import EFA2.Interpreter.Interpreter
-import EFA2.Interpreter.Arith
+import EFA2.Interpreter.Interpreter (interpretFromScratch, eqToInTerm)
+import EFA2.Interpreter.Arith (Val)
 
 import EFA2.Display.Report (report)
 import EFA2.Display.Plot (surfPlot, xyplot)
-import EFA2.Display.DrawGraph
+import EFA2.Display.DrawGraph (drawTopology)
 
 import qualified EFA2.Signal.Signal as S
-import EFA2.Signal.Sequence
-import EFA2.Signal.SequenceData
+import EFA2.Signal.Sequence (makeSequence)
+import EFA2.Signal.SequenceData (PPosIdx(..), PowerRecord(..))
 import EFA2.Signal.Signal
           (TC, Scalar, FSamp, PFSamp, PSigL, UTFSig, Test1, Test2,
            toSigList, toScalar, makeDelta, makeAbsolute,
            (.-), (.+), (./), (.++))
 import EFA2.Signal.Data (Data, Nil)
-import EFA2.Signal.Typ
+import EFA2.Signal.Typ (Typ, A, Tt, Y, P, N, F)
 
-import EFA2.Utils.Utils
-      
+import EFA2.Utils.Utils (safeLookup)
+
+
 mkSig :: Int -> ([Val] -> PSigL)
 mkSig n = S.fromList . concat . replicate n
  
