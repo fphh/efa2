@@ -1,7 +1,6 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE PatternGuards #-}
 
-
 module EFA2.Solver.Equation where
 
 import Control.Exception
@@ -366,17 +365,17 @@ additiveTerms = additiveTerms' . simplify . pushMult
 setEqTerms :: Envs EqTerm -> EqTerm -> EqTerm
 setEqTerms envs term =
    case term of
-      (Power idx) | Just t <- M.lookup idx (powerMap envs) -> t
-      (DPower idx) | Just t <- M.lookup idx (dpowerMap envs) -> t
-      (Energy idx) | Just t <- M.lookup idx (energyMap envs) -> t
-      (DEnergy idx) | Just t <- M.lookup idx (denergyMap envs) -> t
-      (FEta idx) | Just t <- M.lookup idx (fetaMap envs) -> trace "setEqTerms" $ t undefined
-      (DEta idx) | Just t <- M.lookup idx (detaMap envs) -> trace "setEqTerms" $ t undefined
-      (X idx) | Just t <- M.lookup idx (xMap envs) -> t
-      (DX idx) | Just t <- M.lookup idx (dxMap envs) -> t
-      (Var idx) | Just t <- M.lookup idx (varMap envs) -> t
-      (Store idx) | Just t <- M.lookup idx (storageMap envs) -> t
-      (DTime idx) | Just t <- M.lookup idx (dtimeMap envs) -> t
+      (Power idx) -> M.findWithDefault term idx (powerMap envs)
+      (DPower idx) -> M.findWithDefault term idx (dpowerMap envs)
+      (Energy idx) -> M.findWithDefault term idx (energyMap envs)
+      (DEnergy idx) -> M.findWithDefault term idx (denergyMap envs)
+      (FEta idx) -> maybe term (\t -> trace "setEqTerms" $ t undefined) $ M.lookup idx (fetaMap envs)
+      (DEta idx) -> maybe term (\t -> trace "setEqTerms" $ t undefined) $ M.lookup idx (detaMap envs)
+      (X idx) -> M.findWithDefault term idx (xMap envs)
+      (DX idx) -> M.findWithDefault term idx (dxMap envs)
+      (Var idx) -> M.findWithDefault term idx (varMap envs)
+      (Store idx) -> M.findWithDefault term idx (storageMap envs)
+      (DTime idx) -> M.findWithDefault term idx (dtimeMap envs)
       (Minus t) -> Minus (setEqTerms envs t)
       (Recip t) -> Recip (setEqTerms envs t)
       (s :+ t) -> setEqTerms envs s :+ setEqTerms envs t
@@ -521,16 +520,16 @@ mkDiffEqTermEquations rec ts = concat $ mapMaybe (mkDiffEqTerm rec) ts
 interpretEqTermRhs :: Envs EqTerm -> EqTerm -> EqTerm
 interpretEqTermRhs envs t =
    case t of
-      (Power idx) | Just s <- M.lookup idx (powerMap envs) -> s
-      (DPower idx) | Just s <- M.lookup idx (dpowerMap envs) -> s
-      (Energy idx) | Just s <- M.lookup idx (energyMap envs) -> s
-      (DEnergy idx) | Just s <- M.lookup idx (denergyMap envs) -> s
-      (FEta idx) | Just s <- M.lookup idx (fetaMap envs) -> s undefined
-      (DEta idx) | Just s <- M.lookup idx (detaMap envs) -> s undefined
-      (Var idx) | Just s <- M.lookup idx (varMap envs) -> s
-      (X idx) | Just s <- M.lookup idx (xMap envs) -> s
-      (Store idx) | Just s <- M.lookup idx (storageMap envs) -> s
-      (DTime idx) | Just s <- M.lookup idx (dtimeMap envs) -> s
+      (Power idx) -> M.findWithDefault t idx (powerMap envs)
+      (DPower idx) -> M.findWithDefault t idx (dpowerMap envs)
+      (Energy idx) -> M.findWithDefault t idx (energyMap envs)
+      (DEnergy idx) -> M.findWithDefault t idx (denergyMap envs)
+      (FEta idx) -> maybe t ($undefined) $ M.lookup idx (fetaMap envs)
+      (DEta idx) -> maybe t ($undefined) $ M.lookup idx (detaMap envs)
+      (Var idx) -> M.findWithDefault t idx (varMap envs)
+      (X idx) -> M.findWithDefault t idx (xMap envs)
+      (Store idx) -> M.findWithDefault t idx (storageMap envs)
+      (DTime idx) -> M.findWithDefault t idx (dtimeMap envs)
       (Minus x) -> Minus $ interpretEqTermRhs envs x
       (Recip x) -> Recip $ interpretEqTermRhs envs x
       (x :+ y) -> interpretEqTermRhs envs x :+ interpretEqTermRhs envs y
