@@ -1,5 +1,3 @@
-{-# LANGUAGE PatternGuards #-}
-
 module EFA2.Topology.Topology where
 
 import EFA2.Solver.Equation
@@ -365,9 +363,10 @@ mkDiffNodeEqs laterRec formerRec (ins, n@(nid, NLabel sec _ _), outs)
 makeDirTopology :: Topology -> Topology
 makeDirTopology topo@(Topology _) = mkGraph ns es
   where es = map flipAgainst $ filter onlyDirected $ labEdges topo
-        onlyDirected a@(_, _, elabel) = flowDirection elabel /= UnDir
-        flipAgainst e@(x, y, elabel)
-          | AgainstDir <- flowDirection elabel = (y, x, elabel { flowDirection = WithDir })
-          | otherwise = e
         ns = unique (concatMap (\(x, y, _) -> [(x,  fromJust (lab topo x)), (y, fromJust (lab topo y))]) es)
 
+        onlyDirected (_, _, elabel) = flowDirection elabel /= UnDir
+        flipAgainst e@(x, y, elabel) =
+           case flowDirection elabel of
+              AgainstDir -> (y, x, elabel { flowDirection = WithDir })
+              _ -> e

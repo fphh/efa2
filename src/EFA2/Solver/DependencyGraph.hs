@@ -5,6 +5,7 @@ import EFA2.Utils.Utils
 
 import Data.Graph.Inductive
 import Data.Maybe (mapMaybe)
+import Data.Maybe.HT (toMaybe)
 import Data.Tuple.HT (swap)
 
 import qualified Data.Set as S
@@ -22,9 +23,7 @@ dependencyGraph p vsets = g
         g = mkGraph (map swap $ M.toList m) es
 
 mkArcs :: (Ord a, Show a) => (S.Set a -> S.Set a -> Bool) -> S.Set a -> [S.Set a] -> [(S.Set a, S.Set a)]
-mkArcs p s ss = mapMaybe g ss
-  where g t | p s t = Just (s, t)
-        g _ = Nothing
+mkArcs p s = mapMaybe (\t -> toMaybe (p s t) (s, t))
 
 makeDependencyGraph :: (EqTerm -> Bool) -> (S.Set EqTerm -> S.Set EqTerm -> Bool) -> [EqTerm] -> Gr EqTerm ()
 makeDependencyGraph isVar p ts = deq

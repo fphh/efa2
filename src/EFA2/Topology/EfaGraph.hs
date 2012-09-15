@@ -1,4 +1,3 @@
-{-# LANGUAGE PatternGuards #-}
 
 module EFA2.Topology.EfaGraph (EfaGraph) where
 
@@ -8,6 +7,7 @@ import qualified Data.Set as S
 import qualified Data.List as L
 import qualified Data.Map as M
 import qualified Data.IntMap as IM
+import Data.Foldable (foldMap)
 import Data.Ord
 
 import EFA2.Utils.Utils
@@ -20,16 +20,12 @@ data EfaGraph a b = EfaGraph { outEdges :: IM.IntMap (S.Set Int),
                                edgeLabels :: M.Map (Int, Int) b } deriving (Show)
 
 getIncoming :: EfaGraph a b -> Int -> [Int]
-getIncoming g n
-  | Nothing <- ns = []
-  | Just xs <- ns = S.toList xs
-  where ns = IM.lookup n (inEdges g)
+getIncoming g n =
+   foldMap S.toList $ IM.lookup n $ inEdges g
 
 getOutgoing :: EfaGraph a b -> Int -> [Int]
-getOutgoing g n
-  | Nothing <- ns = []
-  | Just xs <- ns = S.toList xs
-  where ns = IM.lookup n (outEdges g)
+getOutgoing g n =
+   foldMap S.toList $ IM.lookup n $ outEdges g
 
 mkOutAdj :: EfaGraph a b -> Int -> Adj b
 mkOutAdj g n = map f es
