@@ -154,3 +154,11 @@ Executable demo-sequence
     gnuplot,
     utility-ht,
     base
+
+Executable demo-vierbein
+  Main-Is: demo/vierbein/Main.hs
+  GHC-Options: -Wall
+  Build-Depends:
+    efa2,
+    containers,
+    base

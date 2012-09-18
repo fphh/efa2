@@ -70,6 +70,22 @@
   sonst kommt GHC bei Konstrukten durcheinander,
   wo es auf die Einrückung ankommt.
 
+* PatternGuards vermeiden
+
+  Beispiel:
+
+    findVar t s
+      | (Nothing, x) <- h = fmap (R:) x
+      | (x, Nothing) <- h = fmap (L:) x
+
+  GHC kann nicht auf vollständige Fallunterscheidung prüfen.
+  Hier schon:
+
+    findVar t s =
+       case h of
+          (Nothing, x) -> fmap (R:) x
+          (x, Nothing) -> fmap (L:) x
+
 
 # Typen
 

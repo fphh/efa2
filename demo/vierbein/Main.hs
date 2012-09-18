@@ -1,21 +1,18 @@
 
-
 module Main where
 
 import qualified Data.Map as M
 
 import EFA2.Solver.Equation
-import EFA2.Solver.EquationOrder
-import EFA2.Topology.TopologyData
-import EFA2.Topology.Topology
+import EFA2.Solver.EquationOrder (order)
+import EFA2.Topology.TopologyData (Topology, NodeType(..), defaultELabel, mkGraph)
+import EFA2.Topology.Topology (makeAllEquations, makeNodes, makeEdges)
 import EFA2.Interpreter.Env
-import EFA2.Interpreter.Interpreter
-import EFA2.Signal.Signal
-import EFA2.Signal.Typ
-import EFA2.Signal.Base
-import EFA2.Display.DrawGraph
+import EFA2.Interpreter.Interpreter (interpretFromScratch, eqToInTerm)
+import qualified EFA2.Signal.Signal as S
+import EFA2.Signal.Signal (UTFSig)
+import EFA2.Display.DrawGraph (drawTopology)
 
-import Debug.Trace
 
 symbolic :: Topology -> Envs EqTerm
 symbolic g = res
@@ -44,6 +41,7 @@ numeric g = res
         res = interpretFromScratch (SingleRecord 0) 1 (map (eqToInTerm envs') tso)
 
 
+main :: IO ()
 main = do
   let numres = numeric vierbein
       symres = symbolic vierbein
@@ -61,27 +59,27 @@ main = do
 
 
 dtimes0num :: DTimeMap UTFSig
-dtimes0num = M.fromList [ (DTimeIdx 0 0, sfromList [1.0]) ]
+dtimes0num = M.fromList [ (DTimeIdx 0 0, S.fromList [1.0]) ]
 
 sigs0num :: EnergyMap UTFSig
-sigs0num = M.fromList [ (EnergyIdx 0 0 0 2, sfromList [3.0]) ]
+sigs0num = M.fromList [ (EnergyIdx 0 0 0 2, S.fromList [3.0]) ]
 
 
 eta0num :: FEtaMap UTFSig
-eta0num = M.fromList [ (FEtaIdx 0 0 0 2, smap $ const 0.8), 
-                       (FEtaIdx 0 0 2 0, smap $ const 0.8),
-                       (FEtaIdx 0 0 1 2, smap $ const 0.7), 
-                       (FEtaIdx 0 0 2 1, smap $ const 0.7),
-                       (FEtaIdx 0 0 2 3, smap $ const 0.6), 
-                       (FEtaIdx 0 0 3 2, smap $ const 0.6),
-                       (FEtaIdx 0 0 2 4, smap $ const 0.5), 
-                       (FEtaIdx 0 0 4 2, smap $ const 0.5) ]
- 
+eta0num = M.fromList [ (FEtaIdx 0 0 0 2, S.map $ const 0.8),
+                       (FEtaIdx 0 0 2 0, S.map $ const 0.8),
+                       (FEtaIdx 0 0 1 2, S.map $ const 0.7),
+                       (FEtaIdx 0 0 2 1, S.map $ const 0.7),
+                       (FEtaIdx 0 0 2 3, S.map $ const 0.6),
+                       (FEtaIdx 0 0 3 2, S.map $ const 0.6),
+                       (FEtaIdx 0 0 2 4, S.map $ const 0.5),
+                       (FEtaIdx 0 0 4 2, S.map $ const 0.5) ]
+
 
 x0num :: XMap UTFSig
-x0num = M.fromList [ (XIdx 0 0 2 0, sfromList [0.2]),
-                     (XIdx 0 0 2 3, sfromList [0.5]),
-                     (XIdx 0 0 2 4, sfromList [0.5]) ]
+x0num = M.fromList [ (XIdx 0 0 2 0, S.fromList [0.2]),
+                     (XIdx 0 0 2 3, S.fromList [0.5]),
+                     (XIdx 0 0 2 4, S.fromList [0.5]) ]
 
 ---------------------------------------------------------------------------------
 
@@ -95,15 +93,15 @@ sigs0sym = M.fromList [ (EnergyIdx 0 0 0 2, Energy (EnergyIdx 0 0 0 1)) ]
 
 
 eta0sym :: FEtaMap EqTerm
-eta0sym = M.fromList [ (FEtaIdx 0 0 0 2, const $ FEta (FEtaIdx 0 0 0 2)), 
+eta0sym = M.fromList [ (FEtaIdx 0 0 0 2, const $ FEta (FEtaIdx 0 0 0 2)),
                        (FEtaIdx 0 0 2 0, const $ FEta (FEtaIdx 0 0 2 0)),
-                       (FEtaIdx 0 0 1 2, const $ FEta (FEtaIdx 0 0 1 2)), 
+                       (FEtaIdx 0 0 1 2, const $ FEta (FEtaIdx 0 0 1 2)),
                        (FEtaIdx 0 0 2 1, const $ FEta (FEtaIdx 0 0 2 1)),
-                       (FEtaIdx 0 0 2 3, const $ FEta (FEtaIdx 0 0 2 3)), 
+                       (FEtaIdx 0 0 2 3, const $ FEta (FEtaIdx 0 0 2 3)),
                        (FEtaIdx 0 0 3 2, const $ FEta (FEtaIdx 0 0 3 2)),
-                       (FEtaIdx 0 0 2 4, const $ FEta (FEtaIdx 0 0 2 4)), 
+                       (FEtaIdx 0 0 2 4, const $ FEta (FEtaIdx 0 0 2 4)),
                        (FEtaIdx 0 0 4 2, const $ FEta (FEtaIdx 0 0 4 2)) ]
- 
+
 
 x0sym :: XMap EqTerm
 x0sym = M.fromList [ (XIdx 0 0 2 0, X (XIdx 0 0 2 0)),
