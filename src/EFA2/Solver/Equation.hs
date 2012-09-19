@@ -438,8 +438,8 @@ toAbsEqTerm (x :+ y) = toAbsEqTerm x :+ toAbsEqTerm y
 toAbsEqTerm (x :* y) = toAbsEqTerm x :* toAbsEqTerm y
 toAbsEqTerm t = t
 
-toAbsEqTermEquations :: [EqTerm] -> [EqTerm]
-toAbsEqTermEquations ts = map toAbsEqTerm ts
+toAbsEqTerms :: [EqTerm] -> [EqTerm]
+toAbsEqTerms ts = map toAbsEqTerm ts
 
 toAbsEquation :: Equation -> Equation
 toAbsEquation (Given x) = Given (toAbsEqTerm x)
