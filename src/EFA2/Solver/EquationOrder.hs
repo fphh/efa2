@@ -39,13 +39,14 @@ notin :: [Derived] -> Derived -> [Derived]
 notin xs x = if x `elem` xs then [] else [x]
 
 extend :: [Derived] -> [Derived] -> [Derived]
-extend givens [] = givens
-extend givens [eq] = extend (L.union givens [eq]) (givens >>= resolve eq >>= notin givens)
-extend givens (eq : eqs) = extend (extend givens [eq]) eqs
+extend = foldl extend'
+
+extend' :: [Derived] -> Derived -> [Derived]
+extend' givens eq =
+   extend (L.union givens [eq]) (givens >>= resolve eq >>= notin givens)
 
 consequences :: [Derived] -> [Derived]
-consequences [] = []
-consequences (x:xs) = extend (consequences xs) [x]
+consequences = foldr (flip extend') []
 
 --consequences (x:y:xs) = extend (extend (consequences xs) [y]) [x]
 
