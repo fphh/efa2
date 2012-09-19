@@ -64,7 +64,7 @@ symbolic g = mapEqTermEnv (setEqTerms (emptyEnv { dxMap = dx1eq })) res
         res = interpretEqTermFromScratch ts
 
 numeric :: Topology -> Envs Sc
-numeric g =  trace ("---------\n" ++ showEqTerms ts1o ++ "\n------\n") res
+numeric g =  trace ("---------\n" ++ showEquations ts1o ++ "\n------\n") res
   where envs0 = emptyEnv { recordNumber = SingleRecord 0,
                            powerMap = power0num,
                            dtimeMap = dtimes0num,

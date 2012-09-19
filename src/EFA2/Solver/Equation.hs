@@ -155,6 +155,9 @@ showEquation (x := y) = showEqTerm x ++ " = " ++ showEqTerm y
 showEqTerms :: [EqTerm] -> String
 showEqTerms ts = L.intercalate "\n" $ map showEqTerm ts
 
+showEquations :: [Equation] -> String
+showEquations ts = L.intercalate "\n" $ map showEquation ts
+
 
 newtype LatexString = LatexString { unLatexString :: String } deriving (Show, Eq)
 
