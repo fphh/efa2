@@ -12,6 +12,14 @@ Category:            Engineering
 Build-type:          Simple
 Cabal-version:       >=1.8
 
+Flag buildExamples
+  Description: Build complex examples
+  Default: True
+
+Flag buildDemos
+  Description: Build demonstrations of single library features
+  Default: True
+
 Library
   Build-Depends:
     graphviz ==2999.13.*,
@@ -98,39 +106,54 @@ Library
 Executable sequenzflussgraph
   Main-Is: examples/elementary/sequenzflussgraph/Main.hs
   GHC-Options: -Wall
-  Build-Depends:
-    efa2,
-    utility-ht,
-    base
+  If flag(buildExamples)
+    Build-Depends:
+      efa2,
+      utility-ht,
+      base
+  Else
+    Buildable: False
 
 Executable threewaysto
   Main-Is: examples/elementary/threeWaySto_pred/Main_ThreeWay_sto_alt.hs
   GHC-Options: -Wall
-  Build-Depends:
-    efa2,
-    process,
-    containers,
-    base
+  If flag(buildExamples)
+    Build-Depends:
+      efa2,
+      process,
+      containers,
+      base
+  Else
+    Buildable: False
 
 Executable demo-signalcalc
   Main-Is: demo/Signal/Demo_SignalCalc.hs
   GHC-Options: -Wall
-  Build-Depends:
-    efa2,
-    base
+  If flag(buildDemos)
+    Build-Depends:
+      efa2,
+      base
+  Else
+    Buildable: False
 
 Executable demo-sequence
   Main-Is: demo/sliceSignals/Demo_Sequence.hs
   GHC-Options: -Wall
-  Build-Depends:
-    efa2,
-    containers,
-    base
+  If flag(buildDemos)
+    Build-Depends:
+      efa2,
+      containers,
+      base
+  Else
+    Buildable: False
 
 Executable demo-vierbein
   Main-Is: demo/vierbein/Main.hs
   GHC-Options: -Wall
-  Build-Depends:
-    efa2,
-    containers,
-    base
+  If flag(buildDemos)
+    Build-Depends:
+      efa2,
+      containers,
+      base
+  Else
+    Buildable: False
