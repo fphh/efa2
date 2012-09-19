@@ -33,6 +33,7 @@ module EFA2.Topology.TopologyData (
 import EFA2.Topology.EfaGraph
 import EFA2.Utils.Graph
 
+import qualified Data.Map as M
 import qualified Data.List as L
 import Data.Graph.Inductive
 import Data.Ord (comparing)
@@ -177,15 +178,15 @@ fromFlowToSecTopology (FlowTopology topo) = SecTopology topo
 -- | Active storages, grouped by storage number, sorted by section number.
 getActiveStores :: Topology -> [[InOutGraphFormat (LNode NLabel)]]
 getActiveStores topo = map (sectionSort . filter (isActiveSt topo)) groupedIof
-  where iof = mkInOutGraphFormat id topo
-        sortedIof = L.sortBy (comparing stNum) (filter isSt iof)
-        isSt (_, (_, l), _) = isStorage (nodetypeNLabel l)
+  where groupedIof =
+           M.elems $ M.fromListWith (++) $
+           mapMaybe (\n -> fmap ((,[n])) $ stNum n) $
+           mkInOutGraphFormat id topo
         stNum (_, (_, l), _) =
            case nodetypeNLabel l of
-              Storage x -> x
-              InitStorage x -> x
-        groupedIof = L.groupBy cmp sortedIof
-        cmp a b = stNum a == stNum b
+              Storage x -> Just x
+              InitStorage x -> Just x
+              _ -> Nothing
         sectionSort = L.sortBy (comparing sec)
         sec (_, (_, l), _) = sectionNLabel l
 
