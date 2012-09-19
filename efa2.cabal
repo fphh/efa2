@@ -126,6 +126,29 @@ Executable threewaysto
   Else
     Buildable: False
 
+Executable additive_terms
+  Main-Is: examples/elementary/additive_terms/Main.hs
+  GHC-Options: -Wall
+  If flag(buildExamples)
+    Build-Depends:
+      efa2,
+      containers,
+      base
+  Else
+    Buildable: False
+
+Executable vierbein_delta
+  Main-Is: examples/elementary/vierbein_delta/Main.hs
+  GHC-Options: -Wall
+  If flag(buildExamples)
+    Build-Depends:
+      efa2,
+      fgl,
+      containers,
+      base
+  Else
+    Buildable: False
+
 Executable demo-signalcalc
   Main-Is: demo/Signal/Demo_SignalCalc.hs
   GHC-Options: -Wall
