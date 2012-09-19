@@ -6,7 +6,7 @@ import qualified Data.Set as S
 import EFA2.Solver.Equation (EqTerm, Equation, mkVarSetEq, transformEq)
 import EFA2.Solver.IsVar (isStaticVar)
 
-import Control.Monad (mplus)
+import Control.Monad (mplus, (<=<))
 import Data.Maybe.HT (toMaybe)
 import Data.Maybe (mapMaybe, maybeToList)
 
@@ -23,9 +23,8 @@ isSingleton xs =
       [x] -> Just x
       _ -> Nothing
 
-resolve :: Derived -> Derived -> [Derived]
+resolve :: Derived -> Derived -> Maybe Derived
 resolve a@(Derived as _) b@(Derived bs _) =
-   maybeToList $
    (isSingleton as >>= resolveTerm b)
    `mplus`
    (isSingleton bs >>= resolveTerm a)
@@ -35,15 +34,16 @@ resolveTerm (Derived bs bplan) a =
    toMaybe (S.member a bs) $ Derived (S.delete a bs) bplan
 
 
-notin :: [Derived] -> Derived -> [Derived]
-notin xs x = if x `elem` xs then [] else [x]
+notin :: [Derived] -> Derived -> Maybe Derived
+notin xs x = toMaybe (not $ elem x xs) x
 
 extend :: [Derived] -> [Derived] -> [Derived]
 extend = foldl extend'
 
 extend' :: [Derived] -> Derived -> [Derived]
 extend' givens eq =
-   extend (L.union givens [eq]) (givens >>= resolve eq >>= notin givens)
+   extend (L.union givens [eq]) $
+   mapMaybe (notin givens <=< resolve eq) givens
 
 consequences :: [Derived] -> [Derived]
 consequences = foldr (flip extend') []
