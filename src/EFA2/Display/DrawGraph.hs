@@ -6,6 +6,7 @@ import qualified Data.Map as M
 import qualified Data.List as L
 import qualified Data.List.HT as HTL
 
+import Data.Eq.HT (equating)
 import Data.Ratio
 
 import Data.Maybe
@@ -60,8 +61,8 @@ mkDotGraph g (SingleRecord recordNum) timef nshow eshow =
   where es = labEdges g
         (interEs, origEs) = L.partition (\(_, _, e) -> isIntersectionEdge e) es
         g' = delEdges (map (\(x, y, _) -> (x, y)) interEs) g
-        cs = HTL.removeEach (L.groupBy sameSection (labNodes g))
-        sameSection (_, l1) (_, l2) = sectionNLabel l1 == sectionNLabel l2
+        cs = HTL.removeEach (L.groupBy (equating section) (labNodes g))
+        section = sectionNLabel . snd
         comps = map sg cs
         sg ns@(x:_, _) = DotSG True (Just (Int sl)) (ds sl recordNum ns)
           where sl = sectionNLabel $ snd x
