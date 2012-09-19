@@ -59,8 +59,7 @@ type Rows = Int -- Nr of Rows to be left free before
 
 -- | 
 tvcat :: [Table] -> Table
-tvcat [x] = x
-tvcat (x:xs) = foldl tvapp x xs
+tvcat = foldl1 tvapp
 
 
 tvapp :: Table -> Table -> Table
@@ -83,8 +82,7 @@ tvapp x1 x2 = if check then Table {tableTitle = tableTitle x1 ++ " ++  " ++ tabl
                                          m = "Error in tvCat -- not same column labels"
                 
 thcat :: [Table] -> Table
-thcat [x] = x
-thcat (x:xs) = foldl thapp x xs
+thcat = foldl1 thapp
 
 thapp :: Table -> Table -> Table
 thapp x1 x2 = if check then Table {tableTitle = tableTitle x1 ++ " ++  " ++ tableTitle x2,
