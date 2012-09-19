@@ -1,14 +1,11 @@
-{-# LANGUAGE FlexibleInstances, GADTs, TypeOperators,FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module EFA2.Display.Report (module EFA2.Display.Report) where
 
 import qualified Data.List as L
-import Data.Monoid
 import qualified Text.PrettyPrint as PP
-import EFA2.Utils.Utils
-import EFA2.Signal.Base
+import EFA2.Signal.Base (Val)
 
-import System.IO
 
 -- | Report Options 
 data ROpt = RVertical | RAll | RTimeMask Val Val | RIndexMask [Int] deriving (Show,Eq)
@@ -31,17 +28,21 @@ data Table  = Table { tableTitle :: Title,
                       tableData :: TableData,
                       tableSubTitle :: SubTitle} 
 
-instance Eq PP.Doc where
-  (==) x y = (PP.render x) == (PP.render y)
-             
 type Title = String
 type SubTitle = String
 
 -- | Table-Data including string length
-data TableData = TableData {tableBody :: [[(Length,PP.Doc)]], 
-                            titleRow :: [[(Length,PP.Doc)]], 
-                            titleCols :: [[(Length, PP.Doc)]], 
-                            endCols :: [[(Length, PP.Doc)]]} deriving (Show,Eq)
+data TableData = TableData {tableBody :: [[Cell]],
+                            titleRow :: [[Cell]],
+                            titleCols :: [[Cell]],
+                            endCols :: [[Cell]]} deriving (Show,Eq)
+
+data Cell = Cell {cellWidth :: Length, cellContent :: PP.Doc} deriving (Show)
+
+instance Eq Cell where
+   Cell xl xd == Cell yl yd  =
+      xl==yl && PP.render xd == PP.render yd
+
 type Length = Int
 
 
@@ -127,27 +128,26 @@ makeTable  os t = PP.text (tableTitle t) PP.$$ (makeCol os rf $ map (makeRow os 
     transpose = L.elem (RVertical) os
     xt = if transpose then L.transpose x else x 
 
--- | Generate doc table including title rows and colums    
-buildDocTable :: TableData -> [[(Length, PP.Doc)]]
+-- | Generate doc table including title rows and colums
+buildDocTable :: TableData -> [[Cell]]
 buildDocTable td =
    titleRow td ++
    L.zipWith3 (\x y z -> x ++ y ++ z)
       (titleCols td) (tableBody td) (endCols td)
 
--- | Generate Table Row     
-makeRow :: ROpts -> ColFormat -> [(Length,PP.Doc)]  -> PP.Doc    
-makeRow os cf cs = PP.hcat (zipWith (makeCell os) cf cs)  
+-- | Generate Table Row
+makeRow :: ROpts -> ColFormat -> [Cell]  -> PP.Doc
+makeRow os cf cs = PP.hcat (zipWith (makeCell os) cf cs)
 
 -- | Generate Table Cell
-makeCell :: ROpts -> (Width,Align) -> (Length,PP.Doc) -> PP.Doc
-makeCell os (w,HRight) (l,c) = PP.hcat (replicate (w-l) PP.space ++[c])                        
-makeCell os (w,HLeft) (l,c) = PP.hcat ([c]++replicate (w-l) PP.space)
---formatCell (w,HMid) (l,c) = PP.hcat ([c]++replicate (w-l) PP.space) where h = (w-l)/2
-        
--- | Generate Table Column                            
-makeCol :: ROpts -> RowFormat -> [PP.Doc] -> PP.Doc 
-makeCol os rf rs = PP.vcat rs
+makeCell :: ROpts -> (Width,Align) -> Cell -> PP.Doc
+makeCell _os (w,HRight) (Cell l c) = PP.hcat (replicate (w-l) PP.space ++[c])
+makeCell _os (w,HLeft) (Cell l c) = PP.hcat ([c]++replicate (w-l) PP.space)
+-- makeCell (w,HMid) (Cell l c) = PP.hcat ([c]++replicate (w-l) PP.space) where h = (w-l)/2
 
+-- | Generate Table Column
+makeCol :: ROpts -> RowFormat -> [PP.Doc] -> PP.Doc
+makeCol _os _rf rs = PP.vcat rs
 
 -- | To Table Class to defining generation of Documents  
 class ToTable a where
@@ -165,18 +165,18 @@ instance (Show a) => ToTable [[a]] where
                               endCols = []}
               tf = autoFormat td
 
--- | convert raw data to doc elements, using given function 
-toDoc :: (a->String) -> a -> (Length,PP.Doc)
-toDoc f xs = (length $ f xs, PP.text $ f xs) 
+-- | convert raw data to doc elements, using given function
+toDoc :: (a->String) -> a -> Cell
+toDoc f xs = Cell (length $ f xs) (PP.text $ f xs)
 
 -- | generate Auto Format from Table data
 autoFormat :: TableData -> TableFormat
 autoFormat td = TableFormat {colFormat = zip cf (repeat HLeft),
                              rowFormat = replicate (length x) 0}
   where
-    x = buildDocTable td                      
-    cf = map f $ L.transpose x where f col = (maximum $ map fst col)+2
-    
+    x = buildDocTable td
+    cf = map f $ L.transpose x where f col = (maximum $ map cellWidth col)+2
+
 
 -- | OutPut Functions  --------------------------------------------
 -- | TODO: write formatDocHor versions of this functions.
