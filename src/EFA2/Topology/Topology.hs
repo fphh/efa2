@@ -6,8 +6,13 @@ import EFA2.Topology.TopologyData
 import EFA2.Utils.Graph
 import EFA2.Utils.Utils
 
+import qualified EFA2.Topology.EfaGraph as Gr
+
 import qualified Data.List as L
+import qualified Data.IntMap as IM
+import qualified Data.IntSet as IS
 import qualified Data.Map as M
+import qualified Data.Set as Set
 import Data.Tuple.HT (snd3)
 import Data.Maybe (fromJust)
 import Data.Ord (comparing)
@@ -361,12 +366,18 @@ mkDiffNodeEqs laterRec formerRec (ins, n@(nid, NLabel sec _ _), outs)
 -- Undirected edges are filtered away.
 -- This is important for creating correct equations.
 makeDirTopology :: Topology -> Topology
-makeDirTopology topo@(Topology _) = mkGraph ns es
+makeDirTopology topo = Topology $ Gr.mkGraphFromMap ns esm
   where es = map flipAgainst $ filter onlyDirected $ labEdges topo
-        ns = unique (concatMap (\(x, y, _) -> [(x,  fromJust (lab topo x)), (y, fromJust (lab topo y))]) es)
-
+        esm = M.fromList $ map (\(x, y, l) -> ((x, y), l)) es
         onlyDirected (_, _, elabel) = flowDirection elabel /= UnDir
         flipAgainst e@(x, y, elabel) =
            case flowDirection elabel of
               AgainstDir -> (y, x, elabel { flowDirection = WithDir })
               _ -> e
+        ns =
+           imFromSet (fromJust . lab topo) $ IS.fromList $
+           concatMap (\(x, y) -> [x, y]) $ M.keys esm
+
+-- IM.fromSet is available from containers-0.5
+imFromSet :: (IM.Key -> a) -> IS.IntSet -> IM.IntMap a
+imFromSet f = IM.fromAscList . map (\k -> (k, f k)) . IS.toAscList

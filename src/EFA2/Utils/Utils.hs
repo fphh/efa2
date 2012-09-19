@@ -17,13 +17,6 @@ checkJust _ (Just x) = x
 checkJust str _ = error ("checkJust called from " ++ str)
 
 
-{-
-This function could become unnecessary
-if we store the node set of a graph in a Set.
--}
-unique :: (Ord a) => [a] -> [a]
-unique = S.toList . S.fromList
-
 reverseMap :: (Ord b) => M.Map a b -> M.Map b a
 reverseMap = M.fromList . map swap . M.toList
 

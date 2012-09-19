@@ -1,18 +1,15 @@
 
-module EFA2.Topology.EfaGraph (EfaGraph) where
+module EFA2.Topology.EfaGraph (EfaGraph, mkGraphFromMap) where
 
-import Data.Graph.Inductive
+import Data.Graph.Inductive (Graph(..), DynGraph(..), Adj, context)
 
 import qualified Data.Set as S
 import qualified Data.List as L
 import qualified Data.Map as M
 import qualified Data.IntMap as IM
 import Data.Foldable (foldMap)
-import Data.Ord
+import Data.Tuple.HT (mapSnd, swap)
 
-import EFA2.Utils.Utils
-
-import Debug.Trace
 
 data EfaGraph a b = EfaGraph { outEdges :: IM.IntMap (S.Set Int),
                                inEdges :: IM.IntMap (S.Set Int),
@@ -49,24 +46,33 @@ delEfaNode g@(EfaGraph ins outs nls els) n = EfaGraph ins' outs' nls' els'
 
 instance Graph EfaGraph where
          empty = EfaGraph IM.empty IM.empty IM.empty M.empty
-         isEmpty (EfaGraph a b c d) = IM.null c
+         isEmpty gr = IM.null $ nodeLabels gr
          match n g = if isEmpty g then (Nothing, g) else (Just cont, g')
            where lab = (nodeLabels g) IM.! n
                  cont = (mkInAdj g n, n, lab, mkOutAdj g n)
                  g' = delEfaNode g n
-         mkGraph ns es = L.foldl' (flip (&)) empty (map (context res) (map fst ns))
-           where res = EfaGraph  (IM.fromList outs) (IM.fromList ins)
-                                 (IM.fromList ns) (M.fromList (map f es))
-                 f (x, y, l) = ((x, y), l)
-                 cmp f x y = f x == f y
-                 first (x, _, _) = x
-                 second (_, y, _) = y
-                 mkPairs f g xs = (f $ head xs, S.fromList $ map g xs)
-                 outs = map (mkPairs first second) $ L.groupBy (cmp first) $ L.sortBy (comparing first) es
-                 ins = map (mkPairs second first) $ L.groupBy (cmp second) $ L.sortBy (comparing second) es
+         mkGraph ns es =
+            mkGraphFromMap (IM.fromList ns)
+               (M.fromList $ map (\(x,y,l) -> ((x,y), l)) es)
          labNodes g = IM.toList (nodeLabels g)
          labEdges g = map (\((x, y), l) -> (x, y, l)) (M.toList (edgeLabels g))
 
+_mkDynGraphFromMap ::
+   DynGraph gr =>
+   IM.IntMap n -> M.Map (Int, Int) e -> gr n e
+_mkDynGraphFromMap ns es =
+    L.foldl' (flip (&)) empty
+       (map (context (mkGraphFromMap ns es)) (IM.keys ns))
+
+mkGraphFromMap ::
+   IM.IntMap n -> M.Map (Int, Int) e -> EfaGraph n e
+mkGraphFromMap ns es = EfaGraph  outs ins  ns es
+  where esl = M.keys es
+        mapFromList =
+           flip IM.union (fmap (const S.empty) ns) .
+           IM.fromListWith S.union . map (mapSnd S.singleton)
+        outs = mapFromList esl
+        ins = mapFromList $ map swap esl
 
 
 instance DynGraph EfaGraph where
