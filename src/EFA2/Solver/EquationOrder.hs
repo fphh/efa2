@@ -8,7 +8,7 @@ import EFA2.Solver.IsVar (isStaticVar)
 
 import Control.Monad (mplus)
 import Data.Maybe.HT (toMaybe)
-import Data.Maybe (maybeToList)
+import Data.Maybe (mapMaybe, maybeToList)
 
 
 data Derived = Derived (S.Set EqTerm) Equation deriving (Show, Ord)
@@ -72,11 +72,6 @@ consequences [] = S.empty
 consequences (x:xs) = extend (consequences xs) (S.singleton x)
 -}
 
-isSingleVar :: Derived -> Bool
-isSingleVar (Derived xs _ ) = S.size xs == 1
-
-solve :: [Derived] -> [Derived]
-solve eqns = filter isSingleVar (consequences eqns)
 
 {-
 solve2 :: S.Set EqTerm -> [Derived] -> [Derived]
@@ -86,11 +81,8 @@ solve2 vs eqns = snd $ L.foldr f (vs, []) (consequences eqns)
         f _ ss = ss
 -}
 
-
 order :: [Equation] -> [Equation]
-order ts = map g sol
-  where vs = map (mkVarSetEq isStaticVar) ts
-        sol = solve $ map (uncurry Derived) (zip vs ts)
-        g (Derived v eq) = transformEq (head $ S.toList v) eq
-        
-
+order =
+   mapMaybe (\(Derived xs eq) -> fmap (flip transformEq eq) $ isSingleton xs) .
+   consequences .
+   map (\t -> Derived (mkVarSetEq isStaticVar t) t)
