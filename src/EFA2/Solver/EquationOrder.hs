@@ -11,7 +11,7 @@ import Data.Maybe.HT (toMaybe)
 import Data.Maybe (mapMaybe, maybeToList)
 
 
-data Derived = Derived (S.Set EqTerm) Equation deriving (Show, Ord)
+data Derived = Derived (S.Set EqTerm) Equation deriving (Show)
 
 instance Eq (Derived) where
     Derived as _ == Derived bs _ = as == bs
