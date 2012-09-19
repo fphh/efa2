@@ -5,10 +5,7 @@
 module EFA2.Interpreter.InTerm where
 
 import EFA2.Interpreter.Env
-import qualified EFA2.Signal.Signal as S
 import qualified EFA2.Signal.Base as B
-import EFA2.Signal.Signal (Scalar)
-import EFA2.Signal.Data (Data, Nil)
 import EFA2.Signal.Base (Val)
 
 import Data.Maybe (mapMaybe)
@@ -67,9 +64,6 @@ instance B.BSum (InTerm a) where
 instance B.DArith0 (InTerm a) where
          neg = InMinus
          rec = InRecip
-
-instance S.Const Scalar (Data Nil) where
-         toConst _ _x = undefined --toScalar x
 
 
 toAbsEq :: InTerm a -> InTerm a
