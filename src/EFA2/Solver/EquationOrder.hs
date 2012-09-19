@@ -1,5 +1,3 @@
-{-# LANGUAGE PatternGuards #-}
-
 module EFA2.Solver.EquationOrder where
 
 import qualified Data.List as L
@@ -7,6 +5,11 @@ import qualified Data.Set as S
 
 import EFA2.Solver.Equation (EqTerm, Equation, mkVarSetEq, transformEq)
 import EFA2.Solver.IsVar (isStaticVar)
+
+import Control.Monad (mplus)
+import Data.Maybe.HT (toMaybe)
+import Data.Maybe (maybeToList)
+
 
 data Derived = Derived (S.Set EqTerm) Equation deriving (Show, Ord)
 
@@ -21,10 +24,15 @@ isSingleton xs =
       _ -> Nothing
 
 resolve :: Derived -> Derived -> [Derived]
-resolve (Derived as _aplan) (Derived bs bplan) | Just a <- isSingleton as = 
-    if S.member a bs then  [Derived (S.delete a bs) bplan] else []
-resolve  x (Derived as ys) | Just _a <- isSingleton as = resolve (Derived as ys) x
-resolve _ _ = []
+resolve a@(Derived as _) b@(Derived bs _) =
+   maybeToList $
+   (isSingleton as >>= resolveTerm b)
+   `mplus`
+   (isSingleton bs >>= resolveTerm a)
+
+resolveTerm :: Derived -> EqTerm -> Maybe Derived
+resolveTerm (Derived bs bplan) a =
+   toMaybe (S.member a bs) $ Derived (S.delete a bs) bplan
 
 
 notin :: [Derived] -> Derived -> [Derived]

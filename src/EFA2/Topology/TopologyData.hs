@@ -1,5 +1,4 @@
 {-# LANGUAGE TupleSections #-}
-{-# LANGUAGE PatternGuards #-}
 {-# OPTIONS_HADDOCK ignore-exports #-}
 
 module EFA2.Topology.TopologyData (
@@ -181,8 +180,10 @@ getActiveStores topo = map (sectionSort . filter (isActiveSt topo)) groupedIof
   where iof = mkInOutGraphFormat id topo
         sortedIof = L.sortBy (comparing stNum) (filter isSt iof)
         isSt (_, (_, l), _) = isStorage (nodetypeNLabel l)
-        stNum (_, (_, l), _) | Storage x <- nodetypeNLabel l = x
-                             | InitStorage x <- nodetypeNLabel l = x
+        stNum (_, (_, l), _) =
+           case nodetypeNLabel l of
+              Storage x -> x
+              InitStorage x -> x
         groupedIof = L.groupBy cmp sortedIof
         cmp a b = stNum a == stNum b
         sectionSort = L.sortBy (comparing sec)
@@ -201,9 +202,7 @@ partitionInOutStatic ::
   Topology -> [InOutGraphFormat (LNode NLabel)] -> ([InOutGraphFormat (LNode NLabel)], [InOutGraphFormat (LNode NLabel)])
 partitionInOutStatic topo iof = L.partition p iof
   where p t@([], _, []) = False
-        p (ins, (nid, l), outs) | ((_:_), []) <- (ins', outs') = True
-                                | ([], (_:_)) <- (ins', outs') = True
-                                | otherwise = False
+        p (ins, (nid, l), outs)  =  null ins' /= null outs'
           where ins' = filter q ins
                 outs' = filter r outs
                 q (n, _) = flowDirection e == WithDir && (isOriginalEdge e || isInnerStorageEdge e)

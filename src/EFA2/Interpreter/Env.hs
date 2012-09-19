@@ -1,5 +1,4 @@
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE PatternGuards #-}
 {-# LANGUAGE TypeFamilies #-}
 module EFA2.Interpreter.Env where
 
@@ -203,7 +202,10 @@ envUnion envs = Envs { recordNumber = uniteRecordNumbers (map recordNumber envs)
 
 
 separateEnvs :: Envs a -> [Envs a]
-separateEnvs envs | MixedRecord lst <- recordNumber envs = map f (L.sort lst)
+separateEnvs envs =
+   case recordNumber envs of
+      MixedRecord lst -> map f (L.sort lst)
+      _ -> error "separateEnvs: no mixed env"
   where p n k _ = n == getIdxRecNum k
         f n = emptyEnv { recordNumber = SingleRecord n,
                          energyMap = M.filterWithKey (p n) (energyMap envs),
@@ -217,7 +219,6 @@ separateEnvs envs | MixedRecord lst <- recordNumber envs = map f (L.sort lst)
                          dxMap = M.filterWithKey (p n) (dxMap envs),
                          varMap = M.filterWithKey (p n) (varMap envs),
                          storageMap = M.filterWithKey (p n) (storageMap envs) }
-separateEnvs _ = error "separateEnvs: no mixed env"
 
 checkEnvsForDelta :: Envs a -> Envs a -> Bool
 checkEnvsForDelta env fnv = and lst
