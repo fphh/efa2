@@ -30,8 +30,8 @@ module EFA2.Topology.TopologyData (
        topoToFlowTopo,
        partitionInOutStatic) where
 
-import EFA2.Topology.EfaGraph
-import EFA2.Utils.Graph
+import EFA2.Topology.EfaGraph (EfaGraph)
+import EFA2.Utils.Graph (InOutGraphFormat, getLEdge, mkInOutGraphFormat)
 
 import qualified Data.Map as M
 import qualified Data.List as L
