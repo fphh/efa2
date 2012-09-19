@@ -15,7 +15,8 @@ import EFA2.Solver.Equation
 import EFA2.Solver.EquationOrder (order)
 
 import EFA2.Interpreter.Interpreter
-          (eqToInTerm, interpretFromScratch, showInTerm, interpretWithEnv)
+          (eqToInTerm, eqTermToInTerm,
+           interpretFromScratch, showInTerm, interpretWithEnv)
 import EFA2.Interpreter.InTerm (InTerm)
 import EFA2.Interpreter.Env
 import EFA2.Interpreter.Arith (Val)
@@ -38,7 +39,7 @@ symbolic g = res' { recordNumber = SingleRecord 1, dxMap = dx1sym, detaMap = det
         ts1o = order ts1
         difftseq = mkDiffEqTermEquations 0 ts1o
 
-        ts = toAbsEqTermEquations $ order (ts0o ++ ts1o ++ difftseq)
+        ts = toAbsEquations $ order (ts0o ++ ts1o ++ difftseq)
         res = interpretEqTermFromScratch ts
         --res' = mapEqTermEnv (setEqTerms (emptyEnv { dxMap = dx1sym })) (res { fetaMap = eta1sym, recordNumber = SingleRecord 1 })
         res' = mapEqTermEnv (setEqTerms (emptyEnv { dxMap = dx1sym })) res
@@ -54,7 +55,7 @@ numeric g = {- trace ("---------\n" ++ showEqTerms ts ++ "\n------\n") $ -} res
 
         envs = envUnion [envs0', envs1']
 
-        ts = toAbsEqTermEquations $ ts0o ++ ts1o ++ difftseq
+        ts = toAbsEquations $ ts0o ++ ts1o ++ difftseq
         res = interpretFromScratch (recordNumber envs) 1 (map (eqToInTerm envs) ts)
 
 
@@ -63,8 +64,8 @@ deltaEnv g = (res1 `minusEnv` res0) { recordNumber = SingleRecord 1 }
   where (envs0', ts0) = makeAllEquations g [envs0num]
         (envs1', ts1) = makeAllEquations g [envs1num]
 
-        ts0' = toAbsEqTermEquations $ order ts0
-        ts1' = toAbsEqTermEquations $ order ts1
+        ts0' = toAbsEquations $ order ts0
+        ts1' = toAbsEquations $ order ts1
 
         res0 = interpretFromScratch (recordNumber envs0') 1 (map (eqToInTerm envs0') ts0')
         res1 = interpretFromScratch (recordNumber envs1') 1 (map (eqToInTerm envs1') ts1')
@@ -114,7 +115,7 @@ main = do
       denv = deltaEnv graph
       control = dpowerMap denv
 
-      symSimpleNum = mapEqTermEnv (map (fromScalar . interpretWithEnv 1 (envUnion [num0, num1]) . eqToInTerm emptyEnv)) symSimpleDelta
+      symSimpleNum = mapEqTermEnv (map (fromScalar . interpretWithEnv 1 (envUnion [num0, num1]) . eqTermToInTerm)) symSimpleDelta
 
 
   putStrLn "\n== Control delta environment (later env - former env, computed independently) =="

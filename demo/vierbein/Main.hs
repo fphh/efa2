@@ -24,7 +24,7 @@ symbolic g = res
 
         (_, ts) = makeAllEquations g [envs]
 
-        tso = toAbsEqTermEquations $ order ts
+        tso = toAbsEquations $ order ts
         res = interpretEqTermFromScratch tso
 
 numeric :: Topology -> Envs UTFSig
@@ -37,7 +37,7 @@ numeric g = res
 
         (envs', ts) = makeAllEquations g [envs]
 
-        tso = toAbsEqTermEquations $ order ts
+        tso = toAbsEquations $ order ts
         res = interpretFromScratch (SingleRecord 0) 1 (map (eqToInTerm envs') tso)
 
 
