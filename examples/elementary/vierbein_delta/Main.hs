@@ -9,29 +9,30 @@ import qualified Data.Set as Set
 import qualified Data.Map as M
 import Data.Set (Set)
 
-import Text.Printf
+import Text.Printf (printf)
 
 import EFA2.Solver.Equation
-import EFA2.Solver.EquationOrder
+import EFA2.Solver.EquationOrder (order)
 
 import EFA2.Interpreter.Interpreter
-import EFA2.Interpreter.InTerm
+          (eqToInTerm, interpretFromScratch, showInTerm, interpretWithEnv)
+import EFA2.Interpreter.InTerm (InTerm)
 import EFA2.Interpreter.Env
-import EFA2.Interpreter.Arith
+import EFA2.Interpreter.Arith (Val)
 
 import qualified EFA2.Signal.Signal as S
 import EFA2.Signal.Signal (Sc, toScalar, fromScalar)
 
-import EFA2.Topology.Topology
-import EFA2.Topology.TopologyData
+import EFA2.Topology.Topology (makeAllEquations, makeNodes, makeEdges)
+import EFA2.Topology.TopologyData (Topology, NodeType(..), defaultELabel)
 
-import EFA2.Display.DrawGraph
+import EFA2.Display.DrawGraph (drawDeltaTopology, drawTopology, drawAll)
 
 
 symbolic :: Topology -> Envs EqTerm
 symbolic g = res' { recordNumber = SingleRecord 1, dxMap = dx1sym, detaMap = deta1sym, fetaMap = eta1sym }
-  where (envs0', ts0) = makeAllEquations g [envs0sym]
-        (envs1', ts1) = makeAllEquations g [envs1sym]
+  where ts0 = snd $ makeAllEquations g [envs0sym]
+        ts1 = snd $ makeAllEquations g [envs1sym]
 
         ts0o = order ts0
         ts1o = order ts1
@@ -153,6 +154,7 @@ x0num = M.fromList [ (XIdx 0 0 2 0, toScalar 0.3),
                      (XIdx 0 0 2 3, toScalar 0.4) ]
 
 
+envs0num :: Envs Sc
 envs0num = emptyEnv { recordNumber = SingleRecord 0,
                       powerMap = power0num,
                       dtimeMap = dtimes0num,
@@ -197,15 +199,16 @@ x1num = M.fromList [ (XIdx 0 1 2 0, toScalar 0.3),
 
 
 dx1num :: DXMap Sc
-dx1num = M.fromList [ (DXIdx 0 1 0 2, toScalar 0.0), 
+dx1num = M.fromList [ (DXIdx 0 1 0 2, toScalar 0.0),
                       (DXIdx 0 1 2 0, toScalar 0.0),
-                      (DXIdx 0 1 1 2, toScalar 0.0), 
+                      (DXIdx 0 1 1 2, toScalar 0.0),
                       (DXIdx 0 1 2 1, toScalar 0.0),
-                      (DXIdx 0 1 2 3, toScalar 0.0), 
+                      (DXIdx 0 1 2 3, toScalar 0.0),
                       (DXIdx 0 1 3 2, toScalar 0.0),
-                      (DXIdx 0 1 2 4, toScalar 0.0), 
+                      (DXIdx 0 1 2 4, toScalar 0.0),
                       (DXIdx 0 1 4 2, toScalar 0.0) ]
 
+envs1num :: Envs Sc
 envs1num = emptyEnv { recordNumber = SingleRecord 1,
                       powerMap = power1num,
                       dpowerMap = dpower1num,
@@ -235,7 +238,7 @@ power0sym :: PowerMap EqTerm
 power0sym = selfMap [ PowerIdx 0 0 0 2 ]
 
 eta0sym :: FEtaMap EqTerm
-eta0sym = selfEta [ FEtaIdx 0 0 0 2, FEtaIdx 0 0 2 0, 
+eta0sym = selfEta [ FEtaIdx 0 0 0 2, FEtaIdx 0 0 2 0,
                     FEtaIdx 0 0 1 2, FEtaIdx 0 0 2 1,
                     FEtaIdx 0 0 2 3, FEtaIdx 0 0 3 2,
                     FEtaIdx 0 0 2 4, FEtaIdx 0 0 4 2 ]
@@ -244,6 +247,7 @@ x0sym :: XMap EqTerm
 x0sym = selfMap [ XIdx 0 0 2 0, XIdx 0 0 2 3 ]
 
 
+envs0sym :: Envs EqTerm
 envs0sym = emptyEnv { recordNumber = SingleRecord 0,
                       powerMap = power0sym,
                       dtimeMap = dtimes0sym,
@@ -282,7 +286,7 @@ x1sym = selfMap [ XIdx 0 1 2 0, XIdx 0 1 2 3 ]
 dx1sym :: DXMap EqTerm
 dx1sym = M.union m1 m2
   where m1 = M.fromList [ (DXIdx 0 1 0 2, Const 0.0),
-                          (DXIdx 0 1 1 2, Const 0.0), 
+                          (DXIdx 0 1 1 2, Const 0.0),
                           (DXIdx 0 1 3 2, Const 0.0),
                           (DXIdx 0 1 4 2, Const 0.0) ]
         m2 = M.fromList [ (DXIdx 0 1 2 0, Const 0.0),
@@ -290,6 +294,7 @@ dx1sym = M.union m1 m2
                           (DXIdx 0 1 2 3, Const 0.0),
                           (DXIdx 0 1 2 4, Const 0.0) ]
 
+envs1sym :: Envs EqTerm
 envs1sym = emptyEnv { recordNumber = SingleRecord 1,
                       powerMap = power1sym,
                       dpowerMap = dpower1sym,
