@@ -1,5 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE TypeOperators #-}
 
 module EFA2.Signal.SequenceData where
@@ -15,6 +17,9 @@ import EFA2.Signal.Typ (Typ, A, P, T, Tt)
 import EFA2.Signal.Data (Data, (:>), Nil)
 import EFA2.Signal.Base (Sign, Val)
 
+import qualified EFA2.Display.DispSignal as Disp
+import EFA2.Display.Report (ToTable(toTable), Table(..), TableData(..), toDoc, tvcat, autoFormat)
+
 import qualified Test.QuickCheck as QC
 import System.Random (Random)
 
@@ -24,6 +29,7 @@ import qualified Data.List.HT as HTL
 import qualified Data.List.Match as Match
 import Data.Ratio (Ratio, (%))
 import Data.List (transpose)
+import Data.Tuple.HT (mapFst)
 import Control.Monad (liftM2)
 
 -----------------------------------------------------------------------------------
@@ -125,3 +131,55 @@ instance (Random a, Integral a) => Sample (Ratio a) where
             LT -> x%y
             GT -> y%x
             EQ -> 1 -- prevent 0/0
+
+
+instance ToTable Record where
+   toTable os (ti,(Record time sigs)) =
+      [Table {
+         tableTitle = "Record - " ++ ti ,
+         tableData = tableData t,
+         tableFormat = tableFormat t,
+         tableSubTitle = ""}]
+
+      where t = tvcat $ toTable os ("Time",time) ++
+                        concatMap (toTable os . mapFst show) (M.toList sigs)
+
+
+instance
+   (V.Walker v, V.Singleton v, V.FromList v, V.Storage v Val,
+    Disp.SigDisp S.Signal (v :> Nil)) =>
+   ToTable (PowerRecord v Val) where
+   toTable os (ti, PowerRecord time sigs) =
+      [Table {
+         tableTitle = "PowerRecord - " ++ ti ,
+         tableData = tableData t,
+         tableFormat = tableFormat t,
+         tableSubTitle = ""}]
+
+      where t = tvcat $ toTable os ("Time",time) ++
+                        concatMap (toTable os . mapFst show) (M.toList sigs)
+
+instance (ToTable a) => ToTable (SequData a) where
+   toTable os (_ti, SequData rs) =
+      concatMap (toTable os) (zip (map f [0..]) rs)
+         where f :: Int -> String
+               f idx = "Section " ++ show idx
+
+
+instance ToTable Sequ where
+   toTable _os (ti, Sequ xs) =
+      [Table {
+         tableTitle = "Sequence: " ++ ti,
+         tableData = td,
+         tableFormat = autoFormat td,
+         tableSubTitle = ""}]
+      where
+         td = TableData {
+                 tableBody = [map f xs],
+                 titleRow  = [[toDoc id "Section:"]++map (\x -> toDoc id ("Sec" ++ show x)) [0..(length xs -1)]],
+                 titleCols = [[toDoc id "Index"]],
+                 endCols  = []
+              }
+
+         -- f :: Sec -> TableData
+         f (i1, i2) = toDoc id $ show i1 ++ " - " ++ show i2

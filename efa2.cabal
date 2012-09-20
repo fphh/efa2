@@ -66,7 +66,6 @@ Library
     EFA2.Solver.DependencyGraph
     EFA2.Display.FileSave
 --    EFA2.Display.DispData
-    EFA2.Display.DispSequence
     EFA2.Display.Plot
     EFA2.Display.DrawGraph
     EFA2.Display.DispTyp
