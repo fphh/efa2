@@ -1,5 +1,3 @@
-{-# LANGUAGE FlexibleInstances #-}
-
 module EFA2.Display.Report (module EFA2.Display.Report) where
 
 import qualified Data.List as L
@@ -146,12 +144,20 @@ makeCell _os (w,HLeft) (Cell l c) = PP.hcat ([c]++replicate (w-l) PP.space)
 makeCol :: ROpts -> RowFormat -> [PP.Doc] -> PP.Doc
 makeCol _os _rf rs = PP.vcat rs
 
--- | To Table Class to defining generation of Documents  
+
+-- | To Table Class to defining generation of Documents
 class ToTable a where
       toTable :: ROpts -> (String,a) -> [Table]
 
-instance (Show a) => ToTable [[a]] where
-      toTable _os (ti,xs)  = [Table {tableTitle = "Matrix - " ++ ti,
+class RowsToTable a where
+      rowsToTable :: ROpts -> (String, [a]) -> [Table]
+
+instance (RowsToTable row) => ToTable [row] where
+      toTable = rowsToTable
+
+instance (Show a) => RowsToTable [a] where
+      rowsToTable _os (ti,xs) =
+                            [Table {tableTitle = "Matrix - " ++ ti,
                                     tableFormat = autoFormat td,
                                     tableData = td,
                                     tableSubTitle = ""}]
