@@ -1,10 +1,8 @@
-{-# LANGUAGE FlexibleInstances #-}
-
 module EFA2.Display.DispTyp (module EFA2.Display.DispTyp) where
 
-import EFA2.Signal.Typ
-import EFA2.Signal.Signal
+import EFA2.Signal.Typ as Typ
 import EFA2.Display.DispBase
+
 
 data DisplayType = Typ_BZ
                  | Typ_E  
@@ -20,23 +18,24 @@ data DisplayType = Typ_BZ
                  | Typ_UT deriving Show
 
 -- | Convert Type Information ADT
-class DisplayTyp t where 
-  getDisplayType :: TC s t d -> DisplayType
-  
-instance DisplayTyp (Typ d P p) where getDisplayType x = Typ_P
-instance DisplayTyp (Typ d E p) where getDisplayType x = Typ_E
-instance DisplayTyp (Typ d F p) where getDisplayType x = Typ_F
-instance DisplayTyp (Typ d N p) where getDisplayType x = Typ_N
-instance DisplayTyp (Typ d M p) where getDisplayType x = Typ_M
-instance DisplayTyp (Typ d T p) where getDisplayType x = Typ_T
-instance DisplayTyp (Typ d X p) where getDisplayType x = Typ_X
-instance DisplayTyp (Typ d Y p) where getDisplayType x = Typ_Y
-instance DisplayTyp (Typ d BZ p) where getDisplayType x = Typ_BZ
-instance DisplayTyp (Typ d IZ p) where getDisplayType x = Typ_IZ
-instance DisplayTyp (Typ d UZ p) where getDisplayType x = Typ_UZ
-instance DisplayTyp (Typ d UT p) where getDisplayType x = Typ_UT
+class DisplayTyp t where
+  getDispType :: t -> DisplayType
+
+instance DisplayTyp P where getDispType _ = Typ_P
+instance DisplayTyp E where getDispType _ = Typ_E
+instance DisplayTyp F where getDispType _ = Typ_F
+instance DisplayTyp N where getDispType _ = Typ_N
+instance DisplayTyp M where getDispType _ = Typ_M
+instance DisplayTyp T where getDispType _ = Typ_T
+instance DisplayTyp X where getDispType _ = Typ_X
+instance DisplayTyp Y where getDispType _ = Typ_Y
+instance DisplayTyp BZ where getDispType _ = Typ_BZ
+instance DisplayTyp IZ where getDispType _ = Typ_IZ
+instance DisplayTyp UZ where getDispType _ = Typ_UZ
+instance DisplayTyp UT where getDispType _ = Typ_UT
 
 
+getDisplayTypName :: DisplayType -> String
 getDisplayTypName Typ_P = "Power"
 getDisplayTypName Typ_E = "Energy"
 getDisplayTypName Typ_X = "Split-Share"
@@ -80,27 +79,39 @@ getDisplayFormat Middle Typ_P Unit_kWh = DisplayFormat "%6.7f"
 getDisplayFormat _ _ _ = getDefaultFormat
 
 
-tdisp :: (DeltaDisp t,PartDisp t,  DisplayTyp t) => TC s t d -> String 
-tdisp x = tddisp x  ++ dispPhTyp (getDisplayType x) ++ tpdisp x
+tdisp :: TDisp t => t -> String
+tdisp x =
+   tddisp x ++
+   dispPhTyp (getDisplayType x) ++
+   tpdisp x
 
-udisp :: (DeltaDisp t, PartDisp t, DisplayTyp t) => TC s t d -> String
-udisp x = show $ getDisplayUnit (getDisplayType x)
+udisp :: TDisp t => t -> String
+udisp x = show $ getDisplayUnit $ getDisplayType x
 
+class TDisp t where
+   getDisplayType :: t -> DisplayType
+   tddisp :: t -> String
+   tpdisp :: t -> String
+
+instance (DeltaDisp d, DisplayTyp t, PartDisp p) => TDisp (Typ d t p) where
+   getDisplayType = getDispType . Typ.getType
+   tddisp = deltaDisp . Typ.getDelta
+   tpdisp = partialDisp . Typ.getPartial
 
 -- Class to Display Partial Flag
-class PartDisp t where   tpdisp :: TC s t d -> String 
-instance PartDisp (Typ d t Tt) where tpdisp x = "_total"
-instance PartDisp (Typ d t Pt) where tpdisp x = "_partial"
-instance PartDisp (Typ d t UT) where tpdisp x = "_x"
+class PartDisp p where partialDisp :: p -> String
+instance PartDisp Tt where partialDisp _ = "_total"
+instance PartDisp Pt where partialDisp _ = "_partial"
+instance PartDisp UT where partialDisp _ = "_x"
 
 -- Class to Display Delta Flag
-class DeltaDisp t where tddisp :: TC s t d -> String 
-instance DeltaDisp (Typ A t p) where tddisp x = ""
-instance DeltaDisp (Typ D t p) where tddisp x = "d"
-instance DeltaDisp (Typ DD t p) where tddisp x = "dd"
-instance DeltaDisp (Typ DDD t p) where tddisp x = "ddd"
-instance DeltaDisp (Typ UT t p) where tddisp x = "x"
-  
-  
+class DeltaDisp d where deltaDisp :: d -> String
+instance DeltaDisp A where deltaDisp _ = ""
+instance DeltaDisp D where deltaDisp _ = "d"
+instance DeltaDisp DD where deltaDisp _ = "dd"
+instance DeltaDisp DDD where deltaDisp _ = "ddd"
+instance DeltaDisp UT where deltaDisp _ = "x"
+
+
 dispPhTyp ::  DisplayType -> String
-dispPhTyp x = drop 4 (show x) 
+dispPhTyp x = drop 4 (show x)

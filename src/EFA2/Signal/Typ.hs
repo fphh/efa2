@@ -1,4 +1,7 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, FunctionalDependencies, EmptyDataDecls #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE EmptyDataDecls #-}
 
 module EFA2.Signal.Typ (module EFA2.Signal.Typ) where
 
@@ -11,6 +14,18 @@ data Typ d t p
 -- t = EFA Typ
 -- p = partial flag
 -- a = average flag
+
+--------------------------------
+-- Accessors to the type parameters
+getDelta :: Typ d t p -> d
+getDelta _ = error "Signal.Typ.getDelta: got phantom type"
+
+getType :: Typ d t p -> t
+getType _ = error "Signal.Typ.getType: got phantom type"
+
+getPartial :: Typ d t p -> p
+getPartial _ = error "Signal.Typ.getPartial: got phantom type"
+
 
 data UT -- Untyped
 

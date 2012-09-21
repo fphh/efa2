@@ -51,6 +51,9 @@ data FClass
 data TestRow
 
 
+typ :: TC s t d -> t
+typ _ = error "Signal.typ: got phantom type"
+
 writeNested ::
    ((SV.Storage v2 (Apply v1 a), D.Storage v1 a) => TC s t (Data (v2 :> v1) a)) ->
    (D.Storage (v2 :> v1) a => TC s t (Data (v2 :> v1) a))
