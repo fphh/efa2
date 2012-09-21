@@ -154,6 +154,28 @@
                 (lineare Laufzeit, aber immer noch nicht lazy)
      richtig: ohne Akkumulator vor Rest der Rekursion h�ngen
 
+* Rekursion vermeiden, wenn es auch ohne Rekursion geht
+  reale Beispiele: EquationOrder.resolve, extend (dritter Fall ruft zweiten Fall auf)
+
+  Schlechtes Beispiel:
+
+  f a b =
+     if a<=b
+       then g a b
+       else f b a
+
+  Problem:
+     GHC kann nicht sehen, dass Rekursion immer nach einer Ebene abbricht
+     und wird es vermutlich in etwas umständliches übersetzen.
+     Auch für Leser sieht es nach Rekursion aus - Endlosschleife ist möglich.
+
+  Besser ohne Rekursion:
+
+  f a b =
+     if a<=b
+       then g a b
+       else g b a
+
 * besser Maybe, Either & Co. als Spezialwerte,
   wie bei ">=0 bedeutet Anzahl geschriebene Bytes, <0 Errorcode"
   Spezialwerte zu fehleranf�llig
