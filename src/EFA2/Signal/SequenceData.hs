@@ -34,9 +34,9 @@ import Control.Monad (liftM2)
 
 -----------------------------------------------------------------------------------
 -- | Indices for Record, Section and Power Position
-newtype RecIdx = RecIdx Int deriving (Show,Eq,Ord) -- dataset Index
-newtype SecIdx = SecIdx Int deriving (Show,Eq,Ord, Num, Enum)
-data PPosIdx =  PPosIdx !Int !Int deriving (Show, Eq, Ord)
+newtype RecIdx = RecIdx Int deriving (Show, Eq, Ord) -- dataset Index
+newtype SecIdx = SecIdx Int deriving (Show, Eq, Ord, Enum)
+data PPosIdx = PPosIdx !Int !Int deriving (Show, Eq, Ord)
 
 -----------------------------------------------------------------------------------
 -- | Signal Record & Power Record & Flow -- Structure for Handling recorded data

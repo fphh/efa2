@@ -46,7 +46,8 @@ mkSectionTopology (SecIdx sid) t = fromFlowToSecTopology $ nmap f t
   where f n = n { sectionNLabel = sid }
 
 genSectionTopology :: SequFlowTops -> SequData SecTopology
-genSectionTopology (SequData tops) = SequData (map (uncurry mkSectionTopology) (zip [0..] tops))
+genSectionTopology (SequData tops) =
+   SequData (map (uncurry mkSectionTopology) (zip [SecIdx 0 ..] tops))
 
 
 copySeqTopology :: SequData SecTopology -> Topology
