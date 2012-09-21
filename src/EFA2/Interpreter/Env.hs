@@ -5,8 +5,9 @@ module EFA2.Interpreter.Env where
 import qualified Data.Map as M
 import qualified Data.List as L
 
-import qualified EFA2.Signal.Data as D
 import qualified EFA2.Signal.Signal as S
+import qualified EFA2.Signal.Data as D
+import qualified EFA2.Signal.Vector as SV
 import EFA2.Signal.Signal (TC, (.-))
 import EFA2.Signal.Data (Data, Zip)
 import EFA2.Signal.Typ (TSum)
@@ -221,13 +222,14 @@ separateEnvs envs =
                          storageMap = M.filterWithKey (p n) (storageMap envs) }
 
 checkEnvsForDelta :: Envs a -> Envs a -> Bool
-checkEnvsForDelta env fnv = and lst
-  where lst = [ energyMap env .== energyMap fnv,
-                powerMap env .== powerMap fnv,
-                fetaMap env .== fetaMap fnv,
-                xMap env .== xMap fnv,
-                storageMap env .== storageMap fnv ]
-        (.==) x y = and $ zipWith ignoreRecEq (M.keys x) (M.keys y)
+checkEnvsForDelta env fnv =
+   and [ check env fnv energyMap,
+         check env fnv powerMap,
+         check env fnv fetaMap,
+         check env fnv xMap,
+         check env fnv storageMap ]
+   where check :: IdxEq idx => Envs a -> Envs a -> (Envs a -> M.Map idx c) -> Bool
+         check x y f = SV.equalBy ignoreRecEq (M.keys $ f x) (M.keys $ f y)
 
 minusEnv ::
    (S.Arith s s ~ s, TSum t t t, c ~ Zip c c, D.ZipWith c c, D.Storage c a, BSum a) =>
