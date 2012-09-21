@@ -53,11 +53,12 @@ dispLength = Middle
 data DisplayFormat = DisplayFormat String
 
 getDefaultFormat :: DisplayFormat
-getDefaultFormat = f dispLength
-  where f Short = DisplayFormat "%3.2f"
-        f Middle = DisplayFormat "%5.3f"
-        f Long = DisplayFormat "%6.7f"
-        f Float = DisplayFormat "%6.7e"
+getDefaultFormat =
+   case dispLength of
+      Short -> DisplayFormat "%3.2f"
+      Middle -> DisplayFormat "%5.3f"
+      Long -> DisplayFormat "%6.7f"
+      Float -> DisplayFormat "%6.7e"
 
 
 -- | Simple Display Function
