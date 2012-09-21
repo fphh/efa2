@@ -80,7 +80,5 @@ instance Disp Int where
   disp (DisplayFormat f) _ x = printf f (show x)
 
 instance Disp Sign where
-  disp (DisplayFormat f) _ x = show x
-  
-        
- 
+  disp (DisplayFormat _f) _ x = show x
+
