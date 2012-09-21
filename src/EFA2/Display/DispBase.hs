@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeSynonymInstances  #-}
-
 module EFA2.Display.DispBase (module EFA2.Display.DispBase) where
 
 
@@ -69,7 +67,7 @@ xdisp x = disp getDefaultFormat (UnitScale 1) x
 class Disp a where 
   disp :: DisplayFormat -> UnitScale -> a -> String
 
-instance Disp Val where
+instance Disp Double where
   disp _ _ 0 = "null"
   disp (DisplayFormat f) (UnitScale s) x = printf f $ x*s
 
