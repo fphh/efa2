@@ -21,10 +21,9 @@ import qualified EFA2.Signal.Signal as S
 import qualified EFA2.Signal.Data as D
 import qualified EFA2.Signal.Vector as SV
 import EFA2.Signal.SequenceData (PowerRecord(PowerRecord), SequPwrRecord, SequData(SequData))
-import EFA2.Signal.Signal (TC, Signal, toSigList)
+import EFA2.Signal.Signal (TC, Signal, toSigList, getDisplayType)
 import EFA2.Signal.Data (Data, (:>), Nil, NestedList)
 import EFA2.Signal.Base (Val)
-import EFA2.Display.DispSignal (getDisplayType)
 import EFA2.Display.DispTyp (TDisp, DisplayType(Typ_P, Typ_T), getDisplayUnit, getDisplayTypName)
 import EFA2.Display.DispBase (UnitScale(UnitScale), getUnitScale)
 

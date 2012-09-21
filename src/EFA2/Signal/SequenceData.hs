@@ -18,7 +18,6 @@ import EFA2.Signal.Typ (Typ, A, P, T, Tt)
 import EFA2.Signal.Data (Data, (:>), Nil)
 import EFA2.Signal.Base (Sign, Val)
 
-import EFA2.Display.DispSignal ()
 import EFA2.Display.Report (ToTable(toTable), Table(..), TableData(..), toDoc, tvcat, autoFormat)
 
 import qualified Test.QuickCheck as QC

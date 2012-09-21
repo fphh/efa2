@@ -1,7 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE TypeOperators #-}
@@ -17,18 +16,22 @@ import qualified EFA2.Signal.Base as B
 import EFA2.Signal.Data (Data(Data), (:>), Nil, Zip, Apply, List, List2, NestedList, Vec2, UVec, UVec2, UVec2L, DVal)
 import EFA2.Signal.Base (BSum(..), BProd(..), DArith0(..), Val, ZeroCrossing)
 import EFA2.Signal.Typ
-import qualified Data.Vector as V
-import qualified Data.Vector.Unboxed as UV
+import EFA2.Display.Report (ToTable(toTable), Table(..), TableData(..), ROpt(RAll), toDoc, autoFormat)
+import EFA2.Display.DispBase (UnitScale(..), DisplayFormat(..), DispStorage(..), getUnitScale, dispLength)
+import EFA2.Display.DispTyp (TDisp, getDisplayUnit)
+import qualified EFA2.Display.DispTyp as Typ
 
 import Control.Monad (liftM2)
 import Data.Monoid (Monoid, mempty, mappend, mconcat)
 import Data.Tuple.HT (mapPair)
 
+import Text.Printf (printf)
+
 import qualified Data.List as L
-import Data.Function ((.), ($))
+import Data.Function (id, (.), ($))
 import Prelude
-          (Show, Eq, Ord, Maybe, Bool, error,
-           Int, (++), Num, Fractional, (+), (-), (/), (*))
+          (Show, Eq, Ord, Maybe, Bool, error, fmap,
+           String, Int, (++), Num, Fractional, (+), (-), (/), (*))
 import qualified Prelude as P
 
 
@@ -896,3 +899,103 @@ makeAbsolute (TC x) = TC x
 
 reverse :: (D.Reverse c, D.Storage c d) => TC s t (Data c d) ->  TC s t (Data c d)
 reverse (TC x) = TC $ D.reverse x
+
+
+----------------------------------------------------------
+-- Report instances
+
+getDisplayType :: (TDisp t) => TC s t d  -> Typ.DisplayType
+getDisplayType = Typ.getDisplayType . typ
+
+tdisp :: (TDisp t) => TC s t d  -> String
+tdisp = Typ.tdisp . typ
+
+udisp :: (TDisp t) => TC s t d  -> String
+udisp = Typ.udisp . typ
+
+-- | Display single values
+vdisp :: (TDisp t) => TC s t (Data Nil Val)  -> String
+vdisp x@(TC (Data val)) = printf f $ s*val
+  where t = getDisplayType x
+        u = getDisplayUnit t
+        (UnitScale s) = getUnitScale u
+        (DisplayFormat f) = Typ.getDisplayFormat dispLength t u
+
+-- | Display single values
+srdisp ::
+   (TDisp t, SV.FromList v, SV.Storage v Val) =>
+   TC s t (Data (v :> Nil) Val)  -> [String]
+srdisp xs = fmap g $ toList xs -- (f l)
+  where g x = printf f (s*x)
+        t = getDisplayType xs
+        u = getDisplayUnit t
+        (UnitScale s) = getUnitScale u
+        (DisplayFormat f) = Typ.getDisplayFormat dispLength t u
+
+
+class DispApp s where
+   dispApp :: s -> String
+
+instance DispApp Signal where
+   dispApp _ = "Sig"
+
+instance DispApp TestRow where
+   dispApp _ = "Test"
+
+
+sigDisp ::
+   (DispApp s, DispStorage c) =>
+   TC s t (Data c d) -> String
+sigDisp =
+   let aux ::
+          (DispApp s, DispStorage c) =>
+          s -> TC s t (Data c d) -> String
+       aux s (TC x) = dispApp s ++ dispStorage x
+   in  aux (error "sigDisp s")
+
+
+instance
+   (DispApp s, DispStorage (v :> Nil), TDisp t,
+    SV.FromList v, SV.Singleton v, SV.Walker v, SV.Storage v Val) =>
+       ToTable (TC s t (Data (v :> Nil) Val)) where
+   toTable os (ti,x) =
+      [Table {
+         tableTitle = "",
+         tableFormat = autoFormat td,
+         tableData = td,
+         tableSubTitle = ""
+      }]
+     where td = TableData {
+                   tableBody = [fmap (toDoc id ) (f x) ],
+                   titleRow = [],
+                   titleCols = [fmap (toDoc id) [ti, sigDisp x, tdisp x]],
+                   endCols = [[toDoc id $ udisp x]]
+                }
+
+           f y =
+              if L.elem RAll os
+                then srdisp y
+                else [vdisp (minimum x) ++ " - " ++ vdisp (maximum y)]
+
+instance
+   (DispApp s, DispStorage (v2 :> v1 :> Nil), TDisp t,
+    SV.FromList v1, SV.Storage v1 Val,
+    SV.FromList v2, SV.Storage v2 (v1 Val),
+    SV.Walker v2) =>
+       ToTable (TC s t (Data (v2 :> v1 :> Nil) Val)) where
+   toTable _os (ti,xss) =
+      [Table {
+         tableTitle = ti ++ "   " ++ sigDisp xss ++ tdisp xss ++ udisp xss,
+         tableFormat = autoFormat td,
+         tableData = td,
+         tableSubTitle = ""
+      }]
+     where td = TableData {
+                   tableBody = fmap (fmap (toDoc id . f) ) (toCells xss),
+                   titleRow = [],
+                   titleCols = [],
+                   endCols = []
+                }
+
+           f x = vdisp x
+--           f x | otherwise = [(vdisp min) ++ " - " ++ (vdisp max)]
