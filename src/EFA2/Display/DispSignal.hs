@@ -64,8 +64,9 @@ instance SigDisp TestRow (V.Vector :> UV.Vector :> Nil) where
          sigDisp _ = "Test2U"
 
 instance
-      (SV.FromList v, SV.Singleton v, SV.Walker v, SV.Storage v Val,
-       UDisp t, SigDisp s (v :> Nil)) =>
+      (SigDisp s (v :> Nil),
+       DeltaDisp t, PartDisp t, DisplayTyp t,
+       SV.FromList v, SV.Singleton v, SV.Walker v, SV.Storage v Val) =>
           ToTable (TC s t (Data (v :> Nil) Val)) where
       toTable os (ti,x) = [Table {tableTitle = "",
                          tableFormat = autoFormat td,
@@ -80,8 +81,8 @@ instance
                  | L.elem RAll os = srdisp y
                  | otherwise = [vdisp (S.minimum x) ++ " - " ++ vdisp (S.maximum y)]
 
-instance (UDisp t,
-          SigDisp s (v2 :> v1 :> Nil),
+instance (SigDisp s (v2 :> v1 :> Nil),
+          DeltaDisp t, PartDisp t, DisplayTyp t,
           SV.FromList v1, SV.Storage v1 Val,
           SV.FromList v2, SV.Storage v2 (v1 Val),
           SV.Walker v2) => ToTable (TC s t (Data (v2 :> v1 :> Nil) Val)) where

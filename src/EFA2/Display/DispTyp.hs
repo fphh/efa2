@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, UndecidableInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module EFA2.Display.DispTyp (module EFA2.Display.DispTyp) where
 
@@ -82,12 +82,9 @@ getDisplayFormat _ _ _ = getDefaultFormat
 
 tdisp :: (DeltaDisp t,PartDisp t,  DisplayTyp t) => TC s t d -> String 
 tdisp x = tddisp x  ++ dispPhTyp (getDisplayType x) ++ tpdisp x
-  
-class (DeltaDisp t,PartDisp t,  DisplayTyp t) => UDisp t where
-  udisp :: TC s t d -> String 
-  
-instance (DeltaDisp t,PartDisp t,  DisplayTyp t) => UDisp t where  
-  udisp x = show $ getDisplayUnit (getDisplayType x)
+
+udisp :: (DeltaDisp t, PartDisp t, DisplayTyp t) => TC s t d -> String
+udisp x = show $ getDisplayUnit (getDisplayType x)
 
 
 -- Class to Display Partial Flag
