@@ -1,11 +1,9 @@
 module EFA2.Display.DispBase (module EFA2.Display.DispBase) where
 
-
-import Text.Printf
-
-
-import EFA2.Signal.Base
+import EFA2.Signal.Base (Val, Sign)
 -- import EFA2.Display.DispTyp
+
+import Text.Printf (printf)
 
 
 -- | Central Place for basic Unit & Display settings
