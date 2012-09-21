@@ -39,7 +39,9 @@ getUnitScale Unit_UT = UnitScale 1
  -- ============ Setting - Switch global display length =============
 
 -- | Central Place to switch Display Formats througght the system
-data DisplayLength = Short | Middle | Long | Float 
+data DisplayLength = Short | Middle | Long | Float
+
+dispLength :: DisplayLength
 -- dispLength = Short
 -- dispLength = Middle
 dispLength = Middle
@@ -59,6 +61,7 @@ getDefaultFormat = f dispLength
 
 
 -- | Simple Display Function
+xdisp :: Disp a => a -> String
 xdisp x = disp getDefaultFormat (UnitScale 1) x
 
 -- | Display Class using Format & Scale
