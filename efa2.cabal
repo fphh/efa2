@@ -47,16 +47,12 @@ Library
     EFA2.Utils.Utils
     EFA2.StateAnalysis.StateAnalysis
     EFA2.Signal.Base
-    EFA2.Signal.TH
     EFA2.Signal.SequenceData
-    EFA2.Signal.SignalVersuch
     EFA2.Signal.Typ
     EFA2.Signal.Data
     EFA2.Signal.Vector
     EFA2.Signal.Signal
-    EFA2.Signal.SignalData
     EFA2.Signal.Sequence
-    EFA2.Signal.SignalGeneration
     EFA2.Solver.IsVar
     EFA2.Solver.Equation
     EFA2.Solver.Horn
@@ -101,7 +97,12 @@ Library
     EFA2.Interpreter.Arith
     EFA2.Interpreter.Interpreter
     EFA2.Interpreter.InTerm
-  -- Other-Modules:       
+  Other-Modules:
+    -- these modules can be compiled, but I think they are unused
+    EFA2.Signal.TH
+    EFA2.Signal.SignalData
+    EFA2.Signal.SignalGeneration
+    EFA2.Signal.SignalVersuch
 
 Executable sequenzflussgraph
   Main-Is: examples/elementary/sequenzflussgraph/Main.hs
