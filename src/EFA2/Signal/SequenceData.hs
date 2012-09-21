@@ -11,13 +11,14 @@ import EFA2.Topology.TopologyData (FlowTopology)
 
 import qualified EFA2.Signal.Signal as S
 import qualified EFA2.Signal.Vector as V
+import EFA2.Display.DispBase (DispStorage)
 import EFA2.Signal.Signal
           (TC, Signal, SignalIdx, DTVal, FVal, TSig, DTFSig, FFSig, UTSigL)
 import EFA2.Signal.Typ (Typ, A, P, T, Tt)
 import EFA2.Signal.Data (Data, (:>), Nil)
 import EFA2.Signal.Base (Sign, Val)
 
-import qualified EFA2.Display.DispSignal as Disp
+import EFA2.Display.DispSignal ()
 import EFA2.Display.Report (ToTable(toTable), Table(..), TableData(..), toDoc, tvcat, autoFormat)
 
 import qualified Test.QuickCheck as QC
@@ -147,7 +148,7 @@ instance ToTable Record where
 
 instance
    (V.Walker v, V.Singleton v, V.FromList v, V.Storage v Val,
-    Disp.SigDisp S.Signal (v :> Nil)) =>
+    DispStorage (v :> Nil)) =>
    ToTable (PowerRecord v Val) where
    toTable os (ti, PowerRecord time sigs) =
       [Table {

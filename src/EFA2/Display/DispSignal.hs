@@ -1,4 +1,3 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeOperators #-}
@@ -10,6 +9,7 @@ import EFA2.Display.DispTyp
           (TDisp, DisplayType, getDisplayFormat, getDisplayUnit)
 import EFA2.Display.DispBase
           (Disp, DisplayFormat(DisplayFormat), UnitScale(UnitScale),
+           DispStorage(dispStorage),
            dispLength, getUnitScale, disp)
 
 import EFA2.Display.Report
@@ -24,8 +24,6 @@ import EFA2.Signal.Base (Val)
 
 import Text.Printf (printf)
 import qualified Data.List as L
-import qualified Data.Vector as V
-import qualified Data.Vector.Unboxed as UV
 
 
 getDisplayType :: (TDisp t) => TC s t d  -> DisplayType
@@ -57,33 +55,28 @@ srdisp xs = map g l -- (f l)
         l = S.toList xs
 
 
--- | Display Signal Type
-class SigDisp s c where
-      sigDisp :: TC s t (Data c d)  -> String
+class DispApp s where
+   dispApp :: s -> String
 
-instance SigDisp Signal ([] :> Nil) where
-         sigDisp _ = "Sig1L"
+instance DispApp Signal where
+   dispApp _ = "Sig"
 
-instance SigDisp Signal (UV.Vector :> Nil) where
-         sigDisp _ = "Sig1U"
+instance DispApp TestRow where
+   dispApp _ = "Test"
 
-instance SigDisp Signal (V.Vector :> Nil) where
-         sigDisp _ = "Sig1V"
+sigDisp ::
+   (DispApp s, DispStorage c) =>
+   TC s t (Data c d) -> String
+sigDisp =
+   let aux ::
+          (DispApp s, DispStorage c) =>
+          s -> TC s t (Data c d) -> String
+       aux s (TC x) = dispApp s ++ dispStorage x
+   in  aux (error "sigDisp s")
 
-instance SigDisp Signal ([] :> [] :> Nil) where
-         sigDisp _ = "Sig2L"
-
-instance SigDisp Signal (V.Vector :> UV.Vector :> Nil) where
-         sigDisp _ = "Sig2U"
-
-instance SigDisp Signal (V.Vector :> V.Vector :> Nil) where
-         sigDisp _ = "Sig2V"
-
-instance SigDisp TestRow (V.Vector :> UV.Vector :> Nil) where
-         sigDisp _ = "Test2U"
 
 instance
-      (SigDisp s (v :> Nil), TDisp t,
+      (DispApp s, DispStorage (v :> Nil), TDisp t,
        SV.FromList v, SV.Singleton v, SV.Walker v, SV.Storage v Val) =>
           ToTable (TC s t (Data (v :> Nil) Val)) where
       toTable os (ti,x) = [Table {tableTitle = "",
@@ -99,7 +92,7 @@ instance
                  | L.elem RAll os = srdisp y
                  | otherwise = [vdisp (S.minimum x) ++ " - " ++ vdisp (S.maximum y)]
 
-instance (SigDisp s (v2 :> v1 :> Nil), TDisp t,
+instance (DispApp s, DispStorage (v2 :> v1 :> Nil), TDisp t,
           SV.FromList v1, SV.Storage v1 Val,
           SV.FromList v2, SV.Storage v2 (v1 Val),
           SV.Walker v2) => ToTable (TC s t (Data (v2 :> v1 :> Nil) Val)) where

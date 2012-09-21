@@ -1,7 +1,14 @@
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE KindSignatures #-}
 module EFA2.Display.DispBase (module EFA2.Display.DispBase) where
 
+import EFA2.Signal.Data (Data, (:>), Nil)
 import EFA2.Signal.Base (Val, Sign)
 -- import EFA2.Display.DispTyp
+
+import qualified Data.Vector as V
+import qualified Data.Vector.Unboxed as UV
 
 import Text.Printf (printf)
 
@@ -82,3 +89,25 @@ instance Disp Int where
 instance Disp Sign where
   disp (DisplayFormat _f) _ x = show x
 
+
+-- | Display Signal Type
+class DispStorage (c :: * -> *) where
+   dispStorage :: Data c d -> String
+
+instance DispStorage ([] :> Nil) where
+   dispStorage _ = "1L"
+
+instance DispStorage (UV.Vector :> Nil) where
+   dispStorage _ = "1U"
+
+instance DispStorage (V.Vector :> Nil) where
+   dispStorage _ = "1V"
+
+instance DispStorage ([] :> [] :> Nil) where
+   dispStorage _ = "2L"
+
+instance DispStorage (V.Vector :> UV.Vector :> Nil) where
+   dispStorage _ = "2U"
+
+instance DispStorage (V.Vector :> V.Vector :> Nil) where
+   dispStorage _ = "2V"
