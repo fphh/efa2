@@ -432,7 +432,7 @@ toList2 ::
 toList2 (TC x) = D.toList x
 
 fromVal :: (SV.FromList c, SV.Storage c d) => Int -> d -> TC s t (Data (c :> Nil) d)
-fromVal len x = fromList (L.replicate len x)
+fromVal n x = fromList (L.replicate n x)
 
 fromScalar :: TC Scalar typ (Data Nil d) -> d
 fromScalar (TC (Data x)) = x
@@ -455,7 +455,7 @@ class Const s c where
    toConst :: D.Storage c d => Int -> d -> TC s (Typ UT UT UT) (Data c d)
 
 instance (SV.FromList v1, ConstSignal s) => Const s (v1 :> Nil) where
-   toConst len x = writeNested (fromVal len x)
+   toConst n x = writeNested (fromVal n x)
 
 instance Const Scalar Nil where
    toConst _len x = toScalar x
