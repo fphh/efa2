@@ -17,7 +17,7 @@ import Text.Printf (printf)
 
 -- | Variables for DisplayUnit and Display Scale 
 data DisplayUnit = Unit_kWh | Unit_Joule | Unit_kJoule | Unit_kW | Unit_Percent | Unit_None | Unit_Sec | Unit_UT
-data UnitScale = UnitScale Val
+newtype UnitScale = UnitScale Rational
 
 
 -- | Unit Show Instance
@@ -78,7 +78,7 @@ class Disp a where
 
 instance Disp Double where
   disp _ _ 0 = "null"
-  disp (DisplayFormat f) (UnitScale s) x = printf f $ x*s
+  disp (DisplayFormat f) (UnitScale s) x = printf f $ x * fromRational s
 
 instance Disp Bool where 
   disp (DisplayFormat f) _ x = printf f (show x)

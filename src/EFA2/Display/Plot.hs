@@ -38,9 +38,9 @@ import Data.Monoid (mconcat)
 -- | Get Signal Plot Data (Unit Conversion)  ---------------------------------------------------------------
 
 sPlotData ::
-   (D.FromList c, D.Map c, D.Storage c Val, TDisp typ) =>
-   TC s typ (Data c Val) -> NestedList c Val
-sPlotData x = S.toList $ S.map (*s) x
+   (TDisp typ, D.FromList c, D.Map c, D.Storage c a, Fractional a) =>
+   TC s typ (Data c a) -> NestedList c a
+sPlotData x = S.toList $ S.map (* fromRational s) x
    where (UnitScale s) = getUnitScale $ getDisplayUnit $ getDisplayType x
 
 

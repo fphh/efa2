@@ -25,13 +25,14 @@ import Control.Monad (liftM2)
 import Data.Monoid (Monoid, mempty, mappend, mconcat)
 import Data.Tuple.HT (mapPair)
 
-import Text.Printf (printf)
+import Text.Printf (PrintfArg, printf)
 
 import qualified Data.List as L
 import Data.Function (id, (.), ($))
 import Prelude
           (Show, Eq, Ord, Maybe, Bool, error, fmap,
-           String, Int, (++), Num, Fractional, (+), (-), (/), (*))
+           String, (++),
+           Int, Num, Fractional, fromRational, (+), (-), (/), (*))
 import qualified Prelude as P
 
 
@@ -914,8 +915,10 @@ udisp :: (TDisp t) => TC s t d  -> String
 udisp = Typ.udisp . typ
 
 -- | Display single values
-vdisp :: (TDisp t) => TC s t (Data Nil Val)  -> String
-vdisp x@(TC (Data val)) = printf f $ s*val
+vdisp ::
+   (TDisp t, Fractional a, PrintfArg a) =>
+   TC s t (Data Nil a)  -> String
+vdisp x@(TC (Data val)) = printf f $ fromRational s * val
   where t = getDisplayType x
         u = getDisplayUnit t
         (UnitScale s) = getUnitScale u
@@ -923,10 +926,10 @@ vdisp x@(TC (Data val)) = printf f $ s*val
 
 -- | Display single values
 srdisp ::
-   (TDisp t, SV.FromList v, SV.Storage v Val) =>
-   TC s t (Data (v :> Nil) Val)  -> [String]
+   (TDisp t, SV.FromList v, SV.Storage v a, Fractional a, PrintfArg a) =>
+   TC s t (Data (v :> Nil) a)  -> [String]
 srdisp xs = fmap g $ toList xs -- (f l)
-  where g x = printf f (s*x)
+  where g x = printf f (fromRational s * x)
         t = getDisplayType xs
         u = getDisplayUnit t
         (UnitScale s) = getUnitScale u
