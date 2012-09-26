@@ -961,9 +961,10 @@ sigDisp =
 
 
 instance
-   (DispApp s, DispStorage (v :> Nil), TDisp t,
-    SV.FromList v, SV.Singleton v, SV.Walker v, SV.Storage v Val) =>
-       ToTable (TC s t (Data (v :> Nil) Val)) where
+   (DispApp s, TDisp t, DispStorage (v :> Nil),
+    SV.FromList v, SV.Singleton v, SV.Walker v, SV.Storage v a,
+    Ord a, Fractional a, PrintfArg a) =>
+       ToTable (TC s t (Data (v :> Nil) a)) where
    toTable os (ti,x) =
       [Table {
          tableTitle = "",
@@ -984,11 +985,12 @@ instance
                 else [vdisp (minimum x) ++ " - " ++ vdisp (maximum y)]
 
 instance
-   (DispApp s, DispStorage (v2 :> v1 :> Nil), TDisp t,
-    SV.FromList v1, SV.Storage v1 Val,
-    SV.FromList v2, SV.Storage v2 (v1 Val),
-    SV.Walker v2) =>
-       ToTable (TC s t (Data (v2 :> v1 :> Nil) Val)) where
+   (DispApp s, TDisp t,
+    SV.Walker v2, DispStorage (v2 :> v1 :> Nil),
+    SV.FromList v1, SV.Storage v1 a,
+    SV.FromList v2, SV.Storage v2 (v1 a),
+    Fractional a, PrintfArg a) =>
+       ToTable (TC s t (Data (v2 :> v1 :> Nil) a)) where
    toTable _os (ti,xss) =
       [Table {
          tableTitle = ti ++ "   " ++ sigDisp xss ++ tdisp xss ++ udisp xss,

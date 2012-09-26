@@ -21,6 +21,7 @@ import EFA2.Signal.Data (Data, (:>), Nil)
 import EFA2.Signal.Base (Sign, Val)
 
 import EFA2.Display.Report (ToTable(toTable), Table(..), TableData(..), toDoc, tvcat, autoFormat)
+import Text.Printf (PrintfArg)
 
 import qualified Test.QuickCheck as QC
 import System.Random (Random)
@@ -152,9 +153,10 @@ instance ToTable Record where
 
 
 instance
-   (V.Walker v, V.Singleton v, V.FromList v, V.Storage v Val,
-    DispStorage (v :> Nil)) =>
-   ToTable (PowerRecord v Val) where
+   (V.Walker v, V.Singleton v, V.FromList v, V.Storage v a,
+    DispStorage (v :> Nil),
+    Ord a, Fractional a, PrintfArg a) =>
+   ToTable (PowerRecord v a) where
    toTable os (ti, PowerRecord time sigs) =
       [Table {
          tableTitle = "PowerRecord - " ++ ti ,
