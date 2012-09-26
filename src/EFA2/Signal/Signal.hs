@@ -66,6 +66,9 @@ writeNested x =
    in  z
 
 
+type instance D.Value (TC s t d) = D.Value d
+
+
 ----------------------------------------------------------------
 -- Signal Zipwith with Rule of Signal Inheritance
 -- type family

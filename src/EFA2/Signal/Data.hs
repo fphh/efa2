@@ -61,6 +61,10 @@ getSubData :: Data (v2 :> v1) a -> Data v1 a -> Apply v1 a
 getSubData _ = getData
 
 
+type family Value dat :: *
+type instance Value (Data ab c) = c
+
+
 instance P.Show (Apply ab c) => P.Show (Data ab c) where
    showsPrec n (Data x) =
       P.showParen (n>=10)
