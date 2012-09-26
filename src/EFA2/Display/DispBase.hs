@@ -57,7 +57,7 @@ dispLength = Middle
 -- ============ Setting - Switch global display length =============
 
 -- | Generic Display Format Variable
-data DisplayFormat = DisplayFormat String
+newtype DisplayFormat = DisplayFormat String
 
 getDefaultFormat :: DisplayFormat
 getDefaultFormat =
