@@ -8,6 +8,7 @@ import EFA2.Utils.Utils
 
 import qualified EFA2.Topology.EfaGraph as Gr
 
+import qualified Data.NonEmpty as NonEmpty
 import qualified Data.List as L
 import qualified Data.IntMap as IM
 import qualified Data.IntSet as IS
@@ -256,50 +257,56 @@ mkNodeEq :: Int -> Topology -> [Equation]
 mkNodeEq recordNum topo = concat $ mapGraph (mkEq recordNum) (elfilter cond topo)
   where cond x = isOriginalEdge x || isInnerStorageEdge x
 
-mkEq :: Int -> ([LNode NLabel], LNode NLabel, [LNode NLabel]) -> [Equation]
-mkEq recordNum (ins, n@(nid, NLabel sec _ _), outs)
-  | length ins == 0 && length outs == 0 = []
-  | length ins == 0 && length outs > 0 = xoeqs ++ oeqs' ++ vosumeq
-  | length ins > 0 && length outs == 0 = xieqs ++ ieqs' ++ visumeq
-  | otherwise = vosumeq ++ oeqs ++ visumeq ++ ieqs ++ xoeqs ++ xieqs ++ oeqs' ++ ieqs' ++ pisumeq
-  where xis = map (makeVar XIdx) ins
-        xos = map (makeVar XIdx) outs
-        --eis = map (makeVar EnergyIdx) ins
-        --eos = map (makeVar EnergyIdx) outs
-        -- For section and record, we focus on the current node n.
-        makeVar mkIdx (nid', _) = mkVar $ mkIdx sec recordNum nid nid'
+mkEq :: Int -> InOutGraphFormat (LNode NLabel) -> [Equation]
+mkEq recordNum (ins, (nid, NLabel sec _ _), outs) =
+   case (fmap (makeOuts vosum . makeVars) $ NonEmpty.fetch ins,
+         fmap (makeIns  visum . makeVars) $ NonEmpty.fetch outs) of
+      (Nothing, Nothing) -> []
+      (Nothing, Just (_, oeqss)) -> oeqss
+      (Just (_, ieqss), Nothing) -> ieqss
+      (Just (ieqs, ieqss), Just (oeqs, oeqss)) ->
+         oeqss ++ ieqss ++ oeqs ++ ieqs ++ [vosum := visum]
 
-
-        pis = map (makeVar PowerIdx) ins
-        pos = map (makeVar PowerIdx) outs
-
-        -- ATTENTION (not very safe): We need this variable in mkInStoreEq again!!!
+  where -- ATTENTION (not very safe): We need this variable in mkInStoreEq again!!!
         visum = mkVar (VarIdx sec recordNum InSum nid)
-        visumeq = [visum := add pis]
-
         -- ATTENTION (not very safe): We need this variable in mkOutStoreEq again!!!
         vosum = mkVar (VarIdx sec recordNum OutSum nid)
-        vosumeq = [vosum := add pos]
 
-        pisumeq = [vosum := visum]
+        -- For section and record, we focus on the current node n.
+        makeVar mkIdx (nid', _) = mkVar $ mkIdx sec recordNum nid nid'
+        makeVars xs = (fmap (makeVar XIdx) xs, fmap (makeVar PowerIdx) xs)
 
-        ieqs = zipWith (f visum) pis xis
-        h v p x = v := BEdge p x
+makeIns, makeOuts ::
+   EqTerm ->
+   (NonEmpty.T [] EqTerm, NonEmpty.T [] EqTerm) ->
+   ([Equation], [Equation])
 
-        oeqs = zipWith (f vosum) pos xos
-        f v p x = p := FEdge v x
+makeIns visum (xis, pis) =
+   let  visumeq = [visum := add pis]
 
-        xieqs | length xis > 0 = [Const 1.0 := add xis]
-              | otherwise = []
-        xoeqs | length xos > 0 = [Const 1.0 := add xos]
-              | otherwise = []
+        ieqs = NonEmpty.zipWith (\p x -> visum := BEdge p x) pis xis
 
+        ieqs' = []
+
+   in   (NonEmpty.flatten ieqs, (Const 1.0 := add xis) : ieqs' ++ visumeq)
+
+makeOuts vosum (xos, pos) =
+   let  vosumeq = [vosum := add pos]
+
+        oeqs = NonEmpty.zipWith (\p x -> p := FEdge vosum x) pos xos
+
+        oeqs' = []
+
+   in   (NonEmpty.flatten oeqs, (Const 1.0 := add xos) : oeqs' ++ vosumeq)
+
+{-
         ieqs' | length pis > 1 = [] -- zipWith (g visum) xis pis
               | otherwise = []
         oeqs' | length pos > 1 = [] -- zipWith (g vosum) xos pos
               | otherwise = []
         --g v x e = x := e :* Recip v
         g v x e = e := v :* x
+-}
 
 
 mkAllDiffEqs :: Int -> Int -> Topology -> [Equation]
@@ -352,13 +359,15 @@ mkDiffXEqs laterRec formerRec (ins, n@(nid, NLabel sec _ _), outs) = xiseq ++ xo
 
 
 mkDiffNodeEqs :: Int -> Int -> ([LNode NLabel], LNode NLabel, [LNode NLabel]) -> [Equation]
-mkDiffNodeEqs laterRec formerRec (ins, n@(nid, NLabel sec _ _), outs)
-  | length ins > 0 && length outs > 0 = sumeq
-  | otherwise = []
-  where makeVar r mkIdx (nid', _) = mkVar $ mkIdx sec r nid nid'
-        dleis = map (makeVar laterRec DPowerIdx) ins
-        dleos = map (makeVar laterRec DPowerIdx) outs
-        sumeq = [] -- [add dleis := add dleos]
+mkDiffNodeEqs laterRec _formerRec (ins0, (nid, NLabel sec _ _), outs0) =
+   case (NonEmpty.fetch ins0, NonEmpty.fetch outs0) of
+      (Just ins, Just outs) ->
+         let makeVar r mkIdx (nid', _) = mkVar $ mkIdx sec r nid nid'
+             dleis = fmap (makeVar laterRec DPowerIdx) ins
+             dleos = fmap (makeVar laterRec DPowerIdx) outs
+             _sumeq = [add dleis := add dleos]
+         in  []
+      _ -> []
 
 
 
