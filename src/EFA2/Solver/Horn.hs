@@ -53,8 +53,8 @@ instance QC.Arbitrary Formula where
          Zero -> []
          One -> []
          Atom n -> map Atom $ QC.shrink n
-         And f g -> map (uncurry And) $ QC.shrink (f,g)
-         f :-> g -> map (uncurry (:->)) $ QC.shrink (f,g)
+         And f g -> f : g : (map (uncurry And) $ QC.shrink (f,g))
+         f :-> g -> f : g : (map (uncurry (:->)) $ QC.shrink (f,g))
 
 type Step = Int
 
