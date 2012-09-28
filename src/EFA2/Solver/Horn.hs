@@ -114,7 +114,7 @@ horn fs = fmap atomsOnly res
 
 -- | Takes a dependency graph and returns Horn clauses from it, that is, every directed edge
 --   is taken for an implication.
-graphToHorn :: Gr EqTerm () -> [Formula]
+graphToHorn :: Gr a () -> [Formula]
 graphToHorn g = foldGraphNodes f [] g
   where f acc ([], _, []) = acc
         f acc (ins, x, _) = (map (:-> Atom x) (map Atom ins)) ++ acc
@@ -123,7 +123,7 @@ graphToHorn g = foldGraphNodes f [] g
 -- | Takes a dependency graph and returns Horn clauses from it. /Given/ 'Formula'e will
 --   produce additional clauses of the form One :-> Atom x. 
 --   These are the starting clauses for the Horn marking algorithm.
-makeHornFormulae :: (EqTerm -> Bool) -> Gr EqTerm () -> [Formula]
+makeHornFormulae :: (a -> Bool) -> Gr a () -> [Formula]
 makeHornFormulae isVar g = given ++ graphToHorn g
   where given = L.foldl' f [] (labNodes g)
         f acc (n, t) | isGiven t = (One :-> Atom n):acc
@@ -132,8 +132,8 @@ makeHornFormulae isVar g = given ++ graphToHorn g
 
 -- | Takes a dependency graph and a list of 'Formula'e. With help of the horn marking algorithm
 --   it produces a list of 'EqTerm' equations that is ordered such, that it can be computed
---   one by one. 
-makeHornOrder :: M.Map Node EqTerm -> [Formula] -> [EqTerm]
+--   one by one.
+makeHornOrder :: M.Map Node a -> [Formula] -> [a]
 makeHornOrder m formulae = map ((m M.!) . fromAtom) fs'
   where Just fs = horn formulae
         fs' = map snd (S.toAscList fs)
@@ -178,7 +178,8 @@ allNotEmptyCombinations =
    tail . map catMaybes . mapM (\x -> [Nothing, Just x])
 
 
-setCoverBruteForce :: M.Map Node (S.Set EqTerm) -> Node -> [Node] -> [[Node]]
+setCoverBruteForce ::
+   Ord a => M.Map Node (S.Set a) -> Node -> [Node] -> [[Node]]
 setCoverBruteForce _ _ ns | l > n = trace msg []
   where n = 16
         l = length ns
@@ -190,7 +191,8 @@ setCoverBruteForce m n ns = map fst $ filter p xs
         f ys = S.unions $ map (m M.!) ys
         p (c, t) = S.size (s S.\\ t) < 2
 
-greedyCover :: M.Map Node (S.Set EqTerm) -> Node -> [Node] -> [[Node]]
+greedyCover ::
+   Ord a => M.Map Node (S.Set a) -> Node -> [Node] -> [[Node]]
 greedyCover m n ns = [go s ns]
   where s = m M.! n
         go s _ | S.size s < 2 = []
