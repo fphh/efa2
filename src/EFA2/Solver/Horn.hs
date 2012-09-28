@@ -1,26 +1,24 @@
-{-# LANGUAGE FlexibleInstances #-}
-
-
 module EFA2.Solver.Horn where
 
 import qualified Data.Foldable as Fold
-import Data.Maybe
+import qualified Data.List.Key as Key
 import qualified Data.List as L
 import qualified Data.Set as S
 import qualified Data.Map as M
 import Control.Monad (liftM2)
+import Control.Functor.HT (void)
+import Data.Maybe (mapMaybe, catMaybes)
+import Data.Ord.HT (comparing)
 import Data.Bool.HT (if')
 
-import Data.Graph.Inductive
-import Data.Function
+import Data.Graph.Inductive (Node, Gr, labNodes, delEdge, edges)
+import EFA2.Utils.Utils (foldGraphNodes, mapGraphNodes)
 
-import Debug.Trace
+import EFA2.Solver.DependencyGraph (dpgDiffByAtMostOne, dpgHasSameVariable)
+import EFA2.Solver.Equation (EqTerm, mkVarSet)
 
-import EFA2.Solver.DependencyGraph
-import EFA2.Solver.Equation
-import EFA2.Solver.IsVar
+import Debug.Trace (trace)
 
-import EFA2.Utils.Utils
 
 import qualified Test.QuickCheck as QC
 
@@ -162,14 +160,15 @@ makeHornClauses isVar givenExt rest = (m, startfs ++ fsdpg ++ fsdpg2)
 
         g ([], _, _) = []
         g (ins, n, _) = mapMaybe f sc
-          where --sc = greedyCover mset n ins
+          where _sc = greedyCover mset n ins
                 sc = setCoverBruteForce mset n ins
                 f [] = Nothing
                 f xs = Just (makeAnd (map Atom xs) :-> Atom n)
 
 
 hornOrder :: (EqTerm -> Bool) -> [EqTerm] -> [EqTerm] -> [EqTerm]
-hornOrder isVar givenExt ts = (uncurry makeHornOrder) (makeHornClauses isVar givenExt ts)
+hornOrder isVar givenExt ts =
+   uncurry makeHornOrder $ makeHornClauses isVar givenExt ts
 
 
 -- using a NonEmptyList, the 'tail' could be total
@@ -180,24 +179,75 @@ allNotEmptyCombinations =
 
 setCoverBruteForce ::
    Ord a => M.Map Node (S.Set a) -> Node -> [Node] -> [[Node]]
-setCoverBruteForce _ _ ns | l > n = trace msg []
+setCoverBruteForce m n ns =
+   let minL = 16
+       l = length ns
+   in  if l > minL
+         then
+            trace
+               ("Instance size " ++ show l ++
+                "; setCoverBruteForce doesn't like instances > " ++ show minL) []
+         else
+            let p t = sizeLessThanTwo ((m M.! n) S.\\ t)
+            in  map fst $ filter (p . S.unions . snd) $
+                map unzip $
+                allNotEmptyCombinations $
+                map (\k -> (k, m M.! k)) ns
+
+greedyCover ::
+   Ord a => M.Map Node (S.Set a) -> Node -> [Node] -> [[Node]]
+greedyCover m n ns0 = [go (m M.! n) ns0]
+  where go s _ | sizeLessThanTwo s = []
+        go _ [] = error "no set cover"
+        go s ns = x : go (s S.\\ s') (L.delete x ns)
+          where (x, s') =
+                   Key.minimum (lazySize . (s S.\\) . snd) $
+                   map (\a -> (a, m M.! a)) ns
+
+lazySize :: S.Set a -> [()]
+lazySize = void . S.toList
+
+sizeLessThanTwo :: S.Set a -> Bool
+sizeLessThanTwo = null . drop 1 . S.toList
+
+
+setCoverBruteForceOld ::
+   Ord a => M.Map Node (S.Set a) -> Node -> [Node] -> [[Node]]
+setCoverBruteForceOld _ _ ns | l > n = trace msg []
   where n = 16
         l = length ns
-        msg = "Instance size " ++ show l ++ "; setCoverBruteForce doesn't like instances > " ++ show n
-setCoverBruteForce m n ns = map fst $ filter p xs
+        msg = "Instance size " ++ show l ++ "; setCoverBruteForceOld doesn't like instances > " ++ show n
+setCoverBruteForceOld m n ns = map fst $ filter p xs
   where s = m M.! n
         combs = allNotEmptyCombinations ns
         xs = zip combs (map f combs)
         f ys = S.unions $ map (m M.!) ys
-        p (c, t) = S.size (s S.\\ t) < 2
+        p (_c, t) = S.size (s S.\\ t) < 2
 
-greedyCover ::
+greedyCoverOld ::
    Ord a => M.Map Node (S.Set a) -> Node -> [Node] -> [[Node]]
-greedyCover m n ns = [go s ns]
-  where s = m M.! n
+greedyCoverOld m n ns0 = [go s0 ns0]
+  where s0 = m M.! n
         go s _ | S.size s < 2 = []
         go _ [] = error "no set cover"
         go s ns = x:(go (s S.\\ s') ns')
           where sets = map (\a -> (a, m M.! a)) ns
-                (x, s') = head $ L.sortBy (compare `on` (S.size . (s S.\\) . snd)) sets
+                (x, s') = head $ L.sortBy (comparing (S.size . (s S.\\) . snd)) sets
                 ns' = L.delete x ns
+
+
+setCoverBruteForceProp :: [(Node, [Ordering])] -> Node -> [Node] -> Bool
+setCoverBruteForceProp forms n ns0 =
+   let m = fmap S.fromList $ M.insert n [] $ M.fromList forms
+       ns = S.toList $ S.intersection (M.keysSet m) $ S.fromList ns0
+   in  setCoverBruteForce m n ns
+       ==
+       setCoverBruteForceOld m n ns
+
+greedyCoverProp :: [(Node, [Ordering])] -> Node -> [Node] -> Bool
+greedyCoverProp forms n ns0 =
+   let m = fmap S.fromList $ M.insert n [] $ M.fromList forms
+       ns = S.toList $ S.intersection (M.keysSet m) $ S.fromList ns0
+   in  greedyCover m n ns
+       ==
+       greedyCoverOld m n ns
