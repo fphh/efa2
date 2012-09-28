@@ -78,11 +78,11 @@ getAtoms _ = S.empty
 
 leftMarked :: S.Set Formula -> Formula -> Bool
 leftMarked _ (One :-> _) = True
-leftMarked vs (lhs :-> _) | S.size (S.difference (getAtoms lhs) vs) == 0 = True
+leftMarked vs (lhs :-> _) = S.null $ S.difference (getAtoms lhs) vs
 leftMarked _ _ = False
 
 rightMarked :: S.Set Formula -> Formula -> Bool
-rightMarked vs (_ :-> v) | S.member v vs = True
+rightMarked vs (_ :-> v) = S.member v vs
 rightMarked _ _ = False
 
 makeAnd :: [Formula] -> Formula
