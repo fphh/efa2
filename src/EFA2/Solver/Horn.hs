@@ -7,6 +7,7 @@ import Data.Maybe
 import qualified Data.List as L
 import qualified Data.Set as S
 import qualified Data.Map as M
+import Control.Monad (liftM2)
 
 import Data.Graph.Inductive
 import Data.Function
@@ -18,6 +19,9 @@ import EFA2.Solver.Equation
 import EFA2.Solver.IsVar
 
 import EFA2.Utils.Utils
+
+import qualified Test.QuickCheck as QC
+
 
 data Formula = Zero
              | One
@@ -33,6 +37,24 @@ instance Show Formula where
          show (Atom x) = show x
          show (And f g) = "(" ++ show f ++ " ∧ " ++ show g ++ ")"
          show (f :-> g) = show f ++ " → " ++ show g
+
+instance QC.Arbitrary Formula where
+   arbitrary =
+      QC.oneof $
+      return Zero :
+      return One :
+      fmap Atom QC.arbitrary :
+      QC.sized (\n -> let arb = QC.resize (div n 2) QC.arbitrary in liftM2 And arb arb) :
+      QC.sized (\n -> let arb = QC.resize (div n 2) QC.arbitrary in liftM2 (:->) arb arb) :
+      []
+
+   shrink x =
+      case x of
+         Zero -> []
+         One -> []
+         Atom n -> map Atom $ QC.shrink n
+         And f g -> map (uncurry And) $ QC.shrink (f,g)
+         f :-> g -> map (uncurry (:->)) $ QC.shrink (f,g)
 
 type Step = Int
 
