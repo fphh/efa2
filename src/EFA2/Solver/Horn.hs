@@ -3,11 +3,13 @@
 
 module EFA2.Solver.Horn where
 
+import qualified Data.Foldable as Fold
 import Data.Maybe
 import qualified Data.List as L
 import qualified Data.Set as S
 import qualified Data.Map as M
 import Control.Monad (liftM2)
+import Data.Bool.HT (if')
 
 import Data.Graph.Inductive
 import Data.Function
@@ -97,11 +99,11 @@ step i vs fs = (unionVs, filter (not . rightMarked onlyVars') bs)
         onlyVars' = S.map snd unionVs
 
 horn' :: Step -> S.Set (Step, Formula) -> [Formula] -> Maybe (S.Set (Step, Formula))
-horn' i vs fs
-  | noZero = if (vs == vs') then Just vs else horn' (i+1) vs' fs'
-  | otherwise = Nothing             
+horn' i vs fs =
+   if' (Fold.any ((Zero ==) . snd) vs) Nothing $
+   if' (vs == vs') (Just vs) $
+   horn' (i+1) vs' fs'
   where (vs', fs') = step i vs fs
-        noZero = all ((Zero /=) . snd) (S.toList vs)
 
 -- | Returns a set of 'Atom's that are have to be marked True in order to fulfill the 'Formula'e.
 --   To each 'Atom' is associated the 'Step' in which it was marked.
