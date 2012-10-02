@@ -1,10 +1,14 @@
 module EFA2.Solver.Horn where
 
+import qualified Data.Traversable as Trav
 import qualified Data.Foldable as Fold
 import qualified Data.List.Key as Key
 import qualified Data.List as L
 import qualified Data.Set as S
 import qualified Data.Map as M
+import qualified Data.NonEmpty.Mixed as NonEmptyM
+import qualified Data.NonEmpty as NonEmpty
+import Data.NonEmpty ((!:))
 import Control.Monad (liftM2)
 import Control.Functor.HT (void)
 import Data.Maybe (mapMaybe, catMaybes)
@@ -85,8 +89,8 @@ rightMarked :: S.Set Formula -> Formula -> Bool
 rightMarked vs (_ :-> v) = S.member v vs
 rightMarked _ _ = False
 
-makeAnd :: [Formula] -> Formula
-makeAnd = L.foldl1' And
+makeAnd :: NonEmpty.T [] Formula -> Formula
+makeAnd = NonEmpty.foldl1 And
 
 step :: Step -> S.Set (Step, Formula) -> [Formula] -> (S.Set (Step, Formula), [Formula])
 step i vs fs = (unionVs, filter (not . rightMarked onlyVars') bs)
@@ -140,9 +144,11 @@ makeHornOrder m formulae = map ((m M.!) . fromAtom) fs'
 -- Given terms are also filtered, as they contain no variables.
 filterUnneeded :: (EqTerm -> Bool) -> [EqTerm] -> [EqTerm]
 filterUnneeded isVar =
-   map (fst . head) . L.groupBy (equating snd) . map (\t -> (t, mkVarSet isVar t))
+   map (fst . NonEmpty.head) .
+   NonEmptyM.groupBy (equating snd) .
+   map (\t -> (t, mkVarSet isVar t))
 
- 
+
 makeHornClauses :: (EqTerm -> Bool) -> [EqTerm] -> [EqTerm] -> (M.Map Node EqTerm, [Formula])
 makeHornClauses isVar givenExt rest = (m, startfs ++ fsdpg ++ fsdpg2)
   where m = M.fromList (labNodes dpg)
@@ -160,11 +166,11 @@ makeHornClauses isVar givenExt rest = (m, startfs ++ fsdpg ++ fsdpg2)
         mset = M.map (mkVarSet isVar) m
 
         g ([], _, _) = []
-        g (ins, n, _) = mapMaybe f sc
+        g (ins, n, _) =
+           map (\xs -> makeAnd (fmap Atom xs) :-> Atom n) $
+           mapMaybe NonEmpty.fetch sc
           where _sc = greedyCover mset n ins
                 sc = setCoverBruteForce mset n ins
-                f [] = Nothing
-                f xs = Just (makeAnd (map Atom xs) :-> Atom n)
 
 
 hornOrder :: (EqTerm -> Bool) -> [EqTerm] -> [EqTerm] -> [EqTerm]
@@ -175,7 +181,7 @@ hornOrder isVar givenExt ts =
 -- using a NonEmptyList, the 'tail' could be total
 allNotEmptyCombinations :: (Ord a) => [a] -> [[a]]
 allNotEmptyCombinations =
-   tail . map catMaybes . mapM (\x -> [Nothing, Just x])
+   NonEmpty.tail . fmap catMaybes . Trav.mapM (\x -> Nothing !: Just x : [])
 
 
 setCoverBruteForce ::
