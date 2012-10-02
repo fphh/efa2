@@ -30,6 +30,7 @@ import qualified Data.Map as M
 import qualified Data.Vector.Unboxed as UV
 import qualified Data.List.HT as HTL
 import qualified Data.List.Match as Match
+import Data.NonEmpty ((!:))
 import Data.Ratio (Ratio, (%))
 import Data.List (transpose)
 import Data.Tuple.HT (mapFst)
@@ -141,14 +142,14 @@ instance (Random a, Integral a) => Sample (Ratio a) where
 
 
 instance ToTable Record where
-   toTable os (ti,(Record time sigs)) =
+   toTable os (ti, Record time sigs) =
       [Table {
          tableTitle = "Record - " ++ ti ,
          tableData = tableData t,
          tableFormat = tableFormat t,
          tableSubTitle = ""}]
 
-      where t = tvcat $ toTable os ("Time",time) ++
+      where t = tvcat $ S.toTable os ("Time",time) !:
                         concatMap (toTable os . mapFst show) (M.toList sigs)
 
 
@@ -164,7 +165,7 @@ instance
          tableFormat = tableFormat t,
          tableSubTitle = ""}]
 
-      where t = tvcat $ toTable os ("Time",time) ++
+      where t = tvcat $ S.toTable os ("Time",time) !:
                         concatMap (toTable os . mapFst show) (M.toList sigs)
 
 instance (ToTable a) => ToTable (SequData a) where

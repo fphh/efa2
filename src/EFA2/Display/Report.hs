@@ -1,6 +1,7 @@
 module EFA2.Display.Report (module EFA2.Display.Report) where
 
 import qualified Data.List as L
+import qualified Data.NonEmpty as NonEmpty
 import qualified Text.PrettyPrint as PP
 import EFA2.Signal.Base (Val)
 
@@ -55,9 +56,9 @@ type Width = Int
 data Align = HLeft | HMid | HRight deriving Show
 type Rows = Int -- Nr of Rows to be left free before
 
--- | 
-tvcat :: [Table] -> Table
-tvcat = foldl1 tvapp
+-- |
+tvcat :: NonEmpty.T [] Table -> Table
+tvcat = NonEmpty.foldl1 tvapp
 
 
 tvapp :: Table -> Table -> Table
@@ -79,8 +80,8 @@ tvapp y1 y2 = if check then Table {tableTitle = tableTitle y1 ++ " ++  " ++ tabl
                                          check = (titleRow $ tableData y1) ==  (titleRow $ tableData y2)
                                          m = "Error in tvCat -- not same column labels"
 
-thcat :: [Table] -> Table
-thcat = foldl1 thapp
+thcat :: NonEmpty.T [] Table -> Table
+thcat = NonEmpty.foldl1 thapp
 
 thapp :: Table -> Table -> Table
 thapp y1 y2 = if check then Table {tableTitle = tableTitle y1 ++ " ++  " ++ tableTitle y2,
