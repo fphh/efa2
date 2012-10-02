@@ -95,7 +95,7 @@ thapp y1 y2 = if check then Table {tableTitle = tableTitle y1 ++ " ++  " ++ tabl
                                         endCols = endCols x1}
 
                     f :: TableFormat -> TableFormat -> TableFormat
-                    f x1 x2 = TableFormat {colFormat = (init $ colFormat x1)++(init $ tail $ colFormat x2)++[(last $ colFormat x2)],
+                    f x1 x2 = TableFormat {colFormat = (init $ colFormat x1)++(tail $ colFormat x2),
                                            rowFormat = rowFormat x1}
                     check = (titleCols $ tableData y1) == (titleCols $ tableData y2) && (endCols $ tableData y1) == (endCols $ tableData y2)
                     m = "Error in thcat - not same column title and end row"
