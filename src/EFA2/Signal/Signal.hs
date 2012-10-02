@@ -8,6 +8,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE EmptyDataDecls #-}
 
+-- needed for DispStorage constraint of ToTable
+{-# LANGUAGE UndecidableInstances #-}
+
 module EFA2.Signal.Signal (module EFA2.Signal.Signal) where
 
 import qualified EFA2.Signal.Data as D
@@ -16,9 +19,10 @@ import qualified EFA2.Signal.Base as B
 import EFA2.Signal.Data (Data(Data), (:>), Nil, Zip, Apply, List, List2, NestedList, Vec2, UVec, UVec2, UVec2L, DVal)
 import EFA2.Signal.Base (BSum(..), BProd(..), DArith0(..), Val, ZeroCrossing)
 import EFA2.Signal.Typ
-import EFA2.Display.Report (ToTable(toTable), Table(..), TableData(..), ROpt(RAll), toDoc, autoFormat)
+import EFA2.Display.Report (Table(..), TableData(..), ROpt(RAll), toDoc, autoFormat)
 import EFA2.Display.DispBase (UnitScale(..), DisplayFormat(..), DispStorage(..), getUnitScale, dispLength)
 import EFA2.Display.DispTyp (TDisp, getDisplayUnit)
+import qualified EFA2.Display.Report as Report
 import qualified EFA2.Display.DispTyp as Typ
 
 import Control.Monad (liftM2)
@@ -57,6 +61,21 @@ data TestRow
 
 typ :: TC s t d -> t
 typ _ = error "Signal.typ: got phantom type"
+
+readNested ::
+   ((SV.Storage v2 (Apply v1 a), D.Storage v1 a) => TC s t (Data (v2 :> v1) a) -> b) ->
+   (D.Storage (v2 :> v1) a => TC s t (Data (v2 :> v1) a) -> b)
+readNested f x@(TC y) =
+   case D.constraints y of D.ComposeConstraints -> f x
+
+readNested2 ::
+   ((SV.Storage v3 (Apply (v2 :> v1) a), SV.Storage v2 (Apply v1 a), D.Storage v1 a) => TC s t (Data (v3 :> v2 :> v1) a) -> b) ->
+   (D.Storage (v3 :> v2 :> v1) a => TC s t (Data (v3 :> v2 :> v1) a) -> b)
+readNested2 f x@(TC y) =
+   case D.constraints y of
+      D.ComposeConstraints ->
+         case D.constraints (D.subData y (P.error "Signal.subData")) of
+            D.ComposeConstraints -> f x
 
 writeNested ::
    ((SV.Storage v2 (Apply v1 a), D.Storage v1 a) => TC s t (Data (v2 :> v1) a)) ->
@@ -964,17 +983,28 @@ sigDisp =
 
 
 instance
-   (DispApp s, TDisp t, DispStorage (v :> Nil),
-    SV.FromList v, SV.Singleton v, SV.Walker v, SV.Storage v a,
+   (DispApp s, TDisp t, ToTable c, D.Storage c a,
     Ord a, Fractional a, PrintfArg a) =>
-       ToTable (TC s t (Data (v :> Nil) a)) where
+       Report.ToTable (TC s t (Data c a)) where
+   toTable os (ti,x) = [toTable os (ti,x)]
+
+
+class DispStorage c => ToTable c where
+   toTable ::
+      (DispApp s, TDisp t, D.Storage c a,
+       Ord a, Fractional a, PrintfArg a) =>
+      Report.ROpts -> (String, TC s t (Data c a)) -> Table
+
+instance
+   (DispStorage (v :> Nil), SV.FromList v, SV.Singleton v) =>
+       ToTable (v :> Nil) where
    toTable os (ti,x) =
-      [Table {
+      Table {
          tableTitle = "",
          tableFormat = autoFormat td,
          tableData = td,
          tableSubTitle = ""
-      }]
+      }
      where td = TableData {
                    tableBody = [fmap (toDoc id ) (f x) ],
                    titleRow = [],
@@ -984,25 +1014,21 @@ instance
 
            f y =
               if L.elem RAll os
-                then srdisp y
+                then readNested srdisp y
                 else [vdisp (minimum x) ++ " - " ++ vdisp (maximum y)]
 
 instance
-   (DispApp s, TDisp t,
-    SV.Walker v2, DispStorage (v2 :> v1 :> Nil),
-    SV.FromList v1, SV.Storage v1 a,
-    SV.FromList v2, SV.Storage v2 (v1 a),
-    Fractional a, PrintfArg a) =>
-       ToTable (TC s t (Data (v2 :> v1 :> Nil) a)) where
+   (DispStorage (v2 :> v1 :> Nil), SV.FromList v1, SV.FromList v2) =>
+       ToTable (v2 :> v1 :> Nil) where
    toTable _os (ti,xss) =
-      [Table {
+      Table {
          tableTitle = ti ++ "   " ++ sigDisp xss ++ tdisp xss ++ udisp xss,
          tableFormat = autoFormat td,
          tableData = td,
          tableSubTitle = ""
-      }]
+      }
      where td = TableData {
-                   tableBody = fmap (fmap (toDoc id . f) ) (toCells xss),
+                   tableBody = fmap (fmap (toDoc id . f) ) (readNested2 toCells xss),
                    titleRow = [],
                    titleCols = [],
                    endCols = []
