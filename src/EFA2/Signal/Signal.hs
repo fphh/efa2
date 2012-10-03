@@ -122,24 +122,24 @@ type instance Arith TestRow Scalar = TestRow
 
 
 zipWith ::
-   (D.ZipWith c1 c2, D.Storage c1 d1, D.Storage c2 d2, D.Storage (Zip c1 c2) d3) =>
+   (D.ZipWith c, D.Storage c d1, D.Storage c d2, D.Storage c d3) =>
    (d1 -> d2 -> d3) ->
-   TC s1 typ1 (Data c1 d1) ->
-   TC s2 typ2 (Data c2 d2) ->
-   TC (Arith s1 s2) typ3 (Data (Zip c1 c2) d3)
+   TC s1 typ1 (Data c d1) ->
+   TC s2 typ2 (Data c d2) ->
+   TC (Arith s1 s2) typ3 (Data c d3)
 zipWith f (TC da1) (TC da2) =
    TC $ D.zipWith f da1 da2
 
 ----------------------------------------------------------------
 -- Getyptes ZipWith
 tzipWith ::
-   (D.ZipWith c1 c2, D.Storage c1 d1, D.Storage c2 d2, D.Storage (Zip c1 c2) d3) =>
+   (D.ZipWith c, D.Storage c d1, D.Storage c d2, D.Storage c d3) =>
    (TC Sample typ1 (Data Nil d1) ->
     TC Sample typ2 (Data Nil d2) ->
     TC Sample typ3 (Data Nil d3)) ->
-   TC s1 typ1 (Data c1 d1) ->
-   TC s2 typ2 (Data c2 d2) ->
-   TC (Arith s1 s2) typ3 (Data (Zip c1 c2) d3)
+   TC s1 typ1 (Data c d1) ->
+   TC s2 typ2 (Data c d2) ->
+   TC (Arith s1 s2) typ3 (Data c d3)
 tzipWith f xs ys = zipWith g xs ys
    where g x y = fromSample $ f (toSample x) (toSample y)
 
@@ -168,35 +168,31 @@ crossWith f (TC da1) (TC da2) = TC $ D.crossWith f da1 da2
 -- Normal Arithmetics - based on zip
 
 (.*) ::
-   (TProd t1 t2 t3, D.ZipWith c1 c2,
-    D.Storage c1 a1, D.Storage c2 a2, D.Storage (Zip c1 c2) a1, BProd a1 a2) =>
-   TC s1 t1 (Data c1 a1) ->
-   TC s2 t2 (Data c2 a2) ->
-   TC (Arith s1 s2) t3 (Data (Zip c1 c2) a1)
+   (TProd t1 t2 t3, D.ZipWith c, D.Storage c a1, D.Storage c a2, BProd a1 a2) =>
+   TC s1 t1 (Data c a1) ->
+   TC s2 t2 (Data c a2) ->
+   TC (Arith s1 s2) t3 (Data c a1)
 (.*) x y = zipWith (..*) x y
 
 (./) ::
-   (TProd t1 t2 t3, D.ZipWith c1 c2,
-    D.Storage c1 a1, D.Storage c2 a2, D.Storage (Zip c1 c2) a1, BProd a1 a2) =>
-   TC s1 t3 (Data c1 a1) ->
-   TC s2 t2 (Data c2 a2) ->
-   TC (Arith s1 s2) t1 (Data (Zip c1 c2) a1)
+   (TProd t1 t2 t3, D.ZipWith c, D.Storage c a1, D.Storage c a2, BProd a1 a2) =>
+   TC s1 t3 (Data c a1) ->
+   TC s2 t2 (Data c a2) ->
+   TC (Arith s1 s2) t1 (Data c a1)
 (./) x y = zipWith (../) x y
 
 (.+) ::
-   (TSum t1 t2 t3, D.ZipWith c1 c2,
-    D.Storage c1 a, D.Storage c2 a, D.Storage (Zip c1 c2) a, BSum a) =>
-   TC s1 t1 (Data c1 a) ->
-   TC s2 t2 (Data c2 a) ->
-   TC (Arith s1 s2) t3 (Data (Zip c1 c2) a)
+   (TSum t1 t2 t3, D.ZipWith c, D.Storage c a, BSum a) =>
+   TC s1 t1 (Data c a) ->
+   TC s2 t2 (Data c a) ->
+   TC (Arith s1 s2) t3 (Data c a)
 (.+) x y = zipWith (..+) x y
 
 (.-) ::
-   (TSum t1 t2 t3, D.ZipWith c1 c2,
-    D.Storage c1 a, D.Storage c2 a, D.Storage (Zip c1 c2) a, BSum a) =>
-   TC s1 t3 (Data c1 a) ->
-   TC s2 t2 (Data c2 a) ->
-   TC (Arith s1 s2) t1 (Data (Zip c1 c2) a)
+   (TSum t1 t2 t3, D.ZipWith c, D.Storage c a, BSum a) =>
+   TC s1 t3 (Data c a) ->
+   TC s2 t2 (Data c a) ->
+   TC (Arith s1 s2) t1 (Data c a)
 (.-) x y = zipWith (..-) x y
 
 
@@ -505,8 +501,7 @@ toSigList (TC (Data (D2 x))) = map vec2Sig vecList
 -- Zip
 
 zip ::
-   (c ~ Zip c c, D.ZipWith c c,
-    D.Storage c d1, D.Storage c d2, D.Storage c (d1, d2)) =>
+   (D.ZipWith c, D.Storage c d1, D.Storage c d2, D.Storage c (d1, d2)) =>
    TC s typ (Data c d1) ->
    TC s typ (Data c d2) ->
    TC (Arith s s) typ (Data c (d1,d2))
@@ -531,13 +526,12 @@ tmap f xs = changeType $ map (fromSample . f . toSample) xs
 -- DeltaMap
 
 deltaMap, deltaMapReverse ::
-   (SV.Singleton v2, SV.Storage v2 (Apply v1 d1),
-    v1 ~ Zip v1 v1, D.ZipWith (v2 :> v1) (v2 :> v1),
+   (SV.Singleton v2, SV.Storage v2 (Apply v1 d1), D.ZipWith (v2 :> v1),
     D.Storage (v2 :> v1) d1, D.Storage (v2 :> v1) d2) =>
    (d1 -> d1 -> d2) ->
    TC Signal typ (Data (v2 :> v1) d1) ->
    TC FSignal typ (Data (v2 :> v1) d2)
-deltaMap f x = changeSignalType $ zipWith f  x (tail x)
+deltaMap f x = changeSignalType $ zipWith f x (tail x)
 deltaMapReverse f x = changeSignalType $ zipWith f (tail x) x
 
 {-
@@ -777,7 +771,7 @@ instance (SV.Walker v) => SigSum FSignal (v :> Nil) where
 
 deltaSig ::
     (z ~ Apply v1 a, SV.Zipper v2, SV.Walker v2, SV.Singleton v2, SV.Storage v2 z,
-     v1 ~ Zip v1 v1, D.ZipWith v1 v1, D.Storage v1 a, BSum a,
+     D.ZipWith v1, D.Storage v1 a, BSum a,
      DSucc delta1 delta2) =>
     TC Signal (Typ delta1 t1 p1) (Data (v2 :> v1) a) ->
     TC FSignal (Typ delta2 t1 p1) (Data (v2 :> v1) a)
@@ -785,7 +779,7 @@ deltaSig x = changeDelta $ deltaMapReverse (..-) x
 
 avSig ::
     (z ~ Apply v1 a, SV.Zipper v2, SV.Walker v2, SV.Singleton v2, SV.Storage v2 z,
-     v1 ~ Zip v1 v1, D.ZipWith v1 v1, D.Storage v1 a, BSum a, BProd a a, Num a) =>
+     D.ZipWith v1, D.Storage v1 a, BSum a, BProd a a, Num a) =>
     TC Signal (Typ delta1 t1 p1) (Data (v2 :> v1) a) ->
     TC FSignal (Typ delta1 t1 p1) (Data (v2 :> v1) a)
 avSig x =

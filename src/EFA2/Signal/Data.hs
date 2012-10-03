@@ -180,31 +180,58 @@ It should hold:
 > map f xs = zipWith (const f) xs xs
 > map f xs = zipWith (const . f) xs xs
 -}
-class (Map c1, Map c2) => ZipWith c1 c2 where
+class (Map c) => ZipWith c where
    zipWith ::
-      (Storage c1 d1, Storage c2 d2, Storage (Zip c1 c2) d3) =>
-      (d1 -> d2 -> d3) -> Data c1 d1 -> Data c2 d2 -> Data (Zip c1 c2) d3
+      (Storage c d1, Storage c d2, Storage c d3) =>
+      (d1 -> d2 -> d3) -> Data c d1 -> Data c d2 -> Data c d3
 
 -- 0d - 0d
-instance ZipWith Nil Nil where
+instance ZipWith Nil where
    zipWith f (Data x) (Data y) = Data $ f x y
 
--- 0d - (n+1)d
-instance (SV.Walker v2, Map v1) => ZipWith Nil (v2 :> v1) where
-   zipWith f (Data x) y = map (f x) y
-
--- (n+1)d - 0d
-instance (SV.Walker v2, Map v1) => ZipWith (v2 :> v1) Nil where
-   zipWith f x (Data y) = map (flip f y) x
-
 -- (n+1)d - (n+1)d
-instance (SV.Walker v2, SV.Zipper v2, ZipWith v0 v1) =>
-      ZipWith (v2 :> v0) (v2 :> v1) where
+instance
+   (SV.Walker v2, SV.Zipper v2, ZipWith v1) =>
+      ZipWith (v2 :> v1) where
    zipWith f xd yd =
       nestedData (
       withNestedData (
       withNestedData (
          SV.zipWith (\xc yc -> getData $ zipWith f (subData xd xc) (subData yd yc))) xd) yd)
+
+
+{- |
+When the structure of @xs@ and @ys@ matches,
+then it should hold:
+
+> zipWith f xs ys = zipWithFill f xs ys
+-}
+class (Map c1, Map c2) => ZipWithFill c1 c2 where
+   zipWithFill ::
+      (Storage c1 d1, Storage c2 d2, Storage (Zip c1 c2) d3) =>
+      (d1 -> d2 -> d3) -> Data c1 d1 -> Data c2 d2 -> Data (Zip c1 c2) d3
+
+-- 0d - 0d
+instance ZipWithFill Nil Nil where
+   zipWithFill f (Data x) (Data y) = Data $ f x y
+
+-- 0d - (n+1)d
+instance (SV.Walker v2, Map v1) => ZipWithFill Nil (v2 :> v1) where
+   zipWithFill f (Data x) y = map (f x) y
+
+-- (n+1)d - 0d
+instance (SV.Walker v2, Map v1) => ZipWithFill (v2 :> v1) Nil where
+   zipWithFill f x (Data y) = map (flip f y) x
+
+-- (n+1)d - (n+1)d
+instance
+   (SV.Walker v2, SV.Zipper v2, ZipWithFill v0 v1) =>
+      ZipWithFill (v2 :> v0) (v2 :> v1) where
+   zipWithFill f xd yd =
+      nestedData (
+      withNestedData (
+      withNestedData (
+         SV.zipWith (\xc yc -> getData $ zipWithFill f (subData xd xc) (subData yd yc))) xd) yd)
 
 
 ----------------------------------------------------------
@@ -250,13 +277,13 @@ instance
    (SV.Zipper v2, SV.Walker v1, SV.Walker v2) =>
       CrossWith (v2 :> Nil) (v2 :> v1 :> Nil) where
    type Cross (v2 :> Nil) (v2 :> v1 :> Nil) = v2 :> v1 :> Nil
-   crossWith = zipWith
+   crossWith = zipWithFill
 
 instance
    (SV.Zipper v2, SV.Walker v1, SV.Walker v2) =>
       CrossWith (v2 :> v1 :> Nil) (v2 :> Nil) where
    type Cross (v2 :> v1 :> Nil) (v2 :> Nil) = v2 :> v1 :> Nil
-   crossWith = zipWith
+   crossWith = zipWithFill
 
 
 ----------------------------------------------------------

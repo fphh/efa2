@@ -5,10 +5,11 @@
 import qualified EFA2.Display.Plot as Plot
 import qualified EFA2.Signal.Signal as S
 import EFA2.Display.DispSignal (sdisp)
+import EFA2.Signal.SignalFill ((.-), (./), (.*))
 import EFA2.Signal.Signal
           (TC, Scalar, Signal, FSignal, FSamp, PFSamp, PSigL, UTFSig, Test1, Test2,
            PSig,TSig, Scal, FFSig,  FSig1,
-           (.-), (.+), (./), (.*), (.++)) -- (&-), (&+), (&/), (&*), (&++))
+           (.++)) -- (&-), (&+), (&/), (&*), (&++))
 
 import EFA2.Signal.Typ (Typ, A, D, P, N, T, Tt)
 import EFA2.Signal.Data (UVec)

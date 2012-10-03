@@ -24,10 +24,11 @@ import EFA2.Display.DrawGraph (drawTopology)
 import qualified EFA2.Signal.Signal as S
 import EFA2.Signal.Sequence (makeSequence)
 import EFA2.Signal.SequenceData (PPosIdx(..), PowerRecord(..))
+import EFA2.Signal.SignalFill ((.-), (.+), (./))
 import EFA2.Signal.Signal
           (TC, Scalar, FSamp, PFSamp, PSigL, UTFSig, Test1, Test2,
            toSigList, toScalar, makeDelta, makeAbsolute,
-           (.-), (.+), (./), (.++))
+           (.++))
 import EFA2.Signal.Data (Data, Nil)
 import EFA2.Signal.Typ (Typ, A, Tt, Y, P, N, F)
 
