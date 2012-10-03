@@ -1,7 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -13,7 +12,7 @@ import EFA2.Topology.TopologyData (FlowTopology)
 import qualified EFA2.Signal.Signal as S
 import qualified EFA2.Signal.Data as D
 import qualified EFA2.Signal.Vector as V
-import EFA2.Display.DispBase (DispStorage)
+import EFA2.Display.DispBase (DispStorage1)
 import EFA2.Signal.Signal
           (TC, Signal, SignalIdx, DTVal, FVal, TSig, DTFSig, FFSig, UTSigL)
 import EFA2.Signal.Typ (Typ, A, P, T, Tt)
@@ -154,8 +153,7 @@ instance ToTable Record where
 
 
 instance
-   (V.Walker v, V.Singleton v, V.FromList v, V.Storage v a,
-    DispStorage (v :> Nil),
+   (V.Walker v, V.Singleton v, V.FromList v, V.Storage v a, DispStorage1 v,
     Ord a, Fractional a, PrintfArg a) =>
    ToTable (PowerRecord v a) where
    toTable os (ti, PowerRecord time sigs) =

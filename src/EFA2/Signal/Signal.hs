@@ -8,9 +8,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE EmptyDataDecls #-}
 
--- needed for DispStorage constraint of ToTable
-{-# LANGUAGE UndecidableInstances #-}
-
 module EFA2.Signal.Signal (module EFA2.Signal.Signal) where
 
 import qualified EFA2.Signal.Data as D
@@ -20,7 +17,10 @@ import EFA2.Signal.Data (Data(Data), (:>), Nil, Zip, Apply, List, List2, NestedL
 import EFA2.Signal.Base (BSum(..), BProd(..), DArith0(..), Val, ZeroCrossing)
 import EFA2.Signal.Typ
 import EFA2.Display.Report (Table(..), TableData(..), ROpt(RAll), toDoc, autoFormat)
-import EFA2.Display.DispBase (UnitScale(..), DisplayFormat(..), DispStorage(..), getUnitScale, dispLength)
+import EFA2.Display.DispBase
+          (UnitScale(..), DisplayFormat(..),
+           DispStorage(..), DispStorage1(..), DispStorage2(..),
+           getUnitScale, dispLength)
 import EFA2.Display.DispTyp (TDisp, getDisplayUnit)
 import qualified EFA2.Display.Report as Report
 import qualified EFA2.Display.DispTyp as Typ
@@ -996,7 +996,7 @@ class DispStorage c => ToTable c where
       Report.ROpts -> (String, TC s t (Data c a)) -> Table
 
 instance
-   (DispStorage (v :> Nil), SV.FromList v, SV.Singleton v) =>
+   (DispStorage1 v, SV.FromList v, SV.Singleton v) =>
        ToTable (v :> Nil) where
    toTable os (ti,x) =
       Table {
@@ -1018,7 +1018,8 @@ instance
                 else [vdisp (minimum x) ++ " - " ++ vdisp (maximum y)]
 
 instance
-   (DispStorage (v2 :> v1 :> Nil), SV.FromList v1, SV.FromList v2) =>
+   (DispStorage2 v1, StorageCollection v1 ~ v2,
+    SV.FromList v1, SV.FromList v2) =>
        ToTable (v2 :> v1 :> Nil) where
    toTable _os (ti,xss) =
       Table {
