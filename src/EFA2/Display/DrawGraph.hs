@@ -17,6 +17,7 @@ import Data.GraphViz.Attributes.Complete
 
 import Control.Concurrent
 import Control.Applicative
+import Control.Monad ((>=>))
 
 import Text.Printf
 
@@ -506,5 +507,4 @@ wait :: Async a -> IO a
 wait (Async m) = readMVar m
 
 drawAll :: [IO a] -> IO ()
-drawAll ds = mapM async ds >>= mapM wait >> return ()
-
+drawAll = mapM_ (async >=> wait)
