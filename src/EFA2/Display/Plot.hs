@@ -333,8 +333,7 @@ clearCurves = do
 
 saveCurves :: String -> IO ()
 saveCurves ti = do
-  system ("mkdir gnuplot")
-  system ("mkdir gnuplot/"++ti)
+  system ("mkdir -p gnuplot/"++ti)
   system ("mv curve.gp gnuplot/" ++ ti)
   system ("mv curve*.csv gnuplot/" ++ ti)
   return ()
