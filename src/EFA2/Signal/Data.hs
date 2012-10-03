@@ -174,7 +174,13 @@ type instance Zip (v2 :> v1) Nil = v2 :> v1
 type instance Zip (v :> v1) (v :> v2) = v :> Zip v1 v2
 
 
-class ZipWith c1 c2 where
+{- |
+It should hold:
+
+> map f xs = zipWith (const f) xs xs
+> map f xs = zipWith (const . f) xs xs
+-}
+class (Map c1, Map c2) => ZipWith c1 c2 where
    zipWith ::
       (Storage c1 d1, Storage c2 d2, Storage (Zip c1 c2) d3) =>
       (d1 -> d2 -> d3) -> Data c1 d1 -> Data c2 d2 -> Data (Zip c1 c2) d3
@@ -192,7 +198,7 @@ instance (SV.Walker v2, Map v1) => ZipWith (v2 :> v1) Nil where
    zipWith f x (Data y) = map (flip f y) x
 
 -- (n+1)d - (n+1)d
-instance (SV.Zipper v2, ZipWith v0 v1) =>
+instance (SV.Walker v2, SV.Zipper v2, ZipWith v0 v1) =>
       ZipWith (v2 :> v0) (v2 :> v1) where
    zipWith f xd yd =
       nestedData (
@@ -241,13 +247,13 @@ instance
    crossWith = tensorProduct
 
 instance
-   (SV.Zipper v2, SV.Walker v1) =>
+   (SV.Zipper v2, SV.Walker v1, SV.Walker v2) =>
       CrossWith (v2 :> Nil) (v2 :> v1 :> Nil) where
    type Cross (v2 :> Nil) (v2 :> v1 :> Nil) = v2 :> v1 :> Nil
    crossWith = zipWith
 
 instance
-   (SV.Zipper v2, SV.Walker v1) =>
+   (SV.Zipper v2, SV.Walker v1, SV.Walker v2) =>
       CrossWith (v2 :> v1 :> Nil) (v2 :> Nil) where
    type Cross (v2 :> v1 :> Nil) (v2 :> Nil) = v2 :> v1 :> Nil
    crossWith = zipWith

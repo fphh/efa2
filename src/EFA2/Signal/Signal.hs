@@ -776,7 +776,7 @@ instance (SV.Walker v) => SigSum FSignal (v :> Nil) where
 -- Delta and 2Point Average of Signal
 
 deltaSig ::
-    (z ~ Apply v1 a, SV.Zipper v2, SV.Singleton v2, SV.Storage v2 z,
+    (z ~ Apply v1 a, SV.Zipper v2, SV.Walker v2, SV.Singleton v2, SV.Storage v2 z,
      v1 ~ Zip v1 v1, D.ZipWith v1 v1, D.Storage v1 a, BSum a,
      DSucc delta1 delta2) =>
     TC Signal (Typ delta1 t1 p1) (Data (v2 :> v1) a) ->
@@ -784,7 +784,7 @@ deltaSig ::
 deltaSig x = changeDelta $ deltaMapReverse (..-) x
 
 avSig ::
-    (z ~ Apply v1 a, SV.Zipper v2, SV.Singleton v2, SV.Storage v2 z,
+    (z ~ Apply v1 a, SV.Zipper v2, SV.Walker v2, SV.Singleton v2, SV.Storage v2 z,
      v1 ~ Zip v1 v1, D.ZipWith v1 v1, D.Storage v1 a, BSum a, BProd a a, Num a) =>
     TC Signal (Typ delta1 t1 p1) (Data (v2 :> v1) a) ->
     TC FSignal (Typ delta1 t1 p1) (Data (v2 :> v1) a)

@@ -112,9 +112,8 @@ showInTerms ts = L.intercalate "\n" $ map showInTerm ts
 type Signal s c a = S.TC s (Typ UT UT UT) (D.Data c a)
 
 interpretRhs ::
-   (Show (D.Apply c2 Val), D.ZipWith c2 c2, D.Map c2,
-    D.Storage c2 Val, S.Const s2 c2, S.Arith s2 s2 ~ s2,
-    D.Zip c2 c2 ~ c2) =>
+   (Show (D.Apply c2 Val), D.ZipWith c2 c2, D.Zip c2 c2 ~ c2,
+    D.Storage c2 Val, S.Const s2 c2, S.Arith s2 s2 ~ s2) =>
    Int ->
    Envs (Signal s2 c2 Val) ->
    InTerm (Signal s2 c2 Val) ->
@@ -151,9 +150,8 @@ interpretRhs len envs term = interpretRhs' term
         interpretRhs' t = error ("interpretRhs': " ++ show t)
 
 insert ::
-   (Ord k, Show (D.Apply c2 Val), D.ZipWith c2 c2, D.Map c2,
-    D.Storage c2 Val, S.Const s2 c2, S.Arith s2 s2 ~ s2,
-    D.Zip c2 c2 ~ c2) =>
+   (Ord k, Show (D.Apply c2 Val), D.ZipWith c2 c2, D.Zip c2 c2 ~ c2,
+    D.Storage c2 Val, S.Const s2 c2, S.Arith s2 s2 ~ s2) =>
    Int ->
    k ->
    Envs (Signal s2 c2 Val) ->
@@ -164,9 +162,8 @@ insert len idx envs rhs m = M.insert idx (interpretRhs len envs rhs) m
 
 
 interpretEq ::
-   (Show (D.Apply c2 Val), D.ZipWith c2 c2, D.Map c2,
-    D.Storage c2 Val, S.Const s2 c2, S.Arith s2 s2 ~ s2,
-    D.Zip c2 c2 ~ c2) =>
+   (Show (D.Apply c2 Val), D.ZipWith c2 c2, D.Zip c2 c2 ~ c2,
+    D.Storage c2 Val, S.Const s2 c2, S.Arith s2 s2 ~ s2) =>
    Int ->
    Envs (Signal s2 c2 Val) ->
    InEquation (Signal s2 c2 Val) ->
@@ -198,9 +195,8 @@ interpretEq len envs eq =
 
 
 interpretFromScratch ::
-   (Show (D.Apply c2 Val), D.ZipWith c2 c2, D.Map c2,
-    D.Storage c2 Val, S.Const s2 c2, S.Arith s2 s2 ~ s2,
-    D.Zip c2 c2 ~ c2) =>
+   (Show (D.Apply c2 Val), D.ZipWith c2 c2, D.Zip c2 c2 ~ c2,
+    D.Storage c2 Val, S.Const s2 c2, S.Arith s2 s2 ~ s2) =>
    RecordNumber ->
    Int ->
    [InEquation (Signal s2 c2 Val)] ->
@@ -209,9 +205,8 @@ interpretFromScratch rec len ts = (L.foldl' (interpretEq len) emptyEnv ts) { rec
 
 
 interpretWithEnv ::
-   (Show (D.Apply c2 Val), D.ZipWith c2 c2, D.Map c2,
-    D.Storage c2 Val, S.Const s2 c2, S.Arith s2 s2 ~ s2,
-    D.Zip c2 c2 ~ c2) =>
+   (Show (D.Apply c2 Val), D.ZipWith c2 c2, D.Zip c2 c2 ~ c2,
+    D.Storage c2 Val, S.Const s2 c2, S.Arith s2 s2 ~ s2) =>
    Int ->
    Envs (Signal s2 c2 Val) ->
    InTerm (Signal s2 c2 Val) ->
