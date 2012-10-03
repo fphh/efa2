@@ -131,7 +131,6 @@ class Walker vec where
    map :: (Storage vec a, Storage vec b) => (a -> b) -> vec a -> vec b
    foldr :: (Storage vec a) => (a -> b -> b) -> b -> vec a -> b
    foldl :: (Storage vec a) => (b -> a -> b) -> b -> vec a -> b
-   zip :: (Storage vec a, Storage vec b, Storage vec (a,b)) => vec a -> vec b -> vec (a, b)
    {- |
    For fully defined values it holds
    @equalBy f xs ys  ==  (and (zipWith f xs ys) && length xs == length ys)@
@@ -143,7 +142,6 @@ instance Walker [] where
    map = L.map
    foldr = L.foldr
    foldl = L.foldl'
-   zip = L.zip
    equalBy f =
       let go (x:xs) (y:ys) = f x y && go xs ys
           go [] [] = True
@@ -154,7 +152,6 @@ instance Walker UV.Vector where
    map f xs = writeUnbox (readUnbox (UV.map f) xs)
    foldr f a = readUnbox (UV.foldr f a)
    foldl f a = readUnbox (UV.foldl' f a)
-   zip xs ys = writeUnbox (readUnbox (readUnbox UV.zip xs) ys)
    equalBy f =
       readUnbox (\xs ->
       readUnbox (\ys ->
@@ -164,7 +161,6 @@ instance Walker V.Vector where
    map = V.map
    foldr = V.foldr
    foldl = V.foldl'
-   zip = V.zip
    equalBy f xs ys =
       V.length xs == V.length ys  &&  V.and (V.zipWith f xs ys)
 
@@ -176,6 +172,12 @@ class Zipper vec where
    zipWith ::
       (Storage vec a, Storage vec b, Storage vec c) =>
       (a -> b -> c) -> vec a -> vec b -> vec c
+
+zip ::
+   (Zipper vec, Storage vec a, Storage vec b, Storage vec (a,b)) =>
+   vec a -> vec b -> vec (a, b)
+zip = zipWith (,)
+
 
 instance Zipper [] where
    zipWith f x y = L.zipWith f x y -- if V.lenCheck x y then zipWith f x y else error "Error in V.lenCheck List -- unequal Length"
