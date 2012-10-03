@@ -6,7 +6,8 @@ import EFA2.Solver.IsVar (isGiven)
 
 import qualified Data.Set as S
 import qualified Data.List as L
-import qualified Data.List.HT as HTL
+import qualified Data.NonEmpty as NonEmpty
+import qualified Data.NonEmpty.Mixed as NonEmptyM
 
 import EFA2.Utils.Utils (pairs)
 import Data.Eq.HT (equating)
@@ -27,7 +28,9 @@ filterEquations :: (EqTerm -> Bool) -> [EqTerm] -> [Equation] -> [Equation]
 filterEquations isVar _vars ts = res
   where vsets = tail $ L.scanl (dirFoldFunc isVar) S.empty ts
         notGiven = filter (not . isGiven . fst) (zip ts vsets)
-        res = map (fst . head) $ HTL.groupBy (equating snd) notGiven
+        res =
+           map (fst . NonEmpty.head) $
+           NonEmptyM.groupBy (equating snd) notGiven
 
 directEquations :: (EqTerm -> Bool) -> [Equation] -> [Equation]
 directEquations isVar ts = L.filter isGiven ts ++ res
