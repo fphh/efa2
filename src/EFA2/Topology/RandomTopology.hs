@@ -19,8 +19,6 @@ import EFA2.Utils.Graph (mapGraphLabels)
 
 import Debug.Trace
 
-rand :: (RandomGen g, Random a) => (a, a) -> g -> a
-rand range gen = head $ randomRs range gen
 
 seed :: Int
 seed = 3233333
@@ -29,7 +27,7 @@ ranges :: Int -> [(Int, Int)]
 ranges n = zip (repeat 0) (take n $ iterate ((negate 1) +) (n-1))
 
 indices :: Int -> Int -> [Int]
-indices seed n = map (flip rand (mkStdGen seed)) (ranges n)
+indices seed n = map (flip randomR (mkStdGen seed)) (ranges n)
 
 shuffle :: Int -> Int -> [Int]
 shuffle seed n = fst $ L.foldl' f ([], ns) idx
