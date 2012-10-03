@@ -19,7 +19,7 @@ import EFA2.Signal.Typ
 import EFA2.Display.Report (Table(..), TableData(..), ROpt(RAll), toDoc, autoFormat)
 import EFA2.Display.DispBase
           (UnitScale(..), DisplayFormat(..),
-           DispStorage(..), DispStorage1(..), DispStorage2(..),
+           DispStorage(..), DispStorage1(..),
            getUnitScale, dispLength)
 import EFA2.Display.DispTyp (TDisp, getDisplayUnit)
 import qualified EFA2.Display.Report as Report
@@ -1018,7 +1018,7 @@ instance
                 else [vdisp (minimum x) ++ " - " ++ vdisp (maximum y)]
 
 instance
-   (DispStorage2 v1, StorageCollection v1 ~ v2,
+   (DispStorage1 v1, StorageCollection v1 ~ v2,
     SV.FromList v1, SV.FromList v2) =>
        ToTable (v2 :> v1 :> Nil) where
    toTable _os (ti,xss) =

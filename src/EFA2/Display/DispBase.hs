@@ -4,7 +4,7 @@
 {-# LANGUAGE KindSignatures #-}
 module EFA2.Display.DispBase (module EFA2.Display.DispBase) where
 
-import EFA2.Signal.Data (Data, (:>), Nil)
+import EFA2.Signal.Data (Data, (:>), Nil, subData)
 import EFA2.Signal.Base (Sign)
 -- import EFA2.Display.DispTyp
 
@@ -99,36 +99,23 @@ instance DispStorage1 v => DispStorage (v :> Nil) where
    dispStorage s = "1" ++ dispStorage1 s
 
 instance
-   (DispStorage2 v1, StorageCollection v1 ~ v2) =>
+   (DispStorage1 v1, StorageCollection v1 ~ v2) =>
       DispStorage (v2 :> v1 :> Nil) where
-   dispStorage s = "2" ++ dispStorage2 s
+   dispStorage s = "2" ++ dispStorage1 (subData s (error "DispStorage.subData"))
 
 
 class DispStorage1 v where
+   type StorageCollection v :: * -> *
    dispStorage1 :: Data (v :> Nil) d -> String
 
 instance DispStorage1 [] where
+   type StorageCollection [] = []
    dispStorage1 _ = "L"
 
 instance DispStorage1 UV.Vector where
+   type StorageCollection UV.Vector = V.Vector
    dispStorage1 _ = "U"
 
 instance DispStorage1 V.Vector where
-   dispStorage1 _ = "V"
-
-
-class DispStorage2 v where
-   type StorageCollection v :: * -> *
-   dispStorage2 :: Data (StorageCollection v :> v :> Nil) d -> String
-
-instance DispStorage2 [] where
-   type StorageCollection [] = []
-   dispStorage2 _ = "L"
-
-instance DispStorage2 UV.Vector where
-   type StorageCollection UV.Vector = V.Vector
-   dispStorage2 _ = "U"
-
-instance DispStorage2 V.Vector where
    type StorageCollection V.Vector = V.Vector
-   dispStorage2 _ = "V"
+   dispStorage1 _ = "V"
