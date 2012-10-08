@@ -1,48 +1,37 @@
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
 module Main where
 
-
-import Data.Graph.Inductive
-
 import qualified Data.List as L
-import qualified Data.Set as S
+import qualified Data.Set as Set
 import qualified Data.Map as M
-import Data.Maybe
+import Data.Set (Set)
 
-import System.IO
+import Debug.Trace (trace)
 
-import Debug.Trace
-
-import Text.Printf
+import Text.Printf (printf)
 
 import EFA2.Solver.Equation
-import EFA2.Solver.Horn
-import EFA2.Solver.DirEquation
-import EFA2.Solver.DependencyGraph
-import EFA2.Solver.IsVar
-import EFA2.Solver.EquationOrder
+import EFA2.Solver.EquationOrder (order)
+import EFA2.Solver.IsVar (isStaticVar)
 
 import EFA2.Interpreter.Interpreter
-import EFA2.Interpreter.InTerm
+          (eqToInTerm, interpretFromScratch, showInTerm, interpretWithEnv)
+import EFA2.Interpreter.InTerm (InTerm)
 import EFA2.Interpreter.Env
-import EFA2.Interpreter.Arith
+import EFA2.Interpreter.Arith (Val)
 
-import EFA2.Signal.Signal
+import qualified EFA2.Signal.Signal as S
+import EFA2.Signal.Signal (Sc)
 
-import EFA2.Topology.Topology
-import EFA2.Topology.TopologyData
+import EFA2.Topology.Topology (makeAllEquations)
+import EFA2.Topology.TopologyData (Topology)
 
---import EFA2.Topology.RandomTopology
-
-import EFA2.Utils.Utils
-
-import EFA2.Display.FileSave
-import EFA2.Display.DrawGraph
-
---import EFA2.Example.SymSig
+import EFA2.Display.DrawGraph (drawDeltaTopology, drawTopology, drawAll)
 
 import EFA2.Example.Dreibein
+
 
 symbolic :: Topology -> Envs EqTerm
 symbolic g = mapEqTermEnv (setEqTerms (emptyEnv { dxMap = dx1eq })) res
@@ -63,8 +52,8 @@ symbolic g = mapEqTermEnv (setEqTerms (emptyEnv { dxMap = dx1eq })) res
                            dxMap = dx1eq,
                            dtimeMap = dtimes1eq }
 
-        (envs0', ts0) = makeAllEquations g [envs0]
-        (envs1', ts1) = makeAllEquations g [envs1]
+        ts0 = snd $ makeAllEquations g [envs0]
+        ts1 = snd $ makeAllEquations g [envs1]
 
         ts0o = order ts0
         ts1o = order ts1
@@ -104,7 +93,7 @@ numeric g =  trace ("---------\n" ++ showEqTerms ts1o ++ "\n------\n") res
 
 deltaEnv :: Topology -> Envs Sc
 deltaEnv g = res1 `minusEnv` res0
-  where 
+  where
         envs0 = emptyEnv { recordNumber = SingleRecord 0,
                            powerMap = power0num,
                            dtimeMap = dtimes0num,
@@ -153,8 +142,8 @@ instance MyShow EqTerm where
 instance MyShow a => MyShow [a] where
          myshow xs = "[ " ++ L.intercalate ", " (map myshow xs) ++ " ]"
 
-instance MyShow a => MyShow (S.Set a) where
-         myshow s = myshow $ S.toList s
+instance MyShow a => MyShow (Set a) where
+         myshow s = myshow $ Set.toList s
 
 format :: (MyShow a, MyShow b) => [(a, b)] -> String
 format xs = L.intercalate "\n" (map f xs)
@@ -179,8 +168,8 @@ main = do
       detailsSym = M.map additiveTerms dpsymEq
 
       details :: M.Map DPowerIdx [Val]
-      details = M.map (map (fromScalar . interpretWithEnv 1 num . eqToInTerm emptyEnv)) detailsSym
-      
+      details = M.map (map (S.fromScalar . interpretWithEnv 1 num . eqToInTerm emptyEnv)) detailsSym
+
       sumdetails = M.map sum details
 
       control = dpowerMap (deltaEnv g)

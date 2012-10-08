@@ -644,15 +644,19 @@ type instance Append Signal Sample = Signal
 type instance Append Sample Signal = Signal
 
 
-class (SV.Singleton v (Apply c d)) => Singleton s1 s2 v c d | s2 -> s1 where
-   singleton :: TC s1 t (Data c d) -> TC s2 t (Data (v :> c) d)
-   singleton (TC x) = TC $ D.singleton x
+type family SingletonSource s
+type instance SingletonSource Signal = Sample
+type instance SingletonSource Sample = Sample
 
-instance (SV.Singleton v1 d) => Singleton Sample Signal v1 Nil d where
+class (SV.Singleton v (Apply c d)) => Singleton s v c d where
+instance (SV.Singleton v1 d)      => Singleton Signal v1 Nil d where
+instance (SV.Singleton v2 (v1 d)) => Singleton Signal v2 (v1 :> Nil) d where
+instance (SV.Singleton v2 (v1 d)) => Singleton Sample v2 (v1 :> Nil) d where
 
-instance (SV.Singleton v2 (v1 d)) => Singleton Sample Signal v2 (v1 :> Nil) d where
-
-instance (SV.Singleton v2 (v1 d)) => Singleton Sample Sample v2 (v1 :> Nil) d where
+singleton ::
+   Singleton s v c d =>
+   TC (SingletonSource s) t (Data c d) -> TC s t (Data (v :> c) d)
+singleton (TC x) = TC $ D.singleton x
 
 
 -- (.++) :: SAppend s1 s2 s3 c1 c2 c3 d =>  (TC s1 typ (c1 d)) -> (TC s2 typ (c2 d)) -> (TC s3 typ (c3 d))

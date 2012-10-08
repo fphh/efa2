@@ -12,6 +12,14 @@ Category:            Engineering
 Build-type:          Simple
 Cabal-version:       >=1.8
 
+Flag buildExamples
+  Description: Build complex examples
+  Default: True
+
+Flag buildDemos
+  Description: Build demonstrations of single library features
+  Default: True
+
 Library
   Build-Depends:
     graphviz ==2999.13.*,
@@ -36,16 +44,12 @@ Library
     EFA2.Utils.Trace
     EFA2.StateAnalysis.StateAnalysis
     EFA2.Signal.Base
-    EFA2.Signal.TH
     EFA2.Signal.SequenceData
-    EFA2.Signal.SignalVersuch
     EFA2.Signal.Typ
     EFA2.Signal.Data
     EFA2.Signal.Vector
     EFA2.Signal.Signal
-    EFA2.Signal.SignalData
     EFA2.Signal.Sequence
-    EFA2.Signal.SignalGeneration
     EFA2.Solver.IsVar
     EFA2.Solver.Equation
     EFA2.Solver.Horn
@@ -92,6 +96,11 @@ Library
     EFA2.Interpreter.InTerm
   Other-Modules:
     EFA2.Solver.EquationTest
+    -- these modules can be compiled, but I think they are unused
+    EFA2.Signal.TH
+    EFA2.Signal.SignalData
+    EFA2.Signal.SignalGeneration
+    EFA2.Signal.SignalVersuch
 
 
 -- sollte man auf Cabal-Test umstellen,
@@ -116,34 +125,80 @@ Executable test-efa
 Executable sequenzflussgraph
   Main-Is: examples/elementary/sequenzflussgraph/Main.hs
   GHC-Options: -Wall
-  Build-Depends:
-    efa2,
-    utility-ht,
-    base
+  If flag(buildExamples)
+    Build-Depends:
+      efa2,
+      utility-ht,
+      base
+  Else
+    Buildable: False
 
 Executable threewaysto
   Main-Is: examples/elementary/threeWaySto_pred/Main_ThreeWay_sto_alt.hs
   GHC-Options: -Wall
-  Build-Depends:
-    efa2,
-    process,
-    containers,
-    base
+  If flag(buildExamples)
+    Build-Depends:
+      efa2,
+      process,
+      containers,
+      base
+  Else
+    Buildable: False
+
+Executable additive_terms
+  Main-Is: examples/elementary/additive_terms/Main.hs
+  GHC-Options: -Wall
+  If flag(buildExamples)
+    Build-Depends:
+      efa2,
+      containers,
+      base
+  Else
+    Buildable: False
+
+Executable vierbein_delta
+  Main-Is: examples/elementary/vierbein_delta/Main.hs
+  GHC-Options: -Wall
+  If flag(buildExamples)
+    Build-Depends:
+      efa2,
+      fgl,
+      containers,
+      base
+  Else
+    Buildable: False
 
 Executable demo-signalcalc
   Main-Is: demo/Signal/Demo_SignalCalc.hs
   GHC-Options: -Wall
-  Build-Depends:
-    efa2,
-    base
+  If flag(buildDemos)
+    Build-Depends:
+      efa2,
+      base
+  Else
+    Buildable: False
 
 Executable demo-sequence
   Main-Is: demo/sliceSignals/Demo_Sequence.hs
   GHC-Options: -Wall
-  Build-Depends:
-    efa2,
-    containers,
-    array >=0.4 && <0.5,
-    gnuplot,
-    utility-ht,
-    base
+  If flag(buildDemos)
+    Build-Depends:
+      efa2,
+      array >=0.4 && <0.5,
+      gnuplot,
+      utility-ht,
+      containers,
+      base
+  Else
+    Buildable: False
+
+Executable demo-vierbein
+  Main-Is: demo/vierbein/Main.hs
+  GHC-Options: -Wall
+  If flag(buildDemos)
+    Build-Depends:
+      efa2,
+      containers,
+      base
+  Else
+    Buildable: False

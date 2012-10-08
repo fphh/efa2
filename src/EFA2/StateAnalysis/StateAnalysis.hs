@@ -1,5 +1,3 @@
-{-# LANGUAGE BangPatterns, TupleSections #-}
-
 module EFA2.StateAnalysis.StateAnalysis where
 
 -- This algorithm is made after reading R. Birds "Making a Century" in Pearls of Functional Algorithm Design.
@@ -22,8 +20,8 @@ import EFA2.Utils.Utils
 
 -- How should it be orderd to be faster?
 checkNodeType :: NodeType -> [ELabel] -> [ELabel] -> Bool
-checkNodeType Crossing xsuc xpre = 
-  (length xsuc > 0 && length xpre > 0) || all isInactiveEdge (xsuc ++ xpre)
+checkNodeType Crossing xsuc xpre =
+   (not (null xsuc) && not (null xpre)) || all isInactiveEdge (xsuc ++ xpre)
 checkNodeType NoRestriction _ _ = True
 checkNodeType Source _ [] = True
 checkNodeType AlwaysSource (_:_) [] = True
@@ -36,9 +34,8 @@ checkNodeType _ _ _ = False
 
 -- Because of extend, we only do have to deal with WithDir edges here!
 checkNode :: GraphInfo -> Node -> Topology -> Bool
-checkNode gf x topo
-  | nadj == length xsuc + length xpre = res
-  | otherwise = True
+checkNode gf x topo =
+    (nadj /= length xsuc + length xpre) || res
   where res = checkNodeType nty xsuc' xpre'
 
         xsuc = lsuc topo x

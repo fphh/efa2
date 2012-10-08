@@ -13,7 +13,9 @@ import qualified Data.List as L
 import qualified Data.List.HT as HTL
 
 
-dependencyGraph :: (S.Set EqTerm -> S.Set EqTerm -> Bool) -> [S.Set EqTerm] -> Gr (S.Set EqTerm) ()
+dependencyGraph ::
+   (Ord a, Show a) =>
+   (S.Set a -> S.Set a -> Bool) -> [S.Set a] -> Gr (S.Set a) ()
 dependencyGraph p vsets = g
   where xs = HTL.removeEach vsets
         ys = concatMap (uncurry (mkArcs p)) xs
@@ -21,7 +23,9 @@ dependencyGraph p vsets = g
         es = unique $ map (\(x, y) -> (m M.! x, m M.! y, ())) ys
         g = mkGraph (map swap $ M.toList m) es
 
-mkArcs :: (Ord a, Show a) => (S.Set a -> S.Set a -> Bool) -> S.Set a -> [S.Set a] -> [(S.Set a, S.Set a)]
+mkArcs ::
+   (Ord a, Show a) =>
+   (S.Set a -> S.Set a -> Bool) -> S.Set a -> [S.Set a] -> [(S.Set a, S.Set a)]
 mkArcs p s ss = mapMaybe g ss
   where g t | p s t = Just (s, t)
         g _ = Nothing
@@ -33,7 +37,7 @@ makeDependencyGraph isVar p ts = deq
         dg = dependencyGraph p vsets
         deq = nmap (mt M.!) dg
 
-addToDependencyGraph :: [EqTerm] -> Gr EqTerm () -> Gr EqTerm ()
+addToDependencyGraph :: (Ord a, Show a) => [a] -> Gr a () -> Gr a ()
 addToDependencyGraph ts dpg = L.foldl' f dpg ns
   where xs = newNodes (length ts) dpg
         ns = zip xs ts
