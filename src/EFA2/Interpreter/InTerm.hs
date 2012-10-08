@@ -6,7 +6,6 @@ module EFA2.Interpreter.InTerm where
 
 import EFA2.Interpreter.Env
 import qualified EFA2.Signal.Base as B
-import EFA2.Signal.Base (Val)
 
 import Data.Maybe (mapMaybe)
 
@@ -26,7 +25,7 @@ data InTerm a = EIdx EnergyIdx
               | DTIdx DTimeIdx
               | VIdx VarIdx
               | SIdx StorageIdx
-              | InConst Val
+              | InConst Rational
               | InGiven a
               | InFunc (a -> a)
 

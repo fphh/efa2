@@ -3,6 +3,9 @@ module EFA2.Solver.Equation where
 import Control.Monad (liftM2)
 import Data.Maybe (mapMaybe)
 
+import qualified Data.Ratio as Ratio
+import Data.Ratio (Ratio, (%))
+
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Stream as Stream
 import qualified Data.Set as S
@@ -15,7 +18,6 @@ import Text.Printf (printf)
 
 
 import EFA2.Interpreter.Env
-import EFA2.Interpreter.Arith (Val)
 
 -- TOTHINK: Die Algorithmen aus dem Verzeichnis Solver sollten
 -- über den Datentyp EqTerm parametrisierbar sein. Die Abhängigkeitsanalyse
@@ -27,7 +29,7 @@ data Equation =
           | Given EqTerm deriving (Show, Eq, Ord)
 
 data EqTerm =
-            Const Val -- Double
+            Const Rational
           | Energy EnergyIdx
           | DEnergy DEnergyIdx
           | Power PowerIdx
@@ -101,7 +103,13 @@ instance MkVarC StorageIdx where
          mkVar = Store
 
 instance MkVarC Double where
-         mkVar = Const
+         mkVar = Const . realToFrac
+
+instance MkVarC Integer where
+         mkVar = Const . fromInteger
+
+instance Integral int => MkVarC (Ratio int) where
+         mkVar x = Const $ toInteger (Ratio.numerator x) % toInteger (Ratio.denominator x)
 
 instance MkVarC EqTerm where
          mkVar = id
@@ -155,7 +163,7 @@ showEquations ts = L.intercalate "\n" $ map showEquation ts
 newtype LatexString = LatexString { unLatexString :: String } deriving (Show, Eq)
 
 toLatexString' :: EqTerm -> String
-toLatexString' (Const x) = printf "%.6f   " x
+toLatexString' (Const x) = printf "%.6f   " (fromRational x :: Double)
 
 toLatexString' (Energy (EnergyIdx s r x y)) = "E_{" ++ show s ++ "." ++ show r ++ "." ++ show x ++ "." ++ show y ++ "}"
 toLatexString' (DEnergy (DEnergyIdx s r x y)) = "\\Delta E_{" ++ show s ++ "." ++ show r ++ "." ++ show x ++ "." ++ show y ++ "}"

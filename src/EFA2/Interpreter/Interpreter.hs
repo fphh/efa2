@@ -7,9 +7,9 @@ import qualified Data.List as L
 
 import qualified EFA2.Signal.Signal as S
 import qualified EFA2.Signal.Data as D
+import qualified EFA2.Signal.Base as Base
 import EFA2.Signal.Signal (toConst, (.+), (.*))
 import EFA2.Signal.Typ (Typ, UT)
-import EFA2.Signal.Base (Val)
 
 import EFA2.Solver.Equation (Equation(Given, (:=)), EqTerm(..))
 import EFA2.Interpreter.InTerm (InTerm(..), InEquation(..))
@@ -104,17 +104,18 @@ showInTerms ts = L.intercalate "\n" $ map showInTerm ts
 type Signal s c a = S.TC s (Typ UT UT UT) (D.Data c a)
 
 interpretRhs ::
-   (Show (D.Apply c2 Val), D.ZipWith c2,
-    D.Storage c2 Val, S.Const s2 c2, S.Arith s2 s2 ~ s2) =>
+   (Show (D.Apply c2 a), D.ZipWith c2,
+    D.Storage c2 a, S.Const s2 c2, S.Arith s2 s2 ~ s2,
+    Fractional a, Base.DArith0 a, Base.BSum a, Base.BProd a a) =>
    Int ->
-   Envs (Signal s2 c2 Val) ->
-   InTerm (Signal s2 c2 Val) ->
-   Signal s2 c2 Val
+   Envs (Signal s2 c2 a) ->
+   InTerm (Signal s2 c2 a) ->
+   Signal s2 c2 a
 interpretRhs len envs term = interpretRhs' term
   where --interpretRhs' (InConst x) = S.fromVal len [x] -- Wichtig für delta Rechnung?
         --interpretRhs' (InGiven xs) = S.map (:[]) xs
         --interpretRhs' (InConst x) = S.fromVal len x
-        interpretRhs' (InConst x) = toConst len x
+        interpretRhs' (InConst x) = toConst len $ fromRational x
         --interpretRhs' (InConst x) = toScalar (InConst x)
 
         interpretRhs' (InGiven xs) = xs
@@ -142,24 +143,26 @@ interpretRhs len envs term = interpretRhs' term
         interpretRhs' t = error ("interpretRhs': " ++ show t)
 
 insert ::
-   (Ord k, Show (D.Apply c2 Val), D.ZipWith c2,
-    D.Storage c2 Val, S.Const s2 c2, S.Arith s2 s2 ~ s2) =>
+   (Ord k, Show (D.Apply c2 a), D.ZipWith c2,
+    D.Storage c2 a, S.Const s2 c2, S.Arith s2 s2 ~ s2,
+    Fractional a, Base.DArith0 a, Base.BSum a, Base.BProd a a) =>
    Int ->
    k ->
-   Envs (Signal s2 c2 Val) ->
-   InTerm (Signal s2 c2 Val) ->
-   M.Map k (Signal s2 c2 Val) ->
-   M.Map k (Signal s2 c2 Val)
+   Envs (Signal s2 c2 a) ->
+   InTerm (Signal s2 c2 a) ->
+   M.Map k (Signal s2 c2 a) ->
+   M.Map k (Signal s2 c2 a)
 insert len idx envs rhs m = M.insert idx (interpretRhs len envs rhs) m
 
 
 interpretEq ::
-   (Show (D.Apply c2 Val), D.ZipWith c2,
-    D.Storage c2 Val, S.Const s2 c2, S.Arith s2 s2 ~ s2) =>
+   (Show (D.Apply c2 a), D.ZipWith c2,
+    D.Storage c2 a, S.Const s2 c2, S.Arith s2 s2 ~ s2,
+    Fractional a, Base.DArith0 a, Base.BSum a, Base.BProd a a) =>
    Int ->
-   Envs (Signal s2 c2 Val) ->
-   InEquation (Signal s2 c2 Val) ->
-   Envs (Signal s2 c2 Val)
+   Envs (Signal s2 c2 a) ->
+   InEquation (Signal s2 c2 a) ->
+   Envs (Signal s2 c2 a)
 interpretEq len envs eq =
    case eq of
       (InEqual (EIdx idx) rhs) -> envs { energyMap = insert len idx envs rhs (energyMap envs) }
@@ -187,20 +190,22 @@ interpretEq len envs eq =
 
 
 interpretFromScratch ::
-   (Show (D.Apply c2 Val), D.ZipWith c2,
-    D.Storage c2 Val, S.Const s2 c2, S.Arith s2 s2 ~ s2) =>
+   (Show (D.Apply c2 a), D.ZipWith c2,
+    D.Storage c2 a, S.Const s2 c2, S.Arith s2 s2 ~ s2,
+    Fractional a, Base.DArith0 a, Base.BSum a, Base.BProd a a) =>
    RecordNumber ->
    Int ->
-   [InEquation (Signal s2 c2 Val)] ->
-   Envs (Signal s2 c2 Val)
+   [InEquation (Signal s2 c2 a)] ->
+   Envs (Signal s2 c2 a)
 interpretFromScratch rec len ts = (L.foldl' (interpretEq len) emptyEnv ts) { recordNumber = rec }
 
 
 interpretWithEnv ::
-   (Show (D.Apply c2 Val), D.ZipWith c2,
-    D.Storage c2 Val, S.Const s2 c2, S.Arith s2 s2 ~ s2) =>
+   (Show (D.Apply c2 a), D.ZipWith c2,
+    D.Storage c2 a, S.Const s2 c2, S.Arith s2 s2 ~ s2,
+    Fractional a, Base.DArith0 a, Base.BSum a, Base.BProd a a) =>
    Int ->
-   Envs (Signal s2 c2 Val) ->
-   InTerm (Signal s2 c2 Val) ->
-   Signal s2 c2 Val
+   Envs (Signal s2 c2 a) ->
+   InTerm (Signal s2 c2 a) ->
+   Signal s2 c2 a
 interpretWithEnv len envs t = interpretRhs len envs t
