@@ -1,9 +1,9 @@
 module EFA2.Solver.Equation where
 
-import Control.Exception
-
+import Control.Monad (liftM2)
 import Data.Maybe (mapMaybe)
 
+import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Set as S
 import qualified Data.List as L
 import qualified Data.Map as M
@@ -109,11 +109,11 @@ instance MkVarC Double where
 instance MkVarC EqTerm where
          mkVar = id
 
-add :: [EqTerm] -> EqTerm
-add ts = assert (length ts > 0) (L.foldl1' (:+) ts)
+add :: NonEmpty.T [] EqTerm -> EqTerm
+add = NonEmpty.foldl1 (:+)
 
-mult :: [EqTerm] -> EqTerm
-mult = L.foldl1' (:*)
+mult :: NonEmpty.T [] EqTerm -> EqTerm
+mult = NonEmpty.foldl1 (:*)
 
 showEqTerm :: EqTerm -> String
 showEqTerm (Const x) = show x
@@ -343,7 +343,7 @@ transformEq unknown t =
 
 
 pushMult :: EqTerm -> EqTerm
-pushMult t = add (pushMult' t)
+pushMult t = add $ pushMult' t
 
 {-
 pushMult :: EqTerm -> EqTerm
@@ -353,12 +353,12 @@ pushMult t =
       _       ->  add (pushMult' t)
 -}
 
-pushMult' :: EqTerm -> [EqTerm]
-pushMult' (Minus u) = map Minus (pushMult' u)
-pushMult' (Recip u) = [Recip (L.foldl1' (:+) $ pushMult' u)]
-pushMult' (u :+ v) = pushMult' u ++ pushMult' v
-pushMult' (u :* v) = map mult (sequence [pushMult' u, pushMult' v])
-pushMult' t = [t]
+pushMult' :: EqTerm -> NonEmpty.T [] EqTerm
+pushMult' (Minus u) = fmap Minus (pushMult' u)
+pushMult' (Recip u) = NonEmpty.singleton $ Recip $ pushMult u
+pushMult' (u :+ v) = NonEmpty.append (pushMult' u) (pushMult' v)
+pushMult' (u :* v) = liftM2 (:*) (pushMult' u) (pushMult' v)
+pushMult' t = NonEmpty.singleton t
 
 simplify :: EqTerm -> EqTerm
 simplify = fst . head . dropWhile (uncurry (/=)) . pairs . iterate simplify' . pushMult
@@ -392,9 +392,13 @@ simplifyEq (Given x) = Given (simplify x)
 simplifyEq (x := y) = simplify x := simplify y
 
 additiveTerms :: EqTerm -> [EqTerm]
-additiveTerms = additiveTerms' . simplify . pushMult
-  where additiveTerms' (x :+ y) = additiveTerms' x ++ additiveTerms' y
-        additiveTerms' t = [t]
+additiveTerms = NonEmpty.flatten . additiveTermsNonEmpty
+
+additiveTermsNonEmpty :: EqTerm -> NonEmpty.T [] EqTerm
+additiveTermsNonEmpty = recourse . simplify . pushMult
+  where recourse (x :+ y) =
+           NonEmpty.append (recourse x) (recourse y)
+        recourse t = NonEmpty.singleton t
 
 
 setEqTerms :: Envs EqTerm -> EqTerm -> EqTerm
@@ -468,9 +472,9 @@ mkDiffEqTerm _ (Var (VarIdx s r use n) := Power (PowerIdx _ _ f t)) =
 mkDiffEqTerm _ (Var (VarIdx s r use n) := as@(_x :+ _y)) =
   {- trace ("--->: " ++ showEqTerm z ++ " => " ++ showEqTerm res) $ -} Just [res]
   where res = v := dps
-        ats = additiveTerms as
+        ats = additiveTermsNonEmpty as
         v = mkVar $ VarIdx s r (toDiffUse use) n
-        dps = add $ map g ats
+        dps = add $ fmap g ats
         g (Power (PowerIdx _ _ f t)) = mkVar $ DPowerIdx s r f t
 
 -- P_0.1_0.1 = v_0.1_OutSum.0

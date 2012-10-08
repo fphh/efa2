@@ -30,6 +30,8 @@ import EFA2.Signal.Data (Data(Data), Nil, (:>))
 import qualified Data.Vector.Unboxed as UV
 
 import qualified Data.Foldable as Fold
+import qualified Data.NonEmpty.Mixed as NonEmptyM
+import qualified Data.NonEmpty as NonEmpty
 import qualified Data.List.HT as HTL
 import qualified Data.List as L
 import qualified Data.Map as M
@@ -364,7 +366,7 @@ But for real world data we still need a way to handle
 jitter around zero crossings anyway.
 -}
 removeDuplicates :: (Eq b) => (a -> b) -> [a] -> [a]
-removeDuplicates f = map head . HTL.groupBy (equating f)
+removeDuplicates f = map NonEmpty.head . NonEmptyM.groupBy (equating f)
 
 
 chopAtZeroCrossings :: (RealFrac a) => [(a, [a])] -> [[(a, [a])]]

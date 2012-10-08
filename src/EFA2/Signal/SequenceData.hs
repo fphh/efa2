@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module EFA2.Signal.SequenceData where
 
@@ -10,6 +11,7 @@ module EFA2.Signal.SequenceData where
 import EFA2.Topology.TopologyData (FlowTopology)
 
 import qualified EFA2.Signal.Signal as S
+import qualified EFA2.Signal.Data as D
 import qualified EFA2.Signal.Vector as V
 import EFA2.Display.DispBase (DispStorage)
 import EFA2.Signal.Signal
@@ -19,6 +21,7 @@ import EFA2.Signal.Data (Data, (:>), Nil)
 import EFA2.Signal.Base (Sign, Val)
 
 import EFA2.Display.Report (ToTable(toTable), Table(..), TableData(..), toDoc, tvcat, autoFormat)
+import Text.Printf (PrintfArg)
 
 import qualified Test.QuickCheck as QC
 import System.Random (Random)
@@ -50,6 +53,8 @@ data PowerRecord v a =
       (TC Signal (Typ A T Tt) (Data (v :> Nil) a))
       (M.Map PPosIdx (TC Signal (Typ A P Tt) (Data (v :> Nil) a)))
    deriving (Show, Eq)
+
+type instance D.Value (PowerRecord v a) = a
 
 -- | Power record to contain power signals assigned to the tree
 type ListPowerRecord = PowerRecord [] Val
@@ -92,6 +97,8 @@ type Sec = (SignalIdx,SignalIdx)
 
 -- | Sequence Vector to Store Section Data
 newtype SequData a = SequData [a] deriving (Show, Eq)
+
+type instance D.Value (SequData a) = D.Value a
 
 instance Functor SequData where
    fmap f (SequData xs) = SequData (map f xs)
@@ -146,9 +153,10 @@ instance ToTable Record where
 
 
 instance
-   (V.Walker v, V.Singleton v, V.FromList v, V.Storage v Val,
-    DispStorage (v :> Nil)) =>
-   ToTable (PowerRecord v Val) where
+   (V.Walker v, V.Singleton v, V.FromList v, V.Storage v a,
+    DispStorage (v :> Nil),
+    Ord a, Fractional a, PrintfArg a) =>
+   ToTable (PowerRecord v a) where
    toTable os (ti, PowerRecord time sigs) =
       [Table {
          tableTitle = "PowerRecord - " ++ ti ,

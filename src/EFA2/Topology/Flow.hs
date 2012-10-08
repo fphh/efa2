@@ -1,16 +1,13 @@
-{-# LANGUAGE TupleSections, TypeOperators, FlexibleContexts #-}
+{-# LANGUAGE TupleSections #-}
 
 module EFA2.Topology.Flow (module EFA2.Topology.Flow) where
 
-
---import Data.Graph.Inductive
 import qualified Data.Map as M
 import qualified Data.List as L
 
 import EFA2.Topology.TopologyData
 import EFA2.Signal.SequenceData
--- import EFA2.Interpreter.Arith
-import EFA2.Utils.Graph
+import EFA2.Utils.Graph (InOutGraphFormat)
 
 import EFA2.Signal.Signal (fromScalar, sigSign, sigSum)
 import EFA2.Signal.Base (Sign(PSign, NSign, ZSign))
@@ -60,8 +57,7 @@ copySeqTopology (SequData tops) = mkGraph (concat ns'') (concat es'')
         es'' = map h es'
         h (o, elist) = map (\(n1, n2, l) -> (n1+o, n2+o, l)) elist
 
-        offsets = reverse $ L.foldl' f [0] (map length ns)
-        f (a:acc) l = (a+l):a:acc
+        offsets = L.scanl (+) 0 $ map length ns
 
 
 mkIntersectionEdges :: Topology -> LNode NLabel -> [InOutGraphFormat (LNode NLabel)] -> [(Node, Node, ELabel)]

@@ -25,13 +25,14 @@ import Control.Monad (liftM2)
 import Data.Monoid (Monoid, mempty, mappend, mconcat)
 import Data.Tuple.HT (mapPair)
 
-import Text.Printf (printf)
+import Text.Printf (PrintfArg, printf)
 
 import qualified Data.List as L
 import Data.Function (id, (.), ($))
 import Prelude
           (Show, Eq, Ord, Maybe, Bool, error, fmap,
-           String, Int, (++), Num, Fractional, (+), (-), (/), (*))
+           String, (++),
+           Int, Num, Fractional, fromRational, (+), (-), (/), (*))
 import qualified Prelude as P
 
 
@@ -63,6 +64,9 @@ writeNested ::
 writeNested x =
    let z@(TC y) = case D.constraints y of D.ComposeConstraints -> x
    in  z
+
+
+type instance D.Value (TC s t d) = D.Value d
 
 
 ----------------------------------------------------------------
@@ -753,18 +757,21 @@ instance (SV.Walker v) => SigSum FSignal (v :> Nil) where
 -- Delta and 2Point Average of Signal
 
 deltaSig ::
-    (z ~ Apply v1 Val, SV.Zipper v2, SV.Singleton v2, SV.Storage v2 z,
-     v1 ~ Zip v1 v1, D.ZipWith v1 v1, D.Storage v1 Val, DSucc delta1 delta2) =>
-    TC Signal (Typ delta1 t1 p1) (Data (v2 :> v1) Val) ->
-    TC FSignal (Typ delta2 t1 p1) (Data (v2 :> v1) Val)
+    (z ~ Apply v1 a, SV.Zipper v2, SV.Singleton v2, SV.Storage v2 z,
+     v1 ~ Zip v1 v1, D.ZipWith v1 v1, D.Storage v1 a, BSum a,
+     DSucc delta1 delta2) =>
+    TC Signal (Typ delta1 t1 p1) (Data (v2 :> v1) a) ->
+    TC FSignal (Typ delta2 t1 p1) (Data (v2 :> v1) a)
 deltaSig x = changeDelta $ deltaMapReverse (..-) x
 
 avSig ::
-    (z ~ Apply v1 Val, SV.Zipper v2, SV.Singleton v2, SV.Storage v2 z,
-     v1 ~ Zip v1 v1, D.ZipWith v1 v1, D.Storage v1 Val) =>
-    TC Signal (Typ delta1 t1 p1) (Data (v2 :> v1) Val) ->
-    TC FSignal (Typ delta1 t1 p1) (Data (v2 :> v1) Val)
-avSig x = changeDelta $ deltaMapReverse (\ x1 x2 -> (x1..+x2)../ (2::Val)) x
+    (z ~ Apply v1 a, SV.Zipper v2, SV.Singleton v2, SV.Storage v2 z,
+     v1 ~ Zip v1 v1, D.ZipWith v1 v1, D.Storage v1 a, BSum a, BProd a a, Num a) =>
+    TC Signal (Typ delta1 t1 p1) (Data (v2 :> v1) a) ->
+    TC FSignal (Typ delta1 t1 p1) (Data (v2 :> v1) a)
+avSig x =
+   changeDelta $
+   deltaMapReverse (\ x1 x2 -> (x1..+x2) ../ P.asTypeOf 2 x1) x
 
 sort ::
    (SV.Sort v, SV.Storage v d, Ord d) =>
@@ -914,8 +921,10 @@ udisp :: (TDisp t) => TC s t d  -> String
 udisp = Typ.udisp . typ
 
 -- | Display single values
-vdisp :: (TDisp t) => TC s t (Data Nil Val)  -> String
-vdisp x@(TC (Data val)) = printf f $ s*val
+vdisp ::
+   (TDisp t, Fractional a, PrintfArg a) =>
+   TC s t (Data Nil a)  -> String
+vdisp x@(TC (Data val)) = printf f $ fromRational s * val
   where t = getDisplayType x
         u = getDisplayUnit t
         (UnitScale s) = getUnitScale u
@@ -923,10 +932,10 @@ vdisp x@(TC (Data val)) = printf f $ s*val
 
 -- | Display single values
 srdisp ::
-   (TDisp t, SV.FromList v, SV.Storage v Val) =>
-   TC s t (Data (v :> Nil) Val)  -> [String]
+   (TDisp t, SV.FromList v, SV.Storage v a, Fractional a, PrintfArg a) =>
+   TC s t (Data (v :> Nil) a)  -> [String]
 srdisp xs = fmap g $ toList xs -- (f l)
-  where g x = printf f (s*x)
+  where g x = printf f (fromRational s * x)
         t = getDisplayType xs
         u = getDisplayUnit t
         (UnitScale s) = getUnitScale u
@@ -955,9 +964,10 @@ sigDisp =
 
 
 instance
-   (DispApp s, DispStorage (v :> Nil), TDisp t,
-    SV.FromList v, SV.Singleton v, SV.Walker v, SV.Storage v Val) =>
-       ToTable (TC s t (Data (v :> Nil) Val)) where
+   (DispApp s, TDisp t, DispStorage (v :> Nil),
+    SV.FromList v, SV.Singleton v, SV.Walker v, SV.Storage v a,
+    Ord a, Fractional a, PrintfArg a) =>
+       ToTable (TC s t (Data (v :> Nil) a)) where
    toTable os (ti,x) =
       [Table {
          tableTitle = "",
@@ -978,11 +988,12 @@ instance
                 else [vdisp (minimum x) ++ " - " ++ vdisp (maximum y)]
 
 instance
-   (DispApp s, DispStorage (v2 :> v1 :> Nil), TDisp t,
-    SV.FromList v1, SV.Storage v1 Val,
-    SV.FromList v2, SV.Storage v2 (v1 Val),
-    SV.Walker v2) =>
-       ToTable (TC s t (Data (v2 :> v1 :> Nil) Val)) where
+   (DispApp s, TDisp t,
+    SV.Walker v2, DispStorage (v2 :> v1 :> Nil),
+    SV.FromList v1, SV.Storage v1 a,
+    SV.FromList v2, SV.Storage v2 (v1 a),
+    Fractional a, PrintfArg a) =>
+       ToTable (TC s t (Data (v2 :> v1 :> Nil) a)) where
    toTable _os (ti,xss) =
       [Table {
          tableTitle = ti ++ "   " ++ sigDisp xss ++ tdisp xss ++ udisp xss,

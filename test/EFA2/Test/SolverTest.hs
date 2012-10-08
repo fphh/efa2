@@ -69,8 +69,7 @@ prop_orderOfEqs seed = do
 
       ho = hornOrder isV ss
       dirs = directEquations isV ho
-      dirsets = reverse $ L.foldl' f [S.empty] (map (mkVarSet isV) dirs) -- For _:a:b:_, b includes a
-      f (a:acc) s = (S.union a s):a:acc
+      dirsets = L.scanl S.union S.empty $ map (mkVarSet isV) dirs -- For _:a:b:_, b includes a
       atMostOneMore (s, t) = S.size (s S.\\ t) <= 1
 
   return $ all atMostOneMore (pairs dirsets)
