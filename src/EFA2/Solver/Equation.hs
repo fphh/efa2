@@ -43,10 +43,6 @@ data EqTerm =
           | BEdge EqTerm EqTerm
           | NEdge EqTerm EqTerm
 
-          | FNode EqTerm EqTerm -- node equations
-          | BNode EqTerm EqTerm
-          | XNode EqTerm EqTerm
-
           | Minus EqTerm
           | Recip EqTerm
           | EqTerm :+ EqTerm
@@ -142,10 +138,6 @@ showEqTerm (FEdge power eta) = "f(" ++ showEqTerm power ++ ", " ++ showEqTerm et
 showEqTerm (BEdge power eta) = "b(" ++ showEqTerm power ++ ", " ++ showEqTerm eta ++ ")"
 showEqTerm (NEdge power0 power1) = "n(" ++ showEqTerm power0 ++ ", " ++ showEqTerm power1 ++ ")"
 
-showEqTerm (FNode power eta) = "fn(" ++ showEqTerm power ++ ", " ++ showEqTerm eta ++ ")"
-showEqTerm (BNode power eta) = "bn(" ++ showEqTerm power ++ ", " ++ showEqTerm eta ++ ")"
-showEqTerm (XNode power0 power1) = "xn(" ++ showEqTerm power0 ++ ", " ++ showEqTerm power1 ++ ")"
-
 showEqTerm (Recip x) = "1/(" ++ showEqTerm x ++ ")"
 showEqTerm (Minus x) = "-(" ++ showEqTerm x ++ ")"
 
@@ -189,10 +181,6 @@ toLatexString' (FEdge power eta) = "f(" ++ toLatexString' power ++ ", " ++ toLat
 toLatexString' (BEdge power eta) = "b(" ++ toLatexString' power ++ ", " ++ toLatexString' eta ++ ")"
 toLatexString' (NEdge power0 power1) = "n(" ++ toLatexString' power0 ++ ", " ++ toLatexString' power1 ++ ")"
 
-toLatexString' (FNode power eta) = "fn(" ++ toLatexString' power ++ ", " ++ toLatexString' eta ++ ")"
-toLatexString' (BNode power eta) = "bn(" ++ toLatexString' power ++ ", " ++ toLatexString' eta ++ ")"
-toLatexString' (XNode power0 power1) = "xn(" ++ toLatexString' power0 ++ ", " ++ toLatexString' power1 ++ ")"
-
 toLatexString' (Recip x) = "\\frac{1}{" ++ toLatexString' x ++ "}"
 toLatexString' (Minus x) = "-(" ++ toLatexString' x ++ ")"
 
@@ -224,10 +212,6 @@ mkVarSet p t = mkVarSet' t
         mkVarSet' (FEdge x y) = S.union (mkVarSet' x) (mkVarSet' y)
         mkVarSet' (BEdge x y) = S.union (mkVarSet' x) (mkVarSet' y)
         mkVarSet' (NEdge x y) = S.union (mkVarSet' x) (mkVarSet' y)
-
-        mkVarSet' (FNode x y) = S.union (mkVarSet' x) (mkVarSet' y)
-        mkVarSet' (BNode x y) = S.union (mkVarSet' x) (mkVarSet' y)
-        mkVarSet' (XNode x y) = S.union (mkVarSet' x) (mkVarSet' y)
 
         mkVarSet' (Minus x) = mkVarSet' x
         mkVarSet' (Recip x) = mkVarSet' x
@@ -271,10 +255,6 @@ findVar t s =
            (BEdge power eta) -> (findVar t power, findVar t eta)
            (NEdge power eta) -> (findVar t power, findVar t eta)
 
-           (FNode power eta) -> (findVar t power, findVar t eta)
-           (BNode power eta) -> (findVar t power, findVar t eta)
-           (XNode power eta) -> (findVar t power, findVar t eta)
-
            _ -> (Nothing, Nothing)
 
 isolateVar :: EqTerm -> Equation -> TPath -> Equation
@@ -306,20 +286,6 @@ isolateVar' (BEdge u v) (R:p) = isolateVar' v p . (flip NEdge u)
 -- n = u/v
 isolateVar' (NEdge u v) (L:p) = isolateVar' u p . (flip FEdge v)
 isolateVar' (NEdge u v) (R:p) = isolateVar' v p . (flip BEdge u)
-
-{-
--- e = u * v
-isolateVar' (FNode u v) (L:p) = isolateVar' u p . (flip BNode v)
-isolateVar' (FNode u v) (R:p) = isolateVar' v p . (flip XNode u)
-
--- e = u / v
-isolateVar' (BNode u v) (L:p) = isolateVar' u p . (flip FNode v)
-isolateVar' (BNode u v) (R:p) = isolateVar' v p . (flip XNode u)
-
--- n = u/v
-isolateVar' (XNode u v) (L:p) = isolateVar' u p . (flip FNode v)
-isolateVar' (XNode u v) (R:p) = isolateVar' v p . (flip BNode u)
--}
 
 
 
@@ -440,10 +406,6 @@ toAbsEqTerm :: EqTerm -> EqTerm
 toAbsEqTerm (FEdge p n) = p :* n
 toAbsEqTerm (BEdge p n) = p :* (Recip n)
 toAbsEqTerm (NEdge p0 p1) = p0 :* (Recip p1)
-
-toAbsEqTerm (FNode p n) = p :* n
-toAbsEqTerm (BNode p n) = p :* (Recip n)
-toAbsEqTerm (XNode p0 p1) = p0 :* (Recip p1)
 
 toAbsEqTerm (Minus x) = Minus (toAbsEqTerm x)
 toAbsEqTerm (Recip x) = Recip (toAbsEqTerm x)

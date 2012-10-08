@@ -62,10 +62,6 @@ eqTermToInTerm term =
       (BEdge x y) -> InBEdge (eqTermToInTerm x) (eqTermToInTerm y)
       (NEdge x y) -> InNEdge (eqTermToInTerm x) (eqTermToInTerm y)
 
-      (FNode x y) -> InFNode (eqTermToInTerm x) (eqTermToInTerm y)
-      (BNode x y) -> InBNode (eqTermToInTerm x) (eqTermToInTerm y)
-      (XNode x y) -> InXNode (eqTermToInTerm x) (eqTermToInTerm y)
-
       (x :+ y) -> InAdd (eqTermToInTerm x) (eqTermToInTerm y)
       (x :* y) -> InMult (eqTermToInTerm x) (eqTermToInTerm y)
 
@@ -93,10 +89,6 @@ showInTerm (InRecip t) = "1/(" ++ showInTerm t ++ ")"
 showInTerm (InFEdge s t) = "f(" ++ showInTerm s ++ ", " ++ showInTerm t ++ ")"
 showInTerm (InBEdge s t) = "b(" ++ showInTerm s ++ ", " ++ showInTerm t ++ ")"
 showInTerm (InNEdge s t) = "n(" ++ showInTerm s ++ ", " ++ showInTerm t ++ ")"
-
-showInTerm (InFNode s t) = "fn(" ++ showInTerm s ++ ", " ++ showInTerm t ++ ")"
-showInTerm (InBNode s t) = "bn(" ++ showInTerm s ++ ", " ++ showInTerm t ++ ")"
-showInTerm (InXNode s t) = "xn(" ++ showInTerm s ++ ", " ++ showInTerm t ++ ")"
 
 showInTerm (InAdd s t) = "(" ++ showInTerm s ++ " + " ++ showInTerm t ++ ")"
 showInTerm (InMult s t) = showInTerm s ++ " * " ++ showInTerm t

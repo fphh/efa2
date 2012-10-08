@@ -34,11 +34,6 @@ data InTerm a = EIdx EnergyIdx
               | InBEdge (InTerm a) (InTerm a)
               | InNEdge (InTerm a) (InTerm a)
 
-              | InFNode (InTerm a) (InTerm a)
-              | InBNode (InTerm a) (InTerm a)
-              | InXNode (InTerm a) (InTerm a)
-
-
               | InMinus (InTerm a)
               | InRecip (InTerm a)
               | InAdd (InTerm a) (InTerm a)
