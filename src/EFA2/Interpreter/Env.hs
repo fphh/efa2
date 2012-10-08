@@ -237,8 +237,17 @@ minusEnv ::
    Envs (TC s t (Data c a)) ->
    Envs (TC s t (Data c a))
 minusEnv laterEnv formerEnv | checkEnvsForDelta laterEnv formerEnv = gnv
+  where minus x y = M.fromList $ zipWith minush (M.toList x) (M.toList y)
+        minush (k0, x) (k1, y) =
+           (if ignoreRecEq k0 k1 then k0 else error "minush", x .- y)
+
+        fminus x y = M.fromList $ zipWith fminush (M.toList x) (M.toList y)
+        fminush (k0, fx) (k1, fy) =
+           (if ignoreRecEq k0 k1 then k0 else error "fminush", \z -> fx z .- fy z)
+{-
   where minus x y = M.intersectionWith (.-) x y
         fminus = M.intersectionWith (\fx fy z -> fx z .- fy z)
+-}
 
         edk (EnergyIdx a b c d) = DEnergyIdx a b c d
         pdk (PowerIdx a b c d) = DPowerIdx a b c d
