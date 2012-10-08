@@ -1,7 +1,6 @@
 module EFA2.Solver.Equation where
 
 import Control.Monad (liftM2)
-import Data.Maybe (mapMaybe)
 
 import qualified Data.Ratio as Ratio
 import Data.Ratio (Ratio, (%))
@@ -437,11 +436,11 @@ toAbsEquations :: [Equation] -> [Equation]
 toAbsEquations = map toAbsEquation
 
 
-mkDiffEqTerm :: Int -> Equation -> Maybe [Equation]
+mkDiffEqTerm :: Int -> Equation -> [Equation]
 
 -- v_0.1_OutSum.0 = P_0.1_0.1
 mkDiffEqTerm _ (Var (VarIdx s r use n) := Power (PowerIdx _ _ f t)) =
-  {- trace ("--->: " ++ showEqTerm z ++ " s=> " ++ showEqTerm eres) $ -} Just [res, eres]
+  {- trace ("--->: " ++ showEqTerm z ++ " s=> " ++ showEqTerm eres) $ -} [res, eres]
   where res = v := dp
         v = mkVar $ VarIdx s r (toDiffUse use) n
         dp = mkVar $ DPowerIdx s r f t
@@ -454,7 +453,7 @@ mkDiffEqTerm _ (Var (VarIdx s r use n) := Power (PowerIdx _ _ f t)) =
 
 -- v_0.1_OutSum.1 = (P_0.1_1.2 + P_0.1_1.3) ...
 mkDiffEqTerm _ (Var (VarIdx s r use n) := as@(_x :+ _y)) =
-  {- trace ("--->: " ++ showEqTerm z ++ " => " ++ showEqTerm res) $ -} Just [res]
+  {- trace ("--->: " ++ showEqTerm z ++ " => " ++ showEqTerm res) $ -} [res]
   where res = v := dps
         ats = additiveTermsNonEmpty as
         v = mkVar $ VarIdx s r (toDiffUse use) n
@@ -463,7 +462,7 @@ mkDiffEqTerm _ (Var (VarIdx s r use n) := as@(_x :+ _y)) =
 
 -- P_0.1_0.1 = v_0.1_OutSum.0
 mkDiffEqTerm _ (Power (PowerIdx _ _ f t) := Var (VarIdx s r use n)) =
-  {- trace ("--->: " ++ showEqTerm z ++ " => " ++ showEqTerm eres) $ -} Just [res, eres]
+  {- trace ("--->: " ++ showEqTerm z ++ " => " ++ showEqTerm eres) $ -} [res, eres]
   where res = dp := v
         v = mkVar $ VarIdx s r (toDiffUse use) n
         dp = mkVar $ DPowerIdx s r f t
@@ -475,14 +474,14 @@ mkDiffEqTerm _ (Power (PowerIdx _ _ f t) := Var (VarIdx s r use n)) =
 
 -- v_0.1_OutSum.1 = v_0.1_InSum.1
 mkDiffEqTerm _ (Var (VarIdx s r use0 n) := Var (VarIdx _ _ use1 _)) =
-  {- trace (showEqTerm z ++ " => " ++ showEqTerm res) $ -} Just [res]
+  {- trace (showEqTerm z ++ " => " ++ showEqTerm res) $ -} [res]
   where res = v0 := v1
         v0 = mkVar $ VarIdx s r (toDiffUse use0) n
         v1 = mkVar $ VarIdx s r (toDiffUse use1) n
 
 -- P_0.1_1.0 = f(P_0.1_0.1, n_0.1_0.1)
 mkDiffEqTerm oldrec (Power (PowerIdx s newrec f t) := FEdge (Power _) _) =
-  {- trace ("--->: " ++ showEqTerm z ++ " => " ++ showEqTerm eres) $ -} Just [res, eres]
+  {- trace ("--->: " ++ showEqTerm z ++ " => " ++ showEqTerm eres) $ -} [res, eres]
   where res = dq := (dp :* n) :+ (p :* dn) :+ (dp :* dn)
         dq = mkVar $ DPowerIdx s newrec f t
         dp = mkVar $ DPowerIdx s newrec t f
@@ -496,7 +495,7 @@ mkDiffEqTerm oldrec (Power (PowerIdx s newrec f t) := FEdge (Power _) _) =
 
 -- P_0.1_1.2 = f(v_0.1_OutSum.1, x_0.1_1.2)
 mkDiffEqTerm oldrec (Power (PowerIdx s newrec f t) := FEdge (Var (VarIdx _ _ use _)) _) =
-  {- trace ("--->: " ++ showEqTerm z ++ " => " ++ showEqTerm eres) $ -} Just [res, eres]
+  {- trace ("--->: " ++ showEqTerm z ++ " => " ++ showEqTerm eres) $ -} [res, eres]
   where res = dq := (dv :* x) :+ (v :* dx) :+ (dv :* dx)
         dq = mkVar $ DPowerIdx s newrec f t
         dv = mkVar $ VarIdx s newrec (toDiffUse use) f
@@ -510,7 +509,7 @@ mkDiffEqTerm oldrec (Power (PowerIdx s newrec f t) := FEdge (Var (VarIdx _ _ use
 
 -- P_0.1_1.2 = b(P_0.1_2.1, n_0.1_1.2)
 mkDiffEqTerm oldrec (Power (PowerIdx s newrec f t) := BEdge _ (FEta _)) =
-  {- trace (showEqTerm z ++ " => " ++ showEqTerm res) $ -} Just [res, eres]
+  {- trace (showEqTerm z ++ " => " ++ showEqTerm res) $ -} [res, eres]
   where res = dq := (dp :* (Recip n)) :+ (Minus ((p :* dn) :* nom)) :+ (Minus ((dp :* dn) :* nom))
         dq = mkVar $ DPowerIdx s newrec f t
         dp = mkVar $ DPowerIdx s newrec t f
@@ -526,7 +525,7 @@ mkDiffEqTerm oldrec (Power (PowerIdx s newrec f t) := BEdge _ (FEta _)) =
 
 -- v_0.1_OutSum.1 = b(P_0.1_1.2, x_0.1_1.2)
 mkDiffEqTerm oldrec (Var (VarIdx s newrec use _n) := BEdge (Power (PowerIdx _ _ f t)) _) =
-  {- trace ("--->: " ++ showEqTerm z ++ " => " ++ showEqTerm eres) $ -} Just [res, eres]
+  {- trace ("--->: " ++ showEqTerm z ++ " => " ++ showEqTerm eres) $ -} [res, eres]
   where res = v := (dp :* (Recip x)) :+ (Minus ((p :* dx) :* nom)) :+ (Minus ((dp :* dx) :* nom))
         v = mkVar $ VarIdx s newrec (toDiffUse use) f
         p = mkVar $ PowerIdx s oldrec f t
@@ -540,11 +539,11 @@ mkDiffEqTerm oldrec (Var (VarIdx s newrec use _n) := BEdge (Power (PowerIdx _ _ 
         dt = mkVar $ DTimeIdx s newrec
         de = mkVar $ DEnergyIdx s newrec f t
 
-mkDiffEqTerm _ _ = Nothing
+mkDiffEqTerm _ _ = []
 
 
 mkDiffEqTermEquations :: Int -> [Equation] -> [Equation]
-mkDiffEqTermEquations rec ts = concat $ mapMaybe (mkDiffEqTerm rec) ts
+mkDiffEqTermEquations rec = concatMap (mkDiffEqTerm rec)
 
 --------------------------------------------------------------------
 -- interpretEq len envs (InEqual (EIdx idx) rhs) = envs { energyMap = insert len idx envs rhs (energyMap envs) }
