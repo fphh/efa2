@@ -84,12 +84,17 @@ mkSequenceTopology sd = res
         g ((_, (_, l), _):_) = l
 
         maxNode = 1 + (snd $ nodeRange sqTopo)
-        startNodes = map f (zip (map (,maxNode) [maxNode+1 ..]) storeLabs)
-        f ((nid1, nid2), NLabel _ n (Storage sn)) =
-          [ (nid1, NLabel (-1) n (InitStorage sn)), (nid2, NLabel (-1) (-1) Source) ]
+        startNodes = zipWith f (map (,maxNode) [maxNode+1 ..]) storeLabs
+        f (nid1, nid2) (NLabel _ n (Storage sn)) =
+           ( (nid1, NLabel (-1) n (InitStorage sn)),
+             (nid2, NLabel (-1) (-1) Source) )
 
-        interSecEs = concatMap (uncurry (mkIntersectionEdges sqTopo)) (zip (map head startNodes) grpStores)
+        interSecEs =
+           concat $ zipWith (mkIntersectionEdges sqTopo) (map fst startNodes) grpStores
 
         e = defaultELabel { edgeType = InnerStorageEdge }
-        startEdges = map (\((nid1, _):(nid2, _):_) -> (nid2, nid1, e)) startNodes
-        res = insEdges (startEdges ++ interSecEs) (insNodes (concat startNodes) sqTopo)
+        startEdges = map (\((nid1, _), (nid2, _)) -> (nid2, nid1, e)) startNodes
+        res =
+           insEdges
+              (startEdges ++ interSecEs)
+              (insNodes (concatMap (\(n1,n2) -> [n1,n2]) startNodes) sqTopo)

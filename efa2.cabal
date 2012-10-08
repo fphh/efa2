@@ -36,6 +36,7 @@ Library
     template-haskell ==2.7.*,
     process ==1.1.*,
     random ==1.0.*,
+    Stream >=0.4.6 && <0.5,
     non-empty >=0.0 && <0.1,
     containers >=0.4 && <0.6,
     utility-ht ==0.0.*,
@@ -54,6 +55,7 @@ Library
     EFA2.Signal.Data
     EFA2.Signal.Vector
     EFA2.Signal.Signal
+    EFA2.Signal.SignalFill
     EFA2.Signal.Sequence
     EFA2.Solver.IsVar
     EFA2.Solver.Equation

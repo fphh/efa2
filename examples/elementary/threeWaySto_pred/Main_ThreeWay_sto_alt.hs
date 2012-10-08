@@ -3,9 +3,6 @@ module Main where
 import qualified Data.List as L
 import qualified Data.Map as M
 
-import System.Exit (ExitCode)
-import System.Cmd (system)
-
 import EFA2.Topology.Topology (makeNodes, makeEdges, makeAllEquations)
 import EFA2.Topology.TopologyData
           (NodeType(Crossing, Sink, Source, Storage), Topology, defaultELabel, mkGraph)
@@ -24,10 +21,11 @@ import EFA2.Display.DrawGraph (drawTopology)
 import qualified EFA2.Signal.Signal as S
 import EFA2.Signal.Sequence (makeSequence)
 import EFA2.Signal.SequenceData (PPosIdx(..), PowerRecord(..))
+import EFA2.Signal.SignalFill ((.-), (.+), (./))
 import EFA2.Signal.Signal
           (TC, Scalar, FSamp, PFSamp, PSigL, UTFSig, Test1, Test2,
            toSigList, toScalar, makeDelta, makeAbsolute,
-           (.-), (.+), (./), (.++))
+           (.++))
 import EFA2.Signal.Data (Data, Nil)
 import EFA2.Signal.Typ (Typ, A, Tt, Y, P, N, F)
 
@@ -153,17 +151,6 @@ getVarPower varEnvs idx = S.changeSignalType $ S.fromCells $ map (map f ) varEnv
   where f ::  Envs UTFSig ->   PFSamp
         f envs = S.changeType $ S.head $ ((safeLookup (powerMap envs) idx))
 
-clearCurves ::  IO ExitCode
-clearCurves = do
-  system ("rm curve.gp")
-  system ("rm *.csv")
-  
-
--- | 
-saveCurves :: String -> IO ExitCode
-saveCurves dirName = do   
-  system ("mv curve.gp " ++ dirName)
-  system ("mv *.csv " ++ dirName)
 
 -- | Main Function ================================================================== 
 

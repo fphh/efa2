@@ -4,9 +4,11 @@ import Control.Monad (liftM2)
 import Data.Maybe (mapMaybe)
 
 import qualified Data.NonEmpty as NonEmpty
+import qualified Data.Stream as Stream
 import qualified Data.Set as S
 import qualified Data.List as L
 import qualified Data.Map as M
+import Data.Stream (Stream)
 
 import Debug.Trace (trace)
 import Text.Printf (printf)
@@ -14,7 +16,6 @@ import Text.Printf (printf)
 
 import EFA2.Interpreter.Env
 import EFA2.Interpreter.Arith (Val)
-import EFA2.Utils.Utils (pairs)
 
 -- TOTHINK: Die Algorithmen aus dem Verzeichnis Solver sollten
 -- über den Datentyp EqTerm parametrisierbar sein. Die Abhängigkeitsanalyse
@@ -360,8 +361,16 @@ pushMult' (u :+ v) = NonEmpty.append (pushMult' u) (pushMult' v)
 pushMult' (u :* v) = liftM2 (:*) (pushMult' u) (pushMult' v)
 pushMult' t = NonEmpty.singleton t
 
+streamPairs :: Stream a -> Stream (a, a)
+streamPairs xs = Stream.zip xs (Stream.tail xs)
+
+iterateUntilFix :: (Eq a) => (a -> a) -> a -> a
+iterateUntilFix f =
+   fst . Stream.head . Stream.dropWhile (uncurry (/=)) .
+   streamPairs . Stream.iterate f
+
 simplify :: EqTerm -> EqTerm
-simplify = fst . head . dropWhile (uncurry (/=)) . pairs . iterate simplify' . pushMult
+simplify = iterateUntilFix simplify' . pushMult
   where simplify' :: EqTerm -> EqTerm
         simplify' ((Const 0.0) :+ x) = simplify' x
         simplify' (x :+ (Const 0.0)) = simplify' x

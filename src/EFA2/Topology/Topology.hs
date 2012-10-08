@@ -210,7 +210,8 @@ mkInStoreEqs _ _ = []
 
 
 mkOutStoreEqs :: Int -> InOutGraphFormat (LNode NLabel) -> [Equation]
-mkOutStoreEqs recordNum (ins, n@(nid, NLabel sec _ _), o:_) = visumeq:xeqs ++ pieqs
+mkOutStoreEqs recordNum (ins, n@(nid, NLabel sec _ _), o:_) =
+     visumeqs ++ xeqs ++ pieqs
   where xis = map (makeVar XIdx) ins
         --eis = map (makeVar EnergyIdx) ins
         pis = map (makeVar PowerIdx) ins
@@ -219,7 +220,11 @@ mkOutStoreEqs recordNum (ins, n@(nid, NLabel sec _ _), o:_) = visumeq:xeqs ++ pi
         --visum = mkVar (VarIdx sec recordNum St nid)
         visum = mkVar (VarIdx sec recordNum InSum nid)
 
-        visumeq = visum := add pis
+        visumeqs =
+           case NonEmpty.fetch pis of
+              Just pisne -> [visum := add pisne]
+              -- How to cope with empty lists?
+              -- Nothing -> []
 
         xeqs = zipWith g xis pis
         g x e = x := e :* Recip visum

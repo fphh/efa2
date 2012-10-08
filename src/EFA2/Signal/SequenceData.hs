@@ -1,7 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -13,7 +12,7 @@ import EFA2.Topology.TopologyData (FlowTopology)
 import qualified EFA2.Signal.Signal as S
 import qualified EFA2.Signal.Data as D
 import qualified EFA2.Signal.Vector as V
-import EFA2.Display.DispBase (DispStorage)
+import EFA2.Display.DispBase (DispStorage1)
 import EFA2.Signal.Signal
           (TC, Signal, SignalIdx, DTVal, FVal, TSig, DTFSig, FFSig, UTSigL)
 import EFA2.Signal.Typ (Typ, A, P, T, Tt)
@@ -30,6 +29,7 @@ import qualified Data.Map as M
 import qualified Data.Vector.Unboxed as UV
 import qualified Data.List.HT as HTL
 import qualified Data.List.Match as Match
+import Data.NonEmpty ((!:))
 import Data.Ratio (Ratio, (%))
 import Data.List (transpose)
 import Data.Tuple.HT (mapFst)
@@ -141,20 +141,19 @@ instance (Random a, Integral a) => Sample (Ratio a) where
 
 
 instance ToTable Record where
-   toTable os (ti,(Record time sigs)) =
+   toTable os (ti, Record time sigs) =
       [Table {
          tableTitle = "Record - " ++ ti ,
          tableData = tableData t,
          tableFormat = tableFormat t,
          tableSubTitle = ""}]
 
-      where t = tvcat $ toTable os ("Time",time) ++
+      where t = tvcat $ S.toTable os ("Time",time) !:
                         concatMap (toTable os . mapFst show) (M.toList sigs)
 
 
 instance
-   (V.Walker v, V.Singleton v, V.FromList v, V.Storage v a,
-    DispStorage (v :> Nil),
+   (V.Walker v, V.Singleton v, V.FromList v, V.Storage v a, DispStorage1 v,
     Ord a, Fractional a, PrintfArg a) =>
    ToTable (PowerRecord v a) where
    toTable os (ti, PowerRecord time sigs) =
@@ -164,7 +163,7 @@ instance
          tableFormat = tableFormat t,
          tableSubTitle = ""}]
 
-      where t = tvcat $ toTable os ("Time",time) ++
+      where t = tvcat $ S.toTable os ("Time",time) !:
                         concatMap (toTable os . mapFst show) (M.toList sigs)
 
 instance (ToTable a) => ToTable (SequData a) where

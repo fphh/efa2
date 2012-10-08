@@ -232,7 +232,7 @@ checkEnvsForDelta env fnv =
          check x y f = SV.equalBy ignoreRecEq (M.keys $ f x) (M.keys $ f y)
 
 minusEnv ::
-   (S.Arith s s ~ s, TSum t t t, c ~ Zip c c, D.ZipWith c c, D.Storage c a, BSum a) =>
+   (S.Arith s s ~ s, TSum t t t, D.ZipWith c, D.Storage c a, BSum a) =>
    Envs (TC s t (Data c a)) ->
    Envs (TC s t (Data c a)) ->
    Envs (TC s t (Data c a))

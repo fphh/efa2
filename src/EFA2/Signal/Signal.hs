@@ -16,9 +16,13 @@ import qualified EFA2.Signal.Base as B
 import EFA2.Signal.Data (Data(Data), (:>), Nil, Zip, Apply, List, List2, NestedList, Vec2, UVec, UVec2, UVec2L, DVal)
 import EFA2.Signal.Base (BSum(..), BProd(..), DArith0(..), Val, ZeroCrossing)
 import EFA2.Signal.Typ
-import EFA2.Display.Report (ToTable(toTable), Table(..), TableData(..), ROpt(RAll), toDoc, autoFormat)
-import EFA2.Display.DispBase (UnitScale(..), DisplayFormat(..), DispStorage(..), getUnitScale, dispLength)
+import EFA2.Display.Report (Table(..), TableData(..), ROpt(RAll), toDoc, autoFormat)
+import EFA2.Display.DispBase
+          (UnitScale(..), DisplayFormat(..),
+           DispStorage(..), DispStorage1(..),
+           getUnitScale, dispLength)
 import EFA2.Display.DispTyp (TDisp, getDisplayUnit)
+import qualified EFA2.Display.Report as Report
 import qualified EFA2.Display.DispTyp as Typ
 
 import Control.Monad (liftM2)
@@ -57,6 +61,21 @@ data TestRow
 
 typ :: TC s t d -> t
 typ _ = error "Signal.typ: got phantom type"
+
+readNested ::
+   ((SV.Storage v2 (Apply v1 a), D.Storage v1 a) => TC s t (Data (v2 :> v1) a) -> b) ->
+   (D.Storage (v2 :> v1) a => TC s t (Data (v2 :> v1) a) -> b)
+readNested f x@(TC y) =
+   case D.constraints y of D.ComposeConstraints -> f x
+
+readNested2 ::
+   ((SV.Storage v3 (Apply (v2 :> v1) a), SV.Storage v2 (Apply v1 a), D.Storage v1 a) => TC s t (Data (v3 :> v2 :> v1) a) -> b) ->
+   (D.Storage (v3 :> v2 :> v1) a => TC s t (Data (v3 :> v2 :> v1) a) -> b)
+readNested2 f x@(TC y) =
+   case D.constraints y of
+      D.ComposeConstraints ->
+         case D.constraints (D.subData y (P.error "Signal.subData")) of
+            D.ComposeConstraints -> f x
 
 writeNested ::
    ((SV.Storage v2 (Apply v1 a), D.Storage v1 a) => TC s t (Data (v2 :> v1) a)) ->
@@ -103,24 +122,24 @@ type instance Arith TestRow Scalar = TestRow
 
 
 zipWith ::
-   (D.ZipWith c1 c2, D.Storage c1 d1, D.Storage c2 d2, D.Storage (Zip c1 c2) d3) =>
+   (D.ZipWith c, D.Storage c d1, D.Storage c d2, D.Storage c d3) =>
    (d1 -> d2 -> d3) ->
-   TC s1 typ1 (Data c1 d1) ->
-   TC s2 typ2 (Data c2 d2) ->
-   TC (Arith s1 s2) typ3 (Data (Zip c1 c2) d3)
+   TC s1 typ1 (Data c d1) ->
+   TC s2 typ2 (Data c d2) ->
+   TC (Arith s1 s2) typ3 (Data c d3)
 zipWith f (TC da1) (TC da2) =
    TC $ D.zipWith f da1 da2
 
 ----------------------------------------------------------------
 -- Getyptes ZipWith
 tzipWith ::
-   (D.ZipWith c1 c2, D.Storage c1 d1, D.Storage c2 d2, D.Storage (Zip c1 c2) d3) =>
+   (D.ZipWith c, D.Storage c d1, D.Storage c d2, D.Storage c d3) =>
    (TC Sample typ1 (Data Nil d1) ->
     TC Sample typ2 (Data Nil d2) ->
     TC Sample typ3 (Data Nil d3)) ->
-   TC s1 typ1 (Data c1 d1) ->
-   TC s2 typ2 (Data c2 d2) ->
-   TC (Arith s1 s2) typ3 (Data (Zip c1 c2) d3)
+   TC s1 typ1 (Data c d1) ->
+   TC s2 typ2 (Data c d2) ->
+   TC (Arith s1 s2) typ3 (Data c d3)
 tzipWith f xs ys = zipWith g xs ys
    where g x y = fromSample $ f (toSample x) (toSample y)
 
@@ -149,35 +168,31 @@ crossWith f (TC da1) (TC da2) = TC $ D.crossWith f da1 da2
 -- Normal Arithmetics - based on zip
 
 (.*) ::
-   (TProd t1 t2 t3, D.ZipWith c1 c2,
-    D.Storage c1 a1, D.Storage c2 a2, D.Storage (Zip c1 c2) a1, BProd a1 a2) =>
-   TC s1 t1 (Data c1 a1) ->
-   TC s2 t2 (Data c2 a2) ->
-   TC (Arith s1 s2) t3 (Data (Zip c1 c2) a1)
+   (TProd t1 t2 t3, D.ZipWith c, D.Storage c a1, D.Storage c a2, BProd a1 a2) =>
+   TC s1 t1 (Data c a1) ->
+   TC s2 t2 (Data c a2) ->
+   TC (Arith s1 s2) t3 (Data c a1)
 (.*) x y = zipWith (..*) x y
 
 (./) ::
-   (TProd t1 t2 t3, D.ZipWith c1 c2,
-    D.Storage c1 a1, D.Storage c2 a2, D.Storage (Zip c1 c2) a1, BProd a1 a2) =>
-   TC s1 t3 (Data c1 a1) ->
-   TC s2 t2 (Data c2 a2) ->
-   TC (Arith s1 s2) t1 (Data (Zip c1 c2) a1)
+   (TProd t1 t2 t3, D.ZipWith c, D.Storage c a1, D.Storage c a2, BProd a1 a2) =>
+   TC s1 t3 (Data c a1) ->
+   TC s2 t2 (Data c a2) ->
+   TC (Arith s1 s2) t1 (Data c a1)
 (./) x y = zipWith (../) x y
 
 (.+) ::
-   (TSum t1 t2 t3, D.ZipWith c1 c2,
-    D.Storage c1 a, D.Storage c2 a, D.Storage (Zip c1 c2) a, BSum a) =>
-   TC s1 t1 (Data c1 a) ->
-   TC s2 t2 (Data c2 a) ->
-   TC (Arith s1 s2) t3 (Data (Zip c1 c2) a)
+   (TSum t1 t2 t3, D.ZipWith c, D.Storage c a, BSum a) =>
+   TC s1 t1 (Data c a) ->
+   TC s2 t2 (Data c a) ->
+   TC (Arith s1 s2) t3 (Data c a)
 (.+) x y = zipWith (..+) x y
 
 (.-) ::
-   (TSum t1 t2 t3, D.ZipWith c1 c2,
-    D.Storage c1 a, D.Storage c2 a, D.Storage (Zip c1 c2) a, BSum a) =>
-   TC s1 t3 (Data c1 a) ->
-   TC s2 t2 (Data c2 a) ->
-   TC (Arith s1 s2) t1 (Data (Zip c1 c2) a)
+   (TSum t1 t2 t3, D.ZipWith c, D.Storage c a, BSum a) =>
+   TC s1 t3 (Data c a) ->
+   TC s2 t2 (Data c a) ->
+   TC (Arith s1 s2) t1 (Data c a)
 (.-) x y = zipWith (..-) x y
 
 
@@ -486,8 +501,7 @@ toSigList (TC (Data (D2 x))) = map vec2Sig vecList
 -- Zip
 
 zip ::
-   (c ~ Zip c c, D.ZipWith c c,
-    D.Storage c d1, D.Storage c d2, D.Storage c (d1, d2)) =>
+   (D.ZipWith c, D.Storage c d1, D.Storage c d2, D.Storage c (d1, d2)) =>
    TC s typ (Data c d1) ->
    TC s typ (Data c d2) ->
    TC (Arith s s) typ (Data c (d1,d2))
@@ -512,13 +526,12 @@ tmap f xs = changeType $ map (fromSample . f . toSample) xs
 -- DeltaMap
 
 deltaMap, deltaMapReverse ::
-   (SV.Singleton v2, SV.Storage v2 (Apply v1 d1),
-    v1 ~ Zip v1 v1, D.ZipWith (v2 :> v1) (v2 :> v1),
+   (SV.Singleton v2, SV.Storage v2 (Apply v1 d1), D.ZipWith (v2 :> v1),
     D.Storage (v2 :> v1) d1, D.Storage (v2 :> v1) d2) =>
    (d1 -> d1 -> d2) ->
    TC Signal typ (Data (v2 :> v1) d1) ->
    TC FSignal typ (Data (v2 :> v1) d2)
-deltaMap f x = changeSignalType $ zipWith f  x (tail x)
+deltaMap f x = changeSignalType $ zipWith f x (tail x)
 deltaMapReverse f x = changeSignalType $ zipWith f (tail x) x
 
 {-
@@ -757,16 +770,16 @@ instance (SV.Walker v) => SigSum FSignal (v :> Nil) where
 -- Delta and 2Point Average of Signal
 
 deltaSig ::
-    (z ~ Apply v1 a, SV.Zipper v2, SV.Singleton v2, SV.Storage v2 z,
-     v1 ~ Zip v1 v1, D.ZipWith v1 v1, D.Storage v1 a, BSum a,
+    (z ~ Apply v1 a, SV.Zipper v2, SV.Walker v2, SV.Singleton v2, SV.Storage v2 z,
+     D.ZipWith v1, D.Storage v1 a, BSum a,
      DSucc delta1 delta2) =>
     TC Signal (Typ delta1 t1 p1) (Data (v2 :> v1) a) ->
     TC FSignal (Typ delta2 t1 p1) (Data (v2 :> v1) a)
 deltaSig x = changeDelta $ deltaMapReverse (..-) x
 
 avSig ::
-    (z ~ Apply v1 a, SV.Zipper v2, SV.Singleton v2, SV.Storage v2 z,
-     v1 ~ Zip v1 v1, D.ZipWith v1 v1, D.Storage v1 a, BSum a, BProd a a, Num a) =>
+    (z ~ Apply v1 a, SV.Zipper v2, SV.Walker v2, SV.Singleton v2, SV.Storage v2 z,
+     D.ZipWith v1, D.Storage v1 a, BSum a, BProd a a, Num a) =>
     TC Signal (Typ delta1 t1 p1) (Data (v2 :> v1) a) ->
     TC FSignal (Typ delta1 t1 p1) (Data (v2 :> v1) a)
 avSig x =
@@ -964,17 +977,28 @@ sigDisp =
 
 
 instance
-   (DispApp s, TDisp t, DispStorage (v :> Nil),
-    SV.FromList v, SV.Singleton v, SV.Walker v, SV.Storage v a,
+   (DispApp s, TDisp t, ToTable c, D.Storage c a,
     Ord a, Fractional a, PrintfArg a) =>
-       ToTable (TC s t (Data (v :> Nil) a)) where
+       Report.ToTable (TC s t (Data c a)) where
+   toTable os (ti,x) = [toTable os (ti,x)]
+
+
+class DispStorage c => ToTable c where
+   toTable ::
+      (DispApp s, TDisp t, D.Storage c a,
+       Ord a, Fractional a, PrintfArg a) =>
+      Report.ROpts -> (String, TC s t (Data c a)) -> Table
+
+instance
+   (DispStorage1 v, SV.FromList v, SV.Singleton v) =>
+       ToTable (v :> Nil) where
    toTable os (ti,x) =
-      [Table {
+      Table {
          tableTitle = "",
          tableFormat = autoFormat td,
          tableData = td,
          tableSubTitle = ""
-      }]
+      }
      where td = TableData {
                    tableBody = [fmap (toDoc id ) (f x) ],
                    titleRow = [],
@@ -984,25 +1008,22 @@ instance
 
            f y =
               if L.elem RAll os
-                then srdisp y
+                then readNested srdisp y
                 else [vdisp (minimum x) ++ " - " ++ vdisp (maximum y)]
 
 instance
-   (DispApp s, TDisp t,
-    SV.Walker v2, DispStorage (v2 :> v1 :> Nil),
-    SV.FromList v1, SV.Storage v1 a,
-    SV.FromList v2, SV.Storage v2 (v1 a),
-    Fractional a, PrintfArg a) =>
-       ToTable (TC s t (Data (v2 :> v1 :> Nil) a)) where
+   (DispStorage1 v1, StorageCollection v1 ~ v2,
+    SV.FromList v1, SV.FromList v2) =>
+       ToTable (v2 :> v1 :> Nil) where
    toTable _os (ti,xss) =
-      [Table {
+      Table {
          tableTitle = ti ++ "   " ++ sigDisp xss ++ tdisp xss ++ udisp xss,
          tableFormat = autoFormat td,
          tableData = td,
          tableSubTitle = ""
-      }]
+      }
      where td = TableData {
-                   tableBody = fmap (fmap (toDoc id . f) ) (toCells xss),
+                   tableBody = fmap (fmap (toDoc id . f) ) (readNested2 toCells xss),
                    titleRow = [],
                    titleCols = [],
                    endCols = []
