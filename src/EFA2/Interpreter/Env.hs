@@ -1,13 +1,13 @@
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE PatternGuards #-}
 {-# LANGUAGE TypeFamilies #-}
 module EFA2.Interpreter.Env where
 
 import qualified Data.Map as M
 import qualified Data.List as L
 
-import qualified EFA2.Signal.Data as D
 import qualified EFA2.Signal.Signal as S
+import qualified EFA2.Signal.Data as D
+import qualified EFA2.Signal.Vector as SV
 import EFA2.Signal.Signal (TC, (.-))
 import EFA2.Signal.Data (Data, Zip)
 import EFA2.Signal.Typ (TSum)
@@ -203,7 +203,10 @@ envUnion envs = Envs { recordNumber = uniteRecordNumbers (map recordNumber envs)
 
 
 separateEnvs :: Envs a -> [Envs a]
-separateEnvs envs | MixedRecord lst <- recordNumber envs = map f (L.sort lst)
+separateEnvs envs =
+   case recordNumber envs of
+      MixedRecord lst -> map f (L.sort lst)
+      _ -> error "separateEnvs: no mixed env"
   where p n k _ = n == getIdxRecNum k
         f n = emptyEnv { recordNumber = SingleRecord n,
                          energyMap = M.filterWithKey (p n) (energyMap envs),
@@ -217,28 +220,25 @@ separateEnvs envs | MixedRecord lst <- recordNumber envs = map f (L.sort lst)
                          dxMap = M.filterWithKey (p n) (dxMap envs),
                          varMap = M.filterWithKey (p n) (varMap envs),
                          storageMap = M.filterWithKey (p n) (storageMap envs) }
-separateEnvs _ = error "separateEnvs: no mixed env"
 
 checkEnvsForDelta :: Envs a -> Envs a -> Bool
-checkEnvsForDelta env fnv = and lst
-  where lst = [ energyMap env .== energyMap fnv,
-                powerMap env .== powerMap fnv,
-                fetaMap env .== fetaMap fnv,
-                xMap env .== xMap fnv,
-                storageMap env .== storageMap fnv ]
-        (.==) x y = and $ zipWith ignoreRecEq (M.keys x) (M.keys y)
+checkEnvsForDelta env fnv =
+   and [ check env fnv energyMap,
+         check env fnv powerMap,
+         check env fnv fetaMap,
+         check env fnv xMap,
+         check env fnv storageMap ]
+   where check :: IdxEq idx => Envs a -> Envs a -> (Envs a -> M.Map idx c) -> Bool
+         check x y f = SV.equalBy ignoreRecEq (M.keys $ f x) (M.keys $ f y)
 
 minusEnv ::
-   (S.Arith s s ~ s, TSum t t t, c ~ Zip c c, BSum a, D.ZipWith c c a a a) =>
+   (S.Arith s s ~ s, TSum t t t, c ~ Zip c c, D.ZipWith c c, D.Storage c a, BSum a) =>
    Envs (TC s t (Data c a)) ->
    Envs (TC s t (Data c a)) ->
    Envs (TC s t (Data c a))
 minusEnv laterEnv formerEnv | checkEnvsForDelta laterEnv formerEnv = gnv
-  where minus x y = M.fromList $ zipWith minush (M.toList x) (M.toList y)
-        minush (k0, x) (k1, y) = (k0, x .- y)
-
-        fminus x y = M.fromList $ zipWith fminush (M.toList x) (M.toList y)
-        fminush (k0, fx) (k1, fy) = (k0, \z -> fx z .- fy z)
+  where minus x y = M.intersectionWith (.-) x y
+        fminus = M.intersectionWith (\fx fy z -> fx z .- fy z)
 
         edk (EnergyIdx a b c d) = DEnergyIdx a b c d
         pdk (PowerIdx a b c d) = DPowerIdx a b c d
@@ -252,7 +252,9 @@ minusEnv laterEnv formerEnv | checkEnvsForDelta laterEnv formerEnv = gnv
 
 
 
-mapEnv :: (D.Map c a b) => (a -> b) -> Envs (TC s t (Data c a)) -> Envs (TC s t (Data c b))
+mapEnv ::
+   (D.Map c, D.Storage c a, D.Storage c b) =>
+   (a -> b) -> Envs (TC s t (Data c a)) -> Envs (TC s t (Data c b))
 mapEnv f env = emptyEnv { recordNumber = recordNumber env,
                           energyMap = M.map (S.map f) (energyMap env),
                           denergyMap = M.map (S.map f) (denergyMap env),

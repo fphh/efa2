@@ -1,62 +1,73 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeFamilies #-}
 module EFA2.Interpreter.Interpreter where
 
 import qualified Data.Map as M
 import qualified Data.List as L
 
 import qualified EFA2.Signal.Signal as S
-import EFA2.Solver.Equation
-import EFA2.Interpreter.InTerm
-import EFA2.Interpreter.Env
+import qualified EFA2.Signal.Data as D
 import EFA2.Signal.Signal (toConst, (.+), (.*))
-import EFA2.Utils.Utils
+import EFA2.Signal.Typ (Typ, UT)
+import EFA2.Signal.Base (Val)
+
+import EFA2.Solver.Equation (Equation(Given, (:=)), EqTerm(..))
+import EFA2.Interpreter.InTerm (InTerm(..), InEquation(..))
+import EFA2.Interpreter.Env
+import EFA2.Utils.Utils (safeLookup)
 
 
---eqToInTerm :: Envs a -> EqTerm -> InTerm a
-eqToInTerm envs term = eqToInTerm' term
-  where eqToInTerm' (Const x) = InConst x
-        eqToInTerm' (Energy idx := Given) = InEqual (EIdx idx) (InGiven (energyMap envs `safeLookup` idx))
-        eqToInTerm' (DEnergy idx := Given) = InEqual (DEIdx idx) (InGiven (denergyMap envs `safeLookup` idx))
-        eqToInTerm' (Power idx := Given) = InEqual (PIdx idx) (InGiven (powerMap envs `safeLookup` idx))
-        eqToInTerm' (DPower idx := Given) = InEqual (DPIdx idx) (InGiven (dpowerMap envs `safeLookup` idx))
-        eqToInTerm' (FEta idx := Given) = InEqual (FNIdx idx) (InFunc (fetaMap envs `safeLookup` idx))
-        eqToInTerm' (DEta idx := Given) = InEqual (DNIdx idx) (InFunc (detaMap envs `safeLookup` idx))
-{- 
-        eqToInTerm' (DEta idx := ((FEta x) :+ (Minus (FEta y)))) = InEqual (DNIdx idx) (InFunc (\z -> fx z .- fy z))
+eqToInTerm :: Show a => Envs a -> Equation -> InEquation a
+eqToInTerm envs (Given t) =
+   case t of
+      (Energy idx) -> InEqual (EIdx idx) (InGiven (energyMap envs `safeLookup` idx))
+      (DEnergy idx) -> InEqual (DEIdx idx) (InGiven (denergyMap envs `safeLookup` idx))
+      (Power idx) -> InEqual (PIdx idx) (InGiven (powerMap envs `safeLookup` idx))
+      (DPower idx) -> InEqual (DPIdx idx) (InGiven (dpowerMap envs `safeLookup` idx))
+      (FEta idx) -> InEqual (FNIdx idx) (InFunc (fetaMap envs `safeLookup` idx))
+      (DEta idx) -> InEqual (DNIdx idx) (InFunc (detaMap envs `safeLookup` idx))
+{-
+      (DEta idx := ((FEta x) :+ (Minus (FEta y)))) -> InEqual (DNIdx idx) (InFunc (\z -> fx z .- fy z))
           where fx = fetaMap envs `safeLookup` x
                 fy = fetaMap envs `safeLookup` y
 -}
-        eqToInTerm' (DTime idx := Given) = InEqual (DTIdx idx) (InGiven (dtimeMap envs `safeLookup` idx))
-        eqToInTerm' (X idx := Given) = InEqual (ScaleIdx idx) (InGiven (xMap envs `safeLookup` idx))
-        eqToInTerm' (DX idx := Given) = InEqual (DScaleIdx idx) (InGiven (dxMap envs `safeLookup` idx))
-        eqToInTerm' (Var idx := Given) = InEqual (VIdx idx) (InGiven (varMap envs `safeLookup` idx))
-        eqToInTerm' (Store idx := Given) = InEqual (SIdx idx) (InGiven (storageMap envs `safeLookup` idx))
-        eqToInTerm' (Energy idx) = EIdx idx
-        eqToInTerm' (DEnergy idx) = DEIdx idx
-        eqToInTerm' (Power idx) = PIdx idx
-        eqToInTerm' (DPower idx) = DPIdx idx
-        eqToInTerm' (FEta idx) = FNIdx idx
-        eqToInTerm' (DEta idx) = DNIdx idx
-        eqToInTerm' (DTime idx) = DTIdx idx
-        eqToInTerm' (X idx) = ScaleIdx idx
-        eqToInTerm' (DX idx) = DScaleIdx idx
+      (DTime idx) -> InEqual (DTIdx idx) (InGiven (dtimeMap envs `safeLookup` idx))
+      (X idx) -> InEqual (ScaleIdx idx) (InGiven (xMap envs `safeLookup` idx))
+      (DX idx) -> InEqual (DScaleIdx idx) (InGiven (dxMap envs `safeLookup` idx))
+      (Var idx) -> InEqual (VIdx idx) (InGiven (varMap envs `safeLookup` idx))
+      (Store idx) -> InEqual (SIdx idx) (InGiven (storageMap envs `safeLookup` idx))
 
-        eqToInTerm' (Var idx) = VIdx idx
-        eqToInTerm' (Store idx) = SIdx idx
-        eqToInTerm' (Recip x) = InRecip (eqToInTerm' x)
-        eqToInTerm' (Minus x) = InMinus (eqToInTerm' x)
-        eqToInTerm' (FEdge x y) = InFEdge (eqToInTerm' x) (eqToInTerm' y)
-        eqToInTerm' (BEdge x y) = InBEdge (eqToInTerm' x) (eqToInTerm' y)
-        eqToInTerm' (NEdge x y) = InNEdge (eqToInTerm' x) (eqToInTerm' y)
+eqToInTerm _envs (x := y) =
+   InEqual (eqTermToInTerm x) (eqTermToInTerm y)
 
-        eqToInTerm' (FNode x y) = InFNode (eqToInTerm' x) (eqToInTerm' y)
-        eqToInTerm' (BNode x y) = InBNode (eqToInTerm' x) (eqToInTerm' y)
-        eqToInTerm' (XNode x y) = InXNode (eqToInTerm' x) (eqToInTerm' y)
+eqTermToInTerm :: EqTerm -> InTerm a
+eqTermToInTerm term =
+   case term of
+      (Const x) -> InConst x
+      (Energy idx) -> EIdx idx
+      (DEnergy idx) -> DEIdx idx
+      (Power idx) -> PIdx idx
+      (DPower idx) -> DPIdx idx
+      (FEta idx) -> FNIdx idx
+      (DEta idx) -> DNIdx idx
+      (DTime idx) -> DTIdx idx
+      (X idx) -> ScaleIdx idx
+      (DX idx) -> DScaleIdx idx
 
+      (Var idx) -> VIdx idx
+      (Store idx) -> SIdx idx
+      (Recip x) -> InRecip (eqTermToInTerm x)
+      (Minus x) -> InMinus (eqTermToInTerm x)
+      (FEdge x y) -> InFEdge (eqTermToInTerm x) (eqTermToInTerm y)
+      (BEdge x y) -> InBEdge (eqTermToInTerm x) (eqTermToInTerm y)
+      (NEdge x y) -> InNEdge (eqTermToInTerm x) (eqTermToInTerm y)
 
-        eqToInTerm' (x :+ y) = InAdd (eqToInTerm' x) (eqToInTerm' y)
-        eqToInTerm' (x :* y) = InMult (eqToInTerm' x) (eqToInTerm' y)
-        eqToInTerm' (x := y) = InEqual (eqToInTerm' x) (eqToInTerm' y)
-        eqToInTerm' t = error ("eqToInTerm: " ++ show t)
+      (FNode x y) -> InFNode (eqTermToInTerm x) (eqTermToInTerm y)
+      (BNode x y) -> InBNode (eqTermToInTerm x) (eqTermToInTerm y)
+      (XNode x y) -> InXNode (eqTermToInTerm x) (eqTermToInTerm y)
+
+      (x :+ y) -> InAdd (eqTermToInTerm x) (eqTermToInTerm y)
+      (x :* y) -> InMult (eqTermToInTerm x) (eqTermToInTerm y)
 
 
 showInTerm :: (Show a) => InTerm a -> String
@@ -89,17 +100,25 @@ showInTerm (InXNode s t) = "xn(" ++ showInTerm s ++ ", " ++ showInTerm t ++ ")"
 
 showInTerm (InAdd s t) = "(" ++ showInTerm s ++ " + " ++ showInTerm t ++ ")"
 showInTerm (InMult s t) = showInTerm s ++ " * " ++ showInTerm t
-showInTerm (InEqual s t) = showInTerm s ++ " = " ++ showInTerm t
+
+showInEquation :: (Show a) => InEquation a -> String
+showInEquation (InEqual s t) = showInTerm s ++ " = " ++ showInTerm t
 
 showInTerms :: (Show a) => [InTerm a] -> String
 showInTerms ts = L.intercalate "\n" $ map showInTerm ts
 
-{-
-interpretRhs :: ( S.Arith s s s, SMap c Val Val, TProd t t t, TSum t t t, D.ZipWith c c c Val Val Val,
-                  D.FromList c Val, Show (c Val)) =>
-                  Int -> Envs (TC s t (c Val)) -> InTerm (TC s t (c Val)) -> TC s t (c Val)
 
--}
+
+type Signal s c a = S.TC s (Typ UT UT UT) (D.Data c a)
+
+interpretRhs ::
+   (Show (D.Apply c2 Val), D.ZipWith c2 c2, D.Map c2,
+    D.Storage c2 Val, S.Const s2 c2, S.Arith s2 s2 ~ s2,
+    D.Zip c2 c2 ~ c2) =>
+   Int ->
+   Envs (Signal s2 c2 Val) ->
+   InTerm (Signal s2 c2 Val) ->
+   Signal s2 c2 Val
 interpretRhs len envs term = interpretRhs' term
   where --interpretRhs' (InConst x) = S.fromVal len [x] -- Wichtig für delta Rechnung?
         --interpretRhs' (InGiven xs) = S.map (:[]) xs
@@ -130,49 +149,71 @@ interpretRhs len envs term = interpretRhs' term
         interpretRhs' (InAdd s t) = (interpretRhs' s) .+ (interpretRhs' t)
         interpretRhs' (InMult s t) = (interpretRhs' s) .* (interpretRhs' t)
         interpretRhs' t = error ("interpretRhs': " ++ show t)
-{-
-insert :: ( S.Arith s s s, SMap c Val Val, TProd t t t, TSum t t t, D.ZipWith c c c Val Val Val,
-            D.FromList c Val, Show (c Val), Ord k) =>
-            Int -> k -> Envs (TC s t (c Val)) -> InTerm (TC s t (c Val)) -> M.Map k (TC s t (c Val)) -> M.Map k (TC s t (c Val))
--}
+
+insert ::
+   (Ord k, Show (D.Apply c2 Val), D.ZipWith c2 c2, D.Map c2,
+    D.Storage c2 Val, S.Const s2 c2, S.Arith s2 s2 ~ s2,
+    D.Zip c2 c2 ~ c2) =>
+   Int ->
+   k ->
+   Envs (Signal s2 c2 Val) ->
+   InTerm (Signal s2 c2 Val) ->
+   M.Map k (Signal s2 c2 Val) ->
+   M.Map k (Signal s2 c2 Val)
 insert len idx envs rhs m = M.insert idx (interpretRhs len envs rhs) m
 
+
+interpretEq ::
+   (Show (D.Apply c2 Val), D.ZipWith c2 c2, D.Map c2,
+    D.Storage c2 Val, S.Const s2 c2, S.Arith s2 s2 ~ s2,
+    D.Zip c2 c2 ~ c2) =>
+   Int ->
+   Envs (Signal s2 c2 Val) ->
+   InEquation (Signal s2 c2 Val) ->
+   Envs (Signal s2 c2 Val)
+interpretEq len envs eq =
+   case eq of
+      (InEqual (EIdx idx) rhs) -> envs { energyMap = insert len idx envs rhs (energyMap envs) }
+      (InEqual (DEIdx idx) rhs) -> envs { denergyMap = insert len idx envs rhs (denergyMap envs) }
+      (InEqual (PIdx idx) rhs) -> envs { powerMap = insert len idx envs rhs (powerMap envs) }
+      (InEqual (DPIdx idx) rhs) -> envs { dpowerMap = insert len idx envs rhs (dpowerMap envs) }
+      (InEqual (FNIdx idx@(FEtaIdx _s _r _f _t)) (InFunc feta)) -> envs { fetaMap = M.insert idx feta (fetaMap envs) }
 {-
-interpretEq :: ( S.Arith s s s, SMap c Val Val, TProd t t t, TSum t t t,
-                 D.ZipWith c c c Val Val Val, D.FromList c Val, Show (c Val)) =>
-                 Int -> Envs (TC s t (c Val)) -> InTerm (TC s t (c Val)) -> Envs (TC s t (c Val))
--}
-interpretEq len envs (InEqual (EIdx idx) rhs) = envs { energyMap = insert len idx envs rhs (energyMap envs) }
-interpretEq len envs (InEqual (DEIdx idx) rhs) = envs { denergyMap = insert len idx envs rhs (denergyMap envs) }
-interpretEq len envs (InEqual (PIdx idx) rhs) = envs { powerMap = insert len idx envs rhs (powerMap envs) }
-interpretEq len envs (InEqual (DPIdx idx) rhs) = envs { dpowerMap = insert len idx envs rhs (dpowerMap envs) }
-interpretEq len envs (InEqual (FNIdx idx@(FEtaIdx s r f t)) (InFunc feta)) = envs { fetaMap = M.insert idx feta (fetaMap envs) }
-{-
-interpretEq envs (InEqual (FNIdx idx@(FEtaIdx s r f t) _) (InMult (InRecip (PIdx pidx1)) (PIdx pidx2))) = envs''
+      (InEqual (FNIdx idx@(FEtaIdx s r f t) _) (InMult (InRecip (PIdx pidx1)) (PIdx pidx2))) -> envs''
   where envs' = envs { fetaMap = M.insert idx (mkEtaFunc pts) (fetaMap envs) }
         envs'' = envs' { fetaMap = M.insert (FEtaIdx s r t f) (mkEtaFunc (reversePts pts)) (fetaMap envs') }
         p1 = powerMap envs M.! pidx1
         p2 = powerMap envs M.! pidx2
         pts = Pt p2 (p2 ./ p1) 
 -}
---interpretEq len envs (InEqual (DNIdx idx) rhs) = envs { detaMap = insert len idx envs rhs (detaMap envs) }
-interpretEq len envs (InEqual (DNIdx idx@(DEtaIdx s r f t)) (InFunc deta)) = envs { detaMap = M.insert idx deta (detaMap envs) }
-interpretEq len envs (InEqual (DTIdx idx) rhs) = envs { dtimeMap = insert len idx envs rhs (dtimeMap envs) }
-interpretEq len envs (InEqual (ScaleIdx idx) rhs) = envs { xMap = insert len idx envs rhs (xMap envs) }
-interpretEq len envs (InEqual (DScaleIdx idx) rhs) = envs { dxMap = insert len idx envs rhs (dxMap envs) }
-interpretEq len envs (InEqual (VIdx idx) rhs) = envs { varMap = insert len idx envs rhs (varMap envs) }
-interpretEq len envs (InEqual (SIdx idx) rhs) = envs { storageMap = insert len idx envs rhs (storageMap envs) }
+--      (InEqual (DNIdx idx) rhs) -> envs { detaMap = insert len idx envs rhs (detaMap envs) }
+      (InEqual (DNIdx idx@(DEtaIdx _s _r _f _t)) (InFunc deta)) -> envs { detaMap = M.insert idx deta (detaMap envs) }
+      (InEqual (DTIdx idx) rhs) -> envs { dtimeMap = insert len idx envs rhs (dtimeMap envs) }
+      (InEqual (ScaleIdx idx) rhs) -> envs { xMap = insert len idx envs rhs (xMap envs) }
+      (InEqual (DScaleIdx idx) rhs) -> envs { dxMap = insert len idx envs rhs (dxMap envs) }
+      (InEqual (VIdx idx) rhs) -> envs { varMap = insert len idx envs rhs (varMap envs) }
+      (InEqual (SIdx idx) rhs) -> envs { storageMap = insert len idx envs rhs (storageMap envs) }
 
-interpretEq len envs t = error ("interpretEq: " ++ showInTerm t)
+      _ -> error ("interpretEq: " ++ showInEquation eq)
 
 
-{-
-interpretFromScratch :: ( S.Arith s s s, TProd t t t, TSum t t t, D.Map c d d, D.ZipWith c c c d d d, 
-                          BProd d d d, BSum d d d, DArith0 d, Show (c d)) 
-                     => RecordNumber -> Int -> [InTerm (TC s t (c d))] -> Envs (TC s t (c d))
--}
+interpretFromScratch ::
+   (Show (D.Apply c2 Val), D.ZipWith c2 c2, D.Map c2,
+    D.Storage c2 Val, S.Const s2 c2, S.Arith s2 s2 ~ s2,
+    D.Zip c2 c2 ~ c2) =>
+   RecordNumber ->
+   Int ->
+   [InEquation (Signal s2 c2 Val)] ->
+   Envs (Signal s2 c2 Val)
 interpretFromScratch rec len ts = (L.foldl' (interpretEq len) emptyEnv ts) { recordNumber = rec }
 
 
---interpretWithEnv :: Int -> Envs a -> InTerm a -> a
+interpretWithEnv ::
+   (Show (D.Apply c2 Val), D.ZipWith c2 c2, D.Map c2,
+    D.Storage c2 Val, S.Const s2 c2, S.Arith s2 s2 ~ s2,
+    D.Zip c2 c2 ~ c2) =>
+   Int ->
+   Envs (Signal s2 c2 Val) ->
+   InTerm (Signal s2 c2 Val) ->
+   Signal s2 c2 Val
 interpretWithEnv len envs t = interpretRhs len envs t

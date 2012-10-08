@@ -17,7 +17,8 @@ import EFA2.Solver.EquationOrder (order)
 import EFA2.Solver.IsVar (isStaticVar)
 
 import EFA2.Interpreter.Interpreter
-          (eqToInTerm, interpretFromScratch, showInTerm, interpretWithEnv)
+          (eqToInTerm, eqTermToInTerm,
+           interpretFromScratch, showInTerm, interpretWithEnv)
 import EFA2.Interpreter.InTerm (InTerm)
 import EFA2.Interpreter.Env
 import EFA2.Interpreter.Arith (Val)
@@ -59,11 +60,11 @@ symbolic g = mapEqTermEnv (setEqTerms (emptyEnv { dxMap = dx1eq })) res
         ts1o = order ts1
         difftseq = mkDiffEqTermEquations 0 ts1o
 
-        ts = toAbsEqTermEquations $ order (ts0o ++ ts1o ++ difftseq)
+        ts = toAbsEquations $ order (ts0o ++ ts1o ++ difftseq)
         res = interpretEqTermFromScratch ts
 
 numeric :: Topology -> Envs Sc
-numeric g =  trace ("---------\n" ++ showEqTerms ts1o ++ "\n------\n") res
+numeric g =  trace ("---------\n" ++ showEquations ts1o ++ "\n------\n") res
   where envs0 = emptyEnv { recordNumber = SingleRecord 0,
                            powerMap = power0num,
                            dtimeMap = dtimes0num,
@@ -88,7 +89,7 @@ numeric g =  trace ("---------\n" ++ showEqTerms ts1o ++ "\n------\n") res
 
         envs = envUnion [envs0', envs1']
 
-        ts = toAbsEqTermEquations $ ts0o ++ ts1o ++ difftseq
+        ts = toAbsEquations $ ts0o ++ ts1o ++ difftseq
         res = interpretFromScratch (recordNumber envs) 1 (map (eqToInTerm envs) ts)
 
 deltaEnv :: Topology -> Envs Sc
@@ -111,8 +112,8 @@ deltaEnv g = res1 `minusEnv` res0
         (envs0', ts0) = makeAllEquations g [envs0]
         (envs1', ts1) = makeAllEquations g [envs1]
 
-        ts0' = toAbsEqTermEquations $ order ts0
-        ts1' = toAbsEqTermEquations $ order ts1
+        ts0' = toAbsEquations $ order ts0
+        ts1' = toAbsEquations $ order ts1
 
         res0 = interpretFromScratch (recordNumber envs0') 1 (map (eqToInTerm envs0') ts0')
         res1 = interpretFromScratch (recordNumber envs1') 1 (map (eqToInTerm envs1') ts1')
@@ -162,13 +163,13 @@ main = do
       dpsym = dpowerMap sym
       dpsymEq = M.map pushMult dpsym
 
-      dpsymIn = M.map (eqToInTerm emptyEnv) dpsym
+      dpsymIn = M.map eqTermToInTerm dpsym
       dpsyminterp = M.map (interpretWithEnv 1 num) dpsymIn
 
       detailsSym = M.map additiveTerms dpsymEq
 
       details :: M.Map DPowerIdx [Val]
-      details = M.map (map (S.fromScalar . interpretWithEnv 1 num . eqToInTerm emptyEnv)) detailsSym
+      details = M.map (map (S.fromScalar . interpretWithEnv 1 num . eqTermToInTerm)) detailsSym
 
       sumdetails = M.map sum details
 

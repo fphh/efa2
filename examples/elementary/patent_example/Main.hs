@@ -39,13 +39,13 @@ mkSig n = S.fromList . concat . replicate n
 symbolic :: Topology -> Envs EqTerm
 symbolic g = res { recordNumber = SingleRecord 0 }
   where (envs, ts) = makeAllEquations g [envs0sym]
-        ts' = toAbsEqTermEquations $ order ts
+        ts' = toAbsEquations $ order ts
         res = interpretEqTermFromScratch ts'
 
 numeric :: Topology -> Envs Sc
 numeric g = res { recordNumber = SingleRecord 0 }
   where (envs, ts) = makeAllEquations g [envs0num]
-        ts' = toAbsEqTermEquations $ order ts
+        ts' = toAbsEquations $ order ts
         res = interpretFromScratch (recordNumber envs) 1 (map (eqToInTerm envs) ts')
 
 

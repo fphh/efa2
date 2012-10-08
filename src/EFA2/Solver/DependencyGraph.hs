@@ -1,10 +1,11 @@
 module EFA2.Solver.DependencyGraph where
 
 import EFA2.Solver.Equation (EqTerm, mkVarSet)
-import EFA2.Utils.Utils
+import EFA2.Utils.Utils (diffByAtMostOne, hasSameVariable)
 
-import Data.Graph.Inductive
+import Data.Graph.Inductive (Graph(..), DynGraph(..), Gr, nmap, newNodes, insNode)
 import Data.Maybe (mapMaybe)
+import Data.Maybe.HT (toMaybe)
 import Data.Tuple.HT (swap)
 
 import qualified Data.Set as S
@@ -20,15 +21,13 @@ dependencyGraph p vsets = g
   where xs = HTL.removeEach vsets
         ys = concatMap (uncurry (mkArcs p)) xs
         m = M.fromList (zip vsets [0..])
-        es = unique $ map (\(x, y) -> (m M.! x, m M.! y, ())) ys
+        es = map (\(x, y) -> (m M.! x, m M.! y, ())) ys
         g = mkGraph (map swap $ M.toList m) es
 
 mkArcs ::
    (Ord a, Show a) =>
    (S.Set a -> S.Set a -> Bool) -> S.Set a -> [S.Set a] -> [(S.Set a, S.Set a)]
-mkArcs p s ss = mapMaybe g ss
-  where g t | p s t = Just (s, t)
-        g _ = Nothing
+mkArcs p s = mapMaybe (\t -> toMaybe (p s t) (s, t))
 
 makeDependencyGraph :: (EqTerm -> Bool) -> (S.Set EqTerm -> S.Set EqTerm -> Bool) -> [EqTerm] -> Gr EqTerm ()
 makeDependencyGraph isVar p ts = deq

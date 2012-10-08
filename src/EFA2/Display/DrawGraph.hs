@@ -1,5 +1,4 @@
 {-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, ScopedTypeVariables, FlexibleContexts #-}
-{-# LANGUAGE PatternGuards #-}
 
 module EFA2.Display.DrawGraph where
 
@@ -7,6 +6,7 @@ import qualified Data.Map as M
 import qualified Data.List as L
 import qualified Data.List.HT as HTL
 
+import Data.Eq.HT (equating)
 import Data.Ratio
 
 import Data.Maybe
@@ -61,8 +61,8 @@ mkDotGraph g (SingleRecord recordNum) timef nshow eshow =
   where es = labEdges g
         (interEs, origEs) = L.partition (\(_, _, e) -> isIntersectionEdge e) es
         g' = delEdges (map (\(x, y, _) -> (x, y)) interEs) g
-        cs = HTL.removeEach (L.groupBy sameSection (labNodes g))
-        sameSection (_, l1) (_, l2) = sectionNLabel l1 == sectionNLabel l2
+        cs = HTL.removeEach (L.groupBy (equating section) (labNodes g))
+        section = sectionNLabel . snd
         comps = map sg cs
         sg ns@(x:_, _) = DotSG True (Just (Int sl)) (ds sl recordNum ns)
           where sl = sectionNLabel $ snd x
@@ -84,14 +84,21 @@ mkDotNode nshow n@(x, _) = DotNode x [displabel, nodeColour, Style [SItem Filled
 mkDotEdge :: (LEdge ELabel -> String) -> LEdge ELabel -> DotEdge Int
 mkDotEdge eshow e@(x, y, elabel) = DotEdge x y [displabel, edir, colour]
   where flowDir = flowDirection elabel
-        displabel | UnDir <- flowDir = Label $ StrLabel $ T.pack ""
-                  | otherwise = Label $ StrLabel $ T.pack (eshow e)
-        edir | AgainstDir <- flowDir = Dir Back
-             | WithDir <- flowDir = Dir Forward
-             | otherwise = Dir NoDir
-        etype = edgeType elabel
-        colour | IntersectionEdge <- etype = intersectionEdgeColour
-               | otherwise = originalEdgeColour
+        displabel =
+           Label $ StrLabel $ T.pack $
+           case flowDir of
+              UnDir -> ""
+              _ -> eshow e
+        edir =
+           Dir $
+           case flowDir of
+              AgainstDir -> Back
+              WithDir -> Forward
+              _ -> NoDir
+        colour =
+           case edgeType elabel of
+              IntersectionEdge -> intersectionEdgeColour
+              _ -> originalEdgeColour
         --colour = originalEdgeColour
 
 printGraph :: EfaGraph NLabel ELabel -> RecordNumber -> (Int -> Int -> String) -> (LNode NLabel -> String) -> (LEdge ELabel -> String) -> IO ()
@@ -124,11 +131,12 @@ dsg ident topo = DotSG True (Just (Int ident)) stmts
         nattrs x = [labNodef x, nodeColour, Style [SItem Filled []], Shape BoxShape ]
         labNodef (n, l) = Label $ StrLabel $ T.pack (show n ++ " - " ++ show (nodetypeNLabel l))
         es = map mkEdge (labEdges topo)
-        mkEdge (x, y, l) 
-          | WithDir <- fd = DotEdge (idf x) (idf y) [Dir Forward]
-          | AgainstDir <- fd = DotEdge (idf x) (idf y) [Dir Back]
-          | otherwise = DotEdge (idf x) (idf y) [Dir NoDir]
-          where fd = flowDirection l
+        mkEdge (x, y, l) =
+           DotEdge (idf x) (idf y) $ (:[]) $ Dir $
+           case flowDirection l of
+              WithDir -> Forward
+              AgainstDir -> Back
+              _ -> NoDir
 
 drawTopologyXs' :: [Topology] -> IO ()
 drawTopologyXs' ts = runGraphvizCanvas Dot g Xlib

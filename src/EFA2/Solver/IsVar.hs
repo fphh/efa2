@@ -1,17 +1,14 @@
 
-
 module EFA2.Solver.IsVar where
 
-import Data.Graph.Inductive
-import qualified Data.Vector.Unboxed as UV
 import qualified Data.List as L
 import qualified Data.Set as S
+import Data.Maybe (mapMaybe)
 
-import Debug.Trace
+-- import Debug.Trace
 
-import EFA2.Solver.Equation
-import EFA2.Interpreter.Env
-import EFA2.Utils.Utils
+import EFA2.Solver.Equation (Equation(..), EqTerm(..), mkVarSetEq)
+import EFA2.Interpreter.Env (EnergyIdx(..))
 
 {-- This algorithm is fast, but buggy.
 
@@ -76,27 +73,27 @@ isVar g ts t
 -- | True for 'EqTerm's that are of the form:
 --
 -- > ... := Given ...
-isGiven :: EqTerm -> Bool
-isGiven (_ := Given) = True
+isGiven :: Equation -> Bool
+isGiven (Given _) = True
 isGiven _ = False
 
 -- | True for 'EqTerm's that don't contain variables and for which 'isGiven' is False.
 -- We assume for the given predicate (isVar :: EqTerm -> Bool) that:
 --
 -- > not (isVar t) == isGiven t
-noVar :: (EqTerm -> Bool) -> EqTerm -> Bool
-noVar isVar t = (not $ isGiven t) && (S.size (mkVarSet isVar t) == 0)
+noVar :: (EqTerm -> Bool) -> Equation -> Bool
+noVar isVar t = (not $ isGiven t) && (S.null (mkVarSetEq isVar t))
 
 
 -- | True for 'EqTerm's that contain exactly one variable and for which 'isGiven' is False.
 -- We assume for the given predicate (isVar :: EqTerm -> Bool) that:
 --
 -- > not (isVar t) == isGiven t
-isGivenExtended :: (EqTerm -> Bool) -> EqTerm -> Bool
-isGivenExtended isVar t = (not $ isGiven t) && (S.size (mkVarSet isVar t) == 1)
+isGivenExtended :: (EqTerm -> Bool) -> Equation -> Bool
+isGivenExtended isVar t = (not $ isGiven t) && (S.size (mkVarSetEq isVar t) == 1)
 
 
-splitTerms :: (EqTerm -> Bool) -> [EqTerm] -> ([EqTerm], [EqTerm], [EqTerm], [EqTerm])
+splitTerms :: (EqTerm -> Bool) -> [Equation] -> ([Equation], [Equation], [Equation], [Equation])
 splitTerms isVar ts = (given, nov, givenExt, rest)
   where (given, r0) = L.partition isGiven ts
         (nov, r1) = L.partition (noVar isVar) r0
@@ -149,8 +146,7 @@ isVarFromEqs s t = not (S.member t s || isCompoundTerm t)
 
 -- | True for variables that don't appear in 'Given' equations.
 -- Used mainly as a reference implementation for 'isVar'.
-isVarFromEqs :: [EqTerm] -> (EqTerm -> Bool)
+isVarFromEqs :: [Equation] -> EqTerm -> Bool
 isVarFromEqs ts t = not (S.member t s || isCompoundTerm t) 
-  where s = L.foldl' f S.empty ts
-        f acc (v := Given) = S.insert v acc
-        f acc _ = acc
+  where s = S.fromList $
+               mapMaybe (\eq -> case eq of Given v -> Just v; _ -> Nothing) ts

@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -20,7 +21,9 @@ import Data.Tuple.HT (mapPair)
 import Data.Eq (Eq((==), (/=)))
 import Data.Ord (Ord, (<), (>), (<=), (>=))
 import Data.Function ((.), ($), id, flip)
-import Prelude (Maybe, Bool, Int, (+))
+import Data.Maybe (Maybe(Just, Nothing), fromMaybe)
+import Control.Monad (mplus)
+import Prelude (Bool, Int, (+), error)
 import qualified Prelude as P
 
 
@@ -83,6 +86,48 @@ type List2 = Data ([] :> [] :> Nil)
 type List3 = Data ([] :> [] :> [] :> Nil)
 
 
+
+----------------------------------------------------------
+-- | handling of storage specific constraints on the element type
+
+class Storage (c :: * -> *) a where
+   data Constraints c a :: *
+   constraints :: Data c a -> Constraints c a
+
+instance Storage Nil a where
+   data Constraints Nil a = NilConstraints
+   constraints _ = NilConstraints
+
+instance (SV.Storage v2 (Apply v1 a), Storage v1 a) => Storage (v2 :> v1) a where
+   data Constraints (v2 :> v1) a =
+           (SV.Storage v2 (Apply v1 a), Storage v1 a) => ComposeConstraints
+   constraints _ = ComposeConstraints
+
+
+readNested ::
+   ((SV.Storage v2 (Apply v1 a), Storage v1 a) => Data (v2 :> v1) a -> b) ->
+   (Storage (v2 :> v1) a => Data (v2 :> v1) a -> b)
+readNested f x = case constraints x of ComposeConstraints -> f x
+
+writeNested ::
+   ((SV.Storage v2 (Apply v1 a), Storage v1 a) => Data (v2 :> v1) a) ->
+   (Storage (v2 :> v1) a => Data (v2 :> v1) a)
+writeNested x =
+   let z = case constraints z of ComposeConstraints -> x
+   in  z
+
+
+withNestedData ::
+   ((SV.Storage v2 (Apply v1 a), Storage v1 a) => v2 (Apply v1 a) -> b) ->
+   (Storage (v2 :> v1) a => Data (v2 :> v1) a -> b)
+withNestedData f = readNested (f . getData)
+
+nestedData ::
+   ((SV.Storage v2 (Apply v1 a), Storage v1 a) => v2 (Apply v1 a)) ->
+   (Storage (v2 :> v1) a => Data (v2 :> v1) a)
+nestedData x = writeNested (Data x)
+
+
 ----------------------------------------------------------
 -- | mapping
 
@@ -100,17 +145,16 @@ instance (Functor v) => P.Functor (Data v) where
    fmap = fmap
 
 
-class Map c d1 d2 where
-   map :: (d1 -> d2) -> Data c d1 -> Data c d2
+class Map c where
+   map :: (Storage c d1, Storage c d2) => (d1 -> d2) -> Data c d1 -> Data c d2
 
-instance Map Nil d1 d2 where
+instance Map Nil where
    map f (Data x) = Data $ f x
 
-instance
-   (SV.Walker v2 (Apply v1 d1) (Apply v1 d2), Map v1 d1 d2) =>
-      Map (v2 :> v1) d1 d2 where
-   map f xd@(Data x) =
-      Data $ SV.map (getData . map f . subData xd) x
+instance (SV.Walker v2, Map v1) => Map (v2 :> v1) where
+   map f xd =
+      nestedData
+         (withNestedData (SV.map (getData . map f . subData xd)) xd)
 
 
 ----------------------------------------------------------
@@ -126,83 +170,81 @@ type instance Zip (v2 :> v1) Nil = v2 :> v1
 type instance Zip (v :> v1) (v :> v2) = v :> Zip v1 v2
 
 
-class ZipWith c1 c2 d1 d2 d3 where
-   zipWith :: (d1 -> d2 -> d3) -> Data c1 d1 -> Data c2 d2 -> Data (Zip c1 c2) d3
+class ZipWith c1 c2 where
+   zipWith ::
+      (Storage c1 d1, Storage c2 d2, Storage (Zip c1 c2) d3) =>
+      (d1 -> d2 -> d3) -> Data c1 d1 -> Data c2 d2 -> Data (Zip c1 c2) d3
 
 -- 0d - 0d
-instance ZipWith Nil Nil d1 d2 d3 where
+instance ZipWith Nil Nil where
    zipWith f (Data x) (Data y) = Data $ f x y
 
 -- 0d - (n+1)d
-instance
-   (SV.Walker v2 (Apply v1 d2) (Apply v1 d3), Map v1 d2 d3) =>
-      ZipWith Nil (v2 :> v1) d1 d2 d3 where
+instance (SV.Walker v2, Map v1) => ZipWith Nil (v2 :> v1) where
    zipWith f (Data x) y = map (f x) y
 
 -- (n+1)d - 0d
-instance
-   (SV.Walker v2 (Apply v1 d1) (Apply v1 d3), Map v1 d1 d3) =>
-      ZipWith (v2 :> v1) Nil d1 d2 d3 where
+instance (SV.Walker v2, Map v1) => ZipWith (v2 :> v1) Nil where
    zipWith f x (Data y) = map (flip f y) x
 
 -- (n+1)d - (n+1)d
-instance
-   (SV.Zipper v2 (Apply v0 d1) (Apply v1 d2) (Apply (Zip v0 v1) d3),
-    ZipWith v0 v1 d1 d2 d3) =>
-      ZipWith (v2 :> v0) (v2 :> v1) d1 d2 d3 where
-   zipWith f xd@(Data x) yd@(Data y) =
-      Data $ SV.zipWith (\xc yc -> getData $ zipWith f (subData xd xc) (subData yd yc)) x y
+instance (SV.Zipper v2, ZipWith v0 v1) =>
+      ZipWith (v2 :> v0) (v2 :> v1) where
+   zipWith f xd yd =
+      nestedData (
+      withNestedData (
+      withNestedData (
+         SV.zipWith (\xc yc -> getData $ zipWith f (subData xd xc) (subData yd yc))) xd) yd)
 
 
 ----------------------------------------------------------
 -- | Tensor products
 
-class TensorProduct c1 c2 d1 d2 d3 where
+class TensorProduct c1 c2 where
    type Stack c1 c2 :: (* -> *)
-   tensorProduct :: (d1 -> d2 -> d3) -> Data c1 d1 -> Data c2 d2 -> Data (Stack c1 c2) d3
+   tensorProduct ::
+      (Storage c1 d1, Storage c2 d2, Storage (Stack c1 c2) d3) =>
+      (d1 -> d2 -> d3) -> Data c1 d1 -> Data c2 d2 -> Data (Stack c1 c2) d3
 
 -- 0d - nd
-instance
-   (Map v d2 d3) =>
-      TensorProduct Nil v d1 d2 d3 where
+instance (Map v) => TensorProduct Nil v where
    type Stack Nil v = v
    tensorProduct f (Data x) y = map (f x) y
 
 -- (m+1)d - nd
-instance
-   (SV.Walker v1 (Apply v2 d1) (Apply (Stack v2 v) d3),
-    TensorProduct v2 v d1 d2 d3) =>
-      TensorProduct (v1 :> v2) v d1 d2 d3 where
+instance (SV.Walker v1, TensorProduct v2 v) => TensorProduct (v1 :> v2) v where
    type Stack (v1 :> v2) v = v1 :> Stack v2 v
-   tensorProduct f xd@(Data x) yd =
-      Data $ SV.map (\xc -> getData $ tensorProduct f (subData xd xc) yd) x
+   tensorProduct f xd yd =
+      nestedData (withNestedData
+         (SV.map (\xc -> getData $ tensorProduct f (subData xd xc) yd)) xd)
 
 
 ----------------------------------------------------------
 -- Zipping for cross Arithmetics
 
 -- this class does not scale well to arbitrary nesting depths
-class CrossWith c1 c2 d1 d2 d3 where
+class CrossWith c1 c2 where
    type Cross c1 c2 :: (* -> *)
    crossWith ::
+      (Storage c1 d1, Storage c2 d2, Storage (Cross c1 c2) d3) =>
       (d1 -> d2 -> d3) ->
       Data c1 d1 -> Data c2 d2 -> Data (Cross c1 c2) d3
 
 instance
-   (SV.Walker v1 d1 (v2 d3), SV.Walker v2 d2 d3) =>
-      CrossWith (v1 :> Nil) (v2 :> Nil) d1 d2 d3 where
+   (SV.Walker v1, SV.Walker v2) =>
+      CrossWith (v1 :> Nil) (v2 :> Nil) where
    type Cross (v1 :> Nil) (v2 :> Nil) = v1 :> v2 :> Nil
    crossWith = tensorProduct
 
 instance
-   (SV.Zipper v2 d1 (v1 d2) (v1 d3), SV.Walker v1 d2 d3) =>
-      CrossWith (v2 :> Nil) (v2 :> v1 :> Nil) d1 d2 d3 where
+   (SV.Zipper v2, SV.Walker v1) =>
+      CrossWith (v2 :> Nil) (v2 :> v1 :> Nil) where
    type Cross (v2 :> Nil) (v2 :> v1 :> Nil) = v2 :> v1 :> Nil
    crossWith = zipWith
 
 instance
-   (SV.Zipper v2 (v1 d1) d2 (v1 d3), SV.Walker v1 d1 d3) =>
-      CrossWith (v2 :> v1 :> Nil) (v2 :> Nil) d1 d2 d3 where
+   (SV.Zipper v2, SV.Walker v1) =>
+      CrossWith (v2 :> v1 :> Nil) (v2 :> Nil) where
    type Cross (v2 :> v1 :> Nil) (v2 :> Nil) = v2 :> v1 :> Nil
    crossWith = zipWith
 
@@ -210,23 +252,21 @@ instance
 ----------------------------------------------------------
 -- fold Functions
 
-class Fold c d1 d2 where
-   foldl :: (d1 -> d2 -> d1) -> d1 -> Data c d2 -> d1
-   foldr :: (d2 -> d1 -> d1) -> d1 -> Data c d2 -> d1
+class Fold c where
+   foldl :: Storage c d2 => (d1 -> d2 -> d1) -> d1 -> Data c d2 -> d1
+   foldr :: Storage c d2 => (d2 -> d1 -> d1) -> d1 -> Data c d2 -> d1
 
-instance Fold Nil d1 d2 where
+instance Fold Nil where
    foldl f x (Data y) = f x y
    foldr f x (Data y) = f y x
 
-instance
-   (SV.Walker v2 (Apply v1 d2) d1, Fold v1 d1 d2) =>
-      Fold (v2 :> v1) d1 d2 where
-   foldl f x yd@(Data y) = SV.foldl (\xc yc -> foldl f xc (subData yd yc)) x y
-   foldr f x yd@(Data y) = SV.foldr (flip (foldr f) . subData yd) x y
+instance (SV.Walker v2, Fold v1) => Fold (v2 :> v1) where
+   foldl f x yd = withNestedData (vecFoldlMap (foldl f) x (subData yd)) yd
+   foldr f x yd = withNestedData (SV.foldr (flip (foldr f) . subData yd) x) yd
 
 
 foldl1d ::
-   (SV.Walker v2 (Apply v1 d2) (Apply v1 d1)) =>
+   (SV.Walker v2, SV.Storage v2 (Apply v1 d1), SV.Storage v2 (Apply v1 d2)) =>
    (Apply v1 d1 -> Apply v1 d2 -> Apply v1 d1) ->
    Apply v1 d1 ->
    Data (v2 :> v1) d2 ->
@@ -234,95 +274,180 @@ foldl1d ::
 foldl1d f x (Data y) = SV.foldl f x y
 
 foldr1d ::
-   (SV.Walker v2 (Apply v1 d1) (Apply v1 d2)) =>
+   (SV.Walker v2, SV.Storage v2 (Apply v1 d1), SV.Storage v2 (Apply v1 d2)) =>
    (Apply v1 d1 -> Apply v1 d2 -> Apply v1 d2) ->
    Apply v1 d2 ->
    Data (v2 :> v1) d1 ->
    Apply v1 d2
 foldr1d f x (Data y) = SV.foldr f x y
 
+
+{- |
+vecFoldlMap f x g = foldl f x . map g
+but this function requires no storage constraint for the result of 'map'.
+-}
+vecFoldlMap ::
+   (SV.Walker vec, SV.Storage vec a) =>
+   (c -> b -> c) -> c -> (a -> b) -> vec a -> c
+vecFoldlMap f x0 g = SV.foldl (\acc x -> f acc (g x)) x0
+
+foldlMap ::
+   (Fold vec, Storage vec a) =>
+   (c -> b -> c) -> c -> (a -> b) -> Data vec a -> c
+foldlMap f x0 g = foldl (\acc x -> f acc (g x)) x0
+
+
 ----------------------------------------------------------
 -- Monoid
 
-instance (SV.Singleton v2 (Apply v1 d)) => Monoid (Data (v2 :> v1) d) where
+instance
+   (SV.Singleton v2, SV.Storage v2 (Apply v1 d)) =>
+      Monoid (Data (v2 :> v1) d) where
    mempty = Data SV.empty
    mappend (Data x) (Data y) = Data $ SV.append x y
    mconcat = Data . SV.concat . L.map getData
 
 
-class Append c1 c2 d  where
-   append :: Data c1 d -> Data c2 d -> Data (Zip c1 c2) d
+class Append c1 c2  where
+   append ::
+      (Storage c1 d, Storage c2 d) =>
+      Data c1 d -> Data c2 d -> Data (Zip c1 c2) d
 
 instance
-   (SV.Singleton v2 (Apply v1 d), v1 ~ Zip v1 v1) =>
-      Append (v2 :> v1) (v2 :> v1) d where
-   append (Data x) (Data y) = Data $ SV.append x y
+   (SV.Singleton v2, v1 ~ Zip v1 v1) =>
+      Append (v2 :> v1) (v2 :> v1) where
+   append xd yd =
+      Data $ withNestedData (withNestedData SV.append xd) yd
 
-instance (SV.Singleton v1 d) => Append (v1 :> Nil) Nil d where
-   append (Data x) (Data y) = Data $ SV.append x (SV.singleton y)
+instance (SV.Singleton v1) => Append (v1 :> Nil) Nil where
+   append xd (Data y) =
+      nestedData $
+      withNestedData SV.append xd (SV.singleton y)
 
-instance (SV.Singleton v1 d) => Append Nil (v1 :> Nil) d where
-   append (Data x) (Data y) = Data $ SV.append (SV.singleton x) y
+instance (SV.Singleton v1) => Append Nil (v1 :> Nil) where
+   append (Data x) yd =
+      nestedData $
+      withNestedData (SV.append (SV.singleton x)) yd
 
 
 ----------------------------------------------------------
 -- get data Range
 
-class Maximum c d where
-   maximum :: Data c d -> d
-   minimum :: Data c d -> d
+_maximum, _minimum :: (Storage c d, Fold c, Ord d) => Data c d -> d
+_maximum =
+   fromMaybe (error "Data.maximum: empty data") .
+   foldlMap (liftOrd P.max) Nothing Just
 
-instance Maximum Nil d where
+_minimum =
+   fromMaybe (error "Data.minimum: empty data") .
+   foldlMap (liftOrd P.min) Nothing Just
+
+
+class Maximum c where
+   maximum, minimum :: (Storage c d, Ord d) => Data c d -> d
+
+instance Maximum Nil where
    maximum (Data x) = x
    minimum (Data x) = x
 
-instance
-   (SV.Singleton v2 d, SV.Walker v2 (Apply v1 d) d, Maximum v1 d) =>
-      Maximum (v2 :> v1) d where
-   maximum xd@(Data x) = SV.maximum $ SV.map (maximum . subData xd) x
-   minimum xd@(Data x) = SV.minimum $ SV.map (minimum . subData xd) x
+instance (Maximum1 v2 v1) => Maximum (v2 :> v1) where
+   maximum = fromMaybe (error "Data.maximum: empty vector") . maximum1
+   minimum = fromMaybe (error "Data.minimum: empty vector") . minimum1
 
+
+class Maximum1 v2 v1 where
+   maximum1, minimum1 ::
+      {-
+      We do not resolve the Storage constraint here
+      and thus omit the readNested call when calling maximum1 and minimum1.
+      -}
+      (Storage (v2 :> v1) d, Ord d) =>
+      Data (v2 :> v1) d -> Maybe d
+
+instance SV.Singleton v => Maximum1 v Nil where
+   maximum1 = Just . withNestedData SV.maximum
+   minimum1 = Just . withNestedData SV.minimum
+
+instance (SV.Walker v3, Maximum1 v2 v1) => Maximum1 v3 (v2 :> v1) where
+   maximum1 xd = withNestedData (vecFoldlMap (liftOrd P.max) Nothing (maximum1 . subData xd)) xd
+   minimum1 xd = withNestedData (vecFoldlMap (liftOrd P.min) Nothing (minimum1 . subData xd)) xd
+
+
+liftOrd :: (a -> a -> a) -> Maybe a -> Maybe a -> Maybe a
+liftOrd f (Just x) (Just y) = Just (f x y)
+liftOrd _ mx my = mplus mx my
+
+{-
+class Maximum c where
+   maximum, minimum :: (Storage c d, Ord d) => Data c d -> d
+
+instance Maximum Nil where
+   maximum (Data x) = x
+   minimum (Data x) = x
+
+instance (Maximum1 v2 v1) => Maximum (v2 :> v1) where
+   maximum = readNested (fromMaybe (error "Data.maximum: empty vector") . maximum1)
+   minimum = readNested (fromMaybe (error "Data.minimum: empty vector") . minimum1)
+
+
+class Maximum1 v2 v1 where
+   maximum1, minimum1 ::
+      {-
+      here we use the resolved (Storage (v2 :> v1) d) constraint,
+      thus we must use readNested when calling maximum1 or minimum1.
+      -}
+      (SV.Storage v2 (Apply v1 d), Storage v1 d, Ord d) =>
+      Data (v2 :> v1) d -> Maybe d
+
+instance SV.Singleton v => Maximum1 v Nil where
+   maximum1 = Just . withNestedData SV.maximum
+   minimum1 = Just . withNestedData SV.minimum
+
+instance (SV.Walker v3, Maximum1 v2 v1) => Maximum1 v3 (v2 :> v1) where
+   maximum1 xd = withNestedData (SV.foldl (\acc y -> liftOrd P.max acc (readNested maximum1 $ subData xd y)) Nothing) xd
+   minimum1 xd = withNestedData (SV.foldl (\acc y -> liftOrd P.min acc (readNested minimum1 $ subData xd y)) Nothing) xd
+-}
 
 ----------------------------------------------------------
 -- From / To List
 
-class FromList c d where
+class FromList c where
    type NestedList c d :: *
-   fromList :: NestedList c d -> Data c d
-   toList :: Data c d -> NestedList c d
+   fromList :: Storage c d => NestedList c d -> Data c d
+   toList :: Storage c d => Data c d -> NestedList c d
 
-instance FromList Nil d where
+instance FromList Nil where
    type NestedList Nil d = d
    fromList x = Data x
    toList (Data x) = x
 
-instance
-   (SV.FromList v2 (Apply v1 d), FromList v1 d) =>
-      FromList (v2 :> v1) d where
+instance (SV.FromList v2, FromList v1) => FromList (v2 :> v1) where
    type NestedList (v2 :> v1) d = [NestedList v1 d]
    fromList x =
-      let y = Data $ SV.fromList $ L.map (getSubData y . fromList) x
+      let y = nestedData $ SV.fromList $ L.map (getSubData y . fromList) x
       in  y
-   toList xd@(Data x) = L.map (toList . subData xd) $ SV.toList x
+   toList xd =
+      withNestedData (L.map (toList . subData xd) . SV.toList) xd
 
 
 ----------------------------------------------------------
 -- All
 
-class All c d where
-   all :: (d -> Bool) -> Data c d -> Bool
-   any :: (d -> Bool) -> Data c d -> Bool
+class All c where
+   all :: Storage c d => (d -> Bool) -> Data c d -> Bool
+   any :: Storage c d => (d -> Bool) -> Data c d -> Bool
 
-instance All Nil d where
+instance All Nil where
    all f (Data x) = f x
    any f (Data x) = f x
 
-instance (SV.Singleton v2 (Apply v1 d), All v1 d) => All (v2 :> v1) d where
-   all f xd@(Data x) = SV.all (all f . subData xd) x
-   any f xd@(Data x) = SV.any (any f . subData xd) x
+instance (SV.Singleton v2, All v1) => All (v2 :> v1) where
+   all f xd = withNestedData (SV.all (all f . subData xd)) xd
+   any f xd = withNestedData (SV.any (any f . subData xd)) xd
+
 
 equalBy ::
-   (SV.Walker v a b) =>
+   (SV.Walker v, SV.Storage v a, SV.Storage v b) =>
    (a -> b -> Bool) -> Data (v :> Nil) a -> Data (v :> Nil) b -> Bool
 equalBy f (Data x) (Data y) = SV.equalBy f x y
 
@@ -334,7 +459,7 @@ transpose1 :: Data (v1 :> Nil) d -> Data (v1 :> Nil) d
 transpose1 x = x
 
 transpose2 ::
-   (SV.Transpose v1 v2 d) =>
+   (SV.Transpose v1 v2, SV.Storage v1 d) =>
    Data (v2 :> v1 :> Nil) d -> Data (v2 :> v1 :> Nil) d
 transpose2 (Data x) = Data $ SV.transpose x
 
@@ -346,22 +471,24 @@ transpose2 (Data x) = Data $ SV.transpose x
 {-# DEPRECATED last, init "use viewR instead" #-}
 
 head, last ::
-   (SV.Singleton v2 (Apply v1 d)) => Data (v2 :> v1) d -> Data v1 d
+   (SV.Singleton v2, SV.Storage v2 (Apply v1 d)) =>
+   Data (v2 :> v1) d -> Data v1 d
 head (Data x) = Data $ SV.head x
 last (Data x) = Data $ SV.last x
 
 tail, init ::
-   (SV.Singleton v2 (Apply v1 d)) => Data (v2 :> v1) d -> Data (v2 :> v1) d
+   (SV.Singleton v2, SV.Storage v2 (Apply v1 d)) =>
+   Data (v2 :> v1) d -> Data (v2 :> v1) d
 tail (Data x) = Data $ SV.tail x
 init (Data x) = Data $ SV.init x
 
 viewL ::
-   (SV.Singleton v2 (Apply v1 d)) =>
+   (SV.Singleton v2, SV.Storage v2 (Apply v1 d)) =>
    Data (v2 :> v1) d -> Maybe (Data v1 d, Data (v2 :> v1) d)
 viewL (Data x) = P.fmap (mapPair (Data, Data)) $ SV.viewL x
 
 viewR ::
-   (SV.Singleton v2 (Apply v1 d)) =>
+   (SV.Singleton v2, SV.Storage v2 (Apply v1 d)) =>
    Data (v2 :> v1) d -> Maybe (Data (v2 :> v1) d, Data v1 d)
 viewR (Data x) = P.fmap (mapPair (Data, Data)) $ SV.viewR x
 
@@ -370,37 +497,40 @@ viewR (Data x) = P.fmap (mapPair (Data, Data)) $ SV.viewR x
 ----------------------------------------------------------
 -- Singleton
 
-singleton :: (SV.Singleton v2 (Apply v1 d)) => Data v1 d -> Data (v2 :> v1) d
+singleton ::
+   (SV.Singleton v2, SV.Storage v2 (Apply v1 d)) =>
+   Data v1 d -> Data (v2 :> v1) d
 singleton (Data x) = Data $ SV.singleton x
 
 
 ----------------------------------------------------------
 -- Sort
 
-sort :: (SV.Sort v1 d) => Data (v1 :> Nil) d -> Data (v1 :> Nil) d
+sort ::
+   (Ord d, SV.Sort v1, SV.Storage v1 d) =>
+   Data (v1 :> Nil) d -> Data (v1 :> Nil) d
 sort (Data x) = Data $ SV.sort x
 
 
 ----------------------------------------------------------
 -- Filter
 
-class Filter c d where
-   filter :: (d -> Bool) -> Data c d -> Data c d
+class Filter c where
+   filter :: (Storage c d) => (d -> Bool) -> Data c d -> Data c d
 
-instance Filter1 v2 v1 d => Filter (v2 :> v1) d where
+instance Filter1 v2 v1 => Filter (v2 :> v1) where
    filter = filter1
 
 
-class Filter1 c2 c1 d where
-   filter1 :: (d -> Bool) -> Data (c2 :> c1) d -> Data (c2 :> c1) d
+class Filter1 c2 c1 where
+   filter1 :: (Storage (c2 :> c1) d) => (d -> Bool) -> Data (c2 :> c1) d -> Data (c2 :> c1) d
 
-instance SV.Filter v d => Filter1 v Nil d where
-   filter1 f (Data x) = Data $ SV.filter f x
+instance SV.Filter v => Filter1 v Nil where
+   filter1 f xd = nestedData $ withNestedData (SV.filter f) xd
 
-instance
-   (SV.Walker v3 (v2 (Apply v1 d)) (v2 (Apply v1 d)), Filter1 v2 v1 d) =>
-      Filter1 v3 (v2 :> v1) d where
-   filter1 f xd@(Data x) = Data $ SV.map (getData . filter f . subData xd) x
+instance (SV.Walker v3, Filter1 v2 v1) => Filter1 v3 (v2 :> v1) where
+   filter1 f xd =
+      nestedData $ withNestedData (SV.map (getData . filter f . subData xd)) xd
 
 
 ----------------------------------------------------------
@@ -420,19 +550,41 @@ instance Ord d => Ord (Data Nil d) where
 ----------------------------------------------------------
 -- Convert
 
-class Convert c1 c2 d where
-   convert :: Data c1 d -> Data c2 d
+{- |
+Most simple implementation
+but it will not take advantage of specialised conversions
+at the most-inner vector.
+-}
+_convert ::
+   (NestedList c1 d ~ NestedList c2 d,
+    Storage c2 d, FromList c2,
+    Storage c1 d, FromList c1) =>
+   Data c1 d -> Data c2 d
+_convert = fromList . toList
 
-instance Convert Nil Nil d where
+class Convert c1 c2 where
+   convert :: (Storage c1 d, Storage c2 d) => Data c1 d -> Data c2 d
+
+instance Convert Nil Nil where
    convert = id
 
+instance (Convert1 v1 c1 v2 c2) => Convert (v1 :> c1) (v2 :> c2) where
+   convert = convert1
+
+
+class Convert1 v1 c1 v2 c2 where
+   convert1 ::
+      (Storage (v1 :> c1) d, Storage (v2 :> c2) d) =>
+      Data (v1 :> c1) d -> Data (v2 :> c2) d
+
+instance (SV.Convert v1 v2) => Convert1 v1 Nil v2 Nil where
+   convert1 xd = nestedData (withNestedData SV.convert xd)
+
 instance
-   (SV.Convert v1 v2 (Apply v2r d),
-    SV.Walker v1 (Apply v1r d) (Apply v2r d),
-    Convert v1r v2r d) =>
-      Convert (v1 :> v1r) (v2 :> v2r) d where
-   convert xd@(Data x) =
-      let yd = Data $ SV.convert $ SV.map (getSubData yd . convert . subData xd) x
+   (SV.FromList w1, SV.FromList w2, Convert1 v1 c1 v2 c2) =>
+      Convert1 w1 (v1 :> c1) w2 (v2 :> c2) where
+   convert1 xd =
+      let yd = nestedData (withNestedData (SV.fromList . L.map (getSubData yd . convert1 . subData xd) . SV.toList) xd)
       in  yd
 
 
@@ -440,27 +592,47 @@ instance
 -- Length
 
 
-length :: SV.Length (Apply c d) => Data c d -> Int
-length (Data x) = SV.len x
+len :: SV.Len (Apply c d) => Data c d -> Int
+len (Data x) = SV.len x
+
+length :: (SV.Length v, SV.Storage v (Apply c d)) => Data (v :> c) d -> Int
+length (Data x) = SV.length x
 
 
-class Size c d where
-   size :: Data c d -> Int
+{- |
+Most simple implementation
+but inefficient since it counts the elements one by one.
+-}
+_size :: (Fold c, Storage c d) => Data c d -> Int
+_size = foldlMap (+) 0 (P.const 1)
 
-instance Size Nil d where
+class Size c where
+   size :: (Storage c d) => Data c d -> Int
+
+instance Size Nil where
    size (Data _) = 1
 
-instance
-   (SV.Walker v2 Int Int, SV.Walker v2 (Apply v1 d) Int, Size v1 d) =>
-      Size (v2 :> v1) d where
-   size xd@(Data x) = SV.foldl (+) 0 $ SV.map (size . subData xd) x
+instance (Size1 v2 v1) => Size (v2 :> v1) where
+   size = size1
+
+
+class Size1 v2 v1 where
+   size1 :: (Storage (v2 :> v1) d) => Data (v2 :> v1) d -> Int
+
+instance SV.Length v => Size1 v Nil where
+   size1 = withNestedData SV.length
+
+instance (SV.Walker v3, Size1 v2 v1) => Size1 v3 (v2 :> v1) where
+   size1 xd =
+      withNestedData (vecFoldlMap (+) 0 (size1 . subData xd)) xd
 
 
 ----------------------------------------------------------
 -- Reverse
 
-class Reverse c d where
-   reverse :: Data c d -> Data c d
+class Reverse c where
+   reverse :: Storage c d => Data c d -> Data c d
 
-instance SV.Reverse v2 (Apply v1 d) => Reverse (v2 :> v1) d where
-   reverse (Data x) = Data $ SV.reverse x
+instance (SV.Reverse v2) => Reverse (v2 :> v1) where
+   reverse =
+      withNestedData (Data . SV.reverse)

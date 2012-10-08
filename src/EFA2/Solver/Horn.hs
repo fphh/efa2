@@ -9,6 +9,7 @@ import Control.Monad (liftM2)
 import Control.Functor.HT (void)
 import Data.Maybe (mapMaybe, catMaybes)
 import Data.Ord.HT (comparing)
+import Data.Eq.HT (equating)
 import Data.Bool.HT (if')
 
 import Data.Graph.Inductive (Node, Gr, labNodes, delEdge, edges)
@@ -137,9 +138,10 @@ makeHornOrder m formulae = map ((m M.!) . fromAtom) fs'
         fs' = map snd (S.toAscList fs)
 
 -- | Filter equations which contain the same variables.
--- Given terms are also filtered, as the contain no variables.
+-- Given terms are also filtered, as they contain no variables.
 filterUnneeded :: (EqTerm -> Bool) -> [EqTerm] -> [EqTerm]
-filterUnneeded isVar ts = map (fst . head) $ L.groupBy (\x y -> snd x == snd y) (map (\t -> (t, mkVarSet isVar t)) ts)
+filterUnneeded isVar =
+   map (fst . head) . L.groupBy (equating snd) . map (\t -> (t, mkVarSet isVar t))
 
  
 makeHornClauses :: (EqTerm -> Bool) -> [EqTerm] -> [EqTerm] -> (M.Map Node EqTerm, [Formula])

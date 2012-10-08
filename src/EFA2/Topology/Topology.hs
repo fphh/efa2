@@ -1,5 +1,3 @@
-{-# LANGUAGE PatternGuards #-}
-
 module EFA2.Topology.Topology where
 
 import EFA2.Solver.Equation
@@ -8,8 +6,13 @@ import EFA2.Topology.TopologyData
 import EFA2.Utils.Graph
 import EFA2.Utils.Utils
 
+import qualified EFA2.Topology.EfaGraph as Gr
+
 import qualified Data.List as L
+import qualified Data.IntMap as IM
+import qualified Data.IntSet as IS
 import qualified Data.Map as M
+import qualified Data.Set as Set
 import Data.Tuple.HT (snd3)
 import Data.Maybe (fromJust)
 import Data.Ord (comparing)
@@ -37,13 +40,13 @@ makeWithDirEdges es = map f es
 -- Making equations:
 
 missingRecordNumbers :: [Envs a] -> Bool
-missingRecordNumbers envs = not $ and bs
-  where bs = map (isSingleRecord . recordNumber) envs
+missingRecordNumbers envs =
+   not $ all (isSingleRecord . recordNumber) envs
 
 
 -- TODO: Check that envUnion preserves all variables.
-makeAllEquations :: (Show a) => Topology -> [Envs a] -> (Envs a, [EqTerm])
-makeAllEquations topo envs | missingRecordNumbers envs = 
+makeAllEquations :: (Show a) => Topology -> [Envs a] -> (Envs a, [Equation])
+makeAllEquations topo envs | missingRecordNumbers envs =
   error ("makeAllEquations: only single records are allowed in " ++ show envs)
 makeAllEquations topo envs = ((envUnion envs') { recordNumber = MixedRecord newRecNums }, ts)
   where newRecNums = map (fromSingleRecord . recordNumber) envs
@@ -116,13 +119,13 @@ shiftIndices m (Envs (SingleRecord rec) e de p dp fn dn t x dx v st) =
         stf (StorageIdx s _ sto) = StorageIdx s rec (m `safeLookup` (s, sto))
 
 
-envToEqTerms :: (MkVarC k) => M.Map k v -> [EqTerm]
+envToEqTerms :: (MkVarC k) => M.Map k v -> [Equation]
 envToEqTerms m = map (give . fst) (M.toList m)
 
-mkPowerEqs :: Int -> Topology -> [EqTerm]
+mkPowerEqs :: Int -> Topology -> [Equation]
 mkPowerEqs rec topo = concat $ mapGraph (mkPEqs rec) topo
 
-mkPEqs :: Int -> ([LNode NLabel], LNode NLabel, [LNode NLabel]) -> [EqTerm]
+mkPEqs :: Int -> ([LNode NLabel], LNode NLabel, [LNode NLabel]) -> [Equation]
 mkPEqs rec (ins, n@(nid, NLabel sec _ _), outs) = ieqs ++ oeqs -- ++ dieqs ++ doeqs
   where makeVar mkIdx (nid', _) = mkVar $ mkIdx sec rec nid nid'
         dt = DTime $ DTimeIdx sec rec
@@ -134,7 +137,7 @@ mkPEqs rec (ins, n@(nid, NLabel sec _ _), outs) = ieqs ++ oeqs -- ++ dieqs ++ do
         pos = map (makeVar PowerIdx) outs
         --dpis = map (makeVar DPowerIdx) ins
         --dpos = map (makeVar DPowerIdx) outs
-        
+
         ieqs = zipWith f eis pis
         oeqs = zipWith f eos pos
         --dieqs = zipWith f deis dpis
@@ -142,9 +145,9 @@ mkPEqs rec (ins, n@(nid, NLabel sec _ _), outs) = ieqs ++ oeqs -- ++ dieqs ++ do
         f e p = e := p :* dt
 
 
-mkIntersectionEqs :: Int -> Topology -> [EqTerm]
+mkIntersectionEqs :: Int -> Topology -> [Equation]
 mkIntersectionEqs recordNum topo = concat inEqs ++ concat outEqs ++ stContentEqs
-  where actStores = getActiveStores topo 
+  where actStores = getActiveStores topo
         inouts = map (partitionInOutStatic topo) actStores
         (ins, outs) = unzip inouts
         inEqs = concatMap (map (mkInStoreEqs recordNum)) ins
@@ -154,7 +157,7 @@ mkIntersectionEqs recordNum topo = concat inEqs ++ concat outEqs ++ stContentEqs
 data IOStore = InStore (LNode NLabel)
              | OutStore (LNode NLabel) deriving (Show)
 
-mkStoreEqs :: Int -> ([InOutGraphFormat (LNode NLabel)], [InOutGraphFormat (LNode NLabel)]) -> [EqTerm]
+mkStoreEqs :: Int -> ([InOutGraphFormat (LNode NLabel)], [InOutGraphFormat (LNode NLabel)]) -> [Equation]
 mkStoreEqs recordNum (ins, outs) = startEq ++ eqs
   where ins' = map (InStore . snd3) ins
         outs' = map (OutStore . snd3) outs
@@ -173,7 +176,7 @@ mkStoreEqs recordNum (ins, outs) = startEq ++ eqs
 
         g ((nid, NLabel sec _ st), InStore (nid', NLabel sec' _ st')) = stnew := (v :* dt) :+ stold
 {-
-          mkVar (StorageIdx sec' recordNum (getStorageNumber st')) := 
+          mkVar (StorageIdx sec' recordNum (getStorageNumber st')) :=
             (mkVar (VarIdx sec' recordNum InSum nid') :* dt)
               :+ mkVar (StorageIdx sec recordNum (getStorageNumber st))
 -}
@@ -184,7 +187,7 @@ mkStoreEqs recordNum (ins, outs) = startEq ++ eqs
 
         g ((nid, NLabel sec _ st), OutStore (nid', NLabel sec' _ st')) = stnew := Minus (v :* dt) :+ stold
 {-
-          mkVar (StorageIdx sec' recordNum (getStorageNumber st')) := 
+          mkVar (StorageIdx sec' recordNum (getStorageNumber st')) :=
             Minus (mkVar (VarIdx sec' recordNum OutSum nid') :* dt) :+ (mkVar (StorageIdx sec recordNum (getStorageNumber st)))
 -}
           where stnew = mkVar $ StorageIdx sec' recordNum (getStorageNumber st')
@@ -194,18 +197,18 @@ mkStoreEqs recordNum (ins, outs) = startEq ++ eqs
 
 
 
-mkInStoreEqs :: Int -> InOutGraphFormat (LNode NLabel) -> [EqTerm]
+mkInStoreEqs :: Int -> InOutGraphFormat (LNode NLabel) -> [Equation]
 mkInStoreEqs recordNum (ins, n@(nid, NLabel sec _ _), outs@((o,_):_)) = (startEq:osEqs)
   where startEq = mkVar (VarIdx sec recordNum InSum nid) := mkVar (PowerIdx sec recordNum nid o)
         osEqs = map f (pairs outs)
-        f (x, y) = mkVar (PowerIdx sec recordNum nid y') := 
+        f (x, y) = mkVar (PowerIdx sec recordNum nid y') :=
                      mkVar (PowerIdx sec recordNum nid x') :+ (Minus (mkVar (PowerIdx xs recordNum x' nid)))
           where (x', NLabel xs _ _) = x
                 (y', _) = y
 mkInStoreEqs _ _ = []
 
 
-mkOutStoreEqs :: Int -> InOutGraphFormat (LNode NLabel) -> [EqTerm]
+mkOutStoreEqs :: Int -> InOutGraphFormat (LNode NLabel) -> [Equation]
 mkOutStoreEqs recordNum (ins, n@(nid, NLabel sec _ _), o:_) = visumeq:xeqs ++ pieqs
   where xis = map (makeVar XIdx) ins
         --eis = map (makeVar EnergyIdx) ins
@@ -231,7 +234,7 @@ mkOutStoreEqs _ _ = []
 
 {-
 -- | Takes section, record, and a graph.
-mkEdgeEq :: Int -> Topology -> [EqTerm]
+mkEdgeEq :: Int -> Topology -> [Equation]
 mkEdgeEq recordNum topo = map f (map unlabelEdge origEs)
   where origEs = L.filter (\(_, _, l) -> not $ isIntersectionEdge l) (labEdges topo)
         f (x, y) = mkVar (PowerIdx ys recordNum y x) :=
@@ -240,7 +243,7 @@ mkEdgeEq recordNum topo = map f (map unlabelEdge origEs)
                 NLabel ys _ _ = fromJust $ lab topo y
 -}
 -- | Takes section, record, and a graph.
-mkEdgeEq :: Int -> Topology -> [EqTerm]
+mkEdgeEq :: Int -> Topology -> [Equation]
 mkEdgeEq recordNum topo = map f (map unlabelEdge origEs)
   where origEs = L.filter (\(_, _, l) -> not $ isIntersectionEdge l) (labEdges topo)
         f (x, y) = mkVar (PowerIdx ys recordNum y x) :=
@@ -249,11 +252,11 @@ mkEdgeEq recordNum topo = map f (map unlabelEdge origEs)
                 NLabel ys _ _ = fromJust $ lab topo y
 
 
-mkNodeEq :: Int -> Topology -> [EqTerm]
+mkNodeEq :: Int -> Topology -> [Equation]
 mkNodeEq recordNum topo = concat $ mapGraph (mkEq recordNum) (elfilter cond topo)
   where cond x = isOriginalEdge x || isInnerStorageEdge x
 
-mkEq :: Int -> ([LNode NLabel], LNode NLabel, [LNode NLabel]) -> [EqTerm]
+mkEq :: Int -> ([LNode NLabel], LNode NLabel, [LNode NLabel]) -> [Equation]
 mkEq recordNum (ins, n@(nid, NLabel sec _ _), outs)
   | length ins == 0 && length outs == 0 = []
   | length ins == 0 && length outs > 0 = xoeqs ++ oeqs' ++ vosumeq
@@ -271,7 +274,7 @@ mkEq recordNum (ins, n@(nid, NLabel sec _ _), outs)
         pos = map (makeVar PowerIdx) outs
 
         -- ATTENTION (not very safe): We need this variable in mkInStoreEq again!!!
-        visum = mkVar (VarIdx sec recordNum InSum nid) 
+        visum = mkVar (VarIdx sec recordNum InSum nid)
         visumeq = [visum := add pis]
 
         -- ATTENTION (not very safe): We need this variable in mkOutStoreEq again!!!
@@ -299,7 +302,7 @@ mkEq recordNum (ins, n@(nid, NLabel sec _ _), outs)
         g v x e = e := v :* x
 
 
-mkAllDiffEqs :: Int -> Int -> Topology -> [EqTerm]
+mkAllDiffEqs :: Int -> Int -> Topology -> [Equation]
 mkAllDiffEqs laterRec formerRec topo = {- edgeEqs ++ -} nodeEqs ++ etaEqs ++ xEqs
   where -- edgeEqs = concat $ mapGraph (mkDiffPowerEqs laterRec formerRec) topo
         nodeEqs = concat $ mapGraph (mkDiffNodeEqs laterRec formerRec) topo
@@ -307,7 +310,7 @@ mkAllDiffEqs laterRec formerRec topo = {- edgeEqs ++ -} nodeEqs ++ etaEqs ++ xEq
         xEqs = concat $ mapGraph (mkDiffXEqs laterRec formerRec) topo
 
 {-
-mkDiffPowerEqs :: Int -> Int -> ([LNode NLabel], LNode NLabel, [LNode NLabel]) -> [EqTerm]
+mkDiffPowerEqs :: Int -> Int -> ([LNode NLabel], LNode NLabel, [LNode NLabel]) -> [Equation]
 mkDiffPowerEqs laterRec formerRec (ins, n@(nid, NLabel sec _ _), outs)
   | length ins == 0 && length outs == 0 = []
   | length ins == 0 && length outs > 0 = doeqs
@@ -324,7 +327,7 @@ mkDiffPowerEqs laterRec formerRec (ins, n@(nid, NLabel sec _ _), outs)
         f x y i = (makeVar laterRec DPowerIdx i) := x :+ (Minus y)
 -}
 
-mkDiffEtaEqs :: Int -> Int -> ([LNode NLabel], LNode NLabel, [LNode NLabel]) -> [EqTerm]
+mkDiffEtaEqs :: Int -> Int -> ([LNode NLabel], LNode NLabel, [LNode NLabel]) -> [Equation]
 mkDiffEtaEqs laterRec formerRec (ins, n@(nid, NLabel sec _ _), outs) = dnoeqs
   where makeVar r mkIdx (nid', _) = mkVar $ mkIdx sec r nid nid'
         lnos = map (makeVar laterRec FEtaIdx) outs
@@ -332,7 +335,7 @@ mkDiffEtaEqs laterRec formerRec (ins, n@(nid, NLabel sec _ _), outs) = dnoeqs
         dnoeqs = zipWith3 g lnos fnos outs
         g x y i = (makeVar laterRec DEtaIdx i) := x :+ (Minus y)
 
-mkDiffXEqs :: Int -> Int -> ([LNode NLabel], LNode NLabel, [LNode NLabel]) -> [EqTerm]
+mkDiffXEqs :: Int -> Int -> ([LNode NLabel], LNode NLabel, [LNode NLabel]) -> [Equation]
 mkDiffXEqs laterRec formerRec (ins, n@(nid, NLabel sec _ _), outs) = xiseq ++ xoseq
   where makeVar r mkIdx (nid', _) = mkVar $ mkIdx sec r nid nid'
         f dx lx fx = dx := lx :+ (Minus fx)
@@ -348,7 +351,7 @@ mkDiffXEqs laterRec formerRec (ins, n@(nid, NLabel sec _ _), outs) = xiseq ++ xo
         xoseq = zipWith3 f dxos lxos fxos
 
 
-mkDiffNodeEqs :: Int -> Int -> ([LNode NLabel], LNode NLabel, [LNode NLabel]) -> [EqTerm]
+mkDiffNodeEqs :: Int -> Int -> ([LNode NLabel], LNode NLabel, [LNode NLabel]) -> [Equation]
 mkDiffNodeEqs laterRec formerRec (ins, n@(nid, NLabel sec _ _), outs)
   | length ins > 0 && length outs > 0 = sumeq
   | otherwise = []
@@ -363,11 +366,18 @@ mkDiffNodeEqs laterRec formerRec (ins, n@(nid, NLabel sec _ _), outs)
 -- Undirected edges are filtered away.
 -- This is important for creating correct equations.
 makeDirTopology :: Topology -> Topology
-makeDirTopology topo@(Topology _) = mkGraph ns es
+makeDirTopology topo = Topology $ Gr.mkGraphFromMap ns esm
   where es = map flipAgainst $ filter onlyDirected $ labEdges topo
-        onlyDirected a@(_, _, elabel) = flowDirection elabel /= UnDir
-        flipAgainst e@(x, y, elabel)
-          | AgainstDir <- flowDirection elabel = (y, x, elabel { flowDirection = WithDir })
-          | otherwise = e
-        ns = unique (concatMap (\(x, y, _) -> [(x,  fromJust (lab topo x)), (y, fromJust (lab topo y))]) es)
+        esm = M.fromList $ map (\(x, y, l) -> ((x, y), l)) es
+        onlyDirected (_, _, elabel) = flowDirection elabel /= UnDir
+        flipAgainst e@(x, y, elabel) =
+           case flowDirection elabel of
+              AgainstDir -> (y, x, elabel { flowDirection = WithDir })
+              _ -> e
+        ns =
+           imFromSet (fromJust . lab topo) $ IS.fromList $
+           concatMap (\(x, y) -> [x, y]) $ M.keys esm
 
+-- IM.fromSet is available from containers-0.5
+imFromSet :: (IM.Key -> a) -> IS.IntSet -> IM.IntMap a
+imFromSet f = IM.fromAscList . map (\k -> (k, f k)) . IS.toAscList

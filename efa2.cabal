@@ -12,6 +12,10 @@ Category:            Engineering
 Build-type:          Simple
 Cabal-version:       >=1.8
 
+Flag buildTests
+  Description: build test suite (makes trouble with TemplateHaskell and dynamic linking)
+  Default: True
+
 Flag buildExamples
   Description: Build complex examples
   Default: True
@@ -32,7 +36,7 @@ Library
     template-haskell ==2.7.*,
     process ==1.1.*,
     random ==1.0.*,
-    containers ==0.4.*,
+    containers >=0.4 && <0.6,
     utility-ht ==0.0.*,
     QuickCheck >=2.4 && <2.6,
     base ==4.5.*
@@ -58,7 +62,6 @@ Library
     EFA2.Solver.DependencyGraph
     EFA2.Display.FileSave
 --    EFA2.Display.DispData
-    EFA2.Display.DispSequence
     EFA2.Display.Plot
     EFA2.Display.DrawGraph
     EFA2.Display.DispTyp
@@ -109,12 +112,15 @@ Executable test-efa
   Main-Is: EFA2/Test/Test.hs
   GHC-Options: -Wall
   Hs-Source-Dirs: test
-  Build-Depends:
-    efa2,
-    QuickCheck,
-    containers,
-    utility-ht,
-    base
+  If flag(buildTests)
+    Build-Depends:
+      efa2,
+      QuickCheck,
+      containers,
+      utility-ht,
+      base
+  Else
+    Buildable: False
   Other-Modules:
     EFA2.Test.UtilsTest
     EFA2.Test.SequenceTest
@@ -188,6 +194,9 @@ Executable demo-sequence
       gnuplot,
       utility-ht,
       containers,
+      array >=0.4 && <0.5,
+      gnuplot,
+      utility-ht,
       base
   Else
     Buildable: False

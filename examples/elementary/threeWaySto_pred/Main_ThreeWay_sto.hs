@@ -95,7 +95,7 @@ variation sqTopo x y = trace (showEqTerms ts'') $ interpretFromScratch (SingleRe
         sqEnvs' = sqEnvs { dtimeMap = M.insert (DTimeIdx (-1) 0) (S.fromList [1.0]) (dtimeMap sqEnvs),
                            energyMap = M.insert storage0 (S.fromList [3.0]) (energyMap sqEnvs) }
 
-        ts'' = toAbsEqTermEquations $ order ts
+        ts'' = toAbsEquations $ order ts
         gd = map (eqToInTerm sqEnvs') ts''
 
 

@@ -74,7 +74,7 @@ main = do
                        fetaMap = M.singleton (FEtaIdx 3 0 15 13) (S.map (const 0.4)) }
 
 
-      gd = map (eqToInTerm envs) (toAbsEqTermEquations $ order ts)
+      gd = map (eqToInTerm envs) (toAbsEquations $ order ts)
 
       --res :: Envs [Val]
       res = interpretFromScratch (SingleRecord 0) 1 gd

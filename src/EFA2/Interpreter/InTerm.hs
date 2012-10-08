@@ -5,15 +5,14 @@
 module EFA2.Interpreter.InTerm where
 
 import EFA2.Interpreter.Env
-import qualified EFA2.Signal.Signal as S
 import qualified EFA2.Signal.Base as B
-import EFA2.Signal.Signal (Scalar)
-import EFA2.Signal.Data (Data, Nil)
 import EFA2.Signal.Base (Val)
 
 import Data.Maybe (mapMaybe)
 
 
+data InEquation a =
+        InEqual (InTerm a) (InTerm a) deriving (Eq, Ord, Show)
 
 data InTerm a = EIdx EnergyIdx
               | DEIdx DEnergyIdx
@@ -43,8 +42,7 @@ data InTerm a = EIdx EnergyIdx
               | InMinus (InTerm a)
               | InRecip (InTerm a)
               | InAdd (InTerm a) (InTerm a)
-              | InMult (InTerm a) (InTerm a)
-              | InEqual (InTerm a) (InTerm a) deriving (Eq, Ord, Show)
+              | InMult (InTerm a) (InTerm a) deriving (Eq, Ord, Show)
 
 
 -- What for?
@@ -68,9 +66,6 @@ instance B.DArith0 (InTerm a) where
          neg = InMinus
          rec = InRecip
 
-instance S.Const Scalar (Data Nil) (InTerm a) where
-         toConst _ _x = undefined --toScalar x
-
 
 toAbsEq :: InTerm a -> InTerm a
 toAbsEq (InFEdge p n) = InMult p n
@@ -80,15 +75,20 @@ toAbsEq (InMinus x) = InMinus (toAbsEq x)
 toAbsEq (InRecip x) = InRecip (toAbsEq x)
 toAbsEq (InAdd x y) = InAdd (toAbsEq x) (toAbsEq y)
 toAbsEq (InMult x y) = InMult (toAbsEq x) (toAbsEq y)
-toAbsEq (InEqual x y) = InEqual (toAbsEq x) (toAbsEq y)
 toAbsEq t = t
 
-toAbsEquations :: [InTerm a] -> [InTerm a]
-toAbsEquations ts = map toAbsEq ts
+toAbsEqs :: [InTerm a] -> [InTerm a]
+toAbsEqs = map toAbsEq
+
+toAbsEquation :: InEquation a -> InEquation a
+toAbsEquation (InEqual x y) = InEqual (toAbsEq x) (toAbsEq y)
+
+toAbsEquations :: [InEquation a] -> [InEquation a]
+toAbsEquations = map toAbsEquation
 
 
 
-mkDiffEq :: Int -> InTerm a -> Maybe (InTerm a)
+mkDiffEq :: Int -> InEquation a -> Maybe (InEquation a)
 mkDiffEq rec (InEqual (PIdx (PowerIdx s'' _ f'' t''))
                       (InFEdge p@(PIdx (PowerIdx s _ f t)) n@(FNIdx (FEtaIdx s' _ f' t')))) = Just res
   where res = InEqual dq (InAdd (InAdd (InMult dp n) (InMult p dn)) (InMult dp dn))
@@ -106,5 +106,5 @@ mkDiffEq rec (InEqual (PIdx (PowerIdx s'' _ f'' t''))
 mkDiffEq _ (InEqual _ (InNEdge _ _)) = error "mkDiffEq: eta cannot be computed with Differenzenrechnung"
 mkDiffEq _ _ = Nothing
 
-mkDiffEquations :: Int -> [InTerm a] -> [InTerm a]
+mkDiffEquations :: Int -> [InEquation a] -> [InEquation a]
 mkDiffEquations rec ts = mapMaybe (mkDiffEq rec) ts

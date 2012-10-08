@@ -1,45 +1,52 @@
-{-# LANGUAGE PatternGuards #-}
-
 module EFA2.Solver.EquationOrder where
 
 import qualified Data.List as L
 import qualified Data.Set as S
-import Data.Maybe
-import Debug.Trace
 
-import EFA2.Solver.Equation
-import EFA2.Solver.IsVar
+import EFA2.Solver.Equation (EqTerm, Equation, mkVarSetEq, transformEq)
+import EFA2.Solver.IsVar (isStaticVar)
 
-data Derived = Derived (S.Set EqTerm) EqTerm deriving (Show, Ord)
+import Control.Monad (mplus, (<=<))
+import Data.Maybe.HT (toMaybe)
+import Data.Maybe (mapMaybe, maybeToList)
+
+
+data Derived = Derived (S.Set EqTerm) Equation deriving (Show)
 
 instance Eq (Derived) where
     Derived as _ == Derived bs _ = as == bs
 
-without :: (Ord a) => S.Set a -> a -> S.Set a
-without as b = S.delete b as
-
 
 isSingleton :: S.Set a -> Maybe a
-isSingleton xs = if S.size xs == 1 then Just (S.findMin xs) else Nothing
+isSingleton xs =
+   case S.toList xs of
+      [x] -> Just x
+      _ -> Nothing
 
-resolve :: Derived -> Derived -> [Derived]
-resolve (Derived as aplan) (Derived bs bplan) | Just a <- isSingleton as = 
-    if S.member a bs then  [Derived (bs `without` a) bplan] else []
-resolve  x (Derived as ys) | Just a <- isSingleton as = resolve (Derived as ys) x
-resolve _ _ = []
+resolve :: Derived -> Derived -> Maybe Derived
+resolve a@(Derived as _) b@(Derived bs _) =
+   (isSingleton as >>= resolveTerm b)
+   `mplus`
+   (isSingleton bs >>= resolveTerm a)
+
+resolveTerm :: Derived -> EqTerm -> Maybe Derived
+resolveTerm (Derived bs bplan) a =
+   toMaybe (S.member a bs) $ Derived (S.delete a bs) bplan
 
 
-notin :: [Derived] -> Derived -> [Derived]
-notin xs x = if x `elem` xs then [] else [x]
+notin :: [Derived] -> Derived -> Maybe Derived
+notin xs x = toMaybe (not $ elem x xs) x
 
 extend :: [Derived] -> [Derived] -> [Derived]
-extend givens [] = givens
-extend givens [eq] = extend (L.union givens [eq]) (givens >>= resolve eq >>= notin givens)
-extend givens (eq : eqs) = extend (extend givens [eq]) eqs
+extend = foldl extend'
+
+extend' :: [Derived] -> Derived -> [Derived]
+extend' givens eq =
+   extend (L.union givens [eq]) $
+   mapMaybe (notin givens <=< resolve eq) givens
 
 consequences :: [Derived] -> [Derived]
-consequences [] = []
-consequences (x:xs) = extend (consequences xs) [x]
+consequences = foldr (flip extend') []
 
 --consequences (x:y:xs) = extend (extend (consequences xs) [y]) [x]
 
@@ -66,11 +73,6 @@ consequences [] = S.empty
 consequences (x:xs) = extend (consequences xs) (S.singleton x)
 -}
 
-isSingleVar :: Derived -> Bool
-isSingleVar (Derived xs _ ) = S.size xs == 1
-
-solve :: [Derived] -> [Derived]
-solve eqns = filter isSingleVar (consequences eqns)
 
 {-
 solve2 :: S.Set EqTerm -> [Derived] -> [Derived]
@@ -80,11 +82,8 @@ solve2 vs eqns = snd $ L.foldr f (vs, []) (consequences eqns)
         f _ ss = ss
 -}
 
-
-order :: [EqTerm] -> [EqTerm]
-order ts = map g sol
-  where vs = map (mkVarSet isStaticVar) ts
-        sol = solve $ map (uncurry Derived) (zip vs ts)
-        g (Derived v eq) = transformEq (head $ S.toList v) eq
-        
-
+order :: [Equation] -> [Equation]
+order =
+   mapMaybe (\(Derived xs eq) -> fmap (flip transformEq eq) $ isSingleton xs) .
+   consequences .
+   map (\t -> Derived (mkVarSetEq isStaticVar t) t)

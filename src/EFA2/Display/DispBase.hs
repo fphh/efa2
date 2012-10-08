@@ -1,13 +1,16 @@
-{-# LANGUAGE TypeSynonymInstances  #-}
-
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE KindSignatures #-}
 module EFA2.Display.DispBase (module EFA2.Display.DispBase) where
 
-
-import Text.Printf
-
-
-import EFA2.Signal.Base
+import EFA2.Signal.Data (Data, (:>), Nil)
+import EFA2.Signal.Base (Val, Sign)
 -- import EFA2.Display.DispTyp
+
+import qualified Data.Vector as V
+import qualified Data.Vector.Unboxed as UV
+
+import Text.Printf (printf)
 
 
 -- | Central Place for basic Unit & Display settings
@@ -43,7 +46,9 @@ getUnitScale Unit_UT = UnitScale 1
  -- ============ Setting - Switch global display length =============
 
 -- | Central Place to switch Display Formats througght the system
-data DisplayLength = Short | Middle | Long | Float 
+data DisplayLength = Short | Middle | Long | Float
+
+dispLength :: DisplayLength
 -- dispLength = Short
 -- dispLength = Middle
 dispLength = Middle
@@ -55,21 +60,23 @@ dispLength = Middle
 data DisplayFormat = DisplayFormat String
 
 getDefaultFormat :: DisplayFormat
-getDefaultFormat = f dispLength
-  where f Short = DisplayFormat "%3.2f"
-        f Middle = DisplayFormat "%5.3f"
-        f Long = DisplayFormat "%6.7f"
-        f Float = DisplayFormat "%6.7e"
+getDefaultFormat =
+   case dispLength of
+      Short -> DisplayFormat "%3.2f"
+      Middle -> DisplayFormat "%5.3f"
+      Long -> DisplayFormat "%6.7f"
+      Float -> DisplayFormat "%6.7e"
 
 
 -- | Simple Display Function
+xdisp :: Disp a => a -> String
 xdisp x = disp getDefaultFormat (UnitScale 1) x
 
 -- | Display Class using Format & Scale
 class Disp a where 
   disp :: DisplayFormat -> UnitScale -> a -> String
 
-instance Disp Val where
+instance Disp Double where
   disp _ _ 0 = "null"
   disp (DisplayFormat f) (UnitScale s) x = printf f $ x*s
 
@@ -80,7 +87,27 @@ instance Disp Int where
   disp (DisplayFormat f) _ x = printf f (show x)
 
 instance Disp Sign where
-  disp (DisplayFormat f) _ x = show x
-  
-        
- 
+  disp (DisplayFormat _f) _ x = show x
+
+
+-- | Display Signal Type
+class DispStorage (c :: * -> *) where
+   dispStorage :: Data c d -> String
+
+instance DispStorage ([] :> Nil) where
+   dispStorage _ = "1L"
+
+instance DispStorage (UV.Vector :> Nil) where
+   dispStorage _ = "1U"
+
+instance DispStorage (V.Vector :> Nil) where
+   dispStorage _ = "1V"
+
+instance DispStorage ([] :> [] :> Nil) where
+   dispStorage _ = "2L"
+
+instance DispStorage (V.Vector :> UV.Vector :> Nil) where
+   dispStorage _ = "2U"
+
+instance DispStorage (V.Vector :> V.Vector :> Nil) where
+   dispStorage _ = "2V"

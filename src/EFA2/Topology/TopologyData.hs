@@ -1,5 +1,4 @@
 {-# LANGUAGE TupleSections #-}
-{-# LANGUAGE PatternGuards #-}
 {-# OPTIONS_HADDOCK ignore-exports #-}
 
 module EFA2.Topology.TopologyData (
@@ -31,9 +30,10 @@ module EFA2.Topology.TopologyData (
        topoToFlowTopo,
        partitionInOutStatic) where
 
-import EFA2.Topology.EfaGraph
-import EFA2.Utils.Graph
+import EFA2.Topology.EfaGraph (EfaGraph)
+import EFA2.Utils.Graph (InOutGraphFormat, getLEdge, mkInOutGraphFormat)
 
+import qualified Data.Map as M
 import qualified Data.List as L
 import Data.Graph.Inductive
 import Data.Ord (comparing)
@@ -178,13 +178,15 @@ fromFlowToSecTopology (FlowTopology topo) = SecTopology topo
 -- | Active storages, grouped by storage number, sorted by section number.
 getActiveStores :: Topology -> [[InOutGraphFormat (LNode NLabel)]]
 getActiveStores topo = map (sectionSort . filter (isActiveSt topo)) groupedIof
-  where iof = mkInOutGraphFormat id topo
-        sortedIof = L.sortBy (comparing stNum) (filter isSt iof)
-        isSt (_, (_, l), _) = isStorage (nodetypeNLabel l)
-        stNum (_, (_, l), _) | Storage x <- nodetypeNLabel l = x
-                             | InitStorage x <- nodetypeNLabel l = x
-        groupedIof = L.groupBy cmp sortedIof
-        cmp a b = stNum a == stNum b
+  where groupedIof =
+           M.elems $ M.fromListWith (++) $
+           mapMaybe (\n -> fmap ((,[n])) $ stNum n) $
+           mkInOutGraphFormat id topo
+        stNum (_, (_, l), _) =
+           case nodetypeNLabel l of
+              Storage x -> Just x
+              InitStorage x -> Just x
+              _ -> Nothing
         sectionSort = L.sortBy (comparing sec)
         sec (_, (_, l), _) = sectionNLabel l
 
@@ -193,24 +195,15 @@ isActiveSt topo (ins, (nid, _), outs) = res
   where inEs = map ((,nid) . fst) ins
         outEs = map ((nid,) . fst) outs
         es = mapMaybe (uncurry (getLEdge topo)) (inEs ++ outEs)
-        res = any isActiveEdge (map (\(_, _, el) -> el) es)
+        res = any isActiveEdge (map thd3 es)
 
 -- | Partition the storages in in and out storages, looking only at edges, not at values.
 -- This means that nodes with in AND out edges cannot be treated.
 partitionInOutStatic ::
   Topology -> [InOutGraphFormat (LNode NLabel)] -> ([InOutGraphFormat (LNode NLabel)], [InOutGraphFormat (LNode NLabel)])
 partitionInOutStatic topo iof = L.partition p iof
-  where p t@([], _, []) = False
-        p (ins, (nid, l), outs) | ((_:_), []) <- (ins', outs') = True
-                                | ([], (_:_)) <- (ins', outs') = True
-                                | otherwise = False
-          where ins' = filter q ins
-                outs' = filter r outs
-                q (n, _) = flowDirection e == WithDir && (isOriginalEdge e || isInnerStorageEdge e)
+  where p (ins, (nid, _), outs)  =  null (filter q ins) /= null (filter r outs)
+          where q (n, _) = flowDirection e == WithDir && (isOriginalEdge e || isInnerStorageEdge e)
                   where e = thd3 $ fromJust (getLEdge topo n nid)
-                        cond = isOriginalEdge e || isInnerStorageEdge e
                 r (n, _) = flowDirection e == AgainstDir && (isOriginalEdge e || isInnerStorageEdge e)
                   where e = thd3 $ fromJust (getLEdge topo nid n)
-                        cond = isOriginalEdge e || isInnerStorageEdge e
-
-
