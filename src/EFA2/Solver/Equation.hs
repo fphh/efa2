@@ -30,6 +30,8 @@ data Equation =
 
 data EqTerm =
             Const Rational
+               {- we initialize it only with 0 or 1,
+                  but constant folding may yield any rational number -}
           | Energy EnergyIdx
           | DEnergy DEnergyIdx
           | Power PowerIdx
@@ -346,14 +348,17 @@ iterateUntilFix f =
 simplify :: EqTerm -> EqTerm
 simplify = iterateUntilFix simplify' . pushMult
   where simplify' :: EqTerm -> EqTerm
+        simplify' (Const x :+ Const y) = Const $ x+y
         simplify' ((Const 0.0) :+ x) = simplify' x
         simplify' (x :+ (Const 0.0)) = simplify' x
+
+        simplify' (Const x :* Const y) = Const $ x*y
         simplify' ((Const 1.0) :* x) = simplify' x
         simplify' (x :* (Const 1.0)) = simplify' x
         simplify' ((Const 0.0) :* _) = Const 0.0
         simplify' (_ :* (Const 0.0)) = Const 0.0
 
-        simplify' (Recip (Const 1.0)) = Const 1.0
+        simplify' (Recip (Const x)) = Const $ recip x
         simplify' (x :* (Recip y)) | x == y = Const 1.0
         simplify' ((Minus x) :* (Recip y)) | x == y = Const (-1.0)
         simplify' ((Recip x) :* y) | x == y = Const 1.0
@@ -362,7 +367,7 @@ simplify = iterateUntilFix simplify' . pushMult
         simplify' (Recip (Recip x)) = simplify' x
         simplify' (Recip x) = Recip (simplify' x)
 
-        simplify' (Minus (Const 0.0)) = Const 0.0
+        simplify' (Minus (Const x)) = Const $ negate x
         simplify' (Minus (Minus x)) = simplify' x
         simplify' (Minus x) = Minus (simplify' x)
         simplify' ((Minus x) :* (Minus y)) = simplify' x :* simplify' y
