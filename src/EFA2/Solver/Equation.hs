@@ -547,6 +547,7 @@ interpretEqTermRhs envs (FEta idx) | Just s <- M.lookup idx (fetaMap envs) = s u
 interpretEqTermRhs envs (DEta idx) | Just s <- M.lookup idx (detaMap envs) = s undefined
 interpretEqTermRhs envs (Var idx) | Just s <- M.lookup idx (varMap envs) = s
 interpretEqTermRhs envs (X idx) | Just s <- M.lookup idx (xMap envs) = s
+interpretEqTermRhs envs (DX idx) | Just s <- M.lookup idx (dxMap envs) = s
 interpretEqTermRhs envs (Store idx) | Just s <- M.lookup idx (storageMap envs) = s
 interpretEqTermRhs envs (DTime idx) | Just s <- M.lookup idx (dtimeMap envs) = s
 interpretEqTermRhs envs (Minus x) = Minus $ interpretEqTermRhs envs x
@@ -567,6 +568,7 @@ interpretEqTermEq envs (t@(FEta idx) := Given) = envs { fetaMap = M.insert idx (
 interpretEqTermEq envs (t@(DEta idx) := Given) = envs { detaMap = M.insert idx (const t) (detaMap envs) }
 interpretEqTermEq envs (t@(Var idx) := Given) = envs { varMap = insertEqTerm idx envs t (varMap envs) }
 interpretEqTermEq envs (t@(X idx) := Given) = envs { xMap = insertEqTerm idx envs t (xMap envs) }
+interpretEqTermEq envs (t@(DX idx) := Given) = envs { dxMap = insertEqTerm idx envs t (dxMap envs) }
 interpretEqTermEq envs (t@(Store idx) := Given) = envs { storageMap = insertEqTerm idx envs t (storageMap envs) }
 interpretEqTermEq envs (t@(DTime idx) := Given) = envs { dtimeMap = insertEqTerm idx envs t (dtimeMap envs) }
 
