@@ -284,7 +284,7 @@ makeIns, makeOuts ::
 makeIns visum (xis, pis) =
    let  visumeq = [visum := add pis]
 
-        ieqs = NonEmpty.zipWith (\p x -> visum := BEdge p x) pis xis
+        ieqs = NonEmpty.zipWith (\p x -> p := FEdge visum x) pis xis
 
         ieqs' = []
 
