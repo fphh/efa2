@@ -4,11 +4,11 @@ import qualified Data.List as L
 import qualified Data.Set as S
 
 import EFA2.Solver.Equation (EqTerm, Equation, mkVarSetEq, transformEq)
-import EFA2.Solver.IsVar (isStaticVar)
+import EFA2.Solver.IsVar (maybeStaticVar)
 
 import Control.Monad (mplus, (<=<))
 import Data.Maybe.HT (toMaybe)
-import Data.Maybe (mapMaybe, maybeToList)
+import Data.Maybe (mapMaybe)
 
 
 data Derived = Derived (S.Set EqTerm) Equation deriving (Show)
@@ -86,4 +86,4 @@ order :: [Equation] -> [Equation]
 order =
    mapMaybe (\(Derived xs eq) -> fmap (flip transformEq eq) $ isSingleton xs) .
    consequences .
-   map (\t -> Derived (mkVarSetEq isStaticVar t) t)
+   map (\t -> Derived (mkVarSetEq maybeStaticVar t) t)

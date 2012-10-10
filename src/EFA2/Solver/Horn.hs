@@ -142,14 +142,19 @@ makeHornOrder m formulae = map ((m M.!) . fromAtom) fs'
 
 -- | Filter equations which contain the same variables.
 -- Given terms are also filtered, as they contain no variables.
-filterUnneeded :: (EqTerm -> Bool) -> [EqTerm] -> [EqTerm]
+filterUnneeded ::
+   (Ord a) =>
+   (EqTerm -> Maybe a) -> [EqTerm] -> [EqTerm]
 filterUnneeded isVar =
    map (fst . NonEmpty.head) .
    NonEmptyM.groupBy (equating snd) .
    map (\t -> (t, mkVarSet isVar t))
 
 
-makeHornClauses :: (EqTerm -> Bool) -> [EqTerm] -> [EqTerm] -> (M.Map Node EqTerm, [Formula])
+makeHornClauses ::
+   (Ord a, Show a) =>
+   (EqTerm -> Maybe a) -> [EqTerm] -> [EqTerm] ->
+   (M.Map Node EqTerm, [Formula])
 makeHornClauses isVar givenExt rest = (m, startfs ++ fsdpg ++ fsdpg2)
   where m = M.fromList (labNodes dpg)
         ts = givenExt ++ rest
@@ -173,7 +178,9 @@ makeHornClauses isVar givenExt rest = (m, startfs ++ fsdpg ++ fsdpg2)
                 sc = setCoverBruteForce mset n ins
 
 
-hornOrder :: (EqTerm -> Bool) -> [EqTerm] -> [EqTerm] -> [EqTerm]
+hornOrder ::
+   (Ord a, Show a) =>
+   (EqTerm -> Maybe a) -> [EqTerm] -> [EqTerm] -> [EqTerm]
 hornOrder isVar givenExt ts =
    uncurry makeHornOrder $ makeHornClauses isVar givenExt ts
 

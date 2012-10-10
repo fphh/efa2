@@ -14,7 +14,7 @@ import Text.Printf (printf)
 
 import EFA2.Solver.Equation
 import EFA2.Solver.EquationOrder (order)
-import EFA2.Solver.IsVar (isStaticVar)
+import EFA2.Solver.IsVar (maybeStaticVar)
 
 import EFA2.Interpreter.Interpreter
           (eqToInTerm, eqTermToInTerm,
@@ -174,7 +174,7 @@ main = do
       sumdetails = M.map sum details
 
       control = dpowerMap (deltaEnv g)
-      vars = M.map (length . map (mkVarSet isStaticVar)) detailsSym
+      vars = M.map (length . map (mkVarSet maybeStaticVar)) detailsSym
 
   putStrLn "\n== Control delta environment (later env - former env, computed independently) =="
   putStrLn (format $ M.toList control)

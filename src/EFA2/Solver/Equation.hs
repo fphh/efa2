@@ -208,23 +208,28 @@ eqToLatexString t = LatexString $ "$" ++ eqToLatexString' t ++ "$"
 -- a term is a variable or not. It then takes a term and
 -- determines the set of variables contained in the term,
 -- according to the predicate.
-mkVarSetEq :: (EqTerm -> Bool) -> Equation -> S.Set EqTerm
+mkVarSetEq :: (Ord a) => (EqTerm -> Maybe a) -> Equation -> S.Set a
 mkVarSetEq p (Given x) = mkVarSet p x
 mkVarSetEq p (x := y) = S.union (mkVarSet p x) (mkVarSet p y)
 
-mkVarSet :: (EqTerm -> Bool) -> EqTerm -> S.Set EqTerm
-mkVarSet p t = mkVarSet' t
-  where mkVarSet' v | p v = S.singleton v
-        -- mkVarSet' fn@(FEta _) = S.insert fn (mkVarSet' p)
-        mkVarSet' (x :+ y) = S.union (mkVarSet' x) (mkVarSet' y)
-        mkVarSet' (x :* y) = S.union (mkVarSet' x) (mkVarSet' y)
-        mkVarSet' (FEdge x y) = S.union (mkVarSet' x) (mkVarSet' y)
-        mkVarSet' (BEdge x y) = S.union (mkVarSet' x) (mkVarSet' y)
-        mkVarSet' (NEdge x y) = S.union (mkVarSet' x) (mkVarSet' y)
+mkVarSet :: (Ord a) => (EqTerm -> Maybe a) -> EqTerm -> S.Set a
+mkVarSet p = mkVarSet'
+   where
+      mkVarSet' t =
+         case p t of
+            Just v -> S.singleton v
+            Nothing ->
+               case t of
+                  -- fn@(FEta _) -> S.insert fn (mkVarSet' p)
+                  x :+ y -> S.union (mkVarSet' x) (mkVarSet' y)
+                  x :* y -> S.union (mkVarSet' x) (mkVarSet' y)
+                  FEdge x y -> S.union (mkVarSet' x) (mkVarSet' y)
+                  BEdge x y -> S.union (mkVarSet' x) (mkVarSet' y)
+                  NEdge x y -> S.union (mkVarSet' x) (mkVarSet' y)
 
-        mkVarSet' (Minus x) = mkVarSet' x
-        mkVarSet' (Recip x) = mkVarSet' x
-        mkVarSet' _ = S.empty
+                  Minus x -> mkVarSet' x
+                  Recip x -> mkVarSet' x
+                  _ -> S.empty
 
 
 -- The following functions transform an equation.

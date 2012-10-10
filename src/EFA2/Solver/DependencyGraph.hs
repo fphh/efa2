@@ -29,7 +29,10 @@ mkArcs ::
    (S.Set a -> S.Set a -> Bool) -> S.Set a -> [S.Set a] -> [(S.Set a, S.Set a)]
 mkArcs p s = mapMaybe (\t -> toMaybe (p s t) (s, t))
 
-makeDependencyGraph :: (EqTerm -> Bool) -> (S.Set EqTerm -> S.Set EqTerm -> Bool) -> [EqTerm] -> Gr EqTerm ()
+makeDependencyGraph ::
+   (Ord a, Show a) =>
+   (EqTerm -> Maybe a) -> (S.Set a -> S.Set a -> Bool) -> [EqTerm] ->
+   Gr EqTerm ()
 makeDependencyGraph isVar p ts = deq
   where vsets = map (mkVarSet isVar) ts
         mt = M.fromList (zip vsets ts)
@@ -44,12 +47,16 @@ addToDependencyGraph ts dpg = L.foldl' f dpg ns
 
 -- | The produced graph has an edge, iff the solution of one node allows for computing the solution 
 --   of the other node and the other node has exactly one unknown variable.
-dpgDiffByAtMostOne :: (EqTerm -> Bool) -> [EqTerm] -> Gr EqTerm ()
+dpgDiffByAtMostOne ::
+   (Ord a, Show a) =>
+   (EqTerm -> Maybe a) -> [EqTerm] -> Gr EqTerm ()
 dpgDiffByAtMostOne isVar = makeDependencyGraph isVar diffByAtMostOne
 
 
 -- | The resulting graph has an edge iff two nodes have one or more variables in common.
-dpgHasSameVariable :: (EqTerm -> Bool) -> [EqTerm] -> Gr EqTerm ()
+dpgHasSameVariable ::
+   (Ord a, Show a) =>
+   (EqTerm -> Maybe a) -> [EqTerm] -> Gr EqTerm ()
 dpgHasSameVariable isVar = makeDependencyGraph isVar hasSameVariable
 
 {-

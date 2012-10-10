@@ -15,16 +15,22 @@ import Data.Eq.HT (equating)
 
 -- This function takes equations already in order and
 -- returns a list of variables conforming to this order that allows for calculation.
-varsToCalculate :: (EqTerm -> Bool) -> [Equation] -> [EqTerm]
+varsToCalculate ::
+   (Ord a) =>
+   (EqTerm -> Maybe a) -> [Equation] -> [a]
 varsToCalculate isVar ts = dropGiven $ concatMap sdiff (pairs res)
   where dropGiven = drop (length $ filter isGiven ts)
         res = L.scanl (dirFoldFunc isVar) S.empty ts
         sdiff (a, b) = S.toList $ S.difference b a
 
-dirFoldFunc :: (EqTerm -> Bool) -> S.Set EqTerm -> Equation -> S.Set EqTerm
+dirFoldFunc ::
+   (Ord a) =>
+   (EqTerm -> Maybe a) -> S.Set a -> Equation -> S.Set a
 dirFoldFunc isVar a t = S.union (mkVarSetEq isVar t) a
 
-filterEquations :: (EqTerm -> Bool) -> [EqTerm] -> [Equation] -> [Equation]
+filterEquations ::
+   (Ord a) =>
+   (EqTerm -> Maybe a) -> [a] -> [Equation] -> [Equation]
 filterEquations isVar _vars ts = res
   where vsets = tail $ L.scanl (dirFoldFunc isVar) S.empty ts
         notGiven = filter (not . isGiven . fst) (zip ts vsets)
@@ -32,7 +38,7 @@ filterEquations isVar _vars ts = res
            map (fst . NonEmpty.head) $
            NonEmptyM.groupBy (equating snd) notGiven
 
-directEquations :: (EqTerm -> Bool) -> [Equation] -> [Equation]
+directEquations :: (EqTerm -> Maybe EqTerm) -> [Equation] -> [Equation]
 directEquations isVar ts = L.filter isGiven ts ++ res
   where unknown = varsToCalculate isVar ts
         feqs = filterEquations isVar unknown ts

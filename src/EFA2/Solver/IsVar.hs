@@ -81,7 +81,7 @@ isGiven _ = False
 -- We assume for the given predicate (isVar :: EqTerm -> Bool) that:
 --
 -- > not (isVar t) == isGiven t
-noVar :: (EqTerm -> Bool) -> Equation -> Bool
+noVar :: (Ord a) => (EqTerm -> Maybe a) -> Equation -> Bool
 noVar isVar t = (not $ isGiven t) && (S.null (mkVarSetEq isVar t))
 
 
@@ -89,11 +89,14 @@ noVar isVar t = (not $ isGiven t) && (S.null (mkVarSetEq isVar t))
 -- We assume for the given predicate (isVar :: EqTerm -> Bool) that:
 --
 -- > not (isVar t) == isGiven t
-isGivenExtended :: (EqTerm -> Bool) -> Equation -> Bool
+isGivenExtended :: (Ord a) => (EqTerm -> Maybe a) -> Equation -> Bool
 isGivenExtended isVar t = (not $ isGiven t) && (S.size (mkVarSetEq isVar t) == 1)
 
 
-splitTerms :: (EqTerm -> Bool) -> [Equation] -> ([Equation], [Equation], [Equation], [Equation])
+splitTerms ::
+   (Ord a) =>
+   (EqTerm -> Maybe a) -> [Equation] ->
+   ([Equation], [Equation], [Equation], [Equation])
 splitTerms isVar ts = (given, nov, givenExt, rest)
   where (given, r0) = L.partition isGiven ts
         (nov, r1) = L.partition (noVar isVar) r0
@@ -136,6 +139,9 @@ isCompoundTerm _ = True
 -- > isStaticVar == not . isCompoundTerm
 isStaticVar :: EqTerm -> Bool
 isStaticVar = not . isCompoundTerm
+
+maybeStaticVar :: EqTerm -> Maybe EqTerm
+maybeStaticVar x = if isStaticVar x then Just x else Nothing
 
 {-
 -- | True for variables that don't appear in 'Given' equations.
