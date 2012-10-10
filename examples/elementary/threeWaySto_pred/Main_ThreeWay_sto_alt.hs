@@ -2,10 +2,11 @@ module Main where
 
 import qualified Data.List as L
 import qualified Data.Map as M
+import Data.Graph.Inductive (mkGraph)
 
 import EFA2.Topology.Topology (makeNodes, makeEdges, makeAllEquations)
 import EFA2.Topology.TopologyData
-          (NodeType(Crossing, Sink, Source, Storage), Topology, defaultELabel, mkGraph)
+          (NodeType(Crossing, Sink, Source, Storage), Topology, defaultELabel)
 
 import EFA2.Solver.Equation (give, toAbsEquations)
 import EFA2.Solver.EquationOrder (order)

@@ -2,10 +2,11 @@
 module Main where
 
 import qualified Data.Map as M
+import Data.Graph.Inductive (mkGraph)
 
 import EFA2.Solver.Equation
 import EFA2.Solver.EquationOrder (order)
-import EFA2.Topology.TopologyData (Topology, NodeType(..), defaultELabel, mkGraph)
+import EFA2.Topology.TopologyData (Topology, NodeType(..), defaultELabel)
 import EFA2.Topology.Topology (makeAllEquations, makeNodes, makeEdges)
 import EFA2.Interpreter.Env
 import EFA2.Interpreter.Interpreter (interpretFromScratch, eqToInTerm)

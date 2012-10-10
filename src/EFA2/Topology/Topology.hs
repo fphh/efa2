@@ -8,6 +8,8 @@ import EFA2.Utils.Graph
 import EFA2.Utils.Utils
 
 import qualified EFA2.Topology.EfaGraph as Gr
+import Data.Graph.Inductive
+          (LNode, Node, LEdge, lab, labNodes, labEdges, elfilter)
 
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.List as L

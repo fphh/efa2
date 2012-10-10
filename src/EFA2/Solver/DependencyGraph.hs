@@ -3,7 +3,7 @@ module EFA2.Solver.DependencyGraph where
 import EFA2.Solver.Equation (EqTerm, mkVarSet)
 import EFA2.Utils.Utils (diffByAtMostOne, hasSameVariable)
 
-import Data.Graph.Inductive (Graph(..), DynGraph(..), Gr, nmap, newNodes, insNode)
+import Data.Graph.Inductive (Graph(..), Gr, nmap, newNodes, insNode)
 import Data.Maybe (mapMaybe)
 import Data.Maybe.HT (toMaybe)
 import Data.Tuple.HT (swap)

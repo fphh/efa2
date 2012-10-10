@@ -3,6 +3,7 @@ module EFA2.Example.Examples where
 
 import EFA2.Topology.Topology
 import EFA2.Topology.TopologyData
+import Data.Graph.Inductive (mkGraph)
 
 
 topoDreibein :: Topology

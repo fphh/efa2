@@ -4,6 +4,10 @@ module EFA2.Topology.Flow (module EFA2.Topology.Flow) where
 
 import qualified Data.Map as M
 import qualified Data.List as L
+import Data.Graph.Inductive
+          (LNode, Node, labNodes, labEdges,
+           insNodes, insEdges, mkGraph,
+           nmap, nodeRange)
 
 import EFA2.Topology.TopologyData
 import EFA2.Signal.SequenceData

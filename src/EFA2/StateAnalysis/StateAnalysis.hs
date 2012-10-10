@@ -7,14 +7,17 @@ module EFA2.StateAnalysis.StateAnalysis where
 --import Prelude hiding (map, length, filter, concatMap, all, (++), foldr)
 --import Data.List.Stream
 
-import qualified Data.List as L
 import qualified Data.IntMap as IM
 --import qualified Data.Vector as V
 --import Data.Function (on)
 
-import EFA2.Topology.Topology
 import EFA2.Topology.TopologyData
 import EFA2.Utils.Utils
+
+import Data.Graph.Inductive
+          (LNode, Node, lab, labNodes, labEdges,
+           insNode, insEdge, pre, suc, lpre, lsuc, mkGraph)
+
 
 -- import Debug.Trace
 

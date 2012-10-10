@@ -6,6 +6,8 @@ import qualified Data.Map as M
 import qualified Data.List as L
 import qualified Data.List.HT as HTL
 
+import Data.Graph.Inductive
+          (LNode, LEdge, lab, labNodes, labEdges, delNodes, delEdges)
 import Data.Eq.HT (equating)
 import Data.Ratio
 
