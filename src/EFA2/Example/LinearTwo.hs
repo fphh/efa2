@@ -71,6 +71,7 @@ eta1num = M.fromList [ (FEtaIdx 0 1 1 0, S.map $ const 0.9),
 x1num :: XMap Sc
 x1num = M.fromList []
 
+dx1num :: DXMap Sc
 dx1num = M.fromList [ (DXIdx 0 1 0 1, toScalar 0.0),
                       (DXIdx 0 1 1 0, toScalar 0.0),
                       (DXIdx 0 1 1 2, toScalar 0.0),
@@ -85,40 +86,40 @@ deta1num = M.fromList [ (DEtaIdx 0 1 1 0, S.map $ const 0.1),
 ---------------------------------------------------------------------------------
 
 dtimes0eq :: DTimeMap EqTerm
-dtimes0eq = M.fromList [ (DTimeIdx 0 0, DTime (DTimeIdx 0 0)) ]
+dtimes0eq = M.fromList [ (DTimeIdx 0 0, mkVar $ DTimeIdx 0 0) ]
 
 
 -- forward
 power0eq :: PowerMap EqTerm
-power0eq = M.fromList [ (PowerIdx 0 0 0 1, Power (PowerIdx 0 0 0 1)) ]
+power0eq = M.fromList [ (PowerIdx 0 0 0 1, mkVar $ PowerIdx 0 0 0 1) ]
 
 
 {-
 -- backwards
 power0eq :: PowerMap EqTerm
-power0eq = M.fromList [ (PowerIdx 0 0 2 1, Power (PowerIdx 0 0 2 1)) ]
+power0eq = M.fromList [ (PowerIdx 0 0 2 1, mkVar $ PowerIdx 0 0 2 1) ]
 -}
 
 
 eta0eq :: FEtaMap EqTerm
-eta0eq = M.fromList [ (FEtaIdx 0 0 1 0, const $ FEta (FEtaIdx 0 0 1 0)), 
-                      (FEtaIdx 0 0 0 1, const $ FEta (FEtaIdx 0 0 0 1)),
-                      (FEtaIdx 0 0 1 2, const $ FEta (FEtaIdx 0 0 1 2)), 
-                      (FEtaIdx 0 0 2 1, const $ FEta (FEtaIdx 0 0 2 1)) ]
+eta0eq = M.fromList [ (FEtaIdx 0 0 1 0, const $ mkVar $ FEtaIdx 0 0 1 0),
+                      (FEtaIdx 0 0 0 1, const $ mkVar $ FEtaIdx 0 0 0 1),
+                      (FEtaIdx 0 0 1 2, const $ mkVar $ FEtaIdx 0 0 1 2),
+                      (FEtaIdx 0 0 2 1, const $ mkVar $ FEtaIdx 0 0 2 1) ]
 
 x0eq :: XMap EqTerm
 x0eq = M.fromList []
 
 dtimes1eq:: DTimeMap EqTerm
-dtimes1eq = M.fromList [ (DTimeIdx 0 1, DTime (DTimeIdx 0 1)) ]
+dtimes1eq = M.fromList [ (DTimeIdx 0 1, mkVar $ DTimeIdx 0 1) ]
 
 
 -- forward
 power1eq :: PowerMap EqTerm
-power1eq = M.fromList [ (PowerIdx 0 1 0 1, Power (PowerIdx 0 1 0 1)) ]
+power1eq = M.fromList [ (PowerIdx 0 1 0 1, mkVar $ PowerIdx 0 1 0 1) ]
 
 dpower1eq :: DPowerMap EqTerm
-dpower1eq = M.fromList [ (DPowerIdx 0 1 0 1, DPower (DPowerIdx 0 1 0 1)) ]
+dpower1eq = M.fromList [ (DPowerIdx 0 1 0 1, mkVar $ DPowerIdx 0 1 0 1) ]
 
 {-
 -- backward
@@ -130,24 +131,25 @@ dpower1eq = M.fromList [ (DPowerIdx 0 1 2 1, DPower (DPowerIdx 0 1 2 1)) ]
 -}
 
 eta1eq :: FEtaMap EqTerm
-eta1eq = M.fromList [ (FEtaIdx 0 1 1 0, const $ FEta (FEtaIdx 0 1 1 0)), 
-                      (FEtaIdx 0 1 0 1, const $ FEta (FEtaIdx 0 1 0 1)),
-                      (FEtaIdx 0 1 1 2, const $ FEta (FEtaIdx 0 1 1 2)), 
-                      (FEtaIdx 0 1 2 1, const $ FEta (FEtaIdx 0 1 2 1)) ]
+eta1eq = M.fromList [ (FEtaIdx 0 1 1 0, const $ mkVar $ FEtaIdx 0 1 1 0),
+                      (FEtaIdx 0 1 0 1, const $ mkVar $ FEtaIdx 0 1 0 1),
+                      (FEtaIdx 0 1 1 2, const $ mkVar $ FEtaIdx 0 1 1 2),
+                      (FEtaIdx 0 1 2 1, const $ mkVar $ FEtaIdx 0 1 2 1) ]
 
 x1eq :: XMap EqTerm
 x1eq = M.fromList []
 
+dx1eq :: DXMap EqTerm
 dx1eq = M.fromList [ (DXIdx 0 1 0 1, Const 0.0),
                      (DXIdx 0 1 1 0, Const 0.0),
                      (DXIdx 0 1 1 2, Const 0.0),
                      (DXIdx 0 1 2 1, Const 0.0) ]
 
 deta1eq :: DEtaMap EqTerm
-deta1eq = M.fromList [ (DEtaIdx 0 1 1 0, const $ DEta (DEtaIdx 0 1 1 0)), 
-                       (DEtaIdx 0 1 0 1, const $ DEta (DEtaIdx 0 1 0 1)),
-                       (DEtaIdx 0 1 1 2, const $ DEta (DEtaIdx 0 1 1 2)), 
-                       (DEtaIdx 0 1 2 1, const $ DEta (DEtaIdx 0 1 2 1)) ]
+deta1eq = M.fromList [ (DEtaIdx 0 1 1 0, const $ mkVar $ DEtaIdx 0 1 1 0),
+                       (DEtaIdx 0 1 0 1, const $ mkVar $ DEtaIdx 0 1 0 1),
+                       (DEtaIdx 0 1 1 2, const $ mkVar $ DEtaIdx 0 1 1 2),
+                       (DEtaIdx 0 1 2 1, const $ mkVar $ DEtaIdx 0 1 2 1) ]
 
 
 graph :: Topology

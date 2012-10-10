@@ -1,6 +1,7 @@
 module EFA2.Topology.Topology where
 
 import EFA2.Solver.Equation
+          (Equation(..), EqTerm(..), MkIdxC, mkVar, add, give)
 import EFA2.Interpreter.Env
 import EFA2.Topology.TopologyData
 import EFA2.Utils.Graph
@@ -13,7 +14,6 @@ import qualified Data.List as L
 import qualified Data.IntMap as IM
 import qualified Data.IntSet as IS
 import qualified Data.Map as M
-import qualified Data.Set as Set
 import Data.Tuple.HT (snd3)
 import Data.Maybe (fromJust)
 import Data.Ord (comparing)
@@ -120,7 +120,7 @@ shiftIndices m (Envs (SingleRecord rec) e de p dp fn dn t x dx v st) =
         stf (StorageIdx s _ sto) = StorageIdx s rec (m `safeLookup` (s, sto))
 
 
-envToEqTerms :: (MkVarC k) => M.Map k v -> [Equation]
+envToEqTerms :: (MkIdxC k) => M.Map k v -> [Equation]
 envToEqTerms m = map (give . fst) (M.toList m)
 
 mkPowerEqs :: Int -> Topology -> [Equation]
@@ -129,7 +129,7 @@ mkPowerEqs rec topo = concat $ mapGraph (mkPEqs rec) topo
 mkPEqs :: Int -> ([LNode NLabel], LNode NLabel, [LNode NLabel]) -> [Equation]
 mkPEqs rec (ins, n@(nid, NLabel sec _ _), outs) = ieqs ++ oeqs -- ++ dieqs ++ doeqs
   where makeVar mkIdx (nid', _) = mkVar $ mkIdx sec rec nid nid'
-        dt = DTime $ DTimeIdx sec rec
+        dt = Idx $ DTime $ DTimeIdx sec rec
         eis = map (makeVar EnergyIdx) ins
         eos = map (makeVar EnergyIdx) outs
         --deis = map (makeVar DEnergyIdx) ins

@@ -60,11 +60,13 @@ symbolic g = mapEqTermEnv (setEqTerms (emptyEnv { dxMap = dx1eq })) res
         ts1o = order ts1
         difftseq = mkDiffEqTermEquations 0 ts1o
 
-        ts = toAbsEquations $ order (ts0o ++ ts1o ++ difftseq)
+        ts =
+           toAbsEquations $ order $ map assignToEquation $
+           ts0o ++ ts1o ++ difftseq
         res = interpretEqTermFromScratch ts
 
 numeric :: Topology -> Envs Sc
-numeric g =  trace ("---------\n" ++ showEquations ts1o ++ "\n------\n") res
+numeric g =  trace ("---------\n" ++ showAssigns ts1o ++ "\n------\n") res
   where envs0 = emptyEnv { recordNumber = SingleRecord 0,
                            powerMap = power0num,
                            dtimeMap = dtimes0num,

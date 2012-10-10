@@ -66,6 +66,22 @@ toDiffUse OutSum = OutDiffSum
 
 data VarIdx = VarIdx !Int !Int Use !Int deriving (Show, Ord, Eq)
 
+
+data Index =
+            Energy EnergyIdx
+          | DEnergy DEnergyIdx
+          | Power PowerIdx
+          | DPower DPowerIdx
+          | FEta FEtaIdx
+          | DEta DEtaIdx
+          | DTime DTimeIdx
+          | X XIdx
+          | DX DXIdx
+          | Var VarIdx
+          | Store StorageIdx
+             deriving (Show, Eq, Ord)
+
+
 class IdxRecNum a where
       getIdxRecNum :: a -> Int
 

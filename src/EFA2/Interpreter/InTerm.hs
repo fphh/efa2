@@ -4,27 +4,17 @@
 
 module EFA2.Interpreter.InTerm where
 
-import EFA2.Interpreter.Env
+import EFA2.Interpreter.Env as Env
 import qualified EFA2.Signal.Base as B
 
 import Data.Maybe (mapMaybe)
 
 
 data InEquation a =
-        InEqual (InTerm a) (InTerm a) deriving (Eq, Ord, Show)
+        InEqual Env.Index (InTerm a) deriving (Eq, Ord, Show)
 
-data InTerm a = EIdx EnergyIdx
-              | DEIdx DEnergyIdx
-              | PIdx PowerIdx
-              | DPIdx DPowerIdx
-              | FNIdx FEtaIdx
-              | DNIdx DEtaIdx
-              | ScaleIdx XIdx
-              | DScaleIdx DXIdx
+data InTerm a = InIndex Env.Index
 
-              | DTIdx DTimeIdx
-              | VIdx VarIdx
-              | SIdx StorageIdx
               | InConst Rational
               | InGiven a
               | InFunc (a -> a)
@@ -75,7 +65,7 @@ toAbsEqs :: [InTerm a] -> [InTerm a]
 toAbsEqs = map toAbsEq
 
 toAbsEquation :: InEquation a -> InEquation a
-toAbsEquation (InEqual x y) = InEqual (toAbsEq x) (toAbsEq y)
+toAbsEquation (InEqual x y) = InEqual x (toAbsEq y)
 
 toAbsEquations :: [InEquation a] -> [InEquation a]
 toAbsEquations = map toAbsEquation
@@ -83,20 +73,25 @@ toAbsEquations = map toAbsEquation
 
 
 mkDiffEq :: Int -> InEquation a -> Maybe (InEquation a)
-mkDiffEq rec (InEqual (PIdx (PowerIdx s'' _ f'' t''))
-                      (InFEdge p@(PIdx (PowerIdx s _ f t)) n@(FNIdx (FEtaIdx s' _ f' t')))) = Just res
+
+mkDiffEq rec (InEqual (Power (PowerIdx s'' _ f'' t''))
+                      (InFEdge p@(InIndex (Power (PowerIdx s _ f t)))
+                               n@(InIndex (FEta (FEtaIdx s' _ f' t'))))) = Just res
   where res = InEqual dq (InAdd (InAdd (InMult dp n) (InMult p dn)) (InMult dp dn))
-        dq = DPIdx (DPowerIdx s'' rec f'' t'')
-        dn = DNIdx (DEtaIdx s' rec f' t')
-        dp = DPIdx (DPowerIdx s rec f t)
-mkDiffEq rec (InEqual (PIdx (PowerIdx s'' _ f'' t''))
-                      (InBEdge p@(PIdx (PowerIdx s _ f t)) n@(FNIdx (FEtaIdx s' _ f' t')))) = Just res
+        dq = DPower $ DPowerIdx s'' rec f'' t''
+        dn = InIndex $ DEta $ DEtaIdx s' rec f' t'
+        dp = InIndex $ DPower $ DPowerIdx s rec f t
+
+mkDiffEq rec (InEqual (Power (PowerIdx s'' _ f'' t''))
+                      (InBEdge p@(InIndex (Power (PowerIdx s _ f t)))
+                               n@(InIndex (FEta (FEtaIdx s' _ f' t'))))) = Just res
   where res = InEqual dq (InAdd (InAdd (InMult dp (InRecip n)) (InMinus (InMult (InMult p dn) nom)))
                                 (InMinus (InMult (InMult dp dn) nom)))
-        dq = DPIdx (DPowerIdx s'' rec f'' t'')
+        dq = DPower $ DPowerIdx s'' rec f'' t''
         nom = InRecip (InAdd (InMult dn n) (InMult n n))
-        dn = DNIdx (DEtaIdx s' rec f' t')
-        dp = DPIdx (DPowerIdx s rec f t)
+        dn = InIndex $ DEta $ DEtaIdx s' rec f' t'
+        dp = InIndex $ DPower $ DPowerIdx s rec f t
+
 mkDiffEq _ (InEqual _ (InNEdge _ _)) = error "mkDiffEq: eta cannot be computed with Differenzenrechnung"
 mkDiffEq _ _ = Nothing
 

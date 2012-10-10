@@ -86,27 +86,33 @@ x0num = M.fromList [ (XIdx 0 0 2 0, S.fromList [0.2]),
 
 
 dtimes0sym :: DTimeMap EqTerm
-dtimes0sym = M.fromList [ (DTimeIdx 0 0, DTime (DTimeIdx 0 0)) ]
+dtimes0sym = M.fromList [ (DTimeIdx 0 0, mkVar $ DTimeIdx 0 0) ]
 
 sigs0sym :: EnergyMap EqTerm
-sigs0sym = M.fromList [ (EnergyIdx 0 0 0 2, Energy (EnergyIdx 0 0 0 1)) ]
+sigs0sym = M.fromList [ (EnergyIdx 0 0 0 2, mkVar $ EnergyIdx 0 0 0 1) ]
 
 
 eta0sym :: FEtaMap EqTerm
-eta0sym = M.fromList [ (FEtaIdx 0 0 0 2, const $ FEta (FEtaIdx 0 0 0 2)),
-                       (FEtaIdx 0 0 2 0, const $ FEta (FEtaIdx 0 0 2 0)),
-                       (FEtaIdx 0 0 1 2, const $ FEta (FEtaIdx 0 0 1 2)),
-                       (FEtaIdx 0 0 2 1, const $ FEta (FEtaIdx 0 0 2 1)),
-                       (FEtaIdx 0 0 2 3, const $ FEta (FEtaIdx 0 0 2 3)),
-                       (FEtaIdx 0 0 3 2, const $ FEta (FEtaIdx 0 0 3 2)),
-                       (FEtaIdx 0 0 2 4, const $ FEta (FEtaIdx 0 0 2 4)),
-                       (FEtaIdx 0 0 4 2, const $ FEta (FEtaIdx 0 0 4 2)) ]
+eta0sym =
+   M.fromList [
+      (FEtaIdx 0 0 0 2, const $ mkVar $ FEtaIdx 0 0 0 2),
+      (FEtaIdx 0 0 2 0, const $ mkVar $ FEtaIdx 0 0 2 0),
+      (FEtaIdx 0 0 1 2, const $ mkVar $ FEtaIdx 0 0 1 2),
+      (FEtaIdx 0 0 2 1, const $ mkVar $ FEtaIdx 0 0 2 1),
+      (FEtaIdx 0 0 2 3, const $ mkVar $ FEtaIdx 0 0 2 3),
+      (FEtaIdx 0 0 3 2, const $ mkVar $ FEtaIdx 0 0 3 2),
+      (FEtaIdx 0 0 2 4, const $ mkVar $ FEtaIdx 0 0 2 4),
+      (FEtaIdx 0 0 4 2, const $ mkVar $ FEtaIdx 0 0 4 2)
+      ]
 
 
 x0sym :: XMap EqTerm
-x0sym = M.fromList [ (XIdx 0 0 2 0, X (XIdx 0 0 2 0)),
-                     (XIdx 0 0 2 3, X (XIdx 0 0 2 3)),
-                     (XIdx 0 0 2 4, X (XIdx 0 0 2 4)) ]
+x0sym =
+   M.fromList [
+      (XIdx 0 0 2 0, mkVar $ XIdx 0 0 2 0),
+      (XIdx 0 0 2 3, mkVar $ XIdx 0 0 2 3),
+      (XIdx 0 0 2 4, mkVar $ XIdx 0 0 2 4)
+      ]
 
 
 vierbein :: Topology

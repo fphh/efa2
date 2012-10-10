@@ -1,8 +1,11 @@
 
 module EFA2.Solver.DirEquation where
 
-import EFA2.Solver.Equation (EqTerm, Equation, mkVarSetEq, transformEq)
+import EFA2.Solver.Equation
+          (EqTerm, Equation(Given, (:=)), Assign(GivenIdx),
+           mkVarSetEq, transformEq)
 import EFA2.Solver.IsVar (isGiven)
+import qualified EFA2.Interpreter.Env as Env
 
 import qualified Data.Set as S
 import qualified Data.List as L
@@ -10,6 +13,7 @@ import qualified Data.NonEmpty as NonEmpty
 import qualified Data.NonEmpty.Mixed as NonEmptyM
 
 import EFA2.Utils.Utils (pairs)
+import Data.Maybe (mapMaybe)
 import Data.Eq.HT (equating)
 
 
@@ -38,8 +42,13 @@ filterEquations isVar _vars ts = res
            map (fst . NonEmpty.head) $
            NonEmptyM.groupBy (equating snd) notGiven
 
-directEquations :: (EqTerm -> Maybe EqTerm) -> [Equation] -> [Equation]
-directEquations isVar ts = L.filter isGiven ts ++ res
+directEquations ::
+   (EqTerm -> Maybe Env.Index) -> [Equation] -> [Assign]
+directEquations isVar ts = mapMaybe givenToAssign ts ++ res
   where unknown = varsToCalculate isVar ts
         feqs = filterEquations isVar unknown ts
         res = map (uncurry transformEq) (zip unknown feqs)
+        givenToAssign equ =
+           case equ of
+              Given v -> Just $ GivenIdx v
+              _ := _ -> Nothing

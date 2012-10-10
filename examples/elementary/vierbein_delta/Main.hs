@@ -39,7 +39,9 @@ symbolic g = res' { recordNumber = SingleRecord 1, dxMap = dx1sym, detaMap = det
         ts1o = order ts1
         difftseq = mkDiffEqTermEquations 0 ts1o
 
-        ts = toAbsEquations $ order (ts0o ++ ts1o ++ difftseq)
+        ts =
+           toAbsEquations $ order $ map assignToEquation $
+           ts0o ++ ts1o ++ difftseq
         res = interpretEqTermFromScratch ts
         --res' = mapEqTermEnv (setEqTerms (emptyEnv { dxMap = dx1sym })) (res { fetaMap = eta1sym, recordNumber = SingleRecord 1 })
         res' = mapEqTermEnv (setEqTerms (emptyEnv { dxMap = dx1sym })) res
@@ -224,12 +226,12 @@ envs1num = emptyEnv { recordNumber = SingleRecord 1,
 
 -- Symbolic =====================================================================
 
-selfMap :: (MkVarC a, Ord a) => [a] -> M.Map a EqTerm
-selfMap xs = M.fromList $ map (\x -> (x, mkVar x)) xs
+selfMap :: (MkTermC a, Ord a) => [a] -> M.Map a EqTerm
+selfMap xs = M.fromList $ map (\x -> (x, mkTerm x)) xs
 
 
-selfEta :: (MkVarC a, Ord a) => [a] -> M.Map a (b -> EqTerm)
-selfEta ns = M.fromList $ map (\x -> (x, const $ mkVar x)) ns
+selfEta :: (MkTermC a, Ord a) => [a] -> M.Map a (b -> EqTerm)
+selfEta ns = M.fromList $ map (\x -> (x, const $ mkTerm x)) ns
 
 dtimes0sym :: DTimeMap EqTerm
 dtimes0sym = selfMap [ DTimeIdx 0 0 ]

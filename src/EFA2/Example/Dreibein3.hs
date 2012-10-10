@@ -72,54 +72,69 @@ deta1num = M.fromList [ (DEtaIdx 0 1 1 0, S.map $ const 0.1),
 ------------------------------------------------------------------------------
 
 dtimes0eq :: DTimeMap EqTerm
-dtimes0eq = M.fromList [ (DTimeIdx 0 0, DTime (DTimeIdx 0 0)) ]
+dtimes0eq = M.fromList [ (DTimeIdx 0 0, mkVar $ DTimeIdx 0 0) ]
 
 sigs0eq :: PowerMap EqTerm
-sigs0eq = M.fromList [ (PowerIdx 0 0 0 1, Power (PowerIdx 0 0 0 1)) ]
+sigs0eq = M.fromList [ (PowerIdx 0 0 0 1, mkVar $ PowerIdx 0 0 0 1) ]
 
 eta0eq :: FEtaMap EqTerm
-eta0eq = M.fromList [ (FEtaIdx 0 0 1 0, const $ FEta (FEtaIdx 0 0 1 0)), 
-                      (FEtaIdx 0 0 0 1, const $ FEta (FEtaIdx 0 0 0 1)),
-                      (FEtaIdx 0 0 1 2, const $ FEta (FEtaIdx 0 0 1 2)), 
-                      (FEtaIdx 0 0 2 1, const $ FEta (FEtaIdx 0 0 2 1)),
-                      (FEtaIdx 0 0 1 3, const $ FEta (FEtaIdx 0 0 1 3)), 
-                      (FEtaIdx 0 0 3 1, const $ FEta (FEtaIdx 0 0 3 1)) ]
+eta0eq =
+   M.fromList [
+      (FEtaIdx 0 0 1 0, const $ mkVar $ FEtaIdx 0 0 1 0),
+      (FEtaIdx 0 0 0 1, const $ mkVar $ FEtaIdx 0 0 0 1),
+      (FEtaIdx 0 0 1 2, const $ mkVar $ FEtaIdx 0 0 1 2),
+      (FEtaIdx 0 0 2 1, const $ mkVar $ FEtaIdx 0 0 2 1),
+      (FEtaIdx 0 0 1 3, const $ mkVar $ FEtaIdx 0 0 1 3),
+      (FEtaIdx 0 0 3 1, const $ mkVar $ FEtaIdx 0 0 3 1)
+      ]
 
 
 x0eq :: XMap EqTerm
-x0eq = M.fromList [ (XIdx 0 0 1 2, X (XIdx 0 0 1 2)),
-                    (XIdx 0 0 1 3, X (XIdx 0 0 1 3)) ]
+x0eq =
+   M.fromList [
+      (XIdx 0 0 1 2, mkVar $ XIdx 0 0 1 2),
+      (XIdx 0 0 1 3, mkVar $ XIdx 0 0 1 3)
+      ]
 
 
 dtimes1eq:: DTimeMap EqTerm
-dtimes1eq = M.fromList [ (DTimeIdx 0 1, DTime (DTimeIdx 0 1)) ]
+dtimes1eq = M.fromList [ (DTimeIdx 0 1, mkVar $ DTimeIdx 0 1) ]
 
 sigs1eq :: PowerMap EqTerm
-sigs1eq = M.fromList [ (PowerIdx 0 1 0 1, Power (PowerIdx 0 1 0 1)) ]
+sigs1eq = M.fromList [ (PowerIdx 0 1 0 1, mkVar $ PowerIdx 0 1 0 1) ]
 
 dpower1eq :: DPowerMap EqTerm
-dpower1eq = M.fromList [ (DPowerIdx 0 1 0 1, DPower (DPowerIdx 0 1 0 1)) ]
+dpower1eq = M.fromList [ (DPowerIdx 0 1 0 1, mkVar $ DPowerIdx 0 1 0 1) ]
 
 eta1eq :: FEtaMap EqTerm
-eta1eq = M.fromList [ (FEtaIdx 0 1 1 0, const $ FEta (FEtaIdx 0 1 1 0)), 
-                      (FEtaIdx 0 1 0 1, const $ FEta (FEtaIdx 0 1 0 1)),
-                      (FEtaIdx 0 1 1 2, const $ FEta (FEtaIdx 0 1 1 2)), 
-                      (FEtaIdx 0 1 2 1, const $ FEta (FEtaIdx 0 1 2 1)),
-                      (FEtaIdx 0 1 1 3, const $ FEta (FEtaIdx 0 1 1 3)), 
-                      (FEtaIdx 0 1 3 1, const $ FEta (FEtaIdx 0 1 3 1)) ]
+eta1eq =
+   M.fromList [
+      (FEtaIdx 0 1 1 0, const $ mkVar $ FEtaIdx 0 1 1 0),
+      (FEtaIdx 0 1 0 1, const $ mkVar $ FEtaIdx 0 1 0 1),
+      (FEtaIdx 0 1 1 2, const $ mkVar $ FEtaIdx 0 1 1 2),
+      (FEtaIdx 0 1 2 1, const $ mkVar $ FEtaIdx 0 1 2 1),
+      (FEtaIdx 0 1 1 3, const $ mkVar $ FEtaIdx 0 1 1 3),
+      (FEtaIdx 0 1 3 1, const $ mkVar $ FEtaIdx 0 1 3 1)
+      ]
 
 x1eq :: XMap EqTerm
-x1eq = M.fromList [ (XIdx 0 1 1 2, X (XIdx 0 1 1 2)),
-                    (XIdx 0 1 1 3, X (XIdx 0 1 1 3)) ]
+x1eq =
+   M.fromList [
+      (XIdx 0 1 1 2, mkVar $ XIdx 0 1 1 2),
+      (XIdx 0 1 1 3, mkVar $ XIdx 0 1 1 3)
+      ]
 
 
 deta1eq :: DEtaMap EqTerm
-deta1eq = M.fromList [ (DEtaIdx 0 1 1 0, const $ DEta (DEtaIdx 0 1 1 0)), 
-                       (DEtaIdx 0 1 0 1, const $ DEta (DEtaIdx 0 1 0 1)),
-                       (DEtaIdx 0 1 1 2, const $ DEta (DEtaIdx 0 1 1 2)), 
-                       (DEtaIdx 0 1 2 1, const $ DEta (DEtaIdx 0 1 2 1)),
-                       (DEtaIdx 0 1 1 3, const $ DEta (DEtaIdx 0 1 1 3)), 
-                       (DEtaIdx 0 1 3 1, const $ DEta (DEtaIdx 0 1 3 1)) ]
+deta1eq =
+   M.fromList [
+      (DEtaIdx 0 1 1 0, const $ mkVar $ DEtaIdx 0 1 1 0),
+      (DEtaIdx 0 1 0 1, const $ mkVar $ DEtaIdx 0 1 0 1),
+      (DEtaIdx 0 1 1 2, const $ mkVar $ DEtaIdx 0 1 1 2),
+      (DEtaIdx 0 1 2 1, const $ mkVar $ DEtaIdx 0 1 2 1),
+      (DEtaIdx 0 1 1 3, const $ mkVar $ DEtaIdx 0 1 1 3),
+      (DEtaIdx 0 1 3 1, const $ mkVar $ DEtaIdx 0 1 3 1)
+      ]
 
 
 -- Energie teilt sich am Knoten 1

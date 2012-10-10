@@ -11,51 +11,42 @@ import qualified EFA2.Signal.Base as Base
 import EFA2.Signal.Signal (toConst, (.+), (.*))
 import EFA2.Signal.Typ (Typ, UT)
 
-import EFA2.Solver.Equation (Equation(Given, (:=)), EqTerm(..))
+import EFA2.Solver.Equation (Assign(GivenIdx, (::=)), EqTerm(..))
 import EFA2.Interpreter.InTerm (InTerm(..), InEquation(..))
-import EFA2.Interpreter.Env
+import EFA2.Interpreter.Env as Env
 import EFA2.Utils.Utils (safeLookup)
 
 
-eqToInTerm :: Show a => Envs a -> Equation -> InEquation a
-eqToInTerm envs (Given t) =
+eqToInTerm :: Show a => Envs a -> Assign -> InEquation a
+eqToInTerm envs (GivenIdx t) =
+   InEqual t $
    case t of
-      (Energy idx) -> InEqual (EIdx idx) (InGiven (energyMap envs `safeLookup` idx))
-      (DEnergy idx) -> InEqual (DEIdx idx) (InGiven (denergyMap envs `safeLookup` idx))
-      (Power idx) -> InEqual (PIdx idx) (InGiven (powerMap envs `safeLookup` idx))
-      (DPower idx) -> InEqual (DPIdx idx) (InGiven (dpowerMap envs `safeLookup` idx))
-      (FEta idx) -> InEqual (FNIdx idx) (InFunc (fetaMap envs `safeLookup` idx))
-      (DEta idx) -> InEqual (DNIdx idx) (InFunc (detaMap envs `safeLookup` idx))
+      Energy idx -> InGiven (energyMap envs `safeLookup` idx)
+      DEnergy idx -> InGiven (denergyMap envs `safeLookup` idx)
+      Power idx -> InGiven (powerMap envs `safeLookup` idx)
+      DPower idx -> InGiven (dpowerMap envs `safeLookup` idx)
+      FEta idx -> InFunc (fetaMap envs `safeLookup` idx)
+      DEta idx -> InFunc (detaMap envs `safeLookup` idx)
 {-
-      (DEta idx := ((FEta x) :+ (Minus (FEta y)))) -> InEqual (DNIdx idx) (InFunc (\z -> fx z .- fy z))
+      (DEta idx := ((FEta x) :+ (Minus (FEta y)))) -> InEqual (DEta idx) (InFunc (\z -> fx z .- fy z))
           where fx = fetaMap envs `safeLookup` x
                 fy = fetaMap envs `safeLookup` y
 -}
-      (DTime idx) -> InEqual (DTIdx idx) (InGiven (dtimeMap envs `safeLookup` idx))
-      (X idx) -> InEqual (ScaleIdx idx) (InGiven (xMap envs `safeLookup` idx))
-      (DX idx) -> InEqual (DScaleIdx idx) (InGiven (dxMap envs `safeLookup` idx))
-      (Var idx) -> InEqual (VIdx idx) (InGiven (varMap envs `safeLookup` idx))
-      (Store idx) -> InEqual (SIdx idx) (InGiven (storageMap envs `safeLookup` idx))
+      DTime idx -> InGiven (dtimeMap envs `safeLookup` idx)
+      X idx -> InGiven (xMap envs `safeLookup` idx)
+      DX idx -> InGiven (dxMap envs `safeLookup` idx)
+      Var idx -> InGiven (varMap envs `safeLookup` idx)
+      Store idx -> InGiven (storageMap envs `safeLookup` idx)
 
-eqToInTerm _envs (x := y) =
-   InEqual (eqTermToInTerm x) (eqTermToInTerm y)
+eqToInTerm _envs (x ::= y) =
+   InEqual x (eqTermToInTerm y)
 
 eqTermToInTerm :: EqTerm -> InTerm a
 eqTermToInTerm term =
    case term of
       (Const x) -> InConst x
-      (Energy idx) -> EIdx idx
-      (DEnergy idx) -> DEIdx idx
-      (Power idx) -> PIdx idx
-      (DPower idx) -> DPIdx idx
-      (FEta idx) -> FNIdx idx
-      (DEta idx) -> DNIdx idx
-      (DTime idx) -> DTIdx idx
-      (X idx) -> ScaleIdx idx
-      (DX idx) -> DScaleIdx idx
+      (Idx x) -> InIndex x
 
-      (Var idx) -> VIdx idx
-      (Store idx) -> SIdx idx
       (Recip x) -> InRecip (eqTermToInTerm x)
       (Minus x) -> InMinus (eqTermToInTerm x)
       (FEdge x y) -> InFEdge (eqTermToInTerm x) (eqTermToInTerm y)
@@ -67,19 +58,8 @@ eqTermToInTerm term =
 
 
 showInTerm :: (Show a) => InTerm a -> String
-showInTerm (EIdx (EnergyIdx s r x y)) = "E:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
-showInTerm (DEIdx (DEnergyIdx s r x y)) = "dE:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
-showInTerm (PIdx (PowerIdx s r x y)) = "P:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
-showInTerm (DPIdx (DPowerIdx s r x y)) = "dP:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
-showInTerm (FNIdx (FEtaIdx s r x y)) = "n:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "."  ++ show y
-                                   --      ++ show y ++ "(" ++ showInTerm p ++ ")"
-showInTerm (DNIdx (DEtaIdx s r x y)) = "dn:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
-showInTerm (DTIdx (DTimeIdx s r)) = "dt:" ++ show s ++ "." ++ show r
-showInTerm (ScaleIdx (XIdx s r x y)) = "x:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
-showInTerm (DScaleIdx (DXIdx s r x y)) = "dx:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
 
-showInTerm (VIdx (VarIdx s r x y)) = "v:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
-showInTerm (SIdx (StorageIdx s r n)) = "s:" ++ show s ++ "." ++ show r ++ ":" ++ show n
+showInTerm (InIndex x) = showInIndex x
 showInTerm (InConst x) = show x -- take 20 (show x) ++ "..."
 showInTerm (InGiven xs) = "given " ++ show xs
 showInTerm (InFunc _) = "given <function>"
@@ -93,8 +73,27 @@ showInTerm (InNEdge s t) = "n(" ++ showInTerm s ++ ", " ++ showInTerm t ++ ")"
 showInTerm (InAdd s t) = "(" ++ showInTerm s ++ " + " ++ showInTerm t ++ ")"
 showInTerm (InMult s t) = showInTerm s ++ " * " ++ showInTerm t
 
+
+showInIndex :: Env.Index -> String
+showInIndex idx =
+   case idx of
+      Energy (EnergyIdx s r x y) -> "E:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
+      DEnergy (DEnergyIdx s r x y) -> "dE:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
+      Power (PowerIdx s r x y) -> "P:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
+      DPower (DPowerIdx s r x y) -> "dP:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
+      FEta (FEtaIdx s r x y) -> "n:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "."  ++ show y
+                          --      ++ show y ++ "(" ++ showInIndex p ++ ")"
+      DEta (DEtaIdx s r x y) -> "dn:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
+      DTime (DTimeIdx s r) -> "dt:" ++ show s ++ "." ++ show r
+      X (XIdx s r x y) -> "x:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
+      DX (DXIdx s r x y) -> "dx:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
+
+      Var (VarIdx s r x y) -> "v:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
+      Store (StorageIdx s r n) -> "s:" ++ show s ++ "." ++ show r ++ ":" ++ show n
+
+
 showInEquation :: (Show a) => InEquation a -> String
-showInEquation (InEqual s t) = showInTerm s ++ " = " ++ showInTerm t
+showInEquation (InEqual s t) = showInIndex s ++ " = " ++ showInTerm t
 
 showInTerms :: (Show a) => [InTerm a] -> String
 showInTerms ts = L.intercalate "\n" $ map showInTerm ts
@@ -119,22 +118,25 @@ interpretRhs len envs term = interpretRhs' term
         --interpretRhs' (InConst x) = toScalar (InConst x)
 
         interpretRhs' (InGiven xs) = xs
-        interpretRhs' (EIdx idx) = energyMap envs `safeLookup` idx
-        interpretRhs' (DEIdx idx) = denergyMap envs `safeLookup` idx
-        interpretRhs' (PIdx idx) = powerMap envs `safeLookup` idx
-        interpretRhs' (DPIdx idx) = dpowerMap envs `safeLookup` idx
-        interpretRhs' (FNIdx idx@(FEtaIdx s r f t)) = (fetaMap envs `safeLookup` idx) (powerMap envs `safeLookup` pidx)
-          where pidx = PowerIdx s r f t
---        interpretRhs' (DNIdx idx) = detaMap envs `safeLookup` idx
-        interpretRhs' (DNIdx idx@(DEtaIdx s r f t)) = (detaMap envs `safeLookup` idx) (powerMap envs `safeLookup` pidx)
-          where pidx = PowerIdx s r f t
-        interpretRhs' (DTIdx idx) = dtimeMap envs `safeLookup` idx
-        interpretRhs' (ScaleIdx idx) = xMap envs `safeLookup` idx
-        interpretRhs' (DScaleIdx idx) = dxMap envs `safeLookup` idx
-        interpretRhs' (VIdx idx) = varMap envs `safeLookup` idx
-        interpretRhs' (SIdx idx) = storageMap envs `safeLookup` idx
+        interpretRhs' (InIndex i) =
+           case i of
+              Energy idx -> energyMap envs `safeLookup` idx
+              DEnergy idx -> denergyMap envs `safeLookup` idx
+              Power idx -> powerMap envs `safeLookup` idx
+              DPower idx -> dpowerMap envs `safeLookup` idx
+              FEta idx@(FEtaIdx s r f t) -> (fetaMap envs `safeLookup` idx) (powerMap envs `safeLookup` pidx)
+                where pidx = PowerIdx s r f t
+--              DEta idx -> detaMap envs `safeLookup` idx
+              DEta idx@(DEtaIdx s r f t) -> (detaMap envs `safeLookup` idx) (powerMap envs `safeLookup` pidx)
+                where pidx = PowerIdx s r f t
+              DTime idx -> dtimeMap envs `safeLookup` idx
+              X idx -> xMap envs `safeLookup` idx
+              DX idx -> dxMap envs `safeLookup` idx
+              Var idx -> varMap envs `safeLookup` idx
+              Store idx -> storageMap envs `safeLookup` idx
+
         interpretRhs' (InMinus t) = S.neg (interpretRhs' t)
-        interpretRhs' (InRecip (FNIdx idx@(FEtaIdx s r f t))) = S.rec $ (fetaMap envs `safeLookup` idx) pval
+        interpretRhs' (InRecip (InIndex (FEta idx@(FEtaIdx s r f t)))) = S.rec $ (fetaMap envs `safeLookup` idx) pval
           where pidx = PowerIdx s r t f
                 pval = powerMap envs `safeLookup` pidx
         interpretRhs' (InRecip t) = S.rec (interpretRhs' t)
@@ -165,26 +167,26 @@ interpretEq ::
    Envs (Signal s2 c2 a)
 interpretEq len envs eq =
    case eq of
-      (InEqual (EIdx idx) rhs) -> envs { energyMap = insert len idx envs rhs (energyMap envs) }
-      (InEqual (DEIdx idx) rhs) -> envs { denergyMap = insert len idx envs rhs (denergyMap envs) }
-      (InEqual (PIdx idx) rhs) -> envs { powerMap = insert len idx envs rhs (powerMap envs) }
-      (InEqual (DPIdx idx) rhs) -> envs { dpowerMap = insert len idx envs rhs (dpowerMap envs) }
-      (InEqual (FNIdx idx@(FEtaIdx _s _r _f _t)) (InFunc feta)) -> envs { fetaMap = M.insert idx feta (fetaMap envs) }
+      (InEqual (Energy idx) rhs) -> envs { energyMap = insert len idx envs rhs (energyMap envs) }
+      (InEqual (DEnergy idx) rhs) -> envs { denergyMap = insert len idx envs rhs (denergyMap envs) }
+      (InEqual (Power idx) rhs) -> envs { powerMap = insert len idx envs rhs (powerMap envs) }
+      (InEqual (DPower idx) rhs) -> envs { dpowerMap = insert len idx envs rhs (dpowerMap envs) }
+      (InEqual (FEta idx) (InFunc feta)) -> envs { fetaMap = M.insert idx feta (fetaMap envs) }
 {-
-      (InEqual (FNIdx idx@(FEtaIdx s r f t) _) (InMult (InRecip (PIdx pidx1)) (PIdx pidx2))) -> envs''
+      (InEqual (FEta idx@(FEtaIdx s r f t) _) (InMult (InRecip (Power pidx1)) (Power pidx2))) -> envs''
   where envs' = envs { fetaMap = M.insert idx (mkEtaFunc pts) (fetaMap envs) }
         envs'' = envs' { fetaMap = M.insert (FEtaIdx s r t f) (mkEtaFunc (reversePts pts)) (fetaMap envs') }
         p1 = powerMap envs M.! pidx1
         p2 = powerMap envs M.! pidx2
         pts = Pt p2 (p2 ./ p1) 
 -}
---      (InEqual (DNIdx idx) rhs) -> envs { detaMap = insert len idx envs rhs (detaMap envs) }
-      (InEqual (DNIdx idx@(DEtaIdx _s _r _f _t)) (InFunc deta)) -> envs { detaMap = M.insert idx deta (detaMap envs) }
-      (InEqual (DTIdx idx) rhs) -> envs { dtimeMap = insert len idx envs rhs (dtimeMap envs) }
-      (InEqual (ScaleIdx idx) rhs) -> envs { xMap = insert len idx envs rhs (xMap envs) }
-      (InEqual (DScaleIdx idx) rhs) -> envs { dxMap = insert len idx envs rhs (dxMap envs) }
-      (InEqual (VIdx idx) rhs) -> envs { varMap = insert len idx envs rhs (varMap envs) }
-      (InEqual (SIdx idx) rhs) -> envs { storageMap = insert len idx envs rhs (storageMap envs) }
+--      (InEqual (DEta idx) rhs) -> envs { detaMap = insert len idx envs rhs (detaMap envs) }
+      (InEqual (DEta idx) (InFunc deta)) -> envs { detaMap = M.insert idx deta (detaMap envs) }
+      (InEqual (DTime idx) rhs) -> envs { dtimeMap = insert len idx envs rhs (dtimeMap envs) }
+      (InEqual (X idx) rhs) -> envs { xMap = insert len idx envs rhs (xMap envs) }
+      (InEqual (DX idx) rhs) -> envs { dxMap = insert len idx envs rhs (dxMap envs) }
+      (InEqual (Var idx) rhs) -> envs { varMap = insert len idx envs rhs (varMap envs) }
+      (InEqual (Store idx) rhs) -> envs { storageMap = insert len idx envs rhs (storageMap envs) }
 
       _ -> error ("interpretEq: " ++ showInEquation eq)
 

@@ -8,7 +8,9 @@ import Data.Maybe (mapMaybe)
 -- import Debug.Trace
 
 import EFA2.Solver.Equation (Equation(..), EqTerm(..), mkVarSetEq)
-import EFA2.Interpreter.Env (EnergyIdx(..))
+import EFA2.Interpreter.Env (EnergyIdx(..), Index(..))
+import qualified EFA2.Interpreter.Env as Env
+
 
 {-- This algorithm is fast, but buggy.
 
@@ -105,54 +107,48 @@ splitTerms isVar ts = (given, nov, givenExt, rest)
 -- | Predicate to indicate what should be viewed as a variable. Ask me for further explanation.
 -- Static version for optimisation.
 isVar' :: EqTerm -> Bool
-isVar' (Energy (EnergyIdx 0 0 0 1)) = False
-isVar' (Energy _) = True
---isVar' (Eta _) = True
-isVar' (DEnergy _) = True
-isVar' (DEta _) = True
---isVar (X _) = True
-isVar' (Var _) = True
+isVar' (Idx idx) =
+   case idx of
+      Energy (EnergyIdx 0 0 0 1) -> False
+      Energy _ -> True
+--      Eta _ -> True
+      DEnergy _ -> True
+      DEta _ -> True
+--isVar (X _ -> True
+      Var _ -> True
+      _ -> False
 isVar' _ = False
 
 
 -- | True for compound terms.
 isCompoundTerm :: EqTerm -> Bool
-isCompoundTerm (Energy _) = False
-isCompoundTerm (DEnergy _) = False
+isCompoundTerm = not . isStaticVar
 
-isCompoundTerm (Power _) = False
-isCompoundTerm (DPower _) = False
-
-isCompoundTerm (FEta _) = False
-isCompoundTerm (DEta _) = False
-
-isCompoundTerm (DTime _) = False
-isCompoundTerm (X _) = False
-isCompoundTerm (DX _) = False
-
-isCompoundTerm (Var _) = False
-isCompoundTerm (Store _) = False
-isCompoundTerm _ = True
-
--- | True for yntactic variables.
+-- | True for syntactic variables.
 --
 -- > isStaticVar == not . isCompoundTerm
 isStaticVar :: EqTerm -> Bool
-isStaticVar = not . isCompoundTerm
+isStaticVar (Idx _) = True
+isStaticVar _ = False
 
-maybeStaticVar :: EqTerm -> Maybe EqTerm
-maybeStaticVar x = if isStaticVar x then Just x else Nothing
+-- | True for syntactic variables.
+--
+-- > isStaticVar == not . isCompoundTerm
+maybeStaticVar :: EqTerm -> Maybe Env.Index
+maybeStaticVar (Idx idx) = Just idx
+maybeStaticVar _ = Nothing
 
 {-
 -- | True for variables that don't appear in 'Given' equations.
 -- Used mainly as a reference implementation for 'isVar'.
 isVarFromEqs :: S.Set EqTerm -> (EqTerm -> Bool)
-isVarFromEqs s t = not (S.member t s || isCompoundTerm t) 
+isVarFromEqs s t = not (S.member t s || isCompoundTerm t)
 -}
 
 -- | True for variables that don't appear in 'Given' equations.
 -- Used mainly as a reference implementation for 'isVar'.
 isVarFromEqs :: [Equation] -> EqTerm -> Bool
-isVarFromEqs ts t = not (S.member t s || isCompoundTerm t) 
+isVarFromEqs ts (Idx idx) = not (S.member idx s)
   where s = S.fromList $
                mapMaybe (\eq -> case eq of Given v -> Just v; _ -> Nothing) ts
+isVarFromEqs _ _ = False

@@ -3,15 +3,16 @@ module EFA2.Solver.EquationOrder where
 import qualified Data.List as L
 import qualified Data.Set as S
 
-import EFA2.Solver.Equation (EqTerm, Equation, mkVarSetEq, transformEq)
+import EFA2.Solver.Equation (Equation, Assign, mkVarSetEq, transformEq)
 import EFA2.Solver.IsVar (maybeStaticVar)
+import qualified EFA2.Interpreter.Env as Env
 
 import Control.Monad (mplus, (<=<))
 import Data.Maybe.HT (toMaybe)
 import Data.Maybe (mapMaybe)
 
 
-data Derived = Derived (S.Set EqTerm) Equation deriving (Show)
+data Derived = Derived (S.Set Env.Index) Equation deriving (Show)
 
 instance Eq (Derived) where
     Derived as _ == Derived bs _ = as == bs
@@ -29,7 +30,7 @@ resolve a@(Derived as _) b@(Derived bs _) =
    `mplus`
    (isSingleton bs >>= resolveTerm a)
 
-resolveTerm :: Derived -> EqTerm -> Maybe Derived
+resolveTerm :: Derived -> Env.Index -> Maybe Derived
 resolveTerm (Derived bs bplan) a =
    toMaybe (S.member a bs) $ Derived (S.delete a bs) bplan
 
@@ -82,7 +83,7 @@ solve2 vs eqns = snd $ L.foldr f (vs, []) (consequences eqns)
         f _ ss = ss
 -}
 
-order :: [Equation] -> [Equation]
+order :: [Equation] -> [Assign]
 order =
    mapMaybe (\(Derived xs eq) -> fmap (flip transformEq eq) $ isSingleton xs) .
    consequences .

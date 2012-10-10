@@ -48,16 +48,16 @@ sigs1s = M.fromList [ (EnergyIdx 0 1 0 1, toScalar (InConst 3.3)) ]
 -------------------------
 
 dtimes0ss :: DTimeMap InTermScalar
-dtimes0ss = M.fromList [ (DTimeIdx 0 0, toScalar (DTIdx (DTimeIdx 0 0))) ]
+dtimes0ss = M.fromList [ (DTimeIdx 0 0, toScalar $ InIndex $ DTime $ DTimeIdx 0 0) ]
 
 sigs0ss :: EnergyMap InTermScalar
-sigs0ss = M.fromList [ (EnergyIdx 0 0 1 0, toScalar (EIdx (EnergyIdx 0 0 1 0))) ]
+sigs0ss = M.fromList [ (EnergyIdx 0 0 1 0, toScalar $ InIndex $ Energy $ EnergyIdx 0 0 1 0) ]
 
 dtimes1ss :: DTimeMap InTermScalar
-dtimes1ss = M.fromList [ (DTimeIdx 0 1, toScalar (DTIdx (DTimeIdx 0 1))) ]
+dtimes1ss = M.fromList [ (DTimeIdx 0 1, toScalar $ InIndex $ DTime $ DTimeIdx 0 1) ]
 
 sigs1ss :: EnergyMap InTermScalar
-sigs1ss = M.fromList [ (EnergyIdx 0 1 0 1, toScalar (EIdx (EnergyIdx 0 1 0 1))) ]
+sigs1ss = M.fromList [ (EnergyIdx 0 1 0 1, toScalar $ InIndex $ Energy $ EnergyIdx 0 1 0 1) ]
 
 
 linearOne :: TheGraph InTermScalar
