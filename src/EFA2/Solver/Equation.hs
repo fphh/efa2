@@ -155,7 +155,7 @@ showIdx idx =
       Store (StorageIdx s r n) -> "s_" ++ show s ++ "." ++ show r ++ "_" ++ show n
 
 showEqTerm :: EqTerm -> String
-showEqTerm (Const x) = show x
+showEqTerm (Const x) = show (fromRational x :: Double)
 showEqTerm (Idx x) = showIdx x
 
 showEqTerm (x :+ y) = "(" ++ showEqTerm x ++ " + " ++ showEqTerm y ++ ")"

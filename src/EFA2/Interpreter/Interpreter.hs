@@ -60,7 +60,7 @@ eqTermToInTerm term =
 showInTerm :: (Show a) => InTerm a -> String
 
 showInTerm (InIndex x) = showInIndex x
-showInTerm (InConst x) = show x -- take 20 (show x) ++ "..."
+showInTerm (InConst x) = show (fromRational x :: Double) -- take 20 (show x) ++ "..."
 showInTerm (InGiven xs) = "given " ++ show xs
 showInTerm (InFunc _) = "given <function>"
 showInTerm (InMinus t) = "-(" ++ showInTerm t ++ ")"
