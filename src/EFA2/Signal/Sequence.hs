@@ -230,7 +230,7 @@ calcZeroPowers (t1,(TC (Data ps1))) (t2,(TC (Data ps2))) zeroCrossingTimes (TC (
 calcZeroTimes :: RSamp1 -> RSamp1 -> (TZeroSamp1L,TSigL)
 calcZeroTimes (t1,ps1) (t2,ps2)  = (zeroCrossings, zeroCrossingTimes)
               where
-                -- | create ascending list containing all zero crossing times
+                 -- | create ascending list containing all zero crossing times
                  zeroCrossingTimes = S.sort $ filterTZero zeroCrossings :: TSigL
                  zeroCrossings = S.tzipWith h2 ps1 ps2 :: TZeroSamp1L
 
