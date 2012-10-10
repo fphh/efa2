@@ -32,9 +32,9 @@ import EFA2.Signal.Typ (Typ, A, Tt, Y, P, N, F)
 import EFA2.Utils.Utils (safeLookup)
 
 
-mkSig :: Int -> ([Val] -> PSigL)
+mkSig :: Int -> [Val] -> PSigL
 mkSig n = S.fromList . concat . replicate n
- 
+
 -- | A. Generate System Topology definition
 topo :: Topology
 topo = mkGraph (makeNodes nodes) (makeEdges edges)
@@ -67,8 +67,8 @@ sqTopo = sqTopo
     pRec = PowerRecord (S.fromList time) pMap
        
     (_, sqTopo) = makeSequence pRec topo
-       
-    mkSig :: Int -> ([Val] -> PSigL)
+
+    mkSig :: Int -> [Val] -> PSigL
     mkSig n = S.fromList . concat . replicate n
 
 -- | C. System solving
@@ -98,7 +98,7 @@ solve3Way sqTopo y n = interpretFromScratch (SingleRecord 0) 1 gd -- interprete 
   where givenEnv0 = emptyEnv { recordNumber = SingleRecord 0,
                                dtimeMap = M.fromList [ (DTimeIdx 0 0, S.fromList [(1-y)*dt]) ],
                                powerMap = M.fromList [ (PowerIdx 0 0 2 1, S.fromList [pCons])],
-                               energyMap = M.fromList [ (EnergyIdx 0 0 3 1, S.fromList [(dt*y*pCons/n/0.9)])],
+                               energyMap = M.fromList [ (EnergyIdx 0 0 3 1, S.fromList [dt*y*pCons/n/0.9])],
                                fetaMap =  M.fromList [ (FEtaIdx  0 0 0 1, S.map etaf), (FEtaIdx 0 0 1 0, undefined),
                                                        (FEtaIdx  0 0 1 2, S.map (const 0.9)), (FEtaIdx 0 0 2 1, S.map (const 0.9)),
                                                        (FEtaIdx  0 0 1 3, S.map (const n)), (FEtaIdx 0 0 3 1, S.map (const n)) ] }
@@ -136,20 +136,21 @@ solve3Way sqTopo y n = interpretFromScratch (SingleRecord 0) 1 gd -- interprete 
 
 -- | D. Function to generate Variation Matrix
 genVariationMatrix :: [a] -> [b] -> ([[a]], [[b]])
-genVariationMatrix xs ys = (replicate (length ys) xs, L.transpose $ replicate (length xs) ys)
+genVariationMatrix xs ys =
+   (replicate (length ys) xs, L.transpose $ replicate (length xs) ys)
 
 
 -- | Safe Lookup Functions
 getVarEnergy :: [[Envs UTFSig]] ->  EnergyIdx -> Test2 (Typ A F Tt) Val
 getVarEnergy varEnvs idx = S.changeSignalType $ S.fromCells $ map (map f ) varEnvs
   where f ::  Envs UTFSig ->   FSamp
-        f envs = S.changeType $ S.head $ ((safeLookup (energyMap envs) idx))
+        f envs = S.changeType $ S.head $ safeLookup (energyMap envs) idx
 
 -- | Safe Lookup Functions
 getVarPower :: [[Envs UTFSig]] ->  PowerIdx -> Test2 (Typ A P Tt) Val
 getVarPower varEnvs idx = S.changeSignalType $ S.fromCells $ map (map f ) varEnvs
   where f ::  Envs UTFSig ->   PFSamp
-        f envs = S.changeType $ S.head $ ((safeLookup (powerMap envs) idx))
+        f envs = S.changeType $ S.head $ safeLookup (powerMap envs) idx
 
 
 -- | Main Function ================================================================== 
@@ -179,8 +180,8 @@ main = do
     -- consumer
     powerConsumptionS0 = getVarPower varEnvs (PowerIdx 0 0 2 1)
     powerConsumptionS1 = getVarPower varEnvs (PowerIdx 1 0 6 5)
-    energyConsumption = (getVarEnergy varEnvs  (EnergyIdx 0 0 2 1)) .+  makeDelta (getVarEnergy varEnvs  (EnergyIdx 1 0 6 5)) 
-    
+    energyConsumption = getVarEnergy varEnvs (EnergyIdx 0 0 2 1) .+  makeDelta (getVarEnergy varEnvs (EnergyIdx 1 0 6 5))
+
     -- internal power (Between System 1 and 2)
     powerInt = getVarPower varEnvs (PowerIdx 0 0 1 0)
     energyInt = (getVarEnergy varEnvs (EnergyIdx 0 0 1 0)) -- .+  (makeDelta $ getVarEnergy varEnvs (EnergyIdx 1 0 1 0))
@@ -197,11 +198,11 @@ main = do
     etaSYS2 =  energyConsumption./energyInt 
     
     -- eta1 efficiency check
-    pOne = toScalar 1 :: TC Scalar (Typ A P Tt) (Data Nil Val) 
-    etaOne =  toScalar 1 :: TC Scalar (Typ A N Tt) (Data Nil Val) 
-    etaSYS1_Check = makeAbsolute $ etaOne .- (pOne./ ((makeDelta pOne) .+powerSource)) ::  Test2 (Typ A N Tt) Val
+    pOne = toScalar 1 :: TC Scalar (Typ A P Tt) (Data Nil Val)
+    etaOne =  toScalar 1 :: TC Scalar (Typ A N Tt) (Data Nil Val)
+    etaSYS1_Check = makeAbsolute $ etaOne .- (pOne ./ (makeDelta pOne .+ powerSource)) ::  Test2 (Typ A N Tt) Val
     check = etaSYS1_Check .- etaSYS1
-      
+
     -- calculating system losses
     lossSYS = energySource .- energyConsumption 
     lossSYS1 = energySource .- energyInt 
@@ -212,11 +213,11 @@ main = do
   -- | D. -- Selected Energy Flow Plots
 
 --  drawTopologyX' sqTopo
-  drawTopology  sqTopo (head(head(varEnvs))) 
-  drawTopology  sqTopo (last(head(varEnvs))) 
-  drawTopology  sqTopo (head(last(varEnvs))) 
-  drawTopology  sqTopo (last(last(varEnvs))) 
-  
+  drawTopology  sqTopo $ head $ head varEnvs
+  drawTopology  sqTopo $ last $ head varEnvs
+  drawTopology  sqTopo $ head $ last varEnvs
+  drawTopology  sqTopo $ last $ last varEnvs
+
   -- | E. -- Reporting the Numbers
   
   putStrLn "Efficiency Eta1 and Check"
@@ -251,12 +252,12 @@ main = do
       etaListSYS1 = toSigList etaSYS1
       powerListSource = toSigList powerSource
       powerListInt = toSigList powerInt
-  
-  xyplot "Efficiency System1" (S.fromList yIndir :: Test1 (Typ A Y Tt) Val) (etaSYS1)
-  xyplot "InternalPower" (S.fromList yIndir :: Test1 (Typ A Y Tt) Val) (powerInt)
-  
-  xyplot "SystemLoss" (S.fromList yIndir :: Test1 (Typ A Y Tt) Val) (lossSYS)
-      
+
+  xyplot "Efficiency System1" (S.fromList yIndir :: Test1 (Typ A Y Tt) Val) etaSYS1
+  xyplot "InternalPower" (S.fromList yIndir :: Test1 (Typ A Y Tt) Val) powerInt
+
+  xyplot "SystemLoss" (S.fromList yIndir :: Test1 (Typ A Y Tt) Val) lossSYS
+
   -- xyplots "SystemLoss1 & SystemLoss2"(S.fromList yIndir :: Test1 (Typ A Y Tt) Val) (lossListSYS1 ++ (map S.reverse lossListSYS2))
   xyplot "Loss System1 & Loss System2"(S.fromList yIndir :: Test1 (Typ A Y Tt) Val) (lossSYS1 .++ lossSYS2)
        
