@@ -1,5 +1,3 @@
-{-# LANGUAGE FlexibleInstances #-}
-
 module EFA2.Display.DrawGraph where
 
 import EFA2.Solver.Equation
@@ -15,7 +13,7 @@ import qualified EFA2.Signal.Data as D
 import EFA2.Display.DispSignal (SDisplay, sdisp)
 import EFA2.Display.DispTyp (TDisp)
 import EFA2.Display.DispBase (Disp)
-import EFA2.Signal.Signal (TC, Sc, DispApp)
+import EFA2.Signal.Signal (TC, DispApp)
 import EFA2.Signal.Data (Data)
 
 import EFA2.Utils.Utils (const2, safeLookup)
@@ -446,8 +444,15 @@ instance
       DrawTopology (TC s t a) where
          drawTopology = drawTopologySignal
 
-instance DrawDeltaTopology Sc where
-         drawDeltaTopology = drawDeltaTopologyD f formatStCont
+
+class DrawTopologySignal a => DrawDeltaTopologySignal a where
+   drawDeltaTopologySignal ::
+      (DispApp s, TDisp t) => Topology -> Envs (TC s t a) -> IO ()
+
+instance
+   (SDisplay v, D.Storage v a, Disp a, Ord a) =>
+      DrawDeltaTopologySignal (Data v a) where
+         drawDeltaTopologySignal = drawDeltaTopologyD f formatStCont
            where -- f (x, Just ys) = showDelta x ++ " = [ " ++ L.intercalate ", " (map showEqTerm ys) ++ " ]"
                  f (x, Just ys) = showDelta x ++ " = " ++ sdisp ys
 
@@ -461,6 +466,11 @@ instance DrawDeltaTopology Sc where
                  showDelta (NLine u v) = "dn_" ++ show u ++ "_" ++ show v
                  showDelta (ErrorLine str) = str
                 -- tshow dt s r = showEqTerms $ dt `safeLookup` (DTimeIdx s r)
+
+instance
+   (DispApp s, TDisp t, DrawDeltaTopologySignal a) =>
+      DrawDeltaTopology (TC s t a) where
+         drawDeltaTopology = drawDeltaTopologySignal
 
 
 drawAbsTopology' ::
