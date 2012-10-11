@@ -1,5 +1,4 @@
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
 
 module EFA2.Display.DrawGraph where
 
@@ -16,7 +15,7 @@ import qualified EFA2.Signal.Data as D
 import EFA2.Display.DispSignal (SDisplay, sdisp)
 import EFA2.Display.DispTyp (TDisp)
 import EFA2.Display.DispBase (Disp)
-import EFA2.Signal.Signal (TC, Sc, UTFSig, DispApp)
+import EFA2.Signal.Signal (TC, Sc, DispApp)
 import EFA2.Signal.Data (Data)
 
 import EFA2.Utils.Utils (const2, safeLookup)
@@ -426,8 +425,14 @@ drawDeltaTopology' f content tshow (Topology g) (Envs rec0 _e de _p _dp _fn dn d
 
 
 
-instance DrawTopology UTFSig where
-         drawTopology = drawAbsTopology' f formatStCont
+class DrawTopologySignal a where
+   drawTopologySignal ::
+      (DispApp s, TDisp t) => Topology -> Envs (TC s t a) -> IO ()
+
+instance
+   (SDisplay v, D.Storage v a, Disp a, Ord a) =>
+      DrawTopologySignal (Data v a) where
+         drawTopologySignal = drawAbsTopology' f formatStCont
            where f (x@(ELine _ _), Just tc) = show x ++ " = " ++ sdisp tc
                  f (x@(XLine _ _), Just tc) = show x ++ " = " ++ sdisp tc
                  f (x@(NLine _ _), Just tc) = show x ++ " = " ++ sdisp tc
@@ -436,16 +441,10 @@ instance DrawTopology UTFSig where
                  formatStCont (Just ys) = sdisp ys
                  formatStCont Nothing = "♥"
 
-
-instance DrawTopology Sc where
-         drawTopology = drawAbsTopology' f formatStCont
-           where f (x@(ELine _ _), Just tc) = show x ++ " = " ++ sdisp tc
-                 f (x@(XLine _ _), Just tc) = show x ++ " = " ++ sdisp tc
-                 f (x@(NLine _ _), Just tc) = show x ++ " = " ++ sdisp tc
-                 f (ErrorLine str, _) = str
-                 f (x, Nothing) = show x ++ " = ♥"
-                 formatStCont (Just ys) = sdisp ys
-                 formatStCont Nothing = "♥"
+instance
+   (DispApp s, TDisp t, DrawTopologySignal a) =>
+      DrawTopology (TC s t a) where
+         drawTopology = drawTopologySignal
 
 instance DrawDeltaTopology Sc where
          drawDeltaTopology = drawDeltaTopologyD f formatStCont
