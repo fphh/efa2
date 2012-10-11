@@ -14,8 +14,6 @@ import qualified EFA2.Signal.Vector as SV
 import EFA2.Signal.Signal (TC(TC))
 import EFA2.Signal.Data (Data(Data), (:>), Nil)
 
-import qualified Data.List as L
-
 
 -- | display a single value
 dispSingle ::  Disp a => a -> DisplayType -> String
@@ -33,7 +31,7 @@ dispRange x y t = disp f s x ++ " - " ++ disp f s y ++ " " ++ show u
         f = getDisplayFormat dispLength t u
 
 dispAll :: Disp a => [a] -> DisplayType -> String
-dispAll xs t = (L.intercalate " " $ map (disp f s) xs) ++  " " ++ show u
+dispAll xs t = (unwords $ map (disp f s) xs) ++  " " ++ show u
   where u = getDisplayUnit t
         s = getUnitScale u
         f = getDisplayFormat dispLength t u
