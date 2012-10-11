@@ -13,7 +13,7 @@ import EFA2.Topology.TopologyData
 import EFA2.Topology.EfaGraph (EfaGraph)
 
 import EFA2.Display.DispSignal (SDisplay, sdisp)
-import EFA2.Signal.Signal (TC(TC), Sc, UTFSig)
+import EFA2.Signal.Signal (TC, Sc, UTFSig)
 
 import EFA2.Utils.Utils (const2, safeLookup)
 
@@ -411,9 +411,9 @@ drawDeltaTopology' f content tshow (Topology g) (Envs rec0 _e de _p _dp _fn dn d
 
 instance DrawTopology UTFSig where
          drawTopology = drawAbsTopology' f formatStCont
-           where f (x@(ELine _ _), Just (TC ys)) = show x ++ " = " ++ sdisp (TC ys :: UTFSig)
-                 f (x@(XLine _ _), Just (TC ys)) = show x ++ " = " ++ sdisp (TC ys :: UTFSig)
-                 f (x@(NLine _ _), Just (TC ys)) = show x ++ " = " ++ sdisp (TC ys :: UTFSig)
+           where f (x@(ELine _ _), Just tc) = show x ++ " = " ++ sdisp tc
+                 f (x@(XLine _ _), Just tc) = show x ++ " = " ++ sdisp tc
+                 f (x@(NLine _ _), Just tc) = show x ++ " = " ++ sdisp tc
                  f (ErrorLine str, _) = str
                  f (x, Nothing) = show x ++ " = ♥"
                  formatStCont (Just ys) = sdisp ys
@@ -422,9 +422,9 @@ instance DrawTopology UTFSig where
 
 instance DrawTopology Sc where
          drawTopology = drawAbsTopology' f formatStCont
-           where f (x@(ELine _ _), Just (TC ys)) = show x ++ " = " ++ sdisp (TC ys :: Sc)
-                 f (x@(XLine _ _), Just (TC ys)) = show x ++ " = " ++ sdisp (TC ys :: Sc)
-                 f (x@(NLine _ _), Just (TC ys)) = show x ++ " = " ++ sdisp (TC ys :: Sc)
+           where f (x@(ELine _ _), Just tc) = show x ++ " = " ++ sdisp tc
+                 f (x@(XLine _ _), Just tc) = show x ++ " = " ++ sdisp tc
+                 f (x@(NLine _ _), Just tc) = show x ++ " = " ++ sdisp tc
                  f (ErrorLine str, _) = str
                  f (x, Nothing) = show x ++ " = ♥"
                  formatStCont (Just ys) = sdisp ys
