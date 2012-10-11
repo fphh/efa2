@@ -1,42 +1,62 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, ScopedTypeVariables, FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module EFA2.Display.DrawGraph where
 
-import qualified Data.Map as M
-import qualified Data.List as L
-import qualified Data.List.HT as HTL
+import EFA2.Solver.Equation
+          (EqTerm, showEqTerm, showEqTerms,
+           LatexString, unLatexString)
+import EFA2.Interpreter.Interpreter (showInTerm, showInTerms)
+import EFA2.Interpreter.InTerm (InTerm)
+import EFA2.Interpreter.Env
+import EFA2.Topology.TopologyData
+import EFA2.Topology.EfaGraph (EfaGraph)
+
+import EFA2.Display.DispSignal (SDisplay, sdisp)
+import EFA2.Signal.Signal (TC(TC), Sc, UTFSig)
+
+import EFA2.Utils.Utils (const2, safeLookup)
+
+import Data.GraphViz (
+          runGraphvizCanvas,
+          GraphvizCanvas(Xlib),
+          GraphID(Int),
+          GlobalAttributes(GraphAttrs),
+          GraphvizCommand(Dot),
+          DotEdge(DotEdge),
+          DotGraph(DotGraph),
+          DotNode(DotNode),
+          DotSubGraph(DotSG),
+          DotStatements(DotStmts),
+          DotSubGraph,
+          attrStmts, nodeStmts, edgeStmts, graphStatements,
+          directedGraph, strictGraph, subGraphs,
+          graphID)
+import Data.GraphViz.Attributes.Complete
 
 import Data.Graph.Inductive
           (LNode, LEdge, lab, labNodes, labEdges, delNodes, delEdges)
 import Data.Eq.HT (equating)
-import Data.Ratio
+import Data.Ratio (Ratio)
+import Data.Maybe (fromJust)
 
-import Data.Maybe
---import Data.Graph.Inductive
 import qualified Data.Text.Lazy as T
-import Data.GraphViz
-import Data.GraphViz.Attributes.Complete
 
-import Control.Concurrent
-import Control.Applicative
-import Control.Monad ((>=>))
+import qualified Data.Map as M
+import qualified Data.List as L
+import qualified Data.List.HT as HTL
+import qualified Data.NonEmpty as NonEmpty
+import qualified Data.NonEmpty.Mixed as NonEmptyM
 
-import Text.Printf
+import Control.Concurrent.MVar (MVar, putMVar, readMVar, newEmptyMVar)
+import Control.Concurrent (forkIO)
+import Control.Applicative ((<*>))
+import Control.Monad ((>=>), void)
 
-import EFA2.Solver.Equation
-import EFA2.Interpreter.Interpreter
-import EFA2.Interpreter.InTerm
-import EFA2.Interpreter.Env
-import EFA2.Topology.TopologyData
-import EFA2.Topology.EfaGraph
+import Text.Printf (printf)
 
-import EFA2.Display.DispSignal
-import EFA2.Signal.Signal (TC(TC), Sc, UTFSig)
-import EFA2.Signal.Base
 
-import EFA2.Utils.Utils
-
-nodeColour :: Attribute 
+nodeColour :: Attribute
 nodeColour = FillColor [RGB 230 230 240]
 
 clusterColour :: Attribute
@@ -61,21 +81,21 @@ mkDotGraph g (SingleRecord recordNum) timef nshow eshow =
              directedGraph = True,
              graphID = Just (Int 1),
              graphStatements = stmts }
-  where es = labEdges g
-        (interEs, origEs) = L.partition (\(_, _, e) -> isIntersectionEdge e) es
+  where interEs = L.filter (\(_, _, e) -> isIntersectionEdge e) $ labEdges g
         g' = delEdges (map (\(x, y, _) -> (x, y)) interEs) g
-        cs = HTL.removeEach (L.groupBy (equating section) (labNodes g))
-        section = sectionNLabel . snd
-        comps = map sg cs
-        sg ns@(x:_, _) = DotSG True (Just (Int sl)) (ds sl recordNum ns)
-          where sl = sectionNLabel $ snd x
-        ds sl rl (ns, ms) = DotStmts gattrs [] xs ys
-          where xs = map (mkDotNode nshow) ns
-                ys = map (mkDotEdge eshow) (labEdges (delNodes (map fst (concat ms)) g'))
+        cs =
+           HTL.removeEach $
+           NonEmptyM.groupBy (equating (sectionNLabel . snd)) $
+           labNodes g
+        sg (ns, ms) = DotSG True (Just (Int sl)) (DotStmts gattrs [] xs ys)
+          where sl = sectionNLabel $ snd $ NonEmpty.head ns
+                xs = map (mkDotNode nshow) $ NonEmpty.flatten ns
+                ys = map (mkDotEdge eshow) $ labEdges $
+                     delNodes (map fst (concatMap NonEmpty.flatten ms)) g'
                 gattrs = [GraphAttrs [Label (StrLabel (T.pack str))]]
                 str = "Section " ++ show sl ++ " / Record " ++ show recordNum ++ " / Time " ++ timef sl recordNum
         stmts = DotStmts { attrStmts = [],
-                           subGraphs = comps,
+                           subGraphs = map sg cs,
                            nodeStmts = [],
                            edgeStmts = map (mkDotEdge eshow) interEs }
 
@@ -242,20 +262,19 @@ drawAbsTopologyLatex ::
   Topology' NLabel ELabel ->
   Envs [t] ->
   IO ()
-drawAbsTopologyLatex f content tshow (Topology g) (Envs rec e de p dp fn dn dt x dx v st) = printGraph g rec (tshow dt) nshow eshow
-  where eshow ps = L.intercalate "\n " $ map f $ mkLst rec ps
+drawAbsTopologyLatex f content tshow (Topology g) (Envs rec0 e _de _p _dp fn _dn dt x _dx _v st) = printGraph g rec0 (tshow dt) nshow eshow
+  where eshow ps = L.intercalate "\n " $ map f $ mkLst rec0 ps
         --tshow' = tshow dt
         nshow (num, NLabel sec nid ty) = 
           "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\\\\ " ++
-          "Type: " ++ show ty ++ stContent rec ty
-            where stContent (SingleRecord rec) (InitStorage n) 
+          "Type: " ++ show ty ++ stContent rec0 ty
+            where stContent (SingleRecord rec) (InitStorage n)
                     = "\\\\ Content: " ++ content (M.lookup (StorageIdx sec rec n) st)
                   stContent (SingleRecord rec) (Storage n) = "\\\\ Content: " ++ content (M.lookup (StorageIdx sec rec n) st)
-                  stContent rn (InitStorage n) = "\\\\ Content: Problem with record number: " ++ show rn
-                  stContent rn (Storage n) = "\\\\ Content: Problem with record number: " ++ show rn
+                  stContent rn (InitStorage _n) = "\\\\ Content: Problem with record number: " ++ show rn
+                  stContent rn (Storage _n) = "\\\\ Content: Problem with record number: " ++ show rn
                   stContent _ _ = ""
 
-        node n = nodeNLabel (fromJust (lab g n))
         mkLst (SingleRecord rec) (uid, vid, l)
           | isOriginalEdge l = [ (ELine uid vid, M.lookup (EnergyIdx usec rec uid vid) e), 
                                  (XLine uid vid, M.lookup (XIdx usec rec uid vid) x),
@@ -274,9 +293,9 @@ drawAbsTopologyLatex f content tshow (Topology g) (Envs rec e de p dp fn dn dt x
 
 
 
-instance One (InTerm Val) where one = 1
+instance (Eq val, Show val) => One (InTerm val) where one = 1
 
-instance DrawTopology [InTerm Val] where
+instance (Eq val, Show val) => DrawTopology [InTerm val] where
          drawTopology = drawAbsTopology f formatStCont tshow
            where f (x, Just ys) = show x ++ " = " ++ (concatMap showInTerm ys)
                  f (x, Nothing) = show x ++ " = ♥"
@@ -320,20 +339,19 @@ drawAbsTopology ::
   Topology' NLabel ELabel ->
   Envs [t] ->
   IO ()
-drawAbsTopology f content tshow (Topology g) (Envs rec e de p dp fn dn dt x dx v st) = printGraph g rec (tshow dt) nshow eshow
-  where eshow ps = L.intercalate "\n" $ map f $ mkLst rec ps
+drawAbsTopology f content tshow (Topology g) (Envs rec0 e _de _p _dp fn _dn dt x _dx _v st) = printGraph g rec0 (tshow dt) nshow eshow
+  where eshow ps = L.intercalate "\n" $ map f $ mkLst rec0 ps
         --tshow' = tshow dt
         nshow (num, NLabel sec nid ty) = 
           "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\n" ++
-          "Type: " ++ show ty ++ stContent rec ty
-            where stContent (SingleRecord rec) (InitStorage n) 
+          "Type: " ++ show ty ++ stContent rec0 ty
+            where stContent (SingleRecord rec) (InitStorage n)
                     = "\nContent: " ++ content (M.lookup (StorageIdx sec rec n) st)
                   stContent (SingleRecord rec) (Storage n) = "\nContent: " ++ content (M.lookup (StorageIdx sec rec n) st)
-                  stContent rn (InitStorage n) = "\nContent: Problem with record number: " ++ show rn
-                  stContent rn (Storage n) = "\nContent: Problem with record number: " ++ show rn
+                  stContent rn (InitStorage _n) = "\nContent: Problem with record number: " ++ show rn
+                  stContent rn (Storage _n) = "\nContent: Problem with record number: " ++ show rn
                   stContent _ _ = ""
 
-        node n = nodeNLabel (fromJust (lab g n))
         mkLst (SingleRecord rec) (uid, vid, l)
           | isOriginalEdge l = [ (ELine uid vid, M.lookup (EnergyIdx usec rec uid vid) e), 
                                  (XLine uid vid, M.lookup (XIdx usec rec uid vid) x),
@@ -352,20 +370,27 @@ drawAbsTopology f content tshow (Topology g) (Envs rec e de p dp fn dn dt x dx v
 
 
 --drawDeltaTopology' :: (Show a, Num a, Ord a) => ((Line, Maybe [a]) -> String) -> (Maybe [a] -> String) -> Topology -> Envs [a] -> IO ()
-drawDeltaTopology' f content tshow (Topology g) (Envs rec e de p dp fn dn dt x dx v st) = printGraph g rec (tshow dt) nshow eshow
-  where eshow ps = L.intercalate "\n" $ map f $ mkLst rec ps
+drawDeltaTopology' ::
+   One t =>
+   ((Line, Maybe [t]) -> [Char]) ->
+   (Maybe [t] -> [Char]) ->
+   (DTimeMap [t] -> Int -> Int -> String) ->
+   Topology' NLabel ELabel ->
+   Envs [t] ->
+   IO ()
+drawDeltaTopology' f content tshow (Topology g) (Envs rec0 _e de _p _dp _fn dn dt _x dx _v st) = printGraph g rec0 (tshow dt) nshow eshow
+  where eshow ps = L.intercalate "\n" $ map f $ mkLst rec0 ps
         -- tshow s r = show $ dt `safeLookup` (DTimeIdx s r)
         nshow (num, NLabel sec nid ty) = 
           "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\n" ++
-          "Type: " ++ show ty ++ stContent rec ty
-            where stContent (SingleRecord rec) (InitStorage n) 
+          "Type: " ++ show ty ++ stContent rec0 ty
+            where stContent (SingleRecord rec) (InitStorage n)
                     = "\nContent: " ++ content (M.lookup (StorageIdx sec rec n) st)
                   stContent (SingleRecord rec) (Storage n) = "\nContent: " ++ content (M.lookup (StorageIdx sec rec n) st)
-                  stContent rn (InitStorage n) = "\nContent: Problem with record number: " ++ show rn
-                  stContent rn (Storage n) = "\nContent: Problem with record number: " ++ show rn
+                  stContent rn (InitStorage _n) = "\nContent: Problem with record number: " ++ show rn
+                  stContent rn (Storage _n) = "\nContent: Problem with record number: " ++ show rn
                   stContent _ _ = ""
 
-        node n = nodeNLabel (fromJust (lab g n))
         mkLst (SingleRecord rec) (uid, vid, l)
           | isOriginalEdge l = [ (ELine uid vid, M.lookup (DEnergyIdx usec rec uid vid) de), 
                                  (XLine uid vid, M.lookup (DXIdx usec rec uid vid) dx),
@@ -422,23 +447,25 @@ instance DrawDeltaTopology Sc where
                 -- tshow dt s r = showEqTerms $ dt `safeLookup` (DTimeIdx s r)
 
 
-drawAbsTopology' :: forall s t a. SDisplay (TC s t a) =>
-                  ((Line, Maybe (TC s t a)) -> String) -> (Maybe (TC s t a) -> String) -> Topology -> Envs (TC s t a) ->  IO ()
-drawAbsTopology' f content (Topology g) (Envs rec e de p dp fn dn dt x dx v st) = printGraph g rec tshow nshow eshow
-  where eshow ps = L.intercalate "\n" $ map f $ mkLst rec ps
+drawAbsTopology' ::
+   SDisplay (TC s t a) =>
+   ((Line, Maybe (TC s t a)) -> String) ->
+   (Maybe (TC s t a) -> String) ->
+   Topology -> Envs (TC s t a) ->  IO ()
+drawAbsTopology' f content (Topology g) (Envs rec0 e _de _p _dp fn _dn dt x _dx _v st) = printGraph g rec0 tshow nshow eshow
+  where eshow ps = L.intercalate "\n" $ map f $ mkLst rec0 ps
         tshow s r = case M.lookup (DTimeIdx s r) dt of
-                         Just (TC ts) -> sdisp (TC ts :: TC s t a)
+                         Just tc -> sdisp tc
                          Nothing -> "♥"
         nshow (num, NLabel sec nid ty) = 
           "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\n" ++
-          "Type: " ++ show ty ++ stContent rec ty
+          "Type: " ++ show ty ++ stContent rec0 ty
             where stContent (SingleRecord rec) (InitStorage n) = "\nContent: " ++ content (M.lookup (StorageIdx sec rec n) st)
                   stContent (SingleRecord rec) (Storage n) = "\nContent: " ++ content (M.lookup (StorageIdx sec rec n) st)
-                  stContent rn (InitStorage n) = "\nContent: Problem with record number: " ++ show rn
-                  stContent rn (Storage n) = "\nContent: Problem with record number: " ++ show rn
+                  stContent rn (InitStorage _n) = "\nContent: Problem with record number: " ++ show rn
+                  stContent rn (Storage _n) = "\nContent: Problem with record number: " ++ show rn
                   stContent _ _ = ""
 
-        node n = nodeNLabel (fromJust (lab g n))
         mkLst (SingleRecord rec) (uid, vid, l)
           | isOriginalEdge l = [ (ELine uid vid, M.lookup (EnergyIdx usec rec uid vid) e), 
                                  (XLine uid vid, M.lookup (XIdx usec rec uid vid) x),
@@ -458,23 +485,25 @@ drawAbsTopology' f content (Topology g) (Envs rec e de p dp fn dn dt x dx v st) 
         mkLst _ _ = [ (ErrorLine "No single record number!", Nothing) ]
 
 
-drawDeltaTopologyD :: forall s t a. (SDisplay (TC s t a), Show a) =>
-                  ((Line, Maybe (TC s t a)) -> String) -> (Maybe (TC s t a) -> String) -> Topology -> Envs (TC s t a) ->  IO ()
-drawDeltaTopologyD f content (Topology g) (Envs rec e de p dp fn dn dt x dx v st) = printGraph g rec tshow nshow eshow
-  where eshow ps = L.intercalate "\n" $ map f $ mkLst rec ps
+drawDeltaTopologyD ::
+   (SDisplay (TC s t a), Show a) =>
+   ((Line, Maybe (TC s t a)) -> String) ->
+   (Maybe (TC s t a) -> String) ->
+   Topology -> Envs (TC s t a) ->  IO ()
+drawDeltaTopologyD f content (Topology g) (Envs rec0 _e de _p _dp _fn dn dt _x dx _v st) = printGraph g rec0 tshow nshow eshow
+  where eshow ps = L.intercalate "\n" $ map f $ mkLst rec0 ps
         tshow s r = case M.lookup (DTimeIdx s r) dt of
-                         Just (TC ts) -> sdisp (TC ts :: TC s t a)
+                         Just tc -> sdisp tc
                          Nothing -> "♥"
         nshow (num, NLabel sec nid ty) = 
           "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\n" ++
-          "Type: " ++ show ty ++ stContent rec ty
+          "Type: " ++ show ty ++ stContent rec0 ty
             where stContent (SingleRecord rec) (InitStorage n) = "\nContent: " ++ content (M.lookup (StorageIdx sec rec n) st)
                   stContent (SingleRecord rec) (Storage n) = "\nContent: " ++ content (M.lookup (StorageIdx sec rec n) st)
-                  stContent rn (InitStorage n) = "\nContent: Problem with record number: " ++ show rn
-                  stContent rn (Storage n) = "\nContent: Problem with record number: " ++ show rn
+                  stContent rn (InitStorage _n) = "\nContent: Problem with record number: " ++ show rn
+                  stContent rn (Storage _n) = "\nContent: Problem with record number: " ++ show rn
                   stContent _ _ = ""
 
-        node n = nodeNLabel (fromJust (lab g n))
         mkLst (SingleRecord rec) (uid, vid, l)
           | isOriginalEdge l = [ (ELine uid vid, M.lookup (DEnergyIdx usec rec uid vid) de), 
                                  (XLine uid vid, M.lookup (DXIdx usec rec uid vid) dx),
@@ -502,7 +531,7 @@ newtype Async a = Async (MVar a)
 async :: IO a -> IO (Async a)
 async io = do
   m <- newEmptyMVar
-  forkIO $ do r <- io; putMVar m r
+  void $ forkIO $ putMVar m =<< io
   return (Async m)
 
 wait :: Async a -> IO a
