@@ -36,6 +36,9 @@ dispAll xs t = (unwords $ map (disp f s) xs) ++  " " ++ show u
         s = getUnitScale u
         f = getDisplayFormat dispLength t u
 
+dispAll2 :: Disp a => [[a]] -> DisplayType -> String
+dispAll2 = error "to be implemented"
+
 
 class SDisplay v where
   sdisp ::
@@ -62,22 +65,11 @@ instance (SV.Singleton v1, SV.FromList v1) => SDisplay (v1 :> Nil) where
             _dmin = D.minimum v
             _dmax = D.maximum v
 
-{-
-instance (SV.Singleton v1 d, SV.Singleton v2 (v1 d), D.FromList (v2 :> v1 :> Nil)) => SDisplay Signal (v2 :> v1 :> Nil) where
-  sdisp x@(TC(Data v))  = "Sig-D2 " ++ S.tdisp x ++ ": " ++ dispAll (S.toList x) dtyp -- dispRange dmin dmax dtyp
+instance
+   (SV.Singleton v1, SV.Singleton v2, SV.Walker v2,
+    SV.FromList v1, SV.FromList v2) =>
+      SDisplay (v2 :> v1 :> Nil) where
+  sdisp x@(TC v)  = "Sig-D2 " ++ S.tdisp x ++ ": " ++ dispAll2 (S.toList x) dtyp -- dispRange dmin dmax dtyp
     where dtyp = S.getDisplayType x
-          dmin = SV.minimum $ SV.minimum v
-          dmax = SV.maximum $ SV.maximum v
-
-instance (SV.Singleton v1 d, SV.Singleton v2 (v1 d), D.FromList (v2 :> v1 :> Nil)) => SDisplay FSignal (v2 :> v1 :> Nil) where
-  sdisp x@(TC(Data v))  = "Sig-D2 " ++ S.tdisp x ++ ": " ++ dispAll (S.toList x) dtyp -- dispRange dmin dmax dtyp
-    where dtyp = S.getDisplayType x
-          dmin = SV.minimum $ SV.minimum v
-          dmax = SV.maximum $ SV.maximum v
-
-instance (SV.Singleton v1 d, SV.Singleton v2 (v1 d), D.FromList (v2 :> v1 :> Nil)) => SDisplay (TC TestRow t (Data (v2 :> v1 :> Nil) d)) where
-  sdisp x@(TC(Data v))  = "Test-D2 " ++ S.tdisp x ++ ": " ++ dispAll (S.toList x) dtyp -- dispRange dmin dmax dtyp
-    where dtyp = S.getDisplayType x
-          dmin = SV.minimum $ SV.minimum v
-          dmax = SV.maximum $ SV.maximum v
--}
+          _dmin = D.minimum v
+          _dmax = D.maximum v
