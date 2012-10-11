@@ -62,6 +62,9 @@ data TestRow
 typ :: TC s t d -> t
 typ _ = error "Signal.typ: got phantom type"
 
+app :: TC s t d -> s
+app _ = error "Signal.app: got phantom type"
+
 readNested ::
    ((SV.Storage v2 (Apply v1 a), D.Storage v1 a) => TC s t (Data (v2 :> v1) a) -> b) ->
    (D.Storage (v2 :> v1) a => TC s t (Data (v2 :> v1) a) -> b)
@@ -958,8 +961,14 @@ srdisp xs = fmap g $ toList xs -- (f l)
 class DispApp s where
    dispApp :: s -> String
 
+instance DispApp Scalar where
+   dispApp _ = "Scal"
+
 instance DispApp Signal where
    dispApp _ = "Sig"
+
+instance DispApp FSignal where
+   dispApp _ = "FSig"
 
 instance DispApp TestRow where
    dispApp _ = "Test"

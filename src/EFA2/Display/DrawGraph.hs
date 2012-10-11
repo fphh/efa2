@@ -16,7 +16,7 @@ import qualified EFA2.Signal.Data as D
 import EFA2.Display.DispSignal (SDisplay, sdisp)
 import EFA2.Display.DispTyp (TDisp)
 import EFA2.Display.DispBase (Disp)
-import EFA2.Signal.Signal (TC, Sc, UTFSig)
+import EFA2.Signal.Signal (TC, Sc, UTFSig, DispApp)
 import EFA2.Signal.Data (Data)
 
 import EFA2.Utils.Utils (const2, safeLookup)
@@ -465,7 +465,7 @@ instance DrawDeltaTopology Sc where
 
 
 drawAbsTopology' ::
-   (SDisplay s v, TDisp t, D.Storage v d, Ord d, Disp d) =>
+   (DispApp s, TDisp t, SDisplay v, D.Storage v d, Ord d, Disp d) =>
    ((Line, Maybe (TC s t (Data v d))) -> String) ->
    (Maybe (TC s t (Data v d)) -> String) ->
    Topology -> Envs (TC s t (Data v d)) ->  IO ()
@@ -503,7 +503,7 @@ drawAbsTopology' f content (Topology g) (Envs rec0 e _de _p _dp fn _dn dt x _dx 
 
 
 drawDeltaTopologyD ::
-   (SDisplay s v, TDisp t, D.Storage v d, Ord d, Disp d) =>
+   (DispApp s, TDisp t, SDisplay v, D.Storage v d, Ord d, Disp d) =>
    ((Line, Maybe (TC s t (Data v d))) -> String) ->
    (Maybe (TC s t (Data v d)) -> String) ->
    Topology -> Envs (TC s t (Data v d)) ->  IO ()

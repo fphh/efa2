@@ -1,4 +1,3 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeOperators #-}
 
@@ -12,7 +11,7 @@ import EFA2.Display.DispBase
 import qualified EFA2.Signal.Signal as S
 import qualified EFA2.Signal.Data as D
 import qualified EFA2.Signal.Vector as SV
-import EFA2.Signal.Signal (TC(TC), Scalar, Signal, FSignal, TestRow)
+import EFA2.Signal.Signal (TC(TC))
 import EFA2.Signal.Data (Data(Data), (:>), Nil)
 
 import qualified Data.List as L
@@ -40,9 +39,9 @@ dispAll xs t = (L.intercalate " " $ map (disp f s) xs) ++  " " ++ show u
         f = getDisplayFormat dispLength t u
 
 
-class SDisplay s v where
+class SDisplay v where
   sdisp ::
-     (TDisp t, Disp d, Ord d, D.Storage v d) =>
+     (S.DispApp s, TDisp t, Disp d, Ord d, D.Storage v d) =>
      TC s t (Data v d) -> String
 
 {-
@@ -54,31 +53,13 @@ instance (TDisp t, Disp d, SV.Singleton v1 d, D.FromList (Data Nil) d)
 --          dmax = SV.maximum v
 
 -}
-instance SDisplay Scalar Nil where
+instance SDisplay Nil where
   sdisp x@(TC (Data v))  = "Sig-D0 " ++ dispSingle v dtyp --  ++ ": " ++ dispAll (S.toList x) dtyp -- dispRange dmin dmax dtyp
     where dtyp = S.getDisplayType x
 
 
-instance
-   (SV.Singleton v1, SV.FromList v1) =>
-      SDisplay Signal (v1 :> Nil) where
-   sdisp x@(TC v) = "Sig-D1 " ++ S.tdisp x ++ ": " ++ dispAll (S.toList x) dtyp -- dispRange dmin dmax dtyp
-      where dtyp = S.getDisplayType x
-            _dmin = D.minimum v
-            _dmax = D.maximum v
-
-instance
-   (SV.Singleton v1, SV.FromList v1) =>
-      SDisplay FSignal (v1 :> Nil) where
-   sdisp x@(TC v) = "FSig-D1 " ++ S.tdisp x ++ ": " ++ dispAll (S.toList x) dtyp -- dispRange dmin dmax dtyp
-      where dtyp = S.getDisplayType x
-            _dmin = D.minimum v
-            _dmax = D.maximum v
-
-instance
-   (SV.Singleton v1, SV.FromList v1) =>
-      SDisplay TestRow (v1 :> Nil) where
-   sdisp x@(TC v) = "TestRow-D1 " ++ S.tdisp x ++ ": " ++ dispAll (S.toList x) dtyp -- dispRange dmin dmax dtyp
+instance (SV.Singleton v1, SV.FromList v1) => SDisplay (v1 :> Nil) where
+   sdisp x@(TC v) = S.dispApp (S.app x) ++ "-D1 " ++ S.tdisp x ++ ": " ++ dispAll (S.toList x) dtyp -- dispRange dmin dmax dtyp
       where dtyp = S.getDisplayType x
             _dmin = D.minimum v
             _dmax = D.maximum v
