@@ -187,24 +187,37 @@ class One a where
 
 -- The argument t is for node labels. Until now, it is not used.
 class DrawTopology a where
-      drawTopology :: Topology -> Envs a -> IO ()
+   drawTopology :: Topology -> Envs a -> IO ()
 
 class DrawTopology a => DrawDeltaTopology a where
-      drawDeltaTopology :: Topology -> Envs a -> IO ()
+   drawDeltaTopology :: Topology -> Envs a -> IO ()
+
+
+class DrawTopologyList a where
+   drawTopologyList :: Topology -> Envs [a] -> IO ()
+
+class DrawTopologyList a => DrawDeltaTopologyList a where
+   drawDeltaTopologyList :: Topology -> Envs [a] -> IO ()
+
+instance DrawTopologyList a => DrawTopology [a] where
+   drawTopology = drawTopologyList
+
+instance DrawDeltaTopologyList a => DrawDeltaTopology [a] where
+   drawDeltaTopology = drawDeltaTopologyList
 
 
 instance One Double where one = 1
 
-instance DrawTopology [Double] where
-         drawTopology = drawAbsTopology f formatStCont tshow
+instance DrawTopologyList Double where
+         drawTopologyList = drawAbsTopology f formatStCont tshow
            where f (x, Just ys) = show x ++ " = " ++ (concatMap (printf "%.6f    ") ys)
                  f (x, Nothing) = show x ++ " = ♥"
                  formatStCont (Just ys) = concatMap (printf "%.6f    ") ys
                  formatStCont Nothing = "♥"
                  tshow dt s r = show $ dt `safeLookup` (DTimeIdx s r)
 
-instance DrawDeltaTopology [Double] where
-         drawDeltaTopology = drawDeltaTopology' f formatStCont tshow
+instance DrawDeltaTopologyList Double where
+         drawDeltaTopologyList = drawDeltaTopology' f formatStCont tshow
            where -- f (x, Just ys) = showDelta x ++ " = [ " ++ L.intercalate ", " (map showEqTerm ys) ++ " ]"
                  f (x, Just ys) = showDelta x ++ " = \n" ++  L.intercalate "\n" (map show ys)
 
@@ -221,16 +234,16 @@ instance DrawDeltaTopology [Double] where
 
 instance (Integral a) => One (Ratio a) where one = 1
 
-instance (Integral a, Show a) => DrawTopology [Ratio a] where
-         drawTopology = drawAbsTopology f formatStCont tshow
+instance (Integral a, Show a) => DrawTopologyList (Ratio a) where
+         drawTopologyList = drawAbsTopology f formatStCont tshow
            where f (x, Just ys) = show x ++ " = " ++ (concatMap show ys)
                  f (x, Nothing) = show x ++ " = ♥"
                  formatStCont (Just ys) = concatMap show ys
                  formatStCont Nothing = "♥"
                  tshow dt s r = show $ dt `safeLookup` (DTimeIdx s r)
 
-instance DrawTopology String where
-         drawTopology = drawAbsTopology f formatStCont tshow
+instance DrawTopologyList Char where
+         drawTopologyList = drawAbsTopology f formatStCont tshow
            where f (x, Just ys) = show x ++ " = " ++ ys
                  f (x, Nothing) = show x ++ " = +"
                  formatStCont (Just ys) = ys
@@ -240,8 +253,8 @@ instance DrawTopology String where
 instance One LatexString where
   one = error "LatexString 1"
 
-instance DrawTopology [LatexString] where
-         drawTopology = drawAbsTopologyLatex f formatStCont tshow
+instance DrawTopologyList LatexString where
+         drawTopologyList = drawAbsTopologyLatex f formatStCont tshow
            where f (x, Just ys) = showX x ++ " = " ++ unLatexString (head ys)
                  f (x, Nothing) = showX x ++ " = +"
                  formatStCont (Just ys) = unLatexString (head ys)
@@ -295,8 +308,8 @@ drawAbsTopologyLatex f content tshow (Topology g) (Envs rec0 e _de _p _dp fn _dn
 
 instance (Eq val, Show val) => One (InTerm val) where one = 1
 
-instance (Eq val, Show val) => DrawTopology [InTerm val] where
-         drawTopology = drawAbsTopology f formatStCont tshow
+instance (Eq val, Show val) => DrawTopologyList (InTerm val) where
+         drawTopologyList = drawAbsTopology f formatStCont tshow
            where f (x, Just ys) = show x ++ " = " ++ (concatMap showInTerm ys)
                  f (x, Nothing) = show x ++ " = ♥"
                  formatStCont (Just ys) = concatMap showInTerm ys
@@ -306,16 +319,16 @@ instance (Eq val, Show val) => DrawTopology [InTerm val] where
 instance One EqTerm where one = error "EqTerm 1"
 instance One Char where one = error "Char 1"
 
-instance DrawTopology [EqTerm] where
-         drawTopology = drawAbsTopology f formatStCont tshow
+instance DrawTopologyList EqTerm where
+         drawTopologyList = drawAbsTopology f formatStCont tshow
            where f (x, Just ys) = show x ++ " = " ++ showEqTerms ys
                  f (x, Nothing) = show x ++ " = ♥"
                  formatStCont (Just ys) = showEqTerms ys
                  formatStCont Nothing = "♥"
                  tshow dt s r = showEqTerms $ dt `safeLookup` (DTimeIdx s r)
 
-instance DrawDeltaTopology [EqTerm] where
-         drawDeltaTopology = drawDeltaTopology' f formatStCont tshow
+instance DrawDeltaTopologyList EqTerm where
+         drawDeltaTopologyList = drawDeltaTopology' f formatStCont tshow
            where -- f (x, Just ys) = showDelta x ++ " = [ " ++ L.intercalate ", " (map showEqTerm ys) ++ " ]"
                  f (x, Just ys) = showDelta x ++ " = \n" ++ showEqTerms ys
 
