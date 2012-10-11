@@ -12,8 +12,12 @@ import EFA2.Interpreter.Env
 import EFA2.Topology.TopologyData
 import EFA2.Topology.EfaGraph (EfaGraph)
 
+import qualified EFA2.Signal.Data as D
 import EFA2.Display.DispSignal (SDisplay, sdisp)
+import EFA2.Display.DispTyp (TDisp)
+import EFA2.Display.DispBase (Disp)
 import EFA2.Signal.Signal (TC, Sc, UTFSig)
+import EFA2.Signal.Data (Data)
 
 import EFA2.Utils.Utils (const2, safeLookup)
 
@@ -461,10 +465,10 @@ instance DrawDeltaTopology Sc where
 
 
 drawAbsTopology' ::
-   SDisplay (TC s t a) =>
-   ((Line, Maybe (TC s t a)) -> String) ->
-   (Maybe (TC s t a) -> String) ->
-   Topology -> Envs (TC s t a) ->  IO ()
+   (SDisplay s v, TDisp t, D.Storage v d, Ord d, Disp d) =>
+   ((Line, Maybe (TC s t (Data v d))) -> String) ->
+   (Maybe (TC s t (Data v d)) -> String) ->
+   Topology -> Envs (TC s t (Data v d)) ->  IO ()
 drawAbsTopology' f content (Topology g) (Envs rec0 e _de _p _dp fn _dn dt x _dx _v st) = printGraph g rec0 tshow nshow eshow
   where eshow ps = L.intercalate "\n" $ map f $ mkLst rec0 ps
         tshow s r = case M.lookup (DTimeIdx s r) dt of
@@ -499,10 +503,10 @@ drawAbsTopology' f content (Topology g) (Envs rec0 e _de _p _dp fn _dn dt x _dx 
 
 
 drawDeltaTopologyD ::
-   (SDisplay (TC s t a), Show a) =>
-   ((Line, Maybe (TC s t a)) -> String) ->
-   (Maybe (TC s t a) -> String) ->
-   Topology -> Envs (TC s t a) ->  IO ()
+   (SDisplay s v, TDisp t, D.Storage v d, Ord d, Disp d) =>
+   ((Line, Maybe (TC s t (Data v d))) -> String) ->
+   (Maybe (TC s t (Data v d)) -> String) ->
+   Topology -> Envs (TC s t (Data v d)) ->  IO ()
 drawDeltaTopologyD f content (Topology g) (Envs rec0 _e de _p _dp _fn dn dt _x dx _v st) = printGraph g rec0 tshow nshow eshow
   where eshow ps = L.intercalate "\n" $ map f $ mkLst rec0 ps
         tshow s r = case M.lookup (DTimeIdx s r) dt of
