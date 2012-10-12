@@ -16,7 +16,7 @@ import EFA2.Display.DispBase (Disp)
 import EFA2.Signal.Signal (TC, DispApp)
 import EFA2.Signal.Data (Data)
 
-import EFA2.Utils.Utils (const2, safeLookup)
+import EFA2.Utils.Utils (safeLookup)
 
 import Data.GraphViz (
           runGraphvizCanvas,
@@ -74,7 +74,13 @@ noRecord :: RecordNumber
 noRecord = SingleRecord (-99)
 
 
-mkDotGraph :: EfaGraph NLabel ELabel -> RecordNumber -> (Int -> Int -> String) -> (LNode NLabel -> String) -> (LEdge ELabel -> String) -> DotGraph Int
+mkDotGraph ::
+   EfaGraph NLabel ELabel ->
+   RecordNumber ->
+   (DTimeIdx -> String) ->
+   (LNode NLabel -> String) ->
+   (LEdge ELabel -> String) ->
+   DotGraph Int
 mkDotGraph g (MixedRecord _) timef nshow eshow = mkDotGraph g noRecord timef nshow eshow
 mkDotGraph g (NoRecord) timef nshow eshow = mkDotGraph g noRecord timef nshow eshow
 mkDotGraph g (SingleRecord recordNum) timef nshow eshow =
@@ -94,7 +100,7 @@ mkDotGraph g (SingleRecord recordNum) timef nshow eshow =
                 ys = map (mkDotEdge eshow) $ labEdges $
                      delNodes (map fst (concatMap NonEmpty.flatten ms)) g'
                 gattrs = [GraphAttrs [Label (StrLabel (T.pack str))]]
-                str = "Section " ++ show sl ++ " / Record " ++ show recordNum ++ " / Time " ++ timef sl recordNum
+                str = "Section " ++ show sl ++ " / Record " ++ show recordNum ++ " / Time " ++ timef (DTimeIdx sl recordNum)
         stmts = DotStmts { attrStmts = [],
                            subGraphs = map sg cs,
                            nodeStmts = [],
@@ -125,8 +131,15 @@ mkDotEdge eshow e@(x, y, elabel) = DotEdge x y [displabel, edir, colour]
               _ -> originalEdgeColour
         --colour = originalEdgeColour
 
-printGraph :: EfaGraph NLabel ELabel -> RecordNumber -> (Int -> Int -> String) -> (LNode NLabel -> String) -> (LEdge ELabel -> String) -> IO ()
-printGraph g recordNum tshow nshow eshow = runGraphvizCanvas Dot (mkDotGraph g recordNum tshow nshow eshow) Xlib
+printGraph ::
+   EfaGraph NLabel ELabel ->
+   RecordNumber ->
+   (DTimeIdx -> String) ->
+   (LNode NLabel -> String) ->
+   (LEdge ELabel -> String) ->
+   IO ()
+printGraph g recordNum tshow nshow eshow =
+   runGraphvizCanvas Dot (mkDotGraph g recordNum tshow nshow eshow) Xlib
 {-
 printGraph g recordNum tshow nshow eshow = do
   runGraphvizCommand Dot (mkDotGraph g recordNum tshow nshow eshow) XDot "result/graph.dot"
@@ -134,14 +147,14 @@ printGraph g recordNum tshow nshow eshow = do
 -}
 
 drawTopologyX' :: Topology -> IO ()
-drawTopologyX' topo = printGraph g noRecord (const2 "♥") show show
-  where g = unTopology topo
+drawTopologyX' topo =
+   printGraph (unTopology topo) noRecord (const "♥") show show
 
 
 drawTopologySimple :: Topology -> IO ()
-drawTopologySimple topo = printGraph g noRecord (const2 "♥") nshow eshow
-  where g = unTopology topo
-        nshow (n, l) = show n ++ " - " ++ show (nodetypeNLabel l)
+drawTopologySimple topo =
+   printGraph (unTopology topo) noRecord (const "♥") nshow eshow
+  where nshow (n, l) = show n ++ " - " ++ show (nodetypeNLabel l)
         eshow _ = ""
 
 dsg :: Int -> Topology -> DotSubGraph String
@@ -215,7 +228,7 @@ instance DrawTopologyList Double where
                  f (x, Nothing) = show x ++ " = ♥"
                  formatStCont (Just ys) = concatMap (printf "%.6f    ") ys
                  formatStCont Nothing = "♥"
-                 tshow dt s r = show $ dt `safeLookup` (DTimeIdx s r)
+                 tshow dt dtimeIdx = show $ dt `safeLookup` dtimeIdx
 
 instance DrawDeltaTopologyList Double where
          drawDeltaTopologyList = drawDeltaTopology' f formatStCont tshow
@@ -225,13 +238,12 @@ instance DrawDeltaTopologyList Double where
                  f (x, Nothing) = showDelta x ++ " = ♥"
                  formatStCont (Just ys) = "[ " ++ L.intercalate ", " (map show ys) ++ " ]"
                  formatStCont Nothing = "♥"
-                 --tshow dt s r = showEqTerm $ dt `safeLookup` (DTimeIdx s r)
 
                  showDelta (ELine u v) = "de_" ++ show u ++ "_" ++ show v
                  showDelta (XLine u v) = "dx_" ++ show u ++ "_" ++ show v
                  showDelta (NLine u v) = "dn_" ++ show u ++ "_" ++ show v
                  showDelta (ErrorLine str) = str
-                 tshow dt s r = show $ dt `safeLookup` (DTimeIdx s r)
+                 tshow dt dtimeIdx = show $ dt `safeLookup` dtimeIdx
 
 instance (Integral a) => One (Ratio a) where one = 1
 
@@ -241,7 +253,7 @@ instance (Integral a, Show a) => DrawTopologyList (Ratio a) where
                  f (x, Nothing) = show x ++ " = ♥"
                  formatStCont (Just ys) = concatMap show ys
                  formatStCont Nothing = "♥"
-                 tshow dt s r = show $ dt `safeLookup` (DTimeIdx s r)
+                 tshow dt dtimeIdx = show $ dt `safeLookup` dtimeIdx
 
 instance DrawTopologyList Char where
          drawTopologyList = drawAbsTopology f formatStCont tshow
@@ -249,7 +261,7 @@ instance DrawTopologyList Char where
                  f (x, Nothing) = show x ++ " = +"
                  formatStCont (Just ys) = ys
                  formatStCont Nothing = "+"
-                 tshow dt s r = dt `safeLookup` (DTimeIdx s r)
+                 tshow dt dtimeIdx = dt `safeLookup` dtimeIdx
 
 instance One LatexString where
   one = error "LatexString 1"
@@ -260,7 +272,7 @@ instance DrawTopologyList LatexString where
                  f (x, Nothing) = showX x ++ " = +"
                  formatStCont (Just ys) = unLatexString (head ys)
                  formatStCont Nothing = "+"
-                 tshow dt s r = unLatexString $ head $ dt `safeLookup` (DTimeIdx s r)
+                 tshow dt dtimeIdx = unLatexString $ head $ dt `safeLookup` dtimeIdx
 
                  showX (ELine u v) = "$e_{" ++ show u ++ "." ++ show v ++ "}$"
                  showX (XLine u v) = "$x_{" ++ show u ++ "." ++ show v ++ "}$"
@@ -272,14 +284,13 @@ drawAbsTopologyLatex ::
   One t =>
   ((Line, Maybe [t]) -> String) ->
   (Maybe [t] -> String) ->
-  (DTimeMap [t] -> Int -> Int -> String) ->
+  (DTimeMap [t] -> DTimeIdx -> String) ->
   Topology' NLabel ELabel ->
   Envs [t] ->
   IO ()
 drawAbsTopologyLatex f content tshow (Topology g) (Envs rec0 e _de _p _dp fn _dn dt x _dx _v st) = printGraph g rec0 (tshow dt) nshow eshow
   where eshow ps = L.intercalate "\n " $ map f $ mkLst rec0 ps
-        --tshow' = tshow dt
-        nshow (num, NLabel sec nid ty) = 
+        nshow (num, NLabel sec nid ty) =
           "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\\\\ " ++
           "Type: " ++ show ty ++ stContent rec0 ty
             where stContent (SingleRecord rec) (InitStorage n)
@@ -315,7 +326,7 @@ instance (Eq val, Show val) => DrawTopologyList (InTerm val) where
                  f (x, Nothing) = show x ++ " = ♥"
                  formatStCont (Just ys) = concatMap showInTerm ys
                  formatStCont Nothing = "♥"
-                 tshow dt s r = showInTerms $ dt `safeLookup` (DTimeIdx s r)
+                 tshow dt dtimeIdx = showInTerms $ dt `safeLookup` dtimeIdx
 
 instance One EqTerm where one = error "EqTerm 1"
 instance One Char where one = error "Char 1"
@@ -326,7 +337,7 @@ instance DrawTopologyList EqTerm where
                  f (x, Nothing) = show x ++ " = ♥"
                  formatStCont (Just ys) = showEqTerms ys
                  formatStCont Nothing = "♥"
-                 tshow dt s r = showEqTerms $ dt `safeLookup` (DTimeIdx s r)
+                 tshow dt dtimeIdx = showEqTerms $ dt `safeLookup` dtimeIdx
 
 instance DrawDeltaTopologyList EqTerm where
          drawDeltaTopologyList = drawDeltaTopology' f formatStCont tshow
@@ -336,27 +347,25 @@ instance DrawDeltaTopologyList EqTerm where
                  f (x, Nothing) = showDelta x ++ " = ♥"
                  formatStCont (Just ys) = "[ " ++ L.intercalate ", " (map showEqTerm ys) ++ " ]"
                  formatStCont Nothing = "♥"
-                 --tshow dt s r = showEqTerm $ dt `safeLookup` (DTimeIdx s r)
 
                  showDelta (ELine u v) = "de_" ++ show u ++ "_" ++ show v
                  showDelta (XLine u v) = "dx_" ++ show u ++ "_" ++ show v
                  showDelta (NLine u v) = "dn_" ++ show u ++ "_" ++ show v
                  showDelta (ErrorLine str) = str
-                 tshow dt s r = showEqTerms $ dt `safeLookup` (DTimeIdx s r)
+                 tshow dt dtimeIdx = showEqTerms $ dt `safeLookup` dtimeIdx
 
 
 drawAbsTopology ::
   One t =>
   ((Line, Maybe [t]) -> String) ->
   (Maybe [t] -> String) ->
-  (DTimeMap [t] -> Int -> Int -> String) ->
+  (DTimeMap [t] -> DTimeIdx -> String) ->
   Topology' NLabel ELabel ->
   Envs [t] ->
   IO ()
 drawAbsTopology f content tshow (Topology g) (Envs rec0 e _de _p _dp fn _dn dt x _dx _v st) = printGraph g rec0 (tshow dt) nshow eshow
   where eshow ps = L.intercalate "\n" $ map f $ mkLst rec0 ps
-        --tshow' = tshow dt
-        nshow (num, NLabel sec nid ty) = 
+        nshow (num, NLabel sec nid ty) =
           "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\n" ++
           "Type: " ++ show ty ++ stContent rec0 ty
             where stContent (SingleRecord rec) (InitStorage n)
@@ -388,14 +397,13 @@ drawDeltaTopology' ::
    One t =>
    ((Line, Maybe [t]) -> [Char]) ->
    (Maybe [t] -> [Char]) ->
-   (DTimeMap [t] -> Int -> Int -> String) ->
+   (DTimeMap [t] -> DTimeIdx -> String) ->
    Topology' NLabel ELabel ->
    Envs [t] ->
    IO ()
 drawDeltaTopology' f content tshow (Topology g) (Envs rec0 _e de _p _dp _fn dn dt _x dx _v st) = printGraph g rec0 (tshow dt) nshow eshow
   where eshow ps = L.intercalate "\n" $ map f $ mkLst rec0 ps
-        -- tshow s r = show $ dt `safeLookup` (DTimeIdx s r)
-        nshow (num, NLabel sec nid ty) = 
+        nshow (num, NLabel sec nid ty) =
           "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\n" ++
           "Type: " ++ show ty ++ stContent rec0 ty
             where stContent (SingleRecord rec) (InitStorage n)
@@ -459,13 +467,11 @@ instance
                  f (x, Nothing) = showDelta x ++ " = ♥"
                  formatStCont (Just ys) = sdisp ys
                  formatStCont Nothing = "♥"
-                 --tshow dt s r = showEqTerm $ dt `safeLookup` (DTimeIdx s r)
 
                  showDelta (ELine u v) = "de_" ++ show u ++ "_" ++ show v
                  showDelta (XLine u v) = "dx_" ++ show u ++ "_" ++ show v
                  showDelta (NLine u v) = "dn_" ++ show u ++ "_" ++ show v
                  showDelta (ErrorLine str) = str
-                -- tshow dt s r = showEqTerms $ dt `safeLookup` (DTimeIdx s r)
 
 instance
    (DispApp s, TDisp t, DrawDeltaTopologySignal a) =>
@@ -480,10 +486,11 @@ drawAbsTopology' ::
    Topology -> Envs (TC s t (Data v d)) ->  IO ()
 drawAbsTopology' f content (Topology g) (Envs rec0 e _de _p _dp fn _dn dt x _dx _v st) = printGraph g rec0 tshow nshow eshow
   where eshow ps = L.intercalate "\n" $ map f $ mkLst rec0 ps
-        tshow s r = case M.lookup (DTimeIdx s r) dt of
-                         Just tc -> sdisp tc
-                         Nothing -> "♥"
-        nshow (num, NLabel sec nid ty) = 
+        tshow dtimeIdx =
+           case M.lookup dtimeIdx dt of
+              Just tc -> sdisp tc
+              Nothing -> "♥"
+        nshow (num, NLabel sec nid ty) =
           "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\n" ++
           "Type: " ++ show ty ++ stContent rec0 ty
             where stContent (SingleRecord rec) (InitStorage n) = "\nContent: " ++ content (M.lookup (StorageIdx sec rec n) st)
@@ -518,10 +525,11 @@ drawDeltaTopologyD ::
    Topology -> Envs (TC s t (Data v d)) ->  IO ()
 drawDeltaTopologyD f content (Topology g) (Envs rec0 _e de _p _dp _fn dn dt _x dx _v st) = printGraph g rec0 tshow nshow eshow
   where eshow ps = L.intercalate "\n" $ map f $ mkLst rec0 ps
-        tshow s r = case M.lookup (DTimeIdx s r) dt of
-                         Just tc -> sdisp tc
-                         Nothing -> "♥"
-        nshow (num, NLabel sec nid ty) = 
+        tshow dtimeIdx =
+           case M.lookup dtimeIdx dt of
+              Just tc -> sdisp tc
+              Nothing -> "♥"
+        nshow (num, NLabel sec nid ty) =
           "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\n" ++
           "Type: " ++ show ty ++ stContent rec0 ty
             where stContent (SingleRecord rec) (InitStorage n) = "\nContent: " ++ content (M.lookup (StorageIdx sec rec n) st)
