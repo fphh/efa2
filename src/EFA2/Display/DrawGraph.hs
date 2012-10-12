@@ -207,8 +207,23 @@ class DrawTopology a => DrawDeltaTopology a where
    drawDeltaTopology :: Topology -> Envs a -> IO ()
 
 
-class DrawTopologyList a where
+class One a => DrawTopologyList a where
    drawTopologyList :: Topology -> Envs [a] -> IO ()
+   drawTopologyList =
+      drawAbsTopology formatAssignList formatStContList
+         (\dt k ->
+            case M.lookup k dt of
+               Nothing ->
+                  error $
+                  "drawTopologyList: " ++ show k ++ "\n" ++ show (fmap formatDTimeList dt)
+               Just x -> formatDTimeList x)
+
+   formatStContList :: Maybe [a] -> String
+   formatDTimeList :: [a] -> String
+
+   formatAssignList :: DrawTopologyList a => (Line, Maybe [a]) -> String
+   formatAssignList (x, ys) =
+      show x ++ " = " ++ formatStContList ys
 
 class DrawTopologyList a => DrawDeltaTopologyList a where
    drawDeltaTopologyList :: Topology -> Envs [a] -> IO ()
@@ -223,61 +238,57 @@ instance DrawDeltaTopologyList a => DrawDeltaTopology [a] where
 instance One Double where one = 1
 
 instance DrawTopologyList Double where
-         drawTopologyList = drawAbsTopology f formatStCont tshow
-           where f (x, Just ys) = show x ++ " = " ++ (concatMap (printf "%.6f    ") ys)
-                 f (x, Nothing) = show x ++ " = ♥"
-                 formatStCont (Just ys) = concatMap (printf "%.6f    ") ys
-                 formatStCont Nothing = "♥"
-                 tshow dt dtimeIdx = show $ dt `safeLookup` dtimeIdx
+   formatStContList (Just ys) = concatMap (printf "%.6f    ") ys
+   formatStContList Nothing = "♥"
+   formatDTimeList = show
 
 instance DrawDeltaTopologyList Double where
-         drawDeltaTopologyList = drawDeltaTopology' f formatStCont tshow
-           where -- f (x, Just ys) = showDelta x ++ " = [ " ++ L.intercalate ", " (map showEqTerm ys) ++ " ]"
-                 f (x, Just ys) = showDelta x ++ " = \n" ++  L.intercalate "\n" (map show ys)
+   drawDeltaTopologyList = drawDeltaTopology' f formatStCont tshow
+     where -- f (x, Just ys) = showDelta x ++ " = [ " ++ L.intercalate ", " (map showEqTerm ys) ++ " ]"
+           f (x, ys) =
+              showDelta x ++ " = " ++
+              maybe "♥" (concatMap (("\n"++) . show)) ys
 
-                 f (x, Nothing) = showDelta x ++ " = ♥"
-                 formatStCont (Just ys) = "[ " ++ L.intercalate ", " (map show ys) ++ " ]"
-                 formatStCont Nothing = "♥"
+           formatStCont (Just ys) = "[ " ++ L.intercalate ", " (map show ys) ++ " ]"
+           formatStCont Nothing = "♥"
 
-                 showDelta (ELine u v) = "de_" ++ show u ++ "_" ++ show v
-                 showDelta (XLine u v) = "dx_" ++ show u ++ "_" ++ show v
-                 showDelta (NLine u v) = "dn_" ++ show u ++ "_" ++ show v
-                 showDelta (ErrorLine str) = str
-                 tshow dt dtimeIdx = show $ dt `safeLookup` dtimeIdx
+           tshow dt dtimeIdx = show $ dt `safeLookup` dtimeIdx
+
+           showDelta (ELine u v) = "de_" ++ show u ++ "_" ++ show v
+           showDelta (XLine u v) = "dx_" ++ show u ++ "_" ++ show v
+           showDelta (NLine u v) = "dn_" ++ show u ++ "_" ++ show v
+           showDelta (ErrorLine str) = str
 
 instance (Integral a) => One (Ratio a) where one = 1
 
 instance (Integral a, Show a) => DrawTopologyList (Ratio a) where
-         drawTopologyList = drawAbsTopology f formatStCont tshow
-           where f (x, Just ys) = show x ++ " = " ++ (concatMap show ys)
-                 f (x, Nothing) = show x ++ " = ♥"
-                 formatStCont (Just ys) = concatMap show ys
-                 formatStCont Nothing = "♥"
-                 tshow dt dtimeIdx = show $ dt `safeLookup` dtimeIdx
+   formatStContList (Just ys) = unwords $ map show ys
+   formatStContList Nothing = "♥"
+   formatDTimeList = show
 
 instance DrawTopologyList Char where
-         drawTopologyList = drawAbsTopology f formatStCont tshow
-           where f (x, Just ys) = show x ++ " = " ++ ys
-                 f (x, Nothing) = show x ++ " = +"
-                 formatStCont (Just ys) = ys
-                 formatStCont Nothing = "+"
-                 tshow dt dtimeIdx = dt `safeLookup` dtimeIdx
+   formatStContList (Just ys) = ys
+   formatStContList Nothing = "+"
+   formatDTimeList = id
 
 instance One LatexString where
-  one = error "LatexString 1"
+   one = error "LatexString 1"
 
 instance DrawTopologyList LatexString where
-         drawTopologyList = drawAbsTopologyLatex f formatStCont tshow
-           where f (x, Just ys) = showX x ++ " = " ++ unLatexString (head ys)
-                 f (x, Nothing) = showX x ++ " = +"
-                 formatStCont (Just ys) = unLatexString (head ys)
-                 formatStCont Nothing = "+"
-                 tshow dt dtimeIdx = unLatexString $ head $ dt `safeLookup` dtimeIdx
+   drawTopologyList =
+      drawAbsTopologyLatex formatAssignList formatStContList
+         (\dt dtimeIdx -> formatDTimeList $ dt `safeLookup` dtimeIdx)
 
-                 showX (ELine u v) = "$e_{" ++ show u ++ "." ++ show v ++ "}$"
-                 showX (XLine u v) = "$x_{" ++ show u ++ "." ++ show v ++ "}$"
-                 showX (NLine u v) = "$n_{" ++ show u ++ "." ++ show v ++ "}$"
-                 showX (ErrorLine str) = str
+   formatAssignList (x, ys) = showX x ++ " = " ++ formatStContList ys
+      where
+         showX (ELine u v) = "$e_{" ++ show u ++ "." ++ show v ++ "}$"
+         showX (XLine u v) = "$x_{" ++ show u ++ "." ++ show v ++ "}$"
+         showX (NLine u v) = "$n_{" ++ show u ++ "." ++ show v ++ "}$"
+         showX (ErrorLine str) = str
+
+   formatStContList (Just ys) = unLatexString (head ys)
+   formatStContList Nothing = "+"
+   formatDTimeList = unLatexString . head
 
 
 drawAbsTopologyLatex ::
@@ -321,23 +332,17 @@ drawAbsTopologyLatex f content tshow (Topology g) (Envs rec0 e _de _p _dp fn _dn
 instance (Eq val, Show val) => One (InTerm val) where one = 1
 
 instance (Eq val, Show val) => DrawTopologyList (InTerm val) where
-         drawTopologyList = drawAbsTopology f formatStCont tshow
-           where f (x, Just ys) = show x ++ " = " ++ (concatMap showInTerm ys)
-                 f (x, Nothing) = show x ++ " = ♥"
-                 formatStCont (Just ys) = concatMap showInTerm ys
-                 formatStCont Nothing = "♥"
-                 tshow dt dtimeIdx = showInTerms $ dt `safeLookup` dtimeIdx
+   formatStContList (Just ys) = concatMap showInTerm ys
+   formatStContList Nothing = "♥"
+   formatDTimeList = showInTerms
 
 instance One EqTerm where one = error "EqTerm 1"
 instance One Char where one = error "Char 1"
 
 instance DrawTopologyList EqTerm where
-         drawTopologyList = drawAbsTopology f formatStCont tshow
-           where f (x, Just ys) = show x ++ " = " ++ showEqTerms ys
-                 f (x, Nothing) = show x ++ " = ♥"
-                 formatStCont (Just ys) = showEqTerms ys
-                 formatStCont Nothing = "♥"
-                 tshow dt dtimeIdx = showEqTerms $ dt `safeLookup` dtimeIdx
+   formatStContList (Just ys) = showEqTerms ys
+   formatStContList Nothing = "♥"
+   formatDTimeList = showEqTerms
 
 instance DrawDeltaTopologyList EqTerm where
          drawDeltaTopologyList = drawDeltaTopology' f formatStCont tshow
@@ -395,8 +400,8 @@ drawAbsTopology f content tshow (Topology g) (Envs rec0 e _de _p _dp fn _dn dt x
 --drawDeltaTopology' :: (Show a, Num a, Ord a) => ((Line, Maybe [a]) -> String) -> (Maybe [a] -> String) -> Topology -> Envs [a] -> IO ()
 drawDeltaTopology' ::
    One t =>
-   ((Line, Maybe [t]) -> [Char]) ->
-   (Maybe [t] -> [Char]) ->
+   ((Line, Maybe [t]) -> String) ->
+   (Maybe [t] -> String) ->
    (DTimeMap [t] -> DTimeIdx -> String) ->
    Topology' NLabel ELabel ->
    Envs [t] ->
@@ -435,22 +440,28 @@ class DrawTopologySignal a where
    drawTopologySignal ::
       (DispApp s, TDisp t) => Topology -> Envs (TC s t a) -> IO ()
 
+formatAssignSignal ::
+   (DispApp s, TDisp t, SDisplay v, D.Storage v d, Ord d, Disp d) =>
+   (Line, Maybe (TC s t (Data v d))) -> String
+formatAssignSignal (ErrorLine str, _) = str
+formatAssignSignal (x, tc) = show x ++ " = " ++ formatStContSignal tc
+
+formatStContSignal ::
+   (DispApp s, TDisp t, SDisplay v, D.Storage v d, Ord d, Disp d) =>
+   Maybe (TC s t (Data v d)) -> String
+formatStContSignal (Just ys) = sdisp ys
+formatStContSignal Nothing = "♥"
+
 instance
    (SDisplay v, D.Storage v a, Disp a, Ord a) =>
       DrawTopologySignal (Data v a) where
-         drawTopologySignal = drawAbsTopology' f formatStCont
-           where f (x@(ELine _ _), Just tc) = show x ++ " = " ++ sdisp tc
-                 f (x@(XLine _ _), Just tc) = show x ++ " = " ++ sdisp tc
-                 f (x@(NLine _ _), Just tc) = show x ++ " = " ++ sdisp tc
-                 f (ErrorLine str, _) = str
-                 f (x, Nothing) = show x ++ " = ♥"
-                 formatStCont (Just ys) = sdisp ys
-                 formatStCont Nothing = "♥"
+   drawTopologySignal =
+      drawAbsTopologySignal formatAssignSignal formatStContSignal
 
 instance
    (DispApp s, TDisp t, DrawTopologySignal a) =>
       DrawTopology (TC s t a) where
-         drawTopology = drawTopologySignal
+   drawTopology = drawTopologySignal
 
 
 class DrawTopologySignal a => DrawDeltaTopologySignal a where
@@ -460,13 +471,9 @@ class DrawTopologySignal a => DrawDeltaTopologySignal a where
 instance
    (SDisplay v, D.Storage v a, Disp a, Ord a) =>
       DrawDeltaTopologySignal (Data v a) where
-         drawDeltaTopologySignal = drawDeltaTopologyD f formatStCont
+         drawDeltaTopologySignal = drawDeltaTopologyD f formatStContSignal
            where -- f (x, Just ys) = showDelta x ++ " = [ " ++ L.intercalate ", " (map showEqTerm ys) ++ " ]"
-                 f (x, Just ys) = showDelta x ++ " = " ++ sdisp ys
-
-                 f (x, Nothing) = showDelta x ++ " = ♥"
-                 formatStCont (Just ys) = sdisp ys
-                 formatStCont Nothing = "♥"
+                 f (x, ys) = showDelta x ++ " = " ++ formatStContSignal ys
 
                  showDelta (ELine u v) = "de_" ++ show u ++ "_" ++ show v
                  showDelta (XLine u v) = "dx_" ++ show u ++ "_" ++ show v
@@ -476,20 +483,17 @@ instance
 instance
    (DispApp s, TDisp t, DrawDeltaTopologySignal a) =>
       DrawDeltaTopology (TC s t a) where
-         drawDeltaTopology = drawDeltaTopologySignal
+   drawDeltaTopology = drawDeltaTopologySignal
 
 
-drawAbsTopology' ::
+drawAbsTopologySignal ::
    (DispApp s, TDisp t, SDisplay v, D.Storage v d, Ord d, Disp d) =>
    ((Line, Maybe (TC s t (Data v d))) -> String) ->
    (Maybe (TC s t (Data v d)) -> String) ->
    Topology -> Envs (TC s t (Data v d)) ->  IO ()
-drawAbsTopology' f content (Topology g) (Envs rec0 e _de _p _dp fn _dn dt x _dx _v st) = printGraph g rec0 tshow nshow eshow
+drawAbsTopologySignal f content (Topology g) (Envs rec0 e _de _p _dp fn _dn dt x _dx _v st) = printGraph g rec0 tshow nshow eshow
   where eshow ps = L.intercalate "\n" $ map f $ mkLst rec0 ps
-        tshow dtimeIdx =
-           case M.lookup dtimeIdx dt of
-              Just tc -> sdisp tc
-              Nothing -> "♥"
+        tshow dtimeIdx = formatStContSignal $ M.lookup dtimeIdx dt
         nshow (num, NLabel sec nid ty) =
           "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\n" ++
           "Type: " ++ show ty ++ stContent rec0 ty
@@ -525,10 +529,7 @@ drawDeltaTopologyD ::
    Topology -> Envs (TC s t (Data v d)) ->  IO ()
 drawDeltaTopologyD f content (Topology g) (Envs rec0 _e de _p _dp _fn dn dt _x dx _v st) = printGraph g rec0 tshow nshow eshow
   where eshow ps = L.intercalate "\n" $ map f $ mkLst rec0 ps
-        tshow dtimeIdx =
-           case M.lookup dtimeIdx dt of
-              Just tc -> sdisp tc
-              Nothing -> "♥"
+        tshow dtimeIdx = formatStContSignal $ M.lookup dtimeIdx dt
         nshow (num, NLabel sec nid ty) =
           "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\n" ++
           "Type: " ++ show ty ++ stContent rec0 ty
