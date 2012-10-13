@@ -32,20 +32,38 @@ data Assign =
             Env.Index ::= EqTerm
           | GivenIdx Env.Index deriving (Show, Eq, Ord)
 
-data EqTerm =
-            Const Rational
+type EqTerm = Term Env.Index
+
+data Term a =
+            Atom a
+          | Const Rational
                {- we initialize it only with 0 or 1,
                   but constant folding may yield any rational number -}
-          | Idx Env.Index
 
-          | FEdge EqTerm EqTerm -- power, eta
-          | BEdge EqTerm EqTerm
-          | NEdge EqTerm EqTerm
+          | FEdge (Term a) (Term a) -- power, eta
+          | BEdge (Term a) (Term a)
+          | NEdge (Term a) (Term a)
 
-          | Minus EqTerm
-          | Recip EqTerm
-          | EqTerm :+ EqTerm
-          | EqTerm :* EqTerm deriving (Show, Eq, Ord)
+          | Minus (Term a)
+          | Recip (Term a)
+          | (Term a) :+ (Term a)
+          | (Term a) :* (Term a) deriving (Show, Eq, Ord)
+
+instance Functor Term where
+   fmap f =
+      let go t =
+             case t of
+                Atom a -> Atom $ f a
+                Const x -> Const x
+                FEdge x y -> FEdge (go x) (go y)
+                BEdge x y -> BEdge (go x) (go y)
+                NEdge x y -> NEdge (go x) (go y)
+
+                Minus x -> Minus $ go x
+                Recip x -> Recip $ go x
+                x :+ y -> go x :+ go y
+                x :* y -> go x :* go y
+      in  go
 
 infixl 1 !=, !:=, :=, ::=
 infixl 7  !*, :*
@@ -89,8 +107,8 @@ class MkVarC a where
 instance MkVarC Env.Index where
    mkVarCore = id
 
-instance MkVarC EqTerm where
-   mkVarCore = Idx
+instance MkVarC a => MkVarC (Term a) where
+   mkVarCore = Atom . mkVarCore
 
 mkVar :: (MkIdxC a, MkVarC b) => a -> b
 mkVar = mkVarCore . mkIdx
@@ -112,7 +130,7 @@ instance MkTermC VarIdx where mkTerm = mkVar
 instance MkTermC StorageIdx where mkTerm = mkVar
 
 instance MkTermC Env.Index where
-   mkTerm = Idx
+   mkTerm = Atom
 
 instance MkTermC Double where
    mkTerm = Const . realToFrac
@@ -123,8 +141,14 @@ instance MkTermC Integer where
 instance Integral int => MkTermC (Ratio int) where
    mkTerm x = Const $ toInteger (Ratio.numerator x) % toInteger (Ratio.denominator x)
 
-instance MkTermC EqTerm where
-   mkTerm = id
+class ToIndex idx where
+   toIndex :: idx -> Env.Index
+
+instance ToIndex Env.Index where
+   toIndex = id
+
+instance (ToIndex idx) => MkTermC (Term idx) where
+   mkTerm = fmap toIndex
 
 
 add :: NonEmpty.T [] EqTerm -> EqTerm
@@ -154,9 +178,9 @@ showIdx idx =
       Var (VarIdx s r x y) -> "v_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
       Store (StorageIdx s r n) -> "s_" ++ show s ++ "." ++ show r ++ "_" ++ show n
 
-showEqTerm :: EqTerm -> String
+showEqTerm :: ToIndex idx => Term idx -> String
 showEqTerm (Const x) = show (fromRational x :: Double)
-showEqTerm (Idx x) = showIdx x
+showEqTerm (Atom x) = showIdx (toIndex x)
 
 showEqTerm (x :+ y) = "(" ++ showEqTerm x ++ " + " ++ showEqTerm y ++ ")"
 showEqTerm (x :* y) = showEqTerm x ++ " * " ++ showEqTerm y
@@ -175,7 +199,7 @@ showAssign :: Assign -> String
 showAssign (GivenIdx x) = showIdx x ++ " given"
 showAssign (x ::= y) = showIdx x ++ " = " ++ showEqTerm y
 
-showEqTerms :: [EqTerm] -> String
+showEqTerms :: ToIndex idx => [Term idx] -> String
 showEqTerms ts = L.intercalate "\n" $ map showEqTerm ts
 
 showEquations :: [Equation] -> String
@@ -190,7 +214,7 @@ newtype LatexString = LatexString { unLatexString :: String } deriving (Show, Eq
 
 toLatexString' :: EqTerm -> String
 toLatexString' (Const x) = printf "%.6f   " (fromRational x :: Double)
-toLatexString' (Idx x) = idxToLatexString x
+toLatexString' (Atom x) = idxToLatexString x
 
 toLatexString' (x :+ y) = "(" ++ toLatexString' x ++ " + " ++ toLatexString' y ++ ")"
 toLatexString' (x :* y) = toLatexString' x ++ " * " ++ toLatexString' y
@@ -237,7 +261,7 @@ eqToLatexString t = LatexString $ "$" ++ eqToLatexString' t ++ "$"
 -- determines the set of variables contained in the term,
 -- according to the predicate.
 mkVarSetEq :: (Ord a) => (EqTerm -> Maybe a) -> Equation -> S.Set a
-mkVarSetEq p (Given x) = mkVarSet p $ Idx x
+mkVarSetEq p (Given x) = mkVarSet p $ Atom x
 mkVarSetEq p (x := y) = S.union (mkVarSet p x) (mkVarSet p y)
 
 mkVarSet :: (Ord a) => (EqTerm -> Maybe a) -> EqTerm -> S.Set a
@@ -278,14 +302,14 @@ prepStep t s p =
 
 findVarEq :: Env.Index -> Equation -> Maybe TPath
 findVarEq t s@(Given u) =
-   prepStep t s (findVar t $ Idx u, Nothing)
+   prepStep t s (findVar t $ Atom u, Nothing)
 --   if t == u then Just [] else Nothing
 findVarEq t s@(u := v) =
    prepStep t s (findVar t u, findVar t v)
 
 findVar :: Env.Index -> EqTerm -> Maybe TPath
 findVar t s =
-   if Idx t == s
+   if Atom t == s
      then Just []
      else prepStep t s $
         case s of
@@ -301,7 +325,7 @@ findVar t s =
 
 isolateVar :: Env.Index -> Equation -> TPath -> Assign
 isolateVar s (Given _u) [L] = (GivenIdx s)
-isolateVar s (Given u) [R] = (s ::= Idx u)
+isolateVar s (Given u) [R] = (s ::= Atom u)
 isolateVar s (u := v) (L:p) = (s ::= isolateVar' u p v)
 isolateVar s (u := v) (R:p) = (s ::= isolateVar' v p u)
 isolateVar s t p = error $ "isolateVar:\n" ++ show s ++ "\n" ++ show t ++ "\n" ++ show p
@@ -427,7 +451,7 @@ additiveTermsNonEmpty = recourse . simplify . pushMult
 setEqTerms :: Envs EqTerm -> EqTerm -> EqTerm
 setEqTerms envs term =
    case term of
-      Idx i ->
+      Atom i ->
          case i of
             Power idx -> M.findWithDefault term idx (powerMap envs)
             DPower idx -> M.findWithDefault term idx (dpowerMap envs)
@@ -472,13 +496,13 @@ toAbsEquations = map toAbsEquation
 
 assignToEquation :: Assign -> Equation
 assignToEquation (GivenIdx x)  =  Given x
-assignToEquation (x ::= y)  =  Idx x := y
+assignToEquation (x ::= y)  =  Atom x := y
 
 
 mkDiffEqTerm :: Int -> Assign -> [Assign]
 
 -- v_0.1_OutSum.0 = P_0.1_0.1
-mkDiffEqTerm _ (Var (VarIdx s r use n) ::= Idx (Power (PowerIdx _ _ f t))) =
+mkDiffEqTerm _ (Var (VarIdx s r use n) ::= Atom (Power (PowerIdx _ _ f t))) =
   {- trace ("--->: " ++ showEqTerm z ++ " s=> " ++ showEqTerm eres) $ -} [res, eres]
   where res = v !:= dp
         v = VarIdx s r (toDiffUse use) n
@@ -497,10 +521,10 @@ mkDiffEqTerm _ (Var (VarIdx s r use n) ::= as@(_x :+ _y)) =
         ats = additiveTermsNonEmpty as
         v = mkVar $ VarIdx s r (toDiffUse use) n
         dps = add $ fmap g ats
-        g (Idx (Power (PowerIdx _ _ f t))) = mkVar $ DPowerIdx s r f t
+        g (Atom (Power (PowerIdx _ _ f t))) = mkVar $ DPowerIdx s r f t
 
 -- P_0.1_0.1 = v_0.1_OutSum.0
-mkDiffEqTerm _ (Power (PowerIdx _ _ f t) ::= Idx (Var (VarIdx s r use n))) =
+mkDiffEqTerm _ (Power (PowerIdx _ _ f t) ::= Atom (Var (VarIdx s r use n))) =
   {- trace ("--->: " ++ showEqTerm z ++ " => " ++ showEqTerm eres) $ -} [res, eres]
   where res = dp ::= v
         v = mkVar $ VarIdx s r (toDiffUse use) n
@@ -512,14 +536,14 @@ mkDiffEqTerm _ (Power (PowerIdx _ _ f t) ::= Idx (Var (VarIdx s r use n))) =
 
 
 -- v_0.1_OutSum.1 = v_0.1_InSum.1
-mkDiffEqTerm _ (Var (VarIdx s r use0 n) ::= Idx (Var (VarIdx _ _ use1 _))) =
+mkDiffEqTerm _ (Var (VarIdx s r use0 n) ::= Atom (Var (VarIdx _ _ use1 _))) =
   {- trace (showEqTerm z ++ " => " ++ showEqTerm res) $ -} [res]
   where res = v0 ::= v1
         v0 = mkVar $ VarIdx s r (toDiffUse use0) n
         v1 = mkVar $ VarIdx s r (toDiffUse use1) n
 
 -- P_0.1_1.0 = f(P_0.1_0.1, n_0.1_0.1)
-mkDiffEqTerm oldrec (Power (PowerIdx s newrec f t) ::= FEdge (Idx (Power _)) _) =
+mkDiffEqTerm oldrec (Power (PowerIdx s newrec f t) ::= FEdge (Atom (Power _)) _) =
   {- trace ("--->: " ++ showEqTerm z ++ " => " ++ showEqTerm eres) $ -} [res, eres]
   where res = dq ::= (dp :* n) :+ (p :* dn) :+ (dp :* dn)
         dq = mkVar $ DPowerIdx s newrec f t
@@ -533,7 +557,7 @@ mkDiffEqTerm oldrec (Power (PowerIdx s newrec f t) ::= FEdge (Idx (Power _)) _) 
         de = DEnergyIdx s newrec f t
 
 -- P_0.1_1.2 = f(v_0.1_OutSum.1, x_0.1_1.2)
-mkDiffEqTerm oldrec (Power (PowerIdx s newrec f t) ::= FEdge (Idx (Var (VarIdx _ _ use _))) _) =
+mkDiffEqTerm oldrec (Power (PowerIdx s newrec f t) ::= FEdge (Atom (Var (VarIdx _ _ use _))) _) =
   {- trace ("--->: " ++ showEqTerm z ++ " => " ++ showEqTerm eres) $ -} [res, eres]
   where res = dq ::= (dv :* x) :+ (v :* dx) :+ (dv :* dx)
         dq = mkVar $ DPowerIdx s newrec f t
@@ -547,7 +571,7 @@ mkDiffEqTerm oldrec (Power (PowerIdx s newrec f t) ::= FEdge (Idx (Var (VarIdx _
         de = DEnergyIdx s newrec f t
 
 -- P_0.1_1.2 = b(P_0.1_2.1, n_0.1_1.2)
-mkDiffEqTerm oldrec (Power (PowerIdx s newrec f t) ::= BEdge _ (Idx (FEta _))) =
+mkDiffEqTerm oldrec (Power (PowerIdx s newrec f t) ::= BEdge _ (Atom (FEta _))) =
   {- trace (showEqTerm z ++ " => " ++ showEqTerm res) $ -} [res, eres]
   where res = dq ::= (dp :* (Recip n)) :+ (Minus ((p :* dn) :* nom)) :+ (Minus ((dp :* dn) :* nom))
         dq = mkVar $ DPowerIdx s newrec f t
@@ -563,7 +587,7 @@ mkDiffEqTerm oldrec (Power (PowerIdx s newrec f t) ::= BEdge _ (Idx (FEta _))) =
 
 
 -- v_0.1_OutSum.1 = b(P_0.1_1.2, x_0.1_1.2)
-mkDiffEqTerm oldrec (Var (VarIdx s newrec use _n) ::= BEdge (Idx (Power (PowerIdx _ _ f t))) _) =
+mkDiffEqTerm oldrec (Var (VarIdx s newrec use _n) ::= BEdge (Atom (Power (PowerIdx _ _ f t))) _) =
   {- trace ("--->: " ++ showEqTerm z ++ " => " ++ showEqTerm eres) $ -} [res, eres]
   where res = v ::= (dp :* (Recip x)) :+ (Minus ((p :* dx) :* nom)) :+ (Minus ((dp :* dx) :* nom))
         v = mkVar $ VarIdx s newrec (toDiffUse use) f
@@ -590,7 +614,7 @@ mkDiffEqTermEquations rec = concatMap (mkDiffEqTerm rec)
 interpretEqTermRhs :: Envs EqTerm -> EqTerm -> EqTerm
 interpretEqTermRhs envs t =
    case t of
-      Idx i ->
+      Atom i ->
          case i of
             Power idx -> M.findWithDefault t idx (powerMap envs)
             DPower idx -> M.findWithDefault t idx (dpowerMap envs)
@@ -616,7 +640,7 @@ insertEqTerm idx envs rhs m = M.insert idx (interpretEqTermRhs envs rhs) m
 
 interpretEqTermEq :: Envs EqTerm -> Assign -> Envs EqTerm
 interpretEqTermEq envs (GivenIdx x) =
- case Idx x of
+ case Atom x of
   t ->
    case x of
       Power idx -> envs { powerMap = insertEqTerm idx envs t (powerMap envs) }

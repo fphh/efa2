@@ -1,7 +1,7 @@
 module EFA2.Display.DrawGraph where
 
 import EFA2.Solver.Equation
-          (EqTerm, showEqTerm, showEqTerms,
+          (Term(..), ToIndex, showEqTerm, showEqTerms,
            LatexString, unLatexString)
 import EFA2.Interpreter.Interpreter (showInTerm, showInTerms)
 import EFA2.Interpreter.InTerm (InTerm)
@@ -336,15 +336,15 @@ instance (Eq val, Show val) => DrawTopologyList (InTerm val) where
    formatStContList Nothing = "♥"
    formatDTimeList = showInTerms
 
-instance One EqTerm where one = error "EqTerm 1"
+instance One (Term a) where one = error "EqTerm 1"
 instance One Char where one = error "Char 1"
 
-instance DrawTopologyList EqTerm where
+instance ToIndex a => DrawTopologyList (Term a) where
    formatStContList (Just ys) = showEqTerms ys
    formatStContList Nothing = "♥"
    formatDTimeList = showEqTerms
 
-instance DrawDeltaTopologyList EqTerm where
+instance ToIndex a => DrawDeltaTopologyList (Term a) where
          drawDeltaTopologyList = drawDeltaTopology' f formatStCont tshow
            where -- f (x, Just ys) = showDelta x ++ " = [ " ++ L.intercalate ", " (map showEqTerm ys) ++ " ]"
                  f (x, Just ys) = showDelta x ++ " = \n" ++ showEqTerms ys
@@ -357,7 +357,13 @@ instance DrawDeltaTopologyList EqTerm where
                  showDelta (XLine u v) = "dx_" ++ show u ++ "_" ++ show v
                  showDelta (NLine u v) = "dn_" ++ show u ++ "_" ++ show v
                  showDelta (ErrorLine str) = str
-                 tshow dt dtimeIdx = showEqTerms $ dt `safeLookup` dtimeIdx
+                 tshow dt dtimeIdx =
+                    case M.lookup dtimeIdx dt of
+                       Nothing ->
+                          error $
+                          "drawTopologyList: " ++ show dtimeIdx ++ "\n"
+                           ++ show (fmap showEqTerms dt)
+                       Just t -> showEqTerms t
 
 
 drawAbsTopology ::

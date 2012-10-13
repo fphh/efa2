@@ -1,7 +1,7 @@
 module EFA2.Topology.Topology where
 
 import EFA2.Solver.Equation
-          (Equation(..), EqTerm(..), MkIdxC, mkVar, add, give)
+          (Equation(..), EqTerm, Term(..), MkIdxC, mkVar, add, give)
 import EFA2.Interpreter.Env
 import EFA2.Topology.TopologyData
 import EFA2.Utils.Graph
@@ -131,7 +131,7 @@ mkPowerEqs rec topo = concat $ mapGraph (mkPEqs rec) topo
 mkPEqs :: Int -> ([LNode NLabel], LNode NLabel, [LNode NLabel]) -> [Equation]
 mkPEqs rec (ins, n@(nid, NLabel sec _ _), outs) = ieqs ++ oeqs -- ++ dieqs ++ doeqs
   where makeVar mkIdx (nid', _) = mkVar $ mkIdx sec rec nid nid'
-        dt = Idx $ DTime $ DTimeIdx sec rec
+        dt = Atom $ DTime $ DTimeIdx sec rec
         eis = map (makeVar EnergyIdx) ins
         eos = map (makeVar EnergyIdx) outs
         --deis = map (makeVar DEnergyIdx) ins

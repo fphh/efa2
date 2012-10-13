@@ -110,12 +110,12 @@ deta1num = M.fromList [ (DEtaIdx 0 1 1 0, S.map $ const 0.1),
 ------------------------------------------------------------------------------
 
 dtimes0eq :: DTimeMap EqTerm
-dtimes0eq = fmap Idx $ M.fromList [ (DTimeIdx 0 0, mkVar $ DTimeIdx 0 0) ]
+dtimes0eq = fmap Atom $ M.fromList [ (DTimeIdx 0 0, mkVar $ DTimeIdx 0 0) ]
 
 {-
 -- forward
 power0eq :: PowerMap EqTerm
-power0eq = fmap Idx $ M.fromList [ (PowerIdx 0 0 0 1, mkVar $ PowerIdx 0 0 0 1) ]
+power0eq = fmap Atom $ M.fromList [ (PowerIdx 0 0 0 1, mkVar $ PowerIdx 0 0 0 1) ]
 -}
 
 -- backward
@@ -140,7 +140,7 @@ eta0eq =
 {-
 -- forward
 x0eq :: XMap EqTerm
-x0eq = fmap Idx $ M.fromList [ (XIdx 0 0 1 2, X (XIdx 0 0 1 2) ]
+x0eq = fmap Atom $ M.fromList [ (XIdx 0 0 1 2, X (XIdx 0 0 1 2) ]
 -}
 
 -- backward
@@ -148,15 +148,15 @@ x0eq :: XMap EqTerm
 x0eq = M.fromList []
 
 dtimes1eq:: DTimeMap EqTerm
-dtimes1eq = fmap Idx $ M.fromList [ (DTimeIdx 0 1, mkVar $ DTimeIdx 0 1) ]
+dtimes1eq = fmap Atom $ M.fromList [ (DTimeIdx 0 1, mkVar $ DTimeIdx 0 1) ]
 
 {-
 -- forward
 power1eq :: PowerMap EqTerm
-power1eq = fmap Idx $ M.fromList [ (PowerIdx 0 1 0 1, mkVar $ PowerIdx 0 1 0 1) ]
+power1eq = fmap Atom $ M.fromList [ (PowerIdx 0 1 0 1, mkVar $ PowerIdx 0 1 0 1) ]
 
 dpower1eq :: DPowerMap EqTerm
-dpower1eq = fmap Idx $ M.fromList [ (DPowerIdx 0 1 0 1, mkVar $ DPowerIdx 0 1 0 1) ]
+dpower1eq = fmap Atom $ M.fromList [ (DPowerIdx 0 1 0 1, mkVar $ DPowerIdx 0 1 0 1) ]
 -}
 
 -- backward

@@ -7,7 +7,7 @@ import Data.Maybe (mapMaybe)
 
 -- import Debug.Trace
 
-import EFA2.Solver.Equation (Equation(..), EqTerm(..), mkVarSetEq)
+import EFA2.Solver.Equation (Equation(..), EqTerm, Term(..), mkVarSetEq)
 import EFA2.Interpreter.Env (EnergyIdx(..), Index(..))
 import qualified EFA2.Interpreter.Env as Env
 
@@ -74,7 +74,7 @@ isVar g ts t
 
 -- | True for 'EqTerm's that are of the form:
 --
--- > ... := Given ...
+-- > ... Given x ...
 isGiven :: Equation -> Bool
 isGiven (Given _) = True
 isGiven _ = False
@@ -107,7 +107,7 @@ splitTerms isVar ts = (given, nov, givenExt, rest)
 -- | Predicate to indicate what should be viewed as a variable. Ask me for further explanation.
 -- Static version for optimisation.
 isVar' :: EqTerm -> Bool
-isVar' (Idx idx) =
+isVar' (Atom idx) =
    case idx of
       Energy (EnergyIdx 0 0 0 1) -> False
       Energy _ -> True
@@ -128,14 +128,14 @@ isCompoundTerm = not . isStaticVar
 --
 -- > isStaticVar == not . isCompoundTerm
 isStaticVar :: EqTerm -> Bool
-isStaticVar (Idx _) = True
+isStaticVar (Atom _) = True
 isStaticVar _ = False
 
 -- | True for syntactic variables.
 --
 -- > isStaticVar == not . isCompoundTerm
 maybeStaticVar :: EqTerm -> Maybe Env.Index
-maybeStaticVar (Idx idx) = Just idx
+maybeStaticVar (Atom idx) = Just idx
 maybeStaticVar _ = Nothing
 
 {-
@@ -148,7 +148,7 @@ isVarFromEqs s t = not (S.member t s || isCompoundTerm t)
 -- | True for variables that don't appear in 'Given' equations.
 -- Used mainly as a reference implementation for 'isVar'.
 isVarFromEqs :: [Equation] -> EqTerm -> Bool
-isVarFromEqs ts (Idx idx) = not (S.member idx s)
+isVarFromEqs ts (Atom idx) = not (S.member idx s)
   where s = S.fromList $
                mapMaybe (\eq -> case eq of Given v -> Just v; _ -> Nothing) ts
 isVarFromEqs _ _ = False

@@ -11,7 +11,7 @@ import qualified EFA2.Signal.Base as Base
 import EFA2.Signal.Signal (toConst, (.+), (.*))
 import EFA2.Signal.Typ (Typ, UT)
 
-import EFA2.Solver.Equation (Assign(GivenIdx, (::=)), EqTerm(..))
+import EFA2.Solver.Equation (Assign(GivenIdx, (::=)), EqTerm, Term(..))
 import EFA2.Interpreter.InTerm (InTerm(..), InEquation(..))
 import EFA2.Interpreter.Env as Env
 import EFA2.Utils.Utils (safeLookup)
@@ -45,7 +45,7 @@ eqTermToInTerm :: EqTerm -> InTerm a
 eqTermToInTerm term =
    case term of
       (Const x) -> InConst x
-      (Idx x) -> InIndex x
+      (Atom x) -> InIndex x
 
       (Recip x) -> InRecip (eqTermToInTerm x)
       (Minus x) -> InMinus (eqTermToInTerm x)
