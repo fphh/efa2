@@ -15,7 +15,7 @@ import EFA2.Solver.Equation
 import EFA2.Solver.EquationOrder (order)
 
 import EFA2.Interpreter.Interpreter
-          (eqToInTerm, interpretFromScratch, interpretWithEnv)
+          (eqToInTerm, interpretFromScratch, interpretTerm)
 import EFA2.Interpreter.Env
 import EFA2.Interpreter.Arith (Val)
 
@@ -112,7 +112,7 @@ main = do
       denv = deltaEnv graph
       control = dpowerMap denv
 
-      symSimpleNum = mapEqTermEnv (map (fromScalar . interpretWithEnv 1 (envUnion [num0, num1]))) symSimpleDelta
+      symSimpleNum = mapEqTermEnv (map (fromScalar . interpretTerm 1 (envUnion [num0, num1]))) symSimpleDelta
 
 
   putStrLn "\n== Control delta environment (later env - former env, computed independently) =="

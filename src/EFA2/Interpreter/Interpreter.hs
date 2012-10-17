@@ -166,14 +166,3 @@ interpretFromScratch ::
    [InEquation (Signal s c a)] ->
    Envs (Signal s c a)
 interpretFromScratch rec len ts = (L.foldl' (interpretEq len) emptyEnv ts) { recordNumber = rec }
-
-
-interpretWithEnv ::
-   (Show v, v ~ D.Apply c a, D.ZipWith c,
-    D.Storage c a, S.Const s c, S.Arith s s ~ s,
-    Fractional a, Base.DArith0 a, Base.BSum a, Base.BProd a a) =>
-   Int ->
-   Envs (Signal s c a) ->
-   EqTerm ->
-   Signal s c a
-interpretWithEnv len envs t = interpretTerm len envs t
