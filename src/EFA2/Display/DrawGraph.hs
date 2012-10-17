@@ -68,30 +68,26 @@ intersectionEdgeColour :: Attribute
 intersectionEdgeColour = Color [RGB 200 0 0]
 
 -- coding
-noRecord :: RecordNumber
-noRecord = SingleRecord noRecordInt
-
-noRecordInt :: Int
-noRecordInt = -99
+noRecord :: Maybe RecordNumber
+noRecord = Nothing
 
 
 mkDotGraph ::
    EfaGraph NLabel ELabel ->
-   RecordNumber ->
+   Maybe RecordNumber ->
    (DTimeIdx -> String) ->
    (LNode NLabel -> String) ->
    (LEdge ELabel -> String) ->
    DotGraph Int
-mkDotGraph g r timef nshow eshow =
+mkDotGraph g mRecordNum timef nshow eshow =
   DotGraph { strictGraph = False,
              directedGraph = True,
              graphID = Just (Int 1),
              graphStatements = stmts }
   where recordNum =
-           case r of
-              MixedRecord _ -> noRecordInt
-              NoRecord -> noRecordInt
-              SingleRecord n -> n
+           case mRecordNum of
+              Just (SingleRecord n) -> Just n
+              _ -> Nothing
         interEs = L.filter (\(_, _, e) -> isIntersectionEdge e) $ labEdges g
         g' = delEdges (map (\(x, y, _) -> (x, y)) interEs) g
         cs =
@@ -104,7 +100,13 @@ mkDotGraph g r timef nshow eshow =
                 ys = map (mkDotEdge eshow) $ labEdges $
                      delNodes (map fst (concatMap NonEmpty.flatten ms)) g'
                 gattrs = [GraphAttrs [Label (StrLabel (T.pack str))]]
-                str = "Section " ++ show sl ++ " / Record " ++ show recordNum ++ " / Time " ++ timef (DTimeIdx sl recordNum)
+                str =
+                   "Section " ++ show sl ++ " / " ++
+                   case recordNum of
+                      Nothing -> "NoRecord"
+                      Just n ->
+                         "Record " ++ show n ++
+                         " / Time " ++ timef (DTimeIdx sl n)
         stmts = DotStmts { attrStmts = [],
                            subGraphs = map sg cs,
                            nodeStmts = [],
@@ -137,7 +139,7 @@ mkDotEdge eshow e@(x, y, elabel) = DotEdge x y [displabel, edir, colour]
 
 printGraph ::
    EfaGraph NLabel ELabel ->
-   RecordNumber ->
+   Maybe RecordNumber ->
    (DTimeIdx -> String) ->
    (LNode NLabel -> String) ->
    (LEdge ELabel -> String) ->
@@ -306,7 +308,7 @@ drawAbsTopologyLatex ::
   Topology' NLabel ELabel ->
   Envs [t] ->
   IO ()
-drawAbsTopologyLatex f content tshow (Topology g) (Envs rec0 e _de _p _dp fn _dn dt x _dx _v st) = printGraph g rec0 (tshow dt) nshow eshow
+drawAbsTopologyLatex f content tshow (Topology g) (Envs rec0 e _de _p _dp fn _dn dt x _dx _v st) = printGraph g (Just rec0) (tshow dt) nshow eshow
   where eshow ps = L.intercalate "\n " $ map f $ mkLst rec0 ps
         nshow (num, NLabel sec nid ty) =
           "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\\\\ " ++
@@ -374,7 +376,7 @@ drawAbsTopology ::
   Topology' NLabel ELabel ->
   Envs [t] ->
   IO ()
-drawAbsTopology f content tshow (Topology g) (Envs rec0 e _de _p _dp fn _dn dt x _dx _v st) = printGraph g rec0 (tshow dt) nshow eshow
+drawAbsTopology f content tshow (Topology g) (Envs rec0 e _de _p _dp fn _dn dt x _dx _v st) = printGraph g (Just rec0) (tshow dt) nshow eshow
   where eshow ps = L.intercalate "\n" $ map f $ mkLst rec0 ps
         nshow (num, NLabel sec nid ty) =
           "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\n" ++
@@ -412,7 +414,7 @@ drawDeltaTopology' ::
    Topology' NLabel ELabel ->
    Envs [t] ->
    IO ()
-drawDeltaTopology' f content tshow (Topology g) (Envs rec0 _e de _p _dp _fn dn dt _x dx _v st) = printGraph g rec0 (tshow dt) nshow eshow
+drawDeltaTopology' f content tshow (Topology g) (Envs rec0 _e de _p _dp _fn dn dt _x dx _v st) = printGraph g (Just rec0) (tshow dt) nshow eshow
   where eshow ps = L.intercalate "\n" $ map f $ mkLst rec0 ps
         nshow (num, NLabel sec nid ty) =
           "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\n" ++
@@ -497,7 +499,7 @@ drawAbsTopologySignal ::
    ((Line, Maybe (TC s t (Data v d))) -> String) ->
    (Maybe (TC s t (Data v d)) -> String) ->
    Topology -> Envs (TC s t (Data v d)) ->  IO ()
-drawAbsTopologySignal f content (Topology g) (Envs rec0 e _de _p _dp fn _dn dt x _dx _v st) = printGraph g rec0 tshow nshow eshow
+drawAbsTopologySignal f content (Topology g) (Envs rec0 e _de _p _dp fn _dn dt x _dx _v st) = printGraph g (Just rec0) tshow nshow eshow
   where eshow ps = L.intercalate "\n" $ map f $ mkLst rec0 ps
         tshow dtimeIdx = formatStContSignal $ M.lookup dtimeIdx dt
         nshow (num, NLabel sec nid ty) =
@@ -533,7 +535,7 @@ drawDeltaTopologyD ::
    ((Line, Maybe (TC s t (Data v d))) -> String) ->
    (Maybe (TC s t (Data v d)) -> String) ->
    Topology -> Envs (TC s t (Data v d)) ->  IO ()
-drawDeltaTopologyD f content (Topology g) (Envs rec0 _e de _p _dp _fn dn dt _x dx _v st) = printGraph g rec0 tshow nshow eshow
+drawDeltaTopologyD f content (Topology g) (Envs rec0 _e de _p _dp _fn dn dt _x dx _v st) = printGraph g (Just rec0) tshow nshow eshow
   where eshow ps = L.intercalate "\n" $ map f $ mkLst rec0 ps
         tshow dtimeIdx = formatStContSignal $ M.lookup dtimeIdx dt
         nshow (num, NLabel sec nid ty) =
