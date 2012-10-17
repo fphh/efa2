@@ -1,19 +1,26 @@
 module EFA2.Example.Loop (loop, etas, pows, dtimes) where
 
-import Data.Graph.Inductive
+import Data.Graph.Inductive (mkGraph)
 import qualified Data.Map as M
 
 
 import EFA2.Topology.Topology
+          (makeWithDirEdges, makeEdges, makeNodes)
 import EFA2.Topology.TopologyData
+          (defaultELabel, flowDirection,
+           FlowDirection(AgainstDir), NodeType(Crossing))
 
-import EFA2.Interpreter.Arith
+import EFA2.Interpreter.Arith (Val)
 import EFA2.Interpreter.Env
-import EFA2.Example.SymSig
-import EFA2.Utils.Utils
+          (DTimeIdx(DTimeIdx), DTimeMap,
+           EnergyIdx(EnergyIdx), EnergyMap,
+           FEtaIdx(FEtaIdx), FEtaMap,
+           PowerIdx(PowerIdx), PowerMap)
+import EFA2.Example.SymSig (TheGraph(TheGraph))
+import EFA2.Utils.Utils (pairs)
 
-import Debug.Trace
 
+numOf :: Int
 numOf = 3
 
 dtimes :: DTimeMap [Val]

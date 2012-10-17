@@ -1,11 +1,11 @@
 module EFA2.Example.SymSig where
 
-import Data.Graph.Inductive
-import qualified Data.Map as M
+-- import Data.Graph.Inductive
+-- import qualified Data.Map as M
 
-import EFA2.Interpreter.Env
-import EFA2.Topology.Topology
-import EFA2.Topology.TopologyData
+import EFA2.Interpreter.Env (EnergyMap)
+-- import EFA2.Topology.Topology
+import EFA2.Topology.TopologyData (Topology)
 
 {-
 

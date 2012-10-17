@@ -7,7 +7,6 @@ import EFA2.Display.Report
 import EFA2.Signal.Signal (PSigL)
 
 import qualified Data.Map as M 
-import EFA2.Display.ReportSequence
 import EFA2.Display.DispSequence
 
 import EFA2.Display.Plot

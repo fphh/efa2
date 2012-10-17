@@ -19,7 +19,6 @@ import System.IO
 -- import EFA.Signal.SignalData
 -- import EFA2.Utils.Utils
 import EFA2.Signal.SequenceData
-import EFA2.Display.DispSignal
 
 {-
 type Title = String

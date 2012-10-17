@@ -14,6 +14,7 @@ import EFA2.Interpreter.Env
 import EFA2.Example.SymSig
 import EFA2.Utils.Utils
 
+numOf :: Int
 numOf = 3
 
 sigs :: PowerMap [Val]

@@ -109,8 +109,8 @@ makeSequence ::
     Topology)
 makeSequence pRec topo = (sqEnvs, sqTopo)
   where sqFRec = genSequFlow $ snd $ genSequ $ addZeroCrossings pRec
-        sqEnvs = case sqFRec of SequData sq -> map g $ zip (map SecIdx [0..]) sq
-        g (s, rec) = fromFlowRecord s (RecIdx 0) rec
+        sqEnvs = case sqFRec of SequData sq -> zipWith g (map SecIdx [0..]) sq
+        g s rec = fromFlowRecord s (RecIdx 0) rec
 
         sqFStRec = Flow.genSequFState sqFRec
         sqFlowTops = Flow.genSequFlowTops topo sqFStRec

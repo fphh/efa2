@@ -12,6 +12,7 @@ import EFA2.Graph.GraphData
 import EFA2.Graph.Graph
 import EFA2.Example.SymSig
 
+numOf :: Int
 numOf = 3
 
 sigs :: LRPowerEnv [Val]

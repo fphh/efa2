@@ -9,7 +9,7 @@ import qualified EFA2.Signal.Signal as S
 import qualified EFA2.Signal.Data as D
 import qualified EFA2.Signal.Vector as SV
 import EFA2.Signal.Signal (TC, (.-))
-import EFA2.Signal.Data (Data, Zip)
+import EFA2.Signal.Data (Data)
 import EFA2.Signal.Typ (TSum)
 import EFA2.Signal.Base (BSum)
 
@@ -21,7 +21,7 @@ import EFA2.Signal.Base (BSum)
 --
 -- * a section number
 -- * a data record number
--- * two numbers to identify a place in the topology 
+-- * two numbers to identify a place in the topology
 --   (for equation generation, we use the underlying fgl node ids.
 
 -- | Energy variables.
@@ -201,7 +201,7 @@ uniteRecordNumbers rs = L.foldl' f (MixedRecord []) rs
   where f NoRecord _ = NoRecord
         f _ NoRecord = NoRecord
         f (MixedRecord xs) (SingleRecord x) = MixedRecord (xs ++ [x])
-        f (MixedRecord xs) (MixedRecord ys) = MixedRecord (xs ++ ys) 
+        f (MixedRecord xs) (MixedRecord ys) = MixedRecord (xs ++ ys)
 
 envUnion :: [Envs a] -> Envs a
 envUnion envs = Envs { recordNumber = uniteRecordNumbers (map recordNumber envs),

@@ -6,7 +6,7 @@ import EFA2.Solver.Equation
 import EFA2.Interpreter.Env as Env
 import EFA2.Topology.TopologyData
 import EFA2.Utils.Graph
-import EFA2.Utils.Utils
+import EFA2.Utils.Utils (pairs, safeLookup)
 
 import qualified EFA2.Topology.EfaGraph as Gr
 import Data.Graph.Inductive
@@ -50,9 +50,10 @@ missingRecordNumbers envs =
 
 -- TODO: Check that envUnion preserves all variables.
 makeAllEquations :: (Show a) => Topology -> [Envs a] -> (Envs a, [Equation])
-makeAllEquations topo envs | missingRecordNumbers envs =
-  error ("makeAllEquations: only single records are allowed in " ++ show envs)
-makeAllEquations topo envs = ((envUnion envs') { recordNumber = MixedRecord newRecNums }, ts)
+makeAllEquations topo envs =
+   if missingRecordNumbers envs
+     then error ("makeAllEquations: only single records are allowed in " ++ show envs)
+     else ((envUnion envs') { recordNumber = MixedRecord newRecNums }, ts)
   where newRecNums = map (fromSingleRecord . recordNumber) envs
         recNum env = fromSingleRecord $ recordNumber env
         dirTopo = makeDirTopology topo
@@ -89,8 +90,8 @@ makeAllEquations topo envs = ((envUnion envs') { recordNumber = MixedRecord newR
 
 -- TODO: use patternmatching instead of safeLookup
 shiftIndices :: (Show a) => M.Map (Int, Int) Node -> Envs a -> Envs a
-shiftIndices m (Envs (SingleRecord rec) e de p dp fn dn t x dx v st) =
-  Envs (SingleRecord rec) e' de' p' dp' fn' dn' t x' dx' v' st'
+shiftIndices m (Envs (SingleRecord rec) e de p dp fn dn t' x dx v st) =
+  Envs (SingleRecord rec) e' de' p' dp' fn' dn' t' x' dx' v' st'
   where e' = M.mapKeys ef e
         ef (EnergyIdx s _ f t) = EnergyIdx s rec (m `safeLookup` (s, f)) (m `safeLookup` (s, t))
 
@@ -130,7 +131,7 @@ mkPowerEqs :: Int -> Topology -> [Equation]
 mkPowerEqs rec topo = concat $ mapGraph (mkPEqs rec) topo
 
 mkPEqs :: Int -> ([LNode NLabel], LNode NLabel, [LNode NLabel]) -> [Equation]
-mkPEqs rec (ins, n@(nid, NLabel sec _ _), outs) = ieqs ++ oeqs -- ++ dieqs ++ doeqs
+mkPEqs rec (ins, (nid, NLabel sec _ _), outs) = ieqs ++ oeqs -- ++ dieqs ++ doeqs
   where makeVar mkIdx (nid', _) = mkVar $ mkIdx sec rec nid nid'
         dt = Atom $ DTime $ DTimeIdx sec rec
         eis = map (makeVar EnergyIdx) ins
@@ -178,7 +179,7 @@ mkStoreEqs recordNum (ins, outs) = startEq ++ eqs
         h (InStore x, y) = (x, y)
         h (OutStore x, y) = (x, y)
 
-        g ((nid, NLabel sec _ st), InStore (nid', NLabel sec' _ st')) = stnew := (v :* dt) :+ stold
+        g ((_nid, NLabel sec _ st), InStore (nid', NLabel sec' _ st')) = stnew := (v :* dt) :+ stold
 {-
           mkVar (StorageIdx sec' recordNum (getStorageNumber st')) :=
             (mkVar (VarIdx sec' recordNum InSum nid') :* dt)
@@ -189,7 +190,7 @@ mkStoreEqs recordNum (ins, outs) = startEq ++ eqs
                 v = mkVar $ VarIdx sec' recordNum InSum nid'
                 dt = mkVar $ DTimeIdx sec' recordNum
 
-        g ((nid, NLabel sec _ st), OutStore (nid', NLabel sec' _ st')) = stnew := Minus (v :* dt) :+ stold
+        g ((_nid, NLabel sec _ st), OutStore (nid', NLabel sec' _ st')) = stnew := Minus (v :* dt) :+ stold
 {-
           mkVar (StorageIdx sec' recordNum (getStorageNumber st')) :=
             Minus (mkVar (VarIdx sec' recordNum OutSum nid') :* dt) :+ (mkVar (StorageIdx sec recordNum (getStorageNumber st)))
@@ -202,7 +203,7 @@ mkStoreEqs recordNum (ins, outs) = startEq ++ eqs
 
 
 mkInStoreEqs :: Int -> InOutGraphFormat (LNode NLabel) -> [Equation]
-mkInStoreEqs recordNum (ins, n@(nid, NLabel sec _ _), outs@((o,_):_)) = (startEq:osEqs)
+mkInStoreEqs recordNum (_ins, (nid, NLabel sec _ _), outs@((o,_):_)) = (startEq:osEqs)
   where startEq = mkVar (VarIdx sec recordNum InSum nid) := mkVar (PowerIdx sec recordNum nid o)
         osEqs = map f (pairs outs)
         f (x, y) = mkVar (PowerIdx sec recordNum nid y') :=
@@ -213,7 +214,7 @@ mkInStoreEqs _ _ = []
 
 
 mkOutStoreEqs :: Int -> InOutGraphFormat (LNode NLabel) -> [Equation]
-mkOutStoreEqs recordNum (ins, n@(nid, NLabel sec _ _), o:_) =
+mkOutStoreEqs recordNum (ins, (nid, NLabel sec _ _), _:_) =
      visumeqs ++ xeqs ++ pieqs
   where xis = map (makeVar XIdx) ins
         --eis = map (makeVar EnergyIdx) ins
@@ -346,7 +347,7 @@ mkDiffPowerEqs laterRec formerRec (ins, n@(nid, NLabel sec _ _), outs)
 -}
 
 mkDiffEtaEqs :: Int -> Int -> ([LNode NLabel], LNode NLabel, [LNode NLabel]) -> [Equation]
-mkDiffEtaEqs laterRec formerRec (ins, n@(nid, NLabel sec _ _), outs) = dnoeqs
+mkDiffEtaEqs laterRec formerRec (_ins, (nid, NLabel sec _ _), outs) = dnoeqs
   where makeVar r mkIdx (nid', _) = mkVar $ mkIdx sec r nid nid'
         lnos = map (makeVar laterRec FEtaIdx) outs
         fnos = map (makeVar formerRec FEtaIdx) outs
@@ -354,7 +355,7 @@ mkDiffEtaEqs laterRec formerRec (ins, n@(nid, NLabel sec _ _), outs) = dnoeqs
         g x y i = (makeVar laterRec DEtaIdx i) := x :+ (Minus y)
 
 mkDiffXEqs :: Int -> Int -> ([LNode NLabel], LNode NLabel, [LNode NLabel]) -> [Equation]
-mkDiffXEqs laterRec formerRec (ins, n@(nid, NLabel sec _ _), outs) = xiseq ++ xoseq
+mkDiffXEqs laterRec formerRec (ins, (nid, NLabel sec _ _), outs) = xiseq ++ xoseq
   where makeVar r mkIdx (nid', _) = mkVar $ mkIdx sec r nid nid'
         f dx lx fx = dx := lx :+ (Minus fx)
 

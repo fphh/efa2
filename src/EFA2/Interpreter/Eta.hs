@@ -108,8 +108,8 @@ eta3 = (Pt (cst 0) (cst 0)):(take 500 $ zipWith Pt lst (map cst vs))
 -}
 
 prettyEta :: (Show a) => [a] -> ([a] -> [a]) -> String
-prettyEta lst etaf = L.intercalate "\n" $ map f (zip lst $ etaf lst)
-  where f (x, y) = show x ++ " " ++ show y
+prettyEta lst etaf = L.intercalate "\n" $ zipWith f lst $ etaf lst
+  where f x y = show x ++ " " ++ show y
 
 prettyPts :: (Show a) => [Pt a] -> String
 prettyPts pts = L.intercalate "\n" (map f pts)

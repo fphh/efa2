@@ -2,7 +2,7 @@ module EFA2.Utils.Trace where
 
 import EFA2.Utils.Utils (myShowList)
 
-import Debug.Trace
+import Debug.Trace (trace)
 
 
 -- | A debugging function for displaying arguments in pointless style.

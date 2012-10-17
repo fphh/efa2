@@ -2,9 +2,11 @@
 
 module EFA2.Interpreter.Arith where
 
+{-
 import qualified Data.Vector.Unboxed as UV
 
 import Data.Ratio
+-}
 
 --type Val = Ratio Integer
 type Val = Double  

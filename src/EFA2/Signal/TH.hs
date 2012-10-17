@@ -1,11 +1,11 @@
-{-# LANGUAGE TemplateHaskell, StandaloneDeriving, FlexibleInstances, FlexibleContexts, UndecidableInstances, MultiParamTypeClasses, NoMonomorphismRestriction #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 module EFA2.Signal.TH where
 
-import Control.Monad
+import Control.Monad (liftM)
 
 import Language.Haskell.TH
-import Language.Haskell.TH.Lib
 
  
 
@@ -16,6 +16,7 @@ class Sample cont dim where
       toSample :: cont Val -> dim cont
 
 
+printQ :: Ppr a => Q a -> IO ()
 printQ expr = runQ expr >>= putStrLn.pprint
 
 samples :: [String]
@@ -24,6 +25,7 @@ samples = ["PSample", "NSample"]
 sampleNames :: [Name]
 sampleNames = map mkName samples
 
+showN, eqN, numN, contN, valN :: Name
 showN = mkName "Show"
 eqN = mkName "Eq"
 numN = mkName "Num"
@@ -50,9 +52,9 @@ mkNewtypes strs = liftM concat $ mapM sampleNewtype strs
 
 
 sampleInstance :: Name -> Q [Dec]
-sampleInstance name = do
-  TyConI (NewtypeD _ name tyvars (RecC constr _) _) <- reify name
-  ClassI (ClassD _ cname ctyvars _ cdecs) _ <- reify (mkName "Sample")
+sampleInstance iname = do
+  TyConI (NewtypeD _ name _tyvars (RecC constr _) _) <- reify iname
+  ClassI (ClassD _ cname _ctyvars _ cdecs) _ <- reify (mkName "Sample")
   var <- newName "x"
   let [SigD fname _, SigD tname _] = cdecs
       header = AppT (AppT (ConT cname) (VarT (mkName "cont"))) (ConT name)

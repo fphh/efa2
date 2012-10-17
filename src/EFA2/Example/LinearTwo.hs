@@ -1,17 +1,25 @@
 module EFA2.Example.LinearTwo where
 
-import Data.Graph.Inductive
+import Data.Graph.Inductive (mkGraph)
 import qualified Data.Map as M
 
 import EFA2.Topology.Topology
+          (makeEdges, makeNodes)
 import EFA2.Topology.TopologyData
+          (Topology, NodeType(Source, Sink, Crossing), defaultELabel)
 
+import EFA2.Solver.Equation (EqTerm, Term(Const), mkVar)
 import EFA2.Interpreter.Env
+          (DTimeIdx(DTimeIdx), DTimeMap,
+           FEtaIdx(FEtaIdx), FEtaMap,
+           DEtaIdx(DEtaIdx), DEtaMap,
+           PowerIdx(PowerIdx), PowerMap,
+           DPowerIdx(DPowerIdx), DPowerMap,
+           DXIdx(DXIdx), XMap, DXMap)
 import qualified EFA2.Signal.Signal as S
 import EFA2.Signal.Signal (Scal, toScalar)
-import EFA2.Signal.Typ
-import EFA2.Signal.Base
-import EFA2.Solver.Equation
+import EFA2.Signal.Typ (Typ, UT)
+import EFA2.Signal.Base (Val)
 
 
 

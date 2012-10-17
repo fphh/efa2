@@ -12,7 +12,10 @@ import qualified Data.IntMap as IM
 --import Data.Function (on)
 
 import EFA2.Topology.TopologyData
-import EFA2.Utils.Utils
+          (Topology, NodeType(..),
+           NLabel, ELabel, isActiveEdge, isInactiveEdge, nodetypeNLabel,
+           FlowDirection(UnDir, WithDir), flowDirection, flipFlowDirection)
+import EFA2.Utils.Utils (checkJust)
 
 import Data.Graph.Inductive
           (LNode, Node, lab, labNodes, labEdges,

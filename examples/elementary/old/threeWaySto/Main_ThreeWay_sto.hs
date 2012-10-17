@@ -9,8 +9,6 @@ import qualified Data.Map as M
 import Data.Maybe
 
 
-import Debug.Trace
-
 import EFA2.Topology.Topology
 import EFA2.Topology.EfaGraph
 
@@ -43,8 +41,6 @@ import qualified EFA2.Signal.Signal as S
 import qualified EFA2.Signal.Data as D
 import EFA2.Signal.Signal (UTFSig)
 import EFA2.Signal.Typ
-
-import EFA2.Display.ReportSequence
 
 import EFA2.Display.Plot
 

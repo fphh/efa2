@@ -6,26 +6,26 @@ import qualified Text.PrettyPrint as PP
 import EFA2.Signal.Base (Val)
 
 
--- | Report Options 
+-- | Report Options
 data ROpt = RVertical | RAll | RTimeMask Val Val | RIndexMask [Int] deriving (Show,Eq)
 type ROpts = [ROpt]
 
 {- geht nicht
-checkOpt :: ROpts -> ROpt -> 
+checkOpt :: ROpts -> ROpt ->
 checkOpt os o = L.find g os
   where
-    g o = 
+    g o =
 -}
 
--- | Report  
+-- | Report
 type Report = [Table]
 
 
 -- | Table with Table Format and Table Data
-data Table  = Table { tableTitle :: Title,                       
+data Table  = Table { tableTitle :: Title,
                       tableFormat :: TableFormat,
                       tableData :: TableData,
-                      tableSubTitle :: SubTitle} 
+                      tableSubTitle :: SubTitle}
 
 type Title = String
 type SubTitle = String
@@ -47,12 +47,12 @@ type Length = Int
 
 -- | Table Format
 data TableFormat = TableFormat {colFormat :: ColFormat,
-                                rowFormat :: RowFormat} 
-                                                              
+                                rowFormat :: RowFormat}
+
 type ColFormat = [(Width,Align)]
 type RowFormat = [Rows]
 
-type Width = Int 
+type Width = Int
 data Align = HLeft | HMid | HRight deriving Show
 type Rows = Int -- Nr of Rows to be left free before
 
@@ -102,20 +102,20 @@ thapp y1 y2 = if check then Table {tableTitle = tableTitle y1 ++ " ++  " ++ tabl
 
 
 maxColWidth :: ColFormat -> ColFormat -> ColFormat
-maxColWidth cf1 cf2 = zipWith f cf1 cf2 
-  where f (w1,a) (w2,_) = (max w1 w2,a) 
+maxColWidth cf1 cf2 = zipWith f cf1 cf2
+  where f (w1,a) (w2,_) = (max w1 w2,a)
 
 getMaxColWidth :: ColFormat -> Width
 getMaxColWidth cf = maximum $ map fst cf
 
--- | Generate report from Table List 
+-- | Generate report from Table List
 makeReport :: ROpts -> [Table] -> PP.Doc
-makeReport os ts = PP.vcat$ L.intersperse PP.empty $ map (makeTable os) ts 
+makeReport os ts = PP.vcat$ L.intersperse PP.empty $ map (makeTable os) ts
 
 
 -- | Generate doc from Table
 makeTable :: ROpts -> Table -> PP.Doc
-makeTable  os t = PP.text (tableTitle t) PP.$$ (makeCol os rf $ map (makeRow os cft) xt) PP.$$ PP.text (tableSubTitle t) 
+makeTable  os t = PP.text (tableTitle t) PP.$$ (makeCol os rf $ map (makeRow os cft) xt) PP.$$ PP.text (tableSubTitle t)
   where
     rf = rowFormat $ tableFormat t
     cf = colFormat $ tableFormat t
@@ -184,5 +184,4 @@ autoFormat td = TableFormat {colFormat = zip cf (repeat HLeft),
 -- | OutPut Functions  --------------------------------------------
 -- | TODO: write formatDocHor versions of this functions.
 report :: (ToTable a) => ROpts -> (String,a) -> IO ()
-report os = putStrLn . PP.render . (makeReport os) . (toTable os) 
-  
+report os = putStrLn . PP.render . makeReport os . toTable os

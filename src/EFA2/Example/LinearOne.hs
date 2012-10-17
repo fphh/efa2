@@ -1,17 +1,22 @@
 module EFA2.Example.LinearOne where
 
-import Data.Graph.Inductive
+import Data.Graph.Inductive (mkGraph)
 import qualified Data.Map as M
 
 import EFA2.Topology.Topology
+          (makeEdges, makeNodes)
 import EFA2.Topology.TopologyData
+          (NodeType(Source, Sink), defaultELabel)
 
 import EFA2.Interpreter.Env
-import EFA2.Solver.Equation
-import EFA2.Example.SymSig
+          (Index(Energy, DTime),
+           DTimeIdx(DTimeIdx), DTimeMap,
+           EnergyIdx(EnergyIdx), EnergyMap)
+import EFA2.Solver.Equation (EqTerm, Term(Atom,Const))
+import EFA2.Example.SymSig (TheGraph(TheGraph))
 import qualified EFA2.Signal.Signal as S
 import EFA2.Signal.Signal (UTFSig, TC, Scalar, toScalar)
-import EFA2.Signal.Typ
+import EFA2.Signal.Typ (Typ, UT)
 import EFA2.Signal.Data (Data, Nil)
 
 

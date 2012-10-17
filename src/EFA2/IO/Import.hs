@@ -2,9 +2,9 @@ module EFA2.IO.Import (module EFA2.IO.Import) where
 
 import qualified Data.Map as M 
 
-import Data.Ratio
+import Data.Ratio (Ratio, approxRational)
 
-import EFA2.Signal.SequenceData
+import EFA2.Signal.SequenceData (Record(Record), SigId(SigId))
 
 --import Text.ParserCombinators.Parsec
 import Data.List.HT (chop)

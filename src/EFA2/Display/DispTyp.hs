@@ -5,16 +5,16 @@ import EFA2.Display.DispBase
 
 
 data DisplayType = Typ_BZ
-                 | Typ_E  
-                 | Typ_F 
-                 | Typ_IZ  
-                 | Typ_N  
-                 | Typ_M  
-                 | Typ_P   
-                 | Typ_T  
-                 | Typ_X  
-                 | Typ_Y  
-                 | Typ_UZ  
+                 | Typ_E
+                 | Typ_F
+                 | Typ_IZ
+                 | Typ_N
+                 | Typ_M
+                 | Typ_P
+                 | Typ_T
+                 | Typ_X
+                 | Typ_Y
+                 | Typ_UZ
                  | Typ_UT deriving Show
 
 -- | Convert Type Information ADT

@@ -162,8 +162,8 @@ makeHornClauses isVar givenExt rest = (m, startfs ++ fsdpg ++ fsdpg2)
         fsdpg = graphToHorn dpg
         ext = filter (flip elem givenExt . snd) (labNodes dpg)
 
-        startfs = map (f . fst) ext
-        f x = One :-> Atom x
+        startfs = map (h . fst) ext
+        h x = One :-> Atom x
 
         dpg2 = dpgHasSameVariable isVar ts
         dpg3 = L.foldl' (flip delEdge) dpg2 (edges dpg)

@@ -1,14 +1,10 @@
 
-
 module EFA2.Display.FileSave where
 
 import qualified Data.Map as M
-import Data.GraphViz
-import Data.Graph.Inductive
+import Data.Graph.Inductive (Gr, labNodes, nmap, graphviz')
 
---import EFA2.Graph.GraphData
---import EFA2.Term.DependencyGraph
-import EFA2.Solver.Equation
+import EFA2.Solver.Equation (EqTerm, showEqTerm)
 
 -- dot -Tpdf topograph.dot -o topograph.pdf 
 {-
@@ -21,4 +17,4 @@ writeTopology g = writeFile "results/topograph.dot" (graphviz' g)
 writeDependencyGraph :: Gr EqTerm () -> IO ()
 writeDependencyGraph g = writeFile "results/depgraph.dot" (graphviz' (nmap showEqTerm g))
   where m = M.fromList $ labNodes g
-        nshow x = show x ++ ": " ++ showEqTerm (m M.! x)
+        _nshow x = show x ++ ": " ++ showEqTerm (m M.! x)

@@ -43,6 +43,7 @@ Library
     QuickCheck >=2.4 && <2.6,
     base ==4.5.*
   Hs-Source-Dirs:      src
+  GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs
   Exposed-Modules:
     EFA2.IO.Import
     EFA2.Utils.Utils
@@ -110,7 +111,7 @@ Library
 
 
 -- sollte man auf Cabal-Test umstellen,
--- sobald Cabal-Test vernünftig läuft
+-- sobald Cabal-Test vernÃ¼nftig lÃ¤uft
 Executable test-efa
   Main-Is: EFA2/Test/Test.hs
   GHC-Options: -Wall
@@ -127,7 +128,7 @@ Executable test-efa
   Other-Modules:
     EFA2.Test.UtilsTest
     EFA2.Test.SequenceTest
--- benötigt RandomTopology
+-- benÃ¶tigt RandomTopology
 --    EFA2.Test.SolverTest
 --    EFA2.Test.IsVarTest
 

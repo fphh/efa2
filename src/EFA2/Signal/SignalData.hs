@@ -1,5 +1,12 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, MultiParamTypeClasses, FunctionalDependencies, FlexibleInstances, UndecidableInstances, FlexibleContexts, StandaloneDeriving, ExistentialQuantification, KindSignatures, ScopedTypeVariables, TemplateHaskell #-}
-
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module EFA2.Signal.SignalData where
 
@@ -7,6 +14,9 @@ module EFA2.Signal.SignalData where
 import qualified Data.Vector.Unboxed as UV
 
 import EFA2.Signal.TH
+          (Val, mkNewtypes, mkInstances,
+           Sample, fromSample, toSample, samples, sampleNames)
+
 
 -- type Val = Double
 type Vec = UV.Vector

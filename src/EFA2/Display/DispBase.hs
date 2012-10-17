@@ -16,7 +16,7 @@ import Text.Printf (printf)
 
 -- | Central Place for basic Unit & Display settings
 
--- | Variables for DisplayUnit and Display Scale 
+-- | Variables for DisplayUnit and Display Scale
 data DisplayUnit = Unit_kWh | Unit_Joule | Unit_kJoule | Unit_kW | Unit_Percent | Unit_None | Unit_Sec | Unit_UT
 newtype UnitScale = UnitScale Rational
 
@@ -32,8 +32,8 @@ instance Show DisplayUnit where
   show Unit_Sec = "s"
   show Unit_UT = "UT"
 
--- | get display scale per Unit 
-getUnitScale :: DisplayUnit -> UnitScale  
+-- | get display scale per Unit
+getUnitScale :: DisplayUnit -> UnitScale
 getUnitScale Unit_kWh = UnitScale (1/1000/3600)
 getUnitScale Unit_Joule = UnitScale 1
 getUnitScale Unit_kJoule = UnitScale (1/1000)
@@ -74,14 +74,14 @@ xdisp :: Disp a => a -> String
 xdisp x = disp getDefaultFormat (UnitScale 1) x
 
 -- | Display Class using Format & Scale
-class Disp a where 
+class Disp a where
   disp :: DisplayFormat -> UnitScale -> a -> String
 
 instance Disp Double where
   disp _ _ 0 = "null"
   disp (DisplayFormat f) (UnitScale s) x = printf f $ x * fromRational s
 
-instance Disp Bool where 
+instance Disp Bool where
   disp (DisplayFormat f) _ x = printf f (show x)
 
 instance Disp Int where
