@@ -144,14 +144,17 @@ printGraph g recordNum tshow nshow eshow = do
   return ()
 -}
 
+heart :: Char
+heart = '\9829'
+
 drawTopologyX' :: Topology -> IO ()
 drawTopologyX' topo =
-   printGraph (unTopology topo) noRecord (const "♥") show show
+   printGraph (unTopology topo) noRecord (const [heart]) show show
 
 
 drawTopologySimple :: Topology -> IO ()
 drawTopologySimple topo =
-   printGraph (unTopology topo) noRecord (const "♥") nshow eshow
+   printGraph (unTopology topo) noRecord (const [heart]) nshow eshow
   where nshow (n, l) = show n ++ " - " ++ show (nodetypeNLabel l)
         eshow _ = ""
 
@@ -237,7 +240,7 @@ instance One Double where one = 1
 
 instance DrawTopologyList Double where
    formatStContList (Just ys) = concatMap (printf "%.6f    ") ys
-   formatStContList Nothing = "♥"
+   formatStContList Nothing = [heart]
    formatDTimeList = show
 
 instance DrawDeltaTopologyList Double where
@@ -245,10 +248,10 @@ instance DrawDeltaTopologyList Double where
      where -- f (x, Just ys) = showDelta x ++ " = [ " ++ L.intercalate ", " (map showEqTerm ys) ++ " ]"
            f (x, ys) =
               showDelta x ++ " = " ++
-              maybe "♥" (concatMap (("\n"++) . show)) ys
+              maybe [heart] (concatMap (("\n"++) . show)) ys
 
            formatStCont (Just ys) = "[ " ++ L.intercalate ", " (map show ys) ++ " ]"
-           formatStCont Nothing = "♥"
+           formatStCont Nothing = [heart]
 
            tshow dt dtimeIdx = show $ dt `safeLookup` dtimeIdx
 
@@ -261,7 +264,7 @@ instance (Integral a) => One (Ratio a) where one = 1
 
 instance (Integral a, Show a) => DrawTopologyList (Ratio a) where
    formatStContList (Just ys) = unwords $ map show ys
-   formatStContList Nothing = "♥"
+   formatStContList Nothing = [heart]
    formatDTimeList = show
 
 instance DrawTopologyList Char where
@@ -332,7 +335,7 @@ instance One Char where one = error "Char 1"
 
 instance ToIndex a => DrawTopologyList (Term a) where
    formatStContList (Just ys) = showEqTerms ys
-   formatStContList Nothing = "♥"
+   formatStContList Nothing = [heart]
    formatDTimeList = showEqTerms
 
 instance ToIndex a => DrawDeltaTopologyList (Term a) where
@@ -340,9 +343,9 @@ instance ToIndex a => DrawDeltaTopologyList (Term a) where
            where -- f (x, Just ys) = showDelta x ++ " = [ " ++ L.intercalate ", " (map showEqTerm ys) ++ " ]"
                  f (x, Just ys) = showDelta x ++ " = \n" ++ showEqTerms ys
 
-                 f (x, Nothing) = showDelta x ++ " = ♥"
+                 f (x, Nothing) = showDelta x ++ " = " ++ [heart]
                  formatStCont (Just ys) = "[ " ++ L.intercalate ", " (map showEqTerm ys) ++ " ]"
-                 formatStCont Nothing = "♥"
+                 formatStCont Nothing = [heart]
 
                  showDelta (ELine u v) = "de_" ++ show u ++ "_" ++ show v
                  showDelta (XLine u v) = "dx_" ++ show u ++ "_" ++ show v
@@ -447,7 +450,7 @@ formatStContSignal ::
    (DispApp s, TDisp t, SDisplay v, D.Storage v d, Ord d, Disp d) =>
    Maybe (TC s t (Data v d)) -> String
 formatStContSignal (Just ys) = sdisp ys
-formatStContSignal Nothing = "♥"
+formatStContSignal Nothing = [heart]
 
 instance
    (SDisplay v, D.Storage v a, Disp a, Ord a) =>
