@@ -10,7 +10,7 @@ import qualified EFA2.Signal.Base as Base
 import EFA2.Signal.Signal (toConst, (.+), (.*))
 import EFA2.Signal.Typ (Typ, UT)
 
-import EFA2.Solver.Equation (AbsAssign(GivenIdx, (::=)), EqTerm, Term(..))
+import EFA2.Solver.Equation (AbsAssign(GivenIdx, (::=)), EqTerm, Term(..), showIdx)
 import EFA2.Interpreter.InTerm (InTerm(..), InEquation(..))
 import EFA2.Interpreter.Env as Env
 import EFA2.Utils.Utils (safeLookup)
@@ -59,7 +59,7 @@ eqTermToInTerm term =
 
 showInTerm :: (Show a) => InTerm a -> String
 
-showInTerm (InIndex x) = showInIndex x
+showInTerm (InIndex x) = showIdx x
 showInTerm (InConst x) = show (fromRational x :: Double) -- take 20 (show x) ++ "..."
 showInTerm (InGiven xs) = "given " ++ show xs
 showInTerm (InFunc _) = "given <function>"
@@ -76,26 +76,8 @@ showInTerm (InAdd s t) = "(" ++ showInTerm s ++ " + " ++ showInTerm t ++ ")"
 showInTerm (InMult s t) = showInTerm s ++ " * " ++ showInTerm t
 
 
-showInIndex :: Env.Index -> String
-showInIndex idx =
-   case idx of
-      Energy (EnergyIdx s r x y) -> "E:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
-      DEnergy (DEnergyIdx s r x y) -> "dE:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
-      Power (PowerIdx s r x y) -> "P:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
-      DPower (DPowerIdx s r x y) -> "dP:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
-      FEta (FEtaIdx s r x y) -> "n:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "."  ++ show y
-                          --      ++ show y ++ "(" ++ showInIndex p ++ ")"
-      DEta (DEtaIdx s r x y) -> "dn:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
-      DTime (DTimeIdx s r) -> "dt:" ++ show s ++ "." ++ show r
-      X (XIdx s r x y) -> "x:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
-      DX (DXIdx s r x y) -> "dx:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
-
-      Var (VarIdx s r x y) -> "v:" ++ show s ++ "." ++ show r ++ ":" ++ show x ++ "." ++ show y
-      Store (StorageIdx s r n) -> "s:" ++ show s ++ "." ++ show r ++ ":" ++ show n
-
-
 showInEquation :: (Show a) => InEquation a -> String
-showInEquation (InEqual s t) = showInIndex s ++ " = " ++ showInTerm t
+showInEquation (InEqual s t) = showIdx s ++ " = " ++ showInTerm t
 
 showInTerms :: (Show a) => [InTerm a] -> String
 showInTerms ts = L.intercalate "\n" $ map showInTerm ts
