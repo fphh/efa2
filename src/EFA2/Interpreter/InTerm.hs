@@ -1,13 +1,11 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE TypeFamilies #-}
 
 module EFA2.Interpreter.InTerm where
 
 import EFA2.Interpreter.Env as Env
 import qualified EFA2.Signal.Base as B
 
-import Data.Maybe (mapMaybe)
+-- import Data.Maybe (mapMaybe)
 
 
 data InEquation a =
@@ -18,11 +16,11 @@ data InTerm a = InIndex Env.Index
               | InConst Rational
               | InGiven a
               | InFunc (a -> a)
-
+{-
               | InFEdge (InTerm a) (InTerm a)
               | InBEdge (InTerm a) (InTerm a)
               | InNEdge (InTerm a) (InTerm a)
-
+-}
               | InMinus (InTerm a)
               | InRecip (InTerm a)
               | InAdd (InTerm a) (InTerm a)
@@ -52,9 +50,11 @@ instance B.DArith0 (InTerm a) where
 
 
 toAbsEq :: InTerm a -> InTerm a
+{-
 toAbsEq (InFEdge p n) = InMult p n
 toAbsEq (InBEdge p n) = InMult p (InRecip n)
 toAbsEq (InNEdge p0 p1) = InMult p0 (InRecip p1)
+-}
 toAbsEq (InMinus x) = InMinus (toAbsEq x)
 toAbsEq (InRecip x) = InRecip (toAbsEq x)
 toAbsEq (InAdd x y) = InAdd (toAbsEq x) (toAbsEq y)
@@ -72,6 +72,7 @@ toAbsEquations = map toAbsEquation
 
 
 
+{-
 mkDiffEq :: Int -> InEquation a -> Maybe (InEquation a)
 
 mkDiffEq rec (InEqual (Power (PowerIdx s'' _ f'' t''))
@@ -97,3 +98,4 @@ mkDiffEq _ _ = Nothing
 
 mkDiffEquations :: Int -> [InEquation a] -> [InEquation a]
 mkDiffEquations rec ts = mapMaybe (mkDiffEq rec) ts
+-}

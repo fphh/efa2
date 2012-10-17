@@ -11,13 +11,13 @@ import qualified EFA2.Signal.Base as Base
 import EFA2.Signal.Signal (toConst, (.+), (.*))
 import EFA2.Signal.Typ (Typ, UT)
 
-import EFA2.Solver.Equation (Assign(GivenIdx, (::=)), EqTerm, Term(..))
+import EFA2.Solver.Equation (AbsAssign(GivenIdx, (::=)), EqTerm, Term(..))
 import EFA2.Interpreter.InTerm (InTerm(..), InEquation(..))
 import EFA2.Interpreter.Env as Env
 import EFA2.Utils.Utils (safeLookup)
 
 
-eqToInTerm :: Show a => Envs a -> Assign -> InEquation a
+eqToInTerm :: Show a => Envs a -> AbsAssign -> InEquation a
 eqToInTerm envs (GivenIdx t) =
    InEqual t $
    case t of
@@ -49,10 +49,11 @@ eqTermToInTerm term =
 
       (Recip x) -> InRecip (eqTermToInTerm x)
       (Minus x) -> InMinus (eqTermToInTerm x)
-      (FEdge x y) -> InFEdge (eqTermToInTerm x) (eqTermToInTerm y)
-      (BEdge x y) -> InBEdge (eqTermToInTerm x) (eqTermToInTerm y)
-      (NEdge x y) -> InNEdge (eqTermToInTerm x) (eqTermToInTerm y)
-
+{-
+      (FEdge x y) -> InFEdge (InIndex x) (InIndex y)
+      (BEdge x y) -> InBEdge (InIndex x) (InIndex y)
+      (NEdge x y) -> InNEdge (InIndex x) (InIndex y)
+-}
       (x :+ y) -> InAdd (eqTermToInTerm x) (eqTermToInTerm y)
       (x :* y) -> InMult (eqTermToInTerm x) (eqTermToInTerm y)
 
@@ -66,9 +67,11 @@ showInTerm (InFunc _) = "given <function>"
 showInTerm (InMinus t) = "-(" ++ showInTerm t ++ ")"
 showInTerm (InRecip t) = "1/(" ++ showInTerm t ++ ")"
 
+{-
 showInTerm (InFEdge s t) = "f(" ++ showInTerm s ++ ", " ++ showInTerm t ++ ")"
 showInTerm (InBEdge s t) = "b(" ++ showInTerm s ++ ", " ++ showInTerm t ++ ")"
 showInTerm (InNEdge s t) = "n(" ++ showInTerm s ++ ", " ++ showInTerm t ++ ")"
+-}
 
 showInTerm (InAdd s t) = "(" ++ showInTerm s ++ " + " ++ showInTerm t ++ ")"
 showInTerm (InMult s t) = showInTerm s ++ " * " ++ showInTerm t
@@ -178,7 +181,7 @@ interpretEq len envs eq =
         envs'' = envs' { fetaMap = M.insert (FEtaIdx s r t f) (mkEtaFunc (reversePts pts)) (fetaMap envs') }
         p1 = powerMap envs M.! pidx1
         p2 = powerMap envs M.! pidx2
-        pts = Pt p2 (p2 ./ p1) 
+        pts = Pt p2 (p2 ./ p1)
 -}
 --      (InEqual (DEta idx) rhs) -> envs { detaMap = insert len idx envs rhs (detaMap envs) }
       (InEqual (DEta idx) (InFunc deta)) -> envs { detaMap = M.insert idx deta (detaMap envs) }

@@ -2,7 +2,8 @@
 module EFA2.Solver.DirEquation where
 
 import EFA2.Solver.Equation
-          (EqTerm, Equation(Given, (:=)), Assign(GivenIdx),
+          (EqTerm, Equation(Given),
+           Assign(AbsAssign), AbsAssign(GivenIdx),
            mkVarSetEq, transformEq)
 import EFA2.Solver.IsVar (isGiven)
 import qualified EFA2.Interpreter.Env as Env
@@ -50,5 +51,5 @@ directEquations isVar ts = mapMaybe givenToAssign ts ++ res
         res = map (uncurry transformEq) (zip unknown feqs)
         givenToAssign equ =
            case equ of
-              Given v -> Just $ GivenIdx v
-              _ := _ -> Nothing
+              Given v -> Just $ AbsAssign $ GivenIdx v
+              _ -> Nothing

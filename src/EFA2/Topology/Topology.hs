@@ -1,8 +1,9 @@
 module EFA2.Topology.Topology where
 
 import EFA2.Solver.Equation
-          (Equation(..), EqTerm, Term(..), MkIdxC, mkVar, add, give)
-import EFA2.Interpreter.Env
+          (Equation(..), Term(..),
+           MkIdxC, mkVar, mkTerm, add, give, (!=))
+import EFA2.Interpreter.Env as Env
 import EFA2.Topology.TopologyData
 import EFA2.Utils.Graph
 import EFA2.Utils.Utils
@@ -252,10 +253,13 @@ mkEdgeEq recordNum topo = map f (map unlabelEdge origEs)
 -}
 -- | Takes section, record, and a graph.
 mkEdgeEq :: Int -> Topology -> [Equation]
-mkEdgeEq recordNum topo = map f (map unlabelEdge origEs)
+mkEdgeEq recordNum topo = map (f . unlabelEdge) origEs
   where origEs = L.filter (\(_, _, l) -> not $ isIntersectionEdge l) (labEdges topo)
-        f (x, y) = mkVar (PowerIdx ys recordNum y x) :=
-                         FEdge (mkVar (PowerIdx xs recordNum x y)) (mkVar (FEtaIdx xs recordNum x y))
+        f (x, y) =
+           EqEdge
+              (mkVar $ PowerIdx xs recordNum x y)
+              (mkVar $ FEtaIdx xs recordNum x y)
+              (mkVar $ PowerIdx ys recordNum y x)
           where NLabel xs _ _ = fromJust $ lab topo x
                 NLabel ys _ _ = fromJust $ lab topo y
 
@@ -272,39 +276,39 @@ mkEq recordNum (ins, (nid, NLabel sec _ _), outs) =
       (Nothing, Just (_, oeqss)) -> oeqss
       (Just (_, ieqss), Nothing) -> ieqss
       (Just (ieqs, ieqss), Just (oeqs, oeqss)) ->
-         oeqss ++ ieqss ++ oeqs ++ ieqs ++ [vosum := visum]
+         oeqss ++ ieqss ++ oeqs ++ ieqs ++ [vosum != visum]
 
   where -- ATTENTION (not very safe): We need this variable in mkInStoreEq again!!!
-        visum = mkVar (VarIdx sec recordNum InSum nid)
+        visum = mkVar $ VarIdx sec recordNum InSum nid
         -- ATTENTION (not very safe): We need this variable in mkOutStoreEq again!!!
-        vosum = mkVar (VarIdx sec recordNum OutSum nid)
+        vosum = mkVar $ VarIdx sec recordNum OutSum nid
 
         -- For section and record, we focus on the current node n.
         makeVar mkIdx (nid', _) = mkVar $ mkIdx sec recordNum nid nid'
         makeVars xs = (fmap (makeVar XIdx) xs, fmap (makeVar PowerIdx) xs)
 
 makeIns, makeOuts ::
-   EqTerm ->
-   (NonEmpty.T [] EqTerm, NonEmpty.T [] EqTerm) ->
+   Env.Index ->
+   (NonEmpty.T [] Env.Index, NonEmpty.T [] Env.Index) ->
    ([Equation], [Equation])
 
 makeIns visum (xis, pis) =
-   let  visumeq = [visum := add pis]
+   let  visumeq = [visum != add (fmap mkTerm pis)]
 
-        ieqs = NonEmpty.zipWith (\p x -> p := FEdge visum x) pis xis
+        ieqs = NonEmpty.zipWith (EqEdge visum) xis pis
 
         ieqs' = []
 
-   in   (NonEmpty.flatten ieqs, (Const 1.0 := add xis) : ieqs' ++ visumeq)
+   in   (NonEmpty.flatten ieqs, (Const 1.0 := add (fmap mkTerm xis)) : ieqs' ++ visumeq)
 
 makeOuts vosum (xos, pos) =
-   let  vosumeq = [vosum := add pos]
+   let  vosumeq = [vosum != add (fmap mkTerm pos)]
 
-        oeqs = NonEmpty.zipWith (\p x -> p := FEdge vosum x) pos xos
+        oeqs = NonEmpty.zipWith (EqEdge vosum) xos pos
 
         oeqs' = []
 
-   in   (NonEmpty.flatten oeqs, (Const 1.0 := add xos) : oeqs' ++ vosumeq)
+   in   (NonEmpty.flatten oeqs, (Const 1.0 := add (fmap mkTerm xos)) : oeqs' ++ vosumeq)
 
 {-
         ieqs' | length pis > 1 = [] -- zipWith (g visum) xis pis
