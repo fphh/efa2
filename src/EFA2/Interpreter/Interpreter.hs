@@ -11,7 +11,7 @@ import EFA2.Signal.Signal (toConst, (.+), (.*))
 import EFA2.Signal.Typ (Typ, UT)
 
 import EFA2.Solver.Equation (AbsAssign(GivenIdx, (::=)), EqTerm, Term(..), showIdx)
-import EFA2.Interpreter.InTerm (InTerm(..), InEquation(..))
+import EFA2.Interpreter.InTerm (InTerm(..), InRhs(..), InEquation(..))
 import EFA2.Interpreter.Env as Env
 import EFA2.Utils.Utils (safeLookup)
 
@@ -38,7 +38,7 @@ eqToInTerm envs (GivenIdx t) =
       Store idx -> InGiven (storageMap envs `safeLookup` idx)
 
 eqToInTerm _envs (x ::= y) =
-   InEqual x (eqTermToInTerm y)
+   InEqual x $ InTerm $ eqTermToInTerm y
 
 eqTermToInTerm :: EqTerm -> InTerm a
 eqTermToInTerm term =
@@ -61,8 +61,6 @@ showInTerm :: (Show a) => InTerm a -> String
 
 showInTerm (InIndex x) = showIdx x
 showInTerm (InConst x) = show (fromRational x :: Double) -- take 20 (show x) ++ "..."
-showInTerm (InGiven xs) = "given " ++ show xs
-showInTerm (InFunc _) = "given <function>"
 showInTerm (InMinus t) = "-(" ++ showInTerm t ++ ")"
 showInTerm (InRecip t) = "1/(" ++ showInTerm t ++ ")"
 
@@ -75,9 +73,13 @@ showInTerm (InNEdge s t) = "n(" ++ showInTerm s ++ ", " ++ showInTerm t ++ ")"
 showInTerm (InAdd s t) = "(" ++ showInTerm s ++ " + " ++ showInTerm t ++ ")"
 showInTerm (InMult s t) = showInTerm s ++ " * " ++ showInTerm t
 
+showInRhs :: (Show a) => InRhs a -> String
+showInRhs (InTerm t) = showInTerm t
+showInRhs (InGiven xs) = "given " ++ show xs
+showInRhs (InFunc _) = "given <function>"
 
 showInEquation :: (Show a) => InEquation a -> String
-showInEquation (InEqual s t) = showIdx s ++ " = " ++ showInTerm t
+showInEquation (InEqual s t) = showIdx s ++ " = " ++ showInRhs t
 
 showInTerms :: (Show a) => [InTerm a] -> String
 showInTerms ts = L.intercalate "\n" $ map showInTerm ts
@@ -92,16 +94,28 @@ interpretRhs ::
     Fractional a, Base.DArith0 a, Base.BSum a, Base.BProd a a) =>
    Int ->
    Envs (Signal s c a) ->
+   InRhs (Signal s c a) ->
+   Signal s c a
+interpretRhs len envs rhs =
+   case rhs of
+      InGiven x -> x
+      InTerm term -> interpretTerm len envs term
+
+interpretTerm ::
+   (Show v, v ~ D.Apply c a, D.ZipWith c,
+    D.Storage c a, S.Const s c, S.Arith s s ~ s,
+    Fractional a, Base.DArith0 a, Base.BSum a, Base.BProd a a) =>
+   Int ->
+   Envs (Signal s c a) ->
    InTerm (Signal s c a) ->
    Signal s c a
-interpretRhs len envs term = interpretRhs' term
+interpretTerm len envs term = interpretRhs' term
   where --interpretRhs' (InConst x) = S.fromVal len [x] -- Wichtig für delta Rechnung?
         --interpretRhs' (InGiven xs) = S.map (:[]) xs
         --interpretRhs' (InConst x) = S.fromVal len x
         interpretRhs' (InConst x) = toConst len $ fromRational x
         --interpretRhs' (InConst x) = toScalar (InConst x)
 
-        interpretRhs' (InGiven xs) = xs
         interpretRhs' (InIndex i) =
            case i of
               Energy idx -> energyMap envs `safeLookup` idx
@@ -126,7 +140,6 @@ interpretRhs len envs term = interpretRhs' term
         interpretRhs' (InRecip t) = S.rec (interpretRhs' t)
         interpretRhs' (InAdd s t) = (interpretRhs' s) .+ (interpretRhs' t)
         interpretRhs' (InMult s t) = (interpretRhs' s) .* (interpretRhs' t)
-        interpretRhs' t = error ("interpretRhs': " ++ show t)
 
 insert ::
    (Ord k, Show v, v ~ D.Apply c a, D.ZipWith c,
@@ -135,7 +148,7 @@ insert ::
    Int ->
    k ->
    Envs (Signal s c a) ->
-   InTerm (Signal s c a) ->
+   InRhs (Signal s c a) ->
    M.Map k (Signal s c a) ->
    M.Map k (Signal s c a)
 insert len idx envs rhs m = M.insert idx (interpretRhs len envs rhs) m
@@ -194,4 +207,4 @@ interpretWithEnv ::
    Envs (Signal s c a) ->
    InTerm (Signal s c a) ->
    Signal s c a
-interpretWithEnv len envs t = interpretRhs len envs t
+interpretWithEnv len envs t = interpretTerm len envs t

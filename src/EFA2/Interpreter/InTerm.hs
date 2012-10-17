@@ -9,13 +9,17 @@ import qualified EFA2.Signal.Base as B
 
 
 data InEquation a =
-        InEqual Env.Index (InTerm a) deriving (Eq, Ord, Show)
+        InEqual Env.Index (InRhs a) deriving (Eq, Ord, Show)
+
+data InRhs a =
+          InTerm (InTerm a)
+        | InGiven a
+        | InFunc (a -> a)
+            deriving (Eq, Ord, Show)
 
 data InTerm a = InIndex Env.Index
 
               | InConst Rational
-              | InGiven a
-              | InFunc (a -> a)
 {-
               | InFEdge (InTerm a) (InTerm a)
               | InBEdge (InTerm a) (InTerm a)
