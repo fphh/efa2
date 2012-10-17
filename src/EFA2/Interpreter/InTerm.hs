@@ -49,29 +49,6 @@ instance B.DArith0 (InTerm a) where
          rec = InRecip
 
 
-toAbsEq :: InTerm a -> InTerm a
-{-
-toAbsEq (InFEdge p n) = InMult p n
-toAbsEq (InBEdge p n) = InMult p (InRecip n)
-toAbsEq (InNEdge p0 p1) = InMult p0 (InRecip p1)
--}
-toAbsEq (InMinus x) = InMinus (toAbsEq x)
-toAbsEq (InRecip x) = InRecip (toAbsEq x)
-toAbsEq (InAdd x y) = InAdd (toAbsEq x) (toAbsEq y)
-toAbsEq (InMult x y) = InMult (toAbsEq x) (toAbsEq y)
-toAbsEq t = t
-
-toAbsEqs :: [InTerm a] -> [InTerm a]
-toAbsEqs = map toAbsEq
-
-toAbsEquation :: InEquation a -> InEquation a
-toAbsEquation (InEqual x y) = InEqual x (toAbsEq y)
-
-toAbsEquations :: [InEquation a] -> [InEquation a]
-toAbsEquations = map toAbsEquation
-
-
-
 {-
 mkDiffEq :: Int -> InEquation a -> Maybe (InEquation a)
 
