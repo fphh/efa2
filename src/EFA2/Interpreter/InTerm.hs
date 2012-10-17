@@ -3,7 +3,8 @@
 module EFA2.Interpreter.InTerm where
 
 import EFA2.Interpreter.Env as Env
-import qualified EFA2.Signal.Base as B
+import EFA2.Solver.Equation (EqTerm)
+-- import qualified EFA2.Signal.Base as B
 
 -- import Data.Maybe (mapMaybe)
 
@@ -12,26 +13,13 @@ data InEquation a =
         InEqual Env.Index (InRhs a) deriving (Eq, Ord, Show)
 
 data InRhs a =
-          InTerm (InTerm a)
+          InTerm EqTerm
         | InGiven a
         | InFunc (a -> a)
             deriving (Eq, Ord, Show)
 
-data InTerm a = InIndex Env.Index
 
-              | InConst Rational
-{-
-              | InFEdge (InTerm a) (InTerm a)
-              | InBEdge (InTerm a) (InTerm a)
-              | InNEdge (InTerm a) (InTerm a)
--}
-              | InMinus (InTerm a)
-              | InRecip (InTerm a)
-              | InAdd (InTerm a) (InTerm a)
-              | InMult (InTerm a) (InTerm a) deriving (Eq, Ord, Show)
-
-
--- What for?
+{- What for?
 instance (Show a, Eq a) => Num (InTerm a) where
          (+) = InAdd
          (*) = InMult
@@ -51,6 +39,7 @@ instance B.BSum (InTerm a) where
 instance B.DArith0 (InTerm a) where
          neg = InMinus
          rec = InRecip
+-}
 
 
 {-

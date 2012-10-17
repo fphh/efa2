@@ -3,8 +3,6 @@ module EFA2.Display.DrawGraph where
 import EFA2.Solver.Equation
           (Term(..), ToIndex, showEqTerm, showEqTerms,
            LatexString, unLatexString)
-import EFA2.Interpreter.Interpreter (showInTerm, showInTerms)
-import EFA2.Interpreter.InTerm (InTerm)
 import EFA2.Interpreter.Env
 import EFA2.Topology.TopologyData
 import EFA2.Topology.EfaGraph (EfaGraph)
@@ -328,13 +326,6 @@ drawAbsTopologyLatex f content tshow (Topology g) (Envs rec0 e _de _p _dp fn _dn
         mkLst _ _ = [ (ErrorLine "Problem with record number", Nothing) ]
 
 
-
-instance (Eq val, Show val) => One (InTerm val) where one = 1
-
-instance (Eq val, Show val) => DrawTopologyList (InTerm val) where
-   formatStContList (Just ys) = concatMap showInTerm ys
-   formatStContList Nothing = "♥"
-   formatDTimeList = showInTerms
 
 instance One (Term a) where one = error "EqTerm 1"
 instance One Char where one = error "Char 1"

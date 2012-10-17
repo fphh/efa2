@@ -17,9 +17,7 @@ import EFA2.Solver.EquationOrder (order)
 import EFA2.Solver.IsVar (maybeStaticVar)
 
 import EFA2.Interpreter.Interpreter
-          (eqToInTerm, eqTermToInTerm,
-           interpretFromScratch, showInTerm, interpretWithEnv)
-import EFA2.Interpreter.InTerm (InTerm)
+          (eqToInTerm, interpretFromScratch, interpretWithEnv)
 import EFA2.Interpreter.Env
 import EFA2.Interpreter.Arith (Val)
 
@@ -136,9 +134,6 @@ instance MyShow Sc where
 instance MyShow DPowerIdx where
          myshow (DPowerIdx s r f t) = "dP_" ++ show s ++ "." ++ show r ++ "_" ++ show f ++ "." ++ show t
 
-instance (Show a) => MyShow (InTerm a) where
-         myshow = showInTerm
-
 instance MyShow EqTerm where
          myshow = showEqTerm
 
@@ -165,13 +160,13 @@ main = do
       dpsym = dpowerMap sym
       dpsymEq = M.map pushMult dpsym
 
-      dpsymIn = M.map eqTermToInTerm dpsym
+      dpsymIn = dpsym
       dpsyminterp = M.map (interpretWithEnv 1 num) dpsymIn
 
       detailsSym = M.map additiveTerms dpsymEq
 
       details :: M.Map DPowerIdx [Val]
-      details = M.map (map (S.fromScalar . interpretWithEnv 1 num . eqTermToInTerm)) detailsSym
+      details = M.map (map (S.fromScalar . interpretWithEnv 1 num)) detailsSym
 
       sumdetails = M.map sum details
 

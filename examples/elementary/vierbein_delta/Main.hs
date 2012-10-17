@@ -15,9 +15,7 @@ import EFA2.Solver.Equation
 import EFA2.Solver.EquationOrder (order)
 
 import EFA2.Interpreter.Interpreter
-          (eqToInTerm, eqTermToInTerm,
-           interpretFromScratch, showInTerm, interpretWithEnv)
-import EFA2.Interpreter.InTerm (InTerm)
+          (eqToInTerm, interpretFromScratch, interpretWithEnv)
 import EFA2.Interpreter.Env
 import EFA2.Interpreter.Arith (Val)
 
@@ -88,9 +86,6 @@ instance MyShow Sc where
 instance MyShow DPowerIdx where
          myshow (DPowerIdx s r f t) = "dP_" ++ show s ++ "." ++ show r ++ "_" ++ show f ++ "." ++ show t
 
-instance (Show a) => MyShow (InTerm a) where
-         myshow = showInTerm
-
 instance MyShow EqTerm where
          myshow = showEqTerm
 
@@ -117,7 +112,7 @@ main = do
       denv = deltaEnv graph
       control = dpowerMap denv
 
-      symSimpleNum = mapEqTermEnv (map (fromScalar . interpretWithEnv 1 (envUnion [num0, num1]) . eqTermToInTerm)) symSimpleDelta
+      symSimpleNum = mapEqTermEnv (map (fromScalar . interpretWithEnv 1 (envUnion [num0, num1]))) symSimpleDelta
 
 
   putStrLn "\n== Control delta environment (later env - former env, computed independently) =="

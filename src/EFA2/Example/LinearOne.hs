@@ -6,14 +6,13 @@ import qualified Data.Map as M
 import EFA2.Topology.Topology
 import EFA2.Topology.TopologyData
 
-import EFA2.Interpreter.InTerm
 import EFA2.Interpreter.Env
+import EFA2.Solver.Equation
 import EFA2.Example.SymSig
 import qualified EFA2.Signal.Signal as S
 import EFA2.Signal.Signal (UTFSig, TC, Scalar, toScalar)
 import EFA2.Signal.Typ
 import EFA2.Signal.Data (Data, Nil)
-import EFA2.Signal.Base
 
 
 dtimes0 :: DTimeMap UTFSig
@@ -31,33 +30,33 @@ sigs1 = M.fromList [ (EnergyIdx 0 1 0 1, S.fromList [3.3]) ]
 
 -------------------------
 
-type InTermScalar = TC Scalar (Typ UT UT UT) (Data Nil (InTerm Val))
+type InTermScalar = TC Scalar (Typ UT UT UT) (Data Nil EqTerm)
 
 dtimes0s :: DTimeMap InTermScalar
-dtimes0s = M.fromList [ (DTimeIdx 0 0, toScalar (InConst 20.0)) ]
+dtimes0s = M.fromList [ (DTimeIdx 0 0, toScalar (Const 20.0)) ]
 
 sigs0s :: EnergyMap InTermScalar
-sigs0s = M.fromList [ (EnergyIdx 0 0 0 1, toScalar (InConst 3.0)) ]
+sigs0s = M.fromList [ (EnergyIdx 0 0 0 1, toScalar (Const 3.0)) ]
 
 dtimes1s :: DTimeMap InTermScalar
-dtimes1s = M.fromList [ (DTimeIdx 0 1, toScalar (InConst 20.0)) ]
+dtimes1s = M.fromList [ (DTimeIdx 0 1, toScalar (Const 20.0)) ]
 
 sigs1s :: EnergyMap InTermScalar
-sigs1s = M.fromList [ (EnergyIdx 0 1 0 1, toScalar (InConst 3.3)) ]
+sigs1s = M.fromList [ (EnergyIdx 0 1 0 1, toScalar (Const 3.3)) ]
 
 -------------------------
 
 dtimes0ss :: DTimeMap InTermScalar
-dtimes0ss = M.fromList [ (DTimeIdx 0 0, toScalar $ InIndex $ DTime $ DTimeIdx 0 0) ]
+dtimes0ss = M.fromList [ (DTimeIdx 0 0, toScalar $ Atom $ DTime $ DTimeIdx 0 0) ]
 
 sigs0ss :: EnergyMap InTermScalar
-sigs0ss = M.fromList [ (EnergyIdx 0 0 1 0, toScalar $ InIndex $ Energy $ EnergyIdx 0 0 1 0) ]
+sigs0ss = M.fromList [ (EnergyIdx 0 0 1 0, toScalar $ Atom $ Energy $ EnergyIdx 0 0 1 0) ]
 
 dtimes1ss :: DTimeMap InTermScalar
-dtimes1ss = M.fromList [ (DTimeIdx 0 1, toScalar $ InIndex $ DTime $ DTimeIdx 0 1) ]
+dtimes1ss = M.fromList [ (DTimeIdx 0 1, toScalar $ Atom $ DTime $ DTimeIdx 0 1) ]
 
 sigs1ss :: EnergyMap InTermScalar
-sigs1ss = M.fromList [ (EnergyIdx 0 1 0 1, toScalar $ InIndex $ Energy $ EnergyIdx 0 1 0 1) ]
+sigs1ss = M.fromList [ (EnergyIdx 0 1 0 1, toScalar $ Atom $ Energy $ EnergyIdx 0 1 0 1) ]
 
 
 linearOne :: TheGraph InTermScalar
