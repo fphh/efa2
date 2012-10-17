@@ -1,4 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeFamilies #-}
 module EFA2.Interpreter.Interpreter where
 
@@ -106,7 +105,7 @@ showInTerms ts = L.intercalate "\n" $ map showInTerm ts
 type Signal s c a = S.TC s (Typ UT UT UT) (D.Data c a)
 
 interpretRhs ::
-   (Show (D.Apply c a), D.ZipWith c,
+   (Show v, v ~ D.Apply c a, D.ZipWith c,
     D.Storage c a, S.Const s c, S.Arith s s ~ s,
     Fractional a, Base.DArith0 a, Base.BSum a, Base.BProd a a) =>
    Int ->
@@ -148,7 +147,7 @@ interpretRhs len envs term = interpretRhs' term
         interpretRhs' t = error ("interpretRhs': " ++ show t)
 
 insert ::
-   (Ord k, Show (D.Apply c a), D.ZipWith c,
+   (Ord k, Show v, v ~ D.Apply c a, D.ZipWith c,
     D.Storage c a, S.Const s c, S.Arith s s ~ s,
     Fractional a, Base.DArith0 a, Base.BSum a, Base.BProd a a) =>
    Int ->
@@ -161,7 +160,7 @@ insert len idx envs rhs m = M.insert idx (interpretRhs len envs rhs) m
 
 
 interpretEq ::
-   (Show (D.Apply c a), D.ZipWith c,
+   (Show v, v ~ D.Apply c a, D.ZipWith c,
     D.Storage c a, S.Const s c, S.Arith s s ~ s,
     Fractional a, Base.DArith0 a, Base.BSum a, Base.BProd a a) =>
    Int ->
@@ -195,7 +194,7 @@ interpretEq len envs eq =
 
 
 interpretFromScratch ::
-   (Show (D.Apply c a), D.ZipWith c,
+   (Show v, v ~ D.Apply c a, D.ZipWith c,
     D.Storage c a, S.Const s c, S.Arith s s ~ s,
     Fractional a, Base.DArith0 a, Base.BSum a, Base.BProd a a) =>
    RecordNumber ->
@@ -206,7 +205,7 @@ interpretFromScratch rec len ts = (L.foldl' (interpretEq len) emptyEnv ts) { rec
 
 
 interpretWithEnv ::
-   (Show (D.Apply c a), D.ZipWith c,
+   (Show v, v ~ D.Apply c a, D.ZipWith c,
     D.Storage c a, S.Const s c, S.Arith s s ~ s,
     Fractional a, Base.DArith0 a, Base.BSum a, Base.BProd a a) =>
    Int ->
