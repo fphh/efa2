@@ -69,7 +69,10 @@ intersectionEdgeColour = Color [RGB 200 0 0]
 
 -- coding
 noRecord :: RecordNumber
-noRecord = SingleRecord (-99)
+noRecord = SingleRecord noRecordInt
+
+noRecordInt :: Int
+noRecordInt = -99
 
 
 mkDotGraph ::
@@ -79,14 +82,17 @@ mkDotGraph ::
    (LNode NLabel -> String) ->
    (LEdge ELabel -> String) ->
    DotGraph Int
-mkDotGraph g (MixedRecord _) timef nshow eshow = mkDotGraph g noRecord timef nshow eshow
-mkDotGraph g (NoRecord) timef nshow eshow = mkDotGraph g noRecord timef nshow eshow
-mkDotGraph g (SingleRecord recordNum) timef nshow eshow =
+mkDotGraph g r timef nshow eshow =
   DotGraph { strictGraph = False,
              directedGraph = True,
              graphID = Just (Int 1),
              graphStatements = stmts }
-  where interEs = L.filter (\(_, _, e) -> isIntersectionEdge e) $ labEdges g
+  where recordNum =
+           case r of
+              MixedRecord _ -> noRecordInt
+              NoRecord -> noRecordInt
+              SingleRecord n -> n
+        interEs = L.filter (\(_, _, e) -> isIntersectionEdge e) $ labEdges g
         g' = delEdges (map (\(x, y, _) -> (x, y)) interEs) g
         cs =
            HTL.removeEach $
