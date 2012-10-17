@@ -106,13 +106,13 @@ showInTerms ts = L.intercalate "\n" $ map showInTerm ts
 type Signal s c a = S.TC s (Typ UT UT UT) (D.Data c a)
 
 interpretRhs ::
-   (Show (D.Apply c2 a), D.ZipWith c2,
-    D.Storage c2 a, S.Const s2 c2, S.Arith s2 s2 ~ s2,
+   (Show (D.Apply c a), D.ZipWith c,
+    D.Storage c a, S.Const s c, S.Arith s s ~ s,
     Fractional a, Base.DArith0 a, Base.BSum a, Base.BProd a a) =>
    Int ->
-   Envs (Signal s2 c2 a) ->
-   InTerm (Signal s2 c2 a) ->
-   Signal s2 c2 a
+   Envs (Signal s c a) ->
+   InTerm (Signal s c a) ->
+   Signal s c a
 interpretRhs len envs term = interpretRhs' term
   where --interpretRhs' (InConst x) = S.fromVal len [x] -- Wichtig für delta Rechnung?
         --interpretRhs' (InGiven xs) = S.map (:[]) xs
@@ -148,26 +148,26 @@ interpretRhs len envs term = interpretRhs' term
         interpretRhs' t = error ("interpretRhs': " ++ show t)
 
 insert ::
-   (Ord k, Show (D.Apply c2 a), D.ZipWith c2,
-    D.Storage c2 a, S.Const s2 c2, S.Arith s2 s2 ~ s2,
+   (Ord k, Show (D.Apply c a), D.ZipWith c,
+    D.Storage c a, S.Const s c, S.Arith s s ~ s,
     Fractional a, Base.DArith0 a, Base.BSum a, Base.BProd a a) =>
    Int ->
    k ->
-   Envs (Signal s2 c2 a) ->
-   InTerm (Signal s2 c2 a) ->
-   M.Map k (Signal s2 c2 a) ->
-   M.Map k (Signal s2 c2 a)
+   Envs (Signal s c a) ->
+   InTerm (Signal s c a) ->
+   M.Map k (Signal s c a) ->
+   M.Map k (Signal s c a)
 insert len idx envs rhs m = M.insert idx (interpretRhs len envs rhs) m
 
 
 interpretEq ::
-   (Show (D.Apply c2 a), D.ZipWith c2,
-    D.Storage c2 a, S.Const s2 c2, S.Arith s2 s2 ~ s2,
+   (Show (D.Apply c a), D.ZipWith c,
+    D.Storage c a, S.Const s c, S.Arith s s ~ s,
     Fractional a, Base.DArith0 a, Base.BSum a, Base.BProd a a) =>
    Int ->
-   Envs (Signal s2 c2 a) ->
-   InEquation (Signal s2 c2 a) ->
-   Envs (Signal s2 c2 a)
+   Envs (Signal s c a) ->
+   InEquation (Signal s c a) ->
+   Envs (Signal s c a)
 interpretEq len envs eq =
    case eq of
       (InEqual (Energy idx) rhs) -> envs { energyMap = insert len idx envs rhs (energyMap envs) }
@@ -195,22 +195,22 @@ interpretEq len envs eq =
 
 
 interpretFromScratch ::
-   (Show (D.Apply c2 a), D.ZipWith c2,
-    D.Storage c2 a, S.Const s2 c2, S.Arith s2 s2 ~ s2,
+   (Show (D.Apply c a), D.ZipWith c,
+    D.Storage c a, S.Const s c, S.Arith s s ~ s,
     Fractional a, Base.DArith0 a, Base.BSum a, Base.BProd a a) =>
    RecordNumber ->
    Int ->
-   [InEquation (Signal s2 c2 a)] ->
-   Envs (Signal s2 c2 a)
+   [InEquation (Signal s c a)] ->
+   Envs (Signal s c a)
 interpretFromScratch rec len ts = (L.foldl' (interpretEq len) emptyEnv ts) { recordNumber = rec }
 
 
 interpretWithEnv ::
-   (Show (D.Apply c2 a), D.ZipWith c2,
-    D.Storage c2 a, S.Const s2 c2, S.Arith s2 s2 ~ s2,
+   (Show (D.Apply c a), D.ZipWith c,
+    D.Storage c a, S.Const s c, S.Arith s s ~ s,
     Fractional a, Base.DArith0 a, Base.BSum a, Base.BProd a a) =>
    Int ->
-   Envs (Signal s2 c2 a) ->
-   InTerm (Signal s2 c2 a) ->
-   Signal s2 c2 a
+   Envs (Signal s c a) ->
+   InTerm (Signal s c a) ->
+   Signal s c a
 interpretWithEnv len envs t = interpretRhs len envs t
