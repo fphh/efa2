@@ -488,10 +488,23 @@ instance (SV.Singleton v2, All v1) => All (v2 :> v1) where
    any f xd = withNestedData (SV.any (any f . subData xd)) xd
 
 
-equalBy ::
-   (SV.Walker v, SV.Storage v a, SV.Storage v b) =>
-   (a -> b -> Bool) -> Data (v :> Nil) a -> Data (v :> Nil) b -> Bool
-equalBy f (Data x) (Data y) = SV.equalBy f x y
+----------------------------------------------------------
+-- Equal
+
+class Equal c where
+   equalBy ::
+      (Storage c a, Storage c b) =>
+      (a -> b -> Bool) -> Data c a -> Data c b -> Bool
+
+instance Equal Nil where
+   equalBy f (Data x) (Data y) = f x y
+
+instance (SV.Walker v2, Equal v1) => Equal (v2 :> v1) where
+   equalBy f xd yd =
+      SV.equalBy
+         (\xc yc -> equalBy f (subData xd xc) (subData yd yc))
+         `withNestedData` xd
+         `withNestedData` yd
 
 
 ----------------------------------------------------------
