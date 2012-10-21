@@ -134,6 +134,29 @@ nestedData ::
 nestedData x = writeNested (Data x)
 
 
+{-
+Allow 'Data' to be also instance of classes from "EFA2.Signal.Vector".
+-}
+instance Storage c a => SV.Storage (Data c) a where
+   data Constraints (Data c) a = Storage c a => DataConstraints
+   constraints _ = DataConstraints
+
+infixl 0 `readData`
+
+readData ::
+   (Storage c a => Data c a -> b) ->
+   (SV.Storage (Data c) a => Data c a -> b)
+readData f x = case SV.constraints x of DataConstraints -> f x
+
+writeData ::
+   (Storage c a => Data c a) ->
+   (SV.Storage (Data c) a => Data c a)
+writeData x =
+   let z = case SV.constraints z of DataConstraints -> x
+   in  z
+
+
+
 ----------------------------------------------------------
 -- | mapping
 
@@ -161,6 +184,13 @@ instance (SV.Walker v2, Map v1) => Map (v2 :> v1) where
    map f xd =
       nestedData
          (withNestedData (SV.map (getData . map f . subData xd)) xd)
+
+
+instance (Fold c, Equal c, Map c) => SV.Walker (Data c) where
+   map f x = writeData (map f `readData` x)
+   foldr f b as = foldr f b `readData` as
+   foldl f b as = foldl f b `readData` as
+   equalBy f as bs = equalBy f `readData` as `readData` bs
 
 
 ----------------------------------------------------------
@@ -200,6 +230,11 @@ instance
          SV.zipWith (\xc yc -> getData $ zipWith f (subData xd xc) (subData yd yc))
             `withNestedData` xd
             `withNestedData` yd)
+
+
+instance ZipWith c => SV.Zipper (Data c) where
+   zipWith f x y =
+      writeData (zipWith f `readData` x `readData` y)
 
 
 {- |
@@ -680,6 +715,10 @@ instance SV.Length v => Size1 v Nil where
 instance (SV.Walker v3, Size1 v2 v1) => Size1 v3 (v2 :> v1) where
    size1 xd =
       withNestedData (vecFoldlMap (+) 0 (size1 . subData xd)) xd
+
+
+instance Size c => SV.Length (Data c) where
+   length = readData size
 
 
 ----------------------------------------------------------
