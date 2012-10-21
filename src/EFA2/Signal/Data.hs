@@ -121,6 +121,8 @@ writeNested x =
    in  z
 
 
+infixl 0 `withNestedData`
+
 withNestedData ::
    ((SV.Storage v2 (Apply v1 a), Storage v1 a) => v2 (Apply v1 a) -> b) ->
    (Storage (v2 :> v1) a => Data (v2 :> v1) a -> b)
@@ -195,9 +197,9 @@ instance
       ZipWith (v2 :> v1) where
    zipWith f xd yd =
       nestedData (
-      withNestedData (
-      withNestedData (
-         SV.zipWith (\xc yc -> getData $ zipWith f (subData xd xc) (subData yd yc))) xd) yd)
+         SV.zipWith (\xc yc -> getData $ zipWith f (subData xd xc) (subData yd yc))
+            `withNestedData` xd
+            `withNestedData` yd)
 
 
 {- |
@@ -229,9 +231,11 @@ instance
       ZipWithFill (v2 :> v0) (v2 :> v1) where
    zipWithFill f xd yd =
       nestedData (
-      withNestedData (
-      withNestedData (
-         SV.zipWith (\xc yc -> getData $ zipWithFill f (subData xd xc) (subData yd yc))) xd) yd)
+         SV.zipWith
+            (\xc yc ->
+               getData $ zipWithFill f (subData xd xc) (subData yd yc))
+            `withNestedData` xd
+            `withNestedData` yd)
 
 
 ----------------------------------------------------------
@@ -252,8 +256,9 @@ instance (Map v) => TensorProduct Nil v where
 instance (SV.Walker v1, TensorProduct v2 v) => TensorProduct (v1 :> v2) v where
    type Stack (v1 :> v2) v = v1 :> Stack v2 v
    tensorProduct f xd yd =
-      nestedData (withNestedData
-         (SV.map (\xc -> getData $ tensorProduct f (subData xd xc) yd)) xd)
+      nestedData
+         (SV.map (\xc -> getData $ tensorProduct f (subData xd xc) yd)
+             `withNestedData` xd)
 
 
 ----------------------------------------------------------
@@ -354,7 +359,7 @@ instance
    (SV.Singleton v2, v1 ~ Zip v1 v1) =>
       Append (v2 :> v1) (v2 :> v1) where
    append xd yd =
-      Data $ withNestedData (withNestedData SV.append xd) yd
+      Data (SV.append `withNestedData` xd `withNestedData` yd)
 
 instance (SV.Singleton v1) => Append (v1 :> Nil) Nil where
    append xd (Data y) =
