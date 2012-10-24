@@ -581,4 +581,4 @@ wait :: Async a -> IO a
 wait (Async m) = readMVar m
 
 drawAll :: [IO a] -> IO ()
-drawAll = mapM_ (async >=> wait)
+drawAll = mapM async >=> mapM_ wait
