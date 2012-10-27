@@ -202,11 +202,11 @@ data Line = ELine Int Int
           | NLine Int Int
           | ErrorLine String deriving (Eq, Ord)
 
-instance Show Line where
-         show (ELine u v) = "e_" ++ show u ++ "_" ++ show v
-         show (XLine u v) = "x_" ++ show u ++ "_" ++ show v
-         show (NLine u v) = "n_" ++ show u ++ "_" ++ show v
-         show (ErrorLine str) = str
+showLine :: Line -> String
+showLine (ELine u v) = "e_" ++ show u ++ "_" ++ show v
+showLine (XLine u v) = "x_" ++ show u ++ "_" ++ show v
+showLine (NLine u v) = "n_" ++ show u ++ "_" ++ show v
+showLine (ErrorLine str) = str
 
 showLineDelta :: Line -> String
 showLineDelta (ELine u v) = "de_" ++ show u ++ "_" ++ show v
@@ -298,7 +298,7 @@ class One a => DrawTopologyList a where
 
    formatAssignList :: DrawTopologyList a => (Line, Maybe [a]) -> String
    formatAssignList (x, ys) =
-      show x ++ " = " ++ formatStContList ys
+      showLine x ++ " = " ++ formatStContList ys
 
 class DrawTopologyList a => DrawDeltaTopologyList a where
    drawDeltaTopologyList :: Topology -> Interp.Envs [a] -> IO ()
@@ -468,7 +468,7 @@ formatAssignSignal ::
    (DispApp s, TDisp t, SDisplay v, D.Storage v d, Ord d, Disp d) =>
    (Line, Maybe (TC s t (Data v d))) -> String
 formatAssignSignal (ErrorLine str, _) = str
-formatAssignSignal (x, tc) = show x ++ " = " ++ formatStContSignal tc
+formatAssignSignal (x, tc) = showLine x ++ " = " ++ formatStContSignal tc
 
 formatStContSignal ::
    (DispApp s, TDisp t, SDisplay v, D.Storage v d, Ord d, Disp d) =>
