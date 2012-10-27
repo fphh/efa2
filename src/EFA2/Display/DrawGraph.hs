@@ -21,8 +21,6 @@ import EFA2.Display.DispBase (Disp)
 import EFA2.Signal.Signal (TC, DispApp)
 import EFA2.Signal.Data (Data)
 
-import EFA2.Utils.Utils (safeLookup)
-
 import Data.GraphViz (
           runGraphvizCanvas,
           GraphvizCanvas(Xlib),
@@ -300,10 +298,7 @@ class DrawTopology a => DrawDeltaTopology a where
 
 class DrawTopologyList a where
    envTopologyList :: Interp.Envs [a] -> Env [a]
-   envTopologyList =
-      envAbsTopology formatAssignList formatStContList
-         (checkedLookupFormat "drawTopologyList" formatList)
-         [defaultEtaArg]
+   envTopologyList = envAbsTopologyList [defaultEtaArg]
 
    formatStContList :: Maybe [a] -> String
    formatList :: [a] -> String
@@ -311,6 +306,12 @@ class DrawTopologyList a where
    formatAssignList :: DrawTopologyList a => (Line, Maybe [a]) -> String
    formatAssignList (x, ys) =
       showLine x ++ " = " ++ formatStContList ys
+
+   showListNode ::
+      RecordNumber -> StorageMap [a] ->
+      (Maybe [a] -> String) ->
+      (Int, NLabel) -> String
+   showListNode = showNode
 
    {-
    We have to get rid of this because it is undefined for many instances.
@@ -351,35 +352,14 @@ instance DrawTopologyList Char where
    defaultEtaArg = error "Char 1"
 
 instance DrawTopologyList LatexString where
-   envTopologyList =
-      envAbsTopologyLatex formatAssignList formatStContList
-         (\dt dtimeIdx -> formatList $ dt `safeLookup` dtimeIdx)
-         [defaultEtaArg]
-
    formatAssignList (x, ys) = showLineLatex x ++ " = " ++ formatStContList ys
 
    formatStContList (Just ys) = unLatexString (head ys)
    formatStContList Nothing = "+"
    formatList = unLatexString . head
+   showListNode = showLatexNode
    defaultEtaArg = error "LatexString 1"
 
-
-envAbsTopologyLatex ::
-   ((Line, Maybe [LatexString]) -> String) ->
-   (Maybe [LatexString] -> String) ->
-   (DTimeMap [LatexString] -> DTimeIdx -> String) ->
-   [LatexString] ->
-   Interp.Envs [LatexString] ->
-   Env [LatexString]
-envAbsTopologyLatex formatAssign content tshow etaArg
-      (Interp.Envs rec e _de _p _dp fn _dn dt x _dx _v st) =
-   Env rec
-      (makeLookup EnergyIdx e)
-      (makeLookup XIdx x)
-      (makeLookup FEtaIdx $ fmap ($etaArg) fn)
-      formatAssign
-      (tshow dt)
-      (showLatexNode rec st content)
 
 showLatexNode ::
    RecordNumber -> StorageMap [LatexString] ->
@@ -409,21 +389,19 @@ instance ToIndex a => DrawDeltaTopologyList (Term a) where
    formatElement = showEqTerm
 
 
-envAbsTopology ::
-   ((Line, Maybe a) -> String) ->
-   (Maybe a -> String) ->
-   (DTimeMap a -> DTimeIdx -> String) ->
-   a -> Interp.Envs a ->
-   Env a
-envAbsTopology formatAssign content tshow etaArg
+envAbsTopologyList ::
+   (DrawTopologyList a) =>
+   [a] -> Interp.Envs [a] -> Env [a]
+envAbsTopologyList etaArg
       (Interp.Envs rec e _de _p _dp fn _dn dt x _dx _v st) =
    Env rec
       (makeLookup EnergyIdx e)
       (makeLookup XIdx x)
       (makeLookup FEtaIdx $ fmap ($etaArg) fn)
-      formatAssign
-      (tshow dt)
-      (showNode rec st content)
+      formatAssignList
+      (checkedLookupFormat "envAbsTopologyList" formatList dt)
+      (showListNode rec st formatStContList)
+
 
 showNode ::
    RecordNumber -> StorageMap a ->
