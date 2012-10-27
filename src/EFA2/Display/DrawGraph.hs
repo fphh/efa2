@@ -291,11 +291,6 @@ drawDeltaTopology ::
 drawDeltaTopology topo = draw topo . envDeltaTopology
 
 
--- provide a mock for '1' also for non-Num types
--- FIXME: this is still a hack because 'one' is often undefined
-class One a where
-  one :: a
-
 class DrawTopology a where
    envTopology :: Interp.Envs a -> Env a
 
@@ -303,12 +298,12 @@ class DrawTopology a => DrawDeltaTopology a where
    envDeltaTopology :: Interp.Envs a -> Env a
 
 
-class One a => DrawTopologyList a where
+class DrawTopologyList a where
    envTopologyList :: Interp.Envs [a] -> Env [a]
    envTopologyList =
       envAbsTopology formatAssignList formatStContList
          (checkedLookupFormat "drawTopologyList" formatDTimeList)
-         [one]
+         [defaultEtaArg]
 
    formatStContList :: Maybe [a] -> String
    formatDTimeList :: [a] -> String
@@ -316,6 +311,11 @@ class One a => DrawTopologyList a where
    formatAssignList :: DrawTopologyList a => (Line, Maybe [a]) -> String
    formatAssignList (x, ys) =
       showLine x ++ " = " ++ formatStContList ys
+
+   {-
+   We have to get rid of this because it is undefined for many instances.
+   -}
+   defaultEtaArg :: a
 
 class DrawTopologyList a => DrawDeltaTopologyList a where
    envDeltaTopologyList :: Interp.Envs [a] -> Env [a]
@@ -327,16 +327,15 @@ instance DrawDeltaTopologyList a => DrawDeltaTopology [a] where
    envDeltaTopology = envDeltaTopologyList
 
 
-instance One Double where one = 1
-
 instance DrawTopologyList Double where
    formatStContList (Just ys) = concatMap (printf "%.6f    ") ys
    formatStContList Nothing = [heart]
    formatDTimeList = show
+   defaultEtaArg = 1
 
 instance DrawDeltaTopologyList Double where
    envDeltaTopologyList =
-      envDeltaTopology_ f formatStCont tshow [one]
+      envDeltaTopology_ f formatStCont tshow [defaultEtaArg]
      where f (x, ys) =
               showLineDelta x ++ " = " ++
               maybe [heart] (concatMap (("\n"++) . show)) ys
@@ -346,45 +345,45 @@ instance DrawDeltaTopologyList Double where
 
            tshow dt dtimeIdx = show $ dt `safeLookup` dtimeIdx
 
-instance (Integral a) => One (Ratio a) where one = 1
-
 instance (Integral a, Show a) => DrawTopologyList (Ratio a) where
    formatStContList (Just ys) = unwords $ map show ys
    formatStContList Nothing = [heart]
    formatDTimeList = show
+   defaultEtaArg = 1
 
 instance DrawTopologyList Char where
    formatStContList (Just ys) = ys
    formatStContList Nothing = "+"
    formatDTimeList = id
-
-instance One LatexString where
-   one = error "LatexString 1"
+   defaultEtaArg = error "Char 1"
 
 instance DrawTopologyList LatexString where
    envTopologyList =
       envAbsTopologyLatex formatAssignList formatStContList
          (\dt dtimeIdx -> formatDTimeList $ dt `safeLookup` dtimeIdx)
+         [defaultEtaArg]
 
    formatAssignList (x, ys) = showLineLatex x ++ " = " ++ formatStContList ys
 
    formatStContList (Just ys) = unLatexString (head ys)
    formatStContList Nothing = "+"
    formatDTimeList = unLatexString . head
+   defaultEtaArg = error "LatexString 1"
 
 
 envAbsTopologyLatex ::
    ((Line, Maybe [LatexString]) -> String) ->
    (Maybe [LatexString] -> String) ->
    (DTimeMap [LatexString] -> DTimeIdx -> String) ->
+   [LatexString] ->
    Interp.Envs [LatexString] ->
    Env [LatexString]
-envAbsTopologyLatex formatAssign content tshow
+envAbsTopologyLatex formatAssign content tshow etaArg
       (Interp.Envs rec e _de _p _dp fn _dn dt x _dx _v st) =
    Env rec
       (makeLookup EnergyIdx e)
       (makeLookup XIdx x)
-      (makeLookup FEtaIdx $ fmap ($[one]) fn)
+      (makeLookup FEtaIdx $ fmap ($etaArg) fn)
       formatAssign
       (tshow dt)
       (showLatexNode rec st content)
@@ -406,19 +405,17 @@ showLatexNode rn st content (num, NLabel sec nid ty) =
              _ -> ""
 
 
-instance One (Term a) where one = error "EqTerm 1"
-instance One Char where one = error "Char 1"
-
 instance ToIndex a => DrawTopologyList (Term a) where
    formatStContList (Just ys) = showEqTerms ys
    formatStContList Nothing = [heart]
    formatDTimeList = showEqTerms
+   defaultEtaArg = error "EqTerm 1"
 
 instance ToIndex a => DrawDeltaTopologyList (Term a) where
    envDeltaTopologyList =
       envDeltaTopology_ f formatStCont
          (checkedLookupFormat "drawDeltaTopologyList" showEqTerms)
-         [one]
+         [defaultEtaArg]
            where -- f (x, Just ys) = showLineDelta x ++ " = [ " ++ L.intercalate ", " (map showEqTerm ys) ++ " ]"
                  f (x, Just ys) = showLineDelta x ++ " = \n" ++ showEqTerms ys
 
