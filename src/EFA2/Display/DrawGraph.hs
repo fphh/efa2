@@ -227,8 +227,9 @@ data Env a =
       lookupEnergy_ :: Int -> Int -> Int -> Int -> Maybe a,
       lookupX_      :: Int -> Int -> Int -> Int -> Maybe a,
       lookupEta_    :: Int -> Int -> Int -> Int -> Maybe a,
+      formatAssign_ :: (Line, Maybe a) -> String,
       showTime :: DTimeIdx -> String,
-      showNode_ :: (Maybe a -> String) -> (Int, NLabel) -> String
+      showNode_ :: (Int, NLabel) -> String
    }
 
 makeLookup ::
@@ -240,15 +241,13 @@ makeLookup makeIdx mp =
 
 
 draw ::
-   ((Line, Maybe a) -> String) ->
-   (Maybe a -> String) ->
    Topology' NLabel ELabel ->
    Env a ->
    IO ()
-draw f content (Topology g)
-   (Env rn lookupEnergy lookupX lookupEta tshow nshow) =
-      printGraph g (Just rn) tshow (nshow content) eshow
-  where eshow = L.intercalate "\n" . map f . mkLst
+draw (Topology g)
+   (Env rn lookupEnergy lookupX lookupEta formatAssign tshow nshow) =
+      printGraph g (Just rn) tshow nshow eshow
+  where eshow = L.intercalate "\n" . map formatAssign . mkLst
 
         mkLst (uid, vid, l) =
            case rn of
@@ -289,8 +288,8 @@ class DrawTopology a => DrawDeltaTopology a where
 class One a => DrawTopologyList a where
    drawTopologyList :: Topology -> Interp.Envs [a] -> IO ()
    drawTopologyList topo env =
-      draw formatAssignList formatStContList topo
-         (envAbsTopology
+      draw topo
+         (envAbsTopology formatAssignList formatStContList
             (\dt k ->
                case M.lookup k dt of
                   Nothing ->
@@ -325,10 +324,9 @@ instance DrawTopologyList Double where
 
 instance DrawDeltaTopologyList Double where
    drawDeltaTopologyList topo env =
-      draw f formatStCont
-         topo (envDeltaTopology tshow env [one])
-     where -- f (x, Just ys) = showLineDelta x ++ " = [ " ++ L.intercalate ", " (map showEqTerm ys) ++ " ]"
-           f (x, ys) =
+      draw topo
+         (envDeltaTopology f formatStCont tshow env [one])
+     where f (x, ys) =
               showLineDelta x ++ " = " ++
               maybe [heart] (concatMap (("\n"++) . show)) ys
 
@@ -354,8 +352,9 @@ instance One LatexString where
 
 instance DrawTopologyList LatexString where
    drawTopologyList topo env =
-      draw formatAssignList formatStContList topo
-         (envAbsTopologyLatex (\dt dtimeIdx -> formatDTimeList $ dt `safeLookup` dtimeIdx) env)
+      draw topo
+         (envAbsTopologyLatex formatAssignList formatStContList
+            (\dt dtimeIdx -> formatDTimeList $ dt `safeLookup` dtimeIdx) env)
 
    formatAssignList (x, ys) = showLineLatex x ++ " = " ++ formatStContList ys
 
@@ -365,16 +364,20 @@ instance DrawTopologyList LatexString where
 
 
 envAbsTopologyLatex ::
+   ((Line, Maybe [LatexString]) -> String) ->
+   (Maybe [LatexString] -> String) ->
    (DTimeMap [LatexString] -> DTimeIdx -> String) ->
    Interp.Envs [LatexString] ->
    Env [LatexString]
-envAbsTopologyLatex tshow (Interp.Envs rec e _de _p _dp fn _dn dt x _dx _v st) =
+envAbsTopologyLatex formatAssign content tshow
+      (Interp.Envs rec e _de _p _dp fn _dn dt x _dx _v st) =
    Env rec
       (makeLookup EnergyIdx e)
       (makeLookup XIdx x)
       (makeLookup FEtaIdx $ fmap ($[one]) fn)
+      formatAssign
       (tshow dt)
-      (showLatexNode rec st)
+      (showLatexNode rec st content)
 
 showLatexNode ::
    RecordNumber -> StorageMap [LatexString] ->
@@ -403,7 +406,8 @@ instance ToIndex a => DrawTopologyList (Term a) where
 
 instance ToIndex a => DrawDeltaTopologyList (Term a) where
    drawDeltaTopologyList topo env =
-      draw f formatStCont topo (envDeltaTopology tshow env [one])
+      draw topo
+         (envDeltaTopology f formatStCont tshow env [one])
            where -- f (x, Just ys) = showLineDelta x ++ " = [ " ++ L.intercalate ", " (map showEqTerm ys) ++ " ]"
                  f (x, Just ys) = showLineDelta x ++ " = \n" ++ showEqTerms ys
 
@@ -421,16 +425,20 @@ instance ToIndex a => DrawDeltaTopologyList (Term a) where
 
 
 envAbsTopology ::
+   ((Line, Maybe a) -> String) ->
+   (Maybe a -> String) ->
    (DTimeMap a -> DTimeIdx -> String) ->
    Interp.Envs a -> a ->
    Env a
-envAbsTopology tshow (Interp.Envs rec e _de _p _dp fn _dn dt x _dx _v st) etaArg =
+envAbsTopology formatAssign content tshow
+      (Interp.Envs rec e _de _p _dp fn _dn dt x _dx _v st) etaArg =
    Env rec
       (makeLookup EnergyIdx e)
       (makeLookup XIdx x)
       (makeLookup FEtaIdx $ fmap ($etaArg) fn)
+      formatAssign
       (tshow dt)
-      (showNode rec st)
+      (showNode rec st content)
 
 showNode ::
    RecordNumber -> StorageMap a ->
@@ -449,16 +457,20 @@ showNode rn st content (num, NLabel sec nid ty) =
 
 
 envDeltaTopology ::
+   ((Line, Maybe a) -> String) ->
+   (Maybe a -> String) ->
    (DTimeMap a -> DTimeIdx -> String) ->
    Interp.Envs a -> a ->
    Env a
-envDeltaTopology tshow (Interp.Envs rec _e de _p _dp _fn dn dt _x dx _v st) etaArg =
+envDeltaTopology formatAssign content tshow
+      (Interp.Envs rec _e de _p _dp _fn dn dt _x dx _v st) etaArg =
    Env rec
       (makeLookup DEnergyIdx de)
       (makeLookup DXIdx dx)
       (makeLookup DEtaIdx $ fmap ($etaArg) dn)
+      formatAssign
       (tshow dt)
-      (showNode rec st)
+      (showNode rec st content)
 
 
 class DrawTopologySignal a where
@@ -481,9 +493,7 @@ instance
    (SDisplay v, D.Storage v a, Disp a, Ord a) =>
       DrawTopologySignal (Data v a) where
    drawTopologySignal topo env =
-      draw
-         formatAssignSignal formatStContSignal topo
-         (envAbsTopologySignal env)
+      draw topo (envAbsTopologySignal env)
 
 instance
    (DispApp s, TDisp t, DrawTopologySignal a) =>
@@ -499,9 +509,7 @@ instance
    (SDisplay v, D.Storage v a, Disp a, Ord a) =>
       DrawDeltaTopologySignal (Data v a) where
          drawDeltaTopologySignal topo env =
-            draw f formatStContSignal topo (envDeltaTopologySignal env)
-           where -- f (x, Just ys) = showLineDelta x ++ " = [ " ++ L.intercalate ", " (map showEqTerm ys) ++ " ]"
-                 f (x, ys) = showLineDelta x ++ " = " ++ formatStContSignal ys
+            draw topo (envDeltaTopologySignal env)
 
 instance
    (DispApp s, TDisp t, DrawDeltaTopologySignal a) =>
@@ -520,8 +528,9 @@ envAbsTopologySignal (Interp.Envs rec0 e _de _p _dp fn _dn dt x _dx _v st) =
       (makeLookup FEtaIdx $
        M.intersectionWith ($) fn $
        M.mapKeys (\(EnergyIdx sec rec uid vid) -> FEtaIdx sec rec uid vid) e)
+      formatAssignSignal
       (\dtimeIdx -> formatStContSignal $ M.lookup dtimeIdx dt)
-      (showNode rec0 st)
+      (showNode rec0 st formatStContSignal)
 
 envDeltaTopologySignal ::
    (DispApp s, TDisp t, SDisplay v, D.Storage v d, Ord d, Disp d) =>
@@ -534,8 +543,9 @@ envDeltaTopologySignal (Interp.Envs rec0 _e de _p _dp _fn dn dt _x dx _v st) =
       (makeLookup DEtaIdx $
        M.intersectionWith ($) dn $
        M.mapKeys (\(DEnergyIdx sec rec uid vid) -> DEtaIdx sec rec uid vid) de)
+      (\ (x, ys) -> showLineDelta x ++ " = " ++ formatStContSignal ys)
       (\dtimeIdx -> formatStContSignal $ M.lookup dtimeIdx dt)
-      (showNode rec0 st)
+      (showNode rec0 st formatStContSignal)
 
 
 -------------------------------------------------------------------------------------------
