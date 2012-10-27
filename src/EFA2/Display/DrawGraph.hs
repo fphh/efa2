@@ -216,7 +216,7 @@ data Env eidx xidx nidx a =
       makeXIdx      :: Int -> Int -> Int -> Int -> xidx, xMap :: M.Map xidx a,
       makeEtaIdx    :: Int -> Int -> Int -> Int -> nidx, nMap :: M.Map nidx a,
       dtimeMap :: DTimeMap a,
-      storageMap :: StorageMap a
+      showNode_ :: (Maybe a -> String) -> (Int, NLabel) -> String
    }
 
 
@@ -307,7 +307,7 @@ instance DrawTopologyList LatexString where
    drawTopologyList topo env =
       drawAbsTopologyLatex formatAssignList formatStContList
          (\dt dtimeIdx -> formatDTimeList $ dt `safeLookup` dtimeIdx)
-         topo (envAbsTopology env [one])
+         topo (envAbsTopologyLatex env)
 
    formatAssignList (x, ys) = showX x ++ " = " ++ formatStContList ys
       where
@@ -321,6 +321,29 @@ instance DrawTopologyList LatexString where
    formatDTimeList = unLatexString . head
 
 
+envAbsTopologyLatex ::
+   Interp.Envs [LatexString] ->
+   Env EnergyIdx XIdx FEtaIdx [LatexString]
+envAbsTopologyLatex (Interp.Envs rec e _de _p _dp fn _dn dt x _dx _v st) =
+   Env rec EnergyIdx e XIdx x FEtaIdx (fmap ($[one]) fn) dt $
+      showLatexNode rec st
+
+showLatexNode ::
+   RecordNumber -> StorageMap [LatexString] ->
+   (Maybe [LatexString] -> String) ->
+   (Int, NLabel) -> String
+showLatexNode rn st content (num, NLabel sec nid ty) =
+   "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\\\\ " ++
+   "Type: " ++ show ty ++
+      let showStorage n =
+             case rn of
+                SingleRecord rec -> content (M.lookup (StorageIdx sec rec n) st)
+                _ -> "Problem with record number: " ++ show rn
+      in  case ty of
+             InitStorage n -> "\\\\ Content: " ++ showStorage n
+             Storage n -> "\\\\ Content: " ++ showStorage n
+             _ -> ""
+
 drawAbsTopologyLatex ::
    ((Line, Maybe a) -> String) ->
    (Maybe a -> String) ->
@@ -329,18 +352,9 @@ drawAbsTopologyLatex ::
    Env EnergyIdx XIdx FEtaIdx a ->
    IO ()
 drawAbsTopologyLatex f content tshow (Topology g)
-   (Env rec0 energyIdx e xIdx x etaIdx fn dt st) =
-      printGraph g (Just rec0) (tshow dt) nshow eshow
+   (Env rec0 energyIdx e xIdx x etaIdx fn dt nshow) =
+      printGraph g (Just rec0) (tshow dt) (nshow content) eshow
   where eshow ps = L.intercalate "\n " $ map f $ mkLst rec0 ps
-        nshow (num, NLabel sec nid ty) =
-          "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\\\\ " ++
-          "Type: " ++ show ty ++ stContent rec0 ty
-            where stContent (SingleRecord rec) (InitStorage n)
-                    = "\\\\ Content: " ++ content (M.lookup (StorageIdx sec rec n) st)
-                  stContent (SingleRecord rec) (Storage n) = "\\\\ Content: " ++ content (M.lookup (StorageIdx sec rec n) st)
-                  stContent rn (InitStorage _n) = "\\\\ Content: Problem with record number: " ++ show rn
-                  stContent rn (Storage _n) = "\\\\ Content: Problem with record number: " ++ show rn
-                  stContent _ _ = ""
 
         mkLst (SingleRecord rec) (uid, vid, l)
           | isOriginalEdge l = [ (ELine uid vid, M.lookup (energyIdx usec rec uid vid) e),
@@ -393,9 +407,23 @@ instance ToIndex a => DrawDeltaTopologyList (Term a) where
 envAbsTopology ::
    Interp.Envs a -> a ->
    Env EnergyIdx XIdx FEtaIdx a
-envAbsTopology (Interp.Envs rec0 e _de _p _dp fn _dn dt x _dx _v st) etaArg =
-   Env rec0 EnergyIdx e XIdx x FEtaIdx (fmap ($etaArg) fn) dt st
+envAbsTopology (Interp.Envs rec e _de _p _dp fn _dn dt x _dx _v st) etaArg =
+   Env rec EnergyIdx e XIdx x FEtaIdx (fmap ($etaArg) fn) dt $ showNode rec st
 
+showNode ::
+   RecordNumber -> StorageMap a ->
+   (Maybe a -> String) -> (Int, NLabel) -> String
+showNode rn st content (num, NLabel sec nid ty) =
+   "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\n" ++
+   "Type: " ++ show ty ++
+      let showStorage n =
+             case rn of
+                SingleRecord rec -> content (M.lookup (StorageIdx sec rec n) st)
+                _ -> "Problem with record number: " ++ show rn
+      in  case ty of
+             InitStorage n -> "\nContent: " ++ showStorage n
+             Storage n -> "\nContent: " ++ showStorage n
+             _ -> ""
 
 drawAbsTopology ::
    ((Line, Maybe a) -> String) ->
@@ -405,18 +433,9 @@ drawAbsTopology ::
    Env EnergyIdx XIdx FEtaIdx a ->
    IO ()
 drawAbsTopology f content tshow (Topology g)
-   (Env rec0 energyIdx e xIdx x etaIdx fn dt st) =
-      printGraph g (Just rec0) (tshow dt) nshow eshow
+   (Env rec0 energyIdx e xIdx x etaIdx fn dt nshow) =
+      printGraph g (Just rec0) (tshow dt) (nshow content) eshow
   where eshow ps = L.intercalate "\n" $ map f $ mkLst rec0 ps
-        nshow (num, NLabel sec nid ty) =
-          "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\n" ++
-          "Type: " ++ show ty ++ stContent rec0 ty
-            where stContent (SingleRecord rec) (InitStorage n)
-                    = "\nContent: " ++ content (M.lookup (StorageIdx sec rec n) st)
-                  stContent (SingleRecord rec) (Storage n) = "\nContent: " ++ content (M.lookup (StorageIdx sec rec n) st)
-                  stContent rn (InitStorage _n) = "\nContent: Problem with record number: " ++ show rn
-                  stContent rn (Storage _n) = "\nContent: Problem with record number: " ++ show rn
-                  stContent _ _ = ""
 
         mkLst (SingleRecord rec) (uid, vid, l)
           | isOriginalEdge l = [ (ELine uid vid, M.lookup (energyIdx usec rec uid vid) e),
@@ -438,8 +457,9 @@ drawAbsTopology f content tshow (Topology g)
 envDeltaTopology ::
    Interp.Envs a -> a ->
    Env DEnergyIdx DXIdx DEtaIdx a
-envDeltaTopology (Interp.Envs rec0 _e de _p _dp _fn dn dt _x dx _v st) etaArg =
-   Env rec0 DEnergyIdx de DXIdx dx DEtaIdx (fmap ($etaArg) dn) dt st
+envDeltaTopology (Interp.Envs rec _e de _p _dp _fn dn dt _x dx _v st) etaArg =
+   Env rec DEnergyIdx de DXIdx dx DEtaIdx (fmap ($etaArg) dn) dt $
+      showNode rec st
 
 
 drawDeltaTopology' ::
@@ -450,18 +470,9 @@ drawDeltaTopology' ::
    Env DEnergyIdx DXIdx DEtaIdx a ->
    IO ()
 drawDeltaTopology' f content tshow (Topology g)
-   (Env rec0 dEnergyIdx de dXIdx dx dEtaIdx dn dt st) =
-      printGraph g (Just rec0) (tshow dt) nshow eshow
+   (Env rec0 dEnergyIdx de dXIdx dx dEtaIdx dn dt nshow) =
+      printGraph g (Just rec0) (tshow dt) (nshow content) eshow
   where eshow ps = L.intercalate "\n" $ map f $ mkLst rec0 ps
-        nshow (num, NLabel sec nid ty) =
-          "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\n" ++
-          "Type: " ++ show ty ++ stContent rec0 ty
-            where stContent (SingleRecord rec) (InitStorage n)
-                    = "\nContent: " ++ content (M.lookup (StorageIdx sec rec n) st)
-                  stContent (SingleRecord rec) (Storage n) = "\nContent: " ++ content (M.lookup (StorageIdx sec rec n) st)
-                  stContent rn (InitStorage _n) = "\nContent: Problem with record number: " ++ show rn
-                  stContent rn (Storage _n) = "\nContent: Problem with record number: " ++ show rn
-                  stContent _ _ = ""
 
         mkLst (SingleRecord rec) (uid, vid, l)
           | isOriginalEdge l = [ (ELine uid vid, M.lookup (dEnergyIdx usec rec uid vid) de),
@@ -542,7 +553,8 @@ envAbsTopologySignal (Interp.Envs rec0 e _de _p _dp fn _dn dt x _dx _v st) =
       EnergyIdx e XIdx x
       FEtaIdx
       (M.intersectionWith ($) fn $ M.mapKeys (\(EnergyIdx sec rec uid vid) -> FEtaIdx sec rec uid vid) e)
-      dt st
+      dt
+      (showNode rec0 st)
 
 drawAbsTopologySignal ::
    (DispApp s, TDisp t, SDisplay v, D.Storage v d, Ord d, Disp d) =>
@@ -552,18 +564,10 @@ drawAbsTopologySignal ::
    Env EnergyIdx XIdx FEtaIdx (TC s t (Data v d)) ->
    IO ()
 drawAbsTopologySignal f content (Topology g)
-   (Env rec0 energyIdx e xIdx x etaIdx fn dt st) =
-      printGraph g (Just rec0) tshow nshow eshow
+   (Env rec0 energyIdx e xIdx x etaIdx fn dt nshow) =
+      printGraph g (Just rec0) tshow (nshow content) eshow
   where eshow ps = L.intercalate "\n" $ map f $ mkLst rec0 ps
         tshow dtimeIdx = formatStContSignal $ M.lookup dtimeIdx dt
-        nshow (num, NLabel sec nid ty) =
-          "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\n" ++
-          "Type: " ++ show ty ++ stContent rec0 ty
-            where stContent (SingleRecord rec) (InitStorage n) = "\nContent: " ++ content (M.lookup (StorageIdx sec rec n) st)
-                  stContent (SingleRecord rec) (Storage n) = "\nContent: " ++ content (M.lookup (StorageIdx sec rec n) st)
-                  stContent rn (InitStorage _n) = "\nContent: Problem with record number: " ++ show rn
-                  stContent rn (Storage _n) = "\nContent: Problem with record number: " ++ show rn
-                  stContent _ _ = ""
 
         mkLst (SingleRecord rec) (uid, vid, l)
           | isOriginalEdge l = [ (ELine uid vid, M.lookup (energyIdx usec rec uid vid) e),
@@ -590,7 +594,8 @@ envDeltaTopologySignal (Interp.Envs rec0 _e de _p _dp _fn dn dt _x dx _v st) =
       DEnergyIdx de DXIdx dx
       DEtaIdx
       (M.intersectionWith ($) dn $ M.mapKeys (\(DEnergyIdx sec rec uid vid) -> DEtaIdx sec rec uid vid) de)
-      dt st
+      dt
+      (showNode rec0 st)
 
 drawDeltaTopologyD ::
    (DispApp s, TDisp t, SDisplay v, D.Storage v d, Ord d, Disp d) =>
@@ -600,18 +605,10 @@ drawDeltaTopologyD ::
    Env DEnergyIdx DXIdx DEtaIdx (TC s t (Data v d)) ->
    IO ()
 drawDeltaTopologyD f content (Topology g)
-   (Env rec0 dEnergyIdx de dXIdx dx dEtaIdx dn dt st) =
-      printGraph g (Just rec0) tshow nshow eshow
+   (Env rec0 dEnergyIdx de dXIdx dx dEtaIdx dn dt nshow) =
+      printGraph g (Just rec0) tshow (nshow content) eshow
   where eshow ps = L.intercalate "\n" $ map f $ mkLst rec0 ps
         tshow dtimeIdx = formatStContSignal $ M.lookup dtimeIdx dt
-        nshow (num, NLabel sec nid ty) =
-          "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\n" ++
-          "Type: " ++ show ty ++ stContent rec0 ty
-            where stContent (SingleRecord rec) (InitStorage n) = "\nContent: " ++ content (M.lookup (StorageIdx sec rec n) st)
-                  stContent (SingleRecord rec) (Storage n) = "\nContent: " ++ content (M.lookup (StorageIdx sec rec n) st)
-                  stContent rn (InitStorage _n) = "\nContent: Problem with record number: " ++ show rn
-                  stContent rn (Storage _n) = "\nContent: Problem with record number: " ++ show rn
-                  stContent _ _ = ""
 
         mkLst (SingleRecord rec) (uid, vid, l)
           | isOriginalEdge l = [ (ELine uid vid, M.lookup (dEnergyIdx usec rec uid vid) de),
