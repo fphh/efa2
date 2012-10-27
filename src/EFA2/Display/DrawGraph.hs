@@ -302,11 +302,11 @@ class DrawTopologyList a where
    envTopologyList :: Interp.Envs [a] -> Env [a]
    envTopologyList =
       envAbsTopology formatAssignList formatStContList
-         (checkedLookupFormat "drawTopologyList" formatDTimeList)
+         (checkedLookupFormat "drawTopologyList" formatList)
          [defaultEtaArg]
 
    formatStContList :: Maybe [a] -> String
-   formatDTimeList :: [a] -> String
+   formatList :: [a] -> String
 
    formatAssignList :: DrawTopologyList a => (Line, Maybe [a]) -> String
    formatAssignList (x, ys) =
@@ -330,7 +330,7 @@ instance DrawDeltaTopologyList a => DrawDeltaTopology [a] where
 instance DrawTopologyList Double where
    formatStContList (Just ys) = concatMap (printf "%.6f    ") ys
    formatStContList Nothing = [heart]
-   formatDTimeList = show
+   formatList = show
    defaultEtaArg = 1
 
 instance DrawDeltaTopologyList Double where
@@ -348,26 +348,26 @@ instance DrawDeltaTopologyList Double where
 instance (Integral a, Show a) => DrawTopologyList (Ratio a) where
    formatStContList (Just ys) = unwords $ map show ys
    formatStContList Nothing = [heart]
-   formatDTimeList = show
+   formatList = show
    defaultEtaArg = 1
 
 instance DrawTopologyList Char where
    formatStContList (Just ys) = ys
    formatStContList Nothing = "+"
-   formatDTimeList = id
+   formatList = id
    defaultEtaArg = error "Char 1"
 
 instance DrawTopologyList LatexString where
    envTopologyList =
       envAbsTopologyLatex formatAssignList formatStContList
-         (\dt dtimeIdx -> formatDTimeList $ dt `safeLookup` dtimeIdx)
+         (\dt dtimeIdx -> formatList $ dt `safeLookup` dtimeIdx)
          [defaultEtaArg]
 
    formatAssignList (x, ys) = showLineLatex x ++ " = " ++ formatStContList ys
 
    formatStContList (Just ys) = unLatexString (head ys)
    formatStContList Nothing = "+"
-   formatDTimeList = unLatexString . head
+   formatList = unLatexString . head
    defaultEtaArg = error "LatexString 1"
 
 
@@ -408,7 +408,7 @@ showLatexNode rn st content (num, NLabel sec nid ty) =
 instance ToIndex a => DrawTopologyList (Term a) where
    formatStContList (Just ys) = showEqTerms ys
    formatStContList Nothing = [heart]
-   formatDTimeList = showEqTerms
+   formatList = showEqTerms
    defaultEtaArg = error "EqTerm 1"
 
 instance ToIndex a => DrawDeltaTopologyList (Term a) where
