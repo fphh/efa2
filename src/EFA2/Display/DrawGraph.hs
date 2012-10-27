@@ -212,12 +212,12 @@ instance Show Line where
 data Env eidx xidx nidx a =
    Env {
       recordNumber :: RecordNumber,
-      eMap :: M.Map eidx a,
-      xMap :: M.Map xidx a,
-      nMap :: M.Map nidx a,
+      makeEnergyIdx :: Int -> Int -> Int -> Int -> eidx, eMap :: M.Map eidx a,
+      makeXIdx      :: Int -> Int -> Int -> Int -> xidx, xMap :: M.Map xidx a,
+      makeEtaIdx    :: Int -> Int -> Int -> Int -> nidx, nMap :: M.Map nidx a,
       dtimeMap :: DTimeMap a,
       storageMap :: StorageMap a
-   } deriving (Show)
+   }
 
 
 -- provide a mock for '1' also for non-Num types
@@ -328,7 +328,9 @@ drawAbsTopologyLatex ::
    Topology' NLabel ELabel ->
    Env EnergyIdx XIdx FEtaIdx a ->
    IO ()
-drawAbsTopologyLatex f content tshow (Topology g) (Env rec0 e x fn dt st) = printGraph g (Just rec0) (tshow dt) nshow eshow
+drawAbsTopologyLatex f content tshow (Topology g)
+   (Env rec0 energyIdx e xIdx x etaIdx fn dt st) =
+      printGraph g (Just rec0) (tshow dt) nshow eshow
   where eshow ps = L.intercalate "\n " $ map f $ mkLst rec0 ps
         nshow (num, NLabel sec nid ty) =
           "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\\\\ " ++
@@ -341,21 +343,20 @@ drawAbsTopologyLatex f content tshow (Topology g) (Env rec0 e x fn dt st) = prin
                   stContent _ _ = ""
 
         mkLst (SingleRecord rec) (uid, vid, l)
-          | isOriginalEdge l = [ (ELine uid vid, M.lookup (EnergyIdx usec rec uid vid) e), 
-                                 (XLine uid vid, M.lookup (XIdx usec rec uid vid) x),
+          | isOriginalEdge l = [ (ELine uid vid, M.lookup (energyIdx usec rec uid vid) e),
+                                 (XLine uid vid, M.lookup (xIdx usec rec uid vid) x),
                                  ndirlab (flowDirection l),
-                                 (XLine vid uid, M.lookup (XIdx vsec rec vid uid) x),
-                                 (ELine vid uid, M.lookup (EnergyIdx vsec rec vid uid) e) ]
-          | isInnerStorageEdge l = [ (ELine vid uid, M.lookup (EnergyIdx vsec rec vid uid) e) ]
-          | otherwise = [ (ELine uid vid, M.lookup (EnergyIdx usec rec uid vid) e),
-                          (XLine uid vid, M.lookup (XIdx usec rec uid vid) x),
-                          (ELine vid uid, M.lookup (EnergyIdx vsec rec vid uid) e) ]
+                                 (XLine vid uid, M.lookup (xIdx vsec rec vid uid) x),
+                                 (ELine vid uid, M.lookup (energyIdx vsec rec vid uid) e) ]
+          | isInnerStorageEdge l = [ (ELine vid uid, M.lookup (energyIdx vsec rec vid uid) e) ]
+          | otherwise = [ (ELine uid vid, M.lookup (energyIdx usec rec uid vid) e),
+                          (XLine uid vid, M.lookup (xIdx usec rec uid vid) x),
+                          (ELine vid uid, M.lookup (energyIdx vsec rec vid uid) e) ]
           where NLabel usec _ _ = fromJust $ lab g uid
                 NLabel vsec _ _ = fromJust $ lab g vid
-                ndirlab WithDir = (NLine uid vid, M.lookup (FEtaIdx vsec rec vid uid) fn)
-                ndirlab _ = (NLine vid uid, M.lookup (FEtaIdx usec rec uid vid) fn)
+                ndirlab WithDir = (NLine uid vid, M.lookup (etaIdx vsec rec vid uid) fn)
+                ndirlab _ = (NLine vid uid, M.lookup (etaIdx usec rec uid vid) fn)
         mkLst _ _ = [ (ErrorLine "Problem with record number", Nothing) ]
-
 
 
 instance One (Term a) where one = error "EqTerm 1"
@@ -393,7 +394,7 @@ envAbsTopology ::
    Interp.Envs a -> a ->
    Env EnergyIdx XIdx FEtaIdx a
 envAbsTopology (Interp.Envs rec0 e _de _p _dp fn _dn dt x _dx _v st) etaArg =
-   Env rec0 e x (fmap ($etaArg) fn) dt st
+   Env rec0 EnergyIdx e XIdx x FEtaIdx (fmap ($etaArg) fn) dt st
 
 
 drawAbsTopology ::
@@ -403,7 +404,9 @@ drawAbsTopology ::
    Topology' NLabel ELabel ->
    Env EnergyIdx XIdx FEtaIdx a ->
    IO ()
-drawAbsTopology f content tshow (Topology g) (Env rec0 e x fn dt st) = printGraph g (Just rec0) (tshow dt) nshow eshow
+drawAbsTopology f content tshow (Topology g)
+   (Env rec0 energyIdx e xIdx x etaIdx fn dt st) =
+      printGraph g (Just rec0) (tshow dt) nshow eshow
   where eshow ps = L.intercalate "\n" $ map f $ mkLst rec0 ps
         nshow (num, NLabel sec nid ty) =
           "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\n" ++
@@ -416,19 +419,19 @@ drawAbsTopology f content tshow (Topology g) (Env rec0 e x fn dt st) = printGrap
                   stContent _ _ = ""
 
         mkLst (SingleRecord rec) (uid, vid, l)
-          | isOriginalEdge l = [ (ELine uid vid, M.lookup (EnergyIdx usec rec uid vid) e), 
-                                 (XLine uid vid, M.lookup (XIdx usec rec uid vid) x),
+          | isOriginalEdge l = [ (ELine uid vid, M.lookup (energyIdx usec rec uid vid) e),
+                                 (XLine uid vid, M.lookup (xIdx usec rec uid vid) x),
                                  ndirlab (flowDirection l),
-                                 (XLine vid uid, M.lookup (XIdx vsec rec vid uid) x),
-                                 (ELine vid uid, M.lookup (EnergyIdx vsec rec vid uid) e) ]
-          | isInnerStorageEdge l = [ (ELine vid uid, M.lookup (EnergyIdx vsec rec vid uid) e) ]
-          | otherwise = [ (ELine uid vid, M.lookup (EnergyIdx usec rec uid vid) e),
-                          (XLine uid vid, M.lookup (XIdx usec rec uid vid) x),
-                          (ELine vid uid, M.lookup (EnergyIdx vsec rec vid uid) e) ]
+                                 (XLine vid uid, M.lookup (xIdx vsec rec vid uid) x),
+                                 (ELine vid uid, M.lookup (energyIdx vsec rec vid uid) e) ]
+          | isInnerStorageEdge l = [ (ELine vid uid, M.lookup (energyIdx vsec rec vid uid) e) ]
+          | otherwise = [ (ELine uid vid, M.lookup (energyIdx usec rec uid vid) e),
+                          (XLine uid vid, M.lookup (xIdx usec rec uid vid) x),
+                          (ELine vid uid, M.lookup (energyIdx vsec rec vid uid) e) ]
           where NLabel usec _ _ = fromJust $ lab g uid
                 NLabel vsec _ _ = fromJust $ lab g vid
-                ndirlab WithDir = (NLine uid vid, M.lookup (FEtaIdx usec rec uid vid) fn)
-                ndirlab _ = (NLine vid uid, M.lookup (FEtaIdx vsec rec vid uid) fn)
+                ndirlab WithDir = (NLine uid vid, M.lookup (etaIdx usec rec uid vid) fn)
+                ndirlab _ = (NLine vid uid, M.lookup (etaIdx vsec rec vid uid) fn)
         mkLst _ _ = [ (ErrorLine "Problem with record number", Nothing) ]
 
 
@@ -436,7 +439,7 @@ envDeltaTopology ::
    Interp.Envs a -> a ->
    Env DEnergyIdx DXIdx DEtaIdx a
 envDeltaTopology (Interp.Envs rec0 _e de _p _dp _fn dn dt _x dx _v st) etaArg =
-   Env rec0 de dx (fmap ($etaArg) dn) dt st
+   Env rec0 DEnergyIdx de DXIdx dx DEtaIdx (fmap ($etaArg) dn) dt st
 
 
 drawDeltaTopology' ::
@@ -446,7 +449,9 @@ drawDeltaTopology' ::
    Topology' NLabel ELabel ->
    Env DEnergyIdx DXIdx DEtaIdx a ->
    IO ()
-drawDeltaTopology' f content tshow (Topology g) (Env rec0 de dx dn dt st) = printGraph g (Just rec0) (tshow dt) nshow eshow
+drawDeltaTopology' f content tshow (Topology g)
+   (Env rec0 dEnergyIdx de dXIdx dx dEtaIdx dn dt st) =
+      printGraph g (Just rec0) (tshow dt) nshow eshow
   where eshow ps = L.intercalate "\n" $ map f $ mkLst rec0 ps
         nshow (num, NLabel sec nid ty) =
           "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\n" ++
@@ -459,19 +464,19 @@ drawDeltaTopology' f content tshow (Topology g) (Env rec0 de dx dn dt st) = prin
                   stContent _ _ = ""
 
         mkLst (SingleRecord rec) (uid, vid, l)
-          | isOriginalEdge l = [ (ELine uid vid, M.lookup (DEnergyIdx usec rec uid vid) de), 
-                                 (XLine uid vid, M.lookup (DXIdx usec rec uid vid) dx),
+          | isOriginalEdge l = [ (ELine uid vid, M.lookup (dEnergyIdx usec rec uid vid) de),
+                                 (XLine uid vid, M.lookup (dXIdx usec rec uid vid) dx),
                                  ndirlab (flowDirection l),
-                                 (XLine vid uid, M.lookup (DXIdx vsec rec vid uid) dx),
-                                 (ELine vid uid, M.lookup (DEnergyIdx vsec rec vid uid) de) ]
-          | isInnerStorageEdge l = [ (ELine vid uid, M.lookup (DEnergyIdx vsec rec vid uid) de) ]
-          | otherwise = [ (ELine uid vid, M.lookup (DEnergyIdx usec rec uid vid) de),
-                          (XLine uid vid, M.lookup (DXIdx usec rec uid vid) dx),
-                          (ELine vid uid, M.lookup (DEnergyIdx vsec rec vid uid) de) ]
+                                 (XLine vid uid, M.lookup (dXIdx vsec rec vid uid) dx),
+                                 (ELine vid uid, M.lookup (dEnergyIdx vsec rec vid uid) de) ]
+          | isInnerStorageEdge l = [ (ELine vid uid, M.lookup (dEnergyIdx vsec rec vid uid) de) ]
+          | otherwise = [ (ELine uid vid, M.lookup (dEnergyIdx usec rec uid vid) de),
+                          (XLine uid vid, M.lookup (dXIdx usec rec uid vid) dx),
+                          (ELine vid uid, M.lookup (dEnergyIdx vsec rec vid uid) de) ]
           where NLabel usec _ _ = fromJust $ lab g uid
                 NLabel vsec _ _ = fromJust $ lab g vid
-                ndirlab WithDir = (NLine uid vid, M.lookup (DEtaIdx usec rec uid vid) dn)
-                ndirlab _ = (NLine vid uid, M.lookup (DEtaIdx vsec rec vid uid) dn)
+                ndirlab WithDir = (NLine uid vid, M.lookup (dEtaIdx usec rec uid vid) dn)
+                ndirlab _ = (NLine vid uid, M.lookup (dEtaIdx vsec rec vid uid) dn)
         mkLst _ _ = [ (ErrorLine "Problem with record number", Nothing) ]
 
 
@@ -533,7 +538,9 @@ envAbsTopologySignal ::
    Interp.Envs a ->
    Env EnergyIdx XIdx FEtaIdx a
 envAbsTopologySignal (Interp.Envs rec0 e _de _p _dp fn _dn dt x _dx _v st) =
-   Env rec0 e x
+   Env rec0
+      EnergyIdx e XIdx x
+      FEtaIdx
       (M.intersectionWith ($) fn $ M.mapKeys (\(EnergyIdx sec rec uid vid) -> FEtaIdx sec rec uid vid) e)
       dt st
 
@@ -544,7 +551,9 @@ drawAbsTopologySignal ::
    Topology ->
    Env EnergyIdx XIdx FEtaIdx (TC s t (Data v d)) ->
    IO ()
-drawAbsTopologySignal f content (Topology g) (Env rec0 e x fn dt st) = printGraph g (Just rec0) tshow nshow eshow
+drawAbsTopologySignal f content (Topology g)
+   (Env rec0 energyIdx e xIdx x etaIdx fn dt st) =
+      printGraph g (Just rec0) tshow nshow eshow
   where eshow ps = L.intercalate "\n" $ map f $ mkLst rec0 ps
         tshow dtimeIdx = formatStContSignal $ M.lookup dtimeIdx dt
         nshow (num, NLabel sec nid ty) =
@@ -557,19 +566,19 @@ drawAbsTopologySignal f content (Topology g) (Env rec0 e x fn dt st) = printGrap
                   stContent _ _ = ""
 
         mkLst (SingleRecord rec) (uid, vid, l)
-          | isOriginalEdge l = [ (ELine uid vid, M.lookup (EnergyIdx usec rec uid vid) e), 
-                                 (XLine uid vid, M.lookup (XIdx usec rec uid vid) x),
+          | isOriginalEdge l = [ (ELine uid vid, M.lookup (energyIdx usec rec uid vid) e),
+                                 (XLine uid vid, M.lookup (xIdx usec rec uid vid) x),
                                  ndirlab (flowDirection l),
-                                 (XLine vid uid, M.lookup (XIdx vsec rec vid uid) x),
-                                 (ELine vid uid, M.lookup (EnergyIdx vsec rec vid uid) e) ]
-          | isInnerStorageEdge l = [ (ELine vid uid, M.lookup (EnergyIdx vsec rec vid uid) e) ]
-          | otherwise = [ (ELine uid vid, M.lookup (EnergyIdx usec rec uid vid) e),
-                          (XLine uid vid, M.lookup (XIdx usec rec uid vid) x),
-                          (ELine vid uid, M.lookup (EnergyIdx vsec rec vid uid) e) ]
+                                 (XLine vid uid, M.lookup (xIdx vsec rec vid uid) x),
+                                 (ELine vid uid, M.lookup (energyIdx vsec rec vid uid) e) ]
+          | isInnerStorageEdge l = [ (ELine vid uid, M.lookup (energyIdx vsec rec vid uid) e) ]
+          | otherwise = [ (ELine uid vid, M.lookup (energyIdx usec rec uid vid) e),
+                          (XLine uid vid, M.lookup (xIdx usec rec uid vid) x),
+                          (ELine vid uid, M.lookup (energyIdx vsec rec vid uid) e) ]
           where NLabel usec _ _ = fromJust $ lab g uid
                 NLabel vsec _ _ = fromJust $ lab g vid
-                ndirlab WithDir = (NLine uid vid, M.lookup (FEtaIdx usec rec uid vid) fn)
-                ndirlab _ = (NLine vid uid, M.lookup (FEtaIdx vsec rec vid uid) fn)
+                ndirlab WithDir = (NLine uid vid, M.lookup (etaIdx usec rec uid vid) fn)
+                ndirlab _ = (NLine vid uid, M.lookup (etaIdx vsec rec vid uid) fn)
         mkLst _ _ = [ (ErrorLine "No single record number!", Nothing) ]
 
 
@@ -577,7 +586,9 @@ envDeltaTopologySignal ::
    Interp.Envs a ->
    Env DEnergyIdx DXIdx DEtaIdx a
 envDeltaTopologySignal (Interp.Envs rec0 _e de _p _dp _fn dn dt _x dx _v st) =
-   Env rec0 de dx
+   Env rec0
+      DEnergyIdx de DXIdx dx
+      DEtaIdx
       (M.intersectionWith ($) dn $ M.mapKeys (\(DEnergyIdx sec rec uid vid) -> DEtaIdx sec rec uid vid) de)
       dt st
 
@@ -588,7 +599,9 @@ drawDeltaTopologyD ::
    Topology ->
    Env DEnergyIdx DXIdx DEtaIdx (TC s t (Data v d)) ->
    IO ()
-drawDeltaTopologyD f content (Topology g) (Env rec0 de dx dn dt st) = printGraph g (Just rec0) tshow nshow eshow
+drawDeltaTopologyD f content (Topology g)
+   (Env rec0 dEnergyIdx de dXIdx dx dEtaIdx dn dt st) =
+      printGraph g (Just rec0) tshow nshow eshow
   where eshow ps = L.intercalate "\n" $ map f $ mkLst rec0 ps
         tshow dtimeIdx = formatStContSignal $ M.lookup dtimeIdx dt
         nshow (num, NLabel sec nid ty) =
@@ -601,19 +614,19 @@ drawDeltaTopologyD f content (Topology g) (Env rec0 de dx dn dt st) = printGraph
                   stContent _ _ = ""
 
         mkLst (SingleRecord rec) (uid, vid, l)
-          | isOriginalEdge l = [ (ELine uid vid, M.lookup (DEnergyIdx usec rec uid vid) de), 
-                                 (XLine uid vid, M.lookup (DXIdx usec rec uid vid) dx),
+          | isOriginalEdge l = [ (ELine uid vid, M.lookup (dEnergyIdx usec rec uid vid) de),
+                                 (XLine uid vid, M.lookup (dXIdx usec rec uid vid) dx),
                                  ndirlab (flowDirection l),
-                                 (XLine vid uid, M.lookup (DXIdx vsec rec vid uid) dx),
-                                 (ELine vid uid, M.lookup (DEnergyIdx vsec rec vid uid) de) ]
-          | isInnerStorageEdge l = [ (ELine vid uid, M.lookup (DEnergyIdx vsec rec vid uid) de) ]
-          | otherwise = [ (ELine uid vid, M.lookup (DEnergyIdx usec rec uid vid) de),
-                          (XLine uid vid, M.lookup (DXIdx usec rec uid vid) dx),
-                          (ELine vid uid, M.lookup (DEnergyIdx vsec rec vid uid) de) ]
+                                 (XLine vid uid, M.lookup (dXIdx vsec rec vid uid) dx),
+                                 (ELine vid uid, M.lookup (dEnergyIdx vsec rec vid uid) de) ]
+          | isInnerStorageEdge l = [ (ELine vid uid, M.lookup (dEnergyIdx vsec rec vid uid) de) ]
+          | otherwise = [ (ELine uid vid, M.lookup (dEnergyIdx usec rec uid vid) de),
+                          (XLine uid vid, M.lookup (dXIdx usec rec uid vid) dx),
+                          (ELine vid uid, M.lookup (dEnergyIdx vsec rec vid uid) de) ]
           where NLabel usec _ _ = fromJust $ lab g uid
                 NLabel vsec _ _ = fromJust $ lab g vid
-                ndirlab WithDir = (NLine uid vid , M.lookup (DEtaIdx usec rec uid vid) dn)
-                ndirlab _ = (NLine vid uid, M.lookup (DEtaIdx vsec rec vid uid) dn)
+                ndirlab WithDir = (NLine uid vid , M.lookup (dEtaIdx usec rec uid vid) dn)
+                ndirlab _ = (NLine vid uid, M.lookup (dEtaIdx vsec rec vid uid) dn)
         mkLst _ _ = [ (ErrorLine "No single record number!", Nothing) ]
 
 
