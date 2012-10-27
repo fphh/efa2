@@ -209,15 +209,57 @@ instance Show Line where
          show (ErrorLine str) = str
 
 
-data Env eidx xidx nidx a =
+data Env a =
    Env {
       recordNumber :: RecordNumber,
-      makeEnergyIdx :: Int -> Int -> Int -> Int -> eidx, eMap :: M.Map eidx a,
-      makeXIdx      :: Int -> Int -> Int -> Int -> xidx, xMap :: M.Map xidx a,
-      makeEtaIdx    :: Int -> Int -> Int -> Int -> nidx, nMap :: M.Map nidx a,
+      lookupEnergy_ :: Int -> Int -> Int -> Int -> Maybe a,
+      lookupX_      :: Int -> Int -> Int -> Int -> Maybe a,
+      lookupEta_    :: Int -> Int -> Int -> Int -> Maybe a,
       showTime :: DTimeIdx -> String,
       showNode_ :: (Maybe a -> String) -> (Int, NLabel) -> String
    }
+
+makeLookup ::
+   (Ord idx) =>
+   (Int -> Int -> Int -> Int -> idx) -> M.Map idx a ->
+   Int -> Int -> Int -> Int -> Maybe a
+makeLookup makeIdx mp =
+   \sec rec uid vid -> M.lookup (makeIdx sec rec uid vid) mp
+
+
+draw ::
+   ((Line, Maybe a) -> String) ->
+   (Maybe a -> String) ->
+   Topology' NLabel ELabel ->
+   Env a ->
+   IO ()
+draw f content (Topology g)
+   (Env rn lookupEnergy lookupX lookupEta tshow nshow) =
+      printGraph g (Just rn) tshow (nshow content) eshow
+  where eshow = L.intercalate "\n" . map f . mkLst
+
+        mkLst (uid, vid, l) =
+           case rn of
+              SingleRecord rec
+                 | isOriginalEdge l -> [
+                    (ELine uid vid, lookupEnergy usec rec uid vid),
+                    (XLine uid vid, lookupX usec rec uid vid),
+                    ndirlab (flowDirection l),
+                    (XLine vid uid, lookupX vsec rec vid uid),
+                    (ELine vid uid, lookupEnergy vsec rec vid uid)
+                    ]
+                 | isInnerStorageEdge l ->
+                    [ (ELine vid uid, lookupEnergy vsec rec vid uid) ]
+                 | otherwise -> [
+                    (ELine uid vid, lookupEnergy usec rec uid vid),
+                    (XLine uid vid, lookupX usec rec uid vid),
+                    (ELine vid uid, lookupEnergy vsec rec vid uid)
+                    ]
+                 where NLabel usec _ _ = fromJust $ lab g uid
+                       NLabel vsec _ _ = fromJust $ lab g vid
+                       ndirlab WithDir = (NLine uid vid, lookupEta usec rec uid vid)
+                       ndirlab _ = (NLine vid uid, lookupEta vsec rec vid uid)
+              _ -> [ (ErrorLine "Problem with record number", Nothing) ]
 
 
 -- provide a mock for '1' also for non-Num types
@@ -323,9 +365,12 @@ instance DrawTopologyList LatexString where
 envAbsTopologyLatex ::
    (DTimeMap [LatexString] -> DTimeIdx -> String) ->
    Interp.Envs [LatexString] ->
-   Env EnergyIdx XIdx FEtaIdx [LatexString]
+   Env [LatexString]
 envAbsTopologyLatex tshow (Interp.Envs rec e _de _p _dp fn _dn dt x _dx _v st) =
-   Env rec EnergyIdx e XIdx x FEtaIdx (fmap ($[one]) fn)
+   Env rec
+      (makeLookup EnergyIdx e)
+      (makeLookup XIdx x)
+      (makeLookup FEtaIdx $ fmap ($[one]) fn)
       (tshow dt)
       (showLatexNode rec st)
 
@@ -380,9 +425,12 @@ instance ToIndex a => DrawDeltaTopologyList (Term a) where
 envAbsTopology ::
    (DTimeMap a -> DTimeIdx -> String) ->
    Interp.Envs a -> a ->
-   Env EnergyIdx XIdx FEtaIdx a
+   Env a
 envAbsTopology tshow (Interp.Envs rec e _de _p _dp fn _dn dt x _dx _v st) etaArg =
-   Env rec EnergyIdx e XIdx x FEtaIdx (fmap ($etaArg) fn)
+   Env rec
+      (makeLookup EnergyIdx e)
+      (makeLookup XIdx x)
+      (makeLookup FEtaIdx $ fmap ($etaArg) fn)
       (tshow dt)
       (showNode rec st)
 
@@ -401,41 +449,16 @@ showNode rn st content (num, NLabel sec nid ty) =
              Storage n -> "\nContent: " ++ showStorage n
              _ -> ""
 
-draw ::
-   (Ord eidx, Ord xidx, Ord nidx) =>
-   ((Line, Maybe a) -> String) ->
-   (Maybe a -> String) ->
-   Topology' NLabel ELabel ->
-   Env eidx xidx nidx a ->
-   IO ()
-draw f content (Topology g)
-   (Env rec0 energyIdx e xIdx x etaIdx fn tshow nshow) =
-      printGraph g (Just rec0) tshow (nshow content) eshow
-  where eshow ps = L.intercalate "\n" $ map f $ mkLst rec0 ps
-
-        mkLst (SingleRecord rec) (uid, vid, l)
-          | isOriginalEdge l = [ (ELine uid vid, M.lookup (energyIdx usec rec uid vid) e),
-                                 (XLine uid vid, M.lookup (xIdx usec rec uid vid) x),
-                                 ndirlab (flowDirection l),
-                                 (XLine vid uid, M.lookup (xIdx vsec rec vid uid) x),
-                                 (ELine vid uid, M.lookup (energyIdx vsec rec vid uid) e) ]
-          | isInnerStorageEdge l = [ (ELine vid uid, M.lookup (energyIdx vsec rec vid uid) e) ]
-          | otherwise = [ (ELine uid vid, M.lookup (energyIdx usec rec uid vid) e),
-                          (XLine uid vid, M.lookup (xIdx usec rec uid vid) x),
-                          (ELine vid uid, M.lookup (energyIdx vsec rec vid uid) e) ]
-          where NLabel usec _ _ = fromJust $ lab g uid
-                NLabel vsec _ _ = fromJust $ lab g vid
-                ndirlab WithDir = (NLine uid vid, M.lookup (etaIdx usec rec uid vid) fn)
-                ndirlab _ = (NLine vid uid, M.lookup (etaIdx vsec rec vid uid) fn)
-        mkLst _ _ = [ (ErrorLine "Problem with record number", Nothing) ]
-
 
 envDeltaTopology ::
    (DTimeMap a -> DTimeIdx -> String) ->
    Interp.Envs a -> a ->
-   Env DEnergyIdx DXIdx DEtaIdx a
+   Env a
 envDeltaTopology tshow (Interp.Envs rec _e de _p _dp _fn dn dt _x dx _v st) etaArg =
-   Env rec DEnergyIdx de DXIdx dx DEtaIdx (fmap ($etaArg) dn)
+   Env rec
+      (makeLookup DEnergyIdx de)
+      (makeLookup DXIdx dx)
+      (makeLookup DEtaIdx $ fmap ($etaArg) dn)
       (tshow dt)
       (showNode rec st)
 
@@ -496,24 +519,28 @@ instance
 envAbsTopologySignal ::
    (DispApp s, TDisp t, SDisplay v, D.Storage v d, Ord d, Disp d) =>
    Interp.Envs (TC s t (Data v d)) ->
-   Env EnergyIdx XIdx FEtaIdx (TC s t (Data v d))
+   Env (TC s t (Data v d))
 envAbsTopologySignal (Interp.Envs rec0 e _de _p _dp fn _dn dt x _dx _v st) =
    Env rec0
-      EnergyIdx e XIdx x
-      FEtaIdx
-      (M.intersectionWith ($) fn $ M.mapKeys (\(EnergyIdx sec rec uid vid) -> FEtaIdx sec rec uid vid) e)
+      (makeLookup EnergyIdx e)
+      (makeLookup XIdx x)
+      (makeLookup FEtaIdx $
+       M.intersectionWith ($) fn $
+       M.mapKeys (\(EnergyIdx sec rec uid vid) -> FEtaIdx sec rec uid vid) e)
       (\dtimeIdx -> formatStContSignal $ M.lookup dtimeIdx dt)
       (showNode rec0 st)
 
 envDeltaTopologySignal ::
    (DispApp s, TDisp t, SDisplay v, D.Storage v d, Ord d, Disp d) =>
    Interp.Envs (TC s t (Data v d)) ->
-   Env DEnergyIdx DXIdx DEtaIdx (TC s t (Data v d))
+   Env (TC s t (Data v d))
 envDeltaTopologySignal (Interp.Envs rec0 _e de _p _dp _fn dn dt _x dx _v st) =
    Env rec0
-      DEnergyIdx de DXIdx dx
-      DEtaIdx
-      (M.intersectionWith ($) dn $ M.mapKeys (\(DEnergyIdx sec rec uid vid) -> DEtaIdx sec rec uid vid) de)
+      (makeLookup DEnergyIdx de)
+      (makeLookup DXIdx dx)
+      (makeLookup DEtaIdx $
+       M.intersectionWith ($) dn $
+       M.mapKeys (\(DEnergyIdx sec rec uid vid) -> DEtaIdx sec rec uid vid) de)
       (\dtimeIdx -> formatStContSignal $ M.lookup dtimeIdx dt)
       (showNode rec0 st)
 
