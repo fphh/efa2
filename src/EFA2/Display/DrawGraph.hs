@@ -4,6 +4,13 @@ import EFA2.Solver.Equation
           (Term(..), ToIndex, showEqTerm, showEqTerms,
            LatexString, unLatexString)
 import EFA2.Interpreter.Env
+          (DEnergyIdx(..), EnergyIdx(..),
+           DEtaIdx(..),    FEtaIdx(..),
+           DXIdx(..),      XIdx(..),
+           DTimeIdx(..),   DTimeMap,
+           StorageIdx(..), StorageMap,
+           RecordNumber(SingleRecord))
+import qualified EFA2.Interpreter.Env as Interp
 import EFA2.Topology.TopologyData
 import EFA2.Topology.EfaGraph (EfaGraph)
 
@@ -49,7 +56,6 @@ import qualified Data.NonEmpty.Mixed as NonEmptyM
 
 import Control.Concurrent.MVar (MVar, putMVar, readMVar, newEmptyMVar)
 import Control.Concurrent (forkIO)
-import Control.Applicative ((<*>))
 import Control.Monad ((>=>), void)
 
 import Text.Printf (printf)
@@ -203,22 +209,32 @@ instance Show Line where
          show (ErrorLine str) = str
 
 
+data Env eidx xidx nidx a =
+   Env {
+      recordNumber :: RecordNumber,
+      eMap :: M.Map eidx a,
+      xMap :: M.Map xidx a,
+      nMap :: M.Map nidx a,
+      dtimeMap :: DTimeMap a,
+      storageMap :: StorageMap a
+   } deriving (Show)
+
+
 -- provide a mock for '1' also for non-Num types
 -- FIXME: this is still a hack because 'one' is often undefined
 class One a where
   one :: a
 
--- The argument t is for node labels. Until now, it is not used.
 class DrawTopology a where
-   drawTopology :: Topology -> Envs a -> IO ()
+   drawTopology :: Topology -> Interp.Envs a -> IO ()
 
 class DrawTopology a => DrawDeltaTopology a where
-   drawDeltaTopology :: Topology -> Envs a -> IO ()
+   drawDeltaTopology :: Topology -> Interp.Envs a -> IO ()
 
 
 class One a => DrawTopologyList a where
-   drawTopologyList :: Topology -> Envs [a] -> IO ()
-   drawTopologyList =
+   drawTopologyList :: Topology -> Interp.Envs [a] -> IO ()
+   drawTopologyList topo env =
       drawAbsTopology formatAssignList formatStContList
          (\dt k ->
             case M.lookup k dt of
@@ -226,6 +242,8 @@ class One a => DrawTopologyList a where
                   error $
                   "drawTopologyList: " ++ show k ++ "\n" ++ show (fmap formatDTimeList dt)
                Just x -> formatDTimeList x)
+         topo
+         (envAbsTopology env [one])
 
    formatStContList :: Maybe [a] -> String
    formatDTimeList :: [a] -> String
@@ -235,7 +253,7 @@ class One a => DrawTopologyList a where
       show x ++ " = " ++ formatStContList ys
 
 class DrawTopologyList a => DrawDeltaTopologyList a where
-   drawDeltaTopologyList :: Topology -> Envs [a] -> IO ()
+   drawDeltaTopologyList :: Topology -> Interp.Envs [a] -> IO ()
 
 instance DrawTopologyList a => DrawTopology [a] where
    drawTopology = drawTopologyList
@@ -252,7 +270,9 @@ instance DrawTopologyList Double where
    formatDTimeList = show
 
 instance DrawDeltaTopologyList Double where
-   drawDeltaTopologyList = drawDeltaTopology' f formatStCont tshow
+   drawDeltaTopologyList topo env =
+      drawDeltaTopology' f formatStCont tshow
+         topo (envDeltaTopology env [one])
      where -- f (x, Just ys) = showDelta x ++ " = [ " ++ L.intercalate ", " (map showEqTerm ys) ++ " ]"
            f (x, ys) =
               showDelta x ++ " = " ++
@@ -284,9 +304,10 @@ instance One LatexString where
    one = error "LatexString 1"
 
 instance DrawTopologyList LatexString where
-   drawTopologyList =
+   drawTopologyList topo env =
       drawAbsTopologyLatex formatAssignList formatStContList
          (\dt dtimeIdx -> formatDTimeList $ dt `safeLookup` dtimeIdx)
+         topo (envAbsTopology env [one])
 
    formatAssignList (x, ys) = showX x ++ " = " ++ formatStContList ys
       where
@@ -301,14 +322,13 @@ instance DrawTopologyList LatexString where
 
 
 drawAbsTopologyLatex ::
-  One t =>
-  ((Line, Maybe [t]) -> String) ->
-  (Maybe [t] -> String) ->
-  (DTimeMap [t] -> DTimeIdx -> String) ->
-  Topology' NLabel ELabel ->
-  Envs [t] ->
-  IO ()
-drawAbsTopologyLatex f content tshow (Topology g) (Envs rec0 e _de _p _dp fn _dn dt x _dx _v st) = printGraph g (Just rec0) (tshow dt) nshow eshow
+   ((Line, Maybe a) -> String) ->
+   (Maybe a -> String) ->
+   (DTimeMap a -> DTimeIdx -> String) ->
+   Topology' NLabel ELabel ->
+   Env EnergyIdx XIdx FEtaIdx a ->
+   IO ()
+drawAbsTopologyLatex f content tshow (Topology g) (Env rec0 e x fn dt st) = printGraph g (Just rec0) (tshow dt) nshow eshow
   where eshow ps = L.intercalate "\n " $ map f $ mkLst rec0 ps
         nshow (num, NLabel sec nid ty) =
           "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\\\\ " ++
@@ -332,8 +352,8 @@ drawAbsTopologyLatex f content tshow (Topology g) (Envs rec0 e _de _p _dp fn _dn
                           (ELine vid uid, M.lookup (EnergyIdx vsec rec vid uid) e) ]
           where NLabel usec _ _ = fromJust $ lab g uid
                 NLabel vsec _ _ = fromJust $ lab g vid
-                ndirlab WithDir = (NLine uid vid, M.lookup (FEtaIdx vsec rec vid uid) fn <*> Just [one])
-                ndirlab _ = (NLine vid uid, M.lookup (FEtaIdx usec rec uid vid) fn <*> Just [one])
+                ndirlab WithDir = (NLine uid vid, M.lookup (FEtaIdx vsec rec vid uid) fn)
+                ndirlab _ = (NLine vid uid, M.lookup (FEtaIdx usec rec uid vid) fn)
         mkLst _ _ = [ (ErrorLine "Problem with record number", Nothing) ]
 
 
@@ -347,7 +367,8 @@ instance ToIndex a => DrawTopologyList (Term a) where
    formatDTimeList = showEqTerms
 
 instance ToIndex a => DrawDeltaTopologyList (Term a) where
-         drawDeltaTopologyList = drawDeltaTopology' f formatStCont tshow
+   drawDeltaTopologyList topo env =
+      drawDeltaTopology' f formatStCont tshow topo (envDeltaTopology env [one])
            where -- f (x, Just ys) = showDelta x ++ " = [ " ++ L.intercalate ", " (map showEqTerm ys) ++ " ]"
                  f (x, Just ys) = showDelta x ++ " = \n" ++ showEqTerms ys
 
@@ -368,15 +389,21 @@ instance ToIndex a => DrawDeltaTopologyList (Term a) where
                        Just t -> showEqTerms t
 
 
+envAbsTopology ::
+   Interp.Envs a -> a ->
+   Env EnergyIdx XIdx FEtaIdx a
+envAbsTopology (Interp.Envs rec0 e _de _p _dp fn _dn dt x _dx _v st) etaArg =
+   Env rec0 e x (fmap ($etaArg) fn) dt st
+
+
 drawAbsTopology ::
-  One t =>
-  ((Line, Maybe [t]) -> String) ->
-  (Maybe [t] -> String) ->
-  (DTimeMap [t] -> DTimeIdx -> String) ->
-  Topology' NLabel ELabel ->
-  Envs [t] ->
-  IO ()
-drawAbsTopology f content tshow (Topology g) (Envs rec0 e _de _p _dp fn _dn dt x _dx _v st) = printGraph g (Just rec0) (tshow dt) nshow eshow
+   ((Line, Maybe a) -> String) ->
+   (Maybe a -> String) ->
+   (DTimeMap a -> DTimeIdx -> String) ->
+   Topology' NLabel ELabel ->
+   Env EnergyIdx XIdx FEtaIdx a ->
+   IO ()
+drawAbsTopology f content tshow (Topology g) (Env rec0 e x fn dt st) = printGraph g (Just rec0) (tshow dt) nshow eshow
   where eshow ps = L.intercalate "\n" $ map f $ mkLst rec0 ps
         nshow (num, NLabel sec nid ty) =
           "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\n" ++
@@ -400,21 +427,26 @@ drawAbsTopology f content tshow (Topology g) (Envs rec0 e _de _p _dp fn _dn dt x
                           (ELine vid uid, M.lookup (EnergyIdx vsec rec vid uid) e) ]
           where NLabel usec _ _ = fromJust $ lab g uid
                 NLabel vsec _ _ = fromJust $ lab g vid
-                ndirlab WithDir = (NLine uid vid, M.lookup (FEtaIdx vsec rec vid uid) fn <*> Just [one])
-                ndirlab _ = (NLine vid uid, M.lookup (FEtaIdx usec rec uid vid) fn <*> Just [one])
+                ndirlab WithDir = (NLine uid vid, M.lookup (FEtaIdx usec rec uid vid) fn)
+                ndirlab _ = (NLine vid uid, M.lookup (FEtaIdx vsec rec vid uid) fn)
         mkLst _ _ = [ (ErrorLine "Problem with record number", Nothing) ]
 
 
---drawDeltaTopology' :: (Show a, Num a, Ord a) => ((Line, Maybe [a]) -> String) -> (Maybe [a] -> String) -> Topology -> Envs [a] -> IO ()
+envDeltaTopology ::
+   Interp.Envs a -> a ->
+   Env DEnergyIdx DXIdx DEtaIdx a
+envDeltaTopology (Interp.Envs rec0 _e de _p _dp _fn dn dt _x dx _v st) etaArg =
+   Env rec0 de dx (fmap ($etaArg) dn) dt st
+
+
 drawDeltaTopology' ::
-   One t =>
-   ((Line, Maybe [t]) -> String) ->
-   (Maybe [t] -> String) ->
-   (DTimeMap [t] -> DTimeIdx -> String) ->
+   ((Line, Maybe a) -> String) ->
+   (Maybe a -> String) ->
+   (DTimeMap a -> DTimeIdx -> String) ->
    Topology' NLabel ELabel ->
-   Envs [t] ->
+   Env DEnergyIdx DXIdx DEtaIdx a ->
    IO ()
-drawDeltaTopology' f content tshow (Topology g) (Envs rec0 _e de _p _dp _fn dn dt _x dx _v st) = printGraph g (Just rec0) (tshow dt) nshow eshow
+drawDeltaTopology' f content tshow (Topology g) (Env rec0 de dx dn dt st) = printGraph g (Just rec0) (tshow dt) nshow eshow
   where eshow ps = L.intercalate "\n" $ map f $ mkLst rec0 ps
         nshow (num, NLabel sec nid ty) =
           "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\n" ++
@@ -438,15 +470,15 @@ drawDeltaTopology' f content tshow (Topology g) (Envs rec0 _e de _p _dp _fn dn d
                           (ELine vid uid, M.lookup (DEnergyIdx vsec rec vid uid) de) ]
           where NLabel usec _ _ = fromJust $ lab g uid
                 NLabel vsec _ _ = fromJust $ lab g vid
-                ndirlab WithDir = (NLine uid vid, M.lookup (DEtaIdx vsec rec vid uid) dn <*> Just [one])
-                ndirlab _ = (NLine vid uid, M.lookup (DEtaIdx usec rec uid vid) dn <*> Just [one])
+                ndirlab WithDir = (NLine uid vid, M.lookup (DEtaIdx usec rec uid vid) dn)
+                ndirlab _ = (NLine vid uid, M.lookup (DEtaIdx vsec rec vid uid) dn)
         mkLst _ _ = [ (ErrorLine "Problem with record number", Nothing) ]
 
 
 
 class DrawTopologySignal a where
    drawTopologySignal ::
-      (DispApp s, TDisp t) => Topology -> Envs (TC s t a) -> IO ()
+      (DispApp s, TDisp t) => Topology -> Interp.Envs (TC s t a) -> IO ()
 
 formatAssignSignal ::
    (DispApp s, TDisp t, SDisplay v, D.Storage v d, Ord d, Disp d) =>
@@ -463,8 +495,10 @@ formatStContSignal Nothing = [heart]
 instance
    (SDisplay v, D.Storage v a, Disp a, Ord a) =>
       DrawTopologySignal (Data v a) where
-   drawTopologySignal =
-      drawAbsTopologySignal formatAssignSignal formatStContSignal
+   drawTopologySignal topo env =
+      drawAbsTopologySignal
+         formatAssignSignal formatStContSignal topo
+         (envAbsTopologySignal env)
 
 instance
    (DispApp s, TDisp t, DrawTopologySignal a) =>
@@ -474,12 +508,13 @@ instance
 
 class DrawTopologySignal a => DrawDeltaTopologySignal a where
    drawDeltaTopologySignal ::
-      (DispApp s, TDisp t) => Topology -> Envs (TC s t a) -> IO ()
+      (DispApp s, TDisp t) => Topology -> Interp.Envs (TC s t a) -> IO ()
 
 instance
    (SDisplay v, D.Storage v a, Disp a, Ord a) =>
       DrawDeltaTopologySignal (Data v a) where
-         drawDeltaTopologySignal = drawDeltaTopologyD f formatStContSignal
+         drawDeltaTopologySignal topo env =
+            drawDeltaTopologyD f formatStContSignal topo (envDeltaTopologySignal env)
            where -- f (x, Just ys) = showDelta x ++ " = [ " ++ L.intercalate ", " (map showEqTerm ys) ++ " ]"
                  f (x, ys) = showDelta x ++ " = " ++ formatStContSignal ys
 
@@ -494,12 +529,22 @@ instance
    drawDeltaTopology = drawDeltaTopologySignal
 
 
+envAbsTopologySignal ::
+   Interp.Envs a ->
+   Env EnergyIdx XIdx FEtaIdx a
+envAbsTopologySignal (Interp.Envs rec0 e _de _p _dp fn _dn dt x _dx _v st) =
+   Env rec0 e x
+      (M.intersectionWith ($) fn $ M.mapKeys (\(EnergyIdx sec rec uid vid) -> FEtaIdx sec rec uid vid) e)
+      dt st
+
 drawAbsTopologySignal ::
    (DispApp s, TDisp t, SDisplay v, D.Storage v d, Ord d, Disp d) =>
    ((Line, Maybe (TC s t (Data v d))) -> String) ->
    (Maybe (TC s t (Data v d)) -> String) ->
-   Topology -> Envs (TC s t (Data v d)) ->  IO ()
-drawAbsTopologySignal f content (Topology g) (Envs rec0 e _de _p _dp fn _dn dt x _dx _v st) = printGraph g (Just rec0) tshow nshow eshow
+   Topology ->
+   Env EnergyIdx XIdx FEtaIdx (TC s t (Data v d)) ->
+   IO ()
+drawAbsTopologySignal f content (Topology g) (Env rec0 e x fn dt st) = printGraph g (Just rec0) tshow nshow eshow
   where eshow ps = L.intercalate "\n" $ map f $ mkLst rec0 ps
         tshow dtimeIdx = formatStContSignal $ M.lookup dtimeIdx dt
         nshow (num, NLabel sec nid ty) =
@@ -523,19 +568,27 @@ drawAbsTopologySignal f content (Topology g) (Envs rec0 e _de _p _dp fn _dn dt x
                           (ELine vid uid, M.lookup (EnergyIdx vsec rec vid uid) e) ]
           where NLabel usec _ _ = fromJust $ lab g uid
                 NLabel vsec _ _ = fromJust $ lab g vid
-                e1 = M.lookup (EnergyIdx usec rec uid vid) e
-                e2 = M.lookup (EnergyIdx vsec rec vid uid) e
-                ndirlab WithDir = (NLine uid vid , M.lookup (FEtaIdx usec rec uid vid) fn <*> e2)
-                ndirlab _ = (NLine vid uid, M.lookup (FEtaIdx vsec rec vid uid) fn <*> e1)
+                ndirlab WithDir = (NLine uid vid, M.lookup (FEtaIdx usec rec uid vid) fn)
+                ndirlab _ = (NLine vid uid, M.lookup (FEtaIdx vsec rec vid uid) fn)
         mkLst _ _ = [ (ErrorLine "No single record number!", Nothing) ]
 
+
+envDeltaTopologySignal ::
+   Interp.Envs a ->
+   Env DEnergyIdx DXIdx DEtaIdx a
+envDeltaTopologySignal (Interp.Envs rec0 _e de _p _dp _fn dn dt _x dx _v st) =
+   Env rec0 de dx
+      (M.intersectionWith ($) dn $ M.mapKeys (\(DEnergyIdx sec rec uid vid) -> DEtaIdx sec rec uid vid) de)
+      dt st
 
 drawDeltaTopologyD ::
    (DispApp s, TDisp t, SDisplay v, D.Storage v d, Ord d, Disp d) =>
    ((Line, Maybe (TC s t (Data v d))) -> String) ->
    (Maybe (TC s t (Data v d)) -> String) ->
-   Topology -> Envs (TC s t (Data v d)) ->  IO ()
-drawDeltaTopologyD f content (Topology g) (Envs rec0 _e de _p _dp _fn dn dt _x dx _v st) = printGraph g (Just rec0) tshow nshow eshow
+   Topology ->
+   Env DEnergyIdx DXIdx DEtaIdx (TC s t (Data v d)) ->
+   IO ()
+drawDeltaTopologyD f content (Topology g) (Env rec0 de dx dn dt st) = printGraph g (Just rec0) tshow nshow eshow
   where eshow ps = L.intercalate "\n" $ map f $ mkLst rec0 ps
         tshow dtimeIdx = formatStContSignal $ M.lookup dtimeIdx dt
         nshow (num, NLabel sec nid ty) =
@@ -559,10 +612,8 @@ drawDeltaTopologyD f content (Topology g) (Envs rec0 _e de _p _dp _fn dn dt _x d
                           (ELine vid uid, M.lookup (DEnergyIdx vsec rec vid uid) de) ]
           where NLabel usec _ _ = fromJust $ lab g uid
                 NLabel vsec _ _ = fromJust $ lab g vid
-                e1 = M.lookup (DEnergyIdx usec rec uid vid) de
-                e2 = M.lookup (DEnergyIdx vsec rec vid uid) de
-                ndirlab WithDir = (NLine uid vid , M.lookup (DEtaIdx usec rec uid vid) dn <*> e2)
-                ndirlab _ = (NLine vid uid, M.lookup (DEtaIdx vsec rec vid uid) dn <*> e1)
+                ndirlab WithDir = (NLine uid vid , M.lookup (DEtaIdx usec rec uid vid) dn)
+                ndirlab _ = (NLine vid uid, M.lookup (DEtaIdx vsec rec vid uid) dn)
         mkLst _ _ = [ (ErrorLine "No single record number!", Nothing) ]
 
 
