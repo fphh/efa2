@@ -208,6 +208,12 @@ showLine (XLine u v) = "x_" ++ show u ++ "_" ++ show v
 showLine (NLine u v) = "n_" ++ show u ++ "_" ++ show v
 showLine (ErrorLine str) = str
 
+showLineLatex :: Line -> String
+showLineLatex (ELine u v) = "$e_{" ++ show u ++ "." ++ show v ++ "}$"
+showLineLatex (XLine u v) = "$x_{" ++ show u ++ "." ++ show v ++ "}$"
+showLineLatex (NLine u v) = "$n_{" ++ show u ++ "." ++ show v ++ "}$"
+showLineLatex (ErrorLine str) = str
+
 showLineDelta :: Line -> String
 showLineDelta (ELine u v) = "de_" ++ show u ++ "_" ++ show v
 showLineDelta (XLine u v) = "dx_" ++ show u ++ "_" ++ show v
@@ -351,12 +357,7 @@ instance DrawTopologyList LatexString where
       draw formatAssignList formatStContList topo
          (envAbsTopologyLatex (\dt dtimeIdx -> formatDTimeList $ dt `safeLookup` dtimeIdx) env)
 
-   formatAssignList (x, ys) = showX x ++ " = " ++ formatStContList ys
-      where
-         showX (ELine u v) = "$e_{" ++ show u ++ "." ++ show v ++ "}$"
-         showX (XLine u v) = "$x_{" ++ show u ++ "." ++ show v ++ "}$"
-         showX (NLine u v) = "$n_{" ++ show u ++ "." ++ show v ++ "}$"
-         showX (ErrorLine str) = str
+   formatAssignList (x, ys) = showLineLatex x ++ " = " ++ formatStContList ys
 
    formatStContList (Just ys) = unLatexString (head ys)
    formatStContList Nothing = "+"
