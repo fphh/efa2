@@ -208,6 +208,12 @@ instance Show Line where
          show (NLine u v) = "n_" ++ show u ++ "_" ++ show v
          show (ErrorLine str) = str
 
+showLineDelta :: Line -> String
+showLineDelta (ELine u v) = "de_" ++ show u ++ "_" ++ show v
+showLineDelta (XLine u v) = "dx_" ++ show u ++ "_" ++ show v
+showLineDelta (NLine u v) = "dn_" ++ show u ++ "_" ++ show v
+showLineDelta (ErrorLine str) = str
+
 
 data Env a =
    Env {
@@ -315,20 +321,15 @@ instance DrawDeltaTopologyList Double where
    drawDeltaTopologyList topo env =
       draw f formatStCont
          topo (envDeltaTopology tshow env [one])
-     where -- f (x, Just ys) = showDelta x ++ " = [ " ++ L.intercalate ", " (map showEqTerm ys) ++ " ]"
+     where -- f (x, Just ys) = showLineDelta x ++ " = [ " ++ L.intercalate ", " (map showEqTerm ys) ++ " ]"
            f (x, ys) =
-              showDelta x ++ " = " ++
+              showLineDelta x ++ " = " ++
               maybe [heart] (concatMap (("\n"++) . show)) ys
 
            formatStCont (Just ys) = "[ " ++ L.intercalate ", " (map show ys) ++ " ]"
            formatStCont Nothing = [heart]
 
            tshow dt dtimeIdx = show $ dt `safeLookup` dtimeIdx
-
-           showDelta (ELine u v) = "de_" ++ show u ++ "_" ++ show v
-           showDelta (XLine u v) = "dx_" ++ show u ++ "_" ++ show v
-           showDelta (NLine u v) = "dn_" ++ show u ++ "_" ++ show v
-           showDelta (ErrorLine str) = str
 
 instance (Integral a) => One (Ratio a) where one = 1
 
@@ -402,17 +403,13 @@ instance ToIndex a => DrawTopologyList (Term a) where
 instance ToIndex a => DrawDeltaTopologyList (Term a) where
    drawDeltaTopologyList topo env =
       draw f formatStCont topo (envDeltaTopology tshow env [one])
-           where -- f (x, Just ys) = showDelta x ++ " = [ " ++ L.intercalate ", " (map showEqTerm ys) ++ " ]"
-                 f (x, Just ys) = showDelta x ++ " = \n" ++ showEqTerms ys
+           where -- f (x, Just ys) = showLineDelta x ++ " = [ " ++ L.intercalate ", " (map showEqTerm ys) ++ " ]"
+                 f (x, Just ys) = showLineDelta x ++ " = \n" ++ showEqTerms ys
 
-                 f (x, Nothing) = showDelta x ++ " = " ++ [heart]
+                 f (x, Nothing) = showLineDelta x ++ " = " ++ [heart]
                  formatStCont (Just ys) = "[ " ++ L.intercalate ", " (map showEqTerm ys) ++ " ]"
                  formatStCont Nothing = [heart]
 
-                 showDelta (ELine u v) = "de_" ++ show u ++ "_" ++ show v
-                 showDelta (XLine u v) = "dx_" ++ show u ++ "_" ++ show v
-                 showDelta (NLine u v) = "dn_" ++ show u ++ "_" ++ show v
-                 showDelta (ErrorLine str) = str
                  tshow dt dtimeIdx =
                     case M.lookup dtimeIdx dt of
                        Nothing ->
@@ -502,13 +499,8 @@ instance
       DrawDeltaTopologySignal (Data v a) where
          drawDeltaTopologySignal topo env =
             draw f formatStContSignal topo (envDeltaTopologySignal env)
-           where -- f (x, Just ys) = showDelta x ++ " = [ " ++ L.intercalate ", " (map showEqTerm ys) ++ " ]"
-                 f (x, ys) = showDelta x ++ " = " ++ formatStContSignal ys
-
-                 showDelta (ELine u v) = "de_" ++ show u ++ "_" ++ show v
-                 showDelta (XLine u v) = "dx_" ++ show u ++ "_" ++ show v
-                 showDelta (NLine u v) = "dn_" ++ show u ++ "_" ++ show v
-                 showDelta (ErrorLine str) = str
+           where -- f (x, Just ys) = showLineDelta x ++ " = [ " ++ L.intercalate ", " (map showEqTerm ys) ++ " ]"
+                 f (x, ys) = showLineDelta x ++ " = " ++ formatStContSignal ys
 
 instance
    (DispApp s, TDisp t, DrawDeltaTopologySignal a) =>
