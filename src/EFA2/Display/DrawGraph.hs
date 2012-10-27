@@ -239,6 +239,16 @@ makeLookup ::
 makeLookup makeIdx mp =
    \sec rec uid vid -> M.lookup (makeIdx sec rec uid vid) mp
 
+checkedLookupFormat ::
+   (Ord idx, Show idx) =>
+   String -> (a -> String) -> M.Map idx a -> idx -> String
+checkedLookupFormat msg format dt k =
+   case M.lookup k dt of
+      Nothing ->
+         error $
+         msg ++ ": " ++ show k ++ "\n" ++ show (fmap format dt)
+      Just x -> format x
+
 
 draw ::
    Topology' NLabel ELabel ->
@@ -290,12 +300,7 @@ class One a => DrawTopologyList a where
    drawTopologyList topo env =
       draw topo
          (envAbsTopology formatAssignList formatStContList
-            (\dt k ->
-               case M.lookup k dt of
-                  Nothing ->
-                     error $
-                     "drawTopologyList: " ++ show k ++ "\n" ++ show (fmap formatDTimeList dt)
-                  Just x -> formatDTimeList x)
+            (checkedLookupFormat "drawTopologyList" formatDTimeList)
             env [one])
 
    formatStContList :: Maybe [a] -> String
@@ -407,21 +412,15 @@ instance ToIndex a => DrawTopologyList (Term a) where
 instance ToIndex a => DrawDeltaTopologyList (Term a) where
    drawDeltaTopologyList topo env =
       draw topo
-         (envDeltaTopology f formatStCont tshow env [one])
+         (envDeltaTopology f formatStCont
+             (checkedLookupFormat "drawDeltaTopologyList" showEqTerms)
+             env [one])
            where -- f (x, Just ys) = showLineDelta x ++ " = [ " ++ L.intercalate ", " (map showEqTerm ys) ++ " ]"
                  f (x, Just ys) = showLineDelta x ++ " = \n" ++ showEqTerms ys
 
                  f (x, Nothing) = showLineDelta x ++ " = " ++ [heart]
                  formatStCont (Just ys) = "[ " ++ L.intercalate ", " (map showEqTerm ys) ++ " ]"
                  formatStCont Nothing = [heart]
-
-                 tshow dt dtimeIdx =
-                    case M.lookup dtimeIdx dt of
-                       Nothing ->
-                          error $
-                          "drawTopologyList: " ++ show dtimeIdx ++ "\n"
-                           ++ show (fmap showEqTerms dt)
-                       Just t -> showEqTerms t
 
 
 envAbsTopology ::
