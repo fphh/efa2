@@ -319,6 +319,7 @@ class DrawTopologyList a where
 
 class DrawTopologyList a => DrawDeltaTopologyList a where
    envDeltaTopologyList :: Interp.Envs [a] -> Env [a]
+   formatElement :: a -> String
 
 instance DrawTopologyList a => DrawTopology [a] where
    envTopology = envTopologyList
@@ -334,16 +335,8 @@ instance DrawTopologyList Double where
    defaultEtaArg = 1
 
 instance DrawDeltaTopologyList Double where
-   envDeltaTopologyList =
-      envDeltaTopology_ f formatStCont tshow [defaultEtaArg]
-     where f (x, ys) =
-              showLineDelta x ++ " = " ++
-              maybe [heart] (concatMap (("\n"++) . show)) ys
-
-           formatStCont (Just ys) = "[ " ++ L.intercalate ", " (map show ys) ++ " ]"
-           formatStCont Nothing = [heart]
-
-           tshow dt dtimeIdx = show $ dt `safeLookup` dtimeIdx
+   envDeltaTopologyList = envDeltaTopologyList_ [defaultEtaArg]
+   formatElement = show
 
 instance (Integral a, Show a) => DrawTopologyList (Ratio a) where
    formatStContList (Just ys) = unwords $ map show ys
@@ -412,16 +405,8 @@ instance ToIndex a => DrawTopologyList (Term a) where
    defaultEtaArg = error "EqTerm 1"
 
 instance ToIndex a => DrawDeltaTopologyList (Term a) where
-   envDeltaTopologyList =
-      envDeltaTopology_ f formatStCont
-         (checkedLookupFormat "drawDeltaTopologyList" showEqTerms)
-         [defaultEtaArg]
-           where -- f (x, Just ys) = showLineDelta x ++ " = [ " ++ L.intercalate ", " (map showEqTerm ys) ++ " ]"
-                 f (x, Just ys) = showLineDelta x ++ " = \n" ++ showEqTerms ys
-
-                 f (x, Nothing) = showLineDelta x ++ " = " ++ [heart]
-                 formatStCont (Just ys) = "[ " ++ L.intercalate ", " (map showEqTerm ys) ++ " ]"
-                 formatStCont Nothing = [heart]
+   envDeltaTopologyList = envDeltaTopologyList_ [defaultEtaArg]
+   formatElement = showEqTerm
 
 
 envAbsTopology ::
@@ -472,6 +457,21 @@ envDeltaTopology_ formatAssign content tshow etaArg
       (tshow dt)
       (showNode rec st content)
 
+envDeltaTopologyList_ ::
+   (DrawDeltaTopologyList a) =>
+   [a] -> Interp.Envs [a] ->
+   Env [a]
+envDeltaTopologyList_ etaArg =
+   envDeltaTopology_
+      (\(x, ys) ->
+         showLineDelta x ++ " = " ++
+         maybe [heart] (concatMap (("\n"++) . formatElement)) ys)
+      (\mys ->
+         case mys of
+            Just ys -> "[ " ++ L.intercalate ", " (map formatElement ys) ++ " ]"
+            Nothing -> [heart])
+      (checkedLookupFormat "envDeltaTopologyList_" formatList)
+      etaArg
 
 class DrawTopologySignal a where
    envTopologySignal ::
