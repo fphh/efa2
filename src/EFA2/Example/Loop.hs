@@ -24,11 +24,11 @@ numOf :: Int
 numOf = 3
 
 dtimes :: DTimeMap [Val]
-dtimes = M.fromList [(DTimeIdx (Idx.Section 0) 0, [2, 2, 2])]
+dtimes = M.fromList [(DTimeIdx (Idx.Section 0) (Idx.Record 0), [2, 2, 2])]
 
 sigs :: EnergyMap [Val]
 sigs =
-   M.mapKeys (uncurry (EnergyIdx (Idx.Section 0) 0)) $
+   M.mapKeys (uncurry (EnergyIdx (Idx.Section 0) (Idx.Record 0))) $
    M.fromList $
       ((,) 0 1, [2.3, 2.4, 3]) :
       ((,) 1 0, [2, 2.1, 2.2]) :
@@ -46,7 +46,7 @@ sigs =
 
 etas :: FEtaMap [Val]
 etas =
-   M.mapKeys (uncurry (FEtaIdx (Idx.Section 0) 0)) $
+   M.mapKeys (uncurry (FEtaIdx (Idx.Section 0) (Idx.Record 0))) $
    M.fromList $
       ((,) 0 1, map (\x -> x/(x+1))) :
       ((,) 1 0, map (\x -> x/(x+1))) :
@@ -65,7 +65,7 @@ etas =
 
 pows :: PowerMap [Val]
 pows =
-   M.mapKeys (uncurry (PowerIdx (Idx.Section 0) 0)) $
+   M.mapKeys (uncurry (PowerIdx (Idx.Section 0) (Idx.Record 0))) $
    M.fromList $
       ((,) 0 1, [1, 2, 3]) :
       ((,) 1 0, replicate numOf 2.2) :

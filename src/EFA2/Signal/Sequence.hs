@@ -16,7 +16,7 @@ import EFA2.Signal.SequenceData
           (SequData(..), Sequ(..), Sec,
            PowerRecord(..), ListPowerRecord, SequPwrRecord, SecPowerRecord,
            FlowRecord, FlRecord(FlRecord), SequFlowRecord,
-           RecIdx(..), PPosIdx(..), zipWithSecIdxs)
+           PPosIdx(..), zipWithSecIdxs)
 import EFA2.Signal.Base
           (Val, Sign(..), ZeroCrossing(..))
 import EFA2.Signal.Signal
@@ -62,17 +62,17 @@ data EventType = LeftEvent
 
 
 -- | From PowerRecord
---fromFlowRecord :: SecIdx -> RecIdx -> FlowRecord -> Envs FSig -- [Val]
+--fromFlowRecord :: SecIdx -> Idx.Record -> FlowRecord -> Envs FSig -- [Val]
 
---fromFlowRecord :: SecIdx -> RecIdx -> FlRecord a b -> Envs a --UTFSig
+--fromFlowRecord :: SecIdx -> Idx.Record -> FlRecord a b -> Envs a --UTFSig
 fromFlowRecord ::
    Idx.Section ->
-   RecIdx ->
+   Idx.Record ->
    FlRecord
       (TC s1 (Typ delta2 t2 p2) (Data c1 d1))
       (TC s1 (Typ delta1 t1 p1) (Data c1 d1)) ->
    Envs (TC s1 (Typ UT UT UT) (Data c1 d1))
-fromFlowRecord secIdx (RecIdx recIdx) (FlRecord dTime flowMap) =
+fromFlowRecord secIdx recIdx (FlRecord dTime flowMap) =
   emptyEnv { energyMap = M.map untype $ M.mapKeys f flowMap, dtimeMap = M.fromList [(DTimeIdx secIdx recIdx, untype dTime)] }
   where f (PPosIdx idx1 idx2) = EnergyIdx secIdx recIdx idx1 idx2
 
@@ -109,7 +109,7 @@ makeSequence ::
           (Data (UV.Vector :> Nil) Val))),
     Topology)
 makeSequence pRec topo =
-   (zipWithSecIdxs (flip fromFlowRecord (RecIdx 0)) sqFRec,
+   (zipWithSecIdxs (flip fromFlowRecord (Idx.Record 0)) sqFRec,
     Flow.mkSequenceTopology $
     Flow.genSectionTopology $
     Flow.genSequFlowTops topo $

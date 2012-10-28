@@ -26,34 +26,34 @@ import EFA2.Signal.Base (BSum)
 --   (for equation generation, we use the underlying fgl node ids.
 
 -- | Energy variables.
-data EnergyIdx = EnergyIdx !Idx.Section !Int !Int !Int deriving (Show, Ord, Eq)
-data DEnergyIdx = DEnergyIdx !Idx.Section !Int !Int !Int deriving (Show, Ord, Eq)
+data EnergyIdx = EnergyIdx !Idx.Section !Idx.Record !Int !Int deriving (Show, Ord, Eq)
+data DEnergyIdx = DEnergyIdx !Idx.Section !Idx.Record !Int !Int deriving (Show, Ord, Eq)
 
 -- | Power variables.
-data PowerIdx = PowerIdx !Idx.Section !Int !Int !Int deriving (Show, Ord, Eq)
-data DPowerIdx = DPowerIdx !Idx.Section !Int !Int !Int deriving (Show, Ord, Eq)
+data PowerIdx = PowerIdx !Idx.Section !Idx.Record !Int !Int deriving (Show, Ord, Eq)
+data DPowerIdx = DPowerIdx !Idx.Section !Idx.Record !Int !Int deriving (Show, Ord, Eq)
 
 -- | Eta variables.
-data FEtaIdx = FEtaIdx !Idx.Section !Int !Int !Int deriving (Show, Ord, Eq)
-data DEtaIdx = DEtaIdx !Idx.Section !Int !Int !Int deriving (Show, Ord, Eq)
+data FEtaIdx = FEtaIdx !Idx.Section !Idx.Record !Int !Int deriving (Show, Ord, Eq)
+data DEtaIdx = DEtaIdx !Idx.Section !Idx.Record !Int !Int deriving (Show, Ord, Eq)
 
 -- | Splitting factors.
-data XIdx = XIdx !Idx.Section !Int !Int !Int deriving (Show, Ord, Eq)
-data DXIdx = DXIdx !Idx.Section !Int !Int !Int deriving (Show, Ord, Eq)
+data XIdx = XIdx !Idx.Section !Idx.Record !Int !Int deriving (Show, Ord, Eq)
+data DXIdx = DXIdx !Idx.Section !Idx.Record !Int !Int deriving (Show, Ord, Eq)
 
 -- | Delta time variables, depending solely on their section and record number.
-data DTimeIdx = DTimeIdx !Idx.Section !Int deriving (Show, Ord, Eq)
+data DTimeIdx = DTimeIdx !Idx.Section !Idx.Record deriving (Show, Ord, Eq)
 
 
 -- | Section number, record number, storage number.
-data StorageIdx = StorageIdx !Idx.Section !Int !Int deriving (Show, Ord, Eq)
+data StorageIdx = StorageIdx !Idx.Section !Idx.Record !Int deriving (Show, Ord, Eq)
 
 -- | This variable type can be used to express arbitrary relations.
 -- You can variables also make dependent on section and record.
 -- ATTENTION: Some of them are used for equation generation for
 -- performance issues. You have to make sure yourself if your
 -- variable is unique in the equational system.
---data VarIdx = VarIdx !Idx.Section !Int !Int !Int deriving (Show, Ord, Eq)
+--data VarIdx = VarIdx !Idx.Section !Idx.Record !Int !Int deriving (Show, Ord, Eq)
 
 data Use = InSum
          | OutSum
@@ -65,7 +65,7 @@ toDiffUse :: Use -> Use
 toDiffUse InSum = InDiffSum
 toDiffUse OutSum = OutDiffSum
 
-data VarIdx = VarIdx !Idx.Section !Int Use !Int deriving (Show, Ord, Eq)
+data VarIdx = VarIdx !Idx.Section !Idx.Record Use !Int deriving (Show, Ord, Eq)
 
 
 data Index =
@@ -84,7 +84,7 @@ data Index =
 
 
 class IdxRecNum a where
-      getIdxRecNum :: a -> Int
+      getIdxRecNum :: a -> Idx.Record
 
 instance IdxRecNum EnergyIdx where
          getIdxRecNum (EnergyIdx _ r _ _) = r
@@ -185,14 +185,14 @@ emptyEnv = Envs NoRecord M.empty M.empty M.empty M.empty M.empty M.empty M.empty
 
 
 data RecordNumber = NoRecord
-                  | SingleRecord Int
-                  | MixedRecord [Int] deriving (Eq, Ord, Show)
+                  | SingleRecord Idx.Record
+                  | MixedRecord [Idx.Record] deriving (Eq, Ord, Show)
 
 isSingleRecord :: RecordNumber -> Bool
 isSingleRecord (SingleRecord _) = True
 isSingleRecord _ = False
 
-fromSingleRecord :: RecordNumber -> Int
+fromSingleRecord :: RecordNumber -> Idx.Record
 fromSingleRecord (SingleRecord x) = x
 fromSingleRecord x = error $ "fromSingleRecord: not a single record: " ++ show x
 

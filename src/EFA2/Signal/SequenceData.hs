@@ -38,8 +38,7 @@ import Data.Foldable (Foldable, foldMap, fold)
 
 
 -----------------------------------------------------------------------------------
--- | Indices for Record, Section and Power Position
-newtype RecIdx = RecIdx Int deriving (Show, Eq, Ord) -- dataset Index
+-- | Indices for Power Position
 data PPosIdx = PPosIdx !Int !Int deriving (Show, Eq, Ord)
 
 

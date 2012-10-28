@@ -11,9 +11,9 @@ import EFA2.Interpreter.Env
 
 deflt ::
    (MkIdxC a) =>
-   (Idx.Section -> Int -> Int -> Int -> a) ->
+   (Idx.Section -> Idx.Record -> Int -> Int -> a) ->
    Int -> Int -> Index
-deflt mkIdx x y = mkVar $ mkIdx (Idx.Section 0) 0 x y
+deflt mkIdx x y = mkVar $ mkIdx (Idx.Section 0) (Idx.Record 0) x y
 
 p1, p2, p3, p4 :: Index
 p1 = deflt PowerIdx 0 1

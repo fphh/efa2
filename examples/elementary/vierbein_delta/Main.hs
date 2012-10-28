@@ -30,13 +30,13 @@ import EFA2.Display.DrawGraph (drawDeltaTopology, drawTopology, drawAll)
 
 
 symbolic :: Topology -> Envs EqTerm
-symbolic g = res' { recordNumber = SingleRecord 1, dxMap = dx1sym, detaMap = deta1sym, fetaMap = eta1sym }
+symbolic g = res' { recordNumber = SingleRecord rec1, dxMap = dx1sym, detaMap = deta1sym, fetaMap = eta1sym }
   where ts0 = snd $ makeAllEquations g [envs0sym]
         ts1 = snd $ makeAllEquations g [envs1sym]
 
         ts0o = order ts0
         ts1o = order ts1
-        difftseq = mkDiffEqTermEquations 0 ts1o
+        difftseq = mkDiffEqTermEquations rec0 ts1o
 
         ts =
            toAbsEquations $ order $ map assignToEquation $
@@ -52,7 +52,7 @@ numeric g = {- trace ("---------\n" ++ showEqTerms ts ++ "\n------\n") $ -} res
 
         ts0o = order ts0
         ts1o = order ts1
-        difftseq = mkDiffEqTermEquations 0 ts1o
+        difftseq = mkDiffEqTermEquations rec0 ts1o
 
         envs = envUnion [envs0', envs1']
 
@@ -61,7 +61,7 @@ numeric g = {- trace ("---------\n" ++ showEqTerms ts ++ "\n------\n") $ -} res
 
 
 deltaEnv :: Topology -> Envs Sc
-deltaEnv g = (res1 `minusEnv` res0) { recordNumber = SingleRecord 1 }
+deltaEnv g = (res1 `minusEnv` res0) { recordNumber = SingleRecord rec1 }
   where (envs0', ts0) = makeAllEquations g [envs0num]
         (envs1', ts1) = makeAllEquations g [envs1num]
 
@@ -134,32 +134,36 @@ main = do
 sec :: Idx.Section
 sec = Idx.Section 0
 
+rec0, rec1 :: Idx.Record
+rec0 = Idx.Record 0
+rec1 = Idx.Record 1
+
 
 -- Numeric =====================================================================
 
 dtimes0num :: DTimeMap Sc
-dtimes0num = M.fromList [ (DTimeIdx sec 0, toScalar 1.0) ]
+dtimes0num = M.fromList [ (DTimeIdx sec rec0, toScalar 1.0) ]
 
 power0num :: PowerMap Sc
-power0num = M.fromList [ (PowerIdx sec 0 0 2, toScalar 3.0) ]
+power0num = M.fromList [ (PowerIdx sec rec0 0 2, toScalar 3.0) ]
 
 eta0num :: FEtaMap Sc
-eta0num = M.fromList [ (FEtaIdx sec 0 0 2, S.map $ const 0.8),
-                       (FEtaIdx sec 0 2 0, S.map $ const 0.8),
-                       (FEtaIdx sec 0 1 2, S.map $ const 0.8),
-                       (FEtaIdx sec 0 2 1, S.map $ const 0.8),
-                       (FEtaIdx sec 0 2 3, S.map $ const 0.8),
-                       (FEtaIdx sec 0 3 2, S.map $ const 0.82),
-                       (FEtaIdx sec 0 2 4, S.map $ const 0.8),
-                       (FEtaIdx sec 0 4 2, S.map $ const 0.8) ]
+eta0num = M.fromList [ (FEtaIdx sec rec0 0 2, S.map $ const 0.8),
+                       (FEtaIdx sec rec0 2 0, S.map $ const 0.8),
+                       (FEtaIdx sec rec0 1 2, S.map $ const 0.8),
+                       (FEtaIdx sec rec0 2 1, S.map $ const 0.8),
+                       (FEtaIdx sec rec0 2 3, S.map $ const 0.8),
+                       (FEtaIdx sec rec0 3 2, S.map $ const 0.82),
+                       (FEtaIdx sec rec0 2 4, S.map $ const 0.8),
+                       (FEtaIdx sec rec0 4 2, S.map $ const 0.8) ]
 
 x0num :: XMap Sc
-x0num = M.fromList [ (XIdx sec 0 2 0, toScalar 0.3),
-                     (XIdx sec 0 2 3, toScalar 0.4) ]
+x0num = M.fromList [ (XIdx sec rec0 2 0, toScalar 0.3),
+                     (XIdx sec rec0 2 3, toScalar 0.4) ]
 
 
 envs0num :: Envs Sc
-envs0num = emptyEnv { recordNumber = SingleRecord 0,
+envs0num = emptyEnv { recordNumber = SingleRecord rec0,
                       powerMap = power0num,
                       dtimeMap = dtimes0num,
                       xMap = x0num,
@@ -168,52 +172,52 @@ envs0num = emptyEnv { recordNumber = SingleRecord 0,
 ----------------------------------------------------------------------------------
 
 dtimes1num :: DTimeMap Sc
-dtimes1num = M.fromList [ (DTimeIdx sec 1, toScalar 1.0) ]
+dtimes1num = M.fromList [ (DTimeIdx sec rec1, toScalar 1.0) ]
 
 power1num :: PowerMap Sc
-power1num = M.fromList [ (PowerIdx sec 1 0 2, toScalar 4.0) ]
+power1num = M.fromList [ (PowerIdx sec rec1 0 2, toScalar 4.0) ]
 
 dpower1num :: DPowerMap Sc
-dpower1num = M.fromList [ (DPowerIdx sec 1 0 2, toScalar 1.0) ]
+dpower1num = M.fromList [ (DPowerIdx sec rec1 0 2, toScalar 1.0) ]
 
 
 eta1num :: FEtaMap Sc
-eta1num = M.fromList [ (FEtaIdx sec 1 0 2, S.map $ const 0.85),
-                       (FEtaIdx sec 1 2 0, S.map $ const 0.85),
-                       (FEtaIdx sec 1 1 2, S.map $ const 0.85),
-                       (FEtaIdx sec 1 2 1, S.map $ const 0.85),
-                       (FEtaIdx sec 1 2 3, S.map $ const 0.85),
-                       (FEtaIdx sec 1 3 2, S.map $ const 0.85),
-                       (FEtaIdx sec 1 2 4, S.map $ const 0.85),
-                       (FEtaIdx sec 1 4 2, S.map $ const 0.85) ]
+eta1num = M.fromList [ (FEtaIdx sec rec1 0 2, S.map $ const 0.85),
+                       (FEtaIdx sec rec1 2 0, S.map $ const 0.85),
+                       (FEtaIdx sec rec1 1 2, S.map $ const 0.85),
+                       (FEtaIdx sec rec1 2 1, S.map $ const 0.85),
+                       (FEtaIdx sec rec1 2 3, S.map $ const 0.85),
+                       (FEtaIdx sec rec1 3 2, S.map $ const 0.85),
+                       (FEtaIdx sec rec1 2 4, S.map $ const 0.85),
+                       (FEtaIdx sec rec1 4 2, S.map $ const 0.85) ]
 
 deta1num :: DEtaMap Sc
-deta1num = M.fromList [ (DEtaIdx sec 1 0 2, S.map $ const 0.05),
-                        (DEtaIdx sec 1 2 0, S.map $ const 0.05),
-                        (DEtaIdx sec 1 1 2, S.map $ const 0.05),
-                        (DEtaIdx sec 1 2 1, S.map $ const 0.05),
-                        (DEtaIdx sec 1 2 3, S.map $ const 0.05),
-                        (DEtaIdx sec 1 3 2, S.map $ const 0.05),
-                        (DEtaIdx sec 1 2 4, S.map $ const 0.05),
-                        (DEtaIdx sec 1 4 2, S.map $ const 0.05) ]
+deta1num = M.fromList [ (DEtaIdx sec rec1 0 2, S.map $ const 0.05),
+                        (DEtaIdx sec rec1 2 0, S.map $ const 0.05),
+                        (DEtaIdx sec rec1 1 2, S.map $ const 0.05),
+                        (DEtaIdx sec rec1 2 1, S.map $ const 0.05),
+                        (DEtaIdx sec rec1 2 3, S.map $ const 0.05),
+                        (DEtaIdx sec rec1 3 2, S.map $ const 0.05),
+                        (DEtaIdx sec rec1 2 4, S.map $ const 0.05),
+                        (DEtaIdx sec rec1 4 2, S.map $ const 0.05) ]
 
 x1num :: XMap Sc
-x1num = M.fromList [ (XIdx sec 1 2 0, toScalar 0.3),
-                     (XIdx sec 1 2 3, toScalar 0.4) ]
+x1num = M.fromList [ (XIdx sec rec1 2 0, toScalar 0.3),
+                     (XIdx sec rec1 2 3, toScalar 0.4) ]
 
 
 dx1num :: DXMap Sc
-dx1num = M.fromList [ (DXIdx sec 1 0 2, toScalar 0.0),
-                      (DXIdx sec 1 2 0, toScalar 0.0),
-                      (DXIdx sec 1 1 2, toScalar 0.0),
-                      (DXIdx sec 1 2 1, toScalar 0.0),
-                      (DXIdx sec 1 2 3, toScalar 0.0),
-                      (DXIdx sec 1 3 2, toScalar 0.0),
-                      (DXIdx sec 1 2 4, toScalar 0.0),
-                      (DXIdx sec 1 4 2, toScalar 0.0) ]
+dx1num = M.fromList [ (DXIdx sec rec1 0 2, toScalar 0.0),
+                      (DXIdx sec rec1 2 0, toScalar 0.0),
+                      (DXIdx sec rec1 1 2, toScalar 0.0),
+                      (DXIdx sec rec1 2 1, toScalar 0.0),
+                      (DXIdx sec rec1 2 3, toScalar 0.0),
+                      (DXIdx sec rec1 3 2, toScalar 0.0),
+                      (DXIdx sec rec1 2 4, toScalar 0.0),
+                      (DXIdx sec rec1 4 2, toScalar 0.0) ]
 
 envs1num :: Envs Sc
-envs1num = emptyEnv { recordNumber = SingleRecord 1,
+envs1num = emptyEnv { recordNumber = SingleRecord rec1,
                       powerMap = power1num,
                       dpowerMap = dpower1num,
                       fetaMap = eta1num,
@@ -235,26 +239,26 @@ selfEta :: (MkTermC a, Ord a) => [a] -> M.Map a (b -> EqTerm)
 selfEta ns = M.fromList $ map (\x -> (x, const $ mkTerm x)) ns
 
 dtimes0sym :: DTimeMap EqTerm
-dtimes0sym = selfMap [ DTimeIdx sec 0 ]
+dtimes0sym = selfMap [ DTimeIdx sec rec0 ]
 
 
 power0sym :: PowerMap EqTerm
-power0sym = selfMap [ PowerIdx sec 0 0 2 ]
+power0sym = selfMap [ PowerIdx sec rec0 0 2 ]
 
 eta0sym :: FEtaMap EqTerm
 eta0sym = selfEta $
-   FEtaIdx sec 0 0 2 : FEtaIdx sec 0 2 0 :
-   FEtaIdx sec 0 1 2 : FEtaIdx sec 0 2 1 :
-   FEtaIdx sec 0 2 3 : FEtaIdx sec 0 3 2 :
-   FEtaIdx sec 0 2 4 : FEtaIdx sec 0 4 2 :
+   FEtaIdx sec rec0 0 2 : FEtaIdx sec rec0 2 0 :
+   FEtaIdx sec rec0 1 2 : FEtaIdx sec rec0 2 1 :
+   FEtaIdx sec rec0 2 3 : FEtaIdx sec rec0 3 2 :
+   FEtaIdx sec rec0 2 4 : FEtaIdx sec rec0 4 2 :
    []
 
 x0sym :: XMap EqTerm
-x0sym = selfMap [ XIdx sec 0 2 0, XIdx sec 0 2 3 ]
+x0sym = selfMap [ XIdx sec rec0 2 0, XIdx sec rec0 2 3 ]
 
 
 envs0sym :: Envs EqTerm
-envs0sym = emptyEnv { recordNumber = SingleRecord 0,
+envs0sym = emptyEnv { recordNumber = SingleRecord rec0,
                       powerMap = power0sym,
                       dtimeMap = dtimes0sym,
                       xMap = x0sym,
@@ -264,54 +268,54 @@ envs0sym = emptyEnv { recordNumber = SingleRecord 0,
 
 
 dtimes1sym :: DTimeMap EqTerm
-dtimes1sym = selfMap [ DTimeIdx sec 1 ]
+dtimes1sym = selfMap [ DTimeIdx sec rec1 ]
 
 power1sym :: PowerMap EqTerm
-power1sym = selfMap [ PowerIdx sec 1 0 2 ]
+power1sym = selfMap [ PowerIdx sec rec1 0 2 ]
 
 dpower1sym :: DPowerMap EqTerm
-dpower1sym = selfMap [ DPowerIdx sec 1 0 2 ]
+dpower1sym = selfMap [ DPowerIdx sec rec1 0 2 ]
 
 
 eta1sym :: FEtaMap EqTerm
 eta1sym = selfEta $
-   FEtaIdx sec 1 0 2 : FEtaIdx sec 1 2 0 :
-   FEtaIdx sec 1 1 2 : FEtaIdx sec 1 2 1 :
-   FEtaIdx sec 1 2 3 : FEtaIdx sec 1 3 2 :
-   FEtaIdx sec 1 2 4 : FEtaIdx sec 1 4 2 :
+   FEtaIdx sec rec1 0 2 : FEtaIdx sec rec1 2 0 :
+   FEtaIdx sec rec1 1 2 : FEtaIdx sec rec1 2 1 :
+   FEtaIdx sec rec1 2 3 : FEtaIdx sec rec1 3 2 :
+   FEtaIdx sec rec1 2 4 : FEtaIdx sec rec1 4 2 :
    []
 
 deta1sym :: DEtaMap EqTerm
 deta1sym = selfEta $
-   DEtaIdx sec 1 0 2 : DEtaIdx sec 1 2 0 :
-   DEtaIdx sec 1 1 2 : DEtaIdx sec 1 2 1 :
-   DEtaIdx sec 1 2 3 : DEtaIdx sec 1 3 2 :
-   DEtaIdx sec 1 2 4 : DEtaIdx sec 1 4 2 :
+   DEtaIdx sec rec1 0 2 : DEtaIdx sec rec1 2 0 :
+   DEtaIdx sec rec1 1 2 : DEtaIdx sec rec1 2 1 :
+   DEtaIdx sec rec1 2 3 : DEtaIdx sec rec1 3 2 :
+   DEtaIdx sec rec1 2 4 : DEtaIdx sec rec1 4 2 :
    []
 
 x1sym :: XMap EqTerm
-x1sym = selfMap [ XIdx sec 1 2 0, XIdx sec 1 2 3 ]
+x1sym = selfMap [ XIdx sec rec1 2 0, XIdx sec rec1 2 3 ]
 
 
 dx1sym :: DXMap EqTerm
 dx1sym = M.union m1 m2
   where m1 =
            M.fromList $
-              (DXIdx sec 1 0 2, Const 0.0) :
-              (DXIdx sec 1 1 2, Const 0.0) :
-              (DXIdx sec 1 3 2, Const 0.0) :
-              (DXIdx sec 1 4 2, Const 0.0) :
+              (DXIdx sec rec1 0 2, Const 0.0) :
+              (DXIdx sec rec1 1 2, Const 0.0) :
+              (DXIdx sec rec1 3 2, Const 0.0) :
+              (DXIdx sec rec1 4 2, Const 0.0) :
               []
         m2 =
            M.fromList $
-              (DXIdx sec 1 2 0, Const 0.0) :
-              (DXIdx sec 1 2 1, Const 0.0) :
-              (DXIdx sec 1 2 3, Const 0.0) :
-              (DXIdx sec 1 2 4, Const 0.0) :
+              (DXIdx sec rec1 2 0, Const 0.0) :
+              (DXIdx sec rec1 2 1, Const 0.0) :
+              (DXIdx sec rec1 2 3, Const 0.0) :
+              (DXIdx sec rec1 2 4, Const 0.0) :
               []
 
 envs1sym :: Envs EqTerm
-envs1sym = emptyEnv { recordNumber = SingleRecord 1,
+envs1sym = emptyEnv { recordNumber = SingleRecord rec1,
                       powerMap = power1sym,
                       dpowerMap = dpower1sym,
                       fetaMap = eta1sym,

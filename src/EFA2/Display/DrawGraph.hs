@@ -110,8 +110,7 @@ mkDotGraph g mRecordNum timef nshow eshow =
                    case recordNum of
                       Nothing -> "NoRecord"
                       Just n ->
-                         "Record " ++ show n ++
-                         " / Time " ++ timef (DTimeIdx sl n)
+                         show n ++ " / Time " ++ timef (DTimeIdx sl n)
         stmts = DotStmts { attrStmts = [],
                            subGraphs = map sg cs,
                            nodeStmts = [],
@@ -223,9 +222,9 @@ showLineDelta (ErrorLine str) = str
 data Env a =
    Env {
       recordNumber :: RecordNumber,
-      lookupEnergy_ :: Idx.Section -> Int -> Int -> Int -> Maybe a,
-      lookupX_      :: Idx.Section -> Int -> Int -> Int -> Maybe a,
-      lookupEta_    :: Idx.Section -> Int -> Int -> Int -> Maybe a,
+      lookupEnergy_ :: Idx.Section -> Idx.Record -> Int -> Int -> Maybe a,
+      lookupX_      :: Idx.Section -> Idx.Record -> Int -> Int -> Maybe a,
+      lookupEta_    :: Idx.Section -> Idx.Record -> Int -> Int -> Maybe a,
       formatAssign_ :: (Line, Maybe a) -> String,
       showTime :: DTimeIdx -> String,
       showNode_ :: LNode NLabel -> String
@@ -233,8 +232,8 @@ data Env a =
 
 makeLookup ::
    (Ord idx) =>
-   (Idx.Section -> Int -> Int -> Int -> idx) -> M.Map idx a ->
-   Idx.Section -> Int -> Int -> Int -> Maybe a
+   (Idx.Section -> Idx.Record -> Int -> Int -> idx) -> M.Map idx a ->
+   Idx.Section -> Idx.Record -> Int -> Int -> Maybe a
 makeLookup makeIdx mp =
    \sec rec uid vid -> M.lookup (makeIdx sec rec uid vid) mp
 

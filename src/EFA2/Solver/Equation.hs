@@ -164,8 +164,8 @@ mult :: NonEmpty.T [] EqTerm -> EqTerm
 mult = NonEmpty.foldl1 (:*)
 
 
-showEdgeIdx :: Idx.Section -> Int -> Int -> Int -> String
-showEdgeIdx (Idx.Section s) r x y =
+showEdgeIdx :: Idx.Section -> Idx.Record -> Int -> Int -> String
+showEdgeIdx (Idx.Section s) (Idx.Record r) x y =
    show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
 
 showIdx :: ToIndex idx => idx -> String
@@ -180,15 +180,15 @@ showIdx idx =
       FEta (FEtaIdx s r x y) -> "n_" ++ showEdgeIdx s r x y
       DEta (DEtaIdx s r x y) -> "dn_" ++ showEdgeIdx s r x y
 
-      DTime (DTimeIdx (Idx.Section s) r) ->
+      DTime (DTimeIdx (Idx.Section s) (Idx.Record r)) ->
          "dt_" ++ show s ++ "." ++ show r
 
       X (XIdx s r x y) -> "x_" ++ showEdgeIdx s r x y
       DX (DXIdx s r x y) -> "dx_" ++ showEdgeIdx s r x y
 
-      Var (VarIdx (Idx.Section s) r u x) ->
+      Var (VarIdx (Idx.Section s) (Idx.Record r) u x) ->
          "v_" ++ show s ++ "." ++ show r ++ "_" ++ show u ++ "." ++ show x
-      Store (StorageIdx (Idx.Section s) r n) ->
+      Store (StorageIdx (Idx.Section s) (Idx.Record r) n) ->
          "s_" ++ show s ++ "." ++ show r ++ "_" ++ show n
 
 showEqTerm :: ToIndex idx => Term idx -> String
@@ -255,8 +255,8 @@ edgeToLatexString e power0 eta power1 =
       Eta -> idxToLatexString eta ++ " = n(" ++ idxToLatexString power0 ++ ", " ++ idxToLatexString power1 ++ ")"
 
 
-edgeIdxToLatexString :: Idx.Section -> Int -> Int -> Int -> String
-edgeIdxToLatexString (Idx.Section s) r x y =
+edgeIdxToLatexString :: Idx.Section -> Idx.Record -> Int -> Int -> String
+edgeIdxToLatexString (Idx.Section s) (Idx.Record r) x y =
    "{" ++ show s ++ "." ++ show r ++ "." ++ show x ++ "." ++ show y ++ "}"
 
 idxToLatexString :: Env.Index -> String
@@ -271,14 +271,14 @@ idxToLatexString idx =
       FEta (FEtaIdx s r x y) -> "\\eta_" ++ edgeIdxToLatexString s r x y
       DEta (DEtaIdx s r x y) -> "\\Delta \\eta_" ++ edgeIdxToLatexString s r x y
 
-      DTime (DTimeIdx (Idx.Section s) r) -> "\\Delta t_{" ++ show s ++ "." ++ show r ++ "}"
+      DTime (DTimeIdx (Idx.Section s) (Idx.Record r)) -> "\\Delta t_{" ++ show s ++ "." ++ show r ++ "}"
 
       X (XIdx s r x y) -> "x_" ++ edgeIdxToLatexString s r x y
       DX (DXIdx s r x y) -> "\\Delta x_" ++ edgeIdxToLatexString s r x y
 
-      Var (VarIdx (Idx.Section s) r u x) ->
+      Var (VarIdx (Idx.Section s) (Idx.Record r) u x) ->
          "v_{" ++ show s ++ "." ++ show r ++ "." ++ show u ++ "." ++ show x ++ "}"
-      Store (StorageIdx (Idx.Section s) r n) ->
+      Store (StorageIdx (Idx.Section s) (Idx.Record r) n) ->
          "s_{" ++ show s ++ "." ++ show r ++ "." ++ show n ++ "}"
 
 eqToLatexString' :: Equation -> String
@@ -533,7 +533,7 @@ assignToEquation (AbsAssign assign) =
       x ::= y  ->  Atom x := y
 
 
-mkDiffEqTerm :: Int -> Assign -> [AbsAssign]
+mkDiffEqTerm :: Idx.Record -> Assign -> [AbsAssign]
 
 -- v_0.1_OutSum.0 = P_0.1_0.1
 mkDiffEqTerm _ (AbsAssign (Var (VarIdx s r use n) ::= Atom (Power (PowerIdx _ _ f t)))) =
@@ -639,7 +639,7 @@ mkDiffEqTerm oldrec (AssignEdge PowerIn (Var (VarIdx s newrec use _n)) _ (Power 
 mkDiffEqTerm _ _ = []
 
 
-mkDiffEqTermEquations :: Int -> [Assign] -> [Assign]
+mkDiffEqTermEquations :: Idx.Record -> [Assign] -> [Assign]
 mkDiffEqTermEquations rec =
    map AbsAssign . concatMap (mkDiffEqTerm rec)
 

@@ -36,13 +36,13 @@ symbolic :: Topology -> Envs EqTerm
 symbolic g = mapEqTermEnv (setEqTerms (emptyEnv { dxMap = dx1eq })) res
   where
 
-        envs0 = emptyEnv { recordNumber = SingleRecord 0,
+        envs0 = emptyEnv { recordNumber = SingleRecord rec0,
                            powerMap = power0eq,
                            dtimeMap = dtimes0eq,
                            xMap = x0eq,
                            fetaMap = eta0eq }
 
-        envs1 = emptyEnv { recordNumber = SingleRecord 1,
+        envs1 = emptyEnv { recordNumber = SingleRecord rec1,
                            powerMap = power1eq,
                            dpowerMap = dpower1eq,
                            fetaMap = eta1eq,
@@ -56,7 +56,7 @@ symbolic g = mapEqTermEnv (setEqTerms (emptyEnv { dxMap = dx1eq })) res
 
         ts0o = order ts0
         ts1o = order ts1
-        difftseq = mkDiffEqTermEquations 0 ts1o
+        difftseq = mkDiffEqTermEquations rec0 ts1o
 
         ts =
            toAbsEquations $ order $ map assignToEquation $
@@ -65,13 +65,13 @@ symbolic g = mapEqTermEnv (setEqTerms (emptyEnv { dxMap = dx1eq })) res
 
 numeric :: Topology -> Envs Sc
 numeric g =  trace ("---------\n" ++ showAssigns ts1o ++ "\n------\n") res
-  where envs0 = emptyEnv { recordNumber = SingleRecord 0,
+  where envs0 = emptyEnv { recordNumber = SingleRecord rec0,
                            powerMap = power0num,
                            dtimeMap = dtimes0num,
                            xMap = x0num,
                            fetaMap = eta0num }
 
-        envs1 = emptyEnv { recordNumber = SingleRecord 1,
+        envs1 = emptyEnv { recordNumber = SingleRecord rec1,
                            powerMap = power1num,
                            dpowerMap = dpower1num,
                            fetaMap = eta1num,
@@ -85,7 +85,7 @@ numeric g =  trace ("---------\n" ++ showAssigns ts1o ++ "\n------\n") res
 
         ts0o = order ts0
         ts1o = order ts1
-        difftseq = mkDiffEqTermEquations 0 ts1o
+        difftseq = mkDiffEqTermEquations rec0 ts1o
 
         envs = envUnion [envs0', envs1']
 
@@ -95,13 +95,13 @@ numeric g =  trace ("---------\n" ++ showAssigns ts1o ++ "\n------\n") res
 deltaEnv :: Topology -> Envs Sc
 deltaEnv g = res1 `minusEnv` res0
   where
-        envs0 = emptyEnv { recordNumber = SingleRecord 0,
+        envs0 = emptyEnv { recordNumber = SingleRecord rec0,
                            powerMap = power0num,
                            dtimeMap = dtimes0num,
                            xMap = x0num,
                            fetaMap = eta0num }
 
-        envs1 = emptyEnv { recordNumber = SingleRecord 1,
+        envs1 = emptyEnv { recordNumber = SingleRecord rec1,
                            powerMap = power1num,
                            --dpowerMap = dpower1num,
                            --detaMap = deta1num,
@@ -202,6 +202,6 @@ main = do
   putStrLn (format $ M.toList vars)
 
   drawAll [
-    drawTopology g ((mapEqTermEnv ((:[]) . simplify) sym) { recordNumber = SingleRecord 0 }),
-    drawDeltaTopology g ((mapEqTermEnv additiveTerms sym) { recordNumber = SingleRecord 1 }) ]
+    drawTopology g ((mapEqTermEnv ((:[]) . simplify) sym) { recordNumber = SingleRecord rec0 }),
+    drawDeltaTopology g ((mapEqTermEnv additiveTerms sym) { recordNumber = SingleRecord rec1 }) ]
 
