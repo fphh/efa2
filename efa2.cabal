@@ -46,6 +46,7 @@ Library
   GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs
   Exposed-Modules:
     EFA2.IO.Import
+    EFA2.IO.FileSave
     EFA2.Utils.Utils
     EFA2.Utils.Graph
     EFA2.Utils.Trace
@@ -64,7 +65,6 @@ Library
     EFA2.Solver.Horn
     EFA2.Solver.EquationOrder
     EFA2.Solver.DependencyGraph
-    EFA2.Display.FileSave
     EFA2.Display.Plot
     EFA2.Display.DrawGraph
     EFA2.Display.DispTyp

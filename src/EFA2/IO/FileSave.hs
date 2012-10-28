@@ -1,5 +1,5 @@
 
-module EFA2.Display.FileSave where
+module EFA2.IO.FileSave where
 
 import qualified Data.Map as M
 import Data.Graph.Inductive (Gr, labNodes, nmap, graphviz')
