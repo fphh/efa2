@@ -21,7 +21,7 @@ import EFA2.Interpreter.Env
 import EFA2.Interpreter.Interpreter
 import EFA2.Interpreter.InTerm
 
-import EFA2.Display.DrawGraph
+import EFA2.Topology.Draw
 
 import EFA2.Signal.Sequence
 import EFA2.Signal.SequenceData

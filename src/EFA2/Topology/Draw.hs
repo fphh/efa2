@@ -1,4 +1,4 @@
-module EFA2.Display.DrawGraph where
+module EFA2.Topology.Draw where
 
 import EFA2.Solver.Equation
           (Term(..), ToIndex, showEqTerm, showEqTerms,

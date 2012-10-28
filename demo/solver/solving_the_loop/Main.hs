@@ -31,7 +31,7 @@ import EFA2.Topology.Topology
 import EFA2.Utils.Utils
 
 import EFA2.Display.FileSave
-import EFA2.Display.DrawGraph
+import EFA2.Topology.Draw
 
 import EFA2.Example.SymSig
 import EFA2.Example.Loop

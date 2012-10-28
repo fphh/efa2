@@ -28,7 +28,7 @@ import EFA2.Signal.Signal (Sc)
 import EFA2.Topology.Topology (makeAllEquations)
 import EFA2.Topology.TopologyData (Topology)
 
-import EFA2.Display.DrawGraph (drawDeltaTopology, drawTopology, drawAll)
+import EFA2.Topology.Draw (drawDeltaTopology, drawTopology, drawAll)
 
 import EFA2.Example.Dreibein
 

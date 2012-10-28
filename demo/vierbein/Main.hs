@@ -13,7 +13,7 @@ import EFA2.Interpreter.Interpreter (interpretFromScratch, eqToInTerm)
 import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Signal.Signal as S
 import EFA2.Signal.Signal (UTFSig)
-import EFA2.Display.DrawGraph (drawTopology)
+import EFA2.Topology.Draw (drawTopology)
 
 
 symbolic :: Topology -> Envs EqTerm

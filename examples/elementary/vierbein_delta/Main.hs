@@ -26,7 +26,7 @@ import EFA2.Signal.Signal (Sc, toScalar, fromScalar)
 import EFA2.Topology.Topology (makeAllEquations, makeNodes, makeEdges)
 import EFA2.Topology.TopologyData (Topology, NodeType(..), defaultELabel)
 
-import EFA2.Display.DrawGraph (drawDeltaTopology, drawTopology, drawAll)
+import EFA2.Topology.Draw (drawDeltaTopology, drawTopology, drawAll)
 
 
 symbolic :: Topology -> Envs EqTerm

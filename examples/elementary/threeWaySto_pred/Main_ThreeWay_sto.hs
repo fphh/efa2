@@ -17,7 +17,7 @@ import EFA2.Interpreter.Env
 import EFA2.Interpreter.Interpreter
 import EFA2.Interpreter.Arith
 
-import EFA2.Display.DrawGraph
+import EFA2.Topology.Draw
 
 import qualified EFA2.Signal.Signal as S
 import EFA2.Signal.Sequence

@@ -6,7 +6,7 @@ module Main where
 
 import EFA2.Example.Examples
 import EFA2.StateAnalysis.StateAnalysis
-import EFA2.Display.DrawGraph
+import EFA2.Topology.Draw
 
 
 -- Try topoLoop and topoDoubleLoop!

@@ -17,7 +17,7 @@ import EFA2.Interpreter.Arith (Val)
 
 import EFA2.Display.Report (report)
 import EFA2.Display.Plot (surfPlot, xyplot)
-import EFA2.Display.DrawGraph (drawTopology)
+import EFA2.Topology.Draw (drawTopology)
 
 import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Signal.Signal as S
