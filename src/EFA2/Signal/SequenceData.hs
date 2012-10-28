@@ -31,7 +31,10 @@ import Data.Ratio (Ratio, (%))
 import Data.List (transpose)
 import Data.Tuple.HT (mapFst)
 import Control.Monad (liftM2)
-import Control.Applicative (Applicative(pure, (<*>)), liftA2)
+import Control.Applicative (Applicative(pure, (<*>)), liftA, liftA2)
+import Data.Traversable (Traversable, sequenceA, foldMapDefault)
+import Data.Foldable (Foldable, foldMap, fold)
+
 
 -----------------------------------------------------------------------------------
 -- | Indices for Record, Section and Power Position
@@ -110,6 +113,12 @@ instance Applicative SequData where
    pure = SequData . repeat
    SequData f <*> SequData x = SequData $ zipWith ($) f x
 
+instance Foldable SequData where
+   foldMap = foldMapDefault
+
+instance Traversable SequData where
+   sequenceA (SequData xs) = liftA SequData $ sequenceA xs
+
 {-
 We could also define a top-level variable for (SequData [SecIdx 0 ..]),
 but it would be memorized and thus causes a space leak.
@@ -182,10 +191,8 @@ instance
                         concatMap (toTable os . mapFst show) (M.toList sigs)
 
 instance (ToTable a) => ToTable (SequData a) where
-   toTable os (_ti, SequData rs) =
-      concatMap (toTable os) (zip (map f [0..]) rs)
-         where f :: Int -> String
-               f idx = "Section " ++ show idx
+   toTable os (_ti, rs) =
+      fold $ zipWithSecIdxs (\sec r -> toTable os (show sec, r)) rs
 
 
 instance ToTable Sequ where
