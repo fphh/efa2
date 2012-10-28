@@ -31,6 +31,7 @@ import Data.Ratio (Ratio, (%))
 import Data.List (transpose)
 import Data.Tuple.HT (mapFst)
 import Control.Monad (liftM2)
+import Control.Applicative (Applicative(pure, (<*>)))
 
 -----------------------------------------------------------------------------------
 -- | Indices for Record, Section and Power Position
@@ -104,6 +105,10 @@ type instance D.Value (SequData a) = D.Value a
 
 instance Functor SequData where
    fmap f (SequData xs) = SequData (map f xs)
+
+instance Applicative SequData where
+   pure = SequData . repeat
+   SequData f <*> SequData x = SequData $ zipWith ($) f x
 
 
 instance QC.Arbitrary PPosIdx where
