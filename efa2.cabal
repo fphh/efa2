@@ -60,12 +60,12 @@ Library
     EFA2.Signal.Signal
     EFA2.Signal.SignalFill
     EFA2.Signal.Sequence
+    EFA2.Signal.Plot
     EFA2.Solver.IsVar
     EFA2.Solver.Equation
     EFA2.Solver.Horn
     EFA2.Solver.EquationOrder
     EFA2.Solver.DependencyGraph
-    EFA2.Display.Plot
     EFA2.Display.DispTyp
     EFA2.Display.DispBase
     EFA2.Display.DispSignal

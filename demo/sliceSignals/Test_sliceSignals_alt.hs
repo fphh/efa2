@@ -9,7 +9,7 @@ import EFA2.Signal.Signal (PSigL)
 import qualified Data.Map as M 
 import EFA2.Display.DispSequence
 
-import EFA2.Display.Plot
+import EFA2.Signal.Plot
 
 time = S.fromList [0,10..50]
 

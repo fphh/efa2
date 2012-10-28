@@ -3,7 +3,7 @@
 -- import EFA2.Utils.Utils
 import EFA2.Signal.Signal
 import EFA2.Display.DispSignal
-import EFA2.Display.Plot
+import EFA2.Signal.Plot
 
 import qualified Data.Map as M 
 

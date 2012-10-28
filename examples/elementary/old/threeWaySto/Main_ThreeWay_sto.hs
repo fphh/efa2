@@ -42,7 +42,7 @@ import qualified EFA2.Signal.Data as D
 import EFA2.Signal.Signal (UTFSig)
 import EFA2.Signal.Typ
 
-import EFA2.Display.Plot
+import EFA2.Signal.Plot
 
 -- define topology 
 

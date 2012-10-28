@@ -2,7 +2,7 @@
 
 -- module Demo_Signal where
 
-import qualified EFA2.Display.Plot as Plot
+import qualified EFA2.Signal.Plot as Plot
 import qualified EFA2.Signal.Signal as S
 import EFA2.Display.DispSignal (sdisp)
 import EFA2.Signal.SignalFill ((.-), (./), (.*))

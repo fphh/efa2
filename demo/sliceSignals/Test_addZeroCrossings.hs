@@ -12,7 +12,7 @@ import qualified Data.Map as M
 import EFA2.Signal.Base
 import EFA2.Signal.Typ
 import EFA2.Signal.Data
-import EFA2.Display.Plot
+import EFA2.Signal.Plot
 
 import Data.Monoid
 import EFA2.Display.DispSignal

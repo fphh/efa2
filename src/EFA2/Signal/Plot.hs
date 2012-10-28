@@ -4,7 +4,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module EFA2.Display.Plot (module EFA2.Display.Plot) where
+module EFA2.Signal.Plot where
 
 import qualified Graphics.Gnuplot.Advanced as Plot
 import qualified Graphics.Gnuplot.Plot.TwoDimensional as Plot2D

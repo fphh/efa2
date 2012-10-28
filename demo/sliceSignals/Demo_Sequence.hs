@@ -7,7 +7,7 @@ import EFA2.Signal.SequenceData
            Sequ, SequPwrRecord)
 import EFA2.Signal.Signal (PSigL, (.++))
 import EFA2.Signal.Base (Val)
-import EFA2.Display.Plot (rPlot, rPlotCore)
+import EFA2.Signal.Plot (rPlot, rPlotCore)
 import EFA2.Utils.Utils (divUp)
 
 import qualified Graphics.Gnuplot.Advanced as Plot
