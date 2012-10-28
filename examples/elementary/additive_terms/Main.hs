@@ -21,6 +21,7 @@ import EFA2.Interpreter.Interpreter
 import EFA2.Interpreter.Env
 import EFA2.Interpreter.Arith (Val)
 
+import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Signal.Signal as S
 import EFA2.Signal.Signal (Sc)
 
@@ -131,8 +132,8 @@ instance MyShow Val where
 instance MyShow Sc where
          myshow = show
 
-instance MyShow DPowerIdx where
-         myshow (DPowerIdx s r f t) = "dP_" ++ showEdgeIdx s r f t
+instance MyShow Idx.DPower where
+         myshow (Idx.DPower s r f t) = "dP_" ++ showEdgeIdx s r f t
 
 instance MyShow EqTerm where
          myshow = showEqTerm
@@ -165,7 +166,7 @@ main = do
 
       detailsSym = M.map additiveTerms dpsymEq
 
-      details :: M.Map DPowerIdx [Val]
+      details :: M.Map Idx.DPower [Val]
       details = M.map (map (S.fromScalar . interpretTerm 1 num)) detailsSym
 
       sumdetails = M.map sum details

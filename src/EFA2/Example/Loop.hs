@@ -12,10 +12,7 @@ import EFA2.Topology.TopologyData
 
 import EFA2.Interpreter.Arith (Val)
 import EFA2.Interpreter.Env
-          (DTimeIdx(DTimeIdx), DTimeMap,
-           EnergyIdx(EnergyIdx), EnergyMap,
-           FEtaIdx(FEtaIdx), FEtaMap,
-           PowerIdx(PowerIdx), PowerMap)
+          (DTimeMap, EnergyMap, FEtaMap, PowerMap)
 import EFA2.Example.SymSig (TheGraph(TheGraph))
 import EFA2.Utils.Utils (pairs)
 
@@ -24,11 +21,11 @@ numOf :: Int
 numOf = 3
 
 dtimes :: DTimeMap [Val]
-dtimes = M.fromList [(DTimeIdx (Idx.Section 0) (Idx.Record 0), [2, 2, 2])]
+dtimes = M.fromList [(Idx.DTime (Idx.Section 0) (Idx.Record 0), [2, 2, 2])]
 
 sigs :: EnergyMap [Val]
 sigs =
-   M.mapKeys (uncurry (EnergyIdx (Idx.Section 0) (Idx.Record 0))) $
+   M.mapKeys (uncurry (Idx.Energy (Idx.Section 0) (Idx.Record 0))) $
    M.fromList $
       ((,) 0 1, [2.3, 2.4, 3]) :
       ((,) 1 0, [2, 2.1, 2.2]) :
@@ -46,7 +43,7 @@ sigs =
 
 etas :: FEtaMap [Val]
 etas =
-   M.mapKeys (uncurry (FEtaIdx (Idx.Section 0) (Idx.Record 0))) $
+   M.mapKeys (uncurry (Idx.FEta (Idx.Section 0) (Idx.Record 0))) $
    M.fromList $
       ((,) 0 1, map (\x -> x/(x+1))) :
       ((,) 1 0, map (\x -> x/(x+1))) :
@@ -65,7 +62,7 @@ etas =
 
 pows :: PowerMap [Val]
 pows =
-   M.mapKeys (uncurry (PowerIdx (Idx.Section 0) (Idx.Record 0))) $
+   M.mapKeys (uncurry (Idx.Power (Idx.Section 0) (Idx.Record 0))) $
    M.fromList $
       ((,) 0 1, [1, 2, 3]) :
       ((,) 1 0, replicate numOf 2.2) :

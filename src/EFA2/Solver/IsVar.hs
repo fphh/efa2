@@ -8,7 +8,7 @@ import Data.Maybe (mapMaybe)
 -- import Debug.Trace
 
 import EFA2.Solver.Equation (Equation(..), EqTerm, Term(..), mkVarSetEq)
-import EFA2.Interpreter.Env (EnergyIdx(..), Index(..))
+import EFA2.Interpreter.Env (Index(..))
 import qualified EFA2.Interpreter.Env as Env
 import qualified EFA2.Signal.Index as Idx
 
@@ -37,33 +37,33 @@ mkTableau updatef len ts = Tableau sec rec from to
 type UpdateAcc = ([Int], [Int], [Int], [Int])
 
 powerUpdateVec :: UpdateAcc -> EqTerm -> UpdateAcc
-powerUpdateVec (s, r, f, t) (Power (PowerIdx u v w x) := Given) = (u:s, v:s, w:f, x:t)
+powerUpdateVec (s, r, f, t) (Power (Idx.Power u v w x) := Given) = (u:s, v:s, w:f, x:t)
 powerUpdateVec acc _ = acc
 
 etaUpdateVec :: UpdateAcc -> EqTerm -> UpdateAcc
-etaUpdateVec (s, r, f, t) (Eta (EtaIdx u v w x) := Given) = (u:s, v:s, w:f, x:t)
+etaUpdateVec (s, r, f, t) (Eta (Idx.Eta u v w x) := Given) = (u:s, v:s, w:f, x:t)
 etaUpdateVec acc _ = acc
 
 dpowerUpdateVec :: UpdateAcc -> EqTerm -> UpdateAcc
-dpowerUpdateVec (s, r, f, t) (DPower (DPowerIdx u v w x) := Given) = (u:s, v:s, w:f, x:t)
+dpowerUpdateVec (s, r, f, t) (DPower (Idx.DPower u v w x) := Given) = (u:s, v:s, w:f, x:t)
 dpowerUpdateVec acc _ = acc
 
 detaUpdateVec :: UpdateAcc -> EqTerm -> UpdateAcc
-detaUpdateVec (s, r, f, t) (DEta (DEtaIdx u v w x) := Given) = (u:s, v:s, w:f, x:t)
+detaUpdateVec (s, r, f, t) (DEta (Idx.DEta u v w x) := Given) = (u:s, v:s, w:f, x:t)
 detaUpdateVec acc _ = acc
 
 xUpdateVec :: UpdateAcc -> EqTerm -> UpdateAcc
-xUpdateVec (s, r, f, t) (X (XIdx u v w x) := Given) = (u:s, v:s, w:f, x:t)
+xUpdateVec (s, r, f, t) (X (Idx.X u v w x) := Given) = (u:s, v:s, w:f, x:t)
 xUpdateVec acc _ = acc
 
 -- TODO: Das Tableau wird bei jedem Aufruf neu generiert. Das muss nicht sein!
 isVar :: Gr a b -> [EqTerm] -> (EqTerm -> Bool)
 isVar g ts t
-  | (Power (PowerIdx s r f t)) <- t = not $ (ps UV.! s) && (pr UV.! r) && (pf UV.! f) && (pt UV.! t)
-  | (Eta (EtaIdx s r f t)) <- t = not $ (es UV.! s) && (er UV.! r) && (ef UV.! f) && (et UV.! t)
-  | (DPower (DPowerIdx s r f t)) <- t = not $ (dps UV.! s) && (dpr UV.! r) && (dpf UV.! f) && (dpt UV.! t)
-  | (DEta (DEtaIdx s r f t)) <- t = not $ (des UV.! s) && (der UV.! r) && (def UV.! f) && (det UV.! t)
-  | (X (XIdx s r f t)) <- t = trace (show tab) $ not $ (xs UV.! s) && (xr UV.! r) && (xf UV.! f) && (xt UV.! t)
+  | (Power (Idx.Power s r f t)) <- t = not $ (ps UV.! s) && (pr UV.! r) && (pf UV.! f) && (pt UV.! t)
+  | (Eta (Idx.Eta s r f t)) <- t = not $ (es UV.! s) && (er UV.! r) && (ef UV.! f) && (et UV.! t)
+  | (DPower (Idx.DPower s r f t)) <- t = not $ (dps UV.! s) && (dpr UV.! r) && (dpf UV.! f) && (dpt UV.! t)
+  | (DEta (Idx.DEta s r f t)) <- t = not $ (des UV.! s) && (der UV.! r) && (def UV.! f) && (det UV.! t)
+  | (X (Idx.X s r f t)) <- t = trace (show tab) $ not $ (xs UV.! s) && (xr UV.! r) && (xf UV.! f) && (xt UV.! t)
   | otherwise = False
   where len = 1 + (snd $ nodeRange g)
         Tableau ps pr pf pt = mkTableau powerUpdateVec len ts
@@ -110,7 +110,7 @@ splitTerms isVar ts = (given, nov, givenExt, rest)
 isVar' :: EqTerm -> Bool
 isVar' (Atom idx) =
    case idx of
-      Energy (EnergyIdx (Idx.Section 0) (Idx.Record 0) 0 1) -> False
+      Energy (Idx.Energy (Idx.Section 0) (Idx.Record 0) 0 1) -> False
       Energy _ -> True
 --      Eta _ -> True
       DEnergy _ -> True

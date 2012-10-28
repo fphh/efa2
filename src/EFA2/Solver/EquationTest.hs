@@ -5,8 +5,7 @@ module EFA2.Solver.EquationTest where
 import EFA2.Solver.Equation (EqTerm, Term(..), Equation(..), (!*), MkIdxC, mkVar)
 
 import qualified EFA2.Signal.Index as Idx
-import EFA2.Interpreter.Env
-          (PowerIdx(..), DPowerIdx(..), FEtaIdx(..), DEtaIdx(..), Index(..))
+import EFA2.Interpreter.Env (Index(..))
 
 
 deflt ::
@@ -16,24 +15,24 @@ deflt ::
 deflt mkIdx x y = mkVar $ mkIdx (Idx.Section 0) (Idx.Record 0) x y
 
 p1, p2, p3, p4 :: Index
-p1 = deflt PowerIdx 0 1
-p2 = deflt PowerIdx 0 2
-p3 = deflt PowerIdx 0 3
-p4 = deflt PowerIdx 0 4
+p1 = deflt Idx.Power 0 1
+p2 = deflt Idx.Power 0 2
+p3 = deflt Idx.Power 0 3
+p4 = deflt Idx.Power 0 4
 
 dp1, dp2, dp3, dp4 :: Index
-dp1 = deflt DPowerIdx 0 1
-dp2 = deflt DPowerIdx 0 2
-dp3 = deflt DPowerIdx 0 3
-dp4 = deflt DPowerIdx 0 4
+dp1 = deflt Idx.DPower 0 1
+dp2 = deflt Idx.DPower 0 2
+dp3 = deflt Idx.DPower 0 3
+dp4 = deflt Idx.DPower 0 4
 
 
 c :: Term a
 c = Const 1.0
 
 e, de :: Index
-e = deflt FEtaIdx 0 1
-de = deflt DEtaIdx 0 1
+e = deflt Idx.FEta 0 1
+de = deflt Idx.DEta 0 1
 
 t :: Equation
 t = EqEdge p1 e p2

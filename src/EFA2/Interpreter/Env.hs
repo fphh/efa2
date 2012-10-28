@@ -14,146 +14,93 @@ import EFA2.Signal.Data (Data)
 import EFA2.Signal.Typ (TSum)
 import EFA2.Signal.Base (BSum)
 
--- | Variable types of the solver. The solver, in fact, is
--- ignorant of the provenance of the variables. However, to
--- facilitate life, we introduce variable types, that make
--- it easy to express things needed in energy flow analysis,
--- that is:
---
--- * a section number
--- * a data record number
--- * two numbers to identify a place in the topology
---   (for equation generation, we use the underlying fgl node ids.
-
--- | Energy variables.
-data EnergyIdx = EnergyIdx !Idx.Section !Idx.Record !Int !Int deriving (Show, Ord, Eq)
-data DEnergyIdx = DEnergyIdx !Idx.Section !Idx.Record !Int !Int deriving (Show, Ord, Eq)
-
--- | Power variables.
-data PowerIdx = PowerIdx !Idx.Section !Idx.Record !Int !Int deriving (Show, Ord, Eq)
-data DPowerIdx = DPowerIdx !Idx.Section !Idx.Record !Int !Int deriving (Show, Ord, Eq)
-
--- | Eta variables.
-data FEtaIdx = FEtaIdx !Idx.Section !Idx.Record !Int !Int deriving (Show, Ord, Eq)
-data DEtaIdx = DEtaIdx !Idx.Section !Idx.Record !Int !Int deriving (Show, Ord, Eq)
-
--- | Splitting factors.
-data XIdx = XIdx !Idx.Section !Idx.Record !Int !Int deriving (Show, Ord, Eq)
-data DXIdx = DXIdx !Idx.Section !Idx.Record !Int !Int deriving (Show, Ord, Eq)
-
--- | Delta time variables, depending solely on their section and record number.
-data DTimeIdx = DTimeIdx !Idx.Section !Idx.Record deriving (Show, Ord, Eq)
-
-
--- | Section number, record number, storage number.
-data StorageIdx = StorageIdx !Idx.Section !Idx.Record !Int deriving (Show, Ord, Eq)
-
--- | This variable type can be used to express arbitrary relations.
--- You can variables also make dependent on section and record.
--- ATTENTION: Some of them are used for equation generation for
--- performance issues. You have to make sure yourself if your
--- variable is unique in the equational system.
---data VarIdx = VarIdx !Idx.Section !Idx.Record !Int !Int deriving (Show, Ord, Eq)
-
-data Use = InSum
-         | OutSum
-         | InDiffSum
-         | OutDiffSum
-         | St deriving (Show, Eq, Ord)
-
-toDiffUse :: Use -> Use
-toDiffUse InSum = InDiffSum
-toDiffUse OutSum = OutDiffSum
-
-data VarIdx = VarIdx !Idx.Section !Idx.Record Use !Int deriving (Show, Ord, Eq)
-
 
 data Index =
-            Energy EnergyIdx
-          | DEnergy DEnergyIdx
-          | Power PowerIdx
-          | DPower DPowerIdx
-          | FEta FEtaIdx
-          | DEta DEtaIdx
-          | DTime DTimeIdx
-          | X XIdx
-          | DX DXIdx
-          | Var VarIdx
-          | Store StorageIdx
+            Energy Idx.Energy
+          | DEnergy Idx.DEnergy
+          | Power Idx.Power
+          | DPower Idx.DPower
+          | FEta Idx.FEta
+          | DEta Idx.DEta
+          | DTime Idx.DTime
+          | X Idx.X
+          | DX Idx.DX
+          | Var Idx.Var
+          | Store Idx.Storage
              deriving (Show, Eq, Ord)
 
 
 class IdxRecNum a where
       getIdxRecNum :: a -> Idx.Record
 
-instance IdxRecNum EnergyIdx where
-         getIdxRecNum (EnergyIdx _ r _ _) = r
+instance IdxRecNum Idx.Energy where
+         getIdxRecNum (Idx.Energy _ r _ _) = r
 
-instance IdxRecNum DEnergyIdx where
-         getIdxRecNum (DEnergyIdx _ r _ _) = r
+instance IdxRecNum Idx.DEnergy where
+         getIdxRecNum (Idx.DEnergy _ r _ _) = r
 
-instance IdxRecNum PowerIdx where
-         getIdxRecNum (PowerIdx _ r _ _) = r
+instance IdxRecNum Idx.Power where
+         getIdxRecNum (Idx.Power _ r _ _) = r
 
-instance IdxRecNum DPowerIdx where
-         getIdxRecNum (DPowerIdx _ r _ _) = r
+instance IdxRecNum Idx.DPower where
+         getIdxRecNum (Idx.DPower _ r _ _) = r
 
-instance IdxRecNum FEtaIdx where
-         getIdxRecNum (FEtaIdx _ r _ _) = r
+instance IdxRecNum Idx.FEta where
+         getIdxRecNum (Idx.FEta _ r _ _) = r
 
-instance IdxRecNum DEtaIdx where
-         getIdxRecNum (DEtaIdx _ r _ _) = r
+instance IdxRecNum Idx.DEta where
+         getIdxRecNum (Idx.DEta _ r _ _) = r
 
-instance IdxRecNum XIdx where
-         getIdxRecNum (XIdx _ r _ _) = r
+instance IdxRecNum Idx.X where
+         getIdxRecNum (Idx.X _ r _ _) = r
 
-instance IdxRecNum DXIdx where
-         getIdxRecNum (DXIdx _ r _ _) = r
+instance IdxRecNum Idx.DX where
+         getIdxRecNum (Idx.DX _ r _ _) = r
 
-instance IdxRecNum DTimeIdx where
-         getIdxRecNum (DTimeIdx _ r) = r
+instance IdxRecNum Idx.DTime where
+         getIdxRecNum (Idx.DTime _ r) = r
 
-instance IdxRecNum StorageIdx where
-         getIdxRecNum (StorageIdx _ r _) = r
+instance IdxRecNum Idx.Storage where
+         getIdxRecNum (Idx.Storage _ r _) = r
 
-instance IdxRecNum VarIdx where
-         getIdxRecNum (VarIdx _ r _ _) = r
+instance IdxRecNum Idx.Var where
+         getIdxRecNum (Idx.Var _ r _ _) = r
 
 class IdxEq a where
       ignoreRecEq :: a -> a -> Bool
 
-instance IdxEq PowerIdx where
-         ignoreRecEq (PowerIdx a _ b c) (PowerIdx x _ y z) = a == x && b == y && c == z
+instance IdxEq Idx.Power where
+         ignoreRecEq (Idx.Power a _ b c) (Idx.Power x _ y z) = a == x && b == y && c == z
 
-instance IdxEq EnergyIdx where
-         ignoreRecEq (EnergyIdx a _ b c) (EnergyIdx x _ y z) = a == x && b == y && c == z
+instance IdxEq Idx.Energy where
+         ignoreRecEq (Idx.Energy a _ b c) (Idx.Energy x _ y z) = a == x && b == y && c == z
 
-instance IdxEq FEtaIdx where
-         ignoreRecEq (FEtaIdx a _ b c) (FEtaIdx x _ y z) = a == x && b == y && c == z
+instance IdxEq Idx.FEta where
+         ignoreRecEq (Idx.FEta a _ b c) (Idx.FEta x _ y z) = a == x && b == y && c == z
 
-instance IdxEq XIdx where
-         ignoreRecEq (XIdx a _ b c) (XIdx x _ y z) = a == x && b == y && c == z
+instance IdxEq Idx.X where
+         ignoreRecEq (Idx.X a _ b c) (Idx.X x _ y z) = a == x && b == y && c == z
 
-instance IdxEq StorageIdx where
-         ignoreRecEq (StorageIdx a _ b) (StorageIdx x _ y) = a == x && b == y
+instance IdxEq Idx.Storage where
+         ignoreRecEq (Idx.Storage a _ b) (Idx.Storage x _ y) = a == x && b == y
 
 -- Environments
-type EnergyMap a = M.Map EnergyIdx a
-type DEnergyMap a = M.Map DEnergyIdx a
+type EnergyMap a = M.Map Idx.Energy a
+type DEnergyMap a = M.Map Idx.DEnergy a
 
-type PowerMap a = M.Map PowerIdx a
-type DPowerMap a = M.Map DPowerIdx a
+type PowerMap a = M.Map Idx.Power a
+type DPowerMap a = M.Map Idx.DPower a
 
-type FEtaMap a = M.Map FEtaIdx (a -> a)
-type DEtaMap a = M.Map DEtaIdx (a -> a)
+type FEtaMap a = M.Map Idx.FEta (a -> a)
+type DEtaMap a = M.Map Idx.DEta (a -> a)
 
-type DTimeMap a = M.Map DTimeIdx a
+type DTimeMap a = M.Map Idx.DTime a
 
-type XMap a = M.Map XIdx a
-type DXMap a = M.Map DXIdx a
+type XMap a = M.Map Idx.X a
+type DXMap a = M.Map Idx.DX a
 
-type VarMap a = M.Map VarIdx a
-type StorageMap a = M.Map StorageIdx a
+type VarMap a = M.Map Idx.Var a
+type StorageMap a = M.Map Idx.Storage a
 
 
 
@@ -266,10 +213,10 @@ minusEnv laterEnv formerEnv | checkEnvsForDelta laterEnv formerEnv = gnv
         fminus = M.intersectionWith (\fx fy z -> fx z .- fy z)
 -}
 
-        edk (EnergyIdx a b c d) = DEnergyIdx a b c d
-        pdk (PowerIdx a b c d) = DPowerIdx a b c d
-        etadk (FEtaIdx a b c d) = DEtaIdx a b c d
-        xdk (XIdx a b c d) = DXIdx a b c d
+        edk (Idx.Energy a b c d) = Idx.DEnergy a b c d
+        pdk (Idx.Power a b c d) = Idx.DPower a b c d
+        etadk (Idx.FEta a b c d) = Idx.DEta a b c d
+        xdk (Idx.X a b c d) = Idx.DX a b c d
 
         gnv = laterEnv { denergyMap = M.mapKeys edk $ energyMap laterEnv `minus` energyMap formerEnv,
                          dpowerMap = M.mapKeys pdk $ powerMap laterEnv `minus` powerMap formerEnv,

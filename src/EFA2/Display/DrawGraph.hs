@@ -4,11 +4,7 @@ import EFA2.Solver.Equation
           (Term(..), ToIndex, showEqTerm, showEqTerms,
            LatexString, unLatexString)
 import EFA2.Interpreter.Env
-          (DEnergyIdx(..), EnergyIdx(..),
-           DEtaIdx(..),    FEtaIdx(..),
-           DXIdx(..),      XIdx(..),
-           DTimeIdx(..),   DTimeMap,
-           StorageIdx(..), StorageMap,
+          (DTimeMap, StorageMap,
            RecordNumber(SingleRecord))
 import qualified EFA2.Interpreter.Env as Interp
 import EFA2.Topology.TopologyData
@@ -80,7 +76,7 @@ noRecord = Nothing
 mkDotGraph ::
    EfaGraph NLabel ELabel ->
    Maybe RecordNumber ->
-   (DTimeIdx -> String) ->
+   (Idx.DTime -> String) ->
    (LNode NLabel -> String) ->
    (LEdge ELabel -> String) ->
    DotGraph Int
@@ -110,7 +106,7 @@ mkDotGraph g mRecordNum timef nshow eshow =
                    case recordNum of
                       Nothing -> "NoRecord"
                       Just n ->
-                         show n ++ " / Time " ++ timef (DTimeIdx sl n)
+                         show n ++ " / Time " ++ timef (Idx.DTime sl n)
         stmts = DotStmts { attrStmts = [],
                            subGraphs = map sg cs,
                            nodeStmts = [],
@@ -144,7 +140,7 @@ mkDotEdge eshow e@(x, y, elabel) = DotEdge x y [displabel, edir, colour]
 printGraph ::
    EfaGraph NLabel ELabel ->
    Maybe RecordNumber ->
-   (DTimeIdx -> String) ->
+   (Idx.DTime -> String) ->
    (LNode NLabel -> String) ->
    (LEdge ELabel -> String) ->
    IO ()
@@ -226,7 +222,7 @@ data Env a =
       lookupX_      :: Idx.Section -> Idx.Record -> Int -> Int -> Maybe a,
       lookupEta_    :: Idx.Section -> Idx.Record -> Int -> Int -> Maybe a,
       formatAssign_ :: (Line, Maybe a) -> String,
-      showTime :: DTimeIdx -> String,
+      showTime :: Idx.DTime -> String,
       showNode_ :: LNode NLabel -> String
    }
 
@@ -370,7 +366,7 @@ showLatexNode rn st content (num, NLabel sec nid ty) =
    "Type: " ++ show ty ++
       let showStorage n =
              case rn of
-                SingleRecord rec -> content (M.lookup (StorageIdx sec rec n) st)
+                SingleRecord rec -> content (M.lookup (Idx.Storage sec rec n) st)
                 _ -> "Problem with record number: " ++ show rn
       in  case ty of
              InitStorage n -> "\\\\ Content: " ++ showStorage n
@@ -395,9 +391,9 @@ envAbsTopologyList ::
 envAbsTopologyList etaArg
       (Interp.Envs rec e _de _p _dp fn _dn dt x _dx _v st) =
    Env rec
-      (makeLookup EnergyIdx e)
-      (makeLookup XIdx x)
-      (makeLookup FEtaIdx $ fmap ($etaArg) fn)
+      (makeLookup Idx.Energy e)
+      (makeLookup Idx.X x)
+      (makeLookup Idx.FEta $ fmap ($etaArg) fn)
       formatAssignList
       (checkedLookupFormat "envAbsTopologyList" formatList dt)
       (showListNode rec st formatStContList)
@@ -411,7 +407,7 @@ showNode rn st content (num, NLabel sec nid ty) =
    "Type: " ++ show ty ++
       let showStorage n =
              case rn of
-                SingleRecord rec -> content (M.lookup (StorageIdx sec rec n) st)
+                SingleRecord rec -> content (M.lookup (Idx.Storage sec rec n) st)
                 _ -> "Problem with record number: " ++ show rn
       in  case ty of
              InitStorage n -> "\nContent: " ++ showStorage n
@@ -422,15 +418,15 @@ showNode rn st content (num, NLabel sec nid ty) =
 envDeltaTopology_ ::
    ((Line, Maybe a) -> String) ->
    (Maybe a -> String) ->
-   (DTimeMap a -> DTimeIdx -> String) ->
+   (DTimeMap a -> Idx.DTime -> String) ->
    a -> Interp.Envs a ->
    Env a
 envDeltaTopology_ formatAssign content tshow etaArg
       (Interp.Envs rec _e de _p _dp _fn dn dt _x dx _v st) =
    Env rec
-      (makeLookup DEnergyIdx de)
-      (makeLookup DXIdx dx)
-      (makeLookup DEtaIdx $ fmap ($etaArg) dn)
+      (makeLookup Idx.DEnergy de)
+      (makeLookup Idx.DX dx)
+      (makeLookup Idx.DEta $ fmap ($etaArg) dn)
       formatAssign
       (tshow dt)
       (showNode rec st content)
@@ -485,7 +481,7 @@ class DrawTopologySignal a => DrawDeltaTopologySignal a where
 instance
    (SDisplay v, D.Storage v a, Disp a, Ord a) =>
       DrawDeltaTopologySignal (Data v a) where
-         envDeltaTopologySignal = envDeltaTopologySignal_
+   envDeltaTopologySignal = envDeltaTopologySignal_
 
 instance
    (DispApp s, TDisp t, DrawDeltaTopologySignal a) =>
@@ -499,11 +495,11 @@ envAbsTopologySignal ::
    Env (TC s t (Data v d))
 envAbsTopologySignal (Interp.Envs rec0 e _de _p _dp fn _dn dt x _dx _v st) =
    Env rec0
-      (makeLookup EnergyIdx e)
-      (makeLookup XIdx x)
-      (makeLookup FEtaIdx $
+      (makeLookup Idx.Energy e)
+      (makeLookup Idx.X x)
+      (makeLookup Idx.FEta $
        M.intersectionWith ($) fn $
-       M.mapKeys (\(EnergyIdx sec rec uid vid) -> FEtaIdx sec rec uid vid) e)
+       M.mapKeys (\(Idx.Energy sec rec uid vid) -> Idx.FEta sec rec uid vid) e)
       formatAssignSignal
       (\dtimeIdx -> formatStContSignal $ M.lookup dtimeIdx dt)
       (showNode rec0 st formatStContSignal)
@@ -514,11 +510,11 @@ envDeltaTopologySignal_ ::
    Env (TC s t (Data v d))
 envDeltaTopologySignal_ (Interp.Envs rec0 _e de _p _dp _fn dn dt _x dx _v st) =
    Env rec0
-      (makeLookup DEnergyIdx de)
-      (makeLookup DXIdx dx)
-      (makeLookup DEtaIdx $
+      (makeLookup Idx.DEnergy de)
+      (makeLookup Idx.DX dx)
+      (makeLookup Idx.DEta $
        M.intersectionWith ($) dn $
-       M.mapKeys (\(DEnergyIdx sec rec uid vid) -> DEtaIdx sec rec uid vid) de)
+       M.mapKeys (\(Idx.DEnergy sec rec uid vid) -> Idx.DEta sec rec uid vid) de)
       (\ (x, ys) -> showLineDelta x ++ " = " ++ formatStContSignal ys)
       (\dtimeIdx -> formatStContSignal $ M.lookup dtimeIdx dt)
       (showNode rec0 st formatStContSignal)

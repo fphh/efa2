@@ -1,6 +1,7 @@
 module EFA2.Solver.Equation where
 
 import EFA2.Interpreter.Env as Env
+import EFA2.Signal.Index (toDiffUse)
 import qualified EFA2.Signal.Index as Idx
 
 import Control.Monad (liftM2)
@@ -94,17 +95,17 @@ give = Given . mkIdx
 class MkIdxC a where
    mkIdx :: a -> Env.Index
 
-instance MkIdxC EnergyIdx where mkIdx = Energy
-instance MkIdxC DEnergyIdx where mkIdx = DEnergy
-instance MkIdxC PowerIdx where mkIdx = Power
-instance MkIdxC DPowerIdx where mkIdx = DPower
-instance MkIdxC FEtaIdx where mkIdx = FEta
-instance MkIdxC DEtaIdx where mkIdx = DEta
-instance MkIdxC DTimeIdx where mkIdx = DTime
-instance MkIdxC XIdx where mkIdx = X
-instance MkIdxC DXIdx where mkIdx = DX
-instance MkIdxC VarIdx where mkIdx = Var
-instance MkIdxC StorageIdx where mkIdx = Store
+instance MkIdxC Idx.Energy where mkIdx = Energy
+instance MkIdxC Idx.DEnergy where mkIdx = DEnergy
+instance MkIdxC Idx.Power where mkIdx = Power
+instance MkIdxC Idx.DPower where mkIdx = DPower
+instance MkIdxC Idx.FEta where mkIdx = FEta
+instance MkIdxC Idx.DEta where mkIdx = DEta
+instance MkIdxC Idx.DTime where mkIdx = DTime
+instance MkIdxC Idx.X where mkIdx = X
+instance MkIdxC Idx.DX where mkIdx = DX
+instance MkIdxC Idx.Var where mkIdx = Var
+instance MkIdxC Idx.Storage where mkIdx = Store
 
 
 class MkVarC a where
@@ -123,17 +124,17 @@ mkVar = mkVarCore . mkIdx
 class MkTermC a where
    mkTerm :: a -> EqTerm
 
-instance MkTermC EnergyIdx where mkTerm = mkVar
-instance MkTermC DEnergyIdx where mkTerm = mkVar
-instance MkTermC PowerIdx where mkTerm = mkVar
-instance MkTermC DPowerIdx where mkTerm = mkVar
-instance MkTermC FEtaIdx where mkTerm = mkVar
-instance MkTermC DEtaIdx where mkTerm = mkVar
-instance MkTermC DTimeIdx where mkTerm = mkVar
-instance MkTermC XIdx where mkTerm = mkVar
-instance MkTermC DXIdx where mkTerm = mkVar
-instance MkTermC VarIdx where mkTerm = mkVar
-instance MkTermC StorageIdx where mkTerm = mkVar
+instance MkTermC Idx.Energy where mkTerm = mkVar
+instance MkTermC Idx.DEnergy where mkTerm = mkVar
+instance MkTermC Idx.Power where mkTerm = mkVar
+instance MkTermC Idx.DPower where mkTerm = mkVar
+instance MkTermC Idx.FEta where mkTerm = mkVar
+instance MkTermC Idx.DEta where mkTerm = mkVar
+instance MkTermC Idx.DTime where mkTerm = mkVar
+instance MkTermC Idx.X where mkTerm = mkVar
+instance MkTermC Idx.DX where mkTerm = mkVar
+instance MkTermC Idx.Var where mkTerm = mkVar
+instance MkTermC Idx.Storage where mkTerm = mkVar
 
 instance MkTermC Env.Index where
    mkTerm = Atom
@@ -171,24 +172,24 @@ showEdgeIdx (Idx.Section s) (Idx.Record r) x y =
 showIdx :: ToIndex idx => idx -> String
 showIdx idx =
    case toIndex idx of
-      Energy (EnergyIdx s r x y) -> "E_" ++ showEdgeIdx s r x y
-      DEnergy (DEnergyIdx s r x y) -> "dE_" ++ showEdgeIdx s r x y
+      Energy (Idx.Energy s r x y) -> "E_" ++ showEdgeIdx s r x y
+      DEnergy (Idx.DEnergy s r x y) -> "dE_" ++ showEdgeIdx s r x y
 
-      Power (PowerIdx s r x y) -> "P_" ++ showEdgeIdx s r x y
-      DPower (DPowerIdx s r x y) -> "dP_" ++ showEdgeIdx s r x y
+      Power (Idx.Power s r x y) -> "P_" ++ showEdgeIdx s r x y
+      DPower (Idx.DPower s r x y) -> "dP_" ++ showEdgeIdx s r x y
 
-      FEta (FEtaIdx s r x y) -> "n_" ++ showEdgeIdx s r x y
-      DEta (DEtaIdx s r x y) -> "dn_" ++ showEdgeIdx s r x y
+      FEta (Idx.FEta s r x y) -> "n_" ++ showEdgeIdx s r x y
+      DEta (Idx.DEta s r x y) -> "dn_" ++ showEdgeIdx s r x y
 
-      DTime (DTimeIdx (Idx.Section s) (Idx.Record r)) ->
+      DTime (Idx.DTime (Idx.Section s) (Idx.Record r)) ->
          "dt_" ++ show s ++ "." ++ show r
 
-      X (XIdx s r x y) -> "x_" ++ showEdgeIdx s r x y
-      DX (DXIdx s r x y) -> "dx_" ++ showEdgeIdx s r x y
+      X (Idx.X s r x y) -> "x_" ++ showEdgeIdx s r x y
+      DX (Idx.DX s r x y) -> "dx_" ++ showEdgeIdx s r x y
 
-      Var (VarIdx (Idx.Section s) (Idx.Record r) u x) ->
+      Var (Idx.Var (Idx.Section s) (Idx.Record r) u x) ->
          "v_" ++ show s ++ "." ++ show r ++ "_" ++ show u ++ "." ++ show x
-      Store (StorageIdx (Idx.Section s) (Idx.Record r) n) ->
+      Store (Idx.Storage (Idx.Section s) (Idx.Record r) n) ->
          "s_" ++ show s ++ "." ++ show r ++ "_" ++ show n
 
 showEqTerm :: ToIndex idx => Term idx -> String
@@ -262,23 +263,23 @@ edgeIdxToLatexString (Idx.Section s) (Idx.Record r) x y =
 idxToLatexString :: Env.Index -> String
 idxToLatexString idx =
    case idx of
-      Energy (EnergyIdx s r x y) -> "E_{" ++ show s ++ "." ++ show r ++ "." ++ show x ++ "." ++ show y ++ "}"
-      DEnergy (DEnergyIdx s r x y) -> "\\Delta E_" ++ edgeIdxToLatexString s r x y
+      Energy (Idx.Energy s r x y) -> "E_{" ++ show s ++ "." ++ show r ++ "." ++ show x ++ "." ++ show y ++ "}"
+      DEnergy (Idx.DEnergy s r x y) -> "\\Delta E_" ++ edgeIdxToLatexString s r x y
 
-      Power (PowerIdx s r x y) -> "P_" ++ edgeIdxToLatexString s r x y
-      DPower (DPowerIdx s r x y) -> "\\Delta P_" ++ edgeIdxToLatexString s r x y
+      Power (Idx.Power s r x y) -> "P_" ++ edgeIdxToLatexString s r x y
+      DPower (Idx.DPower s r x y) -> "\\Delta P_" ++ edgeIdxToLatexString s r x y
 
-      FEta (FEtaIdx s r x y) -> "\\eta_" ++ edgeIdxToLatexString s r x y
-      DEta (DEtaIdx s r x y) -> "\\Delta \\eta_" ++ edgeIdxToLatexString s r x y
+      FEta (Idx.FEta s r x y) -> "\\eta_" ++ edgeIdxToLatexString s r x y
+      DEta (Idx.DEta s r x y) -> "\\Delta \\eta_" ++ edgeIdxToLatexString s r x y
 
-      DTime (DTimeIdx (Idx.Section s) (Idx.Record r)) -> "\\Delta t_{" ++ show s ++ "." ++ show r ++ "}"
+      DTime (Idx.DTime (Idx.Section s) (Idx.Record r)) -> "\\Delta t_{" ++ show s ++ "." ++ show r ++ "}"
 
-      X (XIdx s r x y) -> "x_" ++ edgeIdxToLatexString s r x y
-      DX (DXIdx s r x y) -> "\\Delta x_" ++ edgeIdxToLatexString s r x y
+      X (Idx.X s r x y) -> "x_" ++ edgeIdxToLatexString s r x y
+      DX (Idx.DX s r x y) -> "\\Delta x_" ++ edgeIdxToLatexString s r x y
 
-      Var (VarIdx (Idx.Section s) (Idx.Record r) u x) ->
+      Var (Idx.Var (Idx.Section s) (Idx.Record r) u x) ->
          "v_{" ++ show s ++ "." ++ show r ++ "." ++ show u ++ "." ++ show x ++ "}"
-      Store (StorageIdx (Idx.Section s) (Idx.Record r) n) ->
+      Store (Idx.Storage (Idx.Section s) (Idx.Record r) n) ->
          "s_{" ++ show s ++ "." ++ show r ++ "." ++ show n ++ "}"
 
 eqToLatexString' :: Equation -> String
@@ -396,9 +397,9 @@ isolateVar' (Recip u) (L:p) = isolateVar' u p . Recip
 
 {-
 isolateVar' (FDiff p' e dp de) (L:p) = isolateVar' dp p . f
-  where f x@(DEnergy (DEnergyIdx s r a b)) = BDiff (Energy (EnergyIdx s r a b)) e x de
+  where f x@(DEnergy (Idx.DEnergy s r a b)) = BDiff (Energy (Idx.Energy s r a b)) e x de
 isolateVar' (BDiff p' e dp de) (L:p) = isolateVar' dp p . f
-  where f x@(DEnergy (DEnergyIdx s r a b)) = FDiff (Energy (EnergyIdx s r a b)) e x de
+  where f x@(DEnergy (Idx.DEnergy s r a b)) = FDiff (Energy (Idx.Energy s r a b)) e x de
 -}
 
 -- this is the main function for transforming Equations
@@ -536,105 +537,105 @@ assignToEquation (AbsAssign assign) =
 mkDiffEqTerm :: Idx.Record -> Assign -> [AbsAssign]
 
 -- v_0.1_OutSum.0 = P_0.1_0.1
-mkDiffEqTerm _ (AbsAssign (Var (VarIdx s r use n) ::= Atom (Power (PowerIdx _ _ f t)))) =
+mkDiffEqTerm _ (AbsAssign (Var (Idx.Var s r use n) ::= Atom (Power (Idx.Power _ _ f t)))) =
   {- trace ("--->: " ++ showEqTerm z ++ " s=> " ++ showEqTerm eres) $ -} [res, eres]
   where res = v !:= dp
-        v = VarIdx s r (toDiffUse use) n
-        dp = DPowerIdx s r f t
+        v = Idx.Var s r (toDiffUse use) n
+        dp = Idx.DPower s r f t
 
         eres = de !:= dp !* dt
-        dt = DTimeIdx s r
-        de = DEnergyIdx s r f t
+        dt = Idx.DTime s r
+        de = Idx.DEnergy s r f t
 
 
 
 -- v_0.1_OutSum.1 = (P_0.1_1.2 + P_0.1_1.3) ...
-mkDiffEqTerm _ (AbsAssign (Var (VarIdx s r use n) ::= as@(_x :+ _y))) =
+mkDiffEqTerm _ (AbsAssign (Var (Idx.Var s r use n) ::= as@(_x :+ _y))) =
   {- trace ("--->: " ++ showEqTerm z ++ " => " ++ showEqTerm res) $ -} [res]
   where res = v ::= dps
         ats = additiveTermsNonEmpty as
-        v = mkVar $ VarIdx s r (toDiffUse use) n
+        v = mkVar $ Idx.Var s r (toDiffUse use) n
         dps = add $ fmap g ats
-        g (Atom (Power (PowerIdx _ _ f t))) = mkVar $ DPowerIdx s r f t
+        g (Atom (Power (Idx.Power _ _ f t))) = mkVar $ Idx.DPower s r f t
 
 -- P_0.1_0.1 = v_0.1_OutSum.0
-mkDiffEqTerm _ (AbsAssign (Power (PowerIdx _ _ f t) ::= Atom (Var (VarIdx s r use n)))) =
+mkDiffEqTerm _ (AbsAssign (Power (Idx.Power _ _ f t) ::= Atom (Var (Idx.Var s r use n)))) =
   {- trace ("--->: " ++ showEqTerm z ++ " => " ++ showEqTerm eres) $ -} [res, eres]
   where res = dp ::= v
-        v = mkVar $ VarIdx s r (toDiffUse use) n
-        dp = mkVar $ DPowerIdx s r f t
+        v = mkVar $ Idx.Var s r (toDiffUse use) n
+        dp = mkVar $ Idx.DPower s r f t
 
         eres = de !:= dp !* dt
-        dt = DTimeIdx s r
-        de = DEnergyIdx s r f t
+        dt = Idx.DTime s r
+        de = Idx.DEnergy s r f t
 
 
 -- v_0.1_OutSum.1 = v_0.1_InSum.1
-mkDiffEqTerm _ (AbsAssign (Var (VarIdx s r use0 n) ::= Atom (Var (VarIdx _ _ use1 _)))) =
+mkDiffEqTerm _ (AbsAssign (Var (Idx.Var s r use0 n) ::= Atom (Var (Idx.Var _ _ use1 _)))) =
   {- trace (showEqTerm z ++ " => " ++ showEqTerm res) $ -} [res]
   where res = v0 ::= v1
-        v0 = mkVar $ VarIdx s r (toDiffUse use0) n
-        v1 = mkVar $ VarIdx s r (toDiffUse use1) n
+        v0 = mkVar $ Idx.Var s r (toDiffUse use0) n
+        v1 = mkVar $ Idx.Var s r (toDiffUse use1) n
 
 -- P_0.1_1.0 = f(P_0.1_0.1, n_0.1_0.1)
-mkDiffEqTerm oldrec (AssignEdge PowerOut (Power _) _ (Power (PowerIdx s newrec f t))) =
+mkDiffEqTerm oldrec (AssignEdge PowerOut (Power _) _ (Power (Idx.Power s newrec f t))) =
   {- trace ("--->: " ++ showEqTerm z ++ " => " ++ showEqTerm eres) $ -} [res, eres]
   where res = dq ::= (dp :* n) :+ (p :* dn) :+ (dp :* dn)
-        dq = mkVar $ DPowerIdx s newrec f t
-        dp = mkVar $ DPowerIdx s newrec t f
-        n = mkVar $ FEtaIdx s oldrec t f
-        dn = mkVar $ DEtaIdx s newrec t f
-        p = mkVar $ PowerIdx s oldrec t f
+        dq = mkVar $ Idx.DPower s newrec f t
+        dp = mkVar $ Idx.DPower s newrec t f
+        n = mkVar $ Idx.FEta s oldrec t f
+        dn = mkVar $ Idx.DEta s newrec t f
+        p = mkVar $ Idx.Power s oldrec t f
 
         eres = de !:= dq !* dt
-        dt = DTimeIdx s newrec
-        de = DEnergyIdx s newrec f t
+        dt = Idx.DTime s newrec
+        de = Idx.DEnergy s newrec f t
 
 -- P_0.1_1.2 = f(v_0.1_OutSum.1, x_0.1_1.2)
-mkDiffEqTerm oldrec (AssignEdge PowerOut (Var (VarIdx _ _ use _)) _ (Power (PowerIdx s newrec f t))) =
+mkDiffEqTerm oldrec (AssignEdge PowerOut (Var (Idx.Var _ _ use _)) _ (Power (Idx.Power s newrec f t))) =
   {- trace ("--->: " ++ showEqTerm z ++ " => " ++ showEqTerm eres) $ -} [res, eres]
   where res = dq ::= (dv :* x) :+ (v :* dx) :+ (dv :* dx)
-        dq = mkVar $ DPowerIdx s newrec f t
-        dv = mkVar $ VarIdx s newrec (toDiffUse use) f
-        x = mkVar $ XIdx s oldrec f t
-        dx = mkVar $ DXIdx s newrec f t
-        v = mkVar $ VarIdx s oldrec use f
+        dq = mkVar $ Idx.DPower s newrec f t
+        dv = mkVar $ Idx.Var s newrec (toDiffUse use) f
+        x = mkVar $ Idx.X s oldrec f t
+        dx = mkVar $ Idx.DX s newrec f t
+        v = mkVar $ Idx.Var s oldrec use f
 
         eres = de !:= dq !* dt
-        dt = DTimeIdx s newrec
-        de = DEnergyIdx s newrec f t
+        dt = Idx.DTime s newrec
+        de = Idx.DEnergy s newrec f t
 
 -- P_0.1_1.2 = b(P_0.1_2.1, n_0.1_1.2)
-mkDiffEqTerm oldrec (AssignEdge PowerIn (Power (PowerIdx s newrec f t)) (FEta _) _) =
+mkDiffEqTerm oldrec (AssignEdge PowerIn (Power (Idx.Power s newrec f t)) (FEta _) _) =
   {- trace (showEqTerm z ++ " => " ++ showEqTerm res) $ -} [res, eres]
   where res = dq ::= (dp :* (Recip n)) :+ (Minus ((p :* dn) :* nom)) :+ (Minus ((dp :* dn) :* nom))
-        dq = mkVar $ DPowerIdx s newrec f t
-        dp = mkVar $ DPowerIdx s newrec t f
-        p = mkVar $ PowerIdx s oldrec t f
-        n = mkVar $ FEtaIdx s oldrec f t
-        dn = mkVar $ DEtaIdx s newrec f t
+        dq = mkVar $ Idx.DPower s newrec f t
+        dp = mkVar $ Idx.DPower s newrec t f
+        p = mkVar $ Idx.Power s oldrec t f
+        n = mkVar $ Idx.FEta s oldrec f t
+        dn = mkVar $ Idx.DEta s newrec f t
         nom = Recip ((dn :* n) :+ (n :* n))
 
         eres = de !:= dq !* dt
-        dt = DTimeIdx s newrec
-        de = DEnergyIdx s newrec f t
+        dt = Idx.DTime s newrec
+        de = Idx.DEnergy s newrec f t
 
 
 -- v_0.1_OutSum.1 = b(P_0.1_1.2, x_0.1_1.2)
-mkDiffEqTerm oldrec (AssignEdge PowerIn (Var (VarIdx s newrec use _n)) _ (Power (PowerIdx _ _ f t))) =
+mkDiffEqTerm oldrec (AssignEdge PowerIn (Var (Idx.Var s newrec use _n)) _ (Power (Idx.Power _ _ f t))) =
   {- trace ("--->: " ++ showEqTerm z ++ " => " ++ showEqTerm eres) $ -} [res, eres]
   where res = v ::= (dp :* (Recip x)) :+ (Minus ((p :* dx) :* nom)) :+ (Minus ((dp :* dx) :* nom))
-        v = mkVar $ VarIdx s newrec (toDiffUse use) f
-        p = mkVar $ PowerIdx s oldrec f t
-        dp = mkVar $ DPowerIdx s newrec f t
-        x = mkVar $ XIdx s oldrec f t
-        dx = mkVar $ DXIdx s newrec f t
+        v = mkVar $ Idx.Var s newrec (toDiffUse use) f
+        p = mkVar $ Idx.Power s oldrec f t
+        dp = mkVar $ Idx.DPower s newrec f t
+        x = mkVar $ Idx.X s oldrec f t
+        dx = mkVar $ Idx.DX s newrec f t
         nom = Recip ((dx :* x) :+ (x :* x))
 
         eres = de ::= dq :* dt
-        dq = mkVar $ DPowerIdx s newrec f t
-        dt = mkVar $ DTimeIdx s newrec
-        de = mkVar $ DEnergyIdx s newrec f t
+        dq = mkVar $ Idx.DPower s newrec f t
+        dt = mkVar $ Idx.DTime s newrec
+        de = mkVar $ Idx.DEnergy s newrec f t
 
 mkDiffEqTerm _ _ = []
 
@@ -644,7 +645,7 @@ mkDiffEqTermEquations rec =
    map AbsAssign . concatMap (mkDiffEqTerm rec)
 
 --------------------------------------------------------------------
--- interpretEq len envs (InEqual (EIdx idx) rhs) = envs { energyMap = insert len idx envs rhs (energyMap envs) }
+-- interpretEq len envs (InEqual (Idx.E idx) rhs) = envs { energyMap = insert len idx envs rhs (energyMap envs) }
 
 interpretEqTermRhs :: Envs EqTerm -> EqTerm -> EqTerm
 interpretEqTermRhs envs t =

@@ -67,30 +67,30 @@ rec :: Idx.Record
 rec = Idx.Record 0
 
 dtimes0num :: DTimeMap UTFSig
-dtimes0num = M.fromList [ (DTimeIdx sec rec, S.fromList [1.0]) ]
+dtimes0num = M.fromList [ (Idx.DTime sec rec, S.fromList [1.0]) ]
 
 sigs0num :: EnergyMap UTFSig
-sigs0num = M.fromList [ (EnergyIdx sec rec 0 2, S.fromList [3.0]) ]
+sigs0num = M.fromList [ (Idx.Energy sec rec 0 2, S.fromList [3.0]) ]
 
 
 eta0num :: FEtaMap UTFSig
 eta0num = M.fromList $
-   (FEtaIdx sec rec 0 2, S.map $ const 0.8) :
-   (FEtaIdx sec rec 2 0, S.map $ const 0.8) :
-   (FEtaIdx sec rec 1 2, S.map $ const 0.7) :
-   (FEtaIdx sec rec 2 1, S.map $ const 0.7) :
-   (FEtaIdx sec rec 2 3, S.map $ const 0.6) :
-   (FEtaIdx sec rec 3 2, S.map $ const 0.6) :
-   (FEtaIdx sec rec 2 4, S.map $ const 0.5) :
-   (FEtaIdx sec rec 4 2, S.map $ const 0.5) :
+   (Idx.FEta sec rec 0 2, S.map $ const 0.8) :
+   (Idx.FEta sec rec 2 0, S.map $ const 0.8) :
+   (Idx.FEta sec rec 1 2, S.map $ const 0.7) :
+   (Idx.FEta sec rec 2 1, S.map $ const 0.7) :
+   (Idx.FEta sec rec 2 3, S.map $ const 0.6) :
+   (Idx.FEta sec rec 3 2, S.map $ const 0.6) :
+   (Idx.FEta sec rec 2 4, S.map $ const 0.5) :
+   (Idx.FEta sec rec 4 2, S.map $ const 0.5) :
    []
 
 
 x0num :: XMap UTFSig
 x0num = M.fromList $
-   (XIdx sec rec 2 0, S.fromList [0.2]) :
-   (XIdx sec rec 2 3, S.fromList [0.5]) :
-   (XIdx sec rec 2 4, S.fromList [0.5]) :
+   (Idx.X sec rec 2 0, S.fromList [0.2]) :
+   (Idx.X sec rec 2 3, S.fromList [0.5]) :
+   (Idx.X sec rec 2 4, S.fromList [0.5]) :
    []
 
 ---------------------------------------------------------------------------------
@@ -98,32 +98,32 @@ x0num = M.fromList $
 
 
 dtimes0sym :: DTimeMap EqTerm
-dtimes0sym = M.fromList [ (DTimeIdx sec rec, mkVar $ DTimeIdx sec rec) ]
+dtimes0sym = M.fromList [ (Idx.DTime sec rec, mkVar $ Idx.DTime sec rec) ]
 
 sigs0sym :: EnergyMap EqTerm
-sigs0sym = M.fromList [ (EnergyIdx sec rec 0 2, mkVar $ EnergyIdx sec rec 0 1) ]
+sigs0sym = M.fromList [ (Idx.Energy sec rec 0 2, mkVar $ Idx.Energy sec rec 0 1) ]
 
 
 eta0sym :: FEtaMap EqTerm
 eta0sym =
    M.fromList $
-      (FEtaIdx sec rec 0 2, const $ mkVar $ FEtaIdx sec rec 0 2) :
-      (FEtaIdx sec rec 2 0, const $ mkVar $ FEtaIdx sec rec 2 0) :
-      (FEtaIdx sec rec 1 2, const $ mkVar $ FEtaIdx sec rec 1 2) :
-      (FEtaIdx sec rec 2 1, const $ mkVar $ FEtaIdx sec rec 2 1) :
-      (FEtaIdx sec rec 2 3, const $ mkVar $ FEtaIdx sec rec 2 3) :
-      (FEtaIdx sec rec 3 2, const $ mkVar $ FEtaIdx sec rec 3 2) :
-      (FEtaIdx sec rec 2 4, const $ mkVar $ FEtaIdx sec rec 2 4) :
-      (FEtaIdx sec rec 4 2, const $ mkVar $ FEtaIdx sec rec 4 2) :
+      (Idx.FEta sec rec 0 2, const $ mkVar $ Idx.FEta sec rec 0 2) :
+      (Idx.FEta sec rec 2 0, const $ mkVar $ Idx.FEta sec rec 2 0) :
+      (Idx.FEta sec rec 1 2, const $ mkVar $ Idx.FEta sec rec 1 2) :
+      (Idx.FEta sec rec 2 1, const $ mkVar $ Idx.FEta sec rec 2 1) :
+      (Idx.FEta sec rec 2 3, const $ mkVar $ Idx.FEta sec rec 2 3) :
+      (Idx.FEta sec rec 3 2, const $ mkVar $ Idx.FEta sec rec 3 2) :
+      (Idx.FEta sec rec 2 4, const $ mkVar $ Idx.FEta sec rec 2 4) :
+      (Idx.FEta sec rec 4 2, const $ mkVar $ Idx.FEta sec rec 4 2) :
       []
 
 
 x0sym :: XMap EqTerm
 x0sym =
    M.fromList $
-      (XIdx sec rec 2 0, mkVar $ XIdx sec rec 2 0) :
-      (XIdx sec rec 2 3, mkVar $ XIdx sec rec 2 3) :
-      (XIdx sec rec 2 4, mkVar $ XIdx sec rec 2 4) :
+      (Idx.X sec rec 2 0, mkVar $ Idx.X sec rec 2 0) :
+      (Idx.X sec rec 2 3, mkVar $ Idx.X sec rec 2 3) :
+      (Idx.X sec rec 2 4, mkVar $ Idx.X sec rec 2 4) :
       []
 
 

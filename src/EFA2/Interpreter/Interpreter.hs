@@ -4,6 +4,7 @@ module EFA2.Interpreter.Interpreter where
 import qualified Data.Map as M
 import qualified Data.List as L
 
+import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Signal.Signal as S
 import qualified EFA2.Signal.Data as D
 import qualified EFA2.Signal.Base as Base
@@ -90,11 +91,11 @@ interpretTerm len envs = go
                   DEnergy idx -> denergyMap envs `safeLookup` idx
                   Power idx -> powerMap envs `safeLookup` idx
                   DPower idx -> dpowerMap envs `safeLookup` idx
-                  FEta idx@(FEtaIdx s r f t) -> (fetaMap envs `safeLookup` idx) (powerMap envs `safeLookup` pidx)
-                    where pidx = PowerIdx s r f t
+                  FEta idx@(Idx.FEta s r f t) -> (fetaMap envs `safeLookup` idx) (powerMap envs `safeLookup` pidx)
+                    where pidx = Idx.Power s r f t
     --              DEta idx -> detaMap envs `safeLookup` idx
-                  DEta idx@(DEtaIdx s r f t) -> (detaMap envs `safeLookup` idx) (powerMap envs `safeLookup` pidx)
-                    where pidx = PowerIdx s r f t
+                  DEta idx@(Idx.DEta s r f t) -> (detaMap envs `safeLookup` idx) (powerMap envs `safeLookup` pidx)
+                    where pidx = Idx.Power s r f t
                   DTime idx -> dtimeMap envs `safeLookup` idx
                   X idx -> xMap envs `safeLookup` idx
                   DX idx -> dxMap envs `safeLookup` idx
@@ -102,9 +103,9 @@ interpretTerm len envs = go
                   Store idx -> storageMap envs `safeLookup` idx
 
             Minus t -> S.neg (go t)
-            Recip (Atom (FEta idx@(FEtaIdx s r f t))) ->
+            Recip (Atom (FEta idx@(Idx.FEta s r f t))) ->
                S.rec $ (fetaMap envs `safeLookup` idx) pval
-              where pidx = PowerIdx s r t f
+              where pidx = Idx.Power s r t f
                     pval = powerMap envs `safeLookup` pidx
             Recip t -> S.rec $ go t
             s :+ t -> go s .+ go t
@@ -139,9 +140,9 @@ interpretEq len envs eq =
       (InEqual (DPower idx) rhs) -> envs { dpowerMap = insert len idx envs rhs (dpowerMap envs) }
       (InEqual (FEta idx) (InFunc feta)) -> envs { fetaMap = M.insert idx feta (fetaMap envs) }
 {-
-      (InEqual (FEta idx@(FEtaIdx s r f t) _) ((Recip (Power pidx1)) :* (Power pidx2))) -> envs''
+      (InEqual (FEta idx@(Idx.FEta s r f t) _) ((Recip (Power pidx1)) :* (Power pidx2))) -> envs''
   where envs' = envs { fetaMap = M.insert idx (mkEtaFunc pts) (fetaMap envs) }
-        envs'' = envs' { fetaMap = M.insert (FEtaIdx s r t f) (mkEtaFunc (reversePts pts)) (fetaMap envs') }
+        envs'' = envs' { fetaMap = M.insert (Idx.FEta s r t f) (mkEtaFunc (reversePts pts)) (fetaMap envs') }
         p1 = powerMap envs M.! pidx1
         p2 = powerMap envs M.! pidx2
         pts = Pt p2 (p2 ./ p1)

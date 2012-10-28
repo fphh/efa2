@@ -3,7 +3,7 @@
 
 module EFA2.Signal.Sequence where
 
-import EFA2.Interpreter.Env (Envs(..), DTimeIdx(..), EnergyIdx(..), emptyEnv)
+import EFA2.Interpreter.Env (Envs(..), emptyEnv)
 
 import qualified EFA2.Topology.Flow as Flow
 import EFA2.Topology.TopologyData (Topology)
@@ -62,9 +62,9 @@ data EventType = LeftEvent
 
 
 -- | From PowerRecord
---fromFlowRecord :: SecIdx -> Idx.Record -> FlowRecord -> Envs FSig -- [Val]
+--fromFlowRecord :: Idx.Section -> Idx.Record -> FlowRecord -> Envs FSig -- [Val]
 
---fromFlowRecord :: SecIdx -> Idx.Record -> FlRecord a b -> Envs a --UTFSig
+--fromFlowRecord :: Idx.Section -> Idx.Record -> FlRecord a b -> Envs a --UTFSig
 fromFlowRecord ::
    Idx.Section ->
    Idx.Record ->
@@ -73,10 +73,10 @@ fromFlowRecord ::
       (TC s1 (Typ delta1 t1 p1) (Data c1 d1)) ->
    Envs (TC s1 (Typ UT UT UT) (Data c1 d1))
 fromFlowRecord secIdx recIdx (FlRecord dTime flowMap) =
-  emptyEnv { energyMap = M.map untype $ M.mapKeys f flowMap, dtimeMap = M.fromList [(DTimeIdx secIdx recIdx, untype dTime)] }
-  where f (PPosIdx idx1 idx2) = EnergyIdx secIdx recIdx idx1 idx2
+  emptyEnv { energyMap = M.map untype $ M.mapKeys f flowMap, dtimeMap = M.fromList [(Idx.DTime secIdx recIdx, untype dTime)] }
+  where f (PPosIdx idx1 idx2) = Idx.Energy secIdx recIdx idx1 idx2
 
-  --where f ((PPosIdx idx1 idx2), (flowSig)) = ((PowerIdx secIdx recIdx idx1 idx2), [fromScalar $ sigSum flowSig])
+  --where f ((PPosIdx idx1 idx2), (flowSig)) = ((Idx.Power secIdx recIdx idx1 idx2), [fromScalar $ sigSum flowSig])
 
 
 

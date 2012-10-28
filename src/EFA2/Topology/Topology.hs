@@ -10,6 +10,7 @@ import EFA2.Utils.Utils (pairs, safeLookup)
 
 import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Topology.EfaGraph as Gr
+import EFA2.Signal.Index (Use(InSum, OutSum))
 import Data.Graph.Inductive
           (LNode, Node, LEdge, lab, labNodes, labEdges, elfilter)
 
@@ -94,35 +95,35 @@ shiftIndices :: (Show a) => M.Map (Idx.Section, Int) Node -> Envs a -> Envs a
 shiftIndices m (Envs (SingleRecord rec) e de p dp fn dn t' x dx v st) =
   Envs (SingleRecord rec) e' de' p' dp' fn' dn' t' x' dx' v' st'
   where e' = M.mapKeys ef e
-        ef (EnergyIdx s _ f t) = EnergyIdx s rec (m `safeLookup` (s, f)) (m `safeLookup` (s, t))
+        ef (Idx.Energy s _ f t) = Idx.Energy s rec (m `safeLookup` (s, f)) (m `safeLookup` (s, t))
 
         de' = M.mapKeys def de
-        def (DEnergyIdx s _ f t) = DEnergyIdx s rec (m `safeLookup` (s, f)) (m `safeLookup` (s, t))
+        def (Idx.DEnergy s _ f t) = Idx.DEnergy s rec (m `safeLookup` (s, f)) (m `safeLookup` (s, t))
 
         p' = M.mapKeys pf p
-        pf (PowerIdx s _ f t) = PowerIdx s rec (m `safeLookup` (s, f)) (m `safeLookup` (s, t))
+        pf (Idx.Power s _ f t) = Idx.Power s rec (m `safeLookup` (s, f)) (m `safeLookup` (s, t))
 
         dp' = M.mapKeys dpf dp
-        dpf (DPowerIdx s _ f t) = DPowerIdx s rec (m `safeLookup` (s, f)) (m `safeLookup` (s, t))
+        dpf (Idx.DPower s _ f t) = Idx.DPower s rec (m `safeLookup` (s, f)) (m `safeLookup` (s, t))
 
         fn' = M.mapKeys fnf fn
-        fnf (FEtaIdx s _ f t) = FEtaIdx s rec (m `safeLookup` (s, f)) (m `safeLookup` (s, t))
+        fnf (Idx.FEta s _ f t) = Idx.FEta s rec (m `safeLookup` (s, f)) (m `safeLookup` (s, t))
 
         dn' = M.mapKeys dnf dn
-        dnf (DEtaIdx s _ f t) = DEtaIdx s rec (m `safeLookup` (s, f)) (m `safeLookup` (s, t))
+        dnf (Idx.DEta s _ f t) = Idx.DEta s rec (m `safeLookup` (s, f)) (m `safeLookup` (s, t))
 
         x' = M.mapKeys xf x
-        xf (XIdx s _ f t) = XIdx s rec (m `safeLookup` (s, f)) (m `safeLookup` (s, t))
+        xf (Idx.X s _ f t) = Idx.X s rec (m `safeLookup` (s, f)) (m `safeLookup` (s, t))
 
         dx' = M.mapKeys dxf dx
-        dxf (DXIdx s _ f t) = DXIdx s rec (m `safeLookup` (s, f)) (m `safeLookup` (s, t))
+        dxf (Idx.DX s _ f t) = Idx.DX s rec (m `safeLookup` (s, f)) (m `safeLookup` (s, t))
 
         v' = M.mapKeys vf v
-        --vf (VarIdx s _ f t) = VarIdx s rec (m `safeLookup` (s, f)) (m `safeLookup` (s, t))
-        vf (VarIdx s _ use t) = VarIdx s rec use (m `safeLookup` (s, t))
+        --vf (Idx.Var s _ f t) = Idx.Var s rec (m `safeLookup` (s, f)) (m `safeLookup` (s, t))
+        vf (Idx.Var s _ use t) = Idx.Var s rec use (m `safeLookup` (s, t))
 
         st' = M.mapKeys stf st
-        stf (StorageIdx s _ sto) = StorageIdx s rec (m `safeLookup` (s, sto))
+        stf (Idx.Storage s _ sto) = Idx.Storage s rec (m `safeLookup` (s, sto))
 
 
 envToEqTerms :: (MkIdxC k) => M.Map k v -> [Equation]
@@ -134,15 +135,15 @@ mkPowerEqs rec topo = concat $ mapGraph (mkPEqs rec) topo
 mkPEqs :: Idx.Record -> ([LNode NLabel], LNode NLabel, [LNode NLabel]) -> [Equation]
 mkPEqs rec (ins, (nid, NLabel sec _ _), outs) = ieqs ++ oeqs -- ++ dieqs ++ doeqs
   where makeVar mkIdx (nid', _) = mkVar $ mkIdx sec rec nid nid'
-        dt = Atom $ DTime $ DTimeIdx sec rec
-        eis = map (makeVar EnergyIdx) ins
-        eos = map (makeVar EnergyIdx) outs
-        --deis = map (makeVar DEnergyIdx) ins
-        --deos = map (makeVar DEnergyIdx) outs
-        pis = map (makeVar PowerIdx) ins
-        pos = map (makeVar PowerIdx) outs
-        --dpis = map (makeVar DPowerIdx) ins
-        --dpos = map (makeVar DPowerIdx) outs
+        dt = Atom $ DTime $ Idx.DTime sec rec
+        eis = map (makeVar Idx.Energy) ins
+        eos = map (makeVar Idx.Energy) outs
+        --deis = map (makeVar Idx.DEnergy) ins
+        --deos = map (makeVar Idx.DEnergy) outs
+        pis = map (makeVar Idx.Power) ins
+        pos = map (makeVar Idx.Power) outs
+        --dpis = map (makeVar Idx.DPower) ins
+        --dpos = map (makeVar Idx.DPower) outs
 
         ieqs = zipWith f eis pis
         oeqs = zipWith f eos pos
@@ -173,8 +174,8 @@ mkStoreEqs recordNum (ins, outs) = startEq ++ eqs
         f (OutStore (_, l)) = sectionNLabel l
         startEq = k b
         k (InStore (nid, NLabel sec _ (InitStorage st))) =
-          [ mkVar (StorageIdx sec recordNum st) := mkVar (VarIdx sec recordNum InSum nid) :* dt]
-          where dt = mkVar $ DTimeIdx sec recordNum
+          [ mkVar (Idx.Storage sec recordNum st) := mkVar (Idx.Var sec recordNum InSum nid) :* dt]
+          where dt = mkVar $ Idx.DTime sec recordNum
         k _ = []
         eqs = map (g . h) (pairs both)
         h (InStore x, y) = (x, y)
@@ -182,33 +183,33 @@ mkStoreEqs recordNum (ins, outs) = startEq ++ eqs
 
         g ((_nid, NLabel sec _ st), InStore (nid', NLabel sec' _ st')) = stnew := (v :* dt) :+ stold
 {-
-          mkVar (StorageIdx sec' recordNum (getStorageNumber st')) :=
-            (mkVar (VarIdx sec' recordNum InSum nid') :* dt)
-              :+ mkVar (StorageIdx sec recordNum (getStorageNumber st))
+          mkVar (Idx.Storage sec' recordNum (getStorageNumber st')) :=
+            (mkVar (Idx.Var sec' recordNum InSum nid') :* dt)
+              :+ mkVar (Idx.Storage sec recordNum (getStorageNumber st))
 -}
-          where stnew = mkVar $ StorageIdx sec' recordNum (getStorageNumber st')
-                stold = mkVar $ StorageIdx sec recordNum (getStorageNumber st)
-                v = mkVar $ VarIdx sec' recordNum InSum nid'
-                dt = mkVar $ DTimeIdx sec' recordNum
+          where stnew = mkVar $ Idx.Storage sec' recordNum (getStorageNumber st')
+                stold = mkVar $ Idx.Storage sec recordNum (getStorageNumber st)
+                v = mkVar $ Idx.Var sec' recordNum InSum nid'
+                dt = mkVar $ Idx.DTime sec' recordNum
 
         g ((_nid, NLabel sec _ st), OutStore (nid', NLabel sec' _ st')) = stnew := Minus (v :* dt) :+ stold
 {-
-          mkVar (StorageIdx sec' recordNum (getStorageNumber st')) :=
-            Minus (mkVar (VarIdx sec' recordNum OutSum nid') :* dt) :+ (mkVar (StorageIdx sec recordNum (getStorageNumber st)))
+          mkVar (Idx.Storage sec' recordNum (getStorageNumber st')) :=
+            Minus (mkVar (Idx.Var sec' recordNum OutSum nid') :* dt) :+ (mkVar (Idx.Storage sec recordNum (getStorageNumber st)))
 -}
-          where stnew = mkVar $ StorageIdx sec' recordNum (getStorageNumber st')
-                stold = mkVar $ StorageIdx sec recordNum (getStorageNumber st)
-                v = mkVar $ VarIdx sec' recordNum OutSum nid'
-                dt = mkVar $ DTimeIdx sec' recordNum
+          where stnew = mkVar $ Idx.Storage sec' recordNum (getStorageNumber st')
+                stold = mkVar $ Idx.Storage sec recordNum (getStorageNumber st)
+                v = mkVar $ Idx.Var sec' recordNum OutSum nid'
+                dt = mkVar $ Idx.DTime sec' recordNum
 
 
 
 mkInStoreEqs :: Idx.Record -> InOutGraphFormat (LNode NLabel) -> [Equation]
 mkInStoreEqs recordNum (_ins, (nid, NLabel sec _ _), outs@((o,_):_)) = (startEq:osEqs)
-  where startEq = mkVar (VarIdx sec recordNum InSum nid) := mkVar (PowerIdx sec recordNum nid o)
+  where startEq = mkVar (Idx.Var sec recordNum InSum nid) := mkVar (Idx.Power sec recordNum nid o)
         osEqs = map f (pairs outs)
-        f (x, y) = mkVar (PowerIdx sec recordNum nid y') :=
-                     mkVar (PowerIdx sec recordNum nid x') :+ (Minus (mkVar (PowerIdx xs recordNum x' nid)))
+        f (x, y) = mkVar (Idx.Power sec recordNum nid y') :=
+                     mkVar (Idx.Power sec recordNum nid x') :+ (Minus (mkVar (Idx.Power xs recordNum x' nid)))
           where (x', NLabel xs _ _) = x
                 (y', _) = y
 mkInStoreEqs _ _ = []
@@ -217,13 +218,13 @@ mkInStoreEqs _ _ = []
 mkOutStoreEqs :: Idx.Record -> InOutGraphFormat (LNode NLabel) -> [Equation]
 mkOutStoreEqs recordNum (ins, (nid, NLabel sec _ _), _:_) =
      visumeqs ++ xeqs ++ pieqs
-  where xis = map (makeVar XIdx) ins
-        --eis = map (makeVar EnergyIdx) ins
-        pis = map (makeVar PowerIdx) ins
+  where xis = map (makeVar Idx.X) ins
+        --eis = map (makeVar Idx.Energy) ins
+        pis = map (makeVar Idx.Power) ins
         makeVar mkIdx (nid', l) = mkVar $ mkIdx (sectionNLabel l) recordNum nid' nid
 
-        --visum = mkVar (VarIdx sec recordNum St nid)
-        visum = mkVar (VarIdx sec recordNum InSum nid)
+        --visum = mkVar (Idx.Var sec recordNum St nid)
+        visum = mkVar (Idx.Var sec recordNum InSum nid)
 
         visumeqs =
            case NonEmpty.fetch pis of
@@ -234,10 +235,10 @@ mkOutStoreEqs recordNum (ins, (nid, NLabel sec _ _), _:_) =
         xeqs = zipWith g xis pis
         g x e = x := e :* Recip visum
 
-        pis' = map (makeVar' PowerIdx) ins
+        pis' = map (makeVar' Idx.Power) ins
         makeVar' mkIdx (nid', _) = mkVar $ mkIdx sec recordNum nid nid'
 
-        outv = mkVar (VarIdx sec recordNum OutSum nid)
+        outv = mkVar (Idx.Var sec recordNum OutSum nid)
         pieqs = zipWith h pis' xis
         h e x = e := x :* outv
 
@@ -248,8 +249,8 @@ mkOutStoreEqs _ _ = []
 mkEdgeEq :: Int -> Topology -> [Equation]
 mkEdgeEq recordNum topo = map f (map unlabelEdge origEs)
   where origEs = L.filter (\(_, _, l) -> not $ isIntersectionEdge l) (labEdges topo)
-        f (x, y) = mkVar (PowerIdx ys recordNum y x) :=
-                         (mkVar (PowerIdx xs recordNum x y)) :* (mkVar (FEtaIdx xs recordNum x y))
+        f (x, y) = mkVar (Idx.Power ys recordNum y x) :=
+                         (mkVar (Idx.Power xs recordNum x y)) :* (mkVar (Idx.FEta xs recordNum x y))
           where NLabel xs _ _ = fromJust $ lab topo x
                 NLabel ys _ _ = fromJust $ lab topo y
 -}
@@ -259,9 +260,9 @@ mkEdgeEq recordNum topo = map (f . unlabelEdge) origEs
   where origEs = L.filter (\(_, _, l) -> not $ isIntersectionEdge l) (labEdges topo)
         f (x, y) =
            EqEdge
-              (mkVar $ PowerIdx xs recordNum x y)
-              (mkVar $ FEtaIdx xs recordNum x y)
-              (mkVar $ PowerIdx ys recordNum y x)
+              (mkVar $ Idx.Power xs recordNum x y)
+              (mkVar $ Idx.FEta xs recordNum x y)
+              (mkVar $ Idx.Power ys recordNum y x)
           where NLabel xs _ _ = fromJust $ lab topo x
                 NLabel ys _ _ = fromJust $ lab topo y
 
@@ -281,13 +282,13 @@ mkEq recordNum (ins, (nid, NLabel sec _ _), outs) =
          oeqss ++ ieqss ++ oeqs ++ ieqs ++ [vosum != visum]
 
   where -- ATTENTION (not very safe): We need this variable in mkInStoreEq again!!!
-        visum = mkVar $ VarIdx sec recordNum InSum nid
+        visum = mkVar $ Idx.Var sec recordNum InSum nid
         -- ATTENTION (not very safe): We need this variable in mkOutStoreEq again!!!
-        vosum = mkVar $ VarIdx sec recordNum OutSum nid
+        vosum = mkVar $ Idx.Var sec recordNum OutSum nid
 
         -- For section and record, we focus on the current node n.
         makeVar mkIdx (nid', _) = mkVar $ mkIdx sec recordNum nid nid'
-        makeVars xs = (fmap (makeVar XIdx) xs, fmap (makeVar PowerIdx) xs)
+        makeVars xs = (fmap (makeVar Idx.X) xs, fmap (makeVar Idx.Power) xs)
 
 makeIns, makeOuts ::
    Env.Index ->
@@ -340,14 +341,14 @@ mkDiffPowerEqs laterRec formerRec (ins, n@(nid, NLabel sec _ _), outs)
   | length ins > 0 && length outs == 0 = dieqs
   | otherwise = dieqs ++ doeqs
   where makeVar r mkIdx (nid', _) = mkVar $ mkIdx sec r nid nid'
-        lpis = map (makeVar laterRec PowerIdx) ins
-        fpis = map (makeVar formerRec PowerIdx) ins
+        lpis = map (makeVar laterRec Idx.Power) ins
+        fpis = map (makeVar formerRec Idx.Power) ins
         dieqs = zipWith3 f lpis fpis ins
 
-        lpos = map (makeVar laterRec PowerIdx) outs
-        fpos = map (makeVar formerRec PowerIdx) outs
+        lpos = map (makeVar laterRec Idx.Power) outs
+        fpos = map (makeVar formerRec Idx.Power) outs
         doeqs = zipWith3 f lpos fpos outs
-        f x y i = (makeVar laterRec DPowerIdx i) := x :+ (Minus y)
+        f x y i = (makeVar laterRec Idx.DPower i) := x :+ (Minus y)
 -}
 
 mkDiffEtaEqs ::
@@ -356,10 +357,10 @@ mkDiffEtaEqs ::
    [Equation]
 mkDiffEtaEqs laterRec formerRec (_ins, (nid, NLabel sec _ _), outs) = dnoeqs
   where makeVar r mkIdx (nid', _) = mkVar $ mkIdx sec r nid nid'
-        lnos = map (makeVar laterRec FEtaIdx) outs
-        fnos = map (makeVar formerRec FEtaIdx) outs
+        lnos = map (makeVar laterRec Idx.FEta) outs
+        fnos = map (makeVar formerRec Idx.FEta) outs
         dnoeqs = zipWith3 g lnos fnos outs
-        g x y i = (makeVar laterRec DEtaIdx i) := x :+ (Minus y)
+        g x y i = (makeVar laterRec Idx.DEta i) := x :+ (Minus y)
 
 mkDiffXEqs ::
    Idx.Record -> Idx.Record ->
@@ -369,14 +370,14 @@ mkDiffXEqs laterRec formerRec (ins, (nid, NLabel sec _ _), outs) = xiseq ++ xose
   where makeVar r mkIdx (nid', _) = mkVar $ mkIdx sec r nid nid'
         f dx lx fx = dx := lx :+ (Minus fx)
 
-        lxis = map (makeVar laterRec XIdx) ins
-        fxis = map (makeVar formerRec XIdx) ins
-        dxis = map (makeVar laterRec DXIdx) ins
+        lxis = map (makeVar laterRec Idx.X) ins
+        fxis = map (makeVar formerRec Idx.X) ins
+        dxis = map (makeVar laterRec Idx.DX) ins
         xiseq = zipWith3 f dxis lxis fxis
 
-        lxos = map (makeVar laterRec XIdx) outs
-        fxos = map (makeVar formerRec XIdx) outs
-        dxos = map (makeVar laterRec DXIdx) outs
+        lxos = map (makeVar laterRec Idx.X) outs
+        fxos = map (makeVar formerRec Idx.X) outs
+        dxos = map (makeVar laterRec Idx.DX) outs
         xoseq = zipWith3 f dxos lxos fxos
 
 
@@ -388,8 +389,8 @@ mkDiffNodeEqs laterRec _formerRec (ins0, (nid, NLabel sec _ _), outs0) =
    case (NonEmpty.fetch ins0, NonEmpty.fetch outs0) of
       (Just ins, Just outs) ->
          let makeVar r mkIdx (nid', _) = mkVar $ mkIdx sec r nid nid'
-             dleis = fmap (makeVar laterRec DPowerIdx) ins
-             dleos = fmap (makeVar laterRec DPowerIdx) outs
+             dleis = fmap (makeVar laterRec Idx.DPower) ins
+             dleos = fmap (makeVar laterRec Idx.DPower) outs
              _sumeq = [add dleis := add dleos]
          in  []
       _ -> []
