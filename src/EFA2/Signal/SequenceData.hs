@@ -31,7 +31,7 @@ import Data.Ratio (Ratio, (%))
 import Data.List (transpose)
 import Data.Tuple.HT (mapFst)
 import Control.Monad (liftM2)
-import Control.Applicative (Applicative(pure, (<*>)))
+import Control.Applicative (Applicative(pure, (<*>)), liftA2)
 
 -----------------------------------------------------------------------------------
 -- | Indices for Record, Section and Power Position
@@ -109,6 +109,14 @@ instance Functor SequData where
 instance Applicative SequData where
    pure = SequData . repeat
    SequData f <*> SequData x = SequData $ zipWith ($) f x
+
+{-
+We could also define a top-level variable for (SequData [SecIdx 0 ..]),
+but it would be memorized and thus causes a space leak.
+-}
+zipWithSecIdxs :: (SecIdx -> a -> b) -> SequData a -> SequData b
+zipWithSecIdxs f =
+   liftA2 f (SequData [SecIdx 0 ..])
 
 
 instance QC.Arbitrary PPosIdx where

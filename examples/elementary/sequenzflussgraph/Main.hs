@@ -5,7 +5,7 @@ import EFA2.StateAnalysis.StateAnalysis
 import EFA2.Display.DrawGraph
 
 import EFA2.Topology.TopologyData
-import EFA2.Topology.Flow
+import qualified EFA2.Topology.Flow as Flow
 import EFA2.Signal.SequenceData
 
 import Data.List.HT (chop)
@@ -31,16 +31,13 @@ parse str = map readNum $ chop (','==) $ filter (' '/=) str
 select :: [Topology] -> [Int] -> [Topology]
 select ts = map (ts!!)
 
-idx :: [SecIdx]
-idx = map SecIdx [0..]
-
 drawSeqGraph :: [Topology] ->  IO ()
-drawSeqGraph sol = do
-  let f = map topoToFlowTopo . select sol . parse
-  fts <- interactA "Gib kommagetrennt die gewuenschten Sektionsindices ein: " f
-  let sd = SequData (zipWith mkSectionTopology idx fts)
-      seqGraph = mkSequenceTopology sd
-  drawTopologySimple seqGraph
+drawSeqGraph sol =
+   drawTopologySimple .
+   Flow.mkSequenceTopology .
+   Flow.genSectionTopology . SequData =<<
+   interactA "Gib kommagetrennt die gewuenschten Sektionsindices ein: "
+      (map topoToFlowTopo . select sol . parse)
 
 
 main :: IO ()

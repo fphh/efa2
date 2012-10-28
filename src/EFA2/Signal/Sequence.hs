@@ -15,7 +15,7 @@ import EFA2.Signal.SequenceData
           (SequData(..), Sequ(..), Sec,
            PowerRecord(..), ListPowerRecord, SequPwrRecord, SecPowerRecord,
            FlowRecord, FlRecord(FlRecord), SequFlowRecord,
-           RecIdx(..), SecIdx(..), PPosIdx(..))
+           RecIdx(..), SecIdx(..), PPosIdx(..), zipWithSecIdxs)
 import EFA2.Signal.Base
           (Val, Sign(..), ZeroCrossing(..))
 import EFA2.Signal.Signal
@@ -101,21 +101,19 @@ genSequFlow sqPRec = fmap recFullIntegrate sqPRec
 makeSequence ::
    ListPowerRecord ->
    Topology ->
-   ([Envs
+   (SequData (Envs
        (TC
           FSignal
           (Typ UT UT UT)
-          (Data (UV.Vector :> Nil) Val))],
+          (Data (UV.Vector :> Nil) Val))),
     Topology)
-makeSequence pRec topo = (sqEnvs, sqTopo)
+makeSequence pRec topo =
+   (zipWithSecIdxs (flip fromFlowRecord (RecIdx 0)) sqFRec,
+    Flow.mkSequenceTopology $
+    Flow.genSectionTopology $
+    Flow.genSequFlowTops topo $
+    Flow.genSequFState sqFRec)
   where sqFRec = genSequFlow $ snd $ genSequ $ addZeroCrossings pRec
-        sqEnvs = case sqFRec of SequData sq -> zipWith g (map SecIdx [0..]) sq
-        g s rec = fromFlowRecord s (RecIdx 0) rec
-
-        sqFStRec = Flow.genSequFState sqFRec
-        sqFlowTops = Flow.genSequFlowTops topo sqFStRec
-        sqSecTops = Flow.genSectionTopology sqFlowTops
-        sqTopo = Flow.mkSequenceTopology sqSecTops
 
 -----------------------------------------------------------------------------------
 {-
