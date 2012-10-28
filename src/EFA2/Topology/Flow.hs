@@ -15,6 +15,8 @@ import EFA2.Utils.Utils
 import EFA2.Signal.Signal (fromScalar, sigSign, sigSum)
 import EFA2.Signal.Base (Sign(PSign, NSign, ZSign))
 
+import Data.Tuple.HT (snd3)
+
 
 -- | Function to calculate flow states for the whole sequence 
 genSequFState :: SequFlowRecord FlowRecord -> SequFlowState
@@ -22,60 +24,64 @@ genSequFState sqFRec = map genFlowState `fmap` sqFRec
 
 -- | Function to extract the flow state out of a Flow Record  
 genFlowState ::  FlowRecord -> FlowState
-genFlowState (FlRecord _time flowMap) = FlowState $ M.map f flowMap
-  where f flow = fromScalar $ sigSign (sigSum flow)
+genFlowState (FlRecord _time flowMap) =
+   FlowState $ M.map (fromScalar . sigSign . sigSum) flowMap
 
 -- | Function to generate Flow Topologies for all Sequences
-genSequFlowTops :: Topology -> SequFlowState -> SequFlowTops         
-genSequFlowTops topo (SequData sequFlowStates) = SequData $ map (genFlowTopology topo) sequFlowStates  
+genSequFlowTops :: Topology -> SequFlowState -> SequFlowTops
+genSequFlowTops topo = fmap (map (genFlowTopology topo))
 
 -- | Function to generate Flow Topology -- only use one state per signal
 genFlowTopology:: Topology -> FlowState -> FlowTopology
-genFlowTopology topo (FlowState fs) = res 
-  where res :: FlowTopology
-        res = mkGraph (labNodes topo) (concatMap f $ labEdges topo)
-        f (idx1, idx2, l) =
-           case fs M.! (PPosIdx idx1 idx2) of
-              PSign -> [(idx1, idx2, l { flowDirection = WithDir })] 
-              NSign -> [(idx1, idx2, l { flowDirection = AgainstDir})]
-              ZSign -> [(idx1, idx2, l { flowDirection = UnDir})]
+genFlowTopology topo (FlowState fs) =
+   mkGraph (labNodes topo) $
+   map
+      (\(idx1, idx2, l) ->
+         (idx1, idx2, l { flowDirection =
+            case fs M.! PPosIdx idx1 idx2 of
+               PSign -> WithDir
+               NSign -> AgainstDir
+               ZSign -> UnDir } )) $
+   labEdges topo
 
 
 mkSectionTopology :: SecIdx -> FlowTopology -> SecTopology
-mkSectionTopology (SecIdx sid) t = fromFlowToSecTopology $ nmap f t
-  where f n = n { sectionNLabel = sid }
+mkSectionTopology (SecIdx sid) =
+   fromFlowToSecTopology . nmap (\n -> n { sectionNLabel = sid })
 
 genSectionTopology :: SequFlowTops -> SequData [SecTopology]
-genSectionTopology (SequData tops) = SequData (map (uncurry mkSectionTopology) (zip [0..] tops))
+genSectionTopology =
+   fmap (map (uncurry mkSectionTopology) . zip [0..])
 
 
 copySeqTopology :: SequData [SecTopology] -> Topology
-copySeqTopology (SequData tops) = mkGraph (concat ns'') (concat es'')
+copySeqTopology (SequData tops) =
+   mkGraph
+      (concat $ zipWith g offsets ns)
+      (concat $ zipWith h offsets $ map labEdges tops)
   where ns = map labNodes tops
-        ns' = zip offsets ns
-        es' = zip offsets (map labEdges tops)
-        ns'' = map g ns'
-        g (o, nlist) = map (\(n, l) -> (n+o, l)) nlist
-        es'' = map h es'
-        h (o, elist) = map (\(n1, n2, l) -> (n1+o, n2+o, l)) elist
+        g o = map (\(n, l) -> (n+o, l))
+        h o = map (\(n1, n2, l) -> (n1+o, n2+o, l))
 
         offsets = reverse $ L.foldl' f [0] (map length ns)
         f (a:acc) l = (a+l):a:acc
 
 
-mkIntersectionEdges :: Topology -> LNode NLabel -> [InOutGraphFormat (LNode NLabel)] -> [(Node, Node, ELabel)]
-mkIntersectionEdges topo startNode stores = interSecEs
+mkIntersectionEdges ::
+   Topology -> LNode NLabel ->
+   [InOutGraphFormat (LNode NLabel)] -> [LEdge ELabel]
+mkIntersectionEdges topo startNode stores =
+   concatMap (\(n, ns) -> map (n,, e) ns) $
+   map (\(n, l) -> (n, map fst (filter (q l) outs))) $
+   startNode:ins
   where (instores, outstores) = partitionInOutStatic topo stores
 
-        outs = map f outstores
-        ins = map f instores
-        f (_, x, _) = x
+        outs = map snd3 outstores
+        ins = map snd3 instores
 
-        es = map (\(n, l) -> (n, map fst (filter (q l) outs))) (startNode:ins)
         q lin (_, lout) = sectionNLabel lout > sectionNLabel lin
 
         e = defaultELabel { edgeType = IntersectionEdge }
-        interSecEs = concatMap (\(n, ns) -> map (n,, e) ns) es
 
 
 mkSequenceTopology :: SequData [SecTopology] -> Topology
