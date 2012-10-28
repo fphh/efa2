@@ -1,12 +1,9 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module EFA2.Signal.SequenceData where
 
--- import EFA2.Interpreter.Arith
 import EFA2.Topology.TopologyData (FlowTopology)
 
 import qualified EFA2.Signal.Signal as S
@@ -38,8 +35,13 @@ import Control.Monad (liftM2)
 -----------------------------------------------------------------------------------
 -- | Indices for Record, Section and Power Position
 newtype RecIdx = RecIdx Int deriving (Show, Eq, Ord) -- dataset Index
-newtype SecIdx = SecIdx Int deriving (Show, Eq, Ord, Enum)
+newtype SecIdx = SecIdx Int deriving (Show, Eq, Ord)
 data PPosIdx = PPosIdx !Int !Int deriving (Show, Eq, Ord)
+
+instance Enum SecIdx where
+   fromEnum (SecIdx n) = n
+   toEnum n = SecIdx n
+
 
 -----------------------------------------------------------------------------------
 -- | Signal Record & Power Record & Flow -- Structure for Handling recorded data
