@@ -62,15 +62,12 @@ Library
     EFA2.Solver.IsVar
     EFA2.Solver.Equation
     EFA2.Solver.Horn
-    EFA2.Solver.DirEquation
     EFA2.Solver.EquationOrder
     EFA2.Solver.DependencyGraph
     EFA2.Display.FileSave
---    EFA2.Display.DispData
     EFA2.Display.Plot
     EFA2.Display.DrawGraph
     EFA2.Display.DispTyp
-    EFA2.Display.ReportSequence
     EFA2.Display.DispBase
     EFA2.Display.DispSignal
     EFA2.Display.Report
@@ -104,11 +101,6 @@ Library
     EFA2.Interpreter.InTerm
   Other-Modules:
     EFA2.Solver.EquationTest
-    -- these modules can be compiled, but I think they are unused
-    EFA2.Signal.TH
-    EFA2.Signal.SignalData
-    EFA2.Signal.SignalGeneration
-    EFA2.Signal.SignalVersuch
 
 
 -- sollte man auf Cabal-Test umstellen,
