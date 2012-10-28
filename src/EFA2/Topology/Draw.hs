@@ -12,9 +12,9 @@ import EFA2.Topology.EfaGraph (EfaGraph)
 
 import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Signal.Data as D
-import EFA2.Display.DispSignal (SDisplay, sdisp)
-import EFA2.Display.DispTyp (TDisp)
-import EFA2.Display.DispBase (Disp)
+import EFA2.Report.Signal (SDisplay, sdisp)
+import EFA2.Report.Typ (TDisp)
+import EFA2.Report.Base (Disp)
 import EFA2.Signal.Signal (TC, DispApp)
 import EFA2.Signal.Data (Data)
 

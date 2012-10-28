@@ -1,15 +1,19 @@
+import EFA2.Interpreter.Env
+
+import qualified EFA2.Signal.Signal as S
 import EFA2.Signal.Sequence
 import EFA2.Signal.SequenceData
-import  EFA2.Interpreter.Env
-import EFA2.Utils.Utils
-import qualified EFA2.Signal.Signal as S
-import EFA2.Display.Report
 import EFA2.Signal.Signal (PSigL)
 
-import qualified Data.Map as M 
-import EFA2.Display.DispSequence
+import EFA2.Report.Sequence
+import EFA2.Report.Report
 
 import EFA2.Signal.Plot
+
+import EFA2.Utils.Utils
+
+import qualified Data.Map as M
+
 
 time = S.fromList [0,10..50]
 

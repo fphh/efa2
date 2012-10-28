@@ -2,11 +2,10 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE KindSignatures #-}
-module EFA2.Display.DispBase (module EFA2.Display.DispBase) where
+module EFA2.Report.Base where
 
 import EFA2.Signal.Data (Data, (:>), Nil, subData)
 import EFA2.Signal.Base (Sign)
--- import EFA2.Display.DispTyp
 
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as UV

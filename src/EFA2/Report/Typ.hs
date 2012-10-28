@@ -1,7 +1,7 @@
-module EFA2.Display.DispTyp (module EFA2.Display.DispTyp) where
+module EFA2.Report.Typ where
 
 import EFA2.Signal.Typ as Typ
-import EFA2.Display.DispBase
+import EFA2.Report.Base
 
 
 data DisplayType = Typ_BZ
@@ -46,7 +46,7 @@ getDisplayTypName Typ_UT = "Ungetypt"
 getDisplayTypName Typ_T = "Time"
 
 
-getDisplayTypName t = error ("Error in EFA2.Display.DispTyp - getDisplayTypName - no Pattern Match on Typ: " ++ show  t)
+getDisplayTypName t = error ("Error in EFA2.Report.Typ - getDisplayTypName - no Pattern Match on Typ: " ++ show  t)
 
 
 

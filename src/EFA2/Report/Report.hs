@@ -1,4 +1,4 @@
-module EFA2.Display.Report (module EFA2.Display.Report) where
+module EFA2.Report.Report where
 
 import qualified Data.List as L
 import qualified Data.NonEmpty as NonEmpty

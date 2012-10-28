@@ -27,8 +27,8 @@ import qualified EFA2.Signal.Vector as SV
 import EFA2.Signal.SequenceData (PowerRecord(PowerRecord), SequPwrRecord, SequData(SequData))
 import EFA2.Signal.Signal (TC, Signal, toSigList, getDisplayType)
 import EFA2.Signal.Data (Data, (:>), Nil, NestedList)
-import EFA2.Display.DispTyp (TDisp, DisplayType(Typ_P, Typ_T), getDisplayUnit, getDisplayTypName)
-import EFA2.Display.DispBase (UnitScale(UnitScale), getUnitScale)
+import EFA2.Report.Typ (TDisp, DisplayType(Typ_P, Typ_T), getDisplayUnit, getDisplayTypName)
+import EFA2.Report.Base (UnitScale(UnitScale), getUnitScale)
 
 import System.Process (system)
 

@@ -1,11 +1,11 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeOperators #-}
 
-module EFA2.Display.DispSignal (module EFA2.Display.DispSignal) where
+module EFA2.Report.Signal where
 
-import EFA2.Display.DispTyp
+import EFA2.Report.Typ
           (TDisp, DisplayType, getDisplayFormat, getDisplayUnit)
-import EFA2.Display.DispBase
+import EFA2.Report.Base
           (Disp, dispLength, getUnitScale, disp)
 
 import qualified EFA2.Signal.Signal as S

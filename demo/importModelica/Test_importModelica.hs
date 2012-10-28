@@ -1,6 +1,6 @@
 
 import EFA2.IO.Import
-import EFA2.Display.DispSignal
+import EFA2.Report.Signal
 import EFA2.Signal.Plot
 
 name1 =  "linear_res.csv" -- hand generated cvs file

@@ -4,7 +4,7 @@
 
 import qualified EFA2.Signal.Plot as Plot
 import qualified EFA2.Signal.Signal as S
-import EFA2.Display.DispSignal (sdisp)
+import EFA2.Report.Signal (sdisp)
 import EFA2.Signal.SignalFill ((.-), (./), (.*))
 import EFA2.Signal.Signal
           (TC, Scalar, Signal, FSignal, FSamp, PFSamp, PSigL, UTFSig, Test1, Test2,

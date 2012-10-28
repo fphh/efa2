@@ -1,21 +1,21 @@
 {-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, FunctionalDependencies, TypeSynonymInstances, UndecidableInstances,KindSignatures, TypeOperators,  GADTs, OverlappingInstances, FlexibleContexts, ScopedTypeVariables #-}
 
 
+import EFA2.Interpreter.Env
+
 import EFA2.Signal.Sequence
 import EFA2.Signal.SequenceData
-import  EFA2.Interpreter.Env
-import EFA2.Utils.Utils
 import EFA2.Signal.Signal as S
-
-import qualified Data.Map as M 
-
 import EFA2.Signal.Base
 import EFA2.Signal.Typ
 import EFA2.Signal.Data
 import EFA2.Signal.Plot
 
+import EFA2.Utils.Utils
+
+import qualified Data.Map as M
+
 import Data.Monoid
-import EFA2.Display.DispSignal
 
 
 t = S.fromList [0,1,2] :: TSigL

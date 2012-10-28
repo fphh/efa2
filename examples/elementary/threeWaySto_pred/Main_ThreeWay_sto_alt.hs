@@ -1,9 +1,5 @@
 module Main where
 
-import qualified Data.List as L
-import qualified Data.Map as M
-import Data.Graph.Inductive (mkGraph)
-
 import EFA2.Topology.Topology (makeNodes, makeEdges, makeAllEquations)
 import EFA2.Topology.TopologyData
           (NodeType(Crossing, Sink, Source, Storage), Topology, defaultELabel)
@@ -15,7 +11,7 @@ import EFA2.Interpreter.Env
 import EFA2.Interpreter.Interpreter (interpretFromScratch, eqToInTerm)
 import EFA2.Interpreter.Arith (Val)
 
-import EFA2.Display.Report (report)
+import EFA2.Report.Report (report)
 import EFA2.Signal.Plot (surfPlot, xyplot)
 import EFA2.Topology.Draw (drawTopology)
 
@@ -32,6 +28,10 @@ import EFA2.Signal.Data (Data, Nil)
 import EFA2.Signal.Typ (Typ, A, Tt, Y, P, N, F)
 
 import EFA2.Utils.Utils (safeLookup)
+
+import qualified Data.List as L
+import qualified Data.Map as M
+import Data.Graph.Inductive (mkGraph)
 
 
 mkSig :: Int -> [Val] -> PSigL

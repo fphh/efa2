@@ -1,12 +1,12 @@
 
 import qualified Data.Map as M
 
-import EFA2.Display.Report
+import EFA2.Report.Report
 import EFA2.Signal.Signal
 import EFA2.Signal.Base
 
-import EFA2.Display.DispSignal
-import EFA2.Display.DispSequence
+import EFA2.Report.Signal
+import EFA2.Report.Sequence
 
 import EFA2.Signal.Sequence
 import EFA2.Signal.SequenceData

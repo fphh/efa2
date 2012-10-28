@@ -16,14 +16,14 @@ import qualified EFA2.Signal.Base as B
 import EFA2.Signal.Data (Data(Data), (:>), Nil, Zip, Apply, List, List2, NestedList, Vec2, UVec, UVec2, UVec2L, DVal)
 import EFA2.Signal.Base (BSum(..), BProd(..), DArith0(..), Val, ZeroCrossing)
 import EFA2.Signal.Typ
-import EFA2.Display.Report (Table(..), TableData(..), ROpt(RAll), toDoc, autoFormat)
-import EFA2.Display.DispBase
+import EFA2.Report.Report (Table(..), TableData(..), ROpt(RAll), toDoc, autoFormat)
+import EFA2.Report.Base
           (UnitScale(..), DisplayFormat(..),
            DispStorage(..), DispStorage1(..),
            getUnitScale, dispLength)
-import EFA2.Display.DispTyp (TDisp, getDisplayUnit)
-import qualified EFA2.Display.Report as Report
-import qualified EFA2.Display.DispTyp as Typ
+import EFA2.Report.Typ (TDisp, getDisplayUnit)
+import qualified EFA2.Report.Report as Report
+import qualified EFA2.Report.Typ as Typ
 
 import Control.Monad (liftM2)
 import Data.Monoid (Monoid, mempty, mappend, mconcat)

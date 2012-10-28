@@ -66,10 +66,10 @@ Library
     EFA2.Solver.Horn
     EFA2.Solver.EquationOrder
     EFA2.Solver.DependencyGraph
-    EFA2.Display.DispTyp
-    EFA2.Display.DispBase
-    EFA2.Display.DispSignal
-    EFA2.Display.Report
+    EFA2.Report.Typ
+    EFA2.Report.Base
+    EFA2.Report.Signal
+    EFA2.Report.Report
     EFA2.Topology.TopologyData
 -- gibt 4 Argumente an NLabel obwohl das nur (noch) 3 hat
 --    EFA2.Topology.RandomTopology

@@ -10,14 +10,14 @@ import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Signal.Signal as S
 import qualified EFA2.Signal.Data as D
 import qualified EFA2.Signal.Vector as V
-import EFA2.Display.DispBase (DispStorage1)
+import EFA2.Report.Base (DispStorage1)
 import EFA2.Signal.Signal
           (TC, Signal, SignalIdx, DTVal, FVal, TSig, DTFSig, FFSig, UTSigL)
 import EFA2.Signal.Typ (Typ, A, P, T, Tt)
 import EFA2.Signal.Data (Data, (:>), Nil)
 import EFA2.Signal.Base (Sign, Val)
 
-import EFA2.Display.Report (ToTable(toTable), Table(..), TableData(..), toDoc, tvcat, autoFormat)
+import EFA2.Report.Report (ToTable(toTable), Table(..), TableData(..), toDoc, tvcat, autoFormat)
 import Text.Printf (PrintfArg)
 
 import qualified Test.QuickCheck as QC
