@@ -20,6 +20,7 @@ import qualified Graphics.Gnuplot.LineSpecification as LineSpec
 import qualified Graphics.Gnuplot.Frame as Frame
 import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
 
+import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Signal.Signal as S
 import qualified EFA2.Signal.Data as D
 import qualified EFA2.Signal.Vector as SV
@@ -305,7 +306,7 @@ rPlotSingle rName time pMap =
 instance RPlot SequPwrRecord where
    rPlotCore _sqName (SequData rs) = concat $ zipWith rPlotCore nameList rs
     where
-      nameList = map (\ x -> "PowerRecord of Section: " ++ show x) [(1::Int) ..]
+      nameList = map (\ x -> "PowerRecord of " ++ show x) [Idx.Section 1 ..]
 
 
 class Atom.C (Value tc) => AxisLabel tc where

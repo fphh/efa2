@@ -28,6 +28,7 @@ module EFA2.Topology.TopologyData (
        topoToFlowTopo,
        partitionInOutStatic) where
 
+import qualified EFA2.Signal.Index as Idx
 import EFA2.Topology.EfaGraph (EfaGraph)
 import EFA2.Utils.Graph (InOutGraphFormat, getLEdge, mkInOutGraphFormat)
 
@@ -59,12 +60,13 @@ getStorageNumber (Storage x) = x
 getStorageNumber (InitStorage x) = x
 getStorageNumber x = error $ "getStorageNumber: " ++ show x ++ " is not a storage"
 
-data NLabel = NLabel { sectionNLabel :: Int,
+data NLabel = NLabel { sectionNLabel :: Idx.Section,
                        nodeNLabel :: Int,
                        nodetypeNLabel :: NodeType } deriving (Show, Eq, Ord)
 
 defaultNLabel :: NLabel
-defaultNLabel = NLabel 0 0 NoRestriction
+defaultNLabel = NLabel (Idx.Section 0) 0 NoRestriction
+
 
 data FlowDirection = WithDir
                    | AgainstDir

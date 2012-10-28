@@ -9,6 +9,7 @@ import Data.Graph.Inductive
            insNodes, insEdges, mkGraph,
            nmap, nodeRange)
 
+import qualified EFA2.Signal.Index as Idx
 import EFA2.Topology.TopologyData
 import EFA2.Signal.SequenceData
 import EFA2.Utils.Graph (InOutGraphFormat)
@@ -46,8 +47,8 @@ genFlowTopology topo (FlowState fs) =
    labEdges topo
 
 
-mkSectionTopology :: SecIdx -> FlowTopology -> SecTopology
-mkSectionTopology (SecIdx sid) =
+mkSectionTopology :: Idx.Section -> FlowTopology -> SecTopology
+mkSectionTopology sid =
    fromFlowToSecTopology . nmap (\n -> n { sectionNLabel = sid })
 
 genSectionTopology :: SequFlowTops -> SequData SecTopology
@@ -94,8 +95,8 @@ mkSequenceTopology sd = res
         maxNode = 1 + (snd $ nodeRange sqTopo)
         startNodes = zipWith f (map (,maxNode) [maxNode+1 ..]) storeLabs
         f (nid1, nid2) (NLabel _ n (Storage sn)) =
-           ( (nid1, NLabel (-1) n (InitStorage sn)),
-             (nid2, NLabel (-1) (-1) Source) )
+           ( (nid1, NLabel (Idx.Section (-1)) n (InitStorage sn)),
+             (nid2, NLabel (Idx.Section (-1)) (-1) Source) )
 
         interSecEs =
            concat $ zipWith (mkIntersectionEdges sqTopo) (map fst startNodes) grpStores

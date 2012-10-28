@@ -14,6 +14,7 @@ import qualified EFA2.Interpreter.Env as Interp
 import EFA2.Topology.TopologyData
 import EFA2.Topology.EfaGraph (EfaGraph)
 
+import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Signal.Data as D
 import EFA2.Display.DispSignal (SDisplay, sdisp)
 import EFA2.Display.DispTyp (TDisp)
@@ -98,14 +99,14 @@ mkDotGraph g mRecordNum timef nshow eshow =
            HTL.removeEach $
            NonEmptyM.groupBy (equating (sectionNLabel . snd)) $
            labNodes g
-        sg (ns, ms) = DotSG True (Just (Int sl)) (DotStmts gattrs [] xs ys)
+        sg (ns, ms) = DotSG True (Just (Int $ fromEnum sl)) (DotStmts gattrs [] xs ys)
           where sl = sectionNLabel $ snd $ NonEmpty.head ns
                 xs = map (mkDotNode nshow) $ NonEmpty.flatten ns
                 ys = map (mkDotEdge eshow) $ labEdges $
                      delNodes (map fst (concatMap NonEmpty.flatten ms)) g'
                 gattrs = [GraphAttrs [Label (StrLabel (T.pack str))]]
                 str =
-                   "Section " ++ show sl ++ " / " ++
+                   show sl ++ " / " ++
                    case recordNum of
                       Nothing -> "NoRecord"
                       Just n ->
@@ -222,18 +223,18 @@ showLineDelta (ErrorLine str) = str
 data Env a =
    Env {
       recordNumber :: RecordNumber,
-      lookupEnergy_ :: Int -> Int -> Int -> Int -> Maybe a,
-      lookupX_      :: Int -> Int -> Int -> Int -> Maybe a,
-      lookupEta_    :: Int -> Int -> Int -> Int -> Maybe a,
+      lookupEnergy_ :: Idx.Section -> Int -> Int -> Int -> Maybe a,
+      lookupX_      :: Idx.Section -> Int -> Int -> Int -> Maybe a,
+      lookupEta_    :: Idx.Section -> Int -> Int -> Int -> Maybe a,
       formatAssign_ :: (Line, Maybe a) -> String,
       showTime :: DTimeIdx -> String,
-      showNode_ :: (Int, NLabel) -> String
+      showNode_ :: LNode NLabel -> String
    }
 
 makeLookup ::
    (Ord idx) =>
-   (Int -> Int -> Int -> Int -> idx) -> M.Map idx a ->
-   Int -> Int -> Int -> Int -> Maybe a
+   (Idx.Section -> Int -> Int -> Int -> idx) -> M.Map idx a ->
+   Idx.Section -> Int -> Int -> Int -> Maybe a
 makeLookup makeIdx mp =
    \sec rec uid vid -> M.lookup (makeIdx sec rec uid vid) mp
 

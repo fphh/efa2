@@ -1,5 +1,8 @@
 module EFA2.Solver.Equation where
 
+import EFA2.Interpreter.Env as Env
+import qualified EFA2.Signal.Index as Idx
+
 import Control.Monad (liftM2)
 
 import qualified Data.Ratio as Ratio
@@ -15,9 +18,6 @@ import Data.Stream (Stream)
 
 import Debug.Trace (trace)
 import Text.Printf (printf)
-
-
-import EFA2.Interpreter.Env as Env
 
 
 -- TOTHINK: Die Algorithmen aus dem Verzeichnis Solver sollten
@@ -164,25 +164,32 @@ mult :: NonEmpty.T [] EqTerm -> EqTerm
 mult = NonEmpty.foldl1 (:*)
 
 
+showEdgeIdx :: Idx.Section -> Int -> Int -> Int -> String
+showEdgeIdx (Idx.Section s) r x y =
+   show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
+
 showIdx :: ToIndex idx => idx -> String
 showIdx idx =
    case toIndex idx of
-      Energy (EnergyIdx s r x y) -> "E_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
-      DEnergy (DEnergyIdx s r x y) -> "dE_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
+      Energy (EnergyIdx s r x y) -> "E_" ++ showEdgeIdx s r x y
+      DEnergy (DEnergyIdx s r x y) -> "dE_" ++ showEdgeIdx s r x y
 
-      Power (PowerIdx s r x y) -> "P_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
-      DPower (DPowerIdx s r x y) -> "dP_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
+      Power (PowerIdx s r x y) -> "P_" ++ showEdgeIdx s r x y
+      DPower (DPowerIdx s r x y) -> "dP_" ++ showEdgeIdx s r x y
 
-      FEta (FEtaIdx s r x y) -> "n_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
-      DEta (DEtaIdx s r x y) -> "dn_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
+      FEta (FEtaIdx s r x y) -> "n_" ++ showEdgeIdx s r x y
+      DEta (DEtaIdx s r x y) -> "dn_" ++ showEdgeIdx s r x y
 
-      DTime (DTimeIdx s r) -> "dt_" ++ show s ++ "." ++ show r
+      DTime (DTimeIdx (Idx.Section s) r) ->
+         "dt_" ++ show s ++ "." ++ show r
 
-      X (XIdx s r x y) -> "x_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
-      DX (DXIdx s r x y) -> "dx_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
+      X (XIdx s r x y) -> "x_" ++ showEdgeIdx s r x y
+      DX (DXIdx s r x y) -> "dx_" ++ showEdgeIdx s r x y
 
-      Var (VarIdx s r x y) -> "v_" ++ show s ++ "." ++ show r ++ "_" ++ show x ++ "." ++ show y
-      Store (StorageIdx s r n) -> "s_" ++ show s ++ "." ++ show r ++ "_" ++ show n
+      Var (VarIdx (Idx.Section s) r u x) ->
+         "v_" ++ show s ++ "." ++ show r ++ "_" ++ show u ++ "." ++ show x
+      Store (StorageIdx (Idx.Section s) r n) ->
+         "s_" ++ show s ++ "." ++ show r ++ "_" ++ show n
 
 showEqTerm :: ToIndex idx => Term idx -> String
 showEqTerm (Const x) = show (fromRational x :: Double)
@@ -247,25 +254,32 @@ edgeToLatexString e power0 eta power1 =
       PowerIn -> idxToLatexString power0 ++ " = b(" ++ idxToLatexString power1 ++ ", " ++ idxToLatexString eta ++ ")"
       Eta -> idxToLatexString eta ++ " = n(" ++ idxToLatexString power0 ++ ", " ++ idxToLatexString power1 ++ ")"
 
+
+edgeIdxToLatexString :: Idx.Section -> Int -> Int -> Int -> String
+edgeIdxToLatexString (Idx.Section s) r x y =
+   "{" ++ show s ++ "." ++ show r ++ "." ++ show x ++ "." ++ show y ++ "}"
+
 idxToLatexString :: Env.Index -> String
 idxToLatexString idx =
    case idx of
       Energy (EnergyIdx s r x y) -> "E_{" ++ show s ++ "." ++ show r ++ "." ++ show x ++ "." ++ show y ++ "}"
-      DEnergy (DEnergyIdx s r x y) -> "\\Delta E_{" ++ show s ++ "." ++ show r ++ "." ++ show x ++ "." ++ show y ++ "}"
+      DEnergy (DEnergyIdx s r x y) -> "\\Delta E_" ++ edgeIdxToLatexString s r x y
 
-      Power (PowerIdx s r x y) -> "P_{" ++ show s ++ "." ++ show r ++ "." ++ show x ++ "." ++ show y ++ "}"
-      DPower (DPowerIdx s r x y) -> "\\Delta P_{" ++ show s ++ "." ++ show r ++ "." ++ show x ++ "." ++ show y ++ "}"
+      Power (PowerIdx s r x y) -> "P_" ++ edgeIdxToLatexString s r x y
+      DPower (DPowerIdx s r x y) -> "\\Delta P_" ++ edgeIdxToLatexString s r x y
 
-      FEta (FEtaIdx s r x y) -> "\\eta_{" ++ show s ++ "." ++ show r ++ "." ++ show x ++ "." ++ show y ++ "}"
-      DEta (DEtaIdx s r x y) -> "\\Delta \\eta_{" ++ show s ++ "." ++ show r ++ "." ++ show x ++ "." ++ show y ++ "}"
+      FEta (FEtaIdx s r x y) -> "\\eta_" ++ edgeIdxToLatexString s r x y
+      DEta (DEtaIdx s r x y) -> "\\Delta \\eta_" ++ edgeIdxToLatexString s r x y
 
-      DTime (DTimeIdx s r) -> "\\Delta t_{" ++ show s ++ "." ++ show r ++ "}"
+      DTime (DTimeIdx (Idx.Section s) r) -> "\\Delta t_{" ++ show s ++ "." ++ show r ++ "}"
 
-      X (XIdx s r x y) -> "x_{" ++ show s ++ "." ++ show r ++ "." ++ show x ++ "." ++ show y ++ "}"
-      DX (DXIdx s r x y) -> "\\Delta x_{" ++ show s ++ "." ++ show r ++ "." ++ show x ++ "." ++ show y ++ "}"
+      X (XIdx s r x y) -> "x_" ++ edgeIdxToLatexString s r x y
+      DX (DXIdx s r x y) -> "\\Delta x_" ++ edgeIdxToLatexString s r x y
 
-      Var (VarIdx s r x y) -> "v_{" ++ show s ++ "." ++ show r ++ "." ++ show x ++ "." ++ show y ++ "}"
-      Store (StorageIdx s r n) -> "s_{" ++ show s ++ "." ++ show r ++ "." ++ show n ++ "}"
+      Var (VarIdx (Idx.Section s) r u x) ->
+         "v_{" ++ show s ++ "." ++ show r ++ "." ++ show u ++ "." ++ show x ++ "}"
+      Store (StorageIdx (Idx.Section s) r n) ->
+         "s_{" ++ show s ++ "." ++ show r ++ "." ++ show n ++ "}"
 
 eqToLatexString' :: Equation -> String
 eqToLatexString' (Given x) = idxToLatexString x ++ " \\mbox{given}"

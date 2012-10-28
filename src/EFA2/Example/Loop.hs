@@ -3,7 +3,7 @@ module EFA2.Example.Loop (loop, etas, pows, dtimes) where
 import Data.Graph.Inductive (mkGraph)
 import qualified Data.Map as M
 
-
+import qualified EFA2.Signal.Index as Idx
 import EFA2.Topology.Topology
           (makeWithDirEdges, makeEdges, makeNodes)
 import EFA2.Topology.TopologyData
@@ -24,50 +24,62 @@ numOf :: Int
 numOf = 3
 
 dtimes :: DTimeMap [Val]
-dtimes = M.fromList [(DTimeIdx 0 0, [2, 2, 2])]
+dtimes = M.fromList [(DTimeIdx (Idx.Section 0) 0, [2, 2, 2])]
 
 sigs :: EnergyMap [Val]
-sigs = M.fromList [ (EnergyIdx 0 0 0 1, [2.3, 2.4, 3]),
-                    (EnergyIdx 0 0 1 0, [2, 2.1, 2.2]),
-                    (EnergyIdx 0 0 1 2, replicate numOf 1.8),
-                    (EnergyIdx 0 0 2 1, replicate numOf 1.0),
-                    (EnergyIdx 0 0 2 3, replicate numOf 1.1),
-                    (EnergyIdx 0 0 3 2, replicate numOf 0.5),
-                    (EnergyIdx 0 0 1 4, replicate numOf 0.4),
-                    (EnergyIdx 0 0 4 1, replicate numOf 0.3),
-                    (EnergyIdx 0 0 4 5, replicate numOf 0.1),
-                    (EnergyIdx 0 0 5 4, replicate numOf 0.05),
-                    (EnergyIdx 0 0 4 2, replicate numOf 0.2),
-                    (EnergyIdx 0 0 2 4, replicate numOf 0.1) ]
+sigs =
+   M.mapKeys (uncurry (EnergyIdx (Idx.Section 0) 0)) $
+   M.fromList $
+      ((,) 0 1, [2.3, 2.4, 3]) :
+      ((,) 1 0, [2, 2.1, 2.2]) :
+      ((,) 1 2, replicate numOf 1.8) :
+      ((,) 2 1, replicate numOf 1.0) :
+      ((,) 2 3, replicate numOf 1.1) :
+      ((,) 3 2, replicate numOf 0.5) :
+      ((,) 1 4, replicate numOf 0.4) :
+      ((,) 4 1, replicate numOf 0.3) :
+      ((,) 4 5, replicate numOf 0.1) :
+      ((,) 5 4, replicate numOf 0.05) :
+      ((,) 4 2, replicate numOf 0.2) :
+      ((,) 2 4, replicate numOf 0.1) :
+      []
 
 etas :: FEtaMap [Val]
-etas = M.fromList [ (FEtaIdx 0 0 0 1, map (\x -> x/(x+1))),
-                    (FEtaIdx 0 0 1 0, map (\x -> x/(x+1))),
-                    (FEtaIdx 0 0 1 2, map (\x -> x/(x+1))),
-                    (FEtaIdx 0 0 2 1, map (\x -> x/(x+1))),
-                    (FEtaIdx 0 0 2 3, map (\x -> x/(x+1))),
-                    (FEtaIdx 0 0 3 2, map (\x -> x/(x+1))),
-                    (FEtaIdx 0 0 1 4, map (\x -> x/(x+1))),
-                    (FEtaIdx 0 0 4 1, map (\x -> x/(x+1))),
-                    (FEtaIdx 0 0 4 5, map (\x -> x/(x+1))),
-                    (FEtaIdx 0 0 5 4, map (\x -> x/(x+1))),
-                    (FEtaIdx 0 0 4 2, map (\x -> x/(x+1))),
-                    (FEtaIdx 0 0 2 4, map (\x -> x/(x+1))) ]
+etas =
+   M.mapKeys (uncurry (FEtaIdx (Idx.Section 0) 0)) $
+   M.fromList $
+      ((,) 0 1, map (\x -> x/(x+1))) :
+      ((,) 1 0, map (\x -> x/(x+1))) :
+      ((,) 1 2, map (\x -> x/(x+1))) :
+      ((,) 2 1, map (\x -> x/(x+1))) :
+      ((,) 2 3, map (\x -> x/(x+1))) :
+      ((,) 3 2, map (\x -> x/(x+1))) :
+      ((,) 1 4, map (\x -> x/(x+1))) :
+      ((,) 4 1, map (\x -> x/(x+1))) :
+      ((,) 4 5, map (\x -> x/(x+1))) :
+      ((,) 5 4, map (\x -> x/(x+1))) :
+      ((,) 4 2, map (\x -> x/(x+1))) :
+      ((,) 2 4, map (\x -> x/(x+1))) :
+      []
 
 
 pows :: PowerMap [Val]
-pows = M.fromList [ (PowerIdx 0 0 0 1, [1, 2, 3]),
-                    (PowerIdx 0 0 1 0, replicate numOf 2.2),
-                    (PowerIdx 0 0 1 2, replicate numOf 1.8),
-                    (PowerIdx 0 0 2 1, replicate numOf 1.0),
-                    (PowerIdx 0 0 2 3, replicate numOf 1.1),
-                    (PowerIdx 0 0 3 2, replicate numOf 0.5),
-                    (PowerIdx 0 0 1 4, replicate numOf 0.4),
-                    (PowerIdx 0 0 4 1, replicate numOf 0.3),
-                    (PowerIdx 0 0 4 5, replicate numOf 0.1),
-                    (PowerIdx 0 0 5 4, replicate numOf 0.05),
-                    (PowerIdx 0 0 4 2, replicate numOf 0.2),
-                    (PowerIdx 0 0 2 4, replicate numOf 0.1) ]
+pows =
+   M.mapKeys (uncurry (PowerIdx (Idx.Section 0) 0)) $
+   M.fromList $
+      ((,) 0 1, [1, 2, 3]) :
+      ((,) 1 0, replicate numOf 2.2) :
+      ((,) 1 2, replicate numOf 1.8) :
+      ((,) 2 1, replicate numOf 1.0) :
+      ((,) 2 3, replicate numOf 1.1) :
+      ((,) 3 2, replicate numOf 0.5) :
+      ((,) 1 4, replicate numOf 0.4) :
+      ((,) 4 1, replicate numOf 0.3) :
+      ((,) 4 5, replicate numOf 0.1) :
+      ((,) 5 4, replicate numOf 0.05) :
+      ((,) 4 2, replicate numOf 0.2) :
+      ((,) 2 4, replicate numOf 0.1) :
+      []
 
 
 loop :: TheGraph [Val]

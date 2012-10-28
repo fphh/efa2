@@ -6,6 +6,7 @@ module EFA2.Signal.SequenceData where
 
 import EFA2.Topology.TopologyData (FlowTopology)
 
+import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Signal.Signal as S
 import qualified EFA2.Signal.Data as D
 import qualified EFA2.Signal.Vector as V
@@ -39,12 +40,7 @@ import Data.Foldable (Foldable, foldMap, fold)
 -----------------------------------------------------------------------------------
 -- | Indices for Record, Section and Power Position
 newtype RecIdx = RecIdx Int deriving (Show, Eq, Ord) -- dataset Index
-newtype SecIdx = SecIdx Int deriving (Show, Eq, Ord)
 data PPosIdx = PPosIdx !Int !Int deriving (Show, Eq, Ord)
-
-instance Enum SecIdx where
-   fromEnum (SecIdx n) = n
-   toEnum n = SecIdx n
 
 
 -----------------------------------------------------------------------------------
@@ -120,12 +116,12 @@ instance Traversable SequData where
    sequenceA (SequData xs) = liftA SequData $ sequenceA xs
 
 {-
-We could also define a top-level variable for (SequData [SecIdx 0 ..]),
+We could also define a top-level variable for (SequData [Idx.Section 0 ..]),
 but it would be memorized and thus causes a space leak.
 -}
-zipWithSecIdxs :: (SecIdx -> a -> b) -> SequData a -> SequData b
+zipWithSecIdxs :: (Idx.Section -> a -> b) -> SequData a -> SequData b
 zipWithSecIdxs f =
-   liftA2 f (SequData [SecIdx 0 ..])
+   liftA2 f (SequData [Idx.Section 0 ..])
 
 
 instance QC.Arbitrary PPosIdx where
@@ -205,7 +201,11 @@ instance ToTable Sequ where
       where
          td = TableData {
                  tableBody = [map f xs],
-                 titleRow  = [[toDoc id "Section:"]++map (\x -> toDoc id ("Sec" ++ show x)) [0..(length xs -1)]],
+                 titleRow  = [
+                    map (toDoc id) $
+                       "Section:" :
+                       map (\(Idx.Section x) -> "Sec" ++ show x)
+                          (Match.take xs [Idx.Section 0 ..])],
                  titleCols = [[toDoc id "Index"]],
                  endCols  = []
               }

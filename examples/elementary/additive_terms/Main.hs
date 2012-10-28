@@ -132,7 +132,7 @@ instance MyShow Sc where
          myshow = show
 
 instance MyShow DPowerIdx where
-         myshow (DPowerIdx s r f t) = "dP_" ++ show s ++ "." ++ show r ++ "_" ++ show f ++ "." ++ show t
+         myshow (DPowerIdx s r f t) = "dP_" ++ showEdgeIdx s r f t
 
 instance MyShow EqTerm where
          myshow = showEqTerm

@@ -8,6 +8,7 @@ import EFA2.Interpreter.Env (Envs(..), DTimeIdx(..), EnergyIdx(..), emptyEnv)
 import qualified EFA2.Topology.Flow as Flow
 import EFA2.Topology.TopologyData (Topology)
 
+import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Signal.Signal as S
 import qualified EFA2.Signal.Vector as V
 
@@ -15,7 +16,7 @@ import EFA2.Signal.SequenceData
           (SequData(..), Sequ(..), Sec,
            PowerRecord(..), ListPowerRecord, SequPwrRecord, SecPowerRecord,
            FlowRecord, FlRecord(FlRecord), SequFlowRecord,
-           RecIdx(..), SecIdx(..), PPosIdx(..), zipWithSecIdxs)
+           RecIdx(..), PPosIdx(..), zipWithSecIdxs)
 import EFA2.Signal.Base
           (Val, Sign(..), ZeroCrossing(..))
 import EFA2.Signal.Signal
@@ -65,13 +66,13 @@ data EventType = LeftEvent
 
 --fromFlowRecord :: SecIdx -> RecIdx -> FlRecord a b -> Envs a --UTFSig
 fromFlowRecord ::
-   SecIdx ->
+   Idx.Section ->
    RecIdx ->
    FlRecord
       (TC s1 (Typ delta2 t2 p2) (Data c1 d1))
       (TC s1 (Typ delta1 t1 p1) (Data c1 d1)) ->
    Envs (TC s1 (Typ UT UT UT) (Data c1 d1))
-fromFlowRecord (SecIdx secIdx) (RecIdx recIdx) (FlRecord dTime flowMap) =
+fromFlowRecord secIdx (RecIdx recIdx) (FlRecord dTime flowMap) =
   emptyEnv { energyMap = M.map untype $ M.mapKeys f flowMap, dtimeMap = M.fromList [(DTimeIdx secIdx recIdx, untype dTime)] }
   where f (PPosIdx idx1 idx2) = EnergyIdx secIdx recIdx idx1 idx2
 

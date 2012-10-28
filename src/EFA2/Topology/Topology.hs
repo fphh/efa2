@@ -8,6 +8,7 @@ import EFA2.Topology.TopologyData
 import EFA2.Utils.Graph
 import EFA2.Utils.Utils (pairs, safeLookup)
 
+import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Topology.EfaGraph as Gr
 import Data.Graph.Inductive
           (LNode, Node, LEdge, lab, labNodes, labEdges, elfilter)
@@ -28,7 +29,7 @@ import Data.Ord (comparing)
 
 makeNodes :: [(Int, NodeType)] -> [LNode NLabel]
 makeNodes ns = map f ns
-  where f (n, ty) = (n, NLabel 0 n ty)
+  where f (n, ty) = (n, NLabel (Idx.Section 0) n ty)
 
 makeEdges :: [(Int, Int, ELabel)] -> [LEdge ELabel]
 makeEdges es = map f es
@@ -89,7 +90,7 @@ makeAllEquations topo envs =
                                                  ++ envToEqTerms st
 
 -- TODO: use patternmatching instead of safeLookup
-shiftIndices :: (Show a) => M.Map (Int, Int) Node -> Envs a -> Envs a
+shiftIndices :: (Show a) => M.Map (Idx.Section, Int) Node -> Envs a -> Envs a
 shiftIndices m (Envs (SingleRecord rec) e de p dp fn dn t' x dx v st) =
   Envs (SingleRecord rec) e' de' p' dp' fn' dn' t' x' dx' v' st'
   where e' = M.mapKeys ef e

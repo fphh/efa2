@@ -10,6 +10,7 @@ import EFA2.Topology.TopologyData (Topology, NodeType(..), defaultELabel)
 import EFA2.Topology.Topology (makeAllEquations, makeNodes, makeEdges)
 import EFA2.Interpreter.Env
 import EFA2.Interpreter.Interpreter (interpretFromScratch, eqToInTerm)
+import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Signal.Signal as S
 import EFA2.Signal.Signal (UTFSig)
 import EFA2.Display.DrawGraph (drawTopology)
@@ -59,61 +60,68 @@ main = do
 --type Sc = Scal (Typ UT UT UT) Val
 
 
+sec :: Idx.Section
+sec = Idx.Section 0
+
 dtimes0num :: DTimeMap UTFSig
-dtimes0num = M.fromList [ (DTimeIdx 0 0, S.fromList [1.0]) ]
+dtimes0num = M.fromList [ (DTimeIdx sec 0, S.fromList [1.0]) ]
 
 sigs0num :: EnergyMap UTFSig
-sigs0num = M.fromList [ (EnergyIdx 0 0 0 2, S.fromList [3.0]) ]
+sigs0num = M.fromList [ (EnergyIdx sec 0 0 2, S.fromList [3.0]) ]
 
 
 eta0num :: FEtaMap UTFSig
-eta0num = M.fromList [ (FEtaIdx 0 0 0 2, S.map $ const 0.8),
-                       (FEtaIdx 0 0 2 0, S.map $ const 0.8),
-                       (FEtaIdx 0 0 1 2, S.map $ const 0.7),
-                       (FEtaIdx 0 0 2 1, S.map $ const 0.7),
-                       (FEtaIdx 0 0 2 3, S.map $ const 0.6),
-                       (FEtaIdx 0 0 3 2, S.map $ const 0.6),
-                       (FEtaIdx 0 0 2 4, S.map $ const 0.5),
-                       (FEtaIdx 0 0 4 2, S.map $ const 0.5) ]
+eta0num = M.fromList $
+   (FEtaIdx sec 0 0 2, S.map $ const 0.8) :
+   (FEtaIdx sec 0 2 0, S.map $ const 0.8) :
+   (FEtaIdx sec 0 1 2, S.map $ const 0.7) :
+   (FEtaIdx sec 0 2 1, S.map $ const 0.7) :
+   (FEtaIdx sec 0 2 3, S.map $ const 0.6) :
+   (FEtaIdx sec 0 3 2, S.map $ const 0.6) :
+   (FEtaIdx sec 0 2 4, S.map $ const 0.5) :
+   (FEtaIdx sec 0 4 2, S.map $ const 0.5) :
+   []
 
 
 x0num :: XMap UTFSig
-x0num = M.fromList [ (XIdx 0 0 2 0, S.fromList [0.2]),
-                     (XIdx 0 0 2 3, S.fromList [0.5]),
-                     (XIdx 0 0 2 4, S.fromList [0.5]) ]
+x0num = M.fromList $
+   (XIdx sec 0 2 0, S.fromList [0.2]) :
+   (XIdx sec 0 2 3, S.fromList [0.5]) :
+   (XIdx sec 0 2 4, S.fromList [0.5]) :
+   []
 
 ---------------------------------------------------------------------------------
 
 
 
 dtimes0sym :: DTimeMap EqTerm
-dtimes0sym = M.fromList [ (DTimeIdx 0 0, mkVar $ DTimeIdx 0 0) ]
+dtimes0sym = M.fromList [ (DTimeIdx sec 0, mkVar $ DTimeIdx sec 0) ]
 
 sigs0sym :: EnergyMap EqTerm
-sigs0sym = M.fromList [ (EnergyIdx 0 0 0 2, mkVar $ EnergyIdx 0 0 0 1) ]
+sigs0sym = M.fromList [ (EnergyIdx sec 0 0 2, mkVar $ EnergyIdx sec 0 0 1) ]
 
 
 eta0sym :: FEtaMap EqTerm
 eta0sym =
-   M.fromList [
-      (FEtaIdx 0 0 0 2, const $ mkVar $ FEtaIdx 0 0 0 2),
-      (FEtaIdx 0 0 2 0, const $ mkVar $ FEtaIdx 0 0 2 0),
-      (FEtaIdx 0 0 1 2, const $ mkVar $ FEtaIdx 0 0 1 2),
-      (FEtaIdx 0 0 2 1, const $ mkVar $ FEtaIdx 0 0 2 1),
-      (FEtaIdx 0 0 2 3, const $ mkVar $ FEtaIdx 0 0 2 3),
-      (FEtaIdx 0 0 3 2, const $ mkVar $ FEtaIdx 0 0 3 2),
-      (FEtaIdx 0 0 2 4, const $ mkVar $ FEtaIdx 0 0 2 4),
-      (FEtaIdx 0 0 4 2, const $ mkVar $ FEtaIdx 0 0 4 2)
-      ]
+   M.fromList $
+      (FEtaIdx sec 0 0 2, const $ mkVar $ FEtaIdx sec 0 0 2) :
+      (FEtaIdx sec 0 2 0, const $ mkVar $ FEtaIdx sec 0 2 0) :
+      (FEtaIdx sec 0 1 2, const $ mkVar $ FEtaIdx sec 0 1 2) :
+      (FEtaIdx sec 0 2 1, const $ mkVar $ FEtaIdx sec 0 2 1) :
+      (FEtaIdx sec 0 2 3, const $ mkVar $ FEtaIdx sec 0 2 3) :
+      (FEtaIdx sec 0 3 2, const $ mkVar $ FEtaIdx sec 0 3 2) :
+      (FEtaIdx sec 0 2 4, const $ mkVar $ FEtaIdx sec 0 2 4) :
+      (FEtaIdx sec 0 4 2, const $ mkVar $ FEtaIdx sec 0 4 2) :
+      []
 
 
 x0sym :: XMap EqTerm
 x0sym =
-   M.fromList [
-      (XIdx 0 0 2 0, mkVar $ XIdx 0 0 2 0),
-      (XIdx 0 0 2 3, mkVar $ XIdx 0 0 2 3),
-      (XIdx 0 0 2 4, mkVar $ XIdx 0 0 2 4)
-      ]
+   M.fromList $
+      (XIdx sec 0 2 0, mkVar $ XIdx sec 0 2 0) :
+      (XIdx sec 0 2 3, mkVar $ XIdx sec 0 2 3) :
+      (XIdx sec 0 2 4, mkVar $ XIdx sec 0 2 4) :
+      []
 
 
 vierbein :: Topology

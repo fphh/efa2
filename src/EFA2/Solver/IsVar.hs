@@ -10,6 +10,7 @@ import Data.Maybe (mapMaybe)
 import EFA2.Solver.Equation (Equation(..), EqTerm, Term(..), mkVarSetEq)
 import EFA2.Interpreter.Env (EnergyIdx(..), Index(..))
 import qualified EFA2.Interpreter.Env as Env
+import qualified EFA2.Signal.Index as Idx
 
 
 {-- This algorithm is fast, but buggy.
@@ -109,7 +110,7 @@ splitTerms isVar ts = (given, nov, givenExt, rest)
 isVar' :: EqTerm -> Bool
 isVar' (Atom idx) =
    case idx of
-      Energy (EnergyIdx 0 0 0 1) -> False
+      Energy (EnergyIdx (Idx.Section 0) 0 0 1) -> False
       Energy _ -> True
 --      Eta _ -> True
       DEnergy _ -> True
