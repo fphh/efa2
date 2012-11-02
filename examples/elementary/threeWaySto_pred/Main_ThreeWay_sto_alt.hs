@@ -3,6 +3,7 @@ module Main where
 import EFA2.Topology.Topology (makeNodes, makeEdges, makeAllEquations)
 import EFA2.Topology.TopologyData
           (NodeType(Crossing, Sink, Source, Storage), Topology, defaultELabel)
+import EFA2.Topology.EfaGraph (mkGraph)
 
 import EFA2.Solver.Equation (give, toAbsEquations)
 import EFA2.Solver.EquationOrder (order)
@@ -31,7 +32,6 @@ import EFA2.Utils.Utils (safeLookup)
 
 import qualified Data.List as L
 import qualified Data.Map as M
-import Data.Graph.Inductive (mkGraph)
 
 
 mkSig :: Int -> [Val] -> PSigL

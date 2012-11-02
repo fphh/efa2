@@ -1,9 +1,6 @@
 
 module Main where
 
-import qualified Data.Map as M
-import Data.Graph.Inductive (mkGraph)
-
 import EFA2.Solver.Equation
 import EFA2.Solver.EquationOrder (order)
 import EFA2.Topology.TopologyData (Topology, NodeType(..), defaultELabel)
@@ -14,6 +11,9 @@ import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Signal.Signal as S
 import EFA2.Signal.Signal (UTFSig)
 import EFA2.Topology.Draw (drawTopology)
+import EFA2.Topology.EfaGraph (mkGraph)
+
+import qualified Data.Map as M
 
 
 symbolic :: Topology -> Envs EqTerm

@@ -1,19 +1,17 @@
 
-
 module EFA2.Example.Dreibein where
-
-import Data.Graph.Inductive
-import qualified Data.Map as M
-
 
 import EFA2.Topology.Topology
 import EFA2.Topology.TopologyData
+import EFA2.Topology.EfaGraph (mkGraph)
 
 import EFA2.Interpreter.Env
 import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Signal.Signal as S
 import EFA2.Signal.Signal (Sc, toScalar)
 import EFA2.Solver.Equation
+
+import qualified Data.Map as M
 
 
 sec :: Idx.Section

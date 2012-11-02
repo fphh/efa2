@@ -1,12 +1,10 @@
 module EFA2.Example.LinearTwo where
 
-import Data.Graph.Inductive (mkGraph)
-import qualified Data.Map as M
-
 import EFA2.Topology.Topology
           (makeEdges, makeNodes)
 import EFA2.Topology.TopologyData
           (Topology, NodeType(Source, Sink, Crossing), defaultELabel)
+import EFA2.Topology.EfaGraph (mkGraph)
 
 import EFA2.Solver.Equation (EqTerm, Term(Const), mkVar)
 import EFA2.Interpreter.Env
@@ -18,6 +16,8 @@ import EFA2.Interpreter.Env
 import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Signal.Signal as S
 import EFA2.Signal.Signal (Sc, toScalar)
+
+import qualified Data.Map as M
 
 
 

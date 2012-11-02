@@ -2,21 +2,23 @@
 
 module EFA2.Topology.Flow (module EFA2.Topology.Flow) where
 
-import qualified Data.Map as M
-import qualified Data.List as L
-import Data.Graph.Inductive
-          (LNode, labNodes, LEdge, labEdges,
-           insNodes, insEdges, mkGraph,
-           nmap, nodeRange)
+import Data.Graph.Inductive (LNode, LEdge)
+import EFA2.Topology.EfaGraph
+          (InOutGraphFormat, mkGraph,
+           labNodes, labEdges,
+           insNodes, insEdges,
+           nmap, nodeSet)
 
 import qualified EFA2.Signal.Index as Idx
 import EFA2.Topology.TopologyData
 import EFA2.Signal.SequenceData
-import EFA2.Utils.Graph (InOutGraphFormat)
 
 import EFA2.Signal.Signal (fromScalar, sigSign, sigSum)
 import EFA2.Signal.Base (Sign(PSign, NSign, ZSign))
 
+import qualified Data.Map as M
+import qualified Data.Set as S
+import qualified Data.List as L
 import Data.Tuple.HT (snd3)
 
 
@@ -92,7 +94,7 @@ mkSequenceTopology sd = res
         storeLabs = map g grpStores
         g ((_, (_, l), _):_) = l
 
-        maxNode = 1 + (snd $ nodeRange sqTopo)
+        maxNode = 1 + (S.findMax $ nodeSet sqTopo)
         startNodes = zipWith f (map (,maxNode) [maxNode+1 ..]) storeLabs
         f (nid1, nid2) (NLabel _ n (Storage sn)) =
            ( (nid1, NLabel (Idx.Section (-1)) n (InitStorage sn)),

@@ -8,7 +8,8 @@ import EFA2.Interpreter.Env
            RecordNumber(SingleRecord))
 import qualified EFA2.Interpreter.Env as Interp
 import EFA2.Topology.TopologyData
-import EFA2.Topology.EfaGraph (EfaGraph)
+import EFA2.Topology.EfaGraph
+          (EfaGraph, lab, labNodes, labEdges, delNodes, delEdges)
 
 import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Signal.Data as D
@@ -35,8 +36,7 @@ import Data.GraphViz (
           graphID)
 import Data.GraphViz.Attributes.Complete
 
-import Data.Graph.Inductive
-          (Node, LNode, LEdge, lab, labNodes, labEdges, delNodes, delEdges)
+import Data.Graph.Inductive (Node, LNode, LEdge)
 import Data.Eq.HT (equating)
 import Data.Ratio (Ratio)
 import Data.Maybe (fromJust)
@@ -244,13 +244,10 @@ checkedLookupFormat msg format dt k =
       Just x -> format x
 
 
-draw ::
-   Topology' NLabel ELabel ->
-   Env a ->
-   IO ()
-draw (Topology g)
+draw :: Topology -> Env a -> IO ()
+draw g
    (Env rn lookupEnergy lookupX lookupEta formatAssign tshow nshow) =
-      printGraph g (Just rn) tshow nshow eshow
+      printGraph (unTopology g) (Just rn) tshow nshow eshow
   where eshow = L.intercalate "\n" . map formatAssign . mkLst
 
         mkLst (uid, vid, l) =

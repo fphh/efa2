@@ -1,12 +1,10 @@
 module EFA2.Example.LinearOne where
 
-import Data.Graph.Inductive (mkGraph)
-import qualified Data.Map as M
-
 import EFA2.Topology.Topology
           (makeEdges, makeNodes)
 import EFA2.Topology.TopologyData
           (NodeType(Source, Sink), defaultELabel)
+import EFA2.Topology.EfaGraph (mkGraph)
 
 import EFA2.Interpreter.Env
           (Index(Energy, DTime), DTimeMap, EnergyMap)
@@ -18,6 +16,8 @@ import qualified EFA2.Signal.Signal as S
 import EFA2.Signal.Signal (UTFSig, TC, Scalar, toScalar)
 import EFA2.Signal.Typ (Typ, UT)
 import EFA2.Signal.Data (Data, Nil)
+
+import qualified Data.Map as M
 
 
 sec :: Idx.Section

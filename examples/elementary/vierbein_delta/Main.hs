@@ -2,7 +2,7 @@
 
 module Main where
 
-import Data.Graph.Inductive (mkGraph)
+import EFA2.Topology.EfaGraph (mkGraph)
 
 import qualified Data.List as L
 import qualified Data.Set as Set

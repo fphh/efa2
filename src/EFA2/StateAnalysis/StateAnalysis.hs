@@ -15,11 +15,12 @@ import EFA2.Topology.TopologyData
           (Topology, NodeType(..),
            NLabel, ELabel, isActiveEdge, isInactiveEdge, nodetypeNLabel,
            FlowDirection(UnDir, WithDir), flowDirection, flipFlowDirection)
+import EFA2.Topology.EfaGraph
+          (lab, labNodes, labEdges,
+           insNode, insEdge, pre, suc, lpre, lsuc, mkGraph)
 import EFA2.Utils.Utils (checkJust)
 
-import Data.Graph.Inductive
-          (LNode, Node, lab, labNodes, labEdges,
-           insNode, insEdge, pre, suc, lpre, lsuc, mkGraph)
+import Data.Graph.Inductive (LNode, Node)
 
 
 -- import Debug.Trace

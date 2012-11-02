@@ -8,7 +8,7 @@ module EFA2.Topology.TopologyData (
        FlowDirection (..),
        EdgeType (..),
        Topology,
-       Topology' (..),
+       unTopology,
        FlowTopology,
        SecTopology,
        isStorage,
@@ -29,12 +29,12 @@ module EFA2.Topology.TopologyData (
        partitionInOutStatic) where
 
 import qualified EFA2.Signal.Index as Idx
-import EFA2.Topology.EfaGraph (EfaGraph)
-import EFA2.Utils.Graph (InOutGraphFormat, getLEdge, mkInOutGraphFormat)
+import EFA2.Topology.EfaGraph
+          (EfaGraph, InOutGraphFormat, mkInOutGraphFormat, getLEdge)
+import Data.Graph.Inductive (Node, LNode, Edge, LEdge)
 
 import qualified Data.Map as M
 import qualified Data.List as L
-import Data.Graph.Inductive
 import Data.Ord (comparing)
 import Data.Maybe (mapMaybe, fromJust)
 import Data.Tuple.HT (thd3)
@@ -120,60 +120,21 @@ flipFlowDirection UnDir = UnDir
 unlabelEdge :: LEdge a -> Edge
 unlabelEdge (x, y, _) = (x, y)
 
+unTopology :: Topology -> EfaGraph Node NLabel ELabel
+unTopology = id
 
-newtype Topology' a b = Topology { unTopology :: EfaGraph Node a b } deriving (Show)
-type Topology = Topology' NLabel ELabel
-
-instance Graph Topology' where
-         empty = Topology empty
-         isEmpty (Topology topo) = isEmpty topo
-         match n (Topology topo) = (mcont, Topology g)
-           where (mcont, g) = match n topo
-         mkGraph ns es = Topology (mkGraph ns es)
-         labNodes (Topology topo) = labNodes topo
-         labEdges (Topology topo) = labEdges topo
-
-instance DynGraph Topology' where
-         cont & (Topology topo) = Topology (cont & topo)
-
--- | 
-newtype FlowTopology' a b = FlowTopology ( EfaGraph Node a b ) deriving (Show)
-type FlowTopology = FlowTopology' NLabel ELabel
+type Topology = EfaGraph Node NLabel ELabel
 
 topoToFlowTopo :: Topology -> FlowTopology
-topoToFlowTopo = FlowTopology . unTopology
+topoToFlowTopo = id
 
-instance Graph FlowTopology' where
-         empty = FlowTopology empty
-         isEmpty (FlowTopology topo) = isEmpty topo
-         match n (FlowTopology topo) = (mcont, FlowTopology g)
-           where (mcont, g) = match n topo
-         mkGraph ns es = FlowTopology (mkGraph ns es)
-         labNodes (FlowTopology topo) = labNodes topo
-         labEdges (FlowTopology topo) = labEdges topo
+type FlowTopology = EfaGraph Node NLabel ELabel
 
-instance DynGraph FlowTopology' where
-         cont & (FlowTopology topo) = FlowTopology (cont & topo)
-
--- | 
-newtype SecTopology' a b = SecTopology ( EfaGraph Node a b ) deriving (Show)
-type SecTopology = SecTopology' NLabel ELabel
-
-instance Graph SecTopology' where
-         empty = SecTopology empty
-         isEmpty (SecTopology topo) = isEmpty topo
-         match n (SecTopology topo) = (mcont, SecTopology g)
-           where (mcont, g) = match n topo
-         mkGraph ns es = SecTopology (mkGraph ns es)
-         labNodes (SecTopology topo) = labNodes topo
-         labEdges (SecTopology topo) = labEdges topo
-
-instance DynGraph SecTopology' where
-         cont & (SecTopology topo) = SecTopology (cont & topo)
+type SecTopology = EfaGraph Node NLabel ELabel
 
 
 fromFlowToSecTopology :: FlowTopology -> SecTopology
-fromFlowToSecTopology (FlowTopology topo) = SecTopology topo
+fromFlowToSecTopology = id
 
 -- | Active storages, grouped by storage number, sorted by section number.
 getActiveStores :: Topology -> [[InOutGraphFormat (LNode NLabel)]]
