@@ -16,7 +16,7 @@ import EFA2.Topology.TopologyData
            NLabel, ELabel, isActiveEdge, isInactiveEdge, nodetypeNLabel,
            FlowDirection(UnDir, WithDir), flowDirection, flipFlowDirection)
 import EFA2.Topology.EfaGraph
-          (lab, labNodes, labEdges,
+          (Edge(Edge), lab, labNodes, labEdges,
            insNode, insEdge, pre, suc, lpre, lsuc, mkGraph)
 import EFA2.Utils.Utils (checkJust)
 
@@ -60,15 +60,15 @@ ok gf (x, y, _) t = checkNode gf (fst x) t && checkNode gf (fst y) t
 extend :: LNEdge -> [Topology] -> [Topology]
 extend ((x, xl), (y, yl), l) [] = [a, b, c]
   where ns = [(x, xl), (y, yl)]
-        a = mkGraph ns [(x, y, l { flowDirection = WithDir })]
-        b = mkGraph ns [(y, x, l { flowDirection = WithDir })] -- x and y inversed!
-        c = mkGraph ns [(x, y, l { flowDirection = UnDir })]
+        a = mkGraph ns [(Edge x y, l { flowDirection = WithDir })]
+        b = mkGraph ns [(Edge y x, l { flowDirection = WithDir })] -- x and y inversed!
+        c = mkGraph ns [(Edge x y, l { flowDirection = UnDir })]
 extend ((x, xl), (y, yl), l) gs = concatMap f gs'
   where gs' = map (insNode (y, yl) . insNode (x, xl)) gs
         f g = [a g, b g, c g]
-        a g = insEdge (x, y, l { flowDirection = WithDir }) g
-        b g = insEdge (y, x, l { flowDirection = WithDir }) g -- x and y inversed!
-        c g = insEdge (x, y, l { flowDirection = UnDir }) g
+        a g = insEdge (Edge x y, l { flowDirection = WithDir }) g
+        b g = insEdge (Edge y x, l { flowDirection = WithDir }) g -- x and y inversed!
+        c g = insEdge (Edge x y, l { flowDirection = UnDir }) g
 
 type NumberOfAdj = Int
 type GraphInfo = IM.IntMap (NodeType, NumberOfAdj)
@@ -116,7 +116,10 @@ buildLNEdges :: Topology -> [LNEdge]
 buildLNEdges g = lnes
   where les = labEdges g
         lnes = map f les
-        f (x, y, l) = ((x, checkJust "buildLNEdges" $ lab g x), (y, checkJust "buildLNEdges" $ lab g y), l)
+        f (Edge x y, l) =
+           ((x, checkJust "buildLNEdges" $ lab g x),
+            (y, checkJust "buildLNEdges" $ lab g y),
+            l)
 
 stateAnalysis :: Topology -> [Topology]
 stateAnalysis topo = sol
@@ -130,7 +133,7 @@ stateAnalysis topo = sol
 reorderEdges :: Topology -> Topology -- This function should go in an auxiliary module.
 reorderEdges topo = mkGraph ns es
   where ns = labNodes topo
-        es = map f $ labEdges topo  
-        f z@(x, y, l)
+        es = map f $ labEdges topo
+        f z@(Edge x y, l)
           | x < y = z
-          | otherwise = (y, x, l { flowDirection = flipFlowDirection (flowDirection l) })
+          | otherwise = (Edge y x, l { flowDirection = flipFlowDirection (flowDirection l) })

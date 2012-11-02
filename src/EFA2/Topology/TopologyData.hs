@@ -2,8 +2,8 @@
 
 module EFA2.Topology.TopologyData (
        --EfaGraph,
-       NLabel (..),
-       ELabel (..),
+       NLabel (..), LNode,
+       ELabel (..), LEdge,
        NodeType (..),
        FlowDirection (..),
        EdgeType (..),
@@ -29,16 +29,19 @@ module EFA2.Topology.TopologyData (
        partitionInOutStatic) where
 
 import qualified EFA2.Signal.Index as Idx
+import qualified EFA2.Topology.EfaGraph as Gr
 import EFA2.Topology.EfaGraph
           (EfaGraph, InOutGraphFormat, mkInOutGraphFormat, getLEdge)
-import Data.Graph.Inductive (Node, LNode, Edge, LEdge)
+import Data.Graph.Inductive (Node)
 
 import qualified Data.Map as M
 import qualified Data.List as L
 import Data.Ord (comparing)
 import Data.Maybe (mapMaybe, fromJust)
-import Data.Tuple.HT (thd3)
 
+
+type LNode = Gr.LNode Node NLabel
+type LEdge = Gr.LEdge Node ELabel
 
 data NodeType = Storage Int
               | InitStorage Int
@@ -72,7 +75,7 @@ data FlowDirection = WithDir
                    | AgainstDir
                    | UnDir deriving (Show, Eq, Ord)
 
-isOtherSection :: LNode NLabel -> LNode NLabel -> Bool
+isOtherSection :: LNode -> LNode -> Bool
 isOtherSection (_, l1) (_, l2) = sectionNLabel l1 /= sectionNLabel l2
 
 isInactive :: FlowDirection -> Bool
@@ -117,8 +120,8 @@ flipFlowDirection UnDir = UnDir
 
 
 
-unlabelEdge :: LEdge a -> Edge
-unlabelEdge (x, y, _) = (x, y)
+unlabelEdge :: LEdge -> Gr.Edge Node
+unlabelEdge = fst
 
 unTopology :: Topology -> EfaGraph Node NLabel ELabel
 unTopology = id
@@ -137,7 +140,7 @@ fromFlowToSecTopology :: FlowTopology -> SecTopology
 fromFlowToSecTopology = id
 
 -- | Active storages, grouped by storage number, sorted by section number.
-getActiveStores :: Topology -> [[InOutGraphFormat (LNode NLabel)]]
+getActiveStores :: Topology -> [[InOutGraphFormat LNode]]
 getActiveStores topo = map (sectionSort . filter (isActiveSt topo)) groupedIof
   where groupedIof =
            M.elems $ M.fromListWith (++) $
@@ -151,20 +154,21 @@ getActiveStores topo = map (sectionSort . filter (isActiveSt topo)) groupedIof
         sectionSort = L.sortBy (comparing sec)
         sec (_, (_, l), _) = sectionNLabel l
 
-isActiveSt :: Topology -> InOutGraphFormat (LNode NLabel) -> Bool
+isActiveSt :: Topology -> InOutGraphFormat LNode -> Bool
 isActiveSt topo (ins, (nid, _), outs) = res
   where inEs = map ((,nid) . fst) ins
         outEs = map ((nid,) . fst) outs
         es = mapMaybe (uncurry (getLEdge topo)) (inEs ++ outEs)
-        res = any isActiveEdge (map thd3 es)
+        res = any (isActiveEdge . snd) es
 
 -- | Partition the storages in in and out storages, looking only at edges, not at values.
 -- This means that nodes with in AND out edges cannot be treated.
 partitionInOutStatic ::
-  Topology -> [InOutGraphFormat (LNode NLabel)] -> ([InOutGraphFormat (LNode NLabel)], [InOutGraphFormat (LNode NLabel)])
+  Topology -> [InOutGraphFormat LNode] ->
+  ([InOutGraphFormat LNode], [InOutGraphFormat LNode])
 partitionInOutStatic topo iof = L.partition p iof
   where p (ins, (nid, _), outs)  =  null (filter q ins) /= null (filter r outs)
           where q (n, _) = flowDirection e == WithDir && (isOriginalEdge e || isInnerStorageEdge e)
-                  where e = thd3 $ fromJust (getLEdge topo n nid)
+                  where e = snd $ fromJust (getLEdge topo n nid)
                 r (n, _) = flowDirection e == AgainstDir && (isOriginalEdge e || isInnerStorageEdge e)
-                  where e = thd3 $ fromJust (getLEdge topo nid n)
+                  where e = snd $ fromJust (getLEdge topo nid n)

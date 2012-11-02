@@ -7,9 +7,10 @@ import EFA2.Interpreter.Env
           (DTimeMap, StorageMap,
            RecordNumber(SingleRecord))
 import qualified EFA2.Interpreter.Env as Interp
-import EFA2.Topology.TopologyData
+import EFA2.Topology.TopologyData as Topo
 import EFA2.Topology.EfaGraph
-          (EfaGraph, lab, labNodes, labEdges, delNodes, delEdges)
+          (EfaGraph, Edge(Edge),
+           lab, labNodes, labEdges, edgeLabels, delNodes, delEdgeSet)
 
 import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Signal.Data as D
@@ -36,7 +37,7 @@ import Data.GraphViz (
           graphID)
 import Data.GraphViz.Attributes.Complete
 
-import Data.Graph.Inductive (Node, LNode, LEdge)
+import Data.Graph.Inductive (Node)
 import Data.Eq.HT (equating)
 import Data.Ratio (Ratio)
 import Data.Maybe (fromJust)
@@ -77,8 +78,8 @@ mkDotGraph ::
    EfaGraph Node NLabel ELabel ->
    Maybe RecordNumber ->
    (Idx.DTime -> String) ->
-   (LNode NLabel -> String) ->
-   (LEdge ELabel -> String) ->
+   (Topo.LNode -> String) ->
+   (Topo.LEdge -> String) ->
    DotGraph Int
 mkDotGraph g mRecordNum timef nshow eshow =
   DotGraph { strictGraph = False,
@@ -89,8 +90,8 @@ mkDotGraph g mRecordNum timef nshow eshow =
            case mRecordNum of
               Just (SingleRecord n) -> Just n
               _ -> Nothing
-        interEs = L.filter (\(_, _, e) -> isIntersectionEdge e) $ labEdges g
-        g' = delEdges (map (\(x, y, _) -> (x, y)) interEs) g
+        interEs = M.filter isIntersectionEdge $ edgeLabels g
+        g' = delEdgeSet (M.keysSet interEs) g
         cs =
            HTL.removeEach $
            NonEmptyM.groupBy (equating (sectionNLabel . snd)) $
@@ -110,15 +111,15 @@ mkDotGraph g mRecordNum timef nshow eshow =
         stmts = DotStmts { attrStmts = [],
                            subGraphs = map sg cs,
                            nodeStmts = [],
-                           edgeStmts = map (mkDotEdge eshow) interEs }
+                           edgeStmts = map (mkDotEdge eshow) $ M.toList interEs }
 
 
-mkDotNode:: (LNode NLabel -> String) -> LNode NLabel -> DotNode Int
+mkDotNode:: (Topo.LNode -> String) -> Topo.LNode -> DotNode Int
 mkDotNode nshow n@(x, _) = DotNode x [displabel, nodeColour, Style [SItem Filled []], Shape BoxShape ]
   where displabel =  Label $ StrLabel $ T.pack (nshow n)
 
-mkDotEdge :: (LEdge ELabel -> String) -> LEdge ELabel -> DotEdge Int
-mkDotEdge eshow e@(x, y, elabel) = DotEdge x y [displabel, edir, colour]
+mkDotEdge :: (Topo.LEdge -> String) -> Topo.LEdge -> DotEdge Int
+mkDotEdge eshow e@(Edge x y, elabel) = DotEdge x y [displabel, edir, colour]
   where flowDir = flowDirection elabel
         displabel =
            Label $ StrLabel $ T.pack $
@@ -141,8 +142,8 @@ printGraph ::
    EfaGraph Node NLabel ELabel ->
    Maybe RecordNumber ->
    (Idx.DTime -> String) ->
-   (LNode NLabel -> String) ->
-   (LEdge ELabel -> String) ->
+   (Topo.LNode -> String) ->
+   (Topo.LEdge -> String) ->
    IO ()
 printGraph g recordNum tshow nshow eshow =
    runGraphvizCanvas Dot (mkDotGraph g recordNum tshow nshow eshow) Xlib
@@ -177,7 +178,7 @@ dsg ident topo = DotSG True (Just (Int ident)) stmts
         nattrs x = [labNodef x, nodeColour, Style [SItem Filled []], Shape BoxShape ]
         labNodef (n, l) = Label $ StrLabel $ T.pack (show n ++ " - " ++ show (nodetypeNLabel l))
         es = map mkEdge (labEdges topo)
-        mkEdge (x, y, l) =
+        mkEdge (Edge x y, l) =
            DotEdge (idf x) (idf y) $ (:[]) $ Dir $
            case flowDirection l of
               WithDir -> Forward
@@ -223,7 +224,7 @@ data Env a =
       lookupEta_    :: Idx.Section -> Idx.Record -> Int -> Int -> Maybe a,
       formatAssign_ :: (Line, Maybe a) -> String,
       showTime :: Idx.DTime -> String,
-      showNode_ :: LNode NLabel -> String
+      showNode_ :: Topo.LNode -> String
    }
 
 makeLookup ::
@@ -250,7 +251,7 @@ draw g
       printGraph (unTopology g) (Just rn) tshow nshow eshow
   where eshow = L.intercalate "\n" . map formatAssign . mkLst
 
-        mkLst (uid, vid, l) =
+        mkLst (Edge uid vid, l) =
            case rn of
               SingleRecord rec
                  | isOriginalEdge l -> [

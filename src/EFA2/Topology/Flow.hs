@@ -2,15 +2,14 @@
 
 module EFA2.Topology.Flow (module EFA2.Topology.Flow) where
 
-import Data.Graph.Inductive (LNode, LEdge)
 import EFA2.Topology.EfaGraph
-          (InOutGraphFormat, mkGraph,
+          (InOutGraphFormat, Edge(Edge), mkGraph,
            labNodes, labEdges,
            insNodes, insEdges,
            nmap, nodeSet)
 
 import qualified EFA2.Signal.Index as Idx
-import EFA2.Topology.TopologyData
+import EFA2.Topology.TopologyData as Topo
 import EFA2.Signal.SequenceData
 
 import EFA2.Signal.Signal (fromScalar, sigSign, sigSum)
@@ -19,7 +18,7 @@ import EFA2.Signal.Base (Sign(PSign, NSign, ZSign))
 import qualified Data.Map as M
 import qualified Data.Set as S
 import qualified Data.List as L
-import Data.Tuple.HT (snd3)
+import Data.Tuple.HT (mapSnd, snd3)
 
 
 -- | Function to calculate flow states for the whole sequence
@@ -40,8 +39,8 @@ genFlowTopology:: Topology -> FlowState -> FlowTopology
 genFlowTopology topo (FlowState fs) =
    mkGraph (labNodes topo) $
    map
-      (\(idx1, idx2, l) ->
-         (idx1, idx2, l { flowDirection =
+      (\(Edge idx1 idx2, l) ->
+         (Edge idx1 idx2, l { flowDirection =
             case fs M.! PPosIdx idx1 idx2 of
                PSign -> WithDir
                NSign -> AgainstDir
@@ -64,17 +63,17 @@ copySeqTopology (SequData tops) =
       (concat $ zipWith h offsets $ map labEdges tops)
   where ns = map labNodes tops
         g o = map (\(n, l) -> (n+o, l))
-        h o = map (\(n1, n2, l) -> (n1+o, n2+o, l))
+        h o = map (\(Edge n1 n2, l) -> (Edge (n1+o) (n2+o), l))
 
         offsets = L.scanl (+) 0 $ map length ns
 
 
 mkIntersectionEdges ::
-   Topology -> LNode NLabel ->
-   [InOutGraphFormat (LNode NLabel)] -> [LEdge ELabel]
+   Topology -> Topo.LNode ->
+   [InOutGraphFormat Topo.LNode] -> [Topo.LEdge]
 mkIntersectionEdges topo startNode stores =
-   concatMap (\(n, ns) -> map (n,, e) ns) $
-   map (\(n, l) -> (n, map fst (filter (q l) outs))) $
+   concatMap (\(n, ns) -> map (\x -> (Edge n x, e)) ns) $
+   map (mapSnd (\l -> map fst (filter (q l) outs))) $
    startNode:ins
   where (instores, outstores) = partitionInOutStatic topo stores
 
@@ -104,7 +103,8 @@ mkSequenceTopology sd = res
            concat $ zipWith (mkIntersectionEdges sqTopo) (map fst startNodes) grpStores
 
         e = defaultELabel { edgeType = InnerStorageEdge }
-        startEdges = map (\((nid1, _), (nid2, _)) -> (nid2, nid1, e)) startNodes
+        startEdges =
+           map (\((nid1, _), (nid2, _)) -> (Edge nid2 nid1, e)) startNodes
         res =
            insEdges
               (startEdges ++ interSecEs)

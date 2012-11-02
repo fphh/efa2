@@ -6,9 +6,12 @@ import EFA2.Utils.Utils (mapFromSet)
 
 import qualified Data.Set as S
 import qualified Data.Map as M
+import Control.Monad (liftM2)
 import Data.Foldable (foldMap, fold)
-import Data.Tuple.HT (mapSnd, thd3)
+import Data.Tuple.HT (mapSnd)
 import Data.Char (toUpper)
+
+import qualified Test.QuickCheck as QC
 
 
 data EfaGraph node nodeLabel edgeLabel =
@@ -25,6 +28,10 @@ data Edge node = Edge node node
 
 instance Functor Edge where
    fmap f (Edge x y) = Edge (f x) (f y)
+
+instance (QC.Arbitrary n) => QC.Arbitrary (Edge n) where
+   arbitrary = liftM2 Edge QC.arbitrary QC.arbitrary
+   shrink (Edge x y) = map (uncurry Edge) $ QC.shrink (x,y)
 
 reverseEdge :: Edge node -> Edge node
 reverseEdge (Edge x y) = Edge y x
@@ -84,12 +91,8 @@ mkInAdj g n = map f es
   where es = zipWith Edge (getIncoming g n) (repeat n)
         f e@(Edge x _) = ((edgeLabels g) M.! e, x)
 
-getLEdge :: (Ord n) => EfaGraph n nl el -> n -> n -> Maybe (n, n, el)
+getLEdge :: (Ord n) => EfaGraph n nl el -> n -> n -> Maybe (LEdge n el)
 getLEdge g from to =
-   fmap (\l -> (from,to,l)) $ M.lookup (Edge from to) (edgeLabels g)
-
-getLEdge_ :: (Ord n) => EfaGraph n nl el -> n -> n -> Maybe (LEdge n el)
-getLEdge_ g from to =
    let e = Edge from to
    in  fmap ((,) e) $ M.lookup e (edgeLabels g)
 
@@ -132,11 +135,8 @@ lab g n = M.lookup n (nodeLabels g)
 labNodes :: EfaGraph n nl el -> [LNode n nl]
 labNodes = M.toList . nodeLabels
 
-labEdges :: EfaGraph n nl el -> [(n, n, el)]
-labEdges = map (\(Edge x y, l) -> (x, y, l)) . M.toList . edgeLabels
-
-labEdges_ :: EfaGraph n nl el -> [LEdge n el]
-labEdges_ = M.toList . edgeLabels
+labEdges :: EfaGraph n nl el -> [LEdge n el]
+labEdges = M.toList . edgeLabels
 
 pre, suc :: (Ord n) => EfaGraph n nl el -> n -> [n]
 pre g n = S.toList . M.findWithDefault (error "pre: unknown node") n . inEdges $ g
@@ -172,60 +172,64 @@ delNodes nsl (EfaGraph outs ins nls els) =
           (fold $
            M.intersectionWithKey (\n out _ -> S.map (Edge n) out) outs nm)
 
-delEdges ::
+delEdgeSet ::
    (Ord n) =>
-   [(n,n)] -> EfaGraph n nl el -> EfaGraph n nl el
-delEdges es = delEdges_ (map (uncurry Edge) es)
-
-delEdges_ ::
-   (Ord n) =>
-   [Edge n] -> EfaGraph n nl el -> EfaGraph n nl el
-delEdges_ es g =
+   S.Set (Edge n) -> EfaGraph n nl el -> EfaGraph n nl el
+delEdgeSet es g =
    delEdgeHelp g
       (M.difference (edgeLabels g) $
-       mapFromSet (const ()) $ S.fromList es,
+       mapFromSet (const ()) es,
        es)
+
+delEdges ::
+   (Ord n) =>
+   [Edge n] -> EfaGraph n nl el -> EfaGraph n nl el
+delEdges es g =
+   case S.fromList es of
+      ess ->
+         delEdgeHelp g
+            (M.difference (edgeLabels g) $
+             mapFromSet (const ()) ess,
+             ess)
 
 elfilter ::
    (Ord n) =>
    (el -> Bool) ->
    EfaGraph n nl el -> EfaGraph n nl el
 elfilter f g =
-   delEdgeHelp g $ mapSnd M.keys $ M.partition f $ edgeLabels g
+   delEdgeHelp g $ mapSnd M.keysSet $ M.partition f $ edgeLabels g
 
 delEdgeHelp ::
    (Ord n) =>
-   EfaGraph n nl el -> (M.Map (Edge n) el, [Edge n]) -> EfaGraph n nl el
+   EfaGraph n nl el -> (M.Map (Edge n) el, S.Set (Edge n)) -> EfaGraph n nl el
 delEdgeHelp (EfaGraph outs ins nls _els) (kept, deleted) =
    EfaGraph
-      (foldl (\mp (Edge x y) -> M.adjust (S.delete y) x mp) outs deleted)
-      (foldl (\mp (Edge x y) -> M.adjust (S.delete x) y mp) ins deleted)
+      (S.foldl (\mp (Edge x y) -> M.adjust (S.delete y) x mp) outs deleted)
+      (S.foldl (\mp (Edge x y) -> M.adjust (S.delete x) y mp) ins deleted)
       nls kept
 
 
-propELFilter :: [(Char, Char, Int)] -> Bool
+propELFilter :: [LEdge Char Int] -> Bool
 propELFilter =
    uncurry (==) . compareELFilter
 
 compareELFilter ::
-   [(Char, Char, Int)] ->
+   [LEdge Char Int] ->
    (EfaGraph Char String Int, EfaGraph Char String Int)
 compareELFilter esWithDuplicates =
-   let es =
-          map (\(Edge x y, l) -> (x,y,l)) $ M.toList $
-          M.fromList $ packLEdges esWithDuplicates
+   let es = M.toList $ M.fromList esWithDuplicates
        ns =
           map (\n -> (n, [n, toUpper n])) $ S.toList $ S.unions $
-          map (\(x,y,_) -> S.fromList [x,y]) es
+          map (\(Edge x y, _) -> S.fromList [x,y]) es
    in  (elfilter even $ mkGraph ns es,
-        mkGraph ns $ filter (even . thd3) es)
+        mkGraph ns $ filter (even . snd) es)
 
 insNode ::
    (Ord n) => LNode n nl -> EfaGraph n nl el -> EfaGraph n nl el
 insNode n = insNodes [n]
 
 insEdge ::
-   (Ord n) => (n, n, el) -> EfaGraph n nl el -> EfaGraph n nl el
+   (Ord n) => LEdge n el -> EfaGraph n nl el -> EfaGraph n nl el
 insEdge es = insEdges [es]
 
 
@@ -238,12 +242,8 @@ insNodes ns g =
            (nodeLabels g) (M.fromList ns)}
 
 insEdges ::
-   (Ord n) => [(n, n, el)] -> EfaGraph n nl el -> EfaGraph n nl el
-insEdges es = insEdges_ (packLEdges es)
-
-insEdges_ ::
    (Ord n) => [LEdge n el] -> EfaGraph n nl el -> EfaGraph n nl el
-insEdges_ es g =
+insEdges es g =
    let mapFromList f newEs oldEs =
           M.unionWith S.union oldEs $
           M.fromListWith S.union $
@@ -256,9 +256,9 @@ insEdges_ es g =
 
 mkGraph ::
    (Ord n) =>
-   [LNode n nl] -> [(n, n, el)] -> EfaGraph n nl el
+   [LNode n nl] -> [LEdge n el] -> EfaGraph n nl el
 mkGraph ns es =
-   mkGraphFromMap (M.fromList ns) $ M.fromList $ packLEdges es
+   mkGraphFromMap (M.fromList ns) $ M.fromList es
 
 mkGraphFromMap ::
    (Ord n) =>
@@ -271,9 +271,6 @@ mkGraphFromMap ns es = EfaGraph  outs ins  ns es
            map (\e -> case f e of Edge x y -> (x, S.singleton y))
         outs = mapFromList id esl
         ins  = mapFromList reverseEdge esl
-
-packLEdges :: [(n, n, el)] -> [LEdge n el]
-packLEdges = map (\(x,y,l) -> (Edge x y, l))
 
 {-
 instance (Ord n, Enum n) => IG.DynGraph (EfaGraph n) where
