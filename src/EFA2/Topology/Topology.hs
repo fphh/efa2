@@ -6,21 +6,21 @@ import EFA2.Solver.Equation
 import EFA2.Interpreter.Env as Env
 import EFA2.Topology.TopologyData
 import EFA2.Utils.Graph
-import EFA2.Utils.Utils (pairs, safeLookup)
+import EFA2.Utils.Utils (pairs, safeLookup, mapFromSet)
 
 import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Topology.EfaGraph as Gr
 import EFA2.Signal.Index (Use(InSum, OutSum))
+import EFA2.Topology.EfaGraph (Edge(Edge), labEdges_)
 import Data.Graph.Inductive
           (LNode, Node, LEdge, lab, labNodes, labEdges, elfilter)
 
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.List as L
-import qualified Data.IntMap as IM
-import qualified Data.IntSet as IS
+import qualified Data.Set as S
 import qualified Data.Map as M
 import Data.Tuple.HT (snd3)
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, mapMaybe)
 import Data.Ord (comparing)
 
 
@@ -404,18 +404,13 @@ makeVar r sec mkIdx nid (nid', _) =
 -- Undirected edges are filtered away.
 -- This is important for creating correct equations.
 makeDirTopology :: Topology -> Topology
-makeDirTopology topo = Topology $ Gr.mkGraphFromMap ns esm
-  where es = map flipAgainst $ filter onlyDirected $ labEdges topo
-        esm = M.fromList $ map (\(x, y, l) -> ((x, y), l)) es
-        onlyDirected (_, _, elabel) = flowDirection elabel /= UnDir
-        flipAgainst e@(x, y, elabel) =
+makeDirTopology (Topology topo) = Topology $ Gr.mkGraphFromMap ns esm
+  where esm = M.fromList $ mapMaybe flipAgainst $ labEdges_ topo
+        flipAgainst e@(Edge x y, elabel) =
            case flowDirection elabel of
-              AgainstDir -> (y, x, elabel { flowDirection = WithDir })
-              _ -> e
+              UnDir -> Nothing
+              AgainstDir -> Just (Edge y x, elabel { flowDirection = WithDir })
+              WithDir -> Just e
         ns =
-           imFromSet (fromJust . lab topo) $ IS.fromList $
-           concatMap (\(x, y) -> [x, y]) $ M.keys esm
-
--- IM.fromSet is available from containers-0.5
-imFromSet :: (IM.Key -> a) -> IS.IntSet -> IM.IntMap a
-imFromSet f = IM.fromAscList . map (\k -> (k, f k)) . IS.toAscList
+           mapFromSet (fromJust . lab topo) $ S.fromList $
+           concatMap (\(Edge x y) -> [x, y]) $ M.keys esm

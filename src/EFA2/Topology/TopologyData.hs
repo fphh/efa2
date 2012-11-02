@@ -121,7 +121,7 @@ unlabelEdge :: LEdge a -> Edge
 unlabelEdge (x, y, _) = (x, y)
 
 
-newtype Topology' a b = Topology { unTopology :: EfaGraph a b } deriving (Show)
+newtype Topology' a b = Topology { unTopology :: EfaGraph Node a b } deriving (Show)
 type Topology = Topology' NLabel ELabel
 
 instance Graph Topology' where
@@ -137,7 +137,7 @@ instance DynGraph Topology' where
          cont & (Topology topo) = Topology (cont & topo)
 
 -- | 
-newtype FlowTopology' a b = FlowTopology ( EfaGraph a b ) deriving (Show)
+newtype FlowTopology' a b = FlowTopology ( EfaGraph Node a b ) deriving (Show)
 type FlowTopology = FlowTopology' NLabel ELabel
 
 topoToFlowTopo :: Topology -> FlowTopology
@@ -156,7 +156,7 @@ instance DynGraph FlowTopology' where
          cont & (FlowTopology topo) = FlowTopology (cont & topo)
 
 -- | 
-newtype SecTopology' a b = SecTopology ( EfaGraph a b ) deriving (Show)
+newtype SecTopology' a b = SecTopology ( EfaGraph Node a b ) deriving (Show)
 type SecTopology = SecTopology' NLabel ELabel
 
 instance Graph SecTopology' where

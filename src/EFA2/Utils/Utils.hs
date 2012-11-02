@@ -20,6 +20,12 @@ checkJust str _ = error ("checkJust called from " ++ str)
 reverseMap :: (Ord b) => M.Map a b -> M.Map b a
 reverseMap = M.fromList . map swap . M.toList
 
+-- M.fromSet is available from containers-0.5
+mapFromSet ::
+   (Ord key) => (key -> a) -> S.Set key -> M.Map key a
+mapFromSet f = M.fromAscList . map (\k -> (k, f k)) . S.toAscList
+
+
 for :: [a] -> (a -> b) -> [b]
 for = flip map
 

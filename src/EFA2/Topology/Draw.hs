@@ -36,7 +36,7 @@ import Data.GraphViz (
 import Data.GraphViz.Attributes.Complete
 
 import Data.Graph.Inductive
-          (LNode, LEdge, lab, labNodes, labEdges, delNodes, delEdges)
+          (Node, LNode, LEdge, lab, labNodes, labEdges, delNodes, delEdges)
 import Data.Eq.HT (equating)
 import Data.Ratio (Ratio)
 import Data.Maybe (fromJust)
@@ -74,7 +74,7 @@ noRecord = Nothing
 
 
 mkDotGraph ::
-   EfaGraph NLabel ELabel ->
+   EfaGraph Node NLabel ELabel ->
    Maybe RecordNumber ->
    (Idx.DTime -> String) ->
    (LNode NLabel -> String) ->
@@ -138,7 +138,7 @@ mkDotEdge eshow e@(x, y, elabel) = DotEdge x y [displabel, edir, colour]
         --colour = originalEdgeColour
 
 printGraph ::
-   EfaGraph NLabel ELabel ->
+   EfaGraph Node NLabel ELabel ->
    Maybe RecordNumber ->
    (Idx.DTime -> String) ->
    (LNode NLabel -> String) ->
