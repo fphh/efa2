@@ -16,6 +16,7 @@ import EFA2.Topology.EfaGraph
            lab, labNodes, labEdges, edgeLabels, elfilter)
 
 import qualified Data.NonEmpty as NonEmpty
+import qualified Data.List.HT as LH
 import qualified Data.List as L
 import qualified Data.Set as S
 import qualified Data.Map as M
@@ -210,9 +211,11 @@ mkStoreEqs recordNum (ins, outs) = startEq ++ eqs
 mkInStoreEqs :: Idx.Record -> InOutGraphFormat LNode -> [Equation]
 mkInStoreEqs recordNum (_ins, (nid, NLabel sec _ _), outs@((o,_):_)) = (startEq:osEqs)
   where startEq = mkVar (Idx.Var sec recordNum InSum nid) := mkVar (Idx.Power sec recordNum nid o)
-        osEqs = map f (pairs outs)
-        f (x, y) = mkVar (Idx.Power sec recordNum nid y') :=
-                     mkVar (Idx.Power sec recordNum nid x') :+ (Minus (mkVar (Idx.Power xs recordNum x' nid)))
+        osEqs = LH.mapAdjacent f outs
+        f x y =
+           mkVar (Idx.Power sec recordNum nid y') :=
+              mkVar (Idx.Power sec recordNum nid x') :+
+              Minus (mkVar (Idx.Power xs recordNum x' nid))
           where (x', NLabel xs _ _) = x
                 (y', _) = y
 mkInStoreEqs _ _ = []
