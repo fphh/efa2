@@ -3,7 +3,10 @@ module EFA2.Topology.Topology where
 import EFA2.Solver.Equation
           (Equation(..), Term(..),
            MkIdxC, MkVarC, mkVar, mkTerm, add, give, (!=))
-import EFA2.Interpreter.Env as Env
+import qualified EFA2.Interpreter.Env as Env
+import EFA2.Interpreter.Env
+          (Envs(Envs), fromSingleRecord, isSingleRecord, recordNumber,
+           RecordNumber(MixedRecord, SingleRecord))
 import EFA2.Topology.TopologyData
 import EFA2.Utils.Utils (pairs, safeLookup, mapFromSet)
 
@@ -56,7 +59,7 @@ makeAllEquations :: (Show a) => Topology -> [Envs a] -> (Envs a, [Equation])
 makeAllEquations topo envs =
    if missingRecordNumbers envs
      then error ("makeAllEquations: only single records are allowed in " ++ show envs)
-     else ((envUnion envs') { recordNumber = MixedRecord newRecNums }, ts)
+     else ((Env.envUnion envs') { recordNumber = MixedRecord newRecNums }, ts)
   where newRecNums = map (fromSingleRecord . recordNumber) envs
         recNum env = fromSingleRecord $ recordNumber env
         dirTopo = makeDirTopology topo
@@ -135,7 +138,7 @@ mkPowerEqs rec topo = concat $ mapGraph (mkPEqs rec) topo
 
 mkPEqs :: Idx.Record -> ([LNode], LNode, [LNode]) -> [Equation]
 mkPEqs rec (ins, (nid, NLabel sec _ _), outs) = ieqs ++ oeqs -- ++ dieqs ++ doeqs
-  where dt = Atom $ DTime $ Idx.DTime sec rec
+  where dt = Atom $ Env.DTime $ Idx.DTime sec rec
         eis = map (makeVar rec sec Idx.Energy nid) ins
         eos = map (makeVar rec sec Idx.Energy nid) outs
         --deis = map (makeVar rec sec Idx.DEnergy nid) ins
@@ -161,31 +164,30 @@ mkIntersectionEqs recordNum topo = concat inEqs ++ concat outEqs ++ stContentEqs
         outEqs = concatMap (map (mkOutStoreEqs recordNum)) outs
         stContentEqs = concatMap (mkStoreEqs recordNum) inouts
 
-data IOStore =
-     InStore LNode
-   | OutStore LNode deriving (Show)
+data IOStore = Store StoreDir LNode deriving (Show)
+
+data StoreDir = In | Out deriving (Show)
 
 mkStoreEqs ::
    Idx.Record ->
    ([InOutGraphFormat LNode], [InOutGraphFormat LNode]) ->
    [Equation]
 mkStoreEqs recordNum (ins, outs) = startEq ++ eqs
-  where ins' = map (InStore . snd3) ins
-        outs' = map (OutStore . snd3) outs
+  where ins' = map (Store In . snd3) ins
+        outs' = map (Store Out . snd3) outs
         both@(b:_) = L.sortBy (comparing f) $ ins' ++ outs'
 
-        f (InStore (_, l)) = sectionNLabel l
-        f (OutStore (_, l)) = sectionNLabel l
+        f (Store _ (_, l)) = sectionNLabel l
         startEq = k b
-        k (InStore (nid, NLabel sec _ (InitStorage st))) =
+        k (Store In (nid, NLabel sec _ (InitStorage st))) =
           [ mkVar (Idx.Storage sec recordNum st) := mkVar (Idx.Var sec recordNum InSum nid) :* dt]
           where dt = mkVar $ Idx.DTime sec recordNum
         k _ = []
         eqs = map (g . h) (pairs both)
-        h (InStore x, y) = (x, y)
-        h (OutStore x, y) = (x, y)
+        h (Store _ x, y) = (x, y)
 
-        g ((_nid, NLabel sec _ st), InStore (nid', NLabel sec' _ st')) = stnew := (v :* dt) :+ stold
+        g ((_nid, NLabel sec _ st), Store dir (nid', NLabel sec' _ st')) =
+           stnew := (case dir of In -> vdt; Out -> Minus vdt) :+ stold
 {-
           mkVar (Idx.Storage sec' recordNum (getStorageNumber st')) :=
             (mkVar (Idx.Var sec' recordNum InSum nid') :* dt)
@@ -193,19 +195,9 @@ mkStoreEqs recordNum (ins, outs) = startEq ++ eqs
 -}
           where stnew = mkVar $ Idx.Storage sec' recordNum (getStorageNumber st')
                 stold = mkVar $ Idx.Storage sec recordNum (getStorageNumber st)
-                v = mkVar $ Idx.Var sec' recordNum InSum nid'
+                vdt = v :* dt
+                v = mkVar $ Idx.Var sec' recordNum (case dir of In -> InSum; Out -> OutSum) nid'
                 dt = mkVar $ Idx.DTime sec' recordNum
-
-        g ((_nid, NLabel sec _ st), OutStore (nid', NLabel sec' _ st')) = stnew := Minus (v :* dt) :+ stold
-{-
-          mkVar (Idx.Storage sec' recordNum (getStorageNumber st')) :=
-            Minus (mkVar (Idx.Var sec' recordNum OutSum nid') :* dt) :+ (mkVar (Idx.Storage sec recordNum (getStorageNumber st)))
--}
-          where stnew = mkVar $ Idx.Storage sec' recordNum (getStorageNumber st')
-                stold = mkVar $ Idx.Storage sec recordNum (getStorageNumber st)
-                v = mkVar $ Idx.Var sec' recordNum OutSum nid'
-                dt = mkVar $ Idx.DTime sec' recordNum
-
 
 
 mkInStoreEqs :: Idx.Record -> InOutGraphFormat LNode -> [Equation]
