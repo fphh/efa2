@@ -210,8 +210,11 @@ propELFilter =
 compareELFilter ::
    [(Char, Char, Int)] ->
    (EfaGraph Char String Int, EfaGraph Char String Int)
-compareELFilter es =
-   let ns =
+compareELFilter esWithDuplicates =
+   let es =
+          map (\(Edge x y, l) -> (x,y,l)) $ M.toList $
+          M.fromList $ packLEdges esWithDuplicates
+       ns =
           map (\n -> (n, [n, toUpper n])) $ S.toList $ S.unions $
           map (\(x,y,_) -> S.fromList [x,y]) es
    in  (elfilter even $ mkGraph ns es,
