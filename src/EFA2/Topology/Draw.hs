@@ -291,9 +291,6 @@ class AutoEnv a => AutoEnvDelta a where
 
 
 class AutoEnvList a where
-   envAbsList :: Interp.Envs [a] -> Env [a]
-   envAbsList = envAbsArgList [defaultEtaArg]
-
    formatStContList :: Maybe [a] -> String
    formatList :: [a] -> String
 
@@ -313,14 +310,13 @@ class AutoEnvList a where
    defaultEtaArg :: a
 
 class AutoEnvList a => AutoEnvDeltaList a where
-   envDeltaList :: Interp.Envs [a] -> Env [a]
    formatElement :: a -> String
 
 instance AutoEnvList a => AutoEnv [a] where
-   envAbs = envAbsList
+   envAbs = envAbsArgList [defaultEtaArg]
 
 instance AutoEnvDeltaList a => AutoEnvDelta [a] where
-   envDelta = envDeltaList
+   envDelta = envDeltaArgList [defaultEtaArg]
 
 
 instance AutoEnvList Double where
@@ -330,7 +326,6 @@ instance AutoEnvList Double where
    defaultEtaArg = 1
 
 instance AutoEnvDeltaList Double where
-   envDeltaList = envDeltaArgList [defaultEtaArg]
    formatElement = show
 
 instance (Integral a, Show a) => AutoEnvList (Ratio a) where
@@ -379,7 +374,6 @@ instance ToIndex a => AutoEnvList (Term a) where
    defaultEtaArg = error "EqTerm 1"
 
 instance ToIndex a => AutoEnvDeltaList (Term a) where
-   envDeltaList = envDeltaArgList [defaultEtaArg]
    formatElement = showEqTerm
 
 
