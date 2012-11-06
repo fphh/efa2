@@ -275,29 +275,29 @@ draw g
               _ -> [ (ErrorLine "Problem with record number", Nothing) ]
 
 drawTopology ::
-   DrawTopology a => Topology -> Interp.Envs a -> IO ()
-drawTopology topo = draw topo . envTopology
+   AutoEnv a => Topology -> Interp.Envs a -> IO ()
+drawTopology topo = draw topo . envAbs
 
 drawDeltaTopology ::
-   DrawDeltaTopology a => Topology -> Interp.Envs a -> IO ()
-drawDeltaTopology topo = draw topo . envDeltaTopology
+   AutoEnvDelta a => Topology -> Interp.Envs a -> IO ()
+drawDeltaTopology topo = draw topo . envDelta
 
 
-class DrawTopology a where
-   envTopology :: Interp.Envs a -> Env a
+class AutoEnv a where
+   envAbs :: Interp.Envs a -> Env a
 
-class DrawTopology a => DrawDeltaTopology a where
-   envDeltaTopology :: Interp.Envs a -> Env a
+class AutoEnv a => AutoEnvDelta a where
+   envDelta :: Interp.Envs a -> Env a
 
 
-class DrawTopologyList a where
-   envTopologyList :: Interp.Envs [a] -> Env [a]
-   envTopologyList = envAbsTopologyList [defaultEtaArg]
+class AutoEnvList a where
+   envAbsList :: Interp.Envs [a] -> Env [a]
+   envAbsList = envAbsArgList [defaultEtaArg]
 
    formatStContList :: Maybe [a] -> String
    formatList :: [a] -> String
 
-   formatAssignList :: DrawTopologyList a => (Line, Maybe [a]) -> String
+   formatAssignList :: AutoEnvList a => (Line, Maybe [a]) -> String
    formatAssignList (x, ys) =
       showLine x ++ " = " ++ formatStContList ys
 
@@ -312,40 +312,40 @@ class DrawTopologyList a where
    -}
    defaultEtaArg :: a
 
-class DrawTopologyList a => DrawDeltaTopologyList a where
-   envDeltaTopologyList :: Interp.Envs [a] -> Env [a]
+class AutoEnvList a => AutoEnvDeltaList a where
+   envDeltaList :: Interp.Envs [a] -> Env [a]
    formatElement :: a -> String
 
-instance DrawTopologyList a => DrawTopology [a] where
-   envTopology = envTopologyList
+instance AutoEnvList a => AutoEnv [a] where
+   envAbs = envAbsList
 
-instance DrawDeltaTopologyList a => DrawDeltaTopology [a] where
-   envDeltaTopology = envDeltaTopologyList
+instance AutoEnvDeltaList a => AutoEnvDelta [a] where
+   envDelta = envDeltaList
 
 
-instance DrawTopologyList Double where
+instance AutoEnvList Double where
    formatStContList (Just ys) = concatMap (printf "%.6f    ") ys
    formatStContList Nothing = [heart]
    formatList = show
    defaultEtaArg = 1
 
-instance DrawDeltaTopologyList Double where
-   envDeltaTopologyList = envDeltaTopologyList_ [defaultEtaArg]
+instance AutoEnvDeltaList Double where
+   envDeltaList = envDeltaArgList [defaultEtaArg]
    formatElement = show
 
-instance (Integral a, Show a) => DrawTopologyList (Ratio a) where
+instance (Integral a, Show a) => AutoEnvList (Ratio a) where
    formatStContList (Just ys) = unwords $ map show ys
    formatStContList Nothing = [heart]
    formatList = show
    defaultEtaArg = 1
 
-instance DrawTopologyList Char where
+instance AutoEnvList Char where
    formatStContList (Just ys) = ys
    formatStContList Nothing = "+"
    formatList = id
    defaultEtaArg = error "Char 1"
 
-instance DrawTopologyList LatexString where
+instance AutoEnvList LatexString where
    formatAssignList (x, ys) = showLineLatex x ++ " = " ++ formatStContList ys
 
    formatStContList (Just ys) = unLatexString (head ys)
@@ -372,28 +372,28 @@ showLatexNode rn st content (num, NLabel sec nid ty) =
              _ -> ""
 
 
-instance ToIndex a => DrawTopologyList (Term a) where
+instance ToIndex a => AutoEnvList (Term a) where
    formatStContList (Just ys) = showEqTerms ys
    formatStContList Nothing = [heart]
    formatList = showEqTerms
    defaultEtaArg = error "EqTerm 1"
 
-instance ToIndex a => DrawDeltaTopologyList (Term a) where
-   envDeltaTopologyList = envDeltaTopologyList_ [defaultEtaArg]
+instance ToIndex a => AutoEnvDeltaList (Term a) where
+   envDeltaList = envDeltaArgList [defaultEtaArg]
    formatElement = showEqTerm
 
 
-envAbsTopologyList ::
-   (DrawTopologyList a) =>
+envAbsArgList ::
+   (AutoEnvList a) =>
    [a] -> Interp.Envs [a] -> Env [a]
-envAbsTopologyList etaArg
+envAbsArgList etaArg
       (Interp.Envs rec e _de _p _dp fn _dn dt x _dx _v st) =
    Env rec
       (makeLookup Idx.Energy e)
       (makeLookup Idx.X x)
       (makeLookup Idx.FEta $ fmap ($etaArg) fn)
       formatAssignList
-      (checkedLookupFormat "envAbsTopologyList" formatList dt)
+      (checkedLookupFormat "envAbsList" formatList dt)
       (showListNode rec st formatStContList)
 
 
@@ -413,13 +413,13 @@ showNode rn st content (num, NLabel sec nid ty) =
              _ -> ""
 
 
-envDeltaTopology_ ::
+envDeltaArg ::
    ((Line, Maybe a) -> String) ->
    (Maybe a -> String) ->
    (DTimeMap a -> Idx.DTime -> String) ->
    a -> Interp.Envs a ->
    Env a
-envDeltaTopology_ formatAssign content tshow etaArg
+envDeltaArg formatAssign content tshow etaArg
       (Interp.Envs rec _e de _p _dp _fn dn dt _x dx _v st) =
    Env rec
       (makeLookup Idx.DEnergy de)
@@ -429,12 +429,12 @@ envDeltaTopology_ formatAssign content tshow etaArg
       (tshow dt)
       (showNode rec st content)
 
-envDeltaTopologyList_ ::
-   (DrawDeltaTopologyList a) =>
+envDeltaArgList ::
+   (AutoEnvDeltaList a) =>
    [a] -> Interp.Envs [a] ->
    Env [a]
-envDeltaTopologyList_ etaArg =
-   envDeltaTopology_
+envDeltaArgList etaArg =
+   envDeltaArg
       (\(x, ys) ->
          showLineDelta x ++ " = " ++
          maybe [heart] (concatMap (("\n"++) . formatElement)) ys)
@@ -442,11 +442,11 @@ envDeltaTopologyList_ etaArg =
          case mys of
             Just ys -> "[ " ++ L.intercalate ", " (map formatElement ys) ++ " ]"
             Nothing -> [heart])
-      (checkedLookupFormat "envDeltaTopologyList_" formatList)
+      (checkedLookupFormat "envDeltaArgList" formatList)
       etaArg
 
-class DrawTopologySignal a where
-   envTopologySignal ::
+class AutoEnvSignal a where
+   envAbsSignal ::
       (DispApp s, TDisp t) => Interp.Envs (TC s t a) -> Env (TC s t a)
 
 formatAssignSignal ::
@@ -463,35 +463,35 @@ formatStContSignal Nothing = [heart]
 
 instance
    (SDisplay v, D.Storage v a, Disp a, Ord a) =>
-      DrawTopologySignal (Data v a) where
-   envTopologySignal = envAbsTopologySignal
+      AutoEnvSignal (Data v a) where
+   envAbsSignal = envAbsArgSignal
 
 instance
-   (DispApp s, TDisp t, DrawTopologySignal a) =>
-      DrawTopology (TC s t a) where
-   envTopology = envTopologySignal
+   (DispApp s, TDisp t, AutoEnvSignal a) =>
+      AutoEnv (TC s t a) where
+   envAbs = envAbsSignal
 
 
-class DrawTopologySignal a => DrawDeltaTopologySignal a where
-   envDeltaTopologySignal ::
+class AutoEnvSignal a => AutoEnvDeltaSignal a where
+   envDeltaSignal ::
       (DispApp s, TDisp t) => Interp.Envs (TC s t a) -> Env (TC s t a)
 
 instance
    (SDisplay v, D.Storage v a, Disp a, Ord a) =>
-      DrawDeltaTopologySignal (Data v a) where
-   envDeltaTopologySignal = envDeltaTopologySignal_
+      AutoEnvDeltaSignal (Data v a) where
+   envDeltaSignal = envDeltaArgSignal
 
 instance
-   (DispApp s, TDisp t, DrawDeltaTopologySignal a) =>
-      DrawDeltaTopology (TC s t a) where
-   envDeltaTopology = envDeltaTopologySignal
+   (DispApp s, TDisp t, AutoEnvDeltaSignal a) =>
+      AutoEnvDelta (TC s t a) where
+   envDelta = envDeltaSignal
 
 
-envAbsTopologySignal ::
+envAbsArgSignal ::
    (DispApp s, TDisp t, SDisplay v, D.Storage v d, Ord d, Disp d) =>
    Interp.Envs (TC s t (Data v d)) ->
    Env (TC s t (Data v d))
-envAbsTopologySignal (Interp.Envs rec0 e _de _p _dp fn _dn dt x _dx _v st) =
+envAbsArgSignal (Interp.Envs rec0 e _de _p _dp fn _dn dt x _dx _v st) =
    Env rec0
       (makeLookup Idx.Energy e)
       (makeLookup Idx.X x)
@@ -502,11 +502,11 @@ envAbsTopologySignal (Interp.Envs rec0 e _de _p _dp fn _dn dt x _dx _v st) =
       (\dtimeIdx -> formatStContSignal $ M.lookup dtimeIdx dt)
       (showNode rec0 st formatStContSignal)
 
-envDeltaTopologySignal_ ::
+envDeltaArgSignal ::
    (DispApp s, TDisp t, SDisplay v, D.Storage v d, Ord d, Disp d) =>
    Interp.Envs (TC s t (Data v d)) ->
    Env (TC s t (Data v d))
-envDeltaTopologySignal_ (Interp.Envs rec0 _e de _p _dp _fn dn dt _x dx _v st) =
+envDeltaArgSignal (Interp.Envs rec0 _e de _p _dp _fn dn dt _x dx _v st) =
    Env rec0
       (makeLookup Idx.DEnergy de)
       (makeLookup Idx.DX dx)
