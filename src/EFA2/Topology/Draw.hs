@@ -2,7 +2,7 @@ module EFA2.Topology.Draw where
 
 import EFA2.Solver.Equation
           (Term(..), ToIndex, showEqTerm, showEqTerms,
-           LatexString, unLatexString)
+           LatexString(LatexString), unLatexString)
 import EFA2.Interpreter.Env
           (DTimeMap, StorageMap,
            RecordNumber(SingleRecord))
@@ -52,7 +52,7 @@ import qualified Data.NonEmpty.Mixed as NonEmptyM
 
 import Control.Concurrent.MVar (MVar, putMVar, readMVar, newEmptyMVar)
 import Control.Concurrent (forkIO)
-import Control.Monad ((>=>), void)
+import Control.Monad ((>=>), void, liftM2, liftM4)
 
 import Text.Printf (printf)
 
@@ -304,41 +304,69 @@ class AutoEnvList a where
       (Int, NLabel) -> String
    showListNode = showNode
 
-   {-
-   We have to get rid of this because it is undefined for many instances.
-   -}
-   defaultEtaArg :: a
+   divideEnergyList :: [a] -> [a] -> [a]
 
 class AutoEnvList a => AutoEnvDeltaList a where
    formatElement :: a -> String
+   divideDEnergyList :: [a] -> [a] -> [a] -> [a] -> [a]
 
 instance AutoEnvList a => AutoEnv [a] where
-   envAbs = envAbsArgList [defaultEtaArg]
+   envAbs (Interp.Envs r e _de _p _dp _fn _dn dt x _dx _v st) =
+      let lookupEnergy = makeLookup Idx.Energy e
+      in  Env r
+             lookupEnergy
+             (makeLookup Idx.X x)
+             (\sec rec a b ->
+                liftM2 divideEnergyList
+                   (lookupEnergy sec rec a b)
+                   (lookupEnergy sec rec b a))
+             formatAssignList
+             (checkedLookupFormat "envAbsList" formatList dt)
+             (showListNode r st formatStContList)
+
 
 instance AutoEnvDeltaList a => AutoEnvDelta [a] where
-   envDelta = envDeltaArgList [defaultEtaArg]
+   envDelta =
+      envDeltaArg
+         divideDEnergyList
+         (\(x, ys) ->
+            showLineDelta x ++ " = " ++
+            maybe [heart] (concatMap (("\n"++) . formatElement)) ys)
+         (\mys ->
+            case mys of
+               Just ys -> "[ " ++ L.intercalate ", " (map formatElement ys) ++ " ]"
+               Nothing -> [heart])
+         (checkedLookupFormat "envDeltaArg" formatList)
 
 
 instance AutoEnvList Double where
    formatStContList (Just ys) = concatMap (printf "%.6f    ") ys
    formatStContList Nothing = [heart]
    formatList = show
-   defaultEtaArg = 1
+   divideEnergyList = zipWith (/)
 
 instance AutoEnvDeltaList Double where
    formatElement = show
+   divideDEnergyList =
+      L.zipWith4
+         (\ea eb dea deb ->
+            (dea*eb - ea*deb)/((eb+deb)*eb))
+{-
+         (\ea eb dea deb ->
+            (ea+dea)/(eb+deb) - ea/eb)
+-}
 
 instance (Integral a, Show a) => AutoEnvList (Ratio a) where
    formatStContList (Just ys) = unwords $ map show ys
    formatStContList Nothing = [heart]
    formatList = show
-   defaultEtaArg = 1
+   divideEnergyList = zipWith (/)
 
 instance AutoEnvList Char where
    formatStContList (Just ys) = ys
    formatStContList Nothing = "+"
    formatList = id
-   defaultEtaArg = error "Char 1"
+   divideEnergyList x y = "(" ++ x ++ ")/(" ++ y ++ ")"
 
 instance AutoEnvList LatexString where
    formatAssignList (x, ys) = showLineLatex x ++ " = " ++ formatStContList ys
@@ -347,7 +375,10 @@ instance AutoEnvList LatexString where
    formatStContList Nothing = "+"
    formatList = unLatexString . head
    showListNode = showLatexNode
-   defaultEtaArg = error "LatexString 1"
+   divideEnergyList =
+      zipWith
+         (\(LatexString x) (LatexString y) ->
+            LatexString $ "\\frac{" ++ x ++ "}{" ++ y ++ "}")
 
 
 showLatexNode ::
@@ -371,24 +402,14 @@ instance ToIndex a => AutoEnvList (Term a) where
    formatStContList (Just ys) = showEqTerms ys
    formatStContList Nothing = [heart]
    formatList = showEqTerms
-   defaultEtaArg = error "EqTerm 1"
+   divideEnergyList = zipWith (\x y -> x :* Recip y)
 
 instance ToIndex a => AutoEnvDeltaList (Term a) where
    formatElement = showEqTerm
-
-
-envAbsArgList ::
-   (AutoEnvList a) =>
-   [a] -> Interp.Envs [a] -> Env [a]
-envAbsArgList etaArg
-      (Interp.Envs rec e _de _p _dp fn _dn dt x _dx _v st) =
-   Env rec
-      (makeLookup Idx.Energy e)
-      (makeLookup Idx.X x)
-      (makeLookup Idx.FEta $ fmap ($etaArg) fn)
-      formatAssignList
-      (checkedLookupFormat "envAbsList" formatList dt)
-      (showListNode rec st formatStContList)
+   divideDEnergyList =
+      L.zipWith4
+         (\ea eb dea deb ->
+            (dea :* eb :+ Minus (ea :* deb)) :* Recip ((eb:+deb):*eb))
 
 
 showNode ::
@@ -408,36 +429,27 @@ showNode rn st content (num, NLabel sec nid ty) =
 
 
 envDeltaArg ::
+   (a -> a -> a -> a -> a) ->
    ((Line, Maybe a) -> String) ->
    (Maybe a -> String) ->
    (DTimeMap a -> Idx.DTime -> String) ->
-   a -> Interp.Envs a ->
+   Interp.Envs a ->
    Env a
-envDeltaArg formatAssign content tshow etaArg
-      (Interp.Envs rec _e de _p _dp _fn dn dt _x dx _v st) =
-   Env rec
-      (makeLookup Idx.DEnergy de)
-      (makeLookup Idx.DX dx)
-      (makeLookup Idx.DEta $ fmap ($etaArg) dn)
-      formatAssign
-      (tshow dt)
-      (showNode rec st content)
+envDeltaArg divide formatAssign content tshow
+      (Interp.Envs r e de _p _dp _fn _dn dt _x dx _v st) =
+   let lookupEnergy = makeLookup Idx.Energy e
+       lookupDEnergy = makeLookup Idx.DEnergy de
+   in  Env r
+          lookupDEnergy
+          (makeLookup Idx.DX dx)
+          (\sec rec a b ->
+             liftM4 divide
+                (lookupEnergy sec rec a b) (lookupEnergy sec rec b a)
+                (lookupDEnergy sec rec a b) (lookupDEnergy sec rec b a))
+          formatAssign
+          (tshow dt)
+          (showNode r st content)
 
-envDeltaArgList ::
-   (AutoEnvDeltaList a) =>
-   [a] -> Interp.Envs [a] ->
-   Env [a]
-envDeltaArgList etaArg =
-   envDeltaArg
-      (\(x, ys) ->
-         showLineDelta x ++ " = " ++
-         maybe [heart] (concatMap (("\n"++) . formatElement)) ys)
-      (\mys ->
-         case mys of
-            Just ys -> "[ " ++ L.intercalate ", " (map formatElement ys) ++ " ]"
-            Nothing -> [heart])
-      (checkedLookupFormat "envDeltaArgList" formatList)
-      etaArg
 
 class AutoEnvSignal a where
    envAbsSignal ::
