@@ -19,7 +19,7 @@ import EFA2.Topology.Draw
 import qualified EFA2.Signal.Signal as S
 import EFA2.Signal.Signal (Sc, PSigL, toScalar)
 
-import EFA2.Signal.Sequence
+import qualified EFA2.Signal.Sequence as Seq
 import EFA2.Signal.SequenceData
 
 
@@ -82,7 +82,7 @@ main = do
 
 
       pRec = PowerRecord (S.fromList time) pMap
-      (_, sqTopo) = makeSequence pRec topo
+      sqTopo = Seq.makeSeqFlowGraph topo $ Seq.makeSequence pRec
 
       resSym = mapEqTermEnv ((:[]) . simplify) $ symbolic sqTopo
 

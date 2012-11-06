@@ -20,7 +20,7 @@ import EFA2.Interpreter.Arith
 import EFA2.Topology.Draw
 
 import qualified EFA2.Signal.Signal as S
-import EFA2.Signal.Sequence
+import qualified EFA2.Signal.Sequence as Seq
 import EFA2.Signal.SequenceData
 import EFA2.Signal.Signal (TC(TC), PSigL, UTFSig, Test1, (.++))
 import EFA2.Signal.Typ
@@ -132,7 +132,7 @@ main = do
                            (PPosIdx 3 1, mkSig n s31 .++ (S.fromList [head s31] :: PSigL)) ]
 
       pRec = PowerRecord (S.fromList time) pMap
-      (_, sqTopo) = makeSequence pRec topo
+      sqTopo = Seq.makeSeqFlowGraph topo $ Seq.makeSequence pRec
 
       lst = [1, 2]
       etas = [0.2]

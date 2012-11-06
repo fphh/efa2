@@ -18,7 +18,7 @@ import EFA2.Topology.Draw (drawTopology)
 
 import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Signal.Signal as S
-import EFA2.Signal.Sequence (makeSequence)
+import qualified EFA2.Signal.Sequence as Seq
 import EFA2.Signal.SequenceData (PPosIdx(..), PowerRecord(..))
 import EFA2.Signal.SignalFill ((.-), (.+), (./))
 import EFA2.Signal.Signal
@@ -53,7 +53,7 @@ topo = mkGraph (makeNodes nodes) (makeEdges edges)
 
 -- -- | B. Generating a sequence Topology using a fake dataset
 sqTopo :: Topology
-sqTopo = snd $ makeSequence pRec topo
+sqTopo = Seq.makeSeqFlowGraph topo $ Seq.makeSequence pRec
   where
     s01 = [0, 2, 2, 0, 0, 0]
     s10 = [0, 0.8, 0.8, 0, 0, 0]

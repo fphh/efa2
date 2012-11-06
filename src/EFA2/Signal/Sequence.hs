@@ -99,22 +99,31 @@ genSequFlow sqPRec = fmap recFullIntegrate sqPRec
 --genSequFlow sqPRec = fmap recFullIntegrate sqPRec
 
 -- makeSequence :: PowerRecord -> Topology -> ([Envs (Scal (Typ UT UT UT) Val)], Topology)
-makeSequence ::
-   ListPowerRecord ->
-   Topology ->
-   (SequData (Envs
+makeRecSequence ::
+   SequFlowRecord FlowRecord ->
+   SequData (Envs
        (TC
           FSignal
           (Typ UT UT UT)
-          (Data (UV.Vector :> Nil) Val))),
-    Topology)
-makeSequence pRec topo =
-   (zipWithSecIdxs (flip fromFlowRecord (Idx.Record 0)) sqFRec,
-    Flow.mkSequenceTopology $
-    Flow.genSectionTopology $
-    Flow.genSequFlowTops topo $
-    Flow.genSequFState sqFRec)
-  where sqFRec = genSequFlow $ snd $ genSequ $ addZeroCrossings pRec
+          (Data (UV.Vector :> Nil) Val)))
+makeRecSequence =
+   zipWithSecIdxs (flip fromFlowRecord (Idx.Record 0))
+
+makeSeqFlowGraph ::
+   Topology ->
+   SequFlowRecord FlowRecord ->
+   Topology
+makeSeqFlowGraph topo =
+   Flow.mkSequenceTopology .
+   Flow.genSectionTopology .
+   Flow.genSequFlowTops topo .
+   Flow.genSequFState
+
+makeSequence ::
+   ListPowerRecord ->
+   SequFlowRecord FlowRecord
+makeSequence =
+   genSequFlow . snd . genSequ . addZeroCrossings
 
 -----------------------------------------------------------------------------------
 {-
