@@ -3,21 +3,23 @@ module Main where
 
 import qualified Data.Map as M
 
-import EFA2.Topology.Topology
+import EFA2.Topology.EfaGraph (mkGraph)
+import EFA2.Topology.Topology (makeAllEquations, makeNodes, makeEdges)
 import EFA2.Topology.TopologyData
 
-import EFA2.Solver.Equation
-import EFA2.Solver.EquationOrder
+import EFA2.Solver.Equation (give, toAbsEquations)
+import EFA2.Solver.EquationOrder (order)
 
+import qualified EFA2.Signal.Index as Idx
 import EFA2.Interpreter.Env
 import EFA2.Interpreter.Interpreter
-import EFA2.Interpreter.Arith
+import EFA2.Interpreter.Arith (Val)
 
-import EFA2.Topology.Draw
+import EFA2.Topology.Draw (drawTopology)
 
 import qualified EFA2.Signal.Signal as S
-import EFA2.Signal.Sequence
-import EFA2.Signal.SequenceData
+import qualified EFA2.Signal.Sequence as Seq
+import EFA2.Signal.SequenceData (PPosIdx(PPosIdx), PowerRecord(..), SequData(..))
 import EFA2.Signal.Signal (PSigL, TSigL)
 
 
@@ -29,6 +31,14 @@ topo = mkGraph (makeNodes nodes) (makeEdges edges)
 
 mkSig :: Int -> ([Val] -> PSigL)
 mkSig n = S.fromList . concat . replicate n
+
+
+rec :: Idx.Record
+rec = Idx.Record 0
+
+secm, sec3 :: Idx.Section
+secm = Idx.Section (-1)
+sec3 = Idx.Section 3
 
 
 main :: IO ()
@@ -59,29 +69,32 @@ main = do
                            (PPosIdx 1 3, mkSig n (s13 ++ s13')),
                            (PPosIdx 3 1, mkSig n (s31 ++ s31')) ]
 
-      (sqEnvs, sqTopo) = makeSequence (PowerRecord time pMap) topo 
+      sqFRec = Seq.makeSequence (PowerRecord time pMap)
+      sqTopo = Seq.makeSeqFlowGraph topo sqFRec
+      sqEnvs = Seq.makeRecSequence sqFRec
 
-      --storage0 = PowerIdx (-1) 0 24 25
-      storage0 = PowerIdx (-1) 0 16 17
+      --storage0 = Idx.Power secm rec 24 25
+      storage0 = Idx.Power secm rec 16 17
 
-      (sqEnvs', ts') = makeAllEquations sqTopo (map g sqEnvs) -- { recordNumber = SingleRecord 0 })
-      g x = x { recordNumber = SingleRecord 0 }
+      (sqEnvs', ts') =
+         makeAllEquations sqTopo (case sqEnvs of SequData l -> map g l) -- { recordNumber = SingleRecord rec })
+      g x = x { recordNumber = SingleRecord rec }
       sigs = powerMap sqEnvs'
       ts = [give storage0] ++ ts'
 
-      envs = sqEnvs' { recordNumber = SingleRecord 0,
+      envs = sqEnvs' { recordNumber = SingleRecord rec,
                        powerMap = M.insert storage0 (S.fromList [3.0]) (M.map (S.map abs) sigs),
-                       fetaMap = M.singleton (FEtaIdx 3 0 15 13) (S.map (const 0.4)) }
+                       fetaMap = M.singleton (Idx.FEta sec3 rec 15 13) (S.map (const 0.4)) }
 
 
       gd = map (eqToInTerm envs) (toAbsEquations $ order ts)
 
       --res :: Envs [Val]
-      res = interpretFromScratch (SingleRecord 0) 1 gd
+      res = interpretFromScratch (SingleRecord rec) 1 gd
 
 
   print sqEnvs'
-  putStrLn (showInTerms gd)
+  putStrLn (unlines $ map showInEquation gd)
 
   --putStrLn (show $ length gd)
   drawTopology sqTopo res
