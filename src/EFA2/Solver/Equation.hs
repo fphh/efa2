@@ -158,10 +158,10 @@ instance (ToIndex idx) => MkTermC (Term idx) where
    mkTerm = fmap toIndex
 
 
-add :: NonEmpty.T [] EqTerm -> EqTerm
+add :: NonEmpty.T [] (Term a) -> Term a
 add = NonEmpty.foldl1 (:+)
 
-mult :: NonEmpty.T [] EqTerm -> EqTerm
+mult :: NonEmpty.T [] (Term a) -> Term a
 mult = NonEmpty.foldl1 (:*)
 
 
@@ -418,7 +418,7 @@ transformEq unknown t =
 --------------------------------------------------------------------
 
 
-pushMult :: EqTerm -> EqTerm
+pushMult :: Term a -> Term a
 pushMult t = add $ pushMult' t
 
 {-
@@ -429,7 +429,7 @@ pushMult t =
       _       ->  add (pushMult' t)
 -}
 
-pushMult' :: EqTerm -> NonEmpty.T [] EqTerm
+pushMult' :: Term a -> NonEmpty.T [] (Term a)
 pushMult' (Minus u) = fmap Minus (pushMult' u)
 pushMult' (Recip u) = NonEmpty.singleton $ Recip $ pushMult u
 pushMult' (u :+ v) = NonEmpty.append (pushMult' u) (pushMult' v)
@@ -444,9 +444,9 @@ iterateUntilFix f =
    fst . Stream.head . Stream.dropWhile (uncurry (/=)) .
    streamPairs . Stream.iterate f
 
-simplify :: EqTerm -> EqTerm
+simplify :: Eq a => Term a -> Term a
 simplify = iterateUntilFix simplify' . pushMult
-  where simplify' :: EqTerm -> EqTerm
+  where simplify' :: Eq a => Term a -> Term a
         simplify' (Const x :+ Const y) = Const $ x+y
         simplify' ((Const 0.0) :+ x) = simplify' x
         simplify' (x :+ (Const 0.0)) = simplify' x
