@@ -2,8 +2,9 @@
 
 module EFA2.Topology.Flow (module EFA2.Topology.Flow) where
 
+import qualified EFA2.Topology.EfaGraph as Gr
 import EFA2.Topology.EfaGraph
-          (InOutGraphFormat, Edge(Edge), mkGraph,
+          (Edge(Edge), mkGraph,
            labNodes, labEdges,
            insNodes, insEdges,
            nmap, nodeSet)
@@ -69,13 +70,13 @@ copySeqTopology (SequData tops) =
 
 
 mkIntersectionEdges ::
-   Topology -> Topo.LNode ->
-   [InOutGraphFormat Topo.LNode] -> [Topo.LEdge]
-mkIntersectionEdges topo startNode stores =
+   (node, NLabel) ->
+   [Gr.InOut node Topo.NLabel Topo.ELabel] -> [(Edge node, ELabel)]
+mkIntersectionEdges startNode stores =
    concatMap (\(n, ns) -> map (\x -> (Edge n x, e)) ns) $
    map (mapSnd (\l -> map fst (filter (q l) outs))) $
    startNode:ins
-  where (instores, outstores) = partitionInOutStatic topo stores
+  where (instores, outstores) = partitionInOutStatic stores
 
         outs = map snd3 outstores
         ins = map snd3 instores
@@ -100,7 +101,7 @@ mkSequenceTopology sd = res
              (nid2, NLabel (Idx.Section (-1)) (-1) Source) )
 
         interSecEs =
-           concat $ zipWith (mkIntersectionEdges sqTopo) (map fst startNodes) grpStores
+           concat $ zipWith mkIntersectionEdges (map fst startNodes) grpStores
 
         e = defaultELabel { edgeType = InnerStorageEdge }
         startEdges =

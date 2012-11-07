@@ -306,22 +306,20 @@ nodeSet :: EfaGraph n nl el -> S.Set n
 nodeSet = M.keysSet . nodeLabels
 
 
-type InOutGraphFormat a = ([a], a, [a])
+type InOut n nl el = ([LNode n el], LNode n nl, [LNode n el])
 
 mkInOutGraphFormat ::
-   (Ord n) =>
-   (LNode n a -> c) -> EfaGraph n a b -> [InOutGraphFormat c]
-mkInOutGraphFormat f g =
-   let ns = nodeLabels g
-       filt n =
-          map f . M.toList . M.intersectionWith const ns .
-          mapFromSet (const ()) . M.findWithDefault S.empty n
+   (Ord n) => EfaGraph n nl el -> [InOut n nl el]
+mkInOutGraphFormat g =
+   let filt edge n =
+          map (\m -> (m, M.findWithDefault (error "mkInOutGraphFormat: edgeLabel not found") (edge m n) $ edgeLabels g)) .
+          S.toList . M.findWithDefault S.empty n
    in  map
           (\nl@(n,_) ->
-             (filt n $ inEdges g, f nl, filt n $ outEdges g)) $
-       M.toList ns
+             (filt Edge n $ inEdges g, nl, filt (flip Edge) n $ outEdges g)) $
+       M.toList $ nodeLabels g
 
 mapGraph ::
    (Ord n) =>
-   (InOutGraphFormat (LNode n a) -> c) -> EfaGraph n a b -> [c]
-mapGraph f g = map f (mkInOutGraphFormat id g)
+   (InOut n nl el -> a) -> EfaGraph n nl el -> [a]
+mapGraph f g = map f (mkInOutGraphFormat g)

@@ -30,14 +30,13 @@ module EFA2.Topology.TopologyData (
 
 import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Topology.EfaGraph as Gr
-import EFA2.Topology.EfaGraph
-          (EfaGraph, InOutGraphFormat, mkInOutGraphFormat, getLEdge)
+import EFA2.Topology.EfaGraph (EfaGraph, mkInOutGraphFormat, getLEdge)
 import Data.Graph.Inductive (Node)
 
 import qualified Data.Map as M
 import qualified Data.List as L
 import Data.Ord (comparing)
-import Data.Maybe (mapMaybe, fromJust)
+import Data.Maybe (mapMaybe)
 
 
 type LNode = Gr.LNode Node NLabel
@@ -140,12 +139,12 @@ fromFlowToSecTopology :: FlowTopology -> SecTopology
 fromFlowToSecTopology = id
 
 -- | Active storages, grouped by storage number, sorted by section number.
-getActiveStores :: Topology -> [[InOutGraphFormat LNode]]
+getActiveStores :: Topology -> [[Gr.InOut Node NLabel ELabel]]
 getActiveStores topo = map (sectionSort . filter (isActiveSt topo)) groupedIof
   where groupedIof =
            M.elems $ M.fromListWith (++) $
            mapMaybe (\n -> fmap (,[n]) $ stNum n) $
-           mkInOutGraphFormat id topo
+           mkInOutGraphFormat topo
         stNum (_, (_, l), _) =
            case nodetypeNLabel l of
               Storage x -> Just x
@@ -154,7 +153,7 @@ getActiveStores topo = map (sectionSort . filter (isActiveSt topo)) groupedIof
         sectionSort = L.sortBy (comparing sec)
         sec (_, (_, l), _) = sectionNLabel l
 
-isActiveSt :: Topology -> InOutGraphFormat LNode -> Bool
+isActiveSt :: Topology -> Gr.InOut Node nl el -> Bool
 isActiveSt topo (ins, (nid, _), outs) = res
   where inEs = map ((,nid) . fst) ins
         outEs = map ((nid,) . fst) outs
@@ -164,11 +163,9 @@ isActiveSt topo (ins, (nid, _), outs) = res
 -- | Partition the storages in in and out storages, looking only at edges, not at values.
 -- This means that nodes with in AND out edges cannot be treated.
 partitionInOutStatic ::
-  Topology -> [InOutGraphFormat LNode] ->
-  ([InOutGraphFormat LNode], [InOutGraphFormat LNode])
-partitionInOutStatic topo iof = L.partition p iof
-  where p (ins, (nid, _), outs)  =  null (filter q ins) /= null (filter r outs)
-          where q (n, _) = flowDirection e == WithDir && (isOriginalEdge e || isInnerStorageEdge e)
-                  where e = snd $ fromJust (getLEdge topo n nid)
-                r (n, _) = flowDirection e == AgainstDir && (isOriginalEdge e || isInnerStorageEdge e)
-                  where e = snd $ fromJust (getLEdge topo nid n)
+  [Gr.InOut n nl ELabel] ->
+  ([Gr.InOut n nl ELabel], [Gr.InOut n nl ELabel])
+partitionInOutStatic = L.partition p
+  where p (ins, _, outs)  =  null (filter q ins) /= null (filter r outs)
+          where q (_, e) = flowDirection e == WithDir && (isOriginalEdge e || isInnerStorageEdge e)
+                r (_, e) = flowDirection e == AgainstDir && (isOriginalEdge e || isInnerStorageEdge e)
