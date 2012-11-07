@@ -30,11 +30,12 @@ module EFA2.Topology.TopologyData (
 
 import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Topology.EfaGraph as Gr
-import EFA2.Topology.EfaGraph (EfaGraph, mkInOutGraphFormat, getLEdge)
+import EFA2.Topology.EfaGraph (EfaGraph, mkInOutGraphFormat)
 import Data.Graph.Inductive (Node)
 
 import qualified Data.Map as M
 import qualified Data.List as L
+import Data.Tuple.HT (mapFst)
 import Data.Ord (comparing)
 import Data.Maybe (mapMaybe)
 
@@ -140,7 +141,7 @@ fromFlowToSecTopology = id
 
 -- | Active storages, grouped by storage number, sorted by section number.
 getActiveStores :: Topology -> [[Gr.InOut Node NLabel ELabel]]
-getActiveStores topo = map (sectionSort . filter (isActiveSt topo)) groupedIof
+getActiveStores topo = map (sectionSort . filter isActiveSt) groupedIof
   where groupedIof =
            M.elems $ M.fromListWith (++) $
            mapMaybe (\n -> fmap (,[n]) $ stNum n) $
@@ -153,12 +154,12 @@ getActiveStores topo = map (sectionSort . filter (isActiveSt topo)) groupedIof
         sectionSort = L.sortBy (comparing sec)
         sec (_, (_, l), _) = sectionNLabel l
 
-isActiveSt :: Topology -> Gr.InOut Node nl el -> Bool
-isActiveSt topo (ins, (nid, _), outs) = res
-  where inEs = map ((,nid) . fst) ins
-        outEs = map ((nid,) . fst) outs
-        es = mapMaybe (uncurry (getLEdge topo)) (inEs ++ outEs)
-        res = any (isActiveEdge . snd) es
+isActiveSt :: Gr.InOut Node nl ELabel -> Bool
+isActiveSt (ins, (nid, _), outs) =
+   any (isActiveEdge . snd) $
+      map (mapFst $ flip Gr.Edge nid) ins
+      ++
+      map (mapFst $ Gr.Edge nid) outs
 
 -- | Partition the storages in in and out storages, looking only at edges, not at values.
 -- This means that nodes with in AND out edges cannot be treated.
