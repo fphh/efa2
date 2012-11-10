@@ -35,7 +35,6 @@ import Data.Graph.Inductive (Node)
 
 import qualified Data.Map as M
 import qualified Data.List as L
-import Data.Tuple.HT (mapFst)
 import Data.Ord (comparing)
 import Data.Maybe (mapMaybe)
 
@@ -154,12 +153,9 @@ getActiveStores topo = map (sectionSort . filter isActiveSt) groupedIof
         sectionSort = L.sortBy (comparing sec)
         sec (_, (_, l), _) = sectionNLabel l
 
-isActiveSt :: Gr.InOut Node nl ELabel -> Bool
-isActiveSt (ins, (nid, _), outs) =
-   any (isActiveEdge . snd) $
-      map (mapFst $ flip Gr.Edge nid) ins
-      ++
-      map (mapFst $ Gr.Edge nid) outs
+isActiveSt :: Gr.InOut n nl ELabel -> Bool
+isActiveSt (ins, _, outs) =
+   any isActiveEdge $ map snd $ ins ++ outs
 
 -- | Partition the storages in in and out storages, looking only at edges, not at values.
 -- This means that nodes with in AND out edges cannot be treated.
