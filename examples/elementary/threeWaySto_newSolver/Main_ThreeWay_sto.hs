@@ -37,7 +37,7 @@ rec :: Idx.Record
 rec = Idx.Record 0
 
 secm, sec3 :: Idx.Section
-secm = Idx.Section (-1)
+secm = Idx.initSection
 sec3 = Idx.Section 3
 
 

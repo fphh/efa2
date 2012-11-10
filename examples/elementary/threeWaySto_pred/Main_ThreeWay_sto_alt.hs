@@ -40,7 +40,7 @@ mkSig n = S.fromList . concat . replicate n
 sec0, sec1, secm :: Idx.Section
 sec0 = Idx.Section 0
 sec1 = Idx.Section 1
-secm = Idx.Section (-1)
+secm = Idx.initSection
 
 rec :: Idx.Record
 rec = Idx.Record 0

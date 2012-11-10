@@ -88,11 +88,11 @@ variation sqTopo x y = trace (showEqTerms ts'') $ interpretFromScratch (SingleRe
         (sqEnvs, ts') = makeAllEquations sqTopo [givenEnv0, givenEnv1, givenEnv2, givenEnv3]
 
 
-        storage0 = EnergyIdx (-1) 0 17 16
-        dtime0 = DTimeIdx (-1) 0
+        storage0 = EnergyIdx Idx.initSection 0 17 16
+        dtime0 = DTimeIdx Idx.initSection 0
         ts = [give storage0, give dtime0] ++ ts'
 
-        sqEnvs' = sqEnvs { dtimeMap = M.insert (DTimeIdx (-1) 0) (S.fromList [1.0]) (dtimeMap sqEnvs),
+        sqEnvs' = sqEnvs { dtimeMap = M.insert (DTimeIdx Idx.initSection 0) (S.fromList [1.0]) (dtimeMap sqEnvs),
                            energyMap = M.insert storage0 (S.fromList [3.0]) (energyMap sqEnvs) }
 
         ts'' = toAbsEquations $ order ts

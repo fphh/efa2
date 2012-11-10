@@ -97,8 +97,8 @@ mkSequenceTopology sd = res
         maxNode = 1 + (S.findMax $ nodeSet sqTopo)
         startNodes = zipWith f (map (,maxNode) [maxNode+1 ..]) storeLabs
         f (nid1, nid2) (NLabel _ n (Storage sn)) =
-           ( (nid1, NLabel (Idx.Section (-1)) n (InitStorage sn)),
-             (nid2, NLabel (Idx.Section (-1)) (-1) Source) )
+           ( (nid1, NLabel Idx.initSection n (InitStorage sn)),
+             (nid2, NLabel Idx.initSection (-1) Source) )
 
         interSecEs =
            concat $ zipWith mkIntersectionEdges (map fst startNodes) grpStores

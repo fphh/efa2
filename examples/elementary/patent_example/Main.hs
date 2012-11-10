@@ -103,11 +103,11 @@ selfEta :: (MkVarC a, Ord a) => [a] -> M.Map a (b -> EqTerm)
 selfEta ns = M.fromList $ map (\x -> (x, const $ mkVar x)) ns
 
 dtimes0sym :: DTimeMap EqTerm
-dtimes0sym = selfMap [ DTimeIdx (-1) 0, DTimeIdx 0 0, DTimeIdx 1 0, DTimeIdx 2 0 ]
+dtimes0sym = selfMap [ DTimeIdx Idx.initSection 0, DTimeIdx 0 0, DTimeIdx 1 0, DTimeIdx 2 0 ]
 
 
 power0sym :: PowerMap EqTerm
-power0sym = selfMap [ PowerIdx (-1) 0 4 (-1), PowerIdx (-1) 0 5 (-1),
+power0sym = selfMap [ PowerIdx Idx.initSection 0 4 Idx.initSection, PowerIdx Idx.initSection 0 5 Idx.initSection,
                       PowerIdx 0 0 0 1, PowerIdx 2 0 3 2, PowerIdx 1 0 3 2 ]
 
 eta0sym :: FEtaMap EqTerm
@@ -144,15 +144,15 @@ envs0sym = emptyEnv { recordNumber = SingleRecord 0,
 -- Numeric =====================================================================
 
 dtimes0num :: DTimeMap Sc
-dtimes0num = M.fromList [ (DTimeIdx (-1) 0, toScalar 1.0),
+dtimes0num = M.fromList [ (DTimeIdx Idx.initSection 0, toScalar 1.0),
                           (DTimeIdx 0 0, toScalar 1.0),
                           (DTimeIdx 1 0, toScalar 1.0),
                           (DTimeIdx 2 0, toScalar 1.0) ]
 
 
 power0num :: PowerMap Sc
-power0num = M.fromList [ (PowerIdx (-1) 0 4 (-1), toScalar 8.0),
-                         (PowerIdx (-1) 0 5 (-1), toScalar 6.0),
+power0num = M.fromList [ (PowerIdx Idx.initSection 0 4 (-1), toScalar 8.0),
+                         (PowerIdx Idx.initSection 0 5 (-1), toScalar 6.0),
                          (PowerIdx 0 0 0 1, toScalar 3.5),
                          (PowerIdx 2 0 3 2, toScalar 2.0),
                          (PowerIdx 1 0 3 2, toScalar 2.5) ]

@@ -69,7 +69,7 @@ main = do
 
       (sqEnvs, sqTopo) = makeSequence (PowerRecord time pMap) topo
 
-      storage0 = PowerIdx (-1) 0 24 25
+      storage0 = PowerIdx Idx.initSection 0 24 25
 
       (sqEnvs', ts') = makeAllEquations sqTopo (zipWith f [0..] sqEnvs)
       f x env = env { recordNumber = SingleRecord x }

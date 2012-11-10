@@ -7,6 +7,9 @@ instance Enum Section where
    fromEnum (Section n) = n
    toEnum n = Section n
 
+initSection :: Section
+initSection = Section (-1)
+
 
 newtype Record = Record Int deriving (Show, Eq, Ord)
 

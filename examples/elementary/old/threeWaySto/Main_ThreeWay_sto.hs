@@ -101,9 +101,9 @@ main = do
 
 
       --TheGraph sqTopo sigs = loop
-      --storage0 = PowerIdx (-1) 0 24 25
-      storage0 = PowerIdx (-1) 0 24 25
-      --storage0 = PowerIdx (-1) 0 16 17
+      --storage0 = PowerIdx Idx.initSection 0 24 25
+      storage0 = PowerIdx Idx.initSection 0 24 25
+      --storage0 = PowerIdx Idx.initSection 0 16 17
 
       (sqEnvs', ts') = makeAllEquations sqTopo sqEnvs
       --ts = envToEqTerms sigs ++ mkEdgeEq sqTopo ++ mkNodeEq sqTopo
