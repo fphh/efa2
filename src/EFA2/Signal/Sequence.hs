@@ -3,7 +3,7 @@
 
 module EFA2.Signal.Sequence where
 
-import EFA2.Interpreter.Env (Envs(..), emptyEnv)
+import EFA2.Interpreter.Env (Envs(..), NoRecord, emptyEnv)
 
 import qualified EFA2.Topology.Flow as Flow
 import EFA2.Topology.TopologyData (Topology)
@@ -62,16 +62,16 @@ data EventType = LeftEvent
 
 
 -- | From PowerRecord
---fromFlowRecord :: Idx.Section -> Idx.Record -> FlowRecord -> Envs FSig -- [Val]
+--fromFlowRecord :: Idx.Section -> Idx.Record -> FlowRecord -> Envs rec FSig -- [Val]
 
---fromFlowRecord :: Idx.Section -> Idx.Record -> FlRecord a b -> Envs a --UTFSig
+--fromFlowRecord :: Idx.Section -> Idx.Record -> FlRecord a b -> Envs rec a --UTFSig
 fromFlowRecord ::
    Idx.Section ->
    Idx.Record ->
    FlRecord
       (TC s1 (Typ delta2 t2 p2) (Data c1 d1))
       (TC s1 (Typ delta1 t1 p1) (Data c1 d1)) ->
-   Envs (TC s1 (Typ UT UT UT) (Data c1 d1))
+   Envs NoRecord (TC s1 (Typ UT UT UT) (Data c1 d1))
 fromFlowRecord secIdx recIdx (FlRecord dTime flowMap) =
   emptyEnv { energyMap = M.map untype $ M.mapKeys f flowMap, dtimeMap = M.fromList [(Idx.DTime secIdx recIdx, untype dTime)] }
   where f (PPosIdx idx1 idx2) = Idx.Energy secIdx recIdx idx1 idx2
@@ -98,10 +98,10 @@ genSequFlow sqPRec = fmap recFullIntegrate sqPRec
 --genSequFlow :: SequPwrRecord -> SequFlowRecord FlowRecord
 --genSequFlow sqPRec = fmap recFullIntegrate sqPRec
 
--- makeSequence :: PowerRecord -> Topology -> ([Envs (Scal (Typ UT UT UT) Val)], Topology)
+-- makeSequence :: PowerRecord -> Topology -> ([Envs rec (Scal (Typ UT UT UT) Val)], Topology)
 makeRecSequence ::
    SequFlowRecord FlowRecord ->
-   SequData (Envs
+   SequData (Envs NoRecord
        (TC
           FSignal
           (Typ UT UT UT)

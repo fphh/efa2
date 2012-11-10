@@ -17,7 +17,7 @@ import EFA2.Interpreter.Env as Env
 import EFA2.Utils.Utils (safeLookup)
 
 
-eqToInTerm :: Show a => Envs a -> AbsAssign -> InEquation a
+eqToInTerm :: Show a => Envs rec a -> AbsAssign -> InEquation a
 eqToInTerm envs (GivenIdx t) =
    InEqual t $
    case t of
@@ -59,7 +59,7 @@ interpretRhs ::
     D.Storage c a, S.Const s c, S.Arith s s ~ s,
     Fractional a, Base.DArith0 a, Base.BSum a, Base.BProd a a) =>
    Int ->
-   Envs (Signal s c a) ->
+   Envs rec (Signal s c a) ->
    InRhs (Signal s c a) ->
    Signal s c a
 interpretRhs len envs rhs =
@@ -72,7 +72,7 @@ interpretTerm ::
     D.Storage c a, S.Const s c, S.Arith s s ~ s,
     Fractional a, Base.DArith0 a, Base.BSum a, Base.BProd a a) =>
    Int ->
-   Envs (Signal s c a) ->
+   Envs rec (Signal s c a) ->
    EqTerm ->
    Signal s c a
 interpretTerm len envs = go
@@ -117,7 +117,7 @@ insert ::
     Fractional a, Base.DArith0 a, Base.BSum a, Base.BProd a a) =>
    Int ->
    k ->
-   Envs (Signal s c a) ->
+   Envs rec (Signal s c a) ->
    InRhs (Signal s c a) ->
    M.Map k (Signal s c a) ->
    M.Map k (Signal s c a)
@@ -129,9 +129,9 @@ interpretEq ::
     D.Storage c a, S.Const s c, S.Arith s s ~ s,
     Fractional a, Base.DArith0 a, Base.BSum a, Base.BProd a a) =>
    Int ->
-   Envs (Signal s c a) ->
+   Envs rec (Signal s c a) ->
    InEquation (Signal s c a) ->
-   Envs (Signal s c a)
+   Envs rec (Signal s c a)
 interpretEq len envs eq =
    case eq of
       (InEqual (Energy idx) rhs) -> envs { energyMap = insert len idx envs rhs (energyMap envs) }
@@ -162,8 +162,9 @@ interpretFromScratch ::
    (Show v, v ~ D.Apply c a, D.ZipWith c,
     D.Storage c a, S.Const s c, S.Arith s s ~ s,
     Fractional a, Base.DArith0 a, Base.BSum a, Base.BProd a a) =>
-   RecordNumber ->
+   rec ->
    Int ->
    [InEquation (Signal s c a)] ->
-   Envs (Signal s c a)
-interpretFromScratch rec len ts = (L.foldl' (interpretEq len) emptyEnv ts) { recordNumber = rec }
+   Envs rec (Signal s c a)
+interpretFromScratch rec len ts =
+   (L.foldl' (interpretEq len) emptyEnv ts) { recordNumber = rec }

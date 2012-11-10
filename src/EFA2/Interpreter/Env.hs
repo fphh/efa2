@@ -117,7 +117,8 @@ type StorageMap a = M.Map Idx.Storage a
 
 
 
-data Envs a = Envs { recordNumber :: RecordNumber,
+data Envs rec a =
+              Envs { recordNumber :: rec,
                      energyMap :: EnergyMap a,
                      denergyMap :: DEnergyMap a,
                      powerMap :: PowerMap a,
@@ -140,31 +141,28 @@ instance Eq (a -> a) where
 instance Ord (a -> a) where
          compare _ _ = EQ
 
-emptyEnv :: Envs a
+emptyEnv :: Envs NoRecord a
 emptyEnv = Envs NoRecord M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty
 
 
-data RecordNumber = NoRecord
-                  | SingleRecord Idx.Record
-                  | MixedRecord [Idx.Record] deriving (Eq, Ord, Show)
+data NoRecord = NoRecord deriving (Eq, Ord, Show)
+newtype SingleRecord = SingleRecord {fromSingleRecord :: Idx.Record} deriving (Eq, Ord, Show)
+newtype MixedRecord = MixedRecord {fromMixedRecord :: [Idx.Record]} deriving (Eq, Ord, Show)
 
-isSingleRecord :: RecordNumber -> Bool
-isSingleRecord (SingleRecord _) = True
-isSingleRecord _ = False
 
-fromSingleRecord :: RecordNumber -> Idx.Record
-fromSingleRecord (SingleRecord x) = x
-fromSingleRecord x = error $ "fromSingleRecord: not a single record: " ++ show x
+class RecordNumber rec where
+   uniteRecordNumbers :: [rec] -> MixedRecord
 
-uniteRecordNumbers :: [RecordNumber] -> RecordNumber
-uniteRecordNumbers [] = NoRecord
-uniteRecordNumbers rs = L.foldl' f (MixedRecord []) rs
-  where f NoRecord _ = NoRecord
-        f _ NoRecord = NoRecord
-        f (MixedRecord xs) (SingleRecord x) = MixedRecord (xs ++ [x])
-        f (MixedRecord xs) (MixedRecord ys) = MixedRecord (xs ++ ys)
+instance RecordNumber SingleRecord where
+   uniteRecordNumbers =
+      MixedRecord . map fromSingleRecord
 
-envUnion :: [Envs a] -> Envs a
+instance RecordNumber MixedRecord where
+   uniteRecordNumbers =
+      MixedRecord . concatMap fromMixedRecord
+
+
+envUnion :: (RecordNumber rec) => [Envs rec a] -> Envs MixedRecord a
 envUnion envs = Envs { recordNumber = uniteRecordNumbers (map recordNumber envs),
                        energyMap = M.unions $ map energyMap envs,
                        denergyMap = M.unions $ map denergyMap envs,
@@ -179,11 +177,10 @@ envUnion envs = Envs { recordNumber = uniteRecordNumbers (map recordNumber envs)
                        storageMap = M.unions $ map storageMap envs }
 
 
-separateEnvs :: Envs a -> [Envs a]
+separateEnvs :: Envs MixedRecord a -> [Envs SingleRecord a]
 separateEnvs envs =
    case recordNumber envs of
       MixedRecord lst -> map f (L.sort lst)
-      _ -> error "separateEnvs: no mixed env"
   where p n k _ = n == getIdxRecNum k
         f n = emptyEnv { recordNumber = SingleRecord n,
                          energyMap = M.filterWithKey (p n) (energyMap envs),
@@ -198,21 +195,21 @@ separateEnvs envs =
                          varMap = M.filterWithKey (p n) (varMap envs),
                          storageMap = M.filterWithKey (p n) (storageMap envs) }
 
-checkEnvsForDelta :: Envs a -> Envs a -> Bool
+checkEnvsForDelta :: Envs rec a -> Envs rec a -> Bool
 checkEnvsForDelta env fnv =
    and [ check env fnv energyMap,
          check env fnv powerMap,
          check env fnv fetaMap,
          check env fnv xMap,
          check env fnv storageMap ]
-   where check :: IdxEq idx => Envs a -> Envs a -> (Envs a -> M.Map idx c) -> Bool
+   where check :: IdxEq idx => Envs rec a -> Envs rec a -> (Envs rec a -> M.Map idx c) -> Bool
          check x y f = SV.equalBy ignoreRecEq (M.keys $ f x) (M.keys $ f y)
 
 minusEnv ::
    (S.Arith s s ~ s, TSum t t t, D.ZipWith c, D.Storage c a, BSum a) =>
-   Envs (TC s t (Data c a)) ->
-   Envs (TC s t (Data c a)) ->
-   Envs (TC s t (Data c a))
+   Envs rec (TC s t (Data c a)) ->
+   Envs rec (TC s t (Data c a)) ->
+   Envs rec (TC s t (Data c a))
 minusEnv laterEnv formerEnv | checkEnvsForDelta laterEnv formerEnv = gnv
   where minus x y = M.fromList $ zipWith minush (M.toList x) (M.toList y)
         minush (k0, x) (k1, y) =
@@ -240,7 +237,9 @@ minusEnv laterEnv formerEnv | checkEnvsForDelta laterEnv formerEnv = gnv
 
 mapEnv ::
    (D.Map c, D.Storage c a, D.Storage c b) =>
-   (a -> b) -> Envs (TC s t (Data c a)) -> Envs (TC s t (Data c b))
+   (a -> b) ->
+   Envs rec (TC s t (Data c a)) ->
+   Envs rec (TC s t (Data c b))
 mapEnv f env = emptyEnv { recordNumber = recordNumber env,
                           energyMap = M.map (S.map f) (energyMap env),
                           denergyMap = M.map (S.map f) (denergyMap env),

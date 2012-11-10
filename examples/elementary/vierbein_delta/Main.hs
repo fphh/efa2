@@ -29,7 +29,7 @@ import EFA2.Topology.TopologyData (Topology, NodeType(..), defaultELabel)
 import EFA2.Topology.Draw (drawDeltaTopology, drawTopology, drawAll)
 
 
-symbolic :: Topology -> Envs EqTerm
+symbolic :: Topology -> Envs SingleRecord EqTerm
 symbolic g = res' { recordNumber = SingleRecord rec1, dxMap = dx1sym, detaMap = deta1sym, fetaMap = eta1sym }
   where ts0 = snd $ makeAllEquations g [envs0sym]
         ts1 = snd $ makeAllEquations g [envs1sym]
@@ -45,7 +45,7 @@ symbolic g = res' { recordNumber = SingleRecord rec1, dxMap = dx1sym, detaMap = 
         --res' = mapEqTermEnv (setEqTerms (emptyEnv { dxMap = dx1sym })) (res { fetaMap = eta1sym, recordNumber = SingleRecord 1 })
         res' = mapEqTermEnv (setEqTerms (emptyEnv { dxMap = dx1sym })) res
 
-numeric :: Topology -> Envs Sc
+numeric :: Topology -> Envs MixedRecord Sc
 numeric g = {- trace ("---------\n" ++ showEqTerms ts ++ "\n------\n") $ -} res
   where (envs0', ts0) = makeAllEquations g [envs0num]
         (envs1', ts1) = makeAllEquations g [envs1num]
@@ -60,7 +60,7 @@ numeric g = {- trace ("---------\n" ++ showEqTerms ts ++ "\n------\n") $ -} res
         res = interpretFromScratch (recordNumber envs) 1 (map (eqToInTerm envs) ts)
 
 
-deltaEnv :: Topology -> Envs Sc
+deltaEnv :: Topology -> Envs SingleRecord Sc
 deltaEnv g = (res1 `minusEnv` res0) { recordNumber = SingleRecord rec1 }
   where (envs0', ts0) = makeAllEquations g [envs0num]
         (envs1', ts1) = makeAllEquations g [envs1num]
@@ -162,7 +162,7 @@ x0num = M.fromList [ (Idx.X sec rec0 2 0, toScalar 0.3),
                      (Idx.X sec rec0 2 3, toScalar 0.4) ]
 
 
-envs0num :: Envs Sc
+envs0num :: Envs SingleRecord Sc
 envs0num = emptyEnv { recordNumber = SingleRecord rec0,
                       powerMap = power0num,
                       dtimeMap = dtimes0num,
@@ -216,7 +216,7 @@ dx1num = M.fromList [ (Idx.DX sec rec1 0 2, toScalar 0.0),
                       (Idx.DX sec rec1 2 4, toScalar 0.0),
                       (Idx.DX sec rec1 4 2, toScalar 0.0) ]
 
-envs1num :: Envs Sc
+envs1num :: Envs SingleRecord Sc
 envs1num = emptyEnv { recordNumber = SingleRecord rec1,
                       powerMap = power1num,
                       dpowerMap = dpower1num,
@@ -257,7 +257,7 @@ x0sym :: XMap EqTerm
 x0sym = selfMap [ Idx.X sec rec0 2 0, Idx.X sec rec0 2 3 ]
 
 
-envs0sym :: Envs EqTerm
+envs0sym :: Envs SingleRecord EqTerm
 envs0sym = emptyEnv { recordNumber = SingleRecord rec0,
                       powerMap = power0sym,
                       dtimeMap = dtimes0sym,
@@ -314,7 +314,7 @@ dx1sym = M.union m1 m2
               (Idx.DX sec rec1 2 4, Const 0.0) :
               []
 
-envs1sym :: Envs EqTerm
+envs1sym :: Envs SingleRecord EqTerm
 envs1sym = emptyEnv { recordNumber = SingleRecord rec1,
                       powerMap = power1sym,
                       dpowerMap = dpower1sym,

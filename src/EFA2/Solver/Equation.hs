@@ -490,7 +490,7 @@ additiveTermsNonEmpty = recourse . simplify . pushMult
         recourse t = NonEmpty.singleton t
 
 
-setEqTerms :: Envs EqTerm -> EqTerm -> EqTerm
+setEqTerms :: Envs rec EqTerm -> EqTerm -> EqTerm
 setEqTerms envs term =
    case term of
       Atom i ->
@@ -647,7 +647,7 @@ mkDiffEqTermEquations rec =
 --------------------------------------------------------------------
 -- interpretEq len envs (InEqual (Idx.E idx) rhs) = envs { energyMap = insert len idx envs rhs (energyMap envs) }
 
-interpretEqTermRhs :: Envs EqTerm -> EqTerm -> EqTerm
+interpretEqTermRhs :: Envs rec EqTerm -> EqTerm -> EqTerm
 interpretEqTermRhs envs t =
    case t of
       Atom i ->
@@ -671,10 +671,10 @@ interpretEqTermRhs envs t =
 
 insertEqTerm ::
    Ord k =>
-   k -> Envs EqTerm -> EqTerm -> M.Map k EqTerm -> M.Map k EqTerm
+   k -> Envs rec EqTerm -> EqTerm -> M.Map k EqTerm -> M.Map k EqTerm
 insertEqTerm idx envs rhs m = M.insert idx (interpretEqTermRhs envs rhs) m
 
-interpretEqTermEq :: Envs EqTerm -> AbsAssign -> Envs EqTerm
+interpretEqTermEq :: Envs rec EqTerm -> AbsAssign -> Envs rec EqTerm
 interpretEqTermEq envs (GivenIdx x) =
  case Atom x of
   t ->
@@ -705,10 +705,10 @@ interpretEqTermEq envs (t ::= rhs) =
       Store idx -> envs { storageMap = insertEqTerm idx envs rhs (storageMap envs) }
       DTime idx -> envs { dtimeMap = insertEqTerm idx envs rhs (dtimeMap envs) }
 
-interpretEqTermFromScratch :: [AbsAssign] -> Envs EqTerm
+interpretEqTermFromScratch :: [AbsAssign] -> Envs NoRecord EqTerm
 interpretEqTermFromScratch ts = L.foldl' interpretEqTermEq emptyEnv ts
 
-mapEqTermEnv :: (a -> b) -> Envs a -> Envs b
+mapEqTermEnv :: (a -> b) -> Envs rec a -> Envs rec b
 mapEqTermEnv f env = emptyEnv { recordNumber = recordNumber env,
                                 energyMap = M.map f (energyMap env),
                                 denergyMap = M.map f (denergyMap env),

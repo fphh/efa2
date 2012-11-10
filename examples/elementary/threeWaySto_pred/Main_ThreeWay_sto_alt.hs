@@ -77,7 +77,7 @@ sqTopo = Seq.makeSeqFlowGraph topo $ Seq.makeSequence pRec
     pRec = PowerRecord (S.fromList time) pMap
 
 -- | C. System solving
-solve3Way :: Topology -> Val -> Val -> Envs UTFSig
+solve3Way :: Topology -> Val -> Val -> Envs SingleRecord UTFSig
 solve3Way sqTp y n = interpretFromScratch (SingleRecord rec) 1 gd -- interprete and solve equations
 
 {-
@@ -146,15 +146,15 @@ genVariationMatrix xs ys =
 
 
 -- | Safe Lookup Functions
-getVarEnergy :: [[Envs UTFSig]] ->  Idx.Energy -> Test2 (Typ A F Tt) Val
+getVarEnergy :: [[Envs SingleRecord UTFSig]] -> Idx.Energy -> Test2 (Typ A F Tt) Val
 getVarEnergy varEnvs idx = S.changeSignalType $ S.fromCells $ map (map f ) varEnvs
-  where f ::  Envs UTFSig ->   FSamp
+  where f ::  Envs SingleRecord UTFSig -> FSamp
         f envs = S.changeType $ S.head $ safeLookup (energyMap envs) idx
 
 -- | Safe Lookup Functions
-getVarPower :: [[Envs UTFSig]] ->  Idx.Power -> Test2 (Typ A P Tt) Val
+getVarPower :: [[Envs SingleRecord UTFSig]] -> Idx.Power -> Test2 (Typ A P Tt) Val
 getVarPower varEnvs idx = S.changeSignalType $ S.fromCells $ map (map f ) varEnvs
-  where f ::  Envs UTFSig ->   PFSamp
+  where f ::  Envs SingleRecord UTFSig -> PFSamp
         f envs = S.changeType $ S.head $ safeLookup (powerMap envs) idx
 
 
@@ -174,7 +174,7 @@ main = do
     (varY,varN) = genVariationMatrix yIndir etas
 
     -- solve System over Variation Grid
-    varEnvs = zipWith (zipWith (solve3Way sqTopo)) varY varN :: [[Envs UTFSig]]
+    varEnvs = zipWith (zipWith (solve3Way sqTopo)) varY varN :: [[Envs SingleRecord UTFSig]]
 
     -- | B. -- Extract Values for further calulations
 

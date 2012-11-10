@@ -5,8 +5,8 @@ import EFA2.Solver.Equation
            MkIdxC, MkVarC, mkVar, mkTerm, add, give, (!=))
 import qualified EFA2.Interpreter.Env as Env
 import EFA2.Interpreter.Env
-          (Envs(Envs), fromSingleRecord, isSingleRecord, recordNumber,
-           RecordNumber(MixedRecord, SingleRecord))
+          (Envs(Envs), recordNumber, fromSingleRecord,
+           MixedRecord(MixedRecord), SingleRecord(SingleRecord))
 import EFA2.Topology.TopologyData
 import EFA2.Utils.Utils (pairs, safeLookup, mapFromSet)
 
@@ -49,17 +49,12 @@ makeWithDirEdges es = map f es
 ------------------------------------------------------------------------
 -- Making equations:
 
-missingRecordNumbers :: [Envs a] -> Bool
-missingRecordNumbers envs =
-   not $ all (isSingleRecord . recordNumber) envs
-
-
 -- TODO: Check that envUnion preserves all variables.
-makeAllEquations :: (Show a) => Topology -> [Envs a] -> (Envs a, [Equation])
+makeAllEquations ::
+   (Show a) =>
+   Topology -> [Envs SingleRecord a] -> (Envs MixedRecord a, [Equation])
 makeAllEquations topo envs =
-   if missingRecordNumbers envs
-     then error ("makeAllEquations: only single records are allowed in " ++ show envs)
-     else ((Env.envUnion envs') { recordNumber = MixedRecord newRecNums }, ts)
+   ((Env.envUnion envs') { recordNumber = MixedRecord newRecNums }, ts)
   where newRecNums = map (fromSingleRecord . recordNumber) envs
         recNum env = fromSingleRecord $ recordNumber env
         dirTopo = makeDirTopology topo
@@ -95,7 +90,10 @@ makeAllEquations topo envs =
                                                  ++ envToEqTerms st
 
 -- TODO: use patternmatching instead of safeLookup
-shiftIndices :: (Show a) => M.Map (Idx.Section, Int) Node -> Envs a -> Envs a
+shiftIndices ::
+   (Show a) =>
+   M.Map (Idx.Section, Int) Node ->
+   Envs SingleRecord a -> Envs SingleRecord a
 shiftIndices m (Envs (SingleRecord rec) e de p dp fn dn t' x dx v st) =
   Envs (SingleRecord rec) e' de' p' dp' fn' dn' t' x' dx' v' st'
   where e' = M.mapKeys ef e

@@ -33,7 +33,7 @@ import EFA2.Topology.Draw (drawDeltaTopology, drawTopology, drawAll)
 import EFA2.Example.Dreibein
 
 
-symbolic :: Topology -> Envs EqTerm
+symbolic :: Topology -> Envs NoRecord EqTerm
 symbolic g = mapEqTermEnv (setEqTerms (emptyEnv { dxMap = dx1eq })) res
   where
 
@@ -64,7 +64,7 @@ symbolic g = mapEqTermEnv (setEqTerms (emptyEnv { dxMap = dx1eq })) res
            ts0o ++ ts1o ++ difftseq
         res = interpretEqTermFromScratch ts
 
-numeric :: Topology -> Envs Sc
+numeric :: Topology -> Envs MixedRecord Sc
 numeric g =  trace ("---------\n" ++ showAssigns ts1o ++ "\n------\n") res
   where envs0 = emptyEnv { recordNumber = SingleRecord rec0,
                            powerMap = power0num,
@@ -93,7 +93,7 @@ numeric g =  trace ("---------\n" ++ showAssigns ts1o ++ "\n------\n") res
         ts = toAbsEquations $ ts0o ++ ts1o ++ difftseq
         res = interpretFromScratch (recordNumber envs) 1 (map (eqToInTerm envs) ts)
 
-deltaEnv :: Topology -> Envs Sc
+deltaEnv :: Topology -> Envs MixedRecord Sc
 deltaEnv g = res1 `minusEnv` res0
   where
         envs0 = emptyEnv { recordNumber = SingleRecord rec0,

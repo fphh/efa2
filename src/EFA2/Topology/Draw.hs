@@ -5,7 +5,7 @@ import EFA2.Solver.Equation
            LatexString(LatexString), unLatexString)
 import EFA2.Interpreter.Env
           (DTimeMap, StorageMap,
-           RecordNumber(SingleRecord))
+           SingleRecord(SingleRecord))
 import qualified EFA2.Interpreter.Env as Interp
 import EFA2.Topology.TopologyData as Topo
 import EFA2.Topology.EfaGraph
@@ -70,27 +70,23 @@ intersectionEdgeColour :: Attribute
 intersectionEdgeColour = Color [RGB 200 0 0]
 
 -- coding
-noRecord :: Maybe RecordNumber
+noRecord :: Maybe Idx.Record
 noRecord = Nothing
 
 
 mkDotGraph ::
    EfaGraph Node NLabel ELabel ->
-   Maybe RecordNumber ->
+   Maybe Idx.Record ->
    (Idx.DTime -> String) ->
    (Topo.LNode -> String) ->
    (Topo.LEdge -> String) ->
    DotGraph Int
-mkDotGraph g mRecordNum timef nshow eshow =
+mkDotGraph g recordNum timef nshow eshow =
   DotGraph { strictGraph = False,
              directedGraph = True,
              graphID = Just (Int 1),
              graphStatements = stmts }
-  where recordNum =
-           case mRecordNum of
-              Just (SingleRecord n) -> Just n
-              _ -> Nothing
-        interEs = M.filter isIntersectionEdge $ edgeLabels g
+  where interEs = M.filter isIntersectionEdge $ edgeLabels g
         g' = delEdgeSet (M.keysSet interEs) g
         cs =
            HTL.removeEach $
@@ -140,7 +136,7 @@ mkDotEdge eshow e@(Edge x y, elabel) = DotEdge x y [displabel, edir, colour]
 
 printGraph ::
    EfaGraph Node NLabel ELabel ->
-   Maybe RecordNumber ->
+   Maybe Idx.Record ->
    (Idx.DTime -> String) ->
    (Topo.LNode -> String) ->
    (Topo.LEdge -> String) ->
@@ -218,7 +214,7 @@ showLineDelta (ErrorLine str) = str
 
 data Env a =
    Env {
-      recordNumber :: RecordNumber,
+      recordNumber :: Idx.Record,
       lookupEnergy_ :: Idx.Section -> Idx.Record -> Int -> Int -> Maybe a,
       lookupX_      :: Idx.Section -> Idx.Record -> Int -> Int -> Maybe a,
       lookupEta_    :: Idx.Section -> Idx.Record -> Int -> Int -> Maybe a,
@@ -247,47 +243,46 @@ checkedLookupFormat msg format dt k =
 
 draw :: Topology -> Env a -> IO ()
 draw g
-   (Env rn lookupEnergy lookupX lookupEta formatAssign tshow nshow) =
-      printGraph (unTopology g) (Just rn) tshow nshow eshow
+   (Env rec lookupEnergy lookupX lookupEta formatAssign tshow nshow) =
+      printGraph (unTopology g) (Just rec) tshow nshow eshow
   where eshow = L.intercalate "\n" . map formatAssign . mkLst
 
         mkLst (Edge uid vid, l) =
-           case rn of
-              SingleRecord rec
-                 | isOriginalEdge l -> [
-                    (ELine uid vid, lookupEnergy usec rec uid vid),
-                    (XLine uid vid, lookupX usec rec uid vid),
-                    ndirlab (flowDirection l),
-                    (XLine vid uid, lookupX vsec rec vid uid),
-                    (ELine vid uid, lookupEnergy vsec rec vid uid)
-                    ]
-                 | isInnerStorageEdge l ->
-                    [ (ELine vid uid, lookupEnergy vsec rec vid uid) ]
-                 | otherwise -> [
-                    (ELine uid vid, lookupEnergy usec rec uid vid),
-                    (XLine uid vid, lookupX usec rec uid vid),
-                    (ELine vid uid, lookupEnergy vsec rec vid uid)
-                    ]
-                 where NLabel usec _ _ = fromJust $ lab g uid
-                       NLabel vsec _ _ = fromJust $ lab g vid
-                       ndirlab WithDir = (NLine uid vid, lookupEta usec rec uid vid)
-                       ndirlab _ = (NLine vid uid, lookupEta vsec rec vid uid)
-              _ -> [ (ErrorLine "Problem with record number", Nothing) ]
+           case edgeType l of
+              OriginalEdge ->
+                 (ELine uid vid, lookupEnergy usec rec uid vid) :
+                 (XLine uid vid, lookupX usec rec uid vid) :
+                 ndirlab (flowDirection l) :
+                 (XLine vid uid, lookupX vsec rec vid uid) :
+                 (ELine vid uid, lookupEnergy vsec rec vid uid) :
+                 []
+              InnerStorageEdge ->
+                 (ELine vid uid, lookupEnergy vsec rec vid uid) :
+                 []
+              IntersectionEdge ->
+                 (ELine uid vid, lookupEnergy usec rec uid vid) :
+                 (XLine uid vid, lookupX usec rec uid vid) :
+                 (ELine vid uid, lookupEnergy vsec rec vid uid) :
+                 []
+            where NLabel usec _ _ = fromJust $ lab g uid
+                  NLabel vsec _ _ = fromJust $ lab g vid
+                  ndirlab WithDir = (NLine uid vid, lookupEta usec rec uid vid)
+                  ndirlab _ = (NLine vid uid, lookupEta vsec rec vid uid)
 
 drawTopology ::
-   AutoEnv a => Topology -> Interp.Envs a -> IO ()
+   AutoEnv a => Topology -> Interp.Envs SingleRecord a -> IO ()
 drawTopology topo = draw topo . envAbs
 
 drawDeltaTopology ::
-   AutoEnvDelta a => Topology -> Interp.Envs a -> IO ()
+   AutoEnvDelta a => Topology -> Interp.Envs SingleRecord a -> IO ()
 drawDeltaTopology topo = draw topo . envDelta
 
 
 class AutoEnv a where
-   envAbs :: Interp.Envs a -> Env a
+   envAbs :: Interp.Envs SingleRecord a -> Env a
 
 class AutoEnv a => AutoEnvDelta a where
-   envDelta :: Interp.Envs a -> Env a
+   envDelta :: Interp.Envs SingleRecord a -> Env a
 
 
 class AutoEnvList a where
@@ -299,7 +294,7 @@ class AutoEnvList a where
       showLine x ++ " = " ++ formatStContList ys
 
    showListNode ::
-      RecordNumber -> StorageMap [a] ->
+      Idx.Record -> StorageMap [a] ->
       (Maybe [a] -> String) ->
       (Int, NLabel) -> String
    showListNode = showNode
@@ -311,7 +306,7 @@ class AutoEnvList a => AutoEnvDeltaList a where
    divideDEnergyList :: [a] -> [a] -> [a] -> [a] -> [a]
 
 instance AutoEnvList a => AutoEnv [a] where
-   envAbs (Interp.Envs r e _de _p _dp _fn _dn dt x _dx _v st) =
+   envAbs (Interp.Envs (SingleRecord r) e _de _p _dp _fn _dn dt x _dx _v st) =
       let lookupEnergy = makeLookup Idx.Energy e
       in  Env r
              lookupEnergy
@@ -382,16 +377,14 @@ instance AutoEnvList LatexString where
 
 
 showLatexNode ::
-   RecordNumber -> StorageMap [LatexString] ->
+   Idx.Record -> StorageMap [LatexString] ->
    (Maybe [LatexString] -> String) ->
    (Int, NLabel) -> String
-showLatexNode rn st content (num, NLabel sec nid ty) =
+showLatexNode rec st content (num, NLabel sec nid ty) =
    "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\\\\ " ++
    "Type: " ++ showNodeType ty ++
       let showStorage n =
-             case rn of
-                SingleRecord rec -> content (M.lookup (Idx.Storage sec rec n) st)
-                _ -> "Problem with record number: " ++ show rn
+             content (M.lookup (Idx.Storage sec rec n) st)
       in  case ty of
              InitStorage n -> "\\\\ Content: " ++ showStorage n
              Storage n -> "\\\\ Content: " ++ showStorage n
@@ -414,15 +407,13 @@ instance (Eq a, ToIndex a) => AutoEnvDeltaList (Term a) where
 
 
 showNode ::
-   RecordNumber -> StorageMap a ->
+   Idx.Record -> StorageMap a ->
    (Maybe a -> String) -> (Int, NLabel) -> String
-showNode rn st content (num, NLabel sec nid ty) =
+showNode rec st content (num, NLabel sec nid ty) =
    "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\n" ++
    "Type: " ++ showNodeType ty ++
       let showStorage n =
-             case rn of
-                SingleRecord rec -> content (M.lookup (Idx.Storage sec rec n) st)
-                _ -> "Problem with record number: " ++ show rn
+             content (M.lookup (Idx.Storage sec rec n) st)
       in  case ty of
              InitStorage n -> "\nContent: " ++ showStorage n
              Storage n -> "\nContent: " ++ showStorage n
@@ -439,10 +430,10 @@ envDeltaArg ::
    ((Line, Maybe a) -> String) ->
    (Maybe a -> String) ->
    (DTimeMap a -> Idx.DTime -> String) ->
-   Interp.Envs a ->
+   Interp.Envs SingleRecord a ->
    Env a
 envDeltaArg divide formatAssign content tshow
-      (Interp.Envs r e de _p _dp _fn _dn dt _x dx _v st) =
+      (Interp.Envs (SingleRecord r) e de _p _dp _fn _dn dt _x dx _v st) =
    let lookupEnergy = makeLookup Idx.Energy e
        lookupDEnergy = makeLookup Idx.DEnergy de
    in  Env r
@@ -459,7 +450,8 @@ envDeltaArg divide formatAssign content tshow
 
 class AutoEnvSignal a where
    envAbsSignal ::
-      (DispApp s, TDisp t) => Interp.Envs (TC s t a) -> Env (TC s t a)
+      (DispApp s, TDisp t) =>
+      Interp.Envs SingleRecord (TC s t a) -> Env (TC s t a)
 
 formatAssignSignal ::
    (DispApp s, TDisp t, SDisplay v, D.Storage v d, Ord d, Disp d) =>
@@ -486,7 +478,8 @@ instance
 
 class AutoEnvSignal a => AutoEnvDeltaSignal a where
    envDeltaSignal ::
-      (DispApp s, TDisp t) => Interp.Envs (TC s t a) -> Env (TC s t a)
+      (DispApp s, TDisp t) =>
+      Interp.Envs SingleRecord (TC s t a) -> Env (TC s t a)
 
 instance
    (SDisplay v, D.Storage v a, Disp a, Ord a) =>
@@ -501,9 +494,10 @@ instance
 
 envAbsArgSignal ::
    (DispApp s, TDisp t, SDisplay v, D.Storage v d, Ord d, Disp d) =>
-   Interp.Envs (TC s t (Data v d)) ->
+   Interp.Envs SingleRecord (TC s t (Data v d)) ->
    Env (TC s t (Data v d))
-envAbsArgSignal (Interp.Envs rec0 e _de _p _dp fn _dn dt x _dx _v st) =
+envAbsArgSignal
+      (Interp.Envs (SingleRecord rec0) e _de _p _dp fn _dn dt x _dx _v st) =
    Env rec0
       (makeLookup Idx.Energy e)
       (makeLookup Idx.X x)
@@ -516,9 +510,10 @@ envAbsArgSignal (Interp.Envs rec0 e _de _p _dp fn _dn dt x _dx _v st) =
 
 envDeltaArgSignal ::
    (DispApp s, TDisp t, SDisplay v, D.Storage v d, Ord d, Disp d) =>
-   Interp.Envs (TC s t (Data v d)) ->
+   Interp.Envs SingleRecord (TC s t (Data v d)) ->
    Env (TC s t (Data v d))
-envDeltaArgSignal (Interp.Envs rec0 _e de _p _dp _fn dn dt _x dx _v st) =
+envDeltaArgSignal
+      (Interp.Envs (SingleRecord rec0) _e de _p _dp _fn dn dt _x dx _v st) =
    Env rec0
       (makeLookup Idx.DEnergy de)
       (makeLookup Idx.DX dx)

@@ -16,7 +16,7 @@ import EFA2.Topology.EfaGraph (mkGraph)
 import qualified Data.Map as M
 
 
-symbolic :: Topology -> Envs EqTerm
+symbolic :: Topology -> Envs NoRecord EqTerm
 symbolic g = res
   where envs = emptyEnv { recordNumber = SingleRecord rec,
                           energyMap = sigs0sym,
@@ -29,7 +29,7 @@ symbolic g = res
         tso = toAbsEquations $ order ts
         res = interpretEqTermFromScratch tso
 
-numeric :: Topology -> Envs UTFSig
+numeric :: Topology -> Envs SingleRecord UTFSig
 numeric g = res
   where envs = emptyEnv { recordNumber = SingleRecord rec,
                           energyMap = sigs0num,
