@@ -387,7 +387,7 @@ showLatexNode ::
    (Int, NLabel) -> String
 showLatexNode rn st content (num, NLabel sec nid ty) =
    "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\\\\ " ++
-   "Type: " ++ show ty ++
+   "Type: " ++ showNodeType ty ++
       let showStorage n =
              case rn of
                 SingleRecord rec -> content (M.lookup (Idx.Storage sec rec n) st)
@@ -418,7 +418,7 @@ showNode ::
    (Maybe a -> String) -> (Int, NLabel) -> String
 showNode rn st content (num, NLabel sec nid ty) =
    "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\n" ++
-   "Type: " ++ show ty ++
+   "Type: " ++ showNodeType ty ++
       let showStorage n =
              case rn of
                 SingleRecord rec -> content (M.lookup (Idx.Storage sec rec n) st)
@@ -427,6 +427,11 @@ showNode rn st content (num, NLabel sec nid ty) =
              InitStorage n -> "\nContent: " ++ showStorage n
              Storage n -> "\nContent: " ++ showStorage n
              _ -> ""
+
+showNodeType :: NodeType -> String
+showNodeType (InitStorage (Idx.Store n)) = "InitStorage " ++ show n
+showNodeType (Storage (Idx.Store n)) = "Storage " ++ show n
+showNodeType nt = show nt
 
 
 envDeltaArg ::

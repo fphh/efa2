@@ -42,8 +42,8 @@ import Data.Maybe (mapMaybe)
 type LNode = Gr.LNode Node NLabel
 type LEdge = Gr.LEdge Node ELabel
 
-data NodeType = Storage Int
-              | InitStorage Int
+data NodeType = Storage Idx.Store
+              | InitStorage Idx.Store
               | Sink
               | AlwaysSink
               | Source
@@ -57,7 +57,7 @@ isStorage (Storage _) = True
 isStorage (InitStorage _) = True
 isStorage _ = False
 
-getStorageNumber :: NodeType -> Int
+getStorageNumber :: NodeType -> Idx.Store
 getStorageNumber (Storage x) = x
 getStorageNumber (InitStorage x) = x
 getStorageNumber x = error $ "getStorageNumber: " ++ show x ++ " is not a storage"

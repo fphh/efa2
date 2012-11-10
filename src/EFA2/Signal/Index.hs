@@ -10,6 +10,8 @@ instance Enum Section where
 
 newtype Record = Record Int deriving (Show, Eq, Ord)
 
+newtype Store = Store Int deriving (Show, Eq, Ord)
+
 
 -- * Edge indices
 
@@ -44,7 +46,7 @@ data DX = DX !Section !Record !Int !Int deriving (Show, Ord, Eq)
 -- * Node indices
 
 -- | Section number, record number, storage number.
-data Storage = Storage !Section !Record !Int deriving (Show, Ord, Eq)
+data Storage = Storage !Section !Record !Store deriving (Show, Ord, Eq)
 
 -- | This variable type can be used to express arbitrary relations.
 -- You can variables also make dependent on section and record.
