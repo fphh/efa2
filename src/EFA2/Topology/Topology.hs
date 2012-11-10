@@ -127,7 +127,7 @@ shiftIndices m (Envs (SingleRecord rec) e de p dp fn dn t' x dx v st) =
         vf (Idx.Var s _ use t) = Idx.Var s rec use (m `safeLookup` (s, t))
 
         st' = M.mapKeys stf st
-        stf (Idx.Storage s _ sto) = Idx.Storage s rec (m `safeLookup` (s, sto))
+        stf (Idx.Storage s _ sto) = Idx.Storage s rec sto
 
 
 envToEqTerms :: (MkIdxC k) => M.Map k v -> [Equation]
