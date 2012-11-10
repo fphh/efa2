@@ -32,39 +32,52 @@ data Index =
 
 class IdxRecNum a where
       getIdxRecNum :: a -> Idx.Record
+      setIdxRecNum :: Idx.Record -> a -> a
 
 instance IdxRecNum Idx.Energy where
          getIdxRecNum (Idx.Energy _ r _ _) = r
+         setIdxRecNum rec (Idx.Energy s _ f t) = Idx.Energy s rec f t
 
 instance IdxRecNum Idx.DEnergy where
          getIdxRecNum (Idx.DEnergy _ r _ _) = r
+         setIdxRecNum rec (Idx.DEnergy s _ f t) = Idx.DEnergy s rec f t
 
 instance IdxRecNum Idx.Power where
          getIdxRecNum (Idx.Power _ r _ _) = r
+         setIdxRecNum rec (Idx.Power s _ f t) = Idx.Power s rec f t
 
 instance IdxRecNum Idx.DPower where
          getIdxRecNum (Idx.DPower _ r _ _) = r
+         setIdxRecNum rec (Idx.DPower s _ f t) = Idx.DPower s rec f t
 
 instance IdxRecNum Idx.FEta where
          getIdxRecNum (Idx.FEta _ r _ _) = r
+         setIdxRecNum rec (Idx.FEta s _ f t) = Idx.FEta s rec f t
 
 instance IdxRecNum Idx.DEta where
          getIdxRecNum (Idx.DEta _ r _ _) = r
+         setIdxRecNum rec (Idx.DEta s _ f t) = Idx.DEta s rec f t
 
 instance IdxRecNum Idx.X where
          getIdxRecNum (Idx.X _ r _ _) = r
+         setIdxRecNum rec (Idx.X s _ f t) = Idx.X s rec f t
 
 instance IdxRecNum Idx.DX where
          getIdxRecNum (Idx.DX _ r _ _) = r
+         setIdxRecNum rec (Idx.DX s _ f t) = Idx.DX s rec f t
 
 instance IdxRecNum Idx.DTime where
          getIdxRecNum (Idx.DTime _ r) = r
+         setIdxRecNum rec (Idx.DTime s _) = Idx.DTime s rec
 
 instance IdxRecNum Idx.Storage where
          getIdxRecNum (Idx.Storage _ r _) = r
+         setIdxRecNum rec (Idx.Storage s _ sto) = Idx.Storage s rec sto
 
 instance IdxRecNum Idx.Var where
          getIdxRecNum (Idx.Var _ r _ _) = r
+         setIdxRecNum rec (Idx.Var s _ use t) = Idx.Var s rec use t
+
 
 class IdxEq a where
       ignoreRecEq :: a -> a -> Bool
