@@ -2,7 +2,7 @@ module EFA2.Topology.Topology where
 
 import EFA2.Solver.Equation
           (Equation(..), Term(..),
-           MkIdxC, MkVarC, mkVar, mkTerm, add, give, (!=), (&-))
+           MkIdxC, MkVarC, mkVar, mkTerm, add, give, (!=), (&-), (&/))
 import qualified EFA2.Interpreter.Env as Env
 import EFA2.Interpreter.Env
           (Envs(Envs), recordNumber, fromSingleRecord,
@@ -238,7 +238,7 @@ mkOutStoreEqs recordNum (ins, (nid, NLabel sec _ _), _:_) =
               -- Nothing -> []
 
         xeqs = zipWith g xis pis
-        g x e = x := e :* Recip visum
+        g x e = x := e &/ visum
 
         pis' = map (makeVar recordNum sec Idx.Power nid) ins
 
@@ -324,7 +324,7 @@ makeOuts vosum (xos, pos) =
               | otherwise = []
         oeqs' | length pos > 1 = [] -- zipWith (g vosum) xos pos
               | otherwise = []
-        --g v x e = x := e :* Recip v
+        --g v x e = x := e &/ v
         g v x e = e := v :* x
 -}
 

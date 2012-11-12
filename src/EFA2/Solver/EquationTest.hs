@@ -2,7 +2,7 @@
 
 module EFA2.Solver.EquationTest where
 
-import EFA2.Solver.Equation (EqTerm, Term(..), Equation(..), (!*), MkIdxC, mkVar)
+import EFA2.Solver.Equation (EqTerm, Term(..), Equation(..), (!/), (&/), MkIdxC, mkVar)
 
 import qualified EFA2.Signal.Index as Idx
 import EFA2.Interpreter.Env (Index(..))
@@ -38,4 +38,4 @@ t :: Equation
 t = EqEdge p1 e p2
 
 testt :: EqTerm
-testt = de !* (Recip $ Atom e) :* (Recip $ Atom e)
+testt = de !/ Atom e &/ Atom e

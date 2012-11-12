@@ -1,7 +1,7 @@
 module EFA2.Topology.Draw where
 
 import EFA2.Solver.Equation
-          (Term(..), ToIndex, simplify, showEqTerm, showEqTerms, (&-),
+          (Term(..), ToIndex, simplify, showEqTerm, showEqTerms, (&-), (&/),
            LatexString(LatexString), unLatexString)
 import EFA2.Interpreter.Env
           (DTimeMap, StorageMap,
@@ -395,7 +395,7 @@ instance (Eq a, ToIndex a) => AutoEnvList (Term a) where
    formatStContList (Just ys) = showEqTerms ys
    formatStContList Nothing = [heart]
    formatList = showEqTerms
-   divideEnergyList = zipWith (\x y -> simplify $ x :* Recip y)
+   divideEnergyList = zipWith (\x y -> simplify $ x &/ y)
 
 instance (Eq a, ToIndex a) => AutoEnvDeltaList (Term a) where
    formatElement = showEqTerm
@@ -403,7 +403,7 @@ instance (Eq a, ToIndex a) => AutoEnvDeltaList (Term a) where
       L.zipWith4
          (\ea eb dea deb ->
             simplify $
-            (dea :* eb  &-  ea :* deb) :* Recip ((eb:+deb):*eb))
+            (dea :* eb  &-  ea :* deb) &/ ((eb:+deb):*eb))
 
 
 showNode ::

@@ -73,7 +73,7 @@ instance Functor Term where
       in  go
 
 infixl 1 !=, !:=, :=, ::=
-infixl 7  !*, :*
+infixl 7  !*, !/, :*, &/
 infixl 6  !+, !-, :+, &-
 
 {- |
@@ -82,6 +82,9 @@ but this is reserved for constructors.
 -}
 (&-) :: Term a -> Term a -> Term a
 x &- y  =  x :+ Minus y
+
+(&/) :: Term a -> Term a -> Term a
+x &/ y  =  x :* Recip y
 
 
 (!+) :: (MkTermC a, MkTermC b) => a -> b -> EqTerm
@@ -92,6 +95,9 @@ x !- y = mkTerm x &- mkTerm y
 
 (!*) :: (MkTermC a, MkTermC b) => a -> b -> EqTerm
 x !* y = mkTerm x :* mkTerm y
+
+(!/) :: (MkTermC a, MkTermC b) => a -> b -> EqTerm
+x !/ y = mkTerm x &/ mkTerm y
 
 (!=) :: (MkTermC a, MkTermC b) => a -> b -> Equation
 x != y = mkTerm x := mkTerm y
@@ -529,9 +535,9 @@ toAbsEquation :: Assign -> AbsAssign
 toAbsEquation (AbsAssign assign) = assign
 toAbsEquation (AssignEdge e p0 n p1)  =
    case e of
-      PowerOut -> p1 ::= mkTerm p0 :* mkTerm n
-      PowerIn  -> p0 ::= mkTerm p1 :* Recip (mkTerm n)
-      Eta      -> n  ::= mkTerm p0 :* Recip (mkTerm p1)
+      PowerOut -> p1 ::= p0 !* n
+      PowerIn  -> p0 ::= p1 !/ n
+      Eta      -> n  ::= p0 !/ p1
 
 toAbsEquations :: [Assign] -> [AbsAssign]
 toAbsEquations = map toAbsEquation
@@ -619,7 +625,7 @@ mkDiffEqTerm oldrec (AssignEdge PowerOut (Var (Idx.Var _ _ use _)) _ (Power (Idx
 -- P_0.1_1.2 = b(P_0.1_2.1, n_0.1_1.2)
 mkDiffEqTerm oldrec (AssignEdge PowerIn (Power (Idx.Power s newrec f t)) (FEta _) _) =
   {- trace (showEqTerm z ++ " => " ++ showEqTerm res) $ -} [res, eres]
-  where res = dq ::= dp :* Recip n  &-  p :* dn :* nom  &-  dp :* dn :* nom
+  where res = dq ::= dp &/ n  &-  p :* dn :* nom  &-  dp :* dn :* nom
         dq = mkVar $ Idx.DPower s newrec f t
         dp = mkVar $ Idx.DPower s newrec t f
         p = mkVar $ Idx.Power s oldrec t f
@@ -635,7 +641,7 @@ mkDiffEqTerm oldrec (AssignEdge PowerIn (Power (Idx.Power s newrec f t)) (FEta _
 -- v_0.1_OutSum.1 = b(P_0.1_1.2, x_0.1_1.2)
 mkDiffEqTerm oldrec (AssignEdge PowerIn (Var (Idx.Var s newrec use _n)) _ (Power (Idx.Power _ _ f t))) =
   {- trace ("--->: " ++ showEqTerm z ++ " => " ++ showEqTerm eres) $ -} [res, eres]
-  where res = v ::= dp :* Recip x  &-  p :* dx :* nom  &-  dp :* dx :* nom
+  where res = v ::= dp &/ x  &-  p :* dx :* nom  &-  dp :* dx :* nom
         v = mkVar $ Idx.Var s newrec (toDiffUse use) f
         p = mkVar $ Idx.Power s oldrec f t
         dp = mkVar $ Idx.DPower s newrec f t
