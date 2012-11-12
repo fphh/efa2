@@ -35,6 +35,7 @@ import Data.Graph.Inductive (Node)
 
 import qualified Data.Map as M
 import qualified Data.List as L
+import Data.Tuple.HT (mapSnd)
 import Data.Ord (comparing)
 import Data.Maybe (mapMaybe)
 
@@ -139,19 +140,26 @@ fromFlowToSecTopology :: FlowTopology -> SecTopology
 fromFlowToSecTopology = id
 
 -- | Active storages, grouped by storage number, sorted by section number.
-getActiveStores :: Topology -> [[Gr.InOut Node NLabel ELabel]]
-getActiveStores topo = map (sectionSort . filter isActiveSt) groupedIof
-  where groupedIof =
-           M.elems $ M.fromListWith (++) $
-           mapMaybe (\n -> fmap (,[n]) $ stNum n) $
-           mkInOutGraphFormat topo
-        stNum (_, (_, l), _) =
-           case nodetypeNLabel l of
+getActiveStores ::
+   Topology ->
+   M.Map Idx.Store (Node, [Gr.InOut Node Idx.Section ELabel])
+getActiveStores topo =
+   M.map (mapSnd (sectionSort . filter isActiveSt)) $
+   M.fromListWith
+      (\(n0,e0) (n1,e1) ->
+         (if n0==n1 then n0 else error "inconsistent mapping from Store to Node",
+          e0++e1)) $
+   mapMaybe
+      (\(pre, (gn, NLabel s n nt), suc) ->
+         fmap (flip (,) (n, [(pre, (gn, s), suc)])) $ stNum nt) $
+   mkInOutGraphFormat topo
+  where stNum nt =
+           case nt of
               Storage x -> Just x
               InitStorage x -> Just x
               _ -> Nothing
         sectionSort = L.sortBy (comparing sec)
-        sec (_, (_, l), _) = sectionNLabel l
+        sec (_, (_, s), _) = s
 
 isActiveSt :: Gr.InOut n nl ELabel -> Bool
 isActiveSt (ins, _, outs) =

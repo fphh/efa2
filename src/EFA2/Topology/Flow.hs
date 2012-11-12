@@ -69,17 +69,15 @@ copySeqTopology (SequData tops) =
 
 mkIntersectionEdges ::
    (node, NLabel) ->
-   [Gr.InOut node Topo.NLabel Topo.ELabel] -> [(Edge node, ELabel)]
+   [Gr.InOut node Idx.Section ELabel] -> [(Edge node, ELabel)]
 mkIntersectionEdges startNode stores =
    concatMap (\(n, ns) -> map (\x -> (Edge n x, e)) ns) $
-   map (mapSnd (\l -> map fst (filter (q l) outs))) $
-   startNode:ins
+   map (mapSnd (\secin -> map fst $ filter ((>secin) . snd) outs)) $
+   mapSnd sectionNLabel startNode : ins
   where (instores, outstores) = partitionInOutStatic stores
 
         outs = map snd3 outstores
         ins = map snd3 instores
-
-        q lin (_, lout) = sectionNLabel lout > sectionNLabel lin
 
         e = defaultELabel { edgeType = IntersectionEdge }
 
@@ -91,13 +89,14 @@ mkSequenceTopology sd = res
         grpStores = getActiveStores sqTopo
 
         maxNode = 1 + (S.findMax $ nodeSet sqTopo)
-        startNodes = zipWith f [maxNode+1 ..] grpStores
+        startNodes = zipWith f [maxNode+1 ..] $ M.toList $ fmap fst grpStores
         rootNode = (maxNode, NLabel Idx.initSection (-1) Source)
-        f nid ((_, (_, NLabel _ n (Storage sn)), _) : _) =
+        f nid (sn, n) =
            (nid, NLabel Idx.initSection n (InitStorage sn))
 
         interSecEs =
-           concat $ zipWith mkIntersectionEdges startNodes grpStores
+           concat $ zipWith mkIntersectionEdges startNodes $
+           M.elems $ fmap snd grpStores
 
         e = defaultELabel { edgeType = InnerStorageEdge }
         startEdges =

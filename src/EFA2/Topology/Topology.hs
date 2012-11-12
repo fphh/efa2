@@ -8,7 +8,7 @@ import EFA2.Interpreter.Env
           (Envs(Envs), recordNumber, fromSingleRecord,
            MixedRecord(MixedRecord), SingleRecord(SingleRecord))
 import EFA2.Topology.TopologyData
-import EFA2.Utils.Utils (pairs, safeLookup, mapFromSet)
+import EFA2.Utils.Utils (safeLookup, mapFromSet)
 
 import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Topology.EfaGraph as Gr
@@ -19,6 +19,7 @@ import EFA2.Topology.EfaGraph
            lab, labNodes, labEdges, edgeLabels, elfilter)
 
 import qualified Data.NonEmpty as NonEmpty
+import qualified Data.Foldable as Fold
 import qualified Data.List.HT as LH
 import qualified Data.List as L
 import qualified Data.Set as S
@@ -155,59 +156,68 @@ mkPEqs rec (ins, (nid, NLabel sec _ _), outs) = ieqs ++ oeqs -- ++ dieqs ++ doeq
 
 mkIntersectionEqs :: Idx.Record -> Topology -> [Equation]
 mkIntersectionEqs recordNum topo = concat inEqs ++ concat outEqs ++ stContentEqs
-  where actStores = getActiveStores topo
-        inouts = map partitionInOutStatic actStores
-        (ins, outs) = unzip inouts
-        inEqs = concatMap (map (mkInStoreEqs recordNum . replaceInOutNodeLabels topo)) ins
-        outEqs = concatMap (map (mkOutStoreEqs recordNum . replaceInOutNodeLabels topo)) outs
-        stContentEqs = concatMap (mkStoreEqs recordNum) inouts
+  where inouts =
+           fmap (partitionInOutStatic . snd) $
+           getActiveStores topo
+        inEqs =
+           Fold.foldMap
+              (map (mkInStoreEqs recordNum . replaceInOutNodeLabels topo)) $
+           fmap fst inouts
+        outEqs =
+           Fold.foldMap
+              (map (mkOutStoreEqs recordNum . replaceInOutNodeLabels topo)) $
+           fmap snd inouts
+        stContentEqs =
+           Fold.concat $ M.mapWithKey (mkStoreEqs recordNum) inouts
 
 replaceInOutNodeLabels ::
-   Topology -> Gr.InOut Node NLabel el -> Gr.InOut Node NLabel NLabel
+   Topology -> Gr.InOut Node nl el -> Gr.InOut Node nl NLabel
 replaceInOutNodeLabels topo (ins, n, outs) =
    (map (\(k,_) -> (k, Gr.nodeLabels topo M.! k)) ins,
     n,
     map (\(k,_) -> (k, Gr.nodeLabels topo M.! k)) outs)
 
 
-data IOStore = Store StoreDir LNode deriving (Show)
+data IOStore = Store StoreDir (Gr.LNode Node Idx.Section)
+   deriving (Show)
 
 data StoreDir = In | Out deriving (Show)
 
 mkStoreEqs ::
    Idx.Record ->
-   ([Gr.InOut Node NLabel el], [Gr.InOut Node NLabel el]) ->
+   Idx.Store ->
+   ([Gr.InOut Node Idx.Section el],
+    [Gr.InOut Node Idx.Section el]) ->
    [Equation]
-mkStoreEqs recordNum (ins, outs) = startEq ++ eqs
+mkStoreEqs recordNum st (ins, outs) = startEq ++ LH.mapAdjacent g both
   where ins' = map (Store In . snd3) ins
         outs' = map (Store Out . snd3) outs
         both@(b:_) = L.sortBy (comparing f) $ ins' ++ outs'
 
-        f (Store _ (_, l)) = sectionNLabel l
+        f (Store _ (_, sec)) = sec
         startEq = k b
-        k (Store In (nid, NLabel sec _ (InitStorage st))) =
-          [ mkVar (Idx.Storage sec recordNum st) := mkVar (Idx.Var sec recordNum InSum nid) :* dt]
-          where dt = mkVar $ Idx.DTime sec recordNum
+        k (Store In (nid, sec)) =
+          [ mkVar (Idx.Storage sec recordNum st) :=
+               mkVar (Idx.Var sec recordNum InSum nid) :*
+               mkVar (Idx.DTime sec recordNum) ]
         k _ = []
-        eqs = map (g . h) (pairs both)
-        h (Store _ x, y) = (x, y)
 
-        g ((_nid, NLabel sec _ st), Store dir (nid', NLabel sec' _ st')) =
+        g (Store _ (_nid, sec)) (Store dir (nid', sec')) =
            stnew := (case dir of In -> vdt; Out -> Minus vdt) :+ stold
 {-
-          mkVar (Idx.Storage sec' recordNum (getStorageNumber st')) :=
+          mkVar (Idx.Storage sec' recordNum st') :=
             (mkVar (Idx.Var sec' recordNum InSum nid') :* dt)
-              :+ mkVar (Idx.Storage sec recordNum (getStorageNumber st))
+              :+ mkVar (Idx.Storage sec recordNum st)
 -}
-          where stnew = mkVar $ Idx.Storage sec' recordNum (getStorageNumber st')
-                stold = mkVar $ Idx.Storage sec recordNum (getStorageNumber st)
+          where stnew = mkVar $ Idx.Storage sec' recordNum st
+                stold = mkVar $ Idx.Storage sec recordNum st
                 vdt = v :* dt
                 v = mkVar $ Idx.Var sec' recordNum (case dir of In -> InSum; Out -> OutSum) nid'
                 dt = mkVar $ Idx.DTime sec' recordNum
 
 
-mkInStoreEqs :: Idx.Record -> Gr.InOut Node NLabel NLabel -> [Equation]
-mkInStoreEqs recordNum (_ins, (nid, NLabel sec _ _), outs@((o,_):_)) = (startEq:osEqs)
+mkInStoreEqs :: Idx.Record -> Gr.InOut Node Idx.Section NLabel -> [Equation]
+mkInStoreEqs recordNum (_ins, (nid, sec), outs@((o,_) : _)) = (startEq:osEqs)
   where startEq = mkVar (Idx.Var sec recordNum InSum nid) := mkVar (Idx.Power sec recordNum nid o)
         osEqs = LH.mapAdjacent f outs
         f x y =
@@ -219,8 +229,8 @@ mkInStoreEqs recordNum (_ins, (nid, NLabel sec _ _), outs@((o,_):_)) = (startEq:
 mkInStoreEqs _ _ = []
 
 
-mkOutStoreEqs :: Idx.Record -> Gr.InOut Node NLabel NLabel -> [Equation]
-mkOutStoreEqs recordNum (ins, (nid, NLabel sec _ _), _:_) =
+mkOutStoreEqs :: Idx.Record -> Gr.InOut Node Idx.Section NLabel -> [Equation]
+mkOutStoreEqs recordNum (ins, (nid, sec), _ : _) =
      visumeqs ++ xeqs ++ pieqs
   where xis = map (makeVar' Idx.X) ins
         --eis = map (makeVar' Idx.Energy) ins
