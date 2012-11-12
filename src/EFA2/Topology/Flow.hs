@@ -89,13 +89,11 @@ mkSequenceTopology sd = res
   where sqTopo = copySeqTopology sd
 
         grpStores = getActiveStores sqTopo
-        storeLabs = map g grpStores
-        g ((_, (_, l), _):_) = l
 
         maxNode = 1 + (S.findMax $ nodeSet sqTopo)
-        startNodes = zipWith f [maxNode+1 ..] storeLabs
+        startNodes = zipWith f [maxNode+1 ..] grpStores
         rootNode = (maxNode, NLabel Idx.initSection (-1) Source)
-        f nid (NLabel _ n (Storage sn)) =
+        f nid ((_, (_, NLabel _ n (Storage sn)), _) : _) =
            (nid, NLabel Idx.initSection n (InitStorage sn))
 
         interSecEs =
