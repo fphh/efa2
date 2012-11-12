@@ -1,6 +1,5 @@
 module EFA2.Topology.Flow (module EFA2.Topology.Flow) where
 
-import qualified EFA2.Topology.EfaGraph as Gr
 import EFA2.Topology.EfaGraph
           (Edge(Edge), mkGraph,
            labNodes, labEdges,
@@ -17,7 +16,7 @@ import EFA2.Signal.Base (Sign(PSign, NSign, ZSign))
 import qualified Data.Map as M
 import qualified Data.Set as S
 import qualified Data.List as L
-import Data.Tuple.HT (mapSnd, snd3)
+import Data.Tuple.HT (snd3)
 
 
 -- | Function to calculate flow states for the whole sequence
@@ -69,15 +68,17 @@ copySeqTopology (SequData tops) =
 
 mkIntersectionEdges ::
    (node, NLabel) ->
-   [Gr.InOut node Idx.Section ELabel] -> [(Edge node, ELabel)]
-mkIntersectionEdges startNode stores =
-   concatMap (\(n, ns) -> map (\x -> (Edge n x, e)) ns) $
-   map (mapSnd (\secin -> map fst $ filter ((>secin) . snd) outs)) $
-   mapSnd sectionNLabel startNode : ins
+   M.Map Idx.Section (Topo.InOut node ELabel) -> [(Edge node, ELabel)]
+mkIntersectionEdges (startNode, startLabel) stores =
+   concatMap
+      (\(secin, n) ->
+         map (\x -> (Edge n x, e)) $ M.elems $
+         snd $ M.split secin outs) $
+   (sectionNLabel startLabel, startNode) : M.toList ins
   where (instores, outstores) = partitionInOutStatic stores
 
-        outs = map snd3 outstores
-        ins = map snd3 instores
+        outs = fmap snd3 outstores
+        ins = fmap snd3 instores
 
         e = defaultELabel { edgeType = IntersectionEdge }
 
