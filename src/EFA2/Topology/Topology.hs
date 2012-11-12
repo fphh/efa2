@@ -2,7 +2,7 @@ module EFA2.Topology.Topology where
 
 import EFA2.Solver.Equation
           (Equation(..), Term(..),
-           MkIdxC, MkVarC, mkVar, mkTerm, add, give, (!=))
+           MkIdxC, MkVarC, mkVar, mkTerm, add, give, (!=), (&-))
 import qualified EFA2.Interpreter.Env as Env
 import EFA2.Interpreter.Env
           (Envs(Envs), recordNumber, fromSingleRecord,
@@ -212,8 +212,8 @@ mkInStoreEqs recordNum (_ins, (nid, NLabel sec _ _), outs@((o,_):_)) = (startEq:
         osEqs = LH.mapAdjacent f outs
         f x y =
            mkVar (Idx.Power sec recordNum nid y') :=
-              mkVar (Idx.Power sec recordNum nid x') :+
-              Minus (mkVar (Idx.Power xs recordNum x' nid))
+              mkVar (Idx.Power sec recordNum nid x') &-
+              mkVar (Idx.Power xs recordNum x' nid)
           where (x', NLabel xs _ _) = x
                 (y', _) = y
 mkInStoreEqs _ _ = []
@@ -353,7 +353,7 @@ mkDiffPowerEqs laterRec formerRec (ins, n@(nid, NLabel sec _ _), outs)
         lpos = map (makeVar laterRec sec Idx.Power nid) outs
         fpos = map (makeVar formerRec sec Idx.Power nid) outs
         doeqs = zipWith3 f lpos fpos outs
-        f x y i = (makeVar laterRec sec Idx.DPower nid i) := x :+ (Minus y)
+        f x y i = (makeVar laterRec sec Idx.DPower nid i) := x &- y
 -}
 
 mkDiffEtaEqs ::
@@ -364,14 +364,14 @@ mkDiffEtaEqs laterRec formerRec (_ins, (nid, NLabel sec _ _), outs) = dnoeqs
   where lnos = map (makeVar laterRec sec Idx.FEta nid) outs
         fnos = map (makeVar formerRec sec Idx.FEta nid) outs
         dnoeqs = zipWith3 g lnos fnos outs
-        g x y i = (makeVar laterRec sec Idx.DEta nid i) := x :+ (Minus y)
+        g x y i = (makeVar laterRec sec Idx.DEta nid i)  :=  x &- y
 
 mkDiffXEqs ::
    Idx.Record -> Idx.Record ->
    Gr.InOut Node NLabel el ->
    [Equation]
 mkDiffXEqs laterRec formerRec (ins, (nid, NLabel sec _ _), outs) = xiseq ++ xoseq
-  where f dx lx fx = dx := lx :+ (Minus fx)
+  where f dx lx fx = dx := lx &- fx
 
         lxis = map (makeVar laterRec sec Idx.X nid) ins
         fxis = map (makeVar formerRec sec Idx.X nid) ins

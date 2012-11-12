@@ -74,10 +74,21 @@ instance Functor Term where
 
 infixl 1 !=, !:=, :=, ::=
 infixl 7  !*, :*
-infixl 6  !+, :+
+infixl 6  !+, !-, :+, &-
+
+{- |
+For consistency with '(:+)' it should be named '(:-)'
+but this is reserved for constructors.
+-}
+(&-) :: Term a -> Term a -> Term a
+x &- y  =  x :+ Minus y
+
 
 (!+) :: (MkTermC a, MkTermC b) => a -> b -> EqTerm
 x !+ y = mkTerm x :+ mkTerm y
+
+(!-) :: (MkTermC a, MkTermC b) => a -> b -> EqTerm
+x !- y = mkTerm x &- mkTerm y
 
 (!*) :: (MkTermC a, MkTermC b) => a -> b -> EqTerm
 x !* y = mkTerm x :* mkTerm y
@@ -608,7 +619,7 @@ mkDiffEqTerm oldrec (AssignEdge PowerOut (Var (Idx.Var _ _ use _)) _ (Power (Idx
 -- P_0.1_1.2 = b(P_0.1_2.1, n_0.1_1.2)
 mkDiffEqTerm oldrec (AssignEdge PowerIn (Power (Idx.Power s newrec f t)) (FEta _) _) =
   {- trace (showEqTerm z ++ " => " ++ showEqTerm res) $ -} [res, eres]
-  where res = dq ::= (dp :* (Recip n)) :+ (Minus ((p :* dn) :* nom)) :+ (Minus ((dp :* dn) :* nom))
+  where res = dq ::= dp :* Recip n  &-  p :* dn :* nom  &-  dp :* dn :* nom
         dq = mkVar $ Idx.DPower s newrec f t
         dp = mkVar $ Idx.DPower s newrec t f
         p = mkVar $ Idx.Power s oldrec t f
@@ -624,7 +635,7 @@ mkDiffEqTerm oldrec (AssignEdge PowerIn (Power (Idx.Power s newrec f t)) (FEta _
 -- v_0.1_OutSum.1 = b(P_0.1_1.2, x_0.1_1.2)
 mkDiffEqTerm oldrec (AssignEdge PowerIn (Var (Idx.Var s newrec use _n)) _ (Power (Idx.Power _ _ f t))) =
   {- trace ("--->: " ++ showEqTerm z ++ " => " ++ showEqTerm eres) $ -} [res, eres]
-  where res = v ::= (dp :* (Recip x)) :+ (Minus ((p :* dx) :* nom)) :+ (Minus ((dp :* dx) :* nom))
+  where res = v ::= dp :* Recip x  &-  p :* dx :* nom  &-  dp :* dx :* nom
         v = mkVar $ Idx.Var s newrec (toDiffUse use) f
         p = mkVar $ Idx.Power s oldrec f t
         dp = mkVar $ Idx.DPower s newrec f t
