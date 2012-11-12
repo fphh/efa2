@@ -1,5 +1,3 @@
-{-# LANGUAGE TupleSections #-}
-
 module EFA2.Topology.Flow (module EFA2.Topology.Flow) where
 
 import qualified EFA2.Topology.EfaGraph as Gr
@@ -95,18 +93,18 @@ mkSequenceTopology sd = res
         g ((_, (_, l), _):_) = l
 
         maxNode = 1 + (S.findMax $ nodeSet sqTopo)
-        startNodes = zipWith f (map (,maxNode) [maxNode+1 ..]) storeLabs
-        f (nid1, nid2) (NLabel _ n (Storage sn)) =
-           ( (nid1, NLabel Idx.initSection n (InitStorage sn)),
-             (nid2, NLabel Idx.initSection (-1) Source) )
+        startNodes = zipWith f [maxNode+1 ..] storeLabs
+        rootNode = (maxNode, NLabel Idx.initSection (-1) Source)
+        f nid (NLabel _ n (Storage sn)) =
+           (nid, NLabel Idx.initSection n (InitStorage sn))
 
         interSecEs =
-           concat $ zipWith mkIntersectionEdges (map fst startNodes) grpStores
+           concat $ zipWith mkIntersectionEdges startNodes grpStores
 
         e = defaultELabel { edgeType = InnerStorageEdge }
         startEdges =
-           map (\((nid1, _), (nid2, _)) -> (Edge nid2 nid1, e)) startNodes
+           map (\(nid1, _) -> (Edge maxNode nid1, e)) startNodes
         res =
            insEdges
               (startEdges ++ interSecEs)
-              (insNodes (concatMap (\(n1,n2) -> [n1,n2]) startNodes) sqTopo)
+              (insNodes (rootNode : startNodes) sqTopo)
