@@ -95,8 +95,8 @@ shiftIndices ::
    (Show a) =>
    M.Map (Idx.Section, Int) Node ->
    Envs SingleRecord a -> Envs SingleRecord a
-shiftIndices m (Envs (SingleRecord rec) e de p dp fn dn t' x dx v st) =
-  Envs (SingleRecord rec) e' de' p' dp' fn' dn' t' x' dx' v' st'
+shiftIndices m (Envs (SingleRecord rec) e de p dp fn dn dt x dx v st) =
+  Envs (SingleRecord rec) e' de' p' dp' fn' dn' dt' x' dx' v' st'
   where e' = M.mapKeys ef e
         ef (Idx.Energy s _ f t) = Idx.Energy s rec (m `safeLookup` (s, f)) (m `safeLookup` (s, t))
 
@@ -127,6 +127,9 @@ shiftIndices m (Envs (SingleRecord rec) e de p dp fn dn t' x dx v st) =
 
         st' = M.mapKeys stf st
         stf (Idx.Storage s _ sto) = Idx.Storage s rec sto
+
+        dt' = M.mapKeys tf dt
+        tf (Idx.DTime s _) = Idx.DTime s rec
 
 
 envToEqTerms :: (MkIdxC k) => M.Map k v -> [Equation]
