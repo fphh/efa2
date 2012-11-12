@@ -67,14 +67,14 @@ copySeqTopology (SequData tops) =
 
 
 mkIntersectionEdges ::
-   (node, NLabel) ->
+   (Idx.Section, node) ->
    M.Map Idx.Section (Topo.InOut node ELabel) -> [(Edge node, ELabel)]
-mkIntersectionEdges (startNode, startLabel) stores =
+mkIntersectionEdges startNode stores =
    concatMap
       (\(secin, n) ->
          map (\x -> (Edge n x, e)) $ M.elems $
          snd $ M.split secin outs) $
-   (sectionNLabel startLabel, startNode) : M.toList ins
+   startNode : M.toList ins
   where (instores, outstores) = partitionInOutStatic stores
 
         outs = fmap snd3 outstores
@@ -87,22 +87,16 @@ mkSequenceTopology :: SequData SecTopology -> Topology
 mkSequenceTopology sd = res
   where sqTopo = copySeqTopology sd
 
-        grpStores = getActiveStores sqTopo
-
         maxNode = 1 + (S.findMax $ nodeSet sqTopo)
-        startNodes = zipWith f [maxNode+1 ..] $ M.toList $ fmap fst grpStores
         rootNode = (maxNode, NLabel Idx.initSection (-1) Source)
-        f nid (sn, n) =
-           (nid, NLabel Idx.initSection n (InitStorage sn))
-
-        interSecEs =
-           concat $ zipWith mkIntersectionEdges startNodes $
-           M.elems $ fmap snd grpStores
+        startElems =
+           zipWith f [maxNode+1 ..] $ M.toList $ getActiveStores sqTopo
+        f nid (st, (n, io)) =
+           ((Edge maxNode nid, e) :
+               mkIntersectionEdges (Idx.initSection, nid) io,
+            (nid, NLabel Idx.initSection n (InitStorage st)))
 
         e = defaultELabel { edgeType = InnerStorageEdge }
-        startEdges =
-           map (\(nid1, _) -> (Edge maxNode nid1, e)) startNodes
         res =
-           insEdges
-              (startEdges ++ interSecEs)
-              (insNodes (rootNode : startNodes) sqTopo)
+           insEdges (concatMap fst startElems) $
+           insNodes (rootNode : map snd startElems) sqTopo
