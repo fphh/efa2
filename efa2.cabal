@@ -144,7 +144,7 @@ Executable threewaysto-pred
     Build-Depends:
       efa2,
       process,
-      fgl,
+      utility-ht,
       containers,
       base
   Else

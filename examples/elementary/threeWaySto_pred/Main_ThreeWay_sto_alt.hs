@@ -30,7 +30,7 @@ import EFA2.Signal.Typ (Typ, A, Tt, Y, P, N, F)
 
 import EFA2.Utils.Utils (safeLookup)
 
-import qualified Data.List as L
+import qualified Data.List.Match as Match
 import qualified Data.Map as M
 
 
@@ -142,7 +142,7 @@ solve3Way sqTp y n = interpretFromScratch (SingleRecord rec) 1 gd -- interprete 
 -- | D. Function to generate Variation Matrix
 genVariationMatrix :: [a] -> [b] -> ([[a]], [[b]])
 genVariationMatrix xs ys =
-   (replicate (length ys) xs, L.transpose $ replicate (length xs) ys)
+   (Match.replicate ys xs, map (Match.replicate xs) ys)
 
 
 -- | Safe Lookup Functions
