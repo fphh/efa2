@@ -7,28 +7,28 @@ module EFA2.StateAnalysis.StateAnalysis where
 --import Prelude hiding (map, length, filter, concatMap, all, (++), foldr)
 --import Data.List.Stream
 
-import qualified Data.IntMap as IM
+import qualified Data.Map as M
 --import qualified Data.Vector as V
 --import Data.Function (on)
 
+import qualified EFA2.Signal.Index as Idx
+import qualified EFA2.Topology.EfaGraph as Gr
 import EFA2.Topology.TopologyData
-          (Topology, NodeType(..),
-           NLabel, ELabel, isActiveEdge, isInactiveEdge, nodetypeNLabel,
-           FlowDirection(UnDir, WithDir), flowDirection, flipFlowDirection)
+          (FlowTopology, NodeType(..),
+           FlowDirection, isActive, isInactive,
+           FlowDirection(UnDir, WithDir), flipFlowDirection)
 import EFA2.Topology.EfaGraph
-          (Edge(Edge), lab, labNodes, labEdges,
+          (Edge(Edge), LNode, lab, labNodes, labEdges,
            insNode, insEdge, pre, suc, lpre, lsuc, mkGraph)
 import EFA2.Utils.Utils (checkJust)
-
-import Data.Graph.Inductive (LNode, Node)
 
 
 -- import Debug.Trace
 
 -- How should it be orderd to be faster?
-checkNodeType :: NodeType -> [ELabel] -> [ELabel] -> Bool
+checkNodeType :: NodeType -> [FlowDirection] -> [FlowDirection] -> Bool
 checkNodeType Crossing xsuc xpre =
-   (not (null xsuc) && not (null xpre)) || all isInactiveEdge (xsuc ++ xpre)
+   (not (null xsuc) && not (null xpre)) || all isInactive (xsuc ++ xpre)
 checkNodeType NoRestriction _ _ = True
 checkNodeType Source _ [] = True
 checkNodeType AlwaysSource (_:_) [] = True
@@ -40,38 +40,38 @@ checkNodeType (InitStorage _) _ _ = error "Not supposed to meet InitStorage in c
 checkNodeType _ _ _ = False
 
 -- Because of extend, we only do have to deal with WithDir edges here!
-checkNode :: GraphInfo -> Node -> Topology -> Bool
+checkNode :: GraphInfo -> Idx.Node -> FlowTopology -> Bool
 checkNode gf x topo =
     (nadj /= length xsuc + length xpre) || res
   where res = checkNodeType nty xsuc' xpre'
 
         xsuc = lsuc topo x
-        xsuc' = filter isActiveEdge (map snd xsuc)
+        xsuc' = filter isActive (map snd xsuc)
 
         xpre = lpre topo x
-        xpre' = filter isActiveEdge (map snd xpre)
+        xpre' = filter isActive (map snd xpre)
 
-        (nty, nadj) = checkJust "checkNode" $ IM.lookup x gf
+        (nty, nadj) = checkJust "checkNode" $ M.lookup x gf
         --Just (nty, nadj) = gf V.! x  -- Vector Version
 
-ok :: GraphInfo -> LNEdge -> Topology -> Bool
-ok gf (x, y, _) t = checkNode gf (fst x) t && checkNode gf (fst y) t
+ok :: GraphInfo -> LNEdge -> FlowTopology -> Bool
+ok gf (x, y) t = checkNode gf (fst x) t && checkNode gf (fst y) t
 
-extend :: LNEdge -> [Topology] -> [Topology]
-extend ((x, xl), (y, yl), l) [] = [a, b, c]
+extend :: LNEdge -> [FlowTopology] -> [FlowTopology]
+extend ((x, xl), (y, yl)) [] = [a, b, c]
   where ns = [(x, xl), (y, yl)]
-        a = mkGraph ns [(Edge x y, l { flowDirection = WithDir })]
-        b = mkGraph ns [(Edge y x, l { flowDirection = WithDir })] -- x and y inversed!
-        c = mkGraph ns [(Edge x y, l { flowDirection = UnDir })]
-extend ((x, xl), (y, yl), l) gs = concatMap f gs'
+        a = mkGraph ns [(Edge x y, WithDir)]
+        b = mkGraph ns [(Edge y x, WithDir)] -- x and y inversed!
+        c = mkGraph ns [(Edge x y, UnDir)]
+extend ((x, xl), (y, yl)) gs = concatMap f gs'
   where gs' = map (insNode (y, yl) . insNode (x, xl)) gs
         f g = [a g, b g, c g]
-        a g = insEdge (Edge x y, l { flowDirection = WithDir }) g
-        b g = insEdge (Edge y x, l { flowDirection = WithDir }) g -- x and y inversed!
-        c g = insEdge (Edge x y, l { flowDirection = UnDir }) g
+        a g = insEdge (Edge x y, WithDir) g
+        b g = insEdge (Edge y x, WithDir) g -- x and y inversed!
+        c g = insEdge (Edge x y, UnDir) g
 
 type NumberOfAdj = Int
-type GraphInfo = IM.IntMap (NodeType, NumberOfAdj)
+type GraphInfo = M.Map Idx.Node (NodeType, NumberOfAdj)
 
 
 {-
@@ -80,7 +80,7 @@ type GraphInfo = IM.IntMap (NodeType, NumberOfAdj)
 
 type GraphInfo = V.Vector (Maybe (NodeType, NumberOfAdj))
 
-buildInfo :: Topology -> GraphInfo
+buildInfo :: FlowTopology -> GraphInfo
 buildInfo topo = V.fromList xs
   where ns = labNodes topo
         xs = map snd $ makeContigous $ map f ns
@@ -96,44 +96,37 @@ makeContigous xs = reverse ys
 -}
 
 
-buildInfo :: Topology -> GraphInfo
-buildInfo topo = IM.fromList xs
-  where ns = labNodes topo
-        xs = map f ns
-        f (n, l) = (n, (nodetypeNLabel l, length (pre topo n) + length (suc topo n)))
+buildInfo :: FlowTopology -> GraphInfo
+buildInfo topo = M.mapWithKey f $ Gr.nodeLabels topo
+  where f n l = (l, length (pre topo n) + length (suc topo n))
 
 
-expand :: GraphInfo -> LNEdge -> [Topology] -> [Topology]
+expand :: GraphInfo -> LNEdge -> [FlowTopology] -> [FlowTopology]
 expand gf x = filter (ok gf x) . extend x
 
-solutions :: Topology -> [LNEdge] -> [Topology]
+solutions :: FlowTopology -> [LNEdge] -> [FlowTopology]
 solutions origTopo = foldr (expand gf) []
   where gf = buildInfo origTopo
 
-type LNEdge = (LNode NLabel, LNode NLabel, ELabel)
+type LNEdge = (LNode Idx.Node NodeType, LNode Idx.Node NodeType)
 
-buildLNEdges :: Topology -> [LNEdge]
-buildLNEdges g = lnes
-  where les = labEdges g
-        lnes = map f les
-        f (Edge x y, l) =
+buildLNEdges :: FlowTopology -> [LNEdge]
+buildLNEdges g = map f $ M.keys $ Gr.edgeLabels g
+  where f (Edge x y) =
            ((x, checkJust "buildLNEdges" $ lab g x),
-            (y, checkJust "buildLNEdges" $ lab g y),
-            l)
+            (y, checkJust "buildLNEdges" $ lab g y))
 
-stateAnalysis :: Topology -> [Topology]
-stateAnalysis topo = sol
-  where es = buildLNEdges topo
-        sol = solutions topo es
+stateAnalysis :: FlowTopology -> [FlowTopology]
+stateAnalysis topo = solutions topo $ buildLNEdges topo
 
 -- | Auxiliary function that can be mapped over
 -- the results of 'stateAnalysis'. The nodes of the
 -- topologies will then be ordered the same way,
 -- which looks nice when drawing it with 'drawTopologyXs''
-reorderEdges :: Topology -> Topology -- This function should go in an auxiliary module.
+reorderEdges :: FlowTopology -> FlowTopology -- This function should go in an auxiliary module.
 reorderEdges topo = mkGraph ns es
   where ns = labNodes topo
         es = map f $ labEdges topo
         f z@(Edge x y, l)
           | x < y = z
-          | otherwise = (Edge y x, l { flowDirection = flipFlowDirection (flowDirection l) })
+          | otherwise = (Edge y x, flipFlowDirection l)

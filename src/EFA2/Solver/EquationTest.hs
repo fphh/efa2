@@ -10,9 +10,12 @@ import EFA2.Interpreter.Env (Index(..))
 
 deflt ::
    (MkIdxC a) =>
-   (Idx.Section -> Idx.Record -> Int -> Int -> a) ->
+   (Idx.Record -> Idx.SecNode -> Idx.SecNode -> a) ->
    Int -> Int -> Index
-deflt mkIdx x y = mkVar $ mkIdx (Idx.Section 0) (Idx.Record 0) x y
+deflt mkIdx x y =
+   mkVar $ mkIdx (Idx.Record 0)
+      (Idx.SecNode (Idx.Section 0) (Idx.Node x))
+      (Idx.SecNode (Idx.Section 0) (Idx.Node y))
 
 p1, p2, p3, p4 :: Index
 p1 = deflt Idx.Power 0 1

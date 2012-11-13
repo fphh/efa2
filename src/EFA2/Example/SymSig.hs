@@ -5,7 +5,7 @@ module EFA2.Example.SymSig where
 
 import EFA2.Interpreter.Env (EnergyMap)
 -- import EFA2.Topology.Topology
-import EFA2.Topology.TopologyData (Topology)
+import EFA2.Topology.TopologyData (FlowTopology)
 
 {-
 
@@ -29,5 +29,5 @@ instance Signal InTerm where
          toSignal = InConst
 -}
 
-data TheGraph a = TheGraph { theGraph :: Topology,
+data TheGraph a = TheGraph { theGraph :: FlowTopology,
                              powerEnv :: EnergyMap a }

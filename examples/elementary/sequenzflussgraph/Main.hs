@@ -28,16 +28,16 @@ parse str = map readNum $ chop (','==) $ filter (' '/=) str
               [(n, "")] -> n
               _ -> error "parse error: not a number!"
 
-select :: [Topology] -> [Int] -> [Topology]
+select :: [topo] -> [Int] -> [topo]
 select ts = map (ts!!)
 
-drawSeqGraph :: [Topology] ->  IO ()
+drawSeqGraph :: [FlowTopology] ->  IO ()
 drawSeqGraph sol =
    drawTopologySimple .
    Flow.mkSequenceTopology .
    Flow.genSectionTopology . SequData =<<
    interactA "Gib kommagetrennt die gewuenschten Sektionsindices ein: "
-      (map topoToFlowTopo . select sol . parse)
+      (select sol . parse)
 
 
 main :: IO ()

@@ -26,14 +26,14 @@ import qualified EFA2.Signal.Signal as S
 import EFA2.Signal.Signal (Sc)
 
 import EFA2.Topology.Topology (makeAllEquations)
-import EFA2.Topology.TopologyData (Topology)
+import EFA2.Topology.TopologyData (SequFlowGraph)
 
 import EFA2.Topology.Draw (drawDeltaTopology, drawTopology, drawAll)
 
 import EFA2.Example.Dreibein
 
 
-symbolic :: Topology -> Envs NoRecord EqTerm
+symbolic :: SequFlowGraph -> Envs NoRecord EqTerm
 symbolic g = mapEqTermEnv (setEqTerms (emptyEnv { dxMap = dx1eq })) res
   where
 
@@ -64,7 +64,7 @@ symbolic g = mapEqTermEnv (setEqTerms (emptyEnv { dxMap = dx1eq })) res
            ts0o ++ ts1o ++ difftseq
         res = interpretEqTermFromScratch ts
 
-numeric :: Topology -> Envs MixedRecord Sc
+numeric :: SequFlowGraph -> Envs MixedRecord Sc
 numeric g =  trace ("---------\n" ++ showAssigns ts1o ++ "\n------\n") res
   where envs0 = emptyEnv { recordNumber = SingleRecord rec0,
                            powerMap = power0num,
@@ -93,7 +93,7 @@ numeric g =  trace ("---------\n" ++ showAssigns ts1o ++ "\n------\n") res
         ts = toAbsEquations $ ts0o ++ ts1o ++ difftseq
         res = interpretFromScratch (recordNumber envs) 1 (map (eqToInTerm envs) ts)
 
-deltaEnv :: Topology -> Envs MixedRecord Sc
+deltaEnv :: SequFlowGraph -> Envs MixedRecord Sc
 deltaEnv g = res1 `minusEnv` res0
   where
         envs0 = emptyEnv { recordNumber = SingleRecord rec0,
@@ -133,7 +133,7 @@ instance MyShow Sc where
          myshow = show
 
 instance MyShow Idx.DPower where
-         myshow (Idx.DPower s r f t) = "dP_" ++ showEdgeIdx s r f t
+         myshow (Idx.DPower r f t) = "dP_" ++ showEdgeIdx r f t
 
 instance MyShow EqTerm where
          myshow = showEqTerm

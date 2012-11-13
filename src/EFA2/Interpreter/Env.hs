@@ -31,71 +31,71 @@ data Index =
 
 
 class IdxRecNum a where
-      getIdxRecNum :: a -> Idx.Record
-      setIdxRecNum :: Idx.Record -> a -> a
+   getIdxRecNum :: a -> Idx.Record
+   setIdxRecNum :: Idx.Record -> a -> a
 
 instance IdxRecNum Idx.Energy where
-         getIdxRecNum (Idx.Energy _ r _ _) = r
-         setIdxRecNum rec (Idx.Energy s _ f t) = Idx.Energy s rec f t
+   getIdxRecNum (Idx.Energy r _ _) = r
+   setIdxRecNum rec (Idx.Energy _ f t) = Idx.Energy rec f t
 
 instance IdxRecNum Idx.DEnergy where
-         getIdxRecNum (Idx.DEnergy _ r _ _) = r
-         setIdxRecNum rec (Idx.DEnergy s _ f t) = Idx.DEnergy s rec f t
+   getIdxRecNum (Idx.DEnergy r _ _) = r
+   setIdxRecNum rec (Idx.DEnergy _ f t) = Idx.DEnergy rec f t
 
 instance IdxRecNum Idx.Power where
-         getIdxRecNum (Idx.Power _ r _ _) = r
-         setIdxRecNum rec (Idx.Power s _ f t) = Idx.Power s rec f t
+   getIdxRecNum (Idx.Power r _ _) = r
+   setIdxRecNum rec (Idx.Power _ f t) = Idx.Power rec f t
 
 instance IdxRecNum Idx.DPower where
-         getIdxRecNum (Idx.DPower _ r _ _) = r
-         setIdxRecNum rec (Idx.DPower s _ f t) = Idx.DPower s rec f t
+   getIdxRecNum (Idx.DPower r _ _) = r
+   setIdxRecNum rec (Idx.DPower _ f t) = Idx.DPower rec f t
 
 instance IdxRecNum Idx.FEta where
-         getIdxRecNum (Idx.FEta _ r _ _) = r
-         setIdxRecNum rec (Idx.FEta s _ f t) = Idx.FEta s rec f t
+   getIdxRecNum (Idx.FEta r _ _) = r
+   setIdxRecNum rec (Idx.FEta _ f t) = Idx.FEta rec f t
 
 instance IdxRecNum Idx.DEta where
-         getIdxRecNum (Idx.DEta _ r _ _) = r
-         setIdxRecNum rec (Idx.DEta s _ f t) = Idx.DEta s rec f t
+   getIdxRecNum (Idx.DEta r _ _) = r
+   setIdxRecNum rec (Idx.DEta _ f t) = Idx.DEta rec f t
 
 instance IdxRecNum Idx.X where
-         getIdxRecNum (Idx.X _ r _ _) = r
-         setIdxRecNum rec (Idx.X s _ f t) = Idx.X s rec f t
+   getIdxRecNum (Idx.X r _ _) = r
+   setIdxRecNum rec (Idx.X _ f t) = Idx.X rec f t
 
 instance IdxRecNum Idx.DX where
-         getIdxRecNum (Idx.DX _ r _ _) = r
-         setIdxRecNum rec (Idx.DX s _ f t) = Idx.DX s rec f t
+   getIdxRecNum (Idx.DX r _ _) = r
+   setIdxRecNum rec (Idx.DX _ f t) = Idx.DX rec f t
 
 instance IdxRecNum Idx.DTime where
-         getIdxRecNum (Idx.DTime _ r) = r
-         setIdxRecNum rec (Idx.DTime s _) = Idx.DTime s rec
+   getIdxRecNum (Idx.DTime r _) = r
+   setIdxRecNum rec (Idx.DTime _ s) = Idx.DTime rec s
 
 instance IdxRecNum Idx.Storage where
-         getIdxRecNum (Idx.Storage _ r _) = r
-         setIdxRecNum rec (Idx.Storage s _ sto) = Idx.Storage s rec sto
+   getIdxRecNum (Idx.Storage r _ _) = r
+   setIdxRecNum rec (Idx.Storage _ s sto) = Idx.Storage rec s sto
 
 instance IdxRecNum Idx.Var where
-         getIdxRecNum (Idx.Var _ r _ _) = r
-         setIdxRecNum rec (Idx.Var s _ use t) = Idx.Var s rec use t
+   getIdxRecNum (Idx.Var r _ _) = r
+   setIdxRecNum rec (Idx.Var _ use t) = Idx.Var rec use t
 
 
 class IdxEq a where
-      ignoreRecEq :: a -> a -> Bool
+   ignoreRecEq :: a -> a -> Bool
 
 instance IdxEq Idx.Power where
-         ignoreRecEq (Idx.Power a _ b c) (Idx.Power x _ y z) = a == x && b == y && c == z
+   ignoreRecEq (Idx.Power _ a b) (Idx.Power _ x y) = a == x && b == y
 
 instance IdxEq Idx.Energy where
-         ignoreRecEq (Idx.Energy a _ b c) (Idx.Energy x _ y z) = a == x && b == y && c == z
+   ignoreRecEq (Idx.Energy _ a b) (Idx.Energy _ x y) = a == x && b == y
 
 instance IdxEq Idx.FEta where
-         ignoreRecEq (Idx.FEta a _ b c) (Idx.FEta x _ y z) = a == x && b == y && c == z
+   ignoreRecEq (Idx.FEta _ a b) (Idx.FEta _ x y) = a == x && b == y
 
 instance IdxEq Idx.X where
-         ignoreRecEq (Idx.X a _ b c) (Idx.X x _ y z) = a == x && b == y && c == z
+   ignoreRecEq (Idx.X _ a b) (Idx.X _ x y) = a == x && b == y
 
 instance IdxEq Idx.Storage where
-         ignoreRecEq (Idx.Storage a _ b) (Idx.Storage x _ y) = a == x && b == y
+   ignoreRecEq (Idx.Storage _ a b) (Idx.Storage _ x y) = a == x && b == y
 
 -- Environments
 type EnergyMap a = M.Map Idx.Energy a
@@ -223,10 +223,10 @@ minusEnv laterEnv formerEnv | checkEnvsForDelta laterEnv formerEnv = gnv
         fminus = M.intersectionWith (\fx fy z -> fx z .- fy z)
 -}
 
-        edk (Idx.Energy a b c d) = Idx.DEnergy a b c d
-        pdk (Idx.Power a b c d) = Idx.DPower a b c d
-        etadk (Idx.FEta a b c d) = Idx.DEta a b c d
-        xdk (Idx.X a b c d) = Idx.DX a b c d
+        edk (Idx.Energy r x y) = Idx.DEnergy r x y
+        pdk (Idx.Power r x y) = Idx.DPower r x y
+        etadk (Idx.FEta r x y) = Idx.DEta r x y
+        xdk (Idx.X r x y) = Idx.DX r x y
 
         gnv = laterEnv { denergyMap = M.mapKeys edk $ energyMap laterEnv `minus` energyMap formerEnv,
                          dpowerMap = M.mapKeys pdk $ powerMap laterEnv `minus` powerMap formerEnv,

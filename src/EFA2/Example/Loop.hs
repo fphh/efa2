@@ -4,8 +4,7 @@ import qualified EFA2.Signal.Index as Idx
 import EFA2.Topology.Topology
           (makeWithDirEdges, makeEdges, makeNodes)
 import EFA2.Topology.TopologyData
-          (defaultELabel, flowDirection,
-           FlowDirection(AgainstDir), NodeType(Crossing))
+          (FlowDirection(AgainstDir), NodeType(Crossing))
 import EFA2.Topology.EfaGraph (mkGraph)
 
 import EFA2.Interpreter.Arith (Val)
@@ -20,12 +19,25 @@ import qualified Data.Map as M
 numOf :: Int
 numOf = 3
 
+sec :: Idx.Section
+sec = Idx.Section 0
+
+rec :: Idx.Record
+rec = Idx.Record 0
+
+edgeIdx ::
+   (Idx.Record -> Idx.SecNode -> Idx.SecNode -> idx) ->
+   (Int, Int) -> idx
+edgeIdx mkIdx (x, y) =
+   mkIdx rec (Idx.SecNode sec (Idx.Node x)) (Idx.SecNode sec (Idx.Node y))
+
+
 dtimes :: DTimeMap [Val]
-dtimes = M.fromList [(Idx.DTime (Idx.Section 0) (Idx.Record 0), [2, 2, 2])]
+dtimes = M.fromList [(Idx.DTime rec sec, [2, 2, 2])]
 
 sigs :: EnergyMap [Val]
 sigs =
-   M.mapKeys (uncurry (Idx.Energy (Idx.Section 0) (Idx.Record 0))) $
+   M.mapKeys (edgeIdx Idx.Energy) $
    M.fromList $
       ((,) 0 1, [2.3, 2.4, 3]) :
       ((,) 1 0, [2, 2.1, 2.2]) :
@@ -43,7 +55,7 @@ sigs =
 
 etas :: FEtaMap [Val]
 etas =
-   M.mapKeys (uncurry (Idx.FEta (Idx.Section 0) (Idx.Record 0))) $
+   M.mapKeys (edgeIdx Idx.FEta) $
    M.fromList $
       ((,) 0 1, map (\x -> x/(x+1))) :
       ((,) 1 0, map (\x -> x/(x+1))) :
@@ -62,7 +74,7 @@ etas =
 
 pows :: PowerMap [Val]
 pows =
-   M.mapKeys (uncurry (Idx.Power (Idx.Section 0) (Idx.Record 0))) $
+   M.mapKeys (edgeIdx Idx.Power) $
    M.fromList $
       ((,) 0 1, [1, 2, 3]) :
       ((,) 1 0, replicate numOf 2.2) :
@@ -83,7 +95,7 @@ loop :: TheGraph [Val]
 loop = TheGraph g sigs
   where g = mkGraph ns es
         es = makeWithDirEdges (pairs no)
-             ++ makeEdges [(2, 4, defaultELabel { flowDirection =  AgainstDir})] -- Why do we have to do this?
+             ++ makeEdges [(2, 4, AgainstDir)] -- Why do we have to do this?
              ++ makeWithDirEdges (pairs (1:no2))
         no = [0..3]
         no2 = [4, 5]

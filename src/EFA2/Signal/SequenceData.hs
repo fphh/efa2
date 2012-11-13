@@ -39,7 +39,7 @@ import Data.Foldable (Foldable, foldMap, fold)
 
 -----------------------------------------------------------------------------------
 -- | Indices for Power Position
-data PPosIdx = PPosIdx !Int !Int deriving (Show, Eq, Ord)
+data PPosIdx = PPosIdx !Idx.Node !Idx.Node deriving (Show, Eq, Ord)
 
 
 -----------------------------------------------------------------------------------
@@ -124,7 +124,7 @@ zipWithSecIdxs f =
 
 
 instance QC.Arbitrary PPosIdx where
-   arbitrary = liftM2 PPosIdx (QC.choose (0,10)) (QC.choose (0,10))
+   arbitrary = liftM2 PPosIdx QC.arbitrary QC.arbitrary
    shrink (PPosIdx from to) = map (uncurry PPosIdx) $ QC.shrink (from, to)
 
 instance

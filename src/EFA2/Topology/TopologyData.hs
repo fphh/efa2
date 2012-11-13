@@ -1,17 +1,16 @@
-{-# LANGUAGE TupleSections #-}
-
 module EFA2.Topology.TopologyData (
-       --EfaGraph,
        NLabel (..), LNode,
        ELabel (..), LEdge,
        NodeType (..),
-       FlowDirection (..),
        EdgeType (..),
+       FlowDirection (..),
        Topology,
-       unTopology,
        FlowTopology,
        SecTopology,
+       SequFlowGraph,
        isStorage,
+       isActive,
+       isInactive,
        isActiveEdge,
        isInactiveEdge,
        isOtherSection,
@@ -19,28 +18,23 @@ module EFA2.Topology.TopologyData (
        isInnerStorageEdge,
        isIntersectionEdge,
        flipFlowDirection,
-       getStorageNumber,
        defaultELabel,
        defaultNLabel,
-       unlabelEdge,
-       fromFlowToSecTopology,
        InOut,
        getActiveStores,
-       topoToFlowTopo,
        partitionInOutStatic) where
 
 import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Topology.EfaGraph as Gr
 import EFA2.Topology.EfaGraph (EfaGraph, mkInOutGraphFormat)
-import Data.Graph.Inductive (Node)
 
 import qualified Data.Map as M
 import Data.Tuple.HT (mapSnd)
-import Data.Maybe (mapMaybe)
+import Data.Maybe (mapMaybe, isJust)
 
 
-type LNode = Gr.LNode Node NLabel
-type LEdge = Gr.LEdge Node ELabel
+type LNode = Gr.LNode Idx.SecNode NodeType
+type LEdge = Gr.LEdge Idx.SecNode ELabel
 
 data NodeType = Storage Idx.Store
               | InitStorage Idx.Store
@@ -53,21 +47,20 @@ data NodeType = Storage Idx.Store
               | NoRestriction deriving (Show, Ord, Eq)
 
 isStorage :: NodeType -> Bool
-isStorage (Storage _) = True
-isStorage (InitStorage _) = True
-isStorage _ = False
+isStorage = isJust . getStorageNumber
 
-getStorageNumber :: NodeType -> Idx.Store
-getStorageNumber (Storage x) = x
-getStorageNumber (InitStorage x) = x
-getStorageNumber x = error $ "getStorageNumber: " ++ show x ++ " is not a storage"
+getStorageNumber :: NodeType -> Maybe Idx.Store
+getStorageNumber nt =
+   case nt of
+      Storage x -> Just x
+      InitStorage x -> Just x
+      _ -> Nothing
 
-data NLabel = NLabel { sectionNLabel :: Idx.Section,
-                       nodeNLabel :: Int,
-                       nodetypeNLabel :: NodeType } deriving (Show, Eq, Ord)
+
+newtype NLabel = NLabel { nodeType :: NodeType } deriving (Show, Eq, Ord)
 
 defaultNLabel :: NLabel
-defaultNLabel = NLabel (Idx.Section 0) 0 NoRestriction
+defaultNLabel = NLabel NoRestriction
 
 
 data FlowDirection = WithDir
@@ -75,7 +68,7 @@ data FlowDirection = WithDir
                    | UnDir deriving (Show, Eq, Ord)
 
 isOtherSection :: LNode -> LNode -> Bool
-isOtherSection (_, l1) (_, l2) = sectionNLabel l1 /= sectionNLabel l2
+isOtherSection (Idx.SecNode s1 _, _) (Idx.SecNode s2 _, _)  =  s1 /= s2
 
 isInactive :: FlowDirection -> Bool
 isInactive UnDir = True
@@ -118,31 +111,21 @@ flipFlowDirection AgainstDir = WithDir
 flipFlowDirection UnDir = UnDir
 
 
+type Topology = EfaGraph Idx.Node NodeType ()
 
-unlabelEdge :: LEdge -> Gr.Edge Node
-unlabelEdge = fst
+type FlowTopology = EfaGraph Idx.Node NodeType FlowDirection
 
-unTopology :: Topology -> EfaGraph Node NLabel ELabel
-unTopology = id
+type SecTopology = EfaGraph Idx.SecNode NodeType FlowDirection
 
-type Topology = EfaGraph Node NLabel ELabel
-
-topoToFlowTopo :: Topology -> FlowTopology
-topoToFlowTopo = id
-
-type FlowTopology = EfaGraph Node NLabel ELabel
-
-type SecTopology = EfaGraph Node NLabel ELabel
+type SequFlowGraph = EfaGraph Idx.SecNode NodeType ELabel
 
 
-fromFlowToSecTopology :: FlowTopology -> SecTopology
-fromFlowToSecTopology = id
-
-type InOut n el = ([Gr.LNode n el], n, [Gr.LNode n el])
+type InOut n el = ([Gr.LNode n el], [Gr.LNode n el])
 
 -- | Active storages, grouped by storage number, sorted by section number.
 getActiveStores ::
-   Topology -> M.Map Idx.Store (Node, M.Map Idx.Section (InOut Node ELabel))
+   SequFlowGraph ->
+   M.Map Idx.Store (Idx.Node, M.Map Idx.Section (InOut Idx.SecNode ELabel))
 getActiveStores =
    M.map (mapSnd (M.filter isActiveSt)) .
    M.fromListWith
@@ -150,17 +133,12 @@ getActiveStores =
          (if n0==n1 then n0 else error "inconsistent mapping from Store to Node",
           M.unionWith (error "the same storage multiple times in a section") e0 e1)) .
    mapMaybe
-      (\(pre, (gn, NLabel s n nt), suc) ->
-         fmap (flip (,) (n, M.singleton s (pre, gn, suc))) $ stNum nt) .
+      (\(pre, (Idx.SecNode s n, nt), suc) ->
+         fmap (flip (,) (n, M.singleton s (pre, suc))) $ getStorageNumber nt) .
    mkInOutGraphFormat
-  where stNum nt =
-           case nt of
-              Storage x -> Just x
-              InitStorage x -> Just x
-              _ -> Nothing
 
 isActiveSt :: InOut n ELabel -> Bool
-isActiveSt (ins, _, outs) =
+isActiveSt (ins, outs) =
    any isActiveEdge $ map snd $ ins ++ outs
 
 -- | Partition the storages in in and out storages, looking only at edges, not at values.
@@ -170,6 +148,6 @@ partitionInOutStatic ::
    M.Map sec (InOut n ELabel) ->
    (M.Map sec (InOut n ELabel), M.Map sec (InOut n ELabel))
 partitionInOutStatic = M.partition p
-  where p (ins, _, outs)  =  null (filter q ins) /= null (filter r outs)
+  where p (ins, outs)  =  null (filter q ins) /= null (filter r outs)
           where q (_, e) = flowDirection e == WithDir && (isOriginalEdge e || isInnerStorageEdge e)
                 r (_, e) = flowDirection e == AgainstDir && (isOriginalEdge e || isInnerStorageEdge e)

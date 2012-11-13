@@ -55,6 +55,9 @@ ixmap f (EfaGraph outs ins nls els) =
       (M.mapKeysWith (error "EfaGraph.ixmap: node map is not injective") f nls)
       (M.mapKeys (fmap f) els)
 
+empty :: EfaGraph node nodeLabel edgeLabel
+empty = EfaGraph M.empty M.empty M.empty M.empty
+
 {- |
 The node sets must be disjoint.
 -}
@@ -301,6 +304,10 @@ instance (Ord n, Enum n) => IG.DynGraph (EfaGraph n) where
 nmap :: (nl0 -> nl1) -> EfaGraph n nl0 el -> EfaGraph n nl1 el
 nmap f (EfaGraph outs ins nls els) =
    EfaGraph outs ins (fmap f nls) els
+
+emap :: (el0 -> el1) -> EfaGraph n nl el0 -> EfaGraph n nl el1
+emap f (EfaGraph outs ins nls els) =
+   EfaGraph outs ins nls (fmap f els)
 
 nodeSet :: EfaGraph n nl el -> S.Set n
 nodeSet = M.keysSet . nodeLabels

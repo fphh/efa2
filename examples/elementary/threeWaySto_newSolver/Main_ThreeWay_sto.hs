@@ -4,7 +4,7 @@ module Main where
 import qualified Data.Map as M
 
 import EFA2.Topology.EfaGraph (mkGraph)
-import EFA2.Topology.Topology (makeAllEquations, makeNodes, makeEdges)
+import EFA2.Topology.Topology (makeAllEquations, makeNodes, makeSimpleEdges)
 import EFA2.Topology.TopologyData
 
 import EFA2.Solver.Equation (give, toAbsEquations)
@@ -24,9 +24,9 @@ import EFA2.Signal.Signal (PSigL, TSigL)
 
 
 topo :: Topology
-topo = mkGraph (makeNodes nodes) (makeEdges edges)
+topo = mkGraph (makeNodes nodes) (makeSimpleEdges edges)
   where nodes = [(0, Source), (1, Crossing), (2, Sink), (3, Storage $ Idx.Store 0)]
-        edges = [(0, 1, defaultELabel), (1, 2, defaultELabel), (1, 3, defaultELabel)]
+        edges = [(0, 1), (1, 2), (1, 3)]
 
 
 mkSig :: Int -> ([Val] -> PSigL)
@@ -39,6 +39,15 @@ rec = Idx.Record 0
 secm, sec3 :: Idx.Section
 secm = Idx.initSection
 sec3 = Idx.Section 3
+
+pPosIdx :: Int -> Int -> PPosIdx
+pPosIdx x y = PPosIdx (Idx.Node x) (Idx.Node y)
+
+edgeIdx ::
+   (Idx.Record -> Idx.SecNode -> Idx.SecNode -> idx) ->
+   Idx.Section -> Int -> Int -> idx
+edgeIdx mkIdx sec x y =
+   mkIdx rec (Idx.SecNode sec (Idx.Node x)) (Idx.SecNode sec (Idx.Node y))
 
 
 main :: IO ()
@@ -62,19 +71,20 @@ main = do
       time :: TSigL
       time = S.fromList ([0, 0] ++ take 20 [1..])
 
-      pMap =  M.fromList [ (PPosIdx 0 1, mkSig n (s01 ++ s01')),
-                           (PPosIdx 1 0, mkSig n (s10 ++ s10')), 
-                           (PPosIdx 1 2, mkSig n (s12 ++ s12')),
-                           (PPosIdx 2 1, mkSig n (s21 ++ s21')),
-                           (PPosIdx 1 3, mkSig n (s13 ++ s13')),
-                           (PPosIdx 3 1, mkSig n (s31 ++ s31')) ]
+      pMap =  M.fromList [ (pPosIdx 0 1, mkSig n (s01 ++ s01')),
+                           (pPosIdx 1 0, mkSig n (s10 ++ s10')),
+                           (pPosIdx 1 2, mkSig n (s12 ++ s12')),
+                           (pPosIdx 2 1, mkSig n (s21 ++ s21')),
+                           (pPosIdx 1 3, mkSig n (s13 ++ s13')),
+                           (pPosIdx 3 1, mkSig n (s31 ++ s31')) ]
 
       sqFRec = Seq.makeSequence (PowerRecord time pMap)
       sqTopo = Seq.makeSeqFlowGraph topo sqFRec
       sqEnvs = Seq.makeRecSequence sqFRec
 
-      --storage0 = Idx.Power secm rec 24 25
-      storage0 = Idx.Power secm rec 16 17
+      -- storage0 = Idx.Power secm rec 24 25
+      -- storage0 = Idx.Power secm rec 16 17
+      storage0 = edgeIdx Idx.Power secm 0 1
 
       (sqEnvs', ts') =
          makeAllEquations sqTopo (case sqEnvs of SequData l -> map g l) -- { recordNumber = SingleRecord rec })
@@ -84,7 +94,7 @@ main = do
 
       envs = sqEnvs' { recordNumber = SingleRecord rec,
                        powerMap = M.insert storage0 (S.fromList [3.0]) (M.map (S.map abs) sigs),
-                       fetaMap = M.singleton (Idx.FEta sec3 rec 15 13) (S.map (const 0.4)) }
+                       fetaMap = M.singleton (edgeIdx Idx.FEta sec3 3 1) (S.map (const 0.4)) }
 
 
       gd = map (eqToInTerm envs) (toAbsEquations $ order ts)

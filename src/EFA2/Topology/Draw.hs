@@ -1,8 +1,9 @@
 module EFA2.Topology.Draw where
 
 import EFA2.Solver.Equation
-          (Term(..), ToIndex, simplify, showEqTerm, showEqTerms, (&-), (&/),
-           LatexString(LatexString), unLatexString)
+          (Term(..), ToIndex, simplify, (&-), (&/),
+           showEqTerm, showEqTerms, showSecNode,
+           LatexString(LatexString), unLatexString, secNodeToLatexString)
 import EFA2.Interpreter.Env
           (DTimeMap, StorageMap,
            SingleRecord(SingleRecord))
@@ -10,7 +11,7 @@ import qualified EFA2.Interpreter.Env as Interp
 import EFA2.Topology.TopologyData as Topo
 import EFA2.Topology.EfaGraph
           (EfaGraph, Edge(Edge),
-           lab, labNodes, labEdges, edgeLabels, delNodes, delEdgeSet)
+           labNodes, labEdges, edgeLabels, delNodes, delEdgeSet)
 
 import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Signal.Data as D
@@ -37,10 +38,8 @@ import Data.GraphViz (
           graphID)
 import Data.GraphViz.Attributes.Complete
 
-import Data.Graph.Inductive (Node)
 import Data.Eq.HT (equating)
 import Data.Ratio (Ratio)
-import Data.Maybe (fromJust)
 
 import qualified Data.Text.Lazy as T
 
@@ -75,12 +74,12 @@ noRecord = Nothing
 
 
 mkDotGraph ::
-   EfaGraph Node NLabel ELabel ->
+   SequFlowGraph ->
    Maybe Idx.Record ->
    (Idx.DTime -> String) ->
    (Topo.LNode -> String) ->
    (Topo.LEdge -> String) ->
-   DotGraph Int
+   DotGraph T.Text
 mkDotGraph g recordNum timef nshow eshow =
   DotGraph { strictGraph = False,
              directedGraph = True,
@@ -88,12 +87,13 @@ mkDotGraph g recordNum timef nshow eshow =
              graphStatements = stmts }
   where interEs = M.filter isIntersectionEdge $ edgeLabels g
         g' = delEdgeSet (M.keysSet interEs) g
+        section n = case fst n of Idx.SecNode s _ -> s
         cs =
            HTL.removeEach $
-           NonEmptyM.groupBy (equating (sectionNLabel . snd)) $
+           NonEmptyM.groupBy (equating section) $
            labNodes g
         sg (ns, ms) = DotSG True (Just (Int $ fromEnum sl)) (DotStmts gattrs [] xs ys)
-          where sl = sectionNLabel $ snd $ NonEmpty.head ns
+          where sl = section $ NonEmpty.head ns
                 xs = map (mkDotNode nshow) $ NonEmpty.flatten ns
                 ys = map (mkDotEdge eshow) $ labEdges $
                      delNodes (map fst (concatMap NonEmpty.flatten ms)) g'
@@ -103,19 +103,24 @@ mkDotGraph g recordNum timef nshow eshow =
                    case recordNum of
                       Nothing -> "NoRecord"
                       Just n ->
-                         show n ++ " / Time " ++ timef (Idx.DTime sl n)
+                         show n ++ " / Time " ++ timef (Idx.DTime n sl)
         stmts = DotStmts { attrStmts = [],
                            subGraphs = map sg cs,
                            nodeStmts = [],
                            edgeStmts = map (mkDotEdge eshow) $ M.toList interEs }
 
 
-mkDotNode:: (Topo.LNode -> String) -> Topo.LNode -> DotNode Int
-mkDotNode nshow n@(x, _) = DotNode x [displabel, nodeColour, Style [SItem Filled []], Shape BoxShape ]
+mkDotNode:: (Topo.LNode -> String) -> Topo.LNode -> DotNode T.Text
+mkDotNode nshow n@(x, _) =
+   DotNode (dotIdentFromSecNode x)
+      [displabel, nodeColour, Style [SItem Filled []], Shape BoxShape ]
   where displabel =  Label $ StrLabel $ T.pack (nshow n)
 
-mkDotEdge :: (Topo.LEdge -> String) -> Topo.LEdge -> DotEdge Int
-mkDotEdge eshow e@(Edge x y, elabel) = DotEdge x y [displabel, edir, colour]
+mkDotEdge :: (Topo.LEdge -> String) -> Topo.LEdge -> DotEdge T.Text
+mkDotEdge eshow e@(Edge x y, elabel) =
+   DotEdge
+      (dotIdentFromSecNode x) (dotIdentFromSecNode y)
+      [displabel, edir, colour]
   where flowDir = flowDirection elabel
         displabel =
            Label $ StrLabel $ T.pack $
@@ -134,8 +139,12 @@ mkDotEdge eshow e@(Edge x y, elabel) = DotEdge x y [displabel, edir, colour]
               _ -> originalEdgeColour
         --colour = originalEdgeColour
 
+dotIdentFromSecNode :: Idx.SecNode -> T.Text
+dotIdentFromSecNode (Idx.SecNode (Idx.Section s) (Idx.Node n)) =
+   T.pack $ "s" ++ show s ++ "n" ++ show n
+
 printGraph ::
-   EfaGraph Node NLabel ELabel ->
+   SequFlowGraph ->
    Maybe Idx.Record ->
    (Idx.DTime -> String) ->
    (Topo.LNode -> String) ->
@@ -152,18 +161,18 @@ printGraph g recordNum tshow nshow eshow = do
 heart :: Char
 heart = '\9829'
 
-drawTopologyX' :: Topology -> IO ()
+drawTopologyX' :: SequFlowGraph -> IO ()
 drawTopologyX' topo =
-   printGraph (unTopology topo) noRecord (const [heart]) show show
+   printGraph topo noRecord (const [heart]) show show
 
 
-drawTopologySimple :: Topology -> IO ()
+drawTopologySimple :: SequFlowGraph -> IO ()
 drawTopologySimple topo =
-   printGraph (unTopology topo) noRecord (const [heart]) nshow eshow
-  where nshow (n, l) = show n ++ " - " ++ show (nodetypeNLabel l)
+   printGraph topo noRecord (const [heart]) nshow eshow
+  where nshow (n, l) = show n ++ " - " ++ showNodeType l
         eshow _ = ""
 
-dsg :: Int -> Topology -> DotSubGraph String
+dsg :: Int -> FlowTopology -> DotSubGraph String
 dsg ident topo = DotSG True (Just (Int ident)) stmts
   where stmts = DotStmts attrs [] ns es
         attrs = [GraphAttrs [labelf ident]]
@@ -172,52 +181,52 @@ dsg ident topo = DotSG True (Just (Int ident)) stmts
         labelf x = Label $ StrLabel $ T.pack (show x)
         mkNode x@(n, _) = DotNode (idf n) (nattrs x)
         nattrs x = [labNodef x, nodeColour, Style [SItem Filled []], Shape BoxShape ]
-        labNodef (n, l) = Label $ StrLabel $ T.pack (show n ++ " - " ++ show (nodetypeNLabel l))
+        labNodef (n, l) = Label $ StrLabel $ T.pack (show n ++ " - " ++ showNodeType l)
         es = map mkEdge (labEdges topo)
         mkEdge (Edge x y, l) =
            DotEdge (idf x) (idf y) $ (:[]) $ Dir $
-           case flowDirection l of
+           case l of
               WithDir -> Forward
               AgainstDir -> Back
               _ -> NoDir
 
-drawTopologyXs' :: [Topology] -> IO ()
+drawTopologyXs' :: [FlowTopology] -> IO ()
 drawTopologyXs' ts = runGraphvizCanvas Dot g Xlib
   where g = DotGraph False True Nothing stmts
         stmts = DotStmts attrs subgs [] []
         subgs = zipWith dsg [0..] ts
         attrs = []
 
-data Line = ELine Int Int
-          | XLine Int Int
-          | NLine Int Int
+data Line = ELine Idx.SecNode Idx.SecNode
+          | XLine Idx.SecNode Idx.SecNode
+          | NLine Idx.SecNode Idx.SecNode
           | ErrorLine String deriving (Eq, Ord)
 
 showLine :: Line -> String
-showLine (ELine u v) = "e_" ++ show u ++ "_" ++ show v
-showLine (XLine u v) = "x_" ++ show u ++ "_" ++ show v
-showLine (NLine u v) = "n_" ++ show u ++ "_" ++ show v
+showLine (ELine u v) = "e_" ++ showSecNode u ++ "_" ++ showSecNode v
+showLine (XLine u v) = "x_" ++ showSecNode u ++ "_" ++ showSecNode v
+showLine (NLine u v) = "n_" ++ showSecNode u ++ "_" ++ showSecNode v
 showLine (ErrorLine str) = str
 
 showLineLatex :: Line -> String
-showLineLatex (ELine u v) = "$e_{" ++ show u ++ "." ++ show v ++ "}$"
-showLineLatex (XLine u v) = "$x_{" ++ show u ++ "." ++ show v ++ "}$"
-showLineLatex (NLine u v) = "$n_{" ++ show u ++ "." ++ show v ++ "}$"
+showLineLatex (ELine u v) = "$e_{" ++ secNodeToLatexString u ++ "." ++ secNodeToLatexString v ++ "}$"
+showLineLatex (XLine u v) = "$x_{" ++ secNodeToLatexString u ++ "." ++ secNodeToLatexString v ++ "}$"
+showLineLatex (NLine u v) = "$n_{" ++ secNodeToLatexString u ++ "." ++ secNodeToLatexString v ++ "}$"
 showLineLatex (ErrorLine str) = str
 
 showLineDelta :: Line -> String
-showLineDelta (ELine u v) = "de_" ++ show u ++ "_" ++ show v
-showLineDelta (XLine u v) = "dx_" ++ show u ++ "_" ++ show v
-showLineDelta (NLine u v) = "dn_" ++ show u ++ "_" ++ show v
+showLineDelta (ELine u v) = "de_" ++ showSecNode u ++ "_" ++ showSecNode v
+showLineDelta (XLine u v) = "dx_" ++ showSecNode u ++ "_" ++ showSecNode v
+showLineDelta (NLine u v) = "dn_" ++ showSecNode u ++ "_" ++ showSecNode v
 showLineDelta (ErrorLine str) = str
 
 
 data Env a =
    Env {
       recordNumber :: Idx.Record,
-      lookupEnergy_ :: Idx.Section -> Idx.Record -> Int -> Int -> Maybe a,
-      lookupX_      :: Idx.Section -> Idx.Record -> Int -> Int -> Maybe a,
-      lookupEta_    :: Idx.Section -> Idx.Record -> Int -> Int -> Maybe a,
+      lookupEnergy_ :: Idx.Record -> Idx.SecNode -> Idx.SecNode -> Maybe a,
+      lookupX_      :: Idx.Record -> Idx.SecNode -> Idx.SecNode -> Maybe a,
+      lookupEta_    :: Idx.Record -> Idx.SecNode -> Idx.SecNode -> Maybe a,
       formatAssign_ :: (Line, Maybe a) -> String,
       showTime :: Idx.DTime -> String,
       showNode_ :: Topo.LNode -> String
@@ -225,10 +234,10 @@ data Env a =
 
 makeLookup ::
    (Ord idx) =>
-   (Idx.Section -> Idx.Record -> Int -> Int -> idx) -> M.Map idx a ->
-   Idx.Section -> Idx.Record -> Int -> Int -> Maybe a
+   (Idx.Record -> Idx.SecNode -> Idx.SecNode -> idx) -> M.Map idx a ->
+   Idx.Record -> Idx.SecNode -> Idx.SecNode -> Maybe a
 makeLookup makeIdx mp =
-   \sec rec uid vid -> M.lookup (makeIdx sec rec uid vid) mp
+   \rec uid vid -> M.lookup (makeIdx rec uid vid) mp
 
 checkedLookupFormat ::
    (Ord idx, Show idx) =>
@@ -241,40 +250,38 @@ checkedLookupFormat msg format dt k =
       Just x -> format x
 
 
-draw :: Topology -> Env a -> IO ()
+draw :: SequFlowGraph -> Env a -> IO ()
 draw g
    (Env rec lookupEnergy lookupX lookupEta formatAssign tshow nshow) =
-      printGraph (unTopology g) (Just rec) tshow nshow eshow
+      printGraph g (Just rec) tshow nshow eshow
   where eshow = L.intercalate "\n" . map formatAssign . mkLst
 
         mkLst (Edge uid vid, l) =
            case edgeType l of
               OriginalEdge ->
-                 (ELine uid vid, lookupEnergy usec rec uid vid) :
-                 (XLine uid vid, lookupX usec rec uid vid) :
+                 (ELine uid vid, lookupEnergy rec uid vid) :
+                 (XLine uid vid, lookupX rec uid vid) :
                  ndirlab (flowDirection l) :
-                 (XLine vid uid, lookupX vsec rec vid uid) :
-                 (ELine vid uid, lookupEnergy vsec rec vid uid) :
+                 (XLine vid uid, lookupX rec vid uid) :
+                 (ELine vid uid, lookupEnergy rec vid uid) :
                  []
               InnerStorageEdge ->
-                 (ELine vid uid, lookupEnergy vsec rec vid uid) :
+                 (ELine vid uid, lookupEnergy rec vid uid) :
                  []
               IntersectionEdge ->
-                 (ELine uid vid, lookupEnergy usec rec uid vid) :
-                 (XLine uid vid, lookupX usec rec uid vid) :
-                 (ELine vid uid, lookupEnergy vsec rec vid uid) :
+                 (ELine uid vid, lookupEnergy rec uid vid) :
+                 (XLine uid vid, lookupX rec uid vid) :
+                 (ELine vid uid, lookupEnergy rec vid uid) :
                  []
-            where NLabel usec _ _ = fromJust $ lab g uid
-                  NLabel vsec _ _ = fromJust $ lab g vid
-                  ndirlab WithDir = (NLine uid vid, lookupEta usec rec uid vid)
-                  ndirlab _ = (NLine vid uid, lookupEta vsec rec vid uid)
+            where ndirlab WithDir = (NLine uid vid, lookupEta rec uid vid)
+                  ndirlab _ = (NLine vid uid, lookupEta rec vid uid)
 
 drawTopology ::
-   AutoEnv a => Topology -> Interp.Envs SingleRecord a -> IO ()
+   AutoEnv a => SequFlowGraph -> Interp.Envs SingleRecord a -> IO ()
 drawTopology topo = draw topo . envAbs
 
 drawDeltaTopology ::
-   AutoEnvDelta a => Topology -> Interp.Envs SingleRecord a -> IO ()
+   AutoEnvDelta a => SequFlowGraph -> Interp.Envs SingleRecord a -> IO ()
 drawDeltaTopology topo = draw topo . envDelta
 
 
@@ -296,7 +303,7 @@ class AutoEnvList a where
    showListNode ::
       Idx.Record -> StorageMap [a] ->
       (Maybe [a] -> String) ->
-      (Int, NLabel) -> String
+      Topo.LNode -> String
    showListNode = showNode
 
    divideEnergyList :: [a] -> [a] -> [a]
@@ -311,10 +318,10 @@ instance AutoEnvList a => AutoEnv [a] where
       in  Env r
              lookupEnergy
              (makeLookup Idx.X x)
-             (\sec rec a b ->
+             (\rec a b ->
                 liftM2 divideEnergyList
-                   (lookupEnergy sec rec a b)
-                   (lookupEnergy sec rec b a))
+                   (lookupEnergy rec a b)
+                   (lookupEnergy rec b a))
              formatAssignList
              (checkedLookupFormat "envAbsList" formatList dt)
              (showListNode r st formatStContList)
@@ -379,12 +386,12 @@ instance AutoEnvList LatexString where
 showLatexNode ::
    Idx.Record -> StorageMap [LatexString] ->
    (Maybe [LatexString] -> String) ->
-   (Int, NLabel) -> String
-showLatexNode rec st content (num, NLabel sec nid ty) =
-   "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\\\\ " ++
+   Topo.LNode -> String
+showLatexNode rec st content (Idx.SecNode sec nid, ty) =
+   show nid ++ "\\\\ " ++
    "Type: " ++ showNodeType ty ++
       let showStorage n =
-             content (M.lookup (Idx.Storage sec rec n) st)
+             content (M.lookup (Idx.Storage rec sec n) st)
       in  case ty of
              InitStorage n -> "\\\\ Content: " ++ showStorage n
              Storage n -> "\\\\ Content: " ++ showStorage n
@@ -408,12 +415,12 @@ instance (Eq a, ToIndex a) => AutoEnvDeltaList (Term a) where
 
 showNode ::
    Idx.Record -> StorageMap a ->
-   (Maybe a -> String) -> (Int, NLabel) -> String
-showNode rec st content (num, NLabel sec nid ty) =
-   "NodeId: " ++ show nid ++ " (" ++ show num ++ ")\n" ++
+   (Maybe a -> String) -> Topo.LNode -> String
+showNode rec st content (Idx.SecNode sec nid, ty) =
+   show nid ++ "\n" ++
    "Type: " ++ showNodeType ty ++
       let showStorage n =
-             content (M.lookup (Idx.Storage sec rec n) st)
+             content (M.lookup (Idx.Storage rec sec n) st)
       in  case ty of
              InitStorage n -> "\nContent: " ++ showStorage n
              Storage n -> "\nContent: " ++ showStorage n
@@ -439,10 +446,10 @@ envDeltaArg divide formatAssign content tshow
    in  Env r
           lookupDEnergy
           (makeLookup Idx.DX dx)
-          (\sec rec a b ->
+          (\rec a b ->
              liftM4 divide
-                (lookupEnergy sec rec a b) (lookupEnergy sec rec b a)
-                (lookupDEnergy sec rec a b) (lookupDEnergy sec rec b a))
+                (lookupEnergy rec a b) (lookupEnergy rec b a)
+                (lookupDEnergy rec a b) (lookupDEnergy rec b a))
           formatAssign
           (tshow dt)
           (showNode r st content)
@@ -503,7 +510,7 @@ envAbsArgSignal
       (makeLookup Idx.X x)
       (makeLookup Idx.FEta $
        M.intersectionWith ($) fn $
-       M.mapKeys (\(Idx.Energy sec rec uid vid) -> Idx.FEta sec rec uid vid) e)
+       M.mapKeys (\(Idx.Energy rec uid vid) -> Idx.FEta rec uid vid) e)
       formatAssignSignal
       (\dtimeIdx -> formatStContSignal $ M.lookup dtimeIdx dt)
       (showNode rec0 st formatStContSignal)
@@ -519,7 +526,7 @@ envDeltaArgSignal
       (makeLookup Idx.DX dx)
       (makeLookup Idx.DEta $
        M.intersectionWith ($) dn $
-       M.mapKeys (\(Idx.DEnergy sec rec uid vid) -> Idx.DEta sec rec uid vid) de)
+       M.mapKeys (\(Idx.DEnergy rec uid vid) -> Idx.DEta rec uid vid) de)
       (\ (x, ys) -> showLineDelta x ++ " = " ++ formatStContSignal ys)
       (\dtimeIdx -> formatStContSignal $ M.lookup dtimeIdx dt)
       (showNode rec0 st formatStContSignal)

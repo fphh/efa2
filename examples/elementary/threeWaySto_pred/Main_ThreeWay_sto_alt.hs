@@ -1,9 +1,10 @@
 module Main where
 
-import EFA2.Topology.Topology (makeNodes, makeEdges, makeAllEquations)
+import EFA2.Topology.Topology (makeAllEquations)
 import EFA2.Topology.TopologyData
-          (NodeType(Crossing, Sink, Source, Storage), Topology, defaultELabel)
-import EFA2.Topology.EfaGraph (mkGraph)
+          (Topology, SequFlowGraph,
+           NodeType(Crossing, Sink, Source, Storage))
+import qualified EFA2.Topology.EfaGraph as Gr
 
 import EFA2.Solver.Equation (give, toAbsEquations)
 import EFA2.Solver.EquationOrder (order)
@@ -45,14 +46,33 @@ secm = Idx.initSection
 rec :: Idx.Record
 rec = Idx.Record 0
 
+edgeIdx ::
+   (Idx.Record -> Idx.SecNode -> Idx.SecNode -> idx) ->
+   Idx.Section -> Int -> Int -> idx
+edgeIdx mkIdx sec x y =
+   mkIdx rec (Idx.SecNode sec (Idx.Node x)) (Idx.SecNode sec (Idx.Node y))
+
+pPosIdx :: Int -> Int -> PPosIdx
+pPosIdx x y = PPosIdx (Idx.Node x) (Idx.Node y)
+
+
+makeNodes :: [(Int, NodeType)] -> [Gr.LNode Idx.Node NodeType]
+makeNodes ns = map f ns
+  where f (n, ty) = (Idx.Node n, ty)
+
+makeEdges :: [(Int, Int)] -> [Gr.LEdge Idx.Node ()]
+makeEdges es = map f es
+  where f (a, b) = (Gr.Edge (Idx.Node a) (Idx.Node b), ())
+
+
 -- | A. Generate System Topology definition
 topo :: Topology
-topo = mkGraph (makeNodes nodes) (makeEdges edges)
+topo = Gr.mkGraph (makeNodes nodes) (makeEdges edges)
   where nodes = [(0, Source), (1, Crossing), (2, Sink), (3, Storage $ Idx.Store 0)]
-        edges = [(0, 1, defaultELabel), (1, 2, defaultELabel), (1, 3, defaultELabel)]
+        edges = [(0, 1), (1, 2), (1, 3)]
 
 -- -- | B. Generating a sequence Topology using a fake dataset
-sqTopo :: Topology
+sqTopo :: SequFlowGraph
 sqTopo = Seq.makeSeqFlowGraph topo $ Seq.makeSequence pRec
   where
     s01 = [0, 2, 2, 0, 0, 0]
@@ -66,55 +86,57 @@ sqTopo = Seq.makeSeqFlowGraph topo $ Seq.makeSequence pRec
 
     time = take 7 [0 ..]
 
-    pMap =  M.fromList [ (PPosIdx 0 1, mkSig n s01 .++ (S.fromList [head s01] :: PSigL)),
-                         (PPosIdx 1 0, mkSig n s10 .++ (S.fromList [head s10] :: PSigL)),
-                         (PPosIdx 1 2, mkSig n s12 .++ (S.fromList [head s12] :: PSigL)),
-                         (PPosIdx 2 1, mkSig n s21 .++ (S.fromList [head s21] :: PSigL)),
-                         (PPosIdx 1 3, mkSig n s13 .++ (S.fromList [head s13] :: PSigL)),
-                         (PPosIdx 3 1, mkSig n s31 .++ (S.fromList [head s31] :: PSigL)) ]
+    pMap =  M.fromList $
+       (pPosIdx 0 1, mkSig n s01 .++ (S.fromList [head s01] :: PSigL)) :
+       (pPosIdx 1 0, mkSig n s10 .++ (S.fromList [head s10] :: PSigL)) :
+       (pPosIdx 1 2, mkSig n s12 .++ (S.fromList [head s12] :: PSigL)) :
+       (pPosIdx 2 1, mkSig n s21 .++ (S.fromList [head s21] :: PSigL)) :
+       (pPosIdx 1 3, mkSig n s13 .++ (S.fromList [head s13] :: PSigL)) :
+       (pPosIdx 3 1, mkSig n s31 .++ (S.fromList [head s31] :: PSigL)) :
+       []
 
 
     pRec = PowerRecord (S.fromList time) pMap
 
 -- | C. System solving
-solve3Way :: Topology -> Val -> Val -> Envs SingleRecord UTFSig
+solve3Way :: SequFlowGraph -> Val -> Val -> Envs SingleRecord UTFSig
 solve3Way sqTp y n = interpretFromScratch (SingleRecord rec) 1 gd -- interprete and solve equations
 
 {-
   -- Sequence 0 Primary Source Active additionally charging storage
   where givenEnv0 = emptyEnv { recordNumber = SingleRecord 0,
-                               dtimeMap = M.fromList [ (Idx.DTime sec0 rec, S.fromList [1.0]) ],
-                               powerMap = M.fromList [ (Idx.Power sec0 rec 3 1, S.fromList [x]),
-                                                       (Idx.Power sec0 rec 2 1, S.fromList [0.6])],
-                               fetaMap =  M.fromList [ (Idx.FEta  sec0 rec 0 1, S.map etaf), (Idx.FEta sec0 rec 1 0, undefined),
-                                                       (Idx.FEta  sec0 rec 1 2, S.map (const 1)), (Idx.FEta sec0 rec 2 1, S.map (const 1)),
-                                                       (Idx.FEta  sec0 rec 1 3, S.map (const y)), (Idx.FEta sec0 rec 3 1, S.map (const y)) ] }
+                               dtimeMap = M.fromList [ (edgeIdx Idx.DTime sec0, S.fromList [1.0]) ],
+                               powerMap = M.fromList [ (edgeIdx Idx.Power sec0 3 1, S.fromList [x]),
+                                                       (edgeIdx Idx.Power sec0 2 1, S.fromList [0.6])],
+                               fetaMap =  M.fromList [ (edgeIdx Idx.FEta sec0 0 1, S.map etaf), (edgeIdx Idx.FEta sec0 1 0, undefined),
+                                                       (edgeIdx Idx.FEta sec0 1 2, S.map (const 1)), (edgeIdx Idx.FEta sec0 2 1, S.map (const 1)),
+                                                       (edgeIdx Idx.FEta sec0 1 3, S.map (const y)), (edgeIdx Idx.FEta sec0 3 1, S.map (const y)) ] }
         -- Sequence 1 -- using storage only
         givenEnv1 = emptyEnv { recordNumber = SingleRecord 0,
-                           --    dtimeMap = M.fromList [ (Idx.DTime sec1 rec, S.fromList [1.0]) ],
-                               energyMap = M.fromList [ (Idx.Energy sec1 rec 3 1, S.fromList [x] :: UTFSig) ],
-                               powerMap =  M.fromList [ (Idx.Power sec1 rec 2 1, S.fromList [0.6]) ],
-                               fetaMap =   M.fromList [ (Idx.FEta sec1 rec 0 1, S.map etaf), (Idx.FEta sec1 rec 1 0, undefined),
-                                                        (Idx.FEta sec1 rec 1 2, S.map (const 1)), (Idx.FEta sec1 rec 2 1, S.map (const 1)),
-                                                        (Idx.FEta sec1 rec 1 3, S.map (const y)), (Idx.FEta sec1 rec 3 1, S.map (const y)) ] }
+                           --    dtimeMap = M.fromList [ (edgeIdx Idx.DTime sec1, S.fromList [1.0]) ],
+                               energyMap = M.fromList [ (edgeIdx Idx.Energy sec1 3 1, S.fromList [x] :: UTFSig) ],
+                               powerMap =  M.fromList [ (edgeIdx Idx.Power sec1 2 1, S.fromList [0.6]) ],
+                               fetaMap =   M.fromList [ (edgeIdx Idx.FEta sec1 0 1, S.map etaf), (edgeIdx Idx.FEta sec1 1 0, undefined),
+                                                        (edgeIdx Idx.FEta sec1 1 2, S.map (const 1)), (edgeIdx Idx.FEta sec1 2 1, S.map (const 1)),
+                                                        (edgeIdx Idx.FEta sec1 1 3, S.map (const y)), (edgeIdx Idx.FEta sec1 3 1, S.map (const y)) ] }
 -}
 
   -- Sequence 0 Primary Source Active additionally charging storage
   where givenEnv0 = emptyEnv { recordNumber = SingleRecord rec,
-                               dtimeMap = M.fromList [ (Idx.DTime sec0 rec, S.fromList [(1-y)*dt]) ],
-                               powerMap = M.fromList [ (Idx.Power sec0 rec 2 1, S.fromList [pCons])],
-                               energyMap = M.fromList [ (Idx.Energy sec0 rec 3 1, S.fromList [dt*y*pCons/n/0.9])],
-                               fetaMap =  M.fromList [ (Idx.FEta  sec0 rec 0 1, S.map etaf), (Idx.FEta sec0 rec 1 0, undefined),
-                                                       (Idx.FEta  sec0 rec 1 2, S.map (const 0.9)), (Idx.FEta sec0 rec 2 1, S.map (const 0.9)),
-                                                       (Idx.FEta  sec0 rec 1 3, S.map (const n)), (Idx.FEta sec0 rec 3 1, S.map (const n)) ] }
+                               dtimeMap = M.fromList [ (Idx.DTime rec sec0, S.fromList [(1-y)*dt]) ],
+                               powerMap = M.fromList [ (edgeIdx Idx.Power sec0 2 1, S.fromList [pCons])],
+                               energyMap = M.fromList [ (edgeIdx Idx.Energy sec0 3 1, S.fromList [dt*y*pCons/n/0.9])],
+                               fetaMap =  M.fromList [ (edgeIdx Idx.FEta sec0 0 1, S.map etaf), (edgeIdx Idx.FEta sec0 1 0, undefined),
+                                                       (edgeIdx Idx.FEta sec0 1 2, S.map (const 0.9)), (edgeIdx Idx.FEta sec0 2 1, S.map (const 0.9)),
+                                                       (edgeIdx Idx.FEta sec0 1 3, S.map (const n)), (edgeIdx Idx.FEta sec0 3 1, S.map (const n)) ] }
         -- Sequence 1 -- using storage only
         givenEnv1 = emptyEnv { recordNumber = SingleRecord rec,
-                               dtimeMap = M.fromList [ (Idx.DTime sec1 rec, S.fromList [y*dt])],
+                               dtimeMap = M.fromList [ (Idx.DTime rec sec1, S.fromList [y*dt])],
                                energyMap = M.fromList [ ],
-                               powerMap =  M.fromList [ (Idx.Power sec1 rec 2 1, S.fromList [pCons])],
-                               fetaMap =   M.fromList [ (Idx.FEta sec1 rec 0 1, S.map etaf), (Idx.FEta sec1 rec 1 0, undefined),
-                                                        (Idx.FEta sec1 rec 1 2, S.map (const 0.9)), (Idx.FEta sec1 rec 2 1, S.map (const 0.9)),
-                                                        (Idx.FEta sec1 rec 1 3, S.map (const n)), (Idx.FEta sec1 rec 3 1, S.map (const n)) ] }
+                               powerMap =  M.fromList [ (edgeIdx Idx.Power sec1 2 1, S.fromList [pCons])],
+                               fetaMap =   M.fromList [ (edgeIdx Idx.FEta sec1 0 1, S.map etaf), (edgeIdx Idx.FEta sec1 1 0, undefined),
+                                                        (edgeIdx Idx.FEta sec1 1 2, S.map (const 0.9)), (edgeIdx Idx.FEta sec1 2 1, S.map (const 0.9)),
+                                                        (edgeIdx Idx.FEta sec1 1 3, S.map (const n)), (edgeIdx Idx.FEta sec1 3 1, S.map (const n)) ] }
 
         -- Variable Efficiency function at Source (backwards lookup)
 --        etaf x = 1/((x+sqrt(x*x+4*x))/(2*x))
@@ -129,10 +151,10 @@ solve3Way sqTp y n = interpretFromScratch (SingleRecord rec) 1 gd -- interprete 
         (sqEnvs, ts') = makeAllEquations sqTp [givenEnv0, givenEnv1]
 
         -- set initial values in equation system
-        storage0 = Idx.Energy secm rec 8 9
-        dtime0 = Idx.DTime secm rec
+        storage0 = edgeIdx Idx.Energy secm (-1) 3
+        dtime0 = Idx.DTime rec secm
         ts = [give storage0, give dtime0] ++ ts'
-        sqEnvs' = sqEnvs { dtimeMap = M.insert (Idx.DTime secm rec) (S.fromList [1.0]) (dtimeMap sqEnvs),
+        sqEnvs' = sqEnvs { dtimeMap = M.insert (Idx.DTime rec secm) (S.fromList [1.0]) (dtimeMap sqEnvs),
                            energyMap = M.insert storage0 (S.fromList [3.0]) (energyMap sqEnvs) }
 
         -- rearrange equations
@@ -184,18 +206,20 @@ main = do
 
     -- consumer
 {-
-    powerConsumptionS0 = getVarPower varEnvs (Idx.Power sec0 rec 2 1)
-    powerConsumptionS1 = getVarPower varEnvs (Idx.Power sec1 rec 6 5)
+    powerConsumptionS0 = getVarPower varEnvs (edgeIdx Idx.Power sec0 2 1)
+    powerConsumptionS1 = getVarPower varEnvs (edgeIdx Idx.Power sec1 2 1)
 -}
-    energyConsumption = getVarEnergy varEnvs (Idx.Energy sec0 rec 2 1) .+  makeDelta (getVarEnergy varEnvs (Idx.Energy sec1 rec 6 5))
+    energyConsumption =
+       getVarEnergy varEnvs (edgeIdx Idx.Energy sec0 2 1) .+
+       makeDelta (getVarEnergy varEnvs (edgeIdx Idx.Energy sec1 2 1))
 
     -- internal power (Between System 1 and 2)
-    powerInt = getVarPower varEnvs (Idx.Power sec0 rec 1 0)
-    energyInt = (getVarEnergy varEnvs (Idx.Energy sec0 rec 1 0)) -- .+  (makeDelta $ getVarEnergy varEnvs (Idx.Energy sec1 rec 1 0))
+    powerInt = getVarPower varEnvs (edgeIdx Idx.Power sec0 1 0)
+    energyInt = (getVarEnergy varEnvs (edgeIdx Idx.Energy sec0 1 0)) -- .+  (makeDelta $ getVarEnergy varEnvs (edgeIdx Idx.Energy sec1 1 0))
 
     -- energy source
-    powerSource = getVarPower varEnvs (Idx.Power sec0 rec 0 1)
-    energySource = getVarEnergy varEnvs  (Idx.Energy sec0 rec 0 1)
+    powerSource = getVarPower varEnvs (edgeIdx Idx.Power sec0 0 1)
+    energySource = getVarEnergy varEnvs  (edgeIdx Idx.Energy sec0 0 1)
 
     -- | C. -- Calculate Additional Values
 

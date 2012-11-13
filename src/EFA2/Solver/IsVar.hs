@@ -110,7 +110,9 @@ splitTerms isVar ts = (given, nov, givenExt, rest)
 isVar' :: EqTerm -> Bool
 isVar' (Atom idx) =
    case idx of
-      Energy (Idx.Energy (Idx.Section 0) (Idx.Record 0) 0 1) -> False
+      Energy (Idx.Energy (Idx.Record 0)
+                (Idx.SecNode (Idx.Section 0) (Idx.Node 0))
+                (Idx.SecNode (Idx.Section 0) (Idx.Node 1))) -> False
       Energy _ -> True
 --      Eta _ -> True
       DEnergy _ -> True

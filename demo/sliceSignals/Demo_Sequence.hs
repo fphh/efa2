@@ -2,6 +2,7 @@ module Main where
 
 import qualified EFA2.Signal.Signal as S
 import qualified EFA2.Signal.Sequence as Sequ
+import qualified EFA2.Signal.Index as Idx
 import EFA2.Signal.SequenceData
           (PPosIdx(PPosIdx), PowerRecord(PowerRecord), ListPowerRecord,
            Sequ, SequPwrRecord)
@@ -40,15 +41,18 @@ s31 = [0, 0.25, 0.25, 0, -0.6, -0.6]
 n :: Int
 n = 2
 
+pPosIdx :: Int -> Int -> PPosIdx
+pPosIdx x y = PPosIdx (Idx.Node x) (Idx.Node y)
+
 pMap :: M.Map PPosIdx PSigL
 pMap =
    M.fromList $
-      (PPosIdx 0 1, mkSigEnd n s01) :
-      (PPosIdx 1 0, mkSigEnd n s10) :
-      (PPosIdx 1 2, mkSigEnd n s12) :
-      (PPosIdx 2 1, mkSigEnd n s21) :
-      (PPosIdx 1 3, mkSigEnd n s13) :
-      (PPosIdx 3 1, mkSigEnd n s31) :
+      (pPosIdx 0 1, mkSigEnd n s01) :
+      (pPosIdx 1 0, mkSigEnd n s10) :
+      (pPosIdx 1 2, mkSigEnd n s12) :
+      (pPosIdx 2 1, mkSigEnd n s21) :
+      (pPosIdx 1 3, mkSigEnd n s13) :
+      (pPosIdx 3 1, mkSigEnd n s31) :
       []
 
 pRec, pRec0 :: ListPowerRecord

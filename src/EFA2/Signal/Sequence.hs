@@ -6,7 +6,7 @@ module EFA2.Signal.Sequence where
 import EFA2.Interpreter.Env (Envs(..), NoRecord, emptyEnv)
 
 import qualified EFA2.Topology.Flow as Flow
-import EFA2.Topology.TopologyData (Topology)
+import EFA2.Topology.TopologyData (Topology, SequFlowGraph)
 
 import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Signal.Signal as S
@@ -73,8 +73,9 @@ fromFlowRecord ::
       (TC s1 (Typ delta1 t1 p1) (Data c1 d1)) ->
    Envs NoRecord (TC s1 (Typ UT UT UT) (Data c1 d1))
 fromFlowRecord secIdx recIdx (FlRecord dTime flowMap) =
-  emptyEnv { energyMap = M.map untype $ M.mapKeys f flowMap, dtimeMap = M.fromList [(Idx.DTime secIdx recIdx, untype dTime)] }
-  where f (PPosIdx idx1 idx2) = Idx.Energy secIdx recIdx idx1 idx2
+  emptyEnv { energyMap = M.map untype $ M.mapKeys f flowMap, dtimeMap = M.fromList [(Idx.DTime recIdx secIdx, untype dTime)] }
+  where f (PPosIdx idx1 idx2) =
+           Idx.Energy recIdx (Idx.SecNode secIdx idx1) (Idx.SecNode secIdx idx2)
 
   --where f ((PPosIdx idx1 idx2), (flowSig)) = ((Idx.Power secIdx recIdx idx1 idx2), [fromScalar $ sigSum flowSig])
 
@@ -112,7 +113,7 @@ makeRecSequence =
 makeSeqFlowGraph ::
    Topology ->
    SequFlowRecord FlowRecord ->
-   Topology
+   SequFlowGraph
 makeSeqFlowGraph topo =
    Flow.mkSequenceTopology .
    Flow.genSectionTopology .
