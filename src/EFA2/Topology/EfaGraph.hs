@@ -239,10 +239,14 @@ insEdge es = insEdges [es]
 insNodes ::
    (Ord n) => [LNode n nl] -> EfaGraph n nl el -> EfaGraph n nl el
 insNodes ns g =
-   g{nodeLabels =
-        M.unionWith
-           (error "insNodes: node already contained in graph")
-           (nodeLabels g) (M.fromList ns)}
+   g{outEdges =
+        M.union (outEdges g) $
+        M.fromList $ map (mapSnd (const S.empty)) ns,
+     inEdges =
+        M.union (inEdges g) $
+        M.fromList $ map (mapSnd (const S.empty)) ns,
+     nodeLabels =
+        M.union (M.fromList ns) (nodeLabels g)}
 
 insEdges ::
    (Ord n) => [LEdge n el] -> EfaGraph n nl el -> EfaGraph n nl el
