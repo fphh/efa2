@@ -25,6 +25,14 @@ mapFromSet ::
    (Ord key) => (key -> a) -> S.Set key -> M.Map key a
 mapFromSet f = M.fromAscList . map (\k -> (k, f k)) . S.toAscList
 
+differenceMapSet ::
+   (Ord key) => M.Map key a -> S.Set key -> M.Map key a
+differenceMapSet m s = M.difference m (mapFromSet (const ()) s)
+
+intersectionMapSet ::
+   (Ord key) => M.Map key a -> S.Set key -> M.Map key a
+intersectionMapSet m s = M.intersection m (mapFromSet (const ()) s)
+
 
 for :: [a] -> (a -> b) -> [b]
 for = flip map
