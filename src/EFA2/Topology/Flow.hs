@@ -83,7 +83,7 @@ mkSequenceTopology sd = res
            let nid = initNode n
            in  ((Edge rootNode nid, e) :
                    mkIntersectionEdges n Idx.initSection io,
-                (nid, InitStorage st))
+                (nid, Storage st))
 
         e = defaultELabel { edgeType = InnerStorageEdge }
         res =

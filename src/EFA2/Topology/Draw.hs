@@ -390,12 +390,9 @@ showLatexNode ::
 showLatexNode rec st content (Idx.SecNode sec nid, ty) =
    show nid ++ "\\\\ " ++
    "Type: " ++ showNodeType ty ++
-      let showStorage n =
-             content (M.lookup (Idx.Storage rec sec n) st)
-      in  case ty of
-             InitStorage n -> "\\\\ Content: " ++ showStorage n
-             Storage n -> "\\\\ Content: " ++ showStorage n
-             _ -> ""
+      case ty of
+         Storage n -> "\\\\ Content: " ++ content (M.lookup (Idx.Storage rec sec n) st)
+         _ -> ""
 
 
 instance (Eq a, ToIndex a) => AutoEnvList (Term a) where
@@ -419,15 +416,11 @@ showNode ::
 showNode rec st content (Idx.SecNode sec nid, ty) =
    show nid ++ "\n" ++
    "Type: " ++ showNodeType ty ++
-      let showStorage n =
-             content (M.lookup (Idx.Storage rec sec n) st)
-      in  case ty of
-             InitStorage n -> "\nContent: " ++ showStorage n
-             Storage n -> "\nContent: " ++ showStorage n
-             _ -> ""
+      case ty of
+         Storage n -> "\nContent: " ++ content (M.lookup (Idx.Storage rec sec n) st)
+         _ -> ""
 
 showNodeType :: NodeType -> String
-showNodeType (InitStorage (Idx.Store n)) = "InitStorage " ++ show n
 showNodeType (Storage (Idx.Store n)) = "Storage " ++ show n
 showNodeType nt = show nt
 

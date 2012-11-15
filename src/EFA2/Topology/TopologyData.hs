@@ -37,7 +37,6 @@ type LNode = Gr.LNode Idx.SecNode NodeType
 type LEdge = Gr.LEdge Idx.SecNode ELabel
 
 data NodeType = Storage Idx.Store
-              | InitStorage Idx.Store
               | Sink
               | AlwaysSink
               | Source
@@ -53,7 +52,6 @@ getStorageNumber :: NodeType -> Maybe Idx.Store
 getStorageNumber nt =
    case nt of
       Storage x -> Just x
-      InitStorage x -> Just x
       _ -> Nothing
 
 
