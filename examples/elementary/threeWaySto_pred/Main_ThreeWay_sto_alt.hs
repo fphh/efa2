@@ -68,7 +68,7 @@ makeEdges es = map f es
 -- | A. Generate System Topology definition
 topo :: Topology
 topo = Gr.mkGraph (makeNodes nodes) (makeEdges edges)
-  where nodes = [(0, Source), (1, Crossing), (2, Sink), (3, Storage $ Idx.Store 0)]
+  where nodes = [(0, Source), (1, Crossing), (2, Sink), (3, Storage)]
         edges = [(0, 1), (1, 2), (1, 3)]
 
 -- -- | B. Generating a sequence Topology using a fake dataset

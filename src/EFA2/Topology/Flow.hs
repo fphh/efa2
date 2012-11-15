@@ -79,11 +79,11 @@ mkSequenceTopology sd = res
         initNode = Idx.SecNode Idx.initSection
         rootNode = initNode (Idx.Node (-1))
         startElems = map f $ M.toList $ getActiveStores sqTopo
-        f (st, (n, io)) =
+        f (n, io) =
            let nid = initNode n
            in  ((Edge rootNode nid, e) :
                    mkIntersectionEdges n Idx.initSection io,
-                (nid, Storage st))
+                (nid, Storage))
 
         e = defaultELabel { edgeType = InnerStorageEdge }
         res =

@@ -4,12 +4,11 @@ module EFA2.Example.Examples where
 import EFA2.Topology.Topology (makeNodes, makeWithDirEdges)
 import EFA2.Topology.TopologyData (FlowTopology, NodeType(..))
 import EFA2.Topology.EfaGraph (mkGraph)
-import qualified EFA2.Signal.Index as Idx
 
 
 topoDreibein :: FlowTopology
 topoDreibein = mkGraph (makeNodes nodes) (makeWithDirEdges edges)
-  where nodes = [(0, Source), (1, Sink), (2, Crossing), (3, Storage $ Idx.Store 0)]
+  where nodes = [(0, Source), (1, Sink), (2, Crossing), (3, Storage)]
         edges = [(0, 2), (1, 2), (2, 3)]
 
 

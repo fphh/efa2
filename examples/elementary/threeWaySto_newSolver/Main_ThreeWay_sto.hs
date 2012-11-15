@@ -25,7 +25,7 @@ import EFA2.Signal.Signal (PSigL, TSigL)
 
 topo :: Topology
 topo = mkGraph (makeNodes nodes) (makeSimpleEdges edges)
-  where nodes = [(0, Source), (1, Crossing), (2, Sink), (3, Storage $ Idx.Store 0)]
+  where nodes = [(0, Source), (1, Crossing), (2, Sink), (3, Storage)]
         edges = [(0, 1), (1, 2), (1, 3)]
 
 

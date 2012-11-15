@@ -210,8 +210,8 @@ showIdx idx =
 
       Var (Idx.Var (Idx.Record r) u x) ->
          "v_" ++ show r ++ "_" ++ show u ++ "." ++ showSecNode x
-      Store (Idx.Storage (Idx.Record r) (Idx.Section s) (Idx.Store x)) ->
-         "s_" ++ show r ++ "_" ++ show s ++ "." ++ show x
+      Store (Idx.Storage (Idx.Record r) x) ->
+         "s_" ++ show r ++ "_" ++ showSecNode x
 
 showEqTerm :: ToIndex idx => Term idx -> String
 showEqTerm (Const x) = show (fromRational x :: Double)
@@ -304,8 +304,8 @@ idxToLatexString idx =
 
       Var (Idx.Var (Idx.Record r) u x) ->
          "v_{" ++ show r ++ "." ++ show u ++ "_" ++ secNodeToLatexString x ++ "}"
-      Store (Idx.Storage (Idx.Record r) (Idx.Section s) (Idx.Store x)) ->
-         "s_{" ++ show r ++ "." ++ show s ++ ":" ++ show x ++ "}"
+      Store (Idx.Storage (Idx.Record r) x) ->
+         "s_{" ++ show r ++ "." ++ showSecNode x ++ "}"
 
 eqToLatexString' :: Equation -> String
 eqToLatexString' (Given x) = idxToLatexString x ++ " \\mbox{given}"

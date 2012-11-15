@@ -71,8 +71,8 @@ instance IdxRecNum Idx.DTime where
    setIdxRecNum rec (Idx.DTime _ s) = Idx.DTime rec s
 
 instance IdxRecNum Idx.Storage where
-   getIdxRecNum (Idx.Storage r _ _) = r
-   setIdxRecNum rec (Idx.Storage _ s sto) = Idx.Storage rec s sto
+   getIdxRecNum (Idx.Storage r _) = r
+   setIdxRecNum rec (Idx.Storage _ n) = Idx.Storage rec n
 
 instance IdxRecNum Idx.Var where
    getIdxRecNum (Idx.Var r _ _) = r
@@ -95,7 +95,7 @@ instance IdxEq Idx.X where
    ignoreRecEq (Idx.X _ a b) (Idx.X _ x y) = a == x && b == y
 
 instance IdxEq Idx.Storage where
-   ignoreRecEq (Idx.Storage _ a b) (Idx.Storage _ x y) = a == x && b == y
+   ignoreRecEq (Idx.Storage _ a) (Idx.Storage _ x) = a == x
 
 -- Environments
 type EnergyMap a = M.Map Idx.Energy a

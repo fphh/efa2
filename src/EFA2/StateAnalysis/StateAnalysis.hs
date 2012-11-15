@@ -35,7 +35,7 @@ checkNodeType AlwaysSource (_:_) [] = True
 checkNodeType Sink [] _ = True
 checkNodeType AlwaysSink [] (_:_) = True
 checkNodeType DeadNode [] [] = True
-checkNodeType (Storage _) _ _ = True
+checkNodeType Storage _ _ = True
 checkNodeType _ _ _ = False
 
 -- Because of extend, we only do have to deal with WithDir edges here!

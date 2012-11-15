@@ -15,8 +15,6 @@ initSection = Section (-1)
 
 newtype Record = Record Int deriving (Show, Eq, Ord)
 
-newtype Store = Store Int deriving (Show, Eq, Ord)
-
 
 newtype Node = Node Int deriving (Show, Eq, Ord)
 
@@ -57,7 +55,7 @@ data DX = DX !Record !SecNode !SecNode deriving (Show, Ord, Eq)
 
 -- * Node indices
 
-data Storage = Storage !Record !Section !Store deriving (Show, Ord, Eq)
+data Storage = Storage !Record !SecNode deriving (Show, Ord, Eq)
 
 -- | This variable type can be used to express arbitrary relations.
 -- You can variables also make dependent on section and record.

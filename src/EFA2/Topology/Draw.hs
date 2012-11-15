@@ -387,11 +387,11 @@ showLatexNode ::
    Idx.Record -> StorageMap [LatexString] ->
    (Maybe [LatexString] -> String) ->
    Topo.LNode -> String
-showLatexNode rec st content (Idx.SecNode sec nid, ty) =
+showLatexNode rec st content (n@(Idx.SecNode _sec nid), ty) =
    show nid ++ "\\\\ " ++
    "Type: " ++ showNodeType ty ++
       case ty of
-         Storage n -> "\\\\ Content: " ++ content (M.lookup (Idx.Storage rec sec n) st)
+         Storage -> "\\\\ Content: " ++ content (M.lookup (Idx.Storage rec n) st)
          _ -> ""
 
 
@@ -413,16 +413,15 @@ instance (Eq a, ToIndex a) => AutoEnvDeltaList (Term a) where
 showNode ::
    Idx.Record -> StorageMap a ->
    (Maybe a -> String) -> Topo.LNode -> String
-showNode rec st content (Idx.SecNode sec nid, ty) =
+showNode rec st content (n@(Idx.SecNode _sec nid), ty) =
    show nid ++ "\n" ++
    "Type: " ++ showNodeType ty ++
       case ty of
-         Storage n -> "\nContent: " ++ content (M.lookup (Idx.Storage rec sec n) st)
+         Storage -> "\nContent: " ++ content (M.lookup (Idx.Storage rec n) st)
          _ -> ""
 
 showNodeType :: NodeType -> String
-showNodeType (Storage (Idx.Store n)) = "Storage " ++ show n
-showNodeType nt = show nt
+showNodeType = show
 
 
 envDeltaArg ::

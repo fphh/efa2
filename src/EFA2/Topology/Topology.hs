@@ -23,7 +23,6 @@ import qualified Data.Foldable as Fold
 import qualified Data.List.HT as LH
 import qualified Data.Set as S
 import qualified Data.Map as M
-import Data.Tuple.HT (mapSnd)
 import Data.Maybe (fromJust, mapMaybe)
 
 
@@ -133,17 +132,19 @@ mkIntersectionEqs :: Idx.Record -> SequFlowGraph -> [Equation]
 mkIntersectionEqs recordNum topo =
    Fold.fold inEqs ++ Fold.fold outEqs ++ stContentEqs
   where inouts =
-           fmap (mapSnd partitionInOutStatic) $
+           fmap partitionInOutStatic $
            getActiveStores topo
         inEqs =
-           Fold.foldMap
-              (\(n, (ins,_)) ->
+           Fold.fold $
+           M.mapWithKey
+              (\n (ins,_) ->
                  M.mapWithKey (\sec ->
                     mkInStoreEqs recordNum (Idx.SecNode sec n)) ins)
            inouts
         outEqs =
-           Fold.foldMap
-              (\(n, (_,outs)) ->
+           Fold.fold $
+           M.mapWithKey
+              (\n (_,outs) ->
                  M.mapWithKey (\sec ->
                     mkOutStoreEqs recordNum (Idx.SecNode sec n)) outs)
            inouts
@@ -155,12 +156,11 @@ data StoreDir = In | Out deriving (Show)
 
 mkStoreEqs ::
    Idx.Record ->
-   Idx.Store ->
-   (Idx.Node,
-    (M.Map Idx.Section (Topo.InOut Idx.SecNode el),
-     M.Map Idx.Section (Topo.InOut Idx.SecNode el))) ->
+   Idx.Node ->
+   (M.Map Idx.Section (Topo.InOut Idx.SecNode el),
+    M.Map Idx.Section (Topo.InOut Idx.SecNode el)) ->
    [Equation]
-mkStoreEqs recordNum st (node, (ins, outs)) =
+mkStoreEqs recordNum node (ins, outs) =
       startEq ++ LH.mapAdjacent g both
   where ins' = fmap (const In) ins
         outs' = fmap (const Out) outs
@@ -169,9 +169,11 @@ mkStoreEqs recordNum st (node, (ins, outs)) =
         startEq =
            case b of
               (sec, In) ->
-                 [ mkVar (Idx.Storage recordNum sec st) :=
-                      mkVar (Idx.Var recordNum InSum $ Idx.SecNode sec node) :*
-                      mkVar (Idx.DTime recordNum sec) ]
+                 case Idx.SecNode sec node of
+                    n ->
+                       [ mkVar (Idx.Storage recordNum n) :=
+                            mkVar (Idx.Var recordNum InSum n) :*
+                            mkVar (Idx.DTime recordNum sec) ]
               _ -> []
 
         g (sec, _) (sec', dir) =
@@ -181,10 +183,12 @@ mkStoreEqs recordNum st (node, (ins, outs)) =
             (mkVar (Idx.Var recordNum InSum nid') :* dt)
               :+ mkVar (Idx.Storage recordNum sec st)
 -}
-          where stnew = mkVar $ Idx.Storage recordNum sec' st
-                stold = mkVar $ Idx.Storage recordNum sec st
+          where stnew = mkVar $ Idx.Storage recordNum x'
+                stold = mkVar $ Idx.Storage recordNum x
+                x' = Idx.SecNode sec' node
+                x  = Idx.SecNode sec node
                 vdt = v :* dt
-                v = mkVar $ Idx.Var recordNum (case dir of In -> InSum; Out -> OutSum) $ Idx.SecNode sec' node
+                v = mkVar $ Idx.Var recordNum (case dir of In -> InSum; Out -> OutSum) x'
                 dt = mkVar $ Idx.DTime recordNum sec'
 
 

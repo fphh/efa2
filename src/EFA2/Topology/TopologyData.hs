@@ -29,14 +29,13 @@ import qualified EFA2.Topology.EfaGraph as Gr
 import EFA2.Topology.EfaGraph (EfaGraph, mkInOutGraphFormat)
 
 import qualified Data.Map as M
-import Data.Tuple.HT (mapSnd)
-import Data.Maybe (mapMaybe, isJust)
+import Data.Tuple.HT (snd3)
 
 
 type LNode = Gr.LNode Idx.SecNode NodeType
 type LEdge = Gr.LEdge Idx.SecNode ELabel
 
-data NodeType = Storage Idx.Store
+data NodeType = Storage
               | Sink
               | AlwaysSink
               | Source
@@ -46,13 +45,10 @@ data NodeType = Storage Idx.Store
               | NoRestriction deriving (Show, Ord, Eq)
 
 isStorage :: NodeType -> Bool
-isStorage = isJust . getStorageNumber
-
-getStorageNumber :: NodeType -> Maybe Idx.Store
-getStorageNumber nt =
+isStorage nt =
    case nt of
-      Storage x -> Just x
-      _ -> Nothing
+      Storage -> True
+      _ -> False
 
 
 newtype NLabel = NLabel { nodeType :: NodeType } deriving (Show, Eq, Ord)
@@ -123,16 +119,15 @@ type InOut n el = ([Gr.LNode n el], [Gr.LNode n el])
 -- | Active storages, grouped by storage number, sorted by section number.
 getActiveStores ::
    SequFlowGraph ->
-   M.Map Idx.Store (Idx.Node, M.Map Idx.Section (InOut Idx.SecNode ELabel))
+   M.Map Idx.Node (M.Map Idx.Section (InOut Idx.SecNode ELabel))
 getActiveStores =
-   M.map (mapSnd (M.filter isActiveSt)) .
+   M.map (M.filter isActiveSt) .
    M.fromListWith
-      (\(n0,e0) (n1,e1) ->
-         (if n0==n1 then n0 else error "inconsistent mapping from Store to Node",
-          M.unionWith (error "the same storage multiple times in a section") e0 e1)) .
-   mapMaybe
-      (\(pre, (Idx.SecNode s n, nt), suc) ->
-         fmap (flip (,) (n, M.singleton s (pre, suc))) $ getStorageNumber nt) .
+      (M.unionWith (error "the same storage multiple times in a section")) .
+   map
+      (\(pre, (Idx.SecNode s n, _nt), suc) ->
+         (n, M.singleton s (pre, suc))) .
+   filter (isStorage . snd . snd3) .
    mkInOutGraphFormat
 
 isActiveSt :: InOut n ELabel -> Bool
