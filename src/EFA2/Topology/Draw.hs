@@ -200,25 +200,22 @@ drawTopologyXs' ts = runGraphvizCanvas Dot g Xlib
 data Line = ELine Idx.SecNode Idx.SecNode
           | XLine Idx.SecNode Idx.SecNode
           | NLine Idx.SecNode Idx.SecNode
-          | ErrorLine String deriving (Eq, Ord)
+          deriving (Eq, Ord)
 
 showLine :: Line -> String
 showLine (ELine u v) = "e_" ++ showSecNode u ++ "_" ++ showSecNode v
 showLine (XLine u v) = "x_" ++ showSecNode u ++ "_" ++ showSecNode v
 showLine (NLine u v) = "n_" ++ showSecNode u ++ "_" ++ showSecNode v
-showLine (ErrorLine str) = str
 
 showLineLatex :: Line -> String
 showLineLatex (ELine u v) = "$e_{" ++ secNodeToLatexString u ++ "." ++ secNodeToLatexString v ++ "}$"
 showLineLatex (XLine u v) = "$x_{" ++ secNodeToLatexString u ++ "." ++ secNodeToLatexString v ++ "}$"
 showLineLatex (NLine u v) = "$n_{" ++ secNodeToLatexString u ++ "." ++ secNodeToLatexString v ++ "}$"
-showLineLatex (ErrorLine str) = str
 
 showLineDelta :: Line -> String
 showLineDelta (ELine u v) = "de_" ++ showSecNode u ++ "_" ++ showSecNode v
 showLineDelta (XLine u v) = "dx_" ++ showSecNode u ++ "_" ++ showSecNode v
 showLineDelta (NLine u v) = "dn_" ++ showSecNode u ++ "_" ++ showSecNode v
-showLineDelta (ErrorLine str) = str
 
 
 data Env a =
@@ -455,7 +452,6 @@ class AutoEnvSignal a where
 formatAssignSignal ::
    (DispApp s, TDisp t, SDisplay v, D.Storage v d, Ord d, Disp d) =>
    (Line, Maybe (TC s t (Data v d))) -> String
-formatAssignSignal (ErrorLine str, _) = str
 formatAssignSignal (x, tc) = showLine x ++ " = " ++ formatStContSignal tc
 
 formatStContSignal ::
