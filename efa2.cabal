@@ -157,7 +157,6 @@ Executable threewaysto
     Build-Depends:
       efa2,
       process,
-      fgl,
       containers,
       base
   Else
@@ -180,7 +179,6 @@ Executable vierbein_delta
   If flag(buildExamples)
     Build-Depends:
       efa2,
-      fgl,
       containers,
       base
   Else
@@ -219,7 +217,6 @@ Executable demo-vierbein
   If flag(buildDemos)
     Build-Depends:
       efa2,
-      fgl,
       containers,
       base
   Else
