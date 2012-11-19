@@ -66,12 +66,12 @@ data FlowDirection = WithDir
 isOtherSection :: LNode -> LNode -> Bool
 isOtherSection (Idx.SecNode s1 _, _) (Idx.SecNode s2 _, _)  =  s1 /= s2
 
-isInactive :: FlowDirection -> Bool
-isInactive UnDir = True
-isInactive _ = False
-
 isActive :: FlowDirection -> Bool
-isActive = not . isInactive
+isActive UnDir = False
+isActive _ = True
+
+isInactive :: FlowDirection -> Bool
+isInactive = not . isActive
 
 data EdgeType = OriginalEdge
               | InnerStorageEdge
