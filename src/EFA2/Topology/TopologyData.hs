@@ -21,8 +21,10 @@ module EFA2.Topology.TopologyData (
        defaultELabel,
        defaultNLabel,
        InOut,
+       StoreDir(..),
        getActiveStores,
-       partitionInOutStatic) where
+       partitionInOutStatic,
+       classifyInOutStatic) where
 
 import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Topology.EfaGraph as Gr
@@ -134,13 +136,25 @@ isActiveSt :: InOut n ELabel -> Bool
 isActiveSt (ins, outs) =
    any isActiveEdge $ map snd $ ins ++ outs
 
+
+data StoreDir = In | Out deriving (Eq, Show)
+
 -- | Partition the storages in in and out storages, looking only at edges, not at values.
 -- This means that nodes with in AND out edges cannot be treated.
 partitionInOutStatic ::
    (Ord sec) =>
    M.Map sec (InOut n ELabel) ->
    (M.Map sec (InOut n ELabel), M.Map sec (InOut n ELabel))
-partitionInOutStatic = M.partition p
-  where p (ins, outs)  =  null (filter q ins) /= null (filter r outs)
-          where q (_, e) = flowDirection e == WithDir && (isOriginalEdge e || isInnerStorageEdge e)
-                r (_, e) = flowDirection e == AgainstDir && (isOriginalEdge e || isInnerStorageEdge e)
+partitionInOutStatic = M.partition ((In ==) . classifyInOutStatic)
+
+classifyInOutStatic :: InOut n ELabel -> StoreDir
+classifyInOutStatic (ins, outs)  =
+   if null (filter q ins) /= null (filter r outs)
+     then In
+     else Out
+   where q (_, e) =
+            flowDirection e == WithDir &&
+            (isOriginalEdge e || isInnerStorageEdge e)
+         r (_, e) =
+            flowDirection e == AgainstDir &&
+            (isOriginalEdge e || isInnerStorageEdge e)

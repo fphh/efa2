@@ -129,42 +129,32 @@ mkPEqs rec (ins, (nid@(Idx.SecNode sec _), _), outs) = ieqs ++ oeqs -- ++ dieqs 
 
 
 mkIntersectionEqs :: Idx.Record -> SequFlowGraph -> [Equation]
-mkIntersectionEqs recordNum topo =
-   Fold.fold inEqs ++ Fold.fold outEqs ++ stContentEqs
-  where inouts =
-           fmap partitionInOutStatic $
-           getActiveStores topo
-        inEqs =
-           Fold.fold $
-           M.mapWithKey
-              (\n (ins,_) ->
-                 M.mapWithKey (\sec ->
-                    mkInStoreEqs recordNum (Idx.SecNode sec n)) ins)
-           inouts
-        outEqs =
-           Fold.fold $
-           M.mapWithKey
-              (\n (_,outs) ->
-                 M.mapWithKey (\sec ->
-                    mkOutStoreEqs recordNum (Idx.SecNode sec n)) outs)
-           inouts
-        stContentEqs =
-           Fold.concat $ M.mapWithKey (mkStoreEqs recordNum) inouts
+mkIntersectionEqs recordNum =
+   Fold.fold .
+   M.mapWithKey
+      (\n sequ ->
+         case fmap (\inout -> (classifyInOutStatic inout, inout)) sequ of
+            classSequ ->
+               (Fold.fold $
+                M.mapWithKey
+                   (\sec (dir,inout) ->
+                      case dir of
+                         In  -> mkInStoreEqs  recordNum (Idx.SecNode sec n) inout
+                         Out -> mkOutStoreEqs recordNum (Idx.SecNode sec n) inout)
+                classSequ)
+               ++
+               (mkStoreEqs recordNum n $ fmap fst classSequ)) .
+   getActiveStores
 
-
-data StoreDir = In | Out deriving (Show)
 
 mkStoreEqs ::
    Idx.Record ->
    Idx.Node ->
-   (M.Map Idx.Section (Topo.InOut Idx.SecNode el),
-    M.Map Idx.Section (Topo.InOut Idx.SecNode el)) ->
+   M.Map Idx.Section StoreDir ->
    [Equation]
-mkStoreEqs recordNum node (ins, outs) =
+mkStoreEqs recordNum node edges =
       startEq ++ LH.mapAdjacent g both
-  where ins' = fmap (const In) ins
-        outs' = fmap (const Out) outs
-        both@(b:_) = M.toList $ M.union ins' outs'
+  where both@(b:_) = M.toAscList edges
 
         startEq =
            case b of
