@@ -36,11 +36,10 @@ genFlowTopology topo (FlowState fs) =
    mkGraph (labNodes topo) $
    map
       (\(Edge idx1 idx2, ()) ->
-         (Edge idx1 idx2,
-            case fs M.! PPosIdx idx1 idx2 of
-               PSign -> WithDir
-               NSign -> AgainstDir
-               ZSign -> UnDir )) $
+         case fs M.! PPosIdx idx1 idx2 of
+            PSign -> (Edge idx1 idx2, Dir)
+            NSign -> (Edge idx2 idx1, Dir)
+            ZSign -> (Edge idx1 idx2, UnDir)) $
    labEdges topo
 
 

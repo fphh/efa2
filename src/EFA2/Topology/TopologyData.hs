@@ -4,10 +4,14 @@ module EFA2.Topology.TopologyData (
        NodeType (..),
        EdgeType (..),
        FlowDirection (..),
+       EdgeLabel,
+       EdgeTypeField,      getEdgeType,
+       FlowDirectionField, getFlowDirection,
        Topology,
        FlowTopology,
        SecTopology,
        SequFlowGraph,
+       DirSequFlowGraph,
        isStorage,
        isActive,
        isInactive,
@@ -17,7 +21,6 @@ module EFA2.Topology.TopologyData (
        isOriginalEdge,
        isInnerStorageEdge,
        isIntersectionEdge,
-       flipFlowDirection,
        defaultELabel,
        defaultNLabel,
        InOut,
@@ -59,9 +62,7 @@ defaultNLabel :: NLabel
 defaultNLabel = NLabel NoRestriction
 
 
-data FlowDirection = WithDir
-                   | AgainstDir
-                   | UnDir deriving (Show, Eq, Ord)
+data FlowDirection = Dir | UnDir deriving (Show, Eq, Ord)
 
 isOtherSection :: LNode -> LNode -> Bool
 isOtherSection (Idx.SecNode s1 _, _) (Idx.SecNode s2 _, _)  =  s1 /= s2
@@ -83,28 +84,54 @@ data ELabel = ELabel { edgeType :: EdgeType,
                        flowDirection :: FlowDirection } deriving (Eq, Ord, Show)
 
 defaultELabel :: ELabel
-defaultELabel = ELabel OriginalEdge WithDir
+defaultELabel = ELabel OriginalEdge Dir
 
-isActiveEdge :: ELabel -> Bool
-isActiveEdge = isActive . flowDirection
+isActiveEdge :: FlowDirectionField el => el -> Bool
+isActiveEdge = isActive . getFlowDirection
 
-isInactiveEdge :: ELabel -> Bool
-isInactiveEdge = isInactive . flowDirection
+isInactiveEdge :: FlowDirectionField el => el -> Bool
+isInactiveEdge = isInactive . getFlowDirection
 
 
-isOriginalEdge :: ELabel -> Bool
-isOriginalEdge = (OriginalEdge ==) . edgeType
+class EdgeTypeField el where
+   getEdgeType :: el -> EdgeType
 
-isInnerStorageEdge :: ELabel -> Bool
-isInnerStorageEdge = (InnerStorageEdge ==) . edgeType
+class FlowDirectionField el where
+   getFlowDirection :: el -> FlowDirection
 
-isIntersectionEdge :: ELabel -> Bool
-isIntersectionEdge = (IntersectionEdge ==) . edgeType
+class (EdgeTypeField el, FlowDirectionField el) => EdgeLabel el where
 
-flipFlowDirection :: FlowDirection -> FlowDirection
-flipFlowDirection WithDir = AgainstDir
-flipFlowDirection AgainstDir = WithDir
-flipFlowDirection UnDir = UnDir
+
+instance EdgeTypeField EdgeType where
+   getEdgeType = id
+
+instance FlowDirectionField EdgeType where
+   getFlowDirection _ = Dir
+
+instance EdgeLabel EdgeType where
+
+
+instance FlowDirectionField FlowDirection where
+   getFlowDirection = id
+
+
+instance EdgeTypeField ELabel where
+   getEdgeType = edgeType
+
+instance FlowDirectionField ELabel where
+   getFlowDirection = flowDirection
+
+instance EdgeLabel ELabel where
+
+
+isOriginalEdge :: EdgeTypeField et => et -> Bool
+isOriginalEdge = (OriginalEdge ==) . getEdgeType
+
+isInnerStorageEdge :: EdgeTypeField et => et -> Bool
+isInnerStorageEdge = (InnerStorageEdge ==) . getEdgeType
+
+isIntersectionEdge :: EdgeTypeField et => et -> Bool
+isIntersectionEdge = (IntersectionEdge ==) . getEdgeType
 
 
 type Topology = EfaGraph Idx.Node NodeType ()
@@ -115,13 +142,16 @@ type SecTopology = EfaGraph Idx.SecNode NodeType FlowDirection
 
 type SequFlowGraph = EfaGraph Idx.SecNode NodeType ELabel
 
+type DirSequFlowGraph = EfaGraph Idx.SecNode NodeType EdgeType
+
 
 type InOut n el = ([Gr.LNode n el], [Gr.LNode n el])
 
 -- | Active storages, grouped by storage number, sorted by section number.
 getActiveStores ::
-   SequFlowGraph ->
-   M.Map Idx.Node (M.Map Idx.Section (InOut Idx.SecNode ELabel))
+   (FlowDirectionField el) =>
+   EfaGraph Idx.SecNode NodeType el ->
+   M.Map Idx.Node (M.Map Idx.Section (InOut Idx.SecNode el))
 getActiveStores =
    M.map (M.filter isActiveSt) .
    M.fromListWith
@@ -132,7 +162,8 @@ getActiveStores =
    filter (isStorage . snd . snd3) .
    mkInOutGraphFormat
 
-isActiveSt :: InOut n ELabel -> Bool
+isActiveSt ::
+   (FlowDirectionField el) => InOut n el -> Bool
 isActiveSt (ins, outs) =
    any isActiveEdge $ map snd $ ins ++ outs
 
@@ -142,19 +173,15 @@ data StoreDir = In | Out deriving (Eq, Show)
 -- | Partition the storages in in and out storages, looking only at edges, not at values.
 -- This means that nodes with in AND out edges cannot be treated.
 partitionInOutStatic ::
-   (Ord sec) =>
-   M.Map sec (InOut n ELabel) ->
-   (M.Map sec (InOut n ELabel), M.Map sec (InOut n ELabel))
+   (EdgeLabel el, Ord sec) =>
+   M.Map sec (InOut n el) ->
+   (M.Map sec (InOut n el), M.Map sec (InOut n el))
 partitionInOutStatic = M.partition ((In ==) . classifyInOutStatic)
 
-classifyInOutStatic :: InOut n ELabel -> StoreDir
-classifyInOutStatic (ins, outs)  =
-   if any q ins /= any r outs
-     then In
-     else Out
+classifyInOutStatic ::
+   (EdgeLabel el) => InOut n el -> StoreDir
+classifyInOutStatic (ins, _outs)  =
+   if any q ins then In else Out
    where q (_, e) =
-            flowDirection e == WithDir &&
-            (isOriginalEdge e || isInnerStorageEdge e)
-         r (_, e) =
-            flowDirection e == AgainstDir &&
+            isActiveEdge e &&
             (isOriginalEdge e || isInnerStorageEdge e)

@@ -42,7 +42,7 @@ drawSeqGraph sol =
 
 main :: IO ()
 main = do
-  let sol = map reorderEdges $ stateAnalysis topoDreibein
+  let sol = stateAnalysis topoDreibein
 
   drawAll $
     drawTopologyXs' sol :

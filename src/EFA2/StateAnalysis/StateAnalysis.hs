@@ -15,10 +15,9 @@ import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Topology.EfaGraph as Gr
 import EFA2.Topology.TopologyData
           (FlowTopology, NodeType(..),
-           FlowDirection, isActive, isInactive,
-           FlowDirection(UnDir, WithDir), flipFlowDirection)
+           FlowDirection(UnDir, Dir), isActive, isInactive)
 import EFA2.Topology.EfaGraph
-          (Edge(Edge), LNode, lab, labNodes, labEdges,
+          (Edge(Edge), LNode, lab,
            insNode, insEdge, pre, suc, lpre, lsuc, mkGraph)
 import EFA2.Utils.Utils (checkJust)
 
@@ -38,7 +37,7 @@ checkNodeType DeadNode [] [] = True
 checkNodeType Storage _ _ = True
 checkNodeType _ _ _ = False
 
--- Because of extend, we only do have to deal with WithDir edges here!
+-- Because of extend, we only do have to deal with Dir edges here!
 checkNode :: GraphInfo -> Idx.Node -> FlowTopology -> Bool
 checkNode gf x topo =
     (nadj /= length xsuc + length xpre) || res
@@ -59,14 +58,14 @@ ok gf (x, y) t = checkNode gf (fst x) t && checkNode gf (fst y) t
 extend :: LNEdge -> [FlowTopology] -> [FlowTopology]
 extend ((x, xl), (y, yl)) [] = [a, b, c]
   where ns = [(x, xl), (y, yl)]
-        a = mkGraph ns [(Edge x y, WithDir)]
-        b = mkGraph ns [(Edge y x, WithDir)] -- x and y inversed!
+        a = mkGraph ns [(Edge x y, Dir)]
+        b = mkGraph ns [(Edge y x, Dir)] -- x and y inversed!
         c = mkGraph ns [(Edge x y, UnDir)]
 extend ((x, xl), (y, yl)) gs = concatMap f gs'
   where gs' = map (insNode (y, yl) . insNode (x, xl)) gs
         f g = [a g, b g, c g]
-        a g = insEdge (Edge x y, WithDir) g
-        b g = insEdge (Edge y x, WithDir) g -- x and y inversed!
+        a g = insEdge (Edge x y, Dir) g
+        b g = insEdge (Edge y x, Dir) g -- x and y inversed!
         c g = insEdge (Edge x y, UnDir) g
 
 type NumberOfAdj = Int
@@ -117,15 +116,3 @@ buildLNEdges g = map f $ M.keys $ Gr.edgeLabels g
 
 stateAnalysis :: FlowTopology -> [FlowTopology]
 stateAnalysis topo = solutions topo $ buildLNEdges topo
-
--- | Auxiliary function that can be mapped over
--- the results of 'stateAnalysis'. The nodes of the
--- topologies will then be ordered the same way,
--- which looks nice when drawing it with 'drawTopologyXs''
-reorderEdges :: FlowTopology -> FlowTopology -- This function should go in an auxiliary module.
-reorderEdges topo = mkGraph ns es
-  where ns = labNodes topo
-        es = map f $ labEdges topo
-        f z@(Edge x y, l)
-          | x < y = z
-          | otherwise = (Edge y x, flipFlowDirection l)

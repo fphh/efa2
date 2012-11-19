@@ -36,7 +36,7 @@ import Data.GraphViz (
           attrStmts, nodeStmts, edgeStmts, graphStatements,
           directedGraph, strictGraph, subGraphs,
           graphID)
-import Data.GraphViz.Attributes.Complete
+import Data.GraphViz.Attributes.Complete as Viz
 
 import Data.Eq.HT (equating)
 import Data.Ratio (Ratio)
@@ -117,22 +117,16 @@ mkDotNode nshow n@(x, _) =
   where displabel =  Label $ StrLabel $ T.pack (nshow n)
 
 mkDotEdge :: (Topo.LEdge -> String) -> Topo.LEdge -> DotEdge T.Text
-mkDotEdge eshow e@(Edge x y, elabel) =
+mkDotEdge eshow e@(_, elabel) =
    DotEdge
       (dotIdentFromSecNode x) (dotIdentFromSecNode y)
-      [displabel, edir, colour]
-  where flowDir = flowDirection elabel
+      [displabel, Viz.Dir dir, colour]
+  where (Edge x y, dir) = orientEdge e
         displabel =
            Label $ StrLabel $ T.pack $
-           case flowDir of
-              UnDir -> ""
-              _ -> eshow e
-        edir =
-           Dir $
-           case flowDir of
-              AgainstDir -> Back
-              WithDir -> Forward
-              _ -> NoDir
+           if isActiveEdge elabel
+             then eshow e
+             else ""
         colour =
            case edgeType elabel of
               IntersectionEdge -> intersectionEdgeColour
@@ -183,12 +177,10 @@ dsg ident topo = DotSG True (Just (Int ident)) stmts
         nattrs x = [labNodef x, nodeColour, Style [SItem Filled []], Shape BoxShape ]
         labNodef (n, l) = Label $ StrLabel $ T.pack (show n ++ " - " ++ showNodeType l)
         es = map mkEdge (labEdges topo)
-        mkEdge (Edge x y, l) =
-           DotEdge (idf x) (idf y) $ (:[]) $ Dir $
-           case l of
-              WithDir -> Forward
-              AgainstDir -> Back
-              _ -> NoDir
+        mkEdge el =
+           case orientEdge el of
+              (Edge x y, d) ->
+                 DotEdge (idf x) (idf y) [Viz.Dir d]
 
 drawTopologyXs' :: [FlowTopology] -> IO ()
 drawTopologyXs' ts = runGraphvizCanvas Dot g Xlib
@@ -196,6 +188,19 @@ drawTopologyXs' ts = runGraphvizCanvas Dot g Xlib
         stmts = DotStmts attrs subgs [] []
         subgs = zipWith dsg [0..] ts
         attrs = []
+
+
+orientEdge ::
+   (Ord n, FlowDirectionField el) =>
+   (Edge n, el) -> (Edge n, DirType)
+orientEdge (e@(Edge x y), l) =
+   case getFlowDirection l of
+      Topo.UnDir -> (e, NoDir)
+      Topo.Dir ->
+--         if comparing (\(Idx.SecNode s n) -> n) x y == LT
+         if x < y
+           then (e, Forward)
+           else (Edge y x, Back)
 
 data Line = ELine Idx.SecNode Idx.SecNode
           | XLine Idx.SecNode Idx.SecNode
@@ -254,11 +259,12 @@ draw g
   where eshow = L.intercalate "\n" . map formatAssign . mkLst
 
         mkLst (Edge uid vid, l) =
+           (if uid < vid then id else reverse) $
            case edgeType l of
               OriginalEdge ->
                  (ELine uid vid, lookupEnergy rec uid vid) :
                  (XLine uid vid, lookupX rec uid vid) :
-                 ndirlab (flowDirection l) :
+                 (NLine uid vid, lookupEta rec uid vid) :
                  (XLine vid uid, lookupX rec vid uid) :
                  (ELine vid uid, lookupEnergy rec vid uid) :
                  []
@@ -270,8 +276,6 @@ draw g
                  (XLine uid vid, lookupX rec uid vid) :
                  (ELine vid uid, lookupEnergy rec vid uid) :
                  []
-            where ndirlab WithDir = (NLine uid vid, lookupEta rec uid vid)
-                  ndirlab _ = (NLine vid uid, lookupEta rec vid uid)
 
 drawTopology ::
    AutoEnv a => SequFlowGraph -> Interp.Envs SingleRecord a -> IO ()
