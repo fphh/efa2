@@ -1,3 +1,6 @@
+{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE StandaloneDeriving #-}
+
 module EFA2.Signal.Index where
 
 import qualified Test.QuickCheck as QC
@@ -13,8 +16,13 @@ initSection :: Section
 initSection = Section (-1)
 
 
-newtype Record = Record Int deriving (Show, Eq, Ord)
 
+data Absolute = Absolute deriving (Show, Eq, Ord)
+data Differential = Differential deriving (Show, Eq, Ord)
+
+
+
+newtype Record = Record Absolute deriving (Show, Eq, Ord)
 
 newtype Node = Node Int deriving (Show, Eq, Ord)
 

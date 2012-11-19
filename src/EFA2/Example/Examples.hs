@@ -1,7 +1,7 @@
 
 module EFA2.Example.Examples where
 
-import EFA2.Topology.Topology (makeNodes, makeWithDirEdges)
+import EFA2.Topology.Topology2 (makeNodes, makeWithDirEdges)
 import EFA2.Topology.TopologyData (FlowTopology, NodeType(..))
 import EFA2.Topology.EfaGraph (mkGraph)
 
