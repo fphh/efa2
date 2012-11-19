@@ -169,7 +169,7 @@ drawTopologyX' topo =
 drawTopologySimple :: SequFlowGraph -> IO ()
 drawTopologySimple topo =
    printGraph topo noRecord (const [heart]) nshow eshow
-  where nshow (n, l) = show n ++ " - " ++ showNodeType l
+  where nshow (Idx.SecNode _ n, l) = show n ++ " - " ++ showNodeType l
         eshow _ = ""
 
 dsg :: Int -> FlowTopology -> DotSubGraph String
