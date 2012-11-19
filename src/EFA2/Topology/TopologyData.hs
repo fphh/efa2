@@ -149,7 +149,7 @@ partitionInOutStatic = M.partition ((In ==) . classifyInOutStatic)
 
 classifyInOutStatic :: InOut n ELabel -> StoreDir
 classifyInOutStatic (ins, outs)  =
-   if null (filter q ins) /= null (filter r outs)
+   if any q ins /= any r outs
      then In
      else Out
    where q (_, e) =
