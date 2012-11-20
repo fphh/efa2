@@ -2,7 +2,7 @@ module EFA2.Topology.Topology where
 
 import EFA2.Solver.Equation
           (Equation(..), Term(..),
-           MkIdxC, MkVarC, mkVar, mkTerm, add, give, (!=), (&-), (&/))
+           MkIdxC, MkVarC, mkVar, mkTerm, add, give, (!=), (!*), (&-), (&/))
 import qualified EFA2.Interpreter.Env as Env
 import EFA2.Interpreter.Env
           (Envs(Envs), recordNumber, fromSingleRecord,
@@ -133,17 +133,15 @@ mkIntersectionEqs recordNum =
    Fold.fold .
    M.mapWithKey
       (\n sequ ->
-         case fmap (\inout -> (classifyInOutStatic inout, inout)) sequ of
-            classSequ ->
-               (Fold.fold $
-                M.mapWithKey
-                   (\sec (dir,inout) ->
-                      case dir of
-                         In  -> mkInStoreEqs  recordNum (Idx.SecNode sec n) inout
-                         Out -> mkOutStoreEqs recordNum (Idx.SecNode sec n) inout)
-                classSequ)
-               ++
-               (mkStoreEqs recordNum n $ fmap fst classSequ)) .
+         (Fold.fold $
+          M.mapWithKey
+             (\sec (inout,dir) ->
+                case dir of
+                   In  -> mkInStoreEqs  recordNum (Idx.SecNode sec n) inout
+                   Out -> mkOutStoreEqs recordNum (Idx.SecNode sec n) inout)
+          sequ)
+         ++
+         (mkStoreEqs recordNum n $ fmap snd sequ)) .
    getActiveStores
 
 
@@ -153,33 +151,22 @@ mkStoreEqs ::
    M.Map Idx.Section StoreDir ->
    [Equation]
 mkStoreEqs recordNum node edges =
-      startEq ++ LH.mapAdjacent g both
-  where both@(b:_) = M.toAscList edges
+      zipWith ($) (LH.mapAdjacent g (Const 0 : stvars)) both
+  where both = M.toAscList edges
+        stvars =
+           map
+              (\(sec, _dir) ->
+                 mkVar $ Idx.Storage recordNum $ Idx.SecNode sec node)
+           both
 
-        startEq =
-           case b of
-              (sec, In) ->
-                 case Idx.SecNode sec node of
-                    n ->
-                       [ mkVar (Idx.Storage recordNum n) :=
-                            mkVar (Idx.Var recordNum InSum n) :*
-                            mkVar (Idx.DTime recordNum sec) ]
-              _ -> []
-
-        g (sec, _) (sec', dir) =
+        g stold stnew (sec, dir) =
            stnew := (case dir of In -> vdt; Out -> Minus vdt) :+ stold
-{-
-          mkVar (Idx.Storage recordNum st') :=
-            (mkVar (Idx.Var recordNum InSum nid') :* dt)
-              :+ mkVar (Idx.Storage recordNum sec st)
--}
-          where stnew = mkVar $ Idx.Storage recordNum x'
-                stold = mkVar $ Idx.Storage recordNum x
-                x' = Idx.SecNode sec' node
-                x  = Idx.SecNode sec node
-                vdt = v :* dt
-                v = mkVar $ Idx.Var recordNum (case dir of In -> InSum; Out -> OutSum) x'
-                dt = mkVar $ Idx.DTime recordNum sec'
+          where vdt =
+                   (Idx.Var recordNum
+                       (case dir of In -> InSum; Out -> OutSum) $
+                    Idx.SecNode sec node)
+                   !*
+                   Idx.DTime recordNum sec
 
 
 mkInStoreEqs ::
