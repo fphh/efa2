@@ -78,7 +78,7 @@ mkDotGraph ::
    Maybe Idx.Record ->
    (Idx.DTime -> String) ->
    (Topo.LNode -> String) ->
-   (Topo.LEdge -> String) ->
+   (Topo.LEdge -> [String]) ->
    DotGraph T.Text
 mkDotGraph g recordNum timef nshow eshow =
   DotGraph { strictGraph = False,
@@ -116,17 +116,14 @@ mkDotNode nshow n@(x, _) =
       [displabel, nodeColour, Style [SItem Filled []], Shape BoxShape ]
   where displabel =  Label $ StrLabel $ T.pack (nshow n)
 
-mkDotEdge :: (Topo.LEdge -> String) -> Topo.LEdge -> DotEdge T.Text
+mkDotEdge :: (Topo.LEdge -> [String]) -> Topo.LEdge -> DotEdge T.Text
 mkDotEdge eshow e@(_, elabel) =
    DotEdge
       (dotIdentFromSecNode x) (dotIdentFromSecNode y)
       [displabel, Viz.Dir dir, colour]
-  where (Edge x y, dir) = orientEdge e
+  where (Edge x y, dir, order) = orientEdge e
         displabel =
-           Label $ StrLabel $ T.pack $
-           if isActiveEdge elabel
-             then eshow e
-             else ""
+           Label $ StrLabel $ T.pack $ L.intercalate "\n" $ order $ eshow e
         colour =
            case edgeType elabel of
               IntersectionEdge -> intersectionEdgeColour
@@ -142,7 +139,7 @@ printGraph ::
    Maybe Idx.Record ->
    (Idx.DTime -> String) ->
    (Topo.LNode -> String) ->
-   (Topo.LEdge -> String) ->
+   (Topo.LEdge -> [String]) ->
    IO ()
 printGraph g recordNum tshow nshow eshow =
    runGraphvizCanvas Dot (mkDotGraph g recordNum tshow nshow eshow) Xlib
@@ -157,14 +154,14 @@ heart = '\9829'
 
 drawTopologyX' :: SequFlowGraph -> IO ()
 drawTopologyX' topo =
-   printGraph topo noRecord (const [heart]) show show
+   printGraph topo noRecord (const [heart]) show ((:[]) . show)
 
 
 drawTopologySimple :: SequFlowGraph -> IO ()
 drawTopologySimple topo =
    printGraph topo noRecord (const [heart]) nshow eshow
   where nshow (Idx.SecNode _ n, l) = show n ++ " - " ++ showNodeType l
-        eshow _ = ""
+        eshow _ = []
 
 dsg :: Int -> FlowTopology -> DotSubGraph String
 dsg ident topo = DotSG True (Just (Int ident)) stmts
@@ -179,7 +176,7 @@ dsg ident topo = DotSG True (Just (Int ident)) stmts
         es = map mkEdge (labEdges topo)
         mkEdge el =
            case orientEdge el of
-              (Edge x y, d) ->
+              (Edge x y, d, _) ->
                  DotEdge (idf x) (idf y) [Viz.Dir d]
 
 drawTopologyXs' :: [FlowTopology] -> IO ()
@@ -192,15 +189,15 @@ drawTopologyXs' ts = runGraphvizCanvas Dot g Xlib
 
 orientEdge ::
    (Ord n, FlowDirectionField el) =>
-   (Edge n, el) -> (Edge n, DirType)
+   (Edge n, el) -> (Edge n, DirType, [s] -> [s])
 orientEdge (e@(Edge x y), l) =
    case getFlowDirection l of
-      Topo.UnDir -> (e, NoDir)
+      Topo.UnDir -> (e, NoDir, const [])
       Topo.Dir ->
 --         if comparing (\(Idx.SecNode s n) -> n) x y == LT
          if x < y
-           then (e, Forward)
-           else (Edge y x, Back)
+           then (e, Forward, id)
+           else (Edge y x, Back, reverse)
 
 data Line = ELine Idx.SecNode Idx.SecNode
           | XLine Idx.SecNode Idx.SecNode
@@ -256,10 +253,9 @@ draw :: SequFlowGraph -> Env a -> IO ()
 draw g
    (Env rec lookupEnergy lookupX lookupEta formatAssign tshow nshow) =
       printGraph g (Just rec) tshow nshow eshow
-  where eshow = L.intercalate "\n" . map formatAssign . mkLst
+  where eshow = map formatAssign . mkLst
 
         mkLst (Edge uid vid, l) =
-           (if uid < vid then id else reverse) $
            case edgeType l of
               OriginalEdge ->
                  (ELine uid vid, lookupEnergy rec uid vid) :
