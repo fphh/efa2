@@ -133,17 +133,15 @@ mkIntersectionEqs recordNum =
    Fold.fold .
    M.mapWithKey
       (\n sequ ->
-         case fmap (\inout -> (classifyInOutStatic inout, inout)) sequ of
-            classSequ ->
-               (Fold.fold $
-                M.mapWithKey
-                   (\sec (dir,inout) ->
-                      case dir of
-                         In  -> mkInStoreEqs  recordNum (Idx.SecNode sec n) inout
-                         Out -> mkOutStoreEqs recordNum (Idx.SecNode sec n) inout)
-                classSequ)
-               ++
-               (mkStoreEqs recordNum n $ fmap fst classSequ)) .
+         (Fold.fold $
+          M.mapWithKey
+             (\sec (inout,dir) ->
+                case dir of
+                   In  -> mkInStoreEqs  recordNum (Idx.SecNode sec n) inout
+                   Out -> mkOutStoreEqs recordNum (Idx.SecNode sec n) inout)
+          sequ)
+         ++
+         (mkStoreEqs recordNum n $ fmap snd sequ)) .
    getActiveStores
 
 

@@ -25,9 +25,7 @@ module EFA2.Topology.TopologyData (
        defaultNLabel,
        InOut,
        StoreDir(..),
-       getActiveStores,
-       partitionInOutStatic,
-       classifyInOutStatic) where
+       getActiveStores) where
 
 import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Topology.EfaGraph as Gr
@@ -149,39 +147,36 @@ type InOut n el = ([Gr.LNode n el], [Gr.LNode n el])
 
 -- | Active storages, grouped by storage number, sorted by section number.
 getActiveStores ::
-   (FlowDirectionField el) =>
+   (EdgeLabel el) =>
    EfaGraph Idx.SecNode NodeType el ->
-   M.Map Idx.Node (M.Map Idx.Section (InOut Idx.SecNode el))
+   M.Map Idx.Node (M.Map Idx.Section (InOut Idx.SecNode el, StoreDir))
 getActiveStores =
-   M.map (M.filter isActiveSt) .
    M.fromListWith
       (M.unionWith (error "the same storage multiple times in a section")) .
    map
       (\(pre, (Idx.SecNode s n, _nt), suc) ->
-         (n, M.singleton s (pre, suc))) .
+         (n, let inout = (pre, suc)
+             in  case maybeActiveSt inout of
+                    Nothing -> M.empty
+                    Just dir -> M.singleton s (inout, dir))) .
    filter (isStorage . snd . snd3) .
    mkInOutGraphFormat
 
-isActiveSt ::
-   (FlowDirectionField el) => InOut n el -> Bool
-isActiveSt (ins, outs) =
-   any isActiveEdge $ map snd $ ins ++ outs
+-- | Classify the storages in in and out storages,
+-- looking only at edges, not at values.
+-- This means that nodes with in AND out edges cannot be treated.
+maybeActiveSt ::
+   (EdgeLabel el) => InOut n el -> Maybe StoreDir
+maybeActiveSt (ins, outs) =
+   if any (\e ->
+            isActiveEdge e &&
+            (isOriginalEdge e || isInnerStorageEdge e)) $
+      map snd ins
+     then Just In
+     else
+       if any isActiveEdge $ map snd outs
+         then Just Out
+         else Nothing
 
 
 data StoreDir = In | Out deriving (Eq, Show)
-
--- | Partition the storages in in and out storages, looking only at edges, not at values.
--- This means that nodes with in AND out edges cannot be treated.
-partitionInOutStatic ::
-   (EdgeLabel el, Ord sec) =>
-   M.Map sec (InOut n el) ->
-   (M.Map sec (InOut n el), M.Map sec (InOut n el))
-partitionInOutStatic = M.partition ((In ==) . classifyInOutStatic)
-
-classifyInOutStatic ::
-   (EdgeLabel el) => InOut n el -> StoreDir
-classifyInOutStatic (ins, _outs)  =
-   if any q ins then In else Out
-   where q (_, e) =
-            isActiveEdge e &&
-            (isOriginalEdge e || isInnerStorageEdge e)
