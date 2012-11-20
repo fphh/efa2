@@ -280,7 +280,12 @@ compareELFilter esWithDuplicates =
 
 insNode ::
    (Ord n) => LNode n nl -> EfaGraph n nl el -> EfaGraph n nl el
-insNode n = insNodes [n]
+insNode (n,nl) g =
+   g{nodes =
+        M.insertWith
+           (\_ (ins, _, outs) -> (ins, nl, outs))
+           n (S.empty, nl, S.empty)
+           (nodes g)}
 
 insEdge ::
    (Ord n) => LEdge n el -> EfaGraph n nl el -> EfaGraph n nl el
@@ -289,11 +294,7 @@ insEdge es = insEdges [es]
 
 insNodes ::
    (Ord n) => [LNode n nl] -> EfaGraph n nl el -> EfaGraph n nl el
-insNodes ns g =
-   g{nodes =
-        M.union
-           (fmap (\nl -> (S.empty, nl, S.empty)) $ M.fromList ns)
-           (nodes g)}
+insNodes = flip (foldl (flip insNode))
 
 insEdges ::
    (Ord n) => [LEdge n el] -> EfaGraph n nl el -> EfaGraph n nl el
