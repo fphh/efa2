@@ -9,6 +9,7 @@ import qualified EFA2.Topology.Flow as Flow
 import EFA2.Signal.SequenceData
 
 import Data.List.HT (chop)
+import Data.Char (isSpace)
 
 
 interactIO :: String -> (String -> IO a) -> IO a
@@ -22,11 +23,16 @@ interactA qstr f = do
   fmap f getLine
 
 parse :: String -> [Int]
-parse str = map readNum $ chop (','==) $ filter (' '/=) str
-  where readNum s =
-           case reads s of
-              [(n, "")] -> n
-              _ -> error "parse error: not a number!"
+parse = map readNum . chop (','==)
+
+readNum :: (Read a, Num a) => String -> a
+readNum s =
+   case reads s of
+      [(n, trailer)] ->
+         if all isSpace trailer
+           then n
+           else error $ "cannot handle characters \"" ++ trailer ++ "\""
+      _ -> error "parse error: not a number!"
 
 select :: [topo] -> [Int] -> [topo]
 select ts = map (ts!!)
