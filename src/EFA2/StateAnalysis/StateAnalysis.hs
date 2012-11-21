@@ -108,7 +108,7 @@ expand e g0 = do
 
 nodesOnly :: Topology -> CountTopology
 nodesOnly topo =
-   Gr.mkGraphFromMap
+   Gr.fromMap
       (M.map (\(pre,l,suc) -> (l, S.size pre + S.size suc)) $ Gr.nodes topo)
       M.empty
 
@@ -117,7 +117,7 @@ type LNEdge = Gr.Edge Idx.Node
 bruteForce :: Topology -> [FlowTopology]
 bruteForce topo =
    filter (\g -> Fold.all (checkNode g) $ Gr.nodeSet g) .
-   map (Gr.mkGraphFromMap (Gr.nodeLabels topo) . M.fromList) $
+   map (Gr.fromMap (Gr.nodeLabels topo) . M.fromList) $
    mapM (edgeOrients . fst) $ Gr.labEdges topo
 
 advanced :: Topology -> [FlowTopology]
@@ -164,7 +164,7 @@ instance QC.Arbitrary ArbTopology where
          Fold.foldMap (Fold.foldMap S.singleton) $
          M.keys edges
       return $ ArbTopology $
-         Gr.mkGraphFromMap nodes $
+         Gr.fromMap nodes $
          M.mapKeys (\(UndirEdge x y) -> Gr.Edge x y) edges
 
 propAdvanced :: ArbTopology -> Bool

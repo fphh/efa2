@@ -34,7 +34,7 @@ module EFA2.Topology.EfaGraph (
    propELFilter,
    insNode, insNodes,
    insEdge, insEdges,
-   mkGraph, mkGraphFromMap,
+   mkGraph, fromList, fromMap,
    nodes, nodeSet,
    InOut,
    mkInOutGraphFormat,
@@ -293,8 +293,8 @@ compareELFilter es =
    let ns =
           mapFromSet (\n -> [n, toUpper n]) $
           foldMap (foldMap S.singleton) $ M.keys es
-   in  (elfilter even $ mkGraphFromMap ns es,
-        mkGraphFromMap ns $ M.filter even es)
+   in  (elfilter even $ fromMap ns es,
+        fromMap ns $ M.filter even es)
 
 insNode ::
    (Ord n) => LNode n nl -> EfaGraph n nl el -> EfaGraph n nl el
@@ -326,16 +326,18 @@ insEdges es (EfaGraph ns els) =
       (M.unionWith (error "insEdgs: edge already contained in graph")
          els (M.fromList es))
 
-mkGraph ::
+-- I may deprecate mkGraph in favor of EfaGraph.fromList
+fromList, mkGraph ::
    (Ord n) =>
    [LNode n nl] -> [LEdge n el] -> EfaGraph n nl el
-mkGraph ns es =
-   mkGraphFromMap (M.fromList ns) $ M.fromList es
+mkGraph = fromList
+fromList ns es =
+   fromMap (M.fromList ns) $ M.fromList es
 
-mkGraphFromMap ::
+fromMap ::
    (Ord n) =>
    M.Map n nl -> M.Map (Edge n) el -> EfaGraph n nl el
-mkGraphFromMap ns es =
+fromMap ns es =
    case M.keys es of
       esl ->
          EfaGraph (fmap (,,) (makeInMap ns esl) $$ ns $$ (makeOutMap ns esl)) es
