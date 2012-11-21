@@ -31,6 +31,7 @@ import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Topology.EfaGraph as Gr
 import EFA2.Topology.EfaGraph (EfaGraph, mkInOutGraphFormat)
 
+import qualified Test.QuickCheck as QC
 import qualified Data.Map as M
 import Control.Monad (mplus)
 import Data.Maybe.HT (toMaybe)
@@ -181,3 +182,22 @@ maybeActiveSt (ins, outs) =
 
 
 data StoreDir = In | Out deriving (Eq, Show)
+
+
+instance QC.Arbitrary NodeType where
+   arbitrary =
+      QC.oneof $ map return $
+         Storage :
+         Sink :
+         AlwaysSink :
+         Source :
+         AlwaysSource :
+         Crossing :
+         DeadNode :
+         NoRestriction :
+         []
+
+   shrink NoRestriction = []
+   shrink AlwaysSink = [Sink]
+   shrink AlwaysSource = [Source]
+   shrink _ = [NoRestriction]

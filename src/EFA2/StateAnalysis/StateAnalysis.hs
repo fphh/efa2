@@ -1,4 +1,8 @@
-module EFA2.StateAnalysis.StateAnalysis (advanced, bruteForce) where
+module EFA2.StateAnalysis.StateAnalysis (
+   advanced,
+   bruteForce,
+   propAdvanced,
+   ) where
 
 -- This algorithm is made after reading R. Birds "Making a Century" in Pearls of Functional Algorithm Design.
 
@@ -15,11 +19,16 @@ import qualified EFA2.Topology.EfaGraph as Gr
 import EFA2.Topology.TopologyData
           (FlowTopology, Topology, NodeType(..),
            FlowDirection(UnDir, Dir), isActive)
+import EFA2.Utils.Utils (mapFromSet)
 
 import qualified Data.Foldable as Fold
 import qualified Data.Map as M
 import qualified Data.Set as S
-import Control.Monad (foldM, guard)
+import Data.Traversable (sequenceA)
+import Data.Monoid (mappend)
+import Control.Monad (liftM2, foldM, guard)
+
+import qualified Test.QuickCheck as QC
 
 
 -- import Debug.Trace
@@ -37,8 +46,8 @@ checkNodeType Storage _ _ = True
 checkNodeType _ _ _ = False
 
 -- Because of extend, we only do have to deal with Dir edges here!
-checkNode :: Idx.Node -> FlowTopology -> Bool
-checkNode x topo =
+checkNode :: FlowTopology -> Idx.Node -> Bool
+checkNode topo x =
    case M.lookup x $ Gr.nodes topo of
       Nothing -> error "checkNode: node not in graph"
       Just (pre, nty, suc) ->
@@ -46,8 +55,8 @@ checkNode x topo =
             (anyActive $ Gr.sucEdgeLabels topo x suc)
             (anyActive $ Gr.preEdgeLabels topo x pre)
 
-checkCountNode :: Idx.Node -> CountTopology -> Bool
-checkCountNode x topo =
+checkCountNode :: CountTopology -> Idx.Node -> Bool
+checkCountNode topo x =
    case M.lookup x $ Gr.nodes topo of
       Nothing -> error "checkNode: node not in graph"
       Just (pre, (nty, nadj), suc) ->
@@ -92,9 +101,9 @@ edgeOrients (Gr.Edge x y) =
    []
 
 expand :: LNEdge -> CountTopology -> [CountTopology]
-expand e@(Gr.Edge x y) g0 = do
+expand e g0 = do
    g1 <- map (flip Gr.insEdge g0) $ edgeOrients e
-   guard $ checkCountNode x g1 && checkCountNode y g1
+   guard $ Fold.all (checkCountNode g1) e
    return g1
 
 nodesOnly :: Topology -> CountTopology
@@ -107,7 +116,7 @@ type LNEdge = Gr.Edge Idx.Node
 
 bruteForce :: Topology -> [FlowTopology]
 bruteForce topo =
-   filter (\g -> Fold.all (flip checkNode g) $ Gr.nodeSet g) .
+   filter (\g -> Fold.all (checkNode g) $ Gr.nodeSet g) .
    map (Gr.mkGraphFromMap (Gr.nodeLabels topo) . M.fromList) $
    mapM (edgeOrients . fst) $ Gr.labEdges topo
 
@@ -116,3 +125,48 @@ advanced topo =
    map (Gr.nmap fst) $
    foldM (flip expand) (nodesOnly topo) $
    map fst $ Gr.labEdges topo
+
+
+data UndirEdge n = UndirEdge n n
+   deriving (Eq, Ord, Show)
+
+undirEdge :: Ord n => n -> n -> UndirEdge n
+undirEdge x y =
+   if x<y then UndirEdge x y else UndirEdge y x
+
+instance (QC.Arbitrary n, Ord n) => QC.Arbitrary (UndirEdge n) where
+   arbitrary = liftM2 undirEdge QC.arbitrary QC.arbitrary
+   shrink (UndirEdge x y) =
+      S.toList $ S.fromList $ map (uncurry undirEdge) $ QC.shrink (x,y)
+
+instance Fold.Foldable UndirEdge where
+   foldMap f (UndirEdge x y) = mappend (f x) (f y)
+
+
+maxArbEdges :: Int
+maxArbEdges = 6
+
+newtype ArbTopology = ArbTopology Topology
+   deriving (Show)
+
+instance QC.Arbitrary ArbTopology where
+   shrink (ArbTopology g) =
+      case Gr.nodeSet g of
+         ns ->
+            map (ArbTopology . flip Gr.delNodeSet g .
+                 S.difference ns . S.fromList) $
+            QC.shrink $ S.toList ns
+   arbitrary = do
+      edges <-
+         fmap (M.fromList . take maxArbEdges) QC.arbitrary
+      nodes <-
+         sequenceA $ mapFromSet (const QC.arbitrary) $
+         Fold.foldMap (Fold.foldMap S.singleton) $
+         M.keys edges
+      return $ ArbTopology $
+         Gr.mkGraphFromMap nodes $
+         M.mapKeys (\(UndirEdge x y) -> Gr.Edge x y) edges
+
+propAdvanced :: ArbTopology -> Bool
+propAdvanced (ArbTopology g) =
+   bruteForce g == advanced g
