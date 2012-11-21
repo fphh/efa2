@@ -290,12 +290,12 @@ compareELFilter ::
    [LEdge Char Int] ->
    (EfaGraph Char String Int, EfaGraph Char String Int)
 compareELFilter esWithDuplicates =
-   let es = M.toList $ M.fromList esWithDuplicates
+   let es = M.fromList esWithDuplicates
        ns =
-          map (\n -> (n, [n, toUpper n])) $ S.toList $ S.unions $
-          map (\(Edge x y, _) -> S.fromList [x,y]) es
-   in  (elfilter even $ mkGraph ns es,
-        mkGraph ns $ filter (even . snd) es)
+          mapFromSet (\n -> [n, toUpper n]) $
+          foldMap (foldMap S.singleton) $ M.keys es
+   in  (elfilter even $ mkGraphFromMap ns es,
+        mkGraphFromMap ns $ M.filter even es)
 
 insNode ::
    (Ord n) => LNode n nl -> EfaGraph n nl el -> EfaGraph n nl el
