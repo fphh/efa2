@@ -277,7 +277,7 @@ delEdgeHelp (EfaGraph ns _els) (kept, deleted) =
       (fmap
          (\(ins, n, outs) delIns delOuts ->
             (S.difference ins delIns, n, S.difference outs delOuts)) ns
-         $$ makeOutMap ns (map reverseEdge deleted)
+         $$ makeInMap  ns deleted
          $$ makeOutMap ns deleted)
       kept
 
