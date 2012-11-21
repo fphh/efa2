@@ -32,6 +32,8 @@ import qualified EFA2.Topology.EfaGraph as Gr
 import EFA2.Topology.EfaGraph (EfaGraph, mkInOutGraphFormat)
 
 import qualified Data.Map as M
+import Control.Monad (mplus)
+import Data.Maybe.HT (toMaybe)
 import Data.Tuple.HT (snd3)
 
 
@@ -168,15 +170,14 @@ getActiveStores =
 maybeActiveSt ::
    (EdgeLabel el) => InOut n el -> Maybe StoreDir
 maybeActiveSt (ins, outs) =
-   if any (\e ->
-            isActiveEdge e &&
-            (isOriginalEdge e || isInnerStorageEdge e)) $
-      map snd ins
-     then Just In
-     else
-       if any isActiveEdge $ map snd outs
-         then Just Out
-         else Nothing
+   mplus
+      (toMaybe
+         (any (\e ->
+               isActiveEdge e &&
+               (isOriginalEdge e || isInnerStorageEdge e)) $
+          map snd ins)
+         In)
+      (toMaybe (any (isActiveEdge . snd) outs) Out)
 
 
 data StoreDir = In | Out deriving (Eq, Show)
