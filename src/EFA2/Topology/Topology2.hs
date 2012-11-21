@@ -55,6 +55,8 @@ makeSimpleEdges es = map f es
 
 -}
 
+newtype Equations s a = Equations (ST s (MWithVars s a))
+
 edges :: Gr.EfaGraph node nodeLabel edgeLabel -> [Gr.Edge node]
 edges g = M.keys el
   where el = Gr.edgeLabels g
@@ -75,9 +77,10 @@ makeAllEquations g = makeEtaEquations (edges g)
 
 {-
 instance (Monad m0, Monad m1, Monoid l) =>
-  Monoid (m0 (l, m1 ()))  where
-    mempty = return (mempty, return ())
+  Monoid (Equations (m0 (l, m1 ())))  where
+    mempty = return $ Equations (mempty, return ())
     -- mappend x y = x >>= \(xs, m) -> y >>= \(ys, n) -> return (mappend xs ys, m >> n)
+
     mappend x y = do
       (xs, m) <- x
       (ys, n) <- y
@@ -92,6 +95,7 @@ instance (Monad m0, Monad m1) =>
       (xs, m) <- x
       (ys, n) <- y
       return (xs ++ ys, do { m; n })
+
 
 getVar :: Env.Index -> ST s (TWithVars s a)
 getVar idx = do
@@ -111,9 +115,14 @@ instance EnvsPut Idx.FEta where
          putIntoEnv k v envs = envs { fetaMap = M.insert k v (fetaMap envs) }
 -}
 
+
+-- T = Typ => TWithVars = ExpressionWithVars
 type TWithVars s a = ([(Env.Index, Variable s a)], T s a)
 
+-- M = Monad => SystemWithVars
 type MWithVars s a = ([(Env.Index, Variable s a)], M s ())
+
+-- .= .*: auf ST s (MWithVars s a) Ebene definieren
 
 (.=) :: (Eq a) => TWithVars s a -> TWithVars s a -> MWithVars s a
 (vs, x) .= (us, y) = (vs ++ us, x =:= y)
