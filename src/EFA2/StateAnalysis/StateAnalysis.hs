@@ -7,7 +7,6 @@ module EFA2.StateAnalysis.StateAnalysis where
 --import Prelude hiding (map, length, filter, concatMap, all, (++), foldr)
 --import Data.List.Stream
 
-import qualified Data.Map as M
 --import qualified Data.Vector as V
 --import Data.Function (on)
 
@@ -16,9 +15,11 @@ import qualified EFA2.Topology.EfaGraph as Gr
 import EFA2.Topology.TopologyData
           (FlowTopology, NodeType(..),
            FlowDirection(UnDir, Dir), isActive, isInactive)
-import EFA2.Topology.EfaGraph (pre, suc, lpre, lsuc)
+import EFA2.Topology.EfaGraph (lpre, lsuc)
 import EFA2.Utils.Utils (checkJust)
 
+import qualified Data.Map as M
+import qualified Data.Set as S
 import Control.Monad (foldM)
 
 
@@ -38,8 +39,8 @@ checkNodeType Storage _ _ = True
 checkNodeType _ _ _ = False
 
 -- Because of extend, we only do have to deal with Dir edges here!
-checkNode :: GraphInfo -> Idx.Node -> FlowTopology -> Bool
-checkNode gf x topo =
+checkNode :: Idx.Node -> CountTopology -> Bool
+checkNode x topo =
     (nadj /= length xsuc + length xpre) || res
   where res = checkNodeType nty xsuc' xpre'
 
@@ -49,11 +50,11 @@ checkNode gf x topo =
         xpre = lpre topo x
         xpre' = filter isActive (map snd xpre)
 
-        (nty, nadj) = checkJust "checkNode" $ M.lookup x gf
+        (nty, nadj) = checkJust "checkNode" $ Gr.lab topo x
         --Just (nty, nadj) = gf V.! x  -- Vector Version
 
-ok :: GraphInfo -> LNEdge -> FlowTopology -> Bool
-ok gf (Gr.Edge x y) t = checkNode gf x t && checkNode gf y t
+ok :: LNEdge -> CountTopology -> Bool
+ok (Gr.Edge x y) t = checkNode x t && checkNode y t
 
 
 
@@ -64,12 +65,12 @@ edgeOrients (Gr.Edge x y) =
    (Gr.Edge x y, UnDir) :
    []
 
-extend :: LNEdge -> FlowTopology -> [FlowTopology]
+extend :: LNEdge -> CountTopology -> [CountTopology]
 extend e g =
    map (flip Gr.insEdge g) $ edgeOrients e
 
 type NumberOfAdj = Int
-type GraphInfo = M.Map Idx.Node (NodeType, NumberOfAdj)
+type CountTopology = Gr.EfaGraph Idx.Node (NodeType, NumberOfAdj) FlowDirection
 
 
 {-
@@ -94,21 +95,19 @@ makeContigous xs = reverse ys
 -}
 
 
-buildInfo :: FlowTopology -> GraphInfo
-buildInfo topo = M.mapWithKey f $ Gr.nodeLabels topo
-  where f n l = (l, length (pre topo n) + length (suc topo n))
+expand :: LNEdge -> CountTopology -> [CountTopology]
+expand x = filter (ok x) . extend x
 
-
-expand :: GraphInfo -> LNEdge -> FlowTopology -> [FlowTopology]
-expand gf x = filter (ok gf x) . extend x
-
-solutions :: FlowTopology -> FlowTopology -> [LNEdge] -> [FlowTopology]
-solutions origTopo nodesOnly =
-   foldM (flip $ expand (buildInfo origTopo)) nodesOnly
+solutions :: CountTopology -> [LNEdge] -> [CountTopology]
+solutions = foldM (flip expand)
 
 type LNEdge = Gr.Edge Idx.Node
 
 stateAnalysis :: FlowTopology -> [FlowTopology]
 stateAnalysis topo =
-   solutions topo (Gr.mkGraphFromMap (Gr.nodeLabels topo) M.empty) $
+   map (Gr.nmap fst) $
+   solutions
+      (Gr.mkGraphFromMap
+         (M.map (\(pre,l,suc) -> (l, S.size pre + S.size suc)) $ Gr.nodes topo)
+         M.empty) $
    map fst $ Gr.labEdges topo
