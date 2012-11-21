@@ -17,10 +17,8 @@ interactIO qstr f = do
   putStrLn qstr
   f =<< getLine
 
-interactA :: String -> (String -> a) -> IO a
-interactA qstr f = do
-  putStrLn qstr
-  fmap f getLine
+prompt :: String -> IO String
+prompt qstr = putStrLn qstr >> getLine
 
 parse :: String -> [Int]
 parse = map readNum . chop (','==)
@@ -41,9 +39,9 @@ drawSeqGraph :: [FlowTopology] ->  IO ()
 drawSeqGraph sol =
    drawTopologySimple .
    Flow.mkSequenceTopology .
-   Flow.genSectionTopology . SequData =<<
-   interactA "Gib kommagetrennt die gewuenschten Sektionsindices ein: "
-      (select sol . parse)
+   Flow.genSectionTopology .
+   SequData . select sol . parse =<<
+   prompt "Gib kommagetrennt die gewuenschten Sektionsindices ein: "
 
 
 main :: IO ()
