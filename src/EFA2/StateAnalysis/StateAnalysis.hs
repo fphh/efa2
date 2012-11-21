@@ -1,4 +1,4 @@
-module EFA2.StateAnalysis.StateAnalysis where
+module EFA2.StateAnalysis.StateAnalysis (advanced, bruteForce) where
 
 -- This algorithm is made after reading R. Birds "Making a Century" in Pearls of Functional Algorithm Design.
 
@@ -16,6 +16,7 @@ import EFA2.Topology.TopologyData
           (FlowTopology, NodeType(..),
            FlowDirection(UnDir, Dir), isActive)
 
+import qualified Data.Foldable as Fold
 import qualified Data.Map as M
 import qualified Data.Set as S
 import Control.Monad (foldM, guard)
@@ -36,15 +37,27 @@ checkNodeType Storage _ _ = True
 checkNodeType _ _ _ = False
 
 -- Because of extend, we only do have to deal with Dir edges here!
-checkNode :: Idx.Node -> CountTopology -> Bool
+checkNode :: Idx.Node -> FlowTopology -> Bool
 checkNode x topo =
+   case M.lookup x $ Gr.nodes topo of
+      Nothing -> error "checkNode: node not in graph"
+      Just (pre, nty, suc) ->
+         checkNodeType nty
+            (anyActive $ Gr.sucEdgeLabels topo x suc)
+            (anyActive $ Gr.preEdgeLabels topo x pre)
+
+checkCountNode :: Idx.Node -> CountTopology -> Bool
+checkCountNode x topo =
    case M.lookup x $ Gr.nodes topo of
       Nothing -> error "checkNode: node not in graph"
       Just (pre, (nty, nadj), suc) ->
          (S.size pre + S.size suc < nadj) ||
          checkNodeType nty
-            (any (isActive . snd) $ Gr.sucEdgeLabels topo x suc)
-            (any (isActive . snd) $ Gr.preEdgeLabels topo x pre)
+            (anyActive $ Gr.sucEdgeLabels topo x suc)
+            (anyActive $ Gr.preEdgeLabels topo x pre)
+
+anyActive :: [(n, FlowDirection)] -> Bool
+anyActive = any (isActive . snd)
 
 type NumberOfAdj = Int
 type CountTopology = Gr.EfaGraph Idx.Node (NodeType, NumberOfAdj) FlowDirection
@@ -71,16 +84,17 @@ makeContigous xs = reverse ys
         f (a:acc) x = x:(map (, Nothing) [(fst x - 1), (fst x - 2)..(fst a +1)] ++ a:acc)
 -}
 
+edgeOrients :: Gr.Edge node -> [(Gr.Edge node, FlowDirection)]
+edgeOrients (Gr.Edge x y) =
+   (Gr.Edge x y, Dir) :
+   (Gr.Edge y x, Dir) : -- x and y inversed!
+   (Gr.Edge x y, UnDir) :
+   []
 
 expand :: LNEdge -> CountTopology -> [CountTopology]
-expand (Gr.Edge x y) g0 = do
-   e <-
-      (Gr.Edge x y, Dir) :
-      (Gr.Edge y x, Dir) : -- x and y inversed!
-      (Gr.Edge x y, UnDir) :
-      []
-   let g1 = Gr.insEdge e g0
-   guard $ checkNode x g1 && checkNode y g1
+expand e@(Gr.Edge x y) g0 = do
+   g1 <- map (flip Gr.insEdge g0) $ edgeOrients e
+   guard $ checkCountNode x g1 && checkCountNode y g1
    return g1
 
 nodesOnly :: FlowTopology -> CountTopology
@@ -91,8 +105,14 @@ nodesOnly topo =
 
 type LNEdge = Gr.Edge Idx.Node
 
-stateAnalysis :: FlowTopology -> [FlowTopology]
-stateAnalysis topo =
+bruteForce :: FlowTopology -> [FlowTopology]
+bruteForce topo =
+   filter (\g -> Fold.all (flip checkNode g) $ Gr.nodeSet g) .
+   map (Gr.mkGraphFromMap (Gr.nodeLabels topo) . M.fromList) $
+   mapM (edgeOrients . fst) $ Gr.labEdges topo
+
+advanced :: FlowTopology -> [FlowTopology]
+advanced topo =
    map (Gr.nmap fst) $
    foldM (flip expand) (nodesOnly topo) $
    map fst $ Gr.labEdges topo

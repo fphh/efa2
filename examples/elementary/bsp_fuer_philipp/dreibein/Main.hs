@@ -4,7 +4,7 @@ module Main where
 import qualified Data.Map as M
 
 import EFA2.Example.Examples
-import EFA2.StateAnalysis.StateAnalysis
+import qualified EFA2.StateAnalysis.StateAnalysis as StateAnalysis
 import EFA2.Topology.Draw
 
 import EFA2.Topology.TopologyData
@@ -213,7 +213,7 @@ numeric g = separateEnvs res
 
 seqTopo :: SequFlowGraph
 seqTopo = mkSeqTopo (select sol states)
-  where sol = stateAnalysis topoDreibein
+  where sol = StateAnalysis.advanced topoDreibein
         states = [0, 5, 0, 4]
         select ts = map (ts!!)
         mkSeqTopo = Flow.mkSequenceTopology
