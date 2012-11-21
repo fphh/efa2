@@ -1,5 +1,6 @@
 module EFA2.Topology.EfaGraph (
    EfaGraph(EfaGraph),
+   isConsistent,
    inEdges, outEdges,
    nodeLabels,
    edgeLabels,
@@ -26,8 +27,9 @@ module EFA2.Topology.EfaGraph (
    suc, lsuc, sucEdgeLabels,
    delNode,
    delNodes,
-   delEdgeSet,
+   delNodeSet,
    delEdges,
+   delEdgeSet,
    elfilter,
    propELFilter,
    insNode, insNodes,
@@ -44,8 +46,10 @@ import EFA2.Utils.Utils (mapFromSet, differenceMapSet, intersectionMapSet)
 
 import qualified Data.Set as S
 import qualified Data.Map as M
+import qualified Data.Foldable as Fold
 import Control.Monad (liftM2)
-import Data.Foldable (foldMap, fold)
+import Data.Monoid (mappend)
+import Data.Foldable (Foldable, foldMap, fold)
 import Data.Tuple.HT (mapSnd, fst3, snd3, thd3)
 import Data.Char (toUpper)
 
@@ -53,18 +57,25 @@ import qualified Test.QuickCheck as QC
 
 
 {-
-invariant:
-
-forall (EfaGraph ns els).
-   M.keySet edgeLabels
-      == fold (M.mapWithKey (\n (_, _, outs) -> S.map (Edge n) outs))
-      == fold (M.mapWithKey (\n (ins, _, _) -> S.map (flip Edge n) ins))
+For all EfaGraph's the 'isConsistent' predicate must be 'True'.
 -}
 data EfaGraph node nodeLabel edgeLabel =
    EfaGraph {
       nodes :: M.Map node (S.Set node, nodeLabel, S.Set node),
       edgeLabels :: M.Map (Edge node) edgeLabel
    } deriving (Show, Eq)
+
+
+isConsistent :: Ord n => EfaGraph n nl el -> Bool
+isConsistent (EfaGraph ns els) =
+   case M.keysSet els of
+      es ->
+         Fold.all (Fold.all (flip M.member ns)) es
+         &&
+         es == fold (M.mapWithKey (\n (_, _, outs) -> S.map (Edge n) outs) ns)
+         &&
+         es == fold (M.mapWithKey (\n (ins, _, _) -> S.map (flip Edge n) ins) ns)
+
 
 type LNode n label = (n, label)
 
@@ -73,6 +84,9 @@ data Edge node = Edge node node
 
 instance Functor Edge where
    fmap f (Edge x y) = Edge (f x) (f y)
+
+instance Foldable Edge where
+   foldMap f (Edge x y) = mappend (f x) (f y)
 
 instance (QC.Arbitrary n) => QC.Arbitrary (Edge n) where
    arbitrary = liftM2 Edge QC.arbitrary QC.arbitrary
