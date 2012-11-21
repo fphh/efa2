@@ -18,7 +18,7 @@ import EFA2.Topology.TopologyData
 
 import qualified Data.Map as M
 import qualified Data.Set as S
-import Control.Monad (foldM)
+import Control.Monad (foldM, guard)
 
 
 -- import Debug.Trace
@@ -45,22 +45,6 @@ checkNode x topo =
          checkNodeType nty
             (any (isActive . snd) $ Gr.sucEdgeLabels topo x suc)
             (any (isActive . snd) $ Gr.preEdgeLabels topo x pre)
-
-ok :: LNEdge -> CountTopology -> Bool
-ok (Gr.Edge x y) t = checkNode x t && checkNode y t
-
-
-
-edgeOrients :: LNEdge -> [Gr.LEdge Idx.Node FlowDirection]
-edgeOrients (Gr.Edge x y) =
-   (Gr.Edge x y, Dir) :
-   (Gr.Edge y x, Dir) : -- x and y inversed!
-   (Gr.Edge x y, UnDir) :
-   []
-
-extend :: LNEdge -> CountTopology -> [CountTopology]
-extend e g =
-   map (flip Gr.insEdge g) $ edgeOrients e
 
 type NumberOfAdj = Int
 type CountTopology = Gr.EfaGraph Idx.Node (NodeType, NumberOfAdj) FlowDirection
@@ -89,7 +73,15 @@ makeContigous xs = reverse ys
 
 
 expand :: LNEdge -> CountTopology -> [CountTopology]
-expand x = filter (ok x) . extend x
+expand (Gr.Edge x y) g0 = do
+   e <-
+      (Gr.Edge x y, Dir) :
+      (Gr.Edge y x, Dir) : -- x and y inversed!
+      (Gr.Edge x y, UnDir) :
+      []
+   let g1 = Gr.insEdge e g0
+   guard $ checkNode x g1 && checkNode y g1
+   return g1
 
 nodesOnly :: FlowTopology -> CountTopology
 nodesOnly topo =
