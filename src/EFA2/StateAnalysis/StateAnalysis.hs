@@ -13,7 +13,7 @@ module EFA2.StateAnalysis.StateAnalysis (advanced, bruteForce) where
 import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Topology.EfaGraph as Gr
 import EFA2.Topology.TopologyData
-          (FlowTopology, NodeType(..),
+          (FlowTopology, Topology, NodeType(..),
            FlowDirection(UnDir, Dir), isActive)
 
 import qualified Data.Foldable as Fold
@@ -97,7 +97,7 @@ expand e@(Gr.Edge x y) g0 = do
    guard $ checkCountNode x g1 && checkCountNode y g1
    return g1
 
-nodesOnly :: FlowTopology -> CountTopology
+nodesOnly :: Topology -> CountTopology
 nodesOnly topo =
    Gr.mkGraphFromMap
       (M.map (\(pre,l,suc) -> (l, S.size pre + S.size suc)) $ Gr.nodes topo)
@@ -105,13 +105,13 @@ nodesOnly topo =
 
 type LNEdge = Gr.Edge Idx.Node
 
-bruteForce :: FlowTopology -> [FlowTopology]
+bruteForce :: Topology -> [FlowTopology]
 bruteForce topo =
    filter (\g -> Fold.all (flip checkNode g) $ Gr.nodeSet g) .
    map (Gr.mkGraphFromMap (Gr.nodeLabels topo) . M.fromList) $
    mapM (edgeOrients . fst) $ Gr.labEdges topo
 
-advanced :: FlowTopology -> [FlowTopology]
+advanced :: Topology -> [FlowTopology]
 advanced topo =
    map (Gr.nmap fst) $
    foldM (flip expand) (nodesOnly topo) $
