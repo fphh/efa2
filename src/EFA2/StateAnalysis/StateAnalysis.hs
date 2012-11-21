@@ -16,10 +16,10 @@ import qualified EFA2.Topology.EfaGraph as Gr
 import EFA2.Topology.TopologyData
           (FlowTopology, NodeType(..),
            FlowDirection(UnDir, Dir), isActive, isInactive)
-import EFA2.Topology.EfaGraph
-          (Edge(Edge), LNode, lab,
-           insNode, insEdge, pre, suc, lpre, lsuc, mkGraph)
+import EFA2.Topology.EfaGraph (pre, suc, lpre, lsuc)
 import EFA2.Utils.Utils (checkJust)
+
+import Control.Monad (foldM)
 
 
 -- import Debug.Trace
@@ -53,20 +53,20 @@ checkNode gf x topo =
         --Just (nty, nadj) = gf V.! x  -- Vector Version
 
 ok :: GraphInfo -> LNEdge -> FlowTopology -> Bool
-ok gf (x, y) t = checkNode gf (fst x) t && checkNode gf (fst y) t
+ok gf (Gr.Edge x y) t = checkNode gf x t && checkNode gf y t
 
-extend :: LNEdge -> [FlowTopology] -> [FlowTopology]
-extend ((x, xl), (y, yl)) [] = [a, b, c]
-  where ns = [(x, xl), (y, yl)]
-        a = mkGraph ns [(Edge x y, Dir)]
-        b = mkGraph ns [(Edge y x, Dir)] -- x and y inversed!
-        c = mkGraph ns [(Edge x y, UnDir)]
-extend ((x, xl), (y, yl)) gs = concatMap f gs'
-  where gs' = map (insNode (y, yl) . insNode (x, xl)) gs
-        f g = [a g, b g, c g]
-        a g = insEdge (Edge x y, Dir) g
-        b g = insEdge (Edge y x, Dir) g -- x and y inversed!
-        c g = insEdge (Edge x y, UnDir) g
+
+
+edgeOrients :: LNEdge -> [Gr.LEdge Idx.Node FlowDirection]
+edgeOrients (Gr.Edge x y) =
+   (Gr.Edge x y, Dir) :
+   (Gr.Edge y x, Dir) : -- x and y inversed!
+   (Gr.Edge x y, UnDir) :
+   []
+
+extend :: LNEdge -> FlowTopology -> [FlowTopology]
+extend e g =
+   map (flip Gr.insEdge g) $ edgeOrients e
 
 type NumberOfAdj = Int
 type GraphInfo = M.Map Idx.Node (NodeType, NumberOfAdj)
@@ -99,20 +99,16 @@ buildInfo topo = M.mapWithKey f $ Gr.nodeLabels topo
   where f n l = (l, length (pre topo n) + length (suc topo n))
 
 
-expand :: GraphInfo -> LNEdge -> [FlowTopology] -> [FlowTopology]
+expand :: GraphInfo -> LNEdge -> FlowTopology -> [FlowTopology]
 expand gf x = filter (ok gf x) . extend x
 
-solutions :: FlowTopology -> [LNEdge] -> [FlowTopology]
-solutions origTopo = foldr (expand gf) []
-  where gf = buildInfo origTopo
+solutions :: FlowTopology -> FlowTopology -> [LNEdge] -> [FlowTopology]
+solutions origTopo nodesOnly =
+   foldM (flip $ expand (buildInfo origTopo)) nodesOnly
 
-type LNEdge = (LNode Idx.Node NodeType, LNode Idx.Node NodeType)
-
-buildLNEdges :: FlowTopology -> [LNEdge]
-buildLNEdges g = map f $ M.keys $ Gr.edgeLabels g
-  where f (Edge x y) =
-           ((x, checkJust "buildLNEdges" $ lab g x),
-            (y, checkJust "buildLNEdges" $ lab g y))
+type LNEdge = Gr.Edge Idx.Node
 
 stateAnalysis :: FlowTopology -> [FlowTopology]
-stateAnalysis topo = solutions topo $ buildLNEdges topo
+stateAnalysis topo =
+   solutions topo (Gr.mkGraphFromMap (Gr.nodeLabels topo) M.empty) $
+   map fst $ Gr.labEdges topo
