@@ -22,8 +22,8 @@ module EFA2.Topology.EfaGraph (
    lab,
    labNodes,
    labEdges,
-   pre, lpre,
-   suc, lsuc,
+   pre, lpre, preEdgeLabels,
+   suc, lsuc, sucEdgeLabels,
    delNode,
    delNodes,
    delEdgeSet,
@@ -187,14 +187,19 @@ pre, suc :: (Ord n) => EfaGraph n nl el -> n -> [n]
 pre g n = S.toList . M.findWithDefault (error "pre: unknown node") n . inEdges $ g
 suc g n = S.toList . M.findWithDefault (error "suc: unknown node") n . outEdges $ g
 
-lpre, lsuc :: (Ord n) => EfaGraph n nl el -> n -> [(n, el)]
-lpre (EfaGraph ns els) n =
-   filterLEdges els (flip Edge n) $
+lpre, lsuc :: (Ord n) => EfaGraph n nl el -> n -> [LNode n el]
+lpre g@(EfaGraph ns _els) n =
+   preEdgeLabels g n $
    fst3 $ M.findWithDefault (error "lpre: unknown node") n ns
 
-lsuc (EfaGraph ns els) n =
-   filterLEdges els (Edge n) $
+lsuc g@(EfaGraph ns _els) n =
+   sucEdgeLabels g n $
    thd3 $ M.findWithDefault (error "lsuc: unknown node") n ns
+
+preEdgeLabels, sucEdgeLabels ::
+   (Ord n) => EfaGraph n nl el -> n -> S.Set n -> [LNode n el]
+preEdgeLabels g n = filterLEdges (edgeLabels g) (flip Edge n)
+sucEdgeLabels g n = filterLEdges (edgeLabels g) (Edge n)
 
 
 delNode :: (Ord n) => EfaGraph n nl el -> n -> EfaGraph n nl el
@@ -378,12 +383,12 @@ type InOut n nl el = ([LNode n el], LNode n nl, [LNode n el])
 
 mkInOutGraphFormat ::
    (Ord n) => EfaGraph n nl el -> [InOut n nl el]
-mkInOutGraphFormat (EfaGraph ns els) =
+mkInOutGraphFormat g@(EfaGraph ns _els) =
    map
       (\(n, (ins,nl,outs)) ->
-         (filterLEdges els (flip Edge n) ins,
+         (preEdgeLabels g n ins,
           (n,nl),
-          filterLEdges els (Edge n) outs)) $
+          sucEdgeLabels g n outs)) $
    M.toList ns
 
 filterLEdges ::
