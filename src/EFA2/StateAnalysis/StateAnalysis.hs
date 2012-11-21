@@ -14,7 +14,7 @@ import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Topology.EfaGraph as Gr
 import EFA2.Topology.TopologyData
           (FlowTopology, NodeType(..),
-           FlowDirection(UnDir, Dir), isActive, isInactive)
+           FlowDirection(UnDir, Dir), isActive)
 import EFA2.Topology.EfaGraph (lpre, lsuc)
 import EFA2.Utils.Utils (checkJust)
 
@@ -26,30 +26,26 @@ import Control.Monad (foldM)
 -- import Debug.Trace
 
 -- How should it be orderd to be faster?
-checkNodeType :: NodeType -> [FlowDirection] -> [FlowDirection] -> Bool
-checkNodeType Crossing xsuc xpre =
-   (not (null xsuc) && not (null xpre)) || all isInactive (xsuc ++ xpre)
+checkNodeType :: NodeType -> Bool -> Bool -> Bool
+checkNodeType Crossing sucActive preActive = sucActive == preActive
 checkNodeType NoRestriction _ _ = True
-checkNodeType Source _ [] = True
-checkNodeType AlwaysSource (_:_) [] = True
-checkNodeType Sink [] _ = True
-checkNodeType AlwaysSink [] (_:_) = True
-checkNodeType DeadNode [] [] = True
+checkNodeType Source _ False = True
+checkNodeType AlwaysSource True False = True
+checkNodeType Sink False _ = True
+checkNodeType AlwaysSink False True = True
+checkNodeType DeadNode False False = True
 checkNodeType Storage _ _ = True
 checkNodeType _ _ _ = False
 
 -- Because of extend, we only do have to deal with Dir edges here!
 checkNode :: Idx.Node -> CountTopology -> Bool
 checkNode x topo =
-    (nadj /= length xsuc + length xpre) || res
-  where res = checkNodeType nty xsuc' xpre'
-
-        xsuc = lsuc topo x
-        xsuc' = filter isActive (map snd xsuc)
-
+    (length xsuc + length xpre < nadj) ||
+    checkNodeType nty
+       (any (isActive . snd) xsuc)
+       (any (isActive . snd) xpre)
+  where xsuc = lsuc topo x
         xpre = lpre topo x
-        xpre' = filter isActive (map snd xpre)
-
         (nty, nadj) = checkJust "checkNode" $ Gr.lab topo x
         --Just (nty, nadj) = gf V.! x  -- Vector Version
 
