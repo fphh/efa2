@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module EFA2.Topology.Topology2 where
 
@@ -7,15 +7,15 @@ import qualified Data.Map as M
 import EFA2.Signal.Index as Idx
 import EFA2.Topology.EfaGraph as Gr
 
-import EFA2.Interpreter.Env (Envs, SingleRecord, MixedRecord)
-import EFA2.Topology.TopologyData (FlowDirection(..), SequFlowGraph)
-import EFA2.Solver.Equation -- (Equation(..))
-import UniqueLogic.ST.Expression
-import UniqueLogic.ST.Rule
-import UniqueLogic.ST.System
+import EFA2.Topology.TopologyData (SequFlowGraph)
+import EFA2.Solver.Equation
+import UniqueLogic.ST.Expression as Exp
+import UniqueLogic.ST.System as Sys
 
 import Control.Monad.ST
 import Control.Monad
+
+import Data.Monoid
 
 import EFA2.Interpreter.Env as Env
 
@@ -33,9 +33,11 @@ makeEdges :: [(Int, Int, el)] -> [Gr.LEdge Idx.Node el]
 makeEdges es = map f es
   where f (a, b, l) = (Gr.Edge (Idx.Node a) (Idx.Node b), l)
 
+{-
 makeWithDirEdges :: [(Int, Int)] -> [Gr.LEdge Idx.Node FlowDirection]
 makeWithDirEdges es = map f es
   where f (a, b) = (Gr.Edge (Idx.Node a) (Idx.Node b), WithDir)
+-}
 
 makeSimpleEdges :: [(Int, Int)] -> [Gr.LEdge Idx.Node ()]
 makeSimpleEdges es = map f es
@@ -43,6 +45,15 @@ makeSimpleEdges es = map f es
 
 
 -----------------------------------------------------------------------------------
+
+-- type für Gleichungssystem.
+{-
+  data Equations =
+     Equations
+        (ST s (Envs MixedRecord (System.Variable s a)))
+        (System.M s ()) 
+
+-}
 
 edges :: Gr.EfaGraph node nodeLabel edgeLabel -> [Gr.Edge node]
 edges g = M.keys el
@@ -53,111 +64,125 @@ makeVar ::
   (MkIdxC a) =>
   (Record -> Idx.SecNode -> Idx.SecNode -> a) ->
   Idx.SecNode -> Idx.SecNode -> Env.Index
-makeVar mkIdx nid nid' =
-  mkVar $ mkIdx (Record Absolute) nid nid'
-
-type VarName = String
+makeVar idxf nid nid' =
+  mkVar $ idxf (Record Absolute) nid nid'
 
 
-makeAllEquations :: 
-  (Eq a, Fractional a, MonadPlus (M s)) =>
-  SequFlowGraph -> ST s ([(Index, Variable s a)], M s ())
+makeAllEquations ::
+  (Eq a, Fractional a) =>
+  SequFlowGraph -> ST s (MWithVars s a)
 makeAllEquations g = makeEtaEquations (edges g)
 
+{-
+instance (Monad m0, Monad m1, Monoid l) =>
+  Monoid (m0 (l, m1 ()))  where
+    mempty = return (mempty, return ())
+    -- mappend x y = x >>= \(xs, m) -> y >>= \(ys, n) -> return (mappend xs ys, m >> n)
+    mappend x y = do
+      (xs, m) <- x
+      (ys, n) <- y
+      return (mappend xs ys, do { m; n })
+-}
 
-fmapPair :: (a -> b, c -> d) -> (a, c) -> (b, d)
-fmapPair (f, g) (x, y) = (f x, g y)
+instance (Monad m0, Monad m1) =>
+  Monoid (m0 ([x], m1 ()))  where
+    mempty = return ([], return ())
+    -- mappend x y = x >>= \(xs, m) -> y >>= \(ys, n) -> return (xs ++ ys, m >> n)
+    mappend x y = do
+      (xs, m) <- x
+      (ys, n) <- y
+      return (xs ++ ys, do { m; n })
 
-rearrange :: 
-  (Monad (m0 s), MonadPlus (m1 s)) => 
-  m0 s [([x], m1 s t)] -> m0 s ([x], m1 s t)
-rearrange = liftM (fmapPair (join, msum) . unzip)
+getVar :: Env.Index -> ST s (TWithVars s a)
+getVar idx = do
+  var <- globalVariable
+  return ([(idx, var)], fromVariable var)
 
-getVars :: [Index] -> ST s ([(Index, Variable s a)], [T s a])
-getVars idxs = do
-  vars <- sequence (replicate (length idxs) globalVariable)
-  let vars' = map fromVariable vars
-  return (zip idxs vars, vars')
+{-
+type VarEnvs s a = Envs MixedRecord (Variable s a)
+
+class EnvsPut a where
+      putIntoEnv :: a -> b -> Envs Absolute b -> Envs Absolute b
+
+instance EnvsPut Idx.Power where
+         putIntoEnv k v envs = envs { powerMap = M.insert k v (powerMap envs) }
+
+instance EnvsPut Idx.FEta where
+         putIntoEnv k v envs = envs { fetaMap = M.insert k v (fetaMap envs) }
+-}
+
+type TWithVars s a = ([(Env.Index, Variable s a)], T s a)
+
+type MWithVars s a = ([(Env.Index, Variable s a)], M s ())
+
+(.=) :: (Eq a) => TWithVars s a -> TWithVars s a -> MWithVars s a
+(vs, x) .= (us, y) = (vs ++ us, x =:= y)
+
+(.*) :: (Fractional a) => TWithVars s a -> TWithVars s a -> TWithVars s a
+(vs, x) .* (us, y) = (vs ++ us, x * y)
+
+
+infix 0 .=
+infix 5 .*
+
 
 makeEtaEquations ::
-  (Eq a, Fractional a, MonadPlus (M s)) =>
-  [Edge SecNode] -> ST s ([(Index, Variable s a)], M s ())
-makeEtaEquations es = rearrange $ mapM mkEq es
-  where mkEq (Edge from to) = liftM (fmap eq) $ getVars names
-          where eq [pi, po, eta] = po =:= pi * eta
-                names = [piname, poname, etaname]
+  (Eq a, Fractional a) =>
+  [Edge SecNode] -> ST s (MWithVars s a)
+makeEtaEquations es = mconcat $ map mkEq es
+  where mkEq :: (Eq a0, Fractional a0) => Edge SecNode -> ST s0 (MWithVars s0 a0)
+        mkEq (Edge from to) = liftM3 eq (getVar piname) (getVar poname) (getVar etaname)
+          where eq pin pout eta = pout .= pin .* eta
                 piname = makeVar Idx.Power from to
                 poname = makeVar Idx.Power to from
                 etaname = makeVar Idx.FEta from to
-                
 
-
-{-
-makeEtaEquations ::
-  (Eq a, Fractional a, MonadPlus (M s)) =>
-  [Edge t] -> ST s ([Variable s a], M s ())
-makeEtaEquations es = rearrange $ mapM mkEq es
-  where mkEq (Edge from to) = do
-          vars <- sequence (replicate 3 globalVariable)
-          let [pin', pout', eta'] = map fromVariable vars
-          return (vars, pout' =:= pin' * eta')
--}
-   
-
-
-{-
-makeEtaEquations ::
-  (Eq a, Fractional a, MonadPlus (M s)) =>
-  [Edge t] -> ST s ([Variable s a], M s ())
-makeEtaEquations es = rearrange $ mapM mkEq es
-  where mkEq (Edge from to) = do
-          (vars, [pin', pout', eta']) <- getVars 3
-          return (vars, pout' =:= pin' * eta')
--}
-
-
-{-
-mkEdgeEq :: Idx.Record -> SequFlowGraph -> [Equation]
-mkEdgeEq recordNum =
-   map f . M.keys .
-   M.filter (not . isIntersectionEdge) . edgeLabels
-  where f (Edge x y) =
-           EqEdge
-              (mkVar $ Idx.Power recordNum x y)
-              (mkVar $ Idx.FEta recordNum x y)
-              (mkVar $ Idx.Power recordNum y x)
--}
 
 -----------------------------------------------------------------------
 
-example :: ST s ([Variable s Double], M s ())
-example = do
-  vars@[xv, yv, zv] <- sequence (replicate 3 globalVariable)
 
+example1 :: ST s ((Variable s Double, Variable s Double, Variable s Double), M s ())
+example1 = do
+  vars@(xv, yv, zv) <- liftM3 (,,) globalVariable globalVariable globalVariable
   let given = do
         let z = fromVariable zv
         z =:= 2
+      eqs = do
+        let x = fromVariable xv
+            y = fromVariable yv
+            z = fromVariable zv
+        x*3 =:= y/2
+        5 =:= 2+x+z
+  return $ (vars, do { given; eqs })
 
+
+solveItExample1 :: (Maybe Double, Maybe Double, Maybe Double)
+solveItExample1 = runST $ do
+  ((xv, yv, zv), eqs) <- example1
+  solve eqs
+  liftM3 (,,) (query xv) (query yv) (query zv)
+
+
+example2 :: ST s ((Variable s Double, Variable s Double, Variable s Double), M s ())
+example2 = do
+  vars@(xv, yv, zv) <- liftM3 (,,) globalVariable globalVariable globalVariable
   let eqs = do
         let x = fromVariable xv
             y = fromVariable yv
             z = fromVariable zv
         x*3 =:= y/2
         5 =:= 2+x+z
+  return $ (vars, eqs)
 
-  return $ (vars, do { given; eqs })
+(.==) :: Variable s Double -> Double -> M s ()
+(.==) zv d = fromVariable zv =:= Exp.constant d
+
+solveIt :: M s a -> M s b -> ST s c -> ST s c
+solveIt given sys getVal = solve (given >> sys) >> getVal
 
 
-solveItExample :: [Maybe Double]
-solveItExample = runST $ do
-  (vars, eqs) <- example
-  solve eqs
-  mapM query vars
-
-{-
--- solveIt :: ST s ([Variable s a], M s b) -> [Maybe a]
-solveIt sys = runST $ do
-  (vars, eqs) <- sys
-  solve eqs
-  mapM query vars
--}
+solveItExample2 :: Double -> (Maybe Double, Maybe Double, Maybe Double)
+solveItExample2 d = runST $ do
+  ((xv, yv, zv), eqs) <- example2
+  let getValues = liftM3 (,,) (query xv) (query yv) (query zv)
+  solveIt (zv .== d) eqs getValues
