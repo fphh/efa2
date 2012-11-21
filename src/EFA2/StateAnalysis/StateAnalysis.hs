@@ -15,8 +15,6 @@ import qualified EFA2.Topology.EfaGraph as Gr
 import EFA2.Topology.TopologyData
           (FlowTopology, NodeType(..),
            FlowDirection(UnDir, Dir), isActive)
-import EFA2.Topology.EfaGraph (lpre, lsuc)
-import EFA2.Utils.Utils (checkJust)
 
 import qualified Data.Map as M
 import qualified Data.Set as S
@@ -40,14 +38,13 @@ checkNodeType _ _ _ = False
 -- Because of extend, we only do have to deal with Dir edges here!
 checkNode :: Idx.Node -> CountTopology -> Bool
 checkNode x topo =
-    (length xsuc + length xpre < nadj) ||
-    checkNodeType nty
-       (any (isActive . snd) xsuc)
-       (any (isActive . snd) xpre)
-  where xsuc = lsuc topo x
-        xpre = lpre topo x
-        (nty, nadj) = checkJust "checkNode" $ Gr.lab topo x
-        --Just (nty, nadj) = gf V.! x  -- Vector Version
+   case M.lookup x $ Gr.nodes topo of
+      Nothing -> error "checkNode: node not in graph"
+      Just (pre, (nty, nadj), suc) ->
+         (S.size pre + S.size suc < nadj) ||
+         checkNodeType nty
+            (any (isActive . snd) $ Gr.sucEdgeLabels topo x suc)
+            (any (isActive . snd) $ Gr.preEdgeLabels topo x pre)
 
 ok :: LNEdge -> CountTopology -> Bool
 ok (Gr.Edge x y) t = checkNode x t && checkNode y t
