@@ -284,14 +284,13 @@ delEdgeHelp (EfaGraph ns _els) (kept, deleted) =
 
 propELFilter :: [LEdge Char Int] -> Bool
 propELFilter =
-   uncurry (==) . compareELFilter
+   uncurry (==) . compareELFilter . M.fromList
 
 compareELFilter ::
-   [LEdge Char Int] ->
+   M.Map (Edge Char) Int ->
    (EfaGraph Char String Int, EfaGraph Char String Int)
-compareELFilter esWithDuplicates =
-   let es = M.fromList esWithDuplicates
-       ns =
+compareELFilter es =
+   let ns =
           mapFromSet (\n -> [n, toUpper n]) $
           foldMap (foldMap S.singleton) $ M.keys es
    in  (elfilter even $ mkGraphFromMap ns es,
