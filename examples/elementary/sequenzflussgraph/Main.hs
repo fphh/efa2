@@ -1,6 +1,6 @@
 module Main where
 
-import EFA2.Example.Examples
+import qualified EFA2.Example.Examples as Example
 import qualified EFA2.StateAnalysis.StateAnalysis as StateAnalysis
 import EFA2.Topology.Draw
 
@@ -46,7 +46,7 @@ drawSeqGraph sol =
 
 main :: IO ()
 main = do
-  let sol = StateAnalysis.advanced topoDreibein
+  let sol = StateAnalysis.advanced Example.topoDreibein
 
   drawAll $
     drawTopologyXs' sol :
