@@ -91,16 +91,16 @@ makeContigous xs = reverse ys
 expand :: LNEdge -> CountTopology -> [CountTopology]
 expand x = filter (ok x) . extend x
 
-solutions :: CountTopology -> [LNEdge] -> [CountTopology]
-solutions = foldM (flip expand)
+nodesOnly :: FlowTopology -> CountTopology
+nodesOnly topo =
+   Gr.mkGraphFromMap
+      (M.map (\(pre,l,suc) -> (l, S.size pre + S.size suc)) $ Gr.nodes topo)
+      M.empty
 
 type LNEdge = Gr.Edge Idx.Node
 
 stateAnalysis :: FlowTopology -> [FlowTopology]
 stateAnalysis topo =
    map (Gr.nmap fst) $
-   solutions
-      (Gr.mkGraphFromMap
-         (M.map (\(pre,l,suc) -> (l, S.size pre + S.size suc)) $ Gr.nodes topo)
-         M.empty) $
+   foldM (flip expand) (nodesOnly topo) $
    map fst $ Gr.labEdges topo
