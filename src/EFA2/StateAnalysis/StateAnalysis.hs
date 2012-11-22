@@ -55,13 +55,31 @@ checkNode topo x =
             (anyActive $ Gr.sucEdgeLabels topo x suc)
             (anyActive $ Gr.preEdgeLabels topo x pre)
 
+
+infix 1 `implies`
+
+implies :: Bool -> Bool -> Bool
+implies x y = not x || y
+
+checkIncompleteNodeType :: NodeType -> Bool -> Bool -> Bool -> Bool
+checkIncompleteNodeType typ complete sucActive preActive =
+   case typ of
+      Crossing -> complete `implies` sucActive == preActive
+      Source -> not preActive
+      AlwaysSource -> not preActive && (complete `implies` sucActive)
+      Sink -> not sucActive
+      AlwaysSink -> not sucActive && (complete `implies` preActive)
+      Storage -> True
+      NoRestriction -> True
+      DeadNode -> not sucActive && not preActive
+
 checkCountNode :: CountTopology -> Idx.Node -> Bool
 checkCountNode topo x =
    case M.lookup x $ Gr.nodes topo of
       Nothing -> error "checkNode: node not in graph"
       Just (pre, (nty, nadj), suc) ->
-         (S.size pre + S.size suc < nadj) ||
-         checkNodeType nty
+         checkIncompleteNodeType nty
+            (S.size pre + S.size suc == nadj)
             (anyActive $ Gr.sucEdgeLabels topo x suc)
             (anyActive $ Gr.preEdgeLabels topo x pre)
 
