@@ -33,6 +33,9 @@ import Data.FingerTree.PSQueue (PSQ)
 import Data.Traversable (sequenceA)
 import Data.Monoid (mappend)
 import Control.Monad (liftM2, foldM, guard)
+import Control.Functor.HT (void)
+import Data.Ord.HT (comparing)
+import Data.Eq.HT (equating)
 
 import qualified Test.QuickCheck as QC
 
@@ -124,11 +127,17 @@ edgeOrients (Gr.Edge x y) =
    (Gr.Edge x y, UnDir) :
    []
 
+admissibleEdges ::
+   LNEdge -> CountTopology ->
+   [((Gr.Edge Idx.Node, FlowDirection), CountTopology)]
+admissibleEdges e0 g0 = do
+   e1 <- edgeOrients e0
+   let g1 = Gr.insEdge e1 g0
+   guard $ Fold.all (checkCountNode g1) e0
+   return (e1, g1)
+
 expand :: LNEdge -> CountTopology -> [CountTopology]
-expand e g0 = do
-   g1 <- map (flip Gr.insEdge g0) $ edgeOrients e
-   guard $ Fold.all (checkCountNode g1) e
-   return g1
+expand e g = map snd $ admissibleEdges e g
 
 nodesOnly :: Topology -> CountTopology
 nodesOnly topo =
@@ -136,19 +145,33 @@ nodesOnly topo =
       (M.map (\(pre,l,suc) -> (l, S.size pre + S.size suc)) $ Gr.nodes topo)
       M.empty
 
+
+newtype
+   Alternatives =
+      Alternatives {getAlternatives :: [(Gr.Edge Idx.Node, FlowDirection)]}
+
+instance Eq  Alternatives where (==)     =  equating  (void . getAlternatives)
+instance Ord Alternatives where compare  =  comparing (void . getAlternatives)
+
+alternatives :: LNEdge -> CountTopology -> Alternatives
+alternatives e g =
+   Alternatives $ map fst $ admissibleEdges e g
+
 recoursePrioEdge ::
    Topology ->
-   (CountTopology, PSQ LNEdge Int) ->
-   [(CountTopology, PSQ LNEdge Int)]
+   (CountTopology, PSQ LNEdge Alternatives) ->
+   [(CountTopology, PSQ LNEdge Alternatives)]
 recoursePrioEdge origTopo =
    let recourse tq@(topo, queue) =
           case PSQ.minView queue of
              Nothing -> [tq]
-             Just (bestEdge PSQ.:-> _p, remQueue) -> do
-                newTopo <- expand bestEdge topo
+             Just (bestEdge PSQ.:-> Alternatives edges, remQueue) -> do
+                newTopo <- map (flip Gr.insEdge topo) edges
                 recourse
                    (newTopo,
-                    Fold.foldl (\q e -> PSQ.adjust (const $ length $ expand e newTopo) e q) remQueue $
+                    S.foldl
+                       (\q e -> PSQ.adjust (const $ alternatives e newTopo) e q)
+                       remQueue $
                     Fold.foldMap (Gr.adjEdges origTopo) bestEdge)
    in  recourse
 
@@ -178,7 +201,7 @@ prioritized topo =
         recoursePrioEdge topo $
         (cleanTopo,
          PSQ.fromList $ map (uncurry (PSQ.:->)) $ M.toList $
-         M.mapWithKey (\e _ -> length $ expand e cleanTopo) $
+         M.mapWithKey (\e _ -> alternatives e cleanTopo) $
          Gr.edgeLabels topo))
 
 advanced :: Topology -> [FlowTopology]
