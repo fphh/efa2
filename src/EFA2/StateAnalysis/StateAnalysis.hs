@@ -136,19 +136,21 @@ nodesOnly topo =
       (M.map (\(pre,l,suc) -> (l, S.size pre + S.size suc)) $ Gr.nodes topo)
       M.empty
 
-nextPrioEdge ::
+recoursePrioEdge ::
    Topology ->
    (CountTopology, PSQ LNEdge Int) ->
    [(CountTopology, PSQ LNEdge Int)]
-nextPrioEdge origTopo tq@(topo, queue) =
-   case PSQ.minView queue of
-      Nothing -> [tq]
-      Just (bestEdge PSQ.:-> _p, remQueue) -> do
-         newTopo <- expand bestEdge topo
-         return
-            (newTopo,
-             Fold.foldl (\q e -> PSQ.adjust (const $ length $ expand e newTopo) e q) remQueue $
-             Fold.foldMap (Gr.adjEdges origTopo) bestEdge)
+recoursePrioEdge origTopo =
+   let recourse tq@(topo, queue) =
+          case PSQ.minView queue of
+             Nothing -> [tq]
+             Just (bestEdge PSQ.:-> _p, remQueue) -> do
+                newTopo <- expand bestEdge topo
+                recourse
+                   (newTopo,
+                    Fold.foldl (\q e -> PSQ.adjust (const $ length $ expand e newTopo) e q) remQueue $
+                    Fold.foldMap (Gr.adjEdges origTopo) bestEdge)
+   in  recourse
 
 
 type LNEdge = Gr.Edge Idx.Node
@@ -170,16 +172,14 @@ branchAndBound topo =
 prioritized :: Topology -> [FlowTopology]
 prioritized topo =
    let cleanTopo = nodesOnly topo
-       edgePrios =
-          M.toList $
-          M.mapWithKey (\e _ -> length $ expand e cleanTopo) $
-          Gr.edgeLabels topo
    in  guard (Fold.all (checkCountNode cleanTopo) $ Gr.nodeSet cleanTopo)
        >>
        (map (Gr.nmap fst . fst) $
-        foldM (\x _ -> nextPrioEdge topo x)
-           (cleanTopo, PSQ.fromList $ map (uncurry (PSQ.:->)) edgePrios)
-           edgePrios)
+        recoursePrioEdge topo $
+        (cleanTopo,
+         PSQ.fromList $ map (uncurry (PSQ.:->)) $ M.toList $
+         M.mapWithKey (\e _ -> length $ expand e cleanTopo) $
+         Gr.edgeLabels topo))
 
 advanced :: Topology -> [FlowTopology]
 advanced = prioritized
