@@ -63,7 +63,15 @@ data EfaGraph node nodeLabel edgeLabel =
    EfaGraph {
       nodes :: M.Map node (S.Set node, nodeLabel, S.Set node),
       edgeLabels :: M.Map (Edge node) edgeLabel
-   } deriving (Show, Eq)
+   } deriving (Eq)
+
+instance (Show n, Show nl, Show el) => Show (EfaGraph n nl el) where
+   showsPrec prec g =
+      showParen (prec>10) $
+         showString "EfaGraph.fromList " .
+         shows (M.toList $ nodeLabels g) .
+         showString " " .
+         shows (M.toList $ edgeLabels g)
 
 
 isConsistent :: Ord n => EfaGraph n nl el -> Bool
