@@ -26,9 +26,10 @@ Flag buildDemos
 
 Library
   Build-Depends:
-    graphviz ==2999.13.*,
+    graphviz >=2999.13 && <2999.15,
     fgl ==5.4.*,
     vector ==0.9.*,
+    fingertree-psqueue >=0.3 && <0.4,
     gnuplot >=0.5.1 && <0.6,
     text ==0.11.*,
     pretty-show >=1.2 && <1.3,

@@ -23,6 +23,7 @@ module EFA2.Topology.EfaGraph (
    lab,
    labNodes,
    labEdges,
+   adjEdges,
    pre, lpre, preEdgeLabels,
    suc, lsuc, sucEdgeLabels,
    delNode,
@@ -224,13 +225,19 @@ preEdgeLabels g n = filterLEdges (edgeLabels g) (flip Edge n)
 sucEdgeLabels g n = filterLEdges (edgeLabels g) (Edge n)
 
 
+adjEdges ::
+   Ord n => EfaGraph n nl el -> n -> S.Set (Edge n)
+adjEdges g n =
+   nodeEdges n $
+   M.findWithDefault (error "delNode: unknown node") n $
+   nodes g
+
 delNode :: (Ord n) => EfaGraph n nl el -> n -> EfaGraph n nl el
-delNode (EfaGraph nls els) n =
+delNode g@(EfaGraph nls els) n =
    EfaGraph
       (fmap (\(ins, n0, outs) -> (S.delete n ins, n0, S.delete n outs)) $
        M.delete n nls) $
-   differenceMapSet els $ nodeEdges n $
-   M.findWithDefault (error "delNode: unknown node") n nls
+   differenceMapSet els $ adjEdges g n
 
 delNodeSet ::
    Ord n => S.Set n -> EfaGraph n nl el -> EfaGraph n nl el

@@ -1,7 +1,10 @@
 module EFA2.StateAnalysis.StateAnalysis (
    advanced,
    bruteForce,
-   propAdvanced,
+   branchAndBound,
+   prioritized,
+   propBranchAndBound,
+   propPrioritized,
    ) where
 
 -- This algorithm is made after reading R. Birds "Making a Century" in Pearls of Functional Algorithm Design.
@@ -21,9 +24,12 @@ import EFA2.Topology.TopologyData
            FlowDirection(UnDir, Dir), isActive)
 import EFA2.Utils.Utils (mapFromSet)
 
+import qualified Data.List.Key as Key
 import qualified Data.Foldable as Fold
 import qualified Data.Map as M
 import qualified Data.Set as S
+import qualified Data.FingerTree.PSQueue as PSQ
+import Data.FingerTree.PSQueue (PSQ)
 import Data.Traversable (sequenceA)
 import Data.Monoid (mappend)
 import Control.Monad (liftM2, foldM, guard)
@@ -130,7 +136,24 @@ nodesOnly topo =
       (M.map (\(pre,l,suc) -> (l, S.size pre + S.size suc)) $ Gr.nodes topo)
       M.empty
 
+nextPrioEdge ::
+   Topology ->
+   (CountTopology, PSQ LNEdge Int) ->
+   [(CountTopology, PSQ LNEdge Int)]
+nextPrioEdge origTopo tq@(topo, queue) =
+   case PSQ.minView queue of
+      Nothing -> [tq]
+      Just (bestEdge PSQ.:-> _p, remQueue) -> do
+         newTopo <- expand bestEdge topo
+         return
+            (newTopo,
+             Fold.foldl (\q e -> PSQ.adjust (const $ length $ expand e newTopo) e q) remQueue $
+             Fold.foldMap (Gr.adjEdges origTopo) bestEdge)
+
+
 type LNEdge = Gr.Edge Idx.Node
+
+-- * various algorithms
 
 bruteForce :: Topology -> [FlowTopology]
 bruteForce topo =
@@ -138,12 +161,31 @@ bruteForce topo =
    map (Gr.fromMap (Gr.nodeLabels topo) . M.fromList) $
    mapM (edgeOrients . fst) $ Gr.labEdges topo
 
-advanced :: Topology -> [FlowTopology]
-advanced topo =
+branchAndBound :: Topology -> [FlowTopology]
+branchAndBound topo =
    map (Gr.nmap fst) $
    foldM (flip expand) (nodesOnly topo) $
    map fst $ Gr.labEdges topo
 
+prioritized :: Topology -> [FlowTopology]
+prioritized topo =
+   let cleanTopo = nodesOnly topo
+       edgePrios =
+          M.toList $
+          M.mapWithKey (\e _ -> length $ expand e cleanTopo) $
+          Gr.edgeLabels topo
+   in  guard (Fold.all (checkCountNode cleanTopo) $ Gr.nodeSet cleanTopo)
+       >>
+       (map (Gr.nmap fst . fst) $
+        foldM (\x _ -> nextPrioEdge topo x)
+           (cleanTopo, PSQ.fromList $ map (uncurry (PSQ.:->)) edgePrios)
+           edgePrios)
+
+advanced :: Topology -> [FlowTopology]
+advanced = prioritized
+
+
+-- * tests
 
 data UndirEdge n = UndirEdge n n
    deriving (Eq, Ord, Show)
@@ -185,6 +227,27 @@ instance QC.Arbitrary ArbTopology where
          Gr.fromMap nodes $
          M.mapKeys (\(UndirEdge x y) -> Gr.Edge x y) edges
 
-propAdvanced :: ArbTopology -> Bool
-propAdvanced (ArbTopology g) =
-   bruteForce g == advanced g
+propBranchAndBound :: ArbTopology -> Bool
+propBranchAndBound (ArbTopology g) =
+   bruteForce g == branchAndBound g
+
+
+{- |
+I could declare an Ord instance for EfaGraph,
+but I think that @graph0 < graph1@ should be a static error.
+Instead I use this function locally for 'Key.sort'.
+-}
+graphIdent ::
+   Gr.EfaGraph node nodeLabel edgeLabel ->
+   (M.Map node nodeLabel,
+    M.Map (Gr.Edge node) edgeLabel)
+graphIdent g = (Gr.nodeLabels g, Gr.edgeLabels g)
+
+{-
+I do not convert to Set, but use 'sort' in order to check for duplicates.
+-}
+propPrioritized :: ArbTopology -> Bool
+propPrioritized (ArbTopology g) =
+   Key.sort graphIdent (bruteForce g)
+   ==
+   Key.sort graphIdent (prioritized g)
