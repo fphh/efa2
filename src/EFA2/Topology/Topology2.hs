@@ -22,33 +22,9 @@ import Data.Maybe
 
 import EFA2.Interpreter.Env as Env
 
--- import Debug.Trace
+import Debug.Trace
 
------------------------------------------------------------------------------------
--- Topology Graph
--- | This is the main topology graph representation.
 
-{-
-makeNodes :: [(Int, nt)] -> [Gr.LNode Idx.Node nt]
-makeNodes ns = map f ns
-  where f (n, ty) = (Idx.Node n, ty)
-
-makeEdges :: [(Int, Int, el)] -> [Gr.LEdge Idx.Node el]
-makeEdges es = map f es
-  where f (a, b, l) = (Gr.Edge (Idx.Node a) (Idx.Node b), l)
-
-{-
-makeWithDirEdges :: [(Int, Int)] -> [Gr.LEdge Idx.Node FlowDirection]
-makeWithDirEdges es = map f es
-  where f (a, b) = (Gr.Edge (Idx.Node a) (Idx.Node b), WithDir)
--}
-
-makeSimpleEdges :: [(Int, Int)] -> [Gr.LEdge Idx.Node ()]
-makeSimpleEdges es = map f es
-  where f (a, b) = (Gr.Edge (Idx.Node a) (Idx.Node b), ())
--}
-
------------------------------------------------------------------------------------
 
 type ProvEnv s a = [(Env.Index, Variable s a)]
 -- type ProvEnv s a = M.Map Env.Index (Variable s a)
@@ -70,12 +46,6 @@ instance Monoid (EquationSystem s a) where
 
 
 
-getVar :: Env.Index -> ExpWithVars s a
-getVar idx = do
-  var <- globalVariable
-  let -- env = M.singleton idx var
-      env = [(idx, var)]
-  return (env, fromVariable var)
 
 
 (.=) :: (Eq a) => ExpWithVars s a -> ExpWithVars s a -> EquationSystem s a
@@ -94,27 +64,48 @@ constToExpSys c = return (mempty, Exp.constant c)
 varToExpSys :: Variable s a -> ExpWithVars s a
 varToExpSys v = return (mempty, fromVariable v)
 
+recAbs :: Record
+recAbs = Record Absolute
+
 makeVar ::
   (MkIdxC a) =>
   (Record -> Idx.SecNode -> Idx.SecNode -> a) ->
   Idx.SecNode -> Idx.SecNode -> Env.Index
 makeVar idxf nid nid' =
-  mkVar $ idxf (Record Absolute) nid nid'
+  mkVar $ idxf recAbs nid nid'
+
+getVar :: Env.Index -> ExpWithVars s a
+getVar idx = do
+  var <- globalVariable
+  let -- env = M.singleton idx var
+      env = [(idx, var)]
+  return (env, fromVariable var)
 
 power :: SecNode -> SecNode -> ExpWithVars s a
 power = (getVar .) . makeVar Idx.Power
 
+energy :: SecNode -> SecNode -> ExpWithVars s a
+energy = (getVar .) . makeVar Idx.Energy
+
 eta :: SecNode -> SecNode -> ExpWithVars s a
 eta = (getVar .) . makeVar Idx.FEta
 
-edges :: Gr.EfaGraph node nodeLabel edgeLabel -> [Gr.Edge node]
-edges g = M.keys el
-  where el = Gr.edgeLabels g
+dtime :: Section -> ExpWithVars s a
+dtime = getVar . mkVar . Idx.DTime recAbs
+
+mwhen :: Monoid a => Bool -> a -> a
+mwhen True t = t
+mwhen False _ = mempty 
+
 
 makeAllEquations ::
   (Eq a, Fractional a) =>
   SequFlowGraph -> EquationSystem s a
-makeAllEquations g = makeEtaEquations (edges g)
+makeAllEquations g = mconcat $
+  makeEnergyEquations es :
+  makeEtaEquations es :
+  []
+  where es = edges g
 
 makeEtaEquations ::
   (Eq a, Fractional a) =>
@@ -123,9 +114,25 @@ makeEtaEquations es = mconcat $ map mkEq es
   where mkEq (Edge f t) = power t f .= eta f t .* power f t
 
 
+
+edges :: Gr.EfaGraph node nodeLabel edgeLabel -> [Gr.Edge node]
+edges g = M.keys el
+  where el = Gr.edgeLabels g
+
+makeEnergyEquations ::
+  (Eq a, Fractional a) =>
+  [Edge SecNode] -> EquationSystem s a
+makeEnergyEquations es = mconcat $ map mkEq es
+  where mkEq (Edge f@(SecNode sf nf) t@(SecNode st nt)) =
+          mwhen (sf == st)
+            (energy f t .= dt .* power f t) <> (energy t f .= dt .* power t f)
+          where dt = dtime sf
+
 listToEnvs :: [(Env.Index, a)] -> Envs SingleRecord a
 listToEnvs lst = L.foldl' f envs lst 
   where envs = emptyEnv { recordNumber = SingleRecord (Record Absolute) }
+        f e (Env.Energy idx, v) =
+          e { energyMap = M.insert idx v (energyMap e) }
         f e (Env.Power idx, v) =
           e { powerMap = M.insert idx v (powerMap e) }
         f e (Env.FEta idx, v) =
@@ -151,7 +158,7 @@ solveSystem given g = runST $ do
   (gsvars, gs) <- gssys
   let allVars = vars ++ gsvars
 
-  solve (gs >> eqs)
+  trace (show $ length allVars) $ solve (gs >> eqs)
 
   res <- mapM (query . snd) allVars
   return $ listToEnvs (zip (map fst allVars) (map maybeToList res))
@@ -198,37 +205,6 @@ example2 = do
 
 solveIt :: [M s a] -> M s b -> ST s c -> ST s c
 solveIt given eqs getVal = solve (sequence given >> eqs) >> getVal
-{-
-allPositions :: SequFlowGraph -> Envs NoRecord ()
-allPositions g = L.foldl' f emptyEnv es
-  where es = edges g
-        f env (Edge f t) = 
-          env { powerMap = M.insert (Idx.Power (Idx.Record Absolute) f t) () (powerMap env),
-                xMap = M.insert (Idx.X (Idx.Record Absolute) f t) () (xMap env),
-                fetaMap = M.insert (Idx.FEta (Idx.Record Absolute) f t) (\_ -> ()) (fetaMap env)}
-
-solveSystem ::
-  (Eq a, Fractional a) =>
-  [(Env.Index, a)] -> SequFlowGraph -> Envs SingleRecord [a]
-solveSystem given g = runST $ do
-  let EquationSystem sys = makeAllEquations g
-  (vars, eqs) <- sys
-  let varmap = M.fromList vars
-      f (var, val) = trace (show var) $ case (M.lookup var varmap) of
-                          Nothing -> do xvar <- globalVariable
-                                        fromVariable xvar .== val
-                          Just v -> v .== val
-      gs = map f given
-      -- ws = map (forceMaybe . flip M.lookup varmap) wanted
-      posEnvs = allPositions g
-      func idx _ = [1.0] -- query (forceMaybe (M.lookup idx varmap))
-      --valEnvs = emptyEnv { powerMap = M.mapWithKey func (powerMap posEnvs) }
-  solve (sequence gs >> eqs)
-  -- solveIt gs eqs (query (ws !! 0))
-  --return valEnvs
-  return $ emptyEnv { recordNumber = SingleRecord (Record Absolute),
-                      powerMap = M.mapWithKey func (powerMap posEnvs) }
--}
 
 
 solveItExample2 :: Double -> (Maybe Double, Maybe Double, Maybe Double)
