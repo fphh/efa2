@@ -31,7 +31,10 @@ import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Topology.EfaGraph as Gr
 import EFA2.Topology.EfaGraph (EfaGraph, mkInOutGraphFormat)
 
+import qualified Test.QuickCheck as QC
 import qualified Data.Map as M
+import Control.Monad (mplus)
+import Data.Maybe.HT (toMaybe)
 import Data.Tuple.HT (snd3)
 
 
@@ -168,15 +171,33 @@ getActiveStores =
 maybeActiveSt ::
    (EdgeLabel el) => InOut n el -> Maybe StoreDir
 maybeActiveSt (ins, outs) =
-   if any (\e ->
-            isActiveEdge e &&
-            (isOriginalEdge e || isInnerStorageEdge e)) $
-      map snd ins
-     then Just In
-     else
-       if any isActiveEdge $ map snd outs
-         then Just Out
-         else Nothing
+   mplus
+      (toMaybe
+         (any (\e ->
+               isActiveEdge e &&
+               (isOriginalEdge e || isInnerStorageEdge e)) $
+          map snd ins)
+         In)
+      (toMaybe (any (isActiveEdge . snd) outs) Out)
 
 
 data StoreDir = In | Out deriving (Eq, Show)
+
+
+instance QC.Arbitrary NodeType where
+   arbitrary =
+      QC.oneof $ map return $
+         Storage :
+         Sink :
+         AlwaysSink :
+         Source :
+         AlwaysSource :
+         Crossing :
+         DeadNode :
+         NoRestriction :
+         []
+
+   shrink NoRestriction = []
+   shrink AlwaysSink = [Sink]
+   shrink AlwaysSource = [Source]
+   shrink _ = [NoRestriction]

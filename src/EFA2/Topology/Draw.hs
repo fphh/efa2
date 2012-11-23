@@ -55,6 +55,8 @@ import Control.Monad ((>=>), void, liftM2, liftM4)
 
 import Text.Printf (printf)
 
+import Debug.Trace
+
 
 nodeColour :: Attribute
 nodeColour = FillColor [RGB 230 230 240]
