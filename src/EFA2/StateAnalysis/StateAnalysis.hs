@@ -139,11 +139,12 @@ admissibleEdges e0 g0 = do
 expand :: LNEdge -> CountTopology -> [CountTopology]
 expand e g = map snd $ admissibleEdges e g
 
-nodesOnly :: Topology -> CountTopology
-nodesOnly topo =
-   Gr.fromMap
-      (M.map (\(pre,l,suc) -> (l, S.size pre + S.size suc)) $ Gr.nodes topo)
-      M.empty
+splitNodesEdges :: Topology -> (CountTopology, [Gr.Edge Idx.Node])
+splitNodesEdges topo =
+   (Gr.fromMap
+       (M.map (\(pre,l,suc) -> (l, S.size pre + S.size suc)) $ Gr.nodes topo)
+       M.empty,
+    map fst $ Gr.labEdges topo)
 
 
 newtype
@@ -189,20 +190,18 @@ bruteForce topo =
 branchAndBound :: Topology -> [FlowTopology]
 branchAndBound topo =
    map (Gr.nmap fst) $
-   foldM (flip expand) (nodesOnly topo) $
-   map fst $ Gr.labEdges topo
+   uncurry (foldM (flip expand)) $
+   splitNodesEdges topo
 
 prioritized :: Topology -> [FlowTopology]
 prioritized topo =
-   let cleanTopo = nodesOnly topo
+   let (cleanTopo, es) = splitNodesEdges topo
    in  guard (Fold.all (checkCountNode cleanTopo) $ Gr.nodeSet cleanTopo)
        >>
        (map (Gr.nmap fst . fst) $
         recoursePrioEdge topo $
         (cleanTopo,
-         PSQ.fromList $ map (uncurry (PSQ.:->)) $ M.toList $
-         M.mapWithKey (\e _ -> alternatives e cleanTopo) $
-         Gr.edgeLabels topo))
+         PSQ.fromList $ map (\e -> e PSQ.:-> alternatives e cleanTopo) es))
 
 advanced :: Topology -> [FlowTopology]
 advanced = prioritized
