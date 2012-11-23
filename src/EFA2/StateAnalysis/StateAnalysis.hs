@@ -5,6 +5,10 @@ module EFA2.StateAnalysis.StateAnalysis (
    prioritized,
    propBranchAndBound,
    propPrioritized,
+
+   speedBruteForce,
+   speedBranchAndBound,
+   speedPrioritized,
    ) where
 
 -- This algorithm is made after reading R. Birds "Making a Century" in Pearls of Functional Algorithm Design.
@@ -270,6 +274,19 @@ I do not convert to Set, but use 'sort' in order to check for duplicates.
 -}
 propPrioritized :: ArbTopology -> Bool
 propPrioritized (ArbTopology g) =
-   Key.sort graphIdent (bruteForce g)
+   Key.sort graphIdent (branchAndBound g)
    ==
    Key.sort graphIdent (prioritized g)
+
+
+speedBruteForce :: ArbTopology -> Bool
+speedBruteForce (ArbTopology g) =
+   bruteForce g == bruteForce g
+
+speedBranchAndBound :: ArbTopology -> Bool
+speedBranchAndBound (ArbTopology g) =
+   branchAndBound g == branchAndBound g
+
+speedPrioritized :: ArbTopology -> Bool
+speedPrioritized (ArbTopology g) =
+   prioritized g == prioritized g
