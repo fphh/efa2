@@ -29,6 +29,7 @@ import Debug.Trace
 type ProvEnv s a = [(Env.Index, Variable s a)]
 -- type ProvEnv s a = M.Map Env.Index (Variable s a)
 
+-- zu Newtype machen und Num instanz und provenv als writer
 type ExpWithVars s a = ST s (ProvEnv s a, T s a)
 
 type SysWithVars s a = ST s (ProvEnv s a, M s ())
@@ -52,6 +53,7 @@ instance Monoid (EquationSystem s a) where
 xs .= ys = EquationSystem $ 
   xs >>= \(vs, x) -> ys >>= \(us, y) -> return (mappend vs us, x =:= y)
 
+-- wird zu liftM2 (*) 
 (.*) :: (Fractional a) => ExpWithVars s a -> ExpWithVars s a -> ExpWithVars s a
 xs .* ys = xs >>= \(vs, x) -> ys >>= \(us, y) -> return (mappend vs us, x * y)
 

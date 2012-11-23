@@ -122,10 +122,10 @@ power0num = M.fromList $
   (edgeIdx Idx.Power (sec 1) rec0 3 2, toScalar 2.6) :
   (edgeIdx Idx.Power (sec 2) rec0 2 3, toScalar 0.9) :
   (edgeIdx Idx.Power (sec 3) rec0 3 2, toScalar 3.1) :
-  (edgeIdx Idx.Power (sec 0) rec0 2 1, toScalar 1.1) :
-  (edgeIdx Idx.Power (sec 1) rec0 1 2, toScalar 1.6) :
-  (edgeIdx Idx.Power (sec 2) rec0 1 2, toScalar 0.7) :
-  (edgeIdx Idx.Power (sec 3) rec0 1 2, toScalar 2.1) :
+ -- (edgeIdx Idx.Power (sec 0) rec0 2 1, toScalar 1.1) :
+ -- (edgeIdx Idx.Power (sec 1) rec0 1 2, toScalar 1.6) :
+ -- (edgeIdx Idx.Power (sec 2) rec0 1 2, toScalar 0.7) :
+ -- (edgeIdx Idx.Power (sec 3) rec0 1 2, toScalar 2.1) :
   (edgeIdx Idx.Power (sec 0) rec0 0 2, toScalar 3.1) :
   (edgeIdx Idx.Power (sec 1) rec0 0 2, toScalar 3.6) :
   (edgeIdx Idx.Power (sec 2) rec0 0 2, toScalar 2.7) :
@@ -164,7 +164,7 @@ x0num :: XMap Sc
 x0num = M.fromList $
   (edgeIdx Idx.X (sec 0) rec0 2 1, toScalar 0.8) :
   (edgeIdx Idx.X (sec 1) rec0 2 1, toScalar 0.3) :
-  (edgeIdx Idx.X (sec 2) rec0 2 1, toScalar 0.6) :
+  -- (edgeIdx Idx.X (sec 2) rec0 2 1, toScalar 0.6) :
   (edgeIdx Idx.X (sec 3) rec0 2 1, toScalar 0.7) : []
 
 
@@ -187,7 +187,7 @@ numeric g = trace (showEquations ts0) $ separateEnvs res
 seqTopo :: SequFlowGraph
 seqTopo = mkSeqTopo (select sol states)
   where sol = StateAnalysis.advanced Example.topoDreibein
-        states = [0, 5, 0, 4]
+        states = [2, 5, 3, 4]
         select ts = map (ts!!)
         mkSeqTopo = Flow.mkSequenceTopology
                     . Flow.genSectionTopology
