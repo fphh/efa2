@@ -5,7 +5,7 @@ module Main where
 -- This example shows the functionality of StateAnalysis
 
 import EFA2.Example.Examples
-import EFA2.StateAnalysis.StateAnalysis
+import qualified EFA2.StateAnalysis.StateAnalysis as StateAnalysis
 import EFA2.Topology.Draw
 
 
@@ -15,7 +15,7 @@ import EFA2.Topology.Draw
 
 main :: IO ()
 main = do
-  let sol = stateAnalysis topoDreibein
+  let sol = StateAnalysis.advanced topoDreibein
   -- print sol
   print (length sol)
   drawTopologyXs' (map reorderEdges sol)

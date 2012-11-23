@@ -1,4 +1,11 @@
-module EFA2.StateAnalysis.StateAnalysis where
+module EFA2.StateAnalysis.StateAnalysis (
+   advanced,
+   bruteForce,
+   branchAndBound,
+   prioritized,
+   propBranchAndBound,
+   propPrioritized,
+   ) where
 
 -- This algorithm is made after reading R. Birds "Making a Century" in Pearls of Functional Algorithm Design.
 
@@ -7,70 +14,89 @@ module EFA2.StateAnalysis.StateAnalysis where
 --import Prelude hiding (map, length, filter, concatMap, all, (++), foldr)
 --import Data.List.Stream
 
-import qualified Data.Map as M
 --import qualified Data.Vector as V
 --import Data.Function (on)
 
 import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Topology.EfaGraph as Gr
 import EFA2.Topology.TopologyData
-          (FlowTopology, NodeType(..),
-           FlowDirection, isActive, isInactive,
-           FlowDirection(UnDir, WithDir), flipFlowDirection)
-import EFA2.Topology.EfaGraph
-          (Edge(Edge), LNode, lab, labNodes, labEdges,
-           insNode, insEdge, pre, suc, lpre, lsuc, mkGraph)
-import EFA2.Utils.Utils (checkJust)
+          (FlowTopology, Topology, NodeType(..),
+           FlowDirection(UnDir, Dir), isActive)
+import EFA2.Utils.Utils (mapFromSet)
+
+import qualified Data.List.Key as Key
+import qualified Data.Foldable as Fold
+import qualified Data.Map as M
+import qualified Data.Set as S
+import qualified Data.FingerTree.PSQueue as PSQ
+import Data.FingerTree.PSQueue (PSQ)
+import Data.Traversable (sequenceA)
+import Data.Monoid (mappend)
+import Control.Monad (liftM2, foldM, guard)
+import Control.Functor.HT (void)
+import Data.Ord.HT (comparing)
+import Data.Eq.HT (equating)
+
+import qualified Test.QuickCheck as QC
 
 
 -- import Debug.Trace
 
 -- How should it be orderd to be faster?
-checkNodeType :: NodeType -> [FlowDirection] -> [FlowDirection] -> Bool
-checkNodeType Crossing xsuc xpre =
-   (not (null xsuc) && not (null xpre)) || all isInactive (xsuc ++ xpre)
+checkNodeType :: NodeType -> Bool -> Bool -> Bool
+checkNodeType Crossing sucActive preActive = sucActive == preActive
 checkNodeType NoRestriction _ _ = True
-checkNodeType Source _ [] = True
-checkNodeType AlwaysSource (_:_) [] = True
-checkNodeType Sink [] _ = True
-checkNodeType AlwaysSink [] (_:_) = True
-checkNodeType DeadNode [] [] = True
+checkNodeType Source _ False = True
+checkNodeType AlwaysSource True False = True
+checkNodeType Sink False _ = True
+checkNodeType AlwaysSink False True = True
+checkNodeType DeadNode False False = True
 checkNodeType Storage _ _ = True
 checkNodeType _ _ _ = False
 
--- Because of extend, we only do have to deal with WithDir edges here!
-checkNode :: GraphInfo -> Idx.Node -> FlowTopology -> Bool
-checkNode gf x topo =
-    (nadj /= length xsuc + length xpre) || res
-  where res = checkNodeType nty xsuc' xpre'
+-- Because of extend, we only do have to deal with Dir edges here!
+checkNode :: FlowTopology -> Idx.Node -> Bool
+checkNode topo x =
+   case M.lookup x $ Gr.nodes topo of
+      Nothing -> error "checkNode: node not in graph"
+      Just (pre, nty, suc) ->
+         checkNodeType nty
+            (anyActive $ Gr.sucEdgeLabels topo x suc)
+            (anyActive $ Gr.preEdgeLabels topo x pre)
 
-        xsuc = lsuc topo x
-        xsuc' = filter isActive (map snd xsuc)
 
-        xpre = lpre topo x
-        xpre' = filter isActive (map snd xpre)
+infix 1 `implies`
 
-        (nty, nadj) = checkJust "checkNode" $ M.lookup x gf
-        --Just (nty, nadj) = gf V.! x  -- Vector Version
+implies :: Bool -> Bool -> Bool
+implies x y = not x || y
 
-ok :: GraphInfo -> LNEdge -> FlowTopology -> Bool
-ok gf (x, y) t = checkNode gf (fst x) t && checkNode gf (fst y) t
+checkIncompleteNodeType :: NodeType -> Bool -> Bool -> Bool -> Bool
+checkIncompleteNodeType typ complete sucActive preActive =
+   case typ of
+      Crossing -> complete `implies` sucActive == preActive
+      Source -> not preActive
+      AlwaysSource -> not preActive && (complete `implies` sucActive)
+      Sink -> not sucActive
+      AlwaysSink -> not sucActive && (complete `implies` preActive)
+      Storage -> True
+      NoRestriction -> True
+      DeadNode -> not sucActive && not preActive
 
-extend :: LNEdge -> [FlowTopology] -> [FlowTopology]
-extend ((x, xl), (y, yl)) [] = [a, b, c]
-  where ns = [(x, xl), (y, yl)]
-        a = mkGraph ns [(Edge x y, WithDir)]
-        b = mkGraph ns [(Edge y x, WithDir)] -- x and y inversed!
-        c = mkGraph ns [(Edge x y, UnDir)]
-extend ((x, xl), (y, yl)) gs = concatMap f gs'
-  where gs' = map (insNode (y, yl) . insNode (x, xl)) gs
-        f g = [a g, b g, c g]
-        a g = insEdge (Edge x y, WithDir) g
-        b g = insEdge (Edge y x, WithDir) g -- x and y inversed!
-        c g = insEdge (Edge x y, UnDir) g
+checkCountNode :: CountTopology -> Idx.Node -> Bool
+checkCountNode topo x =
+   case M.lookup x $ Gr.nodes topo of
+      Nothing -> error "checkNode: node not in graph"
+      Just (pre, (nty, nadj), suc) ->
+         checkIncompleteNodeType nty
+            (S.size pre + S.size suc == nadj)
+            (anyActive $ Gr.sucEdgeLabels topo x suc)
+            (anyActive $ Gr.preEdgeLabels topo x pre)
+
+anyActive :: [(n, FlowDirection)] -> Bool
+anyActive = any (isActive . snd)
 
 type NumberOfAdj = Int
-type GraphInfo = M.Map Idx.Node (NodeType, NumberOfAdj)
+type CountTopology = Gr.EfaGraph Idx.Node (NodeType, NumberOfAdj) FlowDirection
 
 
 {-
@@ -94,38 +120,157 @@ makeContigous xs = reverse ys
         f (a:acc) x = x:(map (, Nothing) [(fst x - 1), (fst x - 2)..(fst a +1)] ++ a:acc)
 -}
 
+edgeOrients :: Gr.Edge node -> [(Gr.Edge node, FlowDirection)]
+edgeOrients (Gr.Edge x y) =
+   (Gr.Edge x y, Dir) :
+   (Gr.Edge y x, Dir) : -- x and y inversed!
+   (Gr.Edge x y, UnDir) :
+   []
 
-buildInfo :: FlowTopology -> GraphInfo
-buildInfo topo = M.mapWithKey f $ Gr.nodeLabels topo
-  where f n l = (l, length (pre topo n) + length (suc topo n))
+admissibleEdges ::
+   LNEdge -> CountTopology ->
+   [((Gr.Edge Idx.Node, FlowDirection), CountTopology)]
+admissibleEdges e0 g0 = do
+   e1 <- edgeOrients e0
+   let g1 = Gr.insEdge e1 g0
+   guard $ Fold.all (checkCountNode g1) e0
+   return (e1, g1)
+
+expand :: LNEdge -> CountTopology -> [CountTopology]
+expand e g = map snd $ admissibleEdges e g
+
+nodesOnly :: Topology -> CountTopology
+nodesOnly topo =
+   Gr.fromMap
+      (M.map (\(pre,l,suc) -> (l, S.size pre + S.size suc)) $ Gr.nodes topo)
+      M.empty
 
 
-expand :: GraphInfo -> LNEdge -> [FlowTopology] -> [FlowTopology]
-expand gf x = filter (ok gf x) . extend x
+newtype
+   Alternatives =
+      Alternatives {getAlternatives :: [(Gr.Edge Idx.Node, FlowDirection)]}
 
-solutions :: FlowTopology -> [LNEdge] -> [FlowTopology]
-solutions origTopo = foldr (expand gf) []
-  where gf = buildInfo origTopo
+instance Eq  Alternatives where (==)     =  equating  (void . getAlternatives)
+instance Ord Alternatives where compare  =  comparing (void . getAlternatives)
 
-type LNEdge = (LNode Idx.Node NodeType, LNode Idx.Node NodeType)
+alternatives :: LNEdge -> CountTopology -> Alternatives
+alternatives e g =
+   Alternatives $ map fst $ admissibleEdges e g
 
-buildLNEdges :: FlowTopology -> [LNEdge]
-buildLNEdges g = map f $ M.keys $ Gr.edgeLabels g
-  where f (Edge x y) =
-           ((x, checkJust "buildLNEdges" $ lab g x),
-            (y, checkJust "buildLNEdges" $ lab g y))
+recoursePrioEdge ::
+   Topology ->
+   (CountTopology, PSQ LNEdge Alternatives) ->
+   [(CountTopology, PSQ LNEdge Alternatives)]
+recoursePrioEdge origTopo =
+   let recourse tq@(topo, queue) =
+          case PSQ.minView queue of
+             Nothing -> [tq]
+             Just (bestEdge PSQ.:-> Alternatives edges, remQueue) -> do
+                newTopo <- map (flip Gr.insEdge topo) edges
+                recourse
+                   (newTopo,
+                    S.foldl
+                       (\q e -> PSQ.adjust (const $ alternatives e newTopo) e q)
+                       remQueue $
+                    Fold.foldMap (Gr.adjEdges origTopo) bestEdge)
+   in  recourse
 
-stateAnalysis :: FlowTopology -> [FlowTopology]
-stateAnalysis topo = solutions topo $ buildLNEdges topo
 
--- | Auxiliary function that can be mapped over
--- the results of 'stateAnalysis'. The nodes of the
--- topologies will then be ordered the same way,
--- which looks nice when drawing it with 'drawTopologyXs''
-reorderEdges :: FlowTopology -> FlowTopology -- This function should go in an auxiliary module.
-reorderEdges topo = mkGraph ns es
-  where ns = labNodes topo
-        es = map f $ labEdges topo
-        f z@(Edge x y, l)
-          | x < y = z
-          | otherwise = (Edge y x, flipFlowDirection l)
+type LNEdge = Gr.Edge Idx.Node
+
+-- * various algorithms
+
+bruteForce :: Topology -> [FlowTopology]
+bruteForce topo =
+   filter (\g -> Fold.all (checkNode g) $ Gr.nodeSet g) .
+   map (Gr.fromMap (Gr.nodeLabels topo) . M.fromList) $
+   mapM (edgeOrients . fst) $ Gr.labEdges topo
+
+branchAndBound :: Topology -> [FlowTopology]
+branchAndBound topo =
+   map (Gr.nmap fst) $
+   foldM (flip expand) (nodesOnly topo) $
+   map fst $ Gr.labEdges topo
+
+prioritized :: Topology -> [FlowTopology]
+prioritized topo =
+   let cleanTopo = nodesOnly topo
+   in  guard (Fold.all (checkCountNode cleanTopo) $ Gr.nodeSet cleanTopo)
+       >>
+       (map (Gr.nmap fst . fst) $
+        recoursePrioEdge topo $
+        (cleanTopo,
+         PSQ.fromList $ map (uncurry (PSQ.:->)) $ M.toList $
+         M.mapWithKey (\e _ -> alternatives e cleanTopo) $
+         Gr.edgeLabels topo))
+
+advanced :: Topology -> [FlowTopology]
+advanced = prioritized
+
+
+-- * tests
+
+data UndirEdge n = UndirEdge n n
+   deriving (Eq, Ord, Show)
+
+undirEdge :: Ord n => n -> n -> UndirEdge n
+undirEdge x y =
+   if x<y then UndirEdge x y else UndirEdge y x
+
+instance (QC.Arbitrary n, Ord n) => QC.Arbitrary (UndirEdge n) where
+   arbitrary = liftM2 undirEdge QC.arbitrary QC.arbitrary
+   shrink (UndirEdge x y) =
+      S.toList $ S.fromList $ map (uncurry undirEdge) $ QC.shrink (x,y)
+
+instance Fold.Foldable UndirEdge where
+   foldMap f (UndirEdge x y) = mappend (f x) (f y)
+
+
+maxArbEdges :: Int
+maxArbEdges = 6
+
+newtype ArbTopology = ArbTopology Topology
+   deriving (Show)
+
+instance QC.Arbitrary ArbTopology where
+   shrink (ArbTopology g) =
+      case Gr.nodeSet g of
+         ns ->
+            map (ArbTopology . flip Gr.delNodeSet g .
+                 S.difference ns . S.fromList) $
+            QC.shrink $ S.toList ns
+   arbitrary = do
+      edges <-
+         fmap (M.fromList . take maxArbEdges) QC.arbitrary
+      nodes <-
+         sequenceA $ mapFromSet (const QC.arbitrary) $
+         Fold.foldMap (Fold.foldMap S.singleton) $
+         M.keys edges
+      return $ ArbTopology $
+         Gr.fromMap nodes $
+         M.mapKeys (\(UndirEdge x y) -> Gr.Edge x y) edges
+
+propBranchAndBound :: ArbTopology -> Bool
+propBranchAndBound (ArbTopology g) =
+   bruteForce g == branchAndBound g
+
+
+{- |
+I could declare an Ord instance for EfaGraph,
+but I think that @graph0 < graph1@ should be a static error.
+Instead I use this function locally for 'Key.sort'.
+-}
+graphIdent ::
+   Gr.EfaGraph node nodeLabel edgeLabel ->
+   (M.Map node nodeLabel,
+    M.Map (Gr.Edge node) edgeLabel)
+graphIdent g = (Gr.nodeLabels g, Gr.edgeLabels g)
+
+{-
+I do not convert to Set, but use 'sort' in order to check for duplicates.
+-}
+propPrioritized :: ArbTopology -> Bool
+propPrioritized (ArbTopology g) =
+   Key.sort graphIdent (bruteForce g)
+   ==
+   Key.sort graphIdent (prioritized g)

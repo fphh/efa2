@@ -1,10 +1,8 @@
 module EFA2.Example.Loop (loop, etas, pows, dtimes) where
 
 import qualified EFA2.Signal.Index as Idx
-import EFA2.Topology.Topology
-          (makeWithDirEdges, makeEdges, makeNodes)
-import EFA2.Topology.TopologyData
-          (FlowDirection(AgainstDir), NodeType(Crossing))
+import EFA2.Topology.Topology (makeWithDirEdges, makeNodes)
+import EFA2.Topology.TopologyData (NodeType(Crossing))
 import EFA2.Topology.EfaGraph (mkGraph)
 
 import EFA2.Interpreter.Arith (Val)
@@ -94,9 +92,7 @@ pows =
 loop :: TheGraph [Val]
 loop = TheGraph g sigs
   where g = mkGraph ns es
-        es = makeWithDirEdges (pairs no)
-             ++ makeEdges [(2, 4, AgainstDir)] -- Why do we have to do this?
-             ++ makeWithDirEdges (pairs (1:no2))
+        es = makeWithDirEdges (pairs no ++ (4,2) : pairs (1:no2))
         no = [0..3]
         no2 = [4, 5]
         ns = makeNodes $ map f (no ++ no2)

@@ -2,28 +2,24 @@ module EFA2.Topology.Topology where
 
 import EFA2.Solver.Equation
           (Equation(..), Term(..),
-           MkIdxC, MkVarC, mkVar, mkTerm, add, give, (!=), (&-), (&/))
+           MkIdxC, MkVarC, mkVar, mkTerm, add, give, (!=), (!*), (&-), (&/))
 import qualified EFA2.Interpreter.Env as Env
 import EFA2.Interpreter.Env
           (Envs(Envs), recordNumber, fromSingleRecord,
            MixedRecord(MixedRecord), SingleRecord(SingleRecord),
            setIdxRecNum)
 import EFA2.Topology.TopologyData as Topo
-import EFA2.Utils.Utils (mapFromSet)
 
 import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Topology.EfaGraph as Gr
 import EFA2.Signal.Index (Use(InSum, OutSum))
 import EFA2.Topology.EfaGraph
-          (Edge(Edge), mapGraph,
-           lab, labEdges, edgeLabels, elfilter)
+          (Edge(Edge), mapGraph, edgeLabels, elfilter)
 
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Foldable as Fold
 import qualified Data.List.HT as LH
-import qualified Data.Set as S
 import qualified Data.Map as M
-import Data.Maybe (fromJust, mapMaybe)
 
 
 -----------------------------------------------------------------------------------
@@ -40,7 +36,7 @@ makeEdges es = map f es
 
 makeWithDirEdges :: [(Int, Int)] -> [Gr.LEdge Idx.Node FlowDirection]
 makeWithDirEdges es = map f es
-  where f (a, b) = (Edge (Idx.Node a) (Idx.Node b), WithDir)
+  where f (a, b) = (Edge (Idx.Node a) (Idx.Node b), Dir)
 
 makeSimpleEdges :: [(Int, Int)] -> [Gr.LEdge Idx.Node ()]
 makeSimpleEdges es = map f es
@@ -54,11 +50,15 @@ makeSimpleEdges es = map f es
 makeAllEquations ::
    (Show a) =>
    SequFlowGraph -> [Envs SingleRecord a] -> (Envs MixedRecord a, [Equation])
-makeAllEquations topo envs =
+makeAllEquations = makeAllEquationsDir . makeDirTopology
+
+makeAllEquationsDir ::
+   (Show a) =>
+   DirSequFlowGraph -> [Envs SingleRecord a] -> (Envs MixedRecord a, [Equation])
+makeAllEquationsDir dirTopo envs =
    ((Env.envUnion envs') { recordNumber = MixedRecord newRecNums }, ts)
   where newRecNums = map (fromSingleRecord . recordNumber) envs
         recNum env = fromSingleRecord $ recordNumber env
-        dirTopo = makeDirTopology topo
 
         ts = edgeEqs ++ nodeEqs ++ interEqs ++ powerEqs ++ envEqs
 
@@ -106,7 +106,7 @@ setRecordIndices (Envs (SingleRecord rec) e de p dp fn dn dt x dx v st) =
 envToEqTerms :: (MkIdxC k) => M.Map k v -> [Equation]
 envToEqTerms m = map (give . fst) (M.toList m)
 
-mkPowerEqs :: Idx.Record -> SequFlowGraph -> [Equation]
+mkPowerEqs :: Idx.Record -> Gr.EfaGraph Idx.SecNode NodeType el -> [Equation]
 mkPowerEqs rec topo = concat $ mapGraph (mkPEqs rec) topo
 
 mkPEqs :: Idx.Record -> Gr.InOut Idx.SecNode NodeType el -> [Equation]
@@ -128,68 +128,45 @@ mkPEqs rec (ins, (nid@(Idx.SecNode sec _), _), outs) = ieqs ++ oeqs -- ++ dieqs 
         f e p = e := p :* dt
 
 
-mkIntersectionEqs :: Idx.Record -> SequFlowGraph -> [Equation]
-mkIntersectionEqs recordNum topo =
-   Fold.fold inEqs ++ Fold.fold outEqs ++ stContentEqs
-  where inouts =
-           fmap partitionInOutStatic $
-           getActiveStores topo
-        inEqs =
-           Fold.fold $
-           M.mapWithKey
-              (\n (ins,_) ->
-                 M.mapWithKey (\sec ->
-                    mkInStoreEqs recordNum (Idx.SecNode sec n)) ins)
-           inouts
-        outEqs =
-           Fold.fold $
-           M.mapWithKey
-              (\n (_,outs) ->
-                 M.mapWithKey (\sec ->
-                    mkOutStoreEqs recordNum (Idx.SecNode sec n)) outs)
-           inouts
-        stContentEqs =
-           Fold.concat $ M.mapWithKey (mkStoreEqs recordNum) inouts
+mkIntersectionEqs :: Idx.Record -> DirSequFlowGraph -> [Equation]
+mkIntersectionEqs recordNum =
+   Fold.fold .
+   M.mapWithKey
+      (\n sequ ->
+         (Fold.fold $
+          M.mapWithKey
+             (\sec (inout,dir) ->
+                case dir of
+                   In  -> mkInStoreEqs  recordNum (Idx.SecNode sec n) inout
+                   Out -> mkOutStoreEqs recordNum (Idx.SecNode sec n) inout)
+          sequ)
+         ++
+         (mkStoreEqs recordNum n $ fmap snd sequ)) .
+   getActiveStores
 
-
-data StoreDir = In | Out deriving (Show)
 
 mkStoreEqs ::
    Idx.Record ->
    Idx.Node ->
-   (M.Map Idx.Section (Topo.InOut Idx.SecNode el),
-    M.Map Idx.Section (Topo.InOut Idx.SecNode el)) ->
+   M.Map Idx.Section StoreDir ->
    [Equation]
-mkStoreEqs recordNum node (ins, outs) =
-      startEq ++ LH.mapAdjacent g both
-  where ins' = fmap (const In) ins
-        outs' = fmap (const Out) outs
-        both@(b:_) = M.toList $ M.union ins' outs'
+mkStoreEqs recordNum node edges =
+      zipWith ($) (LH.mapAdjacent g (Const 0 : stvars)) both
+  where both = M.toAscList edges
+        stvars =
+           map
+              (\(sec, _dir) ->
+                 mkVar $ Idx.Storage recordNum $ Idx.SecNode sec node)
+           both
 
-        startEq =
-           case b of
-              (sec, In) ->
-                 case Idx.SecNode sec node of
-                    n ->
-                       [ mkVar (Idx.Storage recordNum n) :=
-                            mkVar (Idx.Var recordNum InSum n) :*
-                            mkVar (Idx.DTime recordNum sec) ]
-              _ -> []
-
-        g (sec, _) (sec', dir) =
+        g stold stnew (sec, dir) =
            stnew := (case dir of In -> vdt; Out -> Minus vdt) :+ stold
-{-
-          mkVar (Idx.Storage recordNum st') :=
-            (mkVar (Idx.Var recordNum InSum nid') :* dt)
-              :+ mkVar (Idx.Storage recordNum sec st)
--}
-          where stnew = mkVar $ Idx.Storage recordNum x'
-                stold = mkVar $ Idx.Storage recordNum x
-                x' = Idx.SecNode sec' node
-                x  = Idx.SecNode sec node
-                vdt = v :* dt
-                v = mkVar $ Idx.Var recordNum (case dir of In -> InSum; Out -> OutSum) x'
-                dt = mkVar $ Idx.DTime recordNum sec'
+          where vdt =
+                   (Idx.Var recordNum
+                       (case dir of In -> InSum; Out -> OutSum) $
+                    Idx.SecNode sec node)
+                   !*
+                   Idx.DTime recordNum sec
 
 
 mkInStoreEqs ::
@@ -235,7 +212,7 @@ mkOutStoreEqs _ _ _ = []
 
 {-
 -- | Takes section, record, and a graph.
-mkEdgeEq :: Int -> SequFlowGraph -> [Equation]
+mkEdgeEq :: Int -> Gr.EfaGraph Idx.SecNode NodeType el -> [Equation]
 mkEdgeEq recordNum topo = map f (map unlabelEdge origEs)
   where origEs = L.filter (\(_, _, l) -> not $ isIntersectionEdge l) (labEdges topo)
         f (x, y) = mkVar (Idx.Power ys recordNum y x) :=
@@ -244,7 +221,7 @@ mkEdgeEq recordNum topo = map f (map unlabelEdge origEs)
                 NLabel ys _ _ = fromJust $ lab topo y
 -}
 -- | Takes section, record, and a graph.
-mkEdgeEq :: Idx.Record -> SequFlowGraph -> [Equation]
+mkEdgeEq :: Idx.Record -> DirSequFlowGraph -> [Equation]
 mkEdgeEq recordNum =
    map f . M.keys .
    M.filter (not . isIntersectionEdge) . edgeLabels
@@ -255,7 +232,7 @@ mkEdgeEq recordNum =
               (mkVar $ Idx.Power recordNum y x)
 
 
-mkNodeEq :: Idx.Record -> SequFlowGraph -> [Equation]
+mkNodeEq :: Idx.Record -> DirSequFlowGraph -> [Equation]
 mkNodeEq recordNum topo = concat $ mapGraph (mkEq recordNum) (elfilter cond topo)
   where cond x = isOriginalEdge x || isInnerStorageEdge x
 
@@ -312,7 +289,7 @@ makeOuts vosum (xos, pos) =
 -}
 
 
-mkAllDiffEqs :: Idx.Record -> Idx.Record -> SequFlowGraph -> [Equation]
+mkAllDiffEqs :: Idx.Record -> Idx.Record -> Gr.EfaGraph Idx.SecNode NodeType el -> [Equation]
 mkAllDiffEqs laterRec formerRec topo = {- edgeEqs ++ -} nodeEqs ++ etaEqs ++ xEqs
   where -- edgeEqs = concat $ mapGraph (mkDiffPowerEqs laterRec formerRec) topo
         nodeEqs = concat $ mapGraph (mkDiffNodeEqs laterRec formerRec) topo
@@ -393,14 +370,5 @@ makeVar r mkIdx nid (nid', _) =
 -- | We sort in and out going edges according to 'FlowDirection'.
 -- Undirected edges are filtered away.
 -- This is important for creating correct equations.
-makeDirTopology :: SequFlowGraph -> SequFlowGraph
-makeDirTopology topo = Gr.mkGraphFromMap ns esm
-  where esm = M.fromList $ mapMaybe flipAgainst $ labEdges topo
-        flipAgainst e@(Edge x y, elabel) =
-           case flowDirection elabel of
-              UnDir -> Nothing
-              AgainstDir -> Just (Edge y x, elabel { flowDirection = WithDir })
-              WithDir -> Just e
-        ns =
-           mapFromSet (fromJust . lab topo) $ S.fromList $
-           concatMap (\(Edge x y) -> [x, y]) $ M.keys esm
+makeDirTopology :: SequFlowGraph -> DirSequFlowGraph
+makeDirTopology = Gr.emap edgeType . Gr.elfilter isActiveEdge

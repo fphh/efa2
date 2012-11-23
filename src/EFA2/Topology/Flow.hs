@@ -38,11 +38,10 @@ genFlowTopology topo (FlowState fs) =
    mkGraph (labNodes topo) $
    map
       (\(Edge idx1 idx2, ()) ->
-         (Edge idx1 idx2,
-            case fs M.! PPosIdx idx1 idx2 of
-               PSign -> WithDir
-               NSign -> AgainstDir
-               ZSign -> UnDir )) $
+         case fs M.! PPosIdx idx1 idx2 of
+            PSign -> (Edge idx1 idx2, Dir)
+            NSign -> (Edge idx2 idx1, Dir)
+            ZSign -> (Edge idx1 idx2, UnDir)) $
    labEdges topo
 
 
@@ -61,7 +60,7 @@ copySeqTopology =
 
 mkIntersectionEdges ::
    Idx.Node -> Idx.Section ->
-   M.Map Idx.Section (Topo.InOut node ELabel) ->
+   M.Map Idx.Section StoreDir ->
    [Topo.LEdge]
 mkIntersectionEdges node startSec stores =
    concatMap
@@ -70,7 +69,7 @@ mkIntersectionEdges node startSec stores =
                 (Edge (Idx.SecNode secin node) (Idx.SecNode secout node), e)) $
          M.keys $ snd $ M.split secin outs) $
    startSec : M.keys ins
-  where (ins, outs) = partitionInOutStatic stores
+  where (ins, outs) = M.partition (In ==) stores
 
         e = defaultELabel { edgeType = IntersectionEdge }
 
@@ -84,7 +83,7 @@ mkSequenceTopology sd = res
         f (n, io) =
            let nid = initNode n
            in  ((Edge rootNode nid, e) :
-                   mkIntersectionEdges n Idx.initSection io,
+                   mkIntersectionEdges n Idx.initSection (fmap snd io),
                 (nid, Storage))
 
         e = defaultELabel { edgeType = InnerStorageEdge }

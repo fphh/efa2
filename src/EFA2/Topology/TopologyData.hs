@@ -4,10 +4,14 @@ module EFA2.Topology.TopologyData (
        NodeType (..),
        EdgeType (..),
        FlowDirection (..),
+       EdgeLabel,
+       EdgeTypeField,      getEdgeType,
+       FlowDirectionField, getFlowDirection,
        Topology,
        FlowTopology,
        SecTopology,
        SequFlowGraph,
+       DirSequFlowGraph,
        isStorage,
        isActive,
        isInactive,
@@ -17,18 +21,20 @@ module EFA2.Topology.TopologyData (
        isOriginalEdge,
        isInnerStorageEdge,
        isIntersectionEdge,
-       flipFlowDirection,
        defaultELabel,
        defaultNLabel,
        InOut,
-       getActiveStores,
-       partitionInOutStatic) where
+       StoreDir(..),
+       getActiveStores) where
 
 import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Topology.EfaGraph as Gr
 import EFA2.Topology.EfaGraph (EfaGraph, mkInOutGraphFormat)
 
+import qualified Test.QuickCheck as QC
 import qualified Data.Map as M
+import Control.Monad (mplus)
+import Data.Maybe.HT (toMaybe)
 import Data.Tuple.HT (snd3)
 
 
@@ -57,19 +63,17 @@ defaultNLabel :: NLabel
 defaultNLabel = NLabel NoRestriction
 
 
-data FlowDirection = WithDir
-                   | AgainstDir
-                   | UnDir deriving (Show, Eq, Ord)
+data FlowDirection = Dir | UnDir deriving (Show, Eq, Ord)
 
 isOtherSection :: LNode -> LNode -> Bool
 isOtherSection (Idx.SecNode s1 _, _) (Idx.SecNode s2 _, _)  =  s1 /= s2
 
-isInactive :: FlowDirection -> Bool
-isInactive UnDir = True
-isInactive _ = False
-
 isActive :: FlowDirection -> Bool
-isActive = not . isInactive
+isActive UnDir = False
+isActive _ = True
+
+isInactive :: FlowDirection -> Bool
+isInactive = not . isActive
 
 data EdgeType = OriginalEdge
               | InnerStorageEdge
@@ -81,28 +85,54 @@ data ELabel = ELabel { edgeType :: EdgeType,
                        flowDirection :: FlowDirection } deriving (Eq, Ord, Show)
 
 defaultELabel :: ELabel
-defaultELabel = ELabel OriginalEdge WithDir
+defaultELabel = ELabel OriginalEdge Dir
 
-isActiveEdge :: ELabel -> Bool
-isActiveEdge = isActive . flowDirection
+isActiveEdge :: FlowDirectionField el => el -> Bool
+isActiveEdge = isActive . getFlowDirection
 
-isInactiveEdge :: ELabel -> Bool
-isInactiveEdge = isInactive . flowDirection
+isInactiveEdge :: FlowDirectionField el => el -> Bool
+isInactiveEdge = isInactive . getFlowDirection
 
 
-isOriginalEdge :: ELabel -> Bool
-isOriginalEdge = (OriginalEdge ==) . edgeType
+class EdgeTypeField el where
+   getEdgeType :: el -> EdgeType
 
-isInnerStorageEdge :: ELabel -> Bool
-isInnerStorageEdge = (InnerStorageEdge ==) . edgeType
+class FlowDirectionField el where
+   getFlowDirection :: el -> FlowDirection
 
-isIntersectionEdge :: ELabel -> Bool
-isIntersectionEdge = (IntersectionEdge ==) . edgeType
+class (EdgeTypeField el, FlowDirectionField el) => EdgeLabel el where
 
-flipFlowDirection :: FlowDirection -> FlowDirection
-flipFlowDirection WithDir = AgainstDir
-flipFlowDirection AgainstDir = WithDir
-flipFlowDirection UnDir = UnDir
+
+instance EdgeTypeField EdgeType where
+   getEdgeType = id
+
+instance FlowDirectionField EdgeType where
+   getFlowDirection _ = Dir
+
+instance EdgeLabel EdgeType where
+
+
+instance FlowDirectionField FlowDirection where
+   getFlowDirection = id
+
+
+instance EdgeTypeField ELabel where
+   getEdgeType = edgeType
+
+instance FlowDirectionField ELabel where
+   getFlowDirection = flowDirection
+
+instance EdgeLabel ELabel where
+
+
+isOriginalEdge :: EdgeTypeField et => et -> Bool
+isOriginalEdge = (OriginalEdge ==) . getEdgeType
+
+isInnerStorageEdge :: EdgeTypeField et => et -> Bool
+isInnerStorageEdge = (InnerStorageEdge ==) . getEdgeType
+
+isIntersectionEdge :: EdgeTypeField et => et -> Bool
+isIntersectionEdge = (IntersectionEdge ==) . getEdgeType
 
 
 type Topology = EfaGraph Idx.Node NodeType ()
@@ -113,34 +143,61 @@ type SecTopology = EfaGraph Idx.SecNode NodeType FlowDirection
 
 type SequFlowGraph = EfaGraph Idx.SecNode NodeType ELabel
 
+type DirSequFlowGraph = EfaGraph Idx.SecNode NodeType EdgeType
+
 
 type InOut n el = ([Gr.LNode n el], [Gr.LNode n el])
 
 -- | Active storages, grouped by storage number, sorted by section number.
 getActiveStores ::
-   SequFlowGraph ->
-   M.Map Idx.Node (M.Map Idx.Section (InOut Idx.SecNode ELabel))
+   (EdgeLabel el) =>
+   EfaGraph Idx.SecNode NodeType el ->
+   M.Map Idx.Node (M.Map Idx.Section (InOut Idx.SecNode el, StoreDir))
 getActiveStores =
-   M.map (M.filter isActiveSt) .
    M.fromListWith
       (M.unionWith (error "the same storage multiple times in a section")) .
    map
       (\(pre, (Idx.SecNode s n, _nt), suc) ->
-         (n, M.singleton s (pre, suc))) .
+         (n, let inout = (pre, suc)
+             in  case maybeActiveSt inout of
+                    Nothing -> M.empty
+                    Just dir -> M.singleton s (inout, dir))) .
    filter (isStorage . snd . snd3) .
    mkInOutGraphFormat
 
-isActiveSt :: InOut n ELabel -> Bool
-isActiveSt (ins, outs) =
-   any isActiveEdge $ map snd $ ins ++ outs
-
--- | Partition the storages in in and out storages, looking only at edges, not at values.
+-- | Classify the storages in in and out storages,
+-- looking only at edges, not at values.
 -- This means that nodes with in AND out edges cannot be treated.
-partitionInOutStatic ::
-   (Ord sec) =>
-   M.Map sec (InOut n ELabel) ->
-   (M.Map sec (InOut n ELabel), M.Map sec (InOut n ELabel))
-partitionInOutStatic = M.partition p
-  where p (ins, outs)  =  null (filter q ins) /= null (filter r outs)
-          where q (_, e) = flowDirection e == WithDir && (isOriginalEdge e || isInnerStorageEdge e)
-                r (_, e) = flowDirection e == AgainstDir && (isOriginalEdge e || isInnerStorageEdge e)
+maybeActiveSt ::
+   (EdgeLabel el) => InOut n el -> Maybe StoreDir
+maybeActiveSt (ins, outs) =
+   mplus
+      (toMaybe
+         (any (\e ->
+               isActiveEdge e &&
+               (isOriginalEdge e || isInnerStorageEdge e)) $
+          map snd ins)
+         In)
+      (toMaybe (any (isActiveEdge . snd) outs) Out)
+
+
+data StoreDir = In | Out deriving (Eq, Show)
+
+
+instance QC.Arbitrary NodeType where
+   arbitrary =
+      QC.oneof $ map return $
+         Storage :
+         Sink :
+         AlwaysSink :
+         Source :
+         AlwaysSource :
+         Crossing :
+         DeadNode :
+         NoRestriction :
+         []
+
+   shrink NoRestriction = []
+   shrink AlwaysSink = [Sink]
+   shrink AlwaysSource = [Source]
+   shrink _ = [NoRestriction]

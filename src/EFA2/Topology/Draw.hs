@@ -36,7 +36,7 @@ import Data.GraphViz (
           attrStmts, nodeStmts, edgeStmts, graphStatements,
           directedGraph, strictGraph, subGraphs,
           graphID)
-import Data.GraphViz.Attributes.Complete
+import Data.GraphViz.Attributes.Complete as Viz
 
 import Data.Eq.HT (equating)
 import Data.Ratio (Ratio)
@@ -78,7 +78,7 @@ mkDotGraph ::
    Maybe Idx.Record ->
    (Idx.DTime -> String) ->
    (Topo.LNode -> String) ->
-   (Topo.LEdge -> String) ->
+   (Topo.LEdge -> [String]) ->
    DotGraph T.Text
 mkDotGraph g recordNum timef nshow eshow =
   DotGraph { strictGraph = False,
@@ -116,23 +116,14 @@ mkDotNode nshow n@(x, _) =
       [displabel, nodeColour, Style [SItem Filled []], Shape BoxShape ]
   where displabel =  Label $ StrLabel $ T.pack (nshow n)
 
-mkDotEdge :: (Topo.LEdge -> String) -> Topo.LEdge -> DotEdge T.Text
-mkDotEdge eshow e@(Edge x y, elabel) =
+mkDotEdge :: (Topo.LEdge -> [String]) -> Topo.LEdge -> DotEdge T.Text
+mkDotEdge eshow e@(_, elabel) =
    DotEdge
       (dotIdentFromSecNode x) (dotIdentFromSecNode y)
-      [displabel, edir, colour]
-  where flowDir = flowDirection elabel
+      [displabel, Viz.Dir dir, colour]
+  where (Edge x y, dir, order) = orientEdge e
         displabel =
-           Label $ StrLabel $ T.pack $
-           case flowDir of
-              UnDir -> ""
-              _ -> eshow e
-        edir =
-           Dir $
-           case flowDir of
-              AgainstDir -> Back
-              WithDir -> Forward
-              _ -> NoDir
+           Label $ StrLabel $ T.pack $ L.intercalate "\n" $ order $ eshow e
         colour =
            case edgeType elabel of
               IntersectionEdge -> intersectionEdgeColour
@@ -148,7 +139,7 @@ printGraph ::
    Maybe Idx.Record ->
    (Idx.DTime -> String) ->
    (Topo.LNode -> String) ->
-   (Topo.LEdge -> String) ->
+   (Topo.LEdge -> [String]) ->
    IO ()
 printGraph g recordNum tshow nshow eshow =
    runGraphvizCanvas Dot (mkDotGraph g recordNum tshow nshow eshow) Xlib
@@ -163,14 +154,14 @@ heart = '\9829'
 
 drawTopologyX' :: SequFlowGraph -> IO ()
 drawTopologyX' topo =
-   printGraph topo noRecord (const [heart]) show show
+   printGraph topo noRecord (const [heart]) show ((:[]) . show)
 
 
 drawTopologySimple :: SequFlowGraph -> IO ()
 drawTopologySimple topo =
    printGraph topo noRecord (const [heart]) nshow eshow
-  where nshow (n, l) = show n ++ " - " ++ showNodeType l
-        eshow _ = ""
+  where nshow (Idx.SecNode _ n, l) = show n ++ " - " ++ showNodeType l
+        eshow _ = []
 
 dsg :: Int -> FlowTopology -> DotSubGraph String
 dsg ident topo = DotSG True (Just (Int ident)) stmts
@@ -183,12 +174,10 @@ dsg ident topo = DotSG True (Just (Int ident)) stmts
         nattrs x = [labNodef x, nodeColour, Style [SItem Filled []], Shape BoxShape ]
         labNodef (n, l) = Label $ StrLabel $ T.pack (show n ++ " - " ++ showNodeType l)
         es = map mkEdge (labEdges topo)
-        mkEdge (Edge x y, l) =
-           DotEdge (idf x) (idf y) $ (:[]) $ Dir $
-           case l of
-              WithDir -> Forward
-              AgainstDir -> Back
-              _ -> NoDir
+        mkEdge el =
+           case orientEdge el of
+              (Edge x y, d, _) ->
+                 DotEdge (idf x) (idf y) [Viz.Dir d]
 
 drawTopologyXs' :: [FlowTopology] -> IO ()
 drawTopologyXs' ts = runGraphvizCanvas Dot g Xlib
@@ -196,6 +185,19 @@ drawTopologyXs' ts = runGraphvizCanvas Dot g Xlib
         stmts = DotStmts attrs subgs [] []
         subgs = zipWith dsg [0..] ts
         attrs = []
+
+
+orientEdge ::
+   (Ord n, FlowDirectionField el) =>
+   (Edge n, el) -> (Edge n, DirType, [s] -> [s])
+orientEdge (e@(Edge x y), l) =
+   case getFlowDirection l of
+      Topo.UnDir -> (e, NoDir, const [])
+      Topo.Dir ->
+--         if comparing (\(Idx.SecNode s n) -> n) x y == LT
+         if x < y
+           then (e, Forward, id)
+           else (Edge y x, Back, reverse)
 
 data Line = ELine Idx.SecNode Idx.SecNode
           | XLine Idx.SecNode Idx.SecNode
@@ -251,14 +253,14 @@ draw :: SequFlowGraph -> Env a -> IO ()
 draw g
    (Env rec lookupEnergy lookupX lookupEta formatAssign tshow nshow) =
       printGraph g (Just rec) tshow nshow eshow
-  where eshow = L.intercalate "\n" . map formatAssign . mkLst
+  where eshow = map formatAssign . mkLst
 
         mkLst (Edge uid vid, l) =
            case edgeType l of
               OriginalEdge ->
                  (ELine uid vid, lookupEnergy rec uid vid) :
                  (XLine uid vid, lookupX rec uid vid) :
-                 ndirlab (flowDirection l) :
+                 (NLine uid vid, lookupEta rec uid vid) :
                  (XLine vid uid, lookupX rec vid uid) :
                  (ELine vid uid, lookupEnergy rec vid uid) :
                  []
@@ -270,8 +272,6 @@ draw g
                  (XLine uid vid, lookupX rec uid vid) :
                  (ELine vid uid, lookupEnergy rec vid uid) :
                  []
-            where ndirlab WithDir = (NLine uid vid, lookupEta rec uid vid)
-                  ndirlab _ = (NLine vid uid, lookupEta rec vid uid)
 
 drawTopology ::
    AutoEnv a => SequFlowGraph -> Interp.Envs SingleRecord a -> IO ()
