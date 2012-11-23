@@ -3,8 +3,16 @@ module EFA2.StateAnalysis.StateAnalysis (
    bruteForce,
    branchAndBound,
    prioritized,
+   clustering,
+
    propBranchAndBound,
    propPrioritized,
+   propClustering,
+
+   speedBruteForce,
+   speedBranchAndBound,
+   speedPrioritized,
+   speedClustering,
    ) where
 
 -- This algorithm is made after reading R. Birds "Making a Century" in Pearls of Functional Algorithm Design.
@@ -29,7 +37,9 @@ import qualified Data.Foldable as Fold
 import qualified Data.Map as M
 import qualified Data.Set as S
 import qualified Data.FingerTree.PSQueue as PSQ
+import qualified Data.PQueue.Prio.Min as PQ
 import Data.FingerTree.PSQueue (PSQ)
+import Data.PQueue.Prio.Min (MinPQueue)
 import Data.Traversable (sequenceA)
 import Data.Monoid (mappend)
 import Control.Monad (liftM2, foldM, guard)
@@ -95,6 +105,11 @@ checkCountNode topo x =
 anyActive :: [(n, FlowDirection)] -> Bool
 anyActive = any (isActive . snd)
 
+admissibleCountTopology :: CountTopology -> Bool
+admissibleCountTopology topo =
+   Fold.all (checkCountNode topo) $ Gr.nodeSet topo
+
+
 type NumberOfAdj = Int
 type CountTopology = Gr.EfaGraph Idx.Node (NodeType, NumberOfAdj) FlowDirection
 
@@ -139,11 +154,12 @@ admissibleEdges e0 g0 = do
 expand :: LNEdge -> CountTopology -> [CountTopology]
 expand e g = map snd $ admissibleEdges e g
 
-nodesOnly :: Topology -> CountTopology
-nodesOnly topo =
-   Gr.fromMap
-      (M.map (\(pre,l,suc) -> (l, S.size pre + S.size suc)) $ Gr.nodes topo)
-      M.empty
+splitNodesEdges :: Topology -> (CountTopology, [Gr.Edge Idx.Node])
+splitNodesEdges topo =
+   (Gr.fromMap
+       (M.map (\(pre,l,suc) -> (l, S.size pre + S.size suc)) $ Gr.nodes topo)
+       M.empty,
+    map fst $ Gr.labEdges topo)
 
 
 newtype
@@ -176,6 +192,80 @@ recoursePrioEdge origTopo =
    in  recourse
 
 
+-- move to Utils?
+untilLeft :: (a -> Either b a) -> a -> b
+untilLeft f =
+   let go a0 =
+          case f a0 of
+             Left b -> b
+             Right a1 -> go a1
+   in  go
+
+{-
+The edge set in all list elements must be equal if neglecting edge orientation.
+
+We maintain the set of nodes only for reasons of efficiency.
+For @Cluster ns ess@ it must hold
+@ns == (foldMap (foldMap S.singleton) $ M.keys $ head ess)@.
+-}
+data
+   Cluster =
+      Cluster {
+         clusterNodes :: S.Set Idx.Node,
+         clusterEdges :: [M.Map (Gr.Edge Idx.Node) FlowDirection]
+      }
+
+
+emptyCluster ::
+   CountTopology -> Cluster
+emptyCluster g =
+   Cluster S.empty
+      (guard (admissibleCountTopology g) >> [M.empty])
+
+singletonCluster ::
+   CountTopology -> Gr.Edge Idx.Node -> Cluster
+singletonCluster g e =
+   Cluster
+      (Fold.foldMap S.singleton e)
+      (map (uncurry M.singleton . fst) $ admissibleEdges e g)
+
+mergeCluster ::
+   CountTopology ->
+   Cluster -> Cluster -> Cluster
+mergeCluster topo c0 c1 =
+   let nodes = S.union (clusterNodes c0) (clusterNodes c1)
+   in  Cluster nodes $ do
+          es0 <- clusterEdges c0
+          es1 <- clusterEdges c1
+          let es2 = M.union es0 es1
+              g = Gr.insEdgeSet es2 topo
+          guard $ Fold.all (checkCountNode g) nodes
+          return es2
+
+{- |
+Merge the two clusters with the least numbers of possibilities.
+-}
+mergeQueuedCluster ::
+   CountTopology ->
+   MinPQueue Int Cluster ->
+   Either
+      [FlowTopology]
+      (MinPQueue Int Cluster)
+mergeQueuedCluster topo queue0 =
+   case PQ.minView queue0 of
+      Nothing -> error "empty queue"
+      Just (c0, queue1) ->
+         case PQ.minView queue1 of
+            Nothing ->
+               Left $
+               map (\es -> Gr.nmap fst $ Gr.insEdgeSet es topo) $
+               clusterEdges c0
+            Just (c1, queue2) -> Right $
+               let c2 = mergeCluster topo c0 c1
+               in  PQ.insert (length $ clusterEdges c2) c2 queue2
+
+
+
 type LNEdge = Gr.Edge Idx.Node
 
 -- * various algorithms
@@ -189,23 +279,30 @@ bruteForce topo =
 branchAndBound :: Topology -> [FlowTopology]
 branchAndBound topo =
    map (Gr.nmap fst) $
-   foldM (flip expand) (nodesOnly topo) $
-   map fst $ Gr.labEdges topo
+   uncurry (foldM (flip expand)) $
+   splitNodesEdges topo
 
 prioritized :: Topology -> [FlowTopology]
 prioritized topo =
-   let cleanTopo = nodesOnly topo
-   in  guard (Fold.all (checkCountNode cleanTopo) $ Gr.nodeSet cleanTopo)
+   let (cleanTopo, es) = splitNodesEdges topo
+   in  guard (admissibleCountTopology cleanTopo)
        >>
        (map (Gr.nmap fst . fst) $
         recoursePrioEdge topo $
         (cleanTopo,
-         PSQ.fromList $ map (uncurry (PSQ.:->)) $ M.toList $
-         M.mapWithKey (\e _ -> alternatives e cleanTopo) $
-         Gr.edgeLabels topo))
+         PSQ.fromList $ map (\e -> e PSQ.:-> alternatives e cleanTopo) es))
+
+clustering :: Topology -> [FlowTopology]
+clustering topo =
+   let (cleanTopo, es) = splitNodesEdges topo
+   in  untilLeft (mergeQueuedCluster cleanTopo) $
+       PQ.fromList $
+       map (\c -> (length $ clusterEdges c, c)) $
+       (emptyCluster cleanTopo :) $
+       map (singletonCluster cleanTopo) es
 
 advanced :: Topology -> [FlowTopology]
-advanced = prioritized
+advanced = clustering
 
 
 -- * tests
@@ -271,6 +368,29 @@ I do not convert to Set, but use 'sort' in order to check for duplicates.
 -}
 propPrioritized :: ArbTopology -> Bool
 propPrioritized (ArbTopology g) =
-   Key.sort graphIdent (bruteForce g)
+   Key.sort graphIdent (branchAndBound g)
    ==
    Key.sort graphIdent (prioritized g)
+
+propClustering :: ArbTopology -> Bool
+propClustering (ArbTopology g) =
+   Key.sort graphIdent (branchAndBound g)
+   ==
+   Key.sort graphIdent (clustering g)
+
+
+speedBruteForce :: ArbTopology -> Bool
+speedBruteForce (ArbTopology g) =
+   bruteForce g == bruteForce g
+
+speedBranchAndBound :: ArbTopology -> Bool
+speedBranchAndBound (ArbTopology g) =
+   branchAndBound g == branchAndBound g
+
+speedPrioritized :: ArbTopology -> Bool
+speedPrioritized (ArbTopology g) =
+   prioritized g == prioritized g
+
+speedClustering :: ArbTopology -> Bool
+speedClustering (ArbTopology g) =
+   clustering g == clustering g
