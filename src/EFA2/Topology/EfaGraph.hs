@@ -34,7 +34,7 @@ module EFA2.Topology.EfaGraph (
    elfilter,
    propELFilter,
    insNode, insNodes,
-   insEdge, insEdges,
+   insEdge, insEdges, insEdgeSet,
    mkGraph, fromList, fromMap,
    nodes, nodeSet,
    InOut,
@@ -331,15 +331,19 @@ insNodes = flip (foldl (flip insNode))
 
 insEdges ::
    (Ord n) => [LEdge n el] -> EfaGraph n nl el -> EfaGraph n nl el
-insEdges es (EfaGraph ns els) =
+insEdges es = insEdgeSet (M.fromList es)
+
+insEdgeSet ::
+   (Ord n) => M.Map (Edge n) el -> EfaGraph n nl el -> EfaGraph n nl el
+insEdgeSet es (EfaGraph ns els) =
    EfaGraph
       (fmap
           (\(ins, n, outs) newIns newOuts ->
              (S.union ins newIns, n, S.union outs newOuts)) ns
-       $$ (makeInMap  ns $ map fst es)
-       $$ (makeOutMap ns $ map fst es))
-      (M.unionWith (error "insEdgs: edge already contained in graph")
-         els (M.fromList es))
+       $$ (makeInMap  ns $ M.keys es)
+       $$ (makeOutMap ns $ M.keys es))
+      (M.unionWith (error "insEdgeSet: edge already contained in graph")
+         els es)
 
 -- I may deprecate mkGraph in favor of EfaGraph.fromList
 fromList, mkGraph ::
