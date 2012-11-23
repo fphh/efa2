@@ -29,11 +29,16 @@ import Debug.Trace
 type ProvEnv s a = [(Env.Index, Variable s a)]
 -- type ProvEnv s a = M.Map Env.Index (Variable s a)
 
--- zu Newtype machen und Num instanz und provenv als writer
+-- map bevorzugen
+
+-- module umbenennen in gleichungsgenerator
+
+-- zu Newtype machen und Num instanz und provenv als writer ++ symbolisch darstellung von gleichungen
 type ExpWithVars s a = ST s (ProvEnv s a, T s a)
 
 type SysWithVars s a = ST s (ProvEnv s a, M s ())
 
+-- Gleichungen mitloggen
 newtype EquationSystem s a = EquationSystem (SysWithVars s a)
 
 newtype GivenEquations s a = GivenEquations (ST s (M s ()))
@@ -53,7 +58,7 @@ instance Monoid (EquationSystem s a) where
 xs .= ys = EquationSystem $ 
   xs >>= \(vs, x) -> ys >>= \(us, y) -> return (mappend vs us, x =:= y)
 
--- wird zu liftM2 (*) 
+-- wird zu liftM2 (*)
 (.*) :: (Fractional a) => ExpWithVars s a -> ExpWithVars s a -> ExpWithVars s a
 xs .* ys = xs >>= \(vs, x) -> ys >>= \(us, y) -> return (mappend vs us, x * y)
 
@@ -99,6 +104,9 @@ mwhen :: Monoid a => Bool -> a -> a
 mwhen True t = t
 mwhen False _ = mempty 
 
+edges :: Gr.EfaGraph node nodeLabel edgeLabel -> [Gr.Edge node]
+edges g = M.keys el
+  where el = Gr.edgeLabels g
 
 makeAllEquations ::
   (Eq a, Fractional a) =>
@@ -115,11 +123,6 @@ makeEtaEquations ::
 makeEtaEquations es = mconcat $ map mkEq es
   where mkEq (Edge f t) = power t f .= eta f t .* power f t
 
-
-
-edges :: Gr.EfaGraph node nodeLabel edgeLabel -> [Gr.Edge node]
-edges g = M.keys el
-  where el = Gr.edgeLabels g
 
 makeEnergyEquations ::
   (Eq a, Fractional a) =>
@@ -162,6 +165,7 @@ solveSystem given g = runST $ do
 
   trace (show $ length allVars) $ solve (gs >> eqs)
 
+  -- travers
   res <- mapM (query . snd) allVars
   return $ listToEnvs (zip (map fst allVars) (map maybeToList res))
 
