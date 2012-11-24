@@ -37,9 +37,9 @@ import qualified Data.Foldable as Fold
 import qualified Data.Map as M
 import qualified Data.Set as S
 import qualified Data.FingerTree.PSQueue as PSQ
-import qualified Data.PQueue.Prio.Min as PQ
+import qualified Data.PriorityQueue.FingerTree as PQ
 import Data.FingerTree.PSQueue (PSQ)
-import Data.PQueue.Prio.Min (MinPQueue)
+import Data.PriorityQueue.FingerTree (PQueue)
 import Data.Traversable (sequenceA)
 import Data.Monoid (mappend)
 import Control.Monad (liftM2, foldM, guard)
@@ -247,10 +247,10 @@ Merge the two clusters with the least numbers of possibilities.
 -}
 mergeQueuedCluster ::
    CountTopology ->
-   MinPQueue Int Cluster ->
+   PQueue Int Cluster ->
    Either
       [FlowTopology]
-      (MinPQueue Int Cluster)
+      (PQueue Int Cluster)
 mergeQueuedCluster topo queue0 =
    case PQ.minView queue0 of
       Nothing -> error "empty queue"
