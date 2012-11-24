@@ -164,8 +164,7 @@ x0num :: XMap Sc
 x0num = M.fromList $
   (edgeIdx Idx.X (sec 0) rec0 2 1, toScalar 0.8) :
   (edgeIdx Idx.X (sec 1) rec0 2 1, toScalar 0.3) :
-  (edgeIdx Idx.X (sec 2) rec0 2 1, toScalar 0.6) :
-  (edgeIdx Idx.X (sec 3) rec0 2 1, toScalar 0.7) : []
+  (edgeIdx Idx.X (sec 2) rec0 2 1, toScalar 0.6) : []
 
 
 envs0num :: Envs SingleRecord Sc
@@ -186,7 +185,7 @@ numeric g = trace (showEquations ts0) $ separateEnvs res
 
 seqTopo :: SequFlowGraph
 seqTopo = mkSeqTopo (select sol states)
-  where sol = StateAnalysis.advanced Example.topoDreibein
+  where sol = StateAnalysis.bruteForce Example.topoDreibein
         states = [0, 5, 0, 4]
         select ts = map (ts!!)
         mkSeqTopo = Flow.mkSequenceTopology

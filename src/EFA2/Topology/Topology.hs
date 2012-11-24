@@ -238,8 +238,8 @@ mkNodeEq recordNum topo = concat $ mapGraph (mkEq recordNum) (elfilter cond topo
 
 mkEq :: Idx.Record -> Gr.InOut Idx.SecNode NodeType el -> [Equation]
 mkEq recordNum (ins, (nid, _), outs) =
-   case (fmap (makeOuts vosum . makeVars) $ NonEmpty.fetch ins,
-         fmap (makeIns  visum . makeVars) $ NonEmpty.fetch outs) of
+   case (fmap (makeIns  visum . makeVars) $ NonEmpty.fetch ins,
+         fmap (makeOuts vosum . makeVars) $ NonEmpty.fetch outs) of
       (Nothing, Nothing) -> []
       (Nothing, Just (_, oeqss)) -> oeqss
       (Just (_, ieqss), Nothing) -> ieqss
