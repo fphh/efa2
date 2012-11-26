@@ -445,7 +445,17 @@ formatStContSignal = formatMaybe sdisp
 instance
    (SDisplay v, D.Storage v a, Disp a, Ord a) =>
       AutoEnvSignal (Data v a) where
-   envAbsSignal = envAbsArgSignal
+   envAbsSignal
+         (Interp.Envs (SingleRecord r) e _de _p _dp fn _dn dt x _dx _v st) =
+      Env r
+         (makeLookup r Idx.Energy e)
+         (makeLookup r Idx.X x)
+         (makeLookup r Idx.FEta $
+          M.intersectionWith ($) fn $
+          M.mapKeys (\(Idx.Energy rec uid vid) -> Idx.FEta rec uid vid) e)
+         (\(v, tc) -> showLine v ++ " = " ++ formatStContSignal tc)
+         (\dtimeIdx -> formatStContSignal $ M.lookup dtimeIdx dt)
+         (showNode r st formatStContSignal)
 
 instance
    (DispApp s, TDisp t, AutoEnvSignal a) =>
@@ -461,45 +471,22 @@ class AutoEnvSignal a => AutoEnvDeltaSignal a where
 instance
    (SDisplay v, D.Storage v a, Disp a, Ord a) =>
       AutoEnvDeltaSignal (Data v a) where
-   envDeltaSignal = envDeltaArgSignal
+   envDeltaSignal
+         (Interp.Envs (SingleRecord r) _e de _p _dp _fn dn dt _x dx _v st) =
+      Env r
+         (makeLookup r Idx.DEnergy de)
+         (makeLookup r Idx.DX dx)
+         (makeLookup r Idx.DEta $
+          M.intersectionWith ($) dn $
+          M.mapKeys (\(Idx.DEnergy rec uid vid) -> Idx.DEta rec uid vid) de)
+         (\ (v, ys) -> showLineDelta v ++ " = " ++ formatStContSignal ys)
+         (\dtimeIdx -> formatStContSignal $ M.lookup dtimeIdx dt)
+         (showNode r st formatStContSignal)
 
 instance
    (DispApp s, TDisp t, AutoEnvDeltaSignal a) =>
       AutoEnvDelta (TC s t a) where
    envDelta = envDeltaSignal
-
-
-envAbsArgSignal ::
-   (DispApp s, TDisp t, SDisplay v, D.Storage v d, Ord d, Disp d) =>
-   Interp.Envs SingleRecord (TC s t (Data v d)) ->
-   Env (TC s t (Data v d))
-envAbsArgSignal
-      (Interp.Envs (SingleRecord r) e _de _p _dp fn _dn dt x _dx _v st) =
-   Env r
-      (makeLookup r Idx.Energy e)
-      (makeLookup r Idx.X x)
-      (makeLookup r Idx.FEta $
-       M.intersectionWith ($) fn $
-       M.mapKeys (\(Idx.Energy rec uid vid) -> Idx.FEta rec uid vid) e)
-      (\(v, tc) -> showLine v ++ " = " ++ formatStContSignal tc)
-      (\dtimeIdx -> formatStContSignal $ M.lookup dtimeIdx dt)
-      (showNode r st formatStContSignal)
-
-envDeltaArgSignal ::
-   (DispApp s, TDisp t, SDisplay v, D.Storage v d, Ord d, Disp d) =>
-   Interp.Envs SingleRecord (TC s t (Data v d)) ->
-   Env (TC s t (Data v d))
-envDeltaArgSignal
-      (Interp.Envs (SingleRecord r) _e de _p _dp _fn dn dt _x dx _v st) =
-   Env r
-      (makeLookup r Idx.DEnergy de)
-      (makeLookup r Idx.DX dx)
-      (makeLookup r Idx.DEta $
-       M.intersectionWith ($) dn $
-       M.mapKeys (\(Idx.DEnergy rec uid vid) -> Idx.DEta rec uid vid) de)
-      (\ (x, ys) -> showLineDelta x ++ " = " ++ formatStContSignal ys)
-      (\dtimeIdx -> formatStContSignal $ M.lookup dtimeIdx dt)
-      (showNode r st formatStContSignal)
 
 
 -------------------------------------------------------------------------------------------
