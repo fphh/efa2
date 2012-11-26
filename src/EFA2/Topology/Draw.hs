@@ -223,9 +223,9 @@ showLineDelta (NLine u v) = "dn_" ++ showSecNode u ++ "_" ++ showSecNode v
 data Env a =
    Env {
       recordNumber :: Idx.Record,
-      lookupEnergy_ :: Idx.Record -> Idx.SecNode -> Idx.SecNode -> Maybe a,
-      lookupX_      :: Idx.Record -> Idx.SecNode -> Idx.SecNode -> Maybe a,
-      lookupEta_    :: Idx.Record -> Idx.SecNode -> Idx.SecNode -> Maybe a,
+      lookupEnergy_ :: Idx.SecNode -> Idx.SecNode -> Maybe a,
+      lookupX_      :: Idx.SecNode -> Idx.SecNode -> Maybe a,
+      lookupEta_    :: Idx.SecNode -> Idx.SecNode -> Maybe a,
       formatAssign_ :: (Line, Maybe a) -> String,
       showTime :: Idx.DTime -> String,
       showNode_ :: Topo.LNode -> String
@@ -233,10 +233,11 @@ data Env a =
 
 makeLookup ::
    (Ord idx) =>
+   Idx.Record ->
    (Idx.Record -> Idx.SecNode -> Idx.SecNode -> idx) -> M.Map idx a ->
-   Idx.Record -> Idx.SecNode -> Idx.SecNode -> Maybe a
-makeLookup makeIdx mp =
-   \rec uid vid -> M.lookup (makeIdx rec uid vid) mp
+   Idx.SecNode -> Idx.SecNode -> Maybe a
+makeLookup rec makeIdx mp =
+   \uid vid -> M.lookup (makeIdx rec uid vid) mp
 
 lookupFormat ::
    (Ord idx, Show idx) =>
@@ -256,19 +257,19 @@ draw g
         mkLst (Edge uid vid, l) =
            case edgeType l of
               OriginalEdge ->
-                 (ELine uid vid, lookupEnergy rec uid vid) :
-                 (XLine uid vid, lookupX rec uid vid) :
-                 (NLine uid vid, lookupEta rec uid vid) :
-                 (XLine vid uid, lookupX rec vid uid) :
-                 (ELine vid uid, lookupEnergy rec vid uid) :
+                 (ELine uid vid, lookupEnergy uid vid) :
+                 (XLine uid vid, lookupX uid vid) :
+                 (NLine uid vid, lookupEta uid vid) :
+                 (XLine vid uid, lookupX vid uid) :
+                 (ELine vid uid, lookupEnergy vid uid) :
                  []
               InnerStorageEdge ->
-                 (ELine vid uid, lookupEnergy rec vid uid) :
+                 (ELine vid uid, lookupEnergy vid uid) :
                  []
               IntersectionEdge ->
-                 (ELine uid vid, lookupEnergy rec uid vid) :
-                 (XLine uid vid, lookupX rec uid vid) :
-                 (ELine vid uid, lookupEnergy rec vid uid) :
+                 (ELine uid vid, lookupEnergy uid vid) :
+                 (XLine uid vid, lookupX uid vid) :
+                 (ELine vid uid, lookupEnergy vid uid) :
                  []
 
 drawTopology ::
@@ -308,18 +309,18 @@ class AutoEnvList a => AutoEnvDeltaList a where
    divideDEnergyList :: [a] -> [a] -> [a] -> [a] -> [a]
 
 instance AutoEnvList a => AutoEnv [a] where
-   envAbs (Interp.Envs (SingleRecord r) e _de _p _dp _fn _dn dt x _dx _v st) =
-      let lookupEnergy = makeLookup Idx.Energy e
-      in  Env r
+   envAbs (Interp.Envs (SingleRecord rec) e _de _p _dp _fn _dn dt x _dx _v st) =
+      let lookupEnergy = makeLookup rec Idx.Energy e
+      in  Env rec
              lookupEnergy
-             (makeLookup Idx.X x)
-             (\rec a b ->
+             (makeLookup rec Idx.X x)
+             (\a b ->
                 liftM2 divideEnergyList
-                   (lookupEnergy rec a b)
-                   (lookupEnergy rec b a))
+                   (lookupEnergy a b)
+                   (lookupEnergy b a))
              formatAssignList
              (lookupFormat formatList dt)
-             (showListNode r st formatStContList)
+             (showListNode rec st formatStContList)
 
 
 instance AutoEnvDeltaList a => AutoEnvDelta [a] where
@@ -427,19 +428,19 @@ envDeltaArg ::
    Interp.Envs SingleRecord a ->
    Env a
 envDeltaArg divide formatAssign content tshow
-      (Interp.Envs (SingleRecord r) e de _p _dp _fn _dn dt _x dx _v st) =
-   let lookupEnergy = makeLookup Idx.Energy e
-       lookupDEnergy = makeLookup Idx.DEnergy de
-   in  Env r
+      (Interp.Envs (SingleRecord rec) e de _p _dp _fn _dn dt _x dx _v st) =
+   let lookupEnergy = makeLookup rec Idx.Energy e
+       lookupDEnergy = makeLookup rec Idx.DEnergy de
+   in  Env rec
           lookupDEnergy
-          (makeLookup Idx.DX dx)
-          (\rec a b ->
+          (makeLookup rec Idx.DX dx)
+          (\a b ->
              liftM4 divide
-                (lookupEnergy rec a b) (lookupEnergy rec b a)
-                (lookupDEnergy rec a b) (lookupDEnergy rec b a))
+                (lookupEnergy a b) (lookupEnergy b a)
+                (lookupDEnergy a b) (lookupDEnergy b a))
           formatAssign
           (tshow dt)
-          (showNode r st content)
+          (showNode rec st content)
 
 
 class AutoEnvSignal a where
@@ -490,32 +491,32 @@ envAbsArgSignal ::
    Interp.Envs SingleRecord (TC s t (Data v d)) ->
    Env (TC s t (Data v d))
 envAbsArgSignal
-      (Interp.Envs (SingleRecord rec0) e _de _p _dp fn _dn dt x _dx _v st) =
-   Env rec0
-      (makeLookup Idx.Energy e)
-      (makeLookup Idx.X x)
-      (makeLookup Idx.FEta $
+      (Interp.Envs (SingleRecord r) e _de _p _dp fn _dn dt x _dx _v st) =
+   Env r
+      (makeLookup r Idx.Energy e)
+      (makeLookup r Idx.X x)
+      (makeLookup r Idx.FEta $
        M.intersectionWith ($) fn $
        M.mapKeys (\(Idx.Energy rec uid vid) -> Idx.FEta rec uid vid) e)
       formatAssignSignal
       (\dtimeIdx -> formatStContSignal $ M.lookup dtimeIdx dt)
-      (showNode rec0 st formatStContSignal)
+      (showNode r st formatStContSignal)
 
 envDeltaArgSignal ::
    (DispApp s, TDisp t, SDisplay v, D.Storage v d, Ord d, Disp d) =>
    Interp.Envs SingleRecord (TC s t (Data v d)) ->
    Env (TC s t (Data v d))
 envDeltaArgSignal
-      (Interp.Envs (SingleRecord rec0) _e de _p _dp _fn dn dt _x dx _v st) =
-   Env rec0
-      (makeLookup Idx.DEnergy de)
-      (makeLookup Idx.DX dx)
-      (makeLookup Idx.DEta $
+      (Interp.Envs (SingleRecord r) _e de _p _dp _fn dn dt _x dx _v st) =
+   Env r
+      (makeLookup r Idx.DEnergy de)
+      (makeLookup r Idx.DX dx)
+      (makeLookup r Idx.DEta $
        M.intersectionWith ($) dn $
        M.mapKeys (\(Idx.DEnergy rec uid vid) -> Idx.DEta rec uid vid) de)
       (\ (x, ys) -> showLineDelta x ++ " = " ++ formatStContSignal ys)
       (\dtimeIdx -> formatStContSignal $ M.lookup dtimeIdx dt)
-      (showNode rec0 st formatStContSignal)
+      (showNode r st formatStContSignal)
 
 
 -------------------------------------------------------------------------------------------
