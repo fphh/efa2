@@ -291,18 +291,14 @@ class AutoEnv a => AutoEnvDelta a where
 
 
 class AutoEnvList a where
+   envAbsList :: Interp.Envs SingleRecord [a] -> Env [a]
+   envAbsList =
+      envAbsListGen
+         (\(x, ys) -> showLine x ++ " = " ++ formatStContList ys)
+         showNode
+
    formatStContList :: Maybe [a] -> String
    formatList :: [a] -> String
-
-   formatAssignList :: AutoEnvList a => (Line, Maybe [a]) -> String
-   formatAssignList (x, ys) =
-      showLine x ++ " = " ++ formatStContList ys
-
-   showListNode ::
-      Idx.Record -> StorageMap [a] ->
-      (Maybe [a] -> String) ->
-      Topo.LNode -> String
-   showListNode = showNode
 
    divideEnergyList :: [a] -> [a] -> [a]
 
@@ -311,18 +307,28 @@ class AutoEnvList a => AutoEnvDeltaList a where
    divideDEnergyList :: [a] -> [a] -> [a] -> [a] -> [a]
 
 instance AutoEnvList a => AutoEnv [a] where
-   envAbs (Interp.Envs (SingleRecord rec) e _de _p _dp _fn _dn dt x _dx _v st) =
-      let lookupEnergy = makeLookup rec Idx.Energy e
-      in  Env rec
-             lookupEnergy
-             (makeLookup rec Idx.X x)
-             (\a b ->
-                liftM2 divideEnergyList
-                   (lookupEnergy a b)
-                   (lookupEnergy b a))
-             formatAssignList
-             (lookupFormat formatList dt)
-             (showListNode rec st formatStContList)
+   envAbs = envAbsList
+
+envAbsListGen ::
+   (AutoEnvList a) =>
+   ((Line, Maybe [a]) -> String) ->
+   (Idx.Record -> StorageMap [a] ->
+    (Maybe [a] -> String) ->
+    Topo.LNode -> String) ->
+   Interp.Envs SingleRecord [a] -> Env [a]
+envAbsListGen formatAssignList showListNode
+      (Interp.Envs (SingleRecord rec) e _de _p _dp _fn _dn dt x _dx _v st) =
+   let lookupEnergy = makeLookup rec Idx.Energy e
+   in  Env rec
+          lookupEnergy
+          (makeLookup rec Idx.X x)
+          (\a b ->
+             liftM2 divideEnergyList
+                (lookupEnergy a b)
+                (lookupEnergy b a))
+          formatAssignList
+          (lookupFormat formatList dt)
+          (showListNode rec st formatStContList)
 
 
 instance AutoEnvDeltaList a => AutoEnvDelta [a] where
@@ -364,11 +370,13 @@ instance AutoEnvList Char where
    divideEnergyList x y = "(" ++ x ++ ")/(" ++ y ++ ")"
 
 instance AutoEnvList LatexString where
-   formatAssignList (x, ys) = showLineLatex x ++ " = " ++ formatStContList ys
+   envAbsList =
+      envAbsListGen
+         (\(x, ys) -> showLineLatex x ++ " = " ++ formatStContList ys)
+         showLatexNode
 
    formatStContList = maybe "+" (unLatexString . head)
    formatList = unLatexString . head
-   showListNode = showLatexNode
    divideEnergyList =
       zipWith
          (\(LatexString x) (LatexString y) ->
