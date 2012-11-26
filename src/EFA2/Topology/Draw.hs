@@ -241,11 +241,9 @@ makeLookup makeIdx mp =
 checkedLookupFormat ::
    (Ord idx, Show idx) =>
    String -> (a -> String) -> M.Map idx a -> idx -> String
-checkedLookupFormat msg format dt k =
+checkedLookupFormat _msg format dt k =
    case M.lookup k dt of
-      Nothing ->
-         error $
-         msg ++ ": " ++ show k ++ "\n" ++ show (fmap format dt)
+      Nothing -> [heart]
       Just x -> format x
 
 
