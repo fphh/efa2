@@ -437,11 +437,6 @@ class AutoEnvSignal a where
       (DispApp s, TDisp t) =>
       Interp.Envs SingleRecord (TC s t a) -> Env (TC s t a)
 
-formatAssignSignal ::
-   (DispApp s, TDisp t, SDisplay v, D.Storage v d, Ord d, Disp d) =>
-   (Line, Maybe (TC s t (Data v d))) -> String
-formatAssignSignal (x, tc) = showLine x ++ " = " ++ formatStContSignal tc
-
 formatStContSignal ::
    (DispApp s, TDisp t, SDisplay v, D.Storage v d, Ord d, Disp d) =>
    Maybe (TC s t (Data v d)) -> String
@@ -486,7 +481,7 @@ envAbsArgSignal
       (makeLookup r Idx.FEta $
        M.intersectionWith ($) fn $
        M.mapKeys (\(Idx.Energy rec uid vid) -> Idx.FEta rec uid vid) e)
-      formatAssignSignal
+      (\(v, tc) -> showLine v ++ " = " ++ formatStContSignal tc)
       (\dtimeIdx -> formatStContSignal $ M.lookup dtimeIdx dt)
       (showNode r st formatStContSignal)
 
