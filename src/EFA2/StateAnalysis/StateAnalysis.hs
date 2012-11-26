@@ -3,7 +3,7 @@ module EFA2.StateAnalysis.StateAnalysis (
    bruteForce,
    branchAndBound,
    prioritized,
-   clustering,
+   clustering, clusteringGreedy, clusteringMinimizing,
 
    propBranchAndBound,
    propPrioritized,
@@ -33,6 +33,7 @@ import EFA2.Topology.TopologyData
 import EFA2.Utils.Utils (mapFromSet)
 
 import qualified Data.List.Key as Key
+import qualified Data.List.HT as LH
 import qualified Data.Foldable as Fold
 import qualified Data.Map as M
 import qualified Data.Set as S
@@ -245,13 +246,13 @@ mergeCluster topo c0 c1 =
 {- |
 Merge the two clusters with the least numbers of possibilities.
 -}
-mergeQueuedCluster ::
+mergeSmallestClusters ::
    CountTopology ->
    PQueue Int Cluster ->
    Either
       [FlowTopology]
       (PQueue Int Cluster)
-mergeQueuedCluster topo queue0 =
+mergeSmallestClusters topo queue0 =
    case PQ.minView queue0 of
       Nothing -> error "empty queue"
       Just (c0, queue1) ->
@@ -264,6 +265,91 @@ mergeQueuedCluster topo queue0 =
                let c2 = mergeCluster topo c0 c1
                in  PQ.insert (length $ clusterEdges c2) c2 queue2
 
+
+
+data ShortestList a b =
+   ShortestList {
+      _shortestListKey :: [a],
+      shortestListValue :: b
+   }
+
+{- |
+The result list may not equal one of the input lists.
+We should replace this by Peano numbers.
+-}
+shorterList :: ShortestList a b -> ShortestList a b -> ShortestList a b
+shorterList (ShortestList x0 xv) (ShortestList y0 yv) =
+   let go (x:xs) (_:ys) =
+          let ShortestList zs zv = go xs ys
+          in  ShortestList (x:zs) zv
+       go [] _ = ShortestList [] xv
+       go _  _ = ShortestList [] yv
+   in  go x0 y0
+
+{- |
+Return the value that is associated with the shortest list.
+Lists are only evaluated as far as necessary
+for finding the list with minimum length.
+-}
+shortestList :: [ShortestList a b] -> b
+shortestList = shortestListValue . foldl1 shorterList
+
+
+{- |
+Merge the two clusters
+that give the minimal number of possibilities when merged.
+-}
+mergeMinimizingClusterPairs ::
+   CountTopology ->
+   [Cluster] ->
+   Either [FlowTopology] [Cluster]
+mergeMinimizingClusterPairs topo partition0 =
+   case partition0 of
+      [] -> error "empty list of partitions"
+      [c] ->
+         Left $
+         map (\es -> Gr.nmap fst $ Gr.insEdgeSet es topo) $
+         clusterEdges c
+      _ ->
+         Right $
+         shortestList $ do
+            (c0, partition1) <- LH.removeEach partition0
+            (c1, partition2) <- LH.removeEach partition1
+            let c = mergeCluster topo c0 c1
+            return $ ShortestList (clusterEdges c) (c : partition2)
+
+{- |
+Merge the cluster with the minimal number of possibilities
+with the cluster that minimizes the number of possibilities
+when merged with the first one.
+
+Usually, when the merged cluster is connected
+then there are less possibilities than for non-connected clusters.
+That is, our selection strategy tends to produce connected clusters.
+-}
+mergeMinimizingCluster ::
+   CountTopology ->
+   [Cluster] ->
+   Either [FlowTopology] [Cluster]
+mergeMinimizingCluster topo partition0 =
+   case partition0 of
+      [] -> error "empty list of partitions"
+      [c] ->
+         Left $
+         map (\es -> Gr.nmap fst $ Gr.insEdgeSet es topo) $
+         clusterEdges c
+      _ ->
+         let (c0,partition1) =
+                shortestList $
+                map (\(c,cs) -> ShortestList (clusterEdges c) (c,cs)) $
+                LH.removeEach partition0
+         in  Right $
+             shortestList $
+             map
+                (\(c,cs) ->
+                   let cm = mergeCluster topo c0 c
+                   in  ShortestList (clusterEdges cm) (cm:cs)) $
+             LH.removeEach partition1
 
 
 type LNEdge = Gr.Edge Idx.Node
@@ -292,14 +378,28 @@ prioritized topo =
         (cleanTopo,
          PSQ.fromList $ map (\e -> e PSQ.:-> alternatives e cleanTopo) es))
 
+clusteringGreedy :: Topology -> [FlowTopology]
+clusteringGreedy topo =
+   let (cleanTopo, es) = splitNodesEdges topo
+   in  untilLeft (mergeSmallestClusters cleanTopo) $
+       PQ.fromList $
+       map (\c -> (length $ clusterEdges c, c)) $
+       emptyCluster cleanTopo :
+          map (singletonCluster cleanTopo) es
+
+clusteringMinimizing :: Topology -> [FlowTopology]
+clusteringMinimizing topo =
+   let (cleanTopo, es) = splitNodesEdges topo
+   in  untilLeft (mergeMinimizingClusterPairs cleanTopo) $
+       emptyCluster cleanTopo :
+          map (singletonCluster cleanTopo) es
+
 clustering :: Topology -> [FlowTopology]
 clustering topo =
    let (cleanTopo, es) = splitNodesEdges topo
-   in  untilLeft (mergeQueuedCluster cleanTopo) $
-       PQ.fromList $
-       map (\c -> (length $ clusterEdges c, c)) $
-       (emptyCluster cleanTopo :) $
-       map (singletonCluster cleanTopo) es
+   in  untilLeft (mergeMinimizingCluster cleanTopo) $
+       emptyCluster cleanTopo :
+          map (singletonCluster cleanTopo) es
 
 advanced :: Topology -> [FlowTopology]
 advanced = clustering
