@@ -5,8 +5,7 @@ import EFA2.Solver.Equation
            showEqTerm, showEqTerms, showSecNode,
            LatexString(LatexString), unLatexString, secNodeToLatexString)
 import EFA2.Interpreter.Env
-          (DTimeMap, StorageMap,
-           SingleRecord(SingleRecord))
+          (StorageMap, SingleRecord(SingleRecord))
 import qualified EFA2.Interpreter.Env as Interp
 import EFA2.Topology.TopologyData as Topo
 import EFA2.Topology.EfaGraph
@@ -332,15 +331,25 @@ envAbsListGen formatAssignList showListNode
 
 
 instance AutoEnvDeltaList a => AutoEnvDelta [a] where
-   envDelta =
-      envDeltaArg
-         divideDEnergyList
-         (\(x, ys) ->
-            showLineDelta x ++ " = " ++
-            formatMaybe (concatMap (("\n"++) . formatElement)) ys)
-         (formatMaybe $ \ys ->
-            "[ " ++ L.intercalate ", " (map formatElement ys) ++ " ]")
-         (lookupFormat formatList)
+   envDelta
+         (Interp.Envs (SingleRecord rec) e de _p _dp _fn _dn dt _x dx _v st) =
+      let lookupEnergy = makeLookup rec Idx.Energy e
+          lookupDEnergy = makeLookup rec Idx.DEnergy de
+      in  Env rec
+             lookupDEnergy
+             (makeLookup rec Idx.DX dx)
+             (\a b ->
+                liftM4 divideDEnergyList
+                   (lookupEnergy a b) (lookupEnergy b a)
+                   (lookupDEnergy a b) (lookupDEnergy b a))
+             (\(x, ys) ->
+                showLineDelta x ++ " = " ++
+                formatMaybe (concatMap (("\n"++) . formatElement)) ys)
+             (lookupFormat formatList dt)
+             (showNode rec st $
+              formatMaybe $ \ys ->
+                 "[ " ++ L.intercalate ", " (map formatElement ys) ++ " ]")
+
 
 
 instance AutoEnvList Double where
@@ -421,29 +430,6 @@ showNode rec st content (n@(Idx.SecNode _sec nid), ty) =
 
 showNodeType :: NodeType -> String
 showNodeType = show
-
-
-envDeltaArg ::
-   (a -> a -> a -> a -> a) ->
-   ((Line, Maybe a) -> String) ->
-   (Maybe a -> String) ->
-   (DTimeMap a -> Idx.DTime -> String) ->
-   Interp.Envs SingleRecord a ->
-   Env a
-envDeltaArg divide formatAssign content tshow
-      (Interp.Envs (SingleRecord rec) e de _p _dp _fn _dn dt _x dx _v st) =
-   let lookupEnergy = makeLookup rec Idx.Energy e
-       lookupDEnergy = makeLookup rec Idx.DEnergy de
-   in  Env rec
-          lookupDEnergy
-          (makeLookup rec Idx.DX dx)
-          (\a b ->
-             liftM4 divide
-                (lookupEnergy a b) (lookupEnergy b a)
-                (lookupDEnergy a b) (lookupDEnergy b a))
-          formatAssign
-          (tshow dt)
-          (showNode rec st content)
 
 
 class AutoEnvSignal a where
