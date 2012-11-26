@@ -7,7 +7,7 @@ module EFA2.StateAnalysis.StateAnalysis (
 
    propBranchAndBound,
    propPrioritized,
-   propClustering,
+   propClustering, propClusteringGreedy, propClusteringMinimizing,
 
    speedBruteForce,
    speedBranchAndBound,
@@ -477,6 +477,18 @@ propClustering (ArbTopology g) =
    Key.sort graphIdent (branchAndBound g)
    ==
    Key.sort graphIdent (clustering g)
+
+propClusteringGreedy :: ArbTopology -> Bool
+propClusteringGreedy (ArbTopology g) =
+   Key.sort graphIdent (branchAndBound g)
+   ==
+   Key.sort graphIdent (clusteringGreedy g)
+
+propClusteringMinimizing :: ArbTopology -> Bool
+propClusteringMinimizing (ArbTopology g) =
+   Key.sort graphIdent (branchAndBound g)
+   ==
+   Key.sort graphIdent (clusteringMinimizing g)
 
 
 speedBruteForce :: ArbTopology -> Bool
