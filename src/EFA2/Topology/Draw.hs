@@ -38,6 +38,7 @@ import Data.GraphViz (
           graphID)
 import Data.GraphViz.Attributes.Complete as Viz
 
+import Data.Maybe (fromMaybe)
 import Data.Eq.HT (equating)
 import Data.Ratio (Ratio)
 
@@ -239,13 +240,14 @@ makeLookup ::
 makeLookup rec makeIdx mp =
    \uid vid -> M.lookup (makeIdx rec uid vid) mp
 
+formatMaybe :: (a -> String) -> Maybe a -> String
+formatMaybe = maybe [heart]
+
 lookupFormat ::
    (Ord idx, Show idx) =>
    (a -> String) -> M.Map idx a -> idx -> String
 lookupFormat format dt k =
-   case M.lookup k dt of
-      Nothing -> [heart]
-      Just x -> format x
+   formatMaybe format $ M.lookup k dt
 
 
 draw :: SequFlowGraph -> Env a -> IO ()
@@ -329,17 +331,14 @@ instance AutoEnvDeltaList a => AutoEnvDelta [a] where
          divideDEnergyList
          (\(x, ys) ->
             showLineDelta x ++ " = " ++
-            maybe [heart] (concatMap (("\n"++) . formatElement)) ys)
-         (\mys ->
-            case mys of
-               Just ys -> "[ " ++ L.intercalate ", " (map formatElement ys) ++ " ]"
-               Nothing -> [heart])
+            formatMaybe (concatMap (("\n"++) . formatElement)) ys)
+         (formatMaybe $ \ys ->
+            "[ " ++ L.intercalate ", " (map formatElement ys) ++ " ]")
          (lookupFormat formatList)
 
 
 instance AutoEnvList Double where
-   formatStContList (Just ys) = concatMap (printf "%.6f    ") ys
-   formatStContList Nothing = [heart]
+   formatStContList = formatMaybe (concatMap (printf "%.6f    "))
    formatList = show
    divideEnergyList = zipWith (/)
 
@@ -355,22 +354,19 @@ instance AutoEnvDeltaList Double where
 -}
 
 instance (Integral a, Show a) => AutoEnvList (Ratio a) where
-   formatStContList (Just ys) = unwords $ map show ys
-   formatStContList Nothing = [heart]
+   formatStContList = formatMaybe (unwords . map show)
    formatList = show
    divideEnergyList = zipWith (/)
 
 instance AutoEnvList Char where
-   formatStContList (Just ys) = ys
-   formatStContList Nothing = "+"
+   formatStContList = fromMaybe "+"
    formatList = id
    divideEnergyList x y = "(" ++ x ++ ")/(" ++ y ++ ")"
 
 instance AutoEnvList LatexString where
    formatAssignList (x, ys) = showLineLatex x ++ " = " ++ formatStContList ys
 
-   formatStContList (Just ys) = unLatexString (head ys)
-   formatStContList Nothing = "+"
+   formatStContList = maybe "+" (unLatexString . head)
    formatList = unLatexString . head
    showListNode = showLatexNode
    divideEnergyList =
@@ -392,8 +388,7 @@ showLatexNode rec st content (n@(Idx.SecNode _sec nid), ty) =
 
 
 instance (Eq a, ToIndex a) => AutoEnvList (Term a) where
-   formatStContList (Just ys) = showEqTerms ys
-   formatStContList Nothing = [heart]
+   formatStContList = formatMaybe showEqTerms
    formatList = showEqTerms
    divideEnergyList = zipWith (\x y -> simplify $ x &/ y)
 
@@ -456,8 +451,7 @@ formatAssignSignal (x, tc) = showLine x ++ " = " ++ formatStContSignal tc
 formatStContSignal ::
    (DispApp s, TDisp t, SDisplay v, D.Storage v d, Ord d, Disp d) =>
    Maybe (TC s t (Data v d)) -> String
-formatStContSignal (Just ys) = sdisp ys
-formatStContSignal Nothing = [heart]
+formatStContSignal = formatMaybe sdisp
 
 instance
    (SDisplay v, D.Storage v a, Disp a, Ord a) =>
