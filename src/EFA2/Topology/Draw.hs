@@ -238,10 +238,10 @@ makeLookup ::
 makeLookup makeIdx mp =
    \rec uid vid -> M.lookup (makeIdx rec uid vid) mp
 
-checkedLookupFormat ::
+lookupFormat ::
    (Ord idx, Show idx) =>
-   String -> (a -> String) -> M.Map idx a -> idx -> String
-checkedLookupFormat _msg format dt k =
+   (a -> String) -> M.Map idx a -> idx -> String
+lookupFormat format dt k =
    case M.lookup k dt of
       Nothing -> [heart]
       Just x -> format x
@@ -318,7 +318,7 @@ instance AutoEnvList a => AutoEnv [a] where
                    (lookupEnergy rec a b)
                    (lookupEnergy rec b a))
              formatAssignList
-             (checkedLookupFormat "envAbsList" formatList dt)
+             (lookupFormat formatList dt)
              (showListNode r st formatStContList)
 
 
@@ -333,7 +333,7 @@ instance AutoEnvDeltaList a => AutoEnvDelta [a] where
             case mys of
                Just ys -> "[ " ++ L.intercalate ", " (map formatElement ys) ++ " ]"
                Nothing -> [heart])
-         (checkedLookupFormat "envDeltaArg" formatList)
+         (lookupFormat formatList)
 
 
 instance AutoEnvList Double where
