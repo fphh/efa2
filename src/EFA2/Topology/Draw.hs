@@ -1,3 +1,6 @@
+-- these extension are needed for computing Eta in envAbsSignal, envDeltaSignal
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 module EFA2.Topology.Draw where
 
 import EFA2.Solver.Equation
@@ -17,8 +20,10 @@ import qualified EFA2.Signal.Data as D
 import EFA2.Report.Signal (SDisplay, sdisp)
 import EFA2.Report.Typ (TDisp)
 import EFA2.Report.Base (Disp)
-import EFA2.Signal.Signal (TC, DispApp)
+import EFA2.Signal.Signal (TC, DispApp, Arith, (.-), (.+), (./), (.*))
 import EFA2.Signal.Data (Data)
+import EFA2.Signal.Base (BSum, BProd)
+import EFA2.Signal.Typ (TSum, TProd)
 
 import Data.GraphViz (
           runGraphvizCanvas,
@@ -348,7 +353,7 @@ instance AutoEnvDeltaList a => AutoEnvDelta [a] where
           formatCont = formatMaybe (concatMap (("\n"++) . formatElement))
       in  Env rec
              (\a b -> formatCont $ lookupDEnergy a b)
-             (\a b -> formatCont $ makeLookup rec Idx.DX dx a b)
+             (makeFormat rec Idx.DX dx)
              (\a b ->
                 formatCont $
                 liftM4 divideDEnergyList
@@ -447,27 +452,30 @@ class AutoEnvSignal a where
       (DispApp s, TDisp t) =>
       Maybe (TC s t a) -> String
    envAbsSignal ::
-      (DispApp s, TDisp t) =>
+      (DispApp s, s ~ Arith s s, TDisp t, TProd t t t) =>
       Interp.Envs SingleRecord (TC s t a) -> Env
 
 instance
-   (SDisplay v, D.Storage v a, Disp a, Ord a) =>
+   (SDisplay v, D.Storage v a, Disp a, Ord a, BProd a a, D.ZipWith v) =>
       AutoEnvSignal (Data v a) where
    formatStContSignal = formatMaybe sdisp
    envAbsSignal
-         (Interp.Envs (SingleRecord r) e _de _p _dp fn _dn dt x _dx _v st) =
-      Env r
-         (makeFormat r Idx.Energy e)
-         (makeFormat r Idx.X x)
-         (makeFormat r Idx.FEta $
-          M.intersectionWith ($) fn $
-          M.mapKeys (\(Idx.Energy rec uid vid) -> Idx.FEta rec uid vid) e)
-         (\(v, ys) -> showLine v ++ " = " ++ ys)
-         (lookupFormat sdisp dt)
-         (showNode r st formatStContSignal)
+         (Interp.Envs (SingleRecord rec) e _de _p _dp _fn _dn dt x _dx _v st) =
+      let lookupEnergy = makeLookup rec Idx.Energy e
+      in  Env rec
+             (\a b -> formatStCont $ lookupEnergy a b)
+             (makeFormat rec Idx.X x)
+             (\a b ->
+                formatStCont $
+                liftM2 (./)
+                   (lookupEnergy a b)
+                   (lookupEnergy b a))
+             (\(v, ys) -> showLine v ++ " = " ++ ys)
+             (lookupFormat sdisp dt)
+             (showNode rec st formatStContSignal)
 
 instance
-   (DispApp s, TDisp t, AutoEnvSignal a) =>
+   (DispApp s, s ~ Arith s s, TDisp t, TProd t t t, AutoEnvSignal a) =>
       AutoEnv (TC s t a) where
    formatStCont = formatStContSignal
    envAbs = envAbsSignal
@@ -475,26 +483,33 @@ instance
 
 class AutoEnvSignal a => AutoEnvDeltaSignal a where
    envDeltaSignal ::
-      (DispApp s, TDisp t) =>
+      (DispApp s, s ~ Arith s s, TDisp t, TSum t t t, TProd t t t) =>
       Interp.Envs SingleRecord (TC s t a) -> Env
 
 instance
-   (SDisplay v, D.Storage v a, Disp a, Ord a) =>
+   (SDisplay v, D.Storage v a, Disp a, Ord a, BSum a, BProd a a, D.ZipWith v) =>
       AutoEnvDeltaSignal (Data v a) where
    envDeltaSignal
-         (Interp.Envs (SingleRecord r) _e de _p _dp _fn dn dt _x dx _v st) =
-      Env r
-         (makeFormat r Idx.DEnergy de)
-         (makeFormat r Idx.DX dx)
-         (makeFormat r Idx.DEta $
-          M.intersectionWith ($) dn $
-          M.mapKeys (\(Idx.DEnergy rec uid vid) -> Idx.DEta rec uid vid) de)
-         (\(v, ys) -> showLineDelta v ++ " = " ++ ys)
-         (lookupFormat sdisp dt)
-         (showNode r st formatStContSignal)
+         (Interp.Envs (SingleRecord rec) e de _p _dp _fn _dn dt _x dx _v st) =
+      let lookupEnergy = makeLookup rec Idx.Energy e
+          lookupDEnergy = makeLookup rec Idx.DEnergy de
+      in  Env rec
+             (\a b -> formatStCont $ lookupDEnergy a b)
+             (makeFormat rec Idx.DX dx)
+             (\a b ->
+                formatStCont $
+                liftM4
+                   (\ea eb dea deb ->
+                      (dea.*eb .- ea.*deb)./((eb.+deb).*eb))
+                   (lookupEnergy a b) (lookupEnergy b a)
+                   (lookupDEnergy a b) (lookupDEnergy b a))
+             (\(v, ys) -> showLineDelta v ++ " = " ++ ys)
+             (lookupFormat sdisp dt)
+             (showNode rec st formatStContSignal)
 
 instance
-   (DispApp s, TDisp t, AutoEnvDeltaSignal a) =>
+   (DispApp s, s ~ Arith s s, TDisp t, TSum t t t, TProd t t t,
+    AutoEnvDeltaSignal a) =>
       AutoEnvDelta (TC s t a) where
    envDelta = envDeltaSignal
 
