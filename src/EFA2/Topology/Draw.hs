@@ -253,9 +253,8 @@ draw :: SequFlowGraph -> Env a -> IO ()
 draw g
    (Env rec lookupEnergy lookupX lookupEta formatAssign tshow nshow) =
       printGraph g (Just rec) tshow nshow eshow
-  where eshow = map formatAssign . mkLst
-
-        mkLst (Edge uid vid, l) =
+  where eshow (Edge uid vid, l) =
+           map formatAssign $
            case edgeType l of
               OriginalEdge ->
                  (ELine uid vid, lookupEnergy uid vid) :
