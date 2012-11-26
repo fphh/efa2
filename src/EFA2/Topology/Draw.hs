@@ -284,6 +284,7 @@ drawDeltaTopology topo = draw topo . envDelta
 
 class AutoEnv a where
    envAbs :: Interp.Envs SingleRecord a -> Env a
+   formatStCont :: Maybe a -> String
 
 class AutoEnv a => AutoEnvDelta a where
    envDelta :: Interp.Envs SingleRecord a -> Env a
@@ -307,6 +308,7 @@ class AutoEnvList a => AutoEnvDeltaList a where
 
 instance AutoEnvList a => AutoEnv [a] where
    envAbs = envAbsList
+   formatStCont = formatStContList
 
 envAbsListGen ::
    (AutoEnvList a) =>
@@ -433,18 +435,17 @@ showNodeType = show
 
 
 class AutoEnvSignal a where
+   formatStContSignal ::
+      (DispApp s, TDisp t) =>
+      Maybe (TC s t a) -> String
    envAbsSignal ::
       (DispApp s, TDisp t) =>
       Interp.Envs SingleRecord (TC s t a) -> Env (TC s t a)
 
-formatStContSignal ::
-   (DispApp s, TDisp t, SDisplay v, D.Storage v d, Ord d, Disp d) =>
-   Maybe (TC s t (Data v d)) -> String
-formatStContSignal = formatMaybe sdisp
-
 instance
    (SDisplay v, D.Storage v a, Disp a, Ord a) =>
       AutoEnvSignal (Data v a) where
+   formatStContSignal = formatMaybe sdisp
    envAbsSignal
          (Interp.Envs (SingleRecord r) e _de _p _dp fn _dn dt x _dx _v st) =
       Env r
@@ -460,6 +461,7 @@ instance
 instance
    (DispApp s, TDisp t, AutoEnvSignal a) =>
       AutoEnv (TC s t a) where
+   formatStCont = formatStContSignal
    envAbs = envAbsSignal
 
 
