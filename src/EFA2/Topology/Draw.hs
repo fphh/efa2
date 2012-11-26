@@ -220,13 +220,13 @@ showLineDelta (XLine u v) = "dx_" ++ showSecNode u ++ "_" ++ showSecNode v
 showLineDelta (NLine u v) = "dn_" ++ showSecNode u ++ "_" ++ showSecNode v
 
 
-data Env a =
+data Env =
    Env {
       recordNumber :: Idx.Record,
-      lookupEnergy_ :: Idx.SecNode -> Idx.SecNode -> Maybe a,
-      lookupX_      :: Idx.SecNode -> Idx.SecNode -> Maybe a,
-      lookupEta_    :: Idx.SecNode -> Idx.SecNode -> Maybe a,
-      formatAssign_ :: (Line, Maybe a) -> String,
+      formatEnergy_ :: Idx.SecNode -> Idx.SecNode -> String,
+      formatX_      :: Idx.SecNode -> Idx.SecNode -> String,
+      formatEta_    :: Idx.SecNode -> Idx.SecNode -> String,
+      formatAssign_ :: (Line, String) -> String,
       showTime :: Idx.DTime -> String,
       showNode_ :: Topo.LNode -> String
    }
@@ -239,6 +239,14 @@ makeLookup ::
 makeLookup rec makeIdx mp =
    \uid vid -> M.lookup (makeIdx rec uid vid) mp
 
+makeFormat ::
+   (Ord idx, AutoEnv a) =>
+   Idx.Record ->
+   (Idx.Record -> Idx.SecNode -> Idx.SecNode -> idx) -> M.Map idx a ->
+   Idx.SecNode -> Idx.SecNode -> String
+makeFormat rec makeIdx mp =
+   \uid vid -> formatStCont $ makeLookup rec makeIdx mp uid vid
+
 formatMaybe :: (a -> String) -> Maybe a -> String
 formatMaybe = maybe [heart]
 
@@ -249,27 +257,27 @@ lookupFormat format dt k =
    formatMaybe format $ M.lookup k dt
 
 
-draw :: SequFlowGraph -> Env a -> IO ()
+draw :: SequFlowGraph -> Env -> IO ()
 draw g
-   (Env rec lookupEnergy lookupX lookupEta formatAssign tshow nshow) =
+   (Env rec formatEnergy formatX formatEta formatAssign tshow nshow) =
       printGraph g (Just rec) tshow nshow eshow
   where eshow (Edge uid vid, l) =
            map formatAssign $
            case edgeType l of
               OriginalEdge ->
-                 (ELine uid vid, lookupEnergy uid vid) :
-                 (XLine uid vid, lookupX uid vid) :
-                 (NLine uid vid, lookupEta uid vid) :
-                 (XLine vid uid, lookupX vid uid) :
-                 (ELine vid uid, lookupEnergy vid uid) :
+                 (ELine uid vid, formatEnergy uid vid) :
+                 (XLine uid vid, formatX uid vid) :
+                 (NLine uid vid, formatEta uid vid) :
+                 (XLine vid uid, formatX vid uid) :
+                 (ELine vid uid, formatEnergy vid uid) :
                  []
               InnerStorageEdge ->
-                 (ELine vid uid, lookupEnergy vid uid) :
+                 (ELine vid uid, formatEnergy vid uid) :
                  []
               IntersectionEdge ->
-                 (ELine uid vid, lookupEnergy uid vid) :
-                 (XLine uid vid, lookupX uid vid) :
-                 (ELine vid uid, lookupEnergy vid uid) :
+                 (ELine uid vid, formatEnergy uid vid) :
+                 (XLine uid vid, formatX uid vid) :
+                 (ELine vid uid, formatEnergy vid uid) :
                  []
 
 drawTopology ::
@@ -282,18 +290,18 @@ drawDeltaTopology topo = draw topo . envDelta
 
 
 class AutoEnv a where
-   envAbs :: Interp.Envs SingleRecord a -> Env a
+   envAbs :: Interp.Envs SingleRecord a -> Env
    formatStCont :: Maybe a -> String
 
 class AutoEnv a => AutoEnvDelta a where
-   envDelta :: Interp.Envs SingleRecord a -> Env a
+   envDelta :: Interp.Envs SingleRecord a -> Env
 
 
 class AutoEnvList a where
-   envAbsList :: Interp.Envs SingleRecord [a] -> Env [a]
+   envAbsList :: Interp.Envs SingleRecord [a] -> Env
    envAbsList =
       envAbsListGen
-         (\(x, ys) -> showLine x ++ " = " ++ formatStContList ys)
+         (\(x, ys) -> showLine x ++ " = " ++ ys)
          showNode
 
    formatStContList :: Maybe [a] -> String
@@ -311,18 +319,19 @@ instance AutoEnvList a => AutoEnv [a] where
 
 envAbsListGen ::
    (AutoEnvList a) =>
-   ((Line, Maybe [a]) -> String) ->
+   ((Line, String) -> String) ->
    (Idx.Record -> StorageMap [a] ->
     (Maybe [a] -> String) ->
     Topo.LNode -> String) ->
-   Interp.Envs SingleRecord [a] -> Env [a]
+   Interp.Envs SingleRecord [a] -> Env
 envAbsListGen formatAssignList showListNode
       (Interp.Envs (SingleRecord rec) e _de _p _dp _fn _dn dt x _dx _v st) =
    let lookupEnergy = makeLookup rec Idx.Energy e
    in  Env rec
-          lookupEnergy
-          (makeLookup rec Idx.X x)
+          (\a b -> formatStCont $ lookupEnergy a b)
+          (makeFormat rec Idx.X x)
           (\a b ->
+             formatStCont $
              liftM2 divideEnergyList
                 (lookupEnergy a b)
                 (lookupEnergy b a))
@@ -336,16 +345,16 @@ instance AutoEnvDeltaList a => AutoEnvDelta [a] where
          (Interp.Envs (SingleRecord rec) e de _p _dp _fn _dn dt _x dx _v st) =
       let lookupEnergy = makeLookup rec Idx.Energy e
           lookupDEnergy = makeLookup rec Idx.DEnergy de
+          formatCont = formatMaybe (concatMap (("\n"++) . formatElement))
       in  Env rec
-             lookupDEnergy
-             (makeLookup rec Idx.DX dx)
+             (\a b -> formatCont $ lookupDEnergy a b)
+             (\a b -> formatCont $ makeLookup rec Idx.DX dx a b)
              (\a b ->
+                formatCont $
                 liftM4 divideDEnergyList
                    (lookupEnergy a b) (lookupEnergy b a)
                    (lookupDEnergy a b) (lookupDEnergy b a))
-             (\(x, ys) ->
-                showLineDelta x ++ " = " ++
-                formatMaybe (concatMap (("\n"++) . formatElement)) ys)
+             (\(x, ys) -> showLineDelta x ++ " = " ++ ys)
              (lookupFormat formatList dt)
              (showNode rec st $
               formatMaybe $ \ys ->
@@ -382,7 +391,7 @@ instance AutoEnvList Char where
 instance AutoEnvList LatexString where
    envAbsList =
       envAbsListGen
-         (\(x, ys) -> showLineLatex x ++ " = " ++ formatStContList ys)
+         (\(x, ys) -> showLineLatex x ++ " = " ++ ys)
          showLatexNode
 
    formatStContList = maybe "+" (unLatexString . head)
@@ -439,7 +448,7 @@ class AutoEnvSignal a where
       Maybe (TC s t a) -> String
    envAbsSignal ::
       (DispApp s, TDisp t) =>
-      Interp.Envs SingleRecord (TC s t a) -> Env (TC s t a)
+      Interp.Envs SingleRecord (TC s t a) -> Env
 
 instance
    (SDisplay v, D.Storage v a, Disp a, Ord a) =>
@@ -448,12 +457,12 @@ instance
    envAbsSignal
          (Interp.Envs (SingleRecord r) e _de _p _dp fn _dn dt x _dx _v st) =
       Env r
-         (makeLookup r Idx.Energy e)
-         (makeLookup r Idx.X x)
-         (makeLookup r Idx.FEta $
+         (makeFormat r Idx.Energy e)
+         (makeFormat r Idx.X x)
+         (makeFormat r Idx.FEta $
           M.intersectionWith ($) fn $
           M.mapKeys (\(Idx.Energy rec uid vid) -> Idx.FEta rec uid vid) e)
-         (\(v, tc) -> showLine v ++ " = " ++ formatStContSignal tc)
+         (\(v, ys) -> showLine v ++ " = " ++ ys)
          (lookupFormat sdisp dt)
          (showNode r st formatStContSignal)
 
@@ -467,7 +476,7 @@ instance
 class AutoEnvSignal a => AutoEnvDeltaSignal a where
    envDeltaSignal ::
       (DispApp s, TDisp t) =>
-      Interp.Envs SingleRecord (TC s t a) -> Env (TC s t a)
+      Interp.Envs SingleRecord (TC s t a) -> Env
 
 instance
    (SDisplay v, D.Storage v a, Disp a, Ord a) =>
@@ -475,12 +484,12 @@ instance
    envDeltaSignal
          (Interp.Envs (SingleRecord r) _e de _p _dp _fn dn dt _x dx _v st) =
       Env r
-         (makeLookup r Idx.DEnergy de)
-         (makeLookup r Idx.DX dx)
-         (makeLookup r Idx.DEta $
+         (makeFormat r Idx.DEnergy de)
+         (makeFormat r Idx.DX dx)
+         (makeFormat r Idx.DEta $
           M.intersectionWith ($) dn $
           M.mapKeys (\(Idx.DEnergy rec uid vid) -> Idx.DEta rec uid vid) de)
-         (\ (v, ys) -> showLineDelta v ++ " = " ++ formatStContSignal ys)
+         (\(v, ys) -> showLineDelta v ++ " = " ++ ys)
          (lookupFormat sdisp dt)
          (showNode r st formatStContSignal)
 
@@ -488,6 +497,7 @@ instance
    (DispApp s, TDisp t, AutoEnvDeltaSignal a) =>
       AutoEnvDelta (TC s t a) where
    envDelta = envDeltaSignal
+
 
 
 -------------------------------------------------------------------------------------------
