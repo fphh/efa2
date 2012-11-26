@@ -454,7 +454,7 @@ instance
           M.intersectionWith ($) fn $
           M.mapKeys (\(Idx.Energy rec uid vid) -> Idx.FEta rec uid vid) e)
          (\(v, tc) -> showLine v ++ " = " ++ formatStContSignal tc)
-         (\dtimeIdx -> formatStContSignal $ M.lookup dtimeIdx dt)
+         (lookupFormat sdisp dt)
          (showNode r st formatStContSignal)
 
 instance
@@ -481,7 +481,7 @@ instance
           M.intersectionWith ($) dn $
           M.mapKeys (\(Idx.DEnergy rec uid vid) -> Idx.DEta rec uid vid) de)
          (\ (v, ys) -> showLineDelta v ++ " = " ++ formatStContSignal ys)
-         (\dtimeIdx -> formatStContSignal $ M.lookup dtimeIdx dt)
+         (lookupFormat sdisp dt)
          (showNode r st formatStContSignal)
 
 instance
