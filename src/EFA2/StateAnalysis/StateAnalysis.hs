@@ -33,8 +33,8 @@ import EFA2.Topology.TopologyData
 import EFA2.Utils.Utils (mapFromSet)
 
 import qualified Data.List.Key as Key
-import qualified Data.List.HT as LH
 import qualified Data.Foldable as Fold
+import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Map as M
 import qualified Data.Set as S
 import qualified Data.FingerTree.PSQueue as PSQ
@@ -43,6 +43,7 @@ import Data.FingerTree.PSQueue (PSQ)
 import Data.PriorityQueue.FingerTree (PQueue)
 import Data.Traversable (sequenceA)
 import Data.Monoid (mappend)
+import Data.NonEmpty ((!:))
 import Control.Monad (liftM2, foldM, guard)
 import Control.Functor.HT (void)
 import Data.Ord.HT (comparing)
@@ -291,8 +292,8 @@ Return the value that is associated with the shortest list.
 Lists are only evaluated as far as necessary
 for finding the list with minimum length.
 -}
-shortestList :: [ShortestList a b] -> b
-shortestList = shortestListValue . foldl1 shorterList
+shortestList :: NonEmpty.T [] (ShortestList a b) -> b
+shortestList = shortestListValue . NonEmpty.foldl1 shorterList
 
 
 {- |
@@ -301,22 +302,22 @@ that give the minimal number of possibilities when merged.
 -}
 mergeMinimizingClusterPairs ::
    CountTopology ->
-   [Cluster] ->
-   Either [FlowTopology] [Cluster]
-mergeMinimizingClusterPairs topo partition0 =
-   case partition0 of
-      [] -> error "empty list of partitions"
-      [c] ->
+   NonEmpty.T [] Cluster ->
+   Either [FlowTopology] (NonEmpty.T [] Cluster)
+mergeMinimizingClusterPairs topo (NonEmpty.Cons p ps) =
+   case NonEmpty.fetch ps of
+      Nothing ->
          Left $
          map (\es -> Gr.nmap fst $ Gr.insEdgeSet es topo) $
-         clusterEdges c
-      _ ->
+         clusterEdges p
+      Just partition0 ->
          Right $
          shortestList $ do
-            (c0, partition1) <- LH.removeEach partition0
-            (c1, partition2) <- LH.removeEach partition1
+            (c0, partition1) <-
+               NonEmpty.flatten $ NonEmpty.removeEach $ p !: partition0
+            (c1, partition2) <- NonEmpty.removeEach partition1
             let c = mergeCluster topo c0 c1
-            return $ ShortestList (clusterEdges c) (c : partition2)
+            return $ ShortestList (clusterEdges c) (c !: partition2)
 
 {- |
 Merge the cluster with the minimal number of possibilities
@@ -329,27 +330,27 @@ That is, our selection strategy tends to produce connected clusters.
 -}
 mergeMinimizingCluster ::
    CountTopology ->
-   [Cluster] ->
-   Either [FlowTopology] [Cluster]
-mergeMinimizingCluster topo partition0 =
-   case partition0 of
-      [] -> error "empty list of partitions"
-      [c] ->
+   NonEmpty.T [] Cluster ->
+   Either [FlowTopology] (NonEmpty.T [] Cluster)
+mergeMinimizingCluster topo (NonEmpty.Cons p ps) =
+   case NonEmpty.fetch ps of
+      Nothing ->
          Left $
          map (\es -> Gr.nmap fst $ Gr.insEdgeSet es topo) $
-         clusterEdges c
-      _ ->
+         clusterEdges p
+      Just partition0 ->
          let (c0,partition1) =
                 shortestList $
-                map (\(c,cs) -> ShortestList (clusterEdges c) (c,cs)) $
-                LH.removeEach partition0
+                fmap (\(c,cs) -> ShortestList (clusterEdges c) (c,cs)) $
+                NonEmpty.flatten $
+                NonEmpty.removeEach $ p !: partition0
          in  Right $
              shortestList $
-             map
+             fmap
                 (\(c,cs) ->
                    let cm = mergeCluster topo c0 c
-                   in  ShortestList (clusterEdges cm) (cm:cs)) $
-             LH.removeEach partition1
+                   in  ShortestList (clusterEdges cm) (cm!:cs)) $
+             NonEmpty.removeEach partition1
 
 
 type LNEdge = Gr.Edge Idx.Node
@@ -391,14 +392,14 @@ clusteringMinimizing :: Topology -> [FlowTopology]
 clusteringMinimizing topo =
    let (cleanTopo, es) = splitNodesEdges topo
    in  untilLeft (mergeMinimizingClusterPairs cleanTopo) $
-       emptyCluster cleanTopo :
+       emptyCluster cleanTopo !:
           map (singletonCluster cleanTopo) es
 
 clustering :: Topology -> [FlowTopology]
 clustering topo =
    let (cleanTopo, es) = splitNodesEdges topo
    in  untilLeft (mergeMinimizingCluster cleanTopo) $
-       emptyCluster cleanTopo :
+       emptyCluster cleanTopo !:
           map (singletonCluster cleanTopo) es
 
 advanced :: Topology -> [FlowTopology]
