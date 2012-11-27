@@ -10,6 +10,7 @@ module EFA2.Topology.EfaGraph (
    LEdge,
 
    reverseEdge,
+   edgeFst, edgeSnd,
    ixmap, nmap, emap,
    empty,
    union,
@@ -42,7 +43,7 @@ module EFA2.Topology.EfaGraph (
    mapGraph,
    ) where
 
--- import qualified Data.Graph.Inductive as IG
+-- imaport qualified Data.Graph.Inductive as IG
 import EFA2.Utils.Utils (mapFromSet, differenceMapSet, intersectionMapSet)
 
 import qualified Data.Set as S
@@ -103,6 +104,10 @@ instance (QC.Arbitrary n) => QC.Arbitrary (Edge n) where
 
 reverseEdge :: Edge node -> Edge node
 reverseEdge (Edge x y) = Edge y x
+
+edgeFst, edgeSnd :: Edge node -> node
+edgeFst (Edge x _) = x
+edgeSnd (Edge _ y) = y
 
 type LEdge n label = (Edge n, label)
 

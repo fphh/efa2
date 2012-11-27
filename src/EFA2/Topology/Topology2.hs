@@ -26,8 +26,8 @@ import Debug.Trace
 
 
 
-type ProvEnv s a = [(Env.Index, Variable s a)]
--- type ProvEnv s a = M.Map Env.Index (Variable s a)
+-- type ProvEnv s a = [(Env.Index, Variable s a)]
+type ProvEnv s a = M.Map Env.Index (Variable s a)
 
 -- map bevorzugen
 
@@ -84,8 +84,8 @@ makeVar idxf nid nid' =
 getVar :: Env.Index -> ExpWithVars s a
 getVar idx = do
   var <- globalVariable
-  let -- env = M.singleton idx var
-      env = [(idx, var)]
+  let env = M.singleton idx var
+      --env = [(idx, var)]
   return (env, fromVariable var)
 
 power :: SecNode -> SecNode -> ExpWithVars s a
@@ -152,8 +152,8 @@ solveSystem ::
 solveSystem given g = runST $ do
   let EquationSystem sys = makeAllEquations g
 
-  (vars, eqs) <- sys
-  let varmap = M.fromList vars
+  (varmap, eqs) <- sys
+  let -- varmap = M.fromList vars
       f (var, val) =
         case (M.lookup var varmap) of
              Just v -> varToExpSys v .= constToExpSys val
@@ -161,7 +161,7 @@ solveSystem given g = runST $ do
       EquationSystem gssys = mconcat $ map f given
 
   (gsvars, gs) <- gssys
-  let allVars = vars ++ gsvars
+  let allVars = M.toList $ M.union varmap gsvars
 
   trace (show $ length allVars) $ solve (gs >> eqs)
 
