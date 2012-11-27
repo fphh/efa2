@@ -8,7 +8,8 @@ import EFA2.StateAnalysis.StateAnalysis
 import EFA2.Topology.Draw
 
 import EFA2.Topology.TopologyData as TD
-import EFA2.Topology.Topology2
+--import EFA2.Topology.Topology2
+import EFA2.Topology.EquationGenerator
 import qualified EFA2.Topology.Flow as Flow
 import EFA2.Signal.Index as Idx
 import EFA2.Topology.EfaGraph as Gr
@@ -47,43 +48,48 @@ topoDreibein = mkGraph (makeNodes nodes) (makeSimpleEdges edges)
 
 seqTopo :: SequFlowGraph
 seqTopo = mkSeqTopo (select sol states)
-  where sol = advanced topoDreibein  -- ehemals stateAnalysis
-        states = [4]
+  where sol = bruteForce topoDreibein  -- ehemals stateAnalysis
+        states = [1]
         select ts = map (ts!!)
         mkSeqTopo = Flow.mkSequenceTopology
                     . Flow.genSectionTopology
                     . SequData
 
 given :: [(Env.Index, Double)]
-given = [ (mkVar (Idx.DTime (Idx.Record Absolute) (Section (-1))), 1.0),
-          (mkVar (Idx.DTime (Idx.Record Absolute) (Section 0)), 1.2),
+given = [ (mkVar (Idx.DTime (Idx.Record Absolute) initSection), 1.0),
+          (mkVar (Idx.DTime (Idx.Record Absolute) (Section 0)), 1.0),
           --(mkVar (Idx.DTime (Idx.Record Absolute) (Section 1)), 1.0),
           --(mkVar (Idx.DTime (Idx.Record Absolute) (Section 2)), 1.0),
           --(mkVar (Idx.DTime (Idx.Record Absolute) (Section 3)), 1.0),
           --(mkVar (Idx.DTime (Idx.Record Absolute) (Section 4)), 1.0),
 
 
-          (makeVar Idx.Power (Idx.SecNode initSection (Idx.Node 3))
-                             (Idx.SecNode initSection (Idx.Node (-1))), 4.0),
+          --(makeVar Idx.Power (Idx.SecNode initSection (Idx.Node 3))
+           --                  (Idx.SecNode initSection (Idx.Node (-1))), 4.0),
 
           (makeVar Idx.Power (Idx.SecNode (Section 0) (Idx.Node 3))
                              (Idx.SecNode (Section 0) (Idx.Node 2)), 4.0),
 
           (makeVar Idx.FEta (Idx.SecNode (Section 0) (Idx.Node 3))
-                            (Idx.SecNode (Section 0) (Idx.Node 2)), 0.5),
+                            (Idx.SecNode (Section 0) (Idx.Node 2)), 0.4),
 
-          (makeVar Idx.FEta (Idx.SecNode initSection (Idx.Node (-1)))
-                            (Idx.SecNode initSection (Idx.Node 3)), 0.4) ]
+          (makeVar Idx.X (Idx.SecNode (Section 0) (Idx.Node 2))
+                         (Idx.SecNode (Section 0) (Idx.Node 0)), 0.32),
+
+          (makeVar Idx.Power (Idx.SecNode (Section 0) (Idx.Node 1))
+                             (Idx.SecNode (Section 0) (Idx.Node 2)), 2.0),
+
+
+          (makeVar Idx.FEta (Idx.SecNode (Section 0) (Idx.Node 1))
+                            (Idx.SecNode (Section 0) (Idx.Node 2)), 0.4) ]
 
 
 main :: IO ()
-main = do
-  
+main = do 
+
   --let sys = makeAllEquations seqTopo
   let env = solveSystem given seqTopo
   -- drawTopologySimple seqTopo
 
-  print (dtimeMap env)
-
-  print (powerMap env)
   drawTopology seqTopo env
+

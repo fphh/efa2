@@ -1,24 +1,34 @@
 -- {-# LANGUAGE FlexibleInstances #-}
 -- {-# LANGUAGE RankNTypes #-}
 
-module EFA2.Topology.Topology2 where
+module EFA2.Topology.EquationGenerator where
 
 import qualified Data.Map as M
 import qualified Data.List as L
+import qualified Data.Set as S
 
 import EFA2.Signal.Index as Idx
 import EFA2.Topology.EfaGraph as Gr
 
-import EFA2.Topology.TopologyData (SequFlowGraph)
+import EFA2.Topology.TopologyData (SequFlowGraph, isOriginalEdge)
 import EFA2.Solver.Equation
-import UniqueLogic.ST.Expression as Exp
+import UniqueLogic.ST.Expression as Expr
 import UniqueLogic.ST.System as Sys
+import UniqueLogic.ST.Rule as R
 
 import Control.Monad.ST
 import Control.Monad
 
+-- Unterschied strict vs lazy?
+--import Control.Monad.Writer
+import Control.Monad.State
+
+import Control.Applicative
+
 import Data.Monoid
 import Data.Maybe
+import Data.Ord (comparing)
+import Data.Traversable (traverse)
 
 import EFA2.Interpreter.Env as Env
 
@@ -34,9 +44,11 @@ type ProvEnv s a = M.Map Env.Index (Variable s a)
 -- module umbenennen in gleichungsgenerator
 
 -- zu Newtype machen und Num instanz und provenv als writer ++ symbolisch darstellung von gleichungen
-type ExpWithVars s a = ST s (ProvEnv s a, T s a)
+--newtype ExprWithVars s a = ExprWithVars (ST s (ProvEnv s a, T s a))
 
-type SysWithVars s a = ST s (ProvEnv s a, M s ())
+newtype ExprWithVars s a = ExprWithVars (StateT (ProvEnv s a) (ST s) (T s a))
+type SysWithVars s a = StateT (ProvEnv s a) (ST s) (M s ())
+
 
 -- Gleichungen mitloggen
 newtype EquationSystem s a = EquationSystem (SysWithVars s a)
@@ -44,32 +56,33 @@ newtype EquationSystem s a = EquationSystem (SysWithVars s a)
 newtype GivenEquations s a = GivenEquations (ST s (M s ()))
 
 instance Monoid (EquationSystem s a) where
-         mempty = EquationSystem $ return (mempty, return ())
-         mappend (EquationSystem x) (EquationSystem y) = EquationSystem $ do
-           (xs, m) <- x
-           (ys, n) <- y
-           return (mappend xs ys, do { m; n })
+         mempty = EquationSystem $ return (return ())
+         mappend (EquationSystem x) (EquationSystem y) =
+           EquationSystem $ liftM2 (>>) x y
 
+-- Kann man hier mit Applicative und Functor noch was schoenen?
+-- Scheitert wohl daran, dass beim fmap das f :: a -> T s a sein muesste?
+instance (Num a, Fractional a) => Num (ExprWithVars s a) where
+         (ExprWithVars xs) * (ExprWithVars ys) = ExprWithVars $ liftM2 (*) xs ys
+         --(ExprWithVars xs) * (ExprWithVars ys) = ExprWithVars $ liftM2 (fromRule3 R.mul) xs ys
 
+         (ExprWithVars xs) + (ExprWithVars ys) = ExprWithVars $ liftM2 (+) xs ys
+         --(ExprWithVars xs) + (ExprWithVars ys) = ExprWithVars $ liftM2 (fromRule3 R.add) xs ys
 
-
-
-(.=) :: (Eq a) => ExpWithVars s a -> ExpWithVars s a -> EquationSystem s a
-xs .= ys = EquationSystem $ 
-  xs >>= \(vs, x) -> ys >>= \(us, y) -> return (mappend vs us, x =:= y)
-
--- wird zu liftM2 (*)
-(.*) :: (Fractional a) => ExpWithVars s a -> ExpWithVars s a -> ExpWithVars s a
-xs .* ys = xs >>= \(vs, x) -> ys >>= \(us, y) -> return (mappend vs us, x * y)
+         fromInteger = ExprWithVars . return . fromInteger
+         abs (ExprWithVars xs) = ExprWithVars $ liftM abs xs
+         signum (ExprWithVars xs) = ExprWithVars $ liftM signum xs
 
 infix 0 .=
-infix 5 .*
+(.=) :: (Eq a) => ExprWithVars s a -> ExprWithVars s a -> EquationSystem s a
+(ExprWithVars xs) .= (ExprWithVars ys) = EquationSystem $ liftM2 (=:=) xs ys
 
-constToExpSys :: a -> ExpWithVars s a
-constToExpSys c = return (mempty, Exp.constant c)
 
-varToExpSys :: Variable s a -> ExpWithVars s a
-varToExpSys v = return (mempty, fromVariable v)
+constToExprSys :: a -> ExprWithVars s a
+constToExprSys = ExprWithVars . return . Expr.constant
+
+varToExprSys :: Variable s a -> ExprWithVars s a
+varToExprSys = ExprWithVars . return . Expr.fromVariable
 
 recAbs :: Record
 recAbs = Record Absolute
@@ -81,23 +94,29 @@ makeVar ::
 makeVar idxf nid nid' =
   mkVar $ idxf recAbs nid nid'
 
-getVar :: Env.Index -> ExpWithVars s a
-getVar idx = do
-  var <- globalVariable
-  let env = M.singleton idx var
-      --env = [(idx, var)]
-  return (env, fromVariable var)
+getVar :: Env.Index -> ExprWithVars s a
+getVar idx =
+  let oldVar = return . fromVariable
+      newVar = 
+        lift globalVariable
+          >>= \var -> modify (M.insert idx var)
+          >> return (fromVariable var)
+  in ExprWithVars $ gets (M.lookup idx) >>= maybe newVar oldVar 
 
-power :: SecNode -> SecNode -> ExpWithVars s a
+power :: SecNode -> SecNode -> ExprWithVars s a
 power = (getVar .) . makeVar Idx.Power
 
-energy :: SecNode -> SecNode -> ExpWithVars s a
+energy :: SecNode -> SecNode -> ExprWithVars s a
 energy = (getVar .) . makeVar Idx.Energy
 
-eta :: SecNode -> SecNode -> ExpWithVars s a
+eta :: SecNode -> SecNode -> ExprWithVars s a
 eta = (getVar .) . makeVar Idx.FEta
 
-dtime :: Section -> ExpWithVars s a
+xfactor :: SecNode -> SecNode -> ExprWithVars s a
+xfactor = (getVar .) . makeVar Idx.X
+
+
+dtime :: Section -> ExprWithVars s a
 dtime = getVar . mkVar . Idx.DTime recAbs
 
 mwhen :: Monoid a => Bool -> a -> a
@@ -114,6 +133,7 @@ makeAllEquations ::
 makeAllEquations g = mconcat $
   makeEnergyEquations es :
   makeEtaEquations es :
+  makeXEquations g :
   []
   where es = edges g
 
@@ -121,7 +141,7 @@ makeEtaEquations ::
   (Eq a, Fractional a) =>
   [Edge SecNode] -> EquationSystem s a
 makeEtaEquations es = mconcat $ map mkEq es
-  where mkEq (Edge f t) = power t f .= eta f t .* power f t
+  where mkEq (Edge f t) = power t f .= eta f t * power f t
 
 
 makeEnergyEquations ::
@@ -130,8 +150,20 @@ makeEnergyEquations ::
 makeEnergyEquations es = mconcat $ map mkEq es
   where mkEq (Edge f@(SecNode sf nf) t@(SecNode st nt)) =
           mwhen (sf == st)
-            (energy f t .= dt .* power f t) <> (energy t f .= dt .* power t f)
+            (energy f t .= dt * power f t) <> (energy t f .= dt * power t f)
           where dt = dtime sf
+
+makeXEquations ::
+  (Eq a, Fractional a) =>
+  SequFlowGraph -> EquationSystem s a
+makeXEquations g = mconcat $ map mkIns (ins ++ outs)
+  where g' = elfilter isOriginalEdge g
+        ins = M.toList $ fmap (S.toList) $ inEdges g'
+        outs = M.toList $ fmap (S.toList) $ outEdges g'
+        mkIns (n, ns) = 1 .= sum (map (xfactor n) ns)
+        mkOuts (n, ns) = 1 .= sum (map (flip xfactor n) ns)
+           
+
 
 listToEnvs :: [(Env.Index, a)] -> Envs SingleRecord a
 listToEnvs lst = L.foldl' f envs lst 
@@ -142,6 +174,8 @@ listToEnvs lst = L.foldl' f envs lst
           e { powerMap = M.insert idx v (powerMap e) }
         f e (Env.FEta idx, v) =
           e { fetaMap = M.insert idx (\_ -> v) (fetaMap e) }
+        f e (Env.X idx, v) =
+          e { xMap = M.insert idx v (xMap e) }
         f e (Env.DTime idx, v) =
           e { dtimeMap = M.insert idx v (dtimeMap e) }
 
@@ -152,26 +186,30 @@ solveSystem ::
 solveSystem given g = runST $ do
   let EquationSystem sys = makeAllEquations g
 
-  (varmap, eqs) <- sys
-  let -- varmap = M.fromList vars
-      f (var, val) =
+  (eqs, varmap) <- runStateT sys M.empty
+  let f (var, val) =
         case (M.lookup var varmap) of
-             Just v -> varToExpSys v .= constToExpSys val
-             Nothing -> getVar var .= constToExpSys val
+             Just v -> varToExprSys v .= constToExprSys val
+             Nothing -> getVar var .= constToExprSys val
       EquationSystem gssys = mconcat $ map f given
 
-  (gsvars, gs) <- gssys
+  (gs, gsvars) <- runStateT gssys M.empty
   let allVars = M.toList $ M.union varmap gsvars
 
-  trace (show $ length allVars) $ solve (gs >> eqs)
+  solve (gs >> eqs)
 
-  -- travers
-  res <- mapM (query . snd) allVars
-  return $ listToEnvs (zip (map fst allVars) (map maybeToList res))
+  -- traverse :: Applicative f => (a -> f b) -> t a -> f (t b)
+  -- Map each element of a structure to an action,
+  -- evaluate these actions from left to right, and collect the results. 
+
+  res <- traverse (fmap maybeToList . snd . fmap query) allVars
+
+
+  return $ listToEnvs (zip (map fst allVars) res)
 
 -----------------------------------------------------------------------
 
-
+{-
 example1 :: ST s ((Variable s Double, Variable s Double, Variable s Double), M s ())
 example1 = do
   vars@(xv, yv, zv) <- liftM3 (,,) globalVariable globalVariable globalVariable
@@ -206,7 +244,7 @@ example2 = do
   return $ (vars, eqs)
 
 (.==) :: (Eq a) => Variable s a -> a -> M s ()
-(.==) zv d = fromVariable zv =:= Exp.constant d
+(.==) zv d = fromVariable zv =:= Expr.constant d
 
 
 solveIt :: [M s a] -> M s b -> ST s c -> ST s c
@@ -225,3 +263,4 @@ solveIt2 (GivenEquations given) (EquationSystem sys) getVal = do
   g <- given
   (_, s) <- sys
   solve (g >> s) >> getVal
+-}
