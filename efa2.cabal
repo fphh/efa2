@@ -39,7 +39,7 @@ Library
     process ==1.1.*,
     random ==1.0.*,
     Stream >=0.4.6 && <0.5,
-    non-empty >=0.0 && <0.1,
+    non-empty >=0.0.1 && <0.1,
     containers >=0.4 && <0.6,
     utility-ht ==0.0.*,
     QuickCheck >=2.4 && <2.6,
