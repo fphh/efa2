@@ -54,7 +54,7 @@ warn "take length" = take (length xs) ys ==> Match.take xs ys where note = "Matc
 warn "equal length" = length xs == length ys ==> Match.equalLength xs ys where note = "this comparison is lazy"
 -- Sequence: check = length keys == length xs   -- wird nicht erkannt, warum?
 warn "compare length" = compare (length xs) (length ys) ==> Match.compareLength xs ys where note = "this comparison is lazy"
-warn "compare length" = f (length xs) (length ys) ==> f (void xs) (void ys) where note = "this comparison is lazy"; _ = eq y compare || eq y (<) || eq y (>) || eq y (<=) || eq y (>=) || eq y (==) || eq y (/=)
+-- warn "compare length" = f (length xs) (length ys) ==> f (void xs) (void ys) where note = "this comparison is lazy"; _ = eq y compare || eq y (<) || eq y (>) || eq y (<=) || eq y (>=) || eq y (==) || eq y (/=)
 
 warn "Use dropWhileRev" = reverse (dropWhile f (reverse xs))  ==>  ListHT.dropWhileRev f xs
 
@@ -124,6 +124,11 @@ error "Redundant not" = not (not x) ==> x where note = "increases laziness"
 -- I would like to extend this to arbitrary case expressions.
 error "Too strict if" = (if c then f x else f y) ==> f (if c then x else y) where note = "increases laziness"
 error "Too strict maybe" = maybe (f x) (f . g) ==> f . maybe x g where note = "increases laziness"
+
+error "Too strict case" = (case m of Just x -> f y; Nothing -> f z) ==> f (case m of Just x -> y; Nothing -> z) where note = "May increase laziness"
+error "Too strict case" = (case m of Just x -> f y w; Nothing -> f z w) ==> f (case m of Just x -> y; Nothing -> z) w where note = "May increase laziness"
+error "Too strict case" = (case m of Left x -> f y; Right z -> f w) ==> f (case m of Left x -> y; Right z -> w) where note = "May increase laziness"
+error "Too strict case" = (case m of Left x -> f y w; Right z -> f v w) ==> f (case m of Left x -> y; Right z -> v) w where note = "May increase laziness"
 
 error "Use Foldable.forM_" = (case m of Nothing -> return (); Just x -> f x) ==> Fold.forM_ m f
 error "Use Foldable.forM_" = when (isJust m) (f (fromJust m)) ==> Fold.forM_ m f

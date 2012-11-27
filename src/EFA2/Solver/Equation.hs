@@ -1,3 +1,5 @@
+
+
 module EFA2.Solver.Equation where
 
 import EFA2.Interpreter.Env as Env
@@ -21,12 +23,7 @@ import Debug.Trace (trace)
 import Text.Printf (printf)
 
 
--- TOTHINK: Die Algorithmen aus dem Verzeichnis Solver sollten
--- über den Datentyp EqTerm parametrisierbar sein. Die Abhängigkeitsanalyse
--- sollte nichts mit den konkreten Termen zu tun haben. Diese Entscheidung
--- haette wahrscheinlich auch Einfluss auf InVar...
-
-data Equation =
+data Equation a =
             EqTerm := EqTerm
           | EqEdge Env.Index Env.Index Env.Index
           | Given Env.Index deriving (Show, Eq, Ord)
@@ -99,13 +96,13 @@ x !* y = mkTerm x :* mkTerm y
 (!/) :: (MkTermC a, MkTermC b) => a -> b -> EqTerm
 x !/ y = mkTerm x &/ mkTerm y
 
-(!=) :: (MkTermC a, MkTermC b) => a -> b -> Equation
+(!=) :: (MkTermC a, MkTermC b) => a -> b -> Equation a
 x != y = mkTerm x := mkTerm y
 
 (!:=) :: (MkIdxC a, MkTermC b) => a -> b -> AbsAssign
 x !:= y = mkIdx x ::= mkTerm y
 
-give :: MkIdxC a => a -> Equation
+give :: MkIdxC a => a -> Equation a
 give = Given . mkIdx
 
 
@@ -232,7 +229,7 @@ showEdge e power0 eta power1 =
       PowerIn -> showIdx power0 ++ " = b(" ++ showIdx power1 ++ ", " ++ showIdx eta ++ ")"
       Eta -> showIdx eta ++ " = n(" ++ showIdx power0 ++ ", " ++ showIdx power1 ++ ")"
 
-showEquation :: Equation -> String
+showEquation :: Equation a -> String
 showEquation (Given x) = showIdx x ++ " given"
 showEquation (EqEdge p0 n p1) = showEdge PowerOut p0 n p1
 showEquation (x := y) = showEqTerm x ++ " = " ++ showEqTerm y
@@ -248,7 +245,7 @@ showAssign (AssignEdge e p0 n p1) = showEdge e p0 n p1
 showEqTerms :: ToIndex idx => [Term idx] -> String
 showEqTerms ts = L.intercalate "\n" $ map showEqTerm ts
 
-showEquations :: [Equation] -> String
+showEquations :: [Equation a] -> String
 showEquations ts = L.intercalate "\n" $ map showEquation ts
 
 showAssigns :: [Assign] -> String
@@ -307,7 +304,7 @@ idxToLatexString idx =
       Store (Idx.Storage (Idx.Record r) x) ->
          "s_{" ++ show r ++ "." ++ showSecNode x ++ "}"
 
-eqToLatexString' :: Equation -> String
+eqToLatexString' :: Equation a -> String
 eqToLatexString' (Given x) = idxToLatexString x ++ " \\mbox{given}"
 eqToLatexString' (EqEdge p0 n p1) = edgeToLatexString PowerOut p0 n p1
 eqToLatexString' (x := y) = toLatexString' x ++ " = " ++ toLatexString' y
@@ -315,7 +312,7 @@ eqToLatexString' (x := y) = toLatexString' x ++ " = " ++ toLatexString' y
 toLatexString :: EqTerm -> LatexString
 toLatexString t = LatexString $ "$" ++ toLatexString' t ++ "$"
 
-eqToLatexString :: Equation -> LatexString
+eqToLatexString :: Equation a -> LatexString
 eqToLatexString t = LatexString $ "$" ++ eqToLatexString' t ++ "$"
 
 
@@ -323,7 +320,7 @@ eqToLatexString t = LatexString $ "$" ++ eqToLatexString' t ++ "$"
 -- a term is a variable or not. It then takes a term and
 -- determines the set of variables contained in the term,
 -- according to the predicate.
-mkVarSetEq :: (Ord a) => (EqTerm -> Maybe a) -> Equation -> S.Set a
+mkVarSetEq :: (Ord a) => (EqTerm -> Maybe a) -> Equation a -> S.Set a
 mkVarSetEq p (Given x) = mkVarSet p $ Atom x
 mkVarSetEq p (EqEdge p0 n p1) =
    S.unions $ map (mkVarSet p) $ Atom p0 : Atom n : Atom p1 : []
@@ -361,7 +358,7 @@ prepStep t s p =
       (x, Nothing) -> fmap (L:) x
       _ -> error $ "error in looking for path to (" ++ show t ++ ") in (" ++ show s ++ ")"
 
-findVarEq :: Env.Index -> Equation -> Maybe TPath
+findVarEq :: Env.Index -> Equation a -> Maybe TPath
 findVarEq t s =
    prepStep t s $
    case s of
@@ -386,7 +383,7 @@ findVar t s =
            (Recip u) -> (findVar t u, Nothing)    -- coding: Recip has only left operand.
            _ -> (Nothing, Nothing)
 
-isolateVar :: Env.Index -> Equation -> TPath -> Assign
+isolateVar :: Env.Index -> Equation a -> TPath -> Assign
 isolateVar s (Given _u) [L] = AbsAssign (GivenIdx s)
 isolateVar s (Given u) [R] = AbsAssign (s ::= Atom u)
 isolateVar s (u := v) (L:p) = AbsAssign (s ::= isolateVar' u p v)
@@ -433,7 +430,7 @@ isolateVar' (BDiff p' e dp de) (L:p) = isolateVar' dp p . f
 -- the unknown variable isolated on its left hand side (lhs),
 -- such that we can evaluate the rhs in order to calculate
 -- the value of the unknown variable.
-transformEq :: Env.Index -> Equation -> Assign
+transformEq :: Env.Index -> Equation a -> Assign
 transformEq unknown t =
    maybe
       (error $ "transformEq: did not find " ++ show unknown)
@@ -551,7 +548,7 @@ toAbsEquations :: [Assign] -> [AbsAssign]
 toAbsEquations = map toAbsEquation
 
 
-assignToEquation :: Assign -> Equation
+assignToEquation :: Assign -> Equation a
 assignToEquation (AssignEdge _e p0 n p1)  =  EqEdge p0 n p1
 assignToEquation (AbsAssign assign) =
    case assign of

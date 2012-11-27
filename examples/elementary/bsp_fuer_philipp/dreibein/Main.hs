@@ -2,6 +2,7 @@
 module Main where
 
 import qualified Data.Map as M
+import qualified Data.List as L
 
 import qualified EFA2.Example.Examples as Example
 import qualified EFA2.StateAnalysis.StateAnalysis as StateAnalysis
@@ -18,7 +19,7 @@ import EFA2.Signal.Signal (Sc, toScalar, fromScalar)
 import EFA2.Interpreter.Env as Env
 import EFA2.Solver.EquationOrder (order)
 import EFA2.Solver.Equation
-          (MkTermC, mkTerm,
+          (MkTermC, mkTerm, showAbsAssign, showEquations,
            EqTerm, Term(Const), toAbsEquations, mapEqTermEnv)
 import EFA2.Topology.Draw (drawDeltaTopology, drawTopology, drawAll)
 
@@ -26,39 +27,11 @@ import EFA2.Interpreter.Interpreter
           (eqToInTerm, interpretFromScratch, interpretTerm)
 import qualified EFA2.Signal.Signal as S
 
+import Debug.Trace
 
-{-
-import qualified EFA2.Topology.EfaGraph as Gr
+--showAbsAssigns :: [Assign] -> String
+showAbsAssigns ts = L.intercalate "\n" $ map showAbsAssign ts
 
-import qualified Data.List as L
-import qualified Data.Set as Set
-import qualified Data.Map as M
-import Data.Set (Set)
-
-import Text.Printf (printf)
-
-import qualified EFA2.Solver.Equation as Equ
-import EFA2.Solver.Equation
-          (MkTermC, mkTerm,
-           EqTerm, Term(Const), toAbsEquations, mapEqTermEnv)
-import EFA2.Solver.EquationOrder (order)
-
-import EFA2.Interpreter.Interpreter
-          (eqToInTerm, interpretFromScratch, interpretTerm)
-import EFA2.Interpreter.Env
-import EFA2.Interpreter.Arith (Val)
-
-import qualified EFA2.Signal.Index as Idx
-import qualified EFA2.Signal.Signal as S
-import EFA2.Signal.Signal (Sc, toScalar, fromScalar)
-
-import EFA2.Topology.Topology (makeAllEquations)
-import EFA2.Topology.TopologyData
-          (SequFlowGraph, NodeType(..), ELabel, defaultELabel)
-
-import EFA2.Topology.Draw (drawDeltaTopology, drawTopology, drawAll)
-import EFA2.Topology.TopologyData (SequFlowGraph, NodeType(..))
--}
 
 {-
 edgeIdx ::
@@ -149,10 +122,10 @@ power0num = M.fromList $
   (edgeIdx Idx.Power (sec 1) rec0 3 2, toScalar 2.6) :
   (edgeIdx Idx.Power (sec 2) rec0 2 3, toScalar 0.9) :
   (edgeIdx Idx.Power (sec 3) rec0 3 2, toScalar 3.1) :
-  (edgeIdx Idx.Power (sec 0) rec0 2 1, toScalar 1.1) :
-  (edgeIdx Idx.Power (sec 1) rec0 1 2, toScalar 1.6) :
-  (edgeIdx Idx.Power (sec 2) rec0 1 2, toScalar 0.7) :
-  (edgeIdx Idx.Power (sec 3) rec0 1 2, toScalar 2.1) :
+ -- (edgeIdx Idx.Power (sec 0) rec0 2 1, toScalar 1.1) :
+ -- (edgeIdx Idx.Power (sec 1) rec0 1 2, toScalar 1.6) :
+ -- (edgeIdx Idx.Power (sec 2) rec0 1 2, toScalar 0.7) :
+ -- (edgeIdx Idx.Power (sec 3) rec0 1 2, toScalar 2.1) :
   (edgeIdx Idx.Power (sec 0) rec0 0 2, toScalar 3.1) :
   (edgeIdx Idx.Power (sec 1) rec0 0 2, toScalar 3.6) :
   (edgeIdx Idx.Power (sec 2) rec0 0 2, toScalar 2.7) :
@@ -191,7 +164,7 @@ x0num :: XMap Sc
 x0num = M.fromList $
   (edgeIdx Idx.X (sec 0) rec0 2 1, toScalar 0.8) :
   (edgeIdx Idx.X (sec 1) rec0 2 1, toScalar 0.3) :
-  (edgeIdx Idx.X (sec 2) rec0 2 1, toScalar 0.6) :
+  -- (edgeIdx Idx.X (sec 2) rec0 2 1, toScalar 0.6) :
   (edgeIdx Idx.X (sec 3) rec0 2 1, toScalar 0.7) : []
 
 
@@ -203,7 +176,7 @@ envs0num = emptyEnv { Env.recordNumber = SingleRecord rec0,
                       xMap = x0num }
 
 numeric :: SequFlowGraph -> [Envs SingleRecord Sc]
-numeric g = separateEnvs res
+numeric g = trace (showEquations ts0) $ separateEnvs res
   where (envs0, ts0) = makeAllEquations g [envs0num]
 
         ts0o = order ts0
@@ -214,7 +187,7 @@ numeric g = separateEnvs res
 seqTopo :: SequFlowGraph
 seqTopo = mkSeqTopo (select sol states)
   where sol = StateAnalysis.advanced Example.topoDreibein
-        states = [0, 5, 0, 4]
+        states = [2, 5, 3, 4]
         select ts = map (ts!!)
         mkSeqTopo = Flow.mkSequenceTopology
                     . Flow.genSectionTopology
