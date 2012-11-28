@@ -22,6 +22,8 @@ import UniqueLogic.ST.Expression
 import UniqueLogic.ST.Rule
 import UniqueLogic.ST.System
 
+import Data.Maybe (maybeToList)
+
 import Control.Monad.ST
 import Control.Monad
 
@@ -97,5 +99,5 @@ main = do
   let env = solveSystem given seqTopo
   -- drawTopologySimple seqTopo
 
-  drawTopology seqTopo env
-
+  -- drawTopology seqTopo env
+  print env

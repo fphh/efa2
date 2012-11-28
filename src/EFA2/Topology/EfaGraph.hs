@@ -10,7 +10,6 @@ module EFA2.Topology.EfaGraph (
    LEdge,
 
    reverseEdge,
-   edgeFst, edgeSnd,
    ixmap, nmap, emap,
    empty,
    union,
@@ -105,9 +104,9 @@ instance (QC.Arbitrary n) => QC.Arbitrary (Edge n) where
 reverseEdge :: Edge node -> Edge node
 reverseEdge (Edge x y) = Edge y x
 
-edgeFst, edgeSnd :: Edge node -> node
-edgeFst (Edge x _) = x
-edgeSnd (Edge _ y) = y
+--edgeFst, edgeSnd :: Edge node -> node
+--edgeFst (Edge x _) = x
+--edgeSnd (Edge _ y) = y
 
 type LEdge n label = (Edge n, label)
 

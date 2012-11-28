@@ -29,6 +29,7 @@ import Data.Monoid
 import Data.Maybe
 import Data.Ord (comparing)
 import Data.Traversable (traverse)
+import Data.Foldable (foldMap)
 
 import EFA2.Interpreter.Env as Env
 
@@ -45,13 +46,10 @@ type SysWithVars s a = StateT (ProvEnv s a) (ST s) (M s ())
 -- Gleichungen mitloggen
 newtype EquationSystem s a = EquationSystem (SysWithVars s a)
 
-newtype GivenEquations s a = GivenEquations (ST s (M s ()))
-
 instance Monoid (EquationSystem s a) where
          mempty = EquationSystem $ return (return ())
          mappend (EquationSystem x) (EquationSystem y) =
            EquationSystem $ liftM2 (>>) x y
-
 
 liftV2 :: 
   (T s a -> T s a -> T s a) -> 
@@ -148,14 +146,14 @@ makeOriginalEdgeEquations g = mconcat $
 makeEdgeEquations ::
   (Eq a, Fractional a) =>
   [Edge SecNode] -> EquationSystem s a
-makeEdgeEquations es = mconcat $ map mkEq es
+makeEdgeEquations es = foldMap mkEq es
   where mkEq (Edge f t) = power t f .= eta f t * power f t
 
 
 makeEnergyEquations ::
   (Eq a, Fractional a) =>
   [Edge SecNode] -> EquationSystem s a
-makeEnergyEquations es = mconcat $ map mkEq es
+makeEnergyEquations es = foldMap mkEq es
   where mkEq (Edge f@(SecNode sf nf) t@(SecNode st nt)) =
           mwhen (sf == st)
             (energy f t .= dt * power f t) <> (energy t f .= dt * power t f)
@@ -165,73 +163,56 @@ makeEnergyEquations es = mconcat $ map mkEq es
 makeNodeEquations ::
   (Eq a, Fractional a) =>
   SequFlowGraph -> EquationSystem s a
-makeNodeEquations g = mconcat $
-  map mkInEqs ins
-  ++ map mkOutEqs outs
-  ++ map mkSumEqs (ins ++ outs)
-  where ins = M.toList $ fmap (S.toList) $ inEdges g
-        outs = M.toList $ fmap (S.toList) $ outEdges g
-        mkInEqs (n, ns) = (1 .= sum xs) <> (mconcat $ zipWith f energies xs)
-          where xs = map (xfactor n) ns
-                energies = map (energy n) ns
-                f en x = en .= x * insum n
-        mkOutEqs (n, ns) = (1 .= sum xs) <> (mconcat $ zipWith f energies xs)
-          where xs = map (xfactor n) ns
-                energies = map (energy n) ns
-                f en x = en .= x * outsum n
-        mkSumEqs (n, _) = insum n .= outsum n
+makeNodeEquations = mconcat . mapGraph (f . g)
+  where g (ins, n, outs) = (map fst ins, fst n, map fst outs)
+        f (ins, n, outs) =
+          (1 .= sum xin)
+          <> (1 .= sum xout)
+          <> (sumin .= sumout)
+          <> (mconcat $ zipWith (f sumin) ein xin)
+          <> (mconcat $ zipWith (f sumout) eout xout)
+          where xin = map (xfactor n) ins
+                xout = map (xfactor n) outs
+                ein = map (energy n) ins
+                eout = map (energy n) outs
+                sumin = sum ein
+                sumout = sum eout
+                f s en x = en .= x * s
 
-
--- nimmt eine Map
-listToEnvs :: [(Env.Index, a)] -> Envs SingleRecord a
-listToEnvs lst = L.foldl' f envs lst 
+mapToEnvs :: M.Map Env.Index (Maybe a) -> Envs SingleRecord (Maybe a)
+mapToEnvs = M.foldWithKey f envs
   where envs = emptyEnv { recordNumber = SingleRecord (Record Absolute) }
-        f e (Env.Energy idx, v) =
+        f (Env.Energy idx) v e =
           e { energyMap = M.insert idx v (energyMap e) }
-        f e (Env.Power idx, v) =
+        f (Env.Power idx) v e =
           e { powerMap = M.insert idx v (powerMap e) }
-        f e (Env.FEta idx, v) =
+        f (Env.FEta idx) v e =
           e { fetaMap = M.insert idx (const v) (fetaMap e) }
-        f e (Env.X idx, v) =
+        f (Env.X idx) v e =
           e { xMap = M.insert idx v (xMap e) }
-        f e (Env.DTime idx, v) =
+        f (Env.DTime idx) v e =
           e { dtimeMap = M.insert idx v (dtimeMap e) }
-        f e _ = e
+        f _ _ e = e
 
--- data.foldable
--- mconcat . map = foldMap
+solveSystemDoIt ::
+  (Eq a, Fractional a) =>
+  [(Env.Index, a)] -> SequFlowGraph -> M.Map Env.Index (Maybe a)
+solveSystemDoIt given g = runST $ do
+  let f (var, val) = getVar var .= constToExprSys val
+      -- Reihenfolge spielt hier eine Rolle,
+      -- auch wenn given neue Variablen enthält. Warum?
+      EquationSystem eqsys = foldMap f given <> makeAllEquations g
+  (eqs, varmap) <- runStateT eqsys M.empty
+  solve eqs
+  traverse query varmap
 
--- Equation ueberfluessigne Typparameter entfernen
--- soll eine Map bekommen!
 solveSystem ::
   (Eq a, Fractional a) =>
-  [(Env.Index, a)] -> SequFlowGraph -> Envs SingleRecord [a]
-solveSystem given g = runST $ do
-  let EquationSystem sys = makeAllEquations g
+  [(Env.Index, a)] -> SequFlowGraph -> Envs SingleRecord (Maybe a)
+solveSystem given = mapToEnvs . solveSystemDoIt given
 
-  (eqs, varmap) <- runStateT sys M.empty
+-- Equation ueberfluessigne Typparameter entfernen
 
--- lookup
-
-  let f (var, val) =
-        case (M.lookup var varmap) of
-             Just v -> varToExprSys v .= constToExprSys val
-             Nothing -> getVar var .= constToExprSys val
-      EquationSystem gssys = mconcat $ map f given
-
-  (gs, gsvars) <- runStateT gssys M.empty
-  let allVars = M.toList $ M.union varmap gsvars
-
-  solve (gs >> eqs)
-
-  -- traverse :: Applicative f => (a -> f b) -> t a -> f (t b)
-  -- Map each element of a structure to an action,
-  -- evaluate these actions from left to right, and collect the results. 
-
-  res <- traverse (fmap maybeToList . snd . fmap query) allVars
-
-
-  return $ listToEnvs (zip (map fst allVars) res)
 
 -----------------------------------------------------------------------
 
