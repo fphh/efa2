@@ -36,15 +36,7 @@ import Debug.Trace
 
 
 
--- type ProvEnv s a = [(Env.Index, Variable s a)]
 type ProvEnv s a = M.Map Env.Index (Variable s a)
-
--- map bevorzugen
-
--- module umbenennen in gleichungsgenerator
-
--- zu Newtype machen und Num instanz und provenv als writer ++ symbolisch darstellung von gleichungen
---newtype ExprWithVars s a = ExprWithVars (ST s (ProvEnv s a, T s a))
 
 newtype ExprWithVars s a = ExprWithVars (StateT (ProvEnv s a) (ST s) (T s a))
 type SysWithVars s a = StateT (ProvEnv s a) (ST s) (M s ())
@@ -66,17 +58,11 @@ liftV2 ::
   ExprWithVars s a -> ExprWithVars s a -> ExprWithVars s a
 liftV2 f (ExprWithVars xs) (ExprWithVars ys) = ExprWithVars $ liftM2 f xs ys
 
--- Kann man hier mit Applicative und Functor noch was schoenen?
--- Scheitert wohl daran, dass beim fmap das f :: a -> T s a sein muesste?
+
 instance (Num a, Fractional a) => Num (ExprWithVars s a) where
-         --(ExprWithVars xs) * (ExprWithVars ys) = ExprWithVars $ liftM2 (*) xs ys
-         --(ExprWithVars xs) * (ExprWithVars ys) = ExprWithVars $ liftM2 (fromRule3 R.mul) xs ys
          (*) = liftV2 (*)
          (+) = liftV2 (+)
          (-) = liftV2 (-)
-
-         --(ExprWithVars xs) + (ExprWithVars ys) = ExprWithVars $ liftM2 (+) xs ys
-         --(ExprWithVars xs) + (ExprWithVars ys) = ExprWithVars $ liftM2 (fromRule3 R.add) xs ys
 
          fromInteger = ExprWithVars . return . fromInteger
          abs (ExprWithVars xs) = ExprWithVars $ liftM abs xs
@@ -175,6 +161,7 @@ makeEnergyEquations es = mconcat $ map mkEq es
             (energy f t .= dt * power f t) <> (energy t f .= dt * power t f)
           where dt = dtime sf
 
+
 makeNodeEquations ::
   (Eq a, Fractional a) =>
   SequFlowGraph -> EquationSystem s a
@@ -187,7 +174,7 @@ makeNodeEquations g = mconcat $
         mkInEqs (n, ns) = (1 .= sum xs) <> (mconcat $ zipWith f energies xs)
           where xs = map (xfactor n) ns
                 energies = map (energy n) ns
-                f en x = en .= x * insum n 
+                f en x = en .= x * insum n
         mkOutEqs (n, ns) = (1 .= sum xs) <> (mconcat $ zipWith f energies xs)
           where xs = map (xfactor n) ns
                 energies = map (energy n) ns
@@ -195,7 +182,7 @@ makeNodeEquations g = mconcat $
         mkSumEqs (n, _) = insum n .= outsum n
 
 
-
+-- nimmt eine Map
 listToEnvs :: [(Env.Index, a)] -> Envs SingleRecord a
 listToEnvs lst = L.foldl' f envs lst 
   where envs = emptyEnv { recordNumber = SingleRecord (Record Absolute) }
@@ -211,7 +198,11 @@ listToEnvs lst = L.foldl' f envs lst
           e { dtimeMap = M.insert idx v (dtimeMap e) }
         f e _ = e
 
+-- data.foldable
+-- mconcat . map = foldMap
 
+-- Equation ueberfluessigne Typparameter entfernen
+-- soll eine Map bekommen!
 solveSystem ::
   (Eq a, Fractional a) =>
   [(Env.Index, a)] -> SequFlowGraph -> Envs SingleRecord [a]
@@ -219,6 +210,9 @@ solveSystem given g = runST $ do
   let EquationSystem sys = makeAllEquations g
 
   (eqs, varmap) <- runStateT sys M.empty
+
+-- lookup
+
   let f (var, val) =
         case (M.lookup var varmap) of
              Just v -> varToExprSys v .= constToExprSys val
