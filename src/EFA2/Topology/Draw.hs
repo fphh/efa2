@@ -389,7 +389,7 @@ instance (Integral a, Show a) => AutoEnvList (Ratio a) where
    divideEnergyList = zipWith (/)
 
 instance AutoEnvList Char where
-   formatStContList = fromMaybe "+"
+   formatValueList = fromMaybe [heart]
    formatList = id
    divideEnergyList x y = "(" ++ x ++ ")/(" ++ y ++ ")"
 
