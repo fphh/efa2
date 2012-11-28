@@ -27,6 +27,8 @@ data Index =
           | DX Idx.DX
           | Var Idx.Var
           | Store Idx.Storage
+          | InSumVar Idx.InSumVar
+          | OutSumVar Idx.OutSumVar
              deriving (Show, Eq, Ord)
 
 

@@ -82,8 +82,11 @@ toDiffUse :: Use -> Use
 toDiffUse InSum = InDiffSum
 toDiffUse OutSum = OutDiffSum
 
+
 data Var = Var !Record Use !SecNode deriving (Show, Ord, Eq)
 
+data InSumVar = InSumVar !Record !SecNode deriving (Show, Ord, Eq)
+data OutSumVar = OutSumVar !Record !SecNode deriving (Show, Ord, Eq)
 
 -- * Other indices
 

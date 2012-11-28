@@ -60,13 +60,22 @@ instance Monoid (EquationSystem s a) where
          mappend (EquationSystem x) (EquationSystem y) =
            EquationSystem $ liftM2 (>>) x y
 
+
+liftV2 :: 
+  (T s a -> T s a -> T s a) -> 
+  ExprWithVars s a -> ExprWithVars s a -> ExprWithVars s a
+liftV2 f (ExprWithVars xs) (ExprWithVars ys) = ExprWithVars $ liftM2 f xs ys
+
 -- Kann man hier mit Applicative und Functor noch was schoenen?
 -- Scheitert wohl daran, dass beim fmap das f :: a -> T s a sein muesste?
 instance (Num a, Fractional a) => Num (ExprWithVars s a) where
-         (ExprWithVars xs) * (ExprWithVars ys) = ExprWithVars $ liftM2 (*) xs ys
+         --(ExprWithVars xs) * (ExprWithVars ys) = ExprWithVars $ liftM2 (*) xs ys
          --(ExprWithVars xs) * (ExprWithVars ys) = ExprWithVars $ liftM2 (fromRule3 R.mul) xs ys
+         (*) = liftV2 (*)
+         (+) = liftV2 (+)
+         (-) = liftV2 (-)
 
-         (ExprWithVars xs) + (ExprWithVars ys) = ExprWithVars $ liftM2 (+) xs ys
+         --(ExprWithVars xs) + (ExprWithVars ys) = ExprWithVars $ liftM2 (+) xs ys
          --(ExprWithVars xs) + (ExprWithVars ys) = ExprWithVars $ liftM2 (fromRule3 R.add) xs ys
 
          fromInteger = ExprWithVars . return . fromInteger
@@ -115,6 +124,11 @@ eta = (getVar .) . makeVar Idx.FEta
 xfactor :: SecNode -> SecNode -> ExprWithVars s a
 xfactor = (getVar .) . makeVar Idx.X
 
+vvar use = getVar . mkVar . Idx.Var recAbs use
+
+insum = getVar . mkVar . Idx.InSumVar recAbs
+outsum = getVar . mkVar . Idx.OutSumVar recAbs
+
 
 dtime :: Section -> ExprWithVars s a
 dtime = getVar . mkVar . Idx.DTime recAbs
@@ -131,16 +145,24 @@ makeAllEquations ::
   (Eq a, Fractional a) =>
   SequFlowGraph -> EquationSystem s a
 makeAllEquations g = mconcat $
-  makeEnergyEquations es :
-  makeEtaEquations es :
-  makeXEquations g :
+  makeOriginalEdgeEquations g :
   []
-  where es = edges g
 
-makeEtaEquations ::
+makeOriginalEdgeEquations ::
+  (Eq a, Fractional a) =>
+  SequFlowGraph -> EquationSystem s a
+makeOriginalEdgeEquations g = mconcat $
+  makeEnergyEquations es :
+  makeEdgeEquations es :
+  makeNodeEquations g' :
+  []
+  where g' = elfilter isOriginalEdge g
+        es = edges g'
+
+makeEdgeEquations ::
   (Eq a, Fractional a) =>
   [Edge SecNode] -> EquationSystem s a
-makeEtaEquations es = mconcat $ map mkEq es
+makeEdgeEquations es = mconcat $ map mkEq es
   where mkEq (Edge f t) = power t f .= eta f t * power f t
 
 
@@ -153,16 +175,25 @@ makeEnergyEquations es = mconcat $ map mkEq es
             (energy f t .= dt * power f t) <> (energy t f .= dt * power t f)
           where dt = dtime sf
 
-makeXEquations ::
+makeNodeEquations ::
   (Eq a, Fractional a) =>
   SequFlowGraph -> EquationSystem s a
-makeXEquations g = mconcat $ map mkIns (ins ++ outs)
-  where g' = elfilter isOriginalEdge g
-        ins = M.toList $ fmap (S.toList) $ inEdges g'
-        outs = M.toList $ fmap (S.toList) $ outEdges g'
-        mkIns (n, ns) = 1 .= sum (map (xfactor n) ns)
-        mkOuts (n, ns) = 1 .= sum (map (flip xfactor n) ns)
-           
+makeNodeEquations g = mconcat $
+  map mkInEqs ins
+  ++ map mkOutEqs outs
+  ++ map mkSumEqs (ins ++ outs)
+  where ins = M.toList $ fmap (S.toList) $ inEdges g
+        outs = M.toList $ fmap (S.toList) $ outEdges g
+        mkInEqs (n, ns) = (1 .= sum xs) <> (mconcat $ zipWith f energies xs)
+          where xs = map (xfactor n) ns
+                energies = map (energy n) ns
+                f en x = en .= x * insum n 
+        mkOutEqs (n, ns) = (1 .= sum xs) <> (mconcat $ zipWith f energies xs)
+          where xs = map (xfactor n) ns
+                energies = map (energy n) ns
+                f en x = en .= x * outsum n
+        mkSumEqs (n, _) = insum n .= outsum n
+
 
 
 listToEnvs :: [(Env.Index, a)] -> Envs SingleRecord a
@@ -173,11 +204,12 @@ listToEnvs lst = L.foldl' f envs lst
         f e (Env.Power idx, v) =
           e { powerMap = M.insert idx v (powerMap e) }
         f e (Env.FEta idx, v) =
-          e { fetaMap = M.insert idx (\_ -> v) (fetaMap e) }
+          e { fetaMap = M.insert idx (const v) (fetaMap e) }
         f e (Env.X idx, v) =
           e { xMap = M.insert idx v (xMap e) }
         f e (Env.DTime idx, v) =
           e { dtimeMap = M.insert idx v (dtimeMap e) }
+        f e _ = e
 
 
 solveSystem ::

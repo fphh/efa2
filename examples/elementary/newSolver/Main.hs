@@ -49,7 +49,7 @@ topoDreibein = mkGraph (makeNodes nodes) (makeSimpleEdges edges)
 seqTopo :: SequFlowGraph
 seqTopo = mkSeqTopo (select sol states)
   where sol = bruteForce topoDreibein  -- ehemals stateAnalysis
-        states = [1]
+        states = [0]
         select ts = map (ts!!)
         mkSeqTopo = Flow.mkSequenceTopology
                     . Flow.genSectionTopology
@@ -67,21 +67,27 @@ given = [ (mkVar (Idx.DTime (Idx.Record Absolute) initSection), 1.0),
           --(makeVar Idx.Power (Idx.SecNode initSection (Idx.Node 3))
            --                  (Idx.SecNode initSection (Idx.Node (-1))), 4.0),
 
-          (makeVar Idx.Power (Idx.SecNode (Section 0) (Idx.Node 3))
-                             (Idx.SecNode (Section 0) (Idx.Node 2)), 4.0),
-
-          (makeVar Idx.FEta (Idx.SecNode (Section 0) (Idx.Node 3))
-                            (Idx.SecNode (Section 0) (Idx.Node 2)), 0.4),
+          (makeVar Idx.Power (Idx.SecNode (Section 0) (Idx.Node 2))
+                             (Idx.SecNode (Section 0) (Idx.Node 3)), 4.0),
 
           (makeVar Idx.X (Idx.SecNode (Section 0) (Idx.Node 2))
-                         (Idx.SecNode (Section 0) (Idx.Node 0)), 0.32),
+                         (Idx.SecNode (Section 0) (Idx.Node 3)), 0.32),
 
-          (makeVar Idx.Power (Idx.SecNode (Section 0) (Idx.Node 1))
-                             (Idx.SecNode (Section 0) (Idx.Node 2)), 2.0),
+         -- (makeVar Idx.Power (Idx.SecNode (Section 0) (Idx.Node 1))
+         --                    (Idx.SecNode (Section 0) (Idx.Node 2)), 2.0),
 
 
-          (makeVar Idx.FEta (Idx.SecNode (Section 0) (Idx.Node 1))
-                            (Idx.SecNode (Section 0) (Idx.Node 2)), 0.4) ]
+          (makeVar Idx.FEta (Idx.SecNode (Section 0) (Idx.Node 3))
+                            (Idx.SecNode (Section 0) (Idx.Node 2)), 0.25),
+          (makeVar Idx.FEta (Idx.SecNode (Section 0) (Idx.Node 2))
+                            (Idx.SecNode (Section 0) (Idx.Node 3)), 0.25),
+
+
+          (makeVar Idx.FEta (Idx.SecNode (Section 0) (Idx.Node 2))
+                            (Idx.SecNode (Section 0) (Idx.Node 1)), 0.5),
+
+          (makeVar Idx.FEta (Idx.SecNode (Section 0) (Idx.Node 0))
+                            (Idx.SecNode (Section 0) (Idx.Node 2)), 0.75) ]
 
 
 main :: IO ()

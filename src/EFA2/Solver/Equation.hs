@@ -121,6 +121,9 @@ instance MkIdxC Idx.DX where mkIdx = DX
 instance MkIdxC Idx.Var where mkIdx = Var
 instance MkIdxC Idx.Storage where mkIdx = Store
 
+instance MkIdxC Idx.InSumVar where mkIdx = InSumVar
+instance MkIdxC Idx.OutSumVar where mkIdx = OutSumVar
+
 
 class MkVarC a where
    mkVarCore :: Env.Index -> a
@@ -149,6 +152,10 @@ instance MkTermC Idx.X where mkTerm = mkVar
 instance MkTermC Idx.DX where mkTerm = mkVar
 instance MkTermC Idx.Var where mkTerm = mkVar
 instance MkTermC Idx.Storage where mkTerm = mkVar
+
+instance MkTermC Idx.InSumVar where mkTerm = mkVar
+instance MkTermC Idx.OutSumVar where mkTerm = mkVar
+
 
 instance MkTermC Env.Index where
    mkTerm = Atom
