@@ -204,25 +204,30 @@ orientEdge (e@(Edge x y), l) =
            then (e, Forward, id)
            else (Edge y x, Back, reverse)
 
-data Line = ELine Idx.SecNode Idx.SecNode
-          | XLine Idx.SecNode Idx.SecNode
-          | NLine Idx.SecNode Idx.SecNode
-          deriving (Eq, Ord)
+data LineType = ELine | XLine | NLine
+   deriving (Eq, Ord, Show, Enum)
+
+lineTypeLetter :: LineType -> Char
+lineTypeLetter ELine = 'e'
+lineTypeLetter XLine = 'x'
+lineTypeLetter NLine = 'n'
+
+data Line = Line LineType Idx.SecNode Idx.SecNode
+   deriving (Eq, Ord)
 
 showLine :: Line -> String
-showLine (ELine u v) = "e_" ++ showSecNode u ++ "_" ++ showSecNode v
-showLine (XLine u v) = "x_" ++ showSecNode u ++ "_" ++ showSecNode v
-showLine (NLine u v) = "n_" ++ showSecNode u ++ "_" ++ showSecNode v
+showLine (Line t u v) =
+   lineTypeLetter t : "_" ++ showSecNode u ++ "_" ++ showSecNode v
 
 showLineLatex :: Line -> String
-showLineLatex (ELine u v) = "$e_{" ++ secNodeToLatexString u ++ "." ++ secNodeToLatexString v ++ "}$"
-showLineLatex (XLine u v) = "$x_{" ++ secNodeToLatexString u ++ "." ++ secNodeToLatexString v ++ "}$"
-showLineLatex (NLine u v) = "$n_{" ++ secNodeToLatexString u ++ "." ++ secNodeToLatexString v ++ "}$"
+showLineLatex (Line t u v) =
+   '$' : lineTypeLetter t : "_{" ++
+   secNodeToLatexString u ++ "." ++ secNodeToLatexString v ++
+   "}$"
 
 showLineDelta :: Line -> String
-showLineDelta (ELine u v) = "de_" ++ showSecNode u ++ "_" ++ showSecNode v
-showLineDelta (XLine u v) = "dx_" ++ showSecNode u ++ "_" ++ showSecNode v
-showLineDelta (NLine u v) = "dn_" ++ showSecNode u ++ "_" ++ showSecNode v
+showLineDelta (Line t u v) =
+   'd' : lineTypeLetter t : "_" ++ showSecNode u ++ "_" ++ showSecNode v
 
 
 data Env =
@@ -270,19 +275,19 @@ draw g
            map formatAssign $
            case edgeType l of
               OriginalEdge ->
-                 (ELine uid vid, formatEnergy uid vid) :
-                 (XLine uid vid, formatX uid vid) :
-                 (NLine uid vid, formatEta uid vid) :
-                 (XLine vid uid, formatX vid uid) :
-                 (ELine vid uid, formatEnergy vid uid) :
+                 (Line ELine uid vid, formatEnergy uid vid) :
+                 (Line XLine uid vid, formatX uid vid) :
+                 (Line NLine uid vid, formatEta uid vid) :
+                 (Line XLine vid uid, formatX vid uid) :
+                 (Line ELine vid uid, formatEnergy vid uid) :
                  []
               InnerStorageEdge ->
-                 (ELine vid uid, formatEnergy vid uid) :
+                 (Line ELine vid uid, formatEnergy vid uid) :
                  []
               IntersectionEdge ->
-                 (ELine uid vid, formatEnergy uid vid) :
-                 (XLine uid vid, formatX uid vid) :
-                 (ELine vid uid, formatEnergy vid uid) :
+                 (Line ELine uid vid, formatEnergy uid vid) :
+                 (Line XLine uid vid, formatX uid vid) :
+                 (Line ELine vid uid, formatEnergy vid uid) :
                  []
 
 drawTopology ::
