@@ -250,7 +250,7 @@ makeFormat ::
    (Idx.Record -> Idx.SecNode -> Idx.SecNode -> idx) -> M.Map idx a ->
    Idx.SecNode -> Idx.SecNode -> String
 makeFormat rec makeIdx mp =
-   \uid vid -> formatStCont $ makeLookup rec makeIdx mp uid vid
+   \uid vid -> formatValue $ makeLookup rec makeIdx mp uid vid
 
 formatMaybe :: (a -> String) -> Maybe a -> String
 formatMaybe = maybe [heart]
@@ -296,7 +296,7 @@ drawDeltaTopology topo = draw topo . envDelta
 
 class AutoEnv a where
    envAbs :: Interp.Envs SingleRecord a -> Env
-   formatStCont :: Maybe a -> String
+   formatValue :: Maybe a -> String
 
 class AutoEnv a => AutoEnvDelta a where
    envDelta :: Interp.Envs SingleRecord a -> Env
@@ -309,7 +309,7 @@ class AutoEnvList a where
          (\(x, ys) -> showLine x ++ " = " ++ ys)
          showNode
 
-   formatStContList :: Maybe [a] -> String
+   formatValueList :: Maybe [a] -> String
    formatList :: [a] -> String
 
    divideEnergyList :: [a] -> [a] -> [a]
@@ -320,7 +320,7 @@ class AutoEnvList a => AutoEnvDeltaList a where
 
 instance AutoEnvList a => AutoEnv [a] where
    envAbs = envAbsList
-   formatStCont = formatStContList
+   formatValue = formatValueList
 
 envAbsListGen ::
    (AutoEnvList a) =>
@@ -333,16 +333,16 @@ envAbsListGen formatAssignList showListNode
       (Interp.Envs (SingleRecord rec) e _de _p _dp _fn _dn dt x _dx _v st) =
    let lookupEnergy = makeLookup rec Idx.Energy e
    in  Env rec
-          (\a b -> formatStCont $ lookupEnergy a b)
+          (\a b -> formatValue $ lookupEnergy a b)
           (makeFormat rec Idx.X x)
           (\a b ->
-             formatStCont $
+             formatValue $
              liftM2 divideEnergyList
                 (lookupEnergy a b)
                 (lookupEnergy b a))
           formatAssignList
           (lookupFormat formatList dt)
-          (showListNode rec st formatStContList)
+          (showListNode rec st formatValueList)
 
 
 instance AutoEnvDeltaList a => AutoEnvDelta [a] where
@@ -368,7 +368,7 @@ instance AutoEnvDeltaList a => AutoEnvDelta [a] where
 
 
 instance AutoEnvList Double where
-   formatStContList = formatMaybe (concatMap (printf "%.6f    "))
+   formatValueList = formatMaybe (concatMap (printf "%.6f    "))
    formatList = show
    divideEnergyList = zipWith (/)
 
@@ -384,7 +384,7 @@ instance AutoEnvDeltaList Double where
 -}
 
 instance (Integral a, Show a) => AutoEnvList (Ratio a) where
-   formatStContList = formatMaybe (unwords . map show)
+   formatValueList = formatMaybe (unwords . map show)
    formatList = show
    divideEnergyList = zipWith (/)
 
@@ -399,7 +399,7 @@ instance AutoEnvList LatexString where
          (\(x, ys) -> showLineLatex x ++ " = " ++ ys)
          showLatexNode
 
-   formatStContList = maybe "+" (unLatexString . head)
+   formatValueList = maybe "+" (unLatexString . head)
    formatList = unLatexString . head
    divideEnergyList =
       zipWith
@@ -420,7 +420,7 @@ showLatexNode rec st content (n@(Idx.SecNode _sec nid), ty) =
 
 
 instance (Eq a, ToIndex a) => AutoEnvList (Term a) where
-   formatStContList = formatMaybe showEqTerms
+   formatValueList = formatMaybe showEqTerms
    formatList = showEqTerms
    divideEnergyList = zipWith (\x y -> simplify $ x &/ y)
 
@@ -448,7 +448,7 @@ showNodeType = show
 
 
 class AutoEnvSignal a where
-   formatStContSignal ::
+   formatValueSignal ::
       (DispApp s, TDisp t) =>
       Maybe (TC s t a) -> String
    envAbsSignal ::
@@ -458,26 +458,26 @@ class AutoEnvSignal a where
 instance
    (SDisplay v, D.Storage v a, Disp a, Ord a, BProd a a, D.ZipWith v) =>
       AutoEnvSignal (Data v a) where
-   formatStContSignal = formatMaybe sdisp
+   formatValueSignal = formatMaybe sdisp
    envAbsSignal
          (Interp.Envs (SingleRecord rec) e _de _p _dp _fn _dn dt x _dx _v st) =
       let lookupEnergy = makeLookup rec Idx.Energy e
       in  Env rec
-             (\a b -> formatStCont $ lookupEnergy a b)
+             (\a b -> formatValue $ lookupEnergy a b)
              (makeFormat rec Idx.X x)
              (\a b ->
-                formatStCont $
+                formatValue $
                 liftM2 (./)
                    (lookupEnergy a b)
                    (lookupEnergy b a))
              (\(v, ys) -> showLine v ++ " = " ++ ys)
              (lookupFormat sdisp dt)
-             (showNode rec st formatStContSignal)
+             (showNode rec st formatValueSignal)
 
 instance
    (DispApp s, s ~ Arith s s, TDisp t, TProd t t t, AutoEnvSignal a) =>
       AutoEnv (TC s t a) where
-   formatStCont = formatStContSignal
+   formatValue = formatValueSignal
    envAbs = envAbsSignal
 
 
@@ -494,10 +494,10 @@ instance
       let lookupEnergy = makeLookup rec Idx.Energy e
           lookupDEnergy = makeLookup rec Idx.DEnergy de
       in  Env rec
-             (\a b -> formatStCont $ lookupDEnergy a b)
+             (\a b -> formatValue $ lookupDEnergy a b)
              (makeFormat rec Idx.DX dx)
              (\a b ->
-                formatStCont $
+                formatValue $
                 liftM4
                    (\ea eb dea deb ->
                       (dea.*eb .- ea.*deb)./((eb.+deb).*eb))
@@ -505,7 +505,7 @@ instance
                    (lookupDEnergy a b) (lookupDEnergy b a))
              (\(v, ys) -> showLineDelta v ++ " = " ++ ys)
              (lookupFormat sdisp dt)
-             (showNode rec st formatStContSignal)
+             (showNode rec st formatValueSignal)
 
 instance
    (DispApp s, s ~ Arith s s, TDisp t, TSum t t t, TProd t t t,
