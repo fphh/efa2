@@ -343,8 +343,8 @@ envAbsListGen formatAssignList showListNode
           (\a b ->
              formatValue $
              liftM2 divideEnergyList
-                (lookupEnergy a b)
-                (lookupEnergy b a))
+                (lookupEnergy b a)
+                (lookupEnergy a b))
           formatAssignList
           (lookupFormat formatList dt)
           (showListNode rec st formatValueList)
@@ -362,8 +362,8 @@ instance AutoEnvDeltaList a => AutoEnvDelta [a] where
              (\a b ->
                 formatCont $
                 liftM4 divideDEnergyList
-                   (lookupEnergy a b) (lookupEnergy b a)
-                   (lookupDEnergy a b) (lookupDEnergy b a))
+                   (lookupEnergy b a) (lookupEnergy a b)
+                   (lookupDEnergy b a) (lookupDEnergy a b))
              (\(x, ys) -> showLineDelta x ++ " = " ++ ys)
              (lookupFormat formatList dt)
              (showNode rec st $
