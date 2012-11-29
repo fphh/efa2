@@ -3,11 +3,11 @@ module EFA2.StateAnalysis.StateAnalysis (
    bruteForce,
    branchAndBound,
    prioritized,
-   clustering,
+   clustering, clusteringGreedy, clusteringMinimizing,
 
    propBranchAndBound,
    propPrioritized,
-   propClustering,
+   propClustering, propClusteringGreedy, propClusteringMinimizing,
 
    speedBruteForce,
    speedBranchAndBound,
@@ -34,14 +34,16 @@ import EFA2.Utils.Utils (mapFromSet)
 
 import qualified Data.List.Key as Key
 import qualified Data.Foldable as Fold
+import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Map as M
 import qualified Data.Set as S
 import qualified Data.FingerTree.PSQueue as PSQ
-import qualified Data.PQueue.Prio.Min as PQ
+import qualified Data.PriorityQueue.FingerTree as PQ
 import Data.FingerTree.PSQueue (PSQ)
-import Data.PQueue.Prio.Min (MinPQueue)
+import Data.PriorityQueue.FingerTree (PQueue)
 import Data.Traversable (sequenceA)
 import Data.Monoid (mappend)
+import Data.NonEmpty ((!:))
 import Control.Monad (liftM2, foldM, guard)
 import Control.Functor.HT (void)
 import Data.Ord.HT (comparing)
@@ -245,13 +247,13 @@ mergeCluster topo c0 c1 =
 {- |
 Merge the two clusters with the least numbers of possibilities.
 -}
-mergeQueuedCluster ::
+mergeSmallestClusters ::
    CountTopology ->
-   MinPQueue Int Cluster ->
+   PQueue Int Cluster ->
    Either
       [FlowTopology]
-      (MinPQueue Int Cluster)
-mergeQueuedCluster topo queue0 =
+      (PQueue Int Cluster)
+mergeSmallestClusters topo queue0 =
    case PQ.minView queue0 of
       Nothing -> error "empty queue"
       Just (c0, queue1) ->
@@ -264,6 +266,91 @@ mergeQueuedCluster topo queue0 =
                let c2 = mergeCluster topo c0 c1
                in  PQ.insert (length $ clusterEdges c2) c2 queue2
 
+
+
+data ShortestList a b =
+   ShortestList {
+      _shortestListKey :: [a],
+      shortestListValue :: b
+   }
+
+{- |
+The result list may not equal one of the input lists.
+We should replace this by Peano numbers.
+-}
+shorterList :: ShortestList a b -> ShortestList a b -> ShortestList a b
+shorterList (ShortestList x0 xv) (ShortestList y0 yv) =
+   let go (x:xs) (_:ys) =
+          let ShortestList zs zv = go xs ys
+          in  ShortestList (x:zs) zv
+       go [] _ = ShortestList [] xv
+       go _  _ = ShortestList [] yv
+   in  go x0 y0
+
+{- |
+Return the value that is associated with the shortest list.
+Lists are only evaluated as far as necessary
+for finding the list with minimum length.
+-}
+shortestList :: NonEmpty.T [] (ShortestList a b) -> b
+shortestList = shortestListValue . NonEmpty.foldl1 shorterList
+
+
+{- |
+Merge the two clusters
+that give the minimal number of possibilities when merged.
+-}
+mergeMinimizingClusterPairs ::
+   CountTopology ->
+   NonEmpty.T [] Cluster ->
+   Either [FlowTopology] (NonEmpty.T [] Cluster)
+mergeMinimizingClusterPairs topo (NonEmpty.Cons p ps) =
+   case NonEmpty.fetch ps of
+      Nothing ->
+         Left $
+         map (\es -> Gr.nmap fst $ Gr.insEdgeSet es topo) $
+         clusterEdges p
+      Just partition0 ->
+         Right $
+         shortestList $ do
+            (c0, partition1) <-
+               NonEmpty.flatten $ NonEmpty.removeEach $ p !: partition0
+            (c1, partition2) <- NonEmpty.removeEach partition1
+            let c = mergeCluster topo c0 c1
+            return $ ShortestList (clusterEdges c) (c !: partition2)
+
+{- |
+Merge the cluster with the minimal number of possibilities
+with the cluster that minimizes the number of possibilities
+when merged with the first one.
+
+Usually, when the merged cluster is connected
+then there are less possibilities than for non-connected clusters.
+That is, our selection strategy tends to produce connected clusters.
+-}
+mergeMinimizingCluster ::
+   CountTopology ->
+   NonEmpty.T [] Cluster ->
+   Either [FlowTopology] (NonEmpty.T [] Cluster)
+mergeMinimizingCluster topo (NonEmpty.Cons p ps) =
+   case NonEmpty.fetch ps of
+      Nothing ->
+         Left $
+         map (\es -> Gr.nmap fst $ Gr.insEdgeSet es topo) $
+         clusterEdges p
+      Just partition0 ->
+         let (c0,partition1) =
+                shortestList $
+                fmap (\(c,cs) -> ShortestList (clusterEdges c) (c,cs)) $
+                NonEmpty.flatten $
+                NonEmpty.removeEach $ p !: partition0
+         in  Right $
+             shortestList $
+             fmap
+                (\(c,cs) ->
+                   let cm = mergeCluster topo c0 c
+                   in  ShortestList (clusterEdges cm) (cm!:cs)) $
+             NonEmpty.removeEach partition1
 
 
 type LNEdge = Gr.Edge Idx.Node
@@ -292,14 +379,28 @@ prioritized topo =
         (cleanTopo,
          PSQ.fromList $ map (\e -> e PSQ.:-> alternatives e cleanTopo) es))
 
+clusteringGreedy :: Topology -> [FlowTopology]
+clusteringGreedy topo =
+   let (cleanTopo, es) = splitNodesEdges topo
+   in  untilLeft (mergeSmallestClusters cleanTopo) $
+       PQ.fromList $
+       map (\c -> (length $ clusterEdges c, c)) $
+       emptyCluster cleanTopo :
+          map (singletonCluster cleanTopo) es
+
+clusteringMinimizing :: Topology -> [FlowTopology]
+clusteringMinimizing topo =
+   let (cleanTopo, es) = splitNodesEdges topo
+   in  untilLeft (mergeMinimizingClusterPairs cleanTopo) $
+       emptyCluster cleanTopo !:
+          map (singletonCluster cleanTopo) es
+
 clustering :: Topology -> [FlowTopology]
 clustering topo =
    let (cleanTopo, es) = splitNodesEdges topo
-   in  untilLeft (mergeQueuedCluster cleanTopo) $
-       PQ.fromList $
-       map (\c -> (length $ clusterEdges c, c)) $
-       (emptyCluster cleanTopo :) $
-       map (singletonCluster cleanTopo) es
+   in  untilLeft (mergeMinimizingCluster cleanTopo) $
+       emptyCluster cleanTopo !:
+          map (singletonCluster cleanTopo) es
 
 advanced :: Topology -> [FlowTopology]
 advanced = clustering
@@ -377,6 +478,18 @@ propClustering (ArbTopology g) =
    Key.sort graphIdent (branchAndBound g)
    ==
    Key.sort graphIdent (clustering g)
+
+propClusteringGreedy :: ArbTopology -> Bool
+propClusteringGreedy (ArbTopology g) =
+   Key.sort graphIdent (branchAndBound g)
+   ==
+   Key.sort graphIdent (clusteringGreedy g)
+
+propClusteringMinimizing :: ArbTopology -> Bool
+propClusteringMinimizing (ArbTopology g) =
+   Key.sort graphIdent (branchAndBound g)
+   ==
+   Key.sort graphIdent (clusteringMinimizing g)
 
 
 speedBruteForce :: ArbTopology -> Bool
