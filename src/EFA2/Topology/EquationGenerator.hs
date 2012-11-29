@@ -10,7 +10,7 @@ import qualified Data.Set as S
 import EFA2.Signal.Index as Idx
 import EFA2.Topology.EfaGraph as Gr
 
-import EFA2.Topology.TopologyData (SequFlowGraph, isOriginalEdge)
+import EFA2.Topology.TopologyData (SequFlowGraph, isOriginalEdge, getActiveStores)
 import EFA2.Solver.Equation
 import UniqueLogic.ST.Expression as Expr
 import UniqueLogic.ST.System as Sys
@@ -29,7 +29,7 @@ import Data.Monoid
 import Data.Maybe
 import Data.Ord (comparing)
 import Data.Traversable (traverse)
-import Data.Foldable (foldMap)
+import Data.Foldable (foldMap, fold)
 
 import EFA2.Interpreter.Env as Env
 
@@ -77,6 +77,12 @@ constToExprSys = ExprWithVars . return . Expr.constant
 varToExprSys :: Variable s a -> ExprWithVars s a
 varToExprSys = ExprWithVars . return . Expr.fromVariable
 
+
+withLocalVar :: (ExprWithVars s a -> t) -> t
+withLocalVar f = f $ ExprWithVars
+  (lift globalVariable >>= return . fromVariable)
+
+
 recAbs :: Record
 recAbs = Record Absolute
 
@@ -94,7 +100,10 @@ getVar idx =
         lift globalVariable
           >>= \var -> modify (M.insert idx var)
           >> return (fromVariable var)
-  in ExprWithVars $ gets (M.lookup idx) >>= maybe newVar oldVar 
+  in ExprWithVars $ gets (M.lookup idx) >>= maybe newVar oldVar
+
+
+
 
 power :: SecNode -> SecNode -> ExprWithVars s a
 power = (getVar .) . makeVar Idx.Power
@@ -129,16 +138,17 @@ makeAllEquations ::
   (Eq a, Fractional a) =>
   SequFlowGraph -> EquationSystem s a
 makeAllEquations g = mconcat $
-  makeOriginalEdgeEquations g :
+  makeInnerSectionEquations g :
   []
 
-makeOriginalEdgeEquations ::
+makeInnerSectionEquations ::
   (Eq a, Fractional a) =>
   SequFlowGraph -> EquationSystem s a
-makeOriginalEdgeEquations g = mconcat $
+makeInnerSectionEquations g = mconcat $
   makeEnergyEquations es :
   makeEdgeEquations es :
   makeNodeEquations g' :
+  -- makeStorageEquations g :
   []
   where g' = elfilter isOriginalEdge g
         es = edges g'
@@ -160,6 +170,30 @@ makeEnergyEquations es = foldMap mkEq es
           where dt = dtime sf
 
 
+{-
+makeNodeEquations ::
+  (Eq a, Fractional a) =>
+  SequFlowGraph -> EquationSystem s a
+makeNodeEquations = fold . M.mapWithKey ((f .) . g) . Gr.nodes
+  where g n (ins, _, outs) = (S.toList ins, n, S.toList outs)
+        f (ins, n, outs) =
+          (1 .= sum xin)
+          <> (1 .= sum xout)
+          <> withLocalVar (\s -> mconcat $
+               (s .= sumin) :
+               (s .= sumout) :
+               (mconcat $ zipWith g ein xin) :
+               (mconcat $ zipWith g eout xout) :
+               [] where g en x = en .= x * s)
+          where xin = map (xfactor n) ins
+                xout = map (xfactor n) outs
+                ein = map (energy n) ins
+                eout = map (energy n) outs
+                sumin = sum ein
+                sumout = sum eout
+
+-}
+
 makeNodeEquations ::
   (Eq a, Fractional a) =>
   SequFlowGraph -> EquationSystem s a
@@ -179,19 +213,34 @@ makeNodeEquations = mconcat . mapGraph (f . g)
                 sumout = sum eout
                 f s en x = en .= x * s
 
-mapToEnvs :: M.Map Env.Index (Maybe a) -> Envs SingleRecord (Maybe a)
-mapToEnvs = M.foldWithKey f envs
+
+{-
+makeStorageEquations ::
+  (Eq a, Fractional a) =>
+  SequFlowGraph -> EquationSystem s a
+makeStorageEquations g = trace (show actSt) undefined
+  where actSt = getActiveStores g
+
+fromList [
+(Node 3,fromList [
+(Section (-1),(([(SecNode (Section (-1)) (Node (-1)),ELabel {edgeType = InnerStorageEdge, flowDirection = Dir})],[]),In)),
+(Section 0,   (([(SecNode (Section    0) (Node    2),ELabel {edgeType = OriginalEdge, flowDirection = Dir})],[]),In))])]
+-}
+
+
+mapToEnvs :: (a -> b) -> M.Map Env.Index a -> Envs SingleRecord b
+mapToEnvs func = M.foldWithKey f envs
   where envs = emptyEnv { recordNumber = SingleRecord (Record Absolute) }
         f (Env.Energy idx) v e =
-          e { energyMap = M.insert idx v (energyMap e) }
+          e { energyMap = M.insert idx (func v) (energyMap e) }
         f (Env.Power idx) v e =
-          e { powerMap = M.insert idx v (powerMap e) }
+          e { powerMap = M.insert idx (func v) (powerMap e) }
         f (Env.FEta idx) v e =
-          e { fetaMap = M.insert idx (const v) (fetaMap e) }
+          e { fetaMap = M.insert idx (const $ func v) (fetaMap e) }
         f (Env.X idx) v e =
-          e { xMap = M.insert idx v (xMap e) }
+          e { xMap = M.insert idx (func v) (xMap e) }
         f (Env.DTime idx) v e =
-          e { dtimeMap = M.insert idx v (dtimeMap e) }
+          e { dtimeMap = M.insert idx (func v) (dtimeMap e) }
         f _ _ e = e
 
 solveSystemDoIt ::
@@ -202,14 +251,16 @@ solveSystemDoIt given g = runST $ do
       -- Reihenfolge spielt hier eine Rolle,
       -- auch wenn given neue Variablen enthält. Warum?
       EquationSystem eqsys = foldMap f given <> makeAllEquations g
+      -- EquationSystem eqsys = makeAllEquations g <> foldMap f given
   (eqs, varmap) <- runStateT eqsys M.empty
   solve eqs
   traverse query varmap
 
 solveSystem ::
   (Eq a, Fractional a) =>
-  [(Env.Index, a)] -> SequFlowGraph -> Envs SingleRecord (Maybe a)
-solveSystem given = mapToEnvs . solveSystemDoIt given
+  [(Env.Index, a)] -> SequFlowGraph -> Envs SingleRecord [a]
+solveSystem given = mapToEnvs maybeToList . solveSystemDoIt given
+
 
 -- Equation ueberfluessigne Typparameter entfernen
 

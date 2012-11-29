@@ -66,11 +66,15 @@ given = [ (mkVar (Idx.DTime (Idx.Record Absolute) initSection), 1.0),
           --(mkVar (Idx.DTime (Idx.Record Absolute) (Section 4)), 1.0),
 
 
-          --(makeVar Idx.Power (Idx.SecNode initSection (Idx.Node 3))
-           --                  (Idx.SecNode initSection (Idx.Node (-1))), 4.0),
+          (makeVar Idx.Power (Idx.SecNode initSection (Idx.Node 3))
+                             (Idx.SecNode initSection (Idx.Node (-1))), 3.0),
+
 
           (makeVar Idx.Power (Idx.SecNode (Section 0) (Idx.Node 2))
                              (Idx.SecNode (Section 0) (Idx.Node 3)), 4.0),
+
+          --(makeVar Idx.Energy (Idx.SecNode (Section 0) (Idx.Node 2))
+          --                    (Idx.SecNode (Section 0) (Idx.Node 3)), 2.0),
 
           (makeVar Idx.X (Idx.SecNode (Section 0) (Idx.Node 2))
                          (Idx.SecNode (Section 0) (Idx.Node 3)), 0.32),
@@ -92,6 +96,7 @@ given = [ (mkVar (Idx.DTime (Idx.Record Absolute) initSection), 1.0),
                             (Idx.SecNode (Section 0) (Idx.Node 2)), 0.75) ]
 
 
+
 main :: IO ()
 main = do 
 
@@ -99,5 +104,5 @@ main = do
   let env = solveSystem given seqTopo
   -- drawTopologySimple seqTopo
 
-  -- drawTopology seqTopo env
   print env
+  drawTopology seqTopo env
