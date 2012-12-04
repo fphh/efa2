@@ -21,6 +21,7 @@ module EFA2.Topology.TopologyData (
        isOriginalEdge,
        isInnerStorageEdge,
        isIntersectionEdge,
+       isDirEdge, isStorageNode,
        defaultELabel,
        defaultNLabel,
        InOut,
@@ -135,6 +136,11 @@ isIntersectionEdge :: EdgeTypeField et => et -> Bool
 isIntersectionEdge = (IntersectionEdge ==) . getEdgeType
 
 
+isDirEdge :: (a, ELabel) -> Bool
+isDirEdge = dir . getFlowDirection . snd
+  where dir Dir = True
+        dir _ = False
+
 type Topology = EfaGraph Idx.Node NodeType ()
 
 type FlowTopology = EfaGraph Idx.Node NodeType FlowDirection
@@ -147,6 +153,10 @@ type DirSequFlowGraph = EfaGraph Idx.SecNode NodeType EdgeType
 
 
 type InOut n el = ([Gr.LNode n el], [Gr.LNode n el])
+
+isStorageNode :: (a, (b, NodeType), c) -> Bool
+isStorageNode = isStorage . snd . snd3
+
 
 -- | Active storages, grouped by storage number, sorted by section number.
 getActiveStores ::
@@ -162,7 +172,7 @@ getActiveStores =
              in  case maybeActiveSt inout of
                     Nothing -> M.empty
                     Just dir -> M.singleton s (inout, dir))) .
-   filter (isStorage . snd . snd3) .
+   filter isStorageNode .
    mkInOutGraphFormat
 
 -- | Classify the storages in in and out storages,

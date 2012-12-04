@@ -1,7 +1,7 @@
 module Main where
 
-import qualified Data.List as L
-import qualified Data.Map as M
+--import qualified Data.List as L
+--import qualified Data.Map as M
 
 -- import EFA2.Example.Examples
 import EFA2.StateAnalysis.StateAnalysis
@@ -18,14 +18,14 @@ import EFA2.Interpreter.Env as Env
 import EFA2.Solver.Equation (mkVar)
 
 
-import UniqueLogic.ST.Expression
-import UniqueLogic.ST.Rule
-import UniqueLogic.ST.System
+--import UniqueLogic.ST.Expression
+--import UniqueLogic.ST.Rule
+--import UniqueLogic.ST.System
 
-import Data.Maybe (maybeToList)
+--import Data.Maybe (maybeToList)
 
-import Control.Monad.ST
-import Control.Monad
+--import Control.Monad.ST
+--import Control.Monad
 
 sec :: Idx.Section
 sec = Idx.Section 0
@@ -43,15 +43,15 @@ makeSimpleEdges es = map f es
 
 
 topoDreibein :: Topology
-topoDreibein = mkGraph (makeNodes nodes) (makeSimpleEdges edges)
-  where nodes = [(0, Source), (1, Sink), (2, Crossing), (3, TD.Storage)]
-        edges = [(0, 2), (1, 2), (2, 3)]
+topoDreibein = mkGraph (makeNodes ns) (makeSimpleEdges es)
+  where ns = [(0, Source), (1, Sink), (2, Crossing), (3, TD.Storage)]
+        es = [(0, 2), (1, 2), (2, 3)]
 
 
 seqTopo :: SequFlowGraph
 seqTopo = mkSeqTopo (select sol states)
   where sol = bruteForce topoDreibein  -- ehemals stateAnalysis
-        states = [0]
+        states = [1, 0, 1, 0, 1]
         select ts = map (ts!!)
         mkSeqTopo = Flow.mkSequenceTopology
                     . Flow.genSectionTopology
@@ -60,11 +60,13 @@ seqTopo = mkSeqTopo (select sol states)
 given :: [(Env.Index, Double)]
 given = [ (mkVar (Idx.DTime (Idx.Record Absolute) initSection), 1.0),
           (mkVar (Idx.DTime (Idx.Record Absolute) (Section 0)), 1.0),
-          --(mkVar (Idx.DTime (Idx.Record Absolute) (Section 1)), 1.0),
-          --(mkVar (Idx.DTime (Idx.Record Absolute) (Section 2)), 1.0),
-          --(mkVar (Idx.DTime (Idx.Record Absolute) (Section 3)), 1.0),
+          (mkVar (Idx.DTime (Idx.Record Absolute) (Section 1)), 1.0),
+          (mkVar (Idx.DTime (Idx.Record Absolute) (Section 2)), 1.0),
+          (mkVar (Idx.DTime (Idx.Record Absolute) (Section 3)), 1.0),
           --(mkVar (Idx.DTime (Idx.Record Absolute) (Section 4)), 1.0),
 
+          (mkVar (Idx.Storage (Idx.Record Absolute) 
+                              (Idx.SecNode (Section 3) (Idx.Node 3))), 10.0),
 
           (makeVar Idx.Power (Idx.SecNode initSection (Idx.Node 3))
                              (Idx.SecNode initSection (Idx.Node (-1))), 3.0),
@@ -79,8 +81,16 @@ given = [ (mkVar (Idx.DTime (Idx.Record Absolute) initSection), 1.0),
           (makeVar Idx.X (Idx.SecNode (Section 0) (Idx.Node 2))
                          (Idx.SecNode (Section 0) (Idx.Node 3)), 0.32),
 
-         -- (makeVar Idx.Power (Idx.SecNode (Section 0) (Idx.Node 1))
-         --                    (Idx.SecNode (Section 0) (Idx.Node 2)), 2.0),
+          (makeVar Idx.Power (Idx.SecNode (Section 1) (Idx.Node 3))
+                             (Idx.SecNode (Section 1) (Idx.Node 2)), 5),
+
+          (makeVar Idx.Power (Idx.SecNode (Section 2) (Idx.Node 3))
+                             (Idx.SecNode (Section 2) (Idx.Node 2)), 6),
+
+          (makeVar Idx.Power (Idx.SecNode (Section 3) (Idx.Node 3))
+                             (Idx.SecNode (Section 3) (Idx.Node 2)), 7),
+
+
 
 
           (makeVar Idx.FEta (Idx.SecNode (Section 0) (Idx.Node 3))
@@ -95,6 +105,8 @@ given = [ (mkVar (Idx.DTime (Idx.Record Absolute) initSection), 1.0),
           (makeVar Idx.FEta (Idx.SecNode (Section 0) (Idx.Node 0))
                             (Idx.SecNode (Section 0) (Idx.Node 2)), 0.75) ]
 
+emptyGiven :: [(Env.Index, Double)]
+emptyGiven = []
 
 
 main :: IO ()
@@ -104,5 +116,5 @@ main = do
   let env = solveSystem given seqTopo
   -- drawTopologySimple seqTopo
 
-  print env
+  --print (storageMap env)
   drawTopology seqTopo env

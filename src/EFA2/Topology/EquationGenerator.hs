@@ -10,26 +10,36 @@ import qualified Data.Set as S
 import EFA2.Signal.Index as Idx
 import EFA2.Topology.EfaGraph as Gr
 
-import EFA2.Topology.TopologyData (SequFlowGraph, isOriginalEdge, getActiveStores)
+import EFA2.Topology.TopologyData
+       (SequFlowGraph, isOriginalEdge, getActiveStores, isStorage,
+                       getFlowDirection, FlowDirection(..),
+                       isDirEdge, isStorageNode)
 import EFA2.Solver.Equation
 import UniqueLogic.ST.Expression as Expr
 import UniqueLogic.ST.System as Sys
-import UniqueLogic.ST.Rule as R
+--import UniqueLogic.ST.Rule as R
 
 import Control.Monad.ST
 import Control.Monad
 
 -- Unterschied strict vs lazy?
 --import Control.Monad.Writer
-import Control.Monad.State
 
-import Control.Applicative
+-- import Control.Monad.State
+
+import Control.Monad.Trans.Class
+import Control.Monad.Trans.State
+
+--import Control.Applicative
 
 import Data.Monoid
 import Data.Maybe
-import Data.Ord (comparing)
+import Data.Maybe.HT (toMaybe)
+
+--import Data.Ord (comparing)
 import Data.Traversable (traverse)
 import Data.Foldable (foldMap, fold)
+import Data.Tuple.HT (snd3)
 
 import EFA2.Interpreter.Env as Env
 
@@ -79,9 +89,8 @@ varToExprSys = ExprWithVars . return . Expr.fromVariable
 
 
 withLocalVar :: (ExprWithVars s a -> t) -> t
-withLocalVar f = f $ ExprWithVars
-  (lift globalVariable >>= return . fromVariable)
-
+withLocalVar f = f $ ExprWithVars $
+  liftM fromVariable (lift globalVariable)
 
 recAbs :: Record
 recAbs = Record Absolute
@@ -117,10 +126,17 @@ eta = (getVar .) . makeVar Idx.FEta
 xfactor :: SecNode -> SecNode -> ExprWithVars s a
 xfactor = (getVar .) . makeVar Idx.X
 
-vvar use = getVar . mkVar . Idx.Var recAbs use
+--vvar :: Use -> SecNode -> ExprWithVars s a
+--vvar use = getVar . mkVar . Idx.Var recAbs use
 
-insum = getVar . mkVar . Idx.InSumVar recAbs
-outsum = getVar . mkVar . Idx.OutSumVar recAbs
+insumvar :: SecNode -> ExprWithVars s a
+insumvar = getVar . mkVar . Idx.InSumVar recAbs
+
+outsumvar :: SecNode -> ExprWithVars s a
+outsumvar = getVar . mkVar . Idx.OutSumVar recAbs
+
+storage :: SecNode -> ExprWithVars s a
+storage = getVar . mkVar . Idx.Storage recAbs
 
 
 dtime :: Section -> ExprWithVars s a
@@ -148,7 +164,7 @@ makeInnerSectionEquations g = mconcat $
   makeEnergyEquations es :
   makeEdgeEquations es :
   makeNodeEquations g' :
-  -- makeStorageEquations g :
+  makeStorageEquations g' :
   []
   where g' = elfilter isOriginalEdge g
         es = edges g'
@@ -164,34 +180,37 @@ makeEnergyEquations ::
   (Eq a, Fractional a) =>
   [Edge SecNode] -> EquationSystem s a
 makeEnergyEquations es = foldMap mkEq es
-  where mkEq (Edge f@(SecNode sf nf) t@(SecNode st nt)) =
+  where mkEq (Edge f@(SecNode sf _) t@(SecNode st _)) =
           mwhen (sf == st)
             (energy f t .= dt * power f t) <> (energy t f .= dt * power t f)
           where dt = dtime sf
 
 
 {-
+Die annonyme Variable ist unguenstig, weil man sie spaeter wieder braucht.
+Siehe eins weiter unten.
+
 makeNodeEquations ::
   (Eq a, Fractional a) =>
   SequFlowGraph -> EquationSystem s a
 makeNodeEquations = fold . M.mapWithKey ((f .) . g) . Gr.nodes
   where g n (ins, _, outs) = (S.toList ins, n, S.toList outs)
-        f (ins, n, outs) =
-          (1 .= sum xin)
+        f a@(ins, n, outs) = withLocalVar $ \s ->
+             (1 .= sum xin)
           <> (1 .= sum xout)
-          <> withLocalVar (\s -> mconcat $
-               (s .= sumin) :
-               (s .= sumout) :
-               (mconcat $ zipWith g ein xin) :
-               (mconcat $ zipWith g eout xout) :
-               [] where g en x = en .= x * s)
+
+          -- <> (s .= sum ein)
+          <> mwhen (not (null outs)) (s .= sum ein)
+
+          -- <> (s .= sum eout)
+          <> mwhen (not (null ins)) (s .= sum eout)
+
+          <> (mconcat $ zipWith (\en x -> en .= x * s) ein xin)
+          <> (mconcat $ zipWith (\en x -> en .= x * s) eout xout)
           where xin = map (xfactor n) ins
                 xout = map (xfactor n) outs
                 ein = map (energy n) ins
                 eout = map (energy n) outs
-                sumin = sum ein
-                sumout = sum eout
-
 -}
 
 makeNodeEquations ::
@@ -199,33 +218,54 @@ makeNodeEquations ::
   SequFlowGraph -> EquationSystem s a
 makeNodeEquations = mconcat . mapGraph (f . g)
   where g (ins, n, outs) = (map fst ins, fst n, map fst outs)
-        f (ins, n, outs) =
+        f a@(ins, n, outs) =
           (1 .= sum xin)
           <> (1 .= sum xout)
-          <> (sumin .= sumout)
-          <> (mconcat $ zipWith (f sumin) ein xin)
-          <> (mconcat $ zipWith (f sumout) eout xout)
+          <> (varsumin .= sum ein)
+          <> (varsumout .= sum eout)
+          <> mwhen (not (null ins) && not (null outs)) (varsumin .= varsumout)
+          <> (mconcat $ zipWith (h varsumin) ein xin)
+          <> (mconcat $ zipWith (h varsumout) eout xout)
           where xin = map (xfactor n) ins
                 xout = map (xfactor n) outs
                 ein = map (energy n) ins
                 eout = map (energy n) outs
-                sumin = sum ein
-                sumout = sum eout
-                f s en x = en .= x * s
+                varsumin = insumvar n       -- this variable is used again in makeStorageEquations
+                varsumout = outsumvar n     -- and this, too.
+                h s en x = en .= x * s
 
 
-{-
+
+
 makeStorageEquations ::
   (Eq a, Fractional a) =>
   SequFlowGraph -> EquationSystem s a
-makeStorageEquations g = trace (show actSt) undefined
-  where actSt = getActiveStores g
+makeStorageEquations topo = mconcat $ foldMap g st
+  where st = getStorages topo
+        g lst = zipWith f lst (tail lst)
+        f (before, _) (now, dir) =
+          case dir of
+               NoDir  -> stNow .= stBefore
+               InDir  -> stNow .= stBefore + varsumin
+               OutDir -> stNow .= stBefore - varsumout
+          where stBefore = storage before
+                stNow = storage now
+                varsumin = insumvar now
+                varsumout = outsumvar now
 
-fromList [
-(Node 3,fromList [
-(Section (-1),(([(SecNode (Section (-1)) (Node (-1)),ELabel {edgeType = InnerStorageEdge, flowDirection = Dir})],[]),In)),
-(Section 0,   (([(SecNode (Section    0) (Node    2),ELabel {edgeType = OriginalEdge, flowDirection = Dir})],[]),In))])]
--}
+
+data StDir = InDir
+           | OutDir
+           | NoDir deriving (Eq, Ord, Show)
+
+getStorages :: SequFlowGraph -> [[(SecNode, StDir)]]
+getStorages topo = inoutst
+  where inoutst = L.groupBy nodeId $ map f $ filter isStorageNode $ mkInOutGraphFormat topo
+        f ([n], (s, _), []) = if isDirEdge n then (s, InDir) else (s, NoDir)
+        f ([], (s, _), [n]) = if isDirEdge n then (s, OutDir) else (s, NoDir)
+        f ([], (s, _), []) = (s, NoDir)
+        f n@(_, _, _) = error (show n ++ ": getStorages")
+        nodeId (SecNode _ s, _) (SecNode _ t, _) = s == t
 
 
 mapToEnvs :: (a -> b) -> M.Map Env.Index a -> Envs SingleRecord b
@@ -239,6 +279,8 @@ mapToEnvs func = M.foldWithKey f envs
           e { fetaMap = M.insert idx (const $ func v) (fetaMap e) }
         f (Env.X idx) v e =
           e { xMap = M.insert idx (func v) (xMap e) }
+        f (Env.Store idx) v e =
+          e { storageMap = M.insert idx (func v) (storageMap e) }
         f (Env.DTime idx) v e =
           e { dtimeMap = M.insert idx (func v) (dtimeMap e) }
         f _ _ e = e
@@ -249,9 +291,9 @@ solveSystemDoIt ::
 solveSystemDoIt given g = runST $ do
   let f (var, val) = getVar var .= constToExprSys val
       -- Reihenfolge spielt hier eine Rolle,
-      -- auch wenn given neue Variablen enthält. Warum?
+      -- auch wenn given neue Variablen enthält. Warum? Ist jetzt klar!
       EquationSystem eqsys = foldMap f given <> makeAllEquations g
-      -- EquationSystem eqsys = makeAllEquations g <> foldMap f given
+      --EquationSystem eqsys = makeAllEquations g <> foldMap f given
   (eqs, varmap) <- runStateT eqsys M.empty
   solve eqs
   traverse query varmap
