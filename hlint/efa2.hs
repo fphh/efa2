@@ -133,3 +133,6 @@ error "Too strict case" = (case m of Left x -> f y w; Right z -> f v w) ==> f (c
 error "Use Foldable.forM_" = (case m of Nothing -> return (); Just x -> f x) ==> Fold.forM_ m f
 error "Use Foldable.forM_" = when (isJust m) (f (fromJust m)) ==> Fold.forM_ m f
 error "Use Foldable.mapM_" = maybe (return ()) ==> Fold.mapM_
+
+
+-- HH
