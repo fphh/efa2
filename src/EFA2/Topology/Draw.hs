@@ -289,8 +289,19 @@ draw g
               IntersectionEdge ->
                  (Line ELine uid vid, formatEnergy uid vid) :
                  (Line XLine uid vid, formatX uid vid) :
+                 -- (Line NLine uid vid, formatEta uid vid) :
+                 (Line XLine vid uid, formatX vid uid) :
                  (Line ELine vid uid, formatEnergy vid uid) :
                  []
+
+{-
+                 -- (Line ELine uid vid, formatEnergy uid vid) :
+
+                 (Line XLine uid vid, formatX uid vid) :
+                 (Line XLine vid uid, formatX vid uid) :
+                 (Line ELine vid uid, formatEnergy vid uid) :
+                 []
+-}
 
 drawTopology ::
    AutoEnv a => SequFlowGraph -> Interp.Envs SingleRecord a -> IO ()

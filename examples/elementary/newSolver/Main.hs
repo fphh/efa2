@@ -51,7 +51,7 @@ topoDreibein = mkGraph (makeNodes ns) (makeSimpleEdges es)
 seqTopo :: SequFlowGraph
 seqTopo = mkSeqTopo (select sol states)
   where sol = bruteForce topoDreibein  -- ehemals stateAnalysis
-        states = [1, 0, 1, 0, 1]
+        states = [1, 0, 1]
         select ts = map (ts!!)
         mkSeqTopo = Flow.mkSequenceTopology
                     . Flow.genSectionTopology
@@ -63,10 +63,11 @@ given = [ (mkVar (Idx.DTime (Idx.Record Absolute) initSection), 1.0),
           (mkVar (Idx.DTime (Idx.Record Absolute) (Section 1)), 1.0),
           (mkVar (Idx.DTime (Idx.Record Absolute) (Section 2)), 1.0),
           (mkVar (Idx.DTime (Idx.Record Absolute) (Section 3)), 1.0),
+          (mkVar (Idx.DTime (Idx.Record Absolute) (Section 4)), 1.0),
           --(mkVar (Idx.DTime (Idx.Record Absolute) (Section 4)), 1.0),
 
           (mkVar (Idx.Storage (Idx.Record Absolute) 
-                              (Idx.SecNode (Section 3) (Idx.Node 3))), 10.0),
+                              (Idx.SecNode (Section 2) (Idx.Node 3))), 10.0),
 
           (makeVar Idx.Power (Idx.SecNode initSection (Idx.Node 3))
                              (Idx.SecNode initSection (Idx.Node (-1))), 3.0),
@@ -90,6 +91,8 @@ given = [ (mkVar (Idx.DTime (Idx.Record Absolute) initSection), 1.0),
           (makeVar Idx.Power (Idx.SecNode (Section 3) (Idx.Node 3))
                              (Idx.SecNode (Section 3) (Idx.Node 2)), 7),
 
+          (makeVar Idx.Power (Idx.SecNode (Section 4) (Idx.Node 3))
+                             (Idx.SecNode (Section 4) (Idx.Node 2)), 8),
 
 
 

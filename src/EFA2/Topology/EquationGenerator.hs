@@ -5,41 +5,29 @@ module EFA2.Topology.EquationGenerator where
 
 import qualified Data.Map as M
 import qualified Data.List as L
-import qualified Data.Set as S
+--import qualified Data.Set as S
 
 import EFA2.Signal.Index as Idx
 import EFA2.Topology.EfaGraph as Gr
 
-import EFA2.Topology.TopologyData
-       (SequFlowGraph, isOriginalEdge, getActiveStores, isStorage,
-                       getFlowDirection, FlowDirection(..),
-                       isDirEdge, isStorageNode)
+import qualified EFA2.Topology.TopologyData as TD
 import EFA2.Solver.Equation
 import UniqueLogic.ST.Expression as Expr
 import UniqueLogic.ST.System as Sys
---import UniqueLogic.ST.Rule as R
 
 import Control.Monad.ST
 import Control.Monad
 
--- Unterschied strict vs lazy?
---import Control.Monad.Writer
-
--- import Control.Monad.State
-
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.State
 
---import Control.Applicative
 
 import Data.Monoid
 import Data.Maybe
-import Data.Maybe.HT (toMaybe)
+import Data.Ord (comparing)
 
---import Data.Ord (comparing)
 import Data.Traversable (traverse)
-import Data.Foldable (foldMap, fold)
-import Data.Tuple.HT (snd3)
+import Data.Foldable (foldMap)
 
 import EFA2.Interpreter.Env as Env
 
@@ -152,22 +140,26 @@ edges g = M.keys el
 
 makeAllEquations ::
   (Eq a, Fractional a) =>
-  SequFlowGraph -> EquationSystem s a
+  TD.SequFlowGraph -> EquationSystem s a
 makeAllEquations g = mconcat $
   makeInnerSectionEquations g :
+  makeInterSectionEquations g :
   []
+
+-----------------------------------------------------------------
 
 makeInnerSectionEquations ::
   (Eq a, Fractional a) =>
-  SequFlowGraph -> EquationSystem s a
+  TD.SequFlowGraph -> EquationSystem s a
 makeInnerSectionEquations g = mconcat $
   makeEnergyEquations es :
   makeEdgeEquations es :
   makeNodeEquations g' :
   makeStorageEquations g' :
   []
-  where g' = elfilter isOriginalEdge g
+  where g' = elfilter TD.isOriginalEdge g
         es = edges g'
+
 
 makeEdgeEquations ::
   (Eq a, Fractional a) =>
@@ -192,7 +184,7 @@ Siehe eins weiter unten.
 
 makeNodeEquations ::
   (Eq a, Fractional a) =>
-  SequFlowGraph -> EquationSystem s a
+  TD.SequFlowGraph -> EquationSystem s a
 makeNodeEquations = fold . M.mapWithKey ((f .) . g) . Gr.nodes
   where g n (ins, _, outs) = (S.toList ins, n, S.toList outs)
         f a@(ins, n, outs) = withLocalVar $ \s ->
@@ -213,12 +205,14 @@ makeNodeEquations = fold . M.mapWithKey ((f .) . g) . Gr.nodes
                 eout = map (energy n) outs
 -}
 
+toSecNode :: ([(a, d0)], (b, d1), [(c, d2)]) -> ([a], b, [c])
+toSecNode (ins, n, outs) = (map fst ins, fst n, map fst outs)
+
 makeNodeEquations ::
   (Eq a, Fractional a) =>
-  SequFlowGraph -> EquationSystem s a
-makeNodeEquations = mconcat . mapGraph (f . g)
-  where g (ins, n, outs) = (map fst ins, fst n, map fst outs)
-        f a@(ins, n, outs) =
+  TD.SequFlowGraph -> EquationSystem s a
+makeNodeEquations = mconcat . mapGraph (f . toSecNode)
+  where  f (ins, n, outs) =
           (1 .= sum xin)
           <> (1 .= sum xout)
           <> (varsumin .= sum ein)
@@ -239,9 +233,9 @@ makeNodeEquations = mconcat . mapGraph (f . g)
 
 makeStorageEquations ::
   (Eq a, Fractional a) =>
-  SequFlowGraph -> EquationSystem s a
+  TD.SequFlowGraph -> EquationSystem s a
 makeStorageEquations topo = mconcat $ foldMap g st
-  where st = getStorages topo
+  where st = getInnersectionStorages topo
         g lst = zipWith f lst (tail lst)
         f (before, _) (now, dir) =
           case dir of
@@ -258,14 +252,108 @@ data StDir = InDir
            | OutDir
            | NoDir deriving (Eq, Ord, Show)
 
-getStorages :: SequFlowGraph -> [[(SecNode, StDir)]]
-getStorages topo = inoutst
-  where inoutst = L.groupBy nodeId $ map f $ filter isStorageNode $ mkInOutGraphFormat topo
-        f ([n], (s, _), []) = if isDirEdge n then (s, InDir) else (s, NoDir)
-        f ([], (s, _), [n]) = if isDirEdge n then (s, OutDir) else (s, NoDir)
-        f ([], (s, _), []) = (s, NoDir)
-        f n@(_, _, _) = error (show n ++ ": getStorages")
-        nodeId (SecNode _ s, _) (SecNode _ t, _) = s == t
+-- Only graphs without intersection edges are allowed.
+-- Storages must not have more than one in or out edge.
+getInnersectionStorages :: TD.SequFlowGraph -> [[(SecNode, StDir)]]
+getInnersectionStorages = getStorages format
+  where format ([n], (s, _), []) = if TD.isDirEdge n then (s, InDir) else (s, NoDir)
+        format ([], (s, _), [n]) = if TD.isDirEdge n then (s, OutDir) else (s, NoDir)
+        format ([], (s, _), []) = (s, NoDir)
+        format n@(_, _, _) = error (show n ++ ": getInnersectionStorages")
+
+type InOutFormat = Gr.InOut SecNode TD.NodeType TD.ELabel
+
+
+getStorages :: (InOutFormat -> b) -> TD.SequFlowGraph -> [[b]]
+getStorages format =
+  map (map format)
+  . L.groupBy nodeId
+  . filter TD.isStorageNode
+  . mkInOutGraphFormat
+  where nodeId (_, (SecNode _ s, _), _) (_, (SecNode _ t, _), _) = s == t
+
+
+
+-----------------------------------------------------------------
+
+makeInterSectionEquations ::
+  (Eq a, Fractional a) =>
+  TD.SequFlowGraph -> EquationSystem s a
+makeInterSectionEquations g = mconcat $
+  makeInterNodeEquations g :
+  []
+{-
+makeInterEdgeEquations ::
+  (Eq a, Fractional a) =>
+  [Edge SecNode] -> EquationSystem s a
+makeInterEdgeEquations es = foldMap mkEq es
+  where mkEq (Edge f t) = (eta f t .= 1) <> (energy t f .= eta f t * energy f t)
+-}
+
+makeInterNodeEquations ::
+  (Eq a, Fractional a) =>
+  TD.SequFlowGraph -> EquationSystem s a
+makeInterNodeEquations topo = foldMap f st
+  where st = getIntersectionStorages topo
+        f (dir, x) =
+          case dir of
+               NoDir -> mempty
+               InDir -> mkInStorageEquations x
+               OutDir -> mkOutStorageEquations x
+
+secNode :: SecNode -> Section
+secNode (SecNode s _) = s
+
+-- Sollte mit withLocalVar gemacht werden, um "sum es" zu ersetzen
+mkInStorageEquations ::
+  (Eq a, Fractional a) =>
+  ([SecNode], SecNode, [SecNode]) -> EquationSystem s a
+mkInStorageEquations (_, _, []) = mempty
+mkInStorageEquations (_, n, outs) =
+  (energy n so .= if initialSec n then initStorage else varsumin) -- special for initial Section
+  <> (mconcat $ zipWith (\x e -> e .= x * sum es) xs es)
+  <> (mconcat $ zipWith f sos souts)
+  where souts@(so:sos) = L.sortBy (comparing secNode) outs
+        initStorage = storage n
+        varsumin = insumvar n
+        initialSec s = secNode s == initSection
+        xs = map (xfactor n) souts
+        es = map (energy n) souts
+        f next beforeNext = energy n next .= energy n beforeNext - energy beforeNext n
+
+-- Sollte mit withLocalVar gemacht werden, um "sum esOpposite" zu ersetzen
+mkOutStorageEquations ::
+  (Eq a, Fractional a) =>
+  ([SecNode], SecNode, [SecNode]) -> EquationSystem s a
+mkOutStorageEquations ([], _, _) = mempty
+mkOutStorageEquations (ins, n, _) =
+  --withLocalVar $ \s ->
+    -- (s .= sum esOpposite)
+    (varsumout .= sum esHere)
+    <> (mconcat $ zipWith (\e x -> e .= x * sum esOpposite) esOpposite xsHere)
+    <> (mconcat $ zipWith (\e x -> e .= x * varsumout) esHere xsHere)
+  where sins = L.sortBy (comparing secNode) ins
+        esOpposite = map (flip energy n) sins
+        esHere = map (energy n) sins
+        xsHere = map (xfactor n) sins
+        varsumout = outsumvar n
+
+
+
+
+getIntersectionStorages ::
+  TD.SequFlowGraph -> [(StDir, ([SecNode], SecNode, [SecNode]))]
+getIntersectionStorages = concat . getStorages (format . toSecNode)
+  where format x@(ins, SecNode sec _, outs) =
+          case (filter h ins, filter h outs) of
+               ([], [])  -> (NoDir, x)
+               ([_], []) -> (InDir, x)
+               ([], [_]) -> (OutDir, x)
+               _ -> error (show x ++ ": makeInterNodeEquations")
+          where h (SecNode s _) = s == sec
+
+
+-----------------------------------------------------------------
 
 
 mapToEnvs :: (a -> b) -> M.Map Env.Index a -> Envs SingleRecord b
@@ -287,20 +375,17 @@ mapToEnvs func = M.foldWithKey f envs
 
 solveSystemDoIt ::
   (Eq a, Fractional a) =>
-  [(Env.Index, a)] -> SequFlowGraph -> M.Map Env.Index (Maybe a)
+  [(Env.Index, a)] -> TD.SequFlowGraph -> M.Map Env.Index (Maybe a)
 solveSystemDoIt given g = runST $ do
   let f (var, val) = getVar var .= constToExprSys val
-      -- Reihenfolge spielt hier eine Rolle,
-      -- auch wenn given neue Variablen enthält. Warum? Ist jetzt klar!
       EquationSystem eqsys = foldMap f given <> makeAllEquations g
-      --EquationSystem eqsys = makeAllEquations g <> foldMap f given
   (eqs, varmap) <- runStateT eqsys M.empty
   solve eqs
   traverse query varmap
 
 solveSystem ::
   (Eq a, Fractional a) =>
-  [(Env.Index, a)] -> SequFlowGraph -> Envs SingleRecord [a]
+  [(Env.Index, a)] -> TD.SequFlowGraph -> Envs SingleRecord [a]
 solveSystem given = mapToEnvs maybeToList . solveSystemDoIt given
 
 
