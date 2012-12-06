@@ -266,7 +266,7 @@ instance Format Plain where
          case ty of
             Storage ->
                "\nContent: " ++
-               (getPlain $ formatMaybe formatValue $
+               (getPlain $ formatMaybeValue $
                 M.lookup (Idx.Storage rec n) st)
             _ -> ""
 
@@ -297,7 +297,7 @@ instance Format LatexString where
          case ty of
             Storage ->
                "\\\\ Content: " ++
-               (unLatexString $ formatMaybe formatValue $
+               (unLatexString $ formatMaybeValue $
                 M.lookup (Idx.Storage rec n) st)
             _ -> ""
 
