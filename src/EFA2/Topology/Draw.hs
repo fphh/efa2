@@ -231,6 +231,7 @@ class Format output where
    formatChar :: Char -> output
    formatRatio :: (Integral a, Show a) => Ratio a -> output
    formatReal :: (Floating a, PrintfArg a) => a -> output
+   formatQuotient :: output -> output -> output
    formatSignal ::
       (SDisplay v, D.Storage v a, Ord a, Disp a,
        TDisp t, DispApp s) =>
@@ -255,6 +256,7 @@ instance Format Plain where
    formatRatio = Plain . show
    -- formatReal = Plain . show
    formatReal = Plain . printf "%.6f"
+   formatQuotient (Plain x) (Plain y) = Plain $ "(" ++ x ++ ")/(" ++ y ++ ")"
    formatSignal = Plain . sdisp
    formatNode rec st (n@(Idx.SecNode _sec nid), ty) =
       Plain $
@@ -284,6 +286,8 @@ instance Format LatexString where
    formatChar = LatexString . (:[])
    formatRatio = LatexString . show
    formatReal = LatexString . printf "%f"
+   formatQuotient (LatexString x) (LatexString y) =
+      LatexString $ "\\frac{" ++ x ++ "}{" ++ y ++ "}"
    formatSignal = LatexString . sdisp
    formatNode rec st (n@(Idx.SecNode _sec nid), ty) =
       LatexString $
@@ -392,10 +396,10 @@ class AutoEnv a => AutoEnvDelta a where
 
 
 class FormatValue a => AutoEnvList a where
-   divideEnergyList :: [a] -> [a] -> [a]
+   formatEnergyQuotient :: Format output => a -> a -> output
 
 class AutoEnvList a => AutoEnvDeltaList a where
-   divideDEnergyList :: [a] -> [a] -> [a] -> [a] -> [a]
+   formatDEnergyQuotient :: Format output => a -> a -> a -> a -> output
 
 instance FormatValue a => FormatValue [a] where
    formatValue = formatList . map formatValue
@@ -407,8 +411,8 @@ instance AutoEnvList a => AutoEnv [a] where
              (\a b -> formatMaybeValue $ lookupEnergy a b)
              (makeFormat rec Idx.X x)
              (\a b ->
-                formatMaybeValue $
-                liftM2 divideEnergyList
+                maybe undetermined formatList $
+                liftM2 (zipWith formatEnergyQuotient)
                    (lookupEnergy b a)
                    (lookupEnergy a b))
              (\(v, ys) -> formatAssignGen (formatLineAbs v) ys)
@@ -425,8 +429,8 @@ instance AutoEnvDeltaList a => AutoEnvDelta [a] where
              (\a b -> formatMaybeValue $ lookupDEnergy a b)
              (makeFormat rec Idx.DX dx)
              (\a b ->
-                formatMaybeValue $
-                liftM4 divideDEnergyList
+                maybe undetermined formatList $
+                liftM4 (L.zipWith4 formatDEnergyQuotient)
                    (lookupEnergy b a) (lookupEnergy a b)
                    (lookupDEnergy b a) (lookupDEnergy a b))
              (\(x, ys) -> formatAssignGen (formatLineDelta x) ys)
@@ -443,43 +447,39 @@ instance FormatValue Double where
    formatValue = formatReal
 
 instance AutoEnvList Double where
-   divideEnergyList = zipWith (/)
+   formatEnergyQuotient x y = formatReal $ x/y
 
 instance AutoEnvDeltaList Double where
-   divideDEnergyList =
-      L.zipWith4
-         (\ea eb dea deb ->
-            (dea*eb - ea*deb)/((eb+deb)*eb))
+   formatDEnergyQuotient ea eb dea deb =
+      formatReal $
+      (dea*eb - ea*deb)/((eb+deb)*eb)
 {-
-         (\ea eb dea deb ->
-            (ea+dea)/(eb+deb) - ea/eb)
+      (ea+dea)/(eb+deb) - ea/eb
 -}
 
 instance (Integral a, Show a) => FormatValue (Ratio a) where
    formatValue = formatRatio
 
 instance (Integral a, Show a) => AutoEnvList (Ratio a) where
-   divideEnergyList = zipWith (/)
+   formatEnergyQuotient x y = formatRatio $ x/y
 
 instance FormatValue Char where
    formatValue = formatChar
 
 instance AutoEnvList Char where
-   divideEnergyList x y = "(" ++ x ++ ")/(" ++ y ++ ")"
+   formatEnergyQuotient x y = formatQuotient (formatChar x) (formatChar y)
 
 
 instance (Eq a, ToIndex a) => FormatValue (Term a) where
    formatValue = formatTerm
 
 instance (Eq a, ToIndex a) => AutoEnvList (Term a) where
-   divideEnergyList = zipWith (\x y -> simplify $ x &/ y)
+   formatEnergyQuotient x y = formatTerm $ simplify $ x &/ y
 
 instance (Eq a, ToIndex a) => AutoEnvDeltaList (Term a) where
-   divideDEnergyList =
-      L.zipWith4
-         (\ea eb dea deb ->
-            simplify $
-            (dea :* eb  &-  ea :* deb) &/ ((eb:+deb):*eb))
+   formatDEnergyQuotient ea eb dea deb =
+      formatTerm $ simplify $
+      (dea :* eb  &-  ea :* deb) &/ ((eb:+deb):*eb)
 
 
 class FormatValueSignal a where
