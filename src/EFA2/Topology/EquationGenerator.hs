@@ -119,9 +119,6 @@ eta = (getVar .) . makeVar Idx.FEta
 xfactor :: SecNode -> SecNode -> ExprWithVars s a
 xfactor = (getVar .) . makeVar Idx.X
 
---vvar :: Use -> SecNode -> ExprWithVars s a
---vvar use = getVar . mkVar . Idx.Var recAbs use
-
 insumvar :: SecNode -> ExprWithVars s a
 insumvar = getVar . mkVar . Idx.InSumVar recAbs
 
@@ -183,33 +180,6 @@ makeEnergyEquations es = foldMap mkEq es
           where dt = dtime sf
 
 
-{-
-Die annonyme Variable ist unguenstig, weil man sie spaeter wieder braucht.
-Siehe eins weiter unten.
-
-makeNodeEquations ::
-  (Eq a, Fractional a) =>
-  TD.SequFlowGraph -> EquationSystem s a
-makeNodeEquations = fold . M.mapWithKey ((f .) . g) . Gr.nodes
-  where g n (ins, _, outs) = (S.toList ins, n, S.toList outs)
-        f a@(ins, n, outs) = withLocalVar $ \s ->
-             (1 .= sum xin)
-          <> (1 .= sum xout)
-
-          -- <> (s .= sum ein)
-          <> mwhen (not (null outs)) (s .= sum ein)
-
-          -- <> (s .= sum eout)
-          <> mwhen (not (null ins)) (s .= sum eout)
-
-          <> (mconcat $ zipWith (\en x -> en .= x * s) ein xin)
-          <> (mconcat $ zipWith (\en x -> en .= x * s) eout xout)
-          where xin = map (xfactor n) ins
-                xout = map (xfactor n) outs
-                ein = map (energy n) ins
-                eout = map (energy n) outs
--}
-
 makeNodeEquations ::
   (Eq a, Fractional a) =>
   TD.SequFlowGraph -> EquationSystem s a
@@ -230,8 +200,6 @@ makeNodeEquations = fold . M.mapWithKey ((f .) . g) . Gr.nodes
                 varsumin = insumvar n       -- this variable is used again in makeStorageEquations
                 varsumout = outsumvar n     -- and this, too.
                 h s en x = en .= x * s
-
-
 
 
 makeStorageEquations ::
