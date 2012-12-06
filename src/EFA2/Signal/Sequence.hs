@@ -108,7 +108,7 @@ makeRecSequence ::
           (Typ UT UT UT)
           (Data (UV.Vector :> Nil) Val)))
 makeRecSequence =
-   zipWithSecIdxs (flip fromFlowRecord (Idx.Record 0))
+   zipWithSecIdxs (flip fromFlowRecord (Idx.Record Idx.Absolute))
 
 makeSeqFlowGraph ::
    Topology ->

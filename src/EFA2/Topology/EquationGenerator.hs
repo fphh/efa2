@@ -1,5 +1,3 @@
--- {-# LANGUAGE FlexibleInstances #-}
--- {-# LANGUAGE RankNTypes #-}
 
 module EFA2.Topology.EquationGenerator where
 
@@ -241,7 +239,8 @@ makeStorageEquations ::
   TD.SequFlowGraph -> EquationSystem s a
 makeStorageEquations topo = mconcat $ foldMap g st
   where st = getInnersectionStorages topo
-        g lst = zipWith f lst (tail lst)
+        g [] = mempty
+        g lst@(_:t) = zipWith f lst t
         f (before, _) (now, dir) =
           case dir of
                NoDir  -> stNow .= stBefore
@@ -299,8 +298,8 @@ makeInterNodeEquations topo = foldMap f st
                InDir -> mkInStorageEquations x
                OutDir -> mkOutStorageEquations x
 
-secNode :: SecNode -> Section
-secNode (SecNode s _) = s
+getSection :: SecNode -> Section
+getSection (SecNode s _) = s
 
 mkInStorageEquations ::
   (Eq a, Fractional a) =>
@@ -313,10 +312,10 @@ mkInStorageEquations (_, n, outs) =
     <> (s .= sum es)
     <> (mconcat $ zipWith (\x e -> e .= x * s) xs es)
     <> (mconcat $ zipWith f sos souts)
-  where souts@(so:sos) = L.sortBy (comparing secNode) outs
+  where souts@(so:sos) = L.sortBy (comparing getSection) outs
         initStorage = storage n
         varsumin = insumvar n
-        initialSec s = secNode s == Idx.initSection
+        initialSec s = getSection s == Idx.initSection
         xs = map (xfactor n) souts
         es = map (energy n) souts
         f next beforeNext = energy n next .= energy n beforeNext - energy beforeNext n
@@ -331,7 +330,7 @@ mkOutStorageEquations (ins, n, _) =
     <> (varsumout .= sum esHere)
     <> (mconcat $ zipWith (\e x -> e .= x * s) esOpposite xsHere)
     <> (mconcat $ zipWith (\e x -> e .= x * varsumout) esHere xsHere)
-  where sins = L.sortBy (comparing secNode) ins
+  where sins = L.sortBy (comparing getSection) ins
         esOpposite = map (flip energy n) sins
         esHere = map (energy n) sins
         xsHere = map (xfactor n) sins
@@ -344,11 +343,12 @@ getIntersectionStorages = concat . getStorages (format . toSecNode)
   where toSecNode (ins, n, outs) = (map fst ins, fst n, map fst outs)
         format x@(ins, SecNode sec _, outs) =
           case (filter h ins, filter h outs) of
-               ([], [])  -> (NoDir, x)
+               ([], [])  ->  -- We treat initial storages as in-storages
+                 if sec == Idx.initSection then (InDir, x) else (NoDir, x)
                ([_], []) -> (InDir, x)
                ([], [_]) -> (OutDir, x)
                _ -> error (show x ++ ": getIntersectionStorages")
-          where h (SecNode s _) = s == sec
+          where h s = getSection s == sec
 
 
 -----------------------------------------------------------------
