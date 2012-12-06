@@ -67,22 +67,33 @@ instance Functor Term where
                 Recip x -> Recip $ go x
                 x :+ y -> go x :+ go y
                 x :* y -> go x :* go y
-      in  go
+      in go
 
-infixl 1 !=, !:=, :=, ::=
-infixl 7  !*, !/, :*, &/
-infixl 6  !+, !-, :+, &-
+infixl 1 :=, ::=
+infixl 7 :*
+infixl 6 :+
+
+--infixl 1 !=, !:=, :=, ::=
+--infixl 7  !*, !/, :*, &/
+--infixl 6  !+, !-, :+, &-
+
+
+{-
 
 {- |
 For consistency with '(:+)' it should be named '(:-)'
 but this is reserved for constructors.
 -}
+
+-}
+
 (&-) :: Term a -> Term a -> Term a
 x &- y  =  x :+ Minus y
 
 (&/) :: Term a -> Term a -> Term a
 x &/ y  =  x :* Recip y
 
+{-
 
 (!+) :: (MkTermC a, MkTermC b) => a -> b -> EqTerm
 x !+ y = mkTerm x :+ mkTerm y
@@ -104,7 +115,7 @@ x !:= y = mkIdx x ::= mkTerm y
 
 give :: MkIdxC a => a -> Equation a
 give = Given . mkIdx
-
+-}
 
 class MkIdxC a where
    mkIdx :: a -> Env.Index
@@ -181,6 +192,7 @@ instance (ToIndex idx) => MkTermC (Term idx) where
 
 add :: NonEmpty.T [] (Term a) -> Term a
 add = NonEmpty.foldl1 (:+)
+
 
 mult :: NonEmpty.T [] (Term a) -> Term a
 mult = NonEmpty.foldl1 (:*)
@@ -507,7 +519,7 @@ simplify = iterateUntilFix simplify' . pushMult
 simplifyEq :: Equation -> Equation
 simplifyEq (Given x) = Given x
 simplifyEq (x := y) = simplify x := simplify y
--}
+
 
 additiveTerms :: EqTerm -> [EqTerm]
 additiveTerms = NonEmpty.flatten . additiveTermsNonEmpty
@@ -760,3 +772,4 @@ mapEqTermEnv f env = emptyEnv { recordNumber = recordNumber env,
                                 storageMap = M.map f (storageMap env) }
 
 --------------------------------------------------------------------
+-}

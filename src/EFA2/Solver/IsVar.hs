@@ -1,6 +1,7 @@
 
 module EFA2.Solver.IsVar where
 
+{-
 import qualified Data.List as L
 import qualified Data.Set as S
 import Data.Maybe (mapMaybe)
@@ -155,3 +156,4 @@ isVarFromEqs ts (Atom idx) = not (S.member idx s)
   where s = S.fromList $
                mapMaybe (\eq -> case eq of Given v -> Just v; _ -> Nothing) ts
 isVarFromEqs _ _ = False
+-}

@@ -5,7 +5,7 @@ Description:         Energy flow analysis
 Homepage:            http://energiefluss.info/
 License:             AllRightsReserved
 License-File:        LICENSE
-Author:              Philipp Guttenberg
+Author:              Ingenieurbüro Guttenberg & Hördegen
 Maintainer:          guttenberg@energiefluss.info
 -- Copyright:           
 Category:            Engineering
@@ -68,7 +68,7 @@ Library
     EFA2.Solver.Equation
     EFA2.Solver.Horn
     EFA2.Solver.EquationOrder
-    EFA2.Solver.DependencyGraph
+    -- EFA2.Solver.DependencyGraph
     EFA2.Report.Typ
     EFA2.Report.Base
     EFA2.Report.Signal
