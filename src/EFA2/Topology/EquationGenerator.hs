@@ -106,7 +106,6 @@ getVar idx =
   in ExprWithVars $ gets (M.lookup idx) >>= maybe newVar oldVar
 
 
-
 power :: SecNode -> SecNode -> ExprWithVars s a
 power = (getVar .) . makeVar Idx.Power
 
@@ -226,7 +225,7 @@ data StDir = InDir
 
 -- Only graphs without intersection edges are allowed.
 -- Storages must not have more than one in or out edge.
-getInnersectionStorages :: TD.SequFlowGraph -> [[(SecNode, StDir)]]
+getInnersectionStorages :: TD.SequFlowGraph -> [[(SecNode, StDir)]] -- Map SecNode StDir
 getInnersectionStorages = getStorages format
   where format ([n], (s, _), []) = if TD.isDirEdge n then (s, InDir) else (s, NoDir)
         format ([], (s, _), [n]) = if TD.isDirEdge n then (s, OutDir) else (s, NoDir)
@@ -241,7 +240,7 @@ getStorages format =
   map (map format)
   . L.groupBy nodeId
   . filter TD.isStorageNode
-  . Gr.mkInOutGraphFormat
+  . Gr.mkInOutGraphFormat    -- ersetzen durch nodes
   where nodeId (_, (SecNode _ s, _), _) (_, (SecNode _ t, _), _) = s == t
 
 
