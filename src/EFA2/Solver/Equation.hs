@@ -258,9 +258,9 @@ showAssigns ts = L.intercalate "\n" $ map showAssign ts
 newtype LatexString = LatexString { unLatexString :: String } deriving (Show, Eq)
 
 
-toLatexString' :: EqTerm -> String
+toLatexString' :: ToIndex idx => Term idx -> String
 toLatexString' (Const x) = printf "%.6f   " (fromRational x :: Double)
-toLatexString' (Atom x) = idxToLatexString x
+toLatexString' (Atom x) = idxToLatexString $ toIndex x
 
 toLatexString' (x :+ y) = "(" ++ toLatexString' x ++ " + " ++ toLatexString' y ++ ")"
 toLatexString' (x :* y) = toLatexString' x ++ " * " ++ toLatexString' y
@@ -312,7 +312,7 @@ eqToLatexString' (Given x) = idxToLatexString x ++ " \\mbox{given}"
 eqToLatexString' (EqEdge p0 n p1) = edgeToLatexString PowerOut p0 n p1
 eqToLatexString' (x := y) = toLatexString' x ++ " = " ++ toLatexString' y
 
-toLatexString :: EqTerm -> LatexString
+toLatexString :: ToIndex idx => Term idx -> LatexString
 toLatexString t = LatexString $ "$" ++ toLatexString' t ++ "$"
 
 eqToLatexString :: Equation -> LatexString
