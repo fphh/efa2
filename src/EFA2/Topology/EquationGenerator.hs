@@ -167,6 +167,7 @@ makeEdgeEquations ::
   [Edge SecNode] -> EquationSystem s a
 makeEdgeEquations es = foldMap mkEq es
   where mkEq (Edge f t) = power t f .= eta f t * power f t
+  --where mkEq (Edge f t) = power t f .= powerConversion (power f t)
 
 
 makeEnergyEquations ::
@@ -339,12 +340,16 @@ mapToEnvs func = M.foldWithKey f envs
           e { Env.dtimeMap = M.insert idx (func v) (Env.dtimeMap e) }
         f _ _ e = e
 
+
+-- powerConvMap :: M.Map Idx.PowerConversion (BijectionWeak a a)
+
 solveSystemDoIt ::
   (Eq a, Fractional a) =>
   [(Env.Index, a)] -> TD.SequFlowGraph -> M.Map Env.Index (Maybe a)
 solveSystemDoIt given g = runST $ do
   let f (var, val) = getVar var .= constToExprSys val
       EquationSystem eqsys = foldMap f given <> makeAllEquations g
+      -- EquationSystem eqsys = foldMap f given <> makeAllEquations powerConvMap g
   (eqs, varmap) <- runStateT eqsys M.empty
   Sys.solve eqs
   traverse Sys.query varmap
