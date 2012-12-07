@@ -13,7 +13,7 @@ deflt ::
    (Idx.Record -> Idx.SecNode -> Idx.SecNode -> a) ->
    Int -> Int -> Index
 deflt mkIdx x y =
-   mkVar $ mkIdx (Idx.Record 0)
+   mkVar $ mkIdx (Idx.Record Idx.Absolute)
       (Idx.SecNode (Idx.Section 0) (Idx.Node x))
       (Idx.SecNode (Idx.Section 0) (Idx.Node y))
 

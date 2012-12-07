@@ -5,7 +5,7 @@ Description:         Energy flow analysis
 Homepage:            http://energiefluss.info/
 License:             AllRightsReserved
 License-File:        LICENSE
-Author:              Philipp Guttenberg
+Author:              Ingenieurbüro Guttenberg & Hördegen
 Maintainer:          guttenberg@energiefluss.info
 -- Copyright:           
 Category:            Engineering
@@ -66,9 +66,9 @@ Library
     EFA2.Signal.Plot
     EFA2.Solver.IsVar
     EFA2.Solver.Equation
-    EFA2.Solver.Horn
-    EFA2.Solver.EquationOrder
-    EFA2.Solver.DependencyGraph
+    -- EFA2.Solver.Horn
+    -- EFA2.Solver.EquationOrder
+    -- EFA2.Solver.DependencyGraph
     EFA2.Report.Typ
     EFA2.Report.Base
     EFA2.Report.Signal
@@ -81,17 +81,17 @@ Library
     EFA2.Topology.Topology
     EFA2.Topology.Draw
     EFA2.Example.Examples
-    EFA2.Example.LinearOne
-    EFA2.Example.LinearTwo
+    --EFA2.Example.LinearOne
+    -- EFA2.Example.LinearTwo
 -- EFA2.Graph-Verzeichnis fehlt
 --    EFA2.Example.Circular
 -- einige Typen passen nicht
 --    EFA2.Example.Linear
-    EFA2.Example.Dreibein
-    EFA2.Example.Loop
+    -- EFA2.Example.Dreibein
+    -- EFA2.Example.Loop
     EFA2.Example.SymSig
-    EFA2.Example.Dreibein2
-    EFA2.Example.Dreibein3
+    --EFA2.Example.Dreibein2
+    --EFA2.Example.Dreibein3
 -- einige Typen passen nicht
 --    EFA2.Example.Vierbein
 --    EFA2.Example.Zweibein
@@ -139,52 +139,54 @@ Executable sequenzflussgraph
   Else
     Buildable: False
 
-Executable threewaysto-pred
-  Main-Is: examples/elementary/threeWaySto_pred/Main_ThreeWay_sto_alt.hs
-  GHC-Options: -Wall
-  If flag(buildExamples)
-    Build-Depends:
-      efa2,
-      process,
-      utility-ht,
-      containers,
-      base
-  Else
-    Buildable: False
+--Executable threewaysto-pred
+--  Main-Is: examples/elementary/threeWaySto_pred/Main_ThreeWay_sto_alt.hs
+--  GHC-Options: -Wall
+--  If flag(buildExamples)
+--    Build-Depends:
+--      efa2,
+--      process,
+--      utility-ht,
+--      containers,
+--      base
+--  Else
+--    Buildable: False
 
-Executable threewaysto
-  Main-Is: examples/elementary/threeWaySto_newSolver/Main_ThreeWay_sto.hs
-  GHC-Options: -Wall
-  If flag(buildExamples)
-    Build-Depends:
-      efa2,
-      process,
-      containers,
-      base
-  Else
-    Buildable: False
 
-Executable additive_terms
-  Main-Is: examples/elementary/additive_terms/Main.hs
-  GHC-Options: -Wall
-  If flag(buildExamples)
-    Build-Depends:
-      efa2,
-      containers,
-      base
-  Else
-    Buildable: False
+--Executable threewaysto
+--  Main-Is: examples/elementary/threeWaySto_newSolver/Main_ThreeWay_sto.hs
+--  GHC-Options: -Wall
+--  If flag(buildExamples)
+--    Build-Depends:
+--      efa2,
+--      process,
+--      containers,
+--      base
+--  Else
+--    Buildable: False
 
-Executable vierbein_delta
-  Main-Is: examples/elementary/vierbein_delta/Main.hs
-  GHC-Options: -Wall
-  If flag(buildExamples)
-    Build-Depends:
-      efa2,
-      containers,
-      base
-  Else
-    Buildable: False
+
+--Executable additive_terms
+--  Main-Is: examples/elementary/additive_terms/Main.hs
+--  GHC-Options: -Wall
+--  If flag(buildExamples)
+--    Build-Depends:
+--      efa2,
+--      containers,
+--      base
+--  Else
+--    Buildable: False
+
+--Executable vierbein_delta
+--  Main-Is: examples/elementary/vierbein_delta/Main.hs
+--  GHC-Options: -Wall
+--  If flag(buildExamples)
+--    Build-Depends:
+--      efa2,
+--      containers,
+--      base
+--  Else
+--    Buildable: False
 
 Executable demo-signalcalc
   Main-Is: demo/Signal/Demo_SignalCalc.hs
@@ -213,13 +215,13 @@ Executable demo-sequence
   Else
     Buildable: False
 
-Executable demo-vierbein
-  Main-Is: demo/vierbein/Main.hs
-  GHC-Options: -Wall
-  If flag(buildDemos)
-    Build-Depends:
-      efa2,
-      containers,
-      base
-  Else
-    Buildable: False
+--Executable demo-vierbein
+--  Main-Is: demo/vierbein/Main.hs
+--  GHC-Options: -Wall
+--  If flag(buildDemos)
+--    Build-Depends:
+--      efa2,
+--      containers,
+--      base
+--  Else
+--    Buildable: False

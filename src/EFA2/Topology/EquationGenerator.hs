@@ -1,47 +1,50 @@
--- {-# LANGUAGE FlexibleInstances #-}
--- {-# LANGUAGE RankNTypes #-}
 
 module EFA2.Topology.EquationGenerator where
 
 import qualified Data.Map as M
 import qualified Data.List as L
---import qualified Data.Set as S
+import qualified Data.Set as S
 
-import EFA2.Signal.Index as Idx
-import EFA2.Topology.EfaGraph as Gr
+import EFA2.Signal.Index (SecNode(..), Section(..))
+import qualified EFA2.Signal.Index as Idx
+
+import EFA2.Topology.EfaGraph (Edge(..))
+import qualified EFA2.Topology.EfaGraph as Gr
 
 import qualified EFA2.Topology.TopologyData as TD
-import EFA2.Solver.Equation
-import UniqueLogic.ST.Expression as Expr
-import UniqueLogic.ST.System as Sys
+import EFA2.Solver.Equation (MkIdxC, mkVar)
 
-import Control.Monad.ST
-import Control.Monad
+import UniqueLogic.ST.Expression ((=:=))
+import qualified UniqueLogic.ST.Expression as Expr
+import qualified UniqueLogic.ST.System as Sys
 
-import Control.Monad.Trans.Class
-import Control.Monad.Trans.State
+import Control.Monad.ST (ST, runST)
+import Control.Monad (liftM, liftM2)
+
+import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.State (StateT, runStateT, gets, modify)
 
 
-import Data.Monoid
-import Data.Maybe
+import Data.Monoid (Monoid, (<>), mempty, mappend, mconcat)
+
+import Data.Maybe (maybeToList)
 import Data.Ord (comparing)
 
 import Data.Traversable (traverse)
-import Data.Foldable (foldMap)
+import Data.Foldable (foldMap, fold)
 
-import EFA2.Interpreter.Env as Env
+import qualified EFA2.Interpreter.Env as Env
 
-import Debug.Trace
-
-
-
-type ProvEnv s a = M.Map Env.Index (Variable s a)
-
-newtype ExprWithVars s a = ExprWithVars (StateT (ProvEnv s a) (ST s) (T s a))
-type SysWithVars s a = StateT (ProvEnv s a) (ST s) (M s ())
+-- import Debug.Trace
 
 
--- Gleichungen mitloggen
+
+type ProvEnv s a = M.Map Env.Index (Sys.Variable s a)
+
+newtype ExprWithVars s a = ExprWithVars (StateT (ProvEnv s a) (ST s) (Expr.T s a))
+type SysWithVars s a = StateT (ProvEnv s a) (ST s) (Sys.M s ())
+
+
 newtype EquationSystem s a = EquationSystem (SysWithVars s a)
 
 instance Monoid (EquationSystem s a) where
@@ -50,7 +53,7 @@ instance Monoid (EquationSystem s a) where
            EquationSystem $ liftM2 (>>) x y
 
 liftV2 :: 
-  (T s a -> T s a -> T s a) -> 
+  (Expr.T s a -> Expr.T s a -> Expr.T s a) -> 
   ExprWithVars s a -> ExprWithVars s a -> ExprWithVars s a
 liftV2 f (ExprWithVars xs) (ExprWithVars ys) = ExprWithVars $ liftM2 f xs ys
 
@@ -72,33 +75,35 @@ infix 0 .=
 constToExprSys :: a -> ExprWithVars s a
 constToExprSys = ExprWithVars . return . Expr.constant
 
-varToExprSys :: Variable s a -> ExprWithVars s a
+varToExprSys :: Sys.Variable s a -> ExprWithVars s a
 varToExprSys = ExprWithVars . return . Expr.fromVariable
 
 
-withLocalVar :: (ExprWithVars s a -> t) -> t
-withLocalVar f = f $ ExprWithVars $
-  liftM fromVariable (lift globalVariable)
+withLocalVar :: (ExprWithVars s a -> EquationSystem s b) -> EquationSystem s b
+withLocalVar f = EquationSystem $ do
+   v <- lift Sys.globalVariable
+   case f $ ExprWithVars $ return $ Expr.fromVariable v of
+        EquationSystem act -> act
 
-recAbs :: Record
-recAbs = Record Absolute
+
+recAbs :: Idx.Record
+recAbs = Idx.Record Idx.Absolute
 
 makeVar ::
   (MkIdxC a) =>
-  (Record -> Idx.SecNode -> Idx.SecNode -> a) ->
-  Idx.SecNode -> Idx.SecNode -> Env.Index
+  (Idx.Record -> SecNode -> SecNode -> a) ->
+  SecNode -> SecNode -> Env.Index
 makeVar idxf nid nid' =
   mkVar $ idxf recAbs nid nid'
 
 getVar :: Env.Index -> ExprWithVars s a
 getVar idx =
-  let oldVar = return . fromVariable
+  let oldVar = return . Expr.fromVariable
       newVar = 
-        lift globalVariable
+        lift Sys.globalVariable
           >>= \var -> modify (M.insert idx var)
-          >> return (fromVariable var)
+          >> return (Expr.fromVariable var)
   in ExprWithVars $ gets (M.lookup idx) >>= maybe newVar oldVar
-
 
 
 
@@ -113,9 +118,6 @@ eta = (getVar .) . makeVar Idx.FEta
 
 xfactor :: SecNode -> SecNode -> ExprWithVars s a
 xfactor = (getVar .) . makeVar Idx.X
-
---vvar :: Use -> SecNode -> ExprWithVars s a
---vvar use = getVar . mkVar . Idx.Var recAbs use
 
 insumvar :: SecNode -> ExprWithVars s a
 insumvar = getVar . mkVar . Idx.InSumVar recAbs
@@ -134,7 +136,7 @@ mwhen :: Monoid a => Bool -> a -> a
 mwhen True t = t
 mwhen False _ = mempty 
 
-edges :: Gr.EfaGraph node nodeLabel edgeLabel -> [Gr.Edge node]
+edges :: Gr.EfaGraph node nodeLabel edgeLabel -> [Edge node]
 edges g = M.keys el
   where el = Gr.edgeLabels g
 
@@ -157,7 +159,7 @@ makeInnerSectionEquations g = mconcat $
   makeNodeEquations g' :
   makeStorageEquations g' :
   []
-  where g' = elfilter TD.isOriginalEdge g
+  where g' = Gr.elfilter TD.isOriginalEdge g
         es = edges g'
 
 
@@ -178,48 +180,19 @@ makeEnergyEquations es = foldMap mkEq es
           where dt = dtime sf
 
 
-{-
-Die annonyme Variable ist unguenstig, weil man sie spaeter wieder braucht.
-Siehe eins weiter unten.
-
 makeNodeEquations ::
   (Eq a, Fractional a) =>
   TD.SequFlowGraph -> EquationSystem s a
 makeNodeEquations = fold . M.mapWithKey ((f .) . g) . Gr.nodes
-  where g n (ins, _, outs) = (S.toList ins, n, S.toList outs)
-        f a@(ins, n, outs) = withLocalVar $ \s ->
-             (1 .= sum xin)
-          <> (1 .= sum xout)
-
-          -- <> (s .= sum ein)
-          <> mwhen (not (null outs)) (s .= sum ein)
-
-          -- <> (s .= sum eout)
-          <> mwhen (not (null ins)) (s .= sum eout)
-
-          <> (mconcat $ zipWith (\en x -> en .= x * s) ein xin)
-          <> (mconcat $ zipWith (\en x -> en .= x * s) eout xout)
-          where xin = map (xfactor n) ins
-                xout = map (xfactor n) outs
-                ein = map (energy n) ins
-                eout = map (energy n) outs
--}
-
-toSecNode :: ([(a, d0)], (b, d1), [(c, d2)]) -> ([a], b, [c])
-toSecNode (ins, n, outs) = (map fst ins, fst n, map fst outs)
-
-makeNodeEquations ::
-  (Eq a, Fractional a) =>
-  TD.SequFlowGraph -> EquationSystem s a
-makeNodeEquations = mconcat . mapGraph (f . toSecNode)
-  where  f (ins, n, outs) =
-          (1 .= sum xin)
-          <> (1 .= sum xout)
-          <> (varsumin .= sum ein)
-          <> (varsumout .= sum eout)
-          <> mwhen (not (null ins) && not (null outs)) (varsumin .= varsumout)
-          <> (mconcat $ zipWith (h varsumin) ein xin)
-          <> (mconcat $ zipWith (h varsumout) eout xout)
+  where  g n (ins, _, outs) = (S.toList ins, n, S.toList outs)
+         f (ins, n, outs) =
+           (1 .= sum xin)
+           <> (1 .= sum xout)
+           <> (varsumin .= sum ein)
+           <> (varsumout .= sum eout)
+           <> mwhen (not (null ins) && not (null outs)) (varsumin .= varsumout)
+           <> (mconcat $ zipWith (h varsumin) ein xin)
+           <> (mconcat $ zipWith (h varsumout) eout xout)
           where xin = map (xfactor n) ins
                 xout = map (xfactor n) outs
                 ein = map (energy n) ins
@@ -229,14 +202,13 @@ makeNodeEquations = mconcat . mapGraph (f . toSecNode)
                 h s en x = en .= x * s
 
 
-
-
 makeStorageEquations ::
   (Eq a, Fractional a) =>
   TD.SequFlowGraph -> EquationSystem s a
 makeStorageEquations topo = mconcat $ foldMap g st
   where st = getInnersectionStorages topo
-        g lst = zipWith f lst (tail lst)
+        g [] = mempty
+        g lst@(_:t) = zipWith f lst t
         f (before, _) (now, dir) =
           case dir of
                NoDir  -> stNow .= stBefore
@@ -269,7 +241,7 @@ getStorages format =
   map (map format)
   . L.groupBy nodeId
   . filter TD.isStorageNode
-  . mkInOutGraphFormat
+  . Gr.mkInOutGraphFormat
   where nodeId (_, (SecNode _ s, _), _) (_, (SecNode _ t, _), _) = s == t
 
 
@@ -282,13 +254,6 @@ makeInterSectionEquations ::
 makeInterSectionEquations g = mconcat $
   makeInterNodeEquations g :
   []
-{-
-makeInterEdgeEquations ::
-  (Eq a, Fractional a) =>
-  [Edge SecNode] -> EquationSystem s a
-makeInterEdgeEquations es = foldMap mkEq es
-  where mkEq (Edge f t) = (eta f t .= 1) <> (energy t f .= eta f t * energy f t)
--}
 
 makeInterNodeEquations ::
   (Eq a, Fractional a) =>
@@ -301,76 +266,78 @@ makeInterNodeEquations topo = foldMap f st
                InDir -> mkInStorageEquations x
                OutDir -> mkOutStorageEquations x
 
-secNode :: SecNode -> Section
-secNode (SecNode s _) = s
+getSection :: SecNode -> Section
+getSection (SecNode s _) = s
 
--- Sollte mit withLocalVar gemacht werden, um "sum es" zu ersetzen
 mkInStorageEquations ::
   (Eq a, Fractional a) =>
   ([SecNode], SecNode, [SecNode]) -> EquationSystem s a
 mkInStorageEquations (_, _, []) = mempty
 mkInStorageEquations (_, n, outs) =
-  (energy n so .= if initialSec n then initStorage else varsumin) -- special for initial Section
-  <> (mconcat $ zipWith (\x e -> e .= x * sum es) xs es)
-  <> (mconcat $ zipWith f sos souts)
-  where souts@(so:sos) = L.sortBy (comparing secNode) outs
+  withLocalVar $ \s ->
+    -- The next equation is special for the initial Section.
+    (energy n so .= if initialSec n then initStorage else varsumin)
+    <> (s .= sum es)
+    <> (mconcat $ zipWith (\x e -> e .= x * s) xs es)
+    <> (mconcat $ zipWith f sos souts)
+  where souts@(so:sos) = L.sortBy (comparing getSection) outs
         initStorage = storage n
         varsumin = insumvar n
-        initialSec s = secNode s == initSection
+        initialSec s = getSection s == Idx.initSection
         xs = map (xfactor n) souts
         es = map (energy n) souts
         f next beforeNext = energy n next .= energy n beforeNext - energy beforeNext n
 
--- Sollte mit withLocalVar gemacht werden, um "sum esOpposite" zu ersetzen
 mkOutStorageEquations ::
   (Eq a, Fractional a) =>
   ([SecNode], SecNode, [SecNode]) -> EquationSystem s a
 mkOutStorageEquations ([], _, _) = mempty
 mkOutStorageEquations (ins, n, _) =
-  --withLocalVar $ \s ->
-    -- (s .= sum esOpposite)
-    (varsumout .= sum esHere)
-    <> (mconcat $ zipWith (\e x -> e .= x * sum esOpposite) esOpposite xsHere)
+  withLocalVar $ \s ->
+    (s .= sum esOpposite)
+    <> (varsumout .= sum esHere)
+    <> (mconcat $ zipWith (\e x -> e .= x * s) esOpposite xsHere)
     <> (mconcat $ zipWith (\e x -> e .= x * varsumout) esHere xsHere)
-  where sins = L.sortBy (comparing secNode) ins
+  where sins = L.sortBy (comparing getSection) ins
         esOpposite = map (flip energy n) sins
         esHere = map (energy n) sins
         xsHere = map (xfactor n) sins
         varsumout = outsumvar n
 
 
-
-
 getIntersectionStorages ::
   TD.SequFlowGraph -> [(StDir, ([SecNode], SecNode, [SecNode]))]
 getIntersectionStorages = concat . getStorages (format . toSecNode)
-  where format x@(ins, SecNode sec _, outs) =
+  where toSecNode (ins, n, outs) = (map fst ins, fst n, map fst outs)
+        format x@(ins, SecNode sec _, outs) =
           case (filter h ins, filter h outs) of
-               ([], [])  -> (NoDir, x)
+               ([], [])  ->  -- We treat initial storages as in-storages
+                 if sec == Idx.initSection then (InDir, x) else (NoDir, x)
                ([_], []) -> (InDir, x)
                ([], [_]) -> (OutDir, x)
-               _ -> error (show x ++ ": makeInterNodeEquations")
-          where h (SecNode s _) = s == sec
+               _ -> error (show x ++ ": getIntersectionStorages")
+          where h s = getSection s == sec
 
 
 -----------------------------------------------------------------
 
 
-mapToEnvs :: (a -> b) -> M.Map Env.Index a -> Envs SingleRecord b
+mapToEnvs :: (a -> b) -> M.Map Env.Index a -> Env.Envs Env.SingleRecord b
 mapToEnvs func = M.foldWithKey f envs
-  where envs = emptyEnv { recordNumber = SingleRecord (Record Absolute) }
+  where envs =
+          Env.emptyEnv { Env.recordNumber = Env.SingleRecord (Idx.Record Idx.Absolute) }
         f (Env.Energy idx) v e =
-          e { energyMap = M.insert idx (func v) (energyMap e) }
+          e { Env.energyMap = M.insert idx (func v) (Env.energyMap e) }
         f (Env.Power idx) v e =
-          e { powerMap = M.insert idx (func v) (powerMap e) }
+          e { Env.powerMap = M.insert idx (func v) (Env.powerMap e) }
         f (Env.FEta idx) v e =
-          e { fetaMap = M.insert idx (const $ func v) (fetaMap e) }
+          e { Env.fetaMap = M.insert idx (const $ func v) (Env.fetaMap e) }
         f (Env.X idx) v e =
-          e { xMap = M.insert idx (func v) (xMap e) }
+          e { Env.xMap = M.insert idx (func v) (Env.xMap e) }
         f (Env.Store idx) v e =
-          e { storageMap = M.insert idx (func v) (storageMap e) }
+          e { Env.storageMap = M.insert idx (func v) (Env.storageMap e) }
         f (Env.DTime idx) v e =
-          e { dtimeMap = M.insert idx (func v) (dtimeMap e) }
+          e { Env.dtimeMap = M.insert idx (func v) (Env.dtimeMap e) }
         f _ _ e = e
 
 solveSystemDoIt ::
@@ -380,72 +347,10 @@ solveSystemDoIt given g = runST $ do
   let f (var, val) = getVar var .= constToExprSys val
       EquationSystem eqsys = foldMap f given <> makeAllEquations g
   (eqs, varmap) <- runStateT eqsys M.empty
-  solve eqs
-  traverse query varmap
+  Sys.solve eqs
+  traverse Sys.query varmap
 
 solveSystem ::
   (Eq a, Fractional a) =>
-  [(Env.Index, a)] -> TD.SequFlowGraph -> Envs SingleRecord [a]
+  [(Env.Index, a)] -> TD.SequFlowGraph -> Env.Envs Env.SingleRecord [a]
 solveSystem given = mapToEnvs maybeToList . solveSystemDoIt given
-
-
--- Equation ueberfluessigne Typparameter entfernen
-
-
------------------------------------------------------------------------
-
-{-
-example1 :: ST s ((Variable s Double, Variable s Double, Variable s Double), M s ())
-example1 = do
-  vars@(xv, yv, zv) <- liftM3 (,,) globalVariable globalVariable globalVariable
-  let given = do
-        let z = fromVariable zv
-        z =:= 2
-      eqs = do
-        let x = fromVariable xv
-            y = fromVariable yv
-            z = fromVariable zv
-        x*3 =:= y/2
-        5 =:= 2+x+z
-  return $ (vars, do { given; eqs })
-
-
-solveItExample1 :: (Maybe Double, Maybe Double, Maybe Double)
-solveItExample1 = runST $ do
-  ((xv, yv, zv), eqs) <- example1
-  solve eqs
-  liftM3 (,,) (query xv) (query yv) (query zv)
-
-
-example2 :: ST s ((Variable s Double, Variable s Double, Variable s Double), M s ())
-example2 = do
-  vars@(xv, yv, zv) <- liftM3 (,,) globalVariable globalVariable globalVariable
-  let eqs = do
-        let x = fromVariable xv
-            y = fromVariable yv
-            z = fromVariable zv
-        x*3 =:= y/2
-        5 =:= 2+x+z
-  return $ (vars, eqs)
-
-(.==) :: (Eq a) => Variable s a -> a -> M s ()
-(.==) zv d = fromVariable zv =:= Expr.constant d
-
-
-solveIt :: [M s a] -> M s b -> ST s c -> ST s c
-solveIt given eqs getVal = solve (sequence given >> eqs) >> getVal
-
-
-solveItExample2 :: Double -> (Maybe Double, Maybe Double, Maybe Double)
-solveItExample2 d = runST $ do
-  ((xv, yv, zv), eqs) <- example2
-  let getValues = liftM3 (,,) (query xv) (query yv) (query zv)
-  solveIt [zv .== d] eqs getValues
-
-
-solveIt2 :: GivenEquations s a -> EquationSystem s b -> ST s c -> ST s c
-solveIt2 (GivenEquations given) (EquationSystem sys) getVal = do
-  g <- given
-  (_, s) <- sys
-  solve (g >> s) >> getVal
--}

@@ -70,23 +70,17 @@ mkIntersectionEdges node startSec stores =
          M.keys $ snd $ M.split secin outs) $
    startSec : M.keys ins
   where (ins, outs) = M.partition (In ==) stores
-
         e = defaultELabel { edgeType = IntersectionEdge }
+
 
 mkSequenceTopology :: SequData SecTopology -> SequFlowGraph
 mkSequenceTopology sd = res
   where sqTopo = copySeqTopology sd
-
         initNode = Idx.SecNode Idx.initSection
-        rootNode = initNode (Idx.Node (-1))
         startElems = map f $ M.toList $ getActiveStores sqTopo
         f (n, io) =
-           let nid = initNode n
-           in  ((Edge rootNode nid, e) :
-                   mkIntersectionEdges n Idx.initSection (fmap snd io),
-                (nid, Storage))
+          (mkIntersectionEdges n Idx.initSection (fmap snd io), (nid, Storage))
+          where nid = initNode n
 
-        e = defaultELabel { edgeType = InnerStorageEdge }
-        res =
-           insEdges (concatMap fst startElems) $
-           insNodes ((rootNode, Source) : map snd startElems) sqTopo
+        res = insEdges (concatMap fst startElems)
+              $ insNodes (map snd startElems) sqTopo

@@ -1,5 +1,5 @@
-{-# LANGUAGE ExistentialQuantification #-}
-{-# LANGUAGE StandaloneDeriving #-}
+-- {-# LANGUAGE ExistentialQuantification #-}
+-- {-# LANGUAGE StandaloneDeriving #-}
 
 module EFA2.Signal.Index where
 
@@ -72,18 +72,20 @@ data Storage = Storage !Record !SecNode deriving (Show, Ord, Eq)
 -- variable is unique in the equational system.
 --data Var = Var !Section !Record !Int !Int deriving (Show, Ord, Eq)
 
-data Use = InSum
-         | OutSum
-         | InDiffSum
-         | OutDiffSum
-         | St deriving (Show, Eq, Ord)
 
-toDiffUse :: Use -> Use
+data Use = InSum
+         | OutSum deriving (Show, Eq, Ord)
+
+data DiffUse = InDiffSum
+             | OutDiffSum deriving (Show, Eq, Ord)
+
+toDiffUse :: Use -> DiffUse
 toDiffUse InSum = InDiffSum
 toDiffUse OutSum = OutDiffSum
 
 
 data Var = Var !Record Use !SecNode deriving (Show, Ord, Eq)
+
 
 data InSumVar = InSumVar !Record !SecNode deriving (Show, Ord, Eq)
 data OutSumVar = OutSumVar !Record !SecNode deriving (Show, Ord, Eq)

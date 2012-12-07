@@ -76,6 +76,7 @@ instance IdxRecNum Idx.Storage where
    getIdxRecNum (Idx.Storage r _) = r
    setIdxRecNum rec (Idx.Storage _ n) = Idx.Storage rec n
 
+
 instance IdxRecNum Idx.Var where
    getIdxRecNum (Idx.Var r _ _) = r
    setIdxRecNum rec (Idx.Var _ use t) = Idx.Var rec use t
@@ -115,6 +116,7 @@ type XMap a = M.Map Idx.X a
 type DXMap a = M.Map Idx.DX a
 
 type VarMap a = M.Map Idx.Var a
+
 type StorageMap a = M.Map Idx.Storage a
 
 
@@ -254,4 +256,3 @@ mapEnv f env = emptyEnv { recordNumber = recordNumber env,
                           dxMap = M.map (S.map f) (dxMap env),
                           varMap = M.map (S.map f) (varMap env),
                           storageMap = M.map (S.map f) (storageMap env) }
-

@@ -39,6 +39,8 @@ import Data.GraphViz (
           DotSubGraph,
           attrStmts, nodeStmts, edgeStmts, graphStatements,
           directedGraph, strictGraph, subGraphs,
+          -- The next two are needed for the second version of printGraph.
+          GraphvizOutput(..), runGraphvizCommand,
           graphID)
 import Data.GraphViz.Attributes.Complete as Viz
 
@@ -150,6 +152,7 @@ printGraph ::
    IO ()
 printGraph g recordNum tshow nshow eshow =
    runGraphvizCanvas Dot (mkDotGraph g recordNum tshow nshow eshow) Xlib
+
 {-
 printGraph g recordNum tshow nshow eshow = do
   runGraphvizCommand Dot (mkDotGraph g recordNum tshow nshow eshow) XDot "result/graph.dot"
