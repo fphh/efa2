@@ -256,7 +256,7 @@ instance Format Plain where
    formatLineDelta = formatLine "d"
    formatAssignGen (Plain lhs) (Plain rhs) =
       Plain $ lhs ++ " = " ++ rhs
-   formatList = Plain . ("["++) . ("]"++) . L.intercalate "," . map getPlain
+   formatList = Plain . ("["++) . (++"]") . L.intercalate "," . map getPlain
    formatTerm = Plain . showEqTerm
    formatChar = Plain . (:[])
    formatRatio = Plain . show
@@ -287,7 +287,7 @@ instance Format LatexString where
    formatLineDelta = formatLineLatex "\\Delta "
    formatAssignGen (LatexString lhs) (LatexString rhs) =
       LatexString $ lhs ++ " = " ++ rhs
-   formatList = LatexString . ("["++) . ("]"++) . L.intercalate ", " . map unLatexString
+   formatList = LatexString . ("["++) . (++"]") . L.intercalate ", " . map unLatexString
    formatTerm = toLatexString
    formatChar = LatexString . (:[])
    formatRatio = LatexString . show
