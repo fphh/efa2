@@ -5,7 +5,7 @@ module EFA2.Topology.Draw where
 
 import EFA2.Solver.Equation
           (Term(..), ToIndex, simplify, (&-), (&/),
-           showEqTerm, showSecNode,
+           showEqTerm, showSecNode, delta,
            LatexString(LatexString), unLatexString,
            toLatexString, secNodeToLatexString)
 import EFA2.Interpreter.Env
@@ -156,7 +156,7 @@ printGraph g recordNum tshow nshow eshow = do
 -}
 
 heart :: Char
-heart = '\9829'
+heart = '\x2665'
 
 drawTopologyX' :: SequFlowGraph -> IO ()
 drawTopologyX' topo =
@@ -248,7 +248,7 @@ newtype Plain = Plain {getPlain :: String}
 instance Format Plain where
    undetermined = Plain [heart]
    formatLineAbs = formatLine ""
-   formatLineDelta = formatLine "d"
+   formatLineDelta = formatLine [delta]
    formatAssignGen (Plain lhs) (Plain rhs) =
       Plain $ lhs ++ " = " ++ rhs
    formatList = Plain . ("["++) . (++"]") . L.intercalate "," . map getPlain
