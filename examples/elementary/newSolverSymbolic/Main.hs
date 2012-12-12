@@ -83,7 +83,7 @@ given = [ (mkVar (Idx.DTime (Idx.Record Absolute) initSection), 1.0),
 
 
 instance Num EqTerm where
-         fromInteger x = Const (x % 1)
+         fromInteger = Const . (% 1)
          (+) = (:+)
          (*) = (:*)
 

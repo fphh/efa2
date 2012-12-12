@@ -127,8 +127,8 @@ data Envs rec a =
                      denergyMap :: DEnergyMap a,
                      powerMap :: PowerMap a,
                      dpowerMap :: DPowerMap a,
-                     fetaMap :: FEtaMap a,
-                     detaMap :: DEtaMap a,
+                     --fetaMap :: FEtaMap a,
+                     --detaMap :: DEtaMap a,
                      dtimeMap :: DTimeMap a,
                      xMap :: XMap a,
                      dxMap :: DXMap a,
@@ -146,7 +146,7 @@ instance Ord (a -> a) where
          compare _ _ = EQ
 
 emptyEnv :: Envs NoRecord a
-emptyEnv = Envs NoRecord M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty
+emptyEnv = Envs NoRecord M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty -- M.empty M.empty
 
 
 data NoRecord = NoRecord deriving (Eq, Ord, Show)
@@ -165,6 +165,7 @@ instance RecordNumber MixedRecord where
    uniteRecordNumbers =
       MixedRecord . concatMap fromMixedRecord
 
+{-
 
 envUnion :: (RecordNumber rec) => [Envs rec a] -> Envs MixedRecord a
 envUnion envs = Envs { recordNumber = uniteRecordNumbers (map recordNumber envs),
@@ -256,3 +257,4 @@ mapEnv f env = emptyEnv { recordNumber = recordNumber env,
                           dxMap = M.map (S.map f) (dxMap env),
                           varMap = M.map (S.map f) (varMap env),
                           storageMap = M.map (S.map f) (storageMap env) }
+-}

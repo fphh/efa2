@@ -351,7 +351,7 @@ envAbsListGen ::
     Topo.LNode -> String) ->
    Interp.Envs SingleRecord [a] -> Env
 envAbsListGen formatAssignList showListNode
-      (Interp.Envs (SingleRecord rec) e _de _p _dp _fn _dn dt x _dx _v st) =
+      (Interp.Envs (SingleRecord rec) e _de _p _dp dt x _dx _v st) =
    let lookupEnergy = makeLookup rec Idx.Energy e
    in  Env rec
           (\a b -> formatValue $ lookupEnergy a b)
@@ -368,7 +368,7 @@ envAbsListGen formatAssignList showListNode
 
 instance AutoEnvDeltaList a => AutoEnvDelta [a] where
    envDelta
-         (Interp.Envs (SingleRecord rec) e de _p _dp _fn _dn dt _x dx _v st) =
+         (Interp.Envs (SingleRecord rec) e de _p _dp dt _x dx _v st) =
       let lookupEnergy = makeLookup rec Idx.Energy e
           lookupDEnergy = makeLookup rec Idx.DEnergy de
           formatCont = formatMaybe (concatMap (("\n"++) . formatElement))
@@ -481,7 +481,7 @@ instance
       AutoEnvSignal (Data v a) where
    formatValueSignal = formatMaybe sdisp
    envAbsSignal
-         (Interp.Envs (SingleRecord rec) e _de _p _dp _fn _dn dt x _dx _v st) =
+         (Interp.Envs (SingleRecord rec) e _de _p _dp dt x _dx _v st) =
       let lookupEnergy = makeLookup rec Idx.Energy e
       in  Env rec
              (\a b -> formatValue $ lookupEnergy a b)
@@ -511,7 +511,7 @@ instance
    (SDisplay v, D.Storage v a, Disp a, Ord a, BSum a, BProd a a, D.ZipWith v) =>
       AutoEnvDeltaSignal (Data v a) where
    envDeltaSignal
-         (Interp.Envs (SingleRecord rec) e de _p _dp _fn _dn dt _x dx _v st) =
+         (Interp.Envs (SingleRecord rec) e de _p _dp dt _x dx _v st) =
       let lookupEnergy = makeLookup rec Idx.Energy e
           lookupDEnergy = makeLookup rec Idx.DEnergy de
       in  Env rec

@@ -43,6 +43,8 @@ Library
     containers >=0.4 && <0.6,
     utility-ht ==0.0.*,
     QuickCheck >=2.4 && <2.6,
+    transformers >= 0.3 && < 0.4,
+    unique-logic >= 0.2 && < 0.3,
     base ==4.5.*
   Hs-Source-Dirs:      src
   GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs
@@ -64,43 +66,19 @@ Library
     EFA2.Signal.SignalFill
     EFA2.Signal.Sequence
     EFA2.Signal.Plot
-    EFA2.Solver.IsVar
     EFA2.Solver.Equation
-    -- EFA2.Solver.Horn
-    -- EFA2.Solver.EquationOrder
-    -- EFA2.Solver.DependencyGraph
     EFA2.Report.Typ
     EFA2.Report.Base
     EFA2.Report.Signal
     EFA2.Report.Report
     EFA2.Topology.TopologyData
--- gibt 4 Argumente an NLabel obwohl das nur (noch) 3 hat
---    EFA2.Topology.RandomTopology
     EFA2.Topology.EfaGraph
     EFA2.Topology.Flow
-    EFA2.Topology.Topology
     EFA2.Topology.Draw
-    EFA2.Example.Examples
-    --EFA2.Example.LinearOne
-    -- EFA2.Example.LinearTwo
--- EFA2.Graph-Verzeichnis fehlt
---    EFA2.Example.Circular
--- einige Typen passen nicht
---    EFA2.Example.Linear
-    -- EFA2.Example.Dreibein
-    -- EFA2.Example.Loop
-    EFA2.Example.SymSig
-    --EFA2.Example.Dreibein2
-    --EFA2.Example.Dreibein3
--- einige Typen passen nicht
---    EFA2.Example.Vierbein
---    EFA2.Example.Zweibein
---    EFA2.Example.LinearX
+    EFA2.Topology.EquationGenerator
+    EFA2.Example.ExampleHelper
     EFA2.Interpreter.Env
--- cst nicht importiert
---    EFA2.Interpreter.Eta
     EFA2.Interpreter.Arith
-    EFA2.Interpreter.Interpreter
     EFA2.Interpreter.InTerm
   Other-Modules:
     EFA2.Solver.EquationTest
@@ -124,9 +102,6 @@ Executable test-efa
   Other-Modules:
     EFA2.Test.UtilsTest
     EFA2.Test.SequenceTest
--- benötigt RandomTopology
---    EFA2.Test.SolverTest
---    EFA2.Test.IsVarTest
 
 Executable sequenzflussgraph
   Main-Is: examples/elementary/sequenzflussgraph/Main.hs
@@ -138,55 +113,6 @@ Executable sequenzflussgraph
       base
   Else
     Buildable: False
-
---Executable threewaysto-pred
---  Main-Is: examples/elementary/threeWaySto_pred/Main_ThreeWay_sto_alt.hs
---  GHC-Options: -Wall
---  If flag(buildExamples)
---    Build-Depends:
---      efa2,
---      process,
---      utility-ht,
---      containers,
---      base
---  Else
---    Buildable: False
-
-
---Executable threewaysto
---  Main-Is: examples/elementary/threeWaySto_newSolver/Main_ThreeWay_sto.hs
---  GHC-Options: -Wall
---  If flag(buildExamples)
---    Build-Depends:
---      efa2,
---      process,
---      containers,
---      base
---  Else
---    Buildable: False
-
-
---Executable additive_terms
---  Main-Is: examples/elementary/additive_terms/Main.hs
---  GHC-Options: -Wall
---  If flag(buildExamples)
---    Build-Depends:
---      efa2,
---      containers,
---      base
---  Else
---    Buildable: False
-
---Executable vierbein_delta
---  Main-Is: examples/elementary/vierbein_delta/Main.hs
---  GHC-Options: -Wall
---  If flag(buildExamples)
---    Build-Depends:
---      efa2,
---      containers,
---      base
---  Else
---    Buildable: False
 
 Executable demo-signalcalc
   Main-Is: demo/Signal/Demo_SignalCalc.hs
@@ -204,9 +130,6 @@ Executable demo-sequence
   If flag(buildDemos)
     Build-Depends:
       efa2,
-      array >=0.4 && <0.5,
-      gnuplot,
-      utility-ht,
       containers,
       array >=0.4 && <0.5,
       gnuplot,
@@ -215,13 +138,13 @@ Executable demo-sequence
   Else
     Buildable: False
 
---Executable demo-vierbein
---  Main-Is: demo/vierbein/Main.hs
---  GHC-Options: -Wall
---  If flag(buildDemos)
---    Build-Depends:
---      efa2,
---      containers,
---      base
---  Else
---    Buildable: False
+Executable demo-newsolver
+  Main-Is: examples/elementary/newSolver/Main.hs
+  GHC-Options: -Wall
+  If flag(buildExample)
+    Build-Depends:
+      efa2,
+      base
+  Else
+    Buildable: False
+
