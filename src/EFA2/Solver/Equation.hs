@@ -56,6 +56,17 @@ data Term a =
           | (Term a) :+ (Term a)
           | (Term a) :* (Term a) deriving (Show, Eq, Ord)
 
+
+instance Num (Term idx) where
+   fromInteger x = Const (x % 1)
+   (+) = (:+)
+   (*) = (:*)
+
+instance Fractional (Term idx) where
+   fromRational = Const
+   (/) = (&/)
+
+
 instance Functor Term where
    fmap f =
       let go t = undefined $

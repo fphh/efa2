@@ -81,18 +81,6 @@ given = [ (mkVar (Idx.DTime (Idx.Record Absolute) initSection), 1.0),
 -}
 
 
-
-instance Num EqTerm where
-         fromInteger x = Const (x % 1)
-         (+) = (:+)
-         (*) = (:*)
-
-
-
-instance Fractional EqTerm where
-         -- fromRational x = numerator x !/ denominator x
-         (/) = (&/)
-
 t :: EqTerm
 t = Atom $ mkVar (Idx.DTime (Idx.Record Absolute) initSection)
 
