@@ -1,6 +1,3 @@
-{-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE FlexibleInstances #-}
-
 module Main where
 
 import qualified Data.Map as M
