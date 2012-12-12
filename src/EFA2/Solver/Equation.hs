@@ -59,11 +59,13 @@ data Term a =
 
 instance Num (Term idx) where
    fromInteger x = Const (x % 1)
+   negate = Minus
    (+) = (:+)
    (*) = (:*)
 
 instance Fractional (Term idx) where
    fromRational = Const
+   recip = Recip
    (/) = (&/)
 
 
