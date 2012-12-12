@@ -1,6 +1,3 @@
-{-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE FlexibleInstances #-}
-
 module Main where
 
 import qualified Data.Map as M
@@ -87,10 +84,11 @@ t = Atom $ mkVar (Idx.DTime (Idx.Record Absolute) initSection)
 given :: [(Env.Index, EqTerm)]
 given  = map (\x -> (x, Atom x)) given'
 
-xidx :: X
-xidx = case makeVar Idx.X (Idx.SecNode (Section 0) (Idx.Node 2))
-                          (Idx.SecNode (Section 0) (Idx.Node 0)) of
-            Env.X x -> x
+xidx :: Idx.X
+xidx =
+   Idx.X (Idx.Record Absolute)
+      (Idx.SecNode (Section 0) (Idx.Node 2))
+      (Idx.SecNode (Section 0) (Idx.Node 0))
 
 --given' :: [(Env.Index, Term Env.Index)]
 given' = [ mkVar (Idx.DTime (Idx.Record Absolute) initSection),
