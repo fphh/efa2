@@ -58,7 +58,7 @@ data Term a =
 
 instance Functor Term where
    fmap f =
-      let go t =
+      let go t = undefined $
              case t of
                 Atom a -> Atom $ f a
                 Const x -> Const x
@@ -230,7 +230,7 @@ showEqTerm (Const x) = show (fromRational x :: Double)
 showEqTerm (Atom x) = showIdx (toIndex x)
 
 showEqTerm (x :+ y) = "(" ++ showEqTerm x ++ " + " ++ showEqTerm y ++ ")"
-showEqTerm (x :* y) = showEqTerm x ++ " * " ++ showEqTerm y
+showEqTerm (x :* y) = "(" ++ showEqTerm x ++ " * " ++ showEqTerm y ++ ")"
 
 showEqTerm (Recip x) = "1/(" ++ showEqTerm x ++ ")"
 showEqTerm (Minus x) = "-(" ++ showEqTerm x ++ ")"

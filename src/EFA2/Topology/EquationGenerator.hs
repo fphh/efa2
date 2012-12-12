@@ -34,9 +34,10 @@ import Data.Traversable (traverse)
 import Data.Foldable (foldMap, fold)
 
 import qualified EFA2.Interpreter.Env as Env
+import Data.Tuple.HT (snd3)
+import EFA2.Utils.Utils ((>>!))
 
--- import Debug.Trace
-
+import Debug.Trace
 
 
 type ProvEnv s a = M.Map Env.Index (Sys.Variable s a)
@@ -50,7 +51,8 @@ newtype EquationSystem s a = EquationSystem (SysWithVars s a)
 instance Monoid (EquationSystem s a) where
          mempty = EquationSystem $ return (return ())
          mappend (EquationSystem x) (EquationSystem y) =
-           EquationSystem $ liftM2 (>>) x y
+           EquationSystem $ liftM2 (>>!) x y
+
 
 liftV2 :: 
   (Expr.T s a -> Expr.T s a -> Expr.T s a) -> 
@@ -58,7 +60,7 @@ liftV2 ::
 liftV2 f (ExprWithVars xs) (ExprWithVars ys) = ExprWithVars $ liftM2 f xs ys
 
 
-instance (Num a, Fractional a) => Num (ExprWithVars s a) where
+instance (Fractional a) => Num (ExprWithVars s a) where
          (*) = liftV2 (*)
          (+) = liftV2 (+)
          (-) = liftV2 (-)
@@ -102,9 +104,8 @@ getVar idx =
       newVar = 
         lift Sys.globalVariable
           >>= \var -> modify (M.insert idx var)
-          >> return (Expr.fromVariable var)
+          >>! return (Expr.fromVariable var)
   in ExprWithVars $ gets (M.lookup idx) >>= maybe newVar oldVar
-
 
 
 power :: SecNode -> SecNode -> ExprWithVars s a
@@ -168,6 +169,7 @@ makeEdgeEquations ::
   [Edge SecNode] -> EquationSystem s a
 makeEdgeEquations es = foldMap mkEq es
   where mkEq (Edge f t) = power t f .= eta f t * power f t
+  --where mkEq (Edge f t) = power t f .= powerConversion (power f t)
 
 
 makeEnergyEquations ::
@@ -179,6 +181,8 @@ makeEnergyEquations es = foldMap mkEq es
             (energy f t .= dt * power f t) <> (energy t f .= dt * power t f)
           where dt = dtime sf
 
+sum' [] = 0
+sum' (x:xs) = x + sum' xs
 
 makeNodeEquations ::
   (Eq a, Fractional a) =>
@@ -186,11 +190,11 @@ makeNodeEquations ::
 makeNodeEquations = fold . M.mapWithKey ((f .) . g) . Gr.nodes
   where  g n (ins, _, outs) = (S.toList ins, n, S.toList outs)
          f (ins, n, outs) =
-           (1 .= sum xin)
-           <> (1 .= sum xout)
-           <> (varsumin .= sum ein)
-           <> (varsumout .= sum eout)
-           <> mwhen (not (null ins) && not (null outs)) (varsumin .= varsumout)
+           --(1 .= sum xin)
+           -- <> (1 .= sum xout)
+           (varsumin .= sum' ein)
+           <> (varsumout .= sum' eout)
+           -- <> mwhen (not (null ins) && not (null outs)) (varsumin .= varsumout)
            <> (mconcat $ zipWith (h varsumin) ein xin)
            <> (mconcat $ zipWith (h varsumout) eout xout)
           where xin = map (xfactor n) ins
@@ -226,7 +230,7 @@ data StDir = InDir
 
 -- Only graphs without intersection edges are allowed.
 -- Storages must not have more than one in or out edge.
-getInnersectionStorages :: TD.SequFlowGraph -> [[(SecNode, StDir)]]
+getInnersectionStorages :: TD.SequFlowGraph -> [[(SecNode, StDir)]] -- Map SecNode StDir
 getInnersectionStorages = getStorages format
   where format ([n], (s, _), []) = if TD.isDirEdge n then (s, InDir) else (s, NoDir)
         format ([], (s, _), [n]) = if TD.isDirEdge n then (s, OutDir) else (s, NoDir)
@@ -235,15 +239,28 @@ getInnersectionStorages = getStorages format
 
 type InOutFormat = Gr.InOut SecNode TD.NodeType TD.ELabel
 
+{-
+getStorages :: (InOutFormat -> b) -> TD.SequFlowGraph -> [[b]]
+getStorages format =
+  map (map format)
+  . L.groupBy nodeId
+  . map snd
+  . M.toList
+  . M.mapWithKey f
+  . M.filter (TD.isStorage . snd3)
+  . Gr.nodes
+  where nodeId (_, (SecNode _ s, _), _) (_, (SecNode _ t, _), _) = s == t
+        f n (ins, _, outs) = (map fst $ S.toList ins, n, map fst $ S.toList outs)
+-}
+
 
 getStorages :: (InOutFormat -> b) -> TD.SequFlowGraph -> [[b]]
 getStorages format =
   map (map format)
   . L.groupBy nodeId
   . filter TD.isStorageNode
-  . Gr.mkInOutGraphFormat
+  . Gr.mkInOutGraphFormat    -- ersetzen durch nodes
   where nodeId (_, (SecNode _ s, _), _) (_, (SecNode _ t, _), _) = s == t
-
 
 
 -----------------------------------------------------------------
@@ -340,12 +357,16 @@ mapToEnvs func = M.foldWithKey f envs
           e { Env.dtimeMap = M.insert idx (func v) (Env.dtimeMap e) }
         f _ _ e = e
 
+
+-- powerConvMap :: M.Map Idx.PowerConversion (BijectionWeak a a)
+
 solveSystemDoIt ::
   (Eq a, Fractional a) =>
   [(Env.Index, a)] -> TD.SequFlowGraph -> M.Map Env.Index (Maybe a)
 solveSystemDoIt given g = runST $ do
   let f (var, val) = getVar var .= constToExprSys val
       EquationSystem eqsys = foldMap f given <> makeAllEquations g
+      -- EquationSystem eqsys = foldMap f given <> makeAllEquations powerConvMap g
   (eqs, varmap) <- runStateT eqsys M.empty
   Sys.solve eqs
   traverse Sys.query varmap

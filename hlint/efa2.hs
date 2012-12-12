@@ -136,3 +136,12 @@ error "Use Foldable.mapM_" = maybe (return ()) ==> Fold.mapM_
 
 
 -- HH
+
+
+warn "Use EFA2.Utils.Utils.(>>!)" = a >> b ==> a >>! b where note = "(>>!) has type (Monad m) :: m () -> m a -> m a and you will be sure not to forget accidentally the result of the first operation"
+
+warn "Use EFA2.Utils.Utils.(>>!)" = (>>) ==> (>>!) where note = "(>>!) has type (Monad m) :: m () -> m a -> m a and you will be sure not to forget accidentally the result of the first operation"
+
+-- warn "Use EFA2.Utils.Utils.(>>!)" = (a >>) ==> (a >>!) where note = "(>>!) has type (Monad m) :: m () -> m a -> m a and you will be sure not to forget accidentally the result of the first operation"
+
+-- warn "Use EFA2.Utils.Utils.(>>!)" = (>> b) ==> (>>! b) where note = "(>>!) has type (Monad m) :: m () -> m a -> m a and you will be sure not to forget accidentally the result of the first operation"

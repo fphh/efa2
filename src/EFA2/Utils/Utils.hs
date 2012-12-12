@@ -86,3 +86,7 @@ diffByAtMostOne s t = (S.size t > 1) && (S.size (t S.\\ s) == 1)
 
 hasSameVariable :: (Ord a) => S.Set a -> S.Set a -> Bool
 hasSameVariable s t = not $ S.null (S.intersection s t)
+
+
+(>>!) :: (Monad m) => m () -> m a -> m a
+x >>! y = do { x; y }
