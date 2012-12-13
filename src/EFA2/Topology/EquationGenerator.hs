@@ -181,10 +181,12 @@ makeEnergyEquations es = foldMap mkEq es
             (energy f t .= dt * power f t) <> (energy t f .= dt * power t f)
           where dt = dtime sf
 
+{-
 sum' :: (Num a) => [a] -> a
 sum' [] = 0
 sum' [x] = x
 sum' (x:xs) = x + sum' xs
+-}
 
 makeNodeEquations ::
   (Eq a, Fractional a) =>
@@ -194,8 +196,8 @@ makeNodeEquations = fold . M.mapWithKey ((f .) . g) . Gr.nodes
          f (ins, n, outs) =
            --(1 .= sum xin)
            -- <> (1 .= sum xout)
-           (varsumin .= sum' ein)
-           <> (varsumout .= sum' eout)
+           (varsumin .= sum ein)
+           <> (varsumout .= sum eout)
            <> mwhen (not (null ins) && not (null outs)) (varsumin .= varsumout)
            <> (mconcat $ zipWith (h varsumin) ein xin)
            <> (mconcat $ zipWith (h varsumout) eout xout)

@@ -78,7 +78,6 @@ Library
     EFA2.Topology.EquationGenerator
     EFA2.Example.ExampleHelper
     EFA2.Interpreter.Env
-    -- EFA2.Interpreter.Arith
   Other-Modules:
     EFA2.Solver.EquationTest
 
@@ -148,7 +147,7 @@ Executable demo-newsolver
     Buildable: False
 
 Executable demo-newsolversymbolic
-  Main-Is: examples/elementary/newSolver/Main.hs
+  Main-Is: examples/elementary/newSolverSymbolic/Main.hs
   GHC-Options: -Wall
   If flag(buildExamples)
     Build-Depends:
