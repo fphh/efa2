@@ -136,9 +136,8 @@ mwhen :: Monoid a => Bool -> a -> a
 mwhen True t = t
 mwhen False _ = mempty 
 
-edges :: Gr.EfaGraph node nodeLabel edgeLabel -> [Edge node]
-edges g = M.keys el
-  where el = Gr.edgeLabels g
+edges :: Gr.EfaGraph node nodeLabel edgeLabel -> [Gr.Edge node]
+edges = M.keys . Gr.edgeLabels
 
 makeAllEquations ::
   (Eq a, Fractional a) =>
