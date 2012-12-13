@@ -4,6 +4,7 @@ module EFA2.Topology.EquationGenerator where
 import qualified Data.Map as M
 import qualified Data.List as L
 import qualified Data.List.HT as LH
+import qualified Data.List.Key as Key
 import qualified Data.Set as S
 
 import EFA2.Signal.Index (SecNode(..), Section(..))
@@ -256,10 +257,9 @@ getStorages format =
 getStorages :: (InOutFormat -> b) -> TD.SequFlowGraph -> [[b]]
 getStorages format =
   map (map format)
-  . L.groupBy nodeId
+  . Key.group (getNode . fst . snd3)
   . filter TD.isStorageNode
   . Gr.mkInOutGraphFormat    -- ersetzen durch nodes
-  where nodeId (_, (SecNode _ s, _), _) (_, (SecNode _ t, _), _) = s == t
 
 
 -----------------------------------------------------------------
@@ -282,8 +282,11 @@ makeInterNodeEquations topo = foldMap f st
                InDir -> mkInStorageEquations x
                OutDir -> mkOutStorageEquations x
 
-getSection :: SecNode -> Section
-getSection (SecNode s _) = s
+getSection :: Idx.SecNode -> Idx.Section
+getSection (Idx.SecNode s _) = s
+
+getNode :: Idx.SecNode -> Idx.Node
+getNode (Idx.SecNode _ n) = n
 
 mkInStorageEquations ::
   (Eq a, Fractional a) =>
