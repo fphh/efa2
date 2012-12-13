@@ -3,6 +3,7 @@ module EFA2.Topology.EquationGenerator where
 
 import qualified Data.Map as M
 import qualified Data.List as L
+import qualified Data.List.HT as LH
 import qualified Data.Set as S
 
 import EFA2.Signal.Index (SecNode(..), Section(..))
@@ -209,19 +210,17 @@ makeNodeEquations = fold . M.mapWithKey ((f .) . g) . Gr.nodes
 makeStorageEquations ::
   (Eq a, Fractional a) =>
   TD.SequFlowGraph -> EquationSystem s a
-makeStorageEquations topo = mconcat $ foldMap g st
-  where st = getInnersectionStorages topo
-        g [] = mempty
-        g lst@(_:t) = zipWith f lst t
-        f (before, _) (now, dir) =
-          case dir of
-               NoDir  -> stNow .= stBefore
-               InDir  -> stNow .= stBefore + varsumin
-               OutDir -> stNow .= stBefore - varsumout
-          where stBefore = storage before
-                stNow = storage now
-                varsumin = insumvar now
-                varsumout = outsumvar now
+makeStorageEquations =
+   mconcat . concatMap (LH.mapAdjacent f) . getInnersectionStorages
+  where f (before, _) (now, dir) =
+           storage now
+           .=
+           storage before
+           +
+           case dir of
+                NoDir  -> 0
+                InDir  -> insumvar now
+                OutDir -> - outsumvar now
 
 
 data StDir = InDir
