@@ -408,7 +408,7 @@ drawDeltaTopology topo = draw topo . envDelta
 envAbs ::
    (AutoEnv a, Format output) =>
    Interp.Envs SingleRecord a -> Env output
-envAbs (Interp.Envs (SingleRecord rec) e _de _p _dp _fn _dn dt x _dx _v st) =
+envAbs (Interp.Envs (SingleRecord rec) e _de _p _dp dt x _dx _v st) =
    let lookupEnergy = makeLookup rec Idx.Energy e
    in  Env rec
           (\a b -> formatMaybeValue $ lookupEnergy a b)
@@ -426,7 +426,7 @@ envDelta ::
    (AutoEnvDelta a, Format output) =>
    Interp.Envs SingleRecord a -> Env output
 envDelta
-      (Interp.Envs (SingleRecord rec) e de _p _dp _fn _dn dt _x dx _v st) =
+      (Interp.Envs (SingleRecord rec) e de _p _dp dt _x dx _v st) =
    let lookupEnergy = makeLookup rec Idx.Energy e
        lookupDEnergy = makeLookup rec Idx.DEnergy de
    in  Env rec
