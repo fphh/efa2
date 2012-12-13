@@ -5,7 +5,7 @@ module EFA2.Topology.Draw where
 
 import EFA2.Solver.Equation
           (Term(..), ToIndex, simplify, (&-), (&/),
-           showEqTerm, showSecNode,
+           showEqTerm, showSecNode, delta,
            LatexString(LatexString), unLatexString,
            toLatexString, secNodeToLatexString)
 import EFA2.Interpreter.Env
@@ -29,6 +29,8 @@ import EFA2.Signal.Typ (TSum, TProd)
 import Data.GraphViz (
           runGraphvizCanvas,
           GraphvizCanvas(Xlib),
+          runGraphvizCommand,
+          GraphvizOutput(XDot),
           GraphID(Int),
           GlobalAttributes(GraphAttrs),
           GraphvizCommand(Dot),
@@ -40,8 +42,6 @@ import Data.GraphViz (
           DotSubGraph,
           attrStmts, nodeStmts, edgeStmts, graphStatements,
           directedGraph, strictGraph, subGraphs,
-          -- The next two are needed for the second version of printGraph.
-          GraphvizOutput(..), runGraphvizCommand,
           graphID)
 import Data.GraphViz.Attributes.Complete as Viz
 
@@ -144,24 +144,26 @@ dotIdentFromSecNode :: Idx.SecNode -> T.Text
 dotIdentFromSecNode (Idx.SecNode (Idx.Section s) (Idx.Node n)) =
    T.pack $ "s" ++ show s ++ "n" ++ show n
 
-printGraph ::
+printGraph, printGraphX, printGraphDot ::
    SequFlowGraph ->
    Maybe Idx.Record ->
    (Idx.DTime -> String) ->
    (Topo.LNode -> String) ->
    (Topo.LEdge -> [String]) ->
    IO ()
-printGraph g recordNum tshow nshow eshow =
+printGraph = printGraphX
+
+printGraphX g recordNum tshow nshow eshow =
    runGraphvizCanvas Dot (mkDotGraph g recordNum tshow nshow eshow) Xlib
 
-{-
-printGraph g recordNum tshow nshow eshow = do
-  runGraphvizCommand Dot (mkDotGraph g recordNum tshow nshow eshow) XDot "result/graph.dot"
-  return ()
--}
+printGraphDot g recordNum tshow nshow eshow =
+   void $
+   runGraphvizCommand Dot
+      (mkDotGraph g recordNum tshow nshow eshow)
+      XDot "result/graph.dot"
 
 heart :: Char
-heart = '\9829'
+heart = '\x2665'
 
 drawTopologyX' :: SequFlowGraph -> IO ()
 drawTopologyX' topo =
@@ -253,7 +255,7 @@ newtype Plain = Plain {getPlain :: String}
 instance Format Plain where
    undetermined = Plain [heart]
    formatLineAbs = formatLine ""
-   formatLineDelta = formatLine "d"
+   formatLineDelta = formatLine [delta]
    formatAssignGen (Plain lhs) (Plain rhs) =
       Plain $ lhs ++ " = " ++ rhs
    formatList = Plain . ("["++) . (++"]") . L.intercalate "," . map getPlain

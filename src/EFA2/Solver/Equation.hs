@@ -216,23 +216,26 @@ showEdgeIdx :: Idx.Record -> Idx.SecNode -> Idx.SecNode -> String
 showEdgeIdx (Idx.Record r) x y =
    show r ++ {- "_" ++ showSecNode x ++ -} "_" ++ showSecNode y
 
+delta :: Char
+delta = '\x2206'
+
 showIdx :: ToIndex idx => idx -> String
 showIdx idx =
    case toIndex idx of
       Energy (Idx.Energy r x y) -> "E_" ++ showEdgeIdx r x y
-      DEnergy (Idx.DEnergy r x y) -> "dE_" ++ showEdgeIdx r x y
+      DEnergy (Idx.DEnergy r x y) -> delta:"E_" ++ showEdgeIdx r x y
 
       Power (Idx.Power r x y) -> "P_" ++ showEdgeIdx r x y
-      DPower (Idx.DPower r x y) -> "dP_" ++ showEdgeIdx r x y
+      DPower (Idx.DPower r x y) -> delta:"P_" ++ showEdgeIdx r x y
 
       FEta (Idx.FEta r x y) -> "n_" ++ showEdgeIdx r x y
-      DEta (Idx.DEta r x y) -> "dn_" ++ showEdgeIdx r x y
+      DEta (Idx.DEta r x y) -> delta:"n_" ++ showEdgeIdx r x y
 
       DTime (Idx.DTime (Idx.Record r) (Idx.Section s)) ->
-         "dt_" ++ show r ++ "." ++ show s
+         delta:"t_" ++ show r ++ "." ++ show s
 
       X (Idx.X r x y) -> "x_" ++ showEdgeIdx r x y
-      DX (Idx.DX r x y) -> "dx_" ++ showEdgeIdx r x y
+      DX (Idx.DX r x y) -> delta:"x_" ++ showEdgeIdx r x y
 
       Var (Idx.Var (Idx.Record r) u x) ->
          "v_" ++ show r ++ "_" ++ show u ++ "." ++ showSecNode x
