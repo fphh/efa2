@@ -80,9 +80,6 @@ given = [ (mkVar (Idx.DTime (Idx.Record Absolute) initSection), 1),
           (makeVar Idx.FEta (Idx.SecNode (Section 0) (Idx.Node 0))
                             (Idx.SecNode (Section 0) (Idx.Node 2)), 0.75) ]
 
-emptyGiven :: [(Env.Index, Double)]
-emptyGiven = []
-
 
 main :: IO ()
 main = do 

@@ -16,11 +16,6 @@ import qualified EFA2.Interpreter.Env as Env
 import EFA2.Solver.Equation
 
 
-
-sec :: Idx.Section
-sec = Idx.Section 0
-
-
 topoDreibein :: Topology
 topoDreibein = mkGraph (makeNodes ns) (makeSimpleEdges es)
   where ns = [(0, Source), (1, Sink), (2, Crossing), (3, TD.Storage)]
@@ -36,18 +31,8 @@ seqTopo = mkSeqTopo (select sol states)
                     . Flow.genSectionTopology
                     . SequData
 
-
-t :: EqTerm
-t = Atom $ mkVar (Idx.DTime (Idx.Record Absolute) initSection)
-
 given :: [(Env.Index, EqTerm)]
 given  = map (\x -> (x, Atom x)) given'
-
-xidx :: Idx.X
-xidx =
-   Idx.X (Idx.Record Absolute)
-      (Idx.SecNode (Section 0) (Idx.Node 2))
-      (Idx.SecNode (Section 0) (Idx.Node 0))
 
 
 given' :: [Env.Index]
