@@ -78,8 +78,7 @@ Library
     EFA2.Topology.EquationGenerator
     EFA2.Example.ExampleHelper
     EFA2.Interpreter.Env
-    EFA2.Interpreter.Arith
-    EFA2.Interpreter.InTerm
+    -- EFA2.Interpreter.Arith
   Other-Modules:
     EFA2.Solver.EquationTest
 
