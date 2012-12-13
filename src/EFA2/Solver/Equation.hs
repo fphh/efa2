@@ -57,6 +57,7 @@ data Term a =
           | (Term a) :* (Term a) deriving (Show, Eq, Ord)
 
 
+
 instance Num (Term idx) where
    fromInteger x = Const (x % 1)
    negate = Minus
@@ -213,7 +214,7 @@ showSecNode (Idx.SecNode (Idx.Section s) (Idx.Node x)) =
 
 showEdgeIdx :: Idx.Record -> Idx.SecNode -> Idx.SecNode -> String
 showEdgeIdx (Idx.Record r) x y =
-   show r ++ "_" ++ showSecNode x ++ "_" ++ showSecNode y
+   show r ++ {- "_" ++ showSecNode x ++ -} "_" ++ showSecNode y
 
 showIdx :: ToIndex idx => idx -> String
 showIdx idx =

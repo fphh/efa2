@@ -148,3 +148,13 @@ Executable demo-newsolver
   Else
     Buildable: False
 
+Executable demo-newsolversymbolic
+  Main-Is: examples/elementary/newSolver/Main.hs
+  GHC-Options: -Wall
+  If flag(buildExample)
+    Build-Depends:
+      efa2,
+      base
+  Else
+    Buildable: False
+

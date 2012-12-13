@@ -135,7 +135,7 @@ data Envs rec a =
                      varMap :: VarMap a,
                      storageMap :: StorageMap a } deriving (Show)
 
-
+{-
 instance (Show a) => Show (a -> a) where
          show _ = "<function (a -> a)>"
 
@@ -144,6 +144,13 @@ instance Eq (a -> a) where
 
 instance Ord (a -> a) where
          compare _ _ = EQ
+
+-}
+
+instance Functor (Envs rec) where
+         fmap f (Envs rec e de p dp dt x dx v st) =
+           Envs rec (fmap f e) (fmap f de) (fmap f p) (fmap f dp) (fmap f dt) (fmap f x) (fmap f dx) (fmap f v) (fmap f st)
+
 
 emptyEnv :: Envs NoRecord a
 emptyEnv = Envs NoRecord M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty -- M.empty M.empty
