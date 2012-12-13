@@ -8,6 +8,7 @@ import EFA2.Solver.Equation (EqTerm)
 
 -- import Data.Maybe (mapMaybe)
 
+{-
 
 data InEquation a =
         InEqual Env.Index (InRhs a) deriving (Eq, Ord, Show)
@@ -17,6 +18,7 @@ data InRhs a =
         | InGiven a
         | InFunc (a -> a)
             deriving (Eq, Ord, Show)
+-}
 
 
 {- What for?
