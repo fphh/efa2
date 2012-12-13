@@ -17,7 +17,11 @@ initSection = Section (-1)
 
 
 
-data Absolute = Absolute deriving (Show, Eq, Ord)
+data Absolute = Absolute deriving (Eq, Ord)
+
+instance Show Absolute where
+         show _ = ""
+
 data Differential = Differential deriving (Show, Eq, Ord)
 
 

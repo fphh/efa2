@@ -181,7 +181,9 @@ makeEnergyEquations es = foldMap mkEq es
             (energy f t .= dt * power f t) <> (energy t f .= dt * power t f)
           where dt = dtime sf
 
+sum' :: (Num a) => [a] -> a
 sum' [] = 0
+sum' [x] = x
 sum' (x:xs) = x + sum' xs
 
 makeNodeEquations ::
@@ -194,7 +196,7 @@ makeNodeEquations = fold . M.mapWithKey ((f .) . g) . Gr.nodes
            -- <> (1 .= sum xout)
            (varsumin .= sum' ein)
            <> (varsumout .= sum' eout)
-           -- <> mwhen (not (null ins) && not (null outs)) (varsumin .= varsumout)
+           <> mwhen (not (null ins) && not (null outs)) (varsumin .= varsumout)
            <> (mconcat $ zipWith (h varsumin) ein xin)
            <> (mconcat $ zipWith (h varsumout) eout xout)
           where xin = map (xfactor n) ins
@@ -347,8 +349,6 @@ mapToEnvs func = M.foldWithKey f envs
           e { Env.energyMap = M.insert idx (func v) (Env.energyMap e) }
         f (Env.Power idx) v e =
           e { Env.powerMap = M.insert idx (func v) (Env.powerMap e) }
-        f (Env.FEta idx) v e =
-          e { Env.fetaMap = M.insert idx (const $ func v) (Env.fetaMap e) }
         f (Env.X idx) v e =
           e { Env.xMap = M.insert idx (func v) (Env.xMap e) }
         f (Env.Store idx) v e =
