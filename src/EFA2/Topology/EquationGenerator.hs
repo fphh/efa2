@@ -100,13 +100,12 @@ makeVar idxf nid nid' =
 
 getVar :: Env.Index -> ExprWithVars s a
 getVar idx =
-  let oldVar = return . Expr.fromVariable
-      newVar = 
-        lift Sys.globalVariable
+  let newVar =
+         lift Sys.globalVariable
           >>= \var -> modify (M.insert idx var)
-          >>! return (Expr.fromVariable var)
-  in ExprWithVars $ gets (M.lookup idx) >>= maybe newVar oldVar
-
+          >>! return var
+  in ExprWithVars $ fmap Expr.fromVariable $
+        maybe newVar return =<< gets (M.lookup idx)
 
 power :: SecNode -> SecNode -> ExprWithVars s a
 power = (getVar .) . makeVar Idx.Power
