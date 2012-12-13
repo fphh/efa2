@@ -141,7 +141,7 @@ Executable demo-sequence
 Executable demo-newsolver
   Main-Is: examples/elementary/newSolver/Main.hs
   GHC-Options: -Wall
-  If flag(buildExample)
+  If flag(buildExamples)
     Build-Depends:
       efa2,
       base
@@ -151,7 +151,7 @@ Executable demo-newsolver
 Executable demo-newsolversymbolic
   Main-Is: examples/elementary/newSolver/Main.hs
   GHC-Options: -Wall
-  If flag(buildExample)
+  If flag(buildExamples)
     Build-Depends:
       efa2,
       base
