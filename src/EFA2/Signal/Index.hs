@@ -52,6 +52,13 @@ data SecNode = SecNode Section Node deriving (Show, Eq, Ord)
 data Energy = Energy !Record !SecNode !SecNode deriving (Show, Ord, Eq)
 data DEnergy = DEnergy !Record !SecNode !SecNode deriving (Show, Ord, Eq)
 
+
+-- | Energy variables for hypothetical outgoing energies.
+-- At intersection edges they describe the maximum energy
+-- that a storage could deliver.
+data MaxEnergy = MaxEnergy !Record !SecNode !SecNode deriving (Show, Ord, Eq)
+data DMaxEnergy = DMaxEnergy !Record !SecNode !SecNode deriving (Show, Ord, Eq)
+
 -- | Power variables.
 data Power = Power !Record !SecNode !SecNode deriving (Show, Ord, Eq)
 data DPower = DPower !Record !SecNode !SecNode deriving (Show, Ord, Eq)
@@ -63,6 +70,11 @@ data DEta = DEta !Record !SecNode !SecNode deriving (Show, Ord, Eq)
 -- | Splitting factors.
 data X = X !Record !SecNode !SecNode deriving (Show, Ord, Eq)
 data DX = DX !Record !SecNode !SecNode deriving (Show, Ord, Eq)
+
+-- | Strange factors for outgoing intersection edges.
+data Y = Y !Record !SecNode !SecNode deriving (Show, Ord, Eq)
+data DY = DY !Record !SecNode !SecNode deriving (Show, Ord, Eq)
+
 
 
 -- * Node indices

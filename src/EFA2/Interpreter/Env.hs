@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeFamilies #-}
+
 module EFA2.Interpreter.Env where
 
 import qualified Data.Map as M
@@ -18,6 +19,8 @@ import EFA2.Signal.Base (BSum)
 data Index =
             Energy Idx.Energy
           | DEnergy Idx.DEnergy
+          | MaxEnergy Idx.MaxEnergy
+          | DMaxEnergy Idx.DMaxEnergy
           | Power Idx.Power
           | DPower Idx.DPower
           | FEta Idx.FEta
@@ -25,6 +28,8 @@ data Index =
           | DTime Idx.DTime
           | X Idx.X
           | DX Idx.DX
+          | Y Idx.Y
+          | DY Idx.DY
           | Var Idx.Var
           | Store Idx.Storage
           | InSumVar Idx.InSumVar
@@ -104,6 +109,9 @@ instance IdxEq Idx.Storage where
 type EnergyMap a = M.Map Idx.Energy a
 type DEnergyMap a = M.Map Idx.DEnergy a
 
+type MaxEnergyMap a = M.Map Idx.MaxEnergy a
+type DMaxEnergyMap a = M.Map Idx.DMaxEnergy a
+
 type PowerMap a = M.Map Idx.Power a
 type DPowerMap a = M.Map Idx.DPower a
 
@@ -115,6 +123,10 @@ type DTimeMap a = M.Map Idx.DTime a
 type XMap a = M.Map Idx.X a
 type DXMap a = M.Map Idx.DX a
 
+type YMap a = M.Map Idx.Y a
+type DYMap a = M.Map Idx.DY a
+
+
 type VarMap a = M.Map Idx.Var a
 
 type StorageMap a = M.Map Idx.Storage a
@@ -125,6 +137,9 @@ data Envs rec a =
               Envs { recordNumber :: rec,
                      energyMap :: EnergyMap a,
                      denergyMap :: DEnergyMap a,
+                     maxenergyMap :: MaxEnergyMap a,
+                     dmaxenergyMap :: DMaxEnergyMap a,
+
                      powerMap :: PowerMap a,
                      dpowerMap :: DPowerMap a,
                      --fetaMap :: FEtaMap a,
@@ -132,6 +147,8 @@ data Envs rec a =
                      dtimeMap :: DTimeMap a,
                      xMap :: XMap a,
                      dxMap :: DXMap a,
+                     yMap :: YMap a,
+                     dyMap :: DYMap a,
                      varMap :: VarMap a,
                      storageMap :: StorageMap a } deriving (Show)
 
@@ -148,12 +165,12 @@ instance Ord (a -> a) where
 -}
 
 instance Functor (Envs rec) where
-         fmap f (Envs rec e de p dp dt x dx v st) =
-           Envs rec (fmap f e) (fmap f de) (fmap f p) (fmap f dp) (fmap f dt) (fmap f x) (fmap f dx) (fmap f v) (fmap f st)
+         fmap f (Envs rec e de me dme p dp dt x dx y dy v st) =
+           Envs rec (fmap f e) (fmap f de) (fmap f me) (fmap f dme) (fmap f p) (fmap f dp) (fmap f dt) (fmap f x) (fmap f dx) (fmap f y) (fmap f dy) (fmap f v) (fmap f st)
 
 
 emptyEnv :: Envs NoRecord a
-emptyEnv = Envs NoRecord M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty -- M.empty M.empty
+emptyEnv = Envs NoRecord M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty
 
 
 data NoRecord = NoRecord deriving (Eq, Ord, Show)

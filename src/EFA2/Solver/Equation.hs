@@ -132,6 +132,8 @@ class MkIdxC a where
 
 instance MkIdxC Idx.Energy where mkIdx = Energy
 instance MkIdxC Idx.DEnergy where mkIdx = DEnergy
+instance MkIdxC Idx.MaxEnergy where mkIdx = MaxEnergy
+instance MkIdxC Idx.DMaxEnergy where mkIdx = DMaxEnergy
 instance MkIdxC Idx.Power where mkIdx = Power
 instance MkIdxC Idx.DPower where mkIdx = DPower
 instance MkIdxC Idx.FEta where mkIdx = FEta
@@ -139,6 +141,10 @@ instance MkIdxC Idx.DEta where mkIdx = DEta
 instance MkIdxC Idx.DTime where mkIdx = DTime
 instance MkIdxC Idx.X where mkIdx = X
 instance MkIdxC Idx.DX where mkIdx = DX
+
+instance MkIdxC Idx.Y where mkIdx = Y
+instance MkIdxC Idx.DY where mkIdx = DY
+
 instance MkIdxC Idx.Var where mkIdx = Var
 instance MkIdxC Idx.Storage where mkIdx = Store
 

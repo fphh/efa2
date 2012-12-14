@@ -43,8 +43,8 @@ given = [ (mkVar (Idx.DTime (Idx.Record Absolute) initSection), 1),
           (mkVar (Idx.Storage (Idx.Record Absolute) 
                               (Idx.SecNode (Section 2) (Idx.Node 3))), 10.0),
 
-          (makeVar Idx.Power (Idx.SecNode initSection (Idx.Node 3))
-                             (Idx.SecNode initSection (Idx.Node (-1))), 3.0),
+--          (makeVar Idx.Power (Idx.SecNode initSection (Idx.Node 3))
+--                             (Idx.SecNode initSection (Idx.Node (-1))), 3.0),
 
 
           (makeVar Idx.Power (Idx.SecNode (Section 0) (Idx.Node 2))
@@ -53,6 +53,10 @@ given = [ (mkVar (Idx.DTime (Idx.Record Absolute) initSection), 1),
 
           (makeVar Idx.X (Idx.SecNode (Section 0) (Idx.Node 2))
                          (Idx.SecNode (Section 0) (Idx.Node 3)), 0.32),
+
+--         (makeVar Idx.X (Idx.SecNode (Section 1) (Idx.Node 3))
+--                         (Idx.SecNode (Section 2) (Idx.Node 3)), 1),
+
 
           (makeVar Idx.Power (Idx.SecNode (Section 1) (Idx.Node 3))
                              (Idx.SecNode (Section 1) (Idx.Node 2)), 5),
@@ -87,3 +91,4 @@ main = do
   let env = solveSystem given seqTopo
 
   drawTopology seqTopo env
+

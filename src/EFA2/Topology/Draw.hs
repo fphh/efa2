@@ -63,6 +63,8 @@ import Control.Monad ((>=>), void, liftM2, liftM4)
 
 import Text.Printf (PrintfArg, printf)
 
+import Debug.Trace
+
 
 nodeColour :: Attribute
 nodeColour = FillColor [RGB 230 230 240]
@@ -210,16 +212,18 @@ orientEdge (e@(Edge x y), l) =
            then (e, Forward, id)
            else (Edge y x, Back, reverse)
 
-data LineType = ELine | XLine | NLine
+data LineType = ELine | MELine | XLine | YLine | NLine
    deriving (Eq, Ord, Show, Enum)
 
-lineTypeLetter :: LineType -> Char
-lineTypeLetter ELine = 'e'
-lineTypeLetter XLine = 'x'
-lineTypeLetter NLine = 'n'
+lineTypeString :: LineType -> String
+lineTypeString ELine = "e"
+lineTypeString MELine = "me"
+lineTypeString XLine = "x"
+lineTypeString YLine = "y"
+lineTypeString NLine = "n"
 
 data Line = Line LineType Idx.SecNode Idx.SecNode
-   deriving (Eq, Ord)
+          | NewLine deriving (Eq, Ord)
 
 
 showNodeType :: NodeType -> String
@@ -247,15 +251,19 @@ class Format output where
       Idx.Record -> StorageMap a -> Topo.LNode -> output
 
 
-newtype Plain = Plain {getPlain :: String}
-   deriving (Show)
+data Plain = NoString
+           | Plain String deriving (Show)
+
+getPlain :: Plain -> String
+getPlain NoString = ""
+getPlain (Plain str) = str
 
 instance Format Plain where
    undetermined = Plain [heart]
    formatLineAbs = formatLine ""
    formatLineDelta = formatLine [delta]
-   formatAssignGen (Plain lhs) (Plain rhs) =
-      Plain $ lhs ++ " = " ++ rhs
+   formatAssignGen NoString _ = NoString
+   formatAssignGen (Plain lhs) (Plain rhs) = Plain $ lhs ++ " = " ++ rhs
    formatList = Plain . ("["++) . (++"]") . L.intercalate "," . map getPlain
    formatTerm = Plain . showEqTerm
    formatChar = Plain . (:[])
@@ -279,7 +287,9 @@ instance Format Plain where
 formatLine :: String -> Line -> Plain
 formatLine prefix (Line t u v) =
    Plain $
-   prefix ++ lineTypeLetter t : "_" ++ showSecNode u ++ "_" ++ showSecNode v
+   prefix ++ lineTypeString t ++ "_" ++ showSecNode u ++ "_" ++ showSecNode v
+formatLine prefix NewLine = NoString
+
 
 instance Format LatexString where
    undetermined = LatexString "\\heartsuit "
@@ -311,7 +321,7 @@ instance Format LatexString where
 formatLineLatex :: String -> Line -> LatexString
 formatLineLatex prefix (Line t u v) =
    LatexString $
-   prefix ++ lineTypeLetter t : "_{" ++
+   prefix ++ lineTypeString t ++ "_{" ++
    secNodeToLatexString u ++ "." ++ secNodeToLatexString v ++
    "}"
 
@@ -319,13 +329,13 @@ formatLineLatex prefix (Line t u v) =
 class FormatValue a where
    formatValue :: Format output => a -> output
 
-
-
 data Env output =
    Env {
       recordNumber :: Idx.Record,
       formatEnergy_ :: Idx.SecNode -> Idx.SecNode -> output,
+      formatMaxEnergy_ :: Idx.SecNode -> Idx.SecNode -> output,
       formatX_      :: Idx.SecNode -> Idx.SecNode -> output,
+      formatY_      :: Idx.SecNode -> Idx.SecNode -> output,
       formatEta_    :: Idx.SecNode -> Idx.SecNode -> output,
       formatAssign_ :: (Line, output) -> output,
       showTime :: Idx.DTime -> output,
@@ -348,6 +358,7 @@ makeFormat ::
 makeFormat rec makeIdx mp =
    \uid vid -> formatMaybeValue $ makeLookup rec makeIdx mp uid vid
 
+
 formatMaybe :: Format output => (a -> output) -> Maybe a -> output
 formatMaybe = maybe undetermined
 
@@ -360,10 +371,12 @@ lookupFormat ::
 lookupFormat format dt k =
    formatMaybe format $ M.lookup k dt
 
+newline :: (Line, Plain)
+newline = (NewLine, NoString)
 
 draw :: SequFlowGraph -> Env Plain -> IO ()
 draw g
-   (Env rec formatEnergy formatX formatEta formatAssign tshow nshow) =
+   (Env rec formatEnergy formatMaxEnergy formatX formatY formatEta formatAssign tshow nshow) =
       printGraph g (Just rec)
          (getPlain . tshow) (getPlain . nshow) (map getPlain . eshow)
   where eshow (Edge uid vid, l) =
@@ -380,9 +393,13 @@ draw g
                  (Line ELine vid uid, formatEnergy vid uid) :
                  []
               IntersectionEdge ->
+                 (Line MELine uid vid, formatMaxEnergy uid vid) :
+                 (Line YLine uid vid, formatY uid vid) :
+                 newline :
                  (Line ELine uid vid, formatEnergy uid vid) :
                  (Line XLine uid vid, formatX uid vid) :
-                 (Line XLine uid vid, formatX vid uid) :
+                 (Line NLine uid vid, formatEta uid vid) :
+                 (Line XLine vid uid, formatX vid uid) :
                  (Line ELine vid uid, formatEnergy vid uid) :
                  []
 
@@ -398,16 +415,20 @@ drawDeltaTopology topo = draw topo . envDelta
 envAbs ::
    (AutoEnv a, Format output) =>
    Interp.Envs SingleRecord a -> Env output
-envAbs (Interp.Envs (SingleRecord rec) e _de _p _dp dt x _dx _v st) =
+envAbs (Interp.Envs (SingleRecord rec) e _de me _dme _p _dp dt x _dx y _dy _v st) =
    let lookupEnergy = makeLookup rec Idx.Energy e
+       lookupMaxEnergy = makeLookup rec Idx.MaxEnergy me
    in  Env rec
           (\a b -> formatMaybeValue $ lookupEnergy a b)
+          (\a b -> formatMaybeValue $ lookupMaxEnergy a b)
           (makeFormat rec Idx.X x)
+          (makeFormat rec Idx.Y y)
           (\a b ->
              fromMaybe undetermined $
              liftM2 formatEnergyQuotient
                 (lookupEnergy b a)
                 (lookupEnergy a b))
+
           (\(v, ys) -> formatAssignGen (formatLineAbs v) ys)
           (lookupFormat formatValue dt)
           (formatNode rec st)
@@ -416,12 +437,16 @@ envDelta ::
    (AutoEnvDelta a, Format output) =>
    Interp.Envs SingleRecord a -> Env output
 envDelta
-      (Interp.Envs (SingleRecord rec) e de _p _dp dt _x dx _v st) =
+      (Interp.Envs (SingleRecord rec) e de me dme _p _dp dt _x dx _y dy _v st) =
    let lookupEnergy = makeLookup rec Idx.Energy e
+       lookupDMaxEnergy = makeLookup rec Idx.DMaxEnergy dme
        lookupDEnergy = makeLookup rec Idx.DEnergy de
    in  Env rec
           (\a b -> formatMaybeValue $ lookupDEnergy a b)
+          (\a b -> formatMaybeValue $ lookupDMaxEnergy a b)
           (makeFormat rec Idx.DX dx)
+          (makeFormat rec Idx.DY dy)
+
           (\a b ->
              fromMaybe undetermined $
              liftM4 formatDEnergyQuotient
@@ -479,7 +504,6 @@ instance FormatValue Char where
 
 instance AutoEnv Char where
    formatEnergyQuotient x y = formatQuotient (formatChar x) (formatChar y)
-
 
 instance (Eq a, ToIndex a) => FormatValue (Term a) where
    formatValue = formatTerm
