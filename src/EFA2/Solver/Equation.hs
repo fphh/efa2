@@ -59,6 +59,20 @@ data Term a =
           | (Term a) :+ (Term a)
           | (Term a) :* (Term a) deriving (Show, Eq, Ord)
 
+
+
+instance Num (Term idx) where
+   fromInteger x = Const (x % 1)
+   negate = Minus
+   (+) = (:+)
+   (*) = (:*)
+
+instance Fractional (Term idx) where
+   fromRational = Const
+   recip = Recip
+   (/) = (&/)
+
+
 instance Functor Term where
    fmap f =
       let go t =
