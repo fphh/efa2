@@ -191,13 +191,6 @@ instance (ToIndex idx) => MkTermC (Term idx) where
    mkTerm = fmap toIndex
 
 
-add :: NonEmpty.T [] (Term a) -> Term a
-add = NonEmpty.foldl1 (:+)
-
-mult :: NonEmpty.T [] (Term a) -> Term a
-mult = NonEmpty.foldl1 (:*)
-
-
 showSecNode :: Idx.SecNode -> String
 showSecNode (Idx.SecNode (Idx.Section s) (Idx.Node x)) =
    show s ++ "." ++ show x
@@ -463,7 +456,7 @@ transformEq unknown t =
 
 
 pushMult :: Term a -> Term a
-pushMult t = add $ pushMult' t
+pushMult t = Term.add $ pushMult' t
 
 {-
 pushMult :: EqTerm -> EqTerm
@@ -627,7 +620,7 @@ mkDiffEqTerm _ (AbsAssign (Var (Idx.Var r use n) ::= as@(_x :+ _y))) =
   where res = v ::= dps
         ats = additiveTermsNonEmpty as
         v = mkVar $ Idx.Var r (toDiffUse use) n
-        dps = add $ fmap g ats
+        dps = Term.add $ fmap g ats
         g (Atom (Power (Idx.Power _ f t))) = mkVar $ Idx.DPower r f t
 
 -- P_0.1_0.1 = v_0.1_OutSum.0
