@@ -5,6 +5,7 @@ import qualified Data.NonEmpty.Mixed as NonEmptyMixed
 import qualified Data.List.Match as Match
 import qualified Data.List.HT as ListHT
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 import qualified Data.Foldable as Fold
 import Data.Maybe.HT (toMaybe)
 import Data.Ord.HT (comparing)
@@ -110,10 +111,15 @@ but they hardly increase readability:
 warn "on" = g (f x) (f y) ==> (g `on` f) x y
 -}
 
+error "Set.delete" = Set.filter (n/=) ==> Set.delete n
+error "Set.delete" = Set.filter (/=n) ==> Set.delete n
+error "Map.intersection" = M.intersectionWith const ==> M.intersection
+
 warn "Use Map" = groupBy (equating fst) (sortBy (comparing fst) x) ==> Map.toAscList (Map.fromListWith (++) (map (mapSnd (:[])) x))
 warn "Use Map.fromListWith" = Map.fromList ==> Map.fromListWith (error "multiple keys") where note = "Map.fromList silently drops colliding keys - is this wanted?"
 warn "Use Map.toAscList" = Map.toList ==> Map.toAscList where note = "Map.toList returns keys in any order - are you sure that you do not expect ascending order?"
 warn "Use Map.elems" = map snd (Map.toList m) ==> Map.elems m
+
 warn "Use Foldable.foldl" = foldl f x (Map.elems m) ==> Fold.foldl f x m
 warn "Use Foldable.foldr" = foldr f x (Map.elems m) ==> Fold.foldr f x m
 warn "Use Foldable.length" = length (Map.elems m) ==> Fold.length m
