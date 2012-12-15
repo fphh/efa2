@@ -330,12 +330,12 @@ It shall not contain values needed for computations.
 -}
 data Env output =
    Env {
-      recordNumber :: output,
+      recordNumber_ :: output,
       formatEnergy_ :: Idx.SecNode -> Idx.SecNode -> output,
       formatX_      :: Idx.SecNode -> Idx.SecNode -> output,
       formatEta_    :: Idx.SecNode -> Idx.SecNode -> output,
-      showTime :: Idx.Section -> output,
-      showNode_ :: Topo.LNode -> output
+      formatTime_ :: Idx.Section -> output,
+      formatNode_ :: Topo.LNode -> output
    }
 
 formatMaybeValue :: (FormatValue a, Format output) => Maybe a -> output
