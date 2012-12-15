@@ -2,7 +2,8 @@ module EFA2.Topology.Topology where
 
 import EFA2.Solver.Equation
           (Equation(..), Term(..),
-           MkIdxC, MkVarC, mkVar, mkTerm, add, give, (!=), (!*), (&-), (&/))
+           MkIdxC, MkVarC, mkVar, mkTerm, give, (!=), (!*), (&-), (&/))
+import EFA2.Solver.Term (add)
 import qualified EFA2.Interpreter.Env as Env
 import EFA2.Interpreter.Env
           (Envs(Envs), recordNumber, fromSingleRecord,

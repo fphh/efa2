@@ -5,6 +5,7 @@ import qualified Data.NonEmpty.Mixed as NonEmptyMixed
 import qualified Data.List.Match as Match
 import qualified Data.List.HT as ListHT
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 import qualified Data.Foldable as Fold
 import Data.Maybe.HT (toMaybe)
 import Data.Ord.HT (comparing)
@@ -44,19 +45,27 @@ warn "maximumBy" = maximumBy ==> NonEmpty.maximumBy
 warn "minimumBy" = minimumBy ==> NonEmpty.minimumBy
 warn "fromJust" = fromJust ==> fromMaybe (error "location of call")
 
-warn "head . sort" = head (sort xs) ==> minimum xs
-warn "last . sort" = last (sort xs) ==> maximum xs
-warn "head . sortBy" = head (sortBy f xs) ==> minimumBy f xs
-warn "last . sortBy" = last (sortBy f xs) ==> maximumBy f xs
--- In Horn wird head $ L.sortBy uebersehen - warum?
+warn "head . sort" = head (sort x) ==> minimum x
+warn "last . sort" = last (sort x) ==> maximum x
+warn "head . sortBy" = head (sortBy f x) ==> minimumBy f x
+warn "last . sortBy" = last (sortBy f x) ==> maximumBy f x
 
-warn "take length" = take (length xs) ys ==> Match.take xs ys where note = "Match.take is lazy"
-warn "equal length" = length xs == length ys ==> Match.equalLength xs ys where note = "this comparison is lazy"
--- Sequence: check = length keys == length xs   -- wird nicht erkannt, warum?
-warn "compare length" = compare (length xs) (length ys) ==> Match.compareLength xs ys where note = "this comparison is lazy"
--- warn "compare length" = f (length xs) (length ys) ==> f (void xs) (void ys) where note = "this comparison is lazy"; _ = eq y compare || eq y (<) || eq y (>) || eq y (<=) || eq y (>=) || eq y (==) || eq y (/=)
+warn "take length" = take (length x) y ==> Match.take x y where note = "Match.take is lazy"
+warn "equal length" = length x == length y ==> Match.equalLength x y where note = "this comparison is lazy"
+warn "compare length" = compare (length x) (length y) ==> Match.compareLength x y where note = "this comparison is lazy"
 
-warn "Use dropWhileRev" = reverse (dropWhile f (reverse xs))  ==>  ListHT.dropWhileRev f xs
+-- warn "compare length" = compare (length x) (length y) ==> compare (void x) (void y) where note = "this comparison is lazy"
+warn "le length" = length x <= length y ==> void x <= void y where note = "this comparison is lazy"
+warn "ge length" = length x >= length y ==> void x >= void y where note = "this comparison is lazy"
+warn "lt length" = length x < length y ==> void x < void y where note = "this comparison is lazy"
+warn "gt length" = length x > length y ==> void x > void y where note = "this comparison is lazy"
+-- warn "eq length" = length x == length y ==> void x == void y where note = "this comparison is lazy"
+warn "ne length" = length x /= length y ==> void x /= void y where note = "this comparison is lazy"
+{-
+warn "compare length" = f (length x) (length y) ==> f (void x) (void y) where note = "this comparison is lazy"; _ = eq f compare || eq f (<) || eq f (>) || eq f (<=) || eq f (>=) || eq f (==) || eq f (/=)
+-}
+
+warn "Use dropWhileRev" = reverse (dropWhile f (reverse x))  ==>  ListHT.dropWhileRev f x
 
 warn "Use toMaybe" = (if c then Just x else Nothing)  ==>  toMaybe c x
 warn "Use toMaybe" = (if c then Nothing else Just x)  ==>  toMaybe (not c) x
@@ -80,8 +89,11 @@ warn "Use liftM2" = sequence [mx,my]  ==>  liftM2 (\(x,y) -> [x,y]) mx my
 warn "Use liftM3" = sequence [mx,my,mz]  ==>  liftM3 (\(x,y,z) -> [x,y,z]) mx my mz
 warn "Use liftM4" = sequence [mx,my,mz,mw]  ==>  liftM4 (\(x,y,z,w) -> [x,y,z,w]) mx my mz mw
 
-warn "Use null" = xs == []  ==>  null xs where note = "saves an Eq constraint"
-warn "Use null" = xs /= []  ==>  not (null xs) where note = "saves an Eq constraint"
+warn "Use fmap once" = fmap f (fmap g x) ==> fmap (f . g) x
+warn "Use liftM once" = liftM f (liftM g x) ==> liftM (f . g) x
+
+warn "Use null" = x == []  ==>  null x where note = "saves an Eq constraint"
+warn "Use null" = x /= []  ==>  not (null x) where note = "saves an Eq constraint"
 warn "length always non-negative" = length x >= 0 ==> True
 warn "Use null" = length x > 0 ==> not (null x) where note = "increases laziness"
 warn "Use null" = length x >= 1 ==> not (null x) where note = "increases laziness"
@@ -101,10 +113,15 @@ but they hardly increase readability:
 warn "on" = g (f x) (f y) ==> (g `on` f) x y
 -}
 
-warn "Use Map" = groupBy (equating fst) (sortBy (comparing fst) xs) ==> Map.toAscList (Map.fromListWith (++) (map (mapSnd (:[])) xs))
+error "Set.delete" = Set.filter (n/=) ==> Set.delete n
+error "Set.delete" = Set.filter (/=n) ==> Set.delete n
+error "Map.intersection" = M.intersectionWith const ==> M.intersection
+
+warn "Use Map" = groupBy (equating fst) (sortBy (comparing fst) x) ==> Map.toAscList (Map.fromListWith (++) (map (mapSnd (:[])) x))
 warn "Use Map.fromListWith" = Map.fromList ==> Map.fromListWith (error "multiple keys") where note = "Map.fromList silently drops colliding keys - is this wanted?"
 warn "Use Map.toAscList" = Map.toList ==> Map.toAscList where note = "Map.toList returns keys in any order - are you sure that you do not expect ascending order?"
 warn "Use Map.elems" = map snd (Map.toList m) ==> Map.elems m
+
 warn "Use Foldable.foldl" = foldl f x (Map.elems m) ==> Fold.foldl f x m
 warn "Use Foldable.foldr" = foldr f x (Map.elems m) ==> Fold.foldr f x m
 warn "Use Foldable.length" = length (Map.elems m) ==> Fold.length m
@@ -134,6 +151,8 @@ error "Use Foldable.forM_" = (case m of Nothing -> return (); Just x -> f x) ==>
 error "Use Foldable.forM_" = when (isJust m) (f (fromJust m)) ==> Fold.forM_ m f
 error "Use Foldable.mapM_" = maybe (return ()) ==> Fold.mapM_
 
+error "any map" = any p (map f x) ==> any (p . f) x
+error "all map" = all p (map f x) ==> all (p . f) x
 
 -- HH
 

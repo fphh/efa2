@@ -67,6 +67,7 @@ Library
     EFA2.Signal.Sequence
     EFA2.Signal.Plot
     EFA2.Solver.Equation
+    EFA2.Solver.Term
     EFA2.Report.Typ
     EFA2.Report.Base
     EFA2.Report.Signal

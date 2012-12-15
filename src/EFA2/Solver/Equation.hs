@@ -2,6 +2,8 @@
 
 module EFA2.Solver.Equation where
 
+import qualified EFA2.Solver.Term as Term
+
 import EFA2.Interpreter.Env as Env
 import EFA2.Signal.Index (toDiffUse)
 import qualified EFA2.Signal.Index as Idx
@@ -204,14 +206,6 @@ instance ToIndex Env.Index where
 
 instance (ToIndex idx) => MkTermC (Term idx) where
    mkTerm = fmap toIndex
-
-
-add :: NonEmpty.T [] (Term a) -> Term a
-add = NonEmpty.foldl1 (:+)
-
-
-mult :: NonEmpty.T [] (Term a) -> Term a
-mult = NonEmpty.foldl1 (:*)
 
 
 showSecNode :: Idx.SecNode -> String
@@ -479,7 +473,7 @@ transformEq unknown t =
 
 
 pushMult :: Term a -> Term a
-pushMult t = add $ pushMult' t
+pushMult t = Term.add $ pushMult' t
 
 {-
 pushMult :: EqTerm -> EqTerm
@@ -504,8 +498,8 @@ iterateUntilFix f =
    fst . Stream.head . Stream.dropWhile (uncurry (/=)) .
    streamPairs . Stream.iterate f
 
-simplify :: Eq a => Term a -> Term a
-simplify = iterateUntilFix simplify' . pushMult
+simplifyOld :: Eq a => Term a -> Term a
+simplifyOld = iterateUntilFix simplify' . pushMult
   where simplify' :: Eq a => Term a -> Term a
         simplify' (Const x :+ Const y) = Const $ x+y
         simplify' ((Const 0.0) :+ x) = simplify' x
@@ -533,6 +527,26 @@ simplify = iterateUntilFix simplify' . pushMult
         simplify' (x :+ y) = simplify' x :+ simplify' y
         simplify' (x :* y) = simplify' x :* simplify' y
         simplify' x = x
+
+
+simplify :: Ord a => Term a -> Term a
+simplify = fromNormalTerm . toNormalTerm
+
+toNormalTerm :: Ord a => Term a -> Term.Term a
+toNormalTerm =
+   let go t =
+          case t of
+             Atom a -> Term.Atom a
+             Const x -> fromRational x
+
+             Minus x -> negate $ go x
+             Recip x -> recip $ go x
+             x :+ y -> go x + go y
+             x :* y -> go x * go y
+   in  go
+
+fromNormalTerm :: Ord a => Term.Term a -> Term a
+fromNormalTerm = Term.evaluate Atom
 
 {-
 simplifyEq :: Equation -> Equation
@@ -623,7 +637,7 @@ mkDiffEqTerm _ (AbsAssign (Var (Idx.Var r use n) ::= as@(_x :+ _y))) =
   where res = v ::= dps
         ats = additiveTermsNonEmpty as
         v = mkVar $ Idx.Var r (toDiffUse use) n
-        dps = add $ fmap g ats
+        dps = Term.add $ fmap g ats
         g (Atom (Power (Idx.Power _ f t))) = mkVar $ Idx.DPower r f t
 
 -- P_0.1_0.1 = v_0.1_OutSum.0
