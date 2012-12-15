@@ -231,7 +231,7 @@ class Format output where
    undetermined :: output
    formatLineAbs :: Line -> output
    formatLineDelta :: Line -> output
-   formatAssignGen :: output -> output -> output
+   formatAssign :: output -> output -> output
    formatList :: [output] -> output
    formatTerm :: ToIndex idx => Term idx -> output
    formatChar :: Char -> output
@@ -254,7 +254,7 @@ instance Format Plain where
    undetermined = Plain [heart]
    formatLineAbs = formatLine ""
    formatLineDelta = formatLine [delta]
-   formatAssignGen (Plain lhs) (Plain rhs) =
+   formatAssign (Plain lhs) (Plain rhs) =
       Plain $ lhs ++ " = " ++ rhs
    formatList = Plain . ("["++) . (++"]") . L.intercalate "," . map getPlain
    formatTerm = Plain . showEqTerm
@@ -285,7 +285,7 @@ instance Format LatexString where
    undetermined = LatexString "\\heartsuit "
    formatLineAbs = formatLineLatex ""
    formatLineDelta = formatLineLatex "\\Delta "
-   formatAssignGen (LatexString lhs) (LatexString rhs) =
+   formatAssign (LatexString lhs) (LatexString rhs) =
       LatexString $ lhs ++ " = " ++ rhs
    formatList = LatexString . ("["++) . (++"]") . L.intercalate ", " . map unLatexString
    formatTerm = toLatexString
@@ -365,7 +365,7 @@ formatAssignAbs ::
    (Idx.SecNode -> Idx.SecNode -> output) ->
    (Idx.SecNode -> Idx.SecNode -> output)
 formatAssignAbs lt lookupEdge x y =
-   formatAssignGen (formatLineAbs $ Line lt x y) (lookupEdge x y)
+   formatAssign (formatLineAbs $ Line lt x y) (lookupEdge x y)
 
 formatAssignDelta ::
    (Format output) =>
@@ -373,7 +373,7 @@ formatAssignDelta ::
    (Idx.SecNode -> Idx.SecNode -> output) ->
    (Idx.SecNode -> Idx.SecNode -> output)
 formatAssignDelta lt lookupEdge x y =
-   formatAssignGen (formatLineDelta $ Line lt x y) (lookupEdge x y)
+   formatAssign (formatLineDelta $ Line lt x y) (lookupEdge x y)
 
 
 draw :: SequFlowGraph -> Env Plain -> IO ()
