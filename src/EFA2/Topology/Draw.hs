@@ -11,7 +11,15 @@ import EFA2.Solver.Equation
 import EFA2.Interpreter.Env
           (StorageMap, SingleRecord(SingleRecord))
 import qualified EFA2.Interpreter.Env as Interp
-import EFA2.Topology.TopologyData as Topo
+import qualified EFA2.Topology.TopologyData as Topo
+import EFA2.Topology.TopologyData
+          (SequFlowGraph,
+           NodeType(Storage),
+           EdgeType(OriginalEdge, IntersectionEdge,  InnerStorageEdge),
+           edgeType,
+           isIntersectionEdge,
+           getFlowDirection,
+           FlowDirectionField, FlowTopology)
 import EFA2.Topology.EfaGraph
           (EfaGraph, Edge(Edge),
            labNodes, labEdges, edgeLabels, delNodes, delEdgeSet)
@@ -78,19 +86,14 @@ originalEdgeColour = Color [RGB 0 0 200]
 intersectionEdgeColour :: Attribute
 intersectionEdgeColour = Color [RGB 200 0 0]
 
--- coding
-noRecord :: Maybe Idx.Record
-noRecord = Nothing
-
 
 mkDotGraph ::
    SequFlowGraph ->
-   Maybe Idx.Record ->
-   (Idx.DTime -> String) ->
-   (Topo.LNode -> String) ->
-   (Topo.LEdge -> [String]) ->
+   Maybe (Plain, Idx.Section -> Plain) ->
+   (Topo.LNode -> Plain) ->
+   (Topo.LEdge -> [Plain]) ->
    DotGraph T.Text
-mkDotGraph g recordNum timef nshow eshow =
+mkDotGraph g recTShow nshow eshow =
   DotGraph { strictGraph = False,
              directedGraph = True,
              graphID = Just (Int 1),
@@ -110,30 +113,31 @@ mkDotGraph g recordNum timef nshow eshow =
                 gattrs = [GraphAttrs [Label (StrLabel (T.pack str))]]
                 str =
                    show sl ++ " / " ++
-                   case recordNum of
+                   case recTShow of
                       Nothing -> "NoRecord"
-                      Just n ->
-                         show n ++ " / Time " ++ timef (Idx.DTime n sl)
+                      Just (Plain n, timef) ->
+                         n ++ " / Time " ++ getPlain (timef sl)
         stmts = DotStmts { attrStmts = [],
                            subGraphs = map sg cs,
                            nodeStmts = [],
                            edgeStmts = map (mkDotEdge eshow) $ M.toList interEs }
 
 
-mkDotNode:: (Topo.LNode -> String) -> Topo.LNode -> DotNode T.Text
+mkDotNode:: (Topo.LNode -> Plain) -> Topo.LNode -> DotNode T.Text
 mkDotNode nshow n@(x, _) =
    DotNode (dotIdentFromSecNode x)
       [displabel, nodeColour, Style [SItem Filled []], Shape BoxShape ]
-  where displabel =  Label $ StrLabel $ T.pack (nshow n)
+  where displabel = Label $ StrLabel $ T.pack $ getPlain $ nshow n
 
-mkDotEdge :: (Topo.LEdge -> [String]) -> Topo.LEdge -> DotEdge T.Text
+mkDotEdge :: (Topo.LEdge -> [Plain]) -> Topo.LEdge -> DotEdge T.Text
 mkDotEdge eshow e@(_, elabel) =
    DotEdge
       (dotIdentFromSecNode x) (dotIdentFromSecNode y)
       [displabel, Viz.Dir dir, colour]
   where (Edge x y, dir, order) = orientEdge e
         displabel =
-           Label $ StrLabel $ T.pack $ L.intercalate "\n" $ order $ eshow e
+           Label $ StrLabel $ T.pack $
+           L.intercalate "\n" $ map getPlain $ order $ eshow e
         colour =
            case edgeType elabel of
               IntersectionEdge -> intersectionEdgeColour
@@ -146,20 +150,19 @@ dotIdentFromSecNode (Idx.SecNode (Idx.Section s) (Idx.Node n)) =
 
 printGraph, printGraphX, printGraphDot ::
    SequFlowGraph ->
-   Maybe Idx.Record ->
-   (Idx.DTime -> String) ->
-   (Topo.LNode -> String) ->
-   (Topo.LEdge -> [String]) ->
+   Maybe (Plain, Idx.Section -> Plain) ->
+   (Topo.LNode -> Plain) ->
+   (Topo.LEdge -> [Plain]) ->
    IO ()
 printGraph = printGraphX
 
-printGraphX g recordNum tshow nshow eshow =
-   runGraphvizCanvas Dot (mkDotGraph g recordNum tshow nshow eshow) Xlib
+printGraphX g recTShow nshow eshow =
+   runGraphvizCanvas Dot (mkDotGraph g recTShow nshow eshow) Xlib
 
-printGraphDot g recordNum tshow nshow eshow =
+printGraphDot g recTShow nshow eshow =
    void $
    runGraphvizCommand Dot
-      (mkDotGraph g recordNum tshow nshow eshow)
+      (mkDotGraph g recTShow nshow eshow)
       XDot "result/graph.dot"
 
 heart :: Char
@@ -167,13 +170,13 @@ heart = '\x2665'
 
 drawTopologyX' :: SequFlowGraph -> IO ()
 drawTopologyX' topo =
-   printGraph topo noRecord (const [heart]) show ((:[]) . show)
+   printGraph topo Nothing (Plain . show) ((:[]) . Plain . show)
 
 
 drawTopologySimple :: SequFlowGraph -> IO ()
 drawTopologySimple topo =
-   printGraph topo noRecord (const [heart]) nshow eshow
-  where nshow (Idx.SecNode _ n, l) = show n ++ " - " ++ showNodeType l
+   printGraph topo Nothing nshow eshow
+  where nshow (Idx.SecNode _ n, l) = Plain $ show n ++ " - " ++ showNodeType l
         eshow _ = []
 
 dsg :: Int -> FlowTopology -> DotSubGraph String
@@ -233,7 +236,8 @@ class Format output where
    undetermined :: output
    formatLineAbs :: Line -> output
    formatLineDelta :: Line -> output
-   formatAssignGen :: output -> output -> output
+   formatRecord :: Idx.Record -> output
+   formatAssign :: output -> output -> output
    formatList :: [output] -> output
    formatTerm :: ToIndex idx => Term idx -> output
    formatChar :: Char -> output
@@ -256,7 +260,8 @@ instance Format Plain where
    undetermined = Plain [heart]
    formatLineAbs = formatLine ""
    formatLineDelta = formatLine [delta]
-   formatAssignGen (Plain lhs) (Plain rhs) =
+   formatRecord = Plain . show
+   formatAssign (Plain lhs) (Plain rhs) =
       Plain $ lhs ++ " = " ++ rhs
    formatList = Plain . ("["++) . (++"]") . L.intercalate "," . map getPlain
    formatTerm = Plain . showEqTerm
@@ -273,8 +278,7 @@ instance Format Plain where
          case ty of
             Storage ->
                "\nContent: " ++
-               (getPlain $ formatMaybeValue $
-                M.lookup (Idx.Storage rec n) st)
+               (getPlain $ lookupFormat st (Idx.Storage rec n))
             _ -> ""
 
 
@@ -287,7 +291,8 @@ instance Format LatexString where
    undetermined = LatexString "\\heartsuit "
    formatLineAbs = formatLineLatex ""
    formatLineDelta = formatLineLatex "\\Delta "
-   formatAssignGen (LatexString lhs) (LatexString rhs) =
+   formatRecord = LatexString . show
+   formatAssign (LatexString lhs) (LatexString rhs) =
       LatexString $ lhs ++ " = " ++ rhs
    formatList = LatexString . ("["++) . (++"]") . L.intercalate ", " . map unLatexString
    formatTerm = toLatexString
@@ -304,8 +309,7 @@ instance Format LatexString where
          case ty of
             Storage ->
                "\\\\ Content: " ++
-               (unLatexString $ formatMaybeValue $
-                M.lookup (Idx.Storage rec n) st)
+               (unLatexString $ lookupFormat st (Idx.Storage rec n))
             _ -> ""
 
 
@@ -322,81 +326,70 @@ class FormatValue a where
    formatValue :: Format output => a -> output
 
 
-
+{- |
+The 'Env' shall contain only values and functions for display.
+It shall not contain values needed for computations.
+-}
 data Env output =
    Env {
-      recordNumber :: Idx.Record,
+      recordNumber_ :: output,
       formatEnergy_ :: Idx.SecNode -> Idx.SecNode -> output,
       formatX_      :: Idx.SecNode -> Idx.SecNode -> output,
       formatEta_    :: Idx.SecNode -> Idx.SecNode -> output,
-      formatAssign_ :: (Line, output) -> output,
-      showTime :: Idx.DTime -> output,
-      showNode_ :: Topo.LNode -> output
+      formatTime_ :: Idx.Section -> output,
+      formatNode_ :: Topo.LNode -> output
    }
 
-makeLookup ::
-   (Ord idx) =>
-   Idx.Record ->
-   (Idx.Record -> Idx.SecNode -> Idx.SecNode -> idx) -> M.Map idx a ->
-   Idx.SecNode -> Idx.SecNode -> Maybe a
-makeLookup rec makeIdx mp =
-   \uid vid -> M.lookup (makeIdx rec uid vid) mp
-
-makeFormat ::
-   (Ord idx, FormatValue a, Format output) =>
-   Idx.Record ->
-   (Idx.Record -> Idx.SecNode -> Idx.SecNode -> idx) -> M.Map idx a ->
-   Idx.SecNode -> Idx.SecNode -> output
-makeFormat rec makeIdx mp =
-   \uid vid -> formatMaybeValue $ makeLookup rec makeIdx mp uid vid
-
-formatMaybe :: Format output => (a -> output) -> Maybe a -> output
-formatMaybe = maybe undetermined
-
 formatMaybeValue :: (FormatValue a, Format output) => Maybe a -> output
-formatMaybeValue = formatMaybe formatValue
+formatMaybeValue = maybe undetermined formatValue
 
 lookupFormat ::
-   (Ord idx, Show idx, Format output) =>
-   (a -> output) -> M.Map idx a -> idx -> output
-lookupFormat format dt k =
-   formatMaybe format $ M.lookup k dt
+   (Ord idx, Show idx, FormatValue a, Format output) =>
+   M.Map idx a -> idx -> output
+lookupFormat dt k =
+   formatMaybeValue $ M.lookup k dt
+
+formatAssignAbs ::
+   (Format output) =>
+   LineType ->
+   (Idx.SecNode -> Idx.SecNode -> output) ->
+   (Idx.SecNode -> Idx.SecNode -> output)
+formatAssignAbs lt lookupEdge x y =
+   formatAssign (formatLineAbs $ Line lt x y) (lookupEdge x y)
+
+formatAssignDelta ::
+   (Format output) =>
+   LineType ->
+   (Idx.SecNode -> Idx.SecNode -> output) ->
+   (Idx.SecNode -> Idx.SecNode -> output)
+formatAssignDelta lt lookupEdge x y =
+   formatAssign (formatLineDelta $ Line lt x y) (lookupEdge x y)
 
 
 draw :: SequFlowGraph -> Env Plain -> IO ()
 draw g
-   (Env rec formatEnergy formatX formatEta formatAssign tshow nshow) =
-      printGraph g (Just rec)
-         (getPlain . tshow) (getPlain . nshow) (map getPlain . eshow)
+   (Env rec formatEnergy formatX formatEta tshow nshow) =
+      printGraph g (Just (rec, tshow)) nshow eshow
   where eshow (Edge uid vid, l) =
-           map formatAssign $
            case edgeType l of
               OriginalEdge ->
-                 (Line ELine uid vid, formatEnergy uid vid) :
-                 (Line XLine uid vid, formatX uid vid) :
-                 (Line NLine uid vid, formatEta uid vid) :
-                 (Line XLine vid uid, formatX vid uid) :
-                 (Line ELine vid uid, formatEnergy vid uid) :
+                 formatEnergy uid vid :
+                 formatX uid vid :
+                 formatEta uid vid :
+                 formatX vid uid :
+                 formatEnergy vid uid :
                  []
               InnerStorageEdge ->
-                 (Line ELine vid uid, formatEnergy vid uid) :
+                 formatEnergy vid uid :
                  []
               IntersectionEdge ->
-                 (Line ELine uid vid, formatEnergy uid vid) :
-                 (Line XLine uid vid, formatX uid vid) :
-                 -- (Line NLine uid vid, formatEta uid vid) :
-                 (Line XLine vid uid, formatX vid uid) :
-                 (Line ELine vid uid, formatEnergy vid uid) :
+                 formatEnergy uid vid :
+                 formatX uid vid :
+                 -- formatEta uid vid :
+                 formatX vid uid :
+                 formatEnergy vid uid :
                  []
 
-{-
-                 -- (Line ELine uid vid, formatEnergy uid vid) :
-
-                 (Line XLine uid vid, formatX uid vid) :
-                 (Line XLine vid uid, formatX vid uid) :
-                 (Line ELine vid uid, formatEnergy vid uid) :
-                 []
--}
 
 drawTopology ::
    AutoEnv a => SequFlowGraph -> Interp.Envs SingleRecord a -> IO ()
@@ -411,17 +404,20 @@ envAbs ::
    (AutoEnv a, Format output) =>
    Interp.Envs SingleRecord a -> Env output
 envAbs (Interp.Envs (SingleRecord rec) e _de _p _dp dt x _dx _v st) =
-   let lookupEnergy = makeLookup rec Idx.Energy e
-   in  Env rec
-          (\a b -> formatMaybeValue $ lookupEnergy a b)
-          (makeFormat rec Idx.X x)
-          (\a b ->
+   let lookupEnergy a b = M.lookup (Idx.Energy rec a b) e
+   in  Env
+          (formatRecord rec)
+          (formatAssignAbs ELine $
+           \a b -> formatMaybeValue $ lookupEnergy a b)
+          (formatAssignAbs XLine $
+           \a b -> lookupFormat x (Idx.X rec a b))
+          (formatAssignAbs NLine $
+           \a b ->
              fromMaybe undetermined $
              liftM2 formatEnergyQuotient
                 (lookupEnergy b a)
                 (lookupEnergy a b))
-          (\(v, ys) -> formatAssignGen (formatLineAbs v) ys)
-          (lookupFormat formatValue dt)
+          (lookupFormat dt . Idx.DTime rec)
           (formatNode rec st)
 
 envDelta ::
@@ -429,18 +425,21 @@ envDelta ::
    Interp.Envs SingleRecord a -> Env output
 envDelta
       (Interp.Envs (SingleRecord rec) e de _p _dp dt _x dx _v st) =
-   let lookupEnergy = makeLookup rec Idx.Energy e
-       lookupDEnergy = makeLookup rec Idx.DEnergy de
-   in  Env rec
-          (\a b -> formatMaybeValue $ lookupDEnergy a b)
-          (makeFormat rec Idx.DX dx)
-          (\a b ->
+   let lookupEnergy a b = M.lookup (Idx.Energy rec a b) e
+       lookupDEnergy a b = M.lookup (Idx.DEnergy rec a b) de
+   in  Env
+          (formatRecord rec)
+          (formatAssignDelta ELine $
+           \a b -> formatMaybeValue $ lookupDEnergy a b)
+          (formatAssignDelta XLine $
+           \a b -> lookupFormat dx (Idx.DX rec a b))
+          (formatAssignDelta NLine $
+           \a b ->
              fromMaybe undetermined $
              liftM4 formatDEnergyQuotient
                 (lookupEnergy b a) (lookupEnergy a b)
                 (lookupDEnergy b a) (lookupDEnergy a b))
-          (\(x, ys) -> formatAssignGen (formatLineDelta x) ys)
-          (lookupFormat formatValue dt)
+          (lookupFormat dt . Idx.DTime rec)
           (formatNode rec st)
 
 
