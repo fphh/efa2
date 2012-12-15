@@ -90,6 +90,9 @@ warn "Use liftM2" = sequence [mx,my]  ==>  liftM2 (\(x,y) -> [x,y]) mx my
 warn "Use liftM3" = sequence [mx,my,mz]  ==>  liftM3 (\(x,y,z) -> [x,y,z]) mx my mz
 warn "Use liftM4" = sequence [mx,my,mz,mw]  ==>  liftM4 (\(x,y,z,w) -> [x,y,z,w]) mx my mz mw
 
+warn "Use fmap once" = fmap f (fmap g x) ==> fmap (f . g) x
+warn "Use liftM once" = liftM f (liftM g x) ==> liftM (f . g) x
+
 warn "Use null" = x == []  ==>  null x where note = "saves an Eq constraint"
 warn "Use null" = x /= []  ==>  not (null x) where note = "saves an Eq constraint"
 warn "length always non-negative" = length x >= 0 ==> True
