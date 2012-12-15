@@ -1,5 +1,7 @@
 module EFA2.Solver.Equation where
 
+import qualified EFA2.Solver.Term as Term
+
 import EFA2.Interpreter.Env as Env
 import EFA2.Signal.Index (toDiffUse)
 import qualified EFA2.Signal.Index as Idx
@@ -486,8 +488,8 @@ iterateUntilFix f =
    fst . Stream.head . Stream.dropWhile (uncurry (/=)) .
    streamPairs . Stream.iterate f
 
-simplify :: Eq a => Term a -> Term a
-simplify = iterateUntilFix simplify' . pushMult
+simplifyOld :: Eq a => Term a -> Term a
+simplifyOld = iterateUntilFix simplify' . pushMult
   where simplify' :: Eq a => Term a -> Term a
         simplify' (Const x :+ Const y) = Const $ x+y
         simplify' ((Const 0.0) :+ x) = simplify' x
@@ -515,6 +517,26 @@ simplify = iterateUntilFix simplify' . pushMult
         simplify' (x :+ y) = simplify' x :+ simplify' y
         simplify' (x :* y) = simplify' x :* simplify' y
         simplify' x = x
+
+
+simplify :: Ord a => Term a -> Term a
+simplify = fromNormalTerm . toNormalTerm
+
+toNormalTerm :: Ord a => Term a -> Term.Term a
+toNormalTerm =
+   let go t =
+          case t of
+             Atom a -> Term.Atom a
+             Const x -> fromRational x
+
+             Minus x -> negate $ go x
+             Recip x -> recip $ go x
+             x :+ y -> go x + go y
+             x :* y -> go x * go y
+   in  go
+
+fromNormalTerm :: Ord a => Term.Term a -> Term a
+fromNormalTerm = Term.evaluate Atom
 
 {-
 simplifyEq :: Equation -> Equation

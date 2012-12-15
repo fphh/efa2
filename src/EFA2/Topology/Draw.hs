@@ -490,10 +490,10 @@ instance AutoEnv Char where
 instance (Eq a, ToIndex a) => FormatValue (Term a) where
    formatValue = formatTerm
 
-instance (Eq a, ToIndex a) => AutoEnv (Term a) where
+instance (Ord a, ToIndex a) => AutoEnv (Term a) where
    formatEnergyQuotient x y = formatTerm $ simplify $ x &/ y
 
-instance (Eq a, ToIndex a) => AutoEnvDelta (Term a) where
+instance (Ord a, ToIndex a) => AutoEnvDelta (Term a) where
    formatDEnergyQuotient ea eb dea deb =
       formatTerm $ simplify $
       (dea :* eb  &-  ea :* deb) &/ ((eb:+deb):*eb)
