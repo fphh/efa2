@@ -87,7 +87,7 @@ intersectionEdgeColour = Color [RGB 200 0 0]
 
 mkDotGraph ::
    SequFlowGraph ->
-   Maybe (Idx.Record, Idx.Section -> String) ->
+   Maybe (Plain, Idx.Section -> String) ->
    (Topo.LNode -> String) ->
    (Topo.LEdge -> [String]) ->
    DotGraph T.Text
@@ -113,8 +113,8 @@ mkDotGraph g recTShow nshow eshow =
                    show sl ++ " / " ++
                    case recTShow of
                       Nothing -> "NoRecord"
-                      Just (n, timef) ->
-                         show n ++ " / Time " ++ timef sl
+                      Just (Plain n, timef) ->
+                         n ++ " / Time " ++ timef sl
         stmts = DotStmts { attrStmts = [],
                            subGraphs = map sg cs,
                            nodeStmts = [],
@@ -147,7 +147,7 @@ dotIdentFromSecNode (Idx.SecNode (Idx.Section s) (Idx.Node n)) =
 
 printGraph, printGraphX, printGraphDot ::
    SequFlowGraph ->
-   Maybe (Idx.Record, Idx.Section -> String) ->
+   Maybe (Plain, Idx.Section -> String) ->
    (Topo.LNode -> String) ->
    (Topo.LEdge -> [String]) ->
    IO ()
@@ -233,6 +233,7 @@ class Format output where
    undetermined :: output
    formatLineAbs :: Line -> output
    formatLineDelta :: Line -> output
+   formatRecord :: Idx.Record -> output
    formatAssign :: output -> output -> output
    formatList :: [output] -> output
    formatTerm :: ToIndex idx => Term idx -> output
@@ -256,6 +257,7 @@ instance Format Plain where
    undetermined = Plain [heart]
    formatLineAbs = formatLine ""
    formatLineDelta = formatLine [delta]
+   formatRecord = Plain . show
    formatAssign (Plain lhs) (Plain rhs) =
       Plain $ lhs ++ " = " ++ rhs
    formatList = Plain . ("["++) . (++"]") . L.intercalate "," . map getPlain
@@ -286,6 +288,7 @@ instance Format LatexString where
    undetermined = LatexString "\\heartsuit "
    formatLineAbs = formatLineLatex ""
    formatLineDelta = formatLineLatex "\\Delta "
+   formatRecord = LatexString . show
    formatAssign (LatexString lhs) (LatexString rhs) =
       LatexString $ lhs ++ " = " ++ rhs
    formatList = LatexString . ("["++) . (++"]") . L.intercalate ", " . map unLatexString
@@ -320,10 +323,13 @@ class FormatValue a where
    formatValue :: Format output => a -> output
 
 
-
+{- |
+The 'Env' shall contain only values and functions for display.
+It shall not contain values needed for computations.
+-}
 data Env output =
    Env {
-      recordNumber :: Idx.Record,
+      recordNumber :: output,
       formatEnergy_ :: Idx.SecNode -> Idx.SecNode -> output,
       formatX_      :: Idx.SecNode -> Idx.SecNode -> output,
       formatEta_    :: Idx.SecNode -> Idx.SecNode -> output,
@@ -394,7 +400,8 @@ envAbs ::
    Interp.Envs SingleRecord a -> Env output
 envAbs (Interp.Envs (SingleRecord rec) e _de _p _dp _fn _dn dt x _dx _v st) =
    let lookupEnergy a b = M.lookup (Idx.Energy rec a b) e
-   in  Env rec
+   in  Env
+          (formatRecord rec)
           (formatAssignAbs ELine $
            \a b -> formatMaybeValue $ lookupEnergy a b)
           (formatAssignAbs XLine $
@@ -415,7 +422,8 @@ envDelta
       (Interp.Envs (SingleRecord rec) e de _p _dp _fn _dn dt _x dx _v st) =
    let lookupEnergy a b = M.lookup (Idx.Energy rec a b) e
        lookupDEnergy a b = M.lookup (Idx.DEnergy rec a b) de
-   in  Env rec
+   in  Env
+          (formatRecord rec)
           (formatAssignDelta ELine $
            \a b -> formatMaybeValue $ lookupDEnergy a b)
           (formatAssignDelta XLine $
