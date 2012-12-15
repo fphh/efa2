@@ -327,7 +327,6 @@ data Env output =
       formatEnergy_ :: Idx.SecNode -> Idx.SecNode -> output,
       formatX_      :: Idx.SecNode -> Idx.SecNode -> output,
       formatEta_    :: Idx.SecNode -> Idx.SecNode -> output,
-      formatAssign_ :: (Line, output) -> output,
       showTime :: Idx.DTime -> output,
       showNode_ :: Topo.LNode -> output
    }
@@ -360,29 +359,44 @@ lookupFormat ::
 lookupFormat format dt k =
    formatMaybe format $ M.lookup k dt
 
+formatAssignAbs ::
+   (Format output) =>
+   LineType ->
+   (Idx.SecNode -> Idx.SecNode -> output) ->
+   (Idx.SecNode -> Idx.SecNode -> output)
+formatAssignAbs lt lookupEdge x y =
+   formatAssignGen (formatLineAbs $ Line lt x y) (lookupEdge x y)
+
+formatAssignDelta ::
+   (Format output) =>
+   LineType ->
+   (Idx.SecNode -> Idx.SecNode -> output) ->
+   (Idx.SecNode -> Idx.SecNode -> output)
+formatAssignDelta lt lookupEdge x y =
+   formatAssignGen (formatLineDelta $ Line lt x y) (lookupEdge x y)
+
 
 draw :: SequFlowGraph -> Env Plain -> IO ()
 draw g
-   (Env rec formatEnergy formatX formatEta formatAssign tshow nshow) =
+   (Env rec formatEnergy formatX formatEta tshow nshow) =
       printGraph g (Just rec)
          (getPlain . tshow) (getPlain . nshow) (map getPlain . eshow)
   where eshow (Edge uid vid, l) =
-           map formatAssign $
            case edgeType l of
               OriginalEdge ->
-                 (Line ELine uid vid, formatEnergy uid vid) :
-                 (Line XLine uid vid, formatX uid vid) :
-                 (Line NLine uid vid, formatEta uid vid) :
-                 (Line XLine vid uid, formatX vid uid) :
-                 (Line ELine vid uid, formatEnergy vid uid) :
+                 formatEnergy uid vid :
+                 formatX uid vid :
+                 formatEta uid vid :
+                 formatX vid uid :
+                 formatEnergy vid uid :
                  []
               InnerStorageEdge ->
-                 (Line ELine vid uid, formatEnergy vid uid) :
+                 formatEnergy vid uid :
                  []
               IntersectionEdge ->
-                 (Line ELine uid vid, formatEnergy uid vid) :
-                 (Line XLine uid vid, formatX uid vid) :
-                 (Line ELine vid uid, formatEnergy vid uid) :
+                 formatEnergy uid vid :
+                 formatX uid vid :
+                 formatEnergy vid uid :
                  []
 
 drawTopology ::
@@ -400,14 +414,16 @@ envAbs ::
 envAbs (Interp.Envs (SingleRecord rec) e _de _p _dp _fn _dn dt x _dx _v st) =
    let lookupEnergy = makeLookup rec Idx.Energy e
    in  Env rec
-          (\a b -> formatMaybeValue $ lookupEnergy a b)
-          (makeFormat rec Idx.X x)
-          (\a b ->
+          (formatAssignAbs ELine $
+           \a b -> formatMaybeValue $ lookupEnergy a b)
+          (formatAssignAbs XLine $
+           makeFormat rec Idx.X x)
+          (formatAssignAbs NLine $
+           \a b ->
              fromMaybe undetermined $
              liftM2 formatEnergyQuotient
                 (lookupEnergy b a)
                 (lookupEnergy a b))
-          (\(v, ys) -> formatAssignGen (formatLineAbs v) ys)
           (lookupFormat formatValue dt)
           (formatNode rec st)
 
@@ -419,14 +435,16 @@ envDelta
    let lookupEnergy = makeLookup rec Idx.Energy e
        lookupDEnergy = makeLookup rec Idx.DEnergy de
    in  Env rec
-          (\a b -> formatMaybeValue $ lookupDEnergy a b)
-          (makeFormat rec Idx.DX dx)
-          (\a b ->
+          (formatAssignDelta ELine $
+           \a b -> formatMaybeValue $ lookupDEnergy a b)
+          (formatAssignDelta XLine $
+           makeFormat rec Idx.DX dx)
+          (formatAssignDelta NLine $
+           \a b ->
              fromMaybe undetermined $
              liftM4 formatDEnergyQuotient
                 (lookupEnergy b a) (lookupEnergy a b)
                 (lookupDEnergy b a) (lookupDEnergy a b))
-          (\(x, ys) -> formatAssignGen (formatLineDelta x) ys)
           (lookupFormat formatValue dt)
           (formatNode rec st)
 
