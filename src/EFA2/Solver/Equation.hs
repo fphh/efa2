@@ -2,6 +2,7 @@ module EFA2.Solver.Equation where
 
 import qualified EFA2.Solver.Term as Term
 import qualified EFA2.Report.Format as Format
+import EFA2.Report.Format (delta)
 
 import EFA2.Interpreter.Env as Env
 import EFA2.Signal.Index (toDiffUse)
@@ -199,9 +200,6 @@ showSecNode (Idx.SecNode (Idx.Section s) (Idx.Node x)) =
 showEdgeIdx :: Idx.Record -> Idx.SecNode -> Idx.SecNode -> String
 showEdgeIdx (Idx.Record r) x y =
    show r ++ "_" ++ showSecNode x ++ "_" ++ showSecNode y
-
-delta :: Char
-delta = '\x2206'
 
 showIdx :: ToIndex idx => idx -> String
 showIdx idx =

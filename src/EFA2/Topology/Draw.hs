@@ -5,9 +5,10 @@ module EFA2.Topology.Draw where
 
 import EFA2.Solver.Equation
           (Term(..), ToIndex, simplify, (&-), (&/),
-           showEqTerm, showSecNode, delta,
+           showEqTerm, showSecNode,
            toLatexString, secNodeToLatexString)
 import qualified EFA2.Report.Format as Format
+import EFA2.Report.Format (delta, heart)
 import EFA2.Interpreter.Env
           (StorageMap, SingleRecord(SingleRecord))
 import qualified EFA2.Interpreter.Env as Interp
@@ -162,9 +163,6 @@ printGraphDot g recTShow nshow eshow =
    runGraphvizCommand Dot
       (mkDotGraph g recTShow nshow eshow)
       XDot "result/graph.dot"
-
-heart :: Char
-heart = '\x2665'
 
 drawTopologyX' :: SequFlowGraph -> IO ()
 drawTopologyX' topo =
