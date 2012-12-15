@@ -113,7 +113,7 @@ multiplications with one and additions with zero.
 Thus 'evaluate' can be used to generate symbolic expressions
 in other representations without clutter.
 -}
-evaluate :: Fractional b => (a -> b) -> Term a -> b
+evaluate :: (Ord a, Fractional b) => (a -> b) -> Term a -> b
 evaluate f =
    let term t =
           case t of
@@ -122,12 +122,24 @@ evaluate f =
                 case NonEmpty.fetch $ Map.toList s of
                    Nothing -> 0
                    Just ss -> add $ fmap (uncurry prod) ss
+       powers =
+          map (\(x, e) -> power e $ term x) . Map.toList
        prod (Product p) c =
-          case map (\(x, e) -> power e $ term x) $ Map.toList p of
+          case Map.partition (>0) $ Map.filter (0/=) p of
+             (norm, rec) ->
+                case fmap mult $ NonEmpty.fetch $ powers $ fmap negate rec of
+                   Nothing -> normProd c norm
+                   Just mp ->
+                      case (c, Map.null norm) of
+                         ( 1, True) -> recip mp
+                         (-1, True) -> negate $ recip mp
+                         _ -> normProd c norm / mp
+       normProd c p =
+          case powers p of
              ps ->
-                case (c, NonEmpty.fetch ps) of
-                   (1, Just nps) -> mult nps
-                   (-1, Just nps) -> negate $ mult nps
+                case (c, fmap mult $ NonEmpty.fetch ps) of
+                   ( 1, Just mp) -> mp
+                   (-1, Just mp) -> negate mp
                    _ -> mult $ fromRational c !: ps
    in  term
 
@@ -137,9 +149,9 @@ add = NonEmpty.foldl1 (+)
 mult :: (Num a) => NonEmpty.T [] a -> a
 mult = NonEmpty.foldl1 (*)
 
+{- |
+exponent must be positive (not zero or negative)
+-}
 power :: (Fractional a) => Integer -> a -> a
 power e t =
-   case compare e 0 of
-      LT -> recip $ mult $ t !: List.genericReplicate (-e-1) t
-      GT -> mult $ t !: List.genericReplicate (e-1) t
-      EQ -> 1
+   mult $ t !: List.genericReplicate (e-1) t
