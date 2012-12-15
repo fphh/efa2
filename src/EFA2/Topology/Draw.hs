@@ -8,7 +8,7 @@ import EFA2.Solver.Equation
            showEqTerm, showSecNode,
            toLatexString, secNodeToLatexString)
 import qualified EFA2.Report.Format as Format
-import EFA2.Report.Format (delta, heart)
+import EFA2.Report.Format (Plain(Plain, unPlain), delta, heart)
 import EFA2.Interpreter.Env
           (StorageMap, SingleRecord(SingleRecord))
 import qualified EFA2.Interpreter.Env as Interp
@@ -115,7 +115,7 @@ mkDotGraph g recTShow nshow eshow =
                    case recTShow of
                       Nothing -> "NoRecord"
                       Just (Plain n, timef) ->
-                         n ++ " / Time " ++ getPlain (timef sl)
+                         n ++ " / Time " ++ unPlain (timef sl)
         stmts = DotStmts { attrStmts = [],
                            subGraphs = map sg cs,
                            nodeStmts = [],
@@ -126,7 +126,7 @@ mkDotNode:: (Topo.LNode -> Plain) -> Topo.LNode -> DotNode T.Text
 mkDotNode nshow n@(x, _) =
    DotNode (dotIdentFromSecNode x)
       [displabel, nodeColour, Style [SItem Filled []], Shape BoxShape ]
-  where displabel = Label $ StrLabel $ T.pack $ getPlain $ nshow n
+  where displabel = Label $ StrLabel $ T.pack $ unPlain $ nshow n
 
 mkDotEdge :: (Topo.LEdge -> [Plain]) -> Topo.LEdge -> DotEdge T.Text
 mkDotEdge eshow e@(_, elabel) =
@@ -136,7 +136,7 @@ mkDotEdge eshow e@(_, elabel) =
   where (Edge x y, dir, order) = orientEdge e
         displabel =
            Label $ StrLabel $ T.pack $
-           L.intercalate "\n" $ map getPlain $ order $ eshow e
+           L.intercalate "\n" $ map unPlain $ order $ eshow e
         colour =
            case edgeType elabel of
               IntersectionEdge -> intersectionEdgeColour
@@ -249,9 +249,6 @@ class Format output where
       Idx.Record -> StorageMap a -> Topo.LNode -> output
 
 
-newtype Plain = Plain {getPlain :: String}
-   deriving (Show)
-
 instance Format Plain where
    undetermined = Plain [heart]
    formatLineAbs = formatLine ""
@@ -259,7 +256,7 @@ instance Format Plain where
    formatRecord = Plain . show
    formatAssign (Plain lhs) (Plain rhs) =
       Plain $ lhs ++ " = " ++ rhs
-   formatList = Plain . ("["++) . (++"]") . L.intercalate "," . map getPlain
+   formatList = Plain . ("["++) . (++"]") . L.intercalate "," . map unPlain
    formatTerm = Plain . showEqTerm
    formatChar = Plain . (:[])
    formatRatio = Plain . show
@@ -274,7 +271,7 @@ instance Format Plain where
          case ty of
             Storage ->
                "\nContent: " ++
-               (getPlain $ lookupFormat st (Idx.Storage rec n))
+               (unPlain $ lookupFormat st (Idx.Storage rec n))
             _ -> ""
 
 
