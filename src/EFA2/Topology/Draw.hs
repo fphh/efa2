@@ -87,9 +87,9 @@ intersectionEdgeColour = Color [RGB 200 0 0]
 
 mkDotGraph ::
    SequFlowGraph ->
-   Maybe (Plain, Idx.Section -> String) ->
-   (Topo.LNode -> String) ->
-   (Topo.LEdge -> [String]) ->
+   Maybe (Plain, Idx.Section -> Plain) ->
+   (Topo.LNode -> Plain) ->
+   (Topo.LEdge -> [Plain]) ->
    DotGraph T.Text
 mkDotGraph g recTShow nshow eshow =
   DotGraph { strictGraph = False,
@@ -114,27 +114,28 @@ mkDotGraph g recTShow nshow eshow =
                    case recTShow of
                       Nothing -> "NoRecord"
                       Just (Plain n, timef) ->
-                         n ++ " / Time " ++ timef sl
+                         n ++ " / Time " ++ getPlain (timef sl)
         stmts = DotStmts { attrStmts = [],
                            subGraphs = map sg cs,
                            nodeStmts = [],
                            edgeStmts = map (mkDotEdge eshow) $ M.toList interEs }
 
 
-mkDotNode:: (Topo.LNode -> String) -> Topo.LNode -> DotNode T.Text
+mkDotNode:: (Topo.LNode -> Plain) -> Topo.LNode -> DotNode T.Text
 mkDotNode nshow n@(x, _) =
    DotNode (dotIdentFromSecNode x)
       [displabel, nodeColour, Style [SItem Filled []], Shape BoxShape ]
-  where displabel =  Label $ StrLabel $ T.pack (nshow n)
+  where displabel = Label $ StrLabel $ T.pack $ getPlain $ nshow n
 
-mkDotEdge :: (Topo.LEdge -> [String]) -> Topo.LEdge -> DotEdge T.Text
+mkDotEdge :: (Topo.LEdge -> [Plain]) -> Topo.LEdge -> DotEdge T.Text
 mkDotEdge eshow e@(_, elabel) =
    DotEdge
       (dotIdentFromSecNode x) (dotIdentFromSecNode y)
       [displabel, Viz.Dir dir, colour]
   where (Edge x y, dir, order) = orientEdge e
         displabel =
-           Label $ StrLabel $ T.pack $ L.intercalate "\n" $ order $ eshow e
+           Label $ StrLabel $ T.pack $
+           L.intercalate "\n" $ map getPlain $ order $ eshow e
         colour =
            case edgeType elabel of
               IntersectionEdge -> intersectionEdgeColour
@@ -147,9 +148,9 @@ dotIdentFromSecNode (Idx.SecNode (Idx.Section s) (Idx.Node n)) =
 
 printGraph, printGraphX, printGraphDot ::
    SequFlowGraph ->
-   Maybe (Plain, Idx.Section -> String) ->
-   (Topo.LNode -> String) ->
-   (Topo.LEdge -> [String]) ->
+   Maybe (Plain, Idx.Section -> Plain) ->
+   (Topo.LNode -> Plain) ->
+   (Topo.LEdge -> [Plain]) ->
    IO ()
 printGraph = printGraphX
 
@@ -167,13 +168,13 @@ heart = '\x2665'
 
 drawTopologyX' :: SequFlowGraph -> IO ()
 drawTopologyX' topo =
-   printGraph topo Nothing show ((:[]) . show)
+   printGraph topo Nothing (Plain . show) ((:[]) . Plain . show)
 
 
 drawTopologySimple :: SequFlowGraph -> IO ()
 drawTopologySimple topo =
    printGraph topo Nothing nshow eshow
-  where nshow (Idx.SecNode _ n, l) = show n ++ " - " ++ showNodeType l
+  where nshow (Idx.SecNode _ n, l) = Plain $ show n ++ " - " ++ showNodeType l
         eshow _ = []
 
 dsg :: Int -> FlowTopology -> DotSubGraph String
@@ -366,8 +367,7 @@ formatAssignDelta lt lookupEdge x y =
 draw :: SequFlowGraph -> Env Plain -> IO ()
 draw g
    (Env rec formatEnergy formatX formatEta tshow nshow) =
-      printGraph g (Just (rec, getPlain . tshow))
-         (getPlain . nshow) (map getPlain . eshow)
+      printGraph g (Just (rec, tshow)) nshow eshow
   where eshow (Edge uid vid, l) =
            case edgeType l of
               OriginalEdge ->
