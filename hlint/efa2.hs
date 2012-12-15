@@ -119,7 +119,8 @@ error "Set.delete" = Set.filter (/=n) ==> Set.delete n
 error "Map.intersection" = M.intersectionWith const ==> M.intersection
 
 warn "Use Map" = groupBy (equating fst) (sortBy (comparing fst) x) ==> Map.toAscList (Map.fromListWith (++) (map (mapSnd (:[])) x))
-warn "Use Map.fromListWith" = Map.fromList ==> Map.fromListWith (error "multiple keys") where note = "Map.fromList silently drops colliding keys - is this wanted?"
+warn "Use Map.fromListWith" = Map.fromList ==> Map.fromListWith (error "duplicate keys") where note = "Map.fromList silently drops colliding keys - is this wanted?"
+warn "Use Map.unionWith" = Map.union ==> Map.unionWith (error "duplicate keys") where note = "Map.union silently drops colliding keys - is this wanted?"
 warn "Use Map.toAscList" = Map.toList ==> Map.toAscList where note = "Map.toList returns keys in any order - are you sure that you do not expect ascending order?"
 warn "Use Map.elems" = map snd (Map.toList m) ==> Map.elems m
 
