@@ -11,7 +11,15 @@ import EFA2.Solver.Equation
 import EFA2.Interpreter.Env
           (StorageMap, SingleRecord(SingleRecord))
 import qualified EFA2.Interpreter.Env as Interp
-import EFA2.Topology.TopologyData as Topo
+import qualified EFA2.Topology.TopologyData as Topo
+import EFA2.Topology.TopologyData
+          (SequFlowGraph,
+           NodeType(Storage),
+           EdgeType(OriginalEdge, IntersectionEdge,  InnerStorageEdge),
+           edgeType,
+           isIntersectionEdge,
+           getFlowDirection,
+           FlowDirectionField, FlowTopology)
 import EFA2.Topology.EfaGraph
           (EfaGraph, Edge(Edge),
            labNodes, labEdges, edgeLabels, delNodes, delEdgeSet)
