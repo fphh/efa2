@@ -6,8 +6,8 @@ module EFA2.Topology.Draw where
 import EFA2.Solver.Equation
           (Term(..), ToIndex, simplify, (&-), (&/),
            showEqTerm, showSecNode, delta,
-           LatexString(LatexString), unLatexString,
            toLatexString, secNodeToLatexString)
+import qualified EFA2.Report.Format as Format
 import EFA2.Interpreter.Env
           (StorageMap, SingleRecord(SingleRecord))
 import qualified EFA2.Interpreter.Env as Interp
@@ -285,36 +285,36 @@ formatLine prefix (Line t u v) =
    Plain $
    prefix ++ lineTypeLetter t : "_" ++ showSecNode u ++ "_" ++ showSecNode v
 
-instance Format LatexString where
-   undetermined = LatexString "\\heartsuit "
+instance Format Format.Latex where
+   undetermined = Format.Latex "\\heartsuit "
    formatLineAbs = formatLineLatex ""
    formatLineDelta = formatLineLatex "\\Delta "
-   formatRecord = LatexString . show
-   formatAssign (LatexString lhs) (LatexString rhs) =
-      LatexString $ lhs ++ " = " ++ rhs
-   formatList = LatexString . ("["++) . (++"]") . L.intercalate ", " . map unLatexString
+   formatRecord = Format.Latex . show
+   formatAssign (Format.Latex lhs) (Format.Latex rhs) =
+      Format.Latex $ lhs ++ " = " ++ rhs
+   formatList = Format.Latex . ("["++) . (++"]") . L.intercalate ", " . map Format.unLatex
    formatTerm = toLatexString
-   formatChar = LatexString . (:[])
-   formatRatio = LatexString . show
-   formatReal = LatexString . printf "%f"
-   formatQuotient (LatexString x) (LatexString y) =
-      LatexString $ "\\frac{" ++ x ++ "}{" ++ y ++ "}"
-   formatSignal = LatexString . sdisp
+   formatChar = Format.Latex . (:[])
+   formatRatio = Format.Latex . show
+   formatReal = Format.Latex . printf "%f"
+   formatQuotient (Format.Latex x) (Format.Latex y) =
+      Format.Latex $ "\\frac{" ++ x ++ "}{" ++ y ++ "}"
+   formatSignal = Format.Latex . sdisp
    formatNode rec st (n@(Idx.SecNode _sec nid), ty) =
-      LatexString $
+      Format.Latex $
       show nid ++ "\\\\ " ++
       "Type: " ++ showNodeType ty ++
          case ty of
             Storage ->
                "\\\\ Content: " ++
-               (unLatexString $ lookupFormat st (Idx.Storage rec n))
+               (Format.unLatex $ lookupFormat st (Idx.Storage rec n))
             _ -> ""
 
 
 
-formatLineLatex :: String -> Line -> LatexString
+formatLineLatex :: String -> Line -> Format.Latex
 formatLineLatex prefix (Line t u v) =
-   LatexString $
+   Format.Latex $
    prefix ++ lineTypeLetter t : "_{" ++
    secNodeToLatexString u ++ "." ++ secNodeToLatexString v ++
    "}"

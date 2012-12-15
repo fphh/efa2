@@ -1,6 +1,7 @@
 module EFA2.Solver.Equation where
 
 import qualified EFA2.Solver.Term as Term
+import qualified EFA2.Report.Format as Format
 
 import EFA2.Interpreter.Env as Env
 import EFA2.Signal.Index (toDiffUse)
@@ -267,8 +268,6 @@ showAssigns :: [Assign] -> String
 showAssigns ts = L.intercalate "\n" $ map showAssign ts
 
 
-newtype LatexString = LatexString { unLatexString :: String } deriving (Show, Eq)
-
 
 toLatexString' :: ToIndex idx => Term idx -> String
 toLatexString' (Const x) = printf "%.6f   " (fromRational x :: Double)
@@ -324,11 +323,11 @@ eqToLatexString' (Given x) = idxToLatexString x ++ " \\mbox{given}"
 eqToLatexString' (EqEdge p0 n p1) = edgeToLatexString PowerOut p0 n p1
 eqToLatexString' (x := y) = toLatexString' x ++ " = " ++ toLatexString' y
 
-toLatexString :: ToIndex idx => Term idx -> LatexString
-toLatexString t = LatexString $ "$" ++ toLatexString' t ++ "$"
+toLatexString :: ToIndex idx => Term idx -> Format.Latex
+toLatexString t = Format.Latex $ "$" ++ toLatexString' t ++ "$"
 
-eqToLatexString :: Equation -> LatexString
-eqToLatexString t = LatexString $ "$" ++ eqToLatexString' t ++ "$"
+eqToLatexString :: Equation -> Format.Latex
+eqToLatexString t = Format.Latex $ "$" ++ eqToLatexString' t ++ "$"
 
 
 -- | This function takes a predicate p that determines, wether
