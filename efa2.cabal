@@ -66,6 +66,7 @@ Library
     EFA2.Signal.Plot
     EFA2.Solver.IsVar
     EFA2.Solver.Equation
+    EFA2.Solver.Term
     EFA2.Solver.Horn
     EFA2.Solver.EquationOrder
     EFA2.Solver.DependencyGraph
