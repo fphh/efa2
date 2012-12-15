@@ -84,19 +84,14 @@ originalEdgeColour = Color [RGB 0 0 200]
 intersectionEdgeColour :: Attribute
 intersectionEdgeColour = Color [RGB 200 0 0]
 
--- coding
-noRecord :: Maybe Idx.Record
-noRecord = Nothing
-
 
 mkDotGraph ::
    SequFlowGraph ->
-   Maybe Idx.Record ->
-   (Idx.DTime -> String) ->
+   Maybe (Idx.Record, Idx.Section -> String) ->
    (Topo.LNode -> String) ->
    (Topo.LEdge -> [String]) ->
    DotGraph T.Text
-mkDotGraph g recordNum timef nshow eshow =
+mkDotGraph g recTShow nshow eshow =
   DotGraph { strictGraph = False,
              directedGraph = True,
              graphID = Just (Int 1),
@@ -116,10 +111,10 @@ mkDotGraph g recordNum timef nshow eshow =
                 gattrs = [GraphAttrs [Label (StrLabel (T.pack str))]]
                 str =
                    show sl ++ " / " ++
-                   case recordNum of
+                   case recTShow of
                       Nothing -> "NoRecord"
-                      Just n ->
-                         show n ++ " / Time " ++ timef (Idx.DTime n sl)
+                      Just (n, timef) ->
+                         show n ++ " / Time " ++ timef sl
         stmts = DotStmts { attrStmts = [],
                            subGraphs = map sg cs,
                            nodeStmts = [],
@@ -152,20 +147,19 @@ dotIdentFromSecNode (Idx.SecNode (Idx.Section s) (Idx.Node n)) =
 
 printGraph, printGraphX, printGraphDot ::
    SequFlowGraph ->
-   Maybe Idx.Record ->
-   (Idx.DTime -> String) ->
+   Maybe (Idx.Record, Idx.Section -> String) ->
    (Topo.LNode -> String) ->
    (Topo.LEdge -> [String]) ->
    IO ()
 printGraph = printGraphX
 
-printGraphX g recordNum tshow nshow eshow =
-   runGraphvizCanvas Dot (mkDotGraph g recordNum tshow nshow eshow) Xlib
+printGraphX g recTShow nshow eshow =
+   runGraphvizCanvas Dot (mkDotGraph g recTShow nshow eshow) Xlib
 
-printGraphDot g recordNum tshow nshow eshow =
+printGraphDot g recTShow nshow eshow =
    void $
    runGraphvizCommand Dot
-      (mkDotGraph g recordNum tshow nshow eshow)
+      (mkDotGraph g recTShow nshow eshow)
       XDot "result/graph.dot"
 
 heart :: Char
@@ -173,12 +167,12 @@ heart = '\x2665'
 
 drawTopologyX' :: SequFlowGraph -> IO ()
 drawTopologyX' topo =
-   printGraph topo noRecord (const [heart]) show ((:[]) . show)
+   printGraph topo Nothing show ((:[]) . show)
 
 
 drawTopologySimple :: SequFlowGraph -> IO ()
 drawTopologySimple topo =
-   printGraph topo noRecord (const [heart]) nshow eshow
+   printGraph topo Nothing nshow eshow
   where nshow (Idx.SecNode _ n, l) = show n ++ " - " ++ showNodeType l
         eshow _ = []
 
@@ -333,7 +327,7 @@ data Env output =
       formatEnergy_ :: Idx.SecNode -> Idx.SecNode -> output,
       formatX_      :: Idx.SecNode -> Idx.SecNode -> output,
       formatEta_    :: Idx.SecNode -> Idx.SecNode -> output,
-      showTime :: Idx.DTime -> output,
+      showTime :: Idx.Section -> output,
       showNode_ :: Topo.LNode -> output
    }
 
@@ -366,8 +360,8 @@ formatAssignDelta lt lookupEdge x y =
 draw :: SequFlowGraph -> Env Plain -> IO ()
 draw g
    (Env rec formatEnergy formatX formatEta tshow nshow) =
-      printGraph g (Just rec)
-         (getPlain . tshow) (getPlain . nshow) (map getPlain . eshow)
+      printGraph g (Just (rec, getPlain . tshow))
+         (getPlain . nshow) (map getPlain . eshow)
   where eshow (Edge uid vid, l) =
            case edgeType l of
               OriginalEdge ->
@@ -411,7 +405,7 @@ envAbs (Interp.Envs (SingleRecord rec) e _de _p _dp _fn _dn dt x _dx _v st) =
              liftM2 formatEnergyQuotient
                 (lookupEnergy b a)
                 (lookupEnergy a b))
-          (lookupFormat dt)
+          (lookupFormat dt . Idx.DTime rec)
           (formatNode rec st)
 
 envDelta ::
@@ -432,7 +426,7 @@ envDelta
              liftM4 formatDEnergyQuotient
                 (lookupEnergy b a) (lookupEnergy a b)
                 (lookupDEnergy b a) (lookupDEnergy a b))
-          (lookupFormat dt)
+          (lookupFormat dt . Idx.DTime rec)
           (formatNode rec st)
 
 
