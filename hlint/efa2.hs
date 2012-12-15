@@ -52,10 +52,18 @@ warn "last . sortBy" = last (sortBy f x) ==> maximumBy f x
 
 warn "take length" = take (length x) y ==> Match.take x y where note = "Match.take is lazy"
 warn "equal length" = length x == length y ==> Match.equalLength x y where note = "this comparison is lazy"
--- Sequence: check = length keys == length x   -- wird nicht erkannt, warum?
 warn "compare length" = compare (length x) (length y) ==> Match.compareLength x y where note = "this comparison is lazy"
 
-warn "compare length" = f (length x) (length y) ==> f (void x) (void y) where note = "this comparison is lazy"; _ = eq y compare || eq y (<) || eq y (>) || eq y (<=) || eq y (>=) || eq y (==) || eq y (/=)
+-- warn "compare length" = compare (length x) (length y) ==> compare (void x) (void y) where note = "this comparison is lazy"
+warn "le length" = length x <= length y ==> void x <= void y where note = "this comparison is lazy"
+warn "ge length" = length x >= length y ==> void x >= void y where note = "this comparison is lazy"
+warn "lt length" = length x < length y ==> void x < void y where note = "this comparison is lazy"
+warn "gt length" = length x > length y ==> void x > void y where note = "this comparison is lazy"
+-- warn "eq length" = length x == length y ==> void x == void y where note = "this comparison is lazy"
+warn "ne length" = length x /= length y ==> void x /= void y where note = "this comparison is lazy"
+{-
+warn "compare length" = f (length x) (length y) ==> f (void x) (void y) where note = "this comparison is lazy"; _ = eq f compare || eq f (<) || eq f (>) || eq f (<=) || eq f (>=) || eq f (==) || eq f (/=)
+-}
 
 warn "Use dropWhileRev" = reverse (dropWhile f (reverse x))  ==>  ListHT.dropWhileRev f x
 
