@@ -279,8 +279,7 @@ instance Format Plain where
          case ty of
             Storage ->
                "\nContent: " ++
-               (getPlain $ formatMaybeValue $
-                M.lookup (Idx.Storage rec n) st)
+               (getPlain $ lookupFormat st (Idx.Storage rec n))
             _ -> ""
 
 
@@ -310,8 +309,7 @@ instance Format LatexString where
          case ty of
             Storage ->
                "\\\\ Content: " ++
-               (unLatexString $ formatMaybeValue $
-                M.lookup (Idx.Storage rec n) st)
+               (unLatexString $ lookupFormat st (Idx.Storage rec n))
             _ -> ""
 
 
@@ -339,33 +337,14 @@ data Env output =
       showNode_ :: Topo.LNode -> output
    }
 
-makeLookup ::
-   (Ord idx) =>
-   Idx.Record ->
-   (Idx.Record -> Idx.SecNode -> Idx.SecNode -> idx) -> M.Map idx a ->
-   Idx.SecNode -> Idx.SecNode -> Maybe a
-makeLookup rec makeIdx mp =
-   \uid vid -> M.lookup (makeIdx rec uid vid) mp
-
-makeFormat ::
-   (Ord idx, FormatValue a, Format output) =>
-   Idx.Record ->
-   (Idx.Record -> Idx.SecNode -> Idx.SecNode -> idx) -> M.Map idx a ->
-   Idx.SecNode -> Idx.SecNode -> output
-makeFormat rec makeIdx mp =
-   \uid vid -> formatMaybeValue $ makeLookup rec makeIdx mp uid vid
-
-formatMaybe :: Format output => (a -> output) -> Maybe a -> output
-formatMaybe = maybe undetermined
-
 formatMaybeValue :: (FormatValue a, Format output) => Maybe a -> output
-formatMaybeValue = formatMaybe formatValue
+formatMaybeValue = maybe undetermined formatValue
 
 lookupFormat ::
-   (Ord idx, Show idx, Format output) =>
-   (a -> output) -> M.Map idx a -> idx -> output
-lookupFormat format dt k =
-   formatMaybe format $ M.lookup k dt
+   (Ord idx, Show idx, FormatValue a, Format output) =>
+   M.Map idx a -> idx -> output
+lookupFormat dt k =
+   formatMaybeValue $ M.lookup k dt
 
 formatAssignAbs ::
    (Format output) =>
@@ -420,19 +399,19 @@ envAbs ::
    (AutoEnv a, Format output) =>
    Interp.Envs SingleRecord a -> Env output
 envAbs (Interp.Envs (SingleRecord rec) e _de _p _dp _fn _dn dt x _dx _v st) =
-   let lookupEnergy = makeLookup rec Idx.Energy e
+   let lookupEnergy a b = M.lookup (Idx.Energy rec a b) e
    in  Env rec
           (formatAssignAbs ELine $
            \a b -> formatMaybeValue $ lookupEnergy a b)
           (formatAssignAbs XLine $
-           makeFormat rec Idx.X x)
+           \a b -> lookupFormat x (Idx.X rec a b))
           (formatAssignAbs NLine $
            \a b ->
              fromMaybe undetermined $
              liftM2 formatEnergyQuotient
                 (lookupEnergy b a)
                 (lookupEnergy a b))
-          (lookupFormat formatValue dt)
+          (lookupFormat dt)
           (formatNode rec st)
 
 envDelta ::
@@ -440,20 +419,20 @@ envDelta ::
    Interp.Envs SingleRecord a -> Env output
 envDelta
       (Interp.Envs (SingleRecord rec) e de _p _dp _fn _dn dt _x dx _v st) =
-   let lookupEnergy = makeLookup rec Idx.Energy e
-       lookupDEnergy = makeLookup rec Idx.DEnergy de
+   let lookupEnergy a b = M.lookup (Idx.Energy rec a b) e
+       lookupDEnergy a b = M.lookup (Idx.DEnergy rec a b) de
    in  Env rec
           (formatAssignDelta ELine $
            \a b -> formatMaybeValue $ lookupDEnergy a b)
           (formatAssignDelta XLine $
-           makeFormat rec Idx.DX dx)
+           \a b -> lookupFormat dx (Idx.DX rec a b))
           (formatAssignDelta NLine $
            \a b ->
              fromMaybe undetermined $
              liftM4 formatDEnergyQuotient
                 (lookupEnergy b a) (lookupEnergy a b)
                 (lookupDEnergy b a) (lookupDEnergy a b))
-          (lookupFormat formatValue dt)
+          (lookupFormat dt)
           (formatNode rec st)
 
 
