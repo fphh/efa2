@@ -3,8 +3,10 @@ module EFA2.Solver.Term where
 import qualified Data.Map as Map
 import Data.Map (Map, )
 
+import qualified Data.NonEmpty as NonEmpty
+import qualified Data.List as List
+import Data.NonEmpty as NonEmpty ((!:))
 import Data.Monoid (Monoid(mappend, mempty), (<>), )
-
 import Data.Maybe (fromMaybe, )
 
 
@@ -103,3 +105,41 @@ instance Ord a => Fractional (Term a) where
    fromRational x = Sum $ Map.singleton one x
    -- (/) is not just unionWith (/) because the elements in the second map would remain unchanged
    recip = termFromCoeffProd . recipCoeffProduct . coeffProdFromTerm
+
+
+{- |
+'evaluate' tries hard to avoid
+multiplications with one and additions with zero.
+Thus 'evaluate' can be used to generate symbolic expressions
+in other representations without clutter.
+-}
+evaluate :: Fractional b => (a -> b) -> Term a -> b
+evaluate f =
+   let term t =
+          case t of
+             Atom a -> f a
+             Sum s ->
+                case NonEmpty.fetch $ Map.toList s of
+                   Nothing -> 0
+                   Just ss -> add $ fmap (uncurry prod) ss
+       prod (Product p) c =
+          case map (\(x, e) -> power e $ term x) $ Map.toList p of
+             ps ->
+                case (c, NonEmpty.fetch ps) of
+                   (1, Just nps) -> mult nps
+                   (-1, Just nps) -> negate $ mult nps
+                   _ -> mult $ fromRational c !: ps
+   in  term
+
+add :: (Num a) => NonEmpty.T [] a -> a
+add = NonEmpty.foldl1 (+)
+
+mult :: (Num a) => NonEmpty.T [] a -> a
+mult = NonEmpty.foldl1 (*)
+
+power :: (Fractional a) => Integer -> a -> a
+power e t =
+   case compare e 0 of
+      LT -> recip $ mult $ t !: List.genericReplicate (-e-1) t
+      GT -> mult $ t !: List.genericReplicate (e-1) t
+      EQ -> 1
