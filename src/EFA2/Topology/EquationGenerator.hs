@@ -71,9 +71,9 @@ instance (Fractional a) => Num (ExprWithVars s a) where
          abs (ExprWithVars xs) = ExprWithVars $ liftM abs xs
          signum (ExprWithVars xs) = ExprWithVars $ liftM signum xs
 
-infix 0 .=
-(.=) :: (Eq a) => ExprWithVars s a -> ExprWithVars s a -> EquationSystem s a
-(ExprWithVars xs) .= (ExprWithVars ys) = EquationSystem $ liftM2 (=:=) xs ys
+infix 0 =.=
+(=.=) :: (Eq a) => ExprWithVars s a -> ExprWithVars s a -> EquationSystem s a
+(ExprWithVars xs) =.= (ExprWithVars ys) = EquationSystem $ liftM2 (=:=) xs ys
 
 
 constToExprSys :: a -> ExprWithVars s a
@@ -176,10 +176,10 @@ makeEdgeEquations ::
 makeEdgeEquations es = foldMap mkEq es
   where mkEq (Edge f t, lab) =
           case TD.edgeType lab of
-               TD.OriginalEdge -> power t f .= eta f t * power f t
+               TD.OriginalEdge -> power t f =.= eta f t * power f t
                TD.IntersectionEdge ->
-                 (energy t f .= eta f t * energy f t)
-                 <> (eta f t .= 1)
+                 (energy t f =.= eta f t * energy f t)
+                 <> (eta f t =.= 1)
 
 
 makeEnergyEquations ::
@@ -188,7 +188,7 @@ makeEnergyEquations ::
 makeEnergyEquations es = foldMap (mkEq . fst) es
   where mkEq (Edge f@(SecNode sf _) t@(SecNode st _)) =
           mwhen (sf == st)
-            (energy f t .= dt * power f t) <> (energy t f .= dt * power t f)
+            (energy f t =.= dt * power f t) <> (energy t f =.= dt * power t f)
           where dt = dtime sf
 
 makeNodeEquations ::
@@ -197,11 +197,11 @@ makeNodeEquations ::
 makeNodeEquations = fold . M.mapWithKey ((f .) . g) . Gr.nodes
   where  g n (ins, _, outs) = (S.toList ins, n, S.toList outs)
          f (ins, n, outs) =
-           --(1 .= sum xin)
-           -- <> (1 .= sum xout)
-           (varsumin .= sum ein)
-           <> (varsumout .= sum eout)
-           <> mwhen (not (null ins) && not (null outs)) (varsumin .= varsumout)
+           --(1 =.= sum xin)
+           -- <> (1 =.= sum xout)
+           (varsumin =.= sum ein)
+           <> (varsumout =.= sum eout)
+           <> mwhen (not (null ins) && not (null outs)) (varsumin =.= varsumout)
            <> (mconcat $ zipWith (h varsumin) ein xin)
            <> (mconcat $ zipWith (h varsumout) eout xout)
           where xin = map (xfactor n) ins
@@ -210,7 +210,7 @@ makeNodeEquations = fold . M.mapWithKey ((f .) . g) . Gr.nodes
                 eout = map (energy n) outs
                 varsumin = insumvar n       -- this variable is used again in makeStorageEquations
                 varsumout = outsumvar n     -- and this, too.
-                h s en x = en .= x * s
+                h s en x = en =.= x * s
 
 
 makeStorageEquations ::
@@ -220,7 +220,7 @@ makeStorageEquations =
    mconcat . concatMap (LH.mapAdjacent f) . getInnersectionStorages
   where f (before, _) (now, dir) =
            storage now
-           .=
+           =.=
            storage before
            +
            case dir of
@@ -285,9 +285,9 @@ mkInStorageEquations (_, _, []) = mempty
 mkInStorageEquations (_, n, outs) =
   withLocalVar $ \s ->
     -- The next equation is special for the initial Section.
-    (maxenergy n so .= if initialSec n then initStorage else varsumin)
-    <> (s .= sum es)
-    <> (mconcat $ zipWith (\x e -> e .= x * s) ys es)
+    (maxenergy n so =.= if initialSec n then initStorage else varsumin)
+    <> (s =.= sum es)
+    <> (mconcat $ zipWith (\x e -> e =.= x * s) ys es)
     <> (mconcat $ zipWith f sos souts)
   where souts@(so:sos) = L.sortBy (comparing getSection) outs
         initStorage = storage n
@@ -295,7 +295,7 @@ mkInStorageEquations (_, n, outs) =
         initialSec s = getSection s == Idx.initSection
         ys = map (yfactor n) souts
         es = map (maxenergy n) souts
-        f next beforeNext = maxenergy n next .= maxenergy n beforeNext - energy beforeNext n
+        f next beforeNext = maxenergy n next =.= maxenergy n beforeNext - energy beforeNext n
 
 mkOutStorageEquations ::
   (Eq a, Fractional a) =>
@@ -303,10 +303,10 @@ mkOutStorageEquations ::
 mkOutStorageEquations ([], _, _) = mempty
 mkOutStorageEquations (ins, n, _) =
   withLocalVar $ \s ->
-    (s .= sum esOpposite)
-    <> (varsumout .= sum esHere)
-    <> (mconcat $ zipWith (\e x -> e .= x * s) esOpposite xsHere)
-    <> (mconcat $ zipWith (\e x -> e .= x * varsumout) esHere xsHere)
+    (s =.= sum esOpposite)
+    <> (varsumout =.= sum esHere)
+    <> (mconcat $ zipWith (\e x -> e =.= x * s) esOpposite xsHere)
+    <> (mconcat $ zipWith (\e x -> e =.= x * varsumout) esHere xsHere)
   where sins = L.sortBy (comparing getSection) ins
         esOpposite = map (flip maxenergy n) sins
         esHere = map (energy n) sins
@@ -361,9 +361,9 @@ mkInStorageEquations (_, _, []) = mempty
 mkInStorageEquations (_, n, outs) =
   withLocalVar $ \s ->
     -- The next equation is special for the initial Section.
-    (energy n so .= if initialSec n then initStorage else varsumin)
-    <> (s .= sum es)
-    <> (mconcat $ zipWith (\x e -> e .= x * s) xs es)
+    (energy n so =.= if initialSec n then initStorage else varsumin)
+    <> (s =.= sum es)
+    <> (mconcat $ zipWith (\x e -> e =.= x * s) xs es)
     <> (mconcat $ zipWith f sos souts)
   where souts@(so:sos) = L.sortBy (comparing getSection) outs
         initStorage = storage n
@@ -371,7 +371,7 @@ mkInStorageEquations (_, n, outs) =
         initialSec s = getSection s == Idx.initSection
         xs = map (xfactor n) souts
         es = map (energy n) souts
-        f next beforeNext = energy n next .= energy n beforeNext - energy beforeNext n
+        f next beforeNext = energy n next =.= energy n beforeNext - energy beforeNext n
 
 mkOutStorageEquations ::
   (Eq a, Fractional a) =>
@@ -379,10 +379,10 @@ mkOutStorageEquations ::
 mkOutStorageEquations ([], _, _) = mempty
 mkOutStorageEquations (ins, n, _) =
   withLocalVar $ \s ->
-    (s .= sum esOpposite)
-    <> (varsumout .= sum esHere)
-    <> (mconcat $ zipWith (\e x -> e .= x * s) esOpposite xsHere)
-    <> (mconcat $ zipWith (\e x -> e .= x * varsumout) esHere xsHere)
+    (s =.= sum esOpposite)
+    <> (varsumout =.= sum esHere)
+    <> (mconcat $ zipWith (\e x -> e =.= x * s) esOpposite xsHere)
+    <> (mconcat $ zipWith (\e x -> e =.= x * varsumout) esHere xsHere)
   where sins = L.sortBy (comparing getSection) ins
         esOpposite = map (flip energy n) sins
         esHere = map (energy n) sins
@@ -435,7 +435,7 @@ solveSystemDoIt ::
   (Eq a, Fractional a) =>
   [(Env.Index, a)] -> TD.SequFlowGraph -> M.Map Env.Index (Maybe a)
 solveSystemDoIt given g = runST $ do
-  let f (var, val) = getVar var .= constToExprSys val
+  let f (var, val) = getVar var =.= constToExprSys val
       EquationSystem eqsys = foldMap f given <> makeAllEquations g
       -- EquationSystem eqsys = foldMap f given <> makeAllEquations powerConvMap g
   (eqs, varmap) <- runStateT eqsys M.empty
