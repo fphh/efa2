@@ -1,6 +1,3 @@
--- {-# LANGUAGE ExistentialQuantification #-}
--- {-# LANGUAGE StandaloneDeriving #-}
-
 module EFA2.Signal.Index where
 
 import qualified Test.QuickCheck as QC
