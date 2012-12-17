@@ -147,6 +147,8 @@ error "Too strict maybe" = maybe (f x) (f . g) ==> f . maybe x g where note = "i
 error "Use Foldable.forM_" = (case m of Nothing -> return (); Just x -> f x) ==> Fold.forM_ m f
 error "Use Foldable.forM_" = when (isJust m) (f (fromJust m)) ==> Fold.forM_ m f
 error "Use Foldable.mapM_" = maybe (return ()) ==> Fold.mapM_
+error "foldMap" = maybe "" ==> Fold.foldMap
+error "foldMap" = maybe [] ==> Fold.foldMap
 
 error "any map" = any p (map f x) ==> any (p . f) x
 error "all map" = all p (map f x) ==> all (p . f) x
