@@ -27,6 +27,13 @@ newtype Record = Record Absolute deriving (Show, Eq, Ord)
 
 newtype Node = Node Int deriving (Show, Eq, Ord)
 
+instance Enum Node where
+   fromEnum (Node n) = n
+   toEnum n = Node n
+
+rootNode :: Node
+rootNode = Node (-1)
+
 instance QC.Arbitrary Node where
    arbitrary = fmap Node $ QC.choose (0,10)
    shrink (Node n) = map Node $ QC.shrink n
