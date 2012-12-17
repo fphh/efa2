@@ -1,6 +1,6 @@
 module Main where
 
-import EFA2.Example.ExampleHelper (makeEdges)
+import EFA2.Example.ExampleHelper (var, edgeVar, makeEdges)
 
 import qualified EFA2.StateAnalysis.StateAnalysis as StateAnalysis
 import EFA2.Topology.Draw (drawAll, drawTopology)
@@ -15,8 +15,7 @@ import qualified EFA2.Topology.Flow as Flow
 import qualified EFA2.Topology.EfaGraph as Gr
 import qualified EFA2.Interpreter.Env as Env
 import EFA2.Signal.SequenceData (SequData(SequData))
-import EFA2.Topology.EquationGenerator (makeVar)
-import EFA2.Solver.Equation (Term(Atom), EqTerm, simplify, mkVar)
+import EFA2.Solver.Equation (Term(Atom), EqTerm, simplify)
 
 
 rec :: Idx.Record
@@ -52,28 +51,19 @@ given  = map (\x -> (x, Atom x)) given'
 
 
 given' :: [Env.Index]
-given' = [ mkVar (Idx.DTime rec Idx.initSection),
-           mkVar (Idx.DTime rec sec0),
-           makeVar Idx.Power (Idx.SecNode sec0 node3)
-                             (Idx.SecNode sec0 node2),
+given' =
+   var Idx.DTime Idx.initSection :
+   var Idx.DTime sec0 :
 
-           mkVar (Idx.Storage rec
-                              (Idx.SecNode sec0 node3)),
+   var Idx.Storage (Idx.SecNode sec0 node3) :
 
+   edgeVar Idx.Power sec0 node3 node2 :
 
-           makeVar Idx.X (Idx.SecNode sec0 node2)
-                         (Idx.SecNode sec0 node3),
-
-
-
-           makeVar Idx.FEta (Idx.SecNode sec0 node3)
-                            (Idx.SecNode sec0 node2),
-
-           makeVar Idx.FEta (Idx.SecNode sec0 node0)
-                            (Idx.SecNode sec0 node2),
-
-           makeVar Idx.FEta (Idx.SecNode sec0 node2)
-                            (Idx.SecNode sec0 node1) ]
+   edgeVar Idx.X sec0 node2 node3 :
+   edgeVar Idx.FEta sec0 node3 node2 :
+   edgeVar Idx.FEta sec0 node0 node2 :
+   edgeVar Idx.FEta sec0 node2 node1 :
+   []
 
 main :: IO ()
 main = do
