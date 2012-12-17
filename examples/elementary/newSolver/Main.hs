@@ -1,20 +1,21 @@
 module Main where
 
 import EFA2.Example.ExampleHelper (makeEdges)
-import EFA2.StateAnalysis.StateAnalysis (bruteForce)
-import EFA2.Topology.Draw
 
+import qualified EFA2.StateAnalysis.StateAnalysis as StateAnalysis
+import EFA2.Topology.Draw (drawTopology)
 
 import qualified EFA2.Utils.Stream as Stream
 import EFA2.Utils.Stream (Stream((:~)))
 
-import EFA2.Topology.TopologyData as TD
-import EFA2.Topology.EquationGenerator
+import qualified EFA2.Signal.Index as Idx
+import qualified EFA2.Topology.TopologyData as TD
+import qualified EFA2.Topology.EquationGenerator as EqGen
 import qualified EFA2.Topology.Flow as Flow
-import EFA2.Signal.Index as Idx
-import EFA2.Topology.EfaGraph as Gr
-import EFA2.Signal.SequenceData
-import EFA2.Interpreter.Env as Env
+import qualified EFA2.Topology.EfaGraph as Gr
+import qualified EFA2.Interpreter.Env as Env
+import EFA2.Signal.SequenceData (SequData(SequData))
+import EFA2.Topology.EquationGenerator (makeVar)
 import EFA2.Solver.Equation (mkVar)
 
 
@@ -36,9 +37,10 @@ topoDreibein = Gr.mkGraph ns (makeEdges es)
               (node3, TD.Storage)]
         es = [(node0, node2), (node1, node2), (node2, node3)]
 
-seqTopo :: SequFlowGraph
+
+seqTopo :: TD.SequFlowGraph
 seqTopo = mkSeqTopo (select sol states)
-  where sol = bruteForce topoDreibein
+  where sol = StateAnalysis.bruteForce topoDreibein
         states = [1, 0, 1]
         select ts = map (ts!!)
         mkSeqTopo = Flow.mkSequenceTopology
@@ -100,9 +102,9 @@ given = [ (mkVar (Idx.DTime rec Idx.initSection), 1),
 
 
 main :: IO ()
-main = do 
+main = do
 
-  let env = solveSystem given seqTopo
+  let env = EqGen.solveSystem given seqTopo
 
   drawTopology seqTopo env
 
