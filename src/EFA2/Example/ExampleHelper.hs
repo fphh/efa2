@@ -5,7 +5,8 @@ import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Topology.EfaGraph as Gr
 import qualified EFA2.Topology.TopologyData as TD
 import qualified EFA2.Interpreter.Env as Env
-import EFA2.Topology.EquationGenerator (makeVar)
+import qualified EFA2.Topology.EquationGenerator as EqGen
+import EFA2.Topology.EquationGenerator ((=.=), makeVar)
 import EFA2.Solver.Equation (MkIdxC, mkVar)
 
 makeNode :: Int -> Idx.Node
@@ -48,3 +49,9 @@ interVar idx sec0 sec1 x =
    makeVar idx
       (Idx.SecNode sec0 x)
       (Idx.SecNode sec1 x)
+
+
+infix 0 .=
+
+(.=) :: Eq a => Env.Index -> a -> EqGen.EquationSystem s a
+idx .= val  =  EqGen.getVar idx =.= EqGen.constToExprSys val

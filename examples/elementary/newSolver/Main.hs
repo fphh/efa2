@@ -1,6 +1,6 @@
 module Main where
 
-import EFA2.Example.ExampleHelper (var, edgeVar, makeEdges)
+import EFA2.Example.ExampleHelper (var, edgeVar, makeEdges, (.=))
 
 import qualified EFA2.StateAnalysis.StateAnalysis as StateAnalysis
 import EFA2.Topology.Draw (drawTopology)
@@ -13,8 +13,9 @@ import qualified EFA2.Topology.TopologyData as TD
 import qualified EFA2.Topology.EquationGenerator as EqGen
 import qualified EFA2.Topology.Flow as Flow
 import qualified EFA2.Topology.EfaGraph as Gr
-import qualified EFA2.Interpreter.Env as Env
 import EFA2.Signal.SequenceData (SequData(SequData))
+
+import Data.Foldable (foldMap)
 
 
 sec0, sec1, sec2, sec3, sec4 :: Idx.Section
@@ -42,8 +43,10 @@ seqTopo = mkSeqTopo (select sol states)
                     . Flow.genSectionTopology
                     . SequData
 
-given :: [(Env.Index, Double)]
+
+given :: EqGen.EquationSystem s Double
 given =
+   foldMap (uncurry (.=)) $
    (var Idx.DTime Idx.initSection, 1) :
    (var Idx.DTime sec0, 1) :
    (var Idx.DTime sec1, 1) :

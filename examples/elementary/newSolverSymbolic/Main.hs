@@ -1,6 +1,6 @@
 module Main where
 
-import EFA2.Example.ExampleHelper (var, edgeVar, makeEdges)
+import EFA2.Example.ExampleHelper (var, edgeVar, makeEdges, (.=))
 
 import qualified EFA2.StateAnalysis.StateAnalysis as StateAnalysis
 import EFA2.Topology.Draw (drawAll, drawTopology)
@@ -17,9 +17,8 @@ import qualified EFA2.Interpreter.Env as Env
 import EFA2.Signal.SequenceData (SequData(SequData))
 import EFA2.Solver.Equation (Term(Atom), EqTerm, simplify)
 
+import Data.Foldable (foldMap)
 
-rec :: Idx.Record
-rec = Idx.Record Idx.Absolute
 
 sec0 :: Idx.Section
 sec0 = Idx.Section 0
@@ -46,12 +45,11 @@ seqTopo = mkSeqTopo (select sol states)
                     . Flow.genSectionTopology
                     . SequData
 
-given :: [(Env.Index, EqTerm)]
-given  = map (\x -> (x, Atom x)) given'
 
+given :: EqGen.EquationSystem s EqTerm
+given =
+   foldMap (\x -> x .= Atom x) $
 
-given' :: [Env.Index]
-given' =
    var Idx.DTime Idx.initSection :
    var Idx.DTime sec0 :
 

@@ -1,4 +1,4 @@
-
+{-# LANGUAGE Rank2Types #-}
 module EFA2.Topology.EquationGenerator where
 
 import qualified Data.Map as M
@@ -429,20 +429,30 @@ mapToEnvs func m = M.foldWithKey f envs m
         f _ _ e = e
 
 
--- powerConvMap :: M.Map Idx.PowerConversion (BijectionWeak a a)
+{- |
+In the input 'EquationSystem' you can pass simple variable assignments
+like
 
+> edgeVar Idx.Eta sec0 node1 node2 .= 0.42
+
+but you may also insert complex relations like
+
+> edgeVar Idx.Power sec0 node2 node1 .= square (edgeVar Idx.Power sec0 node1 node2)
+
+.
+-}
 solveSystemDoIt ::
   (Eq a, Fractional a) =>
-  [(Env.Index, a)] -> TD.SequFlowGraph -> M.Map Env.Index (Maybe a)
+  (forall s. EquationSystem s a) ->
+  TD.SequFlowGraph -> M.Map Env.Index (Maybe a)
 solveSystemDoIt given g = runST $ do
-  let f (var, val) = getVar var =.= constToExprSys val
-      EquationSystem eqsys = foldMap f given <> makeAllEquations g
-      -- EquationSystem eqsys = foldMap f given <> makeAllEquations powerConvMap g
+  let EquationSystem eqsys = given <> makeAllEquations g
   (eqs, varmap) <- runStateT eqsys M.empty
   Sys.solve eqs
   traverse Sys.query varmap
 
 solveSystem ::
   (Eq a, Fractional a) =>
-  [(Env.Index, a)] -> TD.SequFlowGraph -> Env.Envs Env.SingleRecord [a]
+  (forall s. EquationSystem s a) ->
+  TD.SequFlowGraph -> Env.Envs Env.SingleRecord [a]
 solveSystem given = mapToEnvs maybeToList . solveSystemDoIt given
