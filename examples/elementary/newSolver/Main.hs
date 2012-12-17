@@ -1,9 +1,12 @@
 module Main where
 
+import EFA2.Example.ExampleHelper (makeEdges)
 import EFA2.StateAnalysis.StateAnalysis (bruteForce)
 import EFA2.Topology.Draw
 
-import EFA2.Example.ExampleHelper (makeNodes, makeSimpleEdges)
+
+import qualified EFA2.Utils.Stream as Stream
+import EFA2.Utils.Stream (Stream((:~)))
 
 import EFA2.Topology.TopologyData as TD
 import EFA2.Topology.EquationGenerator
@@ -15,14 +18,23 @@ import EFA2.Interpreter.Env as Env
 import EFA2.Solver.Equation (mkVar)
 
 
-sec :: Idx.Section
-sec = Idx.Section 0
+rec :: Idx.Record
+rec = Idx.Record Idx.Absolute
 
-topoDreibein :: Topology
-topoDreibein = mkGraph (makeNodes ns) (makeSimpleEdges es)
-  where ns = [(0, Source), (1, Sink), (2, Crossing), (3, TD.Storage)]
-        es = [(0, 2), (1, 2), (2, 3)]
+sec0, sec1, sec2, sec3, sec4 :: Idx.Section
+sec0 :~ sec1 :~ sec2 :~ sec3 :~ sec4 :~ _ = Stream.enumFrom $ Idx.Section 0
 
+node0, node1, node2, node3 :: Idx.Node
+node0 :~ node1 :~ node2 :~ node3 :~ _ = Stream.enumFrom $ Idx.Node 0
+
+
+topoDreibein :: TD.Topology
+topoDreibein = Gr.mkGraph ns (makeEdges es)
+  where ns = [(node0, TD.Source),
+              (node1, TD.Sink),
+              (node2, TD.Crossing),
+              (node3, TD.Storage)]
+        es = [(node0, node2), (node1, node2), (node2, node3)]
 
 seqTopo :: SequFlowGraph
 seqTopo = mkSeqTopo (select sol states)
@@ -34,55 +46,57 @@ seqTopo = mkSeqTopo (select sol states)
                     . SequData
 
 given :: [(Env.Index, Double)]
-given = [ (mkVar (Idx.DTime (Idx.Record Absolute) initSection), 1),
-          (mkVar (Idx.DTime (Idx.Record Absolute) (Section 0)), 1),
-          (mkVar (Idx.DTime (Idx.Record Absolute) (Section 1)), 1),
-          (mkVar (Idx.DTime (Idx.Record Absolute) (Section 2)), 1),
+given = [ (mkVar (Idx.DTime rec Idx.initSection), 1),
+          (mkVar (Idx.DTime rec sec0), 1),
+          (mkVar (Idx.DTime rec sec1), 1),
+          (mkVar (Idx.DTime rec sec2), 1),
 
 
-          (mkVar (Idx.Storage (Idx.Record Absolute) 
-                              (Idx.SecNode (Section 2) (Idx.Node 3))), 10.0),
+          (mkVar (Idx.Storage rec
+                              (Idx.SecNode sec2 node3)), 10.0),
 
---          (makeVar Idx.Power (Idx.SecNode initSection (Idx.Node 3))
---                             (Idx.SecNode initSection (Idx.Node (-1))), 3.0),
+{-
+          (makeVar Idx.Power (Idx.SecNode Idx.initSection node3)
+                             (Idx.SecNode Idx.initSection Idx.rootNode), 3.0),
+-}
 
-
-          (makeVar Idx.Power (Idx.SecNode (Section 0) (Idx.Node 2))
-                             (Idx.SecNode (Section 0) (Idx.Node 3)), 4.0),
-
-
-          (makeVar Idx.X (Idx.SecNode (Section 0) (Idx.Node 2))
-                         (Idx.SecNode (Section 0) (Idx.Node 3)), 0.32),
-
---         (makeVar Idx.X (Idx.SecNode (Section 1) (Idx.Node 3))
---                         (Idx.SecNode (Section 2) (Idx.Node 3)), 1),
+          (makeVar Idx.Power (Idx.SecNode sec0 node2)
+                             (Idx.SecNode sec0 node3), 4.0),
 
 
-          (makeVar Idx.Power (Idx.SecNode (Section 1) (Idx.Node 3))
-                             (Idx.SecNode (Section 1) (Idx.Node 2)), 5),
+          (makeVar Idx.X (Idx.SecNode sec0 node2)
+                         (Idx.SecNode sec0 node3), 0.32),
 
-          (makeVar Idx.Power (Idx.SecNode (Section 2) (Idx.Node 3))
-                             (Idx.SecNode (Section 2) (Idx.Node 2)), 6),
+{-
+          (makeVar Idx.X (Idx.SecNode sec1 node3)
+                         (Idx.SecNode sec2 node3), 1),
+-}
 
-          (makeVar Idx.Power (Idx.SecNode (Section 3) (Idx.Node 3))
-                             (Idx.SecNode (Section 3) (Idx.Node 2)), 7),
+          (makeVar Idx.Power (Idx.SecNode sec1 node3)
+                             (Idx.SecNode sec1 node2), 5),
 
-          (makeVar Idx.Power (Idx.SecNode (Section 4) (Idx.Node 3))
-                             (Idx.SecNode (Section 4) (Idx.Node 2)), 8),
+          (makeVar Idx.Power (Idx.SecNode sec2 node3)
+                             (Idx.SecNode sec2 node2), 6),
+
+          (makeVar Idx.Power (Idx.SecNode sec3 node3)
+                             (Idx.SecNode sec3 node2), 7),
+
+          (makeVar Idx.Power (Idx.SecNode sec4 node3)
+                             (Idx.SecNode sec4 node2), 8),
 
 
 
-          (makeVar Idx.FEta (Idx.SecNode (Section 0) (Idx.Node 3))
-                            (Idx.SecNode (Section 0) (Idx.Node 2)), 0.25),
-          (makeVar Idx.FEta (Idx.SecNode (Section 0) (Idx.Node 2))
-                            (Idx.SecNode (Section 0) (Idx.Node 3)), 0.25),
+          (makeVar Idx.FEta (Idx.SecNode sec0 node3)
+                            (Idx.SecNode sec0 node2), 0.25),
+          (makeVar Idx.FEta (Idx.SecNode sec0 node2)
+                            (Idx.SecNode sec0 node3), 0.25),
 
 
-          (makeVar Idx.FEta (Idx.SecNode (Section 0) (Idx.Node 2))
-                            (Idx.SecNode (Section 0) (Idx.Node 1)), 0.5),
+          (makeVar Idx.FEta (Idx.SecNode sec0 node2)
+                            (Idx.SecNode sec0 node1), 0.5),
 
-          (makeVar Idx.FEta (Idx.SecNode (Section 0) (Idx.Node 0))
-                            (Idx.SecNode (Section 0) (Idx.Node 2)), 0.75) ]
+          (makeVar Idx.FEta (Idx.SecNode sec0 node0)
+                            (Idx.SecNode sec0 node2), 0.75) ]
 
 
 main :: IO ()
