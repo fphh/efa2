@@ -235,6 +235,7 @@ showNodeType = show
 
 class Format output where
    undetermined :: output
+   empty :: output
    newLine :: output
    formatLineAbs :: Line -> output
    formatLineDelta :: Line -> output
@@ -262,6 +263,7 @@ getPlain (Plain str) = str
 
 instance Format Plain where
    undetermined = Plain [heart]
+   empty = Plain ""
    newLine = Plain "\n"
    formatLineAbs = formatLine ""
    formatLineDelta = formatLine [delta]
@@ -295,6 +297,7 @@ formatLine prefix (Line t u v) =
 
 instance Format LatexString where
    undetermined = LatexString "\\heartsuit "
+   empty = LatexString ""
    newLine = LatexString "\\\\\n"
    formatLineAbs = formatLineLatex ""
    formatLineDelta = formatLineLatex "\\Delta "
@@ -393,7 +396,7 @@ draw g
               IntersectionEdge ->
                  formatMaxEnergy uid vid :
                  formatY uid vid :
-                 newLine :
+                 empty :
                  formatEnergy uid vid :
                  formatX uid vid :
                  formatEta uid vid :
