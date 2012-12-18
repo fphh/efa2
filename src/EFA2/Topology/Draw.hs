@@ -15,7 +15,7 @@ import qualified EFA2.Topology.TopologyData as Topo
 import EFA2.Topology.TopologyData
           (SequFlowGraph,
            NodeType(Storage),
-           EdgeType(OriginalEdge, IntersectionEdge,  InnerStorageEdge),
+           EdgeType(OriginalEdge, IntersectionEdge),
            edgeType,
            isIntersectionEdge,
            getFlowDirection,
@@ -388,9 +388,6 @@ draw g
                  formatX uid vid :
                  formatEta uid vid :
                  formatX vid uid :
-                 formatEnergy vid uid :
-                 []
-              InnerStorageEdge ->
                  formatEnergy vid uid :
                  []
               IntersectionEdge ->

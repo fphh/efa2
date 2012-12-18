@@ -19,7 +19,6 @@ module EFA2.Topology.TopologyData (
        isInactiveEdge,
        isOtherSection,
        isOriginalEdge,
-       isInnerStorageEdge,
        isIntersectionEdge,
        isDirEdge, isStorageNode,
        defaultELabel,
@@ -77,7 +76,6 @@ isInactive :: FlowDirection -> Bool
 isInactive = not . isActive
 
 data EdgeType = OriginalEdge
-              | InnerStorageEdge
               | IntersectionEdge deriving (Eq, Ord, Show)
 
 
@@ -128,9 +126,6 @@ instance EdgeLabel ELabel where
 
 isOriginalEdge :: EdgeTypeField et => et -> Bool
 isOriginalEdge = (OriginalEdge ==) . getEdgeType
-
-isInnerStorageEdge :: EdgeTypeField et => et -> Bool
-isInnerStorageEdge = (InnerStorageEdge ==) . getEdgeType
 
 isIntersectionEdge :: EdgeTypeField et => et -> Bool
 isIntersectionEdge = (IntersectionEdge ==) . getEdgeType
@@ -183,9 +178,7 @@ maybeActiveSt ::
 maybeActiveSt (ins, outs) =
    mplus
       (toMaybe
-         (any (\e ->
-               isActiveEdge e &&
-               (isOriginalEdge e || isInnerStorageEdge e)) $
+         (any (\e -> isActiveEdge e && isOriginalEdge e) $
           map snd ins)
          In)
       (toMaybe (any (isActiveEdge . snd) outs) Out)
