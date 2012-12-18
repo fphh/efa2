@@ -27,7 +27,6 @@ Flag buildDemos
 Library
   Build-Depends:
     graphviz >=2999.13 && <2999.15,
-    fgl ==5.4.*,
     vector ==0.9.*,
     fingertree-psqueue >=0.3 && <0.4,
     fingertree >=0.0 && <0.1,
@@ -52,7 +51,6 @@ Library
     EFA2.IO.Import
     EFA2.IO.FileSave
     EFA2.Utils.Utils
-    EFA2.Utils.Graph
     EFA2.Utils.Stream
     EFA2.Utils.Trace
     EFA2.Bijection
