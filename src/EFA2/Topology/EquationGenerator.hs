@@ -411,7 +411,7 @@ getIntersectionStorages = concat . getStorages (format . toSecNode)
 mapToEnvs :: (a -> b) -> M.Map Env.Index a -> Env.Envs Env.SingleRecord b
 mapToEnvs func m = M.foldWithKey f envs m
   where envs =
-          Env.empty { Env.recordNumber = Env.SingleRecord (Idx.Record Idx.Absolute) }
+          Env.empty $ Env.SingleRecord (Idx.Record Idx.Absolute)
         f (Env.Energy idx) v e =
           e { Env.energyMap = M.insert idx (func v) (Env.energyMap e) }
         f (Env.MaxEnergy idx) v e =

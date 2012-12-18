@@ -169,8 +169,8 @@ instance Functor (Envs rec) where
            Envs rec (fmap f e) (fmap f de) (fmap f me) (fmap f dme) (fmap f p) (fmap f dp) (fmap f fn) (fmap f dn) (fmap f dt) (fmap f x) (fmap f dx) (fmap f y) (fmap f dy) (fmap f v) (fmap f st)
 
 
-empty :: Envs NoRecord a
-empty = Envs NoRecord M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty
+empty :: rec -> Envs rec a
+empty rec = Envs rec M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty
 
 
 data NoRecord = NoRecord deriving (Eq, Ord, Show)

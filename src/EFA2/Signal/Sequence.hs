@@ -4,7 +4,7 @@
 module EFA2.Signal.Sequence where
 
 import qualified EFA2.Interpreter.Env as Env
-import EFA2.Interpreter.Env (Envs(..), NoRecord)
+import EFA2.Interpreter.Env (Envs(..))
 
 import qualified EFA2.Topology.Flow as Flow
 import EFA2.Topology.TopologyData (Topology, SequFlowGraph)
@@ -72,9 +72,9 @@ fromFlowRecord ::
    FlRecord
       (TC s1 (Typ delta2 t2 p2) (Data c1 d1))
       (TC s1 (Typ delta1 t1 p1) (Data c1 d1)) ->
-   Envs NoRecord (TC s1 (Typ UT UT UT) (Data c1 d1))
+   Envs Env.NoRecord (TC s1 (Typ UT UT UT) (Data c1 d1))
 fromFlowRecord secIdx recIdx (FlRecord dTime flowMap) =
-  Env.empty { energyMap = M.map untype $ M.mapKeys f flowMap, dtimeMap = M.fromList [(Idx.DTime recIdx secIdx, untype dTime)] }
+  (Env.empty Env.NoRecord) { energyMap = M.map untype $ M.mapKeys f flowMap, dtimeMap = M.fromList [(Idx.DTime recIdx secIdx, untype dTime)] }
   where f (PPosIdx idx1 idx2) =
            Idx.Energy recIdx (Idx.SecNode secIdx idx1) (Idx.SecNode secIdx idx2)
 
@@ -103,7 +103,7 @@ genSequFlow sqPRec = fmap recFullIntegrate sqPRec
 -- makeSequence :: PowerRecord -> Topology -> ([Envs rec (Scal (Typ UT UT UT) Val)], Topology)
 makeRecSequence ::
    SequFlowRecord FlowRecord ->
-   SequData (Envs NoRecord
+   SequData (Envs Env.NoRecord
        (TC
           FSignal
           (Typ UT UT UT)
