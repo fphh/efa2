@@ -115,8 +115,8 @@ type DMaxEnergyMap a = M.Map Idx.DMaxEnergy a
 type PowerMap a = M.Map Idx.Power a
 type DPowerMap a = M.Map Idx.DPower a
 
-type FEtaMap a = M.Map Idx.FEta (a -> a)
-type DEtaMap a = M.Map Idx.DEta (a -> a)
+type FEtaMap a = M.Map Idx.FEta a
+type DEtaMap a = M.Map Idx.DEta a
 
 type DTimeMap a = M.Map Idx.DTime a
 
@@ -142,8 +142,8 @@ data Envs rec a =
 
                      powerMap :: PowerMap a,
                      dpowerMap :: DPowerMap a,
-                     --fetaMap :: FEtaMap a,
-                     --detaMap :: DEtaMap a,
+                     fetaMap :: FEtaMap a,
+                     detaMap :: DEtaMap a,
                      dtimeMap :: DTimeMap a,
                      xMap :: XMap a,
                      dxMap :: DXMap a,
@@ -165,12 +165,12 @@ instance Ord (a -> a) where
 -}
 
 instance Functor (Envs rec) where
-         fmap f (Envs rec e de me dme p dp dt x dx y dy v st) =
-           Envs rec (fmap f e) (fmap f de) (fmap f me) (fmap f dme) (fmap f p) (fmap f dp) (fmap f dt) (fmap f x) (fmap f dx) (fmap f y) (fmap f dy) (fmap f v) (fmap f st)
+         fmap f (Envs rec e de me dme p dp fn dn dt x dx y dy v st) =
+           Envs rec (fmap f e) (fmap f de) (fmap f me) (fmap f dme) (fmap f p) (fmap f dp) (fmap f fn) (fmap f dn) (fmap f dt) (fmap f x) (fmap f dx) (fmap f y) (fmap f dy) (fmap f v) (fmap f st)
 
 
 emptyEnv :: Envs NoRecord a
-emptyEnv = Envs NoRecord M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty
+emptyEnv = Envs NoRecord M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty
 
 
 data NoRecord = NoRecord deriving (Eq, Ord, Show)

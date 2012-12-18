@@ -426,6 +426,10 @@ mapToEnvs func m = M.foldWithKey f envs m
           e { Env.storageMap = M.insert idx (func v) (Env.storageMap e) }
         f (Env.DTime idx) v e =
           e { Env.dtimeMap = M.insert idx (func v) (Env.dtimeMap e) }
+        f (Env.FEta idx) v e =
+          e { Env.fetaMap = M.insert idx (func v) (Env.fetaMap e) }
+        f (Env.DEta idx) v e =
+          e { Env.detaMap = M.insert idx (func v) (Env.detaMap e) }
         f _ _ e = e
 
 
