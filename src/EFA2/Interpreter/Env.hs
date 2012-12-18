@@ -169,8 +169,8 @@ instance Functor (Envs rec) where
            Envs rec (fmap f e) (fmap f de) (fmap f me) (fmap f dme) (fmap f p) (fmap f dp) (fmap f fn) (fmap f dn) (fmap f dt) (fmap f x) (fmap f dx) (fmap f y) (fmap f dy) (fmap f v) (fmap f st)
 
 
-emptyEnv :: Envs NoRecord a
-emptyEnv = Envs NoRecord M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty
+empty :: Envs NoRecord a
+empty = Envs NoRecord M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty
 
 
 data NoRecord = NoRecord deriving (Eq, Ord, Show)
@@ -211,7 +211,7 @@ separateEnvs envs =
    case recordNumber envs of
       MixedRecord lst -> map f (L.sort lst)
   where p n k _ = n == getIdxRecNum k
-        f n = emptyEnv { recordNumber = SingleRecord n,
+        f n = empty { recordNumber = SingleRecord n,
                          energyMap = M.filterWithKey (p n) (energyMap envs),
                          denergyMap = M.filterWithKey (p n) (denergyMap envs),
                          powerMap = M.filterWithKey (p n) (powerMap envs),
@@ -264,12 +264,12 @@ minusEnv laterEnv formerEnv | checkEnvsForDelta laterEnv formerEnv = gnv
 
 
 
-mapEnv ::
+map ::
    (D.Map c, D.Storage c a, D.Storage c b) =>
    (a -> b) ->
    Envs rec (TC s t (Data c a)) ->
    Envs rec (TC s t (Data c b))
-mapEnv f env = emptyEnv { recordNumber = recordNumber env,
+map f env = empty { recordNumber = recordNumber env,
                           energyMap = M.map (S.map f) (energyMap env),
                           denergyMap = M.map (S.map f) (denergyMap env),
                           powerMap = M.map (S.map f) (powerMap env),
