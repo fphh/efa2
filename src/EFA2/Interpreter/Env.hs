@@ -3,9 +3,6 @@
 
 module EFA2.Interpreter.Env where
 
-import qualified Data.Map as M
-import qualified Data.List as L
-
 import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Signal.Signal as S
 import qualified EFA2.Signal.Data as D
@@ -14,6 +11,14 @@ import EFA2.Signal.Signal (TC, (.-))
 import EFA2.Signal.Data (Data)
 import EFA2.Signal.Typ (TSum)
 import EFA2.Signal.Base (BSum)
+
+import qualified Data.Accessor.Basic as Accessor
+import Control.Applicative (Applicative, pure, (<*>))
+import Data.Traversable (Traversable, sequenceA, foldMapDefault)
+import Data.Foldable (Foldable, foldMap)
+
+import qualified Data.Map as M
+import qualified Data.List as L
 
 
 data Index =
@@ -152,6 +157,71 @@ data Envs rec a =
                      varMap :: VarMap a,
                      storageMap :: StorageMap a } deriving (Show)
 
+
+class Ord idx => AccessMap idx where
+   accessMap :: Accessor.T (Envs rec a) (M.Map idx a)
+
+instance AccessMap Idx.Energy where
+   accessMap =
+      Accessor.fromSetGet (\x c -> c{energyMap = x}) energyMap
+
+instance AccessMap Idx.DEnergy where
+   accessMap =
+      Accessor.fromSetGet (\x c -> c{denergyMap = x}) denergyMap
+
+instance AccessMap Idx.MaxEnergy where
+   accessMap =
+      Accessor.fromSetGet (\x c -> c{maxenergyMap = x}) maxenergyMap
+
+instance AccessMap Idx.DMaxEnergy where
+   accessMap =
+      Accessor.fromSetGet (\x c -> c{dmaxenergyMap = x}) dmaxenergyMap
+
+instance AccessMap Idx.Power where
+   accessMap =
+      Accessor.fromSetGet (\x c -> c{powerMap = x}) powerMap
+
+instance AccessMap Idx.DPower where
+   accessMap =
+      Accessor.fromSetGet (\x c -> c{dpowerMap = x}) dpowerMap
+
+instance AccessMap Idx.FEta where
+   accessMap =
+      Accessor.fromSetGet (\x c -> c{fetaMap = x}) fetaMap
+
+instance AccessMap Idx.DEta where
+   accessMap =
+      Accessor.fromSetGet (\x c -> c{detaMap = x}) detaMap
+
+instance AccessMap Idx.DTime where
+   accessMap =
+      Accessor.fromSetGet (\x c -> c{dtimeMap = x}) dtimeMap
+
+instance AccessMap Idx.X where
+   accessMap =
+      Accessor.fromSetGet (\x c -> c{xMap = x}) xMap
+
+instance AccessMap Idx.DX where
+   accessMap =
+      Accessor.fromSetGet (\x c -> c{dxMap = x}) dxMap
+
+instance AccessMap Idx.Y where
+   accessMap =
+      Accessor.fromSetGet (\x c -> c{yMap = x}) yMap
+
+instance AccessMap Idx.DY where
+   accessMap =
+      Accessor.fromSetGet (\x c -> c{dyMap = x}) dyMap
+
+instance AccessMap Idx.Var where
+   accessMap =
+      Accessor.fromSetGet (\x c -> c{varMap = x}) varMap
+
+instance AccessMap Idx.Storage where
+   accessMap =
+      Accessor.fromSetGet (\x c -> c{storageMap = x}) storageMap
+
+
 {-
 instance (Show a) => Show (a -> a) where
          show _ = "<function (a -> a)>"
@@ -167,6 +237,19 @@ instance Ord (a -> a) where
 instance Functor (Envs rec) where
          fmap f (Envs rec e de me dme p dp fn dn dt x dx y dy v st) =
            Envs rec (fmap f e) (fmap f de) (fmap f me) (fmap f dme) (fmap f p) (fmap f dp) (fmap f fn) (fmap f dn) (fmap f dt) (fmap f x) (fmap f dx) (fmap f y) (fmap f dy) (fmap f v) (fmap f st)
+
+instance Foldable (Envs rec) where
+   foldMap = foldMapDefault
+
+instance Traversable (Envs rec) where
+   sequenceA (Envs rec e de me dme p dp fn dn dt x dx y dy v st) =
+      pure (Envs rec) <?> e <?> de <?> me <?> dme <?> p <?> dp <?> fn <?> dn <?> dt <?> x <?> dx <?> y <?> dy <?> v <?> st
+
+infixl 4 <?>
+(<?>) ::
+   (Applicative f, Traversable map) =>
+   f (map a -> b) -> map (f a) -> f b
+f <?> x = f <*> sequenceA x
 
 
 empty :: rec -> Envs rec a

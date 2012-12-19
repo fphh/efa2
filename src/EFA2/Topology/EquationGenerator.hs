@@ -14,7 +14,6 @@ import EFA2.Topology.EfaGraph (Edge(..))
 import qualified EFA2.Topology.EfaGraph as Gr
 
 import qualified EFA2.Topology.TopologyData as TD
-import EFA2.Solver.Equation (MkIdxC, mkVar)
 import EFA2.Utils.Utils ((>>!))
 
 import UniqueLogic.ST.Expression ((=:=))
@@ -27,6 +26,8 @@ import Control.Monad (liftM, liftM2)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT, runStateT, gets, modify)
 
+
+import qualified Data.Accessor.Basic as Accessor
 
 import Data.Monoid (Monoid, (<>), mempty, mappend, mconcat)
 
@@ -42,7 +43,7 @@ import Data.Tuple.HT (snd3)
 import Debug.Trace
 
 
-type ProvEnv s a = M.Map Env.Index (Sys.Variable s a)
+type ProvEnv s a = Env.Envs Env.SingleRecord (Sys.Variable s a)
 
 newtype ExprWithVars s a = ExprWithVars (StateT (ProvEnv s a) (ST s) (Expr.T s a))
 type SysWithVars s a = StateT (ProvEnv s a) (ST s) (Sys.M s ())
@@ -94,51 +95,58 @@ recAbs :: Idx.Record
 recAbs = Idx.Record Idx.Absolute
 
 makeVar ::
-  (MkIdxC a) =>
   (Idx.Record -> SecNode -> SecNode -> a) ->
-  SecNode -> SecNode -> Env.Index
+  SecNode -> SecNode -> a
 makeVar idxf nid nid' =
-  mkVar $ idxf recAbs nid nid'
+  idxf recAbs nid nid'
 
-getVar :: Env.Index -> ExprWithVars s a
+getVar ::
+   (Env.AccessMap idx) =>
+   idx -> ExprWithVars s a
 getVar idx =
   let newVar =
          lift Sys.globalVariable
-          >>= \var -> modify (M.insert idx var)
+          >>= \var -> modify (Accessor.modify Env.accessMap $ M.insert idx var)
           >>! return var
   in ExprWithVars $ fmap Expr.fromVariable $
-        maybe newVar return =<< gets (M.lookup idx)
+        maybe newVar return =<< gets (M.lookup idx . Accessor.get Env.accessMap)
+
+getEdgeVar ::
+   (Env.AccessMap idx) =>
+   (Idx.Record -> Idx.SecNode -> Idx.SecNode -> idx) ->
+   Idx.SecNode -> Idx.SecNode -> ExprWithVars s a
+getEdgeVar mkIdx x y = getVar (makeVar mkIdx x y)
 
 power :: SecNode -> SecNode -> ExprWithVars s a
-power = (getVar .) . makeVar Idx.Power
+power = getEdgeVar Idx.Power
 
 energy :: SecNode -> SecNode -> ExprWithVars s a
-energy = (getVar .) . makeVar Idx.Energy
+energy = getEdgeVar Idx.Energy
 
 maxenergy :: SecNode -> SecNode -> ExprWithVars s a
-maxenergy = (getVar .) . makeVar Idx.MaxEnergy
+maxenergy = getEdgeVar Idx.MaxEnergy
 
 eta :: SecNode -> SecNode -> ExprWithVars s a
-eta = (getVar .) . makeVar Idx.FEta
+eta = getEdgeVar Idx.FEta
 
 xfactor :: SecNode -> SecNode -> ExprWithVars s a
-xfactor = (getVar .) . makeVar Idx.X
+xfactor = getEdgeVar Idx.X
 
 yfactor :: SecNode -> SecNode -> ExprWithVars s a
-yfactor = (getVar .) . makeVar Idx.Y
+yfactor = getEdgeVar Idx.Y
 
 insumvar :: SecNode -> ExprWithVars s a
-insumvar = getVar . mkVar . Idx.InSumVar recAbs
+insumvar = getVar . Idx.Var recAbs Idx.InSum
 
 outsumvar :: SecNode -> ExprWithVars s a
-outsumvar = getVar . mkVar . Idx.OutSumVar recAbs
+outsumvar = getVar . Idx.Var recAbs Idx.OutSum
 
 storage :: SecNode -> ExprWithVars s a
-storage = getVar . mkVar . Idx.Storage recAbs
-
+storage = getVar . Idx.Storage recAbs
 
 dtime :: Section -> ExprWithVars s a
-dtime = getVar . mkVar . Idx.DTime recAbs
+dtime = getVar . Idx.DTime recAbs
+
 
 mwhen :: Monoid a => Bool -> a -> a
 mwhen True t = t
@@ -408,31 +416,6 @@ getIntersectionStorages = concat . getStorages (format . toSecNode)
 -----------------------------------------------------------------
 
 
-mapToEnvs :: (a -> b) -> M.Map Env.Index a -> Env.Envs Env.SingleRecord b
-mapToEnvs func m = M.foldWithKey f envs m
-  where envs =
-          Env.empty $ Env.SingleRecord (Idx.Record Idx.Absolute)
-        f (Env.Energy idx) v e =
-          e { Env.energyMap = M.insert idx (func v) (Env.energyMap e) }
-        f (Env.MaxEnergy idx) v e =
-          e { Env.maxenergyMap = M.insert idx (func v) (Env.maxenergyMap e) }
-        f (Env.Power idx) v e =
-          e { Env.powerMap = M.insert idx (func v) (Env.powerMap e) }
-        f (Env.X idx) v e =
-          e { Env.xMap = M.insert idx (func v) (Env.xMap e) }
-        f (Env.Y idx) v e =
-          e { Env.yMap = M.insert idx (func v) (Env.yMap e) }
-        f (Env.Store idx) v e =
-          e { Env.storageMap = M.insert idx (func v) (Env.storageMap e) }
-        f (Env.DTime idx) v e =
-          e { Env.dtimeMap = M.insert idx (func v) (Env.dtimeMap e) }
-        f (Env.FEta idx) v e =
-          e { Env.fetaMap = M.insert idx (func v) (Env.fetaMap e) }
-        f (Env.DEta idx) v e =
-          e { Env.detaMap = M.insert idx (func v) (Env.detaMap e) }
-        f _ _ e = e
-
-
 {- |
 In the input 'EquationSystem' you can pass simple variable assignments
 like
@@ -448,10 +431,11 @@ but you may also insert complex relations like
 solveSystemDoIt ::
   (Eq a, Fractional a) =>
   (forall s. EquationSystem s a) ->
-  TD.SequFlowGraph -> M.Map Env.Index (Maybe a)
+  TD.SequFlowGraph -> Env.Envs Env.SingleRecord (Maybe a)
 solveSystemDoIt given g = runST $ do
   let EquationSystem eqsys = given <> makeAllEquations g
-  (eqs, varmap) <- runStateT eqsys M.empty
+  (eqs, varmap) <-
+     runStateT eqsys $ Env.empty $ Env.SingleRecord $ Idx.Record Idx.Absolute
   Sys.solve eqs
   traverse Sys.query varmap
 
@@ -459,4 +443,4 @@ solveSystem ::
   (Eq a, Fractional a) =>
   (forall s. EquationSystem s a) ->
   TD.SequFlowGraph -> Env.Envs Env.SingleRecord [a]
-solveSystem given = mapToEnvs maybeToList . solveSystemDoIt given
+solveSystem given = fmap maybeToList . solveSystemDoIt given

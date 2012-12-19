@@ -6,8 +6,10 @@ import qualified EFA2.Topology.EfaGraph as Gr
 import qualified EFA2.Topology.TopologyData as TD
 import qualified EFA2.Interpreter.Env as Env
 import qualified EFA2.Topology.EquationGenerator as EqGen
-import EFA2.Topology.EquationGenerator ((=.=), makeVar)
-import EFA2.Solver.Equation (MkIdxC, mkVar)
+import EFA2.Topology.EquationGenerator ((=.=))
+import EFA2.Solver.Equation (Term(Atom), EqTerm, MkIdxC(mkIdx))
+import Data.Monoid ((<>))
+
 
 makeNode :: Int -> Idx.Node
 makeNode = Idx.Node
@@ -24,34 +26,43 @@ makeSimpleEdges es = map f es
   where f (a, b) = (Gr.Edge (Idx.Node a) (Idx.Node b), ())
 
 
+selfAssign ::
+   (MkIdxC idx, Env.AccessMap idx) =>
+   idx -> EqGen.EquationSystem s EqTerm
+selfAssign idx =
+   EqGen.getVar idx .= Atom (mkIdx idx)
+
+infixr 6 =<>
+
+(=<>) ::
+   (MkIdxC idx, Env.AccessMap idx) =>
+   idx ->
+   EqGen.EquationSystem s EqTerm ->
+   EqGen.EquationSystem s EqTerm
+idx =<> eqsys = selfAssign idx <> eqsys
+
+
 rec :: Idx.Record
 rec = Idx.Record Idx.Absolute
 
-var ::
-   (MkIdxC idx) =>
-   (Idx.Record -> a -> idx) -> a -> Env.Index
-var idx x = mkVar (idx rec x)
-
 edgeVar ::
-   MkIdxC idx =>
-   (Idx.Record -> Idx.SecNode -> Idx.SecNode -> idx) ->
-   Idx.Section -> Idx.Node -> Idx.Node -> Env.Index
+   (Idx.SecNode -> Idx.SecNode -> idx) ->
+   Idx.Section -> Idx.Node -> Idx.Node -> idx
 edgeVar idx sec x y =
-   makeVar idx
+   idx
       (Idx.SecNode sec x)
       (Idx.SecNode sec y)
 
 interVar ::
-   MkIdxC idx =>
-   (Idx.Record -> Idx.SecNode -> Idx.SecNode -> idx) ->
-   Idx.Section -> Idx.Section -> Idx.Node -> Env.Index
+   (Idx.SecNode -> Idx.SecNode -> idx) ->
+   Idx.Section -> Idx.Section -> Idx.Node -> idx
 interVar idx sec0 sec1 x =
-   makeVar idx
+   idx
       (Idx.SecNode sec0 x)
       (Idx.SecNode sec1 x)
 
 
 infix 0 .=
 
-(.=) :: Eq a => Env.Index -> a -> EqGen.EquationSystem s a
-idx .= val  =  EqGen.getVar idx =.= EqGen.constToExprSys val
+(.=) :: Eq a => EqGen.ExprWithVars s a -> a -> EqGen.EquationSystem s a
+evar .= val  =  evar =.= EqGen.constToExprSys val

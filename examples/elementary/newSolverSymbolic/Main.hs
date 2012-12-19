@@ -1,6 +1,6 @@
 module Main where
 
-import EFA2.Example.ExampleHelper (var, edgeVar, makeEdges, (.=))
+import EFA2.Example.ExampleHelper (rec, edgeVar, makeEdges, (=<>))
 
 import qualified EFA2.StateAnalysis.StateAnalysis as StateAnalysis
 import EFA2.Topology.Draw (drawAll, drawTopology)
@@ -15,9 +15,9 @@ import qualified EFA2.Topology.Flow as Flow
 import qualified EFA2.Topology.EfaGraph as Gr
 import qualified EFA2.Interpreter.Env as Env
 import EFA2.Signal.SequenceData (SequData(SequData))
-import EFA2.Solver.Equation (Term(Atom), EqTerm, simplify)
+import EFA2.Solver.Equation (EqTerm, simplify)
 
-import Data.Foldable (foldMap)
+import Data.Monoid (mempty)
 
 
 sec0 :: Idx.Section
@@ -48,20 +48,20 @@ seqTopo = mkSeqTopo (select sol states)
 
 given :: EqGen.EquationSystem s EqTerm
 given =
-   foldMap (\x -> x .= Atom x) $
+   Idx.DTime rec Idx.initSection =<>
+   Idx.DTime rec sec0 =<>
 
-   var Idx.DTime Idx.initSection :
-   var Idx.DTime sec0 :
+   Idx.Storage rec (Idx.SecNode sec0 node3) =<>
 
-   var Idx.Storage (Idx.SecNode sec0 node3) :
+   edgeVar (Idx.Power rec) sec0 node3 node2 =<>
+   edgeVar (Idx.X rec) sec0 node2 node3 =<>
 
-   edgeVar Idx.Power sec0 node3 node2 :
+   edgeVar (Idx.FEta rec) sec0 node3 node2 =<>
+   edgeVar (Idx.FEta rec) sec0 node0 node2 =<>
+   edgeVar (Idx.FEta rec) sec0 node2 node1 =<>
 
-   edgeVar Idx.X sec0 node2 node3 :
-   edgeVar Idx.FEta sec0 node3 node2 :
-   edgeVar Idx.FEta sec0 node0 node2 :
-   edgeVar Idx.FEta sec0 node2 node1 :
-   []
+   mempty
+
 
 main :: IO ()
 main = do

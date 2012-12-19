@@ -1,6 +1,6 @@
 module Main where
 
-import EFA2.Example.ExampleHelper (var, edgeVar, makeEdges, (.=))
+import EFA2.Example.ExampleHelper (edgeVar, makeEdges, (.=))
 
 import qualified EFA2.StateAnalysis.StateAnalysis as StateAnalysis
 import EFA2.Topology.Draw (drawTopology)
@@ -47,34 +47,35 @@ seqTopo = mkSeqTopo (select sol states)
 given :: EqGen.EquationSystem s Double
 given =
    foldMap (uncurry (.=)) $
-   (var Idx.DTime Idx.initSection, 1) :
-   (var Idx.DTime sec0, 1) :
-   (var Idx.DTime sec1, 1) :
-   (var Idx.DTime sec2, 1) :
 
-   (var Idx.Storage (Idx.SecNode sec2 node3), 10.0) :
+   (EqGen.dtime Idx.initSection, 1) :
+   (EqGen.dtime sec0, 1) :
+   (EqGen.dtime sec1, 1) :
+   (EqGen.dtime sec2, 1) :
 
-{-
-   (edgeVar Idx.Power Idx.initSection node3 Idx.rootNode, 3.0) :
--}
-
-   (edgeVar Idx.Power sec0 node2 node3, 4.0) :
-
-   (edgeVar Idx.X sec0 node2 node3, 0.32) :
+   (EqGen.storage (Idx.SecNode sec2 node3), 10.0) :
 
 {-
-   (interVar Idx.X sec1 sec2 node3, 1) :
+   (edgeVar EqGen.power Idx.initSection node3 Idx.rootNode, 3.0) :
 -}
 
-   (edgeVar Idx.Power sec1 node3 node2, 5) :
-   (edgeVar Idx.Power sec2 node3 node2, 6) :
-   (edgeVar Idx.Power sec3 node3 node2, 7) :
-   (edgeVar Idx.Power sec4 node3 node2, 8) :
+   (edgeVar EqGen.power sec0 node2 node3, 4.0) :
 
-   (edgeVar Idx.FEta sec0 node3 node2, 0.25) :
-   (edgeVar Idx.FEta sec0 node2 node3, 0.25) :
-   (edgeVar Idx.FEta sec0 node2 node1, 0.5) :
-   (edgeVar Idx.FEta sec0 node0 node2, 0.75) :
+   (edgeVar EqGen.xfactor sec0 node2 node3, 0.32) :
+
+{-
+   (interVar EqGen.xfactor sec1 sec2 node3, 1) :
+-}
+
+   (edgeVar EqGen.power sec1 node3 node2, 5) :
+   (edgeVar EqGen.power sec2 node3 node2, 6) :
+   (edgeVar EqGen.power sec3 node3 node2, 7) :
+   (edgeVar EqGen.power sec4 node3 node2, 8) :
+
+   (edgeVar EqGen.eta sec0 node3 node2, 0.25) :
+   (edgeVar EqGen.eta sec0 node2 node3, 0.25) :
+   (edgeVar EqGen.eta sec0 node2 node1, 0.5) :
+   (edgeVar EqGen.eta sec0 node0 node2, 0.75) :
    []
 
 
