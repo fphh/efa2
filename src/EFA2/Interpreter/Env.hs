@@ -1,6 +1,3 @@
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE TypeFamilies #-}
-
 module EFA2.Interpreter.Env where
 
 import qualified EFA2.Signal.Index as Idx
