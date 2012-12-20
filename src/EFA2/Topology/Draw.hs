@@ -292,14 +292,11 @@ data Env output =
       formatNode_ :: Topo.LNode -> output
    }
 
-formatMaybeValue :: (FormatValue a, Format output) => Maybe a -> output
-formatMaybeValue = maybe undetermined formatValue
-
 lookupFormat ::
    (Ord idx, FormatValue a, Format output) =>
    M.Map idx a -> idx -> output
 lookupFormat mp k =
-   formatMaybeValue $ M.lookup k mp
+   maybe undetermined formatValue $ M.lookup k mp
 
 lookupFormatAssign ::
    (Ord idx, MkIdxC idx, FormatValue a, Format output) =>
