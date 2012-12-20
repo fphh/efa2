@@ -11,6 +11,7 @@ import Data.Set (Set)
 
 import Text.Printf (printf)
 
+import qualified EFA2.Report.Format as Format
 import qualified EFA2.Solver.Equation as Equ
 import EFA2.Solver.Equation
           (MkTermC, mkTerm,
@@ -89,10 +90,9 @@ instance MyShow Sc where
          myshow = show
 
 instance MyShow Idx.DPower where
-         myshow (Idx.DPower r f t) = "dP_" ++ Equ.showEdgeIdx r f t
-
-instance MyShow EqTerm where
-         myshow = Equ.showEqTerm
+         myshow (Idx.DPower r f t) =
+            Format.unPlain $
+            Format.edgeVar Format.Delta Format.Power r f t
 
 instance MyShow a => MyShow [a] where
          myshow xs = "[ " ++ L.intercalate ", " (map myshow xs) ++ " ]"

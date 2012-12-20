@@ -4,10 +4,9 @@
 module EFA2.Topology.Draw where
 
 import EFA2.Solver.Equation
-          (Term(..), ToIndex,
-           showEqTerm, showSecNode, delta,
-           LatexString(LatexString), unLatexString,
-           toLatexString, secNodeToLatexString)
+          (Term(..), ToIndex, formatTerm)
+import qualified EFA2.Report.Format as Format
+import EFA2.Report.Format (Plain(Plain, unPlain), deltaChar, heartChar)
 import EFA2.Interpreter.Env
           (StorageMap, SingleRecord(SingleRecord))
 import qualified EFA2.Interpreter.Env as Interp
@@ -68,8 +67,6 @@ import Control.Concurrent.MVar (MVar, putMVar, readMVar, newEmptyMVar)
 import Control.Concurrent (forkIO)
 import Control.Monad ((>=>), void)
 
-import Text.Printf (PrintfArg, printf)
-
 
 nodeColour :: Attribute
 nodeColour = FillColor [RGB 230 230 240]
@@ -113,7 +110,7 @@ mkDotGraph g recTShow nshow eshow =
                    case recTShow of
                       Nothing -> "NoRecord"
                       Just (Plain n, timef) ->
-                         n ++ " / Time " ++ getPlain (timef sl)
+                         n ++ " / Time " ++ unPlain (timef sl)
         stmts = DotStmts { attrStmts = [],
                            subGraphs = map sg cs,
                            nodeStmts = [],
@@ -124,7 +121,7 @@ mkDotNode:: (Topo.LNode -> Plain) -> Topo.LNode -> DotNode T.Text
 mkDotNode nshow n@(x, _) =
    DotNode (dotIdentFromSecNode x)
       [displabel, nodeColour, Style [SItem Filled []], Shape BoxShape ]
-  where displabel = Label $ StrLabel $ T.pack $ getPlain $ nshow n
+  where displabel = Label $ StrLabel $ T.pack $ unPlain $ nshow n
 
 mkDotEdge :: (Topo.LEdge -> [Plain]) -> Topo.LEdge -> DotEdge T.Text
 mkDotEdge eshow e@(_, elabel) =
@@ -134,7 +131,7 @@ mkDotEdge eshow e@(_, elabel) =
   where (Edge x y, dir, order) = orientEdge e
         displabel =
            Label $ StrLabel $ T.pack $
-           L.intercalate "\n" $ map getPlain $ order $ eshow e
+           L.intercalate "\n" $ map unPlain $ order $ eshow e
         colour =
            case edgeType elabel of
               IntersectionEdge -> intersectionEdgeColour
@@ -161,9 +158,6 @@ printGraphDot g recTShow nshow eshow =
    runGraphvizCommand Dot
       (mkDotGraph g recTShow nshow eshow)
       XDot "result/graph.dot"
-
-heart :: Char
-heart = '\x2665'
 
 drawTopologyX' :: SequFlowGraph -> IO ()
 drawTopologyX' topo =
@@ -230,7 +224,7 @@ showNodeType = show
 
 
 
-class Format output where
+class Format.Format output => Format output where
    undetermined :: output
    empty :: output
    newLine :: output
@@ -238,11 +232,8 @@ class Format output where
    formatLineDelta :: Line -> output
    formatRecord :: Idx.Record -> output
    formatAssign :: output -> output -> output
-   formatList :: [output] -> output
-   formatTerm :: ToIndex idx => Term idx -> output
    formatChar :: Char -> output
    formatRatio :: (Integral a, Show a) => Ratio a -> output
-   formatReal :: (Floating a, PrintfArg a) => a -> output
    formatSignal ::
       (SDisplay v, D.Storage v a, Ord a, Disp a,
        TDisp t, DispApp s) =>
@@ -252,26 +243,18 @@ class Format output where
       Idx.Record -> StorageMap a -> Topo.LNode -> output
 
 
-newtype Plain = Plain String deriving (Show)
-
-getPlain :: Plain -> String
-getPlain (Plain str) = str
 
 instance Format Plain where
-   undetermined = Plain [heart]
+   undetermined = Plain [heartChar]
    empty = Plain ""
    newLine = Plain "\n"
    formatLineAbs = formatLine ""
-   formatLineDelta = formatLine [delta]
+   formatLineDelta = formatLine [deltaChar]
    formatRecord = Plain . show
    formatAssign (Plain lhs) (Plain rhs) =
       Plain $ lhs ++ " = " ++ rhs
-   formatList = Plain . ("["++) . (++"]") . L.intercalate "," . map getPlain
-   formatTerm = Plain . showEqTerm
    formatChar = Plain . (:[])
    formatRatio = Plain . show
-   -- formatReal = Plain . show
-   formatReal = Plain . printf "%.6f"
    formatSignal = Plain . sdisp
    formatNode rec st (n@(Idx.SecNode _sec nid), ty) =
       Plain $
@@ -280,49 +263,50 @@ instance Format Plain where
          case ty of
             Storage ->
                "\nContent: " ++
-               (getPlain $ lookupFormat st (Idx.Storage rec n))
+               (unPlain $ lookupFormat st (Idx.Storage rec n))
             _ -> ""
 
 
 formatLine :: String -> Line -> Plain
 formatLine prefix (Line t u v) =
-   Plain $
-   prefix ++ lineTypeString t ++ "_" ++ showSecNode u ++ "_" ++ showSecNode v
+   Format.subscript
+      (Plain $ prefix ++ lineTypeString t)
+      (Format.sectionNode u
+       `Format.connect`
+       Format.sectionNode v)
 
 
-instance Format LatexString where
-   undetermined = LatexString "\\heartsuit "
-   empty = LatexString ""
-   newLine = LatexString "\\\\\n"
+instance Format Format.Latex where
+   undetermined = Format.Latex "\\heartsuit "
+   empty = Format.Latex ""
+   newLine = Format.Latex "\\\\\n"
    formatLineAbs = formatLineLatex ""
    formatLineDelta = formatLineLatex "\\Delta "
-   formatRecord = LatexString . show
-   formatAssign (LatexString lhs) (LatexString rhs) =
-      LatexString $ lhs ++ " = " ++ rhs
-   formatList = LatexString . ("["++) . (++"]") . L.intercalate ", " . map unLatexString
-   formatTerm = toLatexString
-   formatChar = LatexString . (:[])
-   formatRatio = LatexString . show
-   formatReal = LatexString . printf "%f"
-   formatSignal = LatexString . sdisp
+   formatRecord = Format.Latex . show
+   formatAssign (Format.Latex lhs) (Format.Latex rhs) =
+      Format.Latex $ lhs ++ " = " ++ rhs
+   formatChar = Format.Latex . (:[])
+   formatRatio = Format.Latex . show
+   formatSignal = Format.Latex . sdisp
    formatNode rec st (n@(Idx.SecNode _sec nid), ty) =
-      LatexString $
+      Format.Latex $
       show nid ++ "\\\\ " ++
       "Type: " ++ showNodeType ty ++
          case ty of
             Storage ->
                "\\\\ Content: " ++
-               (unLatexString $ lookupFormat st (Idx.Storage rec n))
+               (Format.unLatex $ lookupFormat st (Idx.Storage rec n))
             _ -> ""
 
 
 
-formatLineLatex :: String -> Line -> LatexString
+formatLineLatex :: String -> Line -> Format.Latex
 formatLineLatex prefix (Line t u v) =
-   LatexString $
-   prefix ++ lineTypeString t ++ "_{" ++
-   secNodeToLatexString u ++ "." ++ secNodeToLatexString v ++
-   "}"
+   Format.subscript
+      (Format.Latex $ prefix ++ lineTypeString t)
+      (Format.sectionNode u
+       `Format.connect`
+       Format.sectionNode v)
 
 
 class FormatValue a where
@@ -444,12 +428,10 @@ envDelta
 
 
 instance FormatValue a => FormatValue [a] where
-   formatValue = formatList . map formatValue
-
+   formatValue = Format.list . map formatValue
 
 instance FormatValue Double where
-   formatValue = formatReal
-
+   formatValue = Format.real
 
 instance (Integral a, Show a) => FormatValue (Ratio a) where
    formatValue = formatRatio
