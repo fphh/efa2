@@ -45,11 +45,13 @@ import Debug.Trace
 
 type ProvEnv s a = Env.Envs Env.SingleRecord (Sys.Variable s a)
 
-newtype ExprWithVars s a = ExprWithVars (StateT (ProvEnv s a) (ST s) (Expr.T s a))
-type SysWithVars s a = StateT (ProvEnv s a) (ST s) (Sys.M s ())
+newtype
+   ExprWithVars s a =
+      ExprWithVars (StateT (ProvEnv s a) (ST s) (Expr.T s a))
 
-
-newtype EquationSystem s a = EquationSystem (SysWithVars s a)
+newtype
+   EquationSystem s a =
+      EquationSystem (StateT (ProvEnv s a) (ST s) (Sys.M s ()))
 
 instance Monoid (EquationSystem s a) where
          mempty = EquationSystem $ return (return ())
