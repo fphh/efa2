@@ -4,6 +4,7 @@ import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Interpreter.Env as Env
 
 import Data.List (intercalate)
+import Data.Ratio (Ratio)
 
 import Text.Printf (PrintfArg, printf)
 
@@ -31,9 +32,15 @@ data EdgeVar = Energy | MaxEnergy | Power | Eta | X | Y
 
 class Format output where
    real :: (Floating a, PrintfArg a) => a -> output
+   ratio :: (Integral a, Show a) => Ratio a -> output
    subscript :: output -> output -> output
    connect :: output -> output -> output
    list :: [output] -> output
+   undetermined :: output
+   empty :: output
+   newLine :: output
+   assign :: output -> output -> output
+
    record :: Idx.Record -> output
    section :: Idx.Section -> output
    sectionNode :: Idx.SecNode -> output
@@ -47,9 +54,16 @@ class Format output where
 instance Format Plain where
    -- real = Plain . show
    real = Plain . printf "%.6f"
+   ratio = Plain . show
    subscript (Plain t) (Plain s) = Plain $ t ++ "_" ++ s
    connect (Plain t) (Plain s) = Plain $ t ++ "_" ++ s
    list = Plain . ("["++) . (++"]") . intercalate "," . map unPlain
+   undetermined = Plain [heartChar]
+   empty = Plain ""
+   newLine = Plain "\n"
+   assign (Plain lhs) (Plain rhs) =
+      Plain $ lhs ++ " = " ++ rhs
+
    record (Idx.Record r) = Plain $ show r
    section (Idx.Section s) = Plain $ show s
    sectionNode (Idx.SecNode (Idx.Section s) (Idx.Node x)) =
@@ -70,9 +84,16 @@ instance Format Plain where
 
 instance Format Latex where
    real = Latex . printf "%.6f"
+   ratio = Latex . show
    subscript (Latex t) (Latex s) = Latex $ t ++ "_{" ++ s ++ "}"
    connect (Latex t) (Latex s) = Latex $ t ++ "." ++ s
    list = Latex . ("["++) . (++"]") . intercalate ", " . map unLatex
+   undetermined = Latex "\\heartsuit "
+   empty = Latex ""
+   newLine = Latex "\\\\\n"
+   assign (Latex lhs) (Latex rhs) =
+      Latex $ lhs ++ " = " ++ rhs
+
    record (Idx.Record r) = Latex $ show r
    section (Idx.Section s) = Latex $ show s
    sectionNode (Idx.SecNode (Idx.Section s) (Idx.Node x)) =

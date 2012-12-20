@@ -5,7 +5,7 @@ module EFA2.Topology.Draw where
 
 import EFA2.Solver.Equation (Term(..), ToIndex, formatTerm, MkIdxC, mkIdx)
 import qualified EFA2.Report.Format as Format
-import EFA2.Report.Format (Plain(Plain, unPlain), heartChar)
+import EFA2.Report.Format (Plain(Plain, unPlain))
 import EFA2.Interpreter.Env
           (StorageMap, SingleRecord(SingleRecord))
 import qualified EFA2.Interpreter.Env as Interp
@@ -212,13 +212,7 @@ showNodeType = show
 
 
 class Format.Format output => Format output where
-   undetermined :: output
-   empty :: output
-   newLine :: output
-   formatRecord :: Idx.Record -> output
-   formatAssign :: output -> output -> output
    formatChar :: Char -> output
-   formatRatio :: (Integral a, Show a) => Ratio a -> output
    formatSignal ::
       (SDisplay v, D.Storage v a, Ord a, Disp a,
        TDisp t, DispApp s) =>
@@ -230,14 +224,7 @@ class Format.Format output => Format output where
 
 
 instance Format Plain where
-   undetermined = Plain [heartChar]
-   empty = Plain ""
-   newLine = Plain "\n"
-   formatRecord = Plain . show
-   formatAssign (Plain lhs) (Plain rhs) =
-      Plain $ lhs ++ " = " ++ rhs
    formatChar = Plain . (:[])
-   formatRatio = Plain . show
    formatSignal = Plain . sdisp
    formatNode rec st (n@(Idx.SecNode _sec nid), ty) =
       Plain $
@@ -251,14 +238,7 @@ instance Format Plain where
 
 
 instance Format Format.Latex where
-   undetermined = Format.Latex "\\heartsuit "
-   empty = Format.Latex ""
-   newLine = Format.Latex "\\\\\n"
-   formatRecord = Format.Latex . show
-   formatAssign (Format.Latex lhs) (Format.Latex rhs) =
-      Format.Latex $ lhs ++ " = " ++ rhs
    formatChar = Format.Latex . (:[])
-   formatRatio = Format.Latex . show
    formatSignal = Format.Latex . sdisp
    formatNode rec st (n@(Idx.SecNode _sec nid), ty) =
       Format.Latex $
@@ -296,7 +276,7 @@ lookupFormat ::
    (Ord idx, FormatValue a, Format output) =>
    M.Map idx a -> idx -> output
 lookupFormat mp k =
-   maybe undetermined formatValue $ M.lookup k mp
+   maybe Format.undetermined formatValue $ M.lookup k mp
 
 lookupFormatAssign ::
    (Ord idx, MkIdxC idx, FormatValue a, Format output) =>
@@ -306,7 +286,7 @@ lookupFormatAssign ::
 lookupFormatAssign mp makeIdx x y =
    case makeIdx x y of
       idx ->
-         formatAssign (Format.index $ mkIdx idx) (lookupFormat mp idx)
+         Format.assign (Format.index $ mkIdx idx) (lookupFormat mp idx)
 
 draw :: SequFlowGraph -> Env Plain -> IO ()
 draw g
@@ -324,7 +304,7 @@ draw g
               IntersectionEdge ->
                  formatMaxEnergy uid vid :
                  formatY uid vid :
-                 empty :
+                 Format.empty :
                  formatEnergy uid vid :
                  formatX uid vid :
                  formatEta uid vid :
@@ -346,7 +326,7 @@ envAbs ::
    Interp.Envs SingleRecord a -> Env output
 envAbs (Interp.Envs (SingleRecord rec) e _de me _dme _p _dp fn _dn dt x _dx y _dy _v st) =
    Env
-      (formatRecord rec)
+      (Format.record rec)
       (lookupFormatAssign e (Idx.Energy rec))
       (lookupFormatAssign me (Idx.MaxEnergy rec))
       (lookupFormatAssign x (Idx.X rec))
@@ -361,7 +341,7 @@ envDelta ::
 envDelta
       (Interp.Envs (SingleRecord rec) _e de _me dme _p _dp _fn dn dt _x dx _y dy _v st) =
    Env
-      (formatRecord rec)
+      (Format.record rec)
       (lookupFormatAssign de (Idx.DEnergy rec))
       (lookupFormatAssign dme (Idx.DMaxEnergy rec))
       (lookupFormatAssign dx (Idx.DX rec))
@@ -378,7 +358,7 @@ instance FormatValue Double where
    formatValue = Format.real
 
 instance (Integral a, Show a) => FormatValue (Ratio a) where
-   formatValue = formatRatio
+   formatValue = Format.ratio
 
 instance FormatValue Char where
    formatValue = formatChar
