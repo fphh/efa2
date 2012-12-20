@@ -1,10 +1,10 @@
 
 module EFA2.IO.FileSave where
 
-import qualified Data.Map as M
-import Data.Graph.Inductive (Gr, labNodes, nmap, graphviz')
+import EFA2.Solver.Equation (EqTerm, formatTerm)
+import qualified EFA2.Report.Format as Format
 
-import EFA2.Solver.Equation (EqTerm, showEqTerm)
+import Data.Graph.Inductive (Gr, nmap, graphviz')
 
 -- dot -Tpdf topograph.dot -o topograph.pdf 
 {-
@@ -15,6 +15,4 @@ writeTopology g = writeFile "results/topograph.dot" (graphviz' g)
 
 
 writeDependencyGraph :: Gr EqTerm () -> IO ()
-writeDependencyGraph g = writeFile "results/depgraph.dot" (graphviz' (nmap showEqTerm g))
-  where m = M.fromList $ labNodes g
-        _nshow x = show x ++ ": " ++ showEqTerm (m M.! x)
+writeDependencyGraph g = writeFile "results/depgraph.dot" (graphviz' (nmap (Format.unPlain . formatTerm) g))

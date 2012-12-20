@@ -8,8 +8,6 @@ import qualified Data.Set as Set
 import qualified Data.Map as M
 import Data.Set (Set)
 
-import Debug.Trace (trace)
-
 import Text.Printf (printf)
 
 import EFA2.Solver.Equation
@@ -21,6 +19,7 @@ import EFA2.Interpreter.Interpreter
 import EFA2.Interpreter.Env
 import EFA2.Interpreter.Arith (Val)
 
+import qualified EFA2.Report.Format as Format
 import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Signal.Signal as S
 import EFA2.Signal.Signal (Sc)
@@ -65,7 +64,7 @@ symbolic g = mapEqTermEnv (setEqTerms (emptyEnv { dxMap = dx1eq })) res
         res = interpretEqTermFromScratch ts
 
 numeric :: SequFlowGraph -> Envs MixedRecord Sc
-numeric g =  trace ("---------\n" ++ showAssigns ts1o ++ "\n------\n") res
+numeric g =  res -- trace ("---------\n" ++ showAssigns ts1o ++ "\n------\n") res
   where envs0 = emptyEnv { recordNumber = SingleRecord rec0,
                            powerMap = power0num,
                            dtimeMap = dtimes0num,
@@ -126,17 +125,19 @@ class MyShow a where
 instance MyShow Int where
          myshow = show
 
-instance MyShow Val where
+instance MyShow Double where
          myshow = printf "%.6f"
 
 instance MyShow Sc where
          myshow = show
 
 instance MyShow Idx.DPower where
-         myshow (Idx.DPower r f t) = "dP_" ++ showEdgeIdx r f t
+         myshow (Idx.DPower r f t) =
+            Format.unPlain $
+            Format.edgeVar Format.Delta Format.Power r f t
 
-instance MyShow EqTerm where
-         myshow = showEqTerm
+instance ToIndex idx => MyShow (Term idx) where
+         myshow t = Format.unPlain $ formatTerm t
 
 instance MyShow a => MyShow [a] where
          myshow xs = "[ " ++ L.intercalate ", " (map myshow xs) ++ " ]"

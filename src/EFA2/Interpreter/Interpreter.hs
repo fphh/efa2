@@ -8,10 +8,11 @@ import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Signal.Signal as S
 import qualified EFA2.Signal.Data as D
 import qualified EFA2.Signal.Base as Base
+import qualified EFA2.Report.Format as Format
 import EFA2.Signal.Signal (toConst, (.+), (.*))
 import EFA2.Signal.Typ (Typ, UT)
 
-import EFA2.Solver.Equation (AbsAssign(GivenIdx, (::=)), EqTerm, Term(..), showIdx, showEqTerm)
+import EFA2.Solver.Equation (AbsAssign(GivenIdx, (::=)), EqTerm, Term(..), formatTerm)
 import EFA2.Interpreter.InTerm (InRhs(..), InEquation(..))
 import EFA2.Interpreter.Env as Env
 import EFA2.Utils.Utils (safeLookup)
@@ -43,13 +44,13 @@ eqToInTerm _envs (x ::= y) =
 
 
 showInRhs :: (Show a) => InRhs a -> String
-showInRhs (InTerm t) = showEqTerm t
+showInRhs (InTerm t) = Format.unPlain $ formatTerm t
 showInRhs (InGiven xs) = "given " ++ show xs
 showInRhs (InFunc _) = "given <function>"
 
 showInEquation :: (Show a) => InEquation a -> String
-showInEquation (InEqual s t) = showIdx s ++ " = " ++ showInRhs t
-
+showInEquation (InEqual s t) =
+   Format.unPlain (Format.index s) ++ " = " ++ showInRhs t
 
 
 type Signal s c a = S.TC s (Typ UT UT UT) (D.Data c a)
@@ -155,7 +156,8 @@ interpretEq len envs eq =
       (InEqual (Var idx) rhs) -> envs { varMap = insert len idx envs rhs (varMap envs) }
       (InEqual (Store idx) rhs) -> envs { storageMap = insert len idx envs rhs (storageMap envs) }
 
-      _ -> error ("interpretEq: " ++ showInEquation eq)
+      _ -> error "interpretEq"
+--      _ -> error ("interpretEq: " ++ showInEquation eq)
 
 
 interpretFromScratch ::

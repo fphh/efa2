@@ -4,11 +4,9 @@
 module EFA2.Topology.Draw where
 
 import EFA2.Solver.Equation
-          (Term(..), ToIndex, simplify, (&-), (&/),
-           showEqTerm, showSecNode,
-           toLatexString, secNodeToLatexString)
+          (Term(..), ToIndex, simplify, (&-), (&/), formatTerm)
 import qualified EFA2.Report.Format as Format
-import EFA2.Report.Format (Plain(Plain, unPlain), delta, heart)
+import EFA2.Report.Format (Plain(Plain, unPlain), deltaChar, heartChar)
 import EFA2.Interpreter.Env
           (StorageMap, SingleRecord(SingleRecord))
 import qualified EFA2.Interpreter.Env as Interp
@@ -69,8 +67,6 @@ import qualified Data.NonEmpty.Mixed as NonEmptyM
 import Control.Concurrent.MVar (MVar, putMVar, readMVar, newEmptyMVar)
 import Control.Concurrent (forkIO)
 import Control.Monad ((>=>), void, liftM2, liftM4)
-
-import Text.Printf (PrintfArg, printf)
 
 
 nodeColour :: Attribute
@@ -228,17 +224,14 @@ showNodeType = show
 
 
 
-class Format output where
+class Format.Format output => Format output where
    undetermined :: output
    formatLineAbs :: Line -> output
    formatLineDelta :: Line -> output
    formatRecord :: Idx.Record -> output
    formatAssign :: output -> output -> output
-   formatList :: [output] -> output
-   formatTerm :: ToIndex idx => Term idx -> output
    formatChar :: Char -> output
    formatRatio :: (Integral a, Show a) => Ratio a -> output
-   formatReal :: (Floating a, PrintfArg a) => a -> output
    formatQuotient :: output -> output -> output
    formatSignal ::
       (SDisplay v, D.Storage v a, Ord a, Disp a,
@@ -250,18 +243,14 @@ class Format output where
 
 
 instance Format Plain where
-   undetermined = Plain [heart]
+   undetermined = Plain [heartChar]
    formatLineAbs = formatLine ""
-   formatLineDelta = formatLine [delta]
+   formatLineDelta = formatLine [deltaChar]
    formatRecord = Plain . show
    formatAssign (Plain lhs) (Plain rhs) =
       Plain $ lhs ++ " = " ++ rhs
-   formatList = Plain . ("["++) . (++"]") . L.intercalate "," . map unPlain
-   formatTerm = Plain . showEqTerm
    formatChar = Plain . (:[])
    formatRatio = Plain . show
-   -- formatReal = Plain . show
-   formatReal = Plain . printf "%.6f"
    formatQuotient (Plain x) (Plain y) = Plain $ "(" ++ x ++ ")/(" ++ y ++ ")"
    formatSignal = Plain . sdisp
    formatNode rec st (n@(Idx.SecNode _sec nid), ty) =
@@ -277,8 +266,11 @@ instance Format Plain where
 
 formatLine :: String -> Line -> Plain
 formatLine prefix (Line t u v) =
-   Plain $
-   prefix ++ lineTypeLetter t : "_" ++ showSecNode u ++ "_" ++ showSecNode v
+   Format.subscript
+      (Plain $ prefix ++ lineTypeLetter t : "")
+      (Format.sectionNode u
+       `Format.connect`
+       Format.sectionNode v)
 
 instance Format Format.Latex where
    undetermined = Format.Latex "\\heartsuit "
@@ -287,11 +279,8 @@ instance Format Format.Latex where
    formatRecord = Format.Latex . show
    formatAssign (Format.Latex lhs) (Format.Latex rhs) =
       Format.Latex $ lhs ++ " = " ++ rhs
-   formatList = Format.Latex . ("["++) . (++"]") . L.intercalate ", " . map Format.unLatex
-   formatTerm = toLatexString
    formatChar = Format.Latex . (:[])
    formatRatio = Format.Latex . show
-   formatReal = Format.Latex . printf "%f"
    formatQuotient (Format.Latex x) (Format.Latex y) =
       Format.Latex $ "\\frac{" ++ x ++ "}{" ++ y ++ "}"
    formatSignal = Format.Latex . sdisp
@@ -309,10 +298,11 @@ instance Format Format.Latex where
 
 formatLineLatex :: String -> Line -> Format.Latex
 formatLineLatex prefix (Line t u v) =
-   Format.Latex $
-   prefix ++ lineTypeLetter t : "_{" ++
-   secNodeToLatexString u ++ "." ++ secNodeToLatexString v ++
-   "}"
+   Format.subscript
+      (Format.Latex $ prefix ++ lineTypeLetter t : "")
+      (Format.sectionNode u
+       `Format.connect`
+       Format.sectionNode v)
 
 
 class FormatValue a where
@@ -441,29 +431,29 @@ class AutoEnv a => AutoEnvDelta a where
 
 
 instance FormatValue a => FormatValue [a] where
-   formatValue = formatList . map formatValue
+   formatValue = Format.list . map formatValue
 
 instance AutoEnv a => AutoEnv [a] where
    formatEnergyQuotient xs ys =
-      formatList $
+      Format.list $
       zipWith formatEnergyQuotient xs ys
 
 
 instance AutoEnvDelta a => AutoEnvDelta [a] where
    formatDEnergyQuotient xs ys dxs dys =
-      formatList $
+      Format.list $
       L.zipWith4 formatDEnergyQuotient xs ys dxs dys
 
 
 instance FormatValue Double where
-   formatValue = formatReal
+   formatValue = Format.real
 
 instance AutoEnv Double where
-   formatEnergyQuotient x y = formatReal $ x/y
+   formatEnergyQuotient x y = Format.real $ x/y
 
 instance AutoEnvDelta Double where
    formatDEnergyQuotient ea eb dea deb =
-      formatReal $
+      Format.real $
       (dea*eb - ea*deb)/((eb+deb)*eb)
 {-
       (ea+dea)/(eb+deb) - ea/eb
