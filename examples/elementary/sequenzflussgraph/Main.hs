@@ -1,6 +1,6 @@
 module Main where
 
-import EFA2.Example.ExampleHelper (makeNodes, makeSimpleEdges)
+import EFA2.Example.Utility (makeNodes, makeSimpleEdges)
 
 import qualified EFA2.StateAnalysis.StateAnalysis as StateAnalysis
 import EFA2.Topology.Draw (drawTopologyXs', drawTopologySimple, drawAll)

@@ -77,7 +77,7 @@ Library
     EFA2.Topology.Flow
     EFA2.Topology.Draw
     EFA2.Topology.EquationGenerator
-    EFA2.Example.ExampleHelper
+    EFA2.Example.Utility
     EFA2.Interpreter.Env
   Other-Modules:
     EFA2.Solver.EquationTest

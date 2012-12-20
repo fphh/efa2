@@ -1,6 +1,6 @@
 module Main where
 
-import EFA2.Example.ExampleHelper (rec, edgeVar, makeEdges, (=<>))
+import EFA2.Example.Utility (rec, edgeVar, makeEdges, (=<>))
 
 import qualified EFA2.StateAnalysis.StateAnalysis as StateAnalysis
 import EFA2.Topology.Draw (drawAll, drawTopology)
@@ -46,6 +46,9 @@ seqTopo = mkSeqTopo (select sol states)
                     . SequData
 
 
+{-
+Use new Term type here since it simplifies automatically.
+-}
 given :: EqGen.EquationSystem s EqTerm
 given =
    Idx.DTime rec Idx.initSection =<>

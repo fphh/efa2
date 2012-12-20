@@ -1,5 +1,4 @@
-
-module EFA2.Example.ExampleHelper where
+module EFA2.Example.Utility where
 
 import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Topology.EfaGraph as Gr
