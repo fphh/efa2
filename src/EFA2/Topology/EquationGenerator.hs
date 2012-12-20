@@ -82,10 +82,6 @@ infix 0 =.=
 constToExprSys :: a -> ExprWithVars s a
 constToExprSys = ExprWithVars . return . Expr.constant
 
-varToExprSys :: Sys.Variable s a -> ExprWithVars s a
-varToExprSys = ExprWithVars . return . Expr.fromVariable
-
-
 withLocalVar :: (ExprWithVars s a -> EquationSystem s b) -> EquationSystem s b
 withLocalVar f = EquationSystem $ do
    v <- lift Sys.globalVariable
