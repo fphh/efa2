@@ -74,7 +74,7 @@ instance Fractional (Term idx) where
 
 instance Functor Term where
    fmap f =
-      let go t = undefined $
+      let go t =
              case t of
                 Atom a -> Atom $ f a
                 Const x -> Const x
