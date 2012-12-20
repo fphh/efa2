@@ -94,12 +94,6 @@ withLocalVar f = EquationSystem $ do
 recAbs :: Idx.Record
 recAbs = Idx.Record Idx.Absolute
 
-makeVar ::
-  (Idx.Record -> SecNode -> SecNode -> a) ->
-  SecNode -> SecNode -> a
-makeVar idxf nid nid' =
-  idxf recAbs nid nid'
-
 getVar ::
    (Env.AccessMap idx) =>
    idx -> ExprWithVars s a
@@ -115,7 +109,7 @@ getEdgeVar ::
    (Env.AccessMap idx) =>
    (Idx.Record -> Idx.SecNode -> Idx.SecNode -> idx) ->
    Idx.SecNode -> Idx.SecNode -> ExprWithVars s a
-getEdgeVar mkIdx x y = getVar (makeVar mkIdx x y)
+getEdgeVar mkIdx x y = getVar (mkIdx recAbs x y)
 
 power :: SecNode -> SecNode -> ExprWithVars s a
 power = getEdgeVar Idx.Power
