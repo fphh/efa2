@@ -4,7 +4,7 @@
 module EFA2.Topology.Draw where
 
 import EFA2.Solver.Equation
-          (Term(..), ToIndex, simplify, (&-), (&/),
+          (Term(..), ToIndex,
            showEqTerm, showSecNode, delta,
            LatexString(LatexString), unLatexString,
            toLatexString, secNodeToLatexString)
@@ -29,10 +29,10 @@ import qualified EFA2.Signal.Data as D
 import EFA2.Report.Signal (SDisplay, sdisp)
 import EFA2.Report.Typ (TDisp)
 import EFA2.Report.Base (Disp)
-import EFA2.Signal.Signal (TC, DispApp, Arith, (.-), (.+), (./), (.*))
+import EFA2.Signal.Signal (TC, DispApp, Arith)
 import EFA2.Signal.Data (Data)
-import EFA2.Signal.Base (BSum, BProd)
-import EFA2.Signal.Typ (TSum, TProd)
+import EFA2.Signal.Base (BProd)
+import EFA2.Signal.Typ (TProd)
 
 import Data.GraphViz (
           runGraphvizCanvas,
@@ -55,7 +55,6 @@ import Data.GraphViz.Attributes.Complete as Viz
 
 import Data.Eq.HT (equating)
 import Data.Ratio (Ratio)
-import Data.Maybe (fromMaybe)
 
 import qualified Data.Text.Lazy as T
 
@@ -67,11 +66,9 @@ import qualified Data.NonEmpty.Mixed as NonEmptyM
 
 import Control.Concurrent.MVar (MVar, putMVar, readMVar, newEmptyMVar)
 import Control.Concurrent (forkIO)
-import Control.Monad ((>=>), void, liftM2, liftM4)
+import Control.Monad ((>=>), void)
 
 import Text.Printf (PrintfArg, printf)
-
-import Debug.Trace
 
 
 nodeColour :: Attribute
@@ -246,7 +243,6 @@ class Format output where
    formatChar :: Char -> output
    formatRatio :: (Integral a, Show a) => Ratio a -> output
    formatReal :: (Floating a, PrintfArg a) => a -> output
-   formatQuotient :: output -> output -> output
    formatSignal ::
       (SDisplay v, D.Storage v a, Ord a, Disp a,
        TDisp t, DispApp s) =>
@@ -276,7 +272,6 @@ instance Format Plain where
    formatRatio = Plain . show
    -- formatReal = Plain . show
    formatReal = Plain . printf "%.6f"
-   formatQuotient (Plain x) (Plain y) = Plain $ "(" ++ x ++ ")/(" ++ y ++ ")"
    formatSignal = Plain . sdisp
    formatNode rec st (n@(Idx.SecNode _sec nid), ty) =
       Plain $
@@ -309,8 +304,6 @@ instance Format LatexString where
    formatChar = LatexString . (:[])
    formatRatio = LatexString . show
    formatReal = LatexString . printf "%f"
-   formatQuotient (LatexString x) (LatexString y) =
-      LatexString $ "\\frac{" ++ x ++ "}{" ++ y ++ "}"
    formatSignal = LatexString . sdisp
    formatNode rec st (n@(Idx.SecNode _sec nid), ty) =
       LatexString $
@@ -402,23 +395,22 @@ draw g
                  []
 
 drawTopology ::
-   AutoEnv a => SequFlowGraph -> Interp.Envs SingleRecord a -> IO ()
+   FormatValue a => SequFlowGraph -> Interp.Envs SingleRecord a -> IO ()
 drawTopology topo = draw topo . envAbs
 
 drawDeltaTopology ::
-   AutoEnvDelta a => SequFlowGraph -> Interp.Envs SingleRecord a -> IO ()
+   FormatValue a => SequFlowGraph -> Interp.Envs SingleRecord a -> IO ()
 drawDeltaTopology topo = draw topo . envDelta
 
 
 envAbs ::
-   (AutoEnv a, Format output) =>
+   (FormatValue a, Format output) =>
    Interp.Envs SingleRecord a -> Env output
-envAbs (Interp.Envs (SingleRecord rec) e _de me _dme _p _dp _fn _dn dt x _dx y _dy _v st) =
-   let lookupEnergy a b = M.lookup (Idx.Energy rec a b) e
-   in  Env
+envAbs (Interp.Envs (SingleRecord rec) e _de me _dme _p _dp fn _dn dt x _dx y _dy _v st) =
+   Env
           (formatRecord rec)
           (formatAssignAbs ELine $
-           \a b -> formatMaybeValue $ lookupEnergy a b)
+           \a b -> lookupFormat e (Idx.Energy rec a b))
           (formatAssignAbs MELine $
            \a b -> lookupFormat me (Idx.MaxEnergy rec a b))
           (formatAssignAbs XLine $
@@ -426,25 +418,19 @@ envAbs (Interp.Envs (SingleRecord rec) e _de me _dme _p _dp _fn _dn dt x _dx y _
           (formatAssignAbs YLine $
            \a b -> lookupFormat y (Idx.Y rec a b))
           (formatAssignAbs NLine $
-           \a b ->
-             fromMaybe undetermined $
-             liftM2 formatEnergyQuotient
-                (lookupEnergy b a)
-                (lookupEnergy a b))
+           \a b -> lookupFormat fn (Idx.FEta rec a b))
           (lookupFormat dt . Idx.DTime rec)
           (formatNode rec st)
 
 envDelta ::
-   (AutoEnvDelta a, Format output) =>
+   (FormatValue a, Format output) =>
    Interp.Envs SingleRecord a -> Env output
 envDelta
-      (Interp.Envs (SingleRecord rec) e de _me dme _p _dp _fn _dn dt _x dx _y dy _v st) =
-   let lookupEnergy a b = M.lookup (Idx.Energy rec a b) e
-       lookupDEnergy a b = M.lookup (Idx.DEnergy rec a b) de
-   in  Env
+      (Interp.Envs (SingleRecord rec) _e de _me dme _p _dp _fn dn dt _x dx _y dy _v st) =
+   Env
           (formatRecord rec)
           (formatAssignDelta ELine $
-           \a b -> formatMaybeValue $ lookupDEnergy a b)
+           \a b -> lookupFormat de (Idx.DEnergy rec a b))
           (formatAssignDelta MELine $
            \a b -> lookupFormat dme (Idx.DMaxEnergy rec a b))
           (formatAssignDelta XLine $
@@ -452,73 +438,27 @@ envDelta
           (formatAssignDelta YLine $
            \a b -> lookupFormat dy (Idx.DY rec a b))
           (formatAssignDelta NLine $
-           \a b ->
-             fromMaybe undetermined $
-             liftM4 formatDEnergyQuotient
-                (lookupEnergy b a) (lookupEnergy a b)
-                (lookupDEnergy b a) (lookupDEnergy a b))
+           \a b -> lookupFormat dn (Idx.DEta rec a b))
           (lookupFormat dt . Idx.DTime rec)
           (formatNode rec st)
-
-
-class FormatValue a => AutoEnv a where
-   formatEnergyQuotient :: Format output => a -> a -> output
-
-class AutoEnv a => AutoEnvDelta a where
-   formatDEnergyQuotient :: Format output => a -> a -> a -> a -> output
 
 
 instance FormatValue a => FormatValue [a] where
    formatValue = formatList . map formatValue
 
-instance AutoEnv a => AutoEnv [a] where
-   formatEnergyQuotient xs ys =
-      formatList $
-      zipWith formatEnergyQuotient xs ys
-
-
-instance AutoEnvDelta a => AutoEnvDelta [a] where
-   formatDEnergyQuotient xs ys dxs dys =
-      formatList $
-      L.zipWith4 formatDEnergyQuotient xs ys dxs dys
-
 
 instance FormatValue Double where
    formatValue = formatReal
 
-instance AutoEnv Double where
-   formatEnergyQuotient x y = formatReal $ x/y
-
-instance AutoEnvDelta Double where
-   formatDEnergyQuotient ea eb dea deb =
-      formatReal $
-      (dea*eb - ea*deb)/((eb+deb)*eb)
-{-
-      (ea+dea)/(eb+deb) - ea/eb
--}
 
 instance (Integral a, Show a) => FormatValue (Ratio a) where
    formatValue = formatRatio
 
-instance (Integral a, Show a) => AutoEnv (Ratio a) where
-   formatEnergyQuotient x y = formatRatio $ x/y
-
 instance FormatValue Char where
    formatValue = formatChar
 
-instance AutoEnv Char where
-   formatEnergyQuotient x y = formatQuotient (formatChar x) (formatChar y)
-
 instance (Eq a, ToIndex a) => FormatValue (Term a) where
    formatValue = formatTerm
-
-instance (Ord a, ToIndex a) => AutoEnv (Term a) where
-   formatEnergyQuotient x y = formatTerm $ simplify $ x &/ y
-
-instance (Ord a, ToIndex a) => AutoEnvDelta (Term a) where
-   formatDEnergyQuotient ea eb dea deb =
-      formatTerm $ simplify $
-      (dea :* eb  &-  ea :* deb) &/ ((eb:+deb):*eb)
 
 
 class FormatValueSignal a where
@@ -526,49 +466,15 @@ class FormatValueSignal a where
       (DispApp s, TDisp t, Format output) =>
       (TC s t a) -> output
 
-class FormatValueSignal a => AutoEnvSignal a where
-   formatEnergyQuotientSignal ::
-      (DispApp s, s ~ Arith s s, TDisp t, TProd t t t, Format output) =>
-      TC s t a -> TC s t a -> output
-
 instance
    (SDisplay v, D.Storage v a, Disp a, Ord a, BProd a a, D.ZipWith v) =>
       FormatValueSignal (Data v a) where
    formatValueSignal = formatSignal
 
 instance
-   (SDisplay v, D.Storage v a, Disp a, Ord a, BProd a a, D.ZipWith v) =>
-      AutoEnvSignal (Data v a) where
-   formatEnergyQuotientSignal ea eb = formatValue $ ea ./ eb
-
-instance
    (DispApp s, s ~ Arith s s, TDisp t, TProd t t t, FormatValueSignal a) =>
       FormatValue (TC s t a) where
    formatValue = formatValueSignal
-
-instance
-   (DispApp s, s ~ Arith s s, TDisp t, TProd t t t, AutoEnvSignal a) =>
-      AutoEnv (TC s t a) where
-   formatEnergyQuotient = formatEnergyQuotientSignal
-
-
-class AutoEnvSignal a => AutoEnvDeltaSignal a where
-   formatDEnergyQuotientSignal ::
-      (DispApp s, s ~ Arith s s, TDisp t, TSum t t t, TProd t t t,
-       Format output) =>
-      TC s t a -> TC s t a -> TC s t a -> TC s t a -> output
-
-instance
-   (SDisplay v, D.Storage v a, Disp a, Ord a, BSum a, BProd a a, D.ZipWith v) =>
-      AutoEnvDeltaSignal (Data v a) where
-   formatDEnergyQuotientSignal ea eb dea deb =
-      formatValue $ (dea.*eb .- ea.*deb)./((eb.+deb).*eb)
-
-instance
-   (DispApp s, s ~ Arith s s, TDisp t, TSum t t t, TProd t t t,
-    AutoEnvDeltaSignal a) =>
-      AutoEnvDelta (TC s t a) where
-   formatDEnergyQuotient = formatDEnergyQuotientSignal
 
 
 
