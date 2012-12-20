@@ -3,10 +3,9 @@
 {-# LANGUAGE UndecidableInstances #-}
 module EFA2.Topology.Draw where
 
-import EFA2.Solver.Equation
-          (Term(..), ToIndex, formatTerm)
+import EFA2.Solver.Equation (Term(..), ToIndex, formatTerm, MkIdxC, mkIdx)
 import qualified EFA2.Report.Format as Format
-import EFA2.Report.Format (Plain(Plain, unPlain), deltaChar, heartChar)
+import EFA2.Report.Format (Plain(Plain, unPlain), heartChar)
 import EFA2.Interpreter.Env
           (StorageMap, SingleRecord(SingleRecord))
 import qualified EFA2.Interpreter.Env as Interp
@@ -206,18 +205,6 @@ orientEdge (e@(Edge x y), l) =
            then (e, Forward, id)
            else (Edge y x, Back, reverse)
 
-data LineType = ELine | MELine | XLine | YLine | NLine
-   deriving (Eq, Ord, Show, Enum)
-
-lineTypeString :: LineType -> String
-lineTypeString ELine = "e"
-lineTypeString MELine = "me"
-lineTypeString XLine = "x"
-lineTypeString YLine = "y"
-lineTypeString NLine = "n"
-
-data Line = Line LineType Idx.SecNode Idx.SecNode deriving (Eq, Ord)
-
 
 showNodeType :: NodeType -> String
 showNodeType = show
@@ -228,8 +215,6 @@ class Format.Format output => Format output where
    undetermined :: output
    empty :: output
    newLine :: output
-   formatLineAbs :: Line -> output
-   formatLineDelta :: Line -> output
    formatRecord :: Idx.Record -> output
    formatAssign :: output -> output -> output
    formatChar :: Char -> output
@@ -248,8 +233,6 @@ instance Format Plain where
    undetermined = Plain [heartChar]
    empty = Plain ""
    newLine = Plain "\n"
-   formatLineAbs = formatLine ""
-   formatLineDelta = formatLine [deltaChar]
    formatRecord = Plain . show
    formatAssign (Plain lhs) (Plain rhs) =
       Plain $ lhs ++ " = " ++ rhs
@@ -267,21 +250,10 @@ instance Format Plain where
             _ -> ""
 
 
-formatLine :: String -> Line -> Plain
-formatLine prefix (Line t u v) =
-   Format.subscript
-      (Plain $ prefix ++ lineTypeString t)
-      (Format.sectionNode u
-       `Format.connect`
-       Format.sectionNode v)
-
-
 instance Format Format.Latex where
    undetermined = Format.Latex "\\heartsuit "
    empty = Format.Latex ""
    newLine = Format.Latex "\\\\\n"
-   formatLineAbs = formatLineLatex ""
-   formatLineDelta = formatLineLatex "\\Delta "
    formatRecord = Format.Latex . show
    formatAssign (Format.Latex lhs) (Format.Latex rhs) =
       Format.Latex $ lhs ++ " = " ++ rhs
@@ -298,15 +270,6 @@ instance Format Format.Latex where
                (Format.unLatex $ lookupFormat st (Idx.Storage rec n))
             _ -> ""
 
-
-
-formatLineLatex :: String -> Line -> Format.Latex
-formatLineLatex prefix (Line t u v) =
-   Format.subscript
-      (Format.Latex $ prefix ++ lineTypeString t)
-      (Format.sectionNode u
-       `Format.connect`
-       Format.sectionNode v)
 
 
 class FormatValue a where
@@ -333,26 +296,20 @@ formatMaybeValue :: (FormatValue a, Format output) => Maybe a -> output
 formatMaybeValue = maybe undetermined formatValue
 
 lookupFormat ::
-   (Ord idx, Show idx, FormatValue a, Format output) =>
+   (Ord idx, FormatValue a, Format output) =>
    M.Map idx a -> idx -> output
-lookupFormat dt k =
-   formatMaybeValue $ M.lookup k dt
+lookupFormat mp k =
+   formatMaybeValue $ M.lookup k mp
 
-formatAssignAbs ::
-   (Format output) =>
-   LineType ->
-   (Idx.SecNode -> Idx.SecNode -> output) ->
+lookupFormatAssign ::
+   (Ord idx, MkIdxC idx, FormatValue a, Format output) =>
+   M.Map idx a ->
+   (Idx.SecNode -> Idx.SecNode -> idx) ->
    (Idx.SecNode -> Idx.SecNode -> output)
-formatAssignAbs lt lookupEdge x y =
-   formatAssign (formatLineAbs $ Line lt x y) (lookupEdge x y)
-
-formatAssignDelta ::
-   (Format output) =>
-   LineType ->
-   (Idx.SecNode -> Idx.SecNode -> output) ->
-   (Idx.SecNode -> Idx.SecNode -> output)
-formatAssignDelta lt lookupEdge x y =
-   formatAssign (formatLineDelta $ Line lt x y) (lookupEdge x y)
+lookupFormatAssign mp makeIdx x y =
+   case makeIdx x y of
+      idx ->
+         formatAssign (Format.index $ mkIdx idx) (lookupFormat mp idx)
 
 draw :: SequFlowGraph -> Env Plain -> IO ()
 draw g
@@ -392,19 +349,14 @@ envAbs ::
    Interp.Envs SingleRecord a -> Env output
 envAbs (Interp.Envs (SingleRecord rec) e _de me _dme _p _dp fn _dn dt x _dx y _dy _v st) =
    Env
-          (formatRecord rec)
-          (formatAssignAbs ELine $
-           \a b -> lookupFormat e (Idx.Energy rec a b))
-          (formatAssignAbs MELine $
-           \a b -> lookupFormat me (Idx.MaxEnergy rec a b))
-          (formatAssignAbs XLine $
-           \a b -> lookupFormat x (Idx.X rec a b))
-          (formatAssignAbs YLine $
-           \a b -> lookupFormat y (Idx.Y rec a b))
-          (formatAssignAbs NLine $
-           \a b -> lookupFormat fn (Idx.FEta rec a b))
-          (lookupFormat dt . Idx.DTime rec)
-          (formatNode rec st)
+      (formatRecord rec)
+      (lookupFormatAssign e (Idx.Energy rec))
+      (lookupFormatAssign me (Idx.MaxEnergy rec))
+      (lookupFormatAssign x (Idx.X rec))
+      (lookupFormatAssign y (Idx.Y rec))
+      (lookupFormatAssign fn (Idx.FEta rec))
+      (lookupFormat dt . Idx.DTime rec)
+      (formatNode rec st)
 
 envDelta ::
    (FormatValue a, Format output) =>
@@ -412,19 +364,14 @@ envDelta ::
 envDelta
       (Interp.Envs (SingleRecord rec) _e de _me dme _p _dp _fn dn dt _x dx _y dy _v st) =
    Env
-          (formatRecord rec)
-          (formatAssignDelta ELine $
-           \a b -> lookupFormat de (Idx.DEnergy rec a b))
-          (formatAssignDelta MELine $
-           \a b -> lookupFormat dme (Idx.DMaxEnergy rec a b))
-          (formatAssignDelta XLine $
-           \a b -> lookupFormat dx (Idx.DX rec a b))
-          (formatAssignDelta YLine $
-           \a b -> lookupFormat dy (Idx.DY rec a b))
-          (formatAssignDelta NLine $
-           \a b -> lookupFormat dn (Idx.DEta rec a b))
-          (lookupFormat dt . Idx.DTime rec)
-          (formatNode rec st)
+      (formatRecord rec)
+      (lookupFormatAssign de (Idx.DEnergy rec))
+      (lookupFormatAssign dme (Idx.DMaxEnergy rec))
+      (lookupFormatAssign dx (Idx.DX rec))
+      (lookupFormatAssign dy (Idx.DY rec))
+      (lookupFormatAssign dn (Idx.DEta rec))
+      (lookupFormat dt . Idx.DTime rec)
+      (formatNode rec st)
 
 
 instance FormatValue a => FormatValue [a] where

@@ -27,7 +27,7 @@ newtype Latex = Latex { unLatex :: String }
 -- * class for unified handling of Plain and Latex output
 
 data Mode = Absolute | Delta
-data EdgeVar = Energy | Power | Eta | X
+data EdgeVar = Energy | MaxEnergy | Power | Eta | X | Y
 
 class Format output where
    real :: (Floating a, PrintfArg a) => a -> output
@@ -109,8 +109,10 @@ edgeString :: EdgeVar -> String
 edgeString e =
    case e of
       Energy -> "e"
+      MaxEnergy -> "me"
       Power -> "p"
       X -> "x"
+      Y -> "y"
       Eta -> "n"
 
 index :: Format output => Env.Index -> output
@@ -118,6 +120,9 @@ index idx =
    case idx of
       Env.Energy (Idx.Energy r x y) -> edgeVar Absolute Energy r x y
       Env.DEnergy (Idx.DEnergy r x y) -> edgeVar Delta Energy r x y
+
+      Env.MaxEnergy (Idx.MaxEnergy r x y) -> edgeVar Absolute MaxEnergy r x y
+      Env.DMaxEnergy (Idx.DMaxEnergy r x y) -> edgeVar Delta MaxEnergy r x y
 
       Env.Power (Idx.Power r x y) -> edgeVar Absolute Power r x y
       Env.DPower (Idx.DPower r x y) -> edgeVar Delta Power r x y
@@ -127,6 +132,9 @@ index idx =
 
       Env.X (Idx.X r x y) -> edgeVar Absolute X r x y
       Env.DX (Idx.DX r x y) -> edgeVar Delta X r x y
+
+      Env.Y (Idx.Y r x y) -> edgeVar Absolute Y r x y
+      Env.DY (Idx.DY r x y) -> edgeVar Delta Y r x y
 
       Env.DTime (Idx.DTime r s) ->
          subscript (delta time) (record r `connect` section s)
