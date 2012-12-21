@@ -418,11 +418,11 @@ getIntersectionStorages = concat . getStorages (format . toSecNode)
 In the input 'EquationSystem' you can pass simple variable assignments
 like
 
-> edgeVar Idx.Eta sec0 node1 node2 .= 0.42
+> edgeVar Idx.Eta sec0 node1 node2 =.= 0.42
 
 but you may also insert complex relations like
 
-> edgeVar Idx.Power sec0 node2 node1 .= square (edgeVar Idx.Power sec0 node1 node2)
+> edgeVar Idx.Power sec0 node2 node1 =.= square (edgeVar Idx.Power sec0 node1 node2)
 
 .
 -}
