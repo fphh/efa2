@@ -262,16 +262,8 @@ getStorages format =
 makeInterSectionEquations ::
   (Eq a, Fractional a) =>
   TD.SequFlowGraph -> EquationSystem s a
-makeInterSectionEquations g = mconcat $
-  makeInterNodeEquations g :
-  []
-
-makeInterNodeEquations ::
-  (Eq a, Fractional a) =>
-  TD.SequFlowGraph -> EquationSystem s a
-makeInterNodeEquations topo = foldMap f st
-  where st = getIntersectionStorages topo
-        f (dir, x) =
+makeInterSectionEquations = foldMap f . getIntersectionStorages
+  where f (dir, x) =
           case dir of
                NoDir -> mempty
                InDir -> mkInStorageEquations x
