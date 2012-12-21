@@ -36,7 +36,6 @@ import Data.Traversable (traverse)
 import Data.Foldable (foldMap, fold)
 
 import qualified EFA2.Interpreter.Env as Env
-import Data.Tuple.HT (snd3)
 
 import Debug.Trace
 
@@ -240,12 +239,13 @@ data StDir = InDir
 -- Storages must not have more than one in or out edge.
 getInnersectionStorages :: TD.SequFlowGraph -> [[(Idx.SecNode, StDir)]]
 getInnersectionStorages = getStorages format
-  where format ([n], (s, _), []) = if TD.isDirEdge n then (s, InDir) else (s, NoDir)
-        format ([], (s, _), [n]) = if TD.isDirEdge n then (s, OutDir) else (s, NoDir)
-        format ([], (s, _), []) = (s, NoDir)
+  where format ([n], s, []) = if TD.isDirEdge n then (s, InDir) else (s, NoDir)
+        format ([], s, [n]) = if TD.isDirEdge n then (s, OutDir) else (s, NoDir)
+        format ([], s, []) = (s, NoDir)
         format n@(_, _, _) = error ("getInnersectionStorages: " ++ show n)
 
-type InOutFormat = Gr.InOut Idx.SecNode TD.NodeType TD.ELabel
+type InOutFormat = InOut Idx.SecNode TD.ELabel
+type InOut n el = ([Gr.LNode n el], n, [Gr.LNode n el])
 
 getStorages ::
    (InOutFormat -> b) -> TD.SequFlowGraph -> [[b]]
@@ -253,8 +253,8 @@ getStorages format =
   M.elems
   . fmap M.elems
   . M.fromListWith (M.unionWith (error "duplicate node"))
-  . map (\io -> case fst $ snd3 io of
-                   Idx.Section sec node -> (node, M.singleton sec (format io)))
+  . map (\(ins, (n@(Idx.SecNode sec node),_), outs) ->
+            (node, M.singleton sec (format (ins,n,outs))))
   . filter TD.isStorageNode
   . Gr.mkInOutGraphFormat    -- ersetzen durch nodes
 
@@ -323,7 +323,7 @@ mkSplitFactorEquations s ef xf ns =
 getIntersectionStorages ::
   TD.SequFlowGraph -> [(StDir, ([Idx.SecNode], Idx.SecNode, [Idx.SecNode]))]
 getIntersectionStorages = concat . getStorages (format . toSecNode)
-  where toSecNode (ins, n, outs) = (map fst ins, fst n, map fst outs)
+  where toSecNode (ins, n, outs) = (map fst ins, n, map fst outs)
         format x@(ins, Idx.SecNode sec _, outs) =
           case (filter h ins, filter h outs) of
                ([], [])  ->  -- We treat initial storages as in-storages
