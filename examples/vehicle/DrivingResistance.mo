@@ -1,4 +1,4 @@
-model driving_resistance
+model DrivingResistance
   annotation(Diagram(), Icon(graphics = {Line(points = {{-37.8295,15.1938},{9.30233,19.2248},{18.2946,23.876},{33.7984,31.3178},{48.3721,40},{58.6047,50.8527},{66.9767,60.7752}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Line(points = {{-37.5194,14.5736},{68.5271,14.8837},{68.5271,15.1938}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Line(points = {{-36.8992,14.5736},{-37.2093,79.0698}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Text(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-11.7829,92.7132},{76.8992,79.3798}}, textString = "Driving Resistance"),Rectangle(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-48.6822,3.10078},{95.814,98.6047}})}));
   Modelica.Mechanics.Translational.Sources.Force force1 annotation(Placement(visible = true, transformation(origin = {-23.2558,37.5194}, extent = {{12,12},{-12,-12}}, rotation = 180)));
   Modelica.Mechanics.Translational.Interfaces.Flange_a flange_a annotation(Placement(visible = true, transformation(origin = {-65.7364,36.5891}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {-65.7364,36.5891}, extent = {{-12,-12},{12,12}}, rotation = 0)));
@@ -23,5 +23,5 @@ equation
   connect(limiter1.y,product2.u2) annotation(Line(points = {{18.7814,-31.6279},{25.7364,-31.6279},{25.7364,-7.78514},{25.67,-7.78514}}));
   connect(product1.y,gain2.u) annotation(Line(points = {{8.05689,-71.0078},{17.6744,-71.0078},{17.6744,-71.0078},{19.5687,-71.0078}}));
   connect(force1.flange,flange_a) annotation(Line(points = {{-35.2558,37.5194},{-62.6357,37.5194},{-62.6357,36.5891},{-65.7364,36.5891}}));
-end driving_resistance;
+end DrivingResistance;
 
