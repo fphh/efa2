@@ -59,20 +59,26 @@ instance Monoid (EquationSystem s a) where
            EquationSystem $ liftM2 (>>!) x y
 
 
-liftV2 :: 
-  (Expr.T s a -> Expr.T s a -> Expr.T s a) -> 
+liftV ::
+  (Expr.T s a -> Expr.T s a) ->
+  ExprWithVars s a -> ExprWithVars s a
+liftV f (ExprWithVars xs) = ExprWithVars $ liftM f xs
+
+liftV2 ::
+  (Expr.T s a -> Expr.T s a -> Expr.T s a) ->
   ExprWithVars s a -> ExprWithVars s a -> ExprWithVars s a
 liftV2 f (ExprWithVars xs) (ExprWithVars ys) = ExprWithVars $ liftM2 f xs ys
 
 
 instance (Fractional a) => Num (ExprWithVars s a) where
+         fromInteger = ExprWithVars . return . fromInteger
+
          (*) = liftV2 (*)
          (+) = liftV2 (+)
          (-) = liftV2 (-)
 
-         fromInteger = ExprWithVars . return . fromInteger
-         abs (ExprWithVars xs) = ExprWithVars $ liftM abs xs
-         signum (ExprWithVars xs) = ExprWithVars $ liftM signum xs
+         abs = liftV abs
+         signum = liftV signum
 
 infix 0 =.=
 (=.=) :: (Eq a) => ExprWithVars s a -> ExprWithVars s a -> EquationSystem s a
