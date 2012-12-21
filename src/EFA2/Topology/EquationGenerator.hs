@@ -2,10 +2,10 @@
 module EFA2.Topology.EquationGenerator where
 
 import qualified Data.Map as M
-import qualified Data.List as L
 import qualified Data.List.HT as LH
 import qualified Data.List.Key as Key
 import qualified Data.Set as S
+import qualified Data.NonEmpty as NonEmpty
 
 import EFA2.Signal.Index (SecNode(..), Section(..))
 import qualified EFA2.Signal.Index as Idx
@@ -278,24 +278,29 @@ getNode (Idx.SecNode _ n) = n
 mkInStorageEquations ::
   (Eq a, Fractional a) =>
   ([SecNode], SecNode, [SecNode]) -> EquationSystem s a
-mkInStorageEquations (_, _, []) = mempty
 mkInStorageEquations (_, n, outs) =
-  withLocalVar $ \s ->
-    -- The next equation is special for the initial Section.
-    (maxenergy n so =.=
-     if getSection n == Idx.initSection
-       then storage n
-       else insumvar n)
-    <> mkSplitFactorEquations s (maxenergy n) (yfactor n) souts
-    <> (mconcat $ zipWith f sos souts)
-  where souts@(so:sos) = L.sortBy (comparing getSection) outs
-        f next beforeNext = maxenergy n next =.= maxenergy n beforeNext - energy beforeNext n
+   flip foldMap
+      (fmap (NonEmpty.sortBy (comparing getSection)) $
+       NonEmpty.fetch outs) $ \souts ->
+      withLocalVar $ \s ->
+         -- The next equation is special for the initial Section.
+         (maxenergy n (NonEmpty.head souts) =.=
+          if getSection n == Idx.initSection
+            then storage n
+            else insumvar n)
+         <>
+         mkSplitFactorEquations s (maxenergy n) (yfactor n) souts
+         <>
+         let f beforeNext next =
+                maxenergy n next =.=
+                   maxenergy n beforeNext - energy beforeNext n
+         in  mconcat $ LH.mapAdjacent f $ NonEmpty.flatten souts
 
 mkOutStorageEquations ::
   (Eq a, Fractional a) =>
   ([SecNode], SecNode, [SecNode]) -> EquationSystem s a
-mkOutStorageEquations ([], _, _) = mempty
-mkOutStorageEquations (ins, n, _) =
+mkOutStorageEquations (ins0, n, _) =
+  flip foldMap (NonEmpty.fetch ins0) $ \ins ->
   withLocalVar $ \s ->
     mkSplitFactorEquations s (flip maxenergy n) (xfactor n) ins
     <>
@@ -306,9 +311,9 @@ mkSplitFactorEquations ::
    ExprWithVars s a ->
    (node -> ExprWithVars s a) ->
    (node -> ExprWithVars s a) ->
-   [node] -> EquationSystem s a
+   NonEmpty.T [] node -> EquationSystem s a
 mkSplitFactorEquations s ef xf ns =
-   (s =.= sum (map ef ns))
+   (s =.= NonEmpty.sum (fmap ef ns))
    <>
    foldMap (\n -> ef n =.= s * xf n) ns
 
