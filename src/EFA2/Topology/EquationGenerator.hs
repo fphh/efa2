@@ -2,9 +2,8 @@
 module EFA2.Topology.EquationGenerator where
 
 import qualified Data.Map as M
-import qualified Data.List.HT as LH
-import qualified Data.List.Key as Key
 import qualified Data.Set as S
+import qualified Data.List.HT as LH
 import qualified Data.NonEmpty as NonEmpty
 
 import EFA2.Signal.Index (SecNode(..), Section(..))
@@ -249,10 +248,14 @@ getInnersectionStorages = getStorages format
 
 type InOutFormat = Gr.InOut SecNode TD.NodeType TD.ELabel
 
-getStorages :: (InOutFormat -> b) -> TD.SequFlowGraph -> [[b]]
+getStorages ::
+   (InOutFormat -> b) -> TD.SequFlowGraph -> [[b]]
 getStorages format =
-  map (map format)
-  . Key.group (getNode . fst . snd3)
+  M.elems
+  . fmap M.elems
+  . M.fromListWith (M.unionWith (error "duplicate node"))
+  . map (\io -> case fst $ snd3 io of
+                   Idx.Section sec node -> (node, M.singleton sec (format io)))
   . filter TD.isStorageNode
   . Gr.mkInOutGraphFormat    -- ersetzen durch nodes
 
