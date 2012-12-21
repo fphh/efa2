@@ -167,7 +167,7 @@ makeInnerSectionEquations ::
   (Eq a, Fractional a) =>
   TD.SequFlowGraph -> EquationSystem s a
 makeInnerSectionEquations g = mconcat $
-  makeEnergyEquations es :
+  makeEnergyEquations (map fst es) :
   makeEdgeEquations es :
   makeNodeEquations g :
   makeStorageEquations g' :
@@ -190,12 +190,11 @@ makeEdgeEquations es = foldMap mkEq es
 
 makeEnergyEquations ::
   (Eq a, Fractional a) =>
-  [Gr.LEdge SecNode TD.ELabel] -> EquationSystem s a
-makeEnergyEquations es = foldMap (mkEq . fst) es
+  [Gr.Edge SecNode] -> EquationSystem s a
+makeEnergyEquations = foldMap mkEq
   where mkEq (Edge f@(SecNode sf _) t@(SecNode st _)) =
-          mwhen (sf == st)
-            (energy f t =.= dt * power f t) <> (energy t f =.= dt * power t f)
-          where dt = dtime sf
+          mwhen (sf == st) (equ f t <> equ t f)
+             where equ x y = energy x y =.= dtime sf * power x y
 
 makeNodeEquations ::
   (Eq a, Fractional a) =>
