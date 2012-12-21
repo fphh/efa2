@@ -291,16 +291,13 @@ mkInStorageEquations (_, _, []) = mempty
 mkInStorageEquations (_, n, outs) =
   withLocalVar $ \s ->
     -- The next equation is special for the initial Section.
-    (maxenergy n so =.= if initialSec n then initStorage else varsumin)
-    <> (s =.= sum es)
-    <> (mconcat $ zipWith (\x e -> e =.= x * s) ys es)
+    (maxenergy n so =.=
+     if getSection n == Idx.initSection
+       then storage n
+       else insumvar n)
+    <> mkSplitFactorEquations s (maxenergy n) (yfactor n) souts
     <> (mconcat $ zipWith f sos souts)
   where souts@(so:sos) = L.sortBy (comparing getSection) outs
-        initStorage = storage n
-        varsumin = insumvar n
-        initialSec s = getSection s == Idx.initSection
-        ys = map (yfactor n) souts
-        es = map (maxenergy n) souts
         f next beforeNext = maxenergy n next =.= maxenergy n beforeNext - energy beforeNext n
 
 mkOutStorageEquations ::
@@ -309,15 +306,20 @@ mkOutStorageEquations ::
 mkOutStorageEquations ([], _, _) = mempty
 mkOutStorageEquations (ins, n, _) =
   withLocalVar $ \s ->
-    (s =.= sum esOpposite)
-    <> (varsumout =.= sum esHere)
-    <> (mconcat $ zipWith (\e x -> e =.= x * s) esOpposite xsHere)
-    <> (mconcat $ zipWith (\e x -> e =.= x * varsumout) esHere xsHere)
-  where sins = L.sortBy (comparing getSection) ins
-        esOpposite = map (flip maxenergy n) sins
-        esHere = map (energy n) sins
-        xsHere = map (xfactor n) sins
-        varsumout = outsumvar n
+    mkSplitFactorEquations s (flip maxenergy n) (xfactor n) ins
+    <>
+    mkSplitFactorEquations (outsumvar n) (energy n) (xfactor n) ins
+
+mkSplitFactorEquations ::
+   (Eq a, Fractional a) =>
+   ExprWithVars s a ->
+   (node -> ExprWithVars s a) ->
+   (node -> ExprWithVars s a) ->
+   [node] -> EquationSystem s a
+mkSplitFactorEquations s ef xf ns =
+   (s =.= sum (map ef ns))
+   <>
+   foldMap (\n -> ef n =.= s * xf n) ns
 
 
 getIntersectionStorages ::
