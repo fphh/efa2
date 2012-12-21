@@ -196,23 +196,19 @@ makeEnergyEquations = foldMap mkEq
 makeNodeEquations ::
   (Eq a, Fractional a) =>
   TD.SequFlowGraph -> EquationSystem s a
-makeNodeEquations = fold . M.mapWithKey ((f .) . g) . Gr.nodes
-  where  g n (ins, _, outs) = (S.toList ins, n, S.toList outs)
-         f (ins, n, outs) =
-           --(1 =.= sum xin)
-           -- <> (1 =.= sum xout)
-           (varsumin =.= sum ein)
-           <> (varsumout =.= sum eout)
-           <> mwhen (not (null ins) && not (null outs)) (varsumin =.= varsumout)
-           <> (mconcat $ zipWith (h varsumin) ein xin)
-           <> (mconcat $ zipWith (h varsumout) eout xout)
-          where xin = map (xfactor n) ins
-                xout = map (xfactor n) outs
-                ein = map (energy n) ins
-                eout = map (energy n) outs
-                varsumin = insumvar n       -- this variable is used again in makeStorageEquations
+makeNodeEquations = fold . M.mapWithKey f . Gr.nodes
+   where f n (ins, _, outs) =
+            let varsumin = insumvar n       -- this variable is used again in makeStorageEquations
                 varsumout = outsumvar n     -- and this, too.
-                h s en x = en =.= x * s
+                splitEqs varsum nodes =
+                   foldMap
+                      (mkSplitFactorEquations varsum (energy n) (xfactor n))
+                      (NonEmpty.fetch $ S.toList nodes)
+            in  (varsumin =.= varsumout)
+                <>
+                splitEqs varsumin ins
+                <>
+                splitEqs varsumout outs
 
 
 makeStorageEquations ::
