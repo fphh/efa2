@@ -6,7 +6,6 @@ import qualified Data.Set as S
 import qualified Data.List.HT as LH
 import qualified Data.NonEmpty as NonEmpty
 
-import EFA2.Signal.Index (SecNode(..), Section(..))
 import qualified EFA2.Signal.Index as Idx
 
 import EFA2.Topology.EfaGraph (Edge(..))
@@ -114,34 +113,34 @@ getEdgeVar ::
    Idx.SecNode -> Idx.SecNode -> ExprWithVars s a
 getEdgeVar mkIdx x y = getVar (mkIdx recAbs x y)
 
-power :: SecNode -> SecNode -> ExprWithVars s a
+power :: Idx.SecNode -> Idx.SecNode -> ExprWithVars s a
 power = getEdgeVar Idx.Power
 
-energy :: SecNode -> SecNode -> ExprWithVars s a
+energy :: Idx.SecNode -> Idx.SecNode -> ExprWithVars s a
 energy = getEdgeVar Idx.Energy
 
-maxenergy :: SecNode -> SecNode -> ExprWithVars s a
+maxenergy :: Idx.SecNode -> Idx.SecNode -> ExprWithVars s a
 maxenergy = getEdgeVar Idx.MaxEnergy
 
-eta :: SecNode -> SecNode -> ExprWithVars s a
+eta :: Idx.SecNode -> Idx.SecNode -> ExprWithVars s a
 eta = getEdgeVar Idx.FEta
 
-xfactor :: SecNode -> SecNode -> ExprWithVars s a
+xfactor :: Idx.SecNode -> Idx.SecNode -> ExprWithVars s a
 xfactor = getEdgeVar Idx.X
 
-yfactor :: SecNode -> SecNode -> ExprWithVars s a
+yfactor :: Idx.SecNode -> Idx.SecNode -> ExprWithVars s a
 yfactor = getEdgeVar Idx.Y
 
-insumvar :: SecNode -> ExprWithVars s a
+insumvar :: Idx.SecNode -> ExprWithVars s a
 insumvar = getVar . Idx.Var recAbs Idx.InSum
 
-outsumvar :: SecNode -> ExprWithVars s a
+outsumvar :: Idx.SecNode -> ExprWithVars s a
 outsumvar = getVar . Idx.Var recAbs Idx.OutSum
 
-storage :: SecNode -> ExprWithVars s a
+storage :: Idx.SecNode -> ExprWithVars s a
 storage = getVar . Idx.Storage recAbs
 
-dtime :: Section -> ExprWithVars s a
+dtime :: Idx.Section -> ExprWithVars s a
 dtime = getVar . Idx.DTime recAbs
 
 
@@ -177,8 +176,8 @@ makeInnerSectionEquations g = mconcat $
 
 makeEdgeEquations ::
   (Eq a, Fractional a) =>
-  [Gr.LEdge SecNode TD.ELabel] -> EquationSystem s a
-makeEdgeEquations es = foldMap mkEq es
+  [Gr.LEdge Idx.SecNode TD.ELabel] -> EquationSystem s a
+makeEdgeEquations = foldMap mkEq
   where mkEq (Edge f t, lab) =
           case TD.edgeType lab of
                TD.OriginalEdge -> power t f =.= eta f t * power f t
@@ -189,9 +188,9 @@ makeEdgeEquations es = foldMap mkEq es
 
 makeEnergyEquations ::
   (Eq a, Fractional a) =>
-  [Gr.Edge SecNode] -> EquationSystem s a
+  [Gr.Edge Idx.SecNode] -> EquationSystem s a
 makeEnergyEquations = foldMap mkEq
-  where mkEq (Edge f@(SecNode sf _) t@(SecNode st _)) =
+  where mkEq (Edge f@(Idx.SecNode sf _) t@(Idx.SecNode st _)) =
           mwhen (sf == st) (equ f t <> equ t f)
              where equ x y = energy x y =.= dtime sf * power x y
 
@@ -239,14 +238,14 @@ data StDir = InDir
 
 -- Only graphs without intersection edges are allowed.
 -- Storages must not have more than one in or out edge.
-getInnersectionStorages :: TD.SequFlowGraph -> [[(SecNode, StDir)]] -- Map SecNode StDir
+getInnersectionStorages :: TD.SequFlowGraph -> [[(Idx.SecNode, StDir)]]
 getInnersectionStorages = getStorages format
   where format ([n], (s, _), []) = if TD.isDirEdge n then (s, InDir) else (s, NoDir)
         format ([], (s, _), [n]) = if TD.isDirEdge n then (s, OutDir) else (s, NoDir)
         format ([], (s, _), []) = (s, NoDir)
         format n@(_, _, _) = error ("getInnersectionStorages: " ++ show n)
 
-type InOutFormat = Gr.InOut SecNode TD.NodeType TD.ELabel
+type InOutFormat = Gr.InOut Idx.SecNode TD.NodeType TD.ELabel
 
 getStorages ::
    (InOutFormat -> b) -> TD.SequFlowGraph -> [[b]]
@@ -280,7 +279,7 @@ getNode (Idx.SecNode _ n) = n
 
 mkInStorageEquations ::
   (Eq a, Fractional a) =>
-  ([SecNode], SecNode, [SecNode]) -> EquationSystem s a
+  ([Idx.SecNode], Idx.SecNode, [Idx.SecNode]) -> EquationSystem s a
 mkInStorageEquations (_, n, outs) =
    flip foldMap
       (fmap (NonEmpty.sortBy (comparing getSection)) $
@@ -301,7 +300,7 @@ mkInStorageEquations (_, n, outs) =
 
 mkOutStorageEquations ::
   (Eq a, Fractional a) =>
-  ([SecNode], SecNode, [SecNode]) -> EquationSystem s a
+  ([Idx.SecNode], Idx.SecNode, [Idx.SecNode]) -> EquationSystem s a
 mkOutStorageEquations (ins0, n, _) =
   flip foldMap (NonEmpty.fetch ins0) $ \ins ->
   withLocalVar $ \s ->
@@ -322,10 +321,10 @@ mkSplitFactorEquations s ef xf ns =
 
 
 getIntersectionStorages ::
-  TD.SequFlowGraph -> [(StDir, ([SecNode], SecNode, [SecNode]))]
+  TD.SequFlowGraph -> [(StDir, ([Idx.SecNode], Idx.SecNode, [Idx.SecNode]))]
 getIntersectionStorages = concat . getStorages (format . toSecNode)
   where toSecNode (ins, n, outs) = (map fst ins, fst n, map fst outs)
-        format x@(ins, SecNode sec _, outs) =
+        format x@(ins, Idx.SecNode sec _, outs) =
           case (filter h ins, filter h outs) of
                ([], [])  ->  -- We treat initial storages as in-storages
                  if sec == Idx.initSection then (InDir, x) else (NoDir, x)
