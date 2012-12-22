@@ -3,7 +3,8 @@
 {-# LANGUAGE UndecidableInstances #-}
 module EFA2.Topology.Draw where
 
-import EFA2.Solver.Equation (Term(..), ToIndex, formatTerm, MkIdxC, mkIdx)
+import EFA2.Solver.Equation (Term(..), ToIndex, toIndex, formatTerm, MkIdxC, mkIdx)
+import qualified EFA2.Solver.Term as Term
 import qualified EFA2.Report.Format as Format
 import EFA2.Report.Format (Plain(Plain, unPlain))
 import EFA2.Interpreter.Env
@@ -365,6 +366,11 @@ instance FormatValue Char where
 
 instance (Eq a, ToIndex a) => FormatValue (Term a) where
    formatValue = formatTerm
+
+
+instance (Ord a, ToIndex a) => FormatValue (Term.Term a) where
+   formatValue = Term.format (\_ -> Format.index . toIndex) Term.TopLevel
+
 
 
 class FormatValueSignal a where

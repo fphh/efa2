@@ -4,7 +4,7 @@ import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Interpreter.Env as Env
 
 import Data.List (intercalate)
-import Data.Ratio (Ratio)
+import Data.Ratio (Ratio, numerator, denominator)
 
 import Text.Printf (PrintfArg, printf)
 
@@ -31,6 +31,7 @@ data Mode = Absolute | Delta
 data EdgeVar = Energy | MaxEnergy | Power | Eta | X | Y
 
 class Format output where
+   integer :: Integer -> output
    real :: (Floating a, PrintfArg a) => a -> output
    ratio :: (Integral a, Show a) => Ratio a -> output
    subscript :: output -> output -> output
@@ -50,11 +51,13 @@ class Format output where
    time, var, storage :: output
    parenthesize, minus, recip :: output -> output
    plus, multiply :: output -> output -> output
+   power :: output -> Integer -> output
 
 instance Format Plain where
+   integer = Plain . show
    -- real = Plain . show
    real = Plain . printf "%.6f"
-   ratio = Plain . show
+   ratio r = Plain $ show (numerator r) ++ "/" ++ show (denominator r)
    subscript (Plain t) (Plain s) = Plain $ t ++ "_" ++ s
    connect (Plain t) (Plain s) = Plain $ t ++ "_" ++ s
    list = Plain . ("["++) . (++"]") . intercalate "," . map unPlain
@@ -81,10 +84,12 @@ instance Format Plain where
    recip (Plain x) = Plain $ "1/(" ++ x ++ ")"
    plus (Plain x) (Plain y) = Plain $ x ++ " + " ++ y
    multiply (Plain x) (Plain y) = Plain $ x ++ " * " ++ y
+   power (Plain x) n = Plain $ x ++ "^" ++ showsPrec 10 n ""
 
 instance Format Latex where
+   integer = Latex . show
    real = Latex . printf "%.6f"
-   ratio = Latex . show
+   ratio r = Latex $ "\\frac{" ++ show (numerator r) ++ "}{" ++ show (denominator r) ++ "}"
    subscript (Latex t) (Latex s) = Latex $ t ++ "_{" ++ s ++ "}"
    connect (Latex t) (Latex s) = Latex $ t ++ "." ++ s
    list = Latex . ("["++) . (++"]") . intercalate ", " . map unLatex
@@ -111,6 +116,7 @@ instance Format Latex where
    recip (Latex x) = Latex $ "\\frac{1}{" ++ x ++ "}"
    plus (Latex x) (Latex y) = Latex $ x ++ " + " ++ y
    multiply (Latex x) (Latex y) = Latex $ x ++ " \\cdot " ++ y
+   power (Latex x) n = Latex $ x ++ "^{" ++ show n ++ "}"
 
 edgeIndex ::
    Format output =>
