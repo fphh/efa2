@@ -231,7 +231,6 @@ class Format.Format output => Format output where
    formatRecord :: Idx.Record -> output
    formatAssign :: output -> output -> output
    formatChar :: Char -> output
-   formatRatio :: (Integral a, Show a) => Ratio a -> output
    formatQuotient :: output -> output -> output
    formatSignal ::
       (SDisplay v, D.Storage v a, Ord a, Disp a,
@@ -250,7 +249,6 @@ instance Format Plain where
    formatAssign (Plain lhs) (Plain rhs) =
       Plain $ lhs ++ " = " ++ rhs
    formatChar = Plain . (:[])
-   formatRatio = Plain . show
    formatQuotient (Plain x) (Plain y) = Plain $ "(" ++ x ++ ")/(" ++ y ++ ")"
    formatSignal = Plain . sdisp
    formatNode rec st (n@(Idx.SecNode _sec nid), ty) =
@@ -280,7 +278,6 @@ instance Format Format.Latex where
    formatAssign (Format.Latex lhs) (Format.Latex rhs) =
       Format.Latex $ lhs ++ " = " ++ rhs
    formatChar = Format.Latex . (:[])
-   formatRatio = Format.Latex . show
    formatQuotient (Format.Latex x) (Format.Latex y) =
       Format.Latex $ "\\frac{" ++ x ++ "}{" ++ y ++ "}"
    formatSignal = Format.Latex . sdisp
@@ -460,10 +457,10 @@ instance AutoEnvDelta Double where
 -}
 
 instance (Integral a, Show a) => FormatValue (Ratio a) where
-   formatValue = formatRatio
+   formatValue = Format.ratio
 
 instance (Integral a, Show a) => AutoEnv (Ratio a) where
-   formatEnergyQuotient x y = formatRatio $ x/y
+   formatEnergyQuotient x y = Format.ratio $ x/y
 
 instance FormatValue Char where
    formatValue = formatChar

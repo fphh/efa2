@@ -4,6 +4,7 @@ import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Interpreter.Env as Env
 
 import Data.List (intercalate)
+import Data.Ratio (Ratio, numerator, denominator)
 
 import Text.Printf (PrintfArg, printf)
 
@@ -31,6 +32,7 @@ data EdgeVar = Energy | Power | Eta | X
 
 class Format output where
    real :: (Floating a, PrintfArg a) => a -> output
+   ratio :: (Integral a, Show a) => Ratio a -> output
    subscript :: output -> output -> output
    connect :: output -> output -> output
    list :: [output] -> output
@@ -47,6 +49,7 @@ class Format output where
 instance Format Plain where
    -- real = Plain . show
    real = Plain . printf "%.6f"
+   ratio r = Plain $ show (numerator r) ++ "/" ++ show (denominator r)
    subscript (Plain t) (Plain s) = Plain $ t ++ "_" ++ s
    connect (Plain t) (Plain s) = Plain $ t ++ "_" ++ s
    list = Plain . ("["++) . (++"]") . intercalate "," . map unPlain
@@ -70,6 +73,7 @@ instance Format Plain where
 
 instance Format Latex where
    real = Latex . printf "%.6f"
+   ratio r = Latex $ "\\frac{" ++ show (numerator r) ++ "}{" ++ show (denominator r) ++ "}"
    subscript (Latex t) (Latex s) = Latex $ t ++ "_{" ++ s ++ "}"
    connect (Latex t) (Latex s) = Latex $ t ++ "." ++ s
    list = Latex . ("["++) . (++"]") . intercalate ", " . map unLatex
