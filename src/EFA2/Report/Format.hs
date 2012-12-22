@@ -31,6 +31,7 @@ data Mode = Absolute | Delta
 data EdgeVar = Energy | Power | Eta | X
 
 class Format output where
+   integer :: Integer -> output
    real :: (Floating a, PrintfArg a) => a -> output
    ratio :: (Integral a, Show a) => Ratio a -> output
    subscript :: output -> output -> output
@@ -45,8 +46,10 @@ class Format output where
    time, var, storage :: output
    parenthesize, minus, recip :: output -> output
    plus, multiply :: output -> output -> output
+   power :: output -> Integer -> output
 
 instance Format Plain where
+   integer = Plain . show
    -- real = Plain . show
    real = Plain . printf "%.6f"
    ratio r = Plain $ show (numerator r) ++ "/" ++ show (denominator r)
@@ -70,8 +73,10 @@ instance Format Plain where
    recip (Plain x) = Plain $ "1/(" ++ x ++ ")"
    plus (Plain x) (Plain y) = Plain $ x ++ " + " ++ y
    multiply (Plain x) (Plain y) = Plain $ x ++ " * " ++ y
+   power (Plain x) n = Plain $ x ++ "^" ++ showsPrec 10 n ""
 
 instance Format Latex where
+   integer = Latex . show
    real = Latex . printf "%.6f"
    ratio r = Latex $ "\\frac{" ++ show (numerator r) ++ "}{" ++ show (denominator r) ++ "}"
    subscript (Latex t) (Latex s) = Latex $ t ++ "_{" ++ s ++ "}"
@@ -94,6 +99,7 @@ instance Format Latex where
    recip (Latex x) = Latex $ "\\frac{1}{" ++ x ++ "}"
    plus (Latex x) (Latex y) = Latex $ x ++ " + " ++ y
    multiply (Latex x) (Latex y) = Latex $ x ++ " \\cdot " ++ y
+   power (Latex x) n = Latex $ x ++ "^{" ++ show n ++ "}"
 
 edgeIndex ::
    Format output =>

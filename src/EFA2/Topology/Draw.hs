@@ -4,7 +4,8 @@
 module EFA2.Topology.Draw where
 
 import EFA2.Solver.Equation
-          (Term(..), ToIndex, simplify, (&-), (&/), formatTerm)
+          (Term(..), ToIndex, toIndex, simplify, (&-), (&/), formatTerm)
+import qualified EFA2.Solver.Term as Term
 import qualified EFA2.Report.Format as Format
 import EFA2.Report.Format (Plain(Plain, unPlain), deltaChar, heartChar)
 import EFA2.Interpreter.Env
@@ -479,6 +480,14 @@ instance (Ord a, ToIndex a) => AutoEnvDelta (Term a) where
    formatDEnergyQuotient ea eb dea deb =
       formatTerm $ simplify $
       (dea :* eb  &-  ea :* deb) &/ ((eb:+deb):*eb)
+
+
+instance (Ord a, ToIndex a) => FormatValue (Term.Term a) where
+   formatValue = Term.format (\_ -> Format.index . toIndex) Term.TopLevel
+
+instance (Ord a, ToIndex a) => AutoEnv (Term.Term a) where
+   formatEnergyQuotient x y = formatValue $ x / y
+
 
 
 class FormatValueSignal a where

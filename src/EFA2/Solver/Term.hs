@@ -1,5 +1,7 @@
 module EFA2.Solver.Term where
 
+import qualified EFA2.Report.Format as Format
+
 import qualified Data.Map as Map
 import Data.Map (Map, )
 
@@ -8,6 +10,8 @@ import qualified Data.List as List
 import Data.NonEmpty as NonEmpty ((!:))
 import Data.Monoid (Monoid(mappend, mempty), (<>), )
 import Data.Maybe (fromMaybe, )
+
+import Data.Ratio (numerator, denominator)
 
 
 {-
@@ -122,8 +126,7 @@ evaluate f =
                 case NonEmpty.fetch $ Map.toList s of
                    Nothing -> 0
                    Just ss -> add $ fmap (uncurry prod) ss
-       powers =
-          map (\(x, e) -> power e $ term x) . Map.toList
+
        prod (Product p) c =
           case Map.partition (>0) $ Map.filter (0/=) p of
              (norm, rec) ->
@@ -134,6 +137,7 @@ evaluate f =
                          ( 1, True) -> recip mp
                          (-1, True) -> negate $ recip mp
                          _ -> normProd c norm / mp
+
        normProd c p =
           case powers p of
              ps ->
@@ -141,17 +145,70 @@ evaluate f =
                    ( 1, Just mp) -> mp
                    (-1, Just mp) -> negate mp
                    _ -> mult $ fromRational c !: ps
+
+       powers =
+          map (\(x, e) -> power e $ term x) . Map.toList
+
+       {- |
+       exponent must be positive (not zero or negative)
+       -}
+       power :: (Fractional a) => Integer -> a -> a
+       power e t =
+          mult $ t !: List.genericReplicate (e-1) t
+
    in  term
+
+
+{- |
+for minimal use of parentheses
+-}
+data FormatContext = TopLevel | Power deriving (Show, Eq, Ord)
+
+format ::
+   (Ord a, Format.Format output) =>
+   (FormatContext -> a -> output) ->
+   FormatContext -> Term a -> output
+format f =
+   let term ctx t =
+          case t of
+             Atom a -> f ctx a
+             Sum s ->
+                case NonEmpty.fetch $ Map.toList s of
+                   Nothing -> Format.integer 0
+                   Just ss ->
+                      (if ctx > TopLevel
+                         then Format.parenthesize
+                         else id) $
+                      NonEmpty.foldl1 Format.plus $ fmap (uncurry prod) ss
+
+       prod (Product p) c =
+          case fmap (NonEmpty.foldl1 Format.multiply) $
+               NonEmpty.fetch $ powers p of
+             Nothing -> ratio c
+             Just mp ->
+                case c of
+                   1 -> mp
+                   -1 -> Format.minus mp
+                   _ -> Format.multiply (ratio c) mp
+
+       ratio x =
+          if denominator x == 1
+            then Format.integer $ numerator x
+            else Format.ratio x
+
+       powers =
+          map (\(x, e) -> power e $ term Power x) . Map.toList
+
+       power e t =
+          case e of
+             1 -> t
+             _ -> Format.power t e
+
+   in  term
+
 
 add :: (Num a) => NonEmpty.T [] a -> a
 add = NonEmpty.foldl1 (+)
 
 mult :: (Num a) => NonEmpty.T [] a -> a
 mult = NonEmpty.foldl1 (*)
-
-{- |
-exponent must be positive (not zero or negative)
--}
-power :: (Fractional a) => Integer -> a -> a
-power e t =
-   mult $ t !: List.genericReplicate (e-1) t
