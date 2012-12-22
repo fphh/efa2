@@ -3,7 +3,7 @@ module Main where
 import EFA2.Example.Utility (rec, edgeVar, makeEdges, (=<>))
 
 import qualified EFA2.StateAnalysis.StateAnalysis as StateAnalysis
-import EFA2.Topology.Draw (drawAll, drawTopology)
+import EFA2.Topology.Draw (drawTopology)
 
 import qualified EFA2.Utils.Stream as Stream
 import EFA2.Utils.Stream (Stream((:~)))
@@ -15,7 +15,7 @@ import qualified EFA2.Topology.Flow as Flow
 import qualified EFA2.Topology.EfaGraph as Gr
 import qualified EFA2.Interpreter.Env as Env
 import EFA2.Signal.SequenceData (SequData(SequData))
-import EFA2.Solver.Equation (EqTerm, simplify)
+import EFA2.Solver.Term (Term)
 
 import Data.Monoid (mempty)
 
@@ -49,7 +49,7 @@ seqTopo = mkSeqTopo (select sol states)
 {-
 Use new Term type here since it simplifies automatically.
 -}
-given :: EqGen.EquationSystem s EqTerm
+given :: EqGen.EquationSystem s (Term Env.Index)
 given =
    Idx.DTime rec Idx.initSection =<>
    Idx.DTime rec sec0 =<>
@@ -69,10 +69,7 @@ given =
 main :: IO ()
 main = do
 
-  let env :: Env.Envs Env.SingleRecord [EqTerm]
+  let env :: Env.Envs Env.SingleRecord [Term Env.Index]
       env = EqGen.solveSystem given seqTopo
 
-  drawAll [
-    drawTopology seqTopo env,
-    drawTopology seqTopo (fmap (map simplify) env) ]
-
+  drawTopology seqTopo env

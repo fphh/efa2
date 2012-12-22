@@ -163,6 +163,9 @@ instance MkVarC Env.Index where
 instance MkVarC a => MkVarC (Term a) where
    mkVarCore = Atom . mkVarCore
 
+instance MkVarC a => MkVarC (Term.Term a) where
+   mkVarCore = Term.Atom . mkVarCore
+
 mkVar :: (MkIdxC a, MkVarC b) => a -> b
 mkVar = mkVarCore . mkIdx
 

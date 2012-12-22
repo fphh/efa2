@@ -6,7 +6,7 @@ import qualified EFA2.Topology.TopologyData as TD
 import qualified EFA2.Interpreter.Env as Env
 import qualified EFA2.Topology.EquationGenerator as EqGen
 import EFA2.Topology.EquationGenerator ((=.=))
-import EFA2.Solver.Equation (Term(Atom), EqTerm, MkIdxC(mkIdx))
+import EFA2.Solver.Equation (MkIdxC, MkVarC, mkVar)
 import Data.Monoid ((<>))
 
 
@@ -26,18 +26,18 @@ makeSimpleEdges es = map f es
 
 
 selfAssign ::
-   (MkIdxC idx, Env.AccessMap idx) =>
-   idx -> EqGen.EquationSystem s EqTerm
+   (MkIdxC idx, Env.AccessMap idx, Eq term, MkVarC term) =>
+   idx -> EqGen.EquationSystem s term
 selfAssign idx =
-   EqGen.getVar idx .= Atom (mkIdx idx)
+   EqGen.getVar idx .= mkVar idx
 
 infixr 6 =<>
 
 (=<>) ::
-   (MkIdxC idx, Env.AccessMap idx) =>
+   (MkIdxC idx, Env.AccessMap idx, Eq term, MkVarC term) =>
    idx ->
-   EqGen.EquationSystem s EqTerm ->
-   EqGen.EquationSystem s EqTerm
+   EqGen.EquationSystem s term ->
+   EqGen.EquationSystem s term
 idx =<> eqsys = selfAssign idx <> eqsys
 
 
