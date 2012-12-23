@@ -133,11 +133,11 @@ instance MyShow Sc where
 
 instance MyShow Idx.DPower where
          myshow (Idx.DPower r f t) =
-            Format.unPlain $
+            Format.unUnicode $
             Format.edgeVar Format.Delta Format.Power r f t
 
 instance ToIndex idx => MyShow (Term idx) where
-         myshow t = Format.unPlain $ formatTerm t
+         myshow t = Format.unUnicode $ formatTerm t
 
 instance MyShow a => MyShow [a] where
          myshow xs = "[ " ++ L.intercalate ", " (map myshow xs) ++ " ]"

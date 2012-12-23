@@ -91,7 +91,7 @@ instance MyShow Sc where
 
 instance MyShow Idx.DPower where
          myshow (Idx.DPower r f t) =
-            Format.unPlain $
+            Format.unUnicode $
             Format.edgeVar Format.Delta Format.Power r f t
 
 instance MyShow a => MyShow [a] where

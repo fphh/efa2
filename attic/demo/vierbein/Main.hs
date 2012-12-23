@@ -51,8 +51,8 @@ main = do
   let numres = numeric vierbein
       symres = symbolic vierbein
 
-  print (mapEqTermEnv (Format.unPlain . formatTerm) symres)
-  print (mapEqTermEnv (Format.unPlain . Format.list . map formatTerm . Equ.additiveTerms . Equ.pushMult) symres)
+  print (mapEqTermEnv (Format.unUnicode . formatTerm) symres)
+  print (mapEqTermEnv (Format.unUnicode . Format.list . map formatTerm . Equ.additiveTerms . Equ.pushMult) symres)
 
   drawTopology vierbein numres
   -- drawTopology vierbein symres -- waere noch zu schreiben...

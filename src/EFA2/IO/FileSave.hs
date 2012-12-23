@@ -15,5 +15,5 @@ writeTopology g = writeFile "results/topograph.dot" (graphviz' g)
 
 
 writeDependencyGraph :: Gr EqTerm () -> IO ()
-writeDependencyGraph g = writeFile "results/depgraph.dot" (graphviz' (nmap (Format.unPlain . formatTerm) g))
+writeDependencyGraph g = writeFile "results/depgraph.dot" (graphviz' (nmap (Format.unASCII . formatTerm) g))
 -}

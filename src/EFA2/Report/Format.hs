@@ -3,6 +3,8 @@ module EFA2.Report.Format where
 import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Interpreter.Env as Env
 
+import qualified Data.Map as M
+
 import Data.List (intercalate)
 import Data.Ratio (Ratio, numerator, denominator)
 
@@ -20,12 +22,14 @@ heartChar = '\x2665'
 
 -- * common output types
 
-newtype Plain = Plain { unPlain :: String }
+newtype ASCII = ASCII { unASCII :: String }
+
+newtype Unicode = Unicode { unUnicode :: String }
 
 newtype Latex = Latex { unLatex :: String }
 
 
--- * class for unified handling of Plain and Latex output
+-- * class for unified handling of ASCII, Unicode and LaTeX output
 
 data Mode = Absolute | Delta
 data EdgeVar = Energy | MaxEnergy | Power | Eta | X | Y
@@ -53,38 +57,131 @@ class Format output where
    plus, multiply :: output -> output -> output
    power :: output -> Integer -> output
 
-instance Format Plain where
-   integer = Plain . show
-   -- real = Plain . show
-   real = Plain . printf "%.6f"
-   ratio r = Plain $ show (numerator r) ++ "/" ++ show (denominator r)
-   subscript (Plain t) (Plain s) = Plain $ t ++ "_" ++ s
-   connect (Plain t) (Plain s) = Plain $ t ++ "_" ++ s
-   list = Plain . ("["++) . (++"]") . intercalate "," . map unPlain
-   undetermined = Plain [heartChar]
-   empty = Plain ""
-   newLine = Plain "\n"
-   assign (Plain lhs) (Plain rhs) =
-      Plain $ lhs ++ " = " ++ rhs
+instance Format ASCII where
+   integer = ASCII . show
+   -- real = ASCII . show
+   real = ASCII . printf "%.6f"
+   ratio r = ASCII $ show (numerator r) ++ "/" ++ show (denominator r)
+   subscript (ASCII t) (ASCII s) = ASCII $ t ++ "_" ++ s
+   connect (ASCII t) (ASCII s) = ASCII $ t ++ "_" ++ s
+   list = ASCII . ("["++) . (++"]") . intercalate "," . map unASCII
+   undetermined = ASCII "?"
+   empty = ASCII ""
+   newLine = ASCII "\n"
+   assign (ASCII lhs) (ASCII rhs) =
+      ASCII $ lhs ++ " = " ++ rhs
 
-   record (Idx.Record r) = Plain $ show r
-   section (Idx.Section s) = Plain $ show s
+   record (Idx.Record r) = ASCII $ show r
+   section (Idx.Section s) = ASCII $ show s
    sectionNode (Idx.SecNode (Idx.Section s) (Idx.Node x)) =
-      Plain $ show s ++ "." ++ show x
+      ASCII $ show s ++ "." ++ show x
 
-   use = Plain . show
-   delta (Plain s) = Plain $ deltaChar:s
-   edgeIdent = Plain . edgeString
-   time = Plain "t"
-   var = Plain "v"
-   storage = Plain "s"
+   use = ASCII . show
+   delta (ASCII s) = ASCII $ 'd':s
+   edgeIdent e =
+      ASCII $
+      case e of
+         Energy -> "e"
+         MaxEnergy -> "me"
+         Power -> "p"
+         X -> "x"
+         Y -> "y"
+         Eta -> "n"
+   time = ASCII "t"
+   var = ASCII "v"
+   storage = ASCII "s"
 
-   parenthesize (Plain x) = Plain $ "(" ++ x ++ ")"
-   minus (Plain x) = Plain $ '-' : x
-   recip (Plain x) = Plain $ "1/(" ++ x ++ ")"
-   plus (Plain x) (Plain y) = Plain $ x ++ " + " ++ y
-   multiply (Plain x) (Plain y) = Plain $ x ++ " * " ++ y
-   power (Plain x) n = Plain $ x ++ "^" ++ showsPrec 10 n ""
+   parenthesize (ASCII x) = ASCII $ "(" ++ x ++ ")"
+   minus (ASCII x) = ASCII $ '-' : x
+   recip (ASCII x) = ASCII $ "1/(" ++ x ++ ")"
+   plus (ASCII x) (ASCII y) = ASCII $ x ++ " + " ++ y
+   multiply (ASCII x) (ASCII y) = ASCII $ x ++ " * " ++ y
+   power (ASCII x) n = ASCII $ x ++ "^" ++ showsPrec 10 n ""
+
+instance Format Unicode where
+   integer = Unicode . show
+   -- real = Unicode . show
+   real = Unicode . printf "%.6f"
+   ratio r =
+      Unicode $
+      M.findWithDefault
+         (show (numerator r) ++ "/" ++ show (denominator r))
+         r ratioCharMap
+
+   subscript (Unicode t) (Unicode s) = Unicode $ t ++ "_" ++ s
+   connect (Unicode t) (Unicode s) = Unicode $ t ++ "_" ++ s
+   list = Unicode . ("["++) . (++"]") . intercalate "," . map unUnicode
+   undetermined = Unicode [heartChar]
+   empty = Unicode ""
+   newLine = Unicode "\n"
+   assign (Unicode lhs) (Unicode rhs) =
+      Unicode $ lhs ++ " = " ++ rhs
+
+   record (Idx.Record r) = Unicode $ show r
+   section (Idx.Section s) = Unicode $ show s
+   sectionNode (Idx.SecNode (Idx.Section s) (Idx.Node x)) =
+      Unicode $ show s ++ "." ++ show x
+
+   use = Unicode . show
+   delta (Unicode s) = Unicode $ '\x2206':s
+   edgeIdent e =
+      Unicode $
+      case e of
+         Energy -> "e"
+         MaxEnergy -> "me"
+         Power -> "p"
+         X -> "x"
+         Y -> "y"
+         Eta -> "\x03b7"
+   time = Unicode "t"
+   var = Unicode "v"
+   storage = Unicode "s"
+
+   parenthesize (Unicode x) = Unicode $ "(" ++ x ++ ")"
+   minus (Unicode x) = Unicode $ '-' : x
+   recip (Unicode x) = Unicode $ "\x215f(" ++ x ++ ")"
+   plus (Unicode x) (Unicode y) = Unicode $ x ++ " + " ++ y
+   multiply (Unicode x) (Unicode y) = Unicode $ x ++ "\xb7" ++ y
+   power (Unicode x) n =
+      Unicode $ x ++
+         case n of
+            1 -> "\xb9"
+            2 -> "\xb2"
+            3 -> "\xb3"
+            4 -> "\x2074"
+            5 -> "\x2075"
+            6 -> "\x2076"
+            7 -> "\x2077"
+            8 -> "\x2078"
+            9 -> "\x2079"
+            _ -> "^" ++ showsPrec 10 n ""
+
+ratioCharMap :: Integral a => M.Map (Ratio a) String
+ratioCharMap =
+   let xys =
+          fmap (:[]) $
+          M.fromList $
+          (1/4, '\xbc') :
+          (1/2, '\xbd') :
+          (3/4, '\xbe') :
+          (1/7, '\x2150') :
+          (1/9, '\x2151') :
+          (1/10,'\x2152') :
+          (1/3, '\x2153') :
+          (2/3, '\x2154') :
+          (1/5, '\x2155') :
+          (2/5, '\x2156') :
+          (3/5, '\x2157') :
+          (4/5, '\x2158') :
+          (1/6, '\x2159') :
+          (5/6, '\x215A') :
+          (1/8, '\x215B') :
+          (3/8, '\x215C') :
+          (5/8, '\x215D') :
+          (7/8, '\x215E') :
+          []
+   in  M.union xys (fmap ('-':) $ M.mapKeys negate xys)
+
 
 instance Format Latex where
    integer = Latex . show
@@ -106,7 +203,15 @@ instance Format Latex where
 
    use = Latex . show
    delta (Latex s) = Latex $ "\\Delta " ++ s
-   edgeIdent = Latex . edgeString
+   edgeIdent e =
+      Latex $
+      case e of
+         Energy -> "e"
+         MaxEnergy -> "me"
+         Power -> "p"
+         X -> "x"
+         Y -> "y"
+         Eta -> "\\eta"
    time = Latex "t"
    var = Latex "v"
    storage = Latex "s"
@@ -132,16 +237,6 @@ edgeVar mode e r x y =
       Absolute -> subscript (edgeIdent e) (edgeIndex r x y)
       Delta -> subscript (delta $ edgeIdent e) (edgeIndex r x y)
 
-edgeString :: EdgeVar -> String
-edgeString e =
-   case e of
-      Energy -> "e"
-      MaxEnergy -> "me"
-      Power -> "p"
-      X -> "x"
-      Y -> "y"
-      Eta -> "n"
-
 index :: Format output => Env.Index -> output
 index idx =
    case idx of
@@ -164,7 +259,7 @@ index idx =
       Env.DY (Idx.DY r x y) -> edgeVar Delta Y r x y
 
       Env.DTime (Idx.DTime r s) ->
-         subscript (delta time) (record r `connect` section s)
+         subscript (delta time) $ record r `connect` section s
 
       Env.Var (Idx.Var r u x) ->
          subscript var $ record r `connect` use u `connect` sectionNode x

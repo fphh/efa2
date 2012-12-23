@@ -6,7 +6,9 @@ module EFA2.Topology.Draw where
 import EFA2.Solver.Equation (Term(..), ToIndex, toIndex, formatTerm, MkIdxC, mkIdx)
 import qualified EFA2.Solver.Term as Term
 import qualified EFA2.Report.Format as Format
-import EFA2.Report.Format (Plain(Plain, unPlain))
+import EFA2.Report.Format
+          (ASCII(ASCII, unASCII),
+           Unicode(Unicode, unUnicode))
 import EFA2.Interpreter.Env
           (StorageMap, SingleRecord(SingleRecord))
 import qualified EFA2.Interpreter.Env as Interp
@@ -83,9 +85,9 @@ intersectionEdgeColour = Color [RGB 200 0 0]
 
 mkDotGraph ::
    SequFlowGraph ->
-   Maybe (Plain, Idx.Section -> Plain) ->
-   (Topo.LNode -> Plain) ->
-   (Topo.LEdge -> [Plain]) ->
+   Maybe (Unicode, Idx.Section -> Unicode) ->
+   (Topo.LNode -> Unicode) ->
+   (Topo.LEdge -> [Unicode]) ->
    DotGraph T.Text
 mkDotGraph g recTShow nshow eshow =
   DotGraph { strictGraph = False,
@@ -109,21 +111,21 @@ mkDotGraph g recTShow nshow eshow =
                    show sl ++ " / " ++
                    case recTShow of
                       Nothing -> "NoRecord"
-                      Just (Plain n, timef) ->
-                         n ++ " / Time " ++ unPlain (timef sl)
+                      Just (Unicode n, timef) ->
+                         n ++ " / Time " ++ unUnicode (timef sl)
         stmts = DotStmts { attrStmts = [],
                            subGraphs = map sg cs,
                            nodeStmts = [],
                            edgeStmts = map (mkDotEdge eshow) $ M.toList interEs }
 
 
-mkDotNode:: (Topo.LNode -> Plain) -> Topo.LNode -> DotNode T.Text
+mkDotNode:: (Topo.LNode -> Unicode) -> Topo.LNode -> DotNode T.Text
 mkDotNode nshow n@(x, _) =
    DotNode (dotIdentFromSecNode x)
       [displabel, nodeColour, Style [SItem Filled []], Shape BoxShape ]
-  where displabel = Label $ StrLabel $ T.pack $ unPlain $ nshow n
+  where displabel = Label $ StrLabel $ T.pack $ unUnicode $ nshow n
 
-mkDotEdge :: (Topo.LEdge -> [Plain]) -> Topo.LEdge -> DotEdge T.Text
+mkDotEdge :: (Topo.LEdge -> [Unicode]) -> Topo.LEdge -> DotEdge T.Text
 mkDotEdge eshow e@(_, elabel) =
    DotEdge
       (dotIdentFromSecNode x) (dotIdentFromSecNode y)
@@ -131,7 +133,7 @@ mkDotEdge eshow e@(_, elabel) =
   where (Edge x y, dir, order) = orientEdge e
         displabel =
            Label $ StrLabel $ T.pack $
-           L.intercalate "\n" $ map unPlain $ order $ eshow e
+           L.intercalate "\n" $ map unUnicode $ order $ eshow e
         colour =
            case edgeType elabel of
               IntersectionEdge -> intersectionEdgeColour
@@ -144,9 +146,9 @@ dotIdentFromSecNode (Idx.SecNode (Idx.Section s) (Idx.Node n)) =
 
 printGraph, printGraphX, printGraphDot ::
    SequFlowGraph ->
-   Maybe (Plain, Idx.Section -> Plain) ->
-   (Topo.LNode -> Plain) ->
-   (Topo.LEdge -> [Plain]) ->
+   Maybe (Unicode, Idx.Section -> Unicode) ->
+   (Topo.LNode -> Unicode) ->
+   (Topo.LEdge -> [Unicode]) ->
    IO ()
 printGraph = printGraphX
 
@@ -161,13 +163,13 @@ printGraphDot g recTShow nshow eshow =
 
 drawTopologyX' :: SequFlowGraph -> IO ()
 drawTopologyX' topo =
-   printGraph topo Nothing (Plain . show) ((:[]) . Plain . show)
+   printGraph topo Nothing (Unicode . show) ((:[]) . Unicode . show)
 
 
 drawTopologySimple :: SequFlowGraph -> IO ()
 drawTopologySimple topo =
    printGraph topo Nothing nshow eshow
-  where nshow (Idx.SecNode _ n, l) = Plain $ show n ++ " - " ++ showNodeType l
+  where nshow (Idx.SecNode _ n, l) = Unicode $ show n ++ " - " ++ showNodeType l
         eshow _ = []
 
 dsg :: Int -> FlowTopology -> DotSubGraph String
@@ -223,18 +225,31 @@ class Format.Format output => Format output where
       Idx.Record -> StorageMap a -> Topo.LNode -> output
 
 
-
-instance Format Plain where
-   formatChar = Plain . (:[])
-   formatSignal = Plain . sdisp
+instance Format ASCII where
+   formatChar = ASCII . (:[])
+   formatSignal = ASCII . sdisp
    formatNode rec st (n@(Idx.SecNode _sec nid), ty) =
-      Plain $
+      ASCII $
       show nid ++ "\n" ++
       "Type: " ++ showNodeType ty ++
          case ty of
             Storage ->
                "\nContent: " ++
-               (unPlain $ lookupFormat st (Idx.Storage rec n))
+               (unASCII $ lookupFormat st (Idx.Storage rec n))
+            _ -> ""
+
+
+instance Format Unicode where
+   formatChar = Unicode . (:[])
+   formatSignal = Unicode . sdisp
+   formatNode rec st (n@(Idx.SecNode _sec nid), ty) =
+      Unicode $
+      show nid ++ "\n" ++
+      "Type: " ++ showNodeType ty ++
+         case ty of
+            Storage ->
+               "\nContent: " ++
+               (unUnicode $ lookupFormat st (Idx.Storage rec n))
             _ -> ""
 
 
@@ -289,7 +304,7 @@ lookupFormatAssign mp makeIdx x y =
       idx ->
          Format.assign (Format.index $ mkIdx idx) (lookupFormat mp idx)
 
-draw :: SequFlowGraph -> Env Plain -> IO ()
+draw :: SequFlowGraph -> Env Unicode -> IO ()
 draw g
    (Env rec formatEnergy formatMaxEnergy formatX formatY formatEta tshow nshow) =
       printGraph g (Just (rec, tshow)) nshow eshow

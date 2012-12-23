@@ -44,13 +44,13 @@ eqToInTerm _envs (x ::= y) =
 
 
 showInRhs :: (Show a) => InRhs a -> String
-showInRhs (InTerm t) = Format.unPlain $ formatTerm t
+showInRhs (InTerm t) = Format.unUnicode $ formatTerm t
 showInRhs (InGiven xs) = "given " ++ show xs
 showInRhs (InFunc _) = "given <function>"
 
 showInEquation :: (Show a) => InEquation a -> String
 showInEquation (InEqual s t) =
-   Format.unPlain (Format.index s) ++ " = " ++ showInRhs t
+   Format.unUnicode (Format.index s) ++ " = " ++ showInRhs t
 
 
 type Signal s c a = S.TC s (Typ UT UT UT) (D.Data c a)
