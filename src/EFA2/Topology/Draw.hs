@@ -7,7 +7,10 @@ import EFA2.Solver.Equation
           (Term(..), ToIndex, toIndex, simplify, (&-), (&/), formatTerm)
 import qualified EFA2.Solver.Term as Term
 import qualified EFA2.Report.Format as Format
-import EFA2.Report.Format (Plain(Plain, unPlain), deltaChar, heartChar)
+import EFA2.Report.Format
+          (ASCII(ASCII, unASCII),
+           Unicode(Unicode, unUnicode),
+           deltaChar, heartChar)
 import EFA2.Interpreter.Env
           (StorageMap, SingleRecord(SingleRecord))
 import qualified EFA2.Interpreter.Env as Interp
@@ -85,9 +88,9 @@ intersectionEdgeColour = Color [RGB 200 0 0]
 
 mkDotGraph ::
    SequFlowGraph ->
-   Maybe (Plain, Idx.Section -> Plain) ->
-   (Topo.LNode -> Plain) ->
-   (Topo.LEdge -> [Plain]) ->
+   Maybe (Unicode, Idx.Section -> Unicode) ->
+   (Topo.LNode -> Unicode) ->
+   (Topo.LEdge -> [Unicode]) ->
    DotGraph T.Text
 mkDotGraph g recTShow nshow eshow =
   DotGraph { strictGraph = False,
@@ -111,21 +114,21 @@ mkDotGraph g recTShow nshow eshow =
                    show sl ++ " / " ++
                    case recTShow of
                       Nothing -> "NoRecord"
-                      Just (Plain n, timef) ->
-                         n ++ " / Time " ++ unPlain (timef sl)
+                      Just (Unicode n, timef) ->
+                         n ++ " / Time " ++ unUnicode (timef sl)
         stmts = DotStmts { attrStmts = [],
                            subGraphs = map sg cs,
                            nodeStmts = [],
                            edgeStmts = map (mkDotEdge eshow) $ M.toList interEs }
 
 
-mkDotNode:: (Topo.LNode -> Plain) -> Topo.LNode -> DotNode T.Text
+mkDotNode:: (Topo.LNode -> Unicode) -> Topo.LNode -> DotNode T.Text
 mkDotNode nshow n@(x, _) =
    DotNode (dotIdentFromSecNode x)
       [displabel, nodeColour, Style [SItem Filled []], Shape BoxShape ]
-  where displabel = Label $ StrLabel $ T.pack $ unPlain $ nshow n
+  where displabel = Label $ StrLabel $ T.pack $ unUnicode $ nshow n
 
-mkDotEdge :: (Topo.LEdge -> [Plain]) -> Topo.LEdge -> DotEdge T.Text
+mkDotEdge :: (Topo.LEdge -> [Unicode]) -> Topo.LEdge -> DotEdge T.Text
 mkDotEdge eshow e@(_, elabel) =
    DotEdge
       (dotIdentFromSecNode x) (dotIdentFromSecNode y)
@@ -133,7 +136,7 @@ mkDotEdge eshow e@(_, elabel) =
   where (Edge x y, dir, order) = orientEdge e
         displabel =
            Label $ StrLabel $ T.pack $
-           L.intercalate "\n" $ map unPlain $ order $ eshow e
+           L.intercalate "\n" $ map unUnicode $ order $ eshow e
         colour =
            case edgeType elabel of
               IntersectionEdge -> intersectionEdgeColour
@@ -146,9 +149,9 @@ dotIdentFromSecNode (Idx.SecNode (Idx.Section s) (Idx.Node n)) =
 
 printGraph, printGraphX, printGraphDot ::
    SequFlowGraph ->
-   Maybe (Plain, Idx.Section -> Plain) ->
-   (Topo.LNode -> Plain) ->
-   (Topo.LEdge -> [Plain]) ->
+   Maybe (Unicode, Idx.Section -> Unicode) ->
+   (Topo.LNode -> Unicode) ->
+   (Topo.LEdge -> [Unicode]) ->
    IO ()
 printGraph = printGraphX
 
@@ -163,13 +166,13 @@ printGraphDot g recTShow nshow eshow =
 
 drawTopologyX' :: SequFlowGraph -> IO ()
 drawTopologyX' topo =
-   printGraph topo Nothing (Plain . show) ((:[]) . Plain . show)
+   printGraph topo Nothing (Unicode . show) ((:[]) . Unicode . show)
 
 
 drawTopologySimple :: SequFlowGraph -> IO ()
 drawTopologySimple topo =
    printGraph topo Nothing nshow eshow
-  where nshow (Idx.SecNode _ n, l) = Plain $ show n ++ " - " ++ showNodeType l
+  where nshow (Idx.SecNode _ n, l) = Unicode $ show n ++ " - " ++ showNodeType l
         eshow _ = []
 
 dsg :: Int -> FlowTopology -> DotSubGraph String
@@ -242,34 +245,63 @@ class Format.Format output => Format output where
       Idx.Record -> StorageMap a -> Topo.LNode -> output
 
 
-instance Format Plain where
-   undetermined = Plain [heartChar]
-   formatLineAbs = formatLine ""
-   formatLineDelta = formatLine [deltaChar]
-   formatRecord = Plain . show
-   formatAssign (Plain lhs) (Plain rhs) =
-      Plain $ lhs ++ " = " ++ rhs
-   formatChar = Plain . (:[])
-   formatQuotient (Plain x) (Plain y) = Plain $ "(" ++ x ++ ")/(" ++ y ++ ")"
-   formatSignal = Plain . sdisp
+instance Format ASCII where
+   undetermined = ASCII "?"
+   formatLineAbs = formatLineASCII ""
+   formatLineDelta = formatLineASCII [deltaChar]
+   formatRecord = ASCII . show
+   formatAssign (ASCII lhs) (ASCII rhs) =
+      ASCII $ lhs ++ " = " ++ rhs
+   formatChar = ASCII . (:[])
+   formatQuotient (ASCII x) (ASCII y) = ASCII $ "(" ++ x ++ ")/(" ++ y ++ ")"
+   formatSignal = ASCII . sdisp
    formatNode rec st (n@(Idx.SecNode _sec nid), ty) =
-      Plain $
+      ASCII $
       show nid ++ "\n" ++
       "Type: " ++ showNodeType ty ++
          case ty of
             Storage ->
                "\nContent: " ++
-               (unPlain $ lookupFormat st (Idx.Storage rec n))
+               (unASCII $ lookupFormat st (Idx.Storage rec n))
             _ -> ""
 
-
-formatLine :: String -> Line -> Plain
-formatLine prefix (Line t u v) =
+formatLineASCII :: String -> Line -> ASCII
+formatLineASCII prefix (Line t u v) =
    Format.subscript
-      (Plain $ prefix ++ lineTypeLetter t : "")
+      (ASCII $ prefix ++ lineTypeLetter t : "")
       (Format.sectionNode u
        `Format.connect`
        Format.sectionNode v)
+
+
+instance Format Unicode where
+   undetermined = Unicode [heartChar]
+   formatLineAbs = formatLineUnicode ""
+   formatLineDelta = formatLineUnicode [deltaChar]
+   formatRecord = Unicode . show
+   formatAssign (Unicode lhs) (Unicode rhs) =
+      Unicode $ lhs ++ " = " ++ rhs
+   formatChar = Unicode . (:[])
+   formatQuotient (Unicode x) (Unicode y) = Unicode $ "(" ++ x ++ ")/(" ++ y ++ ")"
+   formatSignal = Unicode . sdisp
+   formatNode rec st (n@(Idx.SecNode _sec nid), ty) =
+      Unicode $
+      show nid ++ "\n" ++
+      "Type: " ++ showNodeType ty ++
+         case ty of
+            Storage ->
+               "\nContent: " ++
+               (unUnicode $ lookupFormat st (Idx.Storage rec n))
+            _ -> ""
+
+formatLineUnicode :: String -> Line -> Unicode
+formatLineUnicode prefix (Line t u v) =
+   Format.subscript
+      (Unicode $ prefix ++ lineTypeLetter t : "")
+      (Format.sectionNode u
+       `Format.connect`
+       Format.sectionNode v)
+
 
 instance Format Format.Latex where
    undetermined = Format.Latex "\\heartsuit "
@@ -347,7 +379,7 @@ formatAssignDelta lt lookupEdge x y =
    formatAssign (formatLineDelta $ Line lt x y) (lookupEdge x y)
 
 
-draw :: SequFlowGraph -> Env Plain -> IO ()
+draw :: SequFlowGraph -> Env Unicode -> IO ()
 draw g
    (Env rec formatEnergy formatX formatEta tshow nshow) =
       printGraph g (Just (rec, tshow)) nshow eshow
