@@ -30,8 +30,6 @@ import EFA2.Signal.Data (Data, (:>), Nil, NestedList)
 import EFA2.Report.Typ (TDisp, DisplayType(Typ_P, Typ_T), getDisplayUnit, getDisplayTypName)
 import EFA2.Report.Base (UnitScale(UnitScale), getUnitScale)
 
-import System.Process (system)
-
 import qualified Data.List as L
 import qualified Data.Map as M
 import Control.Functor.HT (void)
@@ -207,7 +205,6 @@ surfPlot ::
    SurfPlot tcX tcY tcZ =>
    String -> tcX -> tcY -> tcZ -> IO ()
 surfPlot ti x y z = do
-   clearCurves
    let attrs =
           Opts.title ti $
           Opts.xLabel (genAxLabel x) $
@@ -217,8 +214,6 @@ surfPlot ti x y z = do
           Opts.deflt
    void $ Plot.plotDefault $
       Frame.cons attrs $ surfPlotCore x y z
-   saveCurves ti
-   return ()
 
 class
    (AxisLabel tcX, AxisLabel tcY, AxisLabel tcZ) =>
@@ -323,18 +318,3 @@ instance (TDisp t, Atom.C (D.Value c)) => AxisLabel (TC s t c) where
 instance (AxisLabel tc) => AxisLabel [tc] where
    type Value [tc] = Value tc
    genAxLabel x = genAxLabel $ head x
-
-
--- | clean old gnuplot files from current dir
-clearCurves ::  IO ()
-clearCurves = do
-  system ("rm curve.gp")
-  system ("rm curve*.csv")
-  return ()
-
-saveCurves :: String -> IO ()
-saveCurves ti = do
-  system ("mkdir -p gnuplot/"++ti)
-  system ("mv curve.gp gnuplot/" ++ ti)
-  system ("mv curve*.csv gnuplot/" ++ ti)
-  return ()

@@ -36,7 +36,6 @@ Library
     pretty-show >=1.2 && <1.3,
     pretty ==1.1.*,
     template-haskell ==2.7.*,
-    process ==1.1.*,
     random ==1.0.*,
     Stream >=0.4.6 && <0.5,
     non-empty >=0.0.1 && <0.1,
@@ -147,7 +146,6 @@ Executable threewaysto-pred
   If flag(buildExamples)
     Build-Depends:
       efa2,
-      process,
       utility-ht,
       containers,
       base
@@ -160,7 +158,6 @@ Executable threewaysto
   If flag(buildExamples)
     Build-Depends:
       efa2,
-      process,
       containers,
       base
   Else
