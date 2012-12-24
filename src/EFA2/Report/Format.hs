@@ -41,6 +41,11 @@ class Format output where
    subscript :: output -> output -> output
    connect :: output -> output -> output
    list :: [output] -> output
+   undetermined :: output
+   empty :: output
+   newLine :: output
+   assign :: output -> output -> output
+
    record :: Idx.Record -> output
    section :: Idx.Section -> output
    sectionNode :: Idx.SecNode -> output
@@ -60,6 +65,12 @@ instance Format ASCII where
    subscript (ASCII t) (ASCII s) = ASCII $ t ++ "_" ++ s
    connect (ASCII t) (ASCII s) = ASCII $ t ++ "_" ++ s
    list = ASCII . ("["++) . (++"]") . intercalate "," . map unASCII
+   undetermined = ASCII "?"
+   empty = ASCII ""
+   newLine = ASCII "\n"
+   assign (ASCII lhs) (ASCII rhs) =
+      ASCII $ lhs ++ " = " ++ rhs
+
    record (Idx.Record r) = ASCII $ show r
    section (Idx.Section s) = ASCII $ show s
    sectionNode (Idx.SecNode (Idx.Section s) (Idx.Node x)) =
@@ -98,6 +109,12 @@ instance Format Unicode where
    subscript (Unicode t) (Unicode s) = Unicode $ t ++ "_" ++ s
    connect (Unicode t) (Unicode s) = Unicode $ t ++ "_" ++ s
    list = Unicode . ("["++) . (++"]") . intercalate "," . map unUnicode
+   undetermined = Unicode [heartChar]
+   empty = Unicode ""
+   newLine = Unicode "\n"
+   assign (Unicode lhs) (Unicode rhs) =
+      Unicode $ lhs ++ " = " ++ rhs
+
    record (Idx.Record r) = Unicode $ show r
    section (Idx.Section s) = Unicode $ show s
    sectionNode (Idx.SecNode (Idx.Section s) (Idx.Node x)) =
@@ -169,6 +186,12 @@ instance Format Latex where
    subscript (Latex t) (Latex s) = Latex $ t ++ "_{" ++ s ++ "}"
    connect (Latex t) (Latex s) = Latex $ t ++ "." ++ s
    list = Latex . ("["++) . (++"]") . intercalate ", " . map unLatex
+   undetermined = Latex "\\heartsuit "
+   empty = Latex ""
+   newLine = Latex "\\\\\n"
+   assign (Latex lhs) (Latex rhs) =
+      Latex $ lhs ++ " = " ++ rhs
+
    record (Idx.Record r) = Latex $ show r
    section (Idx.Section s) = Latex $ show s
    sectionNode (Idx.SecNode (Idx.Section s) (Idx.Node x)) =

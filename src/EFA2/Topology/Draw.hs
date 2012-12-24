@@ -4,13 +4,12 @@
 module EFA2.Topology.Draw where
 
 import EFA2.Solver.Equation
-          (Term(..), ToIndex, toIndex, simplify, (&-), (&/), formatTerm)
+          (Term(..), ToIndex, toIndex, simplify, (&-), (&/), formatTerm, MkIdxC, mkIdx)
 import qualified EFA2.Solver.Term as Term
 import qualified EFA2.Report.Format as Format
 import EFA2.Report.Format
           (ASCII(ASCII, unASCII),
-           Unicode(Unicode, unUnicode),
-           deltaChar, heartChar)
+           Unicode(Unicode, unUnicode))
 import EFA2.Interpreter.Env
           (StorageMap, SingleRecord(SingleRecord))
 import qualified EFA2.Interpreter.Env as Interp
@@ -211,17 +210,6 @@ orientEdge (e@(Edge x y), l) =
            then (e, Forward, id)
            else (Edge y x, Back, reverse)
 
-data LineType = ELine | XLine | NLine
-   deriving (Eq, Ord, Show, Enum)
-
-lineTypeLetter :: LineType -> Char
-lineTypeLetter ELine = 'e'
-lineTypeLetter XLine = 'x'
-lineTypeLetter NLine = 'n'
-
-data Line = Line LineType Idx.SecNode Idx.SecNode
-   deriving (Eq, Ord)
-
 
 showNodeType :: NodeType -> String
 showNodeType = show
@@ -229,11 +217,6 @@ showNodeType = show
 
 
 class Format.Format output => Format output where
-   undetermined :: output
-   formatLineAbs :: Line -> output
-   formatLineDelta :: Line -> output
-   formatRecord :: Idx.Record -> output
-   formatAssign :: output -> output -> output
    formatChar :: Char -> output
    formatQuotient :: output -> output -> output
    formatSignal ::
@@ -246,12 +229,6 @@ class Format.Format output => Format output where
 
 
 instance Format ASCII where
-   undetermined = ASCII "?"
-   formatLineAbs = formatLineASCII ""
-   formatLineDelta = formatLineASCII [deltaChar]
-   formatRecord = ASCII . show
-   formatAssign (ASCII lhs) (ASCII rhs) =
-      ASCII $ lhs ++ " = " ++ rhs
    formatChar = ASCII . (:[])
    formatQuotient (ASCII x) (ASCII y) = ASCII $ "(" ++ x ++ ")/(" ++ y ++ ")"
    formatSignal = ASCII . sdisp
@@ -265,22 +242,8 @@ instance Format ASCII where
                (unASCII $ lookupFormat st (Idx.Storage rec n))
             _ -> ""
 
-formatLineASCII :: String -> Line -> ASCII
-formatLineASCII prefix (Line t u v) =
-   Format.subscript
-      (ASCII $ prefix ++ lineTypeLetter t : "")
-      (Format.sectionNode u
-       `Format.connect`
-       Format.sectionNode v)
-
 
 instance Format Unicode where
-   undetermined = Unicode [heartChar]
-   formatLineAbs = formatLineUnicode ""
-   formatLineDelta = formatLineUnicode [deltaChar]
-   formatRecord = Unicode . show
-   formatAssign (Unicode lhs) (Unicode rhs) =
-      Unicode $ lhs ++ " = " ++ rhs
    formatChar = Unicode . (:[])
    formatQuotient (Unicode x) (Unicode y) = Unicode $ "(" ++ x ++ ")/(" ++ y ++ ")"
    formatSignal = Unicode . sdisp
@@ -294,22 +257,8 @@ instance Format Unicode where
                (unUnicode $ lookupFormat st (Idx.Storage rec n))
             _ -> ""
 
-formatLineUnicode :: String -> Line -> Unicode
-formatLineUnicode prefix (Line t u v) =
-   Format.subscript
-      (Unicode $ prefix ++ lineTypeLetter t : "")
-      (Format.sectionNode u
-       `Format.connect`
-       Format.sectionNode v)
-
 
 instance Format Format.Latex where
-   undetermined = Format.Latex "\\heartsuit "
-   formatLineAbs = formatLineLatex ""
-   formatLineDelta = formatLineLatex "\\Delta "
-   formatRecord = Format.Latex . show
-   formatAssign (Format.Latex lhs) (Format.Latex rhs) =
-      Format.Latex $ lhs ++ " = " ++ rhs
    formatChar = Format.Latex . (:[])
    formatQuotient (Format.Latex x) (Format.Latex y) =
       Format.Latex $ "\\frac{" ++ x ++ "}{" ++ y ++ "}"
@@ -324,15 +273,6 @@ instance Format Format.Latex where
                (Format.unLatex $ lookupFormat st (Idx.Storage rec n))
             _ -> ""
 
-
-
-formatLineLatex :: String -> Line -> Format.Latex
-formatLineLatex prefix (Line t u v) =
-   Format.subscript
-      (Format.Latex $ prefix ++ lineTypeLetter t : "")
-      (Format.sectionNode u
-       `Format.connect`
-       Format.sectionNode v)
 
 
 class FormatValue a where
@@ -353,30 +293,30 @@ data Env output =
       formatNode_ :: Topo.LNode -> output
    }
 
-formatMaybeValue :: (FormatValue a, Format output) => Maybe a -> output
-formatMaybeValue = maybe undetermined formatValue
-
 lookupFormat ::
-   (Ord idx, Show idx, FormatValue a, Format output) =>
+   (Ord idx, FormatValue a, Format output) =>
    M.Map idx a -> idx -> output
-lookupFormat dt k =
-   formatMaybeValue $ M.lookup k dt
+lookupFormat mp k =
+   maybe Format.undetermined formatValue $ M.lookup k mp
 
-formatAssignAbs ::
-   (Format output) =>
-   LineType ->
+lookupFormatAssign ::
+   (Ord idx, MkIdxC idx, FormatValue a, Format output) =>
+   M.Map idx a ->
+   (Idx.SecNode -> Idx.SecNode -> idx) ->
+   (Idx.SecNode -> Idx.SecNode -> output)
+lookupFormatAssign mp makeIdx x y =
+   case makeIdx x y of
+      idx ->
+         Format.assign (Format.index $ mkIdx idx) (lookupFormat mp idx)
+
+formatAssign ::
+   (Format output, MkIdxC idx) =>
+   (Idx.SecNode -> Idx.SecNode -> idx) ->
    (Idx.SecNode -> Idx.SecNode -> output) ->
    (Idx.SecNode -> Idx.SecNode -> output)
-formatAssignAbs lt lookupEdge x y =
-   formatAssign (formatLineAbs $ Line lt x y) (lookupEdge x y)
-
-formatAssignDelta ::
-   (Format output) =>
-   LineType ->
-   (Idx.SecNode -> Idx.SecNode -> output) ->
-   (Idx.SecNode -> Idx.SecNode -> output)
-formatAssignDelta lt lookupEdge x y =
-   formatAssign (formatLineDelta $ Line lt x y) (lookupEdge x y)
+formatAssign makeIdx fmt x y =
+   case makeIdx x y of
+      idx -> Format.assign (Format.index $ mkIdx idx) (fmt x y)
 
 
 draw :: SequFlowGraph -> Env Unicode -> IO ()
@@ -416,14 +356,12 @@ envAbs ::
 envAbs (Interp.Envs (SingleRecord rec) e _de _p _dp _fn _dn dt x _dx _v st) =
    let lookupEnergy a b = M.lookup (Idx.Energy rec a b) e
    in  Env
-          (formatRecord rec)
-          (formatAssignAbs ELine $
-           \a b -> formatMaybeValue $ lookupEnergy a b)
-          (formatAssignAbs XLine $
-           \a b -> lookupFormat x (Idx.X rec a b))
-          (formatAssignAbs NLine $
+          (Format.record rec)
+          (lookupFormatAssign e (Idx.Energy rec))
+          (lookupFormatAssign x (Idx.X rec))
+          (formatAssign (Idx.FEta rec) $
            \a b ->
-             fromMaybe undetermined $
+             fromMaybe Format.undetermined $
              liftM2 formatEnergyQuotient
                 (lookupEnergy b a)
                 (lookupEnergy a b))
@@ -438,14 +376,12 @@ envDelta
    let lookupEnergy a b = M.lookup (Idx.Energy rec a b) e
        lookupDEnergy a b = M.lookup (Idx.DEnergy rec a b) de
    in  Env
-          (formatRecord rec)
-          (formatAssignDelta ELine $
-           \a b -> formatMaybeValue $ lookupDEnergy a b)
-          (formatAssignDelta XLine $
-           \a b -> lookupFormat dx (Idx.DX rec a b))
-          (formatAssignDelta NLine $
+          (Format.record rec)
+          (lookupFormatAssign de (Idx.DEnergy rec))
+          (lookupFormatAssign dx (Idx.DX rec))
+          (formatAssign (Idx.DEta rec) $
            \a b ->
-             fromMaybe undetermined $
+             fromMaybe Format.undetermined $
              liftM4 formatDEnergyQuotient
                 (lookupEnergy b a) (lookupEnergy a b)
                 (lookupDEnergy b a) (lookupDEnergy a b))
