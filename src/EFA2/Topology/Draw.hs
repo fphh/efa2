@@ -217,6 +217,9 @@ showNodeType = show
 formatNodeType :: Format output => NodeType -> output
 formatNodeType = Format.literal . showNodeType
 
+formatChar :: Format output => Char -> output
+formatChar = Format.literal . (:[])
+
 formatNode ::
    (FormatValue a, Format output) =>
    Idx.Record -> StorageMap a -> Topo.LNode -> output
@@ -233,7 +236,6 @@ formatNode rec st (n@(Idx.SecNode _sec nid), ty) =
 
 
 class Format.Format output => Format output where
-   formatChar :: Char -> output
    formatQuotient :: output -> output -> output
    formatSignal ::
       (SDisplay v, D.Storage v a, Ord a, Disp a,
@@ -242,19 +244,16 @@ class Format.Format output => Format output where
 
 
 instance Format ASCII where
-   formatChar = ASCII . (:[])
    formatQuotient (ASCII x) (ASCII y) = ASCII $ "(" ++ x ++ ")/(" ++ y ++ ")"
    formatSignal = ASCII . sdisp
 
 
 instance Format Unicode where
-   formatChar = Unicode . (:[])
    formatQuotient (Unicode x) (Unicode y) = Unicode $ "(" ++ x ++ ")/(" ++ y ++ ")"
    formatSignal = Unicode . sdisp
 
 
 instance Format Format.Latex where
-   formatChar = Format.Latex . (:[])
    formatQuotient (Format.Latex x) (Format.Latex y) =
       Format.Latex $ "\\frac{" ++ x ++ "}{" ++ y ++ "}"
    formatSignal = Format.Latex . sdisp
