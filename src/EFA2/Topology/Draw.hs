@@ -8,7 +8,7 @@ import EFA2.Solver.Equation
 import qualified EFA2.Solver.Term as Term
 import qualified EFA2.Report.Format as Format
 import EFA2.Report.Format
-          (ASCII(ASCII, unASCII),
+          (ASCII(ASCII),
            Unicode(Unicode, unUnicode))
 import EFA2.Interpreter.Env
           (StorageMap, SingleRecord(SingleRecord))
@@ -214,6 +214,22 @@ orientEdge (e@(Edge x y), l) =
 showNodeType :: NodeType -> String
 showNodeType = show
 
+formatNodeType :: Format output => NodeType -> output
+formatNodeType = Format.literal . showNodeType
+
+formatNode ::
+   (FormatValue a, Format output) =>
+   Idx.Record -> StorageMap a -> Topo.LNode -> output
+formatNode rec st (n@(Idx.SecNode _sec nid), ty) =
+   Format.lines $
+   Format.literal (show nid) :
+   Format.words [Format.literal "Type:", formatNodeType ty] :
+      case ty of
+         Storage ->
+            [Format.words
+               [Format.literal "Content:",
+                lookupFormat st $ Idx.Storage rec n]]
+         _ -> []
 
 
 class Format.Format output => Format output where
@@ -223,39 +239,18 @@ class Format.Format output => Format output where
       (SDisplay v, D.Storage v a, Ord a, Disp a,
        TDisp t, DispApp s) =>
       TC s t (Data v a) -> output
-   formatNode ::
-      (FormatValue a) =>
-      Idx.Record -> StorageMap a -> Topo.LNode -> output
 
 
 instance Format ASCII where
    formatChar = ASCII . (:[])
    formatQuotient (ASCII x) (ASCII y) = ASCII $ "(" ++ x ++ ")/(" ++ y ++ ")"
    formatSignal = ASCII . sdisp
-   formatNode rec st (n@(Idx.SecNode _sec nid), ty) =
-      ASCII $
-      show nid ++ "\n" ++
-      "Type: " ++ showNodeType ty ++
-         case ty of
-            Storage ->
-               "\nContent: " ++
-               (unASCII $ lookupFormat st (Idx.Storage rec n))
-            _ -> ""
 
 
 instance Format Unicode where
    formatChar = Unicode . (:[])
    formatQuotient (Unicode x) (Unicode y) = Unicode $ "(" ++ x ++ ")/(" ++ y ++ ")"
    formatSignal = Unicode . sdisp
-   formatNode rec st (n@(Idx.SecNode _sec nid), ty) =
-      Unicode $
-      show nid ++ "\n" ++
-      "Type: " ++ showNodeType ty ++
-         case ty of
-            Storage ->
-               "\nContent: " ++
-               (unUnicode $ lookupFormat st (Idx.Storage rec n))
-            _ -> ""
 
 
 instance Format Format.Latex where
@@ -263,15 +258,6 @@ instance Format Format.Latex where
    formatQuotient (Format.Latex x) (Format.Latex y) =
       Format.Latex $ "\\frac{" ++ x ++ "}{" ++ y ++ "}"
    formatSignal = Format.Latex . sdisp
-   formatNode rec st (n@(Idx.SecNode _sec nid), ty) =
-      Format.Latex $
-      show nid ++ "\\\\ " ++
-      "Type: " ++ showNodeType ty ++
-         case ty of
-            Storage ->
-               "\\\\ Content: " ++
-               (Format.unLatex $ lookupFormat st (Idx.Storage rec n))
-            _ -> ""
 
 
 

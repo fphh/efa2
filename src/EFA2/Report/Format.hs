@@ -10,6 +10,8 @@ import Data.Ratio (Ratio, numerator, denominator)
 
 import Text.Printf (PrintfArg, printf)
 
+import Prelude hiding (words, lines)
+
 
 -- * special Unicode characters
 
@@ -35,6 +37,7 @@ data Mode = Absolute | Delta
 data EdgeVar = Energy | Power | Eta | X
 
 class Format output where
+   literal :: String -> output
    integer :: Integer -> output
    real :: (Floating a, PrintfArg a) => a -> output
    ratio :: (Integral a, Show a) => Ratio a -> output
@@ -43,7 +46,7 @@ class Format output where
    list :: [output] -> output
    undetermined :: output
    empty :: output
-   newLine :: output
+   words, lines :: [output] -> output
    assign :: output -> output -> output
 
    record :: Idx.Record -> output
@@ -58,6 +61,8 @@ class Format output where
    power :: output -> Integer -> output
 
 instance Format ASCII where
+   -- may need some escaping for non-ASCII characters
+   literal = ASCII
    integer = ASCII . show
    -- real = ASCII . show
    real = ASCII . printf "%.6f"
@@ -67,7 +72,8 @@ instance Format ASCII where
    list = ASCII . ("["++) . (++"]") . intercalate "," . map unASCII
    undetermined = ASCII "?"
    empty = ASCII ""
-   newLine = ASCII "\n"
+   lines = ASCII . unlines . map unASCII
+   words = ASCII . unwords . map unASCII
    assign (ASCII lhs) (ASCII rhs) =
       ASCII $ lhs ++ " = " ++ rhs
 
@@ -97,6 +103,7 @@ instance Format ASCII where
    power (ASCII x) n = ASCII $ x ++ "^" ++ showsPrec 10 n ""
 
 instance Format Unicode where
+   literal = Unicode
    integer = Unicode . show
    -- real = Unicode . show
    real = Unicode . printf "%.6f"
@@ -111,7 +118,8 @@ instance Format Unicode where
    list = Unicode . ("["++) . (++"]") . intercalate "," . map unUnicode
    undetermined = Unicode [heartChar]
    empty = Unicode ""
-   newLine = Unicode "\n"
+   lines = Unicode . unlines . map unUnicode
+   words = Unicode . unwords . map unUnicode
    assign (Unicode lhs) (Unicode rhs) =
       Unicode $ lhs ++ " = " ++ rhs
 
@@ -180,6 +188,8 @@ ratioCharMap =
 
 
 instance Format Latex where
+   -- we may use the 'latex' package for escaping non-ASCII characters
+   literal = Latex
    integer = Latex . show
    real = Latex . printf "%.6f"
    ratio r = Latex $ "\\frac{" ++ show (numerator r) ++ "}{" ++ show (denominator r) ++ "}"
@@ -188,7 +198,8 @@ instance Format Latex where
    list = Latex . ("["++) . (++"]") . intercalate ", " . map unLatex
    undetermined = Latex "\\heartsuit "
    empty = Latex ""
-   newLine = Latex "\\\\\n"
+   lines = Latex . intercalate "\\\\\n" . map unLatex
+   words = Latex . unwords . map unLatex
    assign (Latex lhs) (Latex rhs) =
       Latex $ lhs ++ " = " ++ rhs
 
