@@ -9,10 +9,10 @@ model DrivingResistance
   Modelica.Blocks.Math.Add add1 annotation(Placement(visible = true, transformation(origin = {71.3178,-44.9612}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Mechanics.Translational.Sensors.SpeedSensor speedsensor1 annotation(Placement(visible = true, transformation(origin = {-42.7907,-39.6899}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Blocks.Sources.Constant const annotation(Placement(visible = true, transformation(origin = {-28.5271,2.7907}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-  Modelica.Blocks.Math.Gain gain1(k = -1) annotation(Placement(visible = true, transformation(origin = {41.2403,38.4496}, extent = {{12,12},{-12,-12}}, rotation = -180)));
+  Modelica.Blocks.Math.Gain gain1(k = -1) annotation(Placement(visible = true, transformation(origin = {41.815,37.8749}, extent = {{12,12},{-12,-12}}, rotation = -180)));
 equation
-  connect(add1.y,gain1.u) annotation(Line(points = {{84.5178,-44.9612},{89.3023,-44.9612},{89.3023,38.4496},{55.6403,38.4496}}));
-  connect(gain1.y,force1.f) annotation(Line(points = {{28.0403,38.4496},{-7.13178,38.4496},{-7.13178,37.5194},{-8.85581,37.5194}}));
+  connect(gain1.y,force1.f) annotation(Line(points = {{28.615,37.8749},{-7.13178,37.8749},{-7.13178,37.5194},{-8.8558,37.5194}}));
+  connect(add1.y,gain1.u) annotation(Line(points = {{84.5178,-44.9612},{89.3023,-44.9612},{89.3023,37.8749},{56.215,37.8749}}));
   connect(const.y,product2.u1) annotation(Line(points = {{-15.3271,2.7907},{17.6744,2.7907},{17.6744,0.343282},{25.67,0.343282}}));
   connect(speedsensor1.flange,flange_a) annotation(Line(points = {{-54.7907,-39.6899},{-56.7442,-39.6899},{-56.7442,36.5891},{-65.7364,36.5891}}));
   connect(limiter1.u,speedsensor1.v) annotation(Line(points = {{-8.8186,-31.6279},{-22.6357,-31.6279},{-22.6357,-39.6899},{-29.5907,-39.6899}}));
