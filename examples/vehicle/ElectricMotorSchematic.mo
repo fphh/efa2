@@ -1,4 +1,4 @@
-model ElectricMotorSchematic
+model ElectricMotor
   annotation(Icon(graphics = {Text(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-67.5969,48.3721},{67.5969,-45.2713}}, textString = "E-Motor"),Rectangle(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-92.093,59.2248},{72.6001,-51.2131}}),Rectangle(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{68.9461,73.2286},{105.845,51.2131}}),Line(points = {{-49.6124,91.1628},{-40,72.5581},{-22.0155,77.8295},{-12.7132,61.7054},{-13.3333,73.4884},{-24.186,66.9767},{-13.3333,63.2558}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25)}), Diagram());
   Modelica.Mechanics.Rotational.Components.Inertia inertia1 annotation(Placement(visible = true, transformation(origin = {66.6667,10.8528}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Mechanics.Rotational.Sources.Torque torque1 annotation(Placement(visible = true, transformation(origin = {35.0388,10.5426}, extent = {{-12,-12},{12,12}}, rotation = 0)));
@@ -40,5 +40,5 @@ equation
   connect(P_max.y,division1.u1) annotation(Line(points = {{31.4281,-80.6612},{6.61157,-80.6612},{6.61157,-74.0496},{3.82149,-74.0496},{3.82149,-73.6463}}));
   connect(variablelimiter1.y,torque1.tau) annotation(Line(points = {{7.92868,10.2326},{20.1653,10.2326},{20.1653,10.5426},{20.6388,10.5426}}));
   connect(torque1.flange,inertia1.flange_a) annotation(Line(points = {{47.0388,10.5426},{54.8837,10.5426},{54.8837,10.8528},{54.6667,10.8528}}));
-end ElectricMotorSchematic;
+end ElectricMotor;
 
