@@ -18,14 +18,16 @@ model ElectricMotor
   Modelica.Electrical.Analog.Sources.SignalCurrent signalcurrent1 annotation(Placement(visible = true, transformation(origin = {-41.6375,49.4424}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Electrical.Analog.Sensors.VoltageSensor voltagesensor1 annotation(Placement(visible = true, transformation(origin = {-5.89147,87.7519}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Electrical.Analog.Interfaces.NegativePin pin_n annotation(Placement(visible = true, transformation(origin = {24.4961,87.7519}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {24.4961,87.7519}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  Efficiency efficiency1(eta = 0.9) annotation(Placement(visible = true, transformation(origin = {92.5287,36.7816}, extent = {{-12,-12},{12,12}}, rotation = 0)));
 equation
+  connect(efficiency1.y,gain2.u) annotation(Line(points = {{103.494,28.6437},{130.46,28.6437},{130.46,44.2529},{58.431,44.2529},{58.431,44.031}}));
+  connect(efficiency1.u,variablelimiter1.y) annotation(Line(points = {{82.5977,36.8506},{8.04598,36.8506},{8.04598,10.2326},{7.92868,10.2326}}));
   connect(voltagesensor1.v,division2.u2) annotation(Line(points = {{-5.89147,75.7519},{-5.89147,66.3566},{29.1473,66.3566},{29.1473,56.7442},{16.7442,56.7442},{16.7442,58.5011},{17.0022,58.5011}}));
   connect(voltagesensor1.n,pin_n) annotation(Line(points = {{6.10853,87.7519},{21.0853,87.7519},{21.0853,87.7519},{24.4961,87.7519}}));
   connect(signalcurrent1.p,pin_n) annotation(Line(points = {{-53.6375,49.4424},{-71.6279,49.4424},{-71.6279,71.938},{24.186,71.938},{24.186,87.7519},{24.4961,87.7519}}));
   connect(voltagesensor1.p,pin_p) annotation(Line(points = {{-17.8915,87.7519},{-61.3953,87.7519},{-61.3953,86.5116},{-58.6047,86.5116}}));
   connect(signalcurrent1.n,pin_p) annotation(Line(points = {{-29.6375,49.4424},{-22.3256,49.4424},{-22.3256,88.062},{-58.6047,88.062},{-58.6047,86.5116}}));
   connect(division2.y,signalcurrent1.i) annotation(Line(points = {{-10.5978,51.3011},{-15.6134,51.3011},{-15.6134,66.5428},{-39.4052,66.5428},{-39.4052,57.8424},{-41.6375,57.8424}}));
-  connect(gain2.u,torque1.tau) annotation(Line(points = {{58.431,44.031},{74.4186,44.031},{74.4186,28.2171},{17.9845,28.2171},{17.9845,9.6124},{20.6388,9.6124},{20.6388,10.5426}}));
   connect(division2.u1,gain2.y) annotation(Line(points = {{17.0022,44.1011},{31.3178,44.1011},{31.3178,44.031},{30.831,44.031}}));
   connect(limiter1.y,division1.u2) annotation(Line(points = {{14.3093,-45.3532},{5.94796,-45.3532},{5.94796,-59.2463},{3.8215,-59.2463}}));
   connect(limiter1.u,speedsensor1.w) annotation(Line(points = {{41.9093,-45.3532},{51.3011,-45.3532},{51.3011,-44.2379},{49.9822,-44.2379},{49.9822,-44.6305}}));

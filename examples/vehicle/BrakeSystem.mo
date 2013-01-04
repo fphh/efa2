@@ -1,6 +1,6 @@
 model BrakeSystem
   Modelica.Blocks.Interfaces.RealInput PedalPosition annotation(Placement(visible = true, transformation(origin = {-72.9885,8.62069}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {-72.9885,8.62069}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-  annotation(Diagram(), Icon());
+  annotation(Diagram(), Icon(graphics = {Rectangle(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-71.0078,84.9612},{61.7054,-67.2868}}),Text(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-46.5116,24.186},{43.7209,-12.093}}, textString = "Brake System")}));
   Modelica.Blocks.Interfaces.RealOutput BrakeTorqueFront annotation(Placement(visible = true, transformation(origin = {73.5632,51.1494}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {73.5632,51.1494}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Blocks.Interfaces.RealOutput BrakeTorqueRear annotation(Placement(visible = true, transformation(origin = {74.1379,-40.2299}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {74.1379,-40.2299}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Blocks.Math.Feedback feedback1 annotation(Placement(visible = true, transformation(origin = {24.1379,-41.3793}, extent = {{-12,-12},{12,12}}, rotation = 0)));
