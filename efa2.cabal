@@ -36,7 +36,6 @@ Library
     pretty-show >=1.2 && <1.3,
     pretty ==1.1.*,
     template-haskell ==2.7.*,
-    process ==1.1.*,
     random ==1.0.*,
     Stream >=0.4.6 && <0.5,
     non-empty >=0.0.1 && <0.1,
@@ -66,6 +65,7 @@ Library
     EFA2.Signal.Plot
     EFA2.Solver.IsVar
     EFA2.Solver.Equation
+    EFA2.Solver.Term
     EFA2.Solver.Horn
     EFA2.Solver.EquationOrder
     EFA2.Solver.DependencyGraph
@@ -73,6 +73,7 @@ Library
     EFA2.Report.Base
     EFA2.Report.Signal
     EFA2.Report.Report
+    EFA2.Report.Format
     EFA2.Topology.TopologyData
 -- gibt 4 Argumente an NLabel obwohl das nur (noch) 3 hat
 --    EFA2.Topology.RandomTopology
@@ -145,7 +146,6 @@ Executable threewaysto-pred
   If flag(buildExamples)
     Build-Depends:
       efa2,
-      process,
       utility-ht,
       containers,
       base
@@ -158,7 +158,6 @@ Executable threewaysto
   If flag(buildExamples)
     Build-Depends:
       efa2,
-      process,
       containers,
       base
   Else

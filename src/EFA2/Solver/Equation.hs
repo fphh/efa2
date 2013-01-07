@@ -1,5 +1,8 @@
 module EFA2.Solver.Equation where
 
+import qualified EFA2.Solver.Term as Term
+import qualified EFA2.Report.Format as Format
+
 import EFA2.Interpreter.Env as Env
 import EFA2.Signal.Index (toDiffUse)
 import qualified EFA2.Signal.Index as Idx
@@ -18,7 +21,6 @@ import qualified Data.Map as M
 import Data.Stream (Stream)
 
 import Debug.Trace (trace)
-import Text.Printf (printf)
 
 
 -- TOTHINK: Die Algorithmen aus dem Verzeichnis Solver sollten
@@ -58,6 +60,20 @@ data Term a =
           | Recip (Term a)
           | (Term a) :+ (Term a)
           | (Term a) :* (Term a) deriving (Show, Eq, Ord)
+
+
+
+instance Num (Term idx) where
+   fromInteger x = Const (x % 1)
+   negate = Minus
+   (+) = (:+)
+   (*) = (:*)
+
+instance Fractional (Term idx) where
+   fromRational = Const
+   recip = Recip
+   (/) = (&/)
+
 
 instance Functor Term where
    fmap f =
@@ -175,54 +191,23 @@ instance (ToIndex idx) => MkTermC (Term idx) where
    mkTerm = fmap toIndex
 
 
-add :: NonEmpty.T [] (Term a) -> Term a
-add = NonEmpty.foldl1 (:+)
+formatTerm ::
+   (ToIndex idx, Format.Format output) => Term idx -> output
+formatTerm =
+   let go t =
+          case t of
+             Const x -> Format.real (fromRational x :: Double)
+             Atom x -> Format.index $ toIndex x
 
-mult :: NonEmpty.T [] (Term a) -> Term a
-mult = NonEmpty.foldl1 (:*)
+             x :+ y -> Format.parenthesize $ Format.plus (go x) (go y)
+             x :* y -> Format.multiply (go x) (go y)
+
+             Recip x -> Format.recip $ go x
+             Minus x -> Format.minus $ Format.parenthesize $ go x
+   in  go
 
 
-showSecNode :: Idx.SecNode -> String
-showSecNode (Idx.SecNode (Idx.Section s) (Idx.Node x)) =
-   show s ++ "." ++ show x
-
-showEdgeIdx :: Idx.Record -> Idx.SecNode -> Idx.SecNode -> String
-showEdgeIdx (Idx.Record r) x y =
-   show r ++ "_" ++ showSecNode x ++ "_" ++ showSecNode y
-
-showIdx :: ToIndex idx => idx -> String
-showIdx idx =
-   case toIndex idx of
-      Energy (Idx.Energy r x y) -> "E_" ++ showEdgeIdx r x y
-      DEnergy (Idx.DEnergy r x y) -> "dE_" ++ showEdgeIdx r x y
-
-      Power (Idx.Power r x y) -> "P_" ++ showEdgeIdx r x y
-      DPower (Idx.DPower r x y) -> "dP_" ++ showEdgeIdx r x y
-
-      FEta (Idx.FEta r x y) -> "n_" ++ showEdgeIdx r x y
-      DEta (Idx.DEta r x y) -> "dn_" ++ showEdgeIdx r x y
-
-      DTime (Idx.DTime (Idx.Record r) (Idx.Section s)) ->
-         "dt_" ++ show r ++ "." ++ show s
-
-      X (Idx.X r x y) -> "x_" ++ showEdgeIdx r x y
-      DX (Idx.DX r x y) -> "dx_" ++ showEdgeIdx r x y
-
-      Var (Idx.Var (Idx.Record r) u x) ->
-         "v_" ++ show r ++ "_" ++ show u ++ "." ++ showSecNode x
-      Store (Idx.Storage (Idx.Record r) x) ->
-         "s_" ++ show r ++ "_" ++ showSecNode x
-
-showEqTerm :: ToIndex idx => Term idx -> String
-showEqTerm (Const x) = show (fromRational x :: Double)
-showEqTerm (Atom x) = showIdx (toIndex x)
-
-showEqTerm (x :+ y) = "(" ++ showEqTerm x ++ " + " ++ showEqTerm y ++ ")"
-showEqTerm (x :* y) = showEqTerm x ++ " * " ++ showEqTerm y
-
-showEqTerm (Recip x) = "1/(" ++ showEqTerm x ++ ")"
-showEqTerm (Minus x) = "-(" ++ showEqTerm x ++ ")"
-
+{-
 showEdge ::
    (ToIndex idx) =>
    EdgeUnknown -> idx -> idx -> idx -> String
@@ -255,18 +240,6 @@ showAssigns :: [Assign] -> String
 showAssigns ts = L.intercalate "\n" $ map showAssign ts
 
 
-newtype LatexString = LatexString { unLatexString :: String } deriving (Show, Eq)
-
-
-toLatexString' :: EqTerm -> String
-toLatexString' (Const x) = printf "%.6f   " (fromRational x :: Double)
-toLatexString' (Atom x) = idxToLatexString x
-
-toLatexString' (x :+ y) = "(" ++ toLatexString' x ++ " + " ++ toLatexString' y ++ ")"
-toLatexString' (x :* y) = toLatexString' x ++ " * " ++ toLatexString' y
-
-toLatexString' (Recip x) = "\\frac{1}{" ++ toLatexString' x ++ "}"
-toLatexString' (Minus x) = "-(" ++ toLatexString' x ++ ")"
 
 edgeToLatexString ::
    EdgeUnknown -> Index -> Index -> Index -> String
@@ -277,46 +250,17 @@ edgeToLatexString e power0 eta power1 =
       Eta -> idxToLatexString eta ++ " = n(" ++ idxToLatexString power0 ++ ", " ++ idxToLatexString power1 ++ ")"
 
 
-secNodeToLatexString :: Idx.SecNode -> String
-secNodeToLatexString (Idx.SecNode (Idx.Section s) (Idx.Node x)) =
-   show s ++ ":" ++ show x
-
-edgeIdxToLatexString :: Idx.Record -> Idx.SecNode -> Idx.SecNode -> String
-edgeIdxToLatexString (Idx.Record r) x y =
-   "{" ++ show r ++ "." ++ showSecNode x ++ "." ++ showSecNode y ++ "}"
-
-idxToLatexString :: Env.Index -> String
-idxToLatexString idx =
-   case idx of
-      Energy (Idx.Energy r x y) -> "E_" ++ edgeIdxToLatexString r x y
-      DEnergy (Idx.DEnergy r x y) -> "\\Delta E_" ++ edgeIdxToLatexString r x y
-
-      Power (Idx.Power r x y) -> "P_" ++ edgeIdxToLatexString r x y
-      DPower (Idx.DPower r x y) -> "\\Delta P_" ++ edgeIdxToLatexString r x y
-
-      FEta (Idx.FEta r x y) -> "\\eta_" ++ edgeIdxToLatexString r x y
-      DEta (Idx.DEta r x y) -> "\\Delta \\eta_" ++ edgeIdxToLatexString r x y
-
-      DTime (Idx.DTime (Idx.Record r) (Idx.Section s)) -> "\\Delta t_{" ++ show r ++ "." ++ show s ++ "}"
-
-      X (Idx.X r x y) -> "x_" ++ edgeIdxToLatexString r x y
-      DX (Idx.DX r x y) -> "\\Delta x_" ++ edgeIdxToLatexString r x y
-
-      Var (Idx.Var (Idx.Record r) u x) ->
-         "v_{" ++ show r ++ "." ++ show u ++ "_" ++ secNodeToLatexString x ++ "}"
-      Store (Idx.Storage (Idx.Record r) x) ->
-         "s_{" ++ show r ++ "." ++ showSecNode x ++ "}"
-
 eqToLatexString' :: Equation -> String
 eqToLatexString' (Given x) = idxToLatexString x ++ " \\mbox{given}"
 eqToLatexString' (EqEdge p0 n p1) = edgeToLatexString PowerOut p0 n p1
 eqToLatexString' (x := y) = toLatexString' x ++ " = " ++ toLatexString' y
 
-toLatexString :: EqTerm -> LatexString
-toLatexString t = LatexString $ "$" ++ toLatexString' t ++ "$"
+toLatexString :: ToIndex idx => Term idx -> Format.Latex
+toLatexString t = Format.Latex $ "$" ++ toLatexString' t ++ "$"
 
-eqToLatexString :: Equation -> LatexString
-eqToLatexString t = LatexString $ "$" ++ eqToLatexString' t ++ "$"
+eqToLatexString :: Equation -> Format.Latex
+eqToLatexString t = Format.Latex $ "$" ++ eqToLatexString' t ++ "$"
+-}
 
 
 -- | This function takes a predicate p that determines, wether
@@ -444,7 +388,7 @@ transformEq unknown t =
 
 
 pushMult :: Term a -> Term a
-pushMult t = add $ pushMult' t
+pushMult t = Term.add $ pushMult' t
 
 {-
 pushMult :: EqTerm -> EqTerm
@@ -469,8 +413,8 @@ iterateUntilFix f =
    fst . Stream.head . Stream.dropWhile (uncurry (/=)) .
    streamPairs . Stream.iterate f
 
-simplify :: Eq a => Term a -> Term a
-simplify = iterateUntilFix simplify' . pushMult
+simplifyOld :: Eq a => Term a -> Term a
+simplifyOld = iterateUntilFix simplify' . pushMult
   where simplify' :: Eq a => Term a -> Term a
         simplify' (Const x :+ Const y) = Const $ x+y
         simplify' ((Const 0.0) :+ x) = simplify' x
@@ -498,6 +442,26 @@ simplify = iterateUntilFix simplify' . pushMult
         simplify' (x :+ y) = simplify' x :+ simplify' y
         simplify' (x :* y) = simplify' x :* simplify' y
         simplify' x = x
+
+
+simplify :: Ord a => Term a -> Term a
+simplify = fromNormalTerm . toNormalTerm
+
+toNormalTerm :: Ord a => Term a -> Term.Term a
+toNormalTerm =
+   let go t =
+          case t of
+             Atom a -> Term.Atom a
+             Const x -> fromRational x
+
+             Minus x -> negate $ go x
+             Recip x -> recip $ go x
+             x :+ y -> go x + go y
+             x :* y -> go x * go y
+   in  go
+
+fromNormalTerm :: Ord a => Term.Term a -> Term a
+fromNormalTerm = Term.evaluate Atom
 
 {-
 simplifyEq :: Equation -> Equation
@@ -588,7 +552,7 @@ mkDiffEqTerm _ (AbsAssign (Var (Idx.Var r use n) ::= as@(_x :+ _y))) =
   where res = v ::= dps
         ats = additiveTermsNonEmpty as
         v = mkVar $ Idx.Var r (toDiffUse use) n
-        dps = add $ fmap g ats
+        dps = Term.add $ fmap g ats
         g (Atom (Power (Idx.Power _ f t))) = mkVar $ Idx.DPower r f t
 
 -- P_0.1_0.1 = v_0.1_OutSum.0

@@ -2,12 +2,13 @@
 module Main where
 
 import qualified EFA2.Solver.Equation as Equ
-import EFA2.Solver.Equation (EqTerm, mkVar, showEqTerm, mapEqTermEnv, toAbsEquations)
+import EFA2.Solver.Equation (EqTerm, mkVar, formatTerm, mapEqTermEnv, toAbsEquations)
 import EFA2.Solver.EquationOrder (order)
 import EFA2.Topology.TopologyData (SequFlowGraph, NodeType(..), ELabel, defaultELabel)
 import EFA2.Topology.Topology (makeAllEquations)
 import EFA2.Interpreter.Env
 import EFA2.Interpreter.Interpreter (interpretFromScratch, eqToInTerm)
+import qualified EFA2.Report.Format as Format
 import qualified EFA2.Topology.EfaGraph as Gr
 import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Signal.Signal as S
@@ -50,8 +51,8 @@ main = do
   let numres = numeric vierbein
       symres = symbolic vierbein
 
-  print (mapEqTermEnv showEqTerm symres)
-  print (mapEqTermEnv (Equ.showEqTerms . Equ.additiveTerms . Equ.pushMult) symres)
+  print (mapEqTermEnv (Format.unUnicode . formatTerm) symres)
+  print (mapEqTermEnv (Format.unUnicode . Format.list . map formatTerm . Equ.additiveTerms . Equ.pushMult) symres)
 
   drawTopology vierbein numres
   -- drawTopology vierbein symres -- waere noch zu schreiben...
