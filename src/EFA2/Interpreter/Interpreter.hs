@@ -156,7 +156,7 @@ interpretEq len envs eq =
       (InEqual (Var idx) rhs) -> envs { varMap = insert len idx envs rhs (varMap envs) }
       (InEqual (Store idx) rhs) -> envs { storageMap = insert len idx envs rhs (storageMap envs) }
 
-      _ -> error "interpretEq"
+      t -> error ("interpretEq: " ++ show t)
 --      _ -> error ("interpretEq: " ++ showInEquation eq)
 
 
