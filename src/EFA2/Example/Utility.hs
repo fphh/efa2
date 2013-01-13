@@ -9,6 +9,10 @@ import EFA2.Topology.EquationGenerator ((=.=))
 import EFA2.Solver.Equation (MkIdxC, MkVarC, mkVar)
 import Data.Monoid ((<>))
 
+import qualified EFA2.Topology.Flow as Flow
+import EFA2.StateAnalysis.StateAnalysis (bruteForce)
+import EFA2.Signal.SequenceData (SequData(SequData))
+
 
 makeNode :: Int -> Idx.Node
 makeNode = Idx.Node
@@ -24,6 +28,16 @@ makeSimpleEdges :: [(Int, Int)] -> [Gr.LEdge Idx.Node ()]
 makeSimpleEdges es = map f es
   where f (a, b) = (Gr.Edge (Idx.Node a) (Idx.Node b), ())
 
+constructSeqTopo :: TD.Topology -> [Int] -> TD.SequFlowGraph
+constructSeqTopo topo states = mkSeqTopo (select sol states)
+  where sol = bruteForce topo
+        select ts = map (ts!!)
+        mkSeqTopo = Flow.mkSequenceTopology
+                    . Flow.genSectionTopology
+                    . SequData
+
+recAbs :: Idx.Record
+recAbs = Idx.Record Idx.Absolute
 
 selfAssign ::
    (MkIdxC idx, Env.AccessMap idx, Eq term, MkVarC term) =>

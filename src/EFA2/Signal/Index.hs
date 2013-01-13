@@ -68,7 +68,7 @@ data Power = Power !Record !SecNode !SecNode deriving (Show, Ord, Eq)
 data DPower = DPower !Record !SecNode !SecNode deriving (Show, Ord, Eq)
 
 -- | Eta variables.
-data FEta = FEta !Record !SecNode !SecNode deriving (Show, Ord, Eq)
+data Eta = Eta !Record !SecNode !SecNode deriving (Show, Ord, Eq)
 data DEta = DEta !Record !SecNode !SecNode deriving (Show, Ord, Eq)
 
 -- | Splitting factors.
@@ -79,36 +79,13 @@ data DX = DX !Record !SecNode !SecNode deriving (Show, Ord, Eq)
 data Y = Y !Record !SecNode !SecNode deriving (Show, Ord, Eq)
 data DY = DY !Record !SecNode !SecNode deriving (Show, Ord, Eq)
 
-
-
--- * Node indices
-
 data Storage = Storage !Record !SecNode deriving (Show, Ord, Eq)
-
--- | This variable type can be used to express arbitrary relations.
--- You can variables also make dependent on section and record.
--- ATTENTION: Some of them are used for equation generation for
--- performance issues. You have to make sure yourself that your
--- variable is unique in the equational system.
---data Var = Var !Section !Record !Int !Int deriving (Show, Ord, Eq)
-
 
 data Use = InSum
          | OutSum deriving (Show, Eq, Ord)
 
-data DiffUse = InDiffSum
-             | OutDiffSum deriving (Show, Eq, Ord)
-
-toDiffUse :: Use -> DiffUse
-toDiffUse InSum = InDiffSum
-toDiffUse OutSum = OutDiffSum
-
-
 data Var = Var !Record Use !SecNode deriving (Show, Ord, Eq)
 
-
-data InSumVar = InSumVar !Record !SecNode deriving (Show, Ord, Eq)
-data OutSumVar = OutSumVar !Record !SecNode deriving (Show, Ord, Eq)
 
 -- * Other indices
 

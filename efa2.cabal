@@ -24,6 +24,10 @@ Flag buildDemos
   Description: Build demonstrations of single library features
   Default: True
 
+Flag buildTools
+  Description: Build tools
+  Default: True
+
 Library
   Build-Depends:
     graphviz >=2999.13 && <2999.15,
@@ -49,7 +53,6 @@ Library
   GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs
   Exposed-Modules:
     EFA2.IO.Import
-    EFA2.IO.FileSave
     EFA2.Utils.Utils
     EFA2.Utils.Stream
     EFA2.Utils.Trace
@@ -157,3 +160,15 @@ Executable demo-newsolversymbolic
   Else
     Buildable: False
 
+Executable makestub
+  Main-Is: sandbox/dot/Main.hs
+  GHC-Options: -Wall
+  If flag(buildTools)
+    Build-Depends:
+      haskell-src-exts == 1.13.5,
+      text == 0.11.2.0,
+      graphviz == 2999.14.1.0.1,
+      containers == 0.4.2.1,
+      base
+  Else
+    Buildable: False

@@ -1,8 +1,7 @@
 module Main where
 
-import EFA2.Example.Utility (rec, edgeVar, makeEdges, (=<>))
+import EFA2.Example.Utility (rec, edgeVar, makeEdges, (=<>), constructSeqTopo)
 
-import qualified EFA2.StateAnalysis.StateAnalysis as StateAnalysis
 import EFA2.Topology.Draw (drawTopology)
 
 import qualified EFA2.Utils.Stream as Stream
@@ -11,10 +10,8 @@ import EFA2.Utils.Stream (Stream((:~)))
 import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Topology.TopologyData as TD
 import qualified EFA2.Topology.EquationGenerator as EqGen
-import qualified EFA2.Topology.Flow as Flow
 import qualified EFA2.Topology.EfaGraph as Gr
 import qualified EFA2.Interpreter.Env as Env
-import EFA2.Signal.SequenceData (SequData(SequData))
 import EFA2.Solver.Term (Term)
 
 import Data.Monoid (mempty)
@@ -36,16 +33,6 @@ topoDreibein = Gr.mkGraph ns (makeEdges es)
         es = [(node0, node2), (node1, node2), (node2, node3)]
 
 
-seqTopo :: TD.SequFlowGraph
-seqTopo = mkSeqTopo (select sol states)
-  where sol = StateAnalysis.bruteForce topoDreibein
-        states = [1]
-        select ts = map (ts!!)
-        mkSeqTopo = Flow.mkSequenceTopology
-                    . Flow.genSectionTopology
-                    . SequData
-
-
 {-
 Use new Term type here since it simplifies automatically.
 -}
@@ -59,9 +46,9 @@ given =
    edgeVar (Idx.Power rec) sec0 node3 node2 =<>
    edgeVar (Idx.X rec) sec0 node2 node3 =<>
 
-   edgeVar (Idx.FEta rec) sec0 node3 node2 =<>
-   edgeVar (Idx.FEta rec) sec0 node0 node2 =<>
-   edgeVar (Idx.FEta rec) sec0 node2 node1 =<>
+   edgeVar (Idx.Eta rec) sec0 node3 node2 =<>
+   edgeVar (Idx.Eta rec) sec0 node0 node2 =<>
+   edgeVar (Idx.Eta rec) sec0 node2 node1 =<>
 
    mempty
 
@@ -69,7 +56,7 @@ given =
 main :: IO ()
 main = do
 
-  let env :: Env.Envs Env.SingleRecord [Term Env.Index]
+  let seqTopo = constructSeqTopo topoDreibein [1]
       env = EqGen.solveSystem given seqTopo
 
   drawTopology seqTopo env

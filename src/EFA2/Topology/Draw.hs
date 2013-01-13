@@ -332,7 +332,7 @@ envAbs (Interp.Envs (SingleRecord rec) e _de me _dme _p _dp fn _dn dt x _dx y _d
       (lookupFormatAssign me (Idx.MaxEnergy rec))
       (lookupFormatAssign x (Idx.X rec))
       (lookupFormatAssign y (Idx.Y rec))
-      (lookupFormatAssign fn (Idx.FEta rec))
+      (lookupFormatAssign fn (Idx.Eta rec))
       (lookupFormat dt . Idx.DTime rec)
       (formatNode rec st)
 

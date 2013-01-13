@@ -37,18 +37,17 @@ import Data.Foldable (foldMap, fold)
 
 import qualified EFA2.Interpreter.Env as Env
 
-import Debug.Trace
+-- import Debug.Trace
 
-
-type ProvEnv s a = Env.Envs Env.SingleRecord (Sys.Variable s a)
+type EqSysEnv s a = Env.Envs Env.SingleRecord (Sys.Variable s a)
 
 newtype
    ExprWithVars s a =
-      ExprWithVars (StateT (ProvEnv s a) (ST s) (Expr.T s a))
+      ExprWithVars (StateT (EqSysEnv s a) (ST s) (Expr.T s a))
 
 newtype
    EquationSystem s a =
-      EquationSystem (StateT (ProvEnv s a) (ST s) (Sys.M s ()))
+      EquationSystem (StateT (EqSysEnv s a) (ST s) (Sys.M s ()))
 
 instance Monoid (EquationSystem s a) where
          mempty = EquationSystem $ return (return ())
@@ -76,6 +75,11 @@ instance (Fractional a) => Num (ExprWithVars s a) where
 
          abs = liftV abs
          signum = liftV signum
+
+
+instance (Fractional a) => Fractional (ExprWithVars s a) where
+         fromRational = ExprWithVars . return . fromRational
+         (/) = liftV2 (/)
 
 infix 0 =.=
 (=.=) :: (Eq a) => ExprWithVars s a -> ExprWithVars s a -> EquationSystem s a
@@ -122,7 +126,7 @@ maxenergy :: Idx.SecNode -> Idx.SecNode -> ExprWithVars s a
 maxenergy = getEdgeVar Idx.MaxEnergy
 
 eta :: Idx.SecNode -> Idx.SecNode -> ExprWithVars s a
-eta = getEdgeVar Idx.FEta
+eta = getEdgeVar Idx.Eta
 
 xfactor :: Idx.SecNode -> Idx.SecNode -> ExprWithVars s a
 xfactor = getEdgeVar Idx.X
@@ -145,15 +149,15 @@ dtime = getVar . Idx.DTime recAbs
 
 mwhen :: Monoid a => Bool -> a -> a
 mwhen True t = t
-mwhen False _ = mempty 
+mwhen False _ = mempty
 
 edges :: Gr.EfaGraph node nodeLabel edgeLabel -> [Gr.Edge node]
 edges = M.keys . Gr.edgeLabels
 
-makeAllEquations ::
+fromTopology ::
   (Eq a, Fractional a) =>
   TD.SequFlowGraph -> EquationSystem s a
-makeAllEquations g = mconcat $
+fromTopology g = mconcat $
   makeInnerSectionEquations g :
   makeInterSectionEquations g :
   []
@@ -198,8 +202,9 @@ makeNodeEquations ::
   TD.SequFlowGraph -> EquationSystem s a
 makeNodeEquations = fold . M.mapWithKey f . Gr.nodes
    where f n (ins, _, outs) =
-            let varsumin = insumvar n       -- this variable is used again in makeStorageEquations
-                varsumout = outsumvar n     -- and this, too.
+            let -- this variable is used again in makeStorageEquations
+                varsumin = insumvar n
+                varsumout = outsumvar n  -- and this, too.
                 splitEqs varsum nodes =
                    foldMap
                       (mkSplitFactorEquations varsum (energy n) (xfactor n))
@@ -330,83 +335,6 @@ getIntersectionStorages = concat . getStorages (format . toSecNode)
           where h s = getSection s == sec
 
 
-{-
-
-makeInterSectionEquations ::
-  (Eq a, Fractional a) =>
-  TD.SequFlowGraph -> EquationSystem s a
-makeInterSectionEquations g = mconcat $
-  makeInterNodeEquations g :
-  []
-
-makeInterNodeEquations ::
-  (Eq a, Fractional a) =>
-  TD.SequFlowGraph -> EquationSystem s a
-makeInterNodeEquations topo = foldMap f st
-  where st = getIntersectionStorages topo
-        f (dir, x) =
-          case dir of
-               NoDir -> mempty
-               InDir -> mkInStorageEquations x
-               OutDir -> mkOutStorageEquations x
-
-getSection :: Idx.SecNode -> Idx.Section
-getSection (Idx.SecNode s _) = s
-
-getNode :: Idx.SecNode -> Idx.Node
-getNode (Idx.SecNode _ n) = n
-
-mkInStorageEquations ::
-  (Eq a, Fractional a) =>
-  ([SecNode], SecNode, [SecNode]) -> EquationSystem s a
-mkInStorageEquations (_, _, []) = mempty
-mkInStorageEquations (_, n, outs) =
-  withLocalVar $ \s ->
-    -- The next equation is special for the initial Section.
-    (energy n so =.= if initialSec n then initStorage else varsumin)
-    <> (s =.= sum es)
-    <> (mconcat $ zipWith (\x e -> e =.= x * s) xs es)
-    <> (mconcat $ zipWith f sos souts)
-  where souts@(so:sos) = L.sortBy (comparing getSection) outs
-        initStorage = storage n
-        varsumin = insumvar n
-        initialSec s = getSection s == Idx.initSection
-        xs = map (xfactor n) souts
-        es = map (energy n) souts
-        f next beforeNext = energy n next =.= energy n beforeNext - energy beforeNext n
-
-mkOutStorageEquations ::
-  (Eq a, Fractional a) =>
-  ([SecNode], SecNode, [SecNode]) -> EquationSystem s a
-mkOutStorageEquations ([], _, _) = mempty
-mkOutStorageEquations (ins, n, _) =
-  withLocalVar $ \s ->
-    (s =.= sum esOpposite)
-    <> (varsumout =.= sum esHere)
-    <> (mconcat $ zipWith (\e x -> e =.= x * s) esOpposite xsHere)
-    <> (mconcat $ zipWith (\e x -> e =.= x * varsumout) esHere xsHere)
-  where sins = L.sortBy (comparing getSection) ins
-        esOpposite = map (flip energy n) sins
-        esHere = map (energy n) sins
-        xsHere = map (xfactor n) sins
-        varsumout = outsumvar n
-
-
-getIntersectionStorages ::
-  TD.SequFlowGraph -> [(StDir, ([SecNode], SecNode, [SecNode]))]
-getIntersectionStorages = concat . getStorages (format . toSecNode)
-  where toSecNode (ins, n, outs) = (map fst ins, fst n, map fst outs)
-        format x@(ins, SecNode sec _, outs) =
-          case (filter h ins, filter h outs) of
-               ([], [])  ->  -- We treat initial storages as in-storages
-                 if sec == Idx.initSection then (InDir, x) else (NoDir, x)
-               ([_], []) -> (InDir, x)
-               ([], [_]) -> (OutDir, x)
-               _ -> error ("getIntersectionStorages: " ++ show x)
-          where h s = getSection s == sec
-
--}
-
 -----------------------------------------------------------------
 
 
@@ -422,17 +350,20 @@ but you may also insert complex relations like
 
 .
 -}
+
+-- -> solve
 solveSystemDoIt ::
   (Eq a, Fractional a) =>
   (forall s. EquationSystem s a) ->
   TD.SequFlowGraph -> Env.Envs Env.SingleRecord (Maybe a)
 solveSystemDoIt given g = runST $ do
-  let EquationSystem eqsys = given <> makeAllEquations g
+  let EquationSystem eqsys = given <> fromTopology g
   (eqs, varmap) <-
      runStateT eqsys $ Env.empty $ Env.SingleRecord $ Idx.Record Idx.Absolute
   Sys.solve eqs
   traverse Sys.query varmap
 
+-- weg:
 solveSystem ::
   (Eq a, Fractional a) =>
   (forall s. EquationSystem s a) ->

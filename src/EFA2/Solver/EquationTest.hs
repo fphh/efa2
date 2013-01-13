@@ -34,7 +34,7 @@ c :: Term a
 c = Const 1.0
 
 e, de :: Index
-e = deflt Idx.FEta 0 1
+e = deflt Idx.Eta 0 1
 de = deflt Idx.DEta 0 1
 
 t :: Equation

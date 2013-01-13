@@ -1,8 +1,7 @@
 module Main where
 
-import EFA2.Example.Utility (edgeVar, makeEdges, (.=))
+import EFA2.Example.Utility (edgeVar, makeEdges, (.=), constructSeqTopo)
 
-import qualified EFA2.StateAnalysis.StateAnalysis as StateAnalysis
 import EFA2.Topology.Draw (drawTopology)
 
 import qualified EFA2.Utils.Stream as Stream
@@ -11,9 +10,7 @@ import EFA2.Utils.Stream (Stream((:~)))
 import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Topology.TopologyData as TD
 import qualified EFA2.Topology.EquationGenerator as EqGen
-import qualified EFA2.Topology.Flow as Flow
 import qualified EFA2.Topology.EfaGraph as Gr
-import EFA2.Signal.SequenceData (SequData(SequData))
 
 import Data.Foldable (foldMap)
 
@@ -33,17 +30,6 @@ topoDreibein = Gr.mkGraph ns (makeEdges es)
               (node3, TD.Storage)]
         es = [(node0, node2), (node1, node2), (node2, node3)]
 
-
-seqTopo :: TD.SequFlowGraph
-seqTopo = mkSeqTopo (select sol states)
-  where sol = StateAnalysis.bruteForce topoDreibein
-        states = [1, 0, 1]
-        select ts = map (ts!!)
-        mkSeqTopo = Flow.mkSequenceTopology
-                    . Flow.genSectionTopology
-                    . SequData
-
-
 given :: EqGen.EquationSystem s Double
 given =
    foldMap (uncurry (.=)) $
@@ -55,17 +41,10 @@ given =
 
    (EqGen.storage (Idx.SecNode sec2 node3), 10.0) :
 
-{-
-   (edgeVar EqGen.power Idx.initSection node3 Idx.rootNode, 3.0) :
--}
 
    (edgeVar EqGen.power sec0 node2 node3, 4.0) :
 
    (edgeVar EqGen.xfactor sec0 node2 node3, 0.32) :
-
-{-
-   (interVar EqGen.xfactor sec1 sec2 node3, 1) :
--}
 
    (edgeVar EqGen.power sec1 node3 node2, 5) :
    (edgeVar EqGen.power sec2 node3 node2, 6) :
@@ -82,7 +61,8 @@ given =
 main :: IO ()
 main = do
 
-  let env = EqGen.solveSystem given seqTopo
+  let seqTopo = constructSeqTopo topoDreibein [1, 0, 1] 
+      env = EqGen.solveSystem given seqTopo
 
   drawTopology seqTopo env
 

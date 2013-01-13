@@ -260,7 +260,7 @@ index idx =
       Env.Power (Idx.Power r x y) -> edgeVar Absolute Power r x y
       Env.DPower (Idx.DPower r x y) -> edgeVar Delta Power r x y
 
-      Env.FEta (Idx.FEta r x y) -> edgeVar Absolute Eta r x y
+      Env.Eta (Idx.Eta r x y) -> edgeVar Absolute Eta r x y
       Env.DEta (Idx.DEta r x y) -> edgeVar Delta Eta r x y
 
       Env.X (Idx.X r x y) -> edgeVar Absolute X r x y
