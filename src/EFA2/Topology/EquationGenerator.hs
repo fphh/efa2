@@ -22,10 +22,10 @@ import Control.Monad.ST (ST, runST)
 import Control.Monad (liftM, liftM2)
 
 import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.State (StateT, runStateT, gets, modify)
+import Control.Monad.Trans.State (StateT, runStateT)
 
 
-import qualified Data.Accessor.Basic as Accessor
+import qualified Data.Accessor.Monad.Trans.State as AccessState
 
 import Data.Monoid (Monoid, (<>), mempty, mappend, mconcat)
 
@@ -101,10 +101,10 @@ getVar ::
 getVar idx =
   let newVar =
          lift Sys.globalVariable
-          >>= \var -> modify (Accessor.modify Env.accessMap $ M.insert idx var)
+          >>= \var -> AccessState.modify Env.accessMap (M.insert idx var)
           >>! return var
   in ExprWithVars $ fmap Expr.fromVariable $
-        maybe newVar return =<< gets (M.lookup idx . Accessor.get Env.accessMap)
+        maybe newVar return . M.lookup idx =<< AccessState.get Env.accessMap
 
 getEdgeVar ::
    (Env.AccessMap idx) =>
