@@ -199,13 +199,15 @@ drawTopologyXs' ts = runGraphvizCanvas Dot g Xlib
 orientEdge ::
    (Ord n, FlowDirectionField el) =>
    (Edge n, el) -> (Edge n, DirType, [s] -> [s])
-orientEdge (e@(Edge x y), l) =
+orientEdge (Edge x y, l) =
    case getFlowDirection l of
-      Topo.UnDir -> (e, NoDir, const [])
+      Topo.UnDir ->
+         (if x < y then Edge x y else Edge y x,
+          NoDir, const [])
       Topo.Dir ->
 --         if comparing (\(Idx.SecNode s n) -> n) x y == LT
          if x < y
-           then (e, Forward, id)
+           then (Edge x y, Forward, id)
            else (Edge y x, Back, reverse)
 
 
