@@ -57,7 +57,6 @@ Library
     EFA2.Utils.Utils
     EFA2.Utils.Stream
     EFA2.Utils.Trace
-    EFA2.Bijection
     EFA2.StateAnalysis.StateAnalysis
     EFA2.Signal.Index
     EFA2.Signal.Base
