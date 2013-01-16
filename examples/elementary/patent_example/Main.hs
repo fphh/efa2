@@ -5,7 +5,7 @@ module Main where
 import qualified Data.Map as M
 
 import EFA2.Topology.Topology
-import EFA2.Topology.TopologyData
+import EFA2.Graph.Topology
 
 import EFA2.Solver.Equation
 import EFA2.Solver.EquationOrder
@@ -14,7 +14,7 @@ import EFA2.Equation.Env
 import EFA2.Interpreter.Interpreter
 import EFA2.Interpreter.Arith
 
-import EFA2.Topology.Draw
+import EFA2.Graph.Draw
 
 import qualified EFA2.Signal.Signal as S
 import EFA2.Signal.Signal (Sc, PSigL, toScalar)

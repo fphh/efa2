@@ -9,11 +9,11 @@ import qualified Data.Map as M
 import qualified UniqueLogic.ST.Expression as Expr
 import qualified UniqueLogic.ST.System as Sys
 
-import qualified EFA2.Signal.Index as Idx
-import qualified EFA2.Topology.TopologyData as TD
+import qualified EFA2.Graph.Topology.Index as Idx
+import qualified EFA2.Graph.Topology as TD
 import qualified EFA2.Utility.Stream as Stream
 import EFA2.Utility.Stream (Stream((:~)))
-import EFA2.Topology.EfaGraph (mkGraph)
+import EFA2.Graph (mkGraph)
 import EFA2.Example.Utility ((.=), constructSeqTopo, makeNodes, edgeVar, makeEdges, recAbs)
 
 import EFA2.Equation.Env (energyMap)

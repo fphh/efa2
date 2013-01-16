@@ -1,4 +1,4 @@
-module EFA2.StateAnalysis.StateAnalysis (
+module EFA2.Graph.Topology.StateAnalysis (
    advanced,
    bruteForce,
    branchAndBound,
@@ -15,9 +15,9 @@ module EFA2.StateAnalysis.StateAnalysis (
    speedClustering,
    ) where
 
-import qualified EFA2.Signal.Index as Idx
-import qualified EFA2.Topology.EfaGraph as Gr
-import EFA2.Topology.TopologyData
+import qualified EFA2.Graph.Topology.Index as Idx
+import qualified EFA2.Graph as Gr
+import EFA2.Graph.Topology
           (FlowTopology, Topology, NodeType(..),
            FlowDirection(UnDir, Dir), isActive)
 import EFA2.Utility (mapFromSet)

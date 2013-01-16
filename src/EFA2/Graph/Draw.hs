@@ -1,13 +1,16 @@
-module EFA2.Topology.Draw where
+module EFA2.Graph.Draw where
 
-import EFA2.Equation.Variable (MkIdxC, mkIdx)
 import qualified EFA2.Report.Format as Format
 import EFA2.Report.FormatValue (FormatValue, formatValue)
 import EFA2.Report.Format (Format, Unicode(Unicode, unUnicode))
-import EFA2.Equation.Env (StorageMap, SingleRecord(SingleRecord))
+
 import qualified EFA2.Equation.Env as Interp
-import qualified EFA2.Topology.TopologyData as Topo
-import EFA2.Topology.TopologyData
+import EFA2.Equation.Variable (MkIdxC, mkIdx)
+import EFA2.Equation.Env (StorageMap, SingleRecord(SingleRecord))
+
+import qualified EFA2.Graph.Topology.Index as Idx
+import qualified EFA2.Graph.Topology as Topo
+import EFA2.Graph.Topology
           (SequFlowGraph,
            NodeType(Storage),
            EdgeType(OriginalEdge, IntersectionEdge),
@@ -15,11 +18,9 @@ import EFA2.Topology.TopologyData
            isIntersectionEdge,
            getFlowDirection,
            FlowDirectionField, FlowTopology)
-import EFA2.Topology.EfaGraph
+import EFA2.Graph
           (EfaGraph, Edge(Edge),
            labNodes, labEdges, edgeLabels, delNodes, delEdgeSet)
-
-import qualified EFA2.Signal.Index as Idx
 
 import Data.GraphViz (
           runGraphvizCanvas,

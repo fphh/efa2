@@ -5,7 +5,7 @@ module EFA2.Symbolic.OperatorTreeTest where
 import EFA2.Equation.Variable (Index(..), MkIdxC, mkVar)
 import EFA2.Symbolic.OperatorTree (Term(..))
 
-import qualified EFA2.Signal.Index as Idx
+import qualified EFA2.Graph.Topology.Index as Idx
 
 
 deflt ::

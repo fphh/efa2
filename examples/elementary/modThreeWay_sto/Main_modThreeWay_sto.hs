@@ -21,13 +21,13 @@ import EFA2.Equation.Env
 import EFA2.Interpreter.Interpreter
 import EFA2.Interpreter.InTerm
 
-import EFA2.Topology.Draw
+import EFA2.Graph.Draw
 
 import EFA2.Signal.Sequence
 import EFA2.Signal.SequenceData
 import qualified EFA2.Signal.Signal as S
 
-import EFA2.Topology.TopologyData
+import EFA2.Graph.Topology
 
 
 topo :: Topology

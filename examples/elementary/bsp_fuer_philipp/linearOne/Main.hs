@@ -1,7 +1,7 @@
 
 module Main where
 
-import qualified EFA2.Topology.EfaGraph as Gr
+import qualified EFA2.Graph as Gr
 
 import qualified Data.List as L
 import qualified Data.Set as Set
@@ -21,16 +21,16 @@ import EFA2.Interpreter.Interpreter
 import EFA2.Equation.Env
 import EFA2.Interpreter.Arith (Val)
 
-import qualified EFA2.Signal.Index as Idx
+import qualified EFA2.Graph.Topology.Index as Idx
 import qualified EFA2.Signal.Signal as S
 import EFA2.Signal.Signal (Sc, toScalar, fromScalar)
 
 import EFA2.Topology.Topology (makeAllEquations)
-import EFA2.Topology.TopologyData
+import EFA2.Graph.Topology
           (SequFlowGraph, NodeType(..), ELabel, defaultELabel)
 
-import EFA2.Topology.Draw (drawDeltaTopology, drawTopology, drawAll)
-import EFA2.Topology.TopologyData (SequFlowGraph, NodeType(..))
+import EFA2.Graph.Draw (drawDeltaTopology, drawTopology, drawAll)
+import EFA2.Graph.Topology (SequFlowGraph, NodeType(..))
 
 
 edgeIdx ::

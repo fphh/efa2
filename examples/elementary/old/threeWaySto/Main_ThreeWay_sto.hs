@@ -10,7 +10,7 @@ import Data.Maybe
 
 
 import EFA2.Topology.Topology
-import EFA2.Topology.EfaGraph
+import EFA2.Graph
 
 import EFA2.Solver.Equation
 import EFA2.Solver.Horn
@@ -26,13 +26,13 @@ import EFA2.Interpreter.InTerm
 import EFA2.Utility
 import EFA2.IO.Import
 
-import EFA2.Topology.Draw
+import EFA2.Graph.Draw
 
 import EFA2.Signal.Sequence
 import EFA2.Signal.SequenceData
 
-import EFA2.Topology.Flow
-import EFA2.Topology.TopologyData
+import EFA2.Graph.Flow
+import EFA2.Graph.Topology
 import EFA2.Example.Loop
 import EFA2.Example.SymSig
 

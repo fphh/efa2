@@ -6,10 +6,10 @@ module EFA2.Signal.Sequence where
 import qualified EFA2.Equation.Env as Env
 import EFA2.Equation.Env (Env(..))
 
-import qualified EFA2.Topology.Flow as Flow
-import EFA2.Topology.TopologyData (Topology, SequFlowGraph)
+import qualified EFA2.Graph.Flow as Flow
+import qualified EFA2.Graph.Topology.Index as Idx
+import EFA2.Graph.Topology (Topology, SequFlowGraph)
 
-import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Signal.Signal as S
 import qualified EFA2.Signal.Vector as V
 

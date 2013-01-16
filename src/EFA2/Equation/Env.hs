@@ -1,6 +1,6 @@
 module EFA2.Equation.Env where
 
-import qualified EFA2.Signal.Index as Idx
+import qualified EFA2.Graph.Topology.Index as Idx
 
 import qualified Data.Map as M
 

@@ -1,4 +1,4 @@
-module EFA2.Topology.EfaGraph (
+module EFA2.Graph (
    EfaGraph(EfaGraph),
    isConsistent,
    inEdges, outEdges,

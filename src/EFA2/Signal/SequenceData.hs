@@ -4,9 +4,9 @@
 
 module EFA2.Signal.SequenceData where
 
-import EFA2.Topology.TopologyData (FlowTopology)
+import EFA2.Graph.Topology (FlowTopology)
 
-import qualified EFA2.Signal.Index as Idx
+import qualified EFA2.Graph.Topology.Index as Idx
 import qualified EFA2.Signal.Signal as S
 import qualified EFA2.Signal.Data as D
 import qualified EFA2.Signal.Vector as V

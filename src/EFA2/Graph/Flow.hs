@@ -1,15 +1,15 @@
 
 
-module EFA2.Topology.Flow (module EFA2.Topology.Flow) where
+module EFA2.Graph.Flow where
 
-import qualified EFA2.Topology.EfaGraph as Gr
-import EFA2.Topology.EfaGraph
+import qualified EFA2.Graph as Gr
+import EFA2.Graph
           (Edge(Edge), mkGraph,
            labNodes, labEdges,
            insNodes, insEdges)
 
-import qualified EFA2.Signal.Index as Idx
-import EFA2.Topology.TopologyData as Topo
+import qualified EFA2.Graph.Topology.Index as Idx
+import EFA2.Graph.Topology as Topo
 import EFA2.Signal.SequenceData
 
 import EFA2.Signal.Signal (fromScalar, sigSign, sigSum)

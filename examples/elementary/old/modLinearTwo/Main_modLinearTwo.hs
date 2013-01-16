@@ -32,12 +32,12 @@ import EFA2.Utility
 import EFA2.Signal.Sequence
 import EFA2.IO.Import
 
-import EFA2.Topology.Draw
+import EFA2.Graph.Draw
 import EFA2.Example.SymSig
 
 import EFA2.Signal.Sequence
-import EFA2.Topology.Flow
---import EFA2.Topology.Flow
+import EFA2.Graph.Flow
+--import EFA2.Graph.Flow
 
 
 -- import EFA2.Example.LinearOne

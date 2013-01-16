@@ -1,41 +1,38 @@
 {-# LANGUAGE Rank2Types #-}
 module EFA2.Equation.System where
 
-import qualified Data.Map as M
-import qualified Data.Set as S
-import qualified Data.List.HT as LH
-import qualified Data.NonEmpty as NonEmpty
+import qualified EFA2.Equation.Env as Env
+import qualified EFA2.Graph.Topology.Index as Idx
+import qualified EFA2.Graph.Topology as TD
+import qualified EFA2.Graph as Gr
+import EFA2.Graph (Edge(..))
 
-import qualified EFA2.Signal.Index as Idx
-
-import EFA2.Topology.EfaGraph (Edge(..))
-import qualified EFA2.Topology.EfaGraph as Gr
-
-import qualified EFA2.Topology.TopologyData as TD
 import EFA2.Utility ((>>!))
 
 import UniqueLogic.ST.Expression ((=:=))
 import qualified UniqueLogic.ST.Expression as Expr
 import qualified UniqueLogic.ST.System as Sys
 
-import Control.Monad.ST (ST, runST)
-import Control.Monad (liftM, liftM2)
+import qualified Data.Accessor.Monad.Trans.State as AccessState
 
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT, runStateT)
 
+import Control.Monad.ST (ST, runST)
+import Control.Monad (liftM, liftM2)
 
-import qualified Data.Accessor.Monad.Trans.State as AccessState
+import qualified Data.Map as M
+import qualified Data.Set as S
+import qualified Data.List.HT as LH
+import qualified Data.NonEmpty as NonEmpty
 
+import Data.Traversable (traverse)
+import Data.Foldable (foldMap, fold)
 import Data.Monoid (Monoid, (<>), mempty, mappend, mconcat)
 
 import Data.Maybe (maybeToList)
 import Data.Ord (comparing)
 
-import Data.Traversable (traverse)
-import Data.Foldable (foldMap, fold)
-
-import qualified EFA2.Equation.Env as Env
 
 -- import Debug.Trace
 

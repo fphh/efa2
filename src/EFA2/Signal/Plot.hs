@@ -20,7 +20,7 @@ import qualified Graphics.Gnuplot.LineSpecification as LineSpec
 import qualified Graphics.Gnuplot.Frame as Frame
 import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
 
-import qualified EFA2.Signal.Index as Idx
+import qualified EFA2.Graph.Topology.Index as Idx
 import qualified EFA2.Signal.Signal as S
 import qualified EFA2.Signal.Data as D
 import qualified EFA2.Signal.Vector as SV

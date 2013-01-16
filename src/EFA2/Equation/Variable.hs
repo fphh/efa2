@@ -1,6 +1,6 @@
 module EFA2.Equation.Variable where
 
-import qualified EFA2.Signal.Index as Idx
+import qualified EFA2.Graph.Topology.Index as Idx
 import qualified EFA2.Symbolic.OperatorTree as OT
 import qualified EFA2.Symbolic.SumProduct as SP
 import qualified EFA2.Report.Format as Format

@@ -57,8 +57,6 @@ Library
     EFA2.Utility
     EFA2.Utility.Stream
     EFA2.Utility.Trace
-    EFA2.StateAnalysis.StateAnalysis
-    EFA2.Signal.Index
     EFA2.Signal.Base
     EFA2.Signal.SequenceData
     EFA2.Signal.Typ
@@ -75,10 +73,12 @@ Library
     EFA2.Report.Report
     EFA2.Report.Format
     EFA2.Report.FormatValue
-    EFA2.Topology.TopologyData
-    EFA2.Topology.EfaGraph
-    EFA2.Topology.Flow
-    EFA2.Topology.Draw
+    EFA2.Graph
+    EFA2.Graph.Draw
+    EFA2.Graph.Topology
+    EFA2.Graph.Topology.Index
+    EFA2.Graph.Topology.StateAnalysis
+    EFA2.Graph.Flow
     EFA2.Equation.System
     EFA2.Equation.Env
     EFA2.Equation.Variable

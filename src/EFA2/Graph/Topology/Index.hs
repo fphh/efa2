@@ -1,4 +1,4 @@
-module EFA2.Signal.Index where
+module EFA2.Graph.Topology.Index where
 
 import qualified Test.QuickCheck as QC
 

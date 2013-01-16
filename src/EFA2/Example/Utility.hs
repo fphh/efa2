@@ -1,16 +1,17 @@
 module EFA2.Example.Utility where
 
-import qualified EFA2.Signal.Index as Idx
-import qualified EFA2.Topology.EfaGraph as Gr
-import qualified EFA2.Topology.TopologyData as TD
+import qualified EFA2.Graph.Topology.Index as Idx
+import qualified EFA2.Graph.Topology as TD
+import qualified EFA2.Graph.Flow as Flow
+import qualified EFA2.Graph as Gr
+import EFA2.Graph.Topology.StateAnalysis (bruteForce)
+
 import qualified EFA2.Equation.Env as Env
 import qualified EFA2.Equation.System as EqGen
 import EFA2.Equation.System ((=.=))
 import EFA2.Equation.Variable (MkIdxC, MkVarC, mkVar)
 import Data.Monoid ((<>))
 
-import qualified EFA2.Topology.Flow as Flow
-import EFA2.StateAnalysis.StateAnalysis (bruteForce)
 import EFA2.Signal.SequenceData (SequData(SequData))
 
 

@@ -1,4 +1,4 @@
-module EFA2.Topology.TopologyData (
+module EFA2.Graph.Topology (
        NLabel (..), LNode,
        ELabel (..), LEdge,
        NodeType (..),
@@ -27,9 +27,9 @@ module EFA2.Topology.TopologyData (
        StoreDir(..),
        getActiveStores) where
 
-import qualified EFA2.Signal.Index as Idx
-import qualified EFA2.Topology.EfaGraph as Gr
-import EFA2.Topology.EfaGraph (EfaGraph, mkInOutGraphFormat)
+import qualified EFA2.Graph.Topology.Index as Idx
+import qualified EFA2.Graph as Gr
+import EFA2.Graph (EfaGraph, mkInOutGraphFormat)
 
 import qualified Test.QuickCheck as QC
 import qualified Data.Map as M

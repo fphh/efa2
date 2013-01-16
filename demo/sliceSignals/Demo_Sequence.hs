@@ -2,7 +2,7 @@ module Main where
 
 import qualified EFA2.Signal.Signal as S
 import qualified EFA2.Signal.Sequence as Sequ
-import qualified EFA2.Signal.Index as Idx
+import qualified EFA2.Graph.Topology.Index as Idx
 import EFA2.Signal.SequenceData
           (PPosIdx(PPosIdx), PowerRecord(PowerRecord), ListPowerRecord,
            Sequ, SequPwrRecord)
