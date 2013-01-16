@@ -1,11 +1,10 @@
 module EFA2.Topology.Draw where
 
-import EFA2.Solver.Equation (MkIdxC, mkIdx)
+import EFA2.Equation.Variable (MkIdxC, mkIdx)
 import qualified EFA2.Report.Format as Format
 import EFA2.Report.FormatValue (FormatValue, formatValue)
 import EFA2.Report.Format (Format, Unicode(Unicode, unUnicode))
-import EFA2.Interpreter.Env
-          (StorageMap, SingleRecord(SingleRecord))
+import EFA2.Interpreter.Env (StorageMap, SingleRecord(SingleRecord))
 import qualified EFA2.Interpreter.Env as Interp
 import qualified EFA2.Topology.TopologyData as Topo
 import EFA2.Topology.TopologyData
@@ -248,7 +247,7 @@ lookupFormatAssign ::
 lookupFormatAssign mp makeIdx x y =
    case makeIdx x y of
       idx ->
-         Format.assign (Format.index $ mkIdx idx) (lookupFormat mp idx)
+         Format.assign (formatValue $ mkIdx idx) (lookupFormat mp idx)
 
 draw :: SequFlowGraph -> Env Unicode -> IO ()
 draw g

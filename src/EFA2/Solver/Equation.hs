@@ -6,40 +6,14 @@ import qualified EFA2.Solver.Term as Term
 import qualified EFA2.Report.Format as Format
 import EFA2.Report.FormatValue (FormatValue, formatValue)
 
-import EFA2.Interpreter.Env as Env
-import qualified EFA2.Signal.Index as Idx
-
 import Control.Monad (liftM2)
 
-import qualified Data.Ratio as Ratio
-import Data.Ratio (Ratio, (%))
+import Data.Ratio ((%))
 
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Stream as Stream
 import Data.Stream (Stream)
 
-
-data Equation =
-            EqTerm := EqTerm
-          | EqEdge Env.Index Env.Index Env.Index
-          | Given Env.Index deriving (Show, Eq, Ord)
-
-data EdgeUnknown =
-            PowerIn
-          | Eta
-          | PowerOut
-             deriving (Show, Eq, Ord, Enum)
-
-data Assign =
-            AbsAssign AbsAssign
-          | AssignEdge EdgeUnknown Env.Index Env.Index Env.Index
-             deriving (Show, Eq, Ord)
-
-data AbsAssign =
-            Env.Index ::= EqTerm
-          | GivenIdx Env.Index deriving (Show, Eq, Ord)
-
-type EqTerm = Term Env.Index
 
 data Term a =
             Atom a
@@ -79,18 +53,13 @@ instance Functor Term where
                 x :* y -> go x :* go y
       in go
 
-infixl 1 !=, !:=, :=, ::=
-infixl 7  !*, !/, :*, &/
-infixl 6  !+, !-, :+, &-
+infixl 7  :*, &/
+infixl 6  :+, &-
 
-
-{-
 
 {- |
 For consistency with '(:+)' it should be named '(:-)'
 but this is reserved for constructors.
--}
-
 -}
 
 (&-) :: Term a -> Term a -> Term a
@@ -99,102 +68,6 @@ x &- y  =  x :+ Minus y
 (&/) :: Term a -> Term a -> Term a
 x &/ y  =  x :* Recip y
 
-
-
-(!+) :: (MkTermC a, MkTermC b) => a -> b -> EqTerm
-x !+ y = mkTerm x :+ mkTerm y
-
-(!-) :: (MkTermC a, MkTermC b) => a -> b -> EqTerm
-x !- y = mkTerm x &- mkTerm y
-
-(!*) :: (MkTermC a, MkTermC b) => a -> b -> EqTerm
-x !* y = mkTerm x :* mkTerm y
-
-(!/) :: (MkTermC a, MkTermC b) => a -> b -> EqTerm
-x !/ y = mkTerm x &/ mkTerm y
-
-(!=) :: (MkTermC a, MkTermC b) => a -> b -> Equation
-x != y = mkTerm x := mkTerm y
-
-(!:=) :: (MkIdxC a, MkTermC b) => a -> b -> AbsAssign
-x !:= y = mkIdx x ::= mkTerm y
-
-give :: MkIdxC a => a -> Equation
-give = Given . mkIdx
-
-
-class MkIdxC a where
-   mkIdx :: a -> Env.Index
-
-instance MkIdxC Idx.Energy where mkIdx = Env.Energy
-instance MkIdxC Idx.DEnergy where mkIdx = Env.DEnergy
-instance MkIdxC Idx.MaxEnergy where mkIdx = Env.MaxEnergy
-instance MkIdxC Idx.DMaxEnergy where mkIdx = Env.DMaxEnergy
-instance MkIdxC Idx.Power where mkIdx = Env.Power
-instance MkIdxC Idx.DPower where mkIdx = Env.DPower
-instance MkIdxC Idx.Eta where mkIdx = Env.Eta
-instance MkIdxC Idx.DEta where mkIdx = Env.DEta
-instance MkIdxC Idx.DTime where mkIdx = Env.DTime
-instance MkIdxC Idx.X where mkIdx = Env.X
-instance MkIdxC Idx.DX where mkIdx = Env.DX
-instance MkIdxC Idx.Y where mkIdx = Env.Y
-instance MkIdxC Idx.DY where mkIdx = Env.DY
-instance MkIdxC Idx.Var where mkIdx = Env.Var
-instance MkIdxC Idx.Storage where mkIdx = Env.Store
-
-
-class MkVarC a where
-   mkVarCore :: Env.Index -> a
-
-instance MkVarC Env.Index where
-   mkVarCore = id
-
-instance MkVarC a => MkVarC (Term a) where
-   mkVarCore = Atom . mkVarCore
-
-instance MkVarC a => MkVarC (Term.Term a) where
-   mkVarCore = Term.Atom . mkVarCore
-
-mkVar :: (MkIdxC a, MkVarC b) => a -> b
-mkVar = mkVarCore . mkIdx
-
-
-class MkTermC a where
-   mkTerm :: a -> EqTerm
-
-instance MkTermC Idx.Energy where mkTerm = mkVar
-instance MkTermC Idx.DEnergy where mkTerm = mkVar
-instance MkTermC Idx.Power where mkTerm = mkVar
-instance MkTermC Idx.DPower where mkTerm = mkVar
-instance MkTermC Idx.Eta where mkTerm = mkVar
-instance MkTermC Idx.DEta where mkTerm = mkVar
-instance MkTermC Idx.DTime where mkTerm = mkVar
-instance MkTermC Idx.X where mkTerm = mkVar
-instance MkTermC Idx.DX where mkTerm = mkVar
-instance MkTermC Idx.Var where mkTerm = mkVar
-instance MkTermC Idx.Storage where mkTerm = mkVar
-
-
-instance MkTermC Env.Index where
-   mkTerm = Atom
-
-instance MkTermC Double where
-   mkTerm = Const . realToFrac
-
-instance MkTermC Integer where
-   mkTerm = Const . fromInteger
-
-instance Integral int => MkTermC (Ratio int) where
-   mkTerm x = Const $ toInteger (Ratio.numerator x) % toInteger (Ratio.denominator x)
-
-class ToIndex idx where
-   toIndex :: idx -> Env.Index
-
-instance ToIndex Env.Index where
-   toIndex = id
-
-instance (ToIndex idx) => MkTermC (Term idx) where
-   mkTerm = fmap toIndex
 
 
 instance (Eq a, FormatValue a) => FormatValue (Term a) where

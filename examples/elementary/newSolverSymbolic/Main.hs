@@ -11,7 +11,7 @@ import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Topology.TopologyData as TD
 import qualified EFA2.Topology.EquationGenerator as EqGen
 import qualified EFA2.Topology.EfaGraph as Gr
-import qualified EFA2.Interpreter.Env as Env
+import EFA2.Equation.Variable (Index)
 import EFA2.Solver.Term (Term)
 
 import Data.Monoid (mempty)
@@ -36,7 +36,7 @@ topoDreibein = Gr.mkGraph ns (makeEdges es)
 {-
 Use new Term type here since it simplifies automatically.
 -}
-given :: EqGen.EquationSystem s (Term Env.Index)
+given :: EqGen.EquationSystem s (Term Index)
 given =
    Idx.DTime recAbs Idx.initSection =<>
    Idx.DTime recAbs sec0 =<>

@@ -6,7 +6,7 @@ import qualified EFA2.Topology.TopologyData as TD
 import qualified EFA2.Interpreter.Env as Env
 import qualified EFA2.Topology.EquationGenerator as EqGen
 import EFA2.Topology.EquationGenerator ((=.=))
-import EFA2.Solver.Equation (MkIdxC, MkVarC, mkVar)
+import EFA2.Equation.Variable (MkIdxC, MkVarC, mkVar)
 import Data.Monoid ((<>))
 
 import qualified EFA2.Topology.Flow as Flow

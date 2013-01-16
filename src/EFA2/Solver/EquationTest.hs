@@ -2,10 +2,10 @@
 
 module EFA2.Solver.EquationTest where
 
-import EFA2.Solver.Equation (EqTerm, Term(..), Equation(..), (!/), (&/), MkIdxC, mkVar)
+import EFA2.Equation.Variable (Index(..), MkIdxC, mkVar)
+import EFA2.Solver.Equation (Term(..))
 
 import qualified EFA2.Signal.Index as Idx
-import EFA2.Interpreter.Env (Index(..))
 
 
 deflt ::
@@ -36,9 +36,3 @@ c = Const 1.0
 e, de :: Index
 e = deflt Idx.Eta 0 1
 de = deflt Idx.DEta 0 1
-
-t :: Equation
-t = EqEdge p1 e p2
-
-testt :: EqTerm
-testt = de !/ Atom e &/ Atom e

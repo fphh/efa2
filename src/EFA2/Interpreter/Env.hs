@@ -10,25 +10,6 @@ import Data.Traversable (Traversable, sequenceA, foldMapDefault)
 import Data.Foldable (Foldable, foldMap)
 
 
-data Index =
-            Energy Idx.Energy
-          | DEnergy Idx.DEnergy
-          | MaxEnergy Idx.MaxEnergy
-          | DMaxEnergy Idx.DMaxEnergy
-          | Power Idx.Power
-          | DPower Idx.DPower
-          | Eta Idx.Eta
-          | DEta Idx.DEta
-          | DTime Idx.DTime
-          | X Idx.X
-          | DX Idx.DX
-          | Y Idx.Y
-          | DY Idx.DY
-          | Var Idx.Var
-          | Store Idx.Storage
-            deriving (Show, Eq, Ord)
-
-
 -- Environments
 type EnergyMap a = M.Map Idx.Energy a
 type DEnergyMap a = M.Map Idx.DEnergy a

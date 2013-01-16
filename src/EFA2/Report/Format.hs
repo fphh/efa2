@@ -1,7 +1,6 @@
 module EFA2.Report.Format where
 
 import qualified EFA2.Signal.Index as Idx
-import qualified EFA2.Interpreter.Env as Env
 
 import qualified Data.Map as M
 
@@ -33,7 +32,6 @@ newtype Latex = Latex { unLatex :: String }
 
 -- * class for unified handling of ASCII, Unicode and LaTeX output
 
-data Mode = Absolute | Delta
 data EdgeVar = Energy | MaxEnergy | Power | Eta | X | Y
 
 class Format output where
@@ -239,41 +237,3 @@ edgeIndex ::
    Idx.Record -> Idx.SecNode -> Idx.SecNode -> output
 edgeIndex r x y =
    record r `connect` sectionNode x `connect` sectionNode y
-
-edgeVar ::
-   Format output =>
-   Mode -> EdgeVar -> Idx.Record -> Idx.SecNode -> Idx.SecNode -> output
-edgeVar mode e r x y =
-   case mode of
-      Absolute -> subscript (edgeIdent e) (edgeIndex r x y)
-      Delta -> subscript (delta $ edgeIdent e) (edgeIndex r x y)
-
-index :: Format output => Env.Index -> output
-index idx =
-   case idx of
-      Env.Energy (Idx.Energy r x y) -> edgeVar Absolute Energy r x y
-      Env.DEnergy (Idx.DEnergy r x y) -> edgeVar Delta Energy r x y
-
-      Env.MaxEnergy (Idx.MaxEnergy r x y) -> edgeVar Absolute MaxEnergy r x y
-      Env.DMaxEnergy (Idx.DMaxEnergy r x y) -> edgeVar Delta MaxEnergy r x y
-
-      Env.Power (Idx.Power r x y) -> edgeVar Absolute Power r x y
-      Env.DPower (Idx.DPower r x y) -> edgeVar Delta Power r x y
-
-      Env.Eta (Idx.Eta r x y) -> edgeVar Absolute Eta r x y
-      Env.DEta (Idx.DEta r x y) -> edgeVar Delta Eta r x y
-
-      Env.X (Idx.X r x y) -> edgeVar Absolute X r x y
-      Env.DX (Idx.DX r x y) -> edgeVar Delta X r x y
-
-      Env.Y (Idx.Y r x y) -> edgeVar Absolute Y r x y
-      Env.DY (Idx.DY r x y) -> edgeVar Delta Y r x y
-
-      Env.DTime (Idx.DTime r s) ->
-         subscript (delta time) $ record r `connect` section s
-
-      Env.Var (Idx.Var r u x) ->
-         subscript var $ record r `connect` use u `connect` sectionNode x
-
-      Env.Store (Idx.Storage r x) ->
-         subscript storage $ record r `connect` sectionNode x

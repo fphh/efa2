@@ -82,6 +82,7 @@ Library
     EFA2.Topology.EquationGenerator
     EFA2.Example.Utility
     EFA2.Interpreter.Env
+    EFA2.Equation.Variable
   Other-Modules:
     EFA2.Solver.EquationTest
 
