@@ -21,7 +21,7 @@ import EFA2.Solver.Equation
 import EFA2.Solver.IsVar
 import EFA2.Interpreter.Arith
 import EFA2.Interpreter.Env
-import EFA2.Utils.Utils
+import EFA2.Utility
 
 
 {-

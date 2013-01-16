@@ -1,4 +1,4 @@
-module EFA2.Utils.Stream where
+module EFA2.Utility.Stream where
 
 import Prelude (Show, Enum, succ)
 

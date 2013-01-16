@@ -43,7 +43,7 @@ module EFA2.Topology.EfaGraph (
    ) where
 
 -- imaport qualified Data.Graph.Inductive as IG
-import EFA2.Utils.Utils (mapFromSet, differenceMapSet, intersectionMapSet)
+import EFA2.Utility (mapFromSet, differenceMapSet, intersectionMapSet)
 
 import qualified Data.Set as S
 import qualified Data.Map as M

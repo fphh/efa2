@@ -28,7 +28,7 @@ import EFA2.Interpreter.Arith
 
 import EFA2.Topology.Topology
 
-import EFA2.Utils.Utils
+import EFA2.Utility
 
 import EFA2.Display.FileSave
 import EFA2.Topology.Draw

@@ -23,7 +23,7 @@ import EFA2.Interpreter.Interpreter
 import EFA2.Interpreter.Arith
 import EFA2.Interpreter.InTerm
 
-import EFA2.Utils.Utils
+import EFA2.Utility
 import EFA2.IO.Import
 
 import EFA2.Topology.Draw

@@ -1,6 +1,6 @@
-module EFA2.Utils.Trace where
+module EFA2.Utility.Trace where
 
-import EFA2.Utils.Utils (myShowList)
+import EFA2.Utility (myShowList)
 
 import Debug.Trace (trace)
 

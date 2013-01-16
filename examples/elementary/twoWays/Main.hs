@@ -15,8 +15,8 @@ import qualified EFA2.Topology.TopologyData as TD
 import qualified EFA2.Topology.EquationGenerator as EqGen
 import EFA2.Topology.EquationGenerator ((=.=))
 
-import qualified EFA2.Utils.Stream as Stream
-import EFA2.Utils.Stream (Stream((:~)))
+import qualified EFA2.Utility.Stream as Stream
+import EFA2.Utility.Stream (Stream((:~)))
 
 import EFA2.Topology.EfaGraph (mkGraph)
 import EFA2.Example.Utility (makeEdges, constructSeqTopo, edgeVar, (.=), recAbs)

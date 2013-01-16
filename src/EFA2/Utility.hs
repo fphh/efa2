@@ -1,4 +1,4 @@
-module EFA2.Utils.Utils where
+module EFA2.Utility where
 
 import qualified Data.List.Match as Match
 import qualified Data.List.HT as LH

@@ -5,7 +5,7 @@ import qualified EFA2.Signal.Signal as S
 import EFA2.Signal.Signal (TSigL, PSigL)
 
 import  EFA2.Interpreter.Env
-import EFA2.Utils.Utils
+import EFA2.Utility
 
 import qualified Data.Map as M 
 

@@ -28,7 +28,7 @@ import EFA2.Interpreter.Env
 import EFA2.Interpreter.Interpreter
 import EFA2.Interpreter.Arith
 
-import EFA2.Utils.Utils
+import EFA2.Utility
 import EFA2.Signal.Sequence
 import EFA2.IO.Import
 

@@ -20,7 +20,7 @@ import qualified EFA2.Topology.EfaGraph as Gr
 import EFA2.Topology.TopologyData
           (FlowTopology, Topology, NodeType(..),
            FlowDirection(UnDir, Dir), isActive)
-import EFA2.Utils.Utils (mapFromSet)
+import EFA2.Utility (mapFromSet)
 
 import qualified Data.List.Key as Key
 import qualified Data.Foldable as Fold

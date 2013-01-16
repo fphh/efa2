@@ -10,7 +10,7 @@ import EFA2.Report.Report
 
 import EFA2.Signal.Plot
 
-import EFA2.Utils.Utils
+import EFA2.Utility
 
 import qualified Data.Map as M
 

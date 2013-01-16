@@ -54,9 +54,9 @@ Library
   GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs
   Exposed-Modules:
     EFA2.IO.Import
-    EFA2.Utils.Utils
-    EFA2.Utils.Stream
-    EFA2.Utils.Trace
+    EFA2.Utility
+    EFA2.Utility.Stream
+    EFA2.Utility.Trace
     EFA2.StateAnalysis.StateAnalysis
     EFA2.Signal.Index
     EFA2.Signal.Base

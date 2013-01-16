@@ -4,8 +4,8 @@ import EFA2.Example.Utility (recAbs, edgeVar, makeEdges, (=<>), constructSeqTopo
 
 import EFA2.Topology.Draw (drawTopology)
 
-import qualified EFA2.Utils.Stream as Stream
-import EFA2.Utils.Stream (Stream((:~)))
+import qualified EFA2.Utility.Stream as Stream
+import EFA2.Utility.Stream (Stream((:~)))
 
 import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Topology.TopologyData as TD

@@ -11,8 +11,8 @@ import qualified UniqueLogic.ST.System as Sys
 
 import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Topology.TopologyData as TD
-import qualified EFA2.Utils.Stream as Stream
-import EFA2.Utils.Stream (Stream((:~)))
+import qualified EFA2.Utility.Stream as Stream
+import EFA2.Utility.Stream (Stream((:~)))
 import EFA2.Topology.EfaGraph (mkGraph)
 import EFA2.Example.Utility ((.=), constructSeqTopo, makeNodes, edgeVar, makeEdges, recAbs)
 

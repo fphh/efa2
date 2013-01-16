@@ -23,7 +23,7 @@ import EFA2.Solver.IsVar
 import EFA2.Solver.DirEquation
 import EFA2.Interpreter.Arith
 import EFA2.Interpreter.Env
-import EFA2.Utils.Utils
+import EFA2.Utility
 
 
 -- | Given x and eta environments, the number of all solved (directed) equations should be equal the

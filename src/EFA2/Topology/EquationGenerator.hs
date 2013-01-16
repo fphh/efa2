@@ -12,7 +12,7 @@ import EFA2.Topology.EfaGraph (Edge(..))
 import qualified EFA2.Topology.EfaGraph as Gr
 
 import qualified EFA2.Topology.TopologyData as TD
-import EFA2.Utils.Utils ((>>!))
+import EFA2.Utility ((>>!))
 
 import UniqueLogic.ST.Expression ((=:=))
 import qualified UniqueLogic.ST.Expression as Expr

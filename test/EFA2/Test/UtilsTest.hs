@@ -2,7 +2,7 @@
 
 module EFA2.Test.UtilsTest where
 
-import EFA2.Utils.Utils (pairs, yazf)
+import EFA2.Utility (pairs, yazf)
 
 import Test.QuickCheck (Property, (==>))
 import Test.QuickCheck.All (quickCheckAll)

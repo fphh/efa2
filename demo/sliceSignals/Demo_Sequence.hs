@@ -9,7 +9,7 @@ import EFA2.Signal.SequenceData
 import EFA2.Signal.Signal (PSigL, (.++))
 import EFA2.Signal.Base (Val)
 import EFA2.Signal.Plot (rPlot, rPlotCore)
-import EFA2.Utils.Utils (divUp)
+import EFA2.Utility (divUp)
 
 import qualified Graphics.Gnuplot.Advanced as Plot
 import qualified Graphics.Gnuplot.Terminal.PostScript as PS
