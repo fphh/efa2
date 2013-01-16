@@ -55,9 +55,6 @@ infixr 6 =<>
 idx =<> eqsys = selfAssign idx <> eqsys
 
 
-rec :: Idx.Record
-rec = Idx.Record Idx.Absolute
-
 edgeVar ::
    (Idx.SecNode -> Idx.SecNode -> idx) ->
    Idx.Section -> Idx.Node -> Idx.Node -> idx

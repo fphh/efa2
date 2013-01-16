@@ -1,6 +1,6 @@
 module Main where
 
-import EFA2.Example.Utility (rec, edgeVar, makeEdges, (=<>), constructSeqTopo)
+import EFA2.Example.Utility (recAbs, edgeVar, makeEdges, (=<>), constructSeqTopo)
 
 import EFA2.Topology.Draw (drawTopology)
 
@@ -38,17 +38,17 @@ Use new Term type here since it simplifies automatically.
 -}
 given :: EqGen.EquationSystem s (Term Env.Index)
 given =
-   Idx.DTime rec Idx.initSection =<>
-   Idx.DTime rec sec0 =<>
+   Idx.DTime recAbs Idx.initSection =<>
+   Idx.DTime recAbs sec0 =<>
 
-   Idx.Storage rec (Idx.SecNode sec0 node3) =<>
+   Idx.Storage recAbs (Idx.SecNode sec0 node3) =<>
 
-   edgeVar (Idx.Power rec) sec0 node3 node2 =<>
-   edgeVar (Idx.X rec) sec0 node2 node3 =<>
+   edgeVar (Idx.Power recAbs) sec0 node3 node2 =<>
+   edgeVar (Idx.X recAbs) sec0 node2 node3 =<>
 
-   edgeVar (Idx.Eta rec) sec0 node3 node2 =<>
-   edgeVar (Idx.Eta rec) sec0 node0 node2 =<>
-   edgeVar (Idx.Eta rec) sec0 node2 node1 =<>
+   edgeVar (Idx.Eta recAbs) sec0 node3 node2 =<>
+   edgeVar (Idx.Eta recAbs) sec0 node0 node2 =<>
+   edgeVar (Idx.Eta recAbs) sec0 node2 node1 =<>
 
    mempty
 
