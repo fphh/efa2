@@ -103,12 +103,14 @@ getVar ::
    (Env.AccessMap idx) =>
    idx -> ExprWithVars s a
 getVar idx =
-  let newVar =
-         lift Sys.globalVariable
-          >>= \var -> AccessState.modify Env.accessMap (M.insert idx var)
-          >>! return var
-  in ExprWithVars $ fmap Expr.fromVariable $
-        maybe newVar return . M.lookup idx =<< AccessState.get Env.accessMap
+  ExprWithVars $ fmap Expr.fromVariable $ do
+    oldMap <- AccessState.get Env.accessMap
+    case M.lookup idx oldMap of
+      Just var -> return var
+      Nothing -> do
+        var <- lift Sys.globalVariable
+        AccessState.set Env.accessMap $ M.insert idx var oldMap
+        return var
 
 getEdgeVar ::
    (Env.AccessMap idx) =>
