@@ -4,8 +4,8 @@ import EFA2.Equation.Variable (MkIdxC, mkIdx)
 import qualified EFA2.Report.Format as Format
 import EFA2.Report.FormatValue (FormatValue, formatValue)
 import EFA2.Report.Format (Format, Unicode(Unicode, unUnicode))
-import EFA2.Interpreter.Env (StorageMap, SingleRecord(SingleRecord))
-import qualified EFA2.Interpreter.Env as Interp
+import EFA2.Equation.Env (StorageMap, SingleRecord(SingleRecord))
+import qualified EFA2.Equation.Env as Interp
 import qualified EFA2.Topology.TopologyData as Topo
 import EFA2.Topology.TopologyData
           (SequFlowGraph,

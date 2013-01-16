@@ -10,7 +10,7 @@ import EFA2.Topology.TopologyData
 import EFA2.Solver.Equation
 import EFA2.Solver.EquationOrder
 
-import EFA2.Interpreter.Env
+import EFA2.Equation.Env
 import EFA2.Interpreter.Interpreter
 import EFA2.Interpreter.Arith
 

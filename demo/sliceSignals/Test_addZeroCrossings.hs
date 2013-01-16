@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, FunctionalDependencies, TypeSynonymInstances, UndecidableInstances,KindSignatures, TypeOperators,  GADTs, OverlappingInstances, FlexibleContexts, ScopedTypeVariables #-}
 
 
-import EFA2.Interpreter.Env
+import EFA2.Equation.Env
 
 import EFA2.Signal.Sequence
 import EFA2.Signal.SequenceData

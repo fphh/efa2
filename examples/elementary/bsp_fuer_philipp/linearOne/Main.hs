@@ -18,7 +18,7 @@ import EFA2.Solver.EquationOrder (order)
 
 import EFA2.Interpreter.Interpreter
           (eqToInTerm, interpretFromScratch, interpretTerm)
-import EFA2.Interpreter.Env
+import EFA2.Equation.Env
 import EFA2.Interpreter.Arith (Val)
 
 import qualified EFA2.Signal.Index as Idx

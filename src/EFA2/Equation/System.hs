@@ -1,5 +1,5 @@
 {-# LANGUAGE Rank2Types #-}
-module EFA2.Topology.EquationGenerator where
+module EFA2.Equation.System where
 
 import qualified Data.Map as M
 import qualified Data.Set as S
@@ -35,7 +35,7 @@ import Data.Ord (comparing)
 import Data.Traversable (traverse)
 import Data.Foldable (foldMap, fold)
 
-import qualified EFA2.Interpreter.Env as Env
+import qualified EFA2.Equation.Env as Env
 
 -- import Debug.Trace
 

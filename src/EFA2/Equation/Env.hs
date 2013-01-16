@@ -1,4 +1,4 @@
-module EFA2.Interpreter.Env where
+module EFA2.Equation.Env where
 
 import qualified EFA2.Signal.Index as Idx
 

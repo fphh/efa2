@@ -3,8 +3,8 @@
 
 module EFA2.Signal.Sequence where
 
-import qualified EFA2.Interpreter.Env as Env
-import EFA2.Interpreter.Env (Env(..))
+import qualified EFA2.Equation.Env as Env
+import EFA2.Equation.Env (Env(..))
 
 import qualified EFA2.Topology.Flow as Flow
 import EFA2.Topology.TopologyData (Topology, SequFlowGraph)

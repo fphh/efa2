@@ -3,9 +3,9 @@ module EFA2.Example.Utility where
 import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Topology.EfaGraph as Gr
 import qualified EFA2.Topology.TopologyData as TD
-import qualified EFA2.Interpreter.Env as Env
-import qualified EFA2.Topology.EquationGenerator as EqGen
-import EFA2.Topology.EquationGenerator ((=.=))
+import qualified EFA2.Equation.Env as Env
+import qualified EFA2.Equation.System as EqGen
+import EFA2.Equation.System ((=.=))
 import EFA2.Equation.Variable (MkIdxC, MkVarC, mkVar)
 import Data.Monoid ((<>))
 

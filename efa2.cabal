@@ -79,10 +79,10 @@ Library
     EFA2.Topology.EfaGraph
     EFA2.Topology.Flow
     EFA2.Topology.Draw
-    EFA2.Topology.EquationGenerator
-    EFA2.Example.Utility
-    EFA2.Interpreter.Env
+    EFA2.Equation.System
+    EFA2.Equation.Env
     EFA2.Equation.Variable
+    EFA2.Example.Utility
   Other-Modules:
     EFA2.Symbolic.OperatorTreeTest
 

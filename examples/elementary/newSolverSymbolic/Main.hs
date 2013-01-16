@@ -9,7 +9,7 @@ import EFA2.Utility.Stream (Stream((:~)))
 
 import qualified EFA2.Signal.Index as Idx
 import qualified EFA2.Topology.TopologyData as TD
-import qualified EFA2.Topology.EquationGenerator as EqGen
+import qualified EFA2.Equation.System as EqGen
 import qualified EFA2.Topology.EfaGraph as Gr
 import EFA2.Equation.Variable (Index)
 import EFA2.Symbolic.SumProduct (Term)

@@ -1,4 +1,4 @@
-import EFA2.Interpreter.Env
+import EFA2.Equation.Env
 
 import qualified EFA2.Signal.Signal as S
 import EFA2.Signal.Sequence

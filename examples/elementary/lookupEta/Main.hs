@@ -16,10 +16,10 @@ import EFA2.Utility.Stream (Stream((:~)))
 import EFA2.Topology.EfaGraph (mkGraph)
 import EFA2.Example.Utility ((.=), constructSeqTopo, makeNodes, edgeVar, makeEdges, recAbs)
 
-import EFA2.Interpreter.Env (energyMap)
+import EFA2.Equation.Env (energyMap)
 
-import qualified EFA2.Topology.EquationGenerator as EqGen
-import EFA2.Topology.EquationGenerator ((=.=))
+import qualified EFA2.Equation.System as EqGen
+import EFA2.Equation.System ((=.=))
 
 sec0 :: Idx.Section
 sec0 :~ _ = Stream.enumFrom $ Idx.Section 0

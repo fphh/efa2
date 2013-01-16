@@ -22,7 +22,7 @@ import EFA2.Solver.Horn
 import EFA2.Solver.IsVar
 import EFA2.Solver.DirEquation
 import EFA2.Interpreter.Arith
-import EFA2.Interpreter.Env
+import EFA2.Equation.Env
 import EFA2.Utility
 
 

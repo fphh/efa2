@@ -16,7 +16,7 @@ import EFA2.Signal.SequenceData
 
 import qualified EFA2.Signal.Index as Idx
 import EFA2.Signal.Signal (Sc, toScalar, fromScalar)
-import EFA2.Interpreter.Env as Env
+import EFA2.Equation.Env as Env
 import EFA2.Solver.EquationOrder (order)
 import EFA2.Solver.Equation
           (MkTermC, mkTerm, showAbsAssign, showEquations,

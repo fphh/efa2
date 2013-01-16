@@ -23,7 +23,7 @@ import EFA2.Solver.EquationOrder
 
 import EFA2.Interpreter.Interpreter
 import EFA2.Interpreter.InTerm
-import EFA2.Interpreter.Env
+import EFA2.Equation.Env
 import EFA2.Interpreter.Arith
 
 import EFA2.Topology.Topology

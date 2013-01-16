@@ -21,7 +21,7 @@ import EFA2.Solver.DependencyGraph
 import EFA2.Solver.IsVar
 import EFA2.Interpreter.Interpreter
 import EFA2.Interpreter.InTerm
-import EFA2.Interpreter.Env
+import EFA2.Equation.Env
 
 
 import EFA2.Topology.RandomTopology
