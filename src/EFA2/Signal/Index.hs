@@ -91,3 +91,52 @@ data Var = Var !Record Use !SecNode deriving (Show, Ord, Eq)
 
 -- | Delta time variables, depending solely on their section and record number.
 data DTime = DTime !Record !Section deriving (Show, Ord, Eq)
+
+
+class RecNum a where
+   getRecNum :: a -> Record
+   setRecNum :: Record -> a -> a
+
+instance RecNum Energy where
+   getRecNum (Energy r _ _) = r
+   setRecNum rec (Energy _ f t) = Energy rec f t
+
+instance RecNum DEnergy where
+   getRecNum (DEnergy r _ _) = r
+   setRecNum rec (DEnergy _ f t) = DEnergy rec f t
+
+instance RecNum Power where
+   getRecNum (Power r _ _) = r
+   setRecNum rec (Power _ f t) = Power rec f t
+
+instance RecNum DPower where
+   getRecNum (DPower r _ _) = r
+   setRecNum rec (DPower _ f t) = DPower rec f t
+
+instance RecNum Eta where
+   getRecNum (Eta r _ _) = r
+   setRecNum rec (Eta _ f t) = Eta rec f t
+
+instance RecNum DEta where
+   getRecNum (DEta r _ _) = r
+   setRecNum rec (DEta _ f t) = DEta rec f t
+
+instance RecNum X where
+   getRecNum (X r _ _) = r
+   setRecNum rec (X _ f t) = X rec f t
+
+instance RecNum DX where
+   getRecNum (DX r _ _) = r
+   setRecNum rec (DX _ f t) = DX rec f t
+
+instance RecNum DTime where
+   getRecNum (DTime r _) = r
+   setRecNum rec (DTime _ s) = DTime rec s
+
+instance RecNum Storage where
+   getRecNum (Storage r _) = r
+   setRecNum rec (Storage _ n) = Storage rec n
+
+instance RecNum Var where
+   getRecNum (Var r _ _) = r
+   setRecNum rec (Var _ use t) = Var rec use t
