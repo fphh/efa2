@@ -131,8 +131,8 @@ type StorageMap a = M.Map Idx.Storage a
 
 
 
-data Envs rec a =
-              Envs { recordNumber :: rec,
+data Env rec a =
+               Env { recordNumber :: rec,
                      energyMap :: EnergyMap a,
                      denergyMap :: DEnergyMap a,
                      maxenergyMap :: MaxEnergyMap a,
@@ -152,7 +152,7 @@ data Envs rec a =
 
 
 class Ord idx => AccessMap idx where
-   accessMap :: Accessor.T (Envs rec a) (M.Map idx a)
+   accessMap :: Accessor.T (Env rec a) (M.Map idx a)
 
 instance AccessMap Idx.Energy where
    accessMap =
@@ -215,16 +215,16 @@ instance AccessMap Idx.Storage where
       Accessor.fromSetGet (\x c -> c{storageMap = x}) storageMap
 
 
-instance Functor (Envs rec) where
-         fmap f (Envs rec e de me dme p dp n dn dt x dx y dy v st) =
-           Envs rec (fmap f e) (fmap f de) (fmap f me) (fmap f dme) (fmap f p) (fmap f dp) (fmap f n) (fmap f dn) (fmap f dt) (fmap f x) (fmap f dx) (fmap f y) (fmap f dy) (fmap f v) (fmap f st)
+instance Functor (Env rec) where
+         fmap f (Env rec e de me dme p dp n dn dt x dx y dy v st) =
+           Env rec (fmap f e) (fmap f de) (fmap f me) (fmap f dme) (fmap f p) (fmap f dp) (fmap f n) (fmap f dn) (fmap f dt) (fmap f x) (fmap f dx) (fmap f y) (fmap f dy) (fmap f v) (fmap f st)
 
-instance Foldable (Envs rec) where
+instance Foldable (Env rec) where
    foldMap = foldMapDefault
 
-instance Traversable (Envs rec) where
-   sequenceA (Envs rec e de me dme p dp n dn dt x dx y dy v st) =
-      pure (Envs rec) <?> e <?> de <?> me <?> dme <?> p <?> dp <?> n <?> dn <?> dt <?> x <?> dx <?> y <?> dy <?> v <?> st
+instance Traversable (Env rec) where
+   sequenceA (Env rec e de me dme p dp n dn dt x dx y dy v st) =
+      pure (Env rec) <?> e <?> de <?> me <?> dme <?> p <?> dp <?> n <?> dn <?> dt <?> x <?> dx <?> y <?> dy <?> v <?> st
 
 infixl 4 <?>
 (<?>) ::
@@ -233,8 +233,8 @@ infixl 4 <?>
 f <?> x = f <*> sequenceA x
 
 
-empty :: rec -> Envs rec a
-empty rec = Envs rec M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty
+empty :: rec -> Env rec a
+empty rec = Env rec M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty
 
 
 data NoRecord = NoRecord deriving (Eq, Ord, Show)

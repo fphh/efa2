@@ -39,7 +39,7 @@ import qualified EFA2.Interpreter.Env as Env
 
 -- import Debug.Trace
 
-type EqSysEnv s a = Env.Envs Env.SingleRecord (Sys.Variable s a)
+type EqSysEnv s a = Env.Env Env.SingleRecord (Sys.Variable s a)
 
 newtype
    ExprWithVars s a =
@@ -357,7 +357,7 @@ but you may also insert complex relations like
 solveSystemDoIt ::
   (Eq a, Fractional a) =>
   (forall s. EquationSystem s a) ->
-  TD.SequFlowGraph -> Env.Envs Env.SingleRecord (Maybe a)
+  TD.SequFlowGraph -> Env.Env Env.SingleRecord (Maybe a)
 solveSystemDoIt given g = runST $ do
   let EquationSystem eqsys = given <> fromTopology g
   (eqs, varmap) <-
@@ -369,5 +369,5 @@ solveSystemDoIt given g = runST $ do
 solveSystem ::
   (Eq a, Fractional a) =>
   (forall s. EquationSystem s a) ->
-  TD.SequFlowGraph -> Env.Envs Env.SingleRecord [a]
+  TD.SequFlowGraph -> Env.Env Env.SingleRecord [a]
 solveSystem given = fmap maybeToList . solveSystemDoIt given

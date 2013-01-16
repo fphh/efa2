@@ -316,18 +316,18 @@ draw g
                  []
 
 drawTopology ::
-   FormatValue a => SequFlowGraph -> Interp.Envs SingleRecord a -> IO ()
+   FormatValue a => SequFlowGraph -> Interp.Env SingleRecord a -> IO ()
 drawTopology topo = draw topo . envAbs
 
 drawDeltaTopology ::
-   FormatValue a => SequFlowGraph -> Interp.Envs SingleRecord a -> IO ()
+   FormatValue a => SequFlowGraph -> Interp.Env SingleRecord a -> IO ()
 drawDeltaTopology topo = draw topo . envDelta
 
 
 envAbs ::
    (FormatValue a, Format output) =>
-   Interp.Envs SingleRecord a -> Env output
-envAbs (Interp.Envs (SingleRecord rec) e _de me _dme _p _dp fn _dn dt x _dx y _dy _v st) =
+   Interp.Env SingleRecord a -> Env output
+envAbs (Interp.Env (SingleRecord rec) e _de me _dme _p _dp fn _dn dt x _dx y _dy _v st) =
    Env
       (Format.record rec)
       (lookupFormatAssign e (Idx.Energy rec))
@@ -340,9 +340,9 @@ envAbs (Interp.Envs (SingleRecord rec) e _de me _dme _p _dp fn _dn dt x _dx y _d
 
 envDelta ::
    (FormatValue a, Format output) =>
-   Interp.Envs SingleRecord a -> Env output
+   Interp.Env SingleRecord a -> Env output
 envDelta
-      (Interp.Envs (SingleRecord rec) _e de _me dme _p _dp _fn dn dt _x dx _y dy _v st) =
+      (Interp.Env (SingleRecord rec) _e de _me dme _p _dp _fn dn dt _x dx _y dy _v st) =
    Env
       (Format.record rec)
       (lookupFormatAssign de (Idx.DEnergy rec))
