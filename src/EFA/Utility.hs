@@ -7,10 +7,11 @@ import qualified Data.Map as M
 import Data.Tuple.HT (swap)
 
 
-safeLookup :: (Ord k, Show k, Show v) => M.Map k v -> k -> v
-safeLookup m k = case M.lookup k m of
-                      Nothing -> error $ "safeLookup: " ++ show k ++ "\n" ++ show m
-                      Just x -> x
+checkedLookup :: (Ord k, Show k, Show v) => M.Map k v -> k -> v
+checkedLookup m k =
+  case M.lookup k m of
+    Nothing -> error $ "checkedLookup: " ++ show k ++ "\n" ++ show m
+    Just x -> x
 
 checkJust :: String -> Maybe a -> a
 checkJust _ (Just x) = x
