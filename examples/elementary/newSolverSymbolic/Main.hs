@@ -1,18 +1,18 @@
 module Main where
 
-import EFA2.Example.Utility (recAbs, edgeVar, makeEdges, (=<>), constructSeqTopo)
+import EFA.Example.Utility (recAbs, edgeVar, makeEdges, (=<>), constructSeqTopo)
 
-import EFA2.Graph.Draw (drawTopology)
+import EFA.Graph.Draw (drawTopology)
 
-import qualified EFA2.Utility.Stream as Stream
-import EFA2.Utility.Stream (Stream((:~)))
+import qualified EFA.Utility.Stream as Stream
+import EFA.Utility.Stream (Stream((:~)))
 
-import qualified EFA2.Graph.Topology.Index as Idx
-import qualified EFA2.Graph.Topology as TD
-import qualified EFA2.Equation.System as EqGen
-import qualified EFA2.Graph as Gr
-import EFA2.Equation.Variable (Index)
-import EFA2.Symbolic.SumProduct (Term)
+import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Graph.Topology as TD
+import qualified EFA.Equation.System as EqGen
+import qualified EFA.Graph as Gr
+import EFA.Equation.Variable (Index)
+import EFA.Symbolic.SumProduct (Term)
 
 import Data.Monoid (mempty)
 

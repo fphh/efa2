@@ -4,28 +4,28 @@ module Main where
 import qualified Data.Map as M
 import qualified Data.List as L
 
-import qualified EFA2.Example.Examples as Example
-import qualified EFA2.Graph.Topology.StateAnalysis as StateAnalysis
-import EFA2.Graph.Draw
+import qualified EFA.Example.Examples as Example
+import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
+import EFA.Graph.Draw
 
-import EFA2.Graph.Topology
-import EFA2.Topology.Topology
-import qualified EFA2.Graph.Flow as Flow
-import EFA2.Signal.SequenceData
+import EFA.Graph.Topology
+import EFA.Topology.Topology
+import qualified EFA.Graph.Flow as Flow
+import EFA.Signal.SequenceData
 
 
-import qualified EFA2.Graph.Topology.Index as Idx
-import EFA2.Signal.Signal (Sc, toScalar, fromScalar)
-import EFA2.Equation.Env as Env
-import EFA2.Solver.EquationOrder (order)
-import EFA2.Solver.Equation
+import qualified EFA.Graph.Topology.Index as Idx
+import EFA.Signal.Signal (Sc, toScalar, fromScalar)
+import EFA.Equation.Env as Env
+import EFA.Solver.EquationOrder (order)
+import EFA.Solver.Equation
           (MkTermC, mkTerm, showAbsAssign, showEquations,
            EqTerm, Term(Const), toAbsEquations, mapEqTermEnv)
-import EFA2.Graph.Draw (drawDeltaTopology, drawTopology, drawAll)
+import EFA.Graph.Draw (drawDeltaTopology, drawTopology, drawAll)
 
-import EFA2.Interpreter.Interpreter
+import EFA.Interpreter.Interpreter
           (eqToInTerm, interpretFromScratch, interpretTerm)
-import qualified EFA2.Signal.Signal as S
+import qualified EFA.Signal.Signal as S
 
 import Debug.Trace
 

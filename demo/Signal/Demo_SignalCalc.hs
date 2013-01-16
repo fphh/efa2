@@ -2,17 +2,17 @@
 
 -- module Demo_Signal where
 
-import qualified EFA2.Signal.Plot as Plot
-import qualified EFA2.Signal.Signal as S
-import EFA2.Signal.SignalFill ((.-), (./), (.*))
-import EFA2.Signal.Signal
+import qualified EFA.Signal.Plot as Plot
+import qualified EFA.Signal.Signal as S
+import EFA.Signal.SignalFill ((.-), (./), (.*))
+import EFA.Signal.Signal
           (TC, Scalar, Signal, FSignal, FSamp, PFSamp, PSigL, UTFSig, Test1, Test2,
            PSig,TSig, Scal, FFSig,  FSig1,
            (.++)) -- (&-), (&+), (&/), (&*), (&++))
 
-import EFA2.Signal.Typ (Typ, A, D, P, N, T, Tt)
-import EFA2.Signal.Data (UVec)
-import EFA2.Signal.Base (Val)
+import EFA.Signal.Typ (Typ, A, D, P, N, T, Tt)
+import EFA.Signal.Data (UVec)
+import EFA.Signal.Base (Val)
 
 
 -- Generate objects to work with

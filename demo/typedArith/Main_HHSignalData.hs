@@ -1,12 +1,12 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, MultiParamTypeClasses, TypeSynonymInstances, FunctionalDependencies, FlexibleInstances, UndecidableInstances, FlexibleContexts, StandaloneDeriving, ExistentialQuantification, KindSignatures, ScopedTypeVariables, TemplateHaskell #-}
 
 
-module EFA2.Signal.SignalData where
+module EFA.Signal.SignalData where
 
 
 import qualified Data.Vector.Unboxed as UV
 
-import EFA2.Signal.TH
+import EFA.Signal.TH
 
 -- type Val = Double
 type Vec = UV.Vector

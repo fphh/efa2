@@ -1,15 +1,15 @@
 
 import qualified Data.Map as M
 
-import EFA2.Report.Report
-import EFA2.Signal.Signal
-import EFA2.Signal.Base
+import EFA.Report.Report
+import EFA.Signal.Signal
+import EFA.Signal.Base
 
-import EFA2.Report.Signal
-import EFA2.Report.Sequence
+import EFA.Report.Signal
+import EFA.Report.Sequence
 
-import EFA2.Signal.Sequence
-import EFA2.Signal.SequenceData
+import EFA.Signal.Sequence
+import EFA.Signal.SequenceData
 
 l = [1..5] :: [Double]
 ll = [l,l]

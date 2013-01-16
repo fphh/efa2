@@ -1,7 +1,7 @@
-import EFA2.Signal.Vector2
-import EFA2.Signal.Base
-import EFA2.Report.Vector
-import EFA2.Report.Base
+import EFA.Signal.Vector2
+import EFA.Signal.Base
+import EFA.Report.Vector
+import EFA.Report.Base
 
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as UV

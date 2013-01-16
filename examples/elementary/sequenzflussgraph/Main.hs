@@ -1,14 +1,14 @@
 module Main where
 
-import EFA2.Example.Utility (makeNodes, makeSimpleEdges)
+import EFA.Example.Utility (makeNodes, makeSimpleEdges)
 
-import qualified EFA2.Graph.Topology.StateAnalysis as StateAnalysis
-import EFA2.Graph.Draw (drawTopologyXs', drawTopologySimple, drawAll)
+import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
+import EFA.Graph.Draw (drawTopologyXs', drawTopologySimple, drawAll)
 
-import qualified EFA2.Graph.Topology as TD
-import qualified EFA2.Graph.Flow as Flow
-import EFA2.Graph (mkGraph)
-import EFA2.Signal.SequenceData
+import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.Flow as Flow
+import EFA.Graph (mkGraph)
+import EFA.Signal.SequenceData
 
 import Data.List.HT (chop)
 import Data.Char (isSpace)

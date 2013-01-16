@@ -9,19 +9,19 @@ import Data.Monoid ((<>))
 
 import Control.Monad (liftM2)
 
-import qualified EFA2.Graph.Topology.Index as Idx
-import qualified EFA2.Graph.Topology as TD
+import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Graph.Topology as TD
 
-import qualified EFA2.Equation.System as EqGen
-import EFA2.Equation.System ((=.=))
+import qualified EFA.Equation.System as EqGen
+import EFA.Equation.System ((=.=))
 
-import qualified EFA2.Utility.Stream as Stream
-import EFA2.Utility.Stream (Stream((:~)))
+import qualified EFA.Utility.Stream as Stream
+import EFA.Utility.Stream (Stream((:~)))
 
-import EFA2.Graph (mkGraph)
-import EFA2.Example.Utility (makeEdges, constructSeqTopo, edgeVar, (.=), recAbs)
+import EFA.Graph (mkGraph)
+import EFA.Example.Utility (makeEdges, constructSeqTopo, edgeVar, (.=), recAbs)
 
-import EFA2.Equation.Env (energyMap)
+import EFA.Equation.Env (energyMap)
 
 
 

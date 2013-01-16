@@ -14,36 +14,36 @@ import System.IO
 import Debug.Trace
 
 
-import EFA2.Solver.Equation
-import EFA2.Solver.Horn
-import EFA2.Solver.DirEquation
-import EFA2.Solver.DependencyGraph
-import EFA2.Solver.IsVar
-import EFA2.Interpreter.Interpreter
-import EFA2.Interpreter.InTerm
-import EFA2.Equation.Env
+import EFA.Solver.Equation
+import EFA.Solver.Horn
+import EFA.Solver.DirEquation
+import EFA.Solver.DependencyGraph
+import EFA.Solver.IsVar
+import EFA.Interpreter.Interpreter
+import EFA.Interpreter.InTerm
+import EFA.Equation.Env
 
 
-import EFA2.Topology.RandomTopology
-import EFA2.Topology.Topology
+import EFA.Topology.RandomTopology
+import EFA.Topology.Topology
 
-import EFA2.Interpreter.Arith
+import EFA.Interpreter.Arith
 
-import EFA2.Utility
+import EFA.Utility
 
-import EFA2.Display.FileSave
-import EFA2.Graph.Draw
+import EFA.Display.FileSave
+import EFA.Graph.Draw
 
-import EFA2.Example.SymSig
+import EFA.Example.SymSig
 
-import EFA2.Example.Dreibein
-import EFA2.Example.Linear
---import EFA2.Example.LinearOne
---import EFA2.Example.LinearX
---import EFA2.Example.LinearTwo
-import EFA2.Example.Loop
---import EFA2.Example.Circular
-import EFA2.Example.Vierbein
+import EFA.Example.Dreibein
+import EFA.Example.Linear
+--import EFA.Example.LinearOne
+--import EFA.Example.LinearX
+--import EFA.Example.LinearTwo
+import EFA.Example.Loop
+--import EFA.Example.Circular
+import EFA.Example.Vierbein
 
 
 --topo :: Gr NLabel ELabel

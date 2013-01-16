@@ -4,23 +4,23 @@ module Main where
 
 import qualified Data.Map as M
 
-import EFA2.Topology.Topology
-import EFA2.Graph.Topology
+import EFA.Topology.Topology
+import EFA.Graph.Topology
 
-import EFA2.Solver.Equation
-import EFA2.Solver.EquationOrder
+import EFA.Solver.Equation
+import EFA.Solver.EquationOrder
 
-import EFA2.Equation.Env
-import EFA2.Interpreter.Interpreter
-import EFA2.Interpreter.Arith
+import EFA.Equation.Env
+import EFA.Interpreter.Interpreter
+import EFA.Interpreter.Arith
 
-import EFA2.Graph.Draw
+import EFA.Graph.Draw
 
-import qualified EFA2.Signal.Signal as S
-import EFA2.Signal.Signal (Sc, PSigL, toScalar)
+import qualified EFA.Signal.Signal as S
+import EFA.Signal.Signal (Sc, PSigL, toScalar)
 
-import qualified EFA2.Signal.Sequence as Seq
-import EFA2.Signal.SequenceData
+import qualified EFA.Signal.Sequence as Seq
+import EFA.Signal.SequenceData
 
 
 topo :: Topology

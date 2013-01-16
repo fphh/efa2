@@ -4,9 +4,9 @@ module Main where
 
 -- This example shows the functionality of StateAnalysis
 
-import EFA2.Example.Examples
-import qualified EFA2.Graph.Topology.StateAnalysis as StateAnalysis
-import EFA2.Graph.Draw
+import EFA.Example.Examples
+import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
+import EFA.Graph.Draw
 
 
 -- Try topoLoop and topoDoubleLoop!

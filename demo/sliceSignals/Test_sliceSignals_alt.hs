@@ -1,16 +1,16 @@
-import EFA2.Equation.Env
+import EFA.Equation.Env
 
-import qualified EFA2.Signal.Signal as S
-import EFA2.Signal.Sequence
-import EFA2.Signal.SequenceData
-import EFA2.Signal.Signal (PSigL)
+import qualified EFA.Signal.Signal as S
+import EFA.Signal.Sequence
+import EFA.Signal.SequenceData
+import EFA.Signal.Signal (PSigL)
 
-import EFA2.Report.Sequence
-import EFA2.Report.Report
+import EFA.Report.Sequence
+import EFA.Report.Report
 
-import EFA2.Signal.Plot
+import EFA.Signal.Plot
 
-import EFA2.Utility
+import EFA.Utility
 
 import qualified Data.Map as M
 

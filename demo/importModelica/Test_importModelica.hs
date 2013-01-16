@@ -1,7 +1,7 @@
 
-import EFA2.IO.Import
-import EFA2.Report.Signal
-import EFA2.Signal.Plot
+import EFA.IO.Import
+import EFA.Report.Signal
+import EFA.Signal.Plot
 
 name1 =  "linear_res.csv" -- hand generated cvs file
 name2 =  "linear_res_manual.csv" -- full modelica cvs file

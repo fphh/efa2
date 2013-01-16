@@ -1,7 +1,7 @@
 
 module Main where
 
-import qualified EFA2.Graph as Gr
+import qualified EFA.Graph as Gr
 
 import qualified Data.List as L
 import qualified Data.Set as Set
@@ -10,27 +10,27 @@ import Data.Set (Set)
 
 import Text.Printf (printf)
 
-import qualified EFA2.Solver.Equation as Equ
-import EFA2.Solver.Equation
+import qualified EFA.Solver.Equation as Equ
+import EFA.Solver.Equation
           (MkTermC, mkTerm,
            EqTerm, Term(Const), toAbsEquations, mapEqTermEnv)
-import EFA2.Solver.EquationOrder (order)
+import EFA.Solver.EquationOrder (order)
 
-import EFA2.Interpreter.Interpreter
+import EFA.Interpreter.Interpreter
           (eqToInTerm, interpretFromScratch, interpretTerm)
-import EFA2.Equation.Env
-import EFA2.Interpreter.Arith (Val)
+import EFA.Equation.Env
+import EFA.Interpreter.Arith (Val)
 
-import qualified EFA2.Graph.Topology.Index as Idx
-import qualified EFA2.Signal.Signal as S
-import EFA2.Signal.Signal (Sc, toScalar, fromScalar)
+import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Signal.Signal as S
+import EFA.Signal.Signal (Sc, toScalar, fromScalar)
 
-import EFA2.Topology.Topology (makeAllEquations)
-import EFA2.Graph.Topology
+import EFA.Topology.Topology (makeAllEquations)
+import EFA.Graph.Topology
           (SequFlowGraph, NodeType(..), ELabel, defaultELabel)
 
-import EFA2.Graph.Draw (drawDeltaTopology, drawTopology, drawAll)
-import EFA2.Graph.Topology (SequFlowGraph, NodeType(..))
+import EFA.Graph.Draw (drawDeltaTopology, drawTopology, drawAll)
+import EFA.Graph.Topology (SequFlowGraph, NodeType(..))
 
 
 edgeIdx ::

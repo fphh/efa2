@@ -1,17 +1,17 @@
 {-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, FunctionalDependencies, TypeSynonymInstances, UndecidableInstances,KindSignatures, TypeOperators,  GADTs, OverlappingInstances, FlexibleContexts, ScopedTypeVariables #-}
 
 
-import EFA2.Equation.Env
+import EFA.Equation.Env
 
-import EFA2.Signal.Sequence
-import EFA2.Signal.SequenceData
-import EFA2.Signal.Signal as S
-import EFA2.Signal.Base
-import EFA2.Signal.Typ
-import EFA2.Signal.Data
-import EFA2.Signal.Plot
+import EFA.Signal.Sequence
+import EFA.Signal.SequenceData
+import EFA.Signal.Signal as S
+import EFA.Signal.Base
+import EFA.Signal.Typ
+import EFA.Signal.Data
+import EFA.Signal.Plot
 
-import EFA2.Utility
+import EFA.Utility
 
 import qualified Data.Map as M
 

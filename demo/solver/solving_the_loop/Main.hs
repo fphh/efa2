@@ -14,27 +14,27 @@ import System.IO
 import Debug.Trace
 
 
-import EFA2.Solver.Equation
-import EFA2.Solver.Horn
-import EFA2.Solver.DirEquation
-import EFA2.Solver.DependencyGraph
-import EFA2.Solver.IsVar
-import EFA2.Solver.EquationOrder
+import EFA.Solver.Equation
+import EFA.Solver.Horn
+import EFA.Solver.DirEquation
+import EFA.Solver.DependencyGraph
+import EFA.Solver.IsVar
+import EFA.Solver.EquationOrder
 
-import EFA2.Interpreter.Interpreter
-import EFA2.Interpreter.InTerm
-import EFA2.Equation.Env
-import EFA2.Interpreter.Arith
+import EFA.Interpreter.Interpreter
+import EFA.Interpreter.InTerm
+import EFA.Equation.Env
+import EFA.Interpreter.Arith
 
-import EFA2.Topology.Topology
+import EFA.Topology.Topology
 
-import EFA2.Utility
+import EFA.Utility
 
-import EFA2.Display.FileSave
-import EFA2.Graph.Draw
+import EFA.Display.FileSave
+import EFA.Graph.Draw
 
-import EFA2.Example.SymSig
-import EFA2.Example.Loop
+import EFA.Example.SymSig
+import EFA.Example.Loop
 
 
 main :: IO ()
