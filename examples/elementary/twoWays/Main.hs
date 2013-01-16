@@ -85,8 +85,8 @@ pts = liftM2 (,) enRange xRange
 
 
 eout, ein :: Idx.Energy
-eout = Idx.Energy recAbs (Idx.SecNode sec0 sink) (Idx.SecNode sec0 c3)
-ein = Idx.Energy recAbs (Idx.SecNode sec0 source) (Idx.SecNode sec0 c1)
+eout = edgeVar (Idx.Energy recAbs) sec0 sink c3
+ein  = edgeVar (Idx.Energy recAbs) sec0 source c1
 
 main :: IO ()
 main = do

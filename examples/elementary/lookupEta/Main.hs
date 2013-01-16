@@ -62,8 +62,8 @@ given p =
    (edgeVar EqGen.power sec0 source sink, p) : []
 
 ein, eout :: Idx.Energy
-ein = Idx.Energy recAbs (Idx.SecNode sec0 source) (Idx.SecNode sec0 sink)
-eout = Idx.Energy recAbs (Idx.SecNode sec0 sink) (Idx.SecNode sec0 source)
+ein  = edgeVar (Idx.Energy recAbs) sec0 source sink
+eout = edgeVar (Idx.Energy recAbs) sec0 sink source
 
 main :: IO ()
 main = do
