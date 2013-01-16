@@ -1,9 +1,9 @@
 -- | test terms
 
-module EFA2.Solver.EquationTest where
+module EFA2.Symbolic.OperatorTreeTest where
 
 import EFA2.Equation.Variable (Index(..), MkIdxC, mkVar)
-import EFA2.Solver.Equation (Term(..))
+import EFA2.Symbolic.OperatorTree (Term(..))
 
 import qualified EFA2.Signal.Index as Idx
 

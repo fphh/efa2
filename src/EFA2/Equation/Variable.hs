@@ -1,8 +1,8 @@
 module EFA2.Equation.Variable where
 
 import qualified EFA2.Signal.Index as Idx
-import qualified EFA2.Solver.Equation as OT
-import qualified EFA2.Solver.Term as SP
+import qualified EFA2.Symbolic.OperatorTree as OT
+import qualified EFA2.Symbolic.SumProduct as SP
 import qualified EFA2.Report.Format as Format
 import EFA2.Report.FormatValue (FormatValue, formatValue)
 

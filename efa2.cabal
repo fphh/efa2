@@ -68,8 +68,8 @@ Library
     EFA2.Signal.SignalFill
     EFA2.Signal.Sequence
     EFA2.Signal.Plot
-    EFA2.Solver.Equation
-    EFA2.Solver.Term
+    EFA2.Symbolic.OperatorTree
+    EFA2.Symbolic.SumProduct
     EFA2.Report.Typ
     EFA2.Report.Base
     EFA2.Report.Report
@@ -84,7 +84,7 @@ Library
     EFA2.Interpreter.Env
     EFA2.Equation.Variable
   Other-Modules:
-    EFA2.Solver.EquationTest
+    EFA2.Symbolic.OperatorTreeTest
 
 
 -- sollte man auf Cabal-Test umstellen,

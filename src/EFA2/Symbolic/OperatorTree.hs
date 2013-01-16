@@ -1,8 +1,8 @@
 
 
-module EFA2.Solver.Equation where
+module EFA2.Symbolic.OperatorTree where
 
-import qualified EFA2.Solver.Term as Term
+import qualified EFA2.Symbolic.SumProduct as Term
 import qualified EFA2.Report.Format as Format
 import EFA2.Report.FormatValue (FormatValue, formatValue)
 

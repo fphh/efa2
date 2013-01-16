@@ -12,7 +12,7 @@ import qualified EFA2.Topology.TopologyData as TD
 import qualified EFA2.Topology.EquationGenerator as EqGen
 import qualified EFA2.Topology.EfaGraph as Gr
 import EFA2.Equation.Variable (Index)
-import EFA2.Solver.Term (Term)
+import EFA2.Symbolic.SumProduct (Term)
 
 import Data.Monoid (mempty)
 

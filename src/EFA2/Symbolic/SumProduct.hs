@@ -1,4 +1,4 @@
-module EFA2.Solver.Term where
+module EFA2.Symbolic.SumProduct where
 
 import qualified EFA2.Report.Format as Format
 import EFA2.Report.FormatValue (FormatValue, formatValue)
