@@ -1,28 +1,27 @@
 
 module Main where
 
-import Data.Foldable (foldMap)
-import qualified Data.Map as M
-import qualified Data.List as L
-import Data.Maybe (catMaybes)
-import Data.Monoid ((<>))
-
-import Control.Monad (liftM2)
+import qualified EFA.Equation.Env as Env
+import qualified EFA.Equation.System as EqGen
+import EFA.Equation.System ((=.=))
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as TD
 
-import qualified EFA.Equation.System as EqGen
-import EFA.Equation.System ((=.=))
-
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
+import EFA.Utility (checkedLookup)
 
-import EFA.Graph (mkGraph)
 import EFA.Example.Utility (makeEdges, constructSeqTopo, edgeVar, (.=), recAbs)
+import EFA.Graph (mkGraph)
 
-import EFA.Equation.Env (energyMap)
+import qualified EFA.Report.Format as Format
+import EFA.Report.FormatValue (formatValue)
 
+import Control.Applicative (liftA2)
+
+import Data.Foldable (foldMap)
+import Data.Monoid ((<>))
 
 
 sec0 :: Idx.Section
@@ -80,28 +79,19 @@ xRange = 0.01:[ 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9 ] ++ [0.99]
 enRange :: [Double]
 enRange = 0.01:[1..12]
 
-pts :: [(Double, Double)]
-pts = liftM2 (,) enRange xRange
-
 
 eout, ein :: Idx.Energy
 eout = edgeVar (Idx.Energy recAbs) sec0 sink c3
 ein  = edgeVar (Idx.Energy recAbs) sec0 source c1
 
+
+solve :: Double -> Double -> String
+solve e x =
+  let emap = Env.energyMap $ EqGen.solve (etas <> given e x) seqTopo
+  in  show e ++ " " ++ show x ++ " " ++
+      Format.unUnicode (formatValue
+         (liftA2 (/) (checkedLookup emap eout) (checkedLookup emap ein)))
+
 main :: IO ()
-main = do
-
-  let env = map g pts
-      g (e, x) = EqGen.solve (etas <> given e x) seqTopo
-      getResult e = concat . catMaybes . map (M.lookup e . energyMap)
-      etasys = zipWith (/) (getResult eout env) (getResult ein env)
-
-
-      f (e, x) esys = (e, x, esys)
-      res = zipWith f pts etasys
-
-      h (x, _, _) (y, _, _) = x == y
-
-      showTriple (e, x, esys) = show e ++ " " ++ show x ++ " " ++ show esys ++ "\n"
-
-  putStrLn $ unlines $ map (concatMap showTriple) $ L.groupBy h res
+main =
+  putStrLn $ unlines $ map (\e -> unlines $ map (solve e) xRange) enRange

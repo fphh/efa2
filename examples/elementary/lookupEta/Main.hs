@@ -1,25 +1,27 @@
 
 module Main where
 
-import Data.Monoid ((<>))
-import Data.Foldable (foldMap)
-import Data.Maybe (catMaybes)
-import qualified Data.Map as M
-
-import qualified UniqueLogic.ST.Expression as Expr
-import qualified UniqueLogic.ST.System as Sys
+import qualified EFA.Equation.Env as Env
+import qualified EFA.Equation.System as EqGen
+import EFA.Equation.System ((=.=))
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
+import EFA.Utility (checkedLookup)
 import EFA.Graph (mkGraph)
-import EFA.Example.Utility ((.=), constructSeqTopo, makeNodes, edgeVar, makeEdges, recAbs)
+import EFA.Example.Utility ((.=), constructSeqTopo, edgeVar, makeEdges, recAbs)
 
-import EFA.Equation.Env (energyMap)
+import qualified EFA.Report.Format as Format
+import EFA.Report.FormatValue (formatValue)
 
-import qualified EFA.Equation.System as EqGen
-import EFA.Equation.System ((=.=))
+import qualified UniqueLogic.ST.Expression as Expr
+import qualified UniqueLogic.ST.System as Sys
+
+import Data.Monoid ((<>))
+import Data.Foldable (foldMap)
+
 
 sec0 :: Idx.Section
 sec0 :~ _ = Stream.enumFrom $ Idx.Section 0
@@ -65,11 +67,16 @@ ein, eout :: Idx.Energy
 ein  = edgeVar (Idx.Energy recAbs) sec0 source sink
 eout = edgeVar (Idx.Energy recAbs) sec0 sink source
 
+eta :: Idx.Eta
+eta  = edgeVar (Idx.Eta recAbs) sec0 source sink
+
+
+solve :: Double -> String
+solve p =
+  let env = EqGen.solve ((n =.= lookupEta c) <> given p) seqTopo
+  in  show p ++ " " ++
+      Format.unUnicode (formatValue (checkedLookup (Env.etaMap env) eta))
+
 main :: IO ()
-main = do
-  let env = map g enRange
-      g p = EqGen.solve ((n =.= lookupEta c) <> given p) seqTopo
-      getResult e = concat . catMaybes . map (M.lookup e . energyMap)
-      res = zip enRange (zipWith (/) (getResult eout env) (getResult ein env))
-      f (x, esys) = show x ++ " " ++ show esys
-  putStrLn $ unlines $ map f res
+main =
+  putStrLn $ unlines $ map solve enRange

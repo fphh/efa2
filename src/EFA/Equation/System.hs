@@ -24,6 +24,8 @@ import Control.Monad.Trans.State (StateT, runStateT)
 import Control.Monad.ST (ST, runST)
 import Control.Monad (liftM, liftM2)
 
+import Control.Applicative (Applicative, pure, (<*>))
+
 import qualified Data.Map as M
 import qualified Data.Set as S
 import qualified Data.List.HT as LH
@@ -337,10 +339,20 @@ getIntersectionStorages = concat . getStorages (format . toSecNode)
 
 
 data Result a = Undetermined | Determined a
+  deriving (Show)
 
 instance FormatValue a => FormatValue (Result a) where
   formatValue Undetermined = Format.undetermined
   formatValue (Determined a) = formatValue a
+
+instance Functor Result where
+  fmap _ Undetermined = Undetermined
+  fmap f (Determined a) = Determined $ f a
+
+instance Applicative Result where
+  pure = Determined
+  (Determined f) <*> (Determined a) = Determined $ f a
+  _ <*> _ = Undetermined
 
 
 -----------------------------------------------------------------
