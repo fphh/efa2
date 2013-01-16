@@ -62,7 +62,7 @@ main :: IO ()
 main = do
 
   let seqTopo = constructSeqTopo topoDreibein [1, 0, 1] 
-      env = EqGen.solveSystem given seqTopo
+      env = EqGen.solve given seqTopo
 
   drawTopology seqTopo env
 

@@ -92,7 +92,7 @@ main :: IO ()
 main = do
 
   let env = map g pts
-      g (e, x) = EqGen.solveSystem (etas <> given e x) seqTopo
+      g (e, x) = EqGen.solve (etas <> given e x) seqTopo
       getResult e = concat . catMaybes . map (M.lookup e . energyMap)
       etasys = zipWith (/) (getResult eout env) (getResult ein env)
 

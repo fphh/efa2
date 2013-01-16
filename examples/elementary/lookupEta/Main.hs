@@ -68,7 +68,7 @@ eout = Idx.Energy recAbs (Idx.SecNode sec0 sink) (Idx.SecNode sec0 source)
 main :: IO ()
 main = do
   let env = map g enRange
-      g p = EqGen.solveSystem ((n =.= lookupEta c) <> given p) seqTopo
+      g p = EqGen.solve ((n =.= lookupEta c) <> given p) seqTopo
       getResult e = concat . catMaybes . map (M.lookup e . energyMap)
       res = zip enRange (zipWith (/) (getResult eout env) (getResult ein env))
       f (x, esys) = show x ++ " " ++ show esys

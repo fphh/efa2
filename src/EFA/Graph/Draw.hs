@@ -235,10 +235,11 @@ data Env output =
    }
 
 lookupFormat ::
-   (Ord idx, FormatValue a, Format output) =>
+   (Ord idx, MkIdxC idx, FormatValue a, Format output) =>
    M.Map idx a -> idx -> output
 lookupFormat mp k =
-   maybe Format.undetermined formatValue $ M.lookup k mp
+   maybe (error $ "could not find index " ++ show (mkIdx k)) formatValue $
+   M.lookup k mp
 
 lookupFormatAssign ::
    (Ord idx, MkIdxC idx, FormatValue a, Format output) =>

@@ -7,6 +7,9 @@ import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph as Gr
 import EFA.Graph (Edge(..))
 
+import qualified EFA.Report.Format as Format
+import EFA.Report.FormatValue (FormatValue, formatValue)
+
 import EFA.Utility ((>>!))
 
 import UniqueLogic.ST.Expression ((=:=))
@@ -30,7 +33,6 @@ import Data.Traversable (traverse)
 import Data.Foldable (foldMap, fold)
 import Data.Monoid (Monoid, (<>), mempty, mappend, mconcat)
 
-import Data.Maybe (maybeToList)
 import Data.Ord (comparing)
 
 
@@ -334,6 +336,13 @@ getIntersectionStorages = concat . getStorages (format . toSecNode)
           where h s = getSection s == sec
 
 
+data Result a = Undetermined | Determined a
+
+instance FormatValue a => FormatValue (Result a) where
+  formatValue Undetermined = Format.undetermined
+  formatValue (Determined a) = formatValue a
+
+
 -----------------------------------------------------------------
 
 
@@ -350,21 +359,13 @@ but you may also insert complex relations like
 .
 -}
 
--- -> solve
-solveSystemDoIt ::
+solve ::
   (Eq a, Fractional a) =>
   (forall s. EquationSystem s a) ->
-  TD.SequFlowGraph -> Env.Env Env.SingleRecord (Maybe a)
-solveSystemDoIt given g = runST $ do
+  TD.SequFlowGraph -> Env.Env Env.SingleRecord (Result a)
+solve given g = runST $ do
   let EquationSystem eqsys = given <> fromTopology g
   (eqs, varmap) <-
-     runStateT eqsys $ Env.empty $ Env.SingleRecord $ Idx.Record Idx.Absolute
+    runStateT eqsys $ Env.empty $ Env.SingleRecord recAbs
   Sys.solve eqs
-  traverse Sys.query varmap
-
--- weg:
-solveSystem ::
-  (Eq a, Fractional a) =>
-  (forall s. EquationSystem s a) ->
-  TD.SequFlowGraph -> Env.Env Env.SingleRecord [a]
-solveSystem given = fmap maybeToList . solveSystemDoIt given
+  traverse (fmap (maybe Undetermined Determined) . Sys.query) varmap
