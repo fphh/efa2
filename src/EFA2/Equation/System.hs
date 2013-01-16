@@ -150,7 +150,7 @@ mwhen :: Monoid a => Bool -> a -> a
 mwhen True t = t
 mwhen False _ = mempty
 
-edges :: Gr.EfaGraph node nodeLabel edgeLabel -> [Gr.Edge node]
+edges :: Gr.Graph node nodeLabel edgeLabel -> [Gr.Edge node]
 edges = M.keys . Gr.edgeLabels
 
 fromTopology ::

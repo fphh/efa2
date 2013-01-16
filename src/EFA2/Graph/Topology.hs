@@ -29,7 +29,7 @@ module EFA2.Graph.Topology (
 
 import qualified EFA2.Graph.Topology.Index as Idx
 import qualified EFA2.Graph as Gr
-import EFA2.Graph (EfaGraph, mkInOutGraphFormat)
+import EFA2.Graph (Graph, mkInOutGraphFormat)
 
 import qualified Test.QuickCheck as QC
 import qualified Data.Map as M
@@ -136,15 +136,15 @@ isDirEdge = dir . getFlowDirection . snd
   where dir Dir = True
         dir _ = False
 
-type Topology = EfaGraph Idx.Node NodeType ()
+type Topology = Graph Idx.Node NodeType ()
 
-type FlowTopology = EfaGraph Idx.Node NodeType FlowDirection
+type FlowTopology = Graph Idx.Node NodeType FlowDirection
 
-type SecTopology = EfaGraph Idx.SecNode NodeType FlowDirection
+type SecTopology = Graph Idx.SecNode NodeType FlowDirection
 
-type SequFlowGraph = EfaGraph Idx.SecNode NodeType ELabel
+type SequFlowGraph = Graph Idx.SecNode NodeType ELabel
 
-type DirSequFlowGraph = EfaGraph Idx.SecNode NodeType EdgeType
+type DirSequFlowGraph = Graph Idx.SecNode NodeType EdgeType
 
 
 type InOut n el = ([Gr.LNode n el], [Gr.LNode n el])
@@ -156,7 +156,7 @@ isStorageNode = isStorage . snd . snd3
 -- | Active storages, grouped by storage number, sorted by section number.
 getActiveStores ::
    (EdgeLabel el) =>
-   EfaGraph Idx.SecNode NodeType el ->
+   Graph Idx.SecNode NodeType el ->
    M.Map Idx.Node (M.Map Idx.Section (InOut Idx.SecNode el, StoreDir))
 getActiveStores =
    M.fromListWith

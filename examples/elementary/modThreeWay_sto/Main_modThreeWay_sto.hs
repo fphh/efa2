@@ -36,7 +36,7 @@ topo = mkGraph (makeNodes nodes) (makeEdges edges)
         edges = [(0, 1, defaultELabel), (1, 2, defaultELabel), (1, 3, defaultELabel)]
 
 {-
-test :: EfaGraph () ()
+test :: Graph () ()
 test = mkGraph nodes edges
   where nodes = [(0, ()), (1, ()), (2, ()), (3, ())]
         edges = [(0, 1, ()), (1, 2, ()), (1, 3, ())]

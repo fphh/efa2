@@ -19,7 +19,7 @@ import EFA2.Graph.Topology
            getFlowDirection,
            FlowDirectionField, FlowTopology)
 import EFA2.Graph
-          (EfaGraph, Edge(Edge),
+          (Graph, Edge(Edge),
            labNodes, labEdges, edgeLabels, delNodes, delEdgeSet)
 
 import Data.GraphViz (

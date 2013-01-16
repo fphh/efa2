@@ -103,7 +103,7 @@ admissibleCountTopology topo =
 
 
 type NumberOfAdj = Int
-type CountTopology = Gr.EfaGraph Idx.Node (NodeType, NumberOfAdj) FlowDirection
+type CountTopology = Gr.Graph Idx.Node (NodeType, NumberOfAdj) FlowDirection
 
 
 edgeOrients :: Gr.Edge node -> [(Gr.Edge node, FlowDirection)]
@@ -427,12 +427,12 @@ propBranchAndBound (ArbTopology g) =
 
 
 {- |
-I could declare an Ord instance for EfaGraph,
+I could declare an Ord instance for Graph,
 but I think that @graph0 < graph1@ should be a static error.
 Instead I use this function locally for 'Key.sort'.
 -}
 graphIdent ::
-   Gr.EfaGraph node nodeLabel edgeLabel ->
+   Gr.Graph node nodeLabel edgeLabel ->
    (M.Map node nodeLabel,
     M.Map (Gr.Edge node) edgeLabel)
 graphIdent g = (Gr.nodeLabels g, Gr.edgeLabels g)
