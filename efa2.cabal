@@ -72,9 +72,9 @@ Library
     EFA2.Solver.Term
     EFA2.Report.Typ
     EFA2.Report.Base
-    EFA2.Report.Signal
     EFA2.Report.Report
     EFA2.Report.Format
+    EFA2.Report.FormatValue
     EFA2.Topology.TopologyData
     EFA2.Topology.EfaGraph
     EFA2.Topology.Flow

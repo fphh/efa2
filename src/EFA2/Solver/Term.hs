@@ -1,6 +1,7 @@
 module EFA2.Solver.Term where
 
 import qualified EFA2.Report.Format as Format
+import EFA2.Report.FormatValue (FormatValue, formatValue)
 
 import qualified Data.Map as Map
 import Data.Map (Map, )
@@ -205,6 +206,11 @@ format f =
              _ -> Format.power t e
 
    in  term
+
+
+instance (Ord a, FormatValue a) => FormatValue (Term a) where
+   formatValue = format (\_ -> formatValue) TopLevel
+
 
 
 add :: (Num a) => NonEmpty.T [] a -> a

@@ -4,6 +4,7 @@ module EFA2.Solver.Equation where
 
 import qualified EFA2.Solver.Term as Term
 import qualified EFA2.Report.Format as Format
+import EFA2.Report.FormatValue (FormatValue, formatValue)
 
 import EFA2.Interpreter.Env as Env
 import qualified EFA2.Signal.Index as Idx
@@ -196,13 +197,17 @@ instance (ToIndex idx) => MkTermC (Term idx) where
    mkTerm = fmap toIndex
 
 
+instance (Eq a, FormatValue a) => FormatValue (Term a) where
+   formatValue = formatTerm
+
+
 formatTerm ::
-   (ToIndex idx, Format.Format output) => Term idx -> output
+   (FormatValue a, Format.Format output) => Term a -> output
 formatTerm =
    let go t =
           case t of
              Const x -> Format.real (fromRational x :: Double)
-             Atom x -> Format.index $ toIndex x
+             Atom x -> formatValue x
 
              x :+ y -> Format.parenthesize $ Format.plus (go x) (go y)
              x :* y -> Format.multiply (go x) (go y)

@@ -21,7 +21,13 @@ import EFA2.Report.Base
           (UnitScale(..), DisplayFormat(..),
            DispStorage(..), DispStorage1(..),
            getUnitScale, dispLength)
-import EFA2.Report.Typ (TDisp, getDisplayUnit)
+import EFA2.Report.Typ
+          (TDisp, DisplayType, getDisplayFormat, getDisplayUnit)
+import EFA2.Report.Format (Format)
+
+import qualified EFA2.Report.Format as Format
+import qualified EFA2.Report.FormatValue as FV
+import qualified EFA2.Report.Base as ReportBase
 import qualified EFA2.Report.Report as Report
 import qualified EFA2.Report.Typ as Typ
 
@@ -1040,3 +1046,80 @@ instance
 
            f x = vdisp x
 --           f x | otherwise = [(vdisp min) ++ " - " ++ (vdisp max)]
+
+
+-- | display a single value
+dispSingle ::  ReportBase.Disp a => a -> DisplayType -> String
+dispSingle x t = ReportBase.disp f s x ++ " " ++ P.show u
+  where u = getDisplayUnit t
+        s = getUnitScale u
+        f = getDisplayFormat dispLength t u
+
+
+-- | display a single value
+dispRange :: ReportBase.Disp a => a -> a -> DisplayType -> String
+dispRange x y t =
+   ReportBase.disp f s x ++ " - " ++ ReportBase.disp f s y ++ " " ++ P.show u
+  where u = getDisplayUnit t
+        s = getUnitScale u
+        f = getDisplayFormat dispLength t u
+
+dispAll :: ReportBase.Disp a => [a] -> DisplayType -> String
+dispAll xs t = (P.unwords $ fmap (ReportBase.disp f s) xs) ++  " " ++ P.show u
+  where u = getDisplayUnit t
+        s = getUnitScale u
+        f = getDisplayFormat dispLength t u
+
+dispAll2 :: ReportBase.Disp a => [[a]] -> DisplayType -> String
+dispAll2 = error "to be implemented"
+
+
+class SDisplay v where
+  disp ::
+     (DispApp s, TDisp t, ReportBase.Disp d, Ord d, D.Storage v d) =>
+     TC s t (Data v d) -> String
+
+{-
+instance (TDisp t, ReportBase.Disp d, SV.Singleton v1 d, D.FromList (Data Nil) d)
+         => SDisplay (TC Scalar t (Data Nil d)) where
+  sdisp x@(TC (Data v))  = "Sig-D0 " -- ++ tdisp x ++ ": " ++ dispAll (toList x) dtyp -- dispRange dmin dmax dtyp
+--    where dtyp = getDisplayType x
+--          dmin = SV.minimum v
+--          dmax = SV.maximum v
+
+-}
+instance SDisplay Nil where
+  disp x@(TC (Data v))  = "Sig-D0 " ++ dispSingle v dtyp --  ++ ": " ++ dispAll (toList x) dtyp -- dispRange dmin dmax dtyp
+    where dtyp = getDisplayType x
+
+
+instance (SV.Singleton v1, SV.FromList v1) => SDisplay (v1 :> Nil) where
+   disp x@(TC v) = dispApp (app x) ++ "-D1 " ++ tdisp x ++ ": " ++ dispAll (toList x) dtyp -- dispRange dmin dmax dtyp
+      where dtyp = getDisplayType x
+            _dmin = D.minimum v
+            _dmax = D.maximum v
+
+instance
+   (SV.Singleton v1, SV.Singleton v2, SV.Walker v2,
+    SV.FromList v1, SV.FromList v2) =>
+      SDisplay (v2 :> v1 :> Nil) where
+  disp x@(TC v)  = "Sig-D2 " ++ tdisp x ++ ": " ++ dispAll2 (toList x) dtyp -- dispRange dmin dmax dtyp
+    where dtyp = getDisplayType x
+          _dmin = D.minimum v
+          _dmax = D.maximum v
+
+
+class FormatValue a where
+   formatValue ::
+      (DispApp s, TDisp t, Format output) =>
+      TC s t a -> output
+
+instance
+   (Ord a, D.Storage v a, ReportBase.Disp a, SDisplay v) =>
+      FormatValue (Data v a) where
+   formatValue = Format.literal . disp
+
+instance
+   (TDisp t, DispApp s, FormatValue a) =>
+      FV.FormatValue (TC s t a) where
+   formatValue = formatValue

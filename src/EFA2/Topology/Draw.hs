@@ -1,14 +1,9 @@
--- these extension are needed for computing Eta in envAbsSignal, envDeltaSignal
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE UndecidableInstances #-}
 module EFA2.Topology.Draw where
 
-import EFA2.Solver.Equation (Term(..), ToIndex, toIndex, formatTerm, MkIdxC, mkIdx)
-import qualified EFA2.Solver.Term as Term
+import EFA2.Solver.Equation (MkIdxC, mkIdx)
 import qualified EFA2.Report.Format as Format
-import EFA2.Report.Format
-          (ASCII(ASCII),
-           Unicode(Unicode, unUnicode))
+import EFA2.Report.FormatValue (FormatValue, formatValue)
+import EFA2.Report.Format (Format, Unicode(Unicode, unUnicode))
 import EFA2.Interpreter.Env
           (StorageMap, SingleRecord(SingleRecord))
 import qualified EFA2.Interpreter.Env as Interp
@@ -26,14 +21,6 @@ import EFA2.Topology.EfaGraph
            labNodes, labEdges, edgeLabels, delNodes, delEdgeSet)
 
 import qualified EFA2.Signal.Index as Idx
-import qualified EFA2.Signal.Data as D
-import EFA2.Report.Signal (SDisplay, sdisp)
-import EFA2.Report.Typ (TDisp)
-import EFA2.Report.Base (Disp)
-import EFA2.Signal.Signal (TC, DispApp, Arith)
-import EFA2.Signal.Data (Data)
-import EFA2.Signal.Base (BProd)
-import EFA2.Signal.Typ (TProd)
 
 import Data.GraphViz (
           runGraphvizCanvas,
@@ -55,7 +42,6 @@ import Data.GraphViz (
 import Data.GraphViz.Attributes.Complete as Viz
 
 import Data.Eq.HT (equating)
-import Data.Ratio (Ratio)
 
 import qualified Data.Text.Lazy as T
 
@@ -217,9 +203,6 @@ showNodeType = show
 formatNodeType :: Format output => NodeType -> output
 formatNodeType = Format.literal . showNodeType
 
-formatChar :: Format output => Char -> output
-formatChar = Format.literal . (:[])
-
 formatNode ::
    (FormatValue a, Format output) =>
    Idx.Record -> StorageMap a -> Topo.LNode -> output
@@ -233,30 +216,6 @@ formatNode rec st (n@(Idx.SecNode _sec nid), ty) =
                [Format.literal "Content:",
                 lookupFormat st $ Idx.Storage rec n]]
          _ -> []
-
-
-class Format.Format output => Format output where
-   formatSignal ::
-      (SDisplay v, D.Storage v a, Ord a, Disp a,
-       TDisp t, DispApp s) =>
-      TC s t (Data v a) -> output
-
-
-instance Format ASCII where
-   formatSignal = ASCII . sdisp
-
-
-instance Format Unicode where
-   formatSignal = Unicode . sdisp
-
-
-instance Format Format.Latex where
-   formatSignal = Format.Latex . sdisp
-
-
-
-class FormatValue a where
-   formatValue :: Format output => a -> output
 
 
 {- |
@@ -352,44 +311,6 @@ envDelta
       (lookupFormatAssign dn (Idx.DEta rec))
       (lookupFormat dt . Idx.DTime rec)
       (formatNode rec st)
-
-
-instance FormatValue a => FormatValue [a] where
-   formatValue = Format.list . map formatValue
-
-instance FormatValue Double where
-   formatValue = Format.real
-
-instance (Integral a, Show a) => FormatValue (Ratio a) where
-   formatValue = Format.ratio
-
-instance FormatValue Char where
-   formatValue = formatChar
-
-instance (Eq a, ToIndex a) => FormatValue (Term a) where
-   formatValue = formatTerm
-
-
-instance (Ord a, ToIndex a) => FormatValue (Term.Term a) where
-   formatValue = Term.format (\_ -> Format.index . toIndex) Term.TopLevel
-
-
-
-class FormatValueSignal a where
-   formatValueSignal ::
-      (DispApp s, TDisp t, Format output) =>
-      (TC s t a) -> output
-
-instance
-   (SDisplay v, D.Storage v a, Disp a, Ord a, BProd a a, D.ZipWith v) =>
-      FormatValueSignal (Data v a) where
-   formatValueSignal = formatSignal
-
-instance
-   (DispApp s, s ~ Arith s s, TDisp t, TProd t t t, FormatValueSignal a) =>
-      FormatValue (TC s t a) where
-   formatValue = formatValueSignal
-
 
 
 -------------------------------------------------------------------------------------------
