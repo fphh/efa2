@@ -1,21 +1,13 @@
 module EFA2.Interpreter.Env where
 
 import qualified EFA2.Signal.Index as Idx
-import qualified EFA2.Signal.Signal as S
-import qualified EFA2.Signal.Data as D
-import qualified EFA2.Signal.Vector as SV
-import EFA2.Signal.Signal (TC, (.-))
-import EFA2.Signal.Data (Data)
-import EFA2.Signal.Typ (TSum)
-import EFA2.Signal.Base (BSum)
+
+import qualified Data.Map as M
 
 import qualified Data.Accessor.Basic as Accessor
 import Control.Applicative (Applicative, pure, (<*>))
 import Data.Traversable (Traversable, sequenceA, foldMapDefault)
 import Data.Foldable (Foldable, foldMap)
-
-import qualified Data.Map as M
-import qualified Data.List as L
 
 
 data Index =
