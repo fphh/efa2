@@ -12,6 +12,7 @@ module EFA.Graph.Topology (
        SecTopology,
        SequFlowGraph,
        DirSequFlowGraph,
+       pathExists,
        isStorage,
        isActive,
        isInactive,
@@ -145,6 +146,15 @@ type SecTopology = Graph Idx.SecNode NodeType FlowDirection
 type SequFlowGraph = Graph Idx.SecNode NodeType ELabel
 
 type DirSequFlowGraph = Graph Idx.SecNode NodeType EdgeType
+
+pathExists :: Idx.Node -> Idx.Node -> FlowTopology -> Bool
+pathExists _ _ topo | Gr.isEmpty topo = False
+pathExists a b topo | a == b = True 
+pathExists a b topo = or $ map f s
+  where s = map fst $ filter q $ Gr.lsuc topo a
+        q (_, Dir) = True
+        q _ = False
+        f x = pathExists x b (Gr.delNode topo a)
 
 
 type InOut n el = ([Gr.LNode n el], [Gr.LNode n el])
