@@ -162,7 +162,7 @@ Executable demo-newsolversymbolic
     Buildable: False
 
 Executable makestub
-  Main-Is: sandbox/dot/Main.hs
+  Main-Is: sandbox/makestub/Main.hs
   GHC-Options: -Wall
   If flag(buildTools)
     Build-Depends:
