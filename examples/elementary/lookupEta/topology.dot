@@ -1,0 +1,10 @@
+
+
+graph {
+  label="linearOne";
+
+  source [ type="AlwaysSource" ];
+  sink [ type="AlwaysSink" ];
+
+  source -- sink;
+}

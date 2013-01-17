@@ -1,0 +1,11 @@
+
+
+graph {
+      label = "topoDreibein";
+      tank [ type = "Source" ];
+      raeder [ type = "Sink" ];
+      batterie [ type = "Storage" ];
+      tank -- c;
+      c -- raeder;
+      c -- batterie;
+}

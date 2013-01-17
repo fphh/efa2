@@ -2,8 +2,8 @@
 
 module Main where
 
-import EFA2.Signal.Base
-import EFA2.Signal.Data
+import EFA.Signal.Base
+import EFA.Signal.Data
 import Control.Applicative
 
 u :: List [Val]

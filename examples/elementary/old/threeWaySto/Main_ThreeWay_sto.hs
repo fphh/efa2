@@ -9,40 +9,40 @@ import qualified Data.Map as M
 import Data.Maybe
 
 
-import EFA2.Topology.Topology
-import EFA2.Topology.EfaGraph
+import EFA.Topology.Topology
+import EFA.Graph
 
-import EFA2.Solver.Equation
-import EFA2.Solver.Horn
-import EFA2.Solver.DirEquation
-import EFA2.Solver.IsVar
-import EFA2.Solver.DependencyGraph
+import EFA.Solver.Equation
+import EFA.Solver.Horn
+import EFA.Solver.DirEquation
+import EFA.Solver.IsVar
+import EFA.Solver.DependencyGraph
 
-import EFA2.Interpreter.Env
-import EFA2.Interpreter.Interpreter
-import EFA2.Interpreter.Arith
-import EFA2.Interpreter.InTerm
+import EFA.Equation.Env
+import EFA.Interpreter.Interpreter
+import EFA.Interpreter.Arith
+import EFA.Interpreter.InTerm
 
-import EFA2.Utils.Utils
-import EFA2.IO.Import
+import EFA.Utility
+import EFA.IO.Import
 
-import EFA2.Topology.Draw
+import EFA.Graph.Draw
 
-import EFA2.Signal.Sequence
-import EFA2.Signal.SequenceData
+import EFA.Signal.Sequence
+import EFA.Signal.SequenceData
 
-import EFA2.Topology.Flow
-import EFA2.Topology.TopologyData
-import EFA2.Example.Loop
-import EFA2.Example.SymSig
+import EFA.Graph.Flow
+import EFA.Graph.Topology
+import EFA.Example.Loop
+import EFA.Example.SymSig
 
 
-import qualified EFA2.Signal.Signal as S
-import qualified EFA2.Signal.Data as D
-import EFA2.Signal.Signal (UTFSig)
-import EFA2.Signal.Typ
+import qualified EFA.Signal.Signal as S
+import qualified EFA.Signal.Data as D
+import EFA.Signal.Signal (UTFSig)
+import EFA.Signal.Typ
 
-import EFA2.Signal.Plot
+import EFA.Signal.Plot
 
 -- define topology 
 
@@ -51,7 +51,7 @@ topo = mkGraph (makeNodes nodes) (makeEdges edges)
   where nodes = [(0, Source), (1, Crossing), (2, Sink), (3, Storage 0)]
         edges = [(0, 1, defaultELabel), (1, 2, defaultELabel), (1, 3, defaultELabel)]
 
-test :: EfaGraph () ()
+test :: Graph () ()
 test = mkGraph nodes edges
   where nodes = [(0, ()), (1, ()), (2, ()), (3, ())]
         edges = [(0, 1, ()), (1, 2, ()), (1, 3, ())]

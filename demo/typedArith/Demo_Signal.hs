@@ -2,12 +2,12 @@
 
 module Demo_Signal where
 
-import EFA2.Signal.Signal
-import EFA2.Signal.Vector
-import EFA2.Signal.Data
-import EFA2.Signal.Typ
-import EFA2.Signal.Base
-import EFA2.Report.Signal
+import EFA.Signal.Signal
+import EFA.Signal.Vector
+import EFA.Signal.Data
+import EFA.Signal.Typ
+import EFA.Signal.Base
+import EFA.Report.Signal
 
 
 import qualified Data.Vector as V

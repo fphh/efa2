@@ -1,15 +1,26 @@
 module Main where
 
-import qualified EFA2.Example.Examples as Example
-import qualified EFA2.StateAnalysis.StateAnalysis as StateAnalysis
-import EFA2.Topology.Draw
+import EFA.Example.Utility (makeNodes, makeSimpleEdges)
 
-import EFA2.Topology.TopologyData
-import qualified EFA2.Topology.Flow as Flow
-import EFA2.Signal.SequenceData
+import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
+import EFA.Graph.Draw (drawTopologyXs', drawTopologySimple, drawAll)
+
+import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.Flow as Flow
+import EFA.Graph (mkGraph)
+import EFA.Signal.SequenceData
 
 import Data.List.HT (chop)
 import Data.Char (isSpace)
+
+
+topoDreibein :: TD.Topology
+topoDreibein = mkGraph (makeNodes ns) (makeSimpleEdges es)
+  where ns = [ (0, TD.NoRestriction),
+               (1, TD.NoRestriction),
+               (2, TD.Crossing),
+               (3, TD.NoRestriction) ]
+        es = [ (0, 2), (1, 2), (2, 3) ]
 
 
 interactIO :: String -> (String -> IO a) -> IO a
@@ -35,7 +46,7 @@ readNum s =
 select :: [topo] -> [Int] -> [topo]
 select ts = map (ts!!)
 
-drawSeqGraph :: [FlowTopology] ->  IO ()
+drawSeqGraph :: [TD.FlowTopology] ->  IO ()
 drawSeqGraph sol =
    drawTopologySimple .
    Flow.mkSequenceTopology .
@@ -46,7 +57,7 @@ drawSeqGraph sol =
 
 main :: IO ()
 main = do
-  let sol = StateAnalysis.advanced Example.topoDreibein
+  let sol = StateAnalysis.advanced topoDreibein
 
   drawAll $
     drawTopologyXs' sol :

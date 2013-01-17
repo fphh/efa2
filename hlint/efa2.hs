@@ -49,7 +49,6 @@ warn "head . sort" = head (sort x) ==> minimum x
 warn "last . sort" = last (sort x) ==> maximum x
 warn "head . sortBy" = head (sortBy f x) ==> minimumBy f x
 warn "last . sortBy" = last (sortBy f x) ==> maximumBy f x
--- In Horn wird head $ L.sortBy uebersehen - warum?
 
 warn "take length" = take (length x) y ==> Match.take x y where note = "Match.take is lazy"
 warn "equal length" = length x == length y ==> Match.equalLength x y where note = "this comparison is lazy"
@@ -144,6 +143,11 @@ error "Redundant not" = not (not x) ==> x where note = "increases laziness"
 error "Too strict if" = (if c then f x else f y) ==> f (if c then x else y) where note = "increases laziness"
 error "Too strict maybe" = maybe (f x) (f . g) ==> f . maybe x g where note = "increases laziness"
 
+error "Too strict case" = (case m of Just x -> f y; Nothing -> f z) ==> f (case m of Just x -> y; Nothing -> z) where note = "May increase laziness"
+error "Too strict case" = (case m of Just x -> f y w; Nothing -> f z w) ==> f (case m of Just x -> y; Nothing -> z) w where note = "May increase laziness"
+error "Too strict case" = (case m of Left x -> f y; Right z -> f w) ==> f (case m of Left x -> y; Right z -> w) where note = "May increase laziness"
+error "Too strict case" = (case m of Left x -> f y w; Right z -> f v w) ==> f (case m of Left x -> y; Right z -> v) w where note = "May increase laziness"
+
 error "Use Foldable.forM_" = (case m of Nothing -> return (); Just x -> f x) ==> Fold.forM_ m f
 error "Use Foldable.forM_" = when (isJust m) (f (fromJust m)) ==> Fold.forM_ m f
 error "Use Foldable.mapM_" = maybe (return ()) ==> Fold.mapM_
@@ -152,3 +156,14 @@ error "foldMap" = maybe [] ==> Fold.foldMap
 
 error "any map" = any p (map f x) ==> any (p . f) x
 error "all map" = all p (map f x) ==> all (p . f) x
+
+-- HH
+
+
+warn "Use EFA2.Utils.Utils.(>>!)" = a >> b ==> a >>! b where note = "(>>!) has type (Monad m) :: m () -> m a -> m a and you will be sure not to forget accidentally the result of the first operation"
+
+warn "Use EFA2.Utils.Utils.(>>!)" = (>>) ==> (>>!) where note = "(>>!) has type (Monad m) :: m () -> m a -> m a and you will be sure not to forget accidentally the result of the first operation"
+
+-- warn "Use EFA2.Utils.Utils.(>>!)" = (a >>) ==> (a >>!) where note = "(>>!) has type (Monad m) :: m () -> m a -> m a and you will be sure not to forget accidentally the result of the first operation"
+
+-- warn "Use EFA2.Utils.Utils.(>>!)" = (>> b) ==> (>>! b) where note = "(>>!) has type (Monad m) :: m () -> m a -> m a and you will be sure not to forget accidentally the result of the first operation"

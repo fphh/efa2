@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell, StandaloneDeriving, FlexibleInstances, FlexibleContexts, UndecidableInstances, MultiParamTypeClasses, NoMonomorphismRestriction #-}
 
-module EFA2.Signal.TH where
+module EFA.Signal.TH where
 
 import Control.Monad
 

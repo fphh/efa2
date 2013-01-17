@@ -1,0 +1,175 @@
+Name:                efa
+Version:             2.1
+Synopsis:            Energy flow analysis
+Description:         Energy flow analysis
+Homepage:            http://energiefluss.info/
+License:             AllRightsReserved
+License-File:        LICENSE
+Author:              Ingenieurbüro Guttenberg & Hördegen
+Maintainer:          guttenberg@energiefluss.info
+-- Copyright:           
+Category:            Engineering
+Build-type:          Simple
+Cabal-version:       >=1.8
+
+Flag buildTests
+  Description: build test suite (makes trouble with TemplateHaskell and dynamic linking)
+  Default: True
+
+Flag buildExamples
+  Description: Build complex examples
+  Default: True
+
+Flag buildDemos
+  Description: Build demonstrations of single library features
+  Default: True
+
+Flag buildTools
+  Description: Build tools
+  Default: True
+
+Library
+  Build-Depends:
+    graphviz >=2999.13 && <2999.15,
+    vector ==0.9.*,
+    fingertree-psqueue >=0.3 && <0.4,
+    fingertree >=0.0 && <0.1,
+    gnuplot >=0.5.1 && <0.6,
+    text ==0.11.*,
+    pretty-show >=1.2 && <1.3,
+    pretty ==1.1.*,
+    template-haskell ==2.7.*,
+    random ==1.0.*,
+    Stream >=0.4.6 && <0.5,
+    non-empty >=0.0.1 && <0.1,
+    containers >=0.4 && <0.6,
+    data-accessor-transformers >=0.2.1 && <0.3,
+    data-accessor >=0.2.2 && <0.3,
+    utility-ht ==0.0.*,
+    QuickCheck >=2.4 && <2.6,
+    transformers >= 0.3 && < 0.4,
+    unique-logic >= 0.2 && < 0.3,
+    base ==4.5.*
+  Hs-Source-Dirs:      src
+  GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs
+  Exposed-Modules:
+    EFA.IO.Import
+    EFA.Utility
+    EFA.Utility.Stream
+    EFA.Utility.Trace
+    EFA.Signal.Base
+    EFA.Signal.SequenceData
+    EFA.Signal.Typ
+    EFA.Signal.Data
+    EFA.Signal.Vector
+    EFA.Signal.Signal
+    EFA.Signal.SignalFill
+    EFA.Signal.Sequence
+    EFA.Signal.Plot
+    EFA.Symbolic.OperatorTree
+    EFA.Symbolic.SumProduct
+    EFA.Report.Typ
+    EFA.Report.Base
+    EFA.Report.Report
+    EFA.Report.Format
+    EFA.Report.FormatValue
+    EFA.Graph
+    EFA.Graph.Draw
+    EFA.Graph.Topology
+    EFA.Graph.Topology.Index
+    EFA.Graph.Topology.StateAnalysis
+    EFA.Graph.Flow
+    EFA.Equation.System
+    EFA.Equation.Env
+    EFA.Equation.Variable
+    EFA.Example.Utility
+  Other-Modules:
+    EFA.Symbolic.OperatorTreeTest
+
+
+-- sollte man auf Cabal-Test umstellen,
+-- sobald Cabal-Test vernünftig läuft
+Executable test-efa
+  Main-Is: EFA/Test/Test.hs
+  GHC-Options: -Wall
+  Hs-Source-Dirs: test
+  If flag(buildTests)
+    Build-Depends:
+      efa,
+      QuickCheck,
+      containers,
+      utility-ht,
+      base
+  Else
+    Buildable: False
+  Other-Modules:
+    EFA.Test.UtilsTest
+    EFA.Test.SequenceTest
+
+Executable sequenzflussgraph
+  Main-Is: examples/elementary/sequenzflussgraph/Main.hs
+  GHC-Options: -Wall
+  If flag(buildExamples)
+    Build-Depends:
+      efa,
+      utility-ht,
+      base
+  Else
+    Buildable: False
+
+Executable demo-signalcalc
+  Main-Is: demo/Signal/Demo_SignalCalc.hs
+  GHC-Options: -Wall
+  If flag(buildDemos)
+    Build-Depends:
+      efa,
+      base
+  Else
+    Buildable: False
+
+Executable demo-sequence
+  Main-Is: demo/sliceSignals/Demo_Sequence.hs
+  GHC-Options: -Wall
+  If flag(buildDemos)
+    Build-Depends:
+      efa,
+      containers,
+      array >=0.4 && <0.5,
+      gnuplot,
+      utility-ht,
+      base
+  Else
+    Buildable: False
+
+Executable demo-newsolver
+  Main-Is: examples/elementary/newSolver/Main.hs
+  GHC-Options: -Wall
+  If flag(buildExamples)
+    Build-Depends:
+      efa,
+      base
+  Else
+    Buildable: False
+
+Executable demo-newsolversymbolic
+  Main-Is: examples/elementary/newSolverSymbolic/Main.hs
+  GHC-Options: -Wall
+  If flag(buildExamples)
+    Build-Depends:
+      efa,
+      base
+  Else
+    Buildable: False
+
+Executable makestub
+  Main-Is: sandbox/makestub/Main.hs
+  GHC-Options: -Wall
+  If flag(buildTools)
+    Build-Depends:
+      haskell-src-exts == 1.13.5,
+      text == 0.11.2.0,
+      graphviz == 2999.14.1.0.1,
+      containers == 0.4.2.1,
+      base
+  Else
+    Buildable: False

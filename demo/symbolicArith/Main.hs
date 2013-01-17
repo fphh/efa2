@@ -2,9 +2,9 @@
 
 module Main where
 
-import EFA2.Signal.Base
-import EFA2.Signal.Data
-import EFA2.Signal.Vector
+import EFA.Signal.Base
+import EFA.Signal.Data
+import EFA.Signal.Vector
 
 -- The following arithmetic should be implemented for InTerm.
 

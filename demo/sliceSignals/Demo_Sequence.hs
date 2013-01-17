@@ -1,15 +1,16 @@
+
 module Main where
 
-import qualified EFA2.Signal.Signal as S
-import qualified EFA2.Signal.Sequence as Sequ
-import qualified EFA2.Signal.Index as Idx
-import EFA2.Signal.SequenceData
+import qualified EFA.Signal.Signal as S
+import qualified EFA.Signal.Sequence as Sequ
+import qualified EFA.Graph.Topology.Index as Idx
+import EFA.Signal.SequenceData
           (PPosIdx(PPosIdx), PowerRecord(PowerRecord), ListPowerRecord,
            Sequ, SequPwrRecord)
-import EFA2.Signal.Signal (PSigL, (.++))
-import EFA2.Signal.Base (Val)
-import EFA2.Signal.Plot (rPlot, rPlotCore)
-import EFA2.Utils.Utils (divUp)
+import EFA.Signal.Signal (PSigL, (.++))
+import EFA.Signal.Base (Val)
+import EFA.Signal.Plot (rPlot, rPlotCore)
+import EFA.Utility (divUp)
 
 import qualified Graphics.Gnuplot.Advanced as Plot
 import qualified Graphics.Gnuplot.Terminal.PostScript as PS

@@ -14,33 +14,33 @@ import Control.Applicative
 
 import Debug.Trace
 
---import EFA2.Topology.RandomTopology
-import EFA2.Topology.Topology
--- import EFA2.Topology.GraphData
+--import EFA.Topology.RandomTopology
+import EFA.Topology.Topology
+-- import EFA.Topology.GraphData
 
-import EFA2.Solver.Equation
-import EFA2.Solver.Horn
-import EFA2.Solver.DirEquation
-import EFA2.Solver.IsVar
-import EFA2.Solver.DependencyGraph
+import EFA.Solver.Equation
+import EFA.Solver.Horn
+import EFA.Solver.DirEquation
+import EFA.Solver.IsVar
+import EFA.Solver.DependencyGraph
 
-import EFA2.Interpreter.Env
-import EFA2.Interpreter.Interpreter
-import EFA2.Interpreter.Arith
+import EFA.Equation.Env
+import EFA.Interpreter.Interpreter
+import EFA.Interpreter.Arith
 
-import EFA2.Utils.Utils
-import EFA2.Signal.Sequence
-import EFA2.IO.Import
+import EFA.Utility
+import EFA.Signal.Sequence
+import EFA.IO.Import
 
-import EFA2.Topology.Draw
-import EFA2.Example.SymSig
+import EFA.Graph.Draw
+import EFA.Example.SymSig
 
-import EFA2.Signal.Sequence
-import EFA2.Topology.Flow
---import EFA2.Topology.Flow
+import EFA.Signal.Sequence
+import EFA.Graph.Flow
+--import EFA.Graph.Flow
 
 
--- import EFA2.Example.LinearOne
+-- import EFA.Example.LinearOne
 
 -- define topology 
 g' :: Gr NLabel ()
