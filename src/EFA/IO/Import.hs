@@ -1,4 +1,4 @@
-module EFA.IO.Import (modelicaCSVImport) where
+module EFA.IO.Import (modelicaCSVImport, modelicaASCImport) where
 
 -- Modelica CSV Import -----------------------------------------------------------------  
 
@@ -25,8 +25,14 @@ import Text.ParserCombinators.Parsec
 csvFile :: Parser [[String]]
 csvFile = endBy line eol
 
+ascFile :: Parser [[String]]
+ascFile = endBy ascLine eol
+
 line :: Parser [String]
 line = sepBy cell (char ',')
+
+ascLine :: Parser [String]
+ascLine = sepBy cell (char ' ')
 
 cell :: Parser String
 cell = quotedCell <|> many (noneOf ",\n\r")
@@ -53,6 +59,10 @@ eol =   try (string "\n\r")
 parseCSV :: String -> Either ParseError [[String]]
 parseCSV input = parse csvFile "(unknown)" input
 
+parseASC :: String -> Either ParseError [[String]]
+parseASC input = parse ascFile "(unknown)" input
+
+
 modelicaCSVParse :: String -> Either ParseError [[String]] -> Record
 modelicaCSVParse _ (Right strs@(("time":_):_)) = makeRecord strs
 modelicaCSVParse path (Right []) = error ("Empty csv file: " ++ path)
@@ -61,6 +71,11 @@ modelicaCSVParse path (Right _) =
 modelicaCSVParse path (Left err) =
   error ("Parse error in file " ++ show path ++ ": " ++ show err)
 
+modelicaASCParse :: String -> Either ParseError [[String]] -> Record
+modelicaASCParse _ (Right strs) = makeRecordASC strs
+modelicaASCParse path (Right []) = error ("Empty asc file: " ++ path)
+modelicaASCParse path (Left err) =
+  error ("Parse error in file " ++ show path ++ ": " ++ show err)
 
 makeRecord :: [[String]] -> Record
 makeRecord [] = error "This is not possible!"
@@ -69,11 +84,24 @@ makeRecord (h:hs) =
   where sigIdents = map SigId (tail h)
         time:sigs = SV.transpose (map (map read . init) hs)
 
+makeRecordASC :: [[String]] -> Record
+makeRecordASC [] = error "This is not possible!"
+makeRecordASC hs =
+  Record (S.fromList time) (M.fromList $ zip sigIdents (map S.fromList sigs))
+  where sigIdents = map (\ x -> SigId ("S" ++ show x)) [1 .. length sigs]
+        time:sigs = SV.transpose (map (map read . init) hs)
+
+
 -- | Main Modelica CSV Import Function
 modelicaCSVImport :: FilePath -> IO Record
 modelicaCSVImport path = do 
   text <- readFile path
   return $ modelicaCSVParse path (parseCSV text)
+
+modelicaASCImport :: FilePath -> IO Record
+modelicaASCImport path = do
+  text <- readFile path
+  return $ modelicaASCParse path (parseASC text)
 
 {-
 modelicaCSVImport' :: FilePath -> IO Record
