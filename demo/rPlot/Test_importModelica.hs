@@ -1,7 +1,7 @@
 
 module Main where
 
-import EFA.IO.Import
+import EFA.IO.CSVImport
 -- import EFA.Report.Signal
 import EFA.Signal.Plot
 
@@ -25,5 +25,5 @@ main = do
   putStrLn ""
   putStrLn (show rec2)
   
-  sigPlot "Hallo" rec1
+  rPlot ("Hallo", rec1)
   
