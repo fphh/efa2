@@ -1,11 +1,15 @@
 
+module Main where
+
 import EFA.IO.Import
-import EFA.Report.Signal
+-- import EFA.Report.Signal
 import EFA.Signal.Plot
 
+name1, name2 :: String
 name1 =  "linear_res.csv" -- hand generated cvs file
 name2 =  "linear_res_manual.csv" -- full modelica cvs file
 
+main :: IO ()
 main = do 
   rec1 <- modelicaCSVImport (name1)
   rec2 <- modelicaCSVImport (name2)
@@ -21,5 +25,5 @@ main = do
   putStrLn ""
   putStrLn (show rec2)
   
-  sigPlot rec1
+  sigPlot "Hallo" rec1
   
