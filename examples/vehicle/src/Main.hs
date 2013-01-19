@@ -24,6 +24,8 @@ import qualified EFA.Signal.Plot as PL
 import EFA.Signal.Sequence (makeSequence, makeSeqFlowGraph)
 import qualified EFA.Signal.Signal as Sig
 
+import qualified EFA.Report.Report as Rep
+
 import EFA.Graph.Draw -- (drawTopology)
 
 
@@ -100,3 +102,4 @@ main = do
   drawTopologyXs' [head sol]
   -- drawTopology sequTopo env
   -- PL.rPlot ("Test",pRec) 
+  Rep.report [Rep.RAll] ("Test",pRec)
