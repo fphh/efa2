@@ -1,6 +1,8 @@
 
 module Main where
 
+-- | Demonstriert das Plotten von Signalen.
+
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Graph.Topology.Index as Idx
