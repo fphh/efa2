@@ -73,13 +73,13 @@ intersectionEdgeColour :: Attribute
 intersectionEdgeColour = Color [RGB 200 0 0]
 
 
-mkDotGraph ::
+dotFromSequFlowGraph ::
    SequFlowGraph ->
    Maybe (Unicode, Idx.Section -> Unicode) ->
    (Topo.LNode -> Unicode) ->
    (Topo.LEdge -> [Unicode]) ->
    DotGraph T.Text
-mkDotGraph g recTShow nshow eshow =
+dotFromSequFlowGraph g recTShow nshow eshow =
   DotGraph { strictGraph = False,
              directedGraph = True,
              graphID = Just (Int 1),
@@ -93,8 +93,8 @@ mkDotGraph g recTShow nshow eshow =
            labNodes g
         sg (ns, ms) = DotSG True (Just (Int $ fromEnum sl)) (DotStmts gattrs [] xs ys)
           where sl = section $ NonEmpty.head ns
-                xs = map (mkDotNode nshow) $ NonEmpty.flatten ns
-                ys = map (mkDotEdge eshow) $ labEdges $
+                xs = map (dotFromSecNode nshow) $ NonEmpty.flatten ns
+                ys = map (dotFromSecEdge eshow) $ labEdges $
                      delNodes (map fst (concatMap NonEmpty.flatten ms)) g'
                 gattrs = [GraphAttrs [Label (StrLabel (T.pack str))]]
                 str =
@@ -106,17 +106,17 @@ mkDotGraph g recTShow nshow eshow =
         stmts = DotStmts { attrStmts = [],
                            subGraphs = map sg cs,
                            nodeStmts = [],
-                           edgeStmts = map (mkDotEdge eshow) $ M.toList interEs }
+                           edgeStmts = map (dotFromSecEdge eshow) $ M.toList interEs }
 
 
-mkDotNode:: (Topo.LNode -> Unicode) -> Topo.LNode -> DotNode T.Text
-mkDotNode nshow n@(x, _) =
+dotFromSecNode:: (Topo.LNode -> Unicode) -> Topo.LNode -> DotNode T.Text
+dotFromSecNode nshow n@(x, _) =
    DotNode (dotIdentFromSecNode x)
       [displabel, nodeColour, Style [SItem Filled []], Shape BoxShape ]
   where displabel = Label $ StrLabel $ T.pack $ unUnicode $ nshow n
 
-mkDotEdge :: (Topo.LEdge -> [Unicode]) -> Topo.LEdge -> DotEdge T.Text
-mkDotEdge eshow e@(_, elabel) =
+dotFromSecEdge :: (Topo.LEdge -> [Unicode]) -> Topo.LEdge -> DotEdge T.Text
+dotFromSecEdge eshow e@(_, elabel) =
    DotEdge
       (dotIdentFromSecNode x) (dotIdentFromSecNode y)
       [displabel, Viz.Dir dir, colour]
@@ -143,12 +143,12 @@ printGraph, printGraphX, _printGraphDot ::
 printGraph = printGraphX
 
 printGraphX g recTShow nshow eshow =
-   runGraphvizCanvas Dot (mkDotGraph g recTShow nshow eshow) Xlib
+   runGraphvizCanvas Dot (dotFromSequFlowGraph g recTShow nshow eshow) Xlib
 
 _printGraphDot g recTShow nshow eshow =
    void $
    runGraphvizCommand Dot
-      (mkDotGraph g recTShow nshow eshow)
+      (dotFromSequFlowGraph g recTShow nshow eshow)
       XDot "result/graph.dot"
 
 
@@ -198,8 +198,8 @@ topology topo =
    runGraphvizCanvas Dot (dotFromTopology topo) Xlib
 
 
-dsg :: Int -> FlowTopology -> DotSubGraph String
-dsg ident topo = DotSG True (Just (Int ident)) stmts
+dotFromFlowTopology :: Int -> FlowTopology -> DotSubGraph String
+dotFromFlowTopology ident topo = DotSG True (Just (Int ident)) stmts
   where stmts = DotStmts attrs [] ns es
         attrs = [GraphAttrs [labelf ident]]
         ns = map mkNode (labNodes topo)
@@ -218,7 +218,7 @@ flowTopologies :: [FlowTopology] -> IO ()
 flowTopologies ts = runGraphvizCanvas Dot g Xlib
   where g = DotGraph False True Nothing stmts
         stmts = DotStmts attrs subgs [] []
-        subgs = zipWith dsg [0..] ts
+        subgs = zipWith dotFromFlowTopology [0..] ts
         attrs = []
 
 
