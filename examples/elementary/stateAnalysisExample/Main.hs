@@ -6,7 +6,7 @@ module Main where
 
 import EFA.Example.Examples
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
-import EFA.Graph.Draw
+import qualified EFA.Graph.Draw as Draw
 
 
 -- Try topoLoop and topoDoubleLoop!
@@ -18,4 +18,4 @@ main = do
   let sol = StateAnalysis.advanced topoDreibein
   -- print sol
   print (length sol)
-  drawTopologyXs' (map reorderEdges sol)
+  Draw.flowTopologies (map reorderEdges sol)

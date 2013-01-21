@@ -3,9 +3,9 @@ module Main where
 import EFA.Example.Utility (makeNodes, makeSimpleEdges)
 
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
-import EFA.Graph.Draw (drawTopologyXs', drawTopologySimple)
 import EFA.Utility.Async (concurrentlyMany_)
 
+import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Flow as Flow
 import EFA.Graph (mkGraph)
@@ -49,7 +49,7 @@ select ts = map (ts!!)
 
 drawSeqGraph :: [TD.FlowTopology] ->  IO ()
 drawSeqGraph sol =
-   drawTopologySimple .
+   Draw.sequFlowGraph .
    Flow.mkSequenceTopology .
    Flow.genSectionTopology .
    SequData . select sol . parse =<<
@@ -61,6 +61,6 @@ main = do
   let sol = StateAnalysis.advanced topoDreibein
 
   concurrentlyMany_ $
-    drawTopologyXs' sol :
+    Draw.flowTopologies sol :
     drawSeqGraph sol :
     []

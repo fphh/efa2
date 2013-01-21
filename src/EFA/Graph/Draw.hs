@@ -1,9 +1,10 @@
 module EFA.Graph.Draw (
-  draw,
+  sequFlowGraph,
+  sequFlowGraphWithEnv,
+  sequFlowGraphAbsWithEnv, envAbs,
+  sequFlowGraphDeltaWithEnv, envDelta,
   Env(..),
-  drawTopology, envAbs,
-  drawDeltaTopology, envDelta,
-  drawTopologyXs', drawTopologySimple,
+  flowTopologies,
   ) where
 
 import qualified EFA.Report.Format as Format
@@ -149,8 +150,8 @@ _printGraphDot g recTShow nshow eshow =
       XDot "result/graph.dot"
 
 
-drawTopologySimple :: SequFlowGraph -> IO ()
-drawTopologySimple topo =
+sequFlowGraph :: SequFlowGraph -> IO ()
+sequFlowGraph topo =
    printGraph topo Nothing nshow eshow
   where nshow (Idx.SecNode _ n, l) = Unicode $ show n ++ " - " ++ showNodeType l
         eshow _ = []
@@ -171,8 +172,8 @@ dsg ident topo = DotSG True (Just (Int ident)) stmts
               (Edge x y, d, _) ->
                  DotEdge (idf x) (idf y) [Viz.Dir d]
 
-drawTopologyXs' :: [FlowTopology] -> IO ()
-drawTopologyXs' ts = runGraphvizCanvas Dot g Xlib
+flowTopologies :: [FlowTopology] -> IO ()
+flowTopologies ts = runGraphvizCanvas Dot g Xlib
   where g = DotGraph False True Nothing stmts
         stmts = DotStmts attrs subgs [] []
         subgs = zipWith dsg [0..] ts
@@ -246,8 +247,8 @@ lookupFormatAssign mp makeIdx x y =
       idx ->
          Format.assign (formatValue $ mkIdx idx) (lookupFormat mp idx)
 
-draw :: SequFlowGraph -> Env Unicode -> IO ()
-draw g env =
+sequFlowGraphWithEnv :: SequFlowGraph -> Env Unicode -> IO ()
+sequFlowGraphWithEnv g env =
    printGraph g (Just (recordNumber env, formatTime env)) (formatNode env) eshow
   where eshow (e@(Edge uid vid), l) =
            case edgeType l of
@@ -265,13 +266,13 @@ draw g env =
            formatEnergy env vid uid :
            []
 
-drawTopology ::
+sequFlowGraphAbsWithEnv ::
    FormatValue a => SequFlowGraph -> Interp.Env SingleRecord a -> IO ()
-drawTopology topo = draw topo . envAbs
+sequFlowGraphAbsWithEnv topo = sequFlowGraphWithEnv topo . envAbs
 
-drawDeltaTopology ::
+sequFlowGraphDeltaWithEnv ::
    FormatValue a => SequFlowGraph -> Interp.Env SingleRecord a -> IO ()
-drawDeltaTopology topo = draw topo . envDelta
+sequFlowGraphDeltaWithEnv topo = sequFlowGraphWithEnv topo . envDelta
 
 
 envAbs ::

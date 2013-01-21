@@ -14,7 +14,7 @@ import EFA.Equation.Env
 import EFA.Interpreter.Interpreter
 import EFA.Interpreter.Arith
 
-import EFA.Graph.Draw
+import qualified EFA.Graph.Draw as Draw
 
 import qualified EFA.Signal.Signal as S
 import EFA.Signal.Signal (Sc, PSigL, toScalar)
@@ -90,7 +90,7 @@ main = do
 
   --drawTopologyX' sqTopo
   --print res 
-  drawTopology sqTopo resSym
+  Draw.sequFlowGraphAbsWithEnv sqTopo resSym
   --print pRec
 
 -- Symbolic =====================================================================
