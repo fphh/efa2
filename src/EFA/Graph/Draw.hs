@@ -4,6 +4,7 @@ module EFA.Graph.Draw (
   sequFlowGraphAbsWithEnv, envAbs,
   sequFlowGraphDeltaWithEnv, envDelta,
   Env(..),
+  topology,
   flowTopologies,
   ) where
 
@@ -17,6 +18,7 @@ import EFA.Equation.Env (StorageMap, SingleRecord(SingleRecord))
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
+import qualified EFA.Graph as Gr
 import EFA.Graph.Topology
           (SequFlowGraph,
            NodeType(Storage),
@@ -156,6 +158,46 @@ sequFlowGraph topo =
   where nshow (Idx.SecNode _ n, l) = Unicode $ show n ++ " - " ++ showNodeType l
         eshow _ = []
 
+
+dotFromTopology :: Topo.Topology -> DotGraph T.Text
+dotFromTopology g =
+  DotGraph {
+    strictGraph = False,
+    directedGraph = False,
+    graphID = Just (Int 1),
+    graphStatements =
+      DotStmts {
+        attrStmts = [],
+        subGraphs = [],
+        nodeStmts = map dotFromTopoNode $ Gr.labNodes g,
+        edgeStmts = map (dotFromTopoEdge . fst) $ Gr.labEdges g
+      }
+  }
+
+dotFromTopoNode:: Gr.LNode Idx.Node Topo.NodeType -> DotNode T.Text
+dotFromTopoNode (x, typ) =
+   DotNode (dotIdentFromNode x)
+      [Label $ StrLabel $ T.pack $ show x ++ "\n" ++ showNodeType typ,
+       nodeColour, Style [SItem Filled []], Shape BoxShape]
+
+dotFromTopoEdge :: Gr.Edge Idx.Node -> DotEdge T.Text
+dotFromTopoEdge e =
+   case orientUndirEdge e of
+      Edge x y ->
+         DotEdge
+            (dotIdentFromNode x) (dotIdentFromNode y)
+            [Viz.Dir Viz.NoDir, originalEdgeColour]
+
+dotIdentFromNode :: Idx.Node -> T.Text
+dotIdentFromNode (Idx.Node n) = T.pack $ show n
+
+
+
+topology :: Topo.Topology -> IO ()
+topology topo =
+   runGraphvizCanvas Dot (dotFromTopology topo) Xlib
+
+
 dsg :: Int -> FlowTopology -> DotSubGraph String
 dsg ident topo = DotSG True (Just (Int ident)) stmts
   where stmts = DotStmts attrs [] ns es
@@ -183,16 +225,19 @@ flowTopologies ts = runGraphvizCanvas Dot g Xlib
 orientEdge ::
    (Ord n, FlowDirectionField el) =>
    (Edge n, el) -> (Edge n, DirType, [s] -> [s])
-orientEdge (Edge x y, l) =
+orientEdge (e@(Edge x y), l) =
    case getFlowDirection l of
       Topo.UnDir ->
-         (if x < y then Edge x y else Edge y x,
-          NoDir, const [])
+         (orientUndirEdge e, NoDir, const [])
       Topo.Dir ->
 --         if comparing (\(Idx.SecNode s n) -> n) x y == LT
          if x < y
            then (Edge x y, Forward, id)
            else (Edge y x, Back, reverse)
+
+orientUndirEdge :: Ord n => Edge n -> Edge n
+orientUndirEdge (Edge x y) =
+   if x < y then Edge x y else Edge y x
 
 
 showNodeType :: NodeType -> String
