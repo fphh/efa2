@@ -1,5 +1,25 @@
 {-# LANGUAGE Rank2Types #-}
-module EFA.Equation.System where
+module EFA.Equation.System (
+  EquationSystem, ExprWithVars,
+  fromTopology, solve,
+
+  recAbs, constToExprSys,
+  liftV, liftV2, makeFunc, makeFunc2,
+
+  (=.=),
+  getVar,
+  getEdgeVar,
+  power,
+  energy,
+  maxenergy,
+  eta,
+  xfactor,
+  yfactor,
+  insumvar,
+  outsumvar,
+  storage,
+  dtime,
+  ) where
 
 import qualified EFA.Equation.Env as Env
 import qualified EFA.Graph.Topology.Index as Idx
@@ -184,8 +204,6 @@ mwhen :: Monoid a => Bool -> a -> a
 mwhen True t = t
 mwhen False _ = mempty
 
-edges :: Gr.Graph node nodeLabel edgeLabel -> [Gr.Edge node]
-edges = M.keys . Gr.edgeLabels
 
 fromTopology ::
   (Eq a, Fractional a) =>
@@ -308,8 +326,8 @@ makeInterSectionEquations = foldMap f . getIntersectionStorages
 getSection :: Idx.SecNode -> Idx.Section
 getSection (Idx.SecNode s _) = s
 
-getNode :: Idx.SecNode -> Idx.Node
-getNode (Idx.SecNode _ n) = n
+_getNode :: Idx.SecNode -> Idx.Node
+_getNode (Idx.SecNode _ n) = n
 
 mkInStorageEquations ::
   (Eq a, Fractional a) =>
