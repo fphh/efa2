@@ -19,5 +19,5 @@ async io = do
 wait :: Async a -> IO a
 wait (Async m) = readMVar m
 
-concurrentlyMany_ :: [IO a] -> IO ()
+concurrentlyMany_ :: [IO ()] -> IO ()
 concurrentlyMany_ = mapM async >=> mapM_ wait
