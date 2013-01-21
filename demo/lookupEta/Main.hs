@@ -1,6 +1,8 @@
 
 module Main where
 
+-- | Demonstriert, wie man ein eta mit Hilfe von Lookup-Tables definiert.
+
 import qualified EFA.Equation.Env as Env
 import qualified EFA.Equation.System as EqSys
 import EFA.Equation.System ((=.=))
