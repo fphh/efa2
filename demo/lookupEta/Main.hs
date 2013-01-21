@@ -2,7 +2,7 @@
 module Main where
 
 import qualified EFA.Equation.Env as Env
-import qualified EFA.Equation.System as EqGen
+import qualified EFA.Equation.System as EqSys
 import EFA.Equation.System ((=.=))
 
 import qualified EFA.Graph.Topology.Index as Idx
@@ -15,9 +15,6 @@ import EFA.Example.Utility ((.=), constructSeqTopo, edgeVar, makeEdges, recAbs)
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (formatValue)
-
-import qualified UniqueLogic.ST.Expression as Expr
-import qualified UniqueLogic.ST.System as Sys
 
 import Data.Monoid ((<>))
 import Data.Foldable (foldMap)
@@ -40,11 +37,11 @@ seqTopo = constructSeqTopo linearOne [0]
 enRange :: [Double]
 enRange = 0.01:[0.5, 1 .. 9]
 
-c :: EqGen.ExprWithVars s a
-c = edgeVar EqGen.power sec0 source sink
+c :: EqSys.ExprWithVars s a
+c = edgeVar EqSys.power sec0 source sink
 
-n :: EqGen.ExprWithVars s a
-n = edgeVar EqGen.eta sec0 source sink
+n :: EqSys.ExprWithVars s a
+n = edgeVar EqSys.eta sec0 source sink
 
 eval :: [(Double, Double)] -> Double -> Double
 eval lt pin =
@@ -53,15 +50,15 @@ eval lt pin =
        (_, v):_ -> v
 
 
-lookupEta :: EqGen.ExprWithVars s Double -> EqGen.ExprWithVars s Double
-lookupEta = EqGen.liftV $ Expr.fromRule2 $ Sys.assignment2 "lookupTable" $ eval table
+lookupEta :: EqSys.ExprWithVars s Double -> EqSys.ExprWithVars s Double
+lookupEta = EqSys.makeFunc $ eval table
   where table = zip [0..9] [0, 0.1, 0.3, 0.6, 0.7, 0.65, 0.6, 0.4, 0.35, 0.1]
 
-given :: Double -> EqGen.EquationSystem s Double
+given :: Double -> EqSys.EquationSystem s Double
 given p =
    foldMap (uncurry (.=)) $
-   (EqGen.dtime sec0, 1) :
-   (edgeVar EqGen.power sec0 source sink, p) : []
+   (EqSys.dtime sec0, 1) :
+   (edgeVar EqSys.power sec0 source sink, p) : []
 
 eta :: Idx.Eta
 eta = edgeVar (Idx.Eta recAbs) sec0 source sink
@@ -69,7 +66,7 @@ eta = edgeVar (Idx.Eta recAbs) sec0 source sink
 
 solve :: Double -> String
 solve p =
-  let env = EqGen.solve ((n =.= lookupEta c) <> given p) seqTopo
+  let env = EqSys.solve ((n =.= lookupEta c) <> given p) seqTopo
   in  show p ++ " " ++
       Format.unUnicode (formatValue (checkedLookup (Env.etaMap env) eta))
 

@@ -61,11 +61,19 @@ liftV ::
   ExprWithVars s a -> ExprWithVars s a
 liftV f (ExprWithVars xs) = ExprWithVars $ liftM f xs
 
+makeFunc :: (a -> a) -> ExprWithVars s a -> ExprWithVars s a
+makeFunc = liftV . Expr.fromRule2 . Sys.assignment2 ""
+
+
 liftV2 ::
   (Expr.T s a -> Expr.T s a -> Expr.T s a) ->
   ExprWithVars s a -> ExprWithVars s a -> ExprWithVars s a
 liftV2 f (ExprWithVars xs) (ExprWithVars ys) = ExprWithVars $ liftM2 f xs ys
 
+makeFunc2
+  :: (a -> a -> a) 
+     -> ExprWithVars s a -> ExprWithVars s a -> ExprWithVars s a
+makeFunc2 = liftV2 . Expr.fromRule3 . Sys.assignment3 ""
 
 instance (Fractional a) => Num (ExprWithVars s a) where
          fromInteger = ExprWithVars . return . fromInteger
@@ -81,6 +89,28 @@ instance (Fractional a) => Num (ExprWithVars s a) where
 instance (Fractional a) => Fractional (ExprWithVars s a) where
          fromRational = ExprWithVars . return . fromRational
          (/) = liftV2 (/)
+
+instance (Floating a) => Floating (ExprWithVars s a) where
+         pi = constToExprSys pi
+         exp = makeFunc exp
+         sqrt = makeFunc sqrt
+         log = makeFunc log
+         (**) = makeFunc2 (**)
+         logBase = makeFunc2 logBase
+         sin = makeFunc sin
+         tan = makeFunc tan
+         cos = makeFunc cos
+         asin = makeFunc asin
+         atan = makeFunc atan
+         acos = makeFunc acos
+         sinh = makeFunc sinh
+         tanh = makeFunc tanh
+         cosh = makeFunc cosh
+         asinh = makeFunc asinh
+         atanh = makeFunc atanh
+         acosh = makeFunc acosh
+
+
 
 infix 0 =.=
 (=.=) :: (Eq a) => ExprWithVars s a -> ExprWithVars s a -> EquationSystem s a
