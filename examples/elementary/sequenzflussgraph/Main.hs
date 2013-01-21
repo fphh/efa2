@@ -3,7 +3,8 @@ module Main where
 import EFA.Example.Utility (makeNodes, makeSimpleEdges)
 
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
-import EFA.Graph.Draw (drawTopologyXs', drawTopologySimple, drawAll)
+import EFA.Graph.Draw (drawTopologyXs', drawTopologySimple)
+import EFA.Utility.Async (concurrentlyMany_)
 
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Flow as Flow
@@ -59,7 +60,7 @@ main :: IO ()
 main = do
   let sol = StateAnalysis.advanced topoDreibein
 
-  drawAll $
+  concurrentlyMany_ $
     drawTopologyXs' sol :
     drawSeqGraph sol :
     []

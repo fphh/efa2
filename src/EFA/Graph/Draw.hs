@@ -51,9 +51,7 @@ import qualified Data.List.HT as HTL
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.NonEmpty.Mixed as NonEmptyM
 
-import Control.Concurrent.MVar (MVar, putMVar, readMVar, newEmptyMVar)
-import Control.Concurrent (forkIO)
-import Control.Monad ((>=>), void)
+import Control.Monad (void)
 
 
 nodeColour :: Attribute
@@ -312,20 +310,3 @@ envDelta
       (lookupFormatAssign dn (Idx.DEta rec))
       (lookupFormat dt . Idx.DTime rec)
       (formatNode rec st)
-
-
--------------------------------------------------------------------------------------------
-
-newtype Async a = Async (MVar a)
-
-async :: IO a -> IO (Async a)
-async io = do
-  m <- newEmptyMVar
-  void $ forkIO $ putMVar m =<< io
-  return (Async m)
-
-wait :: Async a -> IO a
-wait (Async m) = readMVar m
-
-drawAll :: [IO a] -> IO ()
-drawAll = mapM async >=> mapM_ wait

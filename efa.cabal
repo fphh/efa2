@@ -57,6 +57,7 @@ Library
     EFA.IO.ASCIIImport
     EFA.IO.CSVParser
     EFA.Utility
+    EFA.Utility.Async
     EFA.Utility.Stream
     EFA.Utility.Trace
     EFA.Signal.Base
