@@ -1,4 +1,6 @@
 
+module Main where
+
 import qualified Text.PrettyPrint as PP
 import qualified Text.Show.Pretty as SP
 import qualified Data.List as L
@@ -35,6 +37,7 @@ format t = PP.vcat $ map PP.hsep t
 
 tabelle4 = tabelle2 <++> tabelle2
 
+main :: IO ()
 main = do
   
   putStrLn $ PP.render $ PP.hcat $ L.intersperse PP.space lp 
