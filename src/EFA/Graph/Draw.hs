@@ -1,4 +1,10 @@
-module EFA.Graph.Draw where
+module EFA.Graph.Draw (
+  draw,
+  Env(..),
+  drawTopology, envAbs,
+  drawDeltaTopology, envDelta,
+  drawTopologyXs', drawTopologySimple,
+  ) where
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
@@ -56,9 +62,6 @@ import Control.Monad (void)
 
 nodeColour :: Attribute
 nodeColour = FillColor [RGB 230 230 240]
-
-clusterColour :: Attribute
-clusterColour = FillColor [RGB 250 250 200]
 
 originalEdgeColour :: Attribute
 originalEdgeColour = Color [RGB 0 0 200]
@@ -128,7 +131,7 @@ dotIdentFromSecNode :: Idx.SecNode -> T.Text
 dotIdentFromSecNode (Idx.SecNode (Idx.Section s) (Idx.Node n)) =
    T.pack $ "s" ++ show s ++ "n" ++ show n
 
-printGraph, printGraphX, printGraphDot ::
+printGraph, printGraphX, _printGraphDot ::
    SequFlowGraph ->
    Maybe (Unicode, Idx.Section -> Unicode) ->
    (Topo.LNode -> Unicode) ->
@@ -139,15 +142,11 @@ printGraph = printGraphX
 printGraphX g recTShow nshow eshow =
    runGraphvizCanvas Dot (mkDotGraph g recTShow nshow eshow) Xlib
 
-printGraphDot g recTShow nshow eshow =
+_printGraphDot g recTShow nshow eshow =
    void $
    runGraphvizCommand Dot
       (mkDotGraph g recTShow nshow eshow)
       XDot "result/graph.dot"
-
-drawTopologyX' :: SequFlowGraph -> IO ()
-drawTopologyX' topo =
-   printGraph topo Nothing (Unicode . show) ((:[]) . Unicode . show)
 
 
 drawTopologySimple :: SequFlowGraph -> IO ()
@@ -201,10 +200,10 @@ showNodeType = show
 formatNodeType :: Format output => NodeType -> output
 formatNodeType = Format.literal . showNodeType
 
-formatNode ::
+formatNodeStorage ::
    (FormatValue a, Format output) =>
    Idx.Record -> StorageMap a -> Topo.LNode -> output
-formatNode rec st (n@(Idx.SecNode _sec nid), ty) =
+formatNodeStorage rec st (n@(Idx.SecNode _sec nid), ty) =
    Format.lines $
    Format.literal (show nid) :
    Format.words [Format.literal "Type:", formatNodeType ty] :
@@ -222,14 +221,12 @@ It shall not contain values needed for computations.
 -}
 data Env output =
    Env {
-      recordNumber_ :: output,
-      formatEnergy_ :: Idx.SecNode -> Idx.SecNode -> output,
-      formatMaxEnergy_ :: Idx.SecNode -> Idx.SecNode -> output,
-      formatX_      :: Idx.SecNode -> Idx.SecNode -> output,
-      formatY_      :: Idx.SecNode -> Idx.SecNode -> output,
-      formatEta_    :: Idx.SecNode -> Idx.SecNode -> output,
-      formatTime_ :: Idx.Section -> output,
-      formatNode_ :: Topo.LNode -> output
+      recordNumber :: output,
+      formatEnergy, formatMaxEnergy,
+      formatX, formatY,
+      formatEta    :: Idx.SecNode -> Idx.SecNode -> output,
+      formatTime   :: Idx.Section -> output,
+      formatNode   :: Topo.LNode -> output
    }
 
 lookupFormat ::
@@ -250,28 +247,23 @@ lookupFormatAssign mp makeIdx x y =
          Format.assign (formatValue $ mkIdx idx) (lookupFormat mp idx)
 
 draw :: SequFlowGraph -> Env Unicode -> IO ()
-draw g
-   (Env rec formatEnergy formatMaxEnergy formatX formatY formatEta tshow nshow) =
-      printGraph g (Just (rec, tshow)) nshow eshow
-  where eshow (Edge uid vid, l) =
+draw g env =
+   printGraph g (Just (recordNumber env, formatTime env)) (formatNode env) eshow
+  where eshow (e@(Edge uid vid), l) =
            case edgeType l of
-              OriginalEdge ->
-                 formatEnergy uid vid :
-                 formatX uid vid :
-                 formatEta uid vid :
-                 formatX vid uid :
-                 formatEnergy vid uid :
-                 []
+              OriginalEdge -> eshowBase e
               IntersectionEdge ->
-                 formatMaxEnergy uid vid :
-                 formatY uid vid :
+                 formatMaxEnergy env uid vid :
+                 formatY env uid vid :
                  Format.empty :
-                 formatEnergy uid vid :
-                 formatX uid vid :
-                 formatEta uid vid :
-                 formatX vid uid :
-                 formatEnergy vid uid :
-                 []
+                 eshowBase e
+        eshowBase (Edge uid vid) =
+           formatEnergy env uid vid :
+           formatX env uid vid :
+           formatEta env uid vid :
+           formatX env vid uid :
+           formatEnergy env vid uid :
+           []
 
 drawTopology ::
    FormatValue a => SequFlowGraph -> Interp.Env SingleRecord a -> IO ()
@@ -294,7 +286,7 @@ envAbs (Interp.Env (SingleRecord rec) e _de me _dme _p _dp fn _dn dt x _dx y _dy
       (lookupFormatAssign y (Idx.Y rec))
       (lookupFormatAssign fn (Idx.Eta rec))
       (lookupFormat dt . Idx.DTime rec)
-      (formatNode rec st)
+      (formatNodeStorage rec st)
 
 envDelta ::
    (FormatValue a, Format output) =>
@@ -309,4 +301,4 @@ envDelta
       (lookupFormatAssign dy (Idx.DY rec))
       (lookupFormatAssign dn (Idx.DEta rec))
       (lookupFormat dt . Idx.DTime rec)
-      (formatNode rec st)
+      (formatNodeStorage rec st)
