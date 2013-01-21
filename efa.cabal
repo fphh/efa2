@@ -38,7 +38,6 @@ Library
     text ==0.11.*,
     pretty-show >=1.2 && <1.3,
     pretty ==1.1.*,
-    template-haskell ==2.7.*,
     random ==1.0.*,
     Stream >=0.4.6 && <0.5,
     non-empty >=0.0.1 && <0.1,
@@ -49,11 +48,14 @@ Library
     QuickCheck >=2.4 && <2.6,
     transformers >= 0.3 && < 0.4,
     unique-logic >= 0.2 && < 0.3,
+    parsec ==3.1.2,
     base ==4.5.*
   Hs-Source-Dirs:      src
   GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs
   Exposed-Modules:
-    EFA.IO.Import
+    EFA.IO.CSVImport
+    EFA.IO.ASCIIImport
+    EFA.IO.CSVParser
     EFA.Utility
     EFA.Utility.Stream
     EFA.Utility.Trace
@@ -99,6 +101,7 @@ Executable test-efa
       QuickCheck,
       containers,
       utility-ht,
+      template-haskell ==2.7.*,
       base
   Else
     Buildable: False
@@ -160,6 +163,28 @@ Executable demo-newsolversymbolic
       base
   Else
     Buildable: False
+
+Executable demo-csvimport
+  Main-Is: demo/CSVImport/Main.hs
+  GHC-Options: -Wall
+  If flag(buildExamples)
+    Build-Depends:
+      efa,
+      base
+  Else
+    Buildable: False
+
+Executable demo-asciiimport
+  Main-Is: demo/ASCIIImport/Main.hs
+  GHC-Options: -Wall
+  If flag(buildExamples)
+    Build-Depends:
+      efa,
+      base
+  Else
+    Buildable: False
+
+
 
 Executable makestub
   Main-Is: sandbox/makestub/Main.hs

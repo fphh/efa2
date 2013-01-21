@@ -63,12 +63,8 @@ given p =
    (EqGen.dtime sec0, 1) :
    (edgeVar EqGen.power sec0 source sink, p) : []
 
-ein, eout :: Idx.Energy
-ein  = edgeVar (Idx.Energy recAbs) sec0 source sink
-eout = edgeVar (Idx.Energy recAbs) sec0 sink source
-
 eta :: Idx.Eta
-eta  = edgeVar (Idx.Eta recAbs) sec0 source sink
+eta = edgeVar (Idx.Eta recAbs) sec0 source sink
 
 
 solve :: Double -> String
