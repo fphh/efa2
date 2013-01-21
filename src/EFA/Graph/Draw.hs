@@ -24,12 +24,9 @@ import EFA.Graph.Topology
            NodeType(Storage),
            EdgeType(OriginalEdge, IntersectionEdge),
            edgeType,
-           isIntersectionEdge,
            getFlowDirection,
            FlowDirectionField, FlowTopology)
-import EFA.Graph
-          (Graph, Edge(Edge),
-           labNodes, labEdges, edgeLabels, delNodes, delEdgeSet)
+import EFA.Graph (Edge(Edge), labNodes, labEdges)
 
 import Data.GraphViz (
           runGraphvizCanvas,
@@ -50,15 +47,14 @@ import Data.GraphViz (
           graphID)
 import Data.GraphViz.Attributes.Complete as Viz
 
-import Data.Eq.HT (equating)
+import Data.Tuple.HT (mapFst)
+import Data.Maybe.HT (toMaybe)
 
 import qualified Data.Text.Lazy as T
 
 import qualified Data.Map as M
 import qualified Data.List as L
 import qualified Data.List.HT as HTL
-import qualified Data.NonEmpty as NonEmpty
-import qualified Data.NonEmpty.Mixed as NonEmptyM
 
 import Control.Monad (void)
 
@@ -84,29 +80,42 @@ dotFromSequFlowGraph g recTShow nshow eshow =
              directedGraph = True,
              graphID = Just (Int 1),
              graphStatements = stmts }
-  where interEs = M.filter isIntersectionEdge $ edgeLabels g
-        g' = delEdgeSet (M.keysSet interEs) g
-        section n = case fst n of Idx.SecNode s _ -> s
-        cs =
-           HTL.removeEach $
-           NonEmptyM.groupBy (equating section) $
-           labNodes g
-        sg (ns, ms) = DotSG True (Just (Int $ fromEnum sl)) (DotStmts gattrs [] xs ys)
-          where sl = section $ NonEmpty.head ns
-                xs = map (dotFromSecNode nshow) $ NonEmpty.flatten ns
-                ys = map (dotFromSecEdge eshow) $ labEdges $
-                     delNodes (map fst (concatMap NonEmpty.flatten ms)) g'
-                gattrs = [GraphAttrs [Label (StrLabel (T.pack str))]]
-                str =
+
+  where (topoEs, interEs) =
+           mapFst (M.fromListWith (++)) $
+           HTL.partitionMaybe
+              (\e@(Edge (Idx.SecNode sx _) (Idx.SecNode sy _), _) ->
+                 toMaybe (sx == sy) (sx, [e])) $
+           Gr.labEdges g
+
+        topoNs =
+           M.fromListWith (++) $
+           map (\nl@(Idx.SecNode s _, _) -> (s, [nl])) $
+           Gr.labNodes g
+
+        sg sl ns es =
+            DotSG True (Just (Int $ fromEnum sl)) $
+            DotStmts
+               [GraphAttrs [Label (StrLabel (T.pack str))]]
+               []
+               (map (dotFromSecNode nshow) ns)
+               (map (dotFromSecEdge eshow) es)
+          where str =
                    show sl ++ " / " ++
                    case recTShow of
                       Nothing -> "NoRecord"
                       Just (Unicode n, timef) ->
                          n ++ " / Time " ++ unUnicode (timef sl)
-        stmts = DotStmts { attrStmts = [],
-                           subGraphs = map sg cs,
-                           nodeStmts = [],
-                           edgeStmts = map (dotFromSecEdge eshow) $ M.toList interEs }
+        stmts =
+          DotStmts {
+            attrStmts = [],
+            subGraphs =
+              M.elems $
+              M.intersectionWithKey sg topoNs
+                 (M.union topoEs (fmap (const []) topoNs)),
+            nodeStmts = [],
+            edgeStmts = map (dotFromSecEdge eshow) interEs
+          }
 
 
 dotFromSecNode:: (Topo.LNode -> Unicode) -> Topo.LNode -> DotNode T.Text
