@@ -1,7 +1,7 @@
 
-module Main where
-
 -- | Demonstriert das Plotten von Signalen.
+
+module Main where
 
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Sequence as Sequ

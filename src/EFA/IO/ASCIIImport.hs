@@ -1,8 +1,7 @@
 
+-- | ASCII Import
 
 module EFA.IO.ASCIIImport (modelicaASCIIImport) where
-
--- | ASCII Import
 
 import qualified Data.Map as M
 import Text.ParserCombinators.Parsec (parse)

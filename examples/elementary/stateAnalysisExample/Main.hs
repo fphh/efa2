@@ -1,8 +1,7 @@
+-- | This example shows the functionality of StateAnalysis
 {-# LANGUAGE TypeSynonymInstances #-}
 
 module Main where
-
--- This example shows the functionality of StateAnalysis
 
 import EFA.Example.Examples
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis

@@ -1,6 +1,6 @@
-module EFA.IO.CSVImport (modelicaCSVImport) where
-
 -- | Modelica CSV Import
+
+module EFA.IO.CSVImport (modelicaCSVImport) where
 
 import qualified Data.Map as M 
 import Text.ParserCombinators.Parsec (parse)
