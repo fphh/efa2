@@ -1,7 +1,4 @@
-{-# LANGUAGE FlexibleInstances #-}
-
 -- | Demonstriert, wie man ein eta als Funktion definiert.
-
 module Main where
 
 import qualified EFA.Equation.Env as Env

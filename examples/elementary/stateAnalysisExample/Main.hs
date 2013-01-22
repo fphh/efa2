@@ -1,5 +1,4 @@
 -- | This example shows the functionality of StateAnalysis
-{-# LANGUAGE TypeSynonymInstances #-}
 
 module Main where
 
