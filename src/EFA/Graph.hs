@@ -31,6 +31,7 @@ module EFA.Graph (
    delNodeSet,
    delEdges,
    delEdgeSet,
+   lefilter,
    elfilter,
    propELFilter,
    insNode, insNodes,
@@ -287,6 +288,13 @@ elfilter ::
    Graph n nl el -> Graph n nl el
 elfilter f g =
    delEdgeHelp g $ mapSnd M.keys $ M.partition f $ edgeLabels g
+
+lefilter ::
+   (Ord n) =>
+   (LEdge n el -> Bool) ->
+   Graph n nl el -> Graph n nl el
+lefilter f g =
+   delEdgeHelp g $ mapSnd M.keys $ M.partitionWithKey (curry f) $ edgeLabels g
 
 delEdgeHelp ::
    (Ord n) =>

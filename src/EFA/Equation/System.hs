@@ -224,16 +224,16 @@ makeInnerSectionEquations g = mconcat $
   makeNodeEquations g :
   makeStorageEquations g' :
   []
-  where g' = Gr.elfilter TD.isOriginalEdge g
+  where g' = Gr.lefilter (TD.isOriginalEdge . fst) g
         es = Gr.labEdges g
 
 
 makeEdgeEquations ::
   (Eq a, Fractional a) =>
-  [Gr.LEdge Idx.SecNode TD.ELabel] -> EquationSystem s a
+  [TD.LEdge] -> EquationSystem s a
 makeEdgeEquations = foldMap mkEq
-  where mkEq (Edge f t, lab) =
-          case TD.edgeType lab of
+  where mkEq e@(Edge f t, _lab) =
+          case TD.getEdgeType e of
                TD.OriginalEdge -> power t f =.= eta f t * power f t
                TD.IntersectionEdge ->
                  (energy t f =.= eta f t * energy f t)
@@ -296,7 +296,7 @@ getInnersectionStorages = getStorages format
         format ([], s, []) = (s, NoDir)
         format n@(_, _, _) = error ("getInnersectionStorages: " ++ show n)
 
-type InOutFormat = InOut Idx.SecNode TD.ELabel
+type InOutFormat = InOut Idx.SecNode TD.FlowDirection
 type InOut n el = ([Gr.LNode n el], n, [Gr.LNode n el])
 
 getStorages ::

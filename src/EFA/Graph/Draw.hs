@@ -23,7 +23,6 @@ import EFA.Graph.Topology
           (SequFlowGraph,
            NodeType(Storage),
            EdgeType(OriginalEdge, IntersectionEdge),
-           edgeType,
            getFlowDirection,
            FlowDirectionField, FlowTopology)
 import EFA.Graph (Edge(Edge), labNodes, labEdges)
@@ -125,7 +124,7 @@ dotFromSecNode nshow n@(x, _) =
   where displabel = Label $ StrLabel $ T.pack $ unUnicode $ nshow n
 
 dotFromSecEdge :: (Topo.LEdge -> [Unicode]) -> Topo.LEdge -> DotEdge T.Text
-dotFromSecEdge eshow e@(_, elabel) =
+dotFromSecEdge eshow e =
    DotEdge
       (dotIdentFromSecNode x) (dotIdentFromSecNode y)
       [displabel, Viz.Dir dir, colour]
@@ -134,9 +133,9 @@ dotFromSecEdge eshow e@(_, elabel) =
            Label $ StrLabel $ T.pack $
            L.intercalate "\n" $ map unUnicode $ order $ eshow e
         colour =
-           case edgeType elabel of
+           case Topo.getEdgeType e of
               IntersectionEdge -> intersectionEdgeColour
-              _ -> originalEdgeColour
+              OriginalEdge -> originalEdgeColour
         --colour = originalEdgeColour
 
 dotIdentFromSecNode :: Idx.SecNode -> T.Text
@@ -304,15 +303,15 @@ lookupFormatAssign mp makeIdx x y =
 sequFlowGraphWithEnv :: SequFlowGraph -> Env Unicode -> IO ()
 sequFlowGraphWithEnv g env =
    printGraph g (Just (recordNumber env, formatTime env)) (formatNode env) eshow
-  where eshow (e@(Edge uid vid), l) =
-           case edgeType l of
-              OriginalEdge -> eshowBase e
+  where eshow e@((Edge uid vid), _l) =
+           (case Topo.getEdgeType e of
+              OriginalEdge -> []
               IntersectionEdge ->
                  formatMaxEnergy env uid vid :
                  formatY env uid vid :
                  Format.empty :
-                 eshowBase e
-        eshowBase (Edge uid vid) =
+                 [])
+           ++
            formatEnergy env uid vid :
            formatX env uid vid :
            formatEta env uid vid :
