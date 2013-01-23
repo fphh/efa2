@@ -61,7 +61,9 @@ sigPlotAttr ti x =
 sigPlotStyle :: Graph2D.T x y -> Graph2D.T x y
 sigPlotStyle =
    Graph2D.lineSpec $
+      {- not supported by "lines" style
       LineSpec.pointSize 2 $
+      -}
       LineSpec.deflt
 
 sigPlot ::
