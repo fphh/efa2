@@ -22,12 +22,17 @@ modelicaASCIIParse _ (Right strs) = makeASCIIRecord strs
 modelicaASCIIParse path (Left err) =
   error ("Parse error in file " ++ show path ++ ": " ++ show err)
 
+
 makeASCIIRecord :: [[String]] -> Record
 makeASCIIRecord [] = error "This is not possible!"
 makeASCIIRecord hs =
   Record (S.fromList time) (M.fromList $ zip sigIdents (map S.fromList sigs))
-  where sigIdents = map (SigId . ("sig_" ++) . show) [0..] 
+  where sigIdents = map (SigId . ("sig_" ++) . addLeadingZeros . show) [0..] 
         time:sigs = SV.transpose (map (map read . init) hs)
+        -- Always start getDecade counter with 0
+        addLeadingZeros x = replicate ((getDecade(toRational (length sigs)) 0)-length x) '0' ++ x                
+        getDecade x decCounter = if x > 1 then (getDecade (x/10) (decCounter+1)) else decCounter
+          
 
 parseASCII :: String -> Either ParseError [[String]]
 parseASCII input = parse (csvFile ' ') "(unknown)" input

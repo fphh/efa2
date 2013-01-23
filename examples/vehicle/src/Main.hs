@@ -18,7 +18,7 @@ import qualified EFA.Graph.Topology.Index as Idx
 
 import qualified EFA.Equation.System as EqGen
 
-import EFA.IO.Import (modelicaCSVImport, modelicaASCImport)
+import EFA.IO.ASCIIImport (modelicaASCIIImport)
 import qualified EFA.Signal.SequenceData as SD
 import qualified EFA.Signal.Plot as PL
 import EFA.Signal.Sequence (makeSequence, makeSeqFlowGraph)
@@ -71,23 +71,41 @@ given = foldMap (uncurry (.=)) $
 main :: IO ()
 main = do
   
-    -- rec <- modelicaCSVImport "modThreeWay_sto.RecA_res.csv" :: IO SD.Record
+  -- ## import signals
+  rec <- modelicaASCIIImport "Vehicle_res.asc"
+  
+  -- Get imported Signals 
+  let SD.Record time sigMap = rec
+      sigIDList = M.toList(sigMap)
+      
+  -- Plot imported Signals
+  mapM_ (\ (x,y) -> PL.sigPlot (show x) y) (take 10 sigIDList)
+  mapM_ (\ (x,_) -> putStrLn(show x))  (take 10 sigIDList) -- sigIDList 
+  -- PL.rPlot ("Roh",rec)  
+  
+  -- ## Calculate Power Signals  
 
-  -- SD.Record time sigMap <- modelicaCSVImport "modThreeWay_sto.RecA_res.csv" -- "../simulation/res.csv"
-  SD.Record time sigMap <- modelicaASCImport "Vehicle_res.asc"
-
+{-
+  -- ## Populate Power Record
   let pRec :: SD.PowerRecord [] Double
       pRec = SD.PowerRecord (Sig.fromList $ Sig.toList time) 
                              (M.map (Sig.fromList . Sig.toList) pMap)
-
+             
+      -- Define Power Record
       pMap =  M.fromList [
-         (SD.PPosIdx tank con_engine, sigMap M.! (SD.SigId "s1")),
-         (SD.PPosIdx con_engine tank, sigMap M.! (SD.SigId "s2")),
-         (SD.PPosIdx con_engine el_cross, sigMap M.! (SD.SigId "s3")),
-         (SD.PPosIdx el_cross con_engine, sigMap M.! (SD.SigId "s4")),
-         (SD.PPosIdx con_engine battery, sigMap M.! (SD.SigId "s5")),
-         (SD.PPosIdx battery con_engine, sigMap M.! (SD.SigId "s6")) ]
--- seq = chopAtZeroCrossingsPowerRecord pRec
+         (SD.PPosIdx tank con_engine, sigMap M.! (SD.SigId "sig_1")),
+         (SD.PPosIdx con_engine tank, sigMap M.! (SD.SigId "sig_2")),
+         (SD.PPosIdx con_engine el_cross, sigMap M.! (SD.SigId "sig_3")),
+         (SD.PPosIdx el_cross con_engine, sigMap M.! (SD.SigId "sig_4")),
+         (SD.PPosIdx con_engine battery, sigMap M.! (SD.SigId "sig_5")),
+         (SD.PPosIdx battery con_engine, sigMap M.! (SD.SigId "sig_6")) ]
+  PL.rPlot ("Test",pRec) 
+  -- print pRec  
+  
+  -- ## Analysis
+  let sol = StateAnalysis.advanced topo
+  
+  -- seq = chopAtZeroCrossingsPowerRecord pRec
 
        -- sequ = makeSequence pRec
 
@@ -95,11 +113,9 @@ main = do
 
 --      env = EqGen.solve given sequTopo
 
-  -- print pRec
-      sol = StateAnalysis.advanced topo
-
   putStrLn ("Number of flow states: " ++ show (length sol))
   drawTopologyXs' [head sol]
   -- drawTopology sequTopo env
-  -- PL.rPlot ("Test",pRec) 
+
   Rep.report [Rep.RAll] ("Test",pRec)
+-}  
