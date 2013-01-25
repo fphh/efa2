@@ -33,6 +33,7 @@ import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
 import qualified Data.List as L
 import qualified Data.Map as M
 import Control.Functor.HT (void)
+import Data.Foldable (foldMap)
 import Data.Monoid (mconcat)
 
 
@@ -85,8 +86,7 @@ instance
       Plot2D.list Graph2D.listLines $ sPlotData x
 
 instance (SigPlot tc) => SigPlot [tc]  where
-   sigPlotCore xs =
-      mconcat $ map sigPlotCore xs
+   sigPlotCore = foldMap sigPlotCore
 
 instance
    (TDisp t,
@@ -292,8 +292,7 @@ rPlotSingle ::
    Frame.T (Graph2D.T x y)
 rPlotSingle rName time pMap =
    Frame.cons (rPlotAttr rName) $
-   mconcat $
-   map
+   foldMap
       (\(key, sig) ->
          rPlotStyle key $
          Plot2D.list Graph2D.linesPoints $
