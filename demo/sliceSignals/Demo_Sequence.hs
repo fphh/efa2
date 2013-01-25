@@ -49,7 +49,7 @@ pPosIdx x y = PPosIdx (Idx.Node x) (Idx.Node y)
 
 pMap :: M.Map PPosIdx PSigL
 pMap =
-   M.fromList $
+   M.fromListWith (error "duplicate keys") $
       (pPosIdx 0 1, mkSigEnd n s01) :
       (pPosIdx 1 0, mkSigEnd n s10) :
       (pPosIdx 1 2, mkSigEnd n s12) :
@@ -72,11 +72,11 @@ sequRecB = Sequ.chopAtZeroCrossingsPowerRecord pRec
 
 main :: IO ()
 main = do
-  putStrLn (show time)
-  putStrLn (show pRec)
-  putStrLn (show pRec0)
+  print time
+  print pRec
+  print pRec0
 
-  putStrLn (show sequ)
+  print sequ
 
   rPlot ("PowerRecord", pRec)
   rPlot ("SequA", sequRecA)

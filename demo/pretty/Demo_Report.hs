@@ -34,13 +34,16 @@ t :: S.TC s t (Data ([] :> Nil) Double)
 t = S.fromList [0..4]
 
 r :: PowerRecord [] Double
-r = PowerRecord t (M.fromList [(PPosIdx node0 node0, p1), (PPosIdx node0 node1, p2)]) 
+r = PowerRecord t 
+      (M.fromListWith
+         (error "duplicate keys")
+         [(PPosIdx node0 node0, p1), (PPosIdx node0 node1, p2)])
 
 
 main :: IO ()
 main = do
   
-  putStrLn $ show t
+  print t
 
   report [RVertical] ("TestMatrix", ll) 
   report [RVertical] ("Power1", p1) 
