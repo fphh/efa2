@@ -1,8 +1,8 @@
 {-# LANGUAGE TypeOperators #-}
 
-module Main where
-
 -- | Demonstriert das Schneiden von zero-crossing-Signalen
+
+module Main where
 
 import qualified Data.Map as M 
 

@@ -1,8 +1,8 @@
 {-# LANGUAGE TypeOperators #-}
 
-module Main where
-
 -- | Demonstriert das Schneiden von Signalen
+
+module Main where
 
 import qualified Data.Map as M 
 

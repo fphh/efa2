@@ -2,7 +2,7 @@ module Main where
 
 import EFA.Example.Utility (edgeVar, makeEdges, (.=), constructSeqTopo)
 
-import EFA.Graph.Draw (drawTopology)
+import qualified EFA.Graph.Draw as Draw
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
@@ -64,5 +64,5 @@ main = do
   let seqTopo = constructSeqTopo topoDreibein [1, 0, 1] 
       env = EqGen.solve given seqTopo
 
-  drawTopology seqTopo env
+  Draw.sequFlowGraphAbsWithEnv seqTopo env
 

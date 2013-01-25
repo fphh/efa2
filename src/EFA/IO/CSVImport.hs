@@ -1,9 +1,9 @@
-module EFA.IO.CSVImport (modelicaCSVImport) where
-
 -- | Modelica CSV Import
 
+module EFA.IO.CSVImport (modelicaCSVImport) where
+
 import qualified Data.Map as M 
-import Text.ParserCombinators.Parsec (parse, ParseError)
+import Text.ParserCombinators.Parsec (parse)
 
 import EFA.Signal.SequenceData (Record(Record), SigId(SigId))
 
@@ -12,16 +12,6 @@ import qualified EFA.Signal.Vector as SV
 
 import EFA.IO.CSVParser (csvFile)
 
-parseCSV :: String -> Either ParseError [[String]]
-parseCSV input = parse (csvFile ',') "(unknown)" input
-
-modelicaCSVParse :: String -> Either ParseError [[String]] -> Record
-modelicaCSVParse _ (Right strs@(("time":_):_)) = makeCSVRecord strs
-modelicaCSVParse path (Right []) = error ("Empty csv file: " ++ path)
-modelicaCSVParse path (Right _) =
-  error ("First column of " ++ path ++ " is not \"time\"")
-modelicaCSVParse path (Left err) =
-  error ("Parse error in file " ++ show path ++ ": " ++ show err)
 
 
 makeCSVRecord :: [[String]] -> Record
@@ -35,5 +25,11 @@ makeCSVRecord (h:hs) =
 modelicaCSVImport :: FilePath -> IO Record
 modelicaCSVImport path = do 
   text <- readFile path
-  return $ modelicaCSVParse path (parseCSV text)
-
+  case parse (csvFile ' ') path text of
+    Left err ->
+      ioError $ userError $ "Parse error in file " ++ show err
+    Right table ->
+      case table of
+        (("time":_):_) -> return $ makeCSVRecord table
+        [] -> ioError $ userError $ "Empty CSV file " ++ show path
+        _ -> ioError $ userError $ "First column of " ++ show path ++ " is not \"time\""

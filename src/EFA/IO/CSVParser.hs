@@ -13,18 +13,16 @@ csvFile sepChar = endBy (line sepChar) eol
 
 line :: Char -> Parser [String]
 line sepChar = do
-  _ <- many (char sepChar) -- remove seperators from the beginning of a line
+  skipMany (char sepChar) -- remove seperators from the beginning of a line
   sepBy (cell sepChar) (char sepChar)
 
 cell :: Char -> Parser String
 cell sepChar = quotedCell <|> many (noneOf (sepChar:"\n\r"))
 
 quotedCell :: Parser String
-quotedCell = 
-    do _ <- char '"'
-       content <- many quotedChar
-       _ <- char '"' <?> "quote at end of cell"
-       return content
+quotedCell =
+  between (char '"') (char '"' <?> "quote at end of cell") $
+  many quotedChar
 
 quotedChar :: Parser Char
 quotedChar =

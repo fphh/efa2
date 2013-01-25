@@ -54,7 +54,6 @@ genSectionTopology = zipWithSecIdxs mkSectionTopology
 
 copySeqTopology :: SequData SecTopology -> SequFlowGraph
 copySeqTopology =
-   Gr.emap (ELabel OriginalEdge) .
    Fold.foldl Gr.union Gr.empty
 
 
@@ -66,11 +65,10 @@ mkIntersectionEdges node startSec stores =
    concatMap
       (\secin ->
          map (\secout ->
-                (Edge (Idx.SecNode secin node) (Idx.SecNode secout node), e)) $
+                (Edge (Idx.SecNode secin node) (Idx.SecNode secout node), Dir)) $
          M.keys $ snd $ M.split secin outs) $
    startSec : M.keys ins
   where (ins, outs) = M.partition (In ==) stores
-        e = defaultELabel { edgeType = IntersectionEdge }
 
 
 mkSequenceTopology :: SequData SecTopology -> SequFlowGraph
