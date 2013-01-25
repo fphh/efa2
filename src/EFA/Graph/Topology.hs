@@ -1,6 +1,8 @@
+
+
 module EFA.Graph.Topology (
        NLabel (..), LNode,
-       LEdge,
+       LEdge, LDirEdge,
        NodeType (..),
        EdgeType (..),
        FlowDirection (..),
@@ -40,6 +42,7 @@ import Data.Tuple.HT (snd3)
 
 type LNode = Gr.LNode Idx.SecNode NodeType
 type LEdge = Gr.LEdge Idx.SecNode FlowDirection
+type LDirEdge = Gr.LEdge Idx.SecNode ()
 
 data NodeType = Storage
               | Sink
@@ -100,13 +103,6 @@ class (EdgeTypeField el, FlowDirectionField el) => EdgeLabel el where
 
 instance EdgeTypeField EdgeType where
    getEdgeType = id
-
-{-
-instance FlowDirectionField EdgeType where
-   getFlowDirection _ = Dir
-
-instance EdgeLabel EdgeType where
--}
 
 
 instance FlowDirectionField FlowDirection where
