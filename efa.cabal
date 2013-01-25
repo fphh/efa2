@@ -138,15 +138,79 @@ Executable demo-sequence
     Build-Depends:
       efa,
       containers,
-      array >=0.4 && <0.5,
-      gnuplot,
-      utility-ht,
+      utility-ht ==0.0.8,
+      array ==0.4.0.0,
+      gnuplot ==0.5.1,
       base
   Else
     Buildable: False
 
-Executable demo-newsolver
-  Main-Is: examples/elementary/newSolver/Main.hs
+
+
+Executable demo-addzerocrossings
+  Main-Is: demo/sliceSignals/Demo_addZeroCrossings.hs
+  GHC-Options: -Wall
+  If flag(buildDemos)
+    Build-Depends:
+      efa,
+      containers,
+      utility-ht ==0.0.8,
+      array ==0.4.0.0,
+      gnuplot ==0.5.1,
+      base
+  Else
+    Buildable: False
+
+
+
+Executable demo-slicesignals-alt
+  Main-Is: demo/sliceSignals/Demo_sliceSignals_alt.hs
+  GHC-Options: -Wall
+  If flag(buildDemos)
+    Build-Depends:
+      efa,
+      containers,
+      utility-ht ==0.0.8,
+      array ==0.4.0.0,
+      gnuplot ==0.5.1,
+      base
+  Else
+    Buildable: False
+
+
+Executable demo-slicesignals
+  Main-Is: demo/sliceSignals/Demo_sliceSignals.hs
+  GHC-Options: -Wall
+  If flag(buildDemos)
+    Build-Depends:
+      efa,
+      containers,
+      utility-ht ==0.0.8,
+      array ==0.4.0.0,
+      gnuplot ==0.5.1,
+      base
+  Else
+    Buildable: False
+
+
+Executable demo-slicezerocrosssignals
+  Main-Is: demo/sliceSignals/Demo_sliceZeroCrossSignals.hs
+  GHC-Options: -Wall
+  If flag(buildDemos)
+    Build-Depends:
+      efa,
+      containers,
+      utility-ht ==0.0.8,
+      array ==0.4.0.0,
+      gnuplot ==0.5.1,
+      base
+  Else
+    Buildable: False
+
+
+
+Executable demo-numericSolving
+  Main-Is: examples/elementary/numericSolving/Main.hs
   GHC-Options: -Wall
   If flag(buildExamples)
     Build-Depends:
@@ -155,8 +219,8 @@ Executable demo-newsolver
   Else
     Buildable: False
 
-Executable demo-newsolversymbolic
-  Main-Is: examples/elementary/newSolverSymbolic/Main.hs
+Executable demo-symbolicSolving
+  Main-Is: examples/elementary/symbolicSolving/Main.hs
   GHC-Options: -Wall
   If flag(buildExamples)
     Build-Depends:
@@ -185,7 +249,26 @@ Executable demo-asciiimport
   Else
     Buildable: False
 
+Executable demo-ratio
+  Main-Is: demo/ratio/Main.hs
+  GHC-Options: -Wall
+  If flag(buildExamples)
+    Build-Depends:
+      efa,
+      base
+  Else
+    Buildable: False
 
+Executable demo-pretty
+  Main-Is: demo/pretty/Demo_Report.hs
+  GHC-Options: -Wall
+  If flag(buildExamples)
+    Build-Depends:
+      efa,
+      base,
+      containers
+  Else
+    Buildable: False
 
 Executable makestub
   Main-Is: sandbox/makestub/Main.hs

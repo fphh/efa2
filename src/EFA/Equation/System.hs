@@ -4,7 +4,7 @@ module EFA.Equation.System (
   fromTopology, solve,
 
   recAbs, constToExprSys,
-  liftV, liftV2, makeFunc, makeFunc2,
+  liftV, liftV2, liftF, liftF2,
 
   (=.=),
   getVar,
@@ -19,6 +19,7 @@ module EFA.Equation.System (
   outsumvar,
   storage,
   dtime,
+  Result(..),
   ) where
 
 import qualified EFA.Equation.Env as Env
@@ -81,8 +82,8 @@ liftV ::
   ExprWithVars s a -> ExprWithVars s a
 liftV f (ExprWithVars xs) = ExprWithVars $ liftM f xs
 
-makeFunc :: (a -> a) -> ExprWithVars s a -> ExprWithVars s a
-makeFunc = liftV . Expr.fromRule2 . Sys.assignment2 ""
+liftF :: (a -> a) -> ExprWithVars s a -> ExprWithVars s a
+liftF = liftV . Expr.fromRule2 . Sys.assignment2 ""
 
 
 liftV2 ::
@@ -90,10 +91,10 @@ liftV2 ::
   ExprWithVars s a -> ExprWithVars s a -> ExprWithVars s a
 liftV2 f (ExprWithVars xs) (ExprWithVars ys) = ExprWithVars $ liftM2 f xs ys
 
-makeFunc2
+liftF2
   :: (a -> a -> a) 
      -> ExprWithVars s a -> ExprWithVars s a -> ExprWithVars s a
-makeFunc2 = liftV2 . Expr.fromRule3 . Sys.assignment3 ""
+liftF2 = liftV2 . Expr.fromRule3 . Sys.assignment3 ""
 
 instance (Fractional a) => Num (ExprWithVars s a) where
          fromInteger = ExprWithVars . return . fromInteger
@@ -112,23 +113,23 @@ instance (Fractional a) => Fractional (ExprWithVars s a) where
 
 instance (Floating a) => Floating (ExprWithVars s a) where
          pi = constToExprSys pi
-         exp = makeFunc exp
-         sqrt = makeFunc sqrt
-         log = makeFunc log
-         (**) = makeFunc2 (**)
-         logBase = makeFunc2 logBase
-         sin = makeFunc sin
-         tan = makeFunc tan
-         cos = makeFunc cos
-         asin = makeFunc asin
-         atan = makeFunc atan
-         acos = makeFunc acos
-         sinh = makeFunc sinh
-         tanh = makeFunc tanh
-         cosh = makeFunc cosh
-         asinh = makeFunc asinh
-         atanh = makeFunc atanh
-         acosh = makeFunc acosh
+         exp = liftF exp
+         sqrt = liftF sqrt
+         log = liftF log
+         (**) = liftF2 (**)
+         logBase = liftF2 logBase
+         sin = liftF sin
+         tan = liftF tan
+         cos = liftF cos
+         asin = liftF asin
+         atan = liftF atan
+         acos = liftF acos
+         sinh = liftF sinh
+         tanh = liftF tanh
+         cosh = liftF cosh
+         asinh = liftF asinh
+         atanh = liftF atanh
+         acosh = liftF acosh
 
 
 
