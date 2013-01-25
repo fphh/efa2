@@ -11,7 +11,6 @@ module EFA.Graph.Topology (
        FlowDirectionField, getFlowDirection,
        Topology,
        FlowTopology,
-       SecTopology,
        SequFlowGraph,
        DirSequFlowGraph,
        pathExists,
@@ -143,8 +142,6 @@ isDirEdge = dir . getFlowDirection . snd
 type Topology = Graph Idx.Node NodeType ()
 
 type FlowTopology = Graph Idx.Node NodeType FlowDirection
-
-type SecTopology = Graph Idx.SecNode NodeType FlowDirection
 
 type SequFlowGraph = Graph Idx.SecNode NodeType FlowDirection
 
