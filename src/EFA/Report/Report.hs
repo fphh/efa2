@@ -130,8 +130,9 @@ makeTable  os t = PP.text (tableTitle t) PP.$$ (makeCol os rf $ map (makeRow os 
 buildDocTable :: TableData -> [[Cell]]
 buildDocTable td =
    titleRow td ++
-   L.zipWith3 (\x y z -> x ++ y ++ z)
-      (titleCols td) (tableBody td) (endCols td)
+   foldr1 (zipWith (++))
+      (filter (not . null)
+         [titleCols td, tableBody td, endCols td])
 
 -- | Generate Table Row
 makeRow :: ROpts -> ColFormat -> [Cell]  -> PP.Doc
