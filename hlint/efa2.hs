@@ -153,6 +153,7 @@ error "Use Foldable.forM_" = when (isJust m) (f (fromJust m)) ==> Fold.forM_ m f
 error "Use Foldable.mapM_" = maybe (return ()) ==> Fold.mapM_
 error "foldMap" = maybe "" ==> Fold.foldMap
 error "foldMap" = maybe [] ==> Fold.foldMap
+error "foldMap" = mconcat (map f x) ==> Fold.foldMap f x
 
 error "any map" = any p (map f x) ==> any (p . f) x
 error "all map" = all p (map f x) ==> all (p . f) x
