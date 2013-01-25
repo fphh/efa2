@@ -7,7 +7,7 @@ import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 
 import qualified Data.Map as M
 
-import EFA.Example.Utility (makeEdges, (.=))
+import EFA.Example.Utility (edgeVar, makeEdges, (.=))
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
@@ -30,6 +30,10 @@ import EFA.Signal.Signal((.*),(.+),(./),(.-),neg)
 import qualified EFA.Report.Report as Rep
 
 import EFA.Graph.Draw -- (drawTopology)
+
+import Data.Monoid ((<>))
+
+import Debug.Trace
 
 
 sec0, sec1, sec2, sec3, sec4 :: Idx.Section
@@ -70,10 +74,15 @@ topo = Gr.mkGraph ns (makeEdges es)
               (con_chassis,rearBrakes), -- brakes
               (con_chassis, vehicleInertia)] -- inertia             
 
-given :: EqGen.EquationSystem s Double
-given = foldMap (uncurry (.=)) $
-  (EqGen.dtime Idx.initSection, 1) :
-  []
+
+makeGiven initStorage xs =
+  (EqGen.dtime Idx.initSection .= 1)
+  <> (EqGen.storage (Idx.SecNode Idx.initSection battery) .= initStorage) 
+  <> foldMap f (zip [Idx.Section 0 ..] xs)
+  where f (sec, (t, ps)) =
+          (EqGen.dtime sec .= t)
+          <> foldMap g ps
+          where g (SD.PPosIdx a b, p) = edgeVar EqGen.energy sec a b .= p*t
 
 main :: IO ()
 main = do
@@ -83,8 +92,8 @@ main = do
   
   -- Get imported Signals
   let SD.Record time sigMap = rec
-      sigIDList = M.toList(sigMap)
-      
+      sigIDList = M.toList sigMap
+
   -- Plot imported Signals
   -- mapM_ (\ (x,y) -> PL.xyplot (show x) time y) (take 50 $ drop 50 sigIDList)
   -- mapM_ (\ (x,_) -> putStrLn(show x))  sigIDList -- sigIDList 
@@ -232,7 +241,7 @@ main = do
                f con_chassis rearBrakes brakePowerRear brakePowerRear, --rearbrake
                f con_chassis vehicleInertia kineticPower kineticPower] --kinetic power 
                 
-  PL.rPlot ("Test",pRec) 
+  -- PL.rPlot ("Test",pRec) 
   -- print pRec  
   
   -- mapM_ (\ (x,y) -> PL.xyplot (show x) time y) (concat pList)
@@ -242,37 +251,37 @@ main = do
   
       -- seq = chopAtZeroCrossingsPowerRecord pRec
       sequFRec = makeSequence pRec
-      (sequ,sequPRec) = genSequ  $ addZeroCrossings pRec
-      (sequFilt,sequPRecFilt) = removeZeroTimeSections $ genSequ  $ addZeroCrossings pRec
+      (sequ, sequPRec) = genSequ  $ addZeroCrossings pRec
+      (sequFilt, SD.SequData l) =
+        removeZeroTimeSections $ genSequ  $ addZeroCrossings pRec
       
       (SD.Sequ sList) = sequ
       (SD.Sequ sfList) = sequFilt
       
-      addSequFlowRecToGiven :: EqGen.EquationSystem s Double -> (Sequ, SequFlowRecord FlowRecord) -> EqGen.EquationSystem s Double
-      addSequFlowRecToGiven given (SeqDat xs) = given ++ concat $ map f xs 
-                            where f PowerRecord (time, pMap) = givenNew 
-                                  sigList = M.toList pMap
-                                  givenTime = (EqGen.dtime Idx.initSection, 1) :
                 
-      
+      ds =  map f l
+      f (SD.PowerRecord t ds) =
+        (sum $ Sig.toList t, M.toList $ M.map (sum . Sig.toList) ds)
+
       -- SD.Sequ s = sequ
       sequTopo = makeSeqFlowGraph topo sequFRec
-      env = EqGen.solve given sequTopo
+      env = EqGen.solve (makeGiven 12.34567 ds)  sequTopo
 
+  -- print env
   -- print sequ
   -- putStrLn ("Number of flow states: " ++ show (length sol))
   -- drawTopologyXs' [head sol]
-  Rep.report [Rep.RAll] ("Test",pRec)    
-  Rep.report [] ("Sequenz",sequ)    
-  print sequ
-  print $ length sList
+  --Rep.report [Rep.RAll] ("Test",pRec)    
+  --Rep.report [] ("Sequenz",sequ)    
+  --print sequ
+  --print $ length sList
 --   print sequPRec
-  print ""
-  print sequFilt
-  print $ length sfList
+  --print ""
+  --print sequFilt
+  --print $ length sfList
   -- print sequPRecFilt
   -- Rep.report [] ("SequencePowerRecord", sequPRec)
-  -- drawTopology sequTopo env
+  drawTopology sequTopo env
   --drawTopologySimple sequTopo
   --print sequTopo
   --PL.rPlot ("Sequ", sequ)
