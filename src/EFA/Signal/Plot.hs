@@ -10,7 +10,7 @@ import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Data as D
 import qualified EFA.Signal.Vector as SV
-import EFA.Signal.SequenceData (PowerRecord(PowerRecord), SequPwrRecord, SequData(SequData))
+import EFA.Signal.SequenceData (PowerRecord(PowerRecord), SequPwrRecord, SequData(SequData),Record(Record))
 import EFA.Signal.Signal (TC, Signal, toSigList, getDisplayType)
 import EFA.Signal.Data (Data, (:>), Nil, NestedList)
 import EFA.Report.Typ (TDisp, DisplayType(Typ_P, Typ_T), getDisplayUnit, getDisplayTypName)
@@ -279,6 +279,13 @@ instance
       RPlot (PowerRecord v y) where
    rPlotCore rName (PowerRecord time pMap) =
       [rPlotSingle rName time pMap]
+
+instance
+   (SV.Walker v, SV.FromList v,
+    SV.Storage v y, Fractional y, Atom.C y, Tuple.C y) =>
+      RPlot (Record v y) where
+   rPlotCore rName (Record time sigMap) =
+      [rPlotSingle rName time sigMap]
 
 rPlotSingle ::
    (Show k, TDisp typ0, TDisp typ1,

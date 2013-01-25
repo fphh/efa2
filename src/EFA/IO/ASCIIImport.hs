@@ -12,18 +12,21 @@ import EFA.Signal.SequenceData (Record(Record), SigId(SigId))
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Vector as SV
 
+import qualified EFA.Signal.Base as SB
+
+
 import EFA.IO.CSVParser (csvFile)
 
 
 
 
-modelicaASCIIParse :: String -> Either ParseError [[String]] -> Record
+modelicaASCIIParse :: String -> Either ParseError [[String]] -> Record [] SB.Val
 modelicaASCIIParse _ (Right strs) = makeASCIIRecord strs
 modelicaASCIIParse path (Left err) =
   error ("Parse error in file " ++ show path ++ ": " ++ show err)
 
 
-makeASCIIRecord :: [[String]] -> Record
+makeASCIIRecord :: [[String]] -> Record [] SB.Val
 makeASCIIRecord [] = error "This is not possible!"
 makeASCIIRecord hs =
   Record (S.fromList time) (M.fromList $ zip sigIdents (map S.fromList sigs))
@@ -38,7 +41,7 @@ parseASCII :: String -> Either ParseError [[String]]
 parseASCII input = parse (csvFile ' ') "(unknown)" input
 
 -- | Main ASCIIII Import Function
-modelicaASCIIImport :: FilePath -> IO Record
+modelicaASCIIImport :: FilePath -> IO (Record [] SB.Val)
 modelicaASCIIImport path = do 
   text <- readFile path
   return $ modelicaASCIIParse path (parseASCII text)

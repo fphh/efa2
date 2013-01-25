@@ -29,6 +29,8 @@ import EFA.Signal.Signal((.*),(.+),(./),(.-),neg)
 
 import qualified EFA.Report.Report as Rep
 
+import qualified EFA.Signal.Base as SB
+
 import EFA.Graph.Draw -- (drawTopology)
 
 import Data.Monoid ((<>))
@@ -88,16 +90,16 @@ main :: IO ()
 main = do
   
   -- ## import signals
-  rec <- modelicaCSVImport "Vehicle_res_short.csv"
+  rec <- modelicaCSVImport "Vehicle_res_short.csv" :: IO (SD.Record [] Double)
   
   -- Get imported Signals
-  let SD.Record time sigMap = rec
+  let SD.Record time sigMap = rec 
       sigIDList = M.toList sigMap
 
   -- Plot imported Signals
   -- mapM_ (\ (x,y) -> PL.xyplot (show x) time y) (take 50 $ drop 50 sigIDList)
   -- mapM_ (\ (x,_) -> putStrLn(show x))  sigIDList -- sigIDList 
-  -- PL.rPlot ("Roh",rec)  
+ --  PL.rPlot ("Roh",rec)  
   
 
 -- ## Identify Signale and calculate Power Signals
@@ -107,7 +109,7 @@ main = do
       engineTorque = neg $ sigMap !? (SD.SigId "engine1.flange_b.tau")
       
       fuelPower = sigMap !? (SD.SigId "engine1.FuelPower")
-      engineMechPower = engineSpeed.*engineTorque
+      engineMechPower = engineSpeed.*engineTorque :: Sig.UTSigL
   
   -- generator
       generatorSpeed = sigMap !? (SD.SigId "electricmotor2.speedsensor1.w")
@@ -215,10 +217,11 @@ main = do
                             (M.map (Sig.fromList . Sig.toList) pMap)
              
       -- setEdgePowers       
+      -- setEdgePowers :: Idx.Node Idx.Node Sig.UTSigL Sig.UTSigL
       setEdgePowers node1 node2 x y =  [(SD.PPosIdx node1 node2, x),
                                         (SD.PPosIdx node2 node1, y)]
       
-      f = setEdgePowers
+      f = setEdgePowers 
       
       -- Vorschläge:
       --   Edge-Synonyme einführen, die einem Namen entsprechen
@@ -241,7 +244,7 @@ main = do
                f con_chassis rearBrakes brakePowerRear brakePowerRear, --rearbrake
                f con_chassis vehicleInertia kineticPower kineticPower] --kinetic power 
                 
-  -- PL.rPlot ("Test",pRec) 
+  PL.rPlot ("Record",rec) 
   -- print pRec  
   
   -- mapM_ (\ (x,y) -> PL.xyplot (show x) time y) (concat pList)
@@ -272,8 +275,8 @@ main = do
   -- putStrLn ("Number of flow states: " ++ show (length sol))
   -- drawTopologyXs' [head sol]
   --Rep.report [Rep.RAll] ("Test",pRec)    
-  --Rep.report [] ("Sequenz",sequ)    
-  --print sequ
+  Rep.report [] ("Sequenz",sequ)    
+  --Rep.report sequ
   --print $ length sList
 --   print sequPRec
   --print ""
@@ -281,10 +284,10 @@ main = do
   --print $ length sfList
   -- print sequPRecFilt
   -- Rep.report [] ("SequencePowerRecord", sequPRec)
-  drawTopology sequTopo env
+  -- drawTopology sequTopo env
   --drawTopologySimple sequTopo
   --print sequTopo
   --PL.rPlot ("Sequ", sequ)
-  -- print sequ
-  --  Rep.report [Rep.RAll] ("Test",pRec)
-  putStrLn "Servus!"
+  print sequ
+  -- Rep.report [Rep.RAll] ("Test",pRec)
+  -- putStrLn "Servus!"

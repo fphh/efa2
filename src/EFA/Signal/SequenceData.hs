@@ -13,7 +13,7 @@ import qualified EFA.Signal.Vector as V
 import EFA.Report.Base (DispStorage1)
 import EFA.Signal.Signal
           (TC, Signal, SignalIdx, DTVal, FVal, TSig, DTFSig, FFSig, UTSigL)
-import EFA.Signal.Typ (Typ, A, P, T, Tt)
+import EFA.Signal.Typ (Typ, A, P, T, Tt, UT)
 import EFA.Signal.Data (Data, (:>), Nil)
 import EFA.Signal.Base (Sign, Val)
 
@@ -46,7 +46,16 @@ data PPosIdx = PPosIdx !Idx.Node !Idx.Node deriving (Show, Eq, Ord)
 -- | Signal Record & Power Record & Flow -- Structure for Handling recorded data
 
 -- | Signal record to contain original time signals
-data Record = Record TSig (M.Map SigId UTSigL) deriving (Show)
+-- data Record = Record TSig (M.Map SigId UTSigL) deriving (Show)
+
+data Record v a =
+   Record
+      (TC Signal (Typ A T Tt) (Data (v :> Nil) a))
+      (M.Map SigId (TC Signal (Typ UT UT UT) (Data (v :> Nil) a)))
+   deriving (Show, Eq)
+
+type instance D.Value (Record v a) = a
+
 data SigId = SigId String deriving (Show, Eq, Ord)
 
 data PowerRecord v a =
@@ -158,7 +167,7 @@ instance (Random a, Integral a) => Sample (Ratio a) where
             GT -> y%x
             EQ -> 1 -- prevent 0/0
 
-
+{-
 instance ToTable Record where
    toTable os (ti, Record time sigs) =
       [Table {
@@ -169,7 +178,21 @@ instance ToTable Record where
 
       where t = tvcat $ S.toTable os ("Time",time) !:
                         concatMap (toTable os . mapFst show) (M.toList sigs)
+-}
 
+instance
+   (V.Walker v, V.Singleton v, V.FromList v, V.Storage v a, DispStorage1 v,
+    Ord a, Fractional a, PrintfArg a) =>
+   ToTable (Record v a) where
+   toTable os (ti, Record time sigs) =
+      [Table {
+         tableTitle = "Record - " ++ ti ,
+         tableData = tableData t,
+         tableFormat = tableFormat t,
+         tableSubTitle = ""}]
+
+      where t = tvcat $ S.toTable os ("Time",time) !:
+                        concatMap (toTable os . mapFst show) (M.toList sigs)
 
 instance
    (V.Walker v, V.Singleton v, V.FromList v, V.Storage v a, DispStorage1 v,
