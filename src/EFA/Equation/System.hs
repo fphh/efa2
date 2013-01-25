@@ -385,6 +385,7 @@ instance Applicative Result where
   _ <*> _ = Undetermined
 
 
+
 -----------------------------------------------------------------
 
 
