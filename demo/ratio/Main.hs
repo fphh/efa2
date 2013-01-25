@@ -16,10 +16,7 @@ import EFA.Utility (checkedLookup)
 import EFA.Graph (mkGraph)
 import EFA.Example.Utility ((.=), constructSeqTopo, edgeVar, makeEdges, recAbs)
 
-import Data.Ratio ((%), Rational)
-
-import qualified EFA.Report.Format as Format
-import EFA.Report.FormatValue (formatValue)
+import Data.Ratio ((%))
 
 import Data.Monoid ((<>))
 import Data.Foldable (foldMap)

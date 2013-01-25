@@ -230,6 +230,16 @@ Executable demo-symbolicSolving
   Else
     Buildable: False
 
+Executable demo-undiredge
+  Main-Is: demo/undirEdge/Main.hs
+  GHC-Options: -Wall
+  If flag(buildExamples)
+    Build-Depends:
+      efa,
+      base
+  Else
+    Buildable: False
+
 Executable demo-csvimport
   Main-Is: demo/CSVImport/Main.hs
   GHC-Options: -Wall
