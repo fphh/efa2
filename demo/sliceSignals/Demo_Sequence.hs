@@ -80,6 +80,7 @@ main = do
   rPlot ("SequA", sequRecA)
   rPlot ("SequB", sequRecB)
 
+{-
   {-
   The result looks awful, because many parts overlap.
   -}
@@ -91,3 +92,4 @@ main = do
             map MultiPlot.partFromFrame xs ++
             repeat (MultiPlot.partFromFrame Frame.empty)) $
      rPlotCore "Sequ" sequRecB
+-}

@@ -26,6 +26,7 @@ import EFA.Signal.Signal
            (.+), (.-), (.*), (./), (.++),
            rsingleton, sampleAverage, deltaSig, sigPartInt, sigFullInt,
            changeType, untype, fromScalar, toSample, sigSum, toSigList, fromSigList)
+
 import EFA.Signal.Typ (Typ, UT, STy, Tt, T, P, A)
 import EFA.Signal.Data (Data(Data), Nil, (:>))
 
@@ -96,6 +97,14 @@ recPartIntegrate (PowerRecord time pMap) = FlRecord (deltaSig time) fMap
 genSequFlow :: SequPwrRecord -> SequFlowRecord FlowRecord
 genSequFlow sqPRec = fmap recFullIntegrate sqPRec
 
+
+-- PG attempt to filter modelica state change events by zero time or zero energy
+-- | Filter Sequence Flow
+removeZeroTimeSections :: (Sequ,SequData SecPowerRecord) -> (Sequ,SequData SecPowerRecord)
+removeZeroTimeSections (Sequ xs, SequData ys)  = (Sequ xsf, SequData ysf)
+   where (xsf,ysf) = unzip $ filter f $ zip xs ys  
+         f (_,PowerRecord time pMap) = (S.head time) /= S.last(time) 
+
 -- TODO: Umschalten zwischen recFullIntegrate und recPartIntegrate.
 --genSequFlow :: SequPwrRecord -> SequFlowRecord FlowRecord
 --genSequFlow sqPRec = fmap recFullIntegrate sqPRec
@@ -125,7 +134,7 @@ makeSequence ::
    ListPowerRecord ->
    SequFlowRecord FlowRecord
 makeSequence =
-   genSequFlow . snd . genSequ . addZeroCrossings
+    genSequFlow . snd . removeZeroTimeSections . genSequ . addZeroCrossings
 
 -----------------------------------------------------------------------------------
 {-

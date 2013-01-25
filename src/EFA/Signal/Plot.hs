@@ -110,9 +110,9 @@ xyPlotStyle ::
    Int -> Plot2D.T x y -> Plot2D.T x y
 xyPlotStyle n =
    fmap $ Graph2D.lineSpec $
-      LineSpec.pointSize 1.5 $
+      LineSpec.pointSize 0.1 $
       LineSpec.pointType 7 $
-      LineSpec.lineWidth 2 $
+      LineSpec.lineWidth 1 $
       LineSpec.title (show $ "Signal" ++ show n) $
       LineSpec.deflt
 
@@ -136,7 +136,8 @@ xyplotBasic ::
    TC s t2 (Data (v2 :> Nil) y) ->
    Plot2D.T x y
 xyplotBasic x y =
-   Plot2D.list Graph2D.linesPoints $ zip (sPlotData x) (sPlotData y)
+--   Plot2D.list Graph2D.linesPoints $ zip (sPlotData x) (sPlotData y)
+   Plot2D.list Graph2D.lines $ zip (sPlotData x) (sPlotData y)
 
 instance
    (TDisp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 x,

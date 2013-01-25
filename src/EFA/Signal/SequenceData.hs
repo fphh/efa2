@@ -67,7 +67,7 @@ type SecPowerRecord = PowerRecord UV.Vector Val
 type SequPwrRecord = SequData SecPowerRecord
 
 -- | Flow record to contain flow signals assigned to the tree
-data FlRecord a b = FlRecord a (M.Map PPosIdx b)
+data FlRecord a b = FlRecord a (M.Map PPosIdx b) deriving (Show)
 type FlowRecord = FlRecord DTFSig FFSig
 type FlowValRecord = FlRecord DTVal FVal
 

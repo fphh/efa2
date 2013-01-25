@@ -743,7 +743,7 @@ instance D.All c => All s c where
 -- signal sign
 
 sigSign ::
-   (Ord d, Num d, D.Map c, D.Storage c d, D.Storage c B.Sign) =>
+   (Ord d, Num d, D.Map c, D.Storage c d, D.Storage c B.Sign, Fractional d) =>
    TC s typ (Data c d) -> TC s typ (Data c B.Sign)
 sigSign x = map B.sign x
 
@@ -886,10 +886,18 @@ sampleAverage (TC (Data x)) (TC (Data y)) = TC $ Data $ (x+y)/2
 
 
 sign ::
-   (D.Map c, D.Storage c d, D.Storage c B.Sign, Ord d, Num d) =>
+   (D.Map c, D.Storage c d, D.Storage c B.Sign, Ord d, Num d, Fractional d) =>
    TC s typ (Data c d) -> TC s (Typ A SZ UT) (Data c B.Sign)
 sign x = changeType $ map B.sign x
-
+{-
+sign x = changeType $ map f x
+         where f x = if x > 10^(-12) then 1
+                                     else if x < -10^(-12) then -1
+                                                           else 0
+                                                          
+sign x = changeType $ map f x
+  where f x = if B.abs x > 10^(-12) then B.sign x else B.sign 0
+-}      
 
 untuple ::
    TC Sample typ (Data Nil (d,d)) ->
