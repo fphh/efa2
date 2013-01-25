@@ -83,6 +83,7 @@ Library
     EFA.Graph.Topology.StateAnalysis
     EFA.Graph.Flow
     EFA.Equation.System
+    EFA.Equation.Result
     EFA.Equation.Env
     EFA.Equation.Variable
     EFA.Example.Utility

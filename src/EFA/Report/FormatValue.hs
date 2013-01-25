@@ -2,6 +2,7 @@ module EFA.Report.FormatValue where
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.Format (Format)
+import EFA.Equation.Result (Result(..))
 
 import Data.Ratio (Ratio)
 
@@ -25,3 +26,7 @@ instance FormatValue Char where
 
 formatChar :: Format output => Char -> output
 formatChar = Format.literal . (:[])
+
+instance FormatValue a => FormatValue (Result a) where
+  formatValue Undetermined = Format.undetermined
+  formatValue (Determined a) = formatValue a
