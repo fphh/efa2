@@ -1,6 +1,8 @@
+
+
 module EFA.Graph.Topology (
        NLabel (..), LNode,
-       LEdge,
+       LEdge, LDirEdge,
        NodeType (..),
        EdgeType (..),
        FlowDirection (..),
@@ -9,7 +11,6 @@ module EFA.Graph.Topology (
        FlowDirectionField, getFlowDirection,
        Topology,
        FlowTopology,
-       SecTopology,
        SequFlowGraph,
        DirSequFlowGraph,
        pathExists,
@@ -40,6 +41,7 @@ import Data.Tuple.HT (snd3)
 
 type LNode = Gr.LNode Idx.SecNode NodeType
 type LEdge = Gr.LEdge Idx.SecNode FlowDirection
+type LDirEdge = Gr.LEdge Idx.SecNode ()
 
 data NodeType = Storage
               | Sink
@@ -101,13 +103,6 @@ class (EdgeTypeField el, FlowDirectionField el) => EdgeLabel el where
 instance EdgeTypeField EdgeType where
    getEdgeType = id
 
-{-
-instance FlowDirectionField EdgeType where
-   getFlowDirection _ = Dir
-
-instance EdgeLabel EdgeType where
--}
-
 
 instance FlowDirectionField FlowDirection where
    getFlowDirection = id
@@ -148,8 +143,6 @@ type Topology = Graph Idx.Node NodeType ()
 
 type FlowTopology = Graph Idx.Node NodeType FlowDirection
 
-type SecTopology = Graph Idx.SecNode NodeType FlowDirection
-
 type SequFlowGraph = Graph Idx.SecNode NodeType FlowDirection
 
 type DirSequFlowGraph = Graph Idx.SecNode NodeType ()
@@ -157,7 +150,7 @@ type DirSequFlowGraph = Graph Idx.SecNode NodeType ()
 pathExists :: Idx.Node -> Idx.Node -> FlowTopology -> Bool
 pathExists _ _ topo | Gr.isEmpty topo = False
 pathExists a b topo | a == b = True 
-pathExists a b topo = or $ map f s
+pathExists a b topo = any f s
   where s = map fst $ filter q $ Gr.lsuc topo a
         q (_, Dir) = True
         q _ = False

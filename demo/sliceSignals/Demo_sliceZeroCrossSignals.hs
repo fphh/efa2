@@ -35,7 +35,9 @@ p :: S.TC s t (Data ([] :> Nil) Double)
 p = S.fromList [2, 2, 2, -2, -2]
 
 pmap :: M.Map PPosIdx (S.TC s t (Data ([] :> Nil) Double))
-pmap = M.fromList [(PPosIdx node0 node1,  p)]
+pmap = M.fromListWith
+         (error "duplicate keys") 
+         [(PPosIdx node0 node1,  p)]
 
 
 titleList :: [String]
@@ -46,8 +48,9 @@ pmapList = [pmap]
 
 recList = map (PowerRecord time) pmapList  
 
-list = idxList $ zip titleList 
-                     (zip recList (map  (genSequ) (map addZeroCrossings recList)))
+list = idxList $
+  zip titleList 
+      (zip recList (map  (genSequ . addZeroCrossings) recList))
 
 f (idx, (title, (pRec, (sq, sqRec)))) = do
   putStrLn ""

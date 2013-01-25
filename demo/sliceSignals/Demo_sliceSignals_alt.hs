@@ -32,7 +32,9 @@ p1 = S.fromList [1,0,0,1,0,0]
 p2 = S.fromList [1,0,1,1,1,0]
 
 pmap :: M.Map PPosIdx (S.TC s t (Data ([] :> Nil) Double))
-pmap = M.fromList [(PPosIdx node0 node1, p1),(PPosIdx node1 node0, p2)]
+pmap = M.fromListWith
+         (error "duplicate keys")
+         [(PPosIdx node0 node1, p1),(PPosIdx node1 node0, p2)]
 
 rec, rec0 :: PowerRecord [] Double
 rec = PowerRecord time pmap

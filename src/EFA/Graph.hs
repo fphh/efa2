@@ -357,6 +357,7 @@ insEdgeSet es (Graph ns els) =
       (M.unionWith (error "insEdgeSet: edge already contained in graph")
          els es)
 
+
 -- I may deprecate mkGraph in favor of Graph.fromList
 fromList, mkGraph ::
    (Ord n) =>

@@ -83,6 +83,7 @@ Library
     EFA.Graph.Topology.StateAnalysis
     EFA.Graph.Flow
     EFA.Equation.System
+    EFA.Equation.Result
     EFA.Equation.Env
     EFA.Equation.Variable
     EFA.Example.Utility
@@ -221,6 +222,16 @@ Executable demo-numericSolving
 
 Executable demo-symbolicSolving
   Main-Is: examples/elementary/symbolicSolving/Main.hs
+  GHC-Options: -Wall
+  If flag(buildExamples)
+    Build-Depends:
+      efa,
+      base
+  Else
+    Buildable: False
+
+Executable demo-undiredge
+  Main-Is: demo/undirEdge/Main.hs
   GHC-Options: -Wall
   If flag(buildExamples)
     Build-Depends:
