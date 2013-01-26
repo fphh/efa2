@@ -244,7 +244,7 @@ main = do
                f con_chassis rearBrakes brakePowerRear brakePowerRear, --rearbrake
                f con_chassis vehicleInertia kineticPower kineticPower] --kinetic power 
                 
-  PL.rPlot ("Record",rec) 
+  -- PL.rPlot ("Record",rec) 
   -- print pRec  
   
   -- mapM_ (\ (x,y) -> PL.xyplot (show x) time y) (concat pList)
@@ -291,3 +291,4 @@ main = do
   print sequ
   -- Rep.report [Rep.RAll] ("Test",pRec)
   -- putStrLn "Servus!"
+  PL.rPlot ("Sequ", sequPRec)

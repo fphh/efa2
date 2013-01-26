@@ -245,9 +245,9 @@ instance
 rPlotStyle :: (Show k) => k -> Plot2D.T x y -> Plot2D.T x y
 rPlotStyle key =
    fmap $ Graph2D.lineSpec $
-      LineSpec.pointSize 1.5 $
+      LineSpec.pointSize 1$
       LineSpec.pointType 7 $
-      LineSpec.lineWidth 2 $
+      LineSpec.lineWidth 1 $
       LineSpec.title (show key) $
       LineSpec.deflt
 
