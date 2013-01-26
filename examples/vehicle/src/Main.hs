@@ -23,7 +23,7 @@ import EFA.IO.ASCIIImport (modelicaASCIIImport)
 import EFA.IO.CSVImport (modelicaCSVImport)
 import qualified EFA.Signal.SequenceData as SD
 import qualified EFA.Signal.Plot as PL
-import EFA.Signal.Sequence (makeSequence, makeSeqFlowGraph, genSequ,addZeroCrossings,removeZeroTimeSections )
+import EFA.Signal.Sequence (makeSequence, makeSequenceRaw,makeSeqFlowGraph, genSequ,addZeroCrossings,removeZeroTimeSections )
 import qualified EFA.Signal.Signal as Sig
 import EFA.Signal.Signal((.*),(.+),(./),(.-),neg)
 
@@ -253,10 +253,10 @@ main = do
   let sol = StateAnalysis.advanced topo
   
       -- seq = chopAtZeroCrossingsPowerRecord pRec
-      sequFRec = makeSequence pRec
+      -- sequFRec = makeSequence pRec
       
       (sequ, sequPRec) = genSequ  $ addZeroCrossings pRec
-      (sequFilt, SD.SequData l) = removeZeroTimeSections $ genSequ  $ addZeroCrossings pRec
+      (sequFilt, SD.SequData l) = makeSequenceRaw pRec  -- removeZeroTimeSections $ genSequ  $ addZeroCrossings pRec
       
       (SD.Sequ sList) = sequ
       (SD.Sequ sfList) = sequFilt
@@ -266,8 +266,8 @@ main = do
         (sum $ Sig.toList t, M.toList $ M.map (sum . Sig.toList) ds)
 
       -- SD.Sequ s = sequ
-      sequTopo = makeSeqFlowGraph topo sequFRec
-      env = EqGen.solve (makeGiven 12.34567 ds)  sequTopo
+      -- sequTopo = makeSeqFlowGraph topo sequFRec
+      -- env = EqGen.solve (makeGiven 12.34567 ds)  sequTopo
 
   -- print env
   -- print sequ
@@ -286,7 +286,7 @@ main = do
   --print $ length sfList
   -- print sequPRecFilt
   -- Rep.report [] ("SequencePowerRecord", sequPRec)
-  drawTopology sequTopo env
+  -- drawTopology sequTopo env
   --drawTopologySimple sequTopo
   --print sequTopo
   --PL.rPlot ("Sequ", sequ)

@@ -104,7 +104,7 @@ genSequFlow sqPRec = fmap recFullIntegrate sqPRec
 
 removeZeroTimeSections :: (Sequ,SequData SecPowerRecord) -> (Sequ,SequData SecPowerRecord)
 removeZeroTimeSections (xs, ys)  = filterSequWithSequData f (xs, ys) 
-   where  f (_,PowerRecord time pMap) = (S.head time) /= S.last(time) 
+   where  f (_,PowerRecord time pMap) = (S.head time) /= (S.last time) 
 
 
 -- | Drop Sections with negligible energy flow 
@@ -147,6 +147,12 @@ makeSequence ::
    SequFlowRecord FlowRecord
 makeSequence =
     genSequFlow . snd . removeZeroTimeSections . genSequ . addZeroCrossings
+
+-- | PG - Its better to have processing under controll in Top-Level for inspeting and debugging signal treatment
+makeSequenceRaw ::
+   ListPowerRecord ->
+   (Sequ, SequData SecPowerRecord)
+makeSequenceRaw = genSequ . addZeroCrossings
 
 -----------------------------------------------------------------------------------
 {-
