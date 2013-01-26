@@ -94,18 +94,22 @@ main = do
 
 ---------------------------------------------------------------------------------------
  -- Show Topology
-   
+  
   drawTopologyXs' [head sol]
-  putStrLn ("Number of flow states: " ++ show (length sol))
  
 ---------------------------------------------------------------------------------------
 -- Topology State Analysis
 
-  drawTopologyXs' sol
+  putStrLn ("Number of possible flow states: " ++ show (length sol))
+  drawTopologyXs' (take 20 sol)
              
 --------------------------------------------------------------------------------------- 
 -- ## Read signal from Csv-file, calculate Power Signals and Swap Sign if needed
   rec <- modelicaCSVImport "Vehicle_res_short.csv" :: IO (SD.Record [] Double)
+  
+  -- Show all signals  
+  -- mapM_ (\ (x,y) -> PL.xyplot (show x) time y) (concat pList)  
+  PL.rPlotSplit ("Record",rec) 10
   
   -- engine crankshaft
   let get = SD.getSig rec 
@@ -254,12 +258,12 @@ main = do
                f con_chassis rearBrakes brakePowerRear brakePowerRear, --rearbrake
                f con_chassis vehicleInertia kineticPower kineticPower] --kinetic power 
                 
-  -- PL.rPlot ("Record",rec) 
+  -- PL.rPlot ("Record",pRec) 
   -- print pRec  
 
-   --Rep.report [Rep.RAll] ("Test",pRec)    
+   --Rep.report [Rep.RAll] ("PowerRecord",pRec)    
  
-  -- mapM_ (\ (x,y) -> PL.xyplot (show x) time y) (concat pList)
+  
   
   ---------------------------------------------------------------------------------------
   -- ## Pre-Processing Signals 

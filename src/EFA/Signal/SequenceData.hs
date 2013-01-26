@@ -17,7 +17,7 @@ import qualified EFA.Signal.Signal as Sig (map)
           
 import EFA.Signal.Typ (Typ, A, P, T, Tt, UT)
 import EFA.Signal.Data (Data, (:>), Nil)
-import EFA.Signal.Base (Sign, Val)
+import EFA.Signal.Base (Sign, Val, BSum)
 
 import EFA.Report.Report (ToTable(toTable), Table(..), TableData(..), toDoc, tvcat, autoFormat)
 import Text.Printf (PrintfArg)
@@ -29,6 +29,7 @@ import qualified Data.Map as M
 import qualified Data.Vector.Unboxed as UV
 import qualified Data.Vector as VB
 import qualified Data.List.HT as HTL
+import qualified Data.List as L
 import qualified Data.List.Match as Match
 import Data.NonEmpty ((!:))
 import Data.Ratio (Ratio, (%))
@@ -182,6 +183,27 @@ removeZeroNoise (PowerRecord time pMap) threshold = PowerRecord time (M.map f pM
   where f sig = Sig.map g sig
         g x | abs x < threshold = 0 
             | otherwise = x
+
+
+-- | Split Record in even Junks                          
+splitRecord ::  (Num a, Ord a, V.Walker v, V.Storage v a, BSum a) => Record v a -> Int -> [Record v a]                          
+splitRecord (Record time pMap) n  = recList
+  where (recList, _) = f ([],sortSigList $ M.toList pMap)
+        f (rs, []) = (rs,[])        
+        f (rs, xs) = f (rs ++ [Record time (M.fromList $ take n xs)], drop n xs)
+        
+
+sortSigList ::  (Num a,
+                      Ord a,
+                      V.Walker v,
+                      V.Storage v a,
+                      BSum a) =>
+                [ (SigId,TC Signal (Typ UT UT UT) (Data (v :> Nil) a))] ->  [(SigId, TC Signal (Typ UT UT UT) (Data (v :> Nil) a))]
+sortSigList  sigList = L.sortBy g  sigList
+  where
+        g (_,x) (_,y) | S.sigSum x > S.sigSum y = GT
+        g (_,x) (_,y) | S.sigSum x < S.sigSum y = LT
+        g (_,x) (_,y) | S.sigSum x == S.sigSum y = EQ
 
 -----------------------------------------------------------------------------------
 -- Various Class and Instance Definition for the different Sequence Datatypes 

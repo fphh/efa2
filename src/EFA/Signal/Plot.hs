@@ -10,8 +10,10 @@ import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Data as D
 import qualified EFA.Signal.Vector as SV
-import EFA.Signal.SequenceData (PowerRecord(PowerRecord), SequPwrRecord, SequData(SequData),Record(Record))
+import EFA.Signal.SequenceData (PowerRecord(PowerRecord), SequPwrRecord, SequData(SequData),Record(Record),splitRecord)
 import EFA.Signal.Signal (TC, Signal, toSigList, getDisplayType)
+import EFA.Signal.Base (BSum)
+
 import EFA.Signal.Data (Data, (:>), Nil, NestedList)
 import EFA.Report.Typ (TDisp, DisplayType(Typ_P, Typ_T), getDisplayUnit, getDisplayTypName)
 import EFA.Report.Base (UnitScale(UnitScale), getUnitScale)
@@ -273,6 +275,7 @@ class (Atom.C (D.Value record)) => RPlot record where
       String -> record ->
       [Frame.T (Graph2D.T (D.Value record) (D.Value record))]
 
+-- | Plot a Power Record
 instance
    (SV.Walker v, SV.FromList v,
     SV.Storage v y, Fractional y, Atom.C y, Tuple.C y) =>
@@ -280,12 +283,25 @@ instance
    rPlotCore rName (PowerRecord time pMap) =
       [rPlotSingle rName time pMap]
 
+-- | Plot a Signal Record
 instance
    (SV.Walker v, SV.FromList v,
     SV.Storage v y, Fractional y, Atom.C y, Tuple.C y) =>
       RPlot (Record v y) where
    rPlotCore rName (Record time sigMap) =
       [rPlotSingle rName time sigMap]
+      
+rPlotSplit :: (Fractional a,
+                      SV.Walker v,
+                      SV.Storage v a,
+                      SV.FromList v,
+                      Tuple.C a,
+                      Atom.C a,Ord a, BSum a) => 
+              (String, Record v a) -> Int -> IO ()     
+rPlotSplit (name,r) n = mapM_ rPlot $ zip titles recList
+  where 
+        recList = (splitRecord r n)
+        titles = map (\ x -> name ++ " - Part " ++ show x)  [1 .. (length recList)]
 
 rPlotSingle ::
    (Show k, TDisp typ0, TDisp typ1,
