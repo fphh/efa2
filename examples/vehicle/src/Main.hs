@@ -40,23 +40,20 @@ import Data.Monoid ((<>))
 
 import Debug.Trace
  
- 
+
+
 ---------------------------------------------------------------------------------------
 -- ## Model the System Topology
 
 -- Define Section Names
-
 sec0, sec1, sec2, sec3, sec4 :: Idx.Section
 sec0 :~ sec1 :~ sec2 :~ sec3 :~ sec4 :~ _ = Stream.enumFrom $ Idx.Section 0
 
 -- Define Node Names
 
 tank, con_engine, con_battery, battery, con_evs, con_motor, con_frontBrakes, con_chassis, drivingResistance, electricSystem, frontBrakes, vehicleInertia, con_frontBrakes, rearBrakes :: Idx.Node
+
 tank :~ con_engine :~ con_battery :~ battery :~ con_evs :~ con_motor :~ con_frontBrakes :~ con_chassis :~ drivingResistance :~ electricSystem :~ frontBrakes :~ vehicleInertia :~ rearBrakes :~ _ = Stream.enumFrom $ Idx.Node 0
-
--- Helper Function for CheckedLookup in Record
-
-
 
 -- Define System Topology
 
@@ -88,18 +85,24 @@ topo = Gr.mkGraph ns (makeEdges es)
               (con_frontBrakes, frontBrakes), -- brakes
               (con_chassis,rearBrakes), -- brakes
               (con_chassis, vehicleInertia)] -- inertia             
-             
----------------------------------------------------------------------------------------
- -- Topology State Analysis
-        
+
 sol = StateAnalysis.advanced topo             
-             
-             
 
 main :: IO ()
 main = do
-  
 
+
+---------------------------------------------------------------------------------------
+ -- Show Topology
+   
+  drawTopologyXs' [head sol]
+  putStrLn ("Number of flow states: " ++ show (length sol))
+ 
+---------------------------------------------------------------------------------------
+-- Topology State Analysis
+
+  drawTopologyXs' sol
+             
 --------------------------------------------------------------------------------------- 
 -- ## Read signal from Csv-file, calculate Power Signals and Swap Sign if needed
   rec <- modelicaCSVImport "Vehicle_res_short.csv" :: IO (SD.Record [] Double)
@@ -253,7 +256,9 @@ main = do
                 
   -- PL.rPlot ("Record",rec) 
   -- print pRec  
-  
+
+   --Rep.report [Rep.RAll] ("Test",pRec)    
+ 
   -- mapM_ (\ (x,y) -> PL.xyplot (show x) time y) (concat pList)
   
   ---------------------------------------------------------------------------------------
@@ -277,48 +282,38 @@ main = do
       -- Bypass
       -- (sequ, sequPRec, sequFRec) = (sequB,sequPRecB,sequFRecB) 
       
-      
-  ---------------------------------------------------------------------------------------
-   -- ## Provide solver with Given Variables, Start Solver and generate Sequence Flow Graph     
-      
-  let makeGiven initStorage xs = (EqGen.dtime Idx.initSection .= 1)
-      <> (EqGen.storage (Idx.SecNode Idx.initSection battery) .= initStorage) 
-      <> foldMap f (zip [Idx.Section 0 ..] xs)
-        where f (sec, (dt, es)) = (EqGen.dtime sec .= dt)
-                                  <> foldMap g es
-                where g (SD.PPosIdx a b, e) = edgeVar EqGen.energy sec a b .= e
-   
-      
-  let ds =  fmap f sequFRec
-      f (SD.FlRecord t ds) = (sum $ Sig.toList t, M.toList $ M.map (sum . Sig.toList) ds)
-
-
-      -- SD.Sequ s = sequ
-      -- sequTopo = makeSeqFlowGraph topo sequFRec
-      -- env = EqGen.solve (makeGiven 12.34567 ds)  sequTopo
-
-  
-
-  -- print env
-  -- print sequ
-  -- putStrLn ("Number of flow states: " ++ show (length sol))
-  -- drawTopologyXs' [head sol]
-  --Rep.report [Rep.RAll] ("Test",pRec)    
   Rep.report [] ("Sequenz",sequ)    
   print sequ
-  --Rep.report sequ
-  --print $ length sList
---   print sequPRec
-  --print ""
-  --print sequFilt
-  --print $ length sfList
-  -- print sequPRecFilt
+  -- PL.rPlot ("Sequ", sequPRec)    
   -- Rep.report [] ("SequencePowerRecord", sequPRec)
-  -- drawTopology sequTopo env
+
+  
+  ---------------------------------------------------------------------------------------
+   -- ## Provide solver with Given Variables, Start Solver and generate Sequence Flow Graph     
+   
+  let   
+      makeGiven initStorage sequFRec = (EqGen.dtime Idx.initSection .= 1)  
+                                       <> (EqGen.storage (Idx.SecNode Idx.initSection battery) .= initStorage) 
+                                       <> foldMap f (zip [Idx.Section 0 ..] ds)
+        where 
+              SD.SequData ds =  fmap f2 sequFRec
+              f2 (SD.FlRecord t ds) = (sum $ Sig.toList t, M.toList $ M.map (sum . Sig.toList) ds)      
+              f (sec, (dt, es)) = (EqGen.dtime sec .= dt) <> foldMap g es                                                          
+                where g (SD.PPosIdx a b, e) = (edgeVar EqGen.energy sec a b .= e)
+   
+     -- Generate Sequence Topology 
+      sequTopo = makeSeqFlowGraph topo sequFRec
+                
+     -- Generate Given from Initial Storage and Sequence Flow            
+      env = EqGen.solve (makeGiven 12.34567 sequFRec)  sequTopo
+  
+  print env
+
+  -- Show Sequence Flow Graph
   --drawTopologySimple sequTopo
-  --print sequTopo
-  --PL.rPlot ("Sequ", sequ)
-  -- print sequ
-  -- Rep.report [Rep.RAll] ("Test",pRec)
-  -- putStrLn "Servus!"
-  -- PL.rPlot ("Sequ", sequPRec)
+
+  -- Show Sequence Flow with Numbers
+  drawTopology sequTopo env
+     
+  
+
