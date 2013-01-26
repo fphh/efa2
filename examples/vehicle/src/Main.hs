@@ -95,17 +95,6 @@ topo = Gr.mkGraph ns (makeEdges es)
 sol = StateAnalysis.advanced topo             
              
              
----------------------------------------------------------------------------------------
--- Generate Set of Given Variables
-
-makeGiven initStorage xs =
-  (EqGen.dtime Idx.initSection .= 1)
-  <> (EqGen.storage (Idx.SecNode Idx.initSection battery) .= initStorage) 
-  <> foldMap f (zip [Idx.Section 0 ..] xs)
-  where f (sec, (t, ps)) =
-          (EqGen.dtime sec .= t)
-          <> foldMap g ps
-          where g (SD.PPosIdx a b, p) = edgeVar EqGen.energy sec a b .= p*t
 
 main :: IO ()
 main = do
@@ -276,18 +265,31 @@ main = do
       
       -- Remove Sections with Zero Time Duration
       (sequB,sequPRecB)= removeZeroTimeSections (sequA,sequPRecA)
+      -- ByPass
+      -- (sequB,sequPRecB)= (sequA,sequPRecA)
+      
       
       -- Integrate PowerRecords in Sections to FlowRecords
       sequFRecB = genSequFlow sequPRecB
        
-      -- Drop Sections with negligible EnergyFlow
+      -- Drop Sections with negligible EnergyFlow using a given Threshold
       (sequ, sequPRec, sequFRec) = removeLowEnergySections (sequB,sequPRecB,sequFRecB) (100) 
+      -- Bypass
       -- (sequ, sequPRec, sequFRec) = (sequB,sequPRecB,sequFRecB) 
       
       
   ---------------------------------------------------------------------------------------
    -- ## Provide solver with Given Variables, Start Solver and generate Sequence Flow Graph     
       
+  let
+   makeGiven initStorage xs =
+     (EqGen.dtime Idx.initSection .= 1)
+   <> (EqGen.storage (Idx.SecNode Idx.initSection battery) .= initStorage) 
+   <> foldMap f (zip [Idx.Section 0 ..] xs)
+     where f (sec, (dt, es)) =
+             (EqGen.dtime sec .= dt)
+           <> foldMap g es
+             where g (SD.PPosIdx a b, e) = edgeVar EqGen.energy sec a b .= e
    
       
   let ds =  fmap f sequFRec
