@@ -254,14 +254,13 @@ main = do
   
       -- seq = chopAtZeroCrossingsPowerRecord pRec
       sequFRec = makeSequence pRec
+      
       (sequ, sequPRec) = genSequ  $ addZeroCrossings pRec
-      (sequFilt, SD.SequData l) =
-        removeZeroTimeSections $ genSequ  $ addZeroCrossings pRec
+      (sequFilt, SD.SequData l) = removeZeroTimeSections $ genSequ  $ addZeroCrossings pRec
       
       (SD.Sequ sList) = sequ
       (SD.Sequ sfList) = sequFilt
       
-                
       ds =  map f l
       f (SD.PowerRecord t ds) =
         (sum $ Sig.toList t, M.toList $ M.map (sum . Sig.toList) ds)
@@ -276,6 +275,9 @@ main = do
   -- drawTopologyXs' [head sol]
   --Rep.report [Rep.RAll] ("Test",pRec)    
   Rep.report [] ("Sequenz",sequ)    
+  print sequ
+  Rep.report [] ("Sequenz",sequFilt)    
+  print sequFilt
   --Rep.report sequ
   --print $ length sList
 --   print sequPRec
@@ -284,11 +286,11 @@ main = do
   --print $ length sfList
   -- print sequPRecFilt
   -- Rep.report [] ("SequencePowerRecord", sequPRec)
-  -- drawTopology sequTopo env
+  drawTopology sequTopo env
   --drawTopologySimple sequTopo
   --print sequTopo
   --PL.rPlot ("Sequ", sequ)
-  print sequ
+  -- print sequ
   -- Rep.report [Rep.RAll] ("Test",pRec)
   -- putStrLn "Servus!"
-  PL.rPlot ("Sequ", sequPRec)
+  -- PL.rPlot ("Sequ", sequPRec)

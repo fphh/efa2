@@ -25,6 +25,7 @@ import System.Random (Random)
 
 import qualified Data.Map as M
 import qualified Data.Vector.Unboxed as UV
+import qualified Data.Vector as VB
 import qualified Data.List.HT as HTL
 import qualified Data.List.Match as Match
 import Data.NonEmpty ((!:))
@@ -131,6 +132,33 @@ zipWithSecIdxs :: (Idx.Section -> a -> b) -> SequData a -> SequData b
 zipWithSecIdxs f =
    liftA2 f (SequData [Idx.Section 0 ..])
 
+-----------------------------------------------------------------------------------
+-- Utility Functions on Sequence Data
+         
+         
+-- | PG Diskussion : 
+-- |        Sollte Sequ nicht auch SequData verwenden, dann würden die Utility - Funktionen hier auch funktionieren           
+-- |        brauchen wir eventuell eine Überstruktur, da das Filtern der Sequenz und der Sequenzdaten irgendwie zusammen         
+-- |        gehört
+         
+-- | Get Number of Sections after cutting 
+sequLength :: Sequ -> Int
+sequLength (Sequ xs) = length xs
+
+-- | Filter Sequence and SequenceData with a Filterfunktion
+-- | Allows to e.q. filter Sequ and SequPwrRecord
+filterSequWithSequData :: ((Sec,a) -> Bool) -> (Sequ,SequData a) ->   (Sequ,SequData a)
+filterSequWithSequData f (Sequ xs, SequData ys) = (Sequ xsf, SequData ysf)
+   where (xsf,ysf) = unzip $ filter f $ zip xs ys  
+
+-- | Filter Sequence and SequenceData with a Filterfunktion
+-- | Allows e.g. to filter Sequ, SeqPwrRecord and SequFlowRecord         
+filterSequWithSequData2 :: ((Sec,a,b) -> Bool) -> (Sequ,SequData a,SequData b) -> (Sequ,SequData a,SequData b)
+filterSequWithSequData2 f (Sequ xs, SequData ys, SequData zs) = (Sequ xsf, SequData ysf, SequData zsf )
+   where (xsf,ysf,zsf) = unzip3 $ filter f $ zip3 xs ys zs  
+
+-----------------------------------------------------------------------------------
+-- Various Class and Instance Definition for the different Sequence Datatypes 
 
 instance QC.Arbitrary PPosIdx where
    arbitrary = liftM2 PPosIdx QC.arbitrary QC.arbitrary
@@ -234,3 +262,5 @@ instance ToTable Sequ where
 
          -- f :: Sec -> TableData
          f (i1, i2) = toDoc id $ show i1 ++ " - " ++ show i2
+
+

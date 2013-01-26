@@ -17,7 +17,7 @@ import EFA.Signal.SequenceData
           (SequData(..), Sequ(..), Sec,
            PowerRecord(..), ListPowerRecord, SequPwrRecord, SecPowerRecord,
            FlowRecord, FlRecord(FlRecord), SequFlowRecord,
-           PPosIdx(..), zipWithSecIdxs)
+           PPosIdx(..), zipWithSecIdxs, filterSequWithSequData,filterSequWithSequData2)
 import EFA.Signal.Base
           (Val, Sign(..), ZeroCrossing(..))
 import EFA.Signal.Signal
@@ -97,13 +97,25 @@ recPartIntegrate (PowerRecord time pMap) = FlRecord (deltaSig time) fMap
 genSequFlow :: SequPwrRecord -> SequFlowRecord FlowRecord
 genSequFlow sqPRec = fmap recFullIntegrate sqPRec
 
-
--- PG attempt to filter modelica state change events by zero time or zero energy
 -- | Filter Sequence Flow
+-- | Used to filter Modelica signals 
+-- | State changes in solver create several DataPoints with exact the same time
+-- | The resulting sections which have zero time duration are removed 
+
 removeZeroTimeSections :: (Sequ,SequData SecPowerRecord) -> (Sequ,SequData SecPowerRecord)
-removeZeroTimeSections (Sequ xs, SequData ys)  = (Sequ xsf, SequData ysf)
-   where (xsf,ysf) = unzip $ filter f $ zip xs ys  
-         f (_,PowerRecord time pMap) = (S.head time) /= S.last(time) 
+removeZeroTimeSections (xs, ys)  = filterSequWithSequData f (xs, ys) 
+   where  f (_,PowerRecord time pMap) = (S.head time) /= S.last(time) 
+
+
+-- | Drop Sections with negligible energy flow 
+removeLowEnergySections :: 
+   (Sequ, SequData SecPowerRecord, SequFlowRecord FlowRecord) 
+   -> S.FVal 
+   -> (Sequ, SequData SecPowerRecord, SequFlowRecord FlowRecord)
+removeLowEnergySections  (xs, ys, zs) (TC (Data threshold)) = filterSequWithSequData2 f (xs, ys, zs)
+   where  f (_, _ , FlRecord _ fMap) =  all g (M.toList fMap)
+          g (_,s) = (abs (fromScalar (sigSum s))) < threshold  
+
 
 -- TODO: Umschalten zwischen recFullIntegrate und recPartIntegrate.
 --genSequFlow :: SequPwrRecord -> SequFlowRecord FlowRecord
