@@ -281,15 +281,12 @@ main = do
   ---------------------------------------------------------------------------------------
    -- ## Provide solver with Given Variables, Start Solver and generate Sequence Flow Graph     
       
-  let
-   makeGiven initStorage xs =
-     (EqGen.dtime Idx.initSection .= 1)
-   <> (EqGen.storage (Idx.SecNode Idx.initSection battery) .= initStorage) 
-   <> foldMap f (zip [Idx.Section 0 ..] xs)
-     where f (sec, (dt, es)) =
-             (EqGen.dtime sec .= dt)
-           <> foldMap g es
-             where g (SD.PPosIdx a b, e) = edgeVar EqGen.energy sec a b .= e
+  let makeGiven initStorage xs = (EqGen.dtime Idx.initSection .= 1)
+      <> (EqGen.storage (Idx.SecNode Idx.initSection battery) .= initStorage) 
+      <> foldMap f (zip [Idx.Section 0 ..] xs)
+        where f (sec, (dt, es)) = (EqGen.dtime sec .= dt)
+                                  <> foldMap g es
+                where g (SD.PPosIdx a b, e) = edgeVar EqGen.energy sec a b .= e
    
       
   let ds =  fmap f sequFRec
