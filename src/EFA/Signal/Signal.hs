@@ -937,7 +937,6 @@ makeAbsolute (TC x) = TC x
 reverse :: (D.Reverse c, D.Storage c d) => TC s t (Data c d) ->  TC s t (Data c d)
 reverse (TC x) = TC $ D.reverse x
 
-
 ----------------------------------------------------------
 -- Report instances
 

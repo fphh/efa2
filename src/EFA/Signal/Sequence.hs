@@ -110,10 +110,10 @@ removeZeroTimeSections (xs, ys)  = filterSequWithSequData f (xs, ys)
 -- | Drop Sections with negligible energy flow 
 removeLowEnergySections :: 
    (Sequ, SequData SecPowerRecord, SequFlowRecord FlowRecord) 
-   -> S.FVal 
+   -> Val 
    -> (Sequ, SequData SecPowerRecord, SequFlowRecord FlowRecord)
-removeLowEnergySections  (xs, ys, zs) (TC (Data threshold)) = filterSequWithSequData2 f (xs, ys, zs)
-   where  f (_, _ , FlRecord _ fMap) =  all g (M.toList fMap)
+removeLowEnergySections  (xs, ys, zs) threshold = filterSequWithSequData2 f (xs, ys, zs)
+   where  f (_, _ , FlRecord _ fMap) =  not $ all g (M.toList fMap)
           g (_,s) = (abs (fromScalar (sigSum s))) < threshold  
 
 

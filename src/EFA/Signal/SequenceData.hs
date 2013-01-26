@@ -13,6 +13,8 @@ import qualified EFA.Signal.Vector as V
 import EFA.Report.Base (DispStorage1)
 import EFA.Signal.Signal
           (TC, Signal, SignalIdx, DTVal, FVal, TSig, DTFSig, FFSig, UTSigL)
+import qualified EFA.Signal.Signal as Sig (map)
+          
 import EFA.Signal.Typ (Typ, A, P, T, Tt, UT)
 import EFA.Signal.Data (Data, (:>), Nil)
 import EFA.Signal.Base (Sign, Val)
@@ -36,6 +38,7 @@ import Control.Monad (liftM2)
 import Control.Applicative (Applicative(pure, (<*>)), liftA, liftA2)
 import Data.Traversable (Traversable, sequenceA, foldMapDefault)
 import Data.Foldable (Foldable, foldMap, fold)
+import EFA.Utility (checkedLookup)
 
 
 -----------------------------------------------------------------------------------
@@ -156,6 +159,29 @@ filterSequWithSequData f (Sequ xs, SequData ys) = (Sequ xsf, SequData ysf)
 filterSequWithSequData2 :: ((Sec,a,b) -> Bool) -> (Sequ,SequData a,SequData b) -> (Sequ,SequData a,SequData b)
 filterSequWithSequData2 f (Sequ xs, SequData ys, SequData zs) = (Sequ xsf, SequData ysf, SequData zsf )
    where (xsf,ysf,zsf) = unzip3 $ filter f $ zip3 xs ys zs  
+
+-----------------------------------------------------------------------------------
+-- Utility Functions on Records 
+         
+
+getTime :: Record v a ->  TC Signal (Typ A T Tt) (Data (v :> Nil) a) 
+getTime (Record time _) = time
+
+getPTime :: PowerRecord v a ->  TC Signal (Typ A T Tt) (Data (v :> Nil) a) 
+getPTime (PowerRecord time _) = time
+
+getSig :: Show (v a) => Record v a -> SigId -> TC Signal (Typ UT UT UT) (Data (v :> Nil) a)   
+getSig (Record time sigMap) sigId = checkedLookup sigMap sigId
+
+getPSig :: Show (v a) => PowerRecord v a -> PPosIdx -> TC Signal (Typ A P Tt) (Data (v :> Nil) a)   
+getPSig (PowerRecord time pMap) idx = checkedLookup pMap idx
+
+-- | Use carefully -- removes signal jitter around zero 
+removeZeroNoise :: (V.Walker v, V.Storage v a, Ord a, Num a) => PowerRecord v a -> a -> PowerRecord v a        
+removeZeroNoise (PowerRecord time pMap) threshold = PowerRecord time (M.map f pMap)
+  where f sig = Sig.map g sig
+        g x | abs x < threshold = 0 
+            | otherwise = x
 
 -----------------------------------------------------------------------------------
 -- Various Class and Instance Definition for the different Sequence Datatypes 

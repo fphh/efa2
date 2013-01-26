@@ -23,7 +23,10 @@ import EFA.IO.ASCIIImport (modelicaASCIIImport)
 import EFA.IO.CSVImport (modelicaCSVImport)
 import qualified EFA.Signal.SequenceData as SD
 import qualified EFA.Signal.Plot as PL
-import EFA.Signal.Sequence (makeSequence, makeSequenceRaw,makeSeqFlowGraph, genSequ,addZeroCrossings,removeZeroTimeSections )
+import EFA.Signal.Sequence 
+  (makeSequence, makeSequenceRaw,makeSeqFlowGraph, 
+   genSequ,addZeroCrossings,removeZeroTimeSections, 
+   removeLowEnergySections,genSequFlow)
 import qualified EFA.Signal.Signal as Sig
 import EFA.Signal.Signal((.*),(.+),(./),(.-),neg)
 
@@ -36,16 +39,26 @@ import EFA.Graph.Draw -- (drawTopology)
 import Data.Monoid ((<>))
 
 import Debug.Trace
+ 
+ 
+---------------------------------------------------------------------------------------
+-- ## Model the System Topology
 
+-- Define Section Names
 
 sec0, sec1, sec2, sec3, sec4 :: Idx.Section
 sec0 :~ sec1 :~ sec2 :~ sec3 :~ sec4 :~ _ = Stream.enumFrom $ Idx.Section 0
 
+-- Define Node Names
+
 tank, con_engine, con_battery, battery, con_evs, con_motor, con_frontBrakes, con_chassis, drivingResistance, electricSystem, frontBrakes, vehicleInertia, con_frontBrakes, rearBrakes :: Idx.Node
 tank :~ con_engine :~ con_battery :~ battery :~ con_evs :~ con_motor :~ con_frontBrakes :~ con_chassis :~ drivingResistance :~ electricSystem :~ frontBrakes :~ vehicleInertia :~ rearBrakes :~ _ = Stream.enumFrom $ Idx.Node 0
 
+-- Helper Function for CheckedLookup in Record
 
-(!?) = checkedLookup
+
+
+-- Define System Topology
 
 topo :: TD.Topology
 topo = Gr.mkGraph ns (makeEdges es)
@@ -75,7 +88,15 @@ topo = Gr.mkGraph ns (makeEdges es)
               (con_frontBrakes, frontBrakes), -- brakes
               (con_chassis,rearBrakes), -- brakes
               (con_chassis, vehicleInertia)] -- inertia             
-
+             
+---------------------------------------------------------------------------------------
+ -- Topology State Analysis
+        
+sol = StateAnalysis.advanced topo             
+             
+             
+---------------------------------------------------------------------------------------
+-- Generate Set of Given Variables
 
 makeGiven initStorage xs =
   (EqGen.dtime Idx.initSection .= 1)
@@ -89,42 +110,35 @@ makeGiven initStorage xs =
 main :: IO ()
 main = do
   
-  -- ## import signals
+
+--------------------------------------------------------------------------------------- 
+-- ## Read signal from Csv-file, calculate Power Signals and Swap Sign if needed
   rec <- modelicaCSVImport "Vehicle_res_short.csv" :: IO (SD.Record [] Double)
   
-  -- Get imported Signals
-  let SD.Record time sigMap = rec 
-      sigIDList = M.toList sigMap
-
-  -- Plot imported Signals
-  -- mapM_ (\ (x,y) -> PL.xyplot (show x) time y) (take 50 $ drop 50 sigIDList)
-  -- mapM_ (\ (x,_) -> putStrLn(show x))  sigIDList -- sigIDList 
- --  PL.rPlot ("Roh",rec)  
-  
-
--- ## Identify Signale and calculate Power Signals
-  
   -- engine crankshaft
-  let engineSpeed = sigMap !? (SD.SigId "engine1.Speed")
-      engineTorque = neg $ sigMap !? (SD.SigId "engine1.flange_b.tau")
+  let get = SD.getSig rec 
+      time = SD.getTime rec
+    
+      engineSpeed = get (SD.SigId "engine1.Speed")
+      engineTorque = neg $ get (SD.SigId "engine1.flange_b.tau")
       
-      fuelPower = sigMap !? (SD.SigId "engine1.FuelPower")
+      fuelPower = get (SD.SigId "engine1.FuelPower")
       engineMechPower = engineSpeed.*engineTorque :: Sig.UTSigL
   
   -- generator
-      generatorSpeed = sigMap !? (SD.SigId "electricmotor2.speedsensor1.w")
-      generatorTorque =  sigMap !? (SD.SigId "electricmotor2.flange_a.tau")
-      generatorCurrent = sigMap !? (SD.SigId "electricmotor2.signalcurrent1.p.i")
-      generatorVoltage = sigMap !? (SD.SigId "electricmotor2.signalcurrent1.p.v")
+      generatorSpeed = get (SD.SigId "electricmotor2.speedsensor1.w")
+      generatorTorque =  get (SD.SigId "electricmotor2.flange_a.tau")
+      generatorCurrent = get (SD.SigId "electricmotor2.signalcurrent1.p.i")
+      generatorVoltage = get (SD.SigId "electricmotor2.signalcurrent1.p.v")
       
       generatorMechPower =  generatorSpeed .* generatorTorque
       generatorElectricPower =  generatorCurrent .* generatorVoltage
   
   -- battery
-      batteryPoleVoltage = sigMap !? (SD.SigId "battery1.pin_p.v")
-      batteryPoleCurrent = sigMap !? (SD.SigId "battery1.pin_p.i")                      
-      batteryInnerVoltage = sigMap !? (SD.SigId "battery1.constantvoltage1.v")                      
-      batteryInnerCurrent = sigMap !? (SD.SigId "battery1.constantvoltage1.i")                      
+      batteryPoleVoltage = get (SD.SigId "battery1.pin_p.v")
+      batteryPoleCurrent = get (SD.SigId "battery1.pin_p.i")                      
+      batteryInnerVoltage = get (SD.SigId "battery1.constantvoltage1.v")                      
+      batteryInnerCurrent = get (SD.SigId "battery1.constantvoltage1.i")                      
       
       batteryPolePower = batteryPoleVoltage.*batteryPoleCurrent
       batteryInnerPower = batteryInnerCurrent.*batteryInnerVoltage
@@ -134,64 +148,68 @@ main = do
       dcdcPowerLV = Sig.convert $ Sig.untype $ time -- .*(Sig.toScalar 0) 
       
   -- motor    
-      motorSpeed = sigMap !? (SD.SigId "electricmotor1.speedsensor1.w")
-      motorTorque =  sigMap !? (SD.SigId "electricmotor1.flange_a.tau") 
-      motorCurrent = sigMap !? (SD.SigId "electricmotor1.signalcurrent1.p.i")
-      motorVoltage = sigMap !? (SD.SigId "electricmotor1.signalcurrent1.p.v")
+      motorSpeed = get (SD.SigId "electricmotor1.speedsensor1.w")
+      motorTorque =  get (SD.SigId "electricmotor1.flange_a.tau") 
+      motorCurrent = get (SD.SigId "electricmotor1.signalcurrent1.p.i")
+      motorVoltage = get (SD.SigId "electricmotor1.signalcurrent1.p.v")
       
       motorMechPower =  motorSpeed .* motorTorque
       motorElectricPower =  motorCurrent.* motorVoltage
        
   -- gearbox
-      gearboxTorqueIn = sigMap !? (SD.SigId "gearbox1.flange_a.tau")
-      gearboxSpeedIn = sigMap !? (SD.SigId "gearbox1.inertia1.w")
+      gearboxTorqueIn = get (SD.SigId "gearbox1.flange_a.tau")
+      gearboxSpeedIn = get (SD.SigId "gearbox1.inertia1.w")
       
-      gearboxTorqueOut = sigMap !? (SD.SigId "gearbox1.flange_b.tau")
-      gearboxSpeedOut = sigMap !? (SD.SigId "gearbox1.inertia2.w")
+      gearboxTorqueOut = get (SD.SigId "gearbox1.flange_b.tau")
+      gearboxSpeedOut = get (SD.SigId "gearbox1.inertia2.w")
       
       gearboxPowerIn = gearboxTorqueIn.*gearboxSpeedIn
       gearboxPowerOut = gearboxTorqueOut.*gearboxSpeedOut
         
                         
   -- brake 1
-      brakePowerFront = sigMap !? (SD.SigId "brake1.lossPower")
-      brakeSpeedFront = sigMap !? (SD.SigId "brake1.w")
+      brakePowerFront = get (SD.SigId "brake1.lossPower")
+      brakeSpeedFront = get (SD.SigId "brake1.w")
 
   -- brake 2    
-      brakePowerRear = sigMap !? (SD.SigId "brake2.lossPower")
-      brakeSpeedRear = sigMap !? (SD.SigId "brake2.w")
+      brakePowerRear = get (SD.SigId "brake2.lossPower")
+      brakeSpeedRear = get (SD.SigId "brake2.w")
         
       
   -- wheel 1    
-      wheelTorqueFront = sigMap !? (SD.SigId "idealrollingwheel1.flangeR.tau")
+      wheelTorqueFront = get (SD.SigId "idealrollingwheel1.flangeR.tau")
       wheelSpeedFront = brakeSpeedFront
       
-      wheelForceFront = sigMap !? (SD.SigId "idealrollingwheel1.flangeT.f")
+      wheelForceFront = get (SD.SigId "idealrollingwheel1.flangeT.f")
       
       wheelHubPowerFront = wheelTorqueFront.*wheelSpeedFront
       tirePowerFront = wheelForceFront.*speed
       
   -- wheel2    
-      wheelTorqueRear = sigMap !? (SD.SigId "idealrollingwheel2.flangeR.tau")
+      wheelTorqueRear = get (SD.SigId "idealrollingwheel2.flangeR.tau")
       wheelSpeedRear = brakeSpeedRear
       
-      wheelForceRear = sigMap !? (SD.SigId "idealrollingwheel2.flangeT.f")
+      wheelForceRear = get (SD.SigId "idealrollingwheel2.flangeT.f")
 
       wheelHubPowerRear = wheelTorqueRear.*wheelSpeedRear
       tirePowerRear = wheelForceRear.*speed      
                       
       
  -- chassis       
-      frontAxleForce =  sigMap !? (SD.SigId "chassis1.flange_a.f")
-      rearAxleForce =  sigMap !? (SD.SigId "chassis1.flange_a1.f")                  
-      speed = sigMap !? (SD.SigId "speedsensor1.v") 
+      frontAxleForce =  get (SD.SigId "chassis1.flange_a.f")
+      rearAxleForce =  get (SD.SigId "chassis1.flange_a1.f")                  
+      speed = get (SD.SigId "speedsensor1.v") 
       frontAxlePower =  frontAxleForce.*speed        
       rearAxlePower =  rearAxleForce.*speed
       kineticPower = (frontAxlePower.+rearAxlePower).-resistancePower
                       
--- driving resistance              
-      resistanceForce = sigMap !? (SD.SigId "drivingresistance1.force1.f")
+ -- driving resistance
+      resistanceForce = get (SD.SigId "drivingresistance1.force1.f")
       resistancePower = speed.* resistanceForce                 
+  
+  
+  -- Manual plotting of selected signals
+  
   {-
   PL.xyplot "engineTorque" time engineTorque      
   PL.xyplot "engineSpeed" time engineSpeed  
@@ -208,15 +226,15 @@ main = do
   PL.xyplot "batteryInnerVoltage" time batteryInnerVoltage  
 
   -}
-  -- ## Calculate Power Signals  
 
-
-  -- ## Populate Power Record
+      
+  ---------------------------------------------------------------------------------------
+  -- ## Assign Signals to Power Positions in Topology
   let pRec :: SD.PowerRecord [] Double
       pRec = SD.PowerRecord (Sig.fromList $ Sig.toList time) 
                             (M.map (Sig.fromList . Sig.toList) pMap)
              
-      -- setEdgePowers       
+
       -- setEdgePowers :: Idx.Node Idx.Node Sig.UTSigL Sig.UTSigL
       setEdgePowers node1 node2 x y =  [(SD.PPosIdx node1 node2, x),
                                         (SD.PPosIdx node2 node1, y)]
@@ -225,7 +243,7 @@ main = do
       
       -- Vorschläge:
       --   Edge-Synonyme einführen, die einem Namen entsprechen
-      --   eine beladungsoperation pro Kante (setEdgePowers)
+      --   eine beladungsOperation pro Kante (setEdgePowers)
       --   Kantentypen mit Wirkungsgrad 1, eventuell mit stateanalysis true or false
       
       pMap = M.fromList (concat pList)
@@ -249,25 +267,38 @@ main = do
   
   -- mapM_ (\ (x,y) -> PL.xyplot (show x) time y) (concat pList)
   
-  -- ## Analysis
-  let sol = StateAnalysis.advanced topo
+  ---------------------------------------------------------------------------------------
+  -- ## Pre-Processing Signals 
+  let 
   
-      -- seq = chopAtZeroCrossingsPowerRecord pRec
-      -- sequFRec = makeSequence pRec
+      -- Add ZeroCrossings and Slice Power Signals in Sections
+      (sequA,sequPRecA) = makeSequenceRaw pRec  
       
-      (sequ, sequPRec) = genSequ  $ addZeroCrossings pRec
-      (sequFilt, SD.SequData l) = makeSequenceRaw pRec  -- removeZeroTimeSections $ genSequ  $ addZeroCrossings pRec
+      -- Remove Sections with Zero Time Duration
+      (sequB,sequPRecB)= removeZeroTimeSections (sequA,sequPRecA)
       
-      (SD.Sequ sList) = sequ
-      (SD.Sequ sfList) = sequFilt
+      -- Integrate PowerRecords in Sections to FlowRecords
+      sequFRecB = genSequFlow sequPRecB
+       
+      -- Drop Sections with negligible EnergyFlow
+      (sequ, sequPRec, sequFRec) = removeLowEnergySections (sequB,sequPRecB,sequFRecB) (100) 
+      -- (sequ, sequPRec, sequFRec) = (sequB,sequPRecB,sequFRecB) 
       
-      ds =  map f l
-      f (SD.PowerRecord t ds) =
-        (sum $ Sig.toList t, M.toList $ M.map (sum . Sig.toList) ds)
+      
+  ---------------------------------------------------------------------------------------
+   -- ## Provide solver with Given Variables, Start Solver and generate Sequence Flow Graph     
+      
+   
+      
+  let ds =  fmap f sequFRec
+      f (SD.FlRecord t ds) = (sum $ Sig.toList t, M.toList $ M.map (sum . Sig.toList) ds)
+
 
       -- SD.Sequ s = sequ
       -- sequTopo = makeSeqFlowGraph topo sequFRec
       -- env = EqGen.solve (makeGiven 12.34567 ds)  sequTopo
+
+  
 
   -- print env
   -- print sequ
@@ -276,8 +307,6 @@ main = do
   --Rep.report [Rep.RAll] ("Test",pRec)    
   Rep.report [] ("Sequenz",sequ)    
   print sequ
-  Rep.report [] ("Sequenz",sequFilt)    
-  print sequFilt
   --Rep.report sequ
   --print $ length sList
 --   print sequPRec
