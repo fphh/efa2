@@ -184,7 +184,12 @@ removeZeroNoise (PowerRecord time pMap) threshold = PowerRecord time (M.map f pM
         g x | abs x < threshold = 0 
             | otherwise = x
 
-
+-- | Generate a new Record with selected signals
+selectRecord :: Show (v a) => Record v a -> [SigId] ->  Record v a
+selectRecord rec@(Record time pMap) xs = Record time  (M.fromList $ zip xs (map f xs))
+  where f x = getSig rec x
+        
+        
 -- | Split Record in even Junks                          
 splitRecord ::  (Num a, Ord a, V.Walker v, V.Storage v a, BSum a) => Record v a -> Int -> [Record v a]                          
 splitRecord (Record time pMap) n  = recList
@@ -204,6 +209,15 @@ sortSigList  sigList = L.sortBy g  sigList
         g (_,x) (_,y) | S.sigSum x > S.sigSum y = GT
         g (_,x) (_,y) | S.sigSum x < S.sigSum y = LT
         g (_,x) (_,y) | S.sigSum x == S.sigSum y = EQ
+
+-- | Split PowerRecord in even Junks                          
+splitPowerRecord ::  (Num a, Ord a, V.Walker v, V.Storage v a, BSum a) => PowerRecord v a -> Int -> [PowerRecord v a]                          
+splitPowerRecord (PowerRecord time pMap) n  = recList
+  where (recList, _) = f ([],M.toList pMap)
+        f (rs, []) = (rs,[])        
+        f (rs, xs) = f (rs ++ [PowerRecord time (M.fromList $ take n xs)], drop n xs)
+ 
+
 
 -----------------------------------------------------------------------------------
 -- Various Class and Instance Definition for the different Sequence Datatypes 

@@ -10,7 +10,7 @@ import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Data as D
 import qualified EFA.Signal.Vector as SV
-import EFA.Signal.SequenceData (PowerRecord(PowerRecord), SequPwrRecord, SequData(SequData),Record(Record),splitRecord)
+import EFA.Signal.SequenceData (PowerRecord(PowerRecord), SequPwrRecord, SequData(SequData),Record(Record),splitRecord,splitPowerRecord)
 import EFA.Signal.Signal (TC, Signal, toSigList, getDisplayType)
 import EFA.Signal.Base (BSum)
 
@@ -303,6 +303,18 @@ rPlotSplit (name,r) n = mapM_ rPlot $ zip titles recList
         recList = (splitRecord r n)
         titles = map (\ x -> name ++ " - Part " ++ show x)  [1 .. (length recList)]
 
+rPlotSplitPower :: (Fractional a,
+                      SV.Walker v,
+                      SV.Storage v a,
+                      SV.FromList v,
+                      Tuple.C a,
+                      Atom.C a,Ord a, BSum a) => 
+              (String, PowerRecord v a) -> Int -> IO ()     
+rPlotSplitPower (name,r) n = mapM_ rPlot $ zip titles recList
+  where 
+        recList = (splitPowerRecord r n)
+        titles = map (\ x -> name ++ " - Part " ++ show x)  [1 .. (length recList)]
+
 rPlotSingle ::
    (Show k, TDisp typ0, TDisp typ1,
     SV.Walker v, SV.FromList v,
@@ -325,7 +337,7 @@ rPlotSingle rName time pMap =
 instance RPlot SequPwrRecord where
    rPlotCore _sqName (SequData rs) = concat $ zipWith rPlotCore nameList rs
     where
-      nameList = map (\ x -> "PowerRecord of " ++ show x) [Idx.Section 1 ..]
+      nameList = map (\ x -> "Record of " ++ show x) [Idx.Section 1 ..]
 
 
 class Atom.C (Value tc) => AxisLabel tc where
