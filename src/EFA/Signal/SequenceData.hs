@@ -12,12 +12,12 @@ import qualified EFA.Signal.Data as D
 import qualified EFA.Signal.Vector as V
 import EFA.Report.Base (DispStorage1)
 import EFA.Signal.Signal
-          (TC, Signal, SignalIdx, DTVal, FVal, TSig, DTFSig, FFSig, UTSigL)
+          (TC, Signal, SignalIdx, DTVal, FVal, TSig, DTFSig, FFSig, UTSigL, neg)
 import qualified EFA.Signal.Signal as Sig (map)
           
 import EFA.Signal.Typ (Typ, A, P, T, Tt, UT)
 import EFA.Signal.Data (Data, (:>), Nil)
-import EFA.Signal.Base (Sign, Val, BSum)
+import EFA.Signal.Base (Sign, Val, BSum, DArith0,BProd)
 
 import EFA.Report.Report (ToTable(toTable), Table(..), TableData(..), toDoc, tvcat, autoFormat)
 import Text.Printf (PrintfArg)
@@ -30,6 +30,7 @@ import qualified Data.Vector.Unboxed as UV
 import qualified Data.Vector as VB
 import qualified Data.List.HT as HTL
 import qualified Data.List as L
+import qualified Data.String.Utils as Str
 import qualified Data.List.Match as Match
 import Data.NonEmpty ((!:))
 import Data.Ratio (Ratio, (%))
@@ -218,6 +219,46 @@ splitPowerRecord (PowerRecord time pMap) n  = recList
         f (rs, xs) = f (rs ++ [PowerRecord time (M.fromList $ take n xs)], drop n xs)
  
 
+-----------------------------------------------------------------------------------
+-- Functions to support Signal Selection
+ 
+-- | List of Operations for pre-processing signals
+-- | TODO - a gadt construction would be awesome to provide parameters        
+data SignalOps = Negate | RemoveZeroNoise | Filter | Offset          
+        
+-- | create a Record of selected, and sign corrected signals
+extractLogSignals ::  (V.Walker v,
+                      V.Storage v a,
+                      DArith0 a, 
+                      Show (v a)) => 
+                      Record v a -> [(SigId, [SignalOps])] -> Record  v a        
+extractLogSignals rec@(Record time _) idList = Record time (M.fromList $ map f idList)
+  where f (SigId sigId,opList) = (SigId sigId, foldl g  signal opList)
+          where -- newId = SigId $ Str.replace "." "_" sigId              
+                signal = getSig rec (SigId sigId)              
+                g  sig Negate = neg sig
+                g  sig _ = sig
+
+data PowerCalc a = Take a | Extra a | Mult a | Add a | Subtract a
+
+generatePowerRecord :: (Show (v a),
+                        V.Zipper v,
+                      V.Walker v,
+                      V.Storage v a,
+                      BProd a a, 
+                      BSum a) => 
+                       Record v a -> Record v a -> [(PPosIdx, [PowerCalc String],[PowerCalc String])] -> PowerRecord v a 
+generatePowerRecord rec@(Record time _) eRec idList = PowerRecord time (M.fromList $ concat $ map f idList) 
+  where f (pposIdx, calcListA, calcListB) = [(pposIdx, S.setType $ foldl g  (S.untype time) calcListA),
+                                 (swap pposIdx, S.setType $ foldl g  (S.untype time) calcListB)]
+          where 
+                g  _   (Take id) = getSig rec (SigId id)
+                g  _   (Extra id) = getSig eRec (SigId id)
+                g  sig (Mult id) = sig S..* (getSig rec (SigId id))
+                g  sig (Add id) = sig S..+ (getSig rec (SigId id))
+                g  sig (Subtract id) = sig S..- (getSig rec (SigId id))
+                swap (PPosIdx n1 n2) = PPosIdx n2 n1
+                
 
 -----------------------------------------------------------------------------------
 -- Various Class and Instance Definition for the different Sequence Datatypes 
