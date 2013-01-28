@@ -31,7 +31,7 @@ import EFA.Signal.Signal((.*),(.+),(.-),neg,disp)
 
 import qualified EFA.Report.Report as Rep
 
-import EFA.Graph.Draw -- (drawTopology)
+import qualified EFA.Graph.Draw as Draw-- (drawTopology)
 
 import Data.Monoid ((<>))
 
@@ -384,10 +384,10 @@ main = do
   -- print env
 
   -- Show Sequence Flow Graph
-  --drawTopologySimple sequTopo
+  Draw.sequFlowGraph sequTopo
 
   -- Show Sequence Flow with Numbers
-  drawTopology sequTopo env
+  -- Draw.sequFlowGraphWithEnv sequTopo env
 --  PL.rPlot ("VehicleSignals",recVehicle)    
   
 

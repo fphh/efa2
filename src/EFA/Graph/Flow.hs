@@ -47,16 +47,15 @@ genFlowTopology topo (FlowState fs) =
    labEdges topo
 
 
-mkSectionTopology :: Idx.Section -> FlowTopology -> SecTopology
+mkSectionTopology :: Idx.Section -> FlowTopology -> SequFlowGraph
 mkSectionTopology sid = Gr.ixmap (Idx.SecNode sid)
 
-genSectionTopology :: SequFlowTops -> SequData SecTopology
+genSectionTopology :: SequFlowTops -> SequData SequFlowGraph
 genSectionTopology = zipWithSecIdxs mkSectionTopology
 
 
-copySeqTopology :: SequData SecTopology -> SequFlowGraph
+copySeqTopology :: SequData SequFlowGraph -> SequFlowGraph
 copySeqTopology =
-   Gr.emap (ELabel OriginalEdge) .
    Fold.foldl Gr.union Gr.empty
 
 
@@ -68,14 +67,13 @@ mkIntersectionEdges node startSec stores =
    concatMap
       (\secin ->
          map (\secout ->
-                (Edge (Idx.SecNode secin node) (Idx.SecNode secout node), e)) $
+                (Edge (Idx.SecNode secin node) (Idx.SecNode secout node), Dir)) $
          M.keys $ snd $ M.split secin outs) $
    startSec : M.keys ins
   where (ins, outs) = M.partition (In ==) stores
-        e = defaultELabel { edgeType = IntersectionEdge }
 
 
-mkSequenceTopology :: SequData SecTopology -> SequFlowGraph
+mkSequenceTopology :: SequData SequFlowGraph -> SequFlowGraph
 mkSequenceTopology sd = res
   where sqTopo = copySeqTopology sd
         initNode = Idx.SecNode Idx.initSection

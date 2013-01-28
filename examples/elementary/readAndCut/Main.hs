@@ -22,7 +22,7 @@ import qualified EFA.Signal.SequenceData as SD
 import EFA.Signal.Sequence (makeSequence, makeSeqFlowGraph)
 import qualified EFA.Signal.Signal as Sig
 
-import EFA.Graph.Draw (drawTopology)
+import qualified EFA.Graph.Draw as Draw
 
 
 sec0, sec1, sec2, sec3, sec4 :: Idx.Section
@@ -73,4 +73,4 @@ main = do
       env = EqGen.solve given sequTopo
 
   -- print pRec
-  drawTopology sequTopo env
+  Draw.sequFlowGraphAbsWithEnv sequTopo env

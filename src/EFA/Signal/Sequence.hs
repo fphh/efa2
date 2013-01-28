@@ -196,6 +196,12 @@ genSequ pRec = removeNilSections (Sequ $ sequ++[lastSec], SequData pRecs)
         -- Incoming rList is only one Point long -- append last sample to last section
         recyc rsig _ (((lastIdx,idx),sq),(secRSig, sqRSig)) | (S.rlen rsig) >=1 = (((lastIdx,idx+1),sq),(secRSig .++ rsig, sqRSig))
 
+-- <<<<<<< HEAD
+--         recyc rsig _ (((lastIdx,idx),sq),(secRSig, sqRSig)) | (S.rlen rsig) >=1 = (((lastIdx,idx+1),sq),(secRSig .++ rsig, sqRSig))
+-- =======
+--         recyc rSig _ (((lastIdx,idx),sequ),(secRSig, sequRSig)) | (S.rlen rSig) >=1 = (((lastIdx,idx+1),sequ),(secRSig .++ rSig, sequRSig))
+-- >>>>>>> milestone2.1
+
         -- Incoming rList is empty -- return result
         recyc _ _ acc = acc
         

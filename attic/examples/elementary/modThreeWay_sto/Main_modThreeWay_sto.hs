@@ -60,12 +60,13 @@ main = do
 
       time = S.fromList ([0, 0] ++ (concatMap (replicate 3) [1..10]))
 
-      pMap =  M.fromList [ (PPosIdx 0 1, S.fromList $ concat $ replicate n (s01 ++ s01')),
-                           (PPosIdx 1 0, S.fromList $ concat $ replicate n (s10 ++ s10')),
-                           (PPosIdx 1 2, S.fromList $ concat $ replicate n (s12 ++ s12')),
-                           (PPosIdx 2 1, S.fromList $ concat $ replicate n (s21 ++ s21')),
-                           (PPosIdx 1 3, S.fromList $ concat $ replicate n (s13 ++ s13')),
-                           (PPosIdx 3 1, S.fromList $ concat $ replicate n (s31 ++ s31')) ]
+      pMap =  M.fromListWith (error "duplicate keys")
+                [ (PPosIdx 0 1, S.fromList $ concat $ replicate n (s01 ++ s01')),
+                  (PPosIdx 1 0, S.fromList $ concat $ replicate n (s10 ++ s10')),
+                  (PPosIdx 1 2, S.fromList $ concat $ replicate n (s12 ++ s12')),
+                  (PPosIdx 2 1, S.fromList $ concat $ replicate n (s21 ++ s21')),
+                  (PPosIdx 1 3, S.fromList $ concat $ replicate n (s13 ++ s13')),
+                  (PPosIdx 3 1, S.fromList $ concat $ replicate n (s31 ++ s31')) ]
 
       (sqEnvs, sqTopo) = makeSequence (PowerRecord time pMap) topo
 
