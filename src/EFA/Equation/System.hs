@@ -300,8 +300,8 @@ getInnersectionStorages = getStorages format
 -}
 getInnersectionStorages :: TD.DirSequFlowGraph -> [[(Idx.SecNode, StDir)]]
 getInnersectionStorages = getStorages format
-  where format ([n], s, []) = (s, InDir)
-        format ([], s, [n]) = (s, OutDir)
+  where format ([_], s, []) = (s, InDir)
+        format ([], s, [_]) = (s, OutDir)
         format ([], s, [])  = (s, NoDir)
         format n@(_, _, _)  = error ("getInnersectionStorages: " ++ show n)
 

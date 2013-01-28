@@ -149,7 +149,7 @@ type DirSequFlowGraph = Graph Idx.SecNode NodeType ()
 
 pathExists :: Idx.Node -> Idx.Node -> FlowTopology -> Bool
 pathExists _ _ topo | Gr.isEmpty topo = False
-pathExists a b topo | a == b = True 
+pathExists a b _    | a == b = True 
 pathExists a b topo = any f s
   where s = map fst $ filter q $ Gr.lsuc topo a
         q (_, Dir) = True
