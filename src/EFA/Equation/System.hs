@@ -59,7 +59,7 @@ import Data.Tuple.HT (snd3)
 import Data.Ord (comparing)
 
 
-import Debug.Trace
+-- import Debug.Trace
 
 type EqSysEnv s a = Env.Env Env.SingleRecord (Sys.Variable s a)
 
@@ -219,7 +219,7 @@ fromTopology g = mconcat $
 makeInnerSectionEquations ::
   (Eq a, Fractional a) =>
   TD.DirSequFlowGraph -> EquationSystem s a
-makeInnerSectionEquations g = trace (show es) $ mconcat $
+makeInnerSectionEquations g = mconcat $
   makeEnergyEquations (map fst es) :
   makeEdgeEquations es :
   makeNodeEquations g :
@@ -253,7 +253,7 @@ makeNodeEquations ::
   (Eq a, Fractional a) =>
   TD.DirSequFlowGraph -> EquationSystem s a
 makeNodeEquations = fold . M.mapWithKey f . Gr.nodes
-   where f n (ins, _, outs) = trace (show ins ++ show outs) $
+   where f n (ins, _, outs) =
             let -- this variable is used again in makeStorageEquations
                 varsumin = insumvar n
                 varsumout = outsumvar n  -- and this, too.
@@ -375,7 +375,7 @@ mkSplitFactorEquations ::
    (node -> ExprWithVars s a) ->
    (node -> ExprWithVars s a) ->
    NonEmpty.T [] node -> EquationSystem s a
-mkSplitFactorEquations s ef xf ns = trace (show $ NonEmpty.flatten ns)
+mkSplitFactorEquations s ef xf ns =
    (s =.= NonEmpty.sum (fmap ef ns))
    <>
    foldMap (\n -> ef n =.= s * xf n) ns

@@ -12,8 +12,6 @@ import EFA.Signal.SequenceData
 
 import EFA.Utility (idxList)
 
-import EFA.Report.Report
-
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
 
@@ -46,12 +44,18 @@ titleList = [t]
 pmapList :: [M.Map PPosIdx (S.TC s t (Data ([] :> Nil) Double))]
 pmapList = [pmap]
 
+recList :: [PowerRecord [] Double]
 recList = map (PowerRecord time) pmapList  
 
+list ::
+  [(Int, (String, (PowerRecord [] Double, (Sequ, SequPwrRecord))))]
 list = idxList $
   zip titleList 
       (zip recList (map  (genSequ . addZeroCrossings) recList))
 
+f :: 
+  (Num a, Show a2, Show a1, Show a) =>
+  (a, ([Char], (ListPowerRecord, (a1, a2)))) -> IO ()
 f (idx, (title, (pRec, (sq, sqRec)))) = do
   putStrLn ""
   putStrLn $ "Test " ++ show (idx + 1) ++ ": " ++ title
