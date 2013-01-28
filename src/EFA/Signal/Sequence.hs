@@ -104,7 +104,9 @@ genSequFlow sqPRec = fmap recFullIntegrate sqPRec
 
 removeZeroTimeSections :: (Sequ,SequData SecPowerRecord) -> (Sequ,SequData SecPowerRecord)
 removeZeroTimeSections (xs, ys)  = filterSequWithSequData f (xs, ys) 
-   where  f (_,PowerRecord time pMap) = (S.head time) /= (S.last time) 
+   where  -- f (_,PowerRecord time _) = (S.head time) /= (S.last time) 
+          f (_,PowerRecord time _) = (fst $ maybe err id $ S.viewL time) /= (snd $ maybe err id $ S.viewR time) 
+          err = error "Error in SequenceData.hs / removeZeroTimeSections -- empty head or tail"
 
 
 -- | Drop Sections with negligible energy flow 
@@ -173,30 +175,30 @@ genSequ pRec = removeNilSections (Sequ $ sequ++[lastSec], SequData pRecs)
            ((Sec, [Sec]), (RSig, [RSig]))
         -- recyc rSig x1 (((lastIdx,idx),sequ),(secRSig, sequRSig)) | rSig /= mempty = recyc (S.rtail rSig) (S.rhead rSig) (g $ stepDetect x1 x2, f $ stepDetect x1 x2)
         -- Incoming rSig is at least two samples long -- detect changes
-        recyc rSig x1 (((lastIdx,idx),sequ),(secRSig, sequRSig)) | (S.rlen rSig) >=2 = recyc (S.rtail rSig) (S.rhead rSig) (g $ stepDetect x1 x2, f $ stepDetect x1 x2)
+        recyc rsig x1 (((lastIdx,idx),sq),(secRSig, sqRSig)) | (S.rlen rsig) >=2 = recyc (S.rtail rsig) (S.rhead rsig) (g $ stepDetect x1 x2, f $ stepDetect x1 x2)
           where
-            x2 = S.rhead rSig
+            x2 = S.rhead rsig
             xs1 = rsingleton x1
             xs2 = rsingleton x2
 
             f :: EventType -> (RSig, [RSig])
-            f LeftEvent = (xs1.++xs2, sequRSig ++ [secRSig])           -- add actual Interval to next section
-            f RightEvent = (xs2, sequRSig ++ [secRSig .++ xs2])     --add actual Interval to last section
-            f MixedEvent = (xs2, sequRSig ++ [secRSig] ++ [xs1 .++ xs2]) -- make additional Mini--Section
-            f NoEvent = (secRSig .++ xs2, sequRSig)                  -- continue incrementing
+            f LeftEvent = (xs1.++xs2, sqRSig ++ [secRSig])           -- add actual Interval to next section
+            f RightEvent = (xs2, sqRSig ++ [secRSig .++ xs2])     --add actual Interval to last section
+            f MixedEvent = (xs2, sqRSig ++ [secRSig] ++ [xs1 .++ xs2]) -- make additional Mini--Section
+            f NoEvent = (secRSig .++ xs2, sqRSig)                  -- continue incrementing
 
             g :: EventType -> (Sec, [Sec])
-            g LeftEvent = ((idx, idx+1), sequ ++ [(lastIdx, idx)])
-            g RightEvent = ((idx+1, idx+1), sequ ++ [(lastIdx, idx+1)])
-            g MixedEvent = ((idx+1, idx+1), sequ ++ [(lastIdx, idx)] ++ [(idx, idx+1)])
-            g NoEvent = ((lastIdx, idx+1), sequ)
+            g LeftEvent = ((idx, idx+1), sq ++ [(lastIdx, idx)])
+            g RightEvent = ((idx+1, idx+1), sq ++ [(lastIdx, idx+1)])
+            g MixedEvent = ((idx+1, idx+1), sq ++ [(lastIdx, idx)] ++ [(idx, idx+1)])
+            g NoEvent = ((lastIdx, idx+1), sq)
 
         -- Incoming rList is only one Point long -- append last sample to last section
-        recyc rSig x1 (((lastIdx,idx),sequ),(secRSig, sequRSig)) | (S.rlen rSig) >=1 = (((lastIdx,idx+1),sequ),(secRSig .++ rSig, sequRSig))
+        recyc rsig _ (((lastIdx,idx),sq),(secRSig, sqRSig)) | (S.rlen rsig) >=1 = (((lastIdx,idx+1),sq),(secRSig .++ rsig, sqRSig))
 
         -- Incoming rList is empty -- return result
         recyc _ _ acc = acc
-
+        
 
 -- | Function to remove Nil-Sections which have same start and stop Index
 removeNilSections :: (Sequ,SequPwrRecord) ->   (Sequ, SequPwrRecord)
@@ -217,6 +219,7 @@ stepDetect  (t1,ps1) (t2,ps2) = f
            | S.any (==LeavesZeroStep) stepList && (not $ S.any (==BecomesZeroStep) stepList) = LeftEvent
            | (not $ S.any (==LeavesZeroStep) stepList) && S.any (==BecomesZeroStep) stepList = RightEvent
            | S.any (==LeavesZeroStep) stepList && S.any (==BecomesZeroStep) stepList = MixedEvent
+           | otherwise = error ("Sequence.hs, stepDetect unforeseen case")                                                                            
 
 
 -- | Function to detect and classify a step over one signal
@@ -258,7 +261,7 @@ getZeroCrossings rs1@(t1,ps1) rs2 = ((S.singleton t1) .++ zeroCrossingTimes,(S.s
 
 calcZeroPowers :: RSamp1 -> RSamp1 -> TSigL -> TZeroSamp1L -> PSamp2LL
 calcZeroPowers (t1,(TC (Data ps1))) (t2,(TC (Data ps2))) zeroCrossingTimes (TC (Data tz)) = S.transpose2 $ fromSigList sigList
-               where g p1 p2 tz = f (toSample p1) (toSample p2) (toSample tz)
+               where g p1 p2 tz2 = f (toSample p1) (toSample p2) (toSample tz2)
                      sigList = L.zipWith3 g ps1 ps2 tz :: [PSigL]
 
                      f :: PSamp -> PSamp -> TZeroSamp -> PSigL

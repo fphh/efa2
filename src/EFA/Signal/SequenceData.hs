@@ -12,7 +12,7 @@ import qualified EFA.Signal.Data as D
 import qualified EFA.Signal.Vector as V
 import EFA.Report.Base (DispStorage1)
 import EFA.Signal.Signal
-          (TC, Signal, SignalIdx, DTVal, FVal, TSig, DTFSig, FFSig, UTSigL, neg)
+          (TC, Signal, SignalIdx, DTVal, FVal, DTFSig, FFSig, neg)
 import qualified EFA.Signal.Signal as Sig (map)
           
 import EFA.Signal.Typ (Typ, A, P, T, Tt, UT)
@@ -27,10 +27,10 @@ import System.Random (Random)
 
 import qualified Data.Map as M
 import qualified Data.Vector.Unboxed as UV
-import qualified Data.Vector as VB
+-- import qualified Data.Vector as VB
 import qualified Data.List.HT as HTL
 import qualified Data.List as L
-import qualified Data.String.Utils as Str
+-- import qualified Data.String.Utils as Str
 import qualified Data.List.Match as Match
 import Data.NonEmpty ((!:))
 import Data.Ratio (Ratio, (%))
@@ -140,6 +140,7 @@ zipWithSecIdxs f =
 -----------------------------------------------------------------------------------
 -- Utility Functions on Sequence Data
          
+   
          
 -- | PG Diskussion : 
 -- |        Sollte Sequ nicht auch SequData verwenden, dann würden die Utility - Funktionen hier auch funktionieren           
@@ -173,10 +174,10 @@ getPTime :: PowerRecord v a ->  TC Signal (Typ A T Tt) (Data (v :> Nil) a)
 getPTime (PowerRecord time _) = time
 
 getSig :: Show (v a) => Record v a -> SigId -> TC Signal (Typ UT UT UT) (Data (v :> Nil) a)   
-getSig (Record time sigMap) sigId = checkedLookup sigMap sigId
+getSig (Record _ sigMap) sigId = checkedLookup sigMap sigId
 
 getPSig :: Show (v a) => PowerRecord v a -> PPosIdx -> TC Signal (Typ A P Tt) (Data (v :> Nil) a)   
-getPSig (PowerRecord time pMap) idx = checkedLookup pMap idx
+getPSig (PowerRecord _ pMap) idx = checkedLookup pMap idx
 
 -- | Use carefully -- removes signal jitter around zero 
 removeZeroNoise :: (V.Walker v, V.Storage v a, Ord a, Num a) => PowerRecord v a -> a -> PowerRecord v a        
@@ -187,7 +188,7 @@ removeZeroNoise (PowerRecord time pMap) threshold = PowerRecord time (M.map f pM
 
 -- | Generate a new Record with selected signals
 selectRecord :: Show (v a) => Record v a -> [SigId] ->  Record v a
-selectRecord rec@(Record time pMap) xs = Record time  (M.fromList $ zip xs (map f xs))
+selectRecord rec@(Record time _ ) xs = Record time  (M.fromList $ zip xs (map f xs))
   where f x = getSig rec x
         
         
@@ -206,10 +207,7 @@ sortSigList ::  (Num a,
                       BSum a) =>
                 [ (SigId,TC Signal (Typ UT UT UT) (Data (v :> Nil) a))] ->  [(SigId, TC Signal (Typ UT UT UT) (Data (v :> Nil) a))]
 sortSigList  sigList = L.sortBy g  sigList
-  where
-        g (_,x) (_,y) | S.sigSum x > S.sigSum y = GT
-        g (_,x) (_,y) | S.sigSum x < S.sigSum y = LT
-        g (_,x) (_,y) | S.sigSum x == S.sigSum y = EQ
+  where g (_,x) (_,y) = compare (S.sigSum x) (S.sigSum y) 
 
 -- | Split PowerRecord in even Junks                          
 splitPowerRecord ::  (Num a, Ord a, V.Walker v, V.Storage v a, BSum a) => PowerRecord v a -> Int -> [PowerRecord v a]                          
@@ -252,14 +250,13 @@ generatePowerRecord rec@(Record time _) eRec idList = PowerRecord time (M.fromLi
   where f (pposIdx, calcListA, calcListB) = [(pposIdx, S.setType $ foldl g  (S.untype time) calcListA),
                                  (swap pposIdx, S.setType $ foldl g  (S.untype time) calcListB)]
           where 
-                g  _   (Take id) = getSig rec (SigId id)
-                g  _   (Extra id) = getSig eRec (SigId id)
-                g  sig (Mult id) = sig S..* (getSig rec (SigId id))
-                g  sig (Add id) = sig S..+ (getSig rec (SigId id))
-                g  sig (Subtract id) = sig S..- (getSig rec (SigId id))
+                g  _   (Take idx) = getSig rec (SigId idx)
+                g  _   (Extra idx) = getSig eRec (SigId idx)
+                g  sig (Mult idx) = sig S..* (getSig rec (SigId idx))
+                g  sig (Add idx) = sig S..+ (getSig rec (SigId idx))
+                g  sig (Subtract idx) = sig S..- (getSig rec (SigId idx))
                 swap (PPosIdx n1 n2) = PPosIdx n2 n1
-                
-
+          
 -----------------------------------------------------------------------------------
 -- Various Class and Instance Definition for the different Sequence Datatypes 
 

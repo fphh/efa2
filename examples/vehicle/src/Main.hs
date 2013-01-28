@@ -11,7 +11,6 @@ import EFA.Example.Utility (edgeVar, makeEdges, (.=))
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
-import EFA.Utility(checkedLookup)
 
 import qualified EFA.Graph as Gr
 import qualified EFA.Graph.Topology as TD
@@ -19,28 +18,24 @@ import qualified EFA.Graph.Topology.Index as Idx
 
 import qualified EFA.Equation.System as EqGen
 
-import EFA.IO.ASCIIImport (modelicaASCIIImport)
 import EFA.IO.CSVImport (modelicaCSVImport)
 import qualified EFA.Signal.SequenceData as SD
-import EFA.Signal.SequenceData (SigId(SigId), PowerCalc(Extra),PowerCalc (Take), PowerCalc(Mult), PPosIdx(PPosIdx)) 
-import EFA.Signal.SequenceData(SignalOps(Negate))
+import EFA.Signal.SequenceData (SigId(SigId), PowerCalc(Extra),PowerCalc (Take), PowerCalc(Mult), PPosIdx(PPosIdx),SignalOps(Negate)) 
 import qualified EFA.Signal.Plot as PL
 import EFA.Signal.Sequence 
-  (makeSequence, makeSequenceRaw,makeSeqFlowGraph, 
-   genSequ,addZeroCrossings,removeZeroTimeSections, 
+  (makeSequenceRaw,makeSeqFlowGraph, 
+   removeZeroTimeSections, 
    removeLowEnergySections,genSequFlow)
 import qualified EFA.Signal.Signal as Sig
-import EFA.Signal.Signal((.*),(.+),(./),(.-),neg,disp)
+import EFA.Signal.Signal((.*),(.+),(.-),neg,disp)
 
 import qualified EFA.Report.Report as Rep
-
-import qualified EFA.Signal.Base as SB
 
 import EFA.Graph.Draw -- (drawTopology)
 
 import Data.Monoid ((<>))
 
-import Debug.Trace
+
  
 
 
@@ -85,7 +80,8 @@ topo = Gr.mkGraph ns (makeEdges es)
               (con_chassis,rearBrakes), -- brakes
               (con_chassis, vehicleInertia)] -- inertia             
 
-sol = StateAnalysis.advanced topo             
+sol :: [TD.FlowTopology]
+sol = StateAnalysis.advanced topo    
 
 main :: IO ()
 main = do
@@ -143,8 +139,6 @@ main = do
 -- ## Calculate extra Signals and build Record
   
       time = SD.getTime rec
-      
-      engineSpeed = get (SD.SigId "engine1.Speed")
       
       get = SD.getSig recConditioned
     
@@ -372,12 +366,12 @@ main = do
    -- ## Provide solver with Given Variables, Start Solver and generate Sequence Flow Graph     
    
   let   
-      makeGiven initStorage sequFRec = (EqGen.dtime Idx.initSection .= 1)  
+      makeGiven initStorage sqFlowRec = (EqGen.dtime Idx.initSection .= 1)  
                                        <> (EqGen.storage (Idx.SecNode Idx.initSection battery) .= initStorage) 
                                        <> foldMap f (zip [Idx.Section 0 ..] ds)
         where 
-              SD.SequData ds =  fmap f2 sequFRec
-              f2 (SD.FlRecord t ds) = (sum $ Sig.toList t, M.toList $ M.map (sum . Sig.toList) ds)      
+              SD.SequData ds =  fmap f2 sqFlowRec
+              f2 (SD.FlRecord t xs) = (sum $ Sig.toList t, M.toList $ M.map (sum . Sig.toList) xs)      
               f (sec, (dt, es)) = (EqGen.dtime sec .= dt) <> foldMap g es                                                          
                 where g (PPosIdx a b, e) = (edgeVar EqGen.energy sec a b .= e)
    
