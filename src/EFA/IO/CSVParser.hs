@@ -8,9 +8,6 @@ module EFA.IO.CSVParser (csvFile) where
 import Text.ParserCombinators.Parsec
 
 
-import EFA.Utility ((>>!))
-
-
 -- | Takes a separator character.
 csvFile :: Char -> Parser [[String]]
 csvFile sepChar = endBy (line sepChar) eol
@@ -28,7 +25,6 @@ quotedCell =
   between (char '"') (char '"' <?> "quote at end of cell") $
   many quotedChar
 
--- Warum funktioniert hier (>>!) nicht?
 quotedChar :: Parser Char
 quotedChar =
         noneOf "\""
