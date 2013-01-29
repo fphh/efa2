@@ -1,4 +1,4 @@
-SRCDIRS = src demo examples test tests
+SRCDIRS = src demo examples test
 
 hlint.html: $(SRCDIRS) hlint/efa2.hs
 	hlint $(SRCDIRS) --hint=hlint/efa2.hs --report=$@
