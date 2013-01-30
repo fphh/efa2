@@ -45,7 +45,7 @@ import EFA.Utility (checkedLookup)
 
 -----------------------------------------------------------------------------------
 -- | Indices for Power Position
-data PPosIdx = PPosIdx !Idx.Node !Idx.Node deriving (Show, Eq, Ord)
+data PPosIdx a = PPosIdx !a !a deriving (Show, Eq, Ord)
 
 
 -----------------------------------------------------------------------------------
@@ -64,13 +64,13 @@ type instance D.Value (Record v a) = a
 
 data SigId = SigId String deriving (Show, Eq, Ord)
 
-data PowerRecord v a =
+data PowerRecord v a nty =
    PowerRecord
       (TC Signal (Typ A T Tt) (Data (v :> Nil) a))
-      (M.Map PPosIdx (TC Signal (Typ A P Tt) (Data (v :> Nil) a)))
+      (M.Map (PPosIdx nty) (TC Signal (Typ A P Tt) (Data (v :> Nil) a)))
    deriving (Show, Eq)
 
-type instance D.Value (PowerRecord v a) = a
+type instance D.Value (PowerRecord v a nty) = a
 
 -- | Power record to contain power signals assigned to the tree
 type ListPowerRecord = PowerRecord [] Val
@@ -79,12 +79,12 @@ type ListPowerRecord = PowerRecord [] Val
 type SecPowerRecord = PowerRecord UV.Vector Val
 
 
-type SequPwrRecord = SequData SecPowerRecord
+type SequPwrRecord nty = SequData (SecPowerRecord nty)
 
 -- | Flow record to contain flow signals assigned to the tree
-data FlRecord a b = FlRecord a (M.Map PPosIdx b) deriving (Show)
-type FlowRecord = FlRecord DTFSig FFSig
-type FlowValRecord = FlRecord DTVal FVal
+data FlRecord a b nty = FlRecord a (M.Map (PPosIdx nty) b) deriving (Show)
+type FlowRecord nty = FlRecord DTFSig FFSig nty
+type FlowValRecord nty = FlRecord DTVal FVal nty
 
 
 {-
@@ -100,9 +100,9 @@ type SequFlowRecord a = SequData a
 -- | Flow record to contain flow signals assigned to the tree
 --type SequFlowValRecord = SequData [FlowValRecord]
 
-newtype FlowState = FlowState (M.Map PPosIdx Sign) deriving (Show)
-type SequFlowState = SequData FlowState
-type SequFlowTops = SequData FlowTopology
+newtype FlowState nty = FlowState (M.Map (PPosIdx nty) Sign) deriving (Show)
+type SequFlowState nty = SequData (FlowState nty)
+type SequFlowTops nty = SequData (FlowTopology nty)
 
 -----------------------------------------------------------------------------------
 -- Section and Sequence -- Structures to handle Sequence Information and Data
@@ -170,17 +170,25 @@ filterSequWithSequData2 f (Sequ xs, SequData ys, SequData zs) = (Sequ xsf, SequD
 getTime :: Record v a ->  TC Signal (Typ A T Tt) (Data (v :> Nil) a) 
 getTime (Record time _) = time
 
-getPTime :: PowerRecord v a ->  TC Signal (Typ A T Tt) (Data (v :> Nil) a) 
+getPTime :: PowerRecord v a nty ->  TC Signal (Typ A T Tt) (Data (v :> Nil) a) 
 getPTime (PowerRecord time _) = time
 
-getSig :: Show (v a) => Record v a -> SigId -> TC Signal (Typ UT UT UT) (Data (v :> Nil) a)   
+getSig ::
+  Show (v a) =>
+  Record v a -> SigId
+  -> TC Signal (Typ UT UT UT) (Data (v :> Nil) a)   
 getSig (Record _ sigMap) sigId = checkedLookup sigMap sigId
 
-getPSig :: Show (v a) => PowerRecord v a -> PPosIdx -> TC Signal (Typ A P Tt) (Data (v :> Nil) a)   
+getPSig ::
+  (Show (v a), Ord nty, Show nty) =>
+  PowerRecord v a nty -> PPosIdx nty
+  -> TC Signal (Typ A P Tt) (Data (v :> Nil) a)   
 getPSig (PowerRecord _ pMap) idx = checkedLookup pMap idx
 
 -- | Use carefully -- removes signal jitter around zero 
-removeZeroNoise :: (V.Walker v, V.Storage v a, Ord a, Num a) => PowerRecord v a -> a -> PowerRecord v a        
+removeZeroNoise ::
+  (V.Walker v, V.Storage v a, Ord a, Num a) =>
+  PowerRecord v a nty -> a -> PowerRecord v a nty
 removeZeroNoise (PowerRecord time pMap) threshold = PowerRecord time (M.map f pMap)
   where f sig = Sig.map g sig
         g x | abs x < threshold = 0 
@@ -210,7 +218,9 @@ sortSigList  sigList = L.sortBy g  sigList
   where g (_,x) (_,y) = compare (S.sigSum x) (S.sigSum y) 
 
 -- | Split PowerRecord in even Junks                          
-splitPowerRecord ::  (Num a, Ord a, V.Walker v, V.Storage v a, BSum a) => PowerRecord v a -> Int -> [PowerRecord v a]                          
+splitPowerRecord ::
+  (Num a, Ord a, V.Walker v, V.Storage v a, BSum a, Ord nty) =>
+  PowerRecord v a nty -> Int -> [PowerRecord v a nty]                          
 splitPowerRecord (PowerRecord time pMap) n  = recList
   where (recList, _) = f ([],M.toList pMap)
         f (rs, []) = (rs,[])        
@@ -239,13 +249,12 @@ extractLogSignals rec@(Record time _) idList = Record time (M.fromList $ map f i
 
 data PowerCalc a = Take a | Extra a | Mult a | Add a | Subtract a
 
-generatePowerRecord :: (Show (v a),
-                        V.Zipper v,
-                      V.Walker v,
-                      V.Storage v a,
-                      BProd a a, 
-                      BSum a) => 
-                       Record v a -> Record v a -> [(PPosIdx, [PowerCalc String],[PowerCalc String])] -> PowerRecord v a 
+generatePowerRecord ::
+  (Show (v a), V.Zipper v, V.Walker v,
+   V.Storage v a, BProd a a, BSum a, Ord nty) => 
+  Record v a -> Record v a
+  -> [(PPosIdx nty, [PowerCalc String],[PowerCalc String])]
+  -> PowerRecord v a nty
 generatePowerRecord rec@(Record time _) eRec idList = PowerRecord time (M.fromList $ concat $ map f idList) 
   where f (pposIdx, calcListA, calcListB) = [(pposIdx, S.setType $ foldl g  (S.untype time) calcListA),
                                  (swap pposIdx, S.setType $ foldl g  (S.untype time) calcListB)]
@@ -260,13 +269,14 @@ generatePowerRecord rec@(Record time _) eRec idList = PowerRecord time (M.fromLi
 -----------------------------------------------------------------------------------
 -- Various Class and Instance Definition for the different Sequence Datatypes 
 
-instance QC.Arbitrary PPosIdx where
+instance (QC.Arbitrary nty) => QC.Arbitrary (PPosIdx nty) where
    arbitrary = liftM2 PPosIdx QC.arbitrary QC.arbitrary
    shrink (PPosIdx from to) = map (uncurry PPosIdx) $ QC.shrink (from, to)
 
 instance
-   (Show (v a), Sample a, V.FromList v, V.Storage v a) =>
-      QC.Arbitrary (PowerRecord v a) where
+   (Show (v a), Sample a, V.FromList v,
+    V.Storage v a, Ord nty, QC.Arbitrary nty) =>
+      QC.Arbitrary (PowerRecord v a nty) where
    arbitrary = do
       xs <- QC.listOf arbitrarySample
       n <- QC.choose (1,5)
@@ -324,8 +334,8 @@ instance
 
 instance
    (V.Walker v, V.Singleton v, V.FromList v, V.Storage v a, DispStorage1 v,
-    Ord a, Fractional a, PrintfArg a) =>
-   ToTable (PowerRecord v a) where
+    Ord a, Fractional a, PrintfArg a, Show nty) =>
+   ToTable (PowerRecord v a nty) where
    toTable os (ti, PowerRecord time sigs) =
       [Table {
          tableTitle = "PowerRecord - " ++ ti ,

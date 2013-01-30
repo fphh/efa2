@@ -22,20 +22,24 @@ import EFA.Utility (checkedLookup)
 
 
 -- | Function to calculate flow states for the whole sequence
-genSequFState :: SequFlowRecord FlowRecord -> SequFlowState
+genSequFState :: SequFlowRecord (FlowRecord nty) -> SequFlowState nty
 genSequFState sqFRec = fmap genFlowState sqFRec
 
 -- | Function to extract the flow state out of a Flow Record
-genFlowState ::  FlowRecord -> FlowState
+genFlowState ::  FlowRecord nty -> FlowState nty
 genFlowState (FlRecord _time flowMap) =
    FlowState $ M.map (fromScalar . sigSign . sigSum) flowMap
 
 -- | Function to generate Flow Topologies for all Sequences
-genSequFlowTops :: Topology -> SequFlowState -> SequFlowTops
+genSequFlowTops ::
+  (Ord nty, Show nty) =>
+  Topology nty -> SequFlowState nty -> SequFlowTops nty
 genSequFlowTops topo = fmap (genFlowTopology topo)
 
 -- | Function to generate Flow Topology -- only use one state per signal
-genFlowTopology :: Topology -> FlowState -> FlowTopology
+genFlowTopology ::
+  (Ord nty, Show nty) => 
+  Topology nty -> FlowState nty -> FlowTopology nty
 genFlowTopology topo (FlowState fs) =
    mkGraph (labNodes topo) $
    map
@@ -47,22 +51,28 @@ genFlowTopology topo (FlowState fs) =
    labEdges topo
 
 
-mkSectionTopology :: Idx.Section -> FlowTopology -> SequFlowGraph
+mkSectionTopology ::
+  (Ord nty) =>
+  Idx.Section -> FlowTopology nty -> SequFlowGraph nty
 mkSectionTopology sid = Gr.ixmap (Idx.SecNode sid)
 
-genSectionTopology :: SequFlowTops -> SequData SequFlowGraph
+genSectionTopology ::
+  (Ord nty) =>
+  SequFlowTops nty -> SequData (SequFlowGraph nty)
 genSectionTopology = zipWithSecIdxs mkSectionTopology
 
 
-copySeqTopology :: SequData SequFlowGraph -> SequFlowGraph
+copySeqTopology :: 
+  (Ord nty) =>
+  SequData (SequFlowGraph nty) -> SequFlowGraph nty
 copySeqTopology =
    Fold.foldl Gr.union Gr.empty
 
 
 mkIntersectionEdges ::
-   Idx.Node -> Idx.Section ->
+   nty -> Idx.Section ->
    M.Map Idx.Section StoreDir ->
-   [Topo.LEdge]
+   [Topo.LEdge nty]
 mkIntersectionEdges node startSec stores =
    concatMap
       (\secin ->
@@ -73,7 +83,9 @@ mkIntersectionEdges node startSec stores =
   where (ins, outs) = M.partition (In ==) stores
 
 
-mkSequenceTopology :: SequData SequFlowGraph -> SequFlowGraph
+mkSequenceTopology ::
+  (Ord nty) =>
+  SequData (SequFlowGraph nty) -> SequFlowGraph nty
 mkSequenceTopology sd = res
   where sqTopo = copySeqTopology sd
         initNode = Idx.SecNode Idx.initSection

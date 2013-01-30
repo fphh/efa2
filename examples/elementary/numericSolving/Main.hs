@@ -1,6 +1,10 @@
 module Main where
 
-import EFA.Example.Utility (edgeVar, makeEdges, (.=), constructSeqTopo)
+import EFA.Example.Utility
+  ( edgeVar, makeEdges, (.=), constructSeqTopo )
+
+-- import EFA.Graph.Topology.Nodes (Nodes(Node))
+import qualified EFA.Graph.Topology.Nodes as N
 
 import qualified EFA.Graph.Draw as Draw
 
@@ -18,11 +22,26 @@ import Data.Foldable (foldMap)
 sec0, sec1, sec2, sec3, sec4 :: Idx.Section
 sec0 :~ sec1 :~ sec2 :~ sec3 :~ sec4 :~ _ = Stream.enumFrom $ Idx.Section 0
 
-node0, node1, node2, node3 :: Idx.Node
-node0 :~ node1 :~ node2 :~ node3 :~ _ = Stream.enumFrom $ Idx.Node 0
+node0, node1, node2, node3 :: Nodes
+node0 :~ node1 :~ node2 :~ node3 :~ _ = Stream.enumFrom $ Node 0
 
 
-topoDreibein :: TD.Topology
+data Nodes = Node Int deriving (Show, Eq, Ord)
+
+instance Enum Nodes where
+         toEnum = Node
+         fromEnum (Node n) = n
+
+instance N.ShowNode Nodes where
+         showNode (Node 0) = "null"
+         showNode (Node 1) = "eins"
+         showNode (Node 2) = "zwei"
+         showNode (Node 3) = "drei"
+         showNode n = show n
+
+
+
+topoDreibein :: TD.Topology Nodes
 topoDreibein = Gr.mkGraph ns (makeEdges es)
   where ns = [(node0, TD.Source),
               (node1, TD.Sink),
@@ -30,7 +49,7 @@ topoDreibein = Gr.mkGraph ns (makeEdges es)
               (node3, TD.Storage)]
         es = [(node0, node2), (node1, node2), (node2, node3)]
 
-given :: EqGen.EquationSystem s Double
+given :: EqGen.EquationSystem Nodes s Double
 given =
    foldMap (uncurry (.=)) $
 

@@ -281,15 +281,14 @@ Executable demo-pretty
   Else
     Buildable: False
 
-Executable makestub
-  Main-Is: sandbox/makestub/Main.hs
+
+Executable demo-nodedefinition
+  Main-Is: demo/nodeDefinition/Main.hs
   GHC-Options: -Wall
-  If flag(buildTools)
+  If flag(buildExamples)
     Build-Depends:
-      haskell-src-exts == 1.13.5,
-      text == 0.11.2.0,
-      graphviz == 2999.14.1.0.1,
-      containers == 0.4.2.1,
-      base
+      efa,
+      base,
+      containers
   Else
     Buildable: False
