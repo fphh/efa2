@@ -17,7 +17,6 @@ import qualified EFA.Signal.Vector as V
 import EFA.Signal.SequenceData
   (SequData(..), Sequ(..), Sec,
    filterSequWithSequData,filterSequWithSequData2)
-import qualified EFA.Signal.SequenceData as SD
 
 import EFA.Signal.Record(PowerRecord(..),
            FlowRecord(..),ListPowerRecord,RSamp1,rsingleton, RSig,rlen,rviewL,rviewR)
@@ -153,10 +152,9 @@ makeRecSequence =
 -}
 
 makeSeqFlowGraph ::
-  (Ord nty, Show nty) =>
-  Topology nty
-  -> SD.SequFlowRecord (SD.FlowRecord nty)
-  -> SequFlowGraph nty
+  ( Fractional a, Ord nty, Ord a, Show nty, V.Walker v,
+    V.Storage v a, SB.BSum a) =>
+  Topology nty -> SequData (FlowRecord nty v a) -> SequFlowGraph nty
 makeSeqFlowGraph topo =
    Flow.mkSequenceTopology .
    Flow.genSectionTopology .

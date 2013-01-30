@@ -81,6 +81,7 @@ Library
     EFA.Graph.Draw
     EFA.Graph.Topology
     EFA.Graph.Topology.Index
+    EFA.Graph.Topology.Nodes
     EFA.Graph.Topology.StateAnalysis
     EFA.Graph.Flow
     EFA.Equation.System
@@ -231,6 +232,16 @@ Executable demo-symbolicSolving
   Else
     Buildable: False
 
+Executable demo-twoways
+  Main-Is: examples/elementary/twoWays/Main.hs
+  GHC-Options: -Wall
+  If flag(buildExamples)
+    Build-Depends:
+      efa,
+      base
+  Else
+    Buildable: False
+
 Executable demo-undiredge
   Main-Is: demo/undirEdge/Main.hs
   GHC-Options: -Wall
@@ -294,8 +305,30 @@ Executable demo-nodedefinition
   Else
     Buildable: False
 
-Executable Main
+Executable demo-vehicle
   Main-Is: examples/vehicle/src/Main.hs
+  GHC-Options: -Wall
+  If flag(buildExamples)
+     Build-Depends:
+       efa,
+       base,
+       containers
+  Else
+    Buildable: False
+ 
+Executable demo-stateanalysis
+  Main-Is: demo/stateAnalysis/Main.hs
+  GHC-Options: -Wall
+  If flag(buildExamples)
+     Build-Depends:
+       efa,
+       base,
+       containers
+  Else
+    Buildable: False
+ 
+Executable demo-readandcut
+  Main-Is: examples/elementary/readAndCut/Main.hs
   GHC-Options: -Wall
   If flag(buildExamples)
      Build-Depends:

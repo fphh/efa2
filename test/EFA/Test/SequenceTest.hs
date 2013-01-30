@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, ScopedTypeVariables #-}
 
 module EFA.Test.SequenceTest where
 
@@ -16,39 +16,46 @@ import Test.QuickCheck.All (quickCheckAll)
 import qualified Data.List.HT as HTL
 
 
-failing_prop_genSequ :: PowerRecord [] Val -> Bool
+failing_prop_genSequ :: (Ord nty) => PowerRecord nty [] Val -> Bool
 failing_prop_genSequ prec =
    Seq.approxSequPwrRecord (1e-8)
       (snd (Seq.genSequ prec))
 --      (Seq.chopAtZeroCrossingsPowerRecord prec)
       (Seq.chopAtZeroCrossingsPowerRecord prec)
 
-prop_chopMatchingCutsApprox :: PowerRecord [] Val -> Bool
-prop_chopMatchingCutsApprox prec =
-   case Seq.chopAtZeroCrossingsPowerRecord prec :: SequData (PowerRecord [] Val) of
-      SequData xs ->
-         and $
-         HTL.mapAdjacent
-            (\(PowerRecord xt xm)
-              (PowerRecord yt ym) ->
-                fmap snd (S.viewR xt) == fmap fst (S.viewL yt)
-                &&
-                fmap (fmap snd . S.viewR) xm == fmap (fmap fst . S.viewL) ym)
-            xs
 
-prop_chopProjectiveApprox :: PowerRecord [] Val -> Bool
+prop_chopMatchingCutsApprox ::
+  forall nty. (Ord nty) =>
+  PowerRecord nty [] Val -> Bool
+prop_chopMatchingCutsApprox prec =
+   case Seq.chopAtZeroCrossingsPowerRecord prec :: SequData (PowerRecord nty [] Val) of
+        SequData xs ->
+          and $
+          HTL.mapAdjacent
+             (\(PowerRecord xt xm)
+               (PowerRecord yt ym) ->
+                 fmap snd (S.viewR xt) == fmap fst (S.viewL yt)
+                 &&
+                 fmap (fmap snd . S.viewR) xm == fmap (fmap fst . S.viewL) ym)
+             xs
+
+
+prop_chopProjectiveApprox ::
+  forall nty. (Ord nty) => PowerRecord nty [] Val -> Bool
 prop_chopProjectiveApprox prec =
-   let secs :: SequData (PowerRecord [] Val)
+   let secs :: SequData (PowerRecord nty [] Val)
        secs = Seq.chopAtZeroCrossingsPowerRecord prec
    in  Seq.approxSequPwrRecord (1e-8)
           secs
           (Seq.chopAtZeroCrossingsPowerRecord $
            Seq.concatPowerRecords secs)
 
-prop_chopMatchingCutsExact :: PowerRecord [] Rational -> Bool
+
+prop_chopMatchingCutsExact ::
+  forall nty. (Ord nty) => PowerRecord nty [] Rational -> Bool
 prop_chopMatchingCutsExact prec =
    case Seq.chopAtZeroCrossingsPowerRecord prec
-         :: SequData (PowerRecord [] Rational) of
+         :: SequData (PowerRecord nty [] Rational) of
       SequData xs ->
          and $
          HTL.mapAdjacent
@@ -59,9 +66,11 @@ prop_chopMatchingCutsExact prec =
                 fmap (fmap snd . S.viewR) xm == fmap (fmap fst . S.viewL) ym)
             xs
 
-prop_chopProjectiveExact :: PowerRecord [] Rational -> Bool
+
+prop_chopProjectiveExact ::
+  forall nty. (Ord nty) => PowerRecord nty [] Rational -> Bool
 prop_chopProjectiveExact prec =
-   let secs :: SequData (PowerRecord [] Rational)
+   let secs :: SequData (PowerRecord nty [] Rational)
        secs = Seq.chopAtZeroCrossingsPowerRecord prec
    in  secs
        ==
