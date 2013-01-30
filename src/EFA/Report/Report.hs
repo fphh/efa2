@@ -18,7 +18,7 @@ checkOpt os o = L.find g os
   where
     g o =
 -}
-
+ 
 -- | Report
 type Report = [Table]
 
@@ -139,10 +139,12 @@ makeRow :: ROpts -> ColFormat -> [Cell]  -> PP.Doc
 makeRow os cf cs = PP.hcat (zipWith (makeCell os) cf cs)
 
 -- | Generate Table Cell
-makeCell :: ROpts -> (Width,Align) -> Cell -> PP.Doc
+makeCell ::  ROpts -> (Width,Align) -> Cell -> PP.Doc
 makeCell _os (w,HRight) (Cell l c) = PP.hcat (replicate (w-l) PP.space ++[c])
 makeCell _os (w,HLeft) (Cell l c) = PP.hcat ([c]++replicate (w-l) PP.space)
--- makeCell (w,HMid) (Cell l c) = PP.hcat ([c]++replicate (w-l) PP.space) where h = (w-l)/2
+makeCell _os (w,HMid) (Cell l c) = PP.hcat ([c]++replicate (h) PP.space) 
+  where h :: Int
+        h = floor $ (fromIntegral $ w-l) /(2.0 ::Double)
 
 -- | Generate Table Column
 makeCol :: ROpts -> RowFormat -> [PP.Doc] -> PP.Doc

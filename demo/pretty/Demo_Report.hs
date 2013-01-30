@@ -5,7 +5,7 @@ module Main where
 import qualified Data.Map as M 
 
 import qualified EFA.Signal.Signal as S
-import EFA.Signal.SequenceData
+import EFA.Signal.Record
 import EFA.Signal.Typ (Typ, A, P, Tt)
 
 import EFA.Report.Report (report, ROpt(..))

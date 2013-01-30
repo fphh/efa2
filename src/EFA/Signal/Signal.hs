@@ -31,7 +31,6 @@ import qualified EFA.Report.Base as ReportBase
 import qualified EFA.Report.Report as Report
 import qualified EFA.Report.Typ as Typ
 
-import Control.Monad (liftM2)
 import Data.Monoid (Monoid, mempty, mappend, mconcat)
 import Data.Tuple.HT (mapPair)
 
@@ -377,56 +376,6 @@ type FVal = Scal (Typ A F Tt) Val
 type DTVal = Scal (Typ D T Tt) Val
 
 
-------------------------------------
-
-type RSig = (TSigL, PSamp2LL)
-type RSamp1 = (TSamp, PSamp1L)
-type RSamp = (TSamp, PSamp)
-
-
-{-# DEPRECATED rhead, rtail "use rviewL instead" #-}
-{-# DEPRECATED rlast, rinit "use rviewR instead" #-}
-
-rhead :: RSig -> RSamp1
-rhead (t,ps) = (head t, head ps)
-
-rtail :: RSig -> RSig
-rtail (t,ps) = (tail t, tail ps)
-
-rlast :: RSig -> RSamp1
-rlast (t,ps) = (last t, last ps)
-
-rinit :: RSig -> RSig
-rinit (t,ps) = (init t, init ps)
-
-rviewL :: RSig -> Maybe (RSamp1, RSig)
-rviewL (t,ps) =
-   liftM2 zipPairs (viewL t) (viewL ps)
-
-rviewR :: RSig -> Maybe (RSig, RSamp1)
-rviewR (t,ps) =
-   liftM2 zipPairs (viewR t) (viewR ps)
-
-zipPairs :: (a,b) -> (c,d) -> ((a,c), (b,d))
-zipPairs (a,b) (c,d) = ((a,c), (b,d))
-
-rlen :: RSig -> Int
-rlen  (t,ps) = P.min (len t) (len ps)
-
-rsingleton :: RSamp1 -> RSig
-rsingleton (t,ps) = (singleton t, singleton ps)
-
-
-
--- xappend :: RSig -> RSig -> RSig
--- xappend (t1,ps1) (t2,ps2) = (t1.++t2, ps1.++ps2)
-
--- xconcat xs = L.foldl' (xappend) []
-
--- instance Monoid RSig where
---   mempty = (mempty,mempty)
---   mappend (t1,ps1) (t2,ps2) = (t1 .++ t2, ps1 .++ ps2)
-
 ----------------------------------------------------------
 -- from/to List
 
@@ -540,8 +489,8 @@ deltaMap, deltaMapReverse ::
    (d1 -> d1 -> d2) ->
    TC Signal typ (Data (v2 :> v1) d1) ->
    TC FSignal typ (Data (v2 :> v1) d2)
-deltaMap f x = changeSignalType $ zipWith f x (tail x)
-deltaMapReverse f x = changeSignalType $ zipWith f (tail x) x
+deltaMap f x = changeSignalType $ zipWith f x (P.snd $ P.maybe (error "Error in EFA.Signal.Signal/deltaMap - empty tail") id $ viewL x)
+deltaMapReverse f x = changeSignalType $ zipWith f (P.snd $ P.maybe (error "Error in EFA.Signal.Signal/deltaMapReverse - empty tail") id $ viewL x) x
 
 {-
 ----------------------------------------------------------
@@ -614,6 +563,7 @@ instance (SFold Scalar (Data Nil) d1 d2) => TFold Scalar s2 (Data Nil) c2 d1 d2 
    tfoldl f a x = toScalar $ foldl g (fromScalar a) x where g a x = fromScalar $ f (toScalar a) (unpack x)
 -}
 
+{-  
 ----------------------------------------------------------
 -- Head & Tail
 
@@ -625,6 +575,7 @@ head, last ::
    TC s typ (Data (v1 :> v2) d) -> TC (Head s) typ (Data v2 d)
 head (TC x) = TC $ D.head x
 last (TC x) = TC $ D.last x
+-}
 
 type family Head s
 type instance Head Signal = Sample
@@ -632,19 +583,18 @@ type instance Head FSignal = FSample
 type instance Head Sample = Sample
 type instance Head TestRow = TestRow
 
-
+{-
 init, tail ::
    (TailType s, SV.Singleton v1, SV.Storage v1 (Apply v2 d)) =>
    TC s typ (Data (v1 :> v2) d) -> TC s typ (Data (v1 :> v2) d)
 init (TC x) = TC $ D.init x
 tail (TC x) = TC $ D.tail x
+--}
 
 class TailType s where
 instance TailType Signal where
 instance TailType FSignal where
 instance TailType Sample where
-
-
 
 viewL ::
    (TailType s, SV.Singleton v1, SV.Storage v1 (Apply v2 d)) =>
@@ -807,13 +757,32 @@ sort (TC x) = TC $ D.sort x
 
 -- DeltaSig Signal FSignal (Data (v1 :> Nil)) A D Val =>
 -- | Partial Signal Integration
-sigPartInt ::  TSig -> PSig -> FFSig
+sigPartInt ::  (SV.Zipper v1,
+                SV.Walker v1,
+                SV.Singleton v1,
+                BSum d1, 
+                BProd d1 d1, 
+                Num d1, 
+                SV.Storage v1 d1) =>
+               TC Signal (Typ A T Tt) (Data (v1 :> Nil) d1) -> 
+               TC Signal (Typ A P Tt) (Data (v1 :> Nil) d1) -> 
+               TC FSignal (Typ A F Tt) (Data (v1 :> Nil) d1)
 sigPartInt time power = (deltaSig time) .* (avSig power)
 -- czipWith (*) dTime $ D.map (\ p1 p2 -> (p1+p2)/2) power
 
 
 -- | Partial Signal Integration
-sigFullInt ::  TSig -> PSig -> FFSig
+sigFullInt ::   (SV.FromList v1,
+                 SV.Zipper v1, 
+                 SV.Walker v1, 
+                 SV.Storage v1 d1, 
+                 SV.Singleton v1,
+                 Num d1,
+                 BSum d1,
+                 BProd d1 d1) => 
+                TC Signal (Typ A T Tt) (Data (v1 :> Nil) d1) -> 
+                TC Signal (Typ A P Tt) (Data (v1 :> Nil) d1) -> 
+                TC FSignal (Typ A F Tt) (Data (v1 :> Nil) d1)
 sigFullInt time power = fromList [fromScalar $ sigSum $ sigPartInt time power]
 
 -- csingleton (cfoldr (+) 0  $ czipWith (*) dTime $ D.map (\ p1 p2 -> (p1+p2)/2) power)

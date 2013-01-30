@@ -6,22 +6,22 @@ module Main where
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Graph.Topology.Index as Idx
-import EFA.Signal.SequenceData
-          (PPosIdx(PPosIdx), PowerRecord(PowerRecord), ListPowerRecord,
-           Sequ, SequPwrRecord)
+import EFA.Signal.SequenceData (Sequ,SequData)
+import EFA.Signal.Record
+          (PPosIdx(PPosIdx), PowerRecord(PowerRecord))
+
+         
+          
 import EFA.Signal.Signal (PSigL, (.++))
 import EFA.Signal.Base (Val)
-import EFA.Signal.Plot (rPlot, rPlotCore)
-import EFA.Utility (divUp)
+import EFA.Signal.Plot (rPlot)
 
-import qualified Graphics.Gnuplot.Advanced as Plot
-import qualified Graphics.Gnuplot.Terminal.PostScript as PS
-import qualified Graphics.Gnuplot.MultiPlot as MultiPlot
-import qualified Graphics.Gnuplot.Frame as Frame
+-- import qualified Graphics.Gnuplot.Advanced as Plot
+-- import qualified Graphics.Gnuplot.Terminal.PostScript as PS
+-- import qualified Graphics.Gnuplot.MultiPlot as MultiPlot
+-- import qualified Graphics.Gnuplot.Frame as Frame
 
 import qualified Data.Map as M
-import qualified Data.Array as Array
-import Control.Functor.HT (void)
 
 
 mkSig :: Int -> [Val] -> PSigL
@@ -58,13 +58,13 @@ pMap =
       (pPosIdx 3 1, mkSigEnd n s31) :
       []
 
-pRec, pRec0 :: ListPowerRecord
+pRec, pRec0 :: (PowerRecord [] Val)
 
 pRec = PowerRecord (S.fromList time) pMap
 pRec0 = Sequ.addZeroCrossings pRec
 
 sequ :: Sequ
-sequRecA, sequRecB :: SequPwrRecord
+sequRecA, sequRecB :: SequData (PowerRecord [] Val)
 (sequ,sequRecA) = Sequ.genSequ pRec0
 
 sequRecB = Sequ.chopAtZeroCrossingsPowerRecord pRec

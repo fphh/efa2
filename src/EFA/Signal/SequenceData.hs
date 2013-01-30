@@ -4,6 +4,8 @@
 
 module EFA.Signal.SequenceData where
 
+
+
 import EFA.Graph.Topology (FlowTopology)
 
 import qualified EFA.Graph.Topology.Index as Idx
@@ -104,6 +106,7 @@ newtype FlowState nty = FlowState (M.Map (PPosIdx nty) Sign) deriving (Show)
 type SequFlowState nty = SequData (FlowState nty)
 type SequFlowTops nty = SequData (FlowTopology nty)
 
+
 -----------------------------------------------------------------------------------
 -- Section and Sequence -- Structures to handle Sequence Information and Data
 -- | Section analysis result
@@ -139,8 +142,6 @@ zipWithSecIdxs f =
 
 -----------------------------------------------------------------------------------
 -- Utility Functions on Sequence Data
-         
-   
          
 -- | PG Diskussion : 
 -- |        Sollte Sequ nicht auch SequData verwenden, dann würden die Utility - Funktionen hier auch funktionieren           
@@ -346,6 +347,7 @@ instance
       where t = tvcat $ S.toTable os ("Time",time) !:
                         concatMap (toTable os . mapFst show) (M.toList sigs)
 
+         
 instance (ToTable a) => ToTable (SequData a) where
    toTable os (_ti, rs) =
       fold $ zipWithSecIdxs (\sec r -> toTable os (show sec, r)) rs

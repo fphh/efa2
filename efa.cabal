@@ -65,6 +65,7 @@ Library
     EFA.Signal.Typ
     EFA.Signal.Data
     EFA.Signal.Vector
+    EFA.Signal.Record
     EFA.Signal.Signal
     EFA.Signal.SignalFill
     EFA.Signal.Sequence
@@ -292,3 +293,15 @@ Executable demo-nodedefinition
       containers
   Else
     Buildable: False
+
+Executable Main
+  Main-Is: examples/vehicle/src/Main.hs
+  GHC-Options: -Wall
+  If flag(buildExamples)
+     Build-Depends:
+       efa,
+       base,
+       containers
+  Else
+    Buildable: False
+ 
