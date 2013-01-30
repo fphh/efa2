@@ -4,7 +4,7 @@ module Main where
 -- | Demonstriert das Hinzufügen von ZeroCrossings
 
 import EFA.Signal.Sequence
-import EFA.Signal.SequenceData
+import EFA.Signal.Record
 import EFA.Signal.Signal as S
 import EFA.Signal.Plot
 import EFA.Signal.Base (Val)

@@ -9,6 +9,7 @@ import qualified Data.Map as M
 import qualified EFA.Signal.Signal as S
 import EFA.Signal.Sequence
 import EFA.Signal.SequenceData
+import EFA.Signal.Record
 
 
 import EFA.Report.Report
@@ -40,7 +41,7 @@ rec, rec0 :: PowerRecord [] Double
 rec = PowerRecord time pmap
 rec0 = addZeroCrossings rec
 
-sqRec :: SequPwrRecord
+sqRec :: SequData (PowerRecord [] Double)
 sequ :: Sequ
 (sequ, sqRec) = genSequ rec0
 

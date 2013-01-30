@@ -9,6 +9,7 @@ import qualified Data.Map as M
 import qualified EFA.Signal.Signal as S
 import EFA.Signal.Sequence
 import EFA.Signal.SequenceData
+import EFA.Signal.Record
 import EFA.Report.Report
 
 import qualified EFA.Utility.Stream as Stream
@@ -181,7 +182,7 @@ pmapList =
 recList :: [PowerRecord [] Double]
 recList = map (PowerRecord time) pmapList
 
-list :: [(Int, (String, (PowerRecord [] Double, (Sequ, SequPwrRecord))))]
+list :: [(Int, (String, (PowerRecord [] Double, (Sequ, SequData (PowerRecord [] Double)))))]
 list = idxList $ 
   zip titleList 
       (zip recList (map  (genSequ . addZeroCrossings) recList))

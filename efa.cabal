@@ -65,6 +65,7 @@ Library
     EFA.Signal.Typ
     EFA.Signal.Data
     EFA.Signal.Vector
+    EFA.Signal.Record
     EFA.Signal.Signal
     EFA.Signal.SignalFill
     EFA.Signal.Sequence

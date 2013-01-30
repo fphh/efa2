@@ -20,7 +20,8 @@ import qualified EFA.Equation.System as EqGen
 
 import EFA.IO.CSVImport (modelicaCSVImport)
 import qualified EFA.Signal.SequenceData as SD
-import EFA.Signal.SequenceData (SigId(SigId), PowerCalc(Extra),PowerCalc (Take), PowerCalc(Mult), PPosIdx(PPosIdx),SignalOps(Negate)) 
+-- import EFA.Signal.SequenceData () 
+import EFA.Signal.Record (SigId(SigId), PPosIdx(PPosIdx),PowerCalc(Extra),PowerCalc (Take), PowerCalc(Mult), SignalOps(Negate),SignalRecord,getSig,getTime,selectRecord, extractLogSignals, SignalRecord(..), generatePowerRecord, FlowRecord(..))
 import qualified EFA.Signal.Plot as PL
 import EFA.Signal.Sequence 
   (makeSequenceRaw,makeSeqFlowGraph, 
@@ -101,9 +102,9 @@ main = do
 --------------------------------------------------------------------------------------- 
 -- ## Read and condition signal from Csv-file
   
-  rec <- modelicaCSVImport "Vehicle_res_short_neu.csv" :: IO (SD.Record [] Double)
+  rec <- modelicaCSVImport "Vehicle_res_short_neu.csv" :: IO (SignalRecord [] Double)
   
-  let recConditioned = SD.extractLogSignals rec [(SigId "engine1.Speed",[]),
+  let recConditioned = extractLogSignals rec [(SigId "engine1.Speed",[]),
                                                  (SigId "engine1.flange_b.tau",[Negate]),
                                                  (SigId "engine1.FuelPower",[]),
                                                  (SigId "electricmotor2.speedsensor1.w",[]),
@@ -136,11 +137,11 @@ main = do
                                                  (SigId "drivingresistance1.force1.f",[Negate])]
   
 --------------------------------------------------------------------------------------- 
--- ## Calculate extra Signals and build Record
+-- ## Calculate extra Signals and build SignalRecord
   
-      time = SD.getTime rec
+      time = getTime rec
       
-      get = SD.getSig recConditioned
+      get = getSig recConditioned
     
       -- generator
       generatorCurrent = get (SigId "electricmotor2.signalcurrent1.p.i")
@@ -165,10 +166,10 @@ main = do
       kineticPower = (frontAxlePower.+rearAxlePower).-resistancePower
                       
  -- driving resistance
-      resistanceForce = neg $ get (SD.SigId "drivingresistance1.force1.f")
+      resistanceForce = neg $ get (SigId "drivingresistance1.force1.f")
       resistancePower = speed.* resistanceForce                 
       
-      recExtraSignals = SD.Record time ( M.fromList [(SigId "connectionPower", batteryPolePower.-generatorElectricPower),
+      recExtraSignals = SignalRecord time ( M.fromList [(SigId "connectionPower", batteryPolePower.-generatorElectricPower),
                                                    (SigId "kineticPower", kineticPower),
                                                    (SigId "dcdcPowerHV", dcdcPowerHV),
                                                    (SigId "dcdcPowerLV", dcdcPowerLV)
@@ -178,7 +179,7 @@ main = do
 --------------------------------------------------------------------------------------- 
 -- ## Build Power Record
       
-      pRec = SD.generatePowerRecord recConditioned  recExtraSignals
+      pRec = generatePowerRecord recConditioned  recExtraSignals
       
               -- engine
               [(PPosIdx tank con_engine,                 
@@ -259,7 +260,7 @@ main = do
    
   -- Building Signal Record for better Plotting of the original signals 
 
-      recVehicle = SD.selectRecord recConditioned idlist
+      recVehicle = selectRecord recConditioned idlist
         where idlist = [SigId "speedsensor1.v",
                         SigId "idealrollingwheel1.flangeR.tau",
                         SigId "idealrollingwheel2.flangeR.tau",
@@ -268,7 +269,7 @@ main = do
                         SigId "drivingresistance1.force1.f"]
 
   -- Building Signal Record for better Plotting of the original signals 
-      recDriveLine = SD.selectRecord recConditioned idlist
+      recDriveLine = selectRecord recConditioned idlist
         where idlist = [SigId "speedsensor1.v",
                         SigId "electricmotor1.flange_a.tau",
                         SigId "gearbox1.flange_a.tau",                        
@@ -276,7 +277,7 @@ main = do
                        ]
   
   -- Building Signal Record for better Plotting of the original signals 
-      recMotor = SD.selectRecord recConditioned idlist
+      recMotor = selectRecord recConditioned idlist
         where idlist = [SigId "speedsensor1.v",                        
                         SigId "electricmotor1.flange_a.tau",
                         SigId "electricmotor1.speedsensor1.w",
@@ -285,7 +286,7 @@ main = do
                        ]
   
   -- Building Signal Record for better Plotting of the original signals 
-      recElectric = SD.selectRecord recConditioned idlist
+      recElectric = selectRecord recConditioned idlist
         where idlist = [SigId "speedsensor1.v",                        
                         SigId "battery1.pin_p.v",
                         SigId "battery1.pin_p.i",
@@ -296,7 +297,7 @@ main = do
                        ]
        
   -- Building Signal Record for better Plotting of the original signals 
-      recBattery = SD.selectRecord recConditioned idlist
+      recBattery = selectRecord recConditioned idlist
         where idlist = [SigId "speedsensor1.v",                        
                         SigId "battery1.pin_p.v",
                         SigId "battery1.pin_p.i",
@@ -305,7 +306,7 @@ main = do
                        ]
   
   -- Building Signal Record for better Plotting of the original signals 
-      recGenerator = SD.selectRecord recConditioned idlist
+      recGenerator = selectRecord recConditioned idlist
         where idlist = [SigId "speedsensor1.v",                        
                         SigId "electricmotor2.signalcurrent1.p.i",
                         SigId "electricmotor2.signalcurrent1.v",
@@ -371,7 +372,7 @@ main = do
                                        <> foldMap f (zip [Idx.Section 0 ..] ds)
         where 
               SD.SequData ds =  fmap f2 sqFlowRec
-              f2 (SD.FlRecord t xs) = (sum $ Sig.toList t, M.toList $ M.map (sum . Sig.toList) xs)      
+              f2 (FlowRecord t xs) = (sum $ Sig.toList t, M.toList $ M.map (sum . Sig.toList) xs)      
               f (sec, (dt, es)) = (EqGen.dtime sec .= dt) <> foldMap g es                                                          
                 where g (PPosIdx a b, e) = (edgeVar EqGen.energy sec a b .= e)
    
@@ -387,7 +388,7 @@ main = do
   Draw.sequFlowGraph sequTopo
 
   -- Show Sequence Flow with Numbers
-  -- Draw.sequFlowGraphWithEnv sequTopo env
+  Draw.sequFlowGraphAbsWithEnv sequTopo env
 --  PL.rPlot ("VehicleSignals",recVehicle)    
   
 
