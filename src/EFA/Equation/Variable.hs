@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleInstances #-}
+
 module EFA.Equation.Variable where
 
 import qualified EFA.Graph.Topology.Index as Idx
@@ -7,27 +9,28 @@ import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
 
 
-data Index =
-            Energy Idx.Energy
-          | DEnergy Idx.DEnergy
-          | MaxEnergy Idx.MaxEnergy
-          | DMaxEnergy Idx.DMaxEnergy
-          | Power Idx.Power
-          | DPower Idx.DPower
-          | Eta Idx.Eta
-          | DEta Idx.DEta
-          | DTime Idx.DTime
-          | X Idx.X
-          | DX Idx.DX
-          | Y Idx.Y
-          | DY Idx.DY
-          | Var Idx.Var
-          | Store Idx.Storage
-            deriving (Show, Eq, Ord)
+data Index a = Energy (Idx.Energy a)
+             | DEnergy (Idx.DEnergy a)
+             | MaxEnergy (Idx.MaxEnergy a)
+             | DMaxEnergy (Idx.DMaxEnergy a)
+             | Power (Idx.Power a)
+             | DPower (Idx.DPower a)
+             | Eta (Idx.Eta a)
+             | DEta (Idx.DEta a)
+             | DTime (Idx.DTime a)
+             | X (Idx.X a)
+             | DX (Idx.DX a)
+             | Y (Idx.Y a)
+             | DY (Idx.DY a)
+             | Var (Idx.Var a)
+             | Store (Idx.Storage a)
+               deriving (Show, Eq, Ord)
 
 
-class MkIdxC a where
-   mkIdx :: a -> Index
+class MkIdxC t where
+   mkIdx :: t a -> Index a
+   --mkIdx :: a n -> Index n
+
 
 instance MkIdxC Idx.Energy where mkIdx = Energy
 instance MkIdxC Idx.DEnergy where mkIdx = DEnergy
@@ -46,28 +49,25 @@ instance MkIdxC Idx.Var where mkIdx = Var
 instance MkIdxC Idx.Storage where mkIdx = Store
 
 
-class MkVarC a where
-   mkVarCore :: Index -> a
+class MkVarC term where
+      mkVarCore :: a -> term a
 
-instance MkVarC Index where
-   mkVarCore = id
+instance MkVarC OT.Term where
+         mkVarCore = OT.Atom
 
-instance MkVarC a => MkVarC (OT.Term a) where
-   mkVarCore = OT.Atom . mkVarCore
+instance MkVarC SP.Term where
+         mkVarCore = SP.Atom
 
-instance MkVarC a => MkVarC (SP.Term a) where
-   mkVarCore = SP.Atom . mkVarCore
-
-mkVar :: (MkIdxC a, MkVarC b) => a -> b
+mkVar :: (MkIdxC t, MkVarC term) => t a -> term (Index a)
 mkVar = mkVarCore . mkIdx
 
-
-instance FormatValue Index where
+instance (Show nty) => FormatValue (Index nty) where
    formatValue idx =
       let absolute e r x y =
              Format.subscript (Format.edgeIdent e) (Format.edgeIndex r x y)
           delta e r x y =
-             Format.subscript (Format.delta $ Format.edgeIdent e) (Format.edgeIndex r x y)
+             Format.subscript (Format.delta $ Format.edgeIdent e)
+                              (Format.edgeIndex r x y)
       in  case idx of
              Energy (Idx.Energy r x y) -> absolute Format.Energy r x y
              DEnergy (Idx.DEnergy r x y) -> delta Format.Energy r x y

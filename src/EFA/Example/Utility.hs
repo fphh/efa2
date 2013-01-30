@@ -10,26 +10,34 @@ import qualified EFA.Equation.Env as Env
 import qualified EFA.Equation.System as EqGen
 import EFA.Equation.System ((=.=))
 import EFA.Equation.Variable (MkIdxC, MkVarC, mkVar)
+import qualified EFA.Equation.Variable as Var
 import Data.Monoid ((<>))
 
 import EFA.Signal.SequenceData (SequData(SequData))
 
 
+
+{-
 makeNode :: Int -> Idx.Node
 makeNode = Idx.Node
 
 makeNodes :: [(Int, TD.NodeType)] -> [Gr.LNode Idx.Node TD.NodeType]
 makeNodes ns = map f ns
   where f (n, ty) = (makeNode n, ty)
+-}
 
-makeEdges :: [(Idx.Node, Idx.Node)] -> [Gr.LEdge Idx.Node ()]
+makeEdges :: [(nty, nty)] -> [Gr.LEdge nty ()]
 makeEdges = map (\(a, b) -> (Gr.Edge a b, ()))
 
+{-
 makeSimpleEdges :: [(Int, Int)] -> [Gr.LEdge Idx.Node ()]
 makeSimpleEdges es = map f es
   where f (a, b) = (Gr.Edge (Idx.Node a) (Idx.Node b), ())
+-}
 
-constructSeqTopo :: TD.Topology -> [Int] -> TD.SequFlowGraph
+constructSeqTopo ::
+  (Ord nty) =>
+  TD.Topology nty -> [Int] -> TD.SequFlowGraph nty
 constructSeqTopo topo states = mkSeqTopo (select sol states)
   where sol = bruteForce topo
         select ts = map (ts!!)
@@ -40,33 +48,35 @@ constructSeqTopo topo states = mkSeqTopo (select sol states)
 recAbs :: Idx.Record
 recAbs = EqGen.recAbs
 
+
 selfAssign ::
-   (MkIdxC idx, Env.AccessMap idx, Eq term, MkVarC term) =>
-   idx -> EqGen.EquationSystem s term
+  (Eq (term (Var.Index nty)), Ord (t nty), MkVarC term, MkIdxC t,
+   Env.AccessMap t) =>
+  t nty -> EqGen.EquationSystem nty s (term (Var.Index nty))
 selfAssign idx =
    EqGen.getVar idx .= mkVar idx
 
 infixr 6 =<>
-
 (=<>) ::
-   (MkIdxC idx, Env.AccessMap idx, Eq term, MkVarC term) =>
-   idx ->
-   EqGen.EquationSystem s term ->
-   EqGen.EquationSystem s term
+  ( Eq (term (Var.Index nty)), Ord (t nty), Env.AccessMap t,
+    MkVarC term, MkIdxC t) =>
+  t nty
+  -> EqGen.EquationSystem nty s (term (Var.Index nty))
+  -> EqGen.EquationSystem nty s (term (Var.Index nty))
 idx =<> eqsys = selfAssign idx <> eqsys
 
 
 edgeVar ::
-   (Idx.SecNode -> Idx.SecNode -> idx) ->
-   Idx.Section -> Idx.Node -> Idx.Node -> idx
+   (Idx.SecNode nty -> Idx.SecNode nty -> idx) ->
+   Idx.Section -> nty -> nty -> idx
 edgeVar idx sec x y =
    idx
       (Idx.SecNode sec x)
       (Idx.SecNode sec y)
 
 interVar ::
-   (Idx.SecNode -> Idx.SecNode -> idx) ->
-   Idx.Section -> Idx.Section -> Idx.Node -> idx
+   (Idx.SecNode nty -> Idx.SecNode nty -> idx) ->
+   Idx.Section -> Idx.Section -> nty -> idx
 interVar idx sec0 sec1 x =
    idx
       (Idx.SecNode sec0 x)
@@ -75,5 +85,7 @@ interVar idx sec0 sec1 x =
 
 infix 0 .=
 
-(.=) :: Eq a => EqGen.ExprWithVars s a -> a -> EqGen.EquationSystem s a
+(.=) ::
+  (Eq a) =>
+  EqGen.ExprWithVars nty s a -> a -> EqGen.EquationSystem nty s a
 evar .= val  =  evar =.= EqGen.constToExprSys val
