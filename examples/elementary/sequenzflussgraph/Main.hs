@@ -15,6 +15,7 @@ import Data.List.HT (chop)
 import Data.Char (isSpace)
 
 
+
 topoDreibein :: TD.Topology
 topoDreibein = mkGraph (makeNodes ns) (makeSimpleEdges es)
   where ns = [ (0, TD.NoRestriction),

@@ -280,9 +280,9 @@ class (Atom.C (D.Value record)) => RPlot record where
 
 -- | Plot a Power Record
 instance
-   (SV.Walker v, SV.FromList v,
-    SV.Storage v y, Fractional y, Atom.C y, Tuple.C y) =>
-      RPlot (PowerRecord v y) where
+   (SV.Walker v, SV.FromList v, SV.Storage v y, 
+    Fractional y, Atom.C y, Tuple.C y, Show nty) =>
+      RPlot (PowerRecord nty v y) where
    rPlotCore rName (PowerRecord time pMap) =
       [rPlotSingle rName time pMap]
 
@@ -294,28 +294,21 @@ instance
    rPlotCore rName (SignalRecord time sigMap) =
       [rPlotSingle rName time sigMap]
       
-rPlotSplit :: (Fractional a,
-                      SV.Walker v,
-                      SV.Storage v a,
-                      SV.FromList v,
-                      Tuple.C a,
-                      Atom.C a,Ord a, BSum a) => 
-              (String, SignalRecord v a) -> Int -> IO ()     
+rPlotSplit ::
+  (Fractional a, SV.Walker v, SV.Storage v a,
+   SV.FromList v, Tuple.C a, Atom.C a,Ord a, BSum a) => 
+  (String, SignalRecord v a) -> Int -> IO ()     
 rPlotSplit (name,r) n = mapM_ rPlot $ zip titles recList
   where 
         recList = (splitSignalRecord r n)
         titles = map (\ x -> name ++ " - Part " ++ show x)  [1 .. (length recList)]
 
-rPlotSplitPower :: (Fractional a,
-                      SV.Walker v,
-                      SV.Storage v a,
-                      SV.FromList v,
-                      Tuple.C a,
-                      Atom.C a,Ord a, BSum a) => 
-              (String, PowerRecord v a) -> Int -> IO ()     
+rPlotSplitPower ::
+  (Fractional a, SV.Walker v, SV.Storage v a, SV.FromList v,
+   Tuple.C a, Atom.C a,Ord a, BSum a, Ord nty, Show nty) => 
+  (String, PowerRecord nty v a) -> Int -> IO ()     
 rPlotSplitPower (name,r) n = mapM_ rPlot $ zip titles recList
-  where 
-        recList = (splitPowerRecord r n)
+  where recList = (splitPowerRecord r n)
         titles = map (\ x -> name ++ " - Part " ++ show x)  [1 .. (length recList)]
 
 rPlotSingle ::
@@ -336,12 +329,9 @@ rPlotSingle rName time pMap =
          zip (sPlotData time) (sPlotData sig)) $
    M.toList pMap
 
-instance   (Fractional a,
-                      SV.Walker v,
-                      SV.Storage v a,
-                      SV.FromList v,
-                      Tuple.C a,
-                      Atom.C a) => RPlot (SequData (PowerRecord  v a)) where
+instance (Fractional a, SV.Walker v, SV.Storage v a,
+          SV.FromList v, Tuple.C a, Atom.C a, Show nty) =>
+          RPlot (SequData (PowerRecord nty v a)) where
    rPlotCore _sqName (SequData rs) = concat $ zipWith rPlotCore nameList rs
     where
       nameList = map (\ x -> "Record of " ++ show x) [Idx.Section 1 ..]

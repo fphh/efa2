@@ -13,8 +13,7 @@ import EFA.Graph.Topology as Topo
 import EFA.Signal.SequenceData
 
 import EFA.Signal.Signal (fromScalar, sigSign, sigSum)
-import EFA.Signal.Vector (Storage,Walker)
-import EFA.Signal.Base (Sign(PSign, NSign, ZSign),BSum)
+import EFA.Signal.Base (Sign(..))
 
 import qualified Data.Foldable as Fold
 import qualified Data.Map as M

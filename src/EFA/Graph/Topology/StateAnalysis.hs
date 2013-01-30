@@ -15,7 +15,6 @@ module EFA.Graph.Topology.StateAnalysis (
    speedClustering,
    ) where
 
-import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph as Gr
 import EFA.Graph.Topology
           (FlowTopology, Topology, NodeType(..),

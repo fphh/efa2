@@ -48,26 +48,21 @@ constructSeqTopo topo states = mkSeqTopo (select sol states)
 recAbs :: Idx.Record
 recAbs = EqGen.recAbs
 
-{-
-selfAssign ::
-   (MkIdxC idx, Env.AccessMap idx, Eq (term nty), MkVarC term) =>
-   idx nty -> EqGen.EquationSystem nty s (term nty)
--}
+
 selfAssign ::
   (Eq (term (Var.Index nty)), Ord (t nty), MkVarC term, MkIdxC t,
    Env.AccessMap t) =>
   t nty -> EqGen.EquationSystem nty s (term (Var.Index nty))
 selfAssign idx =
    EqGen.getVar idx .= mkVar idx
-{-
-infixr 6 =<>
 
+infixr 6 =<>
 (=<>) ::
-   (MkIdxC idx, Env.AccessMap idx, Eq (term nty), MkVarC term) =>
-   idx nty ->
-   EqGen.EquationSystem nty s (term nty) ->
-   EqGen.EquationSystem nty s (term nty)
--}
+  ( Eq (term (Var.Index nty)), Ord (t nty), Env.AccessMap t,
+    MkVarC term, MkIdxC t) =>
+  t nty
+  -> EqGen.EquationSystem nty s (term (Var.Index nty))
+  -> EqGen.EquationSystem nty s (term (Var.Index nty))
 idx =<> eqsys = selfAssign idx <> eqsys
 
 

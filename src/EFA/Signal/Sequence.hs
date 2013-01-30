@@ -15,9 +15,9 @@ import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Vector as V
 
 import EFA.Signal.SequenceData
-          (SequData(..), Sequ(..), Sec,
-           filterSequWithSequData,filterSequWithSequData2)
-
+  (SequData(..), Sequ(..), Sec,
+   filterSequWithSequData,filterSequWithSequData2)
+import qualified EFA.Signal.SequenceData as SD
 
 import EFA.Signal.Record(PowerRecord(..),
            FlowRecord(..),ListPowerRecord,RSamp1,rsingleton, RSig,rlen,rviewL,rviewR)
@@ -87,41 +87,26 @@ fromFlowRecord secIdx recIdx (FlowRecord dTime flowMap) =
 
 
 -- | Pre-Integrate all Signals in Record
-recFullIntegrate :: (Num a,
-                      V.Zipper v,
-                      V.Walker v,
-                      V.Singleton v,
-                      SB.BSum a,
-                      SB.BProd a a,
-                      V.Storage v a, 
-                      V.FromList v) => 
-                    PowerRecord v a -> FlowRecord v a
+recFullIntegrate ::
+  ( Num a, V.Zipper v, V.Walker v, V.Singleton v, SB.BSum a,
+    SB.BProd a a, V.Storage v a, V.FromList v) => 
+  PowerRecord nty v a -> FlowRecord nty v a
 recFullIntegrate (PowerRecord time pMap) = FlowRecord (S.fromList [fromScalar $ sigSum $ deltaSig time]) fMap
   where fMap = M.map (sigFullInt time) pMap
 
 -- | Pre-Integrate all Signals in Record
-recPartIntegrate :: (Num a,
-                      V.Zipper v,
-                      V.Walker v,
-                      V.Singleton v,
-                      SB.BSum a,
-                      SB.BProd a a,
-                      V.Storage v a, 
-                      V.FromList v) => 
-                    PowerRecord v a -> FlowRecord v a
+recPartIntegrate ::
+  ( Num a, V.Zipper v, V.Walker v, V.Singleton v, SB.BSum a,
+    SB.BProd a a, V.Storage v a, V.FromList v) => 
+  PowerRecord nty v a -> FlowRecord nty v a
 recPartIntegrate (PowerRecord time pMap) = FlowRecord (deltaSig time) fMap
   where fMap = M.map (sigPartInt time) pMap
 
 -- | Generate Sequence Flow
-genSequFlow :: (Num a,
-                V.Zipper v,
-                V.Walker v,
-                V.Storage v a,
-                V.Singleton v,
-                V.FromList v,
-                SB.BSum a,
-                SB.BProd a a)=>
-               (SequData (PowerRecord v a)) -> SequData (FlowRecord v a)
+genSequFlow ::
+  ( Num a, V.Zipper v, V.Walker v, V.Storage v a, V.Singleton v,
+    V.FromList v, SB.BSum a, SB.BProd a a)=>
+  (SequData (PowerRecord nty v a)) -> SequData (FlowRecord nty v a)
 genSequFlow sqPRec = fmap recFullIntegrate sqPRec
 
 -- | Filter Sequence Flow
@@ -129,18 +114,23 @@ genSequFlow sqPRec = fmap recFullIntegrate sqPRec
 -- | State changes in solver create several DataPoints with exact the same time
 -- | The resulting sections which have zero time duration are removed 
 
-removeZeroTimeSections :: (Eq a, V.Storage v a, V.Singleton v) => (Sequ,SequData (PowerRecord v a)) -> (Sequ,SequData (PowerRecord v a))
+removeZeroTimeSections ::
+  (Eq a, V.Storage v a, V.Singleton v) =>
+  (Sequ, SequData (PowerRecord nty v a)) -> (Sequ, SequData (PowerRecord nty v a))
 removeZeroTimeSections (xs, ys)  = filterSequWithSequData f (xs, ys) 
    where  -- f (_,PowerRecord time _) = (S.head time) /= (S.last time) 
-          f (_,PowerRecord time _) = (fst $ maybe err id $ S.viewL time) /= (snd $ maybe err id $ S.viewR time) 
-          err = error "Error in SequenceData.hs / removeZeroTimeSections -- empty head or tail"
+          f (_,PowerRecord time _) =
+            (fst $ maybe err id $ S.viewL time) 
+                 /= (snd $ maybe err id $ S.viewR time) 
+          err = error ("Error in SequenceData.hs / " 
+                       ++ "removeZeroTimeSections -- empty head or tail")
 
 
 -- | Drop Sections with negligible energy flow 
 removeLowEnergySections :: (Num a, SB.BSum a, Ord a, V.Walker v, V.Storage v a) => 
-   (Sequ, SequData (PowerRecord v a), SequData (FlowRecord v a)) 
+   (Sequ, SequData (PowerRecord nty v a), SequData (FlowRecord nty v a)) 
    -> a 
-   -> (Sequ, SequData (PowerRecord v a), SequData (FlowRecord v a))
+   -> (Sequ, SequData (PowerRecord nty v a), SequData (FlowRecord nty v a))
 removeLowEnergySections  (xs, ys, zs) threshold = filterSequWithSequData2 f (xs, ys, zs)
    where  f (_, _ , FlowRecord _ fMap) =  not $ all g (M.toList fMap)
           g (_,s) = (abs (fromScalar (sigSum s))) < threshold  
@@ -162,15 +152,11 @@ makeRecSequence =
    zipWithSecIdxs (flip fromFlowRecord (Idx.Record Idx.Absolute))
 -}
 
-makeSeqFlowGraph :: 
-  (Fractional a,
-   Ord a,
-   V.Walker v,
-   V.Storage v a,
-   SB.BSum a) =>
-   Topology ->
-   SequData (FlowRecord v a) ->
-   SequFlowGraph
+makeSeqFlowGraph ::
+  (Ord nty, Show nty) =>
+  Topology nty
+  -> SD.SequFlowRecord (SD.FlowRecord nty)
+  -> SequFlowGraph nty
 makeSeqFlowGraph topo =
    Flow.mkSequenceTopology .
    Flow.genSectionTopology .
@@ -178,15 +164,21 @@ makeSeqFlowGraph topo =
    Flow.genSequFState
 
 makeSequence ::
-   PowerRecord [] Val ->
-   SequData (FlowRecord [] Val)
+  (Ord nty) =>
+  PowerRecord nty [] Val ->
+  SequData (FlowRecord nty [] Val)
 makeSequence =
-    genSequFlow . snd . removeZeroTimeSections . genSequ . addZeroCrossings
+  genSequFlow
+  . snd
+  . removeZeroTimeSections
+  . genSequ
+  . addZeroCrossings
 
 -- | PG - Its better to have processing under controll in Top-Level for inspeting and debugging signal treatment
 makeSequenceRaw ::
-   PowerRecord [] Val ->
-   (Sequ, SequData (PowerRecord [] Val))
+  (Ord nty) =>
+  PowerRecord nty [] Val ->
+  (Sequ, SequData (PowerRecord nty [] Val))
 makeSequenceRaw = genSequ . addZeroCrossings
 
 -----------------------------------------------------------------------------------
@@ -196,11 +188,14 @@ Must be fixed for empty signals and
 must correctly handle the last section.
 -}
 -- | Function to Generate Time Sequence
-genSequ ::  PowerRecord [] Val -> (Sequ, SequData (PowerRecord [] Val))
+genSequ ::
+  (Ord nty) =>
+  PowerRecord nty [] Val -> (Sequ, SequData (PowerRecord nty [] Val))
 genSequ pRec = removeNilSections (Sequ $ sequ++[lastSec], SequData pRecs)
   where rSig = record2RSig pRec
         pRecs = map (rsig2SecRecord pRec) (seqRSig ++ [lastRSec])
-        ((lastSec,sequ),(lastRSec,seqRSig)) = recyc rTAIL rHEAD (((0,0),[]),(rsingleton $ rHEAD,[]))
+        ((lastSec,sequ), (lastRSec,seqRSig)) = 
+          recyc rTAIL rHEAD (((0,0),[]),(rsingleton $ rHEAD,[]))
           where
             rHEAD =  fst $ maybe err1 id $ rviewL rSig 
             rTAIL =  snd $ maybe err2 id $ rviewL rSig 
@@ -243,7 +238,7 @@ genSequ pRec = removeNilSections (Sequ $ sequ++[lastSec], SequData pRecs)
         
 
 -- | Function to remove Nil-Sections which have same start and stop Index
-removeNilSections :: (Sequ,(SequData (PowerRecord v a))) ->   (Sequ, (SequData (PowerRecord v a)))
+removeNilSections :: (Sequ,(SequData (PowerRecord nty v a))) ->   (Sequ, (SequData (PowerRecord nty v a)))
 removeNilSections (Sequ sequ, SequData pRecs) = (Sequ fsequ, SequData fRecs)
   where (fsequ, fRecs) = unzip $ filter (uncurry (/=) . fst) $ zip sequ pRecs
 
@@ -274,7 +269,9 @@ stepX p1 p2
    | otherwise = toSample NoStep  -- nostep
 
 
-addZeroCrossings :: ListPowerRecord -> ListPowerRecord
+addZeroCrossings ::
+  (Ord nty) =>
+  ListPowerRecord nty -> ListPowerRecord nty
 addZeroCrossings r = rsig2Record rSigNew0 r
   where rSigNew0 =
            case record2RSig r of
@@ -375,18 +372,20 @@ type RSigX a =
         (TC S.Signal (Typ A T Tt) (Data ([] :> Nil) a),
          TC S.Sample (Typ A P Tt) (Data ([] :> [] :> Nil) a))
 
-record2RSig :: PowerRecord [] a -> RSigX a
+record2RSig :: PowerRecord nty [] a -> RSigX a
 record2RSig (PowerRecord t pMap) = (t, S.transpose2 $ fromSigList $ M.elems pMap)
 
-rsig2Record :: RSigX a -> PowerRecord [] a -> PowerRecord [] a
+rsig2Record ::
+  (Ord nty) =>
+  RSigX a -> PowerRecord nty [] a -> PowerRecord nty [] a
 rsig2Record (t, ps) (PowerRecord _ pMap) =
    PowerRecord t $ updateMap pMap $ toSigList $ S.transpose2 ps
 
 rsig2SecRecord ::
-   (V.Convert [] v, V.Storage v a) =>
-   PowerRecord [] a ->
+   (V.Convert [] v, V.Storage v a, Ord nty) =>
+   PowerRecord nty [] a ->
    RSigX a ->
-   PowerRecord v a
+   PowerRecord nty v a
 rsig2SecRecord (PowerRecord _ pMap) (t, ps) =
    PowerRecord (S.convert t) $
    updateMap pMap $ map S.convert $ toSigList $ S.transpose2 ps
@@ -485,16 +484,16 @@ chopAtZeroCrossingsRSig (TC (Data times), TC (Data vectorSignal)) =
    zip times vectorSignal
 
 chopAtZeroCrossingsPowerRecord ::
-   (V.Convert [] v, V.Storage v a, RealFrac a) =>
-   PowerRecord [] a -> SequData (PowerRecord v a)
+   (V.Convert [] v, V.Storage v a, RealFrac a, Ord nty) =>
+   PowerRecord nty [] a -> SequData (PowerRecord nty v a)
 chopAtZeroCrossingsPowerRecord rSig =
    SequData $ map (rsig2SecRecord rSig) $
    chopAtZeroCrossingsRSig $
    record2RSig rSig
 
 concatPowerRecords ::
-   (V.Singleton v, V.Storage v a) =>
-   SequData (PowerRecord v a) -> PowerRecord v a
+   (V.Singleton v, V.Storage v a, Ord nty) =>
+   SequData (PowerRecord nty v a) -> PowerRecord nty v a
 concatPowerRecords (SequData recs) =
    case recs of
       [] -> PowerRecord mempty M.empty
@@ -510,7 +509,7 @@ concatPowerRecords (SequData recs) =
 
 tailPowerRecord ::
    (V.Singleton v, V.Storage v a) =>
-   PowerRecord v a -> PowerRecord v a
+   PowerRecord nty v a -> PowerRecord nty v a
 tailPowerRecord (PowerRecord times pMap) =
    PowerRecord
       (maybe mempty snd $ S.viewL times)
@@ -518,16 +517,15 @@ tailPowerRecord (PowerRecord times pMap) =
 
 
 approxSequPwrRecord ::
-   (V.Walker v, V.Storage v a, Real a) =>
-   a -> SequData (PowerRecord v a) -> SequData (PowerRecord v a) -> Bool
+   (V.Walker v, V.Storage v a, Real a, Ord nty) =>
+   a -> SequData (PowerRecord nty v a) -> SequData (PowerRecord nty v a) -> Bool
 approxSequPwrRecord eps (SequData xs) (SequData ys) =
    V.equalBy (approxPowerRecord eps) xs ys
 
 approxPowerRecord ::
-   (V.Walker v, V.Storage v a, Real a) =>
-   a -> PowerRecord v a -> PowerRecord v a -> Bool
-approxPowerRecord eps
-      (PowerRecord xt xm) (PowerRecord yt ym) =
+   (V.Walker v, V.Storage v a, Real a, Eq nty, Ord nty) =>
+   a -> PowerRecord nty v a -> PowerRecord nty v a -> Bool
+approxPowerRecord eps (PowerRecord xt xm) (PowerRecord yt ym) =
    S.equalBy (approxAbs eps) xt yt
    &&
    M.keys xm == M.keys ym
