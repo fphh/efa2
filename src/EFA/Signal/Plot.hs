@@ -11,7 +11,7 @@ import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Data as D
 import qualified EFA.Signal.Vector as SV
 import EFA.Signal.SequenceData (SequData(SequData))
-import EFA.Signal.Record (PowerRecord(PowerRecord), SignalRecord(SignalRecord),splitSignalRecord,splitPowerRecord)
+import EFA.Signal.Record (Record(Record), SignalRecord,PowerRecord,splitSignalRecord,splitPowerRecord)
 import EFA.Signal.Signal (TC, Signal, toSigList, getDisplayType)
 import EFA.Signal.Base (BSum)
 
@@ -39,7 +39,7 @@ import Control.Functor.HT (void)
 import Data.Foldable (foldMap)
 import Data.Monoid (mconcat)
 
-
+{-
 -- | Get Signal Plot Data (Unit Conversion)  ---------------------------------------------------------------
 
 sPlotData ::
@@ -242,8 +242,8 @@ instance
    surfPlotCore x y z =
       Plot3D.mesh $
       L.zipWith3 zip3 (S.toList2 x) (S.toList2 y) (S.toList2 z)
-
-
+-}
+{-
 -- | Plotting Records ---------------------------------------------------------------
 
 -- | Line Style
@@ -279,11 +279,21 @@ class (Atom.C (D.Value record)) => RPlot record where
       [Frame.T (Graph2D.T (D.Value record) (D.Value record))]
 
 -- | Plot a Power Record
+   -- (SV.Walker v, SV.FromList v,
+   --  SV.Storage v y, Fractional y, Atom.C y, Tuple.C y) => 
+
 instance
-   (SV.Walker v, SV.FromList v,
-    SV.Storage v y, Fractional y, Atom.C y, Tuple.C y) =>
+  (Atom.C
+   (D.Value (Record
+     Signal
+     (EFA.Signal.Typ.Typ EFA.Signal.Typ.A EFA.Signal.Typ.T EFA.Signal.Typ.Tt)
+     (EFA.Signal.Typ.Typ
+      EFA.Signal.Typ.A EFA.Signal.Typ.P EFA.Signal.Typ.Tt)
+     v
+     y
+     EFA.Signal.Record.PPosIdx)))=>
       RPlot (PowerRecord v y) where
-   rPlotCore rName (PowerRecord time pMap) =
+   rPlotCore rName (Record time pMap) =
       [rPlotSingle rName time pMap]
 
 -- | Plot a Signal Record
@@ -291,7 +301,7 @@ instance
    (SV.Walker v, SV.FromList v,
     SV.Storage v y, Fractional y, Atom.C y, Tuple.C y) =>
       RPlot (SignalRecord v y) where
-   rPlotCore rName (SignalRecord time sigMap) =
+   rPlotCore rName (Record time sigMap) =
       [rPlotSingle rName time sigMap]
       
 rPlotSplit :: (Fractional a,
@@ -361,3 +371,4 @@ instance (TDisp t, Atom.C (D.Value c)) => AxisLabel (TC s t c) where
 instance (AxisLabel tc) => AxisLabel [tc] where
    type Value [tc] = Value tc
    genAxLabel x = genAxLabel $ head x
+-}
