@@ -16,9 +16,9 @@ import qualified Data.List.HT as LH
 import Data.Maybe.HT (toMaybe)
 import Data.Eq (Eq((==)))
 import Data.Function ((.), ($), id, flip)
-import Data.Maybe (Maybe)
+import Data.Maybe (Maybe, maybe)
 import Data.Bool (Bool(False, True), (&&), not)
-import Prelude (Int, Ord, error, (++), (-), Show, show)
+import Prelude (Int, Ord, error, (++), (-), Show, show, snd,fst)
 
 
 {- |
@@ -56,9 +56,10 @@ writeUnbox x =
 
 --------------------------------------------------------------
 -- Singleton Class
-
+{-
 {-# DEPRECATED head, tail "use viewL instead" #-}
 {-# DEPRECATED last, init "use viewR instead" #-}
+-}
 
 class Singleton vec where
    maximum :: (Ord d, Storage vec d) => vec d -> d
@@ -67,10 +68,10 @@ class Singleton vec where
    empty :: (Storage vec d) => vec d
    append :: (Storage vec d) => vec d -> vec d -> vec d
    concat :: (Storage vec d) => [vec d] -> vec d
-   head :: (Storage vec d) => vec d -> d
-   tail :: (Storage vec d) => vec d -> vec d
-   last :: (Storage vec d) => vec d -> d
-   init :: (Storage vec d) => vec d -> vec d
+   -- head :: (Storage vec d) => vec d -> d
+   -- tail :: (Storage vec d) => vec d -> vec d
+   -- last :: (Storage vec d) => vec d -> d
+   -- init :: (Storage vec d) => vec d -> vec d
    viewL :: (Storage vec d) => vec d -> Maybe (d, vec d)
    viewR :: (Storage vec d) => vec d -> Maybe (vec d, d)
    all :: (Storage vec d) => (d -> Bool) -> vec d -> Bool
@@ -83,10 +84,10 @@ instance Singleton V.Vector where
    empty = V.empty
    append = (V.++)
    concat = V.concat
-   head = V.head
-   tail = V.tail
-   last = V.last
-   init = V.init
+--   head = V.head
+--   tail = V.tail
+--   last = V.last
+--   init = V.init
    viewL xs = toMaybe (not $ V.null xs) (V.head xs, V.tail xs)
    viewR xs = toMaybe (not $ V.null xs) (V.init xs, V.last xs)
    all = V.all
@@ -99,10 +100,10 @@ instance Singleton UV.Vector where
    empty = writeUnbox UV.empty
    append = readUnbox (UV.++)
    concat xs = writeUnbox (UV.concat xs)
-   head = readUnbox UV.head
-   tail = readUnbox UV.tail
-   last = readUnbox UV.last
-   init = readUnbox UV.init
+   -- head = readUnbox UV.head
+   -- tail = readUnbox UV.tail
+   -- last = readUnbox UV.last
+   -- init = readUnbox UV.init
    viewL = readUnbox (\xs -> toMaybe (not $ UV.null xs) (UV.head xs, UV.tail xs))
    viewR = readUnbox (\xs -> toMaybe (not $ UV.null xs) (UV.init xs, UV.last xs))
    all f = readUnbox (UV.all f)
@@ -115,10 +116,10 @@ instance Singleton [] where
    empty = []
    append = (++)
    concat = L.concat
-   head = L.head
-   tail = L.tail
-   last = L.last
-   init = L.init
+   -- head = L.head
+   -- tail = L.tail
+   -- last = L.last
+   -- init = L.init
    viewL = LH.viewL
    viewR = LH.viewR
    all = L.all
@@ -193,12 +194,14 @@ instance Zipper UV.Vector where
 deltaMap ::
    (Storage vec b, Storage vec c, Singleton vec, Zipper vec) =>
    (b -> b -> c) -> vec b -> vec c
-deltaMap f l = zipWith f l (tail l)
+deltaMap f l = zipWith f l (snd $ maybe err id $ viewL l)
+  where err = error ("Error in EFA.Signal.Vector/deltaMap - empty tail")
 
 deltaMapReverse ::
    (Storage vec b, Storage vec c, Singleton vec, Zipper vec) =>
    (b -> b -> c) -> vec b -> vec c
-deltaMapReverse f l = zipWith f (tail l) l
+deltaMapReverse f l = zipWith f (snd $ maybe err id $ viewL l) l
+  where err = error ("Error in EFA.Signal.Vector/deltaMapReverse - empty tail")
 
 
 ------------------------------------------------------------
@@ -312,7 +315,7 @@ instance Transpose V.Vector V.Vector where
 
 instance Transpose UV.Vector V.Vector where
    transpose xs =
-      case constraints $ head xs of
+      case constraints $ fst $ maybe (error("Error in EFA.Signal.Vector/transpose - empty head")) id $ viewL xs of
          UnboxedVectorConstraints ->
             let fs = V.map (flip (UV.!)) $ V.fromList [0..len0-1]
                 lens = V.map len xs

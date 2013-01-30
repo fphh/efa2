@@ -28,7 +28,7 @@ import EFA.Signal.Sequence
    removeZeroTimeSections, 
    removeLowEnergySections,genSequFlow)
 import qualified EFA.Signal.Signal as Sig
-import EFA.Signal.Signal((.*),(.+),(.-),neg,disp)
+import EFA.Signal.Signal((.*),(.+),(.-),neg)
 
 import qualified EFA.Report.Report as Rep
 

@@ -294,3 +294,15 @@ Executable makestub
       base
   Else
     Buildable: False
+
+Executable Main
+  Main-Is: examples/vehicle/src/Main.hs
+  GHC-Options: -Wall
+  If flag(buildExamples)
+     Build-Depends:
+       efa,
+       base,
+       containers
+  Else
+    Buildable: False
+ 

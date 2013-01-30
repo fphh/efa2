@@ -556,6 +556,7 @@ transpose2 (Data x) = Data $ SV.transpose x
 
 ----------------------------------------------------------
 -- Head & Tail
+{-
 
 {-# DEPRECATED head, tail "use viewL instead" #-}
 {-# DEPRECATED last, init "use viewR instead" #-}
@@ -571,6 +572,7 @@ tail, init ::
    Data (v2 :> v1) d -> Data (v2 :> v1) d
 tail (Data x) = Data $ SV.tail x
 init (Data x) = Data $ SV.init x
+-}
 
 viewL ::
    (SV.Singleton v2, SV.Storage v2 (Apply v1 d)) =>

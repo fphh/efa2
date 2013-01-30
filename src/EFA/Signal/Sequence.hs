@@ -20,7 +20,7 @@ import EFA.Signal.SequenceData
 
 
 import EFA.Signal.Record(PowerRecord(..),
-           FlowRecord(..),ListPowerRecord,RSamp1,rsingleton, RSig,rtail,rhead,rlen,rviewL,rviewR)
+           FlowRecord(..),ListPowerRecord,RSamp1,rsingleton, RSig,rlen,rviewL,rviewR)
         
   
 import EFA.Signal.Base
@@ -34,8 +34,6 @@ import EFA.Signal.Signal
 
 import EFA.Signal.Typ (Typ, STy, Tt, T, P, A)
 import EFA.Signal.Data (Data(Data), Nil, (:>))
-
--- import qualified Data.Vector.Unboxed as UV
 
 import qualified Data.Foldable as Fold
 import qualified Data.NonEmpty.Mixed as NonEmptyM
@@ -202,17 +200,26 @@ genSequ ::  PowerRecord [] Val -> (Sequ, SequData (PowerRecord [] Val))
 genSequ pRec = removeNilSections (Sequ $ sequ++[lastSec], SequData pRecs)
   where rSig = record2RSig pRec
         pRecs = map (rsig2SecRecord pRec) (seqRSig ++ [lastRSec])
-        ((lastSec,sequ),(lastRSec,seqRSig)) = recyc (rtail rSig) (rhead rSig) (((0,0),[]),(rsingleton $ rhead rSig,[]))
-
+        ((lastSec,sequ),(lastRSec,seqRSig)) = recyc rTAIL rHEAD (((0,0),[]),(rsingleton $ rHEAD,[]))
+          where
+            rHEAD =  fst $ maybe err1 id $ rviewL rSig 
+            rTAIL =  snd $ maybe err2 id $ rviewL rSig 
+            err1 = error ("Error in EFA.Signal.Sequence/genSequence, case 1 - empty head in rSig")
+            err2 = error ("Error in EFA.Signal.Sequence/genSequence, case 1 - empty tail in rSig")
+ 
         recyc ::
            RSig -> RSamp1 ->
            ((Sec, [Sec]), (RSig, [RSig])) ->
            ((Sec, [Sec]), (RSig, [RSig]))
-        -- recyc rSig x1 (((lastIdx,idx),sequ),(secRSig, sequRSig)) | rSig /= mempty = recyc (rtail rSig) (rhead rSig) (g $ stepDetect x1 x2, f $ stepDetect x1 x2)
+
         -- Incoming rSig is at least two samples long -- detect changes
-        recyc rsig x1 (((lastIdx,idx),sq),(secRSig, sqRSig)) | (rlen rsig) >=2 = recyc (rtail rsig) (rhead rsig) (g $ stepDetect x1 x2, f $ stepDetect x1 x2)
+        recyc rsig x1 (((lastIdx,idx),sq),(secRSig, sqRSig)) | 
+          (rlen rsig) >=2 = recyc rTAIL x2 (g $ stepDetect x1 x2, f $ stepDetect x1 x2)
           where
-            x2 = rhead rsig
+            x2 =  fst $ maybe err1 id $ rviewL rsig -- rhead rsig
+            rTAIL =  snd $ maybe err2 id $ rviewL rsig
+            err1 = error ("Error in EFA.Signal.Sequence/genSequence, case 2 - empty head in rSig")
+            err2 = error ("Error in EFA.Signal.Sequence/genSequence, case 2 - empty tail in rSig")
             xs1 = rsingleton x1
             xs2 = rsingleton x2
 

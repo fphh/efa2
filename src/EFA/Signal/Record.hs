@@ -3,9 +3,6 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module EFA.Signal.Record where
-
--- import EFA.Graph.Topology (FlowTopology)
-
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Data as D
@@ -20,25 +17,19 @@ import EFA.Signal.Base (Sign, Val, BSum, DArith0,BProd)
 
 import EFA.Report.Report (ToTable(toTable), Table(..), tvcat)
 import Text.Printf (PrintfArg)
-
 import qualified Test.QuickCheck as QC
 import System.Random (Random)
 
 import qualified Data.Map as M
--- import qualified Data.Vector.Unboxed as UV
--- import qualified Data.Vector as VB
 import qualified Data.List.HT as HTL
 import qualified Data.List as L
--- import qualified Data.String.Utils as Str
 import qualified Data.List.Match as Match
+
 import Data.NonEmpty ((!:))
 import Data.Ratio (Ratio, (%))
 import Data.List (transpose)
 import Data.Tuple.HT (mapFst)
 import Control.Monad (liftM2)
--- import Control.Applicative (Applicative(pure, (<*>)), liftA, liftA2)
--- import Data.Traversable (Traversable, sequenceA, foldMapDefault)
--- import Data.Foldable (Foldable, foldMap, fold)
 import EFA.Utility (checkedLookup)
 
 
@@ -228,19 +219,6 @@ instance (Random a, Integral a) => Sample (Ratio a) where
             GT -> y%x
             EQ -> 1 -- prevent 0/0
 
-{-
-instance ToTable Record where
-   toTable os (ti, Record time sigs) =
-      [Table {
-         tableTitle = "Record - " ++ ti ,
-         tableData = tableData t,
-         tableFormat = tableFormat t,
-         tableSubTitle = ""}]
-
-      where t = tvcat $ S.toTable os ("Time",time) !:
-                        concatMap (toTable os . mapFst show) (M.toList sigs)
--}
-
 instance
    (V.Walker v, V.Singleton v, V.FromList v, V.Storage v a, DispStorage1 v,
     Ord a, Fractional a, PrintfArg a) =>
@@ -278,7 +256,7 @@ type RSig = (TSigL, PSamp2LL)
 type RSamp1 = (TSamp, PSamp1L)
 type RSamp = (TSamp, PSamp)
 
-
+{-
 {-# DEPRECATED rhead, rtail "use rviewL instead" #-}
 {-# DEPRECATED rlast, rinit "use rviewR instead" #-}
 
@@ -293,6 +271,8 @@ rlast (t,ps) = (S.last t, S.last ps)
 
 rinit :: RSig -> RSig
 rinit (t,ps) = (S.init t, S.init ps)
+-}
+
 
 rviewL :: RSig -> Maybe (RSamp1, RSig)
 rviewL (t,ps) =
@@ -312,13 +292,4 @@ rsingleton :: RSamp1 -> RSig
 rsingleton (t,ps) = (S.singleton t, S.singleton ps)
 
 
-
--- xappend :: RSig -> RSig -> RSig
--- xappend (t1,ps1) (t2,ps2) = (t1.++t2, ps1.++ps2)
-
--- xconcat xs = L.foldl' (xappend) []
-
--- instance Monoid RSig where
---   mempty = (mempty,mempty)
---   mappend (t1,ps1) (t2,ps2) = (t1 .++ t2, ps1 .++ ps2)
 

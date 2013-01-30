@@ -489,8 +489,8 @@ deltaMap, deltaMapReverse ::
    (d1 -> d1 -> d2) ->
    TC Signal typ (Data (v2 :> v1) d1) ->
    TC FSignal typ (Data (v2 :> v1) d2)
-deltaMap f x = changeSignalType $ zipWith f x (tail x)
-deltaMapReverse f x = changeSignalType $ zipWith f (tail x) x
+deltaMap f x = changeSignalType $ zipWith f x (P.snd $ P.maybe (error "Error in EFA.Signal.Signal/deltaMap - empty tail") id $ viewL x)
+deltaMapReverse f x = changeSignalType $ zipWith f (P.snd $ P.maybe (error "Error in EFA.Signal.Signal/deltaMapReverse - empty tail") id $ viewL x) x
 
 {-
 ----------------------------------------------------------
@@ -563,6 +563,7 @@ instance (SFold Scalar (Data Nil) d1 d2) => TFold Scalar s2 (Data Nil) c2 d1 d2 
    tfoldl f a x = toScalar $ foldl g (fromScalar a) x where g a x = fromScalar $ f (toScalar a) (unpack x)
 -}
 
+{-  
 ----------------------------------------------------------
 -- Head & Tail
 
@@ -574,6 +575,7 @@ head, last ::
    TC s typ (Data (v1 :> v2) d) -> TC (Head s) typ (Data v2 d)
 head (TC x) = TC $ D.head x
 last (TC x) = TC $ D.last x
+-}
 
 type family Head s
 type instance Head Signal = Sample
@@ -581,19 +583,18 @@ type instance Head FSignal = FSample
 type instance Head Sample = Sample
 type instance Head TestRow = TestRow
 
-
+{-
 init, tail ::
    (TailType s, SV.Singleton v1, SV.Storage v1 (Apply v2 d)) =>
    TC s typ (Data (v1 :> v2) d) -> TC s typ (Data (v1 :> v2) d)
 init (TC x) = TC $ D.init x
 tail (TC x) = TC $ D.tail x
+--}
 
 class TailType s where
 instance TailType Signal where
 instance TailType FSignal where
 instance TailType Sample where
-
-
 
 viewL ::
    (TailType s, SV.Singleton v1, SV.Storage v1 (Apply v2 d)) =>
