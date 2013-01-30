@@ -1,5 +1,3 @@
-{-# LANGUAGE FlexibleInstances #-}
-
 module EFA.Equation.Variable where
 
 import qualified EFA.Graph.Topology.Index as Idx
