@@ -1,5 +1,3 @@
-{-# LANGUAGE FlexibleInstances #-}
-
 module EFA.Graph.Topology (
        NLabel (..), LNode,
        LEdge, LDirEdge,
@@ -112,29 +110,17 @@ instance FlowDirectionField l => FlowDirectionField (e, l) where
    getFlowDirection = getFlowDirection . snd
 
 
-class MakeSecNode n where
-   makeSecNode :: n nty -> Idx.SecNode nty
+class NodeEdgeType n where
+   getNodeEdgeType :: Gr.Edge n -> EdgeType
 
-instance MakeSecNode Idx.SecNode where
-   makeSecNode = id
+instance NodeEdgeType (Idx.SecNode n) where
+   getNodeEdgeType = edgeType
 
-instance MakeSecNode idx => EdgeTypeField (Gr.Edge (idx nty), l) where
-         getEdgeType (e@(Gr.Edge _ _), _) = edgeType (fmap makeSecNode e)
+instance NodeEdgeType n => EdgeTypeField (Gr.Edge n) where
+   getEdgeType e = getNodeEdgeType e
 
-{-
-
-class SecEdgeField e where
-   getSecEdge :: e -> Gr.Edge (Idx.SecNode a)
-
-instance MakeSecNode n => SecEdgeField (Gr.Edge (n a)) where
---instance SecEdgeField (Gr.Edge (Idx.SecNode a)) where
-
-   getSecEdge = fmap makeSecNode
-
-
-instance SecEdgeField e => EdgeTypeField (e, l) where
-   getEdgeType (e, _l) = edgeType $ getSecEdge e
--}
+instance EdgeTypeField e => EdgeTypeField (e, l) where
+   getEdgeType (e, _l) = getEdgeType e
 
 
 isOriginalEdge :: Gr.Edge (Idx.SecNode a) -> Bool
