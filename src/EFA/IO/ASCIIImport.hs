@@ -7,7 +7,7 @@ import qualified Data.Map as M
 import Text.ParserCombinators.Parsec (parse)
 import EFA.Signal.Base (Val)
 
-import EFA.Signal.Record (SignalRecord(SignalRecord), SigId(SigId))
+import EFA.Signal.Record (Record(Record),SignalRecord, SigId(SigId))
 
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Vector as SV
@@ -19,7 +19,7 @@ import EFA.IO.CSVParser (csvFile)
 makeASCIIRecord :: [[String]] -> SignalRecord [] Val
 makeASCIIRecord [] = error "This is not possible!"
 makeASCIIRecord hs =
-  SignalRecord (S.fromList time) (M.fromList $ zip sigIdents (map S.fromList sigs))
+  Record (S.fromList time) (M.fromList $ zip sigIdents (map S.fromList sigs))
   where sigIdents = map (SigId . ("sig_" ++) . show) [(0::Int)..]
         time:sigs = SV.transpose (map (map read . init) hs)
 

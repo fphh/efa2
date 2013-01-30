@@ -41,7 +41,7 @@ genFlowState ::  (Walker v,
                   Fractional a, 
                   Ord a) => 
                  FlowRecord v a -> FlowState
-genFlowState (FlowRecord _time flowMap) =
+genFlowState (Record _time flowMap) =
    FlowState $ M.map (fromScalar . sigSign . sigSum) flowMap
 
 -- | Function to generate Flow Topologies for all Sequences

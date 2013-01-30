@@ -50,8 +50,10 @@ type SignalRecord v a =  Record Signal (Typ A T Tt) (Typ UT UT UT) v a SigId
 
 type PowerRecord v a =  Record Signal (Typ A T Tt) (Typ A P Tt) v a PPosIdx
 
-type FlowRecord v a =  Record Signal (Typ A T Tt) (Typ A F Tt) v a PPosIdx
+type FlowRecord v a =  Record FSignal (Typ D T Tt) (Typ A F Tt) v a PPosIdx
 
+-- | Flow record to contain flow signals assigned to the tree
+newtype FlowState = FlowState (M.Map PPosIdx Sign) deriving (Show)
 
 
 
@@ -98,8 +100,6 @@ data FlowRecord v a =
 
 type instance D.Value (FlowRecord v a) = a
 
--- | Flow record to contain flow signals assigned to the tree
-newtype FlowState = FlowState (M.Map PPosIdx Sign) deriving (Show)
 -- type SequFlowState = SequData FlowState
 -- type SequFlowTops = SequData FlowTopology
 

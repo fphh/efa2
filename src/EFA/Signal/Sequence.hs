@@ -19,8 +19,8 @@ import EFA.Signal.SequenceData
            filterSequWithSequData,filterSequWithSequData2)
 
 
-import EFA.Signal.Record(PowerRecord(..),
-           FlowRecord(..),ListPowerRecord,RSamp1,rsingleton, RSig,rlen,rviewL,rviewR)
+import EFA.Signal.Record(Record(..),PowerRecord,FlowRecord,
+           RSamp1,rsingleton, RSig,rlen,rviewL,rviewR)
         
   
 import EFA.Signal.Base
@@ -96,7 +96,7 @@ recFullIntegrate :: (Num a,
                       V.Storage v a, 
                       V.FromList v) => 
                     PowerRecord v a -> FlowRecord v a
-recFullIntegrate (PowerRecord time pMap) = FlowRecord (S.fromList [fromScalar $ sigSum $ deltaSig time]) fMap
+recFullIntegrate (Record time pMap) = Record (S.fromList [fromScalar $ sigSum $ deltaSig time]) fMap
   where fMap = M.map (sigFullInt time) pMap
 
 -- | Pre-Integrate all Signals in Record
@@ -109,7 +109,7 @@ recPartIntegrate :: (Num a,
                       V.Storage v a, 
                       V.FromList v) => 
                     PowerRecord v a -> FlowRecord v a
-recPartIntegrate (PowerRecord time pMap) = FlowRecord (deltaSig time) fMap
+recPartIntegrate (Record time pMap) = Record (deltaSig time) fMap
   where fMap = M.map (sigPartInt time) pMap
 
 -- | Generate Sequence Flow
@@ -131,8 +131,8 @@ genSequFlow sqPRec = fmap recFullIntegrate sqPRec
 
 removeZeroTimeSections :: (Eq a, V.Storage v a, V.Singleton v) => (Sequ,SequData (PowerRecord v a)) -> (Sequ,SequData (PowerRecord v a))
 removeZeroTimeSections (xs, ys)  = filterSequWithSequData f (xs, ys) 
-   where  -- f (_,PowerRecord time _) = (S.head time) /= (S.last time) 
-          f (_,PowerRecord time _) = (fst $ maybe err id $ S.viewL time) /= (snd $ maybe err id $ S.viewR time) 
+   where  -- f (_,Record time _) = (S.head time) /= (S.last time) 
+          f (_,Record time _) = (fst $ maybe err id $ S.viewL time) /= (snd $ maybe err id $ S.viewR time) 
           err = error "Error in SequenceData.hs / removeZeroTimeSections -- empty head or tail"
 
 
@@ -142,7 +142,7 @@ removeLowEnergySections :: (Num a, SB.BSum a, Ord a, V.Walker v, V.Storage v a) 
    -> a 
    -> (Sequ, SequData (PowerRecord v a), SequData (FlowRecord v a))
 removeLowEnergySections  (xs, ys, zs) threshold = filterSequWithSequData2 f (xs, ys, zs)
-   where  f (_, _ , FlowRecord _ fMap) =  not $ all g (M.toList fMap)
+   where  f (_, _ , Record _ fMap) =  not $ all g (M.toList fMap)
           g (_,s) = (abs (fromScalar (sigSum s))) < threshold  
 
 
@@ -274,7 +274,7 @@ stepX p1 p2
    | otherwise = toSample NoStep  -- nostep
 
 
-addZeroCrossings :: ListPowerRecord -> ListPowerRecord
+addZeroCrossings :: PowerRecord [] Val -> PowerRecord [] Val
 addZeroCrossings r = rsig2Record rSigNew0 r
   where rSigNew0 =
            case record2RSig r of
@@ -376,19 +376,19 @@ type RSigX a =
          TC S.Sample (Typ A P Tt) (Data ([] :> [] :> Nil) a))
 
 record2RSig :: PowerRecord [] a -> RSigX a
-record2RSig (PowerRecord t pMap) = (t, S.transpose2 $ fromSigList $ M.elems pMap)
+record2RSig (Record t pMap) = (t, S.transpose2 $ fromSigList $ M.elems pMap)
 
 rsig2Record :: RSigX a -> PowerRecord [] a -> PowerRecord [] a
-rsig2Record (t, ps) (PowerRecord _ pMap) =
-   PowerRecord t $ updateMap pMap $ toSigList $ S.transpose2 ps
+rsig2Record (t, ps) (Record _ pMap) =
+   Record t $ updateMap pMap $ toSigList $ S.transpose2 ps
 
 rsig2SecRecord ::
    (V.Convert [] v, V.Storage v a) =>
    PowerRecord [] a ->
    RSigX a ->
    PowerRecord v a
-rsig2SecRecord (PowerRecord _ pMap) (t, ps) =
-   PowerRecord (S.convert t) $
+rsig2SecRecord (Record _ pMap) (t, ps) =
+   Record (S.convert t) $
    updateMap pMap $ map S.convert $ toSigList $ S.transpose2 ps
 
 
@@ -497,22 +497,22 @@ concatPowerRecords ::
    SequData (PowerRecord v a) -> PowerRecord v a
 concatPowerRecords (SequData recs) =
    case recs of
-      [] -> PowerRecord mempty M.empty
-      PowerRecord time0 pMap0 : recs0 ->
+      [] -> Record mempty M.empty
+      Record time0 pMap0 : recs0 ->
          let recs1 = map tailPowerRecord recs0
-         in  PowerRecord
-                (mconcat $ time0 : map (\(PowerRecord times _) -> times) recs1)
+         in  Record
+                (mconcat $ time0 : map (\(Record times _) -> times) recs1)
                 (M.mapWithKey
                     (\idx pSig ->
                        mconcat $ pSig :
-                       mapMaybe (\(PowerRecord _ pMap) -> M.lookup idx pMap) recs1)
+                       mapMaybe (\(Record _ pMap) -> M.lookup idx pMap) recs1)
                     pMap0)
 
 tailPowerRecord ::
    (V.Singleton v, V.Storage v a) =>
    PowerRecord v a -> PowerRecord v a
-tailPowerRecord (PowerRecord times pMap) =
-   PowerRecord
+tailPowerRecord (Record times pMap) =
+   Record
       (maybe mempty snd $ S.viewL times)
       (fmap (maybe mempty snd . S.viewL) pMap)
 
@@ -527,7 +527,7 @@ approxPowerRecord ::
    (V.Walker v, V.Storage v a, Real a) =>
    a -> PowerRecord v a -> PowerRecord v a -> Bool
 approxPowerRecord eps
-      (PowerRecord xt xm) (PowerRecord yt ym) =
+      (Record xt xm) (Record yt ym) =
    S.equalBy (approxAbs eps) xt yt
    &&
    M.keys xm == M.keys ym

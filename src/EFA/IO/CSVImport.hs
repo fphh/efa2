@@ -5,7 +5,7 @@ module EFA.IO.CSVImport (modelicaCSVImport) where
 import qualified Data.Map as M 
 import Text.ParserCombinators.Parsec (parse)
 
-import EFA.Signal.Record(SignalRecord(SignalRecord), SigId(SigId))
+import EFA.Signal.Record(Record(Record),SignalRecord, SigId(SigId))
 
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Vector as SV
@@ -18,7 +18,7 @@ import EFA.Signal.Base (Val)
 makeCSVRecord ::  [[String]] -> SignalRecord [] Val
 makeCSVRecord [] = error "This is not possible!"
 makeCSVRecord (h:hs) =
-  SignalRecord (S.fromList time) (M.fromList $ zip sigIdents (map S.fromList sigs))
+  Record (S.fromList time) (M.fromList $ zip sigIdents (map S.fromList sigs))
   where sigIdents = map SigId (tail h)
         time:sigs = SV.transpose (map (map read . init) hs)
 
