@@ -21,7 +21,7 @@ import qualified EFA.Equation.System as EqGen
 import EFA.IO.CSVImport (modelicaCSVImport)
 import qualified EFA.Signal.SequenceData as SD
 -- import EFA.Signal.SequenceData () 
-import EFA.Signal.Record (SigId(SigId), PPosIdx(PPosIdx),PowerCalc(Extra),PowerCalc (Take), PowerCalc(Mult), SignalOps(Negate),SignalRecord,getSig,getTime,selectRecord, extractLogSignals, SignalRecord(..), generatePowerRecord, FlowRecord(..))
+import EFA.Signal.Record (SigId(SigId), PPosIdx(PPosIdx),SignalRecord,getSig,getTime,selectRecord, extractLogSignals, SignalRecord(..), genPowerRecord, FlowRecord(..))
 import qualified EFA.Signal.Plot as PL
 import EFA.Signal.Sequence 
   (makeSequenceRaw,makeSeqFlowGraph, 
@@ -84,6 +84,9 @@ topo = Gr.mkGraph ns (makeEdges es)
 sol :: [TD.FlowTopology]
 sol = StateAnalysis.advanced topo    
 
+
+
+
 main :: IO ()
 main = do
 
@@ -104,153 +107,150 @@ main = do
   
   rec <- modelicaCSVImport "Vehicle_res_short_neu.csv" :: IO (SignalRecord [] Double)
   
-  let recConditioned = extractLogSignals rec [(SigId "engine1.Speed",[]),
-                                                 (SigId "engine1.flange_b.tau",[Negate]),
-                                                 (SigId "engine1.FuelPower",[]),
-                                                 (SigId "electricmotor2.speedsensor1.w",[]),
-                                                 (SigId "electricmotor2.signalcurrent1.p.i",[Negate]),
-                                                 (SigId "electricmotor2.signalcurrent1.v",[Negate]),
-                                                 (SigId "electricmotor2.flange_a.tau",[]),
-                                                 (SigId "battery1.pin_p.v",[]),
-                                                 (SigId "battery1.pin_p.i",[]),
-                                                 (SigId "battery1.constantvoltage1.v",[Negate]),
-                                                 (SigId "battery1.constantvoltage1.i",[]),
-                                                 (SigId "electricmotor1.speedsensor1.w",[]),
-                                                 (SigId "electricmotor1.flange_a.tau",[Negate]),
-                                                 (SigId "electricmotor1.signalcurrent1.p.i",[]),
-                                                 (SigId "electricmotor1.signalcurrent1.p.v",[]),
-                                                 (SigId "gearbox1.flange_a.tau",[]),
-                                                 (SigId "gearbox1.inertia1.w",[]),
-                                                 (SigId "gearbox1.flange_b.tau",[Negate]),
-                                                 (SigId "gearbox1.inertia2.w",[]),
-                                                 (SigId "brake1.lossPower",[]),
-                                                 (SigId "brake1.w",[]),
-                                                 (SigId "brake2.lossPower",[]),
-                                                 (SigId "brake2.w",[]),
-                                                 (SigId "idealrollingwheel1.flangeR.tau",[]),
-                                                 (SigId "idealrollingwheel1.flangeT.f",[Negate]),
-                                                 (SigId "idealrollingwheel2.flangeR.tau",[Negate]),
-                                                 (SigId "idealrollingwheel2.flangeT.f",[]),
-                                                 (SigId "chassis1.flange_a.f",[Negate]),
-                                                 (SigId "chassis1.flange_a1.f",[]),
-                                                 (SigId "speedsensor1.v",[]),
-                                                 (SigId "drivingresistance1.force1.f",[Negate])]
   
---------------------------------------------------------------------------------------- 
--- ## Calculate extra Signals and build SignalRecord
+  
+  
+  
+  let recConditioned = extractLogSignals rec [(SigId "engine1.Speed",id),
+                                                 (SigId "engine1.flange_b.tau",Sig.neg),
+                                                 (SigId "engine1.FuelPower",id),
+                                                 (SigId "electricmotor2.speedsensor1.w",id),
+                                                 (SigId "electricmotor2.signalcurrent1.p.i",Sig.neg),
+                                                 (SigId "electricmotor2.signalcurrent1.v",Sig.neg),
+                                                 (SigId "electricmotor2.flange_a.tau",id),
+                                                 (SigId "battery1.pin_p.v",id),
+                                                 (SigId "battery1.pin_p.i",id),
+                                                 (SigId "battery1.constantvoltage1.v",Sig.neg),
+                                                 (SigId "battery1.constantvoltage1.i",id),
+                                                 (SigId "electricmotor1.speedsensor1.w",id),
+                                                 (SigId "electricmotor1.flange_a.tau",Sig.neg),
+                                                 (SigId "electricmotor1.signalcurrent1.p.i",id),
+                                                 (SigId "electricmotor1.signalcurrent1.p.v",id),
+                                                 (SigId "gearbox1.flange_a.tau",id),
+                                                 (SigId "gearbox1.inertia1.w",id),
+                                                 (SigId "gearbox1.flange_b.tau",Sig.neg),
+                                                 (SigId "gearbox1.inertia2.w",id),
+                                                 (SigId "brake1.lossPower",id),
+                                                 (SigId "brake1.w",id),
+                                                 (SigId "brake2.lossPower",id),
+                                                 (SigId "brake2.w",id),
+                                                 (SigId "idealrollingwheel1.flangeR.tau",id),
+                                                 (SigId "idealrollingwheel1.flangeT.f",Sig.neg),
+                                                 (SigId "idealrollingwheel2.flangeR.tau",Sig.neg),
+                                                 (SigId "idealrollingwheel2.flangeT.f",id),
+                                                 (SigId "chassis1.flange_a.f",Sig.neg),
+                                                 (SigId "chassis1.flange_a1.f",id),
+                                                 (SigId "speedsensor1.v",id),
+                                                 (SigId "drivingresistance1.force1.f",Sig.neg)]
+  
+ --------------------------------------------------------------------------------------- 
+-- ## Calculate special signals
+  
+      -- Convenience function
+      g id = getSig recConditioned $ SigId id
   
       time = getTime rec
-      
-      get = getSig recConditioned
+      speed = g "speedsensor1.v" 
     
       -- generator
-      generatorCurrent = get (SigId "electricmotor2.signalcurrent1.p.i")
-      generatorVoltage = neg $ get (SigId "electricmotor2.signalcurrent1.v")
+      generatorCurrent = g "electricmotor2.signalcurrent1.p.i"
+      generatorVoltage = neg $ g "electricmotor2.signalcurrent1.v"
       generatorElectricPower =  generatorCurrent .* generatorVoltage
    
       -- battery
-      batteryPoleVoltage = get (SigId "battery1.pin_p.v")
-      batteryPoleCurrent = get (SigId "battery1.pin_p.i")                      
+      batteryPoleVoltage = g "battery1.pin_p.v"
+      batteryPoleCurrent = g "battery1.pin_p.i"                      
       batteryPolePower = batteryPoleVoltage.*batteryPoleCurrent
       
       -- dcdc -- TODO !!     
-      dcdcPowerHV = get (SigId "battery1.pin_p.i")
-      dcdcPowerLV = get (SigId "battery1.pin_p.i")
+      dcdcPowerHV = g "battery1.pin_p.i"
+      dcdcPowerLV = g "battery1.pin_p.i"
       
       -- chassis       
-      frontAxleForce =  get (SigId "chassis1.flange_a.f")
-      rearAxleForce =  get (SigId "chassis1.flange_a1.f")                  
-      speed = get (SigId "speedsensor1.v") 
+      frontAxleForce = g "chassis1.flange_a.f"
+      rearAxleForce =  g "chassis1.flange_a1.f"                 
       frontAxlePower =  frontAxleForce.*speed        
       rearAxlePower =  rearAxleForce.*speed
       kineticPower = (frontAxlePower.+rearAxlePower).-resistancePower
-                      
- -- driving resistance
-      resistanceForce = neg $ get (SigId "drivingresistance1.force1.f")
-      resistancePower = speed.* resistanceForce                 
       
-      recExtraSignals = SignalRecord time ( M.fromList [(SigId "connectionPower", batteryPolePower.-generatorElectricPower),
-                                                   (SigId "kineticPower", kineticPower),
-                                                   (SigId "dcdcPowerHV", dcdcPowerHV),
-                                                   (SigId "dcdcPowerLV", dcdcPowerLV)
-                                                  ])
+      resistancePower = g "drivingresistance1.force1.f".*speed
   
         
 --------------------------------------------------------------------------------------- 
 -- ## Build Power Record
       
-      pRec = generatePowerRecord recConditioned  recExtraSignals
-      
+      pRec = genPowerRecord time 
               -- engine
-              [(PPosIdx tank con_engine,                 
-                [Take "engine1.Speed", Mult "engine1.flange_b.tau"],                
-                [Take "engine1.FuelPower"]
+             [(PPosIdx tank con_engine, 
+               g "engine1.Speed" .* g "engine1.flange_b.tau",                
+               g "engine1.FuelPower"
                ),
                
               -- generator 
                (PPosIdx con_engine con_battery, 
-                [Take "electricmotor2.speedsensor1.w", Mult "electricmotor2.flange_a.tau"],
-                [Take "electricmotor2.signalcurrent1.p.i", Mult "electricmotor2.signalcurrent1.v"]
+                g  "electricmotor2.speedsensor1.w".* g "electricmotor2.flange_a.tau",
+                g "electricmotor2.signalcurrent1.p.i".* g "electricmotor2.signalcurrent1.v"
                ),
                
                -- connection
                (PPosIdx con_battery con_evs,
-                [Extra "connectionPower"],
-                [Extra "connectionPower"]
+                batteryPolePower.-generatorElectricPower,
+                batteryPolePower.-generatorElectricPower
                 ),
                
                --motor
                (PPosIdx con_evs con_motor,
-                [Take "electricmotor1.speedsensor1.w", Mult "electricmotor1.flange_a.tau"],
-                [Take "electricmotor1.signalcurrent1.p.i", Mult "electricmotor1.signalcurrent1.p.v"]
+                g "electricmotor1.speedsensor1.w".* g "electricmotor1.flange_a.tau",
+                g "electricmotor1.signalcurrent1.p.i".* g "electricmotor1.signalcurrent1.p.v"
                ),
                
                -- gearbox
                (PPosIdx con_motor con_frontBrakes,
-                [Take "gearbox1.flange_a.tau", Mult "gearbox1.inertia1.w"],
-                [Take "gearbox1.flange_b.tau", Mult "gearbox1.inertia2.w"]
+                g "gearbox1.flange_a.tau".* g "gearbox1.inertia1.w",
+                g "gearbox1.flange_b.tau".* g "gearbox1.inertia2.w"
                ),
       
                -- front wheels
                (PPosIdx con_frontBrakes con_chassis,
-                [Take "idealrollingwheel1.flangeR.tau", Mult "brake1.w"],
-                [Take "idealrollingwheel1.flangeT.f", Mult "speedsensor1.v" ]
+                g "idealrollingwheel1.flangeR.tau".* g "brake1.w",
+                g "idealrollingwheel1.flangeT.f".* speed 
                ),
                  
                -- driving Resistance
                (PPosIdx con_chassis drivingResistance,
-                [Take "drivingresistance1.force1.f", Mult "speedsensor1.v"],
-                [Take "drivingresistance1.force1.f", Mult "speedsensor1.v"]
+                g "drivingresistance1.force1.f".* speed,
+                g "drivingresistance1.force1.f".* speed
                ),
                
                -- battery
                (PPosIdx con_battery battery,
-                [Take "battery1.pin_p.v", Mult "battery1.pin_p.i"],
-                [Take "battery1.constantvoltage1.v", Mult "battery1.constantvoltage1.i"]
+                g "battery1.pin_p.v".* g "battery1.pin_p.i",
+                g "battery1.constantvoltage1.v".* g "battery1.constantvoltage1.i"
                ),
                
                -- DCDC
                (PPosIdx con_evs electricSystem,
-                [Extra "dcdcPowerHV"],
-                [Extra "dcdcPowerLV"]
+                dcdcPowerHV,
+                dcdcPowerLV
                ),
                  
                -- Front brake
                (PPosIdx con_frontBrakes frontBrakes,
-                [Take "brake1.lossPower"],
-                [Take "brake1.lossPower"]
+                g "brake1.lossPower",
+                g "brake1.lossPower"
                ),
                
                --Rear brake
                (PPosIdx con_chassis rearBrakes,
-                [Take "idealrollingwheel2.flangeR.tau", Mult "brake2.w"],
-                [Take "idealrollingwheel2.flangeT.f", Mult "speedsensor1.v"]
+                g "idealrollingwheel2.flangeR.tau".* g "brake2.w",
+                g "idealrollingwheel2.flangeT.f".* speed
                ),
                
                --kinetic power
                (PPosIdx con_chassis vehicleInertia,
-                [Extra "kineticPower"],
-                [Extra "kineticPower"]
+                kineticPower,
+                kineticPower
+                 
                )]
               
 

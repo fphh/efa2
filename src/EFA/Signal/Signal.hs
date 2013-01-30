@@ -247,7 +247,11 @@ infix 6 .+,.-
 
 infix 7 &*, &/
 infix 6 &+, &-
+----------------------------------------------------------
+-- New Synonyms           ] 
 
+type UTSignal v a = TC Signal (Typ UT UT UT) (Data (v :> Nil) a)
+type TSignal v a = TC Signal (Typ A T Tt) (Data (v :> Nil) a)
 
 ----------------------------------------------------------
 -- Convenience Type Synonyms
