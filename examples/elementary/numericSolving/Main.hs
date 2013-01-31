@@ -3,8 +3,7 @@ module Main where
 import EFA.Example.Utility
   ( edgeVar, makeEdges, (.=), constructSeqTopo )
 
--- import EFA.Graph.Topology.Nodes (Nodes(Node))
-import qualified EFA.Graph.Topology.Nodes as N
+import qualified EFA.Graph.Topology.Node as Node
 
 import qualified EFA.Graph.Draw as Draw
 
@@ -25,20 +24,18 @@ sec0 :~ sec1 :~ sec2 :~ sec3 :~ sec4 :~ _ = Stream.enumFrom $ Idx.Section 0
 node0, node1, node2, node3 :: Nodes
 node0 :~ node1 :~ node2 :~ node3 :~ _ = Stream.enumFrom $ Node 0
 
-
 data Nodes = Node Int deriving (Show, Eq, Ord)
 
 instance Enum Nodes where
          toEnum = Node
          fromEnum (Node n) = n
 
-instance N.ShowNode Nodes where
-         showNode (Node 0) = "null"
-         showNode (Node 1) = "eins"
-         showNode (Node 2) = "zwei"
-         showNode (Node 3) = "drei"
-         showNode n = show n
-
+instance Node.Show Nodes where
+         show (Node 0) = "null"
+         show (Node 1) = "eins"
+         show (Node 2) = "zwei"
+         show (Node 3) = "drei"
+         show n = Prelude.show n
 
 
 topoDreibein :: TD.Topology Nodes

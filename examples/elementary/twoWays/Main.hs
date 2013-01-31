@@ -27,7 +27,7 @@ import EFA.Report.FormatValue (formatValue)
 
 import EFA.Utility.Async (concurrentlyMany_)
 import qualified EFA.Graph.Draw as Draw
-import qualified EFA.Graph.Topology.Nodes as N
+import qualified EFA.Graph.Topology.Node as Node
 
 
 sec0 :: Idx.Section
@@ -45,10 +45,10 @@ instance Enum Nodes where
          toEnum 1 = Source
          toEnum x = C (x-2)
 
-instance N.ShowNode Nodes where
-         showNode Sink = show Sink
-         showNode Source = show Source
-         showNode c@(C _) = show (fromEnum c - 2)
+instance Node.Show Nodes where
+         show Sink = Prelude.show Sink
+         show Source = Prelude.show Source
+         show c@(C _) = Prelude.show (fromEnum c - 2)
 
 c0, c1, c2, c3 :: Nodes
 c0 :~ c1 :~ c2 :~ c3 :~ _ = Stream.enumFrom $ C 0
