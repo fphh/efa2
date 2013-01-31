@@ -290,7 +290,7 @@ instance  (Fractional y,
        rPlotCore rName rec = [rPlotSingle rName time pMap]
          where (Record time pMap)= rec -- apply a function before plotting
 
-{-
+
 instance   (Fractional y,
                       Show id,
                       SV.Walker v,
@@ -300,10 +300,9 @@ instance   (Fractional y,
                       TDisp t1,
                       Tuple.C y,
                       Atom.C y) => RPlot (SequData (Record s t1 t2 id v y)) where
-   rPlotCore _sqName f (SequData rs) = concat $ zipWith rPlotCore nameList (map f rs)
+   rPlotCore _sqName (SequData rs) = concat $ zipWith rPlotCore nameList rs
     where
       nameList = map (\ x -> "Record of " ++ show x) [Idx.Section 1 ..]
--}
 
 rPlotSingle ::
    (Show k, TDisp typ0, TDisp typ1,
