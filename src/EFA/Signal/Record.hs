@@ -71,14 +71,14 @@ removeZeroNoise (Record time pMap) threshold = Record time (M.map f pMap)
             | otherwise = x
 
 -- | Generate a new Record with selected signals
-extractRecord :: (Show (v a),Ord id, Show id) => Record s t1 t2 id v a -> [id] ->  Record s t1 t2 id v a
-extractRecord rec@(Record time _ ) xs = Record time  (M.fromList $ zip xs (map f xs))
+extractRecord :: (Show (v a),Ord id, Show id) => [id] -> Record s t1 t2 id v a ->  Record s t1 t2 id v a
+extractRecord xs rec@(Record time _ ) = Record time  (M.fromList $ zip xs (map f xs))
   where f x = getSig rec x
         
         
 -- | Split SignalRecord in even Junks                          
-splitRecord ::  (Ord id) => Record s t1 t2 id v a -> Int -> [Record s t1 t2 id v a]                          
-splitRecord (Record time pMap) n  = recList
+splitRecord ::  (Ord id) => Int -> Record s t1 t2 id v a  -> [Record s t1 t2 id v a]                          
+splitRecord n (Record time pMap)  = recList
   where (recList, _) = f ([],M.toList pMap)
         f (rs, []) = (rs,[])        
         f (rs, xs) = f (rs ++ [Record time (M.fromList $ take n xs)], drop n xs)

@@ -273,7 +273,7 @@ rPlotAttr name =
 -- | The Core Class and Functions for Plotting Records and a Sequnce of Records
 class (Atom.C (D.Value record)) => RPlot record where
    rPlotCore ::
-      String -> record ->
+      String ->  record ->
       [Frame.T (Graph2D.T (D.Value record) (D.Value record))]
 
 -- instance for a single record
@@ -287,9 +287,10 @@ instance  (Fractional y,
            Tuple.C y, 
            Atom.C y) =>
      RPlot (Record s t1 t2 id v y) where
-       rPlotCore rName (Record time pMap) =
-         [rPlotSingle rName time pMap]
+       rPlotCore rName rec = [rPlotSingle rName time pMap]
+         where (Record time pMap)= rec -- apply a function before plotting
 
+{-
 instance   (Fractional y,
                       Show id,
                       SV.Walker v,
@@ -299,10 +300,10 @@ instance   (Fractional y,
                       TDisp t1,
                       Tuple.C y,
                       Atom.C y) => RPlot (SequData (Record s t1 t2 id v y)) where
-   rPlotCore _sqName (SequData rs) = concat $ zipWith rPlotCore nameList rs
+   rPlotCore _sqName f (SequData rs) = concat $ zipWith rPlotCore nameList (map f rs)
     where
       nameList = map (\ x -> "Record of " ++ show x) [Idx.Section 1 ..]
-
+-}
 
 rPlotSingle ::
    (Show k, TDisp typ0, TDisp typ1,
@@ -342,11 +343,20 @@ instance (AxisLabel tc) => AxisLabel [tc] where
 --------------------------------------------
 -- Regular rPlot command
 
-
 rPlot :: (RPlot a) => (String, a) -> IO ()
 rPlot (name, r) =
    mapM_ Plot.plotDefault $ rPlotCore name r
 
+{-
+-- Apply a Function before Plotting 
+rPlotSelect :: (Ord id, 
+                Show id, 
+                Show (v a),
+                RPlot (Record s t1 t2 id v a)) 
+               => (String, Record s t1 t2 id v a) -> [id] -> IO ()
+rPlotSelect (name,r) idList = mapM_ Plot.plotDefault $ rPlotCore name r
+  where r = extractRecord r idList
+-}
 
 
 --------------------------------------------
@@ -362,12 +372,26 @@ rPlotSplit :: (Fractional y,
                       Tuple.C y,
                       Atom.C y,
                       Ord id) =>
-              (String, Record s t1 t2 id v y) -> Int -> IO ()     
-rPlotSplit (name,r) n = mapM_ rPlot $ zip titles recList
+              Int -> (String, Record s t1 t2 id v y) -> IO ()     
+rPlotSplit n (name,r) = mapM_ rPlot $ zip titles recList
   where 
-        recList = (splitRecord r n)
+        recList = splitRecord n r
         titles = map (\ x -> name ++ " - Part " ++ show x)  [1 .. (length recList)]
         
+rPlotSplitSeq ::(Fractional y,
+                      Ord id,
+                      Show id,
+                      SV.Walker v,
+                      SV.Storage v y,
+                      SV.FromList v,
+                      TDisp t1,
+                      TDisp t2,
+                      Tuple.C y,
+                      Atom.C y) => 
+                Int -> (String, SequData(Record s t1 t2 id v y)) -> IO ()     
+rPlotSplitSeq n (name,SequData rs) = mapM_ (rPlotSplit n ) $ zip titles rs
+  where 
+        titles = map (\ x -> name ++ " - Sec " ++ show x)  [1 .. (length rs)]
         
         
 --------------------------------------------
@@ -384,7 +408,20 @@ rPlotSelect :: (Fractional y,
                       Ord id, 
                       Show id, 
                       Show (v y)) =>
-               (String, Record s t1 t2 id v y) -> [id] -> IO ()     
-rPlotSelect (name,r) idList = rPlot (name,extractRecord r idList)
+               [id] -> (String, Record s t1 t2 id v y)  -> IO ()     
+rPlotSelect  idList (name,r) = rPlot (name,extractRecord idList r )
 
 
+rPlotSelectSeq ::  (Fractional y,
+                      Ord id,
+                      Show id,
+                      SV.Walker v,
+                      SV.Storage v y,
+                      SV.FromList v,
+                      TDisp t1,
+                      TDisp t2,
+                      Tuple.C y,
+                      Atom.C y,Show (v y), 
+                      RPlot (SequData (Record s t1 t2 id v y))) => [id] -> (String, SequData (Record s t1 t2 id v y)) ->  IO ()     
+rPlotSelectSeq  idList (name,SequData rs) = rPlot (name,SequData rs')
+  where rs' = map (extractRecord idList) rs

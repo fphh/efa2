@@ -104,41 +104,37 @@ main = do
   
   rec <- modelicaCSVImport "Vehicle_res_short_neu.csv" :: IO (SignalRecord [] Double)
   
-  
-  
-  
-  
   let recConditioned = extractLogSignals rec [(SigId "engine1.Speed",id),
-                                                 (SigId "engine1.flange_b.tau",Sig.neg),
-                                                 (SigId "engine1.FuelPower",id),
-                                                 (SigId "electricmotor2.speedsensor1.w",id),
-                                                 (SigId "electricmotor2.signalcurrent1.p.i",Sig.neg),
-                                                 (SigId "electricmotor2.signalcurrent1.v",Sig.neg),
-                                                 (SigId "electricmotor2.flange_a.tau",id),
-                                                 (SigId "battery1.pin_p.v",id),
-                                                 (SigId "battery1.pin_p.i",id),
-                                                 (SigId "battery1.constantvoltage1.v",Sig.neg),
-                                                 (SigId "battery1.constantvoltage1.i",id),
-                                                 (SigId "electricmotor1.speedsensor1.w",id),
-                                                 (SigId "electricmotor1.flange_a.tau",Sig.neg),
-                                                 (SigId "electricmotor1.signalcurrent1.p.i",id),
-                                                 (SigId "electricmotor1.signalcurrent1.p.v",id),
-                                                 (SigId "gearbox1.flange_a.tau",id),
-                                                 (SigId "gearbox1.inertia1.w",id),
-                                                 (SigId "gearbox1.flange_b.tau",Sig.neg),
-                                                 (SigId "gearbox1.inertia2.w",id),
-                                                 (SigId "brake1.lossPower",id),
-                                                 (SigId "brake1.w",id),
-                                                 (SigId "brake2.lossPower",id),
-                                                 (SigId "brake2.w",id),
-                                                 (SigId "idealrollingwheel1.flangeR.tau",id),
-                                                 (SigId "idealrollingwheel1.flangeT.f",Sig.neg),
-                                                 (SigId "idealrollingwheel2.flangeR.tau",Sig.neg),
-                                                 (SigId "idealrollingwheel2.flangeT.f",id),
-                                                 (SigId "chassis1.flange_a.f",Sig.neg),
-                                                 (SigId "chassis1.flange_a1.f",id),
-                                                 (SigId "speedsensor1.v",id),
-                                                 (SigId "drivingresistance1.force1.f",Sig.neg)]
+                                              (SigId "engine1.flange_b.tau",Sig.neg),
+                                              (SigId "engine1.FuelPower",id),
+                                              (SigId "electricmotor2.speedsensor1.w",id),
+                                              (SigId "electricmotor2.signalcurrent1.p.i",Sig.neg),
+                                              (SigId "electricmotor2.signalcurrent1.v",Sig.neg),
+                                              (SigId "electricmotor2.flange_a.tau",id),
+                                              (SigId "battery1.pin_p.v",id),
+                                              (SigId "battery1.pin_p.i",id),
+                                              (SigId "battery1.constantvoltage1.v",Sig.neg),
+                                              (SigId "battery1.constantvoltage1.i",id),
+                                              (SigId "electricmotor1.speedsensor1.w",id),
+                                              (SigId "electricmotor1.flange_a.tau",Sig.neg),
+                                              (SigId "electricmotor1.signalcurrent1.p.i",id),
+                                              (SigId "electricmotor1.signalcurrent1.p.v",id),
+                                              (SigId "gearbox1.flange_a.tau",id),
+                                              (SigId "gearbox1.inertia1.w",id),
+                                              (SigId "gearbox1.flange_b.tau",Sig.neg),
+                                              (SigId "gearbox1.inertia2.w",id),
+                                              (SigId "brake1.lossPower",id),
+                                              (SigId "brake1.w",id),
+                                              (SigId "brake2.lossPower",id),
+                                              (SigId "brake2.w",id),
+                                              (SigId "idealrollingwheel1.flangeR.tau",id),
+                                              (SigId "idealrollingwheel1.flangeT.f",Sig.neg),
+                                              (SigId "idealrollingwheel2.flangeR.tau",Sig.neg),
+                                              (SigId "idealrollingwheel2.flangeT.f",id),
+                                              (SigId "chassis1.flange_a.f",Sig.neg),
+                                              (SigId "chassis1.flange_a1.f",id),
+                                              (SigId "speedsensor1.v",id),
+                                              (SigId "drivingresistance1.force1.f",Sig.neg)]
   
  --------------------------------------------------------------------------------------- 
 -- ## Calculate special signals
@@ -308,15 +304,15 @@ main = do
                        SigId "engine1.Speed"                       
                       ]
  
-  PL.rPlotSelect ("Vehicle Signals",recConditioned) vehicleSigs  
-  PL.rPlotSelect ("DriveLine Signals",recConditioned) driveLineSigs   
-  PL.rPlotSelect ("Electric System Signals",recConditioned) electricSigs   
-  PL.rPlotSelect ("Motor Signals",recConditioned) motorSigs   
-  PL.rPlotSelect ("Battery Signals",recConditioned) batterySigs   
-  PL.rPlotSelect ("Generator and Engine Signals",recConditioned) generatorSigs   
+  PL.rPlotSelect vehicleSigs ("Vehicle Signals",recConditioned)   
+  PL.rPlotSelect driveLineSigs ("DriveLine Signals",recConditioned)    
+  PL.rPlotSelect electricSigs ("Electric System Signals",recConditioned)    
+  PL.rPlotSelect  motorSigs    ("Motor Signals",recConditioned)
+  PL.rPlotSelect batterySigs  ("Battery Signals",recConditioned)   
+  PL.rPlotSelect generatorSigs ("Generator and Engine Signals",recConditioned)    
   
-  PL.rPlotSplit ("Record",recConditioned) 9
-  PL.rPlotSplit ("Record",pRec) 9
+  PL.rPlotSplit 9 ("Record",recConditioned)
+  PL.rPlotSplit 9 ("Record",pRec)
   -- PL.xyplot "MotorPower" time motorMechPower
   -- PL.xyplot "MotorPower" time motorElectricPower
   
