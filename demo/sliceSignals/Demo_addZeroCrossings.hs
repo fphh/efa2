@@ -29,7 +29,7 @@ p2 = S.fromList [-1,3,3]
 p3 = S.fromList [-1,6,-6]
 
 pRec :: PowerRecord [] Val
-pRec = PowerRecord t
+pRec = Record t
          (M.fromListWith
             (error "duplicate keys")
             [ (PPosIdx node0 node1, p1),

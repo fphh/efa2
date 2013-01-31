@@ -8,7 +8,7 @@ import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Graph.Topology.Index as Idx
 import EFA.Signal.SequenceData (Sequ,SequData)
 import EFA.Signal.Record
-          (PPosIdx(PPosIdx), PowerRecord(PowerRecord))
+          (PPosIdx(PPosIdx), PowerRecord,Record(..))
 
          
           
@@ -60,7 +60,7 @@ pMap =
 
 pRec, pRec0 :: (PowerRecord [] Val)
 
-pRec = PowerRecord (S.fromList time) pMap
+pRec = Record (S.fromList time) pMap
 pRec0 = Sequ.addZeroCrossings pRec
 
 sequ :: Sequ

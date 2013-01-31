@@ -34,7 +34,7 @@ t :: S.TC s t (Data ([] :> Nil) Double)
 t = S.fromList [0..4]
 
 r :: PowerRecord [] Double
-r = PowerRecord t 
+r = Record t 
       (M.fromListWith
          (error "duplicate keys")
          [(PPosIdx node0 node0, p1), (PPosIdx node0 node1, p2)])

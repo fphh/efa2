@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module EFA.Signal.Plot where
 
@@ -11,9 +12,9 @@ import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Data as D
 import qualified EFA.Signal.Vector as SV
 import EFA.Signal.SequenceData (SequData(SequData))
-import EFA.Signal.Record (Record(Record), SignalRecord,PowerRecord,splitSignalRecord,splitPowerRecord)
+import EFA.Signal.Record (Record(Record), splitRecord,extractRecord)
 import EFA.Signal.Signal (TC, Signal, toSigList, getDisplayType)
-import EFA.Signal.Base (BSum)
+-- import EFA.Signal.Base (BSum)
 
 import EFA.Signal.Data (Data, (:>), Nil, NestedList)
 import EFA.Report.Typ (TDisp, DisplayType(Typ_P, Typ_T), getDisplayUnit, getDisplayTypName)
@@ -23,7 +24,7 @@ import qualified Graphics.Gnuplot.Advanced as Plot
 import qualified Graphics.Gnuplot.Plot.TwoDimensional as Plot2D
 import qualified Graphics.Gnuplot.Plot.ThreeDimensional as Plot3D
 import qualified Graphics.Gnuplot.Graph.TwoDimensional as Graph2D
--- import qualified Graphics.Gnuplot.Graph.ThreeDimensional as Graph3D
+
 import qualified Graphics.Gnuplot.Graph as Graph
 import qualified Graphics.Gnuplot.Value.Atom as Atom
 import qualified Graphics.Gnuplot.Value.Tuple as Tuple
@@ -39,7 +40,7 @@ import Control.Functor.HT (void)
 import Data.Foldable (foldMap)
 import Data.Monoid (mconcat)
 
-{-
+
 -- | Get Signal Plot Data (Unit Conversion)  ---------------------------------------------------------------
 
 sPlotData ::
@@ -242,8 +243,8 @@ instance
    surfPlotCore x y z =
       Plot3D.mesh $
       L.zipWith3 zip3 (S.toList2 x) (S.toList2 y) (S.toList2 z)
--}
-{-
+
+
 -- | Plotting Records ---------------------------------------------------------------
 
 -- | Line Style
@@ -268,65 +269,40 @@ rPlotAttr name =
 --   Opts.size (Scale 0.7) $
    Opts.deflt
 
-rPlot :: (RPlot a) => (String, a) -> IO ()
-rPlot (name, r) =
-   mapM_ Plot.plotDefault $ rPlotCore name r
 
--- | Class for Plotting Records
+-- | The Core Class and Functions for Plotting Records and a Sequnce of Records
 class (Atom.C (D.Value record)) => RPlot record where
    rPlotCore ::
       String -> record ->
       [Frame.T (Graph2D.T (D.Value record) (D.Value record))]
 
--- | Plot a Power Record
-   -- (SV.Walker v, SV.FromList v,
-   --  SV.Storage v y, Fractional y, Atom.C y, Tuple.C y) => 
+-- instance for a single record
+instance  (Fractional y,
+           Show id,
+           SV.Walker v,
+           SV.Storage v y,
+           SV.FromList v,
+           TDisp t2,
+           TDisp t1,
+           Tuple.C y, 
+           Atom.C y) =>
+     RPlot (Record s t1 t2 id v y) where
+       rPlotCore rName (Record time pMap) =
+         [rPlotSingle rName time pMap]
 
-instance
-  (Atom.C
-   (D.Value (Record
-     Signal
-     (EFA.Signal.Typ.Typ EFA.Signal.Typ.A EFA.Signal.Typ.T EFA.Signal.Typ.Tt)
-     (EFA.Signal.Typ.Typ
-      EFA.Signal.Typ.A EFA.Signal.Typ.P EFA.Signal.Typ.Tt)
-     v
-     y
-     EFA.Signal.Record.PPosIdx)))=>
-      RPlot (PowerRecord v y) where
-   rPlotCore rName (Record time pMap) =
-      [rPlotSingle rName time pMap]
-
--- | Plot a Signal Record
-instance
-   (SV.Walker v, SV.FromList v,
-    SV.Storage v y, Fractional y, Atom.C y, Tuple.C y) =>
-      RPlot (SignalRecord v y) where
-   rPlotCore rName (Record time sigMap) =
-      [rPlotSingle rName time sigMap]
-      
-rPlotSplit :: (Fractional a,
+instance   (Fractional y,
+                      Show id,
                       SV.Walker v,
-                      SV.Storage v a,
+                      SV.Storage v y,
                       SV.FromList v,
-                      Tuple.C a,
-                      Atom.C a,Ord a, BSum a) => 
-              (String, SignalRecord v a) -> Int -> IO ()     
-rPlotSplit (name,r) n = mapM_ rPlot $ zip titles recList
-  where 
-        recList = (splitSignalRecord r n)
-        titles = map (\ x -> name ++ " - Part " ++ show x)  [1 .. (length recList)]
+                      TDisp t2,
+                      TDisp t1,
+                      Tuple.C y,
+                      Atom.C y) => RPlot (SequData (Record s t1 t2 id v y)) where
+   rPlotCore _sqName (SequData rs) = concat $ zipWith rPlotCore nameList rs
+    where
+      nameList = map (\ x -> "Record of " ++ show x) [Idx.Section 1 ..]
 
-rPlotSplitPower :: (Fractional a,
-                      SV.Walker v,
-                      SV.Storage v a,
-                      SV.FromList v,
-                      Tuple.C a,
-                      Atom.C a,Ord a, BSum a) => 
-              (String, PowerRecord v a) -> Int -> IO ()     
-rPlotSplitPower (name,r) n = mapM_ rPlot $ zip titles recList
-  where 
-        recList = (splitPowerRecord r n)
-        titles = map (\ x -> name ++ " - Part " ++ show x)  [1 .. (length recList)]
 
 rPlotSingle ::
    (Show k, TDisp typ0, TDisp typ1,
@@ -346,16 +322,6 @@ rPlotSingle rName time pMap =
          zip (sPlotData time) (sPlotData sig)) $
    M.toList pMap
 
-instance   (Fractional a,
-                      SV.Walker v,
-                      SV.Storage v a,
-                      SV.FromList v,
-                      Tuple.C a,
-                      Atom.C a) => RPlot (SequData (PowerRecord  v a)) where
-   rPlotCore _sqName (SequData rs) = concat $ zipWith rPlotCore nameList rs
-    where
-      nameList = map (\ x -> "Record of " ++ show x) [Idx.Section 1 ..]
-
 
 class Atom.C (Value tc) => AxisLabel tc where
    type Value tc :: *
@@ -371,4 +337,54 @@ instance (TDisp t, Atom.C (D.Value c)) => AxisLabel (TC s t c) where
 instance (AxisLabel tc) => AxisLabel [tc] where
    type Value [tc] = Value tc
    genAxLabel x = genAxLabel $ head x
--}
+
+
+--------------------------------------------
+-- Regular rPlot command
+
+
+rPlot :: (RPlot a) => (String, a) -> IO ()
+rPlot (name, r) =
+   mapM_ Plot.plotDefault $ rPlotCore name r
+
+
+
+--------------------------------------------
+-- rPlot command to show max n signals per window
+
+rPlotSplit :: (Fractional y,
+                      Show id,
+                      SV.Walker v,
+                      SV.Storage v y,
+                      SV.FromList v,
+                      TDisp t2,
+                      TDisp t1,
+                      Tuple.C y,
+                      Atom.C y,
+                      Ord id) =>
+              (String, Record s t1 t2 id v y) -> Int -> IO ()     
+rPlotSplit (name,r) n = mapM_ rPlot $ zip titles recList
+  where 
+        recList = (splitRecord r n)
+        titles = map (\ x -> name ++ " - Part " ++ show x)  [1 .. (length recList)]
+        
+        
+        
+--------------------------------------------
+-- rPlot command to plot selected Signals only 
+
+rPlotSelect :: (Fractional y,
+                      SV.Walker v,
+                      SV.Storage v y,
+                      SV.FromList v,
+                      TDisp t2,
+                      TDisp t1,
+                      Tuple.C y,
+                      Atom.C y,
+                      Ord id, 
+                      Show id, 
+                      Show (v y)) =>
+               (String, Record s t1 t2 id v y) -> [id] -> IO ()     
+rPlotSelect (name,r) idList = rPlot (name,extractRecord r idList)
+
+

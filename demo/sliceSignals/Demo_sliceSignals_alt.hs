@@ -38,7 +38,7 @@ pmap = M.fromListWith
          [(PPosIdx node0 node1, p1),(PPosIdx node1 node0, p2)]
 
 rec, rec0 :: PowerRecord [] Double
-rec = PowerRecord time pmap
+rec = Record time pmap
 rec0 = addZeroCrossings rec
 
 sqRec :: SequData (PowerRecord [] Double)

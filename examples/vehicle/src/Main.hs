@@ -21,7 +21,7 @@ import qualified EFA.Equation.System as EqGen
 import EFA.IO.CSVImport (modelicaCSVImport)
 import qualified EFA.Signal.SequenceData as SD
 -- import EFA.Signal.SequenceData () 
-import EFA.Signal.Record (SigId(SigId), PPosIdx(PPosIdx),SignalRecord,getSig,getTime,selectRecord, extractLogSignals, SignalRecord(..), genPowerRecord, FlowRecord(..))
+import EFA.Signal.Record (SigId(SigId), PPosIdx(PPosIdx),SignalRecord,getSig,getTime,extractLogSignals,Record(Record), SignalRecord, genPowerRecord)
 import qualified EFA.Signal.Plot as PL
 import EFA.Signal.Sequence 
   (makeSequenceRaw,makeSeqFlowGraph, 
@@ -84,9 +84,6 @@ topo = Gr.mkGraph ns (makeEdges es)
 sol :: [TD.FlowTopology]
 sol = StateAnalysis.advanced topo    
 
-
-
-
 main :: IO ()
 main = do
 
@@ -147,7 +144,7 @@ main = do
 -- ## Calculate special signals
   
       -- Convenience function
-      g id = getSig recConditioned $ SigId id
+      g sigId = getSig recConditioned $ SigId sigId
   
       time = getTime rec
       speed = g "speedsensor1.v" 
@@ -260,71 +257,66 @@ main = do
    
   -- Building Signal Record for better Plotting of the original signals 
 
-      recVehicle = selectRecord recConditioned idlist
-        where idlist = [SigId "speedsensor1.v",
-                        SigId "idealrollingwheel1.flangeR.tau",
-                        SigId "idealrollingwheel2.flangeR.tau",
-                        SigId "brake1.tau",
-                        SigId "brake2.tau",
-                        SigId "drivingresistance1.force1.f"]
+
+      vehicleSigs = [SigId "speedsensor1.v",
+                     SigId "idealrollingwheel1.flangeR.tau",
+                     SigId "idealrollingwheel2.flangeR.tau",
+                     SigId "brake1.tau",
+                     SigId "brake2.tau",
+                     SigId "drivingresistance1.force1.f"]
 
   -- Building Signal Record for better Plotting of the original signals 
-      recDriveLine = selectRecord recConditioned idlist
-        where idlist = [SigId "speedsensor1.v",
-                        SigId "electricmotor1.flange_a.tau",
-                        SigId "gearbox1.flange_a.tau",                        
-                        SigId "gearbox1.flange_b.tau"
+      driveLineSigs = [SigId "speedsensor1.v",
+                       SigId "electricmotor1.flange_a.tau",
+                       SigId "gearbox1.flange_a.tau",                        
+                       SigId "gearbox1.flange_b.tau"
                        ]
   
   -- Building Signal Record for better Plotting of the original signals 
-      recMotor = selectRecord recConditioned idlist
-        where idlist = [SigId "speedsensor1.v",                        
-                        SigId "electricmotor1.flange_a.tau",
-                        SigId "electricmotor1.speedsensor1.w",
-                        SigId "electricmotor1.signalcurrent1.p.i",
-                        SigId "electricmotor1.signalcurrent1.p.v"
-                       ]
+      motorSigs = [SigId "speedsensor1.v",                        
+                   SigId "electricmotor1.flange_a.tau",
+                   SigId "electricmotor1.speedsensor1.w",
+                   SigId "electricmotor1.signalcurrent1.p.i",
+                   SigId "electricmotor1.signalcurrent1.p.v"
+                   ]
   
   -- Building Signal Record for better Plotting of the original signals 
-      recElectric = selectRecord recConditioned idlist
-        where idlist = [SigId "speedsensor1.v",                        
-                        SigId "battery1.pin_p.v",
-                        SigId "battery1.pin_p.i",
-                        SigId "electricmotor1.signalcurrent1.p.i",
-                        SigId "electricmotor1.signalcurrent1.p.v",
-                        SigId "electricmotor2.signalcurrent1.p.i",
-                        SigId "electricmotor2.signalcurrent1.p.v"
+      electricSigs =  [SigId "speedsensor1.v",                        
+                       SigId "battery1.pin_p.v",
+                       SigId "battery1.pin_p.i",
+                       SigId "electricmotor1.signalcurrent1.p.i",
+                       SigId "electricmotor1.signalcurrent1.p.v",
+                       SigId "electricmotor2.signalcurrent1.p.i",
+                       SigId "electricmotor2.signalcurrent1.p.v"
                        ]
        
   -- Building Signal Record for better Plotting of the original signals 
-      recBattery = selectRecord recConditioned idlist
-        where idlist = [SigId "speedsensor1.v",                        
-                        SigId "battery1.pin_p.v",
-                        SigId "battery1.pin_p.i",
-                        SigId "battery1.constantvoltage1.v",
-                        SigId "battery1.constantvoltage1.i"
-                       ]
+      batterySigs = [SigId "speedsensor1.v",                        
+                    SigId "battery1.pin_p.v",
+                    SigId "battery1.pin_p.i",
+                    SigId "battery1.constantvoltage1.v",
+                    SigId "battery1.constantvoltage1.i"
+                   ]
   
   -- Building Signal Record for better Plotting of the original signals 
-      recGenerator = selectRecord recConditioned idlist
-        where idlist = [SigId "speedsensor1.v",                        
-                        SigId "electricmotor2.signalcurrent1.p.i",
-                        SigId "electricmotor2.signalcurrent1.v",
-                        SigId "electricmotor2.flange_a.tau",
-                        SigId "electricmotor2.speedsensor1.w",
-                        SigId "engine1.Speed",
-                        SigId "engine1.Speed"                       
-                       ]
+      generatorSigs = [SigId "speedsensor1.v",                        
+                       SigId "electricmotor2.signalcurrent1.p.i",
+                       SigId "electricmotor2.signalcurrent1.v",
+                       SigId "electricmotor2.flange_a.tau",
+                       SigId "electricmotor2.speedsensor1.w",
+                       SigId "engine1.Speed",
+                       SigId "engine1.Speed"                       
+                      ]
  
-  PL.rPlot ("Vehicle Signals",recVehicle)   
-  PL.rPlot ("DriveLine Signals",recDriveLine)   
-  PL.rPlot ("Electric System Signals",recElectric)   
-  PL.rPlot ("Motor Signals",recMotor)   
-  PL.rPlot ("Battery Signals",recBattery)   
-  PL.rPlot ("Generator and Engine Signals",recGenerator)   
+  PL.rPlotSelect ("Vehicle Signals",recConditioned) vehicleSigs  
+  PL.rPlotSelect ("DriveLine Signals",recConditioned) driveLineSigs   
+  PL.rPlotSelect ("Electric System Signals",recConditioned) electricSigs   
+  PL.rPlotSelect ("Motor Signals",recConditioned) motorSigs   
+  PL.rPlotSelect ("Battery Signals",recConditioned) batterySigs   
+  PL.rPlotSelect ("Generator and Engine Signals",recConditioned) generatorSigs   
   
   PL.rPlotSplit ("Record",recConditioned) 9
-  PL.rPlotSplitPower ("Record",pRec) 9
+  PL.rPlotSplit ("Record",pRec) 9
   -- PL.xyplot "MotorPower" time motorMechPower
   -- PL.xyplot "MotorPower" time motorElectricPower
   
@@ -372,9 +364,9 @@ main = do
                                        <> foldMap f (zip [Idx.Section 0 ..] ds)
         where 
               SD.SequData ds =  fmap f2 sqFlowRec
-              f2 (FlowRecord t xs) = (sum $ Sig.toList t, M.toList $ M.map (sum . Sig.toList) xs)      
-              f (sec, (dt, es)) = (EqGen.dtime sec .= dt) <> foldMap g es                                                          
-                where g (PPosIdx a b, e) = (edgeVar EqGen.energy sec a b .= e)
+              f2 (Record t xs) = (sum $ Sig.toList t, M.toList $ M.map (sum . Sig.toList) xs)      
+              f (sec, (dt, es)) = (EqGen.dtime sec .= dt) <> foldMap h es                                                          
+                where h (PPosIdx a b, e) = (edgeVar EqGen.energy sec a b .= e)
    
      -- Generate Sequence Topology 
       sequTopo = makeSeqFlowGraph topo sequFRec

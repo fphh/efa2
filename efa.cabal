@@ -295,7 +295,7 @@ Executable makestub
   Else
     Buildable: False
 
-Executable Main
+Executable VehicleSeriesHybrid
   Main-Is: examples/vehicle/src/Main.hs
   GHC-Options: -Wall
   If flag(buildExamples)

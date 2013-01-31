@@ -46,7 +46,7 @@ pmapList :: [M.Map PPosIdx (S.TC s t (Data ([] :> Nil) Double))]
 pmapList = [pmap]
 
 recList :: [PowerRecord [] Double]
-recList = map (PowerRecord time) pmapList  
+recList = map (Record time) pmapList  
 
 list ::
   [(Int, (String, (PowerRecord [] Double, (Sequ, SequData (PowerRecord [] Double)))))]
@@ -56,7 +56,7 @@ list = idxList $
 
 f :: 
   (Num a, Show a2, Show a1, Show a) =>
-  (a, ([Char], (ListPowerRecord, (a1, a2)))) -> IO ()
+  (a, ([Char], (PowerRecord [] Double, (a1, a2)))) -> IO ()
 f (idx, (title, (pRec, (sq, sqRec)))) = do
   putStrLn ""
   putStrLn $ "Test " ++ show (idx + 1) ++ ": " ++ title

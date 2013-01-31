@@ -7,7 +7,7 @@ import qualified EFA.Signal.Sequence as Seq
 -- import qualified EFA.Signal.SequenceData as SeqData
 
 import qualified EFA.Signal.Signal as S
-import EFA.Signal.Record (PowerRecord(..))
+import EFA.Signal.Record (PowerRecord,Record(..))
 import EFA.Signal.Base (Val)
 
 -- import Test.QuickCheck (Property, (==>))
@@ -29,8 +29,8 @@ prop_chopMatchingCutsApprox prec =
       SequData xs ->
          and $
          HTL.mapAdjacent
-            (\(PowerRecord xt xm)
-              (PowerRecord yt ym) ->
+            (\(Record xt xm)
+              (Record yt ym) ->
                 fmap snd (S.viewR xt) == fmap fst (S.viewL yt)
                 &&
                 fmap (fmap snd . S.viewR) xm == fmap (fmap fst . S.viewL) ym)
@@ -52,8 +52,8 @@ prop_chopMatchingCutsExact prec =
       SequData xs ->
          and $
          HTL.mapAdjacent
-            (\(PowerRecord xt xm)
-              (PowerRecord yt ym) ->
+            (\(Record xt xm)
+              (Record yt ym) ->
                 fmap snd (S.viewR xt) == fmap fst (S.viewL yt)
                 &&
                 fmap (fmap snd . S.viewR) xm == fmap (fmap fst . S.viewL) ym)

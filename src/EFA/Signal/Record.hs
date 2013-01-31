@@ -13,11 +13,11 @@ import qualified EFA.Signal.Data as D
 import qualified EFA.Signal.Vector as V
 import EFA.Report.Base (DispStorage1)
 import EFA.Signal.Signal
-          (TC, Signal, neg, FSignal,TSamp,PSamp,PSamp1L,PSamp2LL,TSigL,UTSignal,TSignal)
+          (TC, Signal, FSignal,TSamp,PSamp,PSamp1L,PSamp2LL,TSigL,UTSignal,TSignal)
           
 import EFA.Signal.Typ (Typ, A, P, T, Tt, UT,F,D)
 import EFA.Signal.Data (Data, (:>), Nil)
-import EFA.Signal.Base (Sign, Val, BSum, DArith0,BProd)
+import EFA.Signal.Base (Sign, BSum, DArith0,BProd)
 
 import EFA.Report.Report (ToTable(toTable), Table(..), tvcat)
 import Text.Printf (PrintfArg)
@@ -26,7 +26,6 @@ import System.Random (Random)
 
 import qualified Data.Map as M
 import qualified Data.List.HT as HTL
-import qualified Data.List as L
 import qualified Data.List.Match as Match
 
 import Data.NonEmpty ((!:))
@@ -38,95 +37,31 @@ import EFA.Utility (checkedLookup)
 
 
 
-data SigId = SigId String deriving (Show, Eq, Ord)
+newtype SigId = SigId String deriving (Show, Eq, Ord)
 
 
 -- | Indices for Power Position
 data PPosIdx = PPosIdx !Idx.Node !Idx.Node deriving (Show, Eq, Ord)
 
-data Record s t1 t2 v a id =  Record (TC s t1 (Data (v :> Nil) a)) (M.Map id (TC s t2 (Data (v :> Nil) a))) deriving (Show, Eq)
+type instance D.Value (Record s t1 t2 id v a) = a
 
-type SignalRecord v a =  Record Signal (Typ A T Tt) (Typ UT UT UT) v a SigId
 
-type PowerRecord v a =  Record Signal (Typ A T Tt) (Typ A P Tt) v a PPosIdx
+data Record s t1 t2 id v a =  Record (TC s t1 (Data (v :> Nil) a)) (M.Map id (TC s t2 (Data (v :> Nil) a))) deriving (Show, Eq)
 
-type FlowRecord v a =  Record FSignal (Typ D T Tt) (Typ A F Tt) v a PPosIdx
+type SignalRecord v a =  Record Signal (Typ A T Tt) (Typ UT UT UT)  SigId v a
+
+type PowerRecord v a =  Record Signal (Typ A T Tt) (Typ A P Tt) PPosIdx v a 
+
+type FlowRecord v a =  Record FSignal (Typ D T Tt) (Typ A F Tt) PPosIdx v a 
 
 -- | Flow record to contain flow signals assigned to the tree
 newtype FlowState = FlowState (M.Map PPosIdx Sign) deriving (Show)
 
-
-
-{-
------------------------------------------------------------------------------------
--- | Signal Record 
-
--- | Signal record to contain original time signals
--- data Record = Record TSig (M.Map SigId UTSigL) deriving (Show)
-
-data SignalRecord v a =
-   SignalRecord
-      (TC Signal (Typ A T Tt) (Data (v :> Nil) a))
-      (M.Map SigId (TC Signal (Typ UT UT UT) (Data (v :> Nil) a)))
-   deriving (Show, Eq)
-
-type instance D.Value (SignalRecord v a) = a
-
-
------------------------------------------------------------------------------------
--- | Power Record 
-
--- | Power record to contain power signals assigned to the tree
-data PowerRecord v a =
-   PowerRecord
-      (TC Signal (Typ A T Tt) (Data (v :> Nil) a))
-      (M.Map PPosIdx (TC Signal (Typ A P Tt) (Data (v :> Nil) a)))
-   deriving (Show, Eq)
-
-type instance D.Value (PowerRecord v a) = a
-
-type ListPowerRecord = PowerRecord [] Val
-
------------------------------------------------------------------------------------
--- | Flow Record 
-
--- | Flow record to contain flow signals assigned to the tree
--- | Do we need a flow value record ?? 
-data FlowRecord v a =
-   FlowRecord
-      (TC FSignal (Typ D T Tt) (Data (v :> Nil) a))
-      (M.Map PPosIdx (TC FSignal (Typ A F Tt) (Data (v :> Nil) a)))
-   deriving (Show, Eq)
-
-type instance D.Value (FlowRecord v a) = a
-
--- type SequFlowState = SequData FlowState
--- type SequFlowTops = SequData FlowTopology
-
--}
------------------------------------------------------------------------------------
--- Utility Functions on Records 
-
-{-
-class GetSig r v a i s t where 
-  getSignal :: r v a -> i -> TC s (Typ A t  Tt) (Data (v :> Nil) a)
-  
-instance GetSig SignalRecord v a SigId Signal UT where
-  getSignal (SignalRecord time m) k = checkedLookup m k
-
--}
-
-getTime :: SignalRecord v a ->  TC Signal (Typ A T Tt) (Data (v :> Nil) a) 
+getTime :: Record s t1 t2 id v a ->  TC s t1 (Data (v :> Nil) a) 
 getTime (Record time _) = time
 
-getPTime :: PowerRecord v a ->  TC Signal (Typ A T Tt) (Data (v :> Nil) a) 
-getPTime (Record time _) = time
-
-getSig :: Show (v a) => SignalRecord v a -> SigId -> TC Signal (Typ UT UT UT) (Data (v :> Nil) a)   
-getSig (Record _ sigMap) sigId = checkedLookup sigMap sigId
-
-getPSig :: Show (v a) => PowerRecord v a -> PPosIdx -> TC Signal (Typ A P Tt) (Data (v :> Nil) a)   
-getPSig (Record _ pMap) idx = checkedLookup pMap idx
+getSig :: (Show (v a),Ord id, Show id) => Record s t1 t2 id v a -> id -> TC s t2 (Data (v :> Nil) a)   
+getSig (Record _ sigMap) key = checkedLookup sigMap key
 
 -- | Use carefully -- removes signal jitter around zero 
 removeZeroNoise :: (V.Walker v, V.Storage v a, Ord a, Num a) => PowerRecord v a -> a -> PowerRecord v a        
@@ -136,34 +71,34 @@ removeZeroNoise (Record time pMap) threshold = Record time (M.map f pMap)
             | otherwise = x
 
 -- | Generate a new Record with selected signals
-selectRecord :: Show (v a) => SignalRecord v a -> [SigId] ->  SignalRecord v a
-selectRecord rec@(Record time _ ) xs = Record time  (M.fromList $ zip xs (map f xs))
+extractRecord :: (Show (v a),Ord id, Show id) => Record s t1 t2 id v a -> [id] ->  Record s t1 t2 id v a
+extractRecord rec@(Record time _ ) xs = Record time  (M.fromList $ zip xs (map f xs))
   where f x = getSig rec x
         
         
 -- | Split SignalRecord in even Junks                          
-splitSignalRecord ::  (Num a, Ord a, V.Walker v, V.Storage v a, BSum a) => SignalRecord v a -> Int -> [SignalRecord v a]                          
-splitSignalRecord (Record time pMap) n  = recList
-  where (recList, _) = f ([],sortSigList $ M.toList pMap)
+splitRecord ::  (Ord id) => Record s t1 t2 id v a -> Int -> [Record s t1 t2 id v a]                          
+splitRecord (Record time pMap) n  = recList
+  where (recList, _) = f ([],M.toList pMap)
         f (rs, []) = (rs,[])        
         f (rs, xs) = f (rs ++ [Record time (M.fromList $ take n xs)], drop n xs)
         
 
-sortSigList ::  (Num a,
-                      Ord a,
-                      V.Walker v,
-                      V.Storage v a,
-                      BSum a) =>
-                [ (SigId,TC Signal (Typ UT UT UT) (Data (v :> Nil) a))] ->  [(SigId, TC Signal (Typ UT UT UT) (Data (v :> Nil) a))]
-sortSigList  sigList = L.sortBy g  sigList
-  where g (_,x) (_,y) = compare (S.sigSum x) (S.sigSum y) 
+-- sortSigList ::  (Num a,
+--                       Ord a,
+--                       V.Walker v,
+--                       V.Storage v a,
+--                       BSum a) =>
+--                 [ (SigId,TC Signal (Typ UT UT UT) (Data (v :> Nil) a))] ->  [(SigId, TC Signal (Typ UT UT UT) (Data (v :> Nil) a))]
+-- sortSigList  sigList = L.sortBy g  sigList
+--   where g (_,x) (_,y) = compare (S.sigSum x) (S.sigSum y) 
 
--- | Split PowerRecord in even Junks                          
-splitPowerRecord ::  (Num a, Ord a, V.Walker v, V.Storage v a, BSum a) => PowerRecord v a -> Int -> [PowerRecord v a]                          
-splitPowerRecord (Record time pMap) n  = recList
-  where (recList, _) = f ([],M.toList pMap)
-        f (rs, []) = (rs,[])        
-        f (rs, xs) = f (rs ++ [Record time (M.fromList $ take n xs)], drop n xs)
+-- -- | Split PowerRecord in even Junks                          
+-- splitPowerRecord ::  (Num a, Ord a, V.Walker v, V.Storage v a, BSum a) => PowerRecord v a -> Int -> [PowerRecord v a]                          
+-- splitPowerRecord (Record time pMap) n  = recList
+--   where (recList, _) = f ([],M.toList pMap)
+--         f (rs, []) = (rs,[])        
+--         f (rs, xs) = f (rs ++ [Record time (M.fromList $ take n xs)], drop n xs)
  
 
 -----------------------------------------------------------------------------------
