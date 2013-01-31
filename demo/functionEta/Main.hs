@@ -24,9 +24,6 @@ import Data.Foldable (foldMap)
 sec0 :: Idx.Section
 sec0 :~ _ = Stream.enumFrom $ Idx.Section 0
 
---sink, source :: Idx.Node
---sink :~ (source :~ _) = Stream.enumFrom $ Idx.Node 0
-
 data Nodes = Sink | Source deriving (Eq, Ord, Show)
 
 linearOne :: TD.Topology Nodes

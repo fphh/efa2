@@ -81,7 +81,7 @@ Library
     EFA.Graph.Draw
     EFA.Graph.Topology
     EFA.Graph.Topology.Index
-    EFA.Graph.Topology.Nodes
+    EFA.Graph.Topology.Node
     EFA.Graph.Topology.StateAnalysis
     EFA.Graph.Flow
     EFA.Equation.System

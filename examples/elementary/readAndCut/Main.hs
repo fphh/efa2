@@ -25,16 +25,16 @@ import EFA.Signal.Record
 
 import qualified EFA.Graph.Draw as Draw
 
-import qualified EFA.Graph.Topology.Nodes as N
+import qualified EFA.Graph.Topology.Node as Node
 
 sec0, sec1, sec2, sec3, sec4 :: Idx.Section
 sec0 :~ sec1 :~ sec2 :~ sec3 :~ sec4 :~ _ = Stream.enumFrom $ Idx.Section 0
 
-node0, node1, node2, node3 :: N.Nodes
-node0 :~ node1 :~ node2 :~ node3 :~ _ = Stream.enumFrom $ N.Node 0
+node0, node1, node2, node3 :: Node.Node
+node0 :~ node1 :~ node2 :~ node3 :~ _ = Stream.enumFrom $ Node.Node 0
 
 
-topoDreibein :: TD.Topology N.Nodes
+topoDreibein :: TD.Topology Node.Node
 topoDreibein = Gr.mkGraph ns (makeEdges es)
   where ns = [(node0, TD.Source),
               (node1, TD.Crossing),
@@ -43,7 +43,7 @@ topoDreibein = Gr.mkGraph ns (makeEdges es)
         es = [(node0, node1), (node1, node2), (node1, node3)]
 
 
-given :: EqGen.EquationSystem N.Nodes s Double
+given :: EqGen.EquationSystem Node.Node s Double
 given = foldMap (uncurry (.=)) $
   (EqGen.dtime Idx.initSection, 1) :
   []

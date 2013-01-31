@@ -8,7 +8,7 @@ import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Async (concurrentlyMany_)
 import EFA.Utility.Stream (Stream((:~)))
 import EFA.Graph (mkGraph)
-import qualified EFA.Graph.Topology.Nodes as N
+import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Draw as Draw
 import EFA.Example.Utility (makeEdges)
 
@@ -17,33 +17,75 @@ sec0 :: Idx.Section
 sec0 :~ _ = Stream.enumFrom $ Idx.Section 0
 
 -------------------------------------------------
--- Vordefinierte Knoten
+-- Vordefinierte Knoten Node
 
-node0, node1 :: N.Nodes
-node0 :~ node1 :~ _ = Stream.enumFrom $ N.Node 0
+node00, node01 :: Node.Node
+node00 :~ node01 :~ _ = Stream.enumFrom $ Node.Node 0
 
-topo1 :: TD.Topology N.Nodes
-topo1 = mkGraph nodes (makeEdges edges)
-  where nodes = [(node0, TD.AlwaysSink), (node1, TD.AlwaysSource)]
-        edges = [(node0, node1)]
+topo0 :: TD.Topology Node.Node
+topo0 = mkGraph nodes (makeEdges edges)
+  where nodes = [(node00, TD.AlwaysSink), (node01, TD.AlwaysSource)]
+        edges = [(node00, node01)]
+
 
 -------------------------------------------------
--- Selbstdefinierte Knoten
+-- Vordefinierte Knoten Int
+
+node10, node11 :: Node.Int
+node10 :~ node11 :~ _ = Stream.enumFrom $ Node.Int 0
+
+topo1 :: TD.Topology Node.Int
+topo1 = mkGraph nodes (makeEdges edges)
+  where nodes = [(node10, TD.AlwaysSink), (node11, TD.AlwaysSource)]
+        edges = [(node10, node11)]
+
+
+-------------------------------------------------
+-- Vordefinierte Knoten String
+
+node20, node21 :: Node.String
+node20 = Node.String "node20"
+node21 = Node.String "node21"
+
+topo2 :: TD.Topology Node.String
+topo2 = mkGraph nodes (makeEdges edges)
+  where nodes = [(node20, TD.AlwaysSink), (node21, TD.AlwaysSource)]
+        edges = [(node20, node21)]
+
+
+-------------------------------------------------
+-- Selbstdefinierte Knoten mit default show-Funktion
+
+data NodesAB = A | B deriving (Eq, Ord, Show)
+
+instance Node.Show NodesAB
+
+topo3 :: TD.Topology NodesAB
+topo3 = mkGraph nodes (makeEdges edges)
+  where nodes = [(A, TD.AlwaysSink), (B, TD.AlwaysSource)]
+        edges = [(A, B)]
+
+-------------------------------------------------
+-- Selbstdefinierte Knoten mit selbstdefinierter show-Funktion
 
 data Nodes = Source | Sink deriving (Eq, Ord, Show)
 
-instance N.ShowNode Nodes where
-         showNode Source = "Dies ist eine Quelle."
-         showNode Sink = "Dies ist eine Senke."
+instance Node.Show Nodes where
+         show Source = "Dies ist eine Quelle."
+         show x = Prelude.show x
 
-topo2 :: TD.Topology Nodes
-topo2 = mkGraph nodes (makeEdges edges)
+topo4 :: TD.Topology Nodes
+topo4 = mkGraph nodes (makeEdges edges)
   where nodes = [(Sink, TD.AlwaysSink), (Source, TD.AlwaysSource)]
         edges = [(Source, Sink)]
 
+-------------------------------------------------
 
 main :: IO ()
 main =
   concurrentlyMany_ [
+    Draw.topology topo0,
     Draw.topology topo1,
-    Draw.topology topo2 ]
+    Draw.topology topo2,
+    Draw.topology topo3,
+    Draw.topology topo4 ]

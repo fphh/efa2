@@ -16,13 +16,13 @@ import EFA.Utility (idxList)
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
 
-import qualified EFA.Graph.Topology.Nodes as N
+import qualified EFA.Graph.Topology.Node as Node
 
 import EFA.Signal.Data ((:>), Nil, Data)
 
 
-node0, node1 :: N.Nodes
-node0 :~ node1 :~ _ = Stream.enumFrom $ N.Node 0
+node0, node1 :: Node.Node
+node0 :~ node1 :~ _ = Stream.enumFrom $ Node.Node 0
 
 time :: S.TC s t (Data ([] :> Nil) Double)
 time = S.fromList [0, 10..50]
@@ -33,7 +33,7 @@ t = "zero crossing"
 p :: S.TC s t (Data ([] :> Nil) Double)
 p = S.fromList [2, 2, 2, -2, -2]
 
-pmap :: M.Map (PPosIdx N.Nodes) (S.TC s t (Data ([] :> Nil) Double))
+pmap :: M.Map (PPosIdx Node.Node) (S.TC s t (Data ([] :> Nil) Double))
 pmap = M.fromListWith
          (error "duplicate keys") 
          [(PPosIdx node0 node1,  p)]
@@ -42,21 +42,21 @@ pmap = M.fromListWith
 titleList :: [String]
 titleList = [t]
 
-pmapList :: [M.Map (PPosIdx N.Nodes) (S.TC s t (Data ([] :> Nil) Double))]
+pmapList :: [M.Map (PPosIdx Node.Node) (S.TC s t (Data ([] :> Nil) Double))]
 pmapList = [pmap]
 
-recList :: [PowerRecord N.Nodes [] Double]
+recList :: [PowerRecord Node.Node [] Double]
 recList = map (PowerRecord time) pmapList  
 
 list ::
-  [(Int, (String, (PowerRecord N.Nodes [] Double, (Sequ, SequData (PowerRecord N.Nodes [] Double)))))]
+  [(Int, (String, (PowerRecord Node.Node [] Double, (Sequ, SequData (PowerRecord Node.Node [] Double)))))]
 list = idxList $
   zip titleList 
       (zip recList (map  (genSequ . addZeroCrossings) recList))
 
 f :: 
   (Num a, Show a2, Show a1, Show a) =>
-  (a, ([Char], (ListPowerRecord N.Nodes, (a1, a2)))) -> IO ()
+  (a, ([Char], (ListPowerRecord Node.Node, (a1, a2)))) -> IO ()
 f (idx, (title, (pRec, (sq, sqRec)))) = do
   putStrLn ""
   putStrLn $ "Test " ++ show (idx + 1) ++ ": " ++ title

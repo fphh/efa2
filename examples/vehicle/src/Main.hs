@@ -33,7 +33,7 @@ import EFA.Signal.Signal((.*),(.+),(.-),neg)
 import qualified EFA.Report.Report as Rep
 
 import qualified EFA.Graph.Draw as Draw-- (drawTopology)
-import qualified EFA.Graph.Topology.Nodes as N
+import qualified EFA.Graph.Topology.Node as Node
 
 import Data.Monoid ((<>))
 
@@ -50,8 +50,8 @@ sec0 :~ sec1 :~ sec2 :~ sec3 :~ sec4 :~ _ = Stream.enumFrom $ Idx.Section 0
 
 data Nodes = Tank | Con_engine | Con_battery | Battery | Con_evs | Con_motor | Con_frontBrakes | Con_chassis | DrivingResistance | ElectricSystem | FrontBrakes | VehicleInertia | RearBrakes deriving (Eq, Ord, Show)
 
-instance N.ShowNode Nodes where
-         showNode = show
+instance Node.Show Nodes
+
 
 -- Define System Topology
 topo :: TD.Topology Nodes
