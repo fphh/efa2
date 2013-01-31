@@ -11,7 +11,8 @@ import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
 import EFA.Utility (checkedLookup)
 import EFA.Graph (mkGraph)
-import EFA.Example.Utility ((.=), constructSeqTopo, edgeVar, makeEdges, recAbs)
+import EFA.Example.Utility 
+  ((.=), constructSeqTopo, edgeVar, makeEdges, recAbs)
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (formatValue)
@@ -23,38 +24,38 @@ import Data.Foldable (foldMap)
 sec0 :: Idx.Section
 sec0 :~ _ = Stream.enumFrom $ Idx.Section 0
 
-sink, source :: Idx.Node
-sink :~ (source :~ _) = Stream.enumFrom $ Idx.Node 0
+data Nodes = Sink | Source deriving (Eq, Ord, Show)
 
-linearOne :: TD.Topology
+linearOne :: TD.Topology Nodes
 linearOne = mkGraph nodes (makeEdges edges)
-  where nodes = [(sink, TD.AlwaysSink), (source, TD.AlwaysSource)]
-        edges = [(source, sink)]
+  where nodes = [(Sink, TD.AlwaysSink), (Source, TD.AlwaysSource)]
+        edges = [(Source, Sink)]
 
-seqTopo :: TD.SequFlowGraph
+seqTopo :: TD.SequFlowGraph Nodes
 seqTopo = constructSeqTopo linearOne [0]
 
 enRange :: [Double]
 enRange = 0.01:[0.5, 1 .. 9]
 
-c :: EqGen.ExprWithVars s a
-c = edgeVar EqGen.power sec0 source sink
+c :: EqGen.ExprWithVars Nodes s a
+c = edgeVar EqGen.power sec0 Source Sink
 
-n :: EqGen.ExprWithVars s a
-n = edgeVar EqGen.eta sec0 source sink
+n :: EqGen.ExprWithVars Nodes s a
+n = edgeVar EqGen.eta sec0 Source Sink
 
-eta :: Idx.Eta
-eta = edgeVar (Idx.Eta recAbs) sec0 source sink
+eta :: Idx.Eta Nodes
+eta = edgeVar (Idx.Eta recAbs) sec0 Source Sink
 
 
-functionEta :: EqGen.ExprWithVars s Double -> EqGen.ExprWithVars s Double
+functionEta ::
+  EqGen.ExprWithVars Nodes s Double -> EqGen.ExprWithVars Nodes s Double
 functionEta p = 0.3 * sqrt p
 
-given :: Double -> EqGen.EquationSystem s Double
+given :: Double -> EqGen.EquationSystem Nodes s Double
 given p =
    foldMap (uncurry (.=)) $
    (EqGen.dtime sec0, 1) :
-   (edgeVar EqGen.power sec0 source sink, p) : []
+   (edgeVar EqGen.power sec0 Source Sink, p) : []
 
 
 solve :: Double -> String

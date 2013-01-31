@@ -5,7 +5,6 @@ module EFA.IO.ASCIIImport (modelicaASCIIImport) where
 
 import qualified Data.Map as M
 import Text.ParserCombinators.Parsec (parse)
-import EFA.Signal.Base (Val)
 
 import EFA.Signal.Record (Record(Record),SignalRecord, SigId(SigId))
 
@@ -16,7 +15,9 @@ import EFA.IO.CSVParser (csvFile)
 
 
 
-makeASCIIRecord :: [[String]] -> SignalRecord [] Val
+makeASCIIRecord ::
+  (SV.Storage t v, SV.FromList t, Read v) =>
+  [[String]] -> SignalRecord t v
 makeASCIIRecord [] = error "This is not possible!"
 makeASCIIRecord hs =
   Record (S.fromList time) (M.fromList $ zip sigIdents (map S.fromList sigs))
@@ -24,7 +25,9 @@ makeASCIIRecord hs =
         time:sigs = SV.transpose (map (map read . init) hs)
 
 -- | Main ASCII Import Function
-modelicaASCIIImport ::  FilePath -> IO (SignalRecord [] Val)
+modelicaASCIIImport ::
+  (SV.Storage t v, SV.FromList t, Read v) =>
+  FilePath -> IO (SignalRecord t v)
 modelicaASCIIImport path = do
   text <- readFile path
   case parse (csvFile ' ') path text of

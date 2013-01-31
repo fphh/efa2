@@ -1,5 +1,3 @@
-
-
 module EFA.Graph.Topology (
        NLabel (..), LNode,
        LEdge, LDirEdge,
@@ -39,9 +37,9 @@ import Data.Maybe.HT (toMaybe)
 import Data.Tuple.HT (snd3)
 
 
-type LNode = Gr.LNode Idx.SecNode NodeType
-type LEdge = Gr.LEdge Idx.SecNode FlowDirection
-type LDirEdge = Gr.LEdge Idx.SecNode ()
+type LNode a = Gr.LNode (Idx.SecNode a) NodeType
+type LEdge a = Gr.LEdge (Idx.SecNode a) FlowDirection
+type LDirEdge a = Gr.LEdge (Idx.SecNode a) ()
 
 data NodeType = Storage
               | Sink
@@ -78,11 +76,12 @@ data EdgeType = OriginalEdge
               | IntersectionEdge deriving (Eq, Ord, Show)
 
 
-edgeType :: Gr.Edge Idx.SecNode -> EdgeType
+edgeType :: Gr.Edge (Idx.SecNode a) -> EdgeType
 edgeType e =
    if isOriginalEdge e
      then OriginalEdge
      else IntersectionEdge
+
 
 isActiveEdge :: FlowDirectionField el => el -> Bool
 isActiveEdge = isActive . getFlowDirection
@@ -111,26 +110,23 @@ instance FlowDirectionField l => FlowDirectionField (e, l) where
    getFlowDirection = getFlowDirection . snd
 
 
-class MakeSecNode n where
-   makeSecNode :: n -> Idx.SecNode
+class NodeEdgeType n where
+   getNodeEdgeType :: Gr.Edge n -> EdgeType
 
-instance MakeSecNode Idx.SecNode where
-   makeSecNode = id
+instance NodeEdgeType (Idx.SecNode n) where
+   getNodeEdgeType = edgeType
 
-class SecEdgeField e where
-   getSecEdge :: e -> Gr.Edge Idx.SecNode
+instance NodeEdgeType n => EdgeTypeField (Gr.Edge n) where
+   getEdgeType e = getNodeEdgeType e
 
-instance MakeSecNode n => SecEdgeField (Gr.Edge n) where
-   getSecEdge = fmap makeSecNode
-
-instance SecEdgeField e => EdgeTypeField (e, l) where
-   getEdgeType (e, _l) = edgeType $ getSecEdge e
+instance EdgeTypeField e => EdgeTypeField (e, l) where
+   getEdgeType (e, _l) = getEdgeType e
 
 
-isOriginalEdge :: Gr.Edge Idx.SecNode -> Bool
+isOriginalEdge :: Gr.Edge (Idx.SecNode a) -> Bool
 isOriginalEdge (Gr.Edge (Idx.SecNode sx _) (Idx.SecNode sy _))  =  sx == sy
 
-isIntersectionEdge :: Gr.Edge Idx.SecNode -> Bool
+isIntersectionEdge :: Gr.Edge (Idx.SecNode a) -> Bool
 isIntersectionEdge (Gr.Edge (Idx.SecNode sx _) (Idx.SecNode sy _))  =  sx /= sy
 
 
@@ -139,15 +135,15 @@ isDirEdge = dir . getFlowDirection . snd
   where dir Dir = True
         dir _ = False
 
-type Topology = Graph Idx.Node NodeType ()
+type Topology a = Graph a NodeType ()
 
-type FlowTopology = Graph Idx.Node NodeType FlowDirection
+type FlowTopology a = Graph a NodeType FlowDirection
 
-type SequFlowGraph = Graph Idx.SecNode NodeType FlowDirection
+type SequFlowGraph a = Graph (Idx.SecNode a) NodeType FlowDirection
 
-type DirSequFlowGraph = Graph Idx.SecNode NodeType ()
+type DirSequFlowGraph a = Graph (Idx.SecNode a) NodeType ()
 
-pathExists :: Idx.Node -> Idx.Node -> FlowTopology -> Bool
+pathExists :: (Eq a, Ord a) => a -> a -> FlowTopology a -> Bool
 pathExists _ _ topo | Gr.isEmpty topo = False
 pathExists a b _    | a == b = True 
 pathExists a b topo = any f s
@@ -165,9 +161,9 @@ isStorageNode = isStorage . snd . snd3
 
 -- | Active storages, grouped by storage number, sorted by section number.
 getActiveStores ::
-   (FlowDirectionField el) =>
-   Graph Idx.SecNode NodeType el ->
-   M.Map Idx.Node (M.Map Idx.Section (InOut Idx.SecNode el, StoreDir))
+   (FlowDirectionField el, Ord a) =>
+   Graph (Idx.SecNode a) NodeType el ->
+   M.Map a (M.Map Idx.Section (InOut (Idx.SecNode a) el, StoreDir))
 getActiveStores =
    M.fromListWith
       (M.unionWith (error "the same storage multiple times in a section")) .
@@ -185,7 +181,7 @@ getActiveStores =
 -- This means that nodes with in AND out edges cannot be treated.
 maybeActiveSt ::
    (FlowDirectionField el) =>
-   Idx.SecNode -> InOut Idx.SecNode el -> Maybe StoreDir
+   Idx.SecNode a -> InOut (Idx.SecNode a) el -> Maybe StoreDir
 maybeActiveSt n (ins, outs) =
    mplus
       (toMaybe

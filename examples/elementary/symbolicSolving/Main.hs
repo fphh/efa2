@@ -13,6 +13,7 @@ import qualified EFA.Equation.System as EqGen
 import qualified EFA.Graph as Gr
 import EFA.Equation.Variable (Index)
 import EFA.Symbolic.SumProduct (Term)
+import qualified EFA.Graph.Topology.Node as Node
 
 import Data.Monoid (mempty)
 
@@ -20,11 +21,11 @@ import Data.Monoid (mempty)
 sec0 :: Idx.Section
 sec0 = Idx.Section 0
 
-node0, node1, node2, node3 :: Idx.Node
-node0 :~ node1 :~ node2 :~ node3 :~ _ = Stream.enumFrom $ Idx.Node 0
+node0, node1, node2, node3 :: Node.Node
+node0 :~ node1 :~ node2 :~ node3 :~ _ = Stream.enumFrom $ Node.Node 0
 
 
-topoDreibein :: TD.Topology
+topoDreibein :: TD.Topology Node.Node
 topoDreibein = Gr.mkGraph ns (makeEdges es)
   where ns = [(node0, TD.Source),
               (node1, TD.Sink),
@@ -36,7 +37,7 @@ topoDreibein = Gr.mkGraph ns (makeEdges es)
 {-
 Use new Term type here since it simplifies automatically.
 -}
-given :: EqGen.EquationSystem s (Term Index)
+given :: EqGen.EquationSystem Node.Node s (Term (Index Node.Node))
 given =
    Idx.DTime recAbs Idx.initSection =<>
    Idx.DTime recAbs sec0 =<>

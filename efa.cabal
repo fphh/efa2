@@ -81,6 +81,7 @@ Library
     EFA.Graph.Draw
     EFA.Graph.Topology
     EFA.Graph.Topology.Index
+    EFA.Graph.Topology.Node
     EFA.Graph.Topology.StateAnalysis
     EFA.Graph.Flow
     EFA.Equation.System
@@ -231,6 +232,16 @@ Executable demo-symbolicSolving
   Else
     Buildable: False
 
+Executable demo-twoways
+  Main-Is: examples/elementary/twoWays/Main.hs
+  GHC-Options: -Wall
+  If flag(buildExamples)
+    Build-Depends:
+      efa,
+      base
+  Else
+    Buildable: False
+
 Executable demo-undiredge
   Main-Is: demo/undirEdge/Main.hs
   GHC-Options: -Wall
@@ -282,20 +293,23 @@ Executable demo-pretty
   Else
     Buildable: False
 
-Executable makestub
-  Main-Is: sandbox/makestub/Main.hs
+
+Executable demo-nodedefinition
+  Main-Is: demo/nodeDefinition/Main.hs
   GHC-Options: -Wall
-  If flag(buildTools)
+  If flag(buildExamples)
     Build-Depends:
-      haskell-src-exts == 1.13.5,
-      text == 0.11.2.0,
-      graphviz == 2999.14.1.0.1,
-      containers == 0.4.2.1,
-      base
+      efa,
+      base,
+      containers
   Else
     Buildable: False
 
+<<<<<<< HEAD
 Executable VehicleSeriesHybrid
+=======
+Executable demo-vehicle
+>>>>>>> master
   Main-Is: examples/vehicle/src/Main.hs
   GHC-Options: -Wall
   If flag(buildExamples)
@@ -306,3 +320,25 @@ Executable VehicleSeriesHybrid
   Else
     Buildable: False
  
+Executable demo-stateanalysis
+  Main-Is: demo/stateAnalysis/Main.hs
+  GHC-Options: -Wall
+  If flag(buildExamples)
+     Build-Depends:
+       efa,
+       base,
+       containers
+  Else
+    Buildable: False
+ 
+Executable demo-readandcut
+  Main-Is: examples/elementary/readAndCut/Main.hs
+  GHC-Options: -Wall
+  If flag(buildExamples)
+     Build-Depends:
+       efa,
+       base,
+       containers
+  Else
+    Buildable: False
+
