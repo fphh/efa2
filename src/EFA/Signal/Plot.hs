@@ -287,33 +287,22 @@ instance  (Fractional y,
            Tuple.C y, 
            Atom.C y) =>
      RPlot (Record s t1 t2 id v y) where
-       rPlotCore rName rec = [rPlotSingle rName time pMap]
-         where (Record time pMap)= rec -- apply a function before plotting
+       rPlotCore rName rec = [rPlotSingle rName rec]
 
-
-instance   (Fractional y,
-                      Show id,
-                      SV.Walker v,
-                      SV.Storage v y,
-                      SV.FromList v,
-                      TDisp t2,
-                      TDisp t1,
-                      Tuple.C y,
-                      Atom.C y) => RPlot (SequData (Record s t1 t2 id v y)) where
+instance (RPlot record) => RPlot (SequData record) where
+   -- wenn sqName hier nicht gebraucht wird, dann ist an der ganzen Konstruktion was faul
    rPlotCore _sqName (SequData rs) = concat $ zipWith rPlotCore nameList rs
     where
       nameList = map (\ x -> "Record of " ++ show x) [Idx.Section 1 ..]
 
 rPlotSingle ::
-   (Show k, TDisp typ0, TDisp typ1,
+   (Show id, TDisp typ0, TDisp typ1,
     SV.Walker v, SV.FromList v,
-    SV.Storage v x, Fractional x, Atom.C x, Tuple.C x,
-    SV.Storage v y, Fractional y, Atom.C y, Tuple.C y) =>
+    SV.Storage v a, Fractional a, Atom.C a, Tuple.C a) =>
    String ->
-   TC s typ0 (Data (v :> Nil) x) ->
-   M.Map k (TC s typ1 (Data (v :> Nil) y)) ->
-   Frame.T (Graph2D.T x y)
-rPlotSingle rName time pMap =
+   Record s typ0 typ1 id v a ->
+   Frame.T (Graph2D.T a a)
+rPlotSingle rName (Record time pMap) =
    Frame.cons (rPlotAttr rName) $
    foldMap
       (\(key, sig) ->
