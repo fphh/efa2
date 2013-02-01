@@ -305,11 +305,7 @@ Executable demo-nodedefinition
   Else
     Buildable: False
 
-<<<<<<< HEAD
-Executable VehicleSeriesHybrid
-=======
 Executable demo-vehicle
->>>>>>> master
   Main-Is: examples/vehicle/src/Main.hs
   GHC-Options: -Wall
   If flag(buildExamples)
