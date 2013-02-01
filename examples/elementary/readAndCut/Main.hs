@@ -50,7 +50,7 @@ given = foldMap (uncurry (.=)) $
 
 main :: IO ()
 main = do
-  SignalRecord time sigMap <- modelicaCSVImport "modThreeWay_sto.RecB_res.csv"
+  Record time sigMap <- modelicaCSVImport "modThreeWay_sto.RecB_res.csv"
 
 
   let pMap =  M.fromList [
@@ -61,7 +61,7 @@ main = do
         (PPosIdx node1 node3, sigMap M.! (SigId "powercon5.u")),
         (PPosIdx node3 node1, sigMap M.! (SigId "powercon6.u")) ]
 
-      pRec = PowerRecord time (M.map (Sig.fromList . Sig.toList) pMap)
+      pRec = Record time (M.map (Sig.fromList . Sig.toList) pMap) :: PowerRecord Node.Node [] Double
 
       sequ = makeSequence pRec
 

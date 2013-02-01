@@ -36,13 +36,8 @@ pmap = M.fromListWith
          (error "duplicate keys")
          [(PPosIdx node0 node1, p1),(PPosIdx node1 node0, p2)]
 
-<<<<<<< HEAD
-rec, rec0 :: PowerRecord [] Double
-rec = Record time pmap
-=======
 rec, rec0 :: PowerRecord Node.Node [] Double
-rec = PowerRecord time pmap
->>>>>>> master
+rec = Record time pmap
 rec0 = addZeroCrossings rec
 
 sqRec :: SequData (PowerRecord Node.Node [] Double)

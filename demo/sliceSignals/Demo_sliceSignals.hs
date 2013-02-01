@@ -188,7 +188,7 @@ list = idxList $
       (zip recList (map  (genSequ . addZeroCrossings) recList))
 
 f :: (Num a, Show a, ToTable a2, ToTable a1) =>
-  (a, ([Char], (SequData (PowerRecord Node.Int [] (a1, a2))))) -> IO ()
+  (a, ([Char], (PowerRecord Node.Int [] Double, (a1, a2)))) -> IO ()
 f (idx, (title, (pRec, (sq, sqRec)))) = do
   putStrLn ""
   putStrLn $ "Test " ++ show (idx+1) ++ ": " ++ title

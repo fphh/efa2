@@ -10,15 +10,15 @@ import EFA.Signal.Typ (Typ, A, P, Tt)
 
 import EFA.Report.Report (report, ROpt(..))
 
-import qualified EFA.Utility.Stream as Stream
-import EFA.Utility.Stream (Stream((:~)))
+-- import qualified EFA.Utility.Stream as Stream
+-- import EFA.Utility.Stream (Stream((:~)))
 
 import EFA.Signal.Data ((:>), Nil, Data)
 
-import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Graph.Topology.Node as Node
+data Nodes = Node0 | Node1 deriving (Eq, Ord, Show)
 
-node0, node1 :: Idx.Node
-node0 :~ node1 :~ _ = Stream.enumFrom $ Idx.Node 0
+instance Node.Show Nodes
 
 l :: [Double]
 l = [1..5]
@@ -33,11 +33,11 @@ p2 = p1
 t :: S.TC s t (Data ([] :> Nil) Double)
 t = S.fromList [0..4]
 
-r :: PowerRecord [] Double
+r :: PowerRecord Nodes [] Double
 r = Record t 
       (M.fromListWith
          (error "duplicate keys")
-         [(PPosIdx node0 node0, p1), (PPosIdx node0 node1, p2)])
+         [(PPosIdx Node0 Node1, p1), (PPosIdx Node1 Node0, p2)])
 
 
 main :: IO ()
