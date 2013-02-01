@@ -52,11 +52,11 @@ type instance D.Value (Record s t1 t2 id v a) = a
 
 data Record s t1 t2 id v a =  Record (TC s t1 (Data (v :> Nil) a)) (M.Map id (TC s t2 (Data (v :> Nil) a))) deriving (Show, Eq)
 
-type SignalRecord v a =  Record Signal (Typ A T Tt) (Typ UT UT UT)  SigId v a
+type SignalRecord = Record Signal (Typ A T Tt) (Typ UT UT UT) SigId
 
-type PowerRecord nty v a =  Record Signal (Typ A T Tt) (Typ A P Tt) (PPosIdx nty) v a 
+type PowerRecord n = Record Signal (Typ A T Tt) (Typ A P Tt) (PPosIdx n)
 
-type FlowRecord nty v a =  Record FSignal (Typ D T Tt) (Typ A F Tt) (PPosIdx nty) v a 
+type FlowRecord n = Record FSignal (Typ D T Tt) (Typ A F Tt) (PPosIdx n)
 
 -- | Flow record to contain flow signals assigned to the tree
 newtype FlowState nty = FlowState (M.Map (PPosIdx nty) Sign) deriving (Show)
