@@ -1,5 +1,3 @@
-{-# LANGUAGE FlexibleContexts, UndecidableInstances #-}
-
 module EFA.Equation.Env where
 
 import qualified EFA.Graph.Topology.Index as Idx
