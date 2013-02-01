@@ -1,5 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
-
 module EFA.Graph.Draw (
   sequFlowGraph,
   sequFlowGraphWithEnv,
@@ -74,7 +72,7 @@ intersectionEdgeColour = Color [RGB 200 0 0]
 
 
 dotFromSequFlowGraph ::
-  (Node.Show nty, Ord nty, Topo.EdgeTypeField (Topo.LEdge nty)) => 
+  (Node.Show nty, Ord nty) =>
   SequFlowGraph nty ->
   Maybe (Unicode, Idx.Section -> Unicode) ->
   (Topo.LNode nty -> Unicode) ->
@@ -131,8 +129,8 @@ dotFromSecNode nshow n@(x, _) =
       [displabel, nodeColour, Style [SItem Filled []], Shape BoxShape ]
   where displabel = Label $ StrLabel $ T.pack $ unUnicode $ nshow n
 
-dotFromSecEdge :: 
-  (Node.Show nty, Ord nty, Topo.EdgeTypeField (Topo.LEdge nty)) =>
+dotFromSecEdge ::
+  (Node.Show nty, Ord nty) =>
   (Topo.LEdge nty -> [Unicode]) -> Topo.LEdge nty -> DotEdge T.Text
 dotFromSecEdge eshow e =
    DotEdge
@@ -155,7 +153,7 @@ dotIdentFromSecNode (Idx.SecNode (Idx.Section s) n) =
    T.pack $ "s" ++ show s ++ "n" ++ Node.show n
 
 printGraph, printGraphX, _printGraphDot ::
-  (Ord nty, Node.Show nty, Topo.EdgeTypeField (Topo.LEdge nty)) =>
+  (Ord nty, Node.Show nty) =>
    SequFlowGraph nty ->
    Maybe (Unicode, Idx.Section -> Unicode) ->
    (Topo.LNode nty -> Unicode) ->
@@ -174,7 +172,7 @@ _printGraphDot g recTShow nshow eshow =
 
 
 sequFlowGraph ::
-  (Ord nty, Node.Show nty, Topo.EdgeTypeField (Topo.LEdge nty)) =>
+  (Ord nty, Node.Show nty) =>
   SequFlowGraph nty -> IO ()
 sequFlowGraph topo =
    printGraph topo Nothing nshow eshow
@@ -325,7 +323,7 @@ lookupFormatAssign mp makeIdx x y =
          Format.assign (formatValue $ mkIdx idx) (lookupFormat mp idx)
 
 sequFlowGraphWithEnv ::
-  (Ord nty, Node.Show nty, Topo.EdgeTypeField (Topo.LEdge nty)) =>
+  (Ord nty, Node.Show nty) =>
   SequFlowGraph nty -> Env nty Unicode -> IO ()
 sequFlowGraphWithEnv g env =
    printGraph g (Just (recordNumber env, formatTime env)) (formatNode env) eshow
@@ -346,12 +344,12 @@ sequFlowGraphWithEnv g env =
            []
 
 sequFlowGraphAbsWithEnv ::
-  (FormatValue a, Ord nty, Node.Show nty, Topo.EdgeTypeField (Topo.LEdge nty)) =>
+  (FormatValue a, Ord nty, Node.Show nty) =>
   SequFlowGraph nty -> Interp.Env nty SingleRecord a -> IO ()
 sequFlowGraphAbsWithEnv topo = sequFlowGraphWithEnv topo . envAbs
 
 sequFlowGraphDeltaWithEnv ::
-  (FormatValue a, Ord nty, Node.Show nty, Topo.EdgeTypeField (Topo.LEdge nty)) =>
+  (FormatValue a, Ord nty, Node.Show nty) =>
   SequFlowGraph nty -> Interp.Env nty SingleRecord a -> IO ()
 sequFlowGraphDeltaWithEnv topo = sequFlowGraphWithEnv topo . envDelta
 
