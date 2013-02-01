@@ -46,7 +46,7 @@ pmapList :: [M.Map (PPosIdx Node.Node) (S.TC s t (Data ([] :> Nil) Double))]
 pmapList = [pmap]
 
 recList :: [PowerRecord Node.Node [] Double]
-recList = map (PowerRecord time) pmapList  
+recList = map (Record time) pmapList  
 
 list ::
   [(Int, (String, (PowerRecord Node.Node [] Double, (Sequ, SequData (PowerRecord Node.Node [] Double)))))]
@@ -54,9 +54,14 @@ list = idxList $
   zip titleList 
       (zip recList (map  (genSequ . addZeroCrossings) recList))
 
-f :: 
-  (Num a, Show a2, Show a1, Show a) =>
-  (a, ([Char], (ListPowerRecord Node.Node, (a1, a2)))) -> IO ()
+-- f :: 
+--   (Num a, Show a2, Show a1, Show a) =>
+--   (a, ([Char], (SequData (PowerRecord Node.Node [] Double), (a1, a2)))) -> IO ()
+
+f :: (Num a, Ord nty, Show a2, Show a1, Show nty, Show a) =>
+     (a, ([Char], (PowerRecord nty [] Double, (a1, a2))))
+     -> IO ()
+
 f (idx, (title, (pRec, (sq, sqRec)))) = do
   putStrLn ""
   putStrLn $ "Test " ++ show (idx + 1) ++ ": " ++ title

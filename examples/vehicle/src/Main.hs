@@ -33,6 +33,7 @@ import EFA.Signal.Signal((.*),(.+),(.-),neg)
 import qualified EFA.Report.Report as Rep
 
 import qualified EFA.Graph.Draw as Draw-- (drawTopology)
+import qualified EFA.Graph.Topology.Node as Node
 
 import Data.Monoid ((<>))
 
@@ -47,41 +48,41 @@ import Data.Monoid ((<>))
 sec0, sec1, sec2, sec3, sec4 :: Idx.Section
 sec0 :~ sec1 :~ sec2 :~ sec3 :~ sec4 :~ _ = Stream.enumFrom $ Idx.Section 0
 
--- Define Node Names
-tank, con_engine, con_battery, battery, con_evs, con_motor, con_frontBrakes, con_chassis, drivingResistance, electricSystem, frontBrakes, vehicleInertia, con_frontBrakes, rearBrakes :: Idx.Node
-tank :~ con_engine :~ con_battery :~ battery :~ con_evs :~ con_motor :~ con_frontBrakes :~ con_chassis :~ drivingResistance :~ electricSystem :~ frontBrakes :~ vehicleInertia :~ rearBrakes :~ _ = Stream.enumFrom $ Idx.Node 0
+data Nodes = Tank | Con_engine | Con_battery | Battery | Con_evs | Con_motor | Con_frontBrakes | Con_chassis | DrivingResistance | ElectricSystem | FrontBrakes | VehicleInertia | RearBrakes deriving (Eq, Ord, Show)
+
+instance Node.Show Nodes
 
 -- Define System Topology
-topo :: TD.Topology
+topo :: TD.Topology Nodes
 topo = Gr.mkGraph ns (makeEdges es)
-  where ns = [(tank, TD.Source),
-              (con_engine , TD.Crossing),
-              (con_battery, TD.Crossing),
-              (battery, TD.Storage),
-              (con_evs, TD.Crossing),  -- electric crossing to vehicle electric system
-              (con_motor, TD.Crossing),  -- connection motor / gearbox
-              (con_frontBrakes, TD.Crossing),  -- connection brakes
-              (con_chassis, TD.Crossing),  -- connection inertia
-              (drivingResistance, TD.Sink),      -- driving resistance                  
-              (electricSystem, TD.Sink),      -- vehicle electric system
-              (frontBrakes, TD.Sink),     -- vehicle brakes
-              (rearBrakes, TD.Sink),     -- vehicle brakes
-              (vehicleInertia, TD.Storage)]  -- vehicle inertia
+  where ns = [(Tank, TD.Source),
+              (Con_engine , TD.Crossing),
+              (Con_battery, TD.Crossing),
+              (Battery, TD.Storage),
+              (Con_evs, TD.Crossing),  -- electric crossing to vehicle electric system
+              (Con_motor, TD.Crossing),  -- connection motor / gearbox
+              (Con_frontBrakes, TD.Crossing),  -- connection brakes
+              (Con_chassis, TD.Crossing),  -- connection inertia
+              (DrivingResistance, TD.Sink),      -- driving resistance                  
+              (ElectricSystem, TD.Sink),      -- vehicle electric system
+              (FrontBrakes, TD.Sink),     -- vehicle brakes
+              (RearBrakes, TD.Sink),     -- vehicle brakes
+              (VehicleInertia, TD.Storage)]  -- vehicle inertia
              
-        es = [(tank, con_engine),  -- ic engine
-              (con_engine, con_battery),  -- generator
-              (con_battery, con_evs),  -- electric connection        
-              (con_evs, con_motor),  -- motor
-              (con_motor, con_frontBrakes),  -- gearbox 
-              (con_frontBrakes, con_chassis),  -- front wheels             
-              (con_chassis, drivingResistance),  -- driving resistance
-              (con_battery, battery),  -- battery              
-              (con_evs, electricSystem),  -- dcdc          
-              (con_frontBrakes, frontBrakes), -- brakes
-              (con_chassis,rearBrakes), -- brakes
-              (con_chassis, vehicleInertia)] -- inertia             
+        es = [(Tank, Con_engine),  -- ic engine
+              (Con_engine, Con_battery),  -- generator
+              (Con_battery, Con_evs),  -- electric connection        
+              (Con_evs, Con_motor),  -- motor
+              (Con_motor, Con_frontBrakes),  -- gearbox 
+              (Con_frontBrakes, Con_chassis),  -- front wheels             
+              (Con_chassis, DrivingResistance),  -- driving resistance
+              (Con_battery, Battery),  -- battery              
+              (Con_evs, ElectricSystem),  -- dcdc          
+              (Con_frontBrakes, FrontBrakes), -- brakes
+              (Con_chassis, RearBrakes), -- brakes
+              (Con_chassis, VehicleInertia)] -- inertia             
 
-sol :: [TD.FlowTopology]
+sol :: [TD.FlowTopology Nodes]
 sol = StateAnalysis.advanced topo    
 
 main :: IO ()
@@ -174,73 +175,73 @@ main = do
       
       pRec = genPowerRecord time 
               -- engine
-             [(PPosIdx tank con_engine, 
+             [(PPosIdx Tank Con_engine, 
                g "engine1.Speed" .* g "engine1.flange_b.tau",                
                g "engine1.FuelPower"
                ),
                
               -- generator 
-               (PPosIdx con_engine con_battery, 
+               (PPosIdx Con_engine Con_battery, 
                 g  "electricmotor2.speedsensor1.w".* g "electricmotor2.flange_a.tau",
                 g "electricmotor2.signalcurrent1.p.i".* g "electricmotor2.signalcurrent1.v"
                ),
                
                -- connection
-               (PPosIdx con_battery con_evs,
+               (PPosIdx Con_battery Con_evs,
                 batteryPolePower.-generatorElectricPower,
                 batteryPolePower.-generatorElectricPower
                 ),
                
                --motor
-               (PPosIdx con_evs con_motor,
+               (PPosIdx Con_evs Con_motor,
                 g "electricmotor1.speedsensor1.w".* g "electricmotor1.flange_a.tau",
                 g "electricmotor1.signalcurrent1.p.i".* g "electricmotor1.signalcurrent1.p.v"
                ),
                
                -- gearbox
-               (PPosIdx con_motor con_frontBrakes,
+               (PPosIdx Con_motor Con_frontBrakes,
                 g "gearbox1.flange_a.tau".* g "gearbox1.inertia1.w",
                 g "gearbox1.flange_b.tau".* g "gearbox1.inertia2.w"
                ),
       
                -- front wheels
-               (PPosIdx con_frontBrakes con_chassis,
+               (PPosIdx Con_frontBrakes Con_chassis,
                 g "idealrollingwheel1.flangeR.tau".* g "brake1.w",
                 g "idealrollingwheel1.flangeT.f".* speed 
                ),
                  
                -- driving Resistance
-               (PPosIdx con_chassis drivingResistance,
+               (PPosIdx Con_chassis DrivingResistance,
                 g "drivingresistance1.force1.f".* speed,
                 g "drivingresistance1.force1.f".* speed
                ),
                
                -- battery
-               (PPosIdx con_battery battery,
+               (PPosIdx Con_battery Battery,
                 g "battery1.pin_p.v".* g "battery1.pin_p.i",
                 g "battery1.constantvoltage1.v".* g "battery1.constantvoltage1.i"
                ),
                
                -- DCDC
-               (PPosIdx con_evs electricSystem,
+               (PPosIdx Con_evs ElectricSystem,
                 dcdcPowerHV,
                 dcdcPowerLV
                ),
                  
                -- Front brake
-               (PPosIdx con_frontBrakes frontBrakes,
+               (PPosIdx Con_frontBrakes FrontBrakes,
                 g "brake1.lossPower",
                 g "brake1.lossPower"
                ),
                
                --Rear brake
-               (PPosIdx con_chassis rearBrakes,
+               (PPosIdx Con_chassis RearBrakes,
                 g "idealrollingwheel2.flangeR.tau".* g "brake2.w",
                 g "idealrollingwheel2.flangeT.f".* speed
                ),
                
                --kinetic power
-               (PPosIdx con_chassis vehicleInertia,
+               (PPosIdx Con_chassis VehicleInertia,
                 kineticPower,
                 kineticPower
                  
@@ -311,8 +312,8 @@ main = do
   PL.rPlotSelect batterySigs  ("Battery Signals",recConditioned)   
   PL.rPlotSelect generatorSigs ("Generator and Engine Signals",recConditioned)    
   
-  PL.rPlotSplit 9 ("Record",recConditioned)
-  PL.rPlotSplit 9 ("Record",pRec)
+  -- PL.rPlotSplit 9 ("Record",recConditioned)
+  -- PL.rPlotSplit 9 ("Record",pRec)
   -- PL.xyplot "MotorPower" time motorMechPower
   -- PL.xyplot "MotorPower" time motorElectricPower
   
@@ -356,16 +357,18 @@ main = do
    
   let   
       makeGiven initStorage sqFlowRec = (EqGen.dtime Idx.initSection .= 1)  
-                                       <> (EqGen.storage (Idx.SecNode Idx.initSection battery) .= initStorage) 
+                                       <> (EqGen.storage (Idx.SecNode Idx.initSection Battery) .= initStorage) 
                                        <> foldMap f (zip [Idx.Section 0 ..] ds)
         where 
               SD.SequData ds =  fmap f2 sqFlowRec
               f2 (Record t xs) = (sum $ Sig.toList t, M.toList $ M.map (sum . Sig.toList) xs)      
-              f (sec, (dt, es)) = (EqGen.dtime sec .= dt) <> foldMap h es                                                          
-                where h (PPosIdx a b, e) = (edgeVar EqGen.energy sec a b .= e)
-   
-     -- Generate Sequence Topology 
+              f (sec, (dt, es)) = (EqGen.dtime sec .= dt) <> foldMap g es                                                          
+                where g (PPosIdx a b, e) = (edgeVar EqGen.energy sec a b .= e)
+      
+   -- Generate Sequence Topology 
       sequTopo = makeSeqFlowGraph topo sequFRec
+      
+      
                 
      -- Generate Given from Initial Storage and Sequence Flow            
       env = EqGen.solve (makeGiven 12.34567 sequFRec)  sequTopo
@@ -375,8 +378,12 @@ main = do
   -- Show Sequence Flow Graph
   Draw.sequFlowGraph sequTopo
 
+
   -- Show Sequence Flow with Numbers
   Draw.sequFlowGraphAbsWithEnv sequTopo env
---  PL.rPlot ("VehicleSignals",recVehicle)    
   
+  
+  -- PL.rPlotSelect vehicleSigs ("Vehicle Signals",recConditioned)   
+  
+  print sequTopo
 

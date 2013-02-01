@@ -180,7 +180,7 @@ pmapList =
         pmap7, pmap9, pmap10, pmap8, pmap11, pmap12]
 
 recList :: [PowerRecord Node.Int [] Double]
-recList = map (PowerRecord time) pmapList
+recList = map (Record time) pmapList
 
 list :: [(Int, (String, (PowerRecord Node.Int [] Double, (Sequ, SequData (PowerRecord Node.Int [] Double)))))]
 list = idxList $ 
@@ -188,7 +188,7 @@ list = idxList $
       (zip recList (map  (genSequ . addZeroCrossings) recList))
 
 f :: (Num a, Show a, ToTable a2, ToTable a1) =>
-  (a, ([Char], (ListPowerRecord Node.Int, (a1, a2)))) -> IO ()
+  (a, ([Char], (SequData (PowerRecord Node.Int [] (a1, a2))))) -> IO ()
 f (idx, (title, (pRec, (sq, sqRec)))) = do
   putStrLn ""
   putStrLn $ "Test " ++ show (idx+1) ++ ": " ++ title

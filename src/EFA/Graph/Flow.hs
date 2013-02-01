@@ -31,20 +31,10 @@ genSequFState ::
 genSequFState sqFRec = fmap genFlowState sqFRec
 
 -- | Function to extract the flow state out of a Flow Record
-<<<<<<< HEAD
-genFlowState ::  (Walker v, 
-                  Storage v a, 
-                  BSum a,
-                  Fractional a, 
-                  Ord a) => 
-                 FlowRecord v a -> FlowState
-genFlowState (Record _time flowMap) =
-=======
 genFlowState ::
   (Walker v, Storage v a, BSum a, Fractional a, Ord a) => 
   FlowRecord nty v a -> FlowState nty
-genFlowState (FlowRecord _time flowMap) =
->>>>>>> master
+genFlowState (Record _time flowMap) =
    FlowState $ M.map (fromScalar . sigSign . sigSum) flowMap
 
 -- | Function to generate Flow Topologies for all Sequences

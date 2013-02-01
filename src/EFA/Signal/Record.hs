@@ -41,7 +41,11 @@ newtype SigId = SigId String deriving (Show, Eq, Ord)
 
 
 -- | Indices for Power Position
-data PPosIdx = PPosIdx !Idx.Node !Idx.Node deriving (Show, Eq, Ord)
+-- data PPosIdx = PPosIdx !Idx.Node !Idx.Node deriving (Show, Eq, Ord)
+
+-----------------------------------------------------------------------------------
+-- | Indices for Power Position
+data PPosIdx nty = PPosIdx !nty !nty deriving (Show, Eq, Ord)
 
 type instance D.Value (Record s t1 t2 id v a) = a
 
@@ -50,12 +54,12 @@ data Record s t1 t2 id v a =  Record (TC s t1 (Data (v :> Nil) a)) (M.Map id (TC
 
 type SignalRecord v a =  Record Signal (Typ A T Tt) (Typ UT UT UT)  SigId v a
 
-type PowerRecord v a =  Record Signal (Typ A T Tt) (Typ A P Tt) PPosIdx v a 
+type PowerRecord nty v a =  Record Signal (Typ A T Tt) (Typ A P Tt) (PPosIdx nty) v a 
 
-type FlowRecord v a =  Record FSignal (Typ D T Tt) (Typ A F Tt) PPosIdx v a 
+type FlowRecord nty v a =  Record FSignal (Typ D T Tt) (Typ A F Tt) (PPosIdx nty) v a 
 
 -- | Flow record to contain flow signals assigned to the tree
-newtype FlowState = FlowState (M.Map PPosIdx Sign) deriving (Show)
+newtype FlowState nty = FlowState (M.Map (PPosIdx nty) Sign) deriving (Show)
 
 getTime :: Record s t1 t2 id v a ->  TC s t1 (Data (v :> Nil) a) 
 getTime (Record time _) = time
@@ -64,7 +68,7 @@ getSig :: (Show (v a),Ord id, Show id) => Record s t1 t2 id v a -> id -> TC s t2
 getSig (Record _ sigMap) key = checkedLookup sigMap key
 
 -- | Use carefully -- removes signal jitter around zero 
-removeZeroNoise :: (V.Walker v, V.Storage v a, Ord a, Num a) => PowerRecord v a -> a -> PowerRecord v a        
+removeZeroNoise :: (V.Walker v, V.Storage v a, Ord a, Num a) => PowerRecord nty v a -> a -> PowerRecord nty v a        
 removeZeroNoise (Record time pMap) threshold = Record time (M.map f pMap)
   where f sig = S.map g sig
         g x | abs x < threshold = 0 
@@ -94,7 +98,7 @@ splitRecord n (Record time pMap)  = recList
 --   where g (_,x) (_,y) = compare (S.sigSum x) (S.sigSum y) 
 
 -- -- | Split PowerRecord in even Junks                          
--- splitPowerRecord ::  (Num a, Ord a, V.Walker v, V.Storage v a, BSum a) => PowerRecord v a -> Int -> [PowerRecord v a]                          
+-- splitPowerRecord ::  (Num a, Ord a, V.Walker v, V.Storage v a, BSum a) => PowerRecord nty v a -> Int -> [PowerRecord nty v a]                          
 -- splitPowerRecord (Record time pMap) n  = recList
 --   where (recList, _) = f ([],M.toList pMap)
 --         f (rs, []) = (rs,[])        
@@ -124,8 +128,9 @@ genPowerRecord :: (Show (v a),
                    V.Walker v,
                    V.Storage v a,
                    BProd a a, 
-                   BSum a) => 
-                  TSignal v a -> [(PPosIdx, UTSignal v a, UTSignal v a)] -> PowerRecord v a 
+                   BSum a, 
+                   Ord nty) => 
+                  TSignal v a -> [(PPosIdx nty, UTSignal v a, UTSignal v a)] -> PowerRecord nty v a 
 genPowerRecord time sigList = Record time (M.fromList $ concat $ map f sigList) 
   where f (pposIdx, sigA, sigB) = [(pposIdx, S.setType $ sigA),(swap pposIdx, S.setType $ sigB)]
           where 
@@ -134,13 +139,13 @@ genPowerRecord time sigList = Record time (M.fromList $ concat $ map f sigList)
 -----------------------------------------------------------------------------------
 -- Various Class and Instance Definition for the different Sequence Datatypes 
 
-instance QC.Arbitrary PPosIdx where
+instance (QC.Arbitrary nty) => QC.Arbitrary (PPosIdx nty) where
    arbitrary = liftM2 PPosIdx QC.arbitrary QC.arbitrary
    shrink (PPosIdx from to) = map (uncurry PPosIdx) $ QC.shrink (from, to)
 
 instance
-   (Show (v a), Sample a, V.FromList v, V.Storage v a) =>
-      QC.Arbitrary (PowerRecord v a) where
+   (Show (v a), Sample a, V.FromList v, V.Storage v a,QC.Arbitrary nty,Ord nty) =>
+      QC.Arbitrary (PowerRecord nty v a) where
    arbitrary = do
       xs <- QC.listOf arbitrarySample
       n <- QC.choose (1,5)
@@ -186,8 +191,8 @@ instance
 
 instance
    (V.Walker v, V.Singleton v, V.FromList v, V.Storage v a, DispStorage1 v,
-    Ord a, Fractional a, PrintfArg a) =>
-   ToTable (PowerRecord v a) where
+    Ord a, Fractional a, PrintfArg a, Show nty) =>
+   ToTable (PowerRecord nty v a) where
    toTable os (ti, Record time sigs) =
       [Table {
          tableTitle = "PowerRecord - " ++ ti ,
