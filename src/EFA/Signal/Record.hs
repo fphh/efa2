@@ -1,25 +1,23 @@
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE FlexibleInstances #-}
-
 
 module EFA.Signal.Record where
-import qualified EFA.Graph.Topology.Index as Idx
+
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Data as D
 import qualified EFA.Signal.Vector as V
-import EFA.Report.Base (DispStorage1)
 import EFA.Signal.Signal
-          (TC, Signal, FSignal,TSamp,PSamp,PSamp1L,PSamp2LL,TSigL,UTSignal,TSignal)
-          
+          (TC, Signal, FSignal, TSigL, UTSignal, TSignal,
+           TSamp, PSamp, PSamp1L, PSamp2LL)
+
 import EFA.Signal.Typ (Typ, A, P, T, Tt, UT,F,D)
 import EFA.Signal.Data (Data, (:>), Nil)
 import EFA.Signal.Base (Sign, BSum, DArith0,BProd)
 
 import EFA.Report.Report (ToTable(toTable), Table(..), tvcat)
+import EFA.Report.Typ (TDisp, getDisplayTypName)
+import EFA.Report.Base (DispStorage1)
+
 import Text.Printf (PrintfArg)
 import qualified Test.QuickCheck as QC
 import System.Random (Random)
@@ -144,8 +142,8 @@ instance (QC.Arbitrary nty) => QC.Arbitrary (PPosIdx nty) where
    shrink (PPosIdx from to) = map (uncurry PPosIdx) $ QC.shrink (from, to)
 
 instance
-   (Show (v a), Sample a, V.FromList v, V.Storage v a,QC.Arbitrary nty,Ord nty) =>
-      QC.Arbitrary (PowerRecord nty v a) where
+   (Sample a, V.FromList v, V.Storage v a, QC.Arbitrary id, Ord id) =>
+      QC.Arbitrary (Record s t1 t2 id v a) where
    arbitrary = do
       xs <- QC.listOf arbitrarySample
       n <- QC.choose (1,5)
@@ -177,31 +175,21 @@ instance (Random a, Integral a) => Sample (Ratio a) where
 
 instance
    (V.Walker v, V.Singleton v, V.FromList v, V.Storage v a, DispStorage1 v,
-    Ord a, Fractional a, PrintfArg a) =>
-   ToTable (SignalRecord v a) where
+    Ord a, Fractional a, PrintfArg a, Show id,
+    S.DispApp s, TDisp t1, TDisp t2) =>
+   ToTable (Record s t1 t2 id v a) where
    toTable os (ti, Record time sigs) =
       [Table {
-         tableTitle = "SignalRecord - " ++ ti ,
+         tableTitle =
+            (getDisplayTypName $ S.getDisplayType $ snd $ head sigList) ++
+            "Record - " ++ ti,
          tableData = tableData t,
          tableFormat = tableFormat t,
          tableSubTitle = ""}]
 
-      where t = tvcat $ S.toTable os ("Time",time) !:
-                        concatMap (toTable os . mapFst show) (M.toList sigs)
-
-instance
-   (V.Walker v, V.Singleton v, V.FromList v, V.Storage v a, DispStorage1 v,
-    Ord a, Fractional a, PrintfArg a, Show nty) =>
-   ToTable (PowerRecord nty v a) where
-   toTable os (ti, Record time sigs) =
-      [Table {
-         tableTitle = "PowerRecord - " ++ ti ,
-         tableData = tableData t,
-         tableFormat = tableFormat t,
-         tableSubTitle = ""}]
-
-      where t = tvcat $ S.toTable os ("Time",time) !:
-                        concatMap (toTable os . mapFst show) (M.toList sigs)
+      where sigList = M.toList sigs
+            t = tvcat $ S.toTable os ("Time",time) !:
+                        concatMap (toTable os . mapFst show) sigList
 
 
 ------------------------------------
