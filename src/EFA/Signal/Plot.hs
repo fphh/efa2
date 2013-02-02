@@ -262,10 +262,11 @@ rPlotAttr ::
    (Graph.C graph) =>
    String -> Opts.T graph
 rPlotAttr name =
-   Opts.title ("PowerRecord: " ++ name) $
+   Opts.title (name) $
    Opts.grid True $
    Opts.xLabel ("Time [" ++ (show $ getDisplayUnit Typ_T) ++ "]") $
-   Opts.yLabel ("Power [" ++ (show $ getDisplayUnit Typ_P) ++ "]") $
+   Opts.yLabel ("Mixed Units")
+--    Opts.yLabel (show  "[" ++ (show $ getDisplayUnit Typ_P) ++ "]") $
 --   Opts.size (Scale 0.7) $
    Opts.deflt
 

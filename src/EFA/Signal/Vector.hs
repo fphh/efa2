@@ -403,3 +403,38 @@ instance Reverse V.Vector where
 
 instance Reverse UV.Vector where
    reverse = readUnbox UV.reverse
+
+
+class Find v where
+  findIndex :: (Storage v d) => (d -> Bool) -> v d -> Maybe Int
+  
+instance Find [] where  
+  findIndex = L.findIndex
+  
+instance Find V.Vector where
+  findIndex = V.findIndex
+
+instance Find UV.Vector where
+  findIndex f xs = readUnbox (UV.findIndex f) xs
+   
+
+class Slice v where
+  slice :: (Storage v d) => Int -> Int -> v d -> v d
+  
+instance Slice [] where  
+  slice idx len xs = L.take len $ L.drop (idx-1) xs
+  
+instance Slice V.Vector where
+  slice = V.slice
+
+instance Slice UV.Vector where
+  slice idx len xs = readUnbox (UV.slice idx len) xs
+  
+  
+-- -- | Check Vector equality   
+-- (==) :: v d -> v d -> Bool
+-- (==) = all (P.==) 
+
+-- (/=) ::  v d -> v d -> Bool
+-- (/=) = not $ all (P.==)
+  

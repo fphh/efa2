@@ -20,7 +20,7 @@ import EFA.Signal.SequenceData
 
 
 import EFA.Signal.Record(Record(..),PowerRecord,FlowRecord,
-           RSamp1,rsingleton, RSig,rlen,rviewL,rviewR)
+           RSamp1,rsingleton, RSig,rlen,rviewL,rviewR,getTimeWindow)
         
   
 import EFA.Signal.Base
@@ -539,3 +539,33 @@ approxPowerRecord eps
 approxAbs :: (Real a) => a -> a -> a -> Bool
 approxAbs eps x y =
    abs (x-y) <= eps
+
+
+
+-----------------------------------------------------------------------------------
+-- * New Functions from PG to allow Signal Cutting on Time Windows
+
+-- | Get Start and Stop Times for all Power Records in a Sequence
+extractCuttingTimes:: (Ord a, 
+                       V.Storage v a, 
+                       V.Singleton v) => 
+                      SequData (PowerRecord nty v a) -> 
+                      SequData (S.Scal (Typ A T Tt) a, S.Scal (Typ A T Tt) a)
+extractCuttingTimes sequ = fmap getTimeWindow sequ
+ 
+
+{-
+-- | Cut a Slice from a Power Record assumes rising order of sections
+extractTimeSectionRecords :: Record s t1 t2 id v a -> [(S.Scal (Typ A T Tt) a, S.Scal (Typ A T Tt) a)] -> Record s t1 t2 id v a
+extractTimeSectionRecords rec@(Record time _ ) (tStart,tEnd) =   
+  where startIdx = findIndex (P.>=tStart) time
+        endIdx = findIndex (P.>=tEnd) time
+        
+        startIdx = lookUp time idx1 
+        endIdx = lookUp time idx2 - 1
+
+        rSig = record2RSig rec
+        
+        slice = getSlice startIdx (endIdx-1) rSig 
+  
+-}  

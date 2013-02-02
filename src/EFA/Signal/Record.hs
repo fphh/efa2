@@ -8,7 +8,7 @@ import qualified EFA.Signal.Data as D
 import qualified EFA.Signal.Vector as V
 import EFA.Signal.Signal
           (TC, Signal, FSignal, TSigL, UTSignal, TSignal,
-           TSamp, PSamp, PSamp1L, PSamp2LL)
+           TSamp, PSamp, PSamp1L, PSamp2LL,Scalar,Scal)
 
 import EFA.Signal.Typ (Typ, A, P, T, Tt, UT,F,D)
 import EFA.Signal.Data (Data, (:>), Nil)
@@ -59,11 +59,23 @@ type FlowRecord n = Record FSignal (Typ D T Tt) (Typ A F Tt) (PPosIdx n)
 -- | Flow record to contain flow signals assigned to the tree
 newtype FlowState nty = FlowState (M.Map (PPosIdx nty) Sign) deriving (Show)
 
+
+-- | Access Functions
 getTime :: Record s t1 t2 id v a ->  TC s t1 (Data (v :> Nil) a) 
 getTime (Record time _) = time
 
+
 getSig :: (Show (v a),Ord id, Show id) => Record s t1 t2 id v a -> id -> TC s t2 (Data (v :> Nil) a)   
 getSig (Record _ sigMap) key = checkedLookup sigMap key
+
+-- | Get Start and End time
+getTimeWindow :: (Ord a, 
+                  V.Storage v a, 
+                  V.Singleton v) => 
+                 Record s (Typ A T Tt) t2 id v a -> 
+                 (Scal (Typ A T Tt) a, Scal (Typ A T Tt) a)
+getTimeWindow rec = (S.minimum t, S.maximum t)
+  where t = getTime rec
 
 -- | Use carefully -- removes signal jitter around zero 
 removeZeroNoise :: (V.Walker v, V.Storage v a, Ord a, Num a) => PowerRecord nty v a -> a -> PowerRecord nty v a        

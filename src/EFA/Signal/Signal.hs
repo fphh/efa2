@@ -1103,3 +1103,51 @@ instance
    (TDisp t, DispApp s, FormatValue a) =>
       FV.FormatValue (TC s t a) where
    formatValue = formatValue
+
+findIndex ::  (SV.Storage v1 d1, SV.Find v1) => (d1 -> Bool) -> TC s1 t1 (Data (v1 :> Nil) d1) -> Maybe Int
+findIndex f (TC xs) = D.findIndex f xs
+        
+-- | @HT bitte prüfen        
+        
+interp1Lin :: (Eq d1, 
+               Fractional d1, 
+               Num d1, 
+               Ord d1, 
+               SV.Storage v1 d1, 
+               SV.Find v1,
+               SV.Singleton v1, 
+               SV.Lookup v1) => 
+              TC Signal t1 (Data (v1 :> Nil) d1) ->  
+              TC Signal t2 (Data (v1 :> Nil) d1) ->  
+              TC Sample t1 (Data Nil d1) -> 
+              TC Sample t2 (Data Nil d1)
+interp1Lin xSig ySig (TC (Data xVal)) = if x1 P.== x2 then TC $ Data $ (y1 P.+y2) P./2 else TC $ Data $ ((y2 P.- y1) P./(x2 P.-x1)) P.* (xVal P.- x1) P.+ y1
+                where                                                                
+                  idx = P.maybe (error "Out of Range") id $ findIndex (xVal P.>=) xSig  
+                  TC (Data (x1)) = getSample xSig $ idx-1
+                  TC (Data (x2)) = getSample xSig idx
+                  TC (Data (y1)) = getSample ySig $ idx-1
+                  TC (Data (y2)) = getSample ySig idx
+
+
+getSample ::  (SV.Singleton v1, 
+               Eq d1, 
+               SV.Storage v1 d1, 
+               SV.Lookup v1) => 
+              TC Signal t1 (Data (v1 :> Nil) d1) -> 
+              Int ->  
+              TC Sample t1 (Data Nil d1)
+getSample x idx = P.fst $ P.maybe (error "Error in EFA.Signal.Signal/getSample - Empty List") id $ viewL $ subSignal1D x [idx]
+
+
+
+-- ----------------------------------------------------------
+-- -- Equality
+
+-- (==):  TC s1 t1 c1 d1 ->  TC s1 t1 c1 d1 -> Bool
+-- (==) (TC x) (TC y) =  x D.== y
+
+-- (/=):  TC s1 t1 c1 d1 ->  TC s1 t1 c1 d1 -> Bool
+-- (/=) =  not . (==)
+  
+  
