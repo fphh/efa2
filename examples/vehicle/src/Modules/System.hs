@@ -8,7 +8,10 @@ import qualified EFA.Graph as Gr
 import EFA.Example.Utility (edgeVar, makeEdges, (.=))
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 
-data Nodes = Tank | Con_engine | Con_battery | Battery | Con_evs | Con_motor | Con_frontBrakes | Con_chassis | DrivingResistance | ElectricSystem | FrontBrakes | VehicleInertia | RearBrakes deriving (Eq, Ord, Show)
+import qualified Data.Map as M
+import EFA.Signal.Record(PPosIdx(..),SigId(..))
+
+data Nodes = Tank | EngineFlange | ConBattery | Battery | ConES | MotorFlange | ConFrontBrakes | Chassis | Resistance | ElectricSystem | FrontBrakes | VehicleInertia | RearBrakes deriving (Eq, Ord, Show)
 
 instance Node.Show Nodes
 
@@ -17,32 +20,43 @@ instance Node.Show Nodes
 topology :: TD.Topology Nodes
 topology = Gr.mkGraph ns (makeEdges es)
   where ns = [(Tank, TD.Source),
-              (Con_engine , TD.Crossing),
-              (Con_battery, TD.Crossing),
+              (EngineFlange, TD.Crossing),
+              (ConBattery, TD.Crossing), -- electric crossing at battery to vehicle electric system
               (Battery, TD.Storage),
-              (Con_evs, TD.Crossing),  -- electric crossing to vehicle electric system
-              (Con_motor, TD.Crossing),  -- connection motor / gearbox
-              (Con_frontBrakes, TD.Crossing),  -- connection brakes
-              (Con_chassis, TD.Crossing),  -- connection inertia
-              (DrivingResistance, TD.Sink),      -- driving resistance                  
+              (ConES, TD.Crossing),  -- electric crossing to vehicle electric system
+              (MotorFlange, TD.Crossing),  
+              (ConFrontBrakes, TD.Crossing), 
+              (Chassis, TD.Crossing),  
+              (Resistance, TD.Sink),   
               (ElectricSystem, TD.Sink),      -- vehicle electric system
-              (FrontBrakes, TD.Sink),     -- vehicle brakes
-              (RearBrakes, TD.Sink),     -- vehicle brakes
-              (VehicleInertia, TD.Storage)]  -- vehicle inertia
+              (FrontBrakes, TD.Sink),     
+              (RearBrakes, TD.Sink),     
+              (VehicleInertia, TD.Storage)]  
              
-        es = [(Tank, Con_engine),  -- ic engine
-              (Con_engine, Con_battery),  -- generator
-              (Con_battery, Con_evs),  -- electric connection        
-              (Con_evs, Con_motor),  -- motor
-              (Con_motor, Con_frontBrakes),  -- gearbox 
-              (Con_frontBrakes, Con_chassis),  -- front wheels             
-              (Con_chassis, DrivingResistance),  -- driving resistance
-              (Con_battery, Battery),  -- battery              
-              (Con_evs, ElectricSystem),  -- dcdc          
-              (Con_frontBrakes, FrontBrakes), -- brakes
-              (Con_chassis, RearBrakes), -- brakes
-              (Con_chassis, VehicleInertia)] -- inertia             
+        --extract edge Info     
+        es = map f edgeList 
+          where f (n1,n2,_,_,_) = (n1,n2) 
+    
+-- Define Edges with all their Properties
+edgeList :: [(Nodes, Nodes, String, String, String)]                
+edgeList = [(Tank, EngineFlange, "Engine", "Fuel","CrankShaft"),
+            (EngineFlange, ConBattery,"Generator","GeneratorFlange","GeneratorClamps"),
+            (ConBattery, ConES,"Wire","Wire","Wire"),
+            (ConES, MotorFlange,"Motor","MotorClamps","MotorFlange"),
+            (MotorFlange, ConFrontBrakes,"Gearbox","InShaft","OutShaft"),
+            (ConFrontBrakes, Chassis, "FrontWheels","FrontWheelHub","FrontTires"),
+            (Chassis, Resistance,"ToResistance","ToResistance","ToResistance"),
+            (ConBattery, Battery,"BatteryResistance","BatteryPoles","BatteryCore"), 
+            (ConES, ElectricSystem,"DCDC","HighVoltage","LowVoltage"), 
+            (ConFrontBrakes, FrontBrakes,"ToFrontBrakes","ToFrontBrakes","ToFrontBrakes"), 
+            (Chassis, RearBrakes,"RearWheels","RearTires", "RearWheelHubs"),
+            (Chassis, VehicleInertia,"ToIntertia","ToInertia", "ToInertia")] 
 
+
+powerPositonNames :: M.Map (PPosIdx Nodes) SigId
+powerPositonNames = M.fromList $ concat $ map f edgeList 
+  where f (n1,n2,_,l1,l2) = [(PPosIdx n1 n2, SigId l1), 
+                             (PPosIdx n2 n1, SigId l2)]
 
 ----------------------------------------------------------------------
 -- * Calculate Flow States

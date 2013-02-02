@@ -94,73 +94,73 @@ calculatePower rec = pRec
       
       pRec = genPowerRecord time 
              -- engine
-             [(PPosIdx Tank Con_engine, 
+             [(PPosIdx Tank EngineFlange, 
                g "engine1.Speed" .* g "engine1.flange_b.tau",                
                g "engine1.FuelPower"
               ),
               
               -- generator 
-              (PPosIdx Con_engine Con_battery, 
+              (PPosIdx EngineFlange ConBattery, 
                g  "electricmotor2.speedsensor1.w".* g "electricmotor2.flange_a.tau",
                g "electricmotor2.signalcurrent1.p.i".* g "electricmotor2.signalcurrent1.v"
               ),
               
               -- connection
-              (PPosIdx Con_battery Con_evs,
+              (PPosIdx ConBattery ConES,
                batteryPolePower.-generatorElectricPower,
                batteryPolePower.-generatorElectricPower
               ),
               
               --motor
-              (PPosIdx Con_evs Con_motor,
+              (PPosIdx ConES MotorFlange,
                g "electricmotor1.speedsensor1.w".* g "electricmotor1.flange_a.tau",
                g "electricmotor1.signalcurrent1.p.i".* g "electricmotor1.signalcurrent1.p.v"
               ),
               
               -- gearbox
-              (PPosIdx Con_motor Con_frontBrakes,
+              (PPosIdx MotorFlange ConFrontBrakes,
                g "gearbox1.flange_a.tau".* g "gearbox1.inertia1.w",
                g "gearbox1.flange_b.tau".* g "gearbox1.inertia2.w"
               ),
               
               -- front wheels
-              (PPosIdx Con_frontBrakes Con_chassis,
+              (PPosIdx ConFrontBrakes Chassis,
                g "idealrollingwheel1.flangeR.tau".* g "brake1.w",
                g "idealrollingwheel1.flangeT.f".* speed 
               ),
               
               -- driving Resistance
-              (PPosIdx Con_chassis DrivingResistance,
+              (PPosIdx Chassis Resistance,
                g "drivingresistance1.force1.f".* speed,
                g "drivingresistance1.force1.f".* speed
               ),
               
               -- battery
-              (PPosIdx Con_battery Battery,
+              (PPosIdx ConBattery Battery,
                g "battery1.pin_p.v".* g "battery1.pin_p.i",
                g "battery1.constantvoltage1.v".* g "battery1.constantvoltage1.i"
               ),
               
               -- DCDC
-              (PPosIdx Con_evs ElectricSystem,
+              (PPosIdx ConES ElectricSystem,
                dcdcPowerHV,
                dcdcPowerLV
               ),
               
               -- Front brake
-              (PPosIdx Con_frontBrakes FrontBrakes,
+              (PPosIdx ConFrontBrakes FrontBrakes,
                g "brake1.lossPower",
                g "brake1.lossPower"
               ),
               
               --Rear brake
-              (PPosIdx Con_chassis RearBrakes,
+              (PPosIdx Chassis RearBrakes,
                g "idealrollingwheel2.flangeR.tau".* g "brake2.w",
                g "idealrollingwheel2.flangeT.f".* speed
               ),
               
               --kinetic power
-              (PPosIdx Con_chassis VehicleInertia,
+              (PPosIdx Chassis VehicleInertia,
                kineticPower,
                kineticPower
                

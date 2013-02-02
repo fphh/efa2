@@ -78,6 +78,7 @@ main = do
   
 --  PL.rPlotSplit 9 ("Conditioned Signals", signals)
   
+{-  
   Plot.vehicle signals
 --  Plot.engine signals
   Plot.motor signals
@@ -85,11 +86,15 @@ main = do
   Plot.driveline signals
   Plot.electric signals
   Plot.battery signals
-  
+-}  
 --------------------------------------------------------------------------------------- 
 -- * Calculate Powers
   
   let powerSignals = Signals.calculatePower signals 
+      
+  Plot.genPowers powerSignals   
+  Plot.propPowers powerSignals
+  Plot.vehPowers powerSignals
   
 --  PL.rPlotSplit 9 ("Conditioned Signals", signals)
   

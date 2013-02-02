@@ -2,9 +2,18 @@
 
 module EXAMPLES.Vehicle.SeriesHybrid.Plots where
 
+import Data.Map as M (mapKeys)
+import EFA.Utility(checkedLookup)
 import EFA.Signal.Record ()
 import qualified EFA.Signal.Plot as PL
-import EFA.Signal.Record (SigId(..))
+import EFA.Signal.Typ (Typ,A,T,P,Tt)
+import EFA.Signal.Signal(Signal)
+
+
+import EFA.Signal.Record (SigId(..),Record(..),PowerRecord)
+
+import EXAMPLES.Vehicle.SeriesHybrid.System as System
+
 ---------------------------------------------------------------------------------------
   -- | * Group Signals for Plotting
   
@@ -22,19 +31,19 @@ vehicle rec = plot "Vehicle" rec [SigId "speedsensor1.v",
 
 -- Building Signal Record for better Plotting of the original signals 
 driveline rec =  plot "DriveLine" rec [SigId "speedsensor1.v",
-                                   SigId "electricmotor1.flange_a.tau",
-                                   SigId "gearbox1.flange_a.tau",                        
-                                   SigId "gearbox1.flange_b.tau"
-                                  ]
+                                       SigId "electricmotor1.flange_a.tau",
+                                       SigId "gearbox1.flange_a.tau",                        
+                                       SigId "gearbox1.flange_b.tau"
+                                      ]
              
 -- Building Signal Record for better Plotting of the original signals 
 motor rec = plot "Motor" rec [SigId "speedsensor1.v",                        
-                          SigId "electricmotor1.flange_a.tau",
-                          SigId "electricmotor1.speedsensor1.w",
-                          SigId "electricmotor1.signalcurrent1.p.i",
-                          SigId "electricmotor1.signalcurrent1.p.v"
-                         ]
-  
+                              SigId "electricmotor1.flange_a.tau",
+                              SigId "electricmotor1.speedsensor1.w",
+                              SigId "electricmotor1.signalcurrent1.p.i",
+                              SigId "electricmotor1.signalcurrent1.p.v"
+                             ]
+            
 -- Building Signal Record for better Plotting of the original signals 
 electric rec =  plot "Electric" rec [SigId "speedsensor1.v",                        
                                  SigId "battery1.pin_p.v",
@@ -47,21 +56,52 @@ electric rec =  plot "Electric" rec [SigId "speedsensor1.v",
             
 -- Building Signal Record for better Plotting of the original signals 
 battery rec = plot "Battery" rec [SigId "speedsensor1.v",                        
-                              SigId "battery1.pin_p.v",
-                              SigId "battery1.pin_p.i",
-                              SigId "battery1.constantvoltage1.v",
-                              SigId "battery1.constantvoltage1.i"
-                             ]
+                                  SigId "battery1.pin_p.v",
+                                  SigId "battery1.pin_p.i",
+                                  SigId "battery1.constantvoltage1.v",
+                                  SigId "battery1.constantvoltage1.i"
+                                 ]
           
 
 -- Building Signal Record for better Plotting of the original signals 
 generator rec = plot "Generator" rec [SigId "speedsensor1.v",                        
-                                  SigId "electricmotor2.signalcurrent1.p.i",
-                                  SigId "electricmotor2.signalcurrent1.v",
-                                  SigId "electricmotor2.flange_a.tau",
-                                  SigId "electricmotor2.speedsensor1.w",
-                                  SigId "engine1.Speed",
-                                  SigId "engine1.Speed"                       
-                                 ]
+                                      SigId "electricmotor2.signalcurrent1.p.i",
+                                      SigId "electricmotor2.signalcurrent1.v",
+                                      SigId "electricmotor2.flange_a.tau",
+                                      SigId "electricmotor2.speedsensor1.w",
+                                      SigId "engine1.Speed",
+                                      SigId "engine1.Speed"                       
+                                     ]
   
  
+-- Plot Power Records with readible 
+plotPowers :: Show (v a) => PowerRecord Nodes v a -> Record Signal (Typ A T Tt) (Typ A P Tt) SigId v a 
+plotPowers (Record time pMap) = Record time newMap
+  where -- replace old with new keys
+    newMap = M.mapKeys f pMap
+    f key = checkedLookup System.powerPositonNames key
+    
+    
+genPowers pRec =  plot "GenerationPowers" (plotPowers pRec) [SigId "Fuel",    
+                                                             SigId "CrankShaft",
+                                                             SigId "BatteryClamps",
+                                                             SigId "BatteryCore",
+                                                             SigId "Wire"
+                                                            ]
+                  
+propPowers pRec = plot "PropulsionPowers" (plotPowers pRec) [SigId "MotorClamps",
+                                                               SigId "MotorFlange",    
+                                                               SigId "InShaft",
+                                                               SigId "OutShaft",
+                                                               SigId "ToFrontBrakes",
+                                                               SigId "FrontWheelHub",
+                                                               SigId "FrontTires"
+                                                              ]
+
+vehPowers pRec = plot "VehiclePowers"  (plotPowers pRec) [SigId "ToFrontBrakes",
+                                                            SigId "RearTires",    
+                                                            SigId "Inertia",
+                                                            SigId "Resistance"
+                                                           ]
+
+

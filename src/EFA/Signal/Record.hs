@@ -35,7 +35,10 @@ import EFA.Utility (checkedLookup)
 
 
 
-newtype SigId = SigId String deriving (Show, Eq, Ord)
+newtype SigId = SigId String deriving (Eq, Ord)
+
+instance Show SigId where
+  show (SigId x) = show x
 
 
 -- | Indices for Power Position
@@ -145,6 +148,12 @@ genPowerRecord time sigList = Record time (M.fromList $ concat $ map f sigList)
   where f (pposIdx, sigA, sigB) = [(pposIdx, S.setType $ sigA),(swap pposIdx, S.setType $ sigB)]
           where 
                swap (PPosIdx n1 n2) = PPosIdx n2 n1
+               
+               
+               
+               
+
+
           
 -----------------------------------------------------------------------------------
 -- Various Class and Instance Definition for the different Sequence Datatypes 

@@ -251,8 +251,8 @@ instance
 rPlotStyle :: (Show k) => k -> Plot2D.T x y -> Plot2D.T x y
 rPlotStyle key =
    fmap $ Graph2D.lineSpec $
-      LineSpec.pointSize 1$
-      LineSpec.pointType 7 $
+      LineSpec.pointSize 0.1$
+      LineSpec.pointType 1 $
       LineSpec.lineWidth 1 $
       LineSpec.title (show key) $
       LineSpec.deflt
@@ -265,7 +265,7 @@ rPlotAttr name =
    Opts.title (name) $
    Opts.grid True $
    Opts.xLabel ("Time [" ++ (show $ getDisplayUnit Typ_T) ++ "]") $
-   Opts.yLabel ("Mixed Units")
+   Opts.yLabel ("")
 --    Opts.yLabel (show  "[" ++ (show $ getDisplayUnit Typ_P) ++ "]") $
 --   Opts.size (Scale 0.7) $
    Opts.deflt
