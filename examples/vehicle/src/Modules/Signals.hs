@@ -1,4 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeOperators #-}
+
+
 
 module EXAMPLES.Vehicle.SeriesHybrid.Signals where
 
@@ -11,7 +14,9 @@ import EFA.Signal.Record (SigId(SigId),PPosIdx(..),
                           PowerRecord, SignalRecord, genPowerRecord)
 
 import qualified EFA.Graph.Topology.Node as Node
-import EFA.Signal.Signal((.*), (.+), (.-), neg)
+import EFA.Signal.Signal((.*), (.+), (.-), neg, untype, TC, Signal,Scalar,fromScalar,toScalar, len, fromList)
+import EFA.Signal.Typ(UT,Typ)
+import EFA.Signal.Data(Data(..),Nil, (:>))
 
 import EXAMPLES.Vehicle.SeriesHybrid.System  (Nodes(..))
  
@@ -28,9 +33,10 @@ condition rec = extractLogSignals rec [(SigId "engine1.Speed",id),
                                        (SigId "electricmotor2.signalcurrent1.p.i",neg),
                                        (SigId "electricmotor2.signalcurrent1.v",neg),
                                        (SigId "electricmotor2.flange_a.tau",id),
-                                       (SigId "battery1.pin_p.v",id),
+                                      -- (SigId "battery1.pin_p.v",id),
                                        (SigId "battery1.pin_p.i",id),
-                                       (SigId "battery1.constantvoltage1.v",neg),
+                                       (SigId "potentialsensor1.p.v",id),
+                                       (SigId "battery1.constantvoltage1.v",neg), -- constant 200
                                        (SigId "battery1.constantvoltage1.i",id),
                                        (SigId "electricmotor1.speedsensor1.w",id),
                                        (SigId "electricmotor1.flange_a.tau",neg),
@@ -51,7 +57,9 @@ condition rec = extractLogSignals rec [(SigId "engine1.Speed",id),
                                        (SigId "chassis1.flange_a.f",neg),
                                        (SigId "chassis1.flange_a1.f",id),
                                        (SigId "speedsensor1.v",id),
-                                       (SigId "drivingresistance1.force1.f",neg)]
+                                       (SigId "drivingresistance1.force1.f",neg),
+                                       (SigId "brake1.tau",neg),
+                                       (SigId "brake2.tau",neg)]
   
 --------------------------------------------------------------------------------------- 
 -- * Calculate special signals
@@ -63,23 +71,25 @@ calculatePower rec = pRec
       g sigId = getSig rec $ SigId sigId
   
       time = getTime rec
+      zeroSig = fromList (replicate (len time) 0) :: TC Signal (Typ UT UT UT) (Data ([] :> Nil) Double)
+      
       speed = g "speedsensor1.v" 
+      voltage = g "potentialsensor1.p.v"
+
     
       -- generator
-      generatorCurrent = g "electricmotor2.signalcurrent1.p.i"
-      generatorVoltage = neg $ g "electricmotor2.signalcurrent1.v"
-      generatorElectricPower =  generatorCurrent .* generatorVoltage
+      generatorElectricPower =  g "electricmotor2.signalcurrent1.p.i" .* voltage
    
       -- battery
-      batteryPoleVoltage = g "battery1.pin_p.v"
-      batteryPoleCurrent = g "battery1.pin_p.i"                      
-      batteryPolePower = batteryPoleVoltage.*batteryPoleCurrent
+      batteryClampsPower = voltage.*g "battery1.pin_p.i"
+      batteryInternalVoltage = fromList (replicate (len time) 200) :: TC Signal (Typ UT UT UT) (Data ([] :> Nil) Double)
+      batteryInternalPower = g "battery1.pin_p.i".*batteryInternalVoltage
       
       -- dcdc -- TODO !!     
-      dcdcPowerHV = g "battery1.pin_p.i"
-      dcdcPowerLV = g "battery1.pin_p.i"
-      
-      -- chassis       
+      dcdcPowerHV = zeroSig
+      dcdcPowerLV = zeroSig
+
+       -- chassis       
       frontAxleForce = g "chassis1.flange_a.f"
       rearAxleForce =  g "chassis1.flange_a1.f"                 
       frontAxlePower =  frontAxleForce.*speed        
@@ -95,26 +105,26 @@ calculatePower rec = pRec
       pRec = genPowerRecord time 
              -- engine
              [(PPosIdx Tank EngineFlange, 
-               g "engine1.Speed" .* g "engine1.flange_b.tau",                
-               g "engine1.FuelPower"
+               g "engine1.FuelPower",             
+               g "engine1.Speed" .* g "engine1.flange_b.tau"                
               ),
               
               -- generator 
               (PPosIdx EngineFlange ConBattery, 
                g  "electricmotor2.speedsensor1.w".* g "electricmotor2.flange_a.tau",
-               g "electricmotor2.signalcurrent1.p.i".* g "electricmotor2.signalcurrent1.v"
+               generatorElectricPower
               ),
               
               -- connection
               (PPosIdx ConBattery ConES,
-               batteryPolePower.-generatorElectricPower,
-               batteryPolePower.-generatorElectricPower
+               generatorElectricPower .- batteryClampsPower,
+               batteryClampsPower .-generatorElectricPower
               ),
               
               --motor
               (PPosIdx ConES MotorFlange,
-               g "electricmotor1.speedsensor1.w".* g "electricmotor1.flange_a.tau",
-               g "electricmotor1.signalcurrent1.p.i".* g "electricmotor1.signalcurrent1.p.v"
+               g "electricmotor1.signalcurrent1.p.i".* voltage,
+               g "electricmotor1.speedsensor1.w".* g "electricmotor1.flange_a.tau"
               ),
               
               -- gearbox
@@ -137,8 +147,8 @@ calculatePower rec = pRec
               
               -- battery
               (PPosIdx ConBattery Battery,
-               g "battery1.pin_p.v".* g "battery1.pin_p.i",
-               g "battery1.constantvoltage1.v".* g "battery1.constantvoltage1.i"
+               batteryClampsPower,
+               batteryInternalPower
               ),
               
               -- DCDC

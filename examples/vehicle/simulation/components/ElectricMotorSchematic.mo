@@ -1,11 +1,11 @@
 model ElectricMotor
   annotation(Diagram(), Icon(graphics = {Text(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-44.031,27.2869},{42.4806,-13.0232}}, textString = "Motor"),Rectangle(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-84.031,59.5349},{80.6621,-50.903}}),Rectangle(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-71.2089,-50.8024},{-34.31,-72.8179}}),Line(points = {{-49.6124,91.1628},{-40,72.5581},{-22.0155,77.8295},{-12.7132,61.7054},{-13.3333,73.4884},{-24.186,66.9767},{-13.3333,63.2558}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Rectangle(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{36.2791,-74.7287},{72.8682,-50.8527}})}));
-  Modelica.Mechanics.Rotational.Components.Inertia inertia1 annotation(Placement(visible = true, transformation(origin = {66.6667,10.8528}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  Modelica.Mechanics.Rotational.Components.Inertia inertia1(J = 1) annotation(Placement(visible = true, transformation(origin = {66.6667,10.8528}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Mechanics.Rotational.Sources.Torque torque1 annotation(Placement(visible = true, transformation(origin = {35.0388,10.5426}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Blocks.Nonlinear.VariableLimiter variablelimiter1 annotation(Placement(visible = true, transformation(origin = {-5.27132,10.2326}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Blocks.Sources.Constant P_max(k = 60000) annotation(Placement(visible = true, transformation(origin = {44.6281,-80.6612}, extent = {{12,12},{-12,-12}}, rotation = -180)));
   Modelica.Blocks.Math.Division division1 annotation(Placement(visible = true, transformation(origin = {-10.5785,-66.4463}, extent = {{12,12},{-12,-12}}, rotation = -180)));
-  Modelica.Blocks.Sources.Constant T_max(k = 100) annotation(Placement(visible = true, transformation(origin = {-79.6694,-64.1322}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  Modelica.Blocks.Sources.Constant T_max(k = 200) annotation(Placement(visible = true, transformation(origin = {-79.6694,-64.1322}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Blocks.Interfaces.RealInput u annotation(Placement(visible = true, transformation(origin = {-89.9174,11.9008}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {-89.9174,11.9008}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Blocks.Math.Gain gain1(k = -1) annotation(Placement(visible = true, transformation(origin = {-34.3802,0}, extent = {{-6.77369,-6.77369},{6.77369,6.77369}}, rotation = 0)));
   Modelica.Blocks.Math.Min min1 annotation(Placement(visible = true, transformation(origin = {-57.1901,-25.124}, extent = {{12,-12},{-12,12}}, rotation = -270)));
@@ -13,22 +13,23 @@ model ElectricMotor
   Modelica.Mechanics.Rotational.Sensors.SpeedSensor speedsensor1 annotation(Placement(visible = true, transformation(origin = {63.1822,-44.6305}, extent = {{12,12},{-12,-12}}, rotation = -180)));
   Modelica.Blocks.Nonlinear.Limiter limiter1(uMin = 1) annotation(Placement(visible = true, transformation(origin = {27.5093,-45.3532}, extent = {{12,12},{-12,-12}}, rotation = -180)));
   Modelica.Blocks.Math.Division division2 annotation(Placement(visible = true, transformation(origin = {2.60223,51.3011}, extent = {{12,12},{-12,-12}}, rotation = -180)));
-  Modelica.Blocks.Math.Gain gain2(k = -1) annotation(Placement(visible = true, transformation(origin = {44.031,44.031}, extent = {{12,12},{-12,-12}}, rotation = -180)));
   Modelica.Electrical.Analog.Interfaces.PositivePin pin_p annotation(Placement(visible = true, transformation(origin = {-58.6047,86.5116}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {-58.6047,86.5116}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Electrical.Analog.Sources.SignalCurrent signalcurrent1 annotation(Placement(visible = true, transformation(origin = {-41.6375,49.4424}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Electrical.Analog.Sensors.VoltageSensor voltagesensor1 annotation(Placement(visible = true, transformation(origin = {-5.89147,87.7519}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Electrical.Analog.Interfaces.NegativePin pin_n annotation(Placement(visible = true, transformation(origin = {24.4961,87.7519}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {24.4961,87.7519}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-  Efficiency efficiency1(eta = 0.9) annotation(Placement(visible = true, transformation(origin = {92.5287,36.7816}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  Modelica.Blocks.Math.Product product1 annotation(Placement(visible = true, transformation(origin = {62.5,34.1667}, extent = {{-6.77369,-6.77369},{6.77369,6.77369}}, rotation = 0)));
+  Efficiency efficiency1(eta = 0.9) annotation(Placement(visible = true, transformation(origin = {102.251,34.0038}, extent = {{-12,-12},{12,12}}, rotation = 0)));
 equation
-  connect(efficiency1.y,gain2.u) annotation(Line(points = {{103.494,28.6437},{130.46,28.6437},{130.46,44.2529},{58.431,44.2529},{58.431,44.031}}));
-  connect(efficiency1.u,variablelimiter1.y) annotation(Line(points = {{82.5977,36.8506},{8.04598,36.8506},{8.04598,10.2326},{7.92868,10.2326}}));
+  connect(efficiency1.y,division2.u1) annotation(Line(points = {{113.216,25.8659},{116.944,25.8659},{116.944,44.4444},{17.0022,44.4444},{17.0022,44.1011}}));
+  connect(product1.y,efficiency1.u) annotation(Line(points = {{69.9511,34.1667},{91.1111,34.1667},{91.1111,34.0728},{92.3199,34.0728}}));
+  connect(product1.u2,speedsensor1.w) annotation(Line(points = {{54.3716,30.1025},{50.8333,30.1025},{50.8333,-44.6305},{49.9822,-44.6305}}));
+  connect(product1.u1,variablelimiter1.y) annotation(Line(points = {{54.3716,38.2309},{15,38.2309},{15,10.5556},{7.92868,10.5556},{7.92868,10.2326}}));
+  connect(division2.y,signalcurrent1.i) annotation(Line(points = {{-10.5978,51.3011},{-15.6134,51.3011},{-15.6134,66.5428},{-41.6274,66.5428},{-41.6274,57.8424},{-41.6375,57.8424}}));
+  connect(signalcurrent1.n,pin_n) annotation(Line(points = {{-29.6375,49.4424},{-21.1111,49.4424},{-21.1111,71.6667},{23.6111,71.6667},{23.6111,87.7778},{24.4961,87.7778},{24.4961,87.7519}}));
+  connect(signalcurrent1.p,pin_p) annotation(Line(points = {{-53.6375,49.4424},{-59.1667,49.4424},{-59.1667,86.5116},{-58.6047,86.5116}}));
   connect(voltagesensor1.v,division2.u2) annotation(Line(points = {{-5.89147,75.7519},{-5.89147,66.3566},{29.1473,66.3566},{29.1473,56.7442},{16.7442,56.7442},{16.7442,58.5011},{17.0022,58.5011}}));
   connect(voltagesensor1.n,pin_n) annotation(Line(points = {{6.10853,87.7519},{21.0853,87.7519},{21.0853,87.7519},{24.4961,87.7519}}));
-  connect(signalcurrent1.p,pin_n) annotation(Line(points = {{-53.6375,49.4424},{-71.6279,49.4424},{-71.6279,71.938},{24.186,71.938},{24.186,87.7519},{24.4961,87.7519}}));
   connect(voltagesensor1.p,pin_p) annotation(Line(points = {{-17.8915,87.7519},{-61.3953,87.7519},{-61.3953,86.5116},{-58.6047,86.5116}}));
-  connect(signalcurrent1.n,pin_p) annotation(Line(points = {{-29.6375,49.4424},{-22.3256,49.4424},{-22.3256,88.062},{-58.6047,88.062},{-58.6047,86.5116}}));
-  connect(division2.y,signalcurrent1.i) annotation(Line(points = {{-10.5978,51.3011},{-15.6134,51.3011},{-15.6134,66.5428},{-39.4052,66.5428},{-39.4052,57.8424},{-41.6375,57.8424}}));
-  connect(division2.u1,gain2.y) annotation(Line(points = {{17.0022,44.1011},{31.3178,44.1011},{31.3178,44.031},{30.831,44.031}}));
   connect(limiter1.y,division1.u2) annotation(Line(points = {{14.3093,-45.3532},{5.94796,-45.3532},{5.94796,-59.2463},{3.8215,-59.2463}}));
   connect(limiter1.u,speedsensor1.w) annotation(Line(points = {{41.9093,-45.3532},{51.3011,-45.3532},{51.3011,-44.2379},{49.9822,-44.2379},{49.9822,-44.6305}}));
   connect(speedsensor1.flange,inertia1.flange_b) annotation(Line(points = {{75.1822,-44.6305},{78.7597,-44.6305},{78.7597,10.8528},{78.6667,10.8528}}));

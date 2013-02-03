@@ -5,20 +5,20 @@ model Controller_SeriesHybrid
   Modelica.Blocks.Logical.Switch switch1_engine annotation(Placement(visible = true, transformation(origin = {43.7209,-3.72093}, extent = {{-6.1579,-6.1579},{6.1579,6.1579}}, rotation = 0)));
   Modelica.Blocks.Logical.Switch switch2_motor annotation(Placement(visible = true, transformation(origin = {40.3101,-44.3411}, extent = {{-5.59809,-5.59809},{5.59809,5.59809}}, rotation = 0)));
   Modelica.Blocks.Sources.Constant zero(k = 0) annotation(Placement(visible = true, transformation(origin = {-5.5814,-12.093}, extent = {{-7.45106,-7.45106},{7.45106,7.45106}}, rotation = 0)));
-  Modelica.Blocks.Math.Gain gain1(k = 10) annotation(Placement(visible = true, transformation(origin = {-17.0543,-59.845}, extent = {{-6.77369,-6.77369},{6.77369,6.77369}}, rotation = 0)));
-  Modelica.Blocks.Sources.Constant Torque_Demand(k = 100) annotation(Placement(visible = true, transformation(origin = {-31.6279,17.9845}, extent = {{-8.19616,-8.19616},{8.19616,8.19616}}, rotation = 0)));
+  Modelica.Blocks.Math.Gain gain1(k = 5) annotation(Placement(visible = true, transformation(origin = {-17.0543,-59.845}, extent = {{-6.77369,-6.77369},{6.77369,6.77369}}, rotation = 0)));
+  Modelica.Blocks.Sources.Constant Torque_Demand(k = 50) annotation(Placement(visible = true, transformation(origin = {-31.6279,17.9845}, extent = {{-8.19616,-8.19616},{8.19616,8.19616}}, rotation = 0)));
   Modelica.Blocks.Interfaces.RealInput u annotation(Placement(visible = true, transformation(origin = {-75.6589,-68.8372}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {-75.6589,-68.8372}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Blocks.Sources.Constant speed_Demand(k = 150) annotation(Placement(visible = true, transformation(origin = {-72.2481,-48.6822}, extent = {{-7.45106,-7.45106},{7.45106,7.45106}}, rotation = 0)));
   Modelica.Blocks.Math.Feedback feedback1 annotation(Placement(visible = true, transformation(origin = {-43.7209,-49.6124}, extent = {{-6.1579,-6.1579},{6.1579,6.1579}}, rotation = 0)));
-  Modelica.Blocks.Logical.Hysteresis hysteresis_lowSOC(uLow = 0.4, uHigh = 0.5) annotation(Placement(visible = true, transformation(origin = {-31.938,80}, extent = {{-7.45106,-7.45106},{7.45106,7.45106}}, rotation = 0)));
   Modelica.Blocks.Interfaces.RealOutput TorqueDemand_Engine annotation(Placement(visible = true, transformation(origin = {78.1395,38.4496}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {78.1395,38.4496}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Blocks.Interfaces.BooleanOutput y annotation(Placement(visible = true, transformation(origin = {79.3798,-3.41087}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {79.3798,-3.41087}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Blocks.Interfaces.RealOutput TorqueDemand_Motor annotation(Placement(visible = true, transformation(origin = {81.2403,-50.8527}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {81.2403,-50.8527}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  Modelica.Blocks.Logical.Hysteresis hysteresis_lowSOC(uLow = 0.2, uHigh = 0.8, pre_y_start = true) annotation(Placement(visible = true, transformation(origin = {-32.2158,80}, extent = {{-7.45106,-7.45106},{7.45106,7.45106}}, rotation = 0)));
 equation
+  connect(hysteresis_lowSOC.y,not1.u) annotation(Line(points = {{-24.0196,80},{-13.6434,80},{-13.6434,80},{-12.0406,80}}));
+  connect(hysteresis_lowSOC.u,Battery_SOC) annotation(Line(points = {{-41.157,80},{-66.3566,80},{-66.3566,47.4419},{-75.969,47.4419}}));
   connect(switch2_motor.y,TorqueDemand_Motor) annotation(Line(points = {{46.468,-44.3411},{60.155,-44.3411},{60.155,-50.8527},{81.2403,-50.8527}}));
   connect(y,not1.y) annotation(Line(points = {{79.3798,-3.41087},{52.7132,-3.41087},{52.7132,80},{2.12253,80}}));
-  connect(hysteresis_lowSOC.u,Battery_SOC) annotation(Line(points = {{-40.8793,80},{-66.3566,80},{-66.3566,47.4419},{-75.969,47.4419}}));
-  connect(hysteresis_lowSOC.y,not1.u) annotation(Line(points = {{-23.7418,80},{-13.6434,80},{-13.6434,80},{-12.0406,80}}));
   connect(switch2_motor.u2,not1.y) annotation(Line(points = {{33.5924,-44.3411},{28.8372,-44.3411},{28.8372,80.3101},{2.12253,80.3101},{2.12253,80}}));
   connect(not1.y,switch1_engine.u2) annotation(Line(points = {{2.12253,80},{28.8372,80},{28.8372,-3.72093},{36.3314,-3.72093}}));
   connect(u,feedback1.u2) annotation(Line(points = {{-75.6589,-68.8372},{-42.1705,-68.8372},{-42.1705,-54.5387},{-43.7209,-54.5387}}));

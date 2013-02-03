@@ -46,17 +46,17 @@ motor rec = plot "Motor" rec [SigId "speedsensor1.v",
             
 -- Building Signal Record for better Plotting of the original signals 
 electric rec =  plot "Electric" rec [SigId "speedsensor1.v",                        
-                                 SigId "battery1.pin_p.v",
+                                 SigId "potentialsensor1.p.v",
                                  SigId "battery1.pin_p.i",
                                  SigId "electricmotor1.signalcurrent1.p.i",
                                  SigId "electricmotor1.signalcurrent1.p.v",
                                  SigId "electricmotor2.signalcurrent1.p.i",
-                                 SigId "electricmotor2.signalcurrent1.p.v"
+                                 SigId "electricmotor2.signalcurrent1.v"
                                 ]
             
 -- Building Signal Record for better Plotting of the original signals 
 battery rec = plot "Battery" rec [SigId "speedsensor1.v",                        
-                                  SigId "battery1.pin_p.v",
+                                  SigId "potentialsensor1.p.v",
                                   SigId "battery1.pin_p.i",
                                   SigId "battery1.constantvoltage1.v",
                                   SigId "battery1.constantvoltage1.i"
@@ -90,18 +90,18 @@ genPowers pRec =  plot "GenerationPowers" (plotPowers pRec) [SigId "Fuel",
                                                             ]
                   
 propPowers pRec = plot "PropulsionPowers" (plotPowers pRec) [SigId "MotorClamps",
-                                                               SigId "MotorFlange",    
-                                                               SigId "InShaft",
-                                                               SigId "OutShaft",
-                                                               SigId "ToFrontBrakes",
-                                                               SigId "FrontWheelHub",
-                                                               SigId "FrontTires"
+                                                             SigId "MotorFlange",    
+                                                             SigId "InShaft",
+                                                             SigId "OutShaft",
+                                                             SigId "ToFrontBrakes",
+                                                             SigId "FrontWheelHub",
+                                                             SigId "FrontTires"
                                                               ]
 
 vehPowers pRec = plot "VehiclePowers"  (plotPowers pRec) [SigId "ToFrontBrakes",
-                                                            SigId "RearTires",    
-                                                            SigId "Inertia",
-                                                            SigId "Resistance"
-                                                           ]
+                                                          SigId "RearTires",    
+                                                          SigId "ToInertia",
+                                                          SigId "ToResistance"
+                                                         ]
 
 

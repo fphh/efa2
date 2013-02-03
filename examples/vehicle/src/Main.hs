@@ -57,18 +57,18 @@ main = do
 ---------------------------------------------------------------------------------------
 -- * Show Topology
   
-  Draw.topology System.topology
+--  Draw.topology System.topology
  
 ---------------------------------------------------------------------------------------
 -- * Show State Analysis Results
 
-  putStrLn ("Number of possible flow states: " ++ show (length System.flowStates))
-  Draw.flowTopologies (take 20 System.flowStates)
+--  putStrLn ("Number of possible flow states: " ++ show (length System.flowStates))
+--  Draw.flowTopologies (take 20 System.flowStates)
 
 --------------------------------------------------------------------------------------- 
 -- * Import signals from Csv-file
   
-  rawSignals <- modelicaCSVImport "Vehicle_res_short_neu.csv" :: IO (SignalRecord [] Double)
+  rawSignals <- modelicaCSVImport "Vehicle_res.csv" :: IO (SignalRecord [] Double)
   
 --  PL.rPlotSplit 9 ("Imported Signals",rawSignals)
 
@@ -78,7 +78,7 @@ main = do
   
 --  PL.rPlotSplit 9 ("Conditioned Signals", signals)
   
-{-  
+  
   Plot.vehicle signals
 --  Plot.engine signals
   Plot.motor signals
@@ -86,7 +86,7 @@ main = do
   Plot.driveline signals
   Plot.electric signals
   Plot.battery signals
--}  
+  
 --------------------------------------------------------------------------------------- 
 -- * Calculate Powers
   
@@ -114,7 +114,7 @@ main = do
 
   Rep.report [] ("Sequenz",sequence)    
 --  Rep.report [] ("SequencePowerRecord", sequencePowers)
-  Rep.report [] ("SequencePowerRecord", sequenceFlows)
+--  Rep.report [] ("SequencePowerRecord", sequenceFlows)
 
 ---------------------------------------------------------------------------------------
 -- *  Provide solver with Given Variables, Start Solver and generate Sequence Flow Graph     
@@ -134,7 +134,7 @@ main = do
    
   let   sequenceFlowTopology = makeSeqFlowGraph System.topology sequenceFlowsFilt
         
-  Draw.sequFlowGraph sequenceFlowTopology
+  -- Draw.sequFlowGraph sequenceFlowTopology
        
 ---------------------------------------------------------------------------------------
 -- *  Solve System
