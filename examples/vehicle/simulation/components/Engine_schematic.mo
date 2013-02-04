@@ -17,19 +17,17 @@ model Engine
   Modelica.Blocks.Math.Gain Efficiency(k = 1 / etaOpt) annotation(Placement(visible = true, transformation(origin = {65.0287,-44.7702}, extent = {{-8.19616,-8.19616},{8.19616,8.19616}}, rotation = 0)));
   parameter Real etaOpt(start = 0.35, unit = "1") "Positive power multiplied, negative power devided by efficiency" annotation(Placement(visible = true, transformation(origin = {71.2644,78.1609}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Blocks.Logical.And and1 annotation(Placement(visible = true, transformation(origin = {-9.72222,-17.5}, extent = {{-8.19616,-8.19616},{8.19616,8.19616}}, rotation = 0)));
-  engineDragTorque enginedragtorque1(dragTorqueMin = dragTorqueMin, dragTorqueMax = dragTorqueMax) annotation(Placement(visible = true, transformation(origin = {-39.7222,-34.1667}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Blocks.Logical.Greater greater1 annotation(Placement(visible = true, transformation(origin = {-48.3333,-24.1667}, extent = {{-6.1579,-6.1579},{6.1579,6.1579}}, rotation = 0)));
   Modelica.Blocks.Interfaces.RealInput Speed annotation(Placement(visible = true, transformation(origin = {-88.6111,-37.7778}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {-88.6111,-37.7778}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Blocks.Sources.Constant const(k = ignitionSpeed) annotation(Placement(visible = true, transformation(origin = {-81.9444,-72.2222}, extent = {{-9.91736,-9.91736},{9.91736,9.91736}}, rotation = 0)));
 equation
+  connect(switch1.u3,engine_max_torque1.DragTorque) annotation(Line(points = {{8.14932,-0.88885},{-37.5,-0.88885},{-37.5,55.8333},{-44,55.8333}}));
+  connect(engine_max_torque1.DragTorque,ToqueLimit.limit2) annotation(Line(points = {{-44,55.8333},{-37.7778,55.8333},{-37.7778,1.94444},{-24.0915,1.94444},{-24.0915,2.26414}}));
   connect(const.y,greater1.u2) annotation(Line(points = {{-71.0354,-72.2222},{-60.8333,-72.2222},{-60.8333,-29.1667},{-55.7228,-29.1667},{-55.7228,-29.093}}));
   connect(greater1.u1,Speed) annotation(Line(points = {{-55.7228,-24.1667},{-82.5,-24.1667},{-82.5,-37.7778},{-88.6111,-37.7778}}));
-  connect(Speed,enginedragtorque1.u) annotation(Line(points = {{-88.6111,-37.7778},{-53.0556,-37.7778},{-53.0556,-38.8},{-49.7222,-38.8}}));
   connect(engine_max_torque1.u,Speed) annotation(Line(points = {{-62.5666,64.5667},{-67.2222,64.5667},{-67.2222,-36.1111},{-88.6111,-36.1111},{-88.6111,-37.7778}}));
   connect(Power.u2,Speed) annotation(Line(points = {{27.5395,-48.2489},{-81.9444,-48.2489},{-81.9444,-37.7778},{-88.6111,-37.7778}}));
   connect(greater1.y,and1.u2) annotation(Line(points = {{-41.5596,-24.1667},{-19.1667,-24.1667},{-19.1667,-24.0569},{-19.5576,-24.0569}}));
-  connect(enginedragtorque1.y,switch1.u3) annotation(Line(points = {{-36.5889,-38.3},{8.05556,-38.3},{8.05556,-0.88885},{8.14932,-0.88885}}));
-  connect(enginedragtorque1.y,ToqueLimit.limit2) annotation(Line(points = {{-36.5889,-38.3},{-24.4444,-38.3},{-24.4444,2.26414},{-24.0915,2.26414}}));
   connect(and1.u1,SwitchOn) annotation(Line(points = {{-19.5576,-17.5},{-41.9444,-17.5},{-41.9444,42.7778},{-91.9444,42.7778},{-91.9444,42.5}}));
   connect(and1.y,switch1.u2) annotation(Line(points = {{-0.706445,-17.5},{2.5,-17.5},{2.5,4.44444},{8.14932,4.44444},{8.14932,4.03747}}));
   connect(Power.y,Efficiency.u) annotation(Line(points = {{41.7027,-44.5542},{43.4109,-44.5542},{43.4109,-44.7702},{55.1933,-44.7702}}));

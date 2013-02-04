@@ -129,11 +129,14 @@ genSequFlow sqPRec = fmap recFullIntegrate sqPRec
 -- | State changes in solver create several DataPoints with exact the same time
 -- | The resulting sections which have zero time duration are removed 
 
-removeZeroTimeSections :: (Eq a, V.Storage v a, V.Singleton v) => (Sequ,SequData (PowerRecord nty v a)) -> (Sequ,SequData (PowerRecord nty v a))
+removeZeroTimeSections :: (Fractional a, Ord a, Eq a, V.Storage v a, V.Singleton v) => (Sequ,SequData (PowerRecord nty v a)) -> (Sequ,SequData (PowerRecord nty v a))
 removeZeroTimeSections (xs, ys)  = filterSequWithSequData f (xs, ys) 
    where  -- f (_,Record time _) = (S.head time) /= (S.last time) 
-          f (_,Record time _) = (fst $ maybe err id $ S.viewL time) /= (snd $ maybe err id $ S.viewR time) 
-          err = error "Error in SequenceData.hs / removeZeroTimeSections -- empty head or tail"
+          f (_,Record time _) = abs (x -y) > 1 
+            where 
+              err = error "Error in SequenceData.hs / removeZeroTimeSections -- empty head or tail"
+              TC (Data x) = (fst $ maybe err id $ S.viewL time) 
+              TC (Data y) = (snd $ maybe err id $ S.viewR time) 
 
 
 -- | Drop Sections with negligible energy flow 

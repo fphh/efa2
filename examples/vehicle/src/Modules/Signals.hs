@@ -118,12 +118,12 @@ calculatePower rec = pRec
               -- connection
               (PPosIdx ConBattery ConES,
                generatorElectricPower .- batteryClampsPower,
-               batteryClampsPower .-generatorElectricPower
+               generatorElectricPower .- batteryClampsPower 
               ),
               
               --motor
               (PPosIdx ConES MotorFlange,
-               g "electricmotor1.signalcurrent1.p.i".* voltage,
+               (g "electricmotor1.signalcurrent1.p.i".* voltage),
                g "electricmotor1.speedsensor1.w".* g "electricmotor1.flange_a.tau"
               ),
               

@@ -110,11 +110,11 @@ main = do
   
   let sequenceFlows = genSequFlow sequencePowers
 
-  let (sequenceFilt,sequencePowersFilt,sequenceFlowsFilt) = removeLowEnergySections (sequence,sequencePowers,sequenceFlows) (100) 
+  let (sequenceFilt,sequencePowersFilt,sequenceFlowsFilt) = removeLowEnergySections (sequence,sequencePowers,sequenceFlows) (1000) 
 
   Rep.report [] ("Sequenz",sequence)    
 --  Rep.report [] ("SequencePowerRecord", sequencePowers)
---  Rep.report [] ("SequencePowerRecord", sequenceFlows)
+  Rep.report [] ("SequencePowerRecord", sequenceFlows)
 
 ---------------------------------------------------------------------------------------
 -- *  Provide solver with Given Variables, Start Solver and generate Sequence Flow Graph     
