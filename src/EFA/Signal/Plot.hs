@@ -17,7 +17,7 @@ import EFA.Signal.Signal (TC, Signal, toSigList, getDisplayType)
 -- import EFA.Signal.Base (BSum)
 
 import EFA.Signal.Data (Data, (:>), Nil, NestedList)
-import EFA.Report.Typ (TDisp, DisplayType(Typ_P, Typ_T), getDisplayUnit, getDisplayTypName)
+import EFA.Report.Typ (TDisp, DisplayType(Typ_T), getDisplayUnit, getDisplayTypName)
 import EFA.Report.Base (UnitScale(UnitScale), getUnitScale)
 
 import qualified Graphics.Gnuplot.Advanced as Plot

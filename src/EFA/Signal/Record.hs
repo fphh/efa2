@@ -8,7 +8,7 @@ import qualified EFA.Signal.Data as D
 import qualified EFA.Signal.Vector as V
 import EFA.Signal.Signal
           (TC, Signal, FSignal, TSigL, UTSignal, TSignal,
-           TSamp, PSamp, PSamp1L, PSamp2LL,Scalar,Scal)
+           TSamp, PSamp, PSamp1L, PSamp2LL,Scal)
 
 import EFA.Signal.Typ (Typ, A, P, T, Tt, UT,F,D)
 import EFA.Signal.Data (Data, (:>), Nil)
