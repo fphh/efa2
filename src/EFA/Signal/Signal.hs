@@ -253,6 +253,11 @@ infix 6 &+, &-
 type UTSignal v a = TC Signal (Typ UT UT UT) (Data (v :> Nil) a)
 type TSignal v a = TC Signal (Typ A T Tt) (Data (v :> Nil) a)
 
+type FFSignal v a = TC FSignal (Typ A F Tt) (Data (v :> Nil) a)
+
+type UTDistr v a = TC FDistrib (Typ UT UT UT) (Data (v :> Nil) a)
+type FDistr v a = TC FDistrib (Typ A F Tt) (Data (v :> Nil) a)
+
 ----------------------------------------------------------
 -- Convenience Type Synonyms
 
