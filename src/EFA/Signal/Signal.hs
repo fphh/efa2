@@ -488,12 +488,13 @@ tmap f xs = changeType $ map (fromSample . f . toSample) xs
 -- DeltaMap
 
 deltaMap ::
-   (SV.Singleton v2, SV.Storage v2 (Apply v1 d1), D.ZipWith (v2 :> v1),
-    D.Storage (v2 :> v1) d1, D.Storage (v2 :> v1) d2) =>
+   (SV.Singleton v2, D.ZipWith (v2 :> v1),
+    SV.Storage v2 (Apply v1 d1), SV.Storage v2 (Apply v1 d2),
+    D.Storage v1 d1, D.Storage v1 d2) =>
    (d1 -> d1 -> d2) ->
    TC Signal typ (Data (v2 :> v1) d1) ->
    TC FSignal typ (Data (v2 :> v1) d2)
-deltaMap f x = changeSignalType $ zipWith f x (P.snd $ P.maybe (error "Error in EFA.Signal.Signal/deltaMap - empty tail") id $ viewL x)
+deltaMap f (TC x) = TC $ D.deltaMap f x
 
 {-
 ----------------------------------------------------------

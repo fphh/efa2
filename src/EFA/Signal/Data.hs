@@ -584,6 +584,15 @@ viewR ::
    Data (v2 :> v1) d -> Maybe (Data (v2 :> v1) d, Data v1 d)
 viewR (Data x) = P.fmap (mapPair (Data, Data)) $ SV.viewR x
 
+deltaMap ::
+   (SV.Singleton v2, ZipWith (v2 :> v1),
+    SV.Storage v2 (Apply v1 d1), SV.Storage v2 (Apply v1 d2),
+    Storage v1 d1, Storage v1 d2) =>
+   (d1 -> d1 -> d2) ->
+   Data (v2 :> v1) d1 ->
+   Data (v2 :> v1) d2
+deltaMap f x = P.maybe mempty (zipWith f x . P.snd) $ viewL x
+
 
 
 ----------------------------------------------------------

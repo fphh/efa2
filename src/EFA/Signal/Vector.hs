@@ -194,8 +194,7 @@ instance Zipper UV.Vector where
 deltaMap ::
    (Storage vec b, Storage vec c, Singleton vec, Zipper vec) =>
    (b -> b -> c) -> vec b -> vec c
-deltaMap f l = zipWith f l (snd $ maybe err id $ viewL l)
-  where err = error ("Error in EFA.Signal.Vector/deltaMap - empty tail")
+deltaMap f l = maybe empty (zipWith f l . snd) $ viewL l
 
 
 ------------------------------------------------------------
