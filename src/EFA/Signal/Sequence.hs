@@ -8,7 +8,7 @@ module EFA.Signal.Sequence where
 
 import qualified EFA.Graph.Flow as Flow
 -- import qualified EFA.Graph.Topology.Index as Idx
-import EFA.Graph.Topology (Topology, SequFlowGraph)
+import EFA.Graph.Topology (Topology, FlowTopology, SequFlowGraph)
 
 import qualified EFA.Signal.Base as SB
 import qualified EFA.Signal.Signal as S
@@ -19,7 +19,7 @@ import EFA.Signal.SequenceData
            filterSequWithSequData,filterSequWithSequData2)
 
 
-import EFA.Signal.Record(Record(..),PowerRecord,FlowRecord,
+import EFA.Signal.Record(Record(..),PowerRecord,FlowRecord, FlowState,
            RSamp1,rsingleton, RSig,rlen,rviewL,rviewR,getTimeWindow)
         
   
@@ -165,6 +165,7 @@ makeRecSequence =
    zipWithSecIdxs (flip fromFlowRecord (Idx.Record Idx.Absolute))
 -}
 
+{-
 makeSeqFlowGraph :: 
   (Fractional a,
    Ord a,
@@ -176,11 +177,13 @@ makeSeqFlowGraph ::
    Topology nty ->
    SequData (FlowRecord nty v a) ->
    SequFlowGraph nty
-makeSeqFlowGraph topo =
+-}
+
+makeSeqFlowGraph ::
+  (Ord nty) => SequData (FlowTopology nty) -> SequFlowGraph nty
+makeSeqFlowGraph =
    Flow.mkSequenceTopology .
-   Flow.genSectionTopology .
-   Flow.genSequFlowTops topo .
-   Flow.genSequFState
+   Flow.genSectionTopology
 
 makeSequence ::
    (Show nty, Ord nty) => PowerRecord nty [] Val ->

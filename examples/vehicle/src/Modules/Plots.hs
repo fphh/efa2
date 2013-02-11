@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
-module EXAMPLES.Vehicle.SeriesHybrid.Plots where
+module Modules.Plots where
 
 import Data.Map as M (mapKeys)
 import EFA.Utility(checkedLookup)
@@ -19,7 +19,7 @@ import EFA.Signal.Record (SigId(..),Record(..),PowerRecord,SignalRecord)
 import qualified Graphics.Gnuplot.Value.Atom as Atom (C)
 import qualified Graphics.Gnuplot.Value.Tuple as Tuple (C)
 
-import EXAMPLES.Vehicle.SeriesHybrid.System as System
+import Modules.System as System
 
 ---------------------------------------------------------------------------------------
   -- | * Group Signals for Plotting

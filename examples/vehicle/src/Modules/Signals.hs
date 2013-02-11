@@ -3,7 +3,7 @@
 
 
 
-module EXAMPLES.Vehicle.SeriesHybrid.Signals where
+module Modules.Signals where
 
 
 import EFA.Signal.Record (SigId(SigId),PPosIdx(..),
@@ -15,7 +15,7 @@ import EFA.Signal.Signal((.*), (.+), (.-), neg, TC, Signal, len, fromList)
 import EFA.Signal.Typ(UT,Typ)
 import EFA.Signal.Data(Data(..),Nil, (:>))
 
-import EXAMPLES.Vehicle.SeriesHybrid.System  (Nodes(..))
+import Modules.System  (Nodes(..))
  
 
 
