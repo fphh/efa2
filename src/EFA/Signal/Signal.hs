@@ -487,14 +487,13 @@ tmap f xs = changeType $ map (fromSample . f . toSample) xs
 ----------------------------------------------------------
 -- DeltaMap
 
-deltaMap, deltaMapReverse ::
+deltaMap ::
    (SV.Singleton v2, SV.Storage v2 (Apply v1 d1), D.ZipWith (v2 :> v1),
     D.Storage (v2 :> v1) d1, D.Storage (v2 :> v1) d2) =>
    (d1 -> d1 -> d2) ->
    TC Signal typ (Data (v2 :> v1) d1) ->
    TC FSignal typ (Data (v2 :> v1) d2)
 deltaMap f x = changeSignalType $ zipWith f x (P.snd $ P.maybe (error "Error in EFA.Signal.Signal/deltaMap - empty tail") id $ viewL x)
-deltaMapReverse f x = changeSignalType $ zipWith f (P.snd $ P.maybe (error "Error in EFA.Signal.Signal/deltaMapReverse - empty tail") id $ viewL x) x
 
 {-
 ----------------------------------------------------------
@@ -502,11 +501,9 @@ deltaMapReverse f x = changeSignalType $ zipWith f (P.snd $ P.maybe (error "Erro
 
 class TDeltaMap s1 s2 c d1 d2 where
       tdeltaMap :: (TC Scalar typ1 (Data Nil d1) -> TC Scalar typ1 (Data Nil d1) -> TC Scalar typ2 (Data Nil d2)) -> TC s1 typ1 (c d1) -> TC s2 typ2 (c d2)
-      tdeltaMapReverse :: (TC Scalar typ1 (Data Nil d1) -> TC Scalar typ1 (Data Nil d1) -> TC Scalar typ2 (Data Nil d2)) -> TC s1 typ1 (c d1) -> TC s2 typ2 (c d2)
 
 instance (SDeltaMap s1 s2 c d1 d2) => TDeltaMap s1 s2 c d1 d2 where
       tdeltaMap f xs = changeType $ deltaMap g xs where g x y = fromScalar $ f (toScalar x) (toScalar y)
-      tdeltaMapReverse f xs = changeType $ deltaMapReverse g xs where g x y = fromScalar $ f (toScalar x) (toScalar y)
 
 
 ----------------------------------------------------------
@@ -738,7 +735,7 @@ deltaSig ::
      DSucc delta1 delta2) =>
     TC Signal (Typ delta1 t1 p1) (Data (v2 :> v1) a) ->
     TC FSignal (Typ delta2 t1 p1) (Data (v2 :> v1) a)
-deltaSig x = changeDelta $ deltaMapReverse (..-) x
+deltaSig x = changeDelta $ deltaMap (P.flip (..-)) x
 
 avSig ::
     (z ~ Apply v1 a, SV.Zipper v2, SV.Walker v2, SV.Singleton v2, SV.Storage v2 z,
@@ -747,7 +744,7 @@ avSig ::
     TC FSignal (Typ delta1 t1 p1) (Data (v2 :> v1) a)
 avSig x =
    changeDelta $
-   deltaMapReverse (\ x1 x2 -> (x1..+x2) ../ P.asTypeOf 2 x1) x
+   deltaMap (\ x1 x2 -> (x1..+x2) ../ P.asTypeOf 2 x1) x
 
 sort ::
    (SV.Sort v, SV.Storage v d, Ord d) =>

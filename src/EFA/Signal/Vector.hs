@@ -197,12 +197,6 @@ deltaMap ::
 deltaMap f l = zipWith f l (snd $ maybe err id $ viewL l)
   where err = error ("Error in EFA.Signal.Vector/deltaMap - empty tail")
 
-deltaMapReverse ::
-   (Storage vec b, Storage vec c, Singleton vec, Zipper vec) =>
-   (b -> b -> c) -> vec b -> vec c
-deltaMapReverse f l = zipWith f (snd $ maybe err id $ viewL l) l
-  where err = error ("Error in EFA.Signal.Vector/deltaMapReverse - empty tail")
-
 
 ------------------------------------------------------------
 -- | Zipper4
