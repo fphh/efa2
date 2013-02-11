@@ -5,16 +5,13 @@
 
 module EXAMPLES.Vehicle.SeriesHybrid.Signals where
 
-import Data.Foldable (foldMap)
-import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
-
 
 import EFA.Signal.Record (SigId(SigId),PPosIdx(..),
                           getSig,getTime,extractLogSignals, 
                           PowerRecord, SignalRecord, genPowerRecord)
 
-import qualified EFA.Graph.Topology.Node as Node
-import EFA.Signal.Signal((.*), (.+), (.-), neg, untype, TC, Signal,Scalar,fromScalar,toScalar, len, fromList)
+-- import qualified EFA.Graph.Topology.Node as Node
+import EFA.Signal.Signal((.*), (.+), (.-), neg, TC, Signal, len, fromList)
 import EFA.Signal.Typ(UT,Typ)
 import EFA.Signal.Data(Data(..),Nil, (:>))
 
@@ -90,11 +87,7 @@ calculatePower rec = pRec
       dcdcPowerLV = zeroSig
 
        -- chassis       
-      frontAxleForce = g "chassis1.flange_a.f"
-      rearAxleForce =  g "chassis1.flange_a1.f"                 
-      frontAxlePower =  frontAxleForce.*speed        
-      rearAxlePower =  rearAxleForce.*speed
-      kineticPower = (frontAxlePower.+rearAxlePower).-resistancePower
+      kineticPower = (g "chassis1.flange_a1.f" .+ g "chassis1.flange_a.f").*speed
       
       resistancePower = g "drivingresistance1.force1.f".*speed
   

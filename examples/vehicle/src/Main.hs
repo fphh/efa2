@@ -6,31 +6,31 @@ module Main where
 -- * Import other Modules
 
 import Data.Foldable (foldMap)
-import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
+-- import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified Data.Map as M
-import EFA.Example.Utility (edgeVar, makeEdges, (.=))
+import EFA.Example.Utility (edgeVar, (.=))
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Async (concurrentlyMany_)
 
 import EFA.Utility.Stream (Stream((:~)))
-import qualified EFA.Graph as Gr
-import qualified EFA.Graph.Topology as TD
+-- import qualified EFA.Graph as Gr
+-- import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Equation.System as EqGen
 import EFA.IO.CSVImport (modelicaCSVImport)
 import qualified EFA.Signal.SequenceData as SD
-import EFA.Signal.Record (SigId(SigId), PPosIdx(PPosIdx), SignalRecord,
-                          getSig, getTime, extractLogSignals, Record(Record), 
-                          SignalRecord, genPowerRecord)
-import qualified EFA.Signal.Plot as PL
+import EFA.Signal.Record (PPosIdx(PPosIdx), SignalRecord,
+                          Record(Record), 
+                          SignalRecord)
+-- import qualified EFA.Signal.Plot as PL
 import EFA.Signal.Sequence (makeSequenceRaw, makeSeqFlowGraph,
                             removeZeroTimeSections, 
                             removeLowEnergySections, genSequFlow)
-import qualified EFA.Signal.Signal as Sig
-import EFA.Signal.Signal((.*), (.+), (.-), neg)
+import qualified EFA.Signal.Signal as Sig (toList)
+-- import EFA.Signal.Signal((.*), (.+), (.-), neg)
 import qualified EFA.Report.Report as Rep
 import qualified EFA.Graph.Draw as Draw
-import qualified EFA.Graph.Topology.Node as Node
+-- import qualified EFA.Graph.Topology.Node as Node
 import Data.Monoid ((<>))
 
 ----------------------------------
@@ -70,13 +70,13 @@ main = do
 ---------------------------------------------------------------------------------------
 -- * Show Topology
   
---  Draw.topology System.topology
+  Draw.topology System.topology
  
 ---------------------------------------------------------------------------------------
 -- * Show State Analysis Results
 
---  putStrLn ("Number of possible flow states: " ++ show (length System.flowStates))
---  Draw.flowTopologies (take 20 System.flowStates)
+  putStrLn ("Number of possible flow states: " ++ show (length System.flowStates))
+  Draw.flowTopologies (take 20 System.flowStates)
 
 --------------------------------------------------------------------------------------- 
 -- * Import signals from Csv-file
@@ -116,16 +116,16 @@ main = do
   
   let (sequenceRaw,sequencePowersRaw) = makeSequenceRaw powerSignals
   
-  let (sequence,sequencePowers) = removeZeroTimeSections (sequenceRaw,sequencePowersRaw)
+  let (sequenc,sequencePowers) = removeZeroTimeSections (sequenceRaw,sequencePowersRaw)
       
 ---------------------------------------------------------------------------------------
 -- * Integrate Power and Sections on Energy
   
   let sequenceFlows = genSequFlow sequencePowers
 
-  let (sequenceFilt,sequencePowersFilt,sequenceFlowsFilt) = removeLowEnergySections (sequence,sequencePowers,sequenceFlows) (1000) 
+  let (sequenceFilt,sequencePowersFilt,sequenceFlowsFilt) = removeLowEnergySections (sequenc,sequencePowers,sequenceFlows) (1000) 
 
-  Rep.report [] ("Sequenz",sequence)    
+  Rep.report [] ("Sequenz",sequenc)    
 --  Rep.report [] ("SequencePowerRecord", sequencePowers)
   Rep.report [] ("SequencePowerRecord", sequenceFlows)
 
@@ -133,11 +133,11 @@ main = do
 -- *  Provide solver with Given Variables, Start Solver and generate Sequence Flow Graph     
    
   let   
-      makeGiven initStorage sequenceFlowsFilt = (EqGen.dtime Idx.initSection .= 1)  
+      makeGiven initStorage sequenceFlwsFilt = (EqGen.dtime Idx.initSection .= 1)  
                                        <> (EqGen.storage (Idx.SecNode Idx.initSection System.Battery) .= initStorage) 
                                        <> foldMap f (zip [Idx.Section 0 ..] ds)
         where 
-              SD.SequData ds =  fmap f2 sequenceFlowsFilt
+              SD.SequData ds =  fmap f2 sequenceFlwsFilt
               f2 (Record t xs) = (sum $ Sig.toList t, M.toList $ M.map (sum . Sig.toList) xs)      
               f (sec, (dt, es)) = (EqGen.dtime sec .= dt) <> foldMap g es                                                          
                 where g (PPosIdx a b, e) = (edgeVar EqGen.energy sec a b .= e)

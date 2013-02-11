@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 module EXAMPLES.Vehicle.SeriesHybrid.Plots where
 
@@ -7,20 +8,44 @@ import EFA.Utility(checkedLookup)
 import EFA.Signal.Record ()
 import qualified EFA.Signal.Plot as PL
 import EFA.Signal.Typ (Typ,A,T,P,Tt)
+import EFA.Report.Typ(TDisp)
+
 import EFA.Signal.Signal(Signal)
+import EFA.Signal.Vector as V (Walker,Storage,FromList)
+-- import qualified EFA.Signal.Plot as PL
 
 
-import EFA.Signal.Record (SigId(..),Record(..),PowerRecord)
+import EFA.Signal.Record (SigId(..),Record(..),PowerRecord,SignalRecord)
+import qualified Graphics.Gnuplot.Value.Atom as Atom (C)
+import qualified Graphics.Gnuplot.Value.Tuple as Tuple (C)
 
 import EXAMPLES.Vehicle.SeriesHybrid.System as System
 
 ---------------------------------------------------------------------------------------
   -- | * Group Signals for Plotting
+
+class (Fractional a,
+           Show (v a),
+           V.FromList v,
+           V.Walker v,
+           V.Storage v a,
+           Atom.C a,
+           Tuple.C a) =>  Plottable v a where                             
+instance Plottable [] Double where    
   
   
-plot title rec sigs = do PL.rPlotSelect sigs (title,rec)
-   
+plot:: (TDisp t1,
+        TDisp t2,
+        Ord id,
+        Show id,
+        Plottable v a) =>
+       String -> Record s t1 t2 id v a -> [id] -> IO()  
+plot title rec sigIds = do PL.rPlotSelect sigIds (title,rec)
+                           
+                           
 -- Building Signal Record for better Plotting of the original signals 
+vehicle ::(Plottable v a) =>
+          SignalRecord v a -> IO()                           
 vehicle rec = plot "Vehicle" rec [SigId "speedsensor1.v",
                                   SigId "idealrollingwheel1.flangeR.tau",
                                   SigId "idealrollingwheel2.flangeR.tau",
@@ -30,6 +55,7 @@ vehicle rec = plot "Vehicle" rec [SigId "speedsensor1.v",
                                  ]
 
 -- Building Signal Record for better Plotting of the original signals 
+driveline:: Plottable v a =>  SignalRecord v a -> IO()
 driveline rec =  plot "DriveLine" rec [SigId "speedsensor1.v",
                                        SigId "electricmotor1.flange_a.tau",
                                        SigId "gearbox1.flange_a.tau",                        
@@ -37,6 +63,7 @@ driveline rec =  plot "DriveLine" rec [SigId "speedsensor1.v",
                                       ]
              
 -- Building Signal Record for better Plotting of the original signals 
+motor:: Plottable v a =>  SignalRecord v a -> IO()
 motor rec = plot "Motor" rec [SigId "speedsensor1.v",                        
                               SigId "electricmotor1.flange_a.tau",
                               SigId "electricmotor1.speedsensor1.w",
@@ -45,6 +72,7 @@ motor rec = plot "Motor" rec [SigId "speedsensor1.v",
                              ]
             
 -- Building Signal Record for better Plotting of the original signals 
+electric:: Plottable v a =>  SignalRecord v a -> IO()
 electric rec =  plot "Electric" rec [SigId "speedsensor1.v",                        
                                  SigId "potentialsensor1.p.v",
                                  SigId "battery1.pin_p.i",
@@ -55,6 +83,7 @@ electric rec =  plot "Electric" rec [SigId "speedsensor1.v",
                                 ]
             
 -- Building Signal Record for better Plotting of the original signals 
+battery:: Plottable v a =>  SignalRecord v a -> IO()
 battery rec = plot "Battery" rec [SigId "speedsensor1.v",                        
                                   SigId "potentialsensor1.p.v",
                                   SigId "battery1.pin_p.i",
@@ -64,6 +93,7 @@ battery rec = plot "Battery" rec [SigId "speedsensor1.v",
           
 
 -- Building Signal Record for better Plotting of the original signals 
+generator:: Plottable v a =>  SignalRecord v a -> IO()
 generator rec = plot "Generator" rec [SigId "speedsensor1.v",                        
                                       SigId "electricmotor2.signalcurrent1.p.i",
                                       SigId "electricmotor2.signalcurrent1.v",
@@ -75,21 +105,22 @@ generator rec = plot "Generator" rec [SigId "speedsensor1.v",
   
  
 -- Plot Power Records with readible 
-plotPowers :: Show (v a) => PowerRecord Nodes v a -> Record Signal (Typ A T Tt) (Typ A P Tt) SigId v a 
-plotPowers (Record time pMap) = Record time newMap
+mkPlotPowers :: Show (v a) => PowerRecord Nodes v a -> Record Signal (Typ A T Tt) (Typ A P Tt) SigId v a 
+mkPlotPowers (Record time pMap) = Record time newMap
   where -- replace old with new keys
     newMap = M.mapKeys f pMap
     f key = checkedLookup System.powerPositonNames key
     
-    
-genPowers pRec =  plot "GenerationPowers" (plotPowers pRec) [SigId "Fuel",    
+genPowers :: Plottable v a => PowerRecord Nodes v a -> IO()
+genPowers pRec =  plot "GenerationPowers" (mkPlotPowers pRec) [SigId "Fuel",    
                                                              SigId "CrankShaft",
                                                              SigId "BatteryClamps",
                                                              SigId "BatteryCore",
                                                              SigId "Wire"
                                                             ]
-                  
-propPowers pRec = plot "PropulsionPowers" (plotPowers pRec) [SigId "MotorClamps",
+
+propPowers :: (Show (v a), Plottable v a) => PowerRecord Nodes v a -> IO()
+propPowers pRec = plot "PropulsionPowers" (mkPlotPowers pRec) [SigId "MotorClamps",
                                                              SigId "MotorFlange",    
                                                              SigId "InShaft",
                                                              SigId "OutShaft",
@@ -97,8 +128,9 @@ propPowers pRec = plot "PropulsionPowers" (plotPowers pRec) [SigId "MotorClamps"
                                                              SigId "FrontWheelHub",
                                                              SigId "FrontTires"
                                                               ]
-
-vehPowers pRec = plot "VehiclePowers"  (plotPowers pRec) [SigId "ToFrontBrakes",
+                  
+vehPowers :: (Show (v a), Plottable v a) => PowerRecord Nodes v a -> IO()
+vehPowers pRec = plot "VehiclePowers"  (mkPlotPowers pRec) [SigId "ToFrontBrakes",
                                                           SigId "RearTires",    
                                                           SigId "ToInertia",
                                                           SigId "ToResistance"

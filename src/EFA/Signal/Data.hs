@@ -751,7 +751,7 @@ class Slice c where
    slice :: Storage c d => Int -> Int -> Data c d -> Data c d
 
 instance SV.Slice v1 => Slice (v1 :> Nil) where
-   slice idx len xs = withNestedData (Data . SV.slice idx len) xs
+   slice idx n xs = withNestedData (Data . SV.slice idx n) xs
 
 
 -- | @HT ^^ please check, very unsure about this !! PG

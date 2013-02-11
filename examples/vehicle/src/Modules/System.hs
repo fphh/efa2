@@ -5,7 +5,7 @@ module EXAMPLES.Vehicle.SeriesHybrid.System where
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph as Gr
-import EFA.Example.Utility (edgeVar, makeEdges, (.=))
+import EFA.Example.Utility (makeEdges)
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 
 import qualified Data.Map as M
