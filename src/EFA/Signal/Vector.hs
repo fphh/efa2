@@ -414,18 +414,18 @@ instance Find UV.Vector where
 
 class Slice v where
   slice :: (Storage v d) => Int -> Int -> v d -> v d
-  
-instance Slice [] where  
-  slice idx n xs = L.take n $ L.drop (idx-1) xs
-  
+
+instance Slice [] where
+  slice start num = L.take num . L.drop start
+
 instance Slice V.Vector where
   slice = V.slice
 
 instance Slice UV.Vector where
-  slice idx n xs = readUnbox (UV.slice idx n) xs
-  
-  
--- -- | Check Vector equality   
+  slice start num = readUnbox (UV.slice start num)
+
+
+-- -- | Check Vector equality
 -- (==) :: v d -> v d -> Bool
 -- (==) = all (P.==) 
 
