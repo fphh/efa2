@@ -10,6 +10,8 @@ import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified Data.Map as M
 import EFA.Example.Utility (edgeVar, makeEdges, (.=))
 import qualified EFA.Utility.Stream as Stream
+import EFA.Utility.Async (concurrentlyMany_)
+
 import EFA.Utility.Stream (Stream((:~)))
 import qualified EFA.Graph as Gr
 import qualified EFA.Graph.Topology as TD
@@ -34,6 +36,7 @@ import Data.Monoid ((<>))
 ----------------------------------
 -- * Example Specific Imports
 
+
 -- Topology
 import qualified EXAMPLES.Vehicle.SeriesHybrid.System as System (topology, flowStates,Nodes(Battery))
 
@@ -42,6 +45,16 @@ import EXAMPLES.Vehicle.SeriesHybrid.Signals as Signals (condition,calculatePowe
 
 -- Plotting
 import EXAMPLES.Vehicle.SeriesHybrid.Plots as Plot
+
+{-
+import qualified Modules.System as System (topology, flowStates,Nodes(Battery))
+
+-- Signal Treatment
+import Modules.Signals as Signals (condition,calculatePower)
+
+-- Plotting
+import Modules.Plots as Plot
+-}
 
 -- Define Section Names (Technical Reasons)
 sec0, sec1, sec2, sec3, sec4 :: Idx.Section
@@ -139,8 +152,15 @@ main = do
 ---------------------------------------------------------------------------------------
 -- *  Solve System
       
-  let   solverResult = EqGen.solve (makeGiven 12.34567 sequenceFlowsFilt)  sequenceFlowTopology
-  
-  Draw.sequFlowGraphAbsWithEnv sequenceFlowTopology solverResult
+  let solverResult =
+        EqGen.solve (makeGiven 12.34567 sequenceFlowsFilt)
+                    sequenceFlowTopology
+      consSolverResult =
+        EqGen.conservativlySolve (makeGiven 12.34567 sequenceFlowsFilt)
+                                 sequenceFlowTopology
+  concurrentlyMany_ [
+    Draw.sequFlowGraphAbsWithEnv sequenceFlowTopology solverResult,
+    Draw.sequFlowGraphAbsWithEnv sequenceFlowTopology consSolverResult ]
+
   
 

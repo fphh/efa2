@@ -1,7 +1,7 @@
 {-# LANGUAGE Rank2Types #-}
 module EFA.Equation.System (
   EquationSystem, ExprWithVars,
-  fromTopology, solve,
+  fromTopology, solve, conservativlySolve,
 
   recAbs, constToExprSys,
   liftV, liftV2, liftF, liftF2,
@@ -458,3 +458,32 @@ solve given g = runST $ do
     runStateT eqsys $ Env.empty $ Env.SingleRecord recAbs
   Sys.solve eqs
   traverse (fmap (maybe Undetermined Determined) . Sys.query) varmap
+
+
+-- Stellt die originalen Werte wieder her.
+-- Die auf grund der Missachtung originaler Werte
+-- falsch berechneten Werte bleiben aber erhalten.
+-- Eine andere Lösung wäre, die Zeilen
+--     (varsumin =.= varsumout)
+--     <>
+-- (im Moment 273 und 274) auszukommentieren.
+
+conservativlySolve ::
+  (Eq a, Fractional a, Ord nty, Show nty) =>
+  (forall s. EquationSystem nty s a) ->
+  TD.SequFlowGraph nty -> Env.Env nty Env.SingleRecord (Result a)
+conservativlySolve given g = runST $ do
+  let dirG = toDirSequFlowGraph g
+      EquationSystem eqsys = given <> fromTopology dirG
+      EquationSystem givenSys = given
+
+  (eqs, varmap) <-
+    runStateT eqsys $ Env.empty $ Env.SingleRecord recAbs
+  Sys.solve eqs
+
+  (givenEqs, givenVarmap) <-
+    runStateT givenSys $ Env.empty $ Env.SingleRecord recAbs
+  Sys.solve givenEqs
+
+  let uenv = Env.union givenVarmap varmap
+  traverse (fmap (maybe Undetermined Determined) . Sys.query) uenv
