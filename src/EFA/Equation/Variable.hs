@@ -61,16 +61,17 @@ mkVar = mkVarCore . mkIdx
 
 instance (Show nty) => FormatValue (Index nty) where
    formatValue idx =
-      let absolute e r x y =
-             Format.subscript (Format.edgeIdent e) (Format.edgeIndex r x y)
-          delta e r x y =
-             Format.subscript (Format.delta $ Format.edgeIdent e)
-                              (Format.edgeIndex r x y)
+      let absolute e r x y = Format.edgeIdent e
+             -- Format.subscript (Format.edgeIdent e) (Format.edgeIndex r x y)
+          delta e r x y = Format.delta $ Format.edgeIdent e
+             -- Format.subscript (Format.delta $ Format.edgeIdent e)
+             --                 (Format.edgeIndex r x y)
       in  case idx of
              Energy (Idx.Energy r x y) -> absolute Format.Energy r x y
              DEnergy (Idx.DEnergy r x y) -> delta Format.Energy r x y
 
-             MaxEnergy (Idx.MaxEnergy r x y) -> absolute Format.MaxEnergy r x y
+             MaxEnergy (Idx.MaxEnergy r x y) ->
+               absolute Format.MaxEnergy r x y
              DMaxEnergy (Idx.DMaxEnergy r x y) -> delta Format.MaxEnergy r x y
 
              Power (Idx.Power r x y) -> absolute Format.Power r x y

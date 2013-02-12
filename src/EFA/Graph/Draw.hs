@@ -124,10 +124,18 @@ dotFromSequFlowGraph g recTShow nshow eshow =
 dotFromSecNode :: 
   (Node.Show nty) =>
   (Topo.LNode nty -> Unicode) -> Topo.LNode nty -> DotNode T.Text
-dotFromSecNode nshow n@(x, _) =
+dotFromSecNode nshow n@(x, nodeType) =
    DotNode (dotIdentFromSecNode x)
-      [displabel, nodeColour, Style [SItem Filled []], Shape BoxShape ]
+      [ displabel, nodeColour, 
+        Style [SItem Filled []], Shape (shape nodeType), color nodeType ]
   where displabel = Label $ StrLabel $ T.pack $ unUnicode $ nshow n
+        shape Topo.Crossing = PlainText
+        shape Topo.Source = DiamondShape
+        shape Topo.Sink = BoxShape
+        shape Topo.Storage = Ellipse
+        shape _ = BoxShape
+        color Topo.Crossing = FillColor [RGB 150 200 240]
+        color _ = nodeColour
 
 dotFromSecEdge ::
   (Node.Show nty, Ord nty) =>

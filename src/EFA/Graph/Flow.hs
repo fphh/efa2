@@ -14,14 +14,38 @@ import EFA.Signal.SequenceData
 import EFA.Signal.Record
 
 
-import EFA.Signal.Signal (fromScalar, sigSign, sigSum)
+import EFA.Signal.Signal (fromScalar, sigSign, sigSum, neg)
 import EFA.Signal.Vector (Storage,Walker)
-import EFA.Signal.Base (Sign(PSign, NSign, ZSign),BSum)
+import EFA.Signal.Base (Sign(PSign, NSign, ZSign),BSum, DArith0)
+
+import Control.Applicative ((<$>), (<*>))
 
 import qualified Data.Foldable as Fold
 import qualified Data.Map as M
 
 import EFA.Utility (checkedLookup)
+
+adjustSigns ::
+  (Show (v a), DArith0 a,
+  Walker v, Storage v a, Ord nty, Show nty) =>
+  Topology nty -> SequData (FlowState nty) ->
+  SequData (FlowRecord nty v a) -> SequData (FlowRecord nty v a)
+adjustSigns topo flowStates flowRec = f <$> flowStates <*> flowRec
+  where f (FlowState state) (Record dt flow) =
+          Record dt (M.foldrWithKey g M.empty state')
+          where state' = uniquePPos topo state
+                g ppos NSign acc = 
+                  M.insert ppos (neg (flow `checkedLookup` ppos))
+                    $ M.insert ppos' (neg (flow `checkedLookup` ppos')) acc
+                    where ppos' = flipPos ppos
+                g ppos _ acc =
+                  M.insert ppos (flow `checkedLookup` ppos)
+                    $ M.insert ppos' (flow `checkedLookup` ppos') acc
+                    where ppos' = flipPos ppos
+        uniquePPos topol state = foldl h M.empty (labEdges topol)
+          where h acc (Edge idx1 idx2, ()) =
+                  M.insert ppos (state `checkedLookup` ppos) acc
+                  where ppos = PPosIdx idx1 idx2
 
 
 -- | Function to calculate flow states for the whole sequence

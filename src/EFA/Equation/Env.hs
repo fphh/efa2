@@ -130,7 +130,7 @@ instance Foldable (Env nty rec) where
    foldMap = foldMapDefault
 
 instance Traversable (Env nty rec) where
-   sequenceA (Env rec e de  me dme p dp n dn dt x dx y dy v st) =
+   sequenceA (Env rec e de me dme p dp n dn dt x dx y dy v st) =
       pure (Env rec) <?> e <?> de <?> me <?> dme <?> p <?> dp <?> n <?> dn <?> dt <?> x <?> dx <?> y <?> dy <?> v <?> st
 
 infixl 4 <?>
@@ -143,6 +143,14 @@ f <?> x = f <*> sequenceA x
 empty :: rec -> Env nty rec a
 empty rec = Env rec M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty
 
+
+union :: (Ord nty) => Env nty rec a -> Env nty rec a -> Env nty rec a
+union (Env rec e de me dme p dp n dn dt x dx y dy v st)
+         (Env _ e' de' me' dme' p' dp' n' dn' dt' x' dx' y' dy' v' st') =
+  (Env rec (M.union e e') (M.union de de') (M.union me me') (M.union dme dme')
+           (M.union p p') (M.union dp dp') (M.union n n')   (M.union dn dn')
+           (M.union dt dt') (M.union x x') (M.union dx dx') (M.union y y')
+           (M.union dy dy') (M.union v v') (M.union st st'))
 
 data NoRecord = NoRecord deriving (Eq, Ord, Show)
 newtype SingleRecord = SingleRecord {fromSingleRecord :: Idx.Record} deriving (Eq, Ord, Show)

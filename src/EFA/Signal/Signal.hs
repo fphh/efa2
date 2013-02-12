@@ -253,6 +253,11 @@ infix 6 &+, &-
 type UTSignal v a = TC Signal (Typ UT UT UT) (Data (v :> Nil) a)
 type TSignal v a = TC Signal (Typ A T Tt) (Data (v :> Nil) a)
 
+type FFSignal v a = TC FSignal (Typ A F Tt) (Data (v :> Nil) a)
+
+type UTDistr v a = TC FDistrib (Typ UT UT UT) (Data (v :> Nil) a)
+type FDistr v a = TC FDistrib (Typ A F Tt) (Data (v :> Nil) a)
+
 ----------------------------------------------------------
 -- Convenience Type Synonyms
 
@@ -449,16 +454,26 @@ getSigVec (TC (Data (D1 x))) = x
 vec2Sig :: v1 d -> TC Signal typ (Data (v1 :> Nil) d)
 vec2Sig x = (TC (Data (D1 x)))
 
-{-
-fromSigList :: [TC Signal typ (Data (v1 :> Nil) d)] -> TC Signal typ (Data (V.Vector :> v1 :> Nil) d)
-fromSigList slist = TC $ Data $ D2 $ V.fromList vecList
-            where vecList = map getSigVec slist
+-}
 
-toSigList :: TC Signal typ (Data (V.Vector :> v1 :> Nil) d) -> [TC Signal typ (Data (v1 :> Nil) d)]
-toSigList (TC (Data (D2 x))) = map vec2Sig vecList
-            where vecList = V.toList x
--}
--}
+
+fromSigList :: (SV.Storage v1 d,
+                SV.Storage v2 (v1 d),
+                SV.FromList v1,
+                SV.FromList v2) => 
+               [TC s typ (Data (v1 :> Nil) d)] -> TC s typ (Data (v2 :> v1 :> Nil) d)
+fromSigList sigList = fromList2 listList
+            where listList = P.map toList sigList
+
+toSigList :: (SV.Storage v1 d,
+              SV.Storage v2 (v1 d),
+              SV.FromList v1,
+              SV.FromList v2) => 
+             TC s typ (Data (v2 :> v1 :> Nil) d) -> [TC s typ (Data (v1 :> Nil) d)]
+toSigList sig2D = P.map fromList listList
+            where listList = toList2 sig2D
+
+
 ----------------------------------------------------------
 -- Zip
 
@@ -822,6 +837,9 @@ neg = map B.neg
 rec :: (DArith0 d, D.Map c, D.Storage c d) => TC s typ (Data c d) -> TC s typ (Data c d)
 rec = map B.rec
 
+
+
+{-
 -- | data ConversiSon function
 fromSigList ::
    (SV.Storage v2 (Apply v1 d), SV.FromList v2) =>
@@ -835,7 +853,7 @@ toSigList ::
    TC s typ (Data (v2 :> v1) d) -> [TC s typ (Data v1 d)]
 toSigList (TC (Data xs)) =
    SV.map (TC . Data) $ SV.toList xs
-
+-}
 
 fromCells ::
    (SV.FromList v1, SV.FromList v2, SV.Storage v2 (v1 d), SV.Storage v1 d) =>

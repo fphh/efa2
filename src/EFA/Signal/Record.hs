@@ -48,10 +48,16 @@ instance Show SigId where
 -- | Indices for Power Position
 data PPosIdx nty = PPosIdx !nty !nty deriving (Show, Eq, Ord)
 
+flipPos ::  PPosIdx nty -> PPosIdx nty
+flipPos (PPosIdx idx1 idx2) = PPosIdx idx2 idx1
+
+
 type instance D.Value (Record s t1 t2 id v a) = a
 
 
-data Record s t1 t2 id v a =  Record (TC s t1 (Data (v :> Nil) a)) (M.Map id (TC s t2 (Data (v :> Nil) a))) deriving (Show, Eq)
+data Record s t1 t2 id v a = 
+     Record (TC s t1 (Data (v :> Nil) a)) 
+            (M.Map id (TC s t2 (Data (v :> Nil) a))) deriving (Show, Eq)
 
 type SignalRecord = Record Signal (Typ A T Tt) (Typ UT UT UT) SigId
 

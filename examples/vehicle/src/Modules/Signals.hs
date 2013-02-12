@@ -3,7 +3,7 @@
 
 
 
-module EXAMPLES.Vehicle.SeriesHybrid.Signals where
+module Modules.Signals where
 
 
 import EFA.Signal.Record (SigId(SigId),PPosIdx(..),
@@ -15,7 +15,7 @@ import EFA.Signal.Signal((.*), (.+), (.-), neg, TC, Signal, len, fromList)
 import EFA.Signal.Typ(UT,Typ)
 import EFA.Signal.Data(Data(..),Nil, (:>))
 
-import EXAMPLES.Vehicle.SeriesHybrid.System  (Nodes(..))
+import Modules.System  (Nodes(..))
  
 
 
@@ -87,11 +87,7 @@ calculatePower rec = pRec
       dcdcPowerLV = zeroSig
 
        -- chassis       
-      frontAxleForce = g "chassis1.flange_a.f"
-      rearAxleForce =  g "chassis1.flange_a1.f"                 
-      frontAxlePower =  frontAxleForce.*speed        
-      rearAxlePower =  rearAxleForce.*speed
-      kineticPower = (frontAxlePower.+rearAxlePower).-resistancePower
+      kineticPower = (g "chassis1.flange_a1.f" .+ g "chassis1.flange_a.f").*speed
       
       resistancePower = g "drivingresistance1.force1.f".*speed
   
