@@ -455,20 +455,14 @@ consData x = TC (Data x)
 
 
 fromSigList ::
-   (SV.Storage v1 d,
-    SV.Storage v2 (v1 d),
-    SV.FromList v2) =>
-   [TC s typ (Data (v1 :> Nil) d)] ->
-   TC s typ (Data (v2 :> v1 :> Nil) d)
+   (SV.Storage v (Apply c d), SV.FromList v) =>
+   [TC s typ (Data c d)] -> TC s typ (Data (v :> c) d)
 fromSigList =
    consData . SV.fromList . fmap unconsData
 
 toSigList ::
-   (SV.Storage v1 d,
-    SV.Storage v2 (v1 d),
-    SV.FromList v2) =>
-   TC s typ (Data (v2 :> v1 :> Nil) d) ->
-   [TC s typ (Data (v1 :> Nil) d)]
+   (SV.Storage v (Apply c d), SV.FromList v) =>
+   TC s typ (Data (v :> c) d) -> [TC s typ (Data c d)]
 toSigList =
    fmap consData . SV.toList . unconsData
 
