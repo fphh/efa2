@@ -6,15 +6,9 @@ module Main where
 -- * Import other Modules
 
 import Data.Foldable (foldMap)
--- import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified Data.Map as M
 import EFA.Example.Utility (edgeVar, (.=))
---import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Async (concurrentlyMany_)
-
--- import EFA.Utility.Stream (Stream((:~)))
--- import qualified EFA.Graph as Gr
--- import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Equation.System as EqGen
 import EFA.IO.CSVImport (modelicaCSVImport)
@@ -22,36 +16,29 @@ import qualified EFA.Signal.SequenceData as SD
 import EFA.Signal.Record (PPosIdx(PPosIdx), SignalRecord,
                           Record(Record), 
                           SignalRecord)
--- import qualified EFA.Signal.Plot as PL
 import EFA.Signal.Sequence (makeSequenceRaw, makeSeqFlowTopology,
                             removeZeroTimeSections, 
                             removeLowEnergySections, genSequFlow)
 import qualified EFA.Signal.Signal as Sig (toList)
--- import EFA.Signal.Signal((.*), (.+), (.-), neg)
 import qualified EFA.Report.Report as Rep
 import qualified EFA.Graph.Draw as Draw
--- import qualified EFA.Graph.Topology.Node as Node
 import Data.Monoid ((<>))
-
 import qualified EFA.Graph.Flow as Flow
+
 ----------------------------------
 -- * Example Specific Imports
 
 import qualified Modules.System as System (topology, flowStates,Nodes(Battery))
-
 -- Signal Treatment
 import Modules.Signals as Signals (condition,calculatePower)
-
 -- Plotting
 import Modules.Plots as Plot
-
 
 ----------------------------------
 -- * Here Starts the Real Program
 
 main :: IO ()
 main = do
-
 
 ---------------------------------------------------------------------------------------
 -- * Show Topology
@@ -90,7 +77,6 @@ main = do
 --------------------------------------------------------------------------------------- 
 -- * Calculate Powers
   
-      
   Plot.genPowers powerSignals   
   Plot.propPowers powerSignals
   Plot.vehPowers powerSignals
@@ -111,10 +97,10 @@ main = do
   let sequenceFlows = genSequFlow sequencePowers
 
   let (sequenceFilt,sequencePowersFilt,sequenceFlowsFilt) =
-        removeLowEnergySections (sequenc,sequencePowers,sequenceFlows) (1000) 
+        removeLowEnergySections (sequenc,sequencePowers,sequenceFlows) (0) 
 
   --Rep.report [] ("Sequenz",sequenc)    
-  Rep.report [] ("SequencePowerRecord", sequencePowers)
+  -- Rep.report [] ("SequencePowerRecord", sequencePowers)
   Rep.report [] ("SequencePowerRecord", sequenceFlowsFilt)
 
 ---------------------------------------------------------------------------------------
@@ -144,11 +130,11 @@ main = do
 ---------------------------------------------------------------------------------------
 -- *  Solve System
       
-  let solverResult =
-        EqGen.solve (makeGiven 12.34567 adjustedFlows)
-                    sequenceFlowTopology
+  -- let solverResult =
+  --       EqGen.solve (makeGiven 12.34567 adjustedFlows)
+  --                   sequenceFlowTopology
 
-      solverMeasurements =
+  let solverMeasurements =
         EqGen.solveFromMeasurement (makeGiven 12.34567 adjustedFlows)
                                    sequenceFlowTopology
       
