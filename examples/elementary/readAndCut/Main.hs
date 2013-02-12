@@ -30,11 +30,11 @@ import qualified EFA.Graph.Topology.Node as Node
 sec0, sec1, sec2, sec3, sec4 :: Idx.Section
 sec0 :~ sec1 :~ sec2 :~ sec3 :~ sec4 :~ _ = Stream.enumFrom $ Idx.Section 0
 
-node0, node1, node2, node3 :: Node.Node
-node0 :~ node1 :~ node2 :~ node3 :~ _ = Stream.enumFrom $ Node.Node 0
+node0, node1, node2, node3 :: Node.Int
+node0 :~ node1 :~ node2 :~ node3 :~ _ = Stream.enumFrom $ Node.Int 0
 
 
-topoDreibein :: TD.Topology Node.Node
+topoDreibein :: TD.Topology Node.Int
 topoDreibein = Gr.mkGraph ns (makeEdges es)
   where ns = [(node0, TD.Source),
               (node1, TD.Crossing),
@@ -43,7 +43,7 @@ topoDreibein = Gr.mkGraph ns (makeEdges es)
         es = [(node0, node1), (node1, node2), (node1, node3)]
 
 
-given :: EqGen.EquationSystem Node.Node s Double
+given :: EqGen.EquationSystem Node.Int s Double
 given = foldMap (uncurry (.=)) $
   (EqGen.dtime Idx.initSection, 1) :
   []
@@ -61,7 +61,7 @@ main = do
         (PPosIdx node1 node3, sigMap M.! (SigId "powercon5.u")),
         (PPosIdx node3 node1, sigMap M.! (SigId "powercon6.u")) ]
 
-      pRec = Record time (M.map (Sig.fromList . Sig.toList) pMap) :: PowerRecord Node.Node [] Double
+      pRec = Record time (M.map (Sig.fromList . Sig.toList) pMap) :: PowerRecord Node.Int [] Double
 
       sequ = makeSequence pRec
 

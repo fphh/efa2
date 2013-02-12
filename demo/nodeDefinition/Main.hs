@@ -19,10 +19,10 @@ sec0 :~ _ = Stream.enumFrom $ Idx.Section 0
 -------------------------------------------------
 -- Vordefinierte Knoten Node
 
-node00, node01 :: Node.Node
-node00 :~ node01 :~ _ = Stream.enumFrom $ Node.Node 0
+node00, node01 :: Node.Int
+node00 :~ node01 :~ _ = Stream.enumFrom $ Node.Int 0
 
-topo0 :: TD.Topology Node.Node
+topo0 :: TD.Topology Node.Int
 topo0 = mkGraph nodes (makeEdges edges)
   where nodes = [(node00, TD.AlwaysSink), (node01, TD.AlwaysSource)]
         edges = [(node00, node01)]
