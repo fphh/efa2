@@ -12,7 +12,7 @@ import EFA.Signal.Signal
 
 import EFA.Signal.Typ (Typ, A, P, T, Tt, UT,F,D)
 import EFA.Signal.Data (Data, (:>), Nil)
-import EFA.Signal.Base (Sign, BSum, DArith0,BProd)
+import EFA.Signal.Base (Sign, BSum, BProd)
 
 import EFA.Report.Report (ToTable(toTable), Table(..), tvcat)
 import EFA.Report.Typ (TDisp, getDisplayTypName)
@@ -125,16 +125,12 @@ sortSigList = Key.sort (S.sigSum . snd)
 
 -- | List of Operations for pre-processing signals
 
--- generalize to Record
 -- | create a Record of selected, and sign corrected signals
-extractLogSignals ::  (V.Walker v,
-                      V.Storage v a,
-                      DArith0 a,
-                      Show (v a)) =>
-                      SignalRecord v a ->
-                      [(SigId, TC Signal (Typ UT UT UT) (Data (v :> Nil) a)
-                               -> TC Signal (Typ UT UT UT) (Data (v :> Nil) a))] ->
-                      SignalRecord  v a
+extractLogSignals ::
+   (Ord id, Show id) =>
+   Record s t1 t2 id v a ->
+   [(id, TC s t2 (Data (v :> Nil) a) -> TC s t2 (Data (v :> Nil) a))] ->
+   Record s t1 t2 id v a
 extractLogSignals (Record time sMap) idList =
    let idMap = M.fromList idList
        notFound = Set.difference (M.keysSet idMap) (M.keysSet sMap)
