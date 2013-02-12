@@ -447,31 +447,30 @@ instance Const Scalar Nil where
    toConst _len x = toScalar x
 
 
-{-
-getSigVec :: TC Signal typ (Data (v1 :> Nil) d) -> v1 d
-getSigVec (TC (Data (D1 x))) = x
+unconsData :: TC s typ (Data c d) -> Apply c d
+unconsData (TC (Data x)) = x
 
-vec2Sig :: v1 d -> TC Signal typ (Data (v1 :> Nil) d)
-vec2Sig x = (TC (Data (D1 x)))
-
--}
+consData :: Apply c d -> TC s typ (Data c d)
+consData x = TC (Data x)
 
 
-fromSigList :: (SV.Storage v1 d,
-                SV.Storage v2 (v1 d),
-                SV.FromList v1,
-                SV.FromList v2) => 
-               [TC s typ (Data (v1 :> Nil) d)] -> TC s typ (Data (v2 :> v1 :> Nil) d)
-fromSigList sigList = fromList2 listList
-            where listList = P.map toList sigList
+fromSigList ::
+   (SV.Storage v1 d,
+    SV.Storage v2 (v1 d),
+    SV.FromList v2) =>
+   [TC s typ (Data (v1 :> Nil) d)] ->
+   TC s typ (Data (v2 :> v1 :> Nil) d)
+fromSigList =
+   consData . SV.fromList . fmap unconsData
 
-toSigList :: (SV.Storage v1 d,
-              SV.Storage v2 (v1 d),
-              SV.FromList v1,
-              SV.FromList v2) => 
-             TC s typ (Data (v2 :> v1 :> Nil) d) -> [TC s typ (Data (v1 :> Nil) d)]
-toSigList sig2D = P.map fromList listList
-            where listList = toList2 sig2D
+toSigList ::
+   (SV.Storage v1 d,
+    SV.Storage v2 (v1 d),
+    SV.FromList v2) =>
+   TC s typ (Data (v2 :> v1 :> Nil) d) ->
+   [TC s typ (Data (v1 :> Nil) d)]
+toSigList =
+   fmap consData . SV.toList . unconsData
 
 
 ----------------------------------------------------------
