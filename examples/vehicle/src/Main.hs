@@ -9,10 +9,10 @@ import Data.Foldable (foldMap)
 -- import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified Data.Map as M
 import EFA.Example.Utility (edgeVar, (.=))
-import qualified EFA.Utility.Stream as Stream
+--import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Async (concurrentlyMany_)
 
-import EFA.Utility.Stream (Stream((:~)))
+-- import EFA.Utility.Stream (Stream((:~)))
 -- import qualified EFA.Graph as Gr
 -- import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Topology.Index as Idx
@@ -23,7 +23,7 @@ import EFA.Signal.Record (PPosIdx(PPosIdx), SignalRecord,
                           Record(Record), 
                           SignalRecord)
 -- import qualified EFA.Signal.Plot as PL
-import EFA.Signal.Sequence (makeSequenceRaw, makeSeqFlowGraph,
+import EFA.Signal.Sequence (makeSequenceRaw, makeSeqFlowTopology,
                             removeZeroTimeSections, 
                             removeLowEnergySections, genSequFlow)
 import qualified EFA.Signal.Signal as Sig (toList)
@@ -46,13 +46,6 @@ import Modules.Signals as Signals (condition,calculatePower)
 import Modules.Plots as Plot
 
 
--- Define Section Names (Technical Reasons)
---sec0, sec1, sec2, sec3, sec4 :: Idx.Section
---sec0 :~ sec1 :~ sec2 :~ sec3 :~ sec4 :~ _ = Stream.enumFrom $ Idx.Section 0
-
-  
-
-
 ----------------------------------
 -- * Here Starts the Real Program
 
@@ -62,7 +55,7 @@ main = do
 
 ---------------------------------------------------------------------------------------
 -- * Show Topology
-  {-
+
   Draw.topology System.topology
  
 ---------------------------------------------------------------------------------------
@@ -70,7 +63,7 @@ main = do
 
   putStrLn ("Number of possible flow states: " ++ show (length System.flowStates))
   Draw.flowTopologies (take 20 System.flowStates)
--}
+
 --------------------------------------------------------------------------------------- 
 -- * Import signals from Csv-file
   
@@ -85,7 +78,7 @@ main = do
   
 --  PL.rPlotSplit 9 ("Conditioned Signals", signals)
   
-  {-
+  
   Plot.vehicle signals
 --  Plot.engine signals
   Plot.motor signals
@@ -101,7 +94,7 @@ main = do
   Plot.genPowers powerSignals   
   Plot.propPowers powerSignals
   Plot.vehPowers powerSignals
-  -}
+  
 --  PL.rPlotSplit 9 ("Conditioned Signals", signals)
   
 ---------------------------------------------------------------------------------------
@@ -121,8 +114,8 @@ main = do
         removeLowEnergySections (sequenc,sequencePowers,sequenceFlows) (1000) 
 
   --Rep.report [] ("Sequenz",sequenc)    
---  Rep.report [] ("SequencePowerRecord", sequencePowers)
-  --Rep.report [] ("SequencePowerRecord", sequenceFlowsFilt)
+  Rep.report [] ("SequencePowerRecord", sequencePowers)
+  Rep.report [] ("SequencePowerRecord", sequenceFlowsFilt)
 
 ---------------------------------------------------------------------------------------
 -- *  Provide solver with Given Variables, Start Solver and generate Sequence Flow Graph     
