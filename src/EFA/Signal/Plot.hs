@@ -17,7 +17,7 @@ import EFA.Signal.Signal (TC, Signal, toSigList, getDisplayType)
 -- import EFA.Signal.Base (BSum)
 
 import EFA.Signal.Data (Data, (:>), Nil, NestedList)
-import EFA.Report.Typ (TDisp, DisplayType(Typ_P, Typ_T), getDisplayUnit, getDisplayTypName)
+import EFA.Report.Typ (TDisp, DisplayType(Typ_T), getDisplayUnit, getDisplayTypName)
 import EFA.Report.Base (UnitScale(UnitScale), getUnitScale)
 
 import qualified Graphics.Gnuplot.Advanced as Plot
@@ -251,8 +251,8 @@ instance
 rPlotStyle :: (Show k) => k -> Plot2D.T x y -> Plot2D.T x y
 rPlotStyle key =
    fmap $ Graph2D.lineSpec $
-      LineSpec.pointSize 1$
-      LineSpec.pointType 7 $
+      LineSpec.pointSize 0.1$
+      LineSpec.pointType 1 $
       LineSpec.lineWidth 1 $
       LineSpec.title (show key) $
       LineSpec.deflt
@@ -262,10 +262,11 @@ rPlotAttr ::
    (Graph.C graph) =>
    String -> Opts.T graph
 rPlotAttr name =
-   Opts.title ("PowerRecord: " ++ name) $
+   Opts.title (name) $
    Opts.grid True $
    Opts.xLabel ("Time [" ++ (show $ getDisplayUnit Typ_T) ++ "]") $
-   Opts.yLabel ("Power [" ++ (show $ getDisplayUnit Typ_P) ++ "]") $
+   Opts.yLabel ("")
+--    Opts.yLabel (show  "[" ++ (show $ getDisplayUnit Typ_P) ++ "]") $
 --   Opts.size (Scale 0.7) $
    Opts.deflt
 

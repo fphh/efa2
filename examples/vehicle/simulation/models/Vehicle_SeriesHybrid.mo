@@ -1,8 +1,7 @@
 model Vehicle
-  annotation(Icon(graphics = {Text(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-74.1085,33.7984},{74.1085,-43.4109}}, textString = "Simple EV"),Rectangle(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-98.9147,74.1085},{99.2248,-72.2481}})}), experiment(StartTime = 0.0, StopTime = 550, Tolerance = 0.000001));
+  annotation(Icon(graphics = {Text(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-74.1085,33.7984},{74.1085,-43.4109}}, textString = "Simple EV"),Rectangle(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-98.9147,74.1085},{99.2248,-72.2481}})}), experiment(StartTime = 0.0, StopTime = 50.0, Tolerance = 0.000001));
   Modelica.Blocks.Sources.TimeTable timetable1(table = [0,0;10,0;20,120;39,120;40,0;50,0;60,0;70,120;500,120;510,0;520,0]) annotation(Placement(visible = true, transformation(origin = {-150.224,-5.94308}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Driver driver1 annotation(Placement(visible = true, transformation(origin = {-97.7815,-9.56699}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-  ElectricMotor electricmotor1 annotation(Placement(visible = true, transformation(origin = {-14.6525,-8.36288}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Electrical.Analog.Basic.Ground ground2 annotation(Placement(visible = true, transformation(origin = {4.39988,10.8982}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Mechanics.Translational.Components.IdealRollingWheel idealrollingwheel1 annotation(Placement(visible = true, transformation(origin = {146.079,-6.5335}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Chassis chassis1 annotation(Placement(visible = true, transformation(origin = {182.858,-11.2082}, extent = {{-12,-12},{12,12}}, rotation = 0)));
@@ -15,7 +14,7 @@ model Vehicle
   Modelica.Electrical.Analog.Basic.Ground ground3 annotation(Placement(visible = true, transformation(origin = {-63.5659,51.4729}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Controller_SeriesHybrid controller_serieshybrid1 annotation(Placement(visible = true, transformation(origin = {-117.519,40}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Mechanics.Rotational.Sensors.SpeedSensor speedsensor2 annotation(Placement(visible = true, transformation(origin = {-86.2016,93.0233}, extent = {{-6.1579,-6.1579},{6.1579,6.1579}}, rotation = 0)));
-  Battery battery1 annotation(Placement(visible = true, transformation(origin = {-12.4653,56.1171}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  Battery battery1(resistance = 0.01, voltage = 200) annotation(Placement(visible = true, transformation(origin = {-12.4653,56.1171}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Electrical.Analog.Basic.Ground ground1 annotation(Placement(visible = true, transformation(origin = {17.4231,53.6889}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Electrical.Analog.Sensors.CurrentSensor currentsensor1 annotation(Placement(visible = true, transformation(origin = {-31.0078,66.9767}, extent = {{-6.1579,-6.1579},{6.1579,6.1579}}, rotation = 0)));
   Modelica.Blocks.Continuous.Integrator integrator1 annotation(Placement(visible = true, transformation(origin = {-81.2403,69.1473}, extent = {{-4.62652,-4.62652},{4.62652,4.62652}}, rotation = 0)));
@@ -25,11 +24,16 @@ model Vehicle
   BrakeSystem brakesystem1 annotation(Placement(visible = true, transformation(origin = {27.0115,-55.1724}, extent = {{-17.5692,-17.5692},{17.5692,17.5692}}, rotation = 0)));
   GasPedal gaspedal1 annotation(Placement(visible = true, transformation(origin = {-51.0051,-14.0577}, extent = {{-15.972,-15.972},{15.972,15.972}}, rotation = 0)));
   Modelica.Electrical.Analog.Sensors.PotentialSensor potentialsensor1 annotation(Placement(visible = true, transformation(origin = {27.5969,79.0698}, extent = {{-7.45106,-7.45106},{7.45106,7.45106}}, rotation = 0)));
+  ElectricMotor electricmotor1(maxTorque = 600, maxPower = 100000, eta = 0.95, inertia = 0.16) annotation(Placement(visible = true, transformation(origin = {-14.3747,-8.36288}, extent = {{-12,-12},{12,12}}, rotation = 0)));
 equation
+  connect(electricmotor1.pin_n,ground2.p) annotation(Line(points = {{-11.4352,2.16735},{-12.0342,2.16735},{-12.0342,31.0532},{4.39988,31.0532},{4.39988,22.8982},{4.39988,22.8982}}));
+  connect(electricmotor1.pin_p,currentsensor1.p) annotation(Line(points = {{-21.4073,2.01851},{-37.2093,2.01851},{-37.2093,66.9767},{-37.1657,66.9767}}));
+  connect(electricmotor1.flange_a,gearbox1.flange_a) annotation(Line(points = {{-3.43418,-6.9791},{8.71198,-6.9791},{8.71198,-7.27479},{14.2456,-7.27479}}));
+  connect(gaspedal1.y,electricmotor1.u) annotation(Line(points = {{-38.1541,-13.2316},{-26.4368,-13.2316},{-26.4368,-6.93478},{-25.1648,-6.93478}}));
+  connect(speedsensor1.v,driver1.Speed) annotation(Line(points = {{129.533,-85.9264},{-115.938,-85.9264},{-115.938,-11.9856},{-109.763,-11.9856}}));
   connect(potentialsensor1.phi,controller_battery1.Voltage) annotation(Line(points = {{35.7931,79.0698},{56.4341,79.0698},{56.4341,79.3798},{61.7897,79.3798},{61.7897,77.5927}}));
   connect(potentialsensor1.p,battery1.pin_p) annotation(Line(points = {{20.1458,79.0698},{-20.7752,79.0698},{-20.7752,65.5561},{-19.5263,65.5561}}));
   connect(driver1.GasPedalPosition,gaspedal1.u) annotation(Line(points = {{-82.9661,-5.82552},{-66.6667,-5.82552},{-66.6667,-12.589},{-63.5808,-12.589}}));
-  connect(gaspedal1.y,electricmotor1.u) annotation(Line(points = {{-38.1541,-13.2316},{-26.4368,-13.2316},{-26.4368,-6.93478},{-25.4426,-6.93478}}));
   connect(brakesystem1.BrakeTorqueFront,brake1.f_normalized) annotation(Line(points = {{39.936,-46.1859},{50,-46.1859},{50,21.8391},{87.3563,21.8391},{87.3563,5.15402},{87.3563,5.15402}}));
   connect(brakesystem1.BrakeTorqueRear,brake2.f_normalized) annotation(Line(points = {{40.0369,-62.2405},{58.046,-62.2405},{58.046,-33.3333},{87.3563,-33.3333},{87.3563,-37.9495},{87.9311,-37.9495}}));
   connect(brakesystem1.PedalPosition,driver1.BrakePedalPosition) annotation(Line(points = {{14.188,-53.6578},{-74.1379,-53.6578},{-74.1379,-1.06691},{-72.4143,-1.06691}}));
@@ -41,23 +45,19 @@ equation
   connect(controller_serieshybrid1.y,engine1.SwitchOn) annotation(Line(points = {{-107.993,39.5907},{-93.9535,39.5907},{-93.9535,64.8062},{-122.791,64.8062},{-122.791,73.1783},{-120.288,73.1783},{-120.288,75.2871}}));
   connect(currentsensor1.i,controller_battery1.Flow) annotation(Line(points = {{-31.0078,60.8188},{-31.0078,41.2403},{58.9147,41.2403},{58.9147,67.2211},{61.7338,67.2211}}));
   connect(controller_battery1.SOC,controller_serieshybrid1.Battery_SOC) annotation(Line(points = {{77.6966,73.3714},{90.8527,73.3714},{90.8527,52.093},{-135.504,52.093},{-135.504,45.8915},{-126.635,45.8915},{-126.635,45.693}}));
-  connect(electricmotor1.flange_a,gearbox1.flange_a) annotation(Line(points = {{-3.71196,-6.9791},{8.71198,-6.9791},{8.71198,-7.27478},{14.2456,-7.27478}}));
   connect(gearbox1.flange_b,brake1.flange_a) annotation(Line(points = {{46.1697,-7.27478},{75.8621,-7.27478},{75.8621,-8.04598},{75.3563,-8.04598}}));
   connect(controller_serieshybrid1.TorqueDemand_Motor,electricmotor2.u) annotation(Line(points = {{-109.594,34.6791},{-42.4806,34.6791},{-42.4806,80.9302},{-48.9922,80.9302},{-48.9922,81.3626},{-49.9851,81.3626}}));
   connect(electricmotor2.pin_p,currentsensor1.p) annotation(Line(points = {{-53.7426,72.4093},{-36.8992,72.4093},{-36.8992,66.9767},{-37.1656,66.9767}}));
-  connect(electricmotor1.pin_p,currentsensor1.p) annotation(Line(points = {{-21.6851,2.01851},{-37.2093,2.01851},{-37.2093,66.9767},{-37.1656,66.9767}}));
   connect(currentsensor1.n,battery1.pin_p) annotation(Line(points = {{-24.8499,66.9767},{-19.845,66.9767},{-19.845,65.5561},{-19.5263,65.5561}}));
   connect(battery1.pin_n,ground1.p) annotation(Line(points = {{-8.84339,65.5561},{10.6015,65.5561},{10.6015,65.6889},{17.4231,65.6889}}));
   connect(speedsensor2.w,controller_serieshybrid1.u) annotation(Line(points = {{-79.4279,93.0233},{-63.2558,93.0233},{-63.2558,97.0543},{-142.326,97.0543},{-142.326,31.6279},{-126.598,31.6279},{-126.598,31.7395}}));
   connect(ground3.p,electricmotor2.pin_n) annotation(Line(points = {{-63.5659,63.4729},{-63.5659,71.938},{-63.7147,71.938},{-63.7147,72.2605}}));
   connect(brake2.flange_b,idealrollingwheel2.flangeR) annotation(Line(points = {{99.9311,-51.1495},{136.207,-51.1495},{136.207,-50},{132.252,-50},{132.252,-50.5747}}));
   connect(idealrollingwheel2.flangeT,chassis1.flange_a1) annotation(Line(points = {{156.252,-50.5747},{174.138,-50.5747},{174.138,-4.3989},{173.779,-4.3989}}));
-  connect(speedsensor1.v,driver1.Speed) annotation(Line(points = {{129.533,-85.9264},{-106.322,-85.9264},{-106.322,-12.6926},{-106.302,-12.6926}}));
   connect(speedsensor1.flange,chassis1.flange_a1) annotation(Line(points = {{154.733,-85.9264},{172.935,-85.9264},{172.935,-4.3989},{173.779,-4.3989}}));
   connect(timetable1.y,driver1.SpeedDemand) annotation(Line(points = {{-137.024,-5.94308},{-107.471,-5.94308},{-107.471,-6.06931},{-106.711,-6.06931}}));
   connect(brake1.flange_b,idealrollingwheel1.flangeR) annotation(Line(points = {{99.3563,-8.04598},{134.483,-8.04598},{134.483,-6.5335},{134.079,-6.5335}}));
   connect(chassis1.flange_a,drivingresistance1.flange_a) annotation(Line(points = {{191.677,-10.2035},{205.803,-10.2035},{205.803,-10.5544},{200.678,-10.5544}}));
   connect(idealrollingwheel1.flangeT,chassis1.flange_a1) annotation(Line(points = {{158.079,-6.5335},{174.175,-6.5335},{174.175,-4.39886},{173.779,-4.39886}}));
-  connect(electricmotor1.pin_n,ground2.p) annotation(Line(points = {{-11.7129,2.16735},{-12.0342,2.16735},{-12.0342,31.0532},{4.39988,31.0532},{4.39988,22.8982},{4.39988,22.8982}}));
 end Vehicle;
 

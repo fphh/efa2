@@ -732,3 +732,43 @@ class Reverse c where
 instance (SV.Reverse v2) => Reverse (v2 :> v1) where
    reverse =
       withNestedData (Data . SV.reverse)
+
+
+----------------------------------------------------------
+-- Find
+
+-- | @HT VV please check, very unsure about this !! PG
+
+
+class Find c where
+   findIndex :: Storage c d =>  (d -> Bool) -> Data c d -> Maybe Int
+
+instance (SV.Find v1) => Find (v1 :> Nil) where
+   findIndex f xs =  withNestedData (SV.findIndex f) xs
+
+
+class Slice c where
+   slice :: Storage c d => Int -> Int -> Data c d -> Data c d
+
+instance SV.Slice v1 => Slice (v1 :> Nil) where
+   slice idx n xs = withNestedData (Data . SV.slice idx n) xs
+
+
+-- | @HT ^^ please check, very unsure about this !! PG
+
+
+-- ----------------------------------------------------------
+-- -- Equality
+   
+-- class DataEq c where
+-- (==) :: Data c d -> Bool   
+
+-- instance DataEq (Data Nil) where
+-- (==) (Data x) (Data y) = x P.== y
+
+-- instance DataEq (Data (v1 :> Nil)) where
+-- (==) xs = withNestedData SV.== xs
+
+-- instance DataEq (Data (v2 :> v1 :> Nil)) where
+-- (==) xs = withNestedData SV.== xs
+ 

@@ -20,7 +20,7 @@ import EFA.Signal.SequenceData
 
 
 import EFA.Signal.Record(Record(..),PowerRecord,FlowRecord,
-           RSamp1,rsingleton, RSig,rlen,rviewL,rviewR)
+           RSamp1,rsingleton, RSig,rlen,rviewL,rviewR,getTimeWindow)
         
   
 import EFA.Signal.Base
@@ -129,11 +129,14 @@ genSequFlow sqPRec = fmap recFullIntegrate sqPRec
 -- | State changes in solver create several DataPoints with exact the same time
 -- | The resulting sections which have zero time duration are removed 
 
-removeZeroTimeSections :: (Eq a, V.Storage v a, V.Singleton v) => (Sequ,SequData (PowerRecord nty v a)) -> (Sequ,SequData (PowerRecord nty v a))
+removeZeroTimeSections :: (Fractional a, Ord a, Eq a, V.Storage v a, V.Singleton v) => (Sequ,SequData (PowerRecord nty v a)) -> (Sequ,SequData (PowerRecord nty v a))
 removeZeroTimeSections (xs, ys)  = filterSequWithSequData f (xs, ys) 
    where  -- f (_,Record time _) = (S.head time) /= (S.last time) 
-          f (_,Record time _) = (fst $ maybe err id $ S.viewL time) /= (snd $ maybe err id $ S.viewR time) 
-          err = error "Error in SequenceData.hs / removeZeroTimeSections -- empty head or tail"
+          f (_,Record time _) = abs (x -y) > 1 
+            where 
+              err = error "Error in SequenceData.hs / removeZeroTimeSections -- empty head or tail"
+              TC (Data x) = (fst $ maybe err id $ S.viewL time) 
+              TC (Data y) = (snd $ maybe err id $ S.viewR time) 
 
 
 -- | Drop Sections with negligible energy flow 
@@ -539,3 +542,33 @@ approxPowerRecord eps
 approxAbs :: (Real a) => a -> a -> a -> Bool
 approxAbs eps x y =
    abs (x-y) <= eps
+
+
+
+-----------------------------------------------------------------------------------
+-- * New Functions from PG to allow Signal Cutting on Time Windows
+
+-- | Get Start and Stop Times for all Power Records in a Sequence
+extractCuttingTimes:: (Ord a, 
+                       V.Storage v a, 
+                       V.Singleton v) => 
+                      SequData (PowerRecord nty v a) -> 
+                      SequData (S.Scal (Typ A T Tt) a, S.Scal (Typ A T Tt) a)
+extractCuttingTimes sequ = fmap getTimeWindow sequ
+ 
+
+{-
+-- | Cut a Slice from a Power Record assumes rising order of sections
+extractTimeSectionRecords :: Record s t1 t2 id v a -> [(S.Scal (Typ A T Tt) a, S.Scal (Typ A T Tt) a)] -> Record s t1 t2 id v a
+extractTimeSectionRecords rec@(Record time _ ) (tStart,tEnd) =   
+  where startIdx = findIndex (P.>=tStart) time
+        endIdx = findIndex (P.>=tEnd) time
+        
+        startIdx = lookUp time idx1 
+        endIdx = lookUp time idx2 - 1
+
+        rSig = record2RSig rec
+        
+        slice = getSlice startIdx (endIdx-1) rSig 
+  
+-}  

@@ -1,0 +1,43 @@
+model Engine
+  annotation(experiment(StartTime = 0.0, StopTime = 1.0, Tolerance = 0.000001), Icon(graphics = {Rectangle(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-72.694,31.8433},{78.3243,-53.4341}}),Ellipse(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-46.6135,8.76566},{-21.8379,10.561}}),Ellipse(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-10.3478,11.6382},{18.7366,8.04756}}),Ellipse(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{30.2267,12.3564},{57.1567,7.68846}}),Rectangle(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-48.6371,-83.8551},{59.7509,-53.1885}}),Text(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-61.8084,-36.6064},{68.5322,-10.6724}}, textString = "Engine")}), Diagram());
+  Modelica.Blocks.Interfaces.RealOutput FuelPower annotation(Placement(visible = true, transformation(origin = {96.8816,-45.5035}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {96.8816,-45.5035}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  Modelica.Mechanics.Rotational.Interfaces.Flange_b flange_b annotation(Placement(visible = true, transformation(origin = {83.3904,2.6728}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {83.3904,2.6728}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  Modelica.Blocks.Logical.Switch switch1 annotation(Placement(visible = true, transformation(origin = {15.5388,4.03747}, extent = {{-6.1579,-6.1579},{6.1579,6.1579}}, rotation = 0)));
+  Modelica.Blocks.Nonlinear.VariableLimiter ToqueLimit annotation(Placement(visible = true, transformation(origin = {-14.2561,8.82107}, extent = {{-8.19616,-8.19616},{8.19616,8.19616}}, rotation = 0)));
+  Modelica.Blocks.Interfaces.RealInput TorqueDemand annotation(Placement(visible = true, transformation(origin = {-91.3889,9.44444}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {-91.3889,9.44444}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  Modelica.Blocks.Interfaces.BooleanInput SwitchOn annotation(Placement(visible = true, transformation(origin = {-91.9444,42.5}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {-85.8333,47.2222}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  engine_max_torque engine_max_torque1(maxT = Tmax, ignitionSpeed = ignitionSpeed) annotation(Placement(visible = true, transformation(origin = {-53.3333,62.5}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  Modelica.Mechanics.Rotational.Sources.Torque torque1 annotation(Placement(visible = true, transformation(origin = {37.6104,4.04715}, extent = {{-6.77369,-6.77369},{6.77369,6.77369}}, rotation = 0)));
+  Modelica.Mechanics.Rotational.Components.Inertia inertia1(J = 0.16) annotation(Placement(visible = true, transformation(origin = {60.2462,4.24365}, extent = {{-8.19616,-8.19616},{8.19616,8.19616}}, rotation = 0)));
+  Modelica.Blocks.Math.Product Power annotation(Placement(visible = true, transformation(origin = {34.929,-44.5542}, extent = {{-6.1579,-6.1579},{6.1579,6.1579}}, rotation = 0)));
+  parameter Real Tmax(start = 200, unit = "1") "Positive power multiplied, negative power devided by efficiency" annotation(Placement(visible = true, transformation(origin = {71.2644,78.1609}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  parameter Real ignitionSpeed(start = 30, unit = "1") "Positive power multiplied, negative power devided by efficiency" annotation(Placement(visible = true, transformation(origin = {71.2644,78.1609}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  parameter Real dragTorqueMin(start = -30, unit = "1") "Positive power multiplied, negative power devided by efficiency" annotation(Placement(visible = true, transformation(origin = {71.2644,78.1609}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  parameter Real dragTorqueMax(start = -60, unit = "1") "Positive power multiplied, negative power devided by efficiency" annotation(Placement(visible = true, transformation(origin = {71.2644,78.1609}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  Modelica.Blocks.Math.Gain Efficiency(k = 1 / etaOpt) annotation(Placement(visible = true, transformation(origin = {65.0287,-44.7702}, extent = {{-8.19616,-8.19616},{8.19616,8.19616}}, rotation = 0)));
+  parameter Real etaOpt(start = 0.35, unit = "1") "Positive power multiplied, negative power devided by efficiency" annotation(Placement(visible = true, transformation(origin = {71.2644,78.1609}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  Modelica.Blocks.Logical.And and1 annotation(Placement(visible = true, transformation(origin = {-9.72222,-17.5}, extent = {{-8.19616,-8.19616},{8.19616,8.19616}}, rotation = 0)));
+  Modelica.Blocks.Logical.Greater greater1 annotation(Placement(visible = true, transformation(origin = {-48.3333,-24.1667}, extent = {{-6.1579,-6.1579},{6.1579,6.1579}}, rotation = 0)));
+  Modelica.Blocks.Interfaces.RealInput Speed annotation(Placement(visible = true, transformation(origin = {-88.6111,-37.7778}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {-88.6111,-37.7778}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  Modelica.Blocks.Sources.Constant const(k = ignitionSpeed) annotation(Placement(visible = true, transformation(origin = {-81.9444,-72.2222}, extent = {{-9.91736,-9.91736},{9.91736,9.91736}}, rotation = 0)));
+equation
+  connect(switch1.u3,engine_max_torque1.DragTorque) annotation(Line(points = {{8.14932,-0.88885},{-37.5,-0.88885},{-37.5,55.8333},{-44,55.8333}}));
+  connect(engine_max_torque1.DragTorque,ToqueLimit.limit2) annotation(Line(points = {{-44,55.8333},{-37.7778,55.8333},{-37.7778,1.94444},{-24.0915,1.94444},{-24.0915,2.26414}}));
+  connect(const.y,greater1.u2) annotation(Line(points = {{-71.0354,-72.2222},{-60.8333,-72.2222},{-60.8333,-29.1667},{-55.7228,-29.1667},{-55.7228,-29.093}}));
+  connect(greater1.u1,Speed) annotation(Line(points = {{-55.7228,-24.1667},{-82.5,-24.1667},{-82.5,-37.7778},{-88.6111,-37.7778}}));
+  connect(engine_max_torque1.u,Speed) annotation(Line(points = {{-62.5666,64.5667},{-67.2222,64.5667},{-67.2222,-36.1111},{-88.6111,-36.1111},{-88.6111,-37.7778}}));
+  connect(Power.u2,Speed) annotation(Line(points = {{27.5395,-48.2489},{-81.9444,-48.2489},{-81.9444,-37.7778},{-88.6111,-37.7778}}));
+  connect(greater1.y,and1.u2) annotation(Line(points = {{-41.5596,-24.1667},{-19.1667,-24.1667},{-19.1667,-24.0569},{-19.5576,-24.0569}}));
+  connect(and1.u1,SwitchOn) annotation(Line(points = {{-19.5576,-17.5},{-41.9444,-17.5},{-41.9444,42.7778},{-91.9444,42.7778},{-91.9444,42.5}}));
+  connect(and1.y,switch1.u2) annotation(Line(points = {{-0.706445,-17.5},{2.5,-17.5},{2.5,4.44444},{8.14932,4.44444},{8.14932,4.03747}}));
+  connect(Power.y,Efficiency.u) annotation(Line(points = {{41.7027,-44.5542},{43.4109,-44.5542},{43.4109,-44.7702},{55.1933,-44.7702}}));
+  connect(Efficiency.y,FuelPower) annotation(Line(points = {{74.0444,-44.7702},{87.905,-44.7702},{87.905,-45.5035},{96.8816,-45.5035}}));
+  connect(Power.u1,switch1.y) annotation(Line(points = {{27.5395,-40.8595},{22.009,-40.8595},{22.009,-17.9845},{22.3579,-17.9845},{22.3579,-10.6848},{22.3125,-10.6848},{22.3125,4.03747}}));
+  connect(inertia1.flange_b,flange_b) annotation(Line(points = {{68.4424,4.24365},{78.6062,4.24365},{78.6062,2.6728},{83.3904,2.6728}}));
+  connect(torque1.flange,inertia1.flange_a) annotation(Line(points = {{44.3841,4.04715},{62.7263,4.04715},{62.7263,4.24365},{52.0501,4.24365}}));
+  connect(switch1.y,torque1.tau) annotation(Line(points = {{22.3125,4.03747},{32.1667,4.03747},{32.1667,4.04715},{29.4819,4.04715}}));
+  connect(engine_max_torque1.y,ToqueLimit.limit1) annotation(Line(points = {{-43.6333,64.4333},{-31.1111,64.4333},{-31.1111,15.2778},{-24.4444,15.2778},{-24.4444,15.378},{-24.0915,15.378}}));
+  connect(TorqueDemand,ToqueLimit.u) annotation(Line(points = {{-91.3889,9.44444},{-25,9.44444},{-25,8.82107},{-24.0915,8.82107}}));
+  connect(ToqueLimit.y,switch1.u1) annotation(Line(points = {{-5.24036,8.82107},{3.83337,8.82107},{3.83337,8.96379},{8.14934,8.96379}}));
+end Engine;
+

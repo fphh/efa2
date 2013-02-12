@@ -61,9 +61,9 @@ getDisplayUnit Typ_T = Unit_Sec
 getDisplayUnit Typ_X = Unit_Percent
 getDisplayUnit Typ_Y = Unit_Percent
 getDisplayUnit Typ_P = Unit_kW
---getDisplayUnit Typ_F = Unit_kWh
+getDisplayUnit Typ_F = Unit_kWh
 --getDisplayUnit Typ_F = Unit_kJoule
-getDisplayUnit Typ_F = Unit_Joule
+-- getDisplayUnit Typ_F = Unit_Joule
 
 getDisplayUnit Typ_UT = Unit_UT
 getDisplayUnit Typ_N = Unit_Percent
@@ -72,8 +72,8 @@ getDisplayUnit ty = error $ "getDisplayUnit: not implemented " ++ show ty
 
 -- | Define Display Format for each unit depending on selected display length
 getDisplayFormat ::  DisplayLength -> DisplayType -> DisplayUnit -> DisplayFormat
-getDisplayFormat Middle Typ_E Unit_kWh = DisplayFormat "%6.7f"
-getDisplayFormat Middle Typ_P Unit_kWh = DisplayFormat "%6.7f"
+getDisplayFormat Middle Typ_E Unit_kWh = DisplayFormat "%6.4f"
+getDisplayFormat Middle Typ_P Unit_kWh = DisplayFormat "%6.2f"
 
 
 getDisplayFormat _ _ _ = getDefaultFormat
