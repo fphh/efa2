@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 
-module EXAMPLES.Vehicle.SeriesHybrid.System where
+module Modules.System where
 
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as TD

@@ -1,7 +1,7 @@
 {-# LANGUAGE Rank2Types #-}
 module EFA.Equation.System (
   EquationSystem, ExprWithVars,
-  fromTopology, solve,
+  fromTopology, solve, solveFromMeasurement, conservativlySolve,
 
   recAbs, constToExprSys,
   liftV, liftV2, liftF, liftF2,
@@ -59,7 +59,7 @@ import Data.Tuple.HT (snd3)
 import Data.Ord (comparing)
 
 
--- import Debug.Trace
+import Debug.Trace
 
 type EqSysEnv nty s a = Env.Env nty Env.SingleRecord (Sys.Variable s a)
 
@@ -262,7 +262,7 @@ makeNodeEquations ::
   (Eq a, Fractional a, Ord nty, Show nty) =>
   TD.DirSequFlowGraph nty -> EquationSystem nty s a
 makeNodeEquations = fold . M.mapWithKey f . Gr.nodes
-   where f n (ins, _, outs) =
+   where f n (ins, label, outs) = 
             let -- this variable is used again in makeStorageEquations
                 varsumin = insumvar n
                 varsumout = outsumvar n  -- and this, too.
@@ -270,7 +270,7 @@ makeNodeEquations = fold . M.mapWithKey f . Gr.nodes
                    foldMap
                       (mkSplitFactorEquations varsum (energy n) (xfactor n))
                       (NonEmpty.fetch $ S.toList nodes)
-            in  (varsumin =.= varsumout)
+            in  mwhen (label /= TD.Storage) (varsumin =.= varsumout)
                 <>
                 splitEqs varsumin ins
                 <>
@@ -282,7 +282,7 @@ makeStorageEquations ::
   TD.DirSequFlowGraph nty -> EquationSystem nty s a
 makeStorageEquations =
    mconcat . concatMap (LH.mapAdjacent f) . getInnersectionStorages
-  where f (before, _) (now, dir) =
+  where f (before, _) (now, dir) = trace (show now)
            storage now
            =.=
            storage before
@@ -458,3 +458,92 @@ solve given g = runST $ do
     runStateT eqsys $ Env.empty $ Env.SingleRecord recAbs
   Sys.solve eqs
   traverse (fmap (maybe Undetermined Determined) . Sys.query) varmap
+
+
+--------------------------------------------------------------------
+
+
+fromTopology' ::
+  (Eq a, Fractional a, Ord nty, Show nty) =>
+  TD.DirSequFlowGraph nty -> EquationSystem nty s a
+fromTopology' g = mconcat $
+  makeInnerSectionEquations' g :
+  makeInterSectionEquations g :
+  []
+
+makeInnerSectionEquations' ::
+  (Eq a, Fractional a, Ord nty, Show nty) =>
+  TD.DirSequFlowGraph nty -> EquationSystem nty s a
+makeInnerSectionEquations' g = mconcat $
+  makeEnergyEquations (map fst es) :
+  makeEdgeEquations es :
+  makeNodeEquations' g :
+  makeStorageEquations g' :
+  []
+  where g' = Gr.lefilter (TD.isOriginalEdge . fst) g
+        es = Gr.labEdges g
+
+
+makeNodeEquations' ::
+  (Eq a, Fractional a, Ord nty, Show nty) =>
+  TD.DirSequFlowGraph nty -> EquationSystem nty s a
+makeNodeEquations' = fold . M.mapWithKey f . Gr.nodes
+   where f n (ins, _, outs) =
+            let -- this variable is used again in makeStorageEquations
+                varsumin = insumvar n
+                varsumout = outsumvar n  -- and this, too.
+                splitEqs varsum nodes =
+                   foldMap
+                      (mkSplitFactorEquations varsum (energy n) (xfactor n))
+                      (NonEmpty.fetch $ S.toList nodes)
+            in  -- (varsumin =.= varsumout) -- EINZIGER UNTERSCHIED!!!
+                -- <>
+                splitEqs varsumin ins
+                <>
+                splitEqs varsumout outs
+
+
+
+solveFromMeasurement ::
+  (Eq a, Fractional a, Ord nty, Show nty) =>
+  (forall s. EquationSystem nty s a) ->
+  TD.SequFlowGraph nty -> Env.Env nty Env.SingleRecord (Result a)
+solveFromMeasurement given g = runST $ do
+  let dirG = toDirSequFlowGraph g
+      EquationSystem eqsys = given <> fromTopology' dirG
+  (eqs, varmap) <-
+    runStateT eqsys $ Env.empty $ Env.SingleRecord recAbs
+  Sys.solve eqs
+  traverse (fmap (maybe Undetermined Determined) . Sys.query) varmap
+
+
+
+--------------------------------------------------------------------
+
+-- Stellt die originalen Werte wieder her.
+-- Die auf grund der Missachtung originaler Werte
+-- falsch berechneten Werte bleiben aber erhalten.
+-- Eine andere Lösung wäre, die Zeilen
+--     (varsumin =.= varsumout)
+--     <>
+-- (im Moment 273 und 274) auszukommentieren.
+
+conservativlySolve ::
+  (Eq a, Fractional a, Ord nty, Show nty) =>
+  (forall s. EquationSystem nty s a) ->
+  TD.SequFlowGraph nty -> Env.Env nty Env.SingleRecord (Result a)
+conservativlySolve given g = runST $ do
+  let dirG = toDirSequFlowGraph g
+      EquationSystem eqsys = given <> fromTopology dirG
+      EquationSystem givenSys = given
+
+  (eqs, varmap) <-
+    runStateT eqsys $ Env.empty $ Env.SingleRecord recAbs
+  Sys.solve eqs
+
+  (givenEqs, givenVarmap) <-
+    runStateT givenSys $ Env.empty $ Env.SingleRecord recAbs
+  Sys.solve givenEqs
+
+  let uenv = Env.union givenVarmap varmap
+  traverse (fmap (maybe Undetermined Determined) . Sys.query) uenv

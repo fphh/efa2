@@ -8,7 +8,7 @@ module EFA.Signal.Sequence where
 
 import qualified EFA.Graph.Flow as Flow
 -- import qualified EFA.Graph.Topology.Index as Idx
-import EFA.Graph.Topology (Topology, SequFlowGraph)
+import EFA.Graph.Topology (Topology, FlowTopology, SequFlowGraph)
 
 import qualified EFA.Signal.Base as SB
 import qualified EFA.Signal.Signal as S
@@ -181,6 +181,13 @@ makeSeqFlowGraph topo =
    Flow.genSectionTopology .
    Flow.genSequFlowTops topo .
    Flow.genSequFState
+
+
+makeSeqFlowTopology ::
+  (Ord nty) => SequData (FlowTopology nty) -> SequFlowGraph nty
+makeSeqFlowTopology =
+   Flow.mkSequenceTopology .
+   Flow.genSectionTopology
 
 makeSequence ::
    (Show nty, Ord nty) => PowerRecord nty [] Val ->
