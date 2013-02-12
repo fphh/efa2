@@ -271,6 +271,7 @@ makeNodeEquations = fold . M.mapWithKey f . Gr.nodes
                       (mkSplitFactorEquations varsum (energy n) (xfactor n))
                       (NonEmpty.fetch $ S.toList nodes)
             in  mwhen (label /= TD.Storage) (varsumin =.= varsumout)
+                -- (varsumin =.= varsumout)
                 <>
                 splitEqs varsumin ins
                 <>
@@ -282,7 +283,7 @@ makeStorageEquations ::
   TD.DirSequFlowGraph nty -> EquationSystem nty s a
 makeStorageEquations =
    mconcat . concatMap (LH.mapAdjacent f) . getInnersectionStorages
-  where f (before, _) (now, dir) = trace (show now)
+  where f (before, _) (now, dir) =
            storage now
            =.=
            storage before
