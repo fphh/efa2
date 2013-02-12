@@ -746,24 +746,15 @@ instance (SV.Reverse v2) => Reverse (v2 :> v1) where
 ----------------------------------------------------------
 -- Find
 
--- | @HT VV please check, very unsure about this !! PG
+findIndex ::
+   (SV.Find v, SV.Storage v d) =>
+   (d -> Bool) -> Data (v :> Nil) d -> Maybe Int
+findIndex f = withNestedData (SV.findIndex f)
 
-
-class Find c where
-   findIndex :: Storage c d =>  (d -> Bool) -> Data c d -> Maybe Int
-
-instance (SV.Find v1) => Find (v1 :> Nil) where
-   findIndex f xs =  withNestedData (SV.findIndex f) xs
-
-
-class Slice c where
-   slice :: Storage c d => Int -> Int -> Data c d -> Data c d
-
-instance SV.Slice v1 => Slice (v1 :> Nil) where
-   slice idx n xs = withNestedData (Data . SV.slice idx n) xs
-
-
--- | @HT ^^ please check, very unsure about this !! PG
+slice ::
+   (SV.Slice v, SV.Storage v d) =>
+   Int -> Int -> Data (v :> Nil) d -> Data (v :> Nil) d
+slice idx n = withNestedData (Data . SV.slice idx n)
 
 
 -- ----------------------------------------------------------
