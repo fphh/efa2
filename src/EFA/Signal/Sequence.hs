@@ -19,7 +19,7 @@ import EFA.Signal.SequenceData
            filterSequWithSequData,filterSequWithSequData2)
 
 
-import EFA.Signal.Record(Record(..),PowerRecord,FlowRecord, FlowState,
+import EFA.Signal.Record(Record(..),PowerRecord,FlowRecord,
            RSamp1,rsingleton, RSig,rlen,rviewL,rviewR,getTimeWindow)
         
   
@@ -165,7 +165,6 @@ makeRecSequence =
    zipWithSecIdxs (flip fromFlowRecord (Idx.Record Idx.Absolute))
 -}
 
-{-
 makeSeqFlowGraph :: 
   (Fractional a,
    Ord a,
@@ -177,11 +176,16 @@ makeSeqFlowGraph ::
    Topology nty ->
    SequData (FlowRecord nty v a) ->
    SequFlowGraph nty
--}
+makeSeqFlowGraph topo =
+   Flow.mkSequenceTopology .
+   Flow.genSectionTopology .
+   Flow.genSequFlowTops topo .
+   Flow.genSequFState
 
-makeSeqFlowGraph ::
+
+makeSeqFlowTopology ::
   (Ord nty) => SequData (FlowTopology nty) -> SequFlowGraph nty
-makeSeqFlowGraph =
+makeSeqFlowTopology =
    Flow.mkSequenceTopology .
    Flow.genSectionTopology
 

@@ -142,9 +142,9 @@ main = do
 -- *  Generate Sequence Flow Graph     
    
   let flowStates = fmap Flow.genFlowState sequenceFlowsFilt
-      flowTopos = Flow.genSequFlowTops System.topology flowStates
-      adjustedFlows = Flow.adjustSigns System.topology flowStates sequenceFlowsFilt
-  let sequenceFlowTopology = makeSeqFlowGraph flowTopos
+  let flowTopos = Flow.genSequFlowTops System.topology flowStates
+  let adjustedFlows = Flow.adjustSigns System.topology flowStates sequenceFlowsFilt
+  let sequenceFlowTopology = makeSeqFlowTopology flowTopos
         
   -- Draw.sequFlowGraph sequenceFlowTopology
        

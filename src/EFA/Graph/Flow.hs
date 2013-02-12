@@ -42,8 +42,8 @@ adjustSigns topo flowStates flowRec = f <$> flowStates <*> flowRec
                   M.insert ppos (flow `checkedLookup` ppos)
                     $ M.insert ppos' (flow `checkedLookup` ppos') acc
                     where ppos' = flipPos ppos
-        uniquePPos topo state = foldl f M.empty (labEdges topo)
-          where f acc (Edge idx1 idx2, ()) =
+        uniquePPos topol state = foldl h M.empty (labEdges topol)
+          where h acc (Edge idx1 idx2, ()) =
                   M.insert ppos (state `checkedLookup` ppos) acc
                   where ppos = PPosIdx idx1 idx2
 

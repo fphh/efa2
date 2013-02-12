@@ -133,6 +133,7 @@ dotFromSecNode nshow n@(x, nodeType) =
         shape Topo.Source = DiamondShape
         shape Topo.Sink = BoxShape
         shape Topo.Storage = Ellipse
+        shape _ = BoxShape
         color Topo.Crossing = FillColor [RGB 150 200 240]
         color _ = nodeColour
 
