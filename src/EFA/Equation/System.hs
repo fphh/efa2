@@ -59,7 +59,7 @@ import Data.Tuple.HT (snd3)
 import Data.Ord (comparing)
 
 
--- import Debug.Trace
+import Debug.Trace
 
 type EqSysEnv nty s a = Env.Env nty Env.SingleRecord (Sys.Variable s a)
 
@@ -262,7 +262,7 @@ makeNodeEquations ::
   (Eq a, Fractional a, Ord nty, Show nty) =>
   TD.DirSequFlowGraph nty -> EquationSystem nty s a
 makeNodeEquations = fold . M.mapWithKey f . Gr.nodes
-   where f n (ins, _, outs) =
+   where f n (ins, label, outs) = 
             let -- this variable is used again in makeStorageEquations
                 varsumin = insumvar n
                 varsumout = outsumvar n  -- and this, too.
@@ -270,7 +270,7 @@ makeNodeEquations = fold . M.mapWithKey f . Gr.nodes
                    foldMap
                       (mkSplitFactorEquations varsum (energy n) (xfactor n))
                       (NonEmpty.fetch $ S.toList nodes)
-            in  (varsumin =.= varsumout)
+            in  mwhen (label /= TD.Storage) (varsumin =.= varsumout)
                 <>
                 splitEqs varsumin ins
                 <>
@@ -282,7 +282,7 @@ makeStorageEquations ::
   TD.DirSequFlowGraph nty -> EquationSystem nty s a
 makeStorageEquations =
    mconcat . concatMap (LH.mapAdjacent f) . getInnersectionStorages
-  where f (before, _) (now, dir) =
+  where f (before, _) (now, dir) = trace (show now)
            storage now
            =.=
            storage before
