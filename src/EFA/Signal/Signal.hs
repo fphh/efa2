@@ -1147,16 +1147,3 @@ getSample ::  (SV.Singleton v1,
               Int ->  
               TC Sample t1 (Data Nil d1)
 getSample x idx = P.fst $ P.maybe (error "Error in EFA.Signal.Signal/getSample - Empty List") id $ viewL $ subSignal1D x [idx]
-
-
-
--- ----------------------------------------------------------
--- -- Equality
-
--- (==):  TC s1 t1 c1 d1 ->  TC s1 t1 c1 d1 -> Bool
--- (==) (TC x) (TC y) =  x D.== y
-
--- (/=):  TC s1 t1 c1 d1 ->  TC s1 t1 c1 d1 -> Bool
--- (/=) =  not . (==)
-  
-  

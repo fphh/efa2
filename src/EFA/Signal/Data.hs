@@ -755,20 +755,3 @@ slice ::
    (SV.Slice v, SV.Storage v d) =>
    Int -> Int -> Data (v :> Nil) d -> Data (v :> Nil) d
 slice idx n = withNestedData (Data . SV.slice idx n)
-
-
--- ----------------------------------------------------------
--- -- Equality
-   
--- class DataEq c where
--- (==) :: Data c d -> Bool   
-
--- instance DataEq (Data Nil) where
--- (==) (Data x) (Data y) = x P.== y
-
--- instance DataEq (Data (v1 :> Nil)) where
--- (==) xs = withNestedData SV.== xs
-
--- instance DataEq (Data (v2 :> v1 :> Nil)) where
--- (==) xs = withNestedData SV.== xs
- 

@@ -422,12 +422,3 @@ instance Slice V.Vector where
 
 instance Slice UV.Vector where
   slice start num = readUnbox (UV.slice start num)
-
-
--- -- | Check Vector equality
--- (==) :: v d -> v d -> Bool
--- (==) = all (P.==) 
-
--- (/=) ::  v d -> v d -> Bool
--- (/=) = not $ all (P.==)
-  
