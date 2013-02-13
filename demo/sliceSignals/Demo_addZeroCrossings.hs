@@ -37,4 +37,4 @@ main :: IO ()
 main = do
   print pRec
   print pRec0
-  rPlot ("pRec0", pRec0)
+  rPlot "pRec0" pRec0

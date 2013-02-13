@@ -36,6 +36,7 @@ import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
 
 import qualified Data.List as L
 import qualified Data.Map as M
+import Control.Monad (zipWithM_)
 import Control.Functor.HT (void)
 import Data.Foldable (foldMap)
 import Data.Monoid (mconcat)
@@ -332,8 +333,8 @@ instance (AxisLabel tc) => AxisLabel [tc] where
 --------------------------------------------
 -- Regular rPlot command
 
-rPlot :: (RPlot a) => (String, a) -> IO ()
-rPlot (name, r) =
+rPlot :: (RPlot a) => String -> a -> IO ()
+rPlot name r =
    mapM_ Plot.plotDefault $ rPlotCore name r
 
 {-
@@ -361,9 +362,9 @@ rPlotSplit :: (Fractional y,
                       Tuple.C y,
                       Atom.C y,
                       Ord id) =>
-              Int -> (String, Record s t1 t2 id v y) -> IO ()     
-rPlotSplit n (name,r) = mapM_ rPlot $ zip titles recList
-  where 
+              Int -> String -> Record s t1 t2 id v y -> IO ()
+rPlotSplit n name r = zipWithM_ rPlot titles recList
+  where
         recList = splitRecord n r
         titles = map (\ x -> name ++ " - Part " ++ show x)  [1 .. (length recList)]
         
@@ -376,10 +377,10 @@ rPlotSplitSeq ::(Fractional y,
                       TDisp t1,
                       TDisp t2,
                       Tuple.C y,
-                      Atom.C y) => 
-                Int -> (String, SequData(Record s t1 t2 id v y)) -> IO ()     
-rPlotSplitSeq n (name,SequData rs) = mapM_ (rPlotSplit n ) $ zip titles rs
-  where 
+                      Atom.C y) =>
+                Int -> String -> SequData (Record s t1 t2 id v y) -> IO ()
+rPlotSplitSeq n name (SequData rs) = zipWithM_ (rPlotSplit n) titles rs
+  where
         titles = map (\ x -> name ++ " - Sec " ++ show x)  [1 .. (length rs)]
         
         
@@ -397,8 +398,8 @@ rPlotSelect :: (Fractional y,
                       Ord id, 
                       Show id, 
                       Show (v y)) =>
-               [id] -> (String, Record s t1 t2 id v y)  -> IO ()     
-rPlotSelect  idList (name,r) = rPlot (name,extractRecord idList r )
+               [id] -> String -> Record s t1 t2 id v y -> IO ()
+rPlotSelect  idList name r = rPlot name (extractRecord idList r )
 
 
 rPlotSelectSeq ::  (Fractional y,
@@ -410,7 +411,7 @@ rPlotSelectSeq ::  (Fractional y,
                       TDisp t1,
                       TDisp t2,
                       Tuple.C y,
-                      Atom.C y,Show (v y), 
-                      RPlot (SequData (Record s t1 t2 id v y))) => [id] -> (String, SequData (Record s t1 t2 id v y)) ->  IO ()     
-rPlotSelectSeq  idList (name,SequData rs) = rPlot (name,SequData rs')
+                      Atom.C y,Show (v y),
+                      RPlot (SequData (Record s t1 t2 id v y))) => [id] -> String -> (SequData (Record s t1 t2 id v y)) ->  IO ()
+rPlotSelectSeq idList name (SequData rs) = rPlot name (SequData rs')
   where rs' = map (extractRecord idList) rs

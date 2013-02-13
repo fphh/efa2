@@ -40,7 +40,7 @@ plot:: (TDisp t1,
         Show id,
         Plottable v a) =>
        String -> Record s t1 t2 id v a -> [id] -> IO()  
-plot title rec sigIds = do PL.rPlotSelect sigIds (title,rec)
+plot title rec sigIds = do PL.rPlotSelect sigIds title rec
                            
                            
 -- Building Signal Record for better Plotting of the original signals 
