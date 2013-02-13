@@ -12,7 +12,7 @@ import EFA.Signal.Signal
 
 import EFA.Signal.Typ (Typ, A, P, T, Tt, UT,F,D)
 import EFA.Signal.Data (Data, (:>), Nil)
-import EFA.Signal.Base (Sign, BSum, DArith0,BProd)
+import EFA.Signal.Base (Sign, BSum, BProd)
 
 import EFA.Report.Report (ToTable(toTable), Table(..), tvcat)
 import EFA.Report.Typ (TDisp, getDisplayTypName)
@@ -23,15 +23,18 @@ import qualified Test.QuickCheck as QC
 import System.Random (Random)
 
 import qualified Data.Map as M
+import qualified Data.Set as Set
 import qualified Data.List.HT as HTL
+import qualified Data.List.Key as Key
 import qualified Data.List.Match as Match
 
 import Data.NonEmpty ((!:))
 import Data.Ratio (Ratio, (%))
+import Data.Foldable (foldMap)
 import Data.List (transpose)
 import Data.Tuple.HT (mapFst)
 import Control.Monad (liftM2)
-import EFA.Utility (checkedLookup)
+import EFA.Utility (checkedLookup, mapFromSet)
 
 
 
@@ -86,83 +89,79 @@ getTimeWindow :: (Ord a,
 getTimeWindow rec = (S.minimum t, S.maximum t)
   where t = getTime rec
 
--- | Use carefully -- removes signal jitter around zero 
-removeZeroNoise :: (V.Walker v, V.Storage v a, Ord a, Num a) => PowerRecord nty v a -> a -> PowerRecord nty v a        
-removeZeroNoise (Record time pMap) threshold = Record time (M.map f pMap)
-  where f sig = S.map g sig
-        g x | abs x < threshold = 0 
+-- | Use carefully -- removes signal jitter around zero
+removeZeroNoise :: (V.Walker v, V.Storage v a, Ord a, Num a) => PowerRecord nty v a -> a -> PowerRecord nty v a
+removeZeroNoise (Record time pMap) threshold =
+   Record time (M.map (S.map g) pMap)
+  where g x | abs x < threshold = 0
             | otherwise = x
 
 -- | Generate a new Record with selected signals
-extractRecord :: (Show (v a),Ord id, Show id) => [id] -> Record s t1 t2 id v a ->  Record s t1 t2 id v a
-extractRecord xs rec@(Record time _ ) = Record time  (M.fromList $ zip xs (map f xs))
-  where f x = getSig rec x
-        
-        
--- | Split SignalRecord in even Junks                          
-splitRecord ::  (Ord id) => Int -> Record s t1 t2 id v a  -> [Record s t1 t2 id v a]                          
-splitRecord n (Record time pMap)  = recList
-  where (recList, _) = f ([],M.toList pMap)
-        f (rs, []) = (rs,[])        
-        f (rs, xs) = f (rs ++ [Record time (M.fromList $ take n xs)], drop n xs)
-        
+extractRecord ::
+   (Show (v a),Ord id, Show id) =>
+   [id] -> Record s t1 t2 id v a -> Record s t1 t2 id v a
+extractRecord xs rec@(Record time _) =
+   Record time $ mapFromSet (getSig rec) $ Set.fromList xs
 
--- sortSigList ::  (Num a,
---                       Ord a,
---                       V.Walker v,
---                       V.Storage v a,
---                       BSum a) =>
---                 [ (SigId,TC Signal (Typ UT UT UT) (Data (v :> Nil) a))] ->  [(SigId, TC Signal (Typ UT UT UT) (Data (v :> Nil) a))]
--- sortSigList  sigList = L.sortBy g  sigList
---   where g (_,x) (_,y) = compare (S.sigSum x) (S.sigSum y) 
 
--- -- | Split PowerRecord in even Junks                          
--- splitPowerRecord ::  (Num a, Ord a, V.Walker v, V.Storage v a, BSum a) => PowerRecord nty v a -> Int -> [PowerRecord nty v a]                          
--- splitPowerRecord (Record time pMap) n  = recList
---   where (recList, _) = f ([],M.toList pMap)
---         f (rs, []) = (rs,[])        
---         f (rs, xs) = f (rs ++ [Record time (M.fromList $ take n xs)], drop n xs)
- 
+-- | Split SignalRecord in even chunks
+splitRecord ::
+   (Ord id) =>
+   Int -> Record s t1 t2 id v a -> [Record s t1 t2 id v a]
+splitRecord n (Record time pMap) =
+   map (Record time . M.fromList) $ HTL.sliceVertical n $ M.toList pMap
+
+
+sortSigList ::
+   (Num a, Ord a,
+    V.Walker v, V.Storage v a, BSum a) =>
+   [(SigId, TC Signal (Typ UT UT UT) (Data (v :> Nil) a))] ->
+   [(SigId, TC Signal (Typ UT UT UT) (Data (v :> Nil) a))]
+sortSigList = Key.sort (S.sigSum . snd)
+
 
 -----------------------------------------------------------------------------------
 -- Functions to support Signal Selection
- 
+
 -- | List of Operations for pre-processing signals
-        
+
 -- | create a Record of selected, and sign corrected signals
-extractLogSignals ::  (V.Walker v,
-                      V.Storage v a,
-                      DArith0 a, 
-                      Show (v a)) => 
-                      SignalRecord v a -> 
-                      [(SigId, TC Signal (Typ UT UT UT) (Data (v :> Nil) a) 
-                               -> TC Signal (Typ UT UT UT) (Data (v :> Nil) a))] -> 
-                      SignalRecord  v a        
-extractLogSignals rec@(Record time _) idList = Record time (M.fromList $ map f idList)
-  where f (SigId sigId,sigFunct) = (SigId sigId, sigFunct $ getSig rec (SigId sigId)) 
+extractLogSignals ::
+   (Ord id, Show id) =>
+   Record s t1 t2 id v a ->
+   [(id, TC s t2 (Data (v :> Nil) a) -> TC s t2 (Data (v :> Nil) a))] ->
+   Record s t1 t2 id v a
+extractLogSignals (Record time sMap) idList =
+   let idMap = M.fromList idList
+       notFound = Set.difference (M.keysSet idMap) (M.keysSet sMap)
+   in  if Set.null notFound
+         then Record time $ M.intersectionWith ($) idMap sMap
+         else error $ "signals not found in record: " ++ show notFound
 
 
 genPowerRecord :: (Show (v a),
                    V.Zipper v,
                    V.Walker v,
                    V.Storage v a,
-                   BProd a a, 
-                   BSum a, 
-                   Ord nty) => 
-                  TSignal v a -> [(PPosIdx nty, UTSignal v a, UTSignal v a)] -> PowerRecord nty v a 
-genPowerRecord time sigList = Record time (M.fromList $ concat $ map f sigList) 
-  where f (pposIdx, sigA, sigB) = [(pposIdx, S.setType $ sigA),(swap pposIdx, S.setType $ sigB)]
-          where 
-               swap (PPosIdx n1 n2) = PPosIdx n2 n1
-               
-               
-               
-               
+                   BProd a a,
+                   BSum a,
+                   Ord nty) =>
+                  TSignal v a -> [(PPosIdx nty, UTSignal v a, UTSignal v a)] -> PowerRecord nty v a
+genPowerRecord time =
+   Record time .
+      foldMap
+         (\(pposIdx, sigA, sigB) ->
+            M.fromList
+               [(pposIdx, S.setType sigA),
+                (flipPos pposIdx, S.setType sigB)])
 
 
-          
+
+
+
+
 -----------------------------------------------------------------------------------
--- Various Class and Instance Definition for the different Sequence Datatypes 
+-- Various Class and Instance Definition for the different Sequence Datatypes
 
 instance (QC.Arbitrary nty) => QC.Arbitrary (PPosIdx nty) where
    arbitrary = liftM2 PPosIdx QC.arbitrary QC.arbitrary

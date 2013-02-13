@@ -21,11 +21,11 @@ import Data.Foldable (foldMap)
 sec0, sec1, sec2, sec3, sec4 :: Idx.Section
 sec0 :~ sec1 :~ sec2 :~ sec3 :~ sec4 :~ _ = Stream.enumFrom $ Idx.Section 0
 
-node0, node1, node2, node3 :: Node.Node
-node0 :~ node1 :~ node2 :~ node3 :~ _ = Stream.enumFrom $ Node.Node 0
+node0, node1, node2, node3 :: Node.Int
+node0 :~ node1 :~ node2 :~ node3 :~ _ = Stream.enumFrom $ Node.Int 0
 
 
-topoDreibein :: TD.Topology Node.Node
+topoDreibein :: TD.Topology Node.Int
 topoDreibein = Gr.mkGraph ns (makeEdges es)
   where ns = [(node0, TD.Source),
               (node1, TD.Sink),
@@ -34,7 +34,7 @@ topoDreibein = Gr.mkGraph ns (makeEdges es)
         es = [(node0, node2), (node1, node2), (node2, node3)]
 
 
-given :: EqGen.EquationSystem Node.Node s Double
+given :: EqGen.EquationSystem Node.Int s Double
 given =
    foldMap (uncurry (.=)) $
 

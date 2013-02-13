@@ -131,13 +131,21 @@ genSequFlow sqPRec = fmap recFullIntegrate sqPRec
 
 removeZeroTimeSections :: (Fractional a, Ord a, Eq a, V.Storage v a, V.Singleton v) => (Sequ,SequData (PowerRecord nty v a)) -> (Sequ,SequData (PowerRecord nty v a))
 removeZeroTimeSections (xs, ys)  = filterSequWithSequData f (xs, ys) 
-   where  -- f (_,Record time _) = (S.head time) /= (S.last time) 
-          f (_,Record time _) = abs (x -y) > 1 
-            where 
+   where f (_,Record time _) = x /= y
+           where 
               err = error "Error in SequenceData.hs / removeZeroTimeSections -- empty head or tail"
               TC (Data x) = (fst $ maybe err id $ S.viewL time) 
               TC (Data y) = (snd $ maybe err id $ S.viewR time) 
 
+-- | Drop Sections with time duration below threshold
+removeLowTimeSections :: (Fractional a, Ord a, Eq a, V.Storage v a, V.Singleton v) => (Sequ,SequData (PowerRecord nty v a)) -> a -> (Sequ,SequData (PowerRecord nty v a))
+removeLowTimeSections (xs, ys)  threshold = filterSequWithSequData f (xs, ys) 
+   where  
+          f (_,Record time _) = abs (x -y) >= threshold 
+            where 
+              err = error "Error in SequenceData.hs / removeZeroTimeSections -- empty head or tail"
+              TC (Data x) = (fst $ maybe err id $ S.viewL time) 
+              TC (Data y) = (snd $ maybe err id $ S.viewR time) 
 
 -- | Drop Sections with negligible energy flow 
 removeLowEnergySections :: (Num a, SB.BSum a, Ord a, V.Walker v, V.Storage v a) => 
@@ -554,6 +562,22 @@ approxAbs eps x y =
 
 -----------------------------------------------------------------------------------
 -- * New Functions from PG to allow Signal Cutting on Time Windows
+
+{-
+data ZeroCross = Exact a | Interp a | NoCrossing 
+data Cut a = (SignalIdx, a 
+type Seq
+
+-- | Get Zero Crossing Times from a given Power Record
+getSectionTimes :: SequData (PowerRecord nty v a) -> (SequData (SignalIdx, CutRatio), SequSignal)
+-}
+
+
+
+
+
+
+
 
 -- | Get Start and Stop Times for all Power Records in a Sequence
 extractCuttingTimes:: (Ord a, 
