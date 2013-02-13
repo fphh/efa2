@@ -26,39 +26,39 @@ import Data.Foldable (foldMap)
 sec0 :: Idx.Section
 sec0 :~ _ = Stream.enumFrom $ Idx.Section 0
 
-data Nodes = Sink | Source deriving (Ord, Eq, Enum, Show)
+data Node = Sink | Source deriving (Ord, Eq, Enum, Show)
 
-instance Node.C Nodes where
+instance Node.C Node where
    display = Node.displayDefault
    subscript = Node.subscriptDefault
    dotId = Node.dotIdDefault
 
 
-linearOne :: TD.Topology Nodes
+linearOne :: TD.Topology Node
 linearOne = mkGraph nodes (makeEdges edges)
   where nodes = [(Source, TD.AlwaysSink), (Sink, TD.AlwaysSource)]
         edges = [(Source, Sink)]
 
-seqTopo :: TD.SequFlowGraph Nodes
+seqTopo :: TD.SequFlowGraph Node
 seqTopo = constructSeqTopo linearOne [0]
 
 enRange :: [Rational]
 enRange = (1%100):[1%2, 1 .. 9]
 
-c :: EqGen.ExprWithVars Nodes s a
+c :: EqGen.ExprWithVars Node s a
 c = edgeVar EqGen.power sec0 Source Sink
 
-n :: EqGen.ExprWithVars Nodes s a
+n :: EqGen.ExprWithVars Node s a
 n = edgeVar EqGen.eta sec0 Source Sink
 
-eta :: Idx.Eta Nodes
+eta :: Idx.Eta Node
 eta = edgeVar (Idx.Eta recAbs) sec0 Source Sink
 
 
-functionEta :: EqGen.ExprWithVars Nodes s Rational -> EqGen.ExprWithVars Nodes s Rational
+functionEta :: EqGen.ExprWithVars Node s Rational -> EqGen.ExprWithVars Node s Rational
 functionEta p = 0.2 * p
 
-given :: Rational -> EqGen.EquationSystem Nodes s Rational
+given :: Rational -> EqGen.EquationSystem Node s Rational
 given p =
    foldMap (uncurry (.=)) $
    (EqGen.dtime sec0, 1) :
@@ -68,7 +68,7 @@ given p =
 solve :: Rational -> String
 solve p =
   let env = EqGen.solve ((n =.= functionEta c) <> given p) seqTopo
-  in  show p ++ "\t" 
+  in  show p ++ "\t"
         ++ case checkedLookup (Env.etaMap env) eta of
                 EqGen.Undetermined -> "undetermined"
                 EqGen.Determined x -> show x

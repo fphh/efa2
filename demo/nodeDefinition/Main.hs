@@ -72,9 +72,9 @@ topo3 = mkGraph nodes (makeEdges edges)
 -------------------------------------------------
 -- Selbstdefinierte Knoten mit selbstdefinierter show-Funktion
 
-data Nodes = Source | Sink deriving (Eq, Ord, Enum, Show)
+data Node = Source | Sink deriving (Eq, Ord, Enum, Show)
 
-instance Node.C Nodes where
+instance Node.C Node where
    display Source = Format.literal "Dies ist eine Quelle."
    display Sink   = Format.literal "Dies ist eine Senke."
 
@@ -82,7 +82,7 @@ instance Node.C Nodes where
    dotId = Node.dotIdDefault
 
 
-topo4 :: TD.Topology Nodes
+topo4 :: TD.Topology Node
 topo4 = mkGraph nodes (makeEdges edges)
   where nodes = [(Sink, TD.AlwaysSink), (Source, TD.AlwaysSource)]
         edges = [(Source, Sink)]

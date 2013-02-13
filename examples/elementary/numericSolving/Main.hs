@@ -21,16 +21,16 @@ import Data.Foldable (foldMap)
 sec0, sec1, sec2, sec3, sec4 :: Idx.Section
 sec0 :~ sec1 :~ sec2 :~ sec3 :~ sec4 :~ _ = Stream.enumFrom $ Idx.Section 0
 
-node0, node1, node2, node3 :: Nodes
+node0, node1, node2, node3 :: Node
 node0 :~ node1 :~ node2 :~ node3 :~ _ = Stream.enumFrom $ Node 0
 
-newtype Nodes = Node Int deriving (Show, Eq, Ord)
+newtype Node = Node Int deriving (Show, Eq, Ord)
 
-instance Enum Nodes where
+instance Enum Node where
          toEnum = Node
          fromEnum (Node n) = n
 
-instance Node.C Nodes where
+instance Node.C Node where
    display (Node 0) = Format.literal "null"
    display (Node 1) = Format.literal "eins"
    display (Node 2) = Format.literal "zwei"
@@ -41,7 +41,7 @@ instance Node.C Nodes where
    dotId = Node.dotIdDefault
 
 
-topoDreibein :: TD.Topology Nodes
+topoDreibein :: TD.Topology Node
 topoDreibein = Gr.mkGraph ns (makeEdges es)
   where ns = [(node0, TD.Source),
               (node1, TD.Sink),
@@ -49,7 +49,7 @@ topoDreibein = Gr.mkGraph ns (makeEdges es)
               (node3, TD.Storage)]
         es = [(node0, node2), (node1, node2), (node2, node3)]
 
-given :: EqGen.EquationSystem Nodes s Double
+given :: EqGen.EquationSystem Node s Double
 given =
    foldMap (uncurry (.=)) $
 
@@ -80,7 +80,7 @@ given =
 main :: IO ()
 main = do
 
-  let seqTopo = constructSeqTopo topoDreibein [1, 0, 1] 
+  let seqTopo = constructSeqTopo topoDreibein [1, 0, 1]
       env = EqGen.solve given seqTopo
 
   Draw.sequFlowGraphAbsWithEnv seqTopo env

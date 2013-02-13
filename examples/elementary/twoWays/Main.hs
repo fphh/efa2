@@ -34,9 +34,9 @@ sec0 :: Idx.Section
 sec0 :~ _ = Stream.enumFrom $ Idx.Section 0
 
 
-data Nodes = Sink | Source | C Int deriving (Eq, Ord, Show)
+data Node = Sink | Source | C Int deriving (Eq, Ord, Show)
 
-instance Enum Nodes where
+instance Enum Node where
          fromEnum Sink = 0
          fromEnum Source = 1
          fromEnum (C x) = x+2
@@ -45,7 +45,7 @@ instance Enum Nodes where
          toEnum 1 = Source
          toEnum x = C (x-2)
 
-instance Node.C Nodes where
+instance Node.C Node where
    display Sink = Format.literal "Sink"
    display Source = Format.literal "Source"
    display (C c) = Format.integer $ fromIntegral c
@@ -53,10 +53,10 @@ instance Node.C Nodes where
    subscript = Node.subscriptDefault
    dotId = Node.dotIdDefault
 
-c0, c1, c2, c3 :: Nodes
+c0, c1, c2, c3 :: Node
 c0 :~ c1 :~ c2 :~ c3 :~ _ = Stream.enumFrom $ C 0
 
-topo :: TD.Topology Nodes
+topo :: TD.Topology Node
 topo = mkGraph nodes (makeEdges edges)
   where nodes
           = [(c0, TD.Crossing), (c1, TD.Crossing), (c2, TD.Crossing),
@@ -66,10 +66,10 @@ topo = mkGraph nodes (makeEdges edges)
           = [(Source, c0), (c0, c1), (c1, c2), (c2, Sink), (c0, c3),
              (c3, c2)]
 
-seqTopo :: TD.SequFlowGraph Nodes
+seqTopo :: TD.SequFlowGraph Node
 seqTopo = constructSeqTopo topo [0]
 
-given :: Double -> Double -> EqGen.EquationSystem Nodes s Double
+given :: Double -> Double -> EqGen.EquationSystem Node s Double
 given e x =
    foldMap (uncurry (.=)) $
    (EqGen.dtime sec0, 1) :
@@ -80,19 +80,19 @@ given e x =
    (edgeVar EqGen.eta sec0 c3 c2, 1) :
    (edgeVar EqGen.eta sec0 c2 Sink, 1) : []
 
-c02, c04 :: EqGen.ExprWithVars Nodes s a
+c02, c04 :: EqGen.ExprWithVars Node s a
 c02 = edgeVar EqGen.power sec0 c0 c1
 c04 = edgeVar EqGen.power sec0 c0 c3
 
-n12, n14 :: EqGen.ExprWithVars Nodes s a
+n12, n14 :: EqGen.ExprWithVars Node s a
 n12 = edgeVar EqGen.eta sec0 c0 c1
 n14 = edgeVar EqGen.eta sec0 c0 c3
 
-n1, n2 :: EqGen.ExprWithVars Nodes s Double -> EqGen.ExprWithVars Nodes s Double
+n1, n2 :: EqGen.ExprWithVars Node s Double -> EqGen.ExprWithVars Node s Double
 n1 p = -0.012 * (p - 12) * (p - 3) + 0.5
 n2 p = -0.021 * (p - 12) * p
 
-etas :: EqGen.EquationSystem Nodes s Double
+etas :: EqGen.EquationSystem Node s Double
 etas =
   (n12 =.= n1 c02)
   <> (n14 =.= n2 c04)
@@ -105,7 +105,7 @@ enRange :: [Double]
 enRange = 0.01:[1..12]
 
 
-eout, ein :: Idx.Energy Nodes
+eout, ein :: Idx.Energy Node
 eout = edgeVar (Idx.Energy recAbs) sec0 Sink c2
 ein  = edgeVar (Idx.Energy recAbs) sec0 Source c0
 

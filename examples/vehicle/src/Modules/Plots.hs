@@ -105,13 +105,13 @@ generator rec = plot "Generator" rec [SigId "speedsensor1.v",
   
  
 -- Plot Power Records with readible 
-mkPlotPowers :: Show (v a) => PowerRecord Nodes v a -> Record Signal (Typ A T Tt) (Typ A P Tt) SigId v a 
+mkPlotPowers :: Show (v a) => PowerRecord Node v a -> Record Signal (Typ A T Tt) (Typ A P Tt) SigId v a 
 mkPlotPowers (Record time pMap) = Record time newMap
   where -- replace old with new keys
     newMap = M.mapKeys f pMap
     f key = checkedLookup System.powerPositonNames key
     
-genPowers :: Plottable v a => PowerRecord Nodes v a -> IO()
+genPowers :: Plottable v a => PowerRecord Node v a -> IO()
 genPowers pRec =  plot "GenerationPowers" (mkPlotPowers pRec) [SigId "Fuel",    
                                                              SigId "CrankShaft",
                                                              SigId "BatteryClamps",
@@ -119,7 +119,7 @@ genPowers pRec =  plot "GenerationPowers" (mkPlotPowers pRec) [SigId "Fuel",
                                                              SigId "Wire"
                                                             ]
 
-propPowers :: (Show (v a), Plottable v a) => PowerRecord Nodes v a -> IO()
+propPowers :: (Show (v a), Plottable v a) => PowerRecord Node v a -> IO()
 propPowers pRec = plot "PropulsionPowers" (mkPlotPowers pRec) [SigId "MotorClamps",
                                                              SigId "MotorFlange",    
                                                              SigId "InShaft",
@@ -129,7 +129,7 @@ propPowers pRec = plot "PropulsionPowers" (mkPlotPowers pRec) [SigId "MotorClamp
                                                              SigId "FrontTires"
                                                               ]
                   
-vehPowers :: (Show (v a), Plottable v a) => PowerRecord Nodes v a -> IO()
+vehPowers :: (Show (v a), Plottable v a) => PowerRecord Node v a -> IO()
 vehPowers pRec = plot "VehiclePowers"  (mkPlotPowers pRec) [SigId "ToFrontBrakes",
                                                           SigId "RearTires",    
                                                           SigId "ToInertia",

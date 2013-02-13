@@ -2,7 +2,7 @@
 
 module Main where
 
-import qualified Data.Map as M 
+import qualified Data.Map as M
 
 import qualified EFA.Signal.Signal as S
 import EFA.Signal.Record
@@ -18,9 +18,9 @@ import EFA.Signal.Data ((:>), Nil, Data)
 import qualified EFA.Graph.Topology.Node as Node
 
 
-data Nodes = Node0 | Node1 deriving (Eq, Ord, Enum, Show)
+data Node = Node0 | Node1 deriving (Eq, Ord, Enum, Show)
 
-instance Node.C Nodes where
+instance Node.C Node where
    display = Node.displayDefault
    subscript = Node.subscriptDefault
    dotId = Node.dotIdDefault
@@ -39,8 +39,8 @@ p2 = p1
 t :: S.TC s t (Data ([] :> Nil) Double)
 t = S.fromList [0..4]
 
-r :: PowerRecord Nodes [] Double
-r = Record t 
+r :: PowerRecord Node [] Double
+r = Record t
       (M.fromListWith
          (error "duplicate keys")
          [(PPosIdx Node0 Node1, p1), (PPosIdx Node1 Node0, p2)])
@@ -48,9 +48,9 @@ r = Record t
 
 main :: IO ()
 main = do
-  
+
   print t
 
-  report [RVertical] ("TestMatrix", ll) 
-  report [RVertical] ("Power1", p1) 
-  report [RVertical] ("PowerRecord", r) 
+  report [RVertical] ("TestMatrix", ll)
+  report [RVertical] ("Power1", p1)
+  report [RVertical] ("PowerRecord", r)
