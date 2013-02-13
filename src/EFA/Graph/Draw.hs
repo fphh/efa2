@@ -72,7 +72,7 @@ intersectionEdgeColour = Color [RGB 200 0 0]
 
 
 dotFromSequFlowGraph ::
-  (Node.C node, Ord node) =>
+  (Node.C node) =>
   SequFlowGraph node ->
   Maybe (Unicode, Idx.Section -> Unicode) ->
   (Topo.LNode node -> Unicode) ->
@@ -138,7 +138,7 @@ dotFromSecNode nshow n@(x, nodeType) =
         color _ = nodeColour
 
 dotFromSecEdge ::
-  (Node.C node, Ord node) =>
+  (Node.C node) =>
   (Topo.LEdge node -> [Unicode]) -> Topo.LEdge node -> DotEdge T.Text
 dotFromSecEdge eshow e =
    DotEdge
@@ -163,7 +163,7 @@ dotIdentFromNode n = T.pack $ Node.dotId n
 
 
 printGraph, printGraphX, _printGraphDot ::
-  (Ord node, Node.C node) =>
+  (Node.C node) =>
    SequFlowGraph node ->
    Maybe (Unicode, Idx.Section -> Unicode) ->
    (Topo.LNode node -> Unicode) ->
@@ -182,7 +182,7 @@ _printGraphDot g recTShow nshow eshow =
 
 
 sequFlowGraph ::
-  (Ord node, Node.C node) =>
+  (Node.C node) =>
   SequFlowGraph node -> IO ()
 sequFlowGraph topo =
    printGraph topo Nothing nshow eshow
@@ -192,7 +192,7 @@ sequFlowGraph topo =
 
 
 dotFromTopology ::
-  (Ord node, Node.C node) =>
+  (Node.C node) =>
   Topo.Topology node -> DotGraph T.Text
 dotFromTopology g =
   DotGraph {
@@ -209,7 +209,7 @@ dotFromTopology g =
   }
 
 dotFromTopoNode ::
-  (Ord node, Node.C node) =>
+  (Node.C node) =>
   Gr.LNode node Topo.NodeType -> DotNode T.Text
 dotFromTopoNode (x, typ) =
    DotNode (dotIdentFromNode x)
@@ -218,7 +218,7 @@ dotFromTopoNode (x, typ) =
        nodeColour, Style [SItem Filled []], Shape BoxShape]
 
 dotFromTopoEdge ::
-  (Ord node, Node.C node) =>
+  (Node.C node) =>
   Gr.Edge node -> DotEdge T.Text
 dotFromTopoEdge e =
    case orientUndirEdge e of
@@ -229,13 +229,13 @@ dotFromTopoEdge e =
 
 
 
-topology :: (Ord node, Node.C node) => Topo.Topology node -> IO ()
+topology :: (Node.C node) => Topo.Topology node -> IO ()
 topology topo =
    runGraphvizCanvas Dot (dotFromTopology topo) Xlib
 
 
 dotFromFlowTopology ::
-  (Ord node, Node.C node) =>
+  (Node.C node) =>
   Int -> FlowTopology node -> DotSubGraph String
 dotFromFlowTopology ident topo = DotSG True (Just (Int ident)) stmts
   where stmts = DotStmts attrs [] ns es
@@ -255,7 +255,7 @@ dotFromFlowTopology ident topo = DotSG True (Just (Int ident)) stmts
                  DotEdge (idf x) (idf y) [Viz.Dir d]
 
 flowTopologies ::
-  (Ord node, Node.C node) =>
+  (Node.C node) =>
   [FlowTopology node] -> IO ()
 flowTopologies ts = runGraphvizCanvas Dot g Xlib
   where g = DotGraph False True Nothing stmts
@@ -289,7 +289,7 @@ formatNodeType :: Format output => NodeType -> output
 formatNodeType = Format.literal . showType
 
 formatNodeStorage ::
-   (FormatValue a, Format output, Ord node, Node.C node) =>
+   (FormatValue a, Format output, Node.C node) =>
    Idx.Record -> StorageMap node a -> Topo.LNode node -> output
 formatNodeStorage rec st (n@(Idx.SecNode _sec nid), ty) =
    Format.lines $
@@ -335,7 +335,7 @@ lookupFormatAssign mp makeIdx x y =
          Format.assign (formatValue $ mkIdx idx) (lookupFormat mp idx)
 
 sequFlowGraphWithEnv ::
-  (Ord node, Node.C node) =>
+  (Node.C node) =>
   SequFlowGraph node -> Env node Unicode -> IO ()
 sequFlowGraphWithEnv g env =
    printGraph g (Just (recordNumber env, formatTime env)) (formatNode env) eshow
@@ -356,18 +356,18 @@ sequFlowGraphWithEnv g env =
            []
 
 sequFlowGraphAbsWithEnv ::
-  (FormatValue a, Ord node, Node.C node) =>
+  (FormatValue a, Node.C node) =>
   SequFlowGraph node -> Interp.Env node SingleRecord a -> IO ()
 sequFlowGraphAbsWithEnv topo = sequFlowGraphWithEnv topo . envAbs
 
 sequFlowGraphDeltaWithEnv ::
-  (FormatValue a, Ord node, Node.C node) =>
+  (FormatValue a, Node.C node) =>
   SequFlowGraph node -> Interp.Env node SingleRecord a -> IO ()
 sequFlowGraphDeltaWithEnv topo = sequFlowGraphWithEnv topo . envDelta
 
 
 envAbs ::
-   (FormatValue a, Format output, Ord node, Node.C node) =>
+   (FormatValue a, Format output, Node.C node) =>
    Interp.Env node SingleRecord a -> Env node output
 envAbs (Interp.Env (SingleRecord rec) e _de me _dme _p _dp fn _dn dt x _dx y _dy _v st) =
    Env
@@ -381,7 +381,7 @@ envAbs (Interp.Env (SingleRecord rec) e _de me _dme _p _dp fn _dn dt x _dx y _dy
       (formatNodeStorage rec st)
 
 envDelta ::
-   (FormatValue a, Format output, Ord node, Node.C node) =>
+   (FormatValue a, Format output, Node.C node) =>
    Interp.Env node SingleRecord a -> Env node output
 envDelta (Interp.Env (SingleRecord rec) _e de _me dme _p _dp _fn dn dt _x dx _y dy _v st) =
    Env

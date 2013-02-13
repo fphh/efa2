@@ -8,7 +8,7 @@ import EFA.Report.Format (Format)
 import Prelude hiding (String, Int)
 import qualified Prelude as P
 
-class C node where
+class Ord node => C node where
    display :: Format output => node -> output
    subscript :: Format output => node -> output
    dotId :: node -> P.String
