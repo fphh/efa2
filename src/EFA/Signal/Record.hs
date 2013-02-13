@@ -34,7 +34,7 @@ import Data.Foldable (foldMap)
 import Data.List (transpose)
 import Data.Tuple.HT (mapFst)
 import Control.Monad (liftM2)
-import EFA.Utility (checkedLookup, mapFromSet)
+import EFA.Utility (checkedLookup)
 
 
 
@@ -98,10 +98,15 @@ removeZeroNoise (Record time pMap) threshold =
 
 -- | Generate a new Record with selected signals
 extractRecord ::
-   (Show (v a),Ord id, Show id) =>
+   (Ord id, Show id) =>
    [id] -> Record s t1 t2 id v a -> Record s t1 t2 id v a
+extractRecord xs rec = extractLogSignals rec $ map (flip (,) id) xs
+{-
+extractRecord ::
+   (Show (v a), Ord id, Show id) =>
 extractRecord xs rec@(Record time _) =
    Record time $ mapFromSet (getSig rec) $ Set.fromList xs
+-}
 
 
 -- | Split SignalRecord in even chunks
