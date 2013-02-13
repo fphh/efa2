@@ -306,14 +306,14 @@ formatNodeStorage rec st (n@(Idx.SecNode _sec nid), ty) =
 The 'Env' shall contain only values and functions for display.
 It shall not contain values needed for computations.
 -}
-data Env nty output =
+data Env node output =
    Env {
       recordNumber :: output,
       formatEnergy, formatMaxEnergy,
       formatX, formatY,
-      formatEta    :: Idx.SecNode nty -> Idx.SecNode nty -> output,
+      formatEta    :: Idx.SecNode node -> Idx.SecNode node -> output,
       formatTime   :: Idx.Section -> output,
-      formatNode   :: Topo.LNode nty -> output
+      formatNode   :: Topo.LNode node -> output
    }
 
 lookupFormat ::

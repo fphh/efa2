@@ -27,9 +27,9 @@ import EFA.Utility (checkedLookup)
 
 adjustSigns ::
   (Show (v a), DArith0 a,
-  Walker v, Storage v a, Ord nty, Show nty) =>
-  Topology nty -> SequData (FlowState nty) ->
-  SequData (FlowRecord nty v a) -> SequData (FlowRecord nty v a)
+  Walker v, Storage v a, Ord node, Show node) =>
+  Topology node -> SequData (FlowState node) ->
+  SequData (FlowRecord node v a) -> SequData (FlowRecord node v a)
 adjustSigns topo flowStates flowRec = f <$> flowStates <*> flowRec
   where f (FlowState state) (Record dt flow) =
           Record dt (M.foldrWithKey g M.empty state')
@@ -51,26 +51,26 @@ adjustSigns topo flowStates flowRec = f <$> flowStates <*> flowRec
 -- | Function to calculate flow states for the whole sequence
 genSequFState ::
   (Walker v, Storage v a, BSum a, Fractional a, Ord a) => 
-  SequData (FlowRecord nty v a) -> SequData (FlowState nty)
+  SequData (FlowRecord node v a) -> SequData (FlowState node)
 genSequFState sqFRec = fmap genFlowState sqFRec
 
 -- | Function to extract the flow state out of a Flow Record
 genFlowState ::
   (Walker v, Storage v a, BSum a, Fractional a, Ord a) => 
-  FlowRecord nty v a -> FlowState nty
+  FlowRecord node v a -> FlowState node
 genFlowState (Record _time flowMap) =
    FlowState $ M.map (fromScalar . sigSign . sigSum) flowMap
 
 -- | Function to generate Flow Topologies for all Sequences
 genSequFlowTops ::
-  (Ord nty, Show nty) =>
-  Topology nty -> SequData (FlowState nty) -> SequData (FlowTopology nty)
+  (Ord node, Show node) =>
+  Topology node -> SequData (FlowState node) -> SequData (FlowTopology node)
 genSequFlowTops topo = fmap (genFlowTopology topo)
 
 -- | Function to generate Flow Topology -- only use one state per signal
 genFlowTopology ::
-  (Ord nty, Show nty) =>
-  Topology nty -> FlowState nty -> FlowTopology nty
+  (Ord node, Show node) =>
+  Topology node -> FlowState node -> FlowTopology node
 genFlowTopology topo (FlowState fs) =
    mkGraph (labNodes topo) $
    map
@@ -83,27 +83,27 @@ genFlowTopology topo (FlowState fs) =
 
 
 mkSectionTopology ::
-  (Ord nty) =>
-  Idx.Section -> FlowTopology nty -> (SequFlowGraph nty)
+  (Ord node) =>
+  Idx.Section -> FlowTopology node -> (SequFlowGraph node)
 mkSectionTopology sid = Gr.ixmap (Idx.SecNode sid)
 
 genSectionTopology ::
-  (Ord nty) =>
-  SequData (FlowTopology nty) -> SequData (SequFlowGraph nty)
+  (Ord node) =>
+  SequData (FlowTopology node) -> SequData (SequFlowGraph node)
 genSectionTopology = zipWithSecIdxs mkSectionTopology
 
 
 copySeqTopology ::
-  (Ord nty) =>
-  SequData (SequFlowGraph nty) -> SequFlowGraph nty
+  (Ord node) =>
+  SequData (SequFlowGraph node) -> SequFlowGraph node
 copySeqTopology =
    Fold.foldl Gr.union Gr.empty
 
 
 mkIntersectionEdges ::
-   nty -> Idx.Section ->
+   node -> Idx.Section ->
    M.Map Idx.Section StoreDir ->
-   [Topo.LEdge nty]
+   [Topo.LEdge node]
 mkIntersectionEdges node startSec stores =
    concatMap
       (\secin ->
@@ -115,8 +115,8 @@ mkIntersectionEdges node startSec stores =
 
 
 mkSequenceTopology ::
-  (Ord nty) =>
-  SequData (SequFlowGraph nty) -> SequFlowGraph nty
+  (Ord node) =>
+  SequData (SequFlowGraph node) -> SequFlowGraph node
 mkSequenceTopology sd = res
   where sqTopo = copySeqTopology sd
         initNode = Idx.SecNode Idx.initSection

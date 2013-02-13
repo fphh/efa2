@@ -11,54 +11,54 @@ import Data.Foldable (Foldable, foldMap)
 
 
 -- Environments
-type EnergyMap nty a = M.Map (Idx.Energy nty) a
-type DEnergyMap nty a = M.Map (Idx.DEnergy nty) a
+type EnergyMap node a = M.Map (Idx.Energy node) a
+type DEnergyMap node a = M.Map (Idx.DEnergy node) a
 
-type MaxEnergyMap nty a = M.Map (Idx.MaxEnergy nty) a
-type DMaxEnergyMap nty a = M.Map (Idx.DMaxEnergy nty) a
+type MaxEnergyMap node a = M.Map (Idx.MaxEnergy node) a
+type DMaxEnergyMap node a = M.Map (Idx.DMaxEnergy node) a
 
-type PowerMap nty a = M.Map (Idx.Power nty) a
-type DPowerMap nty a = M.Map (Idx.DPower nty) a
+type PowerMap node a = M.Map (Idx.Power node) a
+type DPowerMap node a = M.Map (Idx.DPower node) a
 
-type EtaMap nty a = M.Map (Idx.Eta nty) a
-type DEtaMap nty a = M.Map (Idx.DEta nty) a
+type EtaMap node a = M.Map (Idx.Eta node) a
+type DEtaMap node a = M.Map (Idx.DEta node) a
 
-type DTimeMap nty a = M.Map (Idx.DTime nty) a
+type DTimeMap node a = M.Map (Idx.DTime node) a
 
-type XMap nty a = M.Map (Idx.X nty) a
-type DXMap nty a = M.Map (Idx.DX nty) a
+type XMap node a = M.Map (Idx.X node) a
+type DXMap node a = M.Map (Idx.DX node) a
 
-type YMap nty a = M.Map (Idx.Y nty) a
-type DYMap nty a = M.Map (Idx.DY nty) a
+type YMap node a = M.Map (Idx.Y node) a
+type DYMap node a = M.Map (Idx.DY node) a
 
-type VarMap nty a = M.Map (Idx.Var nty) a
+type VarMap node a = M.Map (Idx.Var node) a
 
-type StorageMap nty a = M.Map (Idx.Storage nty) a
+type StorageMap node a = M.Map (Idx.Storage node) a
 
 
 
-data Env nty rec a =
+data Env node rec a =
                Env { recordNumber :: rec,
-                     energyMap :: EnergyMap nty a,
-                     denergyMap :: DEnergyMap nty a,
-                     maxenergyMap :: MaxEnergyMap nty a,
-                     dmaxenergyMap :: DMaxEnergyMap nty a,
+                     energyMap :: EnergyMap node a,
+                     denergyMap :: DEnergyMap node a,
+                     maxenergyMap :: MaxEnergyMap node a,
+                     dmaxenergyMap :: DMaxEnergyMap node a,
 
-                     powerMap :: PowerMap nty a,
-                     dpowerMap :: DPowerMap nty a,
-                     etaMap :: EtaMap nty a,
-                     detaMap :: DEtaMap nty a,
-                     dtimeMap :: DTimeMap nty a,
-                     xMap :: XMap nty a,
-                     dxMap :: DXMap nty a,
-                     yMap :: YMap nty a,
-                     dyMap :: DYMap nty a,
-                     varMap :: VarMap nty a,
-                     storageMap :: StorageMap nty a } deriving (Show)
+                     powerMap :: PowerMap node a,
+                     dpowerMap :: DPowerMap node a,
+                     etaMap :: EtaMap node a,
+                     detaMap :: DEtaMap node a,
+                     dtimeMap :: DTimeMap node a,
+                     xMap :: XMap node a,
+                     dxMap :: DXMap node a,
+                     yMap :: YMap node a,
+                     dyMap :: DYMap node a,
+                     varMap :: VarMap node a,
+                     storageMap :: StorageMap node a } deriving (Show)
 
 
 class AccessMap idx where
-   accessMap :: Accessor.T (Env nty rec a) (M.Map (idx nty) a)
+   accessMap :: Accessor.T (Env node rec a) (M.Map (idx node) a)
 
 instance AccessMap Idx.Energy where
    accessMap =
@@ -122,14 +122,14 @@ instance AccessMap Idx.Storage where
       Accessor.fromSetGet (\x c -> c{storageMap = x}) storageMap
 
 
-instance Functor (Env nty rec) where
+instance Functor (Env node rec) where
          fmap f (Env rec e de me dme p dp n dn dt x dx y dy v st) =
            Env rec (fmap f e) (fmap f de) (fmap f me) (fmap f dme) (fmap f p) (fmap f dp) (fmap f n) (fmap f dn) (fmap f dt) (fmap f x) (fmap f dx) (fmap f y) (fmap f dy) (fmap f v) (fmap f st)
 
-instance Foldable (Env nty rec) where
+instance Foldable (Env node rec) where
    foldMap = foldMapDefault
 
-instance Traversable (Env nty rec) where
+instance Traversable (Env node rec) where
    sequenceA (Env rec e de me dme p dp n dn dt x dx y dy v st) =
       pure (Env rec) <?> e <?> de <?> me <?> dme <?> p <?> dp <?> n <?> dn <?> dt <?> x <?> dx <?> y <?> dy <?> v <?> st
 
@@ -140,11 +140,11 @@ infixl 4 <?>
 f <?> x = f <*> sequenceA x
 
 
-empty :: rec -> Env nty rec a
+empty :: rec -> Env node rec a
 empty rec = Env rec M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty
 
 
-union :: (Ord nty) => Env nty rec a -> Env nty rec a -> Env nty rec a
+union :: (Ord node) => Env node rec a -> Env node rec a -> Env node rec a
 union (Env rec e de me dme p dp n dn dt x dx y dy v st)
          (Env _ e' de' me' dme' p' dp' n' dn' dt' x' dx' y' dy' v' st') =
   (Env rec (M.union e e') (M.union de de') (M.union me me') (M.union dme dme')
