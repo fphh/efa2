@@ -262,6 +262,17 @@ Executable demo-csvimport
   Else
     Buildable: False
 
+Executable demo-pltimport
+  Main-Is: demo/PLTImport/Main.hs
+  GHC-Options: -Wall
+  If flag(buildExamples)
+    Build-Depends:
+      efa,
+      base
+  Else
+    Buildable: False
+
+
 Executable demo-asciiimport
   Main-Is: demo/ASCIIImport/Main.hs
   GHC-Options: -Wall
