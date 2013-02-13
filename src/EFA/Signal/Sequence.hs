@@ -141,7 +141,7 @@ removeZeroTimeSections (xs, ys)  = filterSequWithSequData f (xs, ys)
 removeLowTimeSections :: (Fractional a, Ord a, Eq a, V.Storage v a, V.Singleton v) => (Sequ,SequData (PowerRecord nty v a)) -> a -> (Sequ,SequData (PowerRecord nty v a))
 removeLowTimeSections (xs, ys)  threshold = filterSequWithSequData f (xs, ys) 
    where  
-          f (_,Record time _) = abs (x -y) >= threshold 
+          f (_,Record time _) = abs (x -y) > threshold 
             where 
               err = error "Error in SequenceData.hs / removeZeroTimeSections -- empty head or tail"
               TC (Data x) = (fst $ maybe err id $ S.viewL time) 
@@ -203,12 +203,13 @@ makeSequence ::
 makeSequence =
     genSequFlow . snd . removeZeroTimeSections . genSequ . addZeroCrossings
 
+{-
 -- | PG - Its better to have processing under controll in Top-Level for inspeting and debugging signal treatment
 makeSequenceRaw ::
    (Show nty, Ord nty) => PowerRecord nty [] Val ->
    (Sequ, SequData (PowerRecord nty [] Val))
 makeSequenceRaw = genSequ . addZeroCrossings
-
+-}
 -----------------------------------------------------------------------------------
 {-
 ToDo:
@@ -217,7 +218,7 @@ must correctly handle the last section.
 -}
 -- | Function to Generate Time Sequence
 genSequ ::  Ord nty => PowerRecord nty [] Val -> (Sequ, SequData (PowerRecord nty [] Val))
-genSequ pRec = removeNilSections (Sequ $ sequ++[lastSec], SequData pRecs)
+genSequ pRec = removeNilSections (SequData $ sequ++[lastSec], SequData pRecs)
   where rSig = record2RSig pRec
         pRecs = map (rsig2SecRecord pRec) (seqRSig ++ [lastRSec])
         ((lastSec,sequ),(lastRSec,seqRSig)) = recyc rTAIL rHEAD (((0,0),[]),(rsingleton $ rHEAD,[]))
@@ -264,7 +265,7 @@ genSequ pRec = removeNilSections (Sequ $ sequ++[lastSec], SequData pRecs)
 
 -- | Function to remove Nil-Sections which have same start and stop Index
 removeNilSections :: (Sequ,(SequData (PowerRecord nty v a))) ->   (Sequ, (SequData (PowerRecord nty v a)))
-removeNilSections (Sequ sequ, SequData pRecs) = (Sequ fsequ, SequData fRecs)
+removeNilSections (SequData sequ, SequData pRecs) = (SequData fsequ, SequData fRecs)
   where (fsequ, fRecs) = unzip $ filter (uncurry (/=) . fst) $ zip sequ pRecs
 
 
@@ -576,4 +577,6 @@ extractCuttingTimes sequ = fmap getTimeWindow sequ
 
 -- | Create SequencePowerRecord by extracting Slices from Indices given by Sequence
 sectionRecordsFromSequence ::  (V.Slice v, V.Storage v a) => Record s t1 t2 id v a -> Sequ -> SequData (Record s t1 t2 id v a)
-sectionRecordsFromSequence rec (Sequ sequ) = SequData $ map (sliceRecord rec) sequ   
+sectionRecordsFromSequence rec (SequData sequ) = SequData $ map (sliceRecord rec) sequ   
+
+

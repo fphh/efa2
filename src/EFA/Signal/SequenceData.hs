@@ -1,5 +1,5 @@
 {-# LANGUAGE TypeFamilies #-}
-
+{-# LANGUAGE FlexibleInstances #-}
 module EFA.Signal.SequenceData where
 
 import qualified EFA.Graph.Topology.Index as Idx
@@ -15,9 +15,8 @@ import Data.Foldable (Foldable, foldMap, fold)
 -----------------------------------------------------------------------------------
 -- Section and Sequence -- Structures to handle Sequence Information and Data
 -- | Section analysis result
-newtype Sequ = Sequ [Sec] deriving Show
+type Sequ = SequData Sec
 type Sec = (SignalIdx,SignalIdx)
-
 
 -- | Sequence Vector to Store Section Data
 newtype SequData a = SequData [a] deriving (Show, Eq)
@@ -55,18 +54,18 @@ zipWithSecIdxs f =
          
 -- | Get Number of Sections after cutting 
 sequLength :: Sequ -> Int
-sequLength (Sequ xs) = length xs
+sequLength (SequData xs) = length xs
 
 -- | Filter Sequence and SequenceData with a Filterfunktion
 -- | Allows to e.q. filter Sequ and SequPwrRecord
 filterSequWithSequData :: ((Sec,a) -> Bool) -> (Sequ,SequData a) ->   (Sequ,SequData a)
-filterSequWithSequData f (Sequ xs, SequData ys) = (Sequ xsf, SequData ysf)
+filterSequWithSequData f (SequData xs, SequData ys) = (SequData xsf, SequData ysf)
    where (xsf,ysf) = unzip $ filter f $ zip xs ys  
 
 -- | Filter Sequence and SequenceData with a Filterfunktion
 -- | Allows e.g. to filter Sequ, SeqPwrRecord and SequFlowRecord         
 filterSequWithSequData2 :: ((Sec,a,b) -> Bool) -> (Sequ,SequData a,SequData b) -> (Sequ,SequData a,SequData b)
-filterSequWithSequData2 f (Sequ xs, SequData ys, SequData zs) = (Sequ xsf, SequData ysf, SequData zsf )
+filterSequWithSequData2 f (SequData xs, SequData ys, SequData zs) = (SequData xsf, SequData ysf, SequData zsf )
    where (xsf,ysf,zsf) = unzip3 $ filter f $ zip3 xs ys zs  
 
 
@@ -75,9 +74,8 @@ instance (ToTable a) => ToTable (SequData a) where
    toTable os (_ti, rs) =
       fold $ zipWithSecIdxs (\sec r -> toTable os (show sec, r)) rs
 
-
-instance ToTable Sequ where
-   toTable _os (ti, Sequ xs) =
+instance ToTable (SequData Sec) where
+   toTable _os (ti, SequData xs) =
       [Table {
          tableTitle = "Sequence: " ++ ti,
          tableData = td,

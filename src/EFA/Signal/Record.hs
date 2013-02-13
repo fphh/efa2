@@ -175,7 +175,7 @@ newTimeBase (Record time m) newTime = Record newTime (M.map f m)
 sliceRecord ::  (V.Slice v, V.Storage v a) => Record s t1 t2 id v a -> (Int,Int) ->  Record s t1 t2 id v a
 sliceRecord (Record t m) (idx1,idx2) = Record (f t) (M.map g m)
   where f sig = S.slice idx1 (idx2-idx1+1) sig
-        g sig = S.slice idx1 (idx2-idx1+1) sig -- Monomorphism Restriction ? 
+        g sig = S.slice idx1 (idx2-idx1+1) sig -- @HT Monomorphism Restriction ? - when I only use f I get type errors 
 
 -----------------------------------------------------------------------------------
 -- Various Class and Instance Definition for the different Sequence Datatypes

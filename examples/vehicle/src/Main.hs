@@ -15,10 +15,9 @@ import EFA.IO.CSVImport (modelicaCSVImport)
 import qualified EFA.Signal.SequenceData as SD
 import EFA.Signal.Record (PPosIdx(PPosIdx), SignalRecord,
                           Record(Record), 
-                          SignalRecord)
-import EFA.Signal.Sequence (makeSequenceRaw, makeSeqFlowTopology,
-                            removeZeroTimeSections, 
-                            removeLowEnergySections, genSequFlow)
+                          SignalRecord,getTime, newTimeBase)
+import EFA.Signal.Sequence (makeSeqFlowTopology,
+                            removeLowEnergySections, genSequFlow, addZeroCrossings, removeLowTimeSections, genSequ,sectionRecordsFromSequence)
 import qualified EFA.Signal.Signal as Sig (toList)
 import qualified EFA.Report.Report as Rep
 import qualified EFA.Graph.Draw as Draw
@@ -59,53 +58,56 @@ main = do
 --  PL.rPlotSplit 9 ("Imported Signals",rawSignals)
 
 --------------------------------------------------------------------------------------- 
--- * Condition Signals
+-- * Condition Signals and Calculate Powers
   let signals = Signals.condition rawSignals 
   let powerSignals = Signals.calculatePower signals 
       
 --------------------------------------------------------------------------------------- 
 -- * Add zerocrossings in Powersignals and Signals
-  let powerSignals0 =     
-      
-      
+  let powerSignals0 = addZeroCrossings powerSignals   
+  let signals0 = newTimeBase signals (getTime powerSignals0) 
   
---  PL.rPlotSplit 9 ("Conditioned Signals", signals)
+
+--------------------------------------------------------------------------------------- 
+-- * Plot Signals
   
-  
-  Plot.vehicle signals
---  Plot.engine signals
-  Plot.motor signals
-  Plot.generator signals
-  Plot.driveline signals
-  Plot.electric signals
-  Plot.battery signals
+  Plot.vehicle signals0
+  Plot.motor signals0
+  Plot.generator signals0
+  Plot.driveline signals0
+  Plot.electric signals0
+  Plot.battery signals0
   
 --------------------------------------------------------------------------------------- 
--- * Calculate Powers
+-- * Plot Power Signals
   
-  Plot.genPowers powerSignals   
-  Plot.propPowers powerSignals
-  Plot.vehPowers powerSignals
-  
---  PL.rPlotSplit 9 ("Conditioned Signals", signals)
+  Plot.genPowers powerSignals0   
+  Plot.propPowers powerSignals0
+  Plot.vehPowers powerSignals0
   
 ---------------------------------------------------------------------------------------
 -- * Cut Signals and filter Time Sektions
   
-  let (sequenceRaw,sequencePowersRaw) = makeSequenceRaw powerSignals
+  let (sequenceRaw,sequencePowersRaw) = genSequ powerSignals0
   
-  let (sequenc,sequencePowers) =
-        removeZeroTimeSections (sequenceRaw,sequencePowersRaw)
+  -- filter for Modelica-specific steps or remove time section with low time duration
+  let (sequ,sequencePowers) = removeLowTimeSections(sequenceRaw,sequencePowersRaw) 0
       
+  let sequenceSignals = sectionRecordsFromSequence signals0 sequ    
+  
 ---------------------------------------------------------------------------------------
 -- * Integrate Power and Sections on Energy
   
   let sequenceFlows = genSequFlow sequencePowers
 
   let (sequenceFilt,sequencePowersFilt,sequenceFlowsFilt) =
-        removeLowEnergySections (sequenc,sequencePowers,sequenceFlows) (0) 
+        removeLowEnergySections (sequ,sequencePowers,sequenceFlows) 0 
 
-  --Rep.report [] ("Sequenz",sequenc)    
+  
+---------------------------------------------------------------------------------------
+-- * Report Record Data
+  
+  --Rep.report [] ("Sequenz",sequ)    
   -- Rep.report [] ("SequencePowerRecord", sequencePowers)
   Rep.report [] ("SequencePowerRecord", sequenceFlowsFilt)
 
