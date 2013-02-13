@@ -92,9 +92,12 @@ getTimeWindow rec = (S.minimum t, S.maximum t)
 -- | Use carefully -- removes signal jitter around zero
 removeZeroNoise :: (V.Walker v, V.Storage v a, Ord a, Num a) => PowerRecord nty v a -> a -> PowerRecord nty v a
 removeZeroNoise (Record time pMap) threshold =
-   Record time (M.map (S.map g) pMap)
-  where g x | abs x < threshold = 0
-            | otherwise = x
+   Record time $ M.map (S.map (hardShrinkage threshold)) pMap
+
+hardShrinkage :: (Ord a, Num a) => a -> a -> a
+hardShrinkage threshold x =
+   if abs x < threshold then 0 else x
+
 
 -- | Generate a new Record with selected signals
 extractRecord ::
