@@ -7,11 +7,10 @@
 
 module EFA.Signal.Plot where
 
-import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Data as D
 import qualified EFA.Signal.Vector as SV
-import EFA.Signal.SequenceData (SequData(SequData), zipWithSecIdxs)
+import EFA.Signal.SequenceData (SequData, zipWithSecIdxs)
 import EFA.Signal.Record (Record(Record), splitRecord,extractRecord)
 import EFA.Signal.Signal (TC, Signal, toSigList, getDisplayType)
 -- import EFA.Signal.Base (BSum)
@@ -287,16 +286,15 @@ instance  (Fractional y,
            SV.FromList v,
            TDisp t2,
            TDisp t1,
-           Tuple.C y, 
+           Tuple.C y,
            Atom.C y) =>
      RPlot (Record s t1 t2 id v y) where
        rPlotCore rName rec = [rPlotSingle rName rec]
 
 instance (RPlot record) => RPlot (SequData record) where
    -- wenn sqName hier nicht gebraucht wird, dann ist an der ganzen Konstruktion was faul
-   rPlotCore _sqName (SequData rs) = concat $ zipWith rPlotCore nameList rs
-    where
-      nameList = map (\ x -> "Record of " ++ show x) [Idx.Section 1 ..]
+   rPlotCore _sqName =
+      Fold.fold . zipWithSecIdxs (\x -> rPlotCore ("Record of " ++ show x))
 
 rPlotSingle ::
    (Show id, TDisp typ0, TDisp typ1,
