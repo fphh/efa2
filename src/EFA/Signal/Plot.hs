@@ -336,17 +336,6 @@ rPlot :: (RPlot a) => String -> a -> IO ()
 rPlot name r =
    mapM_ Plot.plotDefault $ rPlotCore name r
 
-{-
--- Apply a Function before Plotting 
-rPlotSelect :: (Ord id, 
-                Show id, 
-                Show (v a),
-                RPlot (Record s t1 t2 id v a)) 
-               => (String, Record s t1 t2 id v a) -> [id] -> IO ()
-rPlotSelect (name,r) idList = mapM_ Plot.plotDefault $ rPlotCore name r
-  where r = extractRecord r idList
--}
-
 
 --------------------------------------------
 -- rPlot command to show max n signals per window
