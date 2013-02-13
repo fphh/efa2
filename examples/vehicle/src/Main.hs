@@ -62,6 +62,12 @@ main = do
 -- * Condition Signals
   let signals = Signals.condition rawSignals 
   let powerSignals = Signals.calculatePower signals 
+      
+--------------------------------------------------------------------------------------- 
+-- * Add zerocrossings in Powersignals and Signals
+  let powerSignals0 =     
+      
+      
   
 --  PL.rPlotSplit 9 ("Conditioned Signals", signals)
   

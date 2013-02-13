@@ -157,8 +157,25 @@ genPowerRecord time =
 
 
 
+-- | Add interpolated data points in an existing record 
+newTimeBase :: (Fractional a,
+                Ord a,
+                V.Find v,
+                V.Lookup v,
+                V.Walker v,
+                V.Singleton v,
+                V.Storage v a) => 
+               Record Signal (Typ A T Tt) t2 id v a -> TSignal v a -> Record Signal  (Typ A T Tt)  t2 id v a
+newTimeBase (Record time m) newTime = Record newTime (M.map f m)   
+  where f sig = S.interp1LinSig time sig newTime  
 
 
+
+-- | Create a new Record by slicing time and all signals on given Indices
+sliceRecord ::  (V.Slice v, V.Storage v a) => Record s t1 t2 id v a -> (Int,Int) ->  Record s t1 t2 id v a
+sliceRecord (Record t m) (idx1,idx2) = Record (f t) (M.map g m)
+  where f sig = S.slice idx1 (idx2-idx1+1) sig
+        g sig = S.slice idx1 (idx2-idx1+1) sig -- Monomorphism Restriction ? 
 
 -----------------------------------------------------------------------------------
 -- Various Class and Instance Definition for the different Sequence Datatypes

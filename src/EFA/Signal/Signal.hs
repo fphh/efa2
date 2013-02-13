@@ -1147,3 +1147,26 @@ getSample ::  (SV.Singleton v1,
               Int ->  
               TC Sample t1 (Data Nil d1)
 getSample x idx = P.fst $ P.maybe (error "Error in EFA.Signal.Signal/getSample - Empty List") id $ viewL $ subSignal1D x [idx]
+
+
+-- | get a signal slice with startIndex and Number of elements
+slice ::  (SV.Slice v1, SV.Storage v1 d1) => Int -> Int -> TC s1 t1 (Data (v1 :> Nil) d1) -> TC s1 t1 (Data (v1 :> Nil) d1)
+slice start num (TC x) = TC $ D.slice start num x  
+
+
+-- | Interpolate an x-y - Lookup-Curve with a signal. Also can be used to resample a signal with a new time vector 
+interp1LinSig ::  (Eq d1, 
+                     Fractional d1, 
+                     Num d1, 
+                     Ord d1, 
+                     SV.Storage v1 d1, 
+                     SV.Find v1,
+                     SV.Singleton v1, 
+                     SV.Lookup v1, 
+                     SV.Walker v1) => 
+                   TC Signal t1 (Data (v1 :> Nil) d1) ->  
+                   TC Signal t2 (Data (v1 :> Nil) d1) ->  
+                   TC Signal t1 (Data (v1 :> Nil) d1) -> 
+                   TC Signal t2 (Data (v1 :> Nil) d1)
+interp1LinSig xSig ySig xSigLookup = tmap f xSigLookup
+  where f x = interp1Lin xSig ySig x 

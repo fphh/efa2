@@ -20,7 +20,7 @@ import EFA.Signal.SequenceData
 
 
 import EFA.Signal.Record(Record(..),PowerRecord,FlowRecord,
-           RSamp1,rsingleton, RSig,rlen,rviewL,rviewR,getTimeWindow)
+           RSamp1,rsingleton, RSig,rlen,rviewL,rviewR,getTimeWindow,sliceRecord)
         
   
 import EFA.Signal.Base
@@ -563,21 +563,6 @@ approxAbs eps x y =
 -----------------------------------------------------------------------------------
 -- * New Functions from PG to allow Signal Cutting on Time Windows
 
-{-
-data ZeroCross = Exact a | Interp a | NoCrossing 
-data Cut a = (SignalIdx, a 
-type Seq
-
--- | Get Zero Crossing Times from a given Power Record
-getSectionTimes :: SequData (PowerRecord nty v a) -> (SequData (SignalIdx, CutRatio), SequSignal)
--}
-
-
-
-
-
-
-
 
 -- | Get Start and Stop Times for all Power Records in a Sequence
 extractCuttingTimes:: (Ord a, 
@@ -588,18 +573,7 @@ extractCuttingTimes:: (Ord a,
 extractCuttingTimes sequ = fmap getTimeWindow sequ
  
 
-{-
--- | Cut a Slice from a Power Record assumes rising order of sections
-extractTimeSectionRecords :: Record s t1 t2 id v a -> [(S.Scal (Typ A T Tt) a, S.Scal (Typ A T Tt) a)] -> Record s t1 t2 id v a
-extractTimeSectionRecords rec@(Record time _ ) (tStart,tEnd) =   
-  where startIdx = findIndex (P.>=tStart) time
-        endIdx = findIndex (P.>=tEnd) time
-        
-        startIdx = lookUp time idx1 
-        endIdx = lookUp time idx2 - 1
 
-        rSig = record2RSig rec
-        
-        slice = getSlice startIdx (endIdx-1) rSig 
-  
--}  
+-- | Create SequencePowerRecord by extracting Slices from Indices given by Sequence
+sectionRecordsFromSequence ::  (V.Slice v, V.Storage v a) => Record s t1 t2 id v a -> Sequ -> SequData (Record s t1 t2 id v a)
+sectionRecordsFromSequence rec (Sequ sequ) = SequData $ map (sliceRecord rec) sequ   
