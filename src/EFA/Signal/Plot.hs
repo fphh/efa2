@@ -340,65 +340,56 @@ rPlot name r =
 --------------------------------------------
 -- rPlot command to show max n signals per window
 
-rPlotSplit :: (Fractional y,
-                      Show id,
-                      SV.Walker v,
-                      SV.Storage v y,
-                      SV.FromList v,
-                      TDisp t2,
-                      TDisp t1,
-                      Tuple.C y,
-                      Atom.C y,
-                      Ord id) =>
-              Int -> String -> Record s t1 t2 id v y -> IO ()
+rPlotSplit ::
+   (TDisp t1, TDisp t2,
+    Show id, Ord id,
+    Fractional y,
+    Tuple.C y, Atom.C y,
+    SV.Walker v,
+    SV.Storage v y,
+    SV.FromList v) =>
+   Int -> String -> Record s t1 t2 id v y -> IO ()
 rPlotSplit n name r =
    zipWithM_
       (\k -> rPlot (name ++ " - Part " ++ show (k::Int)))
       [0..] (splitRecord n r)
 
-rPlotSplitSeq ::(Fractional y,
-                      Ord id,
-                      Show id,
-                      SV.Walker v,
-                      SV.Storage v y,
-                      SV.FromList v,
-                      TDisp t1,
-                      TDisp t2,
-                      Tuple.C y,
-                      Atom.C y) =>
-                Int -> String -> SequData (Record s t1 t2 id v y) -> IO ()
+rPlotSplitSeq ::
+   (TDisp t1, TDisp t2,
+    Show id, Ord id,
+    Fractional y,
+    Tuple.C y, Atom.C y,
+    SV.Walker v,
+    SV.Storage v y,
+    SV.FromList v) =>
+   Int -> String -> SequData (Record s t1 t2 id v y) -> IO ()
 rPlotSplitSeq n name =
    Fold.sequence_ .
    zipWithSecIdxs (\ x -> rPlotSplit n (name ++ " - " ++ show x))
 
 
 --------------------------------------------
--- rPlot command to plot selected Signals only 
+-- rPlot command to plot selected Signals only
 
-rPlotSelect :: (Fractional y,
-                      SV.Walker v,
-                      SV.Storage v y,
-                      SV.FromList v,
-                      TDisp t2,
-                      TDisp t1,
-                      Tuple.C y,
-                      Atom.C y,
-                      Ord id, 
-                      Show id, 
-                      Show (v y)) =>
-               [id] -> String -> Record s t1 t2 id v y -> IO ()
+rPlotSelect ::
+   (TDisp t1, TDisp t2,
+    Show id, Ord id,
+    Fractional y,
+    Tuple.C y, Atom.C y,
+    SV.Walker v,
+    SV.Storage v y,
+    SV.FromList v) =>
+   [id] -> String -> Record s t1 t2 id v y -> IO ()
 rPlotSelect idList name = rPlot name . extractRecord idList
 
 
-rPlotSelectSeq ::  (Fractional y,
-                      Ord id,
-                      Show id,
-                      SV.Walker v,
-                      SV.Storage v y,
-                      SV.FromList v,
-                      TDisp t1,
-                      TDisp t2,
-                      Tuple.C y,
-                      Atom.C y,Show (v y),
-                      RPlot (SequData (Record s t1 t2 id v y))) => [id] -> String -> (SequData (Record s t1 t2 id v y)) ->  IO ()
+rPlotSelectSeq ::
+   (TDisp t1, TDisp t2,
+    Show id, Ord id,
+    Fractional y,
+    Tuple.C y, Atom.C y,
+    SV.Walker v,
+    SV.Storage v y,
+    SV.FromList v) =>
+   [id] -> String -> (SequData (Record s t1 t2 id v y)) ->  IO ()
 rPlotSelectSeq idList name = rPlot name . fmap (extractRecord idList)
