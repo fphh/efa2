@@ -10,9 +10,13 @@ import EFA.Example.Utility (makeEdges)
 
 import qualified EFA.Graph.Topology.Node as Node
 
-data Nodes = N0 | N1 | N2 | N3 deriving (Eq, Ord, Show)
+data Nodes = N0 | N1 | N2 | N3 deriving (Eq, Ord, Enum, Show)
 
-instance Node.Show Nodes
+instance Node.C Nodes where
+   display = Node.displayDefault
+   subscript = Node.subscriptDefault
+   dotId = Node.dotIdDefault
+
 
 topoDreibein :: TD.Topology Nodes
 topoDreibein = Gr.mkGraph ns (makeEdges es)

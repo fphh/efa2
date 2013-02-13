@@ -39,9 +39,13 @@ sec0, sec1, sec2, sec3, sec4 :: Idx.Section
 sec0 :~ sec1 :~ sec2 :~ sec3 :~ sec4 :~ _ = Stream.enumFrom $ Idx.Section 0
 
 
-data Nodes = N0 | N1 | N2 | N3 deriving (Show, Eq, Ord)
+data Nodes = N0 | N1 | N2 | N3 deriving (Show, Eq, Enum, Ord)
 
-instance Node.Show Nodes
+instance Node.C Nodes where
+   display = Node.displayDefault
+   subscript = Node.subscriptDefault
+   dotId = Node.dotIdDefault
+
 
 topoDreibein :: TD.Topology Nodes
 topoDreibein = Gr.mkGraph ns (makeEdges es)

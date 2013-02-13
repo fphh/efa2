@@ -11,9 +11,12 @@ import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified Data.Map as M
 import EFA.Signal.Record(PPosIdx(..),SigId(..))
 
-data Nodes = Tank | EngineFlange | ConBattery | Battery | ConES | MotorFlange | ConFrontBrakes | Chassis | Resistance | ElectricSystem | FrontBrakes | VehicleInertia | RearBrakes deriving (Eq, Ord, Show)
+data Nodes = Tank | EngineFlange | ConBattery | Battery | ConES | MotorFlange | ConFrontBrakes | Chassis | Resistance | ElectricSystem | FrontBrakes | VehicleInertia | RearBrakes deriving (Eq, Ord, Enum, Show)
 
-instance Node.Show Nodes
+instance Node.C Nodes where
+   display = Node.displayDefault
+   subscript = Node.subscriptDefault
+   dotId = Node.dotIdDefault
 
 ----------------------------------------------------------------------
 -- * Define System Topology

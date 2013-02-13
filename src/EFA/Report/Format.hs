@@ -49,7 +49,7 @@ class Format output where
 
    record :: Idx.Record -> output
    section :: Idx.Section -> output
-   sectionNode :: (Show a) => Idx.SecNode a -> output
+   sectionNode :: output -> output -> output
    use :: Idx.Use -> output
    delta :: output -> output
    edgeIdent :: EdgeVar -> output
@@ -77,8 +77,7 @@ instance Format ASCII where
 
    record (Idx.Record r) = ASCII $ show r
    section (Idx.Section s) = ASCII $ show s
-   sectionNode (Idx.SecNode (Idx.Section s) x) =
-      ASCII $ show s ++ "." ++ show x
+   sectionNode (ASCII s) (ASCII x) = ASCII $ s ++ "." ++ x
 
    use = ASCII . show
    delta (ASCII s) = ASCII $ 'd':s
@@ -125,8 +124,7 @@ instance Format Unicode where
 
    record (Idx.Record r) = Unicode $ show r
    section (Idx.Section s) = Unicode $ show s
-   sectionNode (Idx.SecNode (Idx.Section s) x) =
-      Unicode $ show s ++ "." ++ show x
+   sectionNode (Unicode s) (Unicode x) = Unicode $ s ++ "." ++ x
 
    use = Unicode . show
    delta (Unicode s) = Unicode $ '\x2206':s
@@ -207,8 +205,7 @@ instance Format Latex where
 
    record (Idx.Record r) = Latex $ show r
    section (Idx.Section s) = Latex $ show s
-   sectionNode (Idx.SecNode (Idx.Section s) x) =
-      Latex $ show s ++ ":" ++ show x
+   sectionNode (Latex s) (Latex x) = Latex $ s ++ ":" ++ x
 
    use = Latex . show
    delta (Latex s) = Latex $ "\\Delta " ++ s
@@ -231,9 +228,3 @@ instance Format Latex where
    plus (Latex x) (Latex y) = Latex $ x ++ " + " ++ y
    multiply (Latex x) (Latex y) = Latex $ x ++ " \\cdot " ++ y
    power (Latex x) n = Latex $ x ++ "^{" ++ show n ++ "}"
-
-edgeIndex ::
-   (Format output, Show a) =>
-   Idx.Record -> Idx.SecNode a -> Idx.SecNode a -> output
-edgeIndex r x y =
-   record r `connect` sectionNode x `connect` sectionNode y

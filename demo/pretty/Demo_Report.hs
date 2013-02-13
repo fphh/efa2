@@ -16,9 +16,15 @@ import EFA.Report.Report (report, ROpt(..))
 import EFA.Signal.Data ((:>), Nil, Data)
 
 import qualified EFA.Graph.Topology.Node as Node
-data Nodes = Node0 | Node1 deriving (Eq, Ord, Show)
 
-instance Node.Show Nodes
+
+data Nodes = Node0 | Node1 deriving (Eq, Ord, Enum, Show)
+
+instance Node.C Nodes where
+   display = Node.displayDefault
+   subscript = Node.subscriptDefault
+   dotId = Node.dotIdDefault
+
 
 l :: [Double]
 l = [1..5]

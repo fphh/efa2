@@ -45,10 +45,13 @@ instance Enum Nodes where
          toEnum 1 = Source
          toEnum x = C (x-2)
 
-instance Node.Show Nodes where
-         show Sink = Prelude.show Sink
-         show Source = Prelude.show Source
-         show c@(C _) = Prelude.show (fromEnum c - 2)
+instance Node.C Nodes where
+   display Sink = Format.literal "Sink"
+   display Source = Format.literal "Source"
+   display (C c) = Format.integer $ fromIntegral c
+
+   subscript = Node.subscriptDefault
+   dotId = Node.dotIdDefault
 
 c0, c1, c2, c3 :: Nodes
 c0 :~ c1 :~ c2 :~ c3 :~ _ = Stream.enumFrom $ C 0

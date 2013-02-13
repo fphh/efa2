@@ -1,7 +1,7 @@
 {-# LANGUAGE Rank2Types #-}
 module EFA.Equation.System (
   EquationSystem, ExprWithVars,
-  fromTopology, solve, solveFromMeasurement, conservativlySolve,
+  fromTopology, solve, solveFromMeasurement, conservativelySolve,
 
   recAbs, constToExprSys,
   liftV, liftV2, liftF, liftF2,
@@ -23,9 +23,12 @@ module EFA.Equation.System (
   ) where
 
 import qualified EFA.Equation.Env as Env
+import qualified EFA.Equation.Variable as Var
 import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph as Gr
+import qualified EFA.Report.Format as Format
 import EFA.Graph (Edge(..))
 
 import EFA.Equation.Result(Result(..))
@@ -216,8 +219,8 @@ mwhen False _ = mempty
 
 
 fromTopology ::
-  (Eq a, Fractional a, Ord nty, Show nty) =>
-  TD.DirSequFlowGraph nty -> EquationSystem nty s a
+  (Eq a, Fractional a, Ord node, Node.C node) =>
+  TD.DirSequFlowGraph node -> EquationSystem node s a
 fromTopology g = mconcat $
   makeInnerSectionEquations g :
   makeInterSectionEquations g :
@@ -226,8 +229,8 @@ fromTopology g = mconcat $
 -----------------------------------------------------------------
 
 makeInnerSectionEquations ::
-  (Eq a, Fractional a, Ord nty, Show nty) =>
-  TD.DirSequFlowGraph nty -> EquationSystem nty s a
+  (Eq a, Fractional a, Ord node, Node.C node) =>
+  TD.DirSequFlowGraph node -> EquationSystem node s a
 makeInnerSectionEquations g = mconcat $
   makeEnergyEquations (map fst es) :
   makeEdgeEquations es :
@@ -259,8 +262,8 @@ makeEnergyEquations = foldMap mkEq
              where equ x y = energy x y =.= dtime sf * power x y
 
 makeNodeEquations ::
-  (Eq a, Fractional a, Ord nty, Show nty) =>
-  TD.DirSequFlowGraph nty -> EquationSystem nty s a
+  (Eq a, Fractional a, Ord node) =>
+  TD.DirSequFlowGraph node -> EquationSystem node s a
 makeNodeEquations = fold . M.mapWithKey f . Gr.nodes
    where f n (ins, label, outs) = 
             let -- this variable is used again in makeStorageEquations
@@ -279,8 +282,8 @@ makeNodeEquations = fold . M.mapWithKey f . Gr.nodes
 
 
 makeStorageEquations ::
-  (Eq a, Fractional a, Ord nty, Show nty) =>
-  TD.DirSequFlowGraph nty -> EquationSystem nty s a
+  (Eq a, Fractional a, Ord node, Node.C node) =>
+  TD.DirSequFlowGraph node -> EquationSystem node s a
 makeStorageEquations =
    mconcat . concatMap (LH.mapAdjacent f) . getInnersectionStorages
   where f (before, _) (now, dir) =
@@ -309,14 +312,13 @@ getInnersectionStorages = getStorages format
         format n@(_, _, _) = error ("getInnersectionStorages: " ++ show n)
 -}
 getInnersectionStorages ::
-  (Ord nty, Show nty) =>
-  TD.DirSequFlowGraph nty -> [[(Idx.SecNode nty, StDir)]]
+  (Ord node, Node.C node) =>
+  TD.DirSequFlowGraph node -> [[(Idx.SecNode node, StDir)]]
 getInnersectionStorages = getStorages format
   where format ([_], s, []) = (s, InDir)
         format ([], s, [_]) = (s, OutDir)
         format ([], s, [])  = (s, NoDir)
-        format n@(_, _, _)  =
-          error ("getInnersectionStorages: " ++ show n)
+        format (_, s, _)  = errorSecNode "getInnersectionStorages" s
 
 type InOutFormat nty = InOut (Idx.SecNode nty) ()
 type InOut n el = ([Gr.LNode n el], n, [Gr.LNode n el])
@@ -337,8 +339,8 @@ getStorages format =
 -----------------------------------------------------------------
 
 makeInterSectionEquations ::
-  (Eq a, Fractional a, Ord nty, Show nty) =>
-  TD.DirSequFlowGraph nty -> EquationSystem nty s a
+  (Eq a, Fractional a, Ord node, Node.C node) =>
+  TD.DirSequFlowGraph node -> EquationSystem node s a
 makeInterSectionEquations = foldMap f . getIntersectionStorages
   where f (dir, x) =
           case dir of
@@ -353,8 +355,8 @@ _getNode :: Idx.SecNode a -> a
 _getNode (Idx.SecNode _ n) = n
 
 mkInStorageEquations ::
-  (Eq a, Fractional a, Ord nty, Show nty) =>
-  ([Idx.SecNode nty], Idx.SecNode nty, [Idx.SecNode nty]) -> EquationSystem nty s a
+  (Eq a, Fractional a, Ord node, Node.C node) =>
+  ([Idx.SecNode node], Idx.SecNode node, [Idx.SecNode node]) -> EquationSystem node s a
 mkInStorageEquations (_, n, outs) =
    flip foldMap
       (fmap (NonEmpty.sortBy (comparing getSection)) $
@@ -374,8 +376,8 @@ mkInStorageEquations (_, n, outs) =
          in  mconcat $ LH.mapAdjacent f $ NonEmpty.flatten souts
 
 mkOutStorageEquations ::
-  (Eq a, Fractional a, Ord nty, Show nty) =>
-  ([Idx.SecNode nty], Idx.SecNode nty, [Idx.SecNode nty]) -> EquationSystem nty s a
+  (Eq a, Fractional a, Ord node, Node.C node) =>
+  ([Idx.SecNode node], Idx.SecNode node, [Idx.SecNode node]) -> EquationSystem node s a
 mkOutStorageEquations (ins0, n, _) =
   flip foldMap (NonEmpty.fetch ins0) $ \ins ->
   withLocalVar $ \s ->
@@ -384,11 +386,11 @@ mkOutStorageEquations (ins0, n, _) =
     mkSplitFactorEquations (outsumvar n) (energy n) (xfactor n) ins
 
 mkSplitFactorEquations ::
-   (Eq a, Fractional a, Show node) =>
-   ExprWithVars nty s a ->
-   (node -> ExprWithVars nty s a) ->
-   (node -> ExprWithVars nty s a) ->
-   NonEmpty.T [] node -> EquationSystem nty s a
+   (Eq a, Fractional a) =>
+   ExprWithVars node s a ->
+   (secnode -> ExprWithVars node s a) ->
+   (secnode -> ExprWithVars node s a) ->
+   NonEmpty.T [] secnode -> EquationSystem node s a
 mkSplitFactorEquations s ef xf ns =
    (s =.= NonEmpty.sum (fmap ef ns))
    <>
@@ -396,19 +398,23 @@ mkSplitFactorEquations s ef xf ns =
 
 
 getIntersectionStorages ::
-  (Ord nty, Show nty) =>
-  TD.DirSequFlowGraph nty
-  -> [(StDir, ([Idx.SecNode nty], Idx.SecNode nty, [Idx.SecNode nty]))]
+  (Ord node, Node.C node) =>
+  TD.DirSequFlowGraph node
+  -> [(StDir, ([Idx.SecNode node], Idx.SecNode node, [Idx.SecNode node]))]
 getIntersectionStorages = concat . getStorages (format . toSecNode)
   where toSecNode (ins, n, outs) = (map fst ins, n, map fst outs)
-        format x@(ins, Idx.SecNode sec _, outs) =
+        format x@(ins, sn@(Idx.SecNode sec _), outs) =
           case (filter h ins, filter h outs) of
                ([], [])  ->  -- We treat initial storages as in-storages
                  if sec == Idx.initSection then (InDir, x) else (NoDir, x)
                ([_], []) -> (InDir, x)
                ([], [_]) -> (OutDir, x)
-               _ -> error ("getIntersectionStorages: " ++ show x)
+               _ -> errorSecNode "getIntersectionStorages" sn
           where h s = getSection s == sec
+
+errorSecNode :: Node.C node => String -> Idx.SecNode node -> a
+errorSecNode name node =
+   error (name ++ ": " ++ Format.unUnicode (Var.formatSectionNode node))
 
 
 -----------------------------------------------------------------
@@ -449,9 +455,9 @@ but you may also insert complex relations like
 
 
 solve ::
-  (Eq a, Fractional a, Ord nty, Show nty) =>
-  (forall s. EquationSystem nty s a) ->
-  TD.SequFlowGraph nty -> Env.Env nty Env.SingleRecord (Result a)
+  (Eq a, Fractional a, Ord node, Node.C node) =>
+  (forall s. EquationSystem node s a) ->
+  TD.SequFlowGraph node -> Env.Env node Env.SingleRecord (Result a)
 solve given g = runST $ do
   let dirG = toDirSequFlowGraph g
       EquationSystem eqsys = given <> fromTopology dirG
@@ -465,16 +471,16 @@ solve given g = runST $ do
 
 
 fromTopology' ::
-  (Eq a, Fractional a, Ord nty, Show nty) =>
-  TD.DirSequFlowGraph nty -> EquationSystem nty s a
+  (Eq a, Fractional a, Ord node, Node.C node) =>
+  TD.DirSequFlowGraph node -> EquationSystem node s a
 fromTopology' g = mconcat $
   makeInnerSectionEquations' g :
   makeInterSectionEquations g :
   []
 
 makeInnerSectionEquations' ::
-  (Eq a, Fractional a, Ord nty, Show nty) =>
-  TD.DirSequFlowGraph nty -> EquationSystem nty s a
+  (Eq a, Fractional a, Ord node, Node.C node) =>
+  TD.DirSequFlowGraph node -> EquationSystem node s a
 makeInnerSectionEquations' g = mconcat $
   makeEnergyEquations (map fst es) :
   makeEdgeEquations es :
@@ -486,8 +492,8 @@ makeInnerSectionEquations' g = mconcat $
 
 
 makeNodeEquations' ::
-  (Eq a, Fractional a, Ord nty, Show nty) =>
-  TD.DirSequFlowGraph nty -> EquationSystem nty s a
+  (Eq a, Fractional a, Ord node, Node.C node) =>
+  TD.DirSequFlowGraph node -> EquationSystem node s a
 makeNodeEquations' = fold . M.mapWithKey f . Gr.nodes
    where f n (ins, _, outs) =
             let -- this variable is used again in makeStorageEquations
@@ -506,9 +512,9 @@ makeNodeEquations' = fold . M.mapWithKey f . Gr.nodes
 
 
 solveFromMeasurement ::
-  (Eq a, Fractional a, Ord nty, Show nty) =>
-  (forall s. EquationSystem nty s a) ->
-  TD.SequFlowGraph nty -> Env.Env nty Env.SingleRecord (Result a)
+  (Eq a, Fractional a, Ord node, Node.C node) =>
+  (forall s. EquationSystem node s a) ->
+  TD.SequFlowGraph node -> Env.Env node Env.SingleRecord (Result a)
 solveFromMeasurement given g = runST $ do
   let dirG = toDirSequFlowGraph g
       EquationSystem eqsys = given <> fromTopology' dirG
@@ -529,11 +535,11 @@ solveFromMeasurement given g = runST $ do
 --     <>
 -- (im Moment 273 und 274) auszukommentieren.
 
-conservativlySolve ::
-  (Eq a, Fractional a, Ord nty, Show nty) =>
-  (forall s. EquationSystem nty s a) ->
-  TD.SequFlowGraph nty -> Env.Env nty Env.SingleRecord (Result a)
-conservativlySolve given g = runST $ do
+conservativelySolve ::
+  (Eq a, Fractional a, Ord node, Node.C node) =>
+  (forall s. EquationSystem node s a) ->
+  TD.SequFlowGraph node -> Env.Env node Env.SingleRecord (Result a)
+conservativelySolve given g = runST $ do
   let dirG = toDirSequFlowGraph g
       EquationSystem eqsys = given <> fromTopology dirG
       EquationSystem givenSys = given

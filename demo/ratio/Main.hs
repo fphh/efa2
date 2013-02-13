@@ -9,6 +9,7 @@ import qualified EFA.Equation.System as EqGen
 import EFA.Equation.System ((=.=))
 
 import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
@@ -25,7 +26,13 @@ import Data.Foldable (foldMap)
 sec0 :: Idx.Section
 sec0 :~ _ = Stream.enumFrom $ Idx.Section 0
 
-data Nodes = Sink | Source deriving (Ord, Eq, Show)
+data Nodes = Sink | Source deriving (Ord, Eq, Enum, Show)
+
+instance Node.C Nodes where
+   display = Node.displayDefault
+   subscript = Node.subscriptDefault
+   dotId = Node.dotIdDefault
+
 
 linearOne :: TD.Topology Nodes
 linearOne = mkGraph nodes (makeEdges edges)
