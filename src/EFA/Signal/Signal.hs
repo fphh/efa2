@@ -447,31 +447,24 @@ instance Const Scalar Nil where
    toConst _len x = toScalar x
 
 
-{-
-getSigVec :: TC Signal typ (Data (v1 :> Nil) d) -> v1 d
-getSigVec (TC (Data (D1 x))) = x
+unconsData :: TC s typ (Data c d) -> Apply c d
+unconsData (TC (Data x)) = x
 
-vec2Sig :: v1 d -> TC Signal typ (Data (v1 :> Nil) d)
-vec2Sig x = (TC (Data (D1 x)))
-
--}
+consData :: Apply c d -> TC s typ (Data c d)
+consData x = TC (Data x)
 
 
-fromSigList :: (SV.Storage v1 d,
-                SV.Storage v2 (v1 d),
-                SV.FromList v1,
-                SV.FromList v2) => 
-               [TC s typ (Data (v1 :> Nil) d)] -> TC s typ (Data (v2 :> v1 :> Nil) d)
-fromSigList sigList = fromList2 listList
-            where listList = P.map toList sigList
+fromSigList ::
+   (SV.Storage v (Apply c d), SV.FromList v) =>
+   [TC s typ (Data c d)] -> TC s typ (Data (v :> c) d)
+fromSigList =
+   consData . SV.fromList . fmap unconsData
 
-toSigList :: (SV.Storage v1 d,
-              SV.Storage v2 (v1 d),
-              SV.FromList v1,
-              SV.FromList v2) => 
-             TC s typ (Data (v2 :> v1 :> Nil) d) -> [TC s typ (Data (v1 :> Nil) d)]
-toSigList sig2D = P.map fromList listList
-            where listList = toList2 sig2D
+toSigList ::
+   (SV.Storage v (Apply c d), SV.FromList v) =>
+   TC s typ (Data (v :> c) d) -> [TC s typ (Data c d)]
+toSigList =
+   fmap consData . SV.toList . unconsData
 
 
 ----------------------------------------------------------
@@ -502,14 +495,14 @@ tmap f xs = changeType $ map (fromSample . f . toSample) xs
 ----------------------------------------------------------
 -- DeltaMap
 
-deltaMap, deltaMapReverse ::
-   (SV.Singleton v2, SV.Storage v2 (Apply v1 d1), D.ZipWith (v2 :> v1),
-    D.Storage (v2 :> v1) d1, D.Storage (v2 :> v1) d2) =>
+deltaMap ::
+   (SV.Singleton v2, D.ZipWith (v2 :> v1),
+    SV.Storage v2 (Apply v1 d1), SV.Storage v2 (Apply v1 d2),
+    D.Storage v1 d1, D.Storage v1 d2) =>
    (d1 -> d1 -> d2) ->
    TC Signal typ (Data (v2 :> v1) d1) ->
    TC FSignal typ (Data (v2 :> v1) d2)
-deltaMap f x = changeSignalType $ zipWith f x (P.snd $ P.maybe (error "Error in EFA.Signal.Signal/deltaMap - empty tail") id $ viewL x)
-deltaMapReverse f x = changeSignalType $ zipWith f (P.snd $ P.maybe (error "Error in EFA.Signal.Signal/deltaMapReverse - empty tail") id $ viewL x) x
+deltaMap f (TC x) = TC $ D.deltaMap f x
 
 {-
 ----------------------------------------------------------
@@ -517,11 +510,9 @@ deltaMapReverse f x = changeSignalType $ zipWith f (P.snd $ P.maybe (error "Erro
 
 class TDeltaMap s1 s2 c d1 d2 where
       tdeltaMap :: (TC Scalar typ1 (Data Nil d1) -> TC Scalar typ1 (Data Nil d1) -> TC Scalar typ2 (Data Nil d2)) -> TC s1 typ1 (c d1) -> TC s2 typ2 (c d2)
-      tdeltaMapReverse :: (TC Scalar typ1 (Data Nil d1) -> TC Scalar typ1 (Data Nil d1) -> TC Scalar typ2 (Data Nil d2)) -> TC s1 typ1 (c d1) -> TC s2 typ2 (c d2)
 
 instance (SDeltaMap s1 s2 c d1 d2) => TDeltaMap s1 s2 c d1 d2 where
       tdeltaMap f xs = changeType $ deltaMap g xs where g x y = fromScalar $ f (toScalar x) (toScalar y)
-      tdeltaMapReverse f xs = changeType $ deltaMapReverse g xs where g x y = fromScalar $ f (toScalar x) (toScalar y)
 
 
 ----------------------------------------------------------
@@ -753,7 +744,7 @@ deltaSig ::
      DSucc delta1 delta2) =>
     TC Signal (Typ delta1 t1 p1) (Data (v2 :> v1) a) ->
     TC FSignal (Typ delta2 t1 p1) (Data (v2 :> v1) a)
-deltaSig x = changeDelta $ deltaMapReverse (..-) x
+deltaSig x = changeDelta $ deltaMap (P.flip (..-)) x
 
 avSig ::
     (z ~ Apply v1 a, SV.Zipper v2, SV.Walker v2, SV.Singleton v2, SV.Storage v2 z,
@@ -762,7 +753,7 @@ avSig ::
     TC FSignal (Typ delta1 t1 p1) (Data (v2 :> v1) a)
 avSig x =
    changeDelta $
-   deltaMapReverse (\ x1 x2 -> (x1..+x2) ../ P.asTypeOf 2 x1) x
+   deltaMap (\ x1 x2 -> (x1..+x2) ../ P.asTypeOf 2 x1) x
 
 sort ::
    (SV.Sort v, SV.Storage v d, Ord d) =>
@@ -1156,16 +1147,3 @@ getSample ::  (SV.Singleton v1,
               Int ->  
               TC Sample t1 (Data Nil d1)
 getSample x idx = P.fst $ P.maybe (error "Error in EFA.Signal.Signal/getSample - Empty List") id $ viewL $ subSignal1D x [idx]
-
-
-
--- ----------------------------------------------------------
--- -- Equality
-
--- (==):  TC s1 t1 c1 d1 ->  TC s1 t1 c1 d1 -> Bool
--- (==) (TC x) (TC y) =  x D.== y
-
--- (/=):  TC s1 t1 c1 d1 ->  TC s1 t1 c1 d1 -> Bool
--- (/=) =  not . (==)
-  
-  

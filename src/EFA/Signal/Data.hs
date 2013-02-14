@@ -584,6 +584,15 @@ viewR ::
    Data (v2 :> v1) d -> Maybe (Data (v2 :> v1) d, Data v1 d)
 viewR (Data x) = P.fmap (mapPair (Data, Data)) $ SV.viewR x
 
+deltaMap ::
+   (SV.Singleton v2, ZipWith (v2 :> v1),
+    SV.Storage v2 (Apply v1 d1), SV.Storage v2 (Apply v1 d2),
+    Storage v1 d1, Storage v1 d2) =>
+   (d1 -> d1 -> d2) ->
+   Data (v2 :> v1) d1 ->
+   Data (v2 :> v1) d2
+deltaMap f x = P.maybe mempty (zipWith f x . P.snd) $ viewL x
+
 
 
 ----------------------------------------------------------
@@ -737,38 +746,12 @@ instance (SV.Reverse v2) => Reverse (v2 :> v1) where
 ----------------------------------------------------------
 -- Find
 
--- | @HT VV please check, very unsure about this !! PG
+findIndex ::
+   (SV.Find v, SV.Storage v d) =>
+   (d -> Bool) -> Data (v :> Nil) d -> Maybe Int
+findIndex f = withNestedData (SV.findIndex f)
 
-
-class Find c where
-   findIndex :: Storage c d =>  (d -> Bool) -> Data c d -> Maybe Int
-
-instance (SV.Find v1) => Find (v1 :> Nil) where
-   findIndex f xs =  withNestedData (SV.findIndex f) xs
-
-
-class Slice c where
-   slice :: Storage c d => Int -> Int -> Data c d -> Data c d
-
-instance SV.Slice v1 => Slice (v1 :> Nil) where
-   slice idx n xs = withNestedData (Data . SV.slice idx n) xs
-
-
--- | @HT ^^ please check, very unsure about this !! PG
-
-
--- ----------------------------------------------------------
--- -- Equality
-   
--- class DataEq c where
--- (==) :: Data c d -> Bool   
-
--- instance DataEq (Data Nil) where
--- (==) (Data x) (Data y) = x P.== y
-
--- instance DataEq (Data (v1 :> Nil)) where
--- (==) xs = withNestedData SV.== xs
-
--- instance DataEq (Data (v2 :> v1 :> Nil)) where
--- (==) xs = withNestedData SV.== xs
- 
+slice ::
+   (SV.Slice v, SV.Storage v d) =>
+   Int -> Int -> Data (v :> Nil) d -> Data (v :> Nil) d
+slice idx n = withNestedData (Data . SV.slice idx n)

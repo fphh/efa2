@@ -306,17 +306,25 @@ Executable demo-nodedefinition
     Buildable: False
 
 
---Executable example-vehicle
---  Main-Is: examples/vehicle/src/Main.hs
---  GHC-Options: -Wall
---  If flag(buildExamples)
---     Build-Depends:
---       efa,
---       base,
---       containers
---  Else
---    Buildable: False
+Executable example-vehicle
+  Hs-Source-Dirs: examples/vehicle/src
+  Main-Is: Main.hs
+  Other-Modules:
+    Modules.Plots
+    Modules.Signals
+    Modules.System
+    Modules.Topology
+  GHC-Options: -Wall
+  If flag(buildExamples)
+    Build-Depends:
+      efa,
+      gnuplot,
+      base,
+      containers
+  Else
+    Buildable: False
  
+
 Executable demo-stateanalysis
   Main-Is: demo/stateAnalysis/Main.hs
   GHC-Options: -Wall

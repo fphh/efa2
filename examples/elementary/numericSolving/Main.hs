@@ -3,17 +3,17 @@ module Main where
 import EFA.Example.Utility
   ( edgeVar, makeEdges, (.=), constructSeqTopo )
 
+import qualified EFA.Equation.System as EqGen
 import qualified EFA.Graph.Topology.Node as Node
-
+import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Draw as Draw
+import qualified EFA.Graph as Gr
+
+import qualified EFA.Report.Format as Format
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
-
-import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Topology as TD
-import qualified EFA.Equation.System as EqGen
-import qualified EFA.Graph as Gr
 
 import Data.Foldable (foldMap)
 
@@ -21,24 +21,27 @@ import Data.Foldable (foldMap)
 sec0, sec1, sec2, sec3, sec4 :: Idx.Section
 sec0 :~ sec1 :~ sec2 :~ sec3 :~ sec4 :~ _ = Stream.enumFrom $ Idx.Section 0
 
-node0, node1, node2, node3 :: Nodes
+node0, node1, node2, node3 :: Node
 node0 :~ node1 :~ node2 :~ node3 :~ _ = Stream.enumFrom $ Node 0
 
-data Nodes = Node Int deriving (Show, Eq, Ord)
+newtype Node = Node Int deriving (Show, Eq, Ord)
 
-instance Enum Nodes where
+instance Enum Node where
          toEnum = Node
          fromEnum (Node n) = n
 
-instance Node.Show Nodes where
-         show (Node 0) = "null"
-         show (Node 1) = "eins"
-         show (Node 2) = "zwei"
-         show (Node 3) = "drei"
-         show n = Prelude.show n
+instance Node.C Node where
+   display (Node 0) = Format.literal "null"
+   display (Node 1) = Format.literal "eins"
+   display (Node 2) = Format.literal "zwei"
+   display (Node 3) = Format.literal "drei"
+   display (Node n) = Node.display (Node.Int n)
+
+   subscript = Node.subscriptDefault
+   dotId = Node.dotIdDefault
 
 
-topoDreibein :: TD.Topology Nodes
+topoDreibein :: TD.Topology Node
 topoDreibein = Gr.mkGraph ns (makeEdges es)
   where ns = [(node0, TD.Source),
               (node1, TD.Sink),
@@ -46,7 +49,7 @@ topoDreibein = Gr.mkGraph ns (makeEdges es)
               (node3, TD.Storage)]
         es = [(node0, node2), (node1, node2), (node2, node3)]
 
-given :: EqGen.EquationSystem Nodes s Double
+given :: EqGen.EquationSystem Node s Double
 given =
    foldMap (uncurry (.=)) $
 
@@ -77,7 +80,7 @@ given =
 main :: IO ()
 main = do
 
-  let seqTopo = constructSeqTopo topoDreibein [1, 0, 1] 
+  let seqTopo = constructSeqTopo topoDreibein [1, 0, 1]
       env = EqGen.solve given seqTopo
 
   Draw.sequFlowGraphAbsWithEnv seqTopo env

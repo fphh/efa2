@@ -37,7 +37,7 @@ import qualified EFA.Graph.Flow as Flow
 ----------------------------------
 -- * Example Specific Imports
 
-import qualified Modules.System as System (topology, flowStates,Nodes(Battery))
+import qualified Modules.System as System (topology, flowStates,Node(Battery))
 
 -- Signal Treatment
 import Modules.Signals as Signals (condition,calculatePower)

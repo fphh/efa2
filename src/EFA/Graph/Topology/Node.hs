@@ -2,31 +2,42 @@
 
 module EFA.Graph.Topology.Node where
 
-import Prelude hiding (String, Int, Show)
+import qualified EFA.Report.Format as Format
+import EFA.Report.Format (Format)
+
+import Prelude hiding (String, Int)
 import qualified Prelude as P
 
-class P.Show nty => Show nty where
-      show :: nty -> P.String
-      show = P.show
+class Ord node => C node where
+   display :: Format output => node -> output
+   subscript :: Format output => node -> output
+   dotId :: node -> P.String
 
-newtype Node = Node P.Int deriving (P.Show, Eq, Ord)
+displayDefault :: (Show node, Format output) => node -> output
+displayDefault = Format.literal . show
 
-instance Enum Node where
-         toEnum = Node
-         fromEnum (Node n) = n
+subscriptDefault :: (Show node, Format output) => node -> output
+subscriptDefault = Format.literal . show
 
-instance Show Node where
-         show (Node x) = P.show x
+dotIdDefault :: (Enum node) => node -> P.String
+dotIdDefault = show . fromEnum
 
-newtype Int = Int P.Int deriving (P.Show, Eq, Ord)
+
+newtype Int = Int P.Int deriving (Show, Eq, Ord)
 
 instance Enum Int where
-         toEnum = Int
-         fromEnum (Int n) = n
+   toEnum = Int
+   fromEnum (Int n) = n
 
-instance Show Int
+instance C Int where
+   display (Int n) = Format.integer $ fromIntegral n
+   subscript (Int n) = Format.integer $ fromIntegral n
+   dotId (Int n) = show n
 
-newtype String = String P.String deriving (P.Show, Eq, Ord)
-instance Show String where
-         show (String str) = str
 
+newtype String = String P.String deriving (Show, Eq, Ord)
+
+instance C String where
+   display (String str) = Format.literal str
+   subscript (String str) = Format.literal str
+   dotId (String str) = str

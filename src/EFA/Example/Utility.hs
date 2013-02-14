@@ -26,7 +26,7 @@ makeNodes ns = map f ns
   where f (n, ty) = (makeNode n, ty)
 -}
 
-makeEdges :: [(nty, nty)] -> [Gr.LEdge nty ()]
+makeEdges :: [(node, node)] -> [Gr.LEdge node ()]
 makeEdges = map (\(a, b) -> (Gr.Edge a b, ()))
 
 {-
@@ -36,8 +36,8 @@ makeSimpleEdges es = map f es
 -}
 
 constructSeqTopo ::
-  (Ord nty) =>
-  TD.Topology nty -> [Int] -> TD.SequFlowGraph nty
+  (Ord node) =>
+  TD.Topology node -> [Int] -> TD.SequFlowGraph node
 constructSeqTopo topo states = mkSeqTopo (select sol states)
   where sol = bruteForce topo
         select ts = map (ts!!)
@@ -50,33 +50,33 @@ recAbs = EqGen.recAbs
 
 
 selfAssign ::
-  (Eq (term (Var.Index nty)), Ord (t nty), MkVarC term, MkIdxC t,
+  (Eq (term (Var.Index node)), Ord (t node), MkVarC term, MkIdxC t,
    Env.AccessMap t) =>
-  t nty -> EqGen.EquationSystem nty s (term (Var.Index nty))
+  t node -> EqGen.EquationSystem node s (term (Var.Index node))
 selfAssign idx =
    EqGen.getVar idx .= mkVar idx
 
 infixr 6 =<>
 (=<>) ::
-  ( Eq (term (Var.Index nty)), Ord (t nty), Env.AccessMap t,
+  ( Eq (term (Var.Index node)), Ord (t node), Env.AccessMap t,
     MkVarC term, MkIdxC t) =>
-  t nty
-  -> EqGen.EquationSystem nty s (term (Var.Index nty))
-  -> EqGen.EquationSystem nty s (term (Var.Index nty))
+  t node
+  -> EqGen.EquationSystem node s (term (Var.Index node))
+  -> EqGen.EquationSystem node s (term (Var.Index node))
 idx =<> eqsys = selfAssign idx <> eqsys
 
 
 edgeVar ::
-   (Idx.SecNode nty -> Idx.SecNode nty -> idx) ->
-   Idx.Section -> nty -> nty -> idx
+   (Idx.SecNode node -> Idx.SecNode node -> idx) ->
+   Idx.Section -> node -> node -> idx
 edgeVar idx sec x y =
    idx
       (Idx.SecNode sec x)
       (Idx.SecNode sec y)
 
 interVar ::
-   (Idx.SecNode nty -> Idx.SecNode nty -> idx) ->
-   Idx.Section -> Idx.Section -> nty -> idx
+   (Idx.SecNode node -> Idx.SecNode node -> idx) ->
+   Idx.Section -> Idx.Section -> node -> idx
 interVar idx sec0 sec1 x =
    idx
       (Idx.SecNode sec0 x)
@@ -87,5 +87,5 @@ infix 0 .=
 
 (.=) ::
   (Eq a) =>
-  EqGen.ExprWithVars nty s a -> a -> EqGen.EquationSystem nty s a
+  EqGen.ExprWithVars node s a -> a -> EqGen.EquationSystem node s a
 evar .= val  =  evar =.= EqGen.constToExprSys val

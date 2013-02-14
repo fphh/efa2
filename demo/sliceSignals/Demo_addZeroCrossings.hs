@@ -12,7 +12,7 @@ import EFA.Signal.Plot
 import EFA.Signal.Base (Val)
 
 
-data Nodes = Node0 | Node1 | Node2 deriving (Eq, Ord, Show)
+data Node = Node0 | Node1 | Node2 deriving (Eq, Ord, Show)
 
 t :: TSigL
 t = S.fromList [0,1,2] 
@@ -22,7 +22,7 @@ p1 = S.fromList [-1,1,1]
 p2 = S.fromList [-1,3,3]
 p3 = S.fromList [-1,6,-6]
 
-pRec :: PowerRecord Nodes [] Val
+pRec :: PowerRecord Node [] Val
 pRec = Record t
          (M.fromListWith
             (error "duplicate keys")
@@ -30,11 +30,11 @@ pRec = Record t
               (PPosIdx Node1 Node0, p2),
               (PPosIdx Node1 Node2, p3)])
 
-pRec0 :: PowerRecord Nodes [] Val
+pRec0 :: PowerRecord Node [] Val
 pRec0 = addZeroCrossings pRec
 
 main :: IO ()
 main = do
   print pRec
   print pRec0
-  rPlot ("pRec0", pRec0)
+  rPlot "pRec0" pRec0

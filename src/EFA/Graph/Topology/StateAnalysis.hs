@@ -56,12 +56,12 @@ checkNodeType Storage _ _ = True
 checkNodeType _ _ _ = False
 
 -- Because of extend, we only do have to deal with Dir edges here!
-checkNode :: (Ord nty) => FlowTopology nty -> nty -> Bool
+checkNode :: (Ord node) => FlowTopology node -> node -> Bool
 checkNode topo x =
    case M.lookup x $ Gr.nodes topo of
       Nothing -> error "checkNode: node not in graph"
-      Just (pre, nty, suc) ->
-         checkNodeType nty
+      Just (pre, node, suc) ->
+         checkNodeType node
             (anyActive $ Gr.sucEdgeLabels topo x suc)
             (anyActive $ Gr.preEdgeLabels topo x pre)
 
@@ -83,12 +83,12 @@ checkIncompleteNodeType typ complete sucActive preActive =
       NoRestriction -> True
       DeadNode -> not sucActive && not preActive
 
-checkCountNode :: (Ord nty) => CountTopology nty -> nty -> Bool
+checkCountNode :: (Ord node) => CountTopology node -> node -> Bool
 checkCountNode topo x =
    case M.lookup x $ Gr.nodes topo of
       Nothing -> error "checkNode: node not in graph"
-      Just (pre, (nty, nadj), suc) ->
-         checkIncompleteNodeType nty
+      Just (pre, (node, nadj), suc) ->
+         checkIncompleteNodeType node
             (S.size pre + S.size suc == nadj)
             (anyActive $ Gr.sucEdgeLabels topo x suc)
             (anyActive $ Gr.preEdgeLabels topo x pre)
@@ -96,13 +96,13 @@ checkCountNode topo x =
 anyActive :: [(n, FlowDirection)] -> Bool
 anyActive = any (isActive . snd)
 
-admissibleCountTopology :: (Ord nty) => CountTopology nty -> Bool
+admissibleCountTopology :: (Ord node) => CountTopology node -> Bool
 admissibleCountTopology topo =
    Fold.all (checkCountNode topo) $ Gr.nodeSet topo
 
 
 type NumberOfAdj = Int
-type CountTopology nty = Gr.Graph nty (NodeType, NumberOfAdj) FlowDirection
+type CountTopology node = Gr.Graph node (NodeType, NumberOfAdj) FlowDirection
 
 
 edgeOrients :: Gr.Edge node -> [(Gr.Edge node, FlowDirection)]
@@ -113,19 +113,19 @@ edgeOrients (Gr.Edge x y) =
    []
 
 admissibleEdges ::
-   (Ord nty) =>
-   LNEdge nty -> CountTopology nty ->
-   [((Gr.Edge nty, FlowDirection), CountTopology nty)]
+   (Ord node) =>
+   LNEdge node -> CountTopology node ->
+   [((Gr.Edge node, FlowDirection), CountTopology node)]
 admissibleEdges e0 g0 = do
    e1 <- edgeOrients e0
    let g1 = Gr.insEdge e1 g0
    guard $ Fold.all (checkCountNode g1) e0
    return (e1, g1)
 
-expand :: (Ord nty) => LNEdge nty -> CountTopology nty -> [CountTopology nty]
+expand :: (Ord node) => LNEdge node -> CountTopology node -> [CountTopology node]
 expand e g = map snd $ admissibleEdges e g
 
-splitNodesEdges :: (Ord nty) => Topology nty -> (CountTopology nty, [Gr.Edge nty])
+splitNodesEdges :: (Ord node) => Topology node -> (CountTopology node, [Gr.Edge node])
 splitNodesEdges topo =
    (Gr.fromMap
        (M.map (\(pre,l,suc) -> (l, S.size pre + S.size suc)) $ Gr.nodes topo)
@@ -134,21 +134,21 @@ splitNodesEdges topo =
 
 
 newtype
-   Alternatives nty =
-      Alternatives {getAlternatives :: [(Gr.Edge nty, FlowDirection)]}
+   Alternatives node =
+      Alternatives {getAlternatives :: [(Gr.Edge node, FlowDirection)]}
 
 instance Eq  (Alternatives a) where (==)     =  equating  (void . getAlternatives)
 instance Ord (Alternatives a) where compare  =  comparing (void . getAlternatives)
 
-alternatives :: (Ord nty) => LNEdge nty -> CountTopology nty -> Alternatives nty
+alternatives :: (Ord node) => LNEdge node -> CountTopology node -> Alternatives node
 alternatives e g =
    Alternatives $ map fst $ admissibleEdges e g
 
 recoursePrioEdge ::
-   (Ord nty) =>
-   Topology nty ->
-   (CountTopology nty, PSQ (LNEdge nty) (Alternatives nty)) ->
-   [(CountTopology nty, PSQ (LNEdge nty) (Alternatives nty))]
+   (Ord node) =>
+   Topology node ->
+   (CountTopology node, PSQ (LNEdge node) (Alternatives node)) ->
+   [(CountTopology node, PSQ (LNEdge node) (Alternatives node))]
 recoursePrioEdge origTopo =
    let recourse tq@(topo, queue) =
           case PSQ.minView queue of
@@ -181,32 +181,32 @@ For @Cluster ns ess@ it must hold
 @ns == (foldMap (foldMap S.singleton) $ M.keys $ head ess)@.
 -}
 data
-   Cluster nty =
+   Cluster node =
       Cluster {
-         clusterNodes :: S.Set nty,
-         clusterEdges :: [M.Map (Gr.Edge nty) FlowDirection]
+         clusterNodes :: S.Set node,
+         clusterEdges :: [M.Map (Gr.Edge node) FlowDirection]
       }
 
 
 emptyCluster ::
-   (Ord nty) =>
-   CountTopology nty -> Cluster nty
+   (Ord node) =>
+   CountTopology node -> Cluster node
 emptyCluster g =
    Cluster S.empty
       (guard (admissibleCountTopology g) >> [M.empty])
 
 singletonCluster ::
-   (Ord nty) =>
-   CountTopology nty -> Gr.Edge nty -> Cluster nty
+   (Ord node) =>
+   CountTopology node -> Gr.Edge node -> Cluster node
 singletonCluster g e =
    Cluster
       (Fold.foldMap S.singleton e)
       (map (uncurry M.singleton . fst) $ admissibleEdges e g)
 
 mergeCluster ::
-   (Ord nty) =>
-   CountTopology nty ->
-   Cluster nty -> Cluster nty -> Cluster nty
+   (Ord node) =>
+   CountTopology node ->
+   Cluster node -> Cluster node -> Cluster node
 mergeCluster topo c0 c1 =
    let nodes = S.union (clusterNodes c0) (clusterNodes c1)
    in  Cluster nodes $ do
@@ -221,12 +221,12 @@ mergeCluster topo c0 c1 =
 Merge the two clusters with the least numbers of possibilities.
 -}
 mergeSmallestClusters ::
-   (Ord nty) =>
-   CountTopology nty ->
-   PQueue Int (Cluster nty) ->
+   (Ord node) =>
+   CountTopology node ->
+   PQueue Int (Cluster node) ->
    Either
-      [FlowTopology nty]
-      (PQueue Int (Cluster nty))
+      [FlowTopology node]
+      (PQueue Int (Cluster node))
 mergeSmallestClusters topo queue0 =
    case PQ.minView queue0 of
       Nothing -> error "empty queue"
@@ -275,10 +275,10 @@ Merge the two clusters
 that give the minimal number of possibilities when merged.
 -}
 mergeMinimizingClusterPairs ::
-   (Ord nty) =>
-   CountTopology nty ->
-   NonEmpty.T [] (Cluster nty) ->
-   Either [FlowTopology nty] (NonEmpty.T [] (Cluster nty))
+   (Ord node) =>
+   CountTopology node ->
+   NonEmpty.T [] (Cluster node) ->
+   Either [FlowTopology node] (NonEmpty.T [] (Cluster node))
 mergeMinimizingClusterPairs topo (NonEmpty.Cons p ps) =
    case NonEmpty.fetch ps of
       Nothing ->
@@ -304,10 +304,10 @@ then there are less possibilities than for non-connected clusters.
 That is, our selection strategy tends to produce connected clusters.
 -}
 mergeMinimizingCluster ::
-   (Ord nty) =>
-   CountTopology nty ->
-   NonEmpty.T [] (Cluster nty) ->
-   Either [FlowTopology nty] (NonEmpty.T [] (Cluster nty))
+   (Ord node) =>
+   CountTopology node ->
+   NonEmpty.T [] (Cluster node) ->
+   Either [FlowTopology node] (NonEmpty.T [] (Cluster node))
 mergeMinimizingCluster topo (NonEmpty.Cons p ps) =
    case NonEmpty.fetch ps of
       Nothing ->
@@ -329,11 +329,11 @@ mergeMinimizingCluster topo (NonEmpty.Cons p ps) =
              NonEmpty.removeEach partition1
 
 
-type LNEdge nty = Gr.Edge nty
+type LNEdge node = Gr.Edge node
 
 -- * various algorithms
 
-bruteForce :: (Ord nty) => Topology nty -> [FlowTopology nty]
+bruteForce :: (Ord node) => Topology node -> [FlowTopology node]
 bruteForce topo =
    filter (\g -> Fold.all (checkNode g) $ Gr.nodeSet g) .
    map (Gr.fromMap (Gr.nodeLabels topo) . M.fromList) $
@@ -343,13 +343,13 @@ bruteForce topo =
 This algorithm is made after reading R. Birds "Making a Century"
 in Pearls of Functional Algorithm Design.
 -}
-branchAndBound :: (Ord nty) => Topology nty -> [FlowTopology nty]
+branchAndBound :: (Ord node) => Topology node -> [FlowTopology node]
 branchAndBound topo =
    map (Gr.nmap fst) $
    uncurry (foldM (flip expand)) $
    splitNodesEdges topo
 
-prioritized :: (Ord nty) => Topology nty -> [FlowTopology nty]
+prioritized :: (Ord node) => Topology node -> [FlowTopology node]
 prioritized topo =
    let (cleanTopo, es) = splitNodesEdges topo
    in  guard (admissibleCountTopology cleanTopo)
@@ -359,7 +359,7 @@ prioritized topo =
         (cleanTopo,
          PSQ.fromList $ map (\e -> e PSQ.:-> alternatives e cleanTopo) es))
 
-clusteringGreedy :: (Ord nty) => Topology nty -> [FlowTopology nty]
+clusteringGreedy :: (Ord node) => Topology node -> [FlowTopology node]
 clusteringGreedy topo =
    let (cleanTopo, es) = splitNodesEdges topo
    in  untilLeft (mergeSmallestClusters cleanTopo) $
@@ -368,21 +368,21 @@ clusteringGreedy topo =
        emptyCluster cleanTopo :
           map (singletonCluster cleanTopo) es
 
-clusteringMinimizing :: (Ord nty) => Topology nty -> [FlowTopology nty]
+clusteringMinimizing :: (Ord node) => Topology node -> [FlowTopology node]
 clusteringMinimizing topo =
    let (cleanTopo, es) = splitNodesEdges topo
    in  untilLeft (mergeMinimizingClusterPairs cleanTopo) $
        emptyCluster cleanTopo !:
           map (singletonCluster cleanTopo) es
 
-clustering :: (Ord nty) => Topology nty -> [FlowTopology nty]
+clustering :: (Ord node) => Topology node -> [FlowTopology node]
 clustering topo =
    let (cleanTopo, es) = splitNodesEdges topo
    in  untilLeft (mergeMinimizingCluster cleanTopo) $
        emptyCluster cleanTopo !:
           map (singletonCluster cleanTopo) es
 
-advanced :: (Ord nty) => Topology nty -> [FlowTopology nty]
+advanced :: (Ord node) => Topology node -> [FlowTopology node]
 advanced = clustering
 
 
@@ -407,10 +407,10 @@ instance Fold.Foldable UndirEdge where
 maxArbEdges :: Int
 maxArbEdges = 6
 
-newtype ArbTopology nty = ArbTopology (Topology nty)
+newtype ArbTopology node = ArbTopology (Topology node)
    deriving (Show)
 
-instance (QC.Arbitrary nty, Ord nty) => QC.Arbitrary (ArbTopology nty) where
+instance (QC.Arbitrary node, Ord node) => QC.Arbitrary (ArbTopology node) where
    shrink (ArbTopology g) =
       case Gr.nodeSet g of
          ns ->
@@ -428,7 +428,7 @@ instance (QC.Arbitrary nty, Ord nty) => QC.Arbitrary (ArbTopology nty) where
          Gr.fromMap nodes $
          M.mapKeys (\(UndirEdge x y) -> Gr.Edge x y) edges
 
-propBranchAndBound :: (Eq nty, Ord nty) => ArbTopology nty -> Bool
+propBranchAndBound :: (Eq node, Ord node) => ArbTopology node -> Bool
 propBranchAndBound (ArbTopology g) =
    bruteForce g == branchAndBound g
 
@@ -447,43 +447,43 @@ graphIdent g = (Gr.nodeLabels g, Gr.edgeLabels g)
 {-
 I do not convert to Set, but use 'sort' in order to check for duplicates.
 -}
-propPrioritized :: (Eq nty, Ord nty) => ArbTopology nty -> Bool
+propPrioritized :: (Eq node, Ord node) => ArbTopology node -> Bool
 propPrioritized (ArbTopology g) =
    Key.sort graphIdent (branchAndBound g)
    ==
    Key.sort graphIdent (prioritized g)
 
-propClustering :: (Eq nty, Ord nty) => ArbTopology nty -> Bool
+propClustering :: (Eq node, Ord node) => ArbTopology node -> Bool
 propClustering (ArbTopology g) =
    Key.sort graphIdent (branchAndBound g)
    ==
    Key.sort graphIdent (clustering g)
 
-propClusteringGreedy :: (Eq nty, Ord nty) => ArbTopology nty -> Bool
+propClusteringGreedy :: (Eq node, Ord node) => ArbTopology node -> Bool
 propClusteringGreedy (ArbTopology g) =
    Key.sort graphIdent (branchAndBound g)
    ==
    Key.sort graphIdent (clusteringGreedy g)
 
-propClusteringMinimizing :: (Eq nty, Ord nty) => ArbTopology nty -> Bool
+propClusteringMinimizing :: (Eq node, Ord node) => ArbTopology node -> Bool
 propClusteringMinimizing (ArbTopology g) =
    Key.sort graphIdent (branchAndBound g)
    ==
    Key.sort graphIdent (clusteringMinimizing g)
 
 
-speedBruteForce :: (Eq nty, Ord nty) => ArbTopology nty -> Bool
+speedBruteForce :: (Eq node, Ord node) => ArbTopology node -> Bool
 speedBruteForce (ArbTopology g) =
    bruteForce g == bruteForce g
 
-speedBranchAndBound :: (Eq nty, Ord nty) => ArbTopology nty -> Bool
+speedBranchAndBound :: (Eq node, Ord node) => ArbTopology node -> Bool
 speedBranchAndBound (ArbTopology g) =
    branchAndBound g == branchAndBound g
 
-speedPrioritized :: (Eq nty, Ord nty) => ArbTopology nty -> Bool
+speedPrioritized :: (Eq node, Ord node) => ArbTopology node -> Bool
 speedPrioritized (ArbTopology g) =
    prioritized g == prioritized g
 
-speedClustering :: (Eq nty, Ord nty) => ArbTopology nty -> Bool
+speedClustering :: (Eq node, Ord node) => ArbTopology node -> Bool
 speedClustering (ArbTopology g) =
    clustering g == clustering g

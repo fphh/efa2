@@ -73,9 +73,9 @@ main = do
 
   print sequ
 
-  rPlot ("PowerRecord", pRec)
-  rPlot ("SequA", sequRecA)
-  rPlot ("SequB", sequRecB)
+  rPlot "PowerRecord" pRec
+  rPlot "SequA" sequRecA
+  rPlot "SequB" sequRecB
 
 {-
   {-

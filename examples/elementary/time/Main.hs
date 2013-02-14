@@ -39,11 +39,15 @@ sec0, sec1, sec2, sec3, sec4 :: Idx.Section
 sec0 :~ sec1 :~ sec2 :~ sec3 :~ sec4 :~ _ = Stream.enumFrom $ Idx.Section 0
 
 
-data Nodes = N0 | N1 | N2 | N3 deriving (Show, Eq, Ord)
+data Node = N0 | N1 | N2 | N3 deriving (Show, Eq, Enum, Ord)
 
-instance Node.Show Nodes
+instance Node.C Node where
+   display = Node.displayDefault
+   subscript = Node.subscriptDefault
+   dotId = Node.dotIdDefault
 
-topoDreibein :: TD.Topology Nodes
+
+topoDreibein :: TD.Topology Node
 topoDreibein = Gr.mkGraph ns (makeEdges es)
   where ns = [ (N0, TD.Source),
                (N1, TD.Crossing),
@@ -51,11 +55,11 @@ topoDreibein = Gr.mkGraph ns (makeEdges es)
                (N3, TD.Storage) ]
         es = [(N0, N1), (N1, N3), (N1, N2)]
 
-seqTopo :: TD.SequFlowGraph Nodes
+seqTopo :: TD.SequFlowGraph Node
 seqTopo = constructSeqTopo topoDreibein [0, 4]
-      
+
 n1, n2, n3, n4, n5, n6 ::
-  EqGen.ExprWithVars Nodes s Double -> EqGen.ExprWithVars Nodes s Double
+  EqGen.ExprWithVars Node s Double -> EqGen.ExprWithVars Node s Double
 
 -- steigend und fallend
 
@@ -75,7 +79,7 @@ n7 = EqGen.liftF2 f
 n5 x = x/sqrt(1+(x+2)*(x+2))
 
 
-n01, n12, n13, n31, p10, p12, p21, p13, p31 :: Idx.Section -> EqGen.ExprWithVars Nodes s a
+n01, n12, n13, n31, p10, p12, p21, p13, p31 :: Idx.Section -> EqGen.ExprWithVars Node s a
 n01 sec = edgeVar EqGen.eta sec N0 N1
 n12 sec = edgeVar EqGen.eta sec N1 N2
 n13 sec = edgeVar EqGen.eta sec N1 N3
@@ -86,23 +90,23 @@ p21 sec = edgeVar EqGen.power sec N2 N1
 p13 sec = edgeVar EqGen.power sec N1 N3
 p31 sec = edgeVar EqGen.power sec N3 N1
 
-stoinit :: EqGen.ExprWithVars Nodes s a
+stoinit :: EqGen.ExprWithVars Node s a
 stoinit = EqGen.storage (Idx.SecNode Idx.initSection N3)
 
---esto :: EqGen.ExprWithVars Nodes s Double
-esto, ein, eout0, eout1 :: Idx.Energy Nodes
+--esto :: EqGen.ExprWithVars Node s Double
+esto, ein, eout0, eout1 :: Idx.Energy Node
 esto = Idx.Energy recAbs (Idx.SecNode sec1 N3) (Idx.SecNode Idx.initSection N3)
 ein = Idx.Energy recAbs (Idx.SecNode sec0 N0) (Idx.SecNode sec0 N1)
 eout0 = Idx.Energy recAbs (Idx.SecNode sec0 N2) (Idx.SecNode sec0 N1)
 eout1 = Idx.Energy recAbs (Idx.SecNode sec1 N2) (Idx.SecNode sec1 N1)
 
 
-sto0, sto1 :: Idx.Storage Nodes
+sto0, sto1 :: Idx.Storage Node
 sto0 = Idx.Storage recAbs (Idx.SecNode sec0 N3)
 sto1 = Idx.Storage recAbs (Idx.SecNode sec1 N3)
 
 
-given :: Double -> Double -> EqGen.EquationSystem Nodes s Double
+given :: Double -> Double -> EqGen.EquationSystem Node s Double
 given x t =
   (n01 sec0 =.= n5 (p10 sec0))
   <> (n12 sec0 =.= 1) -- n5 (p21 sec0))

@@ -24,34 +24,34 @@ import Data.Foldable (foldMap)
 sec0 :: Idx.Section
 sec0 :~ _ = Stream.enumFrom $ Idx.Section 0
 
-data Nodes = Sink | Source deriving (Eq, Ord, Show)
+data Node = Sink | Source deriving (Eq, Ord, Show)
 
-linearOne :: TD.Topology Nodes
+linearOne :: TD.Topology Node
 linearOne = mkGraph nodes (makeEdges edges)
   where nodes = [(Sink, TD.AlwaysSink), (Source, TD.AlwaysSource)]
         edges = [(Source, Sink)]
 
-seqTopo :: TD.SequFlowGraph Nodes
+seqTopo :: TD.SequFlowGraph Node
 seqTopo = constructSeqTopo linearOne [0]
 
 enRange :: [Double]
 enRange = 0.01:[0.5, 1 .. 9]
 
-c :: EqGen.ExprWithVars Nodes s a
+c :: EqGen.ExprWithVars Node s a
 c = edgeVar EqGen.power sec0 Source Sink
 
-n :: EqGen.ExprWithVars Nodes s a
+n :: EqGen.ExprWithVars Node s a
 n = edgeVar EqGen.eta sec0 Source Sink
 
-eta :: Idx.Eta Nodes
+eta :: Idx.Eta Node
 eta = edgeVar (Idx.Eta recAbs) sec0 Source Sink
 
 
 functionEta ::
-  EqGen.ExprWithVars Nodes s Double -> EqGen.ExprWithVars Nodes s Double
+  EqGen.ExprWithVars Node s Double -> EqGen.ExprWithVars Node s Double
 functionEta p = 0.3 * sqrt p
 
-given :: Double -> EqGen.EquationSystem Nodes s Double
+given :: Double -> EqGen.EquationSystem Node s Double
 given p =
    foldMap (uncurry (.=)) $
    (EqGen.dtime sec0, 1) :

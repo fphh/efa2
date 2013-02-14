@@ -21,11 +21,11 @@ import Data.Monoid (mempty)
 sec0 :: Idx.Section
 sec0 = Idx.Section 0
 
-node0, node1, node2, node3 :: Node.Node
-node0 :~ node1 :~ node2 :~ node3 :~ _ = Stream.enumFrom $ Node.Node 0
+node0, node1, node2, node3 :: Node.Int
+node0 :~ node1 :~ node2 :~ node3 :~ _ = Stream.enumFrom $ Node.Int 0
 
 
-topoDreibein :: TD.Topology Node.Node
+topoDreibein :: TD.Topology Node.Int
 topoDreibein = Gr.mkGraph ns (makeEdges es)
   where ns = [(node0, TD.Source),
               (node1, TD.Sink),
@@ -37,7 +37,7 @@ topoDreibein = Gr.mkGraph ns (makeEdges es)
 {-
 Use new Term type here since it simplifies automatically.
 -}
-given :: EqGen.EquationSystem Node.Node s (Term (Index Node.Node))
+given :: EqGen.EquationSystem Node.Int s (Term (Index Node.Int))
 given =
    Idx.DTime recAbs Idx.initSection =<>
    Idx.DTime recAbs sec0 =<>

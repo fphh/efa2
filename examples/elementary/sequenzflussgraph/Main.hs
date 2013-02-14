@@ -19,11 +19,11 @@ import qualified EFA.Graph.Topology.Node as Node
 import Data.List.HT (chop)
 import Data.Char (isSpace)
 
-node0, node1, node2, node3 :: Node.Node
-node0 :~ node1 :~ node2 :~ node3 :~ _ = Stream.enumFrom $ Node.Node 0
+node0, node1, node2, node3 :: Node.Int
+node0 :~ node1 :~ node2 :~ node3 :~ _ = Stream.enumFrom $ Node.Int 0
 
 
-topoDreibein :: TD.Topology Node.Node
+topoDreibein :: TD.Topology Node.Int
 topoDreibein = mkGraph ns (makeEdges es)
   where ns = [ (node0, TD.NoRestriction),
                (node1, TD.NoRestriction),
@@ -55,7 +55,7 @@ readNum s =
 select :: [topo] -> [Int] -> [topo]
 select ts = map (ts!!)
 
-drawSeqGraph :: [TD.FlowTopology Node.Node] ->  IO ()
+drawSeqGraph :: [TD.FlowTopology Node.Int] ->  IO ()
 drawSeqGraph sol =
    Draw.sequFlowGraph .
    Flow.mkSequenceTopology .
