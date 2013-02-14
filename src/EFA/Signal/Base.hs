@@ -89,7 +89,7 @@ sign :: (Eq a, Ord a, Num a, Fractional a) => a -> Sign
 sign x | x > eps = PSign
        | x < -eps = NSign
        | otherwise = ZSign
-       where eps = 1^^(-12::Int) -- eps = 1^^(-1::Int)
+       where eps = 0 -- eps = 1^^(-12::Int) -- eps = 1^^(-1::Int)
 
 {-
 sign x =

@@ -15,7 +15,7 @@ import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Vector as V
 
 import EFA.Signal.SequenceData
-          (SequData(..), Sequ(..), Sec,
+          (SequData(..), Sequ, Sec,
            filterSequWithSequData,filterSequWithSequData2)
 
 
@@ -580,3 +580,9 @@ sectionRecordsFromSequence ::  (V.Slice v, V.Storage v a) => Record s t1 t2 id v
 sectionRecordsFromSequence rec (SequData sequ) = SequData $ map (sliceRecord rec) sequ   
 
 
+-- | Generate Time Signal with Sequence Number to allow Plotting
+genSequenceSignal :: (V.FromList v, V.Storage v a, Num a) => Sequ -> S.UTSignal v a 
+genSequenceSignal (SequData xs) = S.fromList $ concat $ fmap f xs
+  where
+    f (idx1, idx2) = [1] ++ replicate (idx2-idx1-1) 0 ++ [-1]  
+      

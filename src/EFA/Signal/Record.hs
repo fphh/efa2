@@ -1,5 +1,6 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE FlexibleContexts#-}
 
 module EFA.Signal.Record where
 
@@ -156,6 +157,13 @@ genPowerRecord time =
                 (flipPos pposIdx, S.setType sigB)])
 
 
+addSignals :: (Ord id, V.Len (v a),Show id) => 
+              [(id, TC s t2 (Data (v :> Nil) a))]  -> 
+              Record s t1 t2 id v a -> Record s t1 t2 id v a
+addSignals list (Record time m) =  (Record time (foldl f m list))   
+  where f ma (ident,sig) = if S.len time == S.len sig 
+                       then M.insert ident sig ma
+                       else error ("Error in addSignals - signal length differs: " ++ show ident) 
 
 -- | Add interpolated data points in an existing record 
 newTimeBase :: (Fractional a,

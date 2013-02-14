@@ -19,7 +19,7 @@ model ElectricMotor
   parameter Real maxPower(start = 15000, unit = "1") "Maximum Power" annotation(Placement(visible = true, transformation(origin = {71.2644,78.1609}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   parameter Real eta(start = 0.95, unit = "1") "Best Efficiency" annotation(Placement(visible = true, transformation(origin = {71.2644,78.1609}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   parameter Real inertia(start = 0.15, unit = "1") "Rotor Inertia" annotation(Placement(visible = true, transformation(origin = {71.2644,78.1609}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-  Plus plus1 annotation(Placement(visible = true, transformation(origin = {56.6667,55.5556}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  Plus plus1(k = 0) annotation(Placement(visible = true, transformation(origin = {56.6667,55.5556}, extent = {{-12,-12},{12,12}}, rotation = 0)));
 equation
   connect(plus1.y,division2.u1) annotation(Line(points = {{46.7,55.0889},{41.9444,55.0889},{41.9444,43.8889},{18.3333,43.8889},{18.3333,44.1011},{17.0022,44.1011}}));
   connect(efficiency1.y,plus1.u) annotation(Line(points = {{113.217,25.8659},{125.833,25.8659},{125.833,54.1667},{66.7667,54.1667},{66.7667,54.5222}}));

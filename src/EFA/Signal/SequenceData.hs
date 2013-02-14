@@ -1,5 +1,8 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE OverlappingInstances #-}
+
+
 module EFA.Signal.SequenceData where
 
 import qualified EFA.Graph.Topology.Index as Idx

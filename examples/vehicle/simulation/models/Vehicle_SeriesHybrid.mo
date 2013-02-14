@@ -10,7 +10,7 @@ model Vehicle
   Modelica.Mechanics.Translational.Sensors.SpeedSensor speedsensor1 annotation(Placement(visible = true, transformation(origin = {142.733,-85.9264}, extent = {{12,12},{-12,-12}}, rotation = -180)));
   Modelica.Mechanics.Rotational.Components.IdealRollingWheel idealrollingwheel2 annotation(Placement(visible = true, transformation(origin = {144.252,-50.5747}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Mechanics.Rotational.Components.Brake brake2 annotation(Placement(visible = true, transformation(origin = {87.9311,-51.1495}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-  ElectricMotor electricmotor2 annotation(Placement(visible = true, transformation(origin = {-60.7752,82.7907}, extent = {{12,12},{-12,-12}}, rotation = -180)));
+  ElectricMotor electricmotor2(maxTorque = 200, maxPower = 30000, eta = 0.95, inertia = 0) annotation(Placement(visible = true, transformation(origin = {-60.7752,82.7907}, extent = {{12,12},{-12,-12}}, rotation = -180)));
   Modelica.Electrical.Analog.Basic.Ground ground3 annotation(Placement(visible = true, transformation(origin = {-63.5659,51.4729}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Controller_SeriesHybrid controller_serieshybrid1 annotation(Placement(visible = true, transformation(origin = {-117.519,40}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Mechanics.Rotational.Sensors.SpeedSensor speedsensor2 annotation(Placement(visible = true, transformation(origin = {-86.2016,93.0233}, extent = {{-6.1579,-6.1579},{6.1579,6.1579}}, rotation = 0)));
@@ -23,7 +23,7 @@ model Vehicle
   BrakeSystem brakesystem1 annotation(Placement(visible = true, transformation(origin = {27.0115,-55.1724}, extent = {{-17.5692,-17.5692},{17.5692,17.5692}}, rotation = 0)));
   GasPedal gaspedal1 annotation(Placement(visible = true, transformation(origin = {-51.0051,-14.0577}, extent = {{-15.972,-15.972},{15.972,15.972}}, rotation = 0)));
   Modelica.Electrical.Analog.Sensors.PotentialSensor potentialsensor1 annotation(Placement(visible = true, transformation(origin = {27.5969,79.0698}, extent = {{-7.45106,-7.45106},{7.45106,7.45106}}, rotation = 0)));
-  ElectricMotor electricmotor1(maxTorque = 600, maxPower = 100000, eta = 0.95, inertia = 0.16) annotation(Placement(visible = true, transformation(origin = {-14.3747,-8.36288}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  ElectricMotor electricmotor1(maxTorque = 600, maxPower = 100000, eta = 0.95, inertia = 0) annotation(Placement(visible = true, transformation(origin = {-14.3747,-8.36288}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Gearbox gearbox1 annotation(Placement(visible = true, transformation(origin = {29.8263,-8.21657}, extent = {{-17.5692,-17.5692},{17.5692,17.5692}}, rotation = 0)));
 equation
   connect(gearbox1.flange_b,brake1.flange_a) annotation(Line(points = {{46.1697,-6.85462},{75.8621,-6.85462},{75.8621,-8.04598},{75.3563,-8.04598}}));

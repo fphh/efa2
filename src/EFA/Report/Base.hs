@@ -51,8 +51,8 @@ data DisplayLength = Short | Middle | Long | Float
 dispLength :: DisplayLength
 -- dispLength = Short
 -- dispLength = Middle
-dispLength = Middle
--- dispLength = Float
+--dispLength = Middle
+dispLength = Float
 
 -- ============ Setting - Switch global display length =============
 

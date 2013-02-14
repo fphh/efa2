@@ -1133,9 +1133,9 @@ interp1Lin :: (Eq d1,
 interp1Lin xSig ySig (TC (Data xVal)) = if x1 P.== x2 then TC $ Data $ (y1 P.+y2) P./2 else TC $ Data $ ((y2 P.- y1) P./(x2 P.-x1)) P.* (xVal P.- x1) P.+ y1
                 where                                                                
                   idx = P.maybe (error "Out of Range") id $ findIndex (xVal P.>=) xSig  
-                  TC (Data (x1)) = getSample xSig $ idx-1
+                  TC (Data (x1)) = getSample xSig $ if idx P.== 0 then idx else idx-1 -- prevent negativ index when interpolating on first element
                   TC (Data (x2)) = getSample xSig idx
-                  TC (Data (y1)) = getSample ySig $ idx-1
+                  TC (Data (y1)) = getSample ySig $ if idx P.== 0 then idx else idx-1 -- prevent negativ index when interpolating on first element
                   TC (Data (y2)) = getSample ySig idx
 
 
@@ -1170,3 +1170,11 @@ interp1LinSig ::  (Eq d1,
                    TC Signal t2 (Data (v1 :> Nil) d1)
 interp1LinSig xSig ySig xSigLookup = tmap f xSigLookup
   where f x = interp1Lin xSig ySig x 
+
+-- | Scale Signal by a given Number
+scale ::  (BProd d1 d1, D.Map c1, D.Storage c1 d1) => TC s1 t1 (Data c1 d1) -> d1 ->  TC s1 t1 (Data c1 d1)
+scale x fact = map (fact ..*) x 
+
+-- | Scale Signal by a given Number
+offset ::  (BSum d1, D.Map c1, D.Storage c1 d1) => TC s1 t1 (Data c1 d1) -> d1 ->  TC s1 t1 (Data c1 d1)
+offset x offs = map (offs ..+) x 

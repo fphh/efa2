@@ -6,7 +6,7 @@ model Controller_SeriesHybrid
   Modelica.Blocks.Logical.Switch switch2_motor annotation(Placement(visible = true, transformation(origin = {40.3101,-44.3411}, extent = {{-5.59809,-5.59809},{5.59809,5.59809}}, rotation = 0)));
   Modelica.Blocks.Sources.Constant zero(k = 0) annotation(Placement(visible = true, transformation(origin = {-5.5814,-12.093}, extent = {{-7.45106,-7.45106},{7.45106,7.45106}}, rotation = 0)));
   Modelica.Blocks.Math.Gain gain1(k = 5) annotation(Placement(visible = true, transformation(origin = {-17.0543,-59.845}, extent = {{-6.77369,-6.77369},{6.77369,6.77369}}, rotation = 0)));
-  Modelica.Blocks.Sources.Constant Torque_Demand(k = 50) annotation(Placement(visible = true, transformation(origin = {-31.6279,17.9845}, extent = {{-8.19616,-8.19616},{8.19616,8.19616}}, rotation = 0)));
+  Modelica.Blocks.Sources.Constant Torque_Demand(k = 200) annotation(Placement(visible = true, transformation(origin = {-31.6279,17.9845}, extent = {{-8.19616,-8.19616},{8.19616,8.19616}}, rotation = 0)));
   Modelica.Blocks.Interfaces.RealInput u annotation(Placement(visible = true, transformation(origin = {-75.6589,-68.8372}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {-75.6589,-68.8372}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Blocks.Sources.Constant speed_Demand(k = 150) annotation(Placement(visible = true, transformation(origin = {-72.2481,-48.6822}, extent = {{-7.45106,-7.45106},{7.45106,7.45106}}, rotation = 0)));
   Modelica.Blocks.Math.Feedback feedback1 annotation(Placement(visible = true, transformation(origin = {-43.7209,-49.6124}, extent = {{-6.1579,-6.1579},{6.1579,6.1579}}, rotation = 0)));
