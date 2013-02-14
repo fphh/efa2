@@ -3,14 +3,12 @@
 module Main where
 
 import Data.Monoid ((<>))
-import qualified Data.Map as M
 
-import Data.Foldable (foldMap)
 import Control.Applicative
 
 
 import EFA.Example.Utility
-  ( edgeVar, makeEdges, (.=), constructSeqTopo, recAbs )
+  ( edgeVar, makeEdges, constructSeqTopo, recAbs )
 
 import qualified EFA.Graph.Topology.Node as Node
 
@@ -27,8 +25,6 @@ import qualified EFA.Graph.Topology as TD
 import qualified EFA.Equation.System as EqGen
 import EFA.Equation.System ((=.=))
 import qualified EFA.Equation.Env as Env
-import qualified EFA.Report.Format as Format
-import EFA.Report.FormatValue (formatValue)
 
 import qualified EFA.Equation.Result as R
 
@@ -39,15 +35,19 @@ import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Plot as Plot
 import qualified EFA.Signal.Typ as T
 
-import Debug.Trace
 
 sec0, sec1 :: Idx.Section
 sec0 :~ sec1 :~ _ = Stream.enumFrom $ Idx.Section 0
 
 
-data Nodes = N0 | N1 | N2 | N3 deriving (Show, Eq, Ord)
+data Nodes = N0 | N1 | N2 | N3 deriving (Show, Eq, Ord, Enum)
 
-instance Node.Show Nodes
+
+instance Node.C Nodes where
+   display = Node.displayDefault
+   subscript = Node.subscriptDefault
+   dotId = Node.dotIdDefault
+
 
 topoDreibein :: TD.Topology Nodes
 topoDreibein = Gr.mkGraph ns (makeEdges es)
@@ -112,7 +112,7 @@ given t n =
         n' = EqGen.constToExprSys n
 
 
-
+trange, nrange :: [Double]
 trange = 0.01:[0.1, 0.2 .. 0.9]
 nrange = [0.6, 0.65 .. 1]
 
@@ -126,7 +126,6 @@ solve :: Double -> Double -> Double
 solve t n =
   let env = EqGen.solve (given t n) seqTopo
       emap = Env.energyMap env
-      smap = Env.storageMap env
       f ei eo0 eo1 = (eo0 + eo1) / ei
       R.Determined res =
         f <$> (checkedLookup emap ein)
@@ -139,7 +138,6 @@ main :: IO ()
 main = do
   let (varT, varN) = varMat trange nrange
       etaSys = zipWith (zipWith solve) varT varN
-      a = S.fromList2 [[1.0]] :: S.Test2 (T.Typ T.A T.Y T.Tt) Double
 
       timeVar, effVar, etaSysVar :: S.Test2 (T.Typ T.A T.Y T.Tt) Double
       timeVar = S.fromList2 varT
