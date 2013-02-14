@@ -271,7 +271,7 @@ makeNodeEquations = fold . M.mapWithKey f . Gr.nodes
                       (mkSplitFactorEquations varsum (energy n) (xfactor n))
                       (NonEmpty.fetch $ S.toList nodes)
             in  mwhen (label /= TD.Storage) (varsumin =.= varsumout)
-                -- (varsumin =.= varsumout)
+                -- (varsumin =.= varsumout) -- siehe bug 2013-02-12-sum-equations-storage
                 <>
                 splitEqs varsumin ins
                 <>
