@@ -33,7 +33,9 @@ import EFA.Graph(lefilter)
 ----------------------------------
 -- * Example Specific Imports
 
-import qualified Modules.System as System (topology, flowStates,Nodes(Battery,Tank))
+
+import qualified Modules.System as System (topology, flowStates,Node(Battery,Tank))
+
 -- Signal Treatment
 import Modules.Signals as Signals (condition,calculatePower)
 -- Plotting

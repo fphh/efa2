@@ -38,9 +38,6 @@ intersectionMapSet m s = M.intersection m (mapFromSet (const ()) s)
 for :: [a] -> (a -> b) -> [b]
 for = flip map
 
-sameValue :: a -> Double
-sameValue = const 1.0
-
 pairs :: [a] -> [(a, a)]
 pairs = LH.mapAdjacent (,)
 
@@ -81,13 +78,6 @@ myShowList list = unlines (map show list)
 -- | own list show function using specified show function for element
 myShowListFunct :: [a] -> (a -> String) -> String
 myShowListFunct list showFunct = unlines (map showFunct list)
-
-diffByAtMostOne :: (Ord a) => S.Set a -> S.Set a -> Bool
-diffByAtMostOne s t = (S.size t > 1) && (S.size (t S.\\ s) == 1)
-
-hasSameVariable :: (Ord a) => S.Set a -> S.Set a -> Bool
-hasSameVariable s t = not $ S.null (S.intersection s t)
-
 
 (>>!) :: (Monad m) => m () -> m a -> m a
 x >>! y = do { x; y }

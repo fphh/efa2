@@ -3,13 +3,14 @@
 module Main where
 
 import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Utility.Stream as Stream
+import qualified EFA.Report.Format as Format
+import EFA.Graph (mkGraph)
 import EFA.Utility.Async (concurrentlyMany_)
 import EFA.Utility.Stream (Stream((:~)))
-import EFA.Graph (mkGraph)
-import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph.Draw as Draw
 import EFA.Example.Utility (makeEdges)
 
 
@@ -56,9 +57,12 @@ topo2 = mkGraph nodes (makeEdges edges)
 -------------------------------------------------
 -- Selbstdefinierte Knoten mit default show-Funktion
 
-data NodesAB = A | B deriving (Eq, Ord, Show)
+data NodesAB = A | B deriving (Eq, Ord, Enum, Show)
 
-instance Node.Show NodesAB
+instance Node.C NodesAB where
+   display = Node.displayDefault
+   subscript = Node.subscriptDefault
+   dotId = Node.dotIdDefault
 
 topo3 :: TD.Topology NodesAB
 topo3 = mkGraph nodes (makeEdges edges)
@@ -68,13 +72,17 @@ topo3 = mkGraph nodes (makeEdges edges)
 -------------------------------------------------
 -- Selbstdefinierte Knoten mit selbstdefinierter show-Funktion
 
-data Nodes = Source | Sink deriving (Eq, Ord, Show)
+data Node = Source | Sink deriving (Eq, Ord, Enum, Show)
 
-instance Node.Show Nodes where
-         show Source = "Dies ist eine Quelle."
-         show x = Prelude.show x
+instance Node.C Node where
+   display Source = Format.literal "Dies ist eine Quelle."
+   display Sink   = Format.literal "Dies ist eine Senke."
 
-topo4 :: TD.Topology Nodes
+   subscript = Node.subscriptDefault
+   dotId = Node.dotIdDefault
+
+
+topo4 :: TD.Topology Node
 topo4 = mkGraph nodes (makeEdges edges)
   where nodes = [(Sink, TD.AlwaysSink), (Source, TD.AlwaysSource)]
         edges = [(Source, Sink)]

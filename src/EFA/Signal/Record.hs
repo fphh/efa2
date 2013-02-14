@@ -35,7 +35,7 @@ import Data.Foldable (foldMap)
 import Data.List (transpose)
 import Data.Tuple.HT (mapFst)
 import Control.Monad (liftM2)
-import EFA.Utility (checkedLookup, mapFromSet)
+import EFA.Utility (checkedLookup)
 
 
 
@@ -50,17 +50,17 @@ instance Show SigId where
 
 -----------------------------------------------------------------------------------
 -- | Indices for Power Position
-data PPosIdx nty = PPosIdx !nty !nty deriving (Show, Eq, Ord)
+data PPosIdx node = PPosIdx !node !node deriving (Show, Eq, Ord)
 
-flipPos ::  PPosIdx nty -> PPosIdx nty
+flipPos ::  PPosIdx node -> PPosIdx node
 flipPos (PPosIdx idx1 idx2) = PPosIdx idx2 idx1
 
 
 type instance D.Value (Record s t1 t2 id v a) = a
 
 
-data Record s t1 t2 id v a = 
-     Record (TC s t1 (Data (v :> Nil) a)) 
+data Record s t1 t2 id v a =
+     Record (TC s t1 (Data (v :> Nil) a))
             (M.Map id (TC s t2 (Data (v :> Nil) a))) deriving (Show, Eq)
 
 type SignalRecord = Record Signal (Typ A T Tt) (Typ UT UT UT) SigId
@@ -70,39 +70,47 @@ type PowerRecord n = Record Signal (Typ A T Tt) (Typ A P Tt) (PPosIdx n)
 type FlowRecord n = Record FSignal (Typ D T Tt) (Typ A F Tt) (PPosIdx n)
 
 -- | Flow record to contain flow signals assigned to the tree
-newtype FlowState nty = FlowState (M.Map (PPosIdx nty) Sign) deriving (Show)
+newtype FlowState node = FlowState (M.Map (PPosIdx node) Sign) deriving (Show)
 
 
 -- | Access Functions
-getTime :: Record s t1 t2 id v a ->  TC s t1 (Data (v :> Nil) a) 
+getTime :: Record s t1 t2 id v a ->  TC s t1 (Data (v :> Nil) a)
 getTime (Record time _) = time
 
 
-getSig :: (Show (v a),Ord id, Show id) => Record s t1 t2 id v a -> id -> TC s t2 (Data (v :> Nil) a)   
+getSig :: (Show (v a),Ord id, Show id) => Record s t1 t2 id v a -> id -> TC s t2 (Data (v :> Nil) a)
 getSig (Record _ sigMap) key = checkedLookup sigMap key
 
 -- | Get Start and End time
-getTimeWindow :: (Ord a, 
-                  V.Storage v a, 
-                  V.Singleton v) => 
-                 Record s (Typ A T Tt) t2 id v a -> 
+getTimeWindow :: (Ord a,
+                  V.Storage v a,
+                  V.Singleton v) =>
+                 Record s (Typ A T Tt) t2 id v a ->
                  (Scal (Typ A T Tt) a, Scal (Typ A T Tt) a)
 getTimeWindow rec = (S.minimum t, S.maximum t)
   where t = getTime rec
 
 -- | Use carefully -- removes signal jitter around zero
-removeZeroNoise :: (V.Walker v, V.Storage v a, Ord a, Num a) => PowerRecord nty v a -> a -> PowerRecord nty v a
+removeZeroNoise :: (V.Walker v, V.Storage v a, Ord a, Num a) => PowerRecord node v a -> a -> PowerRecord node v a
 removeZeroNoise (Record time pMap) threshold =
-   Record time (M.map (S.map g) pMap)
-  where g x | abs x < threshold = 0
-            | otherwise = x
+   Record time $ M.map (S.map (hardShrinkage threshold)) pMap
+
+hardShrinkage :: (Ord a, Num a) => a -> a -> a
+hardShrinkage threshold x =
+   if abs x < threshold then 0 else x
+
 
 -- | Generate a new Record with selected signals
 extractRecord ::
-   (Show (v a),Ord id, Show id) =>
+   (Ord id, Show id) =>
    [id] -> Record s t1 t2 id v a -> Record s t1 t2 id v a
+extractRecord xs rec = extractLogSignals rec $ map (flip (,) id) xs
+{-
+extractRecord ::
+   (Show (v a), Ord id, Show id) =>
 extractRecord xs rec@(Record time _) =
    Record time $ mapFromSet (getSig rec) $ Set.fromList xs
+-}
 
 
 -- | Split SignalRecord in even chunks
@@ -146,8 +154,8 @@ genPowerRecord :: (Show (v a),
                    V.Storage v a,
                    BProd a a,
                    BSum a,
-                   Ord nty) =>
-                  TSignal v a -> [(PPosIdx nty, UTSignal v a, UTSignal v a)] -> PowerRecord nty v a
+                   Ord node) =>
+                  TSignal v a -> [(PPosIdx node, UTSignal v a, UTSignal v a)] -> PowerRecord node v a
 genPowerRecord time =
    Record time .
       foldMap
@@ -188,7 +196,7 @@ sliceRecord (Record t m) (idx1,idx2) = Record (f t) (M.map g m)
 -----------------------------------------------------------------------------------
 -- Various Class and Instance Definition for the different Sequence Datatypes
 
-instance (QC.Arbitrary nty) => QC.Arbitrary (PPosIdx nty) where
+instance (QC.Arbitrary node) => QC.Arbitrary (PPosIdx node) where
    arbitrary = liftM2 PPosIdx QC.arbitrary QC.arbitrary
    shrink (PPosIdx from to) = map (uncurry PPosIdx) $ QC.shrink (from, to)
 

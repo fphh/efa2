@@ -15,7 +15,7 @@ import EFA.Signal.Signal((.*), (.+), (.-), neg, TC, Signal, len, fromList)
 import EFA.Signal.Typ(UT,Typ)
 import EFA.Signal.Data(Data(..),Nil, (:>))
 
-import Modules.System  (Nodes(..))
+import Modules.System  (Node(..))
  
 
 
@@ -62,7 +62,7 @@ condition rec = extractLogSignals rec [(SigId "engine1.Speed",id),
 --------------------------------------------------------------------------------------- 
 -- * Calculate special signals
 
-calculatePower :: SignalRecord [] Double -> PowerRecord Nodes [] Double
+calculatePower :: SignalRecord [] Double -> PowerRecord Node [] Double
 calculatePower rec = pRec
   where
       -- Convenience function

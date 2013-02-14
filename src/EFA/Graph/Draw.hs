@@ -72,11 +72,11 @@ intersectionEdgeColour = Color [RGB 200 0 0]
 
 
 dotFromSequFlowGraph ::
-  (Node.Show nty, Ord nty) =>
-  SequFlowGraph nty ->
+  (Node.C node) =>
+  SequFlowGraph node ->
   Maybe (Unicode, Idx.Section -> Unicode) ->
-  (Topo.LNode nty -> Unicode) ->
-  (Topo.LEdge nty -> [Unicode]) ->
+  (Topo.LNode node -> Unicode) ->
+  (Topo.LEdge node -> [Unicode]) ->
   DotGraph T.Text
 dotFromSequFlowGraph g recTShow nshow eshow =
   DotGraph { strictGraph = False,
@@ -122,8 +122,8 @@ dotFromSequFlowGraph g recTShow nshow eshow =
 
 
 dotFromSecNode :: 
-  (Node.Show nty) =>
-  (Topo.LNode nty -> Unicode) -> Topo.LNode nty -> DotNode T.Text
+  (Node.C node) =>
+  (Topo.LNode node -> Unicode) -> Topo.LNode node -> DotNode T.Text
 dotFromSecNode nshow n@(x, nodeType) =
    DotNode (dotIdentFromSecNode x)
       [ displabel, nodeColour, 
@@ -138,8 +138,8 @@ dotFromSecNode nshow n@(x, nodeType) =
         color _ = nodeColour
 
 dotFromSecEdge ::
-  (Node.Show nty, Ord nty) =>
-  (Topo.LEdge nty -> [Unicode]) -> Topo.LEdge nty -> DotEdge T.Text
+  (Node.C node) =>
+  (Topo.LEdge node -> [Unicode]) -> Topo.LEdge node -> DotEdge T.Text
 dotFromSecEdge eshow e =
    DotEdge
       (dotIdentFromSecNode x) (dotIdentFromSecNode y)
@@ -154,18 +154,20 @@ dotFromSecEdge eshow e =
               OriginalEdge -> originalEdgeColour
         --colour = originalEdgeColour
 
-dotIdentFromSecNode ::
-  (Node.Show nty) =>
-  Idx.SecNode nty -> T.Text
+dotIdentFromSecNode :: (Node.C node) => Idx.SecNode node -> T.Text
 dotIdentFromSecNode (Idx.SecNode (Idx.Section s) n) =
-   T.pack $ "s" ++ show s ++ "n" ++ Node.show n
+   T.pack $ "s" ++ show s ++ "n" ++ Node.dotId n
+
+dotIdentFromNode :: (Node.C node) => node -> T.Text
+dotIdentFromNode n = T.pack $ Node.dotId n
+
 
 printGraph, printGraphX, _printGraphDot ::
-  (Ord nty, Node.Show nty) =>
-   SequFlowGraph nty ->
+  (Node.C node) =>
+   SequFlowGraph node ->
    Maybe (Unicode, Idx.Section -> Unicode) ->
-   (Topo.LNode nty -> Unicode) ->
-   (Topo.LEdge nty -> [Unicode]) ->
+   (Topo.LNode node -> Unicode) ->
+   (Topo.LEdge node -> [Unicode]) ->
    IO ()
 printGraph = printGraphX
 
@@ -180,17 +182,18 @@ _printGraphDot g recTShow nshow eshow =
 
 
 sequFlowGraph ::
-  (Ord nty, Node.Show nty) =>
-  SequFlowGraph nty -> IO ()
+  (Node.C node) =>
+  SequFlowGraph node -> IO ()
 sequFlowGraph topo =
    printGraph topo Nothing nshow eshow
-  where nshow (Idx.SecNode _ n, l) = Unicode $ Node.show n ++ " - " ++ showType l
+  where nshow (Idx.SecNode _ n, l) =
+           Unicode $ unUnicode (Node.display n) ++ " - " ++ showType l
         eshow _ = []
 
 
 dotFromTopology ::
-  (Ord nty, Node.Show nty) =>
-  Topo.Topology nty -> DotGraph T.Text
+  (Node.C node) =>
+  Topo.Topology node -> DotGraph T.Text
 dotFromTopology g =
   DotGraph {
     strictGraph = False,
@@ -206,16 +209,17 @@ dotFromTopology g =
   }
 
 dotFromTopoNode ::
-  (Ord nty, Node.Show nty) =>
-  Gr.LNode nty Topo.NodeType -> DotNode T.Text
+  (Node.C node) =>
+  Gr.LNode node Topo.NodeType -> DotNode T.Text
 dotFromTopoNode (x, typ) =
    DotNode (dotIdentFromNode x)
-      [Label $ StrLabel $ T.pack $ Node.show x ++ "\n" ++ showType typ,
+      [Label $ StrLabel $ T.pack $
+          unUnicode (Node.display x) ++ "\n" ++ showType typ,
        nodeColour, Style [SItem Filled []], Shape BoxShape]
 
 dotFromTopoEdge ::
-  (Ord nty, Node.Show nty) =>
-  Gr.Edge nty -> DotEdge T.Text
+  (Node.C node) =>
+  Gr.Edge node -> DotEdge T.Text
 dotFromTopoEdge e =
    case orientUndirEdge e of
       Edge x y ->
@@ -223,28 +227,27 @@ dotFromTopoEdge e =
             (dotIdentFromNode x) (dotIdentFromNode y)
             [Viz.Dir Viz.NoDir, originalEdgeColour]
 
-dotIdentFromNode :: (Ord nty, Node.Show nty) => nty -> T.Text
-dotIdentFromNode n = T.pack $ Node.show n
 
 
-
-topology :: (Ord nty, Node.Show nty) => Topo.Topology nty -> IO ()
+topology :: (Node.C node) => Topo.Topology node -> IO ()
 topology topo =
    runGraphvizCanvas Dot (dotFromTopology topo) Xlib
 
 
 dotFromFlowTopology ::
-  (Ord nty, Node.Show nty) =>
-  Int -> FlowTopology nty -> DotSubGraph String
+  (Node.C node) =>
+  Int -> FlowTopology node -> DotSubGraph String
 dotFromFlowTopology ident topo = DotSG True (Just (Int ident)) stmts
   where stmts = DotStmts attrs [] ns es
         attrs = [GraphAttrs [labelf ident]]
         ns = map mkNode (labNodes topo)
-        idf x = show ident ++ "_" ++ show x
+        idf x = show ident ++ "_" ++ Node.dotId x
         labelf x = Label $ StrLabel $ T.pack (show x)
         mkNode x@(n, _) = DotNode (idf n) (nattrs x)
         nattrs x = [labNodef x, nodeColour, Style [SItem Filled []], Shape BoxShape ]
-        labNodef (n, l) = Label $ StrLabel $ T.pack (Node.show n ++ " - " ++ showType l)
+        labNodef (n, l) =
+           Label $ StrLabel $ T.pack $
+              unUnicode (Node.display n) ++ " - " ++ showType l
         es = map mkEdge (labEdges topo)
         mkEdge el =
            case orientEdge el of
@@ -252,8 +255,8 @@ dotFromFlowTopology ident topo = DotSG True (Just (Int ident)) stmts
                  DotEdge (idf x) (idf y) [Viz.Dir d]
 
 flowTopologies ::
-  (Ord nty, Node.Show nty) =>
-  [FlowTopology nty] -> IO ()
+  (Node.C node) =>
+  [FlowTopology node] -> IO ()
 flowTopologies ts = runGraphvizCanvas Dot g Xlib
   where g = DotGraph False True Nothing stmts
         stmts = DotStmts attrs subgs [] []
@@ -286,11 +289,11 @@ formatNodeType :: Format output => NodeType -> output
 formatNodeType = Format.literal . showType
 
 formatNodeStorage ::
-   (FormatValue a, Format output, Ord nty, Node.Show nty) =>
-   Idx.Record -> StorageMap nty a -> Topo.LNode nty -> output
+   (FormatValue a, Format output, Node.C node) =>
+   Idx.Record -> StorageMap node a -> Topo.LNode node -> output
 formatNodeStorage rec st (n@(Idx.SecNode _sec nid), ty) =
    Format.lines $
-   Format.literal (Node.show nid) :
+   Node.display nid :
    Format.words [formatNodeType ty] :
       case ty of
          Storage ->
@@ -303,36 +306,37 @@ formatNodeStorage rec st (n@(Idx.SecNode _sec nid), ty) =
 The 'Env' shall contain only values and functions for display.
 It shall not contain values needed for computations.
 -}
-data Env nty output =
+data Env node output =
    Env {
       recordNumber :: output,
       formatEnergy, formatMaxEnergy,
       formatX, formatY,
-      formatEta    :: Idx.SecNode nty -> Idx.SecNode nty -> output,
+      formatEta    :: Idx.SecNode node -> Idx.SecNode node -> output,
       formatTime   :: Idx.Section -> output,
-      formatNode   :: Topo.LNode nty -> output
+      formatNode   :: Topo.LNode node -> output
    }
 
 lookupFormat ::
-   (Ord (idx nty), MkIdxC idx, FormatValue a, Format output, Node.Show nty) =>
-   M.Map (idx nty) a -> idx nty -> output
+   (Ord (idx node), MkIdxC idx, FormatValue a, Format output, Node.C node) =>
+   M.Map (idx node) a -> idx node -> output
 lookupFormat mp k =
-   maybe (error $ "could not find index " ++ show (mkIdx k)) formatValue $
+   maybe (error $ "could not find index " ++
+             (Format.unUnicode $ formatValue $ mkIdx k)) formatValue $
    M.lookup k mp
 
 lookupFormatAssign ::
-   (Ord (idx nty), MkIdxC idx, FormatValue a, Format output, Node.Show nty) =>
-   M.Map (idx nty) a ->
-   (Idx.SecNode nty -> Idx.SecNode nty -> idx nty) ->
-   (Idx.SecNode nty -> Idx.SecNode nty -> output)
+   (Ord (idx node), MkIdxC idx, FormatValue a, Format output, Node.C node) =>
+   M.Map (idx node) a ->
+   (Idx.SecNode node -> Idx.SecNode node -> idx node) ->
+   (Idx.SecNode node -> Idx.SecNode node -> output)
 lookupFormatAssign mp makeIdx x y =
    case makeIdx x y of
       idx ->
          Format.assign (formatValue $ mkIdx idx) (lookupFormat mp idx)
 
 sequFlowGraphWithEnv ::
-  (Ord nty, Node.Show nty) =>
-  SequFlowGraph nty -> Env nty Unicode -> IO ()
+  (Node.C node) =>
+  SequFlowGraph node -> Env node Unicode -> IO ()
 sequFlowGraphWithEnv g env =
    printGraph g (Just (recordNumber env, formatTime env)) (formatNode env) eshow
   where eshow e@((Edge uid vid), _l) =
@@ -352,19 +356,19 @@ sequFlowGraphWithEnv g env =
            []
 
 sequFlowGraphAbsWithEnv ::
-  (FormatValue a, Ord nty, Node.Show nty) =>
-  SequFlowGraph nty -> Interp.Env nty SingleRecord a -> IO ()
+  (FormatValue a, Node.C node) =>
+  SequFlowGraph node -> Interp.Env node SingleRecord a -> IO ()
 sequFlowGraphAbsWithEnv topo = sequFlowGraphWithEnv topo . envAbs
 
 sequFlowGraphDeltaWithEnv ::
-  (FormatValue a, Ord nty, Node.Show nty) =>
-  SequFlowGraph nty -> Interp.Env nty SingleRecord a -> IO ()
+  (FormatValue a, Node.C node) =>
+  SequFlowGraph node -> Interp.Env node SingleRecord a -> IO ()
 sequFlowGraphDeltaWithEnv topo = sequFlowGraphWithEnv topo . envDelta
 
 
 envAbs ::
-   (FormatValue a, Format output, Ord nty, Node.Show nty) =>
-   Interp.Env nty SingleRecord a -> Env nty output
+   (FormatValue a, Format output, Node.C node) =>
+   Interp.Env node SingleRecord a -> Env node output
 envAbs (Interp.Env (SingleRecord rec) e _de me _dme _p _dp fn _dn dt x _dx y _dy _v st) =
    Env
       (Format.record rec)
@@ -377,8 +381,8 @@ envAbs (Interp.Env (SingleRecord rec) e _de me _dme _p _dp fn _dn dt x _dx y _dy
       (formatNodeStorage rec st)
 
 envDelta ::
-   (FormatValue a, Format output, Ord nty, Node.Show nty) =>
-   Interp.Env nty SingleRecord a -> Env nty output
+   (FormatValue a, Format output, Node.C node) =>
+   Interp.Env node SingleRecord a -> Env node output
 envDelta (Interp.Env (SingleRecord rec) _e de _me dme _p _dp _fn dn dt _x dx _y dy _v st) =
    Env
       (Format.record rec)
