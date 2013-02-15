@@ -40,16 +40,16 @@ sec0, sec1 :: Idx.Section
 sec0 :~ sec1 :~ _ = Stream.enumFrom $ Idx.Section 0
 
 
-data Nodes = N0 | N1 | N2 | N3 deriving (Show, Eq, Ord, Enum)
+data Node = N0 | N1 | N2 | N3 deriving (Show, Eq, Ord, Enum)
 
 
-instance Node.C Nodes where
+instance Node.C Node where
    display = Node.displayDefault
    subscript = Node.subscriptDefault
    dotId = Node.dotIdDefault
 
 
-topoDreibein :: TD.Topology Nodes
+topoDreibein :: TD.Topology Node
 topoDreibein = Gr.mkGraph ns (makeEdges es)
   where ns = [ (N0, TD.Source),
                (N1, TD.Crossing),
@@ -57,15 +57,15 @@ topoDreibein = Gr.mkGraph ns (makeEdges es)
                (N3, TD.Storage) ]
         es = [(N0, N1), (N1, N3), (N1, N2)]
 
-seqTopo :: TD.SequFlowGraph Nodes
+seqTopo :: TD.SequFlowGraph Node
 seqTopo = constructSeqTopo topoDreibein [0, 4]
       
-etaf :: EqGen.ExprWithVars Nodes s Double -> EqGen.ExprWithVars Nodes s Double
+etaf :: EqGen.ExprWithVars Node s Double -> EqGen.ExprWithVars Node s Double
 etaf x = 1/((x+sqrt(x*x+4*x))/(2*x))
 
 
 n01, n12, n13, n31, p10, p21, e31 ::
-  Idx.Section -> EqGen.ExprWithVars Nodes s a
+  Idx.Section -> EqGen.ExprWithVars Node s a
 n01 sec = edgeVar EqGen.eta sec N0 N1
 n12 sec = edgeVar EqGen.eta sec N1 N2
 n13 sec = edgeVar EqGen.eta sec N1 N3
@@ -74,15 +74,15 @@ p10 sec = edgeVar EqGen.power sec N1 N0
 p21 sec = edgeVar EqGen.power sec N2 N1
 e31 sec = edgeVar EqGen.energy sec N3 N1
 
-stoinit :: EqGen.ExprWithVars Nodes s a
+stoinit :: EqGen.ExprWithVars Node s a
 stoinit = EqGen.storage (Idx.SecNode Idx.initSection N3)
 
-ein, eout0, eout1 :: Idx.Energy Nodes
+ein, eout0, eout1 :: Idx.Energy Node
 ein = Idx.Energy recAbs (Idx.SecNode sec0 N0) (Idx.SecNode sec0 N1)
 eout0 = Idx.Energy recAbs (Idx.SecNode sec0 N2) (Idx.SecNode sec0 N1)
 eout1 = Idx.Energy recAbs (Idx.SecNode sec1 N2) (Idx.SecNode sec1 N1)
 
-e33 :: EqGen.ExprWithVars Nodes s a
+e33 :: EqGen.ExprWithVars Node s a
 e33 = EqGen.getVar $
   Idx.Energy recAbs (Idx.SecNode (Idx.Section (-1)) N3) (Idx.SecNode sec1 N3)
 
@@ -90,7 +90,7 @@ time :: Idx.Section -> EqGen.ExprWithVars nty s Double
 time = EqGen.dtime
 
 
-given :: Double -> Double -> EqGen.EquationSystem Nodes s Double
+given :: Double -> Double -> EqGen.EquationSystem Node s Double
 given t n =
   (time Idx.initSection =.= 1)
   <> (e33 =.= 1)
