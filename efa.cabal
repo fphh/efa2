@@ -56,6 +56,8 @@ Library
     EFA.IO.CSVImport
     EFA.IO.ASCIIImport
     EFA.IO.CSVParser
+    EFA.IO.PLTImport
+    EFA.IO.PLTParser
     EFA.Utility
     EFA.Utility.Async
     EFA.Utility.Stream
@@ -274,6 +276,17 @@ Executable demo-csvimport
       base
   Else
     Buildable: False
+
+Executable demo-pltimport
+  Main-Is: demo/PLTImport/Main.hs
+  GHC-Options: -Wall
+  If flag(buildExamples)
+    Build-Depends:
+      efa,
+      base
+  Else
+    Buildable: False
+
 
 Executable demo-asciiimport
   Main-Is: demo/ASCIIImport/Main.hs

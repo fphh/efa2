@@ -10,8 +10,11 @@ module EFA.Signal.Plot where
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Data as D
 import qualified EFA.Signal.Vector as SV
-import EFA.Signal.SequenceData (SequData, zipWithSecIdxs)
-import EFA.Signal.Record (Record(Record), splitRecord,extractRecord)
+
+import EFA.Signal.SequenceData (SequData(SequData),zipWithSecIdxs)
+import EFA.Signal.Record (Record(Record), splitRecord,extractRecord,addSignals)
+
+
 import EFA.Signal.Signal (TC, Signal, toSigList, getDisplayType)
 -- import EFA.Signal.Base (BSum)
 
@@ -252,7 +255,7 @@ instance
 rPlotStyle :: (Show k) => k -> Plot2D.T x y -> Plot2D.T x y
 rPlotStyle key =
    fmap $ Graph2D.lineSpec $
-      LineSpec.pointSize 0.1$
+      LineSpec.pointSize 0.3$
       LineSpec.pointType 1 $
       LineSpec.lineWidth 1 $
       LineSpec.title (show key) $
@@ -335,6 +338,25 @@ instance (AxisLabel tc) => AxisLabel [tc] where
 rPlot :: (RPlot a) => String -> a -> IO ()
 rPlot name r =
    mapM_ Plot.plotDefault $ rPlotCore name r
+
+
+rPlotSplitPlus :: (Fractional y,
+                   Show id,
+                   SV.Walker v,
+                   SV.Storage v y,
+                   SV.FromList v,
+                   TDisp t2,
+                   TDisp t1,
+                   Tuple.C y,
+                   Atom.C y,
+                   Ord id,
+                   SV.Len (v y)) =>
+              Int -> (String, Record s t1 t2 id v y) -> [(id, TC s t2 (Data (v :> Nil) y))] -> IO ()     
+rPlotSplitPlus n (name,r) list = mapM_ f $ zip titles recList
+  where
+    f (ti, rec) = rPlot ti rec
+    recList = map (addSignals list) (splitRecord n r)
+    titles = map (\ x -> name ++ " - Part " ++ show x)  [1 .. (length recList)]
 
 
 --------------------------------------------

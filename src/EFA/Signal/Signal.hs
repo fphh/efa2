@@ -1133,9 +1133,9 @@ interp1Lin :: (Eq d1,
 interp1Lin xSig ySig (TC (Data xVal)) = if x1 P.== x2 then TC $ Data $ (y1 P.+y2) P./2 else TC $ Data $ ((y2 P.- y1) P./(x2 P.-x1)) P.* (xVal P.- x1) P.+ y1
                 where                                                                
                   idx = P.maybe (error "Out of Range") id $ findIndex (xVal P.>=) xSig  
-                  TC (Data (x1)) = getSample xSig $ idx-1
+                  TC (Data (x1)) = getSample xSig $ if idx P.== 0 then idx else idx-1 -- prevent negativ index when interpolating on first element
                   TC (Data (x2)) = getSample xSig idx
-                  TC (Data (y1)) = getSample ySig $ idx-1
+                  TC (Data (y1)) = getSample ySig $ if idx P.== 0 then idx else idx-1 -- prevent negativ index when interpolating on first element
                   TC (Data (y2)) = getSample ySig idx
 
 
@@ -1147,3 +1147,34 @@ getSample ::  (SV.Singleton v1,
               Int ->  
               TC Sample t1 (Data Nil d1)
 getSample x idx = P.fst $ P.maybe (error "Error in EFA.Signal.Signal/getSample - Empty List") id $ viewL $ subSignal1D x [idx]
+
+
+-- | get a signal slice with startIndex and Number of elements
+slice ::  (SV.Slice v1, SV.Storage v1 d1) => Int -> Int -> TC s1 t1 (Data (v1 :> Nil) d1) -> TC s1 t1 (Data (v1 :> Nil) d1)
+slice start num (TC x) = TC $ D.slice start num x  
+
+
+-- | Interpolate an x-y - Lookup-Curve with a signal. Also can be used to resample a signal with a new time vector 
+interp1LinSig ::  (Eq d1, 
+                     Fractional d1, 
+                     Num d1, 
+                     Ord d1, 
+                     SV.Storage v1 d1, 
+                     SV.Find v1,
+                     SV.Singleton v1, 
+                     SV.Lookup v1, 
+                     SV.Walker v1) => 
+                   TC Signal t1 (Data (v1 :> Nil) d1) ->  
+                   TC Signal t2 (Data (v1 :> Nil) d1) ->  
+                   TC Signal t1 (Data (v1 :> Nil) d1) -> 
+                   TC Signal t2 (Data (v1 :> Nil) d1)
+interp1LinSig xSig ySig xSigLookup = tmap f xSigLookup
+  where f x = interp1Lin xSig ySig x 
+
+-- | Scale Signal by a given Number
+scale ::  (BProd d1 d1, D.Map c1, D.Storage c1 d1) => TC s1 t1 (Data c1 d1) -> d1 ->  TC s1 t1 (Data c1 d1)
+scale x fact = map (fact ..*) x 
+
+-- | Scale Signal by a given Number
+offset ::  (BSum d1, D.Map c1, D.Storage c1 d1) => TC s1 t1 (Data c1 d1) -> d1 ->  TC s1 t1 (Data c1 d1)
+offset x offs = map (offs ..+) x 

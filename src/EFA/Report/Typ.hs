@@ -61,9 +61,9 @@ getDisplayUnit Typ_T = Unit_Sec
 getDisplayUnit Typ_X = Unit_Percent
 getDisplayUnit Typ_Y = Unit_Percent
 getDisplayUnit Typ_P = Unit_kW
-getDisplayUnit Typ_F = Unit_kWh
+-- getDisplayUnit Typ_F = Unit_kWh
 --getDisplayUnit Typ_F = Unit_kJoule
--- getDisplayUnit Typ_F = Unit_Joule
+getDisplayUnit Typ_F = Unit_Joule
 
 getDisplayUnit Typ_UT = Unit_UT
 getDisplayUnit Typ_N = Unit_Percent

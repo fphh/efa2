@@ -15,12 +15,12 @@ import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Vector as V
 
 import EFA.Signal.SequenceData
-          (SequData(..), Sequ(..), Sec,
+          (SequData(..), Sequ, Sec,
            filterSequWithSequData,filterSequWithSequData2)
 
 
 import EFA.Signal.Record(Record(..),PowerRecord,FlowRecord,
-           RSamp1,rsingleton, RSig,rlen,rviewL,rviewR,getTimeWindow)
+           RSamp1,rsingleton, RSig,rlen,rviewL,rviewR,getTimeWindow,sliceRecord)
         
   
 import EFA.Signal.Base
@@ -129,15 +129,24 @@ genSequFlow sqPRec = fmap recFullIntegrate sqPRec
 -- | State changes in solver create several DataPoints with exact the same time
 -- | The resulting sections which have zero time duration are removed 
 
-removeZeroTimeSections :: (Fractional a, Ord a, Eq a, V.Storage v a, V.Singleton v) => (Sequ,SequData (PowerRecord node v a)) -> (Sequ,SequData (PowerRecord node v a))
-removeZeroTimeSections (xs, ys)  = filterSequWithSequData f (xs, ys)
-   where  -- f (_,Record time _) = (S.head time) /= (S.last time)
-          f (_,Record time _) = abs (x -y) > 1
-            where
+
+removeZeroTimeSections :: (Fractional a, Ord a, Eq a, V.Storage v a, V.Singleton v) => (Sequ,SequData (PowerRecord nty v a)) -> (Sequ,SequData (PowerRecord nty v a))
+removeZeroTimeSections (xs, ys)  = filterSequWithSequData f (xs, ys) 
+   where f (_,Record time _) = x /= y
+           where 
               err = error "Error in SequenceData.hs / removeZeroTimeSections -- empty head or tail"
               TC (Data x) = (fst $ maybe err id $ S.viewL time) 
               TC (Data y) = (snd $ maybe err id $ S.viewR time) 
 
+-- | Drop Sections with time duration below threshold
+removeLowTimeSections :: (Fractional a, Ord a, Eq a, V.Storage v a, V.Singleton v) => (Sequ,SequData (PowerRecord nty v a)) -> a -> (Sequ,SequData (PowerRecord nty v a))
+removeLowTimeSections (xs, ys)  threshold = filterSequWithSequData f (xs, ys) 
+   where  
+          f (_,Record time _) = abs (x -y) > threshold 
+            where 
+              err = error "Error in SequenceData.hs / removeZeroTimeSections -- empty head or tail"
+              TC (Data x) = (fst $ maybe err id $ S.viewL time) 
+              TC (Data y) = (snd $ maybe err id $ S.viewR time) 
 
 -- | Drop Sections with negligible energy flow
 removeLowEnergySections :: (Num a, SB.BSum a, Ord a, V.Walker v, V.Storage v a) =>
@@ -195,12 +204,13 @@ makeSequence ::
 makeSequence =
     genSequFlow . snd . removeZeroTimeSections . genSequ . addZeroCrossings
 
+{-
 -- | PG - Its better to have processing under controll in Top-Level for inspeting and debugging signal treatment
 makeSequenceRaw ::
    (Show node, Ord node) => PowerRecord node [] Val ->
    (Sequ, SequData (PowerRecord node [] Val))
 makeSequenceRaw = genSequ . addZeroCrossings
-
+-}
 -----------------------------------------------------------------------------------
 {-
 ToDo:
@@ -209,7 +219,7 @@ must correctly handle the last section.
 -}
 -- | Function to Generate Time Sequence
 genSequ ::  Ord node => PowerRecord node [] Val -> (Sequ, SequData (PowerRecord node [] Val))
-genSequ pRec = removeNilSections (Sequ $ sequ++[lastSec], SequData pRecs)
+genSequ pRec = removeNilSections (SequData $ sequ++[lastSec], SequData pRecs)
   where rSig = record2RSig pRec
         pRecs = map (rsig2SecRecord pRec) (seqRSig ++ [lastRSec])
         ((lastSec,sequ),(lastRSec,seqRSig)) = recyc rTAIL rHEAD (((0,0),[]),(rsingleton $ rHEAD,[]))
@@ -256,7 +266,7 @@ genSequ pRec = removeNilSections (Sequ $ sequ++[lastSec], SequData pRecs)
 
 -- | Function to remove Nil-Sections which have same start and stop Index
 removeNilSections :: (Sequ,(SequData (PowerRecord node v a))) ->   (Sequ, (SequData (PowerRecord node v a)))
-removeNilSections (Sequ sequ, SequData pRecs) = (Sequ fsequ, SequData fRecs)
+removeNilSections (SequData sequ, SequData pRecs) = (SequData fsequ, SequData fRecs)
   where (fsequ, fRecs) = unzip $ filter (uncurry (/=) . fst) $ zip sequ pRecs
 
 
@@ -555,6 +565,7 @@ approxAbs eps x y =
 -----------------------------------------------------------------------------------
 -- * New Functions from PG to allow Signal Cutting on Time Windows
 
+
 -- | Get Start and Stop Times for all Power Records in a Sequence
 extractCuttingTimes:: (Ord a,
                        V.Storage v a,
@@ -564,18 +575,15 @@ extractCuttingTimes:: (Ord a,
 extractCuttingTimes sequ = fmap getTimeWindow sequ
 
 
-{-
--- | Cut a Slice from a Power Record assumes rising order of sections
-extractTimeSectionRecords :: Record s t1 t2 id v a -> [(S.Scal (Typ A T Tt) a, S.Scal (Typ A T Tt) a)] -> Record s t1 t2 id v a
-extractTimeSectionRecords rec@(Record time _ ) (tStart,tEnd) =
-  where startIdx = findIndex (P.>=tStart) time
-        endIdx = findIndex (P.>=tEnd) time
 
-        startIdx = lookUp time idx1
-        endIdx = lookUp time idx2 - 1
+-- | Create SequencePowerRecord by extracting Slices from Indices given by Sequence
+sectionRecordsFromSequence ::  (V.Slice v, V.Storage v a) => Record s t1 t2 id v a -> Sequ -> SequData (Record s t1 t2 id v a)
+sectionRecordsFromSequence rec (SequData sequ) = SequData $ map (sliceRecord rec) sequ   
 
-        rSig = record2RSig rec
 
-        slice = getSlice startIdx (endIdx-1) rSig
-
--}
+-- | Generate Time Signal with Sequence Number to allow Plotting
+genSequenceSignal :: (V.FromList v, V.Storage v a, Num a) => Sequ -> S.UTSignal v a 
+genSequenceSignal (SequData xs) = S.fromList $ concat $ fmap f xs
+  where
+    f (idx1, idx2) = [1] ++ replicate (idx2-idx1-1) 0 ++ [-1]  
+      

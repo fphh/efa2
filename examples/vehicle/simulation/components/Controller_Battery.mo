@@ -7,7 +7,7 @@ model Controller_Battery
   Modelica.Blocks.Math.Add add1 annotation(Placement(visible = true, transformation(origin = {74.7287,6.20155}, extent = {{-9.91736,-9.91736},{9.91736,9.91736}}, rotation = 0)));
   Modelica.Blocks.Math.Gain toSOC(k = 1 / (1 * 3600 * 1000)) annotation(Placement(visible = true, transformation(origin = {36.2791,12.4031}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Blocks.Interfaces.RealOutput SOC annotation(Placement(visible = true, transformation(origin = {101.705,5.5814}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {101.705,5.5814}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-  Modelica.Blocks.Sources.Constant Start_SOC(k = 0.45) annotation(Placement(visible = true, transformation(origin = {11.4729,-32.8682}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  Modelica.Blocks.Sources.Constant Start_SOC(k = 0.35) annotation(Placement(visible = true, transformation(origin = {11.4729,-32.8682}, extent = {{-12,-12},{12,12}}, rotation = 0)));
 equation
   connect(Start_SOC.y,add1.u2) annotation(Line(points = {{24.6729,-32.8682},{47.4419,-32.8682},{47.4419,-1.24031},{62.8279,-1.24031},{62.8279,0.251137}}));
   connect(SOC,add1.y) annotation(Line(points = {{101.705,5.5814},{85.8915,5.5814},{85.8915,6.20155},{85.6378,6.20155}}));
