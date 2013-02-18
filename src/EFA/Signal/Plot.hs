@@ -296,9 +296,10 @@ instance  (Fractional y,
        rPlotCore rName rec = [rPlotSingle rName rec]
 
 instance (RPlot record) => RPlot (SequData record) where
-   -- wenn sqName hier nicht gebraucht wird, dann ist an der ganzen Konstruktion was faul
-   rPlotCore _sqName =
-      Fold.fold . zipWithSecIdxs (\x -> rPlotCore ("Record of " ++ show x))
+   rPlotCore sqName =
+      Fold.fold .
+      zipWithSecIdxs
+         (\x -> rPlotCore ("Sequence " ++ sqName ++ ", Record of " ++ show x))
 
 rPlotSingle ::
    (Show id, TDisp typ0, TDisp typ1,
