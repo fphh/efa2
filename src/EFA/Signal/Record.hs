@@ -262,23 +262,6 @@ type RSig = (TSigL, PSamp2LL)
 type RSamp1 = (TSamp, PSamp1L)
 type RSamp = (TSamp, PSamp)
 
-{-
-{-# DEPRECATED rhead, rtail "use rviewL instead" #-}
-{-# DEPRECATED rlast, rinit "use rviewR instead" #-}
-
-rhead :: RSig -> RSamp1
-rhead (t,ps) = (S.head t, S.head ps)
-
-rtail :: RSig -> RSig
-rtail (t,ps) = (S.tail t, S.tail ps)
-
-rlast :: RSig -> RSamp1
-rlast (t,ps) = (S.last t, S.last ps)
-
-rinit :: RSig -> RSig
-rinit (t,ps) = (S.init t, S.init ps)
--}
-
 
 viewL :: RSig -> Maybe (RSamp1, RSig)
 viewL (t,ps) =
