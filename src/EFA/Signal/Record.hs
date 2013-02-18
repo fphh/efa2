@@ -189,9 +189,11 @@ newTimeBase (Record time m) newTime = Record newTime (M.map f m)
 
 -- | Create a new Record by slicing time and all signals on given Indices
 sliceRecord ::  (V.Slice v, V.Storage v a) => Record s t1 t2 id v a -> (Int,Int) ->  Record s t1 t2 id v a
-sliceRecord (Record t m) (idx1,idx2) = Record (f t) (M.map g m)
-  where f sig = S.slice idx1 (idx2-idx1+1) sig
-        g sig = S.slice idx1 (idx2-idx1+1) sig -- @HT Monomorphism Restriction ? - when I only use f I get type errors 
+sliceRecord (Record t m) (idx1,idx2) = Record (f t) (M.map f m)
+  where f ::
+           (V.Slice v, V.Storage v a) =>
+           TC s t (Data (v :> Nil) a) -> TC s t (Data (v :> Nil) a)
+        f = S.slice idx1 (idx2-idx1+1)
 
 -----------------------------------------------------------------------------------
 -- Various Class and Instance Definition for the different Sequence Datatypes
