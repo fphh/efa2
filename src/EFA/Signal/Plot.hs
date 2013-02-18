@@ -342,23 +342,21 @@ rPlot name r =
    mapM_ Plot.plotDefault $ rPlotCore name r
 
 
-rPlotSplitPlus :: (Fractional y,
-                   Show id,
-                   SV.Walker v,
-                   SV.Storage v y,
-                   SV.FromList v,
-                   TDisp t2,
-                   TDisp t1,
-                   Tuple.C y,
-                   Atom.C y,
-                   Ord id,
-                   SV.Len (v y)) =>
-              Int -> (String, Record s t1 t2 id v y) -> [(id, TC s t2 (Data (v :> Nil) y))] -> IO ()     
-rPlotSplitPlus n (name,r) list = mapM_ f $ zip titles recList
-  where
-    f (ti, rec) = rPlot ti rec
-    recList = map (addSignals list) (Record.split n r)
-    titles = map (\ x -> name ++ " - Part " ++ show x)  [1 .. (length recList)]
+rPlotSplitPlus ::
+   (TDisp t1, TDisp t2,
+    Show id, Ord id,
+    Fractional y,
+    Tuple.C y, Atom.C y,
+    SV.Walker v,
+    SV.Storage v y,
+    SV.FromList v,
+    SV.Len (v y)) =>
+   Int -> String -> Record s t1 t2 id v y ->
+   [(id, TC s t2 (Data (v :> Nil) y))] -> IO ()
+rPlotSplitPlus n name r list =
+   zipWithM_
+      (\k -> rPlot (name ++ " - Part " ++ show (k::Int)))
+      [0 ..] (map (addSignals list) (Record.split n r))
 
 
 --------------------------------------------
