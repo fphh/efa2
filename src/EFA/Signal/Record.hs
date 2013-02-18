@@ -258,24 +258,24 @@ instance
 -- RSignal als Transponierte Form
 
 
-type RSig = (TSigL, PSamp2LL)
-type RSamp1 = (TSamp, PSamp1L)
-type RSamp = (TSamp, PSamp)
+type Sig = (TSigL, PSamp2LL)
+type Samp1 = (TSamp, PSamp1L)
+type Samp = (TSamp, PSamp)
 
 
-viewL :: RSig -> Maybe (RSamp1, RSig)
+viewL :: Sig -> Maybe (Samp1, Sig)
 viewL (t,ps) =
    liftM2 zipPairs (S.viewL t) (S.viewL ps)
 
-viewR :: RSig -> Maybe (RSig, RSamp1)
+viewR :: Sig -> Maybe (Sig, Samp1)
 viewR (t,ps) =
    liftM2 zipPairs (S.viewR t) (S.viewR ps)
 
 zipPairs :: (a,b) -> (c,d) -> ((a,c), (b,d))
 zipPairs (a,b) (c,d) = ((a,c), (b,d))
 
-len :: RSig -> Int
+len :: Sig -> Int
 len  (t,ps) = min (S.len t) (S.len ps)
 
-singleton :: RSamp1 -> RSig
+singleton :: Samp1 -> Sig
 singleton (t,ps) = (S.singleton t, S.singleton ps)

@@ -20,7 +20,7 @@ import EFA.Signal.SequenceData
            filterSequWithSequData, filterSequWithSequData2)
 
 
-import EFA.Signal.Record (Record(..), PowerRecord, FlowRecord, RSamp1, RSig)
+import EFA.Signal.Record (Record(..), PowerRecord, FlowRecord)
 
 import EFA.Signal.Base
           (Val, Sign(..), ZeroCrossing(..))
@@ -229,9 +229,9 @@ genSequ pRec = removeNilSections (SequData $ sequ++[lastSec], SequData pRecs)
             err2 = error ("Error in EFA.Signal.Sequence/genSequence, case 1 - empty tail in rSig")
 
         recyc ::
-           RSig -> RSamp1 ->
-           ((Sec, [Sec]), (RSig, [RSig])) ->
-           ((Sec, [Sec]), (RSig, [RSig]))
+           Record.Sig -> Record.Samp1 ->
+           ((Sec, [Sec]), (Record.Sig, [Record.Sig])) ->
+           ((Sec, [Sec]), (Record.Sig, [Record.Sig]))
 
         -- Incoming rSig is at least two samples long -- detect changes
         recyc rsig x1 (((lastIdx,idx),sq),(secRSig, sqRSig)) |
@@ -244,7 +244,7 @@ genSequ pRec = removeNilSections (SequData $ sequ++[lastSec], SequData pRecs)
             xs1 = Record.singleton x1
             xs2 = Record.singleton x2
 
-            f :: EventType -> (RSig, [RSig])
+            f :: EventType -> (Record.Sig, [Record.Sig])
             f LeftEvent = (xs1.++xs2, sqRSig ++ [secRSig])           -- add actual Interval to next section
             f RightEvent = (xs2, sqRSig ++ [secRSig .++ xs2])     --add actual Interval to last section
             f MixedEvent = (xs2, sqRSig ++ [secRSig] ++ [xs1 .++ xs2]) -- make additional Mini--Section
@@ -270,7 +270,7 @@ removeNilSections (SequData sequ, SequData pRecs) = (SequData fsequ, SequData fR
 
 
 -- | Function to detect and classify a step over several signals
-stepDetect :: RSamp1 -> RSamp1 -> EventType
+stepDetect :: Record.Samp1 -> Record.Samp1 -> EventType
 stepDetect  (t1,ps1) (t2,ps2) = f
   where stepList :: Samp1L (Typ A STy Tt) StepType
         stepList = S.tzipWith stepX ps1 ps2
@@ -305,7 +305,7 @@ addZeroCrossings r = rsig2Record rSigNew0 r
                     Just ((rHead, rTail), (_, rLast)) ->
                        f rTail rHead mempty .++ Record.singleton rLast
 
-        f :: RSig -> RSamp1 -> RSig -> RSig
+        f :: Record.Sig -> Record.Samp1 -> Record.Sig -> Record.Sig
         f rSig rold rSigNew =
            case Record.viewL rSig of
               Nothing -> rSigNew
@@ -315,14 +315,14 @@ addZeroCrossings r = rsig2Record rSigNew0 r
 -----------------------------------------------------------------------------------
 -- | Function for calculating zero Crossings
 
-getZeroCrossings :: RSamp1 -> RSamp1 -> RSig
+getZeroCrossings :: Record.Samp1 -> Record.Samp1 -> Record.Sig
 getZeroCrossings rs1@(t1,ps1) rs2 = ((S.singleton t1) .++ zeroCrossingTimes,(S.singleton ps1) .++ zeroPowers)
           where
              (zeroCrossings, zeroCrossingTimes) = calcZeroTimes rs1 rs2
              zeroPowers = calcZeroPowers rs1 rs2 zeroCrossingTimes zeroCrossings
 
 
-calcZeroPowers :: RSamp1 -> RSamp1 -> TSigL -> TZeroSamp1L -> PSamp2LL
+calcZeroPowers :: Record.Samp1 -> Record.Samp1 -> TSigL -> TZeroSamp1L -> PSamp2LL
 calcZeroPowers (t1,(TC (Data ps1))) (t2,(TC (Data ps2))) zeroCrossingTimes (TC (Data tz)) = S.transpose2 $ fromSigList sigList
                where g p1 p2 tz2 = f (toSample p1) (toSample p2) (toSample tz2)
                      sigList = L.zipWith3 g ps1 ps2 tz :: [PSigL]
@@ -330,7 +330,7 @@ calcZeroPowers (t1,(TC (Data ps1))) (t2,(TC (Data ps2))) zeroCrossingTimes (TC (
                      f :: PSamp -> PSamp -> TZeroSamp -> PSigL
                      f p1 p2 zeroCrossing = interpPowers (t1,p1) (t2,p2) zeroCrossingTimes zeroCrossing
 
-calcZeroTimes :: RSamp1 -> RSamp1 -> (TZeroSamp1L,TSigL)
+calcZeroTimes :: Record.Samp1 -> Record.Samp1 -> (TZeroSamp1L,TSigL)
 calcZeroTimes (t1,ps1) (t2,ps2)  = (zeroCrossings, zeroCrossingTimes)
               where
                  -- | create ascending list containing all zero crossing times
@@ -381,7 +381,7 @@ filterTZero = S.transpose1 . S.map (\ (ZeroCrossing x) -> x) . S.filter (/=NoCro
 
 
 -----------------------------------------------------------------------------------
--- * Conversions between RSig and Record
+-- * Conversions between Record.Sig and Record
 
 -- | Generate rSig from Power Record
 updateMap :: Ord k => M.Map k a -> [b] -> M.Map k b
