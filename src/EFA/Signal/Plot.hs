@@ -10,9 +10,10 @@ module EFA.Signal.Plot where
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Data as D
 import qualified EFA.Signal.Vector as SV
+import qualified EFA.Signal.Record as Record
 
-import EFA.Signal.SequenceData (SequData(SequData),zipWithSecIdxs)
-import EFA.Signal.Record (Record(Record), splitRecord,extractRecord,addSignals)
+import EFA.Signal.SequenceData (SequData, zipWithSecIdxs)
+import EFA.Signal.Record (Record(Record), addSignals)
 
 
 import EFA.Signal.Signal (TC, Signal, toSigList, getDisplayType)
@@ -355,7 +356,7 @@ rPlotSplitPlus :: (Fractional y,
 rPlotSplitPlus n (name,r) list = mapM_ f $ zip titles recList
   where
     f (ti, rec) = rPlot ti rec
-    recList = map (addSignals list) (splitRecord n r)
+    recList = map (addSignals list) (Record.split n r)
     titles = map (\ x -> name ++ " - Part " ++ show x)  [1 .. (length recList)]
 
 
@@ -374,7 +375,7 @@ rPlotSplit ::
 rPlotSplit n name r =
    zipWithM_
       (\k -> rPlot (name ++ " - Part " ++ show (k::Int)))
-      [0..] (splitRecord n r)
+      [0..] (Record.split n r)
 
 rPlotSplitSeq ::
    (TDisp t1, TDisp t2,
@@ -402,7 +403,7 @@ rPlotSelect ::
     SV.Storage v y,
     SV.FromList v) =>
    [id] -> String -> Record s t1 t2 id v y -> IO ()
-rPlotSelect idList name = rPlot name . extractRecord idList
+rPlotSelect idList name = rPlot name . Record.extract idList
 
 
 rPlotSelectSeq ::
@@ -414,4 +415,4 @@ rPlotSelectSeq ::
     SV.Storage v y,
     SV.FromList v) =>
    [id] -> String -> (SequData (Record s t1 t2 id v y)) ->  IO ()
-rPlotSelectSeq idList name = rPlot name . fmap (extractRecord idList)
+rPlotSelectSeq idList name = rPlot name . fmap (Record.extract idList)

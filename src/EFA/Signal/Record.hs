@@ -101,23 +101,22 @@ hardShrinkage threshold x =
 
 
 -- | Generate a new Record with selected signals
-extractRecord ::
+extract ::
    (Ord id, Show id) =>
    [id] -> Record s t1 t2 id v a -> Record s t1 t2 id v a
-extractRecord xs rec = extractLogSignals rec $ map (flip (,) id) xs
+extract xs rec = extractLogSignals rec $ map (flip (,) id) xs
 {-
-extractRecord ::
+extract ::
    (Show (v a), Ord id, Show id) =>
-extractRecord xs rec@(Record time _) =
+extract xs rec@(Record time _) =
    Record time $ mapFromSet (getSig rec) $ Set.fromList xs
 -}
 
-
 -- | Split SignalRecord in even chunks
-splitRecord ::
+split ::
    (Ord id) =>
    Int -> Record s t1 t2 id v a -> [Record s t1 t2 id v a]
-splitRecord n (Record time pMap) =
+split n (Record time pMap) =
    map (Record time . M.fromList) $ HTL.sliceVertical n $ M.toList pMap
 
 
@@ -188,8 +187,10 @@ newTimeBase (Record time m) newTime = Record newTime (M.map f m)
 
 
 -- | Create a new Record by slicing time and all signals on given Indices
-sliceRecord ::  (V.Slice v, V.Storage v a) => Record s t1 t2 id v a -> (Int,Int) ->  Record s t1 t2 id v a
-sliceRecord (Record t m) (idx1,idx2) = Record (f t) (M.map f m)
+slice ::
+   (V.Slice v, V.Storage v a) =>
+   Record s t1 t2 id v a -> (Int, Int) {- Sec -} -> Record s t1 t2 id v a
+slice (Record t m) (idx1,idx2) = Record (f t) (M.map f m)
   where f ::
            (V.Slice v, V.Storage v a) =>
            TC s t (Data (v :> Nil) a) -> TC s t (Data (v :> Nil) a)
@@ -279,22 +280,19 @@ rinit (t,ps) = (S.init t, S.init ps)
 -}
 
 
-rviewL :: RSig -> Maybe (RSamp1, RSig)
-rviewL (t,ps) =
+viewL :: RSig -> Maybe (RSamp1, RSig)
+viewL (t,ps) =
    liftM2 zipPairs (S.viewL t) (S.viewL ps)
 
-rviewR :: RSig -> Maybe (RSig, RSamp1)
-rviewR (t,ps) =
+viewR :: RSig -> Maybe (RSig, RSamp1)
+viewR (t,ps) =
    liftM2 zipPairs (S.viewR t) (S.viewR ps)
 
 zipPairs :: (a,b) -> (c,d) -> ((a,c), (b,d))
 zipPairs (a,b) (c,d) = ((a,c), (b,d))
 
-rlen :: RSig -> Int
-rlen  (t,ps) = min (S.len t) (S.len ps)
+len :: RSig -> Int
+len  (t,ps) = min (S.len t) (S.len ps)
 
-rsingleton :: RSamp1 -> RSig
-rsingleton (t,ps) = (S.singleton t, S.singleton ps)
-
-
-
+singleton :: RSamp1 -> RSig
+singleton (t,ps) = (S.singleton t, S.singleton ps)
