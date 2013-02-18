@@ -221,12 +221,10 @@ genSequ ::  Ord node => PowerRecord node [] Val -> (Sequ, SequData (PowerRecord 
 genSequ pRec = removeNilSections (SequData $ sequ++[lastSec], SequData pRecs)
   where rSig = record2RSig pRec
         pRecs = map (rsig2SecRecord pRec) (seqRSig ++ [lastRSec])
-        ((lastSec,sequ),(lastRSec,seqRSig)) = recyc rTAIL rHEAD (((0,0),[]),(Record.singleton $ rHEAD,[]))
+        ((lastSec,sequ),(lastRSec,seqRSig)) = recyc rTail rHead (((0,0),[]),(Record.singleton $ rHead,[]))
           where
-            rHEAD =  fst $ maybe err1 id $ Record.viewL rSig
-            rTAIL =  snd $ maybe err2 id $ Record.viewL rSig
-            err1 = error ("Error in EFA.Signal.Sequence/genSequence, case 1 - empty head in rSig")
-            err2 = error ("Error in EFA.Signal.Sequence/genSequence, case 1 - empty tail in rSig")
+            (rHead, rTail) = maybe err id $ Record.viewL rSig
+            err = error ("Error in EFA.Signal.Sequence/genSequence, case 1 - empty rSig")
 
         recyc ::
            Record.Sig -> Record.Samp1 ->
@@ -235,12 +233,10 @@ genSequ pRec = removeNilSections (SequData $ sequ++[lastSec], SequData pRecs)
 
         -- Incoming rSig is at least two samples long -- detect changes
         recyc rsig x1 (((lastIdx,idx),sq),(secRSig, sqRSig)) |
-          (Record.len rsig) >=2 = recyc rTAIL x2 (g $ stepDetect x1 x2, f $ stepDetect x1 x2)
+          (Record.len rsig) >=2 = recyc rTail x2 (g $ stepDetect x1 x2, f $ stepDetect x1 x2)
           where
-            x2 =  fst $ maybe err1 id $ Record.viewL rsig -- rhead rsig
-            rTAIL =  snd $ maybe err2 id $ Record.viewL rsig
-            err1 = error ("Error in EFA.Signal.Sequence/genSequence, case 2 - empty head in rSig")
-            err2 = error ("Error in EFA.Signal.Sequence/genSequence, case 2 - empty tail in rSig")
+            (x2, rTail) = maybe err id $ Record.viewL rsig
+            err = error ("Error in EFA.Signal.Sequence/genSequence, case 2 - empty rSig")
             xs1 = Record.singleton x1
             xs2 = Record.singleton x2
 
