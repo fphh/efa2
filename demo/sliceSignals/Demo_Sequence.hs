@@ -74,8 +74,8 @@ main = do
   print sequ
 
   Plot.recordIO "PowerRecord" pRec
-  Plot.recordIO "SequA" sequRecA
-  Plot.recordIO "SequB" sequRecB
+  Plot.sequenceIO "SequA" sequRecA
+  Plot.sequenceIO "SequB" sequRecB
 
 {-
   {-

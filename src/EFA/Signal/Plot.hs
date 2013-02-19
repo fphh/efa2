@@ -9,9 +9,10 @@ module EFA.Signal.Plot (
    signal, signalAttr, signalStyle, signalIO,
    xy, xyBasic, xyAttr, xyStyle, xyIO,
    surface, surfaceIO,
-   record, recordStyle, recordAttr, recordFrame, recordBasic, recordIO,
-   recordSplitPlus, recordSplit, recordSplitSeq,
-   recordSelect, recordSelectSeq,
+   record, recordStyle, recordAttr, recordIO,
+   sequenceIO,
+   recordSplitPlus, recordSplit, sequenceSplit,
+   recordSelect, sequenceSelect,
    ) where
 
 import qualified EFA.Signal.Signal as S
@@ -21,6 +22,7 @@ import qualified EFA.Signal.Record as Record
 
 import EFA.Signal.SequenceData (SequData, zipWithSecIdxs)
 
+import EFA.Signal.Record (Record(Record))
 import EFA.Signal.Signal (TC, toSigList, getDisplayType)
 -- import EFA.Signal.Base (BSum)
 
@@ -281,47 +283,12 @@ recordAttr name =
    Opts.deflt
 
 
--- | The Core Class and Functions for Plotting Records and a Sequnce of Records
-class (Atom.C (D.Value record)) => Record record where
-   record ::
-      String ->  record ->
-      [Frame.T (Graph2D.T (D.Value record) (D.Value record))]
-
--- instance for a single record
-instance  (Fractional y,
-           Show id,
-           SV.Walker v,
-           SV.Storage v y,
-           SV.FromList v,
-           TDisp t2,
-           TDisp t1,
-           Tuple.C y,
-           Atom.C y) =>
-     Record (Record.Record s t1 t2 id v y) where
-       record rName rec = [recordFrame rName rec]
-
-instance (Record record) => Record (SequData record) where
-   record sqName =
-      Fold.fold .
-      zipWithSecIdxs
-         (\x -> record ("Sequence " ++ sqName ++ ", Record of " ++ show x))
-
-recordFrame ::
+record ::
    (Show id, TDisp typ0, TDisp typ1,
     SV.Walker v, SV.FromList v,
     SV.Storage v a, Fractional a, Atom.C a, Tuple.C a) =>
-   String ->
-   Record.Record s typ0 typ1 id v a ->
-   Frame.T (Graph2D.T a a)
-recordFrame rName rec =
-   Frame.cons (recordAttr rName) $ recordBasic rec
-
-recordBasic ::
-   (Show id, TDisp typ0, TDisp typ1,
-    SV.Walker v, SV.FromList v,
-    SV.Storage v a, Fractional a, Atom.C a, Tuple.C a) =>
-   Record.Record s typ0 typ1 id v a -> Plot2D.T a a
-recordBasic (Record.Record time pMap) =
+   Record s typ0 typ1 id v a -> Plot2D.T a a
+record (Record time pMap) =
    foldMap
       (\(key, sig) ->
          recordStyle key $
@@ -330,28 +297,15 @@ recordBasic (Record.Record time pMap) =
    M.toList pMap
 
 
-class Atom.C (Value tc) => AxisLabel tc where
-   type Value tc :: *
-   genAxLabel :: tc -> String
-
-instance (TDisp t, Atom.C (D.Value c)) => AxisLabel (TC s t c) where
-   type Value (TC s t c) = D.Value c
-   genAxLabel x =
-      let dispType = getDisplayType x
-      in  getDisplayTypName dispType ++
-             " [" ++ (show $ getDisplayUnit dispType) ++ "]"
-
-instance (AxisLabel tc) => AxisLabel [tc] where
-   type Value [tc] = Value tc
-   genAxLabel x = genAxLabel $ head x
-
-
---------------------------------------------
--- Regular recordIO command
-
-recordIO :: (Record a) => String -> a -> IO ()
-recordIO name r =
-   mapM_ Plot.plotDefault $ record name r
+recordIO ::
+   (Fractional y,
+    Show id,
+    SV.Walker v, SV.Storage v y, SV.FromList v,
+    TDisp t2, TDisp t1,
+    Tuple.C y, Atom.C y) =>
+   String -> Record s t1 t2 id v y -> IO ()
+recordIO name =
+   void . Plot.plotDefault . Frame.cons (recordAttr name) . record
 
 
 recordSplitPlus ::
@@ -363,7 +317,7 @@ recordSplitPlus ::
     SV.Storage v y,
     SV.FromList v,
     SV.Len (v y)) =>
-   Int -> String -> Record.Record s t1 t2 id v y ->
+   Int -> String -> Record s t1 t2 id v y ->
    [(id, TC s t2 (Data (v :> Nil) y))] -> IO ()
 recordSplitPlus n name r list =
    zipWithM_
@@ -382,24 +336,11 @@ recordSplit ::
     SV.Walker v,
     SV.Storage v y,
     SV.FromList v) =>
-   Int -> String -> Record.Record s t1 t2 id v y -> IO ()
+   Int -> String -> Record s t1 t2 id v y -> IO ()
 recordSplit n name r =
    zipWithM_
       (\k -> recordIO (name ++ " - Part " ++ show (k::Int)))
       [0..] (Record.split n r)
-
-recordSplitSeq ::
-   (TDisp t1, TDisp t2,
-    Show id, Ord id,
-    Fractional y,
-    Tuple.C y, Atom.C y,
-    SV.Walker v,
-    SV.Storage v y,
-    SV.FromList v) =>
-   Int -> String -> SequData (Record.Record s t1 t2 id v y) -> IO ()
-recordSplitSeq n name =
-   Fold.sequence_ .
-   zipWithSecIdxs (\ x -> recordSplit n (name ++ " - " ++ show x))
 
 
 --------------------------------------------
@@ -413,10 +354,25 @@ recordSelect ::
     SV.Walker v,
     SV.Storage v y,
     SV.FromList v) =>
-   [id] -> String -> Record.Record s t1 t2 id v y -> IO ()
+   [id] -> String -> Record s t1 t2 id v y -> IO ()
 recordSelect idList name = recordIO name . Record.extract idList
 
-recordSelectSeq ::
+
+sequenceFrame ::
+   (Fractional y,
+    Show id,
+    SV.Walker v, SV.Storage v y, SV.FromList v,
+    TDisp t2, TDisp t1,
+    Tuple.C y, Atom.C y) =>
+   String -> SequData (Record s t1 t2 id v y) ->
+   SequData (Frame.T (Graph2D.T y y))
+sequenceFrame sqName =
+   zipWithSecIdxs
+      (\x ->
+         Frame.cons (recordAttr ("Sequence " ++ sqName ++ ", Record of " ++ show x)) .
+         record)
+
+sequenceIO ::
    (TDisp t1, TDisp t2,
     Show id, Ord id,
     Fractional y,
@@ -424,5 +380,49 @@ recordSelectSeq ::
     SV.Walker v,
     SV.Storage v y,
     SV.FromList v) =>
-   [id] -> String -> SequData (Record.Record s t1 t2 id v y) ->  IO ()
-recordSelectSeq idList name = recordIO name . fmap (Record.extract idList)
+   String -> SequData (Record s t1 t2 id v y) -> IO ()
+sequenceIO name =
+   Fold.mapM_ Plot.plotDefault . sequenceFrame name
+
+sequenceSplit ::
+   (TDisp t1, TDisp t2,
+    Show id, Ord id,
+    Fractional y,
+    Tuple.C y, Atom.C y,
+    SV.Walker v,
+    SV.Storage v y,
+    SV.FromList v) =>
+   Int -> String -> SequData (Record s t1 t2 id v y) -> IO ()
+sequenceSplit n name =
+   Fold.sequence_ .
+   zipWithSecIdxs (\ x -> recordSplit n (name ++ " - " ++ show x))
+
+sequenceSelect ::
+   (TDisp t1, TDisp t2,
+    Show id, Ord id,
+    Fractional y,
+    Tuple.C y, Atom.C y,
+    SV.Walker v,
+    SV.Storage v y,
+    SV.FromList v) =>
+   [id] -> String -> SequData (Record s t1 t2 id v y) ->  IO ()
+sequenceSelect idList name =
+   sequenceIO name . fmap (Record.extract idList)
+
+
+
+
+class Atom.C (Value tc) => AxisLabel tc where
+   type Value tc :: *
+   genAxLabel :: tc -> String
+
+instance (TDisp t, Atom.C (D.Value c)) => AxisLabel (TC s t c) where
+   type Value (TC s t c) = D.Value c
+   genAxLabel x =
+      let dispType = getDisplayType x
+      in  getDisplayTypName dispType ++
+             " [" ++ (show $ getDisplayUnit dispType) ++ "]"
+
+instance (AxisLabel tc) => AxisLabel [tc] where
+   type Value [tc] = Value tc
+   genAxLabel x = genAxLabel $ head x
