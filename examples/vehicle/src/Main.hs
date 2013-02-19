@@ -15,9 +15,9 @@ import qualified EFA.Equation.System as EqGen
 import EFA.IO.PLTImport (modelicaPLTImport)
 import qualified EFA.Signal.SequenceData as SD
 import EFA.Signal.Record (PPosIdx(PPosIdx), SignalRecord,
-                          Record(Record), 
+                          Record(Record), PowerRecord,
                           SignalRecord,getTime, newTimeBase, removeZeroNoise)
-import EFA.Signal.Sequence (makeSeqFlowTopology,genSequenceSignal, 
+import EFA.Signal.Sequence (makeSeqFlowTopology,genSequenceSignal,chopAtZeroCrossingsPowerRecord, 
                             removeLowEnergySections, genSequFlow, addZeroCrossings, removeLowTimeSections, genSequ,sectionRecordsFromSequence)
 import qualified EFA.Signal.Signal as Sig -- (toList,UTSigL,setType)
 import qualified EFA.Report.Report as Rep
@@ -69,7 +69,7 @@ main = do
 --------------------------------------------------------------------------------------- 
 -- * Condition Signals and Calculate Powers
   let signals = Signals.condition rawSignals 
-  let powerSignals = removeZeroNoise (Signals.calculatePower signals) (10^^(-12::Int)) 
+  let powerSignals = removeZeroNoise (Signals.calculatePower signals) (0) --(10^^(-12::Int)) 
       
 --------------------------------------------------------------------------------------- 
 -- * Add zerocrossings in Powersignals and Signals
@@ -99,7 +99,11 @@ main = do
 ---------------------------------------------------------------------------------------
 -- * Cut Signals and filter Time Sektions
   
-  let (sequenceRaw,sequencePowersRaw) = genSequ powerSignals0
+  let (sequenceRaw,sequencePowersRawB) = genSequ powerSignals0
+      
+  let sequencePowersRaw :: SD.SequData (PowerRecord System.Node [] Double)      
+      sequencePowersRaw = chopAtZeroCrossingsPowerRecord powerSignals0 
+      
   
   -- filter for Modelica-specific steps or remove time section with low time duration
   let (sequ,sequencePowers) = removeLowTimeSections(sequenceRaw,sequencePowersRaw) 0
@@ -107,7 +111,7 @@ main = do
       
   let sequenceSignals = sectionRecordsFromSequence signals0 sequ 
 --  let powerSignals0' = addSignal powerSignals0 (PPosIdx System.Tank System.Tank, Sig.setType sequSig)    
-  --PL.rPlotSplitPlus 1 ("Mit SektionsSignal",powerSignals0) [(PPosIdx System.Tank System.Tank, Sig.setType sequSig)]   
+  -- PL.rPlotSplitPlus 1 ("Mit SektionsSignal",powerSignals0) [(PPosIdx System.Tank System.Tank, Sig.setType sequSig)]   
   -- Rep.report [Rep.RAll,Rep.RVertical] ("Powers0", powerSignals0)
   
 ---------------------------------------------------------------------------------------

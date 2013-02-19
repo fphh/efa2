@@ -502,7 +502,7 @@ chopAtZeroCrossingsRSig (TC (Data times), TC (Data vectorSignal)) =
    map (mapPair (TC . Data, TC . Data)) $
    map unzip $
    filter (HTL.lengthAtLeast 2) $
-   map (removeDuplicates fst) $
+--   map (removeDuplicates fst) $
    chopAtZeroCrossings $
    zip times vectorSignal
 
