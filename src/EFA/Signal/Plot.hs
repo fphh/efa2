@@ -293,7 +293,7 @@ instance  (Fractional y,
            Tuple.C y,
            Atom.C y) =>
      RPlot (Record s t1 t2 id v y) where
-       rPlotCore rName rec = [rPlotSingle rName rec]
+       rPlotCore rName rec = [rPlotSingleFrame rName rec]
 
 instance (RPlot record) => RPlot (SequData record) where
    rPlotCore sqName =
@@ -301,15 +301,22 @@ instance (RPlot record) => RPlot (SequData record) where
       zipWithSecIdxs
          (\x -> rPlotCore ("Sequence " ++ sqName ++ ", Record of " ++ show x))
 
-rPlotSingle ::
+rPlotSingleFrame ::
    (Show id, TDisp typ0, TDisp typ1,
     SV.Walker v, SV.FromList v,
     SV.Storage v a, Fractional a, Atom.C a, Tuple.C a) =>
    String ->
    Record s typ0 typ1 id v a ->
    Frame.T (Graph2D.T a a)
-rPlotSingle rName (Record time pMap) =
-   Frame.cons (rPlotAttr rName) $
+rPlotSingleFrame rName rec =
+   Frame.cons (rPlotAttr rName) $ rPlotSingle rec
+
+rPlotSingle ::
+   (Show id, TDisp typ0, TDisp typ1,
+    SV.Walker v, SV.FromList v,
+    SV.Storage v a, Fractional a, Atom.C a, Tuple.C a) =>
+   Record s typ0 typ1 id v a -> Plot2D.T a a
+rPlotSingle (Record time pMap) =
    foldMap
       (\(key, sig) ->
          rPlotStyle key $
