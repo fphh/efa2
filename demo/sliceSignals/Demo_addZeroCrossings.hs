@@ -8,7 +8,7 @@ import qualified Data.Map as M
 import EFA.Signal.Sequence
 import EFA.Signal.Record
 import EFA.Signal.Signal as S
-import EFA.Signal.Plot
+import qualified EFA.Signal.Plot as Plot
 import EFA.Signal.Base (Val)
 
 
@@ -37,4 +37,4 @@ main :: IO ()
 main = do
   print pRec
   print pRec0
-  rPlot "pRec0" pRec0
+  Plot.recordIO "pRec0" pRec0

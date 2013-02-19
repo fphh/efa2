@@ -5,7 +5,14 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module EFA.Signal.Plot where
+module EFA.Signal.Plot (
+   signal, signalAttr, signalStyle, signalIO,
+   xy, xyBasic, xyAttr, xyStyle, xyIO,
+   surface, surfaceIO,
+   record, recordStyle, recordAttr, recordFrame, recordBasic, recordIO,
+   recordSplitPlus, recordSplit, recordSplitSeq,
+   recordSelect, recordSelectSeq,
+   ) where
 
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Data as D
@@ -13,10 +20,8 @@ import qualified EFA.Signal.Vector as SV
 import qualified EFA.Signal.Record as Record
 
 import EFA.Signal.SequenceData (SequData, zipWithSecIdxs)
-import EFA.Signal.Record (Record(Record), addSignals)
 
-
-import EFA.Signal.Signal (TC, Signal, toSigList, getDisplayType)
+import EFA.Signal.Signal (TC, toSigList, getDisplayType)
 -- import EFA.Signal.Base (BSum)
 
 import EFA.Signal.Data (Data, (:>), Nil, NestedList)
@@ -48,78 +53,78 @@ import Data.Monoid (mconcat)
 
 -- | Get Signal Plot Data (Unit Conversion)  ---------------------------------------------------------------
 
-sPlotData ::
+getData ::
    (TDisp typ, D.FromList c, D.Map c, D.Storage c a, Fractional a) =>
    TC s typ (Data c a) -> NestedList c a
-sPlotData x = S.toList $ S.map (* fromRational s) x
+getData x = S.toList $ S.map (* fromRational s) x
    where (UnitScale s) = getUnitScale $ getDisplayUnit $ getDisplayType x
 
 
 -- | Simple Signal Plotting -- without time axis --------------------------------------------------------------
 
 -- | Plotting Signals against each other --------------------------------------------------------------
-sigPlotAttr ::
+signalAttr ::
    (AxisLabel tc, Graph.C graph) =>
    String -> tc -> Opts.T graph
-sigPlotAttr ti x =
+signalAttr ti x =
    Opts.title ti $
    Opts.xLabel "Sample-Nr []" $
    Opts.yLabel (genAxLabel x) $
    Opts.grid True $
    Opts.deflt
 
-sigPlotStyle :: Graph2D.T x y -> Graph2D.T x y
-sigPlotStyle =
+signalStyle :: Graph2D.T x y -> Graph2D.T x y
+signalStyle =
    Graph2D.lineSpec $
       {- not supported by "lines" style
       LineSpec.pointSize 2 $
       -}
       LineSpec.deflt
 
-sigPlot ::
-   (SigPlot signal) =>
+signalIO ::
+   (Signal signal) =>
    String -> signal -> IO ()
-sigPlot ti x =
+signalIO ti x =
    void $ Plot.plotDefault $
-   Frame.cons (sigPlotAttr ti x) $
-   fmap sigPlotStyle $ sigPlotCore x
+   Frame.cons (signalAttr ti x) $
+   fmap signalStyle $ signal x
 
-class AxisLabel tc => SigPlot tc where
-   sigPlotCore :: tc -> Plot2D.T Int (Value tc)
+class AxisLabel tc => Signal tc where
+   signal :: tc -> Plot2D.T Int (Value tc)
 
 instance
    (TDisp t, SV.Walker v1, SV.FromList v1, SV.Storage v1 y,
     Atom.C y, Tuple.C y, Fractional y) =>
-      SigPlot (TC s t (Data (v1 :> Nil) y))  where
-   sigPlotCore x =
-      Plot2D.list Graph2D.listLines $ sPlotData x
+      Signal (TC s t (Data (v1 :> Nil) y))  where
+   signal x =
+      Plot2D.list Graph2D.listLines $ getData x
 
-instance (SigPlot tc) => SigPlot [tc]  where
-   sigPlotCore = foldMap sigPlotCore
+instance (Signal tc) => Signal [tc]  where
+   signal = foldMap signal
 
 instance
    (TDisp t,
     SV.Walker v1, SV.FromList v1, SV.Storage v1 y,
     SV.FromList v2, SV.Storage v2 (v1 y),
     Atom.C y, Tuple.C y, Fractional y) =>
-      SigPlot (TC s t (Data (v2 :> v1 :> Nil) y))  where
-   sigPlotCore x = sigPlotCore $ toSigList x
+      Signal (TC s t (Data (v2 :> v1 :> Nil) y))  where
+   signal x = signal $ toSigList x
 
 
 -- | Plotting Signals against each other --------------------------------------------------------------
-xyPlotAttr ::
+xyAttr ::
    (AxisLabel tcX, AxisLabel tcY, Graph.C graph) =>
    String -> tcX -> tcY -> Opts.T graph
-xyPlotAttr ti x y =
+xyAttr ti x y =
    Opts.title ti $
    Opts.xLabel (genAxLabel x) $
    Opts.yLabel (genAxLabel y) $
    Opts.grid True $
    Opts.deflt
 
-xyPlotStyle ::
+xyStyle ::
    Int -> Plot2D.T x y -> Plot2D.T x y
-xyPlotStyle n =
+xyStyle n =
    fmap $ Graph2D.lineSpec $
       LineSpec.pointSize 0.1 $
       LineSpec.pointType 7 $
@@ -127,18 +132,18 @@ xyPlotStyle n =
       LineSpec.title (show $ "Signal" ++ show n) $
       LineSpec.deflt
 
-xyplot ::
-   (XYPlot tcX tcY) =>
+xyIO ::
+   (XY tcX tcY) =>
    String -> tcX -> tcY -> IO ()
-xyplot ti x y =
+xyIO ti x y =
    void $ Plot.plotDefault $
-   Frame.cons (xyPlotAttr ti x y) $
-   xyplotCore x y
+   Frame.cons (xyAttr ti x y) $
+   xy x y
 
-class (AxisLabel tcX, AxisLabel tcY) => XYPlot tcX tcY where
-   xyplotCore :: tcX -> tcY -> Plot2D.T (Value tcX) (Value tcY)
+class (AxisLabel tcX, AxisLabel tcY) => XY tcX tcY where
+   xy :: tcX -> tcY -> Plot2D.T (Value tcX) (Value tcY)
 
-xyplotBasic ::
+xyBasic ::
    (TDisp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 x,
     TDisp t2, SV.Walker v2, SV.FromList v2, SV.Storage v2 y,
     Atom.C x, Tuple.C x, Fractional x,
@@ -146,30 +151,30 @@ xyplotBasic ::
    TC s t1 (Data (v1 :> Nil) x) ->
    TC s t2 (Data (v2 :> Nil) y) ->
    Plot2D.T x y
-xyplotBasic x y =
---   Plot2D.list Graph2D.linesPoints $ zip (sPlotData x) (sPlotData y)
-   Plot2D.list Graph2D.lines $ zip (sPlotData x) (sPlotData y)
+xyBasic x y =
+--   Plot2D.list Graph2D.linesPoints $ zip (getData x) (getData y)
+   Plot2D.list Graph2D.lines $ zip (getData x) (getData y)
 
 instance
    (TDisp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 x,
     TDisp t2, SV.Walker v2, SV.FromList v2, SV.Storage v2 y,
     Atom.C x, Tuple.C x, Fractional x,
     Atom.C y, Tuple.C y, Fractional y) =>
-   XYPlot (TC Signal t1 (Data (v1 :> Nil) x))
-          (TC Signal t2 (Data (v2 :> Nil) y)) where
-   xyplotCore = xyplotBasic
+   XY (TC S.Signal t1 (Data (v1 :> Nil) x))
+      (TC S.Signal t2 (Data (v2 :> Nil) y)) where
+   xy = xyBasic
 
 instance
    (TDisp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 x,
     TDisp t2, SV.Walker v2, SV.FromList v2, SV.Storage v2 y,
     Atom.C x, Tuple.C x, Fractional x,
     Atom.C y, Tuple.C y, Fractional y) =>
-   XYPlot (TC s t1 (Data (v1 :> Nil) x))
-          [TC s t2 (Data (v2 :> Nil) y)] where
-   xyplotCore x ys =
+   XY (TC s t1 (Data (v1 :> Nil) x))
+      [TC s t2 (Data (v2 :> Nil) y)] where
+   xy x ys =
       mconcat $
       zipWith
-         (\ n y -> xyPlotStyle n $ xyplotBasic x y)
+         (\ n y -> xyStyle n $ xyBasic x y)
          [(0::Int)..] ys
 
 instance
@@ -177,12 +182,12 @@ instance
     TDisp t2, SV.Walker v2, SV.FromList v2, SV.Storage v2 y,
     Atom.C x, Tuple.C x, Fractional x,
     Atom.C y, Tuple.C y, Fractional y) =>
-   XYPlot [TC s t1 (Data (v1 :> Nil) x)]
-          [TC s t2 (Data (v2 :> Nil) y)] where
-   xyplotCore xs ys =
+   XY [TC s t1 (Data (v1 :> Nil) x)]
+      [TC s t2 (Data (v2 :> Nil) y)] where
+   xy xs ys =
       mconcat $
       zipWith3
-         (\ n x y -> xyPlotStyle n $ xyplotBasic x y)
+         (\ n x y -> xyStyle n $ xyBasic x y)
          [(0::Int)..] xs ys
 
 instance
@@ -191,9 +196,9 @@ instance
     SV.FromList v3, SV.Storage v3 (v2 y),
     Atom.C x, Tuple.C x, Fractional x,
     Atom.C y, Tuple.C y, Fractional y) =>
-   XYPlot (TC s t1 (Data (v1 :> Nil) x))
-          (TC s t2 (Data (v3 :> v2 :> Nil) y)) where
-   xyplotCore x y = xyplotCore x (toSigList y)
+   XY (TC s t1 (Data (v1 :> Nil) x))
+      (TC s t2 (Data (v3 :> v2 :> Nil) y)) where
+   xy x y = xy x (toSigList y)
 
 instance
    (TDisp t1,
@@ -206,17 +211,17 @@ instance
     SV.FromList v4, SV.Storage v4 (v3 y),
     Atom.C x, Tuple.C x, Fractional x,
     Atom.C y, Tuple.C y, Fractional y) =>
-   XYPlot
+   XY
       (TC s t1 (Data (v2 :> v1 :> Nil) x))
       (TC s t2 (Data (v4 :> v3 :> Nil) y)) where
-   xyplotCore x y = xyplotCore (toSigList x) (toSigList y)
+   xy x y = xy (toSigList x) (toSigList y)
 
 
 -- | Plotting Surfaces
-surfPlot ::
-   SurfPlot tcX tcY tcZ =>
+surfaceIO ::
+   Surface tcX tcY tcZ =>
    String -> tcX -> tcY -> tcZ -> IO ()
-surfPlot ti x y z = do
+surfaceIO ti x y z = do
    let attrs =
           Opts.title ti $
           Opts.xLabel (genAxLabel x) $
@@ -225,12 +230,12 @@ surfPlot ti x y z = do
           Opts.size 1 1 $
           Opts.deflt
    void $ Plot.plotDefault $
-      Frame.cons attrs $ surfPlotCore x y z
+      Frame.cons attrs $ surface x y z
 
 class
    (AxisLabel tcX, AxisLabel tcY, AxisLabel tcZ) =>
-      SurfPlot tcX tcY tcZ where
-   surfPlotCore :: tcX -> tcY -> tcZ -> Plot3D.T (Value tcX) (Value tcY) (Value tcZ)
+      Surface tcX tcY tcZ where
+   surface :: tcX -> tcY -> tcZ -> Plot3D.T (Value tcX) (Value tcY) (Value tcZ)
 
 instance
    (SV.FromList v1, SV.Storage v1 x, SV.FromList v2, SV.Storage v2 (v1 x), TDisp t1,
@@ -240,12 +245,12 @@ instance
     Atom.C y, Tuple.C y,
     Atom.C z, Tuple.C z) =>
 
-      SurfPlot
+      Surface
          (TC s1 t1 (Data (v2 :> v1 :> Nil) x))
          (TC s2 t2 (Data (v4 :> v3 :> Nil) y))
          (TC s3 t3 (Data (v6 :> v5 :> Nil) z)) where
 
-   surfPlotCore x y z =
+   surface x y z =
       Plot3D.mesh $
       L.zipWith3 zip3 (S.toList2 x) (S.toList2 y) (S.toList2 z)
 
@@ -253,8 +258,8 @@ instance
 -- | Plotting Records ---------------------------------------------------------------
 
 -- | Line Style
-rPlotStyle :: (Show k) => k -> Plot2D.T x y -> Plot2D.T x y
-rPlotStyle key =
+recordStyle :: (Show k) => k -> Plot2D.T x y -> Plot2D.T x y
+recordStyle key =
    fmap $ Graph2D.lineSpec $
       LineSpec.pointSize 0.3$
       LineSpec.pointType 1 $
@@ -263,10 +268,10 @@ rPlotStyle key =
       LineSpec.deflt
 
 -- | Plot Attributes
-rPlotAttr ::
+recordAttr ::
    (Graph.C graph) =>
    String -> Opts.T graph
-rPlotAttr name =
+recordAttr name =
    Opts.title (name) $
    Opts.grid True $
    Opts.xLabel ("Time [" ++ (show $ getDisplayUnit Typ_T) ++ "]") $
@@ -277,8 +282,8 @@ rPlotAttr name =
 
 
 -- | The Core Class and Functions for Plotting Records and a Sequnce of Records
-class (Atom.C (D.Value record)) => RPlot record where
-   rPlotCore ::
+class (Atom.C (D.Value record)) => Record record where
+   record ::
       String ->  record ->
       [Frame.T (Graph2D.T (D.Value record) (D.Value record))]
 
@@ -292,36 +297,36 @@ instance  (Fractional y,
            TDisp t1,
            Tuple.C y,
            Atom.C y) =>
-     RPlot (Record s t1 t2 id v y) where
-       rPlotCore rName rec = [rPlotSingleFrame rName rec]
+     Record (Record.Record s t1 t2 id v y) where
+       record rName rec = [recordFrame rName rec]
 
-instance (RPlot record) => RPlot (SequData record) where
-   rPlotCore sqName =
+instance (Record record) => Record (SequData record) where
+   record sqName =
       Fold.fold .
       zipWithSecIdxs
-         (\x -> rPlotCore ("Sequence " ++ sqName ++ ", Record of " ++ show x))
+         (\x -> record ("Sequence " ++ sqName ++ ", Record of " ++ show x))
 
-rPlotSingleFrame ::
+recordFrame ::
    (Show id, TDisp typ0, TDisp typ1,
     SV.Walker v, SV.FromList v,
     SV.Storage v a, Fractional a, Atom.C a, Tuple.C a) =>
    String ->
-   Record s typ0 typ1 id v a ->
+   Record.Record s typ0 typ1 id v a ->
    Frame.T (Graph2D.T a a)
-rPlotSingleFrame rName rec =
-   Frame.cons (rPlotAttr rName) $ rPlotSingle rec
+recordFrame rName rec =
+   Frame.cons (recordAttr rName) $ recordBasic rec
 
-rPlotSingle ::
+recordBasic ::
    (Show id, TDisp typ0, TDisp typ1,
     SV.Walker v, SV.FromList v,
     SV.Storage v a, Fractional a, Atom.C a, Tuple.C a) =>
-   Record s typ0 typ1 id v a -> Plot2D.T a a
-rPlotSingle (Record time pMap) =
+   Record.Record s typ0 typ1 id v a -> Plot2D.T a a
+recordBasic (Record.Record time pMap) =
    foldMap
       (\(key, sig) ->
-         rPlotStyle key $
+         recordStyle key $
          Plot2D.list Graph2D.linesPoints $
-         zip (sPlotData time) (sPlotData sig)) $
+         zip (getData time) (getData sig)) $
    M.toList pMap
 
 
@@ -342,14 +347,14 @@ instance (AxisLabel tc) => AxisLabel [tc] where
 
 
 --------------------------------------------
--- Regular rPlot command
+-- Regular recordIO command
 
-rPlot :: (RPlot a) => String -> a -> IO ()
-rPlot name r =
-   mapM_ Plot.plotDefault $ rPlotCore name r
+recordIO :: (Record a) => String -> a -> IO ()
+recordIO name r =
+   mapM_ Plot.plotDefault $ record name r
 
 
-rPlotSplitPlus ::
+recordSplitPlus ::
    (TDisp t1, TDisp t2,
     Show id, Ord id,
     Fractional y,
@@ -358,18 +363,18 @@ rPlotSplitPlus ::
     SV.Storage v y,
     SV.FromList v,
     SV.Len (v y)) =>
-   Int -> String -> Record s t1 t2 id v y ->
+   Int -> String -> Record.Record s t1 t2 id v y ->
    [(id, TC s t2 (Data (v :> Nil) y))] -> IO ()
-rPlotSplitPlus n name r list =
+recordSplitPlus n name r list =
    zipWithM_
-      (\k -> rPlot (name ++ " - Part " ++ show (k::Int)))
-      [0 ..] (map (addSignals list) (Record.split n r))
+      (\k -> recordIO (name ++ " - Part " ++ show (k::Int)))
+      [0 ..] (map (Record.addSignals list) (Record.split n r))
 
 
 --------------------------------------------
--- rPlot command to show max n signals per window
+-- recordIO command to show max n signals per window
 
-rPlotSplit ::
+recordSplit ::
    (TDisp t1, TDisp t2,
     Show id, Ord id,
     Fractional y,
@@ -377,13 +382,13 @@ rPlotSplit ::
     SV.Walker v,
     SV.Storage v y,
     SV.FromList v) =>
-   Int -> String -> Record s t1 t2 id v y -> IO ()
-rPlotSplit n name r =
+   Int -> String -> Record.Record s t1 t2 id v y -> IO ()
+recordSplit n name r =
    zipWithM_
-      (\k -> rPlot (name ++ " - Part " ++ show (k::Int)))
+      (\k -> recordIO (name ++ " - Part " ++ show (k::Int)))
       [0..] (Record.split n r)
 
-rPlotSplitSeq ::
+recordSplitSeq ::
    (TDisp t1, TDisp t2,
     Show id, Ord id,
     Fractional y,
@@ -391,16 +396,16 @@ rPlotSplitSeq ::
     SV.Walker v,
     SV.Storage v y,
     SV.FromList v) =>
-   Int -> String -> SequData (Record s t1 t2 id v y) -> IO ()
-rPlotSplitSeq n name =
+   Int -> String -> SequData (Record.Record s t1 t2 id v y) -> IO ()
+recordSplitSeq n name =
    Fold.sequence_ .
-   zipWithSecIdxs (\ x -> rPlotSplit n (name ++ " - " ++ show x))
+   zipWithSecIdxs (\ x -> recordSplit n (name ++ " - " ++ show x))
 
 
 --------------------------------------------
--- rPlot command to plot selected Signals only
+-- recordIO command to plot selected Signals only
 
-rPlotSelect ::
+recordSelect ::
    (TDisp t1, TDisp t2,
     Show id, Ord id,
     Fractional y,
@@ -408,11 +413,10 @@ rPlotSelect ::
     SV.Walker v,
     SV.Storage v y,
     SV.FromList v) =>
-   [id] -> String -> Record s t1 t2 id v y -> IO ()
-rPlotSelect idList name = rPlot name . Record.extract idList
+   [id] -> String -> Record.Record s t1 t2 id v y -> IO ()
+recordSelect idList name = recordIO name . Record.extract idList
 
-
-rPlotSelectSeq ::
+recordSelectSeq ::
    (TDisp t1, TDisp t2,
     Show id, Ord id,
     Fractional y,
@@ -420,5 +424,5 @@ rPlotSelectSeq ::
     SV.Walker v,
     SV.Storage v y,
     SV.FromList v) =>
-   [id] -> String -> (SequData (Record s t1 t2 id v y)) ->  IO ()
-rPlotSelectSeq idList name = rPlot name . fmap (Record.extract idList)
+   [id] -> String -> SequData (Record.Record s t1 t2 id v y) ->  IO ()
+recordSelectSeq idList name = recordIO name . fmap (Record.extract idList)
