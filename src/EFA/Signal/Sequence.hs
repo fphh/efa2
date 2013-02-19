@@ -372,7 +372,9 @@ makeTZero :: TSamp -> TZeroSamp
 makeTZero (TC (Data x)) = TC $ Data $ ZeroCrossing x
 
 filterTZero :: TZeroSamp1L -> TSigL
-filterTZero = S.transpose1 . S.map (\ (ZeroCrossing x) -> x) . S.filter (/=NoCrossing)
+filterTZero =
+   S.transpose1 .
+   S.mapMaybe (\ c -> case c of ZeroCrossing x -> Just x; NoCrossing -> Nothing)
 
 
 

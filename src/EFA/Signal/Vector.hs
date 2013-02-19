@@ -16,7 +16,7 @@ import qualified Data.List.HT as LH
 import Data.Maybe.HT (toMaybe)
 import Data.Eq (Eq((==)))
 import Data.Function ((.), ($), id, flip)
-import Data.Maybe (Maybe, maybe)
+import Data.Maybe (Maybe(Just, Nothing), maybe, isJust)
 import Data.Bool (Bool(False, True), (&&), not)
 import Prelude (Int, Ord, error, (++), (-), Show, show, snd,fst)
 
@@ -361,6 +361,23 @@ instance Filter V.Vector where
 
 instance Filter UV.Vector where
    filter f = readUnbox (UV.filter f)
+
+
+{-
+An according function in the vector library would save us from the 'error'
+and from the duplicate computation of 'f'
+(or alternatively from storing a Maybe in a vector).
+-}
+mapMaybe ::
+   (Walker vec, Filter vec, Storage vec a, Storage vec b) =>
+   (a -> Maybe b) -> vec a -> vec b
+mapMaybe f =
+   map
+      (\a ->
+         case f a of
+            Just b -> b
+            Nothing -> error "mapMaybe: filter has passed a Nothing") .
+   filter (isJust . f)
 
 
 class Lookup vec where
