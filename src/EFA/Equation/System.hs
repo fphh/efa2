@@ -57,12 +57,10 @@ import qualified Data.NonEmpty as NonEmpty
 import Data.Traversable (traverse)
 import Data.Foldable (foldMap, fold)
 import Data.Monoid (Monoid, (<>), mempty, mappend, mconcat)
-import Data.Tuple.HT (snd3)
 
 import Data.Ord (comparing)
 
 
-import Debug.Trace
 
 type EqSysEnv node s a = Env.Env node Env.SingleRecord (Sys.Variable s a)
 
@@ -266,7 +264,7 @@ makeNodeEquations ::
   (Eq a, Fractional a, Ord node) =>
   TD.DirSequFlowGraph node -> EquationSystem node s a
 makeNodeEquations = fold . M.mapWithKey f . Gr.nodes
-   where f n (ins, label, outs) = 
+   where f n (ins, label, outs) =
             let -- this variable is used again in makeStorageEquations
                 varsumin = insumvar n
                 varsumout = outsumvar n  -- and this, too.
@@ -274,8 +272,8 @@ makeNodeEquations = fold . M.mapWithKey f . Gr.nodes
                    foldMap
                       (mkSplitFactorEquations varsum (energy n) (xfactor n))
                       (NonEmpty.fetch $ S.toList nodes)
-            in  mwhen (label /= TD.Storage) (varsumin =.= varsumout)
-                -- (varsumin =.= varsumout) -- siehe bug 2013-02-12-sum-equations-storage
+            in  -- mwhen (label /= TD.Storage) (varsumin =.= varsumout)
+                (varsumin =.= varsumout) -- siehe bug 2013-02-12-sum-equations-storage
                 <>
                 splitEqs varsumin ins
                 <>
@@ -432,11 +430,8 @@ errorSecNode name node =
 toDirSequFlowGraph ::
   (Ord node) =>
   TD.SequFlowGraph node -> TD.DirSequFlowGraph node
-toDirSequFlowGraph g = Gr.mkGraph ns es
-  where es = map (fmap (const ())) $
-               filter TD.isDirEdge (M.toList $ Gr.edgeLabels g)
-        ns = map f (M.toList $ Gr.nodes g)
-        f (n, x) = (n, snd3 x)
+toDirSequFlowGraph =
+  Gr.emap (const ()) . Gr.lefilter TD.isDirEdge
 
 -----------------------------------------------------------------
 

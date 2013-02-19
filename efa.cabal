@@ -126,6 +126,19 @@ Executable sequenzflussgraph
   Else
     Buildable: False
 
+Executable optimisingstorage
+  Main-Is: examples/elementary/optimisingStorage/Main.hs
+  GHC-Options: -Wall
+  If flag(buildExamples)
+    Build-Depends:
+      efa,
+      utility-ht,
+      base
+  Else
+    Buildable: False
+
+
+
 Executable demo-signalcalc
   Main-Is: demo/Signal/Demo_SignalCalc.hs
   GHC-Options: -Wall

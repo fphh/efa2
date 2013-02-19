@@ -43,8 +43,8 @@ nVal2 = S.sigSum fSig2 ./ S.sigSum fSig1
 main :: IO ()
 main = do
 
-  Plot.xyplot "Power" time pSig1
-  Plot.xyplot "Power" time pSig2
+  Plot.xyIO "Power" time pSig1
+  Plot.xyIO "Power" time pSig2
 
   putStrLn (S.disp nVal2)
 

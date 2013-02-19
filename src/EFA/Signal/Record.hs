@@ -101,23 +101,22 @@ hardShrinkage threshold x =
 
 
 -- | Generate a new Record with selected signals
-extractRecord ::
+extract ::
    (Ord id, Show id) =>
    [id] -> Record s t1 t2 id v a -> Record s t1 t2 id v a
-extractRecord xs rec = extractLogSignals rec $ map (flip (,) id) xs
+extract xs rec = extractLogSignals rec $ map (flip (,) id) xs
 {-
-extractRecord ::
+extract ::
    (Show (v a), Ord id, Show id) =>
-extractRecord xs rec@(Record time _) =
+extract xs rec@(Record time _) =
    Record time $ mapFromSet (getSig rec) $ Set.fromList xs
 -}
 
-
 -- | Split SignalRecord in even chunks
-splitRecord ::
+split ::
    (Ord id) =>
    Int -> Record s t1 t2 id v a -> [Record s t1 t2 id v a]
-splitRecord n (Record time pMap) =
+split n (Record time pMap) =
    map (Record time . M.fromList) $ HTL.sliceVertical n $ M.toList pMap
 
 
@@ -188,10 +187,14 @@ newTimeBase (Record time m) newTime = Record newTime (M.map f m)
 
 
 -- | Create a new Record by slicing time and all signals on given Indices
-sliceRecord ::  (V.Slice v, V.Storage v a) => Record s t1 t2 id v a -> (Int,Int) ->  Record s t1 t2 id v a
-sliceRecord (Record t m) (idx1,idx2) = Record (f t) (M.map g m)
-  where f sig = S.slice idx1 (idx2-idx1+1) sig
-        g sig = S.slice idx1 (idx2-idx1+1) sig -- @HT Monomorphism Restriction ? - when I only use f I get type errors 
+slice ::
+   (V.Slice v, V.Storage v a) =>
+   Record s t1 t2 id v a -> (Int, Int) {- Sec -} -> Record s t1 t2 id v a
+slice (Record t m) (idx1,idx2) = Record (f t) (M.map f m)
+  where f ::
+           (V.Slice v, V.Storage v a) =>
+           TC s t (Data (v :> Nil) a) -> TC s t (Data (v :> Nil) a)
+        f = S.slice idx1 (idx2-idx1+1)
 
 -----------------------------------------------------------------------------------
 -- Various Class and Instance Definition for the different Sequence Datatypes
@@ -255,44 +258,24 @@ instance
 -- RSignal als Transponierte Form
 
 
-type RSig = (TSigL, PSamp2LL)
-type RSamp1 = (TSamp, PSamp1L)
-type RSamp = (TSamp, PSamp)
-
-{-
-{-# DEPRECATED rhead, rtail "use rviewL instead" #-}
-{-# DEPRECATED rlast, rinit "use rviewR instead" #-}
-
-rhead :: RSig -> RSamp1
-rhead (t,ps) = (S.head t, S.head ps)
-
-rtail :: RSig -> RSig
-rtail (t,ps) = (S.tail t, S.tail ps)
-
-rlast :: RSig -> RSamp1
-rlast (t,ps) = (S.last t, S.last ps)
-
-rinit :: RSig -> RSig
-rinit (t,ps) = (S.init t, S.init ps)
--}
+type Sig = (TSigL, PSamp2LL)
+type Samp1 = (TSamp, PSamp1L)
+type Samp = (TSamp, PSamp)
 
 
-rviewL :: RSig -> Maybe (RSamp1, RSig)
-rviewL (t,ps) =
+viewL :: Sig -> Maybe (Samp1, Sig)
+viewL (t,ps) =
    liftM2 zipPairs (S.viewL t) (S.viewL ps)
 
-rviewR :: RSig -> Maybe (RSig, RSamp1)
-rviewR (t,ps) =
+viewR :: Sig -> Maybe (Sig, Samp1)
+viewR (t,ps) =
    liftM2 zipPairs (S.viewR t) (S.viewR ps)
 
 zipPairs :: (a,b) -> (c,d) -> ((a,c), (b,d))
 zipPairs (a,b) (c,d) = ((a,c), (b,d))
 
-rlen :: RSig -> Int
-rlen  (t,ps) = min (S.len t) (S.len ps)
+len :: Sig -> Int
+len  (t,ps) = min (S.len t) (S.len ps)
 
-rsingleton :: RSamp1 -> RSig
-rsingleton (t,ps) = (S.singleton t, S.singleton ps)
-
-
-
+singleton :: Samp1 -> Sig
+singleton (t,ps) = (S.singleton t, S.singleton ps)

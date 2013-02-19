@@ -17,11 +17,11 @@ import EFA.Utility (checkedLookup)
 import EFA.Graph (mkGraph)
 import EFA.Example.Utility ((.=), constructSeqTopo, edgeVar, makeEdges, recAbs)
 
-import Data.Ratio ((%))
+import Data.Ratio ((%), Ratio)
 
 import Data.Monoid ((<>))
 import Data.Foldable (foldMap)
-
+import qualified EFA.Graph.Draw as Draw
 
 sec0 :: Idx.Section
 sec0 :~ _ = Stream.enumFrom $ Idx.Section 0
@@ -36,8 +36,8 @@ instance Node.C Node where
 
 linearOne :: TD.Topology Node
 linearOne = mkGraph nodes (makeEdges edges)
-  where nodes = [(Source, TD.AlwaysSink), (Sink, TD.AlwaysSource)]
-        edges = [(Source, Sink)]
+  where nodes = [(Sink, TD.AlwaysSink), (Source, TD.AlwaysSource)]
+        edges = [(Sink, Source)]
 
 seqTopo :: TD.SequFlowGraph Node
 seqTopo = constructSeqTopo linearOne [0]
@@ -73,6 +73,15 @@ solve p =
                 EqGen.Undetermined -> "undetermined"
                 EqGen.Determined x -> show x
 
+solveEnv ::
+  Rational -> Env.Env Node Env.SingleRecord (EqGen.Result (Ratio Integer))
+solveEnv p = EqGen.solve ((n =.= functionEta c) <> given p) seqTopo
+
 main :: IO ()
-main =
+main = do
   putStrLn $ unlines $ map solve enRange
+  
+
+  let env = solveEnv 0.5
+
+  Draw.sequFlowGraphAbsWithEnv seqTopo env

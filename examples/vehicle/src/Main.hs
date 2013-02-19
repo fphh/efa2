@@ -20,11 +20,11 @@ import EFA.Signal.Record (PPosIdx(PPosIdx), SignalRecord,
 import EFA.Signal.Sequence (makeSeqFlowTopology,genSequenceSignal,chopAtZeroCrossingsPowerRecord, 
                             removeLowEnergySections, genSequFlow, addZeroCrossings, removeLowTimeSections, genSequ,sectionRecordsFromSequence)
 import qualified EFA.Signal.Signal as Sig -- (toList,UTSigL,setType)
+import qualified EFA.Signal.Plot as Plot
 import qualified EFA.Report.Report as Rep
 import qualified EFA.Graph.Draw as Draw
 import Data.Monoid ((<>))
 import qualified EFA.Graph.Flow as Flow
-import qualified EFA.Signal.Plot as PL
 
 import EFA.Graph.Topology(isOriginalEdge)
 import EFA.Graph(lefilter)
@@ -64,7 +64,7 @@ main = do
 --  rawSignals <- modelicaCSVImport "Vehicle_res.csv" :: IO (SignalRecord [] Double)
   rawSignals <- modelicaPLTImport "Vehicle_res_noInertias.plt" :: IO (SignalRecord [] Double)
   
---  PL.rPlotSplit 9 ("Imported Signals",rawSignals)
+--  Plot.recordSplit 9 ("Imported Signals",rawSignals)
 
 --------------------------------------------------------------------------------------- 
 -- * Condition Signals and Calculate Powers
@@ -111,7 +111,9 @@ main = do
       
   let sequenceSignals = sectionRecordsFromSequence signals0 sequ 
 --  let powerSignals0' = addSignal powerSignals0 (PPosIdx System.Tank System.Tank, Sig.setType sequSig)    
-  -- PL.rPlotSplitPlus 1 ("Mit SektionsSignal",powerSignals0) [(PPosIdx System.Tank System.Tank, Sig.setType sequSig)]   
+  
+-- PL.rPlotSplitPlus 1 ("Mit SektionsSignal",powerSignals0) [(PPosIdx System.Tank System.Tank, Sig.setType sequSig)]   
+
   -- Rep.report [Rep.RAll,Rep.RVertical] ("Powers0", powerSignals0)
   
 ---------------------------------------------------------------------------------------

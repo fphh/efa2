@@ -1,14 +1,25 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE OverlappingInstances #-}
 
 
 module EFA.Signal.SequenceData where
 
 import qualified EFA.Graph.Topology.Index as Idx
+
+import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Data as D
+import qualified EFA.Signal.Vector as V
+import qualified EFA.Signal.Record as Record
+
+import qualified EFA.Report.Report as Report
+import EFA.Report.Report (Table(..), TableData(..), toDoc, autoFormat)
+import EFA.Report.Typ (TDisp)
+import EFA.Report.Base (DispStorage1)
+
+import Text.Printf (PrintfArg)
+
 import EFA.Signal.Signal(SignalIdx)
-import EFA.Report.Report (ToTable(toTable), Table(..), TableData(..), toDoc, autoFormat)
+
 import qualified Data.List.Match as Match
 import Control.Applicative (Applicative(pure, (<*>)), liftA, liftA2)
 import Data.Traversable (Traversable, sequenceA, foldMapDefault)
@@ -72,12 +83,22 @@ filterSequWithSequData2 f (SequData xs, SequData ys, SequData zs) = (SequData xs
    where (xsf,ysf,zsf) = unzip3 $ filter f $ zip3 xs ys zs  
 
 
-         
-instance (ToTable a) => ToTable (SequData a) where
-   toTable os (_ti, rs) =
-      fold $ zipWithSecIdxs (\sec r -> toTable os (show sec, r)) rs
+class ToTable a where
+   toTable :: Report.ROpts -> (String, SequData a) -> [Table]
 
-instance ToTable (SequData Sec) where
+instance ToTable a => Report.ToTable (SequData a) where
+   toTable = toTable
+
+
+instance
+   (V.Walker v, V.Singleton v, V.FromList v, V.Storage v a, DispStorage1 v,
+    Ord a, Fractional a, PrintfArg a, Show id,
+    S.DispApp s, TDisp t1, TDisp t2) =>
+      ToTable (Record.Record s t1 t2 id v a) where
+   toTable os (_ti, rs) =
+      fold $ zipWithSecIdxs (\sec r -> Report.toTable os (show sec, r)) rs
+
+instance ToTable Sec where
    toTable _os (ti, SequData xs) =
       [Table {
          tableTitle = "Sequence: " ++ ti,

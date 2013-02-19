@@ -3,23 +3,23 @@
 
 module Modules.Plots where
 
-import Data.Map as M (mapKeys)
-import EFA.Utility(checkedLookup)
-import EFA.Signal.Record ()
-import qualified EFA.Signal.Plot as PL
-import EFA.Signal.Typ (Typ,A,T,P,Tt)
-import EFA.Report.Typ(TDisp)
-
-import EFA.Signal.Signal(Signal)
-import EFA.Signal.Vector as V (Walker,Storage,FromList)
--- import qualified EFA.Signal.Plot as PL
-
-
-import EFA.Signal.Record (SigId(..),Record(..),PowerRecord,SignalRecord)
-import qualified Graphics.Gnuplot.Value.Atom as Atom (C)
-import qualified Graphics.Gnuplot.Value.Tuple as Tuple (C)
-
 import Modules.System as System
+
+import qualified EFA.Signal.Plot as Plot
+
+import qualified EFA.Signal.Vector as V
+
+import EFA.Signal.Typ (Typ,A,T,P,Tt)
+import EFA.Signal.Signal (Signal)
+import EFA.Signal.Record (SigId(..), Record(..), PowerRecord, SignalRecord)
+
+import EFA.Report.Typ (TDisp)
+
+import qualified Graphics.Gnuplot.Value.Atom as Atom
+import qualified Graphics.Gnuplot.Value.Tuple as Tuple
+
+import qualified Data.Map as M
+import EFA.Utility(checkedLookup)
 
 ---------------------------------------------------------------------------------------
   -- | * Group Signals for Plotting
@@ -40,7 +40,7 @@ plot:: (TDisp t1,
         Show id,
         Plottable v a) =>
        String -> Record s t1 t2 id v a -> [id] -> IO()  
-plot title rec sigIds = do PL.rPlotSelect sigIds title rec
+plot title rec sigIds = Plot.recordSelect sigIds title rec
                            
                            
 -- Building Signal Record for better Plotting of the original signals 
