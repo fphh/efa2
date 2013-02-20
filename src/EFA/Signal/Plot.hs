@@ -6,6 +6,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module EFA.Signal.Plot (
+   run,
    signal, signalAttr, signalStyle, signalIO,
    xy, xyBasic, xyAttr, xyStyle, xyIO,
    surface, surfaceIO,
@@ -31,6 +32,8 @@ import EFA.Report.Typ (TDisp, DisplayType(Typ_T), getDisplayUnit, getDisplayTypN
 import EFA.Report.Base (UnitScale(UnitScale), getUnitScale)
 
 import qualified Graphics.Gnuplot.Advanced as Plot
+import qualified Graphics.Gnuplot.Terminal as Terminal
+import qualified Graphics.Gnuplot.Plot as Plt
 import qualified Graphics.Gnuplot.Plot.TwoDimensional as Plot2D
 import qualified Graphics.Gnuplot.Plot.ThreeDimensional as Plot3D
 import qualified Graphics.Gnuplot.Graph.TwoDimensional as Graph2D
@@ -60,6 +63,13 @@ getData ::
    TC s typ (Data c a) -> NestedList c a
 getData x = S.toList $ S.map (* fromRational s) x
    where (UnitScale s) = getUnitScale $ getDisplayUnit $ getDisplayType x
+
+
+run ::
+   (Terminal.C term, Graph.C graph) =>
+   term -> Opts.T graph -> Plt.T graph -> IO ()
+run terminal opts plt =
+   void $ Plot.plot terminal $ Frame.cons opts plt
 
 
 -- | Simple Signal Plotting -- without time axis --------------------------------------------------------------
