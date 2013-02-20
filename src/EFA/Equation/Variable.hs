@@ -5,30 +5,31 @@ import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Symbolic.OperatorTree as OT
 import qualified EFA.Symbolic.SumProduct as SP
 import qualified EFA.Report.Format as Format
-import EFA.Report.Format (Format)
+import EFA.Report.Format (Format, FormatRecord)
 import EFA.Report.FormatValue (FormatValue, formatValue)
 
 
-data Index a = Energy (Idx.Energy a)
-             | DEnergy (Idx.DEnergy a)
-             | MaxEnergy (Idx.MaxEnergy a)
-             | DMaxEnergy (Idx.DMaxEnergy a)
-             | Power (Idx.Power a)
-             | DPower (Idx.DPower a)
-             | Eta (Idx.Eta a)
-             | DEta (Idx.DEta a)
-             | DTime (Idx.DTime a)
-             | X (Idx.X a)
-             | DX (Idx.DX a)
-             | Y (Idx.Y a)
-             | DY (Idx.DY a)
-             | Sum (Idx.Sum a)
-             | Store (Idx.Storage a)
-               deriving (Show, Eq, Ord)
+data Index rec a =
+     Energy (Idx.Energy rec a)
+   | DEnergy (Idx.DEnergy rec a)
+   | MaxEnergy (Idx.MaxEnergy rec a)
+   | DMaxEnergy (Idx.DMaxEnergy rec a)
+   | Power (Idx.Power rec a)
+   | DPower (Idx.DPower rec a)
+   | Eta (Idx.Eta rec a)
+   | DEta (Idx.DEta rec a)
+   | DTime (Idx.DTime rec a)
+   | X (Idx.X rec a)
+   | DX (Idx.DX rec a)
+   | Y (Idx.Y rec a)
+   | DY (Idx.DY rec a)
+   | Sum (Idx.Sum rec a)
+   | Store (Idx.Storage rec a)
+     deriving (Show, Eq, Ord)
 
 
 class MkIdxC t where
-   mkIdx :: t a -> Index a
+   mkIdx :: t rec a -> Index rec a
    --mkIdx :: a n -> Index n
 
 
@@ -58,7 +59,7 @@ instance MkVarC OT.Term where
 instance MkVarC SP.Term where
          mkVarCore = SP.Atom
 
-mkVar :: (MkIdxC t, MkVarC term) => t a -> term (Index a)
+mkVar :: (MkIdxC t, MkVarC term) => t rec a -> term (Index rec a)
 mkVar = mkVarCore . mkIdx
 
 
@@ -69,14 +70,17 @@ formatSectionNode (Idx.SecNode s n) =
    Format.section s `Format.sectionNode` Node.subscript n
 
 formatEdgeIndex ::
-   (Format output, Node.C node) =>
-   Idx.Record -> Idx.SecNode node -> Idx.SecNode node -> output
+   (Format output, FormatRecord record, Node.C node) =>
+   record -> Idx.SecNode node -> Idx.SecNode node -> output
 formatEdgeIndex r x y =
-   Format.record r
-      `Format.connect` formatSectionNode x
-      `Format.connect` formatSectionNode y
+   Format.record r $
+      formatSectionNode x
+      `Format.connect`
+      formatSectionNode y
 
-instance (Node.C node) => FormatValue (Index node) where
+instance
+   (Node.C node, FormatRecord rec) =>
+      FormatValue (Index rec node) where
    formatValue =
       formatGen
          (\e r x y ->
@@ -87,7 +91,9 @@ instance (Node.C node) => FormatValue (Index node) where
                (formatEdgeIndex r x y))
 
 
-formatShort :: (Node.C node, Format output) => Index node -> output
+formatShort ::
+   (Node.C node, FormatRecord record, Format output) =>
+   Index record node -> output
 formatShort =
    formatGen
       (\e _r _x _y -> Format.edgeIdent e)
@@ -96,12 +102,12 @@ formatShort =
 
 
 formatGen ::
-   (Format output, Node.C node) =>
+   (Format output, FormatRecord record, Node.C node) =>
    (Format.EdgeVar ->
-    Idx.Record -> Idx.SecNode node -> Idx.SecNode node -> output) ->
+    record -> Idx.SecNode node -> Idx.SecNode node -> output) ->
    (Format.EdgeVar ->
-    Idx.Record -> Idx.SecNode node -> Idx.SecNode node -> output) ->
-   Index node ->
+    record -> Idx.SecNode node -> Idx.SecNode node -> output) ->
+   Index record node ->
    output
 formatGen absolute delta idx =
    case idx of
@@ -126,13 +132,13 @@ formatGen absolute delta idx =
 
       DTime (Idx.DTime r s) ->
          Format.subscript (Format.delta Format.time) $
-            Format.record r `Format.connect` Format.section s
+            Format.record r $ Format.section s
 
       Sum (Idx.Sum r dir x) ->
          Format.subscript Format.var $
-            Format.record r `Format.connect`
+            Format.record r $
             Format.direction dir `Format.connect` formatSectionNode x
 
       Store (Idx.Storage r x) ->
          Format.subscript Format.storage $
-            Format.record r `Format.connect` formatSectionNode x
+            Format.record r $ formatSectionNode x

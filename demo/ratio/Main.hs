@@ -1,5 +1,3 @@
-{-# LANGUAGE FlexibleInstances #-}
-
 -- | Demonstriert, wie man ein eta als Funktion definiert.
 
 module Main where
@@ -45,20 +43,22 @@ seqTopo = constructSeqTopo linearOne [0]
 enRange :: [Rational]
 enRange = (1%100):[1%2, 1 .. 9]
 
-c :: EqGen.ExprWithVars Node s a
+c :: EqGen.ExprWithVars Idx.Absolute Node s a
 c = edgeVar EqGen.power sec0 Source Sink
 
-n :: EqGen.ExprWithVars Node s a
+n :: EqGen.ExprWithVars Idx.Absolute Node s a
 n = edgeVar EqGen.eta sec0 Source Sink
 
-eta :: Idx.Eta Node
+eta :: Idx.Eta Idx.Absolute Node
 eta = edgeVar (Idx.Eta recAbs) sec0 Source Sink
 
 
-functionEta :: EqGen.ExprWithVars Node s Rational -> EqGen.ExprWithVars Node s Rational
+functionEta ::
+   EqGen.ExprWithVars Idx.Absolute Node s Rational ->
+   EqGen.ExprWithVars Idx.Absolute Node s Rational
 functionEta p = 0.2 * p
 
-given :: Rational -> EqGen.EquationSystem Node s Rational
+given :: Rational -> EqGen.EquationSystem Idx.Absolute Node s Rational
 given p =
    foldMap (uncurry (.=)) $
    (EqGen.dtime sec0, 1) :
@@ -74,7 +74,7 @@ solve p =
                 EqGen.Determined x -> show x
 
 solveEnv ::
-  Rational -> Env.Env Node (EqGen.Result (Ratio Integer))
+  Rational -> Env.Env Idx.Absolute Node (EqGen.Result (Ratio Integer))
 solveEnv p = EqGen.solve ((n =.= functionEta c) <> given p) seqTopo
 
 main :: IO ()

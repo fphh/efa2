@@ -37,7 +37,7 @@ topoDreibein = Gr.mkGraph ns (makeEdges es)
 {-
 Use new Term type here since it simplifies automatically.
 -}
-given :: EqGen.EquationSystem Node.Int s (Term (Index Node.Int))
+given :: EqGen.EquationSystem Idx.Absolute Node.Int s (Term (Index Idx.Absolute Node.Int))
 given =
    Idx.DTime recAbs Idx.initSection =<>
    Idx.DTime recAbs sec0 =<>

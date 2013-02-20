@@ -69,7 +69,7 @@ topo = mkGraph nodes (makeEdges edges)
 seqTopo :: TD.SequFlowGraph Node
 seqTopo = constructSeqTopo topo [0]
 
-given :: Double -> Double -> EqGen.EquationSystem Node s Double
+given :: Double -> Double -> EqGen.EquationSystem Idx.Absolute Node s Double
 given e x =
    foldMap (uncurry (.=)) $
    (EqGen.dtime sec0, 1) :
@@ -80,19 +80,21 @@ given e x =
    (edgeVar EqGen.eta sec0 c3 c2, 1) :
    (edgeVar EqGen.eta sec0 c2 Sink, 1) : []
 
-c02, c04 :: EqGen.ExprWithVars Node s a
+c02, c04 :: EqGen.ExprWithVars Idx.Absolute Node s a
 c02 = edgeVar EqGen.power sec0 c0 c1
 c04 = edgeVar EqGen.power sec0 c0 c3
 
-n12, n14 :: EqGen.ExprWithVars Node s a
+n12, n14 :: EqGen.ExprWithVars Idx.Absolute Node s a
 n12 = edgeVar EqGen.eta sec0 c0 c1
 n14 = edgeVar EqGen.eta sec0 c0 c3
 
-n1, n2 :: EqGen.ExprWithVars Node s Double -> EqGen.ExprWithVars Node s Double
+n1, n2 ::
+   EqGen.ExprWithVars Idx.Absolute Node s Double ->
+   EqGen.ExprWithVars Idx.Absolute Node s Double
 n1 p = -0.012 * (p - 12) * (p - 3) + 0.5
 n2 p = -0.021 * (p - 12) * p
 
-etas :: EqGen.EquationSystem Node s Double
+etas :: EqGen.EquationSystem Idx.Absolute Node s Double
 etas =
   (n12 =.= n1 c02)
   <> (n14 =.= n2 c04)
@@ -105,7 +107,7 @@ enRange :: [Double]
 enRange = 0.01:[1..12]
 
 
-eout, ein :: Idx.Energy Node
+eout, ein :: Idx.Energy Idx.Absolute Node
 eout = edgeVar (Idx.Energy recAbs) sec0 Sink c2
 ein  = edgeVar (Idx.Energy recAbs) sec0 Source c0
 

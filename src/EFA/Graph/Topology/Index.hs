@@ -12,19 +12,15 @@ initSection = Section (-1)
 
 
 
-data Absolute = Absolute deriving (Eq, Ord)
+data Absolute = Absolute deriving (Show, Eq, Ord)
 
-instance Show Absolute where
-         show _ = ""
-
-data Differential = Differential deriving (Show, Eq, Ord)
+data Delta = Delta | Before | After deriving (Show, Eq, Ord)
 
 
+class Ord rec => Record rec where recDeflt :: rec
+instance Record Absolute where recDeflt = Absolute
+instance Record Delta where recDeflt = Before
 
-newtype Record = Record Absolute deriving (Show, Eq, Ord)
-
-recAbs :: Record
-recAbs = Record Absolute
 
 
 data SecNode a = SecNode Section a deriving (Show, Eq, Ord)
@@ -42,40 +38,40 @@ data SecNode a = SecNode Section a deriving (Show, Eq, Ord)
 -- * two node identifiers to specify a place in the topology
 
 -- | Energy variables.
-data Energy a = Energy !Record !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
-data DEnergy a = DEnergy !Record !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
+data Energy rec a = Energy rec !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
+data DEnergy rec a = DEnergy rec !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
 
 
 -- | Energy variables for hypothetical outgoing energies.
 -- At intersection edges they describe the maximum energy
 -- that a storage could deliver.
-data MaxEnergy a = MaxEnergy !Record !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
-data DMaxEnergy a = DMaxEnergy !Record !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
+data MaxEnergy rec a = MaxEnergy rec !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
+data DMaxEnergy rec a = DMaxEnergy rec !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
 
 -- | Power variables.
-data Power a = Power !Record !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
-data DPower a = DPower !Record !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
+data Power rec a = Power rec !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
+data DPower rec a = DPower rec !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
 
 -- | Eta variables.
-data Eta a = Eta !Record !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
-data DEta a = DEta !Record !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
+data Eta rec a = Eta rec !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
+data DEta rec a = DEta rec !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
 
 -- | Splitting factors.
-data X a = X !Record !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
-data DX a = DX !Record !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
+data X rec a = X rec !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
+data DX rec a = DX rec !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
 
 -- | Strange factors for outgoing intersection edges.
-data Y a = Y !Record !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
-data DY a = DY !Record !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
+data Y rec a = Y rec !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
+data DY rec a = DY rec !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
 
-data Storage a = Storage !Record !(SecNode a) deriving (Show, Ord, Eq)
+data Storage rec a = Storage rec !(SecNode a) deriving (Show, Ord, Eq)
 
 data Direction = In | Out deriving (Show, Eq, Ord)
 
-data Sum a = Sum !Record !Direction !(SecNode a) deriving (Show, Ord, Eq)
+data Sum rec a = Sum rec !Direction !(SecNode a) deriving (Show, Ord, Eq)
 
 
 -- * Other indices
 
 -- | Delta time variables, depending solely on their section and record number.
-data DTime a = DTime !Record !Section deriving (Show, Ord, Eq)
+data DTime rec a = DTime rec !Section deriving (Show, Ord, Eq)

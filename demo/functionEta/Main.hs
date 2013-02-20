@@ -51,7 +51,7 @@ functionEta ::
   EqGen.ExprWithVars Node s Double -> EqGen.ExprWithVars Node s Double
 functionEta p = 0.3 * sqrt p
 
-given :: Double -> EqGen.EquationSystem Node s Double
+given :: Double -> EqGen.EquationSystem Idx.Absolute Node s Double
 given p =
    foldMap (uncurry (.=)) $
    (EqGen.dtime sec0, 1) :

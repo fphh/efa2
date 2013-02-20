@@ -34,7 +34,7 @@ topoDreibein = Gr.mkGraph ns (makeEdges es)
         es = [(node0, node2), (node1, node2), (node2, node3)]
 
 
-given :: EqGen.EquationSystem Node.Int s Double
+given :: EqGen.EquationSystem Idx.Absolute Node.Int s Double
 given =
    foldMap (uncurry (.=)) $
 

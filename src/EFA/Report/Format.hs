@@ -47,7 +47,7 @@ class Format output where
    words, lines :: [output] -> output
    assign :: output -> output -> output
 
-   record :: Idx.Record -> output
+   recordDelta :: Idx.Delta -> output
    section :: Idx.Section -> output
    sectionNode :: output -> output -> output
    direction :: Idx.Direction -> output
@@ -75,7 +75,11 @@ instance Format ASCII where
    assign (ASCII lhs) (ASCII rhs) =
       ASCII $ lhs ++ " = " ++ rhs
 
-   record (Idx.Record r) = ASCII $ show r
+   recordDelta d =
+      case d of
+         Idx.Before -> ASCII "<"
+         Idx.After -> ASCII ">"
+         Idx.Delta -> ASCII "d"
    section (Idx.Section s) = ASCII $ show s
    sectionNode (ASCII s) (ASCII x) = ASCII $ s ++ "." ++ x
 
@@ -122,12 +126,16 @@ instance Format Unicode where
    assign (Unicode lhs) (Unicode rhs) =
       Unicode $ lhs ++ " = " ++ rhs
 
-   record (Idx.Record r) = Unicode $ show r
+   recordDelta d =
+      case d of
+         Idx.Before -> Unicode "<"
+         Idx.After -> Unicode ">"
+         Idx.Delta -> Unicode [deltaChar]
    section (Idx.Section s) = Unicode $ show s
    sectionNode (Unicode s) (Unicode x) = Unicode $ s ++ "." ++ x
 
    direction = Unicode . show
-   delta (Unicode s) = Unicode $ '\x2206':s
+   delta (Unicode s) = Unicode $ deltaChar:s
    edgeIdent e =
       Unicode $
       case e of
@@ -203,7 +211,11 @@ instance Format Latex where
    assign (Latex lhs) (Latex rhs) =
       Latex $ lhs ++ " = " ++ rhs
 
-   record (Idx.Record r) = Latex $ show r
+   recordDelta d =
+      case d of
+         Idx.Before -> Latex "<"
+         Idx.After -> Latex ">"
+         Idx.Delta -> Latex "\\Delta"
    section (Idx.Section s) = Latex $ show s
    sectionNode (Latex s) (Latex x) = Latex $ s ++ ":" ++ x
 
@@ -228,3 +240,13 @@ instance Format Latex where
    plus (Latex x) (Latex y) = Latex $ x ++ " + " ++ y
    multiply (Latex x) (Latex y) = Latex $ x ++ " \\cdot " ++ y
    power (Latex x) n = Latex $ x ++ "^{" ++ show n ++ "}"
+
+
+class Idx.Record record => FormatRecord record where
+   record :: Format output => record -> output -> output
+
+instance FormatRecord Idx.Absolute where
+   record Idx.Absolute = id
+
+instance FormatRecord Idx.Delta where
+   record d = connect $ recordDelta d

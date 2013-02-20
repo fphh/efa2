@@ -45,24 +45,25 @@ constructSeqTopo topo =
   SequData
 
 
-recAbs :: Idx.Record
-recAbs = Idx.recAbs
+recAbs :: Idx.Absolute
+recAbs = Idx.Absolute
 
 
 selfAssign ::
-  (Eq (term (Var.Index node)), Ord (t node), MkVarC term, MkIdxC t,
+  (Eq (term (Var.Index rec node)), Ord (t rec node), MkVarC term, MkIdxC t,
    Env.AccessMap t) =>
-  t node -> EqGen.EquationSystem node s (term (Var.Index node))
+  t rec node ->
+  EqGen.EquationSystem rec node s (term (Var.Index rec node))
 selfAssign idx =
    EqGen.getVar idx .= mkVar idx
 
 infixr 6 =<>
 (=<>) ::
-  ( Eq (term (Var.Index node)), Ord (t node), Env.AccessMap t,
+  ( Eq (term (Var.Index rec node)), Ord (t rec node), Env.AccessMap t,
     MkVarC term, MkIdxC t) =>
-  t node
-  -> EqGen.EquationSystem node s (term (Var.Index node))
-  -> EqGen.EquationSystem node s (term (Var.Index node))
+  t rec node ->
+  EqGen.EquationSystem rec node s (term (Var.Index rec node)) ->
+  EqGen.EquationSystem rec node s (term (Var.Index rec node))
 idx =<> eqsys = selfAssign idx <> eqsys
 
 
@@ -87,5 +88,5 @@ infix 0 .=
 
 (.=) ::
   (Eq a) =>
-  EqGen.ExprWithVars node s a -> a -> EqGen.EquationSystem node s a
+  EqGen.ExprWithVars rec node s a -> a -> EqGen.EquationSystem rec node s a
 evar .= val  =  evar =.= EqGen.constToExprSys val

@@ -62,12 +62,14 @@ topoDreibein = Gr.mkGraph ns (makeEdges es)
 seqTopo :: TD.SequFlowGraph Node
 seqTopo = constructSeqTopo topoDreibein [0, 4]
       
-etaf :: EqGen.ExprWithVars Node s Double -> EqGen.ExprWithVars Node s Double
+etaf ::
+  EqGen.ExprWithVars Idx.Absolute Node s Double ->
+  EqGen.ExprWithVars Idx.Absolute Node s Double
 etaf x = 1/((y+sqrt(y*y+4*y))/(2*y))
   where y = x/100
 
 n01, n12, n13, n31, p10, p21, e31 ::
-  Idx.Section -> EqGen.ExprWithVars Node s a
+  Idx.Section -> EqGen.ExprWithVars Idx.Absolute Node s a
 n01 sec = edgeVar EqGen.eta sec N0 N1
 n12 sec = edgeVar EqGen.eta sec N1 N2
 n13 sec = edgeVar EqGen.eta sec N1 N3
@@ -80,19 +82,19 @@ p31 sec = edgeVar EqGen.power sec N3 N1
 p13 sec = edgeVar EqGen.power sec N1 N3
 
 
-stoinit :: EqGen.ExprWithVars Node s a
+stoinit :: EqGen.ExprWithVars Idx.Absolute Node s a
 stoinit = EqGen.storage (Idx.SecNode Idx.initSection N3)
 
-ein, eout0, eout1 :: Idx.Energy Node
+ein, eout0, eout1 :: Idx.Energy Idx.Absolute Node
 ein = Idx.Energy recAbs (Idx.SecNode sec0 N0) (Idx.SecNode sec0 N1)
 eout0 = Idx.Energy recAbs (Idx.SecNode sec0 N2) (Idx.SecNode sec0 N1)
 eout1 = Idx.Energy recAbs (Idx.SecNode sec1 N2) (Idx.SecNode sec1 N1)
 
-e33 :: EqGen.ExprWithVars Node s a
+e33 :: EqGen.ExprWithVars Idx.Absolute Node s a
 e33 = EqGen.getVar $
   Idx.Energy recAbs (Idx.SecNode (Idx.Section (-1)) N3) (Idx.SecNode sec1 N3)
 
-time :: Idx.Section -> EqGen.ExprWithVars nty s Double
+time :: Idx.Section -> EqGen.ExprWithVars Idx.Absolute node s Double
 time = EqGen.dtime
 
 f r x = x/(x + r*((ui - sqrt(ui^2 - 4*r*x)) / 2*r)^2)
@@ -107,7 +109,7 @@ g r x = 1 / (1 + (x*r)/(ui^2))
   where -- r = 0.9
         ui = 200
 
-given :: Double -> Double -> EqGen.EquationSystem Node s Double
+given :: Double -> Double -> EqGen.EquationSystem Idx.Absolute Node s Double
 given t r =
   (time Idx.initSection =.= 1)
   <> (stoinit =.= 3)

@@ -106,7 +106,7 @@ sto0 = Idx.Storage recAbs (Idx.SecNode sec0 N3)
 sto1 = Idx.Storage recAbs (Idx.SecNode sec1 N3)
 
 
-given :: Double -> Double -> EqGen.EquationSystem Node s Double
+given :: Double -> Double -> EqGen.EquationSystem Idx.Absolute Node s Double
 given x t =
   (n01 sec0 =.= n5 (p10 sec0))
   <> (n12 sec0 =.= 1) -- n5 (p21 sec0))
