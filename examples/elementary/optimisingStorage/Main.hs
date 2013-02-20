@@ -8,7 +8,7 @@ import Control.Applicative
 
 
 import EFA.Example.Utility
-  ( edgeVar, makeEdges, constructSeqTopo, recAbs )
+  ( edgeVar, interVar, makeEdges, constructSeqTopo, recAbs )
 
 import qualified EFA.Graph.Topology.Node as Node
 
@@ -86,13 +86,12 @@ stoinit :: EqGen.ExprWithVars Idx.Absolute Node s a
 stoinit = EqGen.storage (Idx.SecNode Idx.initSection N3)
 
 ein, eout0, eout1 :: Idx.Energy Idx.Absolute Node
-ein = Idx.Energy recAbs (Idx.SecNode sec0 N0) (Idx.SecNode sec0 N1)
-eout0 = Idx.Energy recAbs (Idx.SecNode sec0 N2) (Idx.SecNode sec0 N1)
-eout1 = Idx.Energy recAbs (Idx.SecNode sec1 N2) (Idx.SecNode sec1 N1)
+ein = edgeVar (Idx.Energy recAbs) sec0 N0 N1
+eout0 = edgeVar (Idx.Energy recAbs) sec0 N2 N1
+eout1 = edgeVar (Idx.Energy recAbs) sec1 N2 N1
 
 e33 :: EqGen.ExprWithVars Idx.Absolute Node s a
-e33 = EqGen.getVar $
-  Idx.Energy recAbs (Idx.SecNode (Idx.Section (-1)) N3) (Idx.SecNode sec1 N3)
+e33 = interVar EqGen.energy Idx.initSection sec1 N3
 
 time :: Idx.Section -> EqGen.ExprWithVars Idx.Absolute node s Double
 time = EqGen.dtime
