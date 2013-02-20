@@ -38,12 +38,12 @@ makeSimpleEdges es = map f es
 constructSeqTopo ::
   (Ord node) =>
   TD.Topology node -> [Int] -> TD.SequFlowGraph node
-constructSeqTopo topo states = mkSeqTopo (select sol states)
-  where sol = bruteForce topo
-        select ts = map (ts!!)
-        mkSeqTopo = Flow.mkSequenceTopology
-                    . Flow.genSectionTopology
-                    . SequData
+constructSeqTopo topo =
+  Flow.mkSequenceTopology .
+  Flow.genSectionTopology .
+  fmap (bruteForce topo !!) .
+  SequData
+
 
 recAbs :: Idx.Record
 recAbs = Idx.recAbs
