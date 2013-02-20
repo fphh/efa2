@@ -23,6 +23,10 @@ data Differential = Differential deriving (Show, Eq, Ord)
 
 newtype Record = Record Absolute deriving (Show, Eq, Ord)
 
+recAbs :: Record
+recAbs = Record Absolute
+
+
 data SecNode a = SecNode Section a deriving (Show, Eq, Ord)
 
 

@@ -46,7 +46,7 @@ constructSeqTopo topo states = mkSeqTopo (select sol states)
                     . SequData
 
 recAbs :: Idx.Record
-recAbs = EqGen.recAbs
+recAbs = Idx.recAbs
 
 
 selfAssign ::

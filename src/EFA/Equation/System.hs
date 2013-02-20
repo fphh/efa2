@@ -3,7 +3,7 @@ module EFA.Equation.System (
   EquationSystem, ExprWithVars,
   fromTopology, solve, solveFromMeasurement, conservativelySolve,
 
-  recAbs, constToExprSys,
+  constToExprSys,
   liftV, liftV2, liftF, liftF2,
 
   (=.=),
@@ -62,7 +62,7 @@ import Data.Ord (comparing)
 
 
 
-type EqSysEnv node s a = Env.Env node Env.SingleRecord (Sys.Variable s a)
+type EqSysEnv node s a = Env.Env node (Sys.Variable s a)
 
 newtype
    ExprWithVars node s a =
@@ -159,9 +159,6 @@ withLocalVar f = EquationSystem $ do
         EquationSystem act -> act
 
 
-recAbs :: Idx.Record
-recAbs = Idx.Record Idx.Absolute
-
 getVar ::
    (Env.AccessMap idx, Ord (idx node)) =>
    idx node -> ExprWithVars node s a
@@ -179,7 +176,7 @@ getEdgeVar ::
    (Env.AccessMap idx, Ord (idx node)) =>
    (Idx.Record -> Idx.SecNode node -> Idx.SecNode node -> idx node) ->
    Idx.SecNode node -> Idx.SecNode node -> ExprWithVars node s a
-getEdgeVar mkIdx x y = getVar (mkIdx recAbs x y)
+getEdgeVar mkIdx x y = getVar (mkIdx Idx.recAbs x y)
 
 power :: (Ord node) => Idx.SecNode node -> Idx.SecNode node -> ExprWithVars node s a
 power = getEdgeVar Idx.Power
@@ -200,16 +197,16 @@ yfactor :: (Ord node) => Idx.SecNode node -> Idx.SecNode node -> ExprWithVars no
 yfactor = getEdgeVar Idx.Y
 
 insum :: (Ord node) => Idx.SecNode node -> ExprWithVars node s a
-insum = getVar . Idx.Sum recAbs Idx.In
+insum = getVar . Idx.Sum Idx.recAbs Idx.In
 
 outsum :: (Ord node) => Idx.SecNode node -> ExprWithVars node s a
-outsum = getVar . Idx.Sum recAbs Idx.Out
+outsum = getVar . Idx.Sum Idx.recAbs Idx.Out
 
 storage :: (Ord node) => Idx.SecNode node -> ExprWithVars node s a
-storage = getVar . Idx.Storage recAbs
+storage = getVar . Idx.Storage Idx.recAbs
 
 dtime :: Idx.Section -> ExprWithVars node s a
-dtime = getVar . Idx.DTime recAbs
+dtime = getVar . Idx.DTime Idx.recAbs
 
 
 mwhen :: Monoid a => Bool -> a -> a
@@ -453,12 +450,11 @@ but you may also insert complex relations like
 solve ::
   (Eq a, Fractional a, Node.C node) =>
   (forall s. EquationSystem node s a) ->
-  TD.SequFlowGraph node -> Env.Env node Env.SingleRecord (Result a)
+  TD.SequFlowGraph node -> Env.Env node (Result a)
 solve given g = runST $ do
   let dirG = toDirSequFlowGraph g
       EquationSystem eqsys = given <> fromTopology dirG
-  (eqs, varmap) <-
-    runStateT eqsys $ Env.empty $ Env.SingleRecord recAbs
+  (eqs, varmap) <- runStateT eqsys $ Env.empty
   Sys.solve eqs
   traverse (fmap (maybe Undetermined Determined) . Sys.query) varmap
 
@@ -510,12 +506,11 @@ makeNodeEquations' = fold . M.mapWithKey f . Gr.nodes
 solveFromMeasurement ::
   (Eq a, Fractional a, Node.C node) =>
   (forall s. EquationSystem node s a) ->
-  TD.SequFlowGraph node -> Env.Env node Env.SingleRecord (Result a)
+  TD.SequFlowGraph node -> Env.Env node (Result a)
 solveFromMeasurement given g = runST $ do
   let dirG = toDirSequFlowGraph g
       EquationSystem eqsys = given <> fromTopology' dirG
-  (eqs, varmap) <-
-    runStateT eqsys $ Env.empty $ Env.SingleRecord recAbs
+  (eqs, varmap) <- runStateT eqsys $ Env.empty
   Sys.solve eqs
   traverse (fmap (maybe Undetermined Determined) . Sys.query) varmap
 
@@ -534,18 +529,16 @@ solveFromMeasurement given g = runST $ do
 conservativelySolve ::
   (Eq a, Fractional a, Node.C node) =>
   (forall s. EquationSystem node s a) ->
-  TD.SequFlowGraph node -> Env.Env node Env.SingleRecord (Result a)
+  TD.SequFlowGraph node -> Env.Env node (Result a)
 conservativelySolve given g = runST $ do
   let dirG = toDirSequFlowGraph g
       EquationSystem eqsys = given <> fromTopology dirG
       EquationSystem givenSys = given
 
-  (eqs, varmap) <-
-    runStateT eqsys $ Env.empty $ Env.SingleRecord recAbs
+  (eqs, varmap) <- runStateT eqsys $ Env.empty
   Sys.solve eqs
 
-  (givenEqs, givenVarmap) <-
-    runStateT givenSys $ Env.empty $ Env.SingleRecord recAbs
+  (givenEqs, givenVarmap) <- runStateT givenSys $ Env.empty
   Sys.solve givenEqs
 
   let uenv = Env.union givenVarmap varmap

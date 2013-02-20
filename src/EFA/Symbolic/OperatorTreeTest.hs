@@ -14,7 +14,7 @@ deflt ::
   (Idx.Record -> Idx.SecNode Node.Int -> Idx.SecNode Node.Int -> t a)
   -> Int -> Int -> term (Index a)
 deflt f x y =
-   mkVar $ f (Idx.Record Idx.Absolute)
+   mkVar $ f Idx.recAbs
              (Idx.SecNode (Idx.Section 0) (Node.Int x))
              (Idx.SecNode (Idx.Section 0) (Node.Int y))
 

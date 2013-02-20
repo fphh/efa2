@@ -37,9 +37,8 @@ type StorageMap node a = M.Map (Idx.Storage node) a
 
 
 
-data Env node rec a =
-               Env { recordNumber :: rec,
-                     energyMap :: EnergyMap node a,
+data Env node a =
+               Env { energyMap :: EnergyMap node a,
                      denergyMap :: DEnergyMap node a,
                      maxenergyMap :: MaxEnergyMap node a,
                      dmaxenergyMap :: DMaxEnergyMap node a,
@@ -58,7 +57,7 @@ data Env node rec a =
 
 
 class AccessMap idx where
-   accessMap :: Accessor.T (Env node rec a) (M.Map (idx node) a)
+   accessMap :: Accessor.T (Env node a) (M.Map (idx node) a)
 
 instance AccessMap Idx.Energy where
    accessMap =
@@ -122,16 +121,16 @@ instance AccessMap Idx.Storage where
       Accessor.fromSetGet (\x c -> c{storageMap = x}) storageMap
 
 
-instance Functor (Env node rec) where
-         fmap f (Env rec e de me dme p dp n dn dt x dx y dy v st) =
-           Env rec (fmap f e) (fmap f de) (fmap f me) (fmap f dme) (fmap f p) (fmap f dp) (fmap f n) (fmap f dn) (fmap f dt) (fmap f x) (fmap f dx) (fmap f y) (fmap f dy) (fmap f v) (fmap f st)
+instance Functor (Env node) where
+   fmap f (Env e de me dme p dp n dn dt x dx y dy v st) =
+      Env (fmap f e) (fmap f de) (fmap f me) (fmap f dme) (fmap f p) (fmap f dp) (fmap f n) (fmap f dn) (fmap f dt) (fmap f x) (fmap f dx) (fmap f y) (fmap f dy) (fmap f v) (fmap f st)
 
-instance Foldable (Env node rec) where
+instance Foldable (Env node) where
    foldMap = foldMapDefault
 
-instance Traversable (Env node rec) where
-   sequenceA (Env rec e de me dme p dp n dn dt x dx y dy v st) =
-      pure (Env rec) <?> e <?> de <?> me <?> dme <?> p <?> dp <?> n <?> dn <?> dt <?> x <?> dx <?> y <?> dy <?> v <?> st
+instance Traversable (Env node) where
+   sequenceA (Env e de me dme p dp n dn dt x dx y dy v st) =
+      pure Env <?> e <?> de <?> me <?> dme <?> p <?> dp <?> n <?> dn <?> dt <?> x <?> dx <?> y <?> dy <?> v <?> st
 
 infixl 4 <?>
 (<?>) ::
@@ -140,30 +139,14 @@ infixl 4 <?>
 f <?> x = f <*> sequenceA x
 
 
-empty :: rec -> Env node rec a
-empty rec = Env rec M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty
+empty :: Env node a
+empty = Env M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty
 
 
-union :: (Ord node) => Env node rec a -> Env node rec a -> Env node rec a
-union (Env rec e de me dme p dp n dn dt x dx y dy v st)
-         (Env _ e' de' me' dme' p' dp' n' dn' dt' x' dx' y' dy' v' st') =
-  (Env rec (M.union e e') (M.union de de') (M.union me me') (M.union dme dme')
+union :: (Ord node) => Env node a -> Env node a -> Env node a
+union (Env e de me dme p dp n dn dt x dx y dy v st)
+         (Env e' de' me' dme' p' dp' n' dn' dt' x' dx' y' dy' v' st') =
+      (Env (M.union e e') (M.union de de') (M.union me me') (M.union dme dme')
            (M.union p p') (M.union dp dp') (M.union n n')   (M.union dn dn')
            (M.union dt dt') (M.union x x') (M.union dx dx') (M.union y y')
            (M.union dy dy') (M.union v v') (M.union st st'))
-
-data NoRecord = NoRecord deriving (Eq, Ord, Show)
-newtype SingleRecord = SingleRecord {fromSingleRecord :: Idx.Record} deriving (Eq, Ord, Show)
-newtype MixedRecord = MixedRecord {fromMixedRecord :: [Idx.Record]} deriving (Eq, Ord, Show)
-
-
-class RecordNumber rec where
-   uniteRecordNumbers :: [rec] -> MixedRecord
-
-instance RecordNumber SingleRecord where
-   uniteRecordNumbers =
-      MixedRecord . map fromSingleRecord
-
-instance RecordNumber MixedRecord where
-   uniteRecordNumbers =
-      MixedRecord . concatMap fromMixedRecord

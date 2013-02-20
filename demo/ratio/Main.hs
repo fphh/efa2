@@ -74,7 +74,7 @@ solve p =
                 EqGen.Determined x -> show x
 
 solveEnv ::
-  Rational -> Env.Env Node Env.SingleRecord (EqGen.Result (Ratio Integer))
+  Rational -> Env.Env Node (EqGen.Result (Ratio Integer))
 solveEnv p = EqGen.solve ((n =.= functionEta c) <> given p) seqTopo
 
 main :: IO ()
