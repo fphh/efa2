@@ -80,17 +80,18 @@ given e x =
    (edgeVar EqGen.eta sec0 c3 c2, 1) :
    (edgeVar EqGen.eta sec0 c2 Sink, 1) : []
 
-c02, c04 :: EqGen.ExprWithVars Idx.Absolute Node s a
+
+type Expr = EqGen.ExprWithVars Idx.Absolute Node
+
+c02, c04 :: Expr s a a
 c02 = edgeVar EqGen.power sec0 c0 c1
 c04 = edgeVar EqGen.power sec0 c0 c3
 
-n12, n14 :: EqGen.ExprWithVars Idx.Absolute Node s a
+n12, n14 :: Expr s a a
 n12 = edgeVar EqGen.eta sec0 c0 c1
 n14 = edgeVar EqGen.eta sec0 c0 c3
 
-n1, n2 ::
-   EqGen.ExprWithVars Idx.Absolute Node s Double ->
-   EqGen.ExprWithVars Idx.Absolute Node s Double
+n1, n2 :: (Fractional a) => Expr s a a -> Expr s a a
 n1 p = -0.012 * (p - 12) * (p - 3) + 0.5
 n2 p = -0.021 * (p - 12) * p
 

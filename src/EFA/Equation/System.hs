@@ -65,8 +65,8 @@ import Data.Ord (comparing)
 type EqSysEnv rec node s a = Env.Env rec node (Sys.Variable s a)
 
 newtype
-   ExprWithVars rec node s a =
-      ExprWithVars (StateT (EqSysEnv rec node s a) (ST s) (Expr.T s a))
+   ExprWithVars rec node s a x =
+      ExprWithVars (StateT (EqSysEnv rec node s a) (ST s) (Expr.T s x))
 
 newtype
    EquationSystem rec node s a =
@@ -79,30 +79,30 @@ instance Monoid (EquationSystem rec node s a) where
 
 
 liftV ::
-  (Expr.T s a -> Expr.T s a) ->
-  ExprWithVars rec node s a -> ExprWithVars rec node s a
+  (Expr.T s x -> Expr.T s y) ->
+  ExprWithVars rec node s a x -> ExprWithVars rec node s a y
 liftV f (ExprWithVars xs) = ExprWithVars $ liftM f xs
 
-liftF :: (a -> a) -> ExprWithVars rec node s a -> ExprWithVars rec node s a
+liftF :: (x -> y) -> ExprWithVars rec node s a x -> ExprWithVars rec node s a y
 liftF = liftV . Expr.fromRule2 . Sys.assignment2 ""
 
 
 liftV2 ::
-  (Expr.T s a -> Expr.T s a -> Expr.T s a) ->
-  ExprWithVars rec node s a ->
-  ExprWithVars rec node s a ->
-  ExprWithVars rec node s a
+  (Expr.T s x -> Expr.T s y -> Expr.T s z) ->
+  ExprWithVars rec node s a x ->
+  ExprWithVars rec node s a y ->
+  ExprWithVars rec node s a z
 liftV2 f (ExprWithVars xs) (ExprWithVars ys) =
   ExprWithVars $ liftM2 f xs ys
 
 liftF2 ::
-  (a -> a -> a) ->
-  ExprWithVars rec node s a ->
-  ExprWithVars rec node s a ->
-  ExprWithVars rec node s a
+  (x -> y -> z) ->
+  ExprWithVars rec node s a x ->
+  ExprWithVars rec node s a y ->
+  ExprWithVars rec node s a z
 liftF2 = liftV2 . Expr.fromRule3 . Sys.assignment3 ""
 
-instance (Fractional a) => Num (ExprWithVars rec node s a) where
+instance (Fractional x) => Num (ExprWithVars rec node s a x) where
          fromInteger = ExprWithVars . return . fromInteger
 
          (*) = liftV2 (*)
@@ -113,11 +113,11 @@ instance (Fractional a) => Num (ExprWithVars rec node s a) where
          signum = liftV signum
 
 
-instance (Fractional a) => Fractional (ExprWithVars rec node s a) where
+instance (Fractional x) => Fractional (ExprWithVars rec node s a x) where
          fromRational = ExprWithVars . return . fromRational
          (/) = liftV2 (/)
 
-instance (Floating a) => Floating (ExprWithVars rec node s a) where
+instance (Floating x) => Floating (ExprWithVars rec node s a x) where
          pi = constToExprSys pi
          exp = liftF exp
          sqrt = liftF sqrt
@@ -141,19 +141,19 @@ instance (Floating a) => Floating (ExprWithVars rec node s a) where
 
 infix 0 =.=
 (=.=) ::
-  (Eq a) =>
-  ExprWithVars rec node s a -> ExprWithVars rec node s a ->
+  (Eq x) =>
+  ExprWithVars rec node s a x -> ExprWithVars rec node s a x ->
   EquationSystem rec node s a
 (ExprWithVars xs) =.= (ExprWithVars ys) =
   EquationSystem $ liftM2 (=:=) xs ys
 
 
-constToExprSys :: a -> ExprWithVars rec node s a
+constToExprSys :: x -> ExprWithVars rec node s a x
 constToExprSys = ExprWithVars . return . Expr.constant
 
 withLocalVar ::
-  (ExprWithVars rec node s a -> EquationSystem rec node s b) ->
-  EquationSystem rec node s b
+  (ExprWithVars rec node s a x -> EquationSystem rec node s a) ->
+  EquationSystem rec node s a
 withLocalVar f = EquationSystem $ do
    v <- lift Sys.globalVariable
    case f $ ExprWithVars $ return $ Expr.fromVariable v of
@@ -162,7 +162,7 @@ withLocalVar f = EquationSystem $ do
 
 getVar ::
    (Env.AccessMap idx, Ord (idx rec node)) =>
-   idx rec node -> ExprWithVars rec node s a
+   idx rec node -> ExprWithVars rec node s a a
 getVar idx =
   ExprWithVars $ fmap Expr.fromVariable $ do
     oldMap <- AccessState.get Env.accessMap
@@ -176,37 +176,37 @@ getVar idx =
 getEdgeVar ::
    (Idx.Record rec, Env.AccessMap idx, Ord (idx rec node)) =>
    (rec -> Idx.SecNode node -> Idx.SecNode node -> idx rec node) ->
-   Idx.SecNode node -> Idx.SecNode node -> ExprWithVars rec node s a
+   Idx.SecNode node -> Idx.SecNode node -> ExprWithVars rec node s a a
 getEdgeVar mkIdx x y = getVar (mkIdx Idx.recDeflt x y)
 
-power :: (Idx.Record rec, Ord node) => Idx.SecNode node -> Idx.SecNode node -> ExprWithVars rec node s a
+power :: (Idx.Record rec, Ord node) => Idx.SecNode node -> Idx.SecNode node -> ExprWithVars rec node s a a
 power = getEdgeVar Idx.Power
 
-energy :: (Idx.Record rec, Ord node) => Idx.SecNode node -> Idx.SecNode node -> ExprWithVars rec node s a
+energy :: (Idx.Record rec, Ord node) => Idx.SecNode node -> Idx.SecNode node -> ExprWithVars rec node s a a
 energy = getEdgeVar Idx.Energy
 
-maxenergy :: (Idx.Record rec, Ord node) => Idx.SecNode node -> Idx.SecNode node -> ExprWithVars rec node s a
+maxenergy :: (Idx.Record rec, Ord node) => Idx.SecNode node -> Idx.SecNode node -> ExprWithVars rec node s a a
 maxenergy = getEdgeVar Idx.MaxEnergy
 
-eta :: (Idx.Record rec, Ord node) => Idx.SecNode node -> Idx.SecNode node -> ExprWithVars rec node s a
+eta :: (Idx.Record rec, Ord node) => Idx.SecNode node -> Idx.SecNode node -> ExprWithVars rec node s a a
 eta = getEdgeVar Idx.Eta
 
-xfactor :: (Idx.Record rec, Ord node) => Idx.SecNode node -> Idx.SecNode node -> ExprWithVars rec node s a
+xfactor :: (Idx.Record rec, Ord node) => Idx.SecNode node -> Idx.SecNode node -> ExprWithVars rec node s a a
 xfactor = getEdgeVar Idx.X
 
-yfactor :: (Idx.Record rec, Ord node) => Idx.SecNode node -> Idx.SecNode node -> ExprWithVars rec node s a
+yfactor :: (Idx.Record rec, Ord node) => Idx.SecNode node -> Idx.SecNode node -> ExprWithVars rec node s a a
 yfactor = getEdgeVar Idx.Y
 
-insum :: (Idx.Record rec, Ord node) => Idx.SecNode node -> ExprWithVars rec node s a
+insum :: (Idx.Record rec, Ord node) => Idx.SecNode node -> ExprWithVars rec node s a a
 insum = getVar . Idx.Sum Idx.recDeflt Idx.In
 
-outsum :: (Idx.Record rec, Ord node) => Idx.SecNode node -> ExprWithVars rec node s a
+outsum :: (Idx.Record rec, Ord node) => Idx.SecNode node -> ExprWithVars rec node s a a
 outsum = getVar . Idx.Sum Idx.recDeflt Idx.Out
 
-storage :: (Idx.Record rec, Ord node) => Idx.SecNode node -> ExprWithVars rec node s a
+storage :: (Idx.Record rec, Ord node) => Idx.SecNode node -> ExprWithVars rec node s a a
 storage = getVar . Idx.Storage Idx.recDeflt
 
-dtime :: (Idx.Record rec) => Idx.Section -> ExprWithVars rec node s a
+dtime :: (Idx.Record rec) => Idx.Section -> ExprWithVars rec node s a a
 dtime = getVar . Idx.DTime Idx.recDeflt
 
 
@@ -385,10 +385,10 @@ mkOutStorageEquations (ins0, n, _) =
     mkSplitFactorEquations (outsum n) (energy n) (xfactor n) ins
 
 mkSplitFactorEquations ::
-   (Eq a, Fractional a) =>
-   ExprWithVars rec node s a ->
-   (secnode -> ExprWithVars rec node s a) ->
-   (secnode -> ExprWithVars rec node s a) ->
+   (Eq x, Fractional x) =>
+   ExprWithVars rec node s a x ->
+   (secnode -> ExprWithVars rec node s a x) ->
+   (secnode -> ExprWithVars rec node s a x) ->
    NonEmpty.T [] secnode -> EquationSystem rec node s a
 mkSplitFactorEquations s ef xf ns =
    (s =.= NonEmpty.sum (fmap ef ns))

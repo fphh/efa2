@@ -87,6 +87,7 @@ interVar idx sec0 sec1 x =
 infix 0 .=
 
 (.=) ::
-  (Eq a) =>
-  EqGen.ExprWithVars rec node s a -> a -> EqGen.EquationSystem rec node s a
+  (Eq x) =>
+  EqGen.ExprWithVars rec node s a x -> x ->
+  EqGen.EquationSystem rec node s a
 evar .= val  =  evar =.= EqGen.constToExprSys val

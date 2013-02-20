@@ -43,19 +43,20 @@ seqTopo = constructSeqTopo linearOne [0]
 enRange :: [Rational]
 enRange = (1%100):[1%2, 1 .. 9]
 
-c :: EqGen.ExprWithVars Idx.Absolute Node s a
+
+type Expr = EqGen.ExprWithVars Idx.Absolute Node
+
+c :: Expr s a a
 c = edgeVar EqGen.power sec0 Source Sink
 
-n :: EqGen.ExprWithVars Idx.Absolute Node s a
+n :: Expr s a a
 n = edgeVar EqGen.eta sec0 Source Sink
 
 eta :: Idx.Eta Idx.Absolute Node
 eta = edgeVar (Idx.Eta recAbs) sec0 Source Sink
 
 
-functionEta ::
-   EqGen.ExprWithVars Idx.Absolute Node s Rational ->
-   EqGen.ExprWithVars Idx.Absolute Node s Rational
+functionEta :: (Fractional a) => Expr s a a -> Expr s a a
 functionEta p = 0.2 * p
 
 given :: Rational -> EqGen.EquationSystem Idx.Absolute Node s Rational
