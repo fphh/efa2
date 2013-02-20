@@ -156,9 +156,8 @@ Executable demo-sequence
     Build-Depends:
       efa,
       containers,
-      utility-ht ==0.0.8,
-      array ==0.4.0.0,
-      gnuplot ==0.5.1,
+      utility-ht,
+      gnuplot,
       base
   Else
     Buildable: False
@@ -172,9 +171,8 @@ Executable demo-addzerocrossings
     Build-Depends:
       efa,
       containers,
-      utility-ht ==0.0.8,
-      array ==0.4.0.0,
-      gnuplot ==0.5.1,
+      utility-ht,
+      gnuplot,
       base
   Else
     Buildable: False
@@ -188,9 +186,8 @@ Executable demo-slicesignals-alt
     Build-Depends:
       efa,
       containers,
-      utility-ht ==0.0.8,
-      array ==0.4.0.0,
-      gnuplot ==0.5.1,
+      utility-ht,
+      gnuplot,
       base
   Else
     Buildable: False
@@ -203,9 +200,8 @@ Executable demo-slicesignals
     Build-Depends:
       efa,
       containers,
-      utility-ht ==0.0.8,
-      array ==0.4.0.0,
-      gnuplot ==0.5.1,
+      utility-ht,
+      gnuplot,
       base
   Else
     Buildable: False
@@ -218,9 +214,8 @@ Executable demo-slicezerocrosssignals
     Build-Depends:
       efa,
       containers,
-      utility-ht ==0.0.8,
-      array ==0.4.0.0,
-      gnuplot ==0.5.1,
+      utility-ht,
+      gnuplot,
       base
   Else
     Buildable: False
