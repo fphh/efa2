@@ -8,6 +8,7 @@ import qualified Data.Accessor.Basic as Accessor
 import Control.Applicative (Applicative, pure, (<*>))
 import Data.Traversable (Traversable, sequenceA, foldMapDefault)
 import Data.Foldable (Foldable, foldMap)
+import Data.Monoid (Monoid, mempty, mappend)
 
 
 -- Environments
@@ -139,14 +140,13 @@ infixl 4 <?>
 f <?> x = f <*> sequenceA x
 
 
-empty :: Env node a
-empty = Env M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty
 
-
-union :: (Ord node) => Env node a -> Env node a -> Env node a
-union (Env e de me dme p dp n dn dt x dx y dy v st)
+instance (Ord node) => Monoid (Env node a) where
+   mempty = Env M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty
+   mappend
+         (Env e de me dme p dp n dn dt x dx y dy v st)
          (Env e' de' me' dme' p' dp' n' dn' dt' x' dx' y' dy' v' st') =
-      (Env (M.union e e') (M.union de de') (M.union me me') (M.union dme dme')
+       Env (M.union e e') (M.union de de') (M.union me me') (M.union dme dme')
            (M.union p p') (M.union dp dp') (M.union n n')   (M.union dn dn')
            (M.union dt dt') (M.union x x') (M.union dx dx') (M.union y y')
-           (M.union dy dy') (M.union v v') (M.union st st'))
+           (M.union dy dy') (M.union v v') (M.union st st')

@@ -454,7 +454,7 @@ solve ::
 solve given g = runST $ do
   let dirG = toDirSequFlowGraph g
       EquationSystem eqsys = given <> fromTopology dirG
-  (eqs, varmap) <- runStateT eqsys $ Env.empty
+  (eqs, varmap) <- runStateT eqsys mempty
   Sys.solve eqs
   traverse (fmap (maybe Undetermined Determined) . Sys.query) varmap
 
@@ -510,7 +510,7 @@ solveFromMeasurement ::
 solveFromMeasurement given g = runST $ do
   let dirG = toDirSequFlowGraph g
       EquationSystem eqsys = given <> fromTopology' dirG
-  (eqs, varmap) <- runStateT eqsys $ Env.empty
+  (eqs, varmap) <- runStateT eqsys mempty
   Sys.solve eqs
   traverse (fmap (maybe Undetermined Determined) . Sys.query) varmap
 
@@ -535,11 +535,11 @@ conservativelySolve given g = runST $ do
       EquationSystem eqsys = given <> fromTopology dirG
       EquationSystem givenSys = given
 
-  (eqs, varmap) <- runStateT eqsys $ Env.empty
+  (eqs, varmap) <- runStateT eqsys mempty
   Sys.solve eqs
 
-  (givenEqs, givenVarmap) <- runStateT givenSys $ Env.empty
+  (givenEqs, givenVarmap) <- runStateT givenSys mempty
   Sys.solve givenEqs
 
-  let uenv = Env.union givenVarmap varmap
-  traverse (fmap (maybe Undetermined Determined) . Sys.query) uenv
+  traverse (fmap (maybe Undetermined Determined) . Sys.query) $
+     givenVarmap <> varmap
