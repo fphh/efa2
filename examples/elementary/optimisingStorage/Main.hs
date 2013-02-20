@@ -35,6 +35,8 @@ import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Plot as Plot
 import qualified EFA.Signal.Typ as T
 
+import Debug.Trace
+
 
 sec0, sec1 :: Idx.Section
 sec0 :~ sec1 :~ _ = Stream.enumFrom $ Idx.Section 0
@@ -61,8 +63,8 @@ seqTopo :: TD.SequFlowGraph Node
 seqTopo = constructSeqTopo topoDreibein [0, 4]
       
 etaf :: EqGen.ExprWithVars Node s Double -> EqGen.ExprWithVars Node s Double
-etaf x = 1/((x+sqrt(x*x+4*x))/(2*x))
-
+etaf x = 1/((y+sqrt(y*y+4*y))/(2*y))
+  where y = x/100
 
 n01, n12, n13, n31, p10, p21, e31 ::
   Idx.Section -> EqGen.ExprWithVars Node s a
@@ -73,6 +75,10 @@ n31 sec = edgeVar EqGen.eta sec N3 N1
 p10 sec = edgeVar EqGen.power sec N1 N0
 p21 sec = edgeVar EqGen.power sec N2 N1
 e31 sec = edgeVar EqGen.energy sec N3 N1
+
+p31 sec = edgeVar EqGen.power sec N3 N1
+p13 sec = edgeVar EqGen.power sec N1 N3
+
 
 stoinit :: EqGen.ExprWithVars Node s a
 stoinit = EqGen.storage (Idx.SecNode Idx.initSection N3)
@@ -89,32 +95,42 @@ e33 = EqGen.getVar $
 time :: Idx.Section -> EqGen.ExprWithVars nty s Double
 time = EqGen.dtime
 
+f r x = x/(x + r*((ui - sqrt(ui^2 - 4*r*x)) / 2*r)^2)
+  where -- r = 0.9
+        ui = 200
+{-
+g x = ((-x) + r*((200 - sqrt(200*200 - 4*r*(-x))) / 2*r)*((200 - sqrt(200*200 - 4*r*(-x))) / 2*r))/(-x)
+  where r = 0.9
+-}
+
+g r x = 1 / (1 + (x*r)/(ui^2))
+  where -- r = 0.9
+        ui = 200
 
 given :: Double -> Double -> EqGen.EquationSystem Node s Double
-given t n =
+given t r =
   (time Idx.initSection =.= 1)
-  <> (e33 =.= 1)
   <> (stoinit =.= 3)
 
   <> (time sec0 =.= 1 - t')
-  <> (p21 sec0 =.= 1)
-  <> (e31 sec0 =.= t' / n' / 0.9)
+  <> (p21 sec0 =.= p)
+  <> (e31 sec0 =.= e31 sec1)
+
   <> (n01 sec0 =.= etaf (p10 sec0))
   <> (n12 sec0 =.= 0.9)
-  <> (n13 sec0 =.= n')
+  <> (n13 sec0 =.= (g r' (p31 sec0)))
 
   <> (time sec1 =.= t')
-  <> (p21 sec1 =.= 1)
+  <> (p21 sec1 =.= p)
   <> (n12 sec1 =.= 0.9)
-  <> (n31 sec1 =.= n')
-
+  <> (n31 sec1 =.= f r' (p13 sec1))
   where t' = EqGen.constToExprSys t
-        n' = EqGen.constToExprSys n
+        r' = EqGen.constToExprSys r
+        p = 1000
 
-
-trange, nrange :: [Double]
+trange, rrange :: [Double]
 trange = 0.01:[0.1, 0.2 .. 0.9]
-nrange = [0.6, 0.65 .. 1]
+rrange = 0.01:[0.5, 1 .. 3]
 
 varMat :: [a] -> [b] -> ([[a]], [[b]])
 varMat xs ys =
@@ -136,21 +152,21 @@ solve t n =
 
 main :: IO ()
 main = do
-  let (varT, varN) = varMat trange nrange
+  let (varT, varN) = varMat trange rrange
       etaSys = zipWith (zipWith solve) varT varN
 
-      timeVar, effVar, etaSysVar :: S.Test2 (T.Typ T.A T.Y T.Tt) Double
-      timeVar = S.fromList2 varT
-      effVar = S.fromList2 varN
-      etaSysVar = S.fromList2 etaSys
+--      timeVar, effVar, etaSysVar :: S.Test2 (T.Typ T.A T.Y T.Tt) Double
+      timeVar = S.fromList2 varT :: S.Test2 (T.Typ T.A T.T T.Tt) Double
+      effVar = S.fromList2 varN :: S.Test2 (T.Typ T.A T.N T.Tt) Double
+      etaSysVar = S.fromList2 etaSys :: S.Test2 (T.Typ T.A T.N T.Tt) Double
 
   Plot.surfPlot "EtaSys" timeVar effVar etaSysVar
 
-  let envhh = EqGen.solve (given (head trange) (head nrange)) seqTopo
-      envhl = EqGen.solve (given (head trange) (last nrange)) seqTopo
-      envlh = EqGen.solve (given (last trange) (head nrange)) seqTopo
-      envll = EqGen.solve (given (last trange) (last nrange)) seqTopo
+  let envhh = EqGen.solve (given (head trange) (head rrange)) seqTopo
+      envhl = EqGen.solve (given (head trange) (last rrange)) seqTopo
+      envlh = EqGen.solve (given (last trange) (head rrange)) seqTopo
+      envll = EqGen.solve (given (last trange) (last rrange)) seqTopo
 
 
   concurrentlyMany_ $
-    map (Draw.sequFlowGraphAbsWithEnv seqTopo) [envhh, envhl, envlh, envll]
+    map (Draw.sequFlowGraphAbsWithEnv seqTopo) [envhh] -- , envhl, envlh, envll]
