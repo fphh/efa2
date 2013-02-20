@@ -77,41 +77,62 @@ formatEdgeIndex r x y =
       `Format.connect` formatSectionNode y
 
 instance (Node.C node) => FormatValue (Index node) where
-   formatValue idx =
-      let absolute e r x y = Format.edgeIdent e
-             -- Format.subscript (Format.edgeIdent e) (formatEdgeIndex r x y)
-          delta e r x y = Format.delta $ Format.edgeIdent e
-             -- Format.subscript (Format.delta $ Format.edgeIdent e)
-             --                 (formatEdgeIndex r x y)
-      in  case idx of
-             Energy (Idx.Energy r x y) -> absolute Format.Energy r x y
-             DEnergy (Idx.DEnergy r x y) -> delta Format.Energy r x y
+   formatValue =
+      formatGen
+         (\e r x y ->
+            Format.subscript (Format.edgeIdent e) (formatEdgeIndex r x y))
+         (\e r x y ->
+            Format.subscript
+               (Format.delta $ Format.edgeIdent e)
+               (formatEdgeIndex r x y))
 
-             MaxEnergy (Idx.MaxEnergy r x y) ->
-               absolute Format.MaxEnergy r x y
-             DMaxEnergy (Idx.DMaxEnergy r x y) -> delta Format.MaxEnergy r x y
 
-             Power (Idx.Power r x y) -> absolute Format.Power r x y
-             DPower (Idx.DPower r x y) -> delta Format.Power r x y
+formatShort :: (Node.C node, Format output) => Index node -> output
+formatShort =
+   formatGen
+      (\e _r _x _y -> Format.edgeIdent e)
+      (\e _r _x _y -> Format.delta $ Format.edgeIdent e)
 
-             Eta (Idx.Eta r x y) -> absolute Format.Eta r x y
-             DEta (Idx.DEta r x y) -> delta Format.Eta r x y
 
-             X (Idx.X r x y) -> absolute Format.X r x y
-             DX (Idx.DX r x y) -> delta Format.X r x y
 
-             Y (Idx.Y r x y) -> absolute Format.Y r x y
-             DY (Idx.DY r x y) -> delta Format.Y r x y
+formatGen ::
+   (Format output, Node.C node) =>
+   (Format.EdgeVar ->
+    Idx.Record -> Idx.SecNode node -> Idx.SecNode node -> output) ->
+   (Format.EdgeVar ->
+    Idx.Record -> Idx.SecNode node -> Idx.SecNode node -> output) ->
+   Index node ->
+   output
+formatGen absolute delta idx =
+   case idx of
+      Energy (Idx.Energy r x y) -> absolute Format.Energy r x y
+      DEnergy (Idx.DEnergy r x y) -> delta Format.Energy r x y
 
-             DTime (Idx.DTime r s) ->
-                Format.subscript (Format.delta Format.time) $
-                   Format.record r `Format.connect` Format.section s
+      MaxEnergy (Idx.MaxEnergy r x y) ->
+        absolute Format.MaxEnergy r x y
+      DMaxEnergy (Idx.DMaxEnergy r x y) -> delta Format.MaxEnergy r x y
 
-             Sum (Idx.Sum r dir x) ->
-                Format.subscript Format.var $
-                   Format.record r `Format.connect`
-                   Format.direction dir `Format.connect` formatSectionNode x
+      Power (Idx.Power r x y) -> absolute Format.Power r x y
+      DPower (Idx.DPower r x y) -> delta Format.Power r x y
 
-             Store (Idx.Storage r x) ->
-                Format.subscript Format.storage $
-                   Format.record r `Format.connect` formatSectionNode x
+      Eta (Idx.Eta r x y) -> absolute Format.Eta r x y
+      DEta (Idx.DEta r x y) -> delta Format.Eta r x y
+
+      X (Idx.X r x y) -> absolute Format.X r x y
+      DX (Idx.DX r x y) -> delta Format.X r x y
+
+      Y (Idx.Y r x y) -> absolute Format.Y r x y
+      DY (Idx.DY r x y) -> delta Format.Y r x y
+
+      DTime (Idx.DTime r s) ->
+         Format.subscript (Format.delta Format.time) $
+            Format.record r `Format.connect` Format.section s
+
+      Sum (Idx.Sum r dir x) ->
+         Format.subscript Format.var $
+            Format.record r `Format.connect`
+            Format.direction dir `Format.connect` formatSectionNode x
+
+      Store (Idx.Storage r x) ->
+         Format.subscript Format.storage $
+            Format.record r `Format.connect` formatSectionNode x

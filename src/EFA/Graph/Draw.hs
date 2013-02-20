@@ -13,6 +13,7 @@ import EFA.Report.FormatValue (FormatValue, formatValue)
 import EFA.Report.Format (Format, Unicode(Unicode, unUnicode))
 
 import qualified EFA.Equation.Env as Interp
+import qualified EFA.Equation.Variable as Var
 import EFA.Equation.Variable (MkIdxC, mkIdx)
 import EFA.Equation.Env (StorageMap)
 
@@ -330,7 +331,7 @@ lookupFormatAssign ::
 lookupFormatAssign mp makeIdx x y =
    case makeIdx x y of
       idx ->
-         Format.assign (formatValue $ mkIdx idx) (lookupFormat mp idx)
+         Format.assign (Var.formatShort $ mkIdx idx) (lookupFormat mp idx)
 
 sequFlowGraphWithEnv ::
   (Node.C node) =>
