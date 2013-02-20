@@ -14,7 +14,7 @@ import EFA.Signal.Record
           
 import EFA.Signal.Signal (PSigL, (.++))
 import EFA.Signal.Base (Val)
-import EFA.Signal.Plot (rPlot)
+import qualified EFA.Signal.Plot as Plot
 
 import qualified Data.Map as M
 
@@ -73,9 +73,9 @@ main = do
 
   print sequ
 
-  rPlot "PowerRecord" pRec
-  rPlot "SequA" sequRecA
-  rPlot "SequB" sequRecB
+  Plot.recordIO "PowerRecord" pRec
+  Plot.sequenceIO "SequA" sequRecA
+  Plot.sequenceIO "SequB" sequRecB
 
 {-
   {-

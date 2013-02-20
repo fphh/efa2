@@ -160,7 +160,7 @@ main = do
       effVar = S.fromList2 varN :: S.Test2 (T.Typ T.A T.N T.Tt) Double
       etaSysVar = S.fromList2 etaSys :: S.Test2 (T.Typ T.A T.N T.Tt) Double
 
-  Plot.surfPlot "EtaSys" timeVar effVar etaSysVar
+  Plot.surfaceIO "EtaSys" timeVar effVar etaSysVar
 
   let envhh = EqGen.solve (given (head trange) (head rrange)) seqTopo
       envhl = EqGen.solve (given (head trange) (last rrange)) seqTopo

@@ -13,16 +13,15 @@ import EFA.Graph.Topology (Topology, FlowTopology, SequFlowGraph)
 import qualified EFA.Signal.Base as SB
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Vector as V
+import qualified EFA.Signal.Record as Record
 
 import EFA.Signal.SequenceData
           (SequData(..), Sequ, Sec,
-           filterSequWithSequData,filterSequWithSequData2)
+           filterSequWithSequData, filterSequWithSequData2)
 
 
-import EFA.Signal.Record(Record(..),PowerRecord,FlowRecord,
-           RSamp1,rsingleton, RSig,rlen,rviewL,rviewR,getTimeWindow,sliceRecord)
-        
-  
+import EFA.Signal.Record (Record(..), PowerRecord, FlowRecord)
+
 import EFA.Signal.Base
           (Val, Sign(..), ZeroCrossing(..))
 import EFA.Signal.Signal
@@ -222,30 +221,26 @@ genSequ ::  Ord node => PowerRecord node [] Val -> (Sequ, SequData (PowerRecord 
 genSequ pRec = removeNilSections (SequData $ sequ++[lastSec], SequData pRecs)
   where rSig = record2RSig pRec
         pRecs = map (rsig2SecRecord pRec) (seqRSig ++ [lastRSec])
-        ((lastSec,sequ),(lastRSec,seqRSig)) = recyc rTAIL rHEAD (((0,0),[]),(rsingleton $ rHEAD,[]))
+        ((lastSec,sequ),(lastRSec,seqRSig)) = recyc rTail rHead (((0,0),[]),(Record.singleton $ rHead,[]))
           where
-            rHEAD =  fst $ maybe err1 id $ rviewL rSig
-            rTAIL =  snd $ maybe err2 id $ rviewL rSig
-            err1 = error ("Error in EFA.Signal.Sequence/genSequence, case 1 - empty head in rSig")
-            err2 = error ("Error in EFA.Signal.Sequence/genSequence, case 1 - empty tail in rSig")
+            (rHead, rTail) = maybe err id $ Record.viewL rSig
+            err = error ("Error in EFA.Signal.Sequence/genSequence, case 1 - empty rSig")
 
         recyc ::
-           RSig -> RSamp1 ->
-           ((Sec, [Sec]), (RSig, [RSig])) ->
-           ((Sec, [Sec]), (RSig, [RSig]))
+           Record.Sig -> Record.Samp1 ->
+           ((Sec, [Sec]), (Record.Sig, [Record.Sig])) ->
+           ((Sec, [Sec]), (Record.Sig, [Record.Sig]))
 
         -- Incoming rSig is at least two samples long -- detect changes
         recyc rsig x1 (((lastIdx,idx),sq),(secRSig, sqRSig)) |
-          (rlen rsig) >=2 = recyc rTAIL x2 (g $ stepDetect x1 x2, f $ stepDetect x1 x2)
+          (Record.len rsig) >=2 = recyc rTail x2 (g $ stepDetect x1 x2, f $ stepDetect x1 x2)
           where
-            x2 =  fst $ maybe err1 id $ rviewL rsig -- rhead rsig
-            rTAIL =  snd $ maybe err2 id $ rviewL rsig
-            err1 = error ("Error in EFA.Signal.Sequence/genSequence, case 2 - empty head in rSig")
-            err2 = error ("Error in EFA.Signal.Sequence/genSequence, case 2 - empty tail in rSig")
-            xs1 = rsingleton x1
-            xs2 = rsingleton x2
+            (x2, rTail) = maybe err id $ Record.viewL rsig
+            err = error ("Error in EFA.Signal.Sequence/genSequence, case 2 - empty rSig")
+            xs1 = Record.singleton x1
+            xs2 = Record.singleton x2
 
-            f :: EventType -> (RSig, [RSig])
+            f :: EventType -> (Record.Sig, [Record.Sig])
             f LeftEvent = (xs1.++xs2, sqRSig ++ [secRSig])           -- add actual Interval to next section
             f RightEvent = (xs2, sqRSig ++ [secRSig .++ xs2])     --add actual Interval to last section
             f MixedEvent = (xs2, sqRSig ++ [secRSig] ++ [xs1 .++ xs2]) -- make additional Mini--Section
@@ -258,7 +253,7 @@ genSequ pRec = removeNilSections (SequData $ sequ++[lastSec], SequData pRecs)
             g NoEvent = ((lastIdx, idx+1), sq)
 
         -- Incoming rList is only one Point long -- append last sample to last section
-        recyc rsig _ (((lastIdx,idx),sq),(secRSig, sqRSig)) | (rlen rsig) >=1 = (((lastIdx,idx+1),sq),(secRSig .++ rsig, sqRSig))
+        recyc rsig _ (((lastIdx,idx),sq),(secRSig, sqRSig)) | (Record.len rsig) >=1 = (((lastIdx,idx+1),sq),(secRSig .++ rsig, sqRSig))
 
         -- Incoming rList is empty -- return result
         recyc _ _ acc = acc
@@ -271,7 +266,7 @@ removeNilSections (SequData sequ, SequData pRecs) = (SequData fsequ, SequData fR
 
 
 -- | Function to detect and classify a step over several signals
-stepDetect :: RSamp1 -> RSamp1 -> EventType
+stepDetect :: Record.Samp1 -> Record.Samp1 -> EventType
 stepDetect  (t1,ps1) (t2,ps2) = f
   where stepList :: Samp1L (Typ A STy Tt) StepType
         stepList = S.tzipWith stepX ps1 ps2
@@ -301,14 +296,14 @@ addZeroCrossings r = rsig2Record rSigNew0 r
   where rSigNew0 =
            case record2RSig r of
               rSig ->
-                 case liftM2 (,) (rviewL rSig) (rviewR rSig) of
+                 case liftM2 (,) (Record.viewL rSig) (Record.viewR rSig) of
                     Nothing -> error "addZeroCrossings: empty signal"
                     Just ((rHead, rTail), (_, rLast)) ->
-                       f rTail rHead mempty .++ rsingleton rLast
+                       f rTail rHead mempty .++ Record.singleton rLast
 
-        f :: RSig -> RSamp1 -> RSig -> RSig
+        f :: Record.Sig -> Record.Samp1 -> Record.Sig -> Record.Sig
         f rSig rold rSigNew =
-           case rviewL rSig of
+           case Record.viewL rSig of
               Nothing -> rSigNew
               Just (rnew, rTail) ->
                  f rTail rnew (rSigNew .++ getZeroCrossings rold rnew)
@@ -316,14 +311,14 @@ addZeroCrossings r = rsig2Record rSigNew0 r
 -----------------------------------------------------------------------------------
 -- | Function for calculating zero Crossings
 
-getZeroCrossings :: RSamp1 -> RSamp1 -> RSig
+getZeroCrossings :: Record.Samp1 -> Record.Samp1 -> Record.Sig
 getZeroCrossings rs1@(t1,ps1) rs2 = ((S.singleton t1) .++ zeroCrossingTimes,(S.singleton ps1) .++ zeroPowers)
           where
              (zeroCrossings, zeroCrossingTimes) = calcZeroTimes rs1 rs2
              zeroPowers = calcZeroPowers rs1 rs2 zeroCrossingTimes zeroCrossings
 
 
-calcZeroPowers :: RSamp1 -> RSamp1 -> TSigL -> TZeroSamp1L -> PSamp2LL
+calcZeroPowers :: Record.Samp1 -> Record.Samp1 -> TSigL -> TZeroSamp1L -> PSamp2LL
 calcZeroPowers (t1,(TC (Data ps1))) (t2,(TC (Data ps2))) zeroCrossingTimes (TC (Data tz)) = S.transpose2 $ fromSigList sigList
                where g p1 p2 tz2 = f (toSample p1) (toSample p2) (toSample tz2)
                      sigList = L.zipWith3 g ps1 ps2 tz :: [PSigL]
@@ -331,7 +326,7 @@ calcZeroPowers (t1,(TC (Data ps1))) (t2,(TC (Data ps2))) zeroCrossingTimes (TC (
                      f :: PSamp -> PSamp -> TZeroSamp -> PSigL
                      f p1 p2 zeroCrossing = interpPowers (t1,p1) (t2,p2) zeroCrossingTimes zeroCrossing
 
-calcZeroTimes :: RSamp1 -> RSamp1 -> (TZeroSamp1L,TSigL)
+calcZeroTimes :: Record.Samp1 -> Record.Samp1 -> (TZeroSamp1L,TSigL)
 calcZeroTimes (t1,ps1) (t2,ps2)  = (zeroCrossings, zeroCrossingTimes)
               where
                  -- | create ascending list containing all zero crossing times
@@ -377,12 +372,14 @@ makeTZero :: TSamp -> TZeroSamp
 makeTZero (TC (Data x)) = TC $ Data $ ZeroCrossing x
 
 filterTZero :: TZeroSamp1L -> TSigL
-filterTZero = S.transpose1 . S.map (\ (ZeroCrossing x) -> x) . S.filter (/=NoCrossing)
+filterTZero =
+   S.transpose1 .
+   S.mapMaybe (\ c -> case c of ZeroCrossing x -> Just x; NoCrossing -> Nothing)
 
 
 
 -----------------------------------------------------------------------------------
--- * Conversions between RSig and Record
+-- * Conversions between Record.Sig and Record
 
 -- | Generate rSig from Power Record
 updateMap :: Ord k => M.Map k a -> [b] -> M.Map k b
@@ -502,7 +499,7 @@ chopAtZeroCrossingsRSig (TC (Data times), TC (Data vectorSignal)) =
    map (mapPair (TC . Data, TC . Data)) $
    map unzip $
    filter (HTL.lengthAtLeast 2) $
-   map (removeDuplicates fst) $
+--   map (removeDuplicates fst) $
    chopAtZeroCrossings $
    zip times vectorSignal
 
@@ -572,13 +569,13 @@ extractCuttingTimes:: (Ord a,
                        V.Singleton v) =>
                       SequData (PowerRecord node v a) ->
                       SequData (S.Scal (Typ A T Tt) a, S.Scal (Typ A T Tt) a)
-extractCuttingTimes sequ = fmap getTimeWindow sequ
+extractCuttingTimes = fmap Record.getTimeWindow
 
 
 
 -- | Create SequencePowerRecord by extracting Slices from Indices given by Sequence
 sectionRecordsFromSequence ::  (V.Slice v, V.Storage v a) => Record s t1 t2 id v a -> Sequ -> SequData (Record s t1 t2 id v a)
-sectionRecordsFromSequence rec (SequData sequ) = SequData $ map (sliceRecord rec) sequ   
+sectionRecordsFromSequence rec = fmap (Record.slice rec)
 
 
 -- | Generate Time Signal with Sequence Number to allow Plotting

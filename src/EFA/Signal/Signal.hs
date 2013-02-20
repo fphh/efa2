@@ -862,6 +862,12 @@ filter ::
    (d -> Bool) -> TC s typ (Data (v :> Nil) d) -> TC s typ (Data (v :> Nil) d)
 filter f (TC x) = TC $ D.filter f x
 
+mapMaybe ::
+   (SV.Filter v, SV.Walker v, SV.Storage v a, SV.Storage v b) =>
+   (a -> Maybe b) ->
+   TC s typ (Data (v :> Nil) a) -> TC s typ (Data (v :> Nil) b)
+mapMaybe f (TC (Data x)) = TC $ Data $ SV.mapMaybe f x
+
 
 sampleAverage :: Fractional d => TC Sample typ (Data Nil d) -> TC Sample typ (Data Nil d) -> TC Sample typ (Data Nil d)
 sampleAverage (TC (Data x)) (TC (Data y)) = TC $ Data $ (x+y)/2
