@@ -50,7 +50,7 @@ class Format output where
    record :: Idx.Record -> output
    section :: Idx.Section -> output
    sectionNode :: output -> output -> output
-   use :: Idx.Use -> output
+   direction :: Idx.Direction -> output
    delta :: output -> output
    edgeIdent :: EdgeVar -> output
    time, var, storage :: output
@@ -79,7 +79,7 @@ instance Format ASCII where
    section (Idx.Section s) = ASCII $ show s
    sectionNode (ASCII s) (ASCII x) = ASCII $ s ++ "." ++ x
 
-   use = ASCII . show
+   direction = ASCII . show
    delta (ASCII s) = ASCII $ 'd':s
    edgeIdent e =
       ASCII $
@@ -126,7 +126,7 @@ instance Format Unicode where
    section (Idx.Section s) = Unicode $ show s
    sectionNode (Unicode s) (Unicode x) = Unicode $ s ++ "." ++ x
 
-   use = Unicode . show
+   direction = Unicode . show
    delta (Unicode s) = Unicode $ '\x2206':s
    edgeIdent e =
       Unicode $
@@ -207,7 +207,7 @@ instance Format Latex where
    section (Idx.Section s) = Latex $ show s
    sectionNode (Latex s) (Latex x) = Latex $ s ++ ":" ++ x
 
-   use = Latex . show
+   direction = Latex . show
    delta (Latex s) = Latex $ "\\Delta " ++ s
    edgeIdent e =
       Latex $

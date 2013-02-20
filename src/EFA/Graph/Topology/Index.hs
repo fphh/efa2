@@ -66,10 +66,9 @@ data DY a = DY !Record !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
 
 data Storage a = Storage !Record !(SecNode a) deriving (Show, Ord, Eq)
 
-data Use = InSum
-         | OutSum deriving (Show, Eq, Ord)
+data Direction = In | Out deriving (Show, Eq, Ord)
 
-data Var a = Var !Record Use !(SecNode a) deriving (Show, Ord, Eq)
+data Sum a = Sum !Record !Direction !(SecNode a) deriving (Show, Ord, Eq)
 
 
 -- * Other indices
@@ -122,6 +121,6 @@ instance RecNum (Storage a) where
    getRecNum (Storage r _) = r
    setRecNum rec (Storage _ n) = Storage rec n
 
-instance RecNum (Var a) where
-   getRecNum (Var r _ _) = r
-   setRecNum rec (Var _ use t) = Var rec use t
+instance RecNum (Sum a) where
+   getRecNum (Sum r _ _) = r
+   setRecNum rec (Sum _ use t) = Sum rec use t

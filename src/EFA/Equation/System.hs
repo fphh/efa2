@@ -15,8 +15,8 @@ module EFA.Equation.System (
   eta,
   xfactor,
   yfactor,
-  insumvar,
-  outsumvar,
+  insum,
+  outsum,
   storage,
   dtime,
   Result(..),
@@ -199,11 +199,11 @@ xfactor = getEdgeVar Idx.X
 yfactor :: (Ord node) => Idx.SecNode node -> Idx.SecNode node -> ExprWithVars node s a
 yfactor = getEdgeVar Idx.Y
 
-insumvar :: (Ord node) => Idx.SecNode node -> ExprWithVars node s a
-insumvar = getVar . Idx.Var recAbs Idx.InSum
+insum :: (Ord node) => Idx.SecNode node -> ExprWithVars node s a
+insum = getVar . Idx.Sum recAbs Idx.In
 
-outsumvar :: (Ord node) => Idx.SecNode node -> ExprWithVars node s a
-outsumvar = getVar . Idx.Var recAbs Idx.OutSum
+outsum :: (Ord node) => Idx.SecNode node -> ExprWithVars node s a
+outsum = getVar . Idx.Sum recAbs Idx.Out
 
 storage :: (Ord node) => Idx.SecNode node -> ExprWithVars node s a
 storage = getVar . Idx.Storage recAbs
@@ -266,8 +266,8 @@ makeNodeEquations ::
 makeNodeEquations = fold . M.mapWithKey f . Gr.nodes
    where f n (ins, label, outs) =
             let -- this variable is used again in makeStorageEquations
-                varsumin = insumvar n
-                varsumout = outsumvar n  -- and this, too.
+                varsumin = insum n
+                varsumout = outsum n  -- and this one, too.
                 splitEqs varsum nodes =
                    foldMap
                       (mkSplitFactorEquations varsum (energy n) (xfactor n))
@@ -292,8 +292,8 @@ makeStorageEquations =
            +
            case dir of
                 NoDir  -> 0
-                InDir  -> insumvar now
-                OutDir -> - outsumvar now
+                InDir  -> insum now
+                OutDir -> - outsum now
 
 
 data StDir = InDir
@@ -365,7 +365,7 @@ mkInStorageEquations (_, n, outs) =
          (maxenergy n (NonEmpty.head souts) =.=
           if getSection n == Idx.initSection
             then storage n
-            else insumvar n)
+            else insum n)
          <>
          mkSplitFactorEquations s (maxenergy n) (yfactor n) souts
          <>
@@ -382,7 +382,7 @@ mkOutStorageEquations (ins0, n, _) =
   withLocalVar $ \s ->
     mkSplitFactorEquations s (flip maxenergy n) (xfactor n) ins
     <>
-    mkSplitFactorEquations (outsumvar n) (energy n) (xfactor n) ins
+    mkSplitFactorEquations (outsum n) (energy n) (xfactor n) ins
 
 mkSplitFactorEquations ::
    (Eq a, Fractional a) =>
@@ -493,8 +493,8 @@ makeNodeEquations' ::
 makeNodeEquations' = fold . M.mapWithKey f . Gr.nodes
    where f n (ins, _, outs) =
             let -- this variable is used again in makeStorageEquations
-                varsumin = insumvar n
-                varsumout = outsumvar n  -- and this, too.
+                varsumin = insum n
+                varsumout = outsum n  -- and this one, too.
                 splitEqs varsum nodes =
                    foldMap
                       (mkSplitFactorEquations varsum (energy n) (xfactor n))

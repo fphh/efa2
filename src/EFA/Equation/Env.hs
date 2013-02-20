@@ -31,7 +31,7 @@ type DXMap node a = M.Map (Idx.DX node) a
 type YMap node a = M.Map (Idx.Y node) a
 type DYMap node a = M.Map (Idx.DY node) a
 
-type VarMap node a = M.Map (Idx.Var node) a
+type SumMap node a = M.Map (Idx.Sum node) a
 
 type StorageMap node a = M.Map (Idx.Storage node) a
 
@@ -53,7 +53,7 @@ data Env node rec a =
                      dxMap :: DXMap node a,
                      yMap :: YMap node a,
                      dyMap :: DYMap node a,
-                     varMap :: VarMap node a,
+                     sumMap :: SumMap node a,
                      storageMap :: StorageMap node a } deriving (Show)
 
 
@@ -113,9 +113,9 @@ instance AccessMap Idx.DY where
    accessMap =
       Accessor.fromSetGet (\x c -> c{dyMap = x}) dyMap
 
-instance AccessMap Idx.Var where
+instance AccessMap Idx.Sum where
    accessMap =
-      Accessor.fromSetGet (\x c -> c{varMap = x}) varMap
+      Accessor.fromSetGet (\x c -> c{sumMap = x}) sumMap
 
 instance AccessMap Idx.Storage where
    accessMap =

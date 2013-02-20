@@ -22,7 +22,7 @@ data Index a = Energy (Idx.Energy a)
              | DX (Idx.DX a)
              | Y (Idx.Y a)
              | DY (Idx.DY a)
-             | Var (Idx.Var a)
+             | Sum (Idx.Sum a)
              | Store (Idx.Storage a)
                deriving (Show, Eq, Ord)
 
@@ -45,7 +45,7 @@ instance MkIdxC Idx.X where mkIdx = X
 instance MkIdxC Idx.DX where mkIdx = DX
 instance MkIdxC Idx.Y where mkIdx = Y
 instance MkIdxC Idx.DY where mkIdx = DY
-instance MkIdxC Idx.Var where mkIdx = Var
+instance MkIdxC Idx.Sum where mkIdx = Sum
 instance MkIdxC Idx.Storage where mkIdx = Store
 
 
@@ -107,10 +107,10 @@ instance (Node.C node) => FormatValue (Index node) where
                 Format.subscript (Format.delta Format.time) $
                    Format.record r `Format.connect` Format.section s
 
-             Var (Idx.Var r u x) ->
+             Sum (Idx.Sum r dir x) ->
                 Format.subscript Format.var $
                    Format.record r `Format.connect`
-                   Format.use u `Format.connect` formatSectionNode x
+                   Format.direction dir `Format.connect` formatSectionNode x
 
              Store (Idx.Storage r x) ->
                 Format.subscript Format.storage $
