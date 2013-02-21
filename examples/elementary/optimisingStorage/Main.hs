@@ -37,6 +37,9 @@ import qualified EFA.Signal.Signal as S
 import EFA.Signal.Signal(UTFSig, FSamp, Test2, PFSamp, (.+), (.-),(./),(.*))
 import EFA.Signal.Base(Val)
 
+import qualified EFA.Report.Report as Rep
+
+
 import qualified EFA.Signal.Plot as Plot
 import qualified EFA.Signal.Typ as T
 
@@ -68,7 +71,8 @@ topoDreibein = Gr.mkGraph ns (makeEdges es)
 
 seqTopo :: TD.SequFlowGraph Node
 seqTopo = constructSeqTopo topoDreibein [0, 4]
-      
+
+-- | Variable efficiency of fuel converter: n01 as function of p10       
 etaf :: EqGen.ExprWithVars Node s Double -> EqGen.ExprWithVars Node s Double
 etaf x = 1/((y+sqrt(y*y+4*y))/(2*y))
   where y = x/1000
@@ -102,6 +106,7 @@ e33 = EqGen.getVar $
 time :: Idx.Section -> EqGen.ExprWithVars nty s Double
 time = EqGen.dtime
 
+-- | variable efficiency of energy storage in discharging mode as function of n31 over p13  
 f r x = x/(x + r*((ui - sqrt(ui^2 - 4*r*x)) / 2*r)^2)
   where -- r = 0.9
         ui = 200
@@ -110,6 +115,7 @@ g x = ((-x) + r*((200 - sqrt(200*200 - 4*r*(-x))) / 2*r)*((200 - sqrt(200*200 - 
   where r = 0.9
 -}
 
+-- | variable efficiency of energy storage in charging mode as function of n13 over p31 
 g r x = 1 / (1 + (x*r)/(ui^2))
   where -- r = 0.9
         ui = 200
@@ -207,24 +213,45 @@ main = do
       varN01 = getVarEta varEnvs (Idx.Eta recAbs (Idx.SecNode sec0 N0) (Idx.SecNode sec0 N1))
       
       varE31 = getVarEnergy varEnvs (Idx.Energy recAbs (Idx.SecNode sec1 N3) (Idx.SecNode sec1 N1))
-      varP31 = getVarPower varEnvs (Idx.Power recAbs (Idx.SecNode sec1 N3) (Idx.SecNode sec1 N1))
-      varP13 = getVarPower varEnvs (Idx.Power recAbs (Idx.SecNode sec0 N1) (Idx.SecNode sec0 N3))
-       
+      
+      varP31_0 = getVarPower varEnvs (Idx.Power recAbs (Idx.SecNode sec0 N3) (Idx.SecNode sec0 N1))            
+      varP31_1 = getVarPower varEnvs (Idx.Power recAbs (Idx.SecNode sec1 N3) (Idx.SecNode sec1 N1))
+
+      
+      varP13_0 = getVarPower varEnvs (Idx.Power recAbs (Idx.SecNode sec0 N1) (Idx.SecNode sec0 N3))
+      varP13_1 = getVarPower varEnvs (Idx.Power recAbs (Idx.SecNode sec1 N1) (Idx.SecNode sec1 N3))
+
       varP10 = getVarPower varEnvs (Idx.Power recAbs (Idx.SecNode sec0 N1) (Idx.SecNode sec0 N0))
       varP01 = getVarPower varEnvs (Idx.Power recAbs (Idx.SecNode sec0 N0) (Idx.SecNode sec0 N1))
       
       varE10 = getVarEnergy varEnvs (Idx.Energy recAbs (Idx.SecNode sec0 N1) (Idx.SecNode sec0 N0))
       varE01 = getVarEnergy varEnvs (Idx.Energy recAbs (Idx.SecNode sec0 N0) (Idx.SecNode sec0 N1))
       
+      varPout0 = getVarPower varEnvs (Idx.Power recAbs (Idx.SecNode sec0 N2) (Idx.SecNode sec0 N1))
+      varPout1 = getVarPower varEnvs (Idx.Power recAbs (Idx.SecNode sec1 N2) (Idx.SecNode sec1 N1))
+      
       -- create curve of n01 in used power range
-      p10Lin = S.reshape2D1D varP10
-      p01Lin = S.reshape2D1D varP01
-      n01Lin = S.reshape2D1D varN01
+      p10Lin = S.concat varP10
+      p01Lin = S.concat varP01
+      n01Lin = S.concat varN01
       
+      p130Lin = S.concat varP13_0
+      p310Lin = S.concat varP31_0
+      p131Lin = S.concat varP13_1
+      p311Lin = S.concat varP31_1
+      n13Lin = S.concat varN13
+      n31Lin = S.concat varN31
       
+      -- fuel converter
+      (p10Lin', n01Lin') = S.sortTwo (p10Lin,n01Lin)    
       
+      -- discharging
+--      (p131Lin', n31Lin') = S.sortTwo (p131Lin,n31Lin)    
       
-  
+      -- charging
+--      (p310Lin', n13Lin') = S.sortTwo (p310Lin,n13Lin)    
+       
+ {- 
   -- Plots to check the variation
   
   Plot.surfaceIO "varY" varY varR varY
@@ -234,31 +261,58 @@ main = do
   -- Plot to check consumer behaviour 
   
   Plot.surfaceIO "Eout" varY varR (eoutVar0 .+ (S.makeDelta eoutVar1))
+
+  Plot.surfaceIO "Pout0" varY varR varPout0
   
+  Plot.surfaceIO "Pout1" varY varR varPout1
   
-  -- Plots to check variable Efficiencies with their respective powers
+  Rep.report [] ("varPout1",varPout1)    
+
+  Rep.report [] ("varPout1",varPout0) 
+  
+  -- Plots to check variable efficiency at fuel converter
   
   Plot.surfaceIO "N01" varY varR varN01
   
   Plot.surfaceIO "P10" varY varR varP10
 
   Plot.surfaceIO "P01" varY varR varP01
-  
-  
-  Plot.surfaceIO "N13" varY varR varN13
-  
-  Plot.surfaceIO "N31" varY varR varN31
 
-  Plot.surfaceIO "P31" varY varR varP31
+  Plot.xyIO "N01 - Curve"  p10Lin' n01Lin'
 
-  Plot.surfaceIO "P13" varY varR varP31
   
+ -} 
+      
+  -- Plots to check variable efficiency at storage -- charging
+  Rep.report [] ("varP13_0",varP13_0)
+      
+  Rep.report [] ("varP31_0",varP31_0)
   
-  -- Plot Efficiency curves over power ranges
+  Rep.report  [] ("N13 - Charging",varN13)
   
-  Plot.xyIO "N01 - Curve"  p01Lin n01Lin
+  Plot.surfaceIO "P31_0 - interne LadeLeistung" varY varR varP31_0 
+  
+  Plot.surfaceIO "P13_0 - externe Ladeleistung" varY varR varP13_0
+  
+  Plot.xyIO "N13 - Charging"  varP31_0 varN13
+  
+  Plot.surfaceIO "N13 - Charging" varP31_0 varR varN13
+  
 
-    
+  Rep.report [] ("varP13_1",varP13_1)
+  
+  Rep.report [] ("varP31_1",varP31_1)
+  
+  Plot.surfaceIO "P13_1 - externe Entladeleistung" varY varR varP13_1
+  
+  Plot.surfaceIO "P31_1 - interne EntladeLeistung" varY varR varP31_1
+  
+  Plot.xyIO "N31 - Discharging" varP13_1 varN31 
+  
+  Rep.report  [] ("N31 - Discharging",varN31)
+  
+  
+
   -- Check Losses 
 
   -- Loss of N01

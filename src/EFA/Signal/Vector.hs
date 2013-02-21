@@ -20,6 +20,8 @@ import Data.Maybe (Maybe(Just, Nothing), maybe, isJust)
 import Data.Bool (Bool(False, True), (&&), not)
 import Prelude (Int, Ord, error, (++), (-), Show, show, snd,fst)
 
+import Data.Ord (Ordering)
+
 
 {- |
 We could replace this by suitable:Suitable.
@@ -348,7 +350,20 @@ instance Sort V.Vector where
 
 instance Sort UV.Vector where
    sort = readUnbox (UV.fromList . L.sort . UV.toList)
+   
 
+class SortBy vec where
+   sortBy :: (Ord d, Storage vec d) => (d -> d -> Ordering) -> vec d -> vec d
+
+instance SortBy [] where
+   sortBy f = L.sortBy f 
+
+instance SortBy V.Vector where
+   sortBy f = V.fromList . (L.sortBy f) . V.toList
+
+instance SortBy UV.Vector where
+   sortBy f = readUnbox (UV.fromList . (L.sortBy f) . UV.toList)
+   
 
 class Filter vec where
    filter :: Storage vec d => (d -> Bool) -> vec d -> vec d
@@ -440,17 +455,3 @@ instance Slice V.Vector where
 instance Slice UV.Vector where
   slice start num = readUnbox (UV.slice start num)
 
-
-{-
-class Concat v where
-  concat :: (Storage v d) => Int -> Int -> v d -> v d
-
-instance Concat [] where
-  concat = L.concat
-
-instance Concat V.Vector where
-  concat = V.concat
-
-instance Concat UV.Vector where
-  concat = UV.concat
--}

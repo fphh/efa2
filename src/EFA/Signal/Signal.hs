@@ -477,7 +477,13 @@ zip ::
    TC (Arith s s) typ (Data c (d1,d2))
 zip x y = zipWith (,) x y
 
-----------------------------------------------------------
+unzip ::
+   (D.ZipWith c, D.Storage c d1, D.Storage c d2, D.Storage c (d1, d2)) =>
+   TC s typ (Data c (d1,d2)) ->
+   (TC s typ (Data c d1),TC s typ (Data c d2))
+unzip x = (map P.fst x, map P.snd x)
+                               
+---------------------------------------------------------
 -- SMap
 map ::
    (D.Map c, D.Storage c d1, D.Storage c d2) =>
@@ -760,6 +766,29 @@ sort ::
    TC s1 typ (Data (v :> Nil) d) ->
    TC s1 typ (Data (v :> Nil) d)
 sort (TC x) = TC $ D.sort x
+
+
+sortBy ::
+   (SV.Storage v d, Ord d, SV.SortBy v) =>
+   (d -> d -> P.Ordering) ->   
+   TC s1 typ (Data (v :> Nil) d) -> 
+   TC s1 typ (Data (v :> Nil) d)
+sortBy f (TC x) = TC $ D.sortBy f x
+
+
+sortTwo :: (Ord d1, 
+            Ord d2, 
+            SV.Storage v1 (d1, d2), 
+            SV.SortBy v1, 
+            SV.Zipper v1,
+            SV.Walker v1,
+            SV.Storage v1 d2,
+            SV.Storage v1 d1) => 
+           (TC s t1 (Data (v1 :> Nil) d1),TC s t2 (Data  (v1 :> Nil) d2)) -> (TC s t1 (Data (v1 :> Nil) d1),TC s t2 (Data (v1 :> Nil) d2))
+sortTwo (TC x,TC y) = (TC $ D.map P.fst xy',TC $ D.map P.snd xy')
+  where xy' = D.sortBy (\(x1,_) (x2,_) -> P.compare x1 x2) $ xy
+        xy = D.zipWith ((,)) x y
+
 
 
 ----------------------------------------------------------
@@ -1187,5 +1216,9 @@ offset x offs = map (offs ..+) x
 
 
 -- | Reshape 2d to 1d
-reshape2D1D ::  TC s1 t1 (Data (v2 :> v1 :> Nil) d1) -> TC s1 t1 (Data (v1 :> Nil) d1)
-reshape2D1D (TC x) = TC (D.reshape2D1D x) 
+concat ::   (SV.Storage v2 (v1 (Apply c d)),
+             SV.Storage v1 (Apply c d),
+             SV.Singleton v1, 
+             SV.FromList v2) =>             
+           TC s t (Data (v2 :> v1 :> c) d) -> TC s t (Data (v1 :> c) d)
+concat (TC x) = TC (D.concat x) 

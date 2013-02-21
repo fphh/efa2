@@ -612,6 +612,14 @@ sort ::
    Data (v1 :> Nil) d -> Data (v1 :> Nil) d
 sort (Data x) = Data $ SV.sort x
 
+sortBy ::
+   (Ord d, 
+    SV.SortBy v1, 
+    SV.Storage v1 d) =>
+   (d -> d -> P.Ordering) ->
+   Data (v1 :> Nil) d -> 
+   Data (v1 :> Nil) d
+sortBy f (Data x) = Data $ SV.sortBy f x
 
 ----------------------------------------------------------
 -- Filter
@@ -757,14 +765,11 @@ slice ::
 slice idx n = withNestedData (Data . SV.slice idx n)
 
 
--- | Reshape 2d to 1d
+concat :: (SV.Storage v1 (Apply c d), 
+           SV.Singleton v1, 
+           SV.Storage v2 (v1 (Apply c d)), 
+           SV.FromList v2) 
+          => Data (v2 :> v1 :> c) d -> Data (v1 :> c) d
+concat (Data x) = Data $ SV.concat $ SV.toList x 
 
-class Concat c where
-   concat :: Storage c d => Data c1 d -> Data c2 d
 
-instance Data (v2 :> v1 :> Nil) d1 -> Data (v1 :> Nil) d1 where
-  concat (Data x) = Data (V.concat x) 
-  
-  
-instance Data (v3 :> v2 :> v1 :> Nil) d1 -> Data (v2 :> v1 :> Nil) d1 where
-  concat (Data x) = Data (V.concat x) 

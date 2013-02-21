@@ -172,8 +172,8 @@ instance
     TDisp t2, SV.Walker v2, SV.FromList v2, SV.Storage v2 y,
     Atom.C x, Tuple.C x, Fractional x,
     Atom.C y, Tuple.C y, Fractional y) =>
-   XY (TC S.Signal t1 (Data (v1 :> Nil) x))
-      (TC S.Signal t2 (Data (v2 :> Nil) y)) where
+   XY (TC s t1 (Data (v1 :> Nil) x))
+      (TC s t2 (Data (v2 :> Nil) y)) where
    xy = xyBasic
 
 instance
