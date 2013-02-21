@@ -25,6 +25,7 @@ import qualified EFA.Graph.Topology as TD
 import qualified EFA.Equation.System as EqGen
 import EFA.Equation.System ((=.=))
 import qualified EFA.Equation.Env as Env
+import EFA.Equation.Env(Env, SingleRecord,energyMap,powerMap,etaMap,accessMap)
 
 import qualified EFA.Equation.Result as R
 
@@ -32,8 +33,14 @@ import qualified Data.List.Match as Match
 
 import qualified EFA.Graph as Gr
 import qualified EFA.Signal.Signal as S
+
+import EFA.Signal.Signal(UTFSig, FSamp, Test2, PFSamp, (.+), (.-),(./),(.*))
+import EFA.Signal.Base(Val)
+
 import qualified EFA.Signal.Plot as Plot
 import qualified EFA.Signal.Typ as T
+
+import EFA.Signal.Typ (A, P, Tt, F, N, X, Typ, T, UT)
 
 import Debug.Trace
 
@@ -64,7 +71,7 @@ seqTopo = constructSeqTopo topoDreibein [0, 4]
       
 etaf :: EqGen.ExprWithVars Node s Double -> EqGen.ExprWithVars Node s Double
 etaf x = 1/((y+sqrt(y*y+4*y))/(2*y))
-  where y = x/100
+  where y = x/1000
 
 n01, n12, n13, n31, p10, p21, e31 ::
   Idx.Section -> EqGen.ExprWithVars Node s a
@@ -107,6 +114,7 @@ g r x = 1 / (1 + (x*r)/(ui^2))
   where -- r = 0.9
         ui = 200
 
+-- | Provide time of sec1 and inner resistance of battery
 given :: Double -> Double -> EqGen.EquationSystem Node s Double
 given t r =
   (time Idx.initSection =.= 1)
@@ -130,38 +138,147 @@ given t r =
 
 trange, rrange :: [Double]
 trange = 0.01:[0.1, 0.2 .. 0.9]
-rrange = 0.01:[0.5, 1 .. 3]
+rrange = 0.01:[0.1,0.2 .. 2]     
+              
 
 varMat :: [a] -> [b] -> ([[a]], [[b]])
 varMat xs ys =
    (Match.replicate ys xs, map (Match.replicate xs) ys)
 
 
+-- | r is inner Resistance of Battery
+solve :: Val -> Val -> Env Node SingleRecord (R.Result Val)
+solve t r = EqGen.solve (given t r) seqTopo
+  
 
-solve :: Double -> Double -> Double
-solve t n =
-  let env = EqGen.solve (given t n) seqTopo
-      emap = Env.energyMap env
-      f ei eo0 eo1 = (eo0 + eo1) / ei
-      R.Determined res =
-        f <$> (checkedLookup emap ein)
-          <*> (checkedLookup emap eout0)
-          <*> (checkedLookup emap eout1)
-  in res
+unpackResult :: R.Result a -> a 
+unpackResult (R.Determined x) = x
+
+-- | Safe Lookup Functions
+getVarEnergy :: [[Env Node SingleRecord (R.Result Val)]] -> Idx.Energy Node -> Test2 (Typ A F Tt) Val
+getVarEnergy varEnvs idx = S.changeSignalType $ S.fromList2 $ map (map f ) varEnvs
+  where f ::  Env Node SingleRecord (R.Result Val) -> Val
+        f envs = unpackResult $ checkedLookup (energyMap envs) idx
+        
+-- | Safe Lookup Functions
+getVarPower :: [[Env Node Env.SingleRecord (R.Result Val)]] -> Idx.Power Node -> Test2 (Typ A P Tt) Val
+getVarPower varEnvs idx = S.changeSignalType $ S.fromList2 $ map (map f ) varEnvs
+  where f ::  Env Node SingleRecord (R.Result Val) -> Val
+        f envs = unpackResult $ checkedLookup (powerMap envs) idx
+
+-- | Safe Lookup Functions
+getVarEta :: [[Env Node Env.SingleRecord (R.Result Val)]] -> Idx.Eta Node -> Test2 (Typ A N Tt) Val
+getVarEta varEnvs idx = S.changeSignalType $ S.fromList2 $ map (map f ) varEnvs
+  where f ::  Env Node SingleRecord (R.Result Val) -> Val
+        f envs = unpackResult $ checkedLookup (etaMap envs) idx
+        
+        
+-- lookUpEnvs :: Env Node Env.SingleRecord (R.Result a) -> (idx node) -> a         
+
 
 
 main :: IO ()
 main = do
-  let (varT, varN) = varMat trange rrange
-      etaSys = zipWith (zipWith solve) varT varN
+  let (varT, varRr) = varMat trange rrange
+      varEnvs = zipWith (zipWith solve) varT varRr
 
---      timeVar, effVar, etaSysVar :: S.Test2 (T.Typ T.A T.Y T.Tt) Double
-      timeVar = S.fromList2 varT :: S.Test2 (T.Typ T.A T.T T.Tt) Double
-      effVar = S.fromList2 varN :: S.Test2 (T.Typ T.A T.N T.Tt) Double
-      etaSysVar = S.fromList2 etaSys :: S.Test2 (T.Typ T.A T.N T.Tt) Double
+      timeVar = S.fromList2 varT :: S.Test2 (Typ A T Tt) Double
+      varR = S.fromList2 varRr :: S.Test2 (Typ A UT Tt) Double
+      
+      -- get Energies 
+      eoutVar0 = getVarEnergy varEnvs eout0 
+      eoutVar1 = getVarEnergy varEnvs eout1
+      
+      varEout = eoutVar0 .+ (S.makeDelta eoutVar1)
+      einVar = getVarEnergy varEnvs ein 
+      
+      -- calculate split share and system efficiency
+      etaSysVar = (eoutVar0 .+ (S.makeDelta eoutVar1))./einVar
+      varY = S.changeType $ eoutVar1 ./ (eoutVar0 .+ (S.makeDelta eoutVar1)) :: S.Test2 (Typ A X Tt) Double
+      
+      -- calculate Losses
+      varLossA = varE01 .- varE10
+      varLossB = varE10 .- varEout
+      varLoss = varE01 .- varEout
+       
+      -- Get more Env values
+      varN13 = getVarEta varEnvs (Idx.Eta recAbs (Idx.SecNode sec0 N1) (Idx.SecNode sec0 N3))
+      varN31 = getVarEta varEnvs (Idx.Eta recAbs (Idx.SecNode sec1 N3) (Idx.SecNode sec1 N1))
+      varN01 = getVarEta varEnvs (Idx.Eta recAbs (Idx.SecNode sec0 N0) (Idx.SecNode sec0 N1))
+      
+      varE31 = getVarEnergy varEnvs (Idx.Energy recAbs (Idx.SecNode sec1 N3) (Idx.SecNode sec1 N1))
+      varP31 = getVarPower varEnvs (Idx.Power recAbs (Idx.SecNode sec1 N3) (Idx.SecNode sec1 N1))
+      varP13 = getVarPower varEnvs (Idx.Power recAbs (Idx.SecNode sec0 N1) (Idx.SecNode sec0 N3))
+       
+      varP10 = getVarPower varEnvs (Idx.Power recAbs (Idx.SecNode sec0 N1) (Idx.SecNode sec0 N0))
+      varP01 = getVarPower varEnvs (Idx.Power recAbs (Idx.SecNode sec0 N0) (Idx.SecNode sec0 N1))
+      
+      varE10 = getVarEnergy varEnvs (Idx.Energy recAbs (Idx.SecNode sec0 N1) (Idx.SecNode sec0 N0))
+      varE01 = getVarEnergy varEnvs (Idx.Energy recAbs (Idx.SecNode sec0 N0) (Idx.SecNode sec0 N1))
+      
+      -- create curve of n01 in used power range
+      p10Lin = S.reshape2D1D varP10
+      p01Lin = S.reshape2D1D varP01
+      n01Lin = S.reshape2D1D varN01
+      
+      
+      
+      
+  
+  -- Plots to check the variation
+  
+  Plot.surfaceIO "varY" varY varR varY
+  
+  Plot.surfaceIO "varY" varY varR varR
+  
+  -- Plot to check consumer behaviour 
+  
+  Plot.surfaceIO "Eout" varY varR (eoutVar0 .+ (S.makeDelta eoutVar1))
+  
+  
+  -- Plots to check variable Efficiencies with their respective powers
+  
+  Plot.surfaceIO "N01" varY varR varN01
+  
+  Plot.surfaceIO "P10" varY varR varP10
 
-  Plot.surfaceIO "EtaSys" timeVar effVar etaSysVar
+  Plot.surfaceIO "P01" varY varR varP01
+  
+  
+  Plot.surfaceIO "N13" varY varR varN13
+  
+  Plot.surfaceIO "N31" varY varR varN31
 
+  Plot.surfaceIO "P31" varY varR varP31
+
+  Plot.surfaceIO "P13" varY varR varP31
+  
+  
+  -- Plot Efficiency curves over power ranges
+  
+  Plot.xyIO "N01 - Curve"  p01Lin n01Lin
+
+    
+  -- Check Losses 
+
+  -- Loss of N01
+  Plot.surfaceIO "LossA" varY varR varLossA
+
+  -- Loss of the Rest of the system
+  Plot.surfaceIO "LossB" varY varR varLossB
+  
+  -- Total System Loss
+  Plot.surfaceIO "Loss" varY varR varLoss
+  
+  -- System loss in curves over split variation for multiple resistance values 
+  Plot.xyIO "Loss" varY varLoss
+  
+  -- Total System Efficiency
+  Plot.surfaceIO "EtaSys" varY varR etaSysVar
+  
+  -- System efficiency in curves over split variation for multiple resistance values 
+  Plot.xyIO "Loss" varY etaSysVar
+  
   let envhh = EqGen.solve (given (head trange) (head rrange)) seqTopo
       envhl = EqGen.solve (given (head trange) (last rrange)) seqTopo
       envlh = EqGen.solve (given (last trange) (head rrange)) seqTopo

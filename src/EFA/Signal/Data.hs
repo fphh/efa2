@@ -755,3 +755,16 @@ slice ::
    (SV.Slice v, SV.Storage v d) =>
    Int -> Int -> Data (v :> Nil) d -> Data (v :> Nil) d
 slice idx n = withNestedData (Data . SV.slice idx n)
+
+
+-- | Reshape 2d to 1d
+
+class Concat c where
+   concat :: Storage c d => Data c1 d -> Data c2 d
+
+instance Data (v2 :> v1 :> Nil) d1 -> Data (v1 :> Nil) d1 where
+  concat (Data x) = Data (V.concat x) 
+  
+  
+instance Data (v3 :> v2 :> v1 :> Nil) d1 -> Data (v2 :> v1 :> Nil) d1 where
+  concat (Data x) = Data (V.concat x) 

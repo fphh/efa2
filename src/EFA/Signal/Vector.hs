@@ -439,3 +439,18 @@ instance Slice V.Vector where
 
 instance Slice UV.Vector where
   slice start num = readUnbox (UV.slice start num)
+
+
+{-
+class Concat v where
+  concat :: (Storage v d) => Int -> Int -> v d -> v d
+
+instance Concat [] where
+  concat = L.concat
+
+instance Concat V.Vector where
+  concat = V.concat
+
+instance Concat UV.Vector where
+  concat = UV.concat
+-}

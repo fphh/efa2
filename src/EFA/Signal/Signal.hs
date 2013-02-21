@@ -1184,3 +1184,8 @@ scale x fact = map (fact ..*) x
 -- | Scale Signal by a given Number
 offset ::  (BSum d1, D.Map c1, D.Storage c1 d1) => TC s1 t1 (Data c1 d1) -> d1 ->  TC s1 t1 (Data c1 d1)
 offset x offs = map (offs ..+) x 
+
+
+-- | Reshape 2d to 1d
+reshape2D1D ::  TC s1 t1 (Data (v2 :> v1 :> Nil) d1) -> TC s1 t1 (Data (v1 :> Nil) d1)
+reshape2D1D (TC x) = TC (D.reshape2D1D x) 
