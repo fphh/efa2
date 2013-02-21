@@ -370,25 +370,25 @@ sequFlowGraphDeltaWithEnv topo = sequFlowGraphWithEnv topo . envDelta
 envAbs ::
    (FormatValue a, Format output, Node.C node) =>
    Interp.Env Idx.Absolute node a -> Env node output
-envAbs (Interp.Env e _de me _dme _p _dp fn _dn dt x _dx y _dy _v st) =
+envAbs (Interp.Env e me _p n dt x y _s st) =
    Env
       (lookupFormatAssign e (Idx.Energy Idx.Absolute))
       (lookupFormatAssign me (Idx.MaxEnergy Idx.Absolute))
       (lookupFormatAssign x (Idx.X Idx.Absolute))
       (lookupFormatAssign y (Idx.Y Idx.Absolute))
-      (lookupFormatAssign fn (Idx.Eta Idx.Absolute))
+      (lookupFormatAssign n (Idx.Eta Idx.Absolute))
       (lookupFormat dt . Idx.DTime Idx.Absolute)
       (formatNodeStorage Idx.Absolute st)
 
 envDelta ::
    (FormatValue a, Format output, Node.C node) =>
    Interp.Env Idx.Delta node a -> Env node output
-envDelta (Interp.Env _e de _me dme _p _dp _fn dn dt _x dx _y dy _v st) =
+envDelta (Interp.Env e me _p n dt x y _s st) =
    Env
-      (lookupFormatAssign de (Idx.DEnergy Idx.Delta))
-      (lookupFormatAssign dme (Idx.DMaxEnergy Idx.Delta))
-      (lookupFormatAssign dx (Idx.DX Idx.Delta))
-      (lookupFormatAssign dy (Idx.DY Idx.Delta))
-      (lookupFormatAssign dn (Idx.DEta Idx.Delta))
+      (lookupFormatAssign e (Idx.Energy Idx.Delta))
+      (lookupFormatAssign me (Idx.MaxEnergy Idx.Delta))
+      (lookupFormatAssign x (Idx.X Idx.Delta))
+      (lookupFormatAssign y (Idx.Y Idx.Delta))
+      (lookupFormatAssign n (Idx.Eta Idx.Delta))
       (lookupFormat dt . Idx.DTime Idx.Delta)
       (formatNodeStorage Idx.Delta st)

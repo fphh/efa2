@@ -47,7 +47,7 @@ class Format output where
    words, lines :: [output] -> output
    assign :: output -> output -> output
 
-   recordDelta :: Idx.Delta -> output
+   recordDelta :: Idx.Delta -> output -> output
    section :: Idx.Section -> output
    sectionNode :: output -> output -> output
    direction :: Idx.Direction -> output
@@ -75,11 +75,12 @@ instance Format ASCII where
    assign (ASCII lhs) (ASCII rhs) =
       ASCII $ lhs ++ " = " ++ rhs
 
-   recordDelta d =
+   recordDelta d (ASCII rest) =
+      ASCII $ (++rest) $
       case d of
-         Idx.Before -> ASCII "<"
-         Idx.After -> ASCII ">"
-         Idx.Delta -> ASCII "d"
+         Idx.Before -> "[0]"
+         Idx.After -> "[1]"
+         Idx.Delta -> "d"
    section (Idx.Section s) = ASCII $ show s
    sectionNode (ASCII s) (ASCII x) = ASCII $ s ++ "." ++ x
 
@@ -126,11 +127,12 @@ instance Format Unicode where
    assign (Unicode lhs) (Unicode rhs) =
       Unicode $ lhs ++ " = " ++ rhs
 
-   recordDelta d =
+   recordDelta d (Unicode rest) =
+      Unicode $ (++rest) $
       case d of
-         Idx.Before -> Unicode "<"
-         Idx.After -> Unicode ">"
-         Idx.Delta -> Unicode [deltaChar]
+         Idx.Before -> "\x2070"
+         Idx.After -> "\xb9"
+         Idx.Delta -> [deltaChar]
    section (Idx.Section s) = Unicode $ show s
    sectionNode (Unicode s) (Unicode x) = Unicode $ s ++ "." ++ x
 
@@ -211,11 +213,16 @@ instance Format Latex where
    assign (Latex lhs) (Latex rhs) =
       Latex $ lhs ++ " = " ++ rhs
 
-   recordDelta d =
+   recordDelta d (Latex rest) =
+      Latex $
       case d of
-         Idx.Before -> Latex "<"
-         Idx.After -> Latex ">"
-         Idx.Delta -> Latex "\\Delta"
+         {-
+         http://math.mit.edu/~ssam/latex
+         \newcommand{\leftexp}[2]{{\vphantom{#2}}^{#1}{#2}}
+         -}
+         Idx.Before -> "\\leftexp{0}{" ++ rest ++ "}"
+         Idx.After -> "\\leftexp{1}{" ++ rest ++ "}"
+         Idx.Delta -> "\\Delta " ++ rest
    section (Idx.Section s) = Latex $ show s
    sectionNode (Latex s) (Latex x) = Latex $ s ++ ":" ++ x
 
@@ -249,4 +256,4 @@ instance FormatRecord Idx.Absolute where
    record Idx.Absolute = id
 
 instance FormatRecord Idx.Delta where
-   record d = connect $ recordDelta d
+   record d = recordDelta d

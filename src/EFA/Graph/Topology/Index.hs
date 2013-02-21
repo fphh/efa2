@@ -39,30 +39,24 @@ data SecNode a = SecNode Section a deriving (Show, Eq, Ord)
 
 -- | Energy variables.
 data Energy rec a = Energy rec !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
-data DEnergy rec a = DEnergy rec !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
 
 
 -- | Energy variables for hypothetical outgoing energies.
 -- At intersection edges they describe the maximum energy
 -- that a storage could deliver.
 data MaxEnergy rec a = MaxEnergy rec !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
-data DMaxEnergy rec a = DMaxEnergy rec !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
 
 -- | Power variables.
 data Power rec a = Power rec !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
-data DPower rec a = DPower rec !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
 
 -- | Eta variables.
 data Eta rec a = Eta rec !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
-data DEta rec a = DEta rec !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
 
 -- | Splitting factors.
 data X rec a = X rec !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
-data DX rec a = DX rec !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
 
 -- | Strange factors for outgoing intersection edges.
 data Y rec a = Y rec !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
-data DY rec a = DY rec !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
 
 data Storage rec a = Storage rec !(SecNode a) deriving (Show, Ord, Eq)
 
