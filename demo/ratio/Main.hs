@@ -15,7 +15,7 @@ import EFA.Utility (checkedLookup)
 import EFA.Graph (mkGraph)
 import EFA.Example.Utility ((.=), constructSeqTopo, edgeVar, makeEdges, recAbs)
 
-import Data.Ratio ((%), Ratio)
+import Data.Ratio ((%))
 
 import Data.Monoid ((<>))
 import Data.Foldable (foldMap)
@@ -75,7 +75,7 @@ solve p =
                 EqGen.Determined x -> show x
 
 solveEnv ::
-  Rational -> Env.Env Idx.Absolute Node (EqGen.Result (Ratio Integer))
+  Rational -> Env.Env Idx.Absolute Node (EqGen.Result Rational)
 solveEnv p = EqGen.solve ((n =.= functionEta c) <> given p) seqTopo
 
 main :: IO ()
