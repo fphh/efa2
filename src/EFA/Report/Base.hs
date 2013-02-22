@@ -16,7 +16,7 @@ import Text.Printf (printf)
 -- | Central Place for basic Unit & Display settings
 
 -- | Variables for DisplayUnit and Display Scale
-data DisplayUnit = Unit_kWh | Unit_Joule | Unit_kJoule | Unit_kW | Unit_Percent | Unit_None | Unit_Sec | Unit_UT
+data DisplayUnit = Unit_kWh | Unit_Joule | Unit_kJoule | Unit_kW | Unit_Percent | Unit_None | Unit_Sec | Unit_UT | Unit_W
 newtype UnitScale = UnitScale Rational
 
 
@@ -30,6 +30,7 @@ instance Show DisplayUnit where
   show Unit_None = "/"
   show Unit_Sec = "s"
   show Unit_UT = "UT"
+  show Unit_W = "W"
 
 -- | get display scale per Unit
 getUnitScale :: DisplayUnit -> UnitScale
@@ -41,6 +42,7 @@ getUnitScale Unit_Percent = UnitScale 100
 getUnitScale Unit_Sec = UnitScale 1
 getUnitScale Unit_kW = UnitScale (1/1000)
 getUnitScale Unit_UT = UnitScale 1
+getUnitScale Unit_W = UnitScale 1
 -- getUnitScale u = error ("Error in getUnitScale -- no scale defined - Unit: " ++ show u)
 
  -- ============ Setting - Switch global display length =============
