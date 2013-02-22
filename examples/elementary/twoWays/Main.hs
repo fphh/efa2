@@ -81,7 +81,7 @@ given e x =
    (edgeVar EqGen.eta sec0 c2 Sink, 1) : []
 
 
-type Expr = EqGen.ExprWithVars Idx.Absolute Node
+type Expr s a x = EqGen.ExprWithVars Idx.Absolute Node s a x
 
 c02, c04 :: Expr s a a
 c02 = edgeVar EqGen.power sec0 c0 c1

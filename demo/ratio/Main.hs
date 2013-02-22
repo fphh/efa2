@@ -44,7 +44,7 @@ enRange :: [Rational]
 enRange = (1%100):[1%2, 1 .. 9]
 
 
-type Expr = EqGen.ExprWithVars Idx.Absolute Node
+type Expr s a x = EqGen.ExprWithVars Idx.Absolute Node s a x
 
 c :: Expr s a a
 c = edgeVar EqGen.power sec0 Source Sink

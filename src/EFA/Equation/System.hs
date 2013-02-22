@@ -1,10 +1,12 @@
 {-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module EFA.Equation.System (
   EquationSystem, ExprWithVars,
   fromTopology, solve, solveFromMeasurement, conservativelySolve,
 
   constToExprSys,
-  liftV, liftV2, liftF, liftF2,
+  liftF, liftF2,
+  sqrt,
 
   (=.=),
   getVar,
@@ -45,8 +47,9 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT, runStateT)
 
 import Control.Monad.ST (ST, runST)
-import Control.Monad (liftM, liftM2)
+import Control.Monad (liftM2)
 
+import Control.Applicative (Applicative, pure, liftA, liftA2)
 
 import qualified Data.Map as M
 import qualified Data.Set as S
@@ -60,19 +63,24 @@ import Data.Monoid (Monoid, (<>), mempty, mappend, mconcat)
 
 import Data.Ord (comparing)
 
+import qualified Prelude as P
+import Prelude hiding (sqrt)
 
 
 type
-   Bookkeeping rec node s a =
+   BK rec node s a =
       StateT (Env.Env rec node (Sys.Variable s a)) (ST s)
 
+type ExprWithVars rec node s a x = Bookkeeping rec node s a (Expr.T s x)
+
 newtype
-   ExprWithVars rec node s a x =
-      ExprWithVars (Bookkeeping rec node s a (Expr.T s x))
+   Bookkeeping rec node s a x =
+      Bookkeeping (BK rec node s a x)
+   deriving (Functor, Applicative)
 
 newtype
    EquationSystem rec node s a =
-      EquationSystem (Bookkeeping rec node s a (Sys.M s ()))
+      EquationSystem (BK rec node s a (Sys.M s ()))
 
 instance Monoid (EquationSystem rec node s a) where
          mempty = EquationSystem $ return (return ())
@@ -80,46 +88,36 @@ instance Monoid (EquationSystem rec node s a) where
            EquationSystem $ liftM2 (>>!) x y
 
 
-liftV ::
-  (Expr.T s x -> Expr.T s y) ->
-  ExprWithVars rec node s a x -> ExprWithVars rec node s a y
-liftV f (ExprWithVars xs) = ExprWithVars $ liftM f xs
-
-liftF :: (x -> y) -> ExprWithVars rec node s a x -> ExprWithVars rec node s a y
-liftF = liftV . Expr.fromRule2 . Sys.assignment2 ""
-
-
-liftV2 ::
-  (Expr.T s x -> Expr.T s y -> Expr.T s z) ->
+liftF ::
+  (x -> y) ->
   ExprWithVars rec node s a x ->
-  ExprWithVars rec node s a y ->
-  ExprWithVars rec node s a z
-liftV2 f (ExprWithVars xs) (ExprWithVars ys) =
-  ExprWithVars $ liftM2 f xs ys
+  ExprWithVars rec node s a y
+liftF = liftA . Expr.fromRule2 . Sys.assignment2 ""
 
 liftF2 ::
   (x -> y -> z) ->
   ExprWithVars rec node s a x ->
   ExprWithVars rec node s a y ->
   ExprWithVars rec node s a z
-liftF2 = liftV2 . Expr.fromRule3 . Sys.assignment3 ""
+liftF2 = liftA2 . Expr.fromRule3 . Sys.assignment3 ""
 
-instance (Fractional x) => Num (ExprWithVars rec node s a x) where
-         fromInteger = ExprWithVars . return . fromInteger
+instance (Fractional x) => Num (Bookkeeping rec node s a x) where
+         fromInteger = pure . fromInteger
 
-         (*) = liftV2 (*)
-         (+) = liftV2 (+)
-         (-) = liftV2 (-)
+         (*) = liftA2 (*)
+         (+) = liftA2 (+)
+         (-) = liftA2 (-)
 
-         abs = liftV abs
-         signum = liftV signum
+         abs = liftA abs
+         signum = liftA signum
 
 
-instance (Fractional x) => Fractional (ExprWithVars rec node s a x) where
-         fromRational = ExprWithVars . return . fromRational
-         (/) = liftV2 (/)
+instance (Fractional x) => Fractional (Bookkeeping rec node s a x) where
+         fromRational = pure . fromRational
+         (/) = liftA2 (/)
 
-instance (Floating x) => Floating (ExprWithVars rec node s a x) where
+{-
+instance (Floating x) => Floating (Bookkeeping rec node s a x) where
          pi = constToExprSys pi
          exp = liftF exp
          sqrt = liftF sqrt
@@ -138,7 +136,13 @@ instance (Floating x) => Floating (ExprWithVars rec node s a x) where
          asinh = liftF asinh
          atanh = liftF atanh
          acosh = liftF acosh
+-}
 
+sqrt ::
+   (Floating x) =>
+   ExprWithVars rec node s a x ->
+   ExprWithVars rec node s a x
+sqrt = liftF P.sqrt
 
 
 infix 0 =.=
@@ -146,19 +150,19 @@ infix 0 =.=
   (Eq x) =>
   ExprWithVars rec node s a x -> ExprWithVars rec node s a x ->
   EquationSystem rec node s a
-(ExprWithVars xs) =.= (ExprWithVars ys) =
+(Bookkeeping xs) =.= (Bookkeeping ys) =
   EquationSystem $ liftM2 (=:=) xs ys
 
 
 constToExprSys :: x -> ExprWithVars rec node s a x
-constToExprSys = ExprWithVars . return . Expr.constant
+constToExprSys = pure . Expr.constant
 
 withLocalVar ::
   (ExprWithVars rec node s a x -> EquationSystem rec node s a) ->
   EquationSystem rec node s a
 withLocalVar f = EquationSystem $ do
    v <- lift Sys.globalVariable
-   case f $ ExprWithVars $ return $ Expr.fromVariable v of
+   case f $ pure $ Expr.fromVariable v of
         EquationSystem act -> act
 
 
@@ -166,7 +170,7 @@ getVar ::
    (Env.AccessMap idx, Ord (idx rec node)) =>
    idx rec node -> ExprWithVars rec node s a a
 getVar idx =
-  ExprWithVars $ fmap Expr.fromVariable $ do
+  Bookkeeping $ fmap Expr.fromVariable $ do
     oldMap <- AccessState.get Env.accessMap
     case M.lookup idx oldMap of
       Just var -> return var

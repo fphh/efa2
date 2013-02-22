@@ -66,7 +66,7 @@ seqTopo = constructSeqTopo topoDreibein [0, 4]
 type Expr s a = EqGen.ExprWithVars Idx.Absolute Node s Double a
 
 etaf :: (Floating a) => Expr s a -> Expr s a
-etaf x = 1/((y+sqrt(y*y+4*y))/(2*y))
+etaf x = 1/((y+EqGen.sqrt(y*y+4*y))/(2*y))
   where y = x/100
 
 n01, n12, n13, n31, p10, p21, e31 ::
@@ -97,11 +97,11 @@ e33 = interVar EqGen.energy Idx.initSection sec1 N3
 time :: Idx.Section -> Expr s Double
 time = EqGen.dtime
 
-f r x = x/(x + r*((ui - sqrt(ui^2 - 4*r*x)) / 2*r)^2)
+f r x = x/(x + r*((ui - EqGen.sqrt(ui^2 - 4*r*x)) / 2*r)^2)
   where -- r = 0.9
         ui = 200
 {-
-g x = ((-x) + r*((200 - sqrt(200*200 - 4*r*(-x))) / 2*r)*((200 - sqrt(200*200 - 4*r*(-x))) / 2*r))/(-x)
+g x = ((-x) + r*((200 - EqGen.sqrt(200*200 - 4*r*(-x))) / 2*r)*((200 - sqrt(200*200 - 4*r*(-x))) / 2*r))/(-x)
   where r = 0.9
 -}
 
