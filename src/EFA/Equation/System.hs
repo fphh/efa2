@@ -62,15 +62,17 @@ import Data.Ord (comparing)
 
 
 
-type EqSysEnv rec node s a = Env.Env rec node (Sys.Variable s a)
+type
+   Bookkeeping rec node s a =
+      StateT (Env.Env rec node (Sys.Variable s a)) (ST s)
 
 newtype
    ExprWithVars rec node s a x =
-      ExprWithVars (StateT (EqSysEnv rec node s a) (ST s) (Expr.T s x))
+      ExprWithVars (Bookkeeping rec node s a (Expr.T s x))
 
 newtype
    EquationSystem rec node s a =
-      EquationSystem (StateT (EqSysEnv rec node s a) (ST s) (Sys.M s ()))
+      EquationSystem (Bookkeeping rec node s a (Sys.M s ()))
 
 instance Monoid (EquationSystem rec node s a) where
          mempty = EquationSystem $ return (return ())
