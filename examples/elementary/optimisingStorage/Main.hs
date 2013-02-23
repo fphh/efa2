@@ -126,8 +126,8 @@ given t r =
   <> (p21 sec1 =.= p)
   <> (n12 sec1 =.= 0.9)
   <> (n31 sec1 =.= f r' (p13 sec1))
-  where t' = EqGen.constToExprSys t
-        r' = EqGen.constToExprSys r
+  where t' = EqGen.constant t
+        r' = EqGen.constant r
         p = 1000
 
 trange, rrange :: [Double]

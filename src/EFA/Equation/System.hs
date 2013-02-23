@@ -4,7 +4,7 @@ module EFA.Equation.System (
   EquationSystem, ExprWithVars,
   fromTopology, solve, solveFromMeasurement, conservativelySolve,
 
-  constToExprSys,
+  constant,
   liftF, liftF2,
   sqrt,
 
@@ -118,7 +118,7 @@ instance (Fractional x) => Fractional (Bookkeeping rec node s a x) where
 
 {-
 instance (Floating x) => Floating (Bookkeeping rec node s a x) where
-         pi = constToExprSys pi
+         pi = constant pi
          exp = liftF exp
          sqrt = liftF sqrt
          log = liftF log
@@ -154,8 +154,8 @@ infix 0 =.=
   EquationSystem $ liftM2 (=:=) xs ys
 
 
-constToExprSys :: x -> ExprWithVars rec node s a x
-constToExprSys = pure . Expr.constant
+constant :: x -> ExprWithVars rec node s a x
+constant = pure . Expr.constant
 
 withLocalVar ::
   (ExprWithVars rec node s a x -> EquationSystem rec node s a) ->

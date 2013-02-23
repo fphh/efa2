@@ -90,4 +90,4 @@ infix 0 .=
   (Eq x) =>
   EqGen.ExprWithVars rec node s a x -> x ->
   EqGen.EquationSystem rec node s a
-evar .= val  =  evar =.= EqGen.constToExprSys val
+evar .= val  =  evar =.= EqGen.constant val
