@@ -49,12 +49,12 @@ recAbs :: Idx.Absolute
 recAbs = Idx.Absolute
 
 
-selfAssign ::
+givenSymbol ::
   (Eq (term (Var.Index rec node)), Ord (t rec node), MkVarC term, MkIdxC t,
    Env.AccessMap t) =>
   t rec node ->
   EqGen.EquationSystem rec node s (term (Var.Index rec node))
-selfAssign idx =
+givenSymbol idx =
    EqGen.getVar idx .= mkVar idx
 
 infixr 6 =<>
@@ -64,7 +64,7 @@ infixr 6 =<>
   t rec node ->
   EqGen.EquationSystem rec node s (term (Var.Index rec node)) ->
   EqGen.EquationSystem rec node s (term (Var.Index rec node))
-idx =<> eqsys = selfAssign idx <> eqsys
+idx =<> eqsys = givenSymbol idx <> eqsys
 
 
 edgeVar ::
