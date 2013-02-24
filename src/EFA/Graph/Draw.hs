@@ -145,7 +145,7 @@ dotFromSecEdge ::
 dotFromSecEdge eshow e =
    DotEdge
       (dotIdentFromSecNode x) (dotIdentFromSecNode y)
-      [displabel, Viz.Dir dir, colour]
+      [displabel, Viz.Dir dir, colour, constraint]
   where (Edge x y, dir, order) = orientEdge e
         displabel =
            Label $ StrLabel $ T.pack $
@@ -154,7 +154,12 @@ dotFromSecEdge eshow e =
            case Topo.getEdgeType e of
               IntersectionEdge -> intersectionEdgeColour
               OriginalEdge -> originalEdgeColour
-        --colour = originalEdgeColour
+        constraint =
+           Constraint $
+           case Topo.getEdgeType e of
+              IntersectionEdge -> False
+              OriginalEdge -> True
+
 
 dotIdentFromSecNode :: (Node.C node) => Idx.SecNode node -> T.Text
 dotIdentFromSecNode (Idx.SecNode (Idx.Section s) n) =
