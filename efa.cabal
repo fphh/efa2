@@ -136,6 +136,17 @@ Executable optimisingstorage
   Else
     Buildable: False
 
+Executable example-time
+  Main-Is: examples/elementary/time/Main.hs
+  GHC-Options: -Wall
+  If flag(buildExamples)
+    Build-Depends:
+      efa,
+      utility-ht,
+      base
+  Else
+    Buildable: False
+
 
 
 Executable demo-signalcalc
@@ -349,11 +360,11 @@ Executable example-vehicle
     Build-Depends:
       efa,
       gnuplot,
-      base,
-      containers
+      containers,
+      base
   Else
     Buildable: False
- 
+
 
 Executable demo-stateanalysis
   Main-Is: demo/stateAnalysis/Main.hs
@@ -365,7 +376,17 @@ Executable demo-stateanalysis
        containers
   Else
     Buildable: False
- 
+
+Executable demo-functioneta
+  Main-Is: demo/functionEta/Main.hs
+  GHC-Options: -Wall
+  If flag(buildExamples)
+     Build-Depends:
+       efa,
+       base
+  Else
+    Buildable: False
+
 Executable demo-readandcut
   Main-Is: examples/elementary/readAndCut/Main.hs
   GHC-Options: -Wall
