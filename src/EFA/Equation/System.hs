@@ -456,16 +456,22 @@ but you may also insert complex relations like
 -}
 
 
+solveSimple ::
+  (Eq a, Fractional a, Idx.Record rec, Node.C node) =>
+  (forall s. EquationSystem rec node s a) ->
+  Env.Env rec node (Result a)
+solveSimple sys = runST $ do
+  let EquationSystem eqsys = sys
+  (eqs, varmap) <- runStateT eqsys mempty
+  Sys.solve eqs
+  traverse (fmap (maybe Undetermined Determined) . Sys.query) varmap
+
 solve ::
   (Eq a, Fractional a, Idx.Record rec, Node.C node) =>
   (forall s. EquationSystem rec node s a) ->
   TD.SequFlowGraph node -> Env.Env rec node (Result a)
-solve given g = runST $ do
-  let dirG = toDirSequFlowGraph g
-      EquationSystem eqsys = given <> fromTopology dirG
-  (eqs, varmap) <- runStateT eqsys mempty
-  Sys.solve eqs
-  traverse (fmap (maybe Undetermined Determined) . Sys.query) varmap
+solve given g =
+  solveSimple (given <> fromTopology (toDirSequFlowGraph g))
 
 
 --------------------------------------------------------------------
@@ -516,12 +522,8 @@ solveFromMeasurement ::
   (Eq a, Fractional a, Idx.Record rec, Node.C node) =>
   (forall s. EquationSystem rec node s a) ->
   TD.SequFlowGraph node -> Env.Env rec node (Result a)
-solveFromMeasurement given g = runST $ do
-  let dirG = toDirSequFlowGraph g
-      EquationSystem eqsys = given <> fromTopology' dirG
-  (eqs, varmap) <- runStateT eqsys mempty
-  Sys.solve eqs
-  traverse (fmap (maybe Undetermined Determined) . Sys.query) varmap
+solveFromMeasurement given g =
+  solveSimple (given <> fromTopology' (toDirSequFlowGraph g))
 
 
 
@@ -539,16 +541,7 @@ conservativelySolve ::
   (Eq a, Fractional a, Idx.Record rec, Node.C node) =>
   (forall s. EquationSystem rec node s a) ->
   TD.SequFlowGraph node -> Env.Env rec node (Result a)
-conservativelySolve given g = runST $ do
-  let dirG = toDirSequFlowGraph g
-      EquationSystem eqsys = given <> fromTopology dirG
-      EquationSystem givenSys = given
-
-  (eqs, varmap) <- runStateT eqsys mempty
-  Sys.solve eqs
-
-  (givenEqs, givenVarmap) <- runStateT givenSys mempty
-  Sys.solve givenEqs
-
-  traverse (fmap (maybe Undetermined Determined) . Sys.query) $
-     givenVarmap <> varmap
+conservativelySolve given g =
+  solveSimple (given <> fromTopology (toDirSequFlowGraph g))
+  <>
+  solveSimple given
