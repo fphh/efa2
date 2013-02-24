@@ -2,7 +2,7 @@
 module Main where
 
 import qualified EFA.Equation.Env as Env
-import qualified EFA.Equation.System as EqGen
+import qualified EFA.Equation.Absolute as EqGen
 import EFA.Equation.System ((=.=))
 import EFA.Equation.Absolute ((.=))
 import EFA.Example.Utility (makeEdges, constructSeqTopo, edgeVar)
@@ -66,7 +66,7 @@ topo = mkGraph nodes (makeEdges edges)
 seqTopo :: TD.SequFlowGraph Node
 seqTopo = constructSeqTopo topo [0]
 
-given :: Double -> Double -> EqGen.EquationSystem Idx.Absolute Node s Double
+given :: Double -> Double -> EqGen.EquationSystem Node s Double
 given e x =
    mconcat $
    (Idx.DTime sec0 .= 1) :
@@ -78,21 +78,21 @@ given e x =
    (edgeVar Idx.Eta sec0 c2 Sink .= 1) : []
 
 
-type Expr s a x = EqGen.ExprWithVars Idx.Absolute Node s a x
+type Expr s a x = EqGen.Expression Node s a x
 
-c02, c04 :: Expr s a a
-c02 = edgeVar EqGen.power sec0 c0 c1
-c04 = edgeVar EqGen.power sec0 c0 c3
+c02, c04 :: (Eq a, Fractional a) => Expr s a a
+c02 = EqGen.getVar $ edgeVar Idx.Power sec0 c0 c1
+c04 = EqGen.getVar $ edgeVar Idx.Power sec0 c0 c3
 
-n12, n14 :: Expr s a a
-n12 = edgeVar EqGen.eta sec0 c0 c1
-n14 = edgeVar EqGen.eta sec0 c0 c3
+n12, n14 :: (Eq a, Fractional a) => Expr s a a
+n12 = EqGen.getVar $ edgeVar Idx.Eta sec0 c0 c1
+n14 = EqGen.getVar $ edgeVar Idx.Eta sec0 c0 c3
 
 n1, n2 :: (Fractional a) => Expr s a a -> Expr s a a
 n1 p = -0.012 * (p - 12) * (p - 3) + 0.5
 n2 p = -0.021 * (p - 12) * p
 
-etas :: EqGen.EquationSystem Idx.Absolute Node s Double
+etas :: EqGen.EquationSystem Node s Double
 etas =
   (n12 =.= n1 c02)
   <> (n14 =.= n2 c04)
@@ -105,9 +105,9 @@ enRange :: [Double]
 enRange = 0.01:[1..12]
 
 
-eout, ein :: Idx.Record Idx.Absolute (Idx.Energy Node)
-eout = Idx.absolute $ edgeVar Idx.Energy sec0 Sink c2
-ein  = Idx.absolute $ edgeVar Idx.Energy sec0 Source c0
+eout, ein :: Idx.Energy Node
+eout = edgeVar Idx.Energy sec0 Sink c2
+ein  = edgeVar Idx.Energy sec0 Source c0
 
 
 solve :: Double -> Double -> String
@@ -115,7 +115,9 @@ solve e x =
   let emap = Env.energyMap $ EqGen.solve (etas <> given e x) seqTopo
   in  show e ++ " " ++ show x ++ " " ++
       Format.unUnicode (formatValue
-         (liftA2 (/) (checkedLookup emap eout) (checkedLookup emap ein)))
+         (liftA2 (/)
+             (Env.unAbsolute $ checkedLookup emap eout)
+             (Env.unAbsolute $ checkedLookup emap ein)))
 
 main :: IO ()
 main =

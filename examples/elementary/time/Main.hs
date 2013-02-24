@@ -12,7 +12,6 @@ import EFA.Utility (checkedLookup)
 import EFA.Utility.Stream (Stream((:~)))
 
 import qualified EFA.Equation.Absolute as EqGen
-import qualified EFA.Equation.System as EqSys
 import qualified EFA.Equation.Env as Env
 import EFA.Equation.System ((=.=))
 
@@ -59,26 +58,26 @@ n1, n2, n3, n4, n5, n6 :: Expr s Double -> Expr s Double
 
 -- steigend und fallend
 
-n1 = EqSys.liftF $ \x ->  0.95*exp(-0.05*((x-2)*(x-2)))
-n2 = EqSys.liftF $ \x -> -0.021 * (x - 12) * x
+n1 = EqGen.liftF $ \x ->  0.95*exp(-0.05*((x-2)*(x-2)))
+n2 = EqGen.liftF $ \x -> -0.021 * (x - 12) * x
 
 -- fallend
-n3 = EqSys.liftF $ \x -> 1/(0.063*(x+4)*(x+4))
-n4 = EqSys.liftF $ \x -> exp(-0.05*x*x)
-n6 = EqSys.liftF $ \x -> 1-1/(1+1000*exp(-(x-2)))
+n3 = EqGen.liftF $ \x -> 1/(0.063*(x+4)*(x+4))
+n4 = EqGen.liftF $ \x -> exp(-0.05*x*x)
+n6 = EqGen.liftF $ \x -> 1-1/(1+1000*exp(-(x-2)))
 
 n7 :: Expr s Double -> Expr s Double -> Expr s Double
 n7 =
-  EqSys.liftF2 $
+  EqGen.liftF2 $
     \ p s ->
       let n = 1-1/(1+1000*exp(-(p-2)))
       in  if p/n > s then 0 else n
 
 -- steigend
-n5 = EqSys.liftF $ \x -> x/sqrt(1+(x+2)*(x+2))
+n5 = EqGen.liftF $ \x -> x/sqrt(1+(x+2)*(x+2))
 
 
-n01, n12, n13, n31, p10, p12, p21, p13, p31 :: Idx.Section -> Expr s a
+n01, n12, n13, n31, p10, p12, p21, p13, p31 :: (Eq a, Num a) => Idx.Section -> Expr s a
 n01 sec = EqGen.getVar $ edgeVar Idx.Eta sec N0 N1
 n12 sec = EqGen.getVar $ edgeVar Idx.Eta sec N1 N2
 n13 sec = EqGen.getVar $ edgeVar Idx.Eta sec N1 N3
@@ -147,10 +146,10 @@ solve x e =
                       (checkedLookup smap sto1)))
 -}
       Format.unUnicode (formatValue
-         (f <$> (checkedLookup emap $ Idx.absolute esto)
-            <*> (checkedLookup emap $ Idx.absolute ein)
-            <*> (checkedLookup emap $ Idx.absolute eout0)
-            <*> (checkedLookup emap $ Idx.absolute eout1)))
+         (f <$> (Env.unAbsolute $ checkedLookup emap esto)
+            <*> (Env.unAbsolute $ checkedLookup emap ein)
+            <*> (Env.unAbsolute $ checkedLookup emap eout0)
+            <*> (Env.unAbsolute $ checkedLookup emap eout1)))
 
 
 main :: IO ()

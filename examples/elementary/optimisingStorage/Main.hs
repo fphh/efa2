@@ -14,7 +14,6 @@ import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph as Gr
 
 import qualified EFA.Equation.Absolute as EqGen
-import qualified EFA.Equation.System as EqSys
 import qualified EFA.Equation.Env as Env
 import qualified EFA.Equation.Result as R
 import EFA.Equation.System ((=.=))
@@ -67,7 +66,7 @@ type Expr s a = EqGen.Expression Node s Double a
 
 etaf :: (Floating a) => Expr s a -> Expr s a
 etaf =
-   EqSys.liftF $ \x ->
+   EqGen.liftF $ \x ->
       let y = x/100
       in  1/((y+sqrt(y*y+4*y))/(2*y))
 
@@ -103,7 +102,7 @@ f ::
    Floating a =>
    Expr s a -> Expr s a -> Expr s a
 f =
-   EqSys.liftF2 $ \r x ->
+   EqGen.liftF2 $ \r x ->
       let -- r = 0.9
           ui = 200
       in  x/(x + r*((ui - sqrt(ui^(2::Int) - 4*r*x)) / 2*r)^(2::Int))
@@ -155,9 +154,9 @@ solve t n =
       emap = Env.energyMap env
       R.Determined res =
         liftA3 (\ei eo0 eo1 -> (eo0 + eo1) / ei)
-          (checkedLookup emap $ Idx.absolute ein)
-          (checkedLookup emap $ Idx.absolute eout0)
-          (checkedLookup emap $ Idx.absolute eout1)
+          (Env.unAbsolute $ checkedLookup emap ein)
+          (Env.unAbsolute $ checkedLookup emap eout0)
+          (Env.unAbsolute $ checkedLookup emap eout1)
   in res
 
 

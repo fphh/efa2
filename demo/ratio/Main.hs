@@ -69,12 +69,12 @@ given p =
 solve :: Rational -> String
 solve p =
   show p ++ "\t"
-        ++ case checkedLookup (Env.etaMap $ solveEnv p) (Idx.absolute eta) of
+        ++ case Env.unAbsolute $ checkedLookup (Env.etaMap $ solveEnv p) eta of
               Undetermined -> "undetermined"
               Determined x -> show x
 
 solveEnv ::
-  Rational -> Env.Env Idx.Absolute Node (Result Rational)
+  Rational -> Env.Env Node (Env.Absolute (Result Rational))
 solveEnv p =
   EqGen.solve
     ((EqGen.getVar eta =.= functionEta (EqGen.getVar c)) <> given p)

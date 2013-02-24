@@ -8,12 +8,12 @@ import EFA.Graph.Topology.StateAnalysis (bruteForce)
 
 import qualified EFA.Equation.Env as Env
 import qualified EFA.Equation.System as EqGen
-import EFA.Equation.System ((=.=))
-import EFA.Equation.Variable (MkIdxC, MkVarC, mkVarCore, mkIdx)
 import qualified EFA.Equation.Variable as Var
-import Data.Monoid ((<>))
-
+import EFA.Equation.System ((=.=), (=%=))
+import EFA.Equation.Variable (MkIdxC, MkVarC)
 import EFA.Signal.SequenceData (SequData(SequData))
+
+import Data.Monoid ((<>))
 
 
 
@@ -45,25 +45,37 @@ constructSeqTopo topo =
   SequData
 
 
-type Term term rec node = term (Idx.Record rec (Var.Index node))
+
+type Term term recIdx node = term (Idx.Record recIdx (Var.Index node))
 
 givenSymbol ::
-  (Eq (Term term rec node), MkVarC term,
-   Ord (t node), MkIdxC t, Env.AccessMap t,
-   EqGen.Record rec) =>
-  Idx.Record rec (t node) ->
-  EqGen.EquationSystem rec node s (Term term rec node)
+  {-
+  The Eq constraint is requested by unique-logic but not really needed.
+  It is not easily possible to compare the terms for equal meaning
+  and it is better not to compare them at all.
+  We should remove the Eq constraint as soon as unique-logic allows it.
+  -}
+  (Eq (Term term recIdx node),
+   Fractional (Term term recIdx node),
+   EqGen.Record rec,
+   Ord (idx node), MkVarC term, MkIdxC idx,
+   Env.AccessMap idx, Env.Record recIdx rec) =>
+  Idx.Record recIdx (idx node) ->
+  EqGen.EquationSystem rec node s (Term term recIdx node)
 givenSymbol idx =
-   idx .= mkVarCore (fmap mkIdx idx)
+   idx .= Var.mkVarCore (fmap Var.mkIdx idx)
+
 
 infixr 6 =<>
 (=<>) ::
-  (Eq (Term term rec node), MkVarC term,
-   Ord (t node), MkIdxC t, Env.AccessMap t,
-   EqGen.Record rec) =>
-  Idx.Record rec (t node) ->
-  EqGen.EquationSystem rec node s (Term term rec node) ->
-  EqGen.EquationSystem rec node s (Term term rec node)
+  (Eq (Term term recIdx node),
+   Fractional (Term term recIdx node),
+   EqGen.Record rec,
+   Ord (idx node), MkVarC term, MkIdxC idx,
+   Env.AccessMap idx, Env.Record recIdx rec) =>
+  Idx.Record recIdx (idx node) ->
+  EqGen.EquationSystem rec node s (Term term recIdx node) ->
+  EqGen.EquationSystem rec node s (Term term recIdx node)
 idx =<> eqsys = givenSymbol idx <> eqsys
 
 
@@ -84,10 +96,17 @@ interVar idx sec0 sec1 x =
       (Idx.SecNode sec1 x)
 
 
-infix 0 .=
+infix 0 .=, %=
 
 (.=) ::
-  (Eq a, EqGen.Record rec, Env.AccessMap idx, Ord (idx node)) =>
-  Idx.Record rec (idx node) -> a ->
+  (Eq a, Num a, EqGen.Record rec, Env.Record recIdx rec,
+   Env.AccessMap idx, Ord (idx node)) =>
+  Idx.Record recIdx (idx node) -> a ->
   EqGen.EquationSystem rec node s a
 evar .= val  =  EqGen.getVar evar =.= EqGen.constant val
+
+(%=) ::
+  (Eq x, Num x, EqGen.Record rec) =>
+  EqGen.RecordExpression rec node s a x -> rec x ->
+  EqGen.EquationSystem rec node s a
+evar %= val  =  evar =%= EqGen.constantRecord val

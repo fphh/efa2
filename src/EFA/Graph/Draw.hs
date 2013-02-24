@@ -50,6 +50,8 @@ import Data.GraphViz (
           graphID)
 import Data.GraphViz.Attributes.Complete as Viz
 
+import qualified Data.Accessor.Basic as Accessor
+
 import Data.Tuple.HT (mapFst)
 import Data.Maybe.HT (toMaybe)
 
@@ -289,8 +291,8 @@ formatNodeType :: Format output => NodeType -> output
 formatNodeType = Format.literal . showType
 
 formatNodeStorage ::
-   (Ord record, FormatValue a, Format.Record record, Format output, Node.C node) =>
-   record -> StorageMap record node a -> Topo.LNode node -> output
+   (Interp.Record recIdx rec, FormatValue a, Format output, Node.C node) =>
+   recIdx -> StorageMap node (rec a) -> Topo.LNode node -> output
 formatNodeStorage rec st (n@(Idx.SecNode _sec nid), ty) =
    Format.lines $
    Node.display nid :
@@ -316,19 +318,21 @@ data Env node output =
    }
 
 lookupFormat ::
-   (Ord (idx node), MkIdxC idx, Ord rec,
-    FormatValue a, Format.Record rec, Format output, Node.C node) =>
-   rec -> M.Map (Idx.Record rec (idx node)) a -> idx node -> output
-lookupFormat rec mp k =
-   maybe (error $ "could not find index " ++
-             (Format.unUnicode $ formatValue $ Idx.Record rec $ mkIdx k)) formatValue $
-   M.lookup (Idx.Record rec k) mp
+   (Ord (idx node), MkIdxC idx, Interp.Record recIdx rec,
+    FormatValue a, Format output, Node.C node) =>
+   recIdx -> M.Map (idx node) (rec a) -> idx node -> output
+lookupFormat recIdx mp k =
+   maybe
+      (error $ "could not find index " ++
+         (Format.unUnicode $ formatValue $ mkIdx k))
+      (formatValue . Accessor.get (Interp.accessRecord recIdx)) $
+   M.lookup k mp
 
 lookupFormatAssign ::
-   (Ord (idx node), MkIdxC idx, Ord rec,
-    FormatValue a, Format.Record rec, Format output, Node.C node) =>
-   rec ->
-   M.Map (Idx.Record rec (idx node)) a ->
+   (Ord (idx node), MkIdxC idx, Format.Record recIdx, Interp.Record recIdx rec,
+    FormatValue a, Format output, Node.C node) =>
+   recIdx ->
+   M.Map (idx node) (rec a) ->
    (Idx.SecNode node -> Idx.SecNode node -> idx node) ->
    (Idx.SecNode node -> Idx.SecNode node -> output)
 lookupFormatAssign rec mp makeIdx x y =
@@ -361,37 +365,36 @@ sequFlowGraphWithEnv g env =
 
 sequFlowGraphAbsWithEnv ::
   (FormatValue a, Node.C node) =>
-  SequFlowGraph node -> Interp.Env Idx.Absolute node a -> IO ()
+  SequFlowGraph node -> Interp.Env node (Interp.Absolute a) -> IO ()
 sequFlowGraphAbsWithEnv topo = sequFlowGraphWithEnv topo . envAbs
 
 sequFlowGraphDeltaWithEnv ::
   (FormatValue a, Node.C node) =>
-  SequFlowGraph node -> Interp.Env Idx.Delta node a -> IO ()
+  SequFlowGraph node -> Interp.Env node (Interp.Delta a) -> IO ()
 sequFlowGraphDeltaWithEnv topo = sequFlowGraphWithEnv topo . envDelta
 
 
+envGen ::
+   (FormatValue a, Format output, Format.Record idx,
+    Interp.Record idx rec, Node.C node) =>
+   idx ->
+   Interp.Env node (rec a) -> Env node output
+envGen rec (Interp.Env e me _p n dt x y _s st) =
+   Env
+      (lookupFormatAssign rec e Idx.Energy)
+      (lookupFormatAssign rec me Idx.MaxEnergy)
+      (lookupFormatAssign rec x Idx.X)
+      (lookupFormatAssign rec y Idx.Y)
+      (lookupFormatAssign rec n Idx.Eta)
+      (lookupFormat rec dt . Idx.DTime)
+      (formatNodeStorage rec st)
+
 envAbs ::
    (FormatValue a, Format output, Node.C node) =>
-   Interp.Env Idx.Absolute node a -> Env node output
-envAbs (Interp.Env e me _p n dt x y _s st) =
-   Env
-      (lookupFormatAssign Idx.Absolute e Idx.Energy)
-      (lookupFormatAssign Idx.Absolute me Idx.MaxEnergy)
-      (lookupFormatAssign Idx.Absolute x Idx.X)
-      (lookupFormatAssign Idx.Absolute y Idx.Y)
-      (lookupFormatAssign Idx.Absolute n Idx.Eta)
-      (lookupFormat Idx.Absolute dt . Idx.DTime)
-      (formatNodeStorage Idx.Absolute st)
+   Interp.Env node (Interp.Absolute a) -> Env node output
+envAbs = envGen Idx.Absolute
 
 envDelta ::
    (FormatValue a, Format output, Node.C node) =>
-   Interp.Env Idx.Delta node a -> Env node output
-envDelta (Interp.Env e me _p n dt x y _s st) =
-   Env
-      (lookupFormatAssign Idx.Delta e Idx.Energy)
-      (lookupFormatAssign Idx.Delta me Idx.MaxEnergy)
-      (lookupFormatAssign Idx.Delta x Idx.X)
-      (lookupFormatAssign Idx.Delta y Idx.Y)
-      (lookupFormatAssign Idx.Delta n Idx.Eta)
-      (lookupFormat Idx.Delta dt . Idx.DTime)
-      (formatNodeStorage Idx.Delta st)
+   Interp.Env node (Interp.Delta a) -> Env node output
+envDelta = envGen Idx.Delta

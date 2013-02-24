@@ -3,7 +3,6 @@ module Main where
 
 import qualified EFA.Equation.Env as Env
 import qualified EFA.Equation.Absolute as EqGen
-import qualified EFA.Equation.System as EqSys
 import EFA.Equation.Absolute ((.=))
 import EFA.Equation.System ((=.=))
 import EFA.Example.Utility
@@ -56,7 +55,7 @@ eta = edgeVar Idx.Eta sec0 Source Sink
 
 
 functionEta :: Expr s Double -> Expr s Double
-functionEta p = 0.3 * EqSys.sqrt p
+functionEta = EqGen.liftF $ \p -> 0.3 * sqrt p
 
 given :: Double -> EqGen.EquationSystem Node s Double
 given p =
@@ -70,7 +69,7 @@ solve :: Double -> String
 solve p =
   let env = EqGen.solve ((EqGen.getVar eta =.= functionEta (EqGen.getVar c)) <> given p) seqTopo
   in  show p ++ " " ++
-      Format.unUnicode (formatValue (checkedLookup (Env.etaMap env) (Idx.absolute eta)))
+      Format.unUnicode (formatValue (Env.unAbsolute (checkedLookup (Env.etaMap env) eta)))
 
 main :: IO ()
 main =
