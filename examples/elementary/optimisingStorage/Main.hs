@@ -13,7 +13,8 @@ import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph as Gr
 
-import qualified EFA.Equation.System as EqGen
+import qualified EFA.Equation.Absolute as EqGen
+import qualified EFA.Equation.System as EqSys
 import qualified EFA.Equation.Env as Env
 import qualified EFA.Equation.Result as R
 import EFA.Equation.System ((=.=))
@@ -62,28 +63,30 @@ seqTopo :: TD.SequFlowGraph Node
 seqTopo = constructSeqTopo topoDreibein [0, 4]
 
 
-type Expr s a = EqGen.ExprWithVars Idx.Absolute Node s Double a
+type Expr s a = EqGen.Expression Node s Double a
 
 etaf :: (Floating a) => Expr s a -> Expr s a
-etaf x = 1/((y+EqGen.sqrt(y*y+4*y))/(2*y))
-  where y = x/100
+etaf =
+   EqSys.liftF $ \x ->
+      let y = x/100
+      in  1/((y+sqrt(y*y+4*y))/(2*y))
 
 n01, n12, n13, n31, p10, p21, e31, p31, p13 ::
   Idx.Section -> Expr s Double
-n01 sec = edgeVar EqGen.eta sec N0 N1
-n12 sec = edgeVar EqGen.eta sec N1 N2
-n13 sec = edgeVar EqGen.eta sec N1 N3
-n31 sec = edgeVar EqGen.eta sec N3 N1
-p10 sec = edgeVar EqGen.power sec N1 N0
-p21 sec = edgeVar EqGen.power sec N2 N1
-e31 sec = edgeVar EqGen.energy sec N3 N1
+n01 sec = EqGen.getVar $ edgeVar Idx.Eta sec N0 N1
+n12 sec = EqGen.getVar $ edgeVar Idx.Eta sec N1 N2
+n13 sec = EqGen.getVar $ edgeVar Idx.Eta sec N1 N3
+n31 sec = EqGen.getVar $ edgeVar Idx.Eta sec N3 N1
+p10 sec = EqGen.getVar $ edgeVar Idx.Power sec N1 N0
+p21 sec = EqGen.getVar $ edgeVar Idx.Power sec N2 N1
+e31 sec = EqGen.getVar $ edgeVar Idx.Energy sec N3 N1
 
-p31 sec = edgeVar EqGen.power sec N3 N1
-p13 sec = edgeVar EqGen.power sec N1 N3
+p31 sec = EqGen.getVar $ edgeVar Idx.Power sec N3 N1
+p13 sec = EqGen.getVar $ edgeVar Idx.Power sec N1 N3
 
 
 stoinit :: Expr s Double
-stoinit = EqGen.storage (Idx.SecNode Idx.initSection N3)
+stoinit = EqGen.getVar $ Idx.Storage (Idx.SecNode Idx.initSection N3)
 
 ein, eout0, eout1 :: Idx.Energy Node
 ein = edgeVar Idx.Energy sec0 N0 N1
@@ -91,17 +94,20 @@ eout0 = edgeVar Idx.Energy sec0 N2 N1
 eout1 = edgeVar Idx.Energy sec1 N2 N1
 
 e33 :: Expr s Double
-e33 = interVar EqGen.energy Idx.initSection sec1 N3
+e33 = EqGen.getVar $ interVar Idx.Energy Idx.initSection sec1 N3
 
 time :: Idx.Section -> Expr s Double
-time = EqGen.dtime
+time = EqGen.getVar . Idx.DTime
 
 f ::
    Floating a =>
    Expr s a -> Expr s a -> Expr s a
-f r x = x/(x + r*((ui - EqGen.sqrt(ui^2 - 4*r*x)) / 2*r)^2)
-  where -- r = 0.9
-        ui = 200
+f =
+   EqSys.liftF2 $ \r x ->
+      let -- r = 0.9
+          ui = 200
+      in  x/(x + r*((ui - sqrt(ui^(2::Int) - 4*r*x)) / 2*r)^(2::Int))
+
 {-
 g x = ((-x) + r*((200 - EqGen.sqrt(200*200 - 4*r*(-x))) / 2*r)*((200 - sqrt(200*200 - 4*r*(-x))) / 2*r))/(-x)
   where r = 0.9
@@ -112,7 +118,7 @@ g r x = 1 / (1 + (x*r)/(ui^(2::Int)))
   where -- r = 0.9
         ui = 200
 
-given :: Double -> Double -> EqGen.EquationSystem Idx.Absolute Node s Double
+given :: Double -> Double -> EqGen.EquationSystem Node s Double
 given t r =
   (time Idx.initSection =.= 1)
   <> (stoinit =.= 3)

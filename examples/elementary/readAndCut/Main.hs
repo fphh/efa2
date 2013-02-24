@@ -2,30 +2,30 @@
 
 module Main where
 
-import Data.Foldable (foldMap)
+import EFA.Example.Utility (makeEdges)
+import EFA.Equation.Absolute ((.=))
 
-import qualified Data.Map as M
-
-import EFA.Example.Utility (makeEdges, (.=))
+import qualified EFA.Equation.Absolute as EqGen
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
 
-import qualified EFA.Graph as Gr
-import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Graph.Topology.Node as Node
+import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.Draw as Draw
+import qualified EFA.Graph as Gr
 
-import qualified EFA.Equation.System as EqGen
+import qualified EFA.Signal.Signal as Sig
 
 import EFA.IO.CSVImport (modelicaCSVImport)
 -- import qualified EFA.Signal.SequenceData as SD
 import EFA.Signal.Sequence (makeSequence, makeSeqFlowGraph)
-import qualified EFA.Signal.Signal as Sig
 import EFA.Signal.Record
+          (SigId(SigId), Record(Record), PPosIdx(PPosIdx), PowerRecord)
 
-import qualified EFA.Graph.Draw as Draw
+import qualified Data.Map as M
 
-import qualified EFA.Graph.Topology.Node as Node
 
 sec0, sec1, sec2, sec3, sec4 :: Idx.Section
 sec0 :~ sec1 :~ sec2 :~ sec3 :~ sec4 :~ _ = Stream.enumFrom $ Idx.Section 0
@@ -43,10 +43,9 @@ topoDreibein = Gr.mkGraph ns (makeEdges es)
         es = [(node0, node1), (node1, node2), (node1, node3)]
 
 
-given :: EqGen.EquationSystem Idx.Absolute Node.Int s Double
-given = foldMap (uncurry (.=)) $
-  (EqGen.dtime Idx.initSection, 1) :
-  []
+given :: EqGen.EquationSystem Node.Int s Double
+given =
+  (Idx.DTime Idx.initSection .= 1)
 
 main :: IO ()
 main = do

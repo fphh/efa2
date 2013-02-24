@@ -1,9 +1,9 @@
 module Main where
 
-import EFA.Example.Utility
-  ( edgeVar, makeEdges, (.=), constructSeqTopo )
+import EFA.Example.Utility ( edgeVar, makeEdges, constructSeqTopo )
+import EFA.Equation.Absolute ( (.=) )
 
-import qualified EFA.Equation.System as EqGen
+import qualified EFA.Equation.Absolute as EqGen
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as TD
@@ -15,7 +15,7 @@ import qualified EFA.Report.Format as Format
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
 
-import Data.Foldable (foldMap)
+import Data.Monoid (mconcat)
 
 
 sec0, sec1, sec2, sec3, sec4 :: Idx.Section
@@ -49,31 +49,31 @@ topoDreibein = Gr.mkGraph ns (makeEdges es)
               (node3, TD.Storage)]
         es = [(node0, node2), (node1, node2), (node2, node3)]
 
-given :: EqGen.EquationSystem Idx.Absolute Node s Double
+given :: EqGen.EquationSystem Node s Double
 given =
-   foldMap (uncurry (.=)) $
+   mconcat $
 
-   (EqGen.dtime Idx.initSection, 1) :
-   (EqGen.dtime sec0, 1) :
-   (EqGen.dtime sec1, 1) :
-   (EqGen.dtime sec2, 1) :
+   (Idx.DTime Idx.initSection .= 1) :
+   (Idx.DTime sec0 .= 1) :
+   (Idx.DTime sec1 .= 1) :
+   (Idx.DTime sec2 .= 1) :
 
-   (EqGen.storage (Idx.SecNode sec2 node3), 10.0) :
+   (Idx.Storage (Idx.SecNode sec2 node3) .= 10.0) :
 
 
-   (edgeVar EqGen.power sec0 node2 node3, 4.0) :
+   (edgeVar Idx.Power sec0 node2 node3 .= 4.0) :
 
-   (edgeVar EqGen.xfactor sec0 node2 node3, 0.32) :
+   (edgeVar Idx.X sec0 node2 node3 .= 0.32) :
 
-   (edgeVar EqGen.power sec1 node3 node2, 5) :
-   (edgeVar EqGen.power sec2 node3 node2, 6) :
-   (edgeVar EqGen.power sec3 node3 node2, 7) :
-   (edgeVar EqGen.power sec4 node3 node2, 8) :
+   (edgeVar Idx.Power sec1 node3 node2 .= 5) :
+   (edgeVar Idx.Power sec2 node3 node2 .= 6) :
+   (edgeVar Idx.Power sec3 node3 node2 .= 7) :
+   (edgeVar Idx.Power sec4 node3 node2 .= 8) :
 
-   (edgeVar EqGen.eta sec0 node3 node2, 0.25) :
-   (edgeVar EqGen.eta sec0 node2 node3, 0.25) :
-   (edgeVar EqGen.eta sec0 node2 node1, 0.5) :
-   (edgeVar EqGen.eta sec0 node0 node2, 0.75) :
+   (edgeVar Idx.Eta sec0 node3 node2 .= 0.25) :
+   (edgeVar Idx.Eta sec0 node2 node3 .= 0.25) :
+   (edgeVar Idx.Eta sec0 node2 node1 .= 0.5) :
+   (edgeVar Idx.Eta sec0 node0 node2 .= 0.75) :
    []
 
 

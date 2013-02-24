@@ -2,11 +2,11 @@
 module EFA.Equation.Absolute where
 
 import qualified EFA.Example.Utility as Utility
-import EFA.Example.Utility ((.=))
 
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Env as Env
 import qualified EFA.Equation.Variable as Var
+import EFA.Equation.System ((=.=))
 import EFA.Equation.Variable (MkIdxC, MkVarC)
 import EFA.Equation.Result(Result(..))
 
@@ -32,6 +32,17 @@ solve ::
 solve = EqGen.solve
 
 
+constant :: x -> Expression node s a x
+constant = EqGen.constant
+
+getVar ::
+   (Env.AccessMap idx, Ord (idx node)) =>
+   idx node -> Expression node s a a
+getVar = EqGen.getVar . Idx.absolute
+
+
+
+
 type Term term node = Utility.Term term Idx.Absolute node
 
 givenSymbol ::
@@ -40,7 +51,7 @@ givenSymbol ::
    t node ->
    EquationSystem node s (Term term node)
 givenSymbol idx =
-   EqGen.getVar (Idx.absolute idx) .=
+   idx .=
    Var.mkVarCore (Idx.absolute (Var.mkIdx idx))
 
 
@@ -53,3 +64,12 @@ infixr 6 =<>
    EquationSystem node s (Term term node) ->
    EquationSystem node s (Term term node)
 idx =<> eqsys = givenSymbol idx <> eqsys
+
+
+infix 0 .=
+
+(.=) ::
+   (Eq a, Env.AccessMap idx, Ord (idx node)) =>
+   idx node -> a ->
+   EquationSystem node s a
+evar .= val  =  getVar evar =.= EqGen.constant val

@@ -54,7 +54,7 @@ givenSymbol ::
   Idx.Record rec (t node) ->
   EqGen.EquationSystem rec node s (Term term rec node)
 givenSymbol idx =
-   EqGen.getVar idx .= mkVarCore (fmap mkIdx idx)
+   idx .= mkVarCore (fmap mkIdx idx)
 
 infixr 6 =<>
 (=<>) ::
@@ -87,7 +87,7 @@ interVar idx sec0 sec1 x =
 infix 0 .=
 
 (.=) ::
-  (Eq x) =>
-  EqGen.ExprWithVars rec node s a x -> x ->
+  (Eq a, EqGen.Record rec, Env.AccessMap idx, Ord (idx node)) =>
+  Idx.Record rec (idx node) -> a ->
   EqGen.EquationSystem rec node s a
-evar .= val  =  evar =.= EqGen.constant val
+evar .= val  =  EqGen.getVar evar =.= EqGen.constant val

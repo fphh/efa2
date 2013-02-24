@@ -1,33 +1,30 @@
 
 module Main where
 
-import Control.Applicative (liftA2)
-
-import Data.Foldable (foldMap)
-import Data.Monoid ((<>))
-
-
 import qualified EFA.Equation.Env as Env
 import qualified EFA.Equation.System as EqGen
 import EFA.Equation.System ((=.=))
+import EFA.Equation.Absolute ((.=))
+import EFA.Example.Utility (makeEdges, constructSeqTopo, edgeVar)
+import EFA.Graph (mkGraph)
 
 import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.Draw as Draw
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
 import EFA.Utility (checkedLookup)
 
-import EFA.Example.Utility (makeEdges, constructSeqTopo, edgeVar, (.=))
-import EFA.Graph (mkGraph)
-
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (formatValue)
 
-
 import EFA.Utility.Async (concurrentlyMany_)
-import qualified EFA.Graph.Draw as Draw
-import qualified EFA.Graph.Topology.Node as Node
+
+import Control.Applicative (liftA2)
+
+import Data.Monoid (mconcat, (<>))
 
 
 sec0 :: Idx.Section
@@ -71,14 +68,14 @@ seqTopo = constructSeqTopo topo [0]
 
 given :: Double -> Double -> EqGen.EquationSystem Idx.Absolute Node s Double
 given e x =
-   foldMap (uncurry (.=)) $
-   (EqGen.dtime sec0, 1) :
-   (edgeVar EqGen.xfactor sec0 c0 c1, x) :
-   (edgeVar EqGen.power sec0 Source c0, e) :
-   (edgeVar EqGen.eta sec0 Source c0, 1) :
-   (edgeVar EqGen.eta sec0 c1 c2, 1) :
-   (edgeVar EqGen.eta sec0 c3 c2, 1) :
-   (edgeVar EqGen.eta sec0 c2 Sink, 1) : []
+   mconcat $
+   (Idx.DTime sec0 .= 1) :
+   (edgeVar Idx.X sec0 c0 c1 .= x) :
+   (edgeVar Idx.Power sec0 Source c0 .= e) :
+   (edgeVar Idx.Eta sec0 Source c0 .= 1) :
+   (edgeVar Idx.Eta sec0 c1 c2 .= 1) :
+   (edgeVar Idx.Eta sec0 c3 c2 .= 1) :
+   (edgeVar Idx.Eta sec0 c2 Sink .= 1) : []
 
 
 type Expr s a x = EqGen.ExprWithVars Idx.Absolute Node s a x
