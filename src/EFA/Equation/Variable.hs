@@ -5,7 +5,7 @@ import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Symbolic.OperatorTree as OT
 import qualified EFA.Symbolic.SumProduct as SP
 import qualified EFA.Report.Format as Format
-import EFA.Report.Format (Format, FormatRecord)
+import EFA.Report.Format (Format)
 import EFA.Report.FormatValue (FormatValue, formatValue)
 
 
@@ -66,7 +66,7 @@ formatEdgeIndex x y =
    formatSectionNode y
 
 instance
-   (Node.C node, FormatRecord rec) =>
+   (Node.C node, Format.Record rec) =>
       FormatValue (Index rec node) where
    formatValue =
       formatGen
@@ -76,7 +76,7 @@ instance
 
 
 formatShort ::
-   (Node.C node, FormatRecord record, Format output) =>
+   (Node.C node, Format.Record record, Format output) =>
    Index record node -> output
 formatShort =
    formatGen
@@ -85,7 +85,7 @@ formatShort =
 
 
 formatGen ::
-   (Format output, FormatRecord record, Node.C node) =>
+   (Format output, Format.Record record, Node.C node) =>
    (Format.EdgeVar ->
     record -> Idx.SecNode node -> Idx.SecNode node -> output) ->
    Index record node ->

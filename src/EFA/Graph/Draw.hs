@@ -10,7 +10,7 @@ module EFA.Graph.Draw (
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
-import EFA.Report.Format (Format, FormatRecord, Unicode(Unicode, unUnicode))
+import EFA.Report.Format (Format, Unicode(Unicode, unUnicode))
 
 import qualified EFA.Equation.Env as Interp
 import qualified EFA.Equation.Variable as Var
@@ -289,7 +289,7 @@ formatNodeType :: Format output => NodeType -> output
 formatNodeType = Format.literal . showType
 
 formatNodeStorage ::
-   (Ord record, FormatValue a, FormatRecord record, Format output, Node.C node) =>
+   (Ord record, FormatValue a, Format.Record record, Format output, Node.C node) =>
    record -> StorageMap record node a -> Topo.LNode node -> output
 formatNodeStorage rec st (n@(Idx.SecNode _sec nid), ty) =
    Format.lines $
@@ -317,7 +317,7 @@ data Env node output =
 
 lookupFormat ::
    (Ord (idx rec node), MkIdxC idx,
-    FormatValue a, FormatRecord rec, Format output, Node.C node) =>
+    FormatValue a, Format.Record rec, Format output, Node.C node) =>
    M.Map (idx rec node) a -> idx rec node -> output
 lookupFormat mp k =
    maybe (error $ "could not find index " ++
@@ -326,7 +326,7 @@ lookupFormat mp k =
 
 lookupFormatAssign ::
    (Ord (idx rec node), MkIdxC idx,
-    FormatValue a, FormatRecord rec, Format output, Node.C node) =>
+    FormatValue a, Format.Record rec, Format output, Node.C node) =>
    M.Map (idx rec node) a ->
    (Idx.SecNode node -> Idx.SecNode node -> idx rec node) ->
    (Idx.SecNode node -> Idx.SecNode node -> output)

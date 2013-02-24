@@ -249,11 +249,11 @@ instance Format Latex where
    power (Latex x) n = Latex $ x ++ "^{" ++ show n ++ "}"
 
 
-class Idx.Record record => FormatRecord record where
+class Idx.Record record => Record record where
    record :: Format output => record -> output -> output
 
-instance FormatRecord Idx.Absolute where
+instance Record Idx.Absolute where
    record Idx.Absolute = id
 
-instance FormatRecord Idx.Delta where
+instance Record Idx.Delta where
    record d = recordDelta d
