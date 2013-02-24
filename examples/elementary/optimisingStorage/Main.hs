@@ -68,7 +68,7 @@ etaf :: (Floating a) => Expr s a -> Expr s a
 etaf x = 1/((y+EqGen.sqrt(y*y+4*y))/(2*y))
   where y = x/100
 
-n01, n12, n13, n31, p10, p21, e31 ::
+n01, n12, n13, n31, p10, p21, e31, p31, p13 ::
   Idx.Section -> Expr s Double
 n01 sec = edgeVar EqGen.eta sec N0 N1
 n12 sec = edgeVar EqGen.eta sec N1 N2
@@ -96,6 +96,9 @@ e33 = interVar EqGen.energy Idx.initSection sec1 N3
 time :: Idx.Section -> Expr s Double
 time = EqGen.dtime
 
+f ::
+   Floating a =>
+   Expr s a -> Expr s a -> Expr s a
 f r x = x/(x + r*((ui - EqGen.sqrt(ui^2 - 4*r*x)) / 2*r)^2)
   where -- r = 0.9
         ui = 200
@@ -104,7 +107,8 @@ g x = ((-x) + r*((200 - EqGen.sqrt(200*200 - 4*r*(-x))) / 2*r)*((200 - sqrt(200*
   where r = 0.9
 -}
 
-g r x = 1 / (1 + (x*r)/(ui^2))
+g :: Fractional a => a -> a -> a
+g r x = 1 / (1 + (x*r)/(ui^(2::Int)))
   where -- r = 0.9
         ui = 200
 
