@@ -1,19 +1,19 @@
 module Main where
 
-import EFA.Example.Utility (recAbs, edgeVar, makeEdges, (=<>), constructSeqTopo)
+import EFA.Example.Utility (edgeVar, makeEdges, constructSeqTopo)
+import EFA.Equation.Absolute (Term, (=<>))
 
-import qualified EFA.Graph.Draw as Draw
+import qualified EFA.Symbolic.SumProduct as SumProduct
+import qualified EFA.Equation.Absolute as EqGen
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
 
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Topology as TD
-import qualified EFA.Equation.System as EqGen
-import qualified EFA.Graph as Gr
-import EFA.Equation.Variable (Index)
-import EFA.Symbolic.SumProduct (Term)
 import qualified EFA.Graph.Topology.Node as Node
+import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.Draw as Draw
+import qualified EFA.Graph as Gr
 
 import Data.Monoid (mempty)
 
@@ -37,19 +37,19 @@ topoDreibein = Gr.mkGraph ns (makeEdges es)
 {-
 Use new Term type here since it simplifies automatically.
 -}
-given :: EqGen.EquationSystem Idx.Absolute Node.Int s (Term (Index Idx.Absolute Node.Int))
+given :: EqGen.EquationSystem Node.Int s (Term SumProduct.Term Node.Int)
 given =
-   Idx.DTime recAbs Idx.initSection =<>
-   Idx.DTime recAbs sec0 =<>
+   Idx.DTime Idx.initSection =<>
+   Idx.DTime sec0 =<>
 
-   Idx.Storage recAbs (Idx.SecNode sec0 node3) =<>
+   Idx.Storage (Idx.SecNode sec0 node3) =<>
 
-   edgeVar (Idx.Power recAbs) sec0 node3 node2 =<>
-   edgeVar (Idx.X recAbs) sec0 node2 node3 =<>
+   edgeVar Idx.Power sec0 node3 node2 =<>
+   edgeVar Idx.X sec0 node2 node3 =<>
 
-   edgeVar (Idx.Eta recAbs) sec0 node3 node2 =<>
-   edgeVar (Idx.Eta recAbs) sec0 node0 node2 =<>
-   edgeVar (Idx.Eta recAbs) sec0 node2 node1 =<>
+   edgeVar Idx.Eta sec0 node3 node2 =<>
+   edgeVar Idx.Eta sec0 node0 node2 =<>
+   edgeVar Idx.Eta sec0 node2 node1 =<>
 
    mempty
 

@@ -1,5 +1,6 @@
 module EFA.Report.FormatValue where
 
+import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Report.Format as Format
 import EFA.Report.Format (Format)
 import EFA.Equation.Result (Result(..))
@@ -23,6 +24,12 @@ instance (Integral a, Show a) => FormatValue (Ratio a) where
 
 instance FormatValue Char where
    formatValue = formatChar
+
+instance
+   (Format.Record rec, FormatValue idx) =>
+      FormatValue (Idx.Record rec idx) where
+   formatValue (Idx.Record r idx) =
+      Format.record r $ formatValue idx
 
 formatChar :: Format output => Char -> output
 formatChar = Format.literal . (:[])

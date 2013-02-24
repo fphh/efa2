@@ -8,6 +8,8 @@ module EFA.Equation.System (
   liftF, liftF2,
   sqrt,
 
+  Record,
+
   (=.=),
   getVar,
   getEdgeVar,
@@ -145,6 +147,16 @@ sqrt ::
 sqrt = liftF P.sqrt
 
 
+class (Ord rec) => Record rec where
+   recordDefault :: idx -> Idx.Record rec idx
+
+instance Record Idx.Absolute where
+   recordDefault = Idx.absolute
+
+instance Record Idx.Delta where
+   recordDefault = Idx.before
+
+
 infix 0 =.=
 (=.=) ::
   (Eq x) =>
@@ -166,9 +178,14 @@ withLocalVar f = EquationSystem $ do
         EquationSystem act -> act
 
 
+getDefaultVar ::
+   (Env.AccessMap idx, Ord (idx node), Record rec) =>
+   idx node -> ExprWithVars rec node s a a
+getDefaultVar = getVar . recordDefault
+
 getVar ::
-   (Env.AccessMap idx, Ord (idx rec node)) =>
-   idx rec node -> ExprWithVars rec node s a a
+   (Env.AccessMap idx, Ord (idx node), Record rec) =>
+   Idx.Record rec (idx node) -> ExprWithVars rec node s a a
 getVar idx =
   Bookkeeping $ fmap Expr.fromVariable $ do
     oldMap <- AccessState.get Env.accessMap
@@ -180,40 +197,40 @@ getVar idx =
         return var
 
 getEdgeVar ::
-   (Idx.Record rec, Env.AccessMap idx, Ord (idx rec node)) =>
-   (rec -> Idx.SecNode node -> Idx.SecNode node -> idx rec node) ->
+   (Record rec, Env.AccessMap idx, Ord (idx node)) =>
+   (Idx.SecNode node -> Idx.SecNode node -> idx node) ->
    Idx.SecNode node -> Idx.SecNode node -> ExprWithVars rec node s a a
-getEdgeVar mkIdx x y = getVar (mkIdx Idx.recDeflt x y)
+getEdgeVar mkIdx x y = getDefaultVar (mkIdx x y)
 
-power :: (Idx.Record rec, Ord node) => Idx.SecNode node -> Idx.SecNode node -> ExprWithVars rec node s a a
+power :: (Record rec, Ord node) => Idx.SecNode node -> Idx.SecNode node -> ExprWithVars rec node s a a
 power = getEdgeVar Idx.Power
 
-energy :: (Idx.Record rec, Ord node) => Idx.SecNode node -> Idx.SecNode node -> ExprWithVars rec node s a a
+energy :: (Record rec, Ord node) => Idx.SecNode node -> Idx.SecNode node -> ExprWithVars rec node s a a
 energy = getEdgeVar Idx.Energy
 
-maxenergy :: (Idx.Record rec, Ord node) => Idx.SecNode node -> Idx.SecNode node -> ExprWithVars rec node s a a
+maxenergy :: (Record rec, Ord node) => Idx.SecNode node -> Idx.SecNode node -> ExprWithVars rec node s a a
 maxenergy = getEdgeVar Idx.MaxEnergy
 
-eta :: (Idx.Record rec, Ord node) => Idx.SecNode node -> Idx.SecNode node -> ExprWithVars rec node s a a
+eta :: (Record rec, Ord node) => Idx.SecNode node -> Idx.SecNode node -> ExprWithVars rec node s a a
 eta = getEdgeVar Idx.Eta
 
-xfactor :: (Idx.Record rec, Ord node) => Idx.SecNode node -> Idx.SecNode node -> ExprWithVars rec node s a a
+xfactor :: (Record rec, Ord node) => Idx.SecNode node -> Idx.SecNode node -> ExprWithVars rec node s a a
 xfactor = getEdgeVar Idx.X
 
-yfactor :: (Idx.Record rec, Ord node) => Idx.SecNode node -> Idx.SecNode node -> ExprWithVars rec node s a a
+yfactor :: (Record rec, Ord node) => Idx.SecNode node -> Idx.SecNode node -> ExprWithVars rec node s a a
 yfactor = getEdgeVar Idx.Y
 
-insum :: (Idx.Record rec, Ord node) => Idx.SecNode node -> ExprWithVars rec node s a a
-insum = getVar . Idx.Sum Idx.recDeflt Idx.In
+insum :: (Record rec, Ord node) => Idx.SecNode node -> ExprWithVars rec node s a a
+insum = getDefaultVar . Idx.Sum Idx.In
 
-outsum :: (Idx.Record rec, Ord node) => Idx.SecNode node -> ExprWithVars rec node s a a
-outsum = getVar . Idx.Sum Idx.recDeflt Idx.Out
+outsum :: (Record rec, Ord node) => Idx.SecNode node -> ExprWithVars rec node s a a
+outsum = getDefaultVar . Idx.Sum Idx.Out
 
-storage :: (Idx.Record rec, Ord node) => Idx.SecNode node -> ExprWithVars rec node s a a
-storage = getVar . Idx.Storage Idx.recDeflt
+storage :: (Record rec, Ord node) => Idx.SecNode node -> ExprWithVars rec node s a a
+storage = getDefaultVar . Idx.Storage
 
-dtime :: (Idx.Record rec) => Idx.Section -> ExprWithVars rec node s a a
-dtime = getVar . Idx.DTime Idx.recDeflt
+dtime :: (Record rec) => Idx.Section -> ExprWithVars rec node s a a
+dtime = getDefaultVar . Idx.DTime
 
 
 mwhen :: Monoid a => Bool -> a -> a
@@ -222,7 +239,7 @@ mwhen False _ = mempty
 
 
 fromTopology ::
-  (Eq a, Fractional a, Idx.Record rec, Node.C node) =>
+  (Eq a, Fractional a, Record rec, Node.C node) =>
   TD.DirSequFlowGraph node -> EquationSystem rec node s a
 fromTopology g = mconcat $
   makeInnerSectionEquations g :
@@ -232,7 +249,7 @@ fromTopology g = mconcat $
 -----------------------------------------------------------------
 
 makeInnerSectionEquations ::
-  (Eq a, Fractional a, Idx.Record rec, Node.C node) =>
+  (Eq a, Fractional a, Record rec, Node.C node) =>
   TD.DirSequFlowGraph node -> EquationSystem rec node s a
 makeInnerSectionEquations g = mconcat $
   makeEnergyEquations (map fst es) :
@@ -245,7 +262,7 @@ makeInnerSectionEquations g = mconcat $
 
 
 makeEdgeEquations ::
-  (Eq a, Fractional a, Idx.Record rec, Ord node) =>
+  (Eq a, Fractional a, Record rec, Ord node) =>
   [TD.LDirEdge node] -> EquationSystem rec node s a
 makeEdgeEquations = foldMap mkEq
   where mkEq e@(Edge f t, ()) =
@@ -257,7 +274,7 @@ makeEdgeEquations = foldMap mkEq
 
 
 makeEnergyEquations ::
-  (Eq a, Fractional a, Idx.Record rec, Ord node) =>
+  (Eq a, Fractional a, Record rec, Ord node) =>
   [Gr.Edge (Idx.SecNode node)] -> EquationSystem rec node s a
 makeEnergyEquations = foldMap mkEq
   where mkEq (Edge f@(Idx.SecNode sf _) t@(Idx.SecNode st _)) =
@@ -265,7 +282,7 @@ makeEnergyEquations = foldMap mkEq
              where equ x y = energy x y =.= dtime sf * power x y
 
 makeNodeEquations ::
-  (Eq a, Fractional a, Idx.Record rec, Ord node) =>
+  (Eq a, Fractional a, Record rec, Ord node) =>
   TD.DirSequFlowGraph node -> EquationSystem rec node s a
 makeNodeEquations = fold . M.mapWithKey f . Gr.nodes
    where f n (ins, label, outs) =
@@ -285,7 +302,7 @@ makeNodeEquations = fold . M.mapWithKey f . Gr.nodes
 
 
 makeStorageEquations ::
-  (Eq a, Fractional a, Idx.Record rec, Node.C node) =>
+  (Eq a, Fractional a, Record rec, Node.C node) =>
   TD.DirSequFlowGraph node -> EquationSystem rec node s a
 makeStorageEquations =
    mconcat . concatMap (LH.mapAdjacent f) . getInnersectionStorages
@@ -342,7 +359,7 @@ getStorages format =
 -----------------------------------------------------------------
 
 makeInterSectionEquations ::
-  (Eq a, Fractional a, Idx.Record rec, Node.C node) =>
+  (Eq a, Fractional a, Record rec, Node.C node) =>
   TD.DirSequFlowGraph node -> EquationSystem rec node s a
 makeInterSectionEquations = foldMap f . getIntersectionStorages
   where f (dir, x) =
@@ -358,7 +375,7 @@ _getNode :: Idx.SecNode a -> a
 _getNode (Idx.SecNode _ n) = n
 
 mkInStorageEquations ::
-  (Eq a, Fractional a, Idx.Record rec, Node.C node) =>
+  (Eq a, Fractional a, Record rec, Node.C node) =>
   ([Idx.SecNode node], Idx.SecNode node, [Idx.SecNode node]) ->
   EquationSystem rec node s a
 mkInStorageEquations (_, n, outs) =
@@ -380,7 +397,7 @@ mkInStorageEquations (_, n, outs) =
          in  mconcat $ LH.mapAdjacent f $ NonEmpty.flatten souts
 
 mkOutStorageEquations ::
-  (Eq a, Fractional a, Idx.Record rec, Node.C node) =>
+  (Eq a, Fractional a, Record rec, Node.C node) =>
   ([Idx.SecNode node], Idx.SecNode node, [Idx.SecNode node]) ->
   EquationSystem rec node s a
 mkOutStorageEquations (ins0, n, _) =
@@ -457,7 +474,7 @@ but you may also insert complex relations like
 
 
 solveSimple ::
-  (Eq a, Fractional a, Idx.Record rec, Node.C node) =>
+  (Eq a, Fractional a, Record rec, Node.C node) =>
   (forall s. EquationSystem rec node s a) ->
   Env.Env rec node (Result a)
 solveSimple sys = runST $ do
@@ -467,7 +484,7 @@ solveSimple sys = runST $ do
   traverse (fmap (maybe Undetermined Determined) . Sys.query) varmap
 
 solve ::
-  (Eq a, Fractional a, Idx.Record rec, Node.C node) =>
+  (Eq a, Fractional a, Record rec, Node.C node) =>
   (forall s. EquationSystem rec node s a) ->
   TD.SequFlowGraph node -> Env.Env rec node (Result a)
 solve given g =
@@ -478,7 +495,7 @@ solve given g =
 
 
 fromTopology' ::
-  (Eq a, Fractional a, Idx.Record rec, Node.C node) =>
+  (Eq a, Fractional a, Record rec, Node.C node) =>
   TD.DirSequFlowGraph node -> EquationSystem rec node s a
 fromTopology' g = mconcat $
   makeInnerSectionEquations' g :
@@ -486,7 +503,7 @@ fromTopology' g = mconcat $
   []
 
 makeInnerSectionEquations' ::
-  (Eq a, Fractional a, Idx.Record rec, Node.C node) =>
+  (Eq a, Fractional a, Record rec, Node.C node) =>
   TD.DirSequFlowGraph node -> EquationSystem rec node s a
 makeInnerSectionEquations' g = mconcat $
   makeEnergyEquations (map fst es) :
@@ -499,7 +516,7 @@ makeInnerSectionEquations' g = mconcat $
 
 
 makeNodeEquations' ::
-  (Eq a, Fractional a, Idx.Record rec, Node.C node) =>
+  (Eq a, Fractional a, Record rec, Node.C node) =>
   TD.DirSequFlowGraph node -> EquationSystem rec node s a
 makeNodeEquations' = fold . M.mapWithKey f . Gr.nodes
    where f n (ins, _, outs) =
@@ -519,7 +536,7 @@ makeNodeEquations' = fold . M.mapWithKey f . Gr.nodes
 
 
 solveFromMeasurement ::
-  (Eq a, Fractional a, Idx.Record rec, Node.C node) =>
+  (Eq a, Fractional a, Record rec, Node.C node) =>
   (forall s. EquationSystem rec node s a) ->
   TD.SequFlowGraph node -> Env.Env rec node (Result a)
 solveFromMeasurement given g =
@@ -538,7 +555,7 @@ solveFromMeasurement given g =
 -- (im Moment 273 und 274) auszukommentieren.
 
 conservativelySolve ::
-  (Eq a, Fractional a, Idx.Record rec, Node.C node) =>
+  (Eq a, Fractional a, Record rec, Node.C node) =>
   (forall s. EquationSystem rec node s a) ->
   TD.SequFlowGraph node -> Env.Env rec node (Result a)
 conservativelySolve given g =

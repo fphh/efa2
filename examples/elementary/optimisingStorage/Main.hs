@@ -2,40 +2,39 @@
 
 module Main where
 
-import Data.Monoid ((<>))
-
-import Control.Applicative
-
-
 import EFA.Example.Utility
-  ( edgeVar, interVar, makeEdges, constructSeqTopo, recAbs )
+  ( edgeVar, interVar, makeEdges, constructSeqTopo )
 
 import qualified EFA.Graph.Topology.Node as Node
 
 import qualified EFA.Graph.Draw as Draw
 
-import qualified EFA.Utility.Stream as Stream
-import EFA.Utility (checkedLookup)
-import EFA.Utility.Async
-
-import EFA.Utility.Stream (Stream((:~)))
-
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as TD
-import qualified EFA.Equation.System as EqGen
-import EFA.Equation.System ((=.=))
-import qualified EFA.Equation.Env as Env
-
-import qualified EFA.Equation.Result as R
-
-import qualified Data.List.Match as Match
-
 import qualified EFA.Graph as Gr
+
+import qualified EFA.Equation.System as EqGen
+import qualified EFA.Equation.Env as Env
+import qualified EFA.Equation.Result as R
+import EFA.Equation.System ((=.=))
+
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Plot as Plot
 import qualified EFA.Signal.Typ as T
 
-import Debug.Trace
+import qualified EFA.Utility.Stream as Stream
+import EFA.Utility (checkedLookup)
+import EFA.Utility.Async (concurrentlyMany_)
+
+import EFA.Utility.Stream (Stream((:~)))
+
+import qualified Data.List.Match as Match
+
+import Control.Applicative (liftA3)
+
+import Data.Monoid ((<>))
+
+
 
 
 sec0, sec1 :: Idx.Section
@@ -86,10 +85,10 @@ p13 sec = edgeVar EqGen.power sec N1 N3
 stoinit :: Expr s Double
 stoinit = EqGen.storage (Idx.SecNode Idx.initSection N3)
 
-ein, eout0, eout1 :: Idx.Energy Idx.Absolute Node
-ein = edgeVar (Idx.Energy recAbs) sec0 N0 N1
-eout0 = edgeVar (Idx.Energy recAbs) sec0 N2 N1
-eout1 = edgeVar (Idx.Energy recAbs) sec1 N2 N1
+ein, eout0, eout1 :: Idx.Energy Node
+ein = edgeVar Idx.Energy sec0 N0 N1
+eout0 = edgeVar Idx.Energy sec0 N2 N1
+eout1 = edgeVar Idx.Energy sec1 N2 N1
 
 e33 :: Expr s Double
 e33 = interVar EqGen.energy Idx.initSection sec1 N3
@@ -144,11 +143,11 @@ solve :: Double -> Double -> Double
 solve t n =
   let env = EqGen.solve (given t n) seqTopo
       emap = Env.energyMap env
-      f ei eo0 eo1 = (eo0 + eo1) / ei
       R.Determined res =
-        f <$> (checkedLookup emap ein)
-          <*> (checkedLookup emap eout0)
-          <*> (checkedLookup emap eout1)
+        liftA3 (\ei eo0 eo1 -> (eo0 + eo1) / ei)
+          (checkedLookup emap $ Idx.absolute ein)
+          (checkedLookup emap $ Idx.absolute eout0)
+          (checkedLookup emap $ Idx.absolute eout1)
   in res
 
 

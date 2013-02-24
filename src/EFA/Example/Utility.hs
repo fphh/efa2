@@ -9,7 +9,7 @@ import EFA.Graph.Topology.StateAnalysis (bruteForce)
 import qualified EFA.Equation.Env as Env
 import qualified EFA.Equation.System as EqGen
 import EFA.Equation.System ((=.=))
-import EFA.Equation.Variable (MkIdxC, MkVarC, mkVar)
+import EFA.Equation.Variable (MkIdxC, MkVarC, mkVarCore, mkIdx)
 import qualified EFA.Equation.Variable as Var
 import Data.Monoid ((<>))
 
@@ -45,25 +45,25 @@ constructSeqTopo topo =
   SequData
 
 
-recAbs :: Idx.Absolute
-recAbs = Idx.Absolute
-
+type Term term rec node = term (Idx.Record rec (Var.Index node))
 
 givenSymbol ::
-  (Eq (term (Var.Index rec node)), Ord (t rec node), MkVarC term, MkIdxC t,
-   Env.AccessMap t) =>
-  t rec node ->
-  EqGen.EquationSystem rec node s (term (Var.Index rec node))
+  (Eq (Term term rec node), MkVarC term,
+   Ord (t node), MkIdxC t, Env.AccessMap t,
+   EqGen.Record rec) =>
+  Idx.Record rec (t node) ->
+  EqGen.EquationSystem rec node s (Term term rec node)
 givenSymbol idx =
-   EqGen.getVar idx .= mkVar idx
+   EqGen.getVar idx .= mkVarCore (fmap mkIdx idx)
 
 infixr 6 =<>
 (=<>) ::
-  ( Eq (term (Var.Index rec node)), Ord (t rec node), Env.AccessMap t,
-    MkVarC term, MkIdxC t) =>
-  t rec node ->
-  EqGen.EquationSystem rec node s (term (Var.Index rec node)) ->
-  EqGen.EquationSystem rec node s (term (Var.Index rec node))
+  (Eq (Term term rec node), MkVarC term,
+   Ord (t node), MkIdxC t, Env.AccessMap t,
+   EqGen.Record rec) =>
+  Idx.Record rec (t node) ->
+  EqGen.EquationSystem rec node s (Term term rec node) ->
+  EqGen.EquationSystem rec node s (Term term rec node)
 idx =<> eqsys = givenSymbol idx <> eqsys
 
 

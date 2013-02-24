@@ -86,6 +86,7 @@ Library
     EFA.Graph.Topology.Node
     EFA.Graph.Topology.StateAnalysis
     EFA.Graph.Flow
+    EFA.Equation.Absolute
     EFA.Equation.System
     EFA.Equation.Result
     EFA.Equation.Env

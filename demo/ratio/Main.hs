@@ -13,7 +13,7 @@ import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
 import EFA.Utility (checkedLookup)
 import EFA.Graph (mkGraph)
-import EFA.Example.Utility ((.=), constructSeqTopo, edgeVar, makeEdges, recAbs)
+import EFA.Example.Utility ((.=), constructSeqTopo, edgeVar, makeEdges)
 
 import Data.Ratio ((%))
 
@@ -50,10 +50,10 @@ c :: Expr s a a
 c = edgeVar EqGen.power sec0 Source Sink
 
 n :: Expr s a a
-n = edgeVar EqGen.eta sec0 Source Sink
+n = EqGen.getVar eta
 
-eta :: Idx.Eta Idx.Absolute Node
-eta = edgeVar (Idx.Eta recAbs) sec0 Source Sink
+eta :: Idx.Record Idx.Absolute (Idx.Eta Node)
+eta = Idx.absolute $ edgeVar Idx.Eta sec0 Source Sink
 
 
 functionEta :: (Fractional a) => Expr s a a -> Expr s a a

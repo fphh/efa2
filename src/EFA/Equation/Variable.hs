@@ -9,21 +9,21 @@ import EFA.Report.Format (Format)
 import EFA.Report.FormatValue (FormatValue, formatValue)
 
 
-data Index rec a =
-     Energy (Idx.Energy rec a)
-   | MaxEnergy (Idx.MaxEnergy rec a)
-   | Power (Idx.Power rec a)
-   | Eta (Idx.Eta rec a)
-   | DTime (Idx.DTime rec a)
-   | X (Idx.X rec a)
-   | Y (Idx.Y rec a)
-   | Sum (Idx.Sum rec a)
-   | Store (Idx.Storage rec a)
+data Index a =
+     Energy (Idx.Energy a)
+   | MaxEnergy (Idx.MaxEnergy a)
+   | Power (Idx.Power a)
+   | Eta (Idx.Eta a)
+   | DTime (Idx.DTime a)
+   | X (Idx.X a)
+   | Y (Idx.Y a)
+   | Sum (Idx.Sum a)
+   | Store (Idx.Storage a)
      deriving (Show, Eq, Ord)
 
 
 class MkIdxC t where
-   mkIdx :: t rec a -> Index rec a
+   mkIdx :: t a -> Index a
    --mkIdx :: a n -> Index n
 
 
@@ -47,7 +47,7 @@ instance MkVarC OT.Term where
 instance MkVarC SP.Term where
          mkVarCore = SP.Atom
 
-mkVar :: (MkIdxC t, MkVarC term) => t rec a -> term (Index rec a)
+mkVar :: (MkIdxC t, MkVarC term) => t a -> term (Index a)
 mkVar = mkVarCore . mkIdx
 
 
@@ -65,50 +65,44 @@ formatEdgeIndex x y =
    `Format.connect`
    formatSectionNode y
 
-instance
-   (Node.C node, Format.Record rec) =>
-      FormatValue (Index rec node) where
+instance (Node.C node) => FormatValue (Index node) where
    formatValue =
       formatGen
-         (\e r x y ->
-            Format.record r $
+         (\e x y ->
             Format.subscript (Format.edgeIdent e) (formatEdgeIndex x y))
 
 
 formatShort ::
-   (Node.C node, Format.Record record, Format output) =>
-   Index record node -> output
+   (Node.C node, Format output) =>
+   Index node -> output
 formatShort =
    formatGen
-      (\e r _x _y -> Format.record r $ Format.edgeIdent e)
+      (\e _x _y -> Format.edgeIdent e)
 
 
 
 formatGen ::
-   (Format output, Format.Record record, Node.C node) =>
+   (Format output, Node.C node) =>
    (Format.EdgeVar ->
-    record -> Idx.SecNode node -> Idx.SecNode node -> output) ->
-   Index record node ->
+    Idx.SecNode node -> Idx.SecNode node -> output) ->
+   Index node ->
    output
 formatGen fmt idx =
    case idx of
-      Energy (Idx.Energy r x y) -> fmt Format.Energy r x y
-      MaxEnergy (Idx.MaxEnergy r x y) -> fmt Format.MaxEnergy r x y
-      Power (Idx.Power r x y) -> fmt Format.Power r x y
-      Eta (Idx.Eta r x y) -> fmt Format.Eta r x y
-      X (Idx.X r x y) -> fmt Format.X r x y
-      Y (Idx.Y r x y) -> fmt Format.Y r x y
-      DTime (Idx.DTime r s) ->
-         Format.record r $
+      Energy (Idx.Energy x y) -> fmt Format.Energy x y
+      MaxEnergy (Idx.MaxEnergy x y) -> fmt Format.MaxEnergy x y
+      Power (Idx.Power x y) -> fmt Format.Power x y
+      Eta (Idx.Eta x y) -> fmt Format.Eta x y
+      X (Idx.X x y) -> fmt Format.X x y
+      Y (Idx.Y x y) -> fmt Format.Y x y
+      DTime (Idx.DTime s) ->
          Format.subscript (Format.delta Format.time) $
          Format.section s
 
-      Sum (Idx.Sum r dir x) ->
-         Format.record r $
+      Sum (Idx.Sum dir x) ->
          Format.subscript Format.var $
          Format.direction dir `Format.connect` formatSectionNode x
 
-      Store (Idx.Storage r x) ->
-         Format.record r $
+      Store (Idx.Storage x) ->
          Format.subscript Format.storage $
          formatSectionNode x

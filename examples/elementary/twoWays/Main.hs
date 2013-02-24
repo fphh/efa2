@@ -18,7 +18,7 @@ import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
 import EFA.Utility (checkedLookup)
 
-import EFA.Example.Utility (makeEdges, constructSeqTopo, edgeVar, (.=), recAbs)
+import EFA.Example.Utility (makeEdges, constructSeqTopo, edgeVar, (.=))
 import EFA.Graph (mkGraph)
 
 import qualified EFA.Report.Format as Format
@@ -108,9 +108,9 @@ enRange :: [Double]
 enRange = 0.01:[1..12]
 
 
-eout, ein :: Idx.Energy Idx.Absolute Node
-eout = edgeVar (Idx.Energy recAbs) sec0 Sink c2
-ein  = edgeVar (Idx.Energy recAbs) sec0 Source c0
+eout, ein :: Idx.Record Idx.Absolute (Idx.Energy Node)
+eout = Idx.absolute $ edgeVar Idx.Energy sec0 Sink c2
+ein  = Idx.absolute $ edgeVar Idx.Energy sec0 Source c0
 
 
 solve :: Double -> Double -> String

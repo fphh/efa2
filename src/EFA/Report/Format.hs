@@ -249,7 +249,7 @@ instance Format Latex where
    power (Latex x) n = Latex $ x ++ "^{" ++ show n ++ "}"
 
 
-class Idx.Record record => Record record where
+class Record record where
    record :: Format output => record -> output -> output
 
 instance Record Idx.Absolute where

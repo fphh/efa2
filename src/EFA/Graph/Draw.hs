@@ -298,7 +298,7 @@ formatNodeStorage rec st (n@(Idx.SecNode _sec nid), ty) =
       case ty of
          Storage ->
             [Format.words
-               [lookupFormat st $ Idx.Storage rec n]]
+               [lookupFormat rec st $ Idx.Storage n]]
          _ -> []
 
 
@@ -316,24 +316,27 @@ data Env node output =
    }
 
 lookupFormat ::
-   (Ord (idx rec node), MkIdxC idx,
+   (Ord (idx node), MkIdxC idx, Ord rec,
     FormatValue a, Format.Record rec, Format output, Node.C node) =>
-   M.Map (idx rec node) a -> idx rec node -> output
-lookupFormat mp k =
+   rec -> M.Map (Idx.Record rec (idx node)) a -> idx node -> output
+lookupFormat rec mp k =
    maybe (error $ "could not find index " ++
-             (Format.unUnicode $ formatValue $ mkIdx k)) formatValue $
-   M.lookup k mp
+             (Format.unUnicode $ formatValue $ Idx.Record rec $ mkIdx k)) formatValue $
+   M.lookup (Idx.Record rec k) mp
 
 lookupFormatAssign ::
-   (Ord (idx rec node), MkIdxC idx,
+   (Ord (idx node), MkIdxC idx, Ord rec,
     FormatValue a, Format.Record rec, Format output, Node.C node) =>
-   M.Map (idx rec node) a ->
-   (Idx.SecNode node -> Idx.SecNode node -> idx rec node) ->
+   rec ->
+   M.Map (Idx.Record rec (idx node)) a ->
+   (Idx.SecNode node -> Idx.SecNode node -> idx node) ->
    (Idx.SecNode node -> Idx.SecNode node -> output)
-lookupFormatAssign mp makeIdx x y =
+lookupFormatAssign rec mp makeIdx x y =
    case makeIdx x y of
       idx ->
-         Format.assign (Var.formatShort $ mkIdx idx) (lookupFormat mp idx)
+         Format.assign
+            (Format.record rec $ Var.formatShort $ mkIdx idx)
+            (lookupFormat rec mp idx)
 
 sequFlowGraphWithEnv ::
   (Node.C node) =>
@@ -372,12 +375,12 @@ envAbs ::
    Interp.Env Idx.Absolute node a -> Env node output
 envAbs (Interp.Env e me _p n dt x y _s st) =
    Env
-      (lookupFormatAssign e (Idx.Energy Idx.Absolute))
-      (lookupFormatAssign me (Idx.MaxEnergy Idx.Absolute))
-      (lookupFormatAssign x (Idx.X Idx.Absolute))
-      (lookupFormatAssign y (Idx.Y Idx.Absolute))
-      (lookupFormatAssign n (Idx.Eta Idx.Absolute))
-      (lookupFormat dt . Idx.DTime Idx.Absolute)
+      (lookupFormatAssign Idx.Absolute e Idx.Energy)
+      (lookupFormatAssign Idx.Absolute me Idx.MaxEnergy)
+      (lookupFormatAssign Idx.Absolute x Idx.X)
+      (lookupFormatAssign Idx.Absolute y Idx.Y)
+      (lookupFormatAssign Idx.Absolute n Idx.Eta)
+      (lookupFormat Idx.Absolute dt . Idx.DTime)
       (formatNodeStorage Idx.Absolute st)
 
 envDelta ::
@@ -385,10 +388,10 @@ envDelta ::
    Interp.Env Idx.Delta node a -> Env node output
 envDelta (Interp.Env e me _p n dt x y _s st) =
    Env
-      (lookupFormatAssign e (Idx.Energy Idx.Delta))
-      (lookupFormatAssign me (Idx.MaxEnergy Idx.Delta))
-      (lookupFormatAssign x (Idx.X Idx.Delta))
-      (lookupFormatAssign y (Idx.Y Idx.Delta))
-      (lookupFormatAssign n (Idx.Eta Idx.Delta))
-      (lookupFormat dt . Idx.DTime Idx.Delta)
+      (lookupFormatAssign Idx.Delta e Idx.Energy)
+      (lookupFormatAssign Idx.Delta me Idx.MaxEnergy)
+      (lookupFormatAssign Idx.Delta x Idx.X)
+      (lookupFormatAssign Idx.Delta y Idx.Y)
+      (lookupFormatAssign Idx.Delta n Idx.Eta)
+      (lookupFormat Idx.Delta dt . Idx.DTime)
       (formatNodeStorage Idx.Delta st)

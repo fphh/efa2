@@ -12,15 +12,15 @@ import Data.Monoid (Monoid, mempty, mappend)
 
 
 -- Environments
-type EnergyMap rec node a = M.Map (Idx.Energy rec node) a
-type MaxEnergyMap rec node a = M.Map (Idx.MaxEnergy rec node) a
-type PowerMap rec node a = M.Map (Idx.Power rec node) a
-type EtaMap rec node a = M.Map (Idx.Eta rec node) a
-type DTimeMap rec node a = M.Map (Idx.DTime rec node) a
-type XMap rec node a = M.Map (Idx.X rec node) a
-type YMap rec node a = M.Map (Idx.Y rec node) a
-type SumMap rec node a = M.Map (Idx.Sum rec node) a
-type StorageMap rec node a = M.Map (Idx.Storage rec node) a
+type EnergyMap rec node a = M.Map (Idx.Record rec (Idx.Energy node)) a
+type MaxEnergyMap rec node a = M.Map (Idx.Record rec (Idx.MaxEnergy node)) a
+type PowerMap rec node a = M.Map (Idx.Record rec (Idx.Power node)) a
+type EtaMap rec node a = M.Map (Idx.Record rec (Idx.Eta node)) a
+type DTimeMap rec node a = M.Map (Idx.Record rec (Idx.DTime node)) a
+type XMap rec node a = M.Map (Idx.Record rec (Idx.X node)) a
+type YMap rec node a = M.Map (Idx.Record rec (Idx.Y node)) a
+type SumMap rec node a = M.Map (Idx.Record rec (Idx.Sum node)) a
+type StorageMap rec node a = M.Map (Idx.Record rec (Idx.Storage node)) a
 
 
 data Env rec node a =
@@ -45,7 +45,7 @@ data Env rec node a =
 
 
 class AccessMap idx where
-   accessMap :: Accessor.T (Env rec node a) (M.Map (idx rec node) a)
+   accessMap :: Accessor.T (Env rec node a) (M.Map (Idx.Record rec (idx node)) a)
 
 instance AccessMap Idx.Energy where
    accessMap =
