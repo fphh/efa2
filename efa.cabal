@@ -222,7 +222,7 @@ Executable example-readandcut
 
 
 Executable demo-signalcalc
-  Main-Is: demo/Signal/Demo_SignalCalc.hs
+  Main-Is: demo/Signal/Main.hs
   GHC-Options: -Wall
   If flag(buildDemos)
     Build-Depends:
@@ -347,7 +347,7 @@ Executable demo-ratio
     Buildable: False
 
 Executable demo-pretty
-  Main-Is: demo/pretty/Demo_Report.hs
+  Main-Is: demo/pretty/Main.hs
   GHC-Options: -Wall
   If flag(buildExamples)
     Build-Depends:
