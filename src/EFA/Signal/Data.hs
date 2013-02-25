@@ -236,6 +236,16 @@ instance ZipWith c => SV.Zipper (Data c) where
    zipWith f x y =
       writeData (zipWith f `readData` x `readData` y)
 
+zip ::
+   (ZipWith c, Storage c d1, Storage c d2, Storage c (d1, d2)) =>
+   Data c d1 -> Data c d2 -> Data c (d1,d2)
+zip = zipWith (,)
+
+unzip ::
+   (Map c, Storage c a, Storage c b, Storage c (a, b)) =>
+   Data c (a, b) -> (Data c a, Data c b)
+unzip x = (map P.fst x, map P.snd x)
+
 
 {- |
 When the structure of @xs@ and @ys@ matches,
@@ -608,17 +618,15 @@ singleton (Data x) = Data $ SV.singleton x
 -- Sort
 
 sort ::
-   (Ord d, SV.Sort v1, SV.Storage v1 d) =>
-   Data (v1 :> Nil) d -> Data (v1 :> Nil) d
+   (Ord d, SV.Sort v, SV.Storage v d) =>
+   Data (v :> Nil) d -> Data (v :> Nil) d
 sort (Data x) = Data $ SV.sort x
 
 sortBy ::
-   (Ord d, 
-    SV.SortBy v1, 
-    SV.Storage v1 d) =>
+   (SV.SortBy v, SV.Storage v d) =>
    (d -> d -> P.Ordering) ->
-   Data (v1 :> Nil) d -> 
-   Data (v1 :> Nil) d
+   Data (v :> Nil) d ->
+   Data (v :> Nil) d
 sortBy f (Data x) = Data $ SV.sortBy f x
 
 ----------------------------------------------------------

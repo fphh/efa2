@@ -355,20 +355,20 @@ instance Sort V.Vector where
 
 instance Sort UV.Vector where
    sort = readUnbox (UV.fromList . L.sort . UV.toList)
-   
+
 
 class SortBy vec where
-   sortBy :: (Ord d, Storage vec d) => (d -> d -> Ordering) -> vec d -> vec d
+   sortBy :: (Storage vec d) => (d -> d -> Ordering) -> vec d -> vec d
 
 instance SortBy [] where
-   sortBy f = L.sortBy f 
+   sortBy f = L.sortBy f
 
 instance SortBy V.Vector where
    sortBy f = V.fromList . (L.sortBy f) . V.toList
 
 instance SortBy UV.Vector where
    sortBy f = readUnbox (UV.fromList . (L.sortBy f) . UV.toList)
-   
+
 
 class Filter vec where
    filter :: Storage vec d => (d -> Bool) -> vec d -> vec d
