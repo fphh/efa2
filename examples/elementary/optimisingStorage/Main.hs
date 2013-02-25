@@ -16,18 +16,15 @@ import qualified EFA.Equation.Result as R
 import EFA.Equation.Env (Env)
 import EFA.Equation.System ((=.=))
 
+import qualified EFA.Signal.Plot as Plot
 import qualified EFA.Signal.Signal as S
 -- import qualified EFA.Signal.Data as D
 
 import EFA.Signal.Signal(UTFSig, FSamp, Test2, PFSamp, (.+), (.-),(./),(.*))
+import EFA.Signal.Typ (A, P, Tt, F, N, X, Typ, T, UT,Y)
 import EFA.Signal.Base(Val)
 
 import qualified EFA.Report.Report as Rep
-
-
-import qualified EFA.Signal.Plot as Plot
-
-import EFA.Signal.Typ (A, P, Tt, F, N, X, Typ, T, UT,Y)
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility (checkedLookup)
@@ -35,6 +32,9 @@ import EFA.Utility.Async (concurrentlyMany_)
 
 import EFA.Utility.Stream (Stream((:~)))
 
+import qualified Data.Vector.Unboxed as UV
+
+import qualified Data.Accessor.Basic as Accessor
 import qualified Data.List.Match as Match
 
 import Data.Monoid ((<>))
@@ -161,23 +161,27 @@ unpackResult (R.Determined x) = x
 unpackResult (R.Undetermined) = error("No Result")
 
 
--- | Checked Lookup Functions
+-- | Checked Lookup
+getVar ::
+   (Ord (idx Node), Show (idx Node), Env.AccessMap idx,
+    Show a, UV.Unbox a) =>
+   [[Env Node (Env.Absolute (R.Result a))]] ->
+   idx Node -> Test2 (Typ A u Tt) a
+getVar varEnvs idx =
+   S.changeSignalType $ S.fromList2 $
+   map (map (unpackResult . Env.unAbsolute .
+             flip checkedLookup idx . Accessor.get Env.accessMap)) $
+   varEnvs
+
+
 getVarEnergy :: [[Env Node (Env.Absolute (R.Result Val))]] -> Idx.Energy Node -> Test2 (Typ A F Tt) Val
-getVarEnergy varEnvs idx = S.changeSignalType $ S.fromList2 $ map (map f ) varEnvs
-  where f ::  Env Node (Env.Absolute (R.Result Val)) -> Val
-        f envs = unpackResult $ Env.unAbsolute $ checkedLookup (Env.energyMap envs) idx
+getVarEnergy = getVar
 
--- | Checked Lookup Functions
 getVarPower :: [[Env Node (Env.Absolute (R.Result Val))]] -> Idx.Power Node -> Test2 (Typ A P Tt) Val
-getVarPower varEnvs idx = S.changeSignalType $ S.fromList2 $ map (map f ) varEnvs
-  where f ::  Env Node (Env.Absolute (R.Result Val)) -> Val
-        f envs = unpackResult $ Env.unAbsolute $ checkedLookup (Env.powerMap envs) idx
+getVarPower = getVar
 
--- | Checked Lookup Functions
 getVarEta :: [[Env Node (Env.Absolute (R.Result Val))]] -> Idx.Eta Node -> Test2 (Typ A N Tt) Val
-getVarEta varEnvs idx = S.changeSignalType $ S.fromList2 $ map (map f ) varEnvs
-  where f ::  Env Node (Env.Absolute (R.Result Val)) -> Val
-        f envs = unpackResult $ Env.unAbsolute $ checkedLookup (Env.etaMap envs) idx
+getVarEta = getVar
 
 -- ##############################
 -- | Setting come here
