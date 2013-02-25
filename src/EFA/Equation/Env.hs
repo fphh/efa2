@@ -1,97 +1,101 @@
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FunctionalDependencies #-}
 module EFA.Equation.Env where
 
 import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Graph.Topology.Node as Node
+import qualified EFA.Equation.Variable as Var
 
 import qualified Data.Map as M
 
 import qualified Data.Accessor.Basic as Accessor
-import Control.Applicative (Applicative, pure, (<*>))
+import Control.Applicative (Applicative, pure, (<*>), liftA3)
 import Data.Traversable (Traversable, sequenceA, foldMapDefault)
 import Data.Foldable (Foldable, foldMap)
+import Data.Monoid (Monoid, mempty, mappend)
+
+import qualified EFA.Report.Format as Format
+import EFA.Report.Format (Format)
+import EFA.Report.FormatValue (FormatValue, formatValue)
 
 
 -- Environments
 type EnergyMap node a = M.Map (Idx.Energy node) a
-type DEnergyMap node a = M.Map (Idx.DEnergy node) a
-
 type MaxEnergyMap node a = M.Map (Idx.MaxEnergy node) a
-type DMaxEnergyMap node a = M.Map (Idx.DMaxEnergy node) a
-
 type PowerMap node a = M.Map (Idx.Power node) a
-type DPowerMap node a = M.Map (Idx.DPower node) a
-
 type EtaMap node a = M.Map (Idx.Eta node) a
-type DEtaMap node a = M.Map (Idx.DEta node) a
-
 type DTimeMap node a = M.Map (Idx.DTime node) a
-
 type XMap node a = M.Map (Idx.X node) a
-type DXMap node a = M.Map (Idx.DX node) a
-
 type YMap node a = M.Map (Idx.Y node) a
-type DYMap node a = M.Map (Idx.DY node) a
-
-type VarMap node a = M.Map (Idx.Var node) a
-
+type SumMap node a = M.Map (Idx.Sum node) a
 type StorageMap node a = M.Map (Idx.Storage node) a
 
 
+data Env node a =
+   Env {
+      energyMap :: EnergyMap node a,
+      maxenergyMap :: MaxEnergyMap node a,
 
-data Env node rec a =
-               Env { recordNumber :: rec,
-                     energyMap :: EnergyMap node a,
-                     denergyMap :: DEnergyMap node a,
-                     maxenergyMap :: MaxEnergyMap node a,
-                     dmaxenergyMap :: DMaxEnergyMap node a,
+      powerMap :: PowerMap node a,
+      etaMap :: EtaMap node a,
+      dtimeMap :: DTimeMap node a,
+      xMap :: XMap node a,
+      yMap :: YMap node a,
+      sumMap :: SumMap node a,
+      {-
+      If 'a' is a signal type,
+      then storages must still be scalar values.
+      Maybe we should move the storageMap to another data type
+      in order to maintain the Functor instances.
+      -}
+      storageMap :: StorageMap node a
+   } deriving (Show)
 
-                     powerMap :: PowerMap node a,
-                     dpowerMap :: DPowerMap node a,
-                     etaMap :: EtaMap node a,
-                     detaMap :: DEtaMap node a,
-                     dtimeMap :: DTimeMap node a,
-                     xMap :: XMap node a,
-                     dxMap :: DXMap node a,
-                     yMap :: YMap node a,
-                     dyMap :: DYMap node a,
-                     varMap :: VarMap node a,
-                     storageMap :: StorageMap node a } deriving (Show)
+
+formatAssign ::
+   (Var.MkIdxC idx, Node.C node, FormatValue a, Format output) =>
+   idx node -> a -> output
+formatAssign lhs rhs =
+   Format.assign (formatValue $ Var.mkIdx lhs) (formatValue rhs)
+
+formatMap ::
+   (Var.MkIdxC idx, Node.C node, FormatValue a, Format output) =>
+   M.Map (idx node) a -> [output]
+formatMap =
+   map (uncurry formatAssign) . M.toList
+
+instance (Node.C node, FormatValue a) => FormatValue (Env node a) where
+   formatValue (Env e me p n dt x y s st) =
+      Format.lines $
+         formatMap e ++
+         formatMap me ++
+         formatMap p ++
+         formatMap n ++
+         formatMap dt ++
+         formatMap x ++
+         formatMap y ++
+         formatMap s ++
+         formatMap st
 
 
 class AccessMap idx where
-   accessMap :: Accessor.T (Env node rec a) (M.Map (idx node) a)
+   accessMap :: Accessor.T (Env node a) (M.Map (idx node) a)
 
 instance AccessMap Idx.Energy where
    accessMap =
       Accessor.fromSetGet (\x c -> c{energyMap = x}) energyMap
 
-
-instance AccessMap Idx.DEnergy where
-   accessMap =
-      Accessor.fromSetGet (\x c -> c{denergyMap = x}) denergyMap
-
 instance AccessMap Idx.MaxEnergy where
    accessMap =
       Accessor.fromSetGet (\x c -> c{maxenergyMap = x}) maxenergyMap
-
-instance AccessMap Idx.DMaxEnergy where
-   accessMap =
-      Accessor.fromSetGet (\x c -> c{dmaxenergyMap = x}) dmaxenergyMap
 
 instance AccessMap Idx.Power where
    accessMap =
       Accessor.fromSetGet (\x c -> c{powerMap = x}) powerMap
 
-instance AccessMap Idx.DPower where
-   accessMap =
-      Accessor.fromSetGet (\x c -> c{dpowerMap = x}) dpowerMap
-
 instance AccessMap Idx.Eta where
    accessMap =
       Accessor.fromSetGet (\x c -> c{etaMap = x}) etaMap
-
-instance AccessMap Idx.DEta where
-   accessMap =
-      Accessor.fromSetGet (\x c -> c{detaMap = x}) detaMap
 
 instance AccessMap Idx.DTime where
    accessMap =
@@ -101,37 +105,29 @@ instance AccessMap Idx.X where
    accessMap =
       Accessor.fromSetGet (\x c -> c{xMap = x}) xMap
 
-instance AccessMap Idx.DX where
-   accessMap =
-      Accessor.fromSetGet (\x c -> c{dxMap = x}) dxMap
-
 instance AccessMap Idx.Y where
    accessMap =
       Accessor.fromSetGet (\x c -> c{yMap = x}) yMap
 
-instance AccessMap Idx.DY where
+instance AccessMap Idx.Sum where
    accessMap =
-      Accessor.fromSetGet (\x c -> c{dyMap = x}) dyMap
-
-instance AccessMap Idx.Var where
-   accessMap =
-      Accessor.fromSetGet (\x c -> c{varMap = x}) varMap
+      Accessor.fromSetGet (\x c -> c{sumMap = x}) sumMap
 
 instance AccessMap Idx.Storage where
    accessMap =
       Accessor.fromSetGet (\x c -> c{storageMap = x}) storageMap
 
 
-instance Functor (Env node rec) where
-         fmap f (Env rec e de me dme p dp n dn dt x dx y dy v st) =
-           Env rec (fmap f e) (fmap f de) (fmap f me) (fmap f dme) (fmap f p) (fmap f dp) (fmap f n) (fmap f dn) (fmap f dt) (fmap f x) (fmap f dx) (fmap f y) (fmap f dy) (fmap f v) (fmap f st)
+instance Functor (Env node) where
+   fmap f (Env e me p n dt x y s st) =
+      Env (fmap f e) (fmap f me) (fmap f p) (fmap f n) (fmap f dt) (fmap f x) (fmap f y) (fmap f s) (fmap f st)
 
-instance Foldable (Env node rec) where
+instance Foldable (Env node) where
    foldMap = foldMapDefault
 
-instance Traversable (Env node rec) where
-   sequenceA (Env rec e de me dme p dp n dn dt x dx y dy v st) =
-      pure (Env rec) <?> e <?> de <?> me <?> dme <?> p <?> dp <?> n <?> dn <?> dt <?> x <?> dx <?> y <?> dy <?> v <?> st
+instance Traversable (Env node) where
+   sequenceA (Env e me p n dt x y s st) =
+      pure Env <?> e <?> me <?> p <?> n <?> dt <?> x <?> y <?> s <?> st
 
 infixl 4 <?>
 (<?>) ::
@@ -140,30 +136,78 @@ infixl 4 <?>
 f <?> x = f <*> sequenceA x
 
 
-empty :: rec -> Env node rec a
-empty rec = Env rec M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty
+
+instance (Ord node) => Monoid (Env node a) where
+   mempty = Env M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty
+   mappend
+         (Env e me p n dt x y s st)
+         (Env e' me' p' n' dt' x' y' s' st') =
+      Env
+         (M.union e e') (M.union me me')
+         (M.union p p') (M.union n n')
+         (M.union dt dt') (M.union x x') (M.union y y')
+         (M.union s s') (M.union st st')
 
 
-union :: (Ord node) => Env node rec a -> Env node rec a -> Env node rec a
-union (Env rec e de me dme p dp n dn dt x dx y dy v st)
-         (Env _ e' de' me' dme' p' dp' n' dn' dt' x' dx' y' dy' v' st') =
-  (Env rec (M.union e e') (M.union de de') (M.union me me') (M.union dme dme')
-           (M.union p p') (M.union dp dp') (M.union n n')   (M.union dn dn')
-           (M.union dt dt') (M.union x x') (M.union dx dx') (M.union y y')
-           (M.union dy dy') (M.union v v') (M.union st st'))
+newtype Absolute a = Absolute {unAbsolute :: a} deriving (Show)
 
-data NoRecord = NoRecord deriving (Eq, Ord, Show)
-newtype SingleRecord = SingleRecord {fromSingleRecord :: Idx.Record} deriving (Eq, Ord, Show)
-newtype MixedRecord = MixedRecord {fromMixedRecord :: [Idx.Record]} deriving (Eq, Ord, Show)
+instance Functor Absolute where
+   fmap f (Absolute a) = Absolute $ f a
+
+instance Applicative Absolute where
+   pure a = Absolute a
+   Absolute f <*> Absolute a = Absolute $ f a
+
+instance Foldable Absolute where
+   foldMap = foldMapDefault
+
+instance Traversable Absolute where
+   sequenceA (Absolute a) = fmap Absolute a
 
 
-class RecordNumber rec where
-   uniteRecordNumbers :: [rec] -> MixedRecord
+data Delta a = Delta {delta, before, after :: a} deriving (Show)
 
-instance RecordNumber SingleRecord where
-   uniteRecordNumbers =
-      MixedRecord . map fromSingleRecord
+deltaConst :: Num a => a -> Delta a
+deltaConst x = Delta {before = x, after = x, delta = 0}
 
-instance RecordNumber MixedRecord where
-   uniteRecordNumbers =
-      MixedRecord . concatMap fromMixedRecord
+deltaCons :: Num a => a -> a -> Delta a
+deltaCons b a = Delta {before = b, after = a, delta = a-b}
+
+instance FormatValue a => FormatValue (Delta a) where
+   formatValue rec =
+      Format.list $
+         Format.assign (Format.literal "delta")  (formatValue $ delta rec) :
+         Format.assign (Format.literal "before") (formatValue $ before rec) :
+         Format.assign (Format.literal "after")  (formatValue $ after rec) :
+         []
+
+instance Functor Delta where
+   fmap f (Delta d b a) = Delta (f d) (f b) (f a)
+
+instance Applicative Delta where
+   pure a = Delta a a a
+   Delta fd fb fa <*> Delta d b a = Delta (fd d) (fb b) (fa a)
+
+instance Foldable Delta where
+   foldMap = foldMapDefault
+
+instance Traversable Delta where
+   sequenceA (Delta d b a) = liftA3 Delta d b a
+
+
+class Ord idx => Record idx rec | idx -> rec, rec -> idx where
+   recordIndices :: rec idx
+   accessRecord :: idx -> Accessor.T (rec a) a
+
+instance Record Idx.Absolute Absolute where
+   recordIndices = Absolute Idx.Absolute
+   accessRecord Idx.Absolute = Accessor.fromWrapper Absolute unAbsolute
+
+instance Record Idx.Delta Delta where
+   recordIndices =
+      Delta {delta = Idx.Delta, before = Idx.Before, after = Idx.After}
+   accessRecord idx =
+      case idx of
+         Idx.Delta  -> Accessor.fromSetGet (\a d -> d{delta  = a}) delta
+         Idx.Before -> Accessor.fromSetGet (\a d -> d{before = a}) before
+         Idx.After  -> Accessor.fromSetGet (\a d -> d{after  = a}) after

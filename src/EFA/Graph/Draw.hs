@@ -13,8 +13,9 @@ import EFA.Report.FormatValue (FormatValue, formatValue)
 import EFA.Report.Format (Format, Unicode(Unicode, unUnicode))
 
 import qualified EFA.Equation.Env as Interp
+import qualified EFA.Equation.Variable as Var
 import EFA.Equation.Variable (MkIdxC, mkIdx)
-import EFA.Equation.Env (StorageMap, SingleRecord(SingleRecord))
+import EFA.Equation.Env (StorageMap)
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
@@ -49,6 +50,8 @@ import Data.GraphViz (
           graphID)
 import Data.GraphViz.Attributes.Complete as Viz
 
+import qualified Data.Accessor.Basic as Accessor
+
 import Data.Tuple.HT (mapFst)
 import Data.Maybe.HT (toMaybe)
 
@@ -74,11 +77,11 @@ intersectionEdgeColour = Color [RGB 200 0 0]
 dotFromSequFlowGraph ::
   (Node.C node) =>
   SequFlowGraph node ->
-  Maybe (Unicode, Idx.Section -> Unicode) ->
+  Maybe (Idx.Section -> Unicode) ->
   (Topo.LNode node -> Unicode) ->
   (Topo.LEdge node -> [Unicode]) ->
   DotGraph T.Text
-dotFromSequFlowGraph g recTShow nshow eshow =
+dotFromSequFlowGraph g mtshow nshow eshow =
   DotGraph { strictGraph = False,
              directedGraph = True,
              graphID = Just (Int 1),
@@ -105,10 +108,9 @@ dotFromSequFlowGraph g recTShow nshow eshow =
                (map (dotFromSecEdge eshow) es)
           where str =
                    show sl ++ " / " ++
-                   case recTShow of
-                      Nothing -> "NoRecord"
-                      Just (Unicode n, timef) ->
-                         n ++ " / Time " ++ unUnicode (timef sl)
+                   case mtshow of
+                      Nothing -> ""
+                      Just tshow -> "Time " ++ unUnicode (tshow sl)
         stmts =
           DotStmts {
             attrStmts = [],
@@ -143,7 +145,7 @@ dotFromSecEdge ::
 dotFromSecEdge eshow e =
    DotEdge
       (dotIdentFromSecNode x) (dotIdentFromSecNode y)
-      [displabel, Viz.Dir dir, colour]
+      [displabel, Viz.Dir dir, colour, constraint]
   where (Edge x y, dir, order) = orientEdge e
         displabel =
            Label $ StrLabel $ T.pack $
@@ -152,7 +154,12 @@ dotFromSecEdge eshow e =
            case Topo.getEdgeType e of
               IntersectionEdge -> intersectionEdgeColour
               OriginalEdge -> originalEdgeColour
-        --colour = originalEdgeColour
+        constraint =
+           Constraint $
+           case Topo.getEdgeType e of
+              IntersectionEdge -> False
+              OriginalEdge -> True
+
 
 dotIdentFromSecNode :: (Node.C node) => Idx.SecNode node -> T.Text
 dotIdentFromSecNode (Idx.SecNode (Idx.Section s) n) =
@@ -165,7 +172,7 @@ dotIdentFromNode n = T.pack $ Node.dotId n
 printGraph, printGraphX, _printGraphDot ::
   (Node.C node) =>
    SequFlowGraph node ->
-   Maybe (Unicode, Idx.Section -> Unicode) ->
+   Maybe (Idx.Section -> Unicode) ->
    (Topo.LNode node -> Unicode) ->
    (Topo.LEdge node -> [Unicode]) ->
    IO ()
@@ -289,8 +296,8 @@ formatNodeType :: Format output => NodeType -> output
 formatNodeType = Format.literal . showType
 
 formatNodeStorage ::
-   (FormatValue a, Format output, Node.C node) =>
-   Idx.Record -> StorageMap node a -> Topo.LNode node -> output
+   (Interp.Record recIdx rec, FormatValue a, Format output, Node.C node) =>
+   recIdx -> StorageMap node (rec a) -> Topo.LNode node -> output
 formatNodeStorage rec st (n@(Idx.SecNode _sec nid), ty) =
    Format.lines $
    Node.display nid :
@@ -298,7 +305,7 @@ formatNodeStorage rec st (n@(Idx.SecNode _sec nid), ty) =
       case ty of
          Storage ->
             [Format.words
-               [lookupFormat st $ Idx.Storage rec n]]
+               [lookupFormat rec st $ Idx.Storage n]]
          _ -> []
 
 
@@ -308,7 +315,6 @@ It shall not contain values needed for computations.
 -}
 data Env node output =
    Env {
-      recordNumber :: output,
       formatEnergy, formatMaxEnergy,
       formatX, formatY,
       formatEta    :: Idx.SecNode node -> Idx.SecNode node -> output,
@@ -317,28 +323,35 @@ data Env node output =
    }
 
 lookupFormat ::
-   (Ord (idx node), MkIdxC idx, FormatValue a, Format output, Node.C node) =>
-   M.Map (idx node) a -> idx node -> output
-lookupFormat mp k =
-   maybe (error $ "could not find index " ++
-             (Format.unUnicode $ formatValue $ mkIdx k)) formatValue $
+   (Ord (idx node), MkIdxC idx, Interp.Record recIdx rec,
+    FormatValue a, Format output, Node.C node) =>
+   recIdx -> M.Map (idx node) (rec a) -> idx node -> output
+lookupFormat recIdx mp k =
+   maybe
+      (error $ "could not find index " ++
+         (Format.unUnicode $ formatValue $ mkIdx k))
+      (formatValue . Accessor.get (Interp.accessRecord recIdx)) $
    M.lookup k mp
 
 lookupFormatAssign ::
-   (Ord (idx node), MkIdxC idx, FormatValue a, Format output, Node.C node) =>
-   M.Map (idx node) a ->
+   (Ord (idx node), MkIdxC idx, Format.Record recIdx, Interp.Record recIdx rec,
+    FormatValue a, Format output, Node.C node) =>
+   recIdx ->
+   M.Map (idx node) (rec a) ->
    (Idx.SecNode node -> Idx.SecNode node -> idx node) ->
    (Idx.SecNode node -> Idx.SecNode node -> output)
-lookupFormatAssign mp makeIdx x y =
+lookupFormatAssign rec mp makeIdx x y =
    case makeIdx x y of
       idx ->
-         Format.assign (formatValue $ mkIdx idx) (lookupFormat mp idx)
+         Format.assign
+            (Format.record rec $ Var.formatShort $ mkIdx idx)
+            (lookupFormat rec mp idx)
 
 sequFlowGraphWithEnv ::
   (Node.C node) =>
   SequFlowGraph node -> Env node Unicode -> IO ()
 sequFlowGraphWithEnv g env =
-   printGraph g (Just (recordNumber env, formatTime env)) (formatNode env) eshow
+   printGraph g (Just (formatTime env)) (formatNode env) eshow
   where eshow e@((Edge uid vid), _l) =
            (case Topo.getEdgeType e of
               OriginalEdge -> []
@@ -357,39 +370,36 @@ sequFlowGraphWithEnv g env =
 
 sequFlowGraphAbsWithEnv ::
   (FormatValue a, Node.C node) =>
-  SequFlowGraph node -> Interp.Env node SingleRecord a -> IO ()
+  SequFlowGraph node -> Interp.Env node (Interp.Absolute a) -> IO ()
 sequFlowGraphAbsWithEnv topo = sequFlowGraphWithEnv topo . envAbs
 
 sequFlowGraphDeltaWithEnv ::
   (FormatValue a, Node.C node) =>
-  SequFlowGraph node -> Interp.Env node SingleRecord a -> IO ()
+  SequFlowGraph node -> Interp.Env node (Interp.Delta a) -> IO ()
 sequFlowGraphDeltaWithEnv topo = sequFlowGraphWithEnv topo . envDelta
 
 
+envGen ::
+   (FormatValue a, Format output, Format.Record idx,
+    Interp.Record idx rec, Node.C node) =>
+   idx ->
+   Interp.Env node (rec a) -> Env node output
+envGen rec (Interp.Env e me _p n dt x y _s st) =
+   Env
+      (lookupFormatAssign rec e Idx.Energy)
+      (lookupFormatAssign rec me Idx.MaxEnergy)
+      (lookupFormatAssign rec x Idx.X)
+      (lookupFormatAssign rec y Idx.Y)
+      (lookupFormatAssign rec n Idx.Eta)
+      (lookupFormat rec dt . Idx.DTime)
+      (formatNodeStorage rec st)
+
 envAbs ::
    (FormatValue a, Format output, Node.C node) =>
-   Interp.Env node SingleRecord a -> Env node output
-envAbs (Interp.Env (SingleRecord rec) e _de me _dme _p _dp fn _dn dt x _dx y _dy _v st) =
-   Env
-      (Format.record rec)
-      (lookupFormatAssign e (Idx.Energy rec))
-      (lookupFormatAssign me (Idx.MaxEnergy rec))
-      (lookupFormatAssign x (Idx.X rec))
-      (lookupFormatAssign y (Idx.Y rec))
-      (lookupFormatAssign fn (Idx.Eta rec))
-      (lookupFormat dt . Idx.DTime rec)
-      (formatNodeStorage rec st)
+   Interp.Env node (Interp.Absolute a) -> Env node output
+envAbs = envGen Idx.Absolute
 
 envDelta ::
    (FormatValue a, Format output, Node.C node) =>
-   Interp.Env node SingleRecord a -> Env node output
-envDelta (Interp.Env (SingleRecord rec) _e de _me dme _p _dp _fn dn dt _x dx _y dy _v st) =
-   Env
-      (Format.record rec)
-      (lookupFormatAssign de (Idx.DEnergy rec))
-      (lookupFormatAssign dme (Idx.DMaxEnergy rec))
-      (lookupFormatAssign dx (Idx.DX rec))
-      (lookupFormatAssign dy (Idx.DY rec))
-      (lookupFormatAssign dn (Idx.DEta rec))
-      (lookupFormat dt . Idx.DTime rec)
-      (formatNodeStorage rec st)
+   Interp.Env node (Interp.Delta a) -> Env node output
+envDelta = envGen Idx.Delta

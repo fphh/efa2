@@ -5,11 +5,8 @@ module Main where
 ---------------------------------------------------------------------------------------
 -- * Import other Modules
 
-import Data.Foldable (foldMap)
-import qualified Data.Map as M
-import EFA.Example.Utility (edgeVar, (.=))
-import EFA.Utility.Async (concurrentlyMany_)
-import qualified EFA.Graph.Topology.Index as Idx
+import EFA.Example.Utility (edgeVar)
+import EFA.Equation.Absolute ((.=))
 import qualified EFA.Equation.System as EqGen
 --import EFA.IO.CSVImport (modelicaCSVImport)
 import EFA.IO.PLTImport (modelicaPLTImport)
@@ -17,17 +14,23 @@ import qualified EFA.Signal.SequenceData as SD
 import EFA.Signal.Record (PPosIdx(PPosIdx), SignalRecord,
                           Record(Record), PowerRecord,
                           SignalRecord,getTime, newTimeBase, removeZeroNoise)
-import EFA.Signal.Sequence (makeSeqFlowTopology,genSequenceSignal,chopAtZeroCrossingsPowerRecord, 
+import EFA.Signal.Sequence (makeSeqFlowTopology,genSequenceSignal,chopAtZeroCrossingsPowerRecord,
                             removeLowEnergySections, genSequFlow, addZeroCrossings, removeLowTimeSections, genSequ,sectionRecordsFromSequence)
 import qualified EFA.Signal.Signal as Sig -- (toList,UTSigL,setType)
 import qualified EFA.Signal.Plot as Plot
 import qualified EFA.Report.Report as Rep
-import qualified EFA.Graph.Draw as Draw
-import Data.Monoid ((<>))
+import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Flow as Flow
+import qualified EFA.Graph.Draw as Draw
 
 import EFA.Graph.Topology(isOriginalEdge)
 import EFA.Graph(lefilter)
+
+import EFA.Utility.Async (concurrentlyMany_)
+
+import qualified Data.Map as M
+import Data.Monoid ((<>))
+import Data.Foldable (fold)
 
 
 ----------------------------------
@@ -133,32 +136,31 @@ main = do
   -- Rep.report [] ("SequencePowerRecord", sequenceFlowsFilt)
 
 ---------------------------------------------------------------------------------------
--- *  Provide solver with Given Variables, Start Solver and generate Sequence Flow Graph     
-   
+-- *  Provide solver with Given Variables, Start Solver and generate Sequence Flow Graph
+
   let makeGiven initStorage sequenceFlwsFilt =
-        (EqGen.dtime Idx.initSection .= 1)  
-        <> (EqGen.storage (Idx.SecNode Idx.initSection System.Battery) .= initStorage) 
-        <> foldMap f (zip [Idx.Section 0 ..] ds)
-        where SD.SequData ds =  fmap f2 sequenceFlwsFilt
-              f2 (Record t xs) =
-                (sum $ Sig.toList t, M.toList $ M.map (sum . Sig.toList) xs)      
-              f (sec, (dt, es)) =
-                (EqGen.dtime sec .= dt) <> foldMap g es
-                where g (PPosIdx a b, e) = (edgeVar EqGen.energy sec a b .= e)
-      
+        (Idx.DTime Idx.initSection .= 1)
+        <> (Idx.Storage (Idx.SecNode Idx.initSection System.Battery) .= initStorage)
+        <> fold (SD.zipWithSecIdxs f sequenceFlwsFilt)
+        where f sec (Record t xs) =
+                (Idx.DTime sec .= sum (Sig.toList t)) <>
+                fold (M.mapWithKey g xs)
+                where g (PPosIdx a b) e =
+                         edgeVar Idx.Energy sec a b .= sum (Sig.toList e)
+
 ---------------------------------------------------------------------------------------
--- *  Generate Sequence Flow Graph     
-   
+-- *  Generate Sequence Flow Graph
+
   let flowStates = fmap Flow.genFlowState sequenceFlowsFilt
   let flowTopos = Flow.genSequFlowTops System.topology flowStates
   let adjustedFlows = Flow.adjustSigns System.topology flowStates sequenceFlowsFilt
   let sequenceFlowTopology = makeSeqFlowTopology flowTopos
-        
+
   -- Draw.sequFlowGraph sequenceFlowTopology
-       
+
 ---------------------------------------------------------------------------------------
 -- *  Solve System
-      
+
   -- let solverResult =
   --       EqGen.solve (makeGiven 12.34567 adjustedFlows)
   --                   sequenceFlowTopology

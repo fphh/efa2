@@ -13,12 +13,17 @@ import qualified Data.Vector as V
 import qualified Data.List as L
 import qualified Data.List.HT as LH
 
+import qualified Data.NonEmpty.Mixed as NonEmptyM
+import qualified Data.NonEmpty as NonEmpty
+
 import Data.Maybe.HT (toMaybe)
 import Data.Eq (Eq((==)))
 import Data.Function ((.), ($), id, flip)
 import Data.Maybe (Maybe(Just, Nothing), maybe, isJust)
 import Data.Bool (Bool(False, True), (&&), not)
-import Prelude (Int, Ord, error, (++), (-), Show, show, snd,fst)
+import Data.Tuple (snd, fst)
+import Text.Show (Show, show)
+import Prelude (Num, Int, Integer, Ord, error, (++), (+), (-), subtract)
 
 import Data.Ord (Ordering)
 
@@ -455,3 +460,16 @@ instance Slice V.Vector where
 instance Slice UV.Vector where
   slice start num = readUnbox (UV.slice start num)
 
+
+cumulate :: (Num a) => NonEmpty.T [] a -> [a] -> [a]
+cumulate storage =
+   NonEmpty.tail . NonEmptyM.scanl (+) (NonEmpty.last storage)
+
+decumulate :: (Num a) => NonEmpty.T [] a -> [a] -> [a]
+decumulate inStorage outStorage =
+   LH.mapAdjacent subtract $ NonEmpty.last inStorage : outStorage
+
+
+propCumulate :: NonEmpty.T [] Integer -> [Integer] -> Bool
+propCumulate storage incoming =
+   decumulate storage (cumulate storage incoming) == incoming

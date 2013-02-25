@@ -47,10 +47,10 @@ class Format output where
    words, lines :: [output] -> output
    assign :: output -> output -> output
 
-   record :: Idx.Record -> output
+   recordDelta :: Idx.Delta -> output -> output
    section :: Idx.Section -> output
    sectionNode :: output -> output -> output
-   use :: Idx.Use -> output
+   direction :: Idx.Direction -> output
    delta :: output -> output
    edgeIdent :: EdgeVar -> output
    time, var, storage :: output
@@ -75,11 +75,16 @@ instance Format ASCII where
    assign (ASCII lhs) (ASCII rhs) =
       ASCII $ lhs ++ " = " ++ rhs
 
-   record (Idx.Record r) = ASCII $ show r
+   recordDelta d (ASCII rest) =
+      ASCII $ (++rest) $
+      case d of
+         Idx.Before -> "[0]"
+         Idx.After -> "[1]"
+         Idx.Delta -> "d"
    section (Idx.Section s) = ASCII $ show s
    sectionNode (ASCII s) (ASCII x) = ASCII $ s ++ "." ++ x
 
-   use = ASCII . show
+   direction = ASCII . show
    delta (ASCII s) = ASCII $ 'd':s
    edgeIdent e =
       ASCII $
@@ -122,12 +127,17 @@ instance Format Unicode where
    assign (Unicode lhs) (Unicode rhs) =
       Unicode $ lhs ++ " = " ++ rhs
 
-   record (Idx.Record r) = Unicode $ show r
+   recordDelta d (Unicode rest) =
+      Unicode $ (++rest) $
+      case d of
+         Idx.Before -> "\x2070"
+         Idx.After -> "\xb9"
+         Idx.Delta -> [deltaChar]
    section (Idx.Section s) = Unicode $ show s
    sectionNode (Unicode s) (Unicode x) = Unicode $ s ++ "." ++ x
 
-   use = Unicode . show
-   delta (Unicode s) = Unicode $ '\x2206':s
+   direction = Unicode . show
+   delta (Unicode s) = Unicode $ deltaChar:s
    edgeIdent e =
       Unicode $
       case e of
@@ -203,11 +213,20 @@ instance Format Latex where
    assign (Latex lhs) (Latex rhs) =
       Latex $ lhs ++ " = " ++ rhs
 
-   record (Idx.Record r) = Latex $ show r
+   recordDelta d (Latex rest) =
+      Latex $
+      case d of
+         {-
+         http://math.mit.edu/~ssam/latex
+         \newcommand{\leftexp}[2]{{\vphantom{#2}}^{#1}{#2}}
+         -}
+         Idx.Before -> "\\leftexp{0}{" ++ rest ++ "}"
+         Idx.After -> "\\leftexp{1}{" ++ rest ++ "}"
+         Idx.Delta -> "\\Delta " ++ rest
    section (Idx.Section s) = Latex $ show s
    sectionNode (Latex s) (Latex x) = Latex $ s ++ ":" ++ x
 
-   use = Latex . show
+   direction = Latex . show
    delta (Latex s) = Latex $ "\\Delta " ++ s
    edgeIdent e =
       Latex $
@@ -228,3 +247,13 @@ instance Format Latex where
    plus (Latex x) (Latex y) = Latex $ x ++ " + " ++ y
    multiply (Latex x) (Latex y) = Latex $ x ++ " \\cdot " ++ y
    power (Latex x) n = Latex $ x ++ "^{" ++ show n ++ "}"
+
+
+class Record record where
+   record :: Format output => record -> output -> output
+
+instance Record Idx.Absolute where
+   record Idx.Absolute = id
+
+instance Record Idx.Delta where
+   record d = recordDelta d

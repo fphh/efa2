@@ -86,13 +86,12 @@ Library
     EFA.Graph.Topology.Node
     EFA.Graph.Topology.StateAnalysis
     EFA.Graph.Flow
+    EFA.Equation.Absolute
     EFA.Equation.System
     EFA.Equation.Result
     EFA.Equation.Env
     EFA.Equation.Variable
     EFA.Example.Utility
-  Other-Modules:
-    EFA.Symbolic.OperatorTreeTest
 
 
 -- sollte man auf Cabal-Test umstellen,
@@ -128,6 +127,17 @@ Executable sequenzflussgraph
 
 Executable optimisingstorage
   Main-Is: examples/elementary/optimisingStorage/Main.hs
+  GHC-Options: -Wall
+  If flag(buildExamples)
+    Build-Depends:
+      efa,
+      utility-ht,
+      base
+  Else
+    Buildable: False
+
+Executable example-time
+  Main-Is: examples/elementary/time/Main.hs
   GHC-Options: -Wall
   If flag(buildExamples)
     Build-Depends:
@@ -242,6 +252,16 @@ Executable demo-symbolicSolving
   Else
     Buildable: False
 
+Executable demo-symbolicDelta
+  Main-Is: examples/elementary/symbolicDelta/Main.hs
+  GHC-Options: -Wall
+  If flag(buildExamples)
+    Build-Depends:
+      efa,
+      base
+  Else
+    Buildable: False
+
 Executable demo-twoways
   Main-Is: examples/elementary/twoWays/Main.hs
   GHC-Options: -Wall
@@ -340,11 +360,11 @@ Executable example-vehicle
     Build-Depends:
       efa,
       gnuplot,
-      base,
-      containers
+      containers,
+      base
   Else
     Buildable: False
- 
+
 
 Executable demo-stateanalysis
   Main-Is: demo/stateAnalysis/Main.hs
@@ -356,7 +376,17 @@ Executable demo-stateanalysis
        containers
   Else
     Buildable: False
- 
+
+Executable demo-functioneta
+  Main-Is: demo/functionEta/Main.hs
+  GHC-Options: -Wall
+  If flag(buildExamples)
+     Build-Depends:
+       efa,
+       base
+  Else
+    Buildable: False
+
 Executable demo-readandcut
   Main-Is: examples/elementary/readAndCut/Main.hs
   GHC-Options: -Wall
@@ -368,3 +398,12 @@ Executable demo-readandcut
   Else
     Buildable: False
 
+Executable demo-deltaLogic
+  Main-Is: demo/deltaLogic/Main.hs
+  GHC-Options: -Wall
+  If flag(buildExamples)
+    Build-Depends:
+      efa,
+      base
+  Else
+    Buildable: False
