@@ -105,6 +105,11 @@ e33 = EqGen.getVar $ interVar Idx.Energy Idx.initSection sec1 N3
 time :: Idx.Section -> Expr s Double
 time = EqGen.getVar . Idx.DTime
 
+
+-- maybe move this to Utility module
+(^!) :: Num a => a -> Int -> a
+(^!) = (^)
+
 f ::
    Floating a =>
    Expr s a -> Expr s a -> Expr s a
@@ -112,7 +117,7 @@ f =
    EqGen.liftF2 $ \r x ->
       let -- r = 0.9
           ui = 200
-      in  x/(x + r*((ui - sqrt(ui^(2::Int) - 4*r*x)) / 2*r)^(2::Int))
+      in  x/(x + r*((ui - sqrt(ui^!2 - 4*r*x)) / 2*r)^!2)
 
 
 -- | Provide time of sec1 and inner resistance of battery
@@ -241,7 +246,7 @@ fn01_p10_fc :: ExpVar s ->  ExpVar s ->  ExpVar s
 fn01_p10_fc =
    EqGen.liftF2 $ \x r ->
       let ui = 1
-      in  x/(x + r*((ui - sqrt(ui^(2::Integer) - 4*r*x)) / 2*r)^(2::Integer))
+      in  x/(x + r*((ui - sqrt(ui^!2 - 4*r*x)) / 2*r)^!2)
 
 fn01_p10 ::    ExpVar s -> ExpVar s
 fn01_p10 = fn01_p10_ic  -- Choose fuel converter type here
@@ -255,11 +260,11 @@ fn31_p13_ba :: ExpVar s ->  ExpVar s ->  ExpVar s
 fn31_p13_ba =
    EqGen.liftF2 $ \ r x ->
       let ui = 1
-      in  nsto_const*x/(x + r*((ui - sqrt(ui^(2::Integer) - 4*r*x)) / 2*r)^(2::Integer))
+      in  nsto_const*x/(x + r*((ui - sqrt(ui^!2 - 4*r*x)) / 2*r)^!2)
 
 -- | variable efficiency of energy storage in charging mode as function of n13 over p31
 fn13_p31_ba ::  ExpVar s ->  ExpVar s ->  ExpVar s
-fn13_p31_ba r x = nsto_const / (1 + (x*r)/(ui^(2::Integer)))
+fn13_p31_ba r x = nsto_const / (1 + (x*r)/(ui^!2))
   where ui = 1
 
 -- ## HyperCaps (Capacitors)
