@@ -319,27 +319,27 @@ main = do
       varLoss = varE01 .- varEout
 
       -- Get more Env values
-      varN13 = getVarEta varEnvs (Idx.Eta (Idx.SecNode sec0 N1) (Idx.SecNode sec0 N3))
-      varN31 = getVarEta varEnvs (Idx.Eta (Idx.SecNode sec1 N3) (Idx.SecNode sec1 N1))
-      varN01 = getVarEta varEnvs (Idx.Eta (Idx.SecNode sec0 N0) (Idx.SecNode sec0 N1))
+      varN13 = getVarEta varEnvs (edgeVar Idx.Eta sec0 N1 N3)
+      varN31 = getVarEta varEnvs (edgeVar Idx.Eta sec1 N3 N1)
+      varN01 = getVarEta varEnvs (edgeVar Idx.Eta sec0 N0 N1)
 
-      varE31 = getVarEnergy varEnvs (Idx.Energy (Idx.SecNode sec1 N3) (Idx.SecNode sec1 N1))
+      varE31 = getVarEnergy varEnvs (edgeVar Idx.Energy sec1 N3 N1)
 
-      varP31_0 = getVarPower varEnvs (Idx.Power (Idx.SecNode sec0 N3) (Idx.SecNode sec0 N1))
-      varP31_1 = getVarPower varEnvs (Idx.Power (Idx.SecNode sec1 N3) (Idx.SecNode sec1 N1))
+      varP31_0 = getVarPower varEnvs (edgeVar Idx.Power sec0 N3 N1)
+      varP31_1 = getVarPower varEnvs (edgeVar Idx.Power sec1 N3 N1)
 
 
-      varP13_0 = getVarPower varEnvs (Idx.Power (Idx.SecNode sec0 N1) (Idx.SecNode sec0 N3))
-      varP13_1 = getVarPower varEnvs (Idx.Power (Idx.SecNode sec1 N1) (Idx.SecNode sec1 N3))
+      varP13_0 = getVarPower varEnvs (edgeVar Idx.Power sec0 N1 N3)
+      varP13_1 = getVarPower varEnvs (edgeVar Idx.Power sec1 N1 N3)
 
-      varP10 = getVarPower varEnvs (Idx.Power (Idx.SecNode sec0 N1) (Idx.SecNode sec0 N0))
-      varP01 = getVarPower varEnvs (Idx.Power (Idx.SecNode sec0 N0) (Idx.SecNode sec0 N1))
+      varP10 = getVarPower varEnvs (edgeVar Idx.Power sec0 N1 N0)
+      varP01 = getVarPower varEnvs (edgeVar Idx.Power sec0 N0 N1)
 
-      varE10 = getVarEnergy varEnvs (Idx.Energy (Idx.SecNode sec0 N1) (Idx.SecNode sec0 N0))
-      varE01 = getVarEnergy varEnvs (Idx.Energy (Idx.SecNode sec0 N0) (Idx.SecNode sec0 N1))
+      varE10 = getVarEnergy varEnvs (edgeVar Idx.Energy sec0 N1 N0)
+      varE01 = getVarEnergy varEnvs (edgeVar Idx.Energy sec0 N0 N1)
 
-      varPout0 = getVarPower varEnvs (Idx.Power (Idx.SecNode sec0 N2) (Idx.SecNode sec0 N1))
-      varPout1 = getVarPower varEnvs (Idx.Power (Idx.SecNode sec1 N2) (Idx.SecNode sec1 N1))
+      varPout0 = getVarPower varEnvs (edgeVar Idx.Power sec0 N2 N1)
+      varPout1 = getVarPower varEnvs (edgeVar Idx.Power sec1 N2 N1)
 
       -- create curve of n01 in used power range
       p10Lin = S.concat varP10
