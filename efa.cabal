@@ -114,7 +114,8 @@ Executable test-efa
     EFA.Test.UtilsTest
     EFA.Test.SequenceTest
 
-Executable sequenzflussgraph
+
+Executable example-sequenzflussgraph
   Main-Is: examples/elementary/sequenzflussgraph/Main.hs
   GHC-Options: -Wall
   If flag(buildExamples)
@@ -125,7 +126,7 @@ Executable sequenzflussgraph
   Else
     Buildable: False
 
-Executable optimisingstorage
+Executable example-optimisingstorage
   Main-Is: examples/elementary/optimisingStorage/Main.hs
   GHC-Options: -Wall
   If flag(buildExamples)
@@ -138,6 +139,24 @@ Executable optimisingstorage
   Else
     Buildable: False
 
+Executable example-vehicle
+  Hs-Source-Dirs: examples/vehicle/src
+  Main-Is: Main.hs
+  Other-Modules:
+    Modules.Plots
+    Modules.Signals
+    Modules.System
+    Modules.Topology
+  GHC-Options: -Wall
+  If flag(buildExamples)
+    Build-Depends:
+      efa,
+      gnuplot,
+      containers,
+      base
+  Else
+    Buildable: False
+
 Executable example-time
   Main-Is: examples/elementary/time/Main.hs
   GHC-Options: -Wall
@@ -146,6 +165,57 @@ Executable example-time
       efa,
       utility-ht,
       base
+  Else
+    Buildable: False
+
+Executable example-numericSolving
+  Main-Is: examples/elementary/numericSolving/Main.hs
+  GHC-Options: -Wall
+  If flag(buildExamples)
+    Build-Depends:
+      efa,
+      base
+  Else
+    Buildable: False
+
+Executable example-symbolicSolving
+  Main-Is: examples/elementary/symbolicSolving/Main.hs
+  GHC-Options: -Wall
+  If flag(buildExamples)
+    Build-Depends:
+      efa,
+      base
+  Else
+    Buildable: False
+
+Executable example-symbolicDelta
+  Main-Is: examples/elementary/symbolicDelta/Main.hs
+  GHC-Options: -Wall
+  If flag(buildExamples)
+    Build-Depends:
+      efa,
+      base
+  Else
+    Buildable: False
+
+Executable example-twoways
+  Main-Is: examples/elementary/twoWays/Main.hs
+  GHC-Options: -Wall
+  If flag(buildExamples)
+    Build-Depends:
+      efa,
+      base
+  Else
+    Buildable: False
+
+Executable example-readandcut
+  Main-Is: examples/elementary/readAndCut/Main.hs
+  GHC-Options: -Wall
+  If flag(buildExamples)
+     Build-Depends:
+       efa,
+       base,
+       containers
   Else
     Buildable: False
 
@@ -174,8 +244,6 @@ Executable demo-sequence
   Else
     Buildable: False
 
-
-
 Executable demo-addzerocrossings
   Main-Is: demo/sliceSignals/Demo_addZeroCrossings.hs
   GHC-Options: -Wall
@@ -188,8 +256,6 @@ Executable demo-addzerocrossings
       base
   Else
     Buildable: False
-
-
 
 Executable demo-slicesignals-alt
   Main-Is: demo/sliceSignals/Demo_sliceSignals_alt.hs
@@ -204,7 +270,6 @@ Executable demo-slicesignals-alt
   Else
     Buildable: False
 
-
 Executable demo-slicesignals
   Main-Is: demo/sliceSignals/Demo_sliceSignals.hs
   GHC-Options: -Wall
@@ -218,7 +283,6 @@ Executable demo-slicesignals
   Else
     Buildable: False
 
-
 Executable demo-slicezerocrosssignals
   Main-Is: demo/sliceSignals/Demo_sliceZeroCrossSignals.hs
   GHC-Options: -Wall
@@ -228,48 +292,6 @@ Executable demo-slicezerocrosssignals
       containers,
       utility-ht,
       gnuplot,
-      base
-  Else
-    Buildable: False
-
-
-
-Executable demo-numericSolving
-  Main-Is: examples/elementary/numericSolving/Main.hs
-  GHC-Options: -Wall
-  If flag(buildExamples)
-    Build-Depends:
-      efa,
-      base
-  Else
-    Buildable: False
-
-Executable demo-symbolicSolving
-  Main-Is: examples/elementary/symbolicSolving/Main.hs
-  GHC-Options: -Wall
-  If flag(buildExamples)
-    Build-Depends:
-      efa,
-      base
-  Else
-    Buildable: False
-
-Executable demo-symbolicDelta
-  Main-Is: examples/elementary/symbolicDelta/Main.hs
-  GHC-Options: -Wall
-  If flag(buildExamples)
-    Build-Depends:
-      efa,
-      base
-  Else
-    Buildable: False
-
-Executable demo-twoways
-  Main-Is: examples/elementary/twoWays/Main.hs
-  GHC-Options: -Wall
-  If flag(buildExamples)
-    Build-Depends:
-      efa,
       base
   Else
     Buildable: False
@@ -304,7 +326,6 @@ Executable demo-pltimport
   Else
     Buildable: False
 
-
 Executable demo-asciiimport
   Main-Is: demo/ASCIIImport/Main.hs
   GHC-Options: -Wall
@@ -336,7 +357,6 @@ Executable demo-pretty
   Else
     Buildable: False
 
-
 Executable demo-nodedefinition
   Main-Is: demo/nodeDefinition/Main.hs
   GHC-Options: -Wall
@@ -347,26 +367,6 @@ Executable demo-nodedefinition
       containers
   Else
     Buildable: False
-
-
-Executable example-vehicle
-  Hs-Source-Dirs: examples/vehicle/src
-  Main-Is: Main.hs
-  Other-Modules:
-    Modules.Plots
-    Modules.Signals
-    Modules.System
-    Modules.Topology
-  GHC-Options: -Wall
-  If flag(buildExamples)
-    Build-Depends:
-      efa,
-      gnuplot,
-      containers,
-      base
-  Else
-    Buildable: False
-
 
 Executable demo-stateanalysis
   Main-Is: demo/stateAnalysis/Main.hs
@@ -386,17 +386,6 @@ Executable demo-functioneta
      Build-Depends:
        efa,
        base
-  Else
-    Buildable: False
-
-Executable demo-readandcut
-  Main-Is: examples/elementary/readAndCut/Main.hs
-  GHC-Options: -Wall
-  If flag(buildExamples)
-     Build-Depends:
-       efa,
-       base,
-       containers
   Else
     Buildable: False
 
