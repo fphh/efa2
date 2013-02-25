@@ -131,6 +131,8 @@ Executable optimisingstorage
   If flag(buildExamples)
     Build-Depends:
       efa,
+      vector,
+      data-accessor,
       utility-ht,
       base
   Else
