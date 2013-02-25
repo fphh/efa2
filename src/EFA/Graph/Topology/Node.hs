@@ -1,12 +1,13 @@
-
-
 module EFA.Graph.Topology.Node where
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.Format (Format)
 
+import Data.Word (Word)
+
 import Prelude hiding (String, Int)
 import qualified Prelude as P
+
 
 class Ord node => C node where
    display :: Format output => node -> output
@@ -23,11 +24,17 @@ dotIdDefault :: (Enum node) => node -> P.String
 dotIdDefault = show . fromEnum
 
 
-newtype Int = Int P.Int deriving (Show, Eq, Ord)
+newtype Int = Int Word deriving (Show, Eq, Ord, Bounded)
 
 instance Enum Int where
-   toEnum = Int
-   fromEnum (Int n) = n
+   toEnum n =
+      if n >=0
+        then Int $ fromIntegral n
+        else error "Node.Int.toEnum: negative number"
+   fromEnum (Int n) =
+      if n <= fromIntegral (maxBound::P.Int)
+        then fromIntegral n
+        else error "Node.Int.fromEnum: number too big"
 
 instance C Int where
    display (Int n) = Format.integer $ fromIntegral n

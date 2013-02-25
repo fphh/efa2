@@ -22,7 +22,7 @@ sec0 :: Idx.Section
 sec0 = Idx.Section 0
 
 node0, node1, node2, node3 :: Node.Int
-node0 :~ node1 :~ node2 :~ node3 :~ _ = Stream.enumFrom $ Node.Int 0
+node0 :~ node1 :~ node2 :~ node3 :~ _ = Stream.enumFrom minBound
 
 
 topoDreibein :: TD.Topology Node.Int

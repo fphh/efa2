@@ -22,7 +22,7 @@ import EFA.Signal.Data ((:>), Nil, Data)
 import qualified EFA.Graph.Topology.Node as Node
 
 node0, node1 :: Node.Int
-node0 :~ node1 :~ _ = Stream.enumFrom $ Node.Int 0
+node0 :~ node1 :~ _ = Stream.enumFrom minBound
 
 time :: S.TC s t (Data ([] :> Nil) Double)
 time = S.fromList [0,10..50]

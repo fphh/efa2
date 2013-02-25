@@ -21,7 +21,7 @@ sec0 :~ _ = Stream.enumFrom $ Idx.Section 0
 -- Vordefinierte Knoten Node
 
 node00, node01 :: Node.Int
-node00 :~ node01 :~ _ = Stream.enumFrom $ Node.Int 0
+node00 :~ node01 :~ _ = Stream.enumFrom minBound
 
 topo0 :: TD.Topology Node.Int
 topo0 = mkGraph nodes (makeEdges edges)
@@ -33,7 +33,7 @@ topo0 = mkGraph nodes (makeEdges edges)
 -- Vordefinierte Knoten Int
 
 node10, node11 :: Node.Int
-node10 :~ node11 :~ _ = Stream.enumFrom $ Node.Int 0
+node10 :~ node11 :~ _ = Stream.enumFrom minBound
 
 topo1 :: TD.Topology Node.Int
 topo1 = mkGraph nodes (makeEdges edges)
