@@ -126,12 +126,12 @@ evaluate f =
              Sum s ->
                 case NonEmpty.fetch $ Map.toList s of
                    Nothing -> 0
-                   Just ss -> add $ fmap (uncurry prod) ss
+                   Just ss -> NonEmpty.sum $ fmap (uncurry prod) ss
 
        prod (Product p) c =
           case Map.partition (>0) $ Map.filter (0/=) p of
              (norm, rec) ->
-                case fmap mult $ NonEmpty.fetch $ powers $ fmap negate rec of
+                case fmap NonEmpty.product $ NonEmpty.fetch $ powers $ fmap negate rec of
                    Nothing -> normProd c norm
                    Just mp ->
                       case (c, Map.null norm) of
@@ -142,10 +142,10 @@ evaluate f =
        normProd c p =
           case powers p of
              ps ->
-                case (c, fmap mult $ NonEmpty.fetch ps) of
+                case (c, fmap NonEmpty.product $ NonEmpty.fetch ps) of
                    ( 1, Just mp) -> mp
                    (-1, Just mp) -> negate mp
-                   _ -> mult $ fromRational c !: ps
+                   _ -> NonEmpty.product $ fromRational c !: ps
 
        powers =
           map (\(x, e) -> power e $ term x) . Map.toList
@@ -155,7 +155,7 @@ evaluate f =
        -}
        power :: (Fractional a) => Integer -> a -> a
        power e t =
-          mult $ t !: List.genericReplicate (e-1) t
+          NonEmpty.product $ t !: List.genericReplicate (e-1) t
 
    in  term
 
@@ -210,11 +210,3 @@ format f =
 
 instance (Ord a, FormatValue a) => FormatValue (Term a) where
    formatValue = format (\_ -> formatValue) TopLevel
-
-
-
-add :: (Num a) => NonEmpty.T [] a -> a
-add = NonEmpty.foldl1 (+)
-
-mult :: (Num a) => NonEmpty.T [] a -> a
-mult = NonEmpty.foldl1 (*)
