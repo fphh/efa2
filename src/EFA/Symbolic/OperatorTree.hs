@@ -1,8 +1,8 @@
 
-
 module EFA.Symbolic.OperatorTree where
 
 import qualified EFA.Symbolic.SumProduct as Term
+import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
 
@@ -160,3 +160,22 @@ toNormalTerm = evaluate Term.Atom
 
 fromNormalTerm :: Ord a => Term.Term a -> Term a
 fromNormalTerm = Term.evaluate Atom
+
+
+delta :: Term (Idx.Record Idx.Absolute a) -> Term (Idx.Record Idx.Delta a)
+delta =
+   let before = fmap (\(Idx.Record Idx.Absolute a) -> (Idx.Record Idx.Before a))
+       go (Const _) = Const 0
+       go (Atom (Idx.Record Idx.Absolute a)) = (Atom (Idx.Record Idx.Delta a))
+       go (Minus t) = Minus $ go t
+       go (s :+ t) = go s + go t
+       go (Recip s) =
+          let bs = before s ; ds = go s
+              --  recip (s+ds) - recip s
+              --  (s-(s+ds)) / ((s+ds) * s)
+          in  -ds / ((bs+ds) * bs)
+       go (s :* t) =
+          let bs = before s ; ds = go s
+              bt = before t ; dt = go t
+          in  ds * bt + bs * dt + ds * dt
+   in  go
