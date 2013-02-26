@@ -227,7 +227,9 @@ Executable demo-additive-terms
   If flag(buildDemos)
     Build-Depends:
       efa,
+      gnuplot,
       containers,
+      utility-ht,
       base
   Else
     Buildable: False

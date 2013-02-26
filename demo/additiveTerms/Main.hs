@@ -20,13 +20,30 @@ import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Graph as Gr
 
 import qualified EFA.Report.Format as Format
-import EFA.Report.FormatValue (formatValue)
+import EFA.Report.FormatValue (FormatValue, formatValue)
+
+
+import qualified Graphics.Gnuplot.Advanced as GP
+
+import qualified Graphics.Gnuplot.Frame as Frame
+import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
+import qualified Graphics.Gnuplot.Frame.OptionSet.Style as OptsStyle
+import qualified Graphics.Gnuplot.Frame.OptionSet.Histogram as Histogram
+
+import qualified Graphics.Gnuplot.Plot.TwoDimensional as Plot2D
+import qualified Graphics.Gnuplot.Graph.TwoDimensional as Graph2D
+
+import qualified Graphics.Gnuplot.LineSpecification as LineSpec
+
 
 import qualified Data.Foldable as Fold
 import qualified Data.Map as Map
+import Data.Foldable (foldMap, )
 import Data.Monoid (mempty, (<>))
+import Control.Functor.HT (void)
 import Data.Ord.HT (comparing)
 import Data.Eq.HT (equating)
+
 
 
 sec0 :: Idx.Section
@@ -97,23 +114,50 @@ given =
    mempty
 
 
+eout :: Idx.Energy Node.Int
+eout = edgeVar Idx.Energy sec0 node2 node1
+
+histogram ::
+   (Fold.Foldable f, FormatValue term) =>
+   f (term, Double) -> Frame.T (Graph2D.T Int Double)
+histogram =
+   Frame.cons (
+      Opts.title "Decomposition of total output energy" $
+      Histogram.rowstacked $
+      OptsStyle.fillBorderLineType (-1) $
+      OptsStyle.fillSolid $
+      Opts.xTicks2d [(Format.unASCII $ formatValue $
+                      Idx.delta $ Var.mkIdx eout, 0)] $
+      Opts.xRange2d (-1,3) $
+      Opts.deflt) .
+   foldMap (\(term,val) ->
+      fmap (Graph2D.lineSpec
+              (LineSpec.title (Format.unASCII $ formatValue term) LineSpec.deflt)) $
+      Plot2D.list Graph2D.histograms [val])
+
+
 main :: IO ()
 main = do
 
    let seqTopo = constructSeqTopo topoLinear [0]
        env = EqGen.solve given seqTopo
 
-   case Map.lookup (edgeVar Idx.Energy sec0 node2 node1) (Env.energyMap env) of
+   case Map.lookup eout (Env.energyMap env) of
       Nothing -> error "undefined E_2_1"
       Just d ->
-         case Env.after d of
+         case Env.delta d of
             Result.Undetermined -> error "undetermined E_2_1"
-            Result.Determined x ->
-               Fold.forM_ (Op.group $ Op.expand $ Op.fromNormalTerm x) $ \symbol -> do
+            Result.Determined x -> do
+               let assigns =
+                      fmap
+                         (\symbol ->
+                            (fmap index symbol,
+                             Op.evaluate value symbol)) $
+                      Op.group $ Op.expand $ Op.fromNormalTerm x
+               Fold.forM_ assigns $ \(term,val) -> do
                   putStrLn $
-                     (Format.unUnicode $ formatValue $ fmap index symbol)
-                     ++ " = " ++
-                     show (Op.evaluate value symbol)
+                     (Format.unUnicode $ formatValue term) ++ " = " ++ show val
+               void $ GP.plotDefault $ histogram assigns
 
    Draw.sequFlowGraphDeltaWithEnv seqTopo $
       fmap (fmap (fmap (SumProduct.map index))) env
