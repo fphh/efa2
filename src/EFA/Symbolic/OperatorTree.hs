@@ -142,11 +142,11 @@ simplifyOld = iterateUntilFix simplify' . NonEmpty.sum . expand
 simplify :: Ord a => Term a -> Term a
 simplify = fromNormalTerm . toNormalTerm
 
-toNormalTerm :: Ord a => Term a -> Term.Term a
-toNormalTerm =
+evaluate :: Fractional b => (a -> b) -> Term a -> b
+evaluate f =
    let go t =
           case t of
-             Atom a -> Term.Atom a
+             Atom a -> f a
              Const x -> fromRational x
 
              Minus x -> negate $ go x
@@ -154,6 +154,9 @@ toNormalTerm =
              x :+ y -> go x + go y
              x :* y -> go x * go y
    in  go
+
+toNormalTerm :: Ord a => Term a -> Term.Term a
+toNormalTerm = evaluate Term.Atom
 
 fromNormalTerm :: Ord a => Term.Term a -> Term a
 fromNormalTerm = Term.evaluate Atom
