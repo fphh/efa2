@@ -93,11 +93,9 @@ formatTerm =
 --------------------------------------------------------------------
 
 
-pushMult :: Term a -> Term a
-pushMult t = Term.add $ go t
-  where go :: Term a -> NonEmpty.T [] (Term a)
-        go (Minus u) = fmap Minus (go u)
-        go (Recip u) = NonEmpty.singleton $ Recip $ pushMult u
+expand :: Term a -> NonEmpty.T [] (Term a)
+expand = go
+  where go (Minus u) = fmap Minus (go u)
         go (u :+ v) = NonEmpty.append (go u) (go v)
         go (u :* v) = liftM2 (:*) (go u) (go v)
         go s = NonEmpty.singleton s
@@ -111,7 +109,7 @@ iterateUntilFix f =
    streamPairs . Stream.iterate f
 
 simplifyOld :: Eq a => Term a -> Term a
-simplifyOld = iterateUntilFix simplify' . pushMult
+simplifyOld = iterateUntilFix simplify' . NonEmpty.sum . expand
   where simplify' :: Eq a => Term a -> Term a
         simplify' (Const x :+ Const y) = Const $ x+y
         simplify' ((Const 0.0) :+ x) = simplify' x
