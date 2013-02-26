@@ -6,13 +6,20 @@ import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
 
-import Control.Monad (liftM2)
-
 import Data.Ratio ((%))
 
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Stream as Stream
 import Data.Stream (Stream)
+
+import qualified Data.Map as Map
+import qualified Data.Set as Set
+import qualified Data.Foldable as Fold
+import Data.Map (Map)
+import Data.Set (Set)
+import Data.Foldable (Foldable, foldMap)
+import Data.Monoid (mempty, mappend)
+import Control.Monad (liftM2)
 
 
 data Term a =
@@ -52,6 +59,20 @@ instance Functor Term where
                 x :+ y -> go x :+ go y
                 x :* y -> go x :* go y
       in go
+
+instance Foldable Term where
+   foldMap f =
+      let go t =
+             case t of
+                Atom a -> f a
+                Const _ -> mempty
+
+                Minus x -> go x
+                Recip x -> go x
+                x :+ y -> mappend (go x) (go y)
+                x :* y -> mappend (go x) (go y)
+      in go
+
 
 infixl 7  :*, &/
 infixl 6  :+, &-
@@ -99,6 +120,16 @@ expand = go
         go (u :+ v) = NonEmpty.append (go u) (go v)
         go (u :* v) = liftM2 (:*) (go u) (go v)
         go s = NonEmpty.singleton s
+
+group ::
+   (Ord a, Foldable f) => f (Term a) -> Map (Set a) (Term a)
+group =
+   Map.filter (0/=) .
+   fmap simplify .
+   Map.fromListWith (+) .
+   fmap (\t -> (foldMap Set.singleton t, t)) .
+   Fold.toList
+
 
 streamPairs :: Stream a -> Stream (a, a)
 streamPairs xs = Stream.zip xs (Stream.tail xs)

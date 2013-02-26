@@ -221,6 +221,17 @@ Executable example-readandcut
 
 
 
+Executable demo-additive-terms
+  Main-Is: demo/additiveTerms/Main.hs
+  GHC-Options: -Wall
+  If flag(buildDemos)
+    Build-Depends:
+      efa,
+      containers,
+      base
+  Else
+    Buildable: False
+
 Executable demo-signalcalc
   Main-Is: demo/Signal/Main.hs
   GHC-Options: -Wall
