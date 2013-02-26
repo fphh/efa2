@@ -79,7 +79,7 @@ formatTerm ::
 formatTerm =
    let go t =
           case t of
-             Const x -> Format.real (fromRational x :: Double)
+             Const x -> Format.ratio x
              Atom x -> formatValue x
 
              x :+ y -> Format.parenthesize $ Format.plus (go x) (go y)
