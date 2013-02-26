@@ -148,7 +148,7 @@ evaluate f =
                    _ -> NonEmpty.product $ fromRational c !: ps
 
        powers =
-          map (\(x, e) -> power e $ term x) . Map.toList
+          List.map (\(x, e) -> power e $ term x) . Map.toList
 
        {- |
        exponent must be positive (not zero or negative)
@@ -158,6 +158,14 @@ evaluate f =
           NonEmpty.product $ t !: List.genericReplicate (e-1) t
 
    in  term
+
+
+map :: (Ord b) => (a -> b) -> Term a -> Term b
+map f =
+   let mapTerm (Atom a) = Atom $ f a
+       mapTerm (Sum s) = Sum $ Map.mapKeys mapProduct s
+       mapProduct (Product p) = Product $ Map.mapKeys mapTerm p
+   in  mapTerm
 
 
 {- |
@@ -198,7 +206,7 @@ format f =
             else Format.ratio x
 
        powers =
-          map (\(x, e) -> power e $ term Power x) . Map.toList
+          List.map (\(x, e) -> power e $ term Power x) . Map.toList
 
        power e t =
           case e of
