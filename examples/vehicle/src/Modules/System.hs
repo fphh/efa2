@@ -23,11 +23,11 @@ instance Node.C Node where
 topology :: TD.Topology Node
 topology = Gr.mkGraph ns (makeEdges es)
   where ns = [(Tank, TD.Source),
-              (EngineFlange, TD.Crossing),
+--              (EngineFlange, TD.Crossing),
               (ConBattery, TD.Crossing), -- electric crossing at battery to vehicle electric system
               (Battery, TD.Storage),
               (ConES, TD.Crossing),  -- electric crossing to vehicle electric system
-              (MotorFlange, TD.Crossing),
+--              (MotorFlange, TD.Crossing),
               (ConFrontBrakes, TD.Crossing),
               (Chassis, TD.Crossing),
               (Resistance, TD.Sink),
@@ -42,11 +42,13 @@ topology = Gr.mkGraph ns (makeEdges es)
 
 -- Define Edges with all their Properties
 edgeList :: [(Node, Node, String, String, String)]
-edgeList = [(Tank, EngineFlange, "Engine", "Fuel","CrankShaft"),
-            (EngineFlange, ConBattery,"Generator","GeneratorFlange","GeneratorClamps"),
+edgeList = [--(Tank, EngineFlange, "Engine", "Fuel","CrankShaft"),
+            --(EngineFlange, ConBattery,"Generator","GeneratorFlange","GeneratorClamps"),
+            (Tank, ConBattery, "Engine&Generator", "Fuel","GeneratorClamps"),
             (ConBattery, ConES,"Wire","Wire","Wire"),
-            (ConES, MotorFlange,"Motor","MotorClamps","MotorFlange"),
-            (MotorFlange, ConFrontBrakes,"Gearbox","InShaft","OutShaft"),
+            (ConES, ConFrontBrakes,"Motor&Gearbox","MotorClamps","OutShaft"),
+--            (ConES, MotorFlange,"Motor","MotorClamps","MotorFlange"),
+--            (MotorFlange, ConFrontBrakes,"Gearbox","InShaft","OutShaft"),
             (ConFrontBrakes, Chassis, "FrontWheels","FrontWheelHub","FrontTires"),
             (Chassis, Resistance,"ToResistance","ToResistance","ToResistance"),
             (ConBattery, Battery,"BatteryResistance","BatteryClamps","BatteryCore"),

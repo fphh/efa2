@@ -113,7 +113,7 @@ mkPlotPowers (Record time pMap) = Record time newMap
     
 genPowers :: Plottable v a => PowerRecord Node v a -> IO()
 genPowers pRec =  plot "GenerationPowers" (mkPlotPowers pRec) [SigId "Fuel",    
-                                                             SigId "CrankShaft",
+                                                          --   SigId "CrankShaft",
                                                              SigId "BatteryClamps",
                                                              SigId "BatteryCore",
                                                              SigId "Wire"
@@ -121,8 +121,8 @@ genPowers pRec =  plot "GenerationPowers" (mkPlotPowers pRec) [SigId "Fuel",
 
 propPowers :: (Show (v a), Plottable v a) => PowerRecord Node v a -> IO()
 propPowers pRec = plot "PropulsionPowers" (mkPlotPowers pRec) [SigId "MotorClamps",
-                                                             SigId "MotorFlange",    
-                                                             SigId "InShaft",
+                                                           --  SigId "MotorFlange",    
+                                                           --  SigId "InShaft",
                                                              SigId "OutShaft",
                                                              SigId "ToFrontBrakes",
                                                              SigId "FrontWheelHub",

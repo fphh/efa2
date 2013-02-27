@@ -5,6 +5,7 @@ module EFA.Graph.Draw (
   sequFlowGraphDeltaWithEnv, envDelta,
   Env(..),
   topology,
+  topology2pdf,
   flowTopologies,
   ) where
 
@@ -47,7 +48,9 @@ import Data.GraphViz (
           DotSubGraph,
           attrStmts, nodeStmts, edgeStmts, graphStatements,
           directedGraph, strictGraph, subGraphs,
-          graphID)
+          graphID,
+          GraphvizOutput(..))
+  
 import Data.GraphViz.Attributes.Complete as Viz
 
 import qualified Data.Accessor.Basic as Accessor
@@ -62,6 +65,8 @@ import qualified Data.List as L
 import qualified Data.List.HT as HTL
 
 import Control.Monad (void)
+
+import System.FilePath
 
 
 nodeColour :: Attribute
@@ -169,14 +174,14 @@ dotIdentFromNode :: (Node.C node) => node -> T.Text
 dotIdentFromNode n = T.pack $ Node.dotId n
 
 
-printGraph, printGraphX, _printGraphDot ::
+printGraph, printGraphX, _printGraphDot, _printGraphPdf ::
   (Node.C node) =>
    SequFlowGraph node ->
    Maybe (Idx.Section -> Unicode) ->
    (Topo.LNode node -> Unicode) ->
    (Topo.LEdge node -> [Unicode]) ->
    IO ()
-printGraph = printGraphX
+printGraph =  printGraphX -- _printGraphPdf -- _printGraphDot -- printGraphX
 
 printGraphX g recTShow nshow eshow =
    runGraphvizCanvas Dot (dotFromSequFlowGraph g recTShow nshow eshow) Xlib
@@ -186,6 +191,12 @@ _printGraphDot g recTShow nshow eshow =
    runGraphvizCommand Dot
       (dotFromSequFlowGraph g recTShow nshow eshow)
       XDot "result/graph.dot"
+
+_printGraphPdf g recTShow nshow eshow =
+   void $
+   runGraphvizCommand Dot
+      (dotFromSequFlowGraph g recTShow nshow eshow)
+      Pdf "result/graph.pdf"
 
 
 sequFlowGraph ::
@@ -240,6 +251,9 @@ topology :: (Node.C node) => Topo.Topology node -> IO ()
 topology topo =
    runGraphvizCanvas Dot (dotFromTopology topo) Xlib
 
+topology2pdf :: (Node.C node) => Topo.Topology node -> IO (FilePath)
+topology2pdf topo =
+   runGraphvizCommand Dot (dotFromTopology topo) Pdf "result/topology.pdf"
 
 dotFromFlowTopology ::
   (Node.C node) =>

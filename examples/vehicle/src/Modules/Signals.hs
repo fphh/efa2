@@ -89,7 +89,7 @@ calculatePower rec = pRec
       dcdcPowerLV = zeroSig
 
        -- chassis       
-      kineticPower = (g "chassis1.flange_a1.f" .+ g "chassis1.flange_a.f").*speed
+      kineticPower = (g "chassis1.flange_a1.f" .- g "chassis1.flange_a.f").*speed
       
       resistancePower = g "drivingresistance1.force1.f".*speed
   
@@ -98,15 +98,21 @@ calculatePower rec = pRec
 -- ## Build Power Record
       
       pRec = genPowerRecord time 
-             -- engine
-             [(PPosIdx Tank EngineFlange, 
-               g "engine1.FuelPower",             
-               g "engine1.Speed" .* g "engine1.flange_b.tau"                
-              ),
+             -- -- engine
+             -- [(PPosIdx Tank EngineFlange, 
+             --   g "engine1.FuelPower",             
+             --   g "engine1.Speed" .* g "engine1.flange_b.tau"                
+             --  ),
               
-              -- generator 
-              (PPosIdx EngineFlange ConBattery, 
-               g  "electricmotor2.speedsensor1.w".* g "electricmotor2.flange_a.tau",
+             --  -- generator 
+             --  (PPosIdx EngineFlange ConBattery, 
+             --   g  "electricmotor2.speedsensor1.w".* g "electricmotor2.flange_a.tau",
+             --   generatorElectricPower
+             --  ),
+             
+              -- engine
+             [(PPosIdx Tank ConBattery,
+               g "engine1.FuelPower",             
                generatorElectricPower
               ),
               
@@ -116,15 +122,21 @@ calculatePower rec = pRec
                generatorElectricPower .- batteryClampsPower 
               ),
               
-              --motor
-              (PPosIdx ConES MotorFlange,
-               (g "electricmotor1.signalcurrent1.p.i".* voltage),
-               g "electricmotor1.speedsensor1.w".* g "electricmotor1.flange_a.tau"
-              ),
+              -- --motor
+              -- (PPosIdx ConES MotorFlange,
+              --  (g "electricmotor1.signalcurrent1.p.i".* voltage),
+              --  g "electricmotor1.speedsensor1.w".* g "electricmotor1.flange_a.tau"
+              -- ),
               
-              -- gearbox
-              (PPosIdx MotorFlange ConFrontBrakes,
-               g "gearbox1.flange_a.tau".* g "gearbox1.inertia1.w",
+              -- -- gearbox
+              -- (PPosIdx MotorFlange ConFrontBrakes,
+              --  g "gearbox1.flange_a.tau".* g "gearbox1.inertia1.w",
+              --  g "gearbox1.flange_b.tau".* g "gearbox1.inertia2.w"
+              -- ),
+              
+              -- --motor
+              (PPosIdx ConES ConFrontBrakes,
+               (g "electricmotor1.signalcurrent1.p.i".* voltage),
                g "gearbox1.flange_b.tau".* g "gearbox1.inertia2.w"
               ),
               
