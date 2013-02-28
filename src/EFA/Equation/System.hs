@@ -22,7 +22,6 @@ module EFA.Equation.System (
   maxEnergy,
   eta,
   xfactor,
-  yfactor,
   insum,
   outsum,
   storage,
@@ -359,11 +358,6 @@ xfactor ::
    Idx.SecNode node -> Idx.SecNode node -> RecordExpression rec node s a a
 xfactor = getEdgeVar Idx.X
 
-yfactor ::
-   (Eq a, Fractional a, Record rec, Ord node) =>
-   Idx.SecNode node -> Idx.SecNode node -> RecordExpression rec node s a a
-yfactor = getEdgeVar Idx.Y
-
 insum ::
    (Eq a, Fractional a, Record rec, Ord node) =>
    Idx.SecNode node -> RecordExpression rec node s a a
@@ -534,14 +528,11 @@ mkInStorageEquations (_, n, outs) =
    flip foldMap
       (fmap (NonEmpty.sortBy (comparing getSection)) $
        NonEmpty.fetch outs) $ \souts ->
-      withLocalVar $ \s ->
          -- The next equation is special for the initial Section.
          (maxEnergy n (NonEmpty.head souts) =%=
           if getSection n == Idx.initSection
             then storage n
             else insum n)
-         <>
-         mkSplitFactorEquations s (maxEnergy n) (yfactor n) souts
          <>
          let f beforeNext next =
                 maxEnergy n next =%=

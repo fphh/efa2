@@ -316,7 +316,7 @@ It shall not contain values needed for computations.
 data Env node output =
    Env {
       formatEnergy, formatMaxEnergy,
-      formatX, formatY,
+      formatX,
       formatEta    :: Idx.SecNode node -> Idx.SecNode node -> output,
       formatTime   :: Idx.Section -> output,
       formatNode   :: Topo.LNode node -> output
@@ -357,7 +357,6 @@ sequFlowGraphWithEnv g env =
               OriginalEdge -> []
               IntersectionEdge ->
                  formatMaxEnergy env uid vid :
-                 formatY env uid vid :
                  Format.empty :
                  [])
            ++
@@ -384,12 +383,11 @@ envGen ::
     Interp.Record idx rec, Node.C node) =>
    idx ->
    Interp.Env node (rec a) -> Env node output
-envGen rec (Interp.Env e me _p n dt x y _s st) =
+envGen rec (Interp.Env e me _p n dt x _s st) =
    Env
       (lookupFormatAssign rec e Idx.Energy)
       (lookupFormatAssign rec me Idx.MaxEnergy)
       (lookupFormatAssign rec x Idx.X)
-      (lookupFormatAssign rec y Idx.Y)
       (lookupFormatAssign rec n Idx.Eta)
       (lookupFormat rec dt . Idx.DTime)
       (formatNodeStorage rec st)

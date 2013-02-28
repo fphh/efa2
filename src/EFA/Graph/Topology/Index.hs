@@ -68,9 +68,6 @@ data Eta a = Eta !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
 -- | Splitting factors.
 data X a = X !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
 
--- | Strange factors for outgoing intersection edges.
-data Y a = Y !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
-
 data Storage a = Storage !(SecNode a) deriving (Show, Ord, Eq)
 
 data Direction = In | Out deriving (Show, Eq, Ord)

@@ -16,7 +16,6 @@ data Index a =
    | Eta (Idx.Eta a)
    | DTime (Idx.DTime a)
    | X (Idx.X a)
-   | Y (Idx.Y a)
    | Sum (Idx.Sum a)
    | Store (Idx.Storage a)
      deriving (Show, Eq, Ord)
@@ -24,7 +23,6 @@ data Index a =
 
 class MkIdxC t where
    mkIdx :: t a -> Index a
-   --mkIdx :: a n -> Index n
 
 
 instance MkIdxC Idx.Energy where mkIdx = Energy
@@ -33,7 +31,6 @@ instance MkIdxC Idx.Power where mkIdx = Power
 instance MkIdxC Idx.Eta where mkIdx = Eta
 instance MkIdxC Idx.DTime where mkIdx = DTime
 instance MkIdxC Idx.X where mkIdx = X
-instance MkIdxC Idx.Y where mkIdx = Y
 instance MkIdxC Idx.Sum where mkIdx = Sum
 instance MkIdxC Idx.Storage where mkIdx = Store
 
@@ -94,7 +91,6 @@ formatGen fmt idx =
       Power (Idx.Power x y) -> fmt Format.Power x y
       Eta (Idx.Eta x y) -> fmt Format.Eta x y
       X (Idx.X x y) -> fmt Format.X x y
-      Y (Idx.Y x y) -> fmt Format.Y x y
       DTime (Idx.DTime s) ->
          Format.subscript (Format.delta Format.time) $
          Format.section s

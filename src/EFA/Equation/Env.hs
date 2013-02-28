@@ -28,7 +28,6 @@ type PowerMap node a = M.Map (Idx.Power node) a
 type EtaMap node a = M.Map (Idx.Eta node) a
 type DTimeMap node a = M.Map (Idx.DTime node) a
 type XMap node a = M.Map (Idx.X node) a
-type YMap node a = M.Map (Idx.Y node) a
 type SumMap node a = M.Map (Idx.Sum node) a
 type StorageMap node a = M.Map (Idx.Storage node) a
 
@@ -42,7 +41,6 @@ data Env node a =
       etaMap :: EtaMap node a,
       dtimeMap :: DTimeMap node a,
       xMap :: XMap node a,
-      yMap :: YMap node a,
       sumMap :: SumMap node a,
       {-
       If 'a' is a signal type,
@@ -67,7 +65,7 @@ formatMap =
    map (uncurry formatAssign) . M.toList
 
 instance (Node.C node, FormatValue a) => FormatValue (Env node a) where
-   formatValue (Env e me p n dt x y s st) =
+   formatValue (Env e me p n dt x s st) =
       Format.lines $
          formatMap e ++
          formatMap me ++
@@ -75,7 +73,6 @@ instance (Node.C node, FormatValue a) => FormatValue (Env node a) where
          formatMap n ++
          formatMap dt ++
          formatMap x ++
-         formatMap y ++
          formatMap s ++
          formatMap st
 
@@ -89,7 +86,6 @@ lookup v =
       Var.Eta       idx -> M.lookup idx . etaMap
       Var.DTime     idx -> M.lookup idx . dtimeMap
       Var.X         idx -> M.lookup idx . xMap
-      Var.Y         idx -> M.lookup idx . yMap
       Var.Sum       idx -> M.lookup idx . sumMap
       Var.Store     idx -> M.lookup idx . storageMap
 
@@ -127,10 +123,6 @@ instance AccessMap Idx.X where
    accessMap =
       Accessor.fromSetGet (\x c -> c{xMap = x}) xMap
 
-instance AccessMap Idx.Y where
-   accessMap =
-      Accessor.fromSetGet (\x c -> c{yMap = x}) yMap
-
 instance AccessMap Idx.Sum where
    accessMap =
       Accessor.fromSetGet (\x c -> c{sumMap = x}) sumMap
@@ -141,15 +133,15 @@ instance AccessMap Idx.Storage where
 
 
 instance Functor (Env node) where
-   fmap f (Env e me p n dt x y s st) =
-      Env (fmap f e) (fmap f me) (fmap f p) (fmap f n) (fmap f dt) (fmap f x) (fmap f y) (fmap f s) (fmap f st)
+   fmap f (Env e me p n dt x s st) =
+      Env (fmap f e) (fmap f me) (fmap f p) (fmap f n) (fmap f dt) (fmap f x) (fmap f s) (fmap f st)
 
 instance Foldable (Env node) where
    foldMap = foldMapDefault
 
 instance Traversable (Env node) where
-   sequenceA (Env e me p n dt x y s st) =
-      pure Env <?> e <?> me <?> p <?> n <?> dt <?> x <?> y <?> s <?> st
+   sequenceA (Env e me p n dt x s st) =
+      pure Env <?> e <?> me <?> p <?> n <?> dt <?> x <?> s <?> st
 
 infixl 4 <?>
 (<?>) ::
@@ -160,14 +152,14 @@ f <?> x = f <*> sequenceA x
 
 
 instance (Ord node) => Monoid (Env node a) where
-   mempty = Env M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty
+   mempty = Env M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty
    mappend
-         (Env e me p n dt x y s st)
-         (Env e' me' p' n' dt' x' y' s' st') =
+         (Env e me p n dt x s st)
+         (Env e' me' p' n' dt' x' s' st') =
       Env
          (M.union e e') (M.union me me')
          (M.union p p') (M.union n n')
-         (M.union dt dt') (M.union x x') (M.union y y')
+         (M.union dt dt') (M.union x x')
          (M.union s s') (M.union st st')
 
 
