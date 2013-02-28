@@ -69,14 +69,6 @@ instance (Node.C node) => FormatValue (Index node) where
             Format.subscript (Format.edgeIdent e) (formatEdgeIndex x y))
 
 
-formatShort ::
-   (Node.C node, Format output) =>
-   Index node -> output
-formatShort =
-   formatGen
-      (\e _x _y -> Format.edgeIdent e)
-
-
 
 formatGen ::
    (Format output, Node.C node) =>

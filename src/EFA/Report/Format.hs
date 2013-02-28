@@ -254,3 +254,11 @@ instance Record Idx.Absolute where
 
 instance Record Idx.Delta where
    record d = recordDelta d
+
+
+class EdgeIdx idx where edgeVar :: idx -> EdgeVar
+instance EdgeIdx (Idx.Energy node) where edgeVar _ = Energy
+instance EdgeIdx (Idx.MaxEnergy node) where edgeVar _ = MaxEnergy
+instance EdgeIdx (Idx.Power node) where edgeVar _ = Power
+instance EdgeIdx (Idx.Eta node) where edgeVar _ = Eta
+instance EdgeIdx (Idx.X node) where edgeVar _ = X
