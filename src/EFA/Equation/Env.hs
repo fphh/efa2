@@ -18,6 +18,8 @@ import qualified EFA.Report.Format as Format
 import EFA.Report.Format (Format)
 import EFA.Report.FormatValue (FormatValue, formatValue)
 
+import Prelude hiding (lookup)
+
 
 -- Environments
 type EnergyMap node a = M.Map (Idx.Energy node) a
@@ -34,7 +36,7 @@ type StorageMap node a = M.Map (Idx.Storage node) a
 data Env node a =
    Env {
       energyMap :: EnergyMap node a,
-      maxenergyMap :: MaxEnergyMap node a,
+      maxEnergyMap :: MaxEnergyMap node a,
 
       powerMap :: PowerMap node a,
       etaMap :: EtaMap node a,
@@ -78,6 +80,26 @@ instance (Node.C node, FormatValue a) => FormatValue (Env node a) where
          formatMap st
 
 
+lookup :: Ord node => Var.Index node -> Env node a -> Maybe a
+lookup v =
+   case v of
+      Var.Energy    idx -> M.lookup idx . energyMap
+      Var.MaxEnergy idx -> M.lookup idx . maxEnergyMap
+      Var.Power     idx -> M.lookup idx . powerMap
+      Var.Eta       idx -> M.lookup idx . etaMap
+      Var.DTime     idx -> M.lookup idx . dtimeMap
+      Var.X         idx -> M.lookup idx . xMap
+      Var.Y         idx -> M.lookup idx . yMap
+      Var.Sum       idx -> M.lookup idx . sumMap
+      Var.Store     idx -> M.lookup idx . storageMap
+
+lookupRecord ::
+   (Record recIdx rec, Ord node) =>
+   Idx.Record recIdx (Var.Index node) -> Env node (rec a) -> Maybe a
+lookupRecord (Idx.Record r v) =
+   fmap (Accessor.get (accessRecord r)) . lookup v
+
+
 class AccessMap idx where
    accessMap :: Accessor.T (Env node a) (M.Map (idx node) a)
 
@@ -87,7 +109,7 @@ instance AccessMap Idx.Energy where
 
 instance AccessMap Idx.MaxEnergy where
    accessMap =
-      Accessor.fromSetGet (\x c -> c{maxenergyMap = x}) maxenergyMap
+      Accessor.fromSetGet (\x c -> c{maxEnergyMap = x}) maxEnergyMap
 
 instance AccessMap Idx.Power where
    accessMap =

@@ -35,7 +35,7 @@ instance Node.C Node where
    display (Node 1) = Format.literal "eins"
    display (Node 2) = Format.literal "zwei"
    display (Node 3) = Format.literal "drei"
-   display (Node n) = Node.display (Node.Int n)
+   display n = Format.literal $ show n
 
    subscript = Node.subscriptDefault
    dotId = Node.dotIdDefault

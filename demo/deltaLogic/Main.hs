@@ -23,7 +23,7 @@ sec0 :: Idx.Section
 sec0 = Idx.Section 0
 
 node0, node1 :: Node.Int
-node0 :~ node1 :~ _ = Stream.enumFrom $ Node.Int 0
+node0 :~ node1 :~ _ = Stream.enumFrom minBound
 
 
 {-

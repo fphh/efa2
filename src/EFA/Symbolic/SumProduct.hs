@@ -126,12 +126,12 @@ evaluate f =
              Sum s ->
                 case NonEmpty.fetch $ Map.toList s of
                    Nothing -> 0
-                   Just ss -> add $ fmap (uncurry prod) ss
+                   Just ss -> NonEmpty.sum $ fmap (uncurry prod) ss
 
        prod (Product p) c =
           case Map.partition (>0) $ Map.filter (0/=) p of
              (norm, rec) ->
-                case fmap mult $ NonEmpty.fetch $ powers $ fmap negate rec of
+                case fmap NonEmpty.product $ NonEmpty.fetch $ powers $ fmap negate rec of
                    Nothing -> normProd c norm
                    Just mp ->
                       case (c, Map.null norm) of
@@ -142,22 +142,30 @@ evaluate f =
        normProd c p =
           case powers p of
              ps ->
-                case (c, fmap mult $ NonEmpty.fetch ps) of
+                case (c, fmap NonEmpty.product $ NonEmpty.fetch ps) of
                    ( 1, Just mp) -> mp
                    (-1, Just mp) -> negate mp
-                   _ -> mult $ fromRational c !: ps
+                   _ -> NonEmpty.product $ fromRational c !: ps
 
        powers =
-          map (\(x, e) -> power e $ term x) . Map.toList
+          List.map (\(x, e) -> power e $ term x) . Map.toList
 
        {- |
        exponent must be positive (not zero or negative)
        -}
        power :: (Fractional a) => Integer -> a -> a
        power e t =
-          mult $ t !: List.genericReplicate (e-1) t
+          NonEmpty.product $ t !: List.genericReplicate (e-1) t
 
    in  term
+
+
+map :: (Ord b) => (a -> b) -> Term a -> Term b
+map f =
+   let mapTerm (Atom a) = Atom $ f a
+       mapTerm (Sum s) = Sum $ Map.mapKeys mapProduct s
+       mapProduct (Product p) = Product $ Map.mapKeys mapTerm p
+   in  mapTerm
 
 
 {- |
@@ -198,7 +206,7 @@ format f =
             else Format.ratio x
 
        powers =
-          map (\(x, e) -> power e $ term Power x) . Map.toList
+          List.map (\(x, e) -> power e $ term Power x) . Map.toList
 
        power e t =
           case e of
@@ -210,11 +218,3 @@ format f =
 
 instance (Ord a, FormatValue a) => FormatValue (Term a) where
    formatValue = format (\_ -> formatValue) TopLevel
-
-
-
-add :: (Num a) => NonEmpty.T [] a -> a
-add = NonEmpty.foldl1 (+)
-
-mult :: (Num a) => NonEmpty.T [] a -> a
-mult = NonEmpty.foldl1 (*)

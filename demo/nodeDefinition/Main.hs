@@ -1,4 +1,8 @@
--- | Demonstriert, wie man einen Knotendatentyp definiert und den Knoten spezielle Labels zuweist oder einfach den vordefinierten Knotentyp benützt.
+{- |
+Demonstriert, wie man einen Knotendatentyp definiert
+und den Knoten Namen zuweist
+oder einfach vordefinierte Knotentypen benützt.
+-}
 
 module Main where
 
@@ -18,10 +22,10 @@ sec0 :: Idx.Section
 sec0 :~ _ = Stream.enumFrom $ Idx.Section 0
 
 -------------------------------------------------
--- Vordefinierte Knoten Node
+-- Vordefinierte Knoten Int
 
 node00, node01 :: Node.Int
-node00 :~ node01 :~ _ = Stream.enumFrom $ Node.Int 0
+node00 :~ node01 :~ _ = Stream.enumFrom minBound
 
 topo0 :: TD.Topology Node.Int
 topo0 = mkGraph nodes (makeEdges edges)
@@ -30,47 +34,35 @@ topo0 = mkGraph nodes (makeEdges edges)
 
 
 -------------------------------------------------
--- Vordefinierte Knoten Int
+-- Vordefinierte Knoten String
 
-node10, node11 :: Node.Int
-node10 :~ node11 :~ _ = Stream.enumFrom $ Node.Int 0
+node10, node11 :: Node.String
+node10 = Node.String "node10"
+node11 = Node.String "node11"
 
-topo1 :: TD.Topology Node.Int
+topo1 :: TD.Topology Node.String
 topo1 = mkGraph nodes (makeEdges edges)
   where nodes = [(node10, TD.AlwaysSink), (node11, TD.AlwaysSource)]
         edges = [(node10, node11)]
 
 
 -------------------------------------------------
--- Vordefinierte Knoten String
+-- Selbstdefinierte Knoten mit Standard-Anzeigefunktion
 
-node20, node21 :: Node.String
-node20 = Node.String "node20"
-node21 = Node.String "node21"
+data NodeAB = A | B deriving (Eq, Ord, Enum, Show)
 
-topo2 :: TD.Topology Node.String
-topo2 = mkGraph nodes (makeEdges edges)
-  where nodes = [(node20, TD.AlwaysSink), (node21, TD.AlwaysSource)]
-        edges = [(node20, node21)]
-
-
--------------------------------------------------
--- Selbstdefinierte Knoten mit default show-Funktion
-
-data NodesAB = A | B deriving (Eq, Ord, Enum, Show)
-
-instance Node.C NodesAB where
+instance Node.C NodeAB where
    display = Node.displayDefault
    subscript = Node.subscriptDefault
    dotId = Node.dotIdDefault
 
-topo3 :: TD.Topology NodesAB
-topo3 = mkGraph nodes (makeEdges edges)
+topo2 :: TD.Topology NodeAB
+topo2 = mkGraph nodes (makeEdges edges)
   where nodes = [(A, TD.AlwaysSink), (B, TD.AlwaysSource)]
         edges = [(A, B)]
 
 -------------------------------------------------
--- Selbstdefinierte Knoten mit selbstdefinierter show-Funktion
+-- Selbstdefinierte Knoten mit selbstdefinierter Anzeigefunktion
 
 data Node = Source | Sink deriving (Eq, Ord, Enum, Show)
 
@@ -82,8 +74,8 @@ instance Node.C Node where
    dotId = Node.dotIdDefault
 
 
-topo4 :: TD.Topology Node
-topo4 = mkGraph nodes (makeEdges edges)
+topo3 :: TD.Topology Node
+topo3 = mkGraph nodes (makeEdges edges)
   where nodes = [(Sink, TD.AlwaysSink), (Source, TD.AlwaysSource)]
         edges = [(Source, Sink)]
 
@@ -91,9 +83,9 @@ topo4 = mkGraph nodes (makeEdges edges)
 
 main :: IO ()
 main =
-  concurrentlyMany_ [
-    Draw.topology topo0,
-    Draw.topology topo1,
-    Draw.topology topo2,
-    Draw.topology topo3,
-    Draw.topology topo4 ]
+  concurrentlyMany_ $
+    Draw.topology topo0 :
+    Draw.topology topo1 :
+    Draw.topology topo2 :
+    Draw.topology topo3 :
+    []
