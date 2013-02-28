@@ -62,27 +62,28 @@ formatEdgeIndex x y =
    `Format.connect`
    formatSectionNode y
 
-instance (Node.C node) => FormatValue (Index node) where
-   formatValue =
-      formatGen
-         (\e x y ->
-            Format.subscript (Format.edgeIdent e) (formatEdgeIndex x y))
-
-
-
-formatGen ::
+formatEdge ::
    (Format output, Node.C node) =>
-   (Format.EdgeVar ->
-    Idx.SecNode node -> Idx.SecNode node -> output) ->
-   Index node ->
-   output
-formatGen fmt idx =
+   Format.EdgeVar -> Idx.SecNode node -> Idx.SecNode node -> output
+formatEdge e x y =
+   Format.subscript (Format.edgeIdent e) (formatEdgeIndex x y)
+
+
+instance (Node.C node) => FormatValue (Index node) where
+   formatValue = format
+
+
+
+format ::
+   (Format output, Node.C node) =>
+   Index node -> output
+format idx =
    case idx of
-      Energy (Idx.Energy x y) -> fmt Format.Energy x y
-      MaxEnergy (Idx.MaxEnergy x y) -> fmt Format.MaxEnergy x y
-      Power (Idx.Power x y) -> fmt Format.Power x y
-      Eta (Idx.Eta x y) -> fmt Format.Eta x y
-      X (Idx.X x y) -> fmt Format.X x y
+      Energy (Idx.Energy x y) -> formatEdge Format.Energy x y
+      MaxEnergy (Idx.MaxEnergy x y) -> formatEdge Format.MaxEnergy x y
+      Power (Idx.Power x y) -> formatEdge Format.Power x y
+      Eta (Idx.Eta x y) -> formatEdge Format.Eta x y
+      X (Idx.X x y) -> formatEdge Format.X x y
       DTime (Idx.DTime s) ->
          Format.subscript (Format.delta Format.time) $
          Format.section s
