@@ -32,7 +32,7 @@ newtype Latex = Latex { unLatex :: String }
 
 -- * class for unified handling of ASCII, Unicode and LaTeX output
 
-data EdgeVar = Energy | MaxEnergy | Power | Eta | X | Y
+data EdgeVar = Energy | MaxEnergy | Power | Eta | X
 
 class Format output where
    literal :: String -> output
@@ -93,7 +93,6 @@ instance Format ASCII where
          MaxEnergy -> "me"
          Power -> "p"
          X -> "x"
-         Y -> "y"
          Eta -> "n"
    time = ASCII "t"
    var = ASCII "v"
@@ -145,7 +144,6 @@ instance Format Unicode where
          MaxEnergy -> "me"
          Power -> "p"
          X -> "x"
-         Y -> "y"
          Eta -> "\x03b7"
    time = Unicode "t"
    var = Unicode "v"
@@ -235,7 +233,6 @@ instance Format Latex where
          MaxEnergy -> "me"
          Power -> "p"
          X -> "x"
-         Y -> "y"
          Eta -> "\\eta"
    time = Latex "t"
    var = Latex "v"
