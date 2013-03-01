@@ -27,7 +27,7 @@ data Term a =
           | Const Rational
                {- we initialize it only with 0 or 1,
                   but constant folding may yield any rational number -}
-
+          | Function Format.Function (Term a)
           | Minus (Term a)
           | Recip (Term a)
           | (Term a) :+ (Term a)
@@ -40,6 +40,8 @@ instance Num (Term idx) where
    negate = Minus
    (+) = (:+)
    (*) = (:*)
+   abs = Function Format.Absolute
+   signum = Function Format.Signum
 
 instance Fractional (Term idx) where
    fromRational = Const
@@ -53,6 +55,7 @@ instance Functor Term where
              case t of
                 Atom a -> Atom $ f a
                 Const x -> Const x
+                Function fn x -> Function fn $ fmap f x
 
                 Minus x -> Minus $ go x
                 Recip x -> Recip $ go x
@@ -66,6 +69,7 @@ instance Foldable Term where
              case t of
                 Atom a -> f a
                 Const _ -> mempty
+                Function _ x -> go x
 
                 Minus x -> go x
                 Recip x -> go x
@@ -102,6 +106,7 @@ formatTerm =
           case t of
              Const x -> Format.ratio x
              Atom x -> formatValue x
+             Function fn x -> Format.function fn $ go x
 
              x :+ y -> Format.parenthesize $ Format.plus (go x) (go y)
              x :* y -> Format.multiply (go x) (go y)
@@ -179,6 +184,10 @@ evaluate f =
           case t of
              Atom a -> f a
              Const x -> fromRational x
+             Function fn x ->
+                case fn of
+                   Format.Absolute -> abs $ go x
+                   Format.Signum -> signum $ go x
 
              Minus x -> negate $ go x
              Recip x -> recip $ go x
@@ -196,8 +205,14 @@ fromNormalTerm = Term.evaluate Atom
 delta :: Term (Idx.Record Idx.Absolute a) -> Term (Idx.Record Idx.Delta a)
 delta =
    let before = fmap (\(Idx.Record Idx.Absolute a) -> (Idx.Record Idx.Before a))
+       function fn x =
+          Function fn (before x + go x) - Function fn (before x)
        go (Const _) = Const 0
        go (Atom (Idx.Record Idx.Absolute a)) = (Atom (Idx.Record Idx.Delta a))
+       go (Function fn a) =
+          case fn of
+             Format.Absolute -> function fn a
+             Format.Signum -> function fn a
        go (Minus t) = Minus $ go t
        go (s :+ t) = go s + go t
        go (Recip s) =

@@ -34,6 +34,9 @@ newtype Latex = Latex { unLatex :: String }
 
 data EdgeVar = Energy | MaxEnergy | Power | Eta | X
 
+data Function = Absolute | Signum
+   deriving (Eq, Ord, Show)
+
 class Format output where
    literal :: String -> output
    integer :: Integer -> output
@@ -47,6 +50,7 @@ class Format output where
    words, lines :: [output] -> output
    assign :: output -> output -> output
 
+   function :: Function -> output -> output
    recordDelta :: Idx.Delta -> output -> output
    section :: Idx.Section -> output
    sectionNode :: output -> output -> output
@@ -75,6 +79,11 @@ instance Format ASCII where
    assign (ASCII lhs) (ASCII rhs) =
       ASCII $ lhs ++ " = " ++ rhs
 
+   function f (ASCII rest) =
+      ASCII $
+      case f of
+         Absolute -> "|" ++ rest ++ "|"
+         Signum -> "sgn(" ++ rest ++ ")"
    recordDelta d (ASCII rest) =
       ASCII $ (++rest) $
       case d of
@@ -126,6 +135,11 @@ instance Format Unicode where
    assign (Unicode lhs) (Unicode rhs) =
       Unicode $ lhs ++ " = " ++ rhs
 
+   function f (Unicode rest) =
+      Unicode $
+      case f of
+         Absolute -> "|" ++ rest ++ "|"
+         Signum -> "sgn(" ++ rest ++ ")"
    recordDelta d (Unicode rest) =
       Unicode $ (++rest) $
       case d of
@@ -211,6 +225,11 @@ instance Format Latex where
    assign (Latex lhs) (Latex rhs) =
       Latex $ lhs ++ " = " ++ rhs
 
+   function f (Latex rest) =
+      Latex $
+      case f of
+         Absolute -> "\\abs{" ++ rest ++ "}"
+         Signum -> "\\sgn{\\left(" ++ rest ++ "\\right)}"
    recordDelta d (Latex rest) =
       Latex $
       case d of
