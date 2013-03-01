@@ -17,7 +17,7 @@ import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
 
 import Data.Monoid (mempty, (<>))
-
+import System.IO
 
 sec0 :: Idx.Section
 sec0 = Idx.Section 0
@@ -50,6 +50,7 @@ sys =
 
 main :: IO ()
 main = do
+   hSetEncoding stdout utf8
    putStr $ Format.unUnicode $ formatValue $ EqGen.solveSimple given
    putStrLn ""
    putStr $ Format.unUnicode $ formatValue $ EqGen.solveSimple (given <> sys)
