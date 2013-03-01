@@ -12,7 +12,7 @@ import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
 import EFA.Report.Format (Format, Unicode(Unicode, unUnicode))
 
-import qualified EFA.Equation.Env as Interp
+import qualified EFA.Equation.Env as Env
 import qualified EFA.Equation.Variable as Var
 import EFA.Equation.Env (StorageMap)
 
@@ -295,7 +295,7 @@ formatNodeType :: Format output => NodeType -> output
 formatNodeType = Format.literal . showType
 
 formatNodeStorage ::
-   (Interp.Record recIdx rec, FormatValue a, Format output, Node.C node) =>
+   (Env.Record recIdx rec, FormatValue a, Format output, Node.C node) =>
    recIdx -> StorageMap node (rec a) -> Topo.LNode node -> output
 formatNodeStorage rec st (n@(Idx.SecNode _sec nid), ty) =
    Format.lines $
@@ -322,19 +322,19 @@ data Env node output =
    }
 
 lookupFormat ::
-   (Ord (idx node), Var.FormatIndex (idx node), Interp.Record recIdx rec,
+   (Ord (idx node), Var.FormatIndex (idx node), Env.Record recIdx rec,
     FormatValue a, Format output, Node.C node) =>
    recIdx -> M.Map (idx node) (rec a) -> idx node -> output
 lookupFormat recIdx mp k =
    maybe
       (error $ "could not find index " ++
          (Format.unUnicode $ Var.formatIndex k))
-      (formatValue . Accessor.get (Interp.accessRecord recIdx)) $
+      (formatValue . Accessor.get (Env.accessRecord recIdx)) $
    M.lookup k mp
 
 lookupFormatAssign ::
    (Ord (idx node), Format.EdgeIdx (idx node), Var.FormatIndex (idx node),
-    Format.Record recIdx, Interp.Record recIdx rec,
+    Format.Record recIdx, Env.Record recIdx rec,
     FormatValue a, Format output, Node.C node) =>
    recIdx ->
    M.Map (idx node) (rec a) ->
@@ -370,21 +370,21 @@ sequFlowGraphWithEnv g env =
 
 sequFlowGraphAbsWithEnv ::
   (FormatValue a, Node.C node) =>
-  SequFlowGraph node -> Interp.Env node (Interp.Absolute a) -> IO ()
+  SequFlowGraph node -> Env.Env node (Env.Absolute a) -> IO ()
 sequFlowGraphAbsWithEnv topo = sequFlowGraphWithEnv topo . envAbs
 
 sequFlowGraphDeltaWithEnv ::
   (FormatValue a, Node.C node) =>
-  SequFlowGraph node -> Interp.Env node (Interp.Delta a) -> IO ()
+  SequFlowGraph node -> Env.Env node (Env.Delta a) -> IO ()
 sequFlowGraphDeltaWithEnv topo = sequFlowGraphWithEnv topo . envDelta
 
 
 envGen ::
    (FormatValue a, Format output, Format.Record idx,
-    Interp.Record idx rec, Node.C node) =>
+    Env.Record idx rec, Node.C node) =>
    idx ->
-   Interp.Env node (rec a) -> Env node output
-envGen rec (Interp.Env e me _p n dt x _s st) =
+   Env.Env node (rec a) -> Env node output
+envGen rec (Env.Env e me _p n dt x _s st) =
    Env
       (lookupFormatAssign rec e Idx.Energy)
       (lookupFormatAssign rec me Idx.MaxEnergy)
@@ -395,10 +395,10 @@ envGen rec (Interp.Env e me _p n dt x _s st) =
 
 envAbs ::
    (FormatValue a, Format output, Node.C node) =>
-   Interp.Env node (Interp.Absolute a) -> Env node output
+   Env.Env node (Env.Absolute a) -> Env node output
 envAbs = envGen Idx.Absolute
 
 envDelta ::
    (FormatValue a, Format output, Node.C node) =>
-   Interp.Env node (Interp.Delta a) -> Env node output
+   Env.Env node (Env.Delta a) -> Env node output
 envDelta = envGen Idx.Delta
