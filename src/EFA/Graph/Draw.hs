@@ -353,19 +353,20 @@ sequFlowGraphWithEnv ::
 sequFlowGraphWithEnv g env =
    printGraph g (Just (formatTime env)) (formatNode env) eshow
   where eshow e@((Edge uid vid), _l) =
-           (case Topo.getEdgeType e of
-              OriginalEdge -> []
+           case Topo.getEdgeType e of
+              OriginalEdge ->
+                 formatEnergy env uid vid :
+                 formatX env uid vid :
+                 formatEta env uid vid :
+                 formatX env vid uid :
+                 formatEnergy env vid uid :
+                 []
               IntersectionEdge ->
                  formatMaxEnergy env uid vid :
-                 Format.empty :
-                 [])
-           ++
-           formatEnergy env uid vid :
-           formatX env uid vid :
-           formatEta env uid vid :
-           formatX env vid uid :
-           formatEnergy env vid uid :
-           []
+                 formatEnergy env uid vid :
+                 formatX env uid vid :
+                 formatX env vid uid :
+                 []
 
 sequFlowGraphAbsWithEnv ::
   (FormatValue a, Node.C node) =>

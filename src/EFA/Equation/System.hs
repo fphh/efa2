@@ -414,9 +414,7 @@ makeEdgeEquations = foldMap mkEq
   where mkEq e@(Edge f t, ()) =
           case TD.getEdgeType e of
                TD.OriginalEdge -> power t f =%= eta f t * power f t
-               TD.IntersectionEdge ->
-                 (energy t f =%= eta f t * energy f t)
-                 <> (eta f t =%= 1)
+               TD.IntersectionEdge -> energy t f =%= energy f t
 
 
 makeEnergyEquations ::
