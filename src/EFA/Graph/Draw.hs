@@ -150,14 +150,11 @@ dotFromSecEdge eshow e =
            Label $ StrLabel $ T.pack $
            L.intercalate "\n" $ map unUnicode $ order $ eshow e
         colour =
-           case Topo.getEdgeType e of
-              StorageEdge -> storageEdgeColour
-              StructureEdge -> structureEdgeColour
+           case Topo.edgeType $ fst e of
+              StorageEdge _ -> storageEdgeColour
+              StructureEdge _ -> structureEdgeColour
         constraint =
-           Constraint $
-           case Topo.getEdgeType e of
-              StorageEdge -> False
-              StructureEdge -> True
+           Constraint $ Topo.isStructureEdge $ fst e
 
 
 dotIdentFromSecNode :: (Node.C node) => Idx.SecNode node -> T.Text
@@ -351,17 +348,17 @@ sequFlowGraphWithEnv ::
   (Node.C node) =>
   SequFlowGraph node -> Env node Unicode -> IO ()
 sequFlowGraphWithEnv g env =
-   printGraph g (Just (formatTime env)) (formatNode env) eshow
-  where eshow e@((Edge uid vid), _l) =
-           case Topo.getEdgeType e of
-              StructureEdge ->
+   printGraph g (Just (formatTime env)) (formatNode env) (eshow . fst)
+  where eshow e@(Edge uid vid) =
+           case Topo.edgeType e of
+              StructureEdge _ ->
                  formatEnergy env uid vid :
                  formatX env uid vid :
                  formatEta env uid vid :
                  formatX env vid uid :
                  formatEnergy env vid uid :
                  []
-              StorageEdge ->
+              StorageEdge _ ->
                  formatMaxEnergy env uid vid :
                  formatEnergy env uid vid :
                  formatX env uid vid :

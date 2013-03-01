@@ -39,7 +39,15 @@ after = Record After
 data SecNode a = SecNode Section a deriving (Show, Eq, Ord)
 
 
+
 -- * Edge indices
+
+data StructureEdge node = StructureEdge Section node node
+   deriving (Show, Eq, Ord)
+
+data StorageEdge node = StorageEdge Section Section node
+   deriving (Show, Eq, Ord)
+
 
 -- | Variable types of the solver. The solver, in fact, is
 -- ignorant of the provenance of the variables. However, to

@@ -379,9 +379,9 @@ dtime ::
 dtime = getRecordVar . Idx.DTime
 
 
-mwhen :: Monoid a => Bool -> a -> a
-mwhen True t = t
-mwhen False _ = mempty
+_mwhen :: Monoid a => Bool -> a -> a
+_mwhen True t = t
+_mwhen False _ = mempty
 
 
 fromTopology ::
@@ -398,32 +398,23 @@ makeInnerSectionEquations ::
   (Eq a, Fractional a, Record rec, Node.C node) =>
   TD.DirSequFlowGraph node -> EquationSystem rec node s a
 makeInnerSectionEquations g = mconcat $
-  makeEnergyEquations (map fst es) :
-  makeEdgeEquations es :
+  makeEdgeEquations (M.keys $ Gr.edgeLabels g) :
   makeNodeEquations g :
-  makeStorageEquations g' :
+  makeStorageEquations (Gr.lefilter (TD.isStructureEdge . fst) g) :
   []
-  where g' = Gr.lefilter (TD.isStructureEdge . fst) g
-        es = Gr.labEdges g
 
 
 makeEdgeEquations ::
   (Eq a, Fractional a, Record rec, Ord node) =>
-  [TD.LDirEdge node] -> EquationSystem rec node s a
-makeEdgeEquations = foldMap mkEq
-  where mkEq e@(Edge f t, ()) =
-          case TD.getEdgeType e of
-               TD.StructureEdge -> power t f =%= eta f t * power f t
-               TD.StorageEdge -> energy t f =%= energy f t
-
-
-makeEnergyEquations ::
-  (Eq a, Fractional a, Record rec, Ord node) =>
   [Gr.Edge (Idx.SecNode node)] -> EquationSystem rec node s a
-makeEnergyEquations = foldMap mkEq
-  where mkEq (Edge f@(Idx.SecNode sf _) t@(Idx.SecNode st _)) =
-          mwhen (sf == st) (equ f t <> equ t f)
-             where equ x y = energy x y =%= dtime sf * power x y
+makeEdgeEquations =
+   foldMap $ \e@(Edge f t) ->
+      case TD.edgeType e of
+         TD.StructureEdge (Idx.StructureEdge s _nf _nt) ->
+            let equ x y = energy x y =%= dtime s * power x y
+            in  equ f t <> equ t f <>
+                (power t f =%= eta f t * power f t)
+         TD.StorageEdge _ -> energy t f =%= energy f t
 
 makeNodeEquations ::
   (Eq a, Fractional a, Record rec, Ord node) =>
@@ -647,13 +638,10 @@ makeInnerSectionEquations' ::
   (Eq a, Fractional a, Record rec, Node.C node) =>
   TD.DirSequFlowGraph node -> EquationSystem rec node s a
 makeInnerSectionEquations' g = mconcat $
-  makeEnergyEquations (map fst es) :
-  makeEdgeEquations es :
+  makeEdgeEquations (M.keys $ Gr.edgeLabels g) :
   makeNodeEquations' g :
-  makeStorageEquations g' :
+  makeStorageEquations (Gr.lefilter (TD.isStructureEdge . fst) g) :
   []
-  where g' = Gr.lefilter (TD.isStructureEdge . fst) g
-        es = Gr.labEdges g
 
 
 makeNodeEquations' ::
