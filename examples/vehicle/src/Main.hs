@@ -23,7 +23,7 @@ import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Draw as Draw
 
-import EFA.Graph.Topology(isOriginalEdge)
+import EFA.Graph.Topology(isStructureEdge)
 import EFA.Graph(lefilter)
 
 import EFA.Utility.Async (concurrentlyMany_)
@@ -168,7 +168,7 @@ main = do
   let solverMeasurements =
         EqGen.solveFromMeasurement (makeGiven 12.34567 adjustedFlows)
                                    sequenceFlowTopology
-  let sectionTopos =  lefilter (isOriginalEdge .fst) sequenceFlowTopology
+  let sectionTopos =  lefilter (isStructureEdge .fst) sequenceFlowTopology
 
   concurrentlyMany_ [
     -- Draw.sequFlowGraphAbsWithEnv sequenceFlowTopology solverResult,

@@ -100,11 +100,11 @@ copySeqTopology =
    Fold.foldl Gr.union Gr.empty
 
 
-mkIntersectionEdges ::
+mkStructureEdges ::
    node -> Idx.Section ->
    M.Map Idx.Section StoreDir ->
    [Topo.LEdge node]
-mkIntersectionEdges node startSec stores =
+mkStructureEdges node startSec stores =
    concatMap
       (\secin ->
          map (\secout ->
@@ -122,8 +122,8 @@ mkSequenceTopology sd = res
         initNode = Idx.SecNode Idx.initSection
         startElems = map f $ M.toList $ getActiveStores sqTopo
         f (n, io) =
-          (mkIntersectionEdges n Idx.initSection (fmap snd io), (nid, Storage))
-          where nid = initNode n
+          (mkStructureEdges n Idx.initSection (fmap snd io),
+           (initNode n, Storage))
 
         res = insEdges (concatMap fst startElems)
               $ insNodes (map snd startElems) sqTopo

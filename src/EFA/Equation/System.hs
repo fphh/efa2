@@ -403,7 +403,7 @@ makeInnerSectionEquations g = mconcat $
   makeNodeEquations g :
   makeStorageEquations g' :
   []
-  where g' = Gr.lefilter (TD.isOriginalEdge . fst) g
+  where g' = Gr.lefilter (TD.isStructureEdge . fst) g
         es = Gr.labEdges g
 
 
@@ -413,8 +413,8 @@ makeEdgeEquations ::
 makeEdgeEquations = foldMap mkEq
   where mkEq e@(Edge f t, ()) =
           case TD.getEdgeType e of
-               TD.OriginalEdge -> power t f =%= eta f t * power f t
-               TD.IntersectionEdge -> energy t f =%= energy f t
+               TD.StructureEdge -> power t f =%= eta f t * power f t
+               TD.StorageEdge -> energy t f =%= energy f t
 
 
 makeEnergyEquations ::
@@ -652,7 +652,7 @@ makeInnerSectionEquations' g = mconcat $
   makeNodeEquations' g :
   makeStorageEquations g' :
   []
-  where g' = Gr.lefilter (TD.isOriginalEdge . fst) g
+  where g' = Gr.lefilter (TD.isStructureEdge . fst) g
         es = Gr.labEdges g
 
 

@@ -55,7 +55,7 @@ data Energy a = Energy !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
 
 
 -- | Energy variables for hypothetical outgoing energies.
--- At intersection edges they describe the maximum energy
+-- At storage edges they describe the maximum energy
 -- that a storage could deliver.
 data MaxEnergy a = MaxEnergy !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
 

@@ -22,7 +22,7 @@ import qualified EFA.Graph as Gr
 import EFA.Graph.Topology
           (SequFlowGraph,
            NodeType(Storage),
-           EdgeType(OriginalEdge, IntersectionEdge),
+           EdgeType(StructureEdge, StorageEdge),
            getFlowDirection,
            FlowDirectionField, FlowTopology)
 import EFA.Graph (Edge(Edge), labNodes, labEdges)
@@ -66,11 +66,11 @@ import Control.Monad (void)
 nodeColour :: Attribute
 nodeColour = FillColor [RGB 230 230 240]
 
-originalEdgeColour :: Attribute
-originalEdgeColour = Color [RGB 0 0 200]
+structureEdgeColour :: Attribute
+structureEdgeColour = Color [RGB 0 0 200]
 
-intersectionEdgeColour :: Attribute
-intersectionEdgeColour = Color [RGB 200 0 0]
+storageEdgeColour :: Attribute
+storageEdgeColour = Color [RGB 200 0 0]
 
 
 dotFromSequFlowGraph ::
@@ -151,13 +151,13 @@ dotFromSecEdge eshow e =
            L.intercalate "\n" $ map unUnicode $ order $ eshow e
         colour =
            case Topo.getEdgeType e of
-              IntersectionEdge -> intersectionEdgeColour
-              OriginalEdge -> originalEdgeColour
+              StorageEdge -> storageEdgeColour
+              StructureEdge -> structureEdgeColour
         constraint =
            Constraint $
            case Topo.getEdgeType e of
-              IntersectionEdge -> False
-              OriginalEdge -> True
+              StorageEdge -> False
+              StructureEdge -> True
 
 
 dotIdentFromSecNode :: (Node.C node) => Idx.SecNode node -> T.Text
@@ -231,7 +231,7 @@ dotFromTopoEdge e =
       Edge x y ->
          DotEdge
             (dotIdentFromNode x) (dotIdentFromNode y)
-            [Viz.Dir Viz.NoDir, originalEdgeColour]
+            [Viz.Dir Viz.NoDir, structureEdgeColour]
 
 
 
@@ -354,14 +354,14 @@ sequFlowGraphWithEnv g env =
    printGraph g (Just (formatTime env)) (formatNode env) eshow
   where eshow e@((Edge uid vid), _l) =
            case Topo.getEdgeType e of
-              OriginalEdge ->
+              StructureEdge ->
                  formatEnergy env uid vid :
                  formatX env uid vid :
                  formatEta env uid vid :
                  formatX env vid uid :
                  formatEnergy env vid uid :
                  []
-              IntersectionEdge ->
+              StorageEdge ->
                  formatMaxEnergy env uid vid :
                  formatEnergy env uid vid :
                  formatX env uid vid :

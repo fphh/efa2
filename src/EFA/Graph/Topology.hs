@@ -18,8 +18,8 @@ module EFA.Graph.Topology (
        isActiveEdge,
        isInactiveEdge,
        edgeType,
-       isOriginalEdge,
-       isIntersectionEdge,
+       isStructureEdge,
+       isStorageEdge,
        isDirEdge, isStorageNode,
        defaultNLabel,
        InOut,
@@ -72,15 +72,15 @@ isActive _ = True
 isInactive :: FlowDirection -> Bool
 isInactive = not . isActive
 
-data EdgeType = OriginalEdge
-              | IntersectionEdge deriving (Eq, Ord, Show)
+data EdgeType = StructureEdge
+              | StorageEdge deriving (Eq, Ord, Show)
 
 
 edgeType :: Gr.Edge (Idx.SecNode a) -> EdgeType
 edgeType e =
-   if isOriginalEdge e
-     then OriginalEdge
-     else IntersectionEdge
+   if isStructureEdge e
+     then StructureEdge
+     else StorageEdge
 
 
 isActiveEdge :: FlowDirectionField el => el -> Bool
@@ -123,11 +123,11 @@ instance EdgeTypeField e => EdgeTypeField (e, l) where
    getEdgeType (e, _l) = getEdgeType e
 
 
-isOriginalEdge :: Gr.Edge (Idx.SecNode a) -> Bool
-isOriginalEdge (Gr.Edge (Idx.SecNode sx _) (Idx.SecNode sy _))  =  sx == sy
+isStructureEdge :: Gr.Edge (Idx.SecNode a) -> Bool
+isStructureEdge (Gr.Edge (Idx.SecNode sx _) (Idx.SecNode sy _))  =  sx == sy
 
-isIntersectionEdge :: Gr.Edge (Idx.SecNode a) -> Bool
-isIntersectionEdge (Gr.Edge (Idx.SecNode sx _) (Idx.SecNode sy _))  =  sx /= sy
+isStorageEdge :: Gr.Edge (Idx.SecNode a) -> Bool
+isStorageEdge (Gr.Edge (Idx.SecNode sx _) (Idx.SecNode sy _))  =  sx /= sy
 
 
 isDirEdge :: FlowDirectionField label => (a, label) -> Bool
@@ -185,7 +185,7 @@ maybeActiveSt ::
 maybeActiveSt n (ins, outs) =
    mplus
       (toMaybe
-         (any (\(m,l) -> isActiveEdge l && isOriginalEdge (Gr.Edge m n)) ins)
+         (any (\(m,l) -> isActiveEdge l && isStructureEdge (Gr.Edge m n)) ins)
          In)
       (toMaybe (any (isActiveEdge . snd) outs) Out)
 
