@@ -53,13 +53,13 @@ data Env node a =
 
 
 formatAssign ::
-   (Var.MkIdxC idx, Node.C node, FormatValue a, Format output) =>
+   (Var.FormatIndex (idx node), Node.C node, FormatValue a, Format output) =>
    idx node -> a -> output
 formatAssign lhs rhs =
-   Format.assign (formatValue $ Var.mkIdx lhs) (formatValue rhs)
+   Format.assign (Var.formatIndex lhs) (formatValue rhs)
 
 formatMap ::
-   (Var.MkIdxC idx, Node.C node, FormatValue a, Format output) =>
+   (Var.FormatIndex (idx node), Node.C node, FormatValue a, Format output) =>
    M.Map (idx node) a -> [output]
 formatMap =
    map (uncurry formatAssign) . M.toList

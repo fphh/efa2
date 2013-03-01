@@ -13,7 +13,7 @@ import EFA.Report.FormatValue (FormatValue, formatValue)
 import EFA.Report.Format (Format, Unicode(Unicode, unUnicode))
 
 import qualified EFA.Equation.Env as Interp
-import EFA.Equation.Variable (MkIdxC, mkIdx)
+import qualified EFA.Equation.Variable as Var
 import EFA.Equation.Env (StorageMap)
 
 import qualified EFA.Graph.Topology.Index as Idx
@@ -322,18 +322,18 @@ data Env node output =
    }
 
 lookupFormat ::
-   (Ord (idx node), MkIdxC idx, Interp.Record recIdx rec,
+   (Ord (idx node), Var.FormatIndex (idx node), Interp.Record recIdx rec,
     FormatValue a, Format output, Node.C node) =>
    recIdx -> M.Map (idx node) (rec a) -> idx node -> output
 lookupFormat recIdx mp k =
    maybe
       (error $ "could not find index " ++
-         (Format.unUnicode $ formatValue $ mkIdx k))
+         (Format.unUnicode $ Var.formatIndex k))
       (formatValue . Accessor.get (Interp.accessRecord recIdx)) $
    M.lookup k mp
 
 lookupFormatAssign ::
-   (Ord (idx node), Format.EdgeIdx (idx node), MkIdxC idx,
+   (Ord (idx node), Format.EdgeIdx (idx node), Var.FormatIndex (idx node),
     Format.Record recIdx, Interp.Record recIdx rec,
     FormatValue a, Format output, Node.C node) =>
    recIdx ->
