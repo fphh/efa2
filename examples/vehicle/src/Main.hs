@@ -11,13 +11,15 @@ import qualified EFA.Equation.System as EqGen
 --import EFA.IO.CSVImport (modelicaCSVImport)
 import EFA.IO.PLTImport (modelicaPLTImport)
 import qualified EFA.Signal.SequenceData as SD
-import EFA.Signal.Record (PPosIdx(PPosIdx), SignalRecord,
+import EFA.Signal.Record (PPosIdx(PPosIdx), SignalRecord, FlowRecord,
                           Record(Record), PowerRecord,
                           SignalRecord,getTime, newTimeBase, removeZeroNoise,getTimeWindow)
 import EFA.Signal.Sequence (makeSeqFlowTopology,genSequenceSignal,chopAtZeroCrossingsPowerRecord,
                             removeLowEnergySections, genSequFlow, addZeroCrossings, removeLowTimeSections,removeZeroTimeSections, genSequ,sectionRecordsFromSequence)
 import qualified EFA.Signal.Signal as Sig -- (toList,UTSigL,setType)
 import qualified EFA.Signal.Plot as Pl
+import EFA.Signal.Typ
+
 import qualified EFA.Report.Report as Rep
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Flow as Flow
@@ -30,17 +32,19 @@ import EFA.Utility.Async (concurrentlyMany_)
 
 import qualified Data.Map as M
 import Data.Monoid ((<>))
-import Data.Foldable (fold)
+import Data.Foldable (fold, foldMap)
 
+import qualified EFA.Equation.Env as Env
+import EFA.Equation.Result (Result(..))
 
 ----------------------------------
 -- * Example Specific Imports
 
 
-import qualified Modules.System as System (topology, flowStates,Node(Battery,Tank,VehicleInertia))
+import qualified Modules.System as System 
 
 -- Signal Treatment
-import Modules.Signals as Signals (condition,calculatePower)
+import Modules.Signals as Signals 
 -- Plotting
 import Modules.Plots as Plot
 
@@ -86,7 +90,7 @@ main = do
 
 --------------------------------------------------------------------------------------- 
 -- * Plot Signals
-{-  
+{--  
   Plot.vehicle signals0
   Plot.motor signals0
   Plot.generator signals0
@@ -102,7 +106,7 @@ main = do
   Plot.genPowers powerSignals0   
   Plot.propPowers powerSignals0
   Plot.vehPowers powerSignals0
--}
+--}
 ---------------------------------------------------------------------------------------
 -- * Cut Signals and filter Time Sektions
   
@@ -151,8 +155,11 @@ main = do
 
 ---------------------------------------------------------------------------------------
 -- *  Provide solver with Given Variables, Start Solver and generate Sequence Flow Graph
+  let makeGiven :: Double -> 
+                   SD.SequData (FlowRecord System.Node [] Double)->
+                   (EqGen.EquationSystem Env.Absolute System.Node s Double)
 
-  let makeGiven initStorage sequenceFlwsFilt =
+      makeGiven initStorage sequenceFlwsFilt =
         (Idx.DTime Idx.initSection .= 1)
         <> (Idx.Storage (Idx.SecNode Idx.initSection System.Battery) .= initStorage)
         <> (Idx.Storage (Idx.SecNode Idx.initSection System.VehicleInertia) .= 0)
@@ -163,7 +170,31 @@ main = do
                 where g (PPosIdx a b) e =
                          edgeVar Idx.Energy sec a b .= sum (Sig.toList e)
 
----------------------------------------------------------------------------------------
+  let makeGivenForPrediction :: Double ->
+                                 Env.Env System.Node (Env.Absolute (EqGen.Result Double)) ->
+                                 (EqGen.EquationSystem Env.Absolute System.Node s Double)
+      makeGivenForPrediction initStorage env =
+        (Idx.DTime Idx.initSection .= 1)
+        <> (Idx.Storage (Idx.SecNode Idx.initSection System.Battery) .= initStorage)
+        <> (Idx.Storage (Idx.SecNode Idx.initSection System.VehicleInertia) .= 0)
+        <> (foldMap f (M.toList (Env.etaMap env)))
+        <> (foldMap f (M.toList (Env.dtimeMap env)))
+        <> (foldMap f (map h $ filter g $ M.toList (Env.energyMap env)))
+        where -- f ((Env.Absolute (EqGen.Determined i)),x) = i .= x            --   EqGen.Determined 
+              f (i,Env.Absolute (EqGen.Determined x)) = i .= x 
+              g ((Idx.Energy (Idx.SecNode _ System.Resistance) (Idx.SecNode _ System.Chassis)),_) = True
+              g ((Idx.Energy (Idx.SecNode _ System.VehicleInertia) (Idx.SecNode _ System.Chassis)),_) = True
+              g ((Idx.Energy (Idx.SecNode _ System.RearBrakes) (Idx.SecNode _ System.Chassis)),_) = True
+              g ((Idx.Energy (Idx.SecNode _ System.FrontBrakes) (Idx.SecNode _ System.ConFrontBrakes)),_) = True              
+              g ((Idx.Energy (Idx.SecNode _ System.ConES) (Idx.SecNode _ System.ElectricSystem)),_) = True              
+              g ((Idx.Energy (Idx.SecNode _ System.Battery) (Idx.SecNode _ System.ConBattery)),_) = True
+              g _  = False
+              h ((Idx.Energy (Idx.SecNode s1 System.Resistance) (Idx.SecNode s2 System.Chassis)),Env.Absolute (EqGen.Determined x)) = 
+                ((Idx.Energy (Idx.SecNode s1 System.Resistance) (Idx.SecNode s2 System.Chassis)),Env.Absolute (EqGen.Determined (x*1.1)))
+              h (i,r) = (i,r)
+
+
+  ---------------------------------------------------------------------------------------
 -- *  Generate Sequence Flow Graph
 
   let flowStates = fmap Flow.genFlowState sequenceFlowsFilt
@@ -183,16 +214,31 @@ main = do
   --                   sequenceFlowTopology
 
   -- analyse Measurement
-  let solverMeasurements =
+  let solverMeasurements :: Env.Env System.Node (Env.Absolute (EqGen.Result Double))
+      solverMeasurements = 
         EqGen.solveFromMeasurement (makeGiven (0.7*3600*1000) adjustedFlows)
                                    sequenceFlowTopology
+  
   let sectionTopos =  lefilter (isOriginalEdge .fst) sequenceFlowTopology
+
+  
+  -- solve complete system from given variables 
+      
+
+  let prediction :: Env.Env System.Node (Env.Absolute (EqGen.Result Double))
+      prediction =
+          EqGen.solve (makeGivenForPrediction (0.7*3600*1000) solverMeasurements)
+                      sequenceFlowTopology
+
+  
 
   -- draw various plots
   concurrentlyMany_ [
     -- Draw.sequFlowGraphAbsWithEnv sequenceFlowTopology solverResult,
-    -- Draw.sequFlowGraphAbsWithEnv sequenceFlowTopology solverMeasurements
-    Draw.sequFlowGraphAbsWithEnv sectionTopos solverMeasurements
+--    Draw.sequFlowGraphAbsWithEnv sequenceFlowTopology solverMeasurements,
+    Draw.sequFlowGraphAbsWithEnv sectionTopos solverMeasurements,
+    Draw.sequFlowGraphAbsWithEnv sectionTopos prediction
+    
     ]
 
 

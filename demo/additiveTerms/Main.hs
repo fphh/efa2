@@ -44,6 +44,7 @@ import Control.Functor.HT (void)
 import Data.Ord.HT (comparing)
 import Data.Eq.HT (equating)
 
+import System.IO
 
 
 sec0 :: Idx.Section
@@ -138,7 +139,7 @@ histogram =
 
 main :: IO ()
 main = do
-
+  -- hSetEncoding stdout utf8
    let seqTopo = constructSeqTopo topoLinear [0]
        env = EqGen.solve given seqTopo
 
