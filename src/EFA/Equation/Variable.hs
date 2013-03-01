@@ -70,28 +70,47 @@ formatEdge e x y =
 
 
 instance (Node.C node) => FormatValue (Index node) where
-   formatValue = format
+   formatValue var =
+      case var of
+         Energy idx -> formatIndex idx
+         MaxEnergy idx -> formatIndex idx
+         Power idx -> formatIndex idx
+         Eta idx -> formatIndex idx
+         X idx -> formatIndex idx
+         DTime idx -> formatIndex idx
+         Sum idx -> formatIndex idx
+         Store idx -> formatIndex idx
 
 
+class FormatIndex idx where
+   formatIndex :: (Format output) => idx -> output
 
-format ::
-   (Format output, Node.C node) =>
-   Index node -> output
-format idx =
-   case idx of
-      Energy (Idx.Energy x y) -> formatEdge Format.Energy x y
-      MaxEnergy (Idx.MaxEnergy x y) -> formatEdge Format.MaxEnergy x y
-      Power (Idx.Power x y) -> formatEdge Format.Power x y
-      Eta (Idx.Eta x y) -> formatEdge Format.Eta x y
-      X (Idx.X x y) -> formatEdge Format.X x y
-      DTime (Idx.DTime s) ->
-         Format.subscript (Format.delta Format.time) $
-         Format.section s
+instance (Node.C node) => FormatIndex (Idx.Energy node) where
+   formatIndex (Idx.Energy x y) = formatEdge Format.Energy x y
 
-      Sum (Idx.Sum dir x) ->
-         Format.subscript Format.var $
-         Format.direction dir `Format.connect` formatSectionNode x
+instance (Node.C node) => FormatIndex (Idx.MaxEnergy node) where
+   formatIndex (Idx.MaxEnergy x y) = formatEdge Format.MaxEnergy x y
 
-      Store (Idx.Storage x) ->
-         Format.subscript Format.storage $
-         formatSectionNode x
+instance (Node.C node) => FormatIndex (Idx.Power node) where
+   formatIndex (Idx.Power x y) = formatEdge Format.Power x y
+
+instance (Node.C node) => FormatIndex (Idx.Eta node) where
+   formatIndex (Idx.Eta x y) = formatEdge Format.Eta x y
+
+instance (Node.C node) => FormatIndex (Idx.X node) where
+   formatIndex (Idx.X x y) = formatEdge Format.X x y
+
+instance (Node.C node) => FormatIndex (Idx.DTime node) where
+   formatIndex (Idx.DTime s) =
+      Format.subscript (Format.delta Format.time) $
+      Format.section s
+
+instance (Node.C node) => FormatIndex (Idx.Sum node) where
+   formatIndex (Idx.Sum dir x) =
+      Format.subscript Format.var $
+      Format.direction dir `Format.connect` formatSectionNode x
+
+instance (Node.C node) => FormatIndex (Idx.Storage node) where
+   formatIndex (Idx.Storage x) =
+      Format.subscript Format.storage $
+      formatSectionNode x
