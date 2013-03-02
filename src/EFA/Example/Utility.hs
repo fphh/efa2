@@ -106,7 +106,8 @@ infix 0 .=, %=
 evar .= val  =  EqGen.getVar evar =.= EqGen.constant val
 
 (%=) ::
-  (Eq x, Num x, EqGen.Record rec) =>
-  EqGen.RecordExpression rec node s a x -> rec x ->
-  EqGen.EquationSystem rec node s a
-evar %= val  =  evar =%= EqGen.constantRecord val
+  (Eq x, Num x, EqGen.Record rec, Env.Record recIdx rec,
+   Env.AccessMap idx, Ord (idx node)) =>
+  idx node -> rec x ->
+  EqGen.EquationSystem rec node s x
+evar %= val  =  EqGen.getRecordVar evar =%= EqGen.constantRecord val
