@@ -17,7 +17,14 @@ data Absolute = Absolute deriving (Show, Eq, Ord)
 data Delta = Delta | Before | After deriving (Show, Eq, Ord)
 
 
-data Record rec idx = Record rec idx deriving (Show, Eq, Ord)
+data Record rec idx = Record rec idx deriving (Show, Eq)
+
+-- this ordering is easier to read than the default one
+instance (Ord rec, Ord idx) => Ord (Record rec idx) where
+   compare (Record rx ix) (Record ry iy) =
+      case compare ix iy of
+         EQ -> compare rx ry
+         o -> o
 
 instance Functor (Record rec) where
    fmap f (Record rec idx) = Record rec $ f idx
