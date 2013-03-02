@@ -51,6 +51,7 @@ class Format output where
    assign :: output -> output -> output
 
    function :: Function -> output -> output
+   integral :: output -> output
    recordDelta :: Idx.Delta -> output -> output
    section :: Idx.Section -> output
    sectionNode :: output -> output -> output
@@ -84,6 +85,7 @@ instance Format ASCII where
       case f of
          Absolute -> "|" ++ rest ++ "|"
          Signum -> "sgn(" ++ rest ++ ")"
+   integral (ASCII x) = ASCII $ "integrate(" ++ x ++ ")"
    recordDelta d (ASCII rest) =
       ASCII $ (++rest) $
       case d of
@@ -140,6 +142,7 @@ instance Format Unicode where
       case f of
          Absolute -> "|" ++ rest ++ "|"
          Signum -> "sgn(" ++ rest ++ ")"
+   integral (Unicode x) = Unicode $ "\x222B(" ++ x ++ ")"
    recordDelta d (Unicode rest) =
       Unicode $ (++rest) $
       case d of
@@ -230,6 +233,7 @@ instance Format Latex where
       case f of
          Absolute -> "\\abs{" ++ rest ++ "}"
          Signum -> "\\sgn{\\left(" ++ rest ++ "\\right)}"
+   integral (Latex x) = Latex $ "\\int\\left(" ++ x ++ "\\right)"
    recordDelta d (Latex rest) =
       Latex $
       case d of

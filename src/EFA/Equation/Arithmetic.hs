@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeFamilies #-}
 module EFA.Equation.Arithmetic where
 
 import qualified UniqueLogic.ST.Expression as Expr
@@ -79,3 +80,30 @@ instance (Constant a) => Constant (Expr.T s a) where
    zero = Expr.constant zero
    fromInteger  = Expr.constant . fromInteger
    fromRational = Expr.constant . fromRational
+
+
+
+
+class Integrate v where
+   type Scalar v :: *
+   integrate :: v -> Scalar v
+
+instance Integrate Float where
+   type Scalar Float = Float
+   integrate = id
+
+instance Integrate Double where
+   type Scalar Double = Double
+   integrate = id
+
+instance (Integral a) => Integrate (Ratio a) where
+   type Scalar (Ratio a) = Ratio a
+   integrate = id
+
+instance (Constant a) => Integrate [a] where
+   type Scalar [a] = a
+   integrate = foldl (~+) zero
+
+instance (Integrate v) => Integrate (Expr.T s v) where
+   type Scalar (Expr.T s v) = Expr.T s (Scalar v)
+   integrate = Expr.fromRule2 . Sys.assignment2 "" $ integrate

@@ -74,6 +74,7 @@ Library
     EFA.Signal.Plot
     EFA.Symbolic.OperatorTree
     EFA.Symbolic.SumProduct
+    EFA.Symbolic.Mixed
     EFA.Report.Typ
     EFA.Report.Base
     EFA.Report.Report
