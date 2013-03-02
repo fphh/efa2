@@ -81,3 +81,7 @@ myShowListFunct list showFunct = unlines (map showFunct list)
 
 (>>!) :: (Monad m) => m () -> m a -> m a
 x >>! y = do { x; y }
+
+
+class Pointed f where
+   point :: a -> f a

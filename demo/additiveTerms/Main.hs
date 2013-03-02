@@ -24,6 +24,8 @@ import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
 
+import EFA.Utility (Pointed, point)
+
 
 import qualified Graphics.Gnuplot.Advanced as GP
 
@@ -84,12 +86,12 @@ infixr 6 =<>
 
 (=<>) ::
    (Eq (term Symbol), Arith.Sum (term Symbol), Ord (t Node.Int),
-    Var.MkVarC term, Var.MkIdxC t, Env.AccessMap t) =>
+    Pointed term, Var.MkIdxC t, Env.AccessMap t) =>
    (Idx.Record Idx.Delta (t Node.Int), Double) ->
    EqGen.EquationSystem Env.Delta Node.Int s (term Symbol) ->
    EqGen.EquationSystem Env.Delta Node.Int s (term Symbol)
 (idx, x) =<> eqsys =
-   (idx .= Var.mkVarCore (Symbol (fmap Var.mkIdx idx) x)) <> eqsys
+   (idx .= point (Symbol (fmap Var.mkIdx idx) x)) <> eqsys
 
 
 {-

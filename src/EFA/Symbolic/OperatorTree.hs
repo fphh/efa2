@@ -12,6 +12,8 @@ import EFA.Equation.Arithmetic
            Product, (~*), (~/),
            Constant)
 
+import EFA.Utility (Pointed, point)
+
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Stream as Stream
 import Data.Stream (Stream)
@@ -65,6 +67,9 @@ instance Constant (Term idx) where
    fromInteger = Const . fromInteger
    fromRational = Const
 
+
+instance Pointed Term where
+   point = Atom
 
 instance Functor Term where
    fmap f =

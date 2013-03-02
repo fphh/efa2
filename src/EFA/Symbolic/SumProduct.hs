@@ -6,6 +6,8 @@ import EFA.Equation.Arithmetic ((~+), (~-), (~*), (~/))
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
 
+import EFA.Utility (Pointed, point)
+
 import qualified Data.Map as Map
 import Data.Map (Map, )
 
@@ -243,6 +245,9 @@ format f =
 
    in  term
 
+
+instance Pointed Term where
+   point = Atom
 
 instance (Ord a, FormatValue a) => FormatValue (Term a) where
    formatValue = format (\_ -> formatValue) TopLevel

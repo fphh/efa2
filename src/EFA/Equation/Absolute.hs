@@ -7,7 +7,7 @@ import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Env as Env
 import qualified EFA.Equation.Variable as Var
 import EFA.Equation.System ((=.=))
-import EFA.Equation.Variable (MkIdxC, MkVarC)
+import EFA.Equation.Variable (MkIdxC)
 import EFA.Equation.Result(Result(..))
 
 import qualified EFA.Graph.Topology.Index as Idx
@@ -15,6 +15,7 @@ import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as TD
 
 import qualified EFA.Equation.Arithmetic as Arith
+import EFA.Utility (Pointed, point)
 
 import qualified UniqueLogic.ST.Expression as Expr
 import qualified UniqueLogic.ST.System as Sys
@@ -64,19 +65,19 @@ liftF2 = liftA2 . Expr.fromRule3 . Sys.assignment3 ""
 type Term term node = Utility.Term term Idx.Absolute node
 
 givenSymbol ::
-   (Eq (Term term node), Arith.Sum (Term term node), MkVarC term,
+   (Eq (Term term node), Arith.Sum (Term term node), Pointed term,
     Ord (t node), MkIdxC t, Env.AccessMap t) =>
    t node ->
    EquationSystem node s (Term term node)
 givenSymbol idx =
    idx .=
-   Var.mkVarCore (Idx.absolute (Var.mkIdx idx))
+   point (Idx.absolute (Var.mkIdx idx))
 
 
 infixr 6 =<>
 
 (=<>) ::
-   (Eq (Term term node), Arith.Sum (Term term node), MkVarC term,
+   (Eq (Term term node), Arith.Sum (Term term node), Pointed term,
     Ord (t node), MkIdxC t, Env.AccessMap t) =>
    t node ->
    EquationSystem node s (Term term node) ->

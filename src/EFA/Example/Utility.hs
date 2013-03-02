@@ -10,8 +10,9 @@ import qualified EFA.Equation.Env as Env
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Variable as Var
 import EFA.Equation.System ((=.=), (=%=))
-import EFA.Equation.Variable (MkIdxC, MkVarC)
+import EFA.Equation.Variable (MkIdxC)
 import EFA.Signal.SequenceData (SequData(SequData))
+import EFA.Utility (Pointed, point)
 
 import qualified EFA.Equation.Arithmetic as Arith
 
@@ -60,12 +61,12 @@ givenSymbol ::
   (Eq (Term term recIdx node),
    Arith.Sum (Term term recIdx node),
    EqGen.Record rec,
-   Ord (idx node), MkVarC term, MkIdxC idx,
+   Ord (idx node), Pointed term, MkIdxC idx,
    Env.AccessMap idx, Env.Record recIdx rec) =>
   Idx.Record recIdx (idx node) ->
   EqGen.EquationSystem rec node s (Term term recIdx node)
 givenSymbol idx =
-   idx .= Var.mkVarCore (fmap Var.mkIdx idx)
+   idx .= point (fmap Var.mkIdx idx)
 
 
 infixr 6 =<>
@@ -73,7 +74,7 @@ infixr 6 =<>
   (Eq (Term term recIdx node),
    Arith.Sum (Term term recIdx node),
    EqGen.Record rec,
-   Ord (idx node), MkVarC term, MkIdxC idx,
+   Ord (idx node), Pointed term, MkIdxC idx,
    Env.AccessMap idx, Env.Record recIdx rec) =>
   Idx.Record recIdx (idx node) ->
   EqGen.EquationSystem rec node s (Term term recIdx node) ->

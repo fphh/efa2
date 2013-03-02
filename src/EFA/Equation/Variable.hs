@@ -2,11 +2,10 @@ module EFA.Equation.Variable where
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Symbolic.OperatorTree as OT
-import qualified EFA.Symbolic.SumProduct as SP
 import qualified EFA.Report.Format as Format
 import EFA.Report.Format (Format)
 import EFA.Report.FormatValue (FormatValue, formatValue)
+import EFA.Utility (Pointed, point)
 
 
 data Index a =
@@ -35,17 +34,8 @@ instance MkIdxC Idx.Sum where mkIdx = Sum
 instance MkIdxC Idx.Storage where mkIdx = Store
 
 
-class MkVarC term where
-      mkVarCore :: a -> term a
-
-instance MkVarC OT.Term where
-         mkVarCore = OT.Atom
-
-instance MkVarC SP.Term where
-         mkVarCore = SP.Atom
-
-mkVar :: (MkIdxC t, MkVarC term) => t a -> term (Index a)
-mkVar = mkVarCore . mkIdx
+mkVar :: (MkIdxC t, Pointed term) => t a -> term (Index a)
+mkVar = point . mkIdx
 
 
 formatSectionNode ::
