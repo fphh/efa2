@@ -91,9 +91,11 @@ main = do
   let simulationB = Analysis.base sequenceFlowTopology sequenceFlowsFiltB
       
   let prediction = Analysis.predict sequenceFlowTopology simulation
---  let predictionB = Analysis.predict sequenceFlowTopology simulationB
+
+  --  let predictionB = Analysis.predict sequenceFlowTopology simulationB
       
 --  let deltaSimulation_AB = Analysis.delta sequenceFlowTopology simulation simulationB
+
 
   -- draw various diagrams
   concurrentlyMany_ [
@@ -101,8 +103,7 @@ main = do
 --    Draw.sequFlowGraphAbsWithEnv sequenceFlowTopology solverMeasurements,
     Draw.sequFlowGraphAbsWithEnv sectionTopos simulation,
     Draw.sequFlowGraphAbsWithEnv sectionTopos simulationB
---    Draw.sequFlowGraphDeltaWithEnv sectionTopos deltaSimulation_AB
-    
+
 --    Draw.sequFlowGraphAbsWithEnv sectionTopos prediction
     
     ]
