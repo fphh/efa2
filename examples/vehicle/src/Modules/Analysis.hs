@@ -145,15 +145,17 @@ makeGivenForPrediction idx env =
     <> (Idx.Record idx (Idx.Storage (Idx.SecNode Idx.initSection System.VehicleInertia)) .= 0)
     <> (foldMap f (M.toList (Env.etaMap env)))
     <> (foldMap f (M.toList (Env.dtimeMap env)))
-    <> (foldMap f (map h $ filter g $ M.toList (Env.energyMap env)))
+    <> (foldMap f (M.toList $ M.mapWithKey h $ M.filterWithKey g $ Env.energyMap env))
     where f (i, x)  =  i %= fmap (\(EqGen.Determined y) -> y) x
-          g ((Idx.Energy (Idx.SecNode _ System.Resistance) (Idx.SecNode _ System.Chassis)),_) = True
-          g ((Idx.Energy (Idx.SecNode _ System.VehicleInertia) (Idx.SecNode _ System.Chassis)),_) = True
-          g ((Idx.Energy (Idx.SecNode _ System.RearBrakes) (Idx.SecNode _ System.Chassis)),_) = True
-          g ((Idx.Energy (Idx.SecNode _ System.FrontBrakes) (Idx.SecNode _ System.ConFrontBrakes)),_) = True
-          g ((Idx.Energy (Idx.SecNode _ System.ConES) (Idx.SecNode _ System.ElectricSystem)),_) = True
-          g ((Idx.Energy (Idx.SecNode _ System.Battery) (Idx.SecNode _ System.ConBattery)),_) = True
-          g _  = False
-          h ((Idx.Energy (Idx.SecNode s1 System.Resistance) (Idx.SecNode s2 System.Chassis)), x) =
-            ((Idx.Energy (Idx.SecNode s1 System.Resistance) (Idx.SecNode s2 System.Chassis)), fmap (fmap (*1.1)) x)
-          h (i,r) = (i,r)
+          g (Idx.Energy (Idx.SecNode _ x) (Idx.SecNode _ y)) _ =
+             case (x,y) of
+                (System.Resistance, System.Chassis) -> True
+                (System.VehicleInertia, System.Chassis) -> True
+                (System.RearBrakes, System.Chassis) -> True
+                (System.FrontBrakes, System.ConFrontBrakes) -> True
+                (System.ConES, System.ElectricSystem) -> True
+                (System.Battery, System.ConBattery) -> True
+                _ -> False
+          h (Idx.Energy (Idx.SecNode _ System.Resistance) (Idx.SecNode _ System.Chassis)) x =
+               fmap (fmap (*1.1)) x
+          h _ r = r
