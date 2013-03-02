@@ -12,6 +12,10 @@ module EFA.Signal.Data (module EFA.Signal.Data) where
 import qualified EFA.Signal.Vector as SV
 import Data.Monoid (Monoid(mempty, mappend, mconcat))
 
+import EFA.Equation.Arithmetic
+          (Sum, (~+), (~-),
+           Product, (~*), (~/))
+
 import qualified Data.Vector.Unboxed as UV
 import qualified Data.Vector as V
 
@@ -245,6 +249,15 @@ unzip ::
    (Map c, Storage c a, Storage c b, Storage c (a, b)) =>
    Data c (a, b) -> (Data c a, Data c b)
 unzip x = (map P.fst x, map P.snd x)
+
+
+instance (ZipWith c, Storage c a, Sum a) => Sum (Data c a) where
+   (~+) = zipWith (~+)
+   (~-) = zipWith (~-)
+
+instance (ZipWith c, Storage c a, Product a) => Product (Data c a) where
+   (~*) = zipWith (~*)
+   (~/) = zipWith (~/)
 
 
 {- |
