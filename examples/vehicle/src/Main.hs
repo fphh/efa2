@@ -1,5 +1,4 @@
-{-# LANGUAGE FlexibleContexts #-}
-
+{-# LANGUAGE Rank2Types #-}
 module Main where
 
 ---------------------------------------------------------------------------------------
@@ -83,17 +82,30 @@ main = do
 
   let sequenceFlowTopology = makeSeqFlowTopology flowTopos
   let sequenceFlowTopologyB = makeSeqFlowTopology flowToposB
-  
-  let sectionTopos =  lefilter (isOriginalEdge .fst) sequenceFlowTopology    
-  let sectionToposB =  lefilter (isOriginalEdge .fst) sequenceFlowTopologyB    
 
-  let simulation = Analysis.base sequenceFlowTopology sequenceFlowsFilt
-  let simulationB = Analysis.base sequenceFlowTopology sequenceFlowsFiltB
-      
-  let prediction = Analysis.predict sequenceFlowTopology simulation
+  let sectionTopos =  lefilter (isOriginalEdge .fst) sequenceFlowTopology
+  let sectionToposB =  lefilter (isOriginalEdge .fst) sequenceFlowTopologyB
+
+  let solve ::
+         (Eq a, Fractional a, EqGen.Record rec) =>
+         (forall s. EqGen.EquationSystem rec System.Node s a) ->
+         Env.Env System.Node (rec (Result a))
+      solve = flip EqGen.solveFromMeasurement sequenceFlowTopology
+
+  let simulation =
+         solve $ Analysis.makeGiven Idx.Absolute sequenceFlowsFilt
+  let simulationB =
+         solve $ Analysis.makeGiven Idx.Absolute sequenceFlowsFiltB
+  let simulationDelta =
+         solve $
+            (Analysis.makeGiven Idx.Before sequenceFlowsFilt <>
+             Analysis.makeGiven Idx.After sequenceFlowsFiltB)
+
+  let prediction =
+         solve $ Analysis.makeGivenForPrediction Idx.Absolute simulation
 
   --  let predictionB = Analysis.predict sequenceFlowTopology simulationB
-      
+
 --  let deltaSimulation_AB = Analysis.delta sequenceFlowTopology simulation simulationB
 
 
@@ -102,12 +114,13 @@ main = do
 -- Draw.sequFlowGraphAbsWithEnv sequenceFlowTopology solverResult,
 --    Draw.sequFlowGraphAbsWithEnv sequenceFlowTopology solverMeasurements,
     Draw.sequFlowGraphAbsWithEnv sectionTopos simulation,
-    Draw.sequFlowGraphAbsWithEnv sectionTopos simulationB
+    Draw.sequFlowGraphAbsWithEnv sectionTopos simulationB,
+    Draw.sequFlowGraphDeltaWithEnv sectionTopos simulationDelta
 
 --    Draw.sequFlowGraphAbsWithEnv sectionTopos prediction
-    
+
     ]
 
 
-  
+
 
