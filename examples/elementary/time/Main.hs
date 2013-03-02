@@ -23,6 +23,8 @@ import qualified EFA.Graph as Gr
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (formatValue)
 
+import qualified EFA.Equation.Arithmetic as Arith
+
 import Control.Applicative ((<$>), (<*>)) -- (liftA4)
 
 import Data.Monoid ((<>))
@@ -77,7 +79,8 @@ n7 =
 n5 = EqGen.liftF $ \x -> x/sqrt(1+(x+2)*(x+2))
 
 
-n01, n12, n13, n31, p10, p12, p21, p13, p31 :: (Eq a, Num a) => Idx.Section -> Expr s a
+n01, n12, n13, n31, p10, p12, p21, p13, p31 ::
+   (Eq a, Arith.Sum a) => Idx.Section -> Expr s a
 n01 sec = EqGen.getVar $ edgeVar Idx.Eta sec N0 N1
 n12 sec = EqGen.getVar $ edgeVar Idx.Eta sec N1 N2
 n13 sec = EqGen.getVar $ edgeVar Idx.Eta sec N1 N3

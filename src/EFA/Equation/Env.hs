@@ -6,6 +6,9 @@ import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Equation.Variable as Var
 
+import EFA.Equation.Arithmetic
+          (Sum, (~-), Constant, zero)
+
 import qualified Data.Map as M
 
 import qualified Data.Accessor.Basic as Accessor
@@ -181,11 +184,11 @@ instance Traversable Absolute where
 
 data Delta a = Delta {delta, before, after :: a} deriving (Show)
 
-deltaConst :: Num a => a -> Delta a
-deltaConst x = Delta {before = x, after = x, delta = 0}
+deltaConst :: Constant a => a -> Delta a
+deltaConst x = Delta {before = x, after = x, delta = zero}
 
-deltaCons :: Num a => a -> a -> Delta a
-deltaCons b a = Delta {before = b, after = a, delta = a-b}
+deltaCons :: Sum a => a -> a -> Delta a
+deltaCons b a = Delta {before = b, after = a, delta = a~-b}
 
 instance FormatValue a => FormatValue (Delta a) where
    formatValue rec =

@@ -91,6 +91,7 @@ Library
     EFA.Equation.Result
     EFA.Equation.Env
     EFA.Equation.Variable
+    EFA.Equation.Arithmetic
     EFA.Example.Utility
 
 

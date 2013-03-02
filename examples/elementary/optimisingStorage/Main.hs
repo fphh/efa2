@@ -24,6 +24,8 @@ import EFA.Signal.Signal(UTFSig, FSamp, Test2, PFSamp, (.+), (.-),(./),(.*))
 import EFA.Signal.Typ (A, P, Tt, F, N, X, Typ, T, UT,Y)
 import EFA.Signal.Base(Val)
 
+import qualified EFA.Equation.Arithmetic as Arith
+
 import qualified EFA.Report.Report as Rep
 
 import qualified EFA.Utility.Stream as Stream
@@ -70,7 +72,7 @@ seqTopo = constructSeqTopo topoDreibein [0, 4]
 type Expr s a = EqGen.Expression Node s Double a
 type ExpVar s = Expr s Double
 
-etaf :: (Floating a) => Expr s a -> Expr s a
+etaf :: (Arith.Sum a, Floating a) => Expr s a -> Expr s a
 etaf =
    EqGen.liftF $ \x ->
       let y = x/100
@@ -111,7 +113,7 @@ time = EqGen.getVar . Idx.DTime
 (^!) = (^)
 
 f ::
-   Floating a =>
+   (Arith.Sum a, Floating a) =>
    Expr s a -> Expr s a -> Expr s a
 f =
    EqGen.liftF2 $ \r x ->

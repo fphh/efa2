@@ -13,6 +13,8 @@ import EFA.Equation.System ((=.=), (=%=))
 import EFA.Equation.Variable (MkIdxC, MkVarC)
 import EFA.Signal.SequenceData (SequData(SequData))
 
+import qualified EFA.Equation.Arithmetic as Arith
+
 import Data.Monoid ((<>))
 
 
@@ -56,7 +58,7 @@ givenSymbol ::
   We should remove the Eq constraint as soon as unique-logic allows it.
   -}
   (Eq (Term term recIdx node),
-   Fractional (Term term recIdx node),
+   Arith.Sum (Term term recIdx node),
    EqGen.Record rec,
    Ord (idx node), MkVarC term, MkIdxC idx,
    Env.AccessMap idx, Env.Record recIdx rec) =>
@@ -69,7 +71,7 @@ givenSymbol idx =
 infixr 6 =<>
 (=<>) ::
   (Eq (Term term recIdx node),
-   Fractional (Term term recIdx node),
+   Arith.Sum (Term term recIdx node),
    EqGen.Record rec,
    Ord (idx node), MkVarC term, MkIdxC idx,
    Env.AccessMap idx, Env.Record recIdx rec) =>
@@ -99,14 +101,14 @@ interVar idx sec0 sec1 x =
 infix 0 .=, %=
 
 (.=) ::
-  (Eq a, Num a, EqGen.Record rec, Env.Record recIdx rec,
+  (Eq a, Arith.Sum a, EqGen.Record rec, Env.Record recIdx rec,
    Env.AccessMap idx, Ord (idx node)) =>
   Idx.Record recIdx (idx node) -> a ->
   EqGen.EquationSystem rec node s a
 evar .= val  =  EqGen.getVar evar =.= EqGen.constant val
 
 (%=) ::
-  (Eq x, Num x, EqGen.Record rec) =>
+  (Eq x, Arith.Sum x, EqGen.Record rec) =>
   EqGen.RecordExpression rec node s a x -> rec x ->
   EqGen.EquationSystem rec node s a
 evar %= val  =  evar =%= EqGen.constantRecord val

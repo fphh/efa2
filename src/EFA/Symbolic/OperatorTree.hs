@@ -6,7 +6,11 @@ import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
 
-import Data.Ratio ((%))
+import qualified EFA.Equation.Arithmetic as Arith
+import EFA.Equation.Arithmetic
+          (Sum, zero, (~+), (~-),
+           Product, (~*), (~/),
+           Constant)
 
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Stream as Stream
@@ -36,7 +40,7 @@ data Term a =
 
 
 instance Num (Term idx) where
-   fromInteger x = Const (x % 1)
+   fromInteger = Const . fromInteger
    negate = Minus
    (+) = (:+)
    (*) = (:*)
@@ -47,6 +51,19 @@ instance Fractional (Term idx) where
    fromRational = Const
    recip = Recip
    (/) = (&/)
+
+instance Sum (Term idx) where
+   (~+) = (:+)
+   (~-) = (&-)
+
+instance Product (Term idx) where
+   (~*) = (:*)
+   (~/) = (&/)
+
+instance Constant (Term idx) where
+   zero = Const 0
+   fromInteger = Const . fromInteger
+   fromRational = Const
 
 
 instance Functor Term where

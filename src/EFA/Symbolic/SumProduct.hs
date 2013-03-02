@@ -1,5 +1,8 @@
 module EFA.Symbolic.SumProduct where
 
+import qualified EFA.Equation.Arithmetic as Arith
+import EFA.Equation.Arithmetic ((~+), (~-), (~*), (~/))
+
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
 
@@ -114,6 +117,21 @@ instance Ord a => Fractional (Term a) where
    fromRational x = Sum $ Map.singleton one x
    -- (/) is not just unionWith (/) because the elements in the second map would remain unchanged
    recip = termFromCoeffProd . recipCoeffProduct . coeffProdFromTerm
+
+
+
+instance Ord idx => Arith.Sum (Term idx) where
+   (~+) = (+)
+   (~-) = (-)
+
+instance Ord idx => Arith.Product (Term idx) where
+   (~*) = (*)
+   (~/) = (/)
+
+instance Ord idx => Arith.Constant (Term idx) where
+   zero = zero
+   fromInteger = fromInteger
+   fromRational = fromRational
 
 
 {- |

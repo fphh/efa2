@@ -13,6 +13,8 @@ import EFA.Utility.Stream (Stream((:~)))
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 
+import EFA.Equation.Arithmetic ((~*))
+
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
 
@@ -44,7 +46,7 @@ given =
 
 sys =
    (edgeVar EqGen.power sec0 node1 node0 =%=
-      edgeVar EqGen.eta sec0 node0 node1 *
+      edgeVar EqGen.eta sec0 node0 node1 ~*
       edgeVar EqGen.power sec0 node0 node1)
 
 

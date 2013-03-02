@@ -19,6 +19,8 @@ import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Graph as Gr
 
+import qualified EFA.Equation.Arithmetic as Arith
+
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
 
@@ -81,7 +83,7 @@ instance Ord Symbol where
 infixr 6 =<>
 
 (=<>) ::
-   (Eq (term Symbol), Num (term Symbol), Ord (t Node.Int),
+   (Eq (term Symbol), Arith.Sum (term Symbol), Ord (t Node.Int),
     Var.MkVarC term, Var.MkIdxC t, Env.AccessMap t) =>
    (Idx.Record Idx.Delta (t Node.Int), Double) ->
    EqGen.EquationSystem Env.Delta Node.Int s (term Symbol) ->

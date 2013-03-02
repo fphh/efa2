@@ -13,6 +13,8 @@ import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Draw as Draw
 
+import qualified EFA.Equation.Arithmetic as Arith
+
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
 import EFA.Utility (checkedLookup)
@@ -80,11 +82,11 @@ given e x =
 
 type Expr s a x = EqGen.Expression Node s a x
 
-c02, c04 :: (Eq a, Fractional a) => Expr s a a
+c02, c04 :: (Eq a, Arith.Sum a) => Expr s a a
 c02 = EqGen.getVar $ edgeVar Idx.Power sec0 c0 c1
 c04 = EqGen.getVar $ edgeVar Idx.Power sec0 c0 c3
 
-n12, n14 :: (Eq a, Fractional a) => Expr s a a
+n12, n14 :: (Eq a, Arith.Sum a) => Expr s a a
 n12 = EqGen.getVar $ edgeVar Idx.Eta sec0 c0 c1
 n14 = EqGen.getVar $ edgeVar Idx.Eta sec0 c0 c3
 
