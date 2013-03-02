@@ -34,7 +34,24 @@ import Data.Monoid ((<>))
 import Data.Foldable (fold, foldMap)
 
 import qualified EFA.Equation.Env as Env
-import EFA.Equation.Result (Result(..))
+import qualified EFA.Equation.Result as Result
+import qualified EFA.Symbolic.OperatorTree as Op
+import qualified EFA.Equation.Variable as Var
+
+import qualified EFA.Report.Format as Format
+import EFA.Report.FormatValue (FormatValue, formatValue)
+
+import Control.Functor.HT (void)
+import qualified Graphics.Gnuplot.Advanced as GP
+import qualified Graphics.Gnuplot.Frame as Frame
+import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
+import qualified Graphics.Gnuplot.Frame.OptionSet.Style as OptsStyle
+import qualified Graphics.Gnuplot.Frame.OptionSet.Histogram as Histogram
+import qualified Graphics.Gnuplot.Plot.TwoDimensional as Plot2D
+import qualified Graphics.Gnuplot.Graph.TwoDimensional as Graph2D
+import qualified Graphics.Gnuplot.LineSpecification as LineSpec
+
+import qualified Data.Foldable as Fold
 
 ----------------------------------
 -- * Example Specific Imports
@@ -44,11 +61,36 @@ import Modules.Signals as Signals
 import Modules.Plots as Plot 
 import Modules.Analysis as Analysis
 
+import System.IO
 ----------------------------------
 -- * Here Starts the Real Program
 
+histogram ::
+   (Fold.Foldable f, FormatValue term) =>
+   f (term, Double) -> Frame.T (Graph2D.T Int Double)
+histogram =
+   Frame.cons (
+      Opts.title "Decomposition of total output energy" $
+      Histogram.rowstacked $
+      OptsStyle.fillBorderLineType (-1) $
+      OptsStyle.fillSolid $
+      Opts.xTicks2d [(Format.unASCII $ formatValue $
+                      Idx.delta $ Var.mkIdx eout, 0)] $
+      Opts.xRange2d (-1,3) $
+      Opts.deflt) .
+   foldMap (\(term,val) ->
+      fmap (Graph2D.lineSpec
+              (LineSpec.title (Format.unASCII $ formatValue term) LineSpec.deflt)) $
+      Plot2D.list Graph2D.histograms [val])
+
+eout :: Idx.Energy System.Node
+eout = edgeVar Idx.Energy (Idx.Section 0)  System.Chassis System.Resistance -- System.Tank System.ConBattery
+
+
 main :: IO ()
 main = do
+  
+  hSetEncoding stdout utf8
 
 ---------------------------------------------------------------------------------------
 -- * Show Topology
@@ -67,7 +109,7 @@ main = do
   
 --  rawSignals <- modelicaCSVImport "Vehicle_res.csv" :: IO (SignalRecord [] Double)
   rawSignals <- modelicaPLTImport "Vehicle_res.plt" :: IO (SignalRecord [] Double)
-  rawSignalsB <- modelicaPLTImport "Vehicle_mass1200kg_res.plt" :: IO (SignalRecord [] Double)
+  rawSignalsB <- modelicaPLTImport "Vehicle_res.plt" :: IO (SignalRecord [] Double) -- "Vehicle_mass1200kg_res.plt" :: IO (SignalRecord [] Double)
   
 --------------------------------------------------------------------------------------- 
 -- * Conditioning, Sequencing and Integration
@@ -89,7 +131,7 @@ main = do
   let solve ::
          (Eq a, Fractional a, EqGen.Record rec) =>
          (forall s. EqGen.EquationSystem rec System.Node s a) ->
-         Env.Env System.Node (rec (Result a))
+         Env.Env System.Node (rec (Result.Result a))
       solve = flip EqGen.solveFromMeasurement sequenceFlowTopology
 
   let simulation =
@@ -101,13 +143,41 @@ main = do
             (Analysis.makeGiven Idx.Before sequenceFlowsFilt <>
              Analysis.makeGiven Idx.After sequenceFlowsFiltB)
 
+--  let prediction =
+--         solve $ Analysis.makeGivenForPrediction Idx.Absolute simulation
+      
   let prediction =
-         solve $ Analysis.makeGivenForPrediction Idx.Absolute simulation
-
+         EqGen.solve (Analysis.makeGivenForPrediction Idx.Absolute simulation) sequenceFlowTopology
+  
+  let difference = 
+        EqGen.solve (Analysis.makeGivenForDifferentialAnalysis simulationDelta) sequenceFlowTopology
+        
   --  let predictionB = Analysis.predict sequenceFlowTopology simulationB
 
---  let deltaSimulation_AB = Analysis.delta sequenceFlowTopology simulation simulationB
 
+    
+
+  
+  case M.lookup eout (Env.energyMap difference) of
+      Nothing -> error "undefined E_0_1"
+      Just d ->
+         case Env.delta d of
+            Result.Undetermined -> error "undetermined E_0_1"
+            Result.Determined x -> do
+               let assigns =
+                      fmap
+                         (\symbol ->
+                            (fmap index symbol,
+                             Op.evaluate value symbol)) $
+                      Op.group $ Op.expand $ Op.fromNormalTerm x
+               Fold.forM_ assigns $ \(term,val) -> do
+                  putStrLn $
+                     (Format.unUnicode $ formatValue term) ++ " = " ++ show val
+               void $ GP.plotDefault $ histogram assigns
+{-
+   Draw.sequFlowGraphDeltaWithEnv seqTopo $
+      fmap (fmap (fmap (SumProduct.map index))) env
+-}
 
   -- draw various diagrams
   concurrentlyMany_ [
@@ -120,7 +190,6 @@ main = do
 --    Draw.sequFlowGraphAbsWithEnv sectionTopos prediction
 
     ]
-
 
 
 
