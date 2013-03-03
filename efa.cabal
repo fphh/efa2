@@ -180,6 +180,16 @@ Executable example-numericSolving
   Else
     Buildable: False
 
+Executable example-signalSolving
+  Main-Is: examples/elementary/signalSolving/Main.hs
+  GHC-Options: -Wall
+  If flag(buildExamples)
+    Build-Depends:
+      efa,
+      base
+  Else
+    Buildable: False
+
 Executable example-symbolicSolving
   Main-Is: examples/elementary/symbolicSolving/Main.hs
   GHC-Options: -Wall
