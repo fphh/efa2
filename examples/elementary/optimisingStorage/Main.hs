@@ -1,4 +1,4 @@
-
+{-# LANGUAGE TypeFamilies #-}
 module Main where
 
 import EFA.Example.Utility
@@ -12,6 +12,7 @@ import qualified EFA.Graph as Gr
 
 import qualified EFA.Equation.Absolute as EqGen
 import qualified EFA.Equation.Env as Env
+import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Result as R
 import EFA.Equation.System ((=.=))
 
@@ -81,21 +82,21 @@ etaf =
 
 n01, n12, n13, n31, p10, p21, e31, e21, p31, p13 ::
   Idx.Section -> Expr s Double
-n01 sec = EqGen.variableSignal $ edgeVar Idx.Eta sec N0 N1
-n12 sec = EqGen.variableSignal $ edgeVar Idx.Eta sec N1 N2
-n13 sec = EqGen.variableSignal $ edgeVar Idx.Eta sec N1 N3
-n31 sec = EqGen.variableSignal $ edgeVar Idx.Eta sec N3 N1
-p10 sec = EqGen.variableSignal $ edgeVar Idx.Power sec N1 N0
-p21 sec = EqGen.variableSignal $ edgeVar Idx.Power sec N2 N1
-e31 sec = EqGen.variableSignal $ edgeVar Idx.Energy sec N3 N1
-e21 sec = EqGen.variableSignal $ edgeVar Idx.Energy sec N2 N1
+n01 sec = EqGen.variable $ edgeVar Idx.Eta sec N0 N1
+n12 sec = EqGen.variable $ edgeVar Idx.Eta sec N1 N2
+n13 sec = EqGen.variable $ edgeVar Idx.Eta sec N1 N3
+n31 sec = EqGen.variable $ edgeVar Idx.Eta sec N3 N1
+p10 sec = EqGen.variable $ edgeVar Idx.Power sec N1 N0
+p21 sec = EqGen.variable $ edgeVar Idx.Power sec N2 N1
+e31 sec = EqGen.variable $ edgeVar Idx.Energy sec N3 N1
+e21 sec = EqGen.variable $ edgeVar Idx.Energy sec N2 N1
 
-p31 sec = EqGen.variableSignal $ edgeVar Idx.Power sec N3 N1
-p13 sec = EqGen.variableSignal $ edgeVar Idx.Power sec N1 N3
+p31 sec = EqGen.variable $ edgeVar Idx.Power sec N3 N1
+p13 sec = EqGen.variable $ edgeVar Idx.Power sec N1 N3
 
 
 stoinit :: Expr s Double
-stoinit = EqGen.variableScalar $ Idx.Storage (Idx.SecNode Idx.initSection N3)
+stoinit = EqGen.variable $ Idx.Storage (Idx.SecNode Idx.initSection N3)
 
 ein, eout0, eout1 :: Idx.Energy Node
 ein = edgeVar Idx.Energy sec0 N0 N1
@@ -103,10 +104,10 @@ eout0 = edgeVar Idx.Energy sec0 N2 N1
 eout1 = edgeVar Idx.Energy sec1 N2 N1
 
 e33 :: Expr s Double
-e33 = EqGen.variableSignal $ interVar Idx.Energy Idx.initSection sec1 N3
+e33 = EqGen.variable $ interVar Idx.Energy Idx.initSection sec1 N3
 
 time :: Idx.Section -> Expr s Double
-time = EqGen.variableSignal . Idx.DTime
+time = EqGen.variable . Idx.DTime
 
 
 -- maybe move this to Utility module
@@ -172,7 +173,7 @@ unpackResult (R.Undetermined) = error("No Result")
 
 -- | Checked Lookup
 getSignalVar ::
-   (Ord (idx Node), Show (idx Node), Env.AccessSignalMap idx,
+   (Ord (idx Node), Show (idx Node), Env.AccessMap idx, Var.Type idx ~ Var.Signal,
     Show a, UV.Unbox a) =>
    [[Env.Complete Node (Env.Absolute (R.Result a)) (Env.Absolute (R.Result a))]] ->
    idx Node -> Test2 (Typ A u Tt) a
@@ -180,7 +181,7 @@ getSignalVar varEnvs idx =
    S.changeSignalType $ S.fromList2 $
    map (map (unpackResult . Env.unAbsolute .
              flip checkedLookup idx .
-             Accessor.get (Env.accessSignalMap . Env.accessSignal))) $
+             Accessor.get Env.accessMap)) $
    varEnvs
 
 

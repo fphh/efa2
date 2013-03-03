@@ -1,7 +1,7 @@
 module Main where
 
 import EFA.Example.Utility ( edgeVar, makeEdges, constructSeqTopo )
-import EFA.Equation.Absolute ( (.=), (#=) )
+import EFA.Equation.Absolute ( (.=) )
 
 import qualified EFA.Equation.Absolute as EqGen
 import qualified EFA.Graph.Topology.Node as Node
@@ -58,7 +58,7 @@ given =
    (Idx.DTime sec1 .= 1) :
    (Idx.DTime sec2 .= 1) :
 
-   (Idx.Storage (Idx.SecNode sec2 node3) #= 10.0) :
+   (Idx.Storage (Idx.SecNode sec2 node3) .= 10.0) :
 
 
    (edgeVar Idx.Power sec0 node2 node3 .= 4.0) :

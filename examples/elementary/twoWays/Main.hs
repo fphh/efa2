@@ -83,12 +83,12 @@ given e x =
 type Expr s a v x = EqGen.Expression Node s a v x
 
 c02, c04 :: (Eq v, Arith.Sum v) => Expr s a v v
-c02 = EqGen.variableSignal $ edgeVar Idx.Power sec0 c0 c1
-c04 = EqGen.variableSignal $ edgeVar Idx.Power sec0 c0 c3
+c02 = EqGen.variable $ edgeVar Idx.Power sec0 c0 c1
+c04 = EqGen.variable $ edgeVar Idx.Power sec0 c0 c3
 
 n12, n14 :: (Eq v, Arith.Sum v) => Expr s a v v
-n12 = EqGen.variableSignal $ edgeVar Idx.Eta sec0 c0 c1
-n14 = EqGen.variableSignal $ edgeVar Idx.Eta sec0 c0 c3
+n12 = EqGen.variable $ edgeVar Idx.Eta sec0 c0 c1
+n14 = EqGen.variable $ edgeVar Idx.Eta sec0 c0 c3
 
 n1, n2 :: (Fractional x) => Expr s a v x -> Expr s a v x
 n1 p = -0.012 * (p - 12) * (p - 3) + 0.5

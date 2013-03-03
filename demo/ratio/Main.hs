@@ -81,7 +81,7 @@ solveEnv ::
     (Env.Absolute (Result Rational))
 solveEnv p =
   EqGen.solve seqTopo
-    ((EqGen.variableSignal eta =.= functionEta (EqGen.variableSignal c)) <> given p)
+    ((EqGen.variable eta =.= functionEta (EqGen.variable c)) <> given p)
 
 main :: IO ()
 main = do

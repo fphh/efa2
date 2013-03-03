@@ -69,7 +69,7 @@ solve :: Double -> String
 solve p =
   let env =
          EqGen.solve seqTopo
-            ((EqGen.variableSignal eta =.= functionEta (EqGen.variableSignal c)) <> given p)
+            ((EqGen.variable eta =.= functionEta (EqGen.variable c)) <> given p)
   in  show p ++ " " ++
       Format.unUnicode (formatValue (Env.unAbsolute
          (checkedLookup (Env.etaMap (Env.signal env)) eta)))

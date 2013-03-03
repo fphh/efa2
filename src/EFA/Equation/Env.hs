@@ -12,6 +12,7 @@ import EFA.Equation.Arithmetic
 import qualified Data.Map as M
 
 import qualified Data.Accessor.Basic as Accessor
+import Control.Category ((.))
 import Control.Applicative (Applicative, pure, (<*>), liftA3)
 import Data.Traversable (Traversable, sequenceA, foldMapDefault)
 import Data.Foldable (Foldable, foldMap)
@@ -21,7 +22,7 @@ import qualified EFA.Report.Format as Format
 import EFA.Report.Format (Format)
 import EFA.Report.FormatValue (FormatValue, formatValue)
 
-import Prelude hiding (lookup)
+import Prelude hiding (lookup, (.))
 
 
 -- Environments
@@ -57,13 +58,21 @@ data Complete node b a =
       signal :: Signal node a
    }
 
-accessScalar :: Accessor.T (Complete node b a) (Scalar node b)
-accessScalar =
-   Accessor.fromSetGet (\x c -> c{scalar = x}) scalar
 
-accessSignal :: Accessor.T (Complete node b a) (Signal node a)
-accessSignal =
-   Accessor.fromSetGet (\x c -> c{signal = x}) signal
+class AccessPart env where
+   type PartElement env a v :: *
+   accessPart ::
+      Accessor.T (Complete node a v) (env node (PartElement env a v))
+
+instance AccessPart Scalar where
+   type PartElement Scalar a v = a
+   accessPart =
+      Accessor.fromSetGet (\x c -> c{scalar = x}) scalar
+
+instance AccessPart Signal where
+   type PartElement Signal a v = v
+   accessPart =
+      Accessor.fromSetGet (\x c -> c{signal = x}) signal
 
 
 formatAssign ::
@@ -122,44 +131,66 @@ lookupSignalRecord (Idx.Record r v) =
 
 
 
-class AccessSignalMap idx where
-   accessSignalMap :: Accessor.T (Signal node a) (M.Map (idx node) a)
+type Element idx a v = PartElement (Environment (Var.Type idx)) a v
 
-instance AccessSignalMap Idx.Energy where
-   accessSignalMap =
+accessMap ::
+   (AccessMap idx) =>
+   Accessor.T (Complete node a v) (M.Map (idx node) (Element idx a v))
+accessMap =
+   accessPartMap . accessPart
+
+class
+   (AccessPart (Environment var), var ~ Variable (Environment var)) =>
+      VarEnv var where
+   type Environment var :: * -> * -> *
+   type Variable env :: * -> *
+
+instance VarEnv Var.Signal where
+   type Environment Var.Signal = Signal
+   type Variable Signal = Var.Signal
+
+instance VarEnv Var.Scalar where
+   type Environment Var.Scalar = Scalar
+   type Variable Scalar = Var.Scalar
+
+
+class (VarEnv (Var.Type idx), Var.Index idx) => AccessMap idx where
+   accessPartMap ::
+      Accessor.T (Environment (Var.Type idx) node a) (M.Map (idx node) a)
+
+instance AccessMap Idx.Energy where
+   accessPartMap =
       Accessor.fromSetGet (\x c -> c{energyMap = x}) energyMap
 
-instance AccessSignalMap Idx.Power where
-   accessSignalMap =
+instance AccessMap Idx.Power where
+   accessPartMap =
       Accessor.fromSetGet (\x c -> c{powerMap = x}) powerMap
 
-instance AccessSignalMap Idx.Eta where
-   accessSignalMap =
+instance AccessMap Idx.Eta where
+   accessPartMap =
       Accessor.fromSetGet (\x c -> c{etaMap = x}) etaMap
 
-instance AccessSignalMap Idx.DTime where
-   accessSignalMap =
+instance AccessMap Idx.DTime where
+   accessPartMap =
       Accessor.fromSetGet (\x c -> c{dtimeMap = x}) dtimeMap
 
-instance AccessSignalMap Idx.X where
-   accessSignalMap =
+instance AccessMap Idx.X where
+   accessPartMap =
       Accessor.fromSetGet (\x c -> c{xMap = x}) xMap
 
-instance AccessSignalMap Idx.Sum where
-   accessSignalMap =
+instance AccessMap Idx.Sum where
+   accessPartMap =
       Accessor.fromSetGet (\x c -> c{sumMap = x}) sumMap
 
 
-class AccessScalarMap idx where
-   accessScalarMap :: Accessor.T (Scalar node a) (M.Map (idx node) a)
-
-instance AccessScalarMap Idx.MaxEnergy where
-   accessScalarMap =
+instance AccessMap Idx.MaxEnergy where
+   accessPartMap =
       Accessor.fromSetGet (\x c -> c{maxEnergyMap = x}) maxEnergyMap
 
-instance AccessScalarMap Idx.Storage where
-   accessScalarMap =
+instance AccessMap Idx.Storage where
+   accessPartMap =
       Accessor.fromSetGet (\x c -> c{storageMap = x}) storageMap
+
 
 
 instance Functor (Signal node) where

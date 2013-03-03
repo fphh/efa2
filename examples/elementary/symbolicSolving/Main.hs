@@ -1,7 +1,7 @@
 module Main where
 
 import EFA.Example.Utility (edgeVar, makeEdges, constructSeqTopo)
-import EFA.Equation.Absolute ((=<>), (#=<>))
+import EFA.Equation.Absolute ((=<>))
 
 import qualified EFA.Symbolic.SumProduct as SumProduct
 import qualified EFA.Equation.Absolute as EqGen
@@ -43,7 +43,7 @@ given =
    Idx.DTime Idx.initSection =<>
    Idx.DTime sec0 =<>
 
-   Idx.Storage (Idx.SecNode sec0 node3) #=<>
+   Idx.Storage (Idx.SecNode sec0 node3) =<>
 
    edgeVar Idx.Power sec0 node3 node2 =<>
    edgeVar Idx.X sec0 node2 node3 =<>

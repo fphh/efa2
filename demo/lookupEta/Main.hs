@@ -71,7 +71,7 @@ solve :: Double -> String
 solve p =
   let env =
          EqSys.solve seqTopo
-            ((EqSys.variableSignal eta =.= lookupEta (EqSys.variableSignal c))
+            ((EqSys.variable eta =.= lookupEta (EqSys.variable c))
                <> given p)
   in  show p ++ " " ++
       Format.unUnicode (formatValue (Env.unAbsolute

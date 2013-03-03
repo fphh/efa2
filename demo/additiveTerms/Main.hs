@@ -96,7 +96,7 @@ type
 infixr 6 =<>
 
 (=<>) ::
-   (Ord (idx Node.Int), Env.AccessSignalMap idx,
+   (Ord (idx Node.Int), Env.AccessMap idx,
     Var.Index idx, Var.Type idx ~ Var.Signal) =>
    (Idx.Record Idx.Delta (idx Node.Int), Double) ->
    EquationSystem s -> EquationSystem s

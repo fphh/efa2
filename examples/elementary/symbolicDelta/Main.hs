@@ -2,7 +2,7 @@ module Main where
 
 import EFA.Example.Utility
           (ScalarTerm, SignalTerm,
-           edgeVar, makeEdges, constructSeqTopo, (=<>), (#=<>), (.=))
+           edgeVar, makeEdges, constructSeqTopo, (=<>), (.=))
 
 import qualified EFA.Symbolic.SumProduct as SumProduct
 import qualified EFA.Equation.System as EqGen
@@ -51,8 +51,8 @@ given =
    Idx.before (Idx.DTime Idx.initSection) =<>
    Idx.before (Idx.DTime sec0) =<>
 
-   Idx.before (Idx.Storage (Idx.SecNode Idx.initSection node3)) #=<>
-   Idx.delta (Idx.Storage (Idx.SecNode sec0 node3)) #=<>
+   Idx.before (Idx.Storage (Idx.SecNode Idx.initSection node3)) =<>
+   Idx.delta (Idx.Storage (Idx.SecNode sec0 node3)) =<>
 
    Idx.after (edgeVar Idx.Power sec0 node3 node2) =<>
    Idx.after (edgeVar Idx.X sec0 node2 node3) =<>

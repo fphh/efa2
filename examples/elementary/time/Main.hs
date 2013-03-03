@@ -3,7 +3,7 @@
 module Main where
 
 import EFA.Example.Utility ( edgeVar, makeEdges, constructSeqTopo, )
-import EFA.Equation.Absolute ((.=), (#=))
+import EFA.Equation.Absolute ((.=))
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Async (concurrentlyMany_)
@@ -81,15 +81,15 @@ n5 = EqGen.liftF $ \x -> x/sqrt(1+(x+2)*(x+2))
 
 n01, n12, n13, n31, p10, p12, p21, p13, p31 ::
    (Eq a, Arith.Sum a) => Idx.Section -> Expr s a
-n01 sec = EqGen.variableSignal $ edgeVar Idx.Eta sec N0 N1
-n12 sec = EqGen.variableSignal $ edgeVar Idx.Eta sec N1 N2
-n13 sec = EqGen.variableSignal $ edgeVar Idx.Eta sec N1 N3
-n31 sec = EqGen.variableSignal $ edgeVar Idx.Eta sec N3 N1
-p10 sec = EqGen.variableSignal $ edgeVar Idx.Power sec N1 N0
-p12 sec = EqGen.variableSignal $ edgeVar Idx.Power sec N1 N2
-p21 sec = EqGen.variableSignal $ edgeVar Idx.Power sec N2 N1
-p13 sec = EqGen.variableSignal $ edgeVar Idx.Power sec N1 N3
-p31 sec = EqGen.variableSignal $ edgeVar Idx.Power sec N3 N1
+n01 sec = EqGen.variable $ edgeVar Idx.Eta sec N0 N1
+n12 sec = EqGen.variable $ edgeVar Idx.Eta sec N1 N2
+n13 sec = EqGen.variable $ edgeVar Idx.Eta sec N1 N3
+n31 sec = EqGen.variable $ edgeVar Idx.Eta sec N3 N1
+p10 sec = EqGen.variable $ edgeVar Idx.Power sec N1 N0
+p12 sec = EqGen.variable $ edgeVar Idx.Power sec N1 N2
+p21 sec = EqGen.variable $ edgeVar Idx.Power sec N2 N1
+p13 sec = EqGen.variable $ edgeVar Idx.Power sec N1 N3
+p31 sec = EqGen.variable $ edgeVar Idx.Power sec N3 N1
 
 --esto :: Expr s Double
 esto, ein, eout0, eout1 :: Idx.Energy Node
@@ -111,13 +111,13 @@ given _x t =
   <> (n12 sec1 =.= 1) -- n5 (p12 sec1))
   <> (n13 sec0 =.= 1) -- n1 (p12 sec0))
   <> (n31 sec1 =.= 1) -- n1 (p31 sec1))
-  <> (EqGen.variableSignal (edgeVar Idx.Energy sec1 N3 N1)
-        =.= EqGen.variableSignal (edgeVar Idx.Energy sec0 N3 N1))
-  <> (EqGen.variableSignal (Idx.DTime sec0) + EqGen.variableSignal (Idx.DTime sec1) =.= 12.1)
+  <> (EqGen.variable (edgeVar Idx.Energy sec1 N3 N1)
+        =.= EqGen.variable (edgeVar Idx.Energy sec0 N3 N1))
+  <> (EqGen.variable (Idx.DTime sec0) + EqGen.variable (Idx.DTime sec1) =.= 12.1)
 
   <> (Idx.DTime Idx.initSection .= 1)
   <> (Idx.DTime sec0 .= t)
-  <> (Idx.Storage (Idx.SecNode Idx.initSection N3) #= 10)
+  <> (Idx.Storage (Idx.SecNode Idx.initSection N3) .= 10)
 
   -- <> (edgeVar EqGen.xfactor sec0 N1 N2 .= x)
   <> (edgeVar Idx.Power sec0 N2 N1 .= 10)
