@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeFamilies #-}
 module Main where
 
 import EFA.Example.Utility
@@ -95,11 +96,12 @@ type
 infixr 6 =<>
 
 (=<>) ::
-   (Ord (t Node.Int), Var.SignalIndex t, Env.AccessSignalMap t) =>
-   (Idx.Record Idx.Delta (t Node.Int), Double) ->
+   (Ord (idx Node.Int), Env.AccessSignalMap idx,
+    Var.Index idx, Var.Type idx ~ Var.Signal) =>
+   (Idx.Record Idx.Delta (idx Node.Int), Double) ->
    EquationSystem s -> EquationSystem s
 (idx, x) =<> eqsys =
-   (idx .= Term.Signal (point (Symbol (fmap Var.signalIndex idx) x))) <> eqsys
+   (idx .= Term.Signal (point (Symbol (fmap Var.index idx) x))) <> eqsys
 
 
 {-
@@ -137,7 +139,7 @@ histogram =
       OptsStyle.fillBorderLineType (-1) $
       OptsStyle.fillSolid $
       Opts.xTicks2d [(Format.unASCII $ formatValue $
-                      Idx.delta $ Var.signalIndex eout, 0)] $
+                      Idx.delta $ Var.index eout, 0)] $
       Opts.xRange2d (-1,3) $
       Opts.deflt) .
    foldMap (\(term,val) ->

@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeFamilies #-}
 module EFA.Equation.Variable where
 
 import qualified EFA.Graph.Topology.Index as Idx
@@ -22,22 +23,21 @@ data Scalar a =
      deriving (Show, Eq, Ord)
 
 
-class SignalIndex t where
-   signalIndex :: t a -> Signal a
 
-instance SignalIndex Idx.Energy where signalIndex = Energy
-instance SignalIndex Idx.Power where signalIndex = Power
-instance SignalIndex Idx.Eta where signalIndex = Eta
-instance SignalIndex Idx.DTime where signalIndex = DTime
-instance SignalIndex Idx.X where signalIndex = X
-instance SignalIndex Idx.Sum where signalIndex = Sum
+class Index t where
+   type Type t :: * -> *
+   index :: t a -> Type t a
 
+instance Index Idx.Energy where type Type Idx.Energy = Signal; index = Energy
+instance Index Idx.Power  where type Type Idx.Power  = Signal; index = Power
+instance Index Idx.Eta    where type Type Idx.Eta    = Signal; index = Eta
+instance Index Idx.DTime  where type Type Idx.DTime  = Signal; index = DTime
+instance Index Idx.X      where type Type Idx.X      = Signal; index = X
+instance Index Idx.Sum    where type Type Idx.Sum    = Signal; index = Sum
 
-class ScalarIndex t where
-   scalarIndex :: t a -> Scalar a
+instance Index Idx.MaxEnergy where type Type Idx.MaxEnergy = Scalar; index = MaxEnergy
+instance Index Idx.Storage   where type Type Idx.Storage   = Scalar; index = Storage
 
-instance ScalarIndex Idx.MaxEnergy where scalarIndex = MaxEnergy
-instance ScalarIndex Idx.Storage where scalarIndex = Storage
 
 
 formatSectionNode ::

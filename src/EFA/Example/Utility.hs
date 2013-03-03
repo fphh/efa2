@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeFamilies #-}
 module EFA.Example.Utility where
 
 import qualified EFA.Graph.Topology.Index as Idx
@@ -82,23 +83,25 @@ givenSignalSymbol ::
   (Eq (term (Idx.Record recIdx (Var.Signal node))),
    Arith.Sum (term (Idx.Record recIdx (Var.Signal node))),
    EqGen.Record rec,
-   Ord (idx node), Pointed term, Var.SignalIndex idx,
+   Ord (idx node), Pointed term,
+   Var.Index idx, Var.Type idx ~ Var.Signal,
    Env.AccessSignalMap idx, Env.Record recIdx rec) =>
   Idx.Record recIdx (idx node) ->
   SymbolicEquationSystem recIdx rec node s term
 givenSignalSymbol idx =
-   idx .= Term.Signal (point (fmap Var.signalIndex idx))
+   idx .= Term.Signal (point (fmap Var.index idx))
 
 givenScalarSymbol ::
   (Eq (term (ScalarAtom recIdx term node)),
    Arith.Sum (term (ScalarAtom recIdx term node)),
    EqGen.Record rec,
-   Ord (idx node), Pointed term, Var.ScalarIndex idx,
+   Ord (idx node), Pointed term,
+   Var.Index idx, Var.Type idx ~ Var.Scalar,
    Env.AccessScalarMap idx, Env.Record recIdx rec) =>
   Idx.Record recIdx (idx node) ->
   SymbolicEquationSystem recIdx rec node s term
 givenScalarSymbol idx =
-   idx #= Term.Scalar (point (Term.ScalarVariable (fmap Var.scalarIndex idx)))
+   idx #= Term.Scalar (point (Term.ScalarVariable (fmap Var.index idx)))
 
 
 infixr 6 =<>, #=<>
@@ -107,7 +110,8 @@ infixr 6 =<>, #=<>
   (Eq (term (Idx.Record recIdx (Var.Signal node))),
    Arith.Sum (term (Idx.Record recIdx (Var.Signal node))),
    EqGen.Record rec,
-   Ord (idx node), Pointed term, Var.SignalIndex idx,
+   Ord (idx node), Pointed term,
+   Var.Index idx, Var.Type idx ~ Var.Signal,
    Env.AccessSignalMap idx, Env.Record recIdx rec) =>
   Idx.Record recIdx (idx node) ->
   SymbolicEquationSystem recIdx rec node s term ->
@@ -118,7 +122,8 @@ idx =<> eqsys = givenSignalSymbol idx <> eqsys
   (Eq (term (ScalarAtom recIdx term node)),
    Arith.Sum (term (ScalarAtom recIdx term node)),
    EqGen.Record rec,
-   Ord (idx node), Pointed term, Var.ScalarIndex idx,
+   Ord (idx node), Pointed term,
+   Var.Index idx, Var.Type idx ~ Var.Scalar,
    Env.AccessScalarMap idx, Env.Record recIdx rec) =>
   Idx.Record recIdx (idx node) ->
   SymbolicEquationSystem recIdx rec node s term ->

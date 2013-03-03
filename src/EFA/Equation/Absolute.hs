@@ -86,20 +86,24 @@ type
 givenSignalSymbol ::
    (Eq (term (Idx.Record Idx.Absolute (Var.Signal node))),
     Arith.Sum (term (Idx.Record Idx.Absolute (Var.Signal node))),
-    Pointed term, Ord (t node), Var.SignalIndex t, Env.AccessSignalMap t) =>
-   t node ->
+    Pointed term, Ord (idx node),
+    Var.Index idx, Var.Type idx ~ Var.Signal,
+    Env.AccessSignalMap idx) =>
+   idx node ->
    SymbolicEquationSystem node s term
 givenSignalSymbol idx =
-   idx .= Term.Signal (point (Idx.absolute (Var.signalIndex idx)))
+   idx .= Term.Signal (point (Idx.absolute (Var.index idx)))
 
 givenScalarSymbol ::
    (Eq (term (ScalarAtom term node)),
     Arith.Sum (term (ScalarAtom term node)),
-    Pointed term, Ord (t node), Var.ScalarIndex t, Env.AccessScalarMap t) =>
-   t node ->
+    Pointed term, Ord (idx node),
+    Var.Index idx, Var.Type idx ~ Var.Scalar,
+    Env.AccessScalarMap idx) =>
+   idx node ->
    SymbolicEquationSystem node s term
 givenScalarSymbol idx =
-   idx #= Term.Scalar (point (Term.ScalarVariable (Idx.absolute (Var.scalarIndex idx))))
+   idx #= Term.Scalar (point (Term.ScalarVariable (Idx.absolute (Var.index idx))))
 
 
 infixr 6 =<>, #=<>
@@ -107,8 +111,10 @@ infixr 6 =<>, #=<>
 (=<>) ::
    (Eq (term (Idx.Record Idx.Absolute (Var.Signal node))),
     Arith.Sum (term (Idx.Record Idx.Absolute (Var.Signal node))),
-    Pointed term, Ord (t node), Var.SignalIndex t, Env.AccessSignalMap t) =>
-   t node ->
+    Pointed term, Ord (idx node),
+    Var.Index idx, Var.Type idx ~ Var.Signal,
+    Env.AccessSignalMap idx) =>
+   idx node ->
    SymbolicEquationSystem node s term ->
    SymbolicEquationSystem node s term
 idx =<> eqsys = givenSignalSymbol idx <> eqsys
@@ -116,8 +122,10 @@ idx =<> eqsys = givenSignalSymbol idx <> eqsys
 (#=<>) ::
    (Eq (term (ScalarAtom term node)),
     Arith.Sum (term (ScalarAtom term node)),
-    Pointed term, Ord (t node), Var.ScalarIndex t, Env.AccessScalarMap t) =>
-   t node ->
+    Pointed term, Ord (idx node),
+    Var.Index idx, Var.Type idx ~ Var.Scalar,
+    Env.AccessScalarMap idx) =>
+   idx node ->
    SymbolicEquationSystem node s term ->
    SymbolicEquationSystem node s term
 idx #=<> eqsys = givenScalarSymbol idx <> eqsys
