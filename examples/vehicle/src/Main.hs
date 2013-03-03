@@ -6,7 +6,7 @@ module Main where
 -- * Import other Modules
 
 import EFA.Example.Utility (edgeVar)
-import EFA.Equation.Absolute ((.=))
+import EFA.Equation.Absolute ((.=), (#=))
 import qualified EFA.Equation.System as EqGen
 --import EFA.IO.CSVImport (modelicaCSVImport)
 import EFA.IO.PLTImport (modelicaPLTImport)
@@ -140,7 +140,7 @@ main = do
 
   let makeGiven initStorage sequenceFlwsFilt =
         (Idx.DTime Idx.initSection .= 1)
-        <> (Idx.Storage (Idx.SecNode Idx.initSection System.Battery) .= initStorage)
+        <> (Idx.Storage (Idx.SecNode Idx.initSection System.Battery) #= initStorage)
         <> fold (SD.zipWithSecIdxs f sequenceFlwsFilt)
         where f sec (Record t xs) =
                 (Idx.DTime sec .= sum (Sig.toList t)) <>

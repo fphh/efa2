@@ -366,22 +366,24 @@ sequFlowGraphWithEnv g env =
                  []
 
 sequFlowGraphAbsWithEnv ::
-  (FormatValue a, Node.C node) =>
-  SequFlowGraph node -> Env.Env node (Env.Absolute a) -> IO ()
+   (FormatValue a, FormatValue v, Node.C node) =>
+   SequFlowGraph node ->
+   Env.Complete node (Env.Absolute a) (Env.Absolute v) -> IO ()
 sequFlowGraphAbsWithEnv topo = sequFlowGraphWithEnv topo . envAbs
 
 sequFlowGraphDeltaWithEnv ::
-  (FormatValue a, Node.C node) =>
-  SequFlowGraph node -> Env.Env node (Env.Delta a) -> IO ()
+   (FormatValue a, FormatValue v, Node.C node) =>
+   SequFlowGraph node ->
+   Env.Complete node (Env.Delta a) (Env.Delta v) -> IO ()
 sequFlowGraphDeltaWithEnv topo = sequFlowGraphWithEnv topo . envDelta
 
 
 envGen ::
-   (FormatValue a, Format output, Format.Record idx,
+   (FormatValue a, FormatValue v, Format output, Format.Record idx,
     Env.Record idx rec, Node.C node) =>
    idx ->
-   Env.Env node (rec a) -> Env node output
-envGen rec (Env.Env e me _p n dt x _s st) =
+   Env.Complete node (rec a) (rec v) -> Env node output
+envGen rec (Env.Complete (Env.Scalar me st) (Env.Signal e _p n dt x _s)) =
    Env
       (lookupFormatAssign rec e Idx.Energy)
       (lookupFormatAssign rec me Idx.MaxEnergy)
@@ -391,11 +393,11 @@ envGen rec (Env.Env e me _p n dt x _s st) =
       (formatNodeStorage rec st)
 
 envAbs ::
-   (FormatValue a, Format output, Node.C node) =>
-   Env.Env node (Env.Absolute a) -> Env node output
+   (FormatValue a, FormatValue v, Format output, Node.C node) =>
+   Env.Complete node (Env.Absolute a) (Env.Absolute v) -> Env node output
 envAbs = envGen Idx.Absolute
 
 envDelta ::
-   (FormatValue a, Format output, Node.C node) =>
-   Env.Env node (Env.Delta a) -> Env node output
+   (FormatValue a, FormatValue v, Format output, Node.C node) =>
+   Env.Complete node (Env.Delta a) (Env.Delta v) -> Env node output
 envDelta = envGen Idx.Delta

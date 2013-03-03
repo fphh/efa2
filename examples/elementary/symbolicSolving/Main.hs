@@ -1,7 +1,7 @@
 module Main where
 
 import EFA.Example.Utility (edgeVar, makeEdges, constructSeqTopo)
-import EFA.Equation.Absolute (Term, (=<>))
+import EFA.Equation.Absolute ((=<>), (#=<>))
 
 import qualified EFA.Symbolic.SumProduct as SumProduct
 import qualified EFA.Equation.Absolute as EqGen
@@ -34,15 +34,16 @@ topoDreibein = Gr.mkGraph ns (makeEdges es)
         es = [(node0, node2), (node1, node2), (node2, node3)]
 
 
-{-
-Use new Term type here since it simplifies automatically.
--}
-given :: EqGen.EquationSystem Node.Int s (Term SumProduct.Term Node.Int)
+type SignalTerm = EqGen.SignalTerm SumProduct.Term Node.Int
+type ScalarTerm = EqGen.ScalarTerm SumProduct.Term Node.Int
+
+
+given :: EqGen.EquationSystem Node.Int s ScalarTerm SignalTerm
 given =
    Idx.DTime Idx.initSection =<>
    Idx.DTime sec0 =<>
 
-   Idx.Storage (Idx.SecNode sec0 node3) =<>
+   Idx.Storage (Idx.SecNode sec0 node3) #=<>
 
    edgeVar Idx.Power sec0 node3 node2 =<>
    edgeVar Idx.X sec0 node2 node3 =<>

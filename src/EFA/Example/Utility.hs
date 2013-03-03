@@ -9,8 +9,8 @@ import EFA.Graph.Topology.StateAnalysis (bruteForce)
 import qualified EFA.Equation.Env as Env
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Variable as Var
+import qualified EFA.Symbolic.Mixed as Term
 import EFA.Equation.System ((=.=), (=%=))
-import EFA.Equation.Variable (MkIdxC)
 import EFA.Signal.SequenceData (SequData(SequData))
 import EFA.Utility (Pointed, point)
 
@@ -48,38 +48,82 @@ constructSeqTopo topo =
   SequData
 
 
+type
+   SignalTerm recIdx term node =
+      Term.Signal term
+         (Idx.Record recIdx (Var.Scalar node))
+         (Idx.Record recIdx (Var.Signal node))
 
-type Term term recIdx node = term (Idx.Record recIdx (Var.Index node))
+type
+   ScalarTerm recIdx term node =
+      Term.Scalar term
+         (Idx.Record recIdx (Var.Scalar node))
+         (Idx.Record recIdx (Var.Signal node))
 
-givenSymbol ::
+type
+   ScalarAtom recIdx term node =
+      Term.ScalarAtom
+         term
+         (Idx.Record recIdx (Var.Scalar node))
+         (Idx.Record recIdx (Var.Signal node))
+
+type
+   SymbolicEquationSystem recIdx rec node s term =
+      EqGen.EquationSystem rec node s
+         (ScalarTerm recIdx term node) (SignalTerm recIdx term node)
+
+givenSignalSymbol ::
   {-
   The Eq constraint is requested by unique-logic but not really needed.
   It is not easily possible to compare the terms for equal meaning
   and it is better not to compare them at all.
   We should remove the Eq constraint as soon as unique-logic allows it.
   -}
-  (Eq (Term term recIdx node),
-   Arith.Sum (Term term recIdx node),
+  (Eq (term (Idx.Record recIdx (Var.Signal node))),
+   Arith.Sum (term (Idx.Record recIdx (Var.Signal node))),
    EqGen.Record rec,
-   Ord (idx node), Pointed term, MkIdxC idx,
-   Env.AccessMap idx, Env.Record recIdx rec) =>
+   Ord (idx node), Pointed term, Var.SignalIndex idx,
+   Env.AccessSignalMap idx, Env.Record recIdx rec) =>
   Idx.Record recIdx (idx node) ->
-  EqGen.EquationSystem rec node s (Term term recIdx node)
-givenSymbol idx =
-   idx .= point (fmap Var.mkIdx idx)
+  SymbolicEquationSystem recIdx rec node s term
+givenSignalSymbol idx =
+   idx .= Term.Signal (point (fmap Var.signalIndex idx))
+
+givenScalarSymbol ::
+  (Eq (term (ScalarAtom recIdx term node)),
+   Arith.Sum (term (ScalarAtom recIdx term node)),
+   EqGen.Record rec,
+   Ord (idx node), Pointed term, Var.ScalarIndex idx,
+   Env.AccessScalarMap idx, Env.Record recIdx rec) =>
+  Idx.Record recIdx (idx node) ->
+  SymbolicEquationSystem recIdx rec node s term
+givenScalarSymbol idx =
+   idx #= Term.Scalar (point (Term.ScalarVariable (fmap Var.scalarIndex idx)))
 
 
-infixr 6 =<>
+infixr 6 =<>, #=<>
+
 (=<>) ::
-  (Eq (Term term recIdx node),
-   Arith.Sum (Term term recIdx node),
+  (Eq (term (Idx.Record recIdx (Var.Signal node))),
+   Arith.Sum (term (Idx.Record recIdx (Var.Signal node))),
    EqGen.Record rec,
-   Ord (idx node), Pointed term, MkIdxC idx,
-   Env.AccessMap idx, Env.Record recIdx rec) =>
+   Ord (idx node), Pointed term, Var.SignalIndex idx,
+   Env.AccessSignalMap idx, Env.Record recIdx rec) =>
   Idx.Record recIdx (idx node) ->
-  EqGen.EquationSystem rec node s (Term term recIdx node) ->
-  EqGen.EquationSystem rec node s (Term term recIdx node)
-idx =<> eqsys = givenSymbol idx <> eqsys
+  SymbolicEquationSystem recIdx rec node s term ->
+  SymbolicEquationSystem recIdx rec node s term
+idx =<> eqsys = givenSignalSymbol idx <> eqsys
+
+(#=<>) ::
+  (Eq (term (ScalarAtom recIdx term node)),
+   Arith.Sum (term (ScalarAtom recIdx term node)),
+   EqGen.Record rec,
+   Ord (idx node), Pointed term, Var.ScalarIndex idx,
+   Env.AccessScalarMap idx, Env.Record recIdx rec) =>
+  Idx.Record recIdx (idx node) ->
+  SymbolicEquationSystem recIdx rec node s term ->
+  SymbolicEquationSystem recIdx rec node s term
+idx #=<> eqsys = givenScalarSymbol idx <> eqsys
 
 
 edgeVar ::
@@ -99,18 +143,25 @@ interVar idx sec0 sec1 x =
       (Idx.SecNode sec1 x)
 
 
-infix 0 .=, %=
+infix 0 .=, %=, #=
 
 (.=) ::
+  (Eq v, Arith.Sum v, EqGen.Record rec, Env.Record recIdx rec,
+   Env.AccessSignalMap idx, Ord (idx node)) =>
+  Idx.Record recIdx (idx node) -> v ->
+  EqGen.EquationSystem rec node s a v
+evar .= val  =  EqGen.getSignalVar evar =.= EqGen.constant val
+
+(#=) ::
   (Eq a, Arith.Sum a, EqGen.Record rec, Env.Record recIdx rec,
-   Env.AccessMap idx, Ord (idx node)) =>
+   Env.AccessScalarMap idx, Ord (idx node)) =>
   Idx.Record recIdx (idx node) -> a ->
-  EqGen.EquationSystem rec node s a
-evar .= val  =  EqGen.getVar evar =.= EqGen.constant val
+  EqGen.EquationSystem rec node s a v
+evar #= val  =  EqGen.getScalarVar evar =.= EqGen.constant val
 
 (%=) ::
-  (Eq x, Arith.Sum x, EqGen.Record rec, Env.Record recIdx rec,
-   Env.AccessMap idx, Ord (idx node)) =>
-  idx node -> rec x ->
-  EqGen.EquationSystem rec node s x
-evar %= val  =  EqGen.getRecordVar evar =%= EqGen.constantRecord val
+  (Eq v, Arith.Sum v, EqGen.Record rec, Env.Record recIdx rec,
+   Env.AccessSignalMap idx, Ord (idx node)) =>
+  idx node -> rec v ->
+  EqGen.EquationSystem rec node s a v
+evar %= val  =  EqGen.getSignalRecordVar evar =%= EqGen.constantRecord val

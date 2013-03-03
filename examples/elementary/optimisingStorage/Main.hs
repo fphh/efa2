@@ -13,7 +13,6 @@ import qualified EFA.Graph as Gr
 import qualified EFA.Equation.Absolute as EqGen
 import qualified EFA.Equation.Env as Env
 import qualified EFA.Equation.Result as R
-import EFA.Equation.Env (Env)
 import EFA.Equation.System ((=.=))
 
 import qualified EFA.Signal.Plot as Plot
@@ -39,8 +38,10 @@ import qualified Data.Vector.Unboxed as UV
 import qualified Data.Accessor.Basic as Accessor
 import qualified Data.List.Match as Match
 
+import Control.Category ((.))
 import Data.Monoid ((<>))
 
+import Prelude hiding ((.))
 
 
 
@@ -69,7 +70,7 @@ seqTopo :: TD.SequFlowGraph Node
 seqTopo = constructSeqTopo topoDreibein [0, 4]
 
 
-type Expr s a = EqGen.Expression Node s Double a
+type Expr s a = EqGen.Expression Node s Double Double a
 type ExpVar s = Expr s Double
 
 etaf :: (Arith.Sum a, Floating a) => Expr s a -> Expr s a
@@ -80,21 +81,21 @@ etaf =
 
 n01, n12, n13, n31, p10, p21, e31, e21, p31, p13 ::
   Idx.Section -> Expr s Double
-n01 sec = EqGen.getVar $ edgeVar Idx.Eta sec N0 N1
-n12 sec = EqGen.getVar $ edgeVar Idx.Eta sec N1 N2
-n13 sec = EqGen.getVar $ edgeVar Idx.Eta sec N1 N3
-n31 sec = EqGen.getVar $ edgeVar Idx.Eta sec N3 N1
-p10 sec = EqGen.getVar $ edgeVar Idx.Power sec N1 N0
-p21 sec = EqGen.getVar $ edgeVar Idx.Power sec N2 N1
-e31 sec = EqGen.getVar $ edgeVar Idx.Energy sec N3 N1
-e21 sec = EqGen.getVar $ edgeVar Idx.Energy sec N2 N1
+n01 sec = EqGen.getSignalVar $ edgeVar Idx.Eta sec N0 N1
+n12 sec = EqGen.getSignalVar $ edgeVar Idx.Eta sec N1 N2
+n13 sec = EqGen.getSignalVar $ edgeVar Idx.Eta sec N1 N3
+n31 sec = EqGen.getSignalVar $ edgeVar Idx.Eta sec N3 N1
+p10 sec = EqGen.getSignalVar $ edgeVar Idx.Power sec N1 N0
+p21 sec = EqGen.getSignalVar $ edgeVar Idx.Power sec N2 N1
+e31 sec = EqGen.getSignalVar $ edgeVar Idx.Energy sec N3 N1
+e21 sec = EqGen.getSignalVar $ edgeVar Idx.Energy sec N2 N1
 
-p31 sec = EqGen.getVar $ edgeVar Idx.Power sec N3 N1
-p13 sec = EqGen.getVar $ edgeVar Idx.Power sec N1 N3
+p31 sec = EqGen.getSignalVar $ edgeVar Idx.Power sec N3 N1
+p13 sec = EqGen.getSignalVar $ edgeVar Idx.Power sec N1 N3
 
 
 stoinit :: Expr s Double
-stoinit = EqGen.getVar $ Idx.Storage (Idx.SecNode Idx.initSection N3)
+stoinit = EqGen.getScalarVar $ Idx.Storage (Idx.SecNode Idx.initSection N3)
 
 ein, eout0, eout1 :: Idx.Energy Node
 ein = edgeVar Idx.Energy sec0 N0 N1
@@ -102,10 +103,10 @@ eout0 = edgeVar Idx.Energy sec0 N2 N1
 eout1 = edgeVar Idx.Energy sec1 N2 N1
 
 e33 :: Expr s Double
-e33 = EqGen.getVar $ interVar Idx.Energy Idx.initSection sec1 N3
+e33 = EqGen.getSignalVar $ interVar Idx.Energy Idx.initSection sec1 N3
 
 time :: Idx.Section -> Expr s Double
-time = EqGen.getVar . Idx.DTime
+time = EqGen.getSignalVar . Idx.DTime
 
 
 -- maybe move this to Utility module
@@ -126,7 +127,7 @@ f =
 given :: Val ->
          Val ->
          Val ->
-         EqGen.EquationSystem Node s Val
+         EqGen.EquationSystem Node s Val Val
 given y' p' nParam' =
   (time Idx.initSection =.= 1)
   <> (stoinit =.= EqGen.constant 3)
@@ -153,12 +154,13 @@ varMat :: [a] -> [b] -> ([[a]], [[b]])
 varMat xs ys =
    (Match.replicate ys xs, map (Match.replicate xs) ys)
 
+
+type AbsoluteResult = Env.Absolute (R.Result Val)
+
 -- | r is inner Resistance of Battery
 solve ::
-   Val ->
-   Val ->
-   Val ->
-   Env Node (Env.Absolute (R.Result Val))
+   Val -> Val -> Val ->
+   Env.Complete Node AbsoluteResult AbsoluteResult
 solve nPar y p = EqGen.solve (given y p nPar) seqTopo
 
 
@@ -169,26 +171,33 @@ unpackResult (R.Undetermined) = error("No Result")
 
 
 -- | Checked Lookup
-getVar ::
-   (Ord (idx Node), Show (idx Node), Env.AccessMap idx,
+getSignalVar ::
+   (Ord (idx Node), Show (idx Node), Env.AccessSignalMap idx,
     Show a, UV.Unbox a) =>
-   [[Env Node (Env.Absolute (R.Result a))]] ->
+   [[Env.Complete Node (Env.Absolute (R.Result a)) (Env.Absolute (R.Result a))]] ->
    idx Node -> Test2 (Typ A u Tt) a
-getVar varEnvs idx =
+getSignalVar varEnvs idx =
    S.changeSignalType $ S.fromList2 $
    map (map (unpackResult . Env.unAbsolute .
-             flip checkedLookup idx . Accessor.get Env.accessMap)) $
+             flip checkedLookup idx .
+             Accessor.get (Env.accessSignalMap . Env.accessSignal))) $
    varEnvs
 
 
-getVarEnergy :: [[Env Node (Env.Absolute (R.Result Val))]] -> Idx.Energy Node -> Test2 (Typ A F Tt) Val
-getVarEnergy = getVar
+getSignalVarEnergy ::
+   [[Env.Complete Node AbsoluteResult AbsoluteResult]] ->
+   Idx.Energy Node -> Test2 (Typ A F Tt) Val
+getSignalVarEnergy = getSignalVar
 
-getVarPower :: [[Env Node (Env.Absolute (R.Result Val))]] -> Idx.Power Node -> Test2 (Typ A P Tt) Val
-getVarPower = getVar
+getSignalVarPower ::
+   [[Env.Complete Node AbsoluteResult AbsoluteResult]] ->
+   Idx.Power Node -> Test2 (Typ A P Tt) Val
+getSignalVarPower = getSignalVar
 
-getVarEta :: [[Env Node (Env.Absolute (R.Result Val))]] -> Idx.Eta Node -> Test2 (Typ A N Tt) Val
-getVarEta = getVar
+getSignalVarEta ::
+   [[Env.Complete Node AbsoluteResult AbsoluteResult]] ->
+   Idx.Eta Node -> Test2 (Typ A N Tt) Val
+getSignalVarEta = getSignalVar
 
 -- ##############################
 -- | Setting come here
@@ -309,12 +318,12 @@ main = do
       varEnvs = zipWith (zipWith (solve batteryResistance)) varX' varY'
 
       -- get Energies
-      eoutVar0 = getVarEnergy varEnvs eout0
-      eoutVar1 = getVarEnergy varEnvs eout1
+      eoutVar0 = getSignalVarEnergy varEnvs eout0
+      eoutVar1 = getSignalVarEnergy varEnvs eout1
   --Rep.report  [] ("eoutVar1",eoutVar1)
 
       varEout = eoutVar0 .+ (S.makeDelta eoutVar1)
-      einVar = getVarEnergy varEnvs ein
+      einVar = getSignalVarEnergy varEnvs ein
 
       -- calculate split share and system efficiency
       etaSysVar = (eoutVar0 .+ (S.makeDelta eoutVar1))./einVar
@@ -326,27 +335,27 @@ main = do
       varLoss = varE01 .- varEout
 
       -- Get more Env values
-      varN13 = getVarEta varEnvs (edgeVar Idx.Eta sec0 N1 N3)
-      varN31 = getVarEta varEnvs (edgeVar Idx.Eta sec1 N3 N1)
-      varN01 = getVarEta varEnvs (edgeVar Idx.Eta sec0 N0 N1)
+      varN13 = getSignalVarEta varEnvs (edgeVar Idx.Eta sec0 N1 N3)
+      varN31 = getSignalVarEta varEnvs (edgeVar Idx.Eta sec1 N3 N1)
+      varN01 = getSignalVarEta varEnvs (edgeVar Idx.Eta sec0 N0 N1)
 
-      varE31 = getVarEnergy varEnvs (edgeVar Idx.Energy sec1 N3 N1)
+      varE31 = getSignalVarEnergy varEnvs (edgeVar Idx.Energy sec1 N3 N1)
 
-      varP31_0 = getVarPower varEnvs (edgeVar Idx.Power sec0 N3 N1)
-      varP31_1 = getVarPower varEnvs (edgeVar Idx.Power sec1 N3 N1)
+      varP31_0 = getSignalVarPower varEnvs (edgeVar Idx.Power sec0 N3 N1)
+      varP31_1 = getSignalVarPower varEnvs (edgeVar Idx.Power sec1 N3 N1)
 
 
-      varP13_0 = getVarPower varEnvs (edgeVar Idx.Power sec0 N1 N3)
-      varP13_1 = getVarPower varEnvs (edgeVar Idx.Power sec1 N1 N3)
+      varP13_0 = getSignalVarPower varEnvs (edgeVar Idx.Power sec0 N1 N3)
+      varP13_1 = getSignalVarPower varEnvs (edgeVar Idx.Power sec1 N1 N3)
 
-      varP10 = getVarPower varEnvs (edgeVar Idx.Power sec0 N1 N0)
-      varP01 = getVarPower varEnvs (edgeVar Idx.Power sec0 N0 N1)
+      varP10 = getSignalVarPower varEnvs (edgeVar Idx.Power sec0 N1 N0)
+      varP01 = getSignalVarPower varEnvs (edgeVar Idx.Power sec0 N0 N1)
 
-      varE10 = getVarEnergy varEnvs (edgeVar Idx.Energy sec0 N1 N0)
-      varE01 = getVarEnergy varEnvs (edgeVar Idx.Energy sec0 N0 N1)
+      varE10 = getSignalVarEnergy varEnvs (edgeVar Idx.Energy sec0 N1 N0)
+      varE01 = getSignalVarEnergy varEnvs (edgeVar Idx.Energy sec0 N0 N1)
 
-      varPout0 = getVarPower varEnvs (edgeVar Idx.Power sec0 N2 N1)
-      varPout1 = getVarPower varEnvs (edgeVar Idx.Power sec1 N2 N1)
+      varPout0 = getSignalVarPower varEnvs (edgeVar Idx.Power sec0 N2 N1)
+      varPout1 = getSignalVarPower varEnvs (edgeVar Idx.Power sec1 N2 N1)
 
       -- create curve of n01 in used power range
       p10Lin = S.concat varP10

@@ -1,6 +1,6 @@
 module Main where
 
-import EFA.Example.Utility (Term, edgeVar, (=<>))
+import EFA.Example.Utility (ScalarTerm, SignalTerm, edgeVar, (=<>))
 
 import qualified EFA.Symbolic.SumProduct as SumProduct
 import qualified EFA.Equation.System as EqGen
@@ -33,7 +33,8 @@ Use SumProduct.Term here since it simplifies automatically.
 -}
 given, sys ::
    EqGen.EquationSystem Env.Delta Node.Int s
-      (Term SumProduct.Term Idx.Delta Node.Int)
+      (ScalarTerm Idx.Delta SumProduct.Term Node.Int)
+      (SignalTerm Idx.Delta SumProduct.Term Node.Int)
 given =
    Idx.before (edgeVar Idx.Power sec0 node0 node1) =<>
    Idx.before (edgeVar Idx.Eta sec0 node0 node1) =<>

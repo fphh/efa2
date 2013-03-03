@@ -3,7 +3,7 @@
 module Main where
 
 import EFA.Example.Utility ( edgeVar, makeEdges, constructSeqTopo, )
-import EFA.Equation.Absolute ((.=))
+import EFA.Equation.Absolute ((.=), (#=))
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Async (concurrentlyMany_)
@@ -54,7 +54,7 @@ seqTopo :: TD.SequFlowGraph Node
 seqTopo = constructSeqTopo topoDreibein [0, 4]
 
 
-type Expr s a = EqGen.Expression Node s a a
+type Expr s a = EqGen.Expression Node s a a a
 
 n1, n2, n3, n4, n5, n6 :: Expr s Double -> Expr s Double
 
@@ -81,15 +81,15 @@ n5 = EqGen.liftF $ \x -> x/sqrt(1+(x+2)*(x+2))
 
 n01, n12, n13, n31, p10, p12, p21, p13, p31 ::
    (Eq a, Arith.Sum a) => Idx.Section -> Expr s a
-n01 sec = EqGen.getVar $ edgeVar Idx.Eta sec N0 N1
-n12 sec = EqGen.getVar $ edgeVar Idx.Eta sec N1 N2
-n13 sec = EqGen.getVar $ edgeVar Idx.Eta sec N1 N3
-n31 sec = EqGen.getVar $ edgeVar Idx.Eta sec N3 N1
-p10 sec = EqGen.getVar $ edgeVar Idx.Power sec N1 N0
-p12 sec = EqGen.getVar $ edgeVar Idx.Power sec N1 N2
-p21 sec = EqGen.getVar $ edgeVar Idx.Power sec N2 N1
-p13 sec = EqGen.getVar $ edgeVar Idx.Power sec N1 N3
-p31 sec = EqGen.getVar $ edgeVar Idx.Power sec N3 N1
+n01 sec = EqGen.getSignalVar $ edgeVar Idx.Eta sec N0 N1
+n12 sec = EqGen.getSignalVar $ edgeVar Idx.Eta sec N1 N2
+n13 sec = EqGen.getSignalVar $ edgeVar Idx.Eta sec N1 N3
+n31 sec = EqGen.getSignalVar $ edgeVar Idx.Eta sec N3 N1
+p10 sec = EqGen.getSignalVar $ edgeVar Idx.Power sec N1 N0
+p12 sec = EqGen.getSignalVar $ edgeVar Idx.Power sec N1 N2
+p21 sec = EqGen.getSignalVar $ edgeVar Idx.Power sec N2 N1
+p13 sec = EqGen.getSignalVar $ edgeVar Idx.Power sec N1 N3
+p31 sec = EqGen.getSignalVar $ edgeVar Idx.Power sec N3 N1
 
 --esto :: Expr s Double
 esto, ein, eout0, eout1 :: Idx.Energy Node
@@ -104,20 +104,20 @@ sto0 = Idx.Storage (Idx.SecNode sec0 N3)
 sto1 = Idx.Storage (Idx.SecNode sec1 N3)
 
 
-given :: Double -> Double -> EqGen.EquationSystem Node s Double
+given :: Double -> Double -> EqGen.EquationSystem Node s Double Double
 given _x t =
   (n01 sec0 =.= n5 (p10 sec0))
   <> (n12 sec0 =.= 1) -- n5 (p21 sec0))
   <> (n12 sec1 =.= 1) -- n5 (p12 sec1))
   <> (n13 sec0 =.= 1) -- n1 (p12 sec0))
   <> (n31 sec1 =.= 1) -- n1 (p31 sec1))
-  <> (EqGen.getVar (edgeVar Idx.Energy sec1 N3 N1)
-        =.= EqGen.getVar (edgeVar Idx.Energy sec0 N3 N1))
-  <> (EqGen.getVar (Idx.DTime sec0) + EqGen.getVar (Idx.DTime sec1) =.= 12.1)
+  <> (EqGen.getSignalVar (edgeVar Idx.Energy sec1 N3 N1)
+        =.= EqGen.getSignalVar (edgeVar Idx.Energy sec0 N3 N1))
+  <> (EqGen.getSignalVar (Idx.DTime sec0) + EqGen.getSignalVar (Idx.DTime sec1) =.= 12.1)
 
   <> (Idx.DTime Idx.initSection .= 1)
   <> (Idx.DTime sec0 .= t)
-  <> (Idx.Storage (Idx.SecNode Idx.initSection N3) .= 10)
+  <> (Idx.Storage (Idx.SecNode Idx.initSection N3) #= 10)
 
   -- <> (edgeVar EqGen.xfactor sec0 N1 N2 .= x)
   <> (edgeVar Idx.Power sec0 N2 N1 .= 10)
@@ -138,7 +138,7 @@ trange = 0.01:[0.5, 1 .. 12] -- ++ [11.9]
 solve :: Double -> Double -> String
 solve x e =
   let env = EqGen.solve (given x e) seqTopo
-      emap = Env.energyMap env
+      emap = Env.energyMap $ Env.signal env
 --      smap = Env.storageMap env
       f _es ei eo0 eo1 = (eo0 + eo1) / ei -- (es + ei)
   in  show x ++ " " ++ show e ++ " " ++

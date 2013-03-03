@@ -35,24 +35,35 @@ type SumMap node a = M.Map (Idx.Sum node) a
 type StorageMap node a = M.Map (Idx.Storage node) a
 
 
-data Env node a =
-   Env {
+data Signal node a =
+   Signal {
       energyMap :: EnergyMap node a,
-      maxEnergyMap :: MaxEnergyMap node a,
-
       powerMap :: PowerMap node a,
       etaMap :: EtaMap node a,
       dtimeMap :: DTimeMap node a,
       xMap :: XMap node a,
-      sumMap :: SumMap node a,
-      {-
-      If 'a' is a signal type,
-      then storages must still be scalar values.
-      Maybe we should move the storageMap to another data type
-      in order to maintain the Functor instances.
-      -}
+      sumMap :: SumMap node a
+   } deriving (Show)
+
+data Scalar node a =
+   Scalar {
+      maxEnergyMap :: MaxEnergyMap node a,
       storageMap :: StorageMap node a
    } deriving (Show)
+
+data Complete node b a =
+   Complete {
+      scalar :: Scalar node b,
+      signal :: Signal node a
+   }
+
+accessScalar :: Accessor.T (Complete node b a) (Scalar node b)
+accessScalar =
+   Accessor.fromSetGet (\x c -> c{scalar = x}) scalar
+
+accessSignal :: Accessor.T (Complete node b a) (Signal node a)
+accessSignal =
+   Accessor.fromSetGet (\x c -> c{signal = x}) signal
 
 
 formatAssign ::
@@ -67,8 +78,11 @@ formatMap ::
 formatMap =
    map (uncurry formatAssign) . M.toList
 
-instance (Node.C node, FormatValue a) => FormatValue (Env node a) where
-   formatValue (Env e me p n dt x s st) =
+
+instance
+   (Node.C node, FormatValue b, FormatValue a) =>
+      FormatValue (Complete node b a) where
+   formatValue (Complete (Scalar me st) (Signal e p n dt x s)) =
       Format.lines $
          formatMap e ++
          formatMap me ++
@@ -80,71 +94,94 @@ instance (Node.C node, FormatValue a) => FormatValue (Env node a) where
          formatMap st
 
 
-lookup :: Ord node => Var.Index node -> Env node a -> Maybe a
-lookup v =
+lookupSignal :: Ord node => Var.Signal node -> Signal node a -> Maybe a
+lookupSignal v =
    case v of
       Var.Energy    idx -> M.lookup idx . energyMap
-      Var.MaxEnergy idx -> M.lookup idx . maxEnergyMap
       Var.Power     idx -> M.lookup idx . powerMap
       Var.Eta       idx -> M.lookup idx . etaMap
       Var.DTime     idx -> M.lookup idx . dtimeMap
       Var.X         idx -> M.lookup idx . xMap
       Var.Sum       idx -> M.lookup idx . sumMap
-      Var.Store     idx -> M.lookup idx . storageMap
 
-lookupRecord ::
+lookupScalar :: Ord node => Var.Scalar node -> Scalar node a -> Maybe a
+lookupScalar v =
+   case v of
+      Var.MaxEnergy idx -> M.lookup idx . maxEnergyMap
+      Var.Storage   idx -> M.lookup idx . storageMap
+
+
+lookupSignalRecord ::
    (Record recIdx rec, Ord node) =>
-   Idx.Record recIdx (Var.Index node) -> Env node (rec a) -> Maybe a
-lookupRecord (Idx.Record r v) =
-   fmap (Accessor.get (accessRecord r)) . lookup v
+   Idx.Record recIdx (Var.Signal node) -> Signal node (rec a) -> Maybe a
+lookupSignalRecord (Idx.Record r v) =
+   fmap (Accessor.get (accessRecord r)) . lookupSignal v
 
 
-class AccessMap idx where
-   accessMap :: Accessor.T (Env node a) (M.Map (idx node) a)
 
-instance AccessMap Idx.Energy where
-   accessMap =
+class AccessSignalMap idx where
+   accessSignalMap :: Accessor.T (Signal node a) (M.Map (idx node) a)
+
+instance AccessSignalMap Idx.Energy where
+   accessSignalMap =
       Accessor.fromSetGet (\x c -> c{energyMap = x}) energyMap
 
-instance AccessMap Idx.MaxEnergy where
-   accessMap =
-      Accessor.fromSetGet (\x c -> c{maxEnergyMap = x}) maxEnergyMap
-
-instance AccessMap Idx.Power where
-   accessMap =
+instance AccessSignalMap Idx.Power where
+   accessSignalMap =
       Accessor.fromSetGet (\x c -> c{powerMap = x}) powerMap
 
-instance AccessMap Idx.Eta where
-   accessMap =
+instance AccessSignalMap Idx.Eta where
+   accessSignalMap =
       Accessor.fromSetGet (\x c -> c{etaMap = x}) etaMap
 
-instance AccessMap Idx.DTime where
-   accessMap =
+instance AccessSignalMap Idx.DTime where
+   accessSignalMap =
       Accessor.fromSetGet (\x c -> c{dtimeMap = x}) dtimeMap
 
-instance AccessMap Idx.X where
-   accessMap =
+instance AccessSignalMap Idx.X where
+   accessSignalMap =
       Accessor.fromSetGet (\x c -> c{xMap = x}) xMap
 
-instance AccessMap Idx.Sum where
-   accessMap =
+instance AccessSignalMap Idx.Sum where
+   accessSignalMap =
       Accessor.fromSetGet (\x c -> c{sumMap = x}) sumMap
 
-instance AccessMap Idx.Storage where
-   accessMap =
+
+class AccessScalarMap idx where
+   accessScalarMap :: Accessor.T (Scalar node a) (M.Map (idx node) a)
+
+instance AccessScalarMap Idx.MaxEnergy where
+   accessScalarMap =
+      Accessor.fromSetGet (\x c -> c{maxEnergyMap = x}) maxEnergyMap
+
+instance AccessScalarMap Idx.Storage where
+   accessScalarMap =
       Accessor.fromSetGet (\x c -> c{storageMap = x}) storageMap
 
 
-instance Functor (Env node) where
-   fmap f (Env e me p n dt x s st) =
-      Env (fmap f e) (fmap f me) (fmap f p) (fmap f n) (fmap f dt) (fmap f x) (fmap f s) (fmap f st)
+instance Functor (Signal node) where
+   fmap f (Signal e p n dt x s) =
+      Signal (fmap f e) (fmap f p) (fmap f n) (fmap f dt) (fmap f x) (fmap f s)
 
-instance Foldable (Env node) where
+instance Functor (Scalar node) where
+   fmap f (Scalar me st) =
+      Scalar (fmap f me) (fmap f st)
+
+
+instance Foldable (Signal node) where
    foldMap = foldMapDefault
 
-instance Traversable (Env node) where
-   sequenceA (Env e me p n dt x s st) =
-      pure Env <?> e <?> me <?> p <?> n <?> dt <?> x <?> s <?> st
+instance Foldable (Scalar node) where
+   foldMap = foldMapDefault
+
+
+instance Traversable (Signal node) where
+   sequenceA (Signal e p n dt x s) =
+      pure Signal <?> e <?> p <?> n <?> dt <?> x <?> s
+
+instance Traversable (Scalar node) where
+   sequenceA (Scalar me st) =
+      pure Scalar <?> me <?> st
 
 infixl 4 <?>
 (<?>) ::
@@ -154,16 +191,24 @@ f <?> x = f <*> sequenceA x
 
 
 
-instance (Ord node) => Monoid (Env node a) where
-   mempty = Env M.empty M.empty M.empty M.empty M.empty M.empty M.empty M.empty
+instance (Ord node) => Monoid (Signal node a) where
+   mempty = Signal M.empty M.empty M.empty M.empty M.empty M.empty
    mappend
-         (Env e me p n dt x s st)
-         (Env e' me' p' n' dt' x' s' st') =
-      Env
-         (M.union e e') (M.union me me')
-         (M.union p p') (M.union n n')
-         (M.union dt dt') (M.union x x')
-         (M.union s s') (M.union st st')
+         (Signal e p n dt x s)
+         (Signal e' p' n' dt' x' s') =
+      Signal
+         (M.union e e') (M.union p p') (M.union n n')
+         (M.union dt dt') (M.union x x') (M.union s s')
+
+instance (Ord node) => Monoid (Scalar node a) where
+   mempty = Scalar M.empty M.empty
+   mappend (Scalar me st) (Scalar me' st') =
+      Scalar (M.union me me') (M.union st st')
+
+instance (Ord node) => Monoid (Complete node b a) where
+   mempty = Complete mempty mempty
+   mappend (Complete scalar0 signal0) (Complete scalar1 signal1) =
+      Complete (mappend scalar0 scalar1) (mappend signal0 signal1)
 
 
 newtype Absolute a = Absolute {unAbsolute :: a} deriving (Show)

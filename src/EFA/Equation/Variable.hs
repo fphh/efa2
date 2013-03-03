@@ -5,37 +5,39 @@ import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Report.Format as Format
 import EFA.Report.Format (Format)
 import EFA.Report.FormatValue (FormatValue, formatValue)
-import EFA.Utility (Pointed, point)
 
 
-data Index a =
+data Signal a =
      Energy (Idx.Energy a)
-   | MaxEnergy (Idx.MaxEnergy a)
    | Power (Idx.Power a)
    | Eta (Idx.Eta a)
    | DTime (Idx.DTime a)
    | X (Idx.X a)
    | Sum (Idx.Sum a)
-   | Store (Idx.Storage a)
+     deriving (Show, Eq, Ord)
+
+data Scalar a =
+     MaxEnergy (Idx.MaxEnergy a)
+   | Storage (Idx.Storage a)
      deriving (Show, Eq, Ord)
 
 
-class MkIdxC t where
-   mkIdx :: t a -> Index a
+class SignalIndex t where
+   signalIndex :: t a -> Signal a
+
+instance SignalIndex Idx.Energy where signalIndex = Energy
+instance SignalIndex Idx.Power where signalIndex = Power
+instance SignalIndex Idx.Eta where signalIndex = Eta
+instance SignalIndex Idx.DTime where signalIndex = DTime
+instance SignalIndex Idx.X where signalIndex = X
+instance SignalIndex Idx.Sum where signalIndex = Sum
 
 
-instance MkIdxC Idx.Energy where mkIdx = Energy
-instance MkIdxC Idx.MaxEnergy where mkIdx = MaxEnergy
-instance MkIdxC Idx.Power where mkIdx = Power
-instance MkIdxC Idx.Eta where mkIdx = Eta
-instance MkIdxC Idx.DTime where mkIdx = DTime
-instance MkIdxC Idx.X where mkIdx = X
-instance MkIdxC Idx.Sum where mkIdx = Sum
-instance MkIdxC Idx.Storage where mkIdx = Store
+class ScalarIndex t where
+   scalarIndex :: t a -> Scalar a
 
-
-mkVar :: (MkIdxC t, Pointed term) => t a -> term (Index a)
-mkVar = point . mkIdx
+instance ScalarIndex Idx.MaxEnergy where scalarIndex = MaxEnergy
+instance ScalarIndex Idx.Storage where scalarIndex = Storage
 
 
 formatSectionNode ::
@@ -59,17 +61,21 @@ formatEdge e x y =
    Format.subscript (Format.edgeIdent e) (formatEdgeIndex x y)
 
 
-instance (Node.C node) => FormatValue (Index node) where
+instance (Node.C node) => FormatValue (Signal node) where
    formatValue var =
       case var of
          Energy idx -> formatIndex idx
-         MaxEnergy idx -> formatIndex idx
          Power idx -> formatIndex idx
          Eta idx -> formatIndex idx
          X idx -> formatIndex idx
          DTime idx -> formatIndex idx
          Sum idx -> formatIndex idx
-         Store idx -> formatIndex idx
+
+instance (Node.C node) => FormatValue (Scalar node) where
+   formatValue var =
+      case var of
+         MaxEnergy idx -> formatIndex idx
+         Storage idx -> formatIndex idx
 
 
 class FormatIndex idx where
