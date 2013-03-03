@@ -663,19 +663,6 @@ toDirSequFlowGraph =
 -----------------------------------------------------------------
 
 
-{- |
-In the input 'EquationSystem' you can pass simple variable assignments
-like
-
-> edgeVar Idx.Eta sec0 node1 node2 =.= 0.42
-
-but you may also insert complex relations like
-
-> edgeVar Idx.Power sec0 node2 node1 =.= square (edgeVar Idx.Power sec0 node1 node2)
-
-.
--}
-
 
 queryEnv ::
   (Traversable env, Traversable rec) =>
@@ -694,6 +681,19 @@ solveSimple sys = runST $ do
   Sys.solve eqs
   liftA2 Env.Complete (queryEnv scalmap) (queryEnv sigmap)
 
+{- |
+In the input 'EquationSystem' you can pass simple variable assignments
+like
+
+> edgeVar Idx.Eta sec0 node1 node2 .= 0.42
+
+but you may also insert complex relations like
+
+> variableSignal (edgeVar Idx.Power sec0 node2 node1) =.=
+>    square (variableSignal (edgeVar Idx.Power sec0 node1 node2))
+
+.
+-}
 solve ::
   (Eq a, Sum a, a ~ Scalar v,
    Eq v, Product v, Integrate v,
