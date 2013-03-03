@@ -686,9 +686,10 @@ solve ::
   (Eq a, Sum a, a ~ Scalar v,
    Eq v, Product v, Integrate v,
    Record rec, Node.C node) =>
+  TD.SequFlowGraph node ->
   (forall s. EquationSystem rec node s a v) ->
-  TD.SequFlowGraph node -> Env.Complete node (rec (Result a)) (rec (Result v))
-solve given g =
+  Env.Complete node (rec (Result a)) (rec (Result v))
+solve g given =
   solveSimple (given <> fromGraph True (toDirSequFlowGraph g))
 
 
@@ -699,9 +700,10 @@ solveFromMeasurement ::
   (Eq a, Sum a, a ~ Scalar v,
    Eq v, Product v, Integrate v,
    Record rec, Node.C node) =>
+  TD.SequFlowGraph node ->
   (forall s. EquationSystem rec node s a v) ->
-  TD.SequFlowGraph node -> Env.Complete node (rec (Result a)) (rec (Result v))
-solveFromMeasurement given g =
+  Env.Complete node (rec (Result a)) (rec (Result v))
+solveFromMeasurement g given =
   solveSimple (given <> fromGraph False (toDirSequFlowGraph g))
 
 
@@ -720,9 +722,10 @@ conservativelySolve ::
   (Eq a, Sum a, a ~ Scalar v,
    Eq v, Product v, Integrate v,
    Record rec, Node.C node) =>
+  TD.SequFlowGraph node ->
   (forall s. EquationSystem rec node s a v) ->
-  TD.SequFlowGraph node -> Env.Complete node (rec (Result a)) (rec (Result v))
-conservativelySolve given g =
+  Env.Complete node (rec (Result a)) (rec (Result v))
+conservativelySolve g given =
   solveSimple (given <> fromGraph True (toDirSequFlowGraph g))
   <>
   solveSimple given

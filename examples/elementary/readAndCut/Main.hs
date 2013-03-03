@@ -62,8 +62,8 @@ main = do
 
       sequ = makeSequence pRec
 
-      sequTopo = makeSeqFlowGraph topoDreibein sequ
+      seqTopo = makeSeqFlowGraph topoDreibein sequ
 
-      env = EqGen.solve given sequTopo
+      env = EqGen.solve seqTopo given
 
-  Draw.sequFlowGraphAbsWithEnv sequTopo env
+  Draw.sequFlowGraphAbsWithEnv seqTopo env

@@ -59,6 +59,6 @@ main :: IO ()
 main = do
 
   let seqTopo = constructSeqTopo topoDreibein [1]
-      env = EqGen.solve given seqTopo
+      env = EqGen.solve seqTopo given
 
   Draw.sequFlowGraphAbsWithEnv seqTopo env

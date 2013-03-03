@@ -115,7 +115,7 @@ ein  = edgeVar Idx.Energy sec0 Source c0
 solve :: Double -> Double -> String
 solve e x =
   let emap =
-         Env.energyMap $ Env.signal $ EqGen.solve (etas <> given e x) seqTopo
+         Env.energyMap $ Env.signal $ EqGen.solve seqTopo (etas <> given e x)
   in  show e ++ " " ++ show x ++ " " ++
       Format.unUnicode (formatValue
          (liftA2 (/)

@@ -37,8 +37,8 @@ solve ::
    (Eq a, Arith.Product a, a ~ Arith.Scalar v,
     Eq v, Arith.Product v, Arith.Integrate v,
     Node.C node) =>
-   (forall s. EquationSystem node s a v) ->
    TD.SequFlowGraph node ->
+   (forall s. EquationSystem node s a v) ->
    Env.Complete node (Env.Absolute (Result a)) (Env.Absolute (Result v))
 solve = EqGen.solve
 

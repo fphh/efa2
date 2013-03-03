@@ -150,7 +150,7 @@ main :: IO ()
 main = do
 
    let seqTopo = constructSeqTopo topoLinear [0]
-       Env.Complete scalarEnv signalEnv = EqGen.solve given seqTopo
+       Env.Complete scalarEnv signalEnv = EqGen.solve seqTopo given
 
    case Map.lookup eout (Env.energyMap signalEnv) of
       Nothing -> error "undefined E_2_1"

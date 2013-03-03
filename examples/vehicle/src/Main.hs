@@ -166,8 +166,9 @@ main = do
   --                   sequenceFlowTopology
 
   let solverMeasurements =
-        EqGen.solveFromMeasurement (makeGiven 12.34567 adjustedFlows)
-                                   sequenceFlowTopology
+        EqGen.solveFromMeasurement sequenceFlowTopology
+           (makeGiven 12.34567 adjustedFlows)
+
   let sectionTopos =  lefilter (isStructureEdge .fst) sequenceFlowTopology
 
   concurrentlyMany_ [

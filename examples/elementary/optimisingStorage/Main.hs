@@ -161,7 +161,7 @@ type AbsoluteResult = Env.Absolute (R.Result Val)
 solve ::
    Val -> Val -> Val ->
    Env.Complete Node AbsoluteResult AbsoluteResult
-solve nPar y p = EqGen.solve (given y p nPar) seqTopo
+solve nPar y p = EqGen.solve seqTopo (given y p nPar)
 
 
 -- | fuck safety just unpack this crap ;-) -- PG

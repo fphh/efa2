@@ -70,10 +70,9 @@ given p =
 solve :: Double -> String
 solve p =
   let env =
-         EqSys.solve
+         EqSys.solve seqTopo
             ((EqSys.variableSignal eta =.= lookupEta (EqSys.variableSignal c))
                <> given p)
-            seqTopo
   in  show p ++ " " ++
       Format.unUnicode (formatValue (Env.unAbsolute
          (checkedLookup (Env.etaMap $ Env.signal env) eta)))

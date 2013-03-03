@@ -137,7 +137,7 @@ trange = 0.01:[0.5, 1 .. 12] -- ++ [11.9]
 
 solve :: Double -> Double -> String
 solve x e =
-  let env = EqGen.solve (given x e) seqTopo
+  let env = EqGen.solve seqTopo (given x e)
       emap = Env.energyMap $ Env.signal env
 --      smap = Env.storageMap env
       f _es ei eo0 eo1 = (eo0 + eo1) / ei -- (es + ei)
@@ -159,7 +159,7 @@ main :: IO ()
 main = do
   --putStrLn $ unlines $ map (\x -> unlines $ map (solve x) trange) xrange
 
-  let env = EqGen.solve (given 0.5 1) seqTopo
+  let env = EqGen.solve seqTopo (given 0.5 1)
   -- let env' = EqGen.solve (given 0.9 undefined) seqTopo
 
   concurrentlyMany_ [
