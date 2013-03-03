@@ -438,18 +438,19 @@ dtime ::
 dtime = getRecordVar (Env.accessSignalMap . Env.accessSignal) . Idx.DTime
 
 
-_mwhen :: Monoid a => Bool -> a -> a
-_mwhen True t = t
-_mwhen False _ = mempty
+mwhen :: Monoid a => Bool -> a -> a
+mwhen True t = t
+mwhen False _ = mempty
 
 
 fromTopology ::
   (Eq a, Sum a, a ~ Scalar v,
    Eq v, Product v, Integrate v,
    Record rec, Node.C node) =>
+  Bool ->
   TD.DirSequFlowGraph node -> EquationSystem rec node s a v
-fromTopology g = mconcat $
-  makeInnerSectionEquations g :
+fromTopology equalInOutSums g = mconcat $
+  makeInnerSectionEquations equalInOutSums g :
   makeInterSectionEquations g :
   []
 
@@ -459,10 +460,11 @@ makeInnerSectionEquations ::
   (Eq a, Sum a, a ~ Scalar v,
    Eq v, Product v, Integrate v,
    Record rec, Node.C node) =>
+  Bool ->
   TD.DirSequFlowGraph node -> EquationSystem rec node s a v
-makeInnerSectionEquations g = mconcat $
+makeInnerSectionEquations equalInOutSums g = mconcat $
   makeEdgeEquations (M.keys $ Gr.edgeLabels g) :
-  makeNodeEquations g :
+  makeNodeEquations equalInOutSums g :
   makeStorageEquations (Gr.lefilter (TD.isStructureEdge . fst) g) :
   []
 
@@ -481,8 +483,9 @@ makeEdgeEquations =
 
 makeNodeEquations ::
   (Eq v, Product v, Record rec, Ord node) =>
+  Bool ->
   TD.DirSequFlowGraph node -> EquationSystem rec node s a v
-makeNodeEquations = fold . M.mapWithKey f . Gr.nodes
+makeNodeEquations equalInOutSums = fold . M.mapWithKey f . Gr.nodes
    where f n (ins, label, outs) =
             let -- this variable is used again in makeStorageEquations
                 varsumin = insum n
@@ -492,7 +495,7 @@ makeNodeEquations = fold . M.mapWithKey f . Gr.nodes
                       (mkSplitFactorEquations varsum (energy n) (xfactor n))
                       (NonEmpty.fetch $ S.toList nodes)
             in  -- mwhen (label /= TD.Storage) (varsumin =%= varsumout)
-                (varsumin =%= varsumout) -- siehe bug 2013-02-12-sum-equations-storage
+                mwhen equalInOutSums (varsumin =%= varsumout) -- siehe bug 2013-02-12-sum-equations-storage
                 <>
                 splitEqs varsumin ins
                 <>
@@ -698,52 +701,10 @@ solve ::
   (forall s. EquationSystem rec node s a v) ->
   TD.SequFlowGraph node -> Env.Complete node (rec (Result a)) (rec (Result v))
 solve given g =
-  solveSimple (given <> fromTopology (toDirSequFlowGraph g))
+  solveSimple (given <> fromTopology True (toDirSequFlowGraph g))
 
 
 --------------------------------------------------------------------
-
-
-fromTopology' ::
-  (Eq a, Sum a, a ~ Scalar v,
-   Eq v, Product v, Integrate v,
-   Record rec, Node.C node) =>
-  TD.DirSequFlowGraph node -> EquationSystem rec node s a v
-fromTopology' g = mconcat $
-  makeInnerSectionEquations' g :
-  makeInterSectionEquations g :
-  []
-
-makeInnerSectionEquations' ::
-  (Eq a, Sum a, a ~ Scalar v,
-   Eq v, Product v, Integrate v,
-   Record rec, Node.C node) =>
-  TD.DirSequFlowGraph node -> EquationSystem rec node s a v
-makeInnerSectionEquations' g = mconcat $
-  makeEdgeEquations (M.keys $ Gr.edgeLabels g) :
-  makeNodeEquations' g :
-  makeStorageEquations (Gr.lefilter (TD.isStructureEdge . fst) g) :
-  []
-
-
-makeNodeEquations' ::
-  (Eq v, Product v, Record rec, Node.C node) =>
-  TD.DirSequFlowGraph node -> EquationSystem rec node s a v
-makeNodeEquations' = fold . M.mapWithKey f . Gr.nodes
-   where f n (ins, _, outs) =
-            let -- this variable is used again in makeStorageEquations
-                varsumin = insum n
-                varsumout = outsum n  -- and this one, too.
-                splitEqs varsum nodes =
-                   foldMap
-                      (mkSplitFactorEquations varsum (energy n) (xfactor n))
-                      (NonEmpty.fetch $ S.toList nodes)
-            in  -- (varsumin =%= varsumout) -- EINZIGER UNTERSCHIED!!!
-                -- <>
-                splitEqs varsumin ins
-                <>
-                splitEqs varsumout outs
-
 
 
 solveFromMeasurement ::
@@ -753,7 +714,7 @@ solveFromMeasurement ::
   (forall s. EquationSystem rec node s a v) ->
   TD.SequFlowGraph node -> Env.Complete node (rec (Result a)) (rec (Result v))
 solveFromMeasurement given g =
-  solveSimple (given <> fromTopology' (toDirSequFlowGraph g))
+  solveSimple (given <> fromTopology False (toDirSequFlowGraph g))
 
 
 
@@ -774,6 +735,6 @@ conservativelySolve ::
   (forall s. EquationSystem rec node s a v) ->
   TD.SequFlowGraph node -> Env.Complete node (rec (Result a)) (rec (Result v))
 conservativelySolve given g =
-  solveSimple (given <> fromTopology (toDirSequFlowGraph g))
+  solveSimple (given <> fromTopology True (toDirSequFlowGraph g))
   <>
   solveSimple given
