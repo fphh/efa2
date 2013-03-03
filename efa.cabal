@@ -404,6 +404,16 @@ Executable demo-functioneta
   Else
     Buildable: False
 
+Executable demo-lookupeta
+  Main-Is: demo/lookupEta/Main.hs
+  GHC-Options: -Wall
+  If flag(buildExamples)
+     Build-Depends:
+       efa,
+       base
+  Else
+    Buildable: False
+
 Executable demo-deltaLogic
   Main-Is: demo/deltaLogic/Main.hs
   GHC-Options: -Wall
