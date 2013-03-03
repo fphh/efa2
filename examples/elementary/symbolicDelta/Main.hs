@@ -42,8 +42,8 @@ Use SumProduct.Term here since it simplifies automatically.
 -}
 given ::
    EqGen.EquationSystem Env.Delta Node.Int s
-      (ScalarTerm Idx.Delta SumProduct.Term Node.Int)
-      (SignalTerm Idx.Delta SumProduct.Term Node.Int)
+      (ScalarTerm Env.Delta SumProduct.Term Node.Int)
+      (SignalTerm Env.Delta SumProduct.Term Node.Int)
 given =
    (Idx.delta (Idx.DTime Idx.initSection) .= zero) <>
    (Idx.delta (Idx.DTime sec0) .= zero) <>

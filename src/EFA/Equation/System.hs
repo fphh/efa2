@@ -241,7 +241,7 @@ sqrt ::
 sqrt = liftF P.sqrt
 
 
-class (Traversable rec, Applicative rec) => Record rec where
+class (Traversable rec, Applicative rec, Env.Record rec) => Record rec where
    newVariable ::
       (Eq a, Sum a) =>
       WriterT (System s) (ST s) (rec (Sys.Variable s a))
@@ -356,7 +356,7 @@ variableRecord accessMap idx =
         return (fmap Expr.fromVariable var)
 
 variableSignalRecord ::
-   (Env.AccessSignalMap idx, Ord (idx node), Record rec, Env.Record recIdx rec,
+   (Env.AccessSignalMap idx, Ord (idx node), Record rec,
     Eq v, Sum v) =>
    idx node ->
    RecordExpression rec node s a v v
@@ -364,18 +364,18 @@ variableSignalRecord =
    variableRecord (Env.accessSignalMap . Env.accessSignal)
 
 variableSignal ::
-   (Env.AccessSignalMap idx, Ord (idx node), Record rec, Env.Record recIdx rec,
+   (Env.AccessSignalMap idx, Ord (idx node), Record rec,
     Eq v, Sum v) =>
-   Idx.Record recIdx (idx node) ->
+   Env.RecordIndexed rec (idx node) ->
    Expression rec node s a v v
 variableSignal (Idx.Record recIdx idx) =
    fmap (Accessor.get (Env.accessRecord recIdx) . unwrap) $
    variableRecord (Env.accessSignalMap . Env.accessSignal) idx
 
 variableScalar ::
-   (Env.AccessScalarMap idx, Ord (idx node), Record rec, Env.Record recIdx rec,
+   (Env.AccessScalarMap idx, Ord (idx node), Record rec,
     Eq a, Sum a) =>
-   Idx.Record recIdx (idx node) ->
+   Env.RecordIndexed rec (idx node) ->
    Expression rec node s a v a
 variableScalar (Idx.Record recIdx idx) =
    fmap (Accessor.get (Env.accessRecord recIdx) . unwrap) $

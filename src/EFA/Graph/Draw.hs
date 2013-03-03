@@ -292,16 +292,14 @@ formatNodeType :: Format output => NodeType -> output
 formatNodeType = Format.literal . showType
 
 formatNodeStorage ::
-   (Env.Record recIdx rec, FormatValue a, Format output, Node.C node) =>
-   recIdx -> StorageMap node (rec a) -> Topo.LNode node -> output
+   (Env.Record rec, FormatValue a, Format output, Node.C node) =>
+   Env.RecordIndex rec -> StorageMap node (rec a) -> Topo.LNode node -> output
 formatNodeStorage rec st (n@(Idx.SecNode _sec nid), ty) =
    Format.lines $
    Node.display nid :
    Format.words [formatNodeType ty] :
       case ty of
-         Storage ->
-            [Format.words
-               [lookupFormat rec st $ Idx.Storage n]]
+         Storage -> [Format.words [lookupFormat rec st $ Idx.Storage n]]
          _ -> []
 
 
@@ -319,9 +317,9 @@ data Env node output =
    }
 
 lookupFormat ::
-   (Ord (idx node), Var.FormatIndex (idx node), Env.Record recIdx rec,
+   (Ord (idx node), Var.FormatIndex (idx node), Env.Record rec,
     FormatValue a, Format output, Node.C node) =>
-   recIdx -> M.Map (idx node) (rec a) -> idx node -> output
+   Env.RecordIndex rec -> M.Map (idx node) (rec a) -> idx node -> output
 lookupFormat recIdx mp k =
    maybe
       (error $ "could not find index " ++
@@ -331,9 +329,9 @@ lookupFormat recIdx mp k =
 
 lookupFormatAssign ::
    (Ord (idx node), Format.EdgeIdx (idx node), Var.FormatIndex (idx node),
-    Format.Record recIdx, Env.Record recIdx rec,
+    Env.Record rec,
     FormatValue a, Format output, Node.C node) =>
-   recIdx ->
+   Env.RecordIndex rec ->
    M.Map (idx node) (rec a) ->
    (Idx.SecNode node -> Idx.SecNode node -> idx node) ->
    (Idx.SecNode node -> Idx.SecNode node -> output)
@@ -379,9 +377,9 @@ sequFlowGraphDeltaWithEnv topo = sequFlowGraphWithEnv topo . envDelta
 
 
 envGen ::
-   (FormatValue a, FormatValue v, Format output, Format.Record idx,
-    Env.Record idx rec, Node.C node) =>
-   idx ->
+   (FormatValue a, FormatValue v, Format output,
+    Env.Record rec, Node.C node) =>
+   Env.RecordIndex rec ->
    Env.Complete node (rec a) (rec v) -> Env node output
 envGen rec (Env.Complete (Env.Scalar me st) (Env.Signal e _p n dt x _s)) =
    Env

@@ -33,8 +33,8 @@ Use SumProduct.Term here since it simplifies automatically.
 -}
 given, sys ::
    EqGen.EquationSystem Env.Delta Node.Int s
-      (ScalarTerm Idx.Delta SumProduct.Term Node.Int)
-      (SignalTerm Idx.Delta SumProduct.Term Node.Int)
+      (ScalarTerm Env.Delta SumProduct.Term Node.Int)
+      (SignalTerm Env.Delta SumProduct.Term Node.Int)
 given =
    Idx.before (edgeVar Idx.Power sec0 node0 node1) =<>
    Idx.before (edgeVar Idx.Eta sec0 node0 node1) =<>

@@ -74,13 +74,13 @@ liftF2 = liftA2 . Expr.fromRule3 . Sys.assignment3 ""
 
 
 
-type SignalTerm term node = Utility.SignalTerm Idx.Absolute term node
-type ScalarTerm term node = Utility.ScalarTerm Idx.Absolute term node
-type ScalarAtom term node = Utility.ScalarAtom Idx.Absolute term node
+type SignalTerm term node = Utility.SignalTerm Env.Absolute term node
+type ScalarTerm term node = Utility.ScalarTerm Env.Absolute term node
+type ScalarAtom term node = Utility.ScalarAtom Env.Absolute term node
 
 type
    SymbolicEquationSystem node s term =
-      Utility.SymbolicEquationSystem Idx.Absolute Env.Absolute node s term
+      Utility.SymbolicEquationSystem Env.Absolute node s term
 
 
 givenSignalSymbol ::

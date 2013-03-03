@@ -1,5 +1,5 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE FlexibleContexts #-}
 module EFA.Equation.Env where
 
 import qualified EFA.Graph.Topology.Index as Idx
@@ -111,9 +111,12 @@ lookupScalar v =
       Var.Storage   idx -> M.lookup idx . storageMap
 
 
+type RecordIndexed rec = Idx.Record (RecordIndex rec)
+
 lookupSignalRecord ::
-   (Record recIdx rec, Ord node) =>
-   Idx.Record recIdx (Var.Signal node) -> Signal node (rec a) -> Maybe a
+   (Record rec, Ord node) =>
+   RecordIndexed rec (Var.Signal node) ->
+   Signal node (rec a) -> Maybe a
 lookupSignalRecord (Idx.Record r v) =
    fmap (Accessor.get (accessRecord r)) . lookupSignal v
 
@@ -257,15 +260,24 @@ instance Traversable Delta where
    sequenceA (Delta d b a) = liftA3 Delta d b a
 
 
-class Ord idx => Record idx rec | idx -> rec, rec -> idx where
-   recordIndices :: rec idx
-   accessRecord :: idx -> Accessor.T (rec a) a
+class
+   (Ord (RecordIndex rec), Format.Record (RecordIndex rec),
+    rec ~ IndexRecord (RecordIndex rec)) =>
+      Record rec where
+   type RecordIndex rec :: *
+   type IndexRecord idx :: * -> *
+   recordIndices :: (idx ~ RecordIndex rec) => rec idx
+   accessRecord :: (idx ~ RecordIndex rec) => idx -> Accessor.T (rec a) a
 
-instance Record Idx.Absolute Absolute where
+instance Record Absolute where
+   type RecordIndex Absolute = Idx.Absolute
+   type IndexRecord Idx.Absolute = Absolute
    recordIndices = Absolute Idx.Absolute
    accessRecord Idx.Absolute = Accessor.fromWrapper Absolute unAbsolute
 
-instance Record Idx.Delta Delta where
+instance Record Delta where
+   type RecordIndex Delta = Idx.Delta
+   type IndexRecord Idx.Delta = Delta
    recordIndices =
       Delta {delta = Idx.Delta, before = Idx.Before, after = Idx.After}
    accessRecord idx =
