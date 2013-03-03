@@ -4,7 +4,9 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module EFA.Equation.System (
   EquationSystem, Expression, RecordExpression,
-  fromGraph, solve, solveFromMeasurement, conservativelySolve,
+  Element,
+  fromGraph,
+  solve, solveFromMeasurement, conservativelySolve,
   solveSimple,
 
   constant,
@@ -337,10 +339,15 @@ _withLocalVar f = EquationSystem $ do
         EquationSystem act -> act
 
 
+type
+   Element idx rec s a v =
+      Env.Element idx
+         (rec (Sys.Variable s a))
+         (rec (Sys.Variable s v))
+
 variableRecord ::
    (Eq x, Sum x, Env.AccessMap idx, Ord (idx node), Record rec,
-    Env.Element idx (rec (Sys.Variable s a)) (rec (Sys.Variable s v))
-    ~ rec (Sys.Variable s x)) =>
+    Element idx rec s a v ~ rec (Sys.Variable s x)) =>
    idx node -> RecordExpression rec node s a v x
 variableRecord idx =
   Bookkeeping $ fmap Wrap $ do
@@ -355,8 +362,7 @@ variableRecord idx =
 variable ::
    (Eq x, Sum x,
     Env.AccessMap idx, Ord (idx node), Record rec,
-    Env.Element idx (rec (Sys.Variable s a)) (rec (Sys.Variable s v))
-    ~ rec (Sys.Variable s x)) =>
+    Element idx rec s a v ~ rec (Sys.Variable s x)) =>
    Env.RecordIndexed rec (idx node) ->
    Expression rec node s a v x
 variable (Idx.Record recIdx idx) =
@@ -365,10 +371,9 @@ variable (Idx.Record recIdx idx) =
 
 
 variableEdge ::
-   (Env.AccessMap idx, Ord (idx node),
-    Env.Element idx (rec (Sys.Variable s a)) (rec (Sys.Variable s v))
-       ~ rec (Sys.Variable s x),
-    Eq x, Sum x, Record rec) =>
+   (Eq x, Sum x,
+    Env.AccessMap idx, Ord (idx node), Record rec,
+    Element idx rec s a v ~ rec (Sys.Variable s x)) =>
    (Idx.SecNode node -> Idx.SecNode node -> idx node) ->
    Idx.SecNode node -> Idx.SecNode node ->
    RecordExpression rec node s a v x

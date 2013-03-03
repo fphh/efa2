@@ -112,9 +112,8 @@ givenSymbol ::
   -}
   (t ~ VarTerm var (Env.RecordIndex rec) term node,
    Eq t, Arith.Sum t,
-   Env.Element idx
-      (rec (Sys.Variable s (ScalarTerm rec term node)))
-      (rec (Sys.Variable s (SignalTerm rec term node)))
+   EqGen.Element idx rec s
+      (ScalarTerm rec term node) (SignalTerm rec term node)
      ~ rec (Sys.Variable s t),
    EqGen.Record rec,
    Ord (idx node), Pointed term,
@@ -130,9 +129,8 @@ infixr 6 =<>
 (=<>) ::
   (t ~ VarTerm var (Env.RecordIndex rec) term node,
    Eq t, Arith.Sum t,
-   Env.Element idx
-      (rec (Sys.Variable s (ScalarTerm rec term node)))
-      (rec (Sys.Variable s (SignalTerm rec term node)))
+   EqGen.Element idx rec s
+      (ScalarTerm rec term node) (SignalTerm rec term node)
      ~ rec (Sys.Variable s t),
    EqGen.Record rec,
    Ord (idx node), Pointed term,
@@ -164,8 +162,7 @@ infix 0 .=, %=, #=, ~=
 
 (.=) ::
   (Eq x, Arith.Sum x, EqGen.Record rec,
-   Env.Element idx (rec (Sys.Variable s a)) (rec (Sys.Variable s v))
-      ~ rec (Sys.Variable s x),
+   EqGen.Element idx rec s a v ~ rec (Sys.Variable s x),
    Env.AccessMap idx, Ord (idx node)) =>
   Env.RecordIndexed rec (idx node) -> x ->
   EqGen.EquationSystem rec node s a v
@@ -190,8 +187,7 @@ evar .= val  =  EqGen.variable evar =.= EqGen.constant val
 
 (%=) ::
   (Eq x, Arith.Sum x, EqGen.Record rec,
-   Env.Element idx (rec (Sys.Variable s a)) (rec (Sys.Variable s v))
-      ~ rec (Sys.Variable s x),
+   EqGen.Element idx rec s a v ~ rec (Sys.Variable s x),
    Env.AccessMap idx, Ord (idx node)) =>
   idx node -> rec x ->
   EqGen.EquationSystem rec node s a v

@@ -47,10 +47,7 @@ constant = EqGen.constant
 
 variable ::
    (Eq x, Arith.Sum x,
-    Env.Element idx
-       (Env.Absolute (Sys.Variable s a))
-       (Env.Absolute (Sys.Variable s v))
-       ~ Env.Absolute (Sys.Variable s x),
+    EqGen.Element idx Env.Absolute s a v ~ Env.Absolute (Sys.Variable s x),
     Env.AccessMap idx, Ord (idx node)) =>
    idx node -> Expression node s a v x
 variable = EqGen.variable . Idx.absolute
@@ -86,9 +83,8 @@ type
 givenSymbol ::
   (t ~ VarTerm var term node,
    Eq t, Arith.Sum t,
-   Env.Element idx
-      (Env.Absolute (Sys.Variable s (ScalarTerm term node)))
-      (Env.Absolute (Sys.Variable s (SignalTerm term node)))
+   EqGen.Element idx Env.Absolute s
+      (ScalarTerm term node) (SignalTerm term node)
      ~ Env.Absolute (Sys.Variable s t),
    Ord (idx node), Pointed term,
    Var.Type idx ~ var, Utility.Symbol var, Env.AccessMap idx) =>
@@ -103,9 +99,8 @@ infixr 6 =<>
 (=<>) ::
   (t ~ VarTerm var term node,
    Eq t, Arith.Sum t,
-   Env.Element idx
-      (Env.Absolute (Sys.Variable s (ScalarTerm term node)))
-      (Env.Absolute (Sys.Variable s (SignalTerm term node)))
+   EqGen.Element idx Env.Absolute s
+      (ScalarTerm term node) (SignalTerm term node)
      ~ Env.Absolute (Sys.Variable s t),
    Ord (idx node), Pointed term,
    Var.Type idx ~ var, Utility.Symbol var, Env.AccessMap idx) =>
