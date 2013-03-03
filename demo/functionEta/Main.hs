@@ -45,7 +45,7 @@ enRange :: [Double]
 enRange = 0.01:[0.5, 1 .. 9]
 
 
-type Expr s a = EqGen.Expression Node s Double a
+type Expr s a = EqGen.Expression Node s Double Double a
 
 c :: Idx.Power Node
 c = edgeVar Idx.Power sec0 Source Sink
@@ -57,7 +57,7 @@ eta = edgeVar Idx.Eta sec0 Source Sink
 functionEta :: Expr s Double -> Expr s Double
 functionEta = EqGen.liftF $ \p -> 0.3 * sqrt p
 
-given :: Double -> EqGen.EquationSystem Node s Double
+given :: Double -> EqGen.EquationSystem Node s Double Double
 given p =
    mconcat $
    (Idx.DTime sec0 .= 1) :
@@ -67,9 +67,12 @@ given p =
 
 solve :: Double -> String
 solve p =
-  let env = EqGen.solve ((EqGen.getVar eta =.= functionEta (EqGen.getVar c)) <> given p) seqTopo
+  let env =
+         EqGen.solve seqTopo
+            ((EqGen.variable eta =.= functionEta (EqGen.variable c)) <> given p)
   in  show p ++ " " ++
-      Format.unUnicode (formatValue (Env.unAbsolute (checkedLookup (Env.etaMap env) eta)))
+      Format.unUnicode (formatValue (Env.unAbsolute
+         (checkedLookup (Env.etaMap (Env.signal env)) eta)))
 
 main :: IO ()
 main =

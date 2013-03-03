@@ -1,7 +1,12 @@
 module EFA.Symbolic.SumProduct where
 
+import qualified EFA.Equation.Arithmetic as Arith
+import EFA.Equation.Arithmetic ((~+), (~-), (~*), (~/))
+
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
+
+import EFA.Utility (Pointed, point)
 
 import qualified Data.Map as Map
 import Data.Map (Map, )
@@ -22,6 +27,7 @@ We might use a custom Map type.
 -}
 data Term a =
      Atom a
+   | Function Format.Function (Term a)
    | Sum (Map (Product a) Rational)
    deriving (Show, Eq, Ord)
 
@@ -106,10 +112,28 @@ instance Ord a => Num (Term a) where
       termFromCoeffProd $
       coeffProdFromTerm x <> coeffProdFromTerm y
 
+   abs = Function Format.Absolute
+   signum = Function Format.Signum
+
 instance Ord a => Fractional (Term a) where
    fromRational x = Sum $ Map.singleton one x
    -- (/) is not just unionWith (/) because the elements in the second map would remain unchanged
    recip = termFromCoeffProd . recipCoeffProduct . coeffProdFromTerm
+
+
+
+instance Ord idx => Arith.Sum (Term idx) where
+   (~+) = (+)
+   (~-) = (-)
+
+instance Ord idx => Arith.Product (Term idx) where
+   (~*) = (*)
+   (~/) = (/)
+
+instance Ord idx => Arith.Constant (Term idx) where
+   zero = zero
+   fromInteger = fromInteger
+   fromRational = fromRational
 
 
 {- |
@@ -123,6 +147,10 @@ evaluate f =
    let term t =
           case t of
              Atom a -> f a
+             Function fn x ->
+                case fn of
+                   Format.Absolute -> abs $ term x
+                   Format.Signum -> signum $ term x
              Sum s ->
                 case NonEmpty.fetch $ Map.toList s of
                    Nothing -> 0
@@ -163,6 +191,7 @@ evaluate f =
 map :: (Ord b) => (a -> b) -> Term a -> Term b
 map f =
    let mapTerm (Atom a) = Atom $ f a
+       mapTerm (Function fn a) = Function fn $ mapTerm a
        mapTerm (Sum s) = Sum $ Map.mapKeys mapProduct s
        mapProduct (Product p) = Product $ Map.mapKeys mapTerm p
    in  mapTerm
@@ -181,6 +210,7 @@ format f =
    let term ctx t =
           case t of
              Atom a -> f ctx a
+             Function fn x -> Format.function fn $ term TopLevel x
              Sum s ->
                 case NonEmpty.fetch $ Map.toList s of
                    Nothing -> Format.integer 0
@@ -215,6 +245,9 @@ format f =
 
    in  term
 
+
+instance Pointed Term where
+   point = Atom
 
 instance (Ord a, FormatValue a) => FormatValue (Term a) where
    formatValue = format (\_ -> formatValue) TopLevel

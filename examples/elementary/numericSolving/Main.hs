@@ -49,7 +49,7 @@ topoDreibein = Gr.mkGraph ns (makeEdges es)
               (node3, TD.Storage)]
         es = [(node0, node2), (node1, node2), (node2, node3)]
 
-given :: EqGen.EquationSystem Node s Double
+given :: EqGen.EquationSystem Node s Double Double
 given =
    mconcat $
 
@@ -81,7 +81,7 @@ main :: IO ()
 main = do
 
   let seqTopo = constructSeqTopo topoDreibein [1, 0, 1]
-      env = EqGen.solve given seqTopo
+      env = EqGen.solve seqTopo given
 
   Draw.sequFlowGraphAbsWithEnv seqTopo env
 

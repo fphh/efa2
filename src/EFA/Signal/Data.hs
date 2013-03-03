@@ -12,6 +12,11 @@ module EFA.Signal.Data (module EFA.Signal.Data) where
 import qualified EFA.Signal.Vector as SV
 import Data.Monoid (Monoid(mempty, mappend, mconcat))
 
+import qualified EFA.Equation.Arithmetic as Arith
+import EFA.Equation.Arithmetic
+          (Sum, (~+), (~-),
+           Product, (~*), (~/))
+
 import qualified Data.Vector.Unboxed as UV
 import qualified Data.Vector as V
 
@@ -247,6 +252,15 @@ unzip ::
 unzip x = (map P.fst x, map P.snd x)
 
 
+instance (ZipWith c, Storage c a, Sum a) => Sum (Data c a) where
+   (~+) = zipWith (~+)
+   (~-) = zipWith (~-)
+
+instance (ZipWith c, Storage c a, Product a) => Product (Data c a) where
+   (~*) = zipWith (~*)
+   (~/) = zipWith (~/)
+
+
 {- |
 When the structure of @xs@ and @ys@ matches,
 then it should hold:
@@ -383,6 +397,34 @@ foldlMap ::
    (c -> b -> c) -> c -> (a -> b) -> Data vec a -> c
 foldlMap f x0 g = foldl (\acc x -> f acc (g x)) x0
 
+
+class Integrate v c where
+   type Integrated v c :: * -> *
+   integrate ::
+      (SV.Storage v (Apply c a), Storage c a,
+       Storage (Integrated v c) a, Arith.Constant a) =>
+      Data (v :> c) a -> Data (Integrated v c) a
+
+instance (SV.Walker v) => Integrate v Nil where
+   type Integrated v Nil = Nil
+   integrate = Data . SV.foldl (~+) Arith.zero . getData
+
+instance
+   (SV.Walker v2, Integrate v1 c) =>
+      Integrate v2 (v1 :> c) where
+   type Integrated v2 (v1 :> c) = v2 :> Integrated v1 c
+   integrate xd =
+      nestedData
+         (withNestedData
+            (SV.map (getData . readNested integrate . subData xd)) xd)
+
+
+instance
+   (SV.Storage v (Apply c a), Storage c a,
+    Storage (Integrated v c) a, Integrate v c, Arith.Constant a) =>
+      Arith.Integrate (Data (v :> c) a) where
+   type Scalar (Data (v :> c) a) = Data (Integrated v c) a
+   integrate = integrate
 
 ----------------------------------------------------------
 -- Monoid

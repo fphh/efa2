@@ -46,7 +46,7 @@ enRange :: [Rational]
 enRange = (1%100):[1%2, 1 .. 9]
 
 
-type Expr s a x = EqGen.Expression Node s a x
+type Expr s a x = EqGen.Expression Node s a a x
 
 c :: Idx.Power Node
 c = edgeVar Idx.Power sec0 Source Sink
@@ -55,10 +55,10 @@ eta :: Idx.Eta Node
 eta = edgeVar Idx.Eta sec0 Source Sink
 
 
-functionEta :: (Fractional a) => Expr s a a -> Expr s a a
+functionEta :: (Fractional x) => Expr s a x -> Expr s a x
 functionEta p = 0.2 * p
 
-given :: Rational -> EqGen.EquationSystem Node s Rational
+given :: Rational -> EqGen.EquationSystem Node s Rational Rational
 given p =
    mconcat $
    (Idx.DTime sec0 .= 1) :
@@ -69,16 +69,19 @@ given p =
 solve :: Rational -> String
 solve p =
   show p ++ "\t"
-        ++ case Env.unAbsolute $ checkedLookup (Env.etaMap $ solveEnv p) eta of
+        ++ case Env.unAbsolute $
+                   checkedLookup (Env.etaMap $ Env.signal $ solveEnv p) eta of
               Undetermined -> "undetermined"
               Determined x -> show x
 
 solveEnv ::
-  Rational -> Env.Env Node (Env.Absolute (Result Rational))
+  Rational ->
+  Env.Complete Node
+    (Env.Absolute (Result Rational))
+    (Env.Absolute (Result Rational))
 solveEnv p =
-  EqGen.solve
-    ((EqGen.getVar eta =.= functionEta (EqGen.getVar c)) <> given p)
-    seqTopo
+  EqGen.solve seqTopo
+    ((EqGen.variable eta =.= functionEta (EqGen.variable c)) <> given p)
 
 main :: IO ()
 main = do

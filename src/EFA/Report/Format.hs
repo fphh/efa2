@@ -32,7 +32,10 @@ newtype Latex = Latex { unLatex :: String }
 
 -- * class for unified handling of ASCII, Unicode and LaTeX output
 
-data EdgeVar = Energy | MaxEnergy | Power | Eta | X | Y
+data EdgeVar = Energy | MaxEnergy | Power | Eta | X
+
+data Function = Absolute | Signum
+   deriving (Eq, Ord, Show)
 
 class Format output where
    literal :: String -> output
@@ -47,6 +50,8 @@ class Format output where
    words, lines :: [output] -> output
    assign :: output -> output -> output
 
+   function :: Function -> output -> output
+   integral :: output -> output
    recordDelta :: Idx.Delta -> output -> output
    section :: Idx.Section -> output
    sectionNode :: output -> output -> output
@@ -75,6 +80,12 @@ instance Format ASCII where
    assign (ASCII lhs) (ASCII rhs) =
       ASCII $ lhs ++ " = " ++ rhs
 
+   function f (ASCII rest) =
+      ASCII $
+      case f of
+         Absolute -> "|" ++ rest ++ "|"
+         Signum -> "sgn(" ++ rest ++ ")"
+   integral (ASCII x) = ASCII $ "integrate(" ++ x ++ ")"
    recordDelta d (ASCII rest) =
       ASCII $ (++rest) $
       case d of
@@ -93,7 +104,6 @@ instance Format ASCII where
          MaxEnergy -> "me"
          Power -> "p"
          X -> "x"
-         Y -> "y"
          Eta -> "n"
    time = ASCII "t"
    var = ASCII "v"
@@ -127,6 +137,12 @@ instance Format Unicode where
    assign (Unicode lhs) (Unicode rhs) =
       Unicode $ lhs ++ " = " ++ rhs
 
+   function f (Unicode rest) =
+      Unicode $
+      case f of
+         Absolute -> "|" ++ rest ++ "|"
+         Signum -> "sgn(" ++ rest ++ ")"
+   integral (Unicode x) = Unicode $ "\x222B(" ++ x ++ ")"
    recordDelta d (Unicode rest) =
       Unicode $ (++rest) $
       case d of
@@ -145,7 +161,6 @@ instance Format Unicode where
          MaxEnergy -> "me"
          Power -> "p"
          X -> "x"
-         Y -> "y"
          Eta -> "\x03b7"
    time = Unicode "t"
    var = Unicode "v"
@@ -213,6 +228,12 @@ instance Format Latex where
    assign (Latex lhs) (Latex rhs) =
       Latex $ lhs ++ " = " ++ rhs
 
+   function f (Latex rest) =
+      Latex $
+      case f of
+         Absolute -> "\\abs{" ++ rest ++ "}"
+         Signum -> "\\sgn{\\left(" ++ rest ++ "\\right)}"
+   integral (Latex x) = Latex $ "\\int\\left(" ++ x ++ "\\right)"
    recordDelta d (Latex rest) =
       Latex $
       case d of
@@ -235,7 +256,6 @@ instance Format Latex where
          MaxEnergy -> "me"
          Power -> "p"
          X -> "x"
-         Y -> "y"
          Eta -> "\\eta"
    time = Latex "t"
    var = Latex "v"
@@ -257,3 +277,11 @@ instance Record Idx.Absolute where
 
 instance Record Idx.Delta where
    record d = recordDelta d
+
+
+class EdgeIdx idx where edgeVar :: idx -> EdgeVar
+instance EdgeIdx (Idx.Energy node) where edgeVar _ = Energy
+instance EdgeIdx (Idx.MaxEnergy node) where edgeVar _ = MaxEnergy
+instance EdgeIdx (Idx.Power node) where edgeVar _ = Power
+instance EdgeIdx (Idx.Eta node) where edgeVar _ = Eta
+instance EdgeIdx (Idx.X node) where edgeVar _ = X

@@ -74,6 +74,7 @@ Library
     EFA.Signal.Plot
     EFA.Symbolic.OperatorTree
     EFA.Symbolic.SumProduct
+    EFA.Symbolic.Mixed
     EFA.Report.Typ
     EFA.Report.Base
     EFA.Report.Report
@@ -91,6 +92,7 @@ Library
     EFA.Equation.Result
     EFA.Equation.Env
     EFA.Equation.Variable
+    EFA.Equation.Arithmetic
     EFA.Example.Utility
 
 
@@ -394,6 +396,16 @@ Executable demo-stateanalysis
 
 Executable demo-functioneta
   Main-Is: demo/functionEta/Main.hs
+  GHC-Options: -Wall
+  If flag(buildExamples)
+     Build-Depends:
+       efa,
+       base
+  Else
+    Buildable: False
+
+Executable demo-lookupeta
+  Main-Is: demo/lookupEta/Main.hs
   GHC-Options: -Wall
   If flag(buildExamples)
      Build-Depends:

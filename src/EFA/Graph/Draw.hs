@@ -13,9 +13,8 @@ import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
 import EFA.Report.Format (Format, Unicode(Unicode, unUnicode))
 
-import qualified EFA.Equation.Env as Interp
+import qualified EFA.Equation.Env as Env
 import qualified EFA.Equation.Variable as Var
-import EFA.Equation.Variable (MkIdxC, mkIdx)
 import EFA.Equation.Env (StorageMap)
 
 import qualified EFA.Graph.Topology.Index as Idx
@@ -24,7 +23,7 @@ import qualified EFA.Graph as Gr
 import EFA.Graph.Topology
           (SequFlowGraph,
            NodeType(Storage),
-           EdgeType(OriginalEdge, IntersectionEdge),
+           EdgeType(StructureEdge, StorageEdge),
            getFlowDirection,
            FlowDirectionField, FlowTopology)
 import EFA.Graph (Edge(Edge), labNodes, labEdges)
@@ -72,11 +71,11 @@ import System.FilePath
 nodeColour :: Attribute
 nodeColour = FillColor [RGB 230 230 240]
 
-originalEdgeColour :: Attribute
-originalEdgeColour = Color [RGB 0 0 200]
+structureEdgeColour :: Attribute
+structureEdgeColour = Color [RGB 0 0 200]
 
-intersectionEdgeColour :: Attribute
-intersectionEdgeColour = Color [RGB 200 0 0]
+storageEdgeColour :: Attribute
+storageEdgeColour = Color [RGB 200 0 0]
 
 
 dotFromSequFlowGraph ::
@@ -156,14 +155,11 @@ dotFromSecEdge eshow e =
            Label $ StrLabel $ T.pack $
            L.intercalate "\n" $ map unUnicode $ order $ eshow e
         colour =
-           case Topo.getEdgeType e of
-              IntersectionEdge -> intersectionEdgeColour
-              OriginalEdge -> originalEdgeColour
+           case Topo.edgeType $ fst e of
+              StorageEdge _ -> storageEdgeColour
+              StructureEdge _ -> structureEdgeColour
         constraint =
-           Constraint $
-           case Topo.getEdgeType e of
-              IntersectionEdge -> False
-              OriginalEdge -> True
+           Constraint $ Topo.isStructureEdge $ fst e
 
 
 dotIdentFromSecNode :: (Node.C node) => Idx.SecNode node -> T.Text
@@ -243,7 +239,7 @@ dotFromTopoEdge e =
       Edge x y ->
          DotEdge
             (dotIdentFromNode x) (dotIdentFromNode y)
-            [Viz.Dir Viz.NoDir, originalEdgeColour]
+            [Viz.Dir Viz.NoDir, structureEdgeColour]
 
 
 
@@ -310,16 +306,14 @@ formatNodeType :: Format output => NodeType -> output
 formatNodeType = Format.literal . showType
 
 formatNodeStorage ::
-   (Interp.Record recIdx rec, FormatValue a, Format output, Node.C node) =>
-   recIdx -> StorageMap node (rec a) -> Topo.LNode node -> output
+   (Env.Record rec, FormatValue a, Format output, Node.C node) =>
+   Env.RecordIndex rec -> StorageMap node (rec a) -> Topo.LNode node -> output
 formatNodeStorage rec st (n@(Idx.SecNode _sec nid), ty) =
    Format.lines $
    Node.display nid :
    Format.words [formatNodeType ty] :
       case ty of
-         Storage ->
-            [Format.words
-               [lookupFormat rec st $ Idx.Storage n]]
+         Storage -> [Format.words [lookupFormat rec st $ Idx.Storage n]]
          _ -> []
 
 
@@ -330,27 +324,28 @@ It shall not contain values needed for computations.
 data Env node output =
    Env {
       formatEnergy, formatMaxEnergy,
-      formatX, formatY,
+      formatX,
       formatEta    :: Idx.SecNode node -> Idx.SecNode node -> output,
       formatTime   :: Idx.Section -> output,
       formatNode   :: Topo.LNode node -> output
    }
 
 lookupFormat ::
-   (Ord (idx node), MkIdxC idx, Interp.Record recIdx rec,
+   (Ord (idx node), Var.FormatIndex (idx node), Env.Record rec,
     FormatValue a, Format output, Node.C node) =>
-   recIdx -> M.Map (idx node) (rec a) -> idx node -> output
+   Env.RecordIndex rec -> M.Map (idx node) (rec a) -> idx node -> output
 lookupFormat recIdx mp k =
    maybe
       (error $ "could not find index " ++
-         (Format.unUnicode $ formatValue $ mkIdx k))
-      (formatValue . Accessor.get (Interp.accessRecord recIdx)) $
+         (Format.unUnicode $ Var.formatIndex k))
+      (formatValue . Accessor.get (Env.accessRecord recIdx)) $
    M.lookup k mp
 
 lookupFormatAssign ::
-   (Ord (idx node), MkIdxC idx, Format.Record recIdx, Interp.Record recIdx rec,
+   (Ord (idx node), Format.EdgeIdx (idx node), Var.FormatIndex (idx node),
+    Env.Record rec,
     FormatValue a, Format output, Node.C node) =>
-   recIdx ->
+   Env.RecordIndex rec ->
    M.Map (idx node) (rec a) ->
    (Idx.SecNode node -> Idx.SecNode node -> idx node) ->
    (Idx.SecNode node -> Idx.SecNode node -> output)
@@ -358,62 +353,63 @@ lookupFormatAssign rec mp makeIdx x y =
    case makeIdx x y of
       idx ->
          Format.assign
-            (Format.record rec $ Var.formatShort $ mkIdx idx)
+            (Format.record rec $ Format.edgeIdent $ Format.edgeVar idx)
             (lookupFormat rec mp idx)
 
 sequFlowGraphWithEnv ::
   (Node.C node) =>
   SequFlowGraph node -> Env node Unicode -> IO ()
 sequFlowGraphWithEnv g env =
-   printGraph g (Just (formatTime env)) (formatNode env) eshow
-  where eshow e@((Edge uid vid), _l) =
-           (case Topo.getEdgeType e of
-              OriginalEdge -> []
-              IntersectionEdge ->
+   printGraph g (Just (formatTime env)) (formatNode env) (eshow . fst)
+  where eshow e@(Edge uid vid) =
+           case Topo.edgeType e of
+              StructureEdge _ ->
+                 formatEnergy env uid vid :
+                 formatX env uid vid :
+                 formatEta env uid vid :
+                 formatX env vid uid :
+                 formatEnergy env vid uid :
+                 []
+              StorageEdge _ ->
                  formatMaxEnergy env uid vid :
-                 formatY env uid vid :
-                 Format.empty :
-                 [])
-           ++
-           formatEnergy env uid vid :
-           formatX env uid vid :
-           formatEta env uid vid :
-           formatX env vid uid :
-           formatEnergy env vid uid :
-           []
+                 formatEnergy env uid vid :
+                 formatX env uid vid :
+                 formatX env vid uid :
+                 []
 
 sequFlowGraphAbsWithEnv ::
-  (FormatValue a, Node.C node) =>
-  SequFlowGraph node -> Interp.Env node (Interp.Absolute a) -> IO ()
+   (FormatValue a, FormatValue v, Node.C node) =>
+   SequFlowGraph node ->
+   Env.Complete node (Env.Absolute a) (Env.Absolute v) -> IO ()
 sequFlowGraphAbsWithEnv topo = sequFlowGraphWithEnv topo . envAbs
 
 sequFlowGraphDeltaWithEnv ::
-  (FormatValue a, Node.C node) =>
-  SequFlowGraph node -> Interp.Env node (Interp.Delta a) -> IO ()
+   (FormatValue a, FormatValue v, Node.C node) =>
+   SequFlowGraph node ->
+   Env.Complete node (Env.Delta a) (Env.Delta v) -> IO ()
 sequFlowGraphDeltaWithEnv topo = sequFlowGraphWithEnv topo . envDelta
 
 
 envGen ::
-   (FormatValue a, Format output, Format.Record idx,
-    Interp.Record idx rec, Node.C node) =>
-   idx ->
-   Interp.Env node (rec a) -> Env node output
-envGen rec (Interp.Env e me _p n dt x y _s st) =
+   (FormatValue a, FormatValue v, Format output,
+    Env.Record rec, Node.C node) =>
+   Env.RecordIndex rec ->
+   Env.Complete node (rec a) (rec v) -> Env node output
+envGen rec (Env.Complete (Env.Scalar me st) (Env.Signal e _p n dt x _s)) =
    Env
       (lookupFormatAssign rec e Idx.Energy)
       (lookupFormatAssign rec me Idx.MaxEnergy)
       (lookupFormatAssign rec x Idx.X)
-      (lookupFormatAssign rec y Idx.Y)
       (lookupFormatAssign rec n Idx.Eta)
       (lookupFormat rec dt . Idx.DTime)
       (formatNodeStorage rec st)
 
 envAbs ::
-   (FormatValue a, Format output, Node.C node) =>
-   Interp.Env node (Interp.Absolute a) -> Env node output
+   (FormatValue a, FormatValue v, Format output, Node.C node) =>
+   Env.Complete node (Env.Absolute a) (Env.Absolute v) -> Env node output
 envAbs = envGen Idx.Absolute
 
 envDelta ::
-   (FormatValue a, Format output, Node.C node) =>
-   Interp.Env node (Interp.Delta a) -> Env node output
+   (FormatValue a, FormatValue v, Format output, Node.C node) =>
+   Env.Complete node (Env.Delta a) (Env.Delta v) -> Env node output
 envDelta = envGen Idx.Delta

@@ -5,7 +5,6 @@ module EFA.Graph.Topology (
        EdgeType (..),
        FlowDirection (..),
        EdgeLabel,
-       EdgeTypeField,      getEdgeType,
        FlowDirectionField, getFlowDirection,
        Topology,
        FlowTopology,
@@ -18,8 +17,8 @@ module EFA.Graph.Topology (
        isActiveEdge,
        isInactiveEdge,
        edgeType,
-       isOriginalEdge,
-       isIntersectionEdge,
+       isStructureEdge,
+       isStorageEdge,
        isDirEdge, isStorageNode,
        defaultNLabel,
        InOut,
@@ -72,15 +71,20 @@ isActive _ = True
 isInactive :: FlowDirection -> Bool
 isInactive = not . isActive
 
-data EdgeType = OriginalEdge
-              | IntersectionEdge deriving (Eq, Ord, Show)
+data EdgeType node =
+     StructureEdge (Idx.StructureEdge node)
+   | StorageEdge (Idx.StorageEdge node)
+   deriving (Eq, Ord, Show)
 
 
-edgeType :: Gr.Edge (Idx.SecNode a) -> EdgeType
-edgeType e =
-   if isOriginalEdge e
-     then OriginalEdge
-     else IntersectionEdge
+edgeType :: Eq node => Gr.Edge (Idx.SecNode node) -> EdgeType node
+edgeType (Gr.Edge (Idx.SecNode sx nx) (Idx.SecNode sy ny)) =
+   if sx == sy
+     then StructureEdge $ Idx.StructureEdge sx nx ny
+     else
+        if nx == ny
+          then StorageEdge $ Idx.StorageEdge sx sy nx
+          else error "forbidden edge type"
 
 
 isActiveEdge :: FlowDirectionField el => el -> Bool
@@ -90,18 +94,20 @@ isInactiveEdge :: FlowDirectionField el => el -> Bool
 isInactiveEdge = isInactive . getFlowDirection
 
 
+{-
 class EdgeTypeField el where
-   getEdgeType :: el -> EdgeType
+   getEdgeType :: el -> EdgeType node
+-}
 
 class FlowDirectionField el where
    getFlowDirection :: el -> FlowDirection
 
-class (EdgeTypeField el, FlowDirectionField el) => EdgeLabel el where
+class ({- EdgeTypeField el, -} FlowDirectionField el) => EdgeLabel el where
 
-
+{-
 instance EdgeTypeField EdgeType where
    getEdgeType = id
-
+-}
 
 instance FlowDirectionField FlowDirection where
    getFlowDirection = id
@@ -110,6 +116,7 @@ instance FlowDirectionField l => FlowDirectionField (e, l) where
    getFlowDirection = getFlowDirection . snd
 
 
+{-
 class NodeEdgeType n where
    getNodeEdgeType :: Gr.Edge n -> EdgeType
 
@@ -121,13 +128,14 @@ instance NodeEdgeType n => EdgeTypeField (Gr.Edge n) where
 
 instance EdgeTypeField e => EdgeTypeField (e, l) where
    getEdgeType (e, _l) = getEdgeType e
+-}
 
 
-isOriginalEdge :: Gr.Edge (Idx.SecNode a) -> Bool
-isOriginalEdge (Gr.Edge (Idx.SecNode sx _) (Idx.SecNode sy _))  =  sx == sy
+isStructureEdge :: Eq node => Gr.Edge (Idx.SecNode node) -> Bool
+isStructureEdge e = case edgeType e of StructureEdge _ -> True ; _ -> False
 
-isIntersectionEdge :: Gr.Edge (Idx.SecNode a) -> Bool
-isIntersectionEdge (Gr.Edge (Idx.SecNode sx _) (Idx.SecNode sy _))  =  sx /= sy
+isStorageEdge :: Eq node => Gr.Edge (Idx.SecNode node) -> Bool
+isStorageEdge e = case edgeType e of StorageEdge _ -> True ; _ -> False
 
 
 isDirEdge :: FlowDirectionField label => (a, label) -> Bool
@@ -180,12 +188,12 @@ getActiveStores =
 -- looking only at edges, not at values.
 -- This means that nodes with in AND out edges cannot be treated.
 maybeActiveSt ::
-   (FlowDirectionField el) =>
-   Idx.SecNode a -> InOut (Idx.SecNode a) el -> Maybe StoreDir
+   (Eq node, FlowDirectionField el) =>
+   Idx.SecNode node -> InOut (Idx.SecNode node) el -> Maybe StoreDir
 maybeActiveSt n (ins, outs) =
    mplus
       (toMaybe
-         (any (\(m,l) -> isActiveEdge l && isOriginalEdge (Gr.Edge m n)) ins)
+         (any (\(m,l) -> isActiveEdge l && isStructureEdge (Gr.Edge m n)) ins)
          In)
       (toMaybe (any (isActiveEdge . snd) outs) Out)
 

@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE Rank2Types #-}
 module Main where
 
@@ -7,6 +8,7 @@ module Main where
 import EFA.Example.Utility (edgeVar)
 import EFA.Equation.Absolute ((.=))
 import qualified EFA.Equation.System as EqGen
+import qualified EFA.Equation.Arithmetic as Arith
 --import EFA.IO.CSVImport (modelicaCSVImport)
 import EFA.IO.PLTImport (modelicaPLTImport)
 import qualified EFA.Signal.SequenceData as SD
@@ -24,7 +26,7 @@ import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Draw as Draw
 
-import EFA.Graph.Topology(isOriginalEdge)
+import EFA.Graph.Topology(isStructureEdge)
 import EFA.Graph(lefilter)
 
 import EFA.Utility.Async (concurrentlyMany_)
@@ -39,9 +41,9 @@ import EFA.Equation.Result (Result(..))
 ----------------------------------
 -- * Example Specific Imports
 
-import qualified Modules.System as System 
-import Modules.Signals as Signals 
-import Modules.Plots as Plot 
+import qualified Modules.System as System
+import Modules.Signals as Signals
+import Modules.Plots as Plot
 import Modules.Analysis as Analysis
 
 ----------------------------------
@@ -55,24 +57,24 @@ main = do
 
   Draw.topology System.topology
   -- Draw.topology2pdf System.topology
- 
+
 ---------------------------------------------------------------------------------------
 -- * State Analysis
 
 --  putStrLn ("Number of possible flow states: " ++ show (length System.flowStates))
 --  Draw.flowTopologies (take 20 System.flowStates)
 
---------------------------------------------------------------------------------------- 
+---------------------------------------------------------------------------------------
 -- * Import signals from Csv-file
-  
+
 --  rawSignals <- modelicaCSVImport "Vehicle_res.csv" :: IO (SignalRecord [] Double)
   rawSignals <- modelicaPLTImport "Vehicle_res.plt" :: IO (SignalRecord [] Double)
   rawSignalsB <- modelicaPLTImport "Vehicle_mass1200kg_res.plt" :: IO (SignalRecord [] Double)
-  
---------------------------------------------------------------------------------------- 
+
+---------------------------------------------------------------------------------------
 -- * Conditioning, Sequencing and Integration
-  (sequenceFilt,sequencePowersFilt,sequenceFlowsFilt,flowStates) <- Analysis.pre System.topology rawSignals 
-  (sequenceFiltB,sequencePowersFiltB,sequenceFlowsFiltB,flowStatesB) <- Analysis.pre System.topology rawSignalsB 
+  (sequenceFilt,sequencePowersFilt,sequenceFlowsFilt,flowStates) <- Analysis.pre System.topology rawSignals
+  (sequenceFiltB,sequencePowersFiltB,sequenceFlowsFiltB,flowStatesB) <- Analysis.pre System.topology rawSignalsB
 
   ---------------------------------------------------------------------------------------
 -- *  Generate Sequence Flow Graph
@@ -83,14 +85,15 @@ main = do
   let sequenceFlowTopology = makeSeqFlowTopology flowTopos
   let sequenceFlowTopologyB = makeSeqFlowTopology flowToposB
 
-  let sectionTopos =  lefilter (isOriginalEdge .fst) sequenceFlowTopology
-  let sectionToposB =  lefilter (isOriginalEdge .fst) sequenceFlowTopologyB
+  let sectionTopos =  lefilter (isStructureEdge .fst) sequenceFlowTopology
+  let sectionToposB =  lefilter (isStructureEdge .fst) sequenceFlowTopologyB
 
   let solve ::
-         (Eq a, Fractional a, EqGen.Record rec) =>
-         (forall s. EqGen.EquationSystem rec System.Node s a) ->
-         Env.Env System.Node (rec (Result a))
-      solve = flip EqGen.solveFromMeasurement sequenceFlowTopology
+         (Eq a, Arith.Product a, Arith.Integrate a, Arith.Scalar a ~ a,
+          EqGen.Record rec) =>
+         (forall s. EqGen.EquationSystem rec System.Node s a a) ->
+         Env.Complete System.Node (rec (Result a)) (rec (Result a))
+      solve = EqGen.solveFromMeasurement sequenceFlowTopology
 
   let simulation =
          solve $ Analysis.makeGiven Idx.Absolute sequenceFlowsFilt

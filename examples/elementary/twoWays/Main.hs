@@ -13,6 +13,8 @@ import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Draw as Draw
 
+import qualified EFA.Equation.Arithmetic as Arith
+
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
 import EFA.Utility (checkedLookup)
@@ -66,7 +68,7 @@ topo = mkGraph nodes (makeEdges edges)
 seqTopo :: TD.SequFlowGraph Node
 seqTopo = constructSeqTopo topo [0]
 
-given :: Double -> Double -> EqGen.EquationSystem Node s Double
+given :: Double -> Double -> EqGen.EquationSystem Node s Double Double
 given e x =
    mconcat $
    (Idx.DTime sec0 .= 1) :
@@ -78,21 +80,21 @@ given e x =
    (edgeVar Idx.Eta sec0 c2 Sink .= 1) : []
 
 
-type Expr s a x = EqGen.Expression Node s a x
+type Expr s a v x = EqGen.Expression Node s a v x
 
-c02, c04 :: (Eq a, Fractional a) => Expr s a a
-c02 = EqGen.getVar $ edgeVar Idx.Power sec0 c0 c1
-c04 = EqGen.getVar $ edgeVar Idx.Power sec0 c0 c3
+c02, c04 :: (Eq v, Arith.Sum v) => Expr s a v v
+c02 = EqGen.variable $ edgeVar Idx.Power sec0 c0 c1
+c04 = EqGen.variable $ edgeVar Idx.Power sec0 c0 c3
 
-n12, n14 :: (Eq a, Fractional a) => Expr s a a
-n12 = EqGen.getVar $ edgeVar Idx.Eta sec0 c0 c1
-n14 = EqGen.getVar $ edgeVar Idx.Eta sec0 c0 c3
+n12, n14 :: (Eq v, Arith.Sum v) => Expr s a v v
+n12 = EqGen.variable $ edgeVar Idx.Eta sec0 c0 c1
+n14 = EqGen.variable $ edgeVar Idx.Eta sec0 c0 c3
 
-n1, n2 :: (Fractional a) => Expr s a a -> Expr s a a
+n1, n2 :: (Fractional x) => Expr s a v x -> Expr s a v x
 n1 p = -0.012 * (p - 12) * (p - 3) + 0.5
 n2 p = -0.021 * (p - 12) * p
 
-etas :: EqGen.EquationSystem Node s Double
+etas :: EqGen.EquationSystem Node s Double Double
 etas =
   (n12 =.= n1 c02)
   <> (n14 =.= n2 c04)
@@ -112,7 +114,8 @@ ein  = edgeVar Idx.Energy sec0 Source c0
 
 solve :: Double -> Double -> String
 solve e x =
-  let emap = Env.energyMap $ EqGen.solve (etas <> given e x) seqTopo
+  let emap =
+         Env.energyMap $ Env.signal $ EqGen.solve seqTopo (etas <> given e x)
   in  show e ++ " " ++ show x ++ " " ++
       Format.unUnicode (formatValue
          (liftA2 (/)

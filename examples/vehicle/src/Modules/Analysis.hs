@@ -22,7 +22,6 @@ import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Gr
 
-import EFA.Graph.Topology(isOriginalEdge)
 import EFA.Graph(lefilter)
 
 import EFA.Utility.Async (concurrentlyMany_)
@@ -119,10 +118,10 @@ initStorage :: Double
 initStorage = 0.7*3600*1000
 
 makeGiven ::
-   (Env.Record recIdx rec, EqGen.Record rec) =>
-   recIdx ->
+   (EqGen.Record rec) =>
+   Env.RecordIndex rec ->
    SD.SequData (FlowRecord System.Node [] Double)->
-   (EqGen.EquationSystem rec System.Node s Double)
+   (EqGen.EquationSystem rec System.Node s Double Double)
 makeGiven idx sf =
    (Idx.Record idx (Idx.DTime Idx.initSection) .= 1)
    <> (Idx.Record idx (Idx.Storage (Idx.SecNode Idx.initSection System.Battery)) .= initStorage)
@@ -135,17 +134,19 @@ makeGiven idx sf =
                     Idx.Record idx (edgeVar Idx.Energy sec a b) .= sum (Sig.toList e)
 
 makeGivenForPrediction ::
-   (Env.Record recIdx rec, EqGen.Record rec) =>
-   recIdx ->
-   Env.Env System.Node (rec (EqGen.Result Double)) ->
-   (EqGen.EquationSystem rec System.Node s Double)
+   (EqGen.Record rec) =>
+   Env.RecordIndex rec ->
+   Env.Complete System.Node
+      (rec (EqGen.Result Double)) (rec (EqGen.Result Double)) ->
+   (EqGen.EquationSystem rec System.Node s Double Double)
 makeGivenForPrediction idx env =
     (Idx.Record idx (Idx.DTime Idx.initSection) .= 1)
     <> (Idx.Record idx (Idx.Storage (Idx.SecNode Idx.initSection System.Battery)) .= initStorage)
     <> (Idx.Record idx (Idx.Storage (Idx.SecNode Idx.initSection System.VehicleInertia)) .= 0)
-    <> (foldMap f (M.toList (Env.etaMap env)))
-    <> (foldMap f (M.toList (Env.dtimeMap env)))
-    <> (foldMap f (M.toList $ M.mapWithKey h $ M.filterWithKey g $ Env.energyMap env))
+    <> (foldMap f $ M.toList $ Env.etaMap $ Env.signal env)
+    <> (foldMap f $ M.toList $ Env.dtimeMap $ Env.signal env)
+    <> (foldMap f $ M.toList $ M.mapWithKey h $ M.filterWithKey g $
+                               Env.energyMap $ Env.signal env)
     where f (i, x)  =  i %= fmap (\(EqGen.Determined y) -> y) x
           g (Idx.Energy (Idx.SecNode _ x) (Idx.SecNode _ y)) _ =
              case (x,y) of

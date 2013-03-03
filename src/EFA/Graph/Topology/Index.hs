@@ -17,7 +17,14 @@ data Absolute = Absolute deriving (Show, Eq, Ord)
 data Delta = Delta | Before | After deriving (Show, Eq, Ord)
 
 
-data Record rec idx = Record rec idx deriving (Show, Eq, Ord)
+data Record rec idx = Record rec idx deriving (Show, Eq)
+
+-- this ordering is easier to read than the default one
+instance (Ord rec, Ord idx) => Ord (Record rec idx) where
+   compare (Record rx ix) (Record ry iy) =
+      case compare ix iy of
+         EQ -> compare rx ry
+         o -> o
 
 instance Functor (Record rec) where
    fmap f (Record rec idx) = Record rec $ f idx
@@ -39,7 +46,15 @@ after = Record After
 data SecNode a = SecNode Section a deriving (Show, Eq, Ord)
 
 
+
 -- * Edge indices
+
+data StructureEdge node = StructureEdge Section node node
+   deriving (Show, Eq, Ord)
+
+data StorageEdge node = StorageEdge Section Section node
+   deriving (Show, Eq, Ord)
+
 
 -- | Variable types of the solver. The solver, in fact, is
 -- ignorant of the provenance of the variables. However, to
@@ -55,7 +70,7 @@ data Energy a = Energy !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
 
 
 -- | Energy variables for hypothetical outgoing energies.
--- At intersection edges they describe the maximum energy
+-- At storage edges they describe the maximum energy
 -- that a storage could deliver.
 data MaxEnergy a = MaxEnergy !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
 
@@ -67,9 +82,6 @@ data Eta a = Eta !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
 
 -- | Splitting factors.
 data X a = X !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
-
--- | Strange factors for outgoing intersection edges.
-data Y a = Y !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
 
 data Storage a = Storage !(SecNode a) deriving (Show, Ord, Eq)
 
