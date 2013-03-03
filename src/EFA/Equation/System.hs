@@ -339,6 +339,16 @@ _withLocalVar f = EquationSystem $ do
         EquationSystem act -> act
 
 
+{-
+With GHC-7.6 we could define a custom constraint like this one:
+
+type
+   Element idx rec s a v x =
+      Env.Element idx
+         (rec (Sys.Variable s a))
+         (rec (Sys.Variable s v))
+       ~ rec (Sys.Variable s x)
+-}
 type
    Element idx rec s a v =
       Env.Element idx
