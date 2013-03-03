@@ -79,7 +79,8 @@ instance P.Show (Apply ab c) => P.Show (Data ab c) where
 ---------------------------------------------------------
 -- | Type Synonym Convenience
 
-type DVal = Data Nil
+type Scalar = Data Nil
+
 type UVec = Data (UV.Vector :> Nil)
 type UVec2 = Data (V.Vector :> UV.Vector :> Nil)
 type UVec3 = Data (V.Vector :> V.Vector :> UV.Vector :> Nil)

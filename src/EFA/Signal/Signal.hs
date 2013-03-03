@@ -13,7 +13,7 @@ module EFA.Signal.Signal where
 import qualified EFA.Signal.Data as D
 import qualified EFA.Signal.Vector as SV
 import qualified EFA.Signal.Base as B
-import EFA.Signal.Data (Data(Data), (:>), Nil, Zip, Apply, List, List2, NestedList, Vec2, UVec, UVec2, UVec2L, DVal)
+import EFA.Signal.Data (Data(Data), (:>), Nil, Zip, Apply, List, List2, NestedList, Vec2, UVec, UVec2, UVec2L)
 import EFA.Signal.Base (BSum(..), BProd(..), DArith0(..), Val, ZeroCrossing)
 import EFA.Signal.Typ
 import EFA.Report.Report (Table(..), TableData(..), ROpt(RAll), toDoc, autoFormat)
@@ -265,6 +265,7 @@ type FDistr v a = TC FDistrib (Typ A F Tt) (Data (v :> Nil) a)
 -- generic Type Synonyms
 
 type Scal typ a = TC Scalar typ (DVal a)
+type DVal = D.Scalar
 
 type Sc = Scal (Typ UT UT UT) Val
 
