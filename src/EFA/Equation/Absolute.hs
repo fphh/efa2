@@ -46,15 +46,15 @@ solve = EqGen.solve
 constant :: x -> Expression node s a v x
 constant = EqGen.constant
 
-getSignalVar ::
+variableSignal ::
    (Eq v, Arith.Sum v, Env.AccessSignalMap idx, Ord (idx node)) =>
    idx node -> Expression node s a v v
-getSignalVar = EqGen.getSignalVar . Idx.absolute
+variableSignal = EqGen.variableSignal . Idx.absolute
 
-getScalarVar ::
+variableScalar ::
    (Eq a, Arith.Sum a, Env.AccessScalarMap idx, Ord (idx node)) =>
    idx node -> Expression node s a v a
-getScalarVar = EqGen.getScalarVar . Idx.absolute
+variableScalar = EqGen.variableScalar . Idx.absolute
 
 
 liftF ::
@@ -129,10 +129,10 @@ infix 0 .=, #=
    (Eq v, Arith.Sum v, Env.AccessSignalMap idx, Ord (idx node)) =>
    idx node -> v ->
    EquationSystem node s a v
-evar .= val  =  getSignalVar evar =.= EqGen.constant val
+evar .= val  =  variableSignal evar =.= EqGen.constant val
 
 (#=) ::
    (Eq a, Arith.Sum a, Env.AccessScalarMap idx, Ord (idx node)) =>
    idx node -> a ->
    EquationSystem node s a v
-evar #= val  =  getScalarVar evar =.= EqGen.constant val
+evar #= val  =  variableScalar evar =.= EqGen.constant val

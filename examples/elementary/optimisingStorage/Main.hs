@@ -81,21 +81,21 @@ etaf =
 
 n01, n12, n13, n31, p10, p21, e31, e21, p31, p13 ::
   Idx.Section -> Expr s Double
-n01 sec = EqGen.getSignalVar $ edgeVar Idx.Eta sec N0 N1
-n12 sec = EqGen.getSignalVar $ edgeVar Idx.Eta sec N1 N2
-n13 sec = EqGen.getSignalVar $ edgeVar Idx.Eta sec N1 N3
-n31 sec = EqGen.getSignalVar $ edgeVar Idx.Eta sec N3 N1
-p10 sec = EqGen.getSignalVar $ edgeVar Idx.Power sec N1 N0
-p21 sec = EqGen.getSignalVar $ edgeVar Idx.Power sec N2 N1
-e31 sec = EqGen.getSignalVar $ edgeVar Idx.Energy sec N3 N1
-e21 sec = EqGen.getSignalVar $ edgeVar Idx.Energy sec N2 N1
+n01 sec = EqGen.variableSignal $ edgeVar Idx.Eta sec N0 N1
+n12 sec = EqGen.variableSignal $ edgeVar Idx.Eta sec N1 N2
+n13 sec = EqGen.variableSignal $ edgeVar Idx.Eta sec N1 N3
+n31 sec = EqGen.variableSignal $ edgeVar Idx.Eta sec N3 N1
+p10 sec = EqGen.variableSignal $ edgeVar Idx.Power sec N1 N0
+p21 sec = EqGen.variableSignal $ edgeVar Idx.Power sec N2 N1
+e31 sec = EqGen.variableSignal $ edgeVar Idx.Energy sec N3 N1
+e21 sec = EqGen.variableSignal $ edgeVar Idx.Energy sec N2 N1
 
-p31 sec = EqGen.getSignalVar $ edgeVar Idx.Power sec N3 N1
-p13 sec = EqGen.getSignalVar $ edgeVar Idx.Power sec N1 N3
+p31 sec = EqGen.variableSignal $ edgeVar Idx.Power sec N3 N1
+p13 sec = EqGen.variableSignal $ edgeVar Idx.Power sec N1 N3
 
 
 stoinit :: Expr s Double
-stoinit = EqGen.getScalarVar $ Idx.Storage (Idx.SecNode Idx.initSection N3)
+stoinit = EqGen.variableScalar $ Idx.Storage (Idx.SecNode Idx.initSection N3)
 
 ein, eout0, eout1 :: Idx.Energy Node
 ein = edgeVar Idx.Energy sec0 N0 N1
@@ -103,10 +103,10 @@ eout0 = edgeVar Idx.Energy sec0 N2 N1
 eout1 = edgeVar Idx.Energy sec1 N2 N1
 
 e33 :: Expr s Double
-e33 = EqGen.getSignalVar $ interVar Idx.Energy Idx.initSection sec1 N3
+e33 = EqGen.variableSignal $ interVar Idx.Energy Idx.initSection sec1 N3
 
 time :: Idx.Section -> Expr s Double
-time = EqGen.getSignalVar . Idx.DTime
+time = EqGen.variableSignal . Idx.DTime
 
 
 -- maybe move this to Utility module

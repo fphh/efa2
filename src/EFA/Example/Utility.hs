@@ -150,18 +150,18 @@ infix 0 .=, %=, #=
    Env.AccessSignalMap idx, Ord (idx node)) =>
   Idx.Record recIdx (idx node) -> v ->
   EqGen.EquationSystem rec node s a v
-evar .= val  =  EqGen.getSignalVar evar =.= EqGen.constant val
+evar .= val  =  EqGen.variableSignal evar =.= EqGen.constant val
 
 (#=) ::
   (Eq a, Arith.Sum a, EqGen.Record rec, Env.Record recIdx rec,
    Env.AccessScalarMap idx, Ord (idx node)) =>
   Idx.Record recIdx (idx node) -> a ->
   EqGen.EquationSystem rec node s a v
-evar #= val  =  EqGen.getScalarVar evar =.= EqGen.constant val
+evar #= val  =  EqGen.variableScalar evar =.= EqGen.constant val
 
 (%=) ::
   (Eq v, Arith.Sum v, EqGen.Record rec, Env.Record recIdx rec,
    Env.AccessSignalMap idx, Ord (idx node)) =>
   idx node -> rec v ->
   EqGen.EquationSystem rec node s a v
-evar %= val  =  EqGen.getSignalRecordVar evar =%= EqGen.constantRecord val
+evar %= val  =  EqGen.variableSignalRecord evar =%= EqGen.constantRecord val

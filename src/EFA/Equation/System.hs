@@ -16,11 +16,10 @@ module EFA.Equation.System (
 
   (=.=),
   (=%=),
-  getRecordVar,
-  getSignalRecordVar,
-  getSignalVar,
-  getScalarVar,
-  getEdgeVar,
+  variableSignalRecord,
+  variableSignal,
+  variableScalar,
+  variableEdge,
   power,
   energy,
   maxEnergy,
@@ -340,13 +339,13 @@ _withLocalVar f = EquationSystem $ do
         EquationSystem act -> act
 
 
-getRecordVar ::
+variableRecord ::
    (Eq x, Sum x, Ord (idx node), Record rec) =>
    Accessor.T
       (Env.Complete node (rec (Sys.Variable s a)) (rec (Sys.Variable s v)))
       (M.Map (idx node) (rec (Sys.Variable s x))) ->
    idx node -> RecordExpression rec node s a v x
-getRecordVar accessMap idx =
+variableRecord accessMap idx =
   Bookkeeping $ fmap Wrap $ do
     oldMap <- AccessState.get accessMap
     case M.lookup idx oldMap of
@@ -356,86 +355,86 @@ getRecordVar accessMap idx =
         AccessState.set accessMap $ M.insert idx var oldMap
         return (fmap Expr.fromVariable var)
 
-getSignalRecordVar ::
+variableSignalRecord ::
    (Env.AccessSignalMap idx, Ord (idx node), Record rec, Env.Record recIdx rec,
     Eq v, Sum v) =>
    idx node ->
    RecordExpression rec node s a v v
-getSignalRecordVar =
-   getRecordVar (Env.accessSignalMap . Env.accessSignal)
+variableSignalRecord =
+   variableRecord (Env.accessSignalMap . Env.accessSignal)
 
-getSignalVar ::
+variableSignal ::
    (Env.AccessSignalMap idx, Ord (idx node), Record rec, Env.Record recIdx rec,
     Eq v, Sum v) =>
    Idx.Record recIdx (idx node) ->
    Expression rec node s a v v
-getSignalVar (Idx.Record recIdx idx) =
+variableSignal (Idx.Record recIdx idx) =
    fmap (Accessor.get (Env.accessRecord recIdx) . unwrap) $
-   getRecordVar (Env.accessSignalMap . Env.accessSignal) idx
+   variableRecord (Env.accessSignalMap . Env.accessSignal) idx
 
-getScalarVar ::
+variableScalar ::
    (Env.AccessScalarMap idx, Ord (idx node), Record rec, Env.Record recIdx rec,
     Eq a, Sum a) =>
    Idx.Record recIdx (idx node) ->
    Expression rec node s a v a
-getScalarVar (Idx.Record recIdx idx) =
+variableScalar (Idx.Record recIdx idx) =
    fmap (Accessor.get (Env.accessRecord recIdx) . unwrap) $
-   getRecordVar (Env.accessScalarMap . Env.accessScalar) idx
+   variableRecord (Env.accessScalarMap . Env.accessScalar) idx
 
 
-getEdgeVar ::
+variableEdge ::
    (Env.AccessSignalMap idx, Ord (idx node), Eq v, Sum v, Record rec) =>
    (Idx.SecNode node -> Idx.SecNode node -> idx node) ->
    Idx.SecNode node -> Idx.SecNode node -> RecordExpression rec node s a v v
-getEdgeVar mkIdx x y =
-   getRecordVar (Env.accessSignalMap . Env.accessSignal) (mkIdx x y)
+variableEdge mkIdx x y =
+   variableRecord (Env.accessSignalMap . Env.accessSignal) (mkIdx x y)
 
 
 power ::
    (Eq v, Sum v, Record rec, Ord node) =>
    Idx.SecNode node -> Idx.SecNode node -> RecordExpression rec node s a v v
-power = getEdgeVar Idx.Power
+power = variableEdge Idx.Power
 
 energy ::
    (Eq v, Sum v, Record rec, Ord node) =>
    Idx.SecNode node -> Idx.SecNode node -> RecordExpression rec node s a v v
-energy = getEdgeVar Idx.Energy
+energy = variableEdge Idx.Energy
 
 maxEnergy ::
    (Eq a, Sum a, Record rec, Ord node) =>
    Idx.SecNode node -> Idx.SecNode node -> RecordExpression rec node s a v a
 maxEnergy x y =
-   getRecordVar (Env.accessScalarMap . Env.accessScalar) (Idx.MaxEnergy x y)
+   variableRecord (Env.accessScalarMap . Env.accessScalar) (Idx.MaxEnergy x y)
 
 eta ::
    (Eq v, Sum v, Record rec, Ord node) =>
    Idx.SecNode node -> Idx.SecNode node -> RecordExpression rec node s a v v
-eta = getEdgeVar Idx.Eta
+eta = variableEdge Idx.Eta
 
 xfactor ::
    (Eq v, Sum v, Record rec, Ord node) =>
    Idx.SecNode node -> Idx.SecNode node -> RecordExpression rec node s a v v
-xfactor = getEdgeVar Idx.X
+xfactor = variableEdge Idx.X
 
 insum ::
    (Eq v, Sum v, Record rec, Ord node) =>
    Idx.SecNode node -> RecordExpression rec node s a v v
-insum = getRecordVar (Env.accessSignalMap . Env.accessSignal) . Idx.Sum Idx.In
+insum = variableRecord (Env.accessSignalMap . Env.accessSignal) . Idx.Sum Idx.In
 
 outsum ::
    (Eq v, Sum v, Record rec, Ord node) =>
    Idx.SecNode node -> RecordExpression rec node s a v v
-outsum = getRecordVar (Env.accessSignalMap . Env.accessSignal) . Idx.Sum Idx.Out
+outsum = variableRecord (Env.accessSignalMap . Env.accessSignal) . Idx.Sum Idx.Out
 
 storage ::
    (Eq a, Sum a, Record rec, Ord node) =>
    Idx.SecNode node -> RecordExpression rec node s a v a
-storage = getRecordVar (Env.accessScalarMap . Env.accessScalar) . Idx.Storage
+storage = variableRecord (Env.accessScalarMap . Env.accessScalar) . Idx.Storage
 
 dtime ::
    (Eq v, Sum v, Record rec, Ord node) =>
    Idx.Section -> RecordExpression rec node s a v v
-dtime = getRecordVar (Env.accessSignalMap . Env.accessSignal) . Idx.DTime
+dtime = variableRecord (Env.accessSignalMap . Env.accessSignal) . Idx.DTime
 
 
 mwhen :: Monoid a => Bool -> a -> a
