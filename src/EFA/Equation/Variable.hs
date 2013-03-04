@@ -98,8 +98,7 @@ instance (Node.C node) => FormatIndex (Idx.X node) where
 
 instance (Node.C node) => FormatIndex (Idx.DTime node) where
    formatIndex (Idx.DTime s) =
-      Format.subscript (Format.delta Format.time) $
-      Format.section s
+      Format.subscript Format.dtime $ Format.section s
 
 instance (Node.C node) => FormatIndex (Idx.Sum node) where
    formatIndex (Idx.Sum dir x) =

@@ -58,7 +58,7 @@ class Format output where
    direction :: Idx.Direction -> output
    delta :: output -> output
    edgeIdent :: EdgeVar -> output
-   time, var, storage :: output
+   dtime, var, storage :: output
    parenthesize, minus, recip :: output -> output
    plus, multiply :: output -> output -> output
    power :: output -> Integer -> output
@@ -105,7 +105,7 @@ instance Format ASCII where
          Power -> "p"
          X -> "x"
          Eta -> "n"
-   time = ASCII "t"
+   dtime = ASCII "dt"
    var = ASCII "v"
    storage = ASCII "s"
 
@@ -162,7 +162,7 @@ instance Format Unicode where
          Power -> "p"
          X -> "x"
          Eta -> "\x03b7"
-   time = Unicode "t"
+   dtime = Unicode "dt"
    var = Unicode "v"
    storage = Unicode "s"
 
@@ -257,7 +257,7 @@ instance Format Latex where
          Power -> "p"
          X -> "x"
          Eta -> "\\eta"
-   time = Latex "t"
+   dtime = Latex "\\dif t"
    var = Latex "v"
    storage = Latex "s"
 
