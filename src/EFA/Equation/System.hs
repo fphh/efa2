@@ -5,7 +5,7 @@
 module EFA.Equation.System (
   EquationSystem, Expression, RecordExpression,
   Element,
-  fromGraph,
+  fromGraph, fromEnvResult, fromEnv,
   solve, solveFromMeasurement, conservativelySolve,
   solveSimple,
 
@@ -438,6 +438,82 @@ dtime = variableRecord . Idx.DTime
 mwhen :: Monoid a => Bool -> a -> a
 mwhen True t = t
 mwhen False _ = mempty
+
+
+join ::
+   (Fold.Foldable rec) =>
+   Bookkeeping rec node s a v (EquationSystem rec node s a v) ->
+   EquationSystem rec node s a v
+join (Bookkeeping m) =
+   EquationSystem $ m >>= \(EquationSystem sys) -> sys
+
+fromMapResult ::
+   (Eq x, Sum x,
+    Env.AccessMap idx, Ord (idx node), Record rec,
+    Element idx rec s a v ~ rec (Sys.Variable s x)) =>
+   M.Map (idx node) (rec (Result x)) ->
+   EquationSystem rec node s a v
+fromMapResult =
+   fold .
+   M.mapWithKey
+      (\idx xrec ->
+         join $
+         fmap
+            (fold .
+             liftA2
+                (\rx var ->
+                   case rx of
+                      Undetermined -> mempty
+                      Determined x -> pure var =.= constant x)
+                (Wrap xrec))
+            (variableRecord idx))
+
+fromEnvResult ::
+   (Eq a, Sum a, Eq v, Sum v, Ord node, Record rec) =>
+   Env.Complete node (rec (Result a)) (rec (Result v)) ->
+   EquationSystem rec node s a v
+fromEnvResult
+   (Env.Complete (Env.Scalar me st) (Env.Signal e p n dt x s)) =
+      mconcat $
+         fromMapResult me :
+         fromMapResult st :
+         fromMapResult e :
+         fromMapResult p :
+         fromMapResult n :
+         fromMapResult dt :
+         fromMapResult x :
+         fromMapResult s :
+         []
+
+
+fromMap ::
+   (Eq x, Sum x,
+    Env.AccessMap idx, Ord (idx node), Record rec,
+    Element idx rec s a v ~ rec (Sys.Variable s x)) =>
+   M.Map (idx node) (rec x) ->
+   EquationSystem rec node s a v
+fromMap =
+   fold .
+   M.mapWithKey
+      (\idx xrec ->
+         variableRecord idx =%= constantRecord xrec)
+
+fromEnv ::
+   (Eq a, Sum a, Eq v, Sum v, Ord node, Record rec) =>
+   Env.Complete node (rec a) (rec v) ->
+   EquationSystem rec node s a v
+fromEnv
+   (Env.Complete (Env.Scalar me st) (Env.Signal e p n dt x s)) =
+      mconcat $
+         fromMap me :
+         fromMap st :
+         fromMap e :
+         fromMap p :
+         fromMap n :
+         fromMap dt :
+         fromMap x :
+         fromMap s :
+         []
 
 
 fromGraph ::
