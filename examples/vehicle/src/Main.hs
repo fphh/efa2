@@ -52,6 +52,7 @@ import qualified Graphics.Gnuplot.Graph.TwoDimensional as Graph2D
 import qualified Graphics.Gnuplot.LineSpecification as LineSpec
 
 import qualified Data.Foldable as Fold
+import qualified EFA.Utility as Ut
 
 ----------------------------------
 -- * Example Specific Imports
@@ -83,8 +84,11 @@ histogram =
               (LineSpec.title (Format.unASCII $ formatValue term) LineSpec.deflt)) $
       Plot2D.list Graph2D.histograms [val])
 
+
+-- Energy (SecNode (Section 1) Chassis) (SecNode (Section 1) Resistance)
+
 eout :: Idx.Energy System.Node
-eout = edgeVar Idx.Energy (Idx.Section 0)  System.Chassis System.Resistance -- System.Tank System.ConBattery
+eout = edgeVar Idx.Energy (Idx.Section 4)  System.Tank System.ConBattery
 
 
 main :: IO ()
@@ -95,7 +99,7 @@ main = do
 ---------------------------------------------------------------------------------------
 -- * Show Topology
 
-  Draw.topology System.topology
+  -- Draw.topology System.topology
   -- Draw.topology2pdf System.topology
  
 ---------------------------------------------------------------------------------------
@@ -159,7 +163,7 @@ main = do
 
   
   case M.lookup eout (Env.energyMap difference) of
-      Nothing -> error "undefined E_0_1"
+      Nothing -> error ("undefined E_0_1" ++ Ut.myShowList (M.keys (Env.energyMap difference)))
       Just d ->
          case Env.delta d of
             Result.Undetermined -> error "undetermined E_0_1"
