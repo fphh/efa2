@@ -104,19 +104,32 @@ given =
    (Idx.before (Idx.DTime Idx.initSection) .= 1) <>
    (Idx.before (Idx.DTime sec0) .= 1) <>
 
-   (Idx.before (edgeVar Idx.Energy sec0 node0 node1), 4) =<>
+   (Idx.before (edgeVar Idx.Energy sec0 node2 node1), 4) =<>
    (Idx.before (edgeVar Idx.Eta sec0 node0 node1), 0.25) =<>
    (Idx.before (edgeVar Idx.Eta sec0 node1 node2), 0.85) =<>
+   (Idx.before (edgeVar Idx.Eta sec0 node1 node0), 0.25) =<>
+   (Idx.before (edgeVar Idx.Eta sec0 node2 node1), 0.85) =<>
 
-   (Idx.delta (edgeVar Idx.Energy sec0 node0 node1), -0.6) =<>
+   (Idx.delta (edgeVar Idx.Energy sec0 node2 node1), -0.6) =<>
    (Idx.delta (edgeVar Idx.Eta sec0 node0 node1), 0.1) =<>
    (Idx.delta (edgeVar Idx.Eta sec0 node1 node2), 0.05) =<>
+   (Idx.delta (edgeVar Idx.Eta sec0 node1 node0), 0.1) =<>
+   (Idx.delta (edgeVar Idx.Eta sec0 node2 node1), 0.05) =<>
 
    mempty
 
 
 eout :: Idx.Energy Node.Int
 eout = edgeVar Idx.Energy sec0 node2 node1
+
+ein :: Idx.Energy Node.Int
+ein = edgeVar Idx.Energy sec0 node0 node1
+
+
+e1 :: Idx.Energy Node.Int
+e1 = edgeVar Idx.Energy sec0 node1 node2
+
+
 
 histogram ::
    (Fold.Foldable f, FormatValue term) =>
@@ -143,8 +156,8 @@ main = do
    let seqTopo = constructSeqTopo topoLinear [0]
        env = EqGen.solve given seqTopo
 
-   case Map.lookup eout (Env.energyMap env) of
-      Nothing -> error "undefined E_2_1"
+   case Map.lookup e1 (Env.energyMap env) of
+      Nothing -> error "undefined E"
       Just d ->
          case Env.delta d of
             Result.Undetermined -> error "undetermined E_2_1"
