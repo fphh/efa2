@@ -39,6 +39,8 @@ import Data.Eq.HT (equating)
 
 import qualified EFA.Symbolic.SumProduct as SumProduct
 
+import qualified EFA.Hack.Stack as HSt
+
 ----------------------------------
 -- * Example Specific Imports
 
@@ -49,6 +51,7 @@ import qualified Modules.System as System
 import Modules.Signals as Signals
 -- Plotting
 import Modules.Plots as Plot
+
 
 
 
@@ -170,6 +173,7 @@ makeGivenForPrediction idx env =
 -- ###################################
 -- Delta Calculation
 
+{-
 
 {- |
 Symbol equipped with a numeric value.
@@ -187,6 +191,8 @@ instance Eq Symbol where
 instance Ord Symbol where
    compare  =  comparing index
 
+-}
+
 {-
 infixr 6 =<>
 
@@ -203,31 +209,31 @@ infixr 6 =<>
 
 
 makeGivenForDifferentialAnalysis ::  Env.Env System.Node (Env.Delta (EqGen.Result Double)) -> 
-                                     EqGen.EquationSystem Env.Delta System.Node s (SumProduct.Term Symbol)
+                                     EqGen.EquationSystem Env.Delta System.Node s (SumProduct.Term (HSt.Symbol  System.Node))
                                      
 makeGivenForDifferentialAnalysis env = (
   Idx.before (Idx.DTime Idx.initSection) .= 1)
   <> (Idx.delta (Idx.DTime Idx.initSection) .= 0)
   <> (Idx.before (Idx.Storage (Idx.SecNode Idx.initSection System.Battery)) .= 
-      SumProduct.Atom (Symbol{index = Idx.before (Var.mkIdx $ Idx.Storage (Idx.SecNode Idx.initSection System.Battery)),
-                              value = initStorage}))
+      SumProduct.Atom (HSt.Symbol{HSt.index = Idx.before (Var.mkIdx $ Idx.Storage (Idx.SecNode Idx.initSection System.Battery)),
+                              HSt.value = initStorage}))
   <> (Idx.delta (Idx.Storage (Idx.SecNode Idx.initSection System.Battery)) .= 
-      SumProduct.Atom (Symbol{index = Idx.delta (Var.mkIdx $ Idx.Storage (Idx.SecNode Idx.initSection System.Battery)),
-                              value = 0}))
+      SumProduct.Atom (HSt.Symbol{HSt.index = Idx.delta (Var.mkIdx $ Idx.Storage (Idx.SecNode Idx.initSection System.Battery)),
+                              HSt.value = 0}))
   <> (Idx.before (Idx.Storage (Idx.SecNode Idx.initSection System.VehicleInertia)) .= 
-      SumProduct.Atom (Symbol{index = Idx.before (Var.mkIdx $ Idx.Storage (Idx.SecNode Idx.initSection System.VehicleInertia)),
-                                                                   value = 0}))
+      SumProduct.Atom (HSt.Symbol{HSt.index = Idx.before (Var.mkIdx $ Idx.Storage (Idx.SecNode Idx.initSection System.VehicleInertia)),
+                                                                   HSt.value = 0}))
   <> (Idx.delta (Idx.Storage (Idx.SecNode Idx.initSection System.VehicleInertia)) .= 
-     SumProduct.Atom (Symbol{index = Idx.delta (Var.mkIdx $ Idx.Storage (Idx.SecNode Idx.initSection System.VehicleInertia)),
-                             value = 0}))
+     SumProduct.Atom (HSt.Symbol{HSt.index = Idx.delta (Var.mkIdx $ Idx.Storage (Idx.SecNode Idx.initSection System.VehicleInertia)),
+                             HSt.value = 0}))
   <> (fold $ concat $ map f (M.toList (Env.etaMap env)))
   <> (fold $ concat $ map f (M.toList (Env.dtimeMap env)))
   <> (fold $ concat $ map f (M.toList $ M.filterWithKey g $ Env.energyMap env))
   where
-    f (i, x)  =  [(Idx.before i) .= SumProduct.Atom (Symbol{index = (Idx.before $ Var.mkIdx i), 
-                                                            value =  (h $ Env.before x)}),
-                  (Idx.delta i) .= SumProduct.Atom (Symbol{index = (Idx.delta $ Var.mkIdx i), 
-                                                           value = (h $ Env.delta x)})]
+    f (i, x)  =  [(Idx.before i) .= SumProduct.Atom (HSt.Symbol{HSt.index = (Idx.before $ Var.mkIdx i), 
+                                                            HSt.value =  (h $ Env.before x)}),
+                  (Idx.delta i) .= SumProduct.Atom (HSt.Symbol{HSt.index = (Idx.delta $ Var.mkIdx i), 
+                                                           HSt.value = (h $ Env.delta x)})]
     h (EqGen.Determined x) = x            
 
     g (Idx.Energy (Idx.SecNode _ x) (Idx.SecNode _ y)) _ =

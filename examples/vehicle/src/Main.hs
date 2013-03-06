@@ -14,7 +14,7 @@ import EFA.IO.PLTImport (modelicaPLTImport)
 import qualified EFA.Signal.SequenceData as SD
 import EFA.Signal.Record (PPosIdx(PPosIdx), SignalRecord, FlowRecord,
                           Record(Record), PowerRecord,
-                          SignalRecord,getTime, newTimeBase, removeZeroNoise,getTimeWindow)
+                          SignalRecord,getTime, newTimeBase, getTimeWindow)
 import EFA.Signal.Sequence (makeSeqFlowTopology,genSequenceSignal,chopAtZeroCrossingsPowerRecord,
                             removeLowEnergySections, genSequFlow, addZeroCrossings, removeLowTimeSections,removeZeroTimeSections, genSequ,sectionRecordsFromSequence)
 import qualified EFA.Signal.Signal as Sig -- (toList,UTSigL,setType)
@@ -54,6 +54,11 @@ import qualified Graphics.Gnuplot.Graph.TwoDimensional as Graph2D
 import qualified Graphics.Gnuplot.LineSpecification as LineSpec
 
 import qualified Data.Foldable as Fold
+import qualified EFA.Utility as Ut
+
+import qualified EFA.Hack.Plot as HPl
+import qualified EFA.Hack.Stack as HSt
+import qualified EFA.Hack.Env as HEn
 
 ----------------------------------
 -- * Example Specific Imports
@@ -67,6 +72,7 @@ import System.IO
 ----------------------------------
 -- * Here Starts the Real Program
 
+{-
 histogram ::
    (Fold.Foldable f, FormatValue term) =>
    f (term, Double) -> Frame.T (Graph2D.T Int Double)
@@ -84,9 +90,12 @@ histogram =
       fmap (Graph2D.lineSpec
               (LineSpec.title (Format.unASCII $ formatValue term) LineSpec.deflt)) $
       Plot2D.list Graph2D.histograms [val])
+-}
+
+-- Energy (SecNode (Section 1) Chassis) (SecNode (Section 1) Resistance)
 
 eout :: Idx.Energy System.Node
-eout = edgeVar Idx.Energy (Idx.Section 0)  System.Chassis System.Resistance -- System.Tank System.ConBattery
+eout = edgeVar Idx.Energy (Idx.Section 4)  System.ConBattery System.Battery
 
 
 main :: IO ()
@@ -97,7 +106,7 @@ main = do
 ---------------------------------------------------------------------------------------
 -- * Show Topology
 
-  Draw.topology System.topology
+  -- Draw.topology System.topology
   -- Draw.topology2pdf System.topology
 
 ---------------------------------------------------------------------------------------
@@ -110,10 +119,14 @@ main = do
 -- * Import signals from Csv-file
 
 --  rawSignals <- modelicaCSVImport "Vehicle_res.csv" :: IO (SignalRecord [] Double)
-  rawSignals <- modelicaPLTImport "Vehicle_res.plt" :: IO (SignalRecord [] Double)
-  rawSignalsB <- modelicaPLTImport "Vehicle_mass1200kg_res.plt" :: IO (SignalRecord [] Double)
 
----------------------------------------------------------------------------------------
+--  rawSignals <- modelicaPLTImport "Vehicle_res.plt" :: IO (SignalRecord [] Double)
+--  rawSignalsB <- modelicaPLTImport "Vehicle_mass1200kg_res.plt" :: IO (SignalRecord [] Double)
+
+  rawSignals <- modelicaPLTImport "/home/felix/data/examples/vehicle/Vehicle_res.plt" :: IO (SignalRecord [] Double)
+  rawSignalsB <- modelicaPLTImport "/home/felix/data/examples/vehicle/Vehicle_res.plt" :: IO (SignalRecord [] Double) -- "Vehicle_mass1200kg_res.plt" :: IO (SignalRecord [] Double)
+  
+--------------------------------------------------------------------------------------- 
 -- * Conditioning, Sequencing and Integration
   (sequenceFilt,sequencePowersFilt,sequenceFlowsFilt,flowStates) <- Analysis.pre System.topology rawSignals
   (sequenceFiltB,sequencePowersFiltB,sequenceFlowsFiltB,flowStatesB) <- Analysis.pre System.topology rawSignalsB
@@ -157,12 +170,9 @@ main = do
         
   --  let predictionB = Analysis.predict sequenceFlowTopology simulationB
 
-
-    
-
-  
+{-  
   case M.lookup eout (Env.energyMap difference) of
-      Nothing -> error "undefined E_0_1"
+      Nothing -> error ("undefined E_0_1" ++ Ut.myShowList (M.keys (Env.energyMap difference)))
       Just d ->
          case Env.delta d of
             Result.Undetermined -> error "undetermined E_0_1"
@@ -177,10 +187,19 @@ main = do
                   putStrLn $
                      (Format.unUnicode $ formatValue term) ++ " = " ++ show val
                void $ GP.plotDefault $ histogram assigns
+
+-}
+
+  
+  
 {-
    Draw.sequFlowGraphDeltaWithEnv seqTopo $
       fmap (fmap (fmap (SumProduct.map index))) env
 -}
+
+  HPl.histogrammIO (HSt.evaluate $ HEn.lookupStack difference eout) eout
+
+       
 
   -- draw various diagrams
   concurrentlyMany_ [

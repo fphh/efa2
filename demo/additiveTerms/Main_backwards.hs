@@ -1,17 +1,14 @@
-{-# LANGUAGE TypeFamilies #-}
 module Main where
 
 import EFA.Example.Utility
           (edgeVar, makeEdges, constructSeqTopo, (.=))
 
-import qualified EFA.Symbolic.Mixed as Term
 import qualified EFA.Symbolic.SumProduct as SumProduct
 import qualified EFA.Symbolic.OperatorTree as Op
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Env as Env
-import qualified EFA.Equation.Arithmetic as Arith
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
@@ -24,8 +21,6 @@ import qualified EFA.Graph as Gr
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
-
-import EFA.Utility (Pointed, point)
 
 
 import qualified Graphics.Gnuplot.Advanced as GP
@@ -71,64 +66,70 @@ topoLinear = Gr.mkGraph ns (makeEdges es)
 Symbol equipped with a numeric value.
 -}
 data
-   Symbol idx =
+   Symbol =
       Symbol {
-         index :: Idx.Record Idx.Delta idx,
+         index :: Idx.Record Idx.Delta (Var.Index Node.Int),
          value :: Double
       }
 
-type ScalarSymbol = Symbol (Var.Scalar Node.Int)
-type SignalSymbol = Symbol (Var.Signal Node.Int)
-
-instance (Eq idx) => Eq (Symbol idx) where
+instance Eq Symbol where
    (==)  =  equating index
 
-instance (Ord idx) => Ord (Symbol idx) where
+instance Ord Symbol where
    compare  =  comparing index
-
-
-type
-   EquationSystem s =
-      EqGen.EquationSystem Env.Delta Node.Int s
-         (Term.Scalar SumProduct.Term ScalarSymbol SignalSymbol)
-         (Term.Signal SumProduct.Term ScalarSymbol SignalSymbol)
 
 
 infixr 6 =<>
 
 (=<>) ::
-   (Ord (idx Node.Int), Env.AccessMap idx,
-    Var.Index idx, Var.Type idx ~ Var.Signal) =>
-   (Idx.Record Idx.Delta (idx Node.Int), Double) ->
-   EquationSystem s -> EquationSystem s
+   (Eq (term Symbol), Num (term Symbol), Ord (t Node.Int),
+    Var.MkVarC term, Var.MkIdxC t, Env.AccessMap t) =>
+   (Idx.Record Idx.Delta (t Node.Int), Double) ->
+   EqGen.EquationSystem Env.Delta Node.Int s (term Symbol) ->
+   EqGen.EquationSystem Env.Delta Node.Int s (term Symbol)
 (idx, x) =<> eqsys =
-   (idx .= Term.Signal (point (Symbol (fmap Var.index idx) x))) <> eqsys
+   (idx .= Var.mkVarCore (Symbol (fmap Var.mkIdx idx) x)) <> eqsys
 
 
 {-
 Use SumProduct.Term here since it simplifies automatically.
 -}
-given :: EquationSystem s
+given ::
+   EqGen.EquationSystem Env.Delta Node.Int s
+      (SumProduct.Term Symbol)
 given =
-   (Idx.delta (Idx.DTime Idx.initSection) .= Arith.zero) <>
-   (Idx.delta (Idx.DTime sec0) .= Arith.zero) <>
+   (Idx.delta (Idx.DTime Idx.initSection) .= 0) <>
+   (Idx.delta (Idx.DTime sec0) .= 0) <>
 
-   (Idx.before (Idx.DTime Idx.initSection) .= Arith.fromInteger 1) <>
-   (Idx.before (Idx.DTime sec0) .= Arith.fromInteger 1) <>
+   (Idx.before (Idx.DTime Idx.initSection) .= 1) <>
+   (Idx.before (Idx.DTime sec0) .= 1) <>
 
-   (Idx.before (edgeVar Idx.Energy sec0 node0 node1), 4) =<>
+   (Idx.before (edgeVar Idx.Energy sec0 node2 node1), 4) =<>
    (Idx.before (edgeVar Idx.Eta sec0 node0 node1), 0.25) =<>
    (Idx.before (edgeVar Idx.Eta sec0 node1 node2), 0.85) =<>
+   (Idx.before (edgeVar Idx.Eta sec0 node1 node0), 0.25) =<>
+   (Idx.before (edgeVar Idx.Eta sec0 node2 node1), 0.85) =<>
 
-   (Idx.delta (edgeVar Idx.Energy sec0 node0 node1), -0.6) =<>
+   (Idx.delta (edgeVar Idx.Energy sec0 node2 node1), -0.6) =<>
    (Idx.delta (edgeVar Idx.Eta sec0 node0 node1), 0.1) =<>
    (Idx.delta (edgeVar Idx.Eta sec0 node1 node2), 0.05) =<>
+   (Idx.delta (edgeVar Idx.Eta sec0 node1 node0), 0.1) =<>
+   (Idx.delta (edgeVar Idx.Eta sec0 node2 node1), 0.05) =<>
 
    mempty
 
 
 eout :: Idx.Energy Node.Int
 eout = edgeVar Idx.Energy sec0 node2 node1
+
+ein :: Idx.Energy Node.Int
+ein = edgeVar Idx.Energy sec0 node0 node1
+
+
+e1 :: Idx.Energy Node.Int
+e1 = edgeVar Idx.Energy sec0 node1 node2
+
+
 
 histogram ::
    (Fold.Foldable f, FormatValue term) =>
@@ -140,7 +141,7 @@ histogram =
       OptsStyle.fillBorderLineType (-1) $
       OptsStyle.fillSolid $
       Opts.xTicks2d [(Format.unASCII $ formatValue $
-                      Idx.delta $ Var.index eout, 0)] $
+                      Idx.delta $ Var.mkIdx eout, 0)] $
       Opts.xRange2d (-1,3) $
       Opts.deflt) .
    foldMap (\(term,val) ->
@@ -153,10 +154,10 @@ main :: IO ()
 main = do
    hSetEncoding stdout utf8
    let seqTopo = constructSeqTopo topoLinear [0]
-       Env.Complete scalarEnv signalEnv = EqGen.solve seqTopo given
+       env = EqGen.solve given seqTopo
 
-   case Map.lookup eout (Env.energyMap signalEnv) of
-      Nothing -> error "undefined E_2_1"
+   case Map.lookup e1 (Env.energyMap env) of
+      Nothing -> error "undefined E"
       Just d ->
          case Env.delta d of
             Result.Undetermined -> error "undetermined E_2_1"
@@ -166,15 +167,11 @@ main = do
                          (\symbol ->
                             (fmap index symbol,
                              Op.evaluate value symbol)) $
-                      Op.group $ Op.expand $ Op.fromNormalTerm $
-                      Term.getSignal x
+                      Op.group $ Op.expand $ Op.fromNormalTerm x
                Fold.forM_ assigns $ \(term,val) -> do
                   putStrLn $
                      (Format.unUnicode $ formatValue term) ++ " = " ++ show val
                void $ GP.plotDefault $ histogram assigns
 
    Draw.sequFlowGraphDeltaWithEnv seqTopo $
-      Env.Complete
-         (fmap (fmap (fmap (Term.mapScalar SumProduct.map index
-                                           (SumProduct.map index)))) scalarEnv)
-         (fmap (fmap (fmap (Term.mapSignal (SumProduct.map index)))) signalEnv)
+      fmap (fmap (fmap (SumProduct.map index))) env
