@@ -49,13 +49,19 @@ edgeList = [--(Tank, EngineFlange, "Engine", "Fuel","CrankShaft"),
             (ConES, ConFrontBrakes,"Motor&Gearbox","MotorClamps","OutShaft"),
 --            (ConES, MotorFlange,"Motor","MotorClamps","MotorFlange"),
 --            (MotorFlange, ConFrontBrakes,"Gearbox","InShaft","OutShaft"),
-            (ConFrontBrakes, Chassis, "FrontWheels","FrontWheelHub","FrontTires"),
+            (ConFrontBrakes, Chassis, "Front\\nWheels","FrontWheelHub","FrontTires"),
             (Chassis, Resistance,"ToResistance","ToResistance","ToResistance"),
             (ConBattery, Battery,"BatteryResistance","BatteryClamps","BatteryCore"),
             (ConES, ElectricSystem,"DCDC","HighVoltage","LowVoltage"),
             (ConFrontBrakes, FrontBrakes,"ToFrontBrakes","ToFrontBrakes","ToFrontBrakes"),
             (Chassis, RearBrakes,"RearWheels","RearTires", "RearWheelHubs"),
             (Chassis, VehicleInertia,"ToIntertia","ToInertia", "ToInertia")]
+
+
+edgeNames :: M.Map (Node, Node) String
+edgeNames = M.fromList el
+  where el = map f edgeList
+        f (x, y, lab, _, _) = ((x, y), lab)
 
 
 powerPositonNames :: M.Map (PPosIdx Node) SigId

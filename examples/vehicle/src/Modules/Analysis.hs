@@ -67,6 +67,15 @@ type
 
 
 -- pre rawSignals :: SignalRecord v a ->
+{-
+pre :: Monad m =>
+     EFA.Graph.Topology.Topology System.Node
+     -> SignalRecord [] Double
+     -> m (SD.Sequ,
+           SD.SequData (PowerRecord System.Node [] Double),
+           SD.SequData (FlowRecord System.Node [] Double),
+           SD.SequData (EFA.Signal.Record.FlowState System.Node))
+-}
 pre topology rawSignals =  do
 
 ---------------------------------------------------------------------------------------
@@ -109,7 +118,7 @@ pre topology rawSignals =  do
 
 -- Rep.report [] ("Sequence", sequ)
 
-  let (sequ,sequencePowers) = removeLowTimeSections(sequenceRaw,sequencePowersRaw) 1
+  let (sequ,sequencePowers) = removeLowTimeSections(sequenceRaw,sequencePowersRaw) 0
   --  let (sequ,sequencePowers) = removeZeroTimeSections(sequenceRaw,sequencePowersRaw)
 
   -- create sequence signal
@@ -187,24 +196,28 @@ makeGivenForPrediction idx env =
 
 infixr 6 =<>
 
+{-
 (=<>) ::
    (Ord (idx System.Node), Env.AccessMap idx,
     Var.Index idx, Var.Type idx ~ Var.Signal) =>
    (Idx.Record Idx.Delta (idx System.Node), Double) ->
    EquationSystem s -> EquationSystem s
+-}
 (idx, x) =<> eqsys =
    (idx .= Term.Signal (point (HSt.Symbol (fmap Var.index idx) x))) <> eqsys
 
 
 
 
+
+
+-- @Henning -- please help here
+
 {-
-
-@Henning -- please help here
-
-makeGivenForDifferentialAnalysis :: Env.Complete System.Node (Env.Delta (EqGen.Result Double)) (Env.Delta (EqGen.Result Double)) ->
-                                    EqGen.EquationSystem Env.Delta System.Node s (SumProduct.Term (HSt.Symbol  System.Node)) (SumProduct.Term (HSt.Symbol  System.Node))
-                                     
+makeGivenForDifferentialAnalysis ::
+  Env.Complete System.Node (Env.Delta (EqGen.Result Double)) (Env.Delta (EqGen.Result Double))
+  -> EqGen.EquationSystem Env.Delta System.Node s (SumProduct.Term (HSt.Symbol  System.Node)) (SumProduct.Term (HSt.Symbol  System.Node))
+-}                          
 makeGivenForDifferentialAnalysis env = (
   Idx.before (Idx.DTime Idx.initSection) .= 1)
   =<> (Idx.delta (Idx.DTime Idx.initSection) .= 0)
@@ -239,5 +252,3 @@ makeGivenForDifferentialAnalysis env = (
          (System.ConES, System.ElectricSystem) -> True
          (System.Battery, System.ConBattery) -> True
          _ -> False
-    
--}

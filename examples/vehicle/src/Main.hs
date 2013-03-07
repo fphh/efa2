@@ -59,6 +59,7 @@ import qualified EFA.Utility as Ut
 import qualified EFA.Hack.Plot as HPl
 import qualified EFA.Hack.Stack as HSt
 import qualified EFA.Hack.Env as HEn
+-- import qualified EFA.Hack.Draw as HDr
 
 
 
@@ -72,6 +73,8 @@ import Modules.Analysis as Analysis
 
 import System.IO
 
+dataset = "Vehicle_res_5000sampels.plt"
+datasetB = "Vehicle_res.plt"
 
 main :: IO ()
 main = do
@@ -98,8 +101,8 @@ main = do
 --  rawSignals <- modelicaPLTImport "Vehicle_res.plt" :: IO (SignalRecord [] Double)
 --  rawSignalsB <- modelicaPLTImport "Vehicle_mass1200kg_res.plt" :: IO (SignalRecord [] Double)
 
-  rawSignals <- modelicaPLTImport "/home/felix/data/examples/vehicle/Vehicle_res.plt" :: IO (SignalRecord [] Double)
-  rawSignalsB <- modelicaPLTImport "/home/felix/data/examples/vehicle/Vehicle_res.plt" :: IO (SignalRecord [] Double) -- "Vehicle_mass1200kg_res.plt" :: IO (SignalRecord [] Double)
+  rawSignals <- modelicaPLTImport dataset -- :: IO (SignalRecord [] Double)
+  rawSignalsB <- modelicaPLTImport datasetB -- :: IO (SignalRecord [] Double) -- "Vehicle_mass1200kg_res.plt" :: IO (SignalRecord [] Double)
   
 --------------------------------------------------------------------------------------- 
 -- * Conditioning, Sequencing and Integration
@@ -108,7 +111,6 @@ main = do
 
   ---------------------------------------------------------------------------------------
 -- *  Generate Sequence Flow Graph
-
   let flowTopos = Flow.genSequFlowTops System.topology flowStates
   let flowToposB = Flow.genSequFlowTops System.topology flowStatesB
 
@@ -124,11 +126,12 @@ main = do
          (forall s. EqGen.EquationSystem rec System.Node s a a) ->
          Env.Complete System.Node (rec (Result.Result a)) (rec (Result.Result a))
       solve = EqGen.solveFromMeasurement sequenceFlowTopology
+      solveB = EqGen.solveFromMeasurement sequenceFlowTopologyB
 
   let simulation =
          solve $ Analysis.makeGiven Idx.Absolute sequenceFlowsFilt
   let simulationB =
-         solve $ Analysis.makeGiven Idx.Absolute sequenceFlowsFiltB
+         solveB $ Analysis.makeGiven Idx.Absolute sequenceFlowsFiltB
   let simulationDelta =
          solve $
             (Analysis.makeGiven Idx.Before sequenceFlowsFilt <>
@@ -136,31 +139,35 @@ main = do
 
   let prediction =
          EqGen.solve sequenceFlowTopology (Analysis.makeGivenForPrediction Idx.Absolute simulation) 
-  
-  
-{-  
-  @Henning -- please help here
+
+
+
+--  @Henning -- please help here
  
   let difference = 
         EqGen.solve sequenceFlowTopology (Analysis.makeGivenForDifferentialAnalysis simulationDelta) 
         
-   Draw.sequFlowGraphDeltaWithEnv seqTopo $
+  Draw.sequFlowGraphDeltaWithEnv seqTopo $
       fmap (fmap (fmap (SumProduct.map index))) env
 
-   let eout :: Idx.Energy System.Node
-       eout = edgeVar Idx.Energy (Idx.Section 4)  System.ConBattery System.Battery
+  let eout :: Idx.Energy System.Node
+      eout = edgeVar Idx.Energy (Idx.Section 4)  System.ConBattery System.Battery
 
-   HPl.histogrammIO (HSt.evaluate $ HEn.lookupStack difference eout) eout
--}
+  HPl.histogrammIO (HSt.evaluate $ HEn.lookupStack difference eout) eout
+
        
+
+  Draw.topologyWithEdgeLabels System.edgeNames System.topology
+  -- Draw.topology System.topology
+
+
+
 
   -- draw various diagrams
   concurrentlyMany_ [
-    Draw.sequFlowGraphAbsWithEnv sectionTopos simulation,
-    Draw.sequFlowGraphAbsWithEnv sectionTopos simulationB,
-    Draw.sequFlowGraphDeltaWithEnv sectionTopos simulationDelta
+    Draw.sequFlowGraphAbsWithEnv dataset sectionTopos simulation,
+    Draw.sequFlowGraphAbsWithEnv datasetB sectionToposB simulationB,
+    Draw.sequFlowGraphDeltaWithEnv "delta" sectionTopos simulationDelta
 --    Draw.sequFlowGraphAbsWithEnv sectionTopos prediction
     ]
-
-
 
