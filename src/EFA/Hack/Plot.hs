@@ -43,6 +43,7 @@ histogram key =
 -}   
 
 
+
 histogram ::
    (Fold.Foldable f, 
     FormatValue term, 
@@ -55,7 +56,7 @@ histogram key =
       OptsStyle.fillBorderLineType (-1) $
       OptsStyle.fillSolid $
       Opts.xTicks2d [(Format.unASCII $ formatValue $
-                      Idx.delta $ Var.mkIdx key, 0)] $
+                      Idx.delta $ Var.index key, 0)] $
       Opts.xRange2d (-1,3) $
       Opts.deflt) .
    Fold.foldMap (\(term,val) ->

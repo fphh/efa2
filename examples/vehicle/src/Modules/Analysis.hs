@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeFamilies #-}
+
 module Modules.Analysis where
 
 import EFA.Example.Utility (edgeVar, Term, (.=), (%=))
@@ -41,6 +43,9 @@ import qualified EFA.Symbolic.SumProduct as SumProduct
 
 import qualified EFA.Hack.Stack as HSt
 
+import qualified EFA.Symbolic.Mixed as Term
+import EFA.Utility (Pointed, point)
+
 ----------------------------------
 -- * Example Specific Imports
 
@@ -52,6 +57,12 @@ import Modules.Signals as Signals
 -- Plotting
 import Modules.Plots as Plot
 
+
+type
+   EquationSystem s =
+      EqGen.EquationSystem Env.Delta System.Node s
+         (Term.Scalar SumProduct.Term (HSt.ScalarSymbol System.Node) (HSt.SignalSymbol System.Node))
+         (Term.Signal SumProduct.Term (HSt.ScalarSymbol System.Node) (HSt.SignalSymbol System.Node))
 
 
 
@@ -123,6 +134,9 @@ pre topology rawSignals =  do
   return  (sequenceFilt,sequencePowersFilt,adjustedFlows, flowStates)
 
 
+
+
+
 initStorage :: Double
 initStorage = 0.7*3600*1000
 
@@ -170,69 +184,49 @@ makeGivenForPrediction idx env =
                fmap (fmap (*1.1)) x
           h _ r = r
 
--- ###################################
--- Delta Calculation
 
-{-
-
-{- |
-Symbol equipped with a numeric value.
--}
-data
-   Symbol =
-      Symbol {
-         index :: Idx.Record Idx.Delta (Var.Index System.Node),
-         value :: Double
-      }
-
-instance Eq Symbol where
-   (==)  =  equating index
-
-instance Ord Symbol where
-   compare  =  comparing index
-
--}
-
-{-
 infixr 6 =<>
 
 (=<>) ::
-   (Eq (term Symbol), Num (term Symbol), Ord (t System.Node),
-    Var.MkVarC term, Var.MkIdxC t, Env.AccessMap t) =>
-   (Idx.Record Idx.Delta (t System.Node), Double) ->
-   EqGen.EquationSystem Env.Delta System.Node s (term Symbol) ->
-   EqGen.EquationSystem Env.Delta System.Node s (term Symbol)
+   (Ord (idx System.Node), Env.AccessMap idx,
+    Var.Index idx, Var.Type idx ~ Var.Signal) =>
+   (Idx.Record Idx.Delta (idx System.Node), Double) ->
+   EquationSystem s -> EquationSystem s
 (idx, x) =<> eqsys =
-   (idx .= Var.mkVarCore (Symbol (fmap Var.mkIdx idx) x)) <> eqsys
-
--}
+   (idx .= Term.Signal (point (HSt.Symbol (fmap Var.index idx) x))) <> eqsys
 
 
-makeGivenForDifferentialAnalysis ::  Env.Env System.Node (Env.Delta (EqGen.Result Double)) -> 
-                                     EqGen.EquationSystem Env.Delta System.Node s (SumProduct.Term (HSt.Symbol  System.Node))
+
+
+{-
+
+@Henning -- please help here
+
+makeGivenForDifferentialAnalysis :: Env.Complete System.Node (Env.Delta (EqGen.Result Double)) (Env.Delta (EqGen.Result Double)) ->
+                                    EqGen.EquationSystem Env.Delta System.Node s (SumProduct.Term (HSt.Symbol  System.Node)) (SumProduct.Term (HSt.Symbol  System.Node))
                                      
 makeGivenForDifferentialAnalysis env = (
   Idx.before (Idx.DTime Idx.initSection) .= 1)
-  <> (Idx.delta (Idx.DTime Idx.initSection) .= 0)
-  <> (Idx.before (Idx.Storage (Idx.SecNode Idx.initSection System.Battery)) .= 
-      SumProduct.Atom (HSt.Symbol{HSt.index = Idx.before (Var.mkIdx $ Idx.Storage (Idx.SecNode Idx.initSection System.Battery)),
+  =<> (Idx.delta (Idx.DTime Idx.initSection) .= 0)
+  =<> (Idx.before (Idx.Storage (Idx.SecNode Idx.initSection System.Battery)) .= 
+      SumProduct.Atom (HSt.Symbol{HSt.index = Idx.before (Var.index $ Idx.Storage (Idx.SecNode Idx.initSection System.Battery)),
                               HSt.value = initStorage}))
-  <> (Idx.delta (Idx.Storage (Idx.SecNode Idx.initSection System.Battery)) .= 
-      SumProduct.Atom (HSt.Symbol{HSt.index = Idx.delta (Var.mkIdx $ Idx.Storage (Idx.SecNode Idx.initSection System.Battery)),
+  =<> (Idx.delta (Idx.Storage (Idx.SecNode Idx.initSection System.Battery)) .= 
+      SumProduct.Atom (HSt.Symbol{HSt.index = Idx.delta (Var.index $ Idx.Storage (Idx.SecNode Idx.initSection System.Battery)),
                               HSt.value = 0}))
-  <> (Idx.before (Idx.Storage (Idx.SecNode Idx.initSection System.VehicleInertia)) .= 
-      SumProduct.Atom (HSt.Symbol{HSt.index = Idx.before (Var.mkIdx $ Idx.Storage (Idx.SecNode Idx.initSection System.VehicleInertia)),
+  =<> (Idx.before (Idx.Storage (Idx.SecNode Idx.initSection System.VehicleInertia)) .= 
+      SumProduct.Atom (HSt.Symbol{HSt.index = Idx.before (Var.index $ Idx.Storage (Idx.SecNode Idx.initSection System.VehicleInertia)),
                                                                    HSt.value = 0}))
-  <> (Idx.delta (Idx.Storage (Idx.SecNode Idx.initSection System.VehicleInertia)) .= 
-     SumProduct.Atom (HSt.Symbol{HSt.index = Idx.delta (Var.mkIdx $ Idx.Storage (Idx.SecNode Idx.initSection System.VehicleInertia)),
+  =<> (Idx.delta (Idx.Storage (Idx.SecNode Idx.initSection System.VehicleInertia)) .= 
+     SumProduct.Atom (HSt.Symbol{HSt.index = Idx.delta (Var.index $ Idx.Storage (Idx.SecNode Idx.initSection System.VehicleInertia)),
                              HSt.value = 0}))
-  <> (fold $ concat $ map f (M.toList (Env.etaMap env)))
-  <> (fold $ concat $ map f (M.toList (Env.dtimeMap env)))
-  <> (fold $ concat $ map f (M.toList $ M.filterWithKey g $ Env.energyMap env))
+  =<> (fold $ concat $ map f (M.toList (Env.etaMap  $ Env.signal env)))
+  =<> (fold $ concat $ map f (M.toList (Env.dtimeMap  $ Env.signal env)))
+  =<> (fold $ concat $ map f (M.toList $ M.filterWithKey g $ Env.energyMap  $ Env.signal env))
   where
-    f (i, x)  =  [(Idx.before i) .= SumProduct.Atom (HSt.Symbol{HSt.index = (Idx.before $ Var.mkIdx i), 
+    f (i, x)  =  [(Idx.before i) .= SumProduct.Atom (HSt.Symbol{HSt.index = (Idx.before $ Var.index i), 
                                                             HSt.value =  (h $ Env.before x)}),
-                  (Idx.delta i) .= SumProduct.Atom (HSt.Symbol{HSt.index = (Idx.delta $ Var.mkIdx i), 
+                  (Idx.delta i) .= SumProduct.Atom (HSt.Symbol{HSt.index = (Idx.delta $ Var.index i), 
                                                            HSt.value = (h $ Env.delta x)})]
     h (EqGen.Determined x) = x            
 
@@ -246,22 +240,4 @@ makeGivenForDifferentialAnalysis env = (
          (System.Battery, System.ConBattery) -> True
          _ -> False
     
-{-  
-given ::
-   EqGen.EquationSystem Env.Delta Node.Int s
-      (SumProduct.Term Symbol)
-given =
-   (Idx.delta (Idx.DTime Idx.initSection) .= 0) <>
-   (Idx.delta (Idx.DTime sec0) .= 0) <>
-
-   (Idx.before (Idx.DTime Idx.initSection) .= 1) <>
-   (Idx.before (Idx.DTime sec0) .= 1) <>
-
-   (Idx.before (edgeVar Idx.Energy sec0 node0 node1), 4) =<>
-   (Idx.before (edgeVar Idx.Eta sec0 node0 node1), 0.25) =<>
-   (Idx.before (edgeVar Idx.Eta sec0 node1 node2), 0.85) =<>
-
-   (Idx.delta (edgeVar Idx.Energy sec0 node0 node1), -0.6) =<>
-   (Idx.delta (edgeVar Idx.Eta sec0 node0 node1), 0.1) =<>
-   (Idx.delta (edgeVar Idx.Eta sec0 node1 node2), 0.05) =<>
--}  
+-}

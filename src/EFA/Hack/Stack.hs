@@ -10,12 +10,14 @@ import Data.Eq.HT (equating)
 import Data.Set as Set
 import Data.Map as Map
 
-
+import qualified EFA.Symbolic.Mixed as Term
 
 
 {- |
 Symbol equipped with a numeric value.
 -}
+
+{-
 data
    Symbol node =
       Symbol {
@@ -29,20 +31,30 @@ instance (Eq node) =>  Eq (Symbol node) where
 instance (Ord node) => Ord (Symbol node) where
    compare  =  comparing index
 
-{-
--- evaluate :: 
-evaluate xs =  fmap f Op.group $ Op.expand $ Op.fromNormalTerm xs
-  where 
-    f symbol = (fmap index symbol, Op.evaluate value symbol)
 -}
 
-evaluate :: Ord node =>
-            SumProduct.Term (Symbol node)
-            -> Map.Map
-            (Set.Set (Symbol node))
-            (Op.Term (Idx.Record Idx.Delta (Var.Index node)), Double)
+data
+   Symbol idx =
+      Symbol {
+         index :: Idx.Record Idx.Delta idx,
+         value :: Double
+      }
+
+type ScalarSymbol idx = Symbol (Var.Scalar idx)
+type SignalSymbol idx = Symbol (Var.Signal idx)
+
+instance (Eq idx) => Eq (Symbol idx) where
+   (==)  =  equating index
+
+instance (Ord idx) => Ord (Symbol idx) where
+   compare  =  comparing index
+
+evaluate :: Ord idx =>
+                           Term.Signal SumProduct.Term scalar (Symbol idx)
+                           -> Map
+                                (Set (Symbol idx)) (Op.Term (Idx.Record Idx.Delta idx), Double)
 evaluate x =  fmap
              (\symbol ->
                (fmap index symbol,
                 Op.evaluate value symbol)) $
-             Op.group $ Op.expand $ Op.fromNormalTerm x
+             Op.group $ Op.expand $ Op.fromNormalTerm $ Term.getSignal x

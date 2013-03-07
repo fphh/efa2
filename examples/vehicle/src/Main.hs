@@ -60,6 +60,8 @@ import qualified EFA.Hack.Plot as HPl
 import qualified EFA.Hack.Stack as HSt
 import qualified EFA.Hack.Env as HEn
 
+
+
 ----------------------------------
 -- * Example Specific Imports
 
@@ -69,33 +71,6 @@ import Modules.Plots as Plot
 import Modules.Analysis as Analysis
 
 import System.IO
-----------------------------------
--- * Here Starts the Real Program
-
-{-
-histogram ::
-   (Fold.Foldable f, FormatValue term) =>
-   f (term, Double) -> Frame.T (Graph2D.T Int Double)
-histogram =
-   Frame.cons (
-      Opts.title "Decomposition of total output energy" $
-      Histogram.rowstacked $
-      OptsStyle.fillBorderLineType (-1) $
-      OptsStyle.fillSolid $
-      Opts.xTicks2d [(Format.unASCII $ formatValue $
-                      Idx.delta $ Var.mkIdx eout, 0)] $
-      Opts.xRange2d (-1,3) $
-      Opts.deflt) .
-   foldMap (\(term,val) ->
-      fmap (Graph2D.lineSpec
-              (LineSpec.title (Format.unASCII $ formatValue term) LineSpec.deflt)) $
-      Plot2D.list Graph2D.histograms [val])
--}
-
--- Energy (SecNode (Section 1) Chassis) (SecNode (Section 1) Resistance)
-
-eout :: Idx.Energy System.Node
-eout = edgeVar Idx.Energy (Idx.Section 4)  System.ConBattery System.Battery
 
 
 main :: IO ()
@@ -147,7 +122,7 @@ main = do
          (Eq a, Arith.Product a, Arith.Integrate a, Arith.Scalar a ~ a,
           EqGen.Record rec) =>
          (forall s. EqGen.EquationSystem rec System.Node s a a) ->
-         Env.Complete System.Node (rec (Result a)) (rec (Result a))
+         Env.Complete System.Node (rec (Result.Result a)) (rec (Result.Result a))
       solve = EqGen.solveFromMeasurement sequenceFlowTopology
 
   let simulation =
@@ -159,58 +134,32 @@ main = do
             (Analysis.makeGiven Idx.Before sequenceFlowsFilt <>
              Analysis.makeGiven Idx.After sequenceFlowsFiltB)
 
---  let prediction =
---         solve $ Analysis.makeGivenForPrediction Idx.Absolute simulation
-      
   let prediction =
-         EqGen.solve (Analysis.makeGivenForPrediction Idx.Absolute simulation) sequenceFlowTopology
+         EqGen.solve sequenceFlowTopology (Analysis.makeGivenForPrediction Idx.Absolute simulation) 
   
-  let difference = 
-        EqGen.solve (Analysis.makeGivenForDifferentialAnalysis simulationDelta) sequenceFlowTopology
-        
-  --  let predictionB = Analysis.predict sequenceFlowTopology simulationB
-
+  
 {-  
-  case M.lookup eout (Env.energyMap difference) of
-      Nothing -> error ("undefined E_0_1" ++ Ut.myShowList (M.keys (Env.energyMap difference)))
-      Just d ->
-         case Env.delta d of
-            Result.Undetermined -> error "undetermined E_0_1"
-            Result.Determined x -> do
-               let assigns =
-                      fmap
-                         (\symbol ->
-                            (fmap index symbol,
-                             Op.evaluate value symbol)) $
-                      Op.group $ Op.expand $ Op.fromNormalTerm x
-               Fold.forM_ assigns $ \(term,val) -> do
-                  putStrLn $
-                     (Format.unUnicode $ formatValue term) ++ " = " ++ show val
-               void $ GP.plotDefault $ histogram assigns
-
--}
-
-  
-  
-{-
+  @Henning -- please help here
+ 
+  let difference = 
+        EqGen.solve sequenceFlowTopology (Analysis.makeGivenForDifferentialAnalysis simulationDelta) 
+        
    Draw.sequFlowGraphDeltaWithEnv seqTopo $
       fmap (fmap (fmap (SumProduct.map index))) env
+
+   let eout :: Idx.Energy System.Node
+       eout = edgeVar Idx.Energy (Idx.Section 4)  System.ConBattery System.Battery
+
+   HPl.histogrammIO (HSt.evaluate $ HEn.lookupStack difference eout) eout
 -}
-
-  HPl.histogrammIO (HSt.evaluate $ HEn.lookupStack difference eout) eout
-
        
 
   -- draw various diagrams
   concurrentlyMany_ [
--- Draw.sequFlowGraphAbsWithEnv sequenceFlowTopology solverResult,
---    Draw.sequFlowGraphAbsWithEnv sequenceFlowTopology solverMeasurements,
     Draw.sequFlowGraphAbsWithEnv sectionTopos simulation,
     Draw.sequFlowGraphAbsWithEnv sectionTopos simulationB,
     Draw.sequFlowGraphDeltaWithEnv sectionTopos simulationDelta
-
 --    Draw.sequFlowGraphAbsWithEnv sectionTopos prediction
-
     ]
 
 

@@ -8,8 +8,9 @@ import qualified EFA.Equation.Result as Result
 import qualified EFA.Graph.Topology.Index as Idx
 
 lookupStack :: (Ord node, Show node) =>
-                              Env.Env node (Env.Delta (Result.Result t))
-                              -> Idx.Energy node -> t
+               Env.Signal node (Env.Delta (Result.Result t))
+               -> Idx.Energy node -> t
+
 lookupStack env key = case M.lookup key (Env.energyMap env) of
     Nothing -> error ("Key not in Map - available Keys" ++ Ut.myShowList (M.keys (Env.energyMap env)))
     Just d -> 
