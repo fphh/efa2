@@ -37,7 +37,7 @@ instance Node.C Node where
    display (Node 3) = Format.literal "drei"
    display n = Format.literal $ show n
 
-   subscript = Node.subscriptDefault
+   subscript (Node n) = Format.literal $ show n
    dotId = Node.dotIdDefault
 
 
