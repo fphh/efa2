@@ -97,7 +97,7 @@ instance Format ASCII where
    section (Idx.Section s) = ASCII $ show s
    sectionNode (ASCII s) (ASCII x) = ASCII $ s ++ "." ++ x
 
-   direction = ASCII . show
+   direction = ASCII . directionShort
    delta (ASCII s) = ASCII $ 'd':s
    edgeIdent e =
       ASCII $
@@ -155,7 +155,7 @@ instance Format Unicode where
    section (Idx.Section s) = Unicode $ show s
    sectionNode (Unicode s) (Unicode x) = Unicode $ s ++ "." ++ x
 
-   direction = Unicode . show
+   direction = Unicode . directionShort
    delta (Unicode s) = Unicode $ deltaChar:s
    edgeIdent e =
       Unicode $
@@ -251,7 +251,7 @@ instance Format Latex where
    section (Idx.Section s) = Latex $ show s
    sectionNode (Latex s) (Latex x) = Latex $ s ++ ":" ++ x
 
-   direction = Latex . show
+   direction = Latex . directionShort
    delta (Latex s) = Latex $ "\\Delta " ++ s
    edgeIdent e =
       Latex $
@@ -291,3 +291,10 @@ instance EdgeIdx (Idx.Eta node) where edgeVar _ = Eta
 instance EdgeIdx (Idx.X node) where edgeVar _ = X
 instance EdgeIdx (Idx.StEnergy node) where edgeVar _ = Energy
 instance EdgeIdx (Idx.StX node) where edgeVar _ = X
+
+
+directionShort :: Idx.Direction -> String
+directionShort d =
+   case d of
+      Idx.In -> "i"
+      Idx.Out -> "o"
