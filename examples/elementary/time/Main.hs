@@ -2,7 +2,7 @@
 
 module Main where
 
-import EFA.Example.Utility ( edgeVar, makeEdges, constructSeqTopo, )
+import EFA.Example.Utility ( edgeVar, interVar, makeEdges, constructSeqTopo, )
 import EFA.Equation.Absolute ((.=))
 
 import qualified EFA.Utility.Stream as Stream
@@ -93,10 +93,10 @@ p31 sec = EqGen.variable $ edgeVar Idx.Power sec N3 N1
 
 --esto :: Expr s Double
 esto, ein, eout0, eout1 :: Idx.Energy Node
-esto = Idx.Energy (Idx.SecNode sec1 N3) (Idx.SecNode Idx.initSection N3)
-ein = Idx.Energy (Idx.SecNode sec0 N0) (Idx.SecNode sec0 N1)
-eout0 = Idx.Energy (Idx.SecNode sec0 N2) (Idx.SecNode sec0 N1)
-eout1 = Idx.Energy (Idx.SecNode sec1 N2) (Idx.SecNode sec1 N1)
+esto = interVar Idx.Energy sec1 Idx.initSection N3
+ein = edgeVar Idx.Energy sec0 N0 N1
+eout0 = edgeVar Idx.Energy sec0 N2 N1
+eout1 = edgeVar Idx.Energy sec1 N2 N1
 
 
 sto0, sto1 :: Idx.Storage Node
