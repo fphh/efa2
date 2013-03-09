@@ -244,6 +244,8 @@ instance Format Latex where
          {-
          http://math.mit.edu/~ssam/latex
          \newcommand{\leftexp}[2]{{\vphantom{#2}}^{#1}{#2}}
+         alternatively use packages leftidx or tensor:
+         http://tex.stackexchange.com/questions/11542/left-and-right-subscript
          -}
          Idx.Before -> "\\leftexp{0}{" ++ rest ++ "}"
          Idx.After -> "\\leftexp{1}{" ++ rest ++ "}"
