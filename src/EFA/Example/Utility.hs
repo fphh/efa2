@@ -6,7 +6,7 @@ import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph as Gr
-import EFA.Graph.Topology.StateAnalysis (bruteForce)
+import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Env as Env
@@ -49,7 +49,7 @@ constructSeqTopo ::
 constructSeqTopo topo =
   Flow.mkSequenceTopology .
   Flow.genSectionTopology .
-  fmap (bruteForce topo !!) .
+  fmap (StateAnalysis.bruteForce topo !!) .
   SequData
 
 
