@@ -309,9 +309,12 @@ It shall not contain values needed for computations.
 -}
 data Env node output =
    Env {
-      formatEnergy, formatMaxEnergy,
+      formatEnergy,
       formatX,
-      formatEta    :: Idx.SecNode node -> Idx.SecNode node -> output,
+      formatEta    :: Idx.StructureEdge node -> output,
+      formatMaxEnergy,
+      formatStEnergy,
+      formatStX    :: Idx.StorageEdge node -> output,
       formatTime   :: Idx.Section -> output,
       formatNode   :: Topo.LNode node -> output
    }
@@ -333,10 +336,10 @@ lookupFormatAssign ::
     FormatValue a, Format output, Node.C node) =>
    Env.RecordIndex rec ->
    M.Map (idx node) (rec a) ->
-   (Idx.SecNode node -> Idx.SecNode node -> idx node) ->
-   (Idx.SecNode node -> Idx.SecNode node -> output)
-lookupFormatAssign rec mp makeIdx x y =
-   case makeIdx x y of
+   (edge node -> idx node) ->
+   (edge node -> output)
+lookupFormatAssign rec mp makeIdx x =
+   case makeIdx x of
       idx ->
          Format.assign
             (Format.record rec $ Format.edgeIdent $ Format.edgeVar idx)
@@ -347,20 +350,20 @@ sequFlowGraphWithEnv ::
   SequFlowGraph node -> Env node Unicode -> IO ()
 sequFlowGraphWithEnv g env =
    printGraph g (Just (formatTime env)) (formatNode env) (eshow . fst)
-  where eshow e@(Edge uid vid) =
-           case Topo.edgeType e of
-              StructureEdge _ ->
-                 formatEnergy env uid vid :
-                 formatX env uid vid :
-                 formatEta env uid vid :
-                 formatX env vid uid :
-                 formatEnergy env vid uid :
+  where eshow se =
+           case Topo.edgeType se of
+              StructureEdge e ->
+                 formatEnergy env e :
+                 formatX env e :
+                 formatEta env e :
+                 formatX env (Idx.flip e) :
+                 formatEnergy env (Idx.flip e) :
                  []
-              StorageEdge _ ->
-                 formatMaxEnergy env uid vid :
-                 formatEnergy env uid vid :
-                 formatX env uid vid :
-                 formatX env vid uid :
+              StorageEdge e ->
+                 formatMaxEnergy env e :
+                 formatStEnergy env e :
+                 formatStX env e :
+                 formatStX env (Idx.flip e) :
                  []
 
 sequFlowGraphAbsWithEnv ::
@@ -381,12 +384,14 @@ envGen ::
     Env.Record rec, Node.C node) =>
    Env.RecordIndex rec ->
    Env.Complete node (rec a) (rec v) -> Env node output
-envGen rec (Env.Complete (Env.Scalar me st) (Env.Signal e _p n dt x _s)) =
+envGen rec (Env.Complete (Env.Scalar me st se sx) (Env.Signal e _p n dt x _s)) =
    Env
       (lookupFormatAssign rec e Idx.Energy)
-      (lookupFormatAssign rec me Idx.MaxEnergy)
       (lookupFormatAssign rec x Idx.X)
       (lookupFormatAssign rec n Idx.Eta)
+      (lookupFormatAssign rec me Idx.MaxEnergy)
+      (lookupFormatAssign rec se Idx.StEnergy)
+      (lookupFormatAssign rec sx Idx.StX)
       (lookupFormat rec dt . Idx.DTime)
       (formatNodeStorage rec st)
 

@@ -44,6 +44,7 @@ class Format output where
    ratio :: (Integral a, Show a) => Ratio a -> output
    subscript :: output -> output -> output
    connect :: output -> output -> output
+   link :: output -> output -> output
    list :: [output] -> output
    undetermined :: output
    empty :: output
@@ -72,6 +73,7 @@ instance Format ASCII where
    ratio r = ASCII $ show (numerator r) ++ "/" ++ show (denominator r)
    subscript (ASCII t) (ASCII s) = ASCII $ t ++ "_" ++ s
    connect (ASCII t) (ASCII s) = ASCII $ t ++ "_" ++ s
+   link (ASCII t) (ASCII s) = ASCII $ t ++ ":" ++ s
    list = ASCII . ("["++) . (++"]") . intercalate "," . map unASCII
    undetermined = ASCII "?"
    empty = ASCII ""
@@ -129,6 +131,7 @@ instance Format Unicode where
 
    subscript (Unicode t) (Unicode s) = Unicode $ t ++ "_" ++ s
    connect (Unicode t) (Unicode s) = Unicode $ t ++ "_" ++ s
+   link (Unicode t) (Unicode s) = Unicode $ t ++ ":" ++ s
    list = Unicode . ("["++) . (++"]") . intercalate "," . map unUnicode
    undetermined = Unicode [heartChar]
    empty = Unicode ""
@@ -220,6 +223,7 @@ instance Format Latex where
    ratio r = Latex $ "\\frac{" ++ show (numerator r) ++ "}{" ++ show (denominator r) ++ "}"
    subscript (Latex t) (Latex s) = Latex $ t ++ "_{" ++ s ++ "}"
    connect (Latex t) (Latex s) = Latex $ t ++ "." ++ s
+   link (Latex t) (Latex s) = Latex $ t ++ ":" ++ s
    list = Latex . ("["++) . (++"]") . intercalate ", " . map unLatex
    undetermined = Latex "\\heartsuit "
    empty = Latex ""
@@ -285,3 +289,5 @@ instance EdgeIdx (Idx.MaxEnergy node) where edgeVar _ = MaxEnergy
 instance EdgeIdx (Idx.Power node) where edgeVar _ = Power
 instance EdgeIdx (Idx.Eta node) where edgeVar _ = Eta
 instance EdgeIdx (Idx.X node) where edgeVar _ = X
+instance EdgeIdx (Idx.StEnergy node) where edgeVar _ = Energy
+instance EdgeIdx (Idx.StX node) where edgeVar _ = X

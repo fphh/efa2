@@ -92,8 +92,10 @@ p13 sec = EqGen.variable $ edgeVar Idx.Power sec N1 N3
 p31 sec = EqGen.variable $ edgeVar Idx.Power sec N3 N1
 
 --esto :: Expr s Double
-esto, ein, eout0, eout1 :: Idx.Energy Node
-esto = interVar Idx.Energy sec1 Idx.initSection N3
+esto :: Idx.StEnergy Node
+esto = interVar Idx.StEnergy sec1 Idx.initSection N3
+
+ein, eout0, eout1 :: Idx.Energy Node
 ein = edgeVar Idx.Energy sec0 N0 N1
 eout0 = edgeVar Idx.Energy sec0 N2 N1
 eout1 = edgeVar Idx.Energy sec1 N2 N1
@@ -139,6 +141,7 @@ solve :: Double -> Double -> String
 solve x e =
   let env = EqGen.solve seqTopo (given x e)
       emap = Env.energyMap $ Env.signal env
+      stemap = Env.stEnergyMap $ Env.scalar env
 --      smap = Env.storageMap env
       f _es ei eo0 eo1 = (eo0 + eo1) / ei -- (es + ei)
   in  show x ++ " " ++ show e ++ " " ++
@@ -149,7 +152,7 @@ solve x e =
                       (checkedLookup smap sto1)))
 -}
       Format.unUnicode (formatValue
-         (f <$> (Env.unAbsolute $ checkedLookup emap esto)
+         (f <$> (Env.unAbsolute $ checkedLookup stemap esto)
             <*> (Env.unAbsolute $ checkedLookup emap ein)
             <*> (Env.unAbsolute $ checkedLookup emap eout0)
             <*> (Env.unAbsolute $ checkedLookup emap eout1)))

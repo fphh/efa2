@@ -39,7 +39,6 @@ import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph as Gr
 import qualified EFA.Report.Format as Format
-import EFA.Graph (Edge(..))
 
 import EFA.Equation.Result(Result(..))
 
@@ -79,7 +78,6 @@ import qualified Data.Foldable as Fold
 import Data.Traversable (Traversable, traverse, sequenceA)
 import Data.Foldable (foldMap, fold)
 import Data.Monoid (Monoid, (<>), mempty, mappend, mconcat)
-import Data.Ord (comparing)
 
 import qualified Prelude as P
 import Prelude hiding (sqrt, (.))
@@ -329,11 +327,11 @@ constantRecord :: (Record rec) => rec x -> RecordExpression rec node s a v x
 constantRecord = pure . Wrap . fmap Expr.constant
 
 
-_withLocalVar ::
+withLocalVar ::
   (Eq x, Sum x, Record rec) =>
   (RecordExpression rec node s a v x -> EquationSystem rec node s a v) ->
   EquationSystem rec node s a v
-_withLocalVar f = EquationSystem $ do
+withLocalVar f = EquationSystem $ do
    v <- lift newVariable
    case f $ pure $ Wrap $ fmap Expr.fromVariable v of
         EquationSystem act -> act
@@ -380,39 +378,40 @@ variable (Idx.Record recIdx idx) =
    variableRecord idx
 
 
-variableEdge ::
-   (Eq x, Sum x,
-    Env.AccessMap idx, Ord (idx node), Record rec,
-    Element idx rec s a v ~ rec (Sys.Variable s x)) =>
-   (Idx.SecNode node -> Idx.SecNode node -> idx node) ->
-   Idx.SecNode node -> Idx.SecNode node ->
-   RecordExpression rec node s a v x
-variableEdge mkIdx x y = variableRecord (mkIdx x y)
-
 power ::
    (Eq v, Sum v, Record rec, Ord node) =>
-   Idx.SecNode node -> Idx.SecNode node -> RecordExpression rec node s a v v
-power = variableEdge Idx.Power
+   Idx.StructureEdge node -> RecordExpression rec node s a v v
+power = variableRecord . Idx.Power
 
 energy ::
    (Eq v, Sum v, Record rec, Ord node) =>
-   Idx.SecNode node -> Idx.SecNode node -> RecordExpression rec node s a v v
-energy = variableEdge Idx.Energy
+   Idx.StructureEdge node -> RecordExpression rec node s a v v
+energy = variableRecord . Idx.Energy
 
 maxEnergy ::
    (Eq a, Sum a, Record rec, Ord node) =>
-   Idx.SecNode node -> Idx.SecNode node -> RecordExpression rec node s a v a
-maxEnergy = variableEdge Idx.MaxEnergy
+   Idx.StorageEdge node -> RecordExpression rec node s a v a
+maxEnergy = variableRecord . Idx.MaxEnergy
+
+stEnergy ::
+   (Eq a, Sum a, Record rec, Ord node) =>
+   Idx.StorageEdge node -> RecordExpression rec node s a v a
+stEnergy = variableRecord . Idx.StEnergy
 
 eta ::
    (Eq v, Sum v, Record rec, Ord node) =>
-   Idx.SecNode node -> Idx.SecNode node -> RecordExpression rec node s a v v
-eta = variableEdge Idx.Eta
+   Idx.StructureEdge node -> RecordExpression rec node s a v v
+eta = variableRecord . Idx.Eta
 
 xfactor ::
    (Eq v, Sum v, Record rec, Ord node) =>
-   Idx.SecNode node -> Idx.SecNode node -> RecordExpression rec node s a v v
-xfactor = variableEdge Idx.X
+   Idx.StructureEdge node -> RecordExpression rec node s a v v
+xfactor = variableRecord . Idx.X
+
+stxfactor ::
+   (Eq a, Sum a, Record rec, Ord node) =>
+   Idx.StorageEdge node -> RecordExpression rec node s a v a
+stxfactor = variableRecord . Idx.StX
 
 insum ::
    (Eq v, Sum v, Record rec, Ord node) =>
@@ -473,10 +472,12 @@ fromEnvResult ::
    Env.Complete node (rec (Result a)) (rec (Result v)) ->
    EquationSystem rec node s a v
 fromEnvResult
-   (Env.Complete (Env.Scalar me st) (Env.Signal e p n dt x s)) =
+   (Env.Complete (Env.Scalar me st se sx) (Env.Signal e p n dt x s)) =
       mconcat $
          fromMapResult me :
          fromMapResult st :
+         fromMapResult se :
+         fromMapResult sx :
          fromMapResult e :
          fromMapResult p :
          fromMapResult n :
@@ -503,10 +504,12 @@ fromEnv ::
    Env.Complete node (rec a) (rec v) ->
    EquationSystem rec node s a v
 fromEnv
-   (Env.Complete (Env.Scalar me st) (Env.Signal e p n dt x s)) =
+   (Env.Complete (Env.Scalar me st se sx) (Env.Signal e p n dt x s)) =
       mconcat $
          fromMap me :
          fromMap st :
+         fromMap se :
+         fromMap sx :
          fromMap e :
          fromMap p :
          fromMap n :
@@ -517,7 +520,7 @@ fromEnv
 
 
 fromGraph ::
-  (Eq a, Sum a, a ~ Scalar v,
+  (Eq a, Product a, a ~ Scalar v,
    Eq v, Product v, Integrate v,
    Record rec, Node.C node) =>
   Bool ->
@@ -532,36 +535,60 @@ fromGraph equalInOutSums g = mconcat $
 -----------------------------------------------------------------
 
 fromEdges ::
-  (Eq v, Product v, Record rec, Ord node) =>
+  (Eq a, Sum a, Eq v, Product v, Record rec, Ord node) =>
   [Gr.Edge (Idx.SecNode node)] -> EquationSystem rec node s a v
 fromEdges =
-   foldMap $ \e@(Edge f t) ->
-      case TD.edgeType e of
-         TD.StructureEdge (Idx.StructureEdge s _nf _nt) ->
-            let equ x y = energy x y =%= dtime s ~* power x y
-            in  equ f t <> equ t f <>
-                (power t f =%= eta f t ~* power f t)
-         TD.StorageEdge _ -> energy t f =%= energy f t
+   foldMap $ \se ->
+      case TD.edgeType se of
+         TD.StructureEdge e@(Idx.StructureEdge s _nf _nt) ->
+            let equ xy = energy xy =%= dtime s ~* power xy
+            in  equ e <> equ (Idx.flip e) <>
+                (power (Idx.flip e) =%= eta e ~* power e)
+         TD.StorageEdge e -> stEnergy e =%= stEnergy (Idx.flip e)
 
 fromNodes ::
-  (Eq v, Product v, Record rec, Ord node) =>
+  (Eq a, Product a, a ~ Scalar v,
+   Eq v, Product v, Integrate v,
+   Record rec, Ord node) =>
   Bool ->
   TD.DirSequFlowGraph node -> EquationSystem rec node s a v
-fromNodes equalInOutSums = fold . M.mapWithKey f . Gr.nodes
-   where f n (ins, label, outs) =
+fromNodes equalInOutSums =
+  fold . M.mapWithKey f . Gr.nodes
+   where f sn (ins, _label, outs) =
             let -- this variable is used again in fromInnerStorages
-                varsumin = insum n
-                varsumout = outsum n  -- and this one, too.
-                splitEqs varsum nodes =
+                varsumin = insum sn
+                varsumout = outsum sn  -- and this one, too.
+                partition =
+                   LH.unzipEithers .
+                   map
+                      (\node ->
+                         case TD.edgeType $ Gr.Edge sn node of
+                            TD.StructureEdge e -> Left e
+                            TD.StorageEdge e -> Right e) .
+                   S.toList
+                (insStruct,  insStore)  = partition ins
+                (outsStruct, outsStore) = partition outs
+                splitStructEqs varsum edges =
                    foldMap
-                      (splitFactors varsum (energy n) (xfactor n))
-                      (NonEmpty.fetch $ S.toList nodes)
-            in  -- mwhen (label /= TD.Storage) (varsumin =%= varsumout)
-                mwhen equalInOutSums (varsumin =%= varsumout) -- siehe bug 2013-02-12-sum-equations-storage
+                      (splitFactors varsum energy xfactor)
+                      (NonEmpty.fetch edges)
+                splitStoreEqs varsum edges =
+                   foldMap
+                      (splitFactors varsum stEnergy stxfactor)
+                      (NonEmpty.fetch edges)
+            in  mwhen equalInOutSums (varsumin =%= varsumout) -- siehe bug 2013-02-12-sum-equations-storage
                 <>
-                splitEqs varsumin ins
+                splitStructEqs varsumin insStruct
                 <>
-                splitEqs varsumout outs
+                splitStructEqs varsumout outsStruct
+                <>
+                withLocalVar
+                   (\s ->
+                      (s =%= integrate varsumout) <> splitStoreEqs s insStore)
+                <>
+                withLocalVar
+                   (\s ->
+                      (s =%= integrate varsumin) <> splitStoreEqs s outsStore)
 
 
 fromInnerStorages ::
@@ -622,7 +649,7 @@ getStorages format =
 -----------------------------------------------------------------
 
 fromInterStorages ::
-  (Eq a, Sum a, a ~ Scalar v,
+  (Eq a, Product a, a ~ Scalar v,
    Eq v, Product v, Integrate v,
    Record rec, Node.C node) =>
   TD.DirSequFlowGraph node -> EquationSystem rec node s a v
@@ -643,35 +670,34 @@ fromInStorages ::
   (Eq a, Sum a, a ~ Scalar v,
    Eq v, Product v, Integrate v,
    Record rec, Node.C node) =>
-  ([Idx.SecNode node], Idx.SecNode node, [Idx.SecNode node]) ->
+  ([Idx.Section], Idx.SecNode node, [Idx.Section]) ->
   EquationSystem rec node s a v
-fromInStorages (_, n, outs) =
+fromInStorages (_, sn@(Idx.SecNode sec n), outs) =
    flip foldMap
-      (fmap (NonEmpty.sortBy (comparing getSection)) $
-       NonEmpty.fetch outs) $ \souts ->
+      (fmap NonEmpty.sort $ NonEmpty.fetch outs) $ \souts ->
          -- The next equation is special for the initial Section.
-         (maxEnergy n (NonEmpty.head souts) =%=
-          if getSection n == Idx.initSection
-            then storage n
-            else integrate (insum n))
+         (Idx.storageEdge maxEnergy sec (NonEmpty.head souts) n =%=
+          if sec == Idx.initSection
+            then storage sn
+            else integrate (insum sn))
          <>
          let f beforeNext next =
-                maxEnergy n next =%=
-                   maxEnergy n beforeNext ~- integrate (energy beforeNext n)
+                Idx.storageEdge maxEnergy sec next n =%=
+                   Idx.storageEdge maxEnergy sec beforeNext n
+                      ~- Idx.storageEdge stEnergy beforeNext sec n
          in  mconcat $ LH.mapAdjacent f $ NonEmpty.flatten souts
 
 fromOutStorages ::
-  (Eq v, Product v, Record rec, Node.C node) =>
-  ([Idx.SecNode node], Idx.SecNode node, [Idx.SecNode node]) ->
+  (Eq a, Product a, Record rec, Node.C node) =>
+  ([Idx.Section], Idx.SecNode node, [Idx.Section]) ->
   EquationSystem rec node s a v
-fromOutStorages (ins0, n, _) =
+fromOutStorages (ins0, Idx.SecNode sec n, _) =
   flip foldMap (NonEmpty.fetch ins0) $ \ins ->
-{-
-  withLocalVar $ \s ->
-    splitFactors s (flip maxEnergy n) (xfactor n) ins
-    <>
--}
-    splitFactors (outsum n) (energy n) (xfactor n) ins
+  (withLocalVar $ \s ->
+    splitFactors s
+      (\sect -> Idx.storageEdge maxEnergy sect sec n)
+      (\sect -> Idx.storageEdge stxfactor sec sect n)
+      ins)
 
 splitFactors ::
    (Eq x, Product x, Record rec) =>
@@ -688,17 +714,20 @@ splitFactors s ef xf ns =
 getInterStorages ::
   (Node.C node) =>
   TD.DirSequFlowGraph node
-  -> [(StDir, ([Idx.SecNode node], Idx.SecNode node, [Idx.SecNode node]))]
-getInterStorages = concat . getStorages (format . toSecNode)
-  where toSecNode (ins, n, outs) = (map fst ins, n, map fst outs)
-        format x@(ins, sn@(Idx.SecNode sec _), outs) =
-          case (filter h ins, filter h outs) of
-               ([], [])  ->  -- We treat initial storages as in-storages
-                 if sec == Idx.initSection then (InDir, x) else (NoDir, x)
-               ([_], []) -> (InDir, x)
-               ([], [_]) -> (OutDir, x)
-               _ -> errorSecNode "getInterStorages" sn
-          where h s = getSection s == sec
+  -> [(StDir, ([Idx.Section], Idx.SecNode node, [Idx.Section]))]
+getInterStorages = concat . getStorages format
+  where format (ins, sn@(Idx.SecNode sec _), outs) =
+          let partition =
+                 LH.partition (sec ==) . map (getSection . fst)
+              (insStruct, insStore) = partition ins
+              (outsStruct, outsStore) = partition outs
+          in  (case (insStruct, outsStruct) of
+                 ([], [])  ->  -- We treat initial storages as in-storages
+                   if sec == Idx.initSection then InDir else NoDir
+                 ([_], []) -> InDir
+                 ([], [_]) -> OutDir
+                 _ -> errorSecNode "getInterStorages" sn,
+               (insStore, sn, outsStore))
 
 errorSecNode :: Node.C node => String -> Idx.SecNode node -> a
 errorSecNode name node =
@@ -757,7 +786,7 @@ but you may also insert complex relations like
 .
 -}
 solve ::
-  (Eq a, Sum a, a ~ Scalar v,
+  (Eq a, Product a, a ~ Scalar v,
    Eq v, Product v, Integrate v,
    Record rec, Node.C node) =>
   TD.SequFlowGraph node ->
@@ -771,7 +800,7 @@ solve g given =
 
 
 solveFromMeasurement ::
-  (Eq a, Sum a, a ~ Scalar v,
+  (Eq a, Product a, a ~ Scalar v,
    Eq v, Product v, Integrate v,
    Record rec, Node.C node) =>
   TD.SequFlowGraph node ->
@@ -793,7 +822,7 @@ solveFromMeasurement g given =
 -- (im Moment 273 und 274) auszukommentieren.
 
 conservativelySolve ::
-  (Eq a, Sum a, a ~ Scalar v,
+  (Eq a, Product a, a ~ Scalar v,
    Eq v, Product v, Integrate v,
    Record rec, Node.C node) =>
   TD.SequFlowGraph node ->

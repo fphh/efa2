@@ -34,6 +34,8 @@ type DTimeMap node a = M.Map (Idx.DTime node) a
 type XMap node a = M.Map (Idx.X node) a
 type SumMap node a = M.Map (Idx.Sum node) a
 type StorageMap node a = M.Map (Idx.Storage node) a
+type StEnergyMap node a = M.Map (Idx.StEnergy node) a
+type StXMap node a = M.Map (Idx.StX node) a
 
 
 data Signal node a =
@@ -49,7 +51,9 @@ data Signal node a =
 data Scalar node a =
    Scalar {
       maxEnergyMap :: MaxEnergyMap node a,
-      storageMap :: StorageMap node a
+      storageMap :: StorageMap node a,
+      stEnergyMap :: StEnergyMap node a,
+      stXMap :: StXMap node a
    } deriving (Show)
 
 data Complete node b a =
@@ -91,15 +95,17 @@ formatMap =
 instance
    (Node.C node, FormatValue b, FormatValue a) =>
       FormatValue (Complete node b a) where
-   formatValue (Complete (Scalar me st) (Signal e p n dt x s)) =
+   formatValue (Complete (Scalar me st se sx) (Signal e p n dt x s)) =
       Format.lines $
          formatMap e ++
+         formatMap se ++
          formatMap me ++
          formatMap p ++
          formatMap n ++
          formatMap dt ++
          formatMap x ++
          formatMap s ++
+         formatMap sx ++
          formatMap st
 
 
@@ -118,6 +124,8 @@ lookupScalar v =
    case v of
       Var.MaxEnergy idx -> M.lookup idx . maxEnergyMap
       Var.Storage   idx -> M.lookup idx . storageMap
+      Var.StEnergy  idx -> M.lookup idx . stEnergyMap
+      Var.StX       idx -> M.lookup idx . stXMap
 
 
 type RecordIndexed rec = Idx.Record (RecordIndex rec)
@@ -191,6 +199,14 @@ instance AccessMap Idx.Storage where
    accessPartMap =
       Accessor.fromSetGet (\x c -> c{storageMap = x}) storageMap
 
+instance AccessMap Idx.StEnergy where
+   accessPartMap =
+      Accessor.fromSetGet (\x c -> c{stEnergyMap = x}) stEnergyMap
+
+instance AccessMap Idx.StX where
+   accessPartMap =
+      Accessor.fromSetGet (\x c -> c{stXMap = x}) stXMap
+
 
 
 instance Functor (Signal node) where
@@ -198,8 +214,8 @@ instance Functor (Signal node) where
       Signal (fmap f e) (fmap f p) (fmap f n) (fmap f dt) (fmap f x) (fmap f s)
 
 instance Functor (Scalar node) where
-   fmap f (Scalar me st) =
-      Scalar (fmap f me) (fmap f st)
+   fmap f (Scalar me st se sx) =
+      Scalar (fmap f me) (fmap f st) (fmap f se) (fmap f sx)
 
 
 instance Foldable (Signal node) where
@@ -214,8 +230,8 @@ instance Traversable (Signal node) where
       pure Signal <?> e <?> p <?> n <?> dt <?> x <?> s
 
 instance Traversable (Scalar node) where
-   sequenceA (Scalar me st) =
-      pure Scalar <?> me <?> st
+   sequenceA (Scalar me st se sx) =
+      pure Scalar <?> me <?> st <?> se <?> sx
 
 infixl 4 <?>
 (<?>) ::
@@ -235,9 +251,11 @@ instance (Ord node) => Monoid (Signal node a) where
          (M.union dt dt') (M.union x x') (M.union s s')
 
 instance (Ord node) => Monoid (Scalar node a) where
-   mempty = Scalar M.empty M.empty
-   mappend (Scalar me st) (Scalar me' st') =
-      Scalar (M.union me me') (M.union st st')
+   mempty = Scalar M.empty M.empty M.empty M.empty
+   mappend (Scalar me st se sx) (Scalar me' st' se' sx') =
+      Scalar
+         (M.union me me') (M.union st st')
+         (M.union se se') (M.union sx sx')
 
 instance (Ord node) => Monoid (Complete node b a) where
    mempty = Complete mempty mempty

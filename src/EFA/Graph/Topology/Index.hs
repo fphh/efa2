@@ -1,5 +1,7 @@
 module EFA.Graph.Topology.Index where
 
+import Prelude hiding (flip)
+
 
 newtype Section = Section Int deriving (Show, Eq, Ord)
 
@@ -43,7 +45,7 @@ after = Record After
 
 
 
-data SecNode a = SecNode Section a deriving (Show, Eq, Ord)
+data SecNode node = SecNode Section node deriving (Show, Eq, Ord)
 
 
 
@@ -54,6 +56,28 @@ data StructureEdge node = StructureEdge Section node node
 
 data StorageEdge node = StorageEdge Section Section node
    deriving (Show, Eq, Ord)
+
+structureEdge ::
+   (StructureEdge node -> idx) ->
+   Section -> node -> node -> idx
+structureEdge mkIdx s x y =
+   mkIdx $ StructureEdge s x y
+
+storageEdge ::
+   (StorageEdge node -> idx) ->
+   Section -> Section -> node -> idx
+storageEdge mkIdx s0 s1 n =
+   mkIdx $ StorageEdge s0 s1 n
+
+
+class Flip edge where
+   flip :: edge node -> edge node
+
+instance Flip StructureEdge where
+   flip (StructureEdge s x y) = StructureEdge s y x
+
+instance Flip StorageEdge where
+   flip (StorageEdge s0 s1 n) = StorageEdge s1 s0 n
 
 
 -- | Variable types of the solver. The solver, in fact, is
@@ -66,31 +90,35 @@ data StorageEdge node = StorageEdge Section Section node
 -- * two node identifiers to specify a place in the topology
 
 -- | Energy variables.
-data Energy a = Energy !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
+data Energy node = Energy (StructureEdge node) deriving (Show, Ord, Eq)
+
+data StEnergy node = StEnergy (StorageEdge node) deriving (Show, Ord, Eq)
 
 
 -- | Energy variables for hypothetical outgoing energies.
 -- At storage edges they describe the maximum energy
 -- that a storage could deliver.
-data MaxEnergy a = MaxEnergy !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
+data MaxEnergy node = MaxEnergy (StorageEdge node) deriving (Show, Ord, Eq)
 
 -- | Power variables.
-data Power a = Power !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
+data Power node = Power (StructureEdge node) deriving (Show, Ord, Eq)
 
 -- | Eta variables.
-data Eta a = Eta !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
+data Eta node = Eta (StructureEdge node) deriving (Show, Ord, Eq)
 
 -- | Splitting factors.
-data X a = X !(SecNode a) !(SecNode a) deriving (Show, Ord, Eq)
+data X node = X (StructureEdge node) deriving (Show, Ord, Eq)
 
-data Storage a = Storage !(SecNode a) deriving (Show, Ord, Eq)
+data StX node = StX (StorageEdge node) deriving (Show, Ord, Eq)
+
+data Storage node = Storage !(SecNode node) deriving (Show, Ord, Eq)
 
 data Direction = In | Out deriving (Show, Eq, Ord)
 
-data Sum a = Sum !Direction !(SecNode a) deriving (Show, Ord, Eq)
+data Sum node = Sum !Direction !(SecNode node) deriving (Show, Ord, Eq)
 
 
 -- * Other indices
 
 -- | Delta time variables, depending solely on their section and record number.
-data DTime a = DTime !Section deriving (Show, Ord, Eq)
+data DTime node = DTime !Section deriving (Show, Ord, Eq)

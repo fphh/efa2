@@ -104,7 +104,7 @@ eout0 = edgeVar Idx.Energy sec0 N2 N1
 eout1 = edgeVar Idx.Energy sec1 N2 N1
 
 e33 :: Expr s Double
-e33 = EqGen.variable $ interVar Idx.Energy Idx.initSection sec1 N3
+e33 = EqGen.variable $ interVar Idx.StEnergy Idx.initSection sec1 N3
 
 time :: Idx.Section -> Expr s Double
 time = EqGen.variable . Idx.DTime

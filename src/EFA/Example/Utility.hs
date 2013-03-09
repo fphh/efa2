@@ -142,20 +142,14 @@ idx =<> eqsys = givenSymbol idx <> eqsys
 
 
 edgeVar ::
-   (Idx.SecNode node -> Idx.SecNode node -> idx) ->
+   (Idx.StructureEdge node -> idx) ->
    Idx.Section -> node -> node -> idx
-edgeVar idx sec x y =
-   idx
-      (Idx.SecNode sec x)
-      (Idx.SecNode sec y)
+edgeVar = Idx.structureEdge
 
 interVar ::
-   (Idx.SecNode node -> Idx.SecNode node -> idx) ->
+   (Idx.StorageEdge node -> idx) ->
    Idx.Section -> Idx.Section -> node -> idx
-interVar idx sec0 sec1 x =
-   idx
-      (Idx.SecNode sec0 x)
-      (Idx.SecNode sec1 x)
+interVar = Idx.storageEdge
 
 
 infix 0 .=, %=, #=, ~=
