@@ -8,6 +8,8 @@ import EFA.Report.Format (Format)
 import EFA.Report.FormatValue (FormatValue, formatValue)
 
 
+data Any a = Signal (Signal a) | Scalar (Scalar a) deriving (Show, Eq, Ord)
+
 data Signal a =
      Energy (Idx.Energy a)
    | Power (Idx.Power a)
@@ -66,6 +68,10 @@ formatStorageEdge e (Idx.StorageEdge s0 s1 n) =
    (Format.section s0 `Format.link` Format.section s1)
       `Format.sectionNode` Node.subscript n
 
+
+instance (Node.C node) => FormatValue (Any node) where
+   formatValue (Signal var) = formatValue var
+   formatValue (Scalar var) = formatValue var
 
 instance (Node.C node) => FormatValue (Signal node) where
    formatValue var =
