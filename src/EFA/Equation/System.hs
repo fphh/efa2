@@ -32,6 +32,7 @@ module EFA.Equation.System (
   Result(..),
   ) where
 
+import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Env as Env
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Graph.Topology.Index as Idx
@@ -239,7 +240,7 @@ sqrt ::
 sqrt = liftF P.sqrt
 
 
-class (Traversable rec, Applicative rec, Env.Record rec) => Record rec where
+class (Traversable rec, Applicative rec, Record.C rec) => Record rec where
    newVariable ::
       (Eq a, Sum a) =>
       WriterT (System s) (ST s) (rec (Sys.Variable s a))
@@ -259,48 +260,48 @@ class (Traversable rec, Applicative rec, Env.Record rec) => Record rec where
       Wrap rec x -> Wrap rec y -> Wrap rec z
 
 
-instance Record Env.Absolute where
+instance Record Record.Absolute where
 
    newVariable =
-      lift $ fmap Env.Absolute Sys.globalVariable
+      lift $ fmap Record.Absolute Sys.globalVariable
 
-   equalRecord (Wrap (Env.Absolute x)) (Wrap (Env.Absolute y)) =
+   equalRecord (Wrap (Record.Absolute x)) (Wrap (Record.Absolute y)) =
       tell $ System (x =:= y)
 
-   liftE0 = Wrap . Env.Absolute
+   liftE0 = Wrap . Record.Absolute
 
-   liftE1 f (Wrap (Env.Absolute x)) = Wrap $ Env.Absolute $ f x
+   liftE1 f (Wrap (Record.Absolute x)) = Wrap $ Record.Absolute $ f x
 
-   liftE2 f (Wrap (Env.Absolute x)) (Wrap (Env.Absolute y)) =
-      Wrap $ Env.Absolute $ f x y
+   liftE2 f (Wrap (Record.Absolute x)) (Wrap (Record.Absolute y)) =
+      Wrap $ Record.Absolute $ f x y
 
 
-instance Record Env.Delta where
+instance Record Record.Delta where
 
    newVariable = do
       vars <- lift $ sequenceA $ pure Sys.globalVariable
       tell $ System $
-         Arith.ruleAdd (Env.before vars) (Env.delta vars) (Env.after vars)
+         Arith.ruleAdd (Record.before vars) (Record.delta vars) (Record.after vars)
       return vars
 
    {-
    I omit equality on the delta part since it would be redundant.
    -}
    equalRecord (Wrap recX) (Wrap recY) = do
-      tell $ System (Env.before recX =:= Env.before recY)
-      tell $ System (Env.after  recX =:= Env.after  recY)
+      tell $ System (Record.before recX =:= Record.before recY)
+      tell $ System (Record.after  recX =:= Record.after  recY)
 
-   liftE0 x = Wrap $ Env.deltaCons x x
+   liftE0 x = Wrap $ Record.deltaCons x x
 
    liftE1 f (Wrap rec) =
       Wrap $
-      Env.deltaCons (f $ Env.before rec) (f $ Env.after rec)
+      Record.deltaCons (f $ Record.before rec) (f $ Record.after rec)
 
    liftE2 f (Wrap recX) (Wrap recY) =
       Wrap $
-      Env.deltaCons
-         (f (Env.before recX) (Env.before recY))
-         (f (Env.after  recX) (Env.after  recY))
+      Record.deltaCons
+         (f (Record.before recX) (Record.before recY))
+         (f (Record.after  recX) (Record.after  recY))
 
 
 infix 0 =.=, =%=
@@ -371,10 +372,10 @@ variable ::
    (Eq x, Sum x,
     Env.AccessMap idx, Ord (idx node), Record rec,
     Element idx rec s a v ~ rec (Sys.Variable s x)) =>
-   Env.RecordIndexed rec (idx node) ->
+   Record.Indexed rec (idx node) ->
    Expression rec node s a v x
 variable (Idx.Record recIdx idx) =
-   fmap (Accessor.get (Env.accessRecord recIdx) . unwrap) $
+   fmap (Accessor.get (Record.access recIdx) . unwrap) $
    variableRecord idx
 
 

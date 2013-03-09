@@ -6,7 +6,7 @@ import EFA.Example.Utility
 
 import qualified EFA.Symbolic.SumProduct as SumProduct
 import qualified EFA.Equation.System as EqGen
-import qualified EFA.Equation.Env as Env
+import qualified EFA.Equation.Record as Record
 import EFA.Equation.Arithmetic (zero)
 
 import qualified EFA.Utility.Stream as Stream
@@ -41,9 +41,9 @@ topoDreibein = Gr.mkGraph ns (makeEdges es)
 Use SumProduct.Term here since it simplifies automatically.
 -}
 given ::
-   EqGen.EquationSystem Env.Delta Node.Int s
-      (ScalarTerm Env.Delta SumProduct.Term Node.Int)
-      (SignalTerm Env.Delta SumProduct.Term Node.Int)
+   EqGen.EquationSystem Record.Delta Node.Int s
+      (ScalarTerm Record.Delta SumProduct.Term Node.Int)
+      (SignalTerm Record.Delta SumProduct.Term Node.Int)
 given =
    (Idx.delta (Idx.DTime Idx.initSection) .= zero) <>
    (Idx.delta (Idx.DTime sec0) .= zero) <>

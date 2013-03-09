@@ -12,6 +12,7 @@ import EFA.Utility (checkedLookup)
 import EFA.Utility.Stream (Stream((:~)))
 
 import qualified EFA.Equation.Absolute as EqGen
+import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Env as Env
 import EFA.Equation.System ((=.=))
 
@@ -152,10 +153,10 @@ solve x e =
                       (checkedLookup smap sto1)))
 -}
       Format.unUnicode (formatValue
-         (f <$> (Env.unAbsolute $ checkedLookup stemap esto)
-            <*> (Env.unAbsolute $ checkedLookup emap ein)
-            <*> (Env.unAbsolute $ checkedLookup emap eout0)
-            <*> (Env.unAbsolute $ checkedLookup emap eout1)))
+         (f <$> (Record.unAbsolute $ checkedLookup stemap esto)
+            <*> (Record.unAbsolute $ checkedLookup emap ein)
+            <*> (Record.unAbsolute $ checkedLookup emap eout0)
+            <*> (Record.unAbsolute $ checkedLookup emap eout1)))
 
 
 main :: IO ()

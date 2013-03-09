@@ -10,6 +10,7 @@ import qualified EFA.Symbolic.OperatorTree as Op
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.Variable as Var
+import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Env as Env
 import qualified EFA.Equation.Arithmetic as Arith
 
@@ -88,7 +89,7 @@ instance (Ord idx) => Ord (Symbol idx) where
 
 type
    EquationSystem s =
-      EqGen.EquationSystem Env.Delta Node.Int s
+      EqGen.EquationSystem Record.Delta Node.Int s
          (Term.Scalar SumProduct.Term ScalarSymbol SignalSymbol)
          (Term.Signal SumProduct.Term ScalarSymbol SignalSymbol)
 
@@ -157,7 +158,7 @@ main = do
    case Map.lookup eout (Env.energyMap signalEnv) of
       Nothing -> error "undefined E_2_1"
       Just d ->
-         case Env.delta d of
+         case Record.delta d of
             Result.Undetermined -> error "undetermined E_2_1"
             Result.Determined x -> do
                let assigns =

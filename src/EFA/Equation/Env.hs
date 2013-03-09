@@ -6,14 +6,11 @@ import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Equation.Variable as Var
 
-import EFA.Equation.Arithmetic
-          (Sum, (~-), Constant, zero)
-
 import qualified Data.Map as M
 
 import qualified Data.Accessor.Basic as Accessor
 import Control.Category ((.))
-import Control.Applicative (Applicative, pure, (<*>), liftA3)
+import Control.Applicative (Applicative, pure, (<*>))
 import Data.Traversable (Traversable, sequenceA, foldMapDefault)
 import Data.Foldable (Foldable, foldMap)
 import Data.Monoid (Monoid, mempty, mappend)
@@ -126,17 +123,6 @@ lookupScalar v =
       Var.Storage   idx -> M.lookup idx . storageMap
       Var.StEnergy  idx -> M.lookup idx . stEnergyMap
       Var.StX       idx -> M.lookup idx . stXMap
-
-
-type RecordIndexed rec = Idx.Record (RecordIndex rec)
-
-lookupSignalRecord ::
-   (Record rec, Ord node) =>
-   RecordIndexed rec (Var.Signal node) ->
-   Signal node (rec a) -> Maybe a
-lookupSignalRecord (Idx.Record r v) =
-   fmap (Accessor.get (accessRecord r)) . lookupSignal v
-
 
 
 type Element idx a v = PartElement (Environment (Var.Type idx)) a v
@@ -261,76 +247,3 @@ instance (Ord node) => Monoid (Complete node b a) where
    mempty = Complete mempty mempty
    mappend (Complete scalar0 signal0) (Complete scalar1 signal1) =
       Complete (mappend scalar0 scalar1) (mappend signal0 signal1)
-
-
-newtype Absolute a = Absolute {unAbsolute :: a} deriving (Show)
-
-instance Functor Absolute where
-   fmap f (Absolute a) = Absolute $ f a
-
-instance Applicative Absolute where
-   pure a = Absolute a
-   Absolute f <*> Absolute a = Absolute $ f a
-
-instance Foldable Absolute where
-   foldMap = foldMapDefault
-
-instance Traversable Absolute where
-   sequenceA (Absolute a) = fmap Absolute a
-
-
-data Delta a = Delta {delta, before, after :: a} deriving (Show)
-
-deltaConst :: Constant a => a -> Delta a
-deltaConst x = Delta {before = x, after = x, delta = zero}
-
-deltaCons :: Sum a => a -> a -> Delta a
-deltaCons b a = Delta {before = b, after = a, delta = a~-b}
-
-instance FormatValue a => FormatValue (Delta a) where
-   formatValue rec =
-      Format.list $
-         Format.assign (Format.literal "delta")  (formatValue $ delta rec) :
-         Format.assign (Format.literal "before") (formatValue $ before rec) :
-         Format.assign (Format.literal "after")  (formatValue $ after rec) :
-         []
-
-instance Functor Delta where
-   fmap f (Delta d b a) = Delta (f d) (f b) (f a)
-
-instance Applicative Delta where
-   pure a = Delta a a a
-   Delta fd fb fa <*> Delta d b a = Delta (fd d) (fb b) (fa a)
-
-instance Foldable Delta where
-   foldMap = foldMapDefault
-
-instance Traversable Delta where
-   sequenceA (Delta d b a) = liftA3 Delta d b a
-
-
-class
-   (Ord (RecordIndex rec), Format.Record (RecordIndex rec),
-    rec ~ IndexRecord (RecordIndex rec)) =>
-      Record rec where
-   type RecordIndex rec :: *
-   type IndexRecord idx :: * -> *
-   recordIndices :: (idx ~ RecordIndex rec) => rec idx
-   accessRecord :: (idx ~ RecordIndex rec) => idx -> Accessor.T (rec a) a
-
-instance Record Absolute where
-   type RecordIndex Absolute = Idx.Absolute
-   type IndexRecord Idx.Absolute = Absolute
-   recordIndices = Absolute Idx.Absolute
-   accessRecord Idx.Absolute = Accessor.fromWrapper Absolute unAbsolute
-
-instance Record Delta where
-   type RecordIndex Delta = Idx.Delta
-   type IndexRecord Idx.Delta = Delta
-   recordIndices =
-      Delta {delta = Idx.Delta, before = Idx.Before, after = Idx.After}
-   accessRecord idx =
-      case idx of
-         Idx.Delta  -> Accessor.fromSetGet (\a d -> d{delta  = a}) delta
-         Idx.Before -> Accessor.fromSetGet (\a d -> d{before = a}) before
-         Idx.After  -> Accessor.fromSetGet (\a d -> d{after  = a}) after

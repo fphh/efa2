@@ -11,6 +11,7 @@ import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Graph as Gr
 
 import qualified EFA.Equation.Absolute as EqGen
+import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Env as Env
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Result as R
@@ -156,7 +157,7 @@ varMat xs ys =
    (Match.replicate ys xs, map (Match.replicate xs) ys)
 
 
-type AbsoluteResult = Env.Absolute (R.Result Val)
+type AbsoluteResult = Record.Absolute (R.Result Val)
 
 -- | r is inner Resistance of Battery
 solve ::
@@ -175,11 +176,11 @@ unpackResult (R.Undetermined) = error("No Result")
 getSignalVar ::
    (Ord (idx Node), Show (idx Node), Env.AccessMap idx, Var.Type idx ~ Var.Signal,
     Show a, UV.Unbox a) =>
-   [[Env.Complete Node (Env.Absolute (R.Result a)) (Env.Absolute (R.Result a))]] ->
+   [[Env.Complete Node (Record.Absolute (R.Result a)) (Record.Absolute (R.Result a))]] ->
    idx Node -> Test2 (Typ A u Tt) a
 getSignalVar varEnvs idx =
    S.changeSignalType $ S.fromList2 $
-   map (map (unpackResult . Env.unAbsolute .
+   map (map (unpackResult . Record.unAbsolute .
              flip checkedLookup idx .
              Accessor.get Env.accessMap)) $
    varEnvs
