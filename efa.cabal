@@ -94,6 +94,8 @@ Library
     EFA.Equation.Record
     EFA.Equation.Variable
     EFA.Equation.Arithmetic
+    EFA.Equation.MultiValue
+    EFA.Equation.Stack
     EFA.Example.Utility
 
 
@@ -241,6 +243,7 @@ Executable demo-additive-terms
     Build-Depends:
       efa,
       gnuplot,
+      non-empty,
       containers,
       utility-ht,
       base
