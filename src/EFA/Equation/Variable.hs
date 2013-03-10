@@ -116,7 +116,7 @@ instance (Node.C node) => FormatIndex (Idx.DTime node) where
 
 instance (Node.C node) => FormatIndex (Idx.Sum node) where
    formatIndex (Idx.Sum dir x) =
-      Format.subscript Format.var $
+      Format.subscript Format.sum $
       Format.direction dir `Format.connect` formatSectionNode x
 
 instance (Node.C node) => FormatIndex (Idx.Storage node) where

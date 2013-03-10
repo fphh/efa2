@@ -9,7 +9,7 @@ import Data.Ratio (Ratio, numerator, denominator)
 
 import Text.Printf (PrintfArg, printf)
 
-import Prelude hiding (words, lines)
+import Prelude hiding (words, lines, sum)
 
 
 -- * special Unicode characters
@@ -59,7 +59,7 @@ class Format output where
    direction :: Idx.Direction -> output
    delta :: output -> output
    edgeIdent :: EdgeVar -> output
-   dtime, var, storage :: output
+   dtime, sum, storage :: output
    parenthesize, minus, recip :: output -> output
    plus, multiply :: output -> output -> output
    power :: output -> Integer -> output
@@ -108,7 +108,7 @@ instance Format ASCII where
          X -> "x"
          Eta -> "n"
    dtime = ASCII "dt"
-   var = ASCII "v"
+   sum = ASCII "S"
    storage = ASCII "s"
 
    parenthesize (ASCII x) = ASCII $ "(" ++ x ++ ")"
@@ -166,7 +166,7 @@ instance Format Unicode where
          X -> "x"
          Eta -> "\x03b7"
    dtime = Unicode "dt"
-   var = Unicode "v"
+   sum = Unicode "\x2211"
    storage = Unicode "s"
 
    parenthesize (Unicode x) = Unicode $ "(" ++ x ++ ")"
@@ -264,7 +264,7 @@ instance Format Latex where
          X -> "x"
          Eta -> "\\eta"
    dtime = Latex "\\dif t"
-   var = Latex "v"
+   sum = Latex "\\Sigma"
    storage = Latex "s"
 
    parenthesize (Latex x) = Latex $ "(" ++ x ++ ")"
