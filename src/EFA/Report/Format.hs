@@ -102,9 +102,9 @@ instance Format ASCII where
    edgeIdent e =
       ASCII $
       case e of
-         Energy -> "e"
-         MaxEnergy -> "me"
-         Power -> "p"
+         Energy -> "E"
+         MaxEnergy -> "Em"
+         Power -> "P"
          X -> "x"
          Eta -> "n"
    dtime = ASCII "dt"
@@ -160,9 +160,9 @@ instance Format Unicode where
    edgeIdent e =
       Unicode $
       case e of
-         Energy -> "e"
-         MaxEnergy -> "me"
-         Power -> "p"
+         Energy -> "E"
+         MaxEnergy -> "\xCA"
+         Power -> "P"
          X -> "x"
          Eta -> "\x03b7"
    dtime = Unicode "dt"
@@ -258,9 +258,9 @@ instance Format Latex where
    edgeIdent e =
       Latex $
       case e of
-         Energy -> "e"
-         MaxEnergy -> "me"
-         Power -> "p"
+         Energy -> "E"
+         MaxEnergy -> "\\^E"
+         Power -> "P"
          X -> "x"
          Eta -> "\\eta"
    dtime = Latex "\\dif t"
