@@ -177,6 +177,10 @@ instance (Ord i, Arith.Constant a) => Arith.Constant (Stack i a) where
    fromInteger = singleton . Arith.fromInteger
    fromRational = singleton . Arith.fromRational
 
+instance (Ord i, Arith.Integrate v) => Arith.Integrate (Stack i v) where
+   type Scalar (Stack i v) = Stack i (Arith.Scalar v)
+   integrate (Stack is a) = Stack is $ fmap Arith.integrate a
+
 
 singleton :: a -> Stack i a
 singleton = Stack [] . Value

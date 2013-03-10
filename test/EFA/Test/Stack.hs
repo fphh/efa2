@@ -1,6 +1,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 module EFA.Test.Stack where
 
+import EFA.Test.Arithmetic (Triple)
+
 import qualified EFA.Equation.Stack as Stack
 import qualified EFA.Equation.MultiValue as MV
 import EFA.Equation.Stack (Stack)
@@ -44,6 +46,12 @@ prop_multiValueRecip :: PosRatioMultiValue -> Bool
 prop_multiValueRecip px =
    case fmap getPositive px of
       x -> Stack.fromMultiValue (recip x) == recip (Stack.fromMultiValue x)
+
+prop_multiValueIntegrate :: MV.MultiValue Char (Triple Integer) -> Bool
+prop_multiValueIntegrate x =
+   Stack.fromMultiValue (Arith.integrate x)
+   ==
+   Arith.integrate (Stack.fromMultiValue x)
 
 
 prop_arithmeticPlus :: IntStack -> IntStack -> Bool

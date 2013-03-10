@@ -122,6 +122,7 @@ Executable test-efa
     EFA.Test.SequenceTest
     EFA.Test.MultiValue
     EFA.Test.Stack
+    EFA.Test.Arithmetic
 
 
 Executable example-sequenzflussgraph
