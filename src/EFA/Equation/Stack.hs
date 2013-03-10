@@ -5,7 +5,7 @@ import qualified EFA.Graph.Topology.Index as Idx
 
 import qualified EFA.Equation.MultiValue as MV
 import qualified EFA.Equation.Arithmetic as Arith
-import EFA.Equation.Arithmetic ((~+), (~-), (~*))
+import EFA.Equation.Arithmetic ((~+), (~-), (~*), (~/))
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
@@ -99,13 +99,18 @@ mul times plus x0@(Stack is0 _) y0@(Stack js0 _) =
              (_, Left bv) -> case a of Stack _ as -> fmap (flip times bv) as
              (Right (i, (a0, a1)), Right (j, (b0, b1))) ->
                 case compare i j of
+{-
                    EQ ->
                       Plus (go a0 b0)
                          (addMatch plus (go a0 b1) $
                           go a1 (case (b0,b1) of
                                     (Stack ks bs0, Stack _ bs1) ->
                                        Stack ks $ addMatch plus bs0 bs1))
---                   EQ -> Plus (go a0 b0) (addMatch plus (go a0 b1) $ addMatch plus (go a1 b0) $ go b0 b1)
+-}
+                   EQ ->
+                       Plus (go a0 b0)
+                          (addMatch plus (go a0 b1) $
+                           addMatch plus (go a1 b0) $ go b0 b1)
                    LT -> Plus (go a0 b) (go a1 b)
                    GT -> Plus (go a b0) (go a b1)
    in  Stack (MV.mergeIndices is0 js0) $ go x0 y0
@@ -155,13 +160,17 @@ recip rec times neg plus (Stack is s) =
        go (Plus a d) =
           let ra = go a
               rd = go (addMatch plus a d)
-          in  Plus ra (fmap neg $ mulMatch times plus d $ mulMatch times plus ra rd)
+          in  Plus ra $
+                 fmap neg $ mulMatch times plus d $ mulMatch times plus ra rd
        -- 1/(a+d) - 1/a = -d/(a*(a+d))
    in  Stack is $ go s
 
 instance (Ord i, Fractional a) => Fractional (Stack i a) where
    fromRational = singleton . fromRational
-   recip = recip P.recip (*) P.negate (+)
+   -- cf. limitations of Arith.recip
+   -- recip = recip P.recip (*) P.negate (+)
+   recip = fromMultiValueNum . P.recip . toMultiValueNum
+   x / y = fromMultiValueNum $ toMultiValueNum x / toMultiValueNum y
 
 
 instance (Ord i, Arith.Sum a) => Arith.Sum (Stack i a) where
@@ -169,8 +178,18 @@ instance (Ord i, Arith.Sum a) => Arith.Sum (Stack i a) where
    (~+) = add (~+) (\x -> x~-x)
 
 instance (Ord i, Arith.Product a) => Arith.Product (Stack i a) where
-   recip = recip Arith.recip (~*) Arith.negate (~+)
    (~*) = mul (~*) (~+)
+   {-
+   If we are going through the MultiValue,
+   then chances are higher that divisions like @x/x@ are detected
+   which is essential for symbolic computation.
+   However, it is highly fragile.
+   I also think that the native 'recip'
+   has less problems with numeric cancelations.
+   -}
+   -- recip = recip Arith.recip (~*) Arith.negate (~+)
+   recip = fromMultiValue . Arith.recip . toMultiValue
+   x ~/ y = fromMultiValue $ toMultiValue x ~/ toMultiValue y
 
 instance (Ord i, Arith.Constant a) => Arith.Constant (Stack i a) where
    zero = singleton Arith.zero
