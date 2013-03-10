@@ -57,10 +57,12 @@ instance Fractional (Term idx) where
 instance Sum (Term idx) where
    (~+) = (:+)
    (~-) = (&-)
+   negate = Minus
 
 instance Product (Term idx) where
    (~*) = (:*)
    (~/) = (&/)
+   recip = Recip
 
 instance Constant (Term idx) where
    zero = Const 0

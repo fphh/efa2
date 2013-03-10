@@ -24,6 +24,12 @@ We may also need it for future extensions.
 -}
 newtype Signal term scalar signal = Signal {getSignal :: term signal}
 
+liftSignal ::
+   (term signal -> term signal) ->
+   Signal term scalar signal ->
+   Signal term scalar signal
+liftSignal f (Signal x) = Signal $ f x
+
 liftSignal2 ::
    (term signal -> term signal -> term signal) ->
    Signal term scalar signal ->
@@ -47,12 +53,14 @@ instance
       Sum (Signal term scalar signal) where
    (~+) = liftSignal2 (~+)
    (~-) = liftSignal2 (~-)
+   negate = liftSignal Arith.negate
 
 instance
    (Product (term signal)) =>
       Product (Signal term scalar signal) where
    (~*) = liftSignal2 (~*)
    (~/) = liftSignal2 (~/)
+   recip = liftSignal Arith.recip
 
 instance
    (Constant (term signal)) =>
@@ -100,6 +108,13 @@ newtype
    Scalar term scalar signal =
       Scalar {getScalar :: term (ScalarAtom term scalar signal)}
 
+liftScalar ::
+   (term (ScalarAtom term scalar signal) ->
+    term (ScalarAtom term scalar signal)) ->
+   Scalar term scalar signal ->
+   Scalar term scalar signal
+liftScalar f (Scalar x) = Scalar $ f x
+
 liftScalar2 ::
    (term (ScalarAtom term scalar signal) ->
     term (ScalarAtom term scalar signal) ->
@@ -120,12 +135,14 @@ instance
       Sum (Scalar term scalar signal) where
    (~+) = liftScalar2 (~+)
    (~-) = liftScalar2 (~-)
+   negate = liftScalar Arith.negate
 
 instance
    (Product (term (ScalarAtom term scalar signal))) =>
       Product (Scalar term scalar signal) where
    (~*) = liftScalar2 (~*)
    (~/) = liftScalar2 (~/)
+   recip = liftScalar Arith.recip
 
 instance
    (Constant (term (ScalarAtom term scalar signal))) =>

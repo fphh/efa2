@@ -100,10 +100,12 @@ instance (Ord i, Fractional a) => Fractional (MultiValue i a) where
 instance (Ord i, Sum a) => Sum (MultiValue i a) where
    (~+) = liftA2 (~+)
    (~-) = liftA2 (~-)
+   negate = fmap Arith.negate
 
 instance (Ord i, Product a) => Product (MultiValue i a) where
    (~*) = liftA2 (~*)
    (~/) = liftA2 (~/)
+   recip = fmap Arith.recip
 
 instance (Ord i, Constant a) => Constant (MultiValue i a) where
    zero = pure zero

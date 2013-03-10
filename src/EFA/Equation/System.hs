@@ -143,10 +143,12 @@ liftF2 = liftA2 . liftE2 . Expr.fromRule3 . Sys.assignment3 ""
 instance (Record rec, Sum a) => Sum (Wrap rec a) where
    (~+) = liftE2 (~+)
    (~-) = liftE2 (~-)
+   negate = liftE1 Arith.negate
 
 instance (Record rec, Product a) => Product (Wrap rec a) where
    (~*) = liftE2 (~*)
    (~/) = liftE2 (~/)
+   recip = liftE1 Arith.recip
 
 instance (Record rec, Constant a) => Constant (Wrap rec a) where
    zero = pure zero
@@ -179,10 +181,12 @@ instance (Fractional a) => Constant (Expr.T s a) where
 instance (Sum x) => Sum (Bookkeeping rec node s a v x) where
    (~+) = liftA2 (~+)
    (~-) = liftA2 (~-)
+   negate = fmap Arith.negate
 
 instance (Product x) => Product (Bookkeeping rec node s a v x) where
    (~*) = liftA2 (~*)
    (~/) = liftA2 (~/)
+   recip = fmap Arith.recip
 
 instance (Constant x) => Constant (Bookkeeping rec node s a v x) where
    zero = pure zero
