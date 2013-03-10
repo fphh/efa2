@@ -14,8 +14,6 @@ import qualified Data.NonEmpty as NonEmpty
 
 import qualified Test.QuickCheck as QC
 
-import qualified Control.Monad.Trans.State as MS
-import qualified Data.Set as Set
 import Control.Applicative (liftA2)
 import Data.Foldable (Foldable, foldMap)
 import Data.Monoid ((<>))
@@ -188,20 +186,6 @@ assigns _ = error "Stack.assigns: inconsistent data"
 
 
 instance
-   (QC.Arbitrary i, Ord i, QC.Arbitrary a, Num a) =>
+   (QC.Arbitrary i, Ord i, QC.Arbitrary a, Arith.Sum a) =>
       QC.Arbitrary (Stack i a) where
-   arbitrary = do
-      let go (_:is) = liftA2 Plus (go is) (go is)
-          go [] =
-             MS.state $ \at ->
-                case at of
-                   [] -> error "wrong calculation of maximum length of index list"
-                   a:as -> (Value a, as)
-
-      at <- liftA2 (:) QC.arbitrary QC.arbitrary
-      it <-
-         fmap
-            (take (floor $ logBase (2::Double) $ fromIntegral $ length at) .
-             Set.toList . Set.fromList)
-            QC.arbitrary
-      return $ Stack it $ MS.evalState (go it) at
+   arbitrary = fmap fromMultiValue QC.arbitrary
