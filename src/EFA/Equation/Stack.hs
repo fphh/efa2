@@ -97,10 +97,9 @@ instance (Ord i, Num a) => Num (Stack i a) where
                       LT -> Plus (go a0 b) (go a1 b)
                       GT -> Plus (go a b0) (go a b1)
       in  Stack (MV.mergeIndices is0 js0) $ go x0 y0
-{-
-   abs = fromMultiValue . abs . toMultiValue
-   signum = fromMultiValue . signum . toMultiValue
--}
+
+   abs = fromMultiValueNum . abs . toMultiValueNum
+   signum = fromMultiValueNum . signum . toMultiValueNum
 
 
 zeroStack :: (Num a) => Stack i a -> Stack i a
@@ -163,18 +162,33 @@ representing the right-most value from the MultiValue
 where the first summand is the left-most value from the MultiValue.
 -}
 fromMultiValue :: Arith.Sum a => MV.MultiValue i a -> Stack i a
-fromMultiValue (MV.MultiValue indices tree) =
-   let go (MV.Leaf a) = Value a
-       go (MV.Branch a0 a1) =
-          Plus (go a0) (go $ liftA2 (~-) a1 a0)
-   in  Stack indices $ go tree
+fromMultiValue = fromMultiValueGen (~-)
 
 toMultiValue :: Arith.Sum a => Stack i a -> MV.MultiValue i a
-toMultiValue (Stack indices tree) =
+toMultiValue = toMultiValueGen (~+)
+
+
+fromMultiValueNum :: Num a => MV.MultiValue i a -> Stack i a
+fromMultiValueNum = fromMultiValueGen (-)
+
+toMultiValueNum :: Num a => Stack i a -> MV.MultiValue i a
+toMultiValueNum = toMultiValueGen (+)
+
+
+fromMultiValueGen :: (a -> a -> a) -> MV.MultiValue i a -> Stack i a
+fromMultiValueGen minus (MV.MultiValue indices tree) =
+   let go (MV.Leaf a) = Value a
+       go (MV.Branch a0 a1) =
+          Plus (go a0) (go $ liftA2 minus a1 a0)
+   in  Stack indices $ go tree
+
+toMultiValueGen :: (a -> a -> a) -> Stack i a -> MV.MultiValue i a
+toMultiValueGen plus (Stack indices tree) =
    let go (Value a) = MV.Leaf a
        go (Plus a0 a1) =
-          MV.Branch (go a0) (liftA2 (~+) (go a1) (go a0))
+          MV.Branch (go a0) (liftA2 plus (go a1) (go a0))
    in  MV.MultiValue indices $ go tree
+
 
 assigns :: Stack i a -> NonEmpty.T [] ([Idx.Record Idx.Delta i], a)
 assigns (Stack [] (Value a)) = NonEmpty.singleton ([], a)
