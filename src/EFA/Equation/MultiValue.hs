@@ -75,7 +75,7 @@ instance (Ord i) => Functor (MultiValue i) where
    fmap f (MultiValue is a) = MultiValue is (fmap f a)
 
 instance (Ord i) => Applicative (MultiValue i) where
-   pure = MultiValue [] . Leaf
+   pure = singleton
    MultiValue is a <*> MultiValue js b =
       MultiValue
          (mergeIndices is js)
@@ -116,6 +116,9 @@ instance (Ord i, Integrate v) => Integrate (MultiValue i v) where
    type Scalar (MultiValue i v) = MultiValue i (Scalar v)
    integrate = fmap integrate
 
+
+singleton :: a -> MultiValue i a
+singleton = MultiValue [] . Leaf
 
 pair :: i -> a -> a -> MultiValue i a
 pair i a0 a1 = MultiValue [i] (Branch (Leaf a0) (Leaf a1))
