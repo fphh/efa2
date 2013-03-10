@@ -5,9 +5,9 @@ import qualified EFA.Example.Utility as Utility
 import EFA.Example.Utility
           (edgeVar, makeEdges, constructSeqTopo)
 import EFA.Equation.Absolute ((.=))
+import EFA.Equation.Stack (Stack)
 
 import qualified EFA.Equation.Stack as Stack
-import qualified EFA.Equation.MultiValue as MV
 import qualified EFA.Equation.Absolute as EqGen
 import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.Variable as Var
@@ -46,7 +46,6 @@ import qualified Graphics.Gnuplot.LineSpecification as LineSpec
 import qualified Data.Foldable as Fold
 import qualified Data.Map as Map
 import qualified Data.NonEmpty as NonEmpty
-import Control.Applicative (pure)
 import Control.Functor.HT (void)
 import Data.Foldable (foldMap, )
 import Data.Monoid (mempty, (<>))
@@ -76,8 +75,8 @@ type ScalarTerm = Utility.ScalarTerm Record.Delta SumProduct.Term Node.Int
 type
    EquationSystemSymbolic s =
       EqGen.EquationSystem Node.Int s
-         (MV.MultiValue (Var.Any Node.Int) ScalarTerm)
-         (MV.MultiValue (Var.Any Node.Int) SignalTerm)
+         (Stack (Var.Any Node.Int) ScalarTerm)
+         (Stack (Var.Any Node.Int) SignalTerm)
 
 infixr 6 *=<>, -=<>
 
@@ -86,7 +85,9 @@ infixr 6 *=<>, -=<>
     Var.Index idx, Var.Type idx ~ Var.Signal) =>
    idx Node.Int -> EquationSystemSymbolic s -> EquationSystemSymbolic s
 idx *=<> eqsys =
-   (idx .= (pure $ Utility.symbol $ Idx.before $ Var.index idx)) <> eqsys
+   (idx .= (Stack.singleton $ Utility.symbol $ Idx.before $ Var.index idx))
+   <>
+   eqsys
 
 (-=<>) ::
    (Ord (idx Node.Int), Env.AccessMap idx,
@@ -95,7 +96,7 @@ idx *=<> eqsys =
 idx -=<> eqsys =
    (idx .=
       let var = Var.index idx
-      in  MV.deltaPair
+      in  Stack.deltaPair
              (Var.Signal var)
              (Utility.symbol (Idx.before var))
              (Utility.symbol (Idx.delta  var)))
@@ -119,27 +120,30 @@ mainSymbolic :: IO ()
 mainSymbolic = do
 
    let seqTopo = constructSeqTopo topoLinear [0]
-       Env.Complete scalarEnv signalEnv = EqGen.solve seqTopo givenSymbolic
+   let env@(Env.Complete scalarEnv signalEnv) =
+          EqGen.solve seqTopo givenSymbolic
 
-   Draw.sequFlowGraphAbsWithEnv seqTopo $
+   putStrLn $ Format.unUnicode $ formatValue $
       Env.Complete
-         (fmap (fmap (fmap Stack.fromMultiValue)) scalarEnv)
-         (fmap (fmap (fmap Stack.fromMultiValue)) signalEnv)
+         (fmap Record.unAbsolute scalarEnv)
+         (fmap Record.unAbsolute signalEnv)
+
+   Draw.sequFlowGraphAbsWithEnv seqTopo env
 
 
 
 type
    EquationSystemNumeric s =
       EqGen.EquationSystem Node.Int s
-         (MV.MultiValue (Var.Any Node.Int) Double)
-         (MV.MultiValue (Var.Any Node.Int) Double)
+         (Stack (Var.Any Node.Int) Double)
+         (Stack (Var.Any Node.Int) Double)
 
 deltaPair ::
    (Ord (idx Node.Int), Env.AccessMap idx,
     Var.Index idx, Var.Type idx ~ Var.Signal) =>
    idx Node.Int -> Double -> Double -> EquationSystemNumeric s
 deltaPair idx before delta =
-   idx .= MV.deltaPair (Var.Signal $ Var.index idx) before delta
+   idx .= Stack.deltaPair (Var.Signal $ Var.index idx) before delta
 
 
 givenNumeric :: EquationSystemNumeric s
@@ -191,8 +195,7 @@ mainNumeric = do
                let assigns =
                       fmap (mapFst (foldl (\p i -> p * SumProduct.Atom i) 1)) $
                       NonEmpty.tail $
-                      Stack.assigns $
-                      Stack.fromMultiValue x
+                      Stack.assigns x
                Fold.forM_ assigns $ \(term,val) -> do
                   putStrLn $
                      (Format.unUnicode $ formatValue term) ++ " = " ++ show val
