@@ -120,6 +120,7 @@ Executable test-efa
   Other-Modules:
     EFA.Test.UtilsTest
     EFA.Test.SequenceTest
+    EFA.Test.MultiValue
     EFA.Test.Stack
 
 

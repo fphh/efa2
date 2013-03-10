@@ -8,6 +8,12 @@ import EFA.Equation.Arithmetic
            Constant, zero,
            Integrate, Scalar, integrate)
 
+import qualified Test.QuickCheck as QC
+
+import qualified Control.Monad.Trans.State as MS
+import qualified Data.Set as Set
+
+import qualified Data.Foldable as Fold
 import Control.Applicative (Applicative, pure, (<*>), liftA2)
 import Data.Foldable (Foldable, foldMap)
 import Data.Monoid ((<>))
@@ -60,6 +66,11 @@ mergeIndices it@(i:is) jt@(j:js) =
       LT -> i : mergeIndices is jt
       GT -> j : mergeIndices it js
 
+
+eqRelaxed :: (Ord i, Eq a) => MultiValue i a -> MultiValue i a -> Bool
+eqRelaxed a b = case liftA2 (==) a b of MultiValue _is tree -> Fold.and tree
+
+
 instance (Ord i) => Functor (MultiValue i) where
    fmap f (MultiValue is a) = MultiValue is (fmap f a)
 
@@ -109,6 +120,27 @@ pair i a0 a1 = MultiValue [i] (Branch (Leaf a0) (Leaf a1))
 
 deltaPair :: Sum a => i -> a -> a -> MultiValue i a
 deltaPair i a0 a1 = MultiValue [i] (Branch (Leaf a0) (Leaf (a0~+a1)))
+
+
+
+instance
+   (QC.Arbitrary i, Ord i, QC.Arbitrary a) =>
+      QC.Arbitrary (MultiValue i a) where
+   arbitrary = do
+      let go (_:is) = liftA2 Branch (go is) (go is)
+          go [] =
+             MS.state $ \at ->
+                case at of
+                   [] -> error "wrong calculation of maximum length of index list"
+                   a:as -> (Leaf a, as)
+
+      at <- liftA2 (:) QC.arbitrary QC.arbitrary
+      it <-
+         fmap
+            (take (floor $ logBase (2::Double) $ fromIntegral $ length at) .
+             Set.toList . Set.fromList)
+            QC.arbitrary
+      return $ MultiValue it $ MS.evalState (go it) at
 
 
 {-

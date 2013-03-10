@@ -2,7 +2,7 @@ module Main where
 
 -- module EFA.Test.Test where
 
-
+import qualified EFA.Test.MultiValue as MultiValueT
 import qualified EFA.Test.Stack as StackT
 import qualified EFA.Test.UtilsTest as UT
 import qualified EFA.Test.SequenceTest as SeqT
@@ -14,6 +14,7 @@ import Control.Functor.HT (void)
 
 main :: IO ()
 main = do
+   void $ MultiValueT.runTests
    void $ StackT.runTests
    void $ UT.runTests
    void $ SeqT.runTests
