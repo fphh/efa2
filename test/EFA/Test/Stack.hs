@@ -5,6 +5,9 @@ import qualified EFA.Equation.Stack as Stack
 import qualified EFA.Equation.MultiValue as MV
 import EFA.Equation.Stack (Stack)
 
+import qualified EFA.Equation.Arithmetic as Arith
+import EFA.Equation.Arithmetic ((~+), (~-), (~*), (~/))
+
 import qualified Test.QuickCheck.Property.Generic as Law
 import Test.QuickCheck.Modifiers (Positive, getPositive)
 import Test.QuickCheck.All (quickCheckAll)
@@ -12,6 +15,9 @@ import Test.QuickCheck.All (quickCheckAll)
 
 type IntStack = Stack Char Integer
 type IntMultiValue = MV.MultiValue Char Integer
+
+type RatioStack = Stack Char Rational
+type PosRatioMultiValue = MV.MultiValue Char (Positive Rational)
 
 
 prop_multiValueConvert :: IntMultiValue -> Bool
@@ -34,11 +40,33 @@ prop_multiValueNegate :: IntMultiValue -> Bool
 prop_multiValueNegate x =
    Stack.fromMultiValue (negate x) == negate (Stack.fromMultiValue x)
 
-prop_multiValueRecip ::
-   MV.MultiValue Char (Positive Rational) -> Bool
+prop_multiValueRecip :: PosRatioMultiValue -> Bool
 prop_multiValueRecip px =
    case fmap getPositive px of
       x -> Stack.fromMultiValue (recip x) == recip (Stack.fromMultiValue x)
+
+
+prop_arithmeticPlus :: IntStack -> IntStack -> Bool
+prop_arithmeticPlus x y  =  x+y == x~+y
+
+prop_arithmeticMinus :: IntStack -> IntStack -> Bool
+prop_arithmeticMinus x y  =  x-y == x~-y
+
+prop_arithmeticNegate :: IntStack -> Bool
+prop_arithmeticNegate x  =  negate x == Arith.negate x
+
+prop_arithmeticTimes :: RatioStack -> RatioStack -> Bool
+prop_arithmeticTimes x y  =  x*y == x~*y
+
+prop_arithmeticDivide :: RatioStack -> PosRatioMultiValue -> Bool
+prop_arithmeticDivide x py =
+   case Stack.fromMultiValue $ fmap getPositive py of
+      y -> x/y == x~/y
+
+prop_arithmeticRecip :: PosRatioMultiValue -> Bool
+prop_arithmeticRecip px =
+   case Stack.fromMultiValue $ fmap getPositive px of
+      x -> recip x == Arith.recip x
 
 
 prop_commutativePlus :: IntStack -> IntStack -> Bool

@@ -5,7 +5,7 @@ import qualified EFA.Graph.Topology.Index as Idx
 
 import qualified EFA.Equation.MultiValue as MV
 import qualified EFA.Equation.Arithmetic as Arith
-import EFA.Equation.Arithmetic ((~+), (~-))
+import EFA.Equation.Arithmetic ((~+), (~-), (~*))
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
@@ -18,6 +18,9 @@ import Control.Applicative (liftA2)
 import Data.Foldable (Foldable, foldMap)
 import Data.Monoid ((<>))
 import Data.Tuple.HT (mapFst)
+
+import qualified Prelude as P
+import Prelude hiding (recip)
 
 
 {- |
@@ -68,69 +71,111 @@ eqRelaxed =
    in  go
 
 
+add ::
+   (Ord i) =>
+   (a -> a -> a) -> (a -> a) ->
+   Stack i a -> Stack i a -> Stack i a
+add plus zero x0@(Stack is0 _) y0@(Stack js0 _) =
+   let go a b =
+          case (descent a, descent b) of
+             (Left av, Left bv) -> Value $ plus av bv
+             (Left _, Right (_, (b0, Stack _ b1))) -> Plus (go a b0) b1
+             (Right (_, (a0, Stack _ a1)), Left _) -> Plus (go a0 b) a1
+             (Right (i, (a0, a1)), Right (j, (b0, b1))) ->
+                case compare i j of
+                   EQ -> Plus (go a0 b0) (go a1 b1)
+                   LT -> Plus (go a0 b) (go a1 (zeroStack zero b))
+                   GT -> Plus (go a b0) (go (zeroStack zero a) b1)
+   in  Stack (MV.mergeIndices is0 js0) $ go x0 y0
+
+mul ::
+   (Ord i) =>
+   (a -> a -> a) -> (a -> a -> a) ->
+   Stack i a -> Stack i a -> Stack i a
+mul times plus x0@(Stack is0 _) y0@(Stack js0 _) =
+   let go a b =
+          case (descent a, descent b) of
+             (Left av, _) -> case b of Stack _ bs -> fmap (times av) bs
+             (_, Left bv) -> case a of Stack _ as -> fmap (flip times bv) as
+             (Right (i, (a0, a1)), Right (j, (b0, b1))) ->
+                case compare i j of
+                   EQ ->
+                      Plus (go a0 b0)
+                         (addMatch plus (go a0 b1) $
+                          go a1 (case (b0,b1) of
+                                    (Stack ks bs0, Stack _ bs1) ->
+                                       Stack ks $ addMatch plus bs0 bs1))
+--                   EQ -> Plus (go a0 b0) (addMatch plus (go a0 b1) $ addMatch plus (go a1 b0) $ go b0 b1)
+                   LT -> Plus (go a0 b) (go a1 b)
+                   GT -> Plus (go a b0) (go a b1)
+   in  Stack (MV.mergeIndices is0 js0) $ go x0 y0
+
 instance (Ord i, Num a) => Num (Stack i a) where
    fromInteger = singleton . fromInteger
    negate (Stack is s) = Stack is $ fmap negate s
-
-   x0@(Stack is0 _) + y0@(Stack js0 _) =
-      let go a b =
-             case (descent a, descent b) of
-                (Left av, Left bv) -> Value $ av+bv
-                (Left _, Right (_, (b0, Stack _ b1))) -> Plus (go a b0) b1
-                (Right (_, (a0, Stack _ a1)), Left _) -> Plus (go a0 b) a1
-                (Right (i, (a0, a1)), Right (j, (b0, b1))) ->
-                   case compare i j of
-                      EQ -> Plus (go a0 b0) (go a1 b1)
-                      LT -> Plus (go a0 b) (go a1 (zeroStack b))
-                      GT -> Plus (go a b0) (go (zeroStack a) b1)
-      in  Stack (MV.mergeIndices is0 js0) $ go x0 y0
-
-   x0@(Stack is0 _) * y0@(Stack js0 _) =
-      let go a b =
-             case (descent a, descent b) of
-                (Left av, _) -> case b of Stack _ bs -> fmap (av*) bs
-                (_, Left bv) -> case a of Stack _ as -> fmap (*bv) as
-                (Right (i, (a0, a1)), Right (j, (b0, b1))) ->
-                   case compare i j of
-                      EQ -> Plus (go a0 b0) (addMatch (go a0 b1) $ go a1 (b0+b1))
---                      EQ -> Plus (go a0 b0) (addMatch (go a0 b1) $ addMatch (go a1 b0) $ go b0 b1)
-                      LT -> Plus (go a0 b) (go a1 b)
-                      GT -> Plus (go a b0) (go a b1)
-      in  Stack (MV.mergeIndices is0 js0) $ go x0 y0
+   (+) = add (+) (const 0)
+   (*) = mul (*) (+)
 
    abs = fromMultiValueNum . abs . toMultiValueNum
    signum = fromMultiValueNum . signum . toMultiValueNum
 
 
-zeroStack :: (Num a) => Stack i a -> Stack i a
-zeroStack (Stack is a) = Stack is $ zeroMatch a
+zeroStack :: (a -> a) -> Stack i a -> Stack i a
+zeroStack z (Stack is a) = Stack is $ zeroMatch z a
 
-zeroMatch :: (Num a) => Sum a -> Sum a
-zeroMatch (Value _) = Value 0
-zeroMatch (Plus x0 x1) = Plus (zeroMatch x0) (zeroMatch x1)
+zeroMatch :: (a -> a) -> Sum a -> Sum a
+zeroMatch z =
+   let go (Value x) = Value $ z x
+       go (Plus x0 x1) = Plus (go x0) (go x1)
+   in  go
 
-addMatch :: (Num a) => Sum a -> Sum a -> Sum a
-addMatch (Value x) (Value y) = Value (x+y)
-addMatch (Plus x0 x1) (Plus y0 y1) = Plus (addMatch x0 y0) (addMatch x1 y1)
-addMatch _ _ = error "Stack.addMatch: inconsistent data structure"
+addMatch :: (a -> a -> a) -> Sum a -> Sum a -> Sum a
+addMatch plus =
+   let go (Value x) (Value y) = Value $ plus x y
+       go (Plus x0 x1) (Plus y0 y1) = Plus (go x0 y0) (go x1 y1)
+       go _ _ = error "Stack.addMatch: inconsistent data structure"
+   in  go
 
-mulMatch :: (Num a) => Sum a -> Sum a -> Sum a
-mulMatch (Value x) (Value y) = Value (x*y)
-mulMatch (Plus x0 x1) (Plus y0 y1) =
-   Plus (mulMatch x0 y0)
-      (addMatch (mulMatch x0 y1) $ mulMatch x1 $ addMatch y0 y1)
-mulMatch _ _ = error "Stack.mulMatch: inconsistent data structure"
+mulMatch :: (a -> a -> a) -> (a -> a -> a) -> Sum a -> Sum a -> Sum a
+mulMatch times plus =
+   let go (Value x) (Value y) = Value (times x y)
+       go (Plus x0 x1) (Plus y0 y1) =
+          Plus (go x0 y0)
+             (addMatch plus (go x0 y1) $ go x1 $ addMatch plus y0 y1)
+       go _ _ = error "Stack.mulMatch: inconsistent data structure"
+   in  go
+
+recip ::
+   (Ord i) =>
+   (a -> a) -> (a -> a -> a) ->
+   (a -> a) -> (a -> a -> a) ->
+   Stack i a -> Stack i a
+recip rec times neg plus (Stack is s) =
+   let go (Value a) = Value $ rec a
+       go (Plus a d) =
+          let ra = go a
+              rd = go (addMatch plus a d)
+          in  Plus ra (fmap neg $ mulMatch times plus d $ mulMatch times plus ra rd)
+       -- 1/(a+d) - 1/a = -d/(a*(a+d))
+   in  Stack is $ go s
 
 instance (Ord i, Fractional a) => Fractional (Stack i a) where
    fromRational = singleton . fromRational
-   recip (Stack is s) =
-      let go (Value a) = Value $ recip a
-          go (Plus a d) =
-             let ra = go a
-                 rd = go (addMatch a d)
-             in  Plus ra (fmap negate $ mulMatch d $ mulMatch ra rd)
-          -- 1/(a+d) - 1/a = -d/(a*(a+d))
-      in  Stack is $ go s
+   recip = recip P.recip (*) P.negate (+)
+
+
+instance (Ord i, Arith.Sum a) => Arith.Sum (Stack i a) where
+   negate (Stack is s) = Stack is $ fmap Arith.negate s
+   (~+) = add (~+) (\x -> x~-x)
+
+instance (Ord i, Arith.Product a) => Arith.Product (Stack i a) where
+   recip = recip Arith.recip (~*) Arith.negate (~+)
+   (~*) = mul (~*) (~+)
+
+instance (Ord i, Arith.Constant a) => Arith.Constant (Stack i a) where
+   zero = singleton Arith.zero
+   fromInteger = singleton . Arith.fromInteger
+   fromRational = singleton . Arith.fromRational
 
 
 singleton :: a -> Stack i a

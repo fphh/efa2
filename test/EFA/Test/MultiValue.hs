@@ -4,12 +4,42 @@ module EFA.Test.MultiValue where
 import qualified EFA.Equation.MultiValue as MultiValue
 import EFA.Equation.MultiValue (MultiValue)
 
+import qualified EFA.Equation.Arithmetic as Arith
+import EFA.Equation.Arithmetic ((~+), (~-), (~*), (~/))
+
 import qualified Test.QuickCheck.Property.Generic as Law
 
+import Test.QuickCheck.Modifiers (Positive, getPositive)
 import Test.QuickCheck.All (quickCheckAll)
 
 
 type IntMultiValue = MultiValue Char Integer
+type RatioMultiValue = MultiValue Char Rational
+type PosRatioMultiValue = MultiValue Char (Positive Rational)
+
+
+prop_arithmeticPlus :: IntMultiValue -> IntMultiValue -> Bool
+prop_arithmeticPlus x y  =  x+y == x~+y
+
+prop_arithmeticMinus :: IntMultiValue -> IntMultiValue -> Bool
+prop_arithmeticMinus x y  =  x-y == x~-y
+
+prop_arithmeticNegate :: IntMultiValue -> Bool
+prop_arithmeticNegate x  =  negate x == Arith.negate x
+
+prop_arithmeticTimes :: RatioMultiValue -> RatioMultiValue -> Bool
+prop_arithmeticTimes x y  =  x*y == x~*y
+
+prop_arithmeticDivide :: RatioMultiValue -> PosRatioMultiValue -> Bool
+prop_arithmeticDivide x py =
+   case fmap getPositive py of
+      y -> x/y == x~/y
+
+prop_arithmeticRecip :: PosRatioMultiValue -> Bool
+prop_arithmeticRecip px =
+   case fmap getPositive px of
+      x -> recip x == Arith.recip x
+
 
 prop_commutativePlus :: IntMultiValue -> IntMultiValue -> Bool
 prop_commutativePlus = Law.eq $ Law.prop_Commutative (+) Law.T
