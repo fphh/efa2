@@ -141,9 +141,3 @@ instance
              Set.toList . Set.fromList)
             QC.arbitrary
       return $ MultiValue it $ MS.evalState (go it) at
-
-
-{-
-possible tests:
-addition and multiplication are commutative and associative
--}

@@ -2,14 +2,44 @@
 module EFA.Test.Stack where
 
 import qualified EFA.Equation.Stack as Stack
+import qualified EFA.Equation.MultiValue as MV
 import EFA.Equation.Stack (Stack)
 
 import qualified Test.QuickCheck.Property.Generic as Law
-
+import Test.QuickCheck.Modifiers (Positive, getPositive)
 import Test.QuickCheck.All (quickCheckAll)
 
 
 type IntStack = Stack Char Integer
+type IntMultiValue = MV.MultiValue Char Integer
+
+
+prop_multiValueConvert :: IntMultiValue -> Bool
+prop_multiValueConvert x =
+   x == Stack.toMultiValue (Stack.fromMultiValue x)
+
+prop_multiValuePlus :: IntMultiValue -> IntMultiValue -> Bool
+prop_multiValuePlus x y =
+   Stack.fromMultiValue (x+y)
+   ==
+   Stack.fromMultiValue x + Stack.fromMultiValue y
+
+prop_multiValueTimes :: IntMultiValue -> IntMultiValue -> Bool
+prop_multiValueTimes x y =
+   Stack.fromMultiValue (x*y)
+   ==
+   Stack.fromMultiValue x * Stack.fromMultiValue y
+
+prop_multiValueNegate :: IntMultiValue -> Bool
+prop_multiValueNegate x =
+   Stack.fromMultiValue (negate x) == negate (Stack.fromMultiValue x)
+
+prop_multiValueRecip ::
+   MV.MultiValue Char (Positive Rational) -> Bool
+prop_multiValueRecip px =
+   case fmap getPositive px of
+      x -> Stack.fromMultiValue (recip x) == recip (Stack.fromMultiValue x)
+
 
 prop_commutativePlus :: IntStack -> IntStack -> Bool
 prop_commutativePlus = Law.eq $ Law.prop_Commutative (+) Law.T
