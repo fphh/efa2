@@ -54,6 +54,22 @@ descent (Stack [] (Value a)) = Left a
 descent (Stack (i:is) (Plus a0 a1)) = Right (i, (Stack is a0, Stack is a1))
 descent _ = error "Stack.descent: inconsistent data structure"
 
+
+eqRelaxed :: (Ord i, Eq a, Num a) => Stack i a -> Stack i a -> Bool
+eqRelaxed =
+   let go a b =
+          case (descent a, descent b) of
+             (Left av, Left bv) -> av==bv
+             (Left _, Right (_, (b0, b1))) -> go a b0 && go 0 b1
+             (Right (_, (a0, a1)), Left _) -> go a0 b && go a1 0
+             (Right (i, (a0, a1)), Right (j, (b0, b1))) ->
+                case compare i j of
+                   EQ -> go a0 b0 && go a1 b1
+                   LT -> go a0 b && go a1 0
+                   GT -> go a b0 && go 0 b1
+   in  go
+
+
 instance (Ord i, Num a) => Num (Stack i a) where
    fromInteger = singleton . fromInteger
    negate (Stack is s) = Stack is $ fmap negate s

@@ -108,6 +108,8 @@ Executable test-efa
   If flag(buildTests)
     Build-Depends:
       efa,
+      quickcheck-properties >=0.1 && <0.2,
+      -- alternative: checkers
       QuickCheck,
       containers,
       utility-ht,
@@ -118,6 +120,7 @@ Executable test-efa
   Other-Modules:
     EFA.Test.UtilsTest
     EFA.Test.SequenceTest
+    EFA.Test.Stack
 
 
 Executable example-sequenzflussgraph
