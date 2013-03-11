@@ -135,8 +135,8 @@ deltaPair idx before delta =
 
 givenNumeric :: EquationSystemNumeric s
 givenNumeric =
-   (Idx.DTime Idx.initSection .= Arith.fromInteger 1) <>
-   (Idx.DTime sec0 .= Arith.fromInteger 1) <>
+   (Idx.DTime Idx.initSection .= 1) <>
+   (Idx.DTime sec0 .= 1) <>
 
    deltaPair (edgeVar Idx.Energy sec0 node0 node1) 4 (-0.6) <>
    deltaPair (edgeVar Idx.Eta sec0 node0 node1) 0.25 0.1 <>
@@ -167,8 +167,8 @@ mainNumeric = do
                       NonEmpty.tail $
                       Stack.assigns x
                Fold.forM_ assigns $ \(term,val) -> do
-                  putStrLn $
-                     (Format.unUnicode $ formatValue term) ++ " = " ++ show val
+                  putStrLn $ Format.unUnicode $
+                     Format.assign (formatValue term) (formatValue val)
                Plot.stackIO "Decomposition of total output energy"
                   (Idx.delta $ Var.index eout) assigns
 
