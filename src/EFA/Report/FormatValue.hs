@@ -5,6 +5,8 @@ import qualified EFA.Report.Format as Format
 import EFA.Report.Format (Format)
 import EFA.Equation.Result (Result(..))
 
+import qualified Data.NonEmpty as NonEmpty
+import Data.Foldable (Foldable, toList)
 import Data.Ratio (Ratio)
 
 
@@ -15,6 +17,9 @@ class FormatValue a where
 
 instance FormatValue a => FormatValue [a] where
    formatValue = Format.list . map formatValue
+
+instance (Foldable f, FormatValue a) => FormatValue (NonEmpty.T f a) where
+   formatValue = formatValue . toList
 
 instance FormatValue Double where
    formatValue = Format.real

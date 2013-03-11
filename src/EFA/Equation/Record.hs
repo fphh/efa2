@@ -9,15 +9,17 @@ import qualified EFA.Graph.Topology.Index as Idx
 
 import EFA.Equation.Arithmetic (Sum, (~-), Constant, zero)
 
+import qualified EFA.Report.Format as Format
+import EFA.Report.FormatValue (FormatValue, formatValue)
+
 import qualified Data.Accessor.Basic as Accessor
+import qualified Data.NonEmpty as NonEmpty
+import Data.NonEmpty ((!:))
 import Control.Category ((.))
 import Control.Applicative (Applicative, pure, (<*>), liftA3)
 import Data.Traversable (Traversable, sequenceA, foldMapDefault)
 import Data.Foldable (Foldable, foldMap)
 import Data.Monoid ((<>))
-
-import qualified EFA.Report.Format as Format
-import EFA.Report.FormatValue (FormatValue, formatValue)
 
 import Prelude hiding (lookup, (.))
 
@@ -156,13 +158,13 @@ class C rec => Summands rec where
    This method fetches only the before and delta components,
    in contrast to Fold.toList.
    -}
-   summands :: rec a -> [a]
+   summands :: rec a -> NonEmpty.T [] a
 
 instance Summands Absolute where
-   summands (Absolute x) = [x]
+   summands (Absolute x) = NonEmpty.singleton x
 
 instance Summands Delta where
-   summands r = [before r, delta r]
+   summands r = before r !: delta r : []
 
 instance Summands rec => Summands (ExtDelta rec) where
-   summands r = summands (extBefore r) ++ summands (extDelta r)
+   summands r = NonEmpty.append (summands (extBefore r)) (summands (extDelta r))

@@ -194,9 +194,9 @@ simplify =
    Op.fromNormalTerm . Term.getSignal
 
 simplifiedSummands ::
-   RecMultiDelta (Result SignalTerm) -> [Result SignalTerm]
+   RecMultiDelta (Result SignalTerm) -> NonEmpty.T [] (Result SignalTerm)
 simplifiedSummands =
-   map (fmap simplify) . Record.summands
+   fmap (fmap simplify) . Record.summands
 
 main :: IO ()
 main = do
