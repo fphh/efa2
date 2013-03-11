@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module EFA.Test.UtilsTest where
+module EFA.Test.Utility where
 
 import EFA.Utility (pairs, yazf)
 

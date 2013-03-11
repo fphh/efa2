@@ -1,6 +1,7 @@
-{-# LANGUAGE TemplateHaskell, ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
-module EFA.Test.SequenceTest where
+module EFA.Test.Sequence where
 
 import EFA.Signal.SequenceData (SequData(..))
 import qualified EFA.Signal.Sequence as Seq

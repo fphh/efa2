@@ -102,7 +102,7 @@ Library
 -- sollte man auf Cabal-Test umstellen,
 -- sobald Cabal-Test vernünftig läuft
 Executable test-efa
-  Main-Is: EFA/Test/Test.hs
+  Main-Is: EFA/Test.hs
   GHC-Options: -Wall
   Hs-Source-Dirs: test
   If flag(buildTests)
@@ -118,8 +118,8 @@ Executable test-efa
   Else
     Buildable: False
   Other-Modules:
-    EFA.Test.UtilsTest
-    EFA.Test.SequenceTest
+    EFA.Test.Utility
+    EFA.Test.Sequence
     EFA.Test.MultiValue
     EFA.Test.Stack
     EFA.Test.Arithmetic
