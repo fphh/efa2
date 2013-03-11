@@ -20,6 +20,7 @@ import Control.Applicative (Applicative, pure, (<*>), liftA3)
 import Data.Traversable (Traversable, sequenceA, foldMapDefault)
 import Data.Foldable (Foldable, foldMap)
 import Data.Monoid ((<>))
+import Data.Tuple.HT (mapFst)
 
 import Prelude hiding (lookup, (.))
 
@@ -153,18 +154,25 @@ instance C rec => C (ExtDelta rec) where
          Idx.After  -> access sub . Accessor.fromSetGet (\a d -> d{extAfter  = a}) extAfter
 
 
-class C rec => Summands rec where
-   {- |
-   This method fetches only the before and delta components,
-   in contrast to Fold.toList.
-   -}
-   summands :: rec a -> NonEmpty.T [] a
+class C rec => Assigns rec where
+   assigns :: rec a -> NonEmpty.T [] (ToIndex rec, a)
 
-instance Summands Absolute where
-   summands (Absolute x) = NonEmpty.singleton x
+instance Assigns Absolute where
+   assigns (Absolute x) = NonEmpty.singleton (Idx.Absolute, x)
 
-instance Summands Delta where
-   summands r = before r !: delta r : []
+instance Assigns Delta where
+   assigns r = (Idx.Before, before r) !: (Idx.Delta, delta r) : []
 
-instance Summands rec => Summands (ExtDelta rec) where
-   summands r = NonEmpty.append (summands (extBefore r)) (summands (extDelta r))
+instance Assigns rec => Assigns (ExtDelta rec) where
+   assigns r =
+      NonEmpty.append
+         (fmap (mapFst (Idx.ExtDelta Idx.Before)) $ assigns (extBefore r))
+         (fmap (mapFst (Idx.ExtDelta Idx.Delta))  $ assigns (extDelta r))
+
+
+{- |
+This method fetches only the before and delta components,
+in contrast to Fold.toList.
+-}
+summands :: Assigns rec => rec a -> NonEmpty.T [] a
+summands = fmap snd . assigns
