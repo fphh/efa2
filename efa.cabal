@@ -264,6 +264,7 @@ Executable demo-additive-terms-static
       gnuplot,
       unique-logic,
       non-empty,
+      data-accessor,
       containers,
       utility-ht,
       base

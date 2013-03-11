@@ -3,7 +3,8 @@ module Main where
 
 import qualified EFA.Example.Utility as Utility
 import EFA.Example.Utility
-          (symbol, edgeVar, makeEdges, constructSeqTopo, (.=))
+          (symbol, edgeVar, makeEdges, constructSeqTopo)
+import EFA.Equation.System ((=.=))
 
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Variable as Var
@@ -25,9 +26,12 @@ import qualified EFA.Graph as Gr
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
 
+import qualified Data.Accessor.Basic as Accessor
+
 import qualified UniqueLogic.ST.System as Sys
 
 
+import Control.Applicative (pure)
 import Data.Monoid (mempty, (<>))
 
 
@@ -74,9 +78,89 @@ param2 =   Idx.Delta  & Idx.Before & Idx.Before
 del    =   Idx.Delta  & Idx.Delta  & Idx.Delta
 
 
+{- |
+Caution:
+This function creates an inconsistent nested Delta record.
+The equations before+delta=after are not (always) satisfied.
+This is ok for application since we only use the before and delta values
+to initialize the equation system.
+-}
+parameterSymbol ::
+   (t ~ Utility.VarTerm var Idx.Delta SumProduct.Term Node.Int,
+    Eq t, Arith.Sum t, Arith.Constant t,
+    Ord (idx Node.Int),
+    Var.Type idx ~ var, Utility.Symbol var, Env.AccessMap idx) =>
+
+   IdxMultiDelta -> idx Node.Int -> RecMultiDelta t
+
+parameterSymbol param idx =
+   Accessor.set (Record.access param) (symbol (Idx.delta $ Var.index idx)) $
+   absoluteSymbol idx
+
+{- | Caution: See 'parameterSymbol' -}
+absoluteSymbol ::
+   (t ~ Utility.VarTerm var Idx.Delta SumProduct.Term Node.Int,
+    Eq t, Arith.Sum t, Arith.Constant t,
+    Ord (idx Node.Int),
+    Var.Type idx ~ var, Utility.Symbol var, Env.AccessMap idx) =>
+
+   idx Node.Int -> RecMultiDelta t
+
+absoluteSymbol idx =
+   absoluteRecord (symbol (Idx.before $ Var.index idx))
+
+{- | Caution: See 'parameterSymbol' -}
+absoluteRecord ::
+   (Arith.Constant x) =>
+   x -> RecMultiDelta x
+absoluteRecord x =
+   Accessor.set (Record.access absolute) x $
+   pure Arith.zero
+
+
+equalDelta ::
+   Eq x =>
+   Record.Delta (EqGen.Expression rec node s a v x) ->
+   Record.Delta (EqGen.Expression rec node s a v x) ->
+   EqGen.EquationSystem rec node s a v
+equalDelta x y =
+   (Record.before x =.= Record.before y) <>
+   (Record.delta  x =.= Record.delta  y)
+
+equalExtDelta ::
+   (f x -> f x -> EqGen.EquationSystem rec node s a v) ->
+   Record.ExtDelta f x ->
+   Record.ExtDelta f x ->
+   EqGen.EquationSystem rec node s a v
+equalExtDelta eq x y =
+   eq (Record.extBefore x) (Record.extBefore y) <>
+   eq (Record.extDelta  x) (Record.extDelta  y)
+
+
+infix 0 =%=, %=
+
+(=%=) ::
+   Eq x =>
+   RecMultiDelta (EqGen.Expression rec node s a v x) ->
+   RecMultiDelta (EqGen.Expression rec node s a v x) ->
+   EqGen.EquationSystem rec node s a v
+(=%=) = equalExtDelta (equalExtDelta equalDelta)
+
+(%=) ::
+   (Eq x, Arith.Sum x,
+    EqGen.Element idx RecMultiDelta s a v ~ RecMultiDelta (Sys.Variable s x),
+    Env.AccessMap idx, Ord (idx node), Var.Type idx ~ var) =>
+   idx node -> RecMultiDelta x ->
+   EqGen.EquationSystem RecMultiDelta node s a v
+evar %= val  =
+   fmap (EqGen.variable . flip Idx.Record evar) Record.indices
+   =%=
+   fmap EqGen.constant val
+
+
 givenParameterSymbol ::
    (t ~ Utility.VarTerm var Idx.Delta SumProduct.Term Node.Int,
-    Eq t, Arith.Sum t,
+    Eq t, Arith.Sum t, Arith.Constant t,
     EqGen.Element idx RecMultiDelta s ScalarTerm SignalTerm
       ~ RecMultiDelta (Sys.Variable s t),
     Ord (idx Node.Int),
@@ -85,14 +169,12 @@ givenParameterSymbol ::
    IdxMultiDelta -> idx Node.Int ->
    EquationSystemSymbolic s
 givenParameterSymbol param idx =
-   (absolute_ idx .= symbol (Idx.before $ Var.index idx))
-   <>
-   (Idx.Record param idx .= symbol (Idx.delta $ Var.index idx))
+   idx %= parameterSymbol param idx
 
 givenSymbolic :: EquationSystemSymbolic s
 givenSymbolic =
-   (absolute_ (Idx.DTime Idx.initSection) .= Arith.fromInteger 1) <>
-   (absolute_ (Idx.DTime sec0) .= Arith.fromInteger 1) <>
+   (Idx.DTime Idx.initSection %= absoluteRecord (Arith.fromInteger 1)) <>
+   (Idx.DTime sec0 %= absoluteRecord (Arith.fromInteger 1)) <>
 
    givenParameterSymbol param0 (edgeVar Idx.Energy sec0 node0 node1) <>
    givenParameterSymbol param1 (edgeVar Idx.Eta sec0 node0 node1) <>
