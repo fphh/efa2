@@ -14,6 +14,7 @@ import qualified Control.Monad.Trans.State as MS
 import qualified Data.Set as Set
 
 import qualified Data.Foldable as Fold
+import qualified Data.List.HT as ListHT
 import Control.Applicative (Applicative, pure, (<*>), liftA2)
 import Data.Foldable (Foldable, foldMap)
 import Data.Monoid ((<>))
@@ -146,3 +147,15 @@ instance
              Set.toList . Set.fromList)
             QC.arbitrary
       return $ MultiValue it $ MS.evalState (go it) at
+
+   shrink (MultiValue it tree) =
+      (case tree of
+         Leaf _ -> []
+         Branch a0 a1 ->
+            concatMap (\(_,is) -> [MultiValue is a0, MultiValue is a1]) $
+            ListHT.removeEach it)
+      ++
+      (let go (Leaf x) = map Leaf $ QC.shrink x
+           go (Branch a0 a1) =
+              map (flip Branch a1) (go a0) ++ map (Branch a0) (go a1)
+       in  map (MultiValue it) $ go tree)

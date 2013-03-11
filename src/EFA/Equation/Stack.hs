@@ -14,6 +14,7 @@ import qualified Data.NonEmpty as NonEmpty
 
 import qualified Test.QuickCheck as QC
 
+import qualified Data.List.HT as ListHT
 import Control.Applicative (liftA2)
 import Data.Foldable (Foldable, foldMap)
 import Data.Monoid ((<>))
@@ -271,3 +272,15 @@ instance
    (QC.Arbitrary i, Ord i, QC.Arbitrary a, Arith.Sum a) =>
       QC.Arbitrary (Stack i a) where
    arbitrary = fmap fromMultiValue QC.arbitrary
+
+   shrink (Stack it tree) =
+      (case tree of
+         Value _ -> []
+         Plus a0 a1 ->
+            concatMap (\(_,is) -> [Stack is a0, Stack is a1]) $
+            ListHT.removeEach it)
+      ++
+      (let go (Value x) = map Value $ QC.shrink x
+           go (Plus a0 a1) =
+              map (flip Plus a1) (go a0) ++ map (Plus a0) (go a1)
+       in  map (Stack it) $ go tree)
