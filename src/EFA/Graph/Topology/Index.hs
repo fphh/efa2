@@ -18,6 +18,8 @@ data Absolute = Absolute deriving (Show, Eq, Ord)
 
 data Delta = Delta | Before | After deriving (Show, Eq, Ord)
 
+data ExtDelta rec = ExtDelta Delta rec deriving (Show, Eq, Ord)
+
 
 data Record rec idx = Record rec idx deriving (Show, Eq)
 

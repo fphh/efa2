@@ -14,6 +14,7 @@ import Control.Category ((.))
 import Control.Applicative (Applicative, pure, (<*>), liftA3)
 import Data.Traversable (Traversable, sequenceA, foldMapDefault)
 import Data.Foldable (Foldable, foldMap)
+import Data.Monoid ((<>))
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
@@ -77,8 +78,39 @@ instance Traversable Delta where
    sequenceA (Delta d b a) = liftA3 Delta d b a
 
 
+data ExtDelta f a = ExtDelta {extDelta, extBefore, extAfter :: f a} deriving (Show)
+
+extDeltaCons :: Sum (f a) => f a -> f a -> ExtDelta f a
+extDeltaCons b a = ExtDelta {extBefore = b, extAfter = a, extDelta = a~-b}
+
+instance FormatValue (f a) => FormatValue (ExtDelta f a) where
+   formatValue rec =
+      Format.list $
+         Format.assign (Format.literal "delta")  (formatValue $ extDelta rec) :
+         Format.assign (Format.literal "before") (formatValue $ extBefore rec) :
+         Format.assign (Format.literal "after")  (formatValue $ extAfter rec) :
+         []
+
+instance Functor f => Functor (ExtDelta f) where
+   fmap f (ExtDelta d b a) = ExtDelta (fmap f d) (fmap f b) (fmap f a)
+
+instance (Applicative f) => Applicative (ExtDelta f) where
+   pure a = ExtDelta (pure a) (pure a) (pure a)
+   ExtDelta fd fb fa <*> ExtDelta d b a =
+      ExtDelta (fd <*> d) (fb <*> b) (fa <*> a)
+
+instance (Foldable f) => Foldable (ExtDelta f) where
+   foldMap f (ExtDelta d b a) =
+      foldMap f d <> foldMap f b <> foldMap f a
+
+instance (Traversable f) => Traversable (ExtDelta f) where
+   sequenceA (ExtDelta d b a) =
+      liftA3 ExtDelta (sequenceA d) (sequenceA b) (sequenceA a)
+
+
+
 class
-   (Ord (ToIndex rec), Format.Record (ToIndex rec),
+   (Ord (ToIndex rec), Functor rec, Format.Record (ToIndex rec),
     rec ~ FromIndex (ToIndex rec)) =>
       C rec where
    type ToIndex rec :: *
@@ -102,3 +134,18 @@ instance C Delta where
          Idx.Delta  -> Accessor.fromSetGet (\a d -> d{delta  = a}) delta
          Idx.Before -> Accessor.fromSetGet (\a d -> d{before = a}) before
          Idx.After  -> Accessor.fromSetGet (\a d -> d{after  = a}) after
+
+instance C rec => C (ExtDelta rec) where
+   type ToIndex (ExtDelta rec) = Idx.ExtDelta (ToIndex rec)
+   type FromIndex (Idx.ExtDelta idx) = ExtDelta (FromIndex idx)
+   indices =
+      ExtDelta {
+         extDelta  = fmap (Idx.ExtDelta Idx.Delta)  indices,
+         extBefore = fmap (Idx.ExtDelta Idx.Before) indices,
+         extAfter  = fmap (Idx.ExtDelta Idx.After)  indices
+      }
+   access (Idx.ExtDelta idx sub) =
+      case idx of
+         Idx.Delta  -> access sub . Accessor.fromSetGet (\a d -> d{extDelta  = a}) extDelta
+         Idx.Before -> access sub . Accessor.fromSetGet (\a d -> d{extBefore = a}) extBefore
+         Idx.After  -> access sub . Accessor.fromSetGet (\a d -> d{extAfter  = a}) extAfter

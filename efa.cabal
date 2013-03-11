@@ -255,6 +255,21 @@ Executable demo-additive-terms
   Else
     Buildable: False
 
+Executable demo-additive-terms-static
+  Main-Is: demo/additiveTermsStatic/Main.hs
+  GHC-Options: -Wall
+  If flag(buildDemos)
+    Build-Depends:
+      efa,
+      gnuplot,
+      unique-logic,
+      non-empty,
+      containers,
+      utility-ht,
+      base
+  Else
+    Buildable: False
+
 Executable demo-signalcalc
   Main-Is: demo/Signal/Main.hs
   GHC-Options: -Wall

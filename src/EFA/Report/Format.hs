@@ -282,7 +282,10 @@ instance Record Idx.Absolute where
    record Idx.Absolute = id
 
 instance Record Idx.Delta where
-   record d = recordDelta d
+   record = recordDelta
+
+instance Record rec => Record (Idx.ExtDelta rec) where
+   record (Idx.ExtDelta d r) = recordDelta d . record r
 
 
 class EdgeIdx idx where edgeVar :: idx -> EdgeVar

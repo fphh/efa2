@@ -66,7 +66,7 @@ import Control.Monad.Trans.Writer (WriterT, runWriterT, tell)
 import Control.Monad.ST (ST, runST)
 import Control.Monad (liftM2)
 
-import Control.Applicative (Applicative, pure, liftA, liftA2)
+import Control.Applicative (Applicative, pure, liftA, liftA2, liftA3)
 import Control.Category ((.))
 
 import qualified Data.Map as M
@@ -306,6 +306,50 @@ instance Record Record.Delta where
       Record.deltaCons
          (f (Record.before recX) (Record.before recY))
          (f (Record.after  recX) (Record.after  recY))
+
+
+-- maybe we should move this to Record, together with the 'Wrap' type
+extDeltaCons ::
+   (Record f, Sum a) => Wrap f a -> Wrap f a -> Record.ExtDelta f a
+extDeltaCons b a =
+   Record.ExtDelta {
+      Record.extBefore = unwrap b,
+      Record.extAfter = unwrap a,
+      Record.extDelta = unwrap (a ~- b)
+   }
+
+
+instance (Record rec) => Record (Record.ExtDelta rec) where
+
+   newVariable = do
+      vars <- liftA3 Record.ExtDelta newVariable newVariable newVariable
+      tell $ System $ Fold.sequence_ $
+         liftA3 Arith.ruleAdd
+            (Record.extBefore vars)
+            (Record.extDelta vars)
+            (Record.extAfter vars)
+      return vars
+
+   {-
+   I omit equality on the delta part since it would be redundant.
+   -}
+   equalRecord (Wrap recX) (Wrap recY) = do
+      equalRecord (Wrap $ Record.extBefore recX) (Wrap $ Record.extBefore recY)
+      equalRecord (Wrap $ Record.extAfter  recX) (Wrap $ Record.extAfter  recY)
+
+   liftE0 x = Wrap $ extDeltaCons (liftE0 x) (liftE0 x)
+
+   liftE1 f (Wrap rec) =
+      Wrap $
+      extDeltaCons
+         (liftE1 f $ Wrap $ Record.extBefore rec)
+         (liftE1 f $ Wrap $ Record.extAfter rec)
+
+   liftE2 f (Wrap recX) (Wrap recY) =
+      Wrap $
+      extDeltaCons
+         (liftE2 f (Wrap $ Record.extBefore recX) (Wrap $ Record.extBefore recY))
+         (liftE2 f (Wrap $ Record.extAfter  recX) (Wrap $ Record.extAfter  recY))
 
 
 infix 0 =.=, =%=
