@@ -7,6 +7,7 @@ module EFA.Graph.Draw (
   Env(..),
   topology,
   flowTopologies,
+  dotFromTopology -- pg inserted for Hack.Draw 
   ) where
 
 import qualified EFA.Report.Format as Format
@@ -258,11 +259,13 @@ topology :: (Node.C node) => Topo.Topology node -> IO ()
 topology topo =
    runGraphvizCanvas Dot (dotFromTopology M.empty topo) Xlib
 
+topology2pdf :: (Node.C node) => Topo.Topology node -> IO (FilePath)
+topology2pdf topo =
+   runGraphvizCommand Dot (dotFromTopology M.empty topo) Pdf "result/topology.pdf"
+
 topologyWithEdgeLabels :: (Node.C node) => M.Map (node, node) String -> Topo.Topology node -> IO ()
 topologyWithEdgeLabels edgeLabels topo =
    runGraphvizCanvas Dot (dotFromTopology edgeLabels topo) Xlib
-
-
 
 dotFromFlowTopology ::
   (Node.C node) =>

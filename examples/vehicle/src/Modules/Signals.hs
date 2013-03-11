@@ -11,7 +11,7 @@ import EFA.Signal.Record (SigId(SigId),PPosIdx(..),
                           PowerRecord, SignalRecord, genPowerRecord)
 
 -- import qualified EFA.Graph.Topology.Node as Node
-import EFA.Signal.Signal((.*), (.+), (.-), neg, TC, Signal, len, fromList)
+import EFA.Signal.Signal((.*), (.-), neg, TC, Signal, len, fromList)
 import EFA.Signal.Typ(UT,Typ)
 import EFA.Signal.Data(Data(..),Nil, (:>))
 
@@ -52,11 +52,11 @@ condition rec = extractLogSignals rec
                  (SigId "idealrollingwheel1.flangeT.f",neg),
                  (SigId "idealrollingwheel2.flangeR.tau",neg),
                  (SigId "idealrollingwheel2.flangeT.f",id),
-                 (SigId "chassis1.flange_a.f",neg),
+--                 (SigId "chassis1.flange_a.f",neg),
                  (SigId "chassis1.flange_a1.f",id),
                  --                                       (SigId "speedsensor1.flange.der(s)",id),
                  (SigId "speedsensor1.v",id),
-                 (SigId "drivingresistance1.force1.f",neg),
+                 (SigId "chassis1.drivingresistance1.force1.f",neg),
                  (SigId "brake1.tau",neg),
                  (SigId "brake2.tau",neg)]
 
@@ -89,9 +89,9 @@ calculatePower rec = pRec
       dcdcPowerLV = zeroSig
 
        -- chassis       
-      kineticPower = (g "chassis1.flange_a1.f" .- g "chassis1.flange_a.f").*speed
+      kineticPower = (g "chassis1.flange_a1.f" .- g "chassis1.drivingresistance1.force1.f").*speed
       
-      resistancePower = g "drivingresistance1.force1.f".*speed
+--      resistancePower = g "drivingresistance1.force1.f".*speed
   
         
 --------------------------------------------------------------------------------------- 
@@ -148,8 +148,8 @@ calculatePower rec = pRec
               
               -- driving Resistance
               (PPosIdx Chassis Resistance,
-               g "drivingresistance1.force1.f".* speed,
-               g "drivingresistance1.force1.f".* speed
+               g "chassis1.drivingresistance1.force1.f".* speed,
+               g "chassis1.drivingresistance1.force1.f".* speed
               ),
               
               -- battery

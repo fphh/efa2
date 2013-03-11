@@ -20,8 +20,7 @@ model Vehicle
   ElectricMotor electricmotor2(maxTorque = 200, maxPower = 30000, eta = 0.95, inertia = 0) annotation(Placement(visible = true, transformation(origin = {-29.2319,30.221}, extent = {{9.01578,9.01578},{-9.01578,-9.01578}}, rotation = -180)));
   Modelica.Mechanics.Rotational.Sensors.SpeedSensor speedsensor2 annotation(Placement(visible = true, transformation(origin = {-55.5393,43.6841}, extent = {{5.08917,-5.08917},{-5.08917,5.08917}}, rotation = -270)));
   Modelica.Blocks.Continuous.Integrator integrator1 annotation(Placement(visible = true, transformation(origin = {-38.2432,47.4146}, extent = {{-4.62652,-4.62652},{4.62652,4.62652}}, rotation = 0)));
-  Chassis chassis1(mass = 1200) annotation(Placement(visible = true, transformation(origin = {62.5543,-24.9381}, extent = {{-17.5692,-17.5692},{17.5692,17.5692}}, rotation = 0)));
-  DrivingResistance drivingresistance1 annotation(Placement(visible = true, transformation(origin = {87.2245,-47.4079}, extent = {{-9.91736,-9.91736},{9.91736,9.91736}}, rotation = 0)));
+  Chassis chassis1(mass = 1000, cwA = 0.677, fr = 0.014) annotation(Placement(visible = true, transformation(origin = {62.5543,-24.9381}, extent = {{-17.5692,-17.5692},{17.5692,17.5692}}, rotation = 0)));
   Modelica.Mechanics.Rotational.Components.IdealRollingWheel idealrollingwheel2 annotation(Placement(visible = true, transformation(origin = {43.2276,-66.5477}, extent = {{-6.77369,-6.77369},{6.77369,6.77369}}, rotation = 0)));
   Modelica.Mechanics.Rotational.Components.Brake brake2 annotation(Placement(visible = true, transformation(origin = {21.4949,-66.5477}, extent = {{-6.1579,-6.1579},{6.1579,6.1579}}, rotation = 0)));
   BrakeSystem brakesystem1 annotation(Placement(visible = true, transformation(origin = {-2.34949,-24.257}, extent = {{-8.19616,-8.19616},{8.19616,8.19616}}, rotation = 0)));
@@ -31,7 +30,6 @@ equation
   connect(driver1.BrakePedalPosition,brakesystem1.PedalPosition) annotation(Line(points = {{-63.9649,-37.6401},{-60.2056,-37.6401},{-60.2056,-23.6696},{-8.33174,-23.6696},{-8.33174,-23.5504}}));
   connect(brake2.flange_b,idealrollingwheel2.flangeR) annotation(Line(points = {{27.6528,-66.5477},{35.8855,-66.5477},{35.8855,-66.5477},{36.4539,-66.5477}}));
   connect(idealrollingwheel2.flangeT,chassis1.flange_a1) annotation(Line(points = {{50.0013,-66.5477},{68.1351,-66.5477},{68.1351,-32.4802},{68.1766,-32.4802},{68.1766,-28.1362}}));
-  connect(chassis1.flange_a,drivingresistance1.flange_a) annotation(Line(points = {{77.994,-23.8284},{78.7751,-23.8284},{78.7751,-43.7792},{80.7052,-43.7792}}));
   connect(idealrollingwheel1.flangeT,chassis1.flange_a1) annotation(Line(points = {{48.3659,-42.7344},{67.8414,-42.7344},{67.8414,-28.1362},{68.1766,-28.1362}}));
   connect(speedsensor1.flange,chassis1.flange_a1) annotation(Line(points = {{29.3511,-88.0681},{68.1601,-88.0681},{68.1601,-28.1362},{68.1766,-28.1362}}));
   connect(integrator1.u,engine1.FuelPower) annotation(Line(points = {{-43.795,47.4146},{-45.1087,47.4146},{-45.1087,33.6409},{-49.5218,33.6409}}));
