@@ -178,46 +178,6 @@ Executable example-time
   Else
     Buildable: False
 
-Executable example-numericSolving
-  Main-Is: examples/elementary/numericSolving/Main.hs
-  GHC-Options: -Wall
-  If flag(buildExamples)
-    Build-Depends:
-      efa,
-      base
-  Else
-    Buildable: False
-
-Executable example-signalSolving
-  Main-Is: examples/elementary/signalSolving/Main.hs
-  GHC-Options: -Wall
-  If flag(buildExamples)
-    Build-Depends:
-      efa,
-      base
-  Else
-    Buildable: False
-
-Executable example-symbolicSolving
-  Main-Is: examples/elementary/symbolicSolving/Main.hs
-  GHC-Options: -Wall
-  If flag(buildExamples)
-    Build-Depends:
-      efa,
-      base
-  Else
-    Buildable: False
-
-Executable example-symbolicDelta
-  Main-Is: examples/elementary/symbolicDelta/Main.hs
-  GHC-Options: -Wall
-  If flag(buildExamples)
-    Build-Depends:
-      efa,
-      base
-  Else
-    Buildable: False
-
 Executable example-twoways
   Main-Is: examples/elementary/twoWays/Main.hs
   GHC-Options: -Wall
@@ -240,6 +200,46 @@ Executable example-readandcut
     Buildable: False
 
 
+
+Executable demo-numericSolving
+  Main-Is: demo/numericSolving/Main.hs
+  GHC-Options: -Wall
+  If flag(buildDemos)
+    Build-Depends:
+      efa,
+      base
+  Else
+    Buildable: False
+
+Executable demo-signalSolving
+  Main-Is: demo/signalSolving/Main.hs
+  GHC-Options: -Wall
+  If flag(buildDemos)
+    Build-Depends:
+      efa,
+      base
+  Else
+    Buildable: False
+
+Executable demo-symbolicSolving
+  Main-Is: demo/symbolicSolving/Main.hs
+  GHC-Options: -Wall
+  If flag(buildDemos)
+    Build-Depends:
+      efa,
+      base
+  Else
+    Buildable: False
+
+Executable demo-symbolicDelta
+  Main-Is: demo/symbolicDelta/Main.hs
+  GHC-Options: -Wall
+  If flag(buildDemos)
+    Build-Depends:
+      efa,
+      base
+  Else
+    Buildable: False
 
 Executable demo-additive-terms
   Main-Is: demo/additiveTerms/Main.hs
