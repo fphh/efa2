@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 
-module EFA.Test.SolverTest where
+module EFA.Test.Solver where
 
 
 
