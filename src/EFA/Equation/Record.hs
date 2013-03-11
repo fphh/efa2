@@ -149,3 +149,20 @@ instance C rec => C (ExtDelta rec) where
          Idx.Delta  -> access sub . Accessor.fromSetGet (\a d -> d{extDelta  = a}) extDelta
          Idx.Before -> access sub . Accessor.fromSetGet (\a d -> d{extBefore = a}) extBefore
          Idx.After  -> access sub . Accessor.fromSetGet (\a d -> d{extAfter  = a}) extAfter
+
+
+class C rec => Summands rec where
+   {- |
+   This method fetches only the before and delta components,
+   in contrast to Fold.toList.
+   -}
+   summands :: rec a -> [a]
+
+instance Summands Absolute where
+   summands (Absolute x) = [x]
+
+instance Summands Delta where
+   summands r = [before r, delta r]
+
+instance Summands rec => Summands (ExtDelta rec) where
+   summands r = summands (extBefore r) ++ summands (extDelta r)

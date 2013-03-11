@@ -98,20 +98,6 @@ givenSymbolic =
    mempty
 
 
-{- |
-These function only fetch the before and delta components,
-in contrast to Fold.toList.
--}
-flatten :: Record.Delta a -> [a]
-flatten r = [Record.before r, Record.delta r]
-
-extFlatten :: (rec a -> [a]) -> Record.ExtDelta rec a -> [a]
-extFlatten f r = f (Record.extBefore r) ++ f (Record.extDelta r)
-
-multiFlatten :: RecMultiDelta a -> [a]
-multiFlatten = extFlatten (extFlatten flatten)
-
-
 main :: IO ()
 main = do
 
@@ -121,10 +107,10 @@ main = do
 
    putStrLn $ Format.unUnicode $ formatValue $
       Env.Complete
-         (fmap multiFlatten scalarEnv)
-         (fmap multiFlatten signalEnv)
+         (fmap Record.summands scalarEnv)
+         (fmap Record.summands signalEnv)
 
    Draw.sequFlowGraphAbsWithEnv seqTopo $
       Env.Complete
-         (fmap (Record.Absolute . multiFlatten) scalarEnv)
-         (fmap (Record.Absolute . multiFlatten) signalEnv)
+         (fmap (Record.Absolute . Record.summands) scalarEnv)
+         (fmap (Record.Absolute . Record.summands) signalEnv)
