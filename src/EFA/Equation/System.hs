@@ -252,7 +252,7 @@ class (Traversable rec, Applicative rec, Record.C rec) => Record rec where
       (Eq a) =>
       Wrap rec (Expr.T s a) ->
       Wrap rec (Expr.T s a) ->
-      WriterT (System s) (ST s) ()
+      System s
    liftE0 :: (Sum x) => x -> Wrap rec x
    liftE1 ::
       (Sum y) =>
@@ -270,7 +270,7 @@ instance Record Record.Absolute where
       lift $ fmap Record.Absolute Sys.globalVariable
 
    equalRecord (Wrap (Record.Absolute x)) (Wrap (Record.Absolute y)) =
-      tell $ System (x =:= y)
+      System (x =:= y)
 
    liftE0 = Wrap . Record.Absolute
 
@@ -291,9 +291,9 @@ instance Record Record.Delta where
    {-
    I omit equality on the delta part since it would be redundant.
    -}
-   equalRecord (Wrap recX) (Wrap recY) = do
-      tell $ System (Record.before recX =:= Record.before recY)
-      tell $ System (Record.after  recX =:= Record.after  recY)
+   equalRecord (Wrap recX) (Wrap recY) =
+      System (Record.before recX =:= Record.before recY) <>
+      System (Record.after  recX =:= Record.after  recY)
 
    liftE0 x = Wrap $ Record.deltaCons x x
 
@@ -333,8 +333,8 @@ instance (Record rec) => Record (Record.ExtDelta rec) where
    {-
    I omit equality on the delta part since it would be redundant.
    -}
-   equalRecord (Wrap recX) (Wrap recY) = do
-      equalRecord (Wrap $ Record.extBefore recX) (Wrap $ Record.extBefore recY)
+   equalRecord (Wrap recX) (Wrap recY) =
+      equalRecord (Wrap $ Record.extBefore recX) (Wrap $ Record.extBefore recY) <>
       equalRecord (Wrap $ Record.extAfter  recX) (Wrap $ Record.extAfter  recY)
 
    liftE0 x = Wrap $ extDeltaCons (liftE0 x) (liftE0 x)
@@ -366,7 +366,7 @@ infix 0 =.=, =%=
   RecordExpression rec node s a v x -> RecordExpression rec node s a v x ->
   EquationSystem rec node s a v
 (Bookkeeping xs) =%= (Bookkeeping ys) =
-  EquationSystem $ do x <- xs; y <- ys; lift $ equalRecord x y
+  EquationSystem $ lift . tell =<< liftM2 equalRecord xs ys
 
 
 constant :: x -> Expression rec node s a v x
