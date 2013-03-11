@@ -81,6 +81,11 @@ type
    SymbolicEquationSystem node s term =
       Utility.SymbolicEquationSystem Record.Absolute node s term
 
+symbol ::
+   (Utility.Symbol var, Pointed term) =>
+   var node -> VarTerm var term node
+symbol = Utility.symbol . Idx.absolute
+
 givenSymbol ::
   (t ~ VarTerm var term node,
    Eq t, Arith.Sum t,
@@ -92,7 +97,7 @@ givenSymbol ::
   idx node ->
   SymbolicEquationSystem node s term
 givenSymbol idx =
-   idx .= Utility.symbol (Idx.absolute (Var.index idx))
+   idx .= symbol (Var.index idx)
 
 
 infixr 6 =<>
