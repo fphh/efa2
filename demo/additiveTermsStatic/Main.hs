@@ -63,12 +63,16 @@ infixr 9 &
 (&) :: Idx.Delta -> a -> Idx.ExtDelta a
 (&) = Idx.ExtDelta
 
+absolute_ :: idx -> Idx.Record IdxMultiDelta idx
+absolute_ = Idx.Record absolute
 
-absolute, param0, param1, param2 :: idx -> Idx.Record IdxMultiDelta idx
-absolute = Idx.Record (Idx.Before & Idx.Before & Idx.Before)
-param0 =   Idx.Record (Idx.Before & Idx.Before & Idx.Delta )
-param1 =   Idx.Record (Idx.Before & Idx.Delta  & Idx.Before)
-param2 =   Idx.Record (Idx.Delta  & Idx.Before & Idx.Before)
+absolute, param0, param1, param2, del :: IdxMultiDelta
+absolute = Idx.Before & Idx.Before & Idx.Before
+param0 =   Idx.Before & Idx.Before & Idx.Delta
+param1 =   Idx.Before & Idx.Delta  & Idx.Before
+param2 =   Idx.Delta  & Idx.Before & Idx.Before
+del    =   Idx.Delta  & Idx.Delta  & Idx.Delta
+
 
 givenParameterSymbol ::
    (t ~ Utility.VarTerm var Idx.Delta SumProduct.Term Node.Int,
@@ -78,18 +82,17 @@ givenParameterSymbol ::
     Ord (idx Node.Int),
     Var.Type idx ~ var, Utility.Symbol var, Env.AccessMap idx) =>
 
-   (idx Node.Int -> Idx.Record IdxMultiDelta (idx Node.Int)) ->
-   idx Node.Int ->
+   IdxMultiDelta -> idx Node.Int ->
    EquationSystemSymbolic s
 givenParameterSymbol param idx =
-   (absolute idx .= symbol (Idx.before $ Var.index idx))
+   (absolute_ idx .= symbol (Idx.before $ Var.index idx))
    <>
-   (param idx .= symbol (Idx.delta $ Var.index idx))
+   (Idx.Record param idx .= symbol (Idx.delta $ Var.index idx))
 
 givenSymbolic :: EquationSystemSymbolic s
 givenSymbolic =
-   (absolute (Idx.DTime Idx.initSection) .= Arith.fromInteger 1) <>
-   (absolute (Idx.DTime sec0) .= Arith.fromInteger 1) <>
+   (absolute_ (Idx.DTime Idx.initSection) .= Arith.fromInteger 1) <>
+   (absolute_ (Idx.DTime sec0) .= Arith.fromInteger 1) <>
 
    givenParameterSymbol param0 (edgeVar Idx.Energy sec0 node0 node1) <>
    givenParameterSymbol param1 (edgeVar Idx.Eta sec0 node0 node1) <>
