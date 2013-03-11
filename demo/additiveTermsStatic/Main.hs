@@ -4,10 +4,12 @@ module Main where
 import qualified EFA.Example.Utility as Utility
 import EFA.Example.Utility
           (symbol, edgeVar, makeEdges, constructSeqTopo)
+import EFA.Equation.Arithmetic ((~*))
 import EFA.Equation.System ((=.=))
 import EFA.Equation.Result (Result)
 
 import qualified EFA.Equation.System as EqGen
+import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Env as Env
@@ -26,6 +28,8 @@ import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Graph as Gr
 
+import qualified EFA.Signal.Plot as Plot
+
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
 
@@ -34,9 +38,12 @@ import qualified Data.Accessor.Basic as Accessor
 import qualified UniqueLogic.ST.System as Sys
 
 
+import qualified Data.Foldable as Fold
+import qualified Data.Map as Map
 import qualified Data.NonEmpty as NonEmpty
 import Control.Applicative (pure)
 import Data.Monoid (mempty, (<>))
+import Data.Tuple.HT (mapFst, mapSnd)
 
 
 
@@ -71,15 +78,27 @@ infixr 9 &
 (&) :: Idx.Delta -> a -> Idx.ExtDelta a
 (&) = Idx.ExtDelta
 
-absolute_ :: idx -> Idx.Record IdxMultiDelta idx
-absolute_ = Idx.Record absolute
-
-absolute, param0, param1, param2, del :: IdxMultiDelta
+absolute, param0, param1, param2 :: IdxMultiDelta
 absolute = Idx.Before & Idx.Before & Idx.Before
 param0 =   Idx.Before & Idx.Before & Idx.Delta
 param1 =   Idx.Before & Idx.Delta  & Idx.Before
 param2 =   Idx.Delta  & Idx.Before & Idx.Before
-del    =   Idx.Delta  & Idx.Delta  & Idx.Delta
+
+
+eout, ein :: Idx.Energy Node.Int
+ein  = edgeVar Idx.Energy sec0 node0 node1
+eout = edgeVar Idx.Energy sec0 node2 node1
+
+eta0, eta1 :: Idx.Eta Node.Int
+eta0 = edgeVar Idx.Eta sec0 node0 node1
+eta1 = edgeVar Idx.Eta sec0 node1 node2
+
+
+termFromIndex :: IdxMultiDelta -> SignalTerm
+termFromIndex (Idx.ExtDelta r2 (Idx.ExtDelta r1 r0)) =
+   symbol (Idx.Record r2 (Var.index ein)) ~*
+   symbol (Idx.Record r1 (Var.index eta0)) ~*
+   symbol (Idx.Record r0 (Var.index eta1))
 
 
 {- |
@@ -112,6 +131,14 @@ absoluteSymbol ::
 
 absoluteSymbol idx =
    absoluteRecord (symbol (Idx.before $ Var.index idx))
+
+{- | Caution: See 'parameterSymbol' -}
+parameterRecord ::
+   (Arith.Constant x) =>
+   IdxMultiDelta -> x -> x -> RecMultiDelta x
+parameterRecord param x d =
+   Accessor.set (Record.access param) d $
+   absoluteRecord x
 
 {- | Caution: See 'parameterSymbol' -}
 absoluteRecord ::
@@ -180,9 +207,9 @@ givenSymbolic =
    (Idx.DTime Idx.initSection %= absoluteRecord (Arith.fromInteger 1)) <>
    (Idx.DTime sec0 %= absoluteRecord (Arith.fromInteger 1)) <>
 
-   givenParameterSymbol param0 (edgeVar Idx.Energy sec0 node0 node1) <>
-   givenParameterSymbol param1 (edgeVar Idx.Eta sec0 node0 node1) <>
-   givenParameterSymbol param2 (edgeVar Idx.Eta sec0 node1 node2) <>
+   givenParameterSymbol param2 ein <>
+   givenParameterSymbol param1 eta0 <>
+   givenParameterSymbol param0 eta1 <>
 
    mempty
 
@@ -198,8 +225,8 @@ simplifiedSummands ::
 simplifiedSummands =
    fmap (fmap simplify) . Record.summands
 
-main :: IO ()
-main = do
+mainSymbolic :: IO ()
+mainSymbolic = do
 
    let seqTopo = constructSeqTopo topoLinear [0]
    let (Env.Complete scalarEnv signalEnv) =
@@ -214,3 +241,57 @@ main = do
       Env.Complete
          (fmap (Record.Absolute . Record.summands) scalarEnv)
          (fmap (Record.Absolute . simplifiedSummands) signalEnv)
+
+
+type
+   EquationSystemNumeric s =
+      EqGen.EquationSystem RecMultiDelta Node.Int s Double Double
+
+givenParameterNumber ::
+   (Ord (idx Node.Int), Env.AccessMap idx,
+    Var.Index idx, Var.Type idx ~ Var.Signal) =>
+   IdxMultiDelta -> idx Node.Int -> Double -> Double -> EquationSystemNumeric s
+givenParameterNumber param idx before delta =
+   idx %= parameterRecord param before delta
+
+
+givenNumeric :: EquationSystemNumeric s
+givenNumeric =
+   (Idx.DTime Idx.initSection %= absoluteRecord 1) <>
+   (Idx.DTime sec0 %= absoluteRecord 1) <>
+
+   givenParameterNumber param2 ein 4 (-0.6) <>
+   givenParameterNumber param1 eta0 0.25 0.1 <>
+   givenParameterNumber param0 eta1 0.85 0.05 <>
+
+   mempty
+
+
+
+checkDetermined :: Result a -> a
+checkDetermined rx =
+   case rx of
+      Result.Undetermined -> error "undetermined"
+      Result.Determined x -> x
+
+mainNumeric :: IO ()
+mainNumeric = do
+
+   let seqTopo = constructSeqTopo topoLinear [0]
+       Env.Complete _scalarEnv signalEnv = EqGen.solve seqTopo givenNumeric
+
+   case Map.lookup eout (Env.energyMap signalEnv) of
+      Nothing -> error "undefined E_2_1"
+      Just x -> do
+         let assigns =
+                map (mapFst termFromIndex) $
+                NonEmpty.tail $ Record.assigns x
+         Fold.forM_ assigns $ \(term,val) -> do
+            putStrLn $ Format.unUnicode $
+               Format.assign (formatValue term) (formatValue val)
+         Plot.stackIO "Decomposition of total output energy"
+            (Idx.delta $ Var.index eout) (map (mapSnd checkDetermined) assigns)
+
+
+main :: IO ()
+main = mainNumeric >> mainSymbolic
