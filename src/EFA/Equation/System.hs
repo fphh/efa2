@@ -33,7 +33,7 @@ module EFA.Equation.System (
   ) where
 
 import qualified EFA.Equation.Record as Record
-import qualified EFA.Equation.Env as Env
+import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node

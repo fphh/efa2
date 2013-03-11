@@ -9,7 +9,7 @@ import qualified EFA.Graph as Gr
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 
 import qualified EFA.Equation.Record as Record
-import qualified EFA.Equation.Env as Env
+import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Symbolic.Mixed as Term

@@ -13,7 +13,7 @@ import EFA.Utility.Stream (Stream((:~)))
 
 import qualified EFA.Equation.Absolute as EqGen
 import qualified EFA.Equation.Record as Record
-import qualified EFA.Equation.Env as Env
+import qualified EFA.Equation.Environment as Env
 import EFA.Equation.System ((=.=))
 
 import qualified EFA.Graph.Topology.Index as Idx

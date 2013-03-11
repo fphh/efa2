@@ -12,7 +12,7 @@ import qualified EFA.Graph as Gr
 
 import qualified EFA.Equation.Absolute as EqGen
 import qualified EFA.Equation.Record as Record
-import qualified EFA.Equation.Env as Env
+import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Result as R
 import EFA.Equation.System ((=.=))

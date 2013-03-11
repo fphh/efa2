@@ -3,8 +3,6 @@
 
 module EFA.Signal.Sequence where
 
--- import qualified EFA.Equation.Env as Env
--- import EFA.Equation.Env (Env(..))
 
 import qualified EFA.Graph.Flow as Flow
 -- import qualified EFA.Graph.Topology.Index as Idx

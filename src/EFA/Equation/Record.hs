@@ -2,7 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 module EFA.Equation.Record where
 
-import qualified EFA.Equation.Env as Env
+import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Variable as Var
 
 import qualified EFA.Graph.Topology.Index as Idx

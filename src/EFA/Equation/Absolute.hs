@@ -9,7 +9,7 @@ import qualified EFA.Example.Utility as Utility
 
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.System as EqGen
-import qualified EFA.Equation.Env as Env
+import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Variable as Var
 import EFA.Equation.System ((=.=))
 import EFA.Equation.Result(Result(..))

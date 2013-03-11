@@ -90,7 +90,7 @@ Library
     EFA.Equation.Absolute
     EFA.Equation.System
     EFA.Equation.Result
-    EFA.Equation.Env
+    EFA.Equation.Environment
     EFA.Equation.Record
     EFA.Equation.Variable
     EFA.Equation.Arithmetic

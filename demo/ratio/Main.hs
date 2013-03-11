@@ -3,7 +3,7 @@
 module Main where
 
 import qualified EFA.Equation.Record as Record
-import qualified EFA.Equation.Env as Env
+import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Absolute as EqGen
 import EFA.Equation.System ((=.=))
 import EFA.Equation.Absolute ((.=))
