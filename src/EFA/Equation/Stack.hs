@@ -111,7 +111,7 @@ mul times plus x0@(Stack is0 _) y0@(Stack js0 _) =
                    EQ ->
                        Plus (go a0 b0)
                           (addMatch plus (go a0 b1) $
-                           addMatch plus (go a1 b0) $ go b0 b1)
+                           addMatch plus (go a1 b0) $ go a1 b1)
                    LT -> Plus (go a0 b) (go a1 b)
                    GT -> Plus (go a b0) (go a b1)
    in  Stack (MV.mergeIndices is0 js0) $ go x0 y0
