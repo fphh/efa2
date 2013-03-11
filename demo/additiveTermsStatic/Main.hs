@@ -5,6 +5,7 @@ import qualified EFA.Example.Utility as Utility
 import EFA.Example.Utility
           (symbol, edgeVar, makeEdges, constructSeqTopo)
 import EFA.Equation.System ((=.=))
+import EFA.Equation.Result (Result)
 
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Variable as Var
@@ -13,6 +14,8 @@ import qualified EFA.Equation.Env as Env
 import qualified EFA.Equation.Arithmetic as Arith
 
 import qualified EFA.Symbolic.SumProduct as SumProduct
+import qualified EFA.Symbolic.OperatorTree as Op
+import qualified EFA.Symbolic.Mixed as Term
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
@@ -31,6 +34,7 @@ import qualified Data.Accessor.Basic as Accessor
 import qualified UniqueLogic.ST.System as Sys
 
 
+import qualified Data.NonEmpty as NonEmpty
 import Control.Applicative (pure)
 import Data.Monoid (mempty, (<>))
 
@@ -183,6 +187,17 @@ givenSymbolic =
    mempty
 
 
+simplify ::SignalTerm -> SignalTerm
+simplify =
+   Term.Signal . Op.toNormalTerm .
+   NonEmpty.sum . Op.expand .
+   Op.fromNormalTerm . Term.getSignal
+
+simplifiedSummands ::
+   RecMultiDelta (Result SignalTerm) -> [Result SignalTerm]
+simplifiedSummands =
+   map (fmap simplify) . Record.summands
+
 main :: IO ()
 main = do
 
@@ -193,9 +208,9 @@ main = do
    putStrLn $ Format.unUnicode $ formatValue $
       Env.Complete
          (fmap Record.summands scalarEnv)
-         (fmap Record.summands signalEnv)
+         (fmap simplifiedSummands signalEnv)
 
    Draw.sequFlowGraphAbsWithEnv seqTopo $
       Env.Complete
          (fmap (Record.Absolute . Record.summands) scalarEnv)
-         (fmap (Record.Absolute . Record.summands) signalEnv)
+         (fmap (Record.Absolute . simplifiedSummands) signalEnv)
