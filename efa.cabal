@@ -348,7 +348,7 @@ Executable demo-slicezerocrosssignals
 Executable demo-undiredge
   Main-Is: demo/undirEdge/Main.hs
   GHC-Options: -Wall
-  If flag(buildExamples)
+  If flag(buildDemos)
     Build-Depends:
       efa,
       base
@@ -358,7 +358,7 @@ Executable demo-undiredge
 Executable demo-csvimport
   Main-Is: demo/CSVImport/Main.hs
   GHC-Options: -Wall
-  If flag(buildExamples)
+  If flag(buildDemos)
     Build-Depends:
       efa,
       base
@@ -368,7 +368,7 @@ Executable demo-csvimport
 Executable demo-pltimport
   Main-Is: demo/PLTImport/Main.hs
   GHC-Options: -Wall
-  If flag(buildExamples)
+  If flag(buildDemos)
     Build-Depends:
       efa,
       base
@@ -378,7 +378,7 @@ Executable demo-pltimport
 Executable demo-asciiimport
   Main-Is: demo/ASCIIImport/Main.hs
   GHC-Options: -Wall
-  If flag(buildExamples)
+  If flag(buildDemos)
     Build-Depends:
       efa,
       base
@@ -388,7 +388,7 @@ Executable demo-asciiimport
 Executable demo-ratio
   Main-Is: demo/ratio/Main.hs
   GHC-Options: -Wall
-  If flag(buildExamples)
+  If flag(buildDemos)
     Build-Depends:
       efa,
       base
@@ -398,7 +398,7 @@ Executable demo-ratio
 Executable demo-pretty
   Main-Is: demo/pretty/Main.hs
   GHC-Options: -Wall
-  If flag(buildExamples)
+  If flag(buildDemos)
     Build-Depends:
       efa,
       base,
@@ -409,7 +409,7 @@ Executable demo-pretty
 Executable demo-nodedefinition
   Main-Is: demo/nodeDefinition/Main.hs
   GHC-Options: -Wall
-  If flag(buildExamples)
+  If flag(buildDemos)
     Build-Depends:
       efa,
       base,
@@ -420,7 +420,7 @@ Executable demo-nodedefinition
 Executable demo-stateanalysis
   Main-Is: demo/stateAnalysis/Main.hs
   GHC-Options: -Wall
-  If flag(buildExamples)
+  If flag(buildDemos)
      Build-Depends:
        efa,
        base,
@@ -431,7 +431,7 @@ Executable demo-stateanalysis
 Executable demo-functioneta
   Main-Is: demo/functionEta/Main.hs
   GHC-Options: -Wall
-  If flag(buildExamples)
+  If flag(buildDemos)
      Build-Depends:
        efa,
        base
@@ -441,7 +441,7 @@ Executable demo-functioneta
 Executable demo-lookupeta
   Main-Is: demo/lookupEta/Main.hs
   GHC-Options: -Wall
-  If flag(buildExamples)
+  If flag(buildDemos)
      Build-Depends:
        efa,
        base
@@ -451,7 +451,7 @@ Executable demo-lookupeta
 Executable demo-deltaLogic
   Main-Is: demo/deltaLogic/Main.hs
   GHC-Options: -Wall
-  If flag(buildExamples)
+  If flag(buildDemos)
     Build-Depends:
       efa,
       base
