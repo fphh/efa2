@@ -19,8 +19,6 @@ import EFA.Utility (Pointed, point)
 
 import qualified EFA.Equation.Arithmetic as Arith
 
-import qualified UniqueLogic.ST.System as Sys
-
 import Data.Monoid ((<>))
 
 
@@ -115,7 +113,7 @@ givenSymbol ::
    Eq t, Arith.Sum t,
    EqGen.Element idx rec s
       (ScalarTerm rec term node) (SignalTerm rec term node)
-     ~ rec (Sys.Variable s t),
+     ~ EqGen.VariableRecord rec s t,
    EqGen.Record rec,
    Ord (idx node), Pointed term,
    Var.Type idx ~ var, Symbol var, Env.AccessMap idx) =>
@@ -132,7 +130,7 @@ infixr 6 =<>
    Eq t, Arith.Sum t,
    EqGen.Element idx rec s
       (ScalarTerm rec term node) (SignalTerm rec term node)
-     ~ rec (Sys.Variable s t),
+     ~ EqGen.VariableRecord rec s t,
    EqGen.Record rec,
    Ord (idx node), Pointed term,
    Var.Type idx ~ var, Symbol var, Env.AccessMap idx) =>
@@ -157,7 +155,7 @@ infix 0 .=, %=, #=, ~=
 
 (.=) ::
   (Eq x, Arith.Sum x, EqGen.Record rec,
-   EqGen.Element idx rec s a v ~ rec (Sys.Variable s x),
+   EqGen.Element idx rec s a v ~ EqGen.VariableRecord rec s x,
    Env.AccessMap idx, Ord (idx node)) =>
   Record.Indexed rec (idx node) -> x ->
   EqGen.EquationSystem rec node s a v
@@ -182,7 +180,7 @@ evar .= val  =  EqGen.variable evar =.= EqGen.constant val
 
 (%=) ::
   (Eq x, Arith.Sum x, EqGen.Record rec,
-   EqGen.Element idx rec s a v ~ rec (Sys.Variable s x),
+   EqGen.Element idx rec s a v ~ EqGen.VariableRecord rec s x,
    Env.AccessMap idx, Ord (idx node)) =>
   idx node -> rec x ->
   EqGen.EquationSystem rec node s a v

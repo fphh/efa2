@@ -262,7 +262,6 @@ Executable demo-additive-terms-static
     Build-Depends:
       efa,
       gnuplot,
-      unique-logic,
       non-empty,
       data-accessor,
       containers,

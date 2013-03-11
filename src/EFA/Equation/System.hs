@@ -4,7 +4,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module EFA.Equation.System (
   EquationSystem, Expression, RecordExpression,
-  Element,
+  Element, VariableRecord,
   fromGraph, fromEnvResult, fromEnv,
   solve, solveFromMeasurement, conservativelySolve,
   solveSimple,
@@ -396,11 +396,22 @@ type
          (rec (Sys.Variable s v))
        ~ rec (Sys.Variable s x)
 -}
+{- |
+I recommend to write the equality constraint like so:
+
+> Element idx rec s a v ~ VariableRecord rec s x
+-}
 type
    Element idx rec s a v =
       Env.Element idx
          (rec (Sys.Variable s a))
          (rec (Sys.Variable s v))
+
+{- |
+I recommend not to expand this type synonym.
+You should not rely on the fact, that we use unique-logic internally.
+-}
+type VariableRecord rec s x = rec (Sys.Variable s x)
 
 variableRecord ::
    (Eq x, Sum x, Env.AccessMap idx, Ord (idx node), Record rec,

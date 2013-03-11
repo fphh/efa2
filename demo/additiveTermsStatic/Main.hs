@@ -35,9 +35,6 @@ import EFA.Report.FormatValue (FormatValue, formatValue)
 
 import qualified Data.Accessor.Basic as Accessor
 
-import qualified UniqueLogic.ST.System as Sys
-
-
 import qualified Data.Foldable as Fold
 import qualified Data.Map as Map
 import qualified Data.NonEmpty as NonEmpty
@@ -179,7 +176,8 @@ infix 0 =%=, %=
 
 (%=) ::
    (Eq x, Arith.Sum x,
-    EqGen.Element idx RecMultiDelta s a v ~ RecMultiDelta (Sys.Variable s x),
+    EqGen.Element idx RecMultiDelta s a v
+       ~ EqGen.VariableRecord RecMultiDelta s x,
     Env.AccessMap idx, Ord (idx node), Var.Type idx ~ var) =>
    idx node -> RecMultiDelta x ->
    EqGen.EquationSystem RecMultiDelta node s a v
@@ -193,7 +191,7 @@ givenParameterSymbol ::
    (t ~ Utility.VarTerm var Idx.Delta SumProduct.Term Node.Int,
     Eq t, Arith.Sum t, Arith.Constant t,
     EqGen.Element idx RecMultiDelta s ScalarTerm SignalTerm
-      ~ RecMultiDelta (Sys.Variable s t),
+       ~ EqGen.VariableRecord RecMultiDelta s t,
     Ord (idx Node.Int),
     Var.Type idx ~ var, Utility.Symbol var, Env.AccessMap idx) =>
 

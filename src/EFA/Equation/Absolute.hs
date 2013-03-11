@@ -48,7 +48,7 @@ constant = EqGen.constant
 
 variable ::
    (Eq x, Arith.Sum x,
-    EqGen.Element idx Record.Absolute s a v ~ Record.Absolute (Sys.Variable s x),
+    EqGen.Element idx Record.Absolute s a v ~ EqGen.VariableRecord Record.Absolute s x,
     Env.AccessMap idx, Ord (idx node)) =>
    idx node -> Expression node s a v x
 variable = EqGen.variable . Idx.absolute
@@ -91,7 +91,7 @@ givenSymbol ::
    Eq t, Arith.Sum t,
    EqGen.Element idx Record.Absolute s
       (ScalarTerm term node) (SignalTerm term node)
-     ~ Record.Absolute (Sys.Variable s t),
+     ~ EqGen.VariableRecord Record.Absolute s t,
    Ord (idx node), Pointed term,
    Var.Type idx ~ var, Utility.Symbol var, Env.AccessMap idx) =>
   idx node ->
@@ -107,7 +107,7 @@ infixr 6 =<>
    Eq t, Arith.Sum t,
    EqGen.Element idx Record.Absolute s
       (ScalarTerm term node) (SignalTerm term node)
-     ~ Record.Absolute (Sys.Variable s t),
+     ~ EqGen.VariableRecord Record.Absolute s t,
    Ord (idx node), Pointed term,
    Var.Type idx ~ var, Utility.Symbol var, Env.AccessMap idx) =>
    idx node ->
@@ -120,10 +120,8 @@ infix 0 .=
 
 (.=) ::
   (Eq x, Arith.Sum x,
-   Env.Element idx
-      (Record.Absolute (Sys.Variable s a))
-      (Record.Absolute (Sys.Variable s v))
-      ~ Record.Absolute (Sys.Variable s x),
+   EqGen.Element idx Record.Absolute s a v
+      ~ EqGen.VariableRecord Record.Absolute s x,
    Env.AccessMap idx, Ord (idx node)) =>
    idx node -> x ->
    EquationSystem node s a v
