@@ -10,12 +10,12 @@ import EFA.Equation.Arithmetic
 
 import qualified Test.QuickCheck as QC
 
-import qualified Control.Monad.Trans.State as MS
 import qualified Data.Set as Set
 
 import qualified Data.Foldable as Fold
 import qualified Data.List.HT as ListHT
 import Control.Applicative (Applicative, pure, (<*>), liftA2)
+import Data.Traversable (Traversable, sequenceA)
 import Data.Foldable (Foldable, foldMap)
 import Data.Monoid ((<>))
 
@@ -46,6 +46,10 @@ instance Applicative Tree where
 instance Foldable Tree where
    foldMap f (Leaf a) = f a
    foldMap f (Branch a0 a1) = foldMap f a0 <> foldMap f a1
+
+instance Traversable Tree where
+   sequenceA (Leaf a) = fmap Leaf a
+   sequenceA (Branch a0 a1) = liftA2 Branch (sequenceA a0) (sequenceA a1)
 
 
 mergeTrees :: Ord i => [i] -> Tree a -> [i] -> Tree b -> Tree (a,b)
@@ -81,6 +85,12 @@ instance (Ord i) => Applicative (MultiValue i) where
       MultiValue
          (mergeIndices is js)
          (fmap (uncurry ($)) $ mergeTrees is a js b)
+
+instance (Ord i) => Foldable (MultiValue i) where
+   foldMap f (MultiValue _is a) = foldMap f a
+
+instance (Ord i) => Traversable (MultiValue i) where
+   sequenceA (MultiValue is a) = fmap (MultiValue is) $ sequenceA a
 
 
 instance (Ord i, Num a) => Num (MultiValue i a) where
@@ -127,26 +137,16 @@ pair i a0 a1 = MultiValue [i] (Branch (Leaf a0) (Leaf a1))
 deltaPair :: Sum a => i -> a -> a -> MultiValue i a
 deltaPair i a0 a1 = MultiValue [i] (Branch (Leaf a0) (Leaf (a0~+a1)))
 
+constant :: [i] -> a -> MultiValue i a
+constant is a = MultiValue is $ foldr (\_ b -> Branch b b) (Leaf a) is
 
 
 instance
    (QC.Arbitrary i, Ord i, QC.Arbitrary a) =>
       QC.Arbitrary (MultiValue i a) where
-   arbitrary = do
-      let go (_:is) = liftA2 Branch (go is) (go is)
-          go [] =
-             MS.state $ \at ->
-                case at of
-                   [] -> error "wrong calculation of maximum length of index list"
-                   a:as -> (Leaf a, as)
-
-      at <- liftA2 (:) QC.arbitrary QC.arbitrary
-      it <-
-         fmap
-            (take (floor $ logBase (2::Double) $ fromIntegral $ length at) .
-             Set.toList . Set.fromList)
-            QC.arbitrary
-      return $ MultiValue it $ MS.evalState (go it) at
+   arbitrary =
+      sequenceA . flip constant QC.arbitrary .
+         take 4 . Set.toList . Set.fromList =<< QC.arbitrary
 
    shrink (MultiValue it tree) =
       (case tree of
