@@ -242,8 +242,8 @@ Executable demo-symbolicDelta
   Else
     Buildable: False
 
-Executable demo-additive-terms
-  Main-Is: demo/additiveTerms/Main.hs
+Executable demo-additive-terms-dynamic
+  Main-Is: demo/additiveTermsDynamic/Main.hs
   GHC-Options: -Wall
   If flag(buildDemos)
     Build-Depends:
