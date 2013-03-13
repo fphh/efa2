@@ -191,17 +191,17 @@ absoluteRecord ::
 absoluteRecord = absolute
 
 
-infix 0 %=
+infix 0 ?=
 
 
-(%=) ::
+(?=) ::
    (Eq x, Arith.Sum x,
     EqGen.Element idx RecMultiDelta s a v
        ~ EqGen.VariableRecord RecMultiDelta s x,
     Env.AccessMap idx, Ord (idx node), Var.Type idx ~ var) =>
    idx node -> RecMultiDelta (Maybe x) ->
    EqGen.EquationSystem RecMultiDelta node s a v
-evar %= val  =
+evar ?= val  =
    Fold.fold $
    liftA2
       (\rec ->
@@ -221,12 +221,12 @@ givenParameterSymbol ::
    (t -> t -> RecMultiDelta (Maybe t)) -> idx Node.Int ->
    EquationSystemSymbolic s
 givenParameterSymbol param idx =
-   idx %= parameterSymbol param idx
+   idx ?= parameterSymbol param idx
 
 givenSymbolic :: EquationSystemSymbolic s
 givenSymbolic =
-   (Idx.DTime Idx.initSection %= absoluteRecord (Arith.fromInteger 1)) <>
-   (Idx.DTime sec0 %= absoluteRecord (Arith.fromInteger 1)) <>
+   (Idx.DTime Idx.initSection ?= absoluteRecord (Arith.fromInteger 1)) <>
+   (Idx.DTime sec0 ?= absoluteRecord (Arith.fromInteger 1)) <>
 
    givenParameterSymbol param2 ein <>
    givenParameterSymbol param1 eta0 <>
@@ -274,13 +274,13 @@ givenParameterNumber ::
    (Double -> Double -> RecMultiDelta (Maybe Double)) ->
    idx Node.Int -> Double -> Double -> EquationSystemNumeric s
 givenParameterNumber param idx before delta =
-   idx %= parameterRecord param before delta
+   idx ?= parameterRecord param before delta
 
 
 givenNumeric :: EquationSystemNumeric s
 givenNumeric =
-   (Idx.DTime Idx.initSection %= absoluteRecord 1) <>
-   (Idx.DTime sec0 %= absoluteRecord 1) <>
+   (Idx.DTime Idx.initSection ?= absoluteRecord 1) <>
+   (Idx.DTime sec0 ?= absoluteRecord 1) <>
 
    givenParameterNumber param2 ein 4 (-0.6) <>
    givenParameterNumber param1 eta0 0.25 0.1 <>
