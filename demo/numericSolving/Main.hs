@@ -1,9 +1,9 @@
 module Main where
 
 import EFA.Example.Utility ( edgeVar, makeEdges, constructSeqTopo )
-import EFA.Equation.Absolute ( (.=) )
+import EFA.Example.Absolute ( (.=) )
 
-import qualified EFA.Equation.Absolute as EqGen
+import qualified EFA.Example.Absolute as EqGen
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as TD

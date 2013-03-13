@@ -6,7 +6,7 @@ module Main where
 -- * Import other Modules
 
 import EFA.Example.Utility (edgeVar)
-import EFA.Equation.Absolute ((.=))
+import EFA.Example.Absolute ((.=))
 import qualified EFA.Equation.System as EqGen
 --import EFA.IO.CSVImport (modelicaCSVImport)
 import EFA.IO.PLTImport (modelicaPLTImport)

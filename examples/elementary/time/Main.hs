@@ -3,7 +3,7 @@
 module Main where
 
 import EFA.Example.Utility ( edgeVar, interVar, makeEdges, constructSeqTopo, )
-import EFA.Equation.Absolute ((.=))
+import EFA.Example.Absolute ((.=))
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Async (concurrentlyMany_)
@@ -11,7 +11,7 @@ import EFA.Utility (checkedLookup)
 
 import EFA.Utility.Stream (Stream((:~)))
 
-import qualified EFA.Equation.Absolute as EqGen
+import qualified EFA.Example.Absolute as EqGen
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
 import EFA.Equation.System ((=.=))

@@ -87,7 +87,6 @@ Library
     EFA.Graph.Topology.Node
     EFA.Graph.Topology.StateAnalysis
     EFA.Graph.Flow
-    EFA.Equation.Absolute
     EFA.Equation.System
     EFA.Equation.Result
     EFA.Equation.Environment
@@ -97,6 +96,7 @@ Library
     EFA.Equation.MultiValue
     EFA.Equation.Stack
     EFA.Example.Utility
+    EFA.Example.Absolute
     EFA.Example.NestedDelta
 
 

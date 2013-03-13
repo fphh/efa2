@@ -5,8 +5,8 @@ module Main where
 
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
-import qualified EFA.Equation.Absolute as EqSys
-import EFA.Equation.Absolute ((.=), (=.=))
+import qualified EFA.Example.Absolute as EqSys
+import EFA.Example.Absolute ((.=), (=.=))
 import EFA.Example.Utility (constructSeqTopo, edgeVar, makeEdges)
 
 import qualified EFA.Graph.Topology.Index as Idx

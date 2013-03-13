@@ -1,7 +1,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE Rank2Types #-}
-module EFA.Equation.Absolute (
-   module EFA.Equation.Absolute,
+module EFA.Example.Absolute (
+   module EFA.Example.Absolute,
    (=.=),
    ) where
 

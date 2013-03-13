@@ -4,11 +4,11 @@ module Main where
 import qualified EFA.Example.Utility as Utility
 import EFA.Example.Utility
           (edgeVar, makeEdges, constructSeqTopo)
-import EFA.Equation.Absolute ((.=))
+import EFA.Example.Absolute ((.=))
 import EFA.Equation.Stack (Stack)
 
 import qualified EFA.Equation.Stack as Stack
-import qualified EFA.Equation.Absolute as EqGen
+import qualified EFA.Example.Absolute as EqGen
 import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Record as Record

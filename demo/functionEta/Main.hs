@@ -3,8 +3,8 @@ module Main where
 
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
-import qualified EFA.Equation.Absolute as EqGen
-import EFA.Equation.Absolute ((.=))
+import qualified EFA.Example.Absolute as EqGen
+import EFA.Example.Absolute ((.=))
 import EFA.Equation.System ((=.=))
 import EFA.Example.Utility
   (constructSeqTopo, edgeVar, makeEdges)
