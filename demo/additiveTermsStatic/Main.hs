@@ -191,16 +191,7 @@ absoluteRecord ::
 absoluteRecord = absolute
 
 
-infix 0 =%=, %=
-
-(=%=) ::
-   Eq x =>
-   RecMultiDelta (EqGen.Expression rec node s a v x) ->
-   RecMultiDelta (Maybe (EqGen.Expression rec node s a v x)) ->
-   EqGen.EquationSystem rec node s a v
-(=%=) as bs =
-   Fold.fold $
-   liftA2 (\a -> Fold.foldMap (\b -> a=.=b)) as bs
+infix 0 %=
 
 
 (%=) ::
@@ -211,9 +202,12 @@ infix 0 =%=, %=
    idx node -> RecMultiDelta (Maybe x) ->
    EqGen.EquationSystem RecMultiDelta node s a v
 evar %= val  =
-   fmap (EqGen.variable . flip Idx.Record evar) Record.indices
-   =%=
-   fmap (fmap EqGen.constant) val
+   Fold.fold $
+   liftA2
+      (\rec ->
+         Fold.foldMap
+            (\x -> EqGen.variable (Idx.Record rec evar) =.= EqGen.constant x))
+      Record.indices val
 
 
 givenParameterSymbol ::
