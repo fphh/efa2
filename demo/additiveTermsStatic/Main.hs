@@ -81,8 +81,8 @@ data Extruder f a =
          a -> a -> Record.ExtDelta f (Maybe a)
    }
 
-extrudeStart :: a -> Record.Absolute (Maybe a)
-extrudeStart = Record.Absolute . Just
+extrudeStart :: InnerExtrusion Record.Absolute a
+extrudeStart = InnerExtrusion $ Record.Absolute . Just
 
 
 beforeDelta :: (Applicative f, Arith.Sum a) => Extruder f a
@@ -102,35 +102,46 @@ beforeDelta =
          }
    }
 
+
+newtype
+   InnerExtrusion f a =
+      InnerExtrusion {runInnerExtrusion :: a -> f (Maybe a)}
+newtype
+   OuterExtrusion f a =
+      OuterExtrusion {runOuterExtrusion :: a -> a -> f (Maybe a)}
+
+
 infixr 0 <&, <&>, &>
 
 (&>) ::
    (Arith.Sum a) =>
    Extruder f a ->
-   (a -> f (Maybe a)) ->
-   (a -> Record.ExtDelta f (Maybe a))
-(e &> f) x = extrudeInner e f x (clear x)
+   InnerExtrusion f a ->
+   InnerExtrusion (Record.ExtDelta f) a
+e &> InnerExtrusion f =
+   InnerExtrusion $ \x -> extrudeInner e f x (clear x)
 
 (<&>) ::
    (Arith.Sum a) =>
    Extruder f a ->
-   (a -> f (Maybe a)) ->
-   (a -> a -> Record.ExtDelta f (Maybe a))
-(<&>) = extrudeInner
+   InnerExtrusion f a ->
+   OuterExtrusion (Record.ExtDelta f) a
+e <&> InnerExtrusion f = OuterExtrusion $ extrudeInner e f
 
 (<&) ::
    (Arith.Sum a) =>
    Extruder f a ->
-   (a -> a -> f (Maybe a)) ->
-   (a -> a -> Record.ExtDelta f (Maybe a))
-(e <& f) x y = extrudeOuter e $ f x y
+   OuterExtrusion f a ->
+   OuterExtrusion (Record.ExtDelta f) a
+e <& OuterExtrusion f =
+   OuterExtrusion $ \x y -> extrudeOuter e $ f x y
 
 
 
-absolute :: (Arith.Sum a) => a -> RecMultiDelta (Maybe a)
+absolute :: (Arith.Sum a) => InnerExtrusion RecMultiDelta a
 absolute = beforeDelta &> beforeDelta  &> beforeDelta  &> extrudeStart
 
-param0, param1, param2 :: (Arith.Sum a) => a -> a -> RecMultiDelta (Maybe a)
+param0, param1, param2 :: (Arith.Sum a) => OuterExtrusion RecMultiDelta a
 param0 = beforeDelta <&  beforeDelta <&  beforeDelta <&> extrudeStart
 param1 = beforeDelta <&  beforeDelta <&> beforeDelta  &> extrudeStart
 param2 = beforeDelta <&> beforeDelta  &> beforeDelta  &> extrudeStart
@@ -160,11 +171,11 @@ parameterSymbol ::
     Ord (idx Node.Int),
     Var.Type idx ~ var, Utility.Symbol var, Env.AccessMap idx) =>
 
-   (t -> t -> RecMultiDelta (Maybe t)) ->
+   OuterExtrusion RecMultiDelta t ->
    idx Node.Int -> RecMultiDelta (Maybe t)
 
 parameterSymbol param idx =
-   param
+   runOuterExtrusion param
       (symbol (Idx.before $ Var.index idx))
       (symbol (Idx.delta $ Var.index idx))
 
@@ -181,14 +192,14 @@ absoluteSymbol idx =
 
 parameterRecord ::
    (Arith.Sum x) =>
-   (x -> x -> RecMultiDelta (Maybe x)) ->
+   OuterExtrusion RecMultiDelta x ->
    x -> x -> RecMultiDelta (Maybe x)
-parameterRecord = id
+parameterRecord = runOuterExtrusion
 
 absoluteRecord ::
    (Arith.Sum x) =>
    x -> RecMultiDelta (Maybe x)
-absoluteRecord = absolute
+absoluteRecord = runInnerExtrusion absolute
 
 
 infix 0 ?=
@@ -218,7 +229,7 @@ givenParameterSymbol ::
     Ord (idx Node.Int),
     Var.Type idx ~ var, Utility.Symbol var, Env.AccessMap idx) =>
 
-   (t -> t -> RecMultiDelta (Maybe t)) -> idx Node.Int ->
+   OuterExtrusion RecMultiDelta t -> idx Node.Int ->
    EquationSystemSymbolic s
 givenParameterSymbol param idx =
    idx ?= parameterSymbol param idx
@@ -271,7 +282,7 @@ type
 givenParameterNumber ::
    (Ord (idx Node.Int), Env.AccessMap idx,
     Var.Index idx, Var.Type idx ~ Var.Signal) =>
-   (Double -> Double -> RecMultiDelta (Maybe Double)) ->
+   (OuterExtrusion RecMultiDelta Double) ->
    idx Node.Int -> Double -> Double -> EquationSystemNumeric s
 givenParameterNumber param idx before delta =
    idx ?= parameterRecord param before delta
