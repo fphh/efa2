@@ -47,6 +47,40 @@ beforeDelta =
          }
    }
 
+beforeAfter :: (Applicative f, Arith.Sum a) => Extruder f a
+beforeAfter =
+   Extruder {
+      extrudeOuter = \x ->
+         Record.ExtDelta {
+            Record.extBefore = x,
+            Record.extAfter = fmap (fmap Arith.clear) x,
+            Record.extDelta = pure Nothing
+         },
+      extrudeInner = \cons x y ->
+         Record.ExtDelta {
+            Record.extBefore = cons x,
+            Record.extAfter = cons y,
+            Record.extDelta = pure Nothing
+         }
+   }
+
+afterDelta :: (Applicative f, Arith.Sum a) => Extruder f a
+afterDelta =
+   Extruder {
+      extrudeOuter = \x ->
+         Record.ExtDelta {
+            Record.extBefore = pure Nothing,
+            Record.extAfter = x,
+            Record.extDelta = fmap (fmap Arith.clear) x
+         },
+      extrudeInner = \cons x y ->
+         Record.ExtDelta {
+            Record.extBefore = pure Nothing,
+            Record.extAfter = cons x,
+            Record.extDelta = cons y
+         }
+   }
+
 
 newtype
    InnerExtrusion f a =
