@@ -123,12 +123,12 @@ infixr 0 &&>
 data
    ParameterRecord g f a =
       ParameterRecord {
-         getInnerCube :: InnerExtrusion f a,
+         getAbsoluteRecord :: InnerExtrusion f a,
          getParameterRecord :: g (OuterExtrusion f a)
       }
 
 parameterStart :: ParameterRecord NonEmpty.Empty Record.Absolute a
-parameterStart = ParameterRecord absolute NonEmpty.Empty
+parameterStart = ParameterRecord extrudeStart NonEmpty.Empty
 
 (&&>) ::
    (Functor g, Arith.Sum a) =>
@@ -156,16 +156,17 @@ parameterSymbol param idx =
       (Utility.symbol (Idx.delta $ Var.index idx))
 
 absoluteSymbol ::
-   (Absolute rec, Pointed term,
+   (Pointed term,
     t ~ Utility.VarTerm var Idx.Delta term node,
     Eq t, Arith.Sum t, Arith.Constant t,
     Ord (idx node),
     Var.Type idx ~ var, Utility.Symbol var, Env.AccessMap idx) =>
 
+   InnerExtrusion rec t ->
    idx node -> rec (Maybe t)
 
-absoluteSymbol idx =
-   absoluteRecord (Utility.symbol (Idx.before $ Var.index idx))
+absoluteSymbol absolute idx =
+   absoluteRecord absolute (Utility.symbol (Idx.before $ Var.index idx))
 
 parameterRecord ::
    (Arith.Sum x) =>
@@ -174,36 +175,10 @@ parameterRecord ::
 parameterRecord = runOuterExtrusion
 
 absoluteRecord ::
-   (Absolute rec, Arith.Sum x) =>
+   (Arith.Sum x) =>
+   InnerExtrusion rec x ->
    x -> rec (Maybe x)
-absoluteRecord = runInnerExtrusion absolute
-
-
-class Absolute rec where
-   absolute :: InnerExtrusion rec a
-
-instance Absolute Record.Absolute where
-   absolute = extrudeStart
-
-instance Absolute Record.Delta where
-   absolute =
-      InnerExtrusion $ \x ->
-         Record.Delta {
-            Record.before = Just x,
-            Record.delta = Nothing,
-            Record.after = Nothing
-         }
-
-instance
-   (Absolute f, Applicative f) =>
-      Absolute (Record.ExtDelta f) where
-   absolute =
-      InnerExtrusion $ \x ->
-         Record.ExtDelta {
-            Record.extBefore = runInnerExtrusion absolute x,
-            Record.extDelta = pure Nothing,
-            Record.extAfter = pure Nothing
-         }
+absoluteRecord = runInnerExtrusion
 
 
 

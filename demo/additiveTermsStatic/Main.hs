@@ -4,7 +4,8 @@ module Main where
 import qualified EFA.Example.NestedDelta as NestedDelta
 import qualified EFA.Example.Utility as Utility
 import EFA.Example.NestedDelta
-          (absoluteRecord, givenParameterSymbol, givenParameterNumber,
+          (ParameterRecord,
+           givenParameterSymbol, givenParameterNumber,
            beforeDelta, extrudeStart,
            (<&), (<&>), (&>), (&&>), (?=))
 import EFA.Example.Utility
@@ -73,6 +74,10 @@ type
 
 
 
+_absolute, absolute ::
+   (Arith.Sum a) => NestedDelta.InnerExtrusion RecMultiDelta a
+_absolute = beforeDelta  &> beforeDelta  &> beforeDelta  &> extrudeStart
+
 param0, param1, param2 ::
    (Arith.Sum a) => NestedDelta.OuterExtrusion RecMultiDelta a
 param0 = beforeDelta <&  beforeDelta <&  beforeDelta <&> extrudeStart
@@ -80,13 +85,20 @@ param1 = beforeDelta <&  beforeDelta <&> beforeDelta  &> extrudeStart
 param2 = beforeDelta <&> beforeDelta  &> beforeDelta  &> extrudeStart
 
 
+absolute = NestedDelta.getAbsoluteRecord params
+
 params ::
    (Arith.Sum a) =>
-   NonEmpty.T (NonEmpty.T (NonEmpty.T NonEmpty.Empty))
-      (NestedDelta.OuterExtrusion RecMultiDelta a)
+   ParameterRecord
+      (NonEmpty.T (NonEmpty.T (NonEmpty.T NonEmpty.Empty)))
+      RecMultiDelta a
 params =
-   NestedDelta.getParameterRecord
-      (beforeDelta &&> beforeDelta &&> beforeDelta &&> NestedDelta.parameterStart)
+   beforeDelta &&> beforeDelta &&> beforeDelta &&> NestedDelta.parameterStart
+
+absoluteRecord ::
+   (Arith.Sum x) =>
+   x -> RecMultiDelta (Maybe x)
+absoluteRecord = NestedDelta.absoluteRecord absolute
 
 
 eout, ein :: Idx.Energy Node.Int
@@ -124,11 +136,12 @@ givenSymbolic =
    (Idx.DTime sec0 ?= absoluteRecord (Arith.fromInteger 1)) <>
 
    Fold.fold
-      (NonEmpty.zipWith (flip ($)) params $
-          givenParameterSymbol ein  !:
+      (NonEmpty.zipWith ($)
+         (givenParameterSymbol ein  !:
           givenParameterSymbol eta0 !:
           givenParameterSymbol eta1 !:
-          NonEmpty.Empty) <>
+          NonEmpty.Empty)
+         (NestedDelta.getParameterRecord params)) <>
 
    mempty
 
@@ -184,11 +197,12 @@ givenNumeric =
    (Idx.DTime sec0 ?= absoluteRecord 1) <>
 
    Fold.fold
-      (NonEmpty.zipWith (flip ($)) params $
-          givenParameterNumber ein  4.00 (-0.6) !:
+      (NonEmpty.zipWith ($)
+         (givenParameterNumber ein  4.00 (-0.6) !:
           givenParameterNumber eta0 0.25   0.1  !:
           givenParameterNumber eta1 0.85   0.05 !:
-          NonEmpty.Empty) <>
+          NonEmpty.Empty)
+         (NestedDelta.getParameterRecord params)) <>
 
    mempty
 
