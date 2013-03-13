@@ -75,8 +75,8 @@ clear x = x~-x
 
 data Extruder f a =
    Extruder {
-      extrudeLeft :: f (Maybe a) -> Record.ExtDelta f (Maybe a),
-      extrudeRight ::
+      extrudeOuter :: f (Maybe a) -> Record.ExtDelta f (Maybe a),
+      extrudeInner ::
          (a -> f (Maybe a)) ->
          a -> a -> Record.ExtDelta f (Maybe a)
    }
@@ -88,13 +88,13 @@ extrudeStart = Record.Absolute . Just
 beforeDelta :: (Applicative f, Arith.Sum a) => Extruder f a
 beforeDelta =
    Extruder {
-      extrudeLeft = \x ->
+      extrudeOuter = \x ->
          Record.ExtDelta {
             Record.extBefore = x,
             Record.extAfter = pure Nothing,
             Record.extDelta = fmap (fmap clear) x
          },
-      extrudeRight = \cons x y ->
+      extrudeInner = \cons x y ->
          Record.ExtDelta {
             Record.extBefore = cons x,
             Record.extAfter = pure Nothing,
@@ -109,21 +109,21 @@ infixr 0 <&, <&>, &>
    Extruder f a ->
    (a -> f (Maybe a)) ->
    (a -> Record.ExtDelta f (Maybe a))
-(e &> f) x = extrudeRight e f x (clear x)
+(e &> f) x = extrudeInner e f x (clear x)
 
 (<&>) ::
    (Arith.Sum a) =>
    Extruder f a ->
    (a -> f (Maybe a)) ->
    (a -> a -> Record.ExtDelta f (Maybe a))
-(<&>) = extrudeRight
+(<&>) = extrudeInner
 
 (<&) ::
    (Arith.Sum a) =>
    Extruder f a ->
    (a -> a -> f (Maybe a)) ->
    (a -> a -> Record.ExtDelta f (Maybe a))
-(e <& f) x y = extrudeLeft e $ f x y
+(e <& f) x y = extrudeOuter e $ f x y
 
 
 
