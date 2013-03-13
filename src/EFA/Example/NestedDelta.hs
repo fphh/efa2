@@ -13,6 +13,7 @@ import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Graph.Topology.Index as Idx
 import EFA.Utility (Pointed)
 
+import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Foldable as Fold
 import Control.Applicative (Applicative, pure, liftA2)
 
@@ -117,6 +118,28 @@ e <& OuterExtrusion f =
 
 
 
+infixr 0 &&>
+
+data
+   ParameterRecord g f a =
+      ParameterRecord {
+         getInnerCube :: InnerExtrusion f a,
+         getParameterRecord :: g (OuterExtrusion f a)
+      }
+
+parameterStart :: ParameterRecord NonEmpty.Empty Record.Absolute a
+parameterStart = ParameterRecord absolute NonEmpty.Empty
+
+(&&>) ::
+   (Functor g, Arith.Sum a) =>
+   Extruder f a ->
+   ParameterRecord g f a ->
+   ParameterRecord (NonEmpty.T g) (Record.ExtDelta f) a
+e &&> ParameterRecord inner xs =
+   ParameterRecord (e&>inner)
+      (NonEmpty.Cons (e<&>inner) $ fmap (e<&) xs)
+
+
 parameterSymbol ::
    (Pointed term,
     t ~ Utility.VarTerm var Idx.Delta term node,
@@ -213,12 +236,11 @@ givenParameterSymbol ::
     Ord (idx node),
     Var.Type idx ~ var, Utility.Symbol var, Env.AccessMap idx) =>
 
-   OuterExtrusion rec t -> idx node ->
+   idx node ->
+   OuterExtrusion rec t ->
    EqGen.EquationSystem rec node s scalar signal
-givenParameterSymbol param idx =
+givenParameterSymbol idx param =
    idx ?= parameterSymbol param idx
-
-
 
 
 givenParameterNumber ::
@@ -227,8 +249,8 @@ givenParameterNumber ::
     Ord (idx node), Env.AccessMap idx, Var.Index idx,
     EqGen.Element idx rec s a v
        ~ EqGen.VariableRecord rec s x) =>
-   OuterExtrusion rec x ->
    idx node -> x -> x ->
+   OuterExtrusion rec x ->
    EqGen.EquationSystem rec node s a v
-givenParameterNumber param idx before delta =
-   idx ?= parameterRecord param before delta
+givenParameterNumber idx x y param =
+   idx ?= parameterRecord param x y

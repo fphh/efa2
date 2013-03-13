@@ -6,7 +6,7 @@ import qualified EFA.Example.Utility as Utility
 import EFA.Example.NestedDelta
           (absoluteRecord, givenParameterSymbol, givenParameterNumber,
            beforeDelta, extrudeStart,
-           (<&), (<&>), (&>), (?=))
+           (<&), (<&>), (&>), (&&>), (?=))
 import EFA.Example.Utility
           (symbol, edgeVar, makeEdges, constructSeqTopo)
 import EFA.Equation.Arithmetic ((~*))
@@ -40,6 +40,7 @@ import EFA.Report.FormatValue (FormatValue, formatValue)
 import qualified Data.Foldable as Fold
 import qualified Data.Map as Map
 import qualified Data.NonEmpty as NonEmpty
+import Data.NonEmpty ((!:))
 import Data.Monoid (mempty, (<>))
 import Data.Tuple.HT (mapFst, mapSnd)
 
@@ -79,6 +80,15 @@ param1 = beforeDelta <&  beforeDelta <&> beforeDelta  &> extrudeStart
 param2 = beforeDelta <&> beforeDelta  &> beforeDelta  &> extrudeStart
 
 
+params ::
+   (Arith.Sum a) =>
+   NonEmpty.T (NonEmpty.T (NonEmpty.T NonEmpty.Empty))
+      (NestedDelta.OuterExtrusion RecMultiDelta a)
+params =
+   NestedDelta.getParameterRecord
+      (beforeDelta &&> beforeDelta &&> beforeDelta &&> NestedDelta.parameterStart)
+
+
 eout, ein :: Idx.Energy Node.Int
 ein  = edgeVar Idx.Energy sec0 node0 node1
 eout = edgeVar Idx.Energy sec0 node2 node1
@@ -97,14 +107,28 @@ termFromIndex
 
 
 
+_givenSymbolic :: EquationSystemSymbolic s
+_givenSymbolic =
+   (Idx.DTime Idx.initSection ?= absoluteRecord (Arith.fromInteger 1)) <>
+   (Idx.DTime sec0 ?= absoluteRecord (Arith.fromInteger 1)) <>
+
+   givenParameterSymbol ein  param2 <>
+   givenParameterSymbol eta0 param1 <>
+   givenParameterSymbol eta1 param0 <>
+
+   mempty
+
 givenSymbolic :: EquationSystemSymbolic s
 givenSymbolic =
    (Idx.DTime Idx.initSection ?= absoluteRecord (Arith.fromInteger 1)) <>
    (Idx.DTime sec0 ?= absoluteRecord (Arith.fromInteger 1)) <>
 
-   givenParameterSymbol param2 ein <>
-   givenParameterSymbol param1 eta0 <>
-   givenParameterSymbol param0 eta1 <>
+   Fold.fold
+      (NonEmpty.zipWith (flip ($)) params $
+          givenParameterSymbol ein  !:
+          givenParameterSymbol eta0 !:
+          givenParameterSymbol eta1 !:
+          NonEmpty.Empty) <>
 
    mempty
 
@@ -143,14 +167,28 @@ type
       EqGen.EquationSystem RecMultiDelta Node.Int s Double Double
 
 
+_givenNumeric :: EquationSystemNumeric s
+_givenNumeric =
+   (Idx.DTime Idx.initSection ?= absoluteRecord 1) <>
+   (Idx.DTime sec0 ?= absoluteRecord 1) <>
+
+   givenParameterNumber ein  4.00 (-0.6) param2 <>
+   givenParameterNumber eta0 0.25   0.1  param1 <>
+   givenParameterNumber eta1 0.85   0.05 param0 <>
+
+   mempty
+
 givenNumeric :: EquationSystemNumeric s
 givenNumeric =
    (Idx.DTime Idx.initSection ?= absoluteRecord 1) <>
    (Idx.DTime sec0 ?= absoluteRecord 1) <>
 
-   givenParameterNumber param2 ein 4 (-0.6) <>
-   givenParameterNumber param1 eta0 0.25 0.1 <>
-   givenParameterNumber param0 eta1 0.85 0.05 <>
+   Fold.fold
+      (NonEmpty.zipWith (flip ($)) params $
+          givenParameterNumber ein  4.00 (-0.6) !:
+          givenParameterNumber eta0 0.25   0.1  !:
+          givenParameterNumber eta1 0.85   0.05 !:
+          NonEmpty.Empty) <>
 
    mempty
 
