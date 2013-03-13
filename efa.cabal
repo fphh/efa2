@@ -97,6 +97,7 @@ Library
     EFA.Equation.MultiValue
     EFA.Equation.Stack
     EFA.Example.Utility
+    EFA.Example.NestedDelta
 
 
 -- sollte man auf Cabal-Test umstellen,

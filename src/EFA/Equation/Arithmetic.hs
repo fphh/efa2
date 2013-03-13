@@ -124,3 +124,13 @@ instance (Constant a) => Integrate [a] where
 instance (Integrate v) => Integrate (Expr.T s v) where
    type Scalar (Expr.T s v) = Expr.T s (Scalar v)
    integrate = Expr.fromRule2 . Sys.assignment2 "" $ integrate
+
+
+{- |
+Construct a zero that is compatible with the argument.
+E.g. for a signal argument it creates
+a signal of the same length filled with zeros.
+In the future we might make this a method of the Sum class.
+-}
+clear :: Sum a => a -> a
+clear x = x~-x

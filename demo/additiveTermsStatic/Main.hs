@@ -1,11 +1,15 @@
 {-# LANGUAGE TypeFamilies #-}
 module Main where
 
+import qualified EFA.Example.NestedDelta as NestedDelta
 import qualified EFA.Example.Utility as Utility
+import EFA.Example.NestedDelta
+          (absoluteRecord, givenParameterSymbol, givenParameterNumber,
+           beforeDelta, extrudeStart,
+           (<&), (<&>), (&>), (?=))
 import EFA.Example.Utility
           (symbol, edgeVar, makeEdges, constructSeqTopo)
-import EFA.Equation.Arithmetic ((~-), (~*))
-import EFA.Equation.System ((=.=))
+import EFA.Equation.Arithmetic ((~*))
 import EFA.Equation.Result (Result)
 
 import qualified EFA.Equation.System as EqGen
@@ -36,7 +40,6 @@ import EFA.Report.FormatValue (FormatValue, formatValue)
 import qualified Data.Foldable as Fold
 import qualified Data.Map as Map
 import qualified Data.NonEmpty as NonEmpty
-import Control.Applicative (Applicative, pure, liftA2)
 import Data.Monoid (mempty, (<>))
 import Data.Tuple.HT (mapFst, mapSnd)
 
@@ -69,79 +72,8 @@ type
 
 
 
-clear :: Arith.Sum a => a -> a
-clear x = x~-x
-
-
-data Extruder f a =
-   Extruder {
-      extrudeOuter :: f (Maybe a) -> Record.ExtDelta f (Maybe a),
-      extrudeInner ::
-         (a -> f (Maybe a)) ->
-         a -> a -> Record.ExtDelta f (Maybe a)
-   }
-
-extrudeStart :: InnerExtrusion Record.Absolute a
-extrudeStart = InnerExtrusion $ Record.Absolute . Just
-
-
-beforeDelta :: (Applicative f, Arith.Sum a) => Extruder f a
-beforeDelta =
-   Extruder {
-      extrudeOuter = \x ->
-         Record.ExtDelta {
-            Record.extBefore = x,
-            Record.extAfter = pure Nothing,
-            Record.extDelta = fmap (fmap clear) x
-         },
-      extrudeInner = \cons x y ->
-         Record.ExtDelta {
-            Record.extBefore = cons x,
-            Record.extAfter = pure Nothing,
-            Record.extDelta = cons y
-         }
-   }
-
-
-newtype
-   InnerExtrusion f a =
-      InnerExtrusion {runInnerExtrusion :: a -> f (Maybe a)}
-newtype
-   OuterExtrusion f a =
-      OuterExtrusion {runOuterExtrusion :: a -> a -> f (Maybe a)}
-
-
-infixr 0 <&, <&>, &>
-
-(&>) ::
-   (Arith.Sum a) =>
-   Extruder f a ->
-   InnerExtrusion f a ->
-   InnerExtrusion (Record.ExtDelta f) a
-e &> InnerExtrusion f =
-   InnerExtrusion $ \x -> extrudeInner e f x (clear x)
-
-(<&>) ::
-   (Arith.Sum a) =>
-   Extruder f a ->
-   InnerExtrusion f a ->
-   OuterExtrusion (Record.ExtDelta f) a
-e <&> InnerExtrusion f = OuterExtrusion $ extrudeInner e f
-
-(<&) ::
-   (Arith.Sum a) =>
-   Extruder f a ->
-   OuterExtrusion f a ->
-   OuterExtrusion (Record.ExtDelta f) a
-e <& OuterExtrusion f =
-   OuterExtrusion $ \x y -> extrudeOuter e $ f x y
-
-
-
-absolute :: (Arith.Sum a) => InnerExtrusion RecMultiDelta a
-absolute = beforeDelta &> beforeDelta  &> beforeDelta  &> extrudeStart
-
-param0, param1, param2 :: (Arith.Sum a) => OuterExtrusion RecMultiDelta a
+param0, param1, param2 ::
+   (Arith.Sum a) => NestedDelta.OuterExtrusion RecMultiDelta a
 param0 = beforeDelta <&  beforeDelta <&  beforeDelta <&> extrudeStart
 param1 = beforeDelta <&  beforeDelta <&> beforeDelta  &> extrudeStart
 param2 = beforeDelta <&> beforeDelta  &> beforeDelta  &> extrudeStart
@@ -164,75 +96,6 @@ termFromIndex
    symbol (Idx.Record r0 (Var.index eta1))
 
 
-
-parameterSymbol ::
-   (t ~ Utility.VarTerm var Idx.Delta SumProduct.Term Node.Int,
-    Eq t, Arith.Sum t, Arith.Constant t,
-    Ord (idx Node.Int),
-    Var.Type idx ~ var, Utility.Symbol var, Env.AccessMap idx) =>
-
-   OuterExtrusion RecMultiDelta t ->
-   idx Node.Int -> RecMultiDelta (Maybe t)
-
-parameterSymbol param idx =
-   runOuterExtrusion param
-      (symbol (Idx.before $ Var.index idx))
-      (symbol (Idx.delta $ Var.index idx))
-
-absoluteSymbol ::
-   (t ~ Utility.VarTerm var Idx.Delta SumProduct.Term Node.Int,
-    Eq t, Arith.Sum t, Arith.Constant t,
-    Ord (idx Node.Int),
-    Var.Type idx ~ var, Utility.Symbol var, Env.AccessMap idx) =>
-
-   idx Node.Int -> RecMultiDelta (Maybe t)
-
-absoluteSymbol idx =
-   absoluteRecord (symbol (Idx.before $ Var.index idx))
-
-parameterRecord ::
-   (Arith.Sum x) =>
-   OuterExtrusion RecMultiDelta x ->
-   x -> x -> RecMultiDelta (Maybe x)
-parameterRecord = runOuterExtrusion
-
-absoluteRecord ::
-   (Arith.Sum x) =>
-   x -> RecMultiDelta (Maybe x)
-absoluteRecord = runInnerExtrusion absolute
-
-
-infix 0 ?=
-
-
-(?=) ::
-   (Eq x, Arith.Sum x,
-    EqGen.Element idx RecMultiDelta s a v
-       ~ EqGen.VariableRecord RecMultiDelta s x,
-    Env.AccessMap idx, Ord (idx node), Var.Type idx ~ var) =>
-   idx node -> RecMultiDelta (Maybe x) ->
-   EqGen.EquationSystem RecMultiDelta node s a v
-evar ?= val  =
-   Fold.fold $
-   liftA2
-      (\rec ->
-         Fold.foldMap
-            (\x -> EqGen.variable (Idx.Record rec evar) =.= EqGen.constant x))
-      Record.indices val
-
-
-givenParameterSymbol ::
-   (t ~ Utility.VarTerm var Idx.Delta SumProduct.Term Node.Int,
-    Eq t, Arith.Sum t, Arith.Constant t,
-    EqGen.Element idx RecMultiDelta s ScalarTerm SignalTerm
-       ~ EqGen.VariableRecord RecMultiDelta s t,
-    Ord (idx Node.Int),
-    Var.Type idx ~ var, Utility.Symbol var, Env.AccessMap idx) =>
-
-   OuterExtrusion RecMultiDelta t -> idx Node.Int ->
-   EquationSystemSymbolic s
-givenParameterSymbol param idx =
-   idx ?= parameterSymbol param idx
 
 givenSymbolic :: EquationSystemSymbolic s
 givenSymbolic =
@@ -278,14 +141,6 @@ mainSymbolic = do
 type
    EquationSystemNumeric s =
       EqGen.EquationSystem RecMultiDelta Node.Int s Double Double
-
-givenParameterNumber ::
-   (Ord (idx Node.Int), Env.AccessMap idx,
-    Var.Index idx, Var.Type idx ~ Var.Signal) =>
-   (OuterExtrusion RecMultiDelta Double) ->
-   idx Node.Int -> Double -> Double -> EquationSystemNumeric s
-givenParameterNumber param idx before delta =
-   idx ?= parameterRecord param before delta
 
 
 givenNumeric :: EquationSystemNumeric s
