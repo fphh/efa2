@@ -4,7 +4,7 @@ module Main where
 import qualified EFA.Example.Utility as Utility
 import EFA.Example.Utility
           (symbol, edgeVar, makeEdges, constructSeqTopo)
-import EFA.Equation.Arithmetic ((~*))
+import EFA.Equation.Arithmetic ((~-), (~*))
 import EFA.Equation.System ((=.=))
 import EFA.Equation.Result (Result)
 
@@ -33,12 +33,10 @@ import qualified EFA.Signal.Plot as Plot
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
 
-import qualified Data.Accessor.Basic as Accessor
-
 import qualified Data.Foldable as Fold
 import qualified Data.Map as Map
 import qualified Data.NonEmpty as NonEmpty
-import Control.Applicative (pure)
+import Control.Applicative (Applicative, pure, liftA2)
 import Data.Monoid (mempty, (<>))
 import Data.Tuple.HT (mapFst, mapSnd)
 
@@ -62,24 +60,80 @@ topoLinear = Gr.mkGraph ns (makeEdges es)
 type SignalTerm = Utility.SignalTerm Record.Delta SumProduct.Term Node.Int
 type ScalarTerm = Utility.ScalarTerm Record.Delta SumProduct.Term Node.Int
 
-type IdxMultiDelta = Idx.ExtDelta (Idx.ExtDelta Idx.Delta)
-type RecMultiDelta = Record.ExtDelta (Record.ExtDelta Record.Delta)
+type IdxMultiDelta = Idx.ExtDelta (Idx.ExtDelta (Idx.ExtDelta Idx.Absolute))
+type RecMultiDelta = Record.ExtDelta (Record.ExtDelta (Record.ExtDelta Record.Absolute))
 
 type
    EquationSystemSymbolic s =
       EqGen.EquationSystem RecMultiDelta Node.Int s ScalarTerm SignalTerm
 
 
-infixr 9 &
 
-(&) :: Idx.Delta -> a -> Idx.ExtDelta a
-(&) = Idx.ExtDelta
+clear :: Arith.Sum a => a -> a
+clear x = x~-x
 
-absolute, param0, param1, param2 :: IdxMultiDelta
-absolute = Idx.Before & Idx.Before & Idx.Before
-param0 =   Idx.Before & Idx.Before & Idx.Delta
-param1 =   Idx.Before & Idx.Delta  & Idx.Before
-param2 =   Idx.Delta  & Idx.Before & Idx.Before
+
+data Extruder f a =
+   Extruder {
+      extrudeLeft :: f (Maybe a) -> Record.ExtDelta f (Maybe a),
+      extrudeRight ::
+         (a -> f (Maybe a)) ->
+         a -> a -> Record.ExtDelta f (Maybe a)
+   }
+
+extrudeStart :: a -> Record.Absolute (Maybe a)
+extrudeStart = Record.Absolute . Just
+
+
+beforeDelta :: (Applicative f, Arith.Sum a) => Extruder f a
+beforeDelta =
+   Extruder {
+      extrudeLeft = \x ->
+         Record.ExtDelta {
+            Record.extBefore = x,
+            Record.extAfter = pure Nothing,
+            Record.extDelta = fmap (fmap clear) x
+         },
+      extrudeRight = \cons x y ->
+         Record.ExtDelta {
+            Record.extBefore = cons x,
+            Record.extAfter = pure Nothing,
+            Record.extDelta = cons y
+         }
+   }
+
+infixr 0 <&, <&>, &>
+
+(&>) ::
+   (Arith.Sum a) =>
+   Extruder f a ->
+   (a -> f (Maybe a)) ->
+   (a -> Record.ExtDelta f (Maybe a))
+(e &> f) x = extrudeRight e f x (clear x)
+
+(<&>) ::
+   (Arith.Sum a) =>
+   Extruder f a ->
+   (a -> f (Maybe a)) ->
+   (a -> a -> Record.ExtDelta f (Maybe a))
+(<&>) = extrudeRight
+
+(<&) ::
+   (Arith.Sum a) =>
+   Extruder f a ->
+   (a -> a -> f (Maybe a)) ->
+   (a -> a -> Record.ExtDelta f (Maybe a))
+(e <& f) x y = extrudeLeft e $ f x y
+
+
+
+absolute :: (Arith.Sum a) => a -> RecMultiDelta (Maybe a)
+absolute = beforeDelta &> beforeDelta  &> beforeDelta  &> extrudeStart
+
+param0, param1, param2 :: (Arith.Sum a) => a -> a -> RecMultiDelta (Maybe a)
+param0 = beforeDelta <&  beforeDelta <&  beforeDelta <&> extrudeStart
+param1 = beforeDelta <&  beforeDelta <&> beforeDelta  &> extrudeStart
+param2 = beforeDelta <&> beforeDelta  &> beforeDelta  &> extrudeStart
 
 
 eout, ein :: Idx.Energy Node.Int
@@ -92,77 +146,49 @@ eta1 = edgeVar Idx.Eta sec0 node1 node2
 
 
 termFromIndex :: IdxMultiDelta -> SignalTerm
-termFromIndex (Idx.ExtDelta r2 (Idx.ExtDelta r1 r0)) =
+termFromIndex
+      (Idx.ExtDelta r2 (Idx.ExtDelta r1 (Idx.ExtDelta r0 Idx.Absolute))) =
    symbol (Idx.Record r2 (Var.index ein)) ~*
    symbol (Idx.Record r1 (Var.index eta0)) ~*
    symbol (Idx.Record r0 (Var.index eta1))
 
 
-{- |
-Caution:
-This function creates an inconsistent nested Delta record.
-The equations before+delta=after are not (always) satisfied.
-This is ok for application since we only use the before and delta values
-to initialize the equation system.
--}
+
 parameterSymbol ::
    (t ~ Utility.VarTerm var Idx.Delta SumProduct.Term Node.Int,
     Eq t, Arith.Sum t, Arith.Constant t,
     Ord (idx Node.Int),
     Var.Type idx ~ var, Utility.Symbol var, Env.AccessMap idx) =>
 
-   IdxMultiDelta -> idx Node.Int -> RecMultiDelta t
+   (t -> t -> RecMultiDelta (Maybe t)) ->
+   idx Node.Int -> RecMultiDelta (Maybe t)
 
 parameterSymbol param idx =
-   Accessor.set (Record.access param) (symbol (Idx.delta $ Var.index idx)) $
-   absoluteSymbol idx
+   param
+      (symbol (Idx.before $ Var.index idx))
+      (symbol (Idx.delta $ Var.index idx))
 
-{- | Caution: See 'parameterSymbol' -}
 absoluteSymbol ::
    (t ~ Utility.VarTerm var Idx.Delta SumProduct.Term Node.Int,
     Eq t, Arith.Sum t, Arith.Constant t,
     Ord (idx Node.Int),
     Var.Type idx ~ var, Utility.Symbol var, Env.AccessMap idx) =>
 
-   idx Node.Int -> RecMultiDelta t
+   idx Node.Int -> RecMultiDelta (Maybe t)
 
 absoluteSymbol idx =
    absoluteRecord (symbol (Idx.before $ Var.index idx))
 
-{- | Caution: See 'parameterSymbol' -}
 parameterRecord ::
-   (Arith.Constant x) =>
-   IdxMultiDelta -> x -> x -> RecMultiDelta x
-parameterRecord param x d =
-   Accessor.set (Record.access param) d $
-   absoluteRecord x
+   (Arith.Sum x) =>
+   (x -> x -> RecMultiDelta (Maybe x)) ->
+   x -> x -> RecMultiDelta (Maybe x)
+parameterRecord = id
 
-{- | Caution: See 'parameterSymbol' -}
 absoluteRecord ::
-   (Arith.Constant x) =>
-   x -> RecMultiDelta x
-absoluteRecord x =
-   Accessor.set (Record.access absolute) x $
-   pure Arith.zero
-
-
-equalDelta ::
-   Eq x =>
-   Record.Delta (EqGen.Expression rec node s a v x) ->
-   Record.Delta (EqGen.Expression rec node s a v x) ->
-   EqGen.EquationSystem rec node s a v
-equalDelta x y =
-   (Record.before x =.= Record.before y) <>
-   (Record.delta  x =.= Record.delta  y)
-
-equalExtDelta ::
-   (f x -> f x -> EqGen.EquationSystem rec node s a v) ->
-   Record.ExtDelta f x ->
-   Record.ExtDelta f x ->
-   EqGen.EquationSystem rec node s a v
-equalExtDelta eq x y =
-   eq (Record.extBefore x) (Record.extBefore y) <>
-   eq (Record.extDelta  x) (Record.extDelta  y)
+   (Arith.Sum x) =>
+   x -> RecMultiDelta (Maybe x)
+absoluteRecord = absolute
 
 
 infix 0 =%=, %=
@@ -170,21 +196,24 @@ infix 0 =%=, %=
 (=%=) ::
    Eq x =>
    RecMultiDelta (EqGen.Expression rec node s a v x) ->
-   RecMultiDelta (EqGen.Expression rec node s a v x) ->
+   RecMultiDelta (Maybe (EqGen.Expression rec node s a v x)) ->
    EqGen.EquationSystem rec node s a v
-(=%=) = equalExtDelta (equalExtDelta equalDelta)
+(=%=) as bs =
+   Fold.fold $
+   liftA2 (\a -> Fold.foldMap (\b -> a=.=b)) as bs
+
 
 (%=) ::
    (Eq x, Arith.Sum x,
     EqGen.Element idx RecMultiDelta s a v
        ~ EqGen.VariableRecord RecMultiDelta s x,
     Env.AccessMap idx, Ord (idx node), Var.Type idx ~ var) =>
-   idx node -> RecMultiDelta x ->
+   idx node -> RecMultiDelta (Maybe x) ->
    EqGen.EquationSystem RecMultiDelta node s a v
 evar %= val  =
    fmap (EqGen.variable . flip Idx.Record evar) Record.indices
    =%=
-   fmap EqGen.constant val
+   fmap (fmap EqGen.constant) val
 
 
 givenParameterSymbol ::
@@ -195,7 +224,7 @@ givenParameterSymbol ::
     Ord (idx Node.Int),
     Var.Type idx ~ var, Utility.Symbol var, Env.AccessMap idx) =>
 
-   IdxMultiDelta -> idx Node.Int ->
+   (t -> t -> RecMultiDelta (Maybe t)) -> idx Node.Int ->
    EquationSystemSymbolic s
 givenParameterSymbol param idx =
    idx %= parameterSymbol param idx
@@ -248,7 +277,8 @@ type
 givenParameterNumber ::
    (Ord (idx Node.Int), Env.AccessMap idx,
     Var.Index idx, Var.Type idx ~ Var.Signal) =>
-   IdxMultiDelta -> idx Node.Int -> Double -> Double -> EquationSystemNumeric s
+   (Double -> Double -> RecMultiDelta (Maybe Double)) ->
+   idx Node.Int -> Double -> Double -> EquationSystemNumeric s
 givenParameterNumber param idx before delta =
    idx %= parameterRecord param before delta
 
