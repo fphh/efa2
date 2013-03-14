@@ -15,6 +15,8 @@ import EFA.Signal.Sequence (genSequenceSignal,
                             genSequ,sectionRecordsFromSequence)
 
 import qualified EFA.Signal.Signal as Sig 
+import qualified EFA.Report.Report as Rep 
+
 import EFA.Signal.Typ
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Flow as Flow
@@ -29,7 +31,7 @@ import qualified EFA.Signal.Record as Record
 -- * Example Specific Imports
 import qualified Modules.System as System
 import Modules.Signals as Signals
--- import Modules.Plots as Plot
+import Modules.Plots as Plots
 import qualified EFA.Graph.Topology as TD
 
 
@@ -43,7 +45,10 @@ pre :: Monad m =>
      -> m (SD.Sequ,
            SD.SequData (PowerRecord System.Node [] Double),
            SD.SequData (FlowRecord System.Node [] Double),
-           SD.SequData (Record.FlowState System.Node))
+           SD.SequData (Record.FlowState System.Node), 
+           PowerRecord System.Node [] Double,
+           SignalRecord 
+           [] Double)
 pre topology rawSignals =  do
 
 ---------------------------------------------------------------------------------------
@@ -63,23 +68,23 @@ pre topology rawSignals =  do
 
 ---------------------------------------------------------------------------------------
 -- * Plot Signals
-{--
-  Plot.vehicle signals0
-  Plot.motor signals0
-  Plot.generator signals0
-  Plot.driveline signals0
-  Plot.electric signals0
-  Plot.battery signals0
+{-
+  Plots.vehicle signals0
+  Plots.motor signals0
+  Plots.generator signals0
+  Plots.driveline signals0
+  Plots.electric signals0
+  Plots.battery signals0
 
   Rep.report [] ("Signals0",signals0)
 
 ---------------------------------------------------------------------------------------
 -- * Plot Power Signals
 
-  Plot.genPowers powerSignals0
-  Plot.propPowers powerSignals0
-  Plot.vehPowers powerSignals0
---}
+  Plots.genPowers powerSignals0
+  Plots.propPowers powerSignals0
+  Plots.vehPowers powerSignals0
+-}
 ---------------------------------------------------------------------------------------
 -- * Cut Signals and filter on low time sektions
 
@@ -109,7 +114,7 @@ pre topology rawSignals =  do
   let flowStates = fmap Flow.genFlowState sequenceFlowsFilt
   let adjustedFlows = Flow.adjustSigns topology flowStates sequenceFlowsFilt
 
-  return  (sequenceFilt,sequencePowersFilt,adjustedFlows, flowStates)
+  return (sequenceFilt,sequencePowersFilt,adjustedFlows, flowStates, powerSignals0, signals0)
 
 -------------------------------------------------------------------------------------------------  
 -- ## Analyse External Energy Flow

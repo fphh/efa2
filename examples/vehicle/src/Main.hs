@@ -15,6 +15,8 @@ import EFA.Utility.Async (concurrentlyMany_)
 
 import qualified Modules.System as System
 import qualified Modules.Analysis as Analysis
+import qualified Modules.Plots as Plots
+import qualified Modules.Signals as Signals
 
 import System.IO
 
@@ -27,12 +29,6 @@ main = do
   
   hSetEncoding stdout utf8
 
----------------------------------------------------------------------------------------
--- * Show Topology
-
---  Draw.topology System.topology
---  Draw.topology2pdf System.topology
---  Draw.topologyWithEdgeLabels System.edgeNames System.topology
 
 ---------------------------------------------------------------------------------------
 -- * State Analysis
@@ -49,8 +45,8 @@ main = do
 --------------------------------------------------------------------------------------- 
 -- * Conditioning, Sequencing and Integration
   
-  (sequenceFilt,sequencePowersFilt,sequenceFlowsFilt,flowStates) <- Analysis.pre System.topology rawSignals
-  (sequenceFiltB,sequencePowersFiltB,sequenceFlowsFiltB,flowStatesB) <- Analysis.pre System.topology rawSignalsB
+  (sequenceFilt,sequencePowersFilt,sequenceFlowsFilt,flowStates,powerSignals,signals) <- Analysis.pre System.topology rawSignals
+  (sequenceFiltB,sequencePowersFiltB,sequenceFlowsFiltB,flowStatesB,powerSignalsB,signalsB) <- Analysis.pre System.topology rawSignalsB
 
 ---------------------------------------------------------------------------------------
 -- *  Generate Flow States as Graphs
@@ -103,7 +99,23 @@ main = do
   HPl.histogrammIO (HSt.evaluate $ HEn.lookupStack difference eout) eout
 
 -}
+      
+      
+---------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------
+-- * Show Topology
+
+--  Draw.topology System.topology
+--  Draw.topology2pdf System.topology
+--  Draw.topologyWithEdgeLabels System.edgeNames System.topology
+     
        
+  --Plots.plotPowers System.powerPositonNames ["A","B"] [powerSignals,powerSignalsB] Signals.vehPowers
+  
+  Plots.timeIO (Plots.gtitle "hallihallo" Plots.globalDeflt) 
+    [(Plots.wtitle "- A" Plots.windowDeflt, [(Plots.recOpts, powerSignals)]),
+     (Plots.wtitle "- B" Plots.windowDeflt, [(Plots.recOpts, powerSignalsB)])]
+{-  
   -- draw various diagrams
   concurrentlyMany_ [
     Draw.sequFlowGraphAbsWithEnv dataset sectionTopos simulation,
@@ -112,3 +124,4 @@ main = do
 --    Draw.sequFlowGraphAbsWithEnv "Prediction" sectionTopos prediction
     ]
 
+-}

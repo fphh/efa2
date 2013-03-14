@@ -10,7 +10,7 @@ module EFA.Signal.Plot (
    signal, signalAttr, signalStyle, signalIO,
    xy, xyBasic, xyAttr, xyStyle, xyIO,
    surface, surfaceIO,
-   record, recordStyle, recordAttr, recordIO,
+   record, recordStyle, recordAttr, recordIO, recordIOList,
    sequenceIO,
    recordSplitPlus, recordSplit, sequenceSplit,
    recordSelect, sequenceSelect,
@@ -315,7 +315,20 @@ recordIO ::
     Tuple.C y, Atom.C y) =>
    String -> Record s t1 t2 id v y -> IO ()
 recordIO name =
-   void . Plot.plotDefault . Frame.cons (recordAttr name) . record
+   void . Plot.plotDefault . Frame.cons (recordAttr name) . record 
+
+
+recordIOList ::
+   (Fractional y,
+    Show id,
+    SV.Walker v, SV.Storage v y, SV.FromList v,
+    TDisp t2, TDisp t1,
+    Tuple.C y, Atom.C y) =>
+   String -> [Record s t1 t2 id v y] -> IO ()
+   
+recordIOList name recList =
+   void $ Plot.plotDefault $ Frame.cons (recordAttr name) $ foldMap record recList
+
 
 
 recordSplitPlus ::

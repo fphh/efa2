@@ -2,7 +2,6 @@
 {-# LANGUAGE TypeOperators #-}
 
 
-
 module Modules.Signals where
 
 
@@ -31,10 +30,9 @@ condition rec = extractLogSignals rec
                  (SigId "electricmotor2.signalcurrent1.p.i",neg),
                  (SigId "electricmotor2.signalcurrent1.v",neg),
                  (SigId "electricmotor2.flange_a.tau",id),
-                 -- (SigId "battery1.pin_p.v",id),
                  (SigId "battery1.pin_p.i",id),
                  (SigId "potentialsensor1.p.v",id),
-                 (SigId "battery1.constantvoltage1.v",neg), -- constant 200
+                 (SigId "battery1.constantvoltage1.v",neg),
                  (SigId "battery1.constantvoltage1.i",id),
                  (SigId "electricmotor1.speedsensor1.w",id),
                  (SigId "electricmotor1.flange_a.tau",neg),
@@ -52,9 +50,7 @@ condition rec = extractLogSignals rec
                  (SigId "idealrollingwheel1.flangeT.f",neg),
                  (SigId "idealrollingwheel2.flangeR.tau",neg),
                  (SigId "idealrollingwheel2.flangeT.f",id),
---                 (SigId "chassis1.flange_a.f",neg),
                  (SigId "chassis1.flange_a1.f",id),
-                 --                                       (SigId "speedsensor1.flange.der(s)",id),
                  (SigId "speedsensor1.v",id),
                  (SigId "chassis1.drivingresistance1.force1.f",neg),
                  (SigId "brake1.tau",neg),
@@ -91,25 +87,12 @@ calculatePower rec = pRec
        -- chassis       
       kineticPower = (g "chassis1.flange_a1.f" .- g "chassis1.drivingresistance1.force1.f").*speed
       
---      resistancePower = g "drivingresistance1.force1.f".*speed
-  
-        
+      
 --------------------------------------------------------------------------------------- 
 -- ## Build Power Record
       
       pRec = genPowerRecord time 
-             -- -- engine
-             -- [(PPosIdx Tank EngineFlange, 
-             --   g "engine1.FuelPower",             
-             --   g "engine1.Speed" .* g "engine1.flange_b.tau"                
-             --  ),
-              
-             --  -- generator 
-             --  (PPosIdx EngineFlange ConBattery, 
-             --   g  "electricmotor2.speedsensor1.w".* g "electricmotor2.flange_a.tau",
-             --   generatorElectricPower
-             --  ),
-             
+            
               -- engine
              [(PPosIdx Tank ConBattery,
                g "engine1.FuelPower",             
@@ -121,18 +104,6 @@ calculatePower rec = pRec
                generatorElectricPower .- batteryClampsPower,
                generatorElectricPower .- batteryClampsPower 
               ),
-              
-              -- --motor
-              -- (PPosIdx ConES MotorFlange,
-              --  (g "electricmotor1.signalcurrent1.p.i".* voltage),
-              --  g "electricmotor1.speedsensor1.w".* g "electricmotor1.flange_a.tau"
-              -- ),
-              
-              -- -- gearbox
-              -- (PPosIdx MotorFlange ConFrontBrakes,
-              --  g "gearbox1.flange_a.tau".* g "gearbox1.inertia1.w",
-              --  g "gearbox1.flange_b.tau".* g "gearbox1.inertia2.w"
-              -- ),
               
               -- --motor
               (PPosIdx ConES ConFrontBrakes,
@@ -183,5 +154,14 @@ calculatePower rec = pRec
                
               )]
               
-
- 
+--------------------------------------------------------------------------------------- 
+-- ## Signalgroups for Plotting
+      
+      
+vehPowers :: [SigId]
+vehPowers  =  [SigId "ToFrontBrakes",
+               SigId "RearTires",    
+               SigId "ToInertia",
+               SigId "ToResistance"
+              ]
+  
