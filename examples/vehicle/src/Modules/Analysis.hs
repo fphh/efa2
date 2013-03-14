@@ -1,4 +1,6 @@
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE FlexibleContexts #-}
+
 
 module Modules.Analysis where
 
@@ -14,6 +16,9 @@ import EFA.Signal.Sequence (genSequenceSignal,
                             removeLowEnergySections, genSequFlow, addZeroCrossings, removeLowTimeSections, 
                             genSequ,sectionRecordsFromSequence)
 
+import qualified EFA.Equation.Arithmetic as Arith
+import qualified EFA.Signal.Vector as Vec
+
 import qualified EFA.Signal.Signal as Sig 
 import qualified EFA.Report.Report as Rep 
 
@@ -24,7 +29,7 @@ import qualified Data.Map as M
 import Data.Monoid ((<>))
 import Data.Foldable (fold, foldMap)
 
-import qualified EFA.Equation.Env as Env
+import qualified EFA.Equation.Environment as Env
 import EFA.Equation.Result (Result(..))
 import qualified EFA.Signal.Record as Record 
 ----------------------------------
@@ -33,6 +38,9 @@ import qualified Modules.System as System
 import Modules.Signals as Signals
 import Modules.Plots as Plots
 import qualified EFA.Graph.Topology as TD
+
+import qualified EFA.Equation.Record as EqRecord
+
 
 
 
@@ -119,20 +127,27 @@ pre topology rawSignals =  do
 -------------------------------------------------------------------------------------------------  
 -- ## Analyse External Energy Flow
   
-external ::   TD.SequFlowGraph System.Node -> 
-              SD.SequData (Record Sig.FSignal (Typ D T Tt) (Typ A F Tt) (PPosIdx System.Node) [] Double) ->
-                           Env.Complete System.Node (Env.Absolute (Result Double)) (Env.Absolute (Result Double))
+external :: (Eq v, Num v, Arith.Product v, Arith.Integrate v, Vec.Storage t v,
+             Vec.FromList t, Arith.Scalar v ~ Double) =>
+            TD.SequFlowGraph System.Node
+            -> SD.SequData (Record s t2 t1 (PPosIdx System.Node) t v)
+            -> Env.Complete
+            System.Node
+            (EqRecord.Absolute (Result Double))
+            (EqRecord.Absolute (Result v))
 external sequenceFlowTopology sequFlowRecord =  EqGen.solveFromMeasurement sequenceFlowTopology $ makeGivenFromExternal Idx.Absolute sequFlowRecord
 
 
 initStorage :: Double
 initStorage = 0.7*3600*1000
 
-makeGivenFromExternal ::
-   (EqGen.Record rec) =>
-   Env.RecordIndex rec ->
-   SD.SequData (FlowRecord System.Node [] Double)->
-   (EqGen.EquationSystem rec System.Node s Double Double)
+makeGivenFromExternal :: (Eq v, Num v, Arith.Sum v, Vec.Storage t v, Vec.FromList t,
+                          EqGen.Record (EqRecord.FromIndex rec),
+                          EqRecord.ToIndex (EqRecord.FromIndex rec) ~ rec) =>
+                         rec
+                         -> SD.SequData (Record s t2 t1 (PPosIdx System.Node) t v)
+                         -> EqGen.EquationSystem
+                         (EqRecord.FromIndex rec) System.Node s1 Double v
 makeGivenFromExternal idx sf =
    (Idx.Record idx (Idx.DTime Idx.initSection) .= 1)
    <> (Idx.Record idx (Idx.Storage (Idx.SecNode Idx.initSection System.Battery)) .= initStorage)
@@ -147,23 +162,25 @@ makeGivenFromExternal idx sf =
 -------------------------------------------------------------------------------------------------  
 -- ## Predict Energy Flow
 
-prediction :: TD.SequFlowGraph System.Node
-                             -> Env.Complete
-                                  System.Node
-                                  (Env.Absolute (Result Double))
-                                  (Env.Absolute (Result Double))
-                             -> Env.Complete
-                                  System.Node
-                                  (Env.Absolute (Result Double))
-                                  (Env.Absolute (Result Double))
+-- prediction :: TD.SequFlowGraph System.Node
+--                              -> Env.Complete
+--                                   System.Node
+--                                   (Env.Absolute (Result Double))
+--                                   (Env.Absolute (Result Double))
+--                              -> Env.Complete
+--                                   System.Node
+--                                   (Env.Absolute (Result Double))
+--                                   (Env.Absolute (Result Double))
+
+{-
 prediction sequenceFlowTopology env = EqGen.solve sequenceFlowTopology (makeGivenForPrediction Idx.Absolute env) 
 
-makeGivenForPrediction ::
-   (EqGen.Record rec) =>
-   Env.RecordIndex rec ->
-   Env.Complete System.Node
-      (rec (EqGen.Result Double)) (rec (EqGen.Result Double)) ->
-   (EqGen.EquationSystem rec System.Node s Double Double)
+-- makeGivenForPrediction ::
+--    (EqGen.Record rec) =>
+--    Env.RecordIndex rec ->
+--    Env.Complete System.Node
+--       (rec (EqGen.Result Double)) (rec (EqGen.Result Double)) ->
+--    (EqGen.EquationSystem rec System.Node s Double Double)
 makeGivenForPrediction idx env =
     (Idx.Record idx (Idx.DTime Idx.initSection) .= 1)
     <> (Idx.Record idx (Idx.Storage (Idx.SecNode Idx.initSection System.Battery)) .= initStorage)
@@ -185,29 +202,40 @@ makeGivenForPrediction idx env =
           h (Idx.Energy (Idx.SecNode _ System.Resistance) (Idx.SecNode _ System.Chassis)) x =
                fmap (fmap (*1.1)) x
           h _ r = r
-
+-}
 ---------------------------------------------------------------------------------------------------
 -- ## Make Delta 
 
-delta :: TD.SequFlowGraph System.Node
-                        -> SD.SequData
-                             (Record
-                                Sig.FSignal
-                                (Typ D T Tt)
-                                (Typ A F Tt)
-                                (PPosIdx System.Node)
-                                []
-                                Double)
-                        -> SD.SequData
-                             (Record
-                                Sig.FSignal
-                                (Typ D T Tt)
-                                (Typ A F Tt)
-                                (PPosIdx System.Node)
-                                []
-                                Double)
-                        -> Env.Complete
-                             System.Node (Env.Delta (Result Double)) (Env.Delta (Result Double))
+-- delta :: TD.SequFlowGraph System.Node
+--                         -> SD.SequData
+--                              (Record
+--                                 Sig.FSignal
+--                                 (Typ D T Tt)
+--                                 (Typ A F Tt)
+--                                 (PPosIdx System.Node)
+--                                 []
+--                                 Double)
+--                         -> SD.SequData
+--                              (Record
+--                                 Sig.FSignal
+--                                 (Typ D T Tt)
+--                                 (Typ A F Tt)
+--                                 (PPosIdx System.Node)
+--                                 []
+--                                 Double)
+--                         -> Env.Complete
+--                              System.Node (Env.Delta (Result Double)) (Env.Delta (Result Double))
+
+delta :: (Eq v, Num v, Arith.Product v, Arith.Integrate v, Vec.Storage t3 v,
+          Vec.Storage t v, Vec.FromList t3, Vec.FromList t,
+          Arith.Scalar v ~ Double) =>
+         TD.SequFlowGraph System.Node
+         -> SD.SequData (Record s t2 t1 (PPosIdx System.Node) t v)
+         -> SD.SequData (Record s1 t5 t4 (PPosIdx System.Node) t3 v)
+         -> Env.Complete
+         System.Node
+         (EqRecord.Delta (Result Double))
+         (EqRecord.Delta (Result v))
 delta sequenceFlowTopology sequenceFlow sequenceFlow'= EqGen.solveFromMeasurement sequenceFlowTopology 
                                                        $ (makeGivenFromExternal Idx.Before sequenceFlow <>
                                                           makeGivenFromExternal Idx.After sequenceFlow')

@@ -2,6 +2,16 @@
 {-# LANGUAGE Rank2Types #-}
 module Main where
 
+-- <<<<<<< HEAD
+-- =======
+---------------------------------------------------------------------------------------
+-- * Import other Modules
+
+import EFA.Example.Utility (edgeVar)
+import EFA.Example.Absolute ((.=))
+import qualified EFA.Equation.System as EqGen
+--import EFA.IO.CSVImport (modelicaCSVImport)
+-- >>>>>>> master
 import EFA.IO.PLTImport (modelicaPLTImport)
 import EFA.Signal.Sequence (makeSeqFlowTopology)
 import qualified EFA.Graph.Flow as Flow
@@ -80,7 +90,7 @@ main = do
  ---------------------------------------------------------------------------------------
 -- *  Make the Prediction
      
-  let prediction = Analysis.prediction  sequenceFlowTopology simulation
+ -- let prediction = Analysis.prediction  sequenceFlowTopology simulation
 
 ---------------------------------------------------------------------------------------
 -- *  Make difference Analysis

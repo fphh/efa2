@@ -14,9 +14,10 @@ import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
 import EFA.Report.Format (Format, Unicode(Unicode, unUnicode))
 
-import qualified EFA.Equation.Env as Env
+import qualified EFA.Equation.Record as Record
+import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Variable as Var
-import EFA.Equation.Env (StorageMap)
+import EFA.Equation.Environment (StorageMap)
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
@@ -322,8 +323,8 @@ formatNodeType :: Format output => NodeType -> output
 formatNodeType = Format.literal . showType
 
 formatNodeStorage ::
-   (Env.Record rec, FormatValue a, Format output, Node.C node) =>
-   Env.RecordIndex rec -> StorageMap node (rec a) -> Topo.LNode node -> output
+   (Record.C rec, FormatValue a, Format output, Node.C node) =>
+   Record.ToIndex rec -> StorageMap node (rec a) -> Topo.LNode node -> output
 formatNodeStorage rec st (n@(Idx.SecNode _sec nid), ty) =
    Format.lines $
    Node.display nid :
@@ -339,34 +340,37 @@ It shall not contain values needed for computations.
 -}
 data Env node output =
    Env {
-      formatEnergy, formatMaxEnergy,
+      formatEnergy,
       formatX,
-      formatEta    :: Idx.SecNode node -> Idx.SecNode node -> output,
+      formatEta    :: Idx.StructureEdge node -> output,
+      formatMaxEnergy,
+      formatStEnergy,
+      formatStX    :: Idx.StorageEdge node -> output,
       formatTime   :: Idx.Section -> output,
       formatNode   :: Topo.LNode node -> output
    }
 
 lookupFormat ::
-   (Ord (idx node), Var.FormatIndex (idx node), Env.Record rec,
+   (Ord (idx node), Var.FormatIndex (idx node), Record.C rec,
     FormatValue a, Format output, Node.C node) =>
-   Env.RecordIndex rec -> M.Map (idx node) (rec a) -> idx node -> output
+   Record.ToIndex rec -> M.Map (idx node) (rec a) -> idx node -> output
 lookupFormat recIdx mp k =
    maybe
       (error $ "could not find index " ++
          (Format.unUnicode $ Var.formatIndex k))
-      (formatValue . Accessor.get (Env.accessRecord recIdx)) $
+      (formatValue . Accessor.get (Record.access recIdx)) $
    M.lookup k mp
 
 lookupFormatAssign ::
    (Ord (idx node), Format.EdgeIdx (idx node), Var.FormatIndex (idx node),
-    Env.Record rec,
+    Record.C rec,
     FormatValue a, Format output, Node.C node) =>
-   Env.RecordIndex rec ->
+   Record.ToIndex rec ->
    M.Map (idx node) (rec a) ->
-   (Idx.SecNode node -> Idx.SecNode node -> idx node) ->
-   (Idx.SecNode node -> Idx.SecNode node -> output)
-lookupFormatAssign rec mp makeIdx x y =
-   case makeIdx x y of
+   (edge node -> idx node) ->
+   (edge node -> output)
+lookupFormatAssign rec mp makeIdx x =
+   case makeIdx x of
       idx ->
          Format.assign
             (Format.record rec $ Format.edgeIdent $ Format.edgeVar idx)
@@ -376,6 +380,8 @@ sequFlowGraphWithEnv ::
   (Node.C node) =>
   String ->
   SequFlowGraph node -> Env node Unicode -> IO ()
+{-
+<<<<<<< HEAD
 sequFlowGraphWithEnv ti g env =
    printGraph ti g (Just (formatTime env)) (formatNode env) (eshow . fst)
   where eshow e@(Edge uid vid) =
@@ -386,49 +392,77 @@ sequFlowGraphWithEnv ti g env =
                  formatEta env uid vid :
                  formatX env vid uid :
                  formatEnergy env vid uid :
+=======
+-}
+
+sequFlowGraphWithEnv ti g env =
+   printGraph ti g (Just (formatTime env)) (formatNode env) (eshow . fst)
+  where eshow se =
+           case Topo.edgeType se of
+              StructureEdge e ->
+                 formatEnergy env e :
+                 formatX env e :
+                 formatEta env e :
+                 formatX env (Idx.flip e) :
+                 formatEnergy env (Idx.flip e) :
+-- >>>>>>> master
                  []
-              StorageEdge _ ->
-                 formatMaxEnergy env uid vid :
-                 formatEnergy env uid vid :
-                 formatX env uid vid :
-                 formatX env vid uid :
+              StorageEdge e ->
+                 formatMaxEnergy env e :
+                 formatStEnergy env e :
+                 formatStX env e :
+                 formatStX env (Idx.flip e) :
                  []
 
 sequFlowGraphAbsWithEnv ::
    (FormatValue a, FormatValue v, Node.C node) =>
    String ->
    SequFlowGraph node ->
+{- <<<<<<< HEAD
    Env.Complete node (Env.Absolute a) (Env.Absolute v) -> IO ()
 sequFlowGraphAbsWithEnv ti topo = sequFlowGraphWithEnv ti topo . envAbs
+======= -}
+   Env.Complete node (Record.Absolute a) (Record.Absolute v) -> IO ()
+sequFlowGraphAbsWithEnv ti topo = sequFlowGraphWithEnv ti topo . envAbs
+-- >>>>>>> master
 
 sequFlowGraphDeltaWithEnv ::
    (FormatValue a, FormatValue v, Node.C node) =>
    String ->
    SequFlowGraph node ->
+
+
+{- <<<<<<< HEAD
    Env.Complete node (Env.Delta a) (Env.Delta v) -> IO ()
 sequFlowGraphDeltaWithEnv ti topo = sequFlowGraphWithEnv ti topo . envDelta
+======= -}
+   Env.Complete node (Record.Delta a) (Record.Delta v) -> IO ()
+sequFlowGraphDeltaWithEnv ti topo = sequFlowGraphWithEnv ti topo . envDelta
+-- >>>>>>> master
 
 
 envGen ::
    (FormatValue a, FormatValue v, Format output,
-    Env.Record rec, Node.C node) =>
-   Env.RecordIndex rec ->
+    Record.C rec, Node.C node) =>
+   Record.ToIndex rec ->
    Env.Complete node (rec a) (rec v) -> Env node output
-envGen rec (Env.Complete (Env.Scalar me st) (Env.Signal e _p n dt x _s)) =
+envGen rec (Env.Complete (Env.Scalar me st se sx) (Env.Signal e _p n dt x _s)) =
    Env
       (lookupFormatAssign rec e Idx.Energy)
-      (lookupFormatAssign rec me Idx.MaxEnergy)
       (lookupFormatAssign rec x Idx.X)
       (lookupFormatAssign rec n Idx.Eta)
+      (lookupFormatAssign rec me Idx.MaxEnergy)
+      (lookupFormatAssign rec se Idx.StEnergy)
+      (lookupFormatAssign rec sx Idx.StX)
       (lookupFormat rec dt . Idx.DTime)
       (formatNodeStorage rec st)
 
 envAbs ::
    (FormatValue a, FormatValue v, Format output, Node.C node) =>
-   Env.Complete node (Env.Absolute a) (Env.Absolute v) -> Env node output
+   Env.Complete node (Record.Absolute a) (Record.Absolute v) -> Env node output
 envAbs = envGen Idx.Absolute
 
 envDelta ::
    (FormatValue a, FormatValue v, Format output, Node.C node) =>
-   Env.Complete node (Env.Delta a) (Env.Delta v) -> Env node output
+   Env.Complete node (Record.Delta a) (Record.Delta v) -> Env node output
 envDelta = envGen Idx.Delta

@@ -17,6 +17,9 @@ import EFA.Equation.Arithmetic
           (Sum, (~+), (~-),
            Product, (~*), (~/))
 
+import qualified EFA.Report.Format as Format
+import EFA.Report.FormatValue (FormatValue, formatValue)
+
 import qualified Data.Vector.Unboxed as UV
 import qualified Data.Vector as V
 
@@ -79,7 +82,8 @@ instance P.Show (Apply ab c) => P.Show (Data ab c) where
 ---------------------------------------------------------
 -- | Type Synonym Convenience
 
-type DVal = Data Nil
+type Scalar = Data Nil
+
 type UVec = Data (UV.Vector :> Nil)
 type UVec2 = Data (V.Vector :> UV.Vector :> Nil)
 type UVec3 = Data (V.Vector :> V.Vector :> UV.Vector :> Nil)
@@ -160,6 +164,23 @@ writeData x =
    let z = case SV.constraints z of DataConstraints -> x
    in  z
 
+
+
+class Format c where
+   format ::
+      (Format.Format output, FormatValue a, Storage c a) =>
+      Data c a -> output
+
+instance Format Nil where
+   format (Data x) = formatValue x
+
+instance (SV.FromList v2, Format v1) => Format (v2 :> v1) where
+   format xd =
+      withNestedData (Format.list . P.map (format . subData xd) . SV.toList) xd
+
+
+instance (Format c, FormatValue a, Storage c a) => FormatValue (Data c a) where
+   formatValue = format
 
 
 ----------------------------------------------------------
@@ -255,10 +276,12 @@ unzip x = (map P.fst x, map P.snd x)
 instance (ZipWith c, Storage c a, Sum a) => Sum (Data c a) where
    (~+) = zipWith (~+)
    (~-) = zipWith (~-)
+   negate = map Arith.negate
 
 instance (ZipWith c, Storage c a, Product a) => Product (Data c a) where
    (~*) = zipWith (~*)
    (~/) = zipWith (~/)
+   recip = map Arith.recip
 
 
 {- |

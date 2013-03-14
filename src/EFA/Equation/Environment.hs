@@ -1,19 +1,16 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleContexts #-}
-module EFA.Equation.Env where
+module EFA.Equation.Environment where
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Equation.Variable as Var
 
-import EFA.Equation.Arithmetic
-          (Sum, (~-), Constant, zero)
-
 import qualified Data.Map as M
 
 import qualified Data.Accessor.Basic as Accessor
 import Control.Category ((.))
-import Control.Applicative (Applicative, pure, (<*>), liftA3)
+import Control.Applicative (Applicative, pure, (<*>))
 import Data.Traversable (Traversable, sequenceA, foldMapDefault)
 import Data.Foldable (Foldable, foldMap)
 import Data.Monoid (Monoid, mempty, mappend)
@@ -34,6 +31,8 @@ type DTimeMap node a = M.Map (Idx.DTime node) a
 type XMap node a = M.Map (Idx.X node) a
 type SumMap node a = M.Map (Idx.Sum node) a
 type StorageMap node a = M.Map (Idx.Storage node) a
+type StEnergyMap node a = M.Map (Idx.StEnergy node) a
+type StXMap node a = M.Map (Idx.StX node) a
 
 
 data Signal node a =
@@ -49,7 +48,9 @@ data Signal node a =
 data Scalar node a =
    Scalar {
       maxEnergyMap :: MaxEnergyMap node a,
-      storageMap :: StorageMap node a
+      storageMap :: StorageMap node a,
+      stEnergyMap :: StEnergyMap node a,
+      stXMap :: StXMap node a
    } deriving (Show)
 
 data Complete node b a =
@@ -91,15 +92,17 @@ formatMap =
 instance
    (Node.C node, FormatValue b, FormatValue a) =>
       FormatValue (Complete node b a) where
-   formatValue (Complete (Scalar me st) (Signal e p n dt x s)) =
+   formatValue (Complete (Scalar me st se sx) (Signal e p n dt x s)) =
       Format.lines $
          formatMap e ++
+         formatMap se ++
          formatMap me ++
          formatMap p ++
          formatMap n ++
          formatMap dt ++
          formatMap x ++
          formatMap s ++
+         formatMap sx ++
          formatMap st
 
 
@@ -118,17 +121,8 @@ lookupScalar v =
    case v of
       Var.MaxEnergy idx -> M.lookup idx . maxEnergyMap
       Var.Storage   idx -> M.lookup idx . storageMap
-
-
-type RecordIndexed rec = Idx.Record (RecordIndex rec)
-
-lookupSignalRecord ::
-   (Record rec, Ord node) =>
-   RecordIndexed rec (Var.Signal node) ->
-   Signal node (rec a) -> Maybe a
-lookupSignalRecord (Idx.Record r v) =
-   fmap (Accessor.get (accessRecord r)) . lookupSignal v
-
+      Var.StEnergy  idx -> M.lookup idx . stEnergyMap
+      Var.StX       idx -> M.lookup idx . stXMap
 
 
 type Element idx a v = PartElement (Environment (Var.Type idx)) a v
@@ -191,6 +185,14 @@ instance AccessMap Idx.Storage where
    accessPartMap =
       Accessor.fromSetGet (\x c -> c{storageMap = x}) storageMap
 
+instance AccessMap Idx.StEnergy where
+   accessPartMap =
+      Accessor.fromSetGet (\x c -> c{stEnergyMap = x}) stEnergyMap
+
+instance AccessMap Idx.StX where
+   accessPartMap =
+      Accessor.fromSetGet (\x c -> c{stXMap = x}) stXMap
+
 
 
 instance Functor (Signal node) where
@@ -198,8 +200,8 @@ instance Functor (Signal node) where
       Signal (fmap f e) (fmap f p) (fmap f n) (fmap f dt) (fmap f x) (fmap f s)
 
 instance Functor (Scalar node) where
-   fmap f (Scalar me st) =
-      Scalar (fmap f me) (fmap f st)
+   fmap f (Scalar me st se sx) =
+      Scalar (fmap f me) (fmap f st) (fmap f se) (fmap f sx)
 
 
 instance Foldable (Signal node) where
@@ -214,8 +216,8 @@ instance Traversable (Signal node) where
       pure Signal <?> e <?> p <?> n <?> dt <?> x <?> s
 
 instance Traversable (Scalar node) where
-   sequenceA (Scalar me st) =
-      pure Scalar <?> me <?> st
+   sequenceA (Scalar me st se sx) =
+      pure Scalar <?> me <?> st <?> se <?> sx
 
 infixl 4 <?>
 (<?>) ::
@@ -235,84 +237,13 @@ instance (Ord node) => Monoid (Signal node a) where
          (M.union dt dt') (M.union x x') (M.union s s')
 
 instance (Ord node) => Monoid (Scalar node a) where
-   mempty = Scalar M.empty M.empty
-   mappend (Scalar me st) (Scalar me' st') =
-      Scalar (M.union me me') (M.union st st')
+   mempty = Scalar M.empty M.empty M.empty M.empty
+   mappend (Scalar me st se sx) (Scalar me' st' se' sx') =
+      Scalar
+         (M.union me me') (M.union st st')
+         (M.union se se') (M.union sx sx')
 
 instance (Ord node) => Monoid (Complete node b a) where
    mempty = Complete mempty mempty
    mappend (Complete scalar0 signal0) (Complete scalar1 signal1) =
       Complete (mappend scalar0 scalar1) (mappend signal0 signal1)
-
-
-newtype Absolute a = Absolute {unAbsolute :: a} deriving (Show)
-
-instance Functor Absolute where
-   fmap f (Absolute a) = Absolute $ f a
-
-instance Applicative Absolute where
-   pure a = Absolute a
-   Absolute f <*> Absolute a = Absolute $ f a
-
-instance Foldable Absolute where
-   foldMap = foldMapDefault
-
-instance Traversable Absolute where
-   sequenceA (Absolute a) = fmap Absolute a
-
-
-data Delta a = Delta {delta, before, after :: a} deriving (Show)
-
-deltaConst :: Constant a => a -> Delta a
-deltaConst x = Delta {before = x, after = x, delta = zero}
-
-deltaCons :: Sum a => a -> a -> Delta a
-deltaCons b a = Delta {before = b, after = a, delta = a~-b}
-
-instance FormatValue a => FormatValue (Delta a) where
-   formatValue rec =
-      Format.list $
-         Format.assign (Format.literal "delta")  (formatValue $ delta rec) :
-         Format.assign (Format.literal "before") (formatValue $ before rec) :
-         Format.assign (Format.literal "after")  (formatValue $ after rec) :
-         []
-
-instance Functor Delta where
-   fmap f (Delta d b a) = Delta (f d) (f b) (f a)
-
-instance Applicative Delta where
-   pure a = Delta a a a
-   Delta fd fb fa <*> Delta d b a = Delta (fd d) (fb b) (fa a)
-
-instance Foldable Delta where
-   foldMap = foldMapDefault
-
-instance Traversable Delta where
-   sequenceA (Delta d b a) = liftA3 Delta d b a
-
-
-class
-   (Ord (RecordIndex rec), Format.Record (RecordIndex rec),
-    rec ~ IndexRecord (RecordIndex rec)) =>
-      Record rec where
-   type RecordIndex rec :: *
-   type IndexRecord idx :: * -> *
-   recordIndices :: (idx ~ RecordIndex rec) => rec idx
-   accessRecord :: (idx ~ RecordIndex rec) => idx -> Accessor.T (rec a) a
-
-instance Record Absolute where
-   type RecordIndex Absolute = Idx.Absolute
-   type IndexRecord Idx.Absolute = Absolute
-   recordIndices = Absolute Idx.Absolute
-   accessRecord Idx.Absolute = Accessor.fromWrapper Absolute unAbsolute
-
-instance Record Delta where
-   type RecordIndex Delta = Idx.Delta
-   type IndexRecord Idx.Delta = Delta
-   recordIndices =
-      Delta {delta = Idx.Delta, before = Idx.Before, after = Idx.After}
-   accessRecord idx =
-      case idx of
-         Idx.Delta  -> Accessor.fromSetGet (\a d -> d{delta  = a}) delta
-         Idx.Before -> Accessor.fromSetGet (\a d -> d{before = a}) before
-         Idx.After  -> Accessor.fromSetGet (\a d -> d{after  = a}) after

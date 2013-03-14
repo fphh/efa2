@@ -125,10 +125,12 @@ instance Ord a => Fractional (Term a) where
 instance Ord idx => Arith.Sum (Term idx) where
    (~+) = (+)
    (~-) = (-)
+   negate = negate
 
 instance Ord idx => Arith.Product (Term idx) where
    (~*) = (*)
    (~/) = (/)
+   recip = recip
 
 instance Ord idx => Arith.Constant (Term idx) where
    zero = zero

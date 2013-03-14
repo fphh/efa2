@@ -1,10 +1,11 @@
 
 module Main where
 
-import qualified EFA.Equation.Env as Env
-import qualified EFA.Equation.Absolute as EqGen
+import qualified EFA.Equation.Record as Record
+import qualified EFA.Equation.Environment as Env
+import qualified EFA.Example.Absolute as EqGen
 import EFA.Equation.System ((=.=))
-import EFA.Equation.Absolute ((.=))
+import EFA.Example.Absolute ((.=))
 import EFA.Example.Utility (makeEdges, constructSeqTopo, edgeVar)
 import EFA.Graph (mkGraph)
 
@@ -119,8 +120,8 @@ solve e x =
   in  show e ++ " " ++ show x ++ " " ++
       Format.unUnicode (formatValue
          (liftA2 (/)
-             (Env.unAbsolute $ checkedLookup emap eout)
-             (Env.unAbsolute $ checkedLookup emap ein)))
+             (Record.unAbsolute $ checkedLookup emap eout)
+             (Record.unAbsolute $ checkedLookup emap ein)))
 
 main :: IO ()
 main =

@@ -2,8 +2,8 @@
 
 module Main where
 
-import EFA.Example.Utility ( edgeVar, makeEdges, constructSeqTopo, )
-import EFA.Equation.Absolute ((.=))
+import EFA.Example.Utility ( edgeVar, interVar, makeEdges, constructSeqTopo, )
+import EFA.Example.Absolute ((.=))
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Async (concurrentlyMany_)
@@ -11,8 +11,9 @@ import EFA.Utility (checkedLookup)
 
 import EFA.Utility.Stream (Stream((:~)))
 
-import qualified EFA.Equation.Absolute as EqGen
-import qualified EFA.Equation.Env as Env
+import qualified EFA.Example.Absolute as EqGen
+import qualified EFA.Equation.Record as Record
+import qualified EFA.Equation.Environment as Env
 import EFA.Equation.System ((=.=))
 
 import qualified EFA.Graph.Topology.Index as Idx
@@ -92,11 +93,13 @@ p13 sec = EqGen.variable $ edgeVar Idx.Power sec N1 N3
 p31 sec = EqGen.variable $ edgeVar Idx.Power sec N3 N1
 
 --esto :: Expr s Double
-esto, ein, eout0, eout1 :: Idx.Energy Node
-esto = Idx.Energy (Idx.SecNode sec1 N3) (Idx.SecNode Idx.initSection N3)
-ein = Idx.Energy (Idx.SecNode sec0 N0) (Idx.SecNode sec0 N1)
-eout0 = Idx.Energy (Idx.SecNode sec0 N2) (Idx.SecNode sec0 N1)
-eout1 = Idx.Energy (Idx.SecNode sec1 N2) (Idx.SecNode sec1 N1)
+esto :: Idx.StEnergy Node
+esto = interVar Idx.StEnergy sec1 Idx.initSection N3
+
+ein, eout0, eout1 :: Idx.Energy Node
+ein = edgeVar Idx.Energy sec0 N0 N1
+eout0 = edgeVar Idx.Energy sec0 N2 N1
+eout1 = edgeVar Idx.Energy sec1 N2 N1
 
 
 sto0, sto1 :: Idx.Storage Node
@@ -139,6 +142,7 @@ solve :: Double -> Double -> String
 solve x e =
   let env = EqGen.solve seqTopo (given x e)
       emap = Env.energyMap $ Env.signal env
+      stemap = Env.stEnergyMap $ Env.scalar env
 --      smap = Env.storageMap env
       f _es ei eo0 eo1 = (eo0 + eo1) / ei -- (es + ei)
   in  show x ++ " " ++ show e ++ " " ++
@@ -149,10 +153,10 @@ solve x e =
                       (checkedLookup smap sto1)))
 -}
       Format.unUnicode (formatValue
-         (f <$> (Env.unAbsolute $ checkedLookup emap esto)
-            <*> (Env.unAbsolute $ checkedLookup emap ein)
-            <*> (Env.unAbsolute $ checkedLookup emap eout0)
-            <*> (Env.unAbsolute $ checkedLookup emap eout1)))
+         (f <$> (Record.unAbsolute $ checkedLookup stemap esto)
+            <*> (Record.unAbsolute $ checkedLookup emap ein)
+            <*> (Record.unAbsolute $ checkedLookup emap eout0)
+            <*> (Record.unAbsolute $ checkedLookup emap eout1)))
 
 
 main :: IO ()

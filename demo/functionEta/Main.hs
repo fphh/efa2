@@ -1,9 +1,10 @@
 -- | Demonstriert, wie man ein eta als Funktion definiert.
 module Main where
 
-import qualified EFA.Equation.Env as Env
-import qualified EFA.Equation.Absolute as EqGen
-import EFA.Equation.Absolute ((.=))
+import qualified EFA.Equation.Record as Record
+import qualified EFA.Equation.Environment as Env
+import qualified EFA.Example.Absolute as EqGen
+import EFA.Example.Absolute ((.=))
 import EFA.Equation.System ((=.=))
 import EFA.Example.Utility
   (constructSeqTopo, edgeVar, makeEdges)
@@ -71,7 +72,7 @@ solve p =
          EqGen.solve seqTopo
             ((EqGen.variable eta =.= functionEta (EqGen.variable c)) <> given p)
   in  show p ++ " " ++
-      Format.unUnicode (formatValue (Env.unAbsolute
+      Format.unUnicode (formatValue (Record.unAbsolute
          (checkedLookup (Env.etaMap (Env.signal env)) eta)))
 
 main :: IO ()

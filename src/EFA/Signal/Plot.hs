@@ -14,6 +14,7 @@ module EFA.Signal.Plot (
    sequenceIO,
    recordSplitPlus, recordSplit, sequenceSplit,
    recordSelect, sequenceSelect,
+   stack, stackAttr, stackIO,
    ) where
 
 import qualified EFA.Signal.Signal as S
@@ -31,6 +32,10 @@ import EFA.Signal.Data (Data, (:>), Nil, NestedList)
 import EFA.Report.Typ (TDisp, DisplayType(Typ_T), getDisplayUnit, getDisplayTypName)
 import EFA.Report.Base (UnitScale(UnitScale), getUnitScale)
 
+import qualified EFA.Report.Format as Format
+import EFA.Report.FormatValue (FormatValue, formatValue)
+
+
 import qualified Graphics.Gnuplot.Advanced as Plot
 import qualified Graphics.Gnuplot.Terminal as Terminal
 import qualified Graphics.Gnuplot.Plot as Plt
@@ -46,6 +51,8 @@ import qualified Graphics.Gnuplot.LineSpecification as LineSpec
 
 import qualified Graphics.Gnuplot.Frame as Frame
 import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
+import qualified Graphics.Gnuplot.Frame.OptionSet.Style as OptsStyle
+import qualified Graphics.Gnuplot.Frame.OptionSet.Histogram as Histogram
 
 import qualified Data.List as L
 import qualified Data.Map as M
@@ -431,6 +438,37 @@ sequenceSelect ::
    [id] -> String -> SequData (Record s t1 t2 id v y) ->  IO ()
 sequenceSelect idList name =
    sequenceIO name . fmap (Record.extract idList)
+
+
+
+
+stackAttr ::
+   (FormatValue var) =>
+   String -> var -> Opts.T (Graph2D.T Int Double)
+stackAttr title var =
+   Opts.title title $
+      Histogram.rowstacked $
+      OptsStyle.fillBorderLineType (-1) $
+      OptsStyle.fillSolid $
+      Opts.xTicks2d [(Format.unASCII $ formatValue var, 0)] $
+      Opts.xRange2d (-1,3) $
+      Opts.deflt
+
+stack ::
+   (Fold.Foldable f, FormatValue term) =>
+   f (term, Double) -> Plt.T (Graph2D.T Int Double)
+stack =
+   foldMap (\(term,val) ->
+      fmap (Graph2D.lineSpec
+              (LineSpec.title (Format.unASCII $ formatValue term) LineSpec.deflt)) $
+      Plot2D.list Graph2D.histograms [val])
+
+
+stackIO ::
+   (FormatValue var, Fold.Foldable f, FormatValue term) =>
+   String -> var -> f (term, Double) -> IO ()
+stackIO title var =
+   void . Plot.plotDefault . Frame.cons (stackAttr title var) . stack
 
 
 

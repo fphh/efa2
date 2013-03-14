@@ -1,10 +1,10 @@
 module Main where
 
 import EFA.Example.Utility (edgeVar, makeEdges, constructSeqTopo)
-import EFA.Equation.Absolute ((=<>))
+import EFA.Example.Absolute ((=<>))
 
 import qualified EFA.Symbolic.SumProduct as SumProduct
-import qualified EFA.Equation.Absolute as EqGen
+import qualified EFA.Example.Absolute as EqGen
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))

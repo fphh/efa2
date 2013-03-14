@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 
-module EFA.Test.IsVarTest where
+module EFA.Test.IsVar where
 
 
 

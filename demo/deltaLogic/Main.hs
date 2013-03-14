@@ -4,7 +4,7 @@ import EFA.Example.Utility (ScalarTerm, SignalTerm, edgeVar, (=<>))
 
 import qualified EFA.Symbolic.SumProduct as SumProduct
 import qualified EFA.Equation.System as EqGen
-import qualified EFA.Equation.Env as Env
+import qualified EFA.Equation.Record as Record
 import EFA.Equation.System ((=%=))
 
 import qualified EFA.Utility.Stream as Stream
@@ -32,9 +32,9 @@ node0 :~ node1 :~ _ = Stream.enumFrom minBound
 Use SumProduct.Term here since it simplifies automatically.
 -}
 given, sys ::
-   EqGen.EquationSystem Env.Delta Node.Int s
-      (ScalarTerm Env.Delta SumProduct.Term Node.Int)
-      (SignalTerm Env.Delta SumProduct.Term Node.Int)
+   EqGen.EquationSystem Record.Delta Node.Int s
+      (ScalarTerm Record.Delta SumProduct.Term Node.Int)
+      (SignalTerm Record.Delta SumProduct.Term Node.Int)
 given =
    Idx.before (edgeVar Idx.Power sec0 node0 node1) =<>
    Idx.before (edgeVar Idx.Eta sec0 node0 node1) =<>

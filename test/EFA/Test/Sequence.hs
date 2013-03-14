@@ -1,6 +1,7 @@
-{-# LANGUAGE TemplateHaskell, ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
-module EFA.Test.SequenceTest where
+module EFA.Test.Sequence where
 
 import EFA.Signal.SequenceData (SequData(..))
 import qualified EFA.Signal.Sequence as Seq
@@ -16,7 +17,7 @@ import Test.QuickCheck.All (quickCheckAll)
 import qualified Data.List.HT as HTL
 
 
-failing_prop_genSequ :: (Ord nty) => PowerRecord nty [] Val -> Bool
+failing_prop_genSequ :: (Ord node) => PowerRecord node [] Val -> Bool
 failing_prop_genSequ prec =
    Seq.approxSequPwrRecord (1e-8)
       (snd (Seq.genSequ prec))
@@ -25,10 +26,10 @@ failing_prop_genSequ prec =
 
 
 prop_chopMatchingCutsApprox ::
-  forall nty. (Ord nty) =>
-  PowerRecord nty [] Val -> Bool
+  forall node. (Ord node) =>
+  PowerRecord node [] Val -> Bool
 prop_chopMatchingCutsApprox prec =
-   case Seq.chopAtZeroCrossingsPowerRecord prec :: SequData (PowerRecord nty [] Val) of
+   case Seq.chopAtZeroCrossingsPowerRecord prec :: SequData (PowerRecord node [] Val) of
         SequData xs ->
           and $
           HTL.mapAdjacent
@@ -41,9 +42,9 @@ prop_chopMatchingCutsApprox prec =
 
 
 prop_chopProjectiveApprox ::
-  forall nty. (Ord nty) => PowerRecord nty [] Val -> Bool
+  forall node. (Ord node) => PowerRecord node [] Val -> Bool
 prop_chopProjectiveApprox prec =
-   let secs :: SequData (PowerRecord nty [] Val)
+   let secs :: SequData (PowerRecord node [] Val)
        secs = Seq.chopAtZeroCrossingsPowerRecord prec
    in  Seq.approxSequPwrRecord (1e-8)
           secs
@@ -51,10 +52,10 @@ prop_chopProjectiveApprox prec =
            Seq.concatPowerRecords secs)
 
 prop_chopMatchingCutsExact ::
-  forall nty. (Ord nty) => PowerRecord nty [] Rational -> Bool
+  forall node. (Ord node) => PowerRecord node [] Rational -> Bool
 prop_chopMatchingCutsExact prec =
    case Seq.chopAtZeroCrossingsPowerRecord prec
-         :: SequData (PowerRecord nty [] Rational) of
+         :: SequData (PowerRecord node [] Rational) of
       SequData xs ->
          and $
          HTL.mapAdjacent
@@ -66,9 +67,9 @@ prop_chopMatchingCutsExact prec =
             xs
 
 prop_chopProjectiveExact ::
-  forall nty. (Ord nty) => PowerRecord nty [] Rational -> Bool
+  forall node. (Ord node) => PowerRecord node [] Rational -> Bool
 prop_chopProjectiveExact prec =
-   let secs :: SequData (PowerRecord nty [] Rational)
+   let secs :: SequData (PowerRecord node [] Rational)
        secs = Seq.chopAtZeroCrossingsPowerRecord prec
    in  secs
        ==

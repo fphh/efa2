@@ -1,14 +1,15 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE Rank2Types #-}
-module EFA.Equation.Absolute (
-   module EFA.Equation.Absolute,
+module EFA.Example.Absolute (
+   module EFA.Example.Absolute,
    (=.=),
    ) where
 
 import qualified EFA.Example.Utility as Utility
 
+import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.System as EqGen
-import qualified EFA.Equation.Env as Env
+import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Variable as Var
 import EFA.Equation.System ((=.=))
 import EFA.Equation.Result(Result(..))
@@ -27,9 +28,9 @@ import Control.Applicative (liftA, liftA2)
 import Data.Monoid ((<>))
 
 
-type EquationSystem = EqGen.EquationSystem Env.Absolute
+type EquationSystem = EqGen.EquationSystem Record.Absolute
 
-type Expression node s a v x = EqGen.Expression Env.Absolute node s a v x
+type Expression node s a v x = EqGen.Expression Record.Absolute node s a v x
 
 
 solve ::
@@ -38,7 +39,7 @@ solve ::
     Node.C node) =>
    TD.SequFlowGraph node ->
    (forall s. EquationSystem node s a v) ->
-   Env.Complete node (Env.Absolute (Result a)) (Env.Absolute (Result v))
+   Env.Complete node (Record.Absolute (Result a)) (Record.Absolute (Result v))
 solve = EqGen.solve
 
 
@@ -47,7 +48,7 @@ constant = EqGen.constant
 
 variable ::
    (Eq x, Arith.Sum x,
-    EqGen.Element idx Env.Absolute s a v ~ Env.Absolute (Sys.Variable s x),
+    EqGen.Element idx Record.Absolute s a v ~ EqGen.VariableRecord Record.Absolute s x,
     Env.AccessMap idx, Ord (idx node)) =>
    idx node -> Expression node s a v x
 variable = EqGen.variable . Idx.absolute
@@ -70,28 +71,33 @@ liftF2 = liftA2 . Expr.fromRule3 . Sys.assignment3 ""
 
 
 
-type SignalTerm term node = Utility.SignalTerm Env.Absolute term node
-type ScalarTerm term node = Utility.ScalarTerm Env.Absolute term node
-type ScalarAtom term node = Utility.ScalarAtom Env.Absolute term node
+type SignalTerm term node = Utility.SignalTerm Record.Absolute term node
+type ScalarTerm term node = Utility.ScalarTerm Record.Absolute term node
+type ScalarAtom term node = Utility.ScalarAtom Record.Absolute term node
 
 type VarTerm var term node = Utility.VarTerm var Idx.Absolute term node
 
 type
    SymbolicEquationSystem node s term =
-      Utility.SymbolicEquationSystem Env.Absolute node s term
+      Utility.SymbolicEquationSystem Record.Absolute node s term
+
+symbol ::
+   (Utility.Symbol var, Pointed term) =>
+   var node -> VarTerm var term node
+symbol = Utility.symbol . Idx.absolute
 
 givenSymbol ::
   (t ~ VarTerm var term node,
    Eq t, Arith.Sum t,
-   EqGen.Element idx Env.Absolute s
+   EqGen.Element idx Record.Absolute s
       (ScalarTerm term node) (SignalTerm term node)
-     ~ Env.Absolute (Sys.Variable s t),
+     ~ EqGen.VariableRecord Record.Absolute s t,
    Ord (idx node), Pointed term,
    Var.Type idx ~ var, Utility.Symbol var, Env.AccessMap idx) =>
   idx node ->
   SymbolicEquationSystem node s term
 givenSymbol idx =
-   idx .= Utility.symbol (Idx.absolute (Var.index idx))
+   idx .= symbol (Var.index idx)
 
 
 infixr 6 =<>
@@ -99,9 +105,9 @@ infixr 6 =<>
 (=<>) ::
   (t ~ VarTerm var term node,
    Eq t, Arith.Sum t,
-   EqGen.Element idx Env.Absolute s
+   EqGen.Element idx Record.Absolute s
       (ScalarTerm term node) (SignalTerm term node)
-     ~ Env.Absolute (Sys.Variable s t),
+     ~ EqGen.VariableRecord Record.Absolute s t,
    Ord (idx node), Pointed term,
    Var.Type idx ~ var, Utility.Symbol var, Env.AccessMap idx) =>
    idx node ->
@@ -114,10 +120,8 @@ infix 0 .=
 
 (.=) ::
   (Eq x, Arith.Sum x,
-   Env.Element idx
-      (Env.Absolute (Sys.Variable s a))
-      (Env.Absolute (Sys.Variable s v))
-      ~ Env.Absolute (Sys.Variable s x),
+   EqGen.Element idx Record.Absolute s a v
+      ~ EqGen.VariableRecord Record.Absolute s x,
    Env.AccessMap idx, Ord (idx node)) =>
    idx node -> x ->
    EquationSystem node s a v

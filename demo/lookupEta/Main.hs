@@ -3,9 +3,10 @@
 
 module Main where
 
-import qualified EFA.Equation.Env as Env
-import qualified EFA.Equation.Absolute as EqSys
-import EFA.Equation.Absolute ((.=), (=.=))
+import qualified EFA.Equation.Record as Record
+import qualified EFA.Equation.Environment as Env
+import qualified EFA.Example.Absolute as EqSys
+import EFA.Example.Absolute ((.=), (=.=))
 import EFA.Example.Utility (constructSeqTopo, edgeVar, makeEdges)
 
 import qualified EFA.Graph.Topology.Index as Idx
@@ -74,7 +75,7 @@ solve p =
             ((EqSys.variable eta =.= lookupEta (EqSys.variable c))
                <> given p)
   in  show p ++ " " ++
-      Format.unUnicode (formatValue (Env.unAbsolute
+      Format.unUnicode (formatValue (Record.unAbsolute
          (checkedLookup (Env.etaMap $ Env.signal env) eta)))
 
 main :: IO ()

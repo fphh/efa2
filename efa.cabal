@@ -40,7 +40,7 @@ Library
     pretty ==1.1.*,
     random ==1.0.*,
     Stream >=0.4.6 && <0.5,
-    non-empty >=0.0.1 && <0.1,
+    non-empty >=0.0.2 && <0.1,
     containers >=0.4 && <0.6,
     data-accessor-transformers >=0.2.1 && <0.3,
     data-accessor >=0.2.2 && <0.3,
@@ -87,24 +87,30 @@ Library
     EFA.Graph.Topology.Node
     EFA.Graph.Topology.StateAnalysis
     EFA.Graph.Flow
-    EFA.Equation.Absolute
     EFA.Equation.System
     EFA.Equation.Result
-    EFA.Equation.Env
+    EFA.Equation.Environment
+    EFA.Equation.Record
     EFA.Equation.Variable
     EFA.Equation.Arithmetic
+    EFA.Equation.MultiValue
+    EFA.Equation.Stack
     EFA.Example.Utility
+    EFA.Example.Absolute
+    EFA.Example.NestedDelta
 
 
 -- sollte man auf Cabal-Test umstellen,
 -- sobald Cabal-Test vernünftig läuft
 Executable test-efa
-  Main-Is: EFA/Test/Test.hs
+  Main-Is: EFA/Test.hs
   GHC-Options: -Wall
   Hs-Source-Dirs: test
   If flag(buildTests)
     Build-Depends:
       efa,
+      quickcheck-properties >=0.1 && <0.2,
+      -- alternative: checkers
       QuickCheck,
       containers,
       utility-ht,
@@ -113,8 +119,11 @@ Executable test-efa
   Else
     Buildable: False
   Other-Modules:
-    EFA.Test.UtilsTest
-    EFA.Test.SequenceTest
+    EFA.Test.Utility
+    EFA.Test.Sequence
+    EFA.Test.MultiValue
+    EFA.Test.Stack
+    EFA.Test.Arithmetic
 
 
 Executable example-sequenzflussgraph
@@ -170,36 +179,6 @@ Executable example-time
   Else
     Buildable: False
 
-Executable example-numericSolving
-  Main-Is: examples/elementary/numericSolving/Main.hs
-  GHC-Options: -Wall
-  If flag(buildExamples)
-    Build-Depends:
-      efa,
-      base
-  Else
-    Buildable: False
-
-Executable example-symbolicSolving
-  Main-Is: examples/elementary/symbolicSolving/Main.hs
-  GHC-Options: -Wall
-  If flag(buildExamples)
-    Build-Depends:
-      efa,
-      base
-  Else
-    Buildable: False
-
-Executable example-symbolicDelta
-  Main-Is: examples/elementary/symbolicDelta/Main.hs
-  GHC-Options: -Wall
-  If flag(buildExamples)
-    Build-Depends:
-      efa,
-      base
-  Else
-    Buildable: False
-
 Executable example-twoways
   Main-Is: examples/elementary/twoWays/Main.hs
   GHC-Options: -Wall
@@ -223,13 +202,69 @@ Executable example-readandcut
 
 
 
-Executable demo-additive-terms
-  Main-Is: demo/additiveTerms/Main.hs
+Executable demo-numericSolving
+  Main-Is: demo/numericSolving/Main.hs
+  GHC-Options: -Wall
+  If flag(buildDemos)
+    Build-Depends:
+      efa,
+      base
+  Else
+    Buildable: False
+
+Executable demo-signalSolving
+  Main-Is: demo/signalSolving/Main.hs
+  GHC-Options: -Wall
+  If flag(buildDemos)
+    Build-Depends:
+      efa,
+      base
+  Else
+    Buildable: False
+
+Executable demo-symbolicSolving
+  Main-Is: demo/symbolicSolving/Main.hs
+  GHC-Options: -Wall
+  If flag(buildDemos)
+    Build-Depends:
+      efa,
+      base
+  Else
+    Buildable: False
+
+Executable demo-symbolicDelta
+  Main-Is: demo/symbolicDelta/Main.hs
+  GHC-Options: -Wall
+  If flag(buildDemos)
+    Build-Depends:
+      efa,
+      base
+  Else
+    Buildable: False
+
+Executable demo-additive-terms-dynamic
+  Main-Is: demo/additiveTermsDynamic/Main.hs
   GHC-Options: -Wall
   If flag(buildDemos)
     Build-Depends:
       efa,
       gnuplot,
+      non-empty,
+      containers,
+      utility-ht,
+      base
+  Else
+    Buildable: False
+
+Executable demo-additive-terms-static
+  Main-Is: demo/additiveTermsStatic/Main.hs
+  GHC-Options: -Wall
+  If flag(buildDemos)
+    Build-Depends:
+      efa,
+      gnuplot,
+      non-empty,
+      data-accessor,
       containers,
       utility-ht,
       base
@@ -314,7 +349,7 @@ Executable demo-slicezerocrosssignals
 Executable demo-undiredge
   Main-Is: demo/undirEdge/Main.hs
   GHC-Options: -Wall
-  If flag(buildExamples)
+  If flag(buildDemos)
     Build-Depends:
       efa,
       base
@@ -324,7 +359,7 @@ Executable demo-undiredge
 Executable demo-csvimport
   Main-Is: demo/CSVImport/Main.hs
   GHC-Options: -Wall
-  If flag(buildExamples)
+  If flag(buildDemos)
     Build-Depends:
       efa,
       base
@@ -334,7 +369,7 @@ Executable demo-csvimport
 Executable demo-pltimport
   Main-Is: demo/PLTImport/Main.hs
   GHC-Options: -Wall
-  If flag(buildExamples)
+  If flag(buildDemos)
     Build-Depends:
       efa,
       base
@@ -344,7 +379,7 @@ Executable demo-pltimport
 Executable demo-asciiimport
   Main-Is: demo/ASCIIImport/Main.hs
   GHC-Options: -Wall
-  If flag(buildExamples)
+  If flag(buildDemos)
     Build-Depends:
       efa,
       base
@@ -354,7 +389,7 @@ Executable demo-asciiimport
 Executable demo-ratio
   Main-Is: demo/ratio/Main.hs
   GHC-Options: -Wall
-  If flag(buildExamples)
+  If flag(buildDemos)
     Build-Depends:
       efa,
       base
@@ -364,7 +399,7 @@ Executable demo-ratio
 Executable demo-pretty
   Main-Is: demo/pretty/Main.hs
   GHC-Options: -Wall
-  If flag(buildExamples)
+  If flag(buildDemos)
     Build-Depends:
       efa,
       base,
@@ -375,7 +410,7 @@ Executable demo-pretty
 Executable demo-nodedefinition
   Main-Is: demo/nodeDefinition/Main.hs
   GHC-Options: -Wall
-  If flag(buildExamples)
+  If flag(buildDemos)
     Build-Depends:
       efa,
       base,
@@ -386,7 +421,7 @@ Executable demo-nodedefinition
 Executable demo-stateanalysis
   Main-Is: demo/stateAnalysis/Main.hs
   GHC-Options: -Wall
-  If flag(buildExamples)
+  If flag(buildDemos)
      Build-Depends:
        efa,
        base,
@@ -397,7 +432,7 @@ Executable demo-stateanalysis
 Executable demo-functioneta
   Main-Is: demo/functionEta/Main.hs
   GHC-Options: -Wall
-  If flag(buildExamples)
+  If flag(buildDemos)
      Build-Depends:
        efa,
        base
@@ -407,7 +442,7 @@ Executable demo-functioneta
 Executable demo-lookupeta
   Main-Is: demo/lookupEta/Main.hs
   GHC-Options: -Wall
-  If flag(buildExamples)
+  If flag(buildDemos)
      Build-Depends:
        efa,
        base
@@ -417,7 +452,7 @@ Executable demo-lookupeta
 Executable demo-deltaLogic
   Main-Is: demo/deltaLogic/Main.hs
   GHC-Options: -Wall
-  If flag(buildExamples)
+  If flag(buildDemos)
     Build-Depends:
       efa,
       base
