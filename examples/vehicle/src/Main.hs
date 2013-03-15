@@ -2,16 +2,12 @@
 {-# LANGUAGE Rank2Types #-}
 module Main where
 
--- <<<<<<< HEAD
--- =======
 ---------------------------------------------------------------------------------------
 -- * Import other Modules
 
 import EFA.Example.Utility (edgeVar)
 import EFA.Example.Absolute ((.=))
 import qualified EFA.Equation.System as EqGen
---import EFA.IO.CSVImport (modelicaCSVImport)
--- >>>>>>> master
 import EFA.IO.PLTImport (modelicaPLTImport)
 import EFA.Signal.Sequence (makeSeqFlowTopology)
 import qualified EFA.Graph.Flow as Flow
@@ -20,6 +16,9 @@ import EFA.Graph.Topology(isStructureEdge)
 import EFA.Graph(lefilter)
 import EFA.Utility.Async (concurrentlyMany_)
 
+
+import qualified EFA.Hack.Plot as HPlot
+
 ----------------------------------
 -- * Example Specific Imports
 
@@ -27,6 +26,10 @@ import qualified Modules.System as System
 import qualified Modules.Analysis as Analysis
 import qualified Modules.Plots as Plots
 import qualified Modules.Signals as Signals
+
+import qualified EFA.Signal.Plot as Plot
+import qualified EFA.Signal.Plot.Options as O
+
 
 import System.IO
 
@@ -120,18 +123,34 @@ main = do
 --  Draw.topologyWithEdgeLabels System.edgeNames System.topology
      
        
-  --Plots.plotPowers System.powerPositonNames ["A","B"] [powerSignals,powerSignalsB] Signals.vehPowers
+--  Plots.plotPowers System.powerPositonNames ["A","B"] [powerSignals,powerSignalsB] Signals.vehPowers
   
-  Plots.timeIO (Plots.gtitle "hallihallo" Plots.globalDeflt) 
-    [(Plots.wtitle "- A" Plots.windowDeflt, [(Plots.recOpts, powerSignals)]),
-     (Plots.wtitle "- B" Plots.windowDeflt, [(Plots.recOpts, powerSignalsB)])]
-{-  
+
+
+  
+  Plot.time2 (O.title "Record-Split" . 
+             O.split (O.Split 5)) (powerSignals)
+
+
+--  Plot.time2 (O.changeId System.swapId . O.title "Record-Split" ) (powerSignals)
+  
+
+
+{-    
+  Plot.time2 (O.title "Record-Split" . 
+             O.split (O.Split 5)) (powerSignals)
+    
+  
+  Plot.time2 (O.title "hallihallo" . 
+             O.split (O.Split 5)) (Plot.RecSq powerSignals sequencePowersFilt)
+   
+-}  
   -- draw various diagrams
   concurrentlyMany_ [
-    Draw.sequFlowGraphAbsWithEnv dataset sectionTopos simulation,
-    Draw.sequFlowGraphAbsWithEnv datasetB sectionToposB simulationB
+    Draw.sequFlowGraphAbsWithEnv dataset sectionTopos simulation
+--    Draw.sequFlowGraphAbsWithEnv datasetB sectionToposB simulationB
 --    Draw.sequFlowGraphDeltaWithEnv "delta" sectionTopos simulationDelta,
 --    Draw.sequFlowGraphAbsWithEnv "Prediction" sectionTopos prediction
     ]
 
--}
+

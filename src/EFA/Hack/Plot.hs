@@ -1,31 +1,34 @@
 module EFA.Hack.Plot where
 
-
 import qualified Graphics.Gnuplot.Frame as Frame
 import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
 import qualified Graphics.Gnuplot.Frame.OptionSet.Style as OptsStyle
 import qualified Graphics.Gnuplot.Frame.OptionSet.Histogram as Histogram
 import qualified Graphics.Gnuplot.Plot.TwoDimensional as Plot2D
 import qualified Graphics.Gnuplot.Graph.TwoDimensional as Graph2D
+import qualified Graphics.Gnuplot.Value.Atom as Atom
+import qualified Graphics.Gnuplot.Value.Tuple as Tuple
 import qualified Graphics.Gnuplot.LineSpecification as LineSpec
+import qualified Graphics.Gnuplot.Graph as Graph
 
+import qualified EFA.Signal.Plot as Plot
+import qualified EFA.Signal.Record as Record
+
+import EFA.Report.Typ (TDisp, DisplayType(Typ_T), getDisplayUnit, getDisplayTypName)
 import qualified EFA.Graph.Topology.Index as Idx
-
 import EFA.Report.FormatValue (FormatValue, formatValue)
 import qualified Graphics.Gnuplot.Advanced as AGP
-
 import qualified EFA.Report.Format as Format
 import qualified EFA.Equation.Variable as Var
-
 import qualified EFA.Graph.Topology.Node as TN 
+import EFA.Signal.Record (SigId(..))
+import qualified EFA.Signal.Vector as Vec
 
 import Control.Functor.HT (void)
 import qualified Data.Foldable as Fold
 
 
-
 -- | Draw a histogram of a flow change stack
-
 histogram ::
    (Fold.Foldable f, 
     FormatValue term, 
@@ -52,15 +55,6 @@ histogrammIO :: (Fold.Foldable f, TN.C node, FormatValue term) =>
 histogrammIO  stack key = do
   void $ AGP.plotDefault $ histogram key stack
 
-{-
 
-recordIOList ::
-   (Fractional y,
-    Show id,
-    SV.Walker v, SV.Storage v y, SV.FromList v,
-    TDisp t2, TDisp t1,
-    Tuple.C y, Atom.C y) =>
-   String -> [Record s t1 t2 id v y] -> IO ()
-recordIOList name =
-   void . Plot.plotDefault . Frame.cons (recordAttr name) . map record
--}
+
+

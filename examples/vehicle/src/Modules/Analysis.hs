@@ -203,28 +203,9 @@ makeGivenForPrediction idx env =
                fmap (fmap (*1.1)) x
           h _ r = r
 -}
+
 ---------------------------------------------------------------------------------------------------
 -- ## Make Delta 
-
--- delta :: TD.SequFlowGraph System.Node
---                         -> SD.SequData
---                              (Record
---                                 Sig.FSignal
---                                 (Typ D T Tt)
---                                 (Typ A F Tt)
---                                 (PPosIdx System.Node)
---                                 []
---                                 Double)
---                         -> SD.SequData
---                              (Record
---                                 Sig.FSignal
---                                 (Typ D T Tt)
---                                 (Typ A F Tt)
---                                 (PPosIdx System.Node)
---                                 []
---                                 Double)
---                         -> Env.Complete
---                              System.Node (Env.Delta (Result Double)) (Env.Delta (Result Double))
 
 delta :: (Eq v, Num v, Arith.Product v, Arith.Integrate v, Vec.Storage t3 v,
           Vec.Storage t v, Vec.FromList t3, Vec.FromList t,
