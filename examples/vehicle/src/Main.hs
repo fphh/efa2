@@ -124,24 +124,24 @@ main = do
      
        
 --  Plots.plotPowers System.powerPositonNames ["A","B"] [powerSignals,powerSignalsB] Signals.vehPowers
-  
-
 
   
-  Plot.time2 (O.title "Record-Split" . 
-             O.split (O.Split 5)) (powerSignals)
+  Plot.record2 (O.title "Record-Split" . 
+                O.split (O.Split 9) . 
+                O.showId System.showPowerId .
+                O.pointSize 2) (powerSignals)
 
 
---  Plot.time2 (O.changeId System.swapId . O.title "Record-Split" ) (powerSignals)
+--  Plot.record2 (O.changeId System.swapId . O.title "Record-Split" ) (powerSignals)
   
 
 
 {-    
-  Plot.time2 (O.title "Record-Split" . 
+  Plot.record2 (O.title "Record-Split" . 
              O.split (O.Split 5)) (powerSignals)
     
   
-  Plot.time2 (O.title "hallihallo" . 
+  Plot.record2 (O.title "hallihallo" . 
              O.split (O.Split 5)) (Plot.RecSq powerSignals sequencePowersFilt)
    
 -}  

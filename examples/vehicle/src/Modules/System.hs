@@ -62,11 +62,11 @@ powerPositonNames :: M.Map (PPosIdx Node) SigId
 powerPositonNames = M.fromList $ concat $ map f edgeList
   where f (n1,n2,_,l1,l2) = [(PPosIdx n1 n2, SigId l1),
                              (PPosIdx n2 n1, SigId l2)]
-swapId :: PPosIdx Node ->  SigId
-swapId ppos = f (M.lookup  ppos powerPositonNames)   
+showPowerId :: PPosIdx Node -> String
+showPowerId ppos = f (M.lookup  ppos powerPositonNames)   
   where 
-    f (Just id) = id 
-    f Nothing = SigId  (show ppos)
+    f (Just id) = show id 
+    f Nothing = (show ppos)
 
 
 ----------------------------------------------------------------------
