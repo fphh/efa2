@@ -485,17 +485,25 @@ instance Time RecSq id where
 
 ------------------------------------------------------------
 -- Plot a single Window
-recordCore :: (Terminal.C term, Ord id, Show id,Fractional a, SV.Walker v, SV.Storage v a,
-                 SV.FromList v, TDisp typ1, TDisp typ0, Tuple.C a, Atom.C a) =>
-                (PlOpts.T id term)
-                -> [Record.Record s typ0 typ1 id v a] -> IO ()
+recordCore :: (Terminal.C term, 
+               Ord id, 
+               Show id,
+               Fractional a, 
+               SV.Walker v, 
+               SV.Storage v a,
+               SV.FromList v, 
+               TDisp typ1, 
+               TDisp typ0, 
+               Tuple.C a, 
+               Atom.C a) =>
+              (PlOpts.T id term)
+              -> [Record.Record s typ0 typ1 id v a] -> IO ()
 recordCore opts xs = void $ AGP.plot term $ frame $ foldMap (buildPlot' . treatRecord) xs
   where    
     frame = PlOpts.buildFrame opts
     treatRecord = PlOpts.buildPrepFunction opts
     buildPlot' = buildPlot opts
-    term = PlOpts.terminalAcc opts
---    term = PlOpts.getTerminal opts
+    term = PlOpts.getTerminal opts
 
 buildPlot ::
    (Show id, TDisp typ0, TDisp typ1,
