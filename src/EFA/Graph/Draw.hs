@@ -381,20 +381,7 @@ sequFlowGraphWithEnv ::
   (Node.C node) =>
   String ->
   SequFlowGraph node -> Env node Unicode -> IO ()
-{-
-<<<<<<< HEAD
-sequFlowGraphWithEnv ti g env =
-   printGraph ti g (Just (formatTime env)) (formatNode env) (eshow . fst)
-  where eshow e@(Edge uid vid) =
-           case Topo.edgeType e of
-              StructureEdge _ ->
-                 formatEnergy env uid vid :
-                 formatX env uid vid :
-                 formatEta env uid vid :
-                 formatX env vid uid :
-                 formatEnergy env vid uid :
-=======
--}
+
 
 sequFlowGraphWithEnv ti g env =
    printGraph ti g (Just (formatTime env)) (formatNode env) (eshow . fst)
@@ -406,7 +393,6 @@ sequFlowGraphWithEnv ti g env =
                  formatEta env e :
                  formatX env (Idx.flip e) :
                  formatEnergy env (Idx.flip e) :
--- >>>>>>> master
                  []
               StorageEdge e ->
                  formatMaxEnergy env e :
@@ -419,27 +405,16 @@ sequFlowGraphAbsWithEnv ::
    (FormatValue a, FormatValue v, Node.C node) =>
    String ->
    SequFlowGraph node ->
-{- <<<<<<< HEAD
-   Env.Complete node (Env.Absolute a) (Env.Absolute v) -> IO ()
-sequFlowGraphAbsWithEnv ti topo = sequFlowGraphWithEnv ti topo . envAbs
-======= -}
    Env.Complete node (Record.Absolute a) (Record.Absolute v) -> IO ()
 sequFlowGraphAbsWithEnv ti topo = sequFlowGraphWithEnv ti topo . envAbs
--- >>>>>>> master
+
 
 sequFlowGraphDeltaWithEnv ::
    (FormatValue a, FormatValue v, Node.C node) =>
    String ->
    SequFlowGraph node ->
-
-
-{- <<<<<<< HEAD
-   Env.Complete node (Env.Delta a) (Env.Delta v) -> IO ()
-sequFlowGraphDeltaWithEnv ti topo = sequFlowGraphWithEnv ti topo . envDelta
-======= -}
    Env.Complete node (Record.Delta a) (Record.Delta v) -> IO ()
 sequFlowGraphDeltaWithEnv ti topo = sequFlowGraphWithEnv ti topo . envDelta
--- >>>>>>> master
 
 
 envGen ::
