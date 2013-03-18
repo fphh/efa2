@@ -93,13 +93,6 @@ genSectionTopology ::
 genSectionTopology = zipWithSecIdxs mkSectionTopology
 
 
-copySeqTopology ::
-  (Ord node) =>
-  SequData (SequFlowGraph node) -> SequFlowGraph node
-copySeqTopology =
-   Fold.foldl Gr.union Gr.empty
-
-
 mkStructureEdges ::
    node -> Idx.Section ->
    M.Map Idx.Section StoreDir ->
@@ -118,7 +111,7 @@ mkSequenceTopology ::
   (Ord node) =>
   SequData (SequFlowGraph node) -> SequFlowGraph node
 mkSequenceTopology sd = res
-  where sqTopo = copySeqTopology sd
+  where sqTopo = Fold.fold sd
         initNode = Idx.SecNode Idx.initSection
         startElems = map f $ M.toList $ getActiveStores sqTopo
         f (n, io) =

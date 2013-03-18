@@ -50,7 +50,7 @@ import qualified Data.Set as S
 import qualified Data.Map as M
 import qualified Data.Foldable as Fold
 import Control.Monad (liftM2)
-import Data.Monoid (mappend)
+import Data.Monoid (Monoid, mempty, mappend)
 import Data.Foldable (Foldable, foldMap, fold)
 import Data.Tuple.HT (mapSnd, fst3, snd3, thd3)
 import Data.Char (toUpper)
@@ -142,6 +142,10 @@ union (Graph ns0 els0) (Graph ns1 els1) =
    Graph
       (M.unionWith (error "Graph.union: node sets overlap") ns0 ns1)
       (M.union els0 els1)
+
+instance (Ord node) => Monoid (Graph node nodeLabel edgeLabel) where
+   mempty = empty
+   mappend = union
 
 
 inEdges, outEdges :: Graph n nl el -> M.Map n (S.Set n)
