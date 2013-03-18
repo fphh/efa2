@@ -3,9 +3,11 @@ module EFA.Graph.Draw (
   sequFlowGraphWithEnv,
   sequFlowGraphAbsWithEnv, envAbs,
   sequFlowGraphDeltaWithEnv, envDelta,
+  topologyWithEdgeLabels,
   Env(..),
   topology,
   flowTopologies,
+  dotFromTopology -- pg inserted for Hack.Draw 
   ) where
 
 import qualified EFA.Report.Format as Format
@@ -47,7 +49,9 @@ import Data.GraphViz (
           DotSubGraph,
           attrStmts, nodeStmts, edgeStmts, graphStatements,
           directedGraph, strictGraph, subGraphs,
-          graphID)
+          graphID,
+          GraphvizOutput(..))
+  
 import Data.GraphViz.Attributes.Complete as Viz
 
 import qualified Data.Accessor.Basic as Accessor
@@ -63,6 +67,8 @@ import qualified Data.List.HT as HTL
 
 import Control.Monad (void)
 
+-- import System.FilePath
+
 
 nodeColour :: Attribute
 nodeColour = FillColor [RGB 230 230 240]
@@ -76,12 +82,13 @@ storageEdgeColour = Color [RGB 200 0 0]
 
 dotFromSequFlowGraph ::
   (Node.C node) =>
+  String ->
   SequFlowGraph node ->
   Maybe (Idx.Section -> Unicode) ->
   (Topo.LNode node -> Unicode) ->
   (Topo.LEdge node -> [Unicode]) ->
   DotGraph T.Text
-dotFromSequFlowGraph g mtshow nshow eshow =
+dotFromSequFlowGraph ti g mtshow nshow eshow =
   DotGraph { strictGraph = False,
              directedGraph = True,
              graphID = Just (Int 1),
@@ -113,7 +120,7 @@ dotFromSequFlowGraph g mtshow nshow eshow =
                       Just tshow -> "Time " ++ unUnicode (tshow sl)
         stmts =
           DotStmts {
-            attrStmts = [],
+            attrStmts = [GraphAttrs [Label (StrLabel (T.pack ti))]],
             subGraphs =
               M.elems $
               M.intersectionWithKey sg topoNs
@@ -166,30 +173,38 @@ dotIdentFromNode :: (Node.C node) => node -> T.Text
 dotIdentFromNode n = T.pack $ Node.dotId n
 
 
-printGraph, printGraphX, _printGraphDot ::
-  (Node.C node) =>
+printGraph, printGraphX, _printGraphDot, _printGraphPdf ::
+   (Node.C node) =>
+   String ->
    SequFlowGraph node ->
    Maybe (Idx.Section -> Unicode) ->
    (Topo.LNode node -> Unicode) ->
    (Topo.LEdge node -> [Unicode]) ->
    IO ()
-printGraph = printGraphX
+printGraph =  printGraphX -- _printGraphPdf -- _printGraphDot -- printGraphX
 
-printGraphX g recTShow nshow eshow =
-   runGraphvizCanvas Dot (dotFromSequFlowGraph g recTShow nshow eshow) Xlib
+printGraphX ti g recTShow nshow eshow =
+   runGraphvizCanvas Dot (dotFromSequFlowGraph ti g recTShow nshow eshow) Xlib
 
-_printGraphDot g recTShow nshow eshow =
+_printGraphDot ti g recTShow nshow eshow =
    void $
    runGraphvizCommand Dot
-      (dotFromSequFlowGraph g recTShow nshow eshow)
+      (dotFromSequFlowGraph ti g recTShow nshow eshow)
       XDot "result/graph.dot"
+
+_printGraphPdf ti g recTShow nshow eshow =
+   void $
+   runGraphvizCommand Dot
+      (dotFromSequFlowGraph ti g recTShow nshow eshow)
+      Pdf "result/graph.pdf"
 
 
 sequFlowGraph ::
   (Node.C node) =>
+  String ->
   SequFlowGraph node -> IO ()
-sequFlowGraph topo =
-   printGraph topo Nothing nshow eshow
+sequFlowGraph ti topo =
+   printGraph ti topo Nothing nshow eshow
   where nshow (Idx.SecNode _ n, l) =
            Unicode $ unUnicode (Node.display n) ++ " - " ++ showType l
         eshow _ = []
@@ -197,8 +212,9 @@ sequFlowGraph topo =
 
 dotFromTopology ::
   (Node.C node) =>
+  M.Map (node, node) String -> 
   Topo.Topology node -> DotGraph T.Text
-dotFromTopology g =
+dotFromTopology edgeLabels g =
   DotGraph {
     strictGraph = False,
     directedGraph = False,
@@ -208,7 +224,7 @@ dotFromTopology g =
         attrStmts = [],
         subGraphs = [],
         nodeStmts = map dotFromTopoNode $ Gr.labNodes g,
-        edgeStmts = map (dotFromTopoEdge . fst) $ Gr.labEdges g
+        edgeStmts = map (dotFromTopoEdge edgeLabels . fst) $ Gr.labEdges g
       }
   }
 
@@ -223,20 +239,35 @@ dotFromTopoNode (x, typ) =
 
 dotFromTopoEdge ::
   (Node.C node) =>
+  M.Map (node, node) String -> 
   Gr.Edge node -> DotEdge T.Text
-dotFromTopoEdge e =
-   case orientUndirEdge e of
-      Edge x y ->
-         DotEdge
-            (dotIdentFromNode x) (dotIdentFromNode y)
-            [Viz.Dir Viz.NoDir, structureEdgeColour]
+dotFromTopoEdge edgeLabels e =
+  case orientUndirEdge e of
+         Edge x y ->
+           let from = dotIdentFromNode x
+               to = dotIdentFromNode y
+               lab = case M.lookup (x, y) edgeLabels of
+                          Just str -> T.pack str
+                          _ -> T.pack ""
+           in  DotEdge
+                 from to
+                 [ Viz.Dir Viz.NoDir, structureEdgeColour, 
+                   Label (StrLabel lab), EdgeTooltip lab ]
 
 
 
 topology :: (Node.C node) => Topo.Topology node -> IO ()
 topology topo =
-   runGraphvizCanvas Dot (dotFromTopology topo) Xlib
+   runGraphvizCanvas Dot (dotFromTopology M.empty topo) Xlib
+{-
+topology2pdf :: (Node.C node) => Topo.Topology node -> IO (FilePath)
+topology2pdf topo =
+   runGraphvizCommand Dot (dotFromTopology M.empty topo) Pdf "result/topology.pdf"
+-}
 
+topologyWithEdgeLabels :: (Node.C node) => M.Map (node, node) String -> Topo.Topology node -> IO ()
+topologyWithEdgeLabels edgeLabels topo =
+   runGraphvizCanvas Dot (dotFromTopology edgeLabels topo) Xlib
 
 dotFromFlowTopology ::
   (Node.C node) =>
@@ -348,9 +379,25 @@ lookupFormatAssign rec mp makeIdx x =
 
 sequFlowGraphWithEnv ::
   (Node.C node) =>
+  String ->
   SequFlowGraph node -> Env node Unicode -> IO ()
-sequFlowGraphWithEnv g env =
-   printGraph g (Just (formatTime env)) (formatNode env) (eshow . fst)
+{-
+<<<<<<< HEAD
+sequFlowGraphWithEnv ti g env =
+   printGraph ti g (Just (formatTime env)) (formatNode env) (eshow . fst)
+  where eshow e@(Edge uid vid) =
+           case Topo.edgeType e of
+              StructureEdge _ ->
+                 formatEnergy env uid vid :
+                 formatX env uid vid :
+                 formatEta env uid vid :
+                 formatX env vid uid :
+                 formatEnergy env vid uid :
+=======
+-}
+
+sequFlowGraphWithEnv ti g env =
+   printGraph ti g (Just (formatTime env)) (formatNode env) (eshow . fst)
   where eshow se =
            case Topo.edgeType se of
               StructureEdge e ->
@@ -359,6 +406,7 @@ sequFlowGraphWithEnv g env =
                  formatEta env e :
                  formatX env (Idx.flip e) :
                  formatEnergy env (Idx.flip e) :
+-- >>>>>>> master
                  []
               StorageEdge e ->
                  formatMaxEnergy env e :
@@ -369,15 +417,29 @@ sequFlowGraphWithEnv g env =
 
 sequFlowGraphAbsWithEnv ::
    (FormatValue a, FormatValue v, Node.C node) =>
+   String ->
    SequFlowGraph node ->
+{- <<<<<<< HEAD
+   Env.Complete node (Env.Absolute a) (Env.Absolute v) -> IO ()
+sequFlowGraphAbsWithEnv ti topo = sequFlowGraphWithEnv ti topo . envAbs
+======= -}
    Env.Complete node (Record.Absolute a) (Record.Absolute v) -> IO ()
-sequFlowGraphAbsWithEnv topo = sequFlowGraphWithEnv topo . envAbs
+sequFlowGraphAbsWithEnv ti topo = sequFlowGraphWithEnv ti topo . envAbs
+-- >>>>>>> master
 
 sequFlowGraphDeltaWithEnv ::
    (FormatValue a, FormatValue v, Node.C node) =>
+   String ->
    SequFlowGraph node ->
+
+
+{- <<<<<<< HEAD
+   Env.Complete node (Env.Delta a) (Env.Delta v) -> IO ()
+sequFlowGraphDeltaWithEnv ti topo = sequFlowGraphWithEnv ti topo . envDelta
+======= -}
    Env.Complete node (Record.Delta a) (Record.Delta v) -> IO ()
-sequFlowGraphDeltaWithEnv topo = sequFlowGraphWithEnv topo . envDelta
+sequFlowGraphDeltaWithEnv ti topo = sequFlowGraphWithEnv ti topo . envDelta
+-- >>>>>>> master
 
 
 envGen ::

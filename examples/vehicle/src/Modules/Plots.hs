@@ -11,15 +11,28 @@ import qualified EFA.Signal.Vector as V
 
 import EFA.Signal.Typ (Typ,A,T,P,Tt)
 import EFA.Signal.Signal (Signal)
-import EFA.Signal.Record (SigId(..), Record(..), PowerRecord, SignalRecord)
+-- import EFA.Signal.Record (SigId(..), Record(..), PowerRecord, SignalRecord)
+import EFA.Signal.Record as Record
+import EFA.Hack.Record as HRecord
+
 
 import EFA.Report.Typ (TDisp)
 
 import qualified Graphics.Gnuplot.Value.Atom as Atom
 import qualified Graphics.Gnuplot.Value.Tuple as Tuple
+--import Control.Functor.HT (void)
+--import qualified Graphics.Gnuplot.Frame as Frame
+--import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
+--import qualified Graphics.Gnuplot.Graph as Graph
+--import EFA.Report.Typ (TDisp, DisplayType(Typ_T), getDisplayUnit, getDisplayTypName)
+--import qualified Graphics.Gnuplot.Advanced as Plot
 
 import qualified Data.Map as M
 import EFA.Utility(checkedLookup)
+
+--import Debug.Trace
+
+--import Data.Monoid ((<>))
 
 ---------------------------------------------------------------------------------------
   -- | * Group Signals for Plotting
@@ -113,7 +126,7 @@ mkPlotPowers (Record time pMap) = Record time newMap
     
 genPowers :: Plottable v a => PowerRecord Node v a -> IO()
 genPowers pRec =  plot "GenerationPowers" (mkPlotPowers pRec) [SigId "Fuel",    
-                                                             SigId "CrankShaft",
+                                                          --   SigId "CrankShaft",
                                                              SigId "BatteryClamps",
                                                              SigId "BatteryCore",
                                                              SigId "Wire"
@@ -121,8 +134,6 @@ genPowers pRec =  plot "GenerationPowers" (mkPlotPowers pRec) [SigId "Fuel",
 
 propPowers :: (Show (v a), Plottable v a) => PowerRecord Node v a -> IO()
 propPowers pRec = plot "PropulsionPowers" (mkPlotPowers pRec) [SigId "MotorClamps",
-                                                             SigId "MotorFlange",    
-                                                             SigId "InShaft",
                                                              SigId "OutShaft",
                                                              SigId "ToFrontBrakes",
                                                              SigId "FrontWheelHub",
@@ -136,4 +147,102 @@ vehPowers pRec = plot "VehiclePowers"  (mkPlotPowers pRec) [SigId "ToFrontBrakes
                                                           SigId "ToResistance"
                                                          ]
 
+
+
+
+
+{-
+vehPowers2 :: (Show (v a), Plottable v a) => [String] -> [PowerRecord Node v a] -> IO()
+vehPowers2 recNames powerRecords = Plot.recordIOList "VehiclePowers" (zipWith g recNames $ map HRecord.namePowers powerRecords) 
+  where
+    f rec = Record.extract [SigId "ToFrontBrakes",                                                     
+                            SigId "RearTires",                                                       
+                            SigId "ToInertia",                                                       
+                            SigId "ToResistance"
+                           ] $ mkPlotPowers rec 
+            
+    g name (Record time sigs) = Record time (M.mapKeys (\ (SigId x) -> SigId (name ++ "_" ++ x) ) sigs)
+-}    
+
+plotPowers :: (Fractional a,
+                      V.Walker v,
+                      V.Storage v a,
+                      V.FromList v,
+                      Tuple.C a,
+                      Atom.C a, 
+                      Show (v a)) =>
+              M.Map (PPosIdx System.Node) (SigId) ->  [String] -> [PowerRecord Node v a] -> [SigId]-> IO() 
+plotPowers signalNameMap recNames powerRecords sigIDList = if length recNames == length powerRecords then
+                                                     Plot.recordIOList "VehiclePowers" $  zipWith HRecord.recName recNames $ 
+                                                     map (Record.extract sigIDList) $                                                    
+                                                     (map (HRecord.namePowers signalNameMap) powerRecords)
+                                                  else error("Length between List of Records and Names doesn't match")
+
+
+{-
+
+
+-- Can differ between Plots
+
+
+preProcessing: 
+- Signal / Signal to PlotRecord 
+- Record -> PlotRecord
+- [Record] -> PlotRecord
+- Sequ -> PlotRecord
+
+
+
+
+
+plotOpts = Terminal Pdf FilePath | Y-Label Name | Title | Grid
+
+-- Can differ between Plots and Records
+rStyleOpts = LineWidth | IncrementLineWith | IncrementLineStyle | LineSyleList | Increment
+
+-- 
+RecordOpts = Selection .. | NamePowers | NameSignals | AddLeadingSignal | Normate  (Record -> Record commutierbar)
+
+MultiOpts = AutoWindowNames Title |  Split Int with LeadingSignal | Split 
+
+
+alternative Idee: 
+
+timePlotData = SplitRecord Int Record | 
+
+
+-- Alternativ rPlot = timePlot
+
+time :: String -> [PlotOpts] -> [StyleOpts] -> [RecordOpts] -> [Record] -> IO ()
+time title Options recordList = 
+
+void . Plot.default . Frame.cons (recordAttr) .  $ foldMap record recList
+
+
+-- alternative Anwendungen !!
+
+-- vorher in Record konvertieren
+time :: String -> [PlotOpts] -> [StyleOpts] -> [RecordOpts] -> (Time,Signal) -> IO ()
+
+time :: String -> [PlotOpts] -> [StyleOpts] -> [RecordOpts] -> Record -> IO ()
+time :: String -> [PlotOpts] -> [StyleOpts] -> [RecordOpts] -> [Record] -> IO ()
+
+time :: String -> [PlotOpts] -> [StyleOpts] -> [RecordOpts] -> (Record,SequData Record) -> IO ()
+
+-- vorher in record-Liste konvertieren 
+time :: String -> [PlotOpts] -> [StyleOpts] -> [RecordOpts] -> [SequData Record] -> IO ()
+
+
+timeIO :: String -> [(plotOpts,([styleopts, recordOpts,record]))] 
+
+
+!! Keine Typ-Sicherheit, wenn wir nur Gaph2D.T verwenden !! --> alles Zeit auf Achse
+
+time :: String -> [Gaph2D.T]
+
+rStyleOpts = LineWidth | IncrementLineWith | IncrementLineStyle | LineSyleList | Increment
+
+-}
+
+------------------
 

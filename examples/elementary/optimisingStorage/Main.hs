@@ -468,4 +468,4 @@ main = do
 
 
   concurrentlyMany_ $
-    map (Draw.sequFlowGraphAbsWithEnv seqTopo) [envhh,envhl, envlh, envll]
+    map (Draw.sequFlowGraphAbsWithEnv "" seqTopo) [envhh,envhl, envlh, envll]

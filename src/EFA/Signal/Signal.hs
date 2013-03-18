@@ -1165,7 +1165,7 @@ interp1Lin :: (Eq d1,
               TC Sample t2 (Data Nil d1)
 interp1Lin xSig ySig (TC (Data xVal)) = if x1 P.== x2 then TC $ Data $ (y1 P.+y2) P./2 else TC $ Data $ ((y2 P.- y1) P./(x2 P.-x1)) P.* (xVal P.- x1) P.+ y1
                 where                                                                
-                  idx = P.maybe (error "Out of Range") id $ findIndex (xVal P.>=) xSig  
+                  idx = P.maybe (error "Out of Range") id $ findIndex (P.>= xVal) xSig  
                   TC (Data (x1)) = getSample xSig $ if idx P.== 0 then idx else idx-1 -- prevent negativ index when interpolating on first element
                   TC (Data (x2)) = getSample xSig idx
                   TC (Data (y1)) = getSample ySig $ if idx P.== 0 then idx else idx-1 -- prevent negativ index when interpolating on first element

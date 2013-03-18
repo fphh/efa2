@@ -11,7 +11,7 @@ model DrivingResistance
   Modelica.Blocks.Math.Gain gain1(k = -1) annotation(Placement(visible = true, transformation(origin = {41.815,37.8749}, extent = {{12,12},{-12,-12}}, rotation = -180)));
   Modelica.Mechanics.Translational.Sensors.SpeedSensor speedsensor1 annotation(Placement(visible = true, transformation(origin = {-41.9286,-65.552}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   parameter Real cwA(start = 0.677, unit = "1") "Area * air drag coefficient" annotation(Placement(visible = true, transformation(origin = {71.2644,78.1609}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-  parameter Real mass(start = 150, unit = "1") "Vehicle Mass" annotation(Placement(visible = true, transformation(origin = {71.2644,78.1609}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  parameter Real mass(start = 1000, unit = "1") "Vehicle Mass" annotation(Placement(visible = true, transformation(origin = {71.2644,78.1609}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   parameter Real fr(start = 0.014, unit = "1") "Rolling Resistance Coefficient" annotation(Placement(visible = true, transformation(origin = {71.2644,78.1609}, extent = {{-12,-12},{12,12}}, rotation = 0)));
 equation
   connect(product1.u1,speedsensor1.v) annotation(Line(points = {{-12.6794,-65.5983},{-22.3256,-65.5983},{-22.3256,-65.552},{-28.7286,-65.552}}));

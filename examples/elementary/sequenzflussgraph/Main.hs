@@ -57,7 +57,7 @@ select ts = map (ts!!)
 
 drawSeqGraph :: [TD.FlowTopology Node.Int] ->  IO ()
 drawSeqGraph sol =
-   Draw.sequFlowGraph .
+   Draw.sequFlowGraph "" .
    Flow.mkSequenceTopology .
    SequData . select sol . parse =<<
    prompt "Gib kommagetrennt die gewuenschten Sektionsindices ein: "

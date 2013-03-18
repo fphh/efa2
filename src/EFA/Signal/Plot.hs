@@ -4,17 +4,20 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE TypeSynonymInstances#-}
+
 
 module EFA.Signal.Plot (
    run,
    signal, signalAttr, signalStyle, signalIO,
    xy, xyBasic, xyAttr, xyStyle, xyIO,
    surface, surfaceIO,
-   record, recordStyle, recordAttr, recordIO,
+   record, recordStyle, recordAttr, recordIO, recordIOList,
    sequenceIO,
    recordSplitPlus, recordSplit, sequenceSplit,
    recordSelect, sequenceSelect,
-   stack, stackAttr, stackIO,
+   stack, stackAttr, stackIO, getData
+--   record2,RecList(..),RecSq(..),Sq(..),SqList(..) 
    ) where
 
 import qualified EFA.Signal.Signal as S
@@ -25,6 +28,8 @@ import qualified EFA.Signal.Record as Record
 import EFA.Signal.SequenceData (SequData, zipWithSecIdxs)
 
 import EFA.Signal.Record (Record(Record))
+-- import EFA.Signal.SequenceData (SequData(..))
+
 import EFA.Signal.Signal (TC, toSigList, getDisplayType)
 -- import EFA.Signal.Base (BSum)
 
@@ -37,6 +42,11 @@ import EFA.Report.FormatValue (FormatValue, formatValue)
 
 
 import qualified Graphics.Gnuplot.Advanced as Plot
+-- import qualified Graphics.Gnuplot.Advanced as AGP
+
+-- import qualified Graphics.Gnuplot.Terminal.X11 as X11
+-- import qualified Graphics.Gnuplot.Terminal.WXT as WXT
+
 import qualified Graphics.Gnuplot.Terminal as Terminal
 import qualified Graphics.Gnuplot.Plot as Plt
 import qualified Graphics.Gnuplot.Plot.TwoDimensional as Plot2D
@@ -61,7 +71,15 @@ import Control.Monad (zipWithM_)
 import Control.Functor.HT (void)
 import Data.Foldable (foldMap)
 import Data.Monoid (mconcat)
+-- import Control.Concurrent (threadDelay)
 
+{-
+import EFA.Signal.Plot.Global as Global
+import EFA.Signal.Plot.Window as Window
+import EFA.Signal.Plot.Record as PlRecord
+-}
+
+-- import qualified EFA.Signal.Plot.Options as PlOpts
 
 -- | Get Signal Plot Data (Unit Conversion)  ---------------------------------------------------------------
 
@@ -322,7 +340,20 @@ recordIO ::
     Tuple.C y, Atom.C y) =>
    String -> Record s t1 t2 id v y -> IO ()
 recordIO name =
-   void . Plot.plotDefault . Frame.cons (recordAttr name) . record
+   void . Plot.plotDefault . Frame.cons (recordAttr name) . record 
+
+
+recordIOList ::
+   (Fractional y,
+    Show id,
+    SV.Walker v, SV.Storage v y, SV.FromList v,
+    TDisp t2, TDisp t1,
+    Tuple.C y, Atom.C y) =>
+   String -> [Record s t1 t2 id v y] -> IO ()
+   
+recordIOList name recList =
+   void $ Plot.plotDefault $ Frame.cons (recordAttr name) $ foldMap record recList
+
 
 
 recordSplitPlus ::
@@ -373,6 +404,8 @@ recordSelect ::
     SV.FromList v) =>
    [id] -> String -> Record s t1 t2 id v y -> IO ()
 recordSelect idList name = recordIO name . Record.extract idList
+
+
 
 
 sequenceFrame ::
@@ -427,8 +460,6 @@ sequenceSelect idList name =
    sequenceIO name . fmap (Record.extract idList)
 
 
-
-
 stackAttr ::
    (FormatValue var) =>
    String -> var -> Opts.T (Graph2D.T Int Double)
@@ -474,3 +505,4 @@ instance (TDisp t, Atom.C (D.Value c)) => AxisLabel (TC s t c) where
 instance (AxisLabel tc) => AxisLabel [tc] where
    type Value [tc] = Value tc
    genAxLabel x = genAxLabel $ head x
+

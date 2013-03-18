@@ -38,7 +38,6 @@ import Control.Monad (liftM2)
 import EFA.Utility (checkedLookup)
 
 
-
 newtype SigId = SigId String deriving (Eq, Ord)
 
 instance Show SigId where
@@ -62,6 +61,8 @@ type instance D.Value (Record s t1 t2 id v a) = a
 data Record s t1 t2 id v a =
      Record (TC s t1 (Data (v :> Nil) a))
             (M.Map id (TC s t2 (Data (v :> Nil) a))) deriving (Show, Eq)
+                                                              
+                                                              
 
 type SignalRecord = Record Signal (Typ A T Tt) (Typ UT UT UT) SigId
 
@@ -71,6 +72,16 @@ type FlowRecord n = Record FSignal (Typ D T Tt) (Typ A F Tt) (PPosIdx n)
 
 -- | Flow record to contain flow signals assigned to the tree
 newtype FlowState node = FlowState (M.Map (PPosIdx node) Sign) deriving (Show)
+
+-----------------------------------------------------------------------------------
+-- | Indice Record Number
+
+data Idx = Idx Int | NoIdx
+
+instance Show Idx where
+  show (Idx x) = "Rec" ++ show x
+  show NoIdx = ""
+
 
 
 -- | Access Functions
