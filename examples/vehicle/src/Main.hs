@@ -125,12 +125,17 @@ main = do
        
 --  Plots.plotPowers System.powerPositonNames ["A","B"] [powerSignals,powerSignalsB] Signals.vehPowers
 
-  
+{-  
   Plot.record2 (O.title "Record-Split" . 
                 O.split (O.Split 9) . 
                 O.showId System.showPowerId .
                 O.pointSize 2) (powerSignals)
+-}
 
+  Plot.record2 (O.title "Record-AB" . 
+                O.split (O.Split 9) . 
+                O.showId System.showPowerId .
+                O.pointSize 1) (Plot.RecList [powerSignals,powerSignals])
 
 --  Plot.record2 (O.changeId System.swapId . O.title "Record-Split" ) (powerSignals)
   

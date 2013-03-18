@@ -429,7 +429,7 @@ class Time r id where
               TDisp t2,
               Atom.C a,
               Tuple.C a) => 
-             (PlOpts.T id X11.T -> PlOpts.T id term)
+             (PlOpts.T id WXT.T -> PlOpts.T id term)
              -> r s t1 t2 id v a
              -> IO ()
 
@@ -443,14 +443,16 @@ instance Time Record.Record id where
          where (PlOpts.Split x) = PlOpts.splitAcc a
                woptsList = map (\x -> PlOpts.wtitle ("Part" ++ show x) opts) [0 ..]
 
--- | Plot a list of records against each other
+-- | Plot a list of records against each other / eventually split in several windows
 instance Time RecList id where
-  record2 optsIn (RecList rec) = (f opts) 
+  record2 optsIn (RecList recList) = (f opts) 
     where
       opts = PlOpts.build optsIn
-      f a | PlOpts.splitAcc a == PlOpts.NoSplit = recordCore opts rec 
-      f a | otherwise = mapM_ (recordCore opts) (L.transpose $ map (Record.split x) rec)               
+      f a | PlOpts.splitAcc a == PlOpts.NoSplit = recordCore opts recList 
+      
+      f a | otherwise = zipWithM_ recordCore woptsList (L.transpose $ map (Record.split x) recList)               
         where (PlOpts.Split x) = PlOpts.splitAcc a
+              woptsList = map (\x -> PlOpts.wtitle ("Part" ++ show x) opts) [0 ..]
 
 
 -- | Plot a SequenceRecord, each Section in a new Window
@@ -498,12 +500,12 @@ recordCore :: (Terminal.C term,
                Atom.C a) =>
               (PlOpts.T id term)
               -> [Record.Record s typ0 typ1 id v a] -> IO ()
-recordCore opts xs = void $ AGP.plot term $ frame $ foldMap (buildPlot' . treatRecord) xs
+recordCore opts xs = void $ AGP.plot term $ frame $ foldMap (makePlot . treatRecord) xs
   where    
     frame = PlOpts.buildFrame opts
     treatRecord = PlOpts.buildPrepFunction opts
-    buildPlot' = buildPlot opts
-    term = PlOpts.getTerminal opts
+    makePlot = buildPlot opts
+    term = PlOpts.buildTerminal opts
 
 buildPlot ::
    (Show id, TDisp typ0, TDisp typ1,

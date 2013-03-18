@@ -14,6 +14,9 @@ import qualified Graphics.Gnuplot.Frame.OptionSet.Style as OptsStyle
 import qualified Graphics.Gnuplot.Terminal as Terminal
 import qualified Graphics.Gnuplot.Terminal.X11 as X11
 import qualified Graphics.Gnuplot.Terminal.WXT as WXT
+
+import qualified Graphics.Gnuplot.Terminal.PNG as PNG
+import qualified Graphics.Gnuplot.Terminal.SVG as SVG
 import qualified Graphics.Gnuplot.Terminal.PostScript as PS
 
 
@@ -39,12 +42,12 @@ data  T id term = T {
   splitAcc :: Split,
   titleAcc :: String, 
   wtitleAcc:: String,
+  rectitleAcc:: String,
   pointSizeAcc :: LineSpec.T -> LineSpec.T,
   pointTypeAcc :: LineSpec.T -> LineSpec.T, 
   lineWidthAcc :: LineSpec.T -> LineSpec.T, 
   lineStyleAcc :: LineSpec.T -> LineSpec.T,            
-  lineTypeAcc  :: LineSpec.T -> LineSpec.T, 
-  lineTitleAcc  :: LineSpec.T -> LineSpec.T} 
+  lineTypeAcc  :: LineSpec.T -> LineSpec.T} 
 
 grid :: Bool -> T id term -> T id term 
 grid b gopts = gopts { gridAcc = b } 
@@ -52,8 +55,14 @@ grid b gopts = gopts { gridAcc = b }
 title :: String -> T id term -> T id term 
 title ti gopts = gopts { titleAcc = ti }
  
-terminal :: Term term -> T id term -> T id term 
+terminal :: Term term -> T id WXT.T -> T id term 
 terminal term gopts = gopts { terminalAcc = term} 
+
+wtitle :: String -> T id term -> T id term 
+wtitle tis gopts = gopts { wtitleAcc = tis }
+
+rectitle :: String -> T id term -> T id term 
+rectitle tis gopts = gopts { rectitleAcc = tis }
 
 showId :: (id -> String) -> T id term ->  T id term
 showId f opts = opts {showIdAcc = f}
@@ -67,8 +76,6 @@ norm b opts = opts {normAcc = b}
 split :: Split ->  T id term ->  T id term 
 split n opts = opts {splitAcc = n}
 
-wtitle :: String -> T id term -> T id term 
-wtitle tis gopts = gopts { wtitleAcc = tis }
 
 pointSize :: Double ->  T id term -> T id term  
 pointSize x opts = opts { pointSizeAcc =  LineSpec.pointSize x }
@@ -85,30 +92,27 @@ lineStyle x opts = opts { lineStyleAcc = LineSpec.lineStyle x }
 lineType :: Int ->  T id term -> T id term  
 lineType x opts = opts { lineTypeAcc = LineSpec.lineType x }
  
-sigTitle :: String ->  T id term -> T id term 
-sigTitle x opts =  opts { lineTitleAcc = LineSpec.title x }
-
 -- | Set Default Values for Global Options
-deflt :: Show id => T id X11.T
+deflt :: Show id => T id WXT.T
 deflt = T {
-  gridAcc = False,
+  gridAcc = True,
   titleAcc = "", 
   extractAcc = [],
   normAcc = False,
-  terminalAcc = X11Term,
+  terminalAcc = WXTTerm,
   showIdAcc = show,
   splitAcc = NoSplit,              
   wtitleAcc = "",           
+  rectitleAcc = "",
   pointSizeAcc = LineSpec.pointSize 0.3,
   pointTypeAcc = LineSpec.pointType 1, 
   lineWidthAcc = LineSpec.lineWidth 1, 
   lineStyleAcc = LineSpec.lineStyle 1,            
-  lineTypeAcc =  LineSpec.lineType 1,            
-  lineTitleAcc = LineSpec.title ""               
+  lineTypeAcc =  LineSpec.lineType 1            
   }
 
         
-build :: (Show id) => (T id X11.T -> T id term) -> T id term
+build :: (Show id) => (T id WXT.T -> T id term) -> T id term
 build opts = opts deflt
 
 
@@ -119,11 +123,13 @@ buildStyle opts key =
       pointSizeAcc opts $
       pointTypeAcc opts $ 
       lineWidthAcc opts $
-      lineStyleAcc opts $
-      lineTitleAcc opts $
+--      lineStyleAcc opts $
+--      lineTitleAcc opts $
+      LineSpec.title (recTitle ++"_"++ showfunct key) $
       LineSpec.deflt
       where
         showfunct = showIdAcc opts  
+        recTitle = rectitleAcc opts
       
       
 
@@ -139,16 +145,20 @@ buildFrame opts  =
 data  Term a where
   X11Term :: Term X11.T
   WXTTerm :: Term WXT.T
---  PSTerm  :: Term PS.T 
+  PSTerm  :: String -> Term PS.T
+  PNGTerm  :: String -> Term PNG.T
+  SVGTerm  :: String -> Term SVG.T
 
-
-getTerminal :: Terminal.C term =>  T id term -> term    
-getTerminal opts = f (terminalAcc opts)
+buildTerminal :: Terminal.C term =>  T id term -> term    
+buildTerminal opts = f (terminalAcc opts)
   where
     f :: Term term -> term
-    f X11Term  = X11.cons 
-    f WXTTerm  = WXT.cons   
---    f (PSTerm filePath) = PS.cons filePath
+    f X11Term  = X11.title name $ X11.cons 
+    f WXTTerm  = WXT.title name $ WXT.cons   
+    f (PSTerm filePath) = PS.cons (filePath ++ "/" ++ name ++ ".ps")
+    f (PNGTerm filePath) = PNG.cons (filePath ++ "/" ++ name ++ ".png")
+    f (SVGTerm filePath) = SVG.cons (filePath ++ "/" ++ name ++ ".svg")
+    name = titleAcc opts ++ "_" ++ wtitleAcc opts
 
 
 buildPrepFunction :: (Ord id, Show id) => T id term ->  
