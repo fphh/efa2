@@ -87,11 +87,6 @@ mkSectionTopology ::
   Idx.Section -> FlowTopology node -> (SequFlowGraph node)
 mkSectionTopology sid = Gr.ixmap (Idx.SecNode sid)
 
-genSectionTopology ::
-  (Ord node) =>
-  SequData (FlowTopology node) -> SequData (SequFlowGraph node)
-genSectionTopology = zipWithSecIdxs mkSectionTopology
-
 
 mkStructureEdges ::
    node -> Idx.Section ->
@@ -107,11 +102,11 @@ mkStructureEdges node startSec stores = do
 
 mkSequenceTopology ::
   (Ord node) =>
-  SequData (SequFlowGraph node) -> SequFlowGraph node
+  SequData (FlowTopology node) -> SequFlowGraph node
 mkSequenceTopology sd =
    insEdges (concatMap fst startElems) $
    insNodes (map snd startElems) sqTopo
-  where sqTopo = Fold.fold sd
+  where sqTopo = Fold.fold $ zipWithSecIdxs mkSectionTopology sd
         startElems = map f $ M.toList $ getActiveStores sqTopo
         f (n, io) =
           (mkStructureEdges n Idx.initSection (fmap snd io),

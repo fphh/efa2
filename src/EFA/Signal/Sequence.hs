@@ -184,7 +184,6 @@ makeSeqFlowGraph ::
    SequFlowGraph node
 makeSeqFlowGraph topo =
    Flow.mkSequenceTopology .
-   Flow.genSectionTopology .
    Flow.genSequFlowTops topo .
    Flow.genSequFState
 
@@ -192,8 +191,7 @@ makeSeqFlowGraph topo =
 makeSeqFlowTopology ::
   (Ord node) => SequData (FlowTopology node) -> SequFlowGraph node
 makeSeqFlowTopology =
-   Flow.mkSequenceTopology .
-   Flow.genSectionTopology
+   Flow.mkSequenceTopology
 
 makeSequence ::
    (Show node, Ord node) => PowerRecord node [] Val ->
