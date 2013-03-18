@@ -89,25 +89,35 @@ mkSectionTopology sid = Gr.ixmap (Idx.SecNode sid)
 
 
 mkStructureEdges ::
-   node -> Idx.Section ->
-   M.Map Idx.Section StoreDir ->
+   node -> M.Map Idx.Section StoreDir ->
    [Topo.LEdge node]
-mkStructureEdges node startSec stores = do
+mkStructureEdges node stores = do
    let (ins, outs) = M.partition (In ==) stores
-   secin <- startSec : M.keys ins
+   secin <- Idx.initSection : M.keys ins
    secout <- M.keys $ snd $ M.split secin outs
    return $
       (Edge (Idx.SecNode secin node) (Idx.SecNode secout node), Dir)
 
+getActiveStoreSequences ::
+   (Ord section, Ord node, FlowDirectionField el) =>
+   SequData (section, Gr.Graph node NodeType el) ->
+   M.Map node (M.Map section StoreDir)
+getActiveStoreSequences sq =
+   Fold.foldl
+      (M.unionWith (M.unionWith (error "duplicate section for node")))
+      M.empty $
+   fmap (\(s, g) ->
+          fmap (M.singleton s) $
+          M.mapMaybe snd $ getActiveStores g) sq
 
 mkSequenceTopology ::
   (Ord node) =>
   SequData (FlowTopology node) -> SequFlowGraph node
 mkSequenceTopology sd =
-   insEdges (concatMap fst startElems) $
-   insNodes (map snd startElems) sqTopo
-  where sqTopo = Fold.fold $ zipWithSecIdxs mkSectionTopology sd
-        startElems = map f $ M.toList $ getActiveStores sqTopo
-        f (n, io) =
-          (mkStructureEdges n Idx.initSection (fmap snd io),
-           (Idx.SecNode Idx.initSection n, Storage))
+   insEdges (Fold.fold $ M.mapWithKey mkStructureEdges tracks) $
+   insNodes
+      (map (\n -> (Idx.SecNode Idx.initSection n, Storage)) $
+       M.keys tracks) $
+   Fold.foldMap (uncurry mkSectionTopology) sq
+  where tracks = getActiveStoreSequences sq
+        sq = zipWithSecIdxs (,) sd

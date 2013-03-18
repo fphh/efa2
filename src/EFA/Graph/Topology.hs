@@ -169,18 +169,16 @@ isStorageNode = isStorage . snd . snd3
 
 -- | Active storages, grouped by storage number, sorted by section number.
 getActiveStores ::
-   (FlowDirectionField el, Ord a) =>
-   Graph (Idx.SecNode a) NodeType el ->
-   M.Map a (M.Map Idx.Section (InOut (Idx.SecNode a) el, StoreDir))
+   (FlowDirectionField el, Ord node) =>
+   Graph node NodeType el ->
+   M.Map node (InOut node el, Maybe StoreDir)
 getActiveStores =
    M.fromListWith
-      (M.unionWith (error "the same storage multiple times in a section")) .
+      (error "the same storage multiple times in a section") .
    map
-      (\(pre, (sn@(Idx.SecNode s n), _nt), suc) ->
+      (\(pre, (n, _nt), suc) ->
          (n, let inout = (pre, suc)
-             in  case maybeActiveSt sn inout of
-                    Nothing -> M.empty
-                    Just dir -> M.singleton s (inout, dir))) .
+             in  (inout, maybeActiveSt inout))) .
    filter isStorageNode .
    mkInOutGraphFormat
 
@@ -189,12 +187,10 @@ getActiveStores =
 -- This means that nodes with in AND out edges cannot be treated.
 maybeActiveSt ::
    (Eq node, FlowDirectionField el) =>
-   Idx.SecNode node -> InOut (Idx.SecNode node) el -> Maybe StoreDir
-maybeActiveSt n (ins, outs) =
+   InOut node el -> Maybe StoreDir
+maybeActiveSt (ins, outs) =
    mplus
-      (toMaybe
-         (any (\(m,l) -> isActiveEdge l && isStructureEdge (Gr.Edge m n)) ins)
-         In)
+      (toMaybe (any (isActiveEdge . snd) ins)  In)
       (toMaybe (any (isActiveEdge . snd) outs) Out)
 
 
