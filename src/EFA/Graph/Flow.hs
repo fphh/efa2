@@ -88,10 +88,10 @@ mkSectionTopology ::
 mkSectionTopology sid = Gr.ixmap (Idx.SecNode sid)
 
 
-mkStructureEdges ::
+mkStorageEdges ::
    node -> M.Map Idx.Section StoreDir ->
    [Topo.LEdge node]
-mkStructureEdges node stores = do
+mkStorageEdges node stores = do
    let (ins, outs) = M.partition (In ==) stores
    secin <- Idx.initSection : M.keys ins
    secout <- M.keys $ snd $ M.split secin outs
@@ -114,7 +114,7 @@ mkSequenceTopology ::
   (Ord node) =>
   SequData (FlowTopology node) -> SequFlowGraph node
 mkSequenceTopology sd =
-   insEdges (Fold.fold $ M.mapWithKey mkStructureEdges tracks) $
+   insEdges (Fold.fold $ M.mapWithKey mkStorageEdges tracks) $
    insNodes
       (map (\n -> (Idx.SecNode Idx.initSection n, Storage)) $
        M.keys tracks) $
