@@ -97,14 +97,12 @@ mkStructureEdges ::
    node -> Idx.Section ->
    M.Map Idx.Section StoreDir ->
    [Topo.LEdge node]
-mkStructureEdges node startSec stores =
-   concatMap
-      (\secin ->
-         map (\secout ->
-                (Edge (Idx.SecNode secin node) (Idx.SecNode secout node), Dir)) $
-         M.keys $ snd $ M.split secin outs) $
-   startSec : M.keys ins
-  where (ins, outs) = M.partition (In ==) stores
+mkStructureEdges node startSec stores = do
+   let (ins, outs) = M.partition (In ==) stores
+   secin <- startSec : M.keys ins
+   secout <- M.keys $ snd $ M.split secin outs
+   return $
+      (Edge (Idx.SecNode secin node) (Idx.SecNode secout node), Dir)
 
 
 mkSequenceTopology ::
