@@ -66,4 +66,4 @@ main = do
 
       env = EqGen.solve seqTopo given
 
-  Draw.sequFlowGraphAbsWithEnv seqTopo env
+  Draw.sequFlowGraphAbsWithEnv "" seqTopo env

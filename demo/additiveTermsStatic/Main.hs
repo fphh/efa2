@@ -169,7 +169,7 @@ mainSymbolic = do
          (fmap Record.summands scalarEnv)
          (fmap simplifiedSummands signalEnv)
 
-   Draw.sequFlowGraphAbsWithEnv seqTopo $
+   Draw.sequFlowGraphAbsWithEnv "" seqTopo $
       Env.Complete
          (fmap (Record.Absolute . Record.summands) scalarEnv)
          (fmap (Record.Absolute . simplifiedSummands) signalEnv)

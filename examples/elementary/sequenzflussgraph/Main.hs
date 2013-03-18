@@ -57,7 +57,7 @@ select ts = map (ts!!)
 
 drawSeqGraph :: [TD.FlowTopology Node.Int] ->  IO ()
 drawSeqGraph sol =
-   Draw.sequFlowGraph .
+   Draw.sequFlowGraph "" .
    Flow.mkSequenceTopology .
    Flow.genSectionTopology .
    SequData . select sol . parse =<<

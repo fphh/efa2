@@ -115,7 +115,7 @@ mainSymbolic = do
          (fmap Record.unAbsolute scalarEnv)
          (fmap Record.unAbsolute signalEnv)
 
-   Draw.sequFlowGraphAbsWithEnv seqTopo env
+   Draw.sequFlowGraphAbsWithEnv "" seqTopo env
 
 
 
