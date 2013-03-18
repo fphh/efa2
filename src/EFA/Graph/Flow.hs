@@ -108,13 +108,11 @@ mkStructureEdges node startSec stores = do
 mkSequenceTopology ::
   (Ord node) =>
   SequData (SequFlowGraph node) -> SequFlowGraph node
-mkSequenceTopology sd = res
+mkSequenceTopology sd =
+   insEdges (concatMap fst startElems) $
+   insNodes (map snd startElems) sqTopo
   where sqTopo = Fold.fold sd
-        initNode = Idx.SecNode Idx.initSection
         startElems = map f $ M.toList $ getActiveStores sqTopo
         f (n, io) =
           (mkStructureEdges n Idx.initSection (fmap snd io),
-           (initNode n, Storage))
-
-        res = insEdges (concatMap fst startElems)
-              $ insNodes (map snd startElems) sqTopo
+           (Idx.SecNode Idx.initSection n, Storage))
