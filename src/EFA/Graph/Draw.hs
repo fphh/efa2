@@ -67,7 +67,7 @@ import qualified Data.List.HT as HTL
 
 import Control.Monad (void)
 
-import System.FilePath
+-- import System.FilePath
 
 
 nodeColour :: Attribute
@@ -259,10 +259,11 @@ dotFromTopoEdge edgeLabels e =
 topology :: (Node.C node) => Topo.Topology node -> IO ()
 topology topo =
    runGraphvizCanvas Dot (dotFromTopology M.empty topo) Xlib
-
+{-
 topology2pdf :: (Node.C node) => Topo.Topology node -> IO (FilePath)
 topology2pdf topo =
    runGraphvizCommand Dot (dotFromTopology M.empty topo) Pdf "result/topology.pdf"
+-}
 
 topologyWithEdgeLabels :: (Node.C node) => M.Map (node, node) String -> Topo.Topology node -> IO ()
 topologyWithEdgeLabels edgeLabels topo =

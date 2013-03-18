@@ -65,7 +65,7 @@ powerPositonNames = M.fromList $ concat $ map f edgeList
 showPowerId :: PPosIdx Node -> String
 showPowerId ppos = f (M.lookup  ppos powerPositonNames)   
   where 
-    f (Just id) = show id 
+    f (Just pid) = show pid 
     f Nothing = (show ppos)
 
 

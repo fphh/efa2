@@ -16,8 +16,8 @@ module EFA.Signal.Plot (
    sequenceIO,
    recordSplitPlus, recordSplit, sequenceSplit,
    recordSelect, sequenceSelect,
-   stack, stackAttr, stackIO,
-   record2,RecList(..),RecSq(..)
+   stack, stackAttr, stackIO, getData
+--   record2,RecList(..),RecSq(..),Sq(..),SqList(..) 
    ) where
 
 import qualified EFA.Signal.Signal as S
@@ -28,7 +28,7 @@ import qualified EFA.Signal.Record as Record
 import EFA.Signal.SequenceData (SequData, zipWithSecIdxs)
 
 import EFA.Signal.Record (Record(Record))
-import EFA.Signal.SequenceData (SequData(..))
+-- import EFA.Signal.SequenceData (SequData(..))
 
 import EFA.Signal.Signal (TC, toSigList, getDisplayType)
 -- import EFA.Signal.Base (BSum)
@@ -42,10 +42,10 @@ import EFA.Report.FormatValue (FormatValue, formatValue)
 
 
 import qualified Graphics.Gnuplot.Advanced as Plot
-import qualified Graphics.Gnuplot.Advanced as AGP
+-- import qualified Graphics.Gnuplot.Advanced as AGP
 
-import qualified Graphics.Gnuplot.Terminal.X11 as X11
-import qualified Graphics.Gnuplot.Terminal.WXT as WXT
+-- import qualified Graphics.Gnuplot.Terminal.X11 as X11
+-- import qualified Graphics.Gnuplot.Terminal.WXT as WXT
 
 import qualified Graphics.Gnuplot.Terminal as Terminal
 import qualified Graphics.Gnuplot.Plot as Plt
@@ -71,6 +71,7 @@ import Control.Monad (zipWithM_)
 import Control.Functor.HT (void)
 import Data.Foldable (foldMap)
 import Data.Monoid (mconcat)
+-- import Control.Concurrent (threadDelay)
 
 {-
 import EFA.Signal.Plot.Global as Global
@@ -78,7 +79,7 @@ import EFA.Signal.Plot.Window as Window
 import EFA.Signal.Plot.Record as PlRecord
 -}
 
-import qualified EFA.Signal.Plot.Options as PlOpts
+-- import qualified EFA.Signal.Plot.Options as PlOpts
 
 -- | Get Signal Plot Data (Unit Conversion)  ---------------------------------------------------------------
 
@@ -404,121 +405,6 @@ recordSelect ::
    [id] -> String -> Record s t1 t2 id v y -> IO ()
 recordSelect idList name = recordIO name . Record.extract idList
 
-
-
-------------------------------------------------------------
---- Neuer Plot Ansatz fuer rPlot
-            
-data Idx rec sec part = Idx rec sec part                  
-                  
-newtype RecList s t1 t2 id v a = RecList [Record.Record s t1 t2 id v a]
-newtype Sq s t1 t2 id v a = Sq  (SequData (Record.Record s t1 t2 id v a))
-newtype SqList s t1 t2 id v a = SqList ([SequData (Record.Record s t1 t2 id v a)])
-data RecSq s t1 t2 id v a =  RecSq  (Record.Record s t1 t2 id v a) (SequData (Record.Record s t1 t2 id v a))
-
-            
-class Time r id where
-  record2 :: (Terminal.C term, 
-              Fractional a,
-              Ord id,
-              Show id,
-              SV.Walker v,
-              SV.Storage v a,
-              SV.FromList v,
-              TDisp t1,
-              TDisp t2,
-              Atom.C a,
-              Tuple.C a) => 
-             (PlOpts.T id WXT.T -> PlOpts.T id term)
-             -> r s t1 t2 id v a
-             -> IO ()
-
--- | Plot a single record / eventually split plot in several windows 
-instance Time Record.Record id where
-   record2 optsIn rec = (f opts) 
-     where  
-       opts = PlOpts.build optsIn
-       f a | PlOpts.splitAcc a == PlOpts.NoSplit = recordCore opts [rec]
-       f a | otherwise = zipWithM_  recordCore woptsList (L.transpose $ map (Record.split x) [rec])               
-         where (PlOpts.Split x) = PlOpts.splitAcc a
-               woptsList = map (\x -> PlOpts.wtitle ("Part" ++ show x) opts) [0 ..]
-
--- | Plot a list of records against each other / eventually split in several windows
-instance Time RecList id where
-  record2 optsIn (RecList recList) = (f opts) 
-    where
-      opts = PlOpts.build optsIn
-      f a | PlOpts.splitAcc a == PlOpts.NoSplit = recordCore opts recList 
-      
-      f a | otherwise = zipWithM_ recordCore woptsList (L.transpose $ map (Record.split x) recList)               
-        where (PlOpts.Split x) = PlOpts.splitAcc a
-              woptsList = map (\x -> PlOpts.wtitle ("Part" ++ show x) opts) [0 ..]
-
-
--- | Plot a SequenceRecord, each Section in a new Window
-instance Time Sq id where
-           record2 optsIn (Sq (SequData recList)) = (f opts) 
-             where
-               opts = PlOpts.build optsIn
-               f a | PlOpts.splitAcc a == PlOpts.NoSplit = recordCore opts (recList) 
-               f a | otherwise = mapM_ (recordCore opts) (L.transpose $ map (Record.split x) (recList))                  
-                 where (PlOpts.Split x) = PlOpts.splitAcc a
-
-{-
--- | Plot a List of SequenceRecords against each other
-instance Time SqList id id where
-           record2 opts (SqList sList) = (f opts) 
-             where
-               opts = PlOpts.build opts
-               f a | PlOpts.splitAcc a == PlOpts.NoSplit = recordCore opts (L.transpose $ map (\ SqData x -> x) sList) 
-               f a | otherwise = mapM_ (recordCore opts) (L.transpose $ map (Record.split x) (recList))                  
-                 where (PlOpts.Split x) = PlOpts.splitAcc a
--}
-
--- | Plot Sequence Signals on top of Record (e.g. Test Signals after cutting)
-instance Time RecSq id where
-           record2 optsIn (RecSq rec (SequData recList) ) = (f opts) 
-             where
-               opts = PlOpts.build optsIn
-               f a | PlOpts.splitAcc a == PlOpts.NoSplit = recordCore opts (rec:recList) 
-               f a | otherwise = mapM_ (recordCore opts) (L.transpose $ map (Record.split x) (rec:recList))                  
-                 where (PlOpts.Split x) = PlOpts.splitAcc a
-
-
-------------------------------------------------------------
--- Plot a single Window
-recordCore :: (Terminal.C term, 
-               Ord id, 
-               Show id,
-               Fractional a, 
-               SV.Walker v, 
-               SV.Storage v a,
-               SV.FromList v, 
-               TDisp typ1, 
-               TDisp typ0, 
-               Tuple.C a, 
-               Atom.C a) =>
-              (PlOpts.T id term)
-              -> [Record.Record s typ0 typ1 id v a] -> IO ()
-recordCore opts xs = void $ AGP.plot term $ frame $ foldMap (makePlot . treatRecord) xs
-  where    
-    frame = PlOpts.buildFrame opts
-    treatRecord = PlOpts.buildPrepFunction opts
-    makePlot = buildPlot opts
-    term = PlOpts.buildTerminal opts
-
-buildPlot ::
-   (Show id, TDisp typ0, TDisp typ1,
-    SV.Walker v, SV.FromList v,
-    SV.Storage v a, Fractional a, Atom.C a, Tuple.C a) =>
-   PlOpts.T id term -> Record s typ0 typ1 id v a -> Plot2D.T a a
-buildPlot opts (Record time pMap) =
-   foldMap
-      (\(key, sig) ->
-         PlOpts.buildStyle opts key $
-         Plot2D.list Graph2D.linesPoints $
-         zip (getData time) (getData sig)) $
-   M.toList pMap
 
 
 

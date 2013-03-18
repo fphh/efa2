@@ -49,7 +49,8 @@ Library
     transformers >= 0.3 && < 0.4,
     unique-logic >= 0.2 && < 0.3,
     parsec ==3.1.2,
-    base ==4.5.*
+    base ==4.5.*,
+    filepath
   Hs-Source-Dirs:      src
   GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs
   Exposed-Modules:
@@ -72,6 +73,7 @@ Library
     EFA.Signal.SignalFill
     EFA.Signal.Sequence
     EFA.Signal.Plot
+    EFA.Signal.Plot.Options
     EFA.Symbolic.OperatorTree
     EFA.Symbolic.SumProduct
     EFA.Symbolic.Mixed
@@ -87,6 +89,10 @@ Library
     EFA.Graph.Topology.Node
     EFA.Graph.Topology.StateAnalysis
     EFA.Graph.Flow
+--    EFA.Hack.Draw
+    EFA.Hack.Plot
+    EFA.Hack.Record
+    EFA.Hack.Stack
     EFA.Equation.System
     EFA.Equation.Result
     EFA.Equation.Environment
@@ -157,7 +163,7 @@ Executable example-vehicle
     Modules.Plots
     Modules.Signals
     Modules.System
-    Modules.Topology
+    Modules.Analysis    
   GHC-Options: -Wall
   If flag(buildExamples)
     Build-Depends:

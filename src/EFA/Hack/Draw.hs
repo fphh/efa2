@@ -4,9 +4,9 @@ import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
 import EFA.Report.Format (Format, Unicode(Unicode, unUnicode))
 
-import qualified EFA.Equation.Env as Env
+import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Variable as Var
-import EFA.Equation.Env (StorageMap)
+import EFA.Equation.Environment (StorageMap)
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
@@ -62,7 +62,13 @@ import System.FilePath
 
 import EFA.Graph.Draw
 
-
+{-
 topology2pdf :: (Node.C node) => Topo.Topology node -> IO (FilePath)
 topology2pdf topo =
    runGraphvizCommand Dot (dotFromTopology topo) Pdf "result/topology.pdf"
+-}
+
+topology2pdf :: (Node.C node) => Topo.Topology node -> IO (FilePath)
+topology2pdf topo =
+   runGraphvizCommand Dot (dotFromTopology M.empty topo) Pdf "result/topology.pdf"
+

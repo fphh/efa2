@@ -157,11 +157,17 @@ calculatePower rec = pRec
 --------------------------------------------------------------------------------------- 
 -- ## Signalgroups for Plotting
       
-      
+{-      
 vehPowers :: [SigId]
 vehPowers  =  [SigId "ToFrontBrakes",
                SigId "RearTires",    
                SigId "ToInertia",
                SigId "ToResistance"
               ]
+-}
   
+vehPowers :: [PPosIdx Node]
+vehPowers = [PPosIdx Chassis VehicleInertia,
+             PPosIdx Chassis RearBrakes, 
+             PPosIdx ConFrontBrakes FrontBrakes,
+             PPosIdx Chassis Resistance]

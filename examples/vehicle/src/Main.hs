@@ -5,9 +5,9 @@ module Main where
 ---------------------------------------------------------------------------------------
 -- * Import other Modules
 
-import EFA.Example.Utility (edgeVar)
-import EFA.Example.Absolute ((.=))
-import qualified EFA.Equation.System as EqGen
+-- import EFA.Example.Utility (edgeVar)
+-- import EFA.Example.Absolute ((.=))
+-- import qualified EFA.Equation.System as EqGen
 import EFA.IO.PLTImport (modelicaPLTImport)
 import EFA.Signal.Sequence (makeSeqFlowTopology)
 import qualified EFA.Graph.Flow as Flow
@@ -24,10 +24,10 @@ import qualified EFA.Hack.Plot as HPlot
 
 import qualified Modules.System as System
 import qualified Modules.Analysis as Analysis
-import qualified Modules.Plots as Plots
+-- import qualified Modules.Plots as Plots
 import qualified Modules.Signals as Signals
 
-import qualified EFA.Signal.Plot as Plot
+-- import qualified EFA.Signal.Plot as Plot
 import qualified EFA.Signal.Plot.Options as O
 
 
@@ -126,30 +126,33 @@ main = do
 --  Plots.plotPowers System.powerPositonNames ["A","B"] [powerSignals,powerSignalsB] Signals.vehPowers
 
 {-  
-  Plot.record2 (O.title "Record-Split" . 
+  HPlot.record2 (O.title "Record-Split" . 
                 O.split (O.Split 9) . 
                 O.showId System.showPowerId .
                 O.pointSize 2) (powerSignals)
+
 -}
-
-  Plot.record2 (O.title "Record-AB" . 
-                O.split (O.Split 9) . 
+  HPlot.record2 (O.title "Record-AB" . 
+                -- O.split (O.Split 9) . 
                 O.showId System.showPowerId .
-                O.pointSize 1) (Plot.RecList [powerSignals,powerSignals])
+                O.extract Signals.vehPowers .
+                O.pointSize 1) (HPlot.RecList [powerSignals,powerSignalsB])
 
---  Plot.record2 (O.changeId System.swapId . O.title "Record-Split" ) (powerSignals)
+{-
+
+  HPlot.record2 (O.title "Sequence" . 
+               O.split (O.Split 5)) (HPlot.Sq sequencePowersFiltB) 
+
   
+  HPlot.record2 (O.title "SequenceList" . O.extract Signals.vehPowers) 
+               (HPlot.SqList [sequencePowersFilt, sequencePowersFiltB]) 
 
-
-{-    
-  Plot.record2 (O.title "Record-Split" . 
-             O.split (O.Split 5)) (powerSignals)
-    
   
-  Plot.record2 (O.title "hallihallo" . 
-             O.split (O.Split 5)) (Plot.RecSq powerSignals sequencePowersFilt)
-   
--}  
+  
+  HPlot.record2 (O.title "Sequence vs Record" . O.extract Signals.vehPowers) 
+             (HPlot.RecSq powerSignals sequencePowersFilt)
+-}   
+
   -- draw various diagrams
   concurrentlyMany_ [
     Draw.sequFlowGraphAbsWithEnv dataset sectionTopos simulation

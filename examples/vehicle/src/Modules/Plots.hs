@@ -11,7 +11,7 @@ import qualified EFA.Signal.Vector as V
 
 import EFA.Signal.Typ (Typ,A,T,P,Tt)
 import EFA.Signal.Signal (Signal)
-import EFA.Signal.Record (SigId(..), Record(..), PowerRecord, SignalRecord)
+-- import EFA.Signal.Record (SigId(..), Record(..), PowerRecord, SignalRecord)
 import EFA.Signal.Record as Record
 import EFA.Hack.Record as HRecord
 
@@ -20,19 +20,19 @@ import EFA.Report.Typ (TDisp)
 
 import qualified Graphics.Gnuplot.Value.Atom as Atom
 import qualified Graphics.Gnuplot.Value.Tuple as Tuple
-import Control.Functor.HT (void)
-import qualified Graphics.Gnuplot.Frame as Frame
-import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
-import qualified Graphics.Gnuplot.Graph as Graph
-import EFA.Report.Typ (TDisp, DisplayType(Typ_T), getDisplayUnit, getDisplayTypName)
-import qualified Graphics.Gnuplot.Advanced as Plot
+--import Control.Functor.HT (void)
+--import qualified Graphics.Gnuplot.Frame as Frame
+--import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
+--import qualified Graphics.Gnuplot.Graph as Graph
+--import EFA.Report.Typ (TDisp, DisplayType(Typ_T), getDisplayUnit, getDisplayTypName)
+--import qualified Graphics.Gnuplot.Advanced as Plot
 
 import qualified Data.Map as M
 import EFA.Utility(checkedLookup)
 
-import Debug.Trace
+--import Debug.Trace
 
-import Data.Monoid ((<>))
+--import Data.Monoid ((<>))
 
 ---------------------------------------------------------------------------------------
   -- | * Group Signals for Plotting

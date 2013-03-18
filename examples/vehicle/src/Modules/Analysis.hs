@@ -4,7 +4,10 @@
 
 module Modules.Analysis where
 
-import EFA.Example.Utility (edgeVar, (.=), (%=))
+import EFA.Example.Utility (edgeVar, 
+                            (.=), 
+                           -- (%=)
+                           )
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Signal.SequenceData as SD
 
@@ -20,14 +23,14 @@ import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Signal.Vector as Vec
 
 import qualified EFA.Signal.Signal as Sig 
-import qualified EFA.Report.Report as Rep 
+--import qualified EFA.Report.Report as Rep 
 
-import EFA.Signal.Typ
+--import EFA.Signal.Typ
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Flow as Flow
 import qualified Data.Map as M
 import Data.Monoid ((<>))
-import Data.Foldable (fold, foldMap)
+import Data.Foldable (fold)
 
 import qualified EFA.Equation.Environment as Env
 import EFA.Equation.Result (Result(..))
@@ -36,7 +39,7 @@ import qualified EFA.Signal.Record as Record
 -- * Example Specific Imports
 import qualified Modules.System as System
 import Modules.Signals as Signals
-import Modules.Plots as Plots
+--import Modules.Plots as Plots
 import qualified EFA.Graph.Topology as TD
 
 import qualified EFA.Equation.Record as EqRecord
