@@ -9,13 +9,18 @@ import EFA.Graph
            insNodes, insEdges)
 
 import qualified EFA.Graph.Topology.Index as Idx
-import EFA.Graph.Topology as Topo
-import EFA.Signal.SequenceData
+import qualified EFA.Graph.Topology as Topo
+import EFA.Signal.SequenceData (SequData, zipWithSecIdxs)
 import EFA.Signal.Record
+          (Record(Record), FlowState(FlowState), FlowRecord,
+           PPosIdx(PPosIdx), flipPos)
+import EFA.Graph.Topology
+          (Topology, FlowTopology, SequFlowGraph,
+           FlowDirection(Dir, UnDir))
 
 
+import qualified EFA.Signal.Vector as SV
 import EFA.Signal.Signal (fromScalar, sigSign, sigSum, neg)
-import EFA.Signal.Vector (Storage,Walker)
 import EFA.Signal.Base (Sign(PSign, NSign, ZSign),BSum, DArith0)
 
 import Control.Applicative (liftA2)
@@ -25,16 +30,17 @@ import qualified Data.Map as M
 
 import EFA.Utility (checkedLookup)
 
+
 adjustSigns ::
   (Show (v a), DArith0 a,
-  Walker v, Storage v a, Ord node, Show node) =>
+  SV.Walker v, SV.Storage v a, Ord node, Show node) =>
   Topology node -> SequData (FlowState node) ->
   SequData (FlowRecord node v a) -> SequData (FlowRecord node v a)
 adjustSigns topo = liftA2 f
   where f (FlowState state) (Record dt flow) =
           Record dt (M.foldrWithKey g M.empty state')
           where state' = uniquePPos topo state
-                g ppos NSign acc = 
+                g ppos NSign acc =
                   M.insert ppos (neg (flow `checkedLookup` ppos))
                     $ M.insert ppos' (neg (flow `checkedLookup` ppos')) acc
                     where ppos' = flipPos ppos
@@ -50,18 +56,18 @@ adjustSigns topo = liftA2 f
 
 -- | Function to calculate flow states for the whole sequence
 genSequFState ::
-  (Walker v, Storage v a, BSum a, Fractional a, Ord a) => 
+  (SV.Walker v, SV.Storage v a, BSum a, Fractional a, Ord a) =>
   SequData (FlowRecord node v a) -> SequData (FlowState node)
 genSequFState sqFRec = fmap genFlowState sqFRec
 
 -- | Function to extract the flow state out of a Flow Record
 genFlowState ::
-  (Walker v, Storage v a, BSum a, Fractional a, Ord a) => 
+  (SV.Walker v, SV.Storage v a, BSum a, Fractional a, Ord a) =>
   FlowRecord node v a -> FlowState node
 genFlowState (Record _time flowMap) =
    FlowState $ M.map (fromScalar . sigSign . sigSum) flowMap
 
--- | Function to generate Flow Topologies for all Sequences
+-- | Function to generate Flow Topologies for all Sections
 genSequFlowTops ::
   (Ord node, Show node) =>
   Topology node -> SequData (FlowState node) -> SequData (FlowTopology node)
@@ -89,26 +95,26 @@ mkSectionTopology sid = Gr.ixmap (Idx.SecNode sid)
 
 
 mkStorageEdges ::
-   node -> M.Map Idx.Section StoreDir ->
+   node -> M.Map Idx.Section Topo.StoreDir ->
    [Topo.LEdge node]
 mkStorageEdges node stores = do
-   let (ins, outs) = M.partition (In ==) stores
+   let (ins, outs) = M.partition (Topo.In ==) stores
    secin <- Idx.initSection : M.keys ins
    secout <- M.keys $ snd $ M.split secin outs
    return $
       (Edge (Idx.SecNode secin node) (Idx.SecNode secout node), Dir)
 
 getActiveStoreSequences ::
-   (Ord section, Ord node, FlowDirectionField el) =>
-   SequData (section, Gr.Graph node NodeType el) ->
-   M.Map node (M.Map section StoreDir)
+   (Ord section, Ord node, Topo.FlowDirectionField el) =>
+   SequData (section, Gr.Graph node Topo.NodeType el) ->
+   M.Map node (M.Map section Topo.StoreDir)
 getActiveStoreSequences sq =
    Fold.foldl
       (M.unionWith (M.unionWith (error "duplicate section for node")))
       M.empty $
    fmap (\(s, g) ->
           fmap (M.singleton s) $
-          M.mapMaybe snd $ getActiveStores g) sq
+          M.mapMaybe snd $ Topo.getActiveStores g) sq
 
 mkSequenceTopology ::
   (Ord node) =>
@@ -116,7 +122,7 @@ mkSequenceTopology ::
 mkSequenceTopology sd =
    insEdges (Fold.fold $ M.mapWithKey mkStorageEdges tracks) $
    insNodes
-      (map (\n -> (Idx.SecNode Idx.initSection n, Storage)) $
+      (map (\n -> (Idx.SecNode Idx.initSection n, Topo.Storage)) $
        M.keys tracks) $
    Fold.foldMap (uncurry mkSectionTopology) sq
   where tracks = getActiveStoreSequences sq
