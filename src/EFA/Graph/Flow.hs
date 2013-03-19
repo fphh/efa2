@@ -18,7 +18,7 @@ import EFA.Signal.Signal (fromScalar, sigSign, sigSum, neg)
 import EFA.Signal.Vector (Storage,Walker)
 import EFA.Signal.Base (Sign(PSign, NSign, ZSign),BSum, DArith0)
 
-import Control.Applicative ((<$>), (<*>))
+import Control.Applicative (liftA2)
 
 import qualified Data.Foldable as Fold
 import qualified Data.Map as M
@@ -30,7 +30,7 @@ adjustSigns ::
   Walker v, Storage v a, Ord node, Show node) =>
   Topology node -> SequData (FlowState node) ->
   SequData (FlowRecord node v a) -> SequData (FlowRecord node v a)
-adjustSigns topo flowStates flowRec = f <$> flowStates <*> flowRec
+adjustSigns topo = liftA2 f
   where f (FlowState state) (Record dt flow) =
           Record dt (M.foldrWithKey g M.empty state')
           where state' = uniquePPos topo state
