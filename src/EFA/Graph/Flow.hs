@@ -34,10 +34,9 @@ adjustSigns ::
   SV.Walker v, SV.Storage v a, Ord node, Show node) =>
   Topology node ->
   FlowState node -> FlowRecord node v a -> FlowRecord node v a
-adjustSigns topo (FlowState state0) (Record dt flow) =
-   Record dt (M.foldrWithKey g M.empty state')
-      where state' = uniquePPos topo state0
-            g ppos NSign acc =
+adjustSigns topo (FlowState state) (Record dt flow) =
+   Record dt (M.foldrWithKey g M.empty uniquePPos)
+      where g ppos NSign acc =
               M.insert ppos (neg (flow `checkedLookup` ppos))
                 $ M.insert ppos' (neg (flow `checkedLookup` ppos')) acc
                 where ppos' = flipPos ppos
@@ -45,7 +44,7 @@ adjustSigns topo (FlowState state0) (Record dt flow) =
               M.insert ppos (flow `checkedLookup` ppos)
                 $ M.insert ppos' (flow `checkedLookup` ppos') acc
                 where ppos' = flipPos ppos
-            uniquePPos topol state = foldl h M.empty (labEdges topol)
+            uniquePPos = foldl h M.empty (labEdges topo)
               where h acc (Edge idx1 idx2, ()) =
                       M.insert ppos (state `checkedLookup` ppos) acc
                       where ppos = PPosIdx idx1 idx2
