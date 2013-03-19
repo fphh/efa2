@@ -107,13 +107,9 @@ mainSymbolic :: IO ()
 mainSymbolic = do
 
    let seqTopo = constructSeqTopo topoLinear [0]
-   let env@(Env.Complete scalarEnv signalEnv) =
-          EqGen.solve seqTopo givenSymbolic
+   let env = EqGen.solve seqTopo givenSymbolic
 
-   putStrLn $ Format.unUnicode $ formatValue $
-      Env.Complete
-         (fmap Record.unAbsolute scalarEnv)
-         (fmap Record.unAbsolute signalEnv)
+   putStrLn $ Format.unUnicode $ formatValue env
 
    Draw.sequFlowGraphAbsWithEnv "" seqTopo env
 

@@ -72,8 +72,8 @@ solve p =
          EqGen.solve seqTopo
             ((EqGen.variable eta =.= functionEta (EqGen.variable c)) <> given p)
   in  show p ++ " " ++
-      Format.unUnicode (formatValue (Record.unAbsolute
-         (checkedLookup (Env.etaMap (Env.signal env)) eta)))
+      Format.unUnicode (formatValue
+         (checkedLookup (Env.etaMap (Env.signal env)) eta))
 
 main :: IO ()
 main =
