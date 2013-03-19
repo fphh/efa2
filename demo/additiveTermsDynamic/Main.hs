@@ -38,7 +38,7 @@ import qualified Data.NonEmpty as NonEmpty
 import Data.Monoid (mempty, (<>))
 import Data.Tuple.HT (mapFst)
 
-
+import System.IO
 
 sec0 :: Idx.Section
 sec0 = Idx.Section 0
@@ -170,4 +170,4 @@ mainNumeric = do
 
 
 main :: IO ()
-main = mainNumeric >> mainSymbolic
+main = hSetEncoding stdout utf8 >> mainNumeric >> mainSymbolic

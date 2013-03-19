@@ -57,7 +57,7 @@ data Complete node b a =
    Complete {
       scalar :: Scalar node b,
       signal :: Signal node a
-   }
+   } deriving (Show)
 
 
 class AccessPart env where
