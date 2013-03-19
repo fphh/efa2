@@ -7,8 +7,8 @@ import qualified EFA.Equation.Environment as Env
 import qualified EFA.Example.Absolute as EqGen
 import EFA.Equation.System ((=.=))
 import EFA.Example.Absolute ((.=))
-import EFA.Equation.Result (Result(Determined, Undetermined))
-import EFA.Example.Utility (constructSeqTopo, edgeVar, makeEdges)
+import EFA.Equation.Result (Result)
+import EFA.Example.Utility (constructSeqTopo, edgeVar, makeEdges, checkDetermined)
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
@@ -70,10 +70,8 @@ given p =
 solve :: Rational -> String
 solve p =
   show p ++ "\t"
-        ++ case Record.unAbsolute $
-                   checkedLookup (Env.etaMap $ Env.signal $ solveEnv p) eta of
-              Undetermined -> "undetermined"
-              Determined x -> show x
+        ++ show (checkDetermined (show eta) $ Record.unAbsolute $
+                   checkedLookup (Env.etaMap $ Env.signal $ solveEnv p) eta)
 
 solveEnv ::
   Rational ->
