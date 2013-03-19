@@ -271,33 +271,33 @@ type
 
 type
    EquationSystemNumeric s =
-      EqGen.EquationSystem EqRecord.Delta System.Node s
+      EqGen.EquationSystem EqRecord.Absolute System.Node s
          (Stack (Var.Any System.Node) Double)
          (Stack (Var.Any System.Node) Double)
-         
+
 type DeltaResult = EqRecord.Delta (R.Result Double)
 
 
-type Expression node s a v x = EqGen.Expression EqRecord.Delta node s a v x
+type Expression node s a v x = EqGen.Expression EqRecord.Absolute node s a v x
 
 
 variable ::
    (Eq x, Arith.Sum x,
-    EqGen.Element idx EqRecord.Delta s a v
-      ~ EqGen.VariableRecord EqRecord.Delta s x,
+    EqGen.Element idx EqRecord.Absolute s a v
+      ~ EqGen.VariableRecord EqRecord.Absolute s x,
     Env.AccessMap idx, Ord (idx node)) =>
    idx node -> Expression node s a v x
-variable = EqGen.variable . Idx.delta
+variable = EqGen.variable . Idx.absolute
 
 infix 0 .==
 
 (.==) ::
   (Eq x, Arith.Sum x,
-   EqGen.Element idx EqRecord.Delta s a v
-      ~ EqGen.VariableRecord EqRecord.Delta s x,
+   EqGen.Element idx EqRecord.Absolute s a v
+      ~ EqGen.VariableRecord EqRecord.Absolute s x,
    Env.AccessMap idx, Ord (idx node)) =>
    idx node -> x ->
-   EqGen.EquationSystem EqRecord.Delta node s a v
+   EqGen.EquationSystem EqRecord.Absolute node s a v
 evar .== val  =  variable evar EqGen.=.= EqGen.constant val
 
 
