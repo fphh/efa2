@@ -8,6 +8,8 @@ import EFA.Example.Utility (edgeVar, checkDetermined,
                             (.=),
                             (%=)
                            )
+import qualified EFA.Example.Absolute as EqAbs
+
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Variable as Term
@@ -271,23 +273,12 @@ type
 
 type
    EquationSystemNumeric s =
-      EqGen.EquationSystem EqRecord.Absolute System.Node s
+      EqAbs.EquationSystem System.Node s
          (Stack (Var.Any System.Node) Double)
          (Stack (Var.Any System.Node) Double)
 
 type DeltaResult = EqRecord.Delta (R.Result Double)
 
-
-type Expression node s a v x = EqGen.Expression EqRecord.Absolute node s a v x
-
-
-variable ::
-   (Eq x, Arith.Sum x,
-    EqGen.Element idx EqRecord.Absolute s a v
-      ~ EqGen.VariableRecord EqRecord.Absolute s x,
-    Env.AccessMap idx, Ord (idx node)) =>
-   idx node -> Expression node s a v x
-variable = EqGen.variable . Idx.absolute
 
 infix 0 .==
 
@@ -297,8 +288,8 @@ infix 0 .==
       ~ EqGen.VariableRecord EqRecord.Absolute s x,
    Env.AccessMap idx, Ord (idx node)) =>
    idx node -> x ->
-   EqGen.EquationSystem EqRecord.Absolute node s a v
-evar .== val  =  variable evar EqGen.=.= EqGen.constant val
+   EqAbs.EquationSystem node s a v
+(.==) = (EqAbs..=)
 
 
 deltaPair ::
