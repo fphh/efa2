@@ -1149,7 +1149,6 @@ instance
 findIndex ::  (SV.Storage v1 d1, SV.Find v1) => (d1 -> Bool) -> TC s1 t1 (Data (v1 :> Nil) d1) -> Maybe Int
 findIndex f (TC xs) = D.findIndex f xs
         
--- | @HT bitte prüfen        
         
 interp1Lin :: (Eq d1, 
                Fractional d1, 

@@ -93,7 +93,7 @@ main = do
  ---------------------------------------------------------------------------------------
 -- *  Make the Prediction
      
- -- let prediction = Analysis.prediction  sequenceFlowTopology simulation
+  let prediction = Analysis.prediction  sequenceFlowTopology simulation
 
 ---------------------------------------------------------------------------------------
 -- *  Make difference Analysis
@@ -155,10 +155,10 @@ main = do
 
   -- draw various diagrams
   concurrentlyMany_ [
-    Draw.sequFlowGraphAbsWithEnv dataset sectionTopos simulation
+    Draw.sequFlowGraphAbsWithEnv dataset sectionTopos simulation,
 --    Draw.sequFlowGraphAbsWithEnv datasetB sectionToposB simulationB
---    Draw.sequFlowGraphDeltaWithEnv "delta" sectionTopos simulationDelta,
---    Draw.sequFlowGraphAbsWithEnv "Prediction" sectionTopos prediction
+    Draw.sequFlowGraphDeltaWithEnv "delta" sectionTopos simulationDelta,
+    Draw.sequFlowGraphAbsWithEnv "Prediction" sectionTopos prediction
     ]
 
 
