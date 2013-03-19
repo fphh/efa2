@@ -14,7 +14,6 @@ import EFA.Equation.Arithmetic ((~*))
 import EFA.Equation.Result (Result)
 
 import qualified EFA.Equation.System as EqGen
-import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
@@ -43,7 +42,7 @@ import qualified Data.Map as Map
 import qualified Data.NonEmpty as NonEmpty
 import Data.NonEmpty ((!:))
 import Data.Monoid (mempty, (<>))
-import Data.Tuple.HT (mapFst, mapSnd)
+import Data.Tuple.HT (mapFst)
 
 
 
@@ -208,12 +207,6 @@ givenNumeric =
 
 
 
-checkDetermined :: Result a -> a
-checkDetermined rx =
-   case rx of
-      Result.Undetermined -> error "undetermined"
-      Result.Determined x -> x
-
 mainNumeric :: IO ()
 mainNumeric = do
 
@@ -230,7 +223,9 @@ mainNumeric = do
             putStrLn $ Format.unUnicode $
                Format.assign (formatValue term) (formatValue val)
          Plot.stackIO "Decomposition of total output energy"
-            (Idx.delta $ Var.index eout) (map (mapSnd checkDetermined) assigns)
+            (Idx.delta $ Var.index eout)
+            (map (\(i,a) ->
+                    (i, Utility.checkDetermined (Format.unUnicode $ formatValue i) a)) assigns)
 
 
 main :: IO ()

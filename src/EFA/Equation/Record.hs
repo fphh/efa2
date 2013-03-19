@@ -37,6 +37,9 @@ lookupSignal (Idx.Record r v) =
 
 newtype Absolute a = Absolute {unAbsolute :: a} deriving (Show)
 
+instance FormatValue a => FormatValue (Absolute a) where
+   formatValue (Absolute a) = formatValue a
+
 instance Functor Absolute where
    fmap f (Absolute a) = Absolute $ f a
 

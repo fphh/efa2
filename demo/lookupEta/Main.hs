@@ -75,8 +75,8 @@ solve p =
             ((EqSys.variable eta =.= lookupEta (EqSys.variable c))
                <> given p)
   in  show p ++ " " ++
-      Format.unUnicode (formatValue (Record.unAbsolute
-         (checkedLookup (Env.etaMap $ Env.signal env) eta)))
+      Format.unUnicode (formatValue
+         (checkedLookup (Env.etaMap $ Env.signal env) eta))
 
 main :: IO ()
 main =
