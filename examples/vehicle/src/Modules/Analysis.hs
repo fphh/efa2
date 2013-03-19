@@ -4,7 +4,7 @@
 
 module Modules.Analysis where
 
-import EFA.Example.Utility (edgeVar, 
+import EFA.Example.Utility (edgeVar, checkDetermined,
                             (.=),
                             (%=)
                            )
@@ -322,10 +322,12 @@ makeGivenForDifferentialAnalysis (Env.Complete scal sig) =
   (Idx.DTime sec2 .== 0) <>
   (Idx.Storage (Idx.SecNode Idx.initSection System.Battery) .== initStorage) <>
   (deltaPair (edgeVar Idx.Energy sec2 System.Tank System.ConBattery) 4 (-0.6)) <>
-  (foldMap f (M.toList $ Env.etaMap sig)) <>
+  (fold $ M.mapWithKey f $ Env.etaMap sig) <>
   mempty
-  where f (i, EqRecord.Delta (R.Determined d) (R.Determined b) _)
-          = deltaPair i b d
+  where f i rec =
+           deltaPair i
+              (checkDetermined "before" $ EqRecord.before rec)
+              (checkDetermined "delta"  $ EqRecord.delta rec)
 
 {-
 makeGivenForDifferentialAnalysis env = (
