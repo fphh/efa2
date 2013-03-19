@@ -23,8 +23,6 @@ import qualified EFA.Signal.Vector as SV
 import EFA.Signal.Signal (fromScalar, sigSign, sigSum, neg)
 import EFA.Signal.Base (Sign(PSign, NSign, ZSign),BSum, DArith0)
 
-import Control.Applicative (liftA2)
-
 import qualified Data.Foldable as Fold
 import qualified Data.Map as M
 
@@ -34,24 +32,23 @@ import EFA.Utility (checkedLookup)
 adjustSigns ::
   (Show (v a), DArith0 a,
   SV.Walker v, SV.Storage v a, Ord node, Show node) =>
-  Topology node -> SequData (FlowState node) ->
-  SequData (FlowRecord node v a) -> SequData (FlowRecord node v a)
-adjustSigns topo = liftA2 f
-  where f (FlowState state) (Record dt flow) =
-          Record dt (M.foldrWithKey g M.empty state')
-          where state' = uniquePPos topo state
-                g ppos NSign acc =
-                  M.insert ppos (neg (flow `checkedLookup` ppos))
-                    $ M.insert ppos' (neg (flow `checkedLookup` ppos')) acc
-                    where ppos' = flipPos ppos
-                g ppos _ acc =
-                  M.insert ppos (flow `checkedLookup` ppos)
-                    $ M.insert ppos' (flow `checkedLookup` ppos') acc
-                    where ppos' = flipPos ppos
-        uniquePPos topol state = foldl h M.empty (labEdges topol)
-          where h acc (Edge idx1 idx2, ()) =
-                  M.insert ppos (state `checkedLookup` ppos) acc
-                  where ppos = PPosIdx idx1 idx2
+  Topology node ->
+  FlowState node -> FlowRecord node v a -> FlowRecord node v a
+adjustSigns topo (FlowState state0) (Record dt flow) =
+   Record dt (M.foldrWithKey g M.empty state')
+      where state' = uniquePPos topo state0
+            g ppos NSign acc =
+              M.insert ppos (neg (flow `checkedLookup` ppos))
+                $ M.insert ppos' (neg (flow `checkedLookup` ppos')) acc
+                where ppos' = flipPos ppos
+            g ppos _ acc =
+              M.insert ppos (flow `checkedLookup` ppos)
+                $ M.insert ppos' (flow `checkedLookup` ppos') acc
+                where ppos' = flipPos ppos
+            uniquePPos topol state = foldl h M.empty (labEdges topol)
+              where h acc (Edge idx1 idx2, ()) =
+                      M.insert ppos (state `checkedLookup` ppos) acc
+                      where ppos = PPosIdx idx1 idx2
 
 
 -- | Function to calculate flow states for the whole sequence
