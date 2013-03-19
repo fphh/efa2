@@ -12,6 +12,8 @@ import EFA.IO.PLTImport (modelicaPLTImport)
 import EFA.Signal.Sequence (makeSeqFlowTopology)
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Draw as Draw
+import qualified EFA.Report.Format as Format
+import EFA.Report.FormatValue (formatValue)
 import EFA.Graph.Topology(isStructureEdge)
 import EFA.Graph(lefilter)
 import EFA.Utility.Async (concurrentlyMany_)
@@ -113,11 +115,11 @@ main = do
 
 -}
 
-        
 
-  print difference
-      
-      
+
+  putStrLn $ Format.unUnicode $ formatValue difference
+
+
 ---------------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------------
 -- * Show Topology
