@@ -289,7 +289,6 @@ infix 0 .==
    EqAbs.EquationSystem node s a v
 (.==) = (EqAbs..=)
 
-
 deltaPair ::
    (Ord (idx System.Node), Env.AccessMap idx,
     Var.Index idx, Var.Type idx ~ Var.Signal) =>
@@ -297,11 +296,16 @@ deltaPair ::
 deltaPair idx before delta =
    idx .== Stack.deltaPair (Var.Signal $ Var.index idx) before delta
 
-
+difference ::
+   TD.SequFlowGraph System.Node ->
+   Env.Complete System.Node DeltaResult DeltaResult ->
+   Env.Complete
+      System.Node
+      (EqRecord.Absolute (Result (Stack (Var.Any System.Node) Double)))
+      (EqRecord.Absolute (Result (Stack (Var.Any System.Node) Double)))
 difference sequenceFlowTopology env =
-  EqGen.solve sequenceFlowTopology (makeGivenForDifferentialAnalysis env) 
-        
-                                      
+  EqGen.solve sequenceFlowTopology (makeGivenForDifferentialAnalysis env)
+
 
 makeGivenForDifferentialAnalysis ::
   Env.Complete System.Node DeltaResult DeltaResult ->
