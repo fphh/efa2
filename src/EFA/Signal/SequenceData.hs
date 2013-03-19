@@ -21,9 +21,13 @@ import Text.Printf (PrintfArg)
 import EFA.Signal.Signal(SignalIdx)
 
 import qualified Data.List.Match as Match
+import qualified Data.List as List
 import Control.Applicative (Applicative(pure, (<*>)), liftA, liftA2)
 import Data.Traversable (Traversable, sequenceA, foldMapDefault)
 import Data.Foldable (Foldable, foldMap, fold)
+import Data.Tuple.HT (mapPair)
+
+import Prelude hiding (unzip)
 
 
 -----------------------------------------------------------------------------------
@@ -58,29 +62,33 @@ zipWithSecIdxs :: (Idx.Section -> a -> b) -> SequData a -> SequData b
 zipWithSecIdxs f =
    liftA2 f (SequData [Idx.Section 0 ..])
 
+unzip :: SequData (a, b) -> (SequData a, SequData b)
+unzip (SequData xs) = mapPair (SequData, SequData) $ List.unzip xs
+
+
 -----------------------------------------------------------------------------------
 -- Utility Functions on Sequence Data
-         
--- | PG Diskussion : 
--- |        Sollte Sequ nicht auch SequData verwenden, dann würden die Utility - Funktionen hier auch funktionieren           
--- |        brauchen wir eventuell eine Überstruktur, da das Filtern der Sequenz und der Sequenzdaten irgendwie zusammen         
+
+-- | PG Diskussion :
+-- |        Sollte Sequ nicht auch SequData verwenden, dann würden die Utility - Funktionen hier auch funktionieren
+-- |        brauchen wir eventuell eine Überstruktur, da das Filtern der Sequenz und der Sequenzdaten irgendwie zusammen
 -- |        gehört
-         
--- | Get Number of Sections after cutting 
+
+-- | Get Number of Sections after cutting
 sequLength :: Sequ -> Int
 sequLength (SequData xs) = length xs
 
--- | Filter Sequence and SequenceData with a Filterfunktion
+-- | Filter Sequence and SequenceData with a filter function
 -- | Allows to e.q. filter Sequ and SequPwrRecord
 filterSequWithSequData :: ((Sec,a) -> Bool) -> (Sequ,SequData a) ->   (Sequ,SequData a)
 filterSequWithSequData f (SequData xs, SequData ys) = (SequData xsf, SequData ysf)
-   where (xsf,ysf) = unzip $ filter f $ zip xs ys  
+   where (xsf,ysf) = List.unzip $ filter f $ zip xs ys
 
 -- | Filter Sequence and SequenceData with a Filterfunktion
--- | Allows e.g. to filter Sequ, SeqPwrRecord and SequFlowRecord         
+-- | Allows e.g. to filter Sequ, SeqPwrRecord and SequFlowRecord
 filterSequWithSequData2 :: ((Sec,a,b) -> Bool) -> (Sequ,SequData a,SequData b) -> (Sequ,SequData a,SequData b)
 filterSequWithSequData2 f (SequData xs, SequData ys, SequData zs) = (SequData xsf, SequData ysf, SequData zsf )
-   where (xsf,ysf,zsf) = unzip3 $ filter f $ zip3 xs ys zs  
+   where (xsf,ysf,zsf) = unzip3 $ filter f $ zip3 xs ys zs
 
 
 class ToTable a where

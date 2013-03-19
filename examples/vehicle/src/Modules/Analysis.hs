@@ -134,8 +134,13 @@ pre topology rawSignals =  do
   let (sequenceFilt,sequencePowersFilt,sequenceFlowsFilt) =
         removeLowEnergySections (sequ,sequencePowers,sequenceFlows) 0
 
-  let flowStates = fmap Flow.genFlowState sequenceFlowsFilt
-  let adjustedFlows = Flow.adjustSigns topology flowStates sequenceFlowsFilt
+  let (flowStates, adjustedFlows) =
+         SD.unzip $
+         fmap
+            (\state ->
+               let flowState = Flow.genFlowState state
+               in  (flowState, Flow.adjustSigns topology flowState state))
+            sequenceFlowsFilt
 
   return (sequenceFilt,sequencePowersFilt,adjustedFlows, flowStates, powerSignals0, signals0)
 

@@ -59,7 +59,6 @@ drawSeqGraph :: [TD.FlowTopology Node.Int] ->  IO ()
 drawSeqGraph sol =
    Draw.sequFlowGraph "" .
    Flow.mkSequenceTopology .
-   Flow.genSectionTopology .
    SequData . select sol . parse =<<
    prompt "Gib kommagetrennt die gewuenschten Sektionsindices ein: "
 

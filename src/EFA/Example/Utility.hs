@@ -46,7 +46,6 @@ constructSeqTopo ::
   TD.Topology node -> [Int] -> TD.SequFlowGraph node
 constructSeqTopo topo =
   Flow.mkSequenceTopology .
-  Flow.genSectionTopology .
   fmap (StateAnalysis.bruteForce topo !!) .
   SequData
 

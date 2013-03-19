@@ -9,59 +9,61 @@ import EFA.Graph
            insNodes, insEdges)
 
 import qualified EFA.Graph.Topology.Index as Idx
-import EFA.Graph.Topology as Topo
-import EFA.Signal.SequenceData
+import qualified EFA.Graph.Topology as Topo
+import EFA.Signal.SequenceData (SequData, zipWithSecIdxs)
 import EFA.Signal.Record
+          (Record(Record), FlowState(FlowState), FlowRecord,
+           PPosIdx(PPosIdx), flipPos)
+import EFA.Graph.Topology
+          (Topology, FlowTopology, SequFlowGraph,
+           FlowDirection(Dir, UnDir))
 
 
+import qualified EFA.Signal.Vector as SV
 import EFA.Signal.Signal (fromScalar, sigSign, sigSum, neg)
-import EFA.Signal.Vector (Storage,Walker)
 import EFA.Signal.Base (Sign(PSign, NSign, ZSign),BSum, DArith0)
-
-import Control.Applicative ((<$>), (<*>))
 
 import qualified Data.Foldable as Fold
 import qualified Data.Map as M
 
 import EFA.Utility (checkedLookup)
 
+
 adjustSigns ::
   (Show (v a), DArith0 a,
-  Walker v, Storage v a, Ord node, Show node) =>
-  Topology node -> SequData (FlowState node) ->
-  SequData (FlowRecord node v a) -> SequData (FlowRecord node v a)
-adjustSigns topo flowStates flowRec = f <$> flowStates <*> flowRec
-  where f (FlowState state) (Record dt flow) =
-          Record dt (M.foldrWithKey g M.empty state')
-          where state' = uniquePPos topo state
-                g ppos NSign acc = 
-                  M.insert ppos (neg (flow `checkedLookup` ppos))
-                    $ M.insert ppos' (neg (flow `checkedLookup` ppos')) acc
-                    where ppos' = flipPos ppos
-                g ppos _ acc =
-                  M.insert ppos (flow `checkedLookup` ppos)
-                    $ M.insert ppos' (flow `checkedLookup` ppos') acc
-                    where ppos' = flipPos ppos
-        uniquePPos topol state = foldl h M.empty (labEdges topol)
-          where h acc (Edge idx1 idx2, ()) =
-                  M.insert ppos (state `checkedLookup` ppos) acc
-                  where ppos = PPosIdx idx1 idx2
+  SV.Walker v, SV.Storage v a, Ord node, Show node) =>
+  Topology node ->
+  FlowState node -> FlowRecord node v a -> FlowRecord node v a
+adjustSigns topo (FlowState state) (Record dt flow) =
+   Record dt (M.foldrWithKey g M.empty uniquePPos)
+      where g ppos NSign acc =
+              M.insert ppos (neg (flow `checkedLookup` ppos))
+                $ M.insert ppos' (neg (flow `checkedLookup` ppos')) acc
+                where ppos' = flipPos ppos
+            g ppos _ acc =
+              M.insert ppos (flow `checkedLookup` ppos)
+                $ M.insert ppos' (flow `checkedLookup` ppos') acc
+                where ppos' = flipPos ppos
+            uniquePPos = foldl h M.empty (labEdges topo)
+              where h acc (Edge idx1 idx2, ()) =
+                      M.insert ppos (state `checkedLookup` ppos) acc
+                      where ppos = PPosIdx idx1 idx2
 
 
 -- | Function to calculate flow states for the whole sequence
 genSequFState ::
-  (Walker v, Storage v a, BSum a, Fractional a, Ord a) => 
+  (SV.Walker v, SV.Storage v a, BSum a, Fractional a, Ord a) =>
   SequData (FlowRecord node v a) -> SequData (FlowState node)
 genSequFState sqFRec = fmap genFlowState sqFRec
 
 -- | Function to extract the flow state out of a Flow Record
 genFlowState ::
-  (Walker v, Storage v a, BSum a, Fractional a, Ord a) => 
+  (SV.Walker v, SV.Storage v a, BSum a, Fractional a, Ord a) =>
   FlowRecord node v a -> FlowState node
 genFlowState (Record _time flowMap) =
    FlowState $ M.map (fromScalar . sigSign . sigSum) flowMap
 
--- | Function to generate Flow Topologies for all Sequences
+-- | Function to generate Flow Topologies for all Sections
 genSequFlowTops ::
   (Ord node, Show node) =>
   Topology node -> SequData (FlowState node) -> SequData (FlowTopology node)
@@ -87,43 +89,37 @@ mkSectionTopology ::
   Idx.Section -> FlowTopology node -> (SequFlowGraph node)
 mkSectionTopology sid = Gr.ixmap (Idx.SecNode sid)
 
-genSectionTopology ::
-  (Ord node) =>
-  SequData (FlowTopology node) -> SequData (SequFlowGraph node)
-genSectionTopology = zipWithSecIdxs mkSectionTopology
 
-
-copySeqTopology ::
-  (Ord node) =>
-  SequData (SequFlowGraph node) -> SequFlowGraph node
-copySeqTopology =
-   Fold.foldl Gr.union Gr.empty
-
-
-mkStructureEdges ::
-   node -> Idx.Section ->
-   M.Map Idx.Section StoreDir ->
+mkStorageEdges ::
+   node -> M.Map Idx.Section Topo.StoreDir ->
    [Topo.LEdge node]
-mkStructureEdges node startSec stores =
-   concatMap
-      (\secin ->
-         map (\secout ->
-                (Edge (Idx.SecNode secin node) (Idx.SecNode secout node), Dir)) $
-         M.keys $ snd $ M.split secin outs) $
-   startSec : M.keys ins
-  where (ins, outs) = M.partition (In ==) stores
+mkStorageEdges node stores = do
+   let (ins, outs) = M.partition (Topo.In ==) stores
+   secin <- Idx.initSection : M.keys ins
+   secout <- M.keys $ snd $ M.split secin outs
+   return $
+      (Edge (Idx.SecNode secin node) (Idx.SecNode secout node), Dir)
 
+getActiveStoreSequences ::
+   (Ord section, Ord node, Topo.FlowDirectionField el) =>
+   SequData (section, Gr.Graph node Topo.NodeType el) ->
+   M.Map node (M.Map section Topo.StoreDir)
+getActiveStoreSequences sq =
+   Fold.foldl
+      (M.unionWith (M.unionWith (error "duplicate section for node")))
+      M.empty $
+   fmap (\(s, g) ->
+          fmap (M.singleton s) $
+          M.mapMaybe snd $ Topo.getActiveStores g) sq
 
 mkSequenceTopology ::
   (Ord node) =>
-  SequData (SequFlowGraph node) -> SequFlowGraph node
-mkSequenceTopology sd = res
-  where sqTopo = copySeqTopology sd
-        initNode = Idx.SecNode Idx.initSection
-        startElems = map f $ M.toList $ getActiveStores sqTopo
-        f (n, io) =
-          (mkStructureEdges n Idx.initSection (fmap snd io),
-           (initNode n, Storage))
-
-        res = insEdges (concatMap fst startElems)
-              $ insNodes (map snd startElems) sqTopo
+  SequData (FlowTopology node) -> SequFlowGraph node
+mkSequenceTopology sd =
+   insEdges (Fold.fold $ M.mapWithKey mkStorageEdges tracks) $
+   insNodes
+      (map (\n -> (Idx.SecNode Idx.initSection n, Topo.Storage)) $
+       M.keys tracks) $
+   Fold.foldMap (uncurry mkSectionTopology) sq
+  where tracks = getActiveStoreSequences sq
+        sq = zipWithSecIdxs (,) sd
