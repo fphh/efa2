@@ -12,7 +12,6 @@ import qualified EFA.Example.Absolute as EqAbs
 
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Variable as Var
-import qualified EFA.Equation.Variable as Term
 import qualified EFA.Equation.Result as R
 
 import qualified EFA.Signal.SequenceData as SD
@@ -256,16 +255,15 @@ infixr 6 =<>
    EquationSystem s -> EquationSystem s
 
 (idx, x) =<> eqsys =
-   (idx .= Term.Signal (point (HSt.Symbol (fmap Var.index idx) x))) <> eqsys
+   (idx .= Var.Signal (point (HSt.Symbol (fmap Var.index idx) x))) <> eqsys
 
 
 
 type
    EquationSystem s =
       EqGen.EquationSystem Env.Delta System.Node s
-         (Term.Scalar SumProduct.Term (HSt.ScalarSymbol System.Node) (HSt.SignalSymbol System.Node))
-         (Term.Signal SumProduct.Term (HSt.ScalarSymbol System.Node) (HSt.SignalSymbol System.Node))
-
+         (Var.Scalar SumProduct.Term (HSt.ScalarSymbol System.Node) (HSt.SignalSymbol System.Node))
+         (Var.Signal SumProduct.Term (HSt.ScalarSymbol System.Node) (HSt.SignalSymbol System.Node))
 
 -- @Henning -- please help here
 -}
