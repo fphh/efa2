@@ -34,8 +34,8 @@ import qualified EFA.Signal.Plot.Options as O
 import System.IO
 
 dataset, datasetB :: FilePath
-dataset = "/home/felix/data/examples/vehicle/Vehicle_res.plt"
-datasetB = "/home/felix/data/examples/vehicle/Vehicle_mass1050kg_res.plt"
+dataset =  "/home/duck/energiefluss/data/examples/vehicle/Vehicle_res.plt"
+datasetB = "/home/duck/energiefluss/data/examples/vehicle/Vehicle_mass1050kg_res.plt"
 
 main :: IO ()
 main = do
@@ -100,9 +100,9 @@ main = do
 
   --  @Henning -- please help here
 
-  {- 
-  let difference = Analysis.difference sequenceFlowTopology env     
 
+  let difference = Analysis.difference sequenceFlowTopology simulationDelta
+  {- 
   Draw.sequFlowGraphDeltaWithEnv seqTopo $
       fmap (fmap (fmap (SumProduct.map index))) env
 
@@ -112,6 +112,10 @@ main = do
   HPl.histogrammIO (HSt.evaluate $ HEn.lookupStack difference eout) eout
 
 -}
+
+        
+
+  print difference
       
       
 ---------------------------------------------------------------------------------------

@@ -5,7 +5,7 @@
 module Modules.Analysis where
 
 import EFA.Example.Utility (edgeVar, 
-                            (.=), 
+                            (.=),
                             (%=)
                            )
 import qualified EFA.Equation.System as EqGen
@@ -56,8 +56,8 @@ import qualified EFA.Equation.Record as EqRecord
 
 -------------------------------------------------------------------------------------------------
 
-sec0 :: Idx.Section
-sec0 = Idx.Section 0
+sec2 :: Idx.Section
+sec2 = Idx.Section 2
 
 -------------------------------------------------------------------------------------------------  
 -- ## Preprocessing of Signals
@@ -158,7 +158,7 @@ external :: (Eq v, Num v, Arith.Product v, Arith.Integrate v, Vec.Storage t v,
 external sequenceFlowTopology sequFlowRecord =  EqGen.solveFromMeasurement sequenceFlowTopology $ makeGivenFromExternal Idx.Absolute sequFlowRecord
 
 
-initStorage :: Double
+initStorage :: (Fractional a, Num a) => a
 initStorage = 0.7*3600*1000
 
 makeGivenFromExternal :: (Eq v, Num v, Arith.Sum v, Vec.Storage t v, Vec.FromList t,
@@ -275,60 +275,58 @@ type
          (Stack (Var.Any System.Node) Double)
          (Stack (Var.Any System.Node) Double)
          
-         
-         
- {-
-deltaPair ::
-   (Ord (idx System.Node), Env.AccessMap idx,
-    Var.Index idx, Var.Type idx ~ Var.Signal) =>
-   EqRecord.Indexed EqRecord.Absolute (idx System.Node) -> Double -> Double -> EquationSystemNumeric s
- -}
-deltaPair idx before delta =
-   idx .= Stack.deltaPair (Var.Signal $ Var.index idx) before delta
-         
-{-
-deltaPair ::
-   (Ord (idx System.Node), Env.AccessMap idx,
-    Var.Index idx, Var.Type idx ~ Var.Signal) =>
-   EqRecord.Indexed (EqRecord.FromIndex uf) (idx System.Node) -> Double -> Double -> EquationSystemNumeric s
-   -}
---deltaPair idx before delta =
---   idx .= Stack.deltaPair (Var.Signal $ Var.index idx) before delta
-
-{-
-givenNumeric :: EquationSystemNumeric s
-givenNumeric =
-   (Idx.DTime Idx.initSection .= 1) <>
-   (Idx.DTime sec0 .= 0) <>
-
-   deltaPair (edgeVar Idx.Energy sec0 node0 node1) 4 (-0.6) <>
-   deltaPair (edgeVar Idx.Eta sec0 node0 node1) 0.25 0.1 <>
-   deltaPair (edgeVar Idx.Eta sec0 node1 node2) 0.85 0.05 <>
-
-   mempty
-
--}
-
 type DeltaResult = EqRecord.Delta (R.Result Double)
 
 
+type Expression node s a v x = EqGen.Expression EqRecord.Delta node s a v x
 
-difference sequenceFlowTopology env = EqGen.solve sequenceFlowTopology (makeGivenForDifferentialAnalysis env) 
+
+variable ::
+   (Eq x, Arith.Sum x,
+    EqGen.Element idx EqRecord.Delta s a v
+      ~ EqGen.VariableRecord EqRecord.Delta s x,
+    Env.AccessMap idx, Ord (idx node)) =>
+   idx node -> Expression node s a v x
+variable = EqGen.variable . Idx.delta
+
+infix 0 .==
+
+(.==) ::
+  (Eq x, Arith.Sum x,
+   EqGen.Element idx EqRecord.Delta s a v
+      ~ EqGen.VariableRecord EqRecord.Delta s x,
+   Env.AccessMap idx, Ord (idx node)) =>
+   idx node -> x ->
+   EqGen.EquationSystem EqRecord.Delta node s a v
+evar .== val  =  variable evar EqGen.=.= EqGen.constant val
+
+
+deltaPair ::
+   (Ord (idx System.Node), Env.AccessMap idx,
+    Var.Index idx, Var.Type idx ~ Var.Signal) =>
+   (idx System.Node) -> Double -> Double -> EquationSystemNumeric s
+deltaPair idx before delta =
+   idx .== Stack.deltaPair (Var.Signal $ Var.index idx) before delta
+
+
+difference sequenceFlowTopology env =
+  EqGen.solve sequenceFlowTopology (makeGivenForDifferentialAnalysis env) 
         
                                       
-{-
+
 makeGivenForDifferentialAnalysis ::
   Env.Complete System.Node DeltaResult DeltaResult ->
-  EquationSystemNumeric s
-  -}
-  -- EqGen.EquationSystem Env.Delta System.Node s (SumProduct.Term (HSt.Symbol  System.Node)) (SumProduct.Term (HSt.Symbol  System.Node))
-                          
-makeGivenForDifferentialAnalysis env = 
-  --(Idx.DTime Idx.initSection .= 1) <>
---  (Idx.DTime sec0 .= 0) <>
-  --(Idx.Storage (Idx.initSection System.Battery) .= initStorage)
-  -- deltaPair (edgeVar Idx.Energy sec0 System.Tank System.ConBattery) 4 (-0.6) <>
-   mempty                                    
+  EquationSystemNumeric s                         
+makeGivenForDifferentialAnalysis (Env.Complete scal sig) = 
+  (Idx.DTime Idx.initSection .== 1) <>
+  (Idx.DTime sec2 .== 0) <>
+  (Idx.Storage (Idx.SecNode Idx.initSection System.Battery) .== initStorage) <>
+  (deltaPair (edgeVar Idx.Energy sec2 System.Tank System.ConBattery) 4 (-0.6)) <>
+  (foldMap f (M.toList $ Env.etaMap sig)) <>
+  mempty
+  where f (i, EqRecord.Delta (R.Determined d) (R.Determined b) _)
+          = deltaPair i b d
+
 {-
 makeGivenForDifferentialAnalysis env = (
   Idx.before (Idx.DTime Idx.initSection) .= 1)
@@ -365,3 +363,4 @@ makeGivenForDifferentialAnalysis env = (
          (System.Battery, System.ConBattery) -> True
          _ -> False
 -}
+
