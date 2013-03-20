@@ -520,10 +520,7 @@ fromMapResult =
          fmap
             (fold .
              liftA2
-                (\rx var ->
-                   case rx of
-                      Undetermined -> mempty
-                      Determined x -> pure var =.= constant x)
+                (\rx var -> foldMap (\x -> pure var =.= constant x) rx)
                 (Wrap xrec))
             (variableRecord idx))
 
