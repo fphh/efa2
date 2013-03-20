@@ -97,7 +97,7 @@ p13 sec = EqGen.variable $ edgeVar Idx.Power sec N1 N3
 
 
 stoinit :: Expr s Double
-stoinit = EqGen.variable $ Idx.Storage (Idx.SecNode Idx.initSection N3)
+stoinit = EqGen.variable $ Idx.Storage (Idx.initBndNode N3)
 
 ein, eout0, eout1 :: Idx.Energy Node
 ein = edgeVar Idx.Energy sec0 N0 N1
@@ -105,7 +105,7 @@ eout0 = edgeVar Idx.Energy sec0 N2 N1
 eout1 = edgeVar Idx.Energy sec1 N2 N1
 
 e33 :: Expr s Double
-e33 = EqGen.variable $ interVar Idx.StEnergy Idx.initSection sec1 N3
+e33 = EqGen.variable $ interVar Idx.StEnergy Idx.initial (Idx.AfterSection sec1) N3
 
 time :: Idx.Section -> Expr s Double
 time = EqGen.variable . Idx.DTime
@@ -131,8 +131,7 @@ given :: Val ->
          Val ->
          EqGen.EquationSystem Node s Val Val
 given y' p' nParam' =
-  (time Idx.initSection =.= 1)
-  <> (stoinit =.= EqGen.constant 3)
+  (stoinit =.= EqGen.constant 3)
 
   <> (p21 sec0 =.= p)
   <> (e21 sec0 =.= (1-y)*(t*p))

@@ -3,7 +3,6 @@
 
 module Main where
 
-import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Example.Absolute as EqSys
 import EFA.Example.Absolute ((.=), (=.=))

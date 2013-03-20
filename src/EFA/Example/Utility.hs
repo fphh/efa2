@@ -160,7 +160,7 @@ edgeVar = Idx.structureEdge
 
 interVar ::
    (Idx.StorageEdge node -> idx) ->
-   Idx.Section -> Idx.Section -> node -> idx
+   Idx.Boundary -> Idx.Boundary -> node -> idx
 interVar = Idx.storageEdge
 
 

@@ -36,9 +36,9 @@ import Data.Maybe.HT (toMaybe)
 import Data.Tuple.HT (snd3)
 
 
-type LNode a = Gr.LNode (Idx.SecNode a) NodeType
-type LEdge a = Gr.LEdge (Idx.SecNode a) FlowDirection
-type LDirEdge a = Gr.LEdge (Idx.SecNode a) ()
+type LNode a = Gr.LNode (Idx.BndNode a) NodeType
+type LEdge a = Gr.LEdge (Idx.BndNode a) FlowDirection
+type LDirEdge a = Gr.LEdge (Idx.BndNode a) ()
 
 data NodeType = Storage
               | Sink
@@ -77,10 +77,14 @@ data EdgeType node =
    deriving (Eq, Ord, Show)
 
 
-edgeType :: Eq node => Gr.Edge (Idx.SecNode node) -> EdgeType node
-edgeType (Gr.Edge (Idx.SecNode sx nx) (Idx.SecNode sy ny)) =
+edgeType :: Eq node => Gr.Edge (Idx.BndNode node) -> EdgeType node
+edgeType (Gr.Edge (Idx.BndNode sx nx) (Idx.BndNode sy ny)) =
    if sx == sy
-     then StructureEdge $ Idx.StructureEdge sx nx ny
+     then
+        case sx of
+           Idx.AfterSection s ->
+              StructureEdge $ Idx.StructureEdge s nx ny
+           _ -> error "structure edges must be in a section"
      else
         if nx == ny
           then StorageEdge $ Idx.StorageEdge sx sy nx
@@ -131,10 +135,10 @@ instance EdgeTypeField e => EdgeTypeField (e, l) where
 -}
 
 
-isStructureEdge :: Eq node => Gr.Edge (Idx.SecNode node) -> Bool
+isStructureEdge :: Eq node => Gr.Edge (Idx.BndNode node) -> Bool
 isStructureEdge e = case edgeType e of StructureEdge _ -> True ; _ -> False
 
-isStorageEdge :: Eq node => Gr.Edge (Idx.SecNode node) -> Bool
+isStorageEdge :: Eq node => Gr.Edge (Idx.BndNode node) -> Bool
 isStorageEdge e = case edgeType e of StorageEdge _ -> True ; _ -> False
 
 
@@ -147,9 +151,9 @@ type Topology a = Graph a NodeType ()
 
 type FlowTopology a = Graph a NodeType FlowDirection
 
-type SequFlowGraph a = Graph (Idx.SecNode a) NodeType FlowDirection
+type SequFlowGraph a = Graph (Idx.BndNode a) NodeType FlowDirection
 
-type DirSequFlowGraph a = Graph (Idx.SecNode a) NodeType ()
+type DirSequFlowGraph a = Graph (Idx.BndNode a) NodeType ()
 
 pathExists :: (Eq a, Ord a) => a -> a -> FlowTopology a -> Bool
 pathExists _ _ topo | Gr.isEmpty topo = False

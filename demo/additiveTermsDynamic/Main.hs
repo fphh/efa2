@@ -93,7 +93,6 @@ idx -=<> eqsys =
 
 givenSymbolic :: EquationSystemSymbolic s
 givenSymbolic =
-   (Idx.DTime Idx.initSection .= Arith.fromInteger 1) <>
    (Idx.DTime sec0 .= Arith.fromInteger 1) <>
 
    edgeVar Idx.Energy sec0 node0 node1 -=<>
@@ -131,7 +130,6 @@ deltaPair idx before delta =
 
 givenNumeric :: EquationSystemNumeric s
 givenNumeric =
-   (Idx.DTime Idx.initSection .= 1) <>
    (Idx.DTime sec0 .= 1) <>
 
    deltaPair (edgeVar Idx.Energy sec0 node0 node1) 4 (-0.6) <>

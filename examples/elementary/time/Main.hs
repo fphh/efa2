@@ -94,7 +94,7 @@ p31 sec = EqGen.variable $ edgeVar Idx.Power sec N3 N1
 
 --esto :: Expr s Double
 esto :: Idx.StEnergy Node
-esto = interVar Idx.StEnergy sec1 Idx.initSection N3
+esto = interVar Idx.StEnergy (Idx.AfterSection sec1) Idx.initial N3
 
 ein, eout0, eout1 :: Idx.Energy Node
 ein = edgeVar Idx.Energy sec0 N0 N1
@@ -103,8 +103,8 @@ eout1 = edgeVar Idx.Energy sec1 N2 N1
 
 
 sto0, sto1 :: Idx.Storage Node
-sto0 = Idx.Storage (Idx.SecNode sec0 N3)
-sto1 = Idx.Storage (Idx.SecNode sec1 N3)
+sto0 = Idx.Storage (Idx.afterSecNode sec0 N3)
+sto1 = Idx.Storage (Idx.afterSecNode sec1 N3)
 
 
 given :: Double -> Double -> EqGen.EquationSystem Node s Double Double
@@ -118,9 +118,8 @@ given _x t =
         =.= EqGen.variable (edgeVar Idx.Energy sec0 N3 N1))
   <> (EqGen.variable (Idx.DTime sec0) + EqGen.variable (Idx.DTime sec1) =.= 12.1)
 
-  <> (Idx.DTime Idx.initSection .= 1)
   <> (Idx.DTime sec0 .= t)
-  <> (Idx.Storage (Idx.SecNode Idx.initSection N3) .= 10)
+  <> (Idx.Storage (Idx.initBndNode N3) .= 10)
 
   -- <> (edgeVar EqGen.xfactor sec0 N1 N2 .= x)
   <> (edgeVar Idx.Power sec0 N2 N1 .= 10)
