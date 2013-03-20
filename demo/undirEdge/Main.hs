@@ -40,7 +40,7 @@ given =
    (Idx.DTime sec0 .= 1) :
    (Idx.DTime sec1 .= 1) :
 
-   (Idx.Storage (Idx.SecNode Idx.initSection node3) .= 10.0) :
+   (Idx.Storage (Idx.initBndNode node3) .= 10.0) :
 
    (edgeVar Idx.Power sec0 node0 node2 .= 4.0) :
    (edgeVar Idx.Eta sec0 node2 node1 .= 0.5) :

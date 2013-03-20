@@ -54,6 +54,7 @@ class Format output where
    function :: Function -> output -> output
    integral :: output -> output
    recordDelta :: Idx.Delta -> output -> output
+   initial :: output
    section :: Idx.Section -> output
    sectionNode :: output -> output -> output
    direction :: Idx.Direction -> output
@@ -94,6 +95,7 @@ instance Format ASCII where
          Idx.Before -> "[0]"
          Idx.After -> "[1]"
          Idx.Delta -> "d"
+   initial = ASCII "i"
    section (Idx.Section s) = ASCII $ show s
    sectionNode (ASCII s) (ASCII x) = ASCII $ s ++ "." ++ x
 
@@ -152,6 +154,7 @@ instance Format Unicode where
          Idx.Before -> "\x2070"
          Idx.After -> "\xb9"
          Idx.Delta -> [deltaChar]
+   initial = Unicode "i"
    section (Idx.Section s) = Unicode $ show s
    sectionNode (Unicode s) (Unicode x) = Unicode $ s ++ "." ++ x
 
@@ -250,6 +253,7 @@ instance Format Latex where
          Idx.Before -> "\\leftexp{0}{" ++ rest ++ "}"
          Idx.After -> "\\leftexp{1}{" ++ rest ++ "}"
          Idx.Delta -> "\\Delta " ++ rest
+   initial = Latex "i"
    section (Idx.Section s) = Latex $ show s
    sectionNode (Latex s) (Latex x) = Latex $ s ++ ":" ++ x
 
@@ -303,3 +307,7 @@ directionShort d =
    case d of
       Idx.In -> "i"
       Idx.Out -> "o"
+
+boundary :: Format output => Idx.Boundary -> output
+boundary Idx.Initial = initial
+boundary (Idx.AfterSection s) = section s

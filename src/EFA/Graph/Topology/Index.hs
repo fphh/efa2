@@ -1,17 +1,34 @@
 module EFA.Graph.Topology.Index where
 
+import Data.Word (Word)
+
 import Prelude hiding (flip)
 
 
-newtype Section = Section Int deriving (Show, Eq, Ord)
+newtype Section = Section Word deriving (Show, Eq, Ord)
 
 instance Enum Section where
-   fromEnum (Section n) = n
-   toEnum n = Section n
+   toEnum n =
+      if n >=0
+        then Section $ fromIntegral n
+        else error "Section.toEnum: negative number"
+   fromEnum (Section n) =
+      if n <= fromIntegral (maxBound::Int)
+        then fromIntegral n
+        else error "Section.fromEnum: number too big"
 
-initSection :: Section
-initSection = Section (-1)
+data Boundary = Initial | AfterSection Section deriving (Show, Eq, Ord)
 
+instance Enum Boundary where
+   toEnum n =
+      if n == -1
+        then Initial
+        else AfterSection $ toEnum n
+   fromEnum Initial = -1
+   fromEnum (AfterSection n) = fromEnum n
+
+initial :: Boundary
+initial = Initial
 
 
 data Absolute = Absolute deriving (Show, Eq, Ord)
@@ -48,6 +65,13 @@ after = Record After
 
 
 data SecNode node = SecNode Section node deriving (Show, Eq, Ord)
+data BndNode node = BndNode Boundary node deriving (Show, Eq, Ord)
+
+initBndNode :: node -> BndNode node
+initBndNode = BndNode Initial
+
+afterSecNode :: Section -> node -> BndNode node
+afterSecNode s = BndNode (AfterSection s)
 
 
 
@@ -56,7 +80,7 @@ data SecNode node = SecNode Section node deriving (Show, Eq, Ord)
 data StructureEdge node = StructureEdge Section node node
    deriving (Show, Eq, Ord)
 
-data StorageEdge node = StorageEdge Section Section node
+data StorageEdge node = StorageEdge Boundary Boundary node
    deriving (Show, Eq, Ord)
 
 structureEdge ::
@@ -67,7 +91,7 @@ structureEdge mkIdx s x y =
 
 storageEdge ::
    (StorageEdge node -> idx) ->
-   Section -> Section -> node -> idx
+   Boundary -> Boundary -> node -> idx
 storageEdge mkIdx s0 s1 n =
    mkIdx $ StorageEdge s0 s1 n
 
@@ -113,11 +137,11 @@ data X node = X (StructureEdge node) deriving (Show, Ord, Eq)
 
 data StX node = StX (StorageEdge node) deriving (Show, Ord, Eq)
 
-data Storage node = Storage !(SecNode node) deriving (Show, Ord, Eq)
+data Storage node = Storage !(BndNode node) deriving (Show, Ord, Eq)
 
 data Direction = In | Out deriving (Show, Eq, Ord)
 
-data Sum node = Sum !Direction !(SecNode node) deriving (Show, Ord, Eq)
+data Sum node = Sum !Direction !(BndNode node) deriving (Show, Ord, Eq)
 
 
 -- * Other indices

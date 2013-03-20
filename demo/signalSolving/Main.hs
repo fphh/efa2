@@ -49,7 +49,7 @@ given =
    (Idx.DTime sec1 .= signal [1]) :
    (Idx.DTime sec2 .= signal [2/3, 1/3]) :
 
-   (Idx.Storage (Idx.SecNode sec2 node3) .= scalar 10.0) :
+   (Idx.Storage (Idx.afterSecNode sec2 node3) .= scalar 10.0) :
 
 
    (edgeVar Idx.Power sec0 node2 node3 .= signal [4.0, 3.8, 4.2]) :

@@ -516,17 +516,17 @@ stxfactor = variableRecord . Idx.StX
 
 insum ::
    (Eq v, Sum v, Record rec, Ord node) =>
-   Idx.SecNode node -> RecordExpression rec node s a v v
+   Idx.BndNode node -> RecordExpression rec node s a v v
 insum = variableRecord . Idx.Sum Idx.In
 
 outsum ::
    (Eq v, Sum v, Record rec, Ord node) =>
-   Idx.SecNode node -> RecordExpression rec node s a v v
+   Idx.BndNode node -> RecordExpression rec node s a v v
 outsum = variableRecord . Idx.Sum Idx.Out
 
 storage ::
    (Eq a, Sum a, Record rec, Ord node) =>
-   Idx.SecNode node -> RecordExpression rec node s a v a
+   Idx.BndNode node -> RecordExpression rec node s a v a
 storage = variableRecord . Idx.Storage
 
 dtime ::
@@ -615,7 +615,7 @@ fromGraph equalInOutSums g = mconcat $
 
 fromEdges ::
   (Eq a, Sum a, Eq v, Product v, Record rec, Ord node) =>
-  [Gr.Edge (Idx.SecNode node)] -> EquationSystem rec node s a v
+  [Gr.Edge (Idx.BndNode node)] -> EquationSystem rec node s a v
 fromEdges =
    foldMap $ \se ->
       case TD.edgeType se of
@@ -702,14 +702,14 @@ getInnerStorages = getStorages format
 -}
 getInnerStorages ::
   (Node.C node) =>
-  TD.DirSequFlowGraph node -> [[(Idx.SecNode node, StDir)]]
+  TD.DirSequFlowGraph node -> [[(Idx.BndNode node, StDir)]]
 getInnerStorages = getStorages format
   where format ([_], s, []) = (s, InDir)
         format ([], s, [_]) = (s, OutDir)
         format ([], s, [])  = (s, NoDir)
         format (_, s, _)  = errorSecNode "getInnerStorages" s
 
-type InOutFormat node = InOut (Idx.SecNode node) ()
+type InOutFormat node = InOut (Idx.BndNode node) ()
 type InOut n el = ([Gr.LNode n el], n, [Gr.LNode n el])
 
 getStorages ::
@@ -719,7 +719,7 @@ getStorages format =
   M.elems
   . fmap M.elems
   . M.fromListWith (M.unionWith (error "duplicate node"))
-  . map (\(ins, (n@(Idx.SecNode sec node),_), outs) ->
+  . map (\(ins, (n@(Idx.BndNode sec node),_), outs) ->
             (node, M.singleton sec (format (ins,n,outs))))
   . filter TD.isStorageNode
   . Gr.mkInOutGraphFormat    -- ersetzen durch nodes
@@ -739,24 +739,24 @@ fromInterStorages = foldMap f . getInterStorages
                InDir -> fromInStorages x
                OutDir -> fromOutStorages x
 
-getSection :: Idx.SecNode a -> Idx.Section
-getSection (Idx.SecNode s _) = s
+getSection :: Idx.BndNode a -> Idx.Boundary
+getSection (Idx.BndNode s _) = s
 
-_getNode :: Idx.SecNode a -> a
-_getNode (Idx.SecNode _ n) = n
+_getNode :: Idx.BndNode a -> a
+_getNode (Idx.BndNode _ n) = n
 
 fromInStorages ::
   (Eq a, Sum a, a ~ Scalar v,
    Eq v, Product v, Integrate v,
    Record rec, Node.C node) =>
-  ([Idx.Section], Idx.SecNode node, [Idx.Section]) ->
+  ([Idx.Boundary], Idx.BndNode node, [Idx.Boundary]) ->
   EquationSystem rec node s a v
-fromInStorages (_, sn@(Idx.SecNode sec n), outs) =
+fromInStorages (_, sn@(Idx.BndNode sec n), outs) =
    flip foldMap
       (fmap NonEmpty.sort $ NonEmpty.fetch outs) $ \souts ->
          -- The next equation is special for the initial Section.
          (Idx.storageEdge maxEnergy sec (NonEmpty.head souts) n =%=
-          if sec == Idx.initSection
+          if sec == Idx.initial
             then storage sn
             else integrate (insum sn))
          <>
@@ -768,9 +768,9 @@ fromInStorages (_, sn@(Idx.SecNode sec n), outs) =
 
 fromOutStorages ::
   (Eq a, Product a, Record rec, Node.C node) =>
-  ([Idx.Section], Idx.SecNode node, [Idx.Section]) ->
+  ([Idx.Boundary], Idx.BndNode node, [Idx.Boundary]) ->
   EquationSystem rec node s a v
-fromOutStorages (ins0, Idx.SecNode sec n, _) =
+fromOutStorages (ins0, Idx.BndNode sec n, _) =
   flip foldMap (NonEmpty.fetch ins0) $ \ins ->
   (withLocalVar $ \s ->
     splitFactors s
@@ -793,24 +793,24 @@ splitFactors s ef xf ns =
 getInterStorages ::
   (Node.C node) =>
   TD.DirSequFlowGraph node
-  -> [(StDir, ([Idx.Section], Idx.SecNode node, [Idx.Section]))]
+  -> [(StDir, ([Idx.Boundary], Idx.BndNode node, [Idx.Boundary]))]
 getInterStorages = concat . getStorages format
-  where format (ins, sn@(Idx.SecNode sec _), outs) =
+  where format (ins, sn@(Idx.BndNode sec _), outs) =
           let partition =
                  LH.partition (sec ==) . map (getSection . fst)
               (insStruct, insStore) = partition ins
               (outsStruct, outsStore) = partition outs
           in  (case (insStruct, outsStruct) of
                  ([], [])  ->  -- We treat initial storages as in-storages
-                   if sec == Idx.initSection then InDir else NoDir
+                   if sec == Idx.initial then InDir else NoDir
                  ([_], []) -> InDir
                  ([], [_]) -> OutDir
                  _ -> errorSecNode "getInterStorages" sn,
                (insStore, sn, outsStore))
 
-errorSecNode :: Node.C node => String -> Idx.SecNode node -> a
+errorSecNode :: Node.C node => String -> Idx.BndNode node -> a
 errorSecNode name node =
-   error (name ++ ": " ++ Format.unUnicode (Var.formatSectionNode node))
+   error (name ++ ": " ++ Format.unUnicode (Var.formatBoundaryNode node))
 
 
 -----------------------------------------------------------------
