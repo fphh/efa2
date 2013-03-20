@@ -248,6 +248,7 @@ infix 6 .+,.-
 
 infix 7 &*, &/
 infix 6 &+, &-
+
 ----------------------------------------------------------
 -- New Synonyms           ] 
 
@@ -924,6 +925,24 @@ maximum, minimum ::
    TC s typ (Data c d) -> TC Scalar typ (Data Nil d)
 maximum (TC x) = TC $ Data $ D.maximum x
 minimum (TC x) = TC $ Data $ D.minimum x
+
+
+-- | fit Signal range from 0 to 1 // ..* 
+norm ::  (Eq d, 
+          D.Map c, 
+          Num d, 
+          Fractional d, 
+          Ord d, 
+          D.Storage c d, 
+          D.Maximum c) => 
+         TC s typ (Data c d) -> TC s typ (Data c d)
+norm x =  if max P./= min 
+          then  map (\y -> (y P.-min) P./ (max P.- min)) x 
+               else map (\ _ -> min) x
+                    
+          where (TC (Data max)) = maximum x
+                (TC (Data min)) = minimum x
+  
 
 equalBy ::
    (SV.Walker v, SV.Storage v a, SV.Storage v b) =>

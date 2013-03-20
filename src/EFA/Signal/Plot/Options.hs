@@ -27,6 +27,7 @@ import qualified Graphics.Gnuplot.Graph.TwoDimensional as Graph2D
 import EFA.Report.Typ (DisplayType(Typ_T), getDisplayUnit)
 -- import EFA.Signal.Record (SigId(..))
 import qualified EFA.Signal.Record as Record
+import qualified EFA.Signal.Vector as V
 -- import qualified Data.Map as Map 
 
 
@@ -38,10 +39,12 @@ data  T id term = T {
   terminalAcc :: Term term,
   showIdAcc :: id -> String,
   extractAcc :: [id],
-  normAcc :: Bool, 
   splitAcc :: Split,
   titleAcc :: String, 
   wtitleAcc:: String,
+  leadSignalsAcc::(Record.RangeFrom id, Record.ToModify id),
+  leadSignalsMaxAcc::(Record.RangeFrom id, Record.ToModify id),
+  normAcc :: Bool,
   showRecIdxAcc:: Record.Idx -> String,
   pointSizeAcc :: LineSpec.T -> LineSpec.T,
   pointTypeAcc :: LineSpec.T -> LineSpec.T, 
@@ -94,12 +97,20 @@ lineType x opts = opts { lineTypeAcc = LineSpec.lineType x }
 extract :: [id] ->  T id term -> T id term
 extract x opts = opts { extractAcc = x }
 
+leadSignals :: (Record.RangeFrom id, Record.ToModify id)->  T id term -> T id term
+leadSignals x opts = opts { leadSignalsAcc = x }
+
+leadSignalsMax :: (Record.RangeFrom id, Record.ToModify id)->  T id term -> T id term
+leadSignalsMax x opts = opts { leadSignalsMaxAcc = x }
+
 -- | Set Default Values for Global Options
 deflt :: Show id => T id WXT.T
 deflt = T {
   gridAcc = True,
   titleAcc = "", 
   extractAcc = [],
+  leadSignalsAcc = (Record.RangeFrom [], Record.ToModify []),
+  leadSignalsMaxAcc = (Record.RangeFrom [], Record.ToModify []),
   normAcc = False,
   terminalAcc = WXTTerm,
   showIdAcc = show,
@@ -154,14 +165,29 @@ buildTerminal wti opts = f (terminalAcc opts)
 
 
 -- | Build the function to condition the record before plotting 
-buildPrepFunction :: (Ord id, Show id) => T id term ->  
+buildPrepFunction :: (Ord id, 
+                      Show id, 
+                      Show (v a),
+                      Fractional a,
+                      Ord a,
+                      V.Walker v,
+                      V.Storage v a,
+                      V.Singleton v) => T id term ->  
                      (Record.Record s t1 t2 id v a ->  
                       Record.Record s t1 t2 id v a)      
-buildPrepFunction  opts = g opts 
+buildPrepFunction  opts = f . g opts . h opts . j
   where
+    f = Record.normSignals2Range (leadSignalsAcc opts)
+    j = Record.normSignals2Max75 (leadSignalsMaxAcc opts)
+    
     -- | do nothing with emtpy list
     g o | extractAcc o == [] = id
     g o | otherwise = Record.extract (extractAcc o)
+    
+    h o | normAcc o == True = Record.norm 
+    h o | otherwise = id
+    
+    
     
 -- | Build the line style for plotting a record
 buildStyle :: (Show id) => Record.Idx -> T id term -> id -> Plot2D.T x y -> Plot2D.T x y
