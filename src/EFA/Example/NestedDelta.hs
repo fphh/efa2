@@ -1,34 +1,37 @@
 {-# LANGUAGE TypeFamilies #-}
-module EFA.Example.NestedDelta where
+module EFA.Example.NestedDelta (
+   module EFA.Example.NestedDelta,
+   (?=),
+   ) where
 
 import qualified EFA.Example.Utility as Utility
-import EFA.Equation.System ((=.=))
+import EFA.Equation.System ((?=))
 
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Arithmetic as Arith
+import EFA.Equation.Result (Result(Determined, Undetermined))
 
 import qualified EFA.Graph.Topology.Index as Idx
 import EFA.Utility (Pointed)
 
 import qualified Data.NonEmpty as NonEmpty
-import qualified Data.Foldable as Fold
-import Control.Applicative (Applicative, pure, liftA2)
+import Control.Applicative (Applicative, pure)
 
 
 
 data Extruder f a =
    Extruder {
-      extrudeOuter :: f (Maybe a) -> Record.ExtDelta f (Maybe a),
+      extrudeOuter :: f (Result a) -> Record.ExtDelta f (Result a),
       extrudeInner ::
-         (a -> f (Maybe a)) ->
-         a -> a -> Record.ExtDelta f (Maybe a)
+         (a -> f (Result a)) ->
+         a -> a -> Record.ExtDelta f (Result a)
    }
 
 extrudeStart :: InnerExtrusion Record.Absolute a
-extrudeStart = InnerExtrusion $ Record.Absolute . Just
+extrudeStart = InnerExtrusion $ Record.Absolute . Determined
 
 
 beforeDelta :: (Applicative f, Arith.Sum a) => Extruder f a
@@ -37,13 +40,13 @@ beforeDelta =
       extrudeOuter = \x ->
          Record.ExtDelta {
             Record.extBefore = x,
-            Record.extAfter = pure Nothing,
+            Record.extAfter = pure Undetermined,
             Record.extDelta = fmap (fmap Arith.clear) x
          },
       extrudeInner = \cons x y ->
          Record.ExtDelta {
             Record.extBefore = cons x,
-            Record.extAfter = pure Nothing,
+            Record.extAfter = pure Undetermined,
             Record.extDelta = cons y
          }
    }
@@ -55,13 +58,13 @@ beforeAfter =
          Record.ExtDelta {
             Record.extBefore = x,
             Record.extAfter = fmap (fmap Arith.clear) x,
-            Record.extDelta = pure Nothing
+            Record.extDelta = pure Undetermined
          },
       extrudeInner = \cons x y ->
          Record.ExtDelta {
             Record.extBefore = cons x,
             Record.extAfter = cons y,
-            Record.extDelta = pure Nothing
+            Record.extDelta = pure Undetermined
          }
    }
 
@@ -70,13 +73,13 @@ afterDelta =
    Extruder {
       extrudeOuter = \x ->
          Record.ExtDelta {
-            Record.extBefore = pure Nothing,
+            Record.extBefore = pure Undetermined,
             Record.extAfter = x,
             Record.extDelta = fmap (fmap Arith.clear) x
          },
       extrudeInner = \cons x y ->
          Record.ExtDelta {
-            Record.extBefore = pure Nothing,
+            Record.extBefore = pure Undetermined,
             Record.extAfter = cons x,
             Record.extDelta = cons y
          }
@@ -85,10 +88,10 @@ afterDelta =
 
 newtype
    InnerExtrusion f a =
-      InnerExtrusion {runInnerExtrusion :: a -> f (Maybe a)}
+      InnerExtrusion {runInnerExtrusion :: a -> f (Result a)}
 newtype
    OuterExtrusion f a =
-      OuterExtrusion {runOuterExtrusion :: a -> a -> f (Maybe a)}
+      OuterExtrusion {runOuterExtrusion :: a -> a -> f (Result a)}
 
 
 infixr 0 <&, <&>, &>
@@ -148,7 +151,7 @@ parameterSymbol ::
     Var.Type idx ~ var, Utility.Symbol var, Env.AccessMap idx) =>
 
    OuterExtrusion rec t ->
-   idx node -> rec (Maybe t)
+   idx node -> rec (Result t)
 
 parameterSymbol param idx =
    runOuterExtrusion param
@@ -163,7 +166,7 @@ absoluteSymbol ::
     Var.Type idx ~ var, Utility.Symbol var, Env.AccessMap idx) =>
 
    InnerExtrusion rec t ->
-   idx node -> rec (Maybe t)
+   idx node -> rec (Result t)
 
 absoluteSymbol absolute idx =
    absoluteRecord absolute (Utility.symbol (Idx.before $ Var.index idx))
@@ -171,35 +174,15 @@ absoluteSymbol absolute idx =
 parameterRecord ::
    (Arith.Sum x) =>
    OuterExtrusion rec x ->
-   x -> x -> rec (Maybe x)
+   x -> x -> rec (Result x)
 parameterRecord = runOuterExtrusion
 
 absoluteRecord ::
    (Arith.Sum x) =>
    InnerExtrusion rec x ->
-   x -> rec (Maybe x)
+   x -> rec (Result x)
 absoluteRecord = runInnerExtrusion
 
-
-
-infix 0 ?=
-
-
-(?=) ::
-   (EqGen.Record rec,
-    Eq x, Arith.Sum x,
-    EqGen.Element idx rec s a v
-       ~ EqGen.VariableRecord rec s x,
-    Env.AccessMap idx, Ord (idx node), Var.Type idx ~ var) =>
-   idx node -> rec (Maybe x) ->
-   EqGen.EquationSystem rec node s a v
-evar ?= val  =
-   Fold.fold $
-   liftA2
-      (\rec ->
-         Fold.foldMap
-            (\x -> EqGen.variable (Idx.Record rec evar) =.= EqGen.constant x))
-      Record.indices val
 
 
 givenParameterSymbol ::
