@@ -313,11 +313,24 @@ makeGivenForDifferentialAnalysis (Env.Complete scal sig) =
   (Idx.Storage (Idx.initBndNode System.Battery) .== initStorage) <>
   (deltaPair (edgeVar Idx.Energy sec2 System.Tank System.ConBattery) 4 (-0.6)) <>
   (fold $ M.mapWithKey f $ Env.etaMap sig) <>
+  (fold $ M.mapWithKey f $ Env.dtimeMap sig) <>
+  (fold $ M.filterWithKey g $ M.mapWithKey f $ Env.energyMap sig) <>
   mempty
   where f i rec =
            deltaPair i
               (checkDetermined "before" $ EqRecord.before rec)
               (checkDetermined "delta"  $ EqRecord.delta rec)
+  
+        g (Idx.Energy (Idx.StructureEdge _ x y)) _ =
+          case (x,y) of
+            (System.Resistance, System.Chassis) -> True
+            (System.VehicleInertia, System.Chassis) -> True
+            (System.RearBrakes, System.Chassis) -> True
+            (System.FrontBrakes, System.ConFrontBrakes) -> True
+            (System.ConES, System.ElectricSystem) -> True
+            (System.Battery, System.ConBattery) -> True
+            _ -> False            
+              
 
 {-
 makeGivenForDifferentialAnalysis env = (
