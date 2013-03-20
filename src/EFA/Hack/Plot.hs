@@ -100,7 +100,10 @@ class Time r id where
               TDisp t1,
               TDisp t2,
               Atom.C a,
-              Tuple.C a) => 
+              Tuple.C a, 
+              Ord a, 
+              Show (v a), 
+              SV.Singleton v) => 
              (PlOpts.T id WXT.T -> PlOpts.T id term)
              -> r s t1 t2 id v a
              -> IO ()
@@ -170,7 +173,10 @@ recordIO2 :: (Terminal.C term,
                TDisp typ1, 
                TDisp typ0, 
                Tuple.C a, 
-               Atom.C a) =>
+               Atom.C a, 
+               Ord a, 
+               Show (v a), 
+               SV.Singleton v) =>
                (PlOpts.T id term)
               -> String 
               -> [Record.Record s typ0 typ1 id v a] 
