@@ -96,7 +96,7 @@ params =
 
 absoluteRecord ::
    (Arith.Sum x) =>
-   x -> RecMultiDelta (Maybe x)
+   x -> RecMultiDelta (Result x)
 absoluteRecord = NestedDelta.absoluteRecord absolute
 
 

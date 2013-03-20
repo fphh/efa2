@@ -16,8 +16,9 @@ module EFA.Equation.System (
 
   Record, Wrap(Wrap, unwrap),
 
-  (=.=),
-  (=%=),
+  (=.=), (.=),
+  (=%=), (%=),
+  (?=),
   variable,
   variableRecord,
   power,
@@ -369,6 +370,46 @@ infix 0 =.=, =%=
   EquationSystem $ lift . tell =<< liftM2 equalRecord xs ys
 
 
+infix 0 .=, %=, ?=
+
+(.=) ::
+   (Eq x, Arith.Sum x, Record rec,
+    Element idx rec s a v ~ VariableRecord rec s x,
+    Env.AccessMap idx, Ord (idx node)) =>
+   Record.Indexed rec (idx node) -> x ->
+   EquationSystem rec node s a v
+evar .= val  =  variable evar =.= constant val
+
+(%=) ::
+   (Eq x, Arith.Sum x, Record rec,
+    Element idx rec s a v ~ VariableRecord rec s x,
+    Env.AccessMap idx, Ord (idx node)) =>
+   idx node -> rec x ->
+   EquationSystem rec node s a v
+evar %= val  =  variableRecord evar =%= constantRecord val
+
+(?=) ::
+   (Eq x, Arith.Sum x, Record rec,
+    Element idx rec s a v ~ VariableRecord rec s x,
+    Env.AccessMap idx, Ord (idx node)) =>
+   idx node -> rec (Result x) ->
+   EquationSystem rec node s a v
+evar ?= val  =
+   join $
+   fmap
+      (fold .
+       liftA2
+          (\rx var -> foldMap (\x -> pure var =.= constant x) rx)
+          (Wrap val))
+      (variableRecord evar)
+
+join ::
+   Bookkeeping rec node s a v (EquationSystem rec node s a v) ->
+   EquationSystem rec node s a v
+join (Bookkeeping m) =
+   EquationSystem $ m >>= \(EquationSystem sys) -> sys
+
+
 constant :: x -> Expression rec node s a v x
 constant = pure . Expr.constant
 
@@ -499,13 +540,6 @@ mwhen True t = t
 mwhen False _ = mempty
 
 
-join ::
-   (Fold.Foldable rec) =>
-   Bookkeeping rec node s a v (EquationSystem rec node s a v) ->
-   EquationSystem rec node s a v
-join (Bookkeeping m) =
-   EquationSystem $ m >>= \(EquationSystem sys) -> sys
-
 fromMapResult ::
    (Eq x, Sum x,
     Env.AccessMap idx, Ord (idx node), Record rec,
@@ -513,19 +547,7 @@ fromMapResult ::
    M.Map (idx node) (rec (Result x)) ->
    EquationSystem rec node s a v
 fromMapResult =
-   fold .
-   M.mapWithKey
-      (\idx xrec ->
-         join $
-         fmap
-            (fold .
-             liftA2
-                (\rx var ->
-                   case rx of
-                      Undetermined -> mempty
-                      Determined x -> pure var =.= constant x)
-                (Wrap xrec))
-            (variableRecord idx))
+   fold . M.mapWithKey (?=)
 
 fromEnvResult ::
    (Eq a, Sum a, Eq v, Sum v, Ord node, Record rec) =>
@@ -554,10 +576,7 @@ fromMap ::
    M.Map (idx node) (rec x) ->
    EquationSystem rec node s a v
 fromMap =
-   fold .
-   M.mapWithKey
-      (\idx xrec ->
-         variableRecord idx =%= constantRecord xrec)
+   fold . M.mapWithKey (%=)
 
 fromEnv ::
    (Eq a, Sum a, Eq v, Sum v, Ord node, Record rec) =>
