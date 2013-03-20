@@ -120,7 +120,6 @@ termFromIndex
 
 _givenSymbolic :: EquationSystemSymbolic s
 _givenSymbolic =
-   (Idx.DTime Idx.initSection ?= absoluteRecord (Arith.fromInteger 1)) <>
    (Idx.DTime sec0 ?= absoluteRecord (Arith.fromInteger 1)) <>
 
    givenParameterSymbol ein  param2 <>
@@ -131,7 +130,6 @@ _givenSymbolic =
 
 givenSymbolic :: EquationSystemSymbolic s
 givenSymbolic =
-   (Idx.DTime Idx.initSection ?= absoluteRecord (Arith.fromInteger 1)) <>
    (Idx.DTime sec0 ?= absoluteRecord (Arith.fromInteger 1)) <>
 
    Fold.fold
@@ -181,7 +179,6 @@ type
 
 _givenNumeric :: EquationSystemNumeric s
 _givenNumeric =
-   (Idx.DTime Idx.initSection ?= absoluteRecord 1) <>
    (Idx.DTime sec0 ?= absoluteRecord 1) <>
 
    givenParameterNumber ein  4.00 (-0.6) param2 <>
@@ -192,7 +189,6 @@ _givenNumeric =
 
 givenNumeric :: EquationSystemNumeric s
 givenNumeric =
-   (Idx.DTime Idx.initSection ?= absoluteRecord 1) <>
    (Idx.DTime sec0 ?= absoluteRecord 1) <>
 
    Fold.fold

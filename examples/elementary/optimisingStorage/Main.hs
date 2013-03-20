@@ -131,8 +131,7 @@ given :: Val ->
          Val ->
          EqGen.EquationSystem Node s Val Val
 given y' p' nParam' =
-  (time Idx.initSection =.= 1)
-  <> (stoinit =.= EqGen.constant 3)
+  (stoinit =.= EqGen.constant 3)
 
   <> (p21 sec0 =.= p)
   <> (e21 sec0 =.= (1-y)*(t*p))

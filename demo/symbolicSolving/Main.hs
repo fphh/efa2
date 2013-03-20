@@ -40,7 +40,6 @@ type ScalarTerm = EqGen.ScalarTerm SumProduct.Term Node.Int
 
 given :: EqGen.EquationSystem Node.Int s ScalarTerm SignalTerm
 given =
-   Idx.DTime Idx.initSection =<>
    Idx.DTime sec0 =<>
 
    Idx.Storage (Idx.SecNode sec0 node3) =<>

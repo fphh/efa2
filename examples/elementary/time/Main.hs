@@ -118,7 +118,6 @@ given _x t =
         =.= EqGen.variable (edgeVar Idx.Energy sec0 N3 N1))
   <> (EqGen.variable (Idx.DTime sec0) + EqGen.variable (Idx.DTime sec1) =.= 12.1)
 
-  <> (Idx.DTime Idx.initSection .= 1)
   <> (Idx.DTime sec0 .= t)
   <> (Idx.Storage (Idx.SecNode Idx.initSection N3) .= 10)
 

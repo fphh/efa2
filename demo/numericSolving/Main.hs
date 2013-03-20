@@ -53,7 +53,6 @@ given :: EqGen.EquationSystem Node s Double Double
 given =
    mconcat $
 
-   (Idx.DTime Idx.initSection .= 1) :
    (Idx.DTime sec0 .= 1) :
    (Idx.DTime sec1 .= 1) :
    (Idx.DTime sec2 .= 1) :

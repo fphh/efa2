@@ -169,8 +169,7 @@ makeGivenFromExternal :: (Eq v, Num v, Arith.Sum v, Vec.Storage t v, Vec.FromLis
                          -> EqGen.EquationSystem
                          (EqRecord.FromIndex rec) System.Node s1 Double v
 makeGivenFromExternal idx sf =
-   (Idx.Record idx (Idx.DTime Idx.initSection) .= 1)
-   <> (Idx.Record idx (Idx.Storage (Idx.SecNode Idx.initSection System.Battery)) .= initStorage)
+   (Idx.Record idx (Idx.Storage (Idx.SecNode Idx.initSection System.Battery)) .= initStorage)
    <> (Idx.Record idx (Idx.Storage (Idx.SecNode Idx.initSection System.VehicleInertia)) .= 0)
    <> fold (SD.zipWithSecIdxs f sf)
    where f sec (Record t xs) =
@@ -202,8 +201,7 @@ prediction sequenceFlowTopology env = EqGen.solve sequenceFlowTopology (makeGive
 --       (rec (EqGen.Result Double)) (rec (EqGen.Result Double)) ->
 --    (EqGen.EquationSystem rec System.Node s Double Double)
 makeGivenForPrediction idx env =
-    (Idx.Record idx (Idx.DTime Idx.initSection) .= 1)
-    <> (Idx.Record idx (Idx.Storage (Idx.SecNode Idx.initSection System.Battery)) .= initStorage)
+    (Idx.Record idx (Idx.Storage (Idx.SecNode Idx.initSection System.Battery)) .= initStorage)
     <> (Idx.Record idx (Idx.Storage (Idx.SecNode Idx.initSection System.VehicleInertia)) .= 0)
     <> (foldMap f $ M.toList $ Env.etaMap $ Env.signal env)
     <> (foldMap f $ M.toList $ Env.dtimeMap $ Env.signal env)
@@ -298,7 +296,6 @@ deltaPair ::
 {-
 givenNumeric :: EquationSystemNumeric s
 givenNumeric =
-   (Idx.DTime Idx.initSection .= 1) <>
    (Idx.DTime sec0 .= 0) <>
 
    deltaPair (edgeVar Idx.Energy sec0 node0 node1) 4 (-0.6) <>
@@ -324,16 +321,13 @@ makeGivenForDifferentialAnalysis ::
   -- EqGen.EquationSystem Env.Delta System.Node s (SumProduct.Term (HSt.Symbol  System.Node)) (SumProduct.Term (HSt.Symbol  System.Node))
                           
 makeGivenForDifferentialAnalysis env = 
-  --(Idx.DTime Idx.initSection .= 1) <>
 --  (Idx.DTime sec0 .= 0) <>
   --(Idx.Storage (Idx.initSection System.Battery) .= initStorage)
   -- deltaPair (edgeVar Idx.Energy sec0 System.Tank System.ConBattery) 4 (-0.6) <>
    mempty                                    
 {-
 makeGivenForDifferentialAnalysis env = (
-  Idx.before (Idx.DTime Idx.initSection) .= 1)
-  =<> (Idx.delta (Idx.DTime Idx.initSection) .= 0)
-  =<> (Idx.before (Idx.Storage (Idx.SecNode Idx.initSection System.Battery)) .= 
+  (Idx.before (Idx.Storage (Idx.SecNode Idx.initSection System.Battery)) .=
       SumProduct.Atom (HSt.Symbol{HSt.index = Idx.before (Var.index $ Idx.Storage (Idx.SecNode Idx.initSection System.Battery)),
                               HSt.value = initStorage}))
   =<> (Idx.delta (Idx.Storage (Idx.SecNode Idx.initSection System.Battery)) .= 

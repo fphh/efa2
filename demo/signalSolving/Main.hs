@@ -45,7 +45,6 @@ given :: EqGen.EquationSystem Node.Int s (Data.Scalar Double) (Data.List Double)
 given =
    mconcat $
 
-   (Idx.DTime Idx.initSection .= signal [0]) :
    (Idx.DTime sec0 .= signal [1/3, 1/3, 1/3]) :
    (Idx.DTime sec1 .= signal [1]) :
    (Idx.DTime sec2 .= signal [2/3, 1/3]) :

@@ -45,10 +45,8 @@ given ::
       (ScalarTerm Record.Delta SumProduct.Term Node.Int)
       (SignalTerm Record.Delta SumProduct.Term Node.Int)
 given =
-   (Idx.delta (Idx.DTime Idx.initSection) .= zero) <>
    (Idx.delta (Idx.DTime sec0) .= zero) <>
 
-   Idx.before (Idx.DTime Idx.initSection) =<>
    Idx.before (Idx.DTime sec0) =<>
 
    Idx.before (Idx.Storage (Idx.SecNode Idx.initSection node3)) =<>
