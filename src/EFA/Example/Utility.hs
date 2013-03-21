@@ -1,6 +1,9 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleContexts #-}
-module EFA.Example.Utility where
+module EFA.Example.Utility (
+   module EFA.Example.Utility,
+   (.=), (%=),
+   ) where
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as TD
@@ -14,7 +17,7 @@ import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Symbolic.Mixed as Term
-import EFA.Equation.System ((=.=), (=%=))
+import EFA.Equation.System ((.=), (%=))
 import EFA.Equation.Result (Result)
 import EFA.Signal.SequenceData (SequData(SequData))
 import EFA.Utility (Pointed, point)
@@ -157,19 +160,11 @@ edgeVar = Idx.structureEdge
 
 interVar ::
    (Idx.StorageEdge node -> idx) ->
-   Idx.Section -> Idx.Section -> node -> idx
+   Idx.Boundary -> Idx.Boundary -> node -> idx
 interVar = Idx.storageEdge
 
 
-infix 0 .=, %=, #=, ~=
-
-(.=) ::
-  (Eq x, Arith.Sum x, EqGen.Record rec,
-   EqGen.Element idx rec s a v ~ EqGen.VariableRecord rec s x,
-   Env.AccessMap idx, Ord (idx node)) =>
-  Record.Indexed rec (idx node) -> x ->
-  EqGen.EquationSystem rec node s a v
-evar .= val  =  EqGen.variable evar =.= EqGen.constant val
+infix 0 #=, ~=
 
 -- | @(.=)@ restricted to signals
 (~=) ::
@@ -187,11 +182,3 @@ evar .= val  =  EqGen.variable evar =.= EqGen.constant val
   EqGen.EquationSystem rec node s a v
 (#=)  =  (.=)
 
-
-(%=) ::
-  (Eq x, Arith.Sum x, EqGen.Record rec,
-   EqGen.Element idx rec s a v ~ EqGen.VariableRecord rec s x,
-   Env.AccessMap idx, Ord (idx node)) =>
-  idx node -> rec x ->
-  EqGen.EquationSystem rec node s a v
-evar %= val  =  EqGen.variableRecord evar =%= EqGen.constantRecord val

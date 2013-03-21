@@ -87,23 +87,24 @@ genFlowTopology topo (FlowState fs) =
 mkSectionTopology ::
   (Ord node) =>
   Idx.Section -> FlowTopology node -> (SequFlowGraph node)
-mkSectionTopology sid = Gr.ixmap (Idx.SecNode sid)
+mkSectionTopology sid = Gr.ixmap (Idx.afterSecNode sid)
 
 
 mkStorageEdges ::
    node -> M.Map Idx.Section Topo.StoreDir ->
    [Topo.LEdge node]
 mkStorageEdges node stores = do
-   let (ins, outs) = M.partition (Topo.In ==) stores
-   secin <- Idx.initSection : M.keys ins
+   let (ins, outs) =
+          M.partition (Topo.In ==) $ M.mapKeys Idx.AfterSection stores
+   secin <- Idx.initial : M.keys ins
    secout <- M.keys $ snd $ M.split secin outs
    return $
-      (Edge (Idx.SecNode secin node) (Idx.SecNode secout node), Dir)
+      (Edge (Idx.BndNode secin node) (Idx.BndNode secout node), Dir)
 
 getActiveStoreSequences ::
-   (Ord section, Ord node, Topo.FlowDirectionField el) =>
-   SequData (section, Gr.Graph node Topo.NodeType el) ->
-   M.Map node (M.Map section Topo.StoreDir)
+   (Ord node, Topo.FlowDirectionField el) =>
+   SequData (Idx.Section, Gr.Graph node Topo.NodeType el) ->
+   M.Map node (M.Map Idx.Section Topo.StoreDir)
 getActiveStoreSequences sq =
    Fold.foldl
       (M.unionWith (M.unionWith (error "duplicate section for node")))
@@ -118,7 +119,7 @@ mkSequenceTopology ::
 mkSequenceTopology sd =
    insEdges (Fold.fold $ M.mapWithKey mkStorageEdges tracks) $
    insNodes
-      (map (\n -> (Idx.SecNode Idx.initSection n, Topo.Storage)) $
+      (map (\n -> (Idx.initBndNode n, Topo.Storage)) $
        M.keys tracks) $
    Fold.foldMap (uncurry mkSectionTopology) sq
   where tracks = getActiveStoreSequences sq

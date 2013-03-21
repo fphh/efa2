@@ -46,11 +46,11 @@ instance Index Idx.StX       where type Type Idx.StX       = Scalar; index = StX
 
 
 
-formatSectionNode ::
+formatBoundaryNode ::
    (Format output, Node.C node) =>
-   Idx.SecNode node -> output
-formatSectionNode (Idx.SecNode s n) =
-   Format.section s `Format.sectionNode` Node.subscript n
+   Idx.BndNode node -> output
+formatBoundaryNode (Idx.BndNode s n) =
+   Format.boundary s `Format.sectionNode` Node.subscript n
 
 formatStructureEdge ::
    (Format output, Node.C node) =>
@@ -65,7 +65,7 @@ formatStorageEdge ::
    Format.EdgeVar -> Idx.StorageEdge node -> output
 formatStorageEdge e (Idx.StorageEdge s0 s1 n) =
    Format.subscript (Format.edgeIdent e) $
-   (Format.section s0 `Format.link` Format.section s1)
+   (Format.boundary s0 `Format.link` Format.boundary s1)
       `Format.sectionNode` Node.subscript n
 
 
@@ -117,12 +117,12 @@ instance (Node.C node) => FormatIndex (Idx.DTime node) where
 instance (Node.C node) => FormatIndex (Idx.Sum node) where
    formatIndex (Idx.Sum dir x) =
       Format.subscript Format.sum $
-      Format.direction dir `Format.connect` formatSectionNode x
+      Format.direction dir `Format.connect` formatBoundaryNode x
 
 instance (Node.C node) => FormatIndex (Idx.Storage node) where
    formatIndex (Idx.Storage x) =
       Format.subscript Format.storage $
-      formatSectionNode x
+      formatBoundaryNode x
 
 instance (Node.C node) => FormatIndex (Idx.StEnergy node) where
    formatIndex (Idx.StEnergy e) = formatStorageEdge Format.Energy e

@@ -1,7 +1,6 @@
 module Main where
 
 import EFA.Example.Utility (makeEdges)
-import EFA.Example.Absolute ((.=))
 
 import qualified EFA.Example.Absolute as EqGen
 
@@ -23,6 +22,7 @@ import EFA.Signal.Record
           (SigId(SigId), Record(Record), PPosIdx(PPosIdx), PowerRecord)
 
 import qualified Data.Map as M
+import Data.Monoid (mempty)
 
 
 sec0, sec1, sec2, sec3, sec4 :: Idx.Section
@@ -42,8 +42,7 @@ topoDreibein = Gr.mkGraph ns (makeEdges es)
 
 
 given :: EqGen.EquationSystem Node.Int s Double Double
-given =
-  (Idx.DTime Idx.initSection .= 1)
+given = mempty
 
 main :: IO ()
 main = do

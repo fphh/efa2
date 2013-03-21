@@ -56,8 +56,8 @@ import Data.GraphViz.Attributes.Complete as Viz
 
 import qualified Data.Accessor.Basic as Accessor
 
+import Data.Foldable (foldMap)
 import Data.Tuple.HT (mapFst)
-import Data.Maybe.HT (toMaybe)
 
 import qualified Data.Text.Lazy as T
 
@@ -97,13 +97,16 @@ dotFromSequFlowGraph ti g mtshow nshow eshow =
   where (topoEs, interEs) =
            mapFst (M.fromListWith (++)) $
            HTL.partitionMaybe
-              (\e@(Edge (Idx.SecNode sx _) (Idx.SecNode sy _), _) ->
-                 toMaybe (sx == sy) (sx, [e])) $
+              (\e ->
+                 case Topo.edgeType $ fst e of
+                    Topo.StructureEdge (Idx.StructureEdge s _ _) ->
+                       Just (Idx.AfterSection s, [e])
+                    _ -> Nothing) $
            Gr.labEdges g
 
         topoNs =
            M.fromListWith (++) $
-           map (\nl@(Idx.SecNode s _, _) -> (s, [nl])) $
+           map (\nl@(Idx.BndNode s _, _) -> (s, [nl])) $
            Gr.labNodes g
 
         sg sl ns es =
@@ -114,10 +117,12 @@ dotFromSequFlowGraph ti g mtshow nshow eshow =
                (map (dotFromSecNode nshow) ns)
                (map (dotFromSecEdge eshow) es)
           where str =
-                   show sl ++ " / " ++
-                   case mtshow of
-                      Nothing -> ""
-                      Just tshow -> "Time " ++ unUnicode (tshow sl)
+                   case sl of
+                      Idx.Initial -> "Initial"
+                      Idx.AfterSection s ->
+                         show s ++
+                         (flip foldMap mtshow $ \tshow ->
+                            " / Time " ++ unUnicode (tshow s))
         stmts =
           DotStmts {
             attrStmts = [GraphAttrs [Label (StrLabel (T.pack ti))]],
@@ -134,7 +139,7 @@ dotFromSecNode ::
   (Node.C node) =>
   (Topo.LNode node -> Unicode) -> Topo.LNode node -> DotNode T.Text
 dotFromSecNode nshow n@(x, nodeType) =
-   DotNode (dotIdentFromSecNode x)
+   DotNode (dotIdentFromBndNode x)
       [ displabel, nodeColour, 
         Style [SItem Filled []], Shape (shape nodeType), color nodeType ]
   where displabel = Label $ StrLabel $ T.pack $ unUnicode $ nshow n
@@ -151,7 +156,7 @@ dotFromSecEdge ::
   (Topo.LEdge node -> [Unicode]) -> Topo.LEdge node -> DotEdge T.Text
 dotFromSecEdge eshow e =
    DotEdge
-      (dotIdentFromSecNode x) (dotIdentFromSecNode y)
+      (dotIdentFromBndNode x) (dotIdentFromBndNode y)
       [displabel, Viz.Dir dir, colour, constraint]
   where (Edge x y, dir, order) = orientEdge e
         displabel =
@@ -165,9 +170,13 @@ dotFromSecEdge eshow e =
            Constraint $ Topo.isStructureEdge $ fst e
 
 
-dotIdentFromSecNode :: (Node.C node) => Idx.SecNode node -> T.Text
-dotIdentFromSecNode (Idx.SecNode (Idx.Section s) n) =
-   T.pack $ "s" ++ show s ++ "n" ++ Node.dotId n
+dotIdentFromBndNode :: (Node.C node) => Idx.BndNode node -> T.Text
+dotIdentFromBndNode (Idx.BndNode b n) =
+   T.pack $ "s" ++ dotIdentFromBoundary b ++ "n" ++ Node.dotId n
+
+dotIdentFromBoundary :: Idx.Boundary -> String
+dotIdentFromBoundary Idx.Initial = "i"
+dotIdentFromBoundary (Idx.AfterSection (Idx.Section s)) = show s
 
 dotIdentFromNode :: (Node.C node) => node -> T.Text
 dotIdentFromNode n = T.pack $ Node.dotId n
@@ -205,7 +214,7 @@ sequFlowGraph ::
   SequFlowGraph node -> IO ()
 sequFlowGraph ti topo =
    printGraph ti topo Nothing nshow eshow
-  where nshow (Idx.SecNode _ n, l) =
+  where nshow (Idx.BndNode _ n, l) =
            Unicode $ unUnicode (Node.display n) ++ " - " ++ showType l
         eshow _ = []
 
@@ -326,7 +335,7 @@ formatNodeType = Format.literal . showType
 formatNodeStorage ::
    (Record.C rec, FormatValue a, Format output, Node.C node) =>
    Record.ToIndex rec -> StorageMap node (rec a) -> Topo.LNode node -> output
-formatNodeStorage rec st (n@(Idx.SecNode _sec nid), ty) =
+formatNodeStorage rec st (n@(Idx.BndNode _sec nid), ty) =
    Format.lines $
    Node.display nid :
    Format.words [formatNodeType ty] :

@@ -3,6 +3,9 @@
 module EFA.Equation.Result where
 
 import Control.Applicative (Applicative, pure, (<*>))
+import Data.Foldable (Foldable, foldMap)
+import Data.Monoid (mempty)
+
 
 data Result a = Undetermined
               | Determined a deriving (Show)
@@ -17,3 +20,8 @@ instance Applicative Result where
   (Determined f) <*> (Determined a) = Determined $ f a
   _ <*> _ = Undetermined
 
+instance Foldable Result where
+  foldMap f r =
+    case r of
+      Undetermined -> mempty
+      Determined x -> f x
