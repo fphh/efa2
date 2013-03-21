@@ -13,7 +13,7 @@ import EFA.Signal.Signal
            Signal, FSignal, TSigL, UTSignal, TSignal,
            TSamp, PSamp, PSamp1L, PSamp2LL,Scal)
 
-import EFA.Signal.Typ (Typ, A, P, T, Tt, UT,F,D)
+import EFA.Signal.Typ (Typ, A, P, T, Tt, UT,F)
 import EFA.Signal.Data (Data(..), (:>), Nil)
 import EFA.Signal.Base (Sign, BSum, BProd)
 
@@ -61,7 +61,7 @@ type instance D.Value (Record s t1 t2 id v a) = a
 
 
 data Record s t1 t2 id v a =
-     Record (TC s t1 (Data (v :> Nil) a))
+     Record (TC Signal t1 (Data (v :> Nil) a))
             (M.Map id (TC s t2 (Data (v :> Nil) a))) deriving (Show, Eq)
                                                               
                                                               
@@ -70,12 +70,15 @@ type SignalRecord = Record Signal (Typ A T Tt) (Typ UT UT UT) SigId
 
 type PowerRecord n = Record Signal (Typ A T Tt) (Typ A P Tt) (PPosIdx n)
 
-type FlowRecord n = Record FSignal (Typ D T Tt) (Typ A F Tt) (PPosIdx n)
+type FlowRecord n = Record FSignal (Typ A T Tt) (Typ A F Tt) (PPosIdx n)
+
+-- type FlowRecordScalar n = Record Scalar (Typ A T Tt) (Typ A F Tt) (PPosIdx n)
+
 
 -- | Flow record to contain flow signals assigned to the tree
 newtype FlowState node = FlowState (M.Map (PPosIdx node) Sign) deriving (Show)
 
-rmap :: (TC s t2 (Data (v :> Nil) a) -> TC s t3 (Data (v :> Nil) a)) -> (Record s t1 t2 id v a) -> (Record s t1 t3 id v a)
+rmap :: (TC s1 t2 (Data (v :> Nil) a) -> TC s2 t3 (Data (v :> Nil) a)) -> (Record s1 t1 t2 id v a) -> (Record s2 t1 t3 id v a)
 rmap f (Record t ma) = Record t (M.map f ma) 
 
 rmapKeys ::  (Ord id2) => (id1 -> id2) -> (Record s t1 t2 id1 v a) -> (Record s t1 t2 id2 v a)
@@ -93,7 +96,7 @@ instance Show Idx where
 
 
 -- | Access Functions
-getTime :: Record s t1 t2 id v a ->  TC s t1 (Data (v :> Nil) a)
+getTime :: Record s t1 t2 id v a ->  TC Signal t1 (Data (v :> Nil) a)
 getTime (Record time _) = time
 
 
@@ -404,3 +407,39 @@ addRecName2SigId name (Record time sigs) = Record time (M.mapKeys (\ (SigId x) -
 namePowers :: (Ord node, Show node,Show (v a)) =>  M.Map (PPosIdx node) SigId -> PowerRecord node v a -> SignalRecord v a 
 namePowers powerNames rec = rmap S.untype $ rmapKeys f rec  
   where f key = checkedLookup2 "Record.namePowers" powerNames key
+
+
+-- | Plot Records with readible keys
+partIntegrate :: (Num a,
+                  V.Zipper v,
+                  V.Walker v,
+                  V.Storage v a,
+                  V.Singleton v,
+                  BSum a,
+                  BProd a a) => PowerRecord node v a -> FlowRecord node v a
+partIntegrate rec@(Record time _) = rmap (S.partIntegrate time) rec
+
+
+{-
+-- | Plot Records with readible keys
+calcScalarFlow :: (Num a,
+                   V.Zipper v,
+                   V.Walker v,
+                   V.Storage v a,
+                   V.Singleton v,
+                   BSum a,
+                   BProd a a) => PowerRecord node v a -> FlowRecordScalar node v a
+calcScalarFlow rec@(Record time _) = rmap (S.fullIntegrate time) rec
+-}
+
+{-
+data FlowQuality = Clean | Dirty | Wrong
+data FlowDir a = PosFlow a | NegFlow a | NoFlow a
+
+type EdgeFlow = FlowDir FlowQuality
+
+calcFlowState :: FlowRecord id v a -> FlowState
+calcFlowState rec = rmap f rec
+  where
+    f sig = 
+-}

@@ -26,7 +26,7 @@ import EFA.Signal.Signal
           (TC(TC),  TSigL, TZeroSamp1L, TZeroSamp, TSamp, PSamp, PSigL,
            DTSamp, PSamp2LL, Samp, Samp1L,
            (.+), (.-), (.*), (./), (.++),
-            sampleAverage, deltaSig, sigPartInt, sigFullInt,
+            sampleAverage, 
            changeType, fromScalar, toSample, sigSum, toSigList, fromSigList)
 
 import EFA.Signal.Typ (Typ, STy, Tt, T, P, A)
@@ -82,7 +82,7 @@ fromFlowRecord secIdx recIdx (FlowRecord dTime flowMap) =
   --where f ((PPosIdx idx1 idx2), (flowSig)) = ((Idx.Power secIdx recIdx idx1 idx2), [fromScalar $ sigSum flowSig])
 -}
 
-
+{-
 -- | Pre-Integrate all Signals in Record
 recFullIntegrate :: (Num a,
                       V.Zipper v,
@@ -108,6 +108,7 @@ recPartIntegrate :: (Num a,
                     PowerRecord node v a -> FlowRecord node v a
 recPartIntegrate (Record time pMap) = Record (deltaSig time) fMap
   where fMap = M.map (sigPartInt time) pMap
+-}
 
 -- | Generate Sequence Flow
 genSequFlow :: (Num a,
@@ -119,7 +120,7 @@ genSequFlow :: (Num a,
                 SB.BSum a,
                 SB.BProd a a)=>
                (SequData (PowerRecord node v a)) -> SequData (FlowRecord node v a)
-genSequFlow sqPRec = fmap recFullIntegrate sqPRec
+genSequFlow sqPRec = fmap Record.partIntegrate sqPRec
 
 -- | Filter Sequence Flow
 -- | Used to filter Modelica signals 

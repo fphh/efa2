@@ -182,25 +182,25 @@ makeGivenFromExternal idx sf =
 -------------------------------------------------------------------------------------------------  
 -- ## Predict Energy Flow
 
--- prediction :: TD.SequFlowGraph System.Node
---                              -> Env.Complete
---                                   System.Node
---                                   (Env.Absolute (Result Double))
---                                   (Env.Absolute (Result Double))
---                              -> Env.Complete
---                                   System.Node
---                                   (Env.Absolute (Result Double))
---                                   (Env.Absolute (Result Double))
-
-
+prediction :: (Eq v, Eq (Arith.Scalar v), Fractional (Arith.Scalar v),
+               Fractional v, Arith.Product v, Arith.Product (Arith.Scalar v),
+               Arith.Integrate v) =>
+              TD.SequFlowGraph System.Node
+              -> Env.Complete System.Node b (EqRecord.Absolute (Result v))
+              -> Env.Complete
+              System.Node
+              (EqRecord.Absolute (Result (Arith.Scalar v)))
+              (EqRecord.Absolute (Result v))
 prediction sequenceFlowTopology env = EqGen.solve sequenceFlowTopology (makeGivenForPrediction Idx.Absolute env) 
 
--- makeGivenForPrediction ::
---    (EqGen.Record rec) =>
---    Env.RecordIndex rec ->
---    Env.Complete System.Node
---       (rec (EqGen.Result Double)) (rec (EqGen.Result Double)) ->
---    (EqGen.EquationSystem rec System.Node s Double Double)
+makeGivenForPrediction ::(Eq v, Eq a, Fractional v, Fractional a, Arith.Sum v,
+                          Arith.Sum a, EqGen.Record (EqRecord.FromIndex uf),
+                          EqRecord.ToIndex (EqRecord.FromIndex uf) ~ uf) =>
+                         uf
+                         -> Env.Complete
+                         System.Node b (EqRecord.FromIndex uf (Result v))
+                         -> EqGen.EquationSystem
+                         (EqRecord.FromIndex uf) System.Node s a v
 makeGivenForPrediction idx env =
     (Idx.Record idx (Idx.Storage (Idx.initBndNode System.Battery)) .= initStorage)
     <> (Idx.Record idx (Idx.Storage (Idx.initBndNode System.VehicleInertia)) .= 0)
@@ -243,29 +243,6 @@ delta sequenceFlowTopology sequenceFlow sequenceFlow'= EqGen.solveFromMeasuremen
 ---------------------------------------------------------------------------------------------------
 -- ## Make Difference Analysis
 
-{-
-infixr 6 =<>
-
-(=<>) ::
-   (Ord (idx System.Node), Env.AccessMap idx,
-    Var.Index idx, Var.Type idx ~ Var.Signal) =>
-   (Idx.Record Idx.Delta (idx System.Node), Double) ->
-   EquationSystem s -> EquationSystem s
-
-(idx, x) =<> eqsys =
-   (idx .= Var.Signal (point (HSt.Symbol (fmap Var.index idx) x))) <> eqsys
-
-
-
-type
-   EquationSystem s =
-      EqGen.EquationSystem Env.Delta System.Node s
-         (Var.Scalar SumProduct.Term (HSt.ScalarSymbol System.Node) (HSt.SignalSymbol System.Node))
-         (Var.Signal SumProduct.Term (HSt.ScalarSymbol System.Node) (HSt.SignalSymbol System.Node))
-
--- @Henning -- please help here
--}
-
 
 type
    EquationSystemNumeric s =
@@ -291,8 +268,8 @@ deltaPair ::
    (Ord (idx System.Node), Env.AccessMap idx,
     Var.Index idx, Var.Type idx ~ Var.Signal) =>
    (idx System.Node) -> Double -> Double -> EquationSystemNumeric s
-deltaPair idx before delta =
-   idx .== Stack.deltaPair (Var.Signal $ Var.index idx) before delta
+deltaPair idx before delt =
+   idx .== Stack.deltaPair (Var.Signal $ Var.index idx) before delt
 
 difference ::
    TD.SequFlowGraph System.Node ->
@@ -308,7 +285,7 @@ difference sequenceFlowTopology env =
 makeGivenForDifferentialAnalysis ::
   Env.Complete System.Node DeltaResult DeltaResult ->
   EquationSystemNumeric s                         
-makeGivenForDifferentialAnalysis (Env.Complete scal sig) = 
+makeGivenForDifferentialAnalysis (Env.Complete _ sig) = 
   (Idx.DTime sec2 .== 0) <>
   (Idx.Storage (Idx.initBndNode System.Battery) .== initStorage) <>
   (deltaPair (edgeVar Idx.Energy sec2 System.Tank System.ConBattery) 4 (-0.6)) <>

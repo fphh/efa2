@@ -795,7 +795,7 @@ sortTwo (TC x, TC y) =
 
 -- DeltaSig Signal FSignal (Data (v1 :> Nil)) A D Val =>
 -- | Partial Signal Integration
-sigPartInt ::  (SV.Zipper v1,
+partIntegrate ::  (SV.Zipper v1,
                 SV.Walker v1,
                 SV.Singleton v1,
                 BSum d1, 
@@ -805,12 +805,12 @@ sigPartInt ::  (SV.Zipper v1,
                TC Signal (Typ A T Tt) (Data (v1 :> Nil) d1) -> 
                TC Signal (Typ A P Tt) (Data (v1 :> Nil) d1) -> 
                TC FSignal (Typ A F Tt) (Data (v1 :> Nil) d1)
-sigPartInt time power = (deltaSig time) .* (avSig power)
+partIntegrate time power = (deltaSig time) .* (avSig power)
 -- czipWith (*) dTime $ D.map (\ p1 p2 -> (p1+p2)/2) power
 
 
 -- | Partial Signal Integration
-sigFullInt ::   (SV.FromList v1,
+fullIntegrate ::   (SV.FromList v1,
                  SV.Zipper v1, 
                  SV.Walker v1, 
                  SV.Storage v1 d1, 
@@ -820,8 +820,8 @@ sigFullInt ::   (SV.FromList v1,
                  BProd d1 d1) => 
                 TC Signal (Typ A T Tt) (Data (v1 :> Nil) d1) -> 
                 TC Signal (Typ A P Tt) (Data (v1 :> Nil) d1) -> 
-                TC FSignal (Typ A F Tt) (Data (v1 :> Nil) d1)
-sigFullInt time power = fromList [fromScalar $ sigSum $ sigPartInt time power]
+                TC Scalar (Typ A F Tt) (Data Nil d1)
+fullIntegrate time power = sigSum $ partIntegrate time power
 
 -- csingleton (cfoldr (+) 0  $ czipWith (*) dTime $ D.map (\ p1 p2 -> (p1+p2)/2) power)
 
