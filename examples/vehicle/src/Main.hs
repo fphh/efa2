@@ -140,11 +140,18 @@ main = do
                 fmap (mapFst (foldl (\p i -> p * SumProduct.Atom i) 1)) $
                 NonEmpty.tail $
                 Stack.assigns x
-          Fold.forM_ assigns $ \(term,val) -> do
+                
+          let  assignsFilt = filter (\(_,x)-> (abs x) >= 1) assigns     
+          print assignsFilt
+               
+                
+          Fold.forM_ assignsFilt $ \(term,val) -> do
             putStrLn $ Format.unUnicode $
               Format.assign (formatValue term) (formatValue val)
+              
           Plot.stackIO "Decomposition of total output energy"
-              (Idx.delta $ Var.index eout) assigns
+              (Idx.delta $ Var.index eout) $ assignsFilt              
+
                     
                     
               
@@ -177,7 +184,7 @@ main = do
 --                O.showId System.showPowerId .
                 O.extract Signals.vehicle .
 --                O.norm .
-                O.leadSignalsMax (Record.RangeFromAll, Record.ToModify [Record.SigId "speedsensor1.v"]) .
+                O.leadSignalsMax (Record.RangeFrom Signals.vehicle, Record.ToModify [Record.SigId "speedsensor1.v"]) .
                 O.pointSize 1) (HPlot.RecList [allSignals, allSignalsB])
 
   HPlot.record2 (O.title "Record-AB" . 

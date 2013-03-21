@@ -175,7 +175,7 @@ buildPrepFunction :: (Ord id,
                       V.Singleton v) => T id term ->  
                      (Record.Record s t1 t2 id v a ->  
                       Record.Record s t1 t2 id v a)      
-buildPrepFunction  opts = f . g opts . h opts . j
+buildPrepFunction  opts = f . j . h opts . g opts
   where
     f = Record.normSignals2Range (leadSignalsAcc opts)
     j = Record.normSignals2Max75 (leadSignalsMaxAcc opts)

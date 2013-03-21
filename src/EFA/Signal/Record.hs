@@ -75,9 +75,11 @@ type FlowRecord n = Record FSignal (Typ D T Tt) (Typ A F Tt) (PPosIdx n)
 -- | Flow record to contain flow signals assigned to the tree
 newtype FlowState node = FlowState (M.Map (PPosIdx node) Sign) deriving (Show)
 
-rmap :: (TC s t2 (Data (v :> Nil) a) -> TC s t2 (Data (v :> Nil) a)) -> (Record s t1 t2 id v a) -> (Record s t1 t2 id v a)
+rmap :: (TC s t2 (Data (v :> Nil) a) -> TC s t3 (Data (v :> Nil) a)) -> (Record s t1 t2 id v a) -> (Record s t1 t3 id v a)
 rmap f (Record t ma) = Record t (M.map f ma) 
 
+rmapKeys ::  (Ord id2) => (id1 -> id2) -> (Record s t1 t2 id1 v a) -> (Record s t1 t2 id2 v a)
+rmapKeys f (Record t ma) = Record t (M.mapKeys f ma) 
 
 -----------------------------------------------------------------------------------
 -- | Indice Record Number
@@ -189,6 +191,14 @@ addSignals list (Record time m) =  (Record time (foldl f m list))
                        then M.insert ident sig ma
                        else error ("Error in addSignals - signal length differs: " ++ show ident) 
                             
+
+-- | adding signals of two records with same time vector by using Data.Map.union
+union :: (Eq (v a),Ord id) => Record s t1 t2 id v a -> Record s t1 t2 id v a -> Record s t1 t2 id v a
+union (Record timeA mA) (Record timeB mB) = if timeA == timeB then Record timeA $ M.union mA mB 
+                                            else error ("EFA.Signal.Record.union: time vectors differ") 
+
+
+
 -- | Modify specified signals with function                            
 modifySignals :: (Ord id) => ToModify id ->  
                  (TC s t2 (Data (v :> Nil) a) -> TC s t2 (Data (v :> Nil) a)) -> 
@@ -252,8 +262,8 @@ normSignals2Max75 :: (Show id,
                      Record s t1 t2 id v a -> 
                      Record s t1 t2 id v a
 normSignals2Max75 (listM,listN) record = modifySignals listN f record 
-  where (TC (Data minx),TC (Data maxx)) = maxRange listM record 
-        f x = S.map (\y -> y * 0.75 * (maxx - minx)) $ S.norm x
+  where ( _ ,TC (Data maxx)) = maxRange listM record 
+        f x = S.map (\y -> y * 0.75 * maxx) $ S.norm x
 
 -- | Norm all signals to one 
 norm :: (Fractional a,
@@ -372,14 +382,25 @@ len  (t,ps) = min (S.len t) (S.len ps)
 singleton :: Samp1 -> Sig
 singleton (t,ps) = (S.singleton t, S.singleton ps)
 
-union :: (Eq (v a),Ord id) => Record s t1 t2 id v a -> Record s t1 t2 id v a -> Record s t1 t2 id v a
-union (Record timeA mA) (Record timeB mB) = if timeA == timeB then Record timeA $ M.union mA mB 
-                                            else error ("Error in Record/union time vectors differ") 
                                                                    
-powerToSignal :: (Show id) => PowerRecord id v a -> SignalRecord v a
+                                                 
+-- * Conversion between Signal and Power Record                                                 
+                                                 
+-- | Convert a power record to a signal record
+powerToSignal :: (Show id) =>  PowerRecord id v a -> SignalRecord v a
 powerToSignal (Record time m) = (Record time $ 
-                                 M.mapKeys (\x -> SigId $ show x) $ 
-                                 M.map S.untype m)                                                                  
+                                   M.mapKeys (\x -> SigId $ show x) $ 
+                                   M.map S.untype m)                                                                  
 
+-- | Combine a power and a signal record together in a signal record (plotting) 
 combinePowerAndSignal :: (Eq (v a),Show id) => PowerRecord id v a -> SignalRecord v a -> SignalRecord v a  
 combinePowerAndSignal pr sr = union (powerToSignal pr) sr 
+
+-- | Add Record name to SigId -- can be used for plotting multiple records in one window
+addRecName2SigId :: String -> SignalRecord v a -> SignalRecord v a 
+addRecName2SigId name (Record time sigs) = Record time (M.mapKeys (\ (SigId x) -> SigId (name ++ "_" ++ x) ) sigs)
+
+-- | Plot Records with readible keys
+namePowers :: (Ord node, Show node,Show (v a)) =>  M.Map (PPosIdx node) SigId -> PowerRecord node v a -> SignalRecord v a 
+namePowers powerNames rec = rmap S.untype $ rmapKeys f rec  
+  where f key = checkedLookup2 "Record.namePowers" powerNames key
