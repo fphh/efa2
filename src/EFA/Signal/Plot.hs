@@ -16,8 +16,9 @@ module EFA.Signal.Plot (
    sequenceIO,
    recordSplitPlus, recordSplit, sequenceSplit,
    recordSelect, sequenceSelect,
-   stack, stackAttr, stackIO, getData
---   record2,RecList(..),RecSq(..),Sq(..),SqList(..) 
+   stack, stackAttr, stackIO,
+   stacks, stacksAttr, stacksIO,
+   getData,
    ) where
 
 import qualified EFA.Signal.Signal as S
@@ -341,7 +342,7 @@ recordIO ::
     Tuple.C y, Atom.C y) =>
    String -> Record s t1 t2 id v y -> IO ()
 recordIO name =
-   void . Plot.plotDefault . Frame.cons (recordAttr name) . record 
+   void . Plot.plotDefault . Frame.cons (recordAttr name) . record
 
 
 recordIOList ::
@@ -492,6 +493,39 @@ stackIO ::
    String -> var -> f (term, Double) -> IO ()
 stackIO title var =
    void . Plot.plotDefault . Frame.cons (stackAttr title var) . stack
+
+
+stacksAttr ::
+   (FormatValue var) =>
+   String -> [var] -> Opts.T (Graph2D.T Int Double)
+stacksAttr title vars =
+   Opts.title title $
+      Histogram.rowstacked $
+      OptsStyle.fillBorderLineType (-1) $
+      OptsStyle.fillSolid $
+      optKeyOutside $
+      Opts.boxwidthAbsolute 0.9 $
+      Opts.xTicks2d (zip (map (Format.unASCII . formatValue) vars) [0..]) $
+      Opts.deflt
+
+stacks ::
+   (Ord term, FormatValue term) =>
+   [M.Map term Double] -> Plt.T (Graph2D.T Int Double)
+stacks =
+   Fold.fold .
+   M.mapWithKey (\term val ->
+      fmap (Graph2D.lineSpec
+              (LineSpec.title (Format.unASCII $ formatValue term) LineSpec.deflt)) $
+      Plot2D.list Graph2D.histograms val) .
+   M.unionsWith (++) . map (fmap (:[]))
+
+stacksIO ::
+   (FormatValue var, Ord term, FormatValue term) =>
+   String -> [(var, M.Map term Double)] -> IO ()
+stacksIO title xs =
+   case unzip xs of
+      (vars, ys) ->
+         void . Plot.plotDefault . Frame.cons (stacksAttr title vars) . stacks $ ys
 
 
 
