@@ -62,6 +62,7 @@ Library
     EFA.Utility
     EFA.Utility.Async
     EFA.Utility.Stream
+    EFA.Utility.TotalMap
     EFA.Utility.Trace
     EFA.Signal.Base
     EFA.Signal.SequenceData

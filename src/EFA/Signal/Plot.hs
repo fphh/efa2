@@ -66,11 +66,13 @@ import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
 import qualified Graphics.Gnuplot.Frame.OptionSet.Style as OptsStyle
 import qualified Graphics.Gnuplot.Frame.OptionSet.Histogram as Histogram
 
-import qualified Data.List as L
+import qualified EFA.Utility.TotalMap as TMap
 import qualified Data.Map as M
+import qualified Data.List as L
 import qualified Data.Foldable as Fold
 import Control.Monad (zipWithM_)
 import Control.Functor.HT (void)
+import Data.Traversable (traverse)
 import Data.Foldable (foldMap)
 import Data.Monoid (mconcat)
 -- import Control.Concurrent (threadDelay)
@@ -513,11 +515,13 @@ stacks ::
    [M.Map term Double] -> Plt.T (Graph2D.T Int Double)
 stacks =
    Fold.fold .
-   M.mapWithKey (\term val ->
-      fmap (Graph2D.lineSpec
-              (LineSpec.title (Format.unASCII $ formatValue term) LineSpec.deflt)) $
-      Plot2D.list Graph2D.histograms val) .
-   M.unionsWith (++) . map (fmap (:[]))
+   M.mapWithKey
+      (\term val ->
+         fmap (Graph2D.lineSpec
+                 (LineSpec.title (Format.unASCII $ formatValue term)
+                    LineSpec.deflt)) $
+         Plot2D.list Graph2D.histograms val) .
+   TMap.core . traverse (TMap.cons 0)
 
 stacksIO ::
    (FormatValue var, Ord term, FormatValue term) =>
