@@ -60,6 +60,7 @@ import qualified Graphics.Gnuplot.Value.Tuple as Tuple
 import qualified Graphics.Gnuplot.LineSpecification as LineSpec
 
 import qualified Graphics.Gnuplot.Frame as Frame
+import qualified Graphics.Gnuplot.Frame.Option as Opt
 import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
 import qualified Graphics.Gnuplot.Frame.OptionSet.Style as OptsStyle
 import qualified Graphics.Gnuplot.Frame.OptionSet.Histogram as Histogram
@@ -460,6 +461,10 @@ sequenceSelect idList name =
    sequenceIO name . fmap (Record.extract idList)
 
 
+optKeyOutside :: Opts.T graph -> Opts.T graph
+optKeyOutside =
+   Opts.add (Opt.custom "key" "position") ["outside"]
+
 stackAttr ::
    (FormatValue var) =>
    String -> var -> Opts.T (Graph2D.T Int Double)
@@ -468,8 +473,8 @@ stackAttr title var =
       Histogram.rowstacked $
       OptsStyle.fillBorderLineType (-1) $
       OptsStyle.fillSolid $
+      optKeyOutside $
       Opts.xTicks2d [(Format.unASCII $ formatValue var, 0)] $
-      Opts.xRange2d (-1,3) $
       Opts.deflt
 
 stack ::
