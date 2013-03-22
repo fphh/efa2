@@ -33,7 +33,7 @@ initial = Initial
 
 data Absolute = Absolute deriving (Show, Eq, Ord)
 
-data Delta = Delta | Before | After deriving (Show, Eq, Ord)
+data Delta = Before | Delta | After deriving (Show, Eq, Ord)
 
 data ExtDelta rec = ExtDelta Delta rec deriving (Show, Eq, Ord)
 
