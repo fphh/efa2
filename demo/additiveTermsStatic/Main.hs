@@ -42,7 +42,6 @@ import qualified Data.Map as Map
 import qualified Data.NonEmpty as NonEmpty
 import Data.NonEmpty ((!:))
 import Data.Monoid (mempty, (<>))
-import Data.Tuple.HT (mapFst)
 
 
 
@@ -212,10 +211,8 @@ mainNumeric = do
    case Map.lookup eout (Env.energyMap signalEnv) of
       Nothing -> error "undefined E_2_1"
       Just x -> do
-         let assigns =
-                map (mapFst termFromIndex) $
-                NonEmpty.tail $ Record.assigns x
-         Fold.forM_ assigns $ \(term,val) -> do
+         let assigns = NonEmpty.tail $ Record.assigns x
+         Fold.forM_ assigns $ \(term,val) ->
             putStrLn $ Format.unUnicode $
                Format.assign (formatValue term) (formatValue val)
          Plot.stackIO "Decomposition of total output energy"

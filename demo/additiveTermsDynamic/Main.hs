@@ -36,7 +36,6 @@ import qualified Data.Foldable as Fold
 import qualified Data.Map as Map
 import qualified Data.NonEmpty as NonEmpty
 import Data.Monoid (mempty, (<>))
-import Data.Tuple.HT (mapFst)
 
 import System.IO
 
@@ -157,7 +156,6 @@ mainNumeric = do
             Result.Undetermined -> error "undetermined E_2_1"
             Result.Determined x -> do
                let assigns =
-                      fmap (mapFst (foldl (\p i -> p * SumProduct.Atom i) 1)) $
                       NonEmpty.tail $
                       Stack.assigns x
                Fold.forM_ assigns $ \(term,val) -> do

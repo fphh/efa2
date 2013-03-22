@@ -36,6 +36,9 @@ data Sum a =
    | Plus (Sum a) (Sum a)
    deriving (Show, Eq)
 
+instance Functor (Stack i) where
+   fmap f (Stack is s) = Stack is (fmap f s)
+
 instance Functor Sum where
    fmap f (Value a) = Value (f a)
    fmap f (Plus a0 a1) = Plus (fmap f a0) (fmap f a1)
@@ -49,6 +52,18 @@ instance FormatValue a => FormatValue (Stack i a) where
 
 instance FormatValue a => FormatValue (Sum a) where
    formatValue = fold Format.plus . fmap formatValue
+
+{- |
+The index function must generate an index list with ascending index order.
+That is, it must be monotonic
+at least on the indices that are present in the stack.
+-}
+mapIndicesMonotonic :: (Ord j) => (i -> j) -> Stack i a -> Stack j a
+mapIndicesMonotonic g (Stack is s) =
+   let js = map g is
+   in  if ListHT.isAscending js
+         then Stack js s
+         else error "Stack.mapIndicesMonotonic: non-monotonic index function"
 
 
 descent :: Stack i a -> Either a (i, (Stack i a, Stack i a))
@@ -207,6 +222,13 @@ singleton = Stack [] . Value
 
 deltaPair :: i -> a -> a -> Stack i a
 deltaPair i a d = Stack [i] $ Plus (Value a) (Value d)
+
+-- could be a simple Semigroup.Foldable.head if it would exist
+absolute :: Stack i a -> a
+absolute (Stack _ s) = fold const s
+
+normalize :: (Arith.Product a) => Stack i a -> Stack i a
+normalize s = fmap (~/ absolute s) s
 
 
 toList :: Sum a -> NonEmpty.T [] a
