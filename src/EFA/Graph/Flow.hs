@@ -1,6 +1,7 @@
-
+{-# LANGUAGE FlexibleContexts #-}
 
 module EFA.Graph.Flow where
+
 
 import qualified EFA.Graph as Gr
 import EFA.Graph
@@ -13,20 +14,75 @@ import qualified EFA.Graph.Topology as Topo
 import EFA.Signal.SequenceData (SequData, zipWithSecIdxs)
 import EFA.Signal.Record
           (Record(Record), FlowState(FlowState), FlowRecord,
-           PPosIdx(PPosIdx), flipPos)
+           PPosIdx(PPosIdx), flipPos, getSig, rmapWithKey)
 import EFA.Graph.Topology
           (Topology, FlowTopology, SequFlowGraph,
            FlowDirection(Dir, UnDir))
 
+import qualified EFA.Graph as G
 
 import qualified EFA.Signal.Vector as SV
-import EFA.Signal.Signal (fromScalar, sigSign, sigSum, neg)
+import EFA.Signal.Signal (fromScalar, sigSign, sigSum, neg,TC(..))
+import qualified EFA.Signal.Signal as S
+import EFA.Signal.Data(Data(..))
 import EFA.Signal.Base (Sign(PSign, NSign, ZSign),BSum, DArith0)
 
 import qualified Data.Foldable as Fold
 import qualified Data.Map as M
 
-import EFA.Utility (checkedLookup)
+import EFA.Utility (checkedLookup,checkedLookup2)
+
+
+
+data Quality = Clean | Dirty | Wrong deriving (Show,Eq)
+data Dir a = Pos a | Neg a | Zero a deriving (Show,Eq)
+
+type EdgeFlow = Dir Quality
+
+newtype EdgeStates node = EdgeStates (M.Map (G.Edge node ) EdgeFlow) deriving (Show)
+
+getEdgeState :: (Fractional a, 
+                 Ord a, 
+                 Ord node, 
+                 SV.Walker v, 
+                 SV.Storage v a, 
+                 BSum a, 
+                 Show node, 
+                 Show (v a), 
+                 SV.Storage v Sign, 
+                 SV.Singleton v) => 
+                Topology node -> FlowRecord node v a -> EdgeStates node
+getEdgeState topo rec = EdgeStates $ M.fromList $ zip edges $ map f edges
+  where
+    edges = M.keys $ G.edgeLabels topo 
+    f (G.Edge n1 n2)  = case sigSign $ sigSum $ s1 of 
+                        (TC (Data (PSign))) -> Pos quality
+                        (TC (Data (NSign))) -> Neg quality
+                        (TC (Data (ZSign))) -> Zero quality
+      
+              where s1 = getSig rec (PPosIdx n1 n2)
+                    s2 = getSig rec (PPosIdx n2 n1)
+                    quality = if isConsistant 
+                              then (if isClean then Clean else Dirty)
+                              else Wrong
+                    isConsistant = sigSign (sigSum s1) == sigSign (sigSum s2)            
+                    isClean = not (S.hasSignChange s1) || (not $  S.hasSignChange s2) 
+
+adjustSignsNew :: (SV.Walker v, 
+                   SV.Storage v a, 
+                   DArith0 a, 
+                   Ord node, 
+                   Show node) => 
+                  EdgeStates node -> 
+                  FlowRecord node v a -> 
+                  FlowRecord node v a
+adjustSignsNew (EdgeStates m) rec = rmapWithKey f rec  
+  where f key x = case checkedLookup2 "Flow.adjustSignsNew" m (g key) of 
+          (Neg _) -> neg x  
+          (Pos _) -> x
+          (Zero _) -> x
+        g (PPosIdx n1 n2) = G.Edge n1 n2
+
 
 
 adjustSigns ::

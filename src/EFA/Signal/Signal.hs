@@ -905,6 +905,23 @@ sign ::
    (D.Map c, D.Storage c d, D.Storage c B.Sign, Ord d, Num d, Fractional d) =>
    TC s typ (Data c d) -> TC s (Typ A SZ UT) (Data c B.Sign)
 sign x = changeType $ map B.sign x
+
+
+hasSignChange :: (SV.Storage v1 B.Sign, 
+                  SV.Walker v1, 
+                  SV.Storage v1 d, 
+                  SV.Singleton v1, 
+                  TailType s, 
+                  Fractional d, 
+                  Ord d) =>
+                 TC s typ (Data (v1 :> Nil) d) -> Bool
+hasSignChange x = P.not $ all (P.== hss) $ sign x 
+  where (TC (Data hss)) = hs
+        hs = case viewL x of 
+          P.Just (h,_) -> sign h
+          P.Nothing -> error "Empty Signal in Signal.consistentSign"
+
+
 {-
 sign x = changeType $ map f x
          where f x = if x > 10^(-12) then 1

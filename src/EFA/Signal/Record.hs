@@ -78,12 +78,17 @@ type FlowRecord n = Record FSignal (Typ A T Tt) (Typ A F Tt) (PPosIdx n)
 -- | Flow record to contain flow signals assigned to the tree
 newtype FlowState node = FlowState (M.Map (PPosIdx node) Sign) deriving (Show)
 
-rmap :: (TC s1 t2 (Data (v :> Nil) a) -> TC s2 t3 (Data (v :> Nil) a)) -> (Record s1 t1 t2 id v a) -> (Record s2 t1 t3 id v a)
+
+
+rmap :: (TC s1 t2 (Data (v :> Nil) a) -> TC s2 t3 (Data (v :> Nil) a)) -> Record s1 t1 t2 id v a -> Record s2 t1 t3 id v a
 rmap f (Record t ma) = Record t (M.map f ma) 
 
-rmapKeys ::  (Ord id2) => (id1 -> id2) -> (Record s t1 t2 id1 v a) -> (Record s t1 t2 id2 v a)
+rmapKeys ::  (Ord id2) => (id1 -> id2) -> Record s t1 t2 id1 v a -> Record s t1 t2 id2 v a
 rmapKeys f (Record t ma) = Record t (M.mapKeys f ma) 
 
+rmapWithKey ::  (id -> TC s1 t2 (Data (v :> Nil) a) -> TC s2 t3 (Data (v :> Nil) a)) -> 
+                               Record s1 t1 t2 id v a -> Record s2 t1 t3 id v a
+rmapWithKey f (Record t ma) = Record t (M.mapWithKey f ma) 
 -----------------------------------------------------------------------------------
 -- | Indice Record Number
 
@@ -432,14 +437,3 @@ calcScalarFlow :: (Num a,
 calcScalarFlow rec@(Record time _) = rmap (S.fullIntegrate time) rec
 -}
 
-{-
-data FlowQuality = Clean | Dirty | Wrong
-data FlowDir a = PosFlow a | NegFlow a | NoFlow a
-
-type EdgeFlow = FlowDir FlowQuality
-
-calcFlowState :: FlowRecord id v a -> FlowState
-calcFlowState rec = rmap f rec
-  where
-    f sig = 
--}
