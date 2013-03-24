@@ -6,6 +6,7 @@ import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Equation.MultiValue as MV
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic ((~+), (~-), (~*), (~/))
+import EFA.Utility (differenceMapSet)
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
@@ -16,6 +17,7 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.List.HT as ListHT
+import qualified Data.Foldable as Fold
 import Control.Applicative (liftA2)
 import Data.Map (Map)
 import Data.Traversable (sequenceA)
@@ -258,6 +260,20 @@ instance QC.Arbitrary Branch where
 
 
 {- |
+A filtered stack contains a sub-hypercube of values
+and the point from where it was taken from a larger hypercube.
+The index sets of the map and the stack must be distinct.
+-}
+data Filtered i a =
+   Filtered {
+      filterCorner :: Map i Branch,
+      filteredStack :: Stack i a
+   } deriving (Eq, Show)
+
+startFilter :: Stack i a -> Filtered i a
+startFilter = Filtered Map.empty
+
+{- |
 With the Map you can choose
 whether you want to keep only the Before or only the Delta part of a variable.
 A missing entry in the Map means that both branches are maintained.
@@ -266,13 +282,27 @@ If an index is in the condition map but not in the stack,
 then the result depends on the value in the condition:
 Is it Before, then the Stack value will be maintained,
 is it Delta, then the Stack value is set to zero.
-This should be consistent with how missing indices in the Stack are handled
-by the arithmetic operations.
+This is consistent with how missing indices in the Stack
+are handled by the arithmetic operations.
 
-Unfortunately, neither 'filter' nor 'filterNaive' satisfy simple laws.
-This is because 'filter' not only selects certain branches
-but also re-declares @delta@ branches as @before@ branches.
+If you filter for 'Before' on a certain variable
+and then for 'Delta' on the same one,
+or vice versa, then you get 'Nothing'.
 -}
+filter ::
+   (Ord i, Arith.Sum a) =>
+   Map i Branch -> Filtered i a -> Maybe (Filtered i a)
+filter c1 (Filtered c0 s@(Stack is _x)) =
+   liftA2
+      (\fc c1' ->
+         Filtered fc $
+            (if Fold.any (Delta==) $ differenceMapSet c1' $ Set.fromList is
+               then fmap Arith.clear
+               else id) $ filterNaive c1' s)
+     (mergeConditions c0 c1)
+     (adaptConditions c0 c1)
+
+{-
 filter :: (Ord i, Arith.Sum a) => Map i Branch -> Stack i a -> Stack i a
 filter cond st0@(Stack is0 _) =
    let go [] (Stack _ s) = s
@@ -288,7 +318,7 @@ filter cond st0@(Stack is0 _) =
                    GT ->
                       case branch of
                          Before -> go js s
-                         Delta  -> fmap Arith.clear $ go js s
+                         Delta  -> fmap Arith.clear s
                    LT -> Plus (go jt a) (go jt d)
                    EQ ->
                       case branch of
@@ -303,6 +333,7 @@ filterMaybe ::
    Maybe (Map i Branch) -> Stack i a -> Stack i a
 filterMaybe Nothing s = singleton $ Arith.clear $ absolute s
 filterMaybe (Just c) s = filter c s
+-}
 
 adaptConditions ::
    (Ord i) => Map i Branch -> Map i Branch -> Maybe (Map i Branch)
@@ -319,6 +350,10 @@ mergeConditions c0 c1 =
 {- |
 The naive implementation ignores indices
 that are in the condition map but not in the stack.
+
+Unfortunately, 'filterNaive' does not satisfy simple laws.
+This is because it selects not only certain branches
+but also re-declares @delta@ branches as @before@ branches.
 -}
 filterNaive :: (Ord i) => Map i Branch -> Stack i a -> Stack i a
 filterNaive cond (Stack is0 s) =

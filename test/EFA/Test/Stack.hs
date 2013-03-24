@@ -12,6 +12,7 @@ import EFA.Equation.Arithmetic ((~+), (~-), (~*), (~/))
 
 import qualified Data.Map as Map
 import Data.Map (Map)
+import Control.Applicative (liftA2)
 
 import qualified Test.QuickCheck.Property.Generic as Law
 import qualified Test.QuickCheck as QC
@@ -36,7 +37,8 @@ instance
 
 prop_filterIdentity :: IntStack -> Bool
 prop_filterIdentity x  =
-   Stack.filter Map.empty x == x
+   case Stack.startFilter x of
+      fx -> Stack.filter Map.empty fx == Just fx
 
 prop_filterProjectNaive :: AMap Char Stack.Branch -> IntStack -> Bool
 prop_filterProjectNaive (AMap c) x  =
@@ -44,26 +46,33 @@ prop_filterProjectNaive (AMap c) x  =
 
 prop_filterProject :: AMap Char Stack.Branch -> IntStack -> Bool
 prop_filterProject (AMap c) x  =
-   Stack.filter c x
-   ==
-   Stack.filterMaybe (Stack.adaptConditions c c) (Stack.filter c x)
+   case Stack.startFilter x of
+      fx ->
+         Stack.filter c fx
+         ==
+         (Stack.filter c =<< Stack.filter c fx)
 
 prop_filterCommutative ::
    AMap Char Stack.Branch -> AMap Char Stack.Branch -> IntStack -> Bool
 prop_filterCommutative (AMap c0) (AMap c1) x =
-   Stack.filterMaybe (Stack.adaptConditions c1 c0) (Stack.filter c1 x)
-   ==
-   Stack.filterMaybe (Stack.adaptConditions c0 c1) (Stack.filter c0 x)
+   case Stack.startFilter x of
+      fx ->
+         (Stack.filter c0 =<< Stack.filter c1 fx)
+         ==
+         (Stack.filter c1 =<< Stack.filter c0 fx)
 
 prop_filterMerge :: AMap Char Stack.Branch -> AMap Char Stack.Branch -> IntStack -> Bool
 prop_filterMerge (AMap c0) (AMap c1) x =
-   Stack.filterMaybe (Stack.adaptConditions c0 c1) (Stack.filter c0 x)
-   ==
-   Stack.filterMaybe (Stack.mergeConditions c0 c1) x
+   case Stack.startFilter x of
+      fx ->
+         (Stack.filter c1 =<< Stack.filter c0 fx)
+         ==
+         (flip Stack.filter fx =<< Stack.mergeConditions c0 c1)
 
 prop_filterPlus :: AMap Char Stack.Branch -> IntStack -> IntStack -> Bool
 prop_filterPlus (AMap c) x y =
-   Stack.filter c (x + y)  ==  Stack.filter c x + Stack.filter c y
+   let filt = fmap Stack.filteredStack . Stack.filter c . Stack.startFilter
+   in  filt (x + y)  ==  liftA2 (+) (filt x) (filt y)
 
 
 prop_multiValueConvert :: IntMultiValue -> Bool
