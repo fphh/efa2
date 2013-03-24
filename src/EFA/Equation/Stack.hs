@@ -18,9 +18,11 @@ import qualified Data.NonEmpty as NonEmpty
 import qualified Data.List.HT as ListHT
 import Control.Applicative (liftA2)
 import Data.Map (Map)
+import Data.Traversable (sequenceA)
 import Data.Foldable (Foldable, foldMap)
 import Data.Monoid ((<>))
 import Data.Tuple.HT (mapFst)
+import Data.Maybe.HT (toMaybe)
 
 import qualified Prelude as P
 import Prelude hiding (recip, filter)
@@ -259,9 +261,67 @@ instance QC.Arbitrary Branch where
 With the Map you can choose
 whether you want to keep only the Before or only the Delta part of a variable.
 A missing entry in the Map means that both branches are maintained.
+
+If an index is in the condition map but not in the stack,
+then the result depends on the value in the condition:
+Is it Before, then the Stack value will be maintained,
+is it Delta, then the Stack value is set to zero.
+This should be consistent with how missing indices in the Stack are handled
+by the arithmetic operations.
+
+Unfortunately, neither 'filter' nor 'filterNaive' satisfy simple laws.
+This is because 'filter' not only selects certain branches
+but also re-declares @delta@ branches as @before@ branches.
 -}
-filter :: (Ord i) => Map i Branch -> Stack i a -> Stack i a
-filter cond (Stack is0 s) =
+filter :: (Ord i, Arith.Sum a) => Map i Branch -> Stack i a -> Stack i a
+filter cond st0@(Stack is0 _) =
+   let go [] (Stack _ s) = s
+       go jt@((j,branch):js) s =
+          case descent s of
+             Left a ->
+                Value $
+                   if any ((Delta ==) . snd) jt
+                     then Arith.clear a
+                     else a
+             Right (i, (a, d)) ->
+                case compare i j of
+                   GT ->
+                      case branch of
+                         Before -> go js s
+                         Delta  -> fmap Arith.clear $ go js s
+                   LT -> Plus (go jt a) (go jt d)
+                   EQ ->
+                      case branch of
+                         Before -> go js a
+                         Delta  -> go js d
+   in  Stack
+          (Set.toAscList $ Set.difference (Set.fromList is0) (Map.keysSet cond))
+          (go (Map.toAscList cond) st0)
+
+filterMaybe ::
+   (Ord i, Arith.Sum a) =>
+   Maybe (Map i Branch) -> Stack i a -> Stack i a
+filterMaybe Nothing s = singleton $ Arith.clear $ absolute s
+filterMaybe (Just c) s = filter c s
+
+adaptConditions ::
+   (Ord i) => Map i Branch -> Map i Branch -> Maybe (Map i Branch)
+adaptConditions c0 c1 =
+   fmap (Map.difference c1 c0 <> ) $
+   sequenceA $ Map.intersectionWith (\a0 a1 -> toMaybe (a0==a1) Before) c0 c1
+
+mergeConditions ::
+   (Ord i) => Map i Branch -> Map i Branch -> Maybe (Map i Branch)
+mergeConditions c0 c1 =
+   fmap ((Map.difference c0 c1 <> Map.difference c1 c0) <> ) $
+   sequenceA $ Map.intersectionWith (\a0 a1 -> toMaybe (a0==a1) a0) c0 c1
+
+{- |
+The naive implementation ignores indices
+that are in the condition map but not in the stack.
+-}
+filterNaive :: (Ord i) => Map i Branch -> Stack i a -> Stack i a
+filterNaive cond (Stack is0 s) =
    let go [] (Value a) = Value a
        go (i:is) (Plus a d) =
           case Map.lookup i cond of

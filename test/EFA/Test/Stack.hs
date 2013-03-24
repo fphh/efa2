@@ -34,10 +34,36 @@ instance
    arbitrary = fmap (AMap . Map.fromList) QC.arbitrary
    shrink (AMap m) = fmap (AMap . Map.fromList) $ QC.shrink $ Map.toList m
 
+prop_filterIdentity :: IntStack -> Bool
+prop_filterIdentity x  =
+   Stack.filter Map.empty x == x
+
+prop_filterProjectNaive :: AMap Char Stack.Branch -> IntStack -> Bool
+prop_filterProjectNaive (AMap c) x  =
+   Stack.filterNaive c x == Stack.filterNaive c (Stack.filterNaive c x)
+
 prop_filterProject :: AMap Char Stack.Branch -> IntStack -> Bool
 prop_filterProject (AMap c) x  =
-   Stack.filter c x == Stack.filter c (Stack.filter c x)
+   Stack.filter c x
+   ==
+   Stack.filterMaybe (Stack.adaptConditions c c) (Stack.filter c x)
 
+prop_filterCommutative ::
+   AMap Char Stack.Branch -> AMap Char Stack.Branch -> IntStack -> Bool
+prop_filterCommutative (AMap c0) (AMap c1) x =
+   Stack.filterMaybe (Stack.adaptConditions c1 c0) (Stack.filter c1 x)
+   ==
+   Stack.filterMaybe (Stack.adaptConditions c0 c1) (Stack.filter c0 x)
+
+prop_filterMerge :: AMap Char Stack.Branch -> AMap Char Stack.Branch -> IntStack -> Bool
+prop_filterMerge (AMap c0) (AMap c1) x =
+   Stack.filterMaybe (Stack.adaptConditions c0 c1) (Stack.filter c0 x)
+   ==
+   Stack.filterMaybe (Stack.mergeConditions c0 c1) x
+
+prop_filterPlus :: AMap Char Stack.Branch -> IntStack -> IntStack -> Bool
+prop_filterPlus (AMap c) x y =
+   Stack.filter c (x + y)  ==  Stack.filter c x + Stack.filter c y
 
 
 prop_multiValueConvert :: IntMultiValue -> Bool
