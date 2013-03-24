@@ -356,17 +356,18 @@ This is because it selects not only certain branches
 but also re-declares @delta@ branches as @before@ branches.
 -}
 filterNaive :: (Ord i) => Map i Branch -> Stack i a -> Stack i a
-filterNaive cond (Stack is0 s) =
-   let go [] (Value a) = Value a
-       go (i:is) (Plus a d) =
-          case Map.lookup i cond of
-             Nothing -> Plus (go is a) (go is d)
-             Just Before -> go is a
-             Just Delta  -> go is d
-       go _ _ = error "inconsistent data structure"
+filterNaive cond s0@(Stack is0 _) =
+   let go s =
+          case descent s of
+             Left a -> Value a
+             Right (i, (a, d)) ->
+                case Map.lookup i cond of
+                   Nothing -> Plus (go a) (go d)
+                   Just Before -> go a
+                   Just Delta  -> go d
    in  Stack
           (Set.toAscList $ Set.difference (Set.fromList is0) (Map.keysSet cond))
-          (go is0 s)
+          (go s0)
 
 
 {- |
@@ -404,12 +405,13 @@ toMultiValueGen plus (Stack indices tree) =
 
 
 assigns :: Stack i a -> NonEmpty.T [] ([Idx.Record Idx.Delta i], a)
-assigns (Stack [] (Value a)) = NonEmpty.singleton ([], a)
-assigns (Stack (i:is) (Plus a0 a1)) =
-   NonEmpty.append
-      (fmap (mapFst (Idx.before i :)) $ assigns $ Stack is a0)
-      (fmap (mapFst (Idx.delta  i :)) $ assigns $ Stack is a1)
-assigns _ = error "Stack.assigns: inconsistent data"
+assigns s =
+   case descent s of
+      Left a -> NonEmpty.singleton ([], a)
+      Right (i, (a0,a1)) ->
+         NonEmpty.append
+            (fmap (mapFst (Idx.before i :)) $ assigns a0)
+            (fmap (mapFst (Idx.delta  i :)) $ assigns a1)
 
 
 instance
