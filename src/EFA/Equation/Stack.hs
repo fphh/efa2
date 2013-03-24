@@ -10,18 +10,20 @@ import EFA.Equation.Arithmetic ((~+), (~-), (~*), (~/))
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
 
-import qualified Data.NonEmpty as NonEmpty
-
 import qualified Test.QuickCheck as QC
 
+import qualified Data.Map as Map
+import qualified Data.Set as Set
+import qualified Data.NonEmpty as NonEmpty
 import qualified Data.List.HT as ListHT
 import Control.Applicative (liftA2)
+import Data.Map (Map)
 import Data.Foldable (Foldable, foldMap)
 import Data.Monoid ((<>))
 import Data.Tuple.HT (mapFst)
 
 import qualified Prelude as P
-import Prelude hiding (recip)
+import Prelude hiding (recip, filter)
 
 
 {- |
@@ -245,6 +247,31 @@ fold op =
    let go (Value a) = a
        go (Plus a d) = go a `op` go d
    in  go
+
+
+data Branch = Before | Delta deriving (Eq, Show)
+
+instance QC.Arbitrary Branch where
+   arbitrary = QC.elements [Before, Delta]
+
+
+{- |
+With the Map you can choose
+whether you want to keep only the Before or only the Delta part of a variable.
+A missing entry in the Map means that both branches are maintained.
+-}
+filter :: (Ord i) => Map i Branch -> Stack i a -> Stack i a
+filter cond (Stack is0 s) =
+   let go [] (Value a) = Value a
+       go (i:is) (Plus a d) =
+          case Map.lookup i cond of
+             Nothing -> Plus (go is a) (go is d)
+             Just Before -> go is a
+             Just Delta  -> go is d
+       go _ _ = error "inconsistent data structure"
+   in  Stack
+          (Set.toAscList $ Set.difference (Set.fromList is0) (Map.keysSet cond))
+          (go is0 s)
 
 
 {- |

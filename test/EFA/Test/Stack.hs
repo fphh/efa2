@@ -10,7 +10,11 @@ import EFA.Equation.Stack (Stack)
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic ((~+), (~-), (~*), (~/))
 
+import qualified Data.Map as Map
+import Data.Map (Map)
+
 import qualified Test.QuickCheck.Property.Generic as Law
+import qualified Test.QuickCheck as QC
 import Test.QuickCheck.Modifiers (Positive, getPositive)
 import Test.QuickCheck.All (quickCheckAll)
 
@@ -20,6 +24,20 @@ type IntMultiValue = MV.MultiValue Char Integer
 
 type RatioStack = Stack Char Rational
 type PosRatioMultiValue = MV.MultiValue Char (Positive Rational)
+
+
+newtype AMap k a = AMap (Map k a) deriving (Show)
+
+instance
+   (Ord k, QC.Arbitrary k, QC.Arbitrary a) =>
+      QC.Arbitrary (AMap k a) where
+   arbitrary = fmap (AMap . Map.fromList) QC.arbitrary
+   shrink (AMap m) = fmap (AMap . Map.fromList) $ QC.shrink $ Map.toList m
+
+prop_filterProject :: AMap Char Stack.Branch -> IntStack -> Bool
+prop_filterProject (AMap c) x  =
+   Stack.filter c x == Stack.filter c (Stack.filter c x)
+
 
 
 prop_multiValueConvert :: IntMultiValue -> Bool
