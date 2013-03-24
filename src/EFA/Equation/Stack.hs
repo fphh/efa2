@@ -293,38 +293,6 @@ filter c1 (Filtered c0 s@(Stack is _x)) =
      (mergeConditions c0 c1)
      (adaptConditions c0 c1)
 
-{-
-filter :: (Ord i, Arith.Sum a) => Map i Branch -> Stack i a -> Stack i a
-filter cond st0@(Stack is0 _) =
-   let go [] (Stack _ s) = s
-       go jt@((j,branch):js) s =
-          case descent s of
-             Left a ->
-                Value $
-                   if any ((Delta ==) . snd) jt
-                     then Arith.clear a
-                     else a
-             Right (i, (a, d)) ->
-                case compare i j of
-                   GT ->
-                      case branch of
-                         Before -> go js s
-                         Delta  -> fmap Arith.clear s
-                   LT -> Plus (go jt a) (go jt d)
-                   EQ ->
-                      case branch of
-                         Before -> go js a
-                         Delta  -> go js d
-   in  Stack
-          (Set.toAscList $ Set.difference (Set.fromList is0) (Map.keysSet cond))
-          (go (Map.toAscList cond) st0)
-
-filterMaybe ::
-   (Ord i, Arith.Sum a) =>
-   Maybe (Map i Branch) -> Stack i a -> Stack i a
-filterMaybe Nothing s = singleton $ Arith.clear $ absolute s
-filterMaybe (Just c) s = filter c s
--}
 
 adaptConditions ::
    (Ord i) => Map i Branch -> Map i Branch -> Maybe (Map i Branch)
