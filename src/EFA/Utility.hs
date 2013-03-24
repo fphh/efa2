@@ -13,6 +13,21 @@ checkedLookup m k =
     Nothing -> error $ "checkedLookup: " ++ show k  ++ "\n" ++ "Keys in Map:" ++ "\n" ++ (show $ M.keys m)
     Just x -> x
 
+
+-- | New improved ugly version with caller function name
+type Caller = String    
+
+checkedLookup2 :: (Ord k, Show k, Show v) => Caller -> M.Map k v -> k -> v
+checkedLookup2 c m k =
+  case M.lookup k m of
+    Nothing -> error $ "Error in checkedLookup called by function " ++ show c ++ 
+               " with the key: " ++ show k  ++ "\n" ++ "Keys in Map:" ++ "\n" ++ 
+               (myShowList $ M.keys m)
+    Just x -> x
+
+
+
+
 checkJust :: String -> Maybe a -> a
 checkJust _ (Just x) = x
 checkJust str _ = error ("checkJust called from " ++ str)

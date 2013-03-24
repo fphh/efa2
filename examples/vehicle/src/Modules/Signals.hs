@@ -153,21 +153,101 @@ calculatePower rec = pRec
                kineticPower
                
               )]
-              
+             
+               
 --------------------------------------------------------------------------------------- 
 -- ## Signalgroups for Plotting
       
-{-      
-vehPowers :: [SigId]
-vehPowers  =  [SigId "ToFrontBrakes",
-               SigId "RearTires",    
-               SigId "ToInertia",
-               SigId "ToResistance"
-              ]
--}
-  
+
 vehPowers :: [PPosIdx Node]
 vehPowers = [PPosIdx Chassis VehicleInertia,
              PPosIdx Chassis RearBrakes, 
              PPosIdx ConFrontBrakes FrontBrakes,
              PPosIdx Chassis Resistance]
+            
+            
+-- Building Signal Record for better Plotting of the original signals 
+vehicle :: [SigId]
+vehicle = [SigId "speedsensor1.v",
+           SigId "idealrollingwheel1.flangeR.tau",
+           SigId "idealrollingwheel2.flangeR.tau",
+           SigId "brake1.tau",
+           SigId "brake2.tau",
+           SigId "chassis1.drivingresistance1.force1.f",
+           SigId "PPosIdx Chassis VehicleInertia"
+          ]
+
+-- Building Signal Record for better Plotting of the original signals 
+driveline:: [SigId]
+driveline = [SigId "speedsensor1.v",
+             SigId "electricmotor1.flange_a.tau",
+             SigId "gearbox1.flange_a.tau",                        
+             SigId "gearbox1.flange_b.tau"
+            ]
+             
+-- Building Signal Record for better Plotting of the original signals 
+motor:: [SigId]
+motor = [SigId "speedsensor1.v",                        
+        SigId "electricmotor1.flange_a.tau",
+        SigId "electricmotor1.speedsensor1.w",
+        SigId "electricmotor1.signalcurrent1.p.i",
+        SigId "electricmotor1.signalcurrent1.p.v"
+        ]
+            
+-- Building Signal Record for better Plotting of the original signals 
+electric:: [SigId]
+electric = [SigId "speedsensor1.v",                        
+          SigId "potentialsensor1.p.v",
+          SigId "battery1.pin_p.i",
+          SigId "electricmotor1.signalcurrent1.p.i",
+          SigId "electricmotor1.signalcurrent1.p.v",
+          SigId "electricmotor2.signalcurrent1.p.i",
+          SigId "electricmotor2.signalcurrent1.v"
+          ]
+            
+-- Building Signal Record for better Plotting of the original signals 
+battery:: [SigId]
+battery  = [SigId "speedsensor1.v",                        
+          SigId "potentialsensor1.p.v",
+          SigId "battery1.pin_p.i",
+          SigId "battery1.constantvoltage1.v",
+          SigId "battery1.constantvoltage1.i"
+          ]
+          
+
+-- Building Signal Record for better Plotting of the original signals 
+generator:: [SigId]
+generator =  [SigId "speedsensor1.v",                        
+            SigId "electricmotor2.signalcurrent1.p.i",
+            SigId "electricmotor2.signalcurrent1.v",
+            SigId "electricmotor2.flange_a.tau",
+            SigId "electricmotor2.speedsensor1.w",
+            SigId "engine1.Speed",
+            SigId "engine1.Speed"                       
+            ]
+  
+{- 
+    
+genPowers :: Plottable v a => PowerRecord Node v a -> IO()
+genPowers [SigId "Fuel",    
+           --   SigId "CrankShaft",
+           SigId "BatteryClamps",
+           SigId "BatteryCore",
+           SigId "Wire"
+                                                            ]
+
+propPowers :: (Show (v a), Plottable v a) => PowerRecord Node v a -> IO()
+propPowers pRec =  [SigId "MotorClamps",
+                    SigId "OutShaft",
+                    SigId "ToFrontBrakes",
+                    SigId "FrontWheelHub",
+                    SigId "FrontTires"
+                                                              ]
+                  
+vehPowers :: (Show (v a), Plottable v a) => PowerRecord Node v a -> IO()
+vehPowers pRec = [SigId "ToFrontBrakes",
+                  SigId "RearTires",    
+                  SigId "ToInertia",
+                  SigId "ToResistance"
+                 ]
+-}            

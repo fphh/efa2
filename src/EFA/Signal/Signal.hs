@@ -248,6 +248,7 @@ infix 6 .+,.-
 
 infix 7 &*, &/
 infix 6 &+, &-
+
 ----------------------------------------------------------
 -- New Synonyms           ] 
 
@@ -794,7 +795,7 @@ sortTwo (TC x, TC y) =
 
 -- DeltaSig Signal FSignal (Data (v1 :> Nil)) A D Val =>
 -- | Partial Signal Integration
-sigPartInt ::  (SV.Zipper v1,
+partIntegrate ::  (SV.Zipper v1,
                 SV.Walker v1,
                 SV.Singleton v1,
                 BSum d1, 
@@ -804,12 +805,12 @@ sigPartInt ::  (SV.Zipper v1,
                TC Signal (Typ A T Tt) (Data (v1 :> Nil) d1) -> 
                TC Signal (Typ A P Tt) (Data (v1 :> Nil) d1) -> 
                TC FSignal (Typ A F Tt) (Data (v1 :> Nil) d1)
-sigPartInt time power = (deltaSig time) .* (avSig power)
+partIntegrate time power = (deltaSig time) .* (avSig power)
 -- czipWith (*) dTime $ D.map (\ p1 p2 -> (p1+p2)/2) power
 
 
 -- | Partial Signal Integration
-sigFullInt ::   (SV.FromList v1,
+fullIntegrate ::   (SV.FromList v1,
                  SV.Zipper v1, 
                  SV.Walker v1, 
                  SV.Storage v1 d1, 
@@ -819,8 +820,8 @@ sigFullInt ::   (SV.FromList v1,
                  BProd d1 d1) => 
                 TC Signal (Typ A T Tt) (Data (v1 :> Nil) d1) -> 
                 TC Signal (Typ A P Tt) (Data (v1 :> Nil) d1) -> 
-                TC FSignal (Typ A F Tt) (Data (v1 :> Nil) d1)
-sigFullInt time power = fromList [fromScalar $ sigSum $ sigPartInt time power]
+                TC Scalar (Typ A F Tt) (Data Nil d1)
+fullIntegrate time power = sigSum $ partIntegrate time power
 
 -- csingleton (cfoldr (+) 0  $ czipWith (*) dTime $ D.map (\ p1 p2 -> (p1+p2)/2) power)
 
@@ -904,6 +905,23 @@ sign ::
    (D.Map c, D.Storage c d, D.Storage c B.Sign, Ord d, Num d, Fractional d) =>
    TC s typ (Data c d) -> TC s (Typ A SZ UT) (Data c B.Sign)
 sign x = changeType $ map B.sign x
+
+
+hasSignChange :: (SV.Storage v1 B.Sign, 
+                  SV.Walker v1, 
+                  SV.Storage v1 d, 
+                  SV.Singleton v1, 
+                  TailType s, 
+                  Fractional d, 
+                  Ord d) =>
+                 TC s typ (Data (v1 :> Nil) d) -> Bool
+hasSignChange x = P.not $ all (P.== hss) $ sign x 
+  where (TC (Data hss)) = hs
+        hs = case viewL x of 
+          P.Just (h,_) -> sign h
+          P.Nothing -> error "Empty Signal in Signal.consistentSign"
+
+
 {-
 sign x = changeType $ map f x
          where f x = if x > 10^(-12) then 1
@@ -924,6 +942,24 @@ maximum, minimum ::
    TC s typ (Data c d) -> TC Scalar typ (Data Nil d)
 maximum (TC x) = TC $ Data $ D.maximum x
 minimum (TC x) = TC $ Data $ D.minimum x
+
+
+-- | fit Signal range from 0 to 1 // ..* 
+norm ::  (Eq d, 
+          D.Map c, 
+          Num d, 
+          Fractional d, 
+          Ord d, 
+          D.Storage c d, 
+          D.Maximum c) => 
+         TC s typ (Data c d) -> TC s typ (Data c d)
+norm x =  if max P./= min 
+          then  map (\y -> (y P.-min) P./ (max P.- min)) x 
+               else map (\ _ -> min) x
+                    
+          where (TC (Data max)) = maximum x
+                (TC (Data min)) = minimum x
+  
 
 equalBy ::
    (SV.Walker v, SV.Storage v a, SV.Storage v b) =>

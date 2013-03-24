@@ -12,6 +12,8 @@ import EFA.IO.PLTImport (modelicaPLTImport)
 import EFA.Signal.Sequence (makeSeqFlowTopology)
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Draw as Draw
+import qualified EFA.Report.Format as Format
+import EFA.Report.FormatValue (formatValue)
 import EFA.Graph.Topology(isStructureEdge)
 import EFA.Graph(lefilter)
 import EFA.Utility.Async (concurrentlyMany_)
@@ -27,14 +29,29 @@ import qualified Modules.Analysis as Analysis
 -- import qualified Modules.Plots as Plots
 import qualified Modules.Signals as Signals
 
--- import qualified EFA.Signal.Plot as Plot
+import qualified EFA.Signal.Plot as Plot
 import qualified EFA.Signal.Plot.Options as O
+import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Equation.Environment as Env
 
+import qualified EFA.Equation.Record as EqRecord
+import qualified EFA.Equation.Result as Result
+
+import qualified EFA.Equation.Stack as Stack
+import qualified EFA.Equation.Variable as Var
+import qualified Data.Foldable as Fold
+import qualified Data.NonEmpty as NonEmpty
+import qualified EFA.Symbolic.SumProduct as SumProduct
+
+import qualified EFA.Signal.Record as Record
 
 import System.IO
 
+import qualified Data.Map as M
+import Data.Tuple.HT (mapFst)
+
 dataset, datasetB :: FilePath
-dataset = "/home/felix/data/examples/vehicle/Vehicle_res.plt"
+dataset =  "/home/felix/data/examples/vehicle/Vehicle_res.plt"
 datasetB = "/home/felix/data/examples/vehicle/Vehicle_mass1050kg_res.plt"
 
 main :: IO ()
@@ -60,6 +77,9 @@ main = do
   
   (sequenceFilt,sequencePowersFilt,sequenceFlowsFilt,flowStates,powerSignals,signals) <- Analysis.pre System.topology rawSignals
   (sequenceFiltB,sequencePowersFiltB,sequenceFlowsFiltB,flowStatesB,powerSignalsB,signalsB) <- Analysis.pre System.topology rawSignalsB
+  
+  let allSignals = Record.combinePowerAndSignal powerSignals signals
+  let allSignalsB = Record.combinePowerAndSignal powerSignalsB signalsB
 
 ---------------------------------------------------------------------------------------
 -- *  Generate Flow States as Graphs
@@ -98,22 +118,49 @@ main = do
 ---------------------------------------------------------------------------------------
 -- *  Make difference Analysis
 
-  --  @Henning -- please help here
-
-  {- 
-  let difference = Analysis.difference sequenceFlowTopology env     
-
+  let difference = Analysis.difference sequenceFlowTopology simulationDelta
+   
+  let (Env.Complete scalEnv sigEnv) = difference
+      
+{-  
   Draw.sequFlowGraphDeltaWithEnv seqTopo $
       fmap (fmap (fmap (SumProduct.map index))) env
-
-  let eout :: Idx.Energy System.Node
-      eout = edgeVar Idx.Energy (Idx.Section 4)  System.ConBattery System.Battery
-
-  HPl.histogrammIO (HSt.evaluate $ HEn.lookupStack difference eout) eout
-
 -}
+  
+  let eout =  Idx.Energy (Idx.StructureEdge (Idx.Section 4) System.Tank System.ConBattery)
+  let stack = (Env.energyMap (sigEnv)) M.! eout
       
-      
+  case M.lookup eout (Env.energyMap sigEnv) of
+    Nothing -> error "undefined E"
+    Just d ->
+      case EqRecord.unAbsolute d of
+        Result.Undetermined -> error "undetermined E"
+        Result.Determined x -> do
+          let assigns =
+                fmap (mapFst (foldl (\p i -> p * SumProduct.Atom i) 1)) $
+                NonEmpty.tail $
+                Stack.assigns x
+                
+          let  assignsFilt = filter (\(_,x)-> (abs x) >= 1) assigns     
+          print assignsFilt
+               
+                
+          Fold.forM_ assignsFilt $ \(term,val) -> do
+            putStrLn $ Format.unUnicode $
+              Format.assign (formatValue term) (formatValue val)
+              
+          Plot.stackIO "Decomposition of total output energy"
+              (Idx.delta $ Var.index eout) $ assignsFilt              
+
+                    
+                    
+              
+              
+  -- Plot.stackIO  "Test" stack formatValue
+
+  -- putStrLn $ Format.unUnicode $ formatValue difference
+  -- putStrLn $ Format.unUnicode $ formatValue stack
+
 ---------------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------------
 -- * Show Topology
@@ -132,11 +179,30 @@ main = do
                 O.pointSize 2) (powerSignals)
 
 -}
+  HPlot.record2 (O.title "VehicleSignals" . 
+                -- O.split (O.Split 9) . 
+--                O.showId System.showPowerId .
+                O.extract Signals.vehicle .
+--                O.norm .
+                O.leadSignalsMax (Record.RangeFrom Signals.vehicle, Record.ToModify [Record.SigId "speedsensor1.v"]) .
+                O.pointSize 1) (HPlot.RecList [allSignals, allSignalsB])
+
   HPlot.record2 (O.title "Record-AB" . 
                 -- O.split (O.Split 9) . 
                 O.showId System.showPowerId .
                 O.extract Signals.vehPowers .
-                O.pointSize 1) (HPlot.RecList [powerSignals,powerSignalsB])
+--                O.norm .
+                O.leadSignalsMax (Record.RangeFromAll, Record.ToModify [Record.PPosIdx System.Tank System.ConBattery]) .
+                O.pointSize 1) (HPlot.RecList [powerSignals, powerSignalsB])
+
+
+  HPlot.record2 (O.title "Vehicle Signals" . 
+                -- O.split (O.Split 9) . 
+--                O.showId System.showPowerId .
+                O.extract Signals.vehicle .
+                O.norm True .
+--                O.leadSignals (Record.RangeFromAll, Record.ToModify [Record.SigId "speedsensor1.v"]) .
+                O.pointSize 1) (HPlot.RecList [signals, signalsB])
 
 {-
 
