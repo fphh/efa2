@@ -284,15 +284,14 @@ filter ::
    (Ord i, Arith.Sum a) =>
    Map i Branch -> Filtered i a -> Maybe (Filtered i a)
 filter c1 (Filtered c0 s@(Stack is _x)) =
-   liftA2
-      (\fc c1' ->
-         Filtered fc $
-            (if Fold.any (Delta==) $ differenceMapSet c1' $ Set.fromList is
-               then fmap Arith.clear
-               else id) $ filterNaive c1' s)
-     (mergeConditions c0 c1)
-     (adaptConditions c0 c1)
-
+   liftA2 Filtered (mergeConditions c0 c1) $
+   fmap
+      (\c1' ->
+         (if Fold.any (Delta==) $ differenceMapSet c1' $ Set.fromList is
+            then fmap Arith.clear
+            else id) $
+         filterNaive c1' s)
+      (adaptConditions c0 c1)
 
 adaptConditions ::
    (Ord i) => Map i Branch -> Map i Branch -> Maybe (Map i Branch)
