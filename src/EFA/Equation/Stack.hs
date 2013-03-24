@@ -97,7 +97,7 @@ add ::
    (Ord i) =>
    (a -> a -> a) -> (a -> a) ->
    Stack i a -> Stack i a -> Stack i a
-add plus zero x0@(Stack is0 _) y0@(Stack js0 _) =
+add plus clear x0@(Stack is0 _) y0@(Stack js0 _) =
    let go a b =
           case (descent a, descent b) of
              (Left av, Left bv) -> Value $ plus av bv
@@ -106,8 +106,8 @@ add plus zero x0@(Stack is0 _) y0@(Stack js0 _) =
              (Right (i, (a0, a1)), Right (j, (b0, b1))) ->
                 case compare i j of
                    EQ -> Plus (go a0 b0) (go a1 b1)
-                   LT -> Plus (go a0 b) (go a1 (zeroStack zero b))
-                   GT -> Plus (go a b0) (go (zeroStack zero a) b1)
+                   LT -> Plus (go a0 b) (go a1 (fmap clear b))
+                   GT -> Plus (go a b0) (go (fmap clear a) b1)
    in  Stack (MV.mergeIndices is0 js0) $ go x0 y0
 
 mul ::
@@ -146,15 +146,6 @@ instance (Ord i, Num a) => Num (Stack i a) where
    abs = fromMultiValueNum . abs . toMultiValueNum
    signum = fromMultiValueNum . signum . toMultiValueNum
 
-
-zeroStack :: (a -> a) -> Stack i a -> Stack i a
-zeroStack z (Stack is a) = Stack is $ zeroMatch z a
-
-zeroMatch :: (a -> a) -> Sum a -> Sum a
-zeroMatch z =
-   let go (Value x) = Value $ z x
-       go (Plus x0 x1) = Plus (go x0) (go x1)
-   in  go
 
 addMatch :: (a -> a -> a) -> Sum a -> Sum a -> Sum a
 addMatch plus =
@@ -197,7 +188,7 @@ instance (Ord i, Fractional a) => Fractional (Stack i a) where
 
 instance (Ord i, Arith.Sum a) => Arith.Sum (Stack i a) where
    negate (Stack is s) = Stack is $ fmap Arith.negate s
-   (~+) = add (~+) (\x -> x~-x)
+   (~+) = add (~+) Arith.clear
 
 instance (Ord i, Arith.Product a) => Arith.Product (Stack i a) where
    (~*) = mul (~*) (~+)
