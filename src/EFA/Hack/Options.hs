@@ -2,7 +2,7 @@
 {-# LANGUAGE GADTs #-}
 
 
-module EFA.Signal.Plot.Options where
+module EFA.Hack.Options where
 
 import qualified Graphics.Gnuplot.Terminal as Terminal
 -- import qualified Graphics.Gnuplot.Advanced as AGP
