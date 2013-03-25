@@ -87,12 +87,12 @@ class
    mulMatch :: (a -> a -> a) -> (a -> a -> a) -> sum a -> sum a -> sum a
    filterMask ::
       (Ord i) => Map i Branch -> ExStack sum i a -> FilterMask sum
-   addMask ::
-      (Ord i, Sum rsum) => ExStack sum i a -> ExStack rsum i a -> AddMask sum rsum i
-   addValueMask ::
-      (Ord i) => ExStack Value i a -> ExStack sum i a -> AddMask Value sum i
-   addPlusMask ::
-      (Ord i, Sum lsum) => ExStack (Plus lsum) i a -> ExStack sum i a -> AddMask (Plus lsum) sum i
+   fillMask ::
+      (Ord i, Sum rsum) => ExStack sum i a -> ExStack rsum i a -> FillMask sum rsum i
+   fillValueMask ::
+      (Ord i) => ExStack Value i a -> ExStack sum i a -> FillMask Value sum i
+   fillPlusMask ::
+      (Ord i, Sum lsum) => ExStack (Plus lsum) i a -> ExStack sum i a -> FillMask (Plus lsum) sum i
    shrinkStack :: ExStack sum i a -> [Stack i a]
    shrinkValues ::
       (QC.Arbitrary a) => ExStack sum i a -> [ExStack sum i a]
@@ -104,12 +104,12 @@ instance Sum Value where
    addMatch plus (Value x) (Value y) = Value $ plus x y
    mulMatch times _plus (Value x) (Value y) = Value (times x y)
    filterMask _cond _s = FilterMask TakeStop
-   addMask = addValueMask
-   addValueMask _l _r = AddMask NonEmpty.Empty AddStop AddStop
-   addPlusMask (ExStack (NonEmpty.Cons i is) (Plus a0 _a1)) r =
-      case addMask (ExStack is a0) r of
-         AddMask js lmask rmask ->
-            AddMask (i!:js) (AddOne lmask) (AddSkip rmask)
+   fillMask = fillValueMask
+   fillValueMask _l _r = FillMask NonEmpty.Empty FillStop FillStop
+   fillPlusMask (ExStack (NonEmpty.Cons i is) (Plus a0 _a1)) r =
+      case fillMask (ExStack is a0) r of
+         FillMask js lmask rmask ->
+            FillMask (i!:js) (FillTake lmask) (FillSkip rmask)
    shrinkStack _ = []
    shrinkValues (ExStack empty (Value x)) =
       map (ExStack empty . Value) $ QC.shrink x
@@ -134,28 +134,28 @@ instance (Sum sum) => Sum (Plus sum) where
                Nothing -> FilterMask (TakeAll mask)
                Just branch -> FilterMask (TakeOne branch mask)
 
-   addMask = addPlusMask
+   fillMask = fillPlusMask
 
-   addValueMask l (ExStack (NonEmpty.Cons i is) (Plus a _d)) =
-      case addMask l (ExStack is a) of
-         AddMask js lmask rmask ->
-            AddMask (i!:js) (AddSkip lmask) (AddOne rmask)
-   addPlusMask a b =
+   fillValueMask l (ExStack (NonEmpty.Cons i is) (Plus a _d)) =
+      case fillMask l (ExStack is a) of
+         FillMask js lmask rmask ->
+            FillMask (i!:js) (FillSkip lmask) (FillTake rmask)
+   fillPlusMask a b =
       let (i,a0) = leftStack a
           (j,b0) = leftStack b
       in  case compare i j of
              EQ ->
-                case addMask a0 b0 of
-                   AddMask ks lmask rmask ->
-                      AddMask (i!:ks) (AddOne lmask) (AddOne rmask)
+                case fillMask a0 b0 of
+                   FillMask ks lmask rmask ->
+                      FillMask (i!:ks) (FillTake lmask) (FillTake rmask)
              LT ->
-                case addMask a0 b  of
-                   AddMask ks lmask rmask ->
-                      AddMask (i!:ks) (AddOne lmask) (AddSkip rmask)
+                case fillMask a0 b  of
+                   FillMask ks lmask rmask ->
+                      FillMask (i!:ks) (FillTake lmask) (FillSkip rmask)
              GT ->
-                case addMask a  b0 of
-                   AddMask ks lmask rmask ->
-                      AddMask (j!:ks) (AddSkip lmask) (AddOne rmask)
+                case fillMask a  b0 of
+                   FillMask ks lmask rmask ->
+                      FillMask (j!:ks) (FillSkip lmask) (FillTake rmask)
 
    shrinkStack (ExStack it (Plus a0 a1)) =
       concatMap (\(_,is) -> [Stack is a0, Stack is a1]) $
@@ -233,42 +233,42 @@ eqRelaxed =
    in  go
 
 
-data AddStop      = AddStop
-data AddOne  rest = AddOne  rest
-data AddSkip rest = AddSkip rest
+data FillStop      = FillStop
+data FillTake rest = FillTake rest
+data FillSkip rest = FillSkip rest
 
 data
-   AddMask lsum rsum i =
+   FillMask lsum rsum i =
       forall lmask rmask sum.
-         (lsum ~ AddFromSum lmask, sum ~ AddToSum lmask, Add lmask,
-          rsum ~ AddFromSum rmask, sum ~ AddToSum rmask, Add rmask) =>
-         AddMask (List sum i) lmask rmask
+         (lsum ~ FillFromSum lmask, sum ~ FillToSum lmask, Fill lmask,
+          rsum ~ FillFromSum rmask, sum ~ FillToSum rmask, Fill rmask) =>
+         FillMask (List sum i) lmask rmask
 
 class
-   (Sum (AddToSum mask), Sum (AddFromSum mask)) => Add mask where
-   type AddFromSum mask :: * -> *
-   type AddToSum mask :: * -> *
+   (Sum (FillToSum mask), Sum (FillFromSum mask)) => Fill mask where
+   type FillFromSum mask :: * -> *
+   type FillToSum mask :: * -> *
    fill ::
       (a -> a) ->
       mask ->
-      AddFromSum mask a ->
-      AddToSum mask a
+      FillFromSum mask a ->
+      FillToSum mask a
 
-instance Add AddStop where
-   type AddFromSum AddStop = Value
-   type AddToSum AddStop = Value
-   fill _clear AddStop (Value x) = Value x
+instance Fill FillStop where
+   type FillFromSum FillStop = Value
+   type FillToSum FillStop = Value
+   fill _clear FillStop (Value x) = Value x
 
-instance Add mask => Add (AddOne mask) where
-   type AddFromSum (AddOne mask) = Plus (AddFromSum mask)
-   type AddToSum (AddOne mask) = Plus (AddToSum mask)
-   fill clear (AddOne mask) (Plus x y) =
+instance Fill mask => Fill (FillTake mask) where
+   type FillFromSum (FillTake mask) = Plus (FillFromSum mask)
+   type FillToSum (FillTake mask) = Plus (FillToSum mask)
+   fill clear (FillTake mask) (Plus x y) =
       Plus (fill clear mask x) (fill clear mask y)
 
-instance Add mask => Add (AddSkip mask) where
-   type AddFromSum (AddSkip mask) = AddFromSum mask
-   type AddToSum (AddSkip mask) = Plus (AddToSum mask)
-   fill clear (AddSkip mask) x =
+instance Fill mask => Fill (FillSkip mask) where
+   type FillFromSum (FillSkip mask) = FillFromSum mask
+   type FillToSum (FillSkip mask) = Plus (FillToSum mask)
+   fill clear (FillSkip mask) x =
       let y = fill clear mask x
       in  Plus y (fmap clear y)
 
@@ -279,8 +279,8 @@ add ::
 add plus clear (Stack is x0) (Stack js y0) =
    let x = ExStack is x0
        y = ExStack js y0
-   in  case addMask x y of
-          AddMask ks lmask rmask ->
+   in  case fillMask x y of
+          FillMask ks lmask rmask ->
              Stack ks (liftA2 plus (fill clear lmask x0) (fill clear rmask y0))
 
 
