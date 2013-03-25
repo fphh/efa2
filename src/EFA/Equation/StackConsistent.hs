@@ -88,11 +88,11 @@ class
    filterMask ::
       (Ord i) => Map i Branch -> ExStack sum i a -> FilterMask sum
    addMask ::
-      (Ord i, Sum rsum) => ExStack sum i a -> ExStack rsum i a -> AddMask sum rsum i a
+      (Ord i, Sum rsum) => ExStack sum i a -> ExStack rsum i a -> AddMask sum rsum i
    addValueMask ::
-      (Ord i) => ExStack Value i a -> ExStack sum i a -> AddMask Value sum i a
+      (Ord i) => ExStack Value i a -> ExStack sum i a -> AddMask Value sum i
    addPlusMask ::
-      (Ord i, Sum lsum) => ExStack (Plus lsum) i a -> ExStack sum i a -> AddMask (Plus lsum) sum i a
+      (Ord i, Sum lsum) => ExStack (Plus lsum) i a -> ExStack sum i a -> AddMask (Plus lsum) sum i
    shrinkStack :: ExStack sum i a -> [Stack i a]
    shrinkValues ::
       (QC.Arbitrary a) => ExStack sum i a -> [ExStack sum i a]
@@ -105,10 +105,10 @@ instance Sum Value where
    mulMatch times _plus (Value x) (Value y) = Value (times x y)
    filterMask _cond _s = FilterMask TakeStop
    addMask = addValueMask
-   addValueMask _l _r = AddMask AddStop
-   addPlusMask (ExStack (NonEmpty.Cons _i is) (Plus a0 _a1)) r =
+   addValueMask _l _r = AddMask NonEmpty.Empty AddStop
+   addPlusMask (ExStack (NonEmpty.Cons i is) (Plus a0 _a1)) r =
       case addMask (ExStack is a0) r of
-         AddMask x -> AddMask (AddLeft x)
+         AddMask js x -> AddMask (i!:js) (AddLeft x)
    shrinkStack _ = []
    shrinkValues (ExStack empty (Value x)) =
       map (ExStack empty . Value) $ QC.shrink x
@@ -135,16 +135,16 @@ instance (Sum sum) => Sum (Plus sum) where
 
    addMask = addPlusMask
 
-   addValueMask l (ExStack (NonEmpty.Cons _i is) (Plus a _d)) =
+   addValueMask l (ExStack (NonEmpty.Cons i is) (Plus a _d)) =
       case addMask l (ExStack is a) of
-         AddMask x -> AddMask (AddRight x)
+         AddMask js x -> AddMask (i!:js) (AddRight x)
    addPlusMask a b =
       let (i,a0) = leftStack a
           (j,b0) = leftStack b
       in  case compare i j of
-             EQ -> case addMask a0 b0 of AddMask mask -> AddMask (AddBoth mask)
-             LT -> case addMask a0 b  of AddMask mask -> AddMask (AddLeft mask)
-             GT -> case addMask a  b0 of AddMask mask -> AddMask (AddRight mask)
+             EQ -> case addMask a0 b0 of AddMask ks mask -> AddMask (i!:ks) (AddBoth mask)
+             LT -> case addMask a0 b  of AddMask ks mask -> AddMask (i!:ks) (AddLeft mask)
+             GT -> case addMask a  b0 of AddMask ks mask -> AddMask (j!:ks) (AddRight mask)
 
    shrinkStack (ExStack it (Plus a0 a1)) =
       concatMap (\(_,is) -> [Stack is a0, Stack is a1]) $
@@ -219,21 +219,16 @@ data AddRight rest = AddRight rest
 data AddBoth  rest = AddBoth  rest
 
 data
-   AddMask lsum rsum i a =
+   AddMask lsum rsum i =
       forall mask.
          (lsum ~ AddFromLeftSum mask,
           rsum ~ AddFromRightSum mask, Add mask) =>
-         AddMask mask
+         AddMask (List (AddToSum mask) i) mask
 
 class (Sum (AddToSum mask), Sum (AddFromLeftSum mask), Sum (AddFromRightSum mask)) => Add mask where
    type AddFromLeftSum mask :: * -> *
    type AddFromRightSum mask :: * -> *
    type AddToSum mask :: * -> *
-   indicesAdd ::
-      mask ->
-      List (AddFromLeftSum mask) i ->
-      List (AddFromRightSum mask) i ->
-      List (AddToSum mask) i
    exAdd ::
       (a -> a -> a) ->
       (a -> a) ->
@@ -246,15 +241,12 @@ instance Add AddStop where
    type AddFromLeftSum AddStop = Value
    type AddFromRightSum AddStop = Value
    type AddToSum AddStop = Value
-   indicesAdd AddStop NonEmpty.Empty NonEmpty.Empty = NonEmpty.Empty
    exAdd plus _clear AddStop (Value x) (Value y) = Value (plus x y)
 
 instance Add mask => Add (AddLeft mask) where
    type AddFromLeftSum (AddLeft mask) = Plus (AddFromLeftSum mask)
    type AddFromRightSum (AddLeft mask) = AddFromRightSum mask
    type AddToSum (AddLeft mask) = Plus (AddToSum mask)
-   indicesAdd (AddLeft mask) (NonEmpty.Cons i is) js =
-      i !: indicesAdd mask is js
    exAdd plus clear (AddLeft mask) (Plus a0 a1) b =
       Plus (exAdd plus clear mask a0 b) (exAdd plus clear mask a1 (fmap clear b))
 
@@ -262,8 +254,6 @@ instance Add mask => Add (AddRight mask) where
    type AddFromLeftSum (AddRight mask) = AddFromLeftSum mask
    type AddFromRightSum (AddRight mask) = Plus (AddFromRightSum mask)
    type AddToSum (AddRight mask) = Plus (AddToSum mask)
-   indicesAdd (AddRight mask) is (NonEmpty.Cons j js) =
-      j !: indicesAdd mask is js
    exAdd plus clear (AddRight mask) a (Plus b0 b1) =
       Plus (exAdd plus clear mask a b0) (exAdd plus clear mask (fmap clear a) b1)
 
@@ -271,8 +261,6 @@ instance Add mask => Add (AddBoth mask) where
    type AddFromLeftSum (AddBoth mask) = Plus (AddFromLeftSum mask)
    type AddFromRightSum (AddBoth mask) = Plus (AddFromRightSum mask)
    type AddToSum (AddBoth mask) = Plus (AddToSum mask)
-   indicesAdd (AddBoth mask) (NonEmpty.Cons i is) (NonEmpty.Cons _j js) =
-      i !: indicesAdd mask is js
    exAdd plus clear (AddBoth mask) (Plus a0 a1) (Plus b0 b1) =
       Plus (exAdd plus clear mask a0 b0) (exAdd plus clear mask a1 b1)
 
@@ -285,8 +273,8 @@ add plus clear (Stack is x0) (Stack js y0) =
    let x = ExStack is x0
        y = ExStack js y0
    in  case addMask x y of
-          AddMask mask ->
-             Stack (indicesAdd mask is js) (exAdd plus clear mask x0 y0)
+          AddMask ks mask ->
+             Stack ks (exAdd plus clear mask x0 y0)
 
 
 instance (Ord i, Arith.Integrate v) => Arith.Integrate (Stack i v) where
