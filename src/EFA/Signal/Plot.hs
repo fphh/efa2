@@ -16,8 +16,9 @@ module EFA.Signal.Plot (
    sequenceIO,
    recordSplitPlus, recordSplit, sequenceSplit,
    recordSelect, sequenceSelect,
-   stack, stackAttr, stackIO, getData
---   record2,RecList(..),RecSq(..),Sq(..),SqList(..) 
+   stack, stackAttr, stackIO,
+   stacks, stacksAttr, stacksIO,
+   getData,
    ) where
 
 import qualified EFA.Signal.Signal as S
@@ -60,15 +61,18 @@ import qualified Graphics.Gnuplot.Value.Tuple as Tuple
 import qualified Graphics.Gnuplot.LineSpecification as LineSpec
 
 import qualified Graphics.Gnuplot.Frame as Frame
+import qualified Graphics.Gnuplot.Frame.Option as Opt
 import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
 import qualified Graphics.Gnuplot.Frame.OptionSet.Style as OptsStyle
 import qualified Graphics.Gnuplot.Frame.OptionSet.Histogram as Histogram
 
-import qualified Data.List as L
+import qualified EFA.Utility.TotalMap as TMap
 import qualified Data.Map as M
+import qualified Data.List as L
 import qualified Data.Foldable as Fold
 import Control.Monad (zipWithM_)
 import Control.Functor.HT (void)
+import Data.Traversable (traverse)
 import Data.Foldable (foldMap)
 import Data.Monoid (mconcat)
 -- import Control.Concurrent (threadDelay)
@@ -340,7 +344,7 @@ recordIO ::
     Tuple.C y, Atom.C y) =>
    String -> Record s t1 t2 id v y -> IO ()
 recordIO name =
-   void . Plot.plotDefault . Frame.cons (recordAttr name) . record 
+   void . Plot.plotDefault . Frame.cons (recordAttr name) . record
 
 
 recordIOList ::
@@ -460,6 +464,10 @@ sequenceSelect idList name =
    sequenceIO name . fmap (Record.extract idList)
 
 
+optKeyOutside :: Opts.T graph -> Opts.T graph
+optKeyOutside =
+   Opts.add (Opt.custom "key" "position") ["outside"]
+
 stackAttr ::
    (FormatValue var) =>
    String -> var -> Opts.T (Graph2D.T Int Double)
@@ -468,8 +476,8 @@ stackAttr title var =
       Histogram.rowstacked $
       OptsStyle.fillBorderLineType (-1) $
       OptsStyle.fillSolid $
+      optKeyOutside $
       Opts.xTicks2d [(Format.unASCII $ formatValue var, 0)] $
-      Opts.xRange2d (-1,3) $
       Opts.deflt
 
 stack ::
@@ -487,6 +495,41 @@ stackIO ::
    String -> var -> f (term, Double) -> IO ()
 stackIO title var =
    void . Plot.plotDefault . Frame.cons (stackAttr title var) . stack
+
+
+stacksAttr ::
+   (FormatValue var) =>
+   String -> [var] -> Opts.T (Graph2D.T Int Double)
+stacksAttr title vars =
+   Opts.title title $
+      Histogram.rowstacked $
+      OptsStyle.fillBorderLineType (-1) $
+      OptsStyle.fillSolid $
+      optKeyOutside $
+      Opts.boxwidthAbsolute 0.9 $
+      Opts.xTicks2d (zip (map (Format.unASCII . formatValue) vars) [0..]) $
+      Opts.deflt
+
+stacks ::
+   (Ord term, FormatValue term) =>
+   [M.Map term Double] -> Plt.T (Graph2D.T Int Double)
+stacks =
+   Fold.fold .
+   M.mapWithKey
+      (\term val ->
+         fmap (Graph2D.lineSpec
+                 (LineSpec.title (Format.unASCII $ formatValue term)
+                    LineSpec.deflt)) $
+         Plot2D.list Graph2D.histograms val) .
+   TMap.core . traverse (TMap.cons 0)
+
+stacksIO ::
+   (FormatValue var, Ord term, FormatValue term) =>
+   String -> [(var, M.Map term Double)] -> IO ()
+stacksIO title xs =
+   case unzip xs of
+      (vars, ys) ->
+         void . Plot.plotDefault . Frame.cons (stacksAttr title vars) . stacks $ ys
 
 
 

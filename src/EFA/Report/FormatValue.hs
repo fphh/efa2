@@ -36,6 +36,17 @@ instance
    formatValue (Idx.Record r idx) =
       Format.record r $ formatValue idx
 
+
+instance FormatValue Idx.Absolute where
+   formatValue Idx.Absolute = Format.empty
+
+instance FormatValue Idx.Delta where
+   formatValue d = Format.recordDelta d Format.empty
+
+instance FormatValue rec => FormatValue (Idx.ExtDelta rec) where
+   formatValue (Idx.ExtDelta d r) = Format.recordDelta d $ formatValue r
+
+
 formatChar :: Format output => Char -> output
 formatChar = Format.literal . (:[])
 

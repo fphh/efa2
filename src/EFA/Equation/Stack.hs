@@ -6,22 +6,28 @@ import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Equation.MultiValue as MV
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic ((~+), (~-), (~*), (~/))
+import EFA.Utility (differenceMapSet)
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
 
-import qualified Data.NonEmpty as NonEmpty
-
 import qualified Test.QuickCheck as QC
 
+import qualified Data.Map as Map
+import qualified Data.Set as Set
+import qualified Data.NonEmpty as NonEmpty
 import qualified Data.List.HT as ListHT
+import qualified Data.Foldable as Fold
 import Control.Applicative (liftA2)
+import Data.Map (Map)
+import Data.Traversable (sequenceA)
 import Data.Foldable (Foldable, foldMap)
 import Data.Monoid ((<>))
 import Data.Tuple.HT (mapFst)
+import Data.Maybe.HT (toMaybe)
 
 import qualified Prelude as P
-import Prelude hiding (recip)
+import Prelude hiding (recip, filter)
 
 
 {- |
@@ -36,6 +42,9 @@ data Sum a =
    | Plus (Sum a) (Sum a)
    deriving (Show, Eq)
 
+instance Functor (Stack i) where
+   fmap f (Stack is s) = Stack is (fmap f s)
+
 instance Functor Sum where
    fmap f (Value a) = Value (f a)
    fmap f (Plus a0 a1) = Plus (fmap f a0) (fmap f a1)
@@ -49,6 +58,18 @@ instance FormatValue a => FormatValue (Stack i a) where
 
 instance FormatValue a => FormatValue (Sum a) where
    formatValue = fold Format.plus . fmap formatValue
+
+{- |
+The index function must generate an index list with ascending index order.
+That is, it must be monotonic
+at least on the indices that are present in the stack.
+-}
+mapIndicesMonotonic :: (Ord j) => (i -> j) -> Stack i a -> Stack j a
+mapIndicesMonotonic g (Stack is s) =
+   let js = map g is
+   in  if ListHT.isAscending js
+         then Stack js s
+         else error "Stack.mapIndicesMonotonic: non-monotonic index function"
 
 
 descent :: Stack i a -> Either a (i, (Stack i a, Stack i a))
@@ -76,7 +97,7 @@ add ::
    (Ord i) =>
    (a -> a -> a) -> (a -> a) ->
    Stack i a -> Stack i a -> Stack i a
-add plus zero x0@(Stack is0 _) y0@(Stack js0 _) =
+add plus clear x0@(Stack is0 _) y0@(Stack js0 _) =
    let go a b =
           case (descent a, descent b) of
              (Left av, Left bv) -> Value $ plus av bv
@@ -85,8 +106,8 @@ add plus zero x0@(Stack is0 _) y0@(Stack js0 _) =
              (Right (i, (a0, a1)), Right (j, (b0, b1))) ->
                 case compare i j of
                    EQ -> Plus (go a0 b0) (go a1 b1)
-                   LT -> Plus (go a0 b) (go a1 (zeroStack zero b))
-                   GT -> Plus (go a b0) (go (zeroStack zero a) b1)
+                   LT -> Plus (go a0 b) (go a1 (fmap clear b))
+                   GT -> Plus (go a b0) (go (fmap clear a) b1)
    in  Stack (MV.mergeIndices is0 js0) $ go x0 y0
 
 mul ::
@@ -125,15 +146,6 @@ instance (Ord i, Num a) => Num (Stack i a) where
    abs = fromMultiValueNum . abs . toMultiValueNum
    signum = fromMultiValueNum . signum . toMultiValueNum
 
-
-zeroStack :: (a -> a) -> Stack i a -> Stack i a
-zeroStack z (Stack is a) = Stack is $ zeroMatch z a
-
-zeroMatch :: (a -> a) -> Sum a -> Sum a
-zeroMatch z =
-   let go (Value x) = Value $ z x
-       go (Plus x0 x1) = Plus (go x0) (go x1)
-   in  go
 
 addMatch :: (a -> a -> a) -> Sum a -> Sum a -> Sum a
 addMatch plus =
@@ -176,7 +188,7 @@ instance (Ord i, Fractional a) => Fractional (Stack i a) where
 
 instance (Ord i, Arith.Sum a) => Arith.Sum (Stack i a) where
    negate (Stack is s) = Stack is $ fmap Arith.negate s
-   (~+) = add (~+) (\x -> x~-x)
+   (~+) = add (~+) Arith.clear
 
 instance (Ord i, Arith.Product a) => Arith.Product (Stack i a) where
    (~*) = mul (~*) (~+)
@@ -208,6 +220,13 @@ singleton = Stack [] . Value
 deltaPair :: i -> a -> a -> Stack i a
 deltaPair i a d = Stack [i] $ Plus (Value a) (Value d)
 
+-- could be a simple Semigroup.Foldable.head if it would exist
+absolute :: Stack i a -> a
+absolute (Stack _ s) = fold const s
+
+normalize :: (Arith.Product a) => Stack i a -> Stack i a
+normalize s = fmap (~/ absolute s) s
+
 
 toList :: Sum a -> NonEmpty.T [] a
 toList = fold NonEmpty.append . fmap NonEmpty.singleton
@@ -223,6 +242,90 @@ fold op =
    let go (Value a) = a
        go (Plus a d) = go a `op` go d
    in  go
+
+
+data Branch = Before | Delta deriving (Eq, Show)
+
+instance QC.Arbitrary Branch where
+   arbitrary = QC.elements [Before, Delta]
+
+
+{- |
+A filtered stack contains a sub-hypercube of values
+and the point from where it was taken from a larger hypercube.
+The index sets of the map and the stack must be distinct.
+-}
+data Filtered i a =
+   Filtered {
+      filterCorner :: Map i Branch,
+      filteredStack :: Stack i a
+   } deriving (Eq, Show)
+
+startFilter :: Stack i a -> Filtered i a
+startFilter = Filtered Map.empty
+
+{- |
+With the Map you can choose
+whether you want to keep only the Before or only the Delta part of a variable.
+A missing entry in the Map means that both branches are maintained.
+
+If an index is in the condition map but not in the stack,
+then the result depends on the value in the condition:
+Is it Before, then the Stack value will be maintained,
+is it Delta, then the Stack value is set to zero.
+This is consistent with how missing indices in the Stack
+are handled by the arithmetic operations.
+
+If you filter for 'Before' on a certain variable
+and then for 'Delta' on the same one,
+or vice versa, then you get 'Nothing'.
+-}
+filter ::
+   (Ord i, Arith.Sum a) =>
+   Map i Branch -> Filtered i a -> Maybe (Filtered i a)
+filter c1 (Filtered c0 s@(Stack is _x)) =
+   liftA2 Filtered (mergeConditions c0 c1) $
+   fmap
+      (\c1' ->
+         (if Fold.any (Delta==) $ differenceMapSet c1' $ Set.fromList is
+            then fmap Arith.clear
+            else id) $
+         filterNaive c1' s)
+      (adaptConditions c0 c1)
+
+adaptConditions ::
+   (Ord i) => Map i Branch -> Map i Branch -> Maybe (Map i Branch)
+adaptConditions c0 c1 =
+   fmap (Map.difference c1 c0 <> ) $
+   sequenceA $ Map.intersectionWith (\a0 a1 -> toMaybe (a0==a1) Before) c0 c1
+
+mergeConditions ::
+   (Ord i) => Map i Branch -> Map i Branch -> Maybe (Map i Branch)
+mergeConditions c0 c1 =
+   fmap ((Map.difference c0 c1 <> Map.difference c1 c0) <> ) $
+   sequenceA $ Map.intersectionWith (\a0 a1 -> toMaybe (a0==a1) a0) c0 c1
+
+{- |
+The naive implementation ignores indices
+that are in the condition map but not in the stack.
+
+Unfortunately, 'filterNaive' does not satisfy simple laws.
+This is because it selects not only certain branches
+but also re-declares @delta@ branches as @before@ branches.
+-}
+filterNaive :: (Ord i) => Map i Branch -> Stack i a -> Stack i a
+filterNaive cond s0@(Stack is0 _) =
+   let go s =
+          case descent s of
+             Left a -> Value a
+             Right (i, (a, d)) ->
+                case Map.lookup i cond of
+                   Nothing -> Plus (go a) (go d)
+                   Just Before -> go a
+                   Just Delta  -> go d
+   in  Stack
+          (Set.toAscList $ Set.difference (Set.fromList is0) (Map.keysSet cond))
+          (go s0)
 
 
 {- |
@@ -260,12 +363,13 @@ toMultiValueGen plus (Stack indices tree) =
 
 
 assigns :: Stack i a -> NonEmpty.T [] ([Idx.Record Idx.Delta i], a)
-assigns (Stack [] (Value a)) = NonEmpty.singleton ([], a)
-assigns (Stack (i:is) (Plus a0 a1)) =
-   NonEmpty.append
-      (fmap (mapFst (Idx.before i :)) $ assigns $ Stack is a0)
-      (fmap (mapFst (Idx.delta  i :)) $ assigns $ Stack is a1)
-assigns _ = error "Stack.assigns: inconsistent data"
+assigns s =
+   case descent s of
+      Left a -> NonEmpty.singleton ([], a)
+      Right (i, (a0,a1)) ->
+         NonEmpty.append
+            (fmap (mapFst (Idx.before i :)) $ assigns a0)
+            (fmap (mapFst (Idx.delta  i :)) $ assigns a1)
 
 
 instance
