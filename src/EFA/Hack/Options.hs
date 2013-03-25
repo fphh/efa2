@@ -2,7 +2,7 @@
 {-# LANGUAGE GADTs #-}
 
 
-module EFA.Signal.Plot.Options where
+module EFA.Hack.Options where
 
 import qualified Graphics.Gnuplot.Terminal as Terminal
 -- import qualified Graphics.Gnuplot.Advanced as AGP
@@ -185,7 +185,7 @@ buildPrepFunction  opts = f . j . h opts . g opts
     g o | otherwise = Record.extract (extractAcc o)
 
     h o | normAcc o == True = Record.norm
-    h o | otherwise = id
+    h _ | otherwise = id
 
 
 

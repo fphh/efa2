@@ -8,7 +8,7 @@
 
 module EFA.Hack.Plot where
 
-import qualified EFA.Signal.Plot.Options as PlOpts
+import qualified EFA.Hack.Options as PlOpts
 
 import qualified Graphics.Gnuplot.Frame as Frame
 import qualified Graphics.Gnuplot.Frame.OptionSet as Opts

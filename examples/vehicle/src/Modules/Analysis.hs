@@ -20,9 +20,14 @@ import EFA.Signal.Record (PPosIdx(PPosIdx), SignalRecord, FlowRecord,
                           Record(Record), PowerRecord,
                           SignalRecord,getTime, newTimeBase, removeZeroNoise)
 
-import EFA.Signal.Sequence (genSequenceSignal,
-                            removeLowEnergySections, genSequFlow, addZeroCrossings, removeLowTimeSections,
-                            genSequ,sectionRecordsFromSequence)
+import EFA.Signal.Sequence (-- genSequenceSignal,
+                            removeLowEnergySections,
+                            genSequFlow,
+                            addZeroCrossings,
+                            removeLowTimeSections,
+                            genSequ,
+                           -- sectionRecordsFromSequence
+                           )
 
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Signal.Vector as Vec
@@ -97,8 +102,8 @@ pre topology rawSignals =  do
   let (sequ,sequencePowers) = removeLowTimeSections(sequenceRaw,sequencePowersRaw) 0
 
   -- create sequence signal
-  let sequSig = Sig.scale (genSequenceSignal sequ) 10 :: Sig.UTSigL  --  (10  ^^ (-12::Int))
-  let sequenceSignals = sectionRecordsFromSequence signals0 sequ
+  -- let sequSig = Sig.scale (genSequenceSignal sequ) 10 :: Sig.UTSigL  --  (10  ^^ (-12::Int))
+  -- let sequenceSignals = sectionRecordsFromSequence signals0 sequ
 
 ---------------------------------------------------------------------------------------
 -- * Integrate Power and Sections on maximum Energyflow
@@ -121,16 +126,16 @@ pre topology rawSignals =  do
 -------------------------------------------------------------------------------------------------
 -- ## Analyse External Energy Flow
 
-external :: (Vec.Zipper v, 
-             Vec.Walker v, 
-             Vec.Singleton v, 
-             Eq d, 
-             Num d, 
+external :: (Vec.Zipper v,
+             Vec.Walker v,
+             Vec.Singleton v,
+             Eq d,
+             Num d,
              B.BSum d,
-             Arith.Product d, 
-             Arith.Integrate d, 
+             Arith.Product d,
+             Arith.Integrate d,
              Vec.Storage v d,
-             Vec.FromList v, 
+             Vec.FromList v,
              Arith.Scalar d ~ Double) =>
             TD.SequFlowGraph System.Node
             -> SD.SequData (FlowRecord System.Node v d) -- (Record s t2 t1 (PPosIdx System.Node)v d)
@@ -147,11 +152,11 @@ initStorage = 0.7*3600*1000
 makeGivenFromExternal :: (Vec.Zipper v,
                           Vec.Walker v,
                           Vec.Singleton v,
-                          B.BSum d, 
-                          Eq d, 
-                          Num d, 
-                          Arith.Sum d, 
-                          Vec.Storage v d, 
+                          B.BSum d,
+                          Eq d,
+                          Num d,
+                          Arith.Sum d,
+                          Vec.Storage v d,
                           Vec.FromList v,
                           EqGen.Record (EqRecord.FromIndex rec),
                           EqRecord.ToIndex (EqRecord.FromIndex rec) ~ rec) =>
@@ -219,17 +224,17 @@ makeGivenForPrediction idx env =
 delta :: (Vec.Zipper v1,
           Vec.Walker v1,
           Vec.Singleton v1,
-          Vec.Zipper v2, 
-          Vec.Walker v2, 
+          Vec.Zipper v2,
+          Vec.Walker v2,
           Vec.Singleton v2,
           B.BSum d,
-          Eq d, 
-          Num d, 
-          Arith.Product d, 
-          Arith.Integrate d, 
+          Eq d,
+          Num d,
+          Arith.Product d,
+          Arith.Integrate d,
           Vec.Storage v1 d,
-          Vec.Storage v2 d, 
-          Vec.FromList v1, 
+          Vec.Storage v2 d,
+          Vec.FromList v1,
           Vec.FromList v2,
           Arith.Scalar d ~ Double) =>
          TD.SequFlowGraph System.Node
