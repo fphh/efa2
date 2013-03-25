@@ -123,20 +123,16 @@ class
       C rec where
    type ToIndex rec :: *
    type FromIndex idx :: * -> *
-   indices :: (idx ~ ToIndex rec) => rec idx
    access :: (idx ~ ToIndex rec) => idx -> Accessor.T (rec a) a
 
 instance C Absolute where
    type ToIndex Absolute = Idx.Absolute
    type FromIndex Idx.Absolute = Absolute
-   indices = Absolute Idx.Absolute
    access Idx.Absolute = Accessor.fromWrapper Absolute unAbsolute
 
 instance C Delta where
    type ToIndex Delta = Idx.Delta
    type FromIndex Idx.Delta = Delta
-   indices =
-      Delta {delta = Idx.Delta, before = Idx.Before, after = Idx.After}
    access idx =
       case idx of
          Idx.Delta  -> Accessor.fromSetGet (\a d -> d{delta  = a}) delta
@@ -146,17 +142,30 @@ instance C Delta where
 instance C rec => C (ExtDelta rec) where
    type ToIndex (ExtDelta rec) = Idx.ExtDelta (ToIndex rec)
    type FromIndex (Idx.ExtDelta idx) = ExtDelta (FromIndex idx)
+   access (Idx.ExtDelta idx sub) =
+      case idx of
+         Idx.Delta  -> access sub . Accessor.fromSetGet (\a d -> d{extDelta  = a}) extDelta
+         Idx.Before -> access sub . Accessor.fromSetGet (\a d -> d{extBefore = a}) extBefore
+         Idx.After  -> access sub . Accessor.fromSetGet (\a d -> d{extAfter  = a}) extAfter
+
+
+class C rec => IndexSet rec where
+   indices :: (idx ~ ToIndex rec) => rec idx
+
+instance IndexSet Absolute where
+   indices = Absolute Idx.Absolute
+
+instance IndexSet Delta where
+   indices =
+      Delta {delta = Idx.Delta, before = Idx.Before, after = Idx.After}
+
+instance IndexSet rec => IndexSet (ExtDelta rec) where
    indices =
       ExtDelta {
          extDelta  = fmap (Idx.ExtDelta Idx.Delta)  indices,
          extBefore = fmap (Idx.ExtDelta Idx.Before) indices,
          extAfter  = fmap (Idx.ExtDelta Idx.After)  indices
       }
-   access (Idx.ExtDelta idx sub) =
-      case idx of
-         Idx.Delta  -> access sub . Accessor.fromSetGet (\a d -> d{extDelta  = a}) extDelta
-         Idx.Before -> access sub . Accessor.fromSetGet (\a d -> d{extBefore = a}) extBefore
-         Idx.After  -> access sub . Accessor.fromSetGet (\a d -> d{extAfter  = a}) extAfter
 
 
 class C rec => Assigns rec where
