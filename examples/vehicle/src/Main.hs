@@ -34,8 +34,8 @@ import qualified EFA.Signal.Plot.Options as O
 import System.IO
 
 dataset, datasetB :: FilePath
-dataset = "/home/felix/data/examples/vehicle/Vehicle_res.plt"
-datasetB = "/home/felix/data/examples/vehicle/Vehicle_mass1050kg_res.plt"
+dataset = "/home/duck/energiefluss/data/examples/vehicle/Vehicle_res.plt"
+datasetB = "/home/duck/energiefluss/data/examples/vehicle/Vehicle_mass1050kg_res.plt"
 
 main :: IO ()
 main = do

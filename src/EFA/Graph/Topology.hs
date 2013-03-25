@@ -142,10 +142,17 @@ isStorageEdge :: Eq node => Gr.Edge (Idx.BndNode node) -> Bool
 isStorageEdge e = case edgeType e of StorageEdge _ -> True ; _ -> False
 
 
+isDirEdge :: FlowDirectionField x => x -> Bool
+isDirEdge = dir . getFlowDirection
+  where dir Dir = True
+        dir _ = False
+
+{-
 isDirEdge :: FlowDirectionField label => (a, label) -> Bool
 isDirEdge = dir . getFlowDirection . snd
   where dir Dir = True
         dir _ = False
+-}
 
 type Topology a = Graph a NodeType ()
 
