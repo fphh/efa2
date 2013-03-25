@@ -9,33 +9,33 @@ module EFA.Hack.Record where
 -- import qualified EFA.Signal.Data as D
 -- import qualified EFA.Signal.Vector as V
 import EFA.Signal.Signal
-          (--TC, 
-           Signal 
-           --FSignal, 
-           --TSigL, 
-           -- UTSignal, 
+          (--TC,
+           Signal
+           --FSignal,
+           --TSigL,
+           -- UTSignal,
            --TSignal,
-           --TSamp, 
-           --PSamp, 
-           --PSamp1L, 
+           --TSamp,
+           --PSamp,
+           --PSamp1L,
            --PSamp2LL,
            --Scal
           )
 
-import EFA.Signal.Typ (Typ, 
-                       A, 
-                       P, 
-                       T, 
-                       Tt 
+import EFA.Signal.Typ (Typ,
+                       A,
+                       P,
+                       T,
+                       Tt
                        --UT,
                        --F,
                        --D
                       )
--- import EFA.Signal.Data (--Data, 
---                        (:>), 
+-- import EFA.Signal.Data (--Data,
+--                        (:>),
 --                        Nil)
--- import EFA.Signal.Base (Sign, 
---                        BSum, 
+-- import EFA.Signal.Base (Sign,
+--                        BSum,
 --                        BProd)
 
 -- import EFA.Report.Report (ToTable(toTable), Table(..), tvcat)

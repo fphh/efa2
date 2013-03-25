@@ -354,7 +354,7 @@ recordIOList ::
     TDisp t2, TDisp t1,
     Tuple.C y, Atom.C y) =>
    String -> [Record s t1 t2 id v y] -> IO ()
-   
+
 recordIOList name recList =
    void $ Plot.plotDefault $ Frame.cons (recordAttr name) $ foldMap record recList
 

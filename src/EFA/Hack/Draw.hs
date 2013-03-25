@@ -42,7 +42,7 @@ import Data.GraphViz (
           directedGraph, strictGraph, subGraphs,
           graphID,
           GraphvizOutput(..))
-  
+
 import Data.GraphViz.Attributes.Complete as Viz
 
 import qualified Data.Accessor.Basic as Accessor

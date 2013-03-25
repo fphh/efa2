@@ -4,7 +4,7 @@ module Main where
 
 -- | Demonstriert das Schneiden von Signalen
 
-import qualified Data.Map as M 
+import qualified Data.Map as M
 
 import qualified EFA.Signal.Signal as S
 import EFA.Signal.Sequence
@@ -183,8 +183,8 @@ recList :: [PowerRecord Node.Int [] Double]
 recList = map (Record time) pmapList
 
 list :: [(Int, (String, (PowerRecord Node.Int [] Double, (Sequ, SequData (PowerRecord Node.Int [] Double)))))]
-list = idxList $ 
-  zip titleList 
+list = idxList $
+  zip titleList
       (zip recList (map  (genSequ . addZeroCrossings) recList))
 
 f :: (Num a, Show a, ToTable a2, ToTable a1) =>
@@ -199,5 +199,5 @@ f (idx, (title, (pRec, (sq, sqRec)))) = do
 
 main :: IO ()
 main = mapM_ f list
-  
-    
+
+

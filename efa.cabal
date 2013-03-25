@@ -171,7 +171,9 @@ Executable example-vehicle
       efa,
       gnuplot,
       containers,
-      base
+      base, 
+      utility-ht,
+      non-empty
   Else
     Buildable: False
 

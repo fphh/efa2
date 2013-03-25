@@ -28,70 +28,70 @@ import EFA.Report.Typ (DisplayType(Typ_T), getDisplayUnit)
 -- import EFA.Signal.Record (SigId(..))
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Vector as V
--- import qualified Data.Map as Map 
+-- import qualified Data.Map as Map
 
 
 data Split = Split Int | NoSplit deriving Eq
 
 
 data  T id term = T {
-  gridAcc :: Bool, 
+  gridAcc :: Bool,
   terminalAcc :: Term term,
   showIdAcc :: id -> String,
   extractAcc :: [id],
   splitAcc :: Split,
-  titleAcc :: String, 
+  titleAcc :: String,
   wtitleAcc:: String,
   leadSignalsAcc::(Record.RangeFrom id, Record.ToModify id),
   leadSignalsMaxAcc::(Record.RangeFrom id, Record.ToModify id),
   normAcc :: Bool,
   showRecIdxAcc:: Record.Idx -> String,
   pointSizeAcc :: LineSpec.T -> LineSpec.T,
-  pointTypeAcc :: LineSpec.T -> LineSpec.T, 
-  lineWidthAcc :: LineSpec.T -> LineSpec.T, 
-  lineStyleAcc :: LineSpec.T -> LineSpec.T,            
-  lineTypeAcc  :: LineSpec.T -> LineSpec.T} 
+  pointTypeAcc :: LineSpec.T -> LineSpec.T,
+  lineWidthAcc :: LineSpec.T -> LineSpec.T,
+  lineStyleAcc :: LineSpec.T -> LineSpec.T,
+  lineTypeAcc  :: LineSpec.T -> LineSpec.T}
 
-grid :: Bool -> T id term -> T id term 
-grid b opts = opts { gridAcc = b } 
+grid :: Bool -> T id term -> T id term
+grid b opts = opts { gridAcc = b }
 
-title :: String -> T id term -> T id term 
+title :: String -> T id term -> T id term
 title ti opts = opts { titleAcc = ti }
- 
-terminal :: Term term -> T id WXT.T -> T id term 
-terminal term opts = opts { terminalAcc = term} 
 
-wtitle :: String -> T id term -> T id term 
+terminal :: Term term -> T id WXT.T -> T id term
+terminal term opts = opts { terminalAcc = term}
+
+wtitle :: String -> T id term -> T id term
 wtitle tis opts = opts { wtitleAcc = tis }
 
-rectitle :: (Record.Idx -> String) -> T id term -> T id term 
+rectitle :: (Record.Idx -> String) -> T id term -> T id term
 rectitle f opts = opts { showRecIdxAcc = f }
 
 showId :: (id -> String) -> T id term ->  T id term
 showId f opts = opts {showIdAcc = f}
 
-section :: [id] -> T id term ->  T id term 
+section :: [id] -> T id term ->  T id term
 section sigIds opts = opts {extractAcc = sigIds}
 
-norm :: Bool ->  T id term ->  T id term 
+norm :: Bool ->  T id term ->  T id term
 norm b opts = opts {normAcc = b}
 
-split :: Split ->  T id term ->  T id term 
+split :: Split ->  T id term ->  T id term
 split n opts = opts {splitAcc = n}
 
-pointSize :: Double ->  T id term -> T id term  
+pointSize :: Double ->  T id term -> T id term
 pointSize x opts = opts { pointSizeAcc =  LineSpec.pointSize x }
 
-pointType :: Int ->  T id term -> T id term  
-pointType x opts = opts { pointTypeAcc = LineSpec.pointType x } 
-  
-lineWidth :: Double ->  T id term -> T id term                    
+pointType :: Int ->  T id term -> T id term
+pointType x opts = opts { pointTypeAcc = LineSpec.pointType x }
+
+lineWidth :: Double ->  T id term -> T id term
 lineWidth x opts = opts { lineWidthAcc = LineSpec.lineWidth x }
-  
-lineStyle :: Int ->  T id term -> T id term  
+
+lineStyle :: Int ->  T id term -> T id term
 lineStyle x opts = opts { lineStyleAcc = LineSpec.lineStyle x }
 
-lineType :: Int ->  T id term -> T id term  
+lineType :: Int ->  T id term -> T id term
 lineType x opts = opts { lineTypeAcc = LineSpec.lineType x }
 
 extract :: [id] ->  T id term -> T id term
@@ -107,29 +107,29 @@ leadSignalsMax x opts = opts { leadSignalsMaxAcc = x }
 deflt :: Show id => T id WXT.T
 deflt = T {
   gridAcc = True,
-  titleAcc = "", 
+  titleAcc = "",
   extractAcc = [],
   leadSignalsAcc = (Record.RangeFrom [], Record.ToModify []),
   leadSignalsMaxAcc = (Record.RangeFrom [], Record.ToModify []),
   normAcc = False,
   terminalAcc = WXTTerm,
   showIdAcc = show,
-  splitAcc = NoSplit,              
-  wtitleAcc = "",           
+  splitAcc = NoSplit,
+  wtitleAcc = "",
   showRecIdxAcc = show,
   pointSizeAcc = LineSpec.pointSize 0.3,
-  pointTypeAcc = LineSpec.pointType 1, 
-  lineWidthAcc = LineSpec.lineWidth 1, 
-  lineStyleAcc = LineSpec.lineStyle 1,            
-  lineTypeAcc =  LineSpec.lineType 1            
+  pointTypeAcc = LineSpec.pointType 1,
+  lineWidthAcc = LineSpec.lineWidth 1,
+  lineStyleAcc = LineSpec.lineStyle 1,
+  lineTypeAcc =  LineSpec.lineType 1
   }
 
-        
+
 build :: (Show id) => (T id WXT.T -> T id term) -> T id term
 build opts = opts deflt
 
 
-{- @HT  Not working -- help appreciated      
+{- @HT  Not working -- help appreciated
 buildFrame:: Graph.C graph =>
                              [Char]
                              -> T id term
@@ -137,10 +137,10 @@ buildFrame:: Graph.C graph =>
                              -> Frame.T graph
 -}
 
-buildFrame wti opts  = 
+buildFrame wti opts  =
   Frame.cons $
   Opts.title (titleAcc opts ++ "_" ++ wti) $
-  Opts.grid (gridAcc opts) $     
+  Opts.grid (gridAcc opts) $
   Opts.xLabel ("Time [" ++ (show $ getDisplayUnit Typ_T) ++ "]") $
   Opts.yLabel ("")
   Opts.deflt
@@ -152,53 +152,53 @@ data  Term a where
   PNGTerm  :: String -> Term PNG.T
   SVGTerm  :: String -> Term SVG.T
 
-buildTerminal :: Terminal.C term =>  String -> T id term -> term    
+buildTerminal :: Terminal.C term =>  String -> T id term -> term
 buildTerminal wti opts = f (terminalAcc opts)
   where
     f :: Term term -> term
-    f X11Term  = X11.title name $ X11.cons 
-    f WXTTerm  = WXT.title name $ WXT.cons   
+    f X11Term  = X11.title name $ X11.cons
+    f WXTTerm  = WXT.title name $ WXT.cons
     f (PSTerm filePath) = PS.cons (filePath ++ "/" ++ name ++ ".ps")
     f (PNGTerm filePath) = PNG.cons (filePath ++ "/" ++ name ++ ".png")
     f (SVGTerm filePath) = SVG.cons (filePath ++ "/" ++ name ++ ".svg")
     name = titleAcc opts ++ "_" ++ wti
 
 
--- | Build the function to condition the record before plotting 
-buildPrepFunction :: (Ord id, 
-                      Show id, 
+-- | Build the function to condition the record before plotting
+buildPrepFunction :: (Ord id,
+                      Show id,
                       Show (v a),
                       Fractional a,
                       Ord a,
                       V.Walker v,
                       V.Storage v a,
-                      V.Singleton v) => T id term ->  
-                     (Record.Record s t1 t2 id v a ->  
-                      Record.Record s t1 t2 id v a)      
+                      V.Singleton v) => T id term ->
+                     (Record.Record s t1 t2 id v a ->
+                      Record.Record s t1 t2 id v a)
 buildPrepFunction  opts = f . j . h opts . g opts
   where
     f = Record.normSignals2Range (leadSignalsAcc opts)
     j = Record.normSignals2Max75 (leadSignalsMaxAcc opts)
-    
+
     -- | do nothing with emtpy list
     g o | extractAcc o == [] = id
     g o | otherwise = Record.extract (extractAcc o)
-    
-    h o | normAcc o == True = Record.norm 
+
+    h o | normAcc o == True = Record.norm
     h o | otherwise = id
-    
-    
-    
+
+
+
 -- | Build the line style for plotting a record
 buildStyle :: (Show id) => Record.Idx -> T id term -> id -> Plot2D.T x y -> Plot2D.T x y
 buildStyle recIdx opts key =
    fmap $ Graph2D.lineSpec $
       pointSizeAcc opts $
-      pointTypeAcc opts $ 
+      pointTypeAcc opts $
       lineWidthAcc opts $
       LineSpec.title (recName recIdx ++ showIdf key) $ -- show record name in legend
       LineSpec.deflt
       where
-        showIdf = showIdAcc opts  
+        showIdf = showIdAcc opts
         recName x@(Record.Idx _) = (showRecIdxAcc opts) x ++ "_"
         recName (Record.NoIdx)  = ""
