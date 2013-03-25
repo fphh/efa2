@@ -12,6 +12,14 @@ module EFA.Signal.Data (module EFA.Signal.Data) where
 import qualified EFA.Signal.Vector as SV
 import Data.Monoid (Monoid(mempty, mappend, mconcat))
 
+import qualified EFA.Equation.Arithmetic as Arith
+import EFA.Equation.Arithmetic
+          (Sum, (~+), (~-),
+           Product, (~*), (~/))
+
+import qualified EFA.Report.Format as Format
+import EFA.Report.FormatValue (FormatValue, formatValue)
+
 import qualified Data.Vector.Unboxed as UV
 import qualified Data.Vector as V
 
@@ -74,7 +82,8 @@ instance P.Show (Apply ab c) => P.Show (Data ab c) where
 ---------------------------------------------------------
 -- | Type Synonym Convenience
 
-type DVal = Data Nil
+type Scalar = Data Nil
+
 type UVec = Data (UV.Vector :> Nil)
 type UVec2 = Data (V.Vector :> UV.Vector :> Nil)
 type UVec3 = Data (V.Vector :> V.Vector :> UV.Vector :> Nil)
@@ -157,6 +166,23 @@ writeData x =
 
 
 
+class Format c where
+   format ::
+      (Format.Format output, FormatValue a, Storage c a) =>
+      Data c a -> output
+
+instance Format Nil where
+   format (Data x) = formatValue x
+
+instance (SV.FromList v2, Format v1) => Format (v2 :> v1) where
+   format xd =
+      withNestedData (Format.list . P.map (format . subData xd) . SV.toList) xd
+
+
+instance (Format c, FormatValue a, Storage c a) => FormatValue (Data c a) where
+   formatValue = format
+
+
 ----------------------------------------------------------
 -- | mapping
 
@@ -235,6 +261,27 @@ instance
 instance ZipWith c => SV.Zipper (Data c) where
    zipWith f x y =
       writeData (zipWith f `readData` x `readData` y)
+
+zip ::
+   (ZipWith c, Storage c d1, Storage c d2, Storage c (d1, d2)) =>
+   Data c d1 -> Data c d2 -> Data c (d1,d2)
+zip = zipWith (,)
+
+unzip ::
+   (Map c, Storage c a, Storage c b, Storage c (a, b)) =>
+   Data c (a, b) -> (Data c a, Data c b)
+unzip x = (map P.fst x, map P.snd x)
+
+
+instance (ZipWith c, Storage c a, Sum a) => Sum (Data c a) where
+   (~+) = zipWith (~+)
+   (~-) = zipWith (~-)
+   negate = map Arith.negate
+
+instance (ZipWith c, Storage c a, Product a) => Product (Data c a) where
+   (~*) = zipWith (~*)
+   (~/) = zipWith (~/)
+   recip = map Arith.recip
 
 
 {- |
@@ -373,6 +420,34 @@ foldlMap ::
    (c -> b -> c) -> c -> (a -> b) -> Data vec a -> c
 foldlMap f x0 g = foldl (\acc x -> f acc (g x)) x0
 
+
+class Integrate v c where
+   type Integrated v c :: * -> *
+   integrate ::
+      (SV.Storage v (Apply c a), Storage c a,
+       Storage (Integrated v c) a, Arith.Constant a) =>
+      Data (v :> c) a -> Data (Integrated v c) a
+
+instance (SV.Walker v) => Integrate v Nil where
+   type Integrated v Nil = Nil
+   integrate = Data . SV.foldl (~+) Arith.zero . getData
+
+instance
+   (SV.Walker v2, Integrate v1 c) =>
+      Integrate v2 (v1 :> c) where
+   type Integrated v2 (v1 :> c) = v2 :> Integrated v1 c
+   integrate xd =
+      nestedData
+         (withNestedData
+            (SV.map (getData . readNested integrate . subData xd)) xd)
+
+
+instance
+   (SV.Storage v (Apply c a), Storage c a,
+    Storage (Integrated v c) a, Integrate v c, Arith.Constant a) =>
+      Arith.Integrate (Data (v :> c) a) where
+   type Scalar (Data (v :> c) a) = Data (Integrated v c) a
+   integrate = integrate
 
 ----------------------------------------------------------
 -- Monoid
@@ -556,6 +631,7 @@ transpose2 (Data x) = Data $ SV.transpose x
 
 ----------------------------------------------------------
 -- Head & Tail
+{-
 
 {-# DEPRECATED head, tail "use viewL instead" #-}
 {-# DEPRECATED last, init "use viewR instead" #-}
@@ -571,6 +647,7 @@ tail, init ::
    Data (v2 :> v1) d -> Data (v2 :> v1) d
 tail (Data x) = Data $ SV.tail x
 init (Data x) = Data $ SV.init x
+-}
 
 viewL ::
    (SV.Singleton v2, SV.Storage v2 (Apply v1 d)) =>
@@ -581,6 +658,15 @@ viewR ::
    (SV.Singleton v2, SV.Storage v2 (Apply v1 d)) =>
    Data (v2 :> v1) d -> Maybe (Data (v2 :> v1) d, Data v1 d)
 viewR (Data x) = P.fmap (mapPair (Data, Data)) $ SV.viewR x
+
+deltaMap ::
+   (SV.Singleton v2, ZipWith (v2 :> v1),
+    SV.Storage v2 (Apply v1 d1), SV.Storage v2 (Apply v1 d2),
+    Storage v1 d1, Storage v1 d2) =>
+   (d1 -> d1 -> d2) ->
+   Data (v2 :> v1) d1 ->
+   Data (v2 :> v1) d2
+deltaMap f x = P.maybe mempty (zipWith f x . P.snd) $ viewL x
 
 
 
@@ -597,10 +683,16 @@ singleton (Data x) = Data $ SV.singleton x
 -- Sort
 
 sort ::
-   (Ord d, SV.Sort v1, SV.Storage v1 d) =>
-   Data (v1 :> Nil) d -> Data (v1 :> Nil) d
+   (Ord d, SV.Sort v, SV.Storage v d) =>
+   Data (v :> Nil) d -> Data (v :> Nil) d
 sort (Data x) = Data $ SV.sort x
 
+sortBy ::
+   (SV.SortBy v, SV.Storage v d) =>
+   (d -> d -> P.Ordering) ->
+   Data (v :> Nil) d ->
+   Data (v :> Nil) d
+sortBy f (Data x) = Data $ SV.sortBy f x
 
 ----------------------------------------------------------
 -- Filter
@@ -730,3 +822,27 @@ class Reverse c where
 instance (SV.Reverse v2) => Reverse (v2 :> v1) where
    reverse =
       withNestedData (Data . SV.reverse)
+
+
+----------------------------------------------------------
+-- Find
+
+findIndex ::
+   (SV.Find v, SV.Storage v d) =>
+   (d -> Bool) -> Data (v :> Nil) d -> Maybe Int
+findIndex f = withNestedData (SV.findIndex f)
+
+slice ::
+   (SV.Slice v, SV.Storage v d) =>
+   Int -> Int -> Data (v :> Nil) d -> Data (v :> Nil) d
+slice idx n = withNestedData (Data . SV.slice idx n)
+
+
+concat :: (SV.Storage v1 (Apply c d), 
+           SV.Singleton v1, 
+           SV.Storage v2 (v1 (Apply c d)), 
+           SV.FromList v2) 
+          => Data (v2 :> v1 :> c) d -> Data (v1 :> c) d
+concat (Data x) = Data $ SV.concat $ SV.toList x 
+
+

@@ -9,7 +9,7 @@ import Data.Ratio (Ratio, numerator, denominator)
 
 import Text.Printf (PrintfArg, printf)
 
-import Prelude hiding (words, lines)
+import Prelude hiding (words, lines, sum)
 
 
 -- * special Unicode characters
@@ -32,7 +32,10 @@ newtype Latex = Latex { unLatex :: String }
 
 -- * class for unified handling of ASCII, Unicode and LaTeX output
 
-data EdgeVar = Energy | MaxEnergy | Power | Eta | X | Y
+data EdgeVar = Energy | MaxEnergy | Power | Eta | X
+
+data Function = Absolute | Signum
+   deriving (Eq, Ord, Show)
 
 class Format output where
    literal :: String -> output
@@ -41,19 +44,23 @@ class Format output where
    ratio :: (Integral a, Show a) => Ratio a -> output
    subscript :: output -> output -> output
    connect :: output -> output -> output
+   link :: output -> output -> output
    list :: [output] -> output
    undetermined :: output
    empty :: output
    words, lines :: [output] -> output
    assign :: output -> output -> output
 
-   record :: Idx.Record -> output
+   function :: Function -> output -> output
+   integral :: output -> output
+   recordDelta :: Idx.Delta -> output -> output
+   initial :: output
    section :: Idx.Section -> output
-   sectionNode :: Idx.SecNode -> output
-   use :: Idx.Use -> output
+   sectionNode :: output -> output -> output
+   direction :: Idx.Direction -> output
    delta :: output -> output
    edgeIdent :: EdgeVar -> output
-   time, var, storage :: output
+   dtime, sum, storage :: output
    parenthesize, minus, recip :: output -> output
    plus, multiply :: output -> output -> output
    power :: output -> Integer -> output
@@ -67,6 +74,7 @@ instance Format ASCII where
    ratio r = ASCII $ show (numerator r) ++ "/" ++ show (denominator r)
    subscript (ASCII t) (ASCII s) = ASCII $ t ++ "_" ++ s
    connect (ASCII t) (ASCII s) = ASCII $ t ++ "_" ++ s
+   link (ASCII t) (ASCII s) = ASCII $ t ++ ":" ++ s
    list = ASCII . ("["++) . (++"]") . intercalate "," . map unASCII
    undetermined = ASCII "?"
    empty = ASCII ""
@@ -75,24 +83,34 @@ instance Format ASCII where
    assign (ASCII lhs) (ASCII rhs) =
       ASCII $ lhs ++ " = " ++ rhs
 
-   record (Idx.Record r) = ASCII $ show r
+   function f (ASCII rest) =
+      ASCII $
+      case f of
+         Absolute -> "|" ++ rest ++ "|"
+         Signum -> "sgn(" ++ rest ++ ")"
+   integral (ASCII x) = ASCII $ "integrate(" ++ x ++ ")"
+   recordDelta d (ASCII rest) =
+      ASCII $ (++rest) $
+      case d of
+         Idx.Before -> "[0]"
+         Idx.After -> "[1]"
+         Idx.Delta -> "d"
+   initial = ASCII "i"
    section (Idx.Section s) = ASCII $ show s
-   sectionNode (Idx.SecNode (Idx.Section s) (Idx.Node x)) =
-      ASCII $ show s ++ "." ++ show x
+   sectionNode (ASCII s) (ASCII x) = ASCII $ s ++ "." ++ x
 
-   use = ASCII . show
+   direction = ASCII . directionShort
    delta (ASCII s) = ASCII $ 'd':s
    edgeIdent e =
       ASCII $
       case e of
-         Energy -> "e"
-         MaxEnergy -> "me"
-         Power -> "p"
+         Energy -> "E"
+         MaxEnergy -> "Em"
+         Power -> "P"
          X -> "x"
-         Y -> "y"
          Eta -> "n"
-   time = ASCII "t"
-   var = ASCII "v"
+   dtime = ASCII "dt"
+   sum = ASCII "S"
    storage = ASCII "s"
 
    parenthesize (ASCII x) = ASCII $ "(" ++ x ++ ")"
@@ -115,6 +133,7 @@ instance Format Unicode where
 
    subscript (Unicode t) (Unicode s) = Unicode $ t ++ "_" ++ s
    connect (Unicode t) (Unicode s) = Unicode $ t ++ "_" ++ s
+   link (Unicode t) (Unicode s) = Unicode $ t ++ ":" ++ s
    list = Unicode . ("["++) . (++"]") . intercalate "," . map unUnicode
    undetermined = Unicode [heartChar]
    empty = Unicode ""
@@ -123,24 +142,34 @@ instance Format Unicode where
    assign (Unicode lhs) (Unicode rhs) =
       Unicode $ lhs ++ " = " ++ rhs
 
-   record (Idx.Record r) = Unicode $ show r
+   function f (Unicode rest) =
+      Unicode $
+      case f of
+         Absolute -> "|" ++ rest ++ "|"
+         Signum -> "sgn(" ++ rest ++ ")"
+   integral (Unicode x) = Unicode $ "\x222B(" ++ x ++ ")"
+   recordDelta d (Unicode rest) =
+      Unicode $ (++rest) $
+      case d of
+         Idx.Before -> "\x2070"
+         Idx.After -> "\xb9"
+         Idx.Delta -> [deltaChar]
+   initial = Unicode "i"
    section (Idx.Section s) = Unicode $ show s
-   sectionNode (Idx.SecNode (Idx.Section s) (Idx.Node x)) =
-      Unicode $ show s ++ "." ++ show x
+   sectionNode (Unicode s) (Unicode x) = Unicode $ s ++ "." ++ x
 
-   use = Unicode . show
-   delta (Unicode s) = Unicode $ '\x2206':s
+   direction = Unicode . directionShort
+   delta (Unicode s) = Unicode $ deltaChar:s
    edgeIdent e =
       Unicode $
       case e of
-         Energy -> "e"
-         MaxEnergy -> "me"
-         Power -> "p"
+         Energy -> "E"
+         MaxEnergy -> "\xCA"
+         Power -> "P"
          X -> "x"
-         Y -> "y"
          Eta -> "\x03b7"
-   time = Unicode "t"
-   var = Unicode "v"
+   dtime = Unicode "dt"
+   sum = Unicode "\x2211"
    storage = Unicode "s"
 
    parenthesize (Unicode x) = Unicode $ "(" ++ x ++ ")"
@@ -197,6 +226,7 @@ instance Format Latex where
    ratio r = Latex $ "\\frac{" ++ show (numerator r) ++ "}{" ++ show (denominator r) ++ "}"
    subscript (Latex t) (Latex s) = Latex $ t ++ "_{" ++ s ++ "}"
    connect (Latex t) (Latex s) = Latex $ t ++ "." ++ s
+   link (Latex t) (Latex s) = Latex $ t ++ ":" ++ s
    list = Latex . ("["++) . (++"]") . intercalate ", " . map unLatex
    undetermined = Latex "\\heartsuit "
    empty = Latex ""
@@ -205,24 +235,40 @@ instance Format Latex where
    assign (Latex lhs) (Latex rhs) =
       Latex $ lhs ++ " = " ++ rhs
 
-   record (Idx.Record r) = Latex $ show r
+   function f (Latex rest) =
+      Latex $
+      case f of
+         Absolute -> "\\abs{" ++ rest ++ "}"
+         Signum -> "\\sgn{\\left(" ++ rest ++ "\\right)}"
+   integral (Latex x) = Latex $ "\\int\\left(" ++ x ++ "\\right)"
+   recordDelta d (Latex rest) =
+      Latex $
+      case d of
+         {-
+         http://math.mit.edu/~ssam/latex
+         \newcommand{\leftexp}[2]{{\vphantom{#2}}^{#1}{#2}}
+         alternatively use packages leftidx or tensor:
+         http://tex.stackexchange.com/questions/11542/left-and-right-subscript
+         -}
+         Idx.Before -> "\\leftexp{0}{" ++ rest ++ "}"
+         Idx.After -> "\\leftexp{1}{" ++ rest ++ "}"
+         Idx.Delta -> "\\Delta " ++ rest
+   initial = Latex "i"
    section (Idx.Section s) = Latex $ show s
-   sectionNode (Idx.SecNode (Idx.Section s) (Idx.Node x)) =
-      Latex $ show s ++ ":" ++ show x
+   sectionNode (Latex s) (Latex x) = Latex $ s ++ ":" ++ x
 
-   use = Latex . show
+   direction = Latex . directionShort
    delta (Latex s) = Latex $ "\\Delta " ++ s
    edgeIdent e =
       Latex $
       case e of
-         Energy -> "e"
-         MaxEnergy -> "me"
-         Power -> "p"
+         Energy -> "E"
+         MaxEnergy -> "\\^E"
+         Power -> "P"
          X -> "x"
-         Y -> "y"
          Eta -> "\\eta"
-   time = Latex "t"
-   var = Latex "v"
+   dtime = Latex "\\dif t"
+   sum = Latex "\\Sigma"
    storage = Latex "s"
 
    parenthesize (Latex x) = Latex $ "(" ++ x ++ ")"
@@ -232,8 +278,36 @@ instance Format Latex where
    multiply (Latex x) (Latex y) = Latex $ x ++ " \\cdot " ++ y
    power (Latex x) n = Latex $ x ++ "^{" ++ show n ++ "}"
 
-edgeIndex ::
-   Format output =>
-   Idx.Record -> Idx.SecNode -> Idx.SecNode -> output
-edgeIndex r x y =
-   record r `connect` sectionNode x `connect` sectionNode y
+
+class Record record where
+   record :: Format output => record -> output -> output
+
+instance Record Idx.Absolute where
+   record Idx.Absolute = id
+
+instance Record Idx.Delta where
+   record = recordDelta
+
+instance Record rec => Record (Idx.ExtDelta rec) where
+   record (Idx.ExtDelta d r) = recordDelta d . record r
+
+
+class EdgeIdx idx where edgeVar :: idx -> EdgeVar
+instance EdgeIdx (Idx.Energy node) where edgeVar _ = Energy
+instance EdgeIdx (Idx.MaxEnergy node) where edgeVar _ = MaxEnergy
+instance EdgeIdx (Idx.Power node) where edgeVar _ = Power
+instance EdgeIdx (Idx.Eta node) where edgeVar _ = Eta
+instance EdgeIdx (Idx.X node) where edgeVar _ = X
+instance EdgeIdx (Idx.StEnergy node) where edgeVar _ = Energy
+instance EdgeIdx (Idx.StX node) where edgeVar _ = X
+
+
+directionShort :: Idx.Direction -> String
+directionShort d =
+   case d of
+      Idx.In -> "i"
+      Idx.Out -> "o"
+
+boundary :: Format output => Idx.Boundary -> output
+boundary Idx.Initial = initial
+boundary (Idx.AfterSection s) = section s

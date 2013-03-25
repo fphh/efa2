@@ -1,0 +1,47 @@
+model engine_max_torque
+  annotation(experiment(StartTime = 0.0, StopTime = 1.0, Tolerance = 0.000001), Diagram(), Icon(graphics = {Line(points = {{-41.0242,-11.8025},{45.3647,-11.8025}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Line(points = {{-36.6826,19.8642},{-23.3493,35.142},{-7.23813,42.9198},{7.76187,44.8642},{25.5396,43.1975},{43.3174,36.8086},{44.4285,35.9753}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Text(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-21.7389,20.2056},{27.7056,-5.34998}}, textString = "T_max"),Rectangle(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-56.094,70.7783},{58.4435,-30.2496}}),Line(points = {{-41.116,-11.7474},{-41.116,54.3319}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25)}));
+  Modelica.Blocks.Nonlinear.DeadZone deadzone1(uMax = ignitionSpeed, uMin = 0) annotation(Placement(visible = true, transformation(origin = {-62.1667,9.72222}, extent = {{-6.77369,-6.77369},{6.77369,6.77369}}, rotation = 0)));
+  Modelica.Blocks.Math.Add add2 annotation(Placement(visible = true, transformation(origin = {-1.66667,48.3333}, extent = {{-7.45106,-7.45106},{7.45106,7.45106}}, rotation = 0)));
+  Modelica.Blocks.Sources.Constant const(k = +1) annotation(Placement(visible = true, transformation(origin = {-35.5556,28.8889}, extent = {{-9.01578,-9.01578},{9.01578,9.01578}}, rotation = 0)));
+  Modelica.Blocks.Math.Log log1 annotation(Placement(visible = true, transformation(origin = {22.2222,47.5}, extent = {{-9.01578,-9.01578},{9.01578,9.01578}}, rotation = 0)));
+  Modelica.Blocks.Math.Add add1(k2 = +1) annotation(Placement(visible = true, transformation(origin = {49.7222,3.88889}, extent = {{-7.45106,-7.45106},{7.45106,7.45106}}, rotation = 0)));
+  Modelica.Blocks.Math.Gain gain1(k = -0.001) annotation(Placement(visible = true, transformation(origin = {24.4444,1.66667}, extent = {{-9.01578,-9.01578},{9.01578,9.01578}}, rotation = 0)));
+  Modelica.Blocks.Math.Product product1 annotation(Placement(visible = true, transformation(origin = {-0.555556,1.11111}, extent = {{-8.19616,-8.19616},{8.19616,8.19616}}, rotation = 0)));
+  Modelica.Blocks.Math.Gain gain2(k = 0.1) annotation(Placement(visible = true, transformation(origin = {-35.8333,0.277778}, extent = {{-6.77369,-6.77369},{6.77369,6.77369}}, rotation = 0)));
+  parameter Real maxT(start = 200, unit = "1") "Maximum Engine Torque" annotation(Placement(visible = true, transformation(origin = {71.2644,78.1609}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  parameter Real ignitionSpeed(start = 30, unit = "1") "Minimum Engine Firing Speed" annotation(Placement(visible = true, transformation(origin = {71.2644,78.1609}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  Modelica.Blocks.Math.Gain gain3(k = maxT * 0.2) annotation(Placement(visible = true, transformation(origin = {70,0.277821}, extent = {{-5.08917,-5.08917},{5.08917,5.08917}}, rotation = 0)));
+  parameter Real dragTorqueMin(start = -30, unit = "1") "Positive power multiplied, negative power devided by efficiency" annotation(Placement(visible = true, transformation(origin = {71.2644,78.1609}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  parameter Real dragTorqueMax(start = -60, unit = "1") "Positive power multiplied, negative power devided by efficiency" annotation(Placement(visible = true, transformation(origin = {71.2644,78.1609}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  Modelica.Blocks.Sources.Constant DragTorqueMin(k = dragTorqueMin) annotation(Placement(visible = true, transformation(origin = {-65.8333,-54.7222}, extent = {{-7.45106,-7.45106},{7.45106,7.45106}}, rotation = 0)));
+  Modelica.Blocks.Math.Add add3 annotation(Placement(visible = true, transformation(origin = {-20,-33.6111}, extent = {{-6.77369,-6.77369},{6.77369,6.77369}}, rotation = 0)));
+  Modelica.Blocks.Math.Gain DragTorqueSlope(k = (dragTorqueMax - dragTorqueMin) / 500) annotation(Placement(visible = true, transformation(origin = {-53.3367,-25.9525}, extent = {{-6.77369,-6.77369},{6.77369,6.77369}}, rotation = 0)));
+  Modelica.Blocks.Math.Product product2 annotation(Placement(visible = true, transformation(origin = {21.3889,-47.5}, extent = {{-7.45106,-7.45106},{7.45106,7.45106}}, rotation = 0)));
+  Modelica.Blocks.Nonlinear.Limiter limiter1(uMax = 1) annotation(Placement(visible = true, transformation(origin = {-6.38888,-78.0556}, extent = {{-7.45106,-7.45106},{7.45106,7.45106}}, rotation = 0)));
+  Modelica.Blocks.Math.Gain gain4(k = 0.01) annotation(Placement(visible = true, transformation(origin = {-41.9444,-79.1667}, extent = {{-7.45106,-7.45106},{7.45106,7.45106}}, rotation = 0)));
+  Modelica.Blocks.Interfaces.RealInput u annotation(Placement(visible = true, transformation(origin = {-66.9909,21.3338}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {-66.9909,21.3338}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  Modelica.Blocks.Interfaces.RealOutput DragTorque annotation(Placement(visible = true, transformation(origin = {71.023,41.6544}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {71.023,41.6544}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  Modelica.Blocks.Interfaces.RealOutput y annotation(Placement(visible = true, transformation(origin = {71.1424,-8.26482}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {71.1424,-8.26482}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+equation
+  connect(gain3.y,y) annotation(Line(points = {{75.5981,0.277821},{78.6111,0.277821},{78.6111,-8.26482},{71.1424,-8.26482}}));
+  connect(u,deadzone1.u) annotation(Line(points = {{-66.9909,21.3338},{-70.5556,21.3338},{-70.5556,9.72222},{-70.2951,9.72222}}));
+  connect(DragTorqueSlope.u,u) annotation(Line(points = {{-61.4651,-25.9525},{-74.7222,-25.9525},{-74.7222,21.3338},{-66.9909,21.3338}}));
+  connect(gain4.u,u) annotation(Line(points = {{-50.8857,-79.1667},{-86.3889,-79.1667},{-86.3889,-13.8889},{-72.7778,-13.8889},{-72.7778,21.3338},{-66.9909,21.3338}}));
+  connect(gain4.y,limiter1.u) annotation(Line(points = {{-33.7483,-79.1667},{-16.1111,-79.1667},{-16.1111,-78.0556},{-15.3302,-78.0556}}));
+  connect(DragTorque,product2.y) annotation(Line(points = {{77.7778,-55.5556},{30,-55.5556},{30,-47.5},{29.5851,-47.5}}));
+  connect(limiter1.y,product2.u2) annotation(Line(points = {{1.80729,-78.0556},{12.5,-78.0556},{12.5,-51.9706},{12.4476,-51.9706}}));
+  connect(add3.y,product2.u1) annotation(Line(points = {{-12.549,-33.6111},{11.1111,-33.6111},{11.1111,-43.0294},{12.4476,-43.0294}}));
+  connect(DragTorqueMin.y,add3.u2) annotation(Line(points = {{-57.6371,-54.7222},{-29.1667,-54.7222},{-29.1667,-37.6753},{-28.1285,-37.6753}}));
+  connect(DragTorqueSlope.y,add3.u1) annotation(Line(points = {{-45.8857,-25.9525},{-28.6111,-25.9525},{-28.6111,-29.5469},{-28.1285,-29.5469}}));
+  connect(add1.y,gain3.u) annotation(Line(points = {{57.9184,3.88889},{63.6111,3.88889},{63.6111,0.277821},{63.893,0.277821}}));
+  connect(gain2.y,product1.u2) annotation(Line(points = {{-28.3823,0.277778},{-11.1111,0.277778},{-11.1111,-3.80659},{-10.3909,-3.80659}}));
+  connect(gain2.y,product1.u1) annotation(Line(points = {{-28.3823,0.277778},{-11.9444,0.277778},{-11.9444,6.02881},{-10.3909,6.02881}}));
+  connect(gain2.u,deadzone1.y) annotation(Line(points = {{-43.9618,0.277778},{-54.7222,0.277778},{-54.7222,9.72222},{-54.7156,9.72222}}));
+  connect(product1.y,gain1.u) annotation(Line(points = {{8.46022,1.11111},{0,1.11111},{0,1.66667},{13.6255,1.66667}}));
+  connect(gain1.y,add1.u2) annotation(Line(points = {{34.3618,1.66667},{39.4444,1.66667},{39.4444,-0.581746},{40.781,-0.581746}}));
+  connect(add2.u1,deadzone1.y) annotation(Line(points = {{-10.6079,52.804},{-52.5,52.804},{-52.5,9.72222},{-54.7156,9.72222},{-54.7156,9.72222}}));
+  connect(log1.y,add1.u1) annotation(Line(points = {{32.1396,47.5},{39.1667,47.5},{39.1667,8.88889},{40.781,8.88889},{40.781,8.35953}}));
+  connect(add2.y,log1.u) annotation(Line(points = {{6.52949,48.3333},{19.7222,48.3333},{19.7222,47.5},{11.4033,47.5}}));
+  connect(const.y,add2.u2) annotation(Line(points = {{-25.6382,28.8889},{-11.6667,28.8889},{-11.6667,43.8627},{-10.6079,43.8627}}));
+end engine_max_torque;
+

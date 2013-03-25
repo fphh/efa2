@@ -1,101 +1,131 @@
+{-# LANGUAGE TypeFamilies #-}
 module EFA.Equation.Variable where
 
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Symbolic.OperatorTree as OT
-import qualified EFA.Symbolic.SumProduct as SP
+import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Report.Format as Format
+import EFA.Report.Format (Format)
 import EFA.Report.FormatValue (FormatValue, formatValue)
 
 
-data Index =
-            Energy Idx.Energy
-          | DEnergy Idx.DEnergy
-          | MaxEnergy Idx.MaxEnergy
-          | DMaxEnergy Idx.DMaxEnergy
-          | Power Idx.Power
-          | DPower Idx.DPower
-          | Eta Idx.Eta
-          | DEta Idx.DEta
-          | DTime Idx.DTime
-          | X Idx.X
-          | DX Idx.DX
-          | Y Idx.Y
-          | DY Idx.DY
-          | Var Idx.Var
-          | Store Idx.Storage
-            deriving (Show, Eq, Ord)
+data Any a = Signal (Signal a) | Scalar (Scalar a) deriving (Show, Eq, Ord)
+
+data Signal a =
+     Energy (Idx.Energy a)
+   | Power (Idx.Power a)
+   | Eta (Idx.Eta a)
+   | DTime (Idx.DTime a)
+   | X (Idx.X a)
+   | Sum (Idx.Sum a)
+     deriving (Show, Eq, Ord)
+
+data Scalar a =
+     MaxEnergy (Idx.MaxEnergy a)
+   | Storage (Idx.Storage a)
+   | StEnergy (Idx.StEnergy a)
+   | StX (Idx.StX a)
+     deriving (Show, Eq, Ord)
 
 
-class MkIdxC a where
-   mkIdx :: a -> Index
 
-instance MkIdxC Idx.Energy where mkIdx = Energy
-instance MkIdxC Idx.DEnergy where mkIdx = DEnergy
-instance MkIdxC Idx.MaxEnergy where mkIdx = MaxEnergy
-instance MkIdxC Idx.DMaxEnergy where mkIdx = DMaxEnergy
-instance MkIdxC Idx.Power where mkIdx = Power
-instance MkIdxC Idx.DPower where mkIdx = DPower
-instance MkIdxC Idx.Eta where mkIdx = Eta
-instance MkIdxC Idx.DEta where mkIdx = DEta
-instance MkIdxC Idx.DTime where mkIdx = DTime
-instance MkIdxC Idx.X where mkIdx = X
-instance MkIdxC Idx.DX where mkIdx = DX
-instance MkIdxC Idx.Y where mkIdx = Y
-instance MkIdxC Idx.DY where mkIdx = DY
-instance MkIdxC Idx.Var where mkIdx = Var
-instance MkIdxC Idx.Storage where mkIdx = Store
+class Index t where
+   type Type t :: * -> *
+   index :: t a -> Type t a
+
+instance Index Idx.Energy where type Type Idx.Energy = Signal; index = Energy
+instance Index Idx.Power  where type Type Idx.Power  = Signal; index = Power
+instance Index Idx.Eta    where type Type Idx.Eta    = Signal; index = Eta
+instance Index Idx.DTime  where type Type Idx.DTime  = Signal; index = DTime
+instance Index Idx.X      where type Type Idx.X      = Signal; index = X
+instance Index Idx.Sum    where type Type Idx.Sum    = Signal; index = Sum
+
+instance Index Idx.MaxEnergy where type Type Idx.MaxEnergy = Scalar; index = MaxEnergy
+instance Index Idx.Storage   where type Type Idx.Storage   = Scalar; index = Storage
+instance Index Idx.StEnergy  where type Type Idx.StEnergy  = Scalar; index = StEnergy
+instance Index Idx.StX       where type Type Idx.StX       = Scalar; index = StX
 
 
-class MkVarC a where
-   mkVarCore :: Index -> a
 
-instance MkVarC Index where
-   mkVarCore = id
+formatBoundaryNode ::
+   (Format output, Node.C node) =>
+   Idx.BndNode node -> output
+formatBoundaryNode (Idx.BndNode s n) =
+   Format.boundary s `Format.sectionNode` Node.subscript n
 
-instance MkVarC a => MkVarC (OT.Term a) where
-   mkVarCore = OT.Atom . mkVarCore
+formatStructureEdge ::
+   (Format output, Node.C node) =>
+   Format.EdgeVar -> Idx.StructureEdge node -> output
+formatStructureEdge e (Idx.StructureEdge s x y) =
+   Format.subscript (Format.edgeIdent e) $
+   Format.section s `Format.sectionNode`
+      (Node.subscript x `Format.link` Node.subscript y)
 
-instance MkVarC a => MkVarC (SP.Term a) where
-   mkVarCore = SP.Atom . mkVarCore
+formatStorageEdge ::
+   (Format output, Node.C node) =>
+   Format.EdgeVar -> Idx.StorageEdge node -> output
+formatStorageEdge e (Idx.StorageEdge s0 s1 n) =
+   Format.subscript (Format.edgeIdent e) $
+   (Format.boundary s0 `Format.link` Format.boundary s1)
+      `Format.sectionNode` Node.subscript n
 
-mkVar :: (MkIdxC a, MkVarC b) => a -> b
-mkVar = mkVarCore . mkIdx
+
+instance (Node.C node) => FormatValue (Any node) where
+   formatValue (Signal var) = formatValue var
+   formatValue (Scalar var) = formatValue var
+
+instance (Node.C node) => FormatValue (Signal node) where
+   formatValue var =
+      case var of
+         Energy idx -> formatIndex idx
+         Power idx -> formatIndex idx
+         Eta idx -> formatIndex idx
+         X idx -> formatIndex idx
+         DTime idx -> formatIndex idx
+         Sum idx -> formatIndex idx
+
+instance (Node.C node) => FormatValue (Scalar node) where
+   formatValue var =
+      case var of
+         MaxEnergy idx -> formatIndex idx
+         Storage idx -> formatIndex idx
+         StEnergy idx -> formatIndex idx
+         StX idx -> formatIndex idx
 
 
-instance FormatValue Index where
-   formatValue idx =
-      let absolute e r x y =
-             Format.subscript (Format.edgeIdent e) (Format.edgeIndex r x y)
-          delta e r x y =
-             Format.subscript (Format.delta $ Format.edgeIdent e) (Format.edgeIndex r x y)
-      in  case idx of
-             Energy (Idx.Energy r x y) -> absolute Format.Energy r x y
-             DEnergy (Idx.DEnergy r x y) -> delta Format.Energy r x y
+class FormatIndex idx where
+   formatIndex :: (Format output) => idx -> output
 
-             MaxEnergy (Idx.MaxEnergy r x y) -> absolute Format.MaxEnergy r x y
-             DMaxEnergy (Idx.DMaxEnergy r x y) -> delta Format.MaxEnergy r x y
+instance (Node.C node) => FormatIndex (Idx.Energy node) where
+   formatIndex (Idx.Energy e) = formatStructureEdge Format.Energy e
 
-             Power (Idx.Power r x y) -> absolute Format.Power r x y
-             DPower (Idx.DPower r x y) -> delta Format.Power r x y
+instance (Node.C node) => FormatIndex (Idx.MaxEnergy node) where
+   formatIndex (Idx.MaxEnergy e) = formatStorageEdge Format.MaxEnergy e
 
-             Eta (Idx.Eta r x y) -> absolute Format.Eta r x y
-             DEta (Idx.DEta r x y) -> delta Format.Eta r x y
+instance (Node.C node) => FormatIndex (Idx.Power node) where
+   formatIndex (Idx.Power e) = formatStructureEdge Format.Power e
 
-             X (Idx.X r x y) -> absolute Format.X r x y
-             DX (Idx.DX r x y) -> delta Format.X r x y
+instance (Node.C node) => FormatIndex (Idx.Eta node) where
+   formatIndex (Idx.Eta e) = formatStructureEdge Format.Eta e
 
-             Y (Idx.Y r x y) -> absolute Format.Y r x y
-             DY (Idx.DY r x y) -> delta Format.Y r x y
+instance (Node.C node) => FormatIndex (Idx.X node) where
+   formatIndex (Idx.X e) = formatStructureEdge Format.X e
 
-             DTime (Idx.DTime r s) ->
-                Format.subscript (Format.delta Format.time) $
-                   Format.record r `Format.connect` Format.section s
+instance (Node.C node) => FormatIndex (Idx.DTime node) where
+   formatIndex (Idx.DTime s) =
+      Format.subscript Format.dtime $ Format.section s
 
-             Var (Idx.Var r u x) ->
-                Format.subscript Format.var $
-                   Format.record r `Format.connect`
-                   Format.use u `Format.connect` Format.sectionNode x
+instance (Node.C node) => FormatIndex (Idx.Sum node) where
+   formatIndex (Idx.Sum dir x) =
+      Format.subscript Format.sum $
+      Format.direction dir `Format.connect` formatBoundaryNode x
 
-             Store (Idx.Storage r x) ->
-                Format.subscript Format.storage $
-                   Format.record r `Format.connect` Format.sectionNode x
+instance (Node.C node) => FormatIndex (Idx.Storage node) where
+   formatIndex (Idx.Storage x) =
+      Format.subscript Format.storage $
+      formatBoundaryNode x
+
+instance (Node.C node) => FormatIndex (Idx.StEnergy node) where
+   formatIndex (Idx.StEnergy e) = formatStorageEdge Format.Energy e
+
+instance (Node.C node) => FormatIndex (Idx.StX node) where
+   formatIndex (Idx.StX e) = formatStorageEdge Format.X e

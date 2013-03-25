@@ -1,67 +1,78 @@
 -- | Demonstriert, wie man ein eta als Funktion definiert.
 module Main where
 
-import qualified EFA.Equation.Env as Env
-import qualified EFA.Equation.System as EqGen
+import qualified EFA.Equation.Environment as Env
+import qualified EFA.Example.Absolute as EqGen
+import EFA.Example.Absolute ((.=))
 import EFA.Equation.System ((=.=))
+import EFA.Example.Utility
+  (constructSeqTopo, edgeVar, makeEdges)
 
 import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
 import EFA.Utility (checkedLookup)
 import EFA.Graph (mkGraph)
-import EFA.Example.Utility ((.=), constructSeqTopo, edgeVar, makeEdges, recAbs)
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (formatValue)
 
-import Data.Monoid ((<>))
-import Data.Foldable (foldMap)
+import Data.Monoid (mconcat, (<>))
 
 
 sec0 :: Idx.Section
 sec0 :~ _ = Stream.enumFrom $ Idx.Section 0
 
-sink, source :: Idx.Node
-sink :~ (source :~ _) = Stream.enumFrom $ Idx.Node 0
+data Node = Sink | Source deriving (Eq, Ord, Enum, Show)
 
-linearOne :: TD.Topology
+instance Node.C Node where
+   display = Node.displayDefault
+   subscript = Node.subscriptDefault
+   dotId = Node.dotIdDefault
+
+
+linearOne :: TD.Topology Node
 linearOne = mkGraph nodes (makeEdges edges)
-  where nodes = [(sink, TD.AlwaysSink), (source, TD.AlwaysSource)]
-        edges = [(source, sink)]
+  where nodes = [(Sink, TD.AlwaysSink), (Source, TD.AlwaysSource)]
+        edges = [(Source, Sink)]
 
-seqTopo :: TD.SequFlowGraph
+seqTopo :: TD.SequFlowGraph Node
 seqTopo = constructSeqTopo linearOne [0]
 
 enRange :: [Double]
 enRange = 0.01:[0.5, 1 .. 9]
 
-c :: EqGen.ExprWithVars s a
-c = edgeVar EqGen.power sec0 source sink
 
-n :: EqGen.ExprWithVars s a
-n = edgeVar EqGen.eta sec0 source sink
+type Expr s a = EqGen.Expression Node s Double Double a
 
-eta :: Idx.Eta
-eta = edgeVar (Idx.Eta recAbs) sec0 source sink
+c :: Idx.Power Node
+c = edgeVar Idx.Power sec0 Source Sink
+
+eta :: Idx.Eta Node
+eta = edgeVar Idx.Eta sec0 Source Sink
 
 
-functionEta :: EqGen.ExprWithVars s Double -> EqGen.ExprWithVars s Double
-functionEta p = 0.3 * sqrt p
+functionEta :: Expr s Double -> Expr s Double
+functionEta = EqGen.liftF $ \p -> 0.3 * sqrt p
 
-given :: Double -> EqGen.EquationSystem s Double
+given :: Double -> EqGen.EquationSystem Node s Double Double
 given p =
-   foldMap (uncurry (.=)) $
-   (EqGen.dtime sec0, 1) :
-   (edgeVar EqGen.power sec0 source sink, p) : []
+   mconcat $
+   (Idx.DTime sec0 .= 1) :
+   (edgeVar Idx.Power sec0 Source Sink .= p) :
+   []
 
 
 solve :: Double -> String
 solve p =
-  let env = EqGen.solve ((n =.= functionEta c) <> given p) seqTopo
+  let env =
+         EqGen.solve seqTopo
+            ((EqGen.variable eta =.= functionEta (EqGen.variable c)) <> given p)
   in  show p ++ " " ++
-      Format.unUnicode (formatValue (checkedLookup (Env.etaMap env) eta))
+      Format.unUnicode (formatValue
+         (checkedLookup (Env.etaMap (Env.signal env)) eta))
 
 main :: IO ()
 main =

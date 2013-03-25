@@ -1,24 +1,18 @@
+-- | Demonstriert das Hinzufügen von ZeroCrossings
 
 module Main where
 
--- | Demonstriert das Hinzufügen von ZeroCrossings
-
-import EFA.Signal.Sequence
-import EFA.Signal.SequenceData
-import EFA.Signal.Signal as S
-import EFA.Signal.Plot
-import EFA.Signal.Base (Val)
-
-import qualified EFA.Utility.Stream as Stream
-import EFA.Utility.Stream (Stream((:~)))
-
 
 import qualified Data.Map as M 
-import qualified EFA.Graph.Topology.Index as Idx
 
-node0, node1, node2 :: Idx.Node
-node0 :~ node1 :~ node2 :~ _ = Stream.enumFrom $ Idx.Node 0
+import EFA.Signal.Sequence
+import EFA.Signal.Record
+import EFA.Signal.Signal as S
+import qualified EFA.Signal.Plot as Plot
+import EFA.Signal.Base (Val)
 
+
+data Node = Node0 | Node1 | Node2 deriving (Eq, Ord, Show)
 
 t :: TSigL
 t = S.fromList [0,1,2] 
@@ -28,19 +22,19 @@ p1 = S.fromList [-1,1,1]
 p2 = S.fromList [-1,3,3]
 p3 = S.fromList [-1,6,-6]
 
-pRec :: PowerRecord [] Val
-pRec = PowerRecord t
+pRec :: PowerRecord Node [] Val
+pRec = Record t
          (M.fromListWith
             (error "duplicate keys")
-            [ (PPosIdx node0 node1, p1),
-              (PPosIdx node1 node0, p2),
-              (PPosIdx node1 node2, p3)])
+            [ (PPosIdx Node0 Node1, p1),
+              (PPosIdx Node1 Node0, p2),
+              (PPosIdx Node1 Node2, p3)])
 
-pRec0 :: PowerRecord [] Val
+pRec0 :: PowerRecord Node [] Val
 pRec0 = addZeroCrossings pRec
 
 main :: IO ()
 main = do
   print pRec
   print pRec0
-  rPlot ("pRec0", pRec0)
+  Plot.recordIO "pRec0" pRec0

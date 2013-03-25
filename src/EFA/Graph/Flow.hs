@@ -9,76 +9,118 @@ import EFA.Graph
            insNodes, insEdges)
 
 import qualified EFA.Graph.Topology.Index as Idx
-import EFA.Graph.Topology as Topo
-import EFA.Signal.SequenceData
+import qualified EFA.Graph.Topology as Topo
+import EFA.Signal.SequenceData (SequData, zipWithSecIdxs)
+import EFA.Signal.Record
+          (Record(Record), FlowState(FlowState), FlowRecord,
+           PPosIdx(PPosIdx), flipPos)
+import EFA.Graph.Topology
+          (Topology, FlowTopology, SequFlowGraph,
+           FlowDirection(Dir, UnDir))
 
-import EFA.Signal.Signal (fromScalar, sigSign, sigSum)
-import EFA.Signal.Base (Sign(PSign, NSign, ZSign))
+
+import qualified EFA.Signal.Vector as SV
+import EFA.Signal.Signal (fromScalar, sigSign, sigSum, neg)
+import EFA.Signal.Base (Sign(PSign, NSign, ZSign),BSum, DArith0)
 
 import qualified Data.Foldable as Fold
 import qualified Data.Map as M
 
+import EFA.Utility (checkedLookup)
+
+
+adjustSigns ::
+  (Show (v a), DArith0 a,
+  SV.Walker v, SV.Storage v a, Ord node, Show node) =>
+  Topology node ->
+  FlowState node -> FlowRecord node v a -> FlowRecord node v a
+adjustSigns topo (FlowState state) (Record dt flow) =
+   Record dt (M.foldrWithKey g M.empty uniquePPos)
+      where g ppos NSign acc =
+              M.insert ppos (neg (flow `checkedLookup` ppos))
+                $ M.insert ppos' (neg (flow `checkedLookup` ppos')) acc
+                where ppos' = flipPos ppos
+            g ppos _ acc =
+              M.insert ppos (flow `checkedLookup` ppos)
+                $ M.insert ppos' (flow `checkedLookup` ppos') acc
+                where ppos' = flipPos ppos
+            uniquePPos = foldl h M.empty (labEdges topo)
+              where h acc (Edge idx1 idx2, ()) =
+                      M.insert ppos (state `checkedLookup` ppos) acc
+                      where ppos = PPosIdx idx1 idx2
+
 
 -- | Function to calculate flow states for the whole sequence
-genSequFState :: SequFlowRecord FlowRecord -> SequFlowState
+genSequFState ::
+  (SV.Walker v, SV.Storage v a, BSum a, Fractional a, Ord a) =>
+  SequData (FlowRecord node v a) -> SequData (FlowState node)
 genSequFState sqFRec = fmap genFlowState sqFRec
 
 -- | Function to extract the flow state out of a Flow Record
-genFlowState ::  FlowRecord -> FlowState
-genFlowState (FlRecord _time flowMap) =
+genFlowState ::
+  (SV.Walker v, SV.Storage v a, BSum a, Fractional a, Ord a) =>
+  FlowRecord node v a -> FlowState node
+genFlowState (Record _time flowMap) =
    FlowState $ M.map (fromScalar . sigSign . sigSum) flowMap
 
--- | Function to generate Flow Topologies for all Sequences
-genSequFlowTops :: Topology -> SequFlowState -> SequFlowTops
+-- | Function to generate Flow Topologies for all Sections
+genSequFlowTops ::
+  (Ord node, Show node) =>
+  Topology node -> SequData (FlowState node) -> SequData (FlowTopology node)
 genSequFlowTops topo = fmap (genFlowTopology topo)
 
 -- | Function to generate Flow Topology -- only use one state per signal
-genFlowTopology :: Topology -> FlowState -> FlowTopology
+genFlowTopology ::
+  (Ord node, Show node) =>
+  Topology node -> FlowState node -> FlowTopology node
 genFlowTopology topo (FlowState fs) =
    mkGraph (labNodes topo) $
    map
       (\(Edge idx1 idx2, ()) ->
-         case fs M.! PPosIdx idx1 idx2 of
+         case fs `checkedLookup` (PPosIdx idx1 idx2) of
             PSign -> (Edge idx1 idx2, Dir)
             NSign -> (Edge idx2 idx1, Dir)
             ZSign -> (Edge idx1 idx2, UnDir)) $
    labEdges topo
 
 
-mkSectionTopology :: Idx.Section -> FlowTopology -> SequFlowGraph
-mkSectionTopology sid = Gr.ixmap (Idx.SecNode sid)
-
-genSectionTopology :: SequFlowTops -> SequData SequFlowGraph
-genSectionTopology = zipWithSecIdxs mkSectionTopology
-
-
-copySeqTopology :: SequData SequFlowGraph -> SequFlowGraph
-copySeqTopology =
-   Fold.foldl Gr.union Gr.empty
+mkSectionTopology ::
+  (Ord node) =>
+  Idx.Section -> FlowTopology node -> (SequFlowGraph node)
+mkSectionTopology sid = Gr.ixmap (Idx.afterSecNode sid)
 
 
-mkIntersectionEdges ::
-   Idx.Node -> Idx.Section ->
-   M.Map Idx.Section StoreDir ->
-   [Topo.LEdge]
-mkIntersectionEdges node startSec stores =
-   concatMap
-      (\secin ->
-         map (\secout ->
-                (Edge (Idx.SecNode secin node) (Idx.SecNode secout node), Dir)) $
-         M.keys $ snd $ M.split secin outs) $
-   startSec : M.keys ins
-  where (ins, outs) = M.partition (In ==) stores
+mkStorageEdges ::
+   node -> M.Map Idx.Section Topo.StoreDir ->
+   [Topo.LEdge node]
+mkStorageEdges node stores = do
+   let (ins, outs) =
+          M.partition (Topo.In ==) $ M.mapKeys Idx.AfterSection stores
+   secin <- Idx.initial : M.keys ins
+   secout <- M.keys $ snd $ M.split secin outs
+   return $
+      (Edge (Idx.BndNode secin node) (Idx.BndNode secout node), Dir)
 
+getActiveStoreSequences ::
+   (Ord node, Topo.FlowDirectionField el) =>
+   SequData (Idx.Section, Gr.Graph node Topo.NodeType el) ->
+   M.Map node (M.Map Idx.Section Topo.StoreDir)
+getActiveStoreSequences sq =
+   Fold.foldl
+      (M.unionWith (M.unionWith (error "duplicate section for node")))
+      M.empty $
+   fmap (\(s, g) ->
+          fmap (M.singleton s) $
+          M.mapMaybe snd $ Topo.getActiveStores g) sq
 
-mkSequenceTopology :: SequData SequFlowGraph -> SequFlowGraph
-mkSequenceTopology sd = res
-  where sqTopo = copySeqTopology sd
-        initNode = Idx.SecNode Idx.initSection
-        startElems = map f $ M.toList $ getActiveStores sqTopo
-        f (n, io) =
-          (mkIntersectionEdges n Idx.initSection (fmap snd io), (nid, Storage))
-          where nid = initNode n
-
-        res = insEdges (concatMap fst startElems)
-              $ insNodes (map snd startElems) sqTopo
+mkSequenceTopology ::
+  (Ord node) =>
+  SequData (FlowTopology node) -> SequFlowGraph node
+mkSequenceTopology sd =
+   insEdges (Fold.fold $ M.mapWithKey mkStorageEdges tracks) $
+   insNodes
+      (map (\n -> (Idx.initBndNode n, Topo.Storage)) $
+       M.keys tracks) $
+   Fold.foldMap (uncurry mkSectionTopology) sq
+  where tracks = getActiveStoreSequences sq
+        sq = zipWithSecIdxs (,) sd

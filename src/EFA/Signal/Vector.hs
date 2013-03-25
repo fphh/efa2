@@ -13,12 +13,19 @@ import qualified Data.Vector as V
 import qualified Data.List as L
 import qualified Data.List.HT as LH
 
+import qualified Data.NonEmpty.Mixed as NonEmptyM
+import qualified Data.NonEmpty as NonEmpty
+
 import Data.Maybe.HT (toMaybe)
 import Data.Eq (Eq((==)))
 import Data.Function ((.), ($), id, flip)
-import Data.Maybe (Maybe)
+import Data.Maybe (Maybe(Just, Nothing), maybe, isJust)
 import Data.Bool (Bool(False, True), (&&), not)
-import Prelude (Int, Ord, error, (++), (-), Show, show)
+import Data.Tuple (snd, fst)
+import Text.Show (Show, show)
+import Prelude (Num, Int, Integer, Ord, error, (++), (+), (-), subtract)
+
+import Data.Ord (Ordering)
 
 
 {- |
@@ -56,9 +63,10 @@ writeUnbox x =
 
 --------------------------------------------------------------
 -- Singleton Class
-
+{-
 {-# DEPRECATED head, tail "use viewL instead" #-}
 {-# DEPRECATED last, init "use viewR instead" #-}
+-}
 
 class Singleton vec where
    maximum :: (Ord d, Storage vec d) => vec d -> d
@@ -67,10 +75,10 @@ class Singleton vec where
    empty :: (Storage vec d) => vec d
    append :: (Storage vec d) => vec d -> vec d -> vec d
    concat :: (Storage vec d) => [vec d] -> vec d
-   head :: (Storage vec d) => vec d -> d
-   tail :: (Storage vec d) => vec d -> vec d
-   last :: (Storage vec d) => vec d -> d
-   init :: (Storage vec d) => vec d -> vec d
+   -- head :: (Storage vec d) => vec d -> d
+   -- tail :: (Storage vec d) => vec d -> vec d
+   -- last :: (Storage vec d) => vec d -> d
+   -- init :: (Storage vec d) => vec d -> vec d
    viewL :: (Storage vec d) => vec d -> Maybe (d, vec d)
    viewR :: (Storage vec d) => vec d -> Maybe (vec d, d)
    all :: (Storage vec d) => (d -> Bool) -> vec d -> Bool
@@ -83,10 +91,10 @@ instance Singleton V.Vector where
    empty = V.empty
    append = (V.++)
    concat = V.concat
-   head = V.head
-   tail = V.tail
-   last = V.last
-   init = V.init
+--   head = V.head
+--   tail = V.tail
+--   last = V.last
+--   init = V.init
    viewL xs = toMaybe (not $ V.null xs) (V.head xs, V.tail xs)
    viewR xs = toMaybe (not $ V.null xs) (V.init xs, V.last xs)
    all = V.all
@@ -99,10 +107,10 @@ instance Singleton UV.Vector where
    empty = writeUnbox UV.empty
    append = readUnbox (UV.++)
    concat xs = writeUnbox (UV.concat xs)
-   head = readUnbox UV.head
-   tail = readUnbox UV.tail
-   last = readUnbox UV.last
-   init = readUnbox UV.init
+   -- head = readUnbox UV.head
+   -- tail = readUnbox UV.tail
+   -- last = readUnbox UV.last
+   -- init = readUnbox UV.init
    viewL = readUnbox (\xs -> toMaybe (not $ UV.null xs) (UV.head xs, UV.tail xs))
    viewR = readUnbox (\xs -> toMaybe (not $ UV.null xs) (UV.init xs, UV.last xs))
    all f = readUnbox (UV.all f)
@@ -115,10 +123,10 @@ instance Singleton [] where
    empty = []
    append = (++)
    concat = L.concat
-   head = L.head
-   tail = L.tail
-   last = L.last
-   init = L.init
+   -- head = L.head
+   -- tail = L.tail
+   -- last = L.last
+   -- init = L.init
    viewL = LH.viewL
    viewR = LH.viewR
    all = L.all
@@ -193,12 +201,7 @@ instance Zipper UV.Vector where
 deltaMap ::
    (Storage vec b, Storage vec c, Singleton vec, Zipper vec) =>
    (b -> b -> c) -> vec b -> vec c
-deltaMap f l = zipWith f l (tail l)
-
-deltaMapReverse ::
-   (Storage vec b, Storage vec c, Singleton vec, Zipper vec) =>
-   (b -> b -> c) -> vec b -> vec c
-deltaMapReverse f l = zipWith f (tail l) l
+deltaMap f l = maybe empty (zipWith f l . snd) $ viewL l
 
 
 ------------------------------------------------------------
@@ -312,7 +315,7 @@ instance Transpose V.Vector V.Vector where
 
 instance Transpose UV.Vector V.Vector where
    transpose xs =
-      case constraints $ head xs of
+      case constraints $ fst $ maybe (error("Error in EFA.Signal.Vector/transpose - empty head")) id $ viewL xs of
          UnboxedVectorConstraints ->
             let fs = V.map (flip (UV.!)) $ V.fromList [0..len0-1]
                 lens = V.map len xs
@@ -354,6 +357,19 @@ instance Sort UV.Vector where
    sort = readUnbox (UV.fromList . L.sort . UV.toList)
 
 
+class SortBy vec where
+   sortBy :: (Storage vec d) => (d -> d -> Ordering) -> vec d -> vec d
+
+instance SortBy [] where
+   sortBy f = L.sortBy f
+
+instance SortBy V.Vector where
+   sortBy f = V.fromList . (L.sortBy f) . V.toList
+
+instance SortBy UV.Vector where
+   sortBy f = readUnbox (UV.fromList . (L.sortBy f) . UV.toList)
+
+
 class Filter vec where
    filter :: Storage vec d => (d -> Bool) -> vec d -> vec d
 
@@ -365,6 +381,23 @@ instance Filter V.Vector where
 
 instance Filter UV.Vector where
    filter f = readUnbox (UV.filter f)
+
+
+{-
+An according function in the vector library would save us from the 'error'
+and from the duplicate computation of 'f'
+(or alternatively from storing a Maybe in a vector).
+-}
+mapMaybe ::
+   (Walker vec, Filter vec, Storage vec a, Storage vec b) =>
+   (a -> Maybe b) -> vec a -> vec b
+mapMaybe f =
+   map
+      (\a ->
+         case f a of
+            Just b -> b
+            Nothing -> error "mapMaybe: filter has passed a Nothing") .
+   filter (isJust . f)
 
 
 class Lookup vec where
@@ -400,3 +433,43 @@ instance Reverse V.Vector where
 
 instance Reverse UV.Vector where
    reverse = readUnbox UV.reverse
+
+
+class Find v where
+  findIndex :: (Storage v d) => (d -> Bool) -> v d -> Maybe Int
+  
+instance Find [] where  
+  findIndex = L.findIndex
+  
+instance Find V.Vector where
+  findIndex = V.findIndex
+
+instance Find UV.Vector where
+  findIndex f xs = readUnbox (UV.findIndex f) xs
+   
+
+class Slice v where
+  slice :: (Storage v d) => Int -> Int -> v d -> v d
+
+instance Slice [] where
+  slice start num = L.take num . L.drop start
+
+instance Slice V.Vector where
+  slice = V.slice
+
+instance Slice UV.Vector where
+  slice start num = readUnbox (UV.slice start num)
+
+
+cumulate :: (Num a) => NonEmpty.T [] a -> [a] -> [a]
+cumulate storage =
+   NonEmpty.tail . NonEmptyM.scanl (+) (NonEmpty.last storage)
+
+decumulate :: (Num a) => NonEmpty.T [] a -> [a] -> [a]
+decumulate inStorage outStorage =
+   LH.mapAdjacent subtract $ NonEmpty.last inStorage : outStorage
+
+
+propCumulate :: NonEmpty.T [] Integer -> [Integer] -> Bool
+propCumulate storage incoming =
+   decumulate storage (cumulate storage incoming) == incoming

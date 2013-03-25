@@ -5,23 +5,18 @@ module Main where
 
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Sequence as Sequ
-import qualified EFA.Graph.Topology.Index as Idx
-import EFA.Signal.SequenceData
-          (PPosIdx(PPosIdx), PowerRecord(PowerRecord), ListPowerRecord,
-           Sequ, SequPwrRecord)
+
+import EFA.Signal.SequenceData (Sequ,SequData)
+import EFA.Signal.Record
+          (PPosIdx(PPosIdx), PowerRecord, Record(Record))
+
+         
+          
 import EFA.Signal.Signal (PSigL, (.++))
 import EFA.Signal.Base (Val)
-import EFA.Signal.Plot (rPlot, rPlotCore)
-import EFA.Utility (divUp)
-
-import qualified Graphics.Gnuplot.Advanced as Plot
-import qualified Graphics.Gnuplot.Terminal.PostScript as PS
-import qualified Graphics.Gnuplot.MultiPlot as MultiPlot
-import qualified Graphics.Gnuplot.Frame as Frame
+import qualified EFA.Signal.Plot as Plot
 
 import qualified Data.Map as M
-import qualified Data.Array as Array
-import Control.Functor.HT (void)
 
 
 mkSig :: Int -> [Val] -> PSigL
@@ -44,10 +39,10 @@ s31 = [0, 0.25, 0.25, 0, -0.6, -0.6]
 n :: Int
 n = 2
 
-pPosIdx :: Int -> Int -> PPosIdx
-pPosIdx x y = PPosIdx (Idx.Node x) (Idx.Node y)
+pPosIdx :: Int -> Int -> PPosIdx Int
+pPosIdx x y = PPosIdx x y
 
-pMap :: M.Map PPosIdx PSigL
+pMap :: M.Map (PPosIdx Int) PSigL
 pMap =
    M.fromListWith (error "duplicate keys") $
       (pPosIdx 0 1, mkSigEnd n s01) :
@@ -58,13 +53,13 @@ pMap =
       (pPosIdx 3 1, mkSigEnd n s31) :
       []
 
-pRec, pRec0 :: ListPowerRecord
 
-pRec = PowerRecord (S.fromList time) pMap
+pRec, pRec0 :: (PowerRecord Int [] Val)
+pRec = Record (S.fromList time) pMap
 pRec0 = Sequ.addZeroCrossings pRec
 
 sequ :: Sequ
-sequRecA, sequRecB :: SequPwrRecord
+sequRecA, sequRecB :: SequData (PowerRecord Int [] Val)
 (sequ,sequRecA) = Sequ.genSequ pRec0
 
 sequRecB = Sequ.chopAtZeroCrossingsPowerRecord pRec
@@ -78,10 +73,11 @@ main = do
 
   print sequ
 
-  rPlot ("PowerRecord", pRec)
-  rPlot ("SequA", sequRecA)
-  rPlot ("SequB", sequRecB)
+  Plot.recordIO "PowerRecord" pRec
+  Plot.sequenceIO "SequA" sequRecA
+  Plot.sequenceIO "SequB" sequRecB
 
+{-
   {-
   The result looks awful, because many parts overlap.
   -}
@@ -93,3 +89,4 @@ main = do
             map MultiPlot.partFromFrame xs ++
             repeat (MultiPlot.partFromFrame Frame.empty)) $
      rPlotCore "Sequ" sequRecB
+-}

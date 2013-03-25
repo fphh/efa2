@@ -13,7 +13,7 @@ module EFA.Signal.Signal where
 import qualified EFA.Signal.Data as D
 import qualified EFA.Signal.Vector as SV
 import qualified EFA.Signal.Base as B
-import EFA.Signal.Data (Data(Data), (:>), Nil, Zip, Apply, List, List2, NestedList, Vec2, UVec, UVec2, UVec2L, DVal)
+import EFA.Signal.Data (Data(Data), (:>), Nil, Zip, Apply, List, List2, NestedList, Vec2, UVec, UVec2, UVec2L)
 import EFA.Signal.Base (BSum(..), BProd(..), DArith0(..), Val, ZeroCrossing)
 import EFA.Signal.Typ
 import EFA.Report.Report (Table(..), TableData(..), ROpt(RAll), toDoc, autoFormat)
@@ -31,9 +31,9 @@ import qualified EFA.Report.Base as ReportBase
 import qualified EFA.Report.Report as Report
 import qualified EFA.Report.Typ as Typ
 
-import Control.Monad (liftM2)
 import Data.Monoid (Monoid, mempty, mappend, mconcat)
 import Data.Tuple.HT (mapPair)
+import Data.Ord (comparing)
 
 import Text.Printf (PrintfArg, printf)
 
@@ -248,7 +248,16 @@ infix 6 .+,.-
 
 infix 7 &*, &/
 infix 6 &+, &-
+----------------------------------------------------------
+-- New Synonyms           ] 
 
+type UTSignal v a = TC Signal (Typ UT UT UT) (Data (v :> Nil) a)
+type TSignal v a = TC Signal (Typ A T Tt) (Data (v :> Nil) a)
+
+type FFSignal v a = TC FSignal (Typ A F Tt) (Data (v :> Nil) a)
+
+type UTDistr v a = TC FDistrib (Typ UT UT UT) (Data (v :> Nil) a)
+type FDistr v a = TC FDistrib (Typ A F Tt) (Data (v :> Nil) a)
 
 ----------------------------------------------------------
 -- Convenience Type Synonyms
@@ -256,6 +265,7 @@ infix 6 &+, &-
 -- generic Type Synonyms
 
 type Scal typ a = TC Scalar typ (DVal a)
+type DVal = D.Scalar
 
 type Sc = Scal (Typ UT UT UT) Val
 
@@ -377,56 +387,6 @@ type FVal = Scal (Typ A F Tt) Val
 type DTVal = Scal (Typ D T Tt) Val
 
 
-------------------------------------
-
-type RSig = (TSigL, PSamp2LL)
-type RSamp1 = (TSamp, PSamp1L)
-type RSamp = (TSamp, PSamp)
-
-
-{-# DEPRECATED rhead, rtail "use rviewL instead" #-}
-{-# DEPRECATED rlast, rinit "use rviewR instead" #-}
-
-rhead :: RSig -> RSamp1
-rhead (t,ps) = (head t, head ps)
-
-rtail :: RSig -> RSig
-rtail (t,ps) = (tail t, tail ps)
-
-rlast :: RSig -> RSamp1
-rlast (t,ps) = (last t, last ps)
-
-rinit :: RSig -> RSig
-rinit (t,ps) = (init t, init ps)
-
-rviewL :: RSig -> Maybe (RSamp1, RSig)
-rviewL (t,ps) =
-   liftM2 zipPairs (viewL t) (viewL ps)
-
-rviewR :: RSig -> Maybe (RSig, RSamp1)
-rviewR (t,ps) =
-   liftM2 zipPairs (viewR t) (viewR ps)
-
-zipPairs :: (a,b) -> (c,d) -> ((a,c), (b,d))
-zipPairs (a,b) (c,d) = ((a,c), (b,d))
-
-rlen :: RSig -> Int
-rlen  (t,ps) = P.min (len t) (len ps)
-
-rsingleton :: RSamp1 -> RSig
-rsingleton (t,ps) = (singleton t, singleton ps)
-
-
-
--- xappend :: RSig -> RSig -> RSig
--- xappend (t1,ps1) (t2,ps2) = (t1.++t2, ps1.++ps2)
-
--- xconcat xs = L.foldl' (xappend) []
-
--- instance Monoid RSig where
---   mempty = (mempty,mempty)
---   mappend (t1,ps1) (t2,ps2) = (t1 .++ t2, ps1 .++ ps2)
-
 ----------------------------------------------------------
 -- from/to List
 
@@ -489,23 +449,26 @@ instance Const Scalar Nil where
    toConst _len x = toScalar x
 
 
-{-
-getSigVec :: TC Signal typ (Data (v1 :> Nil) d) -> v1 d
-getSigVec (TC (Data (D1 x))) = x
+unconsData :: TC s typ (Data c d) -> Apply c d
+unconsData (TC (Data x)) = x
 
-vec2Sig :: v1 d -> TC Signal typ (Data (v1 :> Nil) d)
-vec2Sig x = (TC (Data (D1 x)))
+consData :: Apply c d -> TC s typ (Data c d)
+consData x = TC (Data x)
 
-{-
-fromSigList :: [TC Signal typ (Data (v1 :> Nil) d)] -> TC Signal typ (Data (V.Vector :> v1 :> Nil) d)
-fromSigList slist = TC $ Data $ D2 $ V.fromList vecList
-            where vecList = map getSigVec slist
 
-toSigList :: TC Signal typ (Data (V.Vector :> v1 :> Nil) d) -> [TC Signal typ (Data (v1 :> Nil) d)]
-toSigList (TC (Data (D2 x))) = map vec2Sig vecList
-            where vecList = V.toList x
--}
--}
+fromSigList ::
+   (SV.Storage v (Apply c d), SV.FromList v) =>
+   [TC s typ (Data c d)] -> TC s typ (Data (v :> c) d)
+fromSigList =
+   consData . SV.fromList . fmap unconsData
+
+toSigList ::
+   (SV.Storage v (Apply c d), SV.FromList v) =>
+   TC s typ (Data (v :> c) d) -> [TC s typ (Data c d)]
+toSigList =
+   fmap consData . SV.toList . unconsData
+
+
 ----------------------------------------------------------
 -- Zip
 
@@ -516,7 +479,13 @@ zip ::
    TC (Arith s s) typ (Data c (d1,d2))
 zip x y = zipWith (,) x y
 
-----------------------------------------------------------
+unzip ::
+   (D.ZipWith c, D.Storage c d1, D.Storage c d2, D.Storage c (d1, d2)) =>
+   TC s typ (Data c (d1,d2)) ->
+   (TC s typ (Data c d1),TC s typ (Data c d2))
+unzip x = (map P.fst x, map P.snd x)
+                               
+---------------------------------------------------------
 -- SMap
 map ::
    (D.Map c, D.Storage c d1, D.Storage c d2) =>
@@ -534,14 +503,14 @@ tmap f xs = changeType $ map (fromSample . f . toSample) xs
 ----------------------------------------------------------
 -- DeltaMap
 
-deltaMap, deltaMapReverse ::
-   (SV.Singleton v2, SV.Storage v2 (Apply v1 d1), D.ZipWith (v2 :> v1),
-    D.Storage (v2 :> v1) d1, D.Storage (v2 :> v1) d2) =>
+deltaMap ::
+   (SV.Singleton v2, D.ZipWith (v2 :> v1),
+    SV.Storage v2 (Apply v1 d1), SV.Storage v2 (Apply v1 d2),
+    D.Storage v1 d1, D.Storage v1 d2) =>
    (d1 -> d1 -> d2) ->
    TC Signal typ (Data (v2 :> v1) d1) ->
    TC FSignal typ (Data (v2 :> v1) d2)
-deltaMap f x = changeSignalType $ zipWith f x (tail x)
-deltaMapReverse f x = changeSignalType $ zipWith f (tail x) x
+deltaMap f (TC x) = TC $ D.deltaMap f x
 
 {-
 ----------------------------------------------------------
@@ -549,11 +518,9 @@ deltaMapReverse f x = changeSignalType $ zipWith f (tail x) x
 
 class TDeltaMap s1 s2 c d1 d2 where
       tdeltaMap :: (TC Scalar typ1 (Data Nil d1) -> TC Scalar typ1 (Data Nil d1) -> TC Scalar typ2 (Data Nil d2)) -> TC s1 typ1 (c d1) -> TC s2 typ2 (c d2)
-      tdeltaMapReverse :: (TC Scalar typ1 (Data Nil d1) -> TC Scalar typ1 (Data Nil d1) -> TC Scalar typ2 (Data Nil d2)) -> TC s1 typ1 (c d1) -> TC s2 typ2 (c d2)
 
 instance (SDeltaMap s1 s2 c d1 d2) => TDeltaMap s1 s2 c d1 d2 where
       tdeltaMap f xs = changeType $ deltaMap g xs where g x y = fromScalar $ f (toScalar x) (toScalar y)
-      tdeltaMapReverse f xs = changeType $ deltaMapReverse g xs where g x y = fromScalar $ f (toScalar x) (toScalar y)
 
 
 ----------------------------------------------------------
@@ -614,6 +581,7 @@ instance (SFold Scalar (Data Nil) d1 d2) => TFold Scalar s2 (Data Nil) c2 d1 d2 
    tfoldl f a x = toScalar $ foldl g (fromScalar a) x where g a x = fromScalar $ f (toScalar a) (unpack x)
 -}
 
+{-  
 ----------------------------------------------------------
 -- Head & Tail
 
@@ -625,6 +593,7 @@ head, last ::
    TC s typ (Data (v1 :> v2) d) -> TC (Head s) typ (Data v2 d)
 head (TC x) = TC $ D.head x
 last (TC x) = TC $ D.last x
+-}
 
 type family Head s
 type instance Head Signal = Sample
@@ -632,19 +601,18 @@ type instance Head FSignal = FSample
 type instance Head Sample = Sample
 type instance Head TestRow = TestRow
 
-
+{-
 init, tail ::
    (TailType s, SV.Singleton v1, SV.Storage v1 (Apply v2 d)) =>
    TC s typ (Data (v1 :> v2) d) -> TC s typ (Data (v1 :> v2) d)
 init (TC x) = TC $ D.init x
 tail (TC x) = TC $ D.tail x
+--}
 
 class TailType s where
 instance TailType Signal where
 instance TailType FSignal where
 instance TailType Sample where
-
-
 
 viewL ::
    (TailType s, SV.Singleton v1, SV.Storage v1 (Apply v2 d)) =>
@@ -743,7 +711,7 @@ instance D.All c => All s c where
 -- signal sign
 
 sigSign ::
-   (Ord d, Num d, D.Map c, D.Storage c d, D.Storage c B.Sign) =>
+   (Ord d, Num d, D.Map c, D.Storage c d, D.Storage c B.Sign, Fractional d) =>
    TC s typ (Data c d) -> TC s typ (Data c B.Sign)
 sigSign x = map B.sign x
 
@@ -784,7 +752,7 @@ deltaSig ::
      DSucc delta1 delta2) =>
     TC Signal (Typ delta1 t1 p1) (Data (v2 :> v1) a) ->
     TC FSignal (Typ delta2 t1 p1) (Data (v2 :> v1) a)
-deltaSig x = changeDelta $ deltaMapReverse (..-) x
+deltaSig x = changeDelta $ deltaMap (P.flip (..-)) x
 
 avSig ::
     (z ~ Apply v1 a, SV.Zipper v2, SV.Walker v2, SV.Singleton v2, SV.Storage v2 z,
@@ -793,7 +761,7 @@ avSig ::
     TC FSignal (Typ delta1 t1 p1) (Data (v2 :> v1) a)
 avSig x =
    changeDelta $
-   deltaMapReverse (\ x1 x2 -> (x1..+x2) ../ P.asTypeOf 2 x1) x
+   deltaMap (\ x1 x2 -> (x1..+x2) ../ P.asTypeOf 2 x1) x
 
 sort ::
    (SV.Sort v, SV.Storage v d, Ord d) =>
@@ -802,18 +770,56 @@ sort ::
 sort (TC x) = TC $ D.sort x
 
 
+sortBy ::
+   (SV.Storage v d, Ord d, SV.SortBy v) =>
+   (d -> d -> P.Ordering) ->
+   TC s1 typ (Data (v :> Nil) d) ->
+   TC s1 typ (Data (v :> Nil) d)
+sortBy f (TC x) = TC $ D.sortBy f x
+
+
+sortTwo ::
+   (Ord d1,
+    SV.Storage v d1, SV.Storage v d2, SV.Storage v (d1, d2),
+    SV.SortBy v, SV.Zipper v, SV.Walker v) =>
+   (TC s t1 (Data (v :> Nil) d1), TC s t2 (Data (v :> Nil) d2)) ->
+   (TC s t1 (Data (v :> Nil) d1), TC s t2 (Data (v :> Nil) d2))
+sortTwo (TC x, TC y) =
+   mapPair (TC, TC) $ D.unzip $ D.sortBy (comparing P.fst) $ D.zip x y
+
+
+
 ----------------------------------------------------------
 -- Part & Full Integrate
 
 -- DeltaSig Signal FSignal (Data (v1 :> Nil)) A D Val =>
 -- | Partial Signal Integration
-sigPartInt ::  TSig -> PSig -> FFSig
+sigPartInt ::  (SV.Zipper v1,
+                SV.Walker v1,
+                SV.Singleton v1,
+                BSum d1, 
+                BProd d1 d1, 
+                Num d1, 
+                SV.Storage v1 d1) =>
+               TC Signal (Typ A T Tt) (Data (v1 :> Nil) d1) -> 
+               TC Signal (Typ A P Tt) (Data (v1 :> Nil) d1) -> 
+               TC FSignal (Typ A F Tt) (Data (v1 :> Nil) d1)
 sigPartInt time power = (deltaSig time) .* (avSig power)
 -- czipWith (*) dTime $ D.map (\ p1 p2 -> (p1+p2)/2) power
 
 
 -- | Partial Signal Integration
-sigFullInt ::  TSig -> PSig -> FFSig
+sigFullInt ::   (SV.FromList v1,
+                 SV.Zipper v1, 
+                 SV.Walker v1, 
+                 SV.Storage v1 d1, 
+                 SV.Singleton v1,
+                 Num d1,
+                 BSum d1,
+                 BProd d1 d1) => 
+                TC Signal (Typ A T Tt) (Data (v1 :> Nil) d1) -> 
+                TC Signal (Typ A P Tt) (Data (v1 :> Nil) d1) -> 
+                TC FSignal (Typ A F Tt) (Data (v1 :> Nil) d1)
 sigFullInt time power = fromList [fromScalar $ sigSum $ sigPartInt time power]
 
 -- csingleton (cfoldr (+) 0  $ czipWith (*) dTime $ D.map (\ p1 p2 -> (p1+p2)/2) power)
@@ -849,6 +855,9 @@ neg = map B.neg
 rec :: (DArith0 d, D.Map c, D.Storage c d) => TC s typ (Data c d) -> TC s typ (Data c d)
 rec = map B.rec
 
+
+
+{-
 -- | data ConversiSon function
 fromSigList ::
    (SV.Storage v2 (Apply v1 d), SV.FromList v2) =>
@@ -862,7 +871,7 @@ toSigList ::
    TC s typ (Data (v2 :> v1) d) -> [TC s typ (Data v1 d)]
 toSigList (TC (Data xs)) =
    SV.map (TC . Data) $ SV.toList xs
-
+-}
 
 fromCells ::
    (SV.FromList v1, SV.FromList v2, SV.Storage v2 (v1 d), SV.Storage v1 d) =>
@@ -880,16 +889,30 @@ filter ::
    (d -> Bool) -> TC s typ (Data (v :> Nil) d) -> TC s typ (Data (v :> Nil) d)
 filter f (TC x) = TC $ D.filter f x
 
+mapMaybe ::
+   (SV.Filter v, SV.Walker v, SV.Storage v a, SV.Storage v b) =>
+   (a -> Maybe b) ->
+   TC s typ (Data (v :> Nil) a) -> TC s typ (Data (v :> Nil) b)
+mapMaybe f (TC (Data x)) = TC $ Data $ SV.mapMaybe f x
+
 
 sampleAverage :: Fractional d => TC Sample typ (Data Nil d) -> TC Sample typ (Data Nil d) -> TC Sample typ (Data Nil d)
 sampleAverage (TC (Data x)) (TC (Data y)) = TC $ Data $ (x+y)/2
 
 
 sign ::
-   (D.Map c, D.Storage c d, D.Storage c B.Sign, Ord d, Num d) =>
+   (D.Map c, D.Storage c d, D.Storage c B.Sign, Ord d, Num d, Fractional d) =>
    TC s typ (Data c d) -> TC s (Typ A SZ UT) (Data c B.Sign)
 sign x = changeType $ map B.sign x
-
+{-
+sign x = changeType $ map f x
+         where f x = if x > 10^(-12) then 1
+                                     else if x < -10^(-12) then -1
+                                                           else 0
+                                                          
+sign x = changeType $ map f x
+  where f x = if B.abs x > 10^(-12) then B.sign x else B.sign 0
+-}      
 
 untuple ::
    TC Sample typ (Data Nil (d,d)) ->
@@ -928,7 +951,6 @@ makeAbsolute (TC x) = TC x
 
 reverse :: (D.Reverse c, D.Storage c d) => TC s t (Data c d) ->  TC s t (Data c d)
 reverse (TC x) = TC $ D.reverse x
-
 
 ----------------------------------------------------------
 -- Report instances
@@ -1123,3 +1145,77 @@ instance
    (TDisp t, DispApp s, FormatValue a) =>
       FV.FormatValue (TC s t a) where
    formatValue = formatValue
+
+findIndex ::  (SV.Storage v1 d1, SV.Find v1) => (d1 -> Bool) -> TC s1 t1 (Data (v1 :> Nil) d1) -> Maybe Int
+findIndex f (TC xs) = D.findIndex f xs
+        
+        
+interp1Lin :: (Eq d1, 
+               Fractional d1, 
+               Num d1, 
+               Ord d1, 
+               SV.Storage v1 d1, 
+               SV.Find v1,
+               SV.Singleton v1, 
+               SV.Lookup v1) => 
+              TC Signal t1 (Data (v1 :> Nil) d1) ->  
+              TC Signal t2 (Data (v1 :> Nil) d1) ->  
+              TC Sample t1 (Data Nil d1) -> 
+              TC Sample t2 (Data Nil d1)
+interp1Lin xSig ySig (TC (Data xVal)) = if x1 P.== x2 then TC $ Data $ (y1 P.+y2) P./2 else TC $ Data $ ((y2 P.- y1) P./(x2 P.-x1)) P.* (xVal P.- x1) P.+ y1
+                where                                                                
+                  idx = P.maybe (error "Out of Range") id $ findIndex (P.>= xVal) xSig  
+                  TC (Data (x1)) = getSample xSig $ if idx P.== 0 then idx else idx-1 -- prevent negativ index when interpolating on first element
+                  TC (Data (x2)) = getSample xSig idx
+                  TC (Data (y1)) = getSample ySig $ if idx P.== 0 then idx else idx-1 -- prevent negativ index when interpolating on first element
+                  TC (Data (y2)) = getSample ySig idx
+
+
+getSample ::  (SV.Singleton v1, 
+               Eq d1, 
+               SV.Storage v1 d1, 
+               SV.Lookup v1) => 
+              TC Signal t1 (Data (v1 :> Nil) d1) -> 
+              Int ->  
+              TC Sample t1 (Data Nil d1)
+getSample x idx = P.fst $ P.maybe (error "Error in EFA.Signal.Signal/getSample - Empty List") id $ viewL $ subSignal1D x [idx]
+
+
+-- | get a signal slice with startIndex and Number of elements
+slice ::  (SV.Slice v1, SV.Storage v1 d1) => Int -> Int -> TC s1 t1 (Data (v1 :> Nil) d1) -> TC s1 t1 (Data (v1 :> Nil) d1)
+slice start num (TC x) = TC $ D.slice start num x  
+
+
+-- | Interpolate an x-y - Lookup-Curve with a signal. Also can be used to resample a signal with a new time vector 
+interp1LinSig ::  (Eq d1, 
+                     Fractional d1, 
+                     Num d1, 
+                     Ord d1, 
+                     SV.Storage v1 d1, 
+                     SV.Find v1,
+                     SV.Singleton v1, 
+                     SV.Lookup v1, 
+                     SV.Walker v1) => 
+                   TC Signal t1 (Data (v1 :> Nil) d1) ->  
+                   TC Signal t2 (Data (v1 :> Nil) d1) ->  
+                   TC Signal t1 (Data (v1 :> Nil) d1) -> 
+                   TC Signal t2 (Data (v1 :> Nil) d1)
+interp1LinSig xSig ySig xSigLookup = tmap f xSigLookup
+  where f x = interp1Lin xSig ySig x 
+
+-- | Scale Signal by a given Number
+scale ::  (BProd d1 d1, D.Map c1, D.Storage c1 d1) => TC s1 t1 (Data c1 d1) -> d1 ->  TC s1 t1 (Data c1 d1)
+scale x fact = map (fact ..*) x 
+
+-- | Scale Signal by a given Number
+offset ::  (BSum d1, D.Map c1, D.Storage c1 d1) => TC s1 t1 (Data c1 d1) -> d1 ->  TC s1 t1 (Data c1 d1)
+offset x offs = map (offs ..+) x 
+
+
+-- | Reshape 2d to 1d
+concat ::   (SV.Storage v2 (v1 (Apply c d)),
+             SV.Storage v1 (Apply c d),
+             SV.Singleton v1, 
+             SV.FromList v2) =>             
+           TC s t (Data (v2 :> v1 :> c) d) -> TC s t (Data (v1 :> c) d)
+concat (TC x) = TC (D.concat x) 
