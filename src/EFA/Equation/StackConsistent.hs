@@ -86,7 +86,7 @@ class
    addMatch :: (a -> a -> a) -> sum a -> sum a -> sum a
    mulMatch :: (a -> a -> a) -> (a -> a -> a) -> sum a -> sum a -> sum a
    filterMask ::
-      (Ord i) => Map i Branch -> ExStack sum i a -> FilterMask sum i a
+      (Ord i) => Map i Branch -> ExStack sum i a -> FilterMask sum
    addMask ::
       (Ord i, Sum rsum) => ExStack sum i a -> ExStack rsum i a -> AddMask sum rsum i a
    addValueMask ::
@@ -397,7 +397,7 @@ data TakeAll  rest = TakeAll rest
 data TakeOne  rest = TakeOne Branch rest
 
 data
-   FilterMask sum i a =
+   FilterMask sum =
       forall mask. (sum ~ FilterFromSum mask, Filter mask) =>
          FilterMask mask
 
