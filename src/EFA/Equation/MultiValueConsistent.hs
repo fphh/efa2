@@ -63,3 +63,7 @@ instance Traversable Leaf where
 
 instance Traversable tree => Traversable (Branch tree) where
    sequenceA (Branch a0 a1) = liftA2 Branch (sequenceA a0) (sequenceA a1)
+
+
+instance Functor (Tree idx) => Functor (ExMultiValue idx i) where
+   fmap f (ExMultiValue is x) = ExMultiValue is (fmap f x)

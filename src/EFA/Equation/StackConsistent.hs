@@ -8,7 +8,7 @@ import qualified EFA.Graph.Topology.Index as Idx
 
 import qualified EFA.Equation.MultiValueConsistent as MV
 import qualified EFA.Equation.Arithmetic as Arith
-import EFA.Equation.Arithmetic ((~+), (~/))
+import EFA.Equation.Arithmetic ((~+), (~-), (~*), (~/))
 import EFA.Utility (differenceMapSet)
 
 import qualified EFA.Report.Format as Format
@@ -121,7 +121,6 @@ class
       (a -> a -> a) -> MV.ExMultiValue idx i a -> ExStack idx i a
 
 instance List Empty where
-   -- type List Value = Empty
    type Sum Empty = Value
 
    descentCore Empty (Value a) = Left a
@@ -337,10 +336,57 @@ instance (Ord i, Num a) => Num (Stack i a) where
    (+) = add (+) (const 0)
    (*) = mul (*) (+) (const 0)
 
+   abs = liftMultiValue (+) (-) abs
+   signum = liftMultiValue (+) (-) signum
+
+
+{-
+recip ::
+   (Ord i) =>
+   (a -> a) -> (a -> a -> a) ->
+   (a -> a) -> (a -> a -> a) ->
+   Stack i a -> Stack i a
+recip rec times neg plus (Stack is s) =
+   let go (Value a) = Value $ rec a
+       go (Plus a d) =
+          let ra = go a
+              rd = go (liftA2 plus a d)
+          in  Plus ra $
+                 fmap neg $ mulMatch times plus d $ mulMatch times plus ra rd
+       -- 1/(a+d) - 1/a = -d/(a*(a+d))
+   in  Stack is $ go s
+-}
+
+instance (Ord i, Fractional a) => Fractional (Stack i a) where
+   fromRational = singleton . fromRational
+   -- cf. limitations of Arith.recip
+   -- recip = recip P.recip (*) P.negate (+)
+   recip = liftMultiValue (+) (-) P.recip
+   -- x / y = fromMultiValueNum $ toMultiValueNum x / toMultiValueNum y
+
+
 instance (Ord i, Arith.Sum a) => Arith.Sum (Stack i a) where
    negate (Stack is s) = Stack is $ fmap Arith.negate s
    (~+) = add (~+) Arith.clear
 
+instance (Ord i, Arith.Product a) => Arith.Product (Stack i a) where
+   (~*) = mul (~*) (~+) Arith.clear
+   {-
+   If we are going through the MultiValue,
+   then chances are higher that divisions like @x/x@ are detected
+   which is essential for symbolic computation.
+   However, it is highly fragile.
+   I also think that the native 'recip'
+   has less problems with numeric cancelations.
+   -}
+   -- recip = recip Arith.recip (~*) Arith.negate (~+)
+   recip = liftMultiValue (~+) (~-) Arith.recip
+   -- x ~/ y = fromMultiValue $ toMultiValue x ~/ toMultiValue y
+
+instance (Ord i, Arith.Constant a) => Arith.Constant (Stack i a) where
+   zero = singleton Arith.zero
+   fromInteger = singleton . Arith.fromInteger
+   fromRational = singleton . Arith.fromRational
 
 instance (Ord i, Arith.Integrate v) => Arith.Integrate (Stack i v) where
    type Scalar (Stack i v) = Stack i (Arith.Scalar v)
@@ -511,6 +557,14 @@ toMultiValueGen :: (a -> a -> a) -> Stack i a -> MV.MultiValue i a
 toMultiValueGen plus (Stack is s) =
    case exToMultiValue plus (ExStack is s) of
       MV.ExMultiValue js tree -> MV.MultiValue js tree
+
+liftMultiValue ::
+   (a -> a -> a) ->
+   (b -> b -> b) ->
+   (a -> b) -> Stack t a -> Stack t b
+liftMultiValue plus minus f (Stack is s) =
+   wrapStack $ exFromMultiValue minus $
+   fmap f $ exToMultiValue plus (ExStack is s)
 
 
 assigns :: Stack i a -> NonEmpty.T [] ([Idx.Record Idx.Delta i], a)
