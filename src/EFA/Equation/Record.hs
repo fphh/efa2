@@ -14,7 +14,9 @@ import EFA.Report.FormatValue (FormatValue, formatValue)
 
 import qualified Data.Accessor.Basic as Accessor
 import qualified Data.NonEmpty as NonEmpty
+import qualified Data.Map as Map
 import Data.NonEmpty ((!:))
+import Data.Map (Map)
 import Control.Category ((.))
 import Control.Applicative (Applicative, pure, (<*>), liftA3)
 import Data.Traversable (Traversable, sequenceA, foldMapDefault)
@@ -172,6 +174,14 @@ instance Assigns rec => Assigns (ExtDelta rec) where
          (fmap (mapFst (Idx.ExtDelta Idx.Before)) $ assigns (extBefore r))
          (fmap (mapFst (Idx.ExtDelta Idx.Delta))  $ assigns (extDelta r))
 
+
+{- |
+Return only delta terms.
+-}
+assignDeltaMap :: Assigns rec => rec a -> Map (ToIndex rec) a
+assignDeltaMap =
+   Map.fromListWith (error "assignDeltaMap: duplicate terms") .
+   NonEmpty.tail . assigns
 
 {- |
 This method fetches only the before and delta components,
