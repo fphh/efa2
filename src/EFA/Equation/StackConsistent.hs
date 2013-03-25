@@ -83,7 +83,6 @@ class
    type List sum :: * -> *
    descentCore :: List sum i -> sum a -> Either a (i, Stack2 i a)
    fold :: (a -> a -> a) -> sum a -> a
-   addMatch :: (a -> a -> a) -> sum a -> sum a -> sum a
    mulMatch :: (a -> a -> a) -> (a -> a -> a) -> sum a -> sum a -> sum a
    filterMask ::
       (Ord i) => Map i Branch -> ExStack sum i a -> FilterMask sum
@@ -101,7 +100,6 @@ instance Sum Value where
    type List Value = NonEmpty.Empty
    descentCore NonEmpty.Empty (Value a) = Left a
    fold _ (Value a) = a
-   addMatch plus (Value x) (Value y) = Value $ plus x y
    mulMatch times _plus (Value x) (Value y) = Value (times x y)
    filterMask _cond _s = FilterMask TakeStop
    fillMask = fillValueMask
@@ -120,12 +118,10 @@ instance (Sum sum) => Sum (Plus sum) where
       Right (i, (Stack2 is a0 a1))
    fold op (Plus a d) = fold op a `op` fold op d
 
-   addMatch plus (Plus x0 x1) (Plus y0 y1) =
-      Plus (addMatch plus x0 y0) (addMatch plus x1 y1)
    mulMatch times plus (Plus x0 x1) (Plus y0 y1) =
       Plus (mulMatch times plus x0 y0)
-         (addMatch plus (mulMatch times plus x0 y1) $
-          mulMatch times plus x1 $ addMatch plus y0 y1)
+         (liftA2 plus (mulMatch times plus x0 y1) $
+          mulMatch times plus x1 $ liftA2 plus y0 y1)
 
    filterMask cond (ExStack (NonEmpty.Cons i is) (Plus a _d)) =
       case filterMask cond (ExStack is a) of
