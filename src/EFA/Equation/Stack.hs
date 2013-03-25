@@ -23,7 +23,7 @@ import Data.Map (Map)
 import Data.Traversable (sequenceA)
 import Data.Foldable (Foldable, foldMap)
 import Data.Monoid ((<>))
-import Data.Tuple.HT (mapFst)
+import Data.Tuple.HT (mapFst, swap)
 import Data.Maybe.HT (toMaybe)
 
 import qualified Prelude as P
@@ -244,7 +244,7 @@ fold op =
    in  go
 
 
-data Branch = Before | Delta deriving (Eq, Show)
+data Branch = Before | Delta deriving (Eq, Ord, Show)
 
 instance QC.Arbitrary Branch where
    arbitrary = QC.elements [Before, Delta]
@@ -362,14 +362,28 @@ toMultiValueGen plus (Stack indices tree) =
    in  MV.MultiValue indices $ go tree
 
 
-assigns :: Stack i a -> NonEmpty.T [] ([Idx.Record Idx.Delta i], a)
+assignsIndexList ::
+   (Ord i) => Stack i a -> NonEmpty.T [] ([Idx.Record Idx.Delta i], a)
+assignsIndexList =
+   let flatten :: Map i Branch -> [Idx.Record Idx.Delta i]
+       flatten =
+          map (uncurry Idx.Record . swap) . Map.toList .
+          fmap (\b -> case b of Before -> Idx.Before; Delta -> Idx.Delta)
+   in  fmap (mapFst flatten) . assigns
+
+assignDeltaMap :: (Ord i) => Stack i a -> Map (Map i Branch) a
+assignDeltaMap =
+   Map.fromListWith (error "assignDeltaMap: duplicate indices") .
+   NonEmpty.tail . assigns
+
+assigns :: (Ord i) => Stack i a -> NonEmpty.T [] (Map i Branch, a)
 assigns s =
    case descent s of
-      Left a -> NonEmpty.singleton ([], a)
+      Left a -> NonEmpty.singleton (Map.empty, a)
       Right (i, (a0,a1)) ->
          NonEmpty.append
-            (fmap (mapFst (Idx.before i :)) $ assigns a0)
-            (fmap (mapFst (Idx.delta  i :)) $ assigns a1)
+            (fmap (mapFst (Map.insert i Before)) $ assigns a0)
+            (fmap (mapFst (Map.insert i Delta )) $ assigns a1)
 
 
 instance

@@ -155,9 +155,7 @@ mainNumeric = do
          case Record.unAbsolute d of
             Result.Undetermined -> error "undetermined E_2_1"
             Result.Determined x -> do
-               let assigns =
-                      NonEmpty.tail $
-                      Stack.assigns x
+               let assigns = NonEmpty.tail $ Stack.assignsIndexList x
                Fold.forM_ assigns $ \(term,val) -> do
                   putStrLn $ Format.unUnicode $
                      Format.assign (formatValue term) (formatValue val)
