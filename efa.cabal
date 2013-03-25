@@ -102,6 +102,7 @@ Library
     EFA.Equation.Arithmetic
     EFA.Equation.MultiValue
     EFA.Equation.Stack
+    EFA.Equation.StackConsistent
     EFA.Example.Utility
     EFA.Example.Absolute
     EFA.Example.NestedDelta
