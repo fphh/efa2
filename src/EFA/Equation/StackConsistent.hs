@@ -279,6 +279,31 @@ add plus clear (Stack is x0) (Stack js y0) =
           FillMask ks lmask rmask ->
              Stack ks (liftA2 plus (fill clear lmask x0) (fill clear rmask y0))
 
+{-
+A more efficient solution would not need 'clear'.
+However, I am afraid it could not use the comfortable 'Fill' class.
+-}
+mul ::
+   (Ord i) =>
+   (a -> a -> a) -> (a -> a -> a) -> (a -> a) ->
+   Stack i a -> Stack i a -> Stack i a
+mul times plus clear (Stack is x0) (Stack js y0) =
+   let x = ExStack is x0
+       y = ExStack js y0
+   in  case fillMask x y of
+          FillMask ks lmask rmask ->
+             Stack ks (mulMatch times plus (fill clear lmask x0) (fill clear rmask y0))
+
+instance (Ord i, Num a) => Num (Stack i a) where
+   fromInteger = singleton . fromInteger
+   negate (Stack is s) = Stack is $ fmap negate s
+   (+) = add (+) (const 0)
+   (*) = mul (*) (+) (const 0)
+
+instance (Ord i, Arith.Sum a) => Arith.Sum (Stack i a) where
+   negate (Stack is s) = Stack is $ fmap Arith.negate s
+   (~+) = add (~+) Arith.clear
+
 
 instance (Ord i, Arith.Integrate v) => Arith.Integrate (Stack i v) where
    type Scalar (Stack i v) = Stack i (Arith.Scalar v)
