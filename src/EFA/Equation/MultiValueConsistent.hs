@@ -4,6 +4,7 @@
 module EFA.Equation.MultiValueConsistent where
 
 import qualified Data.NonEmpty as NonEmpty
+import qualified Data.Empty as Empty
 import Control.Applicative (Applicative, pure, (<*>), liftA2)
 import Data.Traversable (Traversable, sequenceA)
 import Data.Foldable (Foldable, foldMap)
@@ -30,8 +31,8 @@ class
       List idx where
    type Tree idx :: * -> *
 
-instance List NonEmpty.Empty where
-   type Tree NonEmpty.Empty = Leaf
+instance List Empty.T where
+   type Tree Empty.T = Leaf
 
 instance List idx => List (NonEmpty.T idx) where
    type Tree (NonEmpty.T idx) = Branch (Tree idx)

@@ -18,6 +18,7 @@ import qualified EFA.Graph.Topology.Index as Idx
 import EFA.Utility (Pointed)
 
 import qualified Data.NonEmpty as NonEmpty
+import qualified Data.Empty as Empty
 import Control.Applicative (Applicative, pure)
 
 
@@ -130,8 +131,8 @@ data
          getParameterRecord :: g (OuterExtrusion f a)
       }
 
-parameterStart :: ParameterRecord NonEmpty.Empty Record.Absolute a
-parameterStart = ParameterRecord extrudeStart NonEmpty.Empty
+parameterStart :: ParameterRecord Empty.T Record.Absolute a
+parameterStart = ParameterRecord extrudeStart Empty.Cons
 
 (&&>) ::
    (Functor g, Arith.Sum a) =>

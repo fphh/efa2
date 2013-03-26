@@ -40,7 +40,7 @@ Library
     pretty ==1.1.*,
     random ==1.0.*,
     Stream >=0.4.6 && <0.5,
-    non-empty >=0.0.2 && <0.1,
+    non-empty >=0.1 && <0.2,
     containers >=0.4 && <0.6,
     data-accessor-transformers >=0.2.1 && <0.3,
     data-accessor >=0.2.2 && <0.3,

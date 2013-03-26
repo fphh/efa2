@@ -20,10 +20,11 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.NonEmpty.Class as NonEmptyC
 import qualified Data.NonEmpty as NonEmpty
+import qualified Data.Empty as Empty
 import qualified Data.List.HT as ListHT
 import qualified Data.Foldable as Fold
 import Control.Applicative (Applicative, pure, liftA2, (<*>))
-import Data.NonEmpty (Empty(Empty), (!:))
+import Data.NonEmpty ((!:))
 import Data.Map (Map)
 import Data.Traversable (sequenceA)
 import Data.Foldable (Foldable, foldMap)
@@ -107,7 +108,7 @@ class
       ExStack idx i a -> ExStack ridx i a -> FillMask idx ridx i
    fillValueMask ::
       (Ord i) =>
-      ExStack Empty i a -> ExStack idx i a -> FillMask Empty idx i
+      ExStack Empty.T i a -> ExStack idx i a -> FillMask Empty.T idx i
    fillPlusMask ::
       (Ord i, List lidx) =>
       ExStack (NonEmpty.T lidx) i a -> ExStack idx i a -> FillMask (NonEmpty.T lidx) idx i
@@ -120,13 +121,13 @@ class
    exFromMultiValue ::
       (a -> a -> a) -> MV.ExMultiValue idx i a -> ExStack idx i a
 
-instance List Empty where
-   type Sum Empty = Value
+instance List Empty.T where
+   type Sum Empty.T = Value
 
-   descentCore Empty (Value a) = Left a
+   descentCore Empty.Cons (Value a) = Left a
    filterMask _cond _s = FilterMask TakeStop
    fillMask = fillValueMask
-   fillValueMask _l _r = FillMask Empty FillStop FillStop
+   fillValueMask _l _r = FillMask Empty.Cons FillStop FillStop
    fillPlusMask (ExStack (NonEmpty.Cons i is) (Plus a0 _a1)) r =
       case fillMask (ExStack is a0) r of
          FillMask js lmask rmask ->
@@ -135,10 +136,10 @@ instance List Empty where
    shrinkValues (ExStack empty (Value x)) =
       map (ExStack empty . Value) $ QC.shrink x
 
-   exToMultiValue _plus (ExStack Empty (Value x)) =
-      MV.ExMultiValue Empty (MV.Leaf x)
-   exFromMultiValue _minus (MV.ExMultiValue Empty (MV.Leaf x)) =
-      ExStack Empty (Value x)
+   exToMultiValue _plus (ExStack Empty.Cons (Value x)) =
+      MV.ExMultiValue Empty.Cons (MV.Leaf x)
+   exFromMultiValue _minus (MV.ExMultiValue Empty.Cons (MV.Leaf x)) =
+      ExStack Empty.Cons (Value x)
 
 instance (List idx) => List (NonEmpty.T idx) where
    type Sum (NonEmpty.T idx) = Plus (Sum idx)
@@ -287,8 +288,8 @@ class
       Sum (FillToIndex mask) a
 
 instance Fill FillStop where
-   type FillFromIndex FillStop = Empty
-   type FillToIndex FillStop = Empty
+   type FillFromIndex FillStop = Empty.T
+   type FillToIndex FillStop = Empty.T
    fill _clear FillStop (Value x) = Value x
 
 instance Fill mask => Fill (FillTake mask) where
@@ -394,11 +395,11 @@ instance (Ord i, Arith.Integrate v) => Arith.Integrate (Stack i v) where
 
 
 singleton :: a -> Stack i a
-singleton = Stack Empty . Value
+singleton = Stack Empty.Cons . Value
 
 deltaPair :: i -> a -> a -> Stack i a
 deltaPair i a d =
-   Stack (i!:Empty) $ Plus (Value a) (Value d)
+   Stack (i!:Empty.Cons) $ Plus (Value a) (Value d)
 
 exPlus ::
    i ->
@@ -512,8 +513,8 @@ class (List (FilterToIndex mask), List (FilterFromIndex mask)) => Filter mask wh
       ExStack (FilterToIndex mask) i a
 
 instance Filter TakeStop where
-   type FilterFromIndex TakeStop = Empty
-   type FilterToIndex TakeStop = Empty
+   type FilterFromIndex TakeStop = Empty.T
+   type FilterToIndex TakeStop = Empty.T
    exFilter TakeStop (ExStack is s) = (ExStack is s)
 
 instance Filter mask => Filter (TakeAll mask) where
