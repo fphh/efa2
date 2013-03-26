@@ -44,6 +44,7 @@ import qualified Data.NonEmpty as NonEmpty
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (formatValue, FormatValue)
 import Data.Tuple.HT (mapFst)
+import EFA.Example.AssignMap(filterDeltaVars)
 
 --import Debug.Trace
 
@@ -62,6 +63,17 @@ sigsWithSpeed recList (ti, idList) =  do
                  O.extract idList .
                  O.leadSignalsMax (Record.RangeFrom idList, Record.ToModify [Record.SigId "speedsensor1.v"]) .
                  O.pointSize 0.1) (HPlot.RecList recList)
+
+operation :: (Fractional a, Ord id, Show (v a), Show id, V.Walker v,
+              V.Storage v a, V.FromList v, TDisp t2, Tuple.C a, Atom.C a) =>
+              [Char]
+              -> [([Char], Record s t1 t2 id v a)] -> ([Char], (id, id)) -> IO ()
+
+operation ti rList  (plotTitle, (idx,idy)) = mapM_ f rList 
+  where f (recTitle, rec) = do 
+          let x = getSig rec idx
+              y = getSig rec idy
+          Plot.xyIO (ti ++ "_" ++ plotTitle ++ "_" ++ recTitle) x y
 
 
 
@@ -93,6 +105,6 @@ stack ti energyIndex (recName,env) = do
               Format.assign (formatValue term) (formatValue val)
 
           Plot.stackIO ("Record " ++ recName ++ "-" ++ ti)
-              (Idx.delta $ Var.index energyIndex) $ assignsFilt
+              (Idx.delta $ Var.index energyIndex) $ filterDeltaVars assignsFilt
 
 

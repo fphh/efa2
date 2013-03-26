@@ -151,6 +151,19 @@ main = do
 ---------------------------------------------------------------------------------------
 -- * Plot Operation Points
 
+  let xyList = [
+                  ("Engine", Signals.xyEngine),
+                  ("Generator", Signals.xyGenerator),
+                  ("Motor", Signals.xyMotor)
+                 ]
+
+  mapM_ (Plots.operation "Operation Points -" (zip datasetsX allSignalsX)) xyList
+
+
+---------------------------------------------------------------------------------------
+-- * Plot Efficiency Curves and Distributions
+
+
 
 
 ---------------------------------------------------------------------------------------
