@@ -1,5 +1,6 @@
 module EFA.Graph.Draw (
   sequFlowGraph,
+  sequFlowGraphCumulated,
   sequFlowGraphWithEnv,
   sequFlowGraphAbsWithEnv, envAbs,
   sequFlowGraphDeltaWithEnv, envDelta,
@@ -70,14 +71,28 @@ import Control.Monad (void)
 -- import System.FilePath
 
 
-nodeColour :: Attribute
-nodeColour = FillColor [RGB 230 230 240]
-
 structureEdgeColour :: Attribute
 structureEdgeColour = Color [RGB 0 0 200]
 
 storageEdgeColour :: Attribute
 storageEdgeColour = Color [RGB 200 0 0]
+
+shape :: NodeType -> Shape
+shape Topo.Crossing = PlainText
+shape Topo.Source = DiamondShape
+shape Topo.AlwaysSource = MDiamond
+shape Topo.Sink = BoxShape
+shape Topo.AlwaysSink = MSquare
+shape Topo.Storage = Egg
+shape _ = BoxShape
+
+color :: NodeType -> Attribute
+color Topo.Crossing = FillColor [RGB 150 200 240]
+color _ = FillColor [RGB 230 230 240]
+
+mkNodeAttrs :: NodeType -> Attribute -> [Attribute]
+mkNodeAttrs nodeType label =
+  [ label, Style [SItem Filled []], Shape (shape nodeType), color nodeType ]
 
 
 dotFromSequFlowGraph ::
@@ -139,17 +154,9 @@ dotFromSecNode ::
   (Node.C node) =>
   (Topo.LNode node -> Unicode) -> Topo.LNode node -> DotNode T.Text
 dotFromSecNode nshow n@(x, nodeType) =
-   DotNode (dotIdentFromBndNode x)
-      [ displabel, nodeColour, 
-        Style [SItem Filled []], Shape (shape nodeType), color nodeType ]
+  DotNode (dotIdentFromBndNode x) (mkNodeAttrs nodeType displabel)
   where displabel = Label $ StrLabel $ T.pack $ unUnicode $ nshow n
-        shape Topo.Crossing = PlainText
-        shape Topo.Source = DiamondShape
-        shape Topo.Sink = BoxShape
-        shape Topo.Storage = Ellipse
-        shape _ = BoxShape
-        color Topo.Crossing = FillColor [RGB 150 200 240]
-        color _ = nodeColour
+
 
 dotFromSecEdge ::
   (Node.C node) =>
@@ -213,7 +220,7 @@ sequFlowGraph ::
   String ->
   SequFlowGraph node -> IO ()
 sequFlowGraph ti topo =
-   printGraph ti topo Nothing nshow eshow
+  printGraph ti topo Nothing nshow eshow
   where nshow (Idx.BndNode _ n, l) =
            Unicode $ unUnicode (Node.display n) ++ " - " ++ showType l
         eshow _ = []
@@ -240,11 +247,9 @@ dotFromTopology edgeLabels g =
 dotFromTopoNode ::
   (Node.C node) =>
   Gr.LNode node Topo.NodeType -> DotNode T.Text
-dotFromTopoNode (x, typ) =
-   DotNode (dotIdentFromNode x)
-      [Label $ StrLabel $ T.pack $
-          unUnicode (Node.display x) ++ "\n" ++ showType typ,
-       nodeColour, Style [SItem Filled []], Shape BoxShape]
+dotFromTopoNode (x, nodeType) =
+  DotNode (dotIdentFromNode x) (mkNodeAttrs nodeType displabel)
+  where displabel = Label $ StrLabel $ T.pack $ unUnicode (Node.display x)
 
 dotFromTopoEdge ::
   (Node.C node) =>
@@ -287,11 +292,11 @@ dotFromFlowTopology ident topo = DotSG True (Just (Int ident)) stmts
         ns = map mkNode (labNodes topo)
         idf x = show ident ++ "_" ++ Node.dotId x
         labelf x = Label $ StrLabel $ T.pack (show x)
-        mkNode x@(n, _) = DotNode (idf n) (nattrs x)
-        nattrs x = [labNodef x, nodeColour, Style [SItem Filled []], Shape BoxShape ]
+        mkNode x@(n, t) =
+          DotNode (idf n) (mkNodeAttrs t (labNodef x))
         labNodef (n, l) =
-           Label $ StrLabel $ T.pack $
-              unUnicode (Node.display n) ++ " - " ++ showType l
+          Label $ StrLabel $ T.pack $
+                  unUnicode (Node.display n) ++ " - " ++ showType l
         es = map mkEdge (labEdges topo)
         mkEdge el =
            case orientEdge el of
@@ -451,3 +456,23 @@ envDelta ::
    (FormatValue a, FormatValue v, Format output, Node.C node) =>
    Env.Complete node (Record.Delta a) (Record.Delta v) -> Env node output
 envDelta = envGen Idx.Delta
+
+
+sequFlowGraphCumulated ::
+  (Node.C node, FormatValue v, FormatValue a) =>
+  String ->
+  SequFlowGraph node ->
+  Env.Complete node (Record.Absolute a) (Record.Absolute v) -> IO ()
+sequFlowGraphCumulated ti g env =
+  printGraph ti g (Just (formatTime aenv)) (formatNode aenv) (eshow . fst)
+  where aenv = envAbs env
+        eshow se =
+           case Topo.edgeType se of
+              StructureEdge e ->
+                 formatEnergy aenv e :
+                 --formatX env e :
+                 --formatEta env e :
+                 --formatX env (Idx.flip e) :
+                 formatEnergy aenv (Idx.flip e) :
+                 []
+              _ -> error "Intersection edge in cumulated diagramm"

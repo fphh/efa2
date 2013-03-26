@@ -11,6 +11,7 @@ module EFA.Graph.Topology (
        SequFlowGraph,
        DirSequFlowGraph,
        pathExists,
+       fromTopology,
        isStorage,
        isActive,
        isInactive,
@@ -170,6 +171,23 @@ pathExists a b topo = any f s
         q (_, Dir) = True
         q _ = False
         f x = pathExists x b (Gr.delNode topo a)
+
+{-
+-- should we do it with a multiparamtypeclass?
+class FromTopology t s where
+      fromTopology :: t a -> s a
+
+instance FromTopology Topology SequFlowGraph where
+         fromTopology = Gr.ixmap nf . Gr.emap ef
+           where ef _ = Dir
+                 nf = Idx.BndNode (Idx.AfterSection (Idx.Section 0))
+-}
+
+
+fromTopology :: (Ord a) => Topology a -> SequFlowGraph a
+fromTopology = Gr.ixmap nf . Gr.emap ef
+  where ef = const Dir
+        nf = Idx.BndNode (Idx.AfterSection (Idx.Section 0))
 
 
 type InOut n el = ([Gr.LNode n el], [Gr.LNode n el])
