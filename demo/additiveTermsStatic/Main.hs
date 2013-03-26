@@ -2,6 +2,7 @@
 module Main where
 
 import qualified EFA.Example.NestedDelta as NestedDelta
+import qualified EFA.Example.AssignMap as AssignMap
 import qualified EFA.Example.Utility as Utility
 import EFA.Example.NestedDelta
           (ParameterRecord,
@@ -41,7 +42,6 @@ import qualified Data.Map as Map
 import qualified Data.NonEmpty as NonEmpty
 import Data.NonEmpty ((!:))
 import Data.Monoid (mempty, (<>))
-import Data.Tuple.HT (mapFst)
 
 
 
@@ -213,15 +213,12 @@ mainNumeric = do
       Nothing -> error "undefined E_2_1"
       Just x -> do
          let assigns =
-                map (mapFst termFromIndex) $
-                NonEmpty.tail $ Record.assigns x
-         Fold.forM_ assigns $ \(term,val) ->
-            putStrLn $ Format.unUnicode $
-               Format.assign (formatValue term) (formatValue val)
+                Map.mapKeys termFromIndex $
+                Record.assignDeltaMap x
+         AssignMap.print assigns
          Plot.stackIO "Decomposition of total output energy"
             (Idx.delta $ Var.index eout)
-            (map (\(i,a) ->
-                    (i, Utility.checkDetermined (Format.unUnicode $ formatValue i) a)) assigns)
+            (AssignMap.ignoreUndetermined assigns)
 
 
 main :: IO ()

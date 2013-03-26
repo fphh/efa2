@@ -107,6 +107,7 @@ Library
     EFA.Example.Utility
     EFA.Example.Absolute
     EFA.Example.NestedDelta
+    EFA.Example.AssignMap
 
 
 -- sollte man auf Cabal-Test umstellen,

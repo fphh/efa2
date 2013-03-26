@@ -1,8 +1,6 @@
 {-# LANGUAGE TypeFamilies #-}
 module EFA.Equation.Stack where
 
-import qualified EFA.Graph.Topology.Index as Idx
-
 import qualified EFA.Equation.MultiValue as MV
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic ((~+), (~-), (~*), (~/))
@@ -23,7 +21,7 @@ import Data.Map (Map)
 import Data.Traversable (sequenceA)
 import Data.Foldable (Foldable, foldMap)
 import Data.Monoid ((<>))
-import Data.Tuple.HT (mapFst, swap)
+import Data.Tuple.HT (mapFst)
 import Data.Maybe.HT (toMaybe)
 
 import qualified Prelude as P
@@ -360,15 +358,6 @@ toMultiValueGen plus (Stack indices tree) =
    fold (\a0 a1 -> MV.Branch a0 (liftA2 plus a1 a0)) $
    fmap MV.Leaf tree
 
-
-assignsIndexList ::
-   (Ord i) => Stack i a -> NonEmpty.T [] ([Idx.Record Idx.Delta i], a)
-assignsIndexList =
-   let flatten :: Map i Branch -> [Idx.Record Idx.Delta i]
-       flatten =
-          map (uncurry Idx.Record . swap) . Map.toList .
-          fmap (\b -> case b of Before -> Idx.Before; Delta -> Idx.Delta)
-   in  fmap (mapFst flatten) . assigns
 
 assignDeltaMap :: (Ord i) => Stack i a -> Map (Map i Branch) a
 assignDeltaMap =
