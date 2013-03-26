@@ -356,10 +356,9 @@ fromMultiValueGen minus (MV.MultiValue indices tree) =
 
 toMultiValueGen :: (a -> a -> a) -> Stack i a -> MV.MultiValue i a
 toMultiValueGen plus (Stack indices tree) =
-   let go (Value a) = MV.Leaf a
-       go (Plus a0 a1) =
-          MV.Branch (go a0) (liftA2 plus (go a1) (go a0))
-   in  MV.MultiValue indices $ go tree
+   MV.MultiValue indices $
+   fold (\a0 a1 -> MV.Branch a0 (liftA2 plus a1 a0)) $
+   fmap MV.Leaf tree
 
 
 assignsIndexList ::
