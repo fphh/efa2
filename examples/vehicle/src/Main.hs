@@ -18,8 +18,6 @@ import EFA.Graph.Topology(isStructureEdge)
 import EFA.Graph(lefilter)
 import EFA.Utility.Async (concurrentlyMany_)
 
-
-
 ----------------------------------
 -- * Example Specific Imports
 
@@ -56,6 +54,7 @@ path = "../../../../../data/examples/vehicle/"
 datasetsX:: [FilePath]
 datasetsX = [path ++ "Vehicle_res.plt",
              path ++ "Vehicle_mass1050kg_res.plt"]
+
 
 deltasets :: [String]  ->   [String]
 deltasets xs = zipWith (\x y -> y ++ "_vs_" ++ x) xs (tail xs)
@@ -128,13 +127,14 @@ main = do
 
 ---------------------------------------------------------------------------------------
 -- * Plot Stacks
-
+ 
   mapM_ (Plots.stack  "Energy Flow Change at Tank in Section 4"
-         (Idx.Energy (Idx.StructureEdge (Idx.Section 4) System.Tank System.ConBattery)))
+         (Idx.Energy (Idx.StructureEdge (Idx.Section 4) System.Tank System.ConBattery))) 
     (zip (deltasets datasetsX) differenceExtEnvs)
 
 ---------------------------------------------------------------------------------------
 -- * Plot Time Signals
+
 
   let plotList = [
                   ("Vehicle", Signals.vehicle),
@@ -150,8 +150,6 @@ main = do
 
 ---------------------------------------------------------------------------------------
 -- * Plot Operation Points
-
-
 
 
 

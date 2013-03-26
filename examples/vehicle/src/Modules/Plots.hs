@@ -42,7 +42,6 @@ import qualified Data.Map as M
 --import EFA.Utility(checkedLookup)
 import qualified Data.NonEmpty as NonEmpty
 import qualified EFA.Report.Format as Format
-
 import EFA.Report.FormatValue (formatValue, FormatValue)
 import Data.Tuple.HT (mapFst)
 
@@ -56,6 +55,7 @@ sigsWithSpeed ::(Fractional a, Ord a, Show (v a), V.Walker v, V.Storage v a,
                                  V.Singleton v, V.FromList v, TDisp t2, TDisp t1, Atom.C a,
                                  Tuple.C a) =>
                                 [Record s t1 t2 SigId v a] -> (String, [SigId]) -> IO ()
+
 
 sigsWithSpeed recList (ti, idList) =  do
   HPlot.record2 (O.title ti .
@@ -96,4 +96,3 @@ stack ti energyIndex (recName,env) = do
               (Idx.delta $ Var.index energyIndex) $ assignsFilt
 
 
--- operation ti rec 
