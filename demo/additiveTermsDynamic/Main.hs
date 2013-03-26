@@ -1,6 +1,7 @@
 {-# LANGUAGE TypeFamilies #-}
 module Main where
 
+import qualified EFA.Example.AssignMap as AssignMap
 import qualified EFA.Example.Utility as Utility
 import EFA.Example.Utility
           (edgeVar, makeEdges, constructSeqTopo)
@@ -31,10 +32,7 @@ import qualified EFA.Signal.Plot as Plot
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
 
-
-import qualified Data.Foldable as Fold
 import qualified Data.Map as Map
-import qualified Data.NonEmpty as NonEmpty
 import Data.Monoid (mempty, (<>))
 
 import System.IO
@@ -156,11 +154,9 @@ mainNumeric = do
             Result.Undetermined -> error "undetermined E_2_1"
             Result.Determined x -> do
                let assigns =
-                      NonEmpty.tail $
-                      Stack.assigns x
-               Fold.forM_ assigns $ \(term,val) -> do
-                  putStrLn $ Format.unUnicode $
-                     Format.assign (formatValue term) (formatValue val)
+                      Map.mapKeys AssignMap.indexSet $
+                      Stack.assignDeltaMap x
+               AssignMap.print assigns
                Plot.stackIO "Decomposition of total output energy"
                   (Idx.delta $ Var.index eout) assigns
 
