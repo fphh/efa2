@@ -7,7 +7,10 @@ import qualified EFA.Graph.Topology.Index as Idx
 import EFA.Equation.Result (Result)
 import EFA.Report.FormatValue (FormatValue, formatValue)
 import EFA.Report.Format (Format)
+import EFA.Utility (intersectionMapSet)
 
+import qualified Data.Foldable as Fold
+import qualified Data.Set as Set
 import qualified Data.Map as Map
 import Data.Map (Map)
 
@@ -50,3 +53,24 @@ instance FormatValue i => FormatValue (IndexSet i) where
                   Stack.Delta -> Idx.Delta) $
             formatValue i) $
       Map.toList x
+
+
+{- |
+Keep only values above a certain threshold.
+-}
+threshold :: (Ord i, Ord a, Num a) => a -> Map i a -> Map i a
+threshold x = Map.filter ((>=x) . abs)
+
+{- |
+@filterDeltaVars vars@ keeps only the terms
+where every @var@ from @vars@ is a delta var.
+-}
+filterDeltaVars ::
+   (Ord i) =>
+   [i] ->
+   Map (Map i Stack.Branch) a ->
+   Map (Map i Stack.Branch) a
+filterDeltaVars is =
+   let set = Set.fromList is
+   in  Map.filterWithKey
+          (\k _ -> Fold.all (Stack.Delta ==) $ intersectionMapSet k set)
