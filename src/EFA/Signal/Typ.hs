@@ -39,13 +39,13 @@ data P' -- Power Derivate dP/dt
 
 
 -- Flow Variable (Edges)
--- data PF -- Power 
+-- data PF -- Power
 data F -- Energy Flow is F = DE ?
 data N -- Flow Efficiency
 data X -- Flow Divider
 data Y -- Flow Merger
 
--- Flow Variables (Knodes) 
+-- Flow Variables (Knodes)
 data FI -- Sum Flow in
 data FO -- Sum Flow out
 
@@ -72,11 +72,11 @@ data D -- Delta
 data DD -- Delta Delta
 data DDD -- Delta Delta Delta
 
-class DSucc d1 d2 | d1 -> d2 
+class DSucc d1 d2 | d1 -> d2
 instance DSucc A D
 instance DSucc D DD
 instance DSucc DD DDD
-  
+
 
 --data Neutral
 --data Zero
@@ -89,23 +89,23 @@ instance DSucc DD DDD
 -------------------------------------
 -- | Partial Flag
 
-data Tt -- Total 
+data Tt -- Total
 data Pt -- Partial
 
 
 
 {-
-class Succ d1 d2 | d1 -> d2, d2 -> d1 
+class Succ d1 d2 | d1 -> d2, d2 -> d1
 instance Succ A D
 instance Succ D DD
 instance Succ DD DDD
 
-class Prec d1 d2 
+class Prec d1 d2
 instance Succ d1 d2 => Prec d2 d1
--}  
+-}
 -------------------------------------
 --  |Type Arithmetic
--- Typ aendert sich 
+-- Typ aendert sich
 -- delta und partial spielen hin und wieder eine Rolle
 
 class TProd t1 t2 t3 | t1 t2 -> t3, t2 t3 -> t1, t1 t3 -> t2
@@ -123,11 +123,11 @@ instance  TProd (Typ D T p) (Typ A P p) (Typ A F p)
 instance TProd (Typ A P p) (Typ D T p) (Typ A F p)
 
 -- F=N*F -- Flow and Flow Efficiency
-instance TProd (Typ d F p) (Typ d N p) (Typ d F p) 
-instance TProd (Typ d N p) (Typ d F p) (Typ d F p) 
+instance TProd (Typ d F p) (Typ d N p) (Typ d F p)
+instance TProd (Typ d N p) (Typ d F p) (Typ d F p)
 
-instance TProd (Typ d P p) (Typ d N p) (Typ d P p) 
-instance TProd (Typ d N p) (Typ d P p) (Typ d P p) 
+instance TProd (Typ d P p) (Typ d N p) (Typ d P p)
+instance TProd (Typ d N p) (Typ d P p) (Typ d P p)
 
 -- E=M*E -- Energy mix and Mix Part
 instance TProd (Typ d E Tt) (Typ d M Tt) (Typ d E Pt)

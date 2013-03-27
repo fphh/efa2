@@ -4,7 +4,7 @@
 
 module Main where
 
-import qualified Data.Map as M 
+import qualified Data.Map as M
 
 import qualified EFA.Signal.Signal as S
 import EFA.Signal.Sequence
@@ -35,7 +35,7 @@ p = S.fromList [2, 2, 2, -2, -2]
 
 pmap :: M.Map (PPosIdx Node.Int) (S.TC s t (Data ([] :> Nil) Double))
 pmap = M.fromListWith
-         (error "duplicate keys") 
+         (error "duplicate keys")
          [(PPosIdx node0 node1,  p)]
 
 
@@ -46,15 +46,15 @@ pmapList :: [M.Map (PPosIdx Node.Int) (S.TC s t (Data ([] :> Nil) Double))]
 pmapList = [pmap]
 
 recList :: [PowerRecord Node.Int [] Double]
-recList = map (Record time) pmapList  
+recList = map (Record time) pmapList
 
 list ::
   [(Int, (String, (PowerRecord Node.Int [] Double, (Sequ, SequData (PowerRecord Node.Int [] Double)))))]
 list = idxList $
-  zip titleList 
+  zip titleList
       (zip recList (map  (genSequ . addZeroCrossings) recList))
 
--- f :: 
+-- f ::
 --   (Num a, Show a2, Show a1, Show a) =>
 --   (a, ([Char], (SequData (PowerRecord Node.Int [] Double), (a1, a2)))) -> IO ()
 
@@ -65,12 +65,12 @@ f :: (Num a, Ord nty, Show a2, Show a1, Show nty, Show a) =>
 f (idx, (title, (pRec, (sq, sqRec)))) = do
   putStrLn ""
   putStrLn $ "Test " ++ show (idx + 1) ++ ": " ++ title
-  putStrLn ("XList: \n" ++ (show pRec))   
-  putStrLn ("XList: \n" ++ (show (addZeroCrossings pRec)))   
-  putStrLn ("Sequence: " ++  show sq) 
-  putStrLn ("SequRec: " ++  show sqRec) 
-  
+  putStrLn ("XList: \n" ++ (show pRec))
+  putStrLn ("XList: \n" ++ (show (addZeroCrossings pRec)))
+  putStrLn ("Sequence: " ++  show sq)
+  putStrLn ("SequRec: " ++  show sqRec)
+
 main :: IO ()
 main = mapM_ f list
-  
-    
+
+

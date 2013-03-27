@@ -26,7 +26,7 @@ import EFA.Signal.Signal
           (TC(TC),  TSigL, TZeroSamp1L, TZeroSamp, TSamp, PSamp, PSigL,
            DTSamp, PSamp2LL, Samp, Samp1L,
            (.+), (.-), (.*), (./), (.++),
-            sampleAverage, 
+            sampleAverage,
            changeType, fromScalar, toSample, sigSum, toSigList, fromSigList)
 
 import EFA.Signal.Typ (Typ, STy, Tt, T, P, A)
@@ -123,28 +123,28 @@ genSequFlow :: (Num a,
 genSequFlow sqPRec = fmap Record.partIntegrate sqPRec
 
 -- | Filter Sequence Flow
--- | Used to filter Modelica signals 
+-- | Used to filter Modelica signals
 -- | State changes in solver create several DataPoints with exact the same time
--- | The resulting sections which have zero time duration are removed 
+-- | The resulting sections which have zero time duration are removed
 
 
 removeZeroTimeSections :: (Fractional a, Ord a, Eq a, V.Storage v a, V.Singleton v) => (Sequ,SequData (PowerRecord nty v a)) -> (Sequ,SequData (PowerRecord nty v a))
-removeZeroTimeSections (xs, ys)  = filterSequWithSequData f (xs, ys) 
+removeZeroTimeSections (xs, ys)  = filterSequWithSequData f (xs, ys)
    where f (_,Record time _) = x /= y
-           where 
+           where
               err = error "Error in SequenceData.hs / removeZeroTimeSections -- empty head or tail"
-              TC (Data x) = (fst $ maybe err id $ S.viewL time) 
-              TC (Data y) = (snd $ maybe err id $ S.viewR time) 
+              TC (Data x) = (fst $ maybe err id $ S.viewL time)
+              TC (Data y) = (snd $ maybe err id $ S.viewR time)
 
 -- | Drop Sections with time duration below threshold
 removeLowTimeSections :: (Fractional a, Ord a, Eq a, V.Storage v a, V.Singleton v) => (Sequ,SequData (PowerRecord nty v a)) -> a -> (Sequ,SequData (PowerRecord nty v a))
-removeLowTimeSections (xs, ys)  threshold = filterSequWithSequData f (xs, ys) 
-   where  
-          f (_,Record time _) = abs (x -y) > threshold 
-            where 
+removeLowTimeSections (xs, ys)  threshold = filterSequWithSequData f (xs, ys)
+   where
+          f (_,Record time _) = abs (x -y) > threshold
+            where
               err = error "Error in SequenceData.hs / removeZeroTimeSections -- empty head or tail"
-              TC (Data x) = (fst $ maybe err id $ S.viewL time) 
-              TC (Data y) = (snd $ maybe err id $ S.viewR time) 
+              TC (Data x) = (fst $ maybe err id $ S.viewL time)
+              TC (Data y) = (snd $ maybe err id $ S.viewR time)
 
 -- | Drop Sections with negligible energy flow
 removeLowEnergySections :: (Num a, SB.BSum a, Ord a, V.Walker v, V.Storage v a) =>
@@ -153,7 +153,7 @@ removeLowEnergySections :: (Num a, SB.BSum a, Ord a, V.Walker v, V.Storage v a) 
    -> (Sequ, SequData (PowerRecord node v a), SequData (FlowRecord node v a))
 removeLowEnergySections  (xs, ys, zs) threshold = filterSequWithSequData2 f (xs, ys, zs)
    where  f (_, _ , Record _ fMap) =  not $ all g (M.toList fMap)
-          g (_,s) = (abs (fromScalar (sigSum s))) < threshold  
+          g (_,s) = (abs (fromScalar (sigSum s))) < threshold
 
 
 -- TODO: Umschalten zwischen recFullIntegrate und recPartIntegrate.
@@ -275,7 +275,7 @@ stepDetect  (t1,ps1) (t2,ps2) = f
            | S.any (==LeavesZeroStep) stepList && (not $ S.any (==BecomesZeroStep) stepList) = LeftEvent
            | (not $ S.any (==LeavesZeroStep) stepList) && S.any (==BecomesZeroStep) stepList = RightEvent
            | S.any (==LeavesZeroStep) stepList && S.any (==BecomesZeroStep) stepList = MixedEvent
-           | otherwise = error ("Sequence.hs, stepDetect unforeseen case")                                                                            
+           | otherwise = error ("Sequence.hs, stepDetect unforeseen case")
 
 
 -- | Function to detect and classify a step over one signal
@@ -576,8 +576,8 @@ sectionRecordsFromSequence rec = fmap (Record.slice rec)
 
 
 -- | Generate Time Signal with Sequence Number to allow Plotting
-genSequenceSignal :: (V.FromList v, V.Storage v a, Num a) => Sequ -> S.UTSignal v a 
+genSequenceSignal :: (V.FromList v, V.Storage v a, Num a) => Sequ -> S.UTSignal v a
 genSequenceSignal (SequData xs) = S.fromList $ concat $ fmap f xs
   where
-    f (idx1, idx2) = [1] ++ replicate (idx2-idx1-1) 0 ++ [-1]  
-      
+    f (idx1, idx2) = [1] ++ replicate (idx2-idx1-1) 0 ++ [-1]
+

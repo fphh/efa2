@@ -437,16 +437,16 @@ instance Reverse UV.Vector where
 
 class Find v where
   findIndex :: (Storage v d) => (d -> Bool) -> v d -> Maybe Int
-  
-instance Find [] where  
+
+instance Find [] where
   findIndex = L.findIndex
-  
+
 instance Find V.Vector where
   findIndex = V.findIndex
 
 instance Find UV.Vector where
   findIndex f xs = readUnbox (UV.findIndex f) xs
-   
+
 
 class Slice v where
   slice :: (Storage v d) => Int -> Int -> v d -> v d

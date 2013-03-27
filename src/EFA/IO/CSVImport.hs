@@ -2,7 +2,7 @@
 
 module EFA.IO.CSVImport (modelicaCSVImport) where
 
-import qualified Data.Map as M 
+import qualified Data.Map as M
 import Text.ParserCombinators.Parsec (parse)
 
 import EFA.Signal.Record(Record(Record),SignalRecord, SigId(SigId))
@@ -24,7 +24,7 @@ makeCSVRecord (h:hs) =
 
 -- | Main Modelica CSV Import Function
 modelicaCSVImport ::   FilePath -> IO (SignalRecord [] Val)
-modelicaCSVImport path = do 
+modelicaCSVImport path = do
   text <- readFile path
   case parse (csvFile ',') path text of
     Left err ->

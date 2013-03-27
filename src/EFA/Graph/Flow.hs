@@ -41,44 +41,44 @@ type EdgeFlow = Dir Quality
 
 newtype EdgeStates node = EdgeStates (M.Map (G.Edge node ) EdgeFlow) deriving (Show)
 
-getEdgeState :: (Fractional a, 
-                 Ord a, 
-                 Ord node, 
-                 SV.Walker v, 
-                 SV.Storage v a, 
-                 BSum a, 
-                 Show node, 
-                 Show (v a), 
-                 SV.Storage v Sign, 
-                 SV.Singleton v) => 
+getEdgeState :: (Fractional a,
+                 Ord a,
+                 Ord node,
+                 SV.Walker v,
+                 SV.Storage v a,
+                 BSum a,
+                 Show node,
+                 Show (v a),
+                 SV.Storage v Sign,
+                 SV.Singleton v) =>
                 Topology node -> FlowRecord node v a -> EdgeStates node
 getEdgeState topo rec = EdgeStates $ M.fromList $ zip edges $ map f edges
   where
-    edges = M.keys $ G.edgeLabels topo 
-    f (G.Edge n1 n2)  = case sigSign $ sigSum $ s1 of 
+    edges = M.keys $ G.edgeLabels topo
+    f (G.Edge n1 n2)  = case sigSign $ sigSum $ s1 of
                         (TC (Data (PSign))) -> Pos quality
                         (TC (Data (NSign))) -> Neg quality
                         (TC (Data (ZSign))) -> Zero quality
-      
+
               where s1 = getSig rec (PPosIdx n1 n2)
                     s2 = getSig rec (PPosIdx n2 n1)
-                    quality = if isConsistant 
+                    quality = if isConsistant
                               then (if isClean then Clean else Dirty)
                               else Wrong
-                    isConsistant = sigSign (sigSum s1) == sigSign (sigSum s2)            
-                    isClean = not (S.hasSignChange s1) || (not $  S.hasSignChange s2) 
+                    isConsistant = sigSign (sigSum s1) == sigSign (sigSum s2)
+                    isClean = not (S.hasSignChange s1) || (not $  S.hasSignChange s2)
 
-adjustSignsNew :: (SV.Walker v, 
-                   SV.Storage v a, 
-                   DArith0 a, 
-                   Ord node, 
-                   Show node) => 
-                  EdgeStates node -> 
-                  FlowRecord node v a -> 
+adjustSignsNew :: (SV.Walker v,
+                   SV.Storage v a,
+                   DArith0 a,
+                   Ord node,
+                   Show node) =>
+                  EdgeStates node ->
+                  FlowRecord node v a ->
                   FlowRecord node v a
-adjustSignsNew (EdgeStates m) rec = rmapWithKey f rec  
-  where f key x = case checkedLookup2 "Flow.adjustSignsNew" m (g key) of 
-          (Neg _) -> neg x  
+adjustSignsNew (EdgeStates m) rec = rmapWithKey f rec
+  where f key x = case checkedLookup2 "Flow.adjustSignsNew" m (g key) of
+          (Neg _) -> neg x
           (Pos _) -> x
           (Zero _) -> x
         g (PPosIdx n1 n2) = G.Edge n1 n2

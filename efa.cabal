@@ -74,7 +74,6 @@ Library
     EFA.Signal.SignalFill
     EFA.Signal.Sequence
     EFA.Signal.Plot
-    EFA.Signal.Plot.Options
     EFA.Symbolic.OperatorTree
     EFA.Symbolic.SumProduct
     EFA.Symbolic.Mixed
@@ -92,7 +91,8 @@ Library
     EFA.Graph.Flow
 --    EFA.Hack.Draw
     EFA.Hack.Plot
-    EFA.Hack.Record
+    EFA.Hack.Options
+--    EFA.Hack.Record
     EFA.Hack.Stack
     EFA.Equation.System
     EFA.Equation.Result
@@ -171,7 +171,9 @@ Executable example-vehicle
       efa,
       gnuplot,
       containers,
-      base
+      base, 
+      utility-ht,
+      non-empty
   Else
     Buildable: False
 
