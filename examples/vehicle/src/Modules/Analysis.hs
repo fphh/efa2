@@ -146,7 +146,7 @@ external :: (Vec.Zipper v,
 external sequenceFlowTopology sequFlowRecord =  EqGen.solveFromMeasurement sequenceFlowTopology $ makeGivenFromExternal Idx.Absolute sequFlowRecord
 
 
-initStorage :: (Fractional a, Num a) => a
+initStorage :: (Fractional a) => a
 initStorage = 0.7*3600*1000
 
 makeGivenFromExternal :: (Vec.Zipper v,
@@ -158,12 +158,12 @@ makeGivenFromExternal :: (Vec.Zipper v,
                           Arith.Sum d,
                           Vec.Storage v d,
                           Vec.FromList v,
-                          EqGen.Record (EqRecord.FromIndex rec),
-                          EqRecord.ToIndex (EqRecord.FromIndex rec) ~ rec) =>
-                         rec
-                         -> SD.SequData (FlowRecord System.Node v d)  -- (Record s t1 t2 (PPosIdx System.Node) v d)
-                         -> EqGen.EquationSystem
-                         (EqRecord.FromIndex rec) System.Node s1 Double d
+                          EqGen.Record rec,
+                          idx ~ EqRecord.ToIndex rec) =>
+                         idx ->
+                         SD.SequData (FlowRecord System.Node v d) ->
+                           -- (Record s t1 t2 (PPosIdx System.Node) v d)
+                         EqGen.EquationSystem rec System.Node s1 Double d
 makeGivenFromExternal idx sf =
    (Idx.Record idx (Idx.Storage (Idx.initBndNode System.Battery)) .= initStorage)
    <> (Idx.Record idx (Idx.Storage (Idx.initBndNode System.VehicleInertia)) .= 0)
@@ -177,25 +177,26 @@ makeGivenFromExternal idx sf =
 -------------------------------------------------------------------------------------------------
 -- ## Predict Energy Flow
 
-prediction :: (Eq d, Eq (Arith.Scalar d), Fractional (Arith.Scalar d),
-               Fractional d, Arith.Product d, Arith.Product (Arith.Scalar d),
-               Arith.Integrate d) =>
-              TD.SequFlowGraph System.Node
-              -> Env.Complete System.Node b (EqRecord.Absolute (Result d))
-              -> Env.Complete
-              System.Node
-              (EqRecord.Absolute (Result (Arith.Scalar d)))
-              (EqRecord.Absolute (Result d))
-prediction sequenceFlowTopology env = EqGen.solve sequenceFlowTopology (makeGivenForPrediction Idx.Absolute env)
+prediction ::
+   (Eq v, Eq a, Fractional v, Fractional a,
+    Arith.Product a, Arith.Product v,
+    Arith.Integrate v, Arith.Scalar v ~ a) =>
+   TD.SequFlowGraph System.Node ->
+   Env.Complete System.Node
+      (EqRecord.Absolute (Result a))
+      (EqRecord.Absolute (Result v)) ->
+   Env.Complete System.Node
+      (EqRecord.Absolute (Result a))
+      (EqRecord.Absolute (Result v))
+prediction sequenceFlowTopology env =
+   EqGen.solve sequenceFlowTopology (makeGivenForPrediction Idx.Absolute env)
 
-makeGivenForPrediction ::(Eq d, Eq a, Fractional d, Fractional a, Arith.Sum d,
-                          Arith.Sum a, EqGen.Record (EqRecord.FromIndex uf),
-                          EqRecord.ToIndex (EqRecord.FromIndex uf) ~ uf) =>
-                         uf
-                         -> Env.Complete
-                         System.Node b (EqRecord.FromIndex uf (Result d))
-                         -> EqGen.EquationSystem
-                         (EqRecord.FromIndex uf) System.Node s a d
+makeGivenForPrediction ::
+   (Eq v, Eq a, Fractional v, Fractional a, Arith.Sum v, Arith.Sum a,
+    EqGen.Record rec, EqRecord.ToIndex rec ~ idx) =>
+   idx ->
+   Env.Complete System.Node (rec (Result a)) (rec (Result v)) ->
+   EqGen.EquationSystem rec System.Node s a v
 makeGivenForPrediction idx env =
     (Idx.Record idx (Idx.Storage (Idx.initBndNode System.Battery)) .= initStorage)
     <> (Idx.Record idx (Idx.Storage (Idx.initBndNode System.VehicleInertia)) .= 0)
@@ -282,8 +283,7 @@ deltaPair idx before delt =
 difference ::
    TD.SequFlowGraph System.Node ->
    Env.Complete System.Node DeltaResult DeltaResult ->
-   Env.Complete
-      System.Node
+   Env.Complete System.Node
       (EqRecord.Absolute (Result (Stack (Var.Any System.Node) Double)))
       (EqRecord.Absolute (Result (Stack (Var.Any System.Node) Double)))
 difference sequenceFlowTopology env =
