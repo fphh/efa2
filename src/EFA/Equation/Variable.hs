@@ -24,6 +24,7 @@ data Scalar a =
    | Storage (Idx.Storage a)
    | StEnergy (Idx.StEnergy a)
    | StX (Idx.StX a)
+   | StSum (Idx.StSum a)
      deriving (Show, Eq, Ord)
 
 
@@ -43,6 +44,7 @@ instance Index Idx.MaxEnergy where type Type Idx.MaxEnergy = Scalar; index = Max
 instance Index Idx.Storage   where type Type Idx.Storage   = Scalar; index = Storage
 instance Index Idx.StEnergy  where type Type Idx.StEnergy  = Scalar; index = StEnergy
 instance Index Idx.StX       where type Type Idx.StX       = Scalar; index = StX
+instance Index Idx.StSum     where type Type Idx.StSum     = Scalar; index = StSum
 
 
 
@@ -90,6 +92,7 @@ instance (Node.C node) => FormatValue (Scalar node) where
          Storage idx -> formatIndex idx
          StEnergy idx -> formatIndex idx
          StX idx -> formatIndex idx
+         StSum idx -> formatIndex idx
 
 
 class FormatIndex idx where
@@ -129,3 +132,8 @@ instance (Node.C node) => FormatIndex (Idx.StEnergy node) where
 
 instance (Node.C node) => FormatIndex (Idx.StX node) where
    formatIndex (Idx.StX e) = formatStorageEdge Format.X e
+
+instance (Node.C node) => FormatIndex (Idx.StSum node) where
+   formatIndex (Idx.StSum dir x) =
+      Format.subscript Format.sum $
+      Format.direction dir `Format.connect` formatBoundaryNode x

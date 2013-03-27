@@ -143,6 +143,8 @@ data Direction = In | Out deriving (Show, Eq, Ord)
 
 data Sum node = Sum !Direction !(BndNode node) deriving (Show, Ord, Eq)
 
+data StSum node = StSum !Direction !(BndNode node) deriving (Show, Ord, Eq)
+
 
 -- * Other indices
 

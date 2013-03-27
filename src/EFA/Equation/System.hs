@@ -554,12 +554,13 @@ fromEnvResult ::
    Env.Complete node (rec (Result a)) (rec (Result v)) ->
    EquationSystem rec node s a v
 fromEnvResult
-   (Env.Complete (Env.Scalar me st se sx) (Env.Signal e p n dt x s)) =
+   (Env.Complete (Env.Scalar me st se sx ss) (Env.Signal e p n dt x s)) =
       mconcat $
          fromMapResult me :
          fromMapResult st :
          fromMapResult se :
          fromMapResult sx :
+         fromMapResult ss :
          fromMapResult e :
          fromMapResult p :
          fromMapResult n :
@@ -583,12 +584,13 @@ fromEnv ::
    Env.Complete node (rec a) (rec v) ->
    EquationSystem rec node s a v
 fromEnv
-   (Env.Complete (Env.Scalar me st se sx) (Env.Signal e p n dt x s)) =
+   (Env.Complete (Env.Scalar me st se sx ss) (Env.Signal e p n dt x s)) =
       mconcat $
          fromMap me :
          fromMap st :
          fromMap se :
          fromMap sx :
+         fromMap ss :
          fromMap e :
          fromMap p :
          fromMap n :

@@ -431,7 +431,7 @@ envGen ::
     Record.C rec, Node.C node) =>
    Record.ToIndex rec ->
    Env.Complete node (rec a) (rec v) -> Env node output
-envGen rec (Env.Complete (Env.Scalar me st se sx) (Env.Signal e _p n dt x _s)) =
+envGen rec (Env.Complete (Env.Scalar me st se sx _ss) (Env.Signal e _p n dt x _s)) =
    Env
       (lookupFormatAssign rec e Idx.Energy)
       (lookupFormatAssign rec x Idx.X)
