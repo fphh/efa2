@@ -24,10 +24,10 @@ import qualified EFA.Equation.Result as Result
 
 import qualified EFA.Equation.Stack as Stack
 import qualified EFA.Equation.Variable as Var
-import qualified Data.Foldable as Fold
+--import qualified Data.Foldable as Fold
 
 import EFA.Report.Typ (TDisp)
-import qualified EFA.Symbolic.SumProduct as SumProduct
+--import qualified EFA.Symbolic.SumProduct as SumProduct
 
 import qualified Graphics.Gnuplot.Value.Atom as Atom
 import qualified Graphics.Gnuplot.Value.Tuple as Tuple
@@ -40,10 +40,11 @@ import qualified Graphics.Gnuplot.Value.Tuple as Tuple
 
 import qualified Data.Map as M
 --import EFA.Utility(checkedLookup)
-import qualified Data.NonEmpty as NonEmpty
-import qualified EFA.Report.Format as Format
-import EFA.Report.FormatValue (formatValue, FormatValue)
-import Data.Tuple.HT (mapFst)
+--import qualified Data.NonEmpty as NonEmpty
+--import qualified EFA.Report.Format as Format
+import EFA.Report.FormatValue (FormatValue)
+--import Data.Tuple.HT (mapFst)
+import qualified EFA.Example.AssignMap as AssignMap 
 
 --import Debug.Trace
 
@@ -63,36 +64,78 @@ sigsWithSpeed recList (ti, idList) =  do
                  O.leadSignalsMax (Record.RangeFrom idList, Record.ToModify [Record.SigId "speedsensor1.v"]) .
                  O.pointSize 0.1) (HPlot.RecList recList)
 
+operation :: (Fractional a, Ord id, Show (v a), Show id, V.Walker v,
+              V.Storage v a, V.FromList v, TDisp t2, Tuple.C a, Atom.C a) =>
+              [Char]
+              -> [([Char], Record s t1 t2 id v a)] -> ([Char], (id, id)) -> IO ()
+
+operation ti rList  (plotTitle, (idx,idy)) = mapM_ f rList 
+  where f (recTitle, rec) = do 
+          let x = getSig rec idx
+              y = getSig rec idy
+          Plot.xyIO (ti ++ "_" ++ plotTitle ++ "_" ++ recTitle) x y
 
 
-stack:: (Ord i, FormatValue i, TDNode.C a) =>
+
+stack:: (Show a, Ord i, FormatValue i, TDNode.C a, Show i) =>
         String ->
         Idx.Energy a ->
+        Double ->         
         (String, Env.Complete
-        a t (EqRecord.Absolute (Result.Result (Stack.Stack i Double)))) ->
+        a t (EqRecord.Absolute (Result.Result (Stack.Stack i Double)))) -> 
         IO ()
-stack ti energyIndex (recName,env) = do
+stack ti energyIndex eps (recName,env) = do
+--               AssignMap.print $ lookupStack energyIndex env
+               Plot.stackIO ("Record " ++ recName ++ "-" ++ ti)
+                  (Idx.delta $ Var.index energyIndex) $ AssignMap.threshold eps $ lookupStack energyIndex env
 
-  let (Env.Complete _ sigEnv) = env
 
-  case M.lookup energyIndex (Env.energyMap sigEnv) of
-    Nothing -> error "undefined E"
+reportStack::(Num a, Ord node, Ord i, Ord a, Show node, FormatValue a,
+                               FormatValue i) =>
+                              [Char]
+                              -> Idx.Energy node
+                              -> a
+                              -> Env.Complete
+                                   node t (EqRecord.Absolute (Result.Result (Stack.Stack i a)))
+                              -> IO ()
+
+reportStack ti energyIndex eps (env) = do
+               print (ti ++ show energyIndex)
+               AssignMap.print $ AssignMap.threshold eps $ lookupStack energyIndex env
+
+recordStackRow:: (TDNode.C node, Ord node, Ord i, Show i, Show node, FormatValue i,
+                             FormatValue var) =>
+                            String
+                            -> Idx.Energy node
+                            -> Double
+                            -> [(var,
+                                 Env.Complete
+                                   node
+                                   t
+                                   (EqRecord.Absolute (Result.Result (Stack.Stack i Double))))]
+                            -> IO ()
+                            
+recordStackRow ti energyIndex eps envList = Plot.stacksIO ti valList
+  where valList = map (\ (x,y) -> (Idx.delta $ Var.index energyIndex, AssignMap.threshold eps $ lookupStack energyIndex y)) envList
+
+
+lookupStack:: (Ord i, Ord node, Show node) =>
+                              Idx.Energy node
+                              -> Env.Complete
+                                   node t (EqRecord.Absolute (Result.Result (Stack.Stack i a)))
+                              -> M.Map (AssignMap.IndexSet i) a
+  
+lookupStack energyIndex env =  case M.lookup energyIndex (Env.energyMap signalEnv) of
+    Nothing -> error (show energyIndex ++ "undefined")
     Just d ->
       case EqRecord.unAbsolute d of
-        Result.Undetermined -> error "undetermined E"
-        Result.Determined xs -> do
-          let assigns =
-                fmap (mapFst (foldl (\p i -> p * SumProduct.Atom i) 1)) $
-                NonEmpty.tail $
-                Stack.assigns xs
-
-          let  assignsFilt = filter (\(_,x)-> (abs x) >= 1) assigns
-
-          Fold.forM_ assignsFilt $ \(term,val) -> do
-            putStrLn $ Format.unUnicode $
-              Format.assign (formatValue term) (formatValue val)
-
-          Plot.stackIO ("Record " ++ recName ++ "-" ++ ti)
-              (Idx.delta $ Var.index energyIndex) $ assignsFilt
-
-
+        Result.Undetermined -> error (show energyIndex ++ "undetermined")
+        Result.Determined xs -> M.mapKeys AssignMap.indexSet $ 
+                             Stack.assignDeltaMap xs
+                             
+   where                         
+        Env.Complete _scalarEnv signalEnv = env
+                             
+ 
+                  
+                  

@@ -1,8 +1,6 @@
 {-# LANGUAGE TypeFamilies #-}
 module EFA.Equation.Stack where
 
-import qualified EFA.Graph.Topology.Index as Idx
-
 import qualified EFA.Equation.MultiValue as MV
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic ((~+), (~-), (~*), (~/))
@@ -244,7 +242,7 @@ fold op =
    in  go
 
 
-data Branch = Before | Delta deriving (Eq, Show)
+data Branch = Before | Delta deriving (Eq, Ord, Show)
 
 instance QC.Arbitrary Branch where
    arbitrary = QC.elements [Before, Delta]
@@ -356,20 +354,24 @@ fromMultiValueGen minus (MV.MultiValue indices tree) =
 
 toMultiValueGen :: (a -> a -> a) -> Stack i a -> MV.MultiValue i a
 toMultiValueGen plus (Stack indices tree) =
-   let go (Value a) = MV.Leaf a
-       go (Plus a0 a1) =
-          MV.Branch (go a0) (liftA2 plus (go a1) (go a0))
-   in  MV.MultiValue indices $ go tree
+   MV.MultiValue indices $
+   fold (\a0 a1 -> MV.Branch a0 (liftA2 plus a1 a0)) $
+   fmap MV.Leaf tree
 
 
-assigns :: Stack i a -> NonEmpty.T [] ([Idx.Record Idx.Delta i], a)
+assignDeltaMap :: (Ord i) => Stack i a -> Map (Map i Branch) a
+assignDeltaMap =
+   Map.fromListWith (error "assignDeltaMap: duplicate indices") .
+   NonEmpty.tail . assigns
+
+assigns :: (Ord i) => Stack i a -> NonEmpty.T [] (Map i Branch, a)
 assigns s =
    case descent s of
-      Left a -> NonEmpty.singleton ([], a)
+      Left a -> NonEmpty.singleton (Map.empty, a)
       Right (i, (a0,a1)) ->
          NonEmpty.append
-            (fmap (mapFst (Idx.before i :)) $ assigns a0)
-            (fmap (mapFst (Idx.delta  i :)) $ assigns a1)
+            (fmap (mapFst (Map.insert i Before)) $ assigns a0)
+            (fmap (mapFst (Map.insert i Delta )) $ assigns a1)
 
 
 instance

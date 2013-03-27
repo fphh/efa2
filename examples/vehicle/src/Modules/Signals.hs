@@ -222,32 +222,15 @@ generator =  [SigId "speedsensor1.v",
             SigId "electricmotor2.signalcurrent1.v",
             SigId "electricmotor2.flange_a.tau",
             SigId "electricmotor2.speedsensor1.w",
-            SigId "engine1.Speed",
             SigId "engine1.Speed"
             ]
 
-{-
 
-genPowers :: Plottable v a => PowerRecord Node v a -> IO()
-genPowers [SigId "Fuel",
-           --   SigId "CrankShaft",
-           SigId "BatteryClamps",
-           SigId "BatteryCore",
-           SigId "Wire"
-                                                            ]
+xyEngine :: (SigId,SigId)
+xyEngine = (SigId "engine1.Speed", SigId "engine1.flange_b.tau")
 
-propPowers :: (Show (v a), Plottable v a) => PowerRecord Node v a -> IO()
-propPowers pRec =  [SigId "MotorClamps",
-                    SigId "OutShaft",
-                    SigId "ToFrontBrakes",
-                    SigId "FrontWheelHub",
-                    SigId "FrontTires"
-                                                              ]
+xyGenerator :: (SigId,SigId)
+xyGenerator = (SigId "engine1.Speed", SigId "electricmotor2.flange_a.tau")
 
-vehPowers :: (Show (v a), Plottable v a) => PowerRecord Node v a -> IO()
-vehPowers pRec = [SigId "ToFrontBrakes",
-                  SigId "RearTires",
-                  SigId "ToInertia",
-                  SigId "ToResistance"
-                 ]
--}            
+xyMotor :: (SigId,SigId)
+xyMotor = (SigId "electricmotor1.speedsensor1.w", SigId "electricmotor1.flange_a.tau")

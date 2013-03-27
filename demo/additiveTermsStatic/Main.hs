@@ -2,6 +2,7 @@
 module Main where
 
 import qualified EFA.Example.NestedDelta as NestedDelta
+import qualified EFA.Example.AssignMap as AssignMap
 import qualified EFA.Example.Utility as Utility
 import EFA.Example.NestedDelta
           (ParameterRecord,
@@ -9,8 +10,7 @@ import EFA.Example.NestedDelta
            beforeDelta, extrudeStart,
            (<&), (<&>), (&>), (&&>), (?=))
 import EFA.Example.Utility
-          (symbol, edgeVar, makeEdges, constructSeqTopo)
-import EFA.Equation.Arithmetic ((~*))
+          (edgeVar, makeEdges, constructSeqTopo)
 import EFA.Equation.Result (Result)
 
 import qualified EFA.Equation.System as EqGen
@@ -108,12 +108,13 @@ eta0 = edgeVar Idx.Eta sec0 node0 node1
 eta1 = edgeVar Idx.Eta sec0 node1 node2
 
 
-termFromIndex :: IdxMultiDelta -> SignalTerm
+termFromIndex :: IdxMultiDelta -> [Idx.Record Idx.Delta (Var.Signal Node.Int)]
 termFromIndex
       (Idx.ExtDelta r2 (Idx.ExtDelta r1 (Idx.ExtDelta r0 Idx.Absolute))) =
-   symbol (Idx.Record r2 (Var.index ein)) ~*
-   symbol (Idx.Record r1 (Var.index eta0)) ~*
-   symbol (Idx.Record r0 (Var.index eta1))
+   Idx.Record r2 (Var.index ein) :
+   Idx.Record r1 (Var.index eta0) :
+   Idx.Record r0 (Var.index eta1) :
+   []
 
 
 
@@ -211,14 +212,13 @@ mainNumeric = do
    case Map.lookup eout (Env.energyMap signalEnv) of
       Nothing -> error "undefined E_2_1"
       Just x -> do
-         let assigns = NonEmpty.tail $ Record.assigns x
-         Fold.forM_ assigns $ \(term,val) ->
-            putStrLn $ Format.unUnicode $
-               Format.assign (formatValue term) (formatValue val)
+         let assigns =
+                Map.mapKeys termFromIndex $
+                Record.assignDeltaMap x
+         AssignMap.print assigns
          Plot.stackIO "Decomposition of total output energy"
             (Idx.delta $ Var.index eout)
-            (map (\(i,a) ->
-                    (i, Utility.checkDetermined (Format.unUnicode $ formatValue i) a)) assigns)
+            (AssignMap.ignoreUndetermined assigns)
 
 
 main :: IO ()

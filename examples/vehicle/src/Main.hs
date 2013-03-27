@@ -57,6 +57,7 @@ datasetsX =
    map (path </>) $
       "Vehicle_res.plt" :
       "Vehicle_mass1050kg_res.plt" :
+      "Vehicle_mass950kg_res.plt" :
       []
 
 
@@ -82,7 +83,7 @@ main = do
 ---------------------------------------------------------------------------------------
 -- * Import signals from Csv-file
 
-  rawSignalsX <- mapM modelicaPLTImport datasetsX
+  rawSignalsX <- mapM modelicaPLTImport $ map (\x -> path ++ x) datasetsX
 
 ---------------------------------------------------------------------------------------
 -- * Conditioning, Sequencing and Integration
@@ -132,13 +133,18 @@ main = do
 ---------------------------------------------------------------------------------------
 -- * Plot Stacks
  
+{-  
   mapM_ (Plots.stack  "Energy Flow Change at Tank in Section 4"
-         (Idx.Energy (Idx.StructureEdge (Idx.Section 4) System.Tank System.ConBattery))) 
+         (Idx.Energy (Idx.StructureEdge (Idx.Section 4) System.Tank System.ConBattery)) 1 ) 
     (zip (deltasets datasetsX) differenceExtEnvs)
+-}
 
+  Plots.recordStackRow "Energy Flow Change at Tank in Section 4"  (Idx.Energy (Idx.StructureEdge (Idx.Section 4) System.Tank System.ConBattery)) 1 
+        (zip (deltasets datasetsX) differenceExtEnvs)
+      
 ---------------------------------------------------------------------------------------
 -- * Plot Time Signals
-
+{-
 
   let plotList = [
                   ("Vehicle", Signals.vehicle),
@@ -155,24 +161,37 @@ main = do
 ---------------------------------------------------------------------------------------
 -- * Plot Operation Points
 
+  let xyList = [
+                  ("Engine", Signals.xyEngine),
+                  ("Generator", Signals.xyGenerator),
+                  ("Motor", Signals.xyMotor)
+                 ]
+
+  mapM_ (Plots.operation "Operation Points -" (zip datasetsX allSignalsX)) xyList
+
+
+---------------------------------------------------------------------------------------
+-- * Plot Efficiency Curves and Distributions
+
+
 
 
 ---------------------------------------------------------------------------------------
 -- * Draw Diagrams
-
+-}
   concurrentlyMany_ [
     -- Topologie
 --  Draw.topology System.topology --  Draw.topology2pdf System.topology
 --  Draw.topologyWithEdgeLabels System.edgeNames System.topology
 
     -- Sectionen
-    zipWith3M_ Draw.sequFlowGraphAbsWithEnv datasetsX sectionToposX externalEnvX,
+--    zipWith3M_ Draw.sequFlowGraphAbsWithEnv datasetsX sectionToposX externalEnvX,
 
     -- Sections-Deltadiagramme
-    zipWith3M_ Draw.sequFlowGraphDeltaWithEnv datasetsX sectionToposX externalDeltaEnvX,
+    zipWith3M_ Draw.sequFlowGraphDeltaWithEnv datasetsX sectionToposX externalDeltaEnvX
 
     -- Vorhersage
-    Draw.sequFlowGraphAbsWithEnv "Prediction" (head sectionToposX) prediction
+--    Draw.sequFlowGraphAbsWithEnv "Prediction" (head sectionToposX) prediction
     ]
 
 

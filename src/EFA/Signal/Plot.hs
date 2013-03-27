@@ -75,6 +75,8 @@ import Control.Functor.HT (void)
 import Data.Traversable (traverse)
 import Data.Foldable (foldMap)
 import Data.Monoid (mconcat)
+
+import Debug.Trace
 -- import Control.Concurrent (threadDelay)
 
 {-
@@ -468,6 +470,12 @@ optKeyOutside :: Opts.T graph -> Opts.T graph
 optKeyOutside =
    Opts.add (Opt.custom "key" "position") ["outside"]
 
+
+stackLineSpec ::
+   (FormatValue term, Show term) => term -> Plot2D.T x y -> Plot2D.T x y
+stackLineSpec term =
+   fmap (Graph2D.lineSpec (LineSpec.title (Format.unASCII $ formatValue term) LineSpec.deflt))
+
 stackAttr ::
    (FormatValue var) =>
    String -> var -> Opts.T (Graph2D.T Int Double)
@@ -481,18 +489,19 @@ stackAttr title var =
       Opts.deflt
 
 stack ::
-   (Fold.Foldable f, FormatValue term) =>
-   f (term, Double) -> Plt.T (Graph2D.T Int Double)
+   (FormatValue term, Show term) =>
+   M.Map term Double -> Plot2D.T Int Double
 stack =
-   foldMap (\(term,val) ->
-      fmap (Graph2D.lineSpec
-              (LineSpec.title (Format.unASCII $ formatValue term) LineSpec.deflt)) $
-      Plot2D.list Graph2D.histograms [val])
+   Fold.fold .
+   M.mapWithKey
+      (\term val ->
+         stackLineSpec term $
+         Plot2D.list Graph2D.histograms [val])
 
 
 stackIO ::
-   (FormatValue var, Fold.Foldable f, FormatValue term) =>
-   String -> var -> f (term, Double) -> IO ()
+   (FormatValue var, FormatValue term, Show term) =>
+   String -> var -> M.Map term Double -> IO ()
 stackIO title var =
    void . Plot.plotDefault . Frame.cons (stackAttr title var) . stack
 
@@ -511,20 +520,18 @@ stacksAttr title vars =
       Opts.deflt
 
 stacks ::
-   (Ord term, FormatValue term) =>
-   [M.Map term Double] -> Plt.T (Graph2D.T Int Double)
+   (Ord term, FormatValue term, Show term) =>
+   [M.Map term Double] -> Plot2D.T Int Double
 stacks =
    Fold.fold .
    M.mapWithKey
       (\term val ->
-         fmap (Graph2D.lineSpec
-                 (LineSpec.title (Format.unASCII $ formatValue term)
-                    LineSpec.deflt)) $
+         stackLineSpec term $
          Plot2D.list Graph2D.histograms val) .
    TMap.core . traverse (TMap.cons 0)
 
 stacksIO ::
-   (FormatValue var, Ord term, FormatValue term) =>
+   (FormatValue var, Ord term, FormatValue term, Show term) =>
    String -> [(var, M.Map term Double)] -> IO ()
 stacksIO title xs =
    case unzip xs of
