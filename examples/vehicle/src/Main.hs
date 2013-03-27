@@ -52,9 +52,15 @@ path :: FilePath
 path = "../../../../../data/examples/vehicle/"
 
 datasetsX:: [FilePath]
+{-
 datasetsX = ["Vehicle_res.plt",
              "Vehicle_mass1050kg_res.plt",
              "Vehicle_mass950kg_res.plt"]
+-}
+
+datasetsX = ["Vehicle_mass900kg_resneu.plt",
+             "Vehicle_mass1000kg_resneu.plt",
+             "Vehicle_mass1100kg_resneu.plt"]
 
 
 deltasets :: [String]  ->   [String]
@@ -140,7 +146,7 @@ main = do
       
 ---------------------------------------------------------------------------------------
 -- * Plot Time Signals
-{-
+
 
   let plotList = [
                   ("Vehicle", Signals.vehicle),
@@ -174,14 +180,14 @@ main = do
 
 ---------------------------------------------------------------------------------------
 -- * Draw Diagrams
--}
+
   concurrentlyMany_ [
     -- Topologie
 --  Draw.topology System.topology --  Draw.topology2pdf System.topology
 --  Draw.topologyWithEdgeLabels System.edgeNames System.topology
 
     -- Sectionen
---    zipWith3M_ Draw.sequFlowGraphAbsWithEnv datasetsX sectionToposX externalEnvX,
+    zipWith3M_ Draw.sequFlowGraphAbsWithEnv datasetsX sectionToposX externalEnvX,
 
     -- Sections-Deltadiagramme
     zipWith3M_ Draw.sequFlowGraphDeltaWithEnv datasetsX sectionToposX externalDeltaEnvX
