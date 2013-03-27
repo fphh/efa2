@@ -58,6 +58,8 @@ import qualified UniqueLogic.ST.System as Sys
 import qualified Data.Accessor.Monad.Trans.State as AccessState
 import qualified Data.Accessor.Basic as Accessor
 
+import qualified Control.Monad as Monad
+
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT, execStateT)
 import Control.Monad.Trans.Writer (WriterT, runWriterT, tell)
@@ -720,12 +722,19 @@ fromInterStorages ::
    Eq v, Product v, Integrate v,
    Record rec, Node.C node) =>
   TD.DirSequFlowGraph node -> EquationSystem rec node s a v
-fromInterStorages = foldMap f . getInterStorages
-  where f (dir, x) =
-          case dir of
-             Nothing     -> mempty
-             Just TD.In  -> fromInStorages x
-             Just TD.Out -> fromOutStorages x
+fromInterStorages =
+  fold .
+  M.mapWithKey
+     (\bn@(Idx.BndNode bnd _n) (ins, dir, outs) ->
+        let sections = filter (bnd /=) . map getBoundary . S.toList
+            inout = (sections ins, bn, sections outs)
+        in  case dir of
+               TD.In  -> fromInStorages inout
+               TD.Out -> fromOutStorages inout) .
+  M.mapMaybe
+     (\(ins, typ, outs) ->
+         fmap (\dir -> (ins, dir, outs)) $ Monad.join $ TD.maybeStorage typ) .
+  Gr.nodes
 
 getBoundary :: Idx.BndNode a -> Idx.Boundary
 getBoundary (Idx.BndNode s _) = s
@@ -777,21 +786,6 @@ splitFactors s ef xf ns =
    <>
    foldMap (\n -> ef n =%= s ~* xf n) ns
 
-
-getInterStorages ::
-  (Node.C node) =>
-  TD.DirSequFlowGraph node ->
-  [(Maybe TD.StoreDir, ([Idx.Boundary], Idx.BndNode node, [Idx.Boundary]))]
-getInterStorages =
-  M.elems .
-  M.mapWithKey
-     (\bn@(Idx.BndNode bnd _n) (ins, dir, outs) ->
-        let sections = filter (bnd /=) . map getBoundary . S.toList
-        in  (dir, (sections ins, bn, sections outs))) .
-  M.mapMaybe
-     (\(ins, typ, outs) ->
-         flip fmap (TD.maybeStorage typ) $ \dir -> (ins, dir, outs)) .
-  Gr.nodes
 
 
 -----------------------------------------------------------------
