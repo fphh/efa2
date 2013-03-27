@@ -83,7 +83,7 @@ main = do
 ---------------------------------------------------------------------------------------
 -- * Import signals from Csv-file
 
-  rawSignalsX <- mapM modelicaPLTImport $ map (\x -> path ++ x) datasetsX
+  rawSignalsX <- mapM modelicaPLTImport $ datasetsX -- map (\x -> path ++ x) datasetsX
 
 ---------------------------------------------------------------------------------------
 -- * Conditioning, Sequencing and Integration
@@ -137,11 +137,11 @@ main = do
   mapM_ (Plots.stack  "Energy Flow Change at Tank in Section 4"
          (Idx.Energy (Idx.StructureEdge (Idx.Section 4) System.Tank System.ConBattery)) 1 ) 
     (zip (deltasets datasetsX) differenceExtEnvs)
--}
 
+-}  
   Plots.recordStackRow "Energy Flow Change at Tank in Section 4"  (Idx.Energy (Idx.StructureEdge (Idx.Section 4) System.Tank System.ConBattery)) 1 
         (zip (deltasets datasetsX) differenceExtEnvs)
-      
+    
 ---------------------------------------------------------------------------------------
 -- * Plot Time Signals
 {-
@@ -179,6 +179,7 @@ main = do
 ---------------------------------------------------------------------------------------
 -- * Draw Diagrams
 -}
+
   concurrentlyMany_ [
     -- Topologie
 --  Draw.topology System.topology --  Draw.topology2pdf System.topology

@@ -25,6 +25,7 @@ import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Data as D
 import qualified EFA.Signal.Vector as SV
 import qualified EFA.Signal.Record as Record
+import qualified EFA.Signal.Colour as Colour
 
 import EFA.Signal.SequenceData (SequData, zipWithSecIdxs)
 
@@ -59,6 +60,7 @@ import qualified Graphics.Gnuplot.Value.Atom as Atom
 import qualified Graphics.Gnuplot.Value.Tuple as Tuple
 
 import qualified Graphics.Gnuplot.LineSpecification as LineSpec
+import Graphics.Gnuplot.ColorSpecification (name)
 
 import qualified Graphics.Gnuplot.Frame as Frame
 import qualified Graphics.Gnuplot.Frame.Option as Opt
@@ -123,6 +125,7 @@ signalStyle =
       LineSpec.pointSize 2 $
       -}
       LineSpec.deflt
+
 
 signalIO ::
    (Signal signal) =>
@@ -470,11 +473,16 @@ optKeyOutside :: Opts.T graph -> Opts.T graph
 optKeyOutside =
    Opts.add (Opt.custom "key" "position") ["outside"]
 
-
+--linestyles :: Graph2D.T x y -> Graph2D.T x y
+lineColour n =
+  LineSpec.lineColor (name (Colour.colours !! (n `mod` len)))
+  where len = length Colour.colours
+ 
 stackLineSpec ::
-   (FormatValue term, Show term) => term -> Plot2D.T x y -> Plot2D.T x y
-stackLineSpec term =
-   fmap (Graph2D.lineSpec (LineSpec.title (Format.unASCII $ formatValue term) LineSpec.deflt))
+   (FormatValue term, Show term) => term -> Int -> Plot2D.T x y -> Plot2D.T x y
+stackLineSpec term n =
+   fmap (Graph2D.lineSpec (LineSpec.title (Format.unASCII $ formatValue term) 
+          (lineColour n $ LineSpec.deflt)))
 
 stackAttr ::
    (FormatValue var) =>
@@ -495,7 +503,7 @@ stack =
    Fold.fold .
    M.mapWithKey
       (\term val ->
-         stackLineSpec term $
+         stackLineSpec term 50 $
          Plot2D.list Graph2D.histograms [val])
 
 
@@ -521,12 +529,12 @@ stacksAttr title vars =
 
 stacks ::
    (Ord term, FormatValue term, Show term) =>
-   [M.Map term Double] -> Plot2D.T Int Double
+   [M.Map (Int, term) Double] -> Plot2D.T Int Double
 stacks =
    Fold.fold .
    M.mapWithKey
-      (\term val ->
-         stackLineSpec term $
+      (\(n, term) val ->
+         stackLineSpec term n $
          Plot2D.list Graph2D.histograms val) .
    TMap.core . traverse (TMap.cons 0)
 
@@ -536,8 +544,10 @@ stacksIO ::
 stacksIO title xs =
    case unzip xs of
       (vars, ys) ->
-         void . Plot.plotDefault . Frame.cons (stacksAttr title vars) . stacks $ ys
-
+         void . Plot.plotDefault . Frame.cons (stacksAttr title vars) . stacks $ 
+           map f ys
+   where f = M.fromList . zipWith g [0..] . M.toList
+         g n (k, v) = ((n, k), v)
 
 
 
