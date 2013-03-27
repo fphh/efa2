@@ -304,12 +304,13 @@ instance
 -- | Plotting Records ---------------------------------------------------------------
 
 -- | Line Style
-recordStyle :: (Show k) => k -> Plot2D.T x y -> Plot2D.T x y
-recordStyle key =
+recordStyle :: (Show k) => k -> String -> Plot2D.T x y -> Plot2D.T x y
+recordStyle key colour =
    fmap $ Graph2D.lineSpec $
       LineSpec.pointSize 0.3$
       LineSpec.pointType 1 $
-      LineSpec.lineWidth 1 $
+      LineSpec.lineWidth 1.6 $
+      lineColour colour $
       LineSpec.title (show key) $
       LineSpec.deflt
 
@@ -328,22 +329,22 @@ recordAttr name =
 
 
 record ::
-   (Show id, TDisp typ0, TDisp typ1,
+   (Show id, Ord id, TDisp typ0, TDisp typ1,
     SV.Walker v, SV.FromList v,
     SV.Storage v a, Fractional a, Atom.C a, Tuple.C a) =>
    Record s typ0 typ1 id v a -> Plot2D.T a a
 record (Record time pMap) =
    foldMap
       (\(key, sig) ->
-         recordStyle key $
+         recordStyle key (colourMap M.! key) $
          Plot2D.list Graph2D.linesPoints $
          zip (getData time) (getData sig)) $
    M.toList pMap
-
+   where colourMap = Colour.colourMap (M.keys pMap)
 
 recordIO ::
    (Fractional y,
-    Show id,
+    Show id, Ord id,
     SV.Walker v, SV.Storage v y, SV.FromList v,
     TDisp t2, TDisp t1,
     Tuple.C y, Atom.C y) =>
@@ -354,12 +355,11 @@ recordIO name =
 
 recordIOList ::
    (Fractional y,
-    Show id,
+    Show id, Ord id,
     SV.Walker v, SV.Storage v y, SV.FromList v,
     TDisp t2, TDisp t1,
     Tuple.C y, Atom.C y) =>
    String -> [Record s t1 t2 id v y] -> IO ()
-
 recordIOList name recList =
    void $ Plot.plotDefault $ Frame.cons (recordAttr name) $ foldMap record recList
 
@@ -419,7 +419,7 @@ recordSelect idList name = recordIO name . Record.extract idList
 
 sequenceFrame ::
    (Fractional y,
-    Show id,
+    Show id, Ord id,
     SV.Walker v, SV.Storage v y, SV.FromList v,
     TDisp t2, TDisp t1,
     Tuple.C y, Atom.C y) =>
@@ -511,7 +511,7 @@ stackIO ::
    String -> var -> M.Map term Double -> IO ()
 stackIO title var m =
    void . Plot.plotDefault . Frame.cons (stackAttr title var) . stack colorMap $ m
-   where colorMap = M.fromList $ zip (M.keys m) Colour.colours
+   where colorMap = Colour.colourMap (M.keys m)
 
 
 stacksAttr ::
@@ -546,7 +546,7 @@ stacksIO ::
 stacksIO title xs =
    case unzip xs of
       (vars, (y:ys)) ->
-         let colorMap = M.fromList $ zip (M.keys y) Colour.colours
+         let colorMap = Colour.colourMap (M.keys y)
          in  void . Plot.plotDefault . Frame.cons (stacksAttr title vars)
                   . stacks colorMap $ ys
       _ -> error "stackIO: empty list"
