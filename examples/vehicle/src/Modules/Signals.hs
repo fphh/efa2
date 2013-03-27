@@ -16,45 +16,79 @@ import EFA.Signal.Data(Data(..),Nil, (:>))
 
 import Modules.System  (Node(..))
 
+{-
+  vehicleSpeed_o = speedsensor1.v; - OK
+  engineSpeed_o = speedsensor2.w;  --- WRONG
+  engineTorque_o = engine1.flange_b.tau; - OK
+  fuelPower_o = engine1.FuelPower; - OK
+  generatorSpeed_o = electricmotor2.speedsensor1.w; --OK
+  generatorTorque_o = electricmotor2.flange_a.tau; -- OK
+  generatorVoltage_o = electricmotor2.signalcurrent1.v;
+  generatorCurrent_o = electricmotor2.signalcurrent1.p.i; -- None
+  batteryPoleCurrent_o = battery1.pin_p.i;
+  batteryPoleVoltage_o = potentialsensor1.p.v;
+  batteryInternalCurrent_o = battery1.constantvoltage1.i;
+  batteryInternalVoltage_o = battery1.constantvoltage1.v;
+  motorSpeed_o = electricmotor1.speedsensor1.w;
+  motorTorque_o = electricmotor1.flange_a.tau;
+  motorCurrent_o = electricmotor1.signalcurrent1.p.i;
+  motorVoltage_o = electricmotor1.signalcurrent1.p.v;
+  gearboxTorqueIS_o = gearbox1.flange_a.tau;
+  gearboxSpeedIS_o = gearbox1.inertia1.w;
+  gearboxTorqueOS_o = gearbox1.flange_b.tau;
+  gearboxSpeedOS_o = gearbox1.inertia2.w;
+  frontBrakesSpeed_o = brake1.w;
+  frontBrakesTorque_o = brake1.tau;
+  frontBrakesLossPower_o = brake1.lossPower;
+  rearBrakesSpeed_o = brake2.w;
+  rearBrakesTorque_o = brake2.tau;
+  rearBrakesLossPower_o = brake2.lossPower;
+  frontWheelsTorque_o = idealrollingwheel1.flangeR.tau;
+  frontWheelsForce_o = idealrollingwheel1.flangeT.f;
+  rearWheelsTorque_o = idealrollingwheel2.flangeR.tau;
+  rearWheelsForce_o = idealrollingwheel2.flangeT.f;
+  chassisPropulsionForce_o = chassis1.flange_a1.f;
 
+  chassisResistanceForce_o = chassis1.drivingresistance1.force1.f;
+-}
 
 ---------------------------------------------------------------------------------------
 -- * Model the System Topology
 
 condition :: SignalRecord [] Double -> SignalRecord [] Double
 condition rec = extractLogSignals rec
-                [(SigId "engine1.Speed",id),
-                 (SigId "engine1.flange_b.tau",neg),
-                 (SigId "engine1.FuelPower",id),
-                 (SigId "electricmotor2.speedsensor1.w",id),
-                 (SigId "electricmotor2.signalcurrent1.p.i",neg),
-                 (SigId "electricmotor2.signalcurrent1.v",neg),
-                 (SigId "electricmotor2.flange_a.tau",id),
-                 (SigId "battery1.pin_p.i",id),
-                 (SigId "potentialsensor1.p.v",id),
-                 (SigId "battery1.constantvoltage1.v",neg),
-                 (SigId "battery1.constantvoltage1.i",id),
-                 (SigId "electricmotor1.speedsensor1.w",id),
-                 (SigId "electricmotor1.flange_a.tau",neg),
-                 (SigId "electricmotor1.signalcurrent1.p.i",id),
-                 (SigId "electricmotor1.signalcurrent1.p.v",id),
-                 (SigId "gearbox1.flange_a.tau",id),
-                 (SigId "gearbox1.inertia1.w",id),
-                 (SigId "gearbox1.flange_b.tau",neg),
-                 (SigId "gearbox1.inertia2.w",id),
-                 (SigId "brake1.lossPower",id),
-                 (SigId "brake1.w",id),
-                 (SigId "brake2.lossPower",id),
-                 (SigId "brake2.w",id),
-                 (SigId "idealrollingwheel1.flangeR.tau",id),
-                 (SigId "idealrollingwheel1.flangeT.f",neg),
-                 (SigId "idealrollingwheel2.flangeR.tau",neg),
-                 (SigId "idealrollingwheel2.flangeT.f",id),
-                 (SigId "chassis1.flange_a1.f",id),
-                 (SigId "speedsensor1.v",id),
-                 (SigId "chassis1.drivingresistance1.force1.f",neg),
-                 (SigId "brake1.tau",neg),
-                 (SigId "brake2.tau",neg)]
+                [(SigId "engineSpeed_o",id),
+                 (SigId "engineTorque_o",neg),
+                 (SigId "fuelPower_o",id),
+                 (SigId "generatorSpeed_o",id),
+                 (SigId "generatorCurrent_o",neg),
+                 (SigId "generatorVoltage_o",neg),
+                 (SigId "generatorTorque_o",id),
+                 (SigId "batteryPoleCurrent_o",id),
+                 (SigId "batteryPoleVoltage_o",id),
+                 (SigId "batteryInternalVoltage_o",neg),
+                 (SigId "batteryInternalCurrent_o",id),
+                 (SigId "motorSpeed_o",id),
+                 (SigId "motorTorque_o",neg),
+                 (SigId "motorCurrent_o",id),
+                 (SigId "motorVoltage_o",id),
+                 (SigId "gearboxTorqueIS_o",id),
+                 (SigId "gearboxSpeedIS_o",id),
+                 (SigId "gearboxTorqueOS_o",neg),
+                 (SigId "gearboxSpeedOS_o",id),
+                 (SigId "frontBrakesLossPower_o",id),
+                 (SigId "frontBrakesSpeed_o",id),
+                 (SigId "rearBrakesLossPower_o",id),
+                 (SigId "rearBrakesSpeed_o",id),
+                 (SigId "frontWheelsTorque_o",id),
+                 (SigId "frontWheelsForce_o",neg),
+                 (SigId "rearWheelsTorque_o",neg),
+                 (SigId "rearWheelsForce_o",id),
+                 (SigId "chassisPropulsionForce_o",id),
+                 (SigId "vehicleSpeed_o",id),
+                 (SigId "chassisResistanceForce_o",neg),
+                 (SigId "frontBrakesTorque_o",neg),
+                 (SigId "rearBrakesTorque_o",neg)]
 
 ---------------------------------------------------------------------------------------
 -- * Calculate special signals
@@ -68,24 +102,24 @@ calculatePower rec = pRec
       time = getTime rec
       zeroSig = fromList (replicate (len time) 0) :: TC Signal (Typ UT UT UT) (Data ([] :> Nil) Double)
 
-      speed = g "speedsensor1.v"
-      voltage = g "potentialsensor1.p.v"
+      speed = g "vehicleSpeed_o"
+      voltage = g "batteryPoleVoltage_o"
 
 
       -- generator
-      generatorElectricPower =  g "electricmotor2.signalcurrent1.p.i" .* voltage
+      generatorElectricPower =  g "generatorCurrent_o" .* voltage
 
       -- battery
-      batteryClampsPower = voltage.*g "battery1.pin_p.i"
+      batteryClampsPower = voltage.*g "batteryPoleCurrent_o"
       batteryInternalVoltage = fromList (replicate (len time) 200) :: TC Signal (Typ UT UT UT) (Data ([] :> Nil) Double)
-      batteryInternalPower = g "battery1.pin_p.i".*batteryInternalVoltage
+      batteryInternalPower = g "batteryPoleCurrent_o".*batteryInternalVoltage
 
       -- dcdc -- TODO !!
       dcdcPowerHV = zeroSig
       dcdcPowerLV = zeroSig
 
        -- chassis
-      kineticPower = (g "chassis1.flange_a1.f" .- g "chassis1.drivingresistance1.force1.f").*speed
+      kineticPower = (g "chassisPropulsionForce_o" .- g "chassisResistanceForce_o").*speed
 
 
 ---------------------------------------------------------------------------------------
@@ -95,7 +129,7 @@ calculatePower rec = pRec
 
               -- engine
              [(PPosIdx Tank ConBattery,
-               g "engine1.FuelPower",
+               g "fuelPower_o",
                generatorElectricPower
               ),
 
@@ -107,20 +141,20 @@ calculatePower rec = pRec
 
               -- --motor
               (PPosIdx ConES ConFrontBrakes,
-               (g "electricmotor1.signalcurrent1.p.i".* voltage),
-               g "gearbox1.flange_b.tau".* g "gearbox1.inertia2.w"
+               (g "motorCurrent_o".* voltage),
+               g "gearboxTorqueOS_o".* g "gearboxSpeedOS_o"
               ),
 
               -- front wheels
               (PPosIdx ConFrontBrakes Chassis,
-               g "idealrollingwheel1.flangeR.tau".* g "brake1.w",
-               g "idealrollingwheel1.flangeT.f".* speed
+               g "frontWheelsTorque_o".* g "frontBrakesSpeed_o",
+               g "frontWheelsForce_o".* speed
               ),
 
               -- driving Resistance
               (PPosIdx Chassis Resistance,
-               g "chassis1.drivingresistance1.force1.f".* speed,
-               g "chassis1.drivingresistance1.force1.f".* speed
+               g "chassisResistanceForce_o".* speed,
+               g "chassisResistanceForce_o".* speed
               ),
 
               -- battery
@@ -137,14 +171,14 @@ calculatePower rec = pRec
 
               -- Front brake
               (PPosIdx ConFrontBrakes FrontBrakes,
-               g "brake1.lossPower",
-               g "brake1.lossPower"
+               g "frontBrakesLossPower_o",
+               g "frontBrakesLossPower_o"
               ),
 
               --Rear brake
               (PPosIdx Chassis RearBrakes,
-               g "idealrollingwheel2.flangeR.tau".* g "brake2.w",
-               g "idealrollingwheel2.flangeT.f".* speed
+               g "rearWheelsTorque_o".* g "rearBrakesSpeed_o",
+               g "rearWheelsForce_o".* speed
               ),
 
               --kinetic power
@@ -168,69 +202,69 @@ vehPowers = [PPosIdx Chassis VehicleInertia,
 
 -- Building Signal Record for better Plotting of the original signals
 vehicle :: [SigId]
-vehicle = [SigId "speedsensor1.v",
-           SigId "idealrollingwheel1.flangeR.tau",
-           SigId "idealrollingwheel2.flangeR.tau",
-           SigId "brake1.tau",
-           SigId "brake2.tau",
-           SigId "chassis1.drivingresistance1.force1.f",
+vehicle = [SigId "vehicleSpeed_o",
+           SigId "frontWheelsTorque_o",
+           SigId "rearWheelsTorque_o",
+           SigId "frontBrakesTorque_o",
+           SigId "rearBrakesTorque_o",
+           SigId "chassisResistanceForce_o",
            SigId "PPosIdx Chassis VehicleInertia"
           ]
 
 -- Building Signal Record for better Plotting of the original signals
 driveline:: [SigId]
-driveline = [SigId "speedsensor1.v",
-             SigId "electricmotor1.flange_a.tau",
-             SigId "gearbox1.flange_a.tau",
-             SigId "gearbox1.flange_b.tau"
+driveline = [SigId "vehicleSpeed_o",
+             SigId "motorTorque_o",
+             SigId "gearboxTorqueIS_o",
+             SigId "gearboxTorqueOS_o"
             ]
 
 -- Building Signal Record for better Plotting of the original signals
 motor:: [SigId]
-motor = [SigId "speedsensor1.v",
-        SigId "electricmotor1.flange_a.tau",
-        SigId "electricmotor1.speedsensor1.w",
-        SigId "electricmotor1.signalcurrent1.p.i",
-        SigId "electricmotor1.signalcurrent1.p.v"
+motor = [SigId "vehicleSpeed_o",
+        SigId "motorTorque_o",
+        SigId "motorSpeed_o",
+        SigId "motorCurrent_o",
+        SigId "motorVoltage_o"
         ]
 
 -- Building Signal Record for better Plotting of the original signals
 electric:: [SigId]
-electric = [SigId "speedsensor1.v",
-          SigId "potentialsensor1.p.v",
-          SigId "battery1.pin_p.i",
-          SigId "electricmotor1.signalcurrent1.p.i",
-          SigId "electricmotor1.signalcurrent1.p.v",
-          SigId "electricmotor2.signalcurrent1.p.i",
-          SigId "electricmotor2.signalcurrent1.v"
+electric = [SigId "vehicleSpeed_o",
+          SigId "batteryPoleVoltage_o",
+          SigId "batteryPoleCurrent_o",
+          SigId "motorCurrent_o",
+          SigId "motorVoltage_o",
+          SigId "generatorCurrent_o",
+          SigId "generatorVoltage_o"
           ]
 
 -- Building Signal Record for better Plotting of the original signals
 battery:: [SigId]
-battery  = [SigId "speedsensor1.v",
-          SigId "potentialsensor1.p.v",
-          SigId "battery1.pin_p.i",
-          SigId "battery1.constantvoltage1.v"
---          SigId "battery1.constantvoltage1.i"
+battery  = [SigId "vehicleSpeed_o",
+          SigId "batteryPoleVoltage_o",
+          SigId "batteryPoleCurrent_o",
+          SigId "batteryInternalVoltage_o"
+--          SigId "batteryInternalCurrent_o"
           ]
 
 
 -- Building Signal Record for better Plotting of the original signals
 generator:: [SigId]
-generator =  [SigId "speedsensor1.v",
-            SigId "electricmotor2.signalcurrent1.p.i",
-            SigId "electricmotor2.signalcurrent1.v",
-            SigId "electricmotor2.flange_a.tau",
-            SigId "electricmotor2.speedsensor1.w",
-            SigId "engine1.Speed"
+generator =  [SigId "vehicleSpeed_o",
+            SigId "generatorCurrent_o",
+            SigId "generatorVoltage_o",
+            SigId "generatorTorque_o",
+            SigId "generatorSpeed_o",
+            SigId "engineSpeed_o"
             ]
 
 
 xyEngine :: (SigId,SigId)
-xyEngine = (SigId "engine1.Speed", SigId "engine1.flange_b.tau")
+xyEngine = (SigId "engineSpeed_o", SigId "engineTorque_o")
 
 xyGenerator :: (SigId,SigId)
-xyGenerator = (SigId "engine1.Speed", SigId "electricmotor2.flange_a.tau")
+xyGenerator = (SigId "engineSpeed_o", SigId "generatorTorque_o")
 
 xyMotor :: (SigId,SigId)
-xyMotor = (SigId "electricmotor1.speedsensor1.w", SigId "electricmotor1.flange_a.tau")
+xyMotor = (SigId "motorSpeed_o", SigId "motorTorque_o")
