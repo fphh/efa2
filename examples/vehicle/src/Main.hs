@@ -41,6 +41,7 @@ import qualified EFA.Graph.Topology.Index as Idx
 
 import qualified EFA.Signal.Record as Record
 
+import System.FilePath ((</>))
 import System.IO
 
 --import qualified Data.Map as M
@@ -52,6 +53,7 @@ path :: FilePath
 path = "../../../../../data/examples/vehicle/"
 
 datasetsX:: [FilePath]
+
 {-
 datasetsX = ["Vehicle_res.plt",
              "Vehicle_mass1050kg_res.plt",
@@ -61,7 +63,6 @@ datasetsX = ["Vehicle_res.plt",
 datasetsX = ["Vehicle_mass900kg_resneu.plt",
              "Vehicle_mass1000kg_resneu.plt",
              "Vehicle_mass1100kg_resneu.plt"]
-
 
 deltasets :: [String]  ->   [String]
 deltasets xs = zipWith (\x y -> y ++ "_vs_" ++ x) xs (tail xs)
