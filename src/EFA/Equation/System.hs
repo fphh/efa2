@@ -524,6 +524,16 @@ outsum ::
    Idx.BndNode node -> RecordExpression rec node s a v v
 outsum = variableRecord . Idx.Sum Idx.Out
 
+stinsum ::
+   (Eq a, Sum a, Record rec, Ord node) =>
+   Idx.BndNode node -> RecordExpression rec node s a v a
+stinsum = variableRecord . Idx.StSum Idx.In
+
+stoutsum ::
+   (Eq a, Sum a, Record rec, Ord node) =>
+   Idx.BndNode node -> RecordExpression rec node s a v a
+stoutsum = variableRecord . Idx.StSum Idx.Out
+
 storage ::
    (Eq a, Sum a, Record rec, Ord node) =>
    Idx.BndNode node -> RecordExpression rec node s a v a
@@ -636,9 +646,12 @@ fromNodes ::
 fromNodes equalInOutSums =
   fold . M.mapWithKey f . Gr.nodes
    where f sn (ins, _label, outs) =
-            let -- this variable is used again in fromInnerStorages
-                varsumin = insum sn
-                varsumout = outsum sn  -- and this one, too.
+            let -- these variables are used again in fromInnerStorages
+                varinsum = insum sn
+                varoutsum = outsum sn
+                stvarinsum = stinsum sn
+                stvaroutsum = stoutsum sn
+
                 partition =
                    LH.unzipEithers .
                    map
@@ -657,19 +670,20 @@ fromNodes equalInOutSums =
                    foldMap
                       (splitFactors varsum stEnergy stxfactor)
                       (NonEmpty.fetch edges)
-            in  mwhen equalInOutSums (varsumin =%= varsumout) -- siehe bug 2013-02-12-sum-equations-storage
+            in  -- siehe bug 2013-02-12-sum-equations-storage
+                mwhen equalInOutSums (varinsum =%= varoutsum)
                 <>
-                splitStructEqs varsumin insStruct
+                (stvarinsum =%= integrate varinsum)
                 <>
-                splitStructEqs varsumout outsStruct
+                (stvaroutsum =%= integrate varoutsum)
                 <>
-                withLocalVar
-                   (\s ->
-                      (s =%= integrate varsumout) <> splitStoreEqs s insStore)
+                splitStructEqs varinsum insStruct
                 <>
-                withLocalVar
-                   (\s ->
-                      (s =%= integrate varsumin) <> splitStoreEqs s outsStore)
+                splitStructEqs varoutsum outsStruct
+                <>
+                splitStoreEqs stvaroutsum insStore
+                <>
+                splitStoreEqs stvarinsum outsStore
 
 
 fromInnerStorages ::
@@ -684,8 +698,8 @@ fromInnerStorages =
            =%=
            case dir of
               NoDir  -> storage before
-              InDir  -> storage before ~+ integrate (insum now)
-              OutDir -> storage before ~- integrate (outsum now)
+              InDir  -> storage before ~+ stinsum now
+              OutDir -> storage before ~- stoutsum now
 
 
 data StDir = InDir
@@ -760,7 +774,7 @@ fromInStorages (_, sn@(Idx.BndNode sec n), outs) =
          (Idx.storageEdge maxEnergy sec (NonEmpty.head souts) n =%=
           if sec == Idx.initial
             then storage sn
-            else integrate (insum sn))
+            else stinsum sn)
          <>
          let f beforeNext next =
                 Idx.storageEdge maxEnergy sec next n =%=
@@ -898,7 +912,7 @@ solveFromMeasurement g given =
 -- Die auf grund der Missachtung originaler Werte
 -- falsch berechneten Werte bleiben aber erhalten.
 -- Eine andere Lösung wäre, die Zeilen
---     (varsumin =%= varsumout)
+--     (varinsum =%= varoutsum)
 --     <>
 -- (im Moment 273 und 274) auszukommentieren.
 
