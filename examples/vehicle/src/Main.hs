@@ -41,6 +41,7 @@ import qualified EFA.Graph.Topology.Index as Idx
 
 import qualified EFA.Signal.Record as Record
 
+import System.FilePath ((</>))
 import System.IO
 
 --import qualified Data.Map as M
@@ -52,8 +53,11 @@ path :: FilePath
 path = "../../../../../data/examples/vehicle/"
 
 datasetsX:: [FilePath]
-datasetsX = [path ++ "Vehicle_res.plt",
-             path ++ "Vehicle_mass1050kg_res.plt"]
+datasetsX =
+   map (path </>) $
+      "Vehicle_res.plt" :
+      "Vehicle_mass1050kg_res.plt" :
+      []
 
 
 deltasets :: [String]  ->   [String]
