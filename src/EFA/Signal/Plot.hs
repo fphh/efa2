@@ -75,6 +75,8 @@ import Control.Functor.HT (void)
 import Data.Traversable (traverse)
 import Data.Foldable (foldMap)
 import Data.Monoid (mconcat)
+
+import Debug.Trace
 -- import Control.Concurrent (threadDelay)
 
 {-
@@ -470,10 +472,9 @@ optKeyOutside =
 
 
 stackLineSpec ::
-   FormatValue term => term -> Plot2D.T x y -> Plot2D.T x y
+   (FormatValue term, Show term) => term -> Plot2D.T x y -> Plot2D.T x y
 stackLineSpec term =
-   fmap (Graph2D.lineSpec
-            (LineSpec.title (Format.unASCII $ formatValue term) LineSpec.deflt))
+   fmap (Graph2D.lineSpec (LineSpec.title (Format.unASCII $ formatValue term) LineSpec.deflt))
 
 stackAttr ::
    (FormatValue var) =>
@@ -488,7 +489,7 @@ stackAttr title var =
       Opts.deflt
 
 stack ::
-   (FormatValue term) =>
+   (FormatValue term, Show term) =>
    M.Map term Double -> Plot2D.T Int Double
 stack =
    Fold.fold .
@@ -499,7 +500,7 @@ stack =
 
 
 stackIO ::
-   (FormatValue var, FormatValue term) =>
+   (FormatValue var, FormatValue term, Show term) =>
    String -> var -> M.Map term Double -> IO ()
 stackIO title var =
    void . Plot.plotDefault . Frame.cons (stackAttr title var) . stack
@@ -519,7 +520,7 @@ stacksAttr title vars =
       Opts.deflt
 
 stacks ::
-   (Ord term, FormatValue term) =>
+   (Ord term, FormatValue term, Show term) =>
    [M.Map term Double] -> Plot2D.T Int Double
 stacks =
    Fold.fold .
@@ -530,7 +531,7 @@ stacks =
    TMap.core . traverse (TMap.cons 0)
 
 stacksIO ::
-   (FormatValue var, Ord term, FormatValue term) =>
+   (FormatValue var, Ord term, FormatValue term, Show term) =>
    String -> [(var, M.Map term Double)] -> IO ()
 stacksIO title xs =
    case unzip xs of
