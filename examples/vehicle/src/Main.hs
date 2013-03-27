@@ -26,7 +26,7 @@ import qualified Modules.Analysis as Analysis
 import qualified Modules.Plots as Plots
 import qualified Modules.Signals as Signals
 
--- import qualified EFA.Signal.Plot as Plot
+import qualified EFA.Signal.Plot as Plot
 import qualified EFA.Graph.Topology.Index as Idx
 -- import qualified EFA.Equation.Environment as Env
 
@@ -98,6 +98,7 @@ main = do
 
   let allSignalsX = zipWith Record.combinePowerAndSignal powerSignalsX signalsX
 
+
 ---------------------------------------------------------------------------------------
 -- *  Generate Flow States as Graphs
 
@@ -121,7 +122,9 @@ main = do
 ---------------------------------------------------------------------------------------
 -- *  Make the Deltas for subsequent Datasets
 
-  let externalDeltaEnvX = zipWith (flip Analysis.delta  (head sequenceFlowsFiltX)) sequenceFlowTopologyX $ tail sequenceFlowsFiltX
+  let externalDeltaEnvX =
+        zipWith (flip Analysis.delta (head sequenceFlowsFiltX))
+                      sequenceFlowTopologyX $ tail sequenceFlowsFiltX
 
  ---------------------------------------------------------------------------------------
 -- *  Make the Prediction
@@ -142,12 +145,15 @@ main = do
     (zip (deltasets datasetsX) differenceExtEnvs)
 -}
 
-  Plots.recordStackRow "Energy Flow Change at Tank in Section 4"  (Idx.Energy (Idx.StructureEdge (Idx.Section 4) System.Tank System.ConBattery)) 1 
-        (zip (deltasets datasetsX) differenceExtEnvs)
+  Plots.recordStackRow
+    "Energy Flow Change at Tank in Section 4" 
+    (Idx.Energy (Idx.StructureEdge (Idx.Section 4) System.Tank System.ConBattery)) 1 
+    (zip (deltasets datasetsX) differenceExtEnvs)
       
+{-      
 ---------------------------------------------------------------------------------------
 -- * Plot Time Signals
-
+-}
 
   let plotList = [
                   ("Vehicle", Signals.vehicle),
@@ -158,9 +164,12 @@ main = do
                   ("Battery", Signals.battery)
                  ]
 
-  mapM_ (Plots.sigsWithSpeed allSignalsX) plotList
+ -- mapM_ (Plots.sigsWithSpeed allSignalsX) plotList
 
+  -- Plots.sigsWithSpeed allSignalsX (head plotList)
+  Plot.recordIO "Test" (head allSignalsX)
 
+{-
 ---------------------------------------------------------------------------------------
 -- * Plot Operation Points
 
@@ -198,3 +207,4 @@ main = do
     ]
 
 
+-}
