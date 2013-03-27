@@ -60,7 +60,7 @@ import qualified Graphics.Gnuplot.Value.Atom as Atom
 import qualified Graphics.Gnuplot.Value.Tuple as Tuple
 
 import qualified Graphics.Gnuplot.LineSpecification as LineSpec
-import Graphics.Gnuplot.ColorSpecification (name)
+import qualified Graphics.Gnuplot.ColorSpecification as ColourSpec
 
 import qualified Graphics.Gnuplot.Frame as Frame
 import qualified Graphics.Gnuplot.Frame.Option as Opt
@@ -74,11 +74,11 @@ import qualified Data.List as L
 import qualified Data.Foldable as Fold
 import Control.Monad (zipWithM_)
 import Control.Functor.HT (void)
+import Control.Applicative (liftA2)
 import Data.Traversable (traverse)
 import Data.Foldable (foldMap)
 import Data.Monoid (mconcat)
 
-import Debug.Trace
 -- import Control.Concurrent (threadDelay)
 
 {-
@@ -473,16 +473,14 @@ optKeyOutside :: Opts.T graph -> Opts.T graph
 optKeyOutside =
    Opts.add (Opt.custom "key" "position") ["outside"]
 
---linestyles :: Graph2D.T x y -> Graph2D.T x y
-lineColour n =
-  LineSpec.lineColor (name (Colour.colours !! (n `mod` len)))
-  where len = length Colour.colours
+lineColour :: String -> LineSpec.T -> LineSpec.T
+lineColour = LineSpec.lineColor . ColourSpec.name
  
 stackLineSpec ::
-   (FormatValue term, Show term) => term -> Int -> Plot2D.T x y -> Plot2D.T x y
-stackLineSpec term n =
+   (FormatValue term, Show term) => term -> String -> Plot2D.T x y -> Plot2D.T x y
+stackLineSpec term colour =
    fmap (Graph2D.lineSpec (LineSpec.title (Format.unASCII $ formatValue term) 
-          (lineColour n $ LineSpec.deflt)))
+          (lineColour colour $ LineSpec.deflt)))
 
 stackAttr ::
    (FormatValue var) =>
@@ -497,21 +495,23 @@ stackAttr title var =
       Opts.deflt
 
 stack ::
-   (FormatValue term, Show term) =>
+   (FormatValue term, Show term, Ord term) =>
+   M.Map term String ->
    M.Map term Double -> Plot2D.T Int Double
-stack =
+stack colorMap =
    Fold.fold .
    M.mapWithKey
       (\term val ->
-         stackLineSpec term 50 $
-         Plot2D.list Graph2D.histograms [val])
+         stackLineSpec term (colorMap M.! term) $
+           Plot2D.list Graph2D.histograms [val])
 
 
 stackIO ::
-   (FormatValue var, FormatValue term, Show term) =>
+   (FormatValue var, FormatValue term, Show term, Ord term) =>
    String -> var -> M.Map term Double -> IO ()
-stackIO title var =
-   void . Plot.plotDefault . Frame.cons (stackAttr title var) . stack
+stackIO title var m =
+   void . Plot.plotDefault . Frame.cons (stackAttr title var) . stack colorMap $ m
+   where colorMap = M.fromList $ zip (M.keys m) Colour.colours
 
 
 stacksAttr ::
@@ -528,28 +528,28 @@ stacksAttr title vars =
       Opts.deflt
 
 stacks ::
-   (Ord term, FormatValue term, Show term) =>
-   [M.Map (Int, term) Double] -> Plot2D.T Int Double
-stacks =
+  (Ord term, FormatValue term, Show term) =>
+  M.Map term String -> [M.Map term Double] -> Plot2D.T Int Double
+stacks colourMap =
    Fold.fold .
    M.mapWithKey
-      (\(n, term) val ->
-         stackLineSpec term n $
-         Plot2D.list Graph2D.histograms val) .
-   TMap.core . traverse (TMap.cons 0)
+      (\term (col, vals) ->
+         stackLineSpec term col $
+         Plot2D.list Graph2D.histograms vals) .
+  TMap.core .
+  liftA2 (,) (TMap.cons Colour.defltColour colourMap) .
+  traverse (TMap.cons 0) 
 
 stacksIO ::
    (FormatValue var, Ord term, FormatValue term, Show term) =>
    String -> [(var, M.Map term Double)] -> IO ()
 stacksIO title xs =
    case unzip xs of
-      (vars, ys) ->
-         void . Plot.plotDefault . Frame.cons (stacksAttr title vars) . stacks $ 
-           map f ys
-   where f = M.fromList . zipWith g [0..] . M.toList
-         g n (k, v) = ((n, k), v)
-
-
+      (vars, (y:ys)) ->
+         let colorMap = M.fromList $ zip (M.keys y) Colour.colours
+         in  void . Plot.plotDefault . Frame.cons (stacksAttr title vars)
+                  . stacks colorMap $ ys
+      _ -> error "stackIO: empty list"
 
 class Atom.C (Value tc) => AxisLabel tc where
    type Value tc :: *

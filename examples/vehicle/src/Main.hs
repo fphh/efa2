@@ -53,13 +53,16 @@ path :: FilePath
 path = "../../../../../data/examples/vehicle/"
 
 datasetsX:: [FilePath]
-datasetsX =
-   map (path </>) $
-      "Vehicle_res.plt" :
-      "Vehicle_mass1050kg_res.plt" :
-      "Vehicle_mass950kg_res.plt" :
-      []
 
+{-
+datasetsX = ["Vehicle_res.plt",
+             "Vehicle_mass1050kg_res.plt",
+             "Vehicle_mass950kg_res.plt"]
+-}
+
+datasetsX = ["Vehicle_mass900kg_res.plt",
+             "Vehicle_mass1000kg_res.plt",
+             "Vehicle_mass1100kg_res.plt"]
 
 deltasets :: [String]  ->   [String]
 deltasets xs = zipWith (\x y -> y ++ "_vs_" ++ x) xs (tail xs)
@@ -83,7 +86,7 @@ main = do
 ---------------------------------------------------------------------------------------
 -- * Import signals from Csv-file
 
-  rawSignalsX <- mapM modelicaPLTImport $ datasetsX -- map (\x -> path ++ x) datasetsX
+  rawSignalsX <- mapM modelicaPLTImport $ map (\x -> path ++ x) datasetsX
 
 ---------------------------------------------------------------------------------------
 -- * Conditioning, Sequencing and Integration
@@ -118,7 +121,9 @@ main = do
 ---------------------------------------------------------------------------------------
 -- *  Make the Deltas for subsequent Datasets
 
-  let externalDeltaEnvX = zipWith (flip Analysis.delta  (head sequenceFlowsFiltX)) sequenceFlowTopologyX $ tail sequenceFlowsFiltX
+  let externalDeltaEnvX =
+        zipWith (flip Analysis.delta (head sequenceFlowsFiltX))
+                      sequenceFlowTopologyX $ tail sequenceFlowsFiltX
 
  ---------------------------------------------------------------------------------------
 -- *  Make the Prediction
@@ -137,14 +142,15 @@ main = do
   mapM_ (Plots.stack  "Energy Flow Change at Tank in Section 4"
          (Idx.Energy (Idx.StructureEdge (Idx.Section 4) System.Tank System.ConBattery)) 1 ) 
     (zip (deltasets datasetsX) differenceExtEnvs)
+-}
 
--}  
   Plots.recordStackRow "Energy Flow Change at Tank in Section 4"  (Idx.Energy (Idx.StructureEdge (Idx.Section 4) System.Tank System.ConBattery)) 1 
         (zip (deltasets datasetsX) differenceExtEnvs)
-    
+      
+{-      
 ---------------------------------------------------------------------------------------
 -- * Plot Time Signals
-{-
+
 
   let plotList = [
                   ("Vehicle", Signals.vehicle),
@@ -178,7 +184,6 @@ main = do
 
 ---------------------------------------------------------------------------------------
 -- * Draw Diagrams
--}
 
   concurrentlyMany_ [
     -- Topologie
@@ -186,7 +191,7 @@ main = do
 --  Draw.topologyWithEdgeLabels System.edgeNames System.topology
 
     -- Sectionen
---    zipWith3M_ Draw.sequFlowGraphAbsWithEnv datasetsX sectionToposX externalEnvX,
+    zipWith3M_ Draw.sequFlowGraphAbsWithEnv datasetsX sectionToposX externalEnvX,
 
     -- Sections-Deltadiagramme
     zipWith3M_ Draw.sequFlowGraphDeltaWithEnv datasetsX sectionToposX externalDeltaEnvX
@@ -196,3 +201,4 @@ main = do
     ]
 
 
+-}
