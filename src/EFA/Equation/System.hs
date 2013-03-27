@@ -35,12 +35,10 @@ module EFA.Equation.System (
 
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
-import qualified EFA.Equation.Variable as Var
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph as Gr
-import qualified EFA.Report.Format as Format
 
 import EFA.Equation.Result(Result(..))
 
@@ -692,53 +690,27 @@ fromInnerStorages ::
    Record rec, Node.C node) =>
   TD.DirSequFlowGraph node -> EquationSystem rec node s a v
 fromInnerStorages =
-   mconcat . concatMap (LH.mapAdjacent f) . getInnerStorages
+   foldMap (mconcat . LH.mapAdjacent f . M.toList) . getInnerStorages
   where f (before, _) (now, dir) =
            storage now
            =%=
            case dir of
-              NoDir  -> storage before
-              InDir  -> storage before ~+ stinsum now
-              OutDir -> storage before ~- stoutsum now
+              Nothing     -> storage before
+              Just TD.In  -> storage before ~+ stinsum now
+              Just TD.Out -> storage before ~- stoutsum now
 
 
-data StDir = InDir
-           | OutDir
-           | NoDir deriving (Eq, Ord, Show)
-
--- Only graphs without intersection edges are allowed.
 -- Storages must not have more than one in or out edge.
-{-
-getInnerStorages :: TD.DirSequFlowGraph -> [[(Idx.SecNode, StDir)]]
-getInnerStorages = getStorages format
-  where format ([n], s, []) = if TD.isDirEdge n then (s, InDir) else (s, NoDir)
-        format ([], s, [n]) = if TD.isDirEdge n then (s, OutDir) else (s, NoDir)
-        format ([], s, []) = (s, NoDir)
-        format n@(_, _, _) = error ("getInnerStorages: " ++ show n)
--}
 getInnerStorages ::
   (Node.C node) =>
-  TD.DirSequFlowGraph node -> [[(Idx.BndNode node, StDir)]]
-getInnerStorages = getStorages format
-  where format ([_], s, []) = (s, InDir)
-        format ([], s, [_]) = (s, OutDir)
-        format ([], s, [])  = (s, NoDir)
-        format (_, s, _)  = errorSecNode "getInnerStorages" s
-
-type InOutFormat node = InOut (Idx.BndNode node) ()
-type InOut n el = ([Gr.LNode n el], n, [Gr.LNode n el])
-
-getStorages ::
-  (Ord node) =>
-  (InOutFormat node -> b) -> TD.DirSequFlowGraph node -> [[b]]
-getStorages format =
-  M.elems
-  . fmap M.elems
-  . M.fromListWith (M.unionWith (error "duplicate node"))
-  . map (\(ins, (n@(Idx.BndNode sec node),_), outs) ->
-            (node, M.singleton sec (format (ins,n,outs))))
-  . filter TD.isStorageNode
-  . Gr.mkInOutGraphFormat    -- ersetzen durch nodes
+  TD.DirSequFlowGraph node ->
+  M.Map node (M.Map (Idx.BndNode node) (Maybe TD.StoreDir))
+getInnerStorages =
+  foldl
+     (M.unionWith (M.unionWith (error "duplicate boundary for node")))
+     M.empty .
+  map (\(bn@(Idx.BndNode _ n), dir) -> M.singleton n $ M.singleton bn dir) .
+  M.toList . M.mapMaybe TD.maybeStorage . Gr.nodeLabels
 
 
 -----------------------------------------------------------------
@@ -751,12 +723,12 @@ fromInterStorages ::
 fromInterStorages = foldMap f . getInterStorages
   where f (dir, x) =
           case dir of
-               NoDir -> mempty
-               InDir -> fromInStorages x
-               OutDir -> fromOutStorages x
+             Nothing     -> mempty
+             Just TD.In  -> fromInStorages x
+             Just TD.Out -> fromOutStorages x
 
-getSection :: Idx.BndNode a -> Idx.Boundary
-getSection (Idx.BndNode s _) = s
+getBoundary :: Idx.BndNode a -> Idx.Boundary
+getBoundary (Idx.BndNode s _) = s
 
 _getNode :: Idx.BndNode a -> a
 _getNode (Idx.BndNode _ n) = n
@@ -808,25 +780,18 @@ splitFactors s ef xf ns =
 
 getInterStorages ::
   (Node.C node) =>
-  TD.DirSequFlowGraph node
-  -> [(StDir, ([Idx.Boundary], Idx.BndNode node, [Idx.Boundary]))]
-getInterStorages = concat . getStorages format
-  where format (ins, sn@(Idx.BndNode sec _), outs) =
-          let partition =
-                 LH.partition (sec ==) . map (getSection . fst)
-              (insStruct, insStore) = partition ins
-              (outsStruct, outsStore) = partition outs
-          in  (case (insStruct, outsStruct) of
-                 ([], [])  ->  -- We treat initial storages as in-storages
-                   if sec == Idx.initial then InDir else NoDir
-                 ([_], []) -> InDir
-                 ([], [_]) -> OutDir
-                 _ -> errorSecNode "getInterStorages" sn,
-               (insStore, sn, outsStore))
-
-errorSecNode :: Node.C node => String -> Idx.BndNode node -> a
-errorSecNode name node =
-   error (name ++ ": " ++ Format.unUnicode (Var.formatBoundaryNode node))
+  TD.DirSequFlowGraph node ->
+  [(Maybe TD.StoreDir, ([Idx.Boundary], Idx.BndNode node, [Idx.Boundary]))]
+getInterStorages =
+  M.elems .
+  M.mapWithKey
+     (\bn@(Idx.BndNode bnd _n) (ins, dir, outs) ->
+        let sections = filter (bnd /=) . map getBoundary . S.toList
+        in  (dir, (sections ins, bn, sections outs))) .
+  M.mapMaybe
+     (\(ins, typ, outs) ->
+         flip fmap (TD.maybeStorage typ) $ \dir -> (ins, dir, outs)) .
+  Gr.nodes
 
 
 -----------------------------------------------------------------

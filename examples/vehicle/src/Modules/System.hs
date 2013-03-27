@@ -24,7 +24,7 @@ topology :: TD.Topology Node
 topology = Gr.mkGraph ns (makeEdges es)
   where ns = [(Tank, TD.Source),
               (ConBattery, TD.Crossing), 
-              (Battery, TD.Storage),
+              (Battery, TD.storage),
               (ConES, TD.Crossing),  
               (ConFrontBrakes, TD.Crossing),
               (Chassis, TD.Crossing),
@@ -32,7 +32,7 @@ topology = Gr.mkGraph ns (makeEdges es)
               (ElectricSystem, TD.Sink),      -- vehicle electric system
               (FrontBrakes, TD.Sink),
               (RearBrakes, TD.Sink),
-              (VehicleInertia, TD.Storage)]
+              (VehicleInertia, TD.storage)]
 
         --extract edge Info
         es = map f edgeList

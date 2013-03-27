@@ -85,7 +85,7 @@ dotFromSequFlowGraph ::
   String ->
   SequFlowGraph node ->
   Maybe (Idx.Section -> Unicode) ->
-  (Topo.LNode node -> Unicode) ->
+  (Topo.LDirNode node -> Unicode) ->
   (Topo.LEdge node -> [Unicode]) ->
   DotGraph T.Text
 dotFromSequFlowGraph ti g mtshow nshow eshow =
@@ -137,7 +137,8 @@ dotFromSequFlowGraph ti g mtshow nshow eshow =
 
 dotFromSecNode :: 
   (Node.C node) =>
-  (Topo.LNode node -> Unicode) -> Topo.LNode node -> DotNode T.Text
+  (Topo.StNode store node -> Unicode) ->
+  Topo.StNode store node -> DotNode T.Text
 dotFromSecNode nshow n@(x, nodeType) =
    DotNode (dotIdentFromBndNode x)
       [ displabel, nodeColour, 
@@ -146,7 +147,7 @@ dotFromSecNode nshow n@(x, nodeType) =
         shape Topo.Crossing = PlainText
         shape Topo.Source = DiamondShape
         shape Topo.Sink = BoxShape
-        shape Topo.Storage = Ellipse
+        shape (Topo.Storage _) = Ellipse
         shape _ = BoxShape
         color Topo.Crossing = FillColor [RGB 150 200 240]
         color _ = nodeColour
@@ -187,7 +188,7 @@ printGraph, printGraphX, _printGraphDot, _printGraphPdf ::
    String ->
    SequFlowGraph node ->
    Maybe (Idx.Section -> Unicode) ->
-   (Topo.LNode node -> Unicode) ->
+   (Topo.LDirNode node -> Unicode) ->
    (Topo.LEdge node -> [Unicode]) ->
    IO ()
 printGraph =  printGraphX -- _printGraphPdf -- _printGraphDot -- printGraphX
@@ -238,8 +239,8 @@ dotFromTopology edgeLabels g =
   }
 
 dotFromTopoNode ::
-  (Node.C node) =>
-  Gr.LNode node Topo.NodeType -> DotNode T.Text
+  (Node.C node, StorageLabel store) =>
+  Gr.LNode node (Topo.NodeType store) -> DotNode T.Text
 dotFromTopoNode (x, typ) =
    DotNode (dotIdentFromNode x)
       [Label $ StrLabel $ T.pack $
@@ -326,21 +327,45 @@ orientUndirEdge (Edge x y) =
    if x < y then Edge x y else Edge y x
 
 
-showType :: NodeType -> String
-showType = show
+class StorageLabel a where
+   formatStorageLabel :: a -> String
 
-formatNodeType :: Format output => NodeType -> output
+instance StorageLabel () where
+   formatStorageLabel () = ""
+
+instance Show a => StorageLabel (Maybe a) where
+   formatStorageLabel Nothing = ""
+   formatStorageLabel (Just dir) = " " ++ show dir
+
+
+showType :: StorageLabel store => NodeType store -> String
+showType typ =
+   case typ of
+      Topo.Storage store -> "Storage" ++ formatStorageLabel store
+      Topo.Sink          -> "Sink"
+      Topo.AlwaysSink    -> "AlwaysSink"
+      Topo.Source        -> "Source"
+      Topo.AlwaysSource  -> "AlwaysSource"
+      Topo.Crossing      -> "Crossing"
+      Topo.DeadNode      -> "DeadNode"
+      Topo.NoRestriction -> "NoRestriction"
+
+
+formatNodeType ::
+   (Format output, StorageLabel store) =>
+   NodeType store -> output
 formatNodeType = Format.literal . showType
 
 formatNodeStorage ::
    (Record.C rec, FormatValue a, Format output, Node.C node) =>
-   Record.ToIndex rec -> StorageMap node (rec a) -> Topo.LNode node -> output
+   Record.ToIndex rec -> StorageMap node (rec a) ->
+   Topo.LDirNode node -> output
 formatNodeStorage rec st (n@(Idx.BndNode _sec nid), ty) =
    Format.lines $
    Node.display nid :
    Format.words [formatNodeType ty] :
       case ty of
-         Storage -> [Format.words [lookupFormat rec st $ Idx.Storage n]]
+         Storage _ -> [Format.words [lookupFormat rec st $ Idx.Storage n]]
          _ -> []
 
 
@@ -357,7 +382,7 @@ data Env node output =
       formatStEnergy,
       formatStX    :: Idx.StorageEdge node -> output,
       formatTime   :: Idx.Section -> output,
-      formatNode   :: Topo.LNode node -> output
+      formatNode   :: Topo.LDirNode node -> output
    }
 
 lookupFormat ::

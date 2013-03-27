@@ -15,7 +15,7 @@ import EFA.Signal.Record
           (Record(Record), FlowState(FlowState), FlowRecord,
            PPosIdx(PPosIdx), flipPos)
 import EFA.Graph.Topology
-          (Topology, FlowTopology, SequFlowGraph,
+          (Topology, FlowTopology, ClassifiedTopology, SequFlowGraph,
            FlowDirection(Dir, UnDir))
 
 
@@ -25,6 +25,7 @@ import EFA.Signal.Base (Sign(PSign, NSign, ZSign),BSum, DArith0)
 
 import qualified Data.Foldable as Fold
 import qualified Data.Map as M
+import Control.Monad (join)
 
 import EFA.Utility (checkedLookup)
 
@@ -86,7 +87,7 @@ genFlowTopology topo (FlowState fs) =
 
 mkSectionTopology ::
   (Ord node) =>
-  Idx.Section -> FlowTopology node -> (SequFlowGraph node)
+  Idx.Section -> ClassifiedTopology node -> SequFlowGraph node
 mkSectionTopology sid = Gr.ixmap (Idx.afterSecNode sid)
 
 
@@ -102,8 +103,8 @@ mkStorageEdges node stores = do
       (Edge (Idx.BndNode secin node) (Idx.BndNode secout node), Dir)
 
 getActiveStoreSequences ::
-   (Ord node, Topo.FlowDirectionField el) =>
-   SequData (Idx.Section, Gr.Graph node Topo.NodeType el) ->
+   (Ord node) =>
+   SequData (Idx.Section, Topo.ClassifiedTopology node) ->
    M.Map node (M.Map Idx.Section Topo.StoreDir)
 getActiveStoreSequences sq =
    Fold.foldl
@@ -111,7 +112,7 @@ getActiveStoreSequences sq =
       M.empty $
    fmap (\(s, g) ->
           fmap (M.singleton s) $
-          M.mapMaybe snd $ Topo.getActiveStores g) sq
+          M.mapMaybe (join . Topo.maybeStorage) $ Gr.nodeLabels g) sq
 
 mkSequenceTopology ::
   (Ord node) =>
@@ -119,8 +120,8 @@ mkSequenceTopology ::
 mkSequenceTopology sd =
    insEdges (Fold.fold $ M.mapWithKey mkStorageEdges tracks) $
    insNodes
-      (map (\n -> (Idx.initBndNode n, Topo.Storage)) $
+      (map (\n -> (Idx.initBndNode n, Topo.Storage (Just Topo.In))) $
        M.keys tracks) $
    Fold.foldMap (uncurry mkSectionTopology) sq
   where tracks = getActiveStoreSequences sq
-        sq = zipWithSecIdxs (,) sd
+        sq = zipWithSecIdxs (,) $ fmap Topo.classifyStorages sd
