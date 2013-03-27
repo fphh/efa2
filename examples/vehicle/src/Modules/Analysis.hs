@@ -21,12 +21,13 @@ import EFA.Signal.Record (PPosIdx(PPosIdx), SignalRecord, FlowRecord,
                           SignalRecord,getTime, newTimeBase, removeZeroNoise)
 
 import EFA.Signal.Sequence (-- genSequenceSignal,
-                            removeLowEnergySections,
+                            -- removeLowEnergySections,
                             genSequFlow,
                             addZeroCrossings,
-                            removeLowTimeSections,
+                            -- removeLowTimeSections,
                             genSequ,
                            -- sectionRecordsFromSequence
+                            separateMinorSections
                            )
 
 import qualified EFA.Equation.Arithmetic as Arith
@@ -34,6 +35,10 @@ import qualified EFA.Signal.Vector as Vec
 import qualified EFA.Signal.Base as B
 
 import qualified EFA.Signal.Signal as Sig
+import EFA.Signal.Signal (TC(..), Scalar) 
+import EFA.Signal.Data (Data(..), Nil)
+import EFA.Signal.Typ (Typ, F, T, A, Tt)
+
 import qualified EFA.Equation.Stack as Stack
 import EFA.Equation.Stack (Stack)
 
@@ -96,10 +101,11 @@ pre topology rawSignals =  do
 ---------------------------------------------------------------------------------------
 -- * Cut Signals and filter on low time sektions
 
-  let sequencePowersRaw :: SD.SequData (PowerRecord System.Node [] Double)
-      (sequenceRaw,sequencePowersRaw) = genSequ powerSignals0
+  let sequencePowers :: SD.SequData (PowerRecord System.Node [] Double)
+      (sequ,sequencePowers) = genSequ powerSignals0
 
-  let (sequ,sequencePowers) = removeLowTimeSections(sequenceRaw,sequencePowersRaw) 0
+--  let (sequ,sequencePowers) = removeLowTimeSections(sequenceRaw,sequencePowersRaw) 0
+      
 
   -- create sequence signal
   -- let sequSig = Sig.scale (genSequenceSignal sequ) 10 :: Sig.UTSigL  --  (10  ^^ (-12::Int))
@@ -109,9 +115,20 @@ pre topology rawSignals =  do
 -- * Integrate Power and Sections on maximum Energyflow
 
   let sequenceFlows = genSequFlow sequencePowers
-
+{-
   let (sequenceFilt,sequencePowersFilt,sequenceFlowsFilt) =
         removeLowEnergySections (sequ,sequencePowers,sequenceFlows) 0
+-} 
+
+  let epsT ::  TC Scalar (Typ A T Tt) (Data Nil Double)
+      epsT = Sig.toScalar 0
+  
+      epsE ::  TC Scalar (Typ A F Tt) (Data Nil Double)
+      epsE = Sig.toScalar 0
+    
+      
+  let ((sequenceFilt,sequencePowersFilt,sequenceFlowsFilt),_) =
+        separateMinorSections (sequ,sequencePowers,sequenceFlows) epsE epsT
 
   let (flowStates, adjustedFlows) =
          SD.unzip $

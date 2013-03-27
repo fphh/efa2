@@ -1,5 +1,6 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module EFA.Signal.Sequence where
 
@@ -7,7 +8,7 @@ module EFA.Signal.Sequence where
 import qualified EFA.Graph.Flow as Flow
 -- import qualified EFA.Graph.Topology.Index as Idx
 import EFA.Graph.Topology (Topology, FlowTopology, SequFlowGraph)
-
+import qualified EFA.Signal.Data as D
 import qualified EFA.Signal.Base as SB
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Vector as V
@@ -15,7 +16,8 @@ import qualified EFA.Signal.Record as Record
 
 import EFA.Signal.SequenceData
           (SequData(..), Sequ, Sec,
-           filterSequWithSequData, filterSequWithSequData2)
+           -- filterSequWithSequData, 
+           filterSequWithSequData2)
 
 
 import EFA.Signal.Record (Record(..), PowerRecord, FlowRecord)
@@ -27,9 +29,9 @@ import EFA.Signal.Signal
            DTSamp, PSamp2LL, Samp, Samp1L,
            (.+), (.-), (.*), (./), (.++),
             sampleAverage,
-           changeType, fromScalar, toSample, sigSum, toSigList, fromSigList)
+           changeType, fromScalar, toSample, sigSum, toSigList, fromSigList,Scalar)
 
-import EFA.Signal.Typ (Typ, STy, Tt, T, P, A)
+import EFA.Signal.Typ (Typ, STy, Tt, T, P, A,F)
 import EFA.Signal.Data (Data(Data), Nil, (:>))
 
 import qualified Data.Foldable as Fold
@@ -127,7 +129,7 @@ genSequFlow sqPRec = fmap Record.partIntegrate sqPRec
 -- | State changes in solver create several DataPoints with exact the same time
 -- | The resulting sections which have zero time duration are removed
 
-
+{-
 removeZeroTimeSections :: (Fractional a, Ord a, Eq a, V.Storage v a, V.Singleton v) => (Sequ,SequData (PowerRecord nty v a)) -> (Sequ,SequData (PowerRecord nty v a))
 removeZeroTimeSections (xs, ys)  = filterSequWithSequData f (xs, ys)
    where f (_,Record time _) = x /= y
@@ -154,6 +156,27 @@ removeLowEnergySections :: (Num a, SB.BSum a, Ord a, V.Walker v, V.Storage v a) 
 removeLowEnergySections  (xs, ys, zs) threshold = filterSequWithSequData2 f (xs, ys, zs)
    where  f (_, _ , Record _ fMap) =  not $ all g (M.toList fMap)
           g (_,s) = (abs (fromScalar (sigSum s))) < threshold
+
+-}
+
+
+separateMinorSections :: (Num d,
+                          V.Storage v d, 
+                          V.Singleton v,
+                          SB.BSum d, 
+                          V.Walker v,                          
+                          Ord d) => 
+                         (Sequ, SequData (PowerRecord id v d) , SequData (FlowRecord id v d)) ->
+                          TC Scalar (Typ A F Tt) (Data Nil d) -> -- (d -> 
+                          TC Scalar (Typ A T Tt) (Data Nil d) -> 
+                          ((Sequ, SequData (PowerRecord id v d), SequData (FlowRecord id v d)),
+                          (Sequ, SequData(PowerRecord id v d),  SequData (FlowRecord id v d)))
+
+separateMinorSections  (xs, ys, zs) (TC(Data energyThreshold)) (TC(Data timeThreshold)) = 
+  (filterSequWithSequData2 f (xs, ys, zs), filterSequWithSequData2 (not. f) (xs, ys, zs))
+   where  f (_, _ , Record time fMap) =  (all g (M.toList fMap) && h time)
+          g (_,s) = (abs (fromScalar $ sigSum s)) > energyThreshold
+          h time = (fromScalar (S.maximum time .- S.minimum time)) > timeThreshold
 
 
 -- TODO: Umschalten zwischen recFullIntegrate und recPartIntegrate.
@@ -193,13 +216,13 @@ makeSeqFlowTopology ::
   (Ord node) => SequData (FlowTopology node) -> SequFlowGraph node
 makeSeqFlowTopology =
    Flow.mkSequenceTopology
-
+{-
 makeSequence ::
    (Show node, Ord node) => PowerRecord node [] Val ->
    SequData (FlowRecord node [] Val)
 makeSequence =
     genSequFlow . snd . removeZeroTimeSections . genSequ . addZeroCrossings
-
+-}
 {-
 -- | PG - Its better to have processing under controll in Top-Level for inspeting and debugging signal treatment
 makeSequenceRaw ::

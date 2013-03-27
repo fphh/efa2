@@ -907,6 +907,10 @@ sign ::
 sign x = changeType $ map B.sign x
 
 
+abs :: (Num d, D.Storage c d, D.Map c)  => TC s t (Data c d) -> TC s t (Data c d)
+abs x = map P.abs x
+
+
 hasSignChange :: (SV.Storage v1 B.Sign,
                   SV.Walker v1,
                   SV.Storage v1 d,
@@ -987,6 +991,8 @@ makeAbsolute (TC x) = TC x
 
 reverse :: (D.Reverse c, D.Storage c d) => TC s t (Data c d) ->  TC s t (Data c d)
 reverse (TC x) = TC $ D.reverse x
+
+
 
 ----------------------------------------------------------
 -- Report instances

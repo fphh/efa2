@@ -60,9 +60,9 @@ datasetsX = ["Vehicle_res.plt",
              "Vehicle_mass950kg_res.plt"]
 -}
 
-datasetsX = ["Vehicle_mass900kg_resneu.plt",
-             "Vehicle_mass1000kg_resneu.plt",
-             "Vehicle_mass1100kg_resneu.plt"]
+datasetsX = ["Vehicle_mass900kg_res.plt",
+             "Vehicle_mass1000kg_res.plt",
+             "Vehicle_mass1100kg_res.plt"]
 
 deltasets :: [String]  ->   [String]
 deltasets xs = zipWith (\x y -> y ++ "_vs_" ++ x) xs (tail xs)
