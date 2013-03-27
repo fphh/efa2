@@ -116,7 +116,7 @@ recordStackRow:: (TDNode.C node, Ord node, Ord i, Show i, Show node, FormatValue
                             -> IO ()
                             
 recordStackRow ti energyIndex eps envList = Plot.stacksIO ti valList
-  where valList = map (\ (x,y) -> (Idx.delta $ Var.index energyIndex, AssignMap.threshold eps $ lookupStack energyIndex y)) envList
+  where valList = map (\ (_,y) -> (Idx.delta $ Var.index energyIndex, AssignMap.threshold eps $ lookupStack energyIndex y)) envList
 
 
 lookupStack:: (Ord i, Ord node, Show node) =>

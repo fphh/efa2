@@ -41,7 +41,7 @@ import qualified EFA.Graph.Topology.Index as Idx
 
 import qualified EFA.Signal.Record as Record
 
-import System.FilePath ((</>))
+--import System.FilePath ((</>))
 import System.IO
 
 --import qualified Data.Map as M
@@ -93,9 +93,10 @@ main = do
 
   preProcessedDataX <- mapM (Analysis.pre System.topology) rawSignalsX
 
-  let (_,_,sequenceFlowsFiltX,flowStatesX,powerSignalsX,signalsX) = L.unzip6 preProcessedDataX
+  let (sequFilt,_,sequenceFlowsFiltX,flowStatesX,powerSignalsX,signalsX) = L.unzip6 preProcessedDataX
 --  let (sequenceFiltX,sequencePowersFiltX,sequenceFlowsFiltX,flowStatesX,powerSignalsX,signalsX) = L.unzip6 preProcessedDataX
-
+  
+  
   let allSignalsX = zipWith Record.combinePowerAndSignal powerSignalsX signalsX
 
 
@@ -164,12 +165,12 @@ main = do
                   ("Battery", Signals.battery)
                  ]
 
- -- mapM_ (Plots.sigsWithSpeed allSignalsX) plotList
+  mapM_ (Plots.sigsWithSpeed allSignalsX) plotList
 
   -- Plots.sigsWithSpeed allSignalsX (head plotList)
   Plot.recordIO "Test" (head allSignalsX)
 
-{-
+
 ---------------------------------------------------------------------------------------
 -- * Plot Operation Points
 
@@ -207,4 +208,4 @@ main = do
     ]
 
 
--}
+

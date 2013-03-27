@@ -173,8 +173,8 @@ separateMinorSections :: (Num d,
                           (Sequ, SequData(PowerRecord id v d),  SequData (FlowRecord id v d)))
 
 separateMinorSections  (xs, ys, zs) (TC(Data energyThreshold)) (TC(Data timeThreshold)) = 
-  (filterSequWithSequData2 f (xs, ys, zs), filterSequWithSequData2 (not. f) (xs, ys, zs))
-   where  f (_, _ , Record time fMap) =  (all g (M.toList fMap) && h time)
+  (filterSequWithSequData2 f (xs, ys, zs), filterSequWithSequData2 (not . f) (xs, ys, zs))
+   where  f (_, _ , Record time fMap) =  (any g (M.toList fMap) && h time)
           g (_,s) = (abs (fromScalar $ sigSum s)) > energyThreshold
           h time = (fromScalar (S.maximum time .- S.minimum time)) > timeThreshold
 
