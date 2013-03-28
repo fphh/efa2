@@ -30,6 +30,15 @@ instance Enum Boundary where
 initial :: Boundary
 initial = Initial
 
+afterSection :: Section -> Boundary
+afterSection = AfterSection
+
+beforeSection :: Section -> Boundary
+beforeSection s =
+   if s == Section 0
+     then Initial
+     else AfterSection (pred s)
+
 
 data Absolute = Absolute deriving (Show, Eq, Ord)
 

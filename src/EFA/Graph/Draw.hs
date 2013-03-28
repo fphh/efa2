@@ -17,7 +17,6 @@ import EFA.Report.Format (Format, Unicode(Unicode, unUnicode))
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Variable as Var
-import EFA.Equation.Environment (StorageMap)
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
@@ -56,9 +55,6 @@ import Data.GraphViz.Attributes.Complete as Viz
 
 import qualified Data.Accessor.Basic as Accessor
 
-import Data.Foldable (foldMap)
-import Data.Tuple.HT (mapFst)
-
 import qualified Data.Text.Lazy as T
 
 import qualified Data.Map as M
@@ -66,6 +62,10 @@ import qualified Data.List as L
 import qualified Data.List.HT as HTL
 
 import Control.Monad (void)
+
+import Data.Foldable (foldMap)
+import Data.Tuple.HT (mapFst)
+
 
 -- import System.FilePath
 
@@ -358,14 +358,35 @@ formatNodeType = Format.literal . showType
 
 formatNodeStorage ::
    (Record.C rec, FormatValue a, Format output, Node.C node) =>
-   Record.ToIndex rec -> StorageMap node (rec a) ->
+   Record.ToIndex rec ->
+   Env.StorageMap node (rec a) ->
+   Env.StSumMap node (rec a) ->
    Topo.LDirNode node -> output
-formatNodeStorage rec st (n@(Idx.BndNode _sec nid), ty) =
+formatNodeStorage rec st ss (n@(Idx.BndNode bnd nid), ty) =
    Format.lines $
    Node.display nid :
    Format.words [formatNodeType ty] :
       case ty of
-         Storage _ -> [Format.words [lookupFormat rec st $ Idx.Storage n]]
+         Storage dir ->
+            case bnd of
+               Idx.Initial -> [lookupFormat rec st $ Idx.Storage n]
+               Idx.AfterSection sec ->
+                  case (lookupFormat rec st $ Idx.Storage $
+                           Idx.BndNode (Idx.beforeSection sec) nid,
+                        lookupFormat rec st $ Idx.Storage n) of
+                     (before, after) ->
+                        case dir of
+                           Just Topo.In ->
+                              [before,
+                               Format.plus Format.empty $
+                                  lookupFormat rec ss $ Idx.StSum Idx.In n,
+                               Format.assign Format.empty after]
+                           Just Topo.Out ->
+                              [before,
+                               Format.minus Format.empty $
+                                  lookupFormat rec ss $ Idx.StSum Idx.Out n,
+                               Format.assign Format.empty after]
+                           Nothing -> [lookupFormat rec st $ Idx.Storage n]
          _ -> []
 
 
@@ -456,7 +477,7 @@ envGen ::
     Record.C rec, Node.C node) =>
    Record.ToIndex rec ->
    Env.Complete node (rec a) (rec v) -> Env node output
-envGen rec (Env.Complete (Env.Scalar me st se sx _ss) (Env.Signal e _p n dt x _s)) =
+envGen rec (Env.Complete (Env.Scalar me st se sx ss) (Env.Signal e _p n dt x _s)) =
    Env
       (lookupFormatAssign rec e Idx.Energy)
       (lookupFormatAssign rec x Idx.X)
@@ -465,7 +486,7 @@ envGen rec (Env.Complete (Env.Scalar me st se sx _ss) (Env.Signal e _p n dt x _s
       (lookupFormatAssign rec se Idx.StEnergy)
       (lookupFormatAssign rec sx Idx.StX)
       (lookupFormat rec dt . Idx.DTime)
-      (formatNodeStorage rec st)
+      (formatNodeStorage rec st ss)
 
 envAbs ::
    (FormatValue a, FormatValue v, Format output, Node.C node) =>
