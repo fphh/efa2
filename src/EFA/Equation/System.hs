@@ -676,21 +676,23 @@ fromNodes equalInOutSums =
                           to (Idx.StorageEdge _ x _) = x
                           inout = (map from insStore, sn, map to outsStore)
                       in  case dir of
-                             TD.In  -> fromInStorages inout
-                             TD.Out -> fromOutStorages inout
+                             TD.In  ->
+                                fromInStorages inout
+                                <>
+                                splitStoreEqs stvarinsum outsStore
+                                <>
+                                (stvarinsum =%= integrate varinsum)
+                             TD.Out ->
+                                fromOutStorages inout
+                                <>
+                                splitStoreEqs stvaroutsum insStore
+                                <>
+                                (stvaroutsum =%= integrate varoutsum)
                    _ -> mempty
-                <>
-                (stvarinsum =%= integrate varinsum)
-                <>
-                (stvaroutsum =%= integrate varoutsum)
                 <>
                 splitStructEqs varinsum insStruct
                 <>
                 splitStructEqs varoutsum outsStruct
-                <>
-                splitStoreEqs stvaroutsum insStore
-                <>
-                splitStoreEqs stvarinsum outsStore
 
 
 fromStorageSequences ::
