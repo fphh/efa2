@@ -459,11 +459,12 @@ envDelta = envGen Idx.Delta
 
 
 sequFlowGraphCumulated ::
-  (Node.C node, FormatValue v, FormatValue a) =>
+  (Node.C node, FormatValue a) =>
   String ->
-  SequFlowGraph node ->
-  Env.Complete node (Record.Absolute a) (Record.Absolute v) -> IO ()
-sequFlowGraphCumulated ti g env =
+  ( SequFlowGraph node,
+    Env.Complete node (Record.Absolute a) (Record.Absolute a)) -> 
+  IO ()
+sequFlowGraphCumulated ti (g, env) =
   printGraph ti g (Just (formatTime aenv)) (formatNode aenv) (eshow . fst)
   where aenv = envAbs env
         eshow se =
