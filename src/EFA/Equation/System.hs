@@ -642,8 +642,8 @@ fromNodes ::
   TD.DirSequFlowGraph node -> EquationSystem rec node s a v
 fromNodes equalInOutSums =
   fold . M.mapWithKey f . Gr.nodes
-   where f sn (ins, nodeType, outs) =
-            let -- these variables are used again in fromInnerStorages
+   where f sn@(Idx.BndNode bnd _) (ins, nodeType, outs) =
+            let -- these variables are used again in fromStorageSequences
                 varinsum = insum sn
                 varoutsum = outsum sn
                 stvarinsum = stinsum sn
@@ -690,9 +690,11 @@ fromNodes equalInOutSums =
                                 (stvaroutsum =%= integrate varoutsum)
                    _ -> mempty
                 <>
-                splitStructEqs varinsum insStruct
-                <>
-                splitStructEqs varoutsum outsStruct
+                mwhen
+                   (bnd /= Idx.initial)
+                   (splitStructEqs varinsum insStruct
+                    <>
+                    splitStructEqs varoutsum outsStruct)
 
 
 fromStorageSequences ::
