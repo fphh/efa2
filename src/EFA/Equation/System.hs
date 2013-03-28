@@ -514,12 +514,12 @@ stxfactor = variableRecord . Idx.StX
 
 insum ::
    (Eq v, Sum v, Record rec, Ord node) =>
-   Idx.BndNode node -> RecordExpression rec node s a v v
+   Idx.SecNode node -> RecordExpression rec node s a v v
 insum = variableRecord . Idx.Sum Idx.In
 
 outsum ::
    (Eq v, Sum v, Record rec, Ord node) =>
-   Idx.BndNode node -> RecordExpression rec node s a v v
+   Idx.SecNode node -> RecordExpression rec node s a v v
 outsum = variableRecord . Idx.Sum Idx.Out
 
 stinsum ::
@@ -642,59 +642,67 @@ fromNodes ::
   TD.DirSequFlowGraph node -> EquationSystem rec node s a v
 fromNodes equalInOutSums =
   fold . M.mapWithKey f . Gr.nodes
-   where f sn@(Idx.BndNode bnd _) (ins, nodeType, outs) =
+   where f bn (ins, nodeType, outs) =
             let -- these variables are used again in fromStorageSequences
-                varinsum = insum sn
-                varoutsum = outsum sn
-                stvarinsum = stinsum sn
-                stvaroutsum = stoutsum sn
+                stvarinsum = stinsum bn
+                stvaroutsum = stoutsum bn
+                msn = Idx.secNodeFromBndNode bn
+                withSecNode = flip foldMap msn
 
                 partition =
                    LH.unzipEithers .
                    map
                       (\node ->
-                         case TD.edgeType $ Gr.Edge sn node of
+                         case TD.edgeType $ Gr.Edge bn node of
                             TD.StructureEdge e -> Left e
                             TD.StorageEdge e -> Right e) .
                    S.toList
+
                 (insStruct,  insStore)  = partition ins
                 (outsStruct, outsStore) = partition outs
+
                 splitStructEqs varsum edges =
                    foldMap
                       (splitFactors varsum energy xfactor)
                       (NonEmpty.fetch edges)
+
                 splitStoreEqs varsum edges =
                    foldMap
                       (splitFactors varsum stEnergy stxfactor)
                       (NonEmpty.fetch edges)
+
             in  -- siehe bug 2013-02-12-sum-equations-storage
                 case nodeType of
                    TD.Crossing ->
-                      mwhen equalInOutSums (varinsum =%= varoutsum)
+                      mwhen equalInOutSums $
+                      withSecNode $ \sn -> insum sn =%= outsum sn
                    TD.Storage (Just dir) ->
                       let from (Idx.StorageEdge x _ _) = x
                           to (Idx.StorageEdge _ x _) = x
-                          inout = (map from insStore, sn, map to outsStore)
+                          inout = (map from insStore, bn, map to outsStore)
                       in  case dir of
                              TD.In  ->
                                 fromInStorages inout
                                 <>
                                 splitStoreEqs stvarinsum outsStore
                                 <>
-                                (stvarinsum =%= integrate varinsum)
+                                (stvarinsum =%=
+                                 case msn of
+                                    Nothing -> storage bn
+                                    Just sn -> integrate $ insum sn)
                              TD.Out ->
                                 fromOutStorages inout
                                 <>
                                 splitStoreEqs stvaroutsum insStore
                                 <>
-                                (stvaroutsum =%= integrate varoutsum)
+                                (withSecNode $ \sn ->
+                                   stvaroutsum =%= integrate (outsum sn))
                    _ -> mempty
                 <>
-                mwhen
-                   (bnd /= Idx.initial)
-                   (splitStructEqs varinsum insStruct
-                    <>
-                    splitStructEqs varoutsum outsStruct)
+                (withSecNode $ \sn ->
+                   splitStructEqs (insum sn) insStruct
+                   <>
+                   splitStructEqs (outsum sn) outsStruct)
 
 
 fromStorageSequences ::
@@ -738,19 +746,15 @@ fromInStorages ::
    Record rec, Node.C node) =>
   ([Idx.Boundary], Idx.BndNode node, [Idx.Boundary]) ->
   EquationSystem rec node s a v
-fromInStorages (_, sn@(Idx.BndNode sec n), outs) =
+fromInStorages (_, sn@(Idx.BndNode bnd n), outs) =
    flip foldMap
       (fmap NonEmpty.sort $ NonEmpty.fetch outs) $ \souts ->
-         -- The next equation is special for the initial Section.
-         (Idx.storageEdge maxEnergy sec (NonEmpty.head souts) n =%=
-          if sec == Idx.initial
-            then storage sn
-            else stinsum sn)
+         (Idx.storageEdge maxEnergy bnd (NonEmpty.head souts) n =%= stinsum sn)
          <>
          let f beforeNext next =
-                Idx.storageEdge maxEnergy sec next n =%=
-                   Idx.storageEdge maxEnergy sec beforeNext n
-                      ~- Idx.storageEdge stEnergy beforeNext sec n
+                Idx.storageEdge maxEnergy bnd next n =%=
+                   Idx.storageEdge maxEnergy bnd beforeNext n
+                      ~- Idx.storageEdge stEnergy beforeNext bnd n
          in  mconcat $ LH.mapAdjacent f $ NonEmpty.flatten souts
 
 fromOutStorages ::

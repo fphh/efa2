@@ -54,6 +54,12 @@ formatBoundaryNode ::
 formatBoundaryNode (Idx.BndNode s n) =
    Format.boundary s `Format.sectionNode` Node.subscript n
 
+formatSectionNode ::
+   (Format output, Node.C node) =>
+   Idx.SecNode node -> output
+formatSectionNode (Idx.SecNode s n) =
+   Format.section s `Format.sectionNode` Node.subscript n
+
 formatStructureEdge ::
    (Format output, Node.C node) =>
    Format.EdgeVar -> Idx.StructureEdge node -> output
@@ -120,7 +126,7 @@ instance (Node.C node) => FormatIndex (Idx.DTime node) where
 instance (Node.C node) => FormatIndex (Idx.Sum node) where
    formatIndex (Idx.Sum dir x) =
       Format.subscript Format.sum $
-      Format.direction dir `Format.connect` formatBoundaryNode x
+      Format.direction dir `Format.connect` formatSectionNode x
 
 instance (Node.C node) => FormatIndex (Idx.Storage node) where
    formatIndex (Idx.Storage x) =

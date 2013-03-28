@@ -82,6 +82,16 @@ initBndNode = BndNode Initial
 afterSecNode :: Section -> node -> BndNode node
 afterSecNode s = BndNode (AfterSection s)
 
+bndNodeFromSecNode :: SecNode node -> BndNode node
+bndNodeFromSecNode (SecNode sec node) =
+   BndNode (AfterSection sec) node
+
+secNodeFromBndNode :: BndNode node -> Maybe (SecNode node)
+secNodeFromBndNode (BndNode bnd node) =
+   case bnd of
+      Initial -> Nothing
+      AfterSection sec -> Just (SecNode sec node)
+
 
 
 -- * Edge indices
@@ -150,7 +160,7 @@ data Storage node = Storage !(BndNode node) deriving (Show, Ord, Eq)
 
 data Direction = In | Out deriving (Show, Eq, Ord)
 
-data Sum node = Sum !Direction !(BndNode node) deriving (Show, Ord, Eq)
+data Sum node = Sum !Direction !(SecNode node) deriving (Show, Ord, Eq)
 
 data StSum node = StSum !Direction !(BndNode node) deriving (Show, Ord, Eq)
 
