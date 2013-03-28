@@ -58,8 +58,6 @@ import qualified UniqueLogic.ST.System as Sys
 import qualified Data.Accessor.Monad.Trans.State as AccessState
 import qualified Data.Accessor.Basic as Accessor
 
-import qualified Control.Monad as Monad
-
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT, execStateT)
 import Control.Monad.Trans.Writer (WriterT, runWriterT, tell)
@@ -620,7 +618,6 @@ fromGraph equalInOutSums g = mconcat $
   fromEdges (M.keys $ Gr.edgeLabels g) :
   fromNodes equalInOutSums g :
   fromInnerStorages (Gr.lefilter (TD.isStructureEdge . fst) g) :
-  fromInterStorages g :
   []
 
 -----------------------------------------------------------------
@@ -640,7 +637,7 @@ fromEdges =
 fromNodes ::
   (Eq a, Product a, a ~ Scalar v,
    Eq v, Product v, Integrate v,
-   Record rec, Ord node) =>
+   Record rec, Node.C node) =>
   Bool ->
   TD.DirSequFlowGraph node -> EquationSystem rec node s a v
 fromNodes equalInOutSums =
@@ -671,9 +668,17 @@ fromNodes equalInOutSums =
                       (splitFactors varsum stEnergy stxfactor)
                       (NonEmpty.fetch edges)
             in  -- siehe bug 2013-02-12-sum-equations-storage
-                mwhen
-                   (equalInOutSums && nodeType == TD.Crossing)
-                   (varinsum =%= varoutsum)
+                case nodeType of
+                   TD.Crossing ->
+                      mwhen equalInOutSums (varinsum =%= varoutsum)
+                   TD.Storage (Just dir) ->
+                      let from (Idx.StorageEdge x _ _) = x
+                          to (Idx.StorageEdge _ x _) = x
+                          inout = (map from insStore, sn, map to outsStore)
+                      in  case dir of
+                             TD.In  -> fromInStorages inout
+                             TD.Out -> fromOutStorages inout
+                   _ -> mempty
                 <>
                 (stvarinsum =%= integrate varinsum)
                 <>
@@ -717,29 +722,8 @@ getInnerStorages =
   M.toList . M.mapMaybe TD.maybeStorage . Gr.nodeLabels
 
 
------------------------------------------------------------------
-
-fromInterStorages ::
-  (Eq a, Product a, a ~ Scalar v,
-   Eq v, Product v, Integrate v,
-   Record rec, Node.C node) =>
-  TD.DirSequFlowGraph node -> EquationSystem rec node s a v
-fromInterStorages =
-  fold .
-  M.mapWithKey
-     (\bn@(Idx.BndNode bnd _n) (ins, dir, outs) ->
-        let sections = filter (bnd /=) . map getBoundary . S.toList
-            inout = (sections ins, bn, sections outs)
-        in  case dir of
-               TD.In  -> fromInStorages inout
-               TD.Out -> fromOutStorages inout) .
-  M.mapMaybe
-     (\(ins, typ, outs) ->
-         fmap (\dir -> (ins, dir, outs)) $ Monad.join $ TD.maybeStorage typ) .
-  Gr.nodes
-
-getBoundary :: Idx.BndNode a -> Idx.Boundary
-getBoundary (Idx.BndNode s _) = s
+_getBoundary :: Idx.BndNode a -> Idx.Boundary
+_getBoundary (Idx.BndNode s _) = s
 
 _getNode :: Idx.BndNode a -> a
 _getNode (Idx.BndNode _ n) = n
