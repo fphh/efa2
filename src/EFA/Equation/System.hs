@@ -617,7 +617,7 @@ fromGraph ::
 fromGraph equalInOutSums g = mconcat $
   fromEdges (M.keys $ Gr.edgeLabels g) :
   fromNodes equalInOutSums g :
-  fromInnerStorages g :
+  fromStorageSequences g :
   []
 
 -----------------------------------------------------------------
@@ -693,13 +693,13 @@ fromNodes equalInOutSums =
                 splitStoreEqs stvarinsum outsStore
 
 
-fromInnerStorages ::
+fromStorageSequences ::
   (Eq a, Sum a, a ~ Scalar v,
    Eq v, Product v, Integrate v,
    Record rec, Node.C node) =>
   TD.DirSequFlowGraph node -> EquationSystem rec node s a v
-fromInnerStorages =
-   foldMap (mconcat . LH.mapAdjacent f . M.toList) . getInnerStorages
+fromStorageSequences =
+   foldMap (mconcat . LH.mapAdjacent f . M.toList) . getStorageSequences
   where f (before, _) (now, dir) =
            storage now
            =%=
@@ -710,11 +710,11 @@ fromInnerStorages =
 
 
 -- Storages must not have more than one in or out edge.
-getInnerStorages ::
+getStorageSequences ::
   (Node.C node) =>
   TD.DirSequFlowGraph node ->
   M.Map node (M.Map (Idx.BndNode node) (Maybe TD.StoreDir))
-getInnerStorages =
+getStorageSequences =
   foldl
      (M.unionWith (M.unionWith (error "duplicate boundary for node")))
      M.empty .
