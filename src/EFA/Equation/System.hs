@@ -645,7 +645,7 @@ fromNodes ::
   TD.DirSequFlowGraph node -> EquationSystem rec node s a v
 fromNodes equalInOutSums =
   fold . M.mapWithKey f . Gr.nodes
-   where f sn (ins, _label, outs) =
+   where f sn (ins, nodeType, outs) =
             let -- these variables are used again in fromInnerStorages
                 varinsum = insum sn
                 varoutsum = outsum sn
@@ -671,7 +671,9 @@ fromNodes equalInOutSums =
                       (splitFactors varsum stEnergy stxfactor)
                       (NonEmpty.fetch edges)
             in  -- siehe bug 2013-02-12-sum-equations-storage
-                mwhen equalInOutSums (varinsum =%= varoutsum)
+                mwhen
+                   (equalInOutSums && nodeType == TD.Crossing)
+                   (varinsum =%= varoutsum)
                 <>
                 (stvarinsum =%= integrate varinsum)
                 <>
