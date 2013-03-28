@@ -71,6 +71,7 @@ import Control.Category ((.))
 import qualified Data.Map as M
 import qualified Data.Set as S
 import qualified Data.List.HT as LH
+import qualified Data.List as List
 
 import qualified Data.NonEmpty as NonEmpty
 
@@ -747,15 +748,12 @@ fromInStorages ::
   ([Idx.Boundary], Idx.BndNode node, [Idx.Boundary]) ->
   EquationSystem rec node s a v
 fromInStorages (_, sn@(Idx.BndNode bnd n), outs) =
-   flip foldMap
-      (fmap NonEmpty.sort $ NonEmpty.fetch outs) $ \souts ->
-         (Idx.storageEdge maxEnergy bnd (NonEmpty.head souts) n =%= stinsum sn)
-         <>
-         let f beforeNext next =
-                Idx.storageEdge maxEnergy bnd next n =%=
-                   Idx.storageEdge maxEnergy bnd beforeNext n
-                      ~- Idx.storageEdge stEnergy beforeNext bnd n
-         in  mconcat $ LH.mapAdjacent f $ NonEmpty.flatten souts
+   let souts = List.sort outs
+       maxEnergies = map (\b -> Idx.storageEdge maxEnergy bnd b n) souts
+       stEnergies  = map (\b -> Idx.storageEdge stEnergy  bnd b n) souts
+   in  mconcat $
+       zipWith (=%=) maxEnergies
+          (stinsum sn : zipWith (~-) maxEnergies stEnergies)
 
 fromOutStorages ::
   (Eq a, Product a, Record rec, Node.C node) =>
