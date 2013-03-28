@@ -617,7 +617,7 @@ fromGraph ::
 fromGraph equalInOutSums g = mconcat $
   fromEdges (M.keys $ Gr.edgeLabels g) :
   fromNodes equalInOutSums g :
-  fromInnerStorages (Gr.lefilter (TD.isStructureEdge . fst) g) :
+  fromInnerStorages g :
   []
 
 -----------------------------------------------------------------
