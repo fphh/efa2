@@ -32,8 +32,8 @@ import Prelude hiding (unzip, length, filter)
 -----------------------------------------------------------------------------------
 -- Section and Sequence -- Structures to handle Sequence Information and Data
 -- | Section analysis result
-type Sequ = SequData Sec
-type Sec = (SignalIdx,SignalIdx)
+type Sequ = SequData Range
+type Range = (SignalIdx, SignalIdx)
 
 {- |
 Sequence Vector to Store Section Data
@@ -42,7 +42,7 @@ It could also be a Map, but we need the laziness of the list type.
 -}
 newtype SequData a = SequData [Section a] deriving (Show, Eq)
 
-data Section a = Section Idx.Section Sec a
+data Section a = Section Idx.Section Range a
    deriving (Eq, Show)
 
 type instance D.Value (SequData a) = D.Value a
@@ -74,7 +74,7 @@ fromList =
       (\s -> Section (Idx.Section s) (case fromIntegral s of r -> (r,r)))
       [0 ..]
 
-fromRangeList :: [(Sec, a)] -> SequData a
+fromRangeList :: [(Range, a)] -> SequData a
 fromRangeList =
    SequData . zipWith (uncurry . Section) [Idx.Section 0 ..]
 
@@ -94,7 +94,7 @@ mapWithSection f (SequData xs) =
 
 
 -- | Get Number of Sections after cutting
-length :: Sequ -> Int
+length :: SequData a -> Int
 length (SequData xs) = List.length xs
 
 -- | Filter Sequence and SequenceData with a filter function
@@ -103,7 +103,7 @@ filter :: (a -> Bool) -> SequData a -> SequData a
 filter f (SequData xs) =
    SequData $ List.filter (\(Section _ _ a) -> f a) xs
 
-filterRange :: (Sec -> Bool) -> SequData a -> SequData a
+filterRange :: (Range -> Bool) -> SequData a -> SequData a
 filterRange f (SequData xs) =
    SequData $ List.filter (\(Section _ rng _) -> f rng) xs
 
@@ -123,7 +123,7 @@ instance
    toTable os (_ti, rs) =
       Fold.fold $ mapWithSection (\ sec r -> Report.toTable os (show sec, r)) rs
 
-instance ToTable Sec where
+instance ToTable Range where
    toTable _os (ti, xs) =
       [Table {
          tableTitle = "Sequence: " ++ ti,
@@ -142,7 +142,7 @@ instance ToTable Sec where
                  endCols  = []
               }
 
-         -- f :: Sec -> TableData
+         -- f :: Range -> TableData
          f (i1, i2) = toDoc id $ show i1 ++ " - " ++ show i2
 
 

@@ -200,7 +200,7 @@ newTimeBase (Record time m) newTime = Record newTime (M.map f m)
 -- | Create a new Record by slicing time and all signals on given Indices
 slice ::
    (V.Slice v, V.Storage v a) =>
-   Record s t1 t2 id v a -> (Int, Int) {- Sec -} -> Record s t1 t2 id v a
+   Record s t1 t2 id v a -> (Int, Int) {- Range -} -> Record s t1 t2 id v a
 slice (Record t m) (idx1,idx2) = Record (f t) (M.map f m)
   where f ::
            (V.Slice v, V.Storage v a) =>

@@ -15,7 +15,7 @@ import qualified EFA.Signal.Vector as V
 import qualified EFA.Signal.Record as Record
 
 import EFA.Signal.SequenceData
-          (SequData(..), Sequ, Sec)
+          (SequData(..), Sequ, Range)
 
 
 import EFA.Signal.Record (Record(..), PowerRecord, FlowRecord)
@@ -231,8 +231,8 @@ genSequ pRec =
 
         recyc ::
            Record.Sig -> Record.Samp1 ->
-           ((Sec, [Sec]), (Record.Sig, [Record.Sig])) ->
-           ((Sec, [Sec]), (Record.Sig, [Record.Sig]))
+           ((Range, [Range]), (Record.Sig, [Record.Sig])) ->
+           ((Range, [Range]), (Record.Sig, [Record.Sig]))
 
         -- Incoming rSig is at least two samples long -- detect changes
         recyc rsig x1 (((lastIdx,idx),sq),(secRSig, sqRSig)) |
@@ -249,7 +249,7 @@ genSequ pRec =
             f MixedEvent = (xs2, sqRSig ++ [secRSig] ++ [xs1 .++ xs2]) -- make additional Mini--Section
             f NoEvent = (secRSig .++ xs2, sqRSig)                  -- continue incrementing
 
-            g :: EventType -> (Sec, [Sec])
+            g :: EventType -> (Range, [Range])
             g LeftEvent = ((idx, idx+1), sq ++ [(lastIdx, idx)])
             g RightEvent = ((idx+1, idx+1), sq ++ [(lastIdx, idx+1)])
             g MixedEvent = ((idx+1, idx+1), sq ++ [(lastIdx, idx)] ++ [(idx, idx+1)])
