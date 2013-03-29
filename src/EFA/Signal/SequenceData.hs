@@ -26,7 +26,7 @@ import Data.Traversable (Traversable, traverse, sequenceA, foldMapDefault)
 import Data.Foldable (Foldable, foldMap)
 import Data.Tuple.HT (mapPair)
 
-import Prelude hiding (unzip)
+import Prelude hiding (unzip, filter)
 
 
 -----------------------------------------------------------------------------------
@@ -42,7 +42,7 @@ It could also be a Map, but we need the laziness of the list type.
 -}
 newtype SequData a = SequData [Section a] deriving (Show, Eq)
 
-data Section a = Section Idx.Section a
+data Section a = Section Idx.Section Sec a
    deriving (Eq, Show)
 
 type instance D.Value (SequData a) = D.Value a
@@ -58,17 +58,25 @@ instance Traversable SequData where
 
 
 instance Functor Section where
-   fmap f (Section s a) = Section s (f a)
+   fmap f (Section s rng a) = Section s rng (f a)
 
 instance Foldable Section where
    foldMap = foldMapDefault
 
 instance Traversable Section where
-   sequenceA (Section s a) = fmap (Section s) a
+   sequenceA (Section s rng a) = fmap (Section s rng) a
 
 
 fromList :: [a] -> SequData a
-fromList = SequData . zipWith Section [Idx.Section 0 ..]
+fromList =
+   SequData .
+   zipWith
+      (\s -> Section (Idx.Section s) (case fromIntegral s of r -> (r,r)))
+      [0 ..]
+
+fromRangeList :: [Sec] -> [a] -> SequData a
+fromRangeList rngs =
+   SequData . zipWith3 Section [Idx.Section 0 ..] rngs
 
 unzip :: SequData (a, b) -> (SequData a, SequData b)
 unzip (SequData xs) =
@@ -77,26 +85,22 @@ unzip (SequData xs) =
 
 mapWithSection :: (Idx.Section -> a -> b) -> SequData a -> SequData b
 mapWithSection f (SequData xs) =
-   SequData $ map (\(Section s a) -> Section s $ f s a) xs
+   SequData $ map (\(Section s rng a) -> Section s rng $ f s a) xs
 
-
------------------------------------------------------------------------------------
--- Utility Functions on Sequence Data
-
--- | PG Diskussion :
--- |        Sollte Sequ nicht auch SequData verwenden, dann würden die Utility - Funktionen hier auch funktionieren
--- |        brauchen wir eventuell eine Überstruktur, da das Filtern der Sequenz und der Sequenzdaten irgendwie zusammen
--- |        gehört
 
 -- | Get Number of Sections after cutting
 sequLength :: Sequ -> Int
 sequLength (SequData xs) = length xs
 
 -- | Filter Sequence and SequenceData with a filter function
--- | Allows to e.q. filter Sequ and SequPwrRecord
-filterSequWithSequData :: ((Sec,a) -> Bool) -> (Sequ,SequData a) ->   (Sequ,SequData a)
-filterSequWithSequData f (SequData xs, SequData ys) = (SequData xsf, SequData ysf)
-   where (xsf,ysf) = List.unzip $ filter (\(Section _si i, Section _s a) -> f (i,a)) $ zip xs ys
+-- | Allows to e.g. filter Sequ and SequPwrRecord
+filter :: (a -> Bool) -> SequData a -> SequData a
+filter f (SequData xs) =
+   SequData $ List.filter (\(Section _ _ a) -> f a) xs
+
+filterRange :: (Sec -> Bool) -> SequData a -> SequData a
+filterRange f (SequData xs) =
+   SequData $ List.filter (\(Section _ rng _) -> f rng) xs
 
 
 class ToTable a where

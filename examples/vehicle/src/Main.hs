@@ -58,8 +58,8 @@ main = do
 --------------------------------------------------------------------------------------- 
 -- * Conditioning, Sequencing and Integration
   
-  (sequenceFilt,sequencePowersFilt,sequenceFlowsFilt,flowStates,powerSignals,signals) <- Analysis.pre System.topology rawSignals
-  (sequenceFiltB,sequencePowersFiltB,sequenceFlowsFiltB,flowStatesB,powerSignalsB,signalsB) <- Analysis.pre System.topology rawSignalsB
+  (sequencePowersFilt,sequenceFlowsFilt,flowStates,powerSignals,signals) <- Analysis.pre System.topology rawSignals
+  (sequencePowersFiltB,sequenceFlowsFiltB,flowStatesB,powerSignalsB,signalsB) <- Analysis.pre System.topology rawSignalsB
 
 ---------------------------------------------------------------------------------------
 -- *  Generate Flow States as Graphs

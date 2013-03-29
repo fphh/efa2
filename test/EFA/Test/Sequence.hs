@@ -21,7 +21,7 @@ import Test.QuickCheck.All (quickCheckAll)
 failing_prop_genSequ :: (Ord node) => PowerRecord node [] Val -> Bool
 failing_prop_genSequ prec =
    Seq.approxSequPwrRecord (1e-8)
-      (snd (Seq.genSequ prec))
+      (Seq.genSequ prec)
 --      (Seq.chopAtZeroCrossingsPowerRecord prec)
       (Seq.chopAtZeroCrossingsPowerRecord prec)
 

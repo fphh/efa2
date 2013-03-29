@@ -15,8 +15,7 @@ import qualified EFA.Signal.Vector as V
 import qualified EFA.Signal.Record as Record
 
 import EFA.Signal.SequenceData
-          (SequData(..), Sequ, Sec,
-           filterSequWithSequData)
+          (SequData(..), Sequ, Sec)
 
 
 import EFA.Signal.Record (Record(..), PowerRecord, FlowRecord)
@@ -128,10 +127,13 @@ genSequFlow sqPRec = fmap recFullIntegrate sqPRec
 -- | The resulting sections which have zero time duration are removed 
 
 
-removeZeroTimeSections :: (Fractional a, Ord a, Eq a, V.Storage v a, V.Singleton v) => (Sequ,SequData (PowerRecord nty v a)) -> (Sequ,SequData (PowerRecord nty v a))
-removeZeroTimeSections (xs, ys)  = filterSequWithSequData f (xs, ys) 
-   where f (_,Record time _) = x /= y
-           where 
+removeZeroTimeSections ::
+   (Fractional a, Ord a, V.Storage v a, V.Singleton v) =>
+   SequData (PowerRecord nty v a) ->
+   SequData (PowerRecord nty v a)
+removeZeroTimeSections = SD.filter f
+   where f (Record time _) = x /= y
+           where
               err = error "Error in SequenceData.hs / removeZeroTimeSections -- empty head or tail"
               TC (Data x) = (fst $ maybe err id $ S.viewL time) 
               TC (Data y) = (snd $ maybe err id $ S.viewR time) 
@@ -140,9 +142,12 @@ removeZeroTimeSections (xs, ys)  = filterSequWithSequData f (xs, ys)
 removeLowTimeSections ::
    (Fractional a, Ord a, Eq a, V.Storage v a, V.Singleton v) =>
    a ->
-   (Sequ, SequData (PowerRecord nty v a)) ->
-   (Sequ, SequData (PowerRecord nty v a))
-removeLowTimeSections threshold = filterSequWithSequData f
+   SequData (PowerRecord nty v a) ->
+   SequData (PowerRecord nty v a)
+removeLowTimeSections threshold = SD.filter f
+   where
+          f (Record time _) = abs (x - y) > threshold
+            where
               err = error "Error in SequenceData.hs / removeZeroTimeSections -- empty head or tail"
               TC (Data x) = (fst $ maybe err id $ S.viewL time) 
               TC (Data y) = (snd $ maybe err id $ S.viewR time) 
@@ -151,10 +156,10 @@ removeLowTimeSections threshold = filterSequWithSequData f
 removeLowEnergySections ::
    (Num a, SB.BSum a, Ord a, V.Walker v, V.Storage v a) =>
    a ->
-   (Sequ, SequData (PowerRecord node v a, FlowRecord node v a)) ->
-   (Sequ, SequData (PowerRecord node v a, FlowRecord node v a))
-removeLowEnergySections threshold = filterSequWithSequData f
-   where  f (_, (_ , Record _ fMap)) =  not $ Fold.all g fMap
+   SequData (PowerRecord node v a, FlowRecord node v a) ->
+   SequData (PowerRecord node v a, FlowRecord node v a)
+removeLowEnergySections threshold = SD.filter (f . snd)
+   where  f (Record _ fMap) =  not $ Fold.all g fMap
           g s = (abs (fromScalar (sigSum s))) < threshold
 
 
@@ -197,10 +202,11 @@ makeSeqFlowTopology =
    Flow.mkSequenceTopology
 
 makeSequence ::
-   (Show node, Ord node) => PowerRecord node [] Val ->
+   (Show node, Ord node) =>
+   PowerRecord node [] Val ->
    SequData (FlowRecord node [] Val)
 makeSequence =
-    genSequFlow . snd . removeZeroTimeSections . genSequ . addZeroCrossings
+    genSequFlow . removeZeroTimeSections . genSequ . addZeroCrossings
 
 {-
 -- | PG - Its better to have processing under controll in Top-Level for inspeting and debugging signal treatment
@@ -216,8 +222,11 @@ Must be fixed for empty signals and
 must correctly handle the last section.
 -}
 -- | Function to Generate Time Sequence
-genSequ ::  Ord node => PowerRecord node [] Val -> (Sequ, SequData (PowerRecord node [] Val))
-genSequ pRec = removeNilSections (SD.fromList $ sequ++[lastSec], SD.fromList pRecs)
+genSequ ::
+   Ord node =>
+   PowerRecord node [] Val ->
+   SequData (PowerRecord node [] Val)
+genSequ pRec = removeNilSections $ SD.fromRangeList (sequ++[lastSec]) pRecs
   where rSig = record2RSig pRec
         pRecs = map (rsig2SecRecord pRec) (seqRSig ++ [lastRSec])
         ((lastSec,sequ),(lastRSec,seqRSig)) = recyc rTail rHead (((0,0),[]),(Record.singleton $ rHead,[]))
@@ -260,10 +269,10 @@ genSequ pRec = removeNilSections (SD.fromList $ sequ++[lastSec], SD.fromList pRe
 
 -- | Function to remove Nil-Sections which have same start and stop Index
 removeNilSections ::
-   (Sequ, SequData (PowerRecord node v a)) ->
-   (Sequ, SequData (PowerRecord node v a))
+   SequData (PowerRecord node v a) ->
+   SequData (PowerRecord node v a)
 removeNilSections =
-   filterSequWithSequData (uncurry (/=) . fst)
+   SD.filterRange (uncurry (/=))
 
 
 -- | Function to detect and classify a step over several signals

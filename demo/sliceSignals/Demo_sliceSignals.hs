@@ -8,7 +8,7 @@ import qualified Data.Map as M
 
 import qualified EFA.Signal.Signal as S
 import EFA.Signal.Sequence
-import EFA.Signal.SequenceData (Sequ, SequData)
+import EFA.Signal.SequenceData (SequData)
 import EFA.Signal.Record
 import EFA.Report.Report (ToTable, ROpt(RAll), report)
 
@@ -182,20 +182,19 @@ pmapList =
 recList :: [PowerRecord Node.Int [] Double]
 recList = map (Record time) pmapList
 
-list :: [(Int, (String, (PowerRecord Node.Int [] Double, (Sequ, SequData (PowerRecord Node.Int [] Double)))))]
+list :: [(Int, (String, (PowerRecord Node.Int [] Double, SequData (PowerRecord Node.Int [] Double))))]
 list = idxList $ 
   zip titleList 
       (zip recList (map  (genSequ . addZeroCrossings) recList))
 
-f :: (Num a, Show a, ToTable a2, ToTable a1) =>
-  (a, ([Char], (PowerRecord Node.Int [] Double, (a1, a2)))) -> IO ()
-f (idx, (title, (pRec, (sq, sqRec)))) = do
+f :: (Num a, Show a, ToTable sequ) =>
+  (a, ([Char], (PowerRecord Node.Int [] Double, sequ))) -> IO ()
+f (idx, (title, (pRec, sq))) = do
   putStrLn ""
   putStrLn $ "Test " ++ show (idx+1) ++ ": " ++ title
   report [RAll] (title, pRec)
   report [RAll] (title, addZeroCrossings pRec)
   report [] (title, sq)
-  report [RAll] (title, sqRec)
 
 main :: IO ()
 main = mapM_ f list

@@ -49,27 +49,26 @@ recList :: [PowerRecord Node.Int [] Double]
 recList = map (Record time) pmapList  
 
 list ::
-  [(Int, (String, (PowerRecord Node.Int [] Double, (Sequ, SequData (PowerRecord Node.Int [] Double)))))]
+  [(Int, (String, (PowerRecord Node.Int [] Double, SequData (PowerRecord Node.Int [] Double))))]
 list = idxList $
   zip titleList 
-      (zip recList (map  (genSequ . addZeroCrossings) recList))
+      (zip recList (map (genSequ . addZeroCrossings) recList))
 
 -- f :: 
 --   (Num a, Show a2, Show a1, Show a) =>
 --   (a, ([Char], (SequData (PowerRecord Node.Int [] Double), (a1, a2)))) -> IO ()
 
-f :: (Num a, Ord nty, Show a2, Show a1, Show nty, Show a) =>
-     (a, ([Char], (PowerRecord nty [] Double, (a1, a2))))
-     -> IO ()
+f ::
+   (Num a, Ord nty, Show seq, Show nty, Show a) =>
+   (a, (String, (PowerRecord nty [] Double, seq))) -> IO ()
 
-f (idx, (title, (pRec, (sq, sqRec)))) = do
+f (idx, (title, (pRec, sqRec))) = do
   putStrLn ""
   putStrLn $ "Test " ++ show (idx + 1) ++ ": " ++ title
   putStrLn ("XList: \n" ++ (show pRec))   
   putStrLn ("XList: \n" ++ (show (addZeroCrossings pRec)))   
-  putStrLn ("Sequence: " ++  show sq) 
-  putStrLn ("SequRec: " ++  show sqRec) 
-  
+  putStrLn ("Sequence: " ++  show sqRec)
+
 main :: IO ()
 main = mapM_ f list
   

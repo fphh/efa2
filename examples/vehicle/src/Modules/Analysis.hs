@@ -66,13 +66,11 @@ sec0 = Idx.Section 0
 pre :: Monad m =>
      TD.Topology System.Node
      -> SignalRecord [] Double
-     -> m (SD.Sequ,
-           SD.SequData (PowerRecord System.Node [] Double),
+     -> m (SD.SequData (PowerRecord System.Node [] Double),
            SD.SequData (FlowRecord System.Node [] Double),
            SD.SequData (Record.FlowState System.Node), 
            PowerRecord System.Node [] Double,
-           SignalRecord 
-           [] Double)
+           SignalRecord [] Double)
 pre topology rawSignals =  do
 
 ---------------------------------------------------------------------------------------
@@ -113,16 +111,16 @@ pre topology rawSignals =  do
 -- * Cut Signals and filter on low time sektions
 
   let sequencePowersRaw :: SD.SequData (PowerRecord System.Node [] Double)
-      (sequenceRaw,sequencePowersRaw) = genSequ powerSignals0
+      sequencePowersRaw = genSequ powerSignals0
 
 -- Rep.report [] ("Sequence", sequ)
 
-  let (sequ,sequencePowers) = removeLowTimeSections 0 (sequenceRaw,sequencePowersRaw)
-  --  let (sequ,sequencePowers) = removeZeroTimeSections(sequenceRaw,sequencePowersRaw)
+  let sequencePowers = removeLowTimeSections 0 sequencePowersRaw
+  --  let sequencePowers = removeZeroTimeSections sequencePowersRaw
 
   -- create sequence signal
-  let sequSig = Sig.scale (genSequenceSignal sequ) 10 :: Sig.UTSigL  --  (10  ^^ (-12::Int))
-  let sequenceSignals = sectionRecordsFromSequence signals0 sequ
+  -- let sequSig = Sig.scale (genSequenceSignal sequ) 10 :: Sig.UTSigL  --  (10  ^^ (-12::Int))
+  -- let sequenceSignals = sectionRecordsFromSequence signals0 sequ
 
   --Pl.recordSplitPlus 1 "Mit SektionsSignal" powerSignals0 [(PPosIdx System.Tank System.Tank, Sig.setType sequSig)]
   --Rep.report [Rep.RAll,Rep.RVertical] ("Powers0", powerSignals0)
@@ -130,10 +128,10 @@ pre topology rawSignals =  do
 ---------------------------------------------------------------------------------------
 -- * Integrate Power and Sections on maximum Energyflow
 
-  let (sequenceFilt,(sequencePowersFilt,sequenceFlowsFilt)) =
-        mapSnd SD.unzip $
-        removeLowEnergySections 0
-           (sequ, fmap (\x -> (x, Seq.recFullIntegrate x)) sequencePowers)
+  let (sequencePowersFilt,sequenceFlowsFilt) =
+        SD.unzip $
+        removeLowEnergySections 0 $
+        fmap (\x -> (x, Seq.recFullIntegrate x)) sequencePowers
 
   let (flowStates, adjustedFlows) =
          SD.unzip $
@@ -143,7 +141,7 @@ pre topology rawSignals =  do
                in  (flowState, Flow.adjustSigns topology flowState state))
             sequenceFlowsFilt
 
-  return (sequenceFilt,sequencePowersFilt,adjustedFlows, flowStates, powerSignals0, signals0)
+  return (sequencePowersFilt, adjustedFlows, flowStates, powerSignals0, signals0)
 
 -------------------------------------------------------------------------------------------------  
 -- ## Analyse External Energy Flow
