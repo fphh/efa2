@@ -137,21 +137,23 @@ removeZeroTimeSections (xs, ys)  = filterSequWithSequData f (xs, ys)
               TC (Data y) = (snd $ maybe err id $ S.viewR time) 
 
 -- | Drop Sections with time duration below threshold
-removeLowTimeSections :: (Fractional a, Ord a, Eq a, V.Storage v a, V.Singleton v) => (Sequ,SequData (PowerRecord nty v a)) -> a -> (Sequ,SequData (PowerRecord nty v a))
-removeLowTimeSections (xs, ys)  threshold = filterSequWithSequData f (xs, ys) 
-   where  
-          f (_,Record time _) = abs (x -y) > threshold 
-            where 
+removeLowTimeSections ::
+   (Fractional a, Ord a, Eq a, V.Storage v a, V.Singleton v) =>
+   a ->
+   (Sequ, SequData (PowerRecord nty v a)) ->
+   (Sequ, SequData (PowerRecord nty v a))
+removeLowTimeSections threshold = filterSequWithSequData f
               err = error "Error in SequenceData.hs / removeZeroTimeSections -- empty head or tail"
               TC (Data x) = (fst $ maybe err id $ S.viewL time) 
               TC (Data y) = (snd $ maybe err id $ S.viewR time) 
 
 -- | Drop Sections with negligible energy flow
-removeLowEnergySections :: (Num a, SB.BSum a, Ord a, V.Walker v, V.Storage v a) =>
+removeLowEnergySections ::
+   (Num a, SB.BSum a, Ord a, V.Walker v, V.Storage v a) =>
+   a ->
+   (Sequ, SequData (PowerRecord node v a, FlowRecord node v a)) ->
    (Sequ, SequData (PowerRecord node v a, FlowRecord node v a))
-   -> a
-   -> (Sequ, SequData (PowerRecord node v a, FlowRecord node v a))
-removeLowEnergySections  (xs, ys) threshold = filterSequWithSequData f (xs, ys)
+removeLowEnergySections threshold = filterSequWithSequData f
    where  f (_, (_ , Record _ fMap)) =  not $ Fold.all g fMap
           g s = (abs (fromScalar (sigSum s))) < threshold
 

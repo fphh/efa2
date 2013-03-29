@@ -117,7 +117,7 @@ pre topology rawSignals =  do
 
 -- Rep.report [] ("Sequence", sequ)
 
-  let (sequ,sequencePowers) = removeLowTimeSections(sequenceRaw,sequencePowersRaw) 0
+  let (sequ,sequencePowers) = removeLowTimeSections 0 (sequenceRaw,sequencePowersRaw)
   --  let (sequ,sequencePowers) = removeZeroTimeSections(sequenceRaw,sequencePowersRaw)
 
   -- create sequence signal
@@ -132,8 +132,8 @@ pre topology rawSignals =  do
 
   let (sequenceFilt,(sequencePowersFilt,sequenceFlowsFilt)) =
         mapSnd SD.unzip $
-        removeLowEnergySections
-           (sequ, fmap (\x -> (x, Seq.recFullIntegrate x)) sequencePowers) 0
+        removeLowEnergySections 0
+           (sequ, fmap (\x -> (x, Seq.recFullIntegrate x)) sequencePowers)
 
   let (flowStates, adjustedFlows) =
          SD.unzip $
