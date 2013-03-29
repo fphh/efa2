@@ -8,8 +8,8 @@ import EFA.Utility.Async (concurrentlyMany_)
 import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Flow as Flow
+import qualified EFA.Signal.SequenceData as SD
 import EFA.Graph (mkGraph)
-import EFA.Signal.SequenceData
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
@@ -59,7 +59,7 @@ drawSeqGraph :: [TD.FlowTopology Node.Int] ->  IO ()
 drawSeqGraph sol =
    Draw.sequFlowGraph "" .
    Flow.mkSequenceTopology .
-   SequData . select sol . parse =<<
+   SD.fromList . select sol . parse =<<
    prompt "Gib kommagetrennt die gewuenschten Sektionsindices ein: "
 
 

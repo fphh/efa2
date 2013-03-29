@@ -16,7 +16,6 @@ import qualified EFA.Graph as Gr
 import qualified EFA.Signal.Signal as Sig
 
 import EFA.IO.CSVImport (modelicaCSVImport)
--- import qualified EFA.Signal.SequenceData as SD
 import EFA.Signal.Sequence (makeSequence, makeSeqFlowGraph)
 import EFA.Signal.Record
           (SigId(SigId), Record(Record), PPosIdx(PPosIdx), PowerRecord)

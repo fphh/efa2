@@ -11,10 +11,11 @@ import qualified EFA.Signal.Signal as S
 import EFA.Signal.Record (PowerRecord, Record (..))
 import EFA.Signal.Base (Val)
 
+import qualified Data.Foldable as Fold
+import qualified Data.List.HT as ListHT
+
 -- import Test.QuickCheck (Property, (==>))
 import Test.QuickCheck.All (quickCheckAll)
-
-import qualified Data.List.HT as HTL
 
 
 failing_prop_genSequ :: (Ord node) => PowerRecord node [] Val -> Bool
@@ -30,9 +31,8 @@ prop_chopMatchingCutsApprox ::
   PowerRecord node [] Val -> Bool
 prop_chopMatchingCutsApprox prec =
    case Seq.chopAtZeroCrossingsPowerRecord prec :: SequData (PowerRecord node [] Val) of
-        SequData xs ->
-          and $
-          HTL.mapAdjacent
+       xs ->
+          eqAdjacent
              (\(Record xt xm)
                (Record yt ym) ->
                  fmap snd (S.viewR xt) == fmap fst (S.viewL yt)
@@ -56,9 +56,8 @@ prop_chopMatchingCutsExact ::
 prop_chopMatchingCutsExact prec =
    case Seq.chopAtZeroCrossingsPowerRecord prec
          :: SequData (PowerRecord node [] Rational) of
-      SequData xs ->
-         and $
-         HTL.mapAdjacent
+      xs ->
+         eqAdjacent
             (\(Record xt xm)
               (Record yt ym) ->
                 fmap snd (S.viewR xt) == fmap fst (S.viewL yt)
@@ -75,6 +74,10 @@ prop_chopProjectiveExact prec =
        ==
        (Seq.chopAtZeroCrossingsPowerRecord $
         Seq.concatPowerRecords secs)
+
+eqAdjacent :: (a -> a -> Bool) -> SequData a -> Bool
+eqAdjacent f =
+   and . ListHT.mapAdjacent f . Fold.toList
 
 runTests :: IO Bool
 runTests = $quickCheckAll

@@ -171,7 +171,7 @@ makeGivenFromExternal :: (Eq v, Num v, Arith.Sum v, Vec.Storage t v, Vec.FromLis
 makeGivenFromExternal idx sf =
    (Idx.Record idx (Idx.Storage (Idx.initBndNode System.Battery)) .= initStorage)
    <> (Idx.Record idx (Idx.Storage (Idx.initBndNode System.VehicleInertia)) .= 0)
-   <> fold (SD.zipWithSecIdxs f sf)
+   <> fold (SD.mapWithSection f sf)
    where f sec (Record t xs) =
            (Idx.Record idx (Idx.DTime sec) .= sum (Sig.toList t)) <>
            fold (M.mapWithKey g xs)

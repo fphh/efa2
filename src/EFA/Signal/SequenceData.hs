@@ -20,11 +20,10 @@ import Text.Printf (PrintfArg)
 
 import EFA.Signal.Signal(SignalIdx)
 
-import qualified Data.List.Match as Match
 import qualified Data.List as List
-import Control.Applicative (Applicative(pure, (<*>)), liftA, liftA2)
-import Data.Traversable (Traversable, sequenceA, foldMapDefault)
-import Data.Foldable (Foldable, foldMap, fold)
+import qualified Data.Foldable as Fold
+import Data.Traversable (Traversable, traverse, sequenceA, foldMapDefault)
+import Data.Foldable (Foldable, foldMap)
 import Data.Tuple.HT (mapPair)
 
 import Prelude hiding (unzip)
@@ -36,34 +35,49 @@ import Prelude hiding (unzip)
 type Sequ = SequData Sec
 type Sec = (SignalIdx,SignalIdx)
 
--- | Sequence Vector to Store Section Data
-newtype SequData a = SequData [a] deriving (Show, Eq)
+{- |
+Sequence Vector to Store Section Data
+
+It could also be a Map, but we need the laziness of the list type.
+-}
+newtype SequData a = SequData [Section a] deriving (Show, Eq)
+
+data Section a = Section Idx.Section a
+   deriving (Eq, Show)
 
 type instance D.Value (SequData a) = D.Value a
 
 instance Functor SequData where
-   fmap f (SequData xs) = SequData (map f xs)
-
-instance Applicative SequData where
-   pure = SequData . repeat
-   SequData f <*> SequData x = SequData $ zipWith ($) f x
+   fmap f (SequData xs) = SequData (map (fmap f) xs)
 
 instance Foldable SequData where
    foldMap = foldMapDefault
 
 instance Traversable SequData where
-   sequenceA (SequData xs) = liftA SequData $ sequenceA xs
+   sequenceA (SequData xs) = fmap SequData $ traverse sequenceA xs
 
-{-
-We could also define a top-level variable for (SequData [Idx.Section 0 ..]),
-but it would be memorized and thus causes a space leak.
--}
-zipWithSecIdxs :: (Idx.Section -> a -> b) -> SequData a -> SequData b
-zipWithSecIdxs f =
-   liftA2 f (SequData [Idx.Section 0 ..])
+
+instance Functor Section where
+   fmap f (Section s a) = Section s (f a)
+
+instance Foldable Section where
+   foldMap = foldMapDefault
+
+instance Traversable Section where
+   sequenceA (Section s a) = fmap (Section s) a
+
+
+fromList :: [a] -> SequData a
+fromList = SequData . zipWith Section [Idx.Section 0 ..]
 
 unzip :: SequData (a, b) -> (SequData a, SequData b)
-unzip (SequData xs) = mapPair (SequData, SequData) $ List.unzip xs
+unzip (SequData xs) =
+   mapPair (SequData, SequData) $ List.unzip $
+   map (\x -> (fmap fst x, fmap snd x)) xs
+
+mapWithSection :: (Idx.Section -> a -> b) -> SequData a -> SequData b
+mapWithSection f (SequData xs) =
+   SequData $ map (\(Section s a) -> Section s $ f s a) xs
 
 
 -----------------------------------------------------------------------------------
@@ -82,13 +96,13 @@ sequLength (SequData xs) = length xs
 -- | Allows to e.q. filter Sequ and SequPwrRecord
 filterSequWithSequData :: ((Sec,a) -> Bool) -> (Sequ,SequData a) ->   (Sequ,SequData a)
 filterSequWithSequData f (SequData xs, SequData ys) = (SequData xsf, SequData ysf)
-   where (xsf,ysf) = List.unzip $ filter f $ zip xs ys
+   where (xsf,ysf) = List.unzip $ filter (\(Section _si i, Section _s a) -> f (i,a)) $ zip xs ys
 
--- | Filter Sequence and SequenceData with a Filterfunktion
+-- | Filter Sequence and SequenceData with a filter function
 -- | Allows e.g. to filter Sequ, SeqPwrRecord and SequFlowRecord
 filterSequWithSequData2 :: ((Sec,a,b) -> Bool) -> (Sequ,SequData a,SequData b) -> (Sequ,SequData a,SequData b)
 filterSequWithSequData2 f (SequData xs, SequData ys, SequData zs) = (SequData xsf, SequData ysf, SequData zsf )
-   where (xsf,ysf,zsf) = unzip3 $ filter f $ zip3 xs ys zs
+   where (xsf,ysf,zsf) = unzip3 $ filter (\(Section _si i, Section _sa a, Section _sb b) -> f (i,a,b)) $ zip3 xs ys zs
 
 
 class ToTable a where
@@ -104,10 +118,10 @@ instance
     S.DispApp s, TDisp t1, TDisp t2) =>
       ToTable (Record.Record s t1 t2 id v a) where
    toTable os (_ti, rs) =
-      fold $ zipWithSecIdxs (\sec r -> Report.toTable os (show sec, r)) rs
+      Fold.fold $ mapWithSection (\ sec r -> Report.toTable os (show sec, r)) rs
 
 instance ToTable Sec where
-   toTable _os (ti, SequData xs) =
+   toTable _os (ti, xs) =
       [Table {
          tableTitle = "Sequence: " ++ ti,
          tableData = td,
@@ -115,12 +129,12 @@ instance ToTable Sec where
          tableSubTitle = ""}]
       where
          td = TableData {
-                 tableBody = [map f xs],
+                 tableBody = [Fold.toList $ fmap f xs],
                  titleRow  = [
                     map (toDoc id) $
                        "Section:" :
-                       map (\(Idx.Section x) -> "Sec" ++ show x)
-                          (Match.take xs [Idx.Section 0 ..])],
+                       (Fold.toList $
+                        mapWithSection (\(Idx.Section x) _ -> "Sec" ++ show x) xs)],
                  titleCols = [[toDoc id "Index"]],
                  endCols  = []
               }

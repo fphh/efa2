@@ -10,7 +10,8 @@ import EFA.Graph
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
-import EFA.Signal.SequenceData (SequData, zipWithSecIdxs)
+import qualified EFA.Signal.SequenceData as SD
+import EFA.Signal.SequenceData (SequData)
 import EFA.Signal.Record
           (Record(Record), FlowState(FlowState), FlowRecord,
            PPosIdx(PPosIdx), flipPos)
@@ -104,13 +105,14 @@ mkStorageEdges node stores = do
 
 getActiveStoreSequences ::
    (Ord node) =>
-   SequData (Idx.Section, Topo.ClassifiedTopology node) ->
+   SequData (Topo.ClassifiedTopology node) ->
    M.Map node (M.Map Idx.Section Topo.StoreDir)
 getActiveStoreSequences sq =
    Fold.foldl
       (M.unionWith (M.unionWith (error "duplicate section for node")))
       M.empty $
-   fmap (\(s, g) ->
+   SD.mapWithSection
+      (\s g ->
           fmap (M.singleton s) $
           M.mapMaybe (join . Topo.maybeStorage) $ Gr.nodeLabels g) sq
 
@@ -122,6 +124,7 @@ mkSequenceTopology sd =
    insNodes
       (map (\n -> (Idx.initBndNode n, Topo.Storage (Just Topo.In))) $
        M.keys tracks) $
-   Fold.foldMap (uncurry mkSectionTopology) sq
+   Fold.fold $
+   SD.mapWithSection mkSectionTopology sq
   where tracks = getActiveStoreSequences sq
-        sq = zipWithSecIdxs (,) $ fmap Topo.classifyStorages sd
+        sq = fmap Topo.classifyStorages sd

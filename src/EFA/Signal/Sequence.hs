@@ -8,6 +8,7 @@ import qualified EFA.Graph.Flow as Flow
 -- import qualified EFA.Graph.Topology.Index as Idx
 import EFA.Graph.Topology (Topology, FlowTopology, SequFlowGraph)
 
+import qualified EFA.Signal.SequenceData as SD
 import qualified EFA.Signal.Base as SB
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Vector as V
@@ -214,7 +215,7 @@ must correctly handle the last section.
 -}
 -- | Function to Generate Time Sequence
 genSequ ::  Ord node => PowerRecord node [] Val -> (Sequ, SequData (PowerRecord node [] Val))
-genSequ pRec = removeNilSections (SequData $ sequ++[lastSec], SequData pRecs)
+genSequ pRec = removeNilSections (SD.fromList $ sequ++[lastSec], SD.fromList pRecs)
   where rSig = record2RSig pRec
         pRecs = map (rsig2SecRecord pRec) (seqRSig ++ [lastRSec])
         ((lastSec,sequ),(lastRSec,seqRSig)) = recyc rTail rHead (((0,0),[]),(Record.singleton $ rHead,[]))
@@ -256,9 +257,11 @@ genSequ pRec = removeNilSections (SequData $ sequ++[lastSec], SequData pRecs)
 
 
 -- | Function to remove Nil-Sections which have same start and stop Index
-removeNilSections :: (Sequ,(SequData (PowerRecord node v a))) ->   (Sequ, (SequData (PowerRecord node v a)))
-removeNilSections (SequData sequ, SequData pRecs) = (SequData fsequ, SequData fRecs)
-  where (fsequ, fRecs) = unzip $ filter (uncurry (/=) . fst) $ zip sequ pRecs
+removeNilSections ::
+   (Sequ, SequData (PowerRecord node v a)) ->
+   (Sequ, SequData (PowerRecord node v a))
+removeNilSections =
+   filterSequWithSequData (uncurry (/=) . fst)
 
 
 -- | Function to detect and classify a step over several signals
@@ -503,15 +506,15 @@ chopAtZeroCrossingsPowerRecord ::
    (V.Convert [] v, V.Storage v a, RealFrac a, Ord node) =>
    PowerRecord node [] a -> SequData (PowerRecord node v a)
 chopAtZeroCrossingsPowerRecord rSig =
-   SequData $ map (rsig2SecRecord rSig) $
+   SD.fromList $ map (rsig2SecRecord rSig) $
    chopAtZeroCrossingsRSig $
    record2RSig rSig
 
 concatPowerRecords ::
    (V.Singleton v, V.Storage v a, Ord node) =>
    SequData (PowerRecord node v a) -> PowerRecord node v a
-concatPowerRecords (SequData recs) =
-   case recs of
+concatPowerRecords recs =
+   case Fold.toList recs of
       [] -> Record mempty M.empty
       Record time0 pMap0 : recs0 ->
          let recs1 = map tailPowerRecord recs0
@@ -535,8 +538,8 @@ tailPowerRecord (Record times pMap) =
 approxSequPwrRecord ::
    (V.Walker v, V.Storage v a, Real a, Ord node) =>
    a -> SequData (PowerRecord node v a) -> SequData (PowerRecord node v a) -> Bool
-approxSequPwrRecord eps (SequData xs) (SequData ys) =
-   V.equalBy (approxPowerRecord eps) xs ys
+approxSequPwrRecord eps xs ys =
+   V.equalBy (approxPowerRecord eps) (Fold.toList xs) (Fold.toList ys)
 
 approxPowerRecord ::
    (V.Walker v, V.Storage v a, Real a,Ord node) =>
@@ -576,7 +579,7 @@ sectionRecordsFromSequence rec = fmap (Record.slice rec)
 
 -- | Generate Time Signal with Sequence Number to allow Plotting
 genSequenceSignal :: (V.FromList v, V.Storage v a, Num a) => Sequ -> S.UTSignal v a 
-genSequenceSignal (SequData xs) = S.fromList $ concat $ fmap f xs
+genSequenceSignal xs = S.fromList $ Fold.foldMap f xs
   where
     f (idx1, idx2) = [1] ++ replicate (idx2-idx1-1) 0 ++ [-1]  
       
