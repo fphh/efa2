@@ -16,7 +16,7 @@ import qualified EFA.Signal.Record as Record
 
 import EFA.Signal.SequenceData
           (SequData(..), Sequ, Sec,
-           filterSequWithSequData, filterSequWithSequData2)
+           filterSequWithSequData)
 
 
 import EFA.Signal.Record (Record(..), PowerRecord, FlowRecord)
@@ -148,12 +148,12 @@ removeLowTimeSections (xs, ys)  threshold = filterSequWithSequData f (xs, ys)
 
 -- | Drop Sections with negligible energy flow
 removeLowEnergySections :: (Num a, SB.BSum a, Ord a, V.Walker v, V.Storage v a) =>
-   (Sequ, SequData (PowerRecord node v a), SequData (FlowRecord node v a))
+   (Sequ, SequData (PowerRecord node v a, FlowRecord node v a))
    -> a
-   -> (Sequ, SequData (PowerRecord node v a), SequData (FlowRecord node v a))
-removeLowEnergySections  (xs, ys, zs) threshold = filterSequWithSequData2 f (xs, ys, zs)
-   where  f (_, _ , Record _ fMap) =  not $ all g (M.toList fMap)
-          g (_,s) = (abs (fromScalar (sigSum s))) < threshold  
+   -> (Sequ, SequData (PowerRecord node v a, FlowRecord node v a))
+removeLowEnergySections  (xs, ys) threshold = filterSequWithSequData f (xs, ys)
+   where  f (_, (_ , Record _ fMap)) =  not $ Fold.all g fMap
+          g s = (abs (fromScalar (sigSum s))) < threshold
 
 
 -- TODO: Umschalten zwischen recFullIntegrate und recPartIntegrate.

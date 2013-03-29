@@ -14,6 +14,7 @@ import qualified EFA.Equation.Variable as Term
 import qualified EFA.Equation.Result as R
 
 import qualified EFA.Signal.SequenceData as SD
+import qualified EFA.Signal.Sequence as Seq
 
 import EFA.Signal.Record (PPosIdx(PPosIdx), SignalRecord, FlowRecord,
                           Record(Record), PowerRecord,
@@ -37,8 +38,8 @@ import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Flow as Flow
 import qualified Data.Map as M
 import Data.Monoid ((<>),mempty)
-import Data.Foldable (fold,
-                      foldMap)
+import Data.Foldable (fold, foldMap)
+import Data.Tuple.HT (mapSnd)
 
 import qualified EFA.Equation.Environment as Env
 import EFA.Equation.Result (Result(..))
@@ -129,10 +130,10 @@ pre topology rawSignals =  do
 ---------------------------------------------------------------------------------------
 -- * Integrate Power and Sections on maximum Energyflow
 
-  let sequenceFlows = genSequFlow sequencePowers
-
-  let (sequenceFilt,sequencePowersFilt,sequenceFlowsFilt) =
-        removeLowEnergySections (sequ,sequencePowers,sequenceFlows) 0
+  let (sequenceFilt,(sequencePowersFilt,sequenceFlowsFilt)) =
+        mapSnd SD.unzip $
+        removeLowEnergySections
+           (sequ, fmap (\x -> (x, Seq.recFullIntegrate x)) sequencePowers) 0
 
   let (flowStates, adjustedFlows) =
          SD.unzip $

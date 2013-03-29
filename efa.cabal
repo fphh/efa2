@@ -173,6 +173,7 @@ Executable example-vehicle
     Build-Depends:
       efa,
       gnuplot,
+      utility-ht,
       containers,
       base
   Else
