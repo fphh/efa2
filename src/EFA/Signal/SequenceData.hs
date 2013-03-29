@@ -74,9 +74,14 @@ fromList =
       (\s -> Section (Idx.Section s) (case fromIntegral s of r -> (r,r)))
       [0 ..]
 
-fromRangeList :: [Sec] -> [a] -> SequData a
-fromRangeList rngs =
-   SequData . zipWith3 Section [Idx.Section 0 ..] rngs
+fromRangeList :: [(Sec, a)] -> SequData a
+fromRangeList =
+   SequData . zipWith (uncurry . Section) [Idx.Section 0 ..]
+
+fromLengthList :: [(Int, a)] -> SequData a
+fromLengthList =
+   fromRangeList . snd .
+   List.mapAccumL (\time (len, x) -> (time+len, ((time, time+len-1), x))) 0
 
 unzip :: SequData (a, b) -> (SequData a, SequData b)
 unzip (SequData xs) =

@@ -220,7 +220,8 @@ genSequ ::
    Ord node =>
    PowerRecord node [] Val ->
    SequData (PowerRecord node [] Val)
-genSequ pRec = removeNilSections $ SD.fromRangeList (sequ++[lastSec]) pRecs
+genSequ pRec =
+   removeNilSections $ SD.fromRangeList $ zip (sequ++[lastSec]) pRecs
   where rSig = record2RSig pRec
         pRecs = map (rsig2SecRecord pRec) (seqRSig ++ [lastRSec])
         ((lastSec,sequ),(lastRSec,seqRSig)) = recyc rTail rHead (((0,0),[]),(Record.singleton $ rHead,[]))
@@ -511,7 +512,8 @@ chopAtZeroCrossingsPowerRecord ::
    (V.Convert [] v, V.Storage v a, RealFrac a, Ord node) =>
    PowerRecord node [] a -> SequData (PowerRecord node v a)
 chopAtZeroCrossingsPowerRecord rSig =
-   SD.fromList $ map (rsig2SecRecord rSig) $
+   SD.fromLengthList $
+   map (\r -> (L.length $ S.unconsData $ fst r, rsig2SecRecord rSig r)) $
    chopAtZeroCrossingsRSig $
    record2RSig rSig
 
