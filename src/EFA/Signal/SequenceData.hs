@@ -26,7 +26,7 @@ import Data.Traversable (Traversable, traverse, sequenceA, foldMapDefault)
 import Data.Foldable (Foldable, foldMap)
 import Data.Tuple.HT (mapPair)
 
-import Prelude hiding (unzip, filter)
+import Prelude hiding (unzip, length, filter)
 
 
 -----------------------------------------------------------------------------------
@@ -89,8 +89,8 @@ mapWithSection f (SequData xs) =
 
 
 -- | Get Number of Sections after cutting
-sequLength :: Sequ -> Int
-sequLength (SequData xs) = length xs
+length :: Sequ -> Int
+length (SequData xs) = List.length xs
 
 -- | Filter Sequence and SequenceData with a filter function
 -- | Allows to e.g. filter Sequ and SequPwrRecord
