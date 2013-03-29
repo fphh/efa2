@@ -296,14 +296,14 @@ instance Record rec => Record (Idx.ExtDelta rec) where
    record (Idx.ExtDelta d r) = recordDelta d . record r
 
 
-class EdgeIdx idx where edgeVar :: idx -> EdgeVar
-instance EdgeIdx (Idx.Energy node) where edgeVar _ = Energy
-instance EdgeIdx (Idx.MaxEnergy node) where edgeVar _ = MaxEnergy
-instance EdgeIdx (Idx.Power node) where edgeVar _ = Power
-instance EdgeIdx (Idx.Eta node) where edgeVar _ = Eta
-instance EdgeIdx (Idx.X node) where edgeVar _ = X
-instance EdgeIdx (Idx.StEnergy node) where edgeVar _ = Energy
-instance EdgeIdx (Idx.StX node) where edgeVar _ = X
+class EdgeIdx idx where edgeVar :: idx node -> EdgeVar
+instance EdgeIdx Idx.Energy where edgeVar _ = Energy
+instance EdgeIdx Idx.MaxEnergy where edgeVar _ = MaxEnergy
+instance EdgeIdx Idx.Power where edgeVar _ = Power
+instance EdgeIdx Idx.Eta where edgeVar _ = Eta
+instance EdgeIdx Idx.X where edgeVar _ = X
+instance EdgeIdx Idx.StEnergy where edgeVar _ = Energy
+instance EdgeIdx Idx.StX where edgeVar _ = X
 
 
 directionShort :: Idx.Direction -> String

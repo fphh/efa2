@@ -418,7 +418,7 @@ lookupFormat recIdx mp k =
    M.lookup k mp
 
 lookupFormatAssign ::
-   (Ord (idx node), Format.EdgeIdx (idx node), Var.FormatIndex (idx node),
+   (Ord (idx node), Format.EdgeIdx idx, Var.FormatIndex (idx node),
     Record.C rec,
     FormatValue a, Format output, Node.C node) =>
    Record.ToIndex rec ->
