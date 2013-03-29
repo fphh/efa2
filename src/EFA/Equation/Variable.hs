@@ -102,44 +102,44 @@ instance (Node.C node) => FormatValue (Scalar node) where
 
 
 class FormatIndex idx where
-   formatIndex :: (Format output) => idx -> output
+   formatIndex :: (Node.C node, Format output) => idx node -> output
 
-instance (Node.C node) => FormatIndex (Idx.Energy node) where
+instance FormatIndex Idx.Energy where
    formatIndex (Idx.Energy e) = formatStructureEdge Format.Energy e
 
-instance (Node.C node) => FormatIndex (Idx.MaxEnergy node) where
+instance FormatIndex Idx.MaxEnergy where
    formatIndex (Idx.MaxEnergy e) = formatStorageEdge Format.MaxEnergy e
 
-instance (Node.C node) => FormatIndex (Idx.Power node) where
+instance FormatIndex Idx.Power where
    formatIndex (Idx.Power e) = formatStructureEdge Format.Power e
 
-instance (Node.C node) => FormatIndex (Idx.Eta node) where
+instance FormatIndex Idx.Eta where
    formatIndex (Idx.Eta e) = formatStructureEdge Format.Eta e
 
-instance (Node.C node) => FormatIndex (Idx.X node) where
+instance FormatIndex Idx.X where
    formatIndex (Idx.X e) = formatStructureEdge Format.X e
 
-instance (Node.C node) => FormatIndex (Idx.DTime node) where
+instance FormatIndex Idx.DTime where
    formatIndex (Idx.DTime s) =
       Format.subscript Format.dtime $ Format.section s
 
-instance (Node.C node) => FormatIndex (Idx.Sum node) where
+instance FormatIndex Idx.Sum where
    formatIndex (Idx.Sum dir x) =
       Format.subscript Format.sum $
       Format.direction dir `Format.connect` formatSectionNode x
 
-instance (Node.C node) => FormatIndex (Idx.Storage node) where
+instance FormatIndex Idx.Storage where
    formatIndex (Idx.Storage x) =
       Format.subscript Format.storage $
       formatBoundaryNode x
 
-instance (Node.C node) => FormatIndex (Idx.StEnergy node) where
+instance FormatIndex Idx.StEnergy where
    formatIndex (Idx.StEnergy e) = formatStorageEdge Format.Energy e
 
-instance (Node.C node) => FormatIndex (Idx.StX node) where
+instance FormatIndex Idx.StX where
    formatIndex (Idx.StX e) = formatStorageEdge Format.X e
 
-instance (Node.C node) => FormatIndex (Idx.StSum node) where
+instance FormatIndex Idx.StSum where
    formatIndex (Idx.StSum dir x) =
       Format.subscript Format.sum $
       Format.direction dir `Format.connect` formatBoundaryNode x

@@ -79,13 +79,13 @@ instance AccessPart Signal where
 
 
 formatAssign ::
-   (Var.FormatIndex (idx node), Node.C node, FormatValue a, Format output) =>
+   (Var.FormatIndex idx, Node.C node, FormatValue a, Format output) =>
    idx node -> a -> output
 formatAssign lhs rhs =
    Format.assign (Var.formatIndex lhs) (formatValue rhs)
 
 formatMap ::
-   (Var.FormatIndex (idx node), Node.C node, FormatValue a, Format output) =>
+   (Var.FormatIndex idx, Node.C node, FormatValue a, Format output) =>
    M.Map (idx node) a -> [output]
 formatMap =
    map (uncurry formatAssign) . M.toList

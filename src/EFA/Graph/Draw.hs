@@ -407,7 +407,7 @@ data Env node output =
    }
 
 lookupFormat ::
-   (Ord (idx node), Var.FormatIndex (idx node), Record.C rec,
+   (Ord (idx node), Var.FormatIndex idx, Record.C rec,
     FormatValue a, Format output, Node.C node) =>
    Record.ToIndex rec -> M.Map (idx node) (rec a) -> idx node -> output
 lookupFormat recIdx mp k =
@@ -418,7 +418,7 @@ lookupFormat recIdx mp k =
    M.lookup k mp
 
 lookupFormatAssign ::
-   (Ord (idx node), Format.EdgeIdx idx, Var.FormatIndex (idx node),
+   (Ord (idx node), Format.EdgeIdx idx, Var.FormatIndex idx,
     Record.C rec,
     FormatValue a, Format output, Node.C node) =>
    Record.ToIndex rec ->
