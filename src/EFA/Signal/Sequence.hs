@@ -131,12 +131,7 @@ removeZeroTimeSections ::
    (Fractional a, Ord a, V.Storage v a, V.Singleton v) =>
    SequData (PowerRecord nty v a) ->
    SequData (PowerRecord nty v a)
-removeZeroTimeSections = SD.filter f
-   where f (Record time _) = x /= y
-           where
-              err = error "Error in SequenceData.hs / removeZeroTimeSections -- empty head or tail"
-              TC (Data x) = (fst $ maybe err id $ S.viewL time) 
-              TC (Data y) = (snd $ maybe err id $ S.viewR time) 
+removeZeroTimeSections = SD.filter (uncurry (/=) . Record.getTimeWindow)
 
 -- | Drop Sections with time duration below threshold
 removeLowTimeSections ::
@@ -144,13 +139,12 @@ removeLowTimeSections ::
    a ->
    SequData (PowerRecord nty v a) ->
    SequData (PowerRecord nty v a)
-removeLowTimeSections threshold = SD.filter f
-   where
-          f (Record time _) = abs (x - y) > threshold
-            where
-              err = error "Error in SequenceData.hs / removeZeroTimeSections -- empty head or tail"
-              TC (Data x) = (fst $ maybe err id $ S.viewL time) 
-              TC (Data y) = (snd $ maybe err id $ S.viewR time) 
+removeLowTimeSections threshold =
+   SD.filter
+      (\r ->
+         case Record.getTimeWindow r of
+            (TC (Data x), TC (Data y)) -> abs (x - y) > threshold)
+
 
 -- | Drop Sections with negligible energy flow
 removeLowEnergySections ::
