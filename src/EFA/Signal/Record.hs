@@ -7,12 +7,13 @@ module EFA.Signal.Record where
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Data as D
 import qualified EFA.Signal.Vector as V
+import qualified EFA.Signal.Base as SB
 import EFA.Signal.Signal
-          (TC, Signal, FSignal, TSigL, UTSignal, TSignal,
+          (TC(TC), Signal, FSignal, TSigL, UTSignal, TSignal,
            TSamp, PSamp, PSamp1L, PSamp2LL,Scal)
 
 import EFA.Signal.Typ (Typ, A, P, T, Tt, UT,F,D)
-import EFA.Signal.Data (Data, (:>), Nil)
+import EFA.Signal.Data (Data(Data), (:>), Nil)
 import EFA.Signal.Base (Sign, BSum, BProd)
 
 import EFA.Report.Report (ToTable(toTable), Table(..), tvcat)
@@ -25,6 +26,7 @@ import System.Random (Random)
 
 import qualified Data.Map as M
 import qualified Data.Set as Set
+import qualified Data.Foldable as Fold
 import qualified Data.List.HT as HTL
 import qualified Data.List.Key as Key
 import qualified Data.List.Match as Match
@@ -206,6 +208,34 @@ slice (Record t m) (idx1,idx2) = Record (f t) (M.map f m)
            (V.Slice v, V.Storage v a) =>
            TC s t (Data (v :> Nil) a) -> TC s t (Data (v :> Nil) a)
         f = S.slice idx1 (idx2-idx1+1)
+
+
+{- | Filter Sequence Flow
+
+Used to filter Modelica signals.
+State changes in solver create several DataPoints with exact the same time.
+The resulting sections which have zero time duration are removed.
+-}
+longerThanZero ::
+   (Fractional a, Ord a, V.Storage v a, V.Singleton v) =>
+   PowerRecord nty v a -> Bool
+longerThanZero = uncurry (/=) . getTimeWindow
+
+-- | Check for minimum duration
+longerThan ::
+   (Fractional a, Ord a, Eq a, V.Storage v a, V.Singleton v) =>
+   a -> PowerRecord nty v a -> Bool
+longerThan threshold r =
+   case getTimeWindow r of
+      (TC (Data x), TC (Data y)) -> abs (x - y) > threshold
+
+-- | Check for negligible energy flow
+energyBelow ::
+   (Num a, SB.BSum a, Ord a, V.Walker v, V.Storage v a) =>
+   a -> FlowRecord node v a -> Bool
+energyBelow threshold (Record _ fMap) =
+   Fold.all (\s -> abs (S.fromScalar (S.sigSum s)) < threshold) fMap
+
 
 -----------------------------------------------------------------------------------
 -- Various Class and Instance Definition for the different Sequence Datatypes

@@ -121,41 +121,6 @@ genSequFlow :: (Num a,
                (SequData (PowerRecord node v a)) -> SequData (FlowRecord node v a)
 genSequFlow sqPRec = fmap recFullIntegrate sqPRec
 
--- | Filter Sequence Flow
--- | Used to filter Modelica signals 
--- | State changes in solver create several DataPoints with exact the same time
--- | The resulting sections which have zero time duration are removed 
-
-
-removeZeroTimeSections ::
-   (Fractional a, Ord a, V.Storage v a, V.Singleton v) =>
-   SequData (PowerRecord nty v a) ->
-   SequData (PowerRecord nty v a)
-removeZeroTimeSections = SD.filter (uncurry (/=) . Record.getTimeWindow)
-
--- | Drop Sections with time duration below threshold
-removeLowTimeSections ::
-   (Fractional a, Ord a, Eq a, V.Storage v a, V.Singleton v) =>
-   a ->
-   SequData (PowerRecord nty v a) ->
-   SequData (PowerRecord nty v a)
-removeLowTimeSections threshold =
-   SD.filter
-      (\r ->
-         case Record.getTimeWindow r of
-            (TC (Data x), TC (Data y)) -> abs (x - y) > threshold)
-
-
--- | Drop Sections with negligible energy flow
-removeLowEnergySections ::
-   (Num a, SB.BSum a, Ord a, V.Walker v, V.Storage v a) =>
-   a ->
-   SequData (PowerRecord node v a, FlowRecord node v a) ->
-   SequData (PowerRecord node v a, FlowRecord node v a)
-removeLowEnergySections threshold = SD.filter (f . snd)
-   where  f (Record _ fMap) =  not $ Fold.all g fMap
-          g s = (abs (fromScalar (sigSum s))) < threshold
-
 
 -- TODO: Umschalten zwischen recFullIntegrate und recPartIntegrate.
 --genSequFlow :: (SequData PowerRecord) -> SequData FlowRecord
@@ -200,7 +165,7 @@ makeSequence ::
    PowerRecord node [] Val ->
    SequData (FlowRecord node [] Val)
 makeSequence =
-    genSequFlow . removeZeroTimeSections . genSequ . addZeroCrossings
+   genSequFlow . SD.filter Record.longerThanZero . genSequ . addZeroCrossings
 
 {-
 -- | PG - Its better to have processing under controll in Top-Level for inspeting and debugging signal treatment

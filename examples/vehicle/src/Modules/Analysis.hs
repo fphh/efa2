@@ -21,7 +21,7 @@ import EFA.Signal.Record (PPosIdx(PPosIdx), SignalRecord, FlowRecord,
                           SignalRecord,getTime, newTimeBase, removeZeroNoise)
 
 import EFA.Signal.Sequence (genSequenceSignal,
-                            removeLowEnergySections, genSequFlow, addZeroCrossings, removeLowTimeSections, 
+                            genSequFlow, addZeroCrossings,
                             genSequ,sectionRecordsFromSequence)
 
 import qualified EFA.Equation.Arithmetic as Arith
@@ -115,7 +115,7 @@ pre topology rawSignals =  do
 
 -- Rep.report [] ("Sequence", sequ)
 
-  let sequencePowers = removeLowTimeSections 0 sequencePowersRaw
+  let sequencePowers = SD.filter (Record.longerThan 0) sequencePowersRaw
   --  let sequencePowers = removeZeroTimeSections sequencePowersRaw
 
   -- create sequence signal
@@ -130,7 +130,7 @@ pre topology rawSignals =  do
 
   let (sequencePowersFilt,sequenceFlowsFilt) =
         SD.unzip $
-        removeLowEnergySections 0 $
+        SD.filter (not . Record.energyBelow 0 . snd) $
         fmap (\x -> (x, Seq.recFullIntegrate x)) sequencePowers
 
   let (flowStates, adjustedFlows) =
