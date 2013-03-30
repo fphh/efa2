@@ -92,6 +92,11 @@ mapWithSection :: (Idx.Section -> a -> b) -> SequData a -> SequData b
 mapWithSection f (SequData xs) =
    SequData $ map (\(Section s rng a) -> Section s rng $ f s a) xs
 
+mapWithSectionRange ::
+   (Idx.Section -> Range -> a -> b) -> SequData a -> SequData b
+mapWithSectionRange f (SequData xs) =
+   SequData $ map (\(Section s rng a) -> Section s rng $ f s rng a) xs
+
 
 -- | Get Number of Sections after cutting
 length :: SequData a -> Int

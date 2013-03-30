@@ -47,8 +47,8 @@ makeSimpleEdges es = map f es
 -}
 
 constructSeqTopo ::
-  (Ord node) =>
-  TD.Topology node -> [Int] -> TD.SequFlowGraph node
+   (Ord node) =>
+   TD.Topology node -> [Int] -> Flow.RangeGraph node
 constructSeqTopo topo =
   Flow.mkSequenceTopology .
   fmap (StateAnalysis.bruteForce topo !!) .

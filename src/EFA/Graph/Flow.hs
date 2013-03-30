@@ -116,10 +116,15 @@ getActiveStoreSequences sq =
           fmap (M.singleton s) $
           M.mapMaybe (join . Topo.maybeStorage) $ Gr.nodeLabels g) sq
 
+
+type RangeGraph node = (M.Map Idx.Section SD.Range, SequFlowGraph node)
+
 mkSequenceTopology ::
-  (Ord node) =>
-  SequData (FlowTopology node) -> SequFlowGraph node
+   (Ord node) =>
+   SequData (FlowTopology node) ->
+   RangeGraph node
 mkSequenceTopology sd =
+   (,) (Fold.fold $ SD.mapWithSectionRange (\s rng _ -> M.singleton s rng) sq) $
    insEdges (Fold.fold $ M.mapWithKey mkStorageEdges tracks) $
    insNodes
       (map (\n -> (Idx.initBndNode n, Topo.Storage (Just Topo.In))) $

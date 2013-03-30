@@ -6,7 +6,7 @@ module EFA.Signal.Sequence where
 
 import qualified EFA.Graph.Flow as Flow
 -- import qualified EFA.Graph.Topology.Index as Idx
-import EFA.Graph.Topology (Topology, FlowTopology, SequFlowGraph)
+import EFA.Graph.Topology (Topology, FlowTopology)
 
 import qualified EFA.Signal.SequenceData as SD
 import qualified EFA.Signal.Base as SB
@@ -148,7 +148,7 @@ makeSeqFlowGraph ::
    Show node) =>
    Topology node ->
    SequData (FlowRecord node v a) ->
-   SequFlowGraph node
+   Flow.RangeGraph node
 makeSeqFlowGraph topo =
    Flow.mkSequenceTopology .
    Flow.genSequFlowTops topo .
@@ -156,7 +156,9 @@ makeSeqFlowGraph topo =
 
 
 makeSeqFlowTopology ::
-  (Ord node) => SequData (FlowTopology node) -> SequFlowGraph node
+   (Ord node) =>
+   SequData (FlowTopology node) ->
+   Flow.RangeGraph node
 makeSeqFlowTopology =
    Flow.mkSequenceTopology
 

@@ -20,10 +20,10 @@ import qualified EFA.Equation.Variable as Var
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
+import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph as Gr
 import EFA.Graph.Topology
-          (SequFlowGraph,
-           NodeType(Storage),
+          (NodeType(Storage),
            EdgeType(StructureEdge, StorageEdge),
            getFlowDirection,
            FlowDirectionField, FlowTopology)
@@ -83,12 +83,12 @@ storageEdgeColour = Color [RGB 200 0 0]
 dotFromSequFlowGraph ::
   (Node.C node) =>
   String ->
-  SequFlowGraph node ->
+  Flow.RangeGraph node ->
   Maybe (Idx.Section -> Unicode) ->
   (Topo.LDirNode node -> Unicode) ->
   (Topo.LEdge node -> [Unicode]) ->
   DotGraph T.Text
-dotFromSequFlowGraph ti g mtshow nshow eshow =
+dotFromSequFlowGraph ti (rngs, g) mtshow nshow eshow =
   DotGraph { strictGraph = False,
              directedGraph = True,
              graphID = Just (Int 1),
@@ -121,6 +121,9 @@ dotFromSequFlowGraph ti g mtshow nshow eshow =
                       Idx.Initial -> "Initial"
                       Idx.AfterSection s ->
                          show s ++
+                         (case M.lookup s rngs of
+                             Just (from, to) -> " / Range " ++ show from ++ "-" ++ show to
+                             Nothing -> error $ "missing range for " ++ show s) ++
                          (flip foldMap mtshow $ \tshow ->
                             " / Time " ++ unUnicode (tshow s))
         stmts =
@@ -186,7 +189,7 @@ dotIdentFromNode n = T.pack $ Node.dotId n
 printGraph, printGraphX, _printGraphDot, _printGraphPdf ::
    (Node.C node) =>
    String ->
-   SequFlowGraph node ->
+   Flow.RangeGraph node ->
    Maybe (Idx.Section -> Unicode) ->
    (Topo.LDirNode node -> Unicode) ->
    (Topo.LEdge node -> [Unicode]) ->
@@ -212,7 +215,7 @@ _printGraphPdf ti g recTShow nshow eshow =
 sequFlowGraph ::
   (Node.C node) =>
   String ->
-  SequFlowGraph node -> IO ()
+  Flow.RangeGraph node -> IO ()
 sequFlowGraph ti topo =
    printGraph ti topo Nothing nshow eshow
   where nshow (Idx.BndNode _ n, l) =
@@ -432,12 +435,11 @@ lookupFormatAssign rec mp makeIdx x =
             (Format.record rec $ Format.edgeIdent $ Format.edgeVar idx)
             (lookupFormat rec mp idx)
 
+
 sequFlowGraphWithEnv ::
   (Node.C node) =>
   String ->
-  SequFlowGraph node -> Env node Unicode -> IO ()
-
-
+  Flow.RangeGraph node -> Env node Unicode -> IO ()
 sequFlowGraphWithEnv ti g env =
    printGraph ti g (Just (formatTime env)) (formatNode env) (eshow . fst)
   where eshow se =
@@ -459,7 +461,7 @@ sequFlowGraphWithEnv ti g env =
 sequFlowGraphAbsWithEnv ::
    (FormatValue a, FormatValue v, Node.C node) =>
    String ->
-   SequFlowGraph node ->
+   Flow.RangeGraph node ->
    Env.Complete node (Record.Absolute a) (Record.Absolute v) -> IO ()
 sequFlowGraphAbsWithEnv ti topo = sequFlowGraphWithEnv ti topo . envAbs
 
@@ -467,7 +469,7 @@ sequFlowGraphAbsWithEnv ti topo = sequFlowGraphWithEnv ti topo . envAbs
 sequFlowGraphDeltaWithEnv ::
    (FormatValue a, FormatValue v, Node.C node) =>
    String ->
-   SequFlowGraph node ->
+   Flow.RangeGraph node ->
    Env.Complete node (Record.Delta a) (Record.Delta v) -> IO ()
 sequFlowGraphDeltaWithEnv ti topo = sequFlowGraphWithEnv ti topo . envDelta
 

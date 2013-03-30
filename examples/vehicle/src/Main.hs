@@ -70,14 +70,17 @@ main = do
 ---------------------------------------------------------------------------------------
 -- *  Generate Sequence Flow Graph
       
-  let sequenceFlowTopology = makeSeqFlowTopology flowTopos
-  let sequenceFlowTopologyB = makeSeqFlowTopology flowToposB
+  let sequenceRangeGraph = makeSeqFlowTopology flowTopos
+  let sequenceRangeGraphB = makeSeqFlowTopology flowToposB
+
+  let sequenceFlowTopology = snd sequenceRangeGraph
+  let sequenceFlowTopologyB = snd sequenceRangeGraphB
 
 ---------------------------------------------------------------------------------------
 -- *  Section Flow States as Graphs
   
-  let sectionTopos =  lefilter (isStructureEdge .fst) sequenceFlowTopology
-  let sectionToposB =  lefilter (isStructureEdge .fst) sequenceFlowTopologyB
+  let sectionTopos = mapSnd (lefilter (isStructureEdge .fst)) sequenceRangeGraph
+  let sectionToposB =  mapSnd (lefilter (isStructureEdge .fst)) sequenceRangeGraphB
       
 ---------------------------------------------------------------------------------------
 -- *  Make Base Analysis on external Data
