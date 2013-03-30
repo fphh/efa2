@@ -85,7 +85,7 @@ dotFromSequFlowGraph ::
   String ->
   Flow.RangeGraph node ->
   Maybe (Idx.Section -> Unicode) ->
-  (Topo.LDirNode node -> Unicode) ->
+  (Maybe Idx.Boundary -> Topo.LDirNode node -> Unicode) ->
   (Topo.LEdge node -> [Unicode]) ->
   DotGraph T.Text
 dotFromSequFlowGraph ti (rngs, g) mtshow nshow eshow =
@@ -109,15 +109,15 @@ dotFromSequFlowGraph ti (rngs, g) mtshow nshow eshow =
            map (\nl@(Idx.BndNode s _, _) -> (s, [nl])) $
            Gr.labNodes g
 
-        sg sl ns es =
-            DotSG True (Just (Int $ fromEnum sl)) $
+        sg before (current, (ns, es)) =
+            DotSG True (Just (Int $ fromEnum current)) $
             DotStmts
                [GraphAttrs [Label (StrLabel (T.pack str))]]
                []
-               (map (dotFromSecNode nshow) ns)
+               (map (dotFromSecNode (nshow before)) ns)
                (map (dotFromSecEdge eshow) es)
           where str =
-                   case sl of
+                   case current of
                       Idx.Initial -> "Initial"
                       Idx.AfterSection s ->
                          show s ++
@@ -130,9 +130,10 @@ dotFromSequFlowGraph ti (rngs, g) mtshow nshow eshow =
           DotStmts {
             attrStmts = [GraphAttrs [Label (StrLabel (T.pack ti))]],
             subGraphs =
-              M.elems $
-              M.intersectionWithKey sg topoNs
-                 (M.union topoEs (fmap (const []) topoNs)),
+              zipWith sg (Nothing : map Just (M.keys topoNs)) $
+              M.toAscList $
+              M.intersectionWith (,) topoNs $
+              M.union topoEs (fmap (const []) topoNs),
             nodeStmts = [],
             edgeStmts = map (dotFromSecEdge eshow) interEs
           }
@@ -191,7 +192,7 @@ printGraph, printGraphX, _printGraphDot, _printGraphPdf ::
    String ->
    Flow.RangeGraph node ->
    Maybe (Idx.Section -> Unicode) ->
-   (Topo.LDirNode node -> Unicode) ->
+   (Maybe Idx.Boundary -> Topo.LDirNode node -> Unicode) ->
    (Topo.LEdge node -> [Unicode]) ->
    IO ()
 printGraph =  printGraphX -- _printGraphPdf -- _printGraphDot -- printGraphX
@@ -218,7 +219,7 @@ sequFlowGraph ::
   Flow.RangeGraph node -> IO ()
 sequFlowGraph ti topo =
    printGraph ti topo Nothing nshow eshow
-  where nshow (Idx.BndNode _ n, l) =
+  where nshow _before (Idx.BndNode _ n, l) =
            Unicode $ unUnicode (Node.display n) ++ " - " ++ showType l
         eshow _ = []
 
@@ -364,32 +365,31 @@ formatNodeStorage ::
    Record.ToIndex rec ->
    Env.StorageMap node (rec a) ->
    Env.StSumMap node (rec a) ->
-   Topo.LDirNode node -> output
-formatNodeStorage rec st ss (n@(Idx.BndNode bnd nid), ty) =
+   Maybe Idx.Boundary -> Topo.LDirNode node -> output
+formatNodeStorage rec st ss mBeforeBnd (n@(Idx.BndNode _bnd nid), ty) =
    Format.lines $
    Node.display nid :
    Format.words [formatNodeType ty] :
       case ty of
          Storage dir ->
-            case bnd of
-               Idx.Initial -> [lookupFormat rec st $ Idx.Storage n]
-               Idx.AfterSection sec ->
+            case mBeforeBnd of
+               Nothing -> [lookupFormat rec st $ Idx.Storage n]
+               Just beforeBnd ->
                   case (lookupFormat rec st $ Idx.Storage $
-                           Idx.BndNode (Idx.beforeSection sec) nid,
+                           Idx.BndNode beforeBnd nid,
                         lookupFormat rec st $ Idx.Storage n) of
                      (before, after) ->
-                        case dir of
+                        before :
+                        (case dir of
                            Just Topo.In ->
-                              [before,
-                               Format.plus Format.empty $
-                                  lookupFormat rec ss $ Idx.StSum Idx.In n,
-                               Format.assign Format.empty after]
+                              [Format.plus Format.empty $
+                                  lookupFormat rec ss $ Idx.StSum Idx.In n]
                            Just Topo.Out ->
-                              [before,
-                               Format.minus Format.empty $
-                                  lookupFormat rec ss $ Idx.StSum Idx.Out n,
-                               Format.assign Format.empty after]
-                           Nothing -> [lookupFormat rec st $ Idx.Storage n]
+                              [Format.minus Format.empty $
+                                  lookupFormat rec ss $ Idx.StSum Idx.Out n]
+                           Nothing -> []) ++
+                        Format.assign Format.empty after :
+                        []
          _ -> []
 
 
@@ -406,7 +406,7 @@ data Env node output =
       formatStEnergy,
       formatStX    :: Idx.StorageEdge node -> output,
       formatTime   :: Idx.Section -> output,
-      formatNode   :: Topo.LDirNode node -> output
+      formatNode   :: Maybe Idx.Boundary -> Topo.LDirNode node -> output
    }
 
 lookupFormat ::
