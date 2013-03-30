@@ -4,54 +4,47 @@
 
 module Modules.Analysis where
 
-import EFA.Example.Utility (edgeVar, 
-                            (.=), 
+----------------------------------
+-- * Example Specific Imports
+import qualified Modules.System as System
+import Modules.Signals as Signals
+
+
+import EFA.Example.Utility (edgeVar,
+                            (.=),
                             (%=)
                            )
+
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Variable as Var
-import qualified EFA.Equation.Variable as Term
 import qualified EFA.Equation.Result as R
+import qualified EFA.Equation.Arithmetic as Arith
+import qualified EFA.Equation.Stack as Stack
+import qualified EFA.Equation.Environment as Env
+import qualified EFA.Equation.Record as EqRecord
+import EFA.Equation.Result (Result(..))
+import EFA.Equation.Stack (Stack)
 
 import qualified EFA.Signal.SequenceData as SD
 import qualified EFA.Signal.Sequence as Seq
+import qualified EFA.Signal.Record as Record
+import qualified EFA.Signal.Vector as Vec
+import qualified EFA.Signal.Signal as Sig
 
 import EFA.Signal.Record (PPosIdx(PPosIdx), SignalRecord, FlowRecord,
                           Record(Record), PowerRecord,
-                          SignalRecord,getTime, newTimeBase, removeZeroNoise)
+                          SignalRecord, getTime, newTimeBase, removeZeroNoise)
 
 import EFA.Signal.Sequence (genSequenceSignal,
                             genSequFlow, addZeroCrossings,
                             genSequ,sectionRecordsFromSequence)
 
-import qualified EFA.Equation.Arithmetic as Arith
-import qualified EFA.Signal.Vector as Vec
-
-import qualified EFA.Signal.Signal as Sig 
-import qualified EFA.Equation.Stack as Stack
-import EFA.Equation.Stack (Stack)
-
---import qualified EFA.Report.Report as Rep 
-
---import EFA.Signal.Typ
 import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Flow as Flow
 import qualified Data.Map as M
 import Data.Monoid ((<>),mempty)
 import Data.Foldable (fold, foldMap)
-import Data.Tuple.HT (mapSnd)
-
-import qualified EFA.Equation.Environment as Env
-import EFA.Equation.Result (Result(..))
-import qualified EFA.Signal.Record as Record 
-----------------------------------
--- * Example Specific Imports
-import qualified Modules.System as System
-import Modules.Signals as Signals
---import Modules.Plots as Plots
-import qualified EFA.Graph.Topology as TD
-
-import qualified EFA.Equation.Record as EqRecord
 
 
 
