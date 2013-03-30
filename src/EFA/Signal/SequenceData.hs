@@ -81,7 +81,7 @@ fromRangeList =
 fromLengthList :: [(Int, a)] -> SequData a
 fromLengthList =
    fromRangeList . snd .
-   List.mapAccumL (\time (len, x) -> (time+len, ((time, time+len-1), x))) 0
+   List.mapAccumL (\time (len, x) -> (time+len-1, ((time, time+len-1), x))) 0
 
 unzip :: SequData (a, b) -> (SequData a, SequData b)
 unzip (SequData xs) =
