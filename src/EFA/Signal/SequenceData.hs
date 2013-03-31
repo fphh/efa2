@@ -20,6 +20,7 @@ import Text.Printf (PrintfArg)
 
 import EFA.Signal.Signal(SignalIdx)
 
+import qualified Data.List.HT as ListHT
 import qualified Data.List as List
 import qualified Data.Foldable as Fold
 import Data.Traversable (Traversable, traverse, sequenceA, foldMapDefault)
@@ -111,6 +112,11 @@ filter f (SequData xs) =
 filterRange :: (Range -> Bool) -> SequData a -> SequData a
 filterRange f (SequData xs) =
    SequData $ List.filter (\(Section _ rng _) -> f rng) xs
+
+partition :: (a -> Bool) -> SequData a -> (SequData a, SequData a)
+partition f (SequData xs) =
+   mapPair (SequData, SequData) $
+   ListHT.partition (\(Section _ _ a) -> f a) xs
 
 
 class ToTable a where
