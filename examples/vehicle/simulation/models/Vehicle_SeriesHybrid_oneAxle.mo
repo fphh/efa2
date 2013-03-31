@@ -20,7 +20,7 @@ model Vehicle
   ElectricMotor electricmotor2(maxTorque = 200, maxPower = 30000, eta = 0.95, inertia = 0) annotation(Placement(visible = true, transformation(origin = {-29.2319,30.221}, extent = {{9.01578,9.01578},{-9.01578,-9.01578}}, rotation = -180)));
   Modelica.Mechanics.Rotational.Sensors.SpeedSensor speedsensor2 annotation(Placement(visible = true, transformation(origin = {-55.5393,43.6841}, extent = {{5.08917,-5.08917},{-5.08917,5.08917}}, rotation = -270)));
   Modelica.Blocks.Continuous.Integrator integrator1 annotation(Placement(visible = true, transformation(origin = {-38.2432,47.4146}, extent = {{-4.62652,-4.62652},{4.62652,4.62652}}, rotation = 0)));
-  Chassis chassis1(mass = 950, cwA = 0.677, fr = 0.014) annotation(Placement(visible = true, transformation(origin = {62.5543,-24.9381}, extent = {{-17.5692,-17.5692},{17.5692,17.5692}}, rotation = 0)));
+  Chassis chassis1(mass = 1100, cwA = 0.677, fr = 0.014) annotation(Placement(visible = true, transformation(origin = {62.5543,-24.9381}, extent = {{-17.5692,-17.5692},{17.5692,17.5692}}, rotation = 0)));
   Modelica.Mechanics.Rotational.Components.IdealRollingWheel idealrollingwheel2 annotation(Placement(visible = true, transformation(origin = {43.2276,-66.5477}, extent = {{-6.77369,-6.77369},{6.77369,6.77369}}, rotation = 0)));
   Modelica.Mechanics.Rotational.Components.Brake brake2 annotation(Placement(visible = true, transformation(origin = {21.4949,-66.5477}, extent = {{-6.1579,-6.1579},{6.1579,6.1579}}, rotation = 0)));
   BrakeSystem brakesystem1 annotation(Placement(visible = true, transformation(origin = {-2.34949,-24.257}, extent = {{-8.19616,-8.19616},{8.19616,8.19616}}, rotation = 0)));

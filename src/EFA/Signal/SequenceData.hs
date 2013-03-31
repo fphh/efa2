@@ -90,6 +90,11 @@ filterSequWithSequData2 :: ((Sec,a,b) -> Bool) -> (Sequ,SequData a,SequData b) -
 filterSequWithSequData2 f (SequData xs, SequData ys, SequData zs) = (SequData xsf, SequData ysf, SequData zsf )
    where (xsf,ysf,zsf) = unzip3 $ filter f $ zip3 xs ys zs
 
+-- | Filter Sequence and SequenceData with a Filterfunktion
+-- | Allows e.g. to filter Sequ, SeqPwrRecord, SequFlowRecord with FlowState
+filterSequWithSequData3 :: ((Sec,a,b,c) -> Bool) -> (Sequ,SequData a,SequData b,SequData c) -> (Sequ,SequData a,SequData b,SequData c)
+filterSequWithSequData3 f (SequData xs, SequData ys, SequData zs, SequData us) = (SequData xsf, SequData ysf, SequData zsf,SequData usf  )
+   where (xsf,ysf,zsf,usf) = List.unzip4 $ filter f $ List.zip4 xs ys zs us
 
 class ToTable a where
    toTable :: Report.ROpts -> (String, SequData a) -> [Table]

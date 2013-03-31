@@ -8,7 +8,7 @@ module EFA.Signal.Sequence where
 import qualified EFA.Graph.Flow as Flow
 -- import qualified EFA.Graph.Topology.Index as Idx
 import EFA.Graph.Topology (Topology, FlowTopology, SequFlowGraph)
-import qualified EFA.Signal.Data as D
+--import qualified EFA.Signal.Data as D
 import qualified EFA.Signal.Base as SB
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Vector as V
@@ -159,6 +159,24 @@ removeLowEnergySections  (xs, ys, zs) threshold = filterSequWithSequData2 f (xs,
 
 -}
 
+{-
+separateUncleanSections :: (Num d,
+                          V.Storage v d, 
+                          V.Singleton v,
+                          SB.BSum d, 
+                          V.Walker v,                          
+                          Ord d) => 
+                         (Sequ, SequData (PowerRecord id v d) , SequData (FlowRecord id v d)) ->
+                          ((Sequ, SequData (PowerRecord id v d), SequData (FlowRecord id v d)),
+                          (Sequ, SequData(PowerRecord id v d),  SequData (FlowRecord id v d)),
+                          (Sequ, SequData(PowerRecord id v d),  SequData (FlowRecord id v d)))
+
+separateUncleanSections  (xs, ys, zs) = 
+  (filterSequWithSequData3 f (xs, ys, zs), filterSequWithSequData2 g (xs, ys, zs), filterSequWithSequData2 h (xs, ys, zs))
+   where  f (_,q) = q == Flow.Clean 
+          g (_,q) = q == Flow.Dirty
+          h (_,q) = q == Flow.Wrong
+-}
 
 separateMinorSections :: (Num d,
                           V.Storage v d, 
