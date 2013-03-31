@@ -12,12 +12,13 @@ import EFA.Graph
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
-import EFA.Signal.SequenceData (SequData, zipWithSecIdxs)
+import qualified EFA.Signal.SequenceData as SD
+import EFA.Signal.SequenceData (SequData)
 import EFA.Signal.Record
           (Record(Record), FlowState(FlowState), FlowRecord,
            PPosIdx(PPosIdx), flipPos, getSig, rmapWithKey)
 import EFA.Graph.Topology
-          (Topology, FlowTopology, SequFlowGraph,
+          (Topology, FlowTopology, ClassifiedTopology, SequFlowGraph,
            FlowDirection(Dir, UnDir))
 
 import qualified EFA.Graph as G
@@ -30,6 +31,7 @@ import EFA.Signal.Base (Sign(PSign, NSign, ZSign),BSum, DArith0)
 
 import qualified Data.Foldable as Fold
 import qualified Data.Map as M
+import Control.Monad (join)
 
 import EFA.Utility (checkedLookup,checkedLookup2)
 
@@ -160,7 +162,7 @@ genFlowTopology topo (FlowState fs) =
 
 mkSectionTopology ::
   (Ord node) =>
-  Idx.Section -> FlowTopology node -> (SequFlowGraph node)
+  Idx.Section -> ClassifiedTopology node -> SequFlowGraph node
 mkSectionTopology sid = Gr.ixmap (Idx.afterSecNode sid)
 
 
@@ -176,25 +178,32 @@ mkStorageEdges node stores = do
       (Edge (Idx.BndNode secin node) (Idx.BndNode secout node), Dir)
 
 getActiveStoreSequences ::
-   (Ord node, Topo.FlowDirectionField el) =>
-   SequData (Idx.Section, Gr.Graph node Topo.NodeType el) ->
+   (Ord node) =>
+   SequData (Topo.ClassifiedTopology node) ->
    M.Map node (M.Map Idx.Section Topo.StoreDir)
 getActiveStoreSequences sq =
    Fold.foldl
       (M.unionWith (M.unionWith (error "duplicate section for node")))
       M.empty $
-   fmap (\(s, g) ->
+   SD.mapWithSection
+      (\s g ->
           fmap (M.singleton s) $
-          M.mapMaybe snd $ Topo.getActiveStores g) sq
+          M.mapMaybe (join . Topo.maybeStorage) $ Gr.nodeLabels g) sq
+
+
+type RangeGraph node = (M.Map Idx.Section SD.Range, SequFlowGraph node)
 
 mkSequenceTopology ::
-  (Ord node) =>
-  SequData (FlowTopology node) -> SequFlowGraph node
+   (Ord node) =>
+   SequData (FlowTopology node) ->
+   RangeGraph node
 mkSequenceTopology sd =
+   (,) (Fold.fold $ SD.mapWithSectionRange (\s rng _ -> M.singleton s rng) sq) $
    insEdges (Fold.fold $ M.mapWithKey mkStorageEdges tracks) $
    insNodes
-      (map (\n -> (Idx.initBndNode n, Topo.Storage)) $
+      (map (\n -> (Idx.initBndNode n, Topo.Storage (Just Topo.In))) $
        M.keys tracks) $
-   Fold.foldMap (uncurry mkSectionTopology) sq
+   Fold.fold $
+   SD.mapWithSection mkSectionTopology sq
   where tracks = getActiveStoreSequences sq
-        sq = zipWithSecIdxs (,) sd
+        sq = fmap Topo.classifyStorages sd

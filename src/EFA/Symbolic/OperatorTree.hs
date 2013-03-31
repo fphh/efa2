@@ -136,7 +136,7 @@ formatTerm =
              x :* y -> Format.multiply (go x) (go y)
 
              Recip x -> Format.recip $ go x
-             Minus x -> Format.minus $ Format.parenthesize $ go x
+             Minus x -> Format.negate $ Format.parenthesize $ go x
    in  go
 
 

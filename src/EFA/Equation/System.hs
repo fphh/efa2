@@ -35,12 +35,11 @@ module EFA.Equation.System (
 
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
-import qualified EFA.Equation.Variable as Var
+import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph as Gr
-import qualified EFA.Report.Format as Format
 
 import EFA.Equation.Result(Result(..))
 
@@ -73,6 +72,7 @@ import Control.Category ((.))
 import qualified Data.Map as M
 import qualified Data.Set as S
 import qualified Data.List.HT as LH
+import qualified Data.List as List
 
 import qualified Data.NonEmpty as NonEmpty
 
@@ -516,13 +516,23 @@ stxfactor = variableRecord . Idx.StX
 
 insum ::
    (Eq v, Sum v, Record rec, Ord node) =>
-   Idx.BndNode node -> RecordExpression rec node s a v v
+   Idx.SecNode node -> RecordExpression rec node s a v v
 insum = variableRecord . Idx.Sum Idx.In
 
 outsum ::
    (Eq v, Sum v, Record rec, Ord node) =>
-   Idx.BndNode node -> RecordExpression rec node s a v v
+   Idx.SecNode node -> RecordExpression rec node s a v v
 outsum = variableRecord . Idx.Sum Idx.Out
+
+stinsum ::
+   (Eq a, Sum a, Record rec, Ord node) =>
+   Idx.BndNode node -> RecordExpression rec node s a v a
+stinsum = variableRecord . Idx.StSum Idx.In
+
+stoutsum ::
+   (Eq a, Sum a, Record rec, Ord node) =>
+   Idx.BndNode node -> RecordExpression rec node s a v a
+stoutsum = variableRecord . Idx.StSum Idx.Out
 
 storage ::
    (Eq a, Sum a, Record rec, Ord node) =>
@@ -554,12 +564,13 @@ fromEnvResult ::
    Env.Complete node (rec (Result a)) (rec (Result v)) ->
    EquationSystem rec node s a v
 fromEnvResult
-   (Env.Complete (Env.Scalar me st se sx) (Env.Signal e p n dt x s)) =
+   (Env.Complete (Env.Scalar me st se sx ss) (Env.Signal e p n dt x s)) =
       mconcat $
          fromMapResult me :
          fromMapResult st :
          fromMapResult se :
          fromMapResult sx :
+         fromMapResult ss :
          fromMapResult e :
          fromMapResult p :
          fromMapResult n :
@@ -583,12 +594,13 @@ fromEnv ::
    Env.Complete node (rec a) (rec v) ->
    EquationSystem rec node s a v
 fromEnv
-   (Env.Complete (Env.Scalar me st se sx) (Env.Signal e p n dt x s)) =
+   (Env.Complete (Env.Scalar me st se sx ss) (Env.Signal e p n dt x s)) =
       mconcat $
          fromMap me :
          fromMap st :
          fromMap se :
          fromMap sx :
+         fromMap ss :
          fromMap e :
          fromMap p :
          fromMap n :
@@ -607,8 +619,7 @@ fromGraph ::
 fromGraph equalInOutSums g = mconcat $
   fromEdges (M.keys $ Gr.edgeLabels g) :
   fromNodes equalInOutSums g :
-  fromInnerStorages (Gr.lefilter (TD.isStructureEdge . fst) g) :
-  fromInterStorages g :
+  fromStorageSequences g :
   []
 
 -----------------------------------------------------------------
@@ -628,119 +639,105 @@ fromEdges =
 fromNodes ::
   (Eq a, Product a, a ~ Scalar v,
    Eq v, Product v, Integrate v,
-   Record rec, Ord node) =>
+   Record rec, Node.C node) =>
   Bool ->
   TD.DirSequFlowGraph node -> EquationSystem rec node s a v
 fromNodes equalInOutSums =
   fold . M.mapWithKey f . Gr.nodes
-   where f sn (ins, _label, outs) =
-            let -- this variable is used again in fromInnerStorages
-                varsumin = insum sn
-                varsumout = outsum sn  -- and this one, too.
+   where f bn (ins, nodeType, outs) =
+            let -- these variables are used again in fromStorageSequences
+                stvarinsum = stinsum bn
+                stvaroutsum = stoutsum bn
+                msn = Idx.secNodeFromBndNode bn
+                withSecNode = flip foldMap msn
+
                 partition =
                    LH.unzipEithers .
                    map
                       (\node ->
-                         case TD.edgeType $ Gr.Edge sn node of
+                         case TD.edgeType $ Gr.Edge bn node of
                             TD.StructureEdge e -> Left e
                             TD.StorageEdge e -> Right e) .
                    S.toList
+
                 (insStruct,  insStore)  = partition ins
                 (outsStruct, outsStore) = partition outs
+
                 splitStructEqs varsum edges =
                    foldMap
                       (splitFactors varsum energy xfactor)
                       (NonEmpty.fetch edges)
+
                 splitStoreEqs varsum edges =
                    foldMap
                       (splitFactors varsum stEnergy stxfactor)
                       (NonEmpty.fetch edges)
-            in  mwhen equalInOutSums (varsumin =%= varsumout) -- siehe bug 2013-02-12-sum-equations-storage
+
+            in  -- siehe bug 2013-02-12-sum-equations-storage
+                case nodeType of
+                   TD.Crossing ->
+                      mwhen equalInOutSums $
+                      withSecNode $ \sn -> insum sn =%= outsum sn
+                   TD.Storage (Just dir) ->
+                      let from (Idx.StorageEdge x _ _) = x
+                          to (Idx.StorageEdge _ x _) = x
+                          inout = (map from insStore, bn, map to outsStore)
+                      in  case dir of
+                             TD.In  ->
+                                fromInStorages inout
+                                <>
+                                splitStoreEqs stvarinsum outsStore
+                                <>
+                                (stvarinsum =%=
+                                 case msn of
+                                    Nothing -> storage bn
+                                    Just sn -> integrate $ insum sn)
+                             TD.Out ->
+                                fromOutStorages inout
+                                <>
+                                splitStoreEqs stvaroutsum insStore
+                                <>
+                                (withSecNode $ \sn ->
+                                   stvaroutsum =%= integrate (outsum sn))
+                   _ -> mempty
                 <>
-                splitStructEqs varsumin insStruct
-                <>
-                splitStructEqs varsumout outsStruct
-                <>
-                withLocalVar
-                   (\s ->
-                      (s =%= integrate varsumout) <> splitStoreEqs s insStore)
-                <>
-                withLocalVar
-                   (\s ->
-                      (s =%= integrate varsumin) <> splitStoreEqs s outsStore)
+                (withSecNode $ \sn ->
+                   splitStructEqs (insum sn) insStruct
+                   <>
+                   splitStructEqs (outsum sn) outsStruct)
 
 
-fromInnerStorages ::
+fromStorageSequences ::
   (Eq a, Sum a, a ~ Scalar v,
    Eq v, Product v, Integrate v,
    Record rec, Node.C node) =>
   TD.DirSequFlowGraph node -> EquationSystem rec node s a v
-fromInnerStorages =
-   mconcat . concatMap (LH.mapAdjacent f) . getInnerStorages
+fromStorageSequences =
+   foldMap (mconcat . LH.mapAdjacent f . M.toList) . getStorageSequences
   where f (before, _) (now, dir) =
            storage now
            =%=
            case dir of
-              NoDir  -> storage before
-              InDir  -> storage before ~+ integrate (insum now)
-              OutDir -> storage before ~- integrate (outsum now)
+              Nothing     -> storage before
+              Just TD.In  -> storage before ~+ stinsum now
+              Just TD.Out -> storage before ~- stoutsum now
 
 
-data StDir = InDir
-           | OutDir
-           | NoDir deriving (Eq, Ord, Show)
-
--- Only graphs without intersection edges are allowed.
 -- Storages must not have more than one in or out edge.
-{-
-getInnerStorages :: TD.DirSequFlowGraph -> [[(Idx.SecNode, StDir)]]
-getInnerStorages = getStorages format
-  where format ([n], s, []) = if TD.isDirEdge n then (s, InDir) else (s, NoDir)
-        format ([], s, [n]) = if TD.isDirEdge n then (s, OutDir) else (s, NoDir)
-        format ([], s, []) = (s, NoDir)
-        format n@(_, _, _) = error ("getInnerStorages: " ++ show n)
--}
-getInnerStorages ::
+getStorageSequences ::
   (Node.C node) =>
-  TD.DirSequFlowGraph node -> [[(Idx.BndNode node, StDir)]]
-getInnerStorages = getStorages format
-  where format ([_], s, []) = (s, InDir)
-        format ([], s, [_]) = (s, OutDir)
-        format ([], s, [])  = (s, NoDir)
-        format (_, s, _)  = errorSecNode "getInnerStorages" s
-
-type InOutFormat node = InOut (Idx.BndNode node) ()
-type InOut n el = ([Gr.LNode n el], n, [Gr.LNode n el])
-
-getStorages ::
-  (Ord node) =>
-  (InOutFormat node -> b) -> TD.DirSequFlowGraph node -> [[b]]
-getStorages format =
-  M.elems
-  . fmap M.elems
-  . M.fromListWith (M.unionWith (error "duplicate node"))
-  . map (\(ins, (n@(Idx.BndNode sec node),_), outs) ->
-            (node, M.singleton sec (format (ins,n,outs))))
-  . filter TD.isStorageNode
-  . Gr.mkInOutGraphFormat    -- ersetzen durch nodes
+  TD.DirSequFlowGraph node ->
+  M.Map node (M.Map (Idx.BndNode node) (Maybe TD.StoreDir))
+getStorageSequences =
+  foldl
+     (M.unionWith (M.unionWith (error "duplicate boundary for node")))
+     M.empty .
+  map (\(bn@(Idx.BndNode _ n), dir) -> M.singleton n $ M.singleton bn dir) .
+  M.toList . M.mapMaybe TD.maybeStorage . Gr.nodeLabels
 
 
------------------------------------------------------------------
-
-fromInterStorages ::
-  (Eq a, Product a, a ~ Scalar v,
-   Eq v, Product v, Integrate v,
-   Record rec, Node.C node) =>
-  TD.DirSequFlowGraph node -> EquationSystem rec node s a v
-fromInterStorages = foldMap f . getInterStorages
-  where f (dir, x) =
-          case dir of
-               NoDir -> mempty
-               InDir -> fromInStorages x
-               OutDir -> fromOutStorages x
-
-getSection :: Idx.BndNode a -> Idx.Boundary
-getSection (Idx.BndNode s _) = s
+_getBoundary :: Idx.BndNode a -> Idx.Boundary
+_getBoundary (Idx.BndNode s _) = s
 
 _getNode :: Idx.BndNode a -> a
 _getNode (Idx.BndNode _ n) = n
@@ -751,20 +748,13 @@ fromInStorages ::
    Record rec, Node.C node) =>
   ([Idx.Boundary], Idx.BndNode node, [Idx.Boundary]) ->
   EquationSystem rec node s a v
-fromInStorages (_, sn@(Idx.BndNode sec n), outs) =
-   flip foldMap
-      (fmap NonEmpty.sort $ NonEmpty.fetch outs) $ \souts ->
-         -- The next equation is special for the initial Section.
-         (Idx.storageEdge maxEnergy sec (NonEmpty.head souts) n =%=
-          if sec == Idx.initial
-            then storage sn
-            else integrate (insum sn))
-         <>
-         let f beforeNext next =
-                Idx.storageEdge maxEnergy sec next n =%=
-                   Idx.storageEdge maxEnergy sec beforeNext n
-                      ~- Idx.storageEdge stEnergy beforeNext sec n
-         in  mconcat $ LH.mapAdjacent f $ NonEmpty.flatten souts
+fromInStorages (_, sn@(Idx.BndNode bnd n), outs) =
+   let souts = List.sort outs
+       maxEnergies = map (\b -> Idx.storageEdge maxEnergy bnd b n) souts
+       stEnergies  = map (\b -> Idx.storageEdge stEnergy  bnd b n) souts
+   in  mconcat $
+       zipWith (=%=) maxEnergies
+          (stinsum sn : zipWith (~-) maxEnergies stEnergies)
 
 fromOutStorages ::
   (Eq a, Product a, Record rec, Node.C node) =>
@@ -789,28 +779,6 @@ splitFactors s ef xf ns =
    <>
    foldMap (\n -> ef n =%= s ~* xf n) ns
 
-
-getInterStorages ::
-  (Node.C node) =>
-  TD.DirSequFlowGraph node
-  -> [(StDir, ([Idx.Boundary], Idx.BndNode node, [Idx.Boundary]))]
-getInterStorages = concat . getStorages format
-  where format (ins, sn@(Idx.BndNode sec _), outs) =
-          let partition =
-                 LH.partition (sec ==) . map (getSection . fst)
-              (insStruct, insStore) = partition ins
-              (outsStruct, outsStore) = partition outs
-          in  (case (insStruct, outsStruct) of
-                 ([], [])  ->  -- We treat initial storages as in-storages
-                   if sec == Idx.initial then InDir else NoDir
-                 ([_], []) -> InDir
-                 ([], [_]) -> OutDir
-                 _ -> errorSecNode "getInterStorages" sn,
-               (insStore, sn, outsStore))
-
-errorSecNode :: Node.C node => String -> Idx.BndNode node -> a
-errorSecNode name node =
-   error (name ++ ": " ++ Format.unUnicode (Var.formatBoundaryNode node))
 
 
 -----------------------------------------------------------------
@@ -868,10 +836,10 @@ solve ::
   (Eq a, Product a, a ~ Scalar v,
    Eq v, Product v, Integrate v,
    Record rec, Node.C node) =>
-  TD.SequFlowGraph node ->
+  Flow.RangeGraph node ->
   (forall s. EquationSystem rec node s a v) ->
   Env.Complete node (rec (Result a)) (rec (Result v))
-solve g given =
+solve (_rngs, g) given =
   solveSimple (given <> fromGraph True (toDirSequFlowGraph g))
 
 
@@ -882,10 +850,10 @@ solveFromMeasurement ::
   (Eq a, Product a, a ~ Scalar v,
    Eq v, Product v, Integrate v,
    Record rec, Node.C node) =>
-  TD.SequFlowGraph node ->
+  Flow.RangeGraph node ->
   (forall s. EquationSystem rec node s a v) ->
   Env.Complete node (rec (Result a)) (rec (Result v))
-solveFromMeasurement g given =
+solveFromMeasurement (_rngs, g) given =
   solveSimple (given <> fromGraph False (toDirSequFlowGraph g))
 
 
@@ -896,7 +864,7 @@ solveFromMeasurement g given =
 -- Die auf grund der Missachtung originaler Werte
 -- falsch berechneten Werte bleiben aber erhalten.
 -- Eine andere Lösung wäre, die Zeilen
---     (varsumin =%= varsumout)
+--     (varinsum =%= varoutsum)
 --     <>
 -- (im Moment 273 und 274) auszukommentieren.
 
@@ -904,10 +872,10 @@ conservativelySolve ::
   (Eq a, Product a, a ~ Scalar v,
    Eq v, Product v, Integrate v,
    Record rec, Node.C node) =>
-  TD.SequFlowGraph node ->
+  Flow.RangeGraph node ->
   (forall s. EquationSystem rec node s a v) ->
   Env.Complete node (rec (Result a)) (rec (Result v))
-conservativelySolve g given =
+conservativelySolve (_rngs, g) given =
   solveSimple (given <> fromGraph True (toDirSequFlowGraph g))
   <>
   solveSimple given

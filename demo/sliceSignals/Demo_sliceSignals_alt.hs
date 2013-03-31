@@ -40,12 +40,11 @@ rec, rec0 :: PowerRecord Node.Int [] Double
 rec = Record time pmap
 rec0 = addZeroCrossings rec
 
-sqRec :: SequData (PowerRecord Node.Int [] Double)
-sequ :: Sequ
-(sequ, sqRec) = genSequ rec0
+sequ :: SequData (PowerRecord Node.Int [] Double)
+sequ = genSequ rec0
 
 main :: IO ()
 main = do
   report [] ("rec", rec)
   report [RAll] ("rec0",rec0)
-  report [] ("sequRec",sqRec)
+  report [] ("sequ",sequ)

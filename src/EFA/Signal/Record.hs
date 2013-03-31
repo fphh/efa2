@@ -8,13 +8,22 @@ import qualified EFA.Signal.Signal as S
 import EFA.Signal.Signal (TC(..), Scalar)
 import qualified EFA.Signal.Data as D
 import qualified EFA.Signal.Vector as V
+import qualified EFA.Signal.Base as SB
 import EFA.Signal.Signal
+{- <<<<<<< HEAD
           (-- TC,
            Signal, FSignal, TSigL, UTSignal, TSignal,
            TSamp, PSamp, PSamp1L, PSamp2LL,Scal)
 
 import EFA.Signal.Typ (Typ, A, P, T, Tt, UT,F)
 import EFA.Signal.Data (Data(..), (:>), Nil)
+======= -}
+          (TC(TC), Signal, FSignal, TSigL, UTSignal, TSignal,
+           TSamp, PSamp, PSamp1L, PSamp2LL,Scal)
+
+import EFA.Signal.Typ (Typ, A, P, T, Tt, UT,F,D)
+import EFA.Signal.Data (Data(Data), (:>), Nil)
+-- >>>>>>> master
 import EFA.Signal.Base (Sign, BSum, BProd)
 
 import EFA.Report.Report (ToTable(toTable), Table(..), tvcat)
@@ -27,6 +36,7 @@ import System.Random (Random)
 
 import qualified Data.Map as M
 import qualified Data.Set as Set
+import qualified Data.Foldable as Fold
 import qualified Data.List.HT as HTL
 import qualified Data.List.Key as Key
 import qualified Data.List.Match as Match
@@ -299,12 +309,40 @@ newTimeBase (Record time m) newTime = Record newTime (M.map f m)
 -- | Create a new Record by slicing time and all signals on given Indices
 slice ::
    (V.Slice v, V.Storage v a) =>
-   Record s t1 t2 id v a -> (Int, Int) {- Sec -} -> Record s t1 t2 id v a
+   Record s t1 t2 id v a -> (Int, Int) {- Range -} -> Record s t1 t2 id v a
 slice (Record t m) (idx1,idx2) = Record (f t) (M.map f m)
   where f ::
            (V.Slice v, V.Storage v a) =>
            TC s t (Data (v :> Nil) a) -> TC s t (Data (v :> Nil) a)
         f = S.slice idx1 (idx2-idx1+1)
+
+
+{- | Filter Sequence Flow
+
+Used to filter Modelica signals.
+State changes in solver create several DataPoints with exact the same time.
+The resulting sections which have zero time duration are removed.
+-}
+longerThanZero ::
+   (Fractional a, Ord a, V.Storage v a, V.Singleton v) =>
+   PowerRecord nty v a -> Bool
+longerThanZero = uncurry (/=) . getTimeWindow
+
+-- | Check for minimum duration
+longerThan ::
+   (Fractional a, Ord a, Eq a, V.Storage v a, V.Singleton v) =>
+   a -> PowerRecord nty v a -> Bool
+longerThan threshold r =
+   case getTimeWindow r of
+      (TC (Data x), TC (Data y)) -> abs (x - y) > threshold
+
+-- | Check for negligible energy flow
+energyBelow ::
+   (Num a, SB.BSum a, Ord a, V.Walker v, V.Storage v a) =>
+   a -> FlowRecord node v a -> Bool
+energyBelow threshold (Record _ fMap) =
+   Fold.all (\s -> abs (S.fromScalar (S.sigSum s)) < threshold) fMap
+
 
 -----------------------------------------------------------------------------------
 -- Various Class and Instance Definition for the different Sequence Datatypes

@@ -21,13 +21,14 @@ module EFA.Signal.Plot (
    getData,
    ) where
 
+import qualified EFA.Signal.SequenceData as SD
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Data as D
 import qualified EFA.Signal.Vector as SV
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Colour as Colour
 
-import EFA.Signal.SequenceData (SequData, zipWithSecIdxs)
+import EFA.Signal.SequenceData (SequData)
 
 import EFA.Signal.Record (Record(Record))
 -- import EFA.Signal.SequenceData (SequData(..))
@@ -426,7 +427,7 @@ sequenceFrame ::
    String -> SequData (Record s t1 t2 id v y) ->
    SequData (Frame.T (Graph2D.T y y))
 sequenceFrame sqName =
-   zipWithSecIdxs
+   SD.mapWithSection
       (\x ->
          Frame.cons (recordAttr ("Sequence " ++ sqName ++ ", Record of " ++ show x)) .
          record)
@@ -454,7 +455,7 @@ sequenceSplit ::
    Int -> String -> SequData (Record s t1 t2 id v y) -> IO ()
 sequenceSplit n name =
    Fold.sequence_ .
-   zipWithSecIdxs (\ x -> recordSplit n (name ++ " - " ++ show x))
+   SD.mapWithSection (\ x -> recordSplit n (name ++ " - " ++ show x))
 
 sequenceSelect ::
    (TDisp t1, TDisp t2,

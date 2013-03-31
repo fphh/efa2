@@ -44,6 +44,7 @@ import qualified EFA.Signal.Record as Record
 --import System.FilePath ((</>))
 import System.IO
 
+-- <<<<<<< HEAD
 --import qualified Data.Map as M
 import qualified Data.List as L
 --import Data.Tuple.HT (mapFst)
@@ -71,6 +72,14 @@ deltasets xs = zipWith (\x y -> y ++ "_vs_" ++ x) xs (tail xs)
 zipWith3M_ :: Monad m => (t -> t1 -> t2 -> m b) -> [t] -> [t1] -> [t2] -> m ()
 zipWith3M_ f x y z = mapM_ (\(x',y',z') -> f x' y' z') (zip3 x y z)
 
+{-=======
+import Data.Tuple.HT (mapSnd)
+
+
+dataset, datasetB :: FilePath
+dataset = "/home/felix/data/examples/vehicle/Vehicle_res.plt"
+datasetB = "/home/felix/data/examples/vehicle/Vehicle_mass1050kg_res.plt"
+>>>>>>> master -}
 
 main :: IO ()
 main = do
@@ -93,13 +102,19 @@ main = do
 
   preProcessedDataX <- mapM (Analysis.pre System.topology) rawSignalsX
 
-  let (sequFilt,_,sequenceFlowsFiltX,flowStatesX,powerSignalsX,signalsX) = L.unzip6 preProcessedDataX
+  let (_,sequenceFlowsFiltX,flowStatesX,powerSignalsX,signalsX) = L.unzip5 preProcessedDataX
 --  let (sequenceFiltX,sequencePowersFiltX,sequenceFlowsFiltX,flowStatesX,powerSignalsX,signalsX) = L.unzip6 preProcessedDataX
   
   
+-- <<<<<<< HEAD
   let allSignalsX = zipWith Record.combinePowerAndSignal powerSignalsX signalsX
 
-
+  {-
+=======
+  (sequencePowersFilt,sequenceFlowsFilt,flowStates,powerSignals,signals) <- Analysis.pre System.topology rawSignals
+  (sequencePowersFiltB,sequenceFlowsFiltB,flowStatesB,powerSignalsB,signalsB) <- Analysis.pre System.topology rawSignalsB
+>>>>>>> master
+-}
 ---------------------------------------------------------------------------------------
 -- *  Generate Flow States as Graphs
 
@@ -108,13 +123,25 @@ main = do
 ---------------------------------------------------------------------------------------
 -- *  Generate Sequence Flow Graph
 
+-- <<<<<<< HEAD
   let sequenceFlowTopologyX = map makeSeqFlowTopology flowToposX
 
 ---------------------------------------------------------------------------------------
 -- *  Section Flow States as Graphs
 
-  let sectionToposX =  map (lefilter (isStructureEdge .fst)) sequenceFlowTopologyX
+--  let sectionToposX =  map (lefilter (isStructureEdge .fst)) sequenceFlowTopologyX
 
+{-=======
+  let sequenceFlowTopology = makeSeqFlowTopology flowTopos
+  let sequenceFlowTopologyB = makeSeqFlowTopology flowToposB
+
+---------------------------------------------------------------------------------------
+-- *  Section Flow States as Graphs
+  
+  let sectionTopos = mapSnd (lefilter (isStructureEdge .fst)) sequenceFlowTopology
+  let sectionToposB =  mapSnd (lefilter (isStructureEdge .fst)) sequenceFlowTopologyB
+      
+>>>>>>> master -}
 ---------------------------------------------------------------------------------------
 -- *  Make Base Analysis on external Data
 
@@ -198,10 +225,10 @@ main = do
 --  Draw.topologyWithEdgeLabels System.edgeNames System.topology
 
     -- Sectionen
-    zipWith3M_ Draw.sequFlowGraphAbsWithEnv datasetsX sectionToposX externalEnvX,
+    zipWith3M_ Draw.sequFlowGraphAbsWithEnv datasetsX sequenceFlowTopologyX externalEnvX,
 
     -- Sections-Deltadiagramme
-    zipWith3M_ Draw.sequFlowGraphDeltaWithEnv datasetsX sectionToposX externalDeltaEnvX
+    zipWith3M_ Draw.sequFlowGraphDeltaWithEnv datasetsX sequenceFlowTopologyX externalDeltaEnvX
 
     -- Vorhersage
 --    Draw.sequFlowGraphAbsWithEnv "Prediction" (head sectionToposX) prediction

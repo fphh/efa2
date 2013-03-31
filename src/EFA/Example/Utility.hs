@@ -17,9 +17,9 @@ import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Symbolic.Mixed as Term
+import qualified EFA.Signal.SequenceData as SD
 import EFA.Equation.System ((.=), (%=))
 import EFA.Equation.Result (Result)
-import EFA.Signal.SequenceData (SequData(SequData))
 import EFA.Utility (Pointed, point)
 
 import qualified EFA.Equation.Arithmetic as Arith
@@ -47,12 +47,12 @@ makeSimpleEdges es = map f es
 -}
 
 constructSeqTopo ::
-  (Ord node) =>
-  TD.Topology node -> [Int] -> TD.SequFlowGraph node
+   (Ord node) =>
+   TD.Topology node -> [Int] -> Flow.RangeGraph node
 constructSeqTopo topo =
   Flow.mkSequenceTopology .
   fmap (StateAnalysis.bruteForce topo !!) .
-  SequData
+  SD.fromList
 
 
 

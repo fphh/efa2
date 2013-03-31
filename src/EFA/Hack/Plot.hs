@@ -28,6 +28,7 @@ import qualified Graphics.Gnuplot.Terminal.WXT as WXT
 import EFA.Signal.Plot(getData)
 
 import qualified EFA.Signal.Record as Record
+import qualified EFA.Signal.SequenceData as SD
 import EFA.Signal.Record (Record(Record))
 import EFA.Signal.SequenceData (SequData(..))
 
@@ -132,14 +133,22 @@ instance Time RecList id where
 
 -- | Plot a SequenceRecord, each Section in a new Window
 instance Time Sq id where
+{- <<<<<<< HEAD
            record2 optsIn (Sq (SequData sqRecList)) = (f opts)
              where
                opts = PlOpts.build optsIn
                f a | PlOpts.splitAcc a == PlOpts.NoSplit = zipWithM_ (recordIO2 opts) wtitles (map (\x -> [x]) sqRecList)
                  where wtitles = map (\x -> "Sec"++ show x) [(0 ::Int) ..]
+======= -}
+           record2 optsIn (Sq sqRecList) = (f opts)
+             where
+               opts = PlOpts.build optsIn
+               f a | PlOpts.splitAcc a == PlOpts.NoSplit = Fold.sequence_ $ SD.mapWithSection (recordIO2Sec opts) (fmap (\x -> [x]) sqRecList)
+-- >>>>>>> master
                f _ | otherwise = error "Splitting not implemented for Sequence Records"
 
 
+{-
 -- | Plot a List of SequenceRecords against each other
 instance Time SqList id where
            record2 optsIn (SqList sList) = (f opts)
@@ -159,6 +168,7 @@ instance Time RecSq id where
                f a | otherwise = zipWithM_ (recordIO2 opts) wtitles (L.transpose $ map (Record.split x) (rec:recList))
                  where (PlOpts.Split x) = PlOpts.splitAcc a
                        wtitles = map (\y -> "Sec"++ show y) [(0::Int) ..]
+-}
 
 
 ------------------------------------------------------------
@@ -187,6 +197,28 @@ recordIO2 opts wtitle xs = void $ AGP.plot term $ frame $ Fold.fold $ zipWith (p
     frame = PlOpts.buildFrame wtitle opts
     treatRecord = PlOpts.buildPrepFunction opts
     term = PlOpts.buildTerminal wtitle opts
+
+recordIO2Sec :: (Terminal.C term,
+                 Ord a, 
+                 Show (v a), 
+                 SV.Singleton v,
+               Ord id,
+               Show id,
+               Fractional a,
+               SV.Walker v,
+               SV.Storage v a,
+               SV.FromList v,
+               TDisp typ1,
+               TDisp typ0,
+               Tuple.C a,
+               Atom.C a) =>
+               (PlOpts.T id term)
+              -> Idx.Section
+              -> [Record.Record s typ0 typ1 id v a]
+              -> IO ()
+recordIO2Sec opts (Idx.Section sec) =
+   recordIO2 opts ("Sec" ++ show sec)
+
 
 -- | Generate gnuplot-Data from a single record
 plotSingleRecord ::

@@ -10,7 +10,7 @@ module EFA.Graph (
    LEdge,
 
    reverseEdge,
-   ixmap, nmap, emap,
+   ixmap, nmap, emap, nmapWithInOut,
    empty,
    union,
    getIncoming,
@@ -432,14 +432,29 @@ nodeSet = M.keysSet . nodes
 
 type InOut n nl el = ([LNode n el], LNode n nl, [LNode n el])
 
+nmapWithInOut ::
+   (Ord n) =>
+   (InOut n nl0 el -> nl1) -> Graph n nl0 el -> Graph n nl1 el
+nmapWithInOut f g@(Graph ns els) =
+   Graph
+      (M.mapWithKey
+          (\n ios@(ins,_nl,outs) -> (ins, f $ inOut g n ios, outs)) ns)
+      els
+
+inOut ::
+   (Ord n) =>
+   Graph n nl el ->
+   n -> (S.Set n, t, S.Set n) ->
+   ([LNode n el], (n, t), [LNode n el])
+inOut g n (ins,nl,outs) =
+   (preEdgeLabels g n ins,
+    (n,nl),
+    sucEdgeLabels g n outs)
+
 mkInOutGraphFormat ::
    (Ord n) => Graph n nl el -> [InOut n nl el]
 mkInOutGraphFormat g@(Graph ns _els) =
-   map
-      (\(n, (ins,nl,outs)) ->
-         (preEdgeLabels g n ins,
-          (n,nl),
-          sucEdgeLabels g n outs)) $
+   map (\(n, ios) -> inOut g n ios) $
    M.toList ns
 
 filterLEdges ::

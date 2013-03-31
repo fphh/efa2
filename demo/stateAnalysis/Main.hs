@@ -23,7 +23,7 @@ topoDreibein = Gr.mkGraph ns (makeEdges es)
   where ns = [(N0, TD.Source),
               (N1, TD.Sink),
               (N2, TD.Crossing),
-              (N3, TD.Storage)]
+              (N3, TD.storage)]
         es = [(N0, N2), (N1, N2), (N2, N3)]
 
 

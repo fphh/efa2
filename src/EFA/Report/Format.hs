@@ -9,7 +9,8 @@ import Data.Ratio (Ratio, numerator, denominator)
 
 import Text.Printf (PrintfArg, printf)
 
-import Prelude hiding (words, lines, sum)
+import qualified Prelude as P
+import Prelude hiding (words, lines, sum, negate)
 
 
 -- * special Unicode characters
@@ -61,8 +62,8 @@ class Format output where
    delta :: output -> output
    edgeIdent :: EdgeVar -> output
    dtime, sum, storage :: output
-   parenthesize, minus, recip :: output -> output
-   plus, multiply :: output -> output -> output
+   parenthesize, negate, recip :: output -> output
+   plus, minus, multiply :: output -> output -> output
    power :: output -> Integer -> output
 
 instance Format ASCII where
@@ -114,9 +115,10 @@ instance Format ASCII where
    storage = ASCII "s"
 
    parenthesize (ASCII x) = ASCII $ "(" ++ x ++ ")"
-   minus (ASCII x) = ASCII $ '-' : x
+   negate (ASCII x) = ASCII $ '-' : x
    recip (ASCII x) = ASCII $ "1/(" ++ x ++ ")"
    plus (ASCII x) (ASCII y) = ASCII $ x ++ " + " ++ y
+   minus (ASCII x) (ASCII y) = ASCII $ x ++ " - " ++ y
    multiply (ASCII x) (ASCII y) = ASCII $ x ++ " * " ++ y
    power (ASCII x) n = ASCII $ x ++ "^" ++ showsPrec 10 n ""
 
@@ -173,9 +175,10 @@ instance Format Unicode where
    storage = Unicode "s"
 
    parenthesize (Unicode x) = Unicode $ "(" ++ x ++ ")"
-   minus (Unicode x) = Unicode $ '-' : x
+   negate (Unicode x) = Unicode $ '-' : x
    recip (Unicode x) = Unicode $ "\x215f(" ++ x ++ ")"
    plus (Unicode x) (Unicode y) = Unicode $ x ++ " + " ++ y
+   minus (Unicode x) (Unicode y) = Unicode $ x ++ " - " ++ y
    multiply (Unicode x) (Unicode y) = Unicode $ x ++ "\xb7" ++ y
    power (Unicode x) n =
       Unicode $ x ++
@@ -215,7 +218,7 @@ ratioCharMap =
           (5/8, '\x215D') :
           (7/8, '\x215E') :
           []
-   in  M.union xys (fmap ('-':) $ M.mapKeys negate xys)
+   in  M.union xys (fmap ('-':) $ M.mapKeys P.negate xys)
 
 
 instance Format Latex where
@@ -272,9 +275,10 @@ instance Format Latex where
    storage = Latex "s"
 
    parenthesize (Latex x) = Latex $ "(" ++ x ++ ")"
-   minus (Latex x) = Latex $ '-' : x
+   negate (Latex x) = Latex $ '-' : x
    recip (Latex x) = Latex $ "\\frac{1}{" ++ x ++ "}"
    plus (Latex x) (Latex y) = Latex $ x ++ " + " ++ y
+   minus (Latex x) (Latex y) = Latex $ x ++ " - " ++ y
    multiply (Latex x) (Latex y) = Latex $ x ++ " \\cdot " ++ y
    power (Latex x) n = Latex $ x ++ "^{" ++ show n ++ "}"
 
@@ -292,14 +296,14 @@ instance Record rec => Record (Idx.ExtDelta rec) where
    record (Idx.ExtDelta d r) = recordDelta d . record r
 
 
-class EdgeIdx idx where edgeVar :: idx -> EdgeVar
-instance EdgeIdx (Idx.Energy node) where edgeVar _ = Energy
-instance EdgeIdx (Idx.MaxEnergy node) where edgeVar _ = MaxEnergy
-instance EdgeIdx (Idx.Power node) where edgeVar _ = Power
-instance EdgeIdx (Idx.Eta node) where edgeVar _ = Eta
-instance EdgeIdx (Idx.X node) where edgeVar _ = X
-instance EdgeIdx (Idx.StEnergy node) where edgeVar _ = Energy
-instance EdgeIdx (Idx.StX node) where edgeVar _ = X
+class EdgeIdx idx where edgeVar :: idx node -> EdgeVar
+instance EdgeIdx Idx.Energy where edgeVar _ = Energy
+instance EdgeIdx Idx.MaxEnergy where edgeVar _ = MaxEnergy
+instance EdgeIdx Idx.Power where edgeVar _ = Power
+instance EdgeIdx Idx.Eta where edgeVar _ = Eta
+instance EdgeIdx Idx.X where edgeVar _ = X
+instance EdgeIdx Idx.StEnergy where edgeVar _ = Energy
+instance EdgeIdx Idx.StX where edgeVar _ = X
 
 
 directionShort :: Idx.Direction -> String
