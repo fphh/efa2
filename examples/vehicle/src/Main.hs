@@ -33,6 +33,9 @@ import qualified EFA.Signal.Plot.Options as O
 
 import System.IO
 
+import Data.Tuple.HT (mapSnd)
+
+
 dataset, datasetB :: FilePath
 dataset = "/home/felix/data/examples/vehicle/Vehicle_res.plt"
 datasetB = "/home/felix/data/examples/vehicle/Vehicle_mass1050kg_res.plt"
@@ -69,18 +72,15 @@ main = do
 
 ---------------------------------------------------------------------------------------
 -- *  Generate Sequence Flow Graph
-      
-  let sequenceRangeGraph = makeSeqFlowTopology flowTopos
-  let sequenceRangeGraphB = makeSeqFlowTopology flowToposB
 
-  let sequenceFlowTopology = snd sequenceRangeGraph
-  let sequenceFlowTopologyB = snd sequenceRangeGraphB
+  let sequenceFlowTopology = makeSeqFlowTopology flowTopos
+  let sequenceFlowTopologyB = makeSeqFlowTopology flowToposB
 
 ---------------------------------------------------------------------------------------
 -- *  Section Flow States as Graphs
   
-  let sectionTopos = mapSnd (lefilter (isStructureEdge .fst)) sequenceRangeGraph
-  let sectionToposB =  mapSnd (lefilter (isStructureEdge .fst)) sequenceRangeGraphB
+  let sectionTopos = mapSnd (lefilter (isStructureEdge .fst)) sequenceFlowTopology
+  let sectionToposB =  mapSnd (lefilter (isStructureEdge .fst)) sequenceFlowTopologyB
       
 ---------------------------------------------------------------------------------------
 -- *  Make Base Analysis on external Data

@@ -9,6 +9,7 @@ import EFA.Example.Absolute ((.=))
 import EFA.Example.Utility (makeEdges, constructSeqTopo, edgeVar)
 import EFA.Graph (mkGraph)
 
+import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as TD
@@ -66,7 +67,7 @@ topo = mkGraph nodes (makeEdges edges)
           = [(Source, c0), (c0, c1), (c1, c2), (c2, Sink), (c0, c3),
              (c3, c2)]
 
-seqTopo :: TD.SequFlowGraph Node
+seqTopo :: Flow.RangeGraph Node
 seqTopo = constructSeqTopo topo [0]
 
 given :: Double -> Double -> EqGen.EquationSystem Node s Double Double

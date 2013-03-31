@@ -8,6 +8,7 @@ import qualified EFA.Example.Absolute as EqSys
 import EFA.Example.Absolute ((.=), (=.=))
 import EFA.Example.Utility (constructSeqTopo, edgeVar, makeEdges)
 
+import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as TD
@@ -33,7 +34,7 @@ linearOne = mkGraph nodes (makeEdges edges)
   where nodes = [(sink, TD.AlwaysSink), (source, TD.AlwaysSource)]
         edges = [(source, sink)]
 
-seqTopo :: TD.SequFlowGraph Node.Int
+seqTopo :: Flow.RangeGraph Node.Int
 seqTopo = constructSeqTopo linearOne [0]
 
 enRange :: [Double]

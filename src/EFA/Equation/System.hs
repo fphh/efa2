@@ -35,6 +35,7 @@ module EFA.Equation.System (
 
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
+import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as TD
@@ -835,10 +836,10 @@ solve ::
   (Eq a, Product a, a ~ Scalar v,
    Eq v, Product v, Integrate v,
    Record rec, Node.C node) =>
-  TD.SequFlowGraph node ->
+  Flow.RangeGraph node ->
   (forall s. EquationSystem rec node s a v) ->
   Env.Complete node (rec (Result a)) (rec (Result v))
-solve g given =
+solve (_rngs, g) given =
   solveSimple (given <> fromGraph True (toDirSequFlowGraph g))
 
 
@@ -849,10 +850,10 @@ solveFromMeasurement ::
   (Eq a, Product a, a ~ Scalar v,
    Eq v, Product v, Integrate v,
    Record rec, Node.C node) =>
-  TD.SequFlowGraph node ->
+  Flow.RangeGraph node ->
   (forall s. EquationSystem rec node s a v) ->
   Env.Complete node (rec (Result a)) (rec (Result v))
-solveFromMeasurement g given =
+solveFromMeasurement (_rngs, g) given =
   solveSimple (given <> fromGraph False (toDirSequFlowGraph g))
 
 
@@ -871,10 +872,10 @@ conservativelySolve ::
   (Eq a, Product a, a ~ Scalar v,
    Eq v, Product v, Integrate v,
    Record rec, Node.C node) =>
-  TD.SequFlowGraph node ->
+  Flow.RangeGraph node ->
   (forall s. EquationSystem rec node s a v) ->
   Env.Complete node (rec (Result a)) (rec (Result v))
-conservativelySolve g given =
+conservativelySolve (_rngs, g) given =
   solveSimple (given <> fromGraph True (toDirSequFlowGraph g))
   <>
   solveSimple given

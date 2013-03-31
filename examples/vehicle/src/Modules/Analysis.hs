@@ -141,7 +141,7 @@ pre topology rawSignals =  do
   
 external :: (Eq v, Num v, Arith.Product v, Arith.Integrate v, Vec.Storage t v,
              Vec.FromList t, Arith.Scalar v ~ Double) =>
-            TD.SequFlowGraph System.Node
+            Flow.RangeGraph System.Node
             -> SD.SequData (Record s t2 t1 (PPosIdx System.Node) t v)
             -> Env.Complete
             System.Node
@@ -173,7 +173,7 @@ makeGivenFromExternal idx sf =
 -------------------------------------------------------------------------------------------------  
 -- ## Predict Energy Flow
 
--- prediction :: TD.SequFlowGraph System.Node
+-- prediction :: Flow.RangeGraph System.Node
 --                              -> Env.Complete
 --                                   System.Node
 --                                   (Env.Absolute (Result Double))
@@ -220,7 +220,7 @@ makeGivenForPrediction idx env =
 delta :: (Eq v, Num v, Arith.Product v, Arith.Integrate v, Vec.Storage t3 v,
           Vec.Storage t v, Vec.FromList t3, Vec.FromList t,
           Arith.Scalar v ~ Double) =>
-         TD.SequFlowGraph System.Node
+         Flow.RangeGraph System.Node
          -> SD.SequData (Record s t2 t1 (PPosIdx System.Node) t v)
          -> SD.SequData (Record s1 t5 t4 (PPosIdx System.Node) t3 v)
          -> Env.Complete

@@ -14,9 +14,9 @@ import qualified EFA.Equation.Variable as Var
 import EFA.Equation.System ((=.=))
 import EFA.Equation.Result(Result(..))
 
+import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph.Topology as TD
 
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Utility (Pointed)
@@ -37,7 +37,7 @@ solve ::
    (Eq a, Arith.Product a, a ~ Arith.Scalar v,
     Eq v, Arith.Product v, Arith.Integrate v,
     Node.C node) =>
-   TD.SequFlowGraph node ->
+   Flow.RangeGraph node ->
    (forall s. EquationSystem node s a v) ->
    Env.Complete node (Record.Absolute (Result a)) (Record.Absolute (Result v))
 solve = EqGen.solve
