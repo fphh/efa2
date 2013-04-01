@@ -112,9 +112,6 @@ class
       (forall didx. List didx => NonEmpty.T didx i -> f (NonEmpty.T didx)) ->
       idx i -> f idx
 
-   fillMask ::
-      (Ord i, List ridx) =>
-      idx i -> ridx i -> FillMask idx ridx i
    fillValueMask ::
       (Ord i) =>
       Empty i -> idx i -> FillMask Empty idx i
@@ -132,7 +129,6 @@ instance List Empty where
 
    switch f _ x = f x
 
-   fillMask = fillValueMask
    fillValueMask _l _r = FillMask Empty FillStop FillStop
    fillPlusMask (NonEmpty.Cons i is) r =
       case fillMask is r of
@@ -148,8 +144,6 @@ instance (List idx) => List (NonEmpty.T idx) where
    type Sum (NonEmpty.T idx) = Plus (Sum idx)
 
    switch _ f x = f x
-
-   fillMask = fillPlusMask
 
    fillValueMask l (NonEmpty.Cons i is) =
       case fillMask l is of
@@ -272,6 +266,21 @@ eqRelaxed =
                    LT -> go a0 b && go a1 (singleton 0)
                    GT -> go a b0 && go (singleton 0) b1
    in  go
+
+
+newtype
+   FillLeftMask ridx i lidx =
+      FillLeftMask {getFillLeftMask :: FillMask lidx ridx i}
+
+fillMask ::
+   (Ord i, List lidx, List ridx) =>
+   lidx i -> ridx i -> FillMask lidx ridx i
+fillMask l r =
+   getFillLeftMask $
+   switch
+      (\is -> FillLeftMask $ fillValueMask is r)
+      (\is -> FillLeftMask $ fillPlusMask is r)
+      l
 
 
 data FillStop      = FillStop
