@@ -216,20 +216,6 @@ instance (List idx) => Functor (ExStack idx i) where
       exStackFromCube (exStackIndices s) $
       fmap f $ cubeFromExStack s
 
-apply ::
-   (List idx) => ExStack idx i (a -> b) -> Sum idx a -> ExStack idx i b
-apply =
-   (unwrapExStack .) .
-   switchExStack2
-      (\(ExStack Empty (Value f)) (Value b) ->
-         WrapExStack $ ExStack Empty (Value (f b)))
-      (\x (Plus a d) ->
-         case splitPlus x of
-            (i, (fa, fd)) ->
-               case (apply fa a, apply fd d) of
-                  (ExStack is a0, ExStack _ d0) ->
-                     WrapExStack $
-                     ExStack (NonEmpty.Cons i is) (Plus a0 d0))
 
 instance Applicative Value where
    pure = Value
@@ -284,18 +270,6 @@ switchExStack f g (ExStack is0 s0) =
          (\is -> SwitchEx $ f . ExStack is)
          (\is -> SwitchEx $ g . ExStack is)
          is0) s0
-
-
-switchExStack2 ::
-   List idx =>
-   (ExStack Empty i a -> Sum Empty b -> f Empty) ->
-   (forall didx. List didx =>
-    ExStack (NonEmpty.T didx) i a ->
-    Sum (NonEmpty.T didx) b -> f (NonEmpty.T didx)) ->
-   ExStack idx i a -> Sum idx b -> f idx
-switchExStack2 f g =
-   runSwitchEx .
-   switchExStack (SwitchEx . f) (SwitchEx . g)
 
 
 newtype
