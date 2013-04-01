@@ -143,36 +143,36 @@ instance Functor sum => Functor (Plus sum) where
 
 
 newtype
-   WrapFunctor i a idx =
-      WrapFunctor {unwrapFunctor :: ExStack idx i a}
+   WrapExStack i a idx =
+      WrapExStack {unwrapExStack :: ExStack idx i a}
 
 instance (List idx) => Functor (ExStack idx i) where
    fmap f =
-      unwrapFunctor .
+      unwrapExStack .
       switchExStack
          (\(ExStack Empty (Value a)) ->
-            WrapFunctor $ ExStack Empty (Value $ f a))
+            WrapExStack $ ExStack Empty (Value $ f a))
          (\x ->
             case splitPlus x of
                (i, (a, d)) ->
                   case (fmap f a, fmap f d) of
                      (ExStack is a0, ExStack _ d0) ->
-                        WrapFunctor $
+                        WrapExStack $
                         ExStack (NonEmpty.Cons i is) (Plus a0 d0))
 
 apply ::
    (List idx) => ExStack idx i (a -> b) -> Sum idx a -> ExStack idx i b
 apply =
-   (unwrapFunctor .) .
+   (unwrapExStack .) .
    switchExStack2
       (\(ExStack Empty (Value f)) (Value b) ->
-         WrapFunctor $ ExStack Empty (Value (f b)))
+         WrapExStack $ ExStack Empty (Value (f b)))
       (\x (Plus a d) ->
          case splitPlus x of
             (i, (fa, fd)) ->
                case (apply fa a, apply fd d) of
                   (ExStack is a0, ExStack _ d0) ->
-                     WrapFunctor $
+                     WrapExStack $
                      ExStack (NonEmpty.Cons i is) (Plus a0 d0))
 
 instance Applicative Value where
@@ -390,13 +390,13 @@ mulMatch ::
    (a -> a -> a) -> (a -> a -> a) ->
    ExStack idx i a -> Sum idx a -> ExStack idx i a
 mulMatch times plus =
-   (unwrapFunctor .) .
+   (unwrapExStack .) .
    switchExStack2
       (\(ExStack Empty (Value x)) (Value y) ->
-         WrapFunctor $
+         WrapExStack $
          ExStack Empty (Value (times x y)))
       (\x (Plus y0 y1) ->
-         WrapFunctor $
+         WrapExStack $
          case splitPlus x of
             (i, (x0@(ExStack is _), x1)) ->
                ExStack (NonEmpty.Cons i is) $
