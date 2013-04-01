@@ -104,10 +104,9 @@ class
    type Sum idx :: * -> *
 
    switch ::
-      (f Empty -> g Empty) ->
-      (forall didx. List didx =>
-       f (NonEmpty.T didx) -> g (NonEmpty.T didx)) ->
-      f idx -> g idx
+      f Empty ->
+      (forall didx. List didx => f (NonEmpty.T didx)) ->
+      f idx
 
    exFromMultiValue ::
       (a -> a -> a) -> MV.ExMultiValue idx i a -> ExStack idx i a
@@ -115,7 +114,7 @@ class
 instance List Empty where
    type Sum Empty = Value
 
-   switch f _ x = f x
+   switch x _ = x
 
    exFromMultiValue _minus (MV.ExMultiValue Empty (MV.Leaf x)) =
       ExStack Empty (Value x)
@@ -123,7 +122,7 @@ instance List Empty where
 instance (List idx) => List (NonEmpty.T idx) where
    type Sum (NonEmpty.T idx) = Plus (Sum idx)
 
-   switch _ f x = f x
+   switch _ x = x
 
    exFromMultiValue minus (MV.ExMultiValue (NonEmpty.Cons i is) (MV.Branch a0 b0)) =
       case (exFromMultiValue minus (MV.ExMultiValue is a0),
@@ -142,17 +141,9 @@ exStackFromCube is (Cube s) = ExStack is s
 
 newtype WrapCube a idx = WrapCube {unwrapCube :: Cube idx a}
 
-switchCube ::
-   List idx =>
-   (Cube Empty a -> f Empty) ->
-   (forall didx. List didx =>
-    Cube (NonEmpty.T didx) a -> f (NonEmpty.T didx)) ->
-   Cube idx a -> f idx
-switchCube f g s =
-   switch
-      (f . unwrapCube)
-      (g . unwrapCube)
-      (WrapCube s)
+newtype
+   WrapFunctor a b idx =
+      WrapFunctor {unwrapFunctor :: Cube idx a -> Cube idx b}
 
 mapCubeValue :: (a -> b) -> Cube Empty a -> Cube Empty b
 mapCubeValue f (Cube (Value a)) = valueCube $ f a
@@ -171,28 +162,20 @@ plusCube (Cube a) (Cube d) = Cube (Plus a d)
 
 instance List idx => Functor (Cube idx) where
    fmap f =
-      unwrapCube .
-      switchCube
-         (WrapCube . mapCubeValue f)
-         (\x ->
-            WrapCube $
+      unwrapFunctor $
+      switch
+         (WrapFunctor $ mapCubeValue f)
+         (WrapFunctor $ \x ->
             case splitCube x of
                (a,d) -> plusCube (fmap f a) (fmap f d))
 
 
-data Pure (idx :: * -> *) = Pure
-
-withPureCube :: (Pure idx -> Cube idx a) -> Cube idx a
-withPureCube f = f Pure
-
-
 instance List idx => Applicative (Cube idx) where
    pure a =
-      withPureCube $
-      unwrapCube .
+      unwrapCube $
       switch
-         (\Pure -> WrapCube $ valueCube a)
-         (\Pure -> WrapCube $ (\c -> plusCube c c) $ pure a)
+         (WrapCube $ valueCube a)
+         (WrapCube $ (\c -> plusCube c c) $ pure a)
 
 
 instance Functor (Stack i) where
@@ -255,7 +238,7 @@ mapIndicesMonotonic g (Stack is s) =
          else error "Stack.mapIndicesMonotonic: non-monotonic index function"
 
 
-newtype Index i idx = Index {getIndex :: idx i}
+newtype Index f i idx = Index {runIndex :: idx i -> f idx}
 
 switchIndex ::
    (List idx) =>
@@ -263,7 +246,7 @@ switchIndex ::
    (forall didx. List didx => NonEmpty.T didx i -> f (NonEmpty.T didx)) ->
    idx i -> f idx
 switchIndex f g =
-   switch (f . getIndex) (g . getIndex) . Index
+   runIndex $ switch (Index f) (Index g)
 
 
 newtype
