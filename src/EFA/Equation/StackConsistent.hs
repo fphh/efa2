@@ -46,7 +46,9 @@ Unfortunately, we cannot assert this statically.
 -}
 data Stack i a = forall idx. List idx => Stack (idx i) (Sum idx a)
 
-data ExStack idx i a = ExStack (idx i) (Sum idx a)
+data
+   ExStack idx i a =
+      ExStack {exStackIndices :: idx i, exStackSum :: Sum idx a}
 
 
 wrapStack :: List idx => ExStack idx i a -> Stack i a
@@ -85,19 +87,13 @@ instance (Show i, Show a) => Show (Stack i a) where
 
 class Applicative sum => SumC sum where
    fold :: (a -> a -> a) -> sum a -> a
-   mulMatch :: (a -> a -> a) -> (a -> a -> a) -> sum a -> sum a -> sum a
 
 instance SumC Value where
    fold _ (Value a) = a
-   mulMatch times _plus (Value x) (Value y) = Value (times x y)
 
 instance SumC sum => SumC (Plus sum) where
    fold op (Plus a d) = fold op a `op` fold op d
 
-   mulMatch times plus (Plus x0 x1) (Plus y0 y1) =
-      Plus (mulMatch times plus x0 y0)
-         (liftA2 plus (mulMatch times plus x0 y1) $
-          mulMatch times plus x1 $ liftA2 plus y0 y1)
 
 
 class
@@ -146,6 +142,39 @@ instance Functor sum => Functor (Plus sum) where
    fmap f (Plus a0 a1) = Plus (fmap f a0) (fmap f a1)
 
 
+newtype
+   WrapFunctor i a idx =
+      WrapFunctor {unwrapFunctor :: ExStack idx i a}
+
+instance (List idx) => Functor (ExStack idx i) where
+   fmap f =
+      unwrapFunctor .
+      switchExStack
+         (\(ExStack Empty (Value a)) ->
+            WrapFunctor $ ExStack Empty (Value $ f a))
+         (\x ->
+            case splitPlus x of
+               (i, (a, d)) ->
+                  case (fmap f a, fmap f d) of
+                     (ExStack is a0, ExStack _ d0) ->
+                        WrapFunctor $
+                        ExStack (NonEmpty.Cons i is) (Plus a0 d0))
+
+apply ::
+   (List idx) => ExStack idx i (a -> b) -> Sum idx a -> ExStack idx i b
+apply =
+   (unwrapFunctor .) .
+   switchExStack2
+      (\(ExStack Empty (Value f)) (Value b) ->
+         WrapFunctor $ ExStack Empty (Value (f b)))
+      (\x (Plus a d) ->
+         case splitPlus x of
+            (i, (fa, fd)) ->
+               case (apply fa a, apply fd d) of
+                  (ExStack is a0, ExStack _ d0) ->
+                     WrapFunctor $
+                     ExStack (NonEmpty.Cons i is) (Plus a0 d0))
+
 instance Applicative Value where
    pure = Value
    Value f <*> Value a = Value (f a)
@@ -188,6 +217,18 @@ switchExStack f g (ExStack is0 s0) =
          (\is -> SwitchEx $ \s -> f $ ExStack is s)
          (\is -> SwitchEx $ \s -> g $ ExStack is s)
          is0) s0
+
+
+switchExStack2 ::
+   List idx =>
+   (ExStack Empty i a -> Sum Empty b -> f Empty) ->
+   (forall didx. List didx =>
+    ExStack (NonEmpty.T didx) i a ->
+    Sum (NonEmpty.T didx) b -> f (NonEmpty.T didx)) ->
+   ExStack idx i a -> Sum idx b -> f idx
+switchExStack2 f g =
+   runSwitchEx .
+   switchExStack (SwitchEx . f) (SwitchEx . g)
 
 
 newtype
@@ -327,6 +368,12 @@ instance Fill mask => Fill (FillSkip mask) where
       let y = fill clear mask x
       in  Plus y (fmap clear y)
 
+
+addMatch ::
+   (List idx) =>
+   (a -> a -> a) -> ExStack idx i a -> Sum idx a -> ExStack idx i a
+addMatch plus = apply . fmap plus
+
 add ::
    (Ord i) =>
    (a -> a -> a) -> (a -> a) ->
@@ -334,7 +381,31 @@ add ::
 add plus clear (Stack is x) (Stack js y) =
    case fillMask is js of
       FillMask ks lmask rmask ->
-         Stack ks (liftA2 plus (fill clear lmask x) (fill clear rmask y))
+         wrapStack $
+         addMatch plus (ExStack ks (fill clear lmask x)) (fill clear rmask y)
+
+
+mulMatch ::
+   List idx =>
+   (a -> a -> a) -> (a -> a -> a) ->
+   ExStack idx i a -> Sum idx a -> ExStack idx i a
+mulMatch times plus =
+   (unwrapFunctor .) .
+   switchExStack2
+      (\(ExStack Empty (Value x)) (Value y) ->
+         WrapFunctor $
+         ExStack Empty (Value (times x y)))
+      (\x (Plus y0 y1) ->
+         WrapFunctor $
+         case splitPlus x of
+            (i, (x0@(ExStack is _), x1)) ->
+               ExStack (NonEmpty.Cons i is) $
+               Plus
+                  (exStackSum $ mulMatch times plus x0 y0)
+                  (exStackSum $ addMatch plus (mulMatch times plus x0 y1) $
+                   exStackSum $ mulMatch times plus x1 $
+                   exStackSum $ addMatch plus (ExStack is y0) y1))
+
 
 {-
 A more efficient solution would not need 'clear'.
@@ -347,7 +418,9 @@ mul ::
 mul times plus clear (Stack is x) (Stack js y) =
    case fillMask is js of
       FillMask ks lmask rmask ->
-         Stack ks (mulMatch times plus (fill clear lmask x) (fill clear rmask y))
+         wrapStack $
+         mulMatch times plus
+            (ExStack ks (fill clear lmask x)) (fill clear rmask y)
 
 instance (Ord i, Num a) => Num (Stack i a) where
    fromInteger = singleton . fromInteger
