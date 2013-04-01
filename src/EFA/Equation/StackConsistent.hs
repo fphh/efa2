@@ -29,7 +29,7 @@ import Data.Map (Map)
 import Data.Traversable (sequenceA)
 import Data.Foldable (Foldable, foldMap)
 import Data.Monoid ((<>))
-import Data.Tuple.HT (mapFst, mapSnd)
+import Data.Tuple.HT (mapFst)
 import Data.Maybe.HT (toMaybe)
 
 import qualified Prelude as P
@@ -100,7 +100,6 @@ class
       List idx where
    type Sum idx :: * -> *
 
-   descentCore :: idx i -> Sum idx a -> Either a (i, Stack2 i a)
    switch ::
       (Empty i -> f Empty) ->
       (forall didx. List didx => NonEmpty.T didx i -> f (NonEmpty.T didx)) ->
@@ -127,7 +126,6 @@ class
 instance List Empty where
    type Sum Empty = Value
 
-   descentCore Empty (Value a) = Left a
    switch f _ x = f x
 
    fillMask = fillValueMask
@@ -148,8 +146,6 @@ instance List Empty where
 instance (List idx) => List (NonEmpty.T idx) where
    type Sum (NonEmpty.T idx) = Plus (Sum idx)
 
-   descentCore (NonEmpty.Cons i is) (Plus a0 a1) =
-      Right (i, (Stack2 is a0 a1))
    switch _ f x = f x
 
    fillMask = fillPlusMask
@@ -233,12 +229,19 @@ mapIndicesMonotonic g (Stack is s) =
          else error "Stack.mapIndicesMonotonic: non-monotonic index function"
 
 
-descent :: Stack i a -> Either a (i, (Stack i a, Stack i a))
-descent (Stack is x) = fmap (mapSnd splitStack2) $ descentCore is x
+newtype
+   Descent i a idx =
+      Descent {runDescent :: Sum idx a -> Either a (i, (Stack i a, Stack i a))}
 
-exDescent :: ExStack (NonEmpty.T idx) i a -> (i, (ExStack idx i a, ExStack idx i a))
-exDescent (ExStack (NonEmpty.Cons i is) (Plus a0 a1)) =
-   (i, (ExStack is a0, ExStack is a1))
+descent :: Stack i a -> Either a (i, (Stack i a, Stack i a))
+descent (Stack it s) =
+   runDescent
+      (switch
+         (\Empty -> Descent (\(Value a) -> Left a))
+         (\(NonEmpty.Cons i is) -> Descent (\(Plus x y) ->
+             Right (i, (Stack is x, Stack is y))))
+         it) s
+
 
 splitStack2 :: Stack2 i a -> (Stack i a, Stack i a)
 splitStack2 (Stack2 is x y) = (Stack is x, Stack is y)
