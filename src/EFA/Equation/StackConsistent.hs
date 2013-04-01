@@ -104,13 +104,13 @@ class
       (Ord i) => Map i Branch -> idx i -> FilterMask idx
    fillMask ::
       (Ord i, List ridx) =>
-      ExStack idx i a -> ExStack ridx i a -> FillMask idx ridx i
+      idx i -> ridx i -> FillMask idx ridx i
    fillValueMask ::
       (Ord i) =>
-      ExStack Empty i a -> ExStack idx i a -> FillMask Empty idx i
+      Empty i -> idx i -> FillMask Empty idx i
    fillPlusMask ::
       (Ord i, List lidx) =>
-      ExStack (NonEmpty.T lidx) i a -> ExStack idx i a -> FillMask (NonEmpty.T lidx) idx i
+      (NonEmpty.T lidx) i -> idx i -> FillMask (NonEmpty.T lidx) idx i
    shrinkStack :: ExStack idx i a -> [Stack i a]
    shrinkValues ::
       (QC.Arbitrary a) => ExStack idx i a -> [ExStack idx i a]
@@ -127,8 +127,8 @@ instance List Empty where
    filterMask _cond _s = FilterMask TakeStop
    fillMask = fillValueMask
    fillValueMask _l _r = FillMask Empty FillStop FillStop
-   fillPlusMask (ExStack (NonEmpty.Cons i is) (Plus a0 _a1)) r =
-      case fillMask (ExStack is a0) r of
+   fillPlusMask (NonEmpty.Cons i is) r =
+      case fillMask is r of
          FillMask js lmask rmask ->
             FillMask (i!:js) (FillTake lmask) (FillSkip rmask)
    shrinkStack _ = []
@@ -155,26 +155,24 @@ instance (List idx) => List (NonEmpty.T idx) where
 
    fillMask = fillPlusMask
 
-   fillValueMask l (ExStack (NonEmpty.Cons i is) (Plus a _d)) =
-      case fillMask l (ExStack is a) of
+   fillValueMask l (NonEmpty.Cons i is) =
+      case fillMask l is of
          FillMask js lmask rmask ->
             FillMask (i!:js) (FillSkip lmask) (FillTake rmask)
-   fillPlusMask a b =
-      let (i,a0) = leftStack a
-          (j,b0) = leftStack b
-      in  case compare i j of
-             EQ ->
-                case fillMask a0 b0 of
-                   FillMask ks lmask rmask ->
-                      FillMask (i!:ks) (FillTake lmask) (FillTake rmask)
-             LT ->
-                case fillMask a0 b  of
-                   FillMask ks lmask rmask ->
-                      FillMask (i!:ks) (FillTake lmask) (FillSkip rmask)
-             GT ->
-                case fillMask a  b0 of
-                   FillMask ks lmask rmask ->
-                      FillMask (j!:ks) (FillSkip lmask) (FillTake rmask)
+   fillPlusMask it@(NonEmpty.Cons i is) jt@(NonEmpty.Cons j js) =
+      case compare i j of
+         EQ ->
+            case fillMask is js of
+               FillMask ks lmask rmask ->
+                  FillMask (i!:ks) (FillTake lmask) (FillTake rmask)
+         LT ->
+            case fillMask is jt of
+               FillMask ks lmask rmask ->
+                  FillMask (i!:ks) (FillTake lmask) (FillSkip rmask)
+         GT ->
+            case fillMask it js of
+               FillMask ks lmask rmask ->
+                  FillMask (j!:ks) (FillSkip lmask) (FillTake rmask)
 
    shrinkStack (ExStack it (Plus a0 a1)) =
       concatMap (\(_,is) -> [Stack is a0, Stack is a1]) $
@@ -246,10 +244,6 @@ exDescent (ExStack (NonEmpty.Cons i is) (Plus a0 a1)) =
 splitStack2 :: Stack2 i a -> (Stack i a, Stack i a)
 splitStack2 (Stack2 is x y) = (Stack is x, Stack is y)
 
-leftStack :: ExStack (NonEmpty.T idx) i a -> (i, ExStack idx i a)
-leftStack (ExStack (NonEmpty.Cons i is) (Plus a0 _a1)) =
-   (i, ExStack is a0)
-
 eqRelaxed :: (Ord i, Eq a, Num a) => Stack i a -> Stack i a -> Bool
 eqRelaxed =
    let go a b =
@@ -308,12 +302,10 @@ add ::
    (Ord i) =>
    (a -> a -> a) -> (a -> a) ->
    Stack i a -> Stack i a -> Stack i a
-add plus clear (Stack is x0) (Stack js y0) =
-   let x = ExStack is x0
-       y = ExStack js y0
-   in  case fillMask x y of
-          FillMask ks lmask rmask ->
-             Stack ks (liftA2 plus (fill clear lmask x0) (fill clear rmask y0))
+add plus clear (Stack is x) (Stack js y) =
+   case fillMask is js of
+      FillMask ks lmask rmask ->
+         Stack ks (liftA2 plus (fill clear lmask x) (fill clear rmask y))
 
 {-
 A more efficient solution would not need 'clear'.
@@ -323,12 +315,10 @@ mul ::
    (Ord i) =>
    (a -> a -> a) -> (a -> a -> a) -> (a -> a) ->
    Stack i a -> Stack i a -> Stack i a
-mul times plus clear (Stack is x0) (Stack js y0) =
-   let x = ExStack is x0
-       y = ExStack js y0
-   in  case fillMask x y of
-          FillMask ks lmask rmask ->
-             Stack ks (mulMatch times plus (fill clear lmask x0) (fill clear rmask y0))
+mul times plus clear (Stack is x) (Stack js y) =
+   case fillMask is js of
+      FillMask ks lmask rmask ->
+         Stack ks (mulMatch times plus (fill clear lmask x) (fill clear rmask y))
 
 instance (Ord i, Num a) => Num (Stack i a) where
    fromInteger = singleton . fromInteger
