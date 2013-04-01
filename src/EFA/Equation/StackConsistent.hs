@@ -725,10 +725,27 @@ exFromMultiValue minus =
             (a1, b1) ->
                exStackFromCube (i!:is) (plusCube a1 (liftA2 minus b1 a1)))
 
+{- |
+Generate a Sum from a MultiValue
+representing the right-most value from the MultiValue
+where the first summand is the left-most value from the MultiValue.
+-}
+fromMultiValue :: Arith.Sum a => MV.MultiValue i a -> Stack i a
+fromMultiValue = fromMultiValueGen (~-)
+
+fromMultiValueNum :: Num a => MV.MultiValue i a -> Stack i a
+fromMultiValueNum = fromMultiValueGen (-)
+
+fromMultiValueGen :: (a -> a -> a) -> MV.MultiValue i a -> Stack i a
+fromMultiValueGen minus (MV.MultiValue indices tree) =
+   case exFromMultiValue minus (MV.ExMultiValue indices tree) of
+      ExStack is s -> Stack is s
+
+
 liftMultiValue ::
    (a -> a -> a) ->
    (b -> b -> b) ->
-   (a -> b) -> Stack t a -> Stack t b
+   (a -> b) -> Stack i a -> Stack i b
 liftMultiValue plus minus f (Stack is s) =
    wrapStack $ exFromMultiValue minus $
    fmap f $ exToMultiValue plus (ExStack is s)
