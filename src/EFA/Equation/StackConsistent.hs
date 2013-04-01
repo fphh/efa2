@@ -33,7 +33,7 @@ import Data.Tuple.HT (mapFst)
 import Data.Maybe.HT (toMaybe)
 
 import qualified Prelude as P
-import Prelude hiding (recip, filter)
+import Prelude hiding (recip, filter, showsPrec)
 
 
 {- |
@@ -57,7 +57,7 @@ newtype Value a = Value a deriving (Show, Eq)
 data Plus sum a = Plus (sum a) (sum a) deriving (Eq)
 
 instance NonEmptyC.Show Value where
-   showsPrec = showsPrec
+   showsPrec = P.showsPrec
 
 instance NonEmptyC.Show sum => NonEmptyC.Show (Plus sum) where
    showsPrec prec (Plus a d) =
@@ -65,11 +65,22 @@ instance NonEmptyC.Show sum => NonEmptyC.Show (Plus sum) where
          showString "Plus " . NonEmptyC.showsPrec 11 a .
          showString " " . NonEmptyC.showsPrec 11 d
 
+
+
+showsPrecSum :: (Show i, Show a) => Int -> Stack i a -> ShowS
+showsPrecSum prec s =
+   case descent s of
+      Left a -> P.showsPrec prec a
+      Right (_, (a,d)) ->
+         showParen (prec>10) $
+            showString "Plus " . showsPrecSum 11 a .
+            showString " " . showsPrecSum 11 d
+
 instance (Show i, Show a) => Show (Stack i a) where
-   showsPrec prec (Stack is s) =
+   showsPrec prec s@(Stack is _) =
       showParen (prec>10) $
          showString "Stack " . NonEmptyC.showsPrec 11 is .
-         showString " " . NonEmptyC.showsPrec 11 s
+         showString " " . showsPrecSum 11 s
 
 
 class Applicative sum => SumC sum where
@@ -90,7 +101,7 @@ instance SumC sum => SumC (Plus sum) where
 
 
 class
-   (NonEmptyC.Show idx, NonEmptyC.Show (Sum idx),
+   (NonEmptyC.Show idx,
     MV.List idx, SumC (Sum idx),
     Foldable idx, NonEmpty.RemoveEach idx) =>
       List idx where
