@@ -110,7 +110,6 @@ class
    fillPlusMask ::
       (Ord i, List lidx) =>
       (NonEmpty.T lidx) i -> idx i -> FillMask (NonEmpty.T lidx) idx i
-   shrinkStack :: ExStack idx i a -> [Stack i a]
    shrinkValues ::
       (QC.Arbitrary a) => ExStack idx i a -> [ExStack idx i a]
 
@@ -130,7 +129,6 @@ instance List Empty where
       case fillMask is r of
          FillMask js lmask rmask ->
             FillMask (i!:js) (FillTake lmask) (FillSkip rmask)
-   shrinkStack _ = []
    shrinkValues (ExStack empty (Value x)) =
       map (ExStack empty . Value) $ QC.shrink x
 
@@ -164,10 +162,6 @@ instance (List idx) => List (NonEmpty.T idx) where
             case fillMask it js of
                FillMask ks lmask rmask ->
                   FillMask (j!:ks) (FillSkip lmask) (FillTake rmask)
-
-   shrinkStack (ExStack it (Plus a0 a1)) =
-      concatMap (\(_,is) -> [Stack is a0, Stack is a1]) $
-      Fold.toList $ NonEmpty.removeEach it
 
    shrinkValues x =
       case splitPlus x of
@@ -226,17 +220,28 @@ mapIndicesMonotonic g (Stack is s) =
 
 
 newtype
-   Descent i a idx =
-      Descent {runDescent :: Sum idx a -> Either a (i, (Stack i a, Stack i a))}
+   Switch x a idx =
+      Switch {runSwitch :: Sum idx a -> x}
+
+switchStack ::
+   (ExStack Empty i a -> x) ->
+   (forall didx. List didx =>
+    ExStack (NonEmpty.T didx) i a -> x) ->
+   Stack i a -> x
+switchStack f g (Stack is0 s0) =
+   runSwitch
+      (switch
+         (\is -> Switch $ \s -> f $ ExStack is s)
+         (\is -> Switch $ \s -> g $ ExStack is s)
+         is0) s0
+
 
 descent :: Stack i a -> Either a (i, (Stack i a, Stack i a))
-descent (Stack it s) =
-   runDescent
-      (switch
-         (\Empty -> Descent (\(Value a) -> Left a))
-         (\(NonEmpty.Cons i is) -> Descent (\(Plus x y) ->
-             Right (i, (Stack is x, Stack is y))))
-         it) s
+descent =
+   switchStack
+      (\(ExStack Empty (Value a)) -> Left a)
+      (\(ExStack (NonEmpty.Cons i is) (Plus x y)) ->
+          Right (i, (Stack is x, Stack is y)))
 
 
 eqRelaxed :: (Ord i, Eq a, Num a) => Stack i a -> Stack i a -> Bool
@@ -572,11 +577,19 @@ assigns s =
             (fmap (mapFst (Idx.delta  i :)) $ assigns a1)
 
 
+shrinkStack :: Stack i a -> [Stack i a]
+shrinkStack =
+   switchStack
+      (const [])
+      (\(ExStack it (Plus a0 a1)) ->
+         concatMap (\(_,is) -> [Stack is a0, Stack is a1]) $
+         Fold.toList $ NonEmpty.removeEach it)
+
 instance
    (QC.Arbitrary i, Ord i, QC.Arbitrary a, Arith.Sum a) =>
       QC.Arbitrary (Stack i a) where
 
-   shrink (Stack it tree) =
-      shrinkStack (ExStack it tree)
+   shrink s@(Stack it tree) =
+      shrinkStack s
       ++
       map wrapStack (shrinkValues (ExStack it tree))
