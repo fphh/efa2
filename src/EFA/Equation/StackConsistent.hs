@@ -1,6 +1,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE GADTs #-}
 module EFA.Equation.StackConsistent where
 
@@ -100,6 +101,11 @@ class
    type Sum idx :: * -> *
 
    descentCore :: idx i -> Sum idx a -> Either a (i, Stack2 i a)
+   switch ::
+      (Empty i -> f Empty) ->
+      (forall didx. List didx => NonEmpty.T didx i -> f (NonEmpty.T didx)) ->
+      idx i -> f idx
+
    filterMask ::
       (Ord i) => Map i Branch -> idx i -> FilterMask idx
    fillMask ::
@@ -124,6 +130,8 @@ instance List Empty where
    type Sum Empty = Value
 
    descentCore Empty (Value a) = Left a
+   switch f _ x = f x
+
    filterMask _cond _s = FilterMask TakeStop
    fillMask = fillValueMask
    fillValueMask _l _r = FillMask Empty FillStop FillStop
@@ -145,6 +153,7 @@ instance (List idx) => List (NonEmpty.T idx) where
 
    descentCore (NonEmpty.Cons i is) (Plus a0 a1) =
       Right (i, (Stack2 is a0 a1))
+   switch _ f x = f x
 
    filterMask cond (NonEmpty.Cons i is) =
       case filterMask cond is of
@@ -520,6 +529,18 @@ instance Filter mask => Filter (TakeOne mask) where
          Before -> exFilter mask (ExStack is a)
          Delta  -> exFilter mask (ExStack is d)
 
+
+filterMask0 ::
+   (List idx, Ord i) => Map i Branch -> idx i -> FilterMask idx
+filterMask0 cond =
+   switch
+      (\Empty -> FilterMask TakeStop)
+      (\(NonEmpty.Cons i is) ->
+         case filterMask0 cond is of
+            FilterMask mask ->
+               case Map.lookup i cond of
+                  Nothing -> FilterMask (TakeAll mask)
+                  Just branch -> FilterMask (TakeOne branch mask))
 
 {- |
 The naive implementation ignores indices
