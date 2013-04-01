@@ -5,6 +5,9 @@
 {-# LANGUAGE GADTs #-}
 module EFA.Equation.StackConsistent where
 
+import qualified EFA.Equation.Consistent.Dimension as Dim
+import EFA.Equation.Consistent.Dimension (switch)
+
 import qualified EFA.Graph.Topology.Index as Idx
 
 import qualified EFA.Equation.MultiValueConsistent as MV
@@ -44,14 +47,14 @@ that the length of the list matches the depth of the tree.
 The indices must be in strictly ascending order.
 Unfortunately, we cannot assert this statically.
 -}
-data Stack i a = forall idx. List idx => Stack (idx i) (Sum idx a)
+data Stack i a = forall idx. Dim.C idx => Stack (idx i) (Sum idx a)
 
 data
    ExStack idx i a =
       ExStack {exStackIndices :: idx i, exStackSum :: Sum idx a}
 
 
-wrapStack :: List idx => ExStack idx i a -> Stack i a
+wrapStack :: Dim.C idx => ExStack idx i a -> Stack i a
 wrapStack (ExStack is s) = Stack is s
 
 
@@ -86,38 +89,9 @@ instance (Show i, Show a) => Show (Stack i a) where
 
 
 
-class
-   (NonEmptyC.Show idx, MV.List idx,
-    Foldable idx, NonEmpty.RemoveEach idx) =>
-      List idx where
-   type Sum idx :: * -> *
-
-   switch ::
-      f Empty ->
-      (forall didx. List didx => f (NonEmpty.T didx)) ->
-      f idx
-
-   exFromMultiValue ::
-      (a -> a -> a) -> MV.ExMultiValue idx i a -> ExStack idx i a
-
-instance List Empty where
-   type Sum Empty = Value
-
-   switch x _ = x
-
-   exFromMultiValue _minus (MV.ExMultiValue Empty (MV.Leaf x)) =
-      ExStack Empty (Value x)
-
-instance (List idx) => List (NonEmpty.T idx) where
-   type Sum (NonEmpty.T idx) = Plus (Sum idx)
-
-   switch _ x = x
-
-   exFromMultiValue minus (MV.ExMultiValue (NonEmpty.Cons i is) (MV.Branch a0 b0)) =
-      case (cubeFromExStack $ exFromMultiValue minus (MV.ExMultiValue is a0),
-            cubeFromExStack $ exFromMultiValue minus (MV.ExMultiValue is b0)) of
-         (a1, b1) ->
-            exStackFromCube (i!:is) (plusCube a1 (liftA2 minus b1 a1))
+type family Sum (idx :: * -> *) :: * -> *  -- must be removed
+type instance Sum Empty = Value
+type instance Sum (NonEmpty.T idx) = Plus (Sum idx)
 
 
 newtype Cube idx a = Cube {unCube :: Sum idx a}
@@ -126,13 +100,13 @@ cubeFromExStack :: ExStack idx i a -> Cube idx a
 cubeFromExStack (ExStack _is s) = Cube s
 
 withCubeFromStack ::
-   (forall idx. List idx => Cube idx a -> b) -> Stack i a -> b
+   (forall idx. Dim.C idx => Cube idx a -> b) -> Stack i a -> b
 withCubeFromStack f (Stack is s) = f (cubeFromExStack $ ExStack is s)
 
 exStackFromCube :: idx i -> Cube idx a -> ExStack idx i a
 exStackFromCube is (Cube s) = ExStack is s
 
-stackFromCube :: List idx => idx i -> Cube idx a -> Stack i a
+stackFromCube :: Dim.C idx => idx i -> Cube idx a -> Stack i a
 stackFromCube is (Cube s) = Stack is s
 
 
@@ -160,7 +134,7 @@ plusCube ::
    Cube (NonEmpty.T idx) a
 plusCube (Cube a) (Cube d) = Cube (Plus a d)
 
-instance List idx => Functor (Cube idx) where
+instance Dim.C idx => Functor (Cube idx) where
    fmap f =
       unwrapFunctor $
       switch
@@ -175,7 +149,7 @@ newtype
       WrapApply {unwrapApply :: Cube idx a -> Cube idx b -> Cube idx c}
 
 
-instance List idx => Applicative (Cube idx) where
+instance Dim.C idx => Applicative (Cube idx) where
    pure a =
       unwrapCube $
       switch
@@ -206,7 +180,7 @@ newtype
    WrapExStack i a idx =
       WrapExStack {unwrapExStack :: ExStack idx i a}
 
-instance (List idx) => Functor (ExStack idx i) where
+instance (Dim.C idx) => Functor (ExStack idx i) where
    fmap f s =
       exStackFromCube (exStackIndices s) $
       fmap f $ cubeFromExStack s
@@ -241,9 +215,9 @@ mapIndicesMonotonic g (Stack is s) =
 newtype Index f i idx = Index {runIndex :: idx i -> f idx}
 
 switchIndex ::
-   (List idx) =>
+   (Dim.C idx) =>
    (Empty i -> f Empty) ->
-   (forall didx. List didx => NonEmpty.T didx i -> f (NonEmpty.T didx)) ->
+   (forall didx. Dim.C didx => NonEmpty.T didx i -> f (NonEmpty.T didx)) ->
    idx i -> f idx
 switchIndex f g =
    runIndex $ switch (Index f) (Index g)
@@ -254,9 +228,9 @@ newtype
       SwitchEx {runSwitchEx :: Sum idx a -> f idx}
 
 switchExStack ::
-   List idx =>
+   Dim.C idx =>
    (ExStack Empty i a -> f Empty) ->
-   (forall didx. List didx =>
+   (forall didx. Dim.C didx =>
     ExStack (NonEmpty.T didx) i a -> f (NonEmpty.T didx)) ->
    ExStack idx i a -> f idx
 switchExStack f g (ExStack is0 s0) =
@@ -273,7 +247,7 @@ newtype
 
 switchStack ::
    (ExStack Empty i a -> x) ->
-   (forall didx. List didx =>
+   (forall didx. Dim.C didx =>
     ExStack (NonEmpty.T didx) i a -> x) ->
    Stack i a -> x
 switchStack f g (Stack is s) =
@@ -309,7 +283,7 @@ newtype
       FillLeftMask {getFillLeftMask :: FillMask lidx ridx i}
 
 fillMask ::
-   (Ord i, List lidx, List ridx) =>
+   (Ord i, Dim.C lidx, Dim.C ridx) =>
    lidx i -> ridx i -> FillMask lidx ridx i
 fillMask l r =
    getFillLeftMask $
@@ -324,7 +298,7 @@ newtype
       FillRightMask {getFillRightMask :: FillMask lidx ridx i}
 
 fillValueMask ::
-   (Ord i, List idx) =>
+   (Ord i, Dim.C idx) =>
    Empty i -> idx i -> FillMask Empty idx i
 fillValueMask l =
    getFillRightMask .
@@ -338,7 +312,7 @@ fillValueMask l =
 
 
 fillPlusMask ::
-   (Ord i, List lidx, List ridx) =>
+   (Ord i, Dim.C lidx, Dim.C ridx) =>
    (NonEmpty.T lidx) i -> ridx i -> FillMask (NonEmpty.T lidx) ridx i
 fillPlusMask it@(NonEmpty.Cons i is) =
    getFillRightMask .
@@ -377,7 +351,7 @@ data
          FillMask (idx i) lmask rmask
 
 class
-   (List (FillToIndex mask), List (FillFromIndex mask)) => Fill mask where
+   (Dim.C (FillToIndex mask), Dim.C (FillFromIndex mask)) => Fill mask where
    type FillFromIndex mask :: * -> *
    type FillToIndex mask :: * -> *
    fill ::
@@ -421,7 +395,7 @@ newtype
       CubeFunc2 {runCubeFunc2 :: Cube idx a -> Cube idx a -> Cube idx a}
 
 mulMatch ::
-   List idx =>
+   Dim.C idx =>
    (a -> a -> a) -> (a -> a -> a) ->
    Cube idx a -> Cube idx a -> Cube idx a
 mulMatch times plus =
@@ -538,7 +512,7 @@ splitPlus (ExStack (NonEmpty.Cons i is) (Plus a0 a1)) =
 
 newtype Fold a idx = Fold {unfold :: Cube idx a -> a}
 
-fold :: (List idx) => (a -> a -> a) -> Cube idx a -> a
+fold :: (Dim.C idx) => (a -> a -> a) -> Cube idx a -> a
 fold op =
    unfold $
    switch
@@ -556,13 +530,13 @@ normalize :: (Arith.Product a) => Stack i a -> Stack i a
 normalize s = fmap (~/ absolute s) s
 
 
-toList :: List idx => Cube idx a -> NonEmpty.T [] a
+toList :: Dim.C idx => Cube idx a -> NonEmpty.T [] a
 toList = fold NonEmpty.append . fmap NonEmpty.singleton
 
 {- |
 You may use 'Data.Foldable.sum' for evaluation with respect to 'Num' class.
 -}
-evaluate :: (List idx, Arith.Sum a) => Cube idx a -> a
+evaluate :: (Dim.C idx, Arith.Sum a) => Cube idx a -> a
 evaluate = fold (~+)
 
 
@@ -638,7 +612,7 @@ data
       forall mask. (idx ~ FilterFromIndex mask, Filter mask) =>
          FilterMask mask
 
-class (List (FilterToIndex mask), List (FilterFromIndex mask)) => Filter mask where
+class (Dim.C (FilterToIndex mask), Dim.C (FilterFromIndex mask)) => Filter mask where
    type FilterFromIndex mask :: * -> *
    type FilterToIndex mask :: * -> *
    exFilter ::
@@ -668,7 +642,7 @@ instance Filter mask => Filter (TakeOne mask) where
 
 
 filterMask ::
-   (List idx, Ord i) => Map i Branch -> idx i -> FilterMask idx
+   (Dim.C idx, Ord i) => Map i Branch -> idx i -> FilterMask idx
 filterMask cond =
    switchIndex
       (\Empty -> FilterMask TakeStop)
@@ -694,25 +668,28 @@ filterNaive cond (Stack is s) =
 
 
 newtype
-   ExMultiValue i a (idx :: * -> *) =
-      ExMultiValue {getExMultiValue :: MV.ExMultiValue idx i a}
-
+   ExToMultiValue i a idx =
+      ExToMultiValue {
+         runExToMultiValue :: ExStack idx i a -> MV.ExMultiValue idx i a
+      }
 
 exToMultiValue ::
-   (List idx) =>
+   (Dim.C idx) =>
    (a -> a -> a) -> ExStack idx i a -> MV.ExMultiValue idx i a
 exToMultiValue plus =
-   getExMultiValue .
-   switchExStack
-      (\(ExStack Empty (Value x)) ->
-         ExMultiValue $
+   runExToMultiValue $
+   switch
+      (ExToMultiValue $ \(ExStack Empty (Value x)) ->
          MV.ExMultiValue Empty (MV.Leaf x))
-      (\(ExStack (NonEmpty.Cons i is) (Plus a0 b0)) ->
-         ExMultiValue $
-         case (exToMultiValue plus (ExStack is a0),
-               exToMultiValue plus (ExStack is b0)) of
-            (MV.ExMultiValue js a1, MV.ExMultiValue _js b1) ->
-               MV.ExMultiValue (i!:js) (MV.Branch a1 (liftA2 plus b1 a1)))
+      (ExToMultiValue $ \x ->
+         case splitPlus x of
+            (i, (a,d)) ->
+               case (exToMultiValue plus a,
+                     exToMultiValue plus $
+                        exStackFromCube (exStackIndices a) $
+                        liftA2 plus (cubeFromExStack a) (cubeFromExStack d)) of
+                  (MV.ExMultiValue js a1, MV.ExMultiValue _js d1) ->
+                     MV.ExMultiValue (i!:js) (MV.Branch a1 d1))
 
 toMultiValue :: Arith.Sum a => Stack i a -> MV.MultiValue i a
 toMultiValue = toMultiValueGen (~+)
@@ -724,6 +701,29 @@ toMultiValueGen :: (a -> a -> a) -> Stack i a -> MV.MultiValue i a
 toMultiValueGen plus (Stack is s) =
    case exToMultiValue plus (ExStack is s) of
       MV.ExMultiValue js tree -> MV.MultiValue js tree
+
+
+
+newtype
+   ExFromMultiValue i a idx =
+      ExFromMultiValue {
+         runExFromMultiValue :: MV.ExMultiValue idx i a -> ExStack idx i a
+      }
+
+exFromMultiValue ::
+   (Dim.C idx) =>
+   (a -> a -> a) -> MV.ExMultiValue idx i a -> ExStack idx i a
+exFromMultiValue minus =
+   runExFromMultiValue $
+   switch
+      (ExFromMultiValue $
+       \(MV.ExMultiValue Empty (MV.Leaf x)) -> ExStack Empty (Value x))
+      (ExFromMultiValue $
+       \(MV.ExMultiValue (NonEmpty.Cons i is) (MV.Branch a0 b0)) ->
+         case (cubeFromExStack $ exFromMultiValue minus (MV.ExMultiValue is a0),
+               cubeFromExStack $ exFromMultiValue minus (MV.ExMultiValue is b0)) of
+            (a1, b1) ->
+               exStackFromCube (i!:is) (plusCube a1 (liftA2 minus b1 a1)))
 
 liftMultiValue ::
    (a -> a -> a) ->
@@ -758,10 +758,10 @@ newtype
       Shrink {runShrink :: [ExStack idx i a]}
 
 shrinkValues ::
-   (List idx, QC.Arbitrary a) =>
+   (Dim.C idx, QC.Arbitrary a) =>
    ExStack idx i a -> [ExStack idx i a]
-shrinkValues s =
-   runShrink $
+shrinkValues =
+   runShrink .
    switchExStack
       (\(ExStack Empty (Value a)) -> Shrink $
            map (ExStack Empty . Value) $ QC.shrink a)
@@ -771,7 +771,6 @@ shrinkValues s =
                map (flip (exPlus i) a1) (shrinkValues a0)
                ++
                map (exPlus i a0) (shrinkValues a1))
-      s
 
 instance
    (QC.Arbitrary i, Ord i, QC.Arbitrary a, Arith.Sum a) =>

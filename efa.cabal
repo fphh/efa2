@@ -104,6 +104,7 @@ Library
     EFA.Equation.Stack
     EFA.Equation.MultiValueConsistent
     EFA.Equation.StackConsistent
+    EFA.Equation.Consistent.Dimension
     EFA.Example.Utility
     EFA.Example.Absolute
     EFA.Example.NestedDelta
