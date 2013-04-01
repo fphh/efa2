@@ -48,10 +48,6 @@ data Stack i a = forall idx. List idx => Stack (idx i) (Sum idx a)
 
 data ExStack idx i a = ExStack (idx i) (Sum idx a)
 
-data Stack2 i a = forall idx. List idx => Stack2 (idx i) (Sum idx a) (Sum idx a)
-
-data ExStack2 idx i a = ExStack2 (idx i) (Sum idx a) (Sum idx a)
-
 
 wrapStack :: List idx => ExStack idx i a -> Stack i a
 wrapStack (ExStack is s) = Stack is s
@@ -242,9 +238,6 @@ descent (Stack it s) =
              Right (i, (Stack is x, Stack is y))))
          it) s
 
-
-splitStack2 :: Stack2 i a -> (Stack i a, Stack i a)
-splitStack2 (Stack2 is x y) = (Stack is x, Stack is y)
 
 eqRelaxed :: (Ord i, Eq a, Num a) => Stack i a -> Stack i a -> Bool
 eqRelaxed =
