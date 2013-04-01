@@ -121,8 +121,6 @@ class
    fillPlusMask ::
       (Ord i, List lidx) =>
       (NonEmpty.T lidx) i -> idx i -> FillMask (NonEmpty.T lidx) idx i
-   shrinkValues ::
-      (QC.Arbitrary a) => ExStack idx i a -> [ExStack idx i a]
 
    exToMultiValue ::
       (a -> a -> a) -> ExStack idx i a -> MV.ExMultiValue idx i a
@@ -140,8 +138,6 @@ instance List Empty where
       case fillMask is r of
          FillMask js lmask rmask ->
             FillMask (i!:js) (FillTake lmask) (FillSkip rmask)
-   shrinkValues (ExStack empty (Value x)) =
-      map (ExStack empty . Value) $ QC.shrink x
 
    exToMultiValue _plus (ExStack Empty (Value x)) =
       MV.ExMultiValue Empty (MV.Leaf x)
@@ -173,13 +169,6 @@ instance (List idx) => List (NonEmpty.T idx) where
             case fillMask it js of
                FillMask ks lmask rmask ->
                   FillMask (j!:ks) (FillSkip lmask) (FillTake rmask)
-
-   shrinkValues x =
-      case splitPlus x of
-         (i, (a0,a1)) ->
-            map (flip (exPlus i) a1) (shrinkValues a0)
-            ++
-            map (exPlus i a0) (shrinkValues a1)
 
    exToMultiValue plus (ExStack (NonEmpty.Cons i is) (Plus a0 b0)) =
       case (exToMultiValue plus (ExStack is a0),
@@ -231,20 +220,35 @@ mapIndicesMonotonic g (Stack is s) =
 
 
 newtype
-   Switch x a idx =
-      Switch {runSwitch :: Sum idx a -> x}
+   SwitchEx f a idx =
+      SwitchEx {runSwitchEx :: Sum idx a -> f idx}
+
+switchExStack ::
+   List idx =>
+   (ExStack Empty i a -> f Empty) ->
+   (forall didx. List didx =>
+    ExStack (NonEmpty.T didx) i a -> f (NonEmpty.T didx)) ->
+   ExStack idx i a -> f idx
+switchExStack f g (ExStack is0 s0) =
+   runSwitchEx
+      (switch
+         (\is -> SwitchEx $ \s -> f $ ExStack is s)
+         (\is -> SwitchEx $ \s -> g $ ExStack is s)
+         is0) s0
+
+
+newtype
+   Switch x (idx :: * -> *) =
+      Switch {runSwitch :: x}
 
 switchStack ::
    (ExStack Empty i a -> x) ->
    (forall didx. List didx =>
     ExStack (NonEmpty.T didx) i a -> x) ->
    Stack i a -> x
-switchStack f g (Stack is0 s0) =
+switchStack f g (Stack is s) =
    runSwitch
-      (switch
-         (\is -> Switch $ \s -> f $ ExStack is s)
-         (\is -> Switch $ \s -> g $ ExStack is s)
-         is0) s0
+      (switchExStack (Switch . f) (Switch . g) (ExStack is s))
 
 
 descent :: Stack i a -> Either a (i, (Stack i a, Stack i a))
@@ -595,6 +599,27 @@ shrinkStack =
       (\(ExStack it (Plus a0 a1)) ->
          concatMap (\(_,is) -> [Stack is a0, Stack is a1]) $
          Fold.toList $ NonEmpty.removeEach it)
+
+
+newtype
+   Shrink i a idx =
+      Shrink {runShrink :: [ExStack idx i a]}
+
+shrinkValues ::
+   (List idx, QC.Arbitrary a) =>
+   ExStack idx i a -> [ExStack idx i a]
+shrinkValues s =
+   runShrink $
+   switchExStack
+      (\(ExStack Empty (Value a)) -> Shrink $
+           map (ExStack Empty . Value) $ QC.shrink a)
+      (\x -> Shrink $
+         case splitPlus x of
+            (i, (a0,a1)) ->
+               map (flip (exPlus i) a1) (shrinkValues a0)
+               ++
+               map (exPlus i a0) (shrinkValues a1))
+      s
 
 instance
    (QC.Arbitrary i, Ord i, QC.Arbitrary a, Arith.Sum a) =>
