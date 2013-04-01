@@ -101,7 +101,7 @@ class
 
    descentCore :: idx i -> Sum idx a -> Either a (i, Stack2 i a)
    filterMask ::
-      (Ord i) => Map i Branch -> ExStack idx i a -> FilterMask idx
+      (Ord i) => Map i Branch -> idx i -> FilterMask idx
    fillMask ::
       (Ord i, List ridx) =>
       ExStack idx i a -> ExStack ridx i a -> FillMask idx ridx i
@@ -146,8 +146,8 @@ instance (List idx) => List (NonEmpty.T idx) where
    descentCore (NonEmpty.Cons i is) (Plus a0 a1) =
       Right (i, (Stack2 is a0 a1))
 
-   filterMask cond (ExStack (NonEmpty.Cons i is) (Plus a _d)) =
-      case filterMask cond (ExStack is a) of
+   filterMask cond (NonEmpty.Cons i is) =
+      case filterMask cond is of
          FilterMask mask ->
             case Map.lookup i cond of
                Nothing -> FilterMask (TakeAll mask)
@@ -541,10 +541,8 @@ but also re-declares @delta@ branches as @before@ branches.
 -}
 filterNaive :: (Ord i) => Map i Branch -> Stack i a -> Stack i a
 filterNaive cond (Stack is s) =
-   case ExStack is s of
-      x ->
-         case filterMask cond x of
-            FilterMask mask -> wrapStack $ exFilter mask x
+   case filterMask cond is of
+      FilterMask mask -> wrapStack $ exFilter mask $ ExStack is s
 
 
 toMultiValue :: Arith.Sum a => Stack i a -> MV.MultiValue i a
