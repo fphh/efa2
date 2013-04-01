@@ -1,7 +1,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ExistentialQuantification #-}
-module EFA.Equation.MultiValueConsistent where
+module EFA.Equation.Consistent.MultiValue where
 
 import qualified EFA.Equation.Consistent.Dimension as Dim
 

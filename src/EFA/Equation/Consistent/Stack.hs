@@ -3,14 +3,14 @@
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE GADTs #-}
-module EFA.Equation.StackConsistent where
+module EFA.Equation.Consistent.Stack where
 
 import qualified EFA.Equation.Consistent.Dimension as Dim
 import EFA.Equation.Consistent.Dimension (switch)
 
 import qualified EFA.Graph.Topology.Index as Idx
 
-import qualified EFA.Equation.MultiValueConsistent as MV
+import qualified EFA.Equation.Consistent.MultiValue as MV
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic ((~+), (~-), (~*), (~/))
 import EFA.Utility (differenceMapSet)
@@ -40,7 +40,7 @@ import Prelude hiding (recip, filter, showsPrec)
 
 
 {- |
-This data structure is the same as in "EFA.Equation.StackConsistent"
+This data structure is the same as in "EFA.Equation.Stack"
 but we assert statically
 that the length of the list matches the depth of the tree.
 

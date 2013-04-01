@@ -102,8 +102,8 @@ Library
     EFA.Equation.Arithmetic
     EFA.Equation.MultiValue
     EFA.Equation.Stack
-    EFA.Equation.MultiValueConsistent
-    EFA.Equation.StackConsistent
+    EFA.Equation.Consistent.MultiValue
+    EFA.Equation.Consistent.Stack
     EFA.Equation.Consistent.Dimension
     EFA.Example.Utility
     EFA.Example.Absolute
