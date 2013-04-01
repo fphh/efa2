@@ -112,8 +112,6 @@ class
       (forall didx. List didx => NonEmpty.T didx i -> f (NonEmpty.T didx)) ->
       idx i -> f idx
 
-   exToMultiValue ::
-      (a -> a -> a) -> ExStack idx i a -> MV.ExMultiValue idx i a
    exFromMultiValue ::
       (a -> a -> a) -> MV.ExMultiValue idx i a -> ExStack idx i a
 
@@ -122,8 +120,6 @@ instance List Empty where
 
    switch f _ x = f x
 
-   exToMultiValue _plus (ExStack Empty (Value x)) =
-      MV.ExMultiValue Empty (MV.Leaf x)
    exFromMultiValue _minus (MV.ExMultiValue Empty (MV.Leaf x)) =
       ExStack Empty (Value x)
 
@@ -132,11 +128,6 @@ instance (List idx) => List (NonEmpty.T idx) where
 
    switch _ f x = f x
 
-   exToMultiValue plus (ExStack (NonEmpty.Cons i is) (Plus a0 b0)) =
-      case (exToMultiValue plus (ExStack is a0),
-            exToMultiValue plus (ExStack is b0)) of
-         (MV.ExMultiValue js a1, MV.ExMultiValue _js b1) ->
-            MV.ExMultiValue (i!:js) (MV.Branch a1 (liftA2 plus b1 a1))
    exFromMultiValue minus (MV.ExMultiValue (NonEmpty.Cons i is) (MV.Branch a0 b0)) =
       case (exFromMultiValue minus (MV.ExMultiValue is a0),
             exFromMultiValue minus (MV.ExMultiValue is b0)) of
@@ -584,6 +575,27 @@ filterNaive cond (Stack is s) =
    case filterMask cond is of
       FilterMask mask -> wrapStack $ exFilter mask $ ExStack is s
 
+
+newtype
+   ExMultiValue i a (idx :: * -> *) =
+      ExMultiValue {getExMultiValue :: MV.ExMultiValue idx i a}
+
+
+exToMultiValue ::
+   (List idx) =>
+   (a -> a -> a) -> ExStack idx i a -> MV.ExMultiValue idx i a
+exToMultiValue plus =
+   getExMultiValue .
+   switchExStack
+      (\(ExStack Empty (Value x)) ->
+         ExMultiValue $
+         MV.ExMultiValue Empty (MV.Leaf x))
+      (\(ExStack (NonEmpty.Cons i is) (Plus a0 b0)) ->
+         ExMultiValue $
+         case (exToMultiValue plus (ExStack is a0),
+               exToMultiValue plus (ExStack is b0)) of
+            (MV.ExMultiValue js a1, MV.ExMultiValue _js b1) ->
+               MV.ExMultiValue (i!:js) (MV.Branch a1 (liftA2 plus b1 a1)))
 
 toMultiValue :: Arith.Sum a => Stack i a -> MV.MultiValue i a
 toMultiValue = toMultiValueGen (~+)
