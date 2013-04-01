@@ -104,9 +104,10 @@ class
    type Sum idx :: * -> *
 
    switch ::
-      (Empty i -> f Empty) ->
-      (forall didx. List didx => NonEmpty.T didx i -> f (NonEmpty.T didx)) ->
-      idx i -> f idx
+      (f Empty -> g Empty) ->
+      (forall didx. List didx =>
+       f (NonEmpty.T didx) -> g (NonEmpty.T didx)) ->
+      f idx -> g idx
 
    exFromMultiValue ::
       (a -> a -> a) -> MV.ExMultiValue idx i a -> ExStack idx i a
@@ -131,6 +132,68 @@ instance (List idx) => List (NonEmpty.T idx) where
             ExStack (i!:js) (Plus a1 (liftA2 minus b1 a1))
 
 
+newtype Cube idx a = Cube {unCube :: Sum idx a}
+
+cubeFromExStack :: ExStack idx i a -> Cube idx a
+cubeFromExStack (ExStack _is s) = Cube s
+
+exStackFromCube :: idx i -> Cube idx a -> ExStack idx i a
+exStackFromCube is (Cube s) = ExStack is s
+
+newtype WrapCube a idx = WrapCube {unwrapCube :: Cube idx a}
+
+switchCube ::
+   List idx =>
+   (Cube Empty a -> f Empty) ->
+   (forall didx. List didx =>
+    Cube (NonEmpty.T didx) a -> f (NonEmpty.T didx)) ->
+   Cube idx a -> f idx
+switchCube f g s =
+   switch
+      (f . unwrapCube)
+      (g . unwrapCube)
+      (WrapCube s)
+
+mapCubeValue :: (a -> b) -> Cube Empty a -> Cube Empty b
+mapCubeValue f (Cube (Value a)) = valueCube $ f a
+
+splitCube ::
+   Cube (NonEmpty.T idx) a -> (Cube idx a, Cube idx a)
+splitCube (Cube (Plus a d)) = (Cube a, Cube d)
+
+valueCube :: a -> Cube Empty a
+valueCube a = Cube $ Value a
+
+plusCube ::
+   Cube idx a -> Cube idx a ->
+   Cube (NonEmpty.T idx) a
+plusCube (Cube a) (Cube d) = Cube (Plus a d)
+
+instance List idx => Functor (Cube idx) where
+   fmap f =
+      unwrapCube .
+      switchCube
+         (WrapCube . mapCubeValue f)
+         (\x ->
+            WrapCube $
+            case splitCube x of
+               (a,d) -> plusCube (fmap f a) (fmap f d))
+
+
+data Pure (idx :: * -> *) = Pure
+
+withPureCube :: (Pure idx -> Cube idx a) -> Cube idx a
+withPureCube f = f Pure
+
+
+instance List idx => Applicative (Cube idx) where
+   pure a =
+      withPureCube $
+      unwrapCube .
+      switch
+         (\Pure -> WrapCube $ valueCube a)
+         (\Pure -> WrapCube $ (\c -> plusCube c c) $ pure a)
+
 
 instance Functor (Stack i) where
    fmap f (Stack is s) = Stack is (fmap f s)
@@ -147,18 +210,9 @@ newtype
       WrapExStack {unwrapExStack :: ExStack idx i a}
 
 instance (List idx) => Functor (ExStack idx i) where
-   fmap f =
-      unwrapExStack .
-      switchExStack
-         (\(ExStack Empty (Value a)) ->
-            WrapExStack $ ExStack Empty (Value $ f a))
-         (\x ->
-            case splitPlus x of
-               (i, (a, d)) ->
-                  case (fmap f a, fmap f d) of
-                     (ExStack is a0, ExStack _ d0) ->
-                        WrapExStack $
-                        ExStack (NonEmpty.Cons i is) (Plus a0 d0))
+   fmap f s =
+      exStackFromCube (exStackIndices s) $
+      fmap f $ cubeFromExStack s
 
 apply ::
    (List idx) => ExStack idx i (a -> b) -> Sum idx a -> ExStack idx i b
@@ -201,6 +255,17 @@ mapIndicesMonotonic g (Stack is s) =
          else error "Stack.mapIndicesMonotonic: non-monotonic index function"
 
 
+newtype Index i idx = Index {getIndex :: idx i}
+
+switchIndex ::
+   (List idx) =>
+   (Empty i -> f Empty) ->
+   (forall didx. List didx => NonEmpty.T didx i -> f (NonEmpty.T didx)) ->
+   idx i -> f idx
+switchIndex f g =
+   switch (f . getIndex) (g . getIndex) . Index
+
+
 newtype
    SwitchEx f a idx =
       SwitchEx {runSwitchEx :: Sum idx a -> f idx}
@@ -213,9 +278,9 @@ switchExStack ::
    ExStack idx i a -> f idx
 switchExStack f g (ExStack is0 s0) =
    runSwitchEx
-      (switch
-         (\is -> SwitchEx $ \s -> f $ ExStack is s)
-         (\is -> SwitchEx $ \s -> g $ ExStack is s)
+      (switchIndex
+         (\is -> SwitchEx $ f . ExStack is)
+         (\is -> SwitchEx $ g . ExStack is)
          is0) s0
 
 
@@ -277,7 +342,7 @@ fillMask ::
    lidx i -> ridx i -> FillMask lidx ridx i
 fillMask l r =
    getFillLeftMask $
-   switch
+   switchIndex
       (\is -> FillLeftMask $ fillValueMask is r)
       (\is -> FillLeftMask $ fillPlusMask is r)
       l
@@ -292,7 +357,7 @@ fillValueMask ::
    Empty i -> idx i -> FillMask Empty idx i
 fillValueMask l =
    getFillRightMask .
-   switch
+   switchIndex
       (\empty -> FillRightMask $ FillMask empty FillStop FillStop)
       (\(NonEmpty.Cons i is) ->
          FillRightMask $
@@ -306,7 +371,7 @@ fillPlusMask ::
    (NonEmpty.T lidx) i -> ridx i -> FillMask (NonEmpty.T lidx) ridx i
 fillPlusMask it@(NonEmpty.Cons i is) =
    getFillRightMask .
-   switch
+   switchIndex
       (\empty ->
          FillRightMask $
          case fillMask is empty of
@@ -626,7 +691,7 @@ instance Filter mask => Filter (TakeOne mask) where
 filterMask ::
    (List idx, Ord i) => Map i Branch -> idx i -> FilterMask idx
 filterMask cond =
-   switch
+   switchIndex
       (\Empty -> FilterMask TakeStop)
       (\(NonEmpty.Cons i is) ->
          case filterMask cond is of
