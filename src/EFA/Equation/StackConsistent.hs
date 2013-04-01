@@ -85,20 +85,9 @@ instance (Show i, Show a) => Show (Stack i a) where
          showString " " . showsPrecSum 11 s
 
 
-class Applicative sum => SumC sum where
-   fold :: (a -> a -> a) -> sum a -> a
-
-instance SumC Value where
-   fold _ (Value a) = a
-
-instance SumC sum => SumC (Plus sum) where
-   fold op (Plus a d) = fold op a `op` fold op d
-
-
 
 class
-   (NonEmptyC.Show idx,
-    MV.List idx, SumC (Sum idx),
+   (NonEmptyC.Show idx, MV.List idx,
     Foldable idx, NonEmpty.RemoveEach idx) =>
       List idx where
    type Sum idx :: * -> *
@@ -125,16 +114,20 @@ instance (List idx) => List (NonEmpty.T idx) where
    switch _ x = x
 
    exFromMultiValue minus (MV.ExMultiValue (NonEmpty.Cons i is) (MV.Branch a0 b0)) =
-      case (exFromMultiValue minus (MV.ExMultiValue is a0),
-            exFromMultiValue minus (MV.ExMultiValue is b0)) of
-         (ExStack js a1, ExStack _js b1) ->
-            ExStack (i!:js) (Plus a1 (liftA2 minus b1 a1))
+      case (cubeFromExStack $ exFromMultiValue minus (MV.ExMultiValue is a0),
+            cubeFromExStack $ exFromMultiValue minus (MV.ExMultiValue is b0)) of
+         (a1, b1) ->
+            exStackFromCube (i!:is) (plusCube a1 (liftA2 minus b1 a1))
 
 
 newtype Cube idx a = Cube {unCube :: Sum idx a}
 
 cubeFromExStack :: ExStack idx i a -> Cube idx a
 cubeFromExStack (ExStack _is s) = Cube s
+
+withCubeFromStack ::
+   (forall idx. List idx => Cube idx a -> b) -> Stack i a -> b
+withCubeFromStack f (Stack is s) = f (cubeFromExStack $ ExStack is s)
 
 exStackFromCube :: idx i -> Cube idx a -> ExStack idx i a
 exStackFromCube is (Cube s) = ExStack is s
@@ -198,7 +191,9 @@ instance List idx => Applicative (Cube idx) where
 
 
 instance Functor (Stack i) where
-   fmap f (Stack is s) = Stack is (fmap f s)
+   fmap f (Stack is s) =
+      case ExStack is s of
+         x -> stackFromCube is . fmap f . cubeFromExStack $ x
 
 instance Functor Value where
    fmap f (Value a) = Value (f a)
@@ -227,8 +222,8 @@ instance Applicative sum => Applicative (Plus sum) where
 
 
 instance FormatValue a => FormatValue (Stack i a) where
-   formatValue (Stack _ s) =
-      fold Format.plus . fmap formatValue $ s
+   formatValue =
+      withCubeFromStack (fold Format.plus . fmap formatValue)
 
 {- |
 The index function must generate an index list with ascending index order.
@@ -460,7 +455,7 @@ mul times plus clear (Stack is x) (Stack js y) =
 
 instance (Ord i, Num a) => Num (Stack i a) where
    fromInteger = singleton . fromInteger
-   negate (Stack is s) = Stack is $ fmap negate s
+   negate = fmap negate
    (+) = add (+) (const 0)
    (*) = mul (*) (+) (const 0)
 
@@ -494,7 +489,7 @@ instance (Ord i, Fractional a) => Fractional (Stack i a) where
 
 
 instance (Ord i, Arith.Sum a) => Arith.Sum (Stack i a) where
-   negate (Stack is s) = Stack is $ fmap Arith.negate s
+   negate = fmap Arith.negate
    (~+) = add (~+) Arith.clear
 
 instance (Ord i, Arith.Product a) => Arith.Product (Stack i a) where
@@ -518,7 +513,7 @@ instance (Ord i, Arith.Constant a) => Arith.Constant (Stack i a) where
 
 instance (Ord i, Arith.Integrate v) => Arith.Integrate (Stack i v) where
    type Scalar (Stack i v) = Stack i (Arith.Scalar v)
-   integrate (Stack is a) = Stack is $ fmap Arith.integrate a
+   integrate = fmap Arith.integrate
 
 
 singleton :: a -> Stack i a
@@ -540,21 +535,34 @@ splitPlus ::
 splitPlus (ExStack (NonEmpty.Cons i is) (Plus a0 a1)) =
    (i, (ExStack is a0, ExStack is a1))
 
+
+newtype Fold a idx = Fold {unfold :: Cube idx a -> a}
+
+fold :: (List idx) => (a -> a -> a) -> Cube idx a -> a
+fold op =
+   unfold $
+   switch
+      (Fold valueFromCube)
+      (Fold $ \x ->
+         case splitCube x of
+            (a,d) -> fold op a `op` fold op d)
+
+
 -- could be a simple Semigroup.Foldable.head if it would exist
 absolute :: Stack i a -> a
-absolute (Stack _ s) = fold const s
+absolute = withCubeFromStack (fold const)
 
 normalize :: (Arith.Product a) => Stack i a -> Stack i a
 normalize s = fmap (~/ absolute s) s
 
 
-toList :: SumC sum => sum a -> NonEmpty.T [] a
+toList :: List idx => Cube idx a -> NonEmpty.T [] a
 toList = fold NonEmpty.append . fmap NonEmpty.singleton
 
 {- |
 You may use 'Data.Foldable.sum' for evaluation with respect to 'Num' class.
 -}
-evaluate :: (SumC sum, Arith.Sum a) => sum a -> a
+evaluate :: (List idx, Arith.Sum a) => Cube idx a -> a
 evaluate = fold (~+)
 
 
