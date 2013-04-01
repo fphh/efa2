@@ -112,13 +112,6 @@ class
       (forall didx. List didx => NonEmpty.T didx i -> f (NonEmpty.T didx)) ->
       idx i -> f idx
 
-   fillValueMask ::
-      (Ord i) =>
-      Empty i -> idx i -> FillMask Empty idx i
-   fillPlusMask ::
-      (Ord i, List lidx) =>
-      (NonEmpty.T lidx) i -> idx i -> FillMask (NonEmpty.T lidx) idx i
-
    exToMultiValue ::
       (a -> a -> a) -> ExStack idx i a -> MV.ExMultiValue idx i a
    exFromMultiValue ::
@@ -129,12 +122,6 @@ instance List Empty where
 
    switch f _ x = f x
 
-   fillValueMask _l _r = FillMask Empty FillStop FillStop
-   fillPlusMask (NonEmpty.Cons i is) r =
-      case fillMask is r of
-         FillMask js lmask rmask ->
-            FillMask (i!:js) (FillTake lmask) (FillSkip rmask)
-
    exToMultiValue _plus (ExStack Empty (Value x)) =
       MV.ExMultiValue Empty (MV.Leaf x)
    exFromMultiValue _minus (MV.ExMultiValue Empty (MV.Leaf x)) =
@@ -144,25 +131,6 @@ instance (List idx) => List (NonEmpty.T idx) where
    type Sum (NonEmpty.T idx) = Plus (Sum idx)
 
    switch _ f x = f x
-
-   fillValueMask l (NonEmpty.Cons i is) =
-      case fillMask l is of
-         FillMask js lmask rmask ->
-            FillMask (i!:js) (FillSkip lmask) (FillTake rmask)
-   fillPlusMask it@(NonEmpty.Cons i is) jt@(NonEmpty.Cons j js) =
-      case compare i j of
-         EQ ->
-            case fillMask is js of
-               FillMask ks lmask rmask ->
-                  FillMask (i!:ks) (FillTake lmask) (FillTake rmask)
-         LT ->
-            case fillMask is jt of
-               FillMask ks lmask rmask ->
-                  FillMask (i!:ks) (FillTake lmask) (FillSkip rmask)
-         GT ->
-            case fillMask it js of
-               FillMask ks lmask rmask ->
-                  FillMask (j!:ks) (FillSkip lmask) (FillTake rmask)
 
    exToMultiValue plus (ExStack (NonEmpty.Cons i is) (Plus a0 b0)) =
       case (exToMultiValue plus (ExStack is a0),
@@ -281,6 +249,52 @@ fillMask l r =
       (\is -> FillLeftMask $ fillValueMask is r)
       (\is -> FillLeftMask $ fillPlusMask is r)
       l
+
+
+newtype
+   FillRightMask lidx i ridx =
+      FillRightMask {getFillRightMask :: FillMask lidx ridx i}
+
+fillValueMask ::
+   (Ord i, List idx) =>
+   Empty i -> idx i -> FillMask Empty idx i
+fillValueMask l =
+   getFillRightMask .
+   switch
+      (\empty -> FillRightMask $ FillMask empty FillStop FillStop)
+      (\(NonEmpty.Cons i is) ->
+         FillRightMask $
+         case fillMask l is of
+            FillMask js lmask rmask ->
+               FillMask (i!:js) (FillSkip lmask) (FillTake rmask))
+
+
+fillPlusMask ::
+   (Ord i, List lidx, List ridx) =>
+   (NonEmpty.T lidx) i -> ridx i -> FillMask (NonEmpty.T lidx) ridx i
+fillPlusMask it@(NonEmpty.Cons i is) =
+   getFillRightMask .
+   switch
+      (\empty ->
+         FillRightMask $
+         case fillMask is empty of
+            FillMask js lmask rmask ->
+               FillMask (i!:js) (FillTake lmask) (FillSkip rmask))
+      (\jt@(NonEmpty.Cons j js) ->
+         FillRightMask $
+         case compare i j of
+            EQ ->
+               case fillMask is js of
+                  FillMask ks lmask rmask ->
+                     FillMask (i!:ks) (FillTake lmask) (FillTake rmask)
+            LT ->
+               case fillMask is jt of
+                  FillMask ks lmask rmask ->
+                     FillMask (i!:ks) (FillTake lmask) (FillSkip rmask)
+            GT ->
+               case fillMask it js of
+                  FillMask ks lmask rmask ->
+                     FillMask (j!:ks) (FillSkip lmask) (FillTake rmask))
 
 
 data FillStop      = FillStop
