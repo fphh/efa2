@@ -139,6 +139,10 @@ cubeFromExStack (ExStack _is s) = Cube s
 exStackFromCube :: idx i -> Cube idx a -> ExStack idx i a
 exStackFromCube is (Cube s) = ExStack is s
 
+stackFromCube :: List idx => idx i -> Cube idx a -> Stack i a
+stackFromCube is (Cube s) = Stack is s
+
+
 newtype WrapCube a idx = WrapCube {unwrapCube :: Cube idx a}
 
 newtype
@@ -146,7 +150,10 @@ newtype
       WrapFunctor {unwrapFunctor :: Cube idx a -> Cube idx b}
 
 mapCubeValue :: (a -> b) -> Cube Empty a -> Cube Empty b
-mapCubeValue f (Cube (Value a)) = valueCube $ f a
+mapCubeValue f = valueCube . f . valueFromCube
+
+valueFromCube :: Cube Empty a -> a
+valueFromCube (Cube (Value a)) = a
 
 splitCube ::
    Cube (NonEmpty.T idx) a -> (Cube idx a, Cube idx a)
@@ -170,12 +177,24 @@ instance List idx => Functor (Cube idx) where
                (a,d) -> plusCube (fmap f a) (fmap f d))
 
 
+newtype
+   WrapApply a b c idx =
+      WrapApply {unwrapApply :: Cube idx a -> Cube idx b -> Cube idx c}
+
+
 instance List idx => Applicative (Cube idx) where
    pure a =
       unwrapCube $
       switch
          (WrapCube $ valueCube a)
          (WrapCube $ (\c -> plusCube c c) $ pure a)
+   (<*>) =
+      unwrapApply $
+      switch
+         (WrapApply $ \f a -> valueCube $ (valueFromCube f) (valueFromCube a))
+         (WrapApply $ \f a ->
+            case (splitCube f, splitCube a) of
+               ((fa,fd), (aa,ad)) -> plusCube (fa<*>aa) (fd<*>ad))
 
 
 instance Functor (Stack i) where
@@ -396,31 +415,26 @@ class
       (a -> a) ->
       mask ->
       Sum (FillFromIndex mask) a ->
-      Sum (FillToIndex mask) a
+      Cube (FillToIndex mask) a
 
 instance Fill FillStop where
    type FillFromIndex FillStop = Empty
    type FillToIndex FillStop = Empty
-   fill _clear FillStop (Value x) = Value x
+   fill _clear FillStop x = Cube x
 
 instance Fill mask => Fill (FillTake mask) where
    type FillFromIndex (FillTake mask) = NonEmpty.T (FillFromIndex mask)
    type FillToIndex (FillTake mask) = NonEmpty.T (FillToIndex mask)
    fill clear (FillTake mask) (Plus x y) =
-      Plus (fill clear mask x) (fill clear mask y)
+      plusCube (fill clear mask x) (fill clear mask y)
 
 instance Fill mask => Fill (FillSkip mask) where
    type FillFromIndex (FillSkip mask) = FillFromIndex mask
    type FillToIndex (FillSkip mask) = NonEmpty.T (FillToIndex mask)
    fill clear (FillSkip mask) x =
       let y = fill clear mask x
-      in  Plus y (fmap clear y)
+      in  plusCube y (fmap clear y)
 
-
-addMatch ::
-   (List idx) =>
-   (a -> a -> a) -> ExStack idx i a -> Sum idx a -> ExStack idx i a
-addMatch plus = apply . fmap plus
 
 add ::
    (Ord i) =>
@@ -429,30 +443,30 @@ add ::
 add plus clear (Stack is x) (Stack js y) =
    case fillMask is js of
       FillMask ks lmask rmask ->
-         wrapStack $
-         addMatch plus (ExStack ks (fill clear lmask x)) (fill clear rmask y)
+         stackFromCube ks $
+         liftA2 plus (fill clear lmask x) (fill clear rmask y)
 
+
+newtype
+   CubeFunc2 i a idx =
+      CubeFunc2 {runCubeFunc2 :: Cube idx a -> Cube idx a -> Cube idx a}
 
 mulMatch ::
    List idx =>
    (a -> a -> a) -> (a -> a -> a) ->
-   ExStack idx i a -> Sum idx a -> ExStack idx i a
+   Cube idx a -> Cube idx a -> Cube idx a
 mulMatch times plus =
-   (unwrapExStack .) .
-   switchExStack2
-      (\(ExStack Empty (Value x)) (Value y) ->
-         WrapExStack $
-         ExStack Empty (Value (times x y)))
-      (\x (Plus y0 y1) ->
-         WrapExStack $
-         case splitPlus x of
-            (i, (x0@(ExStack is _), x1)) ->
-               ExStack (NonEmpty.Cons i is) $
-               Plus
-                  (exStackSum $ mulMatch times plus x0 y0)
-                  (exStackSum $ addMatch plus (mulMatch times plus x0 y1) $
-                   exStackSum $ mulMatch times plus x1 $
-                   exStackSum $ addMatch plus (ExStack is y0) y1))
+   runCubeFunc2 $
+   switch
+      (CubeFunc2 $ liftA2 times)
+      (CubeFunc2 $ \x y ->
+         case (splitCube x, splitCube y) of
+            ((x0, x1), (y0, y1)) ->
+               plusCube
+                  (mulMatch times plus x0 y0)
+                  (liftA2 plus (mulMatch times plus x0 y1) $
+                   mulMatch times plus x1 $
+                   liftA2 plus y0 y1))
 
 
 {-
@@ -466,9 +480,9 @@ mul ::
 mul times plus clear (Stack is x) (Stack js y) =
    case fillMask is js of
       FillMask ks lmask rmask ->
-         wrapStack $
+         stackFromCube ks $
          mulMatch times plus
-            (ExStack ks (fill clear lmask x)) (fill clear rmask y)
+            (fill clear lmask x) (fill clear rmask y)
 
 instance (Ord i, Num a) => Num (Stack i a) where
    fromInteger = singleton . fromInteger
