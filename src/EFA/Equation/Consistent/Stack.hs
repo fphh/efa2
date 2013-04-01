@@ -224,26 +224,8 @@ switchIndex f g =
 
 
 newtype
-   SwitchEx f a idx =
-      SwitchEx {runSwitchEx :: Sum idx a -> f idx}
-
-switchExStack ::
-   Dim.C idx =>
-   (ExStack Empty i a -> f Empty) ->
-   (forall didx. Dim.C didx =>
-    ExStack (NonEmpty.T didx) i a -> f (NonEmpty.T didx)) ->
-   ExStack idx i a -> f idx
-switchExStack f g (ExStack is0 s0) =
-   runSwitchEx
-      (switchIndex
-         (\is -> SwitchEx $ f . ExStack is)
-         (\is -> SwitchEx $ g . ExStack is)
-         is0) s0
-
-
-newtype
-   Switch x (idx :: * -> *) =
-      Switch {runSwitch :: x}
+   Switch i a x idx =
+      Switch {runSwitch :: ExStack idx i a -> x}
 
 switchStack ::
    (ExStack Empty i a -> x) ->
@@ -252,7 +234,8 @@ switchStack ::
    Stack i a -> x
 switchStack f g (Stack is s) =
    runSwitch
-      (switchExStack (Switch . f) (Switch . g) (ExStack is s))
+      (switch (Switch f) (Switch g))
+      (ExStack is s)
 
 
 descent :: Stack i a -> Either a (i, (Stack i a, Stack i a))
@@ -772,17 +755,18 @@ shrinkStack =
 
 newtype
    Shrink i a idx =
-      Shrink {runShrink :: [ExStack idx i a]}
+      Shrink {runShrink :: ExStack idx i a -> [ExStack idx i a]}
 
 shrinkValues ::
    (Dim.C idx, QC.Arbitrary a) =>
    ExStack idx i a -> [ExStack idx i a]
 shrinkValues =
-   runShrink .
-   switchExStack
-      (\(ExStack Empty (Value a)) -> Shrink $
+   runShrink $
+   switch
+      (Shrink $
+       \(ExStack Empty (Value a)) ->
            map (ExStack Empty . Value) $ QC.shrink a)
-      (\x -> Shrink $
+      (Shrink $ \x ->
          case splitPlus x of
             (i, (a0,a1)) ->
                map (flip (exPlus i) a1) (shrinkValues a0)
