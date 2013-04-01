@@ -106,8 +106,6 @@ class
       (forall didx. List didx => NonEmpty.T didx i -> f (NonEmpty.T didx)) ->
       idx i -> f idx
 
-   filterMask ::
-      (Ord i) => Map i Branch -> idx i -> FilterMask idx
    fillMask ::
       (Ord i, List ridx) =>
       idx i -> ridx i -> FillMask idx ridx i
@@ -132,7 +130,6 @@ instance List Empty where
    descentCore Empty (Value a) = Left a
    switch f _ x = f x
 
-   filterMask _cond _s = FilterMask TakeStop
    fillMask = fillValueMask
    fillValueMask _l _r = FillMask Empty FillStop FillStop
    fillPlusMask (NonEmpty.Cons i is) r =
@@ -154,13 +151,6 @@ instance (List idx) => List (NonEmpty.T idx) where
    descentCore (NonEmpty.Cons i is) (Plus a0 a1) =
       Right (i, (Stack2 is a0 a1))
    switch _ f x = f x
-
-   filterMask cond (NonEmpty.Cons i is) =
-      case filterMask cond is of
-         FilterMask mask ->
-            case Map.lookup i cond of
-               Nothing -> FilterMask (TakeAll mask)
-               Just branch -> FilterMask (TakeOne branch mask)
 
    fillMask = fillPlusMask
 
@@ -530,13 +520,13 @@ instance Filter mask => Filter (TakeOne mask) where
          Delta  -> exFilter mask (ExStack is d)
 
 
-filterMask0 ::
+filterMask ::
    (List idx, Ord i) => Map i Branch -> idx i -> FilterMask idx
-filterMask0 cond =
+filterMask cond =
    switch
       (\Empty -> FilterMask TakeStop)
       (\(NonEmpty.Cons i is) ->
-         case filterMask0 cond is of
+         case filterMask cond is of
             FilterMask mask ->
                case Map.lookup i cond of
                   Nothing -> FilterMask (TakeAll mask)
