@@ -65,20 +65,20 @@ getEdgeState topo rec = EdgeStates $ M.fromList $ zip edges $ map f edges
 
               where s1 = getSig rec (PPosIdx n1 n2)
                     s2 = getSig rec (PPosIdx n2 n1)
-                    quality = edgeFlowQuality s1 s2 
+                    quality = edgeFlowQuality s1 s2
 
-edgeFlowQuality :: (Num d, 
-                    SV.Storage v d, 
-                    BSum d, 
-                    S.SigSum s (v :> Nil), 
+edgeFlowQuality :: (Num d,
+                    SV.Storage v d,
+                    BSum d,
+                    S.SigSum s (v :> Nil),
                     Fractional d,
                     Ord d,
                     SV.Walker v,
                     SV.Storage v Sign,
                     SV.Singleton v,
-                    S.TailType s)=>  
-                   TC s typ (Data (v :> Nil) d)-> 
-                   TC s typ (Data (v :> Nil) d)-> 
+                    S.TailType s)=>
+                   TC s typ (Data (v :> Nil) d)->
+                   TC s typ (Data (v :> Nil) d)->
                    Quality
 edgeFlowQuality s1 s2 = if isConsistant
                               then (if isClean then Clean else Dirty)

@@ -8,7 +8,7 @@ import qualified Data.Map as M
 
 import qualified EFA.Signal.Signal as S
 import EFA.Signal.Sequence
-import EFA.Signal.SequenceData
+import EFA.Signal.SequenceData hiding (zip)
 import EFA.Signal.Record
 
 import EFA.Utility (idxList)
@@ -51,13 +51,8 @@ recList = map (Record time) pmapList
 list ::
   [(Int, (String, (PowerRecord Node.Int [] Double, SequData (PowerRecord Node.Int [] Double))))]
 list = idxList $
-<<<<<<< HEAD
   zip titleList
       (zip recList (map  (genSequ . addZeroCrossings) recList))
-=======
-  zip titleList 
-      (zip recList (map (genSequ . addZeroCrossings) recList))
->>>>>>> master
 
 -- f ::
 --   (Num a, Show a2, Show a1, Show a) =>
@@ -70,16 +65,9 @@ f ::
 f (idx, (title, (pRec, sqRec))) = do
   putStrLn ""
   putStrLn $ "Test " ++ show (idx + 1) ++ ": " ++ title
-<<<<<<< HEAD
   putStrLn ("XList: \n" ++ (show pRec))
   putStrLn ("XList: \n" ++ (show (addZeroCrossings pRec)))
-  putStrLn ("Sequence: " ++  show sq)
-  putStrLn ("SequRec: " ++  show sqRec)
-=======
-  putStrLn ("XList: \n" ++ (show pRec))   
-  putStrLn ("XList: \n" ++ (show (addZeroCrossings pRec)))   
   putStrLn ("Sequence: " ++  show sqRec)
->>>>>>> master
 
 main :: IO ()
 main = mapM_ f list

@@ -476,11 +476,11 @@ optKeyOutside =
 
 lineColour :: String -> LineSpec.T -> LineSpec.T
 lineColour = LineSpec.lineColor . ColourSpec.name
- 
+
 stackLineSpec ::
    (FormatValue term, Show term) => term -> String -> Plot2D.T x y -> Plot2D.T x y
 stackLineSpec term colour =
-   fmap (Graph2D.lineSpec (LineSpec.title (Format.unASCII $ formatValue term) 
+   fmap (Graph2D.lineSpec (LineSpec.title (Format.unASCII $ formatValue term)
           (lineColour colour $ LineSpec.deflt)))
 
 stackAttr ::
@@ -539,7 +539,7 @@ stacks colourMap =
          Plot2D.list Graph2D.histograms vals) .
   TMap.core .
   liftA2 (,) (TMap.cons Colour.defltColour colourMap) .
-  traverse (TMap.cons 0) 
+  traverse (TMap.cons 0)
 
 stacksIO ::
    (FormatValue var, Ord term, FormatValue term, Show term) =>

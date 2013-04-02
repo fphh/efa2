@@ -10,20 +10,30 @@ import qualified EFA.Signal.Data as D
 import qualified EFA.Signal.Vector as V
 import qualified EFA.Signal.Base as SB
 import EFA.Signal.Signal
-{- <<<<<<< HEAD
-          (-- TC,
-           Signal, FSignal, TSigL, UTSignal, TSignal,
-           TSamp, PSamp, PSamp1L, PSamp2LL,Scal)
+          (-- TC(TC),
+           Signal,
+           FSignal,
+           TSigL,
+           UTSignal,
+           TSignal,
+           TSamp,
+           PSamp,
+           PSamp1L,
+           PSamp2LL,
+           Scal)
+import EFA.Signal.Typ (Typ,
+                       A,
+                       P,
+                       T,
+                       Tt,
+                       UT,
+                       F,
+                       --D
+                      )
+import EFA.Signal.Data (Data(Data),
+                        (:>),
+                        Nil)
 
-import EFA.Signal.Typ (Typ, A, P, T, Tt, UT,F)
-import EFA.Signal.Data (Data(..), (:>), Nil)
-======= -}
-          (TC(TC), Signal, FSignal, TSigL, UTSignal, TSignal,
-           TSamp, PSamp, PSamp1L, PSamp2LL,Scal)
-
-import EFA.Signal.Typ (Typ, A, P, T, Tt, UT,F,D)
-import EFA.Signal.Data (Data(Data), (:>), Nil)
--- >>>>>>> master
 import EFA.Signal.Base (Sign, BSum, BProd)
 
 import EFA.Report.Report (ToTable(toTable), Table(..), tvcat)
@@ -81,8 +91,6 @@ type SignalRecord = Record Signal (Typ A T Tt) (Typ UT UT UT) SigId
 type PowerRecord n = Record Signal (Typ A T Tt) (Typ A P Tt) (PPosIdx n)
 
 type FlowRecord n = Record FSignal (Typ A T Tt) (Typ A F Tt) (PPosIdx n)
-
--- type FlowRecordScalar n = Record Scalar (Typ A T Tt) (Typ A F Tt) (PPosIdx n)
 
 
 -- | Flow record to contain flow signals assigned to the tree
@@ -461,17 +469,4 @@ partIntegrate :: (Num a,
                   BSum a,
                   BProd a a) => PowerRecord node v a -> FlowRecord node v a
 partIntegrate rec@(Record time _) = rmap (S.partIntegrate time) rec
-
-
-{-
--- | Plot Records with readible keys
-calcScalarFlow :: (Num a,
-                   V.Zipper v,
-                   V.Walker v,
-                   V.Storage v a,
-                   V.Singleton v,
-                   BSum a,
-                   BProd a a) => PowerRecord node v a -> FlowRecordScalar node v a
-calcScalarFlow rec@(Record time _) = rmap (S.fullIntegrate time) rec
--}
 

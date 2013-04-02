@@ -9,7 +9,10 @@ import qualified EFA.Graph.Flow as Flow
 -- import qualified EFA.Graph.Topology.Index as Idx
 --import qualified EFA.Signal.Data as D
 
-import EFA.Graph.Topology (Topology, FlowTopology, SequFlowGraph)
+import EFA.Graph.Topology (Topology,
+                           FlowTopology
+                          -- SequFlowGraph
+                          )
 import qualified EFA.Signal.SequenceData as SD
 
 import qualified EFA.Signal.Base as SB
@@ -18,10 +21,10 @@ import qualified EFA.Signal.Vector as V
 import qualified EFA.Signal.Record as Record
 
 import EFA.Signal.SequenceData
-
-          (SequData(..), Sequ, Range, 
-           partition2, Section(..))
-           -- filterSequWithSequData, 
+          (SequData(..), Sequ, Range,
+           partition2)
+           --Section(..))
+           -- filterSequWithSequData,
            --filterSequWithSequData2)
 
 
@@ -69,54 +72,6 @@ data EventType = LeftEvent
                | MixedEvent
                | NoEvent
 
-{-
-
--- | From PowerRecord
---fromFlowRecord :: Idx.Section -> Idx.Record -> FlowRecord -> Env rec FSig -- [Val]
-
---fromFlowRecord :: Idx.Section -> Idx.Record -> FlowRecord a b -> Env rec a --UTFSig
-fromFlowRecord ::
-   Idx.Section ->
-   Idx.Record ->
-   FlowRecord node v a ->
- --     (TC s1 (Typ delta2 t2 p2) (Data c1 d1))
- --     (TC s1 (Typ delta1 t1 p1) (Data c1 d1)) ->
-   Env Env.NoRecord (TC FSignal (Typ UT UT UT) (Data v a))
-fromFlowRecord secIdx recIdx (FlowRecord dTime flowMap) =
-  (Env.empty Env.NoRecord) { energyMap = M.map untype $ M.mapKeys f flowMap, dtimeMap = M.fromList [(Idx.DTime recIdx secIdx, untype dTime)] }
-  where f (PPosIdx idx1 idx2) =
-           Idx.Energy recIdx (Idx.SecNode secIdx idx1) (Idx.SecNode secIdx idx2)
-
-  --where f ((PPosIdx idx1 idx2), (flowSig)) = ((Idx.Power secIdx recIdx idx1 idx2), [fromScalar $ sigSum flowSig])
--}
-
-{-
--- | Pre-Integrate all Signals in Record
-recFullIntegrate :: (Num a,
-                      V.Zipper v,
-                      V.Walker v,
-                      V.Singleton v,
-                      SB.BSum a,
-                      SB.BProd a a,
-                      V.Storage v a,
-                      V.FromList v) =>
-                    PowerRecord node v a -> FlowRecord node v a
-recFullIntegrate (Record time pMap) = Record (S.fromList [fromScalar $ sigSum $ deltaSig time]) fMap
-  where fMap = M.map (sigFullInt time) pMap
-
--- | Pre-Integrate all Signals in Record
-recPartIntegrate :: (Num a,
-                      V.Zipper v,
-                      V.Walker v,
-                      V.Singleton v,
-                      SB.BSum a,
-                      SB.BProd a a,
-                      V.Storage v a,
-                      V.FromList v) =>
-                    PowerRecord node v a -> FlowRecord node v a
-recPartIntegrate (Record time pMap) = Record (deltaSig time) fMap
-  where fMap = M.map (sigPartInt time) pMap
--}
 
 -- | Generate Sequence Flow
 genSequFlow :: (Num a,
@@ -136,96 +91,42 @@ genSequFlow sqPRec = fmap Record.partIntegrate sqPRec
 -- | State changes in solver create several DataPoints with exact the same time
 -- | The resulting sections which have zero time duration are removed
 
-{-
-removeZeroTimeSections :: (Fractional a, Ord a, Eq a, V.Storage v a, V.Singleton v) => (Sequ,SequData (PowerRecord nty v a)) -> (Sequ,SequData (PowerRecord nty v a))
-removeZeroTimeSections (xs, ys)  = filterSequWithSequData f (xs, ys)
-   where f (_,Record time _) = x /= y
-           where
-              err = error "Error in SequenceData.hs / removeZeroTimeSections -- empty head or tail"
-              TC (Data x) = (fst $ maybe err id $ S.viewL time)
-              TC (Data y) = (snd $ maybe err id $ S.viewR time)
-
--- | Drop Sections with time duration below threshold
-removeLowTimeSections :: (Fractional a, Ord a, Eq a, V.Storage v a, V.Singleton v) => (Sequ,SequData (PowerRecord nty v a)) -> a -> (Sequ,SequData (PowerRecord nty v a))
-removeLowTimeSections (xs, ys)  threshold = filterSequWithSequData f (xs, ys)
-   where
-          f (_,Record time _) = abs (x -y) > threshold
-            where
-              err = error "Error in SequenceData.hs / removeZeroTimeSections -- empty head or tail"
-              TC (Data x) = (fst $ maybe err id $ S.viewL time)
-              TC (Data y) = (snd $ maybe err id $ S.viewR time)
-
--- | Drop Sections with negligible energy flow
-removeLowEnergySections :: (Num a, SB.BSum a, Ord a, V.Walker v, V.Storage v a) =>
-   (Sequ, SequData (PowerRecord node v a), SequData (FlowRecord node v a))
-   -> a
-   -> (Sequ, SequData (PowerRecord node v a), SequData (FlowRecord node v a))
-removeLowEnergySections  (xs, ys, zs) threshold = filterSequWithSequData2 f (xs, ys, zs)
-   where  f (_, _ , Record _ fMap) =  not $ all g (M.toList fMap)
-          g (_,s) = (abs (fromScalar (sigSum s))) < threshold
-
--}
 
 {-
 separateUncleanSections :: (Num d,
-                          V.Storage v d, 
+                          V.Storage v d,
                           V.Singleton v,
-                          SB.BSum d, 
-                          V.Walker v,                          
-                          Ord d) => 
+                          SB.BSum d,
+                          V.Walker v,
+                          Ord d) =>
                          (Sequ, SequData (PowerRecord id v d) , SequData (FlowRecord id v d)) ->
                           ((Sequ, SequData (PowerRecord id v d), SequData (FlowRecord id v d)),
                           (Sequ, SequData(PowerRecord id v d),  SequData (FlowRecord id v d)),
                           (Sequ, SequData(PowerRecord id v d),  SequData (FlowRecord id v d)))
 
-separateUncleanSections  (xs, ys, zs) = 
+separateUncleanSections  (xs, ys, zs) =
   (filterSequWithSequData3 f (xs, ys, zs), filterSequWithSequData2 g (xs, ys, zs), filterSequWithSequData2 h (xs, ys, zs))
-   where  f (_,q) = q == Flow.Clean 
+   where  f (_,q) = q == Flow.Clean
           g (_,q) = q == Flow.Dirty
           h (_,q) = q == Flow.Wrong
 -}
 
 separateMinorSections :: (Num d,
-                          V.Storage v d, 
+                          V.Storage v d,
                           V.Singleton v,
-                          SB.BSum d, 
-                          V.Walker v,                          
-                          Ord d) => 
+                          SB.BSum d,
+                          V.Walker v,
+                          Ord d) =>
                          (SequData (PowerRecord id v d) , SequData (FlowRecord id v d)) ->
-                          TC Scalar (Typ A F Tt) (Data Nil d) -> 
-                          TC Scalar (Typ A T Tt) (Data Nil d) -> 
+                          TC Scalar (Typ A F Tt) (Data Nil d) ->
+                          TC Scalar (Typ A T Tt) (Data Nil d) ->
                           ((SequData (PowerRecord id v d), SequData (FlowRecord id v d)),
                           (SequData(PowerRecord id v d),  SequData (FlowRecord id v d)))
 
-{-
-separateMinorSections  (xs, ys, zs) (TC(Data energyThreshold)) (TC(Data timeThreshold)) = 
-  (filterSequWithSequData2 f (xs, ys, zs), filterSequWithSequData2 (not . f) (xs, ys, zs))
-   where  f (_, _ , Record time fMap) =  (any g (M.toList fMap) && h time)
-          g (_,s) = (abs (fromScalar $ sigSum s)) > energyThreshold
-          h time = (fromScalar (S.maximum time .- S.minimum time)) > timeThreshold
-
--}
-separateMinorSections (xs,ys) (TC(Data energyThreshold)) (TC(Data timeThreshold)) = partition2 f (xs,ys) 
-  where f (_,(Record time fMap)) =   (any g (M.toList fMap) && h time)
+separateMinorSections (xs,ys) (TC(Data energyThreshold)) (TC(Data timeThreshold)) = partition2 f (xs,ys)
+  where f (_,(Record time fMap)) =   (any g (M.toList fMap) || h time)
         g (_,s) = (abs (fromScalar $ sigSum s)) > energyThreshold
         h time = (fromScalar (S.maximum time .- S.minimum time)) > timeThreshold
-
-
--- TODO: Umschalten zwischen recFullIntegrate und recPartIntegrate.
---genSequFlow :: (SequData PowerRecord) -> SequData FlowRecord
---genSequFlow sqPRec = fmap recFullIntegrate sqPRec
-{-
--- makeSequence :: PowerRecord -> Topology -> ([Env rec (Scal (Typ UT UT UT) Val)], Topology)
-makeRecSequence ::
-   SequData (FlowRecord node v a) ->
-   SequData (Env Env.NoRecord
-       (TC
-          FSignal
-          (Typ UT UT UT)
-          (Data (UV.Vector :> Nil) Val)))
-makeRecSequence =
-   zipWithSecIdxs (flip fromFlowRecord (Idx.Record Idx.Absolute))
--}
 
 makeSeqFlowGraph ::
   (Fractional a,
@@ -250,27 +151,14 @@ makeSeqFlowTopology ::
    Flow.RangeGraph node
 makeSeqFlowTopology =
    Flow.mkSequenceTopology
-{-
+
 makeSequence ::
    (Show node, Ord node) =>
    PowerRecord node [] Val ->
    SequData (FlowRecord node [] Val)
 makeSequence =
-<<<<<<< HEAD
-    genSequFlow . snd . removeZeroTimeSections . genSequ . addZeroCrossings
+    genSequFlow . genSequ . addZeroCrossings
 
--- =======
-   genSequFlow . SD.filter Record.longerThanZero . genSequ . addZeroCrossings
-
->>>>>>> master
--}
-{-
--- | PG - Its better to have processing under controll in Top-Level for inspeting and debugging signal treatment
-makeSequenceRaw ::
-   (Show node, Ord node) => PowerRecord node [] Val ->
-   (Sequ, SequData (PowerRecord node [] Val))
-makeSequenceRaw = genSequ . addZeroCrossings
--}
 -----------------------------------------------------------------------------------
 {-
 ToDo:
@@ -647,13 +535,8 @@ sectionRecordsFromSequence rec = fmap (Record.slice rec)
 
 
 -- | Generate Time Signal with Sequence Number to allow Plotting
-{- <<<<<<< HEAD
 genSequenceSignal :: (V.FromList v, V.Storage v a, Num a) => Sequ -> S.UTSignal v a
-genSequenceSignal (SequData xs) = S.fromList $ concat $ fmap f xs
-======= -}
-genSequenceSignal :: (V.FromList v, V.Storage v a, Num a) => Sequ -> S.UTSignal v a 
 genSequenceSignal xs = S.fromList $ Fold.foldMap f xs
--- >>>>>>> master
   where
     f (idx1, idx2) = [1] ++ replicate (idx2-idx1-1) 0 ++ [-1]
 

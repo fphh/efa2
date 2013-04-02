@@ -88,15 +88,15 @@ unzip :: SequData (a, b) -> (SequData a, SequData b)
 unzip (SequData xs) =
    mapPair (SequData, SequData) $ List.unzip $
    map (\x -> (fmap fst x, fmap snd x)) xs
-   
-   
+
+
 zip :: SequData a -> SequData b -> SequData (a, b)
-zip (SequData xs) (SequData ys) = SequData $ List.zipWith f xs ys 
+zip (SequData xs) (SequData ys) = SequData $ List.zipWith f xs ys
   where
-    f (Section s1 r1 x1) (Section s2 r2 x2) = if s1==s2 || r1 ==r2  
+    f (Section s1 r1 x1) (Section s2 r2 x2) = if s1==s2 || r1 ==r2
                                                then (Section s1 r1 (x1,x2))
                                                     else error("SequenceData zip -- not same section or range")
-   
+
 
 mapWithSection :: (Idx.Section -> a -> b) -> SequData a -> SequData b
 mapWithSection f (SequData xs) =
@@ -138,10 +138,10 @@ partition2 f (xs,ys) = (filter2 f (xs,ys), filter2 (not . f) (xs,ys))
 {-
 -- | Filter Sequence and SequenceData with a Filterfunktion
 -- | Allows e.g. to filter Sequ, SeqPwrRecord, SequFlowRecord with FlowState
-filterSequWithSequData2 :: ((Section Range,Section a, Section b) -> Bool) -> 
-                           (SequData Range,SequData a,SequData b) -> 
+filterSequWithSequData2 :: ((Section Range,Section a, Section b) -> Bool) ->
+                           (SequData Range,SequData a,SequData b) ->
                            (SequData Range,SequData a,SequData b)
-filterSequWithSequData2 f (SequData xs, SequData ys, SequData zs) = 
+filterSequWithSequData2 f (SequData xs, SequData ys, SequData zs) =
   (SequData xsf, SequData ysf, SequData  zsf)
    where (xsf,ysf,zsf) = List.unzip4 $ filter f $ List.zip4 xs ys zs
 -}

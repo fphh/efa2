@@ -4,13 +4,6 @@
 
 module Modules.Analysis where
 
-{- <<<<<<< HEAD
-import EFA.Example.Utility (edgeVar, checkDetermined,
-                            (.=),
-                            (%=)
-                           )
-import qualified EFA.Example.Absolute as EqAbs
-======= -}
 ----------------------------------
 -- * Example Specific Imports
 import qualified Modules.System as System
@@ -23,8 +16,6 @@ import EFA.Example.Utility (edgeVar,
                             (.=),
                             (%=)
                            )
--- >>>>>>> master
-
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Result as R
@@ -36,7 +27,7 @@ import EFA.Equation.Result (Result(..))
 import EFA.Equation.Stack (Stack)
 
 import qualified EFA.Signal.SequenceData as SD
-import qualified EFA.Signal.Sequence as Seq
+--import qualified EFA.Signal.Sequence as Seq
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Vector as Vec
 import qualified EFA.Signal.Signal as Sig
@@ -45,7 +36,7 @@ import EFA.Signal.Record (PPosIdx(PPosIdx), SignalRecord, FlowRecord,
                           Record(Record), PowerRecord,
                           SignalRecord, getTime, newTimeBase, removeZeroNoise)
 
--- <<<<<<< HEAD
+
 import EFA.Signal.Sequence (-- genSequenceSignal,
                             -- removeLowEnergySections,
                             genSequFlow,
@@ -56,52 +47,40 @@ import EFA.Signal.Sequence (-- genSequenceSignal,
                             separateMinorSections
                            )
 
-import qualified EFA.Equation.Arithmetic as Arith
-import qualified EFA.Signal.Vector as Vec
+--import qualified EFA.Equation.Arithmetic as Arith
+--import qualified EFA.Signal.Vector as Vec
 import qualified EFA.Signal.Base as B
 
-import qualified EFA.Signal.Signal as Sig
-import EFA.Signal.Signal (TC(..), Scalar) 
+--import qualified EFA.Signal.Signal as Sig
+import EFA.Signal.Signal (TC(..), Scalar)
 import EFA.Signal.Data (Data(..), Nil)
 import EFA.Signal.Typ (Typ, F, T, A, Tt)
 
-import qualified EFA.Equation.Stack as Stack
-import EFA.Equation.Stack (Stack)
-
+--import qualified EFA.Equation.Stack as Stack
+--import EFA.Equation.Stack (Stack)
 --import qualified EFA.Report.Report as Rep
-
 --import EFA.Signal.Typ
-{-=======
-import EFA.Signal.Sequence (genSequenceSignal,
-                            genSequFlow, addZeroCrossings,
-                            genSequ,sectionRecordsFromSequence)
-
->>>>>>> master-}
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Flow as Flow
 import qualified Data.Map as M
 import Data.Monoid ((<>),mempty)
--- <<<<<<< HEAD
+
 import Data.Foldable (fold,
                       foldMap)
 
-import qualified EFA.Equation.Environment as Env
-import EFA.Equation.Result (Result(..))
-import qualified EFA.Signal.Record as Record
+--import qualified EFA.Equation.Environment as Env
+--import EFA.Equation.Result (Result(..))
+--import qualified EFA.Signal.Record as Record
 ----------------------------------
 -- * Example Specific Imports
-import qualified Modules.System as System
-import Modules.Signals as Signals
+--import qualified Modules.System as System
+--import Modules.Signals as Signals
 --import Modules.Plots as Plots
-import qualified EFA.Graph.Topology as TD
+--import qualified EFA.Graph.Topology as TD
 
-import qualified EFA.Equation.Record as EqRecord
-{-=======
-import Data.Foldable (fold, foldMap)
->>>>>>> master -}
-
+--import qualified EFA.Equation.Record as EqRecord
 
 
 -------------------------------------------------------------------------------------------------
@@ -138,21 +117,9 @@ pre topology rawSignals =  do
 ---------------------------------------------------------------------------------------
 -- * Cut Signals and filter on low time sektions
 
--- <<<<<<< HEAD
+
   let sequencePowers :: SD.SequData (PowerRecord System.Node [] Double)
       (sequencePowers) = genSequ powerSignals0
-
---  let (sequ,sequencePowers) = removeLowTimeSections(sequenceRaw,sequencePowersRaw) 0
-      
-{- =======
-  let sequencePowersRaw :: SD.SequData (PowerRecord System.Node [] Double)
-      sequencePowersRaw = genSequ powerSignals0
-
--- Rep.report [] ("Sequence", sequ)
-
-  let sequencePowers = SD.filter (Record.longerThan 0) sequencePowersRaw
-  --  let sequencePowers = removeZeroTimeSections sequencePowersRaw
->>>>>>> master -}
 
   -- create sequence signal
   -- let sequSig = Sig.scale (genSequenceSignal sequ) 10 :: Sig.UTSigL  --  (10  ^^ (-12::Int))
@@ -161,28 +128,18 @@ pre topology rawSignals =  do
 ---------------------------------------------------------------------------------------
 -- * Integrate Power and Sections on maximum Energyflow
 
--- <<<<<<< HEAD
+
   let sequenceFlows = genSequFlow sequencePowers
-{-
-  let (sequenceFilt,sequencePowersFilt,sequenceFlowsFilt) =
-        removeLowEnergySections (sequ,sequencePowers,sequenceFlows) 0
--} 
 
   let epsT ::  TC Scalar (Typ A T Tt) (Data Nil Double)
       epsT = Sig.toScalar 0
-  
+
       epsE ::  TC Scalar (Typ A F Tt) (Data Nil Double)
-      epsE = Sig.toScalar 100
-    
-      
+      epsE = Sig.toScalar 0
+
+
   let ((sequencePowersFilt,sequenceFlowsFilt),_) =
         separateMinorSections (sequencePowers,sequenceFlows) epsE epsT
-{- =======
-  let (sequencePowersFilt,sequenceFlowsFilt) =
-        SD.unzip $
-        SD.filter (not . Record.energyBelow 0 . snd) $
-        fmap (\x -> (x, Seq.recFullIntegrate x)) sequencePowers
->>>>>>> master -}
 
   let (flowStates, adjustedFlows) =
          SD.unzip $
@@ -196,41 +153,23 @@ pre topology rawSignals =  do
 
 -------------------------------------------------------------------------------------------------
 -- ## Analyse External Energy Flow
--- <<<<<<< HEAD
-{-
-external :: (Vec.Zipper v,
-             Vec.Walker v,
-             Vec.Singleton v,
-             Eq d,
-             Num d,
-             B.BSum d,
+
+external :: (Eq d, Num d,
              Arith.Product d,
              Arith.Integrate d,
-             Vec.Storage v d,
-             Vec.FromList v,
-             Arith.Scalar d ~ Double) =>
-            TD.SequFlowGraph System.Node
-            -> SD.SequData (FlowRecord System.Node v d) -- (Record s t2 t1 (PPosIdx System.Node)v d) -}
--- =======
-  
-external :: (Eq d, Num d, 
-             Arith.Product d, 
-             Arith.Integrate d, 
              Vec.Storage v d,
              Vec.Zipper v,
              Vec.Walker v,
              Vec.Singleton v,
-             B.BSum d, 
+             B.BSum d,
              Vec.FromList v, Arith.Scalar d ~ Double) =>
             Flow.RangeGraph System.Node
-            -> SD.SequData (FlowRecord System.Node v d) -- (Record s t2 t1 (PPosIdx System.Node) t d)
--- >>>>>>> master -}
+            -> SD.SequData (FlowRecord System.Node v d)
             -> Env.Complete
             System.Node
             (EqRecord.Absolute (Result Double))
             (EqRecord.Absolute (Result d))
 external sequenceFlowTopology sequFlowRecord =  EqGen.solveFromMeasurement sequenceFlowTopology $ makeGivenFromExternal Idx.Absolute sequFlowRecord
-
 
 initStorage :: (Fractional a) => a
 initStorage = 0.7*3600*1000
@@ -249,8 +188,8 @@ makeGivenFromExternal :: (Vec.Zipper v,
                           idx ~ EqRecord.ToIndex rec) =>
                          idx ->
                          SD.SequData (FlowRecord System.Node v d) ->
-                           -- (Record s t1 t2 (PPosIdx System.Node) v d)
-                         EqGen.EquationSystem rec System.Node s1 Double d
+                         EqGen.EquationSystem rec System.Node s Double d
+
 makeGivenFromExternal idx sf =
    (Idx.Record idx (Idx.Storage (Idx.initBndNode System.Battery)) .= initStorage)
    <> (Idx.Record idx (Idx.Storage (Idx.initBndNode System.VehicleInertia)) .= 0)
@@ -264,9 +203,9 @@ makeGivenFromExternal idx sf =
 -------------------------------------------------------------------------------------------------
 -- ## Predict Energy Flow
 
--- <<<<<<< HEAD
 prediction ::
-   (Eq v, Eq a, Fractional v, Fractional a,
+   (Eq v, Eq a,
+    Fractional v, Fractional a,
     Arith.Product a, Arith.Product v,
     Arith.Integrate v, Arith.Scalar v ~ a) =>
   Flow.RangeGraph System.Node ->
@@ -280,32 +219,15 @@ prediction sequenceFlowTopology env =
    EqGen.solve sequenceFlowTopology (makeGivenForPrediction Idx.Absolute env)
 
 makeGivenForPrediction ::
-   (Eq v, Eq a, Fractional v, Fractional a, Arith.Sum v, Arith.Sum a,
-    EqGen.Record rec, EqRecord.ToIndex rec ~ idx) =>
+   (Eq v, Eq a,
+    Fractional v, Fractional a,
+    Arith.Sum v, Arith.Sum a,
+    EqGen.Record rec,
+    EqRecord.ToIndex rec ~ idx) =>
    idx ->
    Env.Complete System.Node (rec (Result a)) (rec (Result v)) ->
    EqGen.EquationSystem rec System.Node s a v
-{-=======
--- prediction :: Flow.RangeGraph System.Node
---                              -> Env.Complete
---                                   System.Node
---                                   (Env.Absolute (Result Double))
---                                   (Env.Absolute (Result Double))
---                              -> Env.Complete
---                                   System.Node
---                                   (Env.Absolute (Result Double))
---                                   (Env.Absolute (Result Double))
 
-
-prediction sequenceFlowTopology env = EqGen.solve sequenceFlowTopology (makeGivenForPrediction Idx.Absolute env) 
-
--- makeGivenForPrediction ::
---    (EqGen.Record rec) =>
---    Env.RecordIndex rec ->
---    Env.Complete System.Node
---       (rec (EqGen.Result Double)) (rec (EqGen.Result Double)) ->
---    (EqGen.EquationSystem rec System.Node s Double Double)
->>>>>>> master -}
 makeGivenForPrediction idx env =
     (Idx.Record idx (Idx.Storage (Idx.initBndNode System.Battery)) .= initStorage)
     <> (Idx.Record idx (Idx.Storage (Idx.initBndNode System.VehicleInertia)) .= 0)
@@ -329,38 +251,22 @@ makeGivenForPrediction idx env =
 
 
 ---------------------------------------------------------------------------------------------------
--- <<<<<<< HEAD
 -- ## Make Delta
 
-delta :: (Vec.Zipper v1,
-          Vec.Walker v1,
-          Vec.Singleton v1,
-          Vec.Zipper v2,
-          Vec.Walker v2,
-          Vec.Singleton v2,
+delta :: (Vec.Zipper v1, Vec.Zipper v2,
+          Vec.Walker v1, Vec.Walker v2,
+          Vec.Singleton v1, Vec.Singleton v2,
+          Vec.Storage v1 d,Vec.Storage v2 d,
+          Vec.FromList v1,Vec.FromList v2,
           B.BSum d,
           Eq d,
           Num d,
           Arith.Product d,
           Arith.Integrate d,
-          Vec.Storage v1 d,
-          Vec.Storage v2 d,
-          Vec.FromList v1,
-          Vec.FromList v2,
           Arith.Scalar d ~ Double) =>
          Flow.RangeGraph System.Node
-         -> SD.SequData (FlowRecord System.Node v1 d)-- (Record s1 t1 t2 (PPosIdx System.Node) v1 d)
-         -> SD.SequData (FlowRecord System.Node v2 d) -- (Record s2 t3 t4 (PPosIdx System.Node) v2 d)
-{-=======
--- ## Make Delta 
-
-delta :: (Eq v, Num v, Arith.Product v, Arith.Integrate v, Vec.Storage t3 v,
-          Vec.Storage t v, Vec.FromList t3, Vec.FromList t,
-          Arith.Scalar v ~ Double) =>
-         Flow.RangeGraph System.Node
-         -> SD.SequData (Record s t2 t1 (PPosIdx System.Node) t v)
-         -> SD.SequData (Record s1 t5 t4 (PPosIdx System.Node) t3 v)
->>>>>>> master -}
+         -> SD.SequData (FlowRecord System.Node v1 d)
+         -> SD.SequData (FlowRecord System.Node v2 d)
          -> Env.Complete
          System.Node
          (EqRecord.Delta (Result Double))

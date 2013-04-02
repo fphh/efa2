@@ -24,9 +24,9 @@ import EFA.Utility.Async (concurrentlyMany_)
 import qualified Modules.System as System
 import qualified Modules.Analysis as Analysis
 import qualified Modules.Plots as Plots
-import qualified Modules.Signals as Signals
+-- import qualified Modules.Signals as Signals
 
-import qualified EFA.Signal.Plot as Plot
+-- import qualified EFA.Signal.Plot as Plot
 import qualified EFA.Graph.Topology.Index as Idx
 -- import qualified EFA.Equation.Environment as Env
 
@@ -44,42 +44,29 @@ import qualified EFA.Signal.Record as Record
 --import System.FilePath ((</>))
 import System.IO
 
--- <<<<<<< HEAD
 --import qualified Data.Map as M
 import qualified Data.List as L
 --import Data.Tuple.HT (mapFst)
-
+import Data.Tuple.HT (mapSnd)
 
 path :: FilePath
 path = "../../../../../data/examples/vehicle/"
 
 datasetsX:: [FilePath]
 
-{-
-datasetsX = ["Vehicle_res.plt",
-             "Vehicle_mass1050kg_res.plt",
-             "Vehicle_mass950kg_res.plt"]
--}
-
-datasetsX = ["Vehicle_mass900kg_res.plt",
+datasetsX = [-- "Vehicle_mass900kg_res.plt",
              "Vehicle_mass1000kg_res.plt",
              "Vehicle_mass1100kg_res.plt"]
 
 deltasets :: [String]  ->   [String]
+-- deltasets xs = zipWith (\x y -> y ++ "_vs_" ++ x) xs (tail xs)
 deltasets xs = zipWith (\x y -> y ++ "_vs_" ++ x) xs (tail xs)
-
 
 zipWith3M_ :: Monad m => (t -> t1 -> t2 -> m b) -> [t] -> [t1] -> [t2] -> m ()
 zipWith3M_ f x y z = mapM_ (\(x',y',z') -> f x' y' z') (zip3 x y z)
 
-{-=======
-import Data.Tuple.HT (mapSnd)
-
-
-dataset, datasetB :: FilePath
-dataset = "/home/felix/data/examples/vehicle/Vehicle_res.plt"
-datasetB = "/home/felix/data/examples/vehicle/Vehicle_mass1050kg_res.plt"
->>>>>>> master -}
+-- zipWith3M_ :: Monad m => (t -> t1 -> t2 -> m b) -> [t] -> [t1] -> [t2] -> m ()
+-- zipWith3M_ f x y z = mapM_ (\(x',y',z') -> f x' y' z') (zip3 x y z)
 
 main :: IO ()
 main = do
@@ -103,18 +90,10 @@ main = do
   preProcessedDataX <- mapM (Analysis.pre System.topology) rawSignalsX
 
   let (_,sequenceFlowsFiltX,flowStatesX,powerSignalsX,signalsX) = L.unzip5 preProcessedDataX
---  let (sequenceFiltX,sequencePowersFiltX,sequenceFlowsFiltX,flowStatesX,powerSignalsX,signalsX) = L.unzip6 preProcessedDataX
-  
-  
--- <<<<<<< HEAD
+--  let (sequencePowersFiltX,sequenceFlowsFiltX,flowStatesX,powerSignalsX,signalsX) = L.unzip5 preProcessedDataX
+
   let allSignalsX = zipWith Record.combinePowerAndSignal powerSignalsX signalsX
 
-  {-
-=======
-  (sequencePowersFilt,sequenceFlowsFilt,flowStates,powerSignals,signals) <- Analysis.pre System.topology rawSignals
-  (sequencePowersFiltB,sequenceFlowsFiltB,flowStatesB,powerSignalsB,signalsB) <- Analysis.pre System.topology rawSignalsB
->>>>>>> master
--}
 ---------------------------------------------------------------------------------------
 -- *  Generate Flow States as Graphs
 
@@ -123,25 +102,13 @@ main = do
 ---------------------------------------------------------------------------------------
 -- *  Generate Sequence Flow Graph
 
--- <<<<<<< HEAD
   let sequenceFlowTopologyX = map makeSeqFlowTopology flowToposX
 
 ---------------------------------------------------------------------------------------
 -- *  Section Flow States as Graphs
 
---  let sectionToposX =  map (lefilter (isStructureEdge .fst)) sequenceFlowTopologyX
+  let sectionToposX =  map (mapSnd (lefilter (isStructureEdge .fst))) sequenceFlowTopologyX
 
-{-=======
-  let sequenceFlowTopology = makeSeqFlowTopology flowTopos
-  let sequenceFlowTopologyB = makeSeqFlowTopology flowToposB
-
----------------------------------------------------------------------------------------
--- *  Section Flow States as Graphs
-  
-  let sectionTopos = mapSnd (lefilter (isStructureEdge .fst)) sequenceFlowTopology
-  let sectionToposB =  mapSnd (lefilter (isStructureEdge .fst)) sequenceFlowTopologyB
-      
->>>>>>> master -}
 ---------------------------------------------------------------------------------------
 -- *  Make Base Analysis on external Data
 
@@ -150,9 +117,16 @@ main = do
 ---------------------------------------------------------------------------------------
 -- *  Make the Deltas for subsequent Datasets
 
+--  let externalDeltaEnvX =
+--        zipWith (flip Analysis.delta (head sequenceFlowsFiltX))
+--                      sequenceFlowTopologyX $ tail sequenceFlowsFiltX
+
+
   let externalDeltaEnvX =
-        zipWith (flip Analysis.delta (head sequenceFlowsFiltX))
-                      sequenceFlowTopologyX $ tail sequenceFlowsFiltX
+        L.zipWith3  Analysis.delta sequenceFlowTopologyX
+        sequenceFlowsFiltX
+        (tail sequenceFlowsFiltX)
+
 
  ---------------------------------------------------------------------------------------
 -- *  Make the Prediction
@@ -166,23 +140,28 @@ main = do
 
 ---------------------------------------------------------------------------------------
 -- * Plot Stacks
- 
-{-  
-  mapM_ (Plots.stack  "Energy Flow Change at Tank in Section 4"
-         (Idx.Energy (Idx.StructureEdge (Idx.Section 4) System.Tank System.ConBattery)) 1 ) 
+
+
+  mapM_ (Plots.stack  "Energy Flow Change at Tank in Section 6"
+         (Idx.Energy (Idx.StructureEdge (Idx.Section 6) System.Tank System.ConBattery)) 1 )
     (zip (deltasets datasetsX) differenceExtEnvs)
--}
+
+
+
+{-
+  let energyIndex = (Idx.Energy (Idx.StructureEdge (Idx.Section 6) System.Tank System.ConBattery))
+
+--  print $ Plots.lookupStack energyIndex (last differenceExtEnvs)
 
   Plots.recordStackRow
-    "Energy Flow Change at Tank in Section 4" 
-    (Idx.Energy (Idx.StructureEdge (Idx.Section 4) System.Tank System.ConBattery)) 1 
+    "Energy Flow Change at Tank in Section 6"
+    energyIndex 0
     (zip (deltasets datasetsX) differenceExtEnvs)
-      
-{-      
+-}
 ---------------------------------------------------------------------------------------
 -- * Plot Time Signals
--}
 
+{-
   let plotList = [
                   ("Vehicle", Signals.vehicle),
                   ("DriveLine", Signals.driveline),
@@ -196,11 +175,11 @@ main = do
 
   -- Plots.sigsWithSpeed allSignalsX (head plotList)
   Plot.recordIO "Test" (head allSignalsX)
-
+-}
 
 ---------------------------------------------------------------------------------------
 -- * Plot Operation Points
-
+{-
   let xyList = [
                   ("Engine", Signals.xyEngine),
                   ("Generator", Signals.xyGenerator),
@@ -209,7 +188,7 @@ main = do
 
   mapM_ (Plots.operation "Operation Points -" (zip datasetsX allSignalsX)) xyList
 
-
+-}
 ---------------------------------------------------------------------------------------
 -- * Plot Efficiency Curves and Distributions
 
@@ -221,17 +200,19 @@ main = do
 
   concurrentlyMany_ [
     -- Topologie
---  Draw.topology System.topology --  Draw.topology2pdf System.topology
---  Draw.topologyWithEdgeLabels System.edgeNames System.topology
+--    Draw.topology System.topology, --  Draw.topology2pdf System.topology
+--    Draw.topologyWithEdgeLabels System.edgeNames System.topology,
 
     -- Sectionen
-    zipWith3M_ Draw.sequFlowGraphAbsWithEnv datasetsX sequenceFlowTopologyX externalEnvX,
+--    zipWith3M_ Draw.sequFlowGraphAbsWithEnv datasetsX sequenceFlowTopologyX externalEnvX,
+    concurrentlyMany_ $ L.zipWith3 Draw.sequFlowGraphAbsWithEnv datasetsX sectionToposX externalEnvX,
 
     -- Sections-Deltadiagramme
-    zipWith3M_ Draw.sequFlowGraphDeltaWithEnv datasetsX sequenceFlowTopologyX externalDeltaEnvX
+--    zipWith3M_ Draw.sequFlowGraphDeltaWithEnv (deltasets datasetsX) sequenceFlowTopologyX externalDeltaEnvX
+    concurrentlyMany_ $ L.zipWith3 Draw.sequFlowGraphDeltaWithEnv (deltasets datasetsX) sectionToposX externalDeltaEnvX
 
     -- Vorhersage
---    Draw.sequFlowGraphAbsWithEnv "Prediction" (head sectionToposX) prediction
+--    Draw.sequFlowGraphAbsWithEnv "Prediction" (head sequenceFlowTopologyX) prediction
     ]
 
 

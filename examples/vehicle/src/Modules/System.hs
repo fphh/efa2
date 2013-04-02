@@ -23,15 +23,9 @@ instance Node.C Node where
 topology :: TD.Topology Node
 topology = Gr.mkGraph ns (makeEdges es)
   where ns = [(Tank, TD.Source),
-{- <<<<<<< HEAD
               (ConBattery, TD.Crossing),
-              (Battery, TD.Storage),
-              (ConES, TD.Crossing),
-======= -}
-              (ConBattery, TD.Crossing), 
               (Battery, TD.storage),
-              (ConES, TD.Crossing),  
--- >>>>>>> master
+              (ConES, TD.Crossing),
               (ConFrontBrakes, TD.Crossing),
               (Chassis, TD.Crossing),
               (Resistance, TD.Sink),

@@ -133,18 +133,10 @@ instance Time RecList id where
 
 -- | Plot a SequenceRecord, each Section in a new Window
 instance Time Sq id where
-{- <<<<<<< HEAD
-           record2 optsIn (Sq (SequData sqRecList)) = (f opts)
-             where
-               opts = PlOpts.build optsIn
-               f a | PlOpts.splitAcc a == PlOpts.NoSplit = zipWithM_ (recordIO2 opts) wtitles (map (\x -> [x]) sqRecList)
-                 where wtitles = map (\x -> "Sec"++ show x) [(0 ::Int) ..]
-======= -}
            record2 optsIn (Sq sqRecList) = (f opts)
              where
                opts = PlOpts.build optsIn
                f a | PlOpts.splitAcc a == PlOpts.NoSplit = Fold.sequence_ $ SD.mapWithSection (recordIO2Sec opts) (fmap (\x -> [x]) sqRecList)
--- >>>>>>> master
                f _ | otherwise = error "Splitting not implemented for Sequence Records"
 
 
@@ -199,8 +191,8 @@ recordIO2 opts wtitle xs = void $ AGP.plot term $ frame $ Fold.fold $ zipWith (p
     term = PlOpts.buildTerminal wtitle opts
 
 recordIO2Sec :: (Terminal.C term,
-                 Ord a, 
-                 Show (v a), 
+                 Ord a,
+                 Show (v a),
                  SV.Singleton v,
                Ord id,
                Show id,

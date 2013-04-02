@@ -44,7 +44,7 @@ import qualified Data.Map as M
 --import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue)
 --import Data.Tuple.HT (mapFst)
-import qualified EFA.Example.AssignMap as AssignMap 
+import qualified EFA.Example.AssignMap as AssignMap
 
 --import Debug.Trace
 
@@ -69,8 +69,8 @@ operation :: (Fractional a, Ord id, Show (v a), Show id, V.Walker v,
               [Char]
               -> [([Char], Record s t1 t2 id v a)] -> ([Char], (id, id)) -> IO ()
 
-operation ti rList  (plotTitle, (idx,idy)) = mapM_ f rList 
-  where f (recTitle, rec) = do 
+operation ti rList  (plotTitle, (idx,idy)) = mapM_ f rList
+  where f (recTitle, rec) = do
           let x = getSig rec idx
               y = getSig rec idy
           Plot.xyIO (ti ++ "_" ++ plotTitle ++ "_" ++ recTitle) x y
@@ -80,9 +80,9 @@ operation ti rList  (plotTitle, (idx,idy)) = mapM_ f rList
 stack:: (Show a, Ord i, FormatValue i, TDNode.C a, Show i) =>
         String ->
         Idx.Energy a ->
-        Double ->         
+        Double ->
         (String, Env.Complete
-        a t (EqRecord.Absolute (Result.Result (Stack.Stack i Double)))) -> 
+        a t (EqRecord.Absolute (Result.Result (Stack.Stack i Double)))) ->
         IO ()
 stack ti energyIndex eps (recName,env) = do
 --               AssignMap.print $ lookupStack energyIndex env
@@ -114,7 +114,7 @@ recordStackRow:: (TDNode.C node, Ord node, Ord i, Show i, Show node, FormatValue
                                    t
                                    (EqRecord.Absolute (Result.Result (Stack.Stack i Double))))]
                             -> IO ()
-                            
+
 recordStackRow ti energyIndex eps envList = Plot.stacksIO ti valList
   where valList = map (\ (_,y) -> (Idx.delta $ Var.index energyIndex, AssignMap.threshold eps $ lookupStack energyIndex y)) envList
 
@@ -124,18 +124,18 @@ lookupStack:: (Ord i, Ord node, Show node) =>
                               -> Env.Complete
                                    node t (EqRecord.Absolute (Result.Result (Stack.Stack i a)))
                               -> M.Map (AssignMap.IndexSet i) a
-  
+
 lookupStack energyIndex env =  case M.lookup energyIndex (Env.energyMap signalEnv) of
     Nothing -> error (show energyIndex ++ "undefined")
     Just d ->
       case EqRecord.unAbsolute d of
         Result.Undetermined -> error (show energyIndex ++ "undetermined")
-        Result.Determined xs -> M.mapKeys AssignMap.indexSet $ 
+        Result.Determined xs -> M.mapKeys AssignMap.indexSet $
                              Stack.assignDeltaMap xs
-                             
-   where                         
+
+   where
         Env.Complete _scalarEnv signalEnv = env
-                             
- 
-                  
-                  
+
+
+
+
