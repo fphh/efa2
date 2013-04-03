@@ -155,12 +155,14 @@ type SequFlowGraph a = Graph (Idx.BndNode a) NodeType FlowDirection
 
 type DirSequFlowGraph a = Graph (Idx.BndNode a) NodeType ()
 
-pathExists :: (Eq a, Ord a) => a -> a -> FlowTopology a -> Bool
-pathExists _ _ topo | Gr.isEmpty topo = False
-pathExists a b _    | a == b = True 
-pathExists a b topo =
-   any (\e -> isDirEdge e && f (fst e)) $ Gr.lsuc topo a
-  where f x = pathExists x b $ Gr.delNode topo a
+pathExists :: (Ord a) => a -> a -> FlowTopology a -> Bool
+pathExists src dst =
+   let go a topo =
+          not (Gr.isEmpty topo) &&
+          (a==dst ||
+           (any (\e -> isDirEdge e && go (fst e) (Gr.delNode topo a)) $
+            Gr.lsuc topo a))
+   in  go src
 
 
 type InOut n el = ([Gr.LNode n el], [Gr.LNode n el])
