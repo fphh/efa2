@@ -1,12 +1,16 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE GADTs #-}
-module EFA.Equation.StackConsistent where
+module EFA.Equation.Consistent.Stack where
+
+import qualified EFA.Equation.Consistent.Dimension as Dim
+import EFA.Equation.Consistent.Dimension (switch)
 
 import qualified EFA.Graph.Topology.Index as Idx
 
-import qualified EFA.Equation.MultiValueConsistent as MV
+import qualified EFA.Equation.Consistent.MultiValue as MV
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic ((~+), (~-), (~*), (~/))
 import EFA.Utility (differenceMapSet)
@@ -28,31 +32,29 @@ import Data.Map (Map)
 import Data.Traversable (sequenceA)
 import Data.Foldable (Foldable, foldMap)
 import Data.Monoid ((<>))
-import Data.Tuple.HT (mapFst, mapSnd)
+import Data.Tuple.HT (mapFst)
 import Data.Maybe.HT (toMaybe)
 
 import qualified Prelude as P
-import Prelude hiding (recip, filter)
+import Prelude hiding (recip, filter, showsPrec)
 
 
 {- |
-This data structure is the same as in "EFA.Equation.StackConsistent"
+This data structure is the same as in "EFA.Equation.Stack"
 but we assert statically
 that the length of the list matches the depth of the tree.
 
 The indices must be in strictly ascending order.
 Unfortunately, we cannot assert this statically.
 -}
-data Stack i a = forall idx. List idx => Stack (idx i) (Sum idx a)
+data Stack i a = forall idx. Dim.C idx => Stack (idx i) (Sum idx a)
 
-data ExStack idx i a = ExStack (idx i) (Sum idx a)
-
-data Stack2 i a = forall idx. List idx => Stack2 (idx i) (Sum idx a) (Sum idx a)
-
-data ExStack2 idx i a = ExStack2 (idx i) (Sum idx a) (Sum idx a)
+data
+   ExStack idx i a =
+      ExStack {exStackIndices :: idx i, exStackSum :: Sum idx a}
 
 
-wrapStack :: List idx => ExStack idx i a -> Stack i a
+wrapStack :: Dim.C idx => ExStack idx i a -> Stack i a
 wrapStack (ExStack is s) = Stack is s
 
 
@@ -60,7 +62,7 @@ newtype Value a = Value a deriving (Show, Eq)
 data Plus sum a = Plus (sum a) (sum a) deriving (Eq)
 
 instance NonEmptyC.Show Value where
-   showsPrec = showsPrec
+   showsPrec = P.showsPrec
 
 instance NonEmptyC.Show sum => NonEmptyC.Show (Plus sum) where
    showsPrec prec (Plus a d) =
@@ -68,146 +70,120 @@ instance NonEmptyC.Show sum => NonEmptyC.Show (Plus sum) where
          showString "Plus " . NonEmptyC.showsPrec 11 a .
          showString " " . NonEmptyC.showsPrec 11 d
 
+
+
+showsPrecSum :: (Show i, Show a) => Int -> Stack i a -> ShowS
+showsPrecSum prec s =
+   case descent s of
+      Left a -> P.showsPrec prec a
+      Right (_, (a,d)) ->
+         showParen (prec>10) $
+            showString "Plus " . showsPrecSum 11 a .
+            showString " " . showsPrecSum 11 d
+
 instance (Show i, Show a) => Show (Stack i a) where
-   showsPrec prec (Stack is s) =
+   showsPrec prec s@(Stack is _) =
       showParen (prec>10) $
          showString "Stack " . NonEmptyC.showsPrec 11 is .
-         showString " " . NonEmptyC.showsPrec 11 s
+         showString " " . showsPrecSum 11 s
 
 
-class Applicative sum => SumC sum where
-   fold :: (a -> a -> a) -> sum a -> a
-   mulMatch :: (a -> a -> a) -> (a -> a -> a) -> sum a -> sum a -> sum a
 
-instance SumC Value where
-   fold _ (Value a) = a
-   mulMatch times _plus (Value x) (Value y) = Value (times x y)
-
-instance SumC sum => SumC (Plus sum) where
-   fold op (Plus a d) = fold op a `op` fold op d
-
-   mulMatch times plus (Plus x0 x1) (Plus y0 y1) =
-      Plus (mulMatch times plus x0 y0)
-         (liftA2 plus (mulMatch times plus x0 y1) $
-          mulMatch times plus x1 $ liftA2 plus y0 y1)
+type family Sum (idx :: * -> *) :: * -> *  -- must be removed
+type instance Sum Empty = Value
+type instance Sum (NonEmpty.T idx) = Plus (Sum idx)
 
 
-class
-   (NonEmptyC.Show idx, NonEmptyC.Show (Sum idx),
-    MV.List idx, SumC (Sum idx),
-    Foldable idx, NonEmpty.RemoveEach idx) =>
-      List idx where
-   type Sum idx :: * -> *
+newtype Cube idx a = Cube {unCube :: Sum idx a}
 
-   descentCore :: idx i -> Sum idx a -> Either a (i, Stack2 i a)
-   filterMask ::
-      (Ord i) => Map i Branch -> ExStack idx i a -> FilterMask idx
-   fillMask ::
-      (Ord i, List ridx) =>
-      ExStack idx i a -> ExStack ridx i a -> FillMask idx ridx i
-   fillValueMask ::
-      (Ord i) =>
-      ExStack Empty i a -> ExStack idx i a -> FillMask Empty idx i
-   fillPlusMask ::
-      (Ord i, List lidx) =>
-      ExStack (NonEmpty.T lidx) i a -> ExStack idx i a -> FillMask (NonEmpty.T lidx) idx i
-   shrinkStack :: ExStack idx i a -> [Stack i a]
-   shrinkValues ::
-      (QC.Arbitrary a) => ExStack idx i a -> [ExStack idx i a]
+cubeFromExStack :: ExStack idx i a -> Cube idx a
+cubeFromExStack (ExStack _is s) = Cube s
 
-   exToMultiValue ::
-      (a -> a -> a) -> ExStack idx i a -> MV.ExMultiValue idx i a
-   exFromMultiValue ::
-      (a -> a -> a) -> MV.ExMultiValue idx i a -> ExStack idx i a
+withCubeFromStack ::
+   (forall idx. Dim.C idx => Cube idx a -> b) -> Stack i a -> b
+withCubeFromStack f (Stack is s) = f (cubeFromExStack $ ExStack is s)
 
-instance List Empty where
-   type Sum Empty = Value
+exStackFromCube :: idx i -> Cube idx a -> ExStack idx i a
+exStackFromCube is (Cube s) = ExStack is s
 
-   descentCore Empty (Value a) = Left a
-   filterMask _cond _s = FilterMask TakeStop
-   fillMask = fillValueMask
-   fillValueMask _l _r = FillMask Empty FillStop FillStop
-   fillPlusMask (ExStack (NonEmpty.Cons i is) (Plus a0 _a1)) r =
-      case fillMask (ExStack is a0) r of
-         FillMask js lmask rmask ->
-            FillMask (i!:js) (FillTake lmask) (FillSkip rmask)
-   shrinkStack _ = []
-   shrinkValues (ExStack empty (Value x)) =
-      map (ExStack empty . Value) $ QC.shrink x
+stackFromCube :: Dim.C idx => idx i -> Cube idx a -> Stack i a
+stackFromCube is (Cube s) = Stack is s
 
-   exToMultiValue _plus (ExStack Empty (Value x)) =
-      MV.ExMultiValue Empty (MV.Leaf x)
-   exFromMultiValue _minus (MV.ExMultiValue Empty (MV.Leaf x)) =
-      ExStack Empty (Value x)
 
-instance (List idx) => List (NonEmpty.T idx) where
-   type Sum (NonEmpty.T idx) = Plus (Sum idx)
+newtype WrapCube a idx = WrapCube {unwrapCube :: Cube idx a}
 
-   descentCore (NonEmpty.Cons i is) (Plus a0 a1) =
-      Right (i, (Stack2 is a0 a1))
+newtype
+   WrapFunctor a b idx =
+      WrapFunctor {unwrapFunctor :: Cube idx a -> Cube idx b}
 
-   filterMask cond (ExStack (NonEmpty.Cons i is) (Plus a _d)) =
-      case filterMask cond (ExStack is a) of
-         FilterMask mask ->
-            case Map.lookup i cond of
-               Nothing -> FilterMask (TakeAll mask)
-               Just branch -> FilterMask (TakeOne branch mask)
+mapCubeValue :: (a -> b) -> Cube Empty a -> Cube Empty b
+mapCubeValue f = valueCube . f . valueFromCube
 
-   fillMask = fillPlusMask
+valueFromCube :: Cube Empty a -> a
+valueFromCube (Cube (Value a)) = a
 
-   fillValueMask l (ExStack (NonEmpty.Cons i is) (Plus a _d)) =
-      case fillMask l (ExStack is a) of
-         FillMask js lmask rmask ->
-            FillMask (i!:js) (FillSkip lmask) (FillTake rmask)
-   fillPlusMask a b =
-      let (i,a0) = leftStack a
-          (j,b0) = leftStack b
-      in  case compare i j of
-             EQ ->
-                case fillMask a0 b0 of
-                   FillMask ks lmask rmask ->
-                      FillMask (i!:ks) (FillTake lmask) (FillTake rmask)
-             LT ->
-                case fillMask a0 b  of
-                   FillMask ks lmask rmask ->
-                      FillMask (i!:ks) (FillTake lmask) (FillSkip rmask)
-             GT ->
-                case fillMask a  b0 of
-                   FillMask ks lmask rmask ->
-                      FillMask (j!:ks) (FillSkip lmask) (FillTake rmask)
+splitCube ::
+   Cube (NonEmpty.T idx) a -> (Cube idx a, Cube idx a)
+splitCube (Cube (Plus a d)) = (Cube a, Cube d)
 
-   shrinkStack (ExStack it (Plus a0 a1)) =
-      concatMap (\(_,is) -> [Stack is a0, Stack is a1]) $
-      Fold.toList $ NonEmpty.removeEach it
+valueCube :: a -> Cube Empty a
+valueCube a = Cube $ Value a
 
-   shrinkValues x =
-      case splitPlus x of
-         (i, (a0,a1)) ->
-            map (flip (exPlus i) a1) (shrinkValues a0)
-            ++
-            map (exPlus i a0) (shrinkValues a1)
+plusCube ::
+   Cube idx a -> Cube idx a ->
+   Cube (NonEmpty.T idx) a
+plusCube (Cube a) (Cube d) = Cube (Plus a d)
 
-   exToMultiValue plus (ExStack (NonEmpty.Cons i is) (Plus a0 b0)) =
-      case (exToMultiValue plus (ExStack is a0),
-            exToMultiValue plus (ExStack is b0)) of
-         (MV.ExMultiValue js a1, MV.ExMultiValue _js b1) ->
-            MV.ExMultiValue (i!:js) (MV.Branch a1 (liftA2 plus b1 a1))
-   exFromMultiValue minus (MV.ExMultiValue (NonEmpty.Cons i is) (MV.Branch a0 b0)) =
-      case (exFromMultiValue minus (MV.ExMultiValue is a0),
-            exFromMultiValue minus (MV.ExMultiValue is b0)) of
-         (ExStack js a1, ExStack _js b1) ->
-            ExStack (i!:js) (Plus a1 (liftA2 minus b1 a1))
+instance Dim.C idx => Functor (Cube idx) where
+   fmap f =
+      unwrapFunctor $
+      switch
+         (WrapFunctor $ mapCubeValue f)
+         (WrapFunctor $ \x ->
+            case splitCube x of
+               (a,d) -> plusCube (fmap f a) (fmap f d))
 
+
+newtype
+   WrapApply a b c idx =
+      WrapApply {unwrapApply :: Cube idx a -> Cube idx b -> Cube idx c}
+
+
+instance Dim.C idx => Applicative (Cube idx) where
+   pure a =
+      unwrapCube $
+      switch
+         (WrapCube $ valueCube a)
+         (WrapCube $ (\c -> plusCube c c) $ pure a)
+   (<*>) =
+      unwrapApply $
+      switch
+         (WrapApply $ \f a -> valueCube $ (valueFromCube f) (valueFromCube a))
+         (WrapApply $ \f a ->
+            case (splitCube f, splitCube a) of
+               ((fa,fd), (aa,ad)) -> plusCube (fa<*>aa) (fd<*>ad))
 
 
 instance Functor (Stack i) where
-   fmap f (Stack is s) = Stack is (fmap f s)
+   fmap f (Stack is s) =
+      case ExStack is s of
+         x -> stackFromCube is . fmap f . cubeFromExStack $ x
 
 instance Functor Value where
    fmap f (Value a) = Value (f a)
 
 instance Functor sum => Functor (Plus sum) where
    fmap f (Plus a0 a1) = Plus (fmap f a0) (fmap f a1)
+
+
+newtype
+   WrapExStack i a idx =
+      WrapExStack {unwrapExStack :: ExStack idx i a}
+
+instance (Dim.C idx) => Functor (ExStack idx i) where
+   fmap f s =
+      exStackFromCube (exStackIndices s) $
+      fmap f $ cubeFromExStack s
 
 
 instance Applicative Value where
@@ -220,8 +196,8 @@ instance Applicative sum => Applicative (Plus sum) where
 
 
 instance FormatValue a => FormatValue (Stack i a) where
-   formatValue (Stack _ s) =
-      fold Format.plus . fmap formatValue $ s
+   formatValue =
+      withCubeFromStack (fold Format.plus . fmap formatValue)
 
 {- |
 The index function must generate an index list with ascending index order.
@@ -236,19 +212,39 @@ mapIndicesMonotonic g (Stack is s) =
          else error "Stack.mapIndicesMonotonic: non-monotonic index function"
 
 
+newtype Index f i idx = Index {runIndex :: idx i -> f idx}
+
+switchIndex ::
+   (Dim.C idx) =>
+   (Empty i -> f Empty) ->
+   (forall didx. Dim.C didx => NonEmpty.T didx i -> f (NonEmpty.T didx)) ->
+   idx i -> f idx
+switchIndex f g =
+   runIndex $ switch (Index f) (Index g)
+
+
+newtype
+   Switch i a x idx =
+      Switch {runSwitch :: ExStack idx i a -> x}
+
+switchStack ::
+   (ExStack Empty i a -> x) ->
+   (forall didx. Dim.C didx =>
+    ExStack (NonEmpty.T didx) i a -> x) ->
+   Stack i a -> x
+switchStack f g (Stack is s) =
+   runSwitch
+      (switch (Switch f) (Switch g))
+      (ExStack is s)
+
+
 descent :: Stack i a -> Either a (i, (Stack i a, Stack i a))
-descent (Stack is x) = fmap (mapSnd splitStack2) $ descentCore is x
+descent =
+   switchStack
+      (\(ExStack Empty (Value a)) -> Left a)
+      (\(ExStack (NonEmpty.Cons i is) (Plus x y)) ->
+          Right (i, (Stack is x, Stack is y)))
 
-exDescent :: ExStack (NonEmpty.T idx) i a -> (i, (ExStack idx i a, ExStack idx i a))
-exDescent (ExStack (NonEmpty.Cons i is) (Plus a0 a1)) =
-   (i, (ExStack is a0, ExStack is a1))
-
-splitStack2 :: Stack2 i a -> (Stack i a, Stack i a)
-splitStack2 (Stack2 is x y) = (Stack is x, Stack is y)
-
-leftStack :: ExStack (NonEmpty.T idx) i a -> (i, ExStack idx i a)
-leftStack (ExStack (NonEmpty.Cons i is) (Plus a0 _a1)) =
-   (i, ExStack is a0)
 
 eqRelaxed :: (Ord i, Eq a, Num a) => Stack i a -> Stack i a -> Bool
 eqRelaxed =
@@ -265,6 +261,67 @@ eqRelaxed =
    in  go
 
 
+newtype
+   FillLeftMask ridx i lidx =
+      FillLeftMask {getFillLeftMask :: FillMask lidx ridx i}
+
+fillMask ::
+   (Ord i, Dim.C lidx, Dim.C ridx) =>
+   lidx i -> ridx i -> FillMask lidx ridx i
+fillMask l r =
+   getFillLeftMask $
+   switchIndex
+      (\is -> FillLeftMask $ fillValueMask is r)
+      (\is -> FillLeftMask $ fillPlusMask is r)
+      l
+
+
+newtype
+   FillRightMask lidx i ridx =
+      FillRightMask {getFillRightMask :: FillMask lidx ridx i}
+
+fillValueMask ::
+   (Ord i, Dim.C idx) =>
+   Empty i -> idx i -> FillMask Empty idx i
+fillValueMask l =
+   getFillRightMask .
+   switchIndex
+      (\empty -> FillRightMask $ FillMask empty FillStop FillStop)
+      (\(NonEmpty.Cons i is) ->
+         FillRightMask $
+         case fillMask l is of
+            FillMask js lmask rmask ->
+               FillMask (i!:js) (FillSkip lmask) (FillTake rmask))
+
+
+fillPlusMask ::
+   (Ord i, Dim.C lidx, Dim.C ridx) =>
+   (NonEmpty.T lidx) i -> ridx i -> FillMask (NonEmpty.T lidx) ridx i
+fillPlusMask it@(NonEmpty.Cons i is) =
+   getFillRightMask .
+   switchIndex
+      (\empty ->
+         FillRightMask $
+         case fillMask is empty of
+            FillMask js lmask rmask ->
+               FillMask (i!:js) (FillTake lmask) (FillSkip rmask))
+      (\jt@(NonEmpty.Cons j js) ->
+         FillRightMask $
+         case compare i j of
+            EQ ->
+               case fillMask is js of
+                  FillMask ks lmask rmask ->
+                     FillMask (i!:ks) (FillTake lmask) (FillTake rmask)
+            LT ->
+               case fillMask is jt of
+                  FillMask ks lmask rmask ->
+                     FillMask (i!:ks) (FillTake lmask) (FillSkip rmask)
+            GT ->
+               case fillMask it js of
+                  FillMask ks lmask rmask ->
+                     FillMask (j!:ks) (FillSkip lmask) (FillTake rmask))
+
+
 data FillStop      = FillStop
 data FillTake rest = FillTake rest
 data FillSkip rest = FillSkip rest
@@ -277,43 +334,66 @@ data
          FillMask (idx i) lmask rmask
 
 class
-   (List (FillToIndex mask), List (FillFromIndex mask)) => Fill mask where
+   (Dim.C (FillToIndex mask), Dim.C (FillFromIndex mask)) => Fill mask where
    type FillFromIndex mask :: * -> *
    type FillToIndex mask :: * -> *
    fill ::
       (a -> a) ->
       mask ->
       Sum (FillFromIndex mask) a ->
-      Sum (FillToIndex mask) a
+      Cube (FillToIndex mask) a
 
 instance Fill FillStop where
    type FillFromIndex FillStop = Empty
    type FillToIndex FillStop = Empty
-   fill _clear FillStop (Value x) = Value x
+   fill _clear FillStop x = Cube x
 
 instance Fill mask => Fill (FillTake mask) where
    type FillFromIndex (FillTake mask) = NonEmpty.T (FillFromIndex mask)
    type FillToIndex (FillTake mask) = NonEmpty.T (FillToIndex mask)
    fill clear (FillTake mask) (Plus x y) =
-      Plus (fill clear mask x) (fill clear mask y)
+      plusCube (fill clear mask x) (fill clear mask y)
 
 instance Fill mask => Fill (FillSkip mask) where
    type FillFromIndex (FillSkip mask) = FillFromIndex mask
    type FillToIndex (FillSkip mask) = NonEmpty.T (FillToIndex mask)
    fill clear (FillSkip mask) x =
       let y = fill clear mask x
-      in  Plus y (fmap clear y)
+      in  plusCube y (fmap clear y)
+
 
 add ::
    (Ord i) =>
    (a -> a -> a) -> (a -> a) ->
    Stack i a -> Stack i a -> Stack i a
-add plus clear (Stack is x0) (Stack js y0) =
-   let x = ExStack is x0
-       y = ExStack js y0
-   in  case fillMask x y of
-          FillMask ks lmask rmask ->
-             Stack ks (liftA2 plus (fill clear lmask x0) (fill clear rmask y0))
+add plus clear (Stack is x) (Stack js y) =
+   case fillMask is js of
+      FillMask ks lmask rmask ->
+         stackFromCube ks $
+         liftA2 plus (fill clear lmask x) (fill clear rmask y)
+
+
+newtype
+   CubeFunc2 i a idx =
+      CubeFunc2 {runCubeFunc2 :: Cube idx a -> Cube idx a -> Cube idx a}
+
+mulMatch ::
+   Dim.C idx =>
+   (a -> a -> a) -> (a -> a -> a) ->
+   Cube idx a -> Cube idx a -> Cube idx a
+mulMatch times plus =
+   runCubeFunc2 $
+   switch
+      (CubeFunc2 $ liftA2 times)
+      (CubeFunc2 $ \x y ->
+         case (splitCube x, splitCube y) of
+            ((x0, x1), (y0, y1)) ->
+               plusCube
+                  (mulMatch times plus x0 y0)
+                  (liftA2 plus (mulMatch times plus x0 y1) $
+                   mulMatch times plus x1 $
+                   liftA2 plus y0 y1))
+
 
 {-
 A more efficient solution would not need 'clear'.
@@ -323,16 +403,16 @@ mul ::
    (Ord i) =>
    (a -> a -> a) -> (a -> a -> a) -> (a -> a) ->
    Stack i a -> Stack i a -> Stack i a
-mul times plus clear (Stack is x0) (Stack js y0) =
-   let x = ExStack is x0
-       y = ExStack js y0
-   in  case fillMask x y of
-          FillMask ks lmask rmask ->
-             Stack ks (mulMatch times plus (fill clear lmask x0) (fill clear rmask y0))
+mul times plus clear (Stack is x) (Stack js y) =
+   case fillMask is js of
+      FillMask ks lmask rmask ->
+         stackFromCube ks $
+         mulMatch times plus
+            (fill clear lmask x) (fill clear rmask y)
 
 instance (Ord i, Num a) => Num (Stack i a) where
    fromInteger = singleton . fromInteger
-   negate (Stack is s) = Stack is $ fmap negate s
+   negate = fmap negate
    (+) = add (+) (const 0)
    (*) = mul (*) (+) (const 0)
 
@@ -366,7 +446,7 @@ instance (Ord i, Fractional a) => Fractional (Stack i a) where
 
 
 instance (Ord i, Arith.Sum a) => Arith.Sum (Stack i a) where
-   negate (Stack is s) = Stack is $ fmap Arith.negate s
+   negate = fmap Arith.negate
    (~+) = add (~+) Arith.clear
 
 instance (Ord i, Arith.Product a) => Arith.Product (Stack i a) where
@@ -390,7 +470,7 @@ instance (Ord i, Arith.Constant a) => Arith.Constant (Stack i a) where
 
 instance (Ord i, Arith.Integrate v) => Arith.Integrate (Stack i v) where
    type Scalar (Stack i v) = Stack i (Arith.Scalar v)
-   integrate (Stack is a) = Stack is $ fmap Arith.integrate a
+   integrate = fmap Arith.integrate
 
 
 singleton :: a -> Stack i a
@@ -412,21 +492,34 @@ splitPlus ::
 splitPlus (ExStack (NonEmpty.Cons i is) (Plus a0 a1)) =
    (i, (ExStack is a0, ExStack is a1))
 
+
+newtype Fold a idx = Fold {unfold :: Cube idx a -> a}
+
+fold :: (Dim.C idx) => (a -> a -> a) -> Cube idx a -> a
+fold op =
+   unfold $
+   switch
+      (Fold valueFromCube)
+      (Fold $ \x ->
+         case splitCube x of
+            (a,d) -> fold op a `op` fold op d)
+
+
 -- could be a simple Semigroup.Foldable.head if it would exist
 absolute :: Stack i a -> a
-absolute (Stack _ s) = fold const s
+absolute = withCubeFromStack (fold const)
 
 normalize :: (Arith.Product a) => Stack i a -> Stack i a
 normalize s = fmap (~/ absolute s) s
 
 
-toList :: SumC sum => sum a -> NonEmpty.T [] a
+toList :: Dim.C idx => Cube idx a -> NonEmpty.T [] a
 toList = fold NonEmpty.append . fmap NonEmpty.singleton
 
 {- |
 You may use 'Data.Foldable.sum' for evaluation with respect to 'Num' class.
 -}
-evaluate :: (SumC sum, Arith.Sum a) => sum a -> a
+evaluate :: (Dim.C idx, Arith.Sum a) => Cube idx a -> a
 evaluate = fold (~+)
 
 
@@ -502,7 +595,7 @@ data
       forall mask. (idx ~ FilterFromIndex mask, Filter mask) =>
          FilterMask mask
 
-class (List (FilterToIndex mask), List (FilterFromIndex mask)) => Filter mask where
+class (Dim.C (FilterToIndex mask), Dim.C (FilterFromIndex mask)) => Filter mask where
    type FilterFromIndex mask :: * -> *
    type FilterToIndex mask :: * -> *
    exFilter ::
@@ -531,6 +624,18 @@ instance Filter mask => Filter (TakeOne mask) where
          Delta  -> exFilter mask (ExStack is d)
 
 
+filterMask ::
+   (Dim.C idx, Ord i) => Map i Branch -> idx i -> FilterMask idx
+filterMask cond =
+   switchIndex
+      (\Empty -> FilterMask TakeStop)
+      (\(NonEmpty.Cons i is) ->
+         case filterMask cond is of
+            FilterMask mask ->
+               case Map.lookup i cond of
+                  Nothing -> FilterMask (TakeAll mask)
+                  Just branch -> FilterMask (TakeOne branch mask))
+
 {- |
 The naive implementation ignores indices
 that are in the condition map but not in the stack.
@@ -541,11 +646,33 @@ but also re-declares @delta@ branches as @before@ branches.
 -}
 filterNaive :: (Ord i) => Map i Branch -> Stack i a -> Stack i a
 filterNaive cond (Stack is s) =
-   case ExStack is s of
-      x ->
-         case filterMask cond x of
-            FilterMask mask -> wrapStack $ exFilter mask x
+   case filterMask cond is of
+      FilterMask mask -> wrapStack $ exFilter mask $ ExStack is s
 
+
+newtype
+   ExToMultiValue i a idx =
+      ExToMultiValue {
+         runExToMultiValue :: ExStack idx i a -> MV.ExMultiValue idx i a
+      }
+
+exToMultiValue ::
+   (Dim.C idx) =>
+   (a -> a -> a) -> ExStack idx i a -> MV.ExMultiValue idx i a
+exToMultiValue plus =
+   runExToMultiValue $
+   switch
+      (ExToMultiValue $ \(ExStack Empty (Value x)) ->
+         MV.ExMultiValue Empty (MV.Leaf x))
+      (ExToMultiValue $ \x ->
+         case splitPlus x of
+            (i, (a,d)) ->
+               case (exToMultiValue plus a,
+                     exToMultiValue plus $
+                        exStackFromCube (exStackIndices a) $
+                        liftA2 plus (cubeFromExStack a) (cubeFromExStack d)) of
+                  (MV.ExMultiValue js a1, MV.ExMultiValue _js d1) ->
+                     MV.ExMultiValue (i!:js) (MV.Branch a1 d1))
 
 toMultiValue :: Arith.Sum a => Stack i a -> MV.MultiValue i a
 toMultiValue = toMultiValueGen (~+)
@@ -558,10 +685,50 @@ toMultiValueGen plus (Stack is s) =
    case exToMultiValue plus (ExStack is s) of
       MV.ExMultiValue js tree -> MV.MultiValue js tree
 
+
+
+newtype
+   ExFromMultiValue i a idx =
+      ExFromMultiValue {
+         runExFromMultiValue :: MV.ExMultiValue idx i a -> ExStack idx i a
+      }
+
+exFromMultiValue ::
+   (Dim.C idx) =>
+   (a -> a -> a) -> MV.ExMultiValue idx i a -> ExStack idx i a
+exFromMultiValue minus =
+   runExFromMultiValue $
+   switch
+      (ExFromMultiValue $
+       \(MV.ExMultiValue Empty (MV.Leaf x)) -> ExStack Empty (Value x))
+      (ExFromMultiValue $
+       \(MV.ExMultiValue (NonEmpty.Cons i is) (MV.Branch a0 b0)) ->
+         case (cubeFromExStack $ exFromMultiValue minus (MV.ExMultiValue is a0),
+               cubeFromExStack $ exFromMultiValue minus (MV.ExMultiValue is b0)) of
+            (a1, b1) ->
+               exStackFromCube (i!:is) (plusCube a1 (liftA2 minus b1 a1)))
+
+{- |
+Generate a Sum from a MultiValue
+representing the right-most value from the MultiValue
+where the first summand is the left-most value from the MultiValue.
+-}
+fromMultiValue :: Arith.Sum a => MV.MultiValue i a -> Stack i a
+fromMultiValue = fromMultiValueGen (~-)
+
+fromMultiValueNum :: Num a => MV.MultiValue i a -> Stack i a
+fromMultiValueNum = fromMultiValueGen (-)
+
+fromMultiValueGen :: (a -> a -> a) -> MV.MultiValue i a -> Stack i a
+fromMultiValueGen minus (MV.MultiValue indices tree) =
+   case exFromMultiValue minus (MV.ExMultiValue indices tree) of
+      ExStack is s -> Stack is s
+
+
 liftMultiValue ::
    (a -> a -> a) ->
    (b -> b -> b) ->
-   (a -> b) -> Stack t a -> Stack t b
+   (a -> b) -> Stack i a -> Stack i b
 liftMultiValue plus minus f (Stack is s) =
    wrapStack $ exFromMultiValue minus $
    fmap f $ exToMultiValue plus (ExStack is s)
@@ -577,11 +744,40 @@ assigns s =
             (fmap (mapFst (Idx.delta  i :)) $ assigns a1)
 
 
+shrinkStack :: Stack i a -> [Stack i a]
+shrinkStack =
+   switchStack
+      (const [])
+      (\(ExStack it (Plus a0 a1)) ->
+         concatMap (\(_,is) -> [Stack is a0, Stack is a1]) $
+         Fold.toList $ NonEmpty.removeEach it)
+
+
+newtype
+   Shrink i a idx =
+      Shrink {runShrink :: ExStack idx i a -> [ExStack idx i a]}
+
+shrinkValues ::
+   (Dim.C idx, QC.Arbitrary a) =>
+   ExStack idx i a -> [ExStack idx i a]
+shrinkValues =
+   runShrink $
+   switch
+      (Shrink $
+       \(ExStack Empty (Value a)) ->
+           map (ExStack Empty . Value) $ QC.shrink a)
+      (Shrink $ \x ->
+         case splitPlus x of
+            (i, (a0,a1)) ->
+               map (flip (exPlus i) a1) (shrinkValues a0)
+               ++
+               map (exPlus i a0) (shrinkValues a1))
+
 instance
    (QC.Arbitrary i, Ord i, QC.Arbitrary a, Arith.Sum a) =>
       QC.Arbitrary (Stack i a) where
 
-   shrink (Stack it tree) =
-      shrinkStack (ExStack it tree)
+   shrink s@(Stack it tree) =
+      shrinkStack s
       ++
       map wrapStack (shrinkValues (ExStack it tree))
