@@ -34,7 +34,7 @@ import qualified EFA.Signal.Signal as Sig
 
 import EFA.Signal.Record (PPosIdx(PPosIdx), SignalRecord, FlowRecord,
                           Record(Record), PowerRecord,
-                          SignalRecord, getTime, newTimeBase, removeZeroNoise)
+                          SignalRecord, getTime, newTimeBase)
 
 
 import EFA.Signal.Sequence (-- genSequenceSignal,
@@ -106,7 +106,7 @@ pre topology rawSignals =  do
 -- * Condition Signals, Calculate Powers, Remove ZeroNoise
 
   let signals = Signals.condition rawSignals
-  let powerSignals = removeZeroNoise (Signals.calculatePower signals) (10^^(-2::Int))
+  let powerSignals = Record.removeZeroNoise (10^^(-2::Int)) (Signals.calculatePower signals)
 
 ---------------------------------------------------------------------------------------
 -- * Add zerocrossings in Powersignals and Signals
