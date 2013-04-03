@@ -159,9 +159,7 @@ pathExists :: (Eq a, Ord a) => a -> a -> FlowTopology a -> Bool
 pathExists _ _ topo | Gr.isEmpty topo = False
 pathExists a b _    | a == b = True 
 pathExists a b topo = any f s
-  where s = map fst $ filter q $ Gr.lsuc topo a
-        q (_, Dir) = True
-        q _ = False
+  where s = map fst $ filter isDirEdge $ Gr.lsuc topo a
         f x = pathExists x b (Gr.delNode topo a)
 
 
