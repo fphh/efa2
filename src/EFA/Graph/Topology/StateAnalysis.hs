@@ -16,8 +16,9 @@ module EFA.Graph.Topology.StateAnalysis (
    ) where
 
 import qualified EFA.Graph as Gr
+import qualified EFA.Graph.Topology as Topo
 import EFA.Graph.Topology
-          (FlowTopology, Topology, NodeType(..),
+          (FlowTopology, Topology,
            FlowDirection(UnDir, Dir), isActive)
 import EFA.Utility (mapFromSet)
 
@@ -43,16 +44,19 @@ import qualified Test.QuickCheck as QC
 
 -- import Debug.Trace
 
+
+type NodeType = Topo.NodeType ()
+
 -- How should it be orderd to be faster?
 checkNodeType :: NodeType -> Bool -> Bool -> Bool
-checkNodeType Crossing sucActive preActive = sucActive == preActive
-checkNodeType NoRestriction _ _ = True
-checkNodeType Source _ False = True
-checkNodeType AlwaysSource True False = True
-checkNodeType Sink False _ = True
-checkNodeType AlwaysSink False True = True
-checkNodeType DeadNode False False = True
-checkNodeType Storage _ _ = True
+checkNodeType Topo.Crossing sucActive preActive = sucActive == preActive
+checkNodeType Topo.NoRestriction _ _ = True
+checkNodeType Topo.Source _ False = True
+checkNodeType Topo.AlwaysSource True False = True
+checkNodeType Topo.Sink False _ = True
+checkNodeType Topo.AlwaysSink False True = True
+checkNodeType Topo.DeadNode False False = True
+checkNodeType (Topo.Storage _) _ _ = True
 checkNodeType _ _ _ = False
 
 -- Because of extend, we only do have to deal with Dir edges here!
@@ -74,14 +78,14 @@ implies x y = not x || y
 checkIncompleteNodeType :: NodeType -> Bool -> Bool -> Bool -> Bool
 checkIncompleteNodeType typ complete sucActive preActive =
    case typ of
-      Crossing -> complete `implies` sucActive == preActive
-      Source -> not preActive
-      AlwaysSource -> not preActive && (complete `implies` sucActive)
-      Sink -> not sucActive
-      AlwaysSink -> not sucActive && (complete `implies` preActive)
-      Storage -> True
-      NoRestriction -> True
-      DeadNode -> not sucActive && not preActive
+      Topo.Crossing -> complete `implies` sucActive == preActive
+      Topo.Source -> not preActive
+      Topo.AlwaysSource -> not preActive && (complete `implies` sucActive)
+      Topo.Sink -> not sucActive
+      Topo.AlwaysSink -> not sucActive && (complete `implies` preActive)
+      Topo.Storage _ -> True
+      Topo.NoRestriction -> True
+      Topo.DeadNode -> not sucActive && not preActive
 
 checkCountNode :: (Ord node) => CountTopology node -> node -> Bool
 checkCountNode topo x =

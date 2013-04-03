@@ -9,10 +9,18 @@ trim:
 	done
 
 testgit:
+	(export EFA=$$PWD && cd /tmp/ && git clone $$EFA efatest &&
+	 cabal install --enable-documentation --disable-shared --disable-library-profiling efatest/ &&
+	 rm -r efatest/)
+
+testgit-first:
 	(export EFA=$$PWD && cd /tmp/ && git clone $$EFA efatest && cabal install --enable-documentation --disable-shared --disable-library-profiling efatest/)
 
 testgit-again:
 	(export EFA=$$PWD && cd /tmp/efatest/ && git pull $$EFA && cabal build && cabal haddock)
+
+testgit-revert:
+	(cd /tmp/efatest/ && git reset HEAD^ && git checkout -f)
 
 ghci:
 	ghci -i:src:test -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs demo/numericSolving/Main.hs

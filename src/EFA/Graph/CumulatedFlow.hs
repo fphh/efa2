@@ -1,3 +1,4 @@
+-- {-# LANGUAGE FlexibleContexts #-}
 
 
 module EFA.Graph.CumulatedFlow where
@@ -16,7 +17,6 @@ import qualified EFA.Equation.Record as Rec
 import EFA.Equation.Result (Result(..))
 
 
-
 filt :: 
   (Ord node, Eq node, Show node) =>
   Gr.Graph (Idx.BndNode node) nl el ->
@@ -27,6 +27,7 @@ filt = Gr.lefilter (TD.isStructureEdge . fst)
 data RelativeDir = WithTopoDir
                  | AgainstTopoDir deriving (Eq, Show)
 
+
 getRelativeDir ::
   (Ord x) =>
   TD.Topology x -> Gr.Edge x -> RelativeDir
@@ -36,6 +37,8 @@ getRelativeDir (Gr.Graph _ es) e =
      else if M.member (Gr.reverseEdge e) es
              then AgainstTopoDir
              else error "getTopologyDir: edge not found"
+
+--relativeDirToFlowDir :: 
 
 
 -- Are edges in SequFlowGraph always Dir?
@@ -89,19 +92,20 @@ reverseGraph (Gr.Graph ns es) = Gr.Graph ns' es'
 
 getStorages :: (Ord node) => TD.Topology node -> [node]
 getStorages = M.keys . M.filter p . Gr.nodes
-  where p (_, TD.Storage, _) = True
+  where p (_, TD.Storage _, _) = True
         p _ = False
 
 cumulatedEnv :: 
   (Ord node) =>
   TD.Topology node ->
   Env.EnergyMap node (Rec.Absolute (Result a))
-  -> Env.Complete node (Rec.Absolute (Result a1)) (Rec.Absolute (Result a))
-cumulatedEnv topo env = env1 <> env2
+  -> ( TD.SequFlowGraph node,
+       Env.Complete node (Rec.Absolute (Result a1)) (Rec.Absolute (Result a)))
+cumulatedEnv topo enEnv = (ctopo, env)
   where env1 =
           mempty {
             Env.signal = mempty { 
-            Env.energyMap = env,
+            Env.energyMap = enEnv,
             Env.dtimeMap =
               M.fromList [ (Idx.DTime (Idx.Section 0),
                             Rec.Absolute Undetermined) ] }}
@@ -114,21 +118,24 @@ cumulatedEnv topo env = env1 <> env2
         sm = map f (getStorages topo)
         f s = ( Idx.Storage (Idx.BndNode sec s),
                 Rec.Absolute Undetermined )
+        env = env1 <> env2
+        ctopo = TD.fromTopology $
+                  TD.classifyStorages $
+                  Gr.emap (const TD.Dir) topo
 
 
 cumulate ::
-  (Num a, Ord c, Show c) =>
-  TD.Topology c ->
-  Gr.Graph (Idx.BndNode c) t TD.FlowDirection ->
-  Env.Complete c b (Rec.Absolute (Result a)) ->
-  ( ( TD.SequFlowGraph c,
-        Env.Complete c (Rec.Absolute (Result d)) (Rec.Absolute (Result a))),
-    ( TD.SequFlowGraph c,
-        Env.Complete c (Rec.Absolute (Result e)) (Rec.Absolute (Result a))))
-cumulate topo seqTopo env =
-  ( (TD.fromTopology  topo, withDirEnv),
-    (TD.fromTopology  revTopo, againstDirEnv) )
+  (Num a, Ord node, Show node) =>
+  TD.Topology node ->
+  (t1, Gr.Graph (Idx.BndNode node) t TD.FlowDirection) ->
+  Env.Complete node b (Rec.Absolute (Result a)) ->
+  ( ( (t1, TD.SequFlowGraph node),
+       Env.Complete node (Rec.Absolute (Result a1)) (Rec.Absolute (Result a))),
+    ( (t1, TD.SequFlowGraph node),
+      Env.Complete node (Rec.Absolute (Result a2)) (Rec.Absolute (Result a))))
+cumulate topo (rngs, seqTopo) env =
+  ( ((rngs, ctopo), withDirEnv), ((rngs, crevTopo), againstDirEnv) )
   where revTopo = reverseGraph topo
         (withDir, againstDir) = cumulatedEnergyFlow topo seqTopo env
-        withDirEnv = cumulatedEnv topo withDir
-        againstDirEnv = cumulatedEnv revTopo againstDir
+        (ctopo, withDirEnv) = cumulatedEnv topo withDir
+        (crevTopo, againstDirEnv) = cumulatedEnv revTopo againstDir

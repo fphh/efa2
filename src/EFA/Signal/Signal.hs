@@ -248,8 +248,9 @@ infix 6 .+,.-
 
 infix 7 &*, &/
 infix 6 &+, &-
+
 ----------------------------------------------------------
--- New Synonyms           ] 
+-- New Synonyms           ]
 
 type UTSignal v a = TC Signal (Typ UT UT UT) (Data (v :> Nil) a)
 type TSignal v a = TC Signal (Typ A T Tt) (Data (v :> Nil) a)
@@ -329,7 +330,7 @@ type PSamp = TC Sample (Typ A P Tt) (DVal Val)
 
 
 -- #######################
--- Flow Signals 
+-- Flow Signals
 
 -- time
 type DTFSig = FSig1 (Typ D T Tt) Val
@@ -484,7 +485,7 @@ unzip ::
    TC s typ (Data c (d1,d2)) ->
    (TC s typ (Data c d1),TC s typ (Data c d2))
 unzip x = (map P.fst x, map P.snd x)
-                               
+
 ---------------------------------------------------------
 -- SMap
 map ::
@@ -581,7 +582,7 @@ instance (SFold Scalar (Data Nil) d1 d2) => TFold Scalar s2 (Data Nil) c2 d1 d2 
    tfoldl f a x = toScalar $ foldl g (fromScalar a) x where g a x = fromScalar $ f (toScalar a) (unpack x)
 -}
 
-{-  
+{-
 ----------------------------------------------------------
 -- Head & Tail
 
@@ -794,33 +795,33 @@ sortTwo (TC x, TC y) =
 
 -- DeltaSig Signal FSignal (Data (v1 :> Nil)) A D Val =>
 -- | Partial Signal Integration
-sigPartInt ::  (SV.Zipper v1,
+partIntegrate ::  (SV.Zipper v1,
                 SV.Walker v1,
                 SV.Singleton v1,
-                BSum d1, 
-                BProd d1 d1, 
-                Num d1, 
+                BSum d1,
+                BProd d1 d1,
+                Num d1,
                 SV.Storage v1 d1) =>
-               TC Signal (Typ A T Tt) (Data (v1 :> Nil) d1) -> 
-               TC Signal (Typ A P Tt) (Data (v1 :> Nil) d1) -> 
+               TC Signal (Typ A T Tt) (Data (v1 :> Nil) d1) ->
+               TC Signal (Typ A P Tt) (Data (v1 :> Nil) d1) ->
                TC FSignal (Typ A F Tt) (Data (v1 :> Nil) d1)
-sigPartInt time power = (deltaSig time) .* (avSig power)
+partIntegrate time power = (deltaSig time) .* (avSig power)
 -- czipWith (*) dTime $ D.map (\ p1 p2 -> (p1+p2)/2) power
 
 
 -- | Partial Signal Integration
-sigFullInt ::   (SV.FromList v1,
-                 SV.Zipper v1, 
-                 SV.Walker v1, 
-                 SV.Storage v1 d1, 
+fullIntegrate ::   (SV.FromList v1,
+                 SV.Zipper v1,
+                 SV.Walker v1,
+                 SV.Storage v1 d1,
                  SV.Singleton v1,
                  Num d1,
                  BSum d1,
-                 BProd d1 d1) => 
-                TC Signal (Typ A T Tt) (Data (v1 :> Nil) d1) -> 
-                TC Signal (Typ A P Tt) (Data (v1 :> Nil) d1) -> 
-                TC FSignal (Typ A F Tt) (Data (v1 :> Nil) d1)
-sigFullInt time power = fromList [fromScalar $ sigSum $ sigPartInt time power]
+                 BProd d1 d1) =>
+                TC Signal (Typ A T Tt) (Data (v1 :> Nil) d1) ->
+                TC Signal (Typ A P Tt) (Data (v1 :> Nil) d1) ->
+                TC Scalar (Typ A F Tt) (Data Nil d1)
+fullIntegrate time power = sigSum $ partIntegrate time power
 
 -- csingleton (cfoldr (+) 0  $ czipWith (*) dTime $ D.map (\ p1 p2 -> (p1+p2)/2) power)
 
@@ -904,15 +905,36 @@ sign ::
    (D.Map c, D.Storage c d, D.Storage c B.Sign, Ord d, Num d, Fractional d) =>
    TC s typ (Data c d) -> TC s (Typ A SZ UT) (Data c B.Sign)
 sign x = changeType $ map B.sign x
+
+
+abs :: (Num d, D.Storage c d, D.Map c)  => TC s t (Data c d) -> TC s t (Data c d)
+abs x = map P.abs x
+
+
+hasSignChange :: (SV.Storage v1 B.Sign,
+                  SV.Walker v1,
+                  SV.Storage v1 d,
+                  SV.Singleton v1,
+                  TailType s,
+                  Fractional d,
+                  Ord d) =>
+                 TC s typ (Data (v1 :> Nil) d) -> Bool
+hasSignChange x = P.not $ all (P.== hss) $ sign x
+  where (TC (Data hss)) = hs
+        hs = case viewL x of
+          P.Just (h,_) -> sign h
+          P.Nothing -> error "Empty Signal in Signal.consistentSign"
+
+
 {-
 sign x = changeType $ map f x
          where f x = if x > 10^(-12) then 1
                                      else if x < -10^(-12) then -1
                                                            else 0
-                                                          
+
 sign x = changeType $ map f x
   where f x = if B.abs x > 10^(-12) then B.sign x else B.sign 0
--}      
+-}
 
 untuple ::
    TC Sample typ (Data Nil (d,d)) ->
@@ -924,6 +946,24 @@ maximum, minimum ::
    TC s typ (Data c d) -> TC Scalar typ (Data Nil d)
 maximum (TC x) = TC $ Data $ D.maximum x
 minimum (TC x) = TC $ Data $ D.minimum x
+
+
+-- | fit Signal range from 0 to 1 // ..*
+norm ::  (Eq d,
+          D.Map c,
+          Num d,
+          Fractional d,
+          Ord d,
+          D.Storage c d,
+          D.Maximum c) =>
+         TC s typ (Data c d) -> TC s typ (Data c d)
+norm x =  if max P./= min
+          then  map (\y -> (y P.-min) P./ (max P.- min)) x
+               else map (\ _ -> min) x
+
+          where (TC (Data max)) = maximum x
+                (TC (Data min)) = minimum x
+
 
 equalBy ::
    (SV.Walker v, SV.Storage v a, SV.Storage v b) =>
@@ -951,6 +991,8 @@ makeAbsolute (TC x) = TC x
 
 reverse :: (D.Reverse c, D.Storage c d) => TC s t (Data c d) ->  TC s t (Data c d)
 reverse (TC x) = TC $ D.reverse x
+
+
 
 ----------------------------------------------------------
 -- Report instances
@@ -1148,74 +1190,74 @@ instance
 
 findIndex ::  (SV.Storage v1 d1, SV.Find v1) => (d1 -> Bool) -> TC s1 t1 (Data (v1 :> Nil) d1) -> Maybe Int
 findIndex f (TC xs) = D.findIndex f xs
-        
-        
-interp1Lin :: (Eq d1, 
-               Fractional d1, 
-               Num d1, 
-               Ord d1, 
-               SV.Storage v1 d1, 
+
+
+interp1Lin :: (Eq d1,
+               Fractional d1,
+               Num d1,
+               Ord d1,
+               SV.Storage v1 d1,
                SV.Find v1,
-               SV.Singleton v1, 
-               SV.Lookup v1) => 
-              TC Signal t1 (Data (v1 :> Nil) d1) ->  
-              TC Signal t2 (Data (v1 :> Nil) d1) ->  
-              TC Sample t1 (Data Nil d1) -> 
+               SV.Singleton v1,
+               SV.Lookup v1) =>
+              TC Signal t1 (Data (v1 :> Nil) d1) ->
+              TC Signal t2 (Data (v1 :> Nil) d1) ->
+              TC Sample t1 (Data Nil d1) ->
               TC Sample t2 (Data Nil d1)
 interp1Lin xSig ySig (TC (Data xVal)) = if x1 P.== x2 then TC $ Data $ (y1 P.+y2) P./2 else TC $ Data $ ((y2 P.- y1) P./(x2 P.-x1)) P.* (xVal P.- x1) P.+ y1
-                where                                                                
-                  idx = P.maybe (error "Out of Range") id $ findIndex (P.>= xVal) xSig  
+                where
+                  idx = P.maybe (error "Out of Range") id $ findIndex (P.>= xVal) xSig
                   TC (Data (x1)) = getSample xSig $ if idx P.== 0 then idx else idx-1 -- prevent negativ index when interpolating on first element
                   TC (Data (x2)) = getSample xSig idx
                   TC (Data (y1)) = getSample ySig $ if idx P.== 0 then idx else idx-1 -- prevent negativ index when interpolating on first element
                   TC (Data (y2)) = getSample ySig idx
 
 
-getSample ::  (SV.Singleton v1, 
-               Eq d1, 
-               SV.Storage v1 d1, 
-               SV.Lookup v1) => 
-              TC Signal t1 (Data (v1 :> Nil) d1) -> 
-              Int ->  
+getSample ::  (SV.Singleton v1,
+               Eq d1,
+               SV.Storage v1 d1,
+               SV.Lookup v1) =>
+              TC Signal t1 (Data (v1 :> Nil) d1) ->
+              Int ->
               TC Sample t1 (Data Nil d1)
 getSample x idx = P.fst $ P.maybe (error "Error in EFA.Signal.Signal/getSample - Empty List") id $ viewL $ subSignal1D x [idx]
 
 
 -- | get a signal slice with startIndex and Number of elements
 slice ::  (SV.Slice v1, SV.Storage v1 d1) => Int -> Int -> TC s1 t1 (Data (v1 :> Nil) d1) -> TC s1 t1 (Data (v1 :> Nil) d1)
-slice start num (TC x) = TC $ D.slice start num x  
+slice start num (TC x) = TC $ D.slice start num x
 
 
--- | Interpolate an x-y - Lookup-Curve with a signal. Also can be used to resample a signal with a new time vector 
-interp1LinSig ::  (Eq d1, 
-                     Fractional d1, 
-                     Num d1, 
-                     Ord d1, 
-                     SV.Storage v1 d1, 
+-- | Interpolate an x-y - Lookup-Curve with a signal. Also can be used to resample a signal with a new time vector
+interp1LinSig ::  (Eq d1,
+                     Fractional d1,
+                     Num d1,
+                     Ord d1,
+                     SV.Storage v1 d1,
                      SV.Find v1,
-                     SV.Singleton v1, 
-                     SV.Lookup v1, 
-                     SV.Walker v1) => 
-                   TC Signal t1 (Data (v1 :> Nil) d1) ->  
-                   TC Signal t2 (Data (v1 :> Nil) d1) ->  
-                   TC Signal t1 (Data (v1 :> Nil) d1) -> 
+                     SV.Singleton v1,
+                     SV.Lookup v1,
+                     SV.Walker v1) =>
+                   TC Signal t1 (Data (v1 :> Nil) d1) ->
+                   TC Signal t2 (Data (v1 :> Nil) d1) ->
+                   TC Signal t1 (Data (v1 :> Nil) d1) ->
                    TC Signal t2 (Data (v1 :> Nil) d1)
 interp1LinSig xSig ySig xSigLookup = tmap f xSigLookup
-  where f x = interp1Lin xSig ySig x 
+  where f x = interp1Lin xSig ySig x
 
 -- | Scale Signal by a given Number
 scale ::  (BProd d1 d1, D.Map c1, D.Storage c1 d1) => TC s1 t1 (Data c1 d1) -> d1 ->  TC s1 t1 (Data c1 d1)
-scale x fact = map (fact ..*) x 
+scale x fact = map (fact ..*) x
 
 -- | Scale Signal by a given Number
 offset ::  (BSum d1, D.Map c1, D.Storage c1 d1) => TC s1 t1 (Data c1 d1) -> d1 ->  TC s1 t1 (Data c1 d1)
-offset x offs = map (offs ..+) x 
+offset x offs = map (offs ..+) x
 
 
 -- | Reshape 2d to 1d
 concat ::   (SV.Storage v2 (v1 (Apply c d)),
              SV.Storage v1 (Apply c d),
-             SV.Singleton v1, 
-             SV.FromList v2) =>             
+             SV.Singleton v1,
+             SV.FromList v2) =>
            TC s t (Data (v2 :> v1 :> c) d) -> TC s t (Data (v1 :> c) d)
 concat (TC x) = TC (D.concat x) 

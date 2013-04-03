@@ -30,6 +30,15 @@ instance Enum Boundary where
 initial :: Boundary
 initial = Initial
 
+afterSection :: Section -> Boundary
+afterSection = AfterSection
+
+beforeSection :: Section -> Boundary
+beforeSection s =
+   if s == Section 0
+     then Initial
+     else AfterSection (pred s)
+
 
 data Absolute = Absolute deriving (Show, Eq, Ord)
 
@@ -72,6 +81,16 @@ initBndNode = BndNode Initial
 
 afterSecNode :: Section -> node -> BndNode node
 afterSecNode s = BndNode (AfterSection s)
+
+bndNodeFromSecNode :: SecNode node -> BndNode node
+bndNodeFromSecNode (SecNode sec node) =
+   BndNode (AfterSection sec) node
+
+secNodeFromBndNode :: BndNode node -> Maybe (SecNode node)
+secNodeFromBndNode (BndNode bnd node) =
+   case bnd of
+      Initial -> Nothing
+      AfterSection sec -> Just (SecNode sec node)
 
 
 
@@ -141,7 +160,9 @@ data Storage node = Storage !(BndNode node) deriving (Show, Ord, Eq)
 
 data Direction = In | Out deriving (Show, Eq, Ord)
 
-data Sum node = Sum !Direction !(BndNode node) deriving (Show, Ord, Eq)
+data Sum node = Sum !Direction !(SecNode node) deriving (Show, Ord, Eq)
+
+data StSum node = StSum !Direction !(BndNode node) deriving (Show, Ord, Eq)
 
 
 -- * Other indices

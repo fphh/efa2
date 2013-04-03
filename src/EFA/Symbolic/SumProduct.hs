@@ -229,7 +229,7 @@ format f =
              Just mp ->
                 case c of
                    1 -> mp
-                   -1 -> Format.minus mp
+                   -1 -> Format.negate mp
                    _ -> Format.multiply (ratio c) mp
 
        ratio x =

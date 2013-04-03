@@ -6,12 +6,12 @@ module Main where
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Sequence as Sequ
 
-import EFA.Signal.SequenceData (Sequ,SequData)
+import EFA.Signal.SequenceData (SequData)
 import EFA.Signal.Record
           (PPosIdx(PPosIdx), PowerRecord, Record(Record))
 
-         
-          
+
+
 import EFA.Signal.Signal (PSigL, (.++))
 import EFA.Signal.Base (Val)
 import qualified EFA.Signal.Plot as Plot
@@ -58,9 +58,8 @@ pRec, pRec0 :: (PowerRecord Int [] Val)
 pRec = Record (S.fromList time) pMap
 pRec0 = Sequ.addZeroCrossings pRec
 
-sequ :: Sequ
 sequRecA, sequRecB :: SequData (PowerRecord Int [] Val)
-(sequ,sequRecA) = Sequ.genSequ pRec0
+sequRecA = Sequ.genSequ pRec0
 
 sequRecB = Sequ.chopAtZeroCrossingsPowerRecord pRec
 
@@ -70,8 +69,6 @@ main = do
   print time
   print pRec
   print pRec0
-
-  print sequ
 
   Plot.recordIO "PowerRecord" pRec
   Plot.sequenceIO "SequA" sequRecA

@@ -48,8 +48,8 @@ topoDreibein = Gr.mkGraph ns (makeEdges es)
   where ns = [(node0, TD.Source),
               (node1, TD.Sink),
               (node2, TD.Crossing),
-              (node3, TD.Storage)]
-        es = [(node0, node2), (node2, node1), (node2, node3)]
+              (node3, TD.storage)]
+        es = [(node0, node2), (node1, node2), (node2, node3)]
 
 given :: EqGen.EquationSystem Node s Double Double
 given =
@@ -96,7 +96,8 @@ main = do
 
   let seqTopo = constructSeqTopo topoDreibein [1, 0, 1]
       env = EqGen.solve seqTopo given
-      (with, against) = cumulate topoDreibein seqTopo env
+      (with, against) =
+        cumulate topoDreibein seqTopo env
 
   concurrentlyMany_ [
     Draw.sequFlowGraphAbsWithEnv "" seqTopo env,

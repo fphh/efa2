@@ -1,18 +1,20 @@
 module EFA.Graph.Topology (
-       NLabel (..), LNode,
+       NLabel (..), LNode, LDirNode, StNode,
        LEdge, LDirEdge,
-       NodeType (..),
+       NodeType (..), storage,
        EdgeType (..),
        FlowDirection (..),
        EdgeLabel,
        FlowDirectionField, getFlowDirection,
        Topology,
        FlowTopology,
+       ClassifiedTopology,
        SequFlowGraph,
        DirSequFlowGraph,
        pathExists,
        fromTopology,
        isStorage,
+       maybeStorage,
        isActive,
        isInactive,
        isActiveEdge,
@@ -24,40 +26,68 @@ module EFA.Graph.Topology (
        defaultNLabel,
        InOut,
        StoreDir(..),
-       getActiveStores) where
+       classifyStorages,
+       ) where
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph as Gr
-import EFA.Graph (Graph, mkInOutGraphFormat)
+import EFA.Graph (Graph)
 
-import qualified Test.QuickCheck as QC
-import qualified Data.Map as M
-import Control.Monad (mplus)
 import Data.Maybe.HT (toMaybe)
 import Data.Tuple.HT (snd3)
+import Control.Monad (mplus)
+
+import qualified Test.QuickCheck as QC
 
 
-type LNode a = Gr.LNode (Idx.BndNode a) NodeType
+type LNode a = Gr.LNode (Idx.BndNode a) (NodeType ())
 type LEdge a = Gr.LEdge (Idx.BndNode a) FlowDirection
+type LDirNode a = Gr.LNode (Idx.BndNode a) (NodeType (Maybe StoreDir))
 type LDirEdge a = Gr.LEdge (Idx.BndNode a) ()
+type StNode store a = Gr.LNode (Idx.BndNode a) (NodeType store)
 
-data NodeType = Storage
-              | Sink
-              | AlwaysSink
-              | Source
-              | AlwaysSource
-              | Crossing
-              | DeadNode
-              | NoRestriction deriving (Show, Ord, Eq)
+data
+   NodeType a =
+        Storage a
+      | Sink
+      | AlwaysSink
+      | Source
+      | AlwaysSource
+      | Crossing
+      | DeadNode
+      | NoRestriction
+      deriving (Show, Eq, Ord)
 
-isStorage :: NodeType -> Bool
+instance Functor NodeType where
+   fmap f typ =
+      case typ of
+         Storage a     -> Storage $ f a
+         Sink          -> Sink
+         AlwaysSink    -> AlwaysSink
+         Source        -> Source
+         AlwaysSource  -> AlwaysSource
+         Crossing      -> Crossing
+         DeadNode      -> DeadNode
+         NoRestriction -> NoRestriction
+
+storage :: NodeType ()
+storage = Storage ()
+
+
+isStorage :: NodeType sl -> Bool
 isStorage nt =
    case nt of
-      Storage -> True
+      Storage _ -> True
       _ -> False
 
+maybeStorage :: NodeType sl -> Maybe sl
+maybeStorage nt =
+   case nt of
+      Storage x -> Just x
+      _ -> Nothing
 
-newtype NLabel = NLabel { nodeType :: NodeType } deriving (Show, Eq, Ord)
+
+newtype NLabel = NLabel { nodeType :: NodeType () } deriving (Show, Eq, Ord)
 
 defaultNLabel :: NLabel
 defaultNLabel = NLabel NoRestriction
@@ -155,17 +185,25 @@ isDirEdge = dir . getFlowDirection . snd
         dir _ = False
 -}
 
-type Topology a = Graph a NodeType ()
+type Topology a = Graph a (NodeType ()) ()
 
-type FlowTopology a = Graph a NodeType FlowDirection
+type FlowTopology a = Graph a (NodeType ()) FlowDirection
 
-type SequFlowGraph a = Graph (Idx.BndNode a) NodeType FlowDirection
+type
+   ClassifiedTopology a =
+      Graph a (NodeType (Maybe StoreDir)) FlowDirection
 
-type DirSequFlowGraph a = Graph (Idx.BndNode a) NodeType ()
+type
+   SequFlowGraph a =
+      Graph (Idx.BndNode a) (NodeType (Maybe StoreDir)) FlowDirection
+
+type
+   DirSequFlowGraph a =
+      Graph (Idx.BndNode a) (NodeType (Maybe StoreDir)) ()
 
 pathExists :: (Eq a, Ord a) => a -> a -> FlowTopology a -> Bool
 pathExists _ _ topo | Gr.isEmpty topo = False
-pathExists a b _    | a == b = True 
+pathExists a b _    | a == b = True
 pathExists a b topo = any f s
   where s = map fst $ filter q $ Gr.lsuc topo a
         q (_, Dir) = True
@@ -183,8 +221,8 @@ instance FromTopology Topology SequFlowGraph where
                  nf = Idx.BndNode (Idx.AfterSection (Idx.Section 0))
 -}
 
-
-fromTopology :: (Ord a) => Topology a -> SequFlowGraph a
+-- name conflict with Equation.System.fromTopology?
+fromTopology :: (Ord a) => ClassifiedTopology a -> SequFlowGraph a
 fromTopology = Gr.ixmap nf . Gr.emap ef
   where ef = const Dir
         nf = Idx.BndNode (Idx.AfterSection (Idx.Section 0))
@@ -192,24 +230,18 @@ fromTopology = Gr.ixmap nf . Gr.emap ef
 
 type InOut n el = ([Gr.LNode n el], [Gr.LNode n el])
 
-isStorageNode :: (a, (b, NodeType), c) -> Bool
+isStorageNode :: (a, (b, NodeType sl), c) -> Bool
 isStorageNode = isStorage . snd . snd3
 
 
--- | Active storages, grouped by storage number, sorted by section number.
-getActiveStores ::
+classifyStorages ::
    (FlowDirectionField el, Ord node) =>
-   Graph node NodeType el ->
-   M.Map node (InOut node el, Maybe StoreDir)
-getActiveStores =
-   M.fromListWith
-      (error "the same storage multiple times in a section") .
-   map
-      (\(pre, (n, _nt), suc) ->
-         (n, let inout = (pre, suc)
-             in  (inout, maybeActiveSt inout))) .
-   filter isStorageNode .
-   mkInOutGraphFormat
+   Graph node (NodeType ()) el ->
+   Graph node (NodeType (Maybe StoreDir)) el
+classifyStorages =
+   Gr.nmapWithInOut
+      (\(pre, (_n, nt), suc) ->
+         fmap (\() -> maybeActiveSt (pre, suc)) nt)
 
 -- | Classify the storages in in and out storages,
 -- looking only at edges, not at values.
@@ -226,10 +258,18 @@ maybeActiveSt (ins, outs) =
 data StoreDir = In | Out deriving (Eq, Show)
 
 
-instance QC.Arbitrary NodeType where
+class StorageLabel a where
+   arbitraryStorageLabel :: QC.Gen a
+
+instance StorageLabel () where
+   arbitraryStorageLabel = return ()
+
+
+instance StorageLabel a => QC.Arbitrary (NodeType a) where
    arbitrary =
-      QC.oneof $ map return $
-         Storage :
+      QC.oneof $
+      (fmap Storage arbitraryStorageLabel :) $
+      map return $
          Sink :
          AlwaysSink :
          Source :

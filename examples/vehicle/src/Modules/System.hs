@@ -23,16 +23,16 @@ instance Node.C Node where
 topology :: TD.Topology Node
 topology = Gr.mkGraph ns (makeEdges es)
   where ns = [(Tank, TD.Source),
-              (ConBattery, TD.Crossing), 
-              (Battery, TD.Storage),
-              (ConES, TD.Crossing),  
+              (ConBattery, TD.Crossing),
+              (Battery, TD.storage),
+              (ConES, TD.Crossing),
               (ConFrontBrakes, TD.Crossing),
               (Chassis, TD.Crossing),
               (Resistance, TD.Sink),
               (ElectricSystem, TD.Sink),      -- vehicle electric system
               (FrontBrakes, TD.Sink),
               (RearBrakes, TD.Sink),
-              (VehicleInertia, TD.Storage)]
+              (VehicleInertia, TD.storage)]
 
         --extract edge Info
         es = map f edgeList
@@ -63,9 +63,9 @@ powerPositonNames = M.fromList $ concat $ map f edgeList
   where f (n1,n2,_,l1,l2) = [(PPosIdx n1 n2, SigId l1),
                              (PPosIdx n2 n1, SigId l2)]
 showPowerId :: PPosIdx Node -> String
-showPowerId ppos = f (M.lookup  ppos powerPositonNames)   
-  where 
-    f (Just pid) = show pid 
+showPowerId ppos = f (M.lookup  ppos powerPositonNames)
+  where
+    f (Just pid) = show pid
     f Nothing = (show ppos)
 
 

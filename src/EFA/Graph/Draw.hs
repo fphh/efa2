@@ -8,7 +8,7 @@ module EFA.Graph.Draw (
   Env(..),
   topology,
   flowTopologies,
-  dotFromTopology -- pg inserted for Hack.Draw 
+  dotFromTopology -- pg inserted for Hack.Draw
   ) where
 
 import qualified EFA.Report.Format as Format
@@ -18,14 +18,13 @@ import EFA.Report.Format (Format, Unicode(Unicode, unUnicode))
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Variable as Var
-import EFA.Equation.Environment (StorageMap)
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
+import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph as Gr
 import EFA.Graph.Topology
-          (SequFlowGraph,
-           NodeType(Storage),
+          (NodeType(Storage),
            EdgeType(StructureEdge, StorageEdge),
            getFlowDirection,
            FlowDirectionField, FlowTopology)
@@ -52,13 +51,10 @@ import Data.GraphViz (
           directedGraph, strictGraph, subGraphs,
           graphID,
           GraphvizOutput(..))
-  
+
 import Data.GraphViz.Attributes.Complete as Viz
 
 import qualified Data.Accessor.Basic as Accessor
-
-import Data.Foldable (foldMap)
-import Data.Tuple.HT (mapFst)
 
 import qualified Data.Text.Lazy as T
 
@@ -67,6 +63,10 @@ import qualified Data.List as L
 import qualified Data.List.HT as HTL
 
 import Control.Monad (void)
+
+import Data.Foldable (foldMap)
+import Data.Tuple.HT (mapFst)
+
 
 -- import System.FilePath
 
@@ -77,20 +77,20 @@ structureEdgeColour = Color [RGB 0 0 200]
 storageEdgeColour :: Attribute
 storageEdgeColour = Color [RGB 200 0 0]
 
-shape :: NodeType -> Shape
+shape :: NodeType a -> Shape
 shape Topo.Crossing = PlainText
 shape Topo.Source = DiamondShape
 shape Topo.AlwaysSource = MDiamond
 shape Topo.Sink = BoxShape
 shape Topo.AlwaysSink = MSquare
-shape Topo.Storage = Egg
+shape (Topo.Storage _) = Egg
 shape _ = BoxShape
 
-color :: NodeType -> Attribute
-color Topo.Crossing = FillColor [RGB 150 200 240]
-color _ = FillColor [RGB 230 230 240]
+color :: NodeType a -> Attribute
+color (Topo.Storage _) = FillColor [RGB 251 177 97] -- ghlightorange
+color _ = FillColor [RGB 136 215 251]  -- ghverylightblue
 
-mkNodeAttrs :: NodeType -> Attribute -> [Attribute]
+mkNodeAttrs :: NodeType a -> Attribute -> [Attribute]
 mkNodeAttrs nodeType label =
   [ label, Style [SItem Filled []], Shape (shape nodeType), color nodeType ]
 
@@ -98,12 +98,12 @@ mkNodeAttrs nodeType label =
 dotFromSequFlowGraph ::
   (Node.C node) =>
   String ->
-  SequFlowGraph node ->
+  Flow.RangeGraph node ->
   Maybe (Idx.Section -> Unicode) ->
-  (Topo.LNode node -> Unicode) ->
+  (Maybe Idx.Boundary -> Topo.LDirNode node -> Unicode) ->
   (Topo.LEdge node -> [Unicode]) ->
   DotGraph T.Text
-dotFromSequFlowGraph ti g mtshow nshow eshow =
+dotFromSequFlowGraph ti (rngs, g) mtshow nshow eshow =
   DotGraph { strictGraph = False,
              directedGraph = True,
              graphID = Just (Int 1),
@@ -124,39 +124,43 @@ dotFromSequFlowGraph ti g mtshow nshow eshow =
            map (\nl@(Idx.BndNode s _, _) -> (s, [nl])) $
            Gr.labNodes g
 
-        sg sl ns es =
-            DotSG True (Just (Int $ fromEnum sl)) $
+        sg before (current, (ns, es)) =
+            DotSG True (Just (Int $ fromEnum current)) $
             DotStmts
                [GraphAttrs [Label (StrLabel (T.pack str))]]
                []
-               (map (dotFromSecNode nshow) ns)
+               (map (dotFromSecNode (nshow before)) ns)
                (map (dotFromSecEdge eshow) es)
           where str =
-                   case sl of
+                   case current of
                       Idx.Initial -> "Initial"
                       Idx.AfterSection s ->
                          show s ++
+                         (case M.lookup s rngs of
+                             Just (from, to) -> " / Range " ++ show from ++ "-" ++ show to
+                             Nothing -> error $ "missing range for " ++ show s) ++
                          (flip foldMap mtshow $ \tshow ->
                             " / Time " ++ unUnicode (tshow s))
         stmts =
           DotStmts {
             attrStmts = [GraphAttrs [Label (StrLabel (T.pack ti))]],
             subGraphs =
-              M.elems $
-              M.intersectionWithKey sg topoNs
-                 (M.union topoEs (fmap (const []) topoNs)),
+              zipWith sg (Nothing : map Just (M.keys topoNs)) $
+              M.toAscList $
+              M.intersectionWith (,) topoNs $
+              M.union topoEs (fmap (const []) topoNs),
             nodeStmts = [],
             edgeStmts = map (dotFromSecEdge eshow) interEs
           }
 
 
-dotFromSecNode :: 
+dotFromSecNode ::
   (Node.C node) =>
-  (Topo.LNode node -> Unicode) -> Topo.LNode node -> DotNode T.Text
+  (Topo.StNode store node -> Unicode) ->
+  Topo.StNode store node -> DotNode T.Text
 dotFromSecNode nshow n@(x, nodeType) =
   DotNode (dotIdentFromBndNode x) (mkNodeAttrs nodeType displabel)
   where displabel = Label $ StrLabel $ T.pack $ unUnicode $ nshow n
-
 
 dotFromSecEdge ::
   (Node.C node) =>
@@ -192,9 +196,9 @@ dotIdentFromNode n = T.pack $ Node.dotId n
 printGraph, printGraphX, _printGraphDot, _printGraphPdf ::
    (Node.C node) =>
    String ->
-   SequFlowGraph node ->
+   Flow.RangeGraph node ->
    Maybe (Idx.Section -> Unicode) ->
-   (Topo.LNode node -> Unicode) ->
+   (Maybe Idx.Boundary -> Topo.LDirNode node -> Unicode) ->
    (Topo.LEdge node -> [Unicode]) ->
    IO ()
 printGraph =  printGraphX -- _printGraphPdf -- _printGraphDot -- printGraphX
@@ -218,17 +222,17 @@ _printGraphPdf ti g recTShow nshow eshow =
 sequFlowGraph ::
   (Node.C node) =>
   String ->
-  SequFlowGraph node -> IO ()
+  Flow.RangeGraph node -> IO ()
 sequFlowGraph ti topo =
   printGraph ti topo Nothing nshow eshow
-  where nshow (Idx.BndNode _ n, l) =
+  where nshow _before (Idx.BndNode _ n, l) =
            Unicode $ unUnicode (Node.display n) ++ " - " ++ showType l
         eshow _ = []
 
 
 dotFromTopology ::
   (Node.C node) =>
-  M.Map (node, node) String -> 
+  M.Map (node, node) String ->
   Topo.Topology node -> DotGraph T.Text
 dotFromTopology edgeLabels g =
   DotGraph {
@@ -244,16 +248,17 @@ dotFromTopology edgeLabels g =
       }
   }
 
+
 dotFromTopoNode ::
-  (Node.C node) =>
-  Gr.LNode node Topo.NodeType -> DotNode T.Text
-dotFromTopoNode (x, nodeType) =
-  DotNode (dotIdentFromNode x) (mkNodeAttrs nodeType displabel)
+  (Node.C node, StorageLabel store) =>
+  Gr.LNode node (Topo.NodeType store) -> DotNode T.Text
+dotFromTopoNode (x, typ) =
+  DotNode (dotIdentFromNode x) (mkNodeAttrs typ displabel)
   where displabel = Label $ StrLabel $ T.pack $ unUnicode (Node.display x)
 
 dotFromTopoEdge ::
   (Node.C node) =>
-  M.Map (node, node) String -> 
+  M.Map (node, node) String ->
   Gr.Edge node -> DotEdge T.Text
 dotFromTopoEdge edgeLabels e =
   case orientUndirEdge e of
@@ -265,7 +270,7 @@ dotFromTopoEdge edgeLabels e =
                           _ -> T.pack ""
            in  DotEdge
                  from to
-                 [ Viz.Dir Viz.NoDir, structureEdgeColour, 
+                 [ Viz.Dir Viz.NoDir, structureEdgeColour,
                    Label (StrLabel lab), EdgeTooltip lab ]
 
 
@@ -331,21 +336,65 @@ orientUndirEdge (Edge x y) =
    if x < y then Edge x y else Edge y x
 
 
-showType :: NodeType -> String
-showType = show
+class StorageLabel a where
+   formatStorageLabel :: a -> String
 
-formatNodeType :: Format output => NodeType -> output
+instance StorageLabel () where
+   formatStorageLabel () = ""
+
+instance Show a => StorageLabel (Maybe a) where
+   formatStorageLabel Nothing = ""
+   formatStorageLabel (Just dir) = " " ++ show dir
+
+
+showType :: StorageLabel store => NodeType store -> String
+showType typ =
+   case typ of
+      Topo.Storage store -> "Storage" ++ formatStorageLabel store
+      Topo.Sink          -> "Sink"
+      Topo.AlwaysSink    -> "AlwaysSink"
+      Topo.Source        -> "Source"
+      Topo.AlwaysSource  -> "AlwaysSource"
+      Topo.Crossing      -> "Crossing"
+      Topo.DeadNode      -> "DeadNode"
+      Topo.NoRestriction -> "NoRestriction"
+
+
+formatNodeType ::
+   (Format output, StorageLabel store) =>
+   NodeType store -> output
 formatNodeType = Format.literal . showType
 
 formatNodeStorage ::
    (Record.C rec, FormatValue a, Format output, Node.C node) =>
-   Record.ToIndex rec -> StorageMap node (rec a) -> Topo.LNode node -> output
-formatNodeStorage rec st (n@(Idx.BndNode _sec nid), ty) =
+   Record.ToIndex rec ->
+   Env.StorageMap node (rec a) ->
+   Env.StSumMap node (rec a) ->
+   Maybe Idx.Boundary -> Topo.LDirNode node -> output
+formatNodeStorage rec st ss mBeforeBnd (n@(Idx.BndNode _bnd nid), ty) =
    Format.lines $
    Node.display nid :
    Format.words [formatNodeType ty] :
       case ty of
-         Storage -> [Format.words [lookupFormat rec st $ Idx.Storage n]]
+         Storage dir ->
+            case mBeforeBnd of
+               Nothing -> [lookupFormat rec st $ Idx.Storage n]
+               Just beforeBnd ->
+                  case (lookupFormat rec st $ Idx.Storage $
+                           Idx.BndNode beforeBnd nid,
+                        lookupFormat rec st $ Idx.Storage n) of
+                     (before, after) ->
+                        before :
+                        (case dir of
+                           Just Topo.In ->
+                              [Format.plus Format.empty $
+                                  lookupFormat rec ss $ Idx.StSum Idx.In n]
+                           Just Topo.Out ->
+                              [Format.minus Format.empty $
+                                  lookupFormat rec ss $ Idx.StSum Idx.Out n]
+                           Nothing -> []) ++
+                        Format.assign Format.empty after :
+                        []
          _ -> []
 
 
@@ -362,11 +411,11 @@ data Env node output =
       formatStEnergy,
       formatStX    :: Idx.StorageEdge node -> output,
       formatTime   :: Idx.Section -> output,
-      formatNode   :: Topo.LNode node -> output
+      formatNode   :: Maybe Idx.Boundary -> Topo.LDirNode node -> output
    }
 
 lookupFormat ::
-   (Ord (idx node), Var.FormatIndex (idx node), Record.C rec,
+   (Ord (idx node), Var.FormatIndex idx, Record.C rec,
     FormatValue a, Format output, Node.C node) =>
    Record.ToIndex rec -> M.Map (idx node) (rec a) -> idx node -> output
 lookupFormat recIdx mp k =
@@ -377,7 +426,7 @@ lookupFormat recIdx mp k =
    M.lookup k mp
 
 lookupFormatAssign ::
-   (Ord (idx node), Format.EdgeIdx (idx node), Var.FormatIndex (idx node),
+   (Ord (idx node), Format.EdgeIdx idx, Var.FormatIndex idx,
     Record.C rec,
     FormatValue a, Format output, Node.C node) =>
    Record.ToIndex rec ->
@@ -391,12 +440,11 @@ lookupFormatAssign rec mp makeIdx x =
             (Format.record rec $ Format.edgeIdent $ Format.edgeVar idx)
             (lookupFormat rec mp idx)
 
+
 sequFlowGraphWithEnv ::
   (Node.C node) =>
   String ->
-  SequFlowGraph node -> Env node Unicode -> IO ()
-
-
+  Flow.RangeGraph node -> Env node Unicode -> IO ()
 sequFlowGraphWithEnv ti g env =
    printGraph ti g (Just (formatTime env)) (formatNode env) (eshow . fst)
   where eshow se =
@@ -418,7 +466,7 @@ sequFlowGraphWithEnv ti g env =
 sequFlowGraphAbsWithEnv ::
    (FormatValue a, FormatValue v, Node.C node) =>
    String ->
-   SequFlowGraph node ->
+   Flow.RangeGraph node ->
    Env.Complete node (Record.Absolute a) (Record.Absolute v) -> IO ()
 sequFlowGraphAbsWithEnv ti topo = sequFlowGraphWithEnv ti topo . envAbs
 
@@ -426,7 +474,7 @@ sequFlowGraphAbsWithEnv ti topo = sequFlowGraphWithEnv ti topo . envAbs
 sequFlowGraphDeltaWithEnv ::
    (FormatValue a, FormatValue v, Node.C node) =>
    String ->
-   SequFlowGraph node ->
+   Flow.RangeGraph node ->
    Env.Complete node (Record.Delta a) (Record.Delta v) -> IO ()
 sequFlowGraphDeltaWithEnv ti topo = sequFlowGraphWithEnv ti topo . envDelta
 
@@ -436,7 +484,7 @@ envGen ::
     Record.C rec, Node.C node) =>
    Record.ToIndex rec ->
    Env.Complete node (rec a) (rec v) -> Env node output
-envGen rec (Env.Complete (Env.Scalar me st se sx) (Env.Signal e _p n dt x _s)) =
+envGen rec (Env.Complete (Env.Scalar me st se sx ss) (Env.Signal e _p n dt x _s)) =
    Env
       (lookupFormatAssign rec e Idx.Energy)
       (lookupFormatAssign rec x Idx.X)
@@ -445,7 +493,7 @@ envGen rec (Env.Complete (Env.Scalar me st se sx) (Env.Signal e _p n dt x _s)) =
       (lookupFormatAssign rec se Idx.StEnergy)
       (lookupFormatAssign rec sx Idx.StX)
       (lookupFormat rec dt . Idx.DTime)
-      (formatNodeStorage rec st)
+      (formatNodeStorage rec st ss)
 
 envAbs ::
    (FormatValue a, FormatValue v, Format output, Node.C node) =>
@@ -459,11 +507,11 @@ envDelta = envGen Idx.Delta
 
 
 sequFlowGraphCumulated ::
-  (Node.C node, FormatValue a) =>
+  (FormatValue a, Node.C node) =>
   String ->
-  ( SequFlowGraph node,
-    Env.Complete node (Record.Absolute a) (Record.Absolute a)) -> 
-  IO ()
+  ( Flow.RangeGraph node,
+    Env.Complete node (Record.Absolute a) (Record.Absolute a))
+  -> IO ()
 sequFlowGraphCumulated ti (g, env) =
   printGraph ti g (Just (formatTime aenv)) (formatNode aenv) (eshow . fst)
   where aenv = envAbs env

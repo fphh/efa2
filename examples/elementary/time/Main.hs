@@ -16,6 +16,7 @@ import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
 import EFA.Equation.System ((=.=))
 
+import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as TD
@@ -48,10 +49,10 @@ topoDreibein = Gr.mkGraph ns (makeEdges es)
   where ns = [ (N0, TD.Source),
                (N1, TD.Crossing),
                (N2, TD.Sink),
-               (N3, TD.Storage) ]
+               (N3, TD.storage) ]
         es = [(N0, N1), (N1, N3), (N1, N2)]
 
-seqTopo :: TD.SequFlowGraph Node
+seqTopo :: Flow.RangeGraph Node
 seqTopo = constructSeqTopo topoDreibein [0, 4]
 
 

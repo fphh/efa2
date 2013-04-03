@@ -25,3 +25,7 @@ instance Foldable Result where
     case r of
       Undetermined -> mempty
       Determined x -> f x
+
+toMaybe :: Result a -> Maybe a
+toMaybe Undetermined = Nothing
+toMaybe (Determined x) = Just x

@@ -33,6 +33,7 @@ type SumMap node a = M.Map (Idx.Sum node) a
 type StorageMap node a = M.Map (Idx.Storage node) a
 type StEnergyMap node a = M.Map (Idx.StEnergy node) a
 type StXMap node a = M.Map (Idx.StX node) a
+type StSumMap node a = M.Map (Idx.StSum node) a
 
 
 data Signal node a =
@@ -50,7 +51,8 @@ data Scalar node a =
       maxEnergyMap :: MaxEnergyMap node a,
       storageMap :: StorageMap node a,
       stEnergyMap :: StEnergyMap node a,
-      stXMap :: StXMap node a
+      stXMap :: StXMap node a,
+      stSumMap :: StSumMap node a
    } deriving (Show)
 
 data Complete node b a =
@@ -77,13 +79,13 @@ instance AccessPart Signal where
 
 
 formatAssign ::
-   (Var.FormatIndex (idx node), Node.C node, FormatValue a, Format output) =>
+   (Var.FormatIndex idx, Node.C node, FormatValue a, Format output) =>
    idx node -> a -> output
 formatAssign lhs rhs =
    Format.assign (Var.formatIndex lhs) (formatValue rhs)
 
 formatMap ::
-   (Var.FormatIndex (idx node), Node.C node, FormatValue a, Format output) =>
+   (Var.FormatIndex idx, Node.C node, FormatValue a, Format output) =>
    M.Map (idx node) a -> [output]
 formatMap =
    map (uncurry formatAssign) . M.toList
@@ -92,7 +94,7 @@ formatMap =
 instance
    (Node.C node, FormatValue b, FormatValue a) =>
       FormatValue (Complete node b a) where
-   formatValue (Complete (Scalar me st se sx) (Signal e p n dt x s)) =
+   formatValue (Complete (Scalar me st se sx ss) (Signal e p n dt x s)) =
       Format.lines $
          formatMap e ++
          formatMap se ++
@@ -101,8 +103,9 @@ instance
          formatMap n ++
          formatMap dt ++
          formatMap x ++
-         formatMap s ++
          formatMap sx ++
+         formatMap s ++
+         formatMap ss ++
          formatMap st
 
 
@@ -123,6 +126,7 @@ lookupScalar v =
       Var.Storage   idx -> M.lookup idx . storageMap
       Var.StEnergy  idx -> M.lookup idx . stEnergyMap
       Var.StX       idx -> M.lookup idx . stXMap
+      Var.StSum     idx -> M.lookup idx . stSumMap
 
 
 type Element idx a v = PartElement (Environment (Var.Type idx)) a v
@@ -193,6 +197,10 @@ instance AccessMap Idx.StX where
    accessPartMap =
       Accessor.fromSetGet (\x c -> c{stXMap = x}) stXMap
 
+instance AccessMap Idx.StSum where
+   accessPartMap =
+      Accessor.fromSetGet (\x c -> c{stSumMap = x}) stSumMap
+
 
 
 instance Functor (Signal node) where
@@ -200,8 +208,8 @@ instance Functor (Signal node) where
       Signal (fmap f e) (fmap f p) (fmap f n) (fmap f dt) (fmap f x) (fmap f s)
 
 instance Functor (Scalar node) where
-   fmap f (Scalar me st se sx) =
-      Scalar (fmap f me) (fmap f st) (fmap f se) (fmap f sx)
+   fmap f (Scalar me st se sx ss) =
+      Scalar (fmap f me) (fmap f st) (fmap f se) (fmap f sx) (fmap f ss)
 
 
 instance Foldable (Signal node) where
@@ -216,8 +224,8 @@ instance Traversable (Signal node) where
       pure Signal <?> e <?> p <?> n <?> dt <?> x <?> s
 
 instance Traversable (Scalar node) where
-   sequenceA (Scalar me st se sx) =
-      pure Scalar <?> me <?> st <?> se <?> sx
+   sequenceA (Scalar me st se sx ss) =
+      pure Scalar <?> me <?> st <?> se <?> sx <?> ss
 
 infixl 4 <?>
 (<?>) ::
@@ -237,11 +245,12 @@ instance (Ord node) => Monoid (Signal node a) where
          (M.union dt dt') (M.union x x') (M.union s s')
 
 instance (Ord node) => Monoid (Scalar node a) where
-   mempty = Scalar M.empty M.empty M.empty M.empty
-   mappend (Scalar me st se sx) (Scalar me' st' se' sx') =
+   mempty = Scalar M.empty M.empty M.empty M.empty M.empty
+   mappend (Scalar me st se sx ss) (Scalar me' st' se' sx' ss') =
       Scalar
          (M.union me me') (M.union st st')
          (M.union se se') (M.union sx sx')
+         (M.union ss ss')
 
 instance (Ord node) => Monoid (Complete node b a) where
    mempty = Complete mempty mempty

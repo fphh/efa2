@@ -3,7 +3,7 @@
 module Main where
 
 
-import qualified Data.Map as M 
+import qualified Data.Map as M
 
 import EFA.Signal.Sequence
 import EFA.Signal.Record
@@ -15,7 +15,7 @@ import EFA.Signal.Base (Val)
 data Node = Node0 | Node1 | Node2 deriving (Eq, Ord, Show)
 
 t :: TSigL
-t = S.fromList [0,1,2] 
+t = S.fromList [0,1,2]
 
 p1, p2, p3 :: PSigL
 p1 = S.fromList [-1,1,1]
