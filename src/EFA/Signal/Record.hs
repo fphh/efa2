@@ -23,6 +23,7 @@ import EFA.Signal.Signal
            Scal)
 import EFA.Signal.Typ (Typ,
                        A,
+                       D,
                        P,
                        T,
                        Tt,
@@ -92,6 +93,8 @@ type PowerRecord n = Record Signal Signal (Typ A T Tt) (Typ A P Tt) (PPosIdx n)
 
 type FlowRecord n = Record Signal FSignal (Typ A T Tt) (Typ A F Tt) (PPosIdx n)
 
+type DTimeFlowRecord n = Record FSignal FSignal (Typ D T Tt) (Typ A F Tt) (PPosIdx n)
+
 
 -- | Flow record to contain flow signals assigned to the tree
 newtype FlowState node = FlowState (M.Map (PPosIdx node) Sign) deriving (Show)
@@ -145,6 +148,19 @@ getTimeWindow :: (Ord a,
                  (Scal (Typ A T Tt) a, Scal (Typ A T Tt) a)
 getTimeWindow rec = (S.minimum t, S.maximum t)
   where t = getTime rec
+
+
+diffTime ::
+{-
+   (V.Zipper v, V.Walker v, V.Singleton v, V.Storage v a, BSum a,
+    DSucc abs delta) =>
+   Record Signal s2 (Typ abs t1 p1) t2 id v a ->
+   Record FSignal s2 (Typ delta t1 p1) t2 id v a
+-}
+   (V.Zipper v, V.Walker v, V.Singleton v, V.Storage v a, BSum a) =>
+   FlowRecord node v a ->
+   DTimeFlowRecord node v a
+diffTime (Record time signals) = Record (S.delta time) signals
 
 -- | Use carefully -- removes signal jitter around zero
 removeZeroNoise ::
