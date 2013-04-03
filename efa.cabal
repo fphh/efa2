@@ -91,6 +91,7 @@ Library
     EFA.Graph.Topology.Node
     EFA.Graph.Topology.StateAnalysis
     EFA.Graph.Flow
+    EFA.Graph.CumulatedFlow
 --    EFA.Hack.Draw
     EFA.Hack.Plot
     EFA.Hack.Options
@@ -468,6 +469,16 @@ Executable demo-lookupeta
 
 Executable demo-deltaLogic
   Main-Is: demo/deltaLogic/Main.hs
+  GHC-Options: -Wall
+  If flag(buildDemos)
+    Build-Depends:
+      efa,
+      base
+  Else
+    Buildable: False
+
+Executable demo-cumulatedEnergyFlow
+  Main-Is: demo/cumulatedEnergyFlow/Main.hs
   GHC-Options: -Wall
   If flag(buildDemos)
     Build-Depends:

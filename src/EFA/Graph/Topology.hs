@@ -12,7 +12,9 @@ module EFA.Graph.Topology (
        SequFlowGraph,
        DirSequFlowGraph,
        pathExists,
-       isStorage, maybeStorage,
+       fromTopology,
+       isStorage,
+       maybeStorage,
        isActive,
        isInactive,
        isActiveEdge,
@@ -171,10 +173,17 @@ isStorageEdge :: Eq node => Gr.Edge (Idx.BndNode node) -> Bool
 isStorageEdge e = case edgeType e of StorageEdge _ -> True ; _ -> False
 
 
+isDirEdge :: FlowDirectionField x => x -> Bool
+isDirEdge = dir . getFlowDirection
+  where dir Dir = True
+        dir _ = False
+
+{-
 isDirEdge :: FlowDirectionField label => (a, label) -> Bool
 isDirEdge = dir . getFlowDirection . snd
   where dir Dir = True
         dir _ = False
+-}
 
 type Topology a = Graph a (NodeType ()) ()
 
@@ -192,14 +201,30 @@ type
    DirSequFlowGraph a =
       Graph (Idx.BndNode a) (NodeType (Maybe StoreDir)) ()
 
-pathExists :: (Eq a, Ord a) => a -> a -> FlowTopology a -> Bool
-pathExists _ _ topo | Gr.isEmpty topo = False
-pathExists a b _    | a == b = True
-pathExists a b topo = any f s
-  where s = map fst $ filter q $ Gr.lsuc topo a
-        q (_, Dir) = True
-        q _ = False
-        f x = pathExists x b (Gr.delNode topo a)
+pathExists :: (Ord a) => a -> a -> FlowTopology a -> Bool
+pathExists src dst =
+   let go topo a =
+          not (Gr.isEmpty topo) &&
+          (a==dst ||
+           (any (go (Gr.delNode topo a)) $ Gr.suc topo a))
+   in  flip go src . Gr.lefilter isDirEdge
+
+{-
+-- should we do it with a multiparamtypeclass?
+class FromTopology t s where
+      fromTopology :: t a -> s a
+
+instance FromTopology Topology SequFlowGraph where
+         fromTopology = Gr.ixmap nf . Gr.emap ef
+           where ef _ = Dir
+                 nf = Idx.BndNode (Idx.AfterSection (Idx.Section 0))
+-}
+
+-- name conflict with Equation.System.fromTopology?
+fromTopology :: (Ord a) => ClassifiedTopology a -> SequFlowGraph a
+fromTopology = Gr.ixmap nf . Gr.emap ef
+  where ef = const Dir
+        nf = Idx.BndNode (Idx.AfterSection (Idx.Section 0))
 
 
 type InOut n el = ([Gr.LNode n el], [Gr.LNode n el])

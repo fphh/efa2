@@ -44,6 +44,13 @@ import qualified EFA.Signal.Record as Record
 --import System.FilePath ((</>))
 import System.IO
 
+{-
+<<<<<<< HEAD
+dataset, datasetB :: FilePath
+dataset = "/home/duck/energiefluss/data/examples/vehicle/Vehicle_res.plt"
+datasetB = "/home/duck/energiefluss/data/examples/vehicle/Vehicle_mass1050kg_res.plt"
+=======
+-}
 --import qualified Data.Map as M
 import qualified Data.List as L
 --import Data.Tuple.HT (mapFst)
@@ -67,6 +74,7 @@ zipWith3M_ f x y z = mapM_ (\(x',y',z') -> f x' y' z') (zip3 x y z)
 
 -- zipWith3M_ :: Monad m => (t -> t1 -> t2 -> m b) -> [t] -> [t1] -> [t2] -> m ()
 -- zipWith3M_ f x y z = mapM_ (\(x',y',z') -> f x' y' z') (zip3 x y z)
+-- >>>>>>> master
 
 main :: IO ()
 main = do
