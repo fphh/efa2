@@ -191,7 +191,7 @@ makeGivenFromExternal idx sf =
    <> (Idx.Record idx (Idx.Storage (Idx.initBndNode System.VehicleInertia)) .= 0)
    <> fold (SD.mapWithSection f sf)
    where f sec (Record t xs) =
-           (Idx.Record idx (Idx.DTime sec) .=  sum (Sig.toList $ Sig.deltaSig t)) <>
+           (Idx.Record idx (Idx.DTime sec) .=  sum (Sig.toList $ Sig.delta t)) <>
            fold (M.mapWithKey g xs)
            where g (PPosIdx a b) e =
                     Idx.Record idx (edgeVar Idx.Energy sec a b) .=  sum (Sig.toList e)
