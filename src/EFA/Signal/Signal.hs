@@ -726,22 +726,15 @@ convert (TC x) = TC $ D.convert x
 ----------------------------------------------------------
 -- sum all signal value
 
-type family SigSumC (c :: * -> *) :: * -> *
-type instance SigSumC (v :> Nil) = Nil
+type family SumType s :: *
+type instance SumType Signal = Scalar
+type instance SumType FSignal = Scalar
 
-class SigSum s (c :: * -> *) where
-   type SigSumS s :: *
-   sigSum ::
-      (D.Storage  c d, BSum d, Num d) =>
-      TC s typ (Data c d) -> TC (SigSumS s) typ (Data (SigSumC c) d)
-
-instance (SV.Walker v) => SigSum Signal (v :> Nil) where
-   type SigSumS Signal = Scalar
-   sigSum x = TC $ Data $ foldl (..+) 0 x
-
-instance (SV.Walker v) => SigSum FSignal (v :> Nil) where
-   type SigSumS FSignal = Scalar
-   sigSum x = TC $ Data $ foldl (..+) 0 x
+sum ::
+   (FoldType s, SV.Storage v d, SV.Walker v, BSum d, Num d) =>
+   TC s typ (Data (v :> Nil) d) ->
+   TC (SumType s) typ (Data Nil d)
+sum = TC . Data . foldl (..+) 0
 
 
 ----------------------------------------------------------
@@ -821,7 +814,7 @@ fullIntegrate ::   (SV.FromList v1,
                 TC Signal (Typ A T Tt) (Data (v1 :> Nil) d1) ->
                 TC Signal (Typ A P Tt) (Data (v1 :> Nil) d1) ->
                 TC Scalar (Typ A F Tt) (Data Nil d1)
-fullIntegrate time power = sigSum $ partIntegrate time power
+fullIntegrate time power = sum $ partIntegrate time power
 
 -- csingleton (cfoldr (+) 0  $ czipWith (*) dTime $ D.map (\ p1 p2 -> (p1+p2)/2) power)
 

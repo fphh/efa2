@@ -100,7 +100,7 @@ calcDistributionValues :: (Num a,
                            BSum a) =>
                           UTDistr v ([Class a],[Int]) -> FFSignal v a -> FDistr v a
 calcDistributionValues d s = setType $ S.map f d
-  where f (classes, indices) = fromScalar $ sigSum $ subSignal1D s indices
+  where f (classes, indices) = fromScalar $ S.sum $ subSignal1D s indices
 
 
 df4 = calcDistributionValues d4 e1

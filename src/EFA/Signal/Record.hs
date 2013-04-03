@@ -172,7 +172,7 @@ sortSigList ::
     V.Walker v, V.Storage v a, BSum a) =>
    [(SigId, TC Signal (Typ UT UT UT) (Data (v :> Nil) a))] ->
    [(SigId, TC Signal (Typ UT UT UT) (Data (v :> Nil) a))]
-sortSigList = Key.sort (S.sigSum . snd)
+sortSigList = Key.sort (S.sum . snd)
 
 
 -----------------------------------------------------------------------------------
@@ -351,7 +351,7 @@ energyBelow ::
    (Num a, SB.BSum a, Ord a, V.Walker v, V.Storage v a) =>
    a -> FlowRecord node v a -> Bool
 energyBelow threshold (Record _ fMap) =
-   Fold.all (\s -> abs (S.fromScalar (S.sigSum s)) < threshold) fMap
+   Fold.all (\s -> abs (S.fromScalar (S.sum s)) < threshold) fMap
 
 
 major ::
