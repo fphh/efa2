@@ -41,40 +41,27 @@ import qualified EFA.Graph.Topology.Index as Idx
 
 import qualified EFA.Signal.Record as Record
 
---import System.FilePath ((</>))
 import qualified System.IO as IO
+import System.Environment (getEnv)
+import System.FilePath ((</>))
 
-{-
-<<<<<<< HEAD
-dataset, datasetB :: FilePath
-dataset = "/home/duck/energiefluss/data/examples/vehicle/Vehicle_res.plt"
-datasetB = "/home/duck/energiefluss/data/examples/vehicle/Vehicle_mass1050kg_res.plt"
-=======
--}
 --import qualified Data.Map as M
 import qualified Data.List as L
---import Data.Tuple.HT (mapFst)
 import Data.Tuple.HT (mapSnd)
 
-path :: FilePath
-path = "../../../../../data/examples/vehicle/"
+examplePath :: FilePath
+examplePath = "examples/vehicle"
 
-datasetsX:: [FilePath]
-
+datasetsX :: [FilePath]
 datasetsX = [-- "Vehicle_mass900kg_res.plt",
              "Vehicle_mass1000kg_res.plt",
              "Vehicle_mass1100kg_res.plt"]
 
 deltasets :: [String]  ->   [String]
--- deltasets xs = zipWith (\x y -> y ++ "_vs_" ++ x) xs (tail xs)
 deltasets xs = zipWith (\x y -> y ++ "_vs_" ++ x) xs (tail xs)
 
 zipWith3M_ :: Monad m => (t -> t1 -> t2 -> m b) -> [t] -> [t1] -> [t2] -> m ()
 zipWith3M_ f x y z = mapM_ (\(x',y',z') -> f x' y' z') (zip3 x y z)
-
--- zipWith3M_ :: Monad m => (t -> t1 -> t2 -> m b) -> [t] -> [t1] -> [t2] -> m ()
--- zipWith3M_ f x y z = mapM_ (\(x',y',z') -> f x' y' z') (zip3 x y z)
--- >>>>>>> master
 
 main :: IO ()
 main = do
@@ -90,7 +77,8 @@ main = do
 ---------------------------------------------------------------------------------------
 -- * Import signals from Csv-file
 
-  rawSignalsX <- mapM modelicaPLTImport $ map (\x -> path ++ x) datasetsX
+  path <- fmap (</> examplePath) $ getEnv "EFADATA"
+  rawSignalsX <- mapM modelicaPLTImport $ map (path </>) datasetsX
 
 ---------------------------------------------------------------------------------------
 -- * Conditioning, Sequencing and Integration
