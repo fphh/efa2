@@ -1,5 +1,5 @@
 module EFA.Hack.Stack where
-  
+
 import qualified EFA.Symbolic.OperatorTree as Op
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Equation.Variable as Var

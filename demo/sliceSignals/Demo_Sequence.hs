@@ -10,8 +10,8 @@ import EFA.Signal.SequenceData (SequData)
 import EFA.Signal.Record
           (PPosIdx(PPosIdx), PowerRecord, Record(Record))
 
-         
-          
+
+
 import EFA.Signal.Signal (PSigL, (.++))
 import EFA.Signal.Base (Val)
 import qualified EFA.Signal.Plot as Plot

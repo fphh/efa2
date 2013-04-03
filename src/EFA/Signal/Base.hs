@@ -78,13 +78,13 @@ instance DEq Val where
 infix 4 ..==, ../= , ..>= , ..<= , ..> , ..<
 
 -- Own User Defined Sign Variable
-data Sign = PSign 
+data Sign = PSign
           | ZSign
           | NSign deriving (Show, Eq, Enum)
 -- data Sign = PSign | ZSign | NSign deriving (Show, Eq, Ord)
 
 
--- | determine Signal Sign  
+-- | determine Signal Sign
 sign :: (Eq a, Ord a, Num a, Fractional a) => a -> Sign
 sign x | x > eps = PSign
        | x < -eps = NSign
@@ -95,7 +95,7 @@ sign x | x > eps = PSign
 sign x =
    case compare x 0 of
       GT -> PSign
-      EQ -> ZSign -- TODO add intervalls later on Zero - Detection       
+      EQ -> ZSign -- TODO add intervalls later on Zero - Detection
       LT -> NSign
 -}
 data ZeroCrossing = ZeroCrossing Val | NoCrossing deriving (Show, Eq)

@@ -7,7 +7,7 @@ module EFA.Graph.Draw (
   Env(..),
   topology,
   flowTopologies,
-  dotFromTopology -- pg inserted for Hack.Draw 
+  dotFromTopology -- pg inserted for Hack.Draw
   ) where
 
 import qualified EFA.Report.Format as Format
@@ -50,7 +50,7 @@ import Data.GraphViz (
           directedGraph, strictGraph, subGraphs,
           graphID,
           GraphvizOutput(..))
-  
+
 import Data.GraphViz.Attributes.Complete as Viz
 
 import qualified Data.Accessor.Basic as Accessor
@@ -139,13 +139,13 @@ dotFromSequFlowGraph ti (rngs, g) mtshow nshow eshow =
           }
 
 
-dotFromSecNode :: 
+dotFromSecNode ::
   (Node.C node) =>
   (Topo.StNode store node -> Unicode) ->
   Topo.StNode store node -> DotNode T.Text
 dotFromSecNode nshow n@(x, nodeType) =
    DotNode (dotIdentFromBndNode x)
-      [ displabel, nodeColour, 
+      [ displabel, nodeColour,
         Style [SItem Filled []], Shape (shape nodeType), color nodeType ]
   where displabel = Label $ StrLabel $ T.pack $ unUnicode $ nshow n
         shape Topo.Crossing = PlainText
@@ -226,7 +226,7 @@ sequFlowGraph ti topo =
 
 dotFromTopology ::
   (Node.C node) =>
-  M.Map (node, node) String -> 
+  M.Map (node, node) String ->
   Topo.Topology node -> DotGraph T.Text
 dotFromTopology edgeLabels g =
   DotGraph {
@@ -253,7 +253,7 @@ dotFromTopoNode (x, typ) =
 
 dotFromTopoEdge ::
   (Node.C node) =>
-  M.Map (node, node) String -> 
+  M.Map (node, node) String ->
   Gr.Edge node -> DotEdge T.Text
 dotFromTopoEdge edgeLabels e =
   case orientUndirEdge e of
@@ -265,7 +265,7 @@ dotFromTopoEdge edgeLabels e =
                           _ -> T.pack ""
            in  DotEdge
                  from to
-                 [ Viz.Dir Viz.NoDir, structureEdgeColour, 
+                 [ Viz.Dir Viz.NoDir, structureEdgeColour,
                    Label (StrLabel lab), EdgeTooltip lab ]
 
 
