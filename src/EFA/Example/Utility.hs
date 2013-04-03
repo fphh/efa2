@@ -1,4 +1,5 @@
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE FlexibleContexts #-}
 module EFA.Example.Utility (
    module EFA.Example.Utility,
@@ -17,14 +18,19 @@ import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Symbolic.Mixed as Term
+import qualified EFA.Signal.Record as SigRecord
 import qualified EFA.Signal.SequenceData as SD
+import qualified EFA.Signal.Signal as Signal
 import EFA.Equation.System ((.=), (%=))
 import EFA.Equation.Result (Result)
+import EFA.Signal.Data (Data, Nil, (:>))
 import EFA.Utility (Pointed, point)
 
 import qualified EFA.Equation.Arithmetic as Arith
 
-import Data.Monoid ((<>))
+import qualified Data.Map as Map
+import Data.Foldable (fold)
+import Data.Monoid (mempty, (<>))
 
 
 
@@ -182,3 +188,22 @@ infix 0 #=, ~=
   EqGen.EquationSystem rec node s a v
 (#=)  =  (.=)
 
+
+
+envFromFlowRecord ::
+   (Ord node) =>
+   SD.SequData (SigRecord.DTimeFlowRecord node v a) ->
+   Env.Signal node (Data (v :> Nil) a)
+envFromFlowRecord =
+   fold .
+   SD.mapWithSection
+      (\section (SigRecord.Record times signals) ->
+         mempty {
+            Env.dtimeMap =
+               Map.singleton (Idx.DTime section) (Signal.unpack times),
+            Env.powerMap =
+               Map.mapKeys
+                  (\(SigRecord.PPosIdx x y) ->
+                     Idx.structureEdge Idx.Power section x y) $
+               fmap Signal.unpack signals
+         })
