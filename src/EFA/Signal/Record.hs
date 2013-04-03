@@ -354,15 +354,14 @@ energyBelow threshold (Record _ fMap) =
    Fold.all (\s -> abs (S.fromScalar (S.sigSum s)) < threshold) fMap
 
 
-majorSection ::
+major ::
    (Num d, SB.BSum d, Ord d,
     V.Storage v d, V.Singleton v, V.Walker v) =>
 
    TC Scalar (Typ A F Tt) (Data Nil d) ->
    TC Scalar (Typ A T Tt) (Data Nil d) ->
    FlowRecord id v d -> Bool
-majorSection
-      (S.TC (D.Data energyThreshold)) (S.TC (D.Data timeThreshold)) rec =
+major (S.TC (D.Data energyThreshold)) (S.TC (D.Data timeThreshold)) rec =
    not (energyBelow energyThreshold rec)
    &&
    longerThan timeThreshold rec

@@ -134,7 +134,7 @@ pre topology rawSignals =  do
 
   let (sequencePowersFilt, sequenceFlowsFilt) =
          SD.unzip $
-         SD.filter (Record.majorSection epsE epsT . snd) $
+         SD.filter (Record.major epsE epsT . snd) $
          fmap (\x -> (x, Record.partIntegrate x)) sequencePowers
 
   let (flowStates, adjustedFlows) =
