@@ -54,7 +54,7 @@ path = "../../../../../data/examples/vehicle/"
 
 datasetsX:: [FilePath]
 
-datasetsX = [-- "Vehicle_mass900kg_res.plt",
+datasetsX = ["Vehicle_mass900kg_res.plt",
              "Vehicle_mass1000kg_res.plt",
              "Vehicle_mass1100kg_res.plt"]
 
@@ -141,23 +141,23 @@ main = do
 ---------------------------------------------------------------------------------------
 -- * Plot Stacks
 
-
+{-
   mapM_ (Plots.stack  "Energy Flow Change at Tank in Section 6"
          (Idx.Energy (Idx.StructureEdge (Idx.Section 6) System.Tank System.ConBattery)) 1 )
     (zip (deltasets datasetsX) differenceExtEnvs)
+-}
 
 
 
-{-
   let energyIndex = (Idx.Energy (Idx.StructureEdge (Idx.Section 6) System.Tank System.ConBattery))
 
 --  print $ Plots.lookupStack energyIndex (last differenceExtEnvs)
 
   Plots.recordStackRow
     "Energy Flow Change at Tank in Section 6"
-    energyIndex 0
+    energyIndex 10
     (zip (deltasets datasetsX) differenceExtEnvs)
--}
+
 ---------------------------------------------------------------------------------------
 -- * Plot Time Signals
 
