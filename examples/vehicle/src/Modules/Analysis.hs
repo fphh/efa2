@@ -34,17 +34,13 @@ import qualified EFA.Signal.Signal as Sig
 
 import EFA.Signal.Record (PPosIdx(PPosIdx), SignalRecord, FlowRecord,
                           Record(Record), PowerRecord,
-                          SignalRecord, getTime, newTimeBase, removeZeroNoise)
+                          SignalRecord, getTime, newTimeBase)
 
 
 import EFA.Signal.Sequence (-- genSequenceSignal,
-                            -- removeLowEnergySections,
-                            genSequFlow,
                             addZeroCrossings,
-                            -- removeLowTimeSections,
                             genSequ,
                            -- sectionRecordsFromSequence
-                            separateMinorSections
                            )
 
 --import qualified EFA.Equation.Arithmetic as Arith
@@ -106,7 +102,7 @@ pre topology rawSignals =  do
 -- * Condition Signals, Calculate Powers, Remove ZeroNoise
 
   let signals = Signals.condition rawSignals
-  let powerSignals = removeZeroNoise (Signals.calculatePower signals) (10^^(-2::Int))
+  let powerSignals = Record.removeZeroNoise (10^^(-2::Int)) (Signals.calculatePower signals)
 
 ---------------------------------------------------------------------------------------
 -- * Add zerocrossings in Powersignals and Signals
@@ -119,7 +115,7 @@ pre topology rawSignals =  do
 
 
   let sequencePowers :: SD.SequData (PowerRecord System.Node [] Double)
-      (sequencePowers) = genSequ powerSignals0
+      sequencePowers = genSequ powerSignals0
 
   -- create sequence signal
   -- let sequSig = Sig.scale (genSequenceSignal sequ) 10 :: Sig.UTSigL  --  (10  ^^ (-12::Int))
@@ -129,8 +125,6 @@ pre topology rawSignals =  do
 -- * Integrate Power and Sections on maximum Energyflow
 
 
-  let sequenceFlows = genSequFlow sequencePowers
-
   let epsT ::  TC Scalar (Typ A T Tt) (Data Nil Double)
       epsT = Sig.toScalar 0
 
@@ -138,8 +132,10 @@ pre topology rawSignals =  do
       epsE = Sig.toScalar 0
 
 
-  let ((sequencePowersFilt,sequenceFlowsFilt),_) =
-        separateMinorSections (sequencePowers,sequenceFlows) epsE epsT
+  let (sequencePowersFilt, sequenceFlowsFilt) =
+         SD.unzip $
+         SD.filter (Record.major epsE epsT . snd) $
+         fmap (\x -> (x, Record.partIntegrate x)) sequencePowers
 
   let (flowStates, adjustedFlows) =
          SD.unzip $

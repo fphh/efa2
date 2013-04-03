@@ -136,8 +136,10 @@ getTimeWindow rec = (S.minimum t, S.maximum t)
   where t = getTime rec
 
 -- | Use carefully -- removes signal jitter around zero
-removeZeroNoise :: (V.Walker v, V.Storage v a, Ord a, Num a) => PowerRecord node v a -> a -> PowerRecord node v a
-removeZeroNoise (Record time pMap) threshold =
+removeZeroNoise ::
+   (V.Walker v, V.Storage v a, Ord a, Num a) =>
+   a -> PowerRecord node v a -> PowerRecord node v a
+removeZeroNoise threshold (Record time pMap) =
    Record time $ M.map (S.map (hardShrinkage threshold)) pMap
 
 hardShrinkage :: (Ord a, Num a) => a -> a -> a
@@ -332,14 +334,14 @@ State changes in solver create several DataPoints with exact the same time.
 The resulting sections which have zero time duration are removed.
 -}
 longerThanZero ::
-   (Fractional a, Ord a, V.Storage v a, V.Singleton v) =>
-   PowerRecord nty v a -> Bool
+   (Num a, Ord a, V.Storage v a, V.Singleton v) =>
+   PowerRecord node v a -> Bool
 longerThanZero = uncurry (/=) . getTimeWindow
 
 -- | Check for minimum duration
 longerThan ::
-   (Fractional a, Ord a, Eq a, V.Storage v a, V.Singleton v) =>
-   a -> PowerRecord nty v a -> Bool
+   (Num a, Ord a, V.Storage v a, V.Singleton v) =>
+   a -> Record s (Typ A T Tt) t2 id v a -> Bool
 longerThan threshold r =
    case getTimeWindow r of
       (TC (Data x), TC (Data y)) -> abs (x - y) > threshold
@@ -350,6 +352,19 @@ energyBelow ::
    a -> FlowRecord node v a -> Bool
 energyBelow threshold (Record _ fMap) =
    Fold.all (\s -> abs (S.fromScalar (S.sigSum s)) < threshold) fMap
+
+
+major ::
+   (Num d, SB.BSum d, Ord d,
+    V.Storage v d, V.Singleton v, V.Walker v) =>
+
+   TC Scalar (Typ A F Tt) (Data Nil d) ->
+   TC Scalar (Typ A T Tt) (Data Nil d) ->
+   FlowRecord id v d -> Bool
+major (S.TC (D.Data energyThreshold)) (S.TC (D.Data timeThreshold)) rec =
+   not (energyBelow energyThreshold rec)
+   &&
+   longerThan timeThreshold rec
 
 
 -----------------------------------------------------------------------------------
