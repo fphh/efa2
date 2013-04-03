@@ -748,12 +748,12 @@ delta ::
     TC FSignal (Typ delta2 t1 p1) (Data (v2 :> v1) a)
 delta x = changeDelta $ deltaMap (P.flip (..-)) x
 
-avSig ::
+average ::
     (z ~ Apply v1 a, SV.Zipper v2, SV.Walker v2, SV.Singleton v2, SV.Storage v2 z,
      D.ZipWith v1, D.Storage v1 a, BSum a, BProd a a, Num a) =>
     TC Signal (Typ delta1 t1 p1) (Data (v2 :> v1) a) ->
     TC FSignal (Typ delta1 t1 p1) (Data (v2 :> v1) a)
-avSig x =
+average x =
    changeDelta $
    deltaMap (\ x1 x2 -> (x1..+x2) ../ P.asTypeOf 2 x1) x
 
@@ -798,7 +798,7 @@ partIntegrate ::  (SV.Zipper v1,
                TC Signal (Typ A T Tt) (Data (v1 :> Nil) d1) ->
                TC Signal (Typ A P Tt) (Data (v1 :> Nil) d1) ->
                TC FSignal (Typ A F Tt) (Data (v1 :> Nil) d1)
-partIntegrate time power  =  delta time  .*  avSig power
+partIntegrate time power  =  delta time  .*  average power
 -- czipWith (*) dTime $ D.map (\ p1 p2 -> (p1+p2)/2) power
 
 
