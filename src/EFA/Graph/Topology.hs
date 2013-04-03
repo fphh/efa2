@@ -157,12 +157,11 @@ type DirSequFlowGraph a = Graph (Idx.BndNode a) NodeType ()
 
 pathExists :: (Ord a) => a -> a -> FlowTopology a -> Bool
 pathExists src dst =
-   let go a topo =
+   let go topo a =
           not (Gr.isEmpty topo) &&
           (a==dst ||
-           (any (\e -> isDirEdge e && go (fst e) (Gr.delNode topo a)) $
-            Gr.lsuc topo a))
-   in  go src
+           (any (go (Gr.delNode topo a)) $ Gr.suc topo a))
+   in  flip go src . Gr.lefilter isDirEdge
 
 
 type InOut n el = ([Gr.LNode n el], [Gr.LNode n el])
