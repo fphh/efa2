@@ -12,7 +12,7 @@ import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph as Gr
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 
-import qualified EFA.Equation.Record as Record
+import qualified EFA.Equation.Record as EqRecord
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Result as Result
@@ -73,21 +73,21 @@ checkDetermined name rx =
 type
    SignalTerm rec term node =
       Term.Signal term
-         (Record.Indexed rec (Var.Scalar node))
-         (Record.Indexed rec (Var.Signal node))
+         (EqRecord.Indexed rec (Var.Scalar node))
+         (EqRecord.Indexed rec (Var.Signal node))
 
 type
    ScalarTerm rec term node =
       Term.Scalar term
-         (Record.Indexed rec (Var.Scalar node))
-         (Record.Indexed rec (Var.Signal node))
+         (EqRecord.Indexed rec (Var.Scalar node))
+         (EqRecord.Indexed rec (Var.Signal node))
 
 type
    ScalarAtom rec term node =
       Term.ScalarAtom
          term
-         (Record.Indexed rec (Var.Scalar node))
-         (Record.Indexed rec (Var.Signal node))
+         (EqRecord.Indexed rec (Var.Scalar node))
+         (EqRecord.Indexed rec (Var.Signal node))
 
 type
    SymbolicEquationSystem rec node s term =
@@ -128,7 +128,7 @@ givenSymbol ::
   and it is better not to compare them at all.
   We should remove the Eq constraint as soon as unique-logic allows it.
   -}
-  (t ~ VarTerm var (Record.ToIndex rec) term node,
+  (t ~ VarTerm var (EqRecord.ToIndex rec) term node,
    Eq t, Arith.Sum t,
    EqGen.Element idx rec s
       (ScalarTerm rec term node) (SignalTerm rec term node)
@@ -136,7 +136,7 @@ givenSymbol ::
    EqGen.Record rec,
    Ord (idx node), Pointed term,
    Var.Type idx ~ var, Symbol var, Env.AccessMap idx) =>
-  Record.Indexed rec (idx node) ->
+  EqRecord.Indexed rec (idx node) ->
   SymbolicEquationSystem rec node s term
 givenSymbol idx =
    idx .= symbol (fmap Var.index idx)
@@ -145,7 +145,7 @@ givenSymbol idx =
 infixr 6 =<>
 
 (=<>) ::
-  (t ~ VarTerm var (Record.ToIndex rec) term node,
+  (t ~ VarTerm var (EqRecord.ToIndex rec) term node,
    Eq t, Arith.Sum t,
    EqGen.Element idx rec s
       (ScalarTerm rec term node) (SignalTerm rec term node)
@@ -153,7 +153,7 @@ infixr 6 =<>
    EqGen.Record rec,
    Ord (idx node), Pointed term,
    Var.Type idx ~ var, Symbol var, Env.AccessMap idx) =>
-  Record.Indexed rec (idx node) ->
+  EqRecord.Indexed rec (idx node) ->
   SymbolicEquationSystem rec node s term ->
   SymbolicEquationSystem rec node s term
 idx =<> eqsys = givenSymbol idx <> eqsys
@@ -176,7 +176,7 @@ infix 0 #=, ~=
 (~=) ::
   (Eq v, Arith.Sum v, EqGen.Record rec,
    Env.AccessMap idx, Var.Type idx ~ Var.Signal, Ord (idx node)) =>
-  Record.Indexed rec (idx node) -> v ->
+  EqRecord.Indexed rec (idx node) -> v ->
   EqGen.EquationSystem rec node s a v
 (~=)  =  (.=)
 
@@ -184,7 +184,7 @@ infix 0 #=, ~=
 (#=) ::
   (Eq a, Arith.Sum a, EqGen.Record rec,
    Env.AccessMap idx, Var.Type idx ~ Var.Scalar, Ord (idx node)) =>
-  Record.Indexed rec (idx node) -> a ->
+  EqRecord.Indexed rec (idx node) -> a ->
   EqGen.EquationSystem rec node s a v
 (#=)  =  (.=)
 
