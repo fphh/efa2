@@ -20,12 +20,7 @@ import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Vector as V
 import qualified EFA.Signal.Record as Record
 
-import EFA.Signal.SequenceData
-          (SequData(..), Sequ, Range,
-           partition2)
-           --Section(..))
-           -- filterSequWithSequData,
-           --filterSequWithSequData2)
+import EFA.Signal.SequenceData (SequData(..), Sequ, Range)
 
 
 
@@ -37,10 +32,9 @@ import EFA.Signal.Signal
           (TC(TC),  TSigL, TZeroSamp1L, TZeroSamp, TSamp, PSamp, PSigL,
            DTSamp, PSamp2LL, Samp, Samp1L,
            (.+), (.-), (.*), (./), (.++),
-            sampleAverage,
-           changeType, fromScalar, toSample, sigSum, toSigList, fromSigList,Scalar)
+           sampleAverage, changeType, toSample, toSigList, fromSigList)
 
-import EFA.Signal.Typ (Typ, STy, Tt, T, P, A,F)
+import EFA.Signal.Typ (Typ, STy, Tt, T, P, A)
 import EFA.Signal.Data (Data(Data), Nil, (:>))
 
 import qualified Data.Foldable as Fold
@@ -73,6 +67,7 @@ data EventType = LeftEvent
                | NoEvent
 
 
+{-# DEPRECATED genSequFlow "better use (fmap Record.partIntegrate)" #-}
 -- | Generate Sequence Flow
 genSequFlow :: (Num a,
                 V.Zipper v,
@@ -110,23 +105,6 @@ separateUncleanSections  (xs, ys, zs) =
           g (_,q) = q == Flow.Dirty
           h (_,q) = q == Flow.Wrong
 -}
-
-separateMinorSections :: (Num d,
-                          V.Storage v d,
-                          V.Singleton v,
-                          SB.BSum d,
-                          V.Walker v,
-                          Ord d) =>
-                         (SequData (PowerRecord id v d) , SequData (FlowRecord id v d)) ->
-                          TC Scalar (Typ A F Tt) (Data Nil d) ->
-                          TC Scalar (Typ A T Tt) (Data Nil d) ->
-                          ((SequData (PowerRecord id v d), SequData (FlowRecord id v d)),
-                          (SequData(PowerRecord id v d),  SequData (FlowRecord id v d)))
-
-separateMinorSections (xs,ys) (TC(Data energyThreshold)) (TC(Data timeThreshold)) = partition2 f (xs,ys)
-  where f (_,(Record time fMap)) =   (any g (M.toList fMap) || h time)
-        g (_,s) = (abs (fromScalar $ sigSum s)) > energyThreshold
-        h time = (fromScalar (S.maximum time .- S.minimum time)) > timeThreshold
 
 makeSeqFlowGraph ::
   (Fractional a,
