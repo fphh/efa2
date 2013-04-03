@@ -42,7 +42,7 @@ import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Signal.Record as Record
 
 --import System.FilePath ((</>))
-import System.IO
+import qualified System.IO as IO
 
 {-
 <<<<<<< HEAD
@@ -79,7 +79,7 @@ zipWith3M_ f x y z = mapM_ (\(x',y',z') -> f x' y' z') (zip3 x y z)
 main :: IO ()
 main = do
 
-  hSetEncoding stdout utf8
+  IO.hSetEncoding IO.stdout IO.utf8
 
 ---------------------------------------------------------------------------------------
 -- * State Analysis
