@@ -6,17 +6,18 @@ module EFA.Example.Utility (
    (.=), (%=),
    ) where
 
+import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph as Gr
-import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 
 import qualified EFA.Equation.Record as EqRecord
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.Variable as Var
+import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Symbolic.Mixed as Term
 import qualified EFA.Signal.Record as SigRecord
 import qualified EFA.Signal.SequenceData as SD
@@ -25,8 +26,6 @@ import EFA.Equation.System ((.=), (%=))
 import EFA.Equation.Result (Result)
 import EFA.Signal.Data (Data, Nil, (:>))
 import EFA.Utility (Pointed, point)
-
-import qualified EFA.Equation.Arithmetic as Arith
 
 import qualified Data.Map as Map
 import Data.Foldable (fold)
