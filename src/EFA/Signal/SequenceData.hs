@@ -131,8 +131,8 @@ instance ToTable a => Report.ToTable (SequData a) where
 instance
    (V.Walker v, V.Singleton v, V.FromList v, V.Storage v a, DispStorage1 v,
     Ord a, Fractional a, PrintfArg a, Show id,
-    S.DispApp s, TDisp t1, TDisp t2) =>
-      ToTable (Record.Record s t1 t2 id v a) where
+    S.DispApp s1, S.DispApp s2, TDisp t1, TDisp t2) =>
+      ToTable (Record.Record s1 s2 t1 t2 id v a) where
    toTable os (_ti, rs) =
       Fold.fold $ mapWithSection (\ sec r -> Report.toTable os (show sec, r)) rs
 
