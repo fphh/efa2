@@ -9,20 +9,22 @@ import Data.Colour
 import Data.Colour.Names as Colour
 import Data.Colour.SRGB (sRGB24show)
 
-showf :: Colour Double -> String
-showf = sRGB24show
+newtype C = C { unC :: String } deriving (Show)
+
+showf :: Colour Double -> C
+showf = C . sRGB24show
 
 
-colourMap :: (Ord a) => [a] -> M.Map a String
+colourMap :: (Ord a) => [a] -> M.Map a C
 colourMap xs = M.fromList $ zip xs colours
 
-defltColour :: String
+defltColour :: C
 defltColour = showf red
 
-colours :: [String]
+colours :: [C]
 colours = cls ++ colours
 
-cls :: [String]
+cls :: [C]
 cls = map showf [
   red,
   blue,

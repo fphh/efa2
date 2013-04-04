@@ -337,7 +337,7 @@ record ::
 record (Record time pMap) =
    foldMap
       (\(key, sig) ->
-         recordStyle key (colourMap M.! key) $
+         recordStyle key (Colour.unC $ colourMap M.! key) $
          Plot2D.list Graph2D.linesPoints $
          zip (getData time) (getData sig)) $
    M.toList pMap
@@ -497,13 +497,13 @@ stackAttr title var =
 
 stack ::
    (FormatValue term, Show term, Ord term) =>
-   M.Map term String ->
+   M.Map term Colour.C ->
    M.Map term Double -> Plot2D.T Int Double
 stack colorMap =
    Fold.fold .
    M.mapWithKey
       (\term val ->
-         stackLineSpec term (colorMap M.! term) $
+         stackLineSpec term (Colour.unC $ colorMap M.! term) $
            Plot2D.list Graph2D.histograms [val])
 
 
@@ -530,12 +530,12 @@ stacksAttr title vars =
 
 stacks ::
   (Ord term, FormatValue term, Show term) =>
-  M.Map term String -> [M.Map term Double] -> Plot2D.T Int Double
+  M.Map term Colour.C -> [M.Map term Double] -> Plot2D.T Int Double
 stacks colourMap =
    Fold.fold .
    M.mapWithKey
       (\term (col, vals) ->
-         stackLineSpec term col $
+         stackLineSpec term (Colour.unC col) $
          Plot2D.list Graph2D.histograms vals) .
   TMap.core .
   liftA2 (,) (TMap.cons Colour.defltColour colourMap) .
