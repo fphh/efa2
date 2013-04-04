@@ -34,11 +34,10 @@ getRelativeDir (Gr.Graph _ es) e =
 --relativeDirToFlowDir :: 
 
 
--- Are edges in SequFlowGraph always Dir?
 cumulatedEnergyFlow ::
   (Num a, Ord node, Show node) =>
   TD.Topology node ->
-  Gr.Graph (Idx.BndNode node) t TD.FlowDirection ->
+  TD.DirSequFlowGraph node ->
   Env.Complete node b (Rec.Absolute (Result a)) ->
   ( M.Map (Idx.Energy node) (Rec.Absolute (Result a)),
     M.Map (Idx.Energy node) (Rec.Absolute (Result a)) )
@@ -46,7 +45,7 @@ cumulatedEnergyFlow topo seqTopo env =
    mapPair (cum, cum) $ unzip $ mapMaybe f $ Gr.labEdges seqTopo
   where cum = M.unionsWith (liftA2 (liftA2 (+)))
         em = Env.energyMap $ Env.signal env
-        f (e, dir) =
+        f (e, ()) =
           case TD.edgeType e of
              TD.StructureEdge idx@(Idx.StructureEdge _sec n n') ->
                 let e1 = Idx.Energy idx
@@ -66,12 +65,9 @@ cumulatedEnergyFlow topo seqTopo env =
                     zero = Rec.Absolute (Determined 0)
 
                 in  Just $
-                    case dir of
-                       TD.Dir ->
-                          case getRelativeDir topo $ Gr.Edge n n' of
-                               WithTopoDir -> (insert, insertzero)
-                               AgainstTopoDir -> (insertzero, insert)
-                       _ -> error "not a Dir edge!"
+                    case getRelativeDir topo $ Gr.Edge n n' of
+                       WithTopoDir -> (insert, insertzero)
+                       AgainstTopoDir -> (insertzero, insert)
              _ -> Nothing
 
 
@@ -107,7 +103,7 @@ cumulatedEnv topo enEnv = (ctopo, env)
 cumulate ::
   (Num a, Ord node, Show node) =>
   TD.Topology node ->
-  (t1, Gr.Graph (Idx.BndNode node) t TD.FlowDirection) ->
+  (t1, TD.SequFlowGraph node) ->
   Env.Complete node b (Rec.Absolute (Result a)) ->
   ( ( (t1, TD.SequFlowGraph node),
        Env.Complete node (Rec.Absolute (Result a1)) (Rec.Absolute (Result a))),
@@ -116,6 +112,7 @@ cumulate ::
 cumulate topo (rngs, seqTopo) env =
   ( ((rngs, ctopo), withDirEnv), ((rngs, crevTopo), againstDirEnv) )
   where revTopo = Gr.reverse topo
-        (withDir, againstDir) = cumulatedEnergyFlow topo seqTopo env
+        (withDir, againstDir) =
+           cumulatedEnergyFlow topo (TD.dirFromSequFlowGraph seqTopo) env
         (ctopo, withDirEnv) = cumulatedEnv topo withDir
         (crevTopo, againstDirEnv) = cumulatedEnv revTopo againstDir
