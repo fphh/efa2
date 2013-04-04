@@ -1,0 +1,48 @@
+model motorEfficiency
+  annotation(Diagram(), Icon(graphics = {Line(points = {{-48.7395,-60.9244},{-48.7395,71.0084},{-52.9412,56.3025},{-42.0168,56.3025},{-48.3193,71.0084}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Line(points = {{-47.8992,-60.5042},{69.7479,-60.5042},{51.2605,-55.4622},{51.2605,-67.2269},{69.3277,-60.5042}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Line(points = {{-44.958,21.0084},{-2.52101,21.0084},{5.46218,6.72269},{19.3277,-5.46218},{35.2941,-10.084},{59.6639,-12.605}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Line(points = {{-14.7059,-1.2605},{-37.8151,-5.88235},{-37.395,-22.6891},{-21.0084,-39.916},{22.2689,-41.5966},{43.6975,-34.4538},{23.5294,-23.9496},{-7.98319,-7.56303},{-13.4454,-0.420168}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Line(points = {{-18.0672,-14.7059},{-24.7899,-23.1092},{-14.7059,-31.5126},{14.2857,-34.0336},{6.30252,-25.2101},{-15.5462,-14.7059}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Text(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-46.6387,95.7983},{56.3025,71.4286}}, textString = "MotorEfficiency")}));
+  parameter Real speedScale(start = 1) annotation(Placement(visible = true, transformation(origin = {73.5294,76.4706}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  parameter Real maxEta(start = 1) annotation(Placement(visible = true, transformation(origin = {73.5294,76.4706}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  parameter String fileName(start = "") annotation(Placement(visible = true, transformation(origin = {73.5294,76.4706}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  Modelica.Blocks.Interfaces.RealInput minTorque annotation(Placement(visible = true, transformation(origin = {-73.9496,-67.6471}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {-73.9496,-67.6471}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  Modelica.Blocks.Math.Gain SpeedScale(k = speedScale) annotation(Placement(visible = true, transformation(origin = {-60.5042,17.6471}, extent = {{-9.01578,-9.01578},{9.01578,9.01578}}, rotation = 0)));
+  Modelica.Blocks.Math.Abs abs1 annotation(Placement(visible = true, transformation(origin = {-32.1513,17.6471}, extent = {{-7.45106,-7.45106},{7.45106,7.45106}}, rotation = 0)));
+  Modelica.Blocks.Sources.Constant ConstNull(k = 0) annotation(Placement(visible = true, transformation(origin = {-81.9328,-56.7227}, extent = {{-5.59809,-5.59809},{5.59809,5.59809}}, rotation = 0)));
+  relativeTorque relativetorque1 annotation(Placement(visible = true, transformation(origin = {-47.6975,-25.6303}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  Modelica.Blocks.Math.Product product2 annotation(Placement(visible = true, transformation(origin = {76.0504,-1.2605}, extent = {{-8.19616,-8.19616},{8.19616,8.19616}}, rotation = 0)));
+  Modelica.Blocks.Math.Division division1 annotation(Placement(visible = true, transformation(origin = {28.1513,32.7731}, extent = {{-6.77369,-6.77369},{6.77369,6.77369}}, rotation = 0)));
+  Modelica.Blocks.Math.Product product1 annotation(Placement(visible = true, transformation(origin = {-61.7647,-5.88235}, extent = {{-6.77369,-6.77369},{6.77369,6.77369}}, rotation = 0)));
+  Modelica.Blocks.Math.Abs abs2 annotation(Placement(visible = true, transformation(origin = {-24.5882,-21.4286}, extent = {{-8.19616,-8.19616},{8.19616,8.19616}}, rotation = 0)));
+  Modelica.Blocks.Sources.Constant constOne(k = 1) annotation(Placement(visible = true, transformation(origin = {-21.0084,49.5798}, extent = {{-6.1579,-6.1579},{6.1579,6.1579}}, rotation = 0)));
+  Modelica.Blocks.Logical.Switch switch1 annotation(Placement(visible = true, transformation(origin = {48.3193,5.04202}, extent = {{-7.45106,-7.45106},{7.45106,7.45106}}, rotation = 0)));
+  Modelica.Blocks.Logical.GreaterEqual greaterequal1 annotation(Placement(visible = true, transformation(origin = {22.2689,-17.6471}, extent = {{-7.45106,-7.45106},{7.45106,7.45106}}, rotation = 0)));
+  Modelica.Blocks.Sources.Constant constZero(k = 0) annotation(Placement(visible = true, transformation(origin = {-2.94118,-35.7143}, extent = {{-7.45106,-7.45106},{7.45106,7.45106}}, rotation = 0)));
+  Modelica.Blocks.Interfaces.RealInput speedIn annotation(Placement(visible = true, transformation(origin = {-76.0504,47.479}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {-76.0504,47.479}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  Modelica.Blocks.Interfaces.RealInput torque annotation(Placement(visible = true, transformation(origin = {-75.6302,7.14282}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {-75.6302,7.14282}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  Modelica.Blocks.Interfaces.RealInput maxTorque annotation(Placement(visible = true, transformation(origin = {-74.7899,-31.5126}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {-74.7899,-31.5126}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  Modelica.Blocks.Interfaces.RealOutput electricPower annotation(Placement(visible = true, transformation(origin = {78.9916,1.2605}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {78.9916,1.2605}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  Modelica.Blocks.Tables.CombiTable2D combitable2d1(tableName = "table2D_efficiencyMap_firstQuadrant", tableOnFile = true, fileName = fileName) annotation(Placement(visible = true, transformation(origin = {-7.56303,11.7647}, extent = {{-7.45106,-7.45106},{7.45106,7.45106}}, rotation = 0)));
+  Modelica.Blocks.Math.Gain MaxEta(k = maxEta) annotation(Placement(visible = true, transformation(origin = {13.0252,11.7647}, extent = {{-5.59809,-5.59809},{5.59809,5.59809}}, rotation = 0)));
+equation
+  connect(MaxEta.y,switch1.u3) annotation(Line(points = {{19.1831,11.7647},{20.1681,11.7647},{20.1681,-1.2605},{39.378,-1.2605},{39.378,-0.918828}}));
+  connect(MaxEta.y,division1.u2) annotation(Line(points = {{19.1831,11.7647},{26.4706,11.7647},{26.4706,22.2689},{19.7479,22.2689},{19.7479,28.7089},{20.0229,28.7089}}));
+  connect(combitable2d1.y,MaxEta.u) annotation(Line(points = {{0.633138,11.7647},{10.9244,11.7647},{10.9244,11.7647},{6.3075,11.7647}}));
+  connect(abs1.y,combitable2d1.u1) annotation(Line(points = {{-23.9551,17.6471},{-19.3277,17.6471},{-19.3277,16.2353},{-16.5043,16.2353}}));
+  connect(abs2.y,combitable2d1.u2) annotation(Line(points = {{-15.5724,-21.4286},{-15.5462,-21.4286},{-15.5462,7.14286},{-16.5043,7.14286},{-16.5043,7.29406}}));
+  connect(product2.y,electricPower) annotation(Line(points = {{85.0662,-1.2605},{92.8571,-1.2605},{92.8571,-28.5714},{54.2017,-28.5714},{54.2017,-41.5966},{83.1933,-41.5966},{83.1933,-40.7563}}));
+  connect(switch1.y,product2.u1) annotation(Line(points = {{56.5155,5.04202},{66.3866,5.04202},{66.3866,3.65719},{66.215,3.65719}}));
+  connect(greaterequal1.y,switch1.u2) annotation(Line(points = {{30.4651,-17.6471},{33.1933,-17.6471},{33.1933,4.62185},{39.3781,4.62185},{39.3781,5.04202}}));
+  connect(constZero.y,greaterequal1.u2) annotation(Line(points = {{5.25498,-35.7143},{7.56303,-35.7143},{7.56303,-23.6079},{13.3276,-23.6079}}));
+  connect(greaterequal1.u1,product1.y) annotation(Line(points = {{13.3276,-17.6471},{9.2437,-17.6471},{9.2437,-6.30252},{-54.3137,-6.30252},{-54.3137,-5.88235}}));
+  connect(division1.y,switch1.u1) annotation(Line(points = {{35.6023,32.7731},{38.2353,32.7731},{38.2353,11.0029},{39.3781,11.0029}}));
+  connect(constOne.y,division1.u1) annotation(Line(points = {{-14.2347,49.5798},{19.7479,49.5798},{19.7479,36.8373},{20.0228,36.8373}}));
+  connect(relativetorque1.y,abs2.u) annotation(Line(points = {{-38.269,-21.7479},{-34.2521,-21.7479},{-34.2521,-21.4286},{-34.4236,-21.4286}}));
+  connect(product1.y,product2.u2) annotation(Line(points = {{-54.3137,-5.88235},{71.8487,-5.88235},{71.8487,-6.1782},{66.215,-6.1782}}));
+  connect(product1.u2,torque) annotation(Line(points = {{-69.8931,-9.94657},{-75.6303,-9.94657},{-75.6303,-20.1681},{-81.0924,-20.1681}}));
+  connect(product1.u1,speedIn) annotation(Line(points = {{-69.8931,-1.81814},{-84.0336,-1.81814},{-84.0336,18.0672},{-91.1765,18.0672}}));
+  connect(ConstNull.y,relativetorque1.minTorque) annotation(Line(points = {{-75.7749,-56.7227},{-58.8235,-56.7227},{-58.8235,-29.4622},{-56.5715,-29.4622}}));
+  connect(maxTorque,relativetorque1.maxTorque) annotation(Line(points = {{-74.3697,-41.1765},{-68.4874,-41.1765},{-68.4874,-25.6303},{-56.1681,-25.6303},{-56.1681,-24.7227}}));
+  connect(torque,relativetorque1.torque) annotation(Line(points = {{-81.0924,-20.1681},{-53.7815,-20.1681},{-53.7815,-20.2353},{-56.9244,-20.2353}}));
+  connect(SpeedScale.y,abs1.u) annotation(Line(points = {{-50.5868,17.6471},{-41.5966,17.6471},{-41.5966,17.6471},{-41.0925,17.6471}}));
+  connect(speedIn,SpeedScale.u) annotation(Line(points = {{-91.1765,18.0672},{-55.8824,18.0672},{-55.8824,17.6471},{-71.3231,17.6471}}));
+end motorEfficiency;
+
