@@ -333,7 +333,7 @@ record ::
    (Show id, Ord id, TDisp typ0, TDisp typ1,
     SV.Walker v, SV.FromList v,
     SV.Storage v a, Fractional a, Atom.C a, Tuple.C a) =>
-   Record s typ0 typ1 id v a -> Plot2D.T a a
+   Record s1 s2 typ0 typ1 id v a -> Plot2D.T a a
 record (Record time pMap) =
    foldMap
       (\(key, sig) ->
@@ -349,7 +349,7 @@ recordIO ::
     SV.Walker v, SV.Storage v y, SV.FromList v,
     TDisp t2, TDisp t1,
     Tuple.C y, Atom.C y) =>
-   String -> Record s t1 t2 id v y -> IO ()
+   String -> Record s1 s2 t1 t2 id v y -> IO ()
 recordIO name =
    void . Plot.plotDefault . Frame.cons (recordAttr name) . record
 
@@ -360,7 +360,7 @@ recordIOList ::
     SV.Walker v, SV.Storage v y, SV.FromList v,
     TDisp t2, TDisp t1,
     Tuple.C y, Atom.C y) =>
-   String -> [Record s t1 t2 id v y] -> IO ()
+   String -> [Record s1 s2 t1 t2 id v y] -> IO ()
 recordIOList name recList =
    void $ Plot.plotDefault $ Frame.cons (recordAttr name) $ foldMap record recList
 
@@ -375,8 +375,8 @@ recordSplitPlus ::
     SV.Storage v y,
     SV.FromList v,
     SV.Len (v y)) =>
-   Int -> String -> Record s t1 t2 id v y ->
-   [(id, TC s t2 (Data (v :> Nil) y))] -> IO ()
+   Int -> String -> Record s1 s2 t1 t2 id v y ->
+   [(id, TC s2 t2 (Data (v :> Nil) y))] -> IO ()
 recordSplitPlus n name r list =
    zipWithM_
       (\k -> recordIO (name ++ " - Part " ++ show (k::Int)))
@@ -394,7 +394,7 @@ recordSplit ::
     SV.Walker v,
     SV.Storage v y,
     SV.FromList v) =>
-   Int -> String -> Record s t1 t2 id v y -> IO ()
+   Int -> String -> Record s1 s2 t1 t2 id v y -> IO ()
 recordSplit n name r =
    zipWithM_
       (\k -> recordIO (name ++ " - Part " ++ show (k::Int)))
@@ -412,7 +412,7 @@ recordSelect ::
     SV.Walker v,
     SV.Storage v y,
     SV.FromList v) =>
-   [id] -> String -> Record s t1 t2 id v y -> IO ()
+   [id] -> String -> Record s1 s2 t1 t2 id v y -> IO ()
 recordSelect idList name = recordIO name . Record.extract idList
 
 
@@ -424,7 +424,7 @@ sequenceFrame ::
     SV.Walker v, SV.Storage v y, SV.FromList v,
     TDisp t2, TDisp t1,
     Tuple.C y, Atom.C y) =>
-   String -> SequData (Record s t1 t2 id v y) ->
+   String -> SequData (Record s1 s2 t1 t2 id v y) ->
    SequData (Frame.T (Graph2D.T y y))
 sequenceFrame sqName =
    SD.mapWithSection
@@ -440,7 +440,7 @@ sequenceIO ::
     SV.Walker v,
     SV.Storage v y,
     SV.FromList v) =>
-   String -> SequData (Record s t1 t2 id v y) -> IO ()
+   String -> SequData (Record s1 s2 t1 t2 id v y) -> IO ()
 sequenceIO name =
    Fold.mapM_ Plot.plotDefault . sequenceFrame name
 
@@ -452,7 +452,7 @@ sequenceSplit ::
     SV.Walker v,
     SV.Storage v y,
     SV.FromList v) =>
-   Int -> String -> SequData (Record s t1 t2 id v y) -> IO ()
+   Int -> String -> SequData (Record s1 s2 t1 t2 id v y) -> IO ()
 sequenceSplit n name =
    Fold.sequence_ .
    SD.mapWithSection (\ x -> recordSplit n (name ++ " - " ++ show x))
@@ -465,7 +465,7 @@ sequenceSelect ::
     SV.Walker v,
     SV.Storage v y,
     SV.FromList v) =>
-   [id] -> String -> SequData (Record s t1 t2 id v y) ->  IO ()
+   [id] -> String -> SequData (Record s1 s2 t1 t2 id v y) ->  IO ()
 sequenceSelect idList name =
    sequenceIO name . fmap (Record.extract idList)
 

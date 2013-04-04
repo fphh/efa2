@@ -9,6 +9,7 @@ module EFA.Graph (
    Edge(Edge),
    LEdge,
 
+   reverse,
    reverseEdge,
    ixmap, nmap, emap, nmapWithInOut,
    empty,
@@ -57,6 +58,8 @@ import Data.Char (toUpper)
 
 import qualified Test.QuickCheck as QC
 
+import Prelude hiding (reverse)
+
 
 {-
 For all Graph's the 'isConsistent' predicate must be 'True'.
@@ -101,6 +104,12 @@ instance Foldable Edge where
 instance (QC.Arbitrary n) => QC.Arbitrary (Edge n) where
    arbitrary = liftM2 Edge QC.arbitrary QC.arbitrary
    shrink (Edge x y) = map (uncurry Edge) $ QC.shrink (x,y)
+
+
+reverse :: (Ord n) => Graph n nl el -> Graph n nl el
+reverse (Graph ns es) = Graph ns' es'
+  where ns' = fmap (\(ins, n, outs) -> (outs, n, ins)) ns
+        es' = M.mapKeys reverseEdge es
 
 reverseEdge :: Edge node -> Edge node
 reverseEdge (Edge x y) = Edge y x

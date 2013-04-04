@@ -23,6 +23,7 @@ import EFA.Signal.Signal
            Scal)
 import EFA.Signal.Typ (Typ,
                        A,
+                       D,
                        P,
                        T,
                        Tt,
@@ -77,20 +78,22 @@ flipPos ::  PPosIdx node -> PPosIdx node
 flipPos (PPosIdx idx1 idx2) = PPosIdx idx2 idx1
 
 
-type instance D.Value (Record s t1 t2 id v a) = a
+type instance D.Value (Record s1 s2 t1 t2 id v a) = a
 
 
-data Record s t1 t2 id v a =
-     Record (TC Signal t1 (Data (v :> Nil) a))
-            (M.Map id (TC s t2 (Data (v :> Nil) a))) deriving (Show, Eq)
+data Record s1 s2 t1 t2 id v a =
+     Record (TC s1 t1 (Data (v :> Nil) a))
+            (M.Map id (TC s2 t2 (Data (v :> Nil) a))) deriving (Show, Eq)
 
 
 
-type SignalRecord = Record Signal (Typ A T Tt) (Typ UT UT UT) SigId
+type SignalRecord = Record Signal Signal (Typ A T Tt) (Typ UT UT UT) SigId
 
-type PowerRecord n = Record Signal (Typ A T Tt) (Typ A P Tt) (PPosIdx n)
+type PowerRecord n = Record Signal Signal (Typ A T Tt) (Typ A P Tt) (PPosIdx n)
 
-type FlowRecord n = Record FSignal (Typ A T Tt) (Typ A F Tt) (PPosIdx n)
+type FlowRecord n = Record Signal FSignal (Typ A T Tt) (Typ A F Tt) (PPosIdx n)
+
+type DTimeFlowRecord n = Record FSignal FSignal (Typ D T Tt) (Typ A F Tt) (PPosIdx n)
 
 
 -- | Flow record to contain flow signals assigned to the tree
@@ -98,14 +101,23 @@ newtype FlowState node = FlowState (M.Map (PPosIdx node) Sign) deriving (Show)
 
 
 
-rmap :: (TC s1 t2 (Data (v :> Nil) a) -> TC s2 t3 (Data (v :> Nil) a)) -> Record s1 t1 t2 id v a -> Record s2 t1 t3 id v a
+rmap ::
+   (TC s1 t1 (Data (v :> Nil) a) -> TC s2 t2 (Data (v :> Nil) a)) ->
+   Record s s1 t t1 id v a -> Record s s2 t t2 id v a
 rmap f (Record t ma) = Record t (M.map f ma)
 
-rmapKeys ::  (Ord id2) => (id1 -> id2) -> Record s t1 t2 id1 v a -> Record s t1 t2 id2 v a
+rmapKeys ::
+   (Ord id2) =>
+   (id1 -> id2) ->
+   Record s1 s2 t1 t2 id1 v a -> Record s1 s2 t1 t2 id2 v a
 rmapKeys f (Record t ma) = Record t (M.mapKeys f ma)
 
-rmapWithKey ::  (id -> TC s1 t2 (Data (v :> Nil) a) -> TC s2 t3 (Data (v :> Nil) a)) ->
-                               Record s1 t1 t2 id v a -> Record s2 t1 t3 id v a
+rmapWithKey ::
+   (id ->
+    TC s0 t0 (Data (v :> Nil) a) ->
+    TC s1 t1 (Data (v :> Nil) a)) ->
+   Record s s0 t t0 id v a ->
+   Record s s1 t t1 id v a
 rmapWithKey f (Record t ma) = Record t (M.mapWithKey f ma)
 -----------------------------------------------------------------------------------
 -- | Indice Record Number
@@ -119,25 +131,42 @@ instance Show Idx where
 
 
 -- | Access Functions
-getTime :: Record s t1 t2 id v a ->  TC Signal t1 (Data (v :> Nil) a)
+getTime :: Record s1 s2 t1 t2 id v a -> TC s1 t1 (Data (v :> Nil) a)
 getTime (Record time _) = time
 
 
-getSig :: (Show (v a),Ord id, Show id) => Record s t1 t2 id v a -> id -> TC s t2 (Data (v :> Nil) a)
+getSig ::
+   (Show (v a), Ord id, Show id) =>
+   Record s1 s2 t1 t2 id v a -> id -> TC s2 t2 (Data (v :> Nil) a)
 getSig (Record _ sigMap) key = checkedLookup2 "getSig" sigMap key
 
 -- | Get Start and End time
 getTimeWindow :: (Ord a,
                   V.Storage v a,
                   V.Singleton v) =>
-                 Record s (Typ A T Tt) t2 id v a ->
+                 Record s1 s2 (Typ A T Tt) t2 id v a ->
                  (Scal (Typ A T Tt) a, Scal (Typ A T Tt) a)
 getTimeWindow rec = (S.minimum t, S.maximum t)
   where t = getTime rec
 
+
+diffTime ::
+{-
+   (V.Zipper v, V.Walker v, V.Singleton v, V.Storage v a, BSum a,
+    DSucc abs delta) =>
+   Record Signal s2 (Typ abs t1 p1) t2 id v a ->
+   Record FSignal s2 (Typ delta t1 p1) t2 id v a
+-}
+   (V.Zipper v, V.Walker v, V.Singleton v, V.Storage v a, BSum a) =>
+   FlowRecord node v a ->
+   DTimeFlowRecord node v a
+diffTime (Record time signals) = Record (S.delta time) signals
+
 -- | Use carefully -- removes signal jitter around zero
-removeZeroNoise :: (V.Walker v, V.Storage v a, Ord a, Num a) => PowerRecord node v a -> a -> PowerRecord node v a
-removeZeroNoise (Record time pMap) threshold =
+removeZeroNoise ::
+   (V.Walker v, V.Storage v a, Ord a, Num a) =>
+   a -> PowerRecord node v a -> PowerRecord node v a
+removeZeroNoise threshold (Record time pMap) =
    Record time $ M.map (S.map (hardShrinkage threshold)) pMap
 
 hardShrinkage :: (Ord a, Num a) => a -> a -> a
@@ -148,7 +177,7 @@ hardShrinkage threshold x =
 -- | Generate a new Record with selected signals
 extract ::
    (Ord id, Show id) =>
-   [id] -> Record s t1 t2 id v a -> Record s t1 t2 id v a
+   [id] -> Record s1 s2 t1 t2 id v a -> Record s1 s2 t1 t2 id v a
 extract xs rec = extractLogSignals rec $ map (flip (,) id) xs
 {-
 extract ::
@@ -160,7 +189,7 @@ extract xs rec@(Record time _) =
 -- | Split SignalRecord in even chunks
 split ::
    (Ord id) =>
-   Int -> Record s t1 t2 id v a -> [Record s t1 t2 id v a]
+   Int -> Record s1 s2 t1 t2 id v a -> [Record s1 s2 t1 t2 id v a]
 split n (Record time pMap) =
    map (Record time . M.fromList) $ HTL.sliceVertical n $ M.toList pMap
 
@@ -170,7 +199,7 @@ sortSigList ::
     V.Walker v, V.Storage v a, BSum a) =>
    [(SigId, TC Signal (Typ UT UT UT) (Data (v :> Nil) a))] ->
    [(SigId, TC Signal (Typ UT UT UT) (Data (v :> Nil) a))]
-sortSigList = Key.sort (S.sigSum . snd)
+sortSigList = Key.sort (S.sum . snd)
 
 
 -----------------------------------------------------------------------------------
@@ -181,9 +210,9 @@ sortSigList = Key.sort (S.sigSum . snd)
 -- | create a Record of selected, and sign corrected signals
 extractLogSignals ::
    (Ord id, Show id) =>
-   Record s t1 t2 id v a ->
-   [(id, TC s t2 (Data (v :> Nil) a) -> TC s t2 (Data (v :> Nil) a))] ->
-   Record s t1 t2 id v a
+   Record s1 s2 t1 t2 id v a ->
+   [(id, TC s2 t2 (Data (v :> Nil) a) -> TC s2 t2 (Data (v :> Nil) a))] ->
+   Record s1 s2 t1 t2 id v a
 extractLogSignals (Record time sMap) idList =
    let idMap = M.fromList idList
        notFound = Set.difference (M.keysSet idMap) (M.keysSet sMap)
@@ -209,9 +238,10 @@ genPowerRecord time =
                 (flipPos pposIdx, S.setType sigB)])
 
 
-addSignals :: (Ord id, V.Len (v a),Show id) =>
-              [(id, TC s t2 (Data (v :> Nil) a))]  ->
-              Record s t1 t2 id v a -> Record s t1 t2 id v a
+addSignals ::
+   (Ord id, V.Len (v a),Show id) =>
+   [(id, TC s2 t2 (Data (v :> Nil) a))]  ->
+   Record s1 s2 t1 t2 id v a -> Record s1 s2 t1 t2 id v a
 addSignals list (Record time m) =  (Record time (foldl f m list))
   where f ma (ident,sig) = if S.len time == S.len sig
                        then M.insert ident sig ma
@@ -219,17 +249,24 @@ addSignals list (Record time m) =  (Record time (foldl f m list))
 
 
 -- | adding signals of two records with same time vector by using Data.Map.union
-union :: (Eq (v a),Ord id) => Record s t1 t2 id v a -> Record s t1 t2 id v a -> Record s t1 t2 id v a
+union ::
+   (Eq (v a), Ord id) =>
+   Record s1 s2 t1 t2 id v a ->
+   Record s1 s2 t1 t2 id v a ->
+   Record s1 s2 t1 t2 id v a
 union (Record timeA mA) (Record timeB mB) = if timeA == timeB then Record timeA $ M.union mA mB
                                             else error ("EFA.Signal.Record.union: time vectors differ")
 
 
 
 -- | Modify specified signals with function
-modifySignals :: (Ord id) => ToModify id ->
-                 (TC s t2 (Data (v :> Nil) a) -> TC s t2 (Data (v :> Nil) a)) ->
-                 Record s t1 t2 id v a ->
-                 Record s t1 t2 id v a
+modifySignals ::
+   (Ord id) =>
+   ToModify id ->
+   (TC s2 t2 (Data (v :> Nil) a) ->
+    TC s2 t2 (Data (v :> Nil) a)) ->
+   Record s1 s2 t1 t2 id v a ->
+   Record s1 s2 t1 t2 id v a
 modifySignals idList f (Record time ma) =  (Record time (foldl g ma $ h idList))
   where g m ident = M.adjust f ident m
         h xs = case xs of
@@ -245,7 +282,7 @@ maxRange :: (Ord a,
              Show (v a),
              Show id) =>
             RangeFrom id ->
-            Record s t1 t2 id v a ->
+            Record s1 s2 t1 t2 id v a ->
             (TC Scalar t2 (Data Nil a), TC Scalar t2 (Data Nil a))
 maxRange list (Record _ m) = (TC $ Data (minimum $ map fst l), TC $ Data (maximum $ map snd l))
   where l = map f $ map (\x -> (S.minimum x, S.maximum x)) $  map (checkedLookup2 "Signal/maxRange" m) $ h list
@@ -269,8 +306,8 @@ normSignals2Range :: (Show id,
                       V.Walker v,
                       Fractional a)  =>
                      (RangeFrom id, ToModify id) ->
-                     Record s t1 t2 id v a ->
-                     Record s t1 t2 id v a
+                     Record s1 s2 t1 t2 id v a ->
+                     Record s1 s2 t1 t2 id v a
 normSignals2Range (listM,listN) record = modifySignals listN f record
   where (TC (Data minx),TC (Data maxx)) = maxRange listM record
         f x = S.map (\y -> y * (maxx - minx) + minx) $ S.norm x
@@ -285,8 +322,8 @@ normSignals2Max75 :: (Show id,
                       V.Walker v,
                       Fractional a)  =>
                      (RangeFrom id, ToModify id) ->
-                     Record s t1 t2 id v a ->
-                     Record s t1 t2 id v a
+                     Record s1 s2 t1 t2 id v a ->
+                     Record s1 s2 t1 t2 id v a
 normSignals2Max75 (listM,listN) record = modifySignals listN f record
   where ( _ ,TC (Data maxx)) = maxRange listM record
         f x = S.map (\y -> y * 0.75 * maxx) $ S.norm x
@@ -297,7 +334,7 @@ norm :: (Fractional a,
          V.Walker v,
          V.Storage v a,
          V.Singleton v) =>
-        Record s t1 t2 id v a -> Record s t1 t2 id v a
+        Record s1 s2 t1 t2 id v a -> Record s1 s2 t1 t2 id v a
 norm rec = rmap S.norm rec
 
 -- | Add interpolated data points in an existing record
@@ -308,7 +345,7 @@ newTimeBase :: (Fractional a,
                 V.Walker v,
                 V.Singleton v,
                 V.Storage v a) =>
-               Record Signal (Typ A T Tt) t2 id v a -> TSignal v a -> Record Signal  (Typ A T Tt)  t2 id v a
+               Record Signal Signal (Typ A T Tt) t2 id v a -> TSignal v a -> Record Signal Signal  (Typ A T Tt)  t2 id v a
 newTimeBase (Record time m) newTime = Record newTime (M.map f m)
   where f sig = S.interp1LinSig time sig newTime
 
@@ -317,7 +354,7 @@ newTimeBase (Record time m) newTime = Record newTime (M.map f m)
 -- | Create a new Record by slicing time and all signals on given Indices
 slice ::
    (V.Slice v, V.Storage v a) =>
-   Record s t1 t2 id v a -> (Int, Int) {- Range -} -> Record s t1 t2 id v a
+   Record s1 s2 t1 t2 id v a -> (Int, Int) {- Range -} -> Record s1 s2 t1 t2 id v a
 slice (Record t m) (idx1,idx2) = Record (f t) (M.map f m)
   where f ::
            (V.Slice v, V.Storage v a) =>
@@ -332,14 +369,14 @@ State changes in solver create several DataPoints with exact the same time.
 The resulting sections which have zero time duration are removed.
 -}
 longerThanZero ::
-   (Fractional a, Ord a, V.Storage v a, V.Singleton v) =>
-   PowerRecord nty v a -> Bool
+   (Num a, Ord a, V.Storage v a, V.Singleton v) =>
+   PowerRecord node v a -> Bool
 longerThanZero = uncurry (/=) . getTimeWindow
 
 -- | Check for minimum duration
 longerThan ::
-   (Fractional a, Ord a, Eq a, V.Storage v a, V.Singleton v) =>
-   a -> PowerRecord nty v a -> Bool
+   (Num a, Ord a, V.Storage v a, V.Singleton v) =>
+   a -> Record s1 s2 (Typ A T Tt) t2 id v a -> Bool
 longerThan threshold r =
    case getTimeWindow r of
       (TC (Data x), TC (Data y)) -> abs (x - y) > threshold
@@ -349,7 +386,20 @@ energyBelow ::
    (Num a, SB.BSum a, Ord a, V.Walker v, V.Storage v a) =>
    a -> FlowRecord node v a -> Bool
 energyBelow threshold (Record _ fMap) =
-   Fold.all (\s -> abs (S.fromScalar (S.sigSum s)) < threshold) fMap
+   Fold.all (\s -> abs (S.fromScalar (S.sum s)) < threshold) fMap
+
+
+major ::
+   (Num d, SB.BSum d, Ord d,
+    V.Storage v d, V.Singleton v, V.Walker v) =>
+
+   TC Scalar (Typ A F Tt) (Data Nil d) ->
+   TC Scalar (Typ A T Tt) (Data Nil d) ->
+   FlowRecord id v d -> Bool
+major (S.TC (D.Data energyThreshold)) (S.TC (D.Data timeThreshold)) rec =
+   not (energyBelow energyThreshold rec)
+   &&
+   longerThan timeThreshold rec
 
 
 -----------------------------------------------------------------------------------
@@ -361,7 +411,7 @@ instance (QC.Arbitrary node) => QC.Arbitrary (PPosIdx node) where
 
 instance
    (Sample a, V.FromList v, V.Storage v a, QC.Arbitrary id, Ord id) =>
-      QC.Arbitrary (Record s t1 t2 id v a) where
+      QC.Arbitrary (Record s1 s2 t1 t2 id v a) where
    arbitrary = do
       xs <- QC.listOf arbitrarySample
       n <- QC.choose (1,5)
@@ -394,8 +444,8 @@ instance (Random a, Integral a) => Sample (Ratio a) where
 instance
    (V.Walker v, V.Singleton v, V.FromList v, V.Storage v a, DispStorage1 v,
     Ord a, Fractional a, PrintfArg a, Show id,
-    S.DispApp s, TDisp t1, TDisp t2) =>
-   ToTable (Record s t1 t2 id v a) where
+    S.DispApp s1, S.DispApp s2, TDisp t1, TDisp t2) =>
+   ToTable (Record s1 s2 t1 t2 id v a) where
    toTable os (ti, Record time sigs) =
       [Table {
          tableTitle =

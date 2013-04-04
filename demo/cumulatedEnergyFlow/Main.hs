@@ -1,7 +1,5 @@
 module Main where
 
-import Data.Monoid (mconcat, Monoid)
-
 import EFA.Example.Utility ( edgeVar, makeEdges, constructSeqTopo )
 import EFA.Example.Absolute ( (.=) )
 
@@ -18,6 +16,8 @@ import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Async (concurrentlyMany_)
 import EFA.Utility.Stream (Stream((:~)))
 import EFA.Graph.CumulatedFlow (cumulate)
+
+import Data.Monoid (Monoid, mconcat)
 
 
 sec0, sec1, sec2, sec3, sec4 :: Idx.Section

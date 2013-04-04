@@ -55,7 +55,7 @@ import qualified EFA.Example.AssignMap as AssignMap
 sigsWithSpeed ::(Fractional a, Ord a, Show (v a), V.Walker v, V.Storage v a,
                                  V.Singleton v, V.FromList v, TDisp t2, TDisp t1, Atom.C a,
                                  Tuple.C a) =>
-                                [Record s t1 t2 SigId v a] -> (String, [SigId]) -> IO ()
+                                [Record s1 s2 t1 t2 SigId v a] -> (String, [SigId]) -> IO ()
 
 
 sigsWithSpeed recList (ti, idList) =  do
@@ -67,7 +67,7 @@ sigsWithSpeed recList (ti, idList) =  do
 operation :: (Fractional a, Ord id, Show (v a), Show id, V.Walker v,
               V.Storage v a, V.FromList v, TDisp t2, Tuple.C a, Atom.C a) =>
               [Char]
-              -> [([Char], Record s t1 t2 id v a)] -> ([Char], (id, id)) -> IO ()
+              -> [([Char], Record s1 s2 t1 t2 id v a)] -> ([Char], (id, id)) -> IO ()
 
 operation ti rList  (plotTitle, (idx,idy)) = mapM_ f rList
   where f (recTitle, rec) = do

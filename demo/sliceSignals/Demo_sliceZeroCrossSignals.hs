@@ -8,7 +8,7 @@ import qualified Data.Map as M
 
 import qualified EFA.Signal.Signal as S
 import EFA.Signal.Sequence
-import EFA.Signal.SequenceData hiding (zip)
+import EFA.Signal.SequenceData
 import EFA.Signal.Record
 
 import EFA.Utility (idxList)

@@ -1,27 +1,20 @@
--- {-# LANGUAGE FlexibleContexts #-}
-
-
 module EFA.Graph.CumulatedFlow where
 
-import qualified Data.Map as M
-
-import Data.Monoid (mempty, Monoid, (<>))
-import Control.Applicative (liftA2)
-
 import qualified EFA.Equation.Environment as Env
+import qualified EFA.Equation.Record as Rec
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph as Gr
-import qualified EFA.Equation.Record as Rec
 
 import EFA.Equation.Result (Result(..))
 
+import qualified Data.Map as M
 
-filt :: 
-  (Ord node, Eq node, Show node) =>
-  Gr.Graph (Idx.BndNode node) nl el ->
-  Gr.Graph (Idx.BndNode node) nl el
-filt = Gr.lefilter (TD.isStructureEdge . fst)
+import Control.Applicative (liftA2)
+import Data.Monoid (Monoid, mempty, (<>))
+import Data.Maybe (mapMaybe)
+import Data.Tuple.HT (mapPair)
+
 
 
 data RelativeDir = WithTopoDir
@@ -41,93 +34,76 @@ getRelativeDir (Gr.Graph _ es) e =
 --relativeDirToFlowDir :: 
 
 
--- Are edges in SequFlowGraph always Dir?
 cumulatedEnergyFlow ::
   (Num a, Ord node, Show node) =>
   TD.Topology node ->
-  Gr.Graph (Idx.BndNode node) t TD.FlowDirection ->
+  TD.DirSequFlowGraph node ->
   Env.Complete node b (Rec.Absolute (Result a)) ->
   ( M.Map (Idx.Energy node) (Rec.Absolute (Result a)),
     M.Map (Idx.Energy node) (Rec.Absolute (Result a)) )
 cumulatedEnergyFlow topo seqTopo env =
-  (M.mapKeys toEn $ M.map toDet m1, M.mapKeys toEn $ M.map toDet m2)
-  where em = Env.energyMap $ Env.signal env
-        Gr.Graph _ es = filt seqTopo
-        (m1, m2) = M.foldWithKey f (M.empty, M.empty) es
-        f (Gr.Edge (Idx.BndNode (Idx.AfterSection sec) n)
-                   (Idx.BndNode _ n')) TD.Dir (withDir, againstDir) =
-          case getRelativeDir topo e of
-               WithTopoDir -> (insert withDir, insertzero againstDir)
-               AgainstTopoDir -> (insertzero withDir, insert againstDir)
-          where e  = Gr.Edge n n'
+   mapPair (cum, cum) $ unzip $ mapMaybe f $ Gr.labEdges seqTopo
+  where cum = M.unionsWith (liftA2 (liftA2 (+)))
+        em = Env.energyMap $ Env.signal env
+        f (e, ()) =
+          case TD.edgeType e of
+             TD.StructureEdge idx@(Idx.StructureEdge _sec n n') ->
+                let e1 = Idx.Energy idx
+                    idx1 = Idx.Energy (Idx.StructureEdge (Idx.Section 0) n n')
 
-                e1 = Idx.Energy (Idx.StructureEdge sec n n')
-                idx1 = (n, n')
+                    e2 = Idx.Energy (Idx.flip idx)
+                    idx2 = Idx.Energy (Idx.StructureEdge (Idx.Section 0) n' n)
 
-                e2 = Idx.Energy (Idx.StructureEdge sec n' n)
-                idx2 = (n', n)
+                    insert =
+                       (M.singleton idx1 $ toDet $ M.lookup e1 em) <>
+                       (M.singleton idx2 $ toDet $ M.lookup e2 em)
+                    toDet = maybe (Rec.Absolute Undetermined) id
 
-                insert = M.insertWith (.+) idx1 (M.lookup e1 em)
-                         . M.insertWith (.+) idx2 (M.lookup e2 em)
+                    insertzero =
+                       M.singleton idx1 zero <>
+                       M.singleton idx2 zero
+                    zero = Rec.Absolute (Determined 0)
 
-                insertzero = M.insertWith (.+) idx1 zero
-                             . M.insertWith (.+) idx2 zero
-                zero = Just (Rec.Absolute (Determined 0))
-
-                (.+) = liftA2 (liftA2 (liftA2 (+)))
-
-        f _ _ _ = error "not a Dir edge!"
-
-        toDet Nothing = Rec.Absolute Undetermined
-        toDet (Just a) = a
-
-        toEn (a, b) =
-          Idx.Energy (Idx.StructureEdge (Idx.Section 0) a b)
-
-reverseGraph :: (Ord a) => Gr.Graph a b c -> Gr.Graph a b c
-reverseGraph (Gr.Graph ns es) = Gr.Graph ns' es'
-  where ns' = fmap (\(ins, n, outs) -> (outs, n, ins)) ns
-        es' = M.mapKeys (\(Gr.Edge x y) -> (Gr.Edge y x)) es
+                in  Just $
+                    case getRelativeDir topo $ Gr.Edge n n' of
+                       WithTopoDir -> (insert, insertzero)
+                       AgainstTopoDir -> (insertzero, insert)
+             _ -> Nothing
 
 
-getStorages :: (Ord node) => TD.Topology node -> [node]
-getStorages = M.keys . M.filter p . Gr.nodes
-  where p (_, TD.Storage _, _) = True
-        p _ = False
-
-cumulatedEnv :: 
+cumulatedEnv ::
   (Ord node) =>
   TD.Topology node ->
-  Env.EnergyMap node (Rec.Absolute (Result a))
-  -> ( TD.SequFlowGraph node,
-       Env.Complete node (Rec.Absolute (Result a1)) (Rec.Absolute (Result a)))
+  Env.EnergyMap node (Rec.Absolute (Result a)) ->
+  ( TD.SequFlowGraph node,
+    Env.Complete node (Rec.Absolute (Result b)) (Rec.Absolute (Result a)))
 cumulatedEnv topo enEnv = (ctopo, env)
-  where env1 =
-          mempty {
-            Env.signal = mempty { 
-            Env.energyMap = enEnv,
-            Env.dtimeMap =
-              M.fromList [ (Idx.DTime (Idx.Section 0),
-                            Rec.Absolute Undetermined) ] }}
-        env2 =
-          mempty {  -- why cant we put it directly in env1 ? -> type problem
-            Env.scalar = mempty {
-            Env.storageMap = M.fromList sm }}
+  where env =
+           Env.Complete
+              (mempty {
+                 Env.storageMap =
+                   fmap (const $ Rec.Absolute Undetermined) $
+                   M.mapKeys (Idx.Storage . Idx.BndNode sec) $
+                   M.filter TD.isStorage $ Gr.nodeLabels topo })
+              (mempty {
+                 Env.energyMap = enEnv,
+                 Env.dtimeMap =
+                   M.singleton
+                     (Idx.DTime (Idx.Section 0))
+                     (Rec.Absolute Undetermined)
+               })
 
         sec = Idx.AfterSection (Idx.Section 0)
-        sm = map f (getStorages topo)
-        f s = ( Idx.Storage (Idx.BndNode sec s),
-                Rec.Absolute Undetermined )
-        env = env1 <> env2
-        ctopo = TD.fromTopology $
-                  TD.classifyStorages $
-                  Gr.emap (const TD.Dir) topo
+        ctopo =
+           TD.fromTopology $
+           TD.classifyStorages $
+           Gr.emap (const TD.Dir) topo
 
 
 cumulate ::
   (Num a, Ord node, Show node) =>
   TD.Topology node ->
-  (t1, Gr.Graph (Idx.BndNode node) t TD.FlowDirection) ->
+  (t1, TD.SequFlowGraph node) ->
   Env.Complete node b (Rec.Absolute (Result a)) ->
   ( ( (t1, TD.SequFlowGraph node),
        Env.Complete node (Rec.Absolute (Result a1)) (Rec.Absolute (Result a))),
@@ -135,7 +111,8 @@ cumulate ::
       Env.Complete node (Rec.Absolute (Result a2)) (Rec.Absolute (Result a))))
 cumulate topo (rngs, seqTopo) env =
   ( ((rngs, ctopo), withDirEnv), ((rngs, crevTopo), againstDirEnv) )
-  where revTopo = reverseGraph topo
-        (withDir, againstDir) = cumulatedEnergyFlow topo seqTopo env
+  where revTopo = Gr.reverse topo
+        (withDir, againstDir) =
+           cumulatedEnergyFlow topo (TD.dirFromSequFlowGraph seqTopo) env
         (ctopo, withDirEnv) = cumulatedEnv topo withDir
         (crevTopo, againstDirEnv) = cumulatedEnv revTopo againstDir

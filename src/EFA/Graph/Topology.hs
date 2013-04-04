@@ -13,6 +13,7 @@ module EFA.Graph.Topology (
        DirSequFlowGraph,
        pathExists,
        fromTopology,
+       dirFromSequFlowGraph,
        isStorage,
        maybeStorage,
        isActive,
@@ -225,6 +226,21 @@ fromTopology :: (Ord a) => ClassifiedTopology a -> SequFlowGraph a
 fromTopology = Gr.ixmap nf . Gr.emap ef
   where ef = const Dir
         nf = Idx.BndNode (Idx.AfterSection (Idx.Section 0))
+
+{-
+In principle, we could remove "dead nodes", but
+then the storage equations would not work.
+Therefore we should not remove "dead nodes"
+iff they are storages.
+Anyway, I don't remove dead nodes,
+because it will make DirSequFlowGraph more complicated
+or the generation of storage equations will be more complicated.
+-}
+dirFromSequFlowGraph ::
+   (Ord node) =>
+   SequFlowGraph node -> DirSequFlowGraph node
+dirFromSequFlowGraph =
+   Gr.emap (const ()) . Gr.lefilter isDirEdge
 
 
 type InOut n el = ([Gr.LNode n el], [Gr.LNode n el])
