@@ -3,8 +3,8 @@ module Main where
 
 import qualified EFA.Example.AssignMap as AssignMap
 import qualified EFA.Example.Utility as Utility
-import EFA.Example.Utility
-          (edgeVar, makeEdges, constructSeqTopo)
+import qualified EFA.Example.Index as XIdx
+import EFA.Example.Utility (makeEdges, constructSeqTopo)
 import EFA.Example.Absolute ((.=))
 import EFA.Equation.Stack (Stack)
 
@@ -90,11 +90,11 @@ idx -=<> eqsys =
 
 givenSymbolic :: EquationSystemSymbolic s
 givenSymbolic =
-   (Idx.DTime sec0 .= Arith.fromInteger 1) <>
+   (XIdx.dTime sec0 .= Arith.fromInteger 1) <>
 
-   edgeVar Idx.Energy sec0 node0 node1 -=<>
-   edgeVar Idx.Eta sec0 node0 node1 -=<>
-   edgeVar Idx.Eta sec0 node1 node2 -=<>
+   XIdx.energy sec0 node0 node1 -=<>
+   XIdx.eta sec0 node0 node1 -=<>
+   XIdx.eta sec0 node1 node2 -=<>
 
    mempty
 
@@ -127,17 +127,17 @@ deltaPair idx before delta =
 
 givenNumeric :: EquationSystemNumeric s
 givenNumeric =
-   (Idx.DTime sec0 .= 1) <>
+   (XIdx.dTime sec0 .= 1) <>
 
-   deltaPair (edgeVar Idx.Energy sec0 node0 node1) 4 (-0.6) <>
-   deltaPair (edgeVar Idx.Eta sec0 node0 node1) 0.25 0.1 <>
-   deltaPair (edgeVar Idx.Eta sec0 node1 node2) 0.85 0.05 <>
+   deltaPair (XIdx.energy sec0 node0 node1) 4 (-0.6) <>
+   deltaPair (XIdx.eta sec0 node0 node1) 0.25 0.1 <>
+   deltaPair (XIdx.eta sec0 node1 node2) 0.85 0.05 <>
 
    mempty
 
 
 eout :: Idx.Energy Node.Int
-eout = edgeVar Idx.Energy sec0 node2 node1
+eout = XIdx.energy sec0 node2 node1
 
 
 

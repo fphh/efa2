@@ -11,11 +11,9 @@ import Modules.Signals as Signals
 
 import qualified EFA.Example.Absolute as EqAbs
 
-import EFA.Example.Utility (edgeVar,
-                            checkDetermined,
-                            (.=),
-                            (%=)
-                           )
+import qualified EFA.Example.Index as XIdx
+import EFA.Example.Utility ((.=), (%=), checkDetermined)
+
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Result as R
@@ -187,14 +185,14 @@ makeGivenFromExternal :: (Vec.Zipper v,
                          EqGen.EquationSystem rec System.Node s Double d
 
 makeGivenFromExternal idx sf =
-   (Idx.Record idx (Idx.Storage (Idx.initBndNode System.Battery)) .= initStorage)
-   <> (Idx.Record idx (Idx.Storage (Idx.initBndNode System.VehicleInertia)) .= 0)
+   (Idx.Record idx (XIdx.storage Idx.initial System.Battery) .= initStorage)
+   <> (Idx.Record idx (XIdx.storage Idx.initial System.VehicleInertia) .= 0)
    <> fold (SD.mapWithSection f sf)
    where f sec (Record t xs) =
            (Idx.Record idx (Idx.DTime sec) .=  sum (Sig.toList $ Sig.delta t)) <>
            fold (M.mapWithKey g xs)
            where g (PPosIdx a b) e =
-                    Idx.Record idx (edgeVar Idx.Energy sec a b) .=  sum (Sig.toList e)
+                    Idx.Record idx (XIdx.energy sec a b) .= sum (Sig.toList e)
 
 -------------------------------------------------------------------------------------------------
 -- ## Predict Energy Flow
@@ -225,8 +223,8 @@ makeGivenForPrediction ::
    EqGen.EquationSystem rec System.Node s a v
 
 makeGivenForPrediction idx env =
-    (Idx.Record idx (Idx.Storage (Idx.initBndNode System.Battery)) .= initStorage)
-    <> (Idx.Record idx (Idx.Storage (Idx.initBndNode System.VehicleInertia)) .= 0)
+    (Idx.Record idx (XIdx.storage Idx.initial System.Battery) .= initStorage)
+    <> (Idx.Record idx (XIdx.storage Idx.initial System.VehicleInertia) .= 0)
     <> (foldMap f $ M.toList $ Env.etaMap $ Env.signal env)
     <> (foldMap f $ M.toList $ Env.dtimeMap $ Env.signal env)
     <> (foldMap f $ M.toList $ M.mapWithKey h $ M.filterWithKey g $
@@ -337,5 +335,3 @@ makeGivenForDifferentialAnalysis (Env.Complete _ sig) =
             (System.ConES, System.ElectricSystem) -> True
             (System.Battery, System.ConBattery) -> True
             _ -> False
-
-
