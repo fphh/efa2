@@ -22,8 +22,8 @@ import qualified EFA.Signal.Plot as Plot
 import qualified EFA.Signal.Signal as S
 -- import qualified EFA.Signal.Data as D
 
-import EFA.Signal.Signal(UTFSig, FSamp, Test2, PFSamp, (.+), (.-),(./),(.*))
-import EFA.Signal.Typ (A, P, Tt, F, N, X, Typ, T, UT,Y)
+import EFA.Signal.Signal(Test2, (.+), (.-), (./))
+import EFA.Signal.Typ (A, P, Tt, F, N, Typ, Y)
 import EFA.Signal.Base(Val)
 
 import qualified EFA.Equation.Arithmetic as Arith
@@ -341,8 +341,6 @@ main = do
       varN31 = getSignalVarEta varEnvs (edgeVar Idx.Eta sec1 N3 N1)
       varN01 = getSignalVarEta varEnvs (edgeVar Idx.Eta sec0 N0 N1)
 
-      varE31 = getSignalVarEnergy varEnvs (edgeVar Idx.Energy sec1 N3 N1)
-
       varP31_0 = getSignalVarPower varEnvs (edgeVar Idx.Power sec0 N3 N1)
       varP31_1 = getSignalVarPower varEnvs (edgeVar Idx.Power sec1 N3 N1)
 
@@ -361,15 +359,7 @@ main = do
 
       -- create curve of n01 in used power range
       p10Lin = S.concat varP10
-      p01Lin = S.concat varP01
       n01Lin = S.concat varN01
-
-      p130Lin = S.concat varP13_0
-      p310Lin = S.concat varP31_0
-      p131Lin = S.concat varP13_1
-      p311Lin = S.concat varP31_1
-      n13Lin = S.concat varN13
-      n31Lin = S.concat varN31
 
       -- fuel converter
       (p10Lin', n01Lin') = S.sortTwo (p10Lin,n01Lin)
