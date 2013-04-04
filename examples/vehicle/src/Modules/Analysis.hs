@@ -10,10 +10,8 @@ import qualified Modules.System as System
 import Modules.Signals as Signals
 
 
-import EFA.Example.Utility (edgeVar,
-                            (.=),
-                            (%=)
-                           )
+import qualified EFA.Example.Index as XIdx
+import EFA.Example.Utility ((.=), (%=))
 
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Variable as Var
@@ -161,14 +159,14 @@ makeGivenFromExternal :: (Eq v, Num v, Arith.Sum v, Vec.Storage t v, Vec.FromLis
                          -> EqGen.EquationSystem
                          (EqRecord.FromIndex rec) System.Node s1 Double v
 makeGivenFromExternal idx sf =
-   (Idx.Record idx (Idx.Storage (Idx.initBndNode System.Battery)) .= initStorage)
-   <> (Idx.Record idx (Idx.Storage (Idx.initBndNode System.VehicleInertia)) .= 0)
+   (Idx.Record idx (XIdx.storage Idx.initial System.Battery) .= initStorage)
+   <> (Idx.Record idx (XIdx.storage Idx.initial System.VehicleInertia) .= 0)
    <> fold (SD.mapWithSection f sf)
    where f sec (Record t xs) =
            (Idx.Record idx (Idx.DTime sec) .= sum (Sig.toList t)) <>
            fold (M.mapWithKey g xs)
            where g (PPosIdx a b) e =
-                    Idx.Record idx (edgeVar Idx.Energy sec a b) .= sum (Sig.toList e)
+                    Idx.Record idx (XIdx.energy sec a b) .= sum (Sig.toList e)
 
 -------------------------------------------------------------------------------------------------  
 -- ## Predict Energy Flow
@@ -193,8 +191,8 @@ prediction sequenceFlowTopology env = EqGen.solve sequenceFlowTopology (makeGive
 --       (rec (EqGen.Result Double)) (rec (EqGen.Result Double)) ->
 --    (EqGen.EquationSystem rec System.Node s Double Double)
 makeGivenForPrediction idx env =
-    (Idx.Record idx (Idx.Storage (Idx.initBndNode System.Battery)) .= initStorage)
-    <> (Idx.Record idx (Idx.Storage (Idx.initBndNode System.VehicleInertia)) .= 0)
+    (Idx.Record idx (XIdx.storage Idx.initial System.Battery) .= initStorage)
+    <> (Idx.Record idx (XIdx.storage Idx.initial System.VehicleInertia) .= 0)
     <> (foldMap f $ M.toList $ Env.etaMap $ Env.signal env)
     <> (foldMap f $ M.toList $ Env.dtimeMap $ Env.signal env)
     <> (foldMap f $ M.toList $ M.mapWithKey h $ M.filterWithKey g $
@@ -288,11 +286,11 @@ deltaPair ::
 {-
 givenNumeric :: EquationSystemNumeric s
 givenNumeric =
-   (Idx.DTime sec0 .= 0) <>
+   (XIdx.dTime sec0 .= 0) <>
 
-   deltaPair (edgeVar Idx.Energy sec0 node0 node1) 4 (-0.6) <>
-   deltaPair (edgeVar Idx.Eta sec0 node0 node1) 0.25 0.1 <>
-   deltaPair (edgeVar Idx.Eta sec0 node1 node2) 0.85 0.05 <>
+   deltaPair (XIdx.energy sec0 node0 node1) 4 (-0.6) <>
+   deltaPair (XIdx.eta sec0 node0 node1) 0.25 0.1 <>
+   deltaPair (XIdx.eta sec0 node1 node2) 0.85 0.05 <>
 
    mempty
 
@@ -313,9 +311,9 @@ makeGivenForDifferentialAnalysis ::
   -- EqGen.EquationSystem Env.Delta System.Node s (SumProduct.Term (HSt.Symbol  System.Node)) (SumProduct.Term (HSt.Symbol  System.Node))
 
 makeGivenForDifferentialAnalysis env =
---  (Idx.DTime sec0 .= 0) <>
+--  (XIdx.dTime sec0 .= 0) <>
   --(Idx.Storage (Idx.initSection System.Battery) .= initStorage)
-  -- deltaPair (edgeVar Idx.Energy sec0 System.Tank System.ConBattery) 4 (-0.6) <>
+  -- deltaPair (XIdx.energy sec0 System.Tank System.ConBattery) 4 (-0.6) <>
    mempty
 {-
 makeGivenForDifferentialAnalysis env = (

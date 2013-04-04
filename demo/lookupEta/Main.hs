@@ -3,10 +3,12 @@
 
 module Main where
 
-import qualified EFA.Equation.Environment as Env
 import qualified EFA.Example.Absolute as EqSys
+import qualified EFA.Example.Index as XIdx
 import EFA.Example.Absolute ((.=), (=.=))
-import EFA.Example.Utility (constructSeqTopo, edgeVar, makeEdges)
+import EFA.Example.Utility (constructSeqTopo, makeEdges)
+
+import qualified EFA.Equation.Environment as Env
 
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as Idx
@@ -40,11 +42,11 @@ seqTopo = constructSeqTopo linearOne [0]
 enRange :: [Double]
 enRange = 0.01:[0.5, 1 .. 9]
 
-c :: Idx.Power Node.Int
-c = edgeVar Idx.Power sec0 source sink
+c :: XIdx.Power Node.Int
+c = XIdx.power sec0 source sink
 
-eta :: Idx.Eta Node.Int
-eta = edgeVar Idx.Eta sec0 source sink
+eta :: XIdx.Eta Node.Int
+eta = XIdx.eta sec0 source sink
 
 eval :: [(Double, Double)] -> Double -> Double
 eval lt pin =
@@ -63,7 +65,7 @@ given :: Double -> EqSys.EquationSystem Node.Int s Double Double
 given p =
    mconcat $
 
-   (Idx.DTime sec0 .= 1) :
+   (XIdx.dTime sec0 .= 1) :
    (c .= p) :
    []
 

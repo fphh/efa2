@@ -1,9 +1,10 @@
 module Main where
 
-import EFA.Example.Utility ( edgeVar, makeEdges, constructSeqTopo )
+import qualified EFA.Example.Index as XIdx
+import qualified EFA.Example.Absolute as EqGen
+import EFA.Example.Utility ( makeEdges, constructSeqTopo )
 import EFA.Example.Absolute ( (.=) )
 
-import qualified EFA.Example.Absolute as EqGen
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as TD
@@ -53,26 +54,26 @@ given :: EqGen.EquationSystem Node s Double Double
 given =
    mconcat $
 
-   (Idx.DTime sec0 .= 1) :
-   (Idx.DTime sec1 .= 1) :
-   (Idx.DTime sec2 .= 1) :
+   (XIdx.dTime sec0 .= 1) :
+   (XIdx.dTime sec1 .= 1) :
+   (XIdx.dTime sec2 .= 1) :
 
-   (Idx.Storage (Idx.afterSecNode sec2 node3) .= 10.0) :
+   (XIdx.storage (Idx.afterSection sec2) node3 .= 10.0) :
 
 
-   (edgeVar Idx.Power sec0 node2 node3 .= 4.0) :
+   (XIdx.power sec0 node2 node3 .= 4.0) :
 
-   (edgeVar Idx.X sec0 node2 node3 .= 0.32) :
+   (XIdx.x sec0 node2 node3 .= 0.32) :
 
-   (edgeVar Idx.Power sec1 node3 node2 .= 5) :
-   (edgeVar Idx.Power sec2 node3 node2 .= 6) :
-   (edgeVar Idx.Power sec3 node3 node2 .= 7) :
-   (edgeVar Idx.Power sec4 node3 node2 .= 8) :
+   (XIdx.power sec1 node3 node2 .= 5) :
+   (XIdx.power sec2 node3 node2 .= 6) :
+   (XIdx.power sec3 node3 node2 .= 7) :
+   (XIdx.power sec4 node3 node2 .= 8) :
 
-   (edgeVar Idx.Eta sec0 node3 node2 .= 0.25) :
-   (edgeVar Idx.Eta sec0 node2 node3 .= 0.25) :
-   (edgeVar Idx.Eta sec0 node2 node1 .= 0.5) :
-   (edgeVar Idx.Eta sec0 node0 node2 .= 0.75) :
+   (XIdx.eta sec0 node3 node2 .= 0.25) :
+   (XIdx.eta sec0 node2 node3 .= 0.25) :
+   (XIdx.eta sec0 node2 node1 .= 0.5) :
+   (XIdx.eta sec0 node0 node2 .= 0.75) :
    []
 
 
