@@ -101,8 +101,8 @@ isInactive :: FlowDirection -> Bool
 isInactive = not . isActive
 
 data EdgeType node =
-     StructureEdge (Idx.StructureEdge node)
-   | StorageEdge (Idx.StorageEdge node)
+     StructureEdge (Idx.InSection Idx.StructureEdge node)
+   | StorageEdge (Idx.ForNode Idx.StorageEdge node)
    deriving (Eq, Ord, Show)
 
 
@@ -112,11 +112,11 @@ edgeType (Gr.Edge (Idx.BndNode sx nx) (Idx.BndNode sy ny)) =
      then
         case sx of
            Idx.AfterSection s ->
-              StructureEdge $ Idx.StructureEdge s nx ny
+              StructureEdge $ Idx.InSection s $ Idx.StructureEdge nx ny
            _ -> error "structure edges must be in a section"
      else
         if nx == ny
-          then StorageEdge $ Idx.StorageEdge sx sy nx
+          then StorageEdge $ Idx.ForNode (Idx.StorageEdge sx sy) nx
           else error "forbidden edge type"
 
 

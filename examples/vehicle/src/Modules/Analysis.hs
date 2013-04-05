@@ -163,7 +163,7 @@ makeGivenFromExternal idx sf =
    <> (Idx.Record idx (XIdx.storage Idx.initial System.VehicleInertia) .= 0)
    <> fold (SD.mapWithSection f sf)
    where f sec (Record t xs) =
-           (Idx.Record idx (Idx.DTime sec) .= sum (Sig.toList t)) <>
+           (Idx.Record idx (Idx.InSection sec Idx.DTime) .= sum (Sig.toList t)) <>
            fold (M.mapWithKey g xs)
            where g (PPosIdx a b) e =
                     Idx.Record idx (XIdx.energy sec a b) .= sum (Sig.toList e)
@@ -198,7 +198,7 @@ makeGivenForPrediction idx env =
     <> (foldMap f $ M.toList $ M.mapWithKey h $ M.filterWithKey g $
                                Env.energyMap $ Env.signal env)
     where f (i, x)  =  i %= fmap (\(EqGen.Determined y) -> y) x
-          g (Idx.Energy (Idx.StructureEdge _ x y)) _  =
+          g (Idx.InSection _ (Idx.Energy (Idx.StructureEdge x y))) _  =
              case (x,y) of
                 (System.Resistance, System.Chassis) -> True
                 (System.VehicleInertia, System.Chassis) -> True
@@ -207,7 +207,7 @@ makeGivenForPrediction idx env =
                 (System.ConES, System.ElectricSystem) -> True
                 (System.Battery, System.ConBattery) -> True
                 _ -> False
-          h (Idx.Energy (Idx.StructureEdge _ System.Resistance System.Chassis)) x =
+          h (Idx.InSection _ (Idx.Energy (Idx.StructureEdge System.Resistance System.Chassis))) x =
                fmap (fmap (*1.1)) x
           h _ r = r
 

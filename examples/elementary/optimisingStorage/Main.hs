@@ -15,7 +15,6 @@ import qualified EFA.Graph as Gr
 import qualified EFA.Example.Absolute as EqGen
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
-import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Result as R
 import EFA.Equation.System ((=.=))
 
@@ -175,10 +174,10 @@ unpackResult (R.Undetermined) = error("No Result")
 
 -- | Checked Lookup
 getSignalVar ::
-   (Ord (idx Node), Show (idx Node), Env.AccessMap idx, Var.Type idx ~ Var.Signal,
+   (Ord (idx Node), Show (idx Node), Env.AccessSignalMap idx,
     Show a, UV.Unbox a) =>
    [[Env.Complete Node (Record.Absolute (R.Result a)) (Record.Absolute (R.Result a))]] ->
-   idx Node -> Test2 (Typ A u Tt) a
+   Idx.InSection idx Node -> Test2 (Typ A u Tt) a
 getSignalVar varEnvs idx =
    S.changeSignalType $ S.fromList2 $
    map (map (unpackResult . Record.unAbsolute .
