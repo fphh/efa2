@@ -90,4 +90,4 @@ main = do
 
   let env = solveEnv 0.5
 
-  Draw.sequFlowGraphAbsWithEnv "" seqTopo env
+  Draw.sequFlowGraphAbsWithEnv (Draw.xterm "" seqTopo) env

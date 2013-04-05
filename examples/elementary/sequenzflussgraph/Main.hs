@@ -56,11 +56,12 @@ select :: [topo] -> [Int] -> [topo]
 select ts = map (ts!!)
 
 drawSeqGraph :: [TD.FlowTopology Node.Int] ->  IO ()
-drawSeqGraph sol =
-   Draw.sequFlowGraph "" .
-   Flow.mkSequenceTopology .
-   SD.fromList . select sol . parse =<<
-   prompt "Gib kommagetrennt die gewuenschten Sektionsindices ein: "
+drawSeqGraph sol = do
+   xs <- parse `fmap`
+           prompt "Gib kommagetrennt die gewuenschten Sektionsindices ein: "
+   Draw.sequFlowGraph (Draw.xterm "" $
+     Flow.mkSequenceTopology $
+     SD.fromList $ select sol xs)
 
 
 main :: IO ()
