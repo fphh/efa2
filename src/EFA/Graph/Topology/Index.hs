@@ -194,28 +194,28 @@ instance (QC.Arbitrary node) => QC.Arbitrary (PPos node) where
 -- * two node identifiers to specify a place in the topology
 
 -- | Energy variables.
-data Energy node = Energy (StructureEdge node) deriving (Show, Ord, Eq)
+newtype Energy node = Energy (StructureEdge node) deriving (Show, Ord, Eq)
 
-data StEnergy node = StEnergy (StorageEdge node) deriving (Show, Ord, Eq)
+newtype StEnergy node = StEnergy (StorageEdge node) deriving (Show, Ord, Eq)
 
 
 -- | Energy variables for hypothetical outgoing energies.
 -- At storage edges they describe the maximum energy
 -- that a storage could deliver.
-data MaxEnergy node = MaxEnergy (StorageEdge node) deriving (Show, Ord, Eq)
+newtype MaxEnergy node = MaxEnergy (StorageEdge node) deriving (Show, Ord, Eq)
 
 -- | Power variables.
-data Power node = Power (StructureEdge node) deriving (Show, Ord, Eq)
+newtype Power node = Power (StructureEdge node) deriving (Show, Ord, Eq)
 
 -- | Eta variables.
-data Eta node = Eta (StructureEdge node) deriving (Show, Ord, Eq)
+newtype Eta node = Eta (StructureEdge node) deriving (Show, Ord, Eq)
 
 -- | Splitting factors.
-data X node = X (StructureEdge node) deriving (Show, Ord, Eq)
+newtype X node = X (StructureEdge node) deriving (Show, Ord, Eq)
 
-data StX node = StX (StorageEdge node) deriving (Show, Ord, Eq)
+newtype StX node = StX (StorageEdge node) deriving (Show, Ord, Eq)
 
-data Storage node = Storage Boundary deriving (Show, Ord, Eq)
+newtype Storage node = Storage Boundary deriving (Show, Ord, Eq)
 
 data Direction = In | Out deriving (Show, Eq, Ord)
 
