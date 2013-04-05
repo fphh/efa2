@@ -97,10 +97,10 @@ main = do
 
   let seqTopo = constructSeqTopo topoDreibein [1, 0, 1]
       env = EqGen.solve seqTopo given
-      (with, against) =
+      ((withTopo, withEnv), (againstTopo, againstEnv)) =
         cumulate topoDreibein seqTopo env
 
   concurrentlyMany_ [
-    Draw.sequFlowGraphAbsWithEnv "" seqTopo env,
-    Draw.sequFlowGraphCumulated "" with,
-    Draw.sequFlowGraphCumulated "" against ]
+    Draw.sequFlowGraphAbsWithEnv (Draw.xterm "" seqTopo) env,
+    Draw.sequFlowGraphCumulated (Draw.xterm "" withTopo) withEnv,
+    Draw.sequFlowGraphCumulated (Draw.xterm "" againstTopo) againstEnv ]

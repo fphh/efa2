@@ -54,7 +54,7 @@ examplePath :: FilePath
 examplePath = "examples/vehicle"
 
 datasetsX :: [FilePath]
-datasetsX = [-- "Vehicle_mass900kg_res.plt",
+datasetsX = ["Vehicle_mass900kg_res.plt",
              "Vehicle_mass1000kg_res.plt",
              "Vehicle_mass1100kg_res.plt"]
 
@@ -195,22 +195,36 @@ main = do
 ---------------------------------------------------------------------------------------
 -- * Draw Diagrams
 
-  concurrentlyMany_ [
+  concurrentlyMany_ $ [
     -- Topologie
 --    Draw.topology System.topology, --  Draw.topology2pdf System.topology
 --    Draw.topologyWithEdgeLabels System.edgeNames System.topology,
 
     -- Sectionen
 --    zipWith3M_ Draw.sequFlowGraphAbsWithEnv datasetsX sequenceFlowTopologyX externalEnvX,
-    concurrentlyMany_ $ L.zipWith3 Draw.sequFlowGraphAbsWithEnv datasetsX sectionToposX externalEnvX,
+--    concurrentlyMany_ $
+--      L.zipWith3 Draw.sequFlowGraphAbsWithEnv
+--                 (L.zipWith3 Draw.xterm datasetsX sectionToposX externalEnvX)
 
     -- Sections-Deltadiagramme
 --    zipWith3M_ Draw.sequFlowGraphDeltaWithEnv (deltasets datasetsX) sequenceFlowTopologyX externalDeltaEnvX
-    concurrentlyMany_ $ L.zipWith3 Draw.sequFlowGraphDeltaWithEnv (deltasets datasetsX) sectionToposX externalDeltaEnvX
-
+{-
+    concurrentlyMany_ $
+      L.zipWith3 Draw.sequFlowGraphDeltaWithEnv 
+                 (deltasets datasetsX) sectionToposX externalDeltaEnvX
+-}
     -- Vorhersage
 --    Draw.sequFlowGraphAbsWithEnv "Prediction" (head sequenceFlowTopologyX) prediction
     ]
+    ++ Draw.multi Draw.sequFlowGraphAbsWithEnv
+                  Draw.xterm
+                  datasetsX
+                  sectionToposX
+                  externalEnvX
 
-
+    ++ Draw.multi Draw.sequFlowGraphDeltaWithEnv 
+                  Draw.xterm
+                  (deltasets datasetsX)
+                  sectionToposX
+                  externalDeltaEnvX
 

@@ -106,7 +106,7 @@ mainSymbolic = do
 
    putStrLn $ Format.unUnicode $ formatValue env
 
-   Draw.sequFlowGraphAbsWithEnv "" seqTopo env
+   Draw.sequFlowGraphAbsWithEnv (Draw.xterm "" seqTopo) env
 
 
 
