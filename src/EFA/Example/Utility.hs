@@ -154,17 +154,6 @@ infixr 6 =<>
 idx =<> eqsys = givenSymbol idx <> eqsys
 
 
-edgeVar ::
-   (Idx.StructureEdge node -> idx) ->
-   Idx.Section -> node -> node -> idx
-edgeVar = Idx.structureEdge
-
-interVar ::
-   (Idx.StorageEdge node -> idx) ->
-   Idx.Boundary -> Idx.Boundary -> node -> idx
-interVar = Idx.storageEdge
-
-
 infix 0 #=, ~=
 
 -- | @(.=)@ restricted to signals
