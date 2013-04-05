@@ -4,9 +4,10 @@
 
 module Modules.Signals where
 
+import qualified EFA.Example.Index as XIdx
 
-import EFA.Signal.Record (SigId(SigId),PPosIdx(..),
-                          getSig,getTime,extractLogSignals,
+import EFA.Signal.Record (SigId(SigId),
+                          getSig,getTime,extractLogSignals, 
                           PowerRecord, SignalRecord, genPowerRecord)
 
 -- import qualified EFA.Graph.Topology.Node as Node
@@ -128,61 +129,61 @@ calculatePower rec = pRec
       pRec = genPowerRecord time
 
               -- engine
-             [(PPosIdx Tank ConBattery,
+             [(XIdx.ppos Tank ConBattery,
                g "fuelPower_o",
                generatorElectricPower
               ),
 
               -- connection
-              (PPosIdx ConBattery ConES,
+              (XIdx.ppos ConBattery ConES,
                generatorElectricPower .- batteryClampsPower,
                generatorElectricPower .- batteryClampsPower
               ),
 
               -- --motor
-              (PPosIdx ConES ConFrontBrakes,
+              (XIdx.ppos ConES ConFrontBrakes,
                (g "motorCurrent_o".* voltage),
                g "gearboxTorqueOS_o".* g "gearboxSpeedOS_o"
               ),
 
               -- front wheels
-              (PPosIdx ConFrontBrakes Chassis,
+              (XIdx.ppos ConFrontBrakes Chassis,
                g "frontWheelsTorque_o".* g "frontBrakesSpeed_o",
                g "frontWheelsForce_o".* speed
               ),
 
               -- driving Resistance
-              (PPosIdx Chassis Resistance,
+              (XIdx.ppos Chassis Resistance,
                g "chassisResistanceForce_o".* speed,
                g "chassisResistanceForce_o".* speed
               ),
 
               -- battery
-              (PPosIdx ConBattery Battery,
+              (XIdx.ppos ConBattery Battery,
                batteryClampsPower,
                batteryInternalPower
               ),
 
               -- DCDC
-              (PPosIdx ConES ElectricSystem,
+              (XIdx.ppos ConES ElectricSystem,
                dcdcPowerHV,
                dcdcPowerLV
               ),
 
               -- Front brake
-              (PPosIdx ConFrontBrakes FrontBrakes,
+              (XIdx.ppos ConFrontBrakes FrontBrakes,
                g "frontBrakesLossPower_o",
                g "frontBrakesLossPower_o"
               ),
 
               --Rear brake
-              (PPosIdx Chassis RearBrakes,
+              (XIdx.ppos Chassis RearBrakes,
                g "rearWheelsTorque_o".* g "rearBrakesSpeed_o",
                g "rearWheelsForce_o".* speed
               ),
 
               --kinetic power
-              (PPosIdx Chassis VehicleInertia,
+              (XIdx.ppos Chassis VehicleInertia,
                kineticPower,
                kineticPower
 
@@ -193,11 +194,11 @@ calculatePower rec = pRec
 -- ## Signalgroups for Plotting
 
 
-vehPowers :: [PPosIdx Node]
-vehPowers = [PPosIdx Chassis VehicleInertia,
-             PPosIdx Chassis RearBrakes,
-             PPosIdx ConFrontBrakes FrontBrakes,
-             PPosIdx Chassis Resistance]
+vehPowers :: [XIdx.PPos Node]
+vehPowers = [XIdx.ppos Chassis VehicleInertia,
+             XIdx.ppos Chassis RearBrakes,
+             XIdx.ppos ConFrontBrakes FrontBrakes,
+             XIdx.ppos Chassis Resistance]
 
 
 -- Building Signal Record for better Plotting of the original signals

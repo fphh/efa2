@@ -2,14 +2,18 @@
 
 module Modules.System where
 
+import qualified EFA.Example.Index as XIdx
+import EFA.Example.Utility (makeEdges)
+
+import EFA.Signal.Record (SigId(..))
+
+import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph as Gr
-import EFA.Example.Utility (makeEdges)
-import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 
 import qualified Data.Map as M
-import EFA.Signal.Record(PPosIdx(..),SigId(..))
+
 
 data Node = Tank | EngineFlange | ConBattery | Battery | ConES | MotorFlange | ConFrontBrakes | Chassis | Resistance | ElectricSystem | FrontBrakes | VehicleInertia | RearBrakes deriving (Eq, Ord, Enum, Show)
 
@@ -58,11 +62,11 @@ edgeNames = M.fromList el
         f (x, y, lab, _, _) = ((x, y), lab)
 
 
-powerPositonNames :: M.Map (PPosIdx Node) SigId
+powerPositonNames :: M.Map (XIdx.PPos Node) SigId
 powerPositonNames = M.fromList $ concat $ map f edgeList
-  where f (n1,n2,_,l1,l2) = [(PPosIdx n1 n2, SigId l1),
-                             (PPosIdx n2 n1, SigId l2)]
-showPowerId :: PPosIdx Node -> String
+  where f (n1,n2,_,l1,l2) = [(XIdx.ppos n1 n2, SigId l1),
+                             (XIdx.ppos n2 n1, SigId l2)]
+showPowerId :: XIdx.PPos Node -> String
 showPowerId ppos = f (M.lookup  ppos powerPositonNames)
   where
     f (Just pid) = show pid
