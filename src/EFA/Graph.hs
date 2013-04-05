@@ -365,31 +365,6 @@ makeOutMap ns =
 
 makeInMap ns = makeOutMap ns . map reverseEdge
 
-{-
-instance (Ord n, Enum n) => IG.DynGraph (Graph n) where
-         (ins, ni, lab_, outs) & (Graph os is ls es) =
-           {- trace (show os ++ "\n" ++ show resOs ++ "\n" ++ show n++ "\n----\n") -} Graph resOs resIs newLs newEs
-           where n = toEnum ni
-                 insEnum = map (mapSnd toEnum) ins
-                 outsEnum = map (mapSnd toEnum) outs
-                 newLs = M.insert n lab_ ls
-                 newIns = map (\(l, i) -> (Edge i n, l)) insEnum
-                 newOuts = map (\(l, o) -> (Edge n o, l)) outsEnum
-                 newEs = foldr (uncurry M.insert) es (newIns ++ newOuts)
-
-                 ins' = map snd insEnum
-                 -- is' = M.insert n (S.fromList ins') is
-                 is' = M.insertWith S.union n (S.fromList ins') is
-
-                 outs' = map snd outsEnum
-                 --os' = M.insert n (S.fromList outs') os
-                 os' = M.insertWith S.union n (S.fromList outs') os
-
-                 resIs = L.foldl' f is' outs'
-                 resOs = L.foldl' f os' ins'
-
-                 f acc x = M.insertWith S.union x (S.singleton n) acc
--}
 
 nmap :: (nl0 -> nl1) -> Graph n nl0 el -> Graph n nl1 el
 nmap f (Graph ns els) =
