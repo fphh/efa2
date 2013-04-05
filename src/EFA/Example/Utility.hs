@@ -124,9 +124,7 @@ givenSymbol ::
   -}
   (t ~ VarTerm var (Record.ToIndex rec) term node,
    Eq t, Arith.Sum t,
-   EqGen.Element idx rec s
-      (ScalarTerm rec term node) (SignalTerm rec term node)
-     ~ EqGen.VariableRecord rec s t,
+   t ~ Env.Element idx (ScalarTerm rec term node) (SignalTerm rec term node),
    EqGen.Record rec,
    Ord (idx node), Pointed term,
    Var.Type idx ~ var, Symbol var, Env.AccessMap idx) =>
@@ -141,9 +139,7 @@ infixr 6 =<>
 (=<>) ::
   (t ~ VarTerm var (Record.ToIndex rec) term node,
    Eq t, Arith.Sum t,
-   EqGen.Element idx rec s
-      (ScalarTerm rec term node) (SignalTerm rec term node)
-     ~ EqGen.VariableRecord rec s t,
+   t ~ Env.Element idx (ScalarTerm rec term node) (SignalTerm rec term node),
    EqGen.Record rec,
    Ord (idx node), Pointed term,
    Var.Type idx ~ var, Symbol var, Env.AccessMap idx) =>

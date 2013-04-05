@@ -4,7 +4,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module EFA.Equation.System (
   EquationSystem, Expression, RecordExpression,
-  Element, VariableRecord,
   fromGraph, fromEnvResult, fromEnv,
   solve, solveFromMeasurement, conservativelySolve,
   solveSimple,
@@ -374,7 +373,7 @@ infix 0 .=, %=, ?=
 
 (.=) ::
    (Eq x, Arith.Sum x, Record rec,
-    Element idx rec s a v ~ VariableRecord rec s x,
+    Env.Element idx a v ~ x,
     Env.AccessMap idx, Ord (idx node)) =>
    Record.Indexed rec (idx node) -> x ->
    EquationSystem rec node s a v
@@ -382,7 +381,7 @@ evar .= val  =  variable evar =.= constant val
 
 (%=) ::
    (Eq x, Arith.Sum x, Record rec,
-    Element idx rec s a v ~ VariableRecord rec s x,
+    Env.Element idx a v ~ x,
     Env.AccessMap idx, Ord (idx node)) =>
    idx node -> rec x ->
    EquationSystem rec node s a v
@@ -390,7 +389,7 @@ evar %= val  =  variableRecord evar =%= constantRecord val
 
 (?=) ::
    (Eq x, Arith.Sum x, Record rec,
-    Element idx rec s a v ~ VariableRecord rec s x,
+    Env.Element idx a v ~ x,
     Env.AccessMap idx, Ord (idx node)) =>
    idx node -> rec (Result x) ->
    EquationSystem rec node s a v
@@ -427,51 +426,53 @@ withLocalVar f = EquationSystem $ do
         EquationSystem act -> act
 
 
-{-
-With GHC-7.6 we could define a custom constraint like this one:
+newtype
+   PartAccessor rec node s a v env =
+      PartAccessor {
+         getPartAccessor ::
+            Accessor.T
+               (Env.Complete node
+                   (rec (Sys.Variable s a)) (rec (Sys.Variable s v)))
+               (env node (rec (Sys.Variable s (Env.PartElement env a v))))
+      }
 
-type
-   Element idx rec s a v x =
-      Env.Element idx
-         (rec (Sys.Variable s a))
-         (rec (Sys.Variable s v))
-       ~ rec (Sys.Variable s x)
--}
-{- |
-I recommend to write the equality constraint like so:
+accessPart ::
+   (Env.AccessPart env) =>
+   Accessor.T
+      (Env.Complete node (rec (Sys.Variable s a)) (rec (Sys.Variable s v)))
+      (env node (rec (Sys.Variable s (Env.PartElement env a v))))
+accessPart =
+   getPartAccessor $
+   Env.switchPart
+      (PartAccessor $ Env.accessPart)
+      (PartAccessor $ Env.accessPart)
 
-> Element idx rec s a v ~ VariableRecord rec s x
--}
-type
-   Element idx rec s a v =
-      Env.Element idx
-         (rec (Sys.Variable s a))
-         (rec (Sys.Variable s v))
 
-{- |
-I recommend not to expand this type synonym.
-You should not rely on the fact, that we use unique-logic internally.
--}
-type VariableRecord rec s x = rec (Sys.Variable s x)
+accessMap ::
+   (Env.AccessMap idx) =>
+   Accessor.T
+      (Env.Complete node (rec (Sys.Variable s a)) (rec (Sys.Variable s v)))
+      (M.Map (idx node) (rec (Sys.Variable s (Env.Element idx a v))))
+accessMap = Env.accessPartMap . accessPart
+
 
 variableRecord ::
-   (Eq x, Sum x, Env.AccessMap idx, Ord (idx node), Record rec,
-    Element idx rec s a v ~ rec (Sys.Variable s x)) =>
+   (Eq x, Sum x, x ~ Env.Element idx a v,
+    Env.AccessMap idx, Ord (idx node), Record rec) =>
    idx node -> RecordExpression rec node s a v x
 variableRecord idx =
   Bookkeeping $ fmap Wrap $ do
-    oldMap <- AccessState.get Env.accessMap
+    oldMap <- AccessState.get accessMap
     case M.lookup idx oldMap of
       Just var -> return $ fmap Expr.fromVariable var
       Nothing -> do
         var <- lift newVariable
-        AccessState.set Env.accessMap $ M.insert idx var oldMap
+        AccessState.set accessMap $ M.insert idx var oldMap
         return (fmap Expr.fromVariable var)
 
 variable ::
-   (Eq x, Sum x,
-    Env.AccessMap idx, Ord (idx node), Record rec,
-    Element idx rec s a v ~ rec (Sys.Variable s x)) =>
+   (Eq x, Sum x, x ~ Env.Element idx a v,
+    Env.AccessMap idx, Ord (idx node), Record rec) =>
    Record.Indexed rec (idx node) ->
    Expression rec node s a v x
 variable (Idx.Record recIdx idx) =
@@ -551,9 +552,8 @@ mwhen False _ = mempty
 
 
 fromMapResult ::
-   (Eq x, Sum x,
-    Env.AccessMap idx, Ord (idx node), Record rec,
-    Element idx rec s a v ~ rec (Sys.Variable s x)) =>
+   (Eq x, Sum x, x ~ Env.Element idx a v,
+    Env.AccessMap idx, Ord (idx node), Record rec) =>
    M.Map (idx node) (rec (Result x)) ->
    EquationSystem rec node s a v
 fromMapResult =
@@ -581,9 +581,8 @@ fromEnvResult
 
 
 fromMap ::
-   (Eq x, Sum x,
-    Env.AccessMap idx, Ord (idx node), Record rec,
-    Element idx rec s a v ~ rec (Sys.Variable s x)) =>
+   (Eq x, Sum x, x ~ Env.Element idx a v,
+    Env.AccessMap idx, Ord (idx node), Record rec) =>
    M.Map (idx node) (rec x) ->
    EquationSystem rec node s a v
 fromMap =
