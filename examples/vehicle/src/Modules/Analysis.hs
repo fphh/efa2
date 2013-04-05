@@ -189,7 +189,7 @@ makeGivenFromExternal idx sf =
    <> (Idx.Record idx (XIdx.storage Idx.initial System.VehicleInertia) .= 0)
    <> fold (SD.mapWithSection f sf)
    where f sec (Record t xs) =
-           (Idx.Record idx (Idx.DTime sec) .=  sum (Sig.toList $ Sig.delta t)) <>
+           (Idx.Record idx (Idx.InSection sec Idx.DTime) .= sum (Sig.toList $ Sig.delta t)) <>
            fold (M.mapWithKey g xs)
            where g (PPosIdx a b) e =
                     Idx.Record idx (XIdx.energy sec a b) .= sum (Sig.toList e)
@@ -230,7 +230,7 @@ makeGivenForPrediction idx env =
     <> (foldMap f $ M.toList $ M.mapWithKey h $ M.filterWithKey g $
                                Env.energyMap $ Env.signal env)
     where f (i, x)  =  i %= fmap (\(EqGen.Determined y) -> y) x
-          g (Idx.Energy (Idx.StructureEdge _ x y)) _  =
+          g (Idx.InSection _ (Idx.Energy (Idx.StructureEdge x y))) _  =
              case (x,y) of
                 (System.Resistance, System.Chassis) -> True
                 (System.VehicleInertia, System.Chassis) -> True
@@ -239,7 +239,7 @@ makeGivenForPrediction idx env =
                 (System.ConES, System.ElectricSystem) -> True
                 (System.Battery, System.ConBattery) -> True
                 _ -> False
-          h (Idx.Energy (Idx.StructureEdge _ System.Resistance System.Chassis)) x =
+          h (Idx.InSection _ (Idx.Energy (Idx.StructureEdge System.Resistance System.Chassis))) x =
                fmap (fmap (*1.1)) x
           h _ r = r
 
@@ -292,9 +292,8 @@ infix 0 .==
 (.==) = (EqAbs..=)
 
 deltaPair ::
-   (Ord (idx System.Node), Env.AccessMap idx,
-    Var.Index idx, Var.Type idx ~ Var.Signal) =>
-   (idx System.Node) -> Double -> Double -> EquationSystemNumeric s
+   (Ord (idx System.Node), Env.AccessSignalMap idx) =>
+   Idx.InSection idx System.Node -> Double -> Double -> EquationSystemNumeric s
 deltaPair idx before delt =
    idx .== Stack.deltaPair (Var.Signal $ Var.index idx) before delt
 
@@ -313,7 +312,7 @@ makeGivenForDifferentialAnalysis ::
   EquationSystemNumeric s
 makeGivenForDifferentialAnalysis (Env.Complete _ sig) =
 --  (Idx.DTime sec2 .== 0) <>
-  (Idx.Storage (Idx.initBndNode System.Battery) .== initStorage) <>
+  (XIdx.storage Idx.initial System.Battery .== initStorage) <>
 --  (deltaPair (edgeVar Idx.Energy sec2 System.Tank System.ConBattery) 4 (-0.6)) <>
   (fold $ M.mapWithKey f $ Env.etaMap sig) <>
   (fold $ M.mapWithKey f $ Env.dtimeMap sig) <>
@@ -324,7 +323,7 @@ makeGivenForDifferentialAnalysis (Env.Complete _ sig) =
               (checkDetermined "before" $ EqRecord.before rec)
               (checkDetermined "delta"  $ EqRecord.delta rec)
 
-        g (Idx.Energy (Idx.StructureEdge _ x y)) _ =
+        g (Idx.InSection _ (Idx.Energy (Idx.StructureEdge x y))) _ =
           case (x,y) of
             (System.Resistance, System.Chassis) -> True
             (System.VehicleInertia, System.Chassis) -> True

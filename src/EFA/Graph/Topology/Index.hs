@@ -96,33 +96,72 @@ secNodeFromBndNode (BndNode bnd node) =
 
 -- * Edge indices
 
-data StructureEdge node = StructureEdge Section node node
+data StructureEdge node = StructureEdge node node
    deriving (Show, Eq, Ord)
 
-data StorageEdge node = StorageEdge Boundary Boundary node
+data StorageEdge node = StorageEdge Boundary Boundary
    deriving (Show, Eq, Ord)
+
+
+
+data InSection idx node = InSection Section (idx node)
+   deriving (Show, Eq, Ord)
+
+inSection ::
+   (node -> idx node) -> SecNode node -> InSection idx node
+inSection makeIdx (SecNode sec edge) =
+   InSection sec (makeIdx edge)
+
+liftInSection ::
+   (idx0 node -> idx1 node) ->
+   InSection idx0 node -> InSection idx1 node
+liftInSection f (InSection sec edge) =
+   InSection sec $ f edge
+
+data ForNode idx node = ForNode (idx node) node
+   deriving (Show, Eq, Ord)
+
+forNode ::
+   (Boundary -> idx node) -> BndNode node -> ForNode idx node
+forNode makeIdx (BndNode bnd node) =
+   ForNode (makeIdx bnd) node
+
+liftForNode ::
+   (idx0 node -> idx1 node) ->
+   ForNode idx0 node -> ForNode idx1 node
+liftForNode f (ForNode edge node) =
+   ForNode (f edge) node
+
 
 structureEdge ::
-   (StructureEdge node -> idx) ->
-   Section -> node -> node -> idx
+   (StructureEdge node -> idx node) ->
+   Section -> node -> node -> InSection idx node
 structureEdge mkIdx s x y =
-   mkIdx $ StructureEdge s x y
+   InSection s $ mkIdx $ StructureEdge x y
 
 storageEdge ::
-   (StorageEdge node -> idx) ->
-   Boundary -> Boundary -> node -> idx
+   (StorageEdge node -> idx node) ->
+   Boundary -> Boundary -> node -> ForNode idx node
 storageEdge mkIdx s0 s1 n =
-   mkIdx $ StorageEdge s0 s1 n
+   ForNode (mkIdx $ StorageEdge s0 s1) n
 
 
 class Flip edge where
    flip :: edge node -> edge node
 
+
+instance Flip idx => Flip (InSection idx) where
+   flip (InSection s idx) = InSection s (flip idx)
+
 instance Flip StructureEdge where
-   flip (StructureEdge s x y) = StructureEdge s y x
+   flip (StructureEdge x y) = StructureEdge y x
+
+
+instance Flip idx => Flip (ForNode idx) where
+   flip (ForNode idx n) = ForNode (flip idx) n
 
 instance Flip StorageEdge where
-   flip (StorageEdge s0 s1 n) = StorageEdge s1 s0 n
+   flip (StorageEdge s0 s1) = StorageEdge s1 s0
 
 
 -- | Variable types of the solver. The solver, in fact, is
@@ -156,16 +195,16 @@ data X node = X (StructureEdge node) deriving (Show, Ord, Eq)
 
 data StX node = StX (StorageEdge node) deriving (Show, Ord, Eq)
 
-data Storage node = Storage !(BndNode node) deriving (Show, Ord, Eq)
+data Storage node = Storage Boundary deriving (Show, Ord, Eq)
 
 data Direction = In | Out deriving (Show, Eq, Ord)
 
-data Sum node = Sum !Direction !(SecNode node) deriving (Show, Ord, Eq)
+data Sum node = Sum Direction node deriving (Show, Ord, Eq)
 
-data StSum node = StSum !Direction !(BndNode node) deriving (Show, Ord, Eq)
+data StSum node = StSum Direction Boundary deriving (Show, Ord, Eq)
 
 
 -- * Other indices
 
 -- | Delta time variables, depending solely on their section and record number.
-data DTime node = DTime !Section deriving (Show, Ord, Eq)
+data DTime node = DTime deriving (Show, Ord, Eq)

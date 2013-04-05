@@ -39,20 +39,20 @@ cumulatedEnergyFlow ::
   TD.Topology node ->
   TD.DirSequFlowGraph node ->
   Env.Complete node b (Rec.Absolute (Result a)) ->
-  ( M.Map (Idx.Energy node) (Rec.Absolute (Result a)),
-    M.Map (Idx.Energy node) (Rec.Absolute (Result a)) )
+  ( Env.EnergyMap node (Rec.Absolute (Result a)),
+    Env.EnergyMap node (Rec.Absolute (Result a)) )
 cumulatedEnergyFlow topo seqTopo env =
    mapPair (cum, cum) $ unzip $ mapMaybe f $ Gr.labEdges seqTopo
   where cum = M.unionsWith (liftA2 (liftA2 (+)))
         em = Env.energyMap $ Env.signal env
         f (e, ()) =
           case TD.edgeType e of
-             TD.StructureEdge idx@(Idx.StructureEdge _sec n n') ->
-                let e1 = Idx.Energy idx
-                    idx1 = Idx.Energy (Idx.StructureEdge (Idx.Section 0) n n')
+             TD.StructureEdge idx@(Idx.InSection _sec (Idx.StructureEdge n n')) ->
+                let e1 = Idx.liftInSection Idx.Energy idx
+                    idx1 = Idx.InSection (Idx.Section 0) $ Idx.Energy (Idx.StructureEdge n n')
 
-                    e2 = Idx.Energy (Idx.flip idx)
-                    idx2 = Idx.Energy (Idx.StructureEdge (Idx.Section 0) n' n)
+                    e2 = Idx.liftInSection Idx.Energy (Idx.flip idx)
+                    idx2 = Idx.InSection (Idx.Section 0) $ Idx.Energy (Idx.StructureEdge n' n)
 
                     insert =
                        (M.singleton idx1 $ toDet $ M.lookup e1 em) <>
@@ -83,17 +83,18 @@ cumulatedEnv topo enEnv = (ctopo, env)
               (mempty {
                  Env.storageMap =
                    fmap (const $ Rec.Absolute Undetermined) $
-                   M.mapKeys (Idx.Storage . Idx.BndNode sec) $
+                   M.mapKeys (Idx.ForNode $ Idx.Storage bnd) $
                    M.filter TD.isStorage $ Gr.nodeLabels topo })
               (mempty {
                  Env.energyMap = enEnv,
                  Env.dtimeMap =
                    M.singleton
-                     (Idx.DTime (Idx.Section 0))
+                     (Idx.InSection sec Idx.DTime)
                      (Rec.Absolute Undetermined)
                })
 
-        sec = Idx.AfterSection (Idx.Section 0)
+        sec = Idx.Section 0
+        bnd = Idx.AfterSection sec
         ctopo =
            TD.fromTopology $
            TD.classifyStorages $

@@ -1,10 +1,13 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 module EFA.Example.Utility (
    module EFA.Example.Utility,
    (.=), (%=),
    ) where
+
+import qualified EFA.Example.Index as XIdx
 
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Index as Idx
@@ -72,21 +75,20 @@ checkDetermined name rx =
 type
    SignalTerm rec term node =
       Term.Signal term
-         (EqRecord.Indexed rec (Var.Scalar node))
-         (EqRecord.Indexed rec (Var.Signal node))
+         (EqRecord.Indexed rec (Idx.ForNode   Var.Scalar node))
+         (EqRecord.Indexed rec (Idx.InSection Var.Signal node))
 
 type
    ScalarTerm rec term node =
       Term.Scalar term
-         (EqRecord.Indexed rec (Var.Scalar node))
-         (EqRecord.Indexed rec (Var.Signal node))
+         (EqRecord.Indexed rec (Idx.ForNode   Var.Scalar node))
+         (EqRecord.Indexed rec (Idx.InSection Var.Signal node))
 
 type
    ScalarAtom rec term node =
-      Term.ScalarAtom
-         term
-         (EqRecord.Indexed rec (Var.Scalar node))
-         (EqRecord.Indexed rec (Var.Signal node))
+      Term.ScalarAtom term
+         (EqRecord.Indexed rec (Idx.ForNode   Var.Scalar node))
+         (EqRecord.Indexed rec (Idx.InSection Var.Signal node))
 
 type
    SymbolicEquationSystem rec node s term =
@@ -98,8 +100,8 @@ type
 type
    VarTerm var recIdx term node =
       Term var term
-         (Idx.Record recIdx (Var.Scalar node))
-         (Idx.Record recIdx (Var.Signal node))
+         (Idx.Record recIdx (Idx.ForNode   Var.Scalar node))
+         (Idx.Record recIdx (Idx.InSection Var.Signal node))
 
 class (var ~ Variable (Term var)) => Symbol var where
    type Term var :: (* -> *) -> * -> * -> *
@@ -109,14 +111,14 @@ class (var ~ Variable (Term var)) => Symbol var where
       Idx.Record recIdx (var node) ->
       VarTerm var recIdx term node
 
-instance Symbol Var.Signal where
-   type Term Var.Signal = Term.Signal
-   type Variable Term.Signal = Var.Signal
+instance Symbol (Idx.InSection Var.Signal) where
+   type Term (Idx.InSection Var.Signal) = Term.Signal
+   type Variable Term.Signal = Idx.InSection Var.Signal
    symbol = Term.Signal . point
 
-instance Symbol Var.Scalar where
-   type Term Var.Scalar = Term.Scalar
-   type Variable Term.Scalar = Var.Scalar
+instance Symbol (Idx.ForNode Var.Scalar) where
+   type Term (Idx.ForNode Var.Scalar) = Term.Scalar
+   type Variable Term.Scalar = Idx.ForNode Var.Scalar
    symbol = Term.Scalar . point . Term.ScalarVariable
 
 
@@ -159,7 +161,7 @@ infix 0 #=, ~=
 -- | @(.=)@ restricted to signals
 (~=) ::
   (Eq v, Arith.Sum v, EqGen.Record rec,
-   Env.AccessMap idx, Var.Type idx ~ Var.Signal, Ord (idx node)) =>
+   Env.AccessMap idx, Env.Environment idx ~ Env.Signal, Ord (idx node)) =>
   EqRecord.Indexed rec (idx node) -> v ->
   EqGen.EquationSystem rec node s a v
 (~=)  =  (.=)
@@ -167,7 +169,7 @@ infix 0 #=, ~=
 -- | @(.=)@ restricted to scalars
 (#=) ::
   (Eq a, Arith.Sum a, EqGen.Record rec,
-   Env.AccessMap idx, Var.Type idx ~ Var.Scalar, Ord (idx node)) =>
+   Env.AccessMap idx, Env.Environment idx ~ Env.Scalar, Ord (idx node)) =>
   EqRecord.Indexed rec (idx node) -> a ->
   EqGen.EquationSystem rec node s a v
 (#=)  =  (.=)
@@ -184,7 +186,7 @@ envFromFlowRecord =
       (\section (SigRecord.Record times signals) ->
          mempty {
             Env.dtimeMap =
-               Map.singleton (Idx.DTime section) (Signal.unpack times),
+               Map.singleton (XIdx.dTime section) (Signal.unpack times),
             Env.powerMap =
                Map.mapKeys
                   (\(SigRecord.PPosIdx x y) ->

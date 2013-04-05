@@ -65,18 +65,17 @@ type
 infixr 6 *=<>, -=<>
 
 (*=<>) ::
-   (Ord (idx Node.Int), Env.AccessMap idx,
-    Var.Index idx, Var.Type idx ~ Var.Signal) =>
-   idx Node.Int -> EquationSystemSymbolic s -> EquationSystemSymbolic s
+   (Ord (idx Node.Int), Env.AccessSignalMap idx) =>
+   Idx.InSection idx Node.Int ->
+   EquationSystemSymbolic s -> EquationSystemSymbolic s
 idx *=<> eqsys =
    (idx .= (Stack.singleton $ Utility.symbol $ Idx.before $ Var.index idx))
    <>
    eqsys
 
 (-=<>) ::
-   (Ord (idx Node.Int), Env.AccessMap idx,
-    Var.Index idx, Var.Type idx ~ Var.Signal) =>
-   idx Node.Int -> EquationSystemSymbolic s -> EquationSystemSymbolic s
+   (Ord (idx Node.Int), Env.AccessSignalMap idx) =>
+   Idx.InSection idx Node.Int -> EquationSystemSymbolic s -> EquationSystemSymbolic s
 idx -=<> eqsys =
    (idx .=
       let var = Var.index idx
@@ -118,9 +117,8 @@ type
          (Stack (Var.Any Node.Int) Double)
 
 deltaPair ::
-   (Ord (idx Node.Int), Env.AccessMap idx,
-    Var.Index idx, Var.Type idx ~ Var.Signal) =>
-   idx Node.Int -> Double -> Double -> EquationSystemNumeric s
+   (Ord (idx Node.Int), Env.AccessSignalMap idx) =>
+   Idx.InSection idx Node.Int -> Double -> Double -> EquationSystemNumeric s
 deltaPair idx before delta =
    idx .= Stack.deltaPair (Var.Signal $ Var.index idx) before delta
 

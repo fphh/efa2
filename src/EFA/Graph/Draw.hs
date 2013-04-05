@@ -19,6 +19,7 @@ import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Variable as Var
 
+import qualified EFA.Example.Index as XIdx
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Flow as Flow
@@ -114,7 +115,7 @@ dotFromSequFlowGraph ti (rngs, g) mtshow nshow eshow =
            HTL.partitionMaybe
               (\e ->
                  case Topo.edgeType $ fst e of
-                    Topo.StructureEdge (Idx.StructureEdge s _ _) ->
+                    Topo.StructureEdge (Idx.InSection s _) ->
                        Just (Idx.AfterSection s, [e])
                     _ -> Nothing) $
            Gr.labEdges g
@@ -378,20 +379,21 @@ formatNodeStorage rec st ss mBeforeBnd (n@(Idx.BndNode _bnd nid), ty) =
       case ty of
          Storage dir ->
             case mBeforeBnd of
-               Nothing -> [lookupFormat rec st $ Idx.Storage n]
+               Nothing -> [lookupFormat rec st $ Idx.forNode Idx.Storage n]
                Just beforeBnd ->
-                  case (lookupFormat rec st $ Idx.Storage $
-                           Idx.BndNode beforeBnd nid,
-                        lookupFormat rec st $ Idx.Storage n) of
+                  case (lookupFormat rec st $ XIdx.storage beforeBnd nid,
+                        lookupFormat rec st $ Idx.forNode Idx.Storage n) of
                      (before, after) ->
                         before :
                         (case dir of
                            Just Topo.In ->
                               [Format.plus Format.empty $
-                                  lookupFormat rec ss $ Idx.StSum Idx.In n]
+                                  lookupFormat rec ss $
+                                  Idx.forNode (Idx.StSum Idx.In) n]
                            Just Topo.Out ->
                               [Format.minus Format.empty $
-                                  lookupFormat rec ss $ Idx.StSum Idx.Out n]
+                                  lookupFormat rec ss $
+                                  Idx.forNode (Idx.StSum Idx.Out) n]
                            Nothing -> []) ++
                         Format.assign Format.empty after :
                         []
@@ -406,10 +408,10 @@ data Env node output =
    Env {
       formatEnergy,
       formatX,
-      formatEta    :: Idx.StructureEdge node -> output,
+      formatEta    :: Idx.InSection Idx.StructureEdge node -> output,
       formatMaxEnergy,
       formatStEnergy,
-      formatStX    :: Idx.StorageEdge node -> output,
+      formatStX    :: Idx.ForNode Idx.StorageEdge node -> output,
       formatTime   :: Idx.Section -> output,
       formatNode   :: Maybe Idx.Boundary -> Topo.LDirNode node -> output
    }
@@ -486,13 +488,13 @@ envGen ::
    Env.Complete node (rec a) (rec v) -> Env node output
 envGen rec (Env.Complete (Env.Scalar me st se sx ss) (Env.Signal e _p n dt x _s)) =
    Env
-      (lookupFormatAssign rec e Idx.Energy)
-      (lookupFormatAssign rec x Idx.X)
-      (lookupFormatAssign rec n Idx.Eta)
-      (lookupFormatAssign rec me Idx.MaxEnergy)
-      (lookupFormatAssign rec se Idx.StEnergy)
-      (lookupFormatAssign rec sx Idx.StX)
-      (lookupFormat rec dt . Idx.DTime)
+      (lookupFormatAssign rec e $ Idx.liftInSection Idx.Energy)
+      (lookupFormatAssign rec x $ Idx.liftInSection Idx.X)
+      (lookupFormatAssign rec n $ Idx.liftInSection Idx.Eta)
+      (lookupFormatAssign rec me $ Idx.liftForNode Idx.MaxEnergy)
+      (lookupFormatAssign rec se $ Idx.liftForNode Idx.StEnergy)
+      (lookupFormatAssign rec sx $ Idx.liftForNode Idx.StX)
+      (lookupFormat rec dt . flip Idx.InSection Idx.DTime)
       (formatNodeStorage rec st ss)
 
 envAbs ::
