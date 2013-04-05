@@ -1,4 +1,4 @@
-model engine_torque
+model EngineTorque
   annotation(Diagram(), Icon(graphics = {Line(points = {{-54.6218,-74.3697},{65.9664,-74.3697},{59.2437,-71.4286},{59.2437,-79.4118},{65.1261,-74.3697}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Line(points = {{-55.042,-72.6891},{-55.042,44.1176},{-52.1008,34.4538},{-58.8235,34.4538},{-55.4622,43.6975}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Line(points = {{-51.6807,-24.3697},{-39.0756,-11.7647},{-1.2605,0.840336},{24.3697,2.52101},{49.5798,1.2605},{60.084,-1.2605}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Line(points = {{-52.1008,-83.6134},{16.3866,-88.2353},{68.9076,-92.8571}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25)}));
   Modelica.Blocks.Logical.GreaterEqual greaterequal1 annotation(Placement(visible = true, transformation(origin = {-36.5546,-20.1681}, extent = {{-9.01578,-9.01578},{9.01578,9.01578}}, rotation = 0)));
   Modelica.Blocks.Sources.IntegerConstant integerconstant1(k = 1) annotation(Placement(visible = true, transformation(origin = {-39.0756,-82.3529}, extent = {{-7.45106,-7.45106},{7.45106,7.45106}}, rotation = 0)));
@@ -48,5 +48,5 @@ equation
   connect(variablelimiter1.limit1,switch1.y) annotation(Line(points = {{47.7276,-45.1237},{42.0168,-45.1237},{42.0168,-9.2437},{37.167,-9.2437}}));
   connect(and1.y,switch1.u2) annotation(Line(points = {{8.59561,-8.82353},{38.2353,-8.82353},{38.2353,-9.2437},{18.3159,-9.2437}}));
   connect(greaterequal1.y,and1.u2) annotation(Line(points = {{-26.6373,-20.1681},{-12.605,-20.1681},{-12.605,-15.3805},{-10.2556,-15.3805}}));
-end engine_torque;
+end EngineTorque;
 

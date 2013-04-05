@@ -54,7 +54,7 @@ examplePath = "examples/vehicle"
 
 
 datasetsX :: [FilePath]
-datasetsX = [-- "Vehicle_mass900kg_res.plt",
+datasetsX = ["Vehicle_mass900kg_res.plt",
              "Vehicle_mass1000kg_res.plt",
              "Vehicle_mass1100kg_res.plt"]
 
@@ -146,13 +146,14 @@ main = do
 
 
 
-  let energyIndex = (Idx.Energy (Idx.StructureEdge (Idx.Section 6) System.Tank System.ConBattery))
+  let energyIndex = (Idx.Energy (Idx.StructureEdge (Idx.Section 7) System.Tank System.ConBattery))
 
 --  print $ Plots.lookupStack energyIndex (last differenceExtEnvs)
 
   Plots.recordStackRow
-    "Energy Flow Change at Tank in Section 6"
-    energyIndex 10
+    "Energy Flow Change at Tank in Section 7"
+    energyIndex 
+    10
     (zip (deltasets datasetsX) differenceExtEnvs)
 
 ---------------------------------------------------------------------------------------

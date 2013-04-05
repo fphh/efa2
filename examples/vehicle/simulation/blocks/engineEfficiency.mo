@@ -14,13 +14,13 @@ model EngineEfficiency
   Modelica.Blocks.Interfaces.RealInput minTorque annotation(Placement(visible = true, transformation(origin = {-80.7989,-87.1318}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {-77.5233,-87.7869}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Blocks.Interfaces.RealInput torque annotation(Placement(visible = true, transformation(origin = {-76.8682,-32.7563}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {-82.3529,-68.0672}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Blocks.Interfaces.RealInput maxTorque annotation(Placement(visible = true, transformation(origin = {-74.9028,-58.9614}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {-74.9028,-58.9614}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-  relativeTorque relativetorque1 annotation(Placement(visible = true, transformation(origin = {-30.5726,-59.3981}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  RelativeTorque relativetorque1 annotation(Placement(visible = true, transformation(origin = {-30.5726,-59.3981}, extent = {{-12,-12},{12,12}}, rotation = 0)));
 equation
   connect(torque,calculatePower.u2) annotation(Line(points = {{-76.8682,-32.7563},{-48.0426,-32.7563},{-48.0426,-19.5967},{-47.1766,-19.5967}}));
-  connect(relativetorque1.y,EfficiencyMap.u2) annotation(Line(points = {{-21.144,-55.5158},{-14.4128,-55.5158},{-14.4128,28.5143},{-13.5705,28.5143}}));
-  connect(minTorque,relativetorque1.minTorque) annotation(Line(points = {{-80.7989,-87.1318},{-42.1465,-87.1318},{-42.1465,-63.2301},{-39.4465,-63.2301}}));
-  connect(maxTorque,relativetorque1.maxTorque) annotation(Line(points = {{-74.9028,-58.9614},{-41.273,-58.9614},{-41.273,-58.4906},{-39.0432,-58.4906}}));
-  connect(torque,relativetorque1.torque) annotation(Line(points = {{-76.8682,-32.7563},{-42.5832,-32.7563},{-42.5832,-54.0032},{-39.7995,-54.0032}}));
+  connect(relativetorque1.output_relativeTorque,EfficiencyMap.u2) annotation(Line(points = {{-21.144,-55.5158},{-14.4128,-55.5158},{-14.4128,28.5143},{-13.5705,28.5143}}));
+  connect(minTorque,relativetorque1.input_minTorque) annotation(Line(points = {{-80.7989,-87.1318},{-42.1465,-87.1318},{-42.1465,-63.2301},{-39.4465,-63.2301}}));
+  connect(maxTorque,relativetorque1.input_maxTorque) annotation(Line(points = {{-74.9028,-58.9614},{-41.273,-58.9614},{-41.273,-58.4906},{-39.0432,-58.4906}}));
+  connect(torque,relativetorque1.input_torque) annotation(Line(points = {{-76.8682,-32.7563},{-42.5832,-32.7563},{-42.5832,-54.0032},{-39.7995,-54.0032}}));
   connect(division1.u2,efficiencyScale.y) annotation(Line(points = {{1.14277,-25.0589},{-8.40336,-25.0589},{-8.40336,13.4454},{66.8067,13.4454},{66.8067,35.2941},{42.2351,35.2941},{42.2351,35.7143}}));
   connect(division1.y,preventNegtiveFuelConsumption.u) annotation(Line(points = {{18.2802,-20.5882},{32.3529,-20.5882},{32.3529,-8.82353},{33.4419,-8.82353}}));
   connect(calculatePower.y,division1.u1) annotation(Line(points = {{-30.0391,-15.1261},{-5.46218,-15.1261},{-5.46218,-16.1176},{1.14277,-16.1176}}));
