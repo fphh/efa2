@@ -285,9 +285,7 @@ type DeltaResult = EqRecord.Delta (R.Result Double)
 infix 0 .==
 
 (.==) ::
-  (Eq x, Arith.Sum x,
-   EqGen.Element idx EqRecord.Absolute s a v
-      ~ EqGen.VariableRecord EqRecord.Absolute s x,
+  (Eq x, Arith.Sum x, x ~ Env.Element idx a v,
    Env.AccessMap idx, Ord (idx node)) =>
    idx node -> x ->
    EqAbs.EquationSystem node s a v

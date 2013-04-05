@@ -64,18 +64,31 @@ data Complete node b a =
 
 class AccessPart env where
    type PartElement env a v :: *
-   accessPart ::
-      Accessor.T (Complete node a v) (env node (PartElement env a v))
+   switchPart :: f Scalar -> f Signal -> f env
 
 instance AccessPart Scalar where
    type PartElement Scalar a v = a
-   accessPart =
-      Accessor.fromSetGet (\x c -> c{scalar = x}) scalar
+   switchPart x _ = x
 
 instance AccessPart Signal where
    type PartElement Signal a v = v
-   accessPart =
-      Accessor.fromSetGet (\x c -> c{signal = x}) signal
+   switchPart _ x = x
+
+newtype
+   PartAcessor node a v env =
+      PartAccessor {
+         getPartAccessor ::
+            Accessor.T (Complete node a v) (env node (PartElement env a v))
+      }
+
+accessPart ::
+   (AccessPart env) =>
+   Accessor.T (Complete node a v) (env node (PartElement env a v))
+accessPart =
+   getPartAccessor $
+   switchPart
+      (PartAccessor $ Accessor.fromSetGet (\x c -> c{scalar = x}) scalar)
+      (PartAccessor $ Accessor.fromSetGet (\x c -> c{signal = x}) signal)
 
 
 formatAssign ::
