@@ -5,10 +5,10 @@ import qualified EFA.Example.Index as XIdx
 import qualified EFA.Example.Absolute as EqGen
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
+import qualified EFA.Graph as Gr
 import EFA.Equation.System ((=.=))
 import EFA.Example.Absolute ((.=))
 import EFA.Example.Utility (makeEdges, constructSeqTopo)
-import EFA.Graph (mkGraph)
 
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as Idx
@@ -59,7 +59,7 @@ c0, c1, c2, c3 :: Node
 c0 :~ c1 :~ c2 :~ c3 :~ _ = Stream.enumFrom $ C 0
 
 topo :: TD.Topology Node
-topo = mkGraph nodes (makeEdges edges)
+topo = Gr.fromList nodes (makeEdges edges)
   where nodes
           = [(c0, TD.Crossing), (c1, TD.Crossing), (c2, TD.Crossing),
              (c3, TD.Crossing), (Sink, TD.AlwaysSink),

@@ -21,7 +21,7 @@ instance Node.C Node where
 ----------------------------------------------------------------------
 -- * Define System Topology
 topology :: TD.Topology Node
-topology = Gr.mkGraph ns (makeEdges es)
+topology = Gr.fromList ns (makeEdges es)
   where ns = [(Tank, TD.Source),
               (ConBattery, TD.Crossing), 
               (Battery, TD.storage),

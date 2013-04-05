@@ -4,7 +4,7 @@ module EFA.Graph.Flow where
 
 import qualified EFA.Graph as Gr
 import EFA.Graph
-          (Edge(Edge), mkGraph,
+          (Edge(Edge),
            labNodes, labEdges,
            insNodes, insEdges)
 
@@ -76,7 +76,7 @@ genFlowTopology ::
   (Ord node, Show node) =>
   Topology node -> FlowState node -> FlowTopology node
 genFlowTopology topo (FlowState fs) =
-   mkGraph (labNodes topo) $
+   Gr.fromList (labNodes topo) $
    map
       (\(Edge idx1 idx2, ()) ->
          case fs `checkedLookup` (PPosIdx idx1 idx2) of

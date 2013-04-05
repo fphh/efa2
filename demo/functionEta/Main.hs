@@ -13,10 +13,10 @@ import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph as Gr
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
 import EFA.Utility (checkedLookup)
-import EFA.Graph (mkGraph)
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (formatValue)
@@ -36,7 +36,7 @@ instance Node.C Node where
 
 
 linearOne :: TD.Topology Node
-linearOne = mkGraph nodes (makeEdges edges)
+linearOne = Gr.fromList nodes (makeEdges edges)
   where nodes = [(Sink, TD.AlwaysSink), (Source, TD.AlwaysSource)]
         edges = [(Source, Sink)]
 

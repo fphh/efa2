@@ -36,7 +36,7 @@ module EFA.Graph (
    propELFilter,
    insNode, insNodes,
    insEdge, insEdges, insEdgeSet,
-   mkGraph, fromList, fromMap,
+   fromList, fromMap,
    nodes, nodeSet,
    InOut,
    mkInOutGraphFormat,
@@ -362,11 +362,9 @@ insEdgeSet es (Graph ns els) =
          els es)
 
 
--- I may deprecate mkGraph in favor of Graph.fromList
-fromList, mkGraph ::
+fromList ::
    (Ord n) =>
    [LNode n nl] -> [LEdge n el] -> Graph n nl el
-mkGraph = fromList
 fromList ns es =
    fromMap (M.fromList ns) $ M.fromList es
 

@@ -14,10 +14,10 @@ import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph as Gr
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
 import EFA.Utility (checkedLookup)
-import EFA.Graph (mkGraph)
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (formatValue)
@@ -32,7 +32,7 @@ sink, source :: Node.Int
 sink :~ (source :~ _) = Stream.enumFrom $ Node.Int 0
 
 linearOne :: TD.Topology Node.Int
-linearOne = mkGraph nodes (makeEdges edges)
+linearOne = Gr.fromList nodes (makeEdges edges)
   where nodes = [(sink, TD.AlwaysSink), (source, TD.AlwaysSource)]
         edges = [(source, sink)]
 
