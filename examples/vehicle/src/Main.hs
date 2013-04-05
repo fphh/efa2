@@ -39,6 +39,8 @@ import qualified EFA.Graph.Topology.Index as Idx
 --import qualified Data.NonEmpty as NonEmpty
 --import qualified EFA.Symbolic.SumProduct as SumProduct
 
+import qualified EFA.Signal.Colour as Colour
+
 import qualified EFA.Signal.Record as Record
 
 import qualified System.IO as IO
@@ -52,13 +54,13 @@ import Data.Tuple.HT (mapSnd)
 examplePath :: FilePath
 examplePath = "examples/vehicle"
 
-datasetsX :: [FilePath]
-datasetsX = [-- "Vehicle_mass900kg_res.plt",
-             "Vehicle_mass1000kg_res.plt",
-             "Vehicle_mass1100kg_res.plt"]
+datasetsX :: [(FilePath, Colour.C)]
+datasetsX = zip [-- "Vehicle_mass900kg_res.plt",
+                 "Vehicle_mass1000kg_res.plt",
+                 "Vehicle_mass1100kg_res.plt"] Colour.colours
 
-deltasets :: [String]  ->   [String]
-deltasets xs = zipWith (\x y -> y ++ "_vs_" ++ x) xs (tail xs)
+deltasets :: [(FilePath, Colour.C)]  ->   [(FilePath, Colour.C)]
+deltasets xs = zipWith (\(x, _) (y, c) -> (y ++ "_vs_" ++ x, c)) xs (tail xs)
 
 zipWith3M_ :: Monad m => (t -> t1 -> t2 -> m b) -> [t] -> [t1] -> [t2] -> m ()
 zipWith3M_ f x y z = mapM_ (\(x',y',z') -> f x' y' z') (zip3 x y z)
@@ -78,7 +80,7 @@ main = do
 -- * Import signals from Csv-file
 
   path <- fmap (</> examplePath) $ getEnv "EFADATA"
-  rawSignalsX <- mapM modelicaPLTImport $ map (path </>) datasetsX
+  rawSignalsX <- mapM modelicaPLTImport $ map ((path </>) . fst) datasetsX
 
 ---------------------------------------------------------------------------------------
 -- * Conditioning, Sequencing and Integration
@@ -140,7 +142,7 @@ main = do
 
   mapM_ (Plots.stack  "Energy Flow Change at Tank in Section 6"
          (Idx.Energy (Idx.StructureEdge (Idx.Section 6) System.Tank System.ConBattery)) 1 )
-    (zip (deltasets datasetsX) differenceExtEnvs)
+    (zip (map fst $ deltasets datasetsX) differenceExtEnvs)
 
 
 
@@ -201,11 +203,11 @@ main = do
 
     -- Sectionen
 --    zipWith3M_ Draw.sequFlowGraphAbsWithEnv datasetsX sequenceFlowTopologyX externalEnvX,
-    concurrentlyMany_ $ L.zipWith3 Draw.sequFlowGraphAbsWithEnv datasetsX sectionToposX externalEnvX,
+    concurrentlyMany_ $ L.zipWith3 Draw.sequFlowGraphAbsWithEnv (map fst datasetsX) sectionToposX externalEnvX,
 
     -- Sections-Deltadiagramme
 --    zipWith3M_ Draw.sequFlowGraphDeltaWithEnv (deltasets datasetsX) sequenceFlowTopologyX externalDeltaEnvX
-    concurrentlyMany_ $ L.zipWith3 Draw.sequFlowGraphDeltaWithEnv (deltasets datasetsX) sectionToposX externalDeltaEnvX
+    concurrentlyMany_ $ L.zipWith3 Draw.sequFlowGraphDeltaWithEnv (map fst $ deltasets datasetsX) sectionToposX externalDeltaEnvX
 
     -- Vorhersage
 --    Draw.sequFlowGraphAbsWithEnv "Prediction" (head sequenceFlowTopologyX) prediction
