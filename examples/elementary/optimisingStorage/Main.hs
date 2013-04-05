@@ -63,7 +63,7 @@ instance Node.C Node where
 
 
 topoDreibein :: TD.Topology Node
-topoDreibein = Gr.mkGraph ns (makeEdges es)
+topoDreibein = Gr.fromList ns (makeEdges es)
   where ns = [ (N0, TD.Source),
                (N1, TD.Crossing),
                (N2, TD.Sink),

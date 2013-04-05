@@ -53,7 +53,7 @@ node0 :~ node1 :~ node2 :~ _ = Stream.enumFrom minBound
 
 
 topoLinear :: TD.Topology Node.Int
-topoLinear = Gr.mkGraph ns (makeEdges es)
+topoLinear = Gr.fromList ns (makeEdges es)
   where ns = [(node0, TD.Source),
               (node1, TD.Crossing),
               (node2, TD.Sink)]
