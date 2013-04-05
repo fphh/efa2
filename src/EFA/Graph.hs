@@ -13,11 +13,6 @@ module EFA.Graph (
    ixmap, nmap, emap, nmapWithInOut,
    empty,
    union,
-   getIncoming,
-   getOutgoing,
-   Adj,
-   mkOutAdj,
-   mkInAdj,
    getLEdge,
    isEmpty,
    lab,
@@ -155,26 +150,6 @@ outEdges = fmap thd3 . nodes
 nodeLabels :: Graph n nl el -> M.Map n nl
 nodeLabels = fmap snd3 . nodes
 
-
-getIncoming :: (Ord n) => Graph n nl el -> n -> [n]
-getIncoming g n =
-   foldMap S.toList $ M.lookup n $ inEdges g
-
-getOutgoing :: (Ord n) => Graph n nl el -> n -> [n]
-getOutgoing g n =
-   foldMap S.toList $ M.lookup n $ outEdges g
-
-type Adj n el = [(el, n)]
-
-mkOutAdj :: (Ord n) => Graph n nl el -> n -> Adj n el
-mkOutAdj g n = map f es
-  where es = zipWith Edge (repeat n) (getOutgoing g n)
-        f e@(Edge _ x) = ((edgeLabels g) M.! e, x)
-
-mkInAdj :: (Ord n) => Graph n nl el -> n -> Adj n el
-mkInAdj g n = map f es
-  where es = zipWith Edge (getIncoming g n) (repeat n)
-        f e@(Edge x _) = ((edgeLabels g) M.! e, x)
 
 getLEdge :: (Ord n) => Graph n nl el -> n -> n -> Maybe (LEdge n el)
 getLEdge g from to =
