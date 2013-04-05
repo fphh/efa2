@@ -26,6 +26,7 @@ import qualified Modules.Analysis as Analysis
 import qualified Modules.Plots as Plots
 -- import qualified Modules.Signals as Signals
 
+import qualified EFA.Example.Index as XIdx
 -- import qualified EFA.Signal.Plot as Plot
 import qualified EFA.Graph.Topology.Index as Idx
 -- import qualified EFA.Equation.Environment as Env
@@ -139,13 +140,13 @@ main = do
 
 
   mapM_ (Plots.stack  "Energy Flow Change at Tank in Section 6"
-         (Idx.Energy (Idx.StructureEdge (Idx.Section 6) System.Tank System.ConBattery)) 1 )
+         (XIdx.energy (Idx.Section 6) System.Tank System.ConBattery) 1 )
     (zip (deltasets datasetsX) differenceExtEnvs)
 
 
 
 {-
-  let energyIndex = (Idx.Energy (Idx.StructureEdge (Idx.Section 6) System.Tank System.ConBattery))
+  let energyIndex = (XIdx.Energy (Idx.Section 6) System.Tank System.ConBattery)
 
 --  print $ Plots.lookupStack energyIndex (last differenceExtEnvs)
 

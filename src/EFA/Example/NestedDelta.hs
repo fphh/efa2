@@ -189,8 +189,7 @@ givenParameterSymbol ::
    (EqGen.Record rec, Pointed term,
     t ~ Utility.VarTerm var Idx.Delta term node,
     Eq t, Arith.Sum t, Arith.Constant t,
-    EqGen.Element idx rec s scalar signal
-       ~ EqGen.VariableRecord rec s t,
+    t ~ Env.Element idx scalar signal,
     Ord (idx node),
     Var.Type idx ~ var, Utility.Symbol var, Env.AccessMap idx) =>
 
@@ -203,10 +202,8 @@ givenParameterSymbol idx param =
 
 givenParameterNumber ::
    (EqGen.Record rec,
-    Eq x, Arith.Sum x,
-    Ord (idx node), Env.AccessMap idx, Var.Index idx,
-    EqGen.Element idx rec s a v
-       ~ EqGen.VariableRecord rec s x) =>
+    Eq x, Arith.Sum x, x ~ Env.Element idx a v,
+    Ord (idx node), Env.AccessMap idx, Var.Index idx) =>
    idx node -> x -> x ->
    OuterExtrusion rec x ->
    EqGen.EquationSystem rec node s a v

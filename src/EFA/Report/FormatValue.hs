@@ -1,6 +1,7 @@
 module EFA.Report.FormatValue where
 
 import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Report.Format as Format
 import EFA.Report.Format (Format)
 import EFA.Equation.Result (Result(..))
@@ -45,6 +46,96 @@ instance FormatValue Idx.Delta where
 
 instance FormatValue rec => FormatValue (Idx.ExtDelta rec) where
    formatValue (Idx.ExtDelta d r) = Format.recordDelta d $ formatValue r
+
+
+instance (FormatSignalIndex idx, Node.C node) => FormatValue (Idx.InSection idx node) where
+   formatValue (Idx.InSection s idx) = formatSignalIndex idx s
+
+instance (FormatScalarIndex idx, Node.C node) => FormatValue (Idx.ForNode idx node) where
+   formatValue (Idx.ForNode idx n) = formatScalarIndex idx n
+
+
+class FormatSignalIndex idx where
+   formatSignalIndex ::
+      (Node.C node, Format output) =>
+      idx node -> Idx.Section -> output
+
+class FormatScalarIndex idx where
+   formatScalarIndex ::
+      (Node.C node, Format output) =>
+      idx node -> node -> output
+
+formatBoundaryNode ::
+   (Format output, Node.C node) =>
+   Idx.BndNode node -> output
+formatBoundaryNode (Idx.BndNode s n) =
+   Format.boundary s `Format.sectionNode` Node.subscript n
+
+formatSectionNode ::
+   (Format output, Node.C node) =>
+   Idx.SecNode node -> output
+formatSectionNode (Idx.SecNode s n) =
+   Format.section s `Format.sectionNode` Node.subscript n
+
+formatStructureEdge ::
+   (Format output, Node.C node) =>
+   Format.EdgeVar -> Idx.StructureEdge node -> Idx.Section -> output
+formatStructureEdge e (Idx.StructureEdge x y) s =
+   Format.subscript (Format.edgeIdent e) $
+   Format.section s `Format.sectionNode`
+      (Node.subscript x `Format.link` Node.subscript y)
+
+formatStorageEdge ::
+   (Format output, Node.C node) =>
+   Format.EdgeVar -> Idx.StorageEdge node -> node -> output
+formatStorageEdge e (Idx.StorageEdge s0 s1) n =
+   Format.subscript (Format.edgeIdent e) $
+   (Format.boundary s0 `Format.link` Format.boundary s1)
+      `Format.sectionNode` Node.subscript n
+
+
+instance FormatSignalIndex Idx.Energy where
+   formatSignalIndex (Idx.Energy e) = formatStructureEdge Format.Energy e
+
+instance FormatSignalIndex Idx.Power where
+   formatSignalIndex (Idx.Power e) = formatStructureEdge Format.Power e
+
+instance FormatSignalIndex Idx.Eta where
+   formatSignalIndex (Idx.Eta e) = formatStructureEdge Format.Eta e
+
+instance FormatSignalIndex Idx.X where
+   formatSignalIndex (Idx.X e) = formatStructureEdge Format.X e
+
+instance FormatSignalIndex Idx.DTime where
+   formatSignalIndex Idx.DTime s =
+      Format.subscript Format.dtime $ Format.section s
+
+instance FormatSignalIndex Idx.Sum where
+   formatSignalIndex (Idx.Sum dir n) s =
+      Format.subscript Format.sum $
+      Format.direction dir `Format.connect`
+         formatSectionNode (Idx.SecNode s n)
+
+
+instance FormatScalarIndex Idx.MaxEnergy where
+   formatScalarIndex (Idx.MaxEnergy e) = formatStorageEdge Format.MaxEnergy e
+
+instance FormatScalarIndex Idx.Storage where
+   formatScalarIndex (Idx.Storage bnd) n =
+      Format.subscript Format.storage $
+      formatBoundaryNode (Idx.BndNode bnd n)
+
+instance FormatScalarIndex Idx.StEnergy where
+   formatScalarIndex (Idx.StEnergy e) = formatStorageEdge Format.Energy e
+
+instance FormatScalarIndex Idx.StX where
+   formatScalarIndex (Idx.StX e) = formatStorageEdge Format.X e
+
+instance FormatScalarIndex Idx.StSum where
+   formatScalarIndex (Idx.StSum dir bnd) n =
+      Format.subscript Format.sum $
+      Format.direction dir `Format.connect`
+         formatBoundaryNode (Idx.BndNode bnd n)
 
 
 formatChar :: Format output => Char -> output

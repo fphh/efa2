@@ -3,8 +3,8 @@ module Main where
 
 import qualified EFA.Example.AssignMap as AssignMap
 import qualified EFA.Example.Utility as Utility
-import EFA.Example.Utility
-          (edgeVar, makeEdges, constructSeqTopo)
+import qualified EFA.Example.Index as XIdx
+import EFA.Example.Utility (makeEdges, constructSeqTopo)
 import EFA.Example.Absolute ((.=))
 import EFA.Equation.Stack (Stack)
 
@@ -45,7 +45,7 @@ node0 :~ node1 :~ node2 :~ _ = Stream.enumFrom minBound
 
 
 topoLinear :: TD.Topology Node.Int
-topoLinear = Gr.mkGraph ns (makeEdges es)
+topoLinear = Gr.fromList ns (makeEdges es)
   where ns = [(node0, TD.Source),
               (node1, TD.Crossing),
               (node2, TD.Sink)]
@@ -65,18 +65,17 @@ type
 infixr 6 *=<>, -=<>
 
 (*=<>) ::
-   (Ord (idx Node.Int), Env.AccessMap idx,
-    Var.Index idx, Var.Type idx ~ Var.Signal) =>
-   idx Node.Int -> EquationSystemSymbolic s -> EquationSystemSymbolic s
+   (Ord (idx Node.Int), Env.AccessSignalMap idx) =>
+   Idx.InSection idx Node.Int ->
+   EquationSystemSymbolic s -> EquationSystemSymbolic s
 idx *=<> eqsys =
    (idx .= (Stack.singleton $ Utility.symbol $ Idx.before $ Var.index idx))
    <>
    eqsys
 
 (-=<>) ::
-   (Ord (idx Node.Int), Env.AccessMap idx,
-    Var.Index idx, Var.Type idx ~ Var.Signal) =>
-   idx Node.Int -> EquationSystemSymbolic s -> EquationSystemSymbolic s
+   (Ord (idx Node.Int), Env.AccessSignalMap idx) =>
+   Idx.InSection idx Node.Int -> EquationSystemSymbolic s -> EquationSystemSymbolic s
 idx -=<> eqsys =
    (idx .=
       let var = Var.index idx
@@ -90,11 +89,11 @@ idx -=<> eqsys =
 
 givenSymbolic :: EquationSystemSymbolic s
 givenSymbolic =
-   (Idx.DTime sec0 .= Arith.fromInteger 1) <>
+   (XIdx.dTime sec0 .= Arith.fromInteger 1) <>
 
-   edgeVar Idx.Energy sec0 node0 node1 -=<>
-   edgeVar Idx.Eta sec0 node0 node1 -=<>
-   edgeVar Idx.Eta sec0 node1 node2 -=<>
+   XIdx.energy sec0 node0 node1 -=<>
+   XIdx.eta sec0 node0 node1 -=<>
+   XIdx.eta sec0 node1 node2 -=<>
 
    mempty
 
@@ -118,26 +117,25 @@ type
          (Stack (Var.Any Node.Int) Double)
 
 deltaPair ::
-   (Ord (idx Node.Int), Env.AccessMap idx,
-    Var.Index idx, Var.Type idx ~ Var.Signal) =>
-   idx Node.Int -> Double -> Double -> EquationSystemNumeric s
+   (Ord (idx Node.Int), Env.AccessSignalMap idx) =>
+   Idx.InSection idx Node.Int -> Double -> Double -> EquationSystemNumeric s
 deltaPair idx before delta =
    idx .= Stack.deltaPair (Var.Signal $ Var.index idx) before delta
 
 
 givenNumeric :: EquationSystemNumeric s
 givenNumeric =
-   (Idx.DTime sec0 .= 1) <>
+   (XIdx.dTime sec0 .= 1) <>
 
-   deltaPair (edgeVar Idx.Energy sec0 node0 node1) 4 (-0.6) <>
-   deltaPair (edgeVar Idx.Eta sec0 node0 node1) 0.25 0.1 <>
-   deltaPair (edgeVar Idx.Eta sec0 node1 node2) 0.85 0.05 <>
+   deltaPair (XIdx.energy sec0 node0 node1) 4 (-0.6) <>
+   deltaPair (XIdx.eta sec0 node0 node1) 0.25 0.1 <>
+   deltaPair (XIdx.eta sec0 node1 node2) 0.85 0.05 <>
 
    mempty
 
 
-eout :: Idx.Energy Node.Int
-eout = edgeVar Idx.Energy sec0 node2 node1
+eout :: XIdx.Energy Node.Int
+eout = XIdx.energy sec0 node2 node1
 
 
 
