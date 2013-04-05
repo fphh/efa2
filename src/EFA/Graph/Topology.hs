@@ -13,6 +13,7 @@ module EFA.Graph.Topology (
        DirSequFlowGraph,
        pathExists,
        fromTopology,
+       dirFromSequFlowGraph,
        isStorage,
        maybeStorage,
        isActive,
@@ -103,8 +104,8 @@ isInactive :: FlowDirection -> Bool
 isInactive = not . isActive
 
 data EdgeType node =
-     StructureEdge (Idx.StructureEdge node)
-   | StorageEdge (Idx.StorageEdge node)
+     StructureEdge (Idx.InSection Idx.StructureEdge node)
+   | StorageEdge (Idx.ForNode Idx.StorageEdge node)
    deriving (Eq, Ord, Show)
 
 
@@ -114,11 +115,11 @@ edgeType (Gr.Edge (Idx.BndNode sx nx) (Idx.BndNode sy ny)) =
      then
         case sx of
            Idx.AfterSection s ->
-              StructureEdge $ Idx.StructureEdge s nx ny
+              StructureEdge $ Idx.InSection s $ Idx.StructureEdge nx ny
            _ -> error "structure edges must be in a section"
      else
         if nx == ny
-          then StorageEdge $ Idx.StorageEdge sx sy nx
+          then StorageEdge $ Idx.ForNode (Idx.StorageEdge sx sy) nx
           else error "forbidden edge type"
 
 
@@ -225,6 +226,21 @@ fromTopology :: (Ord a) => ClassifiedTopology a -> SequFlowGraph a
 fromTopology = Gr.ixmap nf . Gr.emap ef
   where ef = const Dir
         nf = Idx.BndNode (Idx.AfterSection (Idx.Section 0))
+
+{-
+In principle, we could remove "dead nodes", but
+then the storage equations would not work.
+Therefore we should not remove "dead nodes"
+iff they are storages.
+Anyway, I don't remove dead nodes,
+because it will make DirSequFlowGraph more complicated
+or the generation of storage equations will be more complicated.
+-}
+dirFromSequFlowGraph ::
+   (Ord node) =>
+   SequFlowGraph node -> DirSequFlowGraph node
+dirFromSequFlowGraph =
+   Gr.emap (const ()) . Gr.lefilter isDirEdge
 
 
 type InOut n el = ([Gr.LNode n el], [Gr.LNode n el])

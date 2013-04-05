@@ -4,7 +4,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module EFA.Equation.System (
   EquationSystem, Expression, RecordExpression,
-  Element, VariableRecord,
   fromGraph, fromEnvResult, fromEnv,
   solve, solveFromMeasurement, conservativelySolve,
   solveSimple,
@@ -374,7 +373,7 @@ infix 0 .=, %=, ?=
 
 (.=) ::
    (Eq x, Arith.Sum x, Record rec,
-    Element idx rec s a v ~ VariableRecord rec s x,
+    Env.Element idx a v ~ x,
     Env.AccessMap idx, Ord (idx node)) =>
    Record.Indexed rec (idx node) -> x ->
    EquationSystem rec node s a v
@@ -382,7 +381,7 @@ evar .= val  =  variable evar =.= constant val
 
 (%=) ::
    (Eq x, Arith.Sum x, Record rec,
-    Element idx rec s a v ~ VariableRecord rec s x,
+    Env.Element idx a v ~ x,
     Env.AccessMap idx, Ord (idx node)) =>
    idx node -> rec x ->
    EquationSystem rec node s a v
@@ -390,7 +389,7 @@ evar %= val  =  variableRecord evar =%= constantRecord val
 
 (?=) ::
    (Eq x, Arith.Sum x, Record rec,
-    Element idx rec s a v ~ VariableRecord rec s x,
+    Env.Element idx a v ~ x,
     Env.AccessMap idx, Ord (idx node)) =>
    idx node -> rec (Result x) ->
    EquationSystem rec node s a v
@@ -427,51 +426,45 @@ withLocalVar f = EquationSystem $ do
         EquationSystem act -> act
 
 
-{-
-With GHC-7.6 we could define a custom constraint like this one:
+newtype
+   AccessMap rec node s a v idx env =
+      AccessMap {
+         getAccessMap ::
+            (Env.Environment idx ~ env) =>
+            Accessor.T
+               (Env.Complete node (rec (Sys.Variable s a)) (rec (Sys.Variable s v)))
+               (M.Map (idx node) (rec (Sys.Variable s (Env.Element idx a v))))
+      }
 
-type
-   Element idx rec s a v x =
-      Env.Element idx
-         (rec (Sys.Variable s a))
-         (rec (Sys.Variable s v))
-       ~ rec (Sys.Variable s x)
--}
-{- |
-I recommend to write the equality constraint like so:
+accessMap ::
+   (Env.AccessMap idx) =>
+   Accessor.T
+      (Env.Complete node (rec (Sys.Variable s a)) (rec (Sys.Variable s v)))
+      (M.Map (idx node) (rec (Sys.Variable s (Env.Element idx a v))))
+accessMap =
+   getAccessMap $
+   Env.switchPart
+      (AccessMap $ Env.accessMap)
+      (AccessMap $ Env.accessMap)
 
-> Element idx rec s a v ~ VariableRecord rec s x
--}
-type
-   Element idx rec s a v =
-      Env.Element idx
-         (rec (Sys.Variable s a))
-         (rec (Sys.Variable s v))
-
-{- |
-I recommend not to expand this type synonym.
-You should not rely on the fact, that we use unique-logic internally.
--}
-type VariableRecord rec s x = rec (Sys.Variable s x)
 
 variableRecord ::
-   (Eq x, Sum x, Env.AccessMap idx, Ord (idx node), Record rec,
-    Element idx rec s a v ~ rec (Sys.Variable s x)) =>
+   (Eq x, Sum x, x ~ Env.Element idx a v,
+    Env.AccessMap idx, Ord (idx node), Record rec) =>
    idx node -> RecordExpression rec node s a v x
 variableRecord idx =
   Bookkeeping $ fmap Wrap $ do
-    oldMap <- AccessState.get Env.accessMap
+    oldMap <- AccessState.get accessMap
     case M.lookup idx oldMap of
       Just var -> return $ fmap Expr.fromVariable var
       Nothing -> do
         var <- lift newVariable
-        AccessState.set Env.accessMap $ M.insert idx var oldMap
+        AccessState.set accessMap $ M.insert idx var oldMap
         return (fmap Expr.fromVariable var)
 
 variable ::
-   (Eq x, Sum x,
-    Env.AccessMap idx, Ord (idx node), Record rec,
-    Element idx rec s a v ~ rec (Sys.Variable s x)) =>
+   (Eq x, Sum x, x ~ Env.Element idx a v,
+    Env.AccessMap idx, Ord (idx node), Record rec) =>
    Record.Indexed rec (idx node) ->
    Expression rec node s a v x
 variable (Idx.Record recIdx idx) =
@@ -481,68 +474,68 @@ variable (Idx.Record recIdx idx) =
 
 power ::
    (Eq v, Sum v, Record rec, Ord node) =>
-   Idx.StructureEdge node -> RecordExpression rec node s a v v
-power = variableRecord . Idx.Power
+   Idx.InSection Idx.StructureEdge node -> RecordExpression rec node s a v v
+power = variableRecord . Idx.liftInSection Idx.Power
 
 energy ::
    (Eq v, Sum v, Record rec, Ord node) =>
-   Idx.StructureEdge node -> RecordExpression rec node s a v v
-energy = variableRecord . Idx.Energy
+   Idx.InSection Idx.StructureEdge node -> RecordExpression rec node s a v v
+energy = variableRecord . Idx.liftInSection Idx.Energy
 
 maxEnergy ::
    (Eq a, Sum a, Record rec, Ord node) =>
-   Idx.StorageEdge node -> RecordExpression rec node s a v a
-maxEnergy = variableRecord . Idx.MaxEnergy
+   Idx.ForNode Idx.StorageEdge node -> RecordExpression rec node s a v a
+maxEnergy = variableRecord . Idx.liftForNode Idx.MaxEnergy
 
 stEnergy ::
    (Eq a, Sum a, Record rec, Ord node) =>
-   Idx.StorageEdge node -> RecordExpression rec node s a v a
-stEnergy = variableRecord . Idx.StEnergy
+   Idx.ForNode Idx.StorageEdge node -> RecordExpression rec node s a v a
+stEnergy = variableRecord . Idx.liftForNode Idx.StEnergy
 
 eta ::
    (Eq v, Sum v, Record rec, Ord node) =>
-   Idx.StructureEdge node -> RecordExpression rec node s a v v
-eta = variableRecord . Idx.Eta
+   Idx.InSection Idx.StructureEdge node -> RecordExpression rec node s a v v
+eta = variableRecord . Idx.liftInSection Idx.Eta
 
 xfactor ::
    (Eq v, Sum v, Record rec, Ord node) =>
-   Idx.StructureEdge node -> RecordExpression rec node s a v v
-xfactor = variableRecord . Idx.X
+   Idx.InSection Idx.StructureEdge node -> RecordExpression rec node s a v v
+xfactor = variableRecord . Idx.liftInSection Idx.X
 
 stxfactor ::
    (Eq a, Sum a, Record rec, Ord node) =>
-   Idx.StorageEdge node -> RecordExpression rec node s a v a
-stxfactor = variableRecord . Idx.StX
+   Idx.ForNode Idx.StorageEdge node -> RecordExpression rec node s a v a
+stxfactor = variableRecord . Idx.liftForNode Idx.StX
 
 insum ::
    (Eq v, Sum v, Record rec, Ord node) =>
    Idx.SecNode node -> RecordExpression rec node s a v v
-insum = variableRecord . Idx.Sum Idx.In
+insum = variableRecord . Idx.inSection (Idx.Sum Idx.In)
 
 outsum ::
    (Eq v, Sum v, Record rec, Ord node) =>
    Idx.SecNode node -> RecordExpression rec node s a v v
-outsum = variableRecord . Idx.Sum Idx.Out
+outsum = variableRecord . Idx.inSection (Idx.Sum Idx.Out)
 
 stinsum ::
    (Eq a, Sum a, Record rec, Ord node) =>
    Idx.BndNode node -> RecordExpression rec node s a v a
-stinsum = variableRecord . Idx.StSum Idx.In
+stinsum = variableRecord . Idx.forNode (Idx.StSum Idx.In)
 
 stoutsum ::
    (Eq a, Sum a, Record rec, Ord node) =>
    Idx.BndNode node -> RecordExpression rec node s a v a
-stoutsum = variableRecord . Idx.StSum Idx.Out
+stoutsum = variableRecord . Idx.forNode (Idx.StSum Idx.Out)
 
 storage ::
    (Eq a, Sum a, Record rec, Ord node) =>
    Idx.BndNode node -> RecordExpression rec node s a v a
-storage = variableRecord . Idx.Storage
+storage = variableRecord . Idx.forNode Idx.Storage
 
 dtime ::
    (Eq v, Sum v, Record rec, Ord node) =>
    Idx.Section -> RecordExpression rec node s a v v
-dtime = variableRecord . Idx.DTime
+dtime = variableRecord . flip Idx.InSection Idx.DTime
 
 
 mwhen :: Monoid a => Bool -> a -> a
@@ -551,9 +544,8 @@ mwhen False _ = mempty
 
 
 fromMapResult ::
-   (Eq x, Sum x,
-    Env.AccessMap idx, Ord (idx node), Record rec,
-    Element idx rec s a v ~ rec (Sys.Variable s x)) =>
+   (Eq x, Sum x, x ~ Env.Element idx a v,
+    Env.AccessMap idx, Ord (idx node), Record rec) =>
    M.Map (idx node) (rec (Result x)) ->
    EquationSystem rec node s a v
 fromMapResult =
@@ -581,9 +573,8 @@ fromEnvResult
 
 
 fromMap ::
-   (Eq x, Sum x,
-    Env.AccessMap idx, Ord (idx node), Record rec,
-    Element idx rec s a v ~ rec (Sys.Variable s x)) =>
+   (Eq x, Sum x, x ~ Env.Element idx a v,
+    Env.AccessMap idx, Ord (idx node), Record rec) =>
    M.Map (idx node) (rec x) ->
    EquationSystem rec node s a v
 fromMap =
@@ -630,7 +621,7 @@ fromEdges ::
 fromEdges =
    foldMap $ \se ->
       case TD.edgeType se of
-         TD.StructureEdge e@(Idx.StructureEdge s _nf _nt) ->
+         TD.StructureEdge e@(Idx.InSection s _edge) ->
             let equ xy = energy xy =%= dtime s ~* power xy
             in  equ e <> equ (Idx.flip e) <>
                 (power (Idx.flip e) =%= eta e ~* power e)
@@ -679,8 +670,8 @@ fromNodes equalInOutSums =
                       mwhen equalInOutSums $
                       withSecNode $ \sn -> insum sn =%= outsum sn
                    TD.Storage (Just dir) ->
-                      let from (Idx.StorageEdge x _ _) = x
-                          to (Idx.StorageEdge _ x _) = x
+                      let from (Idx.ForNode (Idx.StorageEdge x _) _) = x
+                          to (Idx.ForNode (Idx.StorageEdge _ x) _) = x
                           inout = (map from insStore, bn, map to outsStore)
                       in  case dir of
                              TD.In  ->
@@ -749,9 +740,9 @@ fromInStorages ::
   ([Idx.Boundary], Idx.BndNode node, [Idx.Boundary]) ->
   EquationSystem rec node s a v
 fromInStorages (_, sn@(Idx.BndNode bnd n), outs) =
-   let souts = List.sort outs
-       maxEnergies = map (\b -> Idx.storageEdge maxEnergy bnd b n) souts
-       stEnergies  = map (\b -> Idx.storageEdge stEnergy  bnd b n) souts
+   let souts = map (\b -> Idx.ForNode (Idx.StorageEdge bnd b) n) $ List.sort outs
+       maxEnergies = map maxEnergy souts
+       stEnergies  = map stEnergy  souts
    in  mconcat $
        zipWith (=%=) maxEnergies
           (stinsum sn : zipWith (~-) maxEnergies stEnergies)
@@ -764,8 +755,8 @@ fromOutStorages (ins0, Idx.BndNode sec n, _) =
   flip foldMap (NonEmpty.fetch ins0) $ \ins ->
   (withLocalVar $ \s ->
     splitFactors s
-      (\sect -> Idx.storageEdge maxEnergy sect sec n)
-      (\sect -> Idx.storageEdge stxfactor sec sect n)
+      (\sect -> maxEnergy $ Idx.ForNode (Idx.StorageEdge sect sec) n)
+      (\sect -> stxfactor $ Idx.ForNode (Idx.StorageEdge sec sect) n)
       ins)
 
 splitFactors ::
@@ -780,23 +771,6 @@ splitFactors s ef xf ns =
    foldMap (\n -> ef n =%= s ~* xf n) ns
 
 
-
------------------------------------------------------------------
-
-
--- In principle, we could remove "dead nodes", but
--- then the storage equations would not work.
--- Therefore we should not remove "dead nodes"
--- iff they are storages.
--- Anyway, I don't remove dead nodes,
--- because it will make DirSequFlowGraph more complicated
--- or the generation of storage equations will be more complicated.
-
-toDirSequFlowGraph ::
-  (Ord node) =>
-  TD.SequFlowGraph node -> TD.DirSequFlowGraph node
-toDirSequFlowGraph =
-  Gr.emap (const ()) . Gr.lefilter TD.isDirEdge
 
 -----------------------------------------------------------------
 
@@ -840,7 +814,7 @@ solve ::
   (forall s. EquationSystem rec node s a v) ->
   Env.Complete node (rec (Result a)) (rec (Result v))
 solve (_rngs, g) given =
-  solveSimple (given <> fromGraph True (toDirSequFlowGraph g))
+  solveSimple (given <> fromGraph True (TD.dirFromSequFlowGraph g))
 
 
 --------------------------------------------------------------------
@@ -854,7 +828,7 @@ solveFromMeasurement ::
   (forall s. EquationSystem rec node s a v) ->
   Env.Complete node (rec (Result a)) (rec (Result v))
 solveFromMeasurement (_rngs, g) given =
-  solveSimple (given <> fromGraph False (toDirSequFlowGraph g))
+  solveSimple (given <> fromGraph False (TD.dirFromSequFlowGraph g))
 
 
 
@@ -876,6 +850,6 @@ conservativelySolve ::
   (forall s. EquationSystem rec node s a v) ->
   Env.Complete node (rec (Result a)) (rec (Result v))
 conservativelySolve (_rngs, g) given =
-  solveSimple (given <> fromGraph True (toDirSequFlowGraph g))
+  solveSimple (given <> fromGraph True (TD.dirFromSequFlowGraph g))
   <>
   solveSimple given

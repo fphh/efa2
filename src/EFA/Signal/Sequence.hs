@@ -510,7 +510,7 @@ extractCuttingTimes = fmap Record.getTimeWindow
 
 {-# DEPRECATED sectionRecordsFromSequence "better use fmap (Record.slice rec)" #-}
 -- | Create SequencePowerRecord by extracting Slices from Indices given by Sequence
-sectionRecordsFromSequence ::  (V.Slice v, V.Storage v a) => Record s t1 t2 id v a -> Sequ -> SequData (Record s t1 t2 id v a)
+sectionRecordsFromSequence ::  (V.Slice v, V.Storage v a) => Record s1 s2 t1 t2 id v a -> Sequ -> SequData (Record s1 s2 t1 t2 id v a)
 sectionRecordsFromSequence rec = fmap (Record.slice rec)
 
 

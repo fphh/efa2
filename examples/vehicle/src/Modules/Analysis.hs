@@ -11,11 +11,9 @@ import Modules.Signals as Signals
 
 import qualified EFA.Example.Absolute as EqAbs
 
-import EFA.Example.Utility (edgeVar,
-                            checkDetermined,
-                            (.=),
-                            (%=)
-                           )
+import qualified EFA.Example.Index as XIdx
+import EFA.Example.Utility ((.=), (%=), checkDetermined)
+
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Result as R
@@ -32,7 +30,7 @@ import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Vector as Vec
 import qualified EFA.Signal.Signal as Sig
 
-import EFA.Signal.Record (PPosIdx(PPosIdx), SignalRecord, FlowRecord,
+import EFA.Signal.Record (SignalRecord, FlowRecord,
                           Record(Record), PowerRecord,
                           SignalRecord, getTime, newTimeBase)
 
@@ -170,7 +168,6 @@ external sequenceFlowTopology sequFlowRecord =  EqGen.solveFromMeasurement seque
 initStorage :: (Fractional a) => a
 initStorage = 0.7*3600*1000
 
-
 makeGivenFromExternal :: (Vec.Zipper v,
                           Vec.Walker v,
                           Vec.Singleton v,
@@ -187,14 +184,14 @@ makeGivenFromExternal :: (Vec.Zipper v,
                          EqGen.EquationSystem rec System.Node s Double d
 
 makeGivenFromExternal idx sf =
-   (Idx.Record idx (Idx.Storage (Idx.initBndNode System.Battery)) .= initStorage)
-   <> (Idx.Record idx (Idx.Storage (Idx.initBndNode System.VehicleInertia)) .= 0)
+   (Idx.Record idx (XIdx.storage Idx.initial System.Battery) .= initStorage)
+   <> (Idx.Record idx (XIdx.storage Idx.initial System.VehicleInertia) .= 0)
    <> fold (SD.mapWithSection f sf)
    where f sec (Record t xs) =
-           (Idx.Record idx (Idx.DTime sec) .=  sum (Sig.toList $ Sig.deltaSig t)) <>
+           (Idx.Record idx (Idx.InSection sec Idx.DTime) .= sum (Sig.toList $ Sig.delta t)) <>
            fold (M.mapWithKey g xs)
-           where g (PPosIdx a b) e =
-                    Idx.Record idx (edgeVar Idx.Energy sec a b) .=  sum (Sig.toList e)
+           where g (Idx.PPos p) e =
+                    Idx.Record idx (Idx.InSection sec (Idx.Energy p)) .= sum (Sig.toList e)
 
 -------------------------------------------------------------------------------------------------
 -- ## Predict Energy Flow
@@ -225,14 +222,14 @@ makeGivenForPrediction ::
    EqGen.EquationSystem rec System.Node s a v
 
 makeGivenForPrediction idx env =
-    (Idx.Record idx (Idx.Storage (Idx.initBndNode System.Battery)) .= initStorage)
-    <> (Idx.Record idx (Idx.Storage (Idx.initBndNode System.VehicleInertia)) .= 0)
+    (Idx.Record idx (XIdx.storage Idx.initial System.Battery) .= initStorage)
+    <> (Idx.Record idx (XIdx.storage Idx.initial System.VehicleInertia) .= 0)
     <> (foldMap f $ M.toList $ Env.etaMap $ Env.signal env)
     <> (foldMap f $ M.toList $ Env.dtimeMap $ Env.signal env)
     <> (foldMap f $ M.toList $ M.mapWithKey h $ M.filterWithKey g $
                                Env.energyMap $ Env.signal env)
     where f (i, x)  =  i %= fmap (\(EqGen.Determined y) -> y) x
-          g (Idx.Energy (Idx.StructureEdge _ x y)) _  =
+          g (Idx.InSection _ (Idx.Energy (Idx.StructureEdge x y))) _  =
              case (x,y) of
                 (System.Resistance, System.Chassis) -> True
                 (System.VehicleInertia, System.Chassis) -> True
@@ -241,7 +238,7 @@ makeGivenForPrediction idx env =
                 (System.ConES, System.ElectricSystem) -> True
                 (System.Battery, System.ConBattery) -> True
                 _ -> False
-          h (Idx.Energy (Idx.StructureEdge _ System.Resistance System.Chassis)) x =
+          h (Idx.InSection _ (Idx.Energy (Idx.StructureEdge System.Resistance System.Chassis))) x =
                fmap (fmap (*1.1)) x
           h _ r = r
 
@@ -287,18 +284,15 @@ type DeltaResult = EqRecord.Delta (R.Result Double)
 infix 0 .==
 
 (.==) ::
-  (Eq x, Arith.Sum x,
-   EqGen.Element idx EqRecord.Absolute s a v
-      ~ EqGen.VariableRecord EqRecord.Absolute s x,
+  (Eq x, Arith.Sum x, x ~ Env.Element idx a v,
    Env.AccessMap idx, Ord (idx node)) =>
    idx node -> x ->
    EqAbs.EquationSystem node s a v
 (.==) = (EqAbs..=)
 
 deltaPair ::
-   (Ord (idx System.Node), Env.AccessMap idx,
-    Var.Index idx, Var.Type idx ~ Var.Signal) =>
-   (idx System.Node) -> Double -> Double -> EquationSystemNumeric s
+   (Ord (idx System.Node), Env.AccessSignalMap idx) =>
+   Idx.InSection idx System.Node -> Double -> Double -> EquationSystemNumeric s
 deltaPair idx before delt =
    idx .== Stack.deltaPair (Var.Signal $ Var.index idx) before delt
 
@@ -317,7 +311,7 @@ makeGivenForDifferentialAnalysis ::
   EquationSystemNumeric s
 makeGivenForDifferentialAnalysis (Env.Complete _ sig) =
 --  (Idx.DTime sec2 .== 0) <>
-  (Idx.Storage (Idx.initBndNode System.Battery) .== initStorage) <>
+  (XIdx.storage Idx.initial System.Battery .== initStorage) <>
 --  (deltaPair (edgeVar Idx.Energy sec2 System.Tank System.ConBattery) 4 (-0.6)) <>
   (fold $ M.mapWithKey f $ Env.etaMap sig) <>
   (fold $ M.mapWithKey f $ Env.dtimeMap sig) <>
@@ -328,7 +322,7 @@ makeGivenForDifferentialAnalysis (Env.Complete _ sig) =
               (checkDetermined "before" $ EqRecord.before rec)
               (checkDetermined "delta"  $ EqRecord.delta rec)
 
-        g (Idx.Energy (Idx.StructureEdge _ x y)) _ =
+        g (Idx.InSection _ (Idx.Energy (Idx.StructureEdge x y))) _ =
           case (x,y) of
             (System.Resistance, System.Chassis) -> True
             (System.VehicleInertia, System.Chassis) -> True
@@ -337,5 +331,3 @@ makeGivenForDifferentialAnalysis (Env.Complete _ sig) =
             (System.ConES, System.ElectricSystem) -> True
             (System.Battery, System.ConBattery) -> True
             _ -> False
-
-

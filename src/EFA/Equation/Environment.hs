@@ -23,17 +23,18 @@ import Prelude hiding (lookup, (.))
 
 
 -- Environments
-type EnergyMap node a = M.Map (Idx.Energy node) a
-type MaxEnergyMap node a = M.Map (Idx.MaxEnergy node) a
-type PowerMap node a = M.Map (Idx.Power node) a
-type EtaMap node a = M.Map (Idx.Eta node) a
-type DTimeMap node a = M.Map (Idx.DTime node) a
-type XMap node a = M.Map (Idx.X node) a
-type SumMap node a = M.Map (Idx.Sum node) a
-type StorageMap node a = M.Map (Idx.Storage node) a
-type StEnergyMap node a = M.Map (Idx.StEnergy node) a
-type StXMap node a = M.Map (Idx.StX node) a
-type StSumMap node a = M.Map (Idx.StSum node) a
+type EnergyMap node a = M.Map (Idx.InSection Idx.Energy node) a
+type PowerMap node a = M.Map (Idx.InSection Idx.Power node) a
+type EtaMap node a = M.Map (Idx.InSection Idx.Eta node) a
+type DTimeMap node a = M.Map (Idx.InSection Idx.DTime node) a
+type XMap node a = M.Map (Idx.InSection Idx.X node) a
+type SumMap node a = M.Map (Idx.InSection Idx.Sum node) a
+
+type MaxEnergyMap node a = M.Map (Idx.ForNode Idx.MaxEnergy node) a
+type StorageMap node a = M.Map (Idx.ForNode Idx.Storage node) a
+type StEnergyMap node a = M.Map (Idx.ForNode Idx.StEnergy node) a
+type StXMap node a = M.Map (Idx.ForNode Idx.StX node) a
+type StSumMap node a = M.Map (Idx.ForNode Idx.StSum node) a
 
 
 data Signal node a =
@@ -64,18 +65,31 @@ data Complete node b a =
 
 class AccessPart env where
    type PartElement env a v :: *
-   accessPart ::
-      Accessor.T (Complete node a v) (env node (PartElement env a v))
+   switchPart :: f Scalar -> f Signal -> f env
 
 instance AccessPart Scalar where
    type PartElement Scalar a v = a
-   accessPart =
-      Accessor.fromSetGet (\x c -> c{scalar = x}) scalar
+   switchPart x _ = x
 
 instance AccessPart Signal where
    type PartElement Signal a v = v
-   accessPart =
-      Accessor.fromSetGet (\x c -> c{signal = x}) signal
+   switchPart _ x = x
+
+newtype
+   PartAcessor node a v env =
+      PartAccessor {
+         getPartAccessor ::
+            Accessor.T (Complete node a v) (env node (PartElement env a v))
+      }
+
+accessPart ::
+   (AccessPart env) =>
+   Accessor.T (Complete node a v) (env node (PartElement env a v))
+accessPart =
+   getPartAccessor $
+   switchPart
+      (PartAccessor $ Accessor.fromSetGet (\x c -> c{scalar = x}) scalar)
+      (PartAccessor $ Accessor.fromSetGet (\x c -> c{signal = x}) signal)
 
 
 formatAssign ::
@@ -109,27 +123,31 @@ instance
          formatMap st
 
 
-lookupSignal :: Ord node => Var.Signal node -> Signal node a -> Maybe a
-lookupSignal v =
-   case v of
-      Var.Energy    idx -> M.lookup idx . energyMap
-      Var.Power     idx -> M.lookup idx . powerMap
-      Var.Eta       idx -> M.lookup idx . etaMap
-      Var.DTime     idx -> M.lookup idx . dtimeMap
-      Var.X         idx -> M.lookup idx . xMap
-      Var.Sum       idx -> M.lookup idx . sumMap
+lookupSignal ::
+   Ord node =>
+   Idx.InSection Var.Signal node -> Signal node a -> Maybe a
+lookupSignal (Idx.InSection s var) =
+   case var of
+      Var.Energy    idx -> M.lookup (Idx.InSection s idx) . energyMap
+      Var.Power     idx -> M.lookup (Idx.InSection s idx) . powerMap
+      Var.Eta       idx -> M.lookup (Idx.InSection s idx) . etaMap
+      Var.DTime     idx -> M.lookup (Idx.InSection s idx) . dtimeMap
+      Var.X         idx -> M.lookup (Idx.InSection s idx) . xMap
+      Var.Sum       idx -> M.lookup (Idx.InSection s idx) . sumMap
 
-lookupScalar :: Ord node => Var.Scalar node -> Scalar node a -> Maybe a
-lookupScalar v =
-   case v of
-      Var.MaxEnergy idx -> M.lookup idx . maxEnergyMap
-      Var.Storage   idx -> M.lookup idx . storageMap
-      Var.StEnergy  idx -> M.lookup idx . stEnergyMap
-      Var.StX       idx -> M.lookup idx . stXMap
-      Var.StSum     idx -> M.lookup idx . stSumMap
+lookupScalar ::
+   Ord node =>
+   Idx.ForNode Var.Scalar node -> Scalar node a -> Maybe a
+lookupScalar (Idx.ForNode var n) =
+   case var of
+      Var.MaxEnergy idx -> M.lookup (Idx.ForNode idx n) . maxEnergyMap
+      Var.Storage   idx -> M.lookup (Idx.ForNode idx n) . storageMap
+      Var.StEnergy  idx -> M.lookup (Idx.ForNode idx n) . stEnergyMap
+      Var.StX       idx -> M.lookup (Idx.ForNode idx n) . stXMap
+      Var.StSum     idx -> M.lookup (Idx.ForNode idx n) . stSumMap
 
 
-type Element idx a v = PartElement (Environment (Var.Type idx)) a v
+type Element idx a v = PartElement (Environment idx) a v
 
 accessMap ::
    (AccessMap idx) =>
@@ -137,68 +155,74 @@ accessMap ::
 accessMap =
    accessPartMap . accessPart
 
-class
-   (AccessPart (Environment var), var ~ Variable (Environment var)) =>
-      VarEnv var where
-   type Environment var :: * -> * -> *
-   type Variable env :: * -> *
 
-instance VarEnv Var.Signal where
-   type Environment Var.Signal = Signal
-   type Variable Signal = Var.Signal
-
-instance VarEnv Var.Scalar where
-   type Environment Var.Scalar = Scalar
-   type Variable Scalar = Var.Scalar
-
-
-class (VarEnv (Var.Type idx), Var.Index idx) => AccessMap idx where
+class (AccessPart (Environment idx), Var.Index idx) => AccessMap idx where
+   type Environment idx :: * -> * -> *
    accessPartMap ::
-      Accessor.T (Environment (Var.Type idx) node a) (M.Map (idx node) a)
+      Accessor.T
+         (Environment idx node a)
+         (M.Map (idx node) a)
 
-instance AccessMap Idx.Energy where
-   accessPartMap =
+instance (AccessSignalMap idx) => AccessMap (Idx.InSection idx) where
+   type Environment (Idx.InSection idx) = Signal
+   accessPartMap = accessSignalMap
+
+instance (AccessScalarMap idx) => AccessMap (Idx.ForNode idx) where
+   type Environment (Idx.ForNode idx) = Scalar
+   accessPartMap = accessScalarMap
+
+
+class (Var.SignalIndex idx) => AccessSignalMap idx where
+   accessSignalMap ::
+      Accessor.T (Signal node a) (M.Map (Idx.InSection idx node) a)
+
+instance AccessSignalMap Idx.Energy where
+   accessSignalMap =
       Accessor.fromSetGet (\x c -> c{energyMap = x}) energyMap
 
-instance AccessMap Idx.Power where
-   accessPartMap =
+instance AccessSignalMap Idx.Power where
+   accessSignalMap =
       Accessor.fromSetGet (\x c -> c{powerMap = x}) powerMap
 
-instance AccessMap Idx.Eta where
-   accessPartMap =
+instance AccessSignalMap Idx.Eta where
+   accessSignalMap =
       Accessor.fromSetGet (\x c -> c{etaMap = x}) etaMap
 
-instance AccessMap Idx.DTime where
-   accessPartMap =
+instance AccessSignalMap Idx.DTime where
+   accessSignalMap =
       Accessor.fromSetGet (\x c -> c{dtimeMap = x}) dtimeMap
 
-instance AccessMap Idx.X where
-   accessPartMap =
+instance AccessSignalMap Idx.X where
+   accessSignalMap =
       Accessor.fromSetGet (\x c -> c{xMap = x}) xMap
 
-instance AccessMap Idx.Sum where
-   accessPartMap =
+instance AccessSignalMap Idx.Sum where
+   accessSignalMap =
       Accessor.fromSetGet (\x c -> c{sumMap = x}) sumMap
 
 
-instance AccessMap Idx.MaxEnergy where
-   accessPartMap =
+class (Var.ScalarIndex idx) => AccessScalarMap idx where
+   accessScalarMap ::
+      Accessor.T (Scalar node a) (M.Map (Idx.ForNode idx node) a)
+
+instance AccessScalarMap Idx.MaxEnergy where
+   accessScalarMap =
       Accessor.fromSetGet (\x c -> c{maxEnergyMap = x}) maxEnergyMap
 
-instance AccessMap Idx.Storage where
-   accessPartMap =
+instance AccessScalarMap Idx.Storage where
+   accessScalarMap =
       Accessor.fromSetGet (\x c -> c{storageMap = x}) storageMap
 
-instance AccessMap Idx.StEnergy where
-   accessPartMap =
+instance AccessScalarMap Idx.StEnergy where
+   accessScalarMap =
       Accessor.fromSetGet (\x c -> c{stEnergyMap = x}) stEnergyMap
 
-instance AccessMap Idx.StX where
-   accessPartMap =
+instance AccessScalarMap Idx.StX where
+   accessScalarMap =
       Accessor.fromSetGet (\x c -> c{stXMap = x}) stXMap
 
-instance AccessMap Idx.StSum where
-   accessPartMap =
+instance AccessScalarMap Idx.StSum where
+   accessScalarMap =
       Accessor.fromSetGet (\x c -> c{stSumMap = x}) stSumMap
 
 

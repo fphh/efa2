@@ -26,6 +26,7 @@ import qualified Modules.Analysis as Analysis
 import qualified Modules.Plots as Plots
 -- import qualified Modules.Signals as Signals
 
+import qualified EFA.Example.Index as XIdx
 -- import qualified EFA.Signal.Plot as Plot
 import qualified EFA.Graph.Topology.Index as Idx
 -- import qualified EFA.Equation.Environment as Env
@@ -48,6 +49,7 @@ import System.FilePath ((</>))
 --import qualified Data.Map as M
 import qualified Data.List as L
 import Data.Tuple.HT (mapSnd)
+import qualified EFA.Example.Index as XIdx
 
 examplePath :: FilePath
 examplePath = "examples/vehicle"
@@ -140,13 +142,14 @@ main = do
 
 {-
   mapM_ (Plots.stack  "Energy Flow Change at Tank in Section 6"
-         (Idx.Energy (Idx.StructureEdge (Idx.Section 6) System.Tank System.ConBattery)) 1 )
+         (XIdx.energy (Idx.Section 6) System.Tank System.ConBattery) 1 )
     (zip (deltasets datasetsX) differenceExtEnvs)
 -}
 
 
 
-  let energyIndex = (Idx.Energy (Idx.StructureEdge (Idx.Section 7) System.Tank System.ConBattery))
+
+  let energyIndex = (XIdx.energy (Idx.Section 7) System.Tank System.ConBattery)
 
 --  print $ Plots.lookupStack energyIndex (last differenceExtEnvs)
 
@@ -196,22 +199,36 @@ main = do
 ---------------------------------------------------------------------------------------
 -- * Draw Diagrams
 
-  concurrentlyMany_ [
+  concurrentlyMany_ $ [
     -- Topologie
 --    Draw.topology System.topology, --  Draw.topology2pdf System.topology
 --    Draw.topologyWithEdgeLabels System.edgeNames System.topology,
 
     -- Sectionen
 --    zipWith3M_ Draw.sequFlowGraphAbsWithEnv datasetsX sequenceFlowTopologyX externalEnvX,
-    concurrentlyMany_ $ L.zipWith3 Draw.sequFlowGraphAbsWithEnv datasetsX sectionToposX externalEnvX,
+--    concurrentlyMany_ $
+--      L.zipWith3 Draw.sequFlowGraphAbsWithEnv
+--                 (L.zipWith3 Draw.xterm datasetsX sectionToposX externalEnvX)
 
     -- Sections-Deltadiagramme
 --    zipWith3M_ Draw.sequFlowGraphDeltaWithEnv (deltasets datasetsX) sequenceFlowTopologyX externalDeltaEnvX
-    concurrentlyMany_ $ L.zipWith3 Draw.sequFlowGraphDeltaWithEnv (deltasets datasetsX) sectionToposX externalDeltaEnvX
-
+{-
+    concurrentlyMany_ $
+      L.zipWith3 Draw.sequFlowGraphDeltaWithEnv 
+                 (deltasets datasetsX) sectionToposX externalDeltaEnvX
+-}
     -- Vorhersage
 --    Draw.sequFlowGraphAbsWithEnv "Prediction" (head sequenceFlowTopologyX) prediction
     ]
+    ++ Draw.multi Draw.sequFlowGraphAbsWithEnv
+                  Draw.xterm
+                  datasetsX
+                  sectionToposX
+                  externalEnvX
 
-
+    ++ Draw.multi Draw.sequFlowGraphDeltaWithEnv 
+                  Draw.xterm
+                  (deltasets datasetsX)
+                  sectionToposX
+                  externalDeltaEnvX
 

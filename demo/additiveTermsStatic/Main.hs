@@ -4,13 +4,13 @@ module Main where
 import qualified EFA.Example.NestedDelta as NestedDelta
 import qualified EFA.Example.AssignMap as AssignMap
 import qualified EFA.Example.Utility as Utility
+import qualified EFA.Example.Index as XIdx
 import EFA.Example.NestedDelta
           (ParameterRecord,
            givenParameterSymbol, givenParameterNumber,
            beforeDelta, extrudeStart,
            (<&), (<&>), (&>), (&&>), (?=))
-import EFA.Example.Utility
-          (edgeVar, makeEdges, constructSeqTopo)
+import EFA.Example.Utility (makeEdges, constructSeqTopo)
 import EFA.Equation.Result (Result)
 
 import qualified EFA.Equation.System as EqGen
@@ -53,7 +53,7 @@ node0 :~ node1 :~ node2 :~ _ = Stream.enumFrom minBound
 
 
 topoLinear :: TD.Topology Node.Int
-topoLinear = Gr.mkGraph ns (makeEdges es)
+topoLinear = Gr.fromList ns (makeEdges es)
   where ns = [(node0, TD.Source),
               (node1, TD.Crossing),
               (node2, TD.Sink)]
@@ -99,16 +99,18 @@ absoluteRecord ::
 absoluteRecord = NestedDelta.absoluteRecord absolute
 
 
-eout, ein :: Idx.Energy Node.Int
-ein  = edgeVar Idx.Energy sec0 node0 node1
-eout = edgeVar Idx.Energy sec0 node2 node1
+eout, ein :: XIdx.Energy Node.Int
+ein  = XIdx.energy sec0 node0 node1
+eout = XIdx.energy sec0 node2 node1
 
-eta0, eta1 :: Idx.Eta Node.Int
-eta0 = edgeVar Idx.Eta sec0 node0 node1
-eta1 = edgeVar Idx.Eta sec0 node1 node2
+eta0, eta1 :: XIdx.Eta Node.Int
+eta0 = XIdx.eta sec0 node0 node1
+eta1 = XIdx.eta sec0 node1 node2
 
 
-termFromIndex :: IdxMultiDelta -> [Idx.Record Idx.Delta (Var.Signal Node.Int)]
+termFromIndex ::
+   IdxMultiDelta ->
+   [Idx.Record Idx.Delta (Idx.InSection Var.Signal Node.Int)]
 termFromIndex
       (Idx.ExtDelta r2 (Idx.ExtDelta r1 (Idx.ExtDelta r0 Idx.Absolute))) =
    Idx.Record r2 (Var.index ein) :
@@ -120,7 +122,7 @@ termFromIndex
 
 _givenSymbolic :: EquationSystemSymbolic s
 _givenSymbolic =
-   (Idx.DTime sec0 ?= absoluteRecord (Arith.fromInteger 1)) <>
+   (XIdx.dTime sec0 ?= absoluteRecord (Arith.fromInteger 1)) <>
 
    givenParameterSymbol ein  param2 <>
    givenParameterSymbol eta0 param1 <>
@@ -130,7 +132,7 @@ _givenSymbolic =
 
 givenSymbolic :: EquationSystemSymbolic s
 givenSymbolic =
-   (Idx.DTime sec0 ?= absoluteRecord (Arith.fromInteger 1)) <>
+   (XIdx.dTime sec0 ?= absoluteRecord (Arith.fromInteger 1)) <>
 
    Fold.fold
       (NonEmpty.zipWith ($)
@@ -166,7 +168,7 @@ mainSymbolic = do
          (fmap Record.summands scalarEnv)
          (fmap simplifiedSummands signalEnv)
 
-   Draw.sequFlowGraphAbsWithEnv "" seqTopo $
+   Draw.sequFlowGraphAbsWithEnv (Draw.xterm "" seqTopo) $
       Env.Complete
          (fmap (Record.Absolute . Record.summands) scalarEnv)
          (fmap (Record.Absolute . simplifiedSummands) signalEnv)
@@ -179,7 +181,7 @@ type
 
 _givenNumeric :: EquationSystemNumeric s
 _givenNumeric =
-   (Idx.DTime sec0 ?= absoluteRecord 1) <>
+   (XIdx.dTime sec0 ?= absoluteRecord 1) <>
 
    givenParameterNumber ein  4.00 (-0.6) param2 <>
    givenParameterNumber eta0 0.25   0.1  param1 <>
@@ -189,7 +191,7 @@ _givenNumeric =
 
 givenNumeric :: EquationSystemNumeric s
 givenNumeric =
-   (Idx.DTime sec0 ?= absoluteRecord 1) <>
+   (XIdx.dTime sec0 ?= absoluteRecord 1) <>
 
    Fold.fold
       (NonEmpty.zipWith ($)

@@ -1,6 +1,7 @@
 module Main where
 
-import EFA.Example.Utility (edgeVar, makeEdges, constructSeqTopo)
+import qualified EFA.Example.Index as XIdx
+import EFA.Example.Utility (makeEdges, constructSeqTopo)
 import EFA.Example.Absolute ((=<>))
 
 import qualified EFA.Symbolic.SumProduct as SumProduct
@@ -26,7 +27,7 @@ node0 :~ node1 :~ node2 :~ node3 :~ _ = Stream.enumFrom minBound
 
 
 topoDreibein :: TD.Topology Node.Int
-topoDreibein = Gr.mkGraph ns (makeEdges es)
+topoDreibein = Gr.fromList ns (makeEdges es)
   where ns = [(node0, TD.Source),
               (node1, TD.Sink),
               (node2, TD.Crossing),
@@ -40,16 +41,16 @@ type ScalarTerm = EqGen.ScalarTerm SumProduct.Term Node.Int
 
 given :: EqGen.EquationSystem Node.Int s ScalarTerm SignalTerm
 given =
-   Idx.DTime sec0 =<>
+   XIdx.dTime sec0 =<>
 
-   Idx.Storage (Idx.afterSecNode sec0 node3) =<>
+   XIdx.storage (Idx.afterSection sec0) node3 =<>
 
-   edgeVar Idx.Power sec0 node3 node2 =<>
-   edgeVar Idx.X sec0 node2 node3 =<>
+   XIdx.power sec0 node3 node2 =<>
+   XIdx.x sec0 node2 node3 =<>
 
-   edgeVar Idx.Eta sec0 node3 node2 =<>
-   edgeVar Idx.Eta sec0 node0 node2 =<>
-   edgeVar Idx.Eta sec0 node2 node1 =<>
+   XIdx.eta sec0 node3 node2 =<>
+   XIdx.eta sec0 node0 node2 =<>
+   XIdx.eta sec0 node2 node1 =<>
 
    mempty
 
@@ -60,4 +61,4 @@ main = do
   let seqTopo = constructSeqTopo topoDreibein [1]
       env = EqGen.solve seqTopo given
 
-  Draw.sequFlowGraphAbsWithEnv "" seqTopo env
+  Draw.sequFlowGraphAbsWithEnv (Draw.xterm "" seqTopo) env

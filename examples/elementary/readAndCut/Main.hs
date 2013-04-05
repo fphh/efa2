@@ -1,8 +1,8 @@
 module Main where
 
-import EFA.Example.Utility (makeEdges)
-
 import qualified EFA.Example.Absolute as EqGen
+import qualified EFA.Example.Index as XIdx
+import EFA.Example.Utility (makeEdges)
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
@@ -17,8 +17,7 @@ import qualified EFA.Signal.Signal as Sig
 
 import EFA.IO.CSVImport (modelicaCSVImport)
 import EFA.Signal.Sequence (makeSequence, makeSeqFlowGraph)
-import EFA.Signal.Record
-          (SigId(SigId), Record(Record), PPosIdx(PPosIdx), PowerRecord)
+import EFA.Signal.Record (SigId(SigId), Record(Record), PowerRecord)
 
 import qualified Data.Map as M
 import Data.Monoid (mempty)
@@ -32,7 +31,7 @@ node0 :~ node1 :~ node2 :~ node3 :~ _ = Stream.enumFrom minBound
 
 
 topoDreibein :: TD.Topology Node.Int
-topoDreibein = Gr.mkGraph ns (makeEdges es)
+topoDreibein = Gr.fromList ns (makeEdges es)
   where ns = [(node0, TD.Source),
               (node1, TD.Crossing),
               (node2, TD.Sink),
@@ -49,12 +48,12 @@ main = do
 
 
   let pMap =  M.fromList [
-        (PPosIdx node0 node1, sigMap M.! (SigId "powercon1.u")),
-        (PPosIdx node1 node0, sigMap M.! (SigId "powercon2.u")),
-        (PPosIdx node1 node2, sigMap M.! (SigId "powercon3.u")),
-        (PPosIdx node2 node1, sigMap M.! (SigId "powercon4.u")),
-        (PPosIdx node1 node3, sigMap M.! (SigId "powercon5.u")),
-        (PPosIdx node3 node1, sigMap M.! (SigId "powercon6.u")) ]
+        (XIdx.ppos node0 node1, sigMap M.! (SigId "powercon1.u")),
+        (XIdx.ppos node1 node0, sigMap M.! (SigId "powercon2.u")),
+        (XIdx.ppos node1 node2, sigMap M.! (SigId "powercon3.u")),
+        (XIdx.ppos node2 node1, sigMap M.! (SigId "powercon4.u")),
+        (XIdx.ppos node1 node3, sigMap M.! (SigId "powercon5.u")),
+        (XIdx.ppos node3 node1, sigMap M.! (SigId "powercon6.u")) ]
 
       pRec = Record time (M.map (Sig.fromList . Sig.toList) pMap) :: PowerRecord Node.Int [] Double
 
@@ -64,4 +63,4 @@ main = do
 
       env = EqGen.solve seqTopo given
 
-  Draw.sequFlowGraphAbsWithEnv "" seqTopo env
+  Draw.sequFlowGraphAbsWithEnv (Draw.xterm "" seqTopo) env

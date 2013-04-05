@@ -3,10 +3,11 @@
 
 module EFA.Graph.Flow where
 
+import qualified EFA.Example.Index as XIdx
 
 import qualified EFA.Graph as Gr
 import EFA.Graph
-          (Edge(Edge), mkGraph,
+          (Edge(Edge),
            labNodes, labEdges,
            insNodes, insEdges)
 
@@ -16,7 +17,7 @@ import qualified EFA.Signal.SequenceData as SD
 import EFA.Signal.SequenceData (SequData)
 import EFA.Signal.Record
           (Record(Record), FlowState(FlowState), FlowRecord,
-           PPosIdx(PPosIdx), flipPos, getSig, rmapWithKey)
+           getSig, rmapWithKey)
 import EFA.Graph.Topology
           (Topology, FlowTopology, ClassifiedTopology, SequFlowGraph,
            FlowDirection(Dir, UnDir))
@@ -24,7 +25,7 @@ import EFA.Graph.Topology
 import qualified EFA.Graph as G
 
 import qualified EFA.Signal.Vector as SV
-import EFA.Signal.Signal (fromScalar, sigSign, sigSum, neg,TC(..))
+import EFA.Signal.Signal (fromScalar, sigSign, neg, TC(..))
 import qualified EFA.Signal.Signal as S
 import EFA.Signal.Data(Data(..), Nil, (:>))
 import EFA.Signal.Base (Sign(PSign, NSign, ZSign),BSum, DArith0)
@@ -58,24 +59,24 @@ getEdgeState :: (Fractional a,
 getEdgeState topo rec = EdgeStates $ M.fromList $ zip edges $ map f edges
   where
     edges = M.keys $ G.edgeLabels topo
-    f (G.Edge n1 n2)  = case sigSign $ sigSum $ s1 of
+    f (G.Edge n1 n2)  = case sigSign $ S.sum $ s1 of
                         (TC (Data (PSign))) -> (Pos,quality)
                         (TC (Data (NSign))) -> (Neg,quality)
                         (TC (Data (ZSign))) -> (Zero,quality)
 
-              where s1 = getSig rec (PPosIdx n1 n2)
-                    s2 = getSig rec (PPosIdx n2 n1)
+              where s1 = getSig rec (XIdx.ppos n1 n2)
+                    s2 = getSig rec (XIdx.ppos n2 n1)
                     quality = edgeFlowQuality s1 s2
 
 edgeFlowQuality :: (Num d,
                     SV.Storage v d,
                     BSum d,
-                    S.SigSum s (v :> Nil),
                     Fractional d,
                     Ord d,
                     SV.Walker v,
                     SV.Storage v Sign,
                     SV.Singleton v,
+                    S.FoldType s,
                     S.TailType s)=>
                    TC s typ (Data (v :> Nil) d)->
                    TC s typ (Data (v :> Nil) d)->
@@ -84,7 +85,7 @@ edgeFlowQuality s1 s2 = if isConsistant
                               then (if isClean then Clean else Dirty)
                               else Wrong
   where
-    isConsistant = sigSign (sigSum s1) == sigSign (sigSum s2)
+    isConsistant = sigSign (S.sum s1) == sigSign (S.sum s2)
     isClean = not (S.hasSignChange s1) || (not $  S.hasSignChange s2)
 
 
@@ -101,7 +102,7 @@ adjustSignsNew (EdgeStates m) rec = rmapWithKey f rec
           (Neg, _) -> neg x
           (Pos, _) -> x
           (Zero, _) -> x
-        g (PPosIdx n1 n2) = G.Edge n1 n2
+        g (Idx.PPos (Idx.StructureEdge n1 n2)) = G.Edge n1 n2
 
 
 
@@ -115,15 +116,15 @@ adjustSigns topo (FlowState state) (Record dt flow) =
       where g ppos NSign acc =
               M.insert ppos (neg (flow `checkedLookup` ppos))
                 $ M.insert ppos' (neg (flow `checkedLookup` ppos')) acc
-                where ppos' = flipPos ppos
+                where ppos' = Idx.flip ppos
             g ppos _ acc =
               M.insert ppos (flow `checkedLookup` ppos)
                 $ M.insert ppos' (flow `checkedLookup` ppos') acc
-                where ppos' = flipPos ppos
+                where ppos' = Idx.flip ppos
             uniquePPos = foldl h M.empty (labEdges topo)
               where h acc (Edge idx1 idx2, ()) =
                       M.insert ppos (state `checkedLookup` ppos) acc
-                      where ppos = PPosIdx idx1 idx2
+                      where ppos = XIdx.ppos idx1 idx2
 
 
 -- | Function to calculate flow states for the whole sequence
@@ -137,7 +138,7 @@ genFlowState ::
   (SV.Walker v, SV.Storage v a, BSum a, Fractional a, Ord a) =>
   FlowRecord node v a -> FlowState node
 genFlowState (Record _time flowMap) =
-   FlowState $ M.map (fromScalar . sigSign . sigSum) flowMap
+   FlowState $ M.map (fromScalar . sigSign . S.sum) flowMap
 
 -- | Function to generate Flow Topologies for all Sections
 genSequFlowTops ::
@@ -150,10 +151,10 @@ genFlowTopology ::
   (Ord node, Show node) =>
   Topology node -> FlowState node -> FlowTopology node
 genFlowTopology topo (FlowState fs) =
-   mkGraph (labNodes topo) $
+   Gr.fromList (labNodes topo) $
    map
       (\(Edge idx1 idx2, ()) ->
-         case fs `checkedLookup` (PPosIdx idx1 idx2) of
+         case fs `checkedLookup` XIdx.ppos idx1 idx2 of
             PSign -> (Edge idx1 idx2, Dir)
             NSign -> (Edge idx2 idx1, Dir)
             ZSign -> (Edge idx1 idx2, UnDir)) $

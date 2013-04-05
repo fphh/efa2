@@ -1,11 +1,10 @@
 module Main where
 
-import Data.Monoid (mconcat, Monoid)
-
-import EFA.Example.Utility ( edgeVar, makeEdges, constructSeqTopo )
+import qualified EFA.Example.Absolute as EqGen
+import qualified EFA.Example.Index as XIdx
+import EFA.Example.Utility ( makeEdges, constructSeqTopo )
 import EFA.Example.Absolute ( (.=) )
 
-import qualified EFA.Example.Absolute as EqGen
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as TD
@@ -18,6 +17,8 @@ import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Async (concurrentlyMany_)
 import EFA.Utility.Stream (Stream((:~)))
 import EFA.Graph.CumulatedFlow (cumulate)
+
+import Data.Monoid (Monoid, mconcat)
 
 
 sec0, sec1, sec2, sec3, sec4 :: Idx.Section
@@ -44,7 +45,7 @@ instance Node.C Node where
 
 
 topoDreibein :: TD.Topology Node
-topoDreibein = Gr.mkGraph ns (makeEdges es)
+topoDreibein = Gr.fromList ns (makeEdges es)
   where ns = [(node0, TD.Source),
               (node1, TD.Sink),
               (node2, TD.Crossing),
@@ -55,38 +56,38 @@ given :: EqGen.EquationSystem Node s Double Double
 given =
    mconcat $
 
-   (Idx.DTime sec0 .= 0.5) :
-   (Idx.DTime sec1 .= 2) :
-   (Idx.DTime sec2 .= 1) :
+   (XIdx.dTime sec0 .= 0.5) :
+   (XIdx.dTime sec1 .= 2) :
+   (XIdx.dTime sec2 .= 1) :
 
-   (Idx.Storage (Idx.afterSecNode sec2 node3) .= 10.0) :
-
-
-   (edgeVar Idx.Power sec0 node2 node3 .= 4.0) :
-
-   (edgeVar Idx.X sec0 node2 node3 .= 0.32) :
-
-   (edgeVar Idx.Power sec1 node3 node2 .= 5) :
-   (edgeVar Idx.Power sec2 node3 node2 .= 6) :
-   (edgeVar Idx.Power sec3 node3 node2 .= 7) :
-   (edgeVar Idx.Power sec4 node3 node2 .= 8) :
-
-   (edgeVar Idx.Eta sec0 node3 node2 .= 0.25) :
-   (edgeVar Idx.Eta sec0 node2 node1 .= 0.5) :
-   (edgeVar Idx.Eta sec0 node0 node2 .= 0.75) :
-
-   (edgeVar Idx.Eta sec1 node3 node2 .= 0.25) :
-   (edgeVar Idx.Eta sec1 node2 node1 .= 0.5) :
-   (edgeVar Idx.Eta sec1 node0 node2 .= 0.75) :
-   (edgeVar Idx.Power sec1 node1 node2 .= 4.0) :
+   (XIdx.storage (Idx.afterSection sec2) node3 .= 10.0) :
 
 
-   (edgeVar Idx.Eta sec2 node3 node2 .= 0.75) :
-   (edgeVar Idx.Eta sec2 node2 node1 .= 0.5) :
-   (edgeVar Idx.Eta sec2 node0 node2 .= 0.75) :
-   (edgeVar Idx.Power sec2 node1 node2 .= 4.0) :
+   (XIdx.power sec0 node2 node3 .= 4.0) :
 
-   (edgeVar Idx.Eta sec1 node2 node3 .= 0.25) :
+   (XIdx.x sec0 node2 node3 .= 0.32) :
+
+   (XIdx.power sec1 node3 node2 .= 5) :
+   (XIdx.power sec2 node3 node2 .= 6) :
+   (XIdx.power sec3 node3 node2 .= 7) :
+   (XIdx.power sec4 node3 node2 .= 8) :
+
+   (XIdx.eta sec0 node3 node2 .= 0.25) :
+   (XIdx.eta sec0 node2 node1 .= 0.5) :
+   (XIdx.eta sec0 node0 node2 .= 0.75) :
+
+   (XIdx.eta sec1 node3 node2 .= 0.25) :
+   (XIdx.eta sec1 node2 node1 .= 0.5) :
+   (XIdx.eta sec1 node0 node2 .= 0.75) :
+   (XIdx.power sec1 node1 node2 .= 4.0) :
+
+
+   (XIdx.eta sec2 node3 node2 .= 0.75) :
+   (XIdx.eta sec2 node2 node1 .= 0.5) :
+   (XIdx.eta sec2 node0 node2 .= 0.75) :
+   (XIdx.power sec2 node1 node2 .= 4.0) :
+
+   (XIdx.eta sec1 node2 node3 .= 0.25) :
 
    []
 
@@ -96,10 +97,10 @@ main = do
 
   let seqTopo = constructSeqTopo topoDreibein [1, 0, 1]
       env = EqGen.solve seqTopo given
-      (with, against) =
+      ((withTopo, withEnv), (againstTopo, againstEnv)) =
         cumulate topoDreibein seqTopo env
 
   concurrentlyMany_ [
-    Draw.sequFlowGraphAbsWithEnv "" seqTopo env,
-    Draw.sequFlowGraphCumulated "" with,
-    Draw.sequFlowGraphCumulated "" against ]
+    Draw.sequFlowGraphAbsWithEnv (Draw.xterm "" seqTopo) env,
+    Draw.sequFlowGraphCumulated (Draw.xterm "" withTopo) withEnv,
+    Draw.sequFlowGraphCumulated (Draw.xterm "" againstTopo) againstEnv ]
