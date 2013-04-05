@@ -34,6 +34,7 @@ module EFA.Equation.System (
 
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
+import qualified EFA.Equation.Variable as Var
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
@@ -427,33 +428,25 @@ withLocalVar f = EquationSystem $ do
 
 
 newtype
-   PartAccessor rec node s a v env =
-      PartAccessor {
-         getPartAccessor ::
+   AccessMap rec node s a v idx env =
+      AccessMap {
+         getAccessMap ::
+            (Env.Environment (Var.Type idx) ~ env) =>
             Accessor.T
-               (Env.Complete node
-                   (rec (Sys.Variable s a)) (rec (Sys.Variable s v)))
-               (env node (rec (Sys.Variable s (Env.PartElement env a v))))
+               (Env.Complete node (rec (Sys.Variable s a)) (rec (Sys.Variable s v)))
+               (M.Map (idx node) (rec (Sys.Variable s (Env.Element idx a v))))
       }
-
-accessPart ::
-   (Env.AccessPart env) =>
-   Accessor.T
-      (Env.Complete node (rec (Sys.Variable s a)) (rec (Sys.Variable s v)))
-      (env node (rec (Sys.Variable s (Env.PartElement env a v))))
-accessPart =
-   getPartAccessor $
-   Env.switchPart
-      (PartAccessor $ Env.accessPart)
-      (PartAccessor $ Env.accessPart)
-
 
 accessMap ::
    (Env.AccessMap idx) =>
    Accessor.T
       (Env.Complete node (rec (Sys.Variable s a)) (rec (Sys.Variable s v)))
       (M.Map (idx node) (rec (Sys.Variable s (Env.Element idx a v))))
-accessMap = Env.accessPartMap . accessPart
+accessMap =
+   getAccessMap $
+   Env.switchPart
+      (AccessMap $ Env.accessMap)
+      (AccessMap $ Env.accessMap)
 
 
 variableRecord ::
