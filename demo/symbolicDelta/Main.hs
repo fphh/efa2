@@ -50,7 +50,7 @@ given =
 
    Idx.before (XIdx.dTime sec0) =<>
 
-   Idx.before (Idx.Storage (Idx.initBndNode node3)) =<>
+   Idx.before (XIdx.storage Idx.initial node3) =<>
    Idx.delta (XIdx.storage (Idx.afterSection sec0) node3) =<>
 
    Idx.after (XIdx.power sec0 node3 node2) =<>

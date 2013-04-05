@@ -136,7 +136,7 @@ givenNumeric =
    mempty
 
 
-eout :: Idx.Energy Node.Int
+eout :: XIdx.Energy Node.Int
 eout = XIdx.energy sec0 node2 node1
 
 
