@@ -3,12 +3,13 @@
 
 module Main where
 
+import qualified EFA.Example.Index as XIdx
+
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Sequence as Sequ
 
 import EFA.Signal.SequenceData (SequData)
-import EFA.Signal.Record
-          (PPosIdx(PPosIdx), PowerRecord, Record(Record))
+import EFA.Signal.Record (PowerRecord, Record(Record))
 
          
           
@@ -39,10 +40,10 @@ s31 = [0, 0.25, 0.25, 0, -0.6, -0.6]
 n :: Int
 n = 2
 
-pPosIdx :: Int -> Int -> PPosIdx Int
-pPosIdx x y = PPosIdx x y
+pPosIdx :: Int -> Int -> XIdx.PPos Int
+pPosIdx x y = XIdx.ppos x y
 
-pMap :: M.Map (PPosIdx Int) PSigL
+pMap :: M.Map (XIdx.PPos Int) PSigL
 pMap =
    M.fromListWith (error "duplicate keys") $
       (pPosIdx 0 1, mkSigEnd n s01) :

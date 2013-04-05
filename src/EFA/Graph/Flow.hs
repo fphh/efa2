@@ -2,6 +2,8 @@
 
 module EFA.Graph.Flow where
 
+import qualified EFA.Example.Index as XIdx
+
 import qualified EFA.Graph as Gr
 import EFA.Graph
           (Edge(Edge),
@@ -13,8 +15,7 @@ import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Signal.SequenceData as SD
 import EFA.Signal.SequenceData (SequData)
 import EFA.Signal.Record
-          (Record(Record), FlowState(FlowState), FlowRecord,
-           PPosIdx(PPosIdx), flipPos)
+          (Record(Record), FlowState(FlowState), FlowRecord)
 import EFA.Graph.Topology
           (Topology, FlowTopology, ClassifiedTopology, SequFlowGraph,
            FlowDirection(Dir, UnDir))
@@ -41,15 +42,15 @@ adjustSigns topo (FlowState state) (Record dt flow) =
       where g ppos NSign acc =
               M.insert ppos (neg (flow `checkedLookup` ppos))
                 $ M.insert ppos' (neg (flow `checkedLookup` ppos')) acc
-                where ppos' = flipPos ppos
+                where ppos' = Idx.flip ppos
             g ppos _ acc =
               M.insert ppos (flow `checkedLookup` ppos)
                 $ M.insert ppos' (flow `checkedLookup` ppos') acc
-                where ppos' = flipPos ppos
+                where ppos' = Idx.flip ppos
             uniquePPos = foldl h M.empty (labEdges topo)
               where h acc (Edge idx1 idx2, ()) =
                       M.insert ppos (state `checkedLookup` ppos) acc
-                      where ppos = PPosIdx idx1 idx2
+                      where ppos = XIdx.ppos idx1 idx2
 
 
 -- | Function to calculate flow states for the whole sequence
@@ -79,7 +80,7 @@ genFlowTopology topo (FlowState fs) =
    Gr.fromList (labNodes topo) $
    map
       (\(Edge idx1 idx2, ()) ->
-         case fs `checkedLookup` (PPosIdx idx1 idx2) of
+         case fs `checkedLookup` XIdx.ppos idx1 idx2 of
             PSign -> (Edge idx1 idx2, Dir)
             NSign -> (Edge idx2 idx1, Dir)
             ZSign -> (Edge idx1 idx2, UnDir)) $

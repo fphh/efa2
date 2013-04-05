@@ -18,6 +18,8 @@ type StX node       = Idx.ForNode Idx.StX node
 type Storage node   = Idx.ForNode Idx.Storage node
 type StSum node     = Idx.ForNode Idx.StSum node
 
+type PPos = Idx.PPos
+
 
 energy :: Idx.Section -> node -> node -> Energy node
 power :: Idx.Section -> node -> node -> Power node
@@ -46,3 +48,6 @@ stX       = Idx.storageEdge Idx.StX
 
 storage :: Idx.Boundary -> node -> Storage node
 storage = Idx.ForNode . Idx.Storage
+
+ppos :: node -> node -> Idx.PPos node
+ppos a b = Idx.PPos $ Idx.StructureEdge a b

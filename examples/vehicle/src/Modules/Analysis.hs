@@ -29,7 +29,7 @@ import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Vector as Vec
 import qualified EFA.Signal.Signal as Sig
 
-import EFA.Signal.Record (PPosIdx(PPosIdx), SignalRecord, FlowRecord,
+import EFA.Signal.Record (SignalRecord, FlowRecord,
                           Record(Record), PowerRecord,
                           SignalRecord, getTime, newTimeBase, removeZeroNoise)
 
@@ -113,7 +113,7 @@ pre topology rawSignals =  do
   -- let sequSig = Sig.scale (genSequenceSignal sequ) 10 :: Sig.UTSigL  --  (10  ^^ (-12::Int))
   -- let sequenceSignals = sectionRecordsFromSequence signals0 sequ
 
-  --Pl.recordSplitPlus 1 "Mit SektionsSignal" powerSignals0 [(PPosIdx System.Tank System.Tank, Sig.setType sequSig)]
+  --Pl.recordSplitPlus 1 "Mit SektionsSignal" powerSignals0 [(XIdx.PPos System.Tank System.Tank, Sig.setType sequSig)]
   --Rep.report [Rep.RAll,Rep.RVertical] ("Powers0", powerSignals0)
 
 ---------------------------------------------------------------------------------------
@@ -140,7 +140,7 @@ pre topology rawSignals =  do
 external :: (Eq v, Num v, Arith.Product v, Arith.Integrate v, Vec.Storage t v,
              Vec.FromList t, Arith.Scalar v ~ Double) =>
             Flow.RangeGraph System.Node
-            -> SD.SequData (Record s t2 t1 (PPosIdx System.Node) t v)
+            -> SD.SequData (Record s t2 t1 (XIdx.PPos System.Node) t v)
             -> Env.Complete
             System.Node
             (EqRecord.Absolute (Result Double))
@@ -155,7 +155,7 @@ makeGivenFromExternal :: (Eq v, Num v, Arith.Sum v, Vec.Storage t v, Vec.FromLis
                           EqGen.Record (EqRecord.FromIndex rec),
                           EqRecord.ToIndex (EqRecord.FromIndex rec) ~ rec) =>
                          rec
-                         -> SD.SequData (Record s t2 t1 (PPosIdx System.Node) t v)
+                         -> SD.SequData (Record s t2 t1 (XIdx.PPos System.Node) t v)
                          -> EqGen.EquationSystem
                          (EqRecord.FromIndex rec) System.Node s1 Double v
 makeGivenFromExternal idx sf =
@@ -165,8 +165,8 @@ makeGivenFromExternal idx sf =
    where f sec (Record t xs) =
            (Idx.Record idx (Idx.InSection sec Idx.DTime) .= sum (Sig.toList t)) <>
            fold (M.mapWithKey g xs)
-           where g (PPosIdx a b) e =
-                    Idx.Record idx (XIdx.energy sec a b) .= sum (Sig.toList e)
+           where g (Idx.PPos p) e =
+                    Idx.Record idx (Idx.InSection sec (Idx.Energy p)) .= sum (Sig.toList e)
 
 -------------------------------------------------------------------------------------------------  
 -- ## Predict Energy Flow
@@ -219,8 +219,8 @@ delta :: (Eq v, Num v, Arith.Product v, Arith.Integrate v, Vec.Storage t3 v,
           Vec.Storage t v, Vec.FromList t3, Vec.FromList t,
           Arith.Scalar v ~ Double) =>
          Flow.RangeGraph System.Node
-         -> SD.SequData (Record s t2 t1 (PPosIdx System.Node) t v)
-         -> SD.SequData (Record s1 t5 t4 (PPosIdx System.Node) t3 v)
+         -> SD.SequData (Record s t2 t1 (XIdx.PPos System.Node) t v)
+         -> SD.SequData (Record s1 t5 t4 (XIdx.PPos System.Node) t3 v)
          -> Env.Complete
          System.Node
          (EqRecord.Delta (Result Double))

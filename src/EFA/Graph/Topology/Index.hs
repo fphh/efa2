@@ -1,5 +1,8 @@
 module EFA.Graph.Topology.Index where
 
+import qualified Test.QuickCheck as QC
+import Control.Monad (liftM2)
+
 import Data.Word (Word)
 
 import Prelude hiding (flip)
@@ -164,6 +167,23 @@ instance Flip StorageEdge where
    flip (StorageEdge s0 s1) = StorageEdge s1 s0
 
 
+instance Flip Power where
+   flip (Power x) = Power $ flip x
+
+instance Flip PPos where
+   flip (PPos x) = PPos $ flip x
+
+
+instance (QC.Arbitrary node) => QC.Arbitrary (StructureEdge node) where
+   arbitrary = liftM2 StructureEdge QC.arbitrary QC.arbitrary
+   shrink (StructureEdge from to) =
+      map (uncurry StructureEdge) $ QC.shrink (from, to)
+
+instance (QC.Arbitrary node) => QC.Arbitrary (PPos node) where
+   arbitrary = fmap PPos QC.arbitrary
+   shrink (PPos x) = map PPos $ QC.shrink x
+
+
 -- | Variable types of the solver. The solver, in fact, is
 -- ignorant of the provenance of the variables. However, to
 -- facilitate life, we introduce variable types, that make
@@ -208,3 +228,6 @@ data StSum node = StSum Direction Boundary deriving (Show, Ord, Eq)
 
 -- | Delta time variables, depending solely on their section and record number.
 data DTime node = DTime deriving (Show, Ord, Eq)
+
+-- | Indices for Power Position
+newtype PPos node = PPos (StructureEdge node) deriving (Show, Ord, Eq)

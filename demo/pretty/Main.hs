@@ -2,20 +2,17 @@
 
 module Main where
 
-import qualified Data.Map as M
+import qualified EFA.Example.Index as XIdx
+import qualified EFA.Graph.Topology.Node as Node
 
 import qualified EFA.Signal.Signal as S
 import EFA.Signal.Record
 import EFA.Signal.Typ (Typ, A, P, Tt)
+import EFA.Signal.Data ((:>), Nil, Data)
 
 import EFA.Report.Report (report, ROpt(..))
 
--- import qualified EFA.Utility.Stream as Stream
--- import EFA.Utility.Stream (Stream((:~)))
-
-import EFA.Signal.Data ((:>), Nil, Data)
-
-import qualified EFA.Graph.Topology.Node as Node
+import qualified Data.Map as M
 
 
 data Node = Node0 | Node1 deriving (Eq, Ord, Enum, Show)
@@ -43,7 +40,7 @@ r :: PowerRecord Node [] Double
 r = Record t
       (M.fromListWith
          (error "duplicate keys")
-         [(PPosIdx Node0 Node1, p1), (PPosIdx Node1 Node0, p2)])
+         [(XIdx.ppos Node0 Node1, p1), (XIdx.ppos Node1 Node0, p2)])
 
 
 main :: IO ()

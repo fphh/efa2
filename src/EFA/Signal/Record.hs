@@ -16,6 +16,8 @@ import EFA.Signal.Typ (Typ, A, P, T, Tt, UT,F,D)
 import EFA.Signal.Data (Data(Data), (:>), Nil)
 import EFA.Signal.Base (Sign, BSum, BProd)
 
+import qualified EFA.Graph.Topology.Index as Idx
+
 import EFA.Report.Report (ToTable(toTable), Table(..), tvcat)
 import EFA.Report.Typ (TDisp, getDisplayTypName)
 import EFA.Report.Base (DispStorage1)
@@ -46,17 +48,6 @@ instance Show SigId where
   show (SigId x) = show x
 
 
--- | Indices for Power Position
--- data PPosIdx = PPosIdx !Idx.Node !Idx.Node deriving (Show, Eq, Ord)
-
------------------------------------------------------------------------------------
--- | Indices for Power Position
-data PPosIdx node = PPosIdx !node !node deriving (Show, Eq, Ord)
-
-flipPos ::  PPosIdx node -> PPosIdx node
-flipPos (PPosIdx idx1 idx2) = PPosIdx idx2 idx1
-
-
 type instance D.Value (Record s t1 t2 id v a) = a
 
 
@@ -68,12 +59,12 @@ data Record s t1 t2 id v a =
 
 type SignalRecord = Record Signal (Typ A T Tt) (Typ UT UT UT) SigId
 
-type PowerRecord n = Record Signal (Typ A T Tt) (Typ A P Tt) (PPosIdx n)
+type PowerRecord n = Record Signal (Typ A T Tt) (Typ A P Tt) (Idx.PPos n)
 
-type FlowRecord n = Record FSignal (Typ D T Tt) (Typ A F Tt) (PPosIdx n)
+type FlowRecord n = Record FSignal (Typ D T Tt) (Typ A F Tt) (Idx.PPos n)
 
 -- | Flow record to contain flow signals assigned to the tree
-newtype FlowState node = FlowState (M.Map (PPosIdx node) Sign) deriving (Show)
+newtype FlowState node = FlowState (M.Map (Idx.PPos node) Sign) deriving (Show)
 
 -----------------------------------------------------------------------------------
 -- | Indice Record Number
@@ -167,14 +158,14 @@ genPowerRecord :: (Show (v a),
                    BProd a a,
                    BSum a,
                    Ord node) =>
-                  TSignal v a -> [(PPosIdx node, UTSignal v a, UTSignal v a)] -> PowerRecord node v a
+                  TSignal v a -> [(Idx.PPos node, UTSignal v a, UTSignal v a)] -> PowerRecord node v a
 genPowerRecord time =
    Record time .
       foldMap
          (\(pposIdx, sigA, sigB) ->
             M.fromList
                [(pposIdx, S.setType sigA),
-                (flipPos pposIdx, S.setType sigB)])
+                (Idx.flip pposIdx, S.setType sigB)])
 
 
 addSignals :: (Ord id, V.Len (v a),Show id) => 
@@ -240,23 +231,19 @@ energyBelow threshold (Record _ fMap) =
 -----------------------------------------------------------------------------------
 -- Various Class and Instance Definition for the different Sequence Datatypes
 
-instance (QC.Arbitrary node) => QC.Arbitrary (PPosIdx node) where
-   arbitrary = liftM2 PPosIdx QC.arbitrary QC.arbitrary
-   shrink (PPosIdx from to) = map (uncurry PPosIdx) $ QC.shrink (from, to)
-
 instance
    (Sample a, V.FromList v, V.Storage v a, QC.Arbitrary id, Ord id) =>
       QC.Arbitrary (Record s t1 t2 id v a) where
    arbitrary = do
       xs <- QC.listOf arbitrarySample
       n <- QC.choose (1,5)
-      ppos <- QC.vectorOf n QC.arbitrary
+      pos <- QC.vectorOf n QC.arbitrary
       let vectorSamples =
              HTL.switchR [] (\equalSized _ -> equalSized) $
              HTL.sliceVertical n xs
       return $
          Record (S.fromList $ Match.take vectorSamples $ iterate (1+) 0) $
-         M.fromList $ zip ppos $ map S.fromList $ transpose vectorSamples
+         M.fromList $ zip pos $ map S.fromList $ transpose vectorSamples
 
 {-
 we need this class,
