@@ -62,12 +62,12 @@ checkNodeType _ _ _ = False
 -- Because of extend, we only do have to deal with Dir edges here!
 checkNode :: (Ord node) => FlowTopology node -> node -> Bool
 checkNode topo x =
-   case M.lookup x $ Gr.nodes topo of
+   case M.lookup x $ Gr.graphMap topo of
       Nothing -> error "checkNode: node not in graph"
       Just (pre, node, suc) ->
          checkNodeType node
-            (anyActive $ Gr.sucEdgeLabels topo x suc)
-            (anyActive $ Gr.preEdgeLabels topo x pre)
+            (anyActive suc)
+            (anyActive pre)
 
 
 infix 1 `implies`
@@ -89,16 +89,16 @@ checkIncompleteNodeType typ complete sucActive preActive =
 
 checkCountNode :: (Ord node) => CountTopology node -> node -> Bool
 checkCountNode topo x =
-   case M.lookup x $ Gr.nodes topo of
+   case M.lookup x $ Gr.graphMap topo of
       Nothing -> error "checkNode: node not in graph"
       Just (pre, (node, nadj), suc) ->
          checkIncompleteNodeType node
-            (S.size pre + S.size suc == nadj)
-            (anyActive $ Gr.sucEdgeLabels topo x suc)
-            (anyActive $ Gr.preEdgeLabels topo x pre)
+            (M.size pre + M.size suc == nadj)
+            (anyActive suc)
+            (anyActive pre)
 
-anyActive :: [(n, FlowDirection)] -> Bool
-anyActive = any (isActive . snd)
+anyActive :: M.Map n FlowDirection -> Bool
+anyActive = Fold.any isActive
 
 admissibleCountTopology :: (Ord node) => CountTopology node -> Bool
 admissibleCountTopology topo =
@@ -443,6 +443,7 @@ but I think that @graph0 < graph1@ should be a static error.
 Instead I use this function locally for 'Key.sort'.
 -}
 graphIdent ::
+   (Ord node) =>
    Gr.Graph node nodeLabel edgeLabel ->
    (M.Map node nodeLabel,
     M.Map (Gr.Edge node) edgeLabel)
