@@ -3,11 +3,17 @@ model Chassis
   parameter Real mass(start = 1000, unit = "1") "Vehicle Mass" annotation(Placement(visible = false, transformation(origin = {71.2644,78.1609}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   parameter Real cwA(start = 0.677, unit = "1") "Area * air drag coefficient" annotation(Placement(visible = true, transformation(origin = {71.2644,78.1609}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   parameter Real fr(start = 0.014, unit = "1") "Rolling Resistance Coefficient" annotation(Placement(visible = true, transformation(origin = {71.2644,78.1609}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-  Modelica.Mechanics.Translational.Components.Mass mass1(m = mass) annotation(Placement(visible = true, transformation(origin = {-11.1628,17.0543}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-  Modelica.Mechanics.Translational.Interfaces.Flange_a flange_a1 annotation(Placement(visible = true, transformation(origin = {32.0008,-18.2031}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {32.0008,-18.2031}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-  DrivingResistance drivingresistance1(mass = mass, cwA = cwA, fr = fr) annotation(Placement(visible = true, transformation(origin = {28.6863,43.9678}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  Modelica.Mechanics.Translational.Components.Mass mass_vehicle(m = mass) annotation(Placement(visible = true, transformation(origin = {-11.1628,17.0543}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  Modelica.Mechanics.Translational.Interfaces.Flange_a flange_frontAndRearAxles annotation(Placement(visible = true, transformation(origin = {32.0008,-18.2031}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {32.0008,-18.2031}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  DrivingResistance drivingResistance1(mass = mass, cwA = cwA, fr = fr) annotation(Placement(visible = true, transformation(origin = {28.6863,43.9678}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  Real _speed_log annotation(Placement(visible = true, transformation(origin = {71.1207,78.8793}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  Real _resistanceForce_log annotation(Placement(visible = true, transformation(origin = {71.9828,78.8793}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  Real _propulsionForce_log annotation(Placement(visible = true, transformation(origin = {71.9828,78.8793}, extent = {{-12,-12},{12,12}}, rotation = 0)));
 equation
-  connect(drivingresistance1.flange_a,mass1.flange_b) annotation(Line(points = {{20.798,48.3585},{0.536193,48.3585},{0.536193,17.0543},{0.8372,17.0543}}));
-  connect(flange_a1,mass1.flange_a) annotation(Line(points = {{32.0008,-18.2031},{-22.6357,-18.2031},{-22.6357,17.0543},{-23.1628,17.0543}}));
+  connect(drivingResistance1.flange_a,mass_vehicle.flange_b) annotation(Line(points = {{20.798,48.3585},{0.536193,48.3585},{0.536193,17.0543},{0.8372,17.0543}}));
+  connect(flange_frontAndRearAxles,mass_vehicle.flange_a) annotation(Line(points = {{32.0008,-18.2031},{-22.6357,-18.2031},{-22.6357,17.0543},{-23.1628,17.0543}}));
+  _propulsionForce_log = flange_frontAndRearAxles.f;
+  _resistanceForce_log = drivingResistance1.force_signal.f;
+  _speed_log = drivingResistance1.speedsensor1.v;
 end Chassis;
 
