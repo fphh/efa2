@@ -200,8 +200,8 @@ adjEdges g n =
    M.findWithDefault (error "delNode: unknown node") n $
    nodes g
 
-delNode :: (Ord n) => Graph n nl el -> n -> Graph n nl el
-delNode g@(Graph nls els) n =
+delNode :: (Ord n) => n -> Graph n nl el -> Graph n nl el
+delNode n g@(Graph nls els) =
    Graph
       (fmap (\(ins, n0, outs) -> (S.delete n ins, n0, S.delete n outs)) $
        M.delete n nls) $

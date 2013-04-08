@@ -207,7 +207,7 @@ pathExists src dst =
    let go topo a =
           not (Gr.isEmpty topo) &&
           (a==dst ||
-           (any (go (Gr.delNode topo a)) $ Gr.suc topo a))
+           (any (go (Gr.delNode a topo)) $ Gr.suc topo a))
    in  flip go src . Gr.lefilter isDirEdge
 
 {-
