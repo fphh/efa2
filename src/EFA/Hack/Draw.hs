@@ -42,7 +42,7 @@ import Data.GraphViz (
           directedGraph, strictGraph, subGraphs,
           graphID,
           GraphvizOutput(..))
-  
+
 import Data.GraphViz.Attributes.Complete as Viz
 
 import qualified Data.Accessor.Basic as Accessor
@@ -62,11 +62,6 @@ import System.FilePath
 
 import EFA.Graph.Draw
 
-{-
-topology2pdf :: (Node.C node) => Topo.Topology node -> IO (FilePath)
-topology2pdf topo =
-   runGraphvizCommand Dot (dotFromTopology topo) Pdf "result/topology.pdf"
--}
 
 topology2pdf :: (Node.C node) => Topo.Topology node -> IO (FilePath)
 topology2pdf topo =

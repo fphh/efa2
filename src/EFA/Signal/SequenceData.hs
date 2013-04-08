@@ -27,7 +27,7 @@ import Data.Traversable (Traversable, traverse, sequenceA, foldMapDefault)
 import Data.Foldable (Foldable, foldMap)
 import Data.Tuple.HT (mapPair)
 
-import Prelude hiding (unzip, length, filter)
+import Prelude hiding (unzip, length, filter,zip)
 
 
 -----------------------------------------------------------------------------------
@@ -89,6 +89,7 @@ unzip (SequData xs) =
    mapPair (SequData, SequData) $ List.unzip $
    map (\x -> (fmap fst x, fmap snd x)) xs
 
+
 mapWithSection :: (Idx.Section -> a -> b) -> SequData a -> SequData b
 mapWithSection f (SequData xs) =
    SequData $ map (\(Section s rng a) -> Section s rng $ f s a) xs
@@ -108,6 +109,7 @@ length (SequData xs) = List.length xs
 filter :: (a -> Bool) -> SequData a -> SequData a
 filter f (SequData xs) =
    SequData $ List.filter (\(Section _ _ a) -> f a) xs
+
 
 filterRange :: (Range -> Bool) -> SequData a -> SequData a
 filterRange f (SequData xs) =
@@ -129,8 +131,8 @@ instance ToTable a => Report.ToTable (SequData a) where
 instance
    (V.Walker v, V.Singleton v, V.FromList v, V.Storage v a, DispStorage1 v,
     Ord a, Fractional a, PrintfArg a, Show id,
-    S.DispApp s, TDisp t1, TDisp t2) =>
-      ToTable (Record.Record s t1 t2 id v a) where
+    S.DispApp s1, S.DispApp s2, TDisp t1, TDisp t2) =>
+      ToTable (Record.Record s1 s2 t1 t2 id v a) where
    toTable os (_ti, rs) =
       Fold.fold $ mapWithSection (\ sec r -> Report.toTable os (show sec, r)) rs
 

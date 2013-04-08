@@ -1,7 +1,7 @@
 module Main where
 
-import qualified EFA.Example.Index as XIdx
 import qualified EFA.Example.Absolute as EqGen
+import qualified EFA.Example.Index as XIdx
 import EFA.Example.Utility ( makeEdges, constructSeqTopo )
 import EFA.Example.Absolute ( (.=) )
 
@@ -14,9 +14,11 @@ import qualified EFA.Graph as Gr
 import qualified EFA.Report.Format as Format
 
 import qualified EFA.Utility.Stream as Stream
+import EFA.Utility.Async (concurrentlyMany_)
 import EFA.Utility.Stream (Stream((:~)))
+import EFA.Graph.CumulatedFlow (cumulate)
 
-import Data.Monoid (mconcat)
+import Data.Monoid (Monoid, mconcat)
 
 
 sec0, sec1, sec2, sec3, sec4 :: Idx.Section
@@ -54,8 +56,8 @@ given :: EqGen.EquationSystem Node s Double Double
 given =
    mconcat $
 
-   (XIdx.dTime sec0 .= 1) :
-   (XIdx.dTime sec1 .= 1) :
+   (XIdx.dTime sec0 .= 0.5) :
+   (XIdx.dTime sec1 .= 2) :
    (XIdx.dTime sec2 .= 1) :
 
    (XIdx.storage (Idx.afterSection sec2) node3 .= 10.0) :
@@ -71,9 +73,22 @@ given =
    (XIdx.power sec4 node3 node2 .= 8) :
 
    (XIdx.eta sec0 node3 node2 .= 0.25) :
-   (XIdx.eta sec0 node2 node3 .= 0.25) :
    (XIdx.eta sec0 node2 node1 .= 0.5) :
    (XIdx.eta sec0 node0 node2 .= 0.75) :
+
+   (XIdx.eta sec1 node3 node2 .= 0.25) :
+   (XIdx.eta sec1 node2 node1 .= 0.5) :
+   (XIdx.eta sec1 node0 node2 .= 0.75) :
+   (XIdx.power sec1 node1 node2 .= 4.0) :
+
+
+   (XIdx.eta sec2 node3 node2 .= 0.75) :
+   (XIdx.eta sec2 node2 node1 .= 0.5) :
+   (XIdx.eta sec2 node0 node2 .= 0.75) :
+   (XIdx.power sec2 node1 node2 .= 4.0) :
+
+   (XIdx.eta sec1 node2 node3 .= 0.25) :
+
    []
 
 
@@ -82,6 +97,10 @@ main = do
 
   let seqTopo = constructSeqTopo topoDreibein [1, 0, 1]
       env = EqGen.solve seqTopo given
+      ((withTopo, withEnv), (againstTopo, againstEnv)) =
+        cumulate topoDreibein seqTopo env
 
-  Draw.sequFlowGraphAbsWithEnv (Draw.xterm "" seqTopo) env
-
+  concurrentlyMany_ [
+    Draw.sequFlowGraphAbsWithEnv (Draw.xterm "" seqTopo) env,
+    Draw.sequFlowGraphCumulated (Draw.xterm "" withTopo) withEnv,
+    Draw.sequFlowGraphCumulated (Draw.xterm "" againstTopo) againstEnv ]

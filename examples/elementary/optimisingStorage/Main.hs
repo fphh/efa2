@@ -15,7 +15,6 @@ import qualified EFA.Graph as Gr
 import qualified EFA.Example.Absolute as EqGen
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
-import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Result as R
 import EFA.Equation.System ((=.=))
 
@@ -23,8 +22,8 @@ import qualified EFA.Signal.Plot as Plot
 import qualified EFA.Signal.Signal as S
 -- import qualified EFA.Signal.Data as D
 
-import EFA.Signal.Signal(UTFSig, FSamp, Test2, PFSamp, (.+), (.-),(./),(.*))
-import EFA.Signal.Typ (A, P, Tt, F, N, X, Typ, T, UT,Y)
+import EFA.Signal.Signal(Test2, (.+), (.-), (./))
+import EFA.Signal.Typ (A, P, Tt, F, N, Typ, Y)
 import EFA.Signal.Base(Val)
 
 import qualified EFA.Equation.Arithmetic as Arith
@@ -175,10 +174,10 @@ unpackResult (R.Undetermined) = error("No Result")
 
 -- | Checked Lookup
 getSignalVar ::
-   (Ord (idx Node), Show (idx Node), Env.AccessMap idx, Var.Type idx ~ Var.Signal,
+   (Ord (idx Node), Show (idx Node), Env.AccessSignalMap idx,
     Show a, UV.Unbox a) =>
    [[Env.Complete Node (Record.Absolute (R.Result a)) (Record.Absolute (R.Result a))]] ->
-   idx Node -> Test2 (Typ A u Tt) a
+   Idx.InSection idx Node -> Test2 (Typ A u Tt) a
 getSignalVar varEnvs idx =
    S.changeSignalType $ S.fromList2 $
    map (map (unpackResult . Record.unAbsolute .
@@ -342,8 +341,6 @@ main = do
       varN31 = getSignalVarEta varEnvs (XIdx.eta sec1 N3 N1)
       varN01 = getSignalVarEta varEnvs (XIdx.eta sec0 N0 N1)
 
-      varE31 = getSignalVarEnergy varEnvs (XIdx.energy sec1 N3 N1)
-
       varP31_0 = getSignalVarPower varEnvs (XIdx.power sec0 N3 N1)
       varP31_1 = getSignalVarPower varEnvs (XIdx.power sec1 N3 N1)
 
@@ -362,15 +359,7 @@ main = do
 
       -- create curve of n01 in used power range
       p10Lin = S.concat varP10
-      p01Lin = S.concat varP01
       n01Lin = S.concat varN01
-
-      p130Lin = S.concat varP13_0
-      p310Lin = S.concat varP31_0
-      p131Lin = S.concat varP13_1
-      p311Lin = S.concat varP31_1
-      n13Lin = S.concat varN13
-      n31Lin = S.concat varN31
 
       -- fuel converter
       (p10Lin', n01Lin') = S.sortTwo (p10Lin,n01Lin)
@@ -469,4 +458,4 @@ main = do
 
 
   concurrentlyMany_ $
-    map (Draw.sequFlowGraphAbsWithEnv "" seqTopo) [envhh,envhl, envlh, envll]
+    map (Draw.sequFlowGraphAbsWithEnv (Draw.xterm "Topology" seqTopo)) [envhh,envhl, envlh, envll]

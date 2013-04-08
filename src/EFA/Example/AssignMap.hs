@@ -52,8 +52,8 @@ instance FormatValue i => FormatValue (IndexSet i) where
                   Stack.Before -> Idx.Before
                   Stack.Delta -> Idx.Delta) $
             formatValue i) $
-      Map.toList x
-
+      filter p $ Map.toList x
+      where p (_, b) =  b == Stack.Delta
 
 {- |
 Keep only values above a certain threshold.
@@ -74,3 +74,5 @@ filterDeltaVars is =
    let set = Set.fromList is
    in  Map.filterWithKey
           (\k _ -> Fold.all (Stack.Delta ==) $ intersectionMapSet k set)
+
+
