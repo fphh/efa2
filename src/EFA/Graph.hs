@@ -38,7 +38,6 @@ module EFA.Graph (
    mapGraph,
    ) where
 
--- imaport qualified Data.Graph.Inductive as IG
 import EFA.Utility (mapFromSet, differenceMapSet, intersectionMapSet)
 
 import qualified Data.Set as S
@@ -100,9 +99,6 @@ instance (QC.Arbitrary n) => QC.Arbitrary (Edge n) where
 reverseEdge :: Edge node -> Edge node
 reverseEdge (Edge x y) = Edge y x
 
---edgeFst, edgeSnd :: Edge node -> node
---edgeFst (Edge x _) = x
---edgeSnd (Edge _ y) = y
 
 type LEdge n label = (Edge n, label)
 
@@ -156,27 +152,6 @@ getLEdge g from to =
    let e = Edge from to
    in  fmap ((,) e) $ M.lookup e (edgeLabels g)
 
-{-
-instance (Ord n, Enum n) => IG.Graph (Graph n) where
-   empty = Graph M.empty M.empty M.empty M.empty
-   isEmpty = isEmpty
-   match ni g =
-      if isEmpty g
-        then (Nothing, g)
-        else (Just cont, delNode g n)
-     where n = toEnum ni
-           cont =
-              (map (mapSnd fromEnum) $ mkInAdj g n,
-               ni,
-               nodeLabels g  M.! n,
-               map (mapSnd fromEnum) $ mkOutAdj g n)
-   labNodes = map (\(n,l) -> (fromEnum n, l)) . labNodes
-   labEdges = map (\(n,m,l) -> (fromEnum n, fromEnum m, l)) . labEdges
-   mkGraph ns es =
-      mkGraph
-         (map (\(n,l) -> (toEnum n, l)) ns)
-         (map (\(n,m,l) -> (toEnum n, toEnum m, l)) es)
--}
 
 isEmpty :: Graph  n nl el -> Bool
 isEmpty = M.null . nodes
