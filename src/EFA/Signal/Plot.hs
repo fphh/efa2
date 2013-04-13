@@ -546,7 +546,7 @@ stacksIO ::
    String -> [(var, M.Map term Double)] -> IO ()
 stacksIO title xs =
    case unzip xs of
-      (vars, (y:ys)) ->
+      (vars, ys@(y:_)) ->
          let colorMap = Colour.colourMap (M.keys y)
          in  void . Plot.plotDefault . Frame.cons (stacksAttr title vars)
                   . stacks colorMap $ ys
