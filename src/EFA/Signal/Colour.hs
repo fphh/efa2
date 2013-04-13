@@ -2,25 +2,29 @@
 
 module EFA.Signal.Colour where
 
-import qualified Data.Map as M
-
-
 import Data.Colour
 import Data.Colour.Names as Colour
 import Data.Colour.SRGB (sRGB24show)
+
+import qualified Data.Stream as Stream
+import Data.Stream (Stream)
+
+import EFA.Utility (zipWithTraversable)
+import Data.Traversable (Traversable)
+
 
 showf :: Colour Double -> String
 showf = sRGB24show
 
 
-colourMap :: (Ord a) => [a] -> M.Map a String
-colourMap xs = M.fromList $ zip xs colours
+adorn :: Traversable f => f a -> f (String, a)
+adorn = zipWithTraversable (,) colours
 
 defltColour :: String
 defltColour = showf red
 
-colours :: [String]
-colours = cls ++ colours
+colours :: Stream String
+colours = Stream.cycle cls
 
 cls :: [String]
 cls = map showf [

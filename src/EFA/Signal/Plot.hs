@@ -332,13 +332,13 @@ record ::
     SV.Storage v a, Fractional a, Atom.C a, Tuple.C a) =>
    Record s1 s2 typ0 typ1 id v a -> Plot2D.T a a
 record (Record time pMap) =
-   foldMap
-      (\(key, sig) ->
-         recordStyle key (colourMap M.! key) $
+   Fold.fold $
+   M.mapWithKey
+      (\key (col, sig) ->
+         recordStyle key col $
          Plot2D.list Graph2D.linesPoints $
          zip (getData time) (getData sig)) $
-   M.toList pMap
-   where colourMap = Colour.colourMap (M.keys pMap)
+   Colour.adorn pMap
 
 recordIO ::
    (Fractional y,
@@ -494,22 +494,21 @@ stackAttr title var =
 
 stack ::
    (FormatValue term, Show term, Ord term) =>
-   M.Map term String ->
    M.Map term Double -> Plot2D.T Int Double
-stack colorMap =
+stack =
    Fold.fold .
    M.mapWithKey
-      (\term val ->
-         stackLineSpec term (colorMap M.! term) $
-           Plot2D.list Graph2D.histograms [val])
+      (\term (col, val) ->
+         stackLineSpec term col $
+           Plot2D.list Graph2D.histograms [val]) .
+   Colour.adorn
 
 
 stackIO ::
    (FormatValue var, FormatValue term, Show term, Ord term) =>
    String -> var -> M.Map term Double -> IO ()
 stackIO title var m =
-   void . Plot.plotDefault . Frame.cons (stackAttr title var) . stack colorMap $ m
-   where colorMap = Colour.colourMap (M.keys m)
+   void . Plot.plotDefault . Frame.cons (stackAttr title var) . stack $ m
 
 
 stacksAttr ::
@@ -534,9 +533,7 @@ stacks =
       (\term (col, vals) ->
          stackLineSpec term col $
          Plot2D.list Graph2D.histograms vals) .
-   M.fromList .
-   zipWith (\col (k,xs) -> (k, (col, xs))) Colour.colours .
-   M.toAscList
+   Colour.adorn
 
 {- |
 The length of @[var]@ must match the one of the @[Double]@ lists.
