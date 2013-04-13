@@ -69,13 +69,11 @@ import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
 import qualified Graphics.Gnuplot.Frame.OptionSet.Style as OptsStyle
 import qualified Graphics.Gnuplot.Frame.OptionSet.Histogram as Histogram
 
-import qualified EFA.Utility.TotalMap as TMap
 import qualified Data.Map as M
 import qualified Data.List as L
 import qualified Data.Foldable as Fold
 import Control.Monad (zipWithM_)
 import Control.Functor.HT (void)
-import Data.Traversable (traverse)
 import Data.Foldable (foldMap)
 import Data.Monoid (mconcat)
 
@@ -529,7 +527,7 @@ stacksAttr title vars =
 
 stacks ::
    (Ord term, FormatValue term, Show term) =>
-   [M.Map term Double] -> Plot2D.T Int Double
+   M.Map term [Double] -> Plot2D.T Int Double
 stacks =
    Fold.fold .
    M.mapWithKey
@@ -538,17 +536,17 @@ stacks =
          Plot2D.list Graph2D.histograms vals) .
    M.fromList .
    zipWith (\col (k,xs) -> (k, (col, xs))) Colour.colours .
-   M.toAscList .
-   TMap.core . traverse (TMap.cons 0)
+   M.toAscList
 
+{- |
+The length of @[var]@ must match the one of the @[Double]@ lists.
+-}
 stacksIO ::
    (FormatValue var, Ord term, FormatValue term, Show term) =>
-   String -> [(var, M.Map term Double)] -> IO ()
-stacksIO title xs =
-   case unzip xs of
-      (vars, ys) ->
-         void . Plot.plotDefault . Frame.cons (stacksAttr title vars)
-                  . stacks $ ys
+   String -> [var] -> M.Map term [Double] -> IO ()
+stacksIO title vars xs =
+   void . Plot.plotDefault .
+   Frame.cons (stacksAttr title vars) . stacks $ xs
 
 class Atom.C (Value tc) => AxisLabel tc where
    type Value tc :: *

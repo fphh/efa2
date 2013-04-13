@@ -9,9 +9,12 @@ import EFA.Report.FormatValue (FormatValue, formatValue)
 import EFA.Report.Format (Format)
 import EFA.Utility (intersectionMapSet)
 
+import qualified EFA.Utility.TotalMap as TMap
+
 import qualified Data.Foldable as Fold
 import qualified Data.Set as Set
 import qualified Data.Map as Map
+import Data.Traversable (traverse)
 import Data.Map (Map)
 
 
@@ -54,6 +57,13 @@ instance FormatValue i => FormatValue (IndexSet i) where
             formatValue i) $
       filter p $ Map.toList x
       where p (_, b) =  b == Stack.Delta
+
+{- |
+Convert a list of AssignMaps to an AssignMap of lists.
+-}
+transpose :: (Ord i, Num a) => [Map i a] -> Map i [a]
+transpose = TMap.core . traverse (TMap.cons 0)
+
 
 {- |
 Keep only values above a certain threshold.

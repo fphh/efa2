@@ -44,7 +44,7 @@ import qualified Data.Map as M
 --import qualified Data.NonEmpty as NonEmpty
 --import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue)
---import Data.Tuple.HT (mapFst)
+import Data.Tuple.HT (mapSnd)
 import qualified EFA.Example.AssignMap as AssignMap
 
 --import Debug.Trace
@@ -112,8 +112,13 @@ recordStackRow:: (TDNode.C node, Ord node, Ord i, Show i, Show node, FormatValue
                                    (EqRecord.Absolute (Result.Result (Stack.Stack i Double)))]
                             -> IO ()
 
-recordStackRow ti energyIndex eps envList = Plot.stacksIO ti valList
-  where valList = map (\ y -> (Idx.delta $ Var.index energyIndex, AssignMap.threshold eps $ lookupStack energyIndex y)) envList
+recordStackRow ti energyIndex eps =
+   uncurry (Plot.stacksIO ti) .
+   mapSnd AssignMap.transpose .
+   unzip .
+   map (\y ->
+          (Idx.delta $ Var.index energyIndex,
+           AssignMap.threshold eps $ lookupStack energyIndex y))
 
 
 lookupStack:: (Ord i, Ord node, Show node) =>
