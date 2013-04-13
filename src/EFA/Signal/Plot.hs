@@ -75,7 +75,6 @@ import qualified Data.List as L
 import qualified Data.Foldable as Fold
 import Control.Monad (zipWithM_)
 import Control.Functor.HT (void)
-import Control.Applicative (liftA2)
 import Data.Traversable (traverse)
 import Data.Foldable (foldMap)
 import Data.Monoid (mconcat)
@@ -529,28 +528,27 @@ stacksAttr title vars =
       Opts.deflt
 
 stacks ::
-  (Ord term, FormatValue term, Show term) =>
-  M.Map term String -> [M.Map term Double] -> Plot2D.T Int Double
-stacks colourMap =
+   (Ord term, FormatValue term, Show term) =>
+   [M.Map term Double] -> Plot2D.T Int Double
+stacks =
    Fold.fold .
    M.mapWithKey
       (\term (col, vals) ->
          stackLineSpec term col $
          Plot2D.list Graph2D.histograms vals) .
-  TMap.core .
-  liftA2 (,) (TMap.cons Colour.defltColour colourMap) .
-  traverse (TMap.cons 0)
+   M.fromList .
+   zipWith (\col (k,xs) -> (k, (col, xs))) Colour.colours .
+   M.toAscList .
+   TMap.core . traverse (TMap.cons 0)
 
 stacksIO ::
    (FormatValue var, Ord term, FormatValue term, Show term) =>
    String -> [(var, M.Map term Double)] -> IO ()
 stacksIO title xs =
    case unzip xs of
-      (vars, ys@(y:_)) ->
-         let colorMap = Colour.colourMap (M.keys y)
-         in  void . Plot.plotDefault . Frame.cons (stacksAttr title vars)
-                  . stacks colorMap $ ys
-      _ -> error "stackIO: empty list"
+      (vars, ys) ->
+         void . Plot.plotDefault . Frame.cons (stacksAttr title vars)
+                  . stacks $ ys
 
 class Atom.C (Value tc) => AxisLabel tc where
    type Value tc :: *
