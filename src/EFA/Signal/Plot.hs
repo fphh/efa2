@@ -482,15 +482,14 @@ stackLineSpec term colour =
           (lineColour colour $ LineSpec.deflt)))
 
 stackAttr ::
-   (FormatValue var) =>
-   String -> var -> Opts.T (Graph2D.T Int Double)
+   String -> Format.ASCII -> Opts.T (Graph2D.T Int Double)
 stackAttr title var =
    Opts.title title $
       Histogram.rowstacked $
       OptsStyle.fillBorderLineType (-1) $
       OptsStyle.fillSolid $
       optKeyOutside $
-      Opts.xTicks2d [(Format.unASCII $ formatValue var, 0)] $
+      Opts.xTicks2d [(Format.unASCII var, 0)] $
       Opts.deflt
 
 stack ::
@@ -507,15 +506,14 @@ stack =
 
 
 stackIO ::
-   (FormatValue var, FormatValue term, Show term, Ord term) =>
-   String -> var -> M.Map term Double -> IO ()
+   (FormatValue term, Show term, Ord term) =>
+   String -> Format.ASCII -> M.Map term Double -> IO ()
 stackIO title var m =
    void . Plot.plotDefault . Frame.cons (stackAttr title var) . stack $ m
 
 
 stacksAttr ::
-   (FormatValue var) =>
-   String -> [var] -> Opts.T (Graph2D.T Int Double)
+   String -> [Format.ASCII] -> Opts.T (Graph2D.T Int Double)
 stacksAttr title vars =
    Opts.title title $
       Histogram.rowstacked $
@@ -523,7 +521,7 @@ stacksAttr title vars =
       OptsStyle.fillSolid $
       optKeyOutside $
       Opts.boxwidthAbsolute 0.9 $
-      Opts.xTicks2d (zip (map (Format.unASCII . formatValue) vars) [0..]) $
+      Opts.xTicks2d (zip (map Format.unASCII vars) [0..]) $
       Opts.deflt
 
 stacks ::
@@ -542,8 +540,8 @@ stacks =
 The length of @[var]@ must match the one of the @[Double]@ lists.
 -}
 stacksIO ::
-   (FormatValue var, Ord term, FormatValue term, Show term) =>
-   String -> [var] -> M.Map term [Double] -> IO ()
+   (Ord term, FormatValue term, Show term) =>
+   String -> [Format.ASCII] -> M.Map term [Double] -> IO ()
 stacksIO title vars xs =
    void . Plot.plotDefault .
    Frame.cons (stacksAttr title vars) . stacks $ xs

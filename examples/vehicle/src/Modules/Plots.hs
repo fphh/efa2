@@ -43,7 +43,7 @@ import qualified Data.Map as M
 --import EFA.Utility(checkedLookup)
 --import qualified Data.NonEmpty as NonEmpty
 --import qualified EFA.Report.Format as Format
-import EFA.Report.FormatValue (FormatValue)
+import EFA.Report.FormatValue (FormatValue, formatValue)
 import qualified EFA.Example.AssignMap as AssignMap
 
 --import Debug.Trace
@@ -85,9 +85,10 @@ stack:: (Show a, Ord i, FormatValue i, TDNode.C a, Show i) =>
         a t (EqRecord.Absolute (Result.Result (Stack.Stack i Double)))) ->
         IO ()
 stack ti energyIndex eps (recName,env) = do
---               AssignMap.print $ lookupStack energyIndex env
-               Plot.stackIO ("Record " ++ recName ++ "-" ++ ti)
-                  (Idx.delta $ Var.index energyIndex) $ AssignMap.threshold eps $ lookupStack energyIndex env
+--   AssignMap.print $ lookupStack energyIndex env
+   Plot.stackIO ("Record " ++ recName ++ "-" ++ ti)
+      (formatValue $ Idx.delta $ Var.index energyIndex)
+      (AssignMap.threshold eps $ lookupStack energyIndex env)
 
 
 reportStack::(Num a, Ord node, Ord i, Ord a, Show node, FormatValue a,
@@ -113,7 +114,7 @@ recordStackRow:: (TDNode.C node, Ord node, Ord i, Show i, Show node, FormatValue
 
 recordStackRow ti energyIndex eps envs =
    Plot.stacksIO ti
-      (map (const $ Idx.delta $ Var.index energyIndex) envs) .
+      (map (const $ formatValue $ Idx.delta $ Var.index energyIndex) envs) .
    AssignMap.simultaneousThreshold eps .
    AssignMap.transpose .
    map (lookupStack energyIndex)

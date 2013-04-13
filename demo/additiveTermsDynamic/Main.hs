@@ -156,7 +156,7 @@ mainNumeric = do
                       Stack.assignDeltaMap x
                AssignMap.print assigns
                Plot.stackIO "Decomposition of total output energy"
-                  (Idx.delta $ Var.index eout) assigns
+                  (formatValue $ Idx.delta $ Var.index eout) assigns
 
 
 main :: IO ()

@@ -219,7 +219,7 @@ mainNumeric = do
                 Record.assignDeltaMap x
          AssignMap.print assigns
          Plot.stackIO "Decomposition of total output energy"
-            (Idx.delta $ Var.index eout)
+            (formatValue $ Idx.delta $ Var.index eout)
             (AssignMap.ignoreUndetermined assigns)
 
 
