@@ -1,8 +1,12 @@
 module HalfPlaneMap where
 
-import qualified Data.List.Key as Key
 import qualified Data.Map as Map
 import qualified Data.Set as Set
+import qualified Data.Foldable as Fold
+import Data.Semigroup.Foldable (Foldable1, foldMap1, )
+import Data.Semigroup (Semigroup, (<>), )
+import Data.Monoid (mappend, )
+import Data.Foldable (Foldable, foldMap, )
 import Data.Tuple.HT (mapPair, )
 import Data.Maybe.HT (toMaybe, )
 import Data.Ord.HT (comparing, )
@@ -104,29 +108,84 @@ optimalSplitTriangleSet ts =
           because that could mean to hold almost all values.
           -}
           Map.unions
-   in  {-
-       could be done more cleanly using a Pair type
-       and an according ArgMin semigroup
-       -}
-       Key.minimum (\(_line, (tas, tbs)) -> max (length tas) (length tbs)) .
-       map (\line -> (line, splitTriangleSet line ts)) .
-       uncurry (++) . mapPair (getMedian, getMedian) . unzip .
+   in  argmin (\(_line, (tas, tbs)) -> max (length tas) (length tbs)) .
+       fmap (\line -> (line, splitTriangleSet line ts)) .
+       uncurry Pair . mapPair (getMedian, getMedian) . unzip .
        map
           (\(Triangle x@(Point x0 x1) y@(Point y0 y1) z@(Point z0 z1)) ->
-             let xLines = rotate90 x y : [Line x y, Line z x]
-                 yLines = rotate90 y z : [Line x y, Line y z]
-                 zLines = rotate90 z x : [Line z x, Line y z]
-             in  (Map.fromListWith (++) $
+             let xLines = rotate90 x y :! pair (Line x y) (Line z x)
+                 yLines = rotate90 y z :! pair (Line x y) (Line y z)
+                 zLines = rotate90 z x :! pair (Line z x) (Line y z)
+             in  (Map.fromList $
                      (x0, xLines) :
                      (y0, yLines) :
                      (z0, zLines) :
                      [],
-                  Map.fromListWith (++) $
+                  Map.fromList $
                      (x1, xLines) :
                      (y1, yLines) :
                      (z1, zLines) :
                      [])) .
        map fst $ ts
+
+
+infixr 5 :!
+
+data NonEmpty f a = a :! f a deriving (Eq, Ord, Show)
+data Pair f a = Pair (f a) (f a) deriving (Eq, Ord, Show)
+newtype Value a = Value a deriving (Eq, Ord, Show)
+
+pair :: a -> a -> Pair Value a
+pair x y = Pair (Value x) (Value y)
+
+
+instance Functor f => Functor (NonEmpty f) where
+   fmap f (a :! as) = f a :! fmap f as
+
+instance Foldable f => Foldable (NonEmpty f) where
+   foldMap f (a :! as) = f a `mappend` foldMap f as
+
+instance Foldable f => Foldable1 (NonEmpty f) where
+{- has incorrect, because foldMap needs Monoid, not only Semigroup
+   foldMap1 f (a :! as) = f a <> foldMap f as
+-}
+{- has correct type, but uses inefficient foldl
+   foldMap1 f (a :! as) = Fold.foldl (\acc b -> acc <> f b) (f a) as
+-}
+   foldMap1 f (a :! as) =
+      Fold.foldr (\b go a0 -> f a0 <> go b) f as a
+
+
+instance Functor f => Functor (Pair f) where
+   fmap f (Pair l r) = fmap f l `Pair` fmap f r
+
+instance Foldable f => Foldable (Pair f) where
+   foldMap f (Pair l r) = foldMap f l `mappend` foldMap f r
+
+instance Foldable1 f => Foldable1 (Pair f) where
+   foldMap1 f (Pair l r) = foldMap1 f l <> foldMap1 f r
+
+
+instance Functor Value where
+   fmap f (Value a) = Value $ f a
+
+instance Foldable Value where
+   foldMap f (Value a) = f a
+
+instance Foldable1 Value where
+   foldMap1 f (Value a) = f a
+
+{-
+Cf. StateAnalysis.ShortestList
+-}
+data ArgMin k a = ArgMin {minArg :: k, minValue :: a}
+
+instance Ord k => Semigroup (ArgMin k a) where
+   x <> y  =  if minArg x <= minArg y then x else y
+
+argmin :: (Ord k) => Foldable1 f => (a -> k) -> f a -> a
+argmin f = minValue . foldMap1 (\a -> ArgMin (f a) a)
+
 
 rotate90 :: (Num x) => Point x -> Point x -> Line x
 rotate90 x@(Point x0 x1) (Point y0 y1) =
