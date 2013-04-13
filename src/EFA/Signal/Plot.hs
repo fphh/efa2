@@ -72,6 +72,7 @@ import qualified Graphics.Gnuplot.Frame.OptionSet.Histogram as Histogram
 import qualified Data.Map as M
 import qualified Data.List as L
 import qualified Data.Foldable as Fold
+import qualified Data.List.Key as Key
 import Control.Monad (zipWithM_)
 import Control.Functor.HT (void)
 import Data.Foldable (foldMap)
@@ -496,12 +497,13 @@ stack ::
    (FormatValue term, Show term, Ord term) =>
    M.Map term Double -> Plot2D.T Int Double
 stack =
-   Fold.fold .
-   M.mapWithKey
-      (\term (col, val) ->
+   foldMap
+      (\(col, (term, val)) ->
          stackLineSpec term col $
            Plot2D.list Graph2D.histograms [val]) .
-   Colour.adorn
+   Colour.adorn .
+   Key.sort (abs . snd) .
+   M.toList
 
 
 stackIO ::
@@ -528,12 +530,13 @@ stacks ::
    (Ord term, FormatValue term, Show term) =>
    M.Map term [Double] -> Plot2D.T Int Double
 stacks =
-   Fold.fold .
-   M.mapWithKey
-      (\term (col, vals) ->
+   foldMap
+      (\(col, (term, vals)) ->
          stackLineSpec term col $
          Plot2D.list Graph2D.histograms vals) .
-   Colour.adorn
+   Colour.adorn .
+   Key.sort (maximum . map abs . snd) .
+   M.toList
 
 {- |
 The length of @[var]@ must match the one of the @[Double]@ lists.
