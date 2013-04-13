@@ -72,6 +72,13 @@ threshold :: (Ord i, Ord a, Num a) => a -> Map i a -> Map i a
 threshold x = Map.filter ((>=x) . abs)
 
 {- |
+Keep all those lists where at least one value is above a threshold.
+This allows to filter consistently across stacks.
+-}
+simultaneousThreshold :: (Ord i, Ord a, Num a) => a -> Map i [a] -> Map i [a]
+simultaneousThreshold x = Map.filter (any ((>=x) . abs))
+
+{- |
 @filterDeltaVars vars@ keeps only the terms
 where every @var@ from @vars@ is a delta var.
 -}
