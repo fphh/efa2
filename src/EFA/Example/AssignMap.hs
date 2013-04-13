@@ -93,3 +93,10 @@ filterDeltaVars is =
           (\k _ -> Fold.all (Stack.Delta ==) $ intersectionMapSet k set)
 
 
+cumulate ::
+   (Ord (idx node), Num a) =>
+   Map (Map (Idx.InSection idx node) Stack.Branch) a ->
+   Map (Map (idx node) Stack.Branch) a
+cumulate =
+   Map.mapKeysWith (+)
+      (Map.mapKeys (\(Idx.InSection _sec node) -> node))
