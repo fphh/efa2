@@ -104,20 +104,16 @@ reportStack ti energyIndex eps (env) = do
                print (ti ++ show energyIndex)
                AssignMap.print $ AssignMap.threshold eps $ lookupStack energyIndex env
 
-recordStackRow:: (TDNode.C node, Ord node, Ord i, Show i, Show node, FormatValue i,
-                             FormatValue var) =>
+recordStackRow:: (TDNode.C node, Ord node, Ord i, Show i, Show node, FormatValue i) =>
                             String
                             -> XIdx.Energy node
                             -> Double
-                            -> [(var,
-                                 Env.Complete
-                                   node
-                                   t
-                                   (EqRecord.Absolute (Result.Result (Stack.Stack i Double))))]
+                            -> [Env.Complete node t
+                                   (EqRecord.Absolute (Result.Result (Stack.Stack i Double)))]
                             -> IO ()
 
 recordStackRow ti energyIndex eps envList = Plot.stacksIO ti valList
-  where valList = map (\ (_,y) -> (Idx.delta $ Var.index energyIndex, AssignMap.threshold eps $ lookupStack energyIndex y)) envList
+  where valList = map (\ y -> (Idx.delta $ Var.index energyIndex, AssignMap.threshold eps $ lookupStack energyIndex y)) envList
 
 
 lookupStack:: (Ord i, Ord node, Show node) =>

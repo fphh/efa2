@@ -157,7 +157,7 @@ main = do
     "Energy Flow Change at Tank in Section 7"
     energyIndex 
     10
-    (zip (deltasets datasetsX) differenceExtEnvs)
+    differenceExtEnvs
 
 ---------------------------------------------------------------------------------------
 -- * Plot Time Signals
