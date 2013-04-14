@@ -79,6 +79,7 @@ import qualified Data.Foldable as Fold
 import Data.Traversable (Traversable, traverse, sequenceA)
 import Data.Foldable (foldMap, fold)
 import Data.Monoid (Monoid, (<>), mempty, mappend, mconcat)
+import Data.Ord.HT (comparing)
 
 import qualified Prelude as P
 import Prelude hiding (sqrt, (.))
@@ -670,10 +671,9 @@ fromNodes equalInOutSums =
                       mwhen equalInOutSums $
                       withSecNode $ \sn -> insum sn =%= outsum sn
                    TD.Storage (Just dir) ->
-                      let to (Idx.ForNode (Idx.StorageEdge _ x) _) = x
-                      in  case dir of
+                          case dir of
                              TD.In ->
-                                fromInStorages bn (map to outsStore)
+                                fromInStorages bn outsStore
                                 <>
                                 splitStoreEqs stvarinsum outsStore
                                 <>
@@ -735,10 +735,11 @@ fromInStorages ::
   (Eq a, Sum a, a ~ Scalar v,
    Eq v, Product v, Integrate v,
    Record rec, Node.C node) =>
-  Idx.BndNode node -> [Idx.Boundary] ->
+  Idx.BndNode node -> [Idx.ForNode Idx.StorageEdge node] ->
   EquationSystem rec node s a v
-fromInStorages sn@(Idx.BndNode bnd n) outs =
-   let souts = map (\b -> Idx.ForNode (Idx.StorageEdge bnd b) n) $ List.sort outs
+fromInStorages sn outs =
+   let toSec (Idx.ForNode (Idx.StorageEdge _ x) _) = x
+       souts = List.sortBy (comparing toSec) outs
        maxEnergies = map maxEnergy souts
        stEnergies  = map stEnergy  souts
    in  mconcat $
