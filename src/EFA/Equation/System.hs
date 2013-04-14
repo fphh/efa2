@@ -671,10 +671,9 @@ fromNodes equalInOutSums =
                       withSecNode $ \sn -> insum sn =%= outsum sn
                    TD.Storage (Just dir) ->
                       let to (Idx.ForNode (Idx.StorageEdge _ x) _) = x
-                          inout = (map to insStore, bn, map to outsStore)
                       in  case dir of
-                             TD.In  ->
-                                fromInStorages inout
+                             TD.In ->
+                                fromInStorages bn (map to outsStore)
                                 <>
                                 splitStoreEqs stvarinsum outsStore
                                 <>
@@ -683,7 +682,7 @@ fromNodes equalInOutSums =
                                     Nothing -> storage bn
                                     Just sn -> integrate $ insum sn)
                              TD.Out ->
-                                fromOutStorages inout
+                                fromOutStorages bn (map to insStore)
                                 <>
                                 splitStoreEqs stvaroutsum insStore
                                 <>
@@ -736,9 +735,9 @@ fromInStorages ::
   (Eq a, Sum a, a ~ Scalar v,
    Eq v, Product v, Integrate v,
    Record rec, Node.C node) =>
-  ([Idx.Boundary], Idx.BndNode node, [Idx.Boundary]) ->
+  Idx.BndNode node -> [Idx.Boundary] ->
   EquationSystem rec node s a v
-fromInStorages (_, sn@(Idx.BndNode bnd n), outs) =
+fromInStorages sn@(Idx.BndNode bnd n) outs =
    let souts = map (\b -> Idx.ForNode (Idx.StorageEdge bnd b) n) $ List.sort outs
        maxEnergies = map maxEnergy souts
        stEnergies  = map stEnergy  souts
@@ -748,9 +747,9 @@ fromInStorages (_, sn@(Idx.BndNode bnd n), outs) =
 
 fromOutStorages ::
   (Eq a, Product a, Record rec, Node.C node) =>
-  ([Idx.Boundary], Idx.BndNode node, [Idx.Boundary]) ->
+  Idx.BndNode node -> [Idx.Boundary] ->
   EquationSystem rec node s a v
-fromOutStorages (ins0, Idx.BndNode sec n, _) =
+fromOutStorages (Idx.BndNode sec n) ins0 =
   flip foldMap (NonEmpty.fetch ins0) $ \ins ->
   (withLocalVar $ \s ->
     splitFactors s
