@@ -106,20 +106,21 @@ admissibleCountTopology topo =
 
 
 type NumberOfAdj = Int
-type CountTopology node = Gr.Graph node (NodeType, NumberOfAdj) FlowDirection
+type CountTopology node =
+        Gr.Graph node Gr.DirEdge (NodeType, NumberOfAdj) FlowDirection
 
 
-edgeOrients :: Gr.Edge node -> [(Gr.Edge node, FlowDirection)]
-edgeOrients (Gr.Edge x y) =
-   (Gr.Edge x y, Dir) :
-   (Gr.Edge y x, Dir) : -- x and y inversed!
-   (Gr.Edge x y, UnDir) :
+edgeOrients :: Gr.DirEdge node -> [(Gr.DirEdge node, FlowDirection)]
+edgeOrients (Gr.DirEdge x y) =
+   (Gr.DirEdge x y, Dir) :
+   (Gr.DirEdge y x, Dir) : -- x and y inversed!
+   (Gr.DirEdge x y, UnDir) :
    []
 
 admissibleEdges ::
    (Ord node) =>
    LNEdge node -> CountTopology node ->
-   [((Gr.Edge node, FlowDirection), CountTopology node)]
+   [((Gr.DirEdge node, FlowDirection), CountTopology node)]
 admissibleEdges e0 g0 = do
    e1 <- edgeOrients e0
    let g1 = Gr.insEdge e1 g0
@@ -129,7 +130,7 @@ admissibleEdges e0 g0 = do
 expand :: (Ord node) => LNEdge node -> CountTopology node -> [CountTopology node]
 expand e g = map snd $ admissibleEdges e g
 
-splitNodesEdges :: (Ord node) => Topology node -> (CountTopology node, [Gr.Edge node])
+splitNodesEdges :: (Ord node) => Topology node -> (CountTopology node, [Gr.DirEdge node])
 splitNodesEdges topo =
    (Gr.fromMap
        (M.map (\(pre,l,suc) -> (l, S.size pre + S.size suc)) $ Gr.nodes topo)
@@ -139,7 +140,7 @@ splitNodesEdges topo =
 
 newtype
    Alternatives node =
-      Alternatives {getAlternatives :: [(Gr.Edge node, FlowDirection)]}
+      Alternatives {getAlternatives :: [(Gr.DirEdge node, FlowDirection)]}
 
 instance Eq  (Alternatives a) where (==)     =  equating  (void . getAlternatives)
 instance Ord (Alternatives a) where compare  =  comparing (void . getAlternatives)
@@ -188,7 +189,7 @@ data
    Cluster node =
       Cluster {
          clusterNodes :: S.Set node,
-         clusterEdges :: [M.Map (Gr.Edge node) FlowDirection]
+         clusterEdges :: [M.Map (Gr.DirEdge node) FlowDirection]
       }
 
 
@@ -201,7 +202,7 @@ emptyCluster g =
 
 singletonCluster ::
    (Ord node) =>
-   CountTopology node -> Gr.Edge node -> Cluster node
+   CountTopology node -> Gr.DirEdge node -> Cluster node
 singletonCluster g e =
    Cluster
       (Fold.foldMap S.singleton e)
@@ -333,7 +334,7 @@ mergeMinimizingCluster topo (NonEmpty.Cons p ps) =
              NonEmpty.removeEach partition1
 
 
-type LNEdge node = Gr.Edge node
+type LNEdge node = Gr.DirEdge node
 
 -- * various algorithms
 
@@ -430,7 +431,7 @@ instance (QC.Arbitrary node, Ord node) => QC.Arbitrary (ArbTopology node) where
          M.keys edges
       return $ ArbTopology $
          Gr.fromMap nodes $
-         M.mapKeys (\(UndirEdge x y) -> Gr.Edge x y) edges
+         M.mapKeys (\(UndirEdge x y) -> Gr.DirEdge x y) edges
 
 propBranchAndBound :: (Eq node, Ord node) => ArbTopology node -> Bool
 propBranchAndBound (ArbTopology g) =
@@ -444,9 +445,9 @@ Instead I use this function locally for 'Key.sort'.
 -}
 graphIdent ::
    (Ord node) =>
-   Gr.Graph node nodeLabel edgeLabel ->
+   Gr.Graph node Gr.DirEdge nodeLabel edgeLabel ->
    (M.Map node nodeLabel,
-    M.Map (Gr.Edge node) edgeLabel)
+    M.Map (Gr.DirEdge node) edgeLabel)
 graphIdent g = (Gr.nodeLabels g, Gr.edgeLabels g)
 
 {-

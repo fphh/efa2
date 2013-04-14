@@ -619,7 +619,7 @@ fromGraph equalInOutSums g = mconcat $
 
 fromEdges ::
   (Eq a, Sum a, Eq v, Product v, Record rec, Ord node) =>
-  [Gr.Edge (Idx.BndNode node)] -> EquationSystem rec node s a v
+  [TD.FlowEdge (Idx.BndNode node)] -> EquationSystem rec node s a v
 fromEdges =
    foldMap $ \se ->
       case TD.edgeType se of

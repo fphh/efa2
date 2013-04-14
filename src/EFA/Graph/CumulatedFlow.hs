@@ -23,7 +23,7 @@ data RelativeDir = WithTopoDir
 
 getRelativeDir ::
   (Ord x) =>
-  TD.Topology x -> Gr.Edge x -> RelativeDir
+  TD.Topology x -> Gr.DirEdge x -> RelativeDir
 getRelativeDir g e =
   case Gr.edgeLabels g of
     es ->
@@ -67,7 +67,7 @@ cumulatedEnergyFlow topo seqTopo env =
                     zero = Rec.Absolute (Determined 0)
 
                 in  Just $
-                    case getRelativeDir topo $ Gr.Edge n n' of
+                    case getRelativeDir topo $ Gr.DirEdge n n' of
                        WithTopoDir -> (insert, insertzero)
                        AgainstTopoDir -> (insertzero, insert)
              _ -> Nothing
