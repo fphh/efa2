@@ -79,6 +79,7 @@ import qualified Data.Foldable as Fold
 import Data.Traversable (Traversable, traverse, sequenceA)
 import Data.Foldable (foldMap, fold)
 import Data.Monoid (Monoid, (<>), mempty, mappend, mconcat)
+import Data.Tuple.HT (mapPair)
 import Data.Ord.HT (comparing)
 
 import qualified Prelude as P
@@ -635,7 +636,7 @@ fromNodes ::
   Bool ->
   TD.DirSequFlowGraph node -> EquationSystem rec node s a v
 fromNodes equalInOutSums =
-  fold . M.mapWithKey f . Gr.nodes
+  fold . M.mapWithKey f . Gr.nodeEdges
    where f bn (ins, nodeType, outs) =
             let -- these variables are used again in fromStorageSequences
                 stvarinsum = stinsum bn
@@ -646,14 +647,16 @@ fromNodes equalInOutSums =
                 partition =
                    LH.unzipEithers .
                    map
-                      (\node ->
-                         case TD.edgeType $ Gr.Edge bn node of
+                      (\edge ->
+                         case TD.edgeType edge of
                             TD.StructureEdge e -> Left e
                             TD.StorageEdge e -> Right e) .
                    S.toList
 
-                (insStruct,  insStore)  = partition ins
                 (outsStruct, outsStore) = partition outs
+                (insStruct,  insStore) =
+                   mapPair (map Idx.flip, map Idx.flip) $
+                   partition ins
 
                 splitStructEqs varsum edges =
                    foldMap

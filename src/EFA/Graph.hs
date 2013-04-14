@@ -34,7 +34,7 @@ module EFA.Graph (
    insNode, insNodes,
    insEdge, insEdges, insEdgeSet,
    fromList, fromMap,
-   nodes, nodeSet,
+   nodes, nodeSet, nodeEdges,
    InOut,
    ) where
 
@@ -106,9 +106,15 @@ nodes ::
    Graph node nodeLabel edgeLabel ->
    M.Map node (S.Set node, nodeLabel, S.Set node)
 nodes =
-   fmap
-      (\(ins,n,outs) ->
-         (S.map from $ M.keysSet ins, n, S.map to $ M.keysSet outs)) .
+   fmap (\(ins,n,outs) -> (S.map from ins, n, S.map to outs)) .
+   nodeEdges
+
+nodeEdges ::
+   (Ord node) =>
+   Graph node nodeLabel edgeLabel ->
+   M.Map node (S.Set (Edge node), nodeLabel, S.Set (Edge node))
+nodeEdges =
+   fmap (\(ins,n,outs) -> (M.keysSet ins, n, M.keysSet outs)) .
    graphMap
 
 
