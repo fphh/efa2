@@ -79,6 +79,8 @@ import qualified Data.Foldable as Fold
 import Data.Traversable (Traversable, traverse, sequenceA)
 import Data.Foldable (foldMap, fold)
 import Data.Monoid (Monoid, (<>), mempty, mappend, mconcat)
+import Data.Tuple.HT (mapPair)
+import Data.Ord.HT (comparing)
 
 import qualified Prelude as P
 import Prelude hiding (sqrt, (.))
@@ -634,7 +636,7 @@ fromNodes ::
   Bool ->
   TD.DirSequFlowGraph node -> EquationSystem rec node s a v
 fromNodes equalInOutSums =
-  fold . M.mapWithKey f . Gr.nodes
+  fold . M.mapWithKey f . Gr.nodeEdges
    where f bn (ins, nodeType, outs) =
             let -- these variables are used again in fromStorageSequences
                 stvarinsum = stinsum bn
@@ -645,14 +647,16 @@ fromNodes equalInOutSums =
                 partition =
                    LH.unzipEithers .
                    map
-                      (\node ->
-                         case TD.edgeType $ Gr.Edge bn node of
+                      (\edge ->
+                         case TD.edgeType edge of
                             TD.StructureEdge e -> Left e
                             TD.StorageEdge e -> Right e) .
                    S.toList
 
-                (insStruct,  insStore)  = partition ins
                 (outsStruct, outsStore) = partition outs
+                (insStruct,  insStore) =
+                   mapPair (map Idx.flip, map Idx.flip) $
+                   partition ins
 
                 splitStructEqs varsum edges =
                    foldMap
@@ -670,12 +674,9 @@ fromNodes equalInOutSums =
                       mwhen equalInOutSums $
                       withSecNode $ \sn -> insum sn =%= outsum sn
                    TD.Storage (Just dir) ->
-                      let from (Idx.ForNode (Idx.StorageEdge x _) _) = x
-                          to (Idx.ForNode (Idx.StorageEdge _ x) _) = x
-                          inout = (map from insStore, bn, map to outsStore)
-                      in  case dir of
-                             TD.In  ->
-                                fromInStorages inout
+                          case dir of
+                             TD.In ->
+                                fromInStorages bn outsStore
                                 <>
                                 splitStoreEqs stvarinsum outsStore
                                 <>
@@ -684,7 +685,7 @@ fromNodes equalInOutSums =
                                     Nothing -> storage bn
                                     Just sn -> integrate $ insum sn)
                              TD.Out ->
-                                fromOutStorages inout
+                                fromOutStorages insStore
                                 <>
                                 splitStoreEqs stvaroutsum insStore
                                 <>
@@ -737,10 +738,11 @@ fromInStorages ::
   (Eq a, Sum a, a ~ Scalar v,
    Eq v, Product v, Integrate v,
    Record rec, Node.C node) =>
-  ([Idx.Boundary], Idx.BndNode node, [Idx.Boundary]) ->
+  Idx.BndNode node -> [Idx.ForNode Idx.StorageEdge node] ->
   EquationSystem rec node s a v
-fromInStorages (_, sn@(Idx.BndNode bnd n), outs) =
-   let souts = map (\b -> Idx.ForNode (Idx.StorageEdge bnd b) n) $ List.sort outs
+fromInStorages sn outs =
+   let toSec (Idx.ForNode (Idx.StorageEdge _ x) _) = x
+       souts = List.sortBy (comparing toSec) outs
        maxEnergies = map maxEnergy souts
        stEnergies  = map stEnergy  souts
    in  mconcat $
@@ -749,15 +751,13 @@ fromInStorages (_, sn@(Idx.BndNode bnd n), outs) =
 
 fromOutStorages ::
   (Eq a, Product a, Record rec, Node.C node) =>
-  ([Idx.Boundary], Idx.BndNode node, [Idx.Boundary]) ->
+  [Idx.ForNode Idx.StorageEdge node] ->
   EquationSystem rec node s a v
-fromOutStorages (ins0, Idx.BndNode sec n, _) =
-  flip foldMap (NonEmpty.fetch ins0) $ \ins ->
-  (withLocalVar $ \s ->
-    splitFactors s
-      (\sect -> maxEnergy $ Idx.ForNode (Idx.StorageEdge sect sec) n)
-      (\sect -> stxfactor $ Idx.ForNode (Idx.StorageEdge sec sect) n)
-      ins)
+fromOutStorages ins =
+   withLocalVar $ \s ->
+      foldMap
+         (splitFactors s (maxEnergy . Idx.flip) stxfactor)
+         (NonEmpty.fetch ins)
 
 splitFactors ::
    (Eq x, Product x, Record rec) =>
