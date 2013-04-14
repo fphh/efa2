@@ -78,10 +78,11 @@ instance DEq Val where
 infix 4 ..==, ../= , ..>= , ..<= , ..> , ..<
 
 -- Own User Defined Sign Variable
-data Sign = PSign 
+data Sign = PSign
           | ZSign
           | NSign deriving (Show, Eq, Enum)
 -- data Sign = PSign | ZSign | NSign deriving (Show, Eq, Ord)
+
 
 -- | determine Signal Sign
 sign :: (Ord a, Num a) => a -> Sign

@@ -13,7 +13,7 @@ lookupStack :: (Ord node, Show node) =>
 
 lookupStack env key = case M.lookup key (Env.energyMap env) of
     Nothing -> error ("Key not in Map - available Keys" ++ Ut.myShowList (M.keys (Env.energyMap env)))
-    Just d -> 
+    Just d ->
       case Env.delta d of
         Result.Undetermined -> error ("undetermined Value in Map for key " ++ show key)
         Result.Determined x -> x

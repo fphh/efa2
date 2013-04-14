@@ -838,11 +838,11 @@ slice ::
 slice idx n = withNestedData (Data . SV.slice idx n)
 
 
-concat :: (SV.Storage v1 (Apply c d), 
-           SV.Singleton v1, 
-           SV.Storage v2 (v1 (Apply c d)), 
-           SV.FromList v2) 
+concat :: (SV.Storage v1 (Apply c d),
+           SV.Singleton v1,
+           SV.Storage v2 (v1 (Apply c d)),
+           SV.FromList v2)
           => Data (v2 :> v1 :> c) d -> Data (v1 :> c) d
-concat (Data x) = Data $ SV.concat $ SV.toList x 
+concat (Data x) = Data $ SV.concat $ SV.toList x
 
 

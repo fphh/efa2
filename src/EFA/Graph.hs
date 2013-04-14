@@ -1,7 +1,8 @@
 module EFA.Graph (
-   Graph(Graph),
+   Graph,
    isConsistent,
-   inEdges, outEdges,
+   -- inEdges, outEdges,
+   graphMap,
    nodeLabels,
    edgeLabels,
 
@@ -9,60 +10,63 @@ module EFA.Graph (
    Edge(Edge),
    LEdge,
 
+   reverse,
    reverseEdge,
    ixmap, nmap, emap, nmapWithInOut,
    empty,
    union,
-   getLEdge,
+   -- getLEdge,
    isEmpty,
-   lab,
+   -- lab,
    labNodes,
    labEdges,
    adjEdges,
-   pre, lpre, preEdgeLabels,
-   suc, lsuc, sucEdgeLabels,
+   pre, -- lpre, preEdgeLabels,
+   suc, -- lsuc, sucEdgeLabels,
    delNode,
-   delNodes,
+   -- delNodes,
    delNodeSet,
-   delEdges,
-   delEdgeSet,
+   -- delEdges,
+   -- delEdgeSet,
    lefilter,
-   elfilter,
-   propELFilter,
+   -- elfilter,
+   -- propELFilter,
    insNode, insNodes,
    insEdge, insEdges, insEdgeSet,
    fromList, fromMap,
    nodes, nodeSet,
    InOut,
-   mkInOutGraphFormat,
-   mapGraph,
    ) where
 
--- imaport qualified Data.Graph.Inductive as IG
-import EFA.Utility (mapFromSet, differenceMapSet, intersectionMapSet)
+-- import EFA.Utility (mapFromSet, differenceMapSet, intersectionMapSet)
 
 import qualified Data.Set as S
 import qualified Data.Map as M
 import qualified Data.Foldable as Fold
 import Control.Monad (liftM2)
 import Data.Monoid (Monoid, mempty, mappend)
-import Data.Foldable (Foldable, foldMap, fold)
-import Data.Tuple.HT (mapSnd, fst3, snd3, thd3)
-import Data.Char (toUpper)
+import Data.Foldable (Foldable, foldMap)
+import Data.Tuple.HT (fst3, snd3, thd3, mapFst3, mapThd3)
+-- import Data.Char (toUpper)
 
 import qualified Test.QuickCheck as QC
+
+import Prelude hiding (reverse)
 
 
 {-
 For all Graph's the 'isConsistent' predicate must be 'True'.
 -}
-data Graph node nodeLabel edgeLabel =
+newtype Graph node nodeLabel edgeLabel =
    Graph {
-      nodes :: M.Map node (S.Set node, nodeLabel, S.Set node),
-      edgeLabels :: M.Map (Edge node) edgeLabel
+      graphMap ::
+         M.Map node
+            (M.Map (Edge node) edgeLabel,
+             nodeLabel,
+             M.Map (Edge node) edgeLabel)
    } deriving (Eq)
 
-instance (Show n, Show nl, Show el) => Show (Graph n nl el) where
+instance (Show n, Show nl, Show el, Ord n) => Show (Graph n nl el) where
    showsPrec prec g =
       showParen (prec>10) $
          showString "Graph.fromList " .
@@ -71,20 +75,19 @@ instance (Show n, Show nl, Show el) => Show (Graph n nl el) where
          shows (M.toList $ edgeLabels g)
 
 
-isConsistent :: Ord n => Graph n nl el -> Bool
-isConsistent (Graph ns els) =
-   case M.keysSet els of
-      es ->
-         Fold.all (Fold.all (flip M.member ns)) es
-         &&
-         es == fold (M.mapWithKey (\n (_, _, outs) -> S.map (Edge n) outs) ns)
-         &&
-         es == fold (M.mapWithKey (\n (ins, _, _) -> S.map (flip Edge n) ins) ns)
+isConsistent :: (Ord n, Eq el) => Graph n nl el -> Bool
+isConsistent (Graph ns) =
+   foldMap fst3 ns == foldMap thd3 ns
+   &&
+   (Fold.and $ flip M.mapWithKey ns $
+      \n (ins,_nl,outs) ->
+         Fold.all ((n==) . to) (M.keysSet ins) &&
+         Fold.all ((n==) . from) (M.keysSet outs))
 
 
 type LNode n label = (n, label)
 
-data Edge node = Edge node node
+data Edge node = Edge {from, to :: node}
    deriving (Show, Eq, Ord)
 
 instance Functor Edge where
@@ -97,12 +100,37 @@ instance (QC.Arbitrary n) => QC.Arbitrary (Edge n) where
    arbitrary = liftM2 Edge QC.arbitrary QC.arbitrary
    shrink (Edge x y) = map (uncurry Edge) $ QC.shrink (x,y)
 
+
+nodes ::
+   (Ord node) =>
+   Graph node nodeLabel edgeLabel ->
+   M.Map node (S.Set node, nodeLabel, S.Set node)
+nodes =
+   fmap
+      (\(ins,n,outs) ->
+         (S.map from $ M.keysSet ins, n, S.map to $ M.keysSet outs)) .
+   graphMap
+
+
+edgeLabels ::
+   (Ord node) =>
+   Graph node nodeLabel edgeLabel ->
+   M.Map (Edge node) edgeLabel
+edgeLabels =
+   foldMap fst3 . graphMap
+
+
+reverse :: (Ord n) => Graph n nl el -> Graph n nl el
+reverse =
+   Graph .
+   fmap
+      (\(ins, nl, outs) ->
+         (M.mapKeys reverseEdge outs, nl, M.mapKeys reverseEdge ins)) .
+   graphMap
+
 reverseEdge :: Edge node -> Edge node
 reverseEdge (Edge x y) = Edge y x
 
---edgeFst, edgeSnd :: Edge node -> node
---edgeFst (Edge x _) = x
---edgeSnd (Edge _ y) = y
 
 type LEdge n label = (Edge n, label)
 
@@ -116,14 +144,16 @@ ixmap ::
    (node0 -> node1) ->
    Graph node0 nodeLabel edgeLabel ->
    Graph node1 nodeLabel edgeLabel
-ixmap f (Graph nls els) =
-   Graph
-      (fmap (\(ins,nl,outs) -> (S.map f ins, nl, S.map f outs)) $
-       M.mapKeysWith (error "Graph.ixmap: node map is not injective") f nls)
-      (M.mapKeys (fmap f) els)
+ixmap f =
+   Graph .
+   fmap
+      (\(ins,nl,outs) ->
+         (M.mapKeys (fmap f) ins, nl, M.mapKeys (fmap f) outs)) .
+   M.mapKeysWith (error "Graph.ixmap: node map is not injective") f .
+   graphMap
 
 empty :: Graph node nodeLabel edgeLabel
-empty = Graph M.empty M.empty
+empty = Graph M.empty
 
 {- |
 The node sets must be disjoint.
@@ -133,67 +163,54 @@ union ::
    Graph node nodeLabel edgeLabel ->
    Graph node nodeLabel edgeLabel ->
    Graph node nodeLabel edgeLabel
-union (Graph ns0 els0) (Graph ns1 els1) =
+union (Graph ns0) (Graph ns1) =
    Graph
       (M.unionWith (error "Graph.union: node sets overlap") ns0 ns1)
-      (M.union els0 els1)
 
 instance (Ord node) => Monoid (Graph node nodeLabel edgeLabel) where
    mempty = empty
    mappend = union
 
 
+{-
 inEdges, outEdges :: Graph n nl el -> M.Map n (S.Set n)
 inEdges  = fmap fst3 . nodes
 outEdges = fmap thd3 . nodes
+-}
 
-nodeLabels :: Graph n nl el -> M.Map n nl
+nodeLabels :: (Ord n) => Graph n nl el -> M.Map n nl
 nodeLabels = fmap snd3 . nodes
 
-
-getLEdge :: (Ord n) => Graph n nl el -> n -> n -> Maybe (LEdge n el)
-getLEdge g from to =
-   let e = Edge from to
-   in  fmap ((,) e) $ M.lookup e (edgeLabels g)
-
 {-
-instance (Ord n, Enum n) => IG.Graph (Graph n) where
-   empty = Graph M.empty M.empty M.empty M.empty
-   isEmpty = isEmpty
-   match ni g =
-      if isEmpty g
-        then (Nothing, g)
-        else (Just cont, delNode g n)
-     where n = toEnum ni
-           cont =
-              (map (mapSnd fromEnum) $ mkInAdj g n,
-               ni,
-               nodeLabels g  M.! n,
-               map (mapSnd fromEnum) $ mkOutAdj g n)
-   labNodes = map (\(n,l) -> (fromEnum n, l)) . labNodes
-   labEdges = map (\(n,m,l) -> (fromEnum n, fromEnum m, l)) . labEdges
-   mkGraph ns es =
-      mkGraph
-         (map (\(n,l) -> (toEnum n, l)) ns)
-         (map (\(n,m,l) -> (toEnum n, toEnum m, l)) es)
+getLEdge :: (Ord n) => Graph n nl el -> n -> n -> Maybe (LEdge n el)
+getLEdge g x y =
+   let e = Edge x y
+   in  fmap ((,) e) $ M.lookup e (edgeLabels g)
 -}
 
 isEmpty :: Graph  n nl el -> Bool
-isEmpty = M.null . nodes
+isEmpty = M.null . graphMap
 
+{-
 lab :: Ord n => Graph n nl el -> n -> Maybe nl
 lab g n = fmap snd3 $ M.lookup n (nodes g)
+-}
 
-labNodes :: Graph n nl el -> [LNode n nl]
+labNodes :: (Ord n) => Graph n nl el -> [LNode n nl]
 labNodes = M.toList . nodeLabels
 
-labEdges :: Graph n nl el -> [LEdge n el]
+labEdges :: (Ord n) => Graph n nl el -> [LEdge n el]
 labEdges = M.toList . edgeLabels
 
 pre, suc :: (Ord n) => Graph n nl el -> n -> [n]
-pre g n = S.toList . M.findWithDefault (error "pre: unknown node") n . inEdges $ g
-suc g n = S.toList . M.findWithDefault (error "suc: unknown node") n . outEdges $ g
+pre g n =
+   S.toList . S.map from . M.keysSet . fst3 .
+   M.findWithDefault (error "pre: unknown node") n . graphMap $ g
+suc g n =
+   S.toList . S.map to . M.keysSet . thd3 .
+   M.findWithDefault (error "suc: unknown node") n . graphMap $ g
 
+{-
 lpre, lsuc :: (Ord n) => Graph n nl el -> n -> [LNode n el]
 lpre g@(Graph ns _els) n =
    preEdgeLabels g n $
@@ -208,33 +225,49 @@ preEdgeLabels, sucEdgeLabels ::
 preEdgeLabels g n = filterLEdges (edgeLabels g) (flip Edge n)
 sucEdgeLabels g n = filterLEdges (edgeLabels g) (Edge n)
 
+filterLEdges ::
+   (Ord n, Ord e) =>
+   M.Map e el -> (n -> e) -> S.Set n -> [(n, el)]
+filterLEdges els edge =
+   M.elems . M.intersectionWith (flip (,)) els .
+   M.mapKeys edge . mapFromSet id
+-}
+
 
 adjEdges ::
    Ord n => Graph n nl el -> n -> S.Set (Edge n)
 adjEdges g n =
-   nodeEdges n $
-   M.findWithDefault (error "delNode: unknown node") n $
-   nodes g
+   (\(ins,_nl,outs) -> M.keysSet ins `S.union` M.keysSet outs) $
+   M.findWithDefault (error "adjEdges: unknown node") n $
+   graphMap g
 
-delNode :: (Ord n) => Graph n nl el -> n -> Graph n nl el
-delNode g@(Graph nls els) n =
-   Graph
-      (fmap (\(ins, n0, outs) -> (S.delete n ins, n0, S.delete n outs)) $
-       M.delete n nls) $
-   differenceMapSet els $ adjEdges g n
+{-
+In constrast to Map.intersectWith ($) unaffected are preserved.
+-}
+applyMap :: (Ord k) => M.Map k (a -> a) -> M.Map k a -> M.Map k a
+applyMap f x =
+   M.union (M.intersectionWith ($) f x) x
 
+{- |
+Node to be deleted must be contained in the graph.
+-}
+delNode :: (Ord n) => n -> Graph n nl el -> Graph n nl el
+delNode n (Graph ns) =
+   case M.findWithDefault (error "delNode: unknown node") n ns of
+      (ins, _nl, outs) ->
+         Graph $
+         applyMap (M.mapKeys from $ M.mapWithKey (\e _ -> mapThd3 $ M.delete e) ins)  $
+         applyMap (M.mapKeys to   $ M.mapWithKey (\e _ -> mapFst3 $ M.delete e) outs) $
+         M.delete n ns
+
+{- |
+Could be implemented more efficiently.
+-}
 delNodeSet ::
    Ord n => S.Set n -> Graph n nl el -> Graph n nl el
-delNodeSet delNs (Graph ns els) =
-   Graph
-      (fmap
-         (\(ins, n, outs) ->
-            (S.difference ins delNs, n, S.difference outs delNs)) $
-         differenceMapSet ns delNs) $
-   differenceMapSet els $
-   fold $ M.mapWithKey nodeEdges $
-   intersectionMapSet ns delNs
+delNodeSet delNs g = S.foldl (flip delNode) g delNs
 
+{-
 nodeEdges ::
    Ord n => n -> (S.Set n, a, S.Set n) -> S.Set (Edge n)
 nodeEdges n (ins, _, outs) =
@@ -267,14 +300,21 @@ elfilter ::
    Graph n nl el -> Graph n nl el
 elfilter f g =
    delEdgeHelp g $ mapSnd M.keys $ M.partition f $ edgeLabels g
+-}
 
 lefilter ::
    (Ord n) =>
    (LEdge n el -> Bool) ->
    Graph n nl el -> Graph n nl el
-lefilter f g =
-   delEdgeHelp g $ mapSnd M.keys $ M.partitionWithKey (curry f) $ edgeLabels g
+lefilter f =
+   Graph .
+   fmap
+      (\(ins, nl, outs) ->
+         (M.filterWithKey (curry f) ins, nl,
+          M.filterWithKey (curry f) outs)) .
+   graphMap
 
+{-
 delEdgeHelp ::
    (Ord n) =>
    Graph n nl el -> (M.Map (Edge n) el, [Edge n]) -> Graph n nl el
@@ -301,41 +341,50 @@ compareELFilter es =
           foldMap (foldMap S.singleton) $ M.keys es
    in  (elfilter even $ fromMap ns es,
         fromMap ns $ M.filter even es)
+-}
 
+{- |
+In the current implementation
+existing nodes are replaced with new labels
+and existing edges are maintained.
+However, I think we should better have an extra function for this purpose
+and you should not rely on this behavior.
+-}
 insNode ::
    (Ord n) => LNode n nl -> Graph n nl el -> Graph n nl el
-insNode (n,nl) g =
-   g{nodes =
-        M.insertWith
-           (\_ (ins, _, outs) -> (ins, nl, outs))
-           n (S.empty, nl, S.empty)
-           (nodes g)}
-
-insEdge ::
-   (Ord n) => LEdge n el -> Graph n nl el -> Graph n nl el
-insEdge es = insEdges [es]
-
+insNode (n,nl) =
+   Graph .
+   M.insertWith
+      (\_ (ins, _, outs) -> (ins, nl, outs))
+      n (M.empty, nl, M.empty) .
+   graphMap
 
 insNodes ::
    (Ord n) => [LNode n nl] -> Graph n nl el -> Graph n nl el
 insNodes = flip (foldl (flip insNode))
 
+insEdge ::
+   (Ord n) => LEdge n el -> Graph n nl el -> Graph n nl el
+insEdge es = insEdges [es]
+
 insEdges ::
    (Ord n) => [LEdge n el] -> Graph n nl el -> Graph n nl el
 insEdges es = insEdgeSet (M.fromList es)
 
+{- |
+In the current implementation
+existing edges are replaced with new labels.
+However, I think we should better have an extra function for this purpose
+and you should not rely on this behavior.
+-}
 insEdgeSet ::
    (Ord n) => M.Map (Edge n) el -> Graph n nl el -> Graph n nl el
-insEdgeSet es (Graph ns els) =
-   Graph
-      (fmap
-          (\(ins, n, outs) newIns newOuts ->
-             (S.union ins newIns, n, S.union outs newOuts)) ns
-       $$ (makeInMap  ns $ M.keys es)
-       $$ (makeOutMap ns $ M.keys es))
-      (M.unionWith (error "insEdgeSet: edge already contained in graph")
-         els es)
-
+insEdgeSet es =
+   let ess = M.mapWithKey M.singleton es
+   in  Graph .
+       applyMap (fmap (\new -> mapFst3 (M.union new)) $ M.mapKeysWith M.union to   ess) .
+       applyMap (fmap (\new -> mapThd3 (M.union new)) $ M.mapKeysWith M.union from ess) .
+       graphMap
 
 fromList ::
    (Ord n) =>
@@ -347,11 +396,16 @@ fromMap ::
    (Ord n) =>
    M.Map n nl -> M.Map (Edge n) el -> Graph n nl el
 fromMap ns es =
-   case M.keys es of
-      esl ->
-         Graph (fmap (,,) (makeInMap ns esl) $$ ns $$ (makeOutMap ns esl)) es
+   let fill = flip M.union (fmap (const M.empty) ns)
+       ess = M.mapWithKey M.singleton es
+   in  Graph $
+       M.intersectionWith (\nl (ins,outs) -> (ins,nl,outs)) ns $
+       M.intersectionWith (,)
+          (fill $ M.mapKeysWith M.union to   ess)
+          (fill $ M.mapKeysWith M.union from ess)
 
 
+{-
 infixl 0 $$
 
 ($$) :: (Ord n) => M.Map n (a -> b) -> M.Map n a -> M.Map n b
@@ -364,18 +418,18 @@ makeOutMap ns =
    map (\(Edge x y) -> (x, S.singleton y))
 
 makeInMap ns = makeOutMap ns . map reverseEdge
-
+-}
 
 nmap :: (nl0 -> nl1) -> Graph n nl0 el -> Graph n nl1 el
-nmap f (Graph ns els) =
-   Graph (fmap (\(ins,n,outs) -> (ins, f n, outs)) ns) els
+nmap f =
+   Graph . fmap (\(ins,n,outs) -> (ins, f n, outs)) . graphMap
 
 emap :: (el0 -> el1) -> Graph n nl el0 -> Graph n nl el1
-emap f (Graph ns els) =
-   Graph ns (fmap f els)
+emap f =
+   Graph . fmap (\(ins,n,outs) -> (fmap f ins, n, fmap f outs)) . graphMap
 
 nodeSet :: Graph n nl el -> S.Set n
-nodeSet = M.keysSet . nodes
+nodeSet = M.keysSet . graphMap
 
 
 type InOut n nl el = ([LNode n el], LNode n nl, [LNode n el])
@@ -383,37 +437,11 @@ type InOut n nl el = ([LNode n el], LNode n nl, [LNode n el])
 nmapWithInOut ::
    (Ord n) =>
    (InOut n nl0 el -> nl1) -> Graph n nl0 el -> Graph n nl1 el
-nmapWithInOut f g@(Graph ns els) =
-   Graph
-      (M.mapWithKey
-          (\n ios@(ins,_nl,outs) -> (ins, f $ inOut g n ios, outs)) ns)
-      els
-
-inOut ::
-   (Ord n) =>
-   Graph n nl el ->
-   n -> (S.Set n, t, S.Set n) ->
-   ([LNode n el], (n, t), [LNode n el])
-inOut g n (ins,nl,outs) =
-   (preEdgeLabels g n ins,
-    (n,nl),
-    sucEdgeLabels g n outs)
-
-mkInOutGraphFormat ::
-   (Ord n) => Graph n nl el -> [InOut n nl el]
-mkInOutGraphFormat g@(Graph ns _els) =
-   map (\(n, ios) -> inOut g n ios) $
-   M.toList ns
-
-filterLEdges ::
-   (Ord n, Ord e) =>
-   M.Map e el -> (n -> e) -> S.Set n -> [(n, el)]
-filterLEdges els edge =
-   M.elems . M.intersectionWith (flip (,)) els .
-   M.mapKeys edge . mapFromSet id
-
-
-mapGraph ::
-   (Ord n) =>
-   (InOut n nl el -> a) -> Graph n nl el -> [a]
-mapGraph f g = map f (mkInOutGraphFormat g)
+nmapWithInOut f =
+   Graph .
+   M.mapWithKey
+      (\n (ins,nl,outs) ->
+         (ins,
+          f (M.toList $ M.mapKeys to ins, (n,nl), M.toList $ M.mapKeys to outs),
+          outs)) .
+   graphMap

@@ -775,23 +775,6 @@ splitFactors s ef xf ns =
 -----------------------------------------------------------------
 
 
--- In principle, we could remove "dead nodes", but
--- then the storage equations would not work.
--- Therefore we should not remove "dead nodes"
--- iff they are storages.
--- Anyway, I don't remove dead nodes,
--- because it will make DirSequFlowGraph more complicated
--- or the generation of storage equations will be more complicated.
-
-toDirSequFlowGraph ::
-  (Ord node) =>
-  TD.SequFlowGraph node -> TD.DirSequFlowGraph node
-toDirSequFlowGraph =
-  Gr.emap (const ()) . Gr.lefilter TD.isDirEdge
-
------------------------------------------------------------------
-
-
 
 queryEnv ::
   (Traversable env, Traversable rec) =>
@@ -831,7 +814,7 @@ solve ::
   (forall s. EquationSystem rec node s a v) ->
   Env.Complete node (rec (Result a)) (rec (Result v))
 solve (_rngs, g) given =
-  solveSimple (given <> fromGraph True (toDirSequFlowGraph g))
+  solveSimple (given <> fromGraph True (TD.dirFromSequFlowGraph g))
 
 
 --------------------------------------------------------------------
@@ -845,7 +828,7 @@ solveFromMeasurement ::
   (forall s. EquationSystem rec node s a v) ->
   Env.Complete node (rec (Result a)) (rec (Result v))
 solveFromMeasurement (_rngs, g) given =
-  solveSimple (given <> fromGraph False (toDirSequFlowGraph g))
+  solveSimple (given <> fromGraph False (TD.dirFromSequFlowGraph g))
 
 
 
@@ -867,6 +850,6 @@ conservativelySolve ::
   (forall s. EquationSystem rec node s a v) ->
   Env.Complete node (rec (Result a)) (rec (Result v))
 conservativelySolve (_rngs, g) given =
-  solveSimple (given <> fromGraph True (toDirSequFlowGraph g))
+  solveSimple (given <> fromGraph True (TD.dirFromSequFlowGraph g))
   <>
   solveSimple given

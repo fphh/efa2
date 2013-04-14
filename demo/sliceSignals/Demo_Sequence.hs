@@ -11,8 +11,8 @@ import qualified EFA.Signal.Sequence as Sequ
 import EFA.Signal.SequenceData (SequData)
 import EFA.Signal.Record (PowerRecord, Record(Record))
 
-         
-          
+
+
 import EFA.Signal.Signal (PSigL, (.++))
 import EFA.Signal.Base (Val)
 import qualified EFA.Signal.Plot as Plot

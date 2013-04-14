@@ -168,7 +168,7 @@ mainSymbolic = do
          (fmap Record.summands scalarEnv)
          (fmap simplifiedSummands signalEnv)
 
-   Draw.sequFlowGraphAbsWithEnv "" seqTopo $
+   Draw.sequFlowGraphAbsWithEnv (Draw.xterm "" seqTopo) $
       Env.Complete
          (fmap (Record.Absolute . Record.summands) scalarEnv)
          (fmap (Record.Absolute . simplifiedSummands) signalEnv)
@@ -219,7 +219,7 @@ mainNumeric = do
                 Record.assignDeltaMap x
          AssignMap.print assigns
          Plot.stackIO "Decomposition of total output energy"
-            (Idx.delta $ Var.index eout)
+            (formatValue $ Idx.delta $ Var.index eout)
             (AssignMap.ignoreUndetermined assigns)
 
 

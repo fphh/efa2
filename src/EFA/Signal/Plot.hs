@@ -26,6 +26,7 @@ import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Data as D
 import qualified EFA.Signal.Vector as SV
 import qualified EFA.Signal.Record as Record
+import qualified EFA.Signal.Colour as Colour
 
 import EFA.Signal.SequenceData (SequData)
 
@@ -60,6 +61,7 @@ import qualified Graphics.Gnuplot.Value.Atom as Atom
 import qualified Graphics.Gnuplot.Value.Tuple as Tuple
 
 import qualified Graphics.Gnuplot.LineSpecification as LineSpec
+import qualified Graphics.Gnuplot.ColorSpecification as ColourSpec
 
 import qualified Graphics.Gnuplot.Frame as Frame
 import qualified Graphics.Gnuplot.Frame.Option as Opt
@@ -67,15 +69,15 @@ import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
 import qualified Graphics.Gnuplot.Frame.OptionSet.Style as OptsStyle
 import qualified Graphics.Gnuplot.Frame.OptionSet.Histogram as Histogram
 
-import qualified EFA.Utility.TotalMap as TMap
 import qualified Data.Map as M
 import qualified Data.List as L
 import qualified Data.Foldable as Fold
+import qualified Data.List.Key as Key
 import Control.Monad (zipWithM_)
 import Control.Functor.HT (void)
-import Data.Traversable (traverse)
 import Data.Foldable (foldMap)
 import Data.Monoid (mconcat)
+
 -- import Control.Concurrent (threadDelay)
 
 {-
@@ -122,6 +124,7 @@ signalStyle =
       LineSpec.pointSize 2 $
       -}
       LineSpec.deflt
+
 
 signalIO ::
    (Signal signal) =>
@@ -300,12 +303,13 @@ instance
 -- | Plotting Records ---------------------------------------------------------------
 
 -- | Line Style
-recordStyle :: (Show k) => k -> Plot2D.T x y -> Plot2D.T x y
-recordStyle key =
+recordStyle :: (Show k) => k -> String -> Plot2D.T x y -> Plot2D.T x y
+recordStyle key colour =
    fmap $ Graph2D.lineSpec $
       LineSpec.pointSize 0.3$
       LineSpec.pointType 1 $
-      LineSpec.lineWidth 1 $
+      LineSpec.lineWidth 1.6 $
+      lineColour colour $
       LineSpec.title (show key) $
       LineSpec.deflt
 
@@ -324,38 +328,37 @@ recordAttr name =
 
 
 record ::
-   (Show id, TDisp typ0, TDisp typ1,
+   (Show id, Ord id, TDisp typ0, TDisp typ1,
     SV.Walker v, SV.FromList v,
     SV.Storage v a, Fractional a, Atom.C a, Tuple.C a) =>
-   Record s typ0 typ1 id v a -> Plot2D.T a a
+   Record s1 s2 typ0 typ1 id v a -> Plot2D.T a a
 record (Record time pMap) =
-   foldMap
-      (\(key, sig) ->
-         recordStyle key $
+   Fold.fold $
+   M.mapWithKey
+      (\key (col, sig) ->
+         recordStyle key col $
          Plot2D.list Graph2D.linesPoints $
          zip (getData time) (getData sig)) $
-   M.toList pMap
-
+   Colour.adorn pMap
 
 recordIO ::
    (Fractional y,
-    Show id,
+    Show id, Ord id,
     SV.Walker v, SV.Storage v y, SV.FromList v,
     TDisp t2, TDisp t1,
     Tuple.C y, Atom.C y) =>
-   String -> Record s t1 t2 id v y -> IO ()
+   String -> Record s1 s2 t1 t2 id v y -> IO ()
 recordIO name =
    void . Plot.plotDefault . Frame.cons (recordAttr name) . record
 
 
 recordIOList ::
    (Fractional y,
-    Show id,
+    Show id, Ord id,
     SV.Walker v, SV.Storage v y, SV.FromList v,
     TDisp t2, TDisp t1,
     Tuple.C y, Atom.C y) =>
-   String -> [Record s t1 t2 id v y] -> IO ()
-   
+   String -> [Record s1 s2 t1 t2 id v y] -> IO ()
 recordIOList name recList =
    void $ Plot.plotDefault $ Frame.cons (recordAttr name) $ foldMap record recList
 
@@ -370,8 +373,8 @@ recordSplitPlus ::
     SV.Storage v y,
     SV.FromList v,
     SV.Len (v y)) =>
-   Int -> String -> Record s t1 t2 id v y ->
-   [(id, TC s t2 (Data (v :> Nil) y))] -> IO ()
+   Int -> String -> Record s1 s2 t1 t2 id v y ->
+   [(id, TC s2 t2 (Data (v :> Nil) y))] -> IO ()
 recordSplitPlus n name r list =
    zipWithM_
       (\k -> recordIO (name ++ " - Part " ++ show (k::Int)))
@@ -389,7 +392,7 @@ recordSplit ::
     SV.Walker v,
     SV.Storage v y,
     SV.FromList v) =>
-   Int -> String -> Record s t1 t2 id v y -> IO ()
+   Int -> String -> Record s1 s2 t1 t2 id v y -> IO ()
 recordSplit n name r =
    zipWithM_
       (\k -> recordIO (name ++ " - Part " ++ show (k::Int)))
@@ -407,7 +410,7 @@ recordSelect ::
     SV.Walker v,
     SV.Storage v y,
     SV.FromList v) =>
-   [id] -> String -> Record s t1 t2 id v y -> IO ()
+   [id] -> String -> Record s1 s2 t1 t2 id v y -> IO ()
 recordSelect idList name = recordIO name . Record.extract idList
 
 
@@ -415,11 +418,11 @@ recordSelect idList name = recordIO name . Record.extract idList
 
 sequenceFrame ::
    (Fractional y,
-    Show id,
+    Show id, Ord id,
     SV.Walker v, SV.Storage v y, SV.FromList v,
     TDisp t2, TDisp t1,
     Tuple.C y, Atom.C y) =>
-   String -> SequData (Record s t1 t2 id v y) ->
+   String -> SequData (Record s1 s2 t1 t2 id v y) ->
    SequData (Frame.T (Graph2D.T y y))
 sequenceFrame sqName =
    SD.mapWithSection
@@ -435,7 +438,7 @@ sequenceIO ::
     SV.Walker v,
     SV.Storage v y,
     SV.FromList v) =>
-   String -> SequData (Record s t1 t2 id v y) -> IO ()
+   String -> SequData (Record s1 s2 t1 t2 id v y) -> IO ()
 sequenceIO name =
    Fold.mapM_ Plot.plotDefault . sequenceFrame name
 
@@ -447,7 +450,7 @@ sequenceSplit ::
     SV.Walker v,
     SV.Storage v y,
     SV.FromList v) =>
-   Int -> String -> SequData (Record s t1 t2 id v y) -> IO ()
+   Int -> String -> SequData (Record s1 s2 t1 t2 id v y) -> IO ()
 sequenceSplit n name =
    Fold.sequence_ .
    SD.mapWithSection (\ x -> recordSplit n (name ++ " - " ++ show x))
@@ -460,7 +463,7 @@ sequenceSelect ::
     SV.Walker v,
     SV.Storage v y,
     SV.FromList v) =>
-   [id] -> String -> SequData (Record s t1 t2 id v y) ->  IO ()
+   [id] -> String -> SequData (Record s1 s2 t1 t2 id v y) ->  IO ()
 sequenceSelect idList name =
    sequenceIO name . fmap (Record.extract idList)
 
@@ -469,46 +472,48 @@ optKeyOutside :: Opts.T graph -> Opts.T graph
 optKeyOutside =
    Opts.add (Opt.custom "key" "position") ["outside"]
 
+lineColour :: String -> LineSpec.T -> LineSpec.T
+lineColour = LineSpec.lineColor . ColourSpec.name
 
 stackLineSpec ::
-   FormatValue term => term -> Plot2D.T x y -> Plot2D.T x y
-stackLineSpec term =
-   fmap (Graph2D.lineSpec
-            (LineSpec.title (Format.unASCII $ formatValue term) LineSpec.deflt))
+   (FormatValue term, Show term) => term -> String -> Plot2D.T x y -> Plot2D.T x y
+stackLineSpec term colour =
+   fmap (Graph2D.lineSpec (LineSpec.title (Format.unASCII $ formatValue term)
+          (lineColour colour $ LineSpec.deflt)))
 
 stackAttr ::
-   (FormatValue var) =>
-   String -> var -> Opts.T (Graph2D.T Int Double)
+   String -> Format.ASCII -> Opts.T (Graph2D.T Int Double)
 stackAttr title var =
    Opts.title title $
       Histogram.rowstacked $
       OptsStyle.fillBorderLineType (-1) $
       OptsStyle.fillSolid $
       optKeyOutside $
-      Opts.xTicks2d [(Format.unASCII $ formatValue var, 0)] $
+      Opts.xTicks2d [(Format.unASCII var, 0)] $
       Opts.deflt
 
 stack ::
-   (FormatValue term) =>
+   (FormatValue term, Show term, Ord term) =>
    M.Map term Double -> Plot2D.T Int Double
 stack =
-   Fold.fold .
-   M.mapWithKey
-      (\term val ->
-         stackLineSpec term $
-         Plot2D.list Graph2D.histograms [val])
+   foldMap
+      (\(col, (term, val)) ->
+         stackLineSpec term col $
+           Plot2D.list Graph2D.histograms [val]) .
+   Colour.adorn .
+   Key.sort (abs . snd) .
+   M.toList
 
 
 stackIO ::
-   (FormatValue var, FormatValue term) =>
-   String -> var -> M.Map term Double -> IO ()
-stackIO title var =
-   void . Plot.plotDefault . Frame.cons (stackAttr title var) . stack
+   (FormatValue term, Show term, Ord term) =>
+   String -> Format.ASCII -> M.Map term Double -> IO ()
+stackIO title var m =
+   void . Plot.plotDefault . Frame.cons (stackAttr title var) . stack $ m
 
 
 stacksAttr ::
-   (FormatValue var) =>
-   String -> [var] -> Opts.T (Graph2D.T Int Double)
+   String -> [Format.ASCII] -> Opts.T (Graph2D.T Int Double)
 stacksAttr title vars =
    Opts.title title $
       Histogram.rowstacked $
@@ -516,30 +521,30 @@ stacksAttr title vars =
       OptsStyle.fillSolid $
       optKeyOutside $
       Opts.boxwidthAbsolute 0.9 $
-      Opts.xTicks2d (zip (map (Format.unASCII . formatValue) vars) [0..]) $
+      Opts.xTicks2d (zip (map Format.unASCII vars) [0..]) $
       Opts.deflt
 
 stacks ::
-   (Ord term, FormatValue term) =>
-   [M.Map term Double] -> Plot2D.T Int Double
+   (Ord term, FormatValue term, Show term) =>
+   M.Map term [Double] -> Plot2D.T Int Double
 stacks =
-   Fold.fold .
-   M.mapWithKey
-      (\term val ->
-         stackLineSpec term $
-         Plot2D.list Graph2D.histograms val) .
-   TMap.core . traverse (TMap.cons 0)
+   foldMap
+      (\(col, (term, vals)) ->
+         stackLineSpec term col $
+         Plot2D.list Graph2D.histograms vals) .
+   Colour.adorn .
+   Key.sort (maximum . map abs . snd) .
+   M.toList
 
+{- |
+The length of @[var]@ must match the one of the @[Double]@ lists.
+-}
 stacksIO ::
-   (FormatValue var, Ord term, FormatValue term) =>
-   String -> [(var, M.Map term Double)] -> IO ()
-stacksIO title xs =
-   case unzip xs of
-      (vars, ys) ->
-         void . Plot.plotDefault . Frame.cons (stacksAttr title vars) . stacks $ ys
-
-
-
+   (Ord term, FormatValue term, Show term) =>
+   String -> [Format.ASCII] -> M.Map term [Double] -> IO ()
+stacksIO title vars xs =
+   void . Plot.plotDefault .
+   Frame.cons (stacksAttr title vars) . stacks $ xs
 
 class Atom.C (Value tc) => AxisLabel tc where
    type Value tc :: *

@@ -34,11 +34,11 @@ pSig2 = pSig1 .* n1
 
 -- Make Time-Step-Integration to get 1D energy flow signals
 fSig1, fSig2 :: FFSig
-fSig1 = S.sigPartInt time pSig1
-fSig2 = S.sigPartInt time pSig2
+fSig1 = S.partIntegrate time pSig1
+fSig2 = S.partIntegrate time pSig2
 
 nVal2 :: Scal (Typ A N Tt) Val
-nVal2 = S.sigSum fSig2 ./ S.sigSum fSig1
+nVal2 = S.sum fSig2 ./ S.sum fSig1
 
 main :: IO ()
 main = do

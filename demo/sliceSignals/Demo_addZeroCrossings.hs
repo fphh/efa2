@@ -16,7 +16,7 @@ import qualified Data.Map as M
 data Node = Node0 | Node1 | Node2 deriving (Eq, Ord, Show)
 
 t :: TSigL
-t = S.fromList [0,1,2] 
+t = S.fromList [0,1,2]
 
 p1, p2, p3 :: PSigL
 p1 = S.fromList [-1,1,1]

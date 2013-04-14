@@ -183,9 +183,10 @@ pmapList =
 recList :: [PowerRecord Node.Int [] Double]
 recList = map (Record time) pmapList
 
+
 list :: [(Int, (String, (PowerRecord Node.Int [] Double, SequData (PowerRecord Node.Int [] Double))))]
-list = idxList $ 
-  zip titleList 
+list = idxList $
+  zip titleList
       (zip recList (map  (genSequ . addZeroCrossings) recList))
 
 f :: (Num a, Show a, ToTable sequ) =>
@@ -199,5 +200,5 @@ f (idx, (title, (pRec, sq))) = do
 
 main :: IO ()
 main = mapM_ f list
-  
-    
+
+
