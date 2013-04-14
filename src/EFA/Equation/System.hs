@@ -682,7 +682,7 @@ fromNodes equalInOutSums =
                                     Nothing -> storage bn
                                     Just sn -> integrate $ insum sn)
                              TD.Out ->
-                                fromOutStorages bn (map to insStore)
+                                fromOutStorages insStore
                                 <>
                                 splitStoreEqs stvaroutsum insStore
                                 <>
@@ -747,15 +747,12 @@ fromInStorages sn@(Idx.BndNode bnd n) outs =
 
 fromOutStorages ::
   (Eq a, Product a, Record rec, Node.C node) =>
-  Idx.BndNode node -> [Idx.Boundary] ->
+  [Idx.ForNode Idx.StorageEdge node] ->
   EquationSystem rec node s a v
-fromOutStorages (Idx.BndNode sec n) ins0 =
+fromOutStorages ins0 =
   flip foldMap (NonEmpty.fetch ins0) $ \ins ->
   (withLocalVar $ \s ->
-    splitFactors s
-      (\sect -> maxEnergy $ Idx.ForNode (Idx.StorageEdge sect sec) n)
-      (\sect -> stxfactor $ Idx.ForNode (Idx.StorageEdge sec sect) n)
-      ins)
+    splitFactors s (maxEnergy . Idx.flip) stxfactor ins)
 
 splitFactors ::
    (Eq x, Product x, Record rec) =>
