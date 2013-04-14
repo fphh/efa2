@@ -45,6 +45,8 @@ module EFA.Graph (
 
 -- import EFA.Utility (mapFromSet, differenceMapSet, intersectionMapSet)
 
+import qualified EFA.Utility.TypeConstructor as TC
+
 import qualified Data.Set as S
 import qualified Data.Map as M
 import qualified Data.Foldable as Fold
@@ -157,6 +159,18 @@ data
       | EUnDirEdge (UnDirEdge node)
    deriving (Eq, Ord, Show)
 
+
+instance TC.Eq DirEdge where eq = (==)
+instance TC.Ord DirEdge where cmp = compare
+instance TC.Show DirEdge where showsPrec = showsPrec
+
+instance TC.Eq UnDirEdge where eq = (==)
+instance TC.Ord UnDirEdge where cmp = compare
+instance TC.Show UnDirEdge where showsPrec = showsPrec
+
+instance TC.Eq EitherEdge where eq = (==)
+instance TC.Ord EitherEdge where cmp = compare
+instance TC.Show EitherEdge where showsPrec = showsPrec
 
 
 instance Functor DirEdge where
