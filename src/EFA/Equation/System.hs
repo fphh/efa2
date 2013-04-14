@@ -670,9 +670,8 @@ fromNodes equalInOutSums =
                       mwhen equalInOutSums $
                       withSecNode $ \sn -> insum sn =%= outsum sn
                    TD.Storage (Just dir) ->
-                      let from (Idx.ForNode (Idx.StorageEdge x _) _) = x
-                          to (Idx.ForNode (Idx.StorageEdge _ x) _) = x
-                          inout = (map from insStore, bn, map to outsStore)
+                      let to (Idx.ForNode (Idx.StorageEdge _ x) _) = x
+                          inout = (map to insStore, bn, map to outsStore)
                       in  case dir of
                              TD.In  ->
                                 fromInStorages inout
