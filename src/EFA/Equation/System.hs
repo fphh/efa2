@@ -750,10 +750,11 @@ fromOutStorages ::
   (Eq a, Product a, Record rec, Node.C node) =>
   [Idx.ForNode Idx.StorageEdge node] ->
   EquationSystem rec node s a v
-fromOutStorages ins0 =
-  flip foldMap (NonEmpty.fetch ins0) $ \ins ->
-  (withLocalVar $ \s ->
-    splitFactors s (maxEnergy . Idx.flip) stxfactor ins)
+fromOutStorages ins =
+   withLocalVar $ \s ->
+      foldMap
+         (splitFactors s (maxEnergy . Idx.flip) stxfactor)
+         (NonEmpty.fetch ins)
 
 splitFactors ::
    (Eq x, Product x, Record rec) =>
