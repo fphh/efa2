@@ -2,6 +2,36 @@
 
 module Main where
 
+
+
+{-
+
+mit fingertree.intervalmap schneller das dreieck suchen.
+
+<a,u>=1
+<a,v>=1
+<a,w>=1
+
+a^T*(u,v,w) = (1,1,1)
+
+(u,v,w)^T * a = (1,1,1)^T
+
+<a,x>=1
+
+a0*x0+a1*x1+a2*x2 = 1
+a2*x2 = 1 - a0*x0 - a1*x1
+x2 = (1 - a0*x0 - a1*x1) / a2
+
+a = (u,v,w)^T^-1 * (1,1,1)^T
+
+(p,q,r) = transpose (u,v,w)
+a0 = det3 ones q r / detA; a1 = det3 p ones r / detA; a2 = det3 p q ones / detA
+
+
+x2 = (det3 p q r - det3 ones q r * x0 - det3 p ones r * x1) / det3 p q ones
+-}
+
+
 import Control.Monad (liftM2)
 
 import qualified Data.Map as M
@@ -15,9 +45,38 @@ import Debug.Trace
 
 type Pt = (Double, Double, Double)
 
+transpose :: Pt -> Pt -> Pt -> (Pt, Pt, Pt)
+transpose (u0, u1, u2) (v0, v1, v2) (w0, w1, w2) =
+  ((u0, v0, w0), (u1, v1, w1), (u2, v2, w2))
+
+det3 :: Pt -> Pt -> Pt -> Double
+det3 (a11, a12, a13)
+     (a21, a22, a23)
+     (a31, a32, a33) = a11*a22*a33 + a12*a23*a31 + a13*a21*a32
+                       - a13*a22*a31 - a12*a21*a33 - a11*a23*a32
+
+detGreaterZero :: Pt -> Pt -> Pt -> Bool
+detGreaterZero (a1, a2, _) (b1, b2, _) (c1, c2, _) =
+  det3 (a1, a2, 1) (b1, b2, 1) (c1, c2, 1) > 0
+
+isInTriangle :: Pt -> (Pt, Pt, Pt) -> Bool
+isInTriangle a (b, c, d) = (x && y && z) || (not x && not y && not z) 
+  where x = detGreaterZero a b c
+        y = detGreaterZero a d b
+        z = detGreaterZero a c d
+
+getZ :: Pt -> Pt -> Pt -> Double -> Double -> Double
+getZ u v w x y =
+  (det3 p q r - det3 ones q r * x - det3 p ones r * y) / det3 p q ones
+  where (p, q, r) = transpose u v w
+        ones = (1, 1, 1)
+
+
+
 mkKennfeld :: [Double] -> [[Pt]]
 mkKennfeld xs = map (\x -> map (\y -> f x y) xs) xs
- where f x y = (x+sin(y), (y-sin(x*0.7)), 3 + sin (y/5) * sin (x/4))
+  -- where f x y = (x+3*sin(y), (y-4*sin(x*0.7)), 3 + sin (y/5) * sin (x/4))
+  where f x y = (x, y, 0)
 
 kennfeld :: [[Pt]]
 kennfeld = mkKennfeld [-20, -17 .. 20]
@@ -59,18 +118,20 @@ plotTri = L.intercalate "\n" . zipWith f [1..]
 tri :: [(Pt, Pt, Pt)]
 tri = delaunay (concat kennfeld)
 
+{-
 isInTriangle :: Pt -> (Pt, Pt, Pt) -> Bool
 isInTriangle (s1, s2, _) ((a1, a2, _), (b1, b2, _), (c1, c2, _)) =
-  if (ac == ab)
+  if not (ac == ab) || not (bc /= ab)
      then False
-     else if (bc /= ab)
-             then False
-             else True
+     else not (bc /= ab)
+            -- then False
+            -- else True
   where ax = s1 - a1
         ay = s2 - a2
         ab = (b1 - a1)*ay - (b2-a2)*ax >= 0
         ac = (c1 - a1)*ay - (c2-a2)*ax >= 0
         bc = (c1 - b1) * (s2 - b2) - (c2 - b2) * (s1-b1) >= 0
+-}
 
 
 getTriangle :: [(Pt, Pt, Pt)] -> Double -> Double -> (Pt, Pt, Pt)
@@ -79,11 +140,11 @@ getTriangle ts x y =
        t:_ -> t
        _ -> error ("no triangle found: " ++ show x ++ " " ++ show y)
 
-
+{-
 plane :: (Num a, Fractional a, Show a) => (a, a, a, a) -> a -> a -> a
 plane (a, b, c, d) x y = d/c - (a*x)/c - (b*y)/c
 
-{-
+
 -- bloeder Versuch, Zeilen zu vertauschen
 getZ :: Pt -> Pt -> Pt -> Double -> Double -> Double
 getZ u@(x1, y1, z1) v@(x2, y2, z2) w@(x3, y3, z3) =
@@ -95,9 +156,8 @@ getZ u@(x1, y1, z1) v@(x2, y2, z2) w@(x3, y3, z3) =
        (_, _, _) -> getZHelp u v w
 -}
 
-getZ u v w = getZHelp c b a
-  where [a, b, c] = L.sort [u, v, w]
 
+{-
 -- numerischer krampf -> Divisionen durch 0
 getZHelp :: Pt -> Pt -> Pt -> Double -> Double -> Double
 getZHelp u@(x1, y1, z1) v@(x2, y2, z2) w@(x3, y3, z3) = plane (a, b, c, d)
@@ -105,10 +165,10 @@ getZHelp u@(x1, y1, z1) v@(x2, y2, z2) w@(x3, y3, z3) = plane (a, b, c, d)
         a = (-c * z1 - b * y1 + d) / x1
         b = (- (c * x1 * z2) + (c * x2 * z1) - x2 + x1) / (x1 * y2 - x2 * y1)
         c = ((x2 - x1) * y3 + (- x3 + x1) * y2 + (x3 - x2) * y1) / ((x1 * y2 - x2 * y1) * z3 + (- x1 * y3 + x3 * y1) * z2 + (x2 * y3 - x3 * y2) * z1)
-
+-}
 
 range :: [Double]
-range =  [1, 1.5 .. 16]
+range =  [-19, -18.5 .. 16]
 
 
 interpolation :: IO ()

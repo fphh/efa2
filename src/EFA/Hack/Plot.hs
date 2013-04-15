@@ -54,7 +54,8 @@ histogram ::
    (Fold.Foldable f,
     FormatValue term,
     TN.C node) =>
-   (Idx.Energy node) -> f (term, Double) -> Frame.T (Graph2D.T Int Double)
+   Idx.InSection Idx.Energy node ->
+   f (term, Double) -> Frame.T (Graph2D.T Int Double)
 histogram key =
    Frame.cons (
       Opts.title "Decomposition of total output energy" $
@@ -71,8 +72,9 @@ histogram key =
       Plot2D.list Graph2D.histograms [val])
 
 
-histogrammIO :: (Fold.Foldable f, TN.C node, FormatValue term) =>
-                f (term, Double) -> Idx.Energy node -> IO ()
+histogrammIO ::
+   (Fold.Foldable f, TN.C node, FormatValue term) =>
+   f (term, Double) -> Idx.InSection Idx.Energy node -> IO ()
 histogrammIO  stack key = do
   void $ AGP.plotDefault $ histogram key stack
 

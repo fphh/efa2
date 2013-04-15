@@ -297,13 +297,23 @@ instance Record rec => Record (Idx.ExtDelta rec) where
 
 
 class EdgeIdx idx where edgeVar :: idx node -> EdgeVar
-instance EdgeIdx Idx.Energy where edgeVar _ = Energy
-instance EdgeIdx Idx.MaxEnergy where edgeVar _ = MaxEnergy
-instance EdgeIdx Idx.Power where edgeVar _ = Power
-instance EdgeIdx Idx.Eta where edgeVar _ = Eta
-instance EdgeIdx Idx.X where edgeVar _ = X
-instance EdgeIdx Idx.StEnergy where edgeVar _ = Energy
-instance EdgeIdx Idx.StX where edgeVar _ = X
+
+instance StructureIdx idx => EdgeIdx (Idx.InSection idx) where
+   edgeVar = structureVar
+
+class StructureIdx idx where structureVar :: Idx.InSection idx node -> EdgeVar
+instance StructureIdx Idx.Energy where structureVar _ = Energy
+instance StructureIdx Idx.Power where structureVar _ = Power
+instance StructureIdx Idx.Eta where structureVar _ = Eta
+instance StructureIdx Idx.X where structureVar _ = X
+
+instance StorageIdx idx => EdgeIdx (Idx.ForNode idx) where
+   edgeVar = storageVar
+
+class StorageIdx idx where storageVar :: Idx.ForNode idx node -> EdgeVar
+instance StorageIdx Idx.MaxEnergy where storageVar _ = MaxEnergy
+instance StorageIdx Idx.StEnergy where storageVar _ = Energy
+instance StorageIdx Idx.StX where storageVar _ = X
 
 
 directionShort :: Idx.Direction -> String

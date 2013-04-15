@@ -1,8 +1,9 @@
 module Main where
 
+import qualified EFA.Example.Index as XIdx
 import EFA.Example.Utility
           (ScalarTerm, SignalTerm,
-           edgeVar, makeEdges, constructSeqTopo, (=<>), (.=))
+           makeEdges, constructSeqTopo, (=<>), (.=))
 
 import qualified EFA.Symbolic.SumProduct as SumProduct
 import qualified EFA.Equation.System as EqGen
@@ -29,7 +30,7 @@ node0 :~ node1 :~ node2 :~ node3 :~ _ = Stream.enumFrom minBound
 
 
 topoDreibein :: TD.Topology Node.Int
-topoDreibein = Gr.mkGraph ns (makeEdges es)
+topoDreibein = Gr.fromList ns (makeEdges es)
   where ns = [(node0, TD.Source),
               (node1, TD.Sink),
               (node2, TD.Crossing),
@@ -45,26 +46,26 @@ given ::
       (ScalarTerm Record.Delta SumProduct.Term Node.Int)
       (SignalTerm Record.Delta SumProduct.Term Node.Int)
 given =
-   (Idx.delta (Idx.DTime sec0) .= zero) <>
+   (Idx.delta (XIdx.dTime sec0) .= zero) <>
 
-   Idx.before (Idx.DTime sec0) =<>
+   Idx.before (XIdx.dTime sec0) =<>
 
-   Idx.before (Idx.Storage (Idx.initBndNode node3)) =<>
-   Idx.delta (Idx.Storage (Idx.afterSecNode sec0 node3)) =<>
+   Idx.before (XIdx.storage Idx.initial node3) =<>
+   Idx.delta (XIdx.storage (Idx.afterSection sec0) node3) =<>
 
-   Idx.after (edgeVar Idx.Power sec0 node3 node2) =<>
-   Idx.after (edgeVar Idx.X sec0 node2 node3) =<>
+   Idx.after (XIdx.power sec0 node3 node2) =<>
+   Idx.after (XIdx.x sec0 node2 node3) =<>
 
-   Idx.before (edgeVar Idx.Power sec0 node3 node2) =<>
-   Idx.before (edgeVar Idx.X sec0 node2 node3) =<>
+   Idx.before (XIdx.power sec0 node3 node2) =<>
+   Idx.before (XIdx.x sec0 node2 node3) =<>
 
-   Idx.before (edgeVar Idx.Eta sec0 node3 node2) =<>
-   Idx.before (edgeVar Idx.Eta sec0 node0 node2) =<>
-   Idx.before (edgeVar Idx.Eta sec0 node2 node1) =<>
+   Idx.before (XIdx.eta sec0 node3 node2) =<>
+   Idx.before (XIdx.eta sec0 node0 node2) =<>
+   Idx.before (XIdx.eta sec0 node2 node1) =<>
 
-   Idx.after (edgeVar Idx.Eta sec0 node3 node2) =<>
-   Idx.delta (edgeVar Idx.Eta sec0 node0 node2) =<>
-   Idx.delta (edgeVar Idx.Eta sec0 node2 node1) =<>
+   Idx.after (XIdx.eta sec0 node3 node2) =<>
+   Idx.delta (XIdx.eta sec0 node0 node2) =<>
+   Idx.delta (XIdx.eta sec0 node2 node1) =<>
 
    mempty
 
@@ -75,4 +76,4 @@ main = do
   let seqTopo = constructSeqTopo topoDreibein [1]
       env = EqGen.solve seqTopo given
 
-  Draw.sequFlowGraphDeltaWithEnv "" seqTopo env
+  Draw.sequFlowGraphDeltaWithEnv (Draw.xterm "" seqTopo) env

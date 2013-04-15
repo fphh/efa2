@@ -7,12 +7,23 @@ import qualified Data.Map as M
 
 import Data.Colour
 import Data.Colour.Names as Colour
-import Data.Colour.SRGB (sRGB24show)
+import Data.Colour.SRGB (sRGB24show, sRGB24read, toSRGB24, RGB(..))
+import qualified Data.GraphViz.Attributes.Colors as GV
 
 newtype C = C { unC :: String } deriving (Show)
 
 showf :: Colour Double -> C
 showf = C . sRGB24show
+
+
+
+class ConvertColour c where
+      convertColour :: C -> c
+
+instance ConvertColour GV.Color where
+         convertColour (C str) =
+           case toSRGB24 $ sRGB24read str of
+                RGB r g b -> GV.RGB r g b
 
 
 colourMap :: (Ord a) => [a] -> M.Map a C

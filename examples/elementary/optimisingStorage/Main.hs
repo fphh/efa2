@@ -1,8 +1,9 @@
 {-# LANGUAGE TypeFamilies #-}
 module Main where
 
+import qualified EFA.Example.Index as XIdx
 import EFA.Example.Utility
-  ( edgeVar, interVar, makeEdges, constructSeqTopo )
+  ( makeEdges, constructSeqTopo )
 
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as Idx
@@ -14,7 +15,6 @@ import qualified EFA.Graph as Gr
 import qualified EFA.Example.Absolute as EqGen
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
-import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Result as R
 import EFA.Equation.System ((=.=))
 
@@ -62,7 +62,7 @@ instance Node.C Node where
 
 
 topoDreibein :: TD.Topology Node
-topoDreibein = Gr.mkGraph ns (makeEdges es)
+topoDreibein = Gr.fromList ns (makeEdges es)
   where ns = [ (N0, TD.Source),
                (N1, TD.Crossing),
                (N2, TD.Sink),
@@ -84,32 +84,32 @@ etaf =
 
 n01, n12, n13, n31, p10, p21, e31, e21, p31, p13 ::
   Idx.Section -> Expr s Double
-n01 sec = EqGen.variable $ edgeVar Idx.Eta sec N0 N1
-n12 sec = EqGen.variable $ edgeVar Idx.Eta sec N1 N2
-n13 sec = EqGen.variable $ edgeVar Idx.Eta sec N1 N3
-n31 sec = EqGen.variable $ edgeVar Idx.Eta sec N3 N1
-p10 sec = EqGen.variable $ edgeVar Idx.Power sec N1 N0
-p21 sec = EqGen.variable $ edgeVar Idx.Power sec N2 N1
-e31 sec = EqGen.variable $ edgeVar Idx.Energy sec N3 N1
-e21 sec = EqGen.variable $ edgeVar Idx.Energy sec N2 N1
+n01 sec = EqGen.variable $ XIdx.eta sec N0 N1
+n12 sec = EqGen.variable $ XIdx.eta sec N1 N2
+n13 sec = EqGen.variable $ XIdx.eta sec N1 N3
+n31 sec = EqGen.variable $ XIdx.eta sec N3 N1
+p10 sec = EqGen.variable $ XIdx.power sec N1 N0
+p21 sec = EqGen.variable $ XIdx.power sec N2 N1
+e31 sec = EqGen.variable $ XIdx.energy sec N3 N1
+e21 sec = EqGen.variable $ XIdx.energy sec N2 N1
 
-p31 sec = EqGen.variable $ edgeVar Idx.Power sec N3 N1
-p13 sec = EqGen.variable $ edgeVar Idx.Power sec N1 N3
+p31 sec = EqGen.variable $ XIdx.power sec N3 N1
+p13 sec = EqGen.variable $ XIdx.power sec N1 N3
 
 
 stoinit :: Expr s Double
-stoinit = EqGen.variable $ Idx.Storage (Idx.initBndNode N3)
+stoinit = EqGen.variable $ XIdx.storage Idx.initial N3
 
-ein, eout0, eout1 :: Idx.Energy Node
-ein = edgeVar Idx.Energy sec0 N0 N1
-eout0 = edgeVar Idx.Energy sec0 N2 N1
-eout1 = edgeVar Idx.Energy sec1 N2 N1
+ein, eout0, eout1 :: XIdx.Energy Node
+ein = XIdx.energy sec0 N0 N1
+eout0 = XIdx.energy sec0 N2 N1
+eout1 = XIdx.energy sec1 N2 N1
 
 e33 :: Expr s Double
-e33 = EqGen.variable $ interVar Idx.StEnergy Idx.initial (Idx.AfterSection sec1) N3
+e33 = EqGen.variable $ XIdx.stEnergy Idx.initial (Idx.AfterSection sec1) N3
 
 time :: Idx.Section -> Expr s Double
-time = EqGen.variable . Idx.DTime
+time = EqGen.variable . XIdx.dTime
 
 
 -- maybe move this to Utility module
@@ -174,10 +174,10 @@ unpackResult (R.Undetermined) = error("No Result")
 
 -- | Checked Lookup
 getSignalVar ::
-   (Ord (idx Node), Show (idx Node), Env.AccessMap idx, Var.Type idx ~ Var.Signal,
+   (Ord (idx Node), Show (idx Node), Env.AccessSignalMap idx,
     Show a, UV.Unbox a) =>
    [[Env.Complete Node (Record.Absolute (R.Result a)) (Record.Absolute (R.Result a))]] ->
-   idx Node -> Test2 (Typ A u Tt) a
+   Idx.InSection idx Node -> Test2 (Typ A u Tt) a
 getSignalVar varEnvs idx =
    S.changeSignalType $ S.fromList2 $
    map (map (unpackResult . Record.unAbsolute .
@@ -188,17 +188,17 @@ getSignalVar varEnvs idx =
 
 getSignalVarEnergy ::
    [[Env.Complete Node AbsoluteResult AbsoluteResult]] ->
-   Idx.Energy Node -> Test2 (Typ A F Tt) Val
+   XIdx.Energy Node -> Test2 (Typ A F Tt) Val
 getSignalVarEnergy = getSignalVar
 
 getSignalVarPower ::
    [[Env.Complete Node AbsoluteResult AbsoluteResult]] ->
-   Idx.Power Node -> Test2 (Typ A P Tt) Val
+   XIdx.Power Node -> Test2 (Typ A P Tt) Val
 getSignalVarPower = getSignalVar
 
 getSignalVarEta ::
    [[Env.Complete Node AbsoluteResult AbsoluteResult]] ->
-   Idx.Eta Node -> Test2 (Typ A N Tt) Val
+   XIdx.Eta Node -> Test2 (Typ A N Tt) Val
 getSignalVarEta = getSignalVar
 
 -- ##############################
@@ -337,25 +337,25 @@ main = do
       varLoss = varE01 .- varEout
 
       -- Get more Env values
-      varN13 = getSignalVarEta varEnvs (edgeVar Idx.Eta sec0 N1 N3)
-      varN31 = getSignalVarEta varEnvs (edgeVar Idx.Eta sec1 N3 N1)
-      varN01 = getSignalVarEta varEnvs (edgeVar Idx.Eta sec0 N0 N1)
+      varN13 = getSignalVarEta varEnvs (XIdx.eta sec0 N1 N3)
+      varN31 = getSignalVarEta varEnvs (XIdx.eta sec1 N3 N1)
+      varN01 = getSignalVarEta varEnvs (XIdx.eta sec0 N0 N1)
 
-      varP31_0 = getSignalVarPower varEnvs (edgeVar Idx.Power sec0 N3 N1)
-      varP31_1 = getSignalVarPower varEnvs (edgeVar Idx.Power sec1 N3 N1)
+      varP31_0 = getSignalVarPower varEnvs (XIdx.power sec0 N3 N1)
+      varP31_1 = getSignalVarPower varEnvs (XIdx.power sec1 N3 N1)
 
 
-      varP13_0 = getSignalVarPower varEnvs (edgeVar Idx.Power sec0 N1 N3)
-      varP13_1 = getSignalVarPower varEnvs (edgeVar Idx.Power sec1 N1 N3)
+      varP13_0 = getSignalVarPower varEnvs (XIdx.power sec0 N1 N3)
+      varP13_1 = getSignalVarPower varEnvs (XIdx.power sec1 N1 N3)
 
-      varP10 = getSignalVarPower varEnvs (edgeVar Idx.Power sec0 N1 N0)
-      varP01 = getSignalVarPower varEnvs (edgeVar Idx.Power sec0 N0 N1)
+      varP10 = getSignalVarPower varEnvs (XIdx.power sec0 N1 N0)
+      varP01 = getSignalVarPower varEnvs (XIdx.power sec0 N0 N1)
 
-      varE10 = getSignalVarEnergy varEnvs (edgeVar Idx.Energy sec0 N1 N0)
-      varE01 = getSignalVarEnergy varEnvs (edgeVar Idx.Energy sec0 N0 N1)
+      varE10 = getSignalVarEnergy varEnvs (XIdx.energy sec0 N1 N0)
+      varE01 = getSignalVarEnergy varEnvs (XIdx.energy sec0 N0 N1)
 
-      varPout0 = getSignalVarPower varEnvs (edgeVar Idx.Power sec0 N2 N1)
-      varPout1 = getSignalVarPower varEnvs (edgeVar Idx.Power sec1 N2 N1)
+      varPout0 = getSignalVarPower varEnvs (XIdx.power sec0 N2 N1)
+      varPout1 = getSignalVarPower varEnvs (XIdx.power sec1 N2 N1)
 
       -- create curve of n01 in used power range
       p10Lin = S.concat varP10
@@ -458,4 +458,4 @@ main = do
 
 
   concurrentlyMany_ $
-    map (Draw.sequFlowGraphAbsWithEnv "" seqTopo) [envhh,envhl, envlh, envll]
+    map (Draw.sequFlowGraphAbsWithEnv (Draw.xterm "Topology" seqTopo)) [envhh,envhl, envlh, envll]

@@ -31,7 +31,7 @@ type Indexed rec = Idx.Record (ToIndex rec)
 
 lookupSignal ::
    (C rec, Ord node) =>
-   Indexed rec (Var.Signal node) ->
+   Indexed rec (Idx.InSection Var.Signal node) ->
    Env.Signal node (rec a) -> Maybe a
 lookupSignal (Idx.Record r v) =
    fmap (Accessor.get (access r)) . Env.lookupSignal v

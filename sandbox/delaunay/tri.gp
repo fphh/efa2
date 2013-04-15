@@ -4,4 +4,4 @@
 
 
 load "tri.txt"
-splot "./kennfeld.txt" with lines, "./interpolation.txt" with lines
+splot "./kennfeld.txt" with lines # , "./interpolation.txt" with lines

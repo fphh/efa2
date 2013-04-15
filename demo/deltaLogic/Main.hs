@@ -1,6 +1,7 @@
 module Main where
 
-import EFA.Example.Utility (ScalarTerm, SignalTerm, edgeVar, (=<>))
+import qualified EFA.Example.Index as XIdx
+import EFA.Example.Utility (ScalarTerm, SignalTerm, (=<>))
 
 import qualified EFA.Symbolic.SumProduct as SumProduct
 import qualified EFA.Equation.System as EqGen
@@ -36,19 +37,19 @@ given, sys ::
       (ScalarTerm Record.Delta SumProduct.Term Node.Int)
       (SignalTerm Record.Delta SumProduct.Term Node.Int)
 given =
-   Idx.before (edgeVar Idx.Power sec0 node0 node1) =<>
-   Idx.before (edgeVar Idx.Eta sec0 node0 node1) =<>
+   Idx.before (XIdx.power sec0 node0 node1) =<>
+   Idx.before (XIdx.eta sec0 node0 node1) =<>
 
-   Idx.after (edgeVar Idx.Eta sec0 node0 node1) =<>
+   Idx.after (XIdx.eta sec0 node0 node1) =<>
 
-   Idx.delta (edgeVar Idx.Power sec0 node0 node1) =<>
+   Idx.delta (XIdx.power sec0 node0 node1) =<>
 
    mempty
 
 sys =
-   (edgeVar EqGen.power sec0 node1 node0 =%=
-      edgeVar EqGen.eta sec0 node0 node1 ~*
-      edgeVar EqGen.power sec0 node0 node1)
+   (EqGen.variableRecord (XIdx.power sec0 node1 node0) =%=
+      EqGen.variableRecord (XIdx.eta sec0 node0 node1) ~*
+      EqGen.variableRecord (XIdx.power sec0 node0 node1))
 
 
 main :: IO ()

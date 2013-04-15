@@ -1,4 +1,8 @@
+{-# LANGUAGE NoMonomorphismRestriction #-}
+
 module EFA.Graph.Draw (
+  xterm, pdf, dot, multi, toTerminal,
+  title, bgcolour,
   sequFlowGraph,
   sequFlowGraphCumulated,
   sequFlowGraphWithEnv,
@@ -19,10 +23,12 @@ import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Variable as Var
 
+import qualified EFA.Example.Index as XIdx
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph as Gr
+import qualified EFA.Signal.Colour as Colour
 import EFA.Graph.Topology
           (NodeType(Storage),
            EdgeType(StructureEdge, StorageEdge),
@@ -61,6 +67,7 @@ import qualified Data.Text.Lazy as T
 import qualified Data.Map as M
 import qualified Data.List as L
 import qualified Data.List.HT as HTL
+import qualified Data.Colour.SRGB as SRGB -- (sRGB24read, toSRGB24)
 
 import Control.Monad (void)
 
@@ -83,27 +90,31 @@ shape Topo.Source = DiamondShape
 shape Topo.AlwaysSource = MDiamond
 shape Topo.Sink = BoxShape
 shape Topo.AlwaysSink = MSquare
-shape (Topo.Storage _) = Egg
+-- shape (Topo.Storage _) = Egg
+shape (Topo.Storage _) = Ellipse
 shape _ = BoxShape
 
 color :: NodeType a -> Attribute
 color (Topo.Storage _) = FillColor [RGB 251 177 97] -- ghlightorange
 color _ = FillColor [RGB 136 215 251]  -- ghverylightblue
 
-mkNodeAttrs :: NodeType a -> Attribute -> [Attribute]
+mkNodeAttrs ::
+  NodeType a -> Attribute -> [Attribute]
 mkNodeAttrs nodeType label =
-  [ label, Style [SItem Filled []], Shape (shape nodeType), color nodeType ]
+  [ label, Style [SItem Filled []], 
+    Shape (shape nodeType), color nodeType ]
 
 
 dotFromSequFlowGraph ::
   (Node.C node) =>
   String ->
+  Colour.C ->
   Flow.RangeGraph node ->
   Maybe (Idx.Section -> Unicode) ->
   (Maybe Idx.Boundary -> Topo.LDirNode node -> Unicode) ->
   (Topo.LEdge node -> [Unicode]) ->
   DotGraph T.Text
-dotFromSequFlowGraph ti (rngs, g) mtshow nshow eshow =
+dotFromSequFlowGraph ti bg (rngs, g) mtshow nshow eshow =
   DotGraph { strictGraph = False,
              directedGraph = True,
              graphID = Just (Int 1),
@@ -114,7 +125,7 @@ dotFromSequFlowGraph ti (rngs, g) mtshow nshow eshow =
            HTL.partitionMaybe
               (\e ->
                  case Topo.edgeType $ fst e of
-                    Topo.StructureEdge (Idx.StructureEdge s _ _) ->
+                    Topo.StructureEdge (Idx.InSection s _) ->
                        Just (Idx.AfterSection s, [e])
                     _ -> Nothing) $
            Gr.labEdges g
@@ -127,7 +138,8 @@ dotFromSequFlowGraph ti (rngs, g) mtshow nshow eshow =
         sg before (current, (ns, es)) =
             DotSG True (Just (Int $ fromEnum current)) $
             DotStmts
-               [GraphAttrs [Label (StrLabel (T.pack str))]]
+               [GraphAttrs [ Label (StrLabel (T.pack str)), 
+                             BgColor [Colour.convertColour bg]]]
                []
                (map (dotFromSecNode (nshow before)) ns)
                (map (dotFromSecEdge eshow) es)
@@ -192,39 +204,138 @@ dotIdentFromBoundary (Idx.AfterSection (Idx.Section s)) = show s
 dotIdentFromNode :: (Node.C node) => node -> T.Text
 dotIdentFromNode n = T.pack $ Node.dotId n
 
+newtype Terminal node output b t = Terminal {
+ runTerminal ::
+   (Maybe (Idx.Section -> output) ->
+   (Maybe Idx.Boundary -> Topo.LDirNode node -> output) ->
+   ((Edge (Idx.BndNode node), b) -> [output]) -> t) }
 
-printGraph, printGraphX, _printGraphDot, _printGraphPdf ::
-   (Node.C node) =>
-   String ->
-   Flow.RangeGraph node ->
-   Maybe (Idx.Section -> Unicode) ->
-   (Maybe Idx.Boundary -> Topo.LDirNode node -> Unicode) ->
-   (Topo.LEdge node -> [Unicode]) ->
-   IO ()
-printGraph =  printGraphX -- _printGraphPdf -- _printGraphDot -- printGraphX
+data T node a v output b t = Cons {
+  termT :: Terminal node output,
+  titleT :: String,
+  bgcolourT :: Colour.C,
+  topoT :: Flow.RangeGraph node,
+  eshowT :: ((Edge (Idx.BndNode node), b) -> [output]),
+  nodeT :: Maybe Idx.Boundary -> Topo.LDirNode node -> output,
+  timeT :: Maybe (Idx.Section -> output) }
 
-printGraphX ti g recTShow nshow eshow =
-   runGraphvizCanvas Dot (dotFromSequFlowGraph ti g recTShow nshow eshow) Xlib
 
-_printGraphDot ti g recTShow nshow eshow =
+deflt :: (Node.C node) => T node a v Unicode b t
+deflt = Cons {
+  termT = printGraphX,
+  bgcolourT = Colour.C "#ffffff",
+  titleT = "" }
+
+{-
+newtype Terminal node output = Terminal {
+  runTerminal :: 
+    String ->
+    Colour.C ->
+    Flow.RangeGraph node ->
+    Maybe (Idx.Section -> output) ->
+    (Maybe Idx.Boundary -> Topo.LDirNode node -> output) ->
+    (Topo.LEdge node -> [output]) ->
+    IO () }
+-}
+
+toTerminal :: T node a v output Topo.FlowDirection t -> IO ()
+toTerminal t = runTerminal
+  (termT t)
+  (titleT t)
+  (bgcolourT t)
+  (topoT t)
+  (timeT t)
+  (nodeT t)
+  (eshowT t)
+
+bgcolour :: Colour.C -> T node a v output b t -> T node a v output b t
+bgcolour colour c = c { bgcolourT = colour }
+
+title :: String -> T node a v output b t -> T node a v output b t
+title ti c = c { titleT = ti }
+
+
+xterm, pdf, dot :: (Node.C node) => T node a v Unicode b t -> T node a v Unicode b t
+xterm c = c { termT = sequFlowGraphWithEnv }
+{-
+pdf c = c { termT = printGraphPdf }
+dot c = c { termT = printGraphDot }
+-}
+
+printGraphX, printGraphDot, printGraphPdf :: (Node.C node) => Terminal node Unicode
+printGraphX = Terminal $ \ti bg g recTShow nshow eshow ->
+   runGraphvizCanvas Dot (dotFromSequFlowGraph ti bg g recTShow nshow eshow) Xlib
+
+printGraphDot = Terminal $ \ti bg g recTShow nshow eshow ->
    void $
    runGraphvizCommand Dot
-      (dotFromSequFlowGraph ti g recTShow nshow eshow)
-      XDot "result/graph.dot"
+      (dotFromSequFlowGraph ti bg g recTShow nshow eshow)
+      XDot $ "result/" ++ ti ++ ".dot"
 
-_printGraphPdf ti g recTShow nshow eshow =
+printGraphPdf = Terminal $ \ti bg g recTShow nshow eshow ->
    void $
    runGraphvizCommand Dot
-      (dotFromSequFlowGraph ti g recTShow nshow eshow)
-      Pdf "result/graph.pdf"
+      (dotFromSequFlowGraph ti bg g recTShow nshow eshow)
+      Pdf $ "result/" ++ ti ++ ".pdf"
+
+sequFlowGraphAbsWithEnv ::
+  (Node.C node, FormatValue v, FormatValue a) =>
+  Flow.RangeGraph node ->
+  Env.Complete node (Record.Absolute a) (Record.Absolute v) ->
+  T node a v Unicode b t
+sequFlowGraphAbsWithEnv topo env =
+  deflt { topoT = topo,
+          eshowT = eshow . fst,
+          timeT = Just (formatTime aenv),
+          nodeT = formatNode aenv }
+  where aenv = envAbs env
+        eshow se =
+          case Topo.edgeType se of
+               StructureEdge e ->
+                 formatEnergy aenv e :
+                 formatX aenv e :
+                 formatEta aenv e :
+                 formatX aenv (Idx.flip e) :
+                 formatEnergy aenv (Idx.flip e) :
+                 []
+               StorageEdge e ->
+                 formatMaxEnergy aenv e :
+                 formatStEnergy aenv e :
+                 formatStX aenv e :
+                 formatStX aenv (Idx.flip e) :
+                 []
+
+sequFlowGraphWithEnv :: 
+  (Eq node) =>
+  (Maybe (Idx.Section -> output) ->
+    (Maybe Idx.Boundary -> Topo.LDirNode node -> output) ->
+    ((Edge (Idx.BndNode node), b) -> [output]) -> t) ->
+  Env node output -> t
+sequFlowGraphWithEnv printGr env =
+  printGr (Just (formatTime env)) (formatNode env) (eshow . fst)
+  where eshow se =
+           case Topo.edgeType se of
+              StructureEdge e ->
+                 formatEnergy env e :
+                 formatX env e :
+                 formatEta env e :
+                 formatX env (Idx.flip e) :
+                 formatEnergy env (Idx.flip e) :
+                 []
+              StorageEdge e ->
+                 formatMaxEnergy env e :
+                 formatStEnergy env e :
+                 formatStX env e :
+                 formatStX env (Idx.flip e) :
+                 []
 
 
 sequFlowGraph ::
-  (Node.C node) =>
-  String ->
-  Flow.RangeGraph node -> IO ()
-sequFlowGraph ti topo =
-  printGraph ti topo Nothing nshow eshow
+  (Node.C node, StorageLabel store) =>
+  (Maybe a -> (t1 -> (Idx.BndNode node, Topo.NodeType store) -> Format.Unicode) ->
+  (t2 -> [a1]) -> t) -> t
+sequFlowGraph printGr =
+  printGr Nothing nshow eshow
   where nshow _before (Idx.BndNode _ n, l) =
            Unicode $ unUnicode (Node.display n) ++ " - " ++ showType l
         eshow _ = []
@@ -359,11 +470,12 @@ showType typ =
       Topo.DeadNode      -> "DeadNode"
       Topo.NoRestriction -> "NoRestriction"
 
-
+{-
 formatNodeType ::
    (Format output, StorageLabel store) =>
    NodeType store -> output
 formatNodeType = Format.literal . showType
+-}
 
 formatNodeStorage ::
    (Record.C rec, FormatValue a, Format output, Node.C node) =>
@@ -374,24 +486,25 @@ formatNodeStorage ::
 formatNodeStorage rec st ss mBeforeBnd (n@(Idx.BndNode _bnd nid), ty) =
    Format.lines $
    Node.display nid :
-   Format.words [formatNodeType ty] :
+   -- Format.words [formatNodeType ty] :
       case ty of
          Storage dir ->
             case mBeforeBnd of
-               Nothing -> [lookupFormat rec st $ Idx.Storage n]
+               Nothing -> [lookupFormat rec st $ Idx.forNode Idx.Storage n]
                Just beforeBnd ->
-                  case (lookupFormat rec st $ Idx.Storage $
-                           Idx.BndNode beforeBnd nid,
-                        lookupFormat rec st $ Idx.Storage n) of
+                  case (lookupFormat rec st $ XIdx.storage beforeBnd nid,
+                        lookupFormat rec st $ Idx.forNode Idx.Storage n) of
                      (before, after) ->
                         before :
                         (case dir of
                            Just Topo.In ->
                               [Format.plus Format.empty $
-                                  lookupFormat rec ss $ Idx.StSum Idx.In n]
+                                  lookupFormat rec ss $
+                                  Idx.forNode (Idx.StSum Idx.In) n]
                            Just Topo.Out ->
                               [Format.minus Format.empty $
-                                  lookupFormat rec ss $ Idx.StSum Idx.Out n]
+                                  lookupFormat rec ss $
+                                  Idx.forNode (Idx.StSum Idx.Out) n]
                            Nothing -> []) ++
                         Format.assign Format.empty after :
                         []
@@ -406,10 +519,10 @@ data Env node output =
    Env {
       formatEnergy,
       formatX,
-      formatEta    :: Idx.StructureEdge node -> output,
+      formatEta    :: Idx.InSection Idx.StructureEdge node -> output,
       formatMaxEnergy,
       formatStEnergy,
-      formatStX    :: Idx.StorageEdge node -> output,
+      formatStX    :: Idx.ForNode Idx.StorageEdge node -> output,
       formatTime   :: Idx.Section -> output,
       formatNode   :: Maybe Idx.Boundary -> Topo.LDirNode node -> output
    }
@@ -440,13 +553,15 @@ lookupFormatAssign rec mp makeIdx x =
             (Format.record rec $ Format.edgeIdent $ Format.edgeVar idx)
             (lookupFormat rec mp idx)
 
-
-sequFlowGraphWithEnv ::
-  (Node.C node) =>
-  String ->
-  Flow.RangeGraph node -> Env node Unicode -> IO ()
-sequFlowGraphWithEnv ti g env =
-   printGraph ti g (Just (formatTime env)) (formatNode env) (eshow . fst)
+{-
+sequFlowGraphWithEnv :: 
+  (Eq node) =>
+  (Maybe (Idx.Section -> output) ->
+    (Maybe Idx.Boundary -> Topo.LDirNode node -> output) ->
+    ((Edge (Idx.BndNode node), b) -> [output]) -> t) ->
+  Env node output -> t
+sequFlowGraphWithEnv printGr env =
+  printGr (Just (formatTime env)) (formatNode env) (eshow . fst)
   where eshow se =
            case Topo.edgeType se of
               StructureEdge e ->
@@ -462,21 +577,41 @@ sequFlowGraphWithEnv ti g env =
                  formatStX env e :
                  formatStX env (Idx.flip e) :
                  []
+-}
+
+{-
+sequFlowGraphAbsWithEnv ::
+  ( Format.Format output,
+    Node.C node,
+    FormatValue a,
+    FormatValue v) =>
+  ( Maybe (Idx.Section -> output) ->
+          (Maybe Idx.Boundary -> Topo.LDirNode node -> output) ->
+          ((Edge (Idx.BndNode node), b) -> [output]) -> c ) ->
+  Env.Complete node (Record.Absolute a) (Record.Absolute v) -> c
+
 
 sequFlowGraphAbsWithEnv ::
-   (FormatValue a, FormatValue v, Node.C node) =>
-   String ->
-   Flow.RangeGraph node ->
-   Env.Complete node (Record.Absolute a) (Record.Absolute v) -> IO ()
-sequFlowGraphAbsWithEnv ti topo = sequFlowGraphWithEnv ti topo . envAbs
+  Topo.SequFlowGraph node ->
+  Env.Complete node (Record.Absolute a) (Record.Absolute v) -> c
+sequFlowGraphAbsWithEnv topo env =
+-- sequFlowGraphAbsWithEnv printGr =
+  sequFlowGraphWithEnv printGr (envAbs env)
+-}
+
 
 
 sequFlowGraphDeltaWithEnv ::
-   (FormatValue a, FormatValue v, Node.C node) =>
-   String ->
-   Flow.RangeGraph node ->
-   Env.Complete node (Record.Delta a) (Record.Delta v) -> IO ()
-sequFlowGraphDeltaWithEnv ti topo = sequFlowGraphWithEnv ti topo . envDelta
+  ( Format.Format output,
+    Node.C node,
+    FormatValue a,
+    FormatValue v) =>
+  ( Maybe (Idx.Section -> output) ->
+          (Maybe Idx.Boundary -> Topo.LDirNode node -> output) ->
+          ((Edge (Idx.BndNode node), b) -> [output]) -> c ) ->
+  Env.Complete node (Record.Delta a) (Record.Delta v) -> c
+sequFlowGraphDeltaWithEnv printGr =
+  sequFlowGraphWithEnv printGr . envDelta
 
 
 envGen ::
@@ -486,13 +621,13 @@ envGen ::
    Env.Complete node (rec a) (rec v) -> Env node output
 envGen rec (Env.Complete (Env.Scalar me st se sx ss) (Env.Signal e _p n dt x _s)) =
    Env
-      (lookupFormatAssign rec e Idx.Energy)
-      (lookupFormatAssign rec x Idx.X)
-      (lookupFormatAssign rec n Idx.Eta)
-      (lookupFormatAssign rec me Idx.MaxEnergy)
-      (lookupFormatAssign rec se Idx.StEnergy)
-      (lookupFormatAssign rec sx Idx.StX)
-      (lookupFormat rec dt . Idx.DTime)
+      (lookupFormatAssign rec e $ Idx.liftInSection Idx.Energy)
+      (lookupFormatAssign rec x $ Idx.liftInSection Idx.X)
+      (lookupFormatAssign rec n $ Idx.liftInSection Idx.Eta)
+      (lookupFormatAssign rec me $ Idx.liftForNode Idx.MaxEnergy)
+      (lookupFormatAssign rec se $ Idx.liftForNode Idx.StEnergy)
+      (lookupFormatAssign rec sx $ Idx.liftForNode Idx.StX)
+      (lookupFormat rec dt . flip Idx.InSection Idx.DTime)
       (formatNodeStorage rec st ss)
 
 envAbs ::
@@ -505,15 +640,15 @@ envDelta ::
    Env.Complete node (Record.Delta a) (Record.Delta v) -> Env node output
 envDelta = envGen Idx.Delta
 
-
 sequFlowGraphCumulated ::
-  (FormatValue a, Node.C node) =>
-  String ->
-  ( Flow.RangeGraph node,
-    Env.Complete node (Record.Absolute a) (Record.Absolute a))
-  -> IO ()
-sequFlowGraphCumulated ti (g, env) =
-  printGraph ti g (Just (formatTime aenv)) (formatNode aenv) (eshow . fst)
+  ( Format a1, Format output1, Format output,
+    Node.C node, FormatValue a) =>
+  ( Maybe (Idx.Section -> output) ->
+    (Maybe Idx.Boundary -> Topo.LDirNode node -> output1) ->
+    ((Edge (Idx.BndNode node), b) -> [a1]) -> t) ->
+  Env.Complete node (Record.Absolute a) (Record.Absolute a) -> t
+sequFlowGraphCumulated printGr env =
+  printGr (Just (formatTime aenv)) (formatNode aenv) (eshow . fst)
   where aenv = envAbs env
         eshow se =
            case Topo.edgeType se of
@@ -525,3 +660,8 @@ sequFlowGraphCumulated ti (g, env) =
                  formatEnergy aenv (Idx.flip e) :
                  []
               _ -> error "Intersection edge in cumulated diagramm"
+
+
+multi ::
+  (a -> b -> c) -> (d -> e -> a) -> [d] -> [e] -> [b] -> [c]
+multi f h a b c = zipWith f (zipWith h a b) c

@@ -5,6 +5,7 @@ module Modules.Plots where
 
 --import Modules.System as System
 
+import qualified EFA.Example.Index as XIdx
 import qualified EFA.Signal.Plot as Plot
 import qualified EFA.Hack.Plot as HPlot
 import qualified EFA.Hack.Options as O
@@ -79,7 +80,7 @@ operation ti rList  (plotTitle, (idx,idy)) = mapM_ f rList
 
 stack:: (Show a, Ord i, FormatValue i, TDNode.C a, Show i) =>
         String ->
-        Idx.Energy a ->
+        XIdx.Energy a ->
         Double ->
         (String, Env.Complete
         a t (EqRecord.Absolute (Result.Result (Stack.Stack i Double)))) ->
@@ -93,7 +94,7 @@ stack ti energyIndex eps (recName,env) = do
 reportStack::(Num a, Ord node, Ord i, Ord a, Show node, FormatValue a,
                                FormatValue i) =>
                               [Char]
-                              -> Idx.Energy node
+                              -> XIdx.Energy node
                               -> a
                               -> Env.Complete
                                    node t (EqRecord.Absolute (Result.Result (Stack.Stack i a)))
@@ -106,7 +107,7 @@ reportStack ti energyIndex eps (env) = do
 recordStackRow:: (TDNode.C node, Ord node, Ord i, Show i, Show node, FormatValue i,
                              FormatValue var) =>
                             String
-                            -> Idx.Energy node
+                            -> XIdx.Energy node
                             -> Double
                             -> [(var,
                                  Env.Complete
@@ -120,7 +121,7 @@ recordStackRow ti energyIndex eps envList = Plot.stacksIO ti valList
 
 
 lookupStack:: (Ord i, Ord node, Show node) =>
-                              Idx.Energy node
+                              XIdx.Energy node
                               -> Env.Complete
                                    node t (EqRecord.Absolute (Result.Result (Stack.Stack i a)))
                               -> M.Map (AssignMap.IndexSet i) a
