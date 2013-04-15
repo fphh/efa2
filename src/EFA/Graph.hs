@@ -583,7 +583,7 @@ nmapWithInOut f =
    M.mapWithKey
       (\n (ins,nl,outs) ->
          (ins,
-          f (M.toList $ M.mapKeys to ins, (n,nl), M.toList $ M.mapKeys to outs),
+          f (M.toList $ M.mapKeys from ins, (n,nl), M.toList $ M.mapKeys to outs),
           outs)) .
    graphMap
 
