@@ -192,6 +192,11 @@ instance (QC.Arbitrary n) => QC.Arbitrary (DirEdge n) where
    arbitrary = liftM2 DirEdge QC.arbitrary QC.arbitrary
    shrink (DirEdge x y) = map (uncurry DirEdge) $ QC.shrink (x,y)
 
+instance (QC.Arbitrary n, Ord n) => QC.Arbitrary (UnDirEdge n) where
+   arbitrary = liftM2 unDirEdge QC.arbitrary QC.arbitrary
+   shrink (UnDirEdge x y) =
+      S.toList $ S.fromList $ map (uncurry unDirEdge) $ QC.shrink (x,y)
+
 
 nodes ::
    (Edge edge, Ord (edge node), Ord node) =>

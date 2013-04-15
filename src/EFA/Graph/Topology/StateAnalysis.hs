@@ -32,9 +32,8 @@ import qualified Data.PriorityQueue.FingerTree as PQ
 import Data.FingerTree.PSQueue (PSQ)
 import Data.PriorityQueue.FingerTree (PQueue)
 import Data.Traversable (sequenceA)
-import Data.Monoid (mappend)
 import Data.NonEmpty ((!:))
-import Control.Monad (liftM2, foldM, guard)
+import Control.Monad (foldM, guard)
 import Control.Functor.HT (void)
 import Data.Ord.HT (comparing)
 import Data.Eq.HT (equating)
@@ -393,21 +392,6 @@ advanced = clustering
 
 -- * tests
 
-data UndirEdge n = UndirEdge n n
-   deriving (Eq, Ord, Show)
-
-undirEdge :: Ord n => n -> n -> UndirEdge n
-undirEdge x y =
-   if x<y then UndirEdge x y else UndirEdge y x
-
-instance (QC.Arbitrary n, Ord n) => QC.Arbitrary (UndirEdge n) where
-   arbitrary = liftM2 undirEdge QC.arbitrary QC.arbitrary
-   shrink (UndirEdge x y) =
-      S.toList $ S.fromList $ map (uncurry undirEdge) $ QC.shrink (x,y)
-
-instance Fold.Foldable UndirEdge where
-   foldMap f (UndirEdge x y) = mappend (f x) (f y)
-
 
 maxArbEdges :: Int
 maxArbEdges = 6
@@ -431,7 +415,7 @@ instance (QC.Arbitrary node, Ord node) => QC.Arbitrary (ArbTopology node) where
          M.keys edges
       return $ ArbTopology $
          Gr.fromMap nodes $
-         M.mapKeys (\(UndirEdge x y) -> Gr.DirEdge x y) edges
+         M.mapKeys (\(Gr.UnDirEdge x y) -> Gr.DirEdge x y) edges
 
 propBranchAndBound :: (Eq node, Ord node) => ArbTopology node -> Bool
 propBranchAndBound (ArbTopology g) =
