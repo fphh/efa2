@@ -9,9 +9,12 @@ import EFA.Report.FormatValue (FormatValue, formatValue)
 import EFA.Report.Format (Format)
 import EFA.Utility (intersectionMapSet)
 
+import qualified EFA.Utility.TotalMap as TMap
+
 import qualified Data.Foldable as Fold
 import qualified Data.Set as Set
 import qualified Data.Map as Map
+import Data.Traversable (traverse)
 import Data.Map (Map)
 
 
@@ -56,10 +59,24 @@ instance FormatValue i => FormatValue (IndexSet i) where
       where p (_, b) =  b == Stack.Delta
 
 {- |
+Convert a list of AssignMaps to an AssignMap of lists.
+-}
+transpose :: (Ord i, Num a) => [Map i a] -> Map i [a]
+transpose = TMap.core . traverse (TMap.cons 0)
+
+
+{- |
 Keep only values above a certain threshold.
 -}
 threshold :: (Ord i, Ord a, Num a) => a -> Map i a -> Map i a
 threshold x = Map.filter ((>=x) . abs)
+
+{- |
+Keep all those lists where at least one value is above a threshold.
+This allows to filter consistently across stacks.
+-}
+simultaneousThreshold :: (Ord i, Ord a, Num a) => a -> Map i [a] -> Map i [a]
+simultaneousThreshold x = Map.filter (any ((>=x) . abs))
 
 {- |
 @filterDeltaVars vars@ keeps only the terms
@@ -76,3 +93,10 @@ filterDeltaVars is =
           (\k _ -> Fold.all (Stack.Delta ==) $ intersectionMapSet k set)
 
 
+cumulate ::
+   (Ord (idx node), Num a) =>
+   Map (Map (Idx.InSection idx node) Stack.Branch) a ->
+   Map (Map (idx node) Stack.Branch) a
+cumulate =
+   Map.mapKeysWith (+)
+      (Map.mapKeys (\(Idx.InSection _sec node) -> node))

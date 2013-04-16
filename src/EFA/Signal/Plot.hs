@@ -69,14 +69,12 @@ import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
 import qualified Graphics.Gnuplot.Frame.OptionSet.Style as OptsStyle
 import qualified Graphics.Gnuplot.Frame.OptionSet.Histogram as Histogram
 
-import qualified EFA.Utility.TotalMap as TMap
 import qualified Data.Map as M
 import qualified Data.List as L
 import qualified Data.Foldable as Fold
+import qualified Data.List.Key as Key
 import Control.Monad (zipWithM_)
 import Control.Functor.HT (void)
-import Control.Applicative (liftA2)
-import Data.Traversable (traverse)
 import Data.Foldable (foldMap)
 import Data.Monoid (mconcat)
 
@@ -335,13 +333,13 @@ record ::
     SV.Storage v a, Fractional a, Atom.C a, Tuple.C a) =>
    Record s1 s2 typ0 typ1 id v a -> Plot2D.T a a
 record (Record time pMap) =
-   foldMap
-      (\(key, sig) ->
-         recordStyle key (colourMap M.! key) $
+   Fold.fold $
+   M.mapWithKey
+      (\key (col, sig) ->
+         recordStyle key (Colour.unC col) $
          Plot2D.list Graph2D.linesPoints $
          zip (getData time) (getData sig)) $
-   M.toList pMap
-   where colourMap = Colour.colourMap (M.keys pMap)
+   Colour.adorn pMap
 
 recordIO ::
    (Fractional y,
@@ -484,40 +482,39 @@ stackLineSpec term colour =
           (lineColour colour $ LineSpec.deflt)))
 
 stackAttr ::
-   (FormatValue var) =>
-   String -> var -> Opts.T (Graph2D.T Int Double)
+   String -> Format.ASCII -> Opts.T (Graph2D.T Int Double)
 stackAttr title var =
    Opts.title title $
       Histogram.rowstacked $
       OptsStyle.fillBorderLineType (-1) $
       OptsStyle.fillSolid $
       optKeyOutside $
-      Opts.xTicks2d [(Format.unASCII $ formatValue var, 0)] $
+      Opts.xTicks2d [(Format.unASCII var, 0)] $
       Opts.deflt
 
 stack ::
    (FormatValue term, Show term, Ord term) =>
-   M.Map term String ->
    M.Map term Double -> Plot2D.T Int Double
-stack colorMap =
-   Fold.fold .
-   M.mapWithKey
-      (\term val ->
-         stackLineSpec term (colorMap M.! term) $
-           Plot2D.list Graph2D.histograms [val])
+stack =
+   foldMap
+      (\(col, (term, val)) ->
+         stackLineSpec term (Colour.unC col) $
+           Plot2D.list Graph2D.histograms [val]) .
+   Colour.adorn .
+   reverse .
+   Key.sort (abs . snd) .
+   M.toList
 
 
 stackIO ::
-   (FormatValue var, FormatValue term, Show term, Ord term) =>
-   String -> var -> M.Map term Double -> IO ()
+   (FormatValue term, Show term, Ord term) =>
+   String -> Format.ASCII -> M.Map term Double -> IO ()
 stackIO title var m =
-   void . Plot.plotDefault . Frame.cons (stackAttr title var) . stack colorMap $ m
-   where colorMap = Colour.colourMap (M.keys m)
+   void . Plot.plotDefault . Frame.cons (stackAttr title var) . stack $ m
 
 
 stacksAttr ::
-   (FormatValue var) =>
-   String -> [var] -> Opts.T (Graph2D.T Int Double)
+   String -> [Format.ASCII] -> Opts.T (Graph2D.T Int Double)
 stacksAttr title vars =
    Opts.title title $
       Histogram.rowstacked $
@@ -525,32 +522,31 @@ stacksAttr title vars =
       OptsStyle.fillSolid $
       optKeyOutside $
       Opts.boxwidthAbsolute 0.9 $
-      Opts.xTicks2d (zip (map (Format.unASCII . formatValue) vars) [0..]) $
+      Opts.xTicks2d (zip (map Format.unASCII vars) [0..]) $
       Opts.deflt
 
 stacks ::
-  (Ord term, FormatValue term, Show term) =>
-  M.Map term String -> [M.Map term Double] -> Plot2D.T Int Double
-stacks colourMap =
-   Fold.fold .
-   M.mapWithKey
-      (\term (col, vals) ->
-         stackLineSpec term col $
+   (Ord term, FormatValue term, Show term) =>
+   M.Map term [Double] -> Plot2D.T Int Double
+stacks =
+   foldMap
+      (\(col, (term, vals)) ->
+         stackLineSpec term (Colour.unC col) $
          Plot2D.list Graph2D.histograms vals) .
-  TMap.core .
-  liftA2 (,) (TMap.cons Colour.defltColour colourMap) .
-  traverse (TMap.cons 0)
+   Colour.adorn .
+   reverse .
+   Key.sort (maximum . map abs . snd) .
+   M.toList
 
+{- |
+The length of @[var]@ must match the one of the @[Double]@ lists.
+-}
 stacksIO ::
-   (FormatValue var, Ord term, FormatValue term, Show term) =>
-   String -> [(var, M.Map term Double)] -> IO ()
-stacksIO title xs =
-   case unzip xs of
-      (vars, (y:ys)) ->
-         let colorMap = Colour.colourMap (M.keys y)
-         in  void . Plot.plotDefault . Frame.cons (stacksAttr title vars)
-                  . stacks colorMap $ ys
-      _ -> error "stackIO: empty list"
+   (Ord term, FormatValue term, Show term) =>
+   String -> [Format.ASCII] -> M.Map term [Double] -> IO ()
+stacksIO title vars xs =
+   void . Plot.plotDefault .
+   Frame.cons (stacksAttr title vars) . stacks $ xs
 
 class Atom.C (Value tc) => AxisLabel tc where
    type Value tc :: *

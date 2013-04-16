@@ -31,4 +31,4 @@ main :: IO ()
 main = do
   let sol = StateAnalysis.advanced topoDreibein
   print (length sol)
-  Draw.flowTopologies sol
+  Draw.xterm $ Draw.flowTopologies sol

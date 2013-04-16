@@ -106,7 +106,8 @@ mainSymbolic = do
 
    putStrLn $ Format.unUnicode $ formatValue env
 
-   Draw.sequFlowGraphAbsWithEnv (Draw.xterm "" seqTopo) env
+   Draw.xterm $
+     Draw.sequFlowGraphAbsWithEnv seqTopo env
 
 
 
@@ -156,7 +157,7 @@ mainNumeric = do
                       Stack.assignDeltaMap x
                AssignMap.print assigns
                Plot.stackIO "Decomposition of total output energy"
-                  (Idx.delta $ Var.index eout) assigns
+                  (formatValue $ Idx.delta $ Var.index eout) assigns
 
 
 main :: IO ()

@@ -168,5 +168,5 @@ main = do
   -- let env' = EqGen.solve (given 0.9 undefined) seqTopo
 
   concurrentlyMany_ [
-    Draw.sequFlowGraphAbsWithEnv (Draw.xterm "" seqTopo) env ]
+    Draw.xterm $ Draw.sequFlowGraphAbsWithEnv seqTopo env ]
     -- Draw.sequFlowGraphAbsWithEnv "" seqTopo env' ]

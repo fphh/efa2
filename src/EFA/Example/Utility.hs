@@ -45,8 +45,8 @@ makeNodes ns = map f ns
   where f (n, ty) = (makeNode n, ty)
 -}
 
-makeEdges :: [(node, node)] -> [Gr.LEdge node ()]
-makeEdges = map (\(a, b) -> (Gr.Edge a b, ()))
+makeEdges :: [(node, node)] -> [Gr.LEdge Gr.DirEdge node ()]
+makeEdges = map (\(a, b) -> (Gr.DirEdge a b, ()))
 
 {-
 makeSimpleEdges :: [(Int, Int)] -> [Gr.LEdge Idx.Node ()]

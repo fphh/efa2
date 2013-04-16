@@ -12,6 +12,7 @@ import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Graph as Gr
 
 import qualified EFA.Report.Format as Format
+import qualified Data.GraphViz.Attributes.Colors.X11 as Colors
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
@@ -83,5 +84,8 @@ main = do
   let seqTopo = constructSeqTopo topoDreibein [1, 0, 1]
       env = EqGen.solve seqTopo given
 
-  Draw.sequFlowGraphAbsWithEnv (Draw.xterm "" seqTopo) env
+  Draw.xterm $
+    Draw.bgcolour Colors.Burlywood1 $
+    Draw.title "Dies ist der Titel!" $
+    Draw.sequFlowGraphAbsWithEnv seqTopo env
 

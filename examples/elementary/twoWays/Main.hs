@@ -128,6 +128,6 @@ solve e x =
 main :: IO ()
 main =
   concurrentlyMany_ [
-    Draw.topology topo,
+    Draw.xterm $ Draw.topology topo,
     putStrLn $ unlines $ map (\e -> unlines $ map (solve e) xRange) enRange
   ]

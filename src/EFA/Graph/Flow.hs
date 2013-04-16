@@ -7,7 +7,7 @@ import qualified EFA.Example.Index as XIdx
 
 import qualified EFA.Graph as Gr
 import EFA.Graph
-          (Edge(Edge),
+          (DirEdge(DirEdge),
            labNodes, labEdges,
            insNodes, insEdges)
 
@@ -43,7 +43,7 @@ data Dir = Pos | Neg | Zero deriving (Show,Eq)
 
 type EdgeFlow = (Dir,Quality)
 
-newtype EdgeStates node = EdgeStates (M.Map (G.Edge node ) EdgeFlow) deriving (Show)
+newtype EdgeStates node = EdgeStates (M.Map (DirEdge node ) EdgeFlow) deriving (Show)
 
 getEdgeState :: (Fractional a,
                  Ord a,
@@ -59,7 +59,7 @@ getEdgeState :: (Fractional a,
 getEdgeState topo rec = EdgeStates $ M.fromList $ zip edges $ map f edges
   where
     edges = M.keys $ G.edgeLabels topo
-    f (G.Edge n1 n2)  = case sigSign $ S.sum $ s1 of
+    f (DirEdge n1 n2)  = case sigSign $ S.sum $ s1 of
                         (TC (Data (PSign))) -> (Pos,quality)
                         (TC (Data (NSign))) -> (Neg,quality)
                         (TC (Data (ZSign))) -> (Zero,quality)
@@ -102,7 +102,7 @@ adjustSignsNew (EdgeStates m) rec = rmapWithKey f rec
           (Neg, _) -> neg x
           (Pos, _) -> x
           (Zero, _) -> x
-        g (Idx.PPos (Idx.StructureEdge n1 n2)) = G.Edge n1 n2
+        g (Idx.PPos (Idx.StructureEdge n1 n2)) = DirEdge n1 n2
 
 
 
@@ -122,7 +122,7 @@ adjustSigns topo (FlowState state) (Record dt flow) =
                 $ M.insert ppos' (flow `checkedLookup` ppos') acc
                 where ppos' = Idx.flip ppos
             uniquePPos = foldl h M.empty (labEdges topo)
-              where h acc (Edge idx1 idx2, ()) =
+              where h acc (DirEdge idx1 idx2, ()) =
                       M.insert ppos (state `checkedLookup` ppos) acc
                       where ppos = XIdx.ppos idx1 idx2
 
@@ -153,30 +153,37 @@ genFlowTopology ::
 genFlowTopology topo (FlowState fs) =
    Gr.fromList (labNodes topo) $
    map
-      (\(Edge idx1 idx2, ()) ->
+      (\(DirEdge idx1 idx2, ()) ->
          case fs `checkedLookup` XIdx.ppos idx1 idx2 of
-            PSign -> (Edge idx1 idx2, Dir)
-            NSign -> (Edge idx2 idx1, Dir)
-            ZSign -> (Edge idx1 idx2, UnDir)) $
+            PSign -> (DirEdge idx1 idx2, Dir)
+            NSign -> (DirEdge idx2 idx1, Dir)
+            ZSign -> (DirEdge idx1 idx2, UnDir)) $
    labEdges topo
 
 
 mkSectionTopology ::
   (Ord node) =>
   Idx.Section -> ClassifiedTopology node -> SequFlowGraph node
-mkSectionTopology sid = Gr.ixmap (Idx.afterSecNode sid)
+mkSectionTopology sec =
+   Gr.ixmap
+      (Idx.afterSecNode sec)
+      (\(DirEdge x y) ->
+         Topo.FlowEdge $ Topo.StructureEdge $
+         Idx.InSection sec $ Idx.StructureEdge x y)
 
 
 mkStorageEdges ::
    node -> M.Map Idx.Section Topo.StoreDir ->
-   [Topo.LEdge node]
+   [(Topo.FlowEdge (Idx.BndNode node), FlowDirection)]
 mkStorageEdges node stores = do
    let (ins, outs) =
           M.partition (Topo.In ==) $ M.mapKeys Idx.AfterSection stores
    secin <- Idx.initial : M.keys ins
    secout <- M.keys $ snd $ M.split secin outs
    return $
-      (Edge (Idx.BndNode secin node) (Idx.BndNode secout node), Dir)
+      (Topo.FlowEdge $ Topo.StorageEdge $
+       Idx.ForNode (Idx.StorageEdge secin secout) node,
+       Dir)
 
 getActiveStoreSequences ::
    (Ord node) =>

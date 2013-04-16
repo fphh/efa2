@@ -67,8 +67,8 @@ topo2 = Gr.fromList nodes (makeEdges edges)
 data Node = Source | Sink deriving (Eq, Ord, Enum, Show)
 
 instance Node.C Node where
-   display Source = Format.literal "Dies ist eine Quelle."
-   display Sink   = Format.literal "Dies ist eine Senke."
+   display Source = Format.literal "Dies ist immer\n eine Quelle."
+   display Sink   = Format.literal "Dies ist immer\n eine Senke."
 
    subscript = Node.subscriptDefault
    dotId = Node.dotIdDefault
@@ -83,7 +83,7 @@ topo3 = Gr.fromList nodes (makeEdges edges)
 
 main :: IO ()
 main =
-  concurrentlyMany_ $
+  concurrentlyMany_ $ map Draw.xterm $
     Draw.topology topo0 :
     Draw.topology topo1 :
     Draw.topology topo2 :

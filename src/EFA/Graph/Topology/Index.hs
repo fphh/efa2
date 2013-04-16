@@ -1,8 +1,12 @@
 module EFA.Graph.Topology.Index where
 
+import qualified EFA.Utility.TypeConstructor as TC
+
 import qualified Test.QuickCheck as QC
 import Control.Monad (liftM2)
 
+import Data.Ord.HT (comparing)
+import Data.Eq.HT (equating)
 import Data.Word (Word)
 
 import Prelude hiding (flip)
@@ -105,6 +109,14 @@ data StructureEdge node = StructureEdge node node
 data StorageEdge node = StorageEdge Boundary Boundary
    deriving (Show, Eq, Ord)
 
+instance TC.Eq StructureEdge where eq = (==)
+instance TC.Eq StorageEdge   where eq = (==)
+
+instance TC.Ord StructureEdge where cmp = compare
+instance TC.Ord StorageEdge   where cmp = compare
+
+instance TC.Show StructureEdge where showsPrec = showsPrec
+instance TC.Show StorageEdge   where showsPrec = showsPrec
 
 
 data InSection idx node = InSection Section (idx node)
@@ -134,6 +146,22 @@ liftForNode ::
    ForNode idx0 node -> ForNode idx1 node
 liftForNode f (ForNode edge node) =
    ForNode (f edge) node
+
+
+wrapInSection :: InSection idx node -> InSection (TC.Wrap idx) node
+wrapInSection (InSection s e)  =  InSection s (TC.Wrap e)
+
+wrapForNode :: ForNode idx node -> ForNode (TC.Wrap idx) node
+wrapForNode (ForNode e n)  =  ForNode (TC.Wrap e) n
+
+instance TC.Eq idx => TC.Eq (InSection idx) where eq = equating wrapInSection
+instance TC.Eq idx => TC.Eq (ForNode   idx) where eq = equating wrapForNode
+
+instance TC.Ord idx => TC.Ord (InSection idx) where cmp = comparing wrapInSection
+instance TC.Ord idx => TC.Ord (ForNode   idx) where cmp = comparing wrapForNode
+
+instance TC.Show idx => TC.Show (InSection idx) where showsPrec p = showsPrec p . wrapInSection
+instance TC.Show idx => TC.Show (ForNode   idx) where showsPrec p = showsPrec p . wrapForNode
 
 
 structureEdge ::
@@ -194,28 +222,28 @@ instance (QC.Arbitrary node) => QC.Arbitrary (PPos node) where
 -- * two node identifiers to specify a place in the topology
 
 -- | Energy variables.
-data Energy node = Energy (StructureEdge node) deriving (Show, Ord, Eq)
+newtype Energy node = Energy (StructureEdge node) deriving (Show, Ord, Eq)
 
-data StEnergy node = StEnergy (StorageEdge node) deriving (Show, Ord, Eq)
+newtype StEnergy node = StEnergy (StorageEdge node) deriving (Show, Ord, Eq)
 
 
 -- | Energy variables for hypothetical outgoing energies.
 -- At storage edges they describe the maximum energy
 -- that a storage could deliver.
-data MaxEnergy node = MaxEnergy (StorageEdge node) deriving (Show, Ord, Eq)
+newtype MaxEnergy node = MaxEnergy (StorageEdge node) deriving (Show, Ord, Eq)
 
 -- | Power variables.
-data Power node = Power (StructureEdge node) deriving (Show, Ord, Eq)
+newtype Power node = Power (StructureEdge node) deriving (Show, Ord, Eq)
 
 -- | Eta variables.
-data Eta node = Eta (StructureEdge node) deriving (Show, Ord, Eq)
+newtype Eta node = Eta (StructureEdge node) deriving (Show, Ord, Eq)
 
 -- | Splitting factors.
-data X node = X (StructureEdge node) deriving (Show, Ord, Eq)
+newtype X node = X (StructureEdge node) deriving (Show, Ord, Eq)
 
-data StX node = StX (StorageEdge node) deriving (Show, Ord, Eq)
+newtype StX node = StX (StorageEdge node) deriving (Show, Ord, Eq)
 
-data Storage node = Storage Boundary deriving (Show, Ord, Eq)
+newtype Storage node = Storage Boundary deriving (Show, Ord, Eq)
 
 data Direction = In | Out deriving (Show, Eq, Ord)
 
