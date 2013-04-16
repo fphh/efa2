@@ -32,7 +32,7 @@ import EFA.Graph.Topology
            EdgeType(StructureEdge, StorageEdge),
            getFlowDirection,
            FlowDirectionField, FlowTopology)
-import EFA.Graph (Edge(Edge), labNodes, labEdges)
+import EFA.Graph (DirEdge(DirEdge), labNodes, labEdges)
 
 -- import EFA.Graph.Topology.Node (ShowNode, showNode)
 import qualified EFA.Graph.Topology.Node as Node
@@ -137,7 +137,7 @@ dotFromSequFlowGraph ti (rngs, g) mtshow nshow eshow =
                [GraphAttrs [Label (StrLabel (T.pack str))]]
                []
                (map (dotFromSecNode (nshow before)) ns)
-               (map (dotFromSecEdge eshow) es)
+               (map (dotFromFlowEdge eshow) es)
           where str =
                    case current of
                       Idx.Initial -> "Initial"
@@ -157,7 +157,7 @@ dotFromSequFlowGraph ti (rngs, g) mtshow nshow eshow =
               M.intersectionWith (,) topoNs $
               M.union topoEs (fmap (const []) topoNs),
             nodeStmts = [],
-            edgeStmts = map (dotFromSecEdge eshow) interEs
+            edgeStmts = map (dotFromFlowEdge eshow) interEs
           }
 
 
@@ -169,14 +169,14 @@ dotFromSecNode nshow n@(x, nodeType) =
   DotNode (dotIdentFromBndNode x) (mkNodeAttrs nodeType displabel)
   where displabel = Label $ StrLabel $ T.pack $ unUnicode $ nshow n
 
-dotFromSecEdge ::
+dotFromFlowEdge ::
   (Node.C node) =>
   (Topo.LEdge node -> [Unicode]) -> Topo.LEdge node -> DotEdge T.Text
-dotFromSecEdge eshow e =
+dotFromFlowEdge eshow e =
    DotEdge
       (dotIdentFromBndNode x) (dotIdentFromBndNode y)
       [displabel, Viz.Dir dir, colour, constraint]
-  where (Edge x y, dir, order) = orientEdge e
+  where (DirEdge x y, dir, order) = orientEdge e
         displabel =
            Label $ StrLabel $ T.pack $
            L.intercalate "\n" $ map unUnicode $ order $ eshow e
@@ -267,10 +267,10 @@ dotFromTopoNode (x, typ) =
 dotFromTopoEdge ::
   (Node.C node) =>
   M.Map (node, node) String ->
-  Gr.Edge node -> DotEdge T.Text
+  DirEdge node -> DotEdge T.Text
 dotFromTopoEdge edgeLabels e =
   case orientUndirEdge e of
-         Edge x y ->
+         DirEdge x y ->
            let from = dotIdentFromNode x
                to = dotIdentFromNode y
                lab = case M.lookup (x, y) edgeLabels of
@@ -313,7 +313,7 @@ dotFromFlowTopology ident topo = DotSG True (Just (Int ident)) stmts
         es = map mkEdge (labEdges topo)
         mkEdge el =
            case orientEdge el of
-              (Edge x y, d, _) ->
+              (DirEdge x y, d, _) ->
                  DotEdge (idf x) (idf y) [Viz.Dir d]
 
 flowTopologies ::
@@ -327,21 +327,23 @@ flowTopologies ts = runGraphvizCanvas Dot g Xlib
 
 
 orientEdge ::
-   (Ord n, FlowDirectionField el) =>
-   (Edge n, el) -> (Edge n, DirType, [s] -> [s])
-orientEdge (e@(Edge x y), l) =
-   case getFlowDirection l of
-      Topo.UnDir ->
-         (orientUndirEdge e, NoDir, const [])
-      Topo.Dir ->
---         if comparing (\(Idx.SecNode s n) -> n) x y == LT
-         if x < y
-           then (Edge x y, Forward, id)
-           else (Edge y x, Back, reverse)
+   (Gr.Edge edge, Ord n, FlowDirectionField el) =>
+   (edge n, el) -> (DirEdge n, DirType, [s] -> [s])
+orientEdge (e, l) =
+   let x = Gr.from e
+       y = Gr.to   e
+   in  case getFlowDirection l of
+          Topo.UnDir ->
+             (orientUndirEdge $ DirEdge x y, NoDir, const [])
+          Topo.Dir ->
+    --         if comparing (\(Idx.SecNode s n) -> n) x y == LT
+             if x < y
+               then (DirEdge x y, Forward, id)
+               else (DirEdge y x, Back, reverse)
 
-orientUndirEdge :: Ord n => Edge n -> Edge n
-orientUndirEdge (Edge x y) =
-   if x < y then Edge x y else Edge y x
+orientUndirEdge :: Ord n => DirEdge n -> DirEdge n
+orientUndirEdge (DirEdge x y) =
+   if x < y then DirEdge x y else DirEdge y x
 
 
 class StorageLabel a where
@@ -454,7 +456,7 @@ sequFlowGraphWithEnv ::
   (Eq node) =>
   (Maybe (Idx.Section -> output) ->
     (Maybe Idx.Boundary -> Topo.LDirNode node -> output) ->
-    ((Edge (Idx.BndNode node), b) -> [output]) -> t) ->
+    ((Topo.FlowEdge (Idx.BndNode node), b) -> [output]) -> t) ->
   Env node output -> t
 sequFlowGraphWithEnv printGr env =
   printGr (Just (formatTime env)) (formatNode env) (eshow . fst)
@@ -481,7 +483,7 @@ sequFlowGraphAbsWithEnv ::
     FormatValue v) =>
   ( Maybe (Idx.Section -> output) ->
           (Maybe Idx.Boundary -> Topo.LDirNode node -> output) ->
-          ((Edge (Idx.BndNode node), b) -> [output]) -> c ) ->
+          ((Topo.FlowEdge (Idx.BndNode node), b) -> [output]) -> c ) ->
   Env.Complete node (Record.Absolute a) (Record.Absolute v) -> c
 sequFlowGraphAbsWithEnv printGr =
   sequFlowGraphWithEnv printGr . envAbs
@@ -493,7 +495,7 @@ sequFlowGraphDeltaWithEnv ::
     FormatValue v) =>
   ( Maybe (Idx.Section -> output) ->
           (Maybe Idx.Boundary -> Topo.LDirNode node -> output) ->
-          ((Edge (Idx.BndNode node), b) -> [output]) -> c ) ->
+          ((Topo.FlowEdge (Idx.BndNode node), b) -> [output]) -> c ) ->
   Env.Complete node (Record.Delta a) (Record.Delta v) -> c
 sequFlowGraphDeltaWithEnv printGr =
   sequFlowGraphWithEnv printGr . envDelta
@@ -530,7 +532,7 @@ sequFlowGraphCumulated ::
     Node.C node, FormatValue a) =>
   ( Maybe (Idx.Section -> output) ->
     (Maybe Idx.Boundary -> Topo.LDirNode node -> output1) ->
-    ((Edge (Idx.BndNode node), b) -> [a1]) -> t) ->
+    ((Topo.FlowEdge (Idx.BndNode node), b) -> [a1]) -> t) ->
   Env.Complete node (Record.Absolute a) (Record.Absolute a) -> t
 sequFlowGraphCumulated printGr env =
   printGr (Just (formatTime aenv)) (formatNode aenv) (eshow . fst)

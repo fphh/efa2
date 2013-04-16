@@ -23,13 +23,15 @@ data RelativeDir = WithTopoDir
 
 getRelativeDir ::
   (Ord x) =>
-  TD.Topology x -> Gr.Edge x -> RelativeDir
-getRelativeDir (Gr.Graph _ es) e =
-  if M.member e es
-     then WithTopoDir
-     else if M.member (Gr.reverseEdge e) es
-             then AgainstTopoDir
-             else error "getTopologyDir: edge not found"
+  TD.Topology x -> Gr.DirEdge x -> RelativeDir
+getRelativeDir g e =
+  case Gr.edgeLabels g of
+    es ->
+      if M.member e es
+         then WithTopoDir
+         else if M.member (Gr.reverseEdge e) es
+                 then AgainstTopoDir
+                 else error "getTopologyDir: edge not found"
 
 --relativeDirToFlowDir :: 
 
@@ -65,7 +67,7 @@ cumulatedEnergyFlow topo seqTopo env =
                     zero = Rec.Absolute (Determined 0)
 
                 in  Just $
-                    case getRelativeDir topo $ Gr.Edge n n' of
+                    case getRelativeDir topo $ Gr.DirEdge n n' of
                        WithTopoDir -> (insert, insertzero)
                        AgainstTopoDir -> (insertzero, insert)
              _ -> Nothing

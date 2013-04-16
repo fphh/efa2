@@ -49,9 +49,11 @@ import System.FilePath ((</>))
 --import qualified Data.Map as M
 import qualified Data.List as L
 import Data.Tuple.HT (mapSnd)
+import qualified EFA.Example.Index as XIdx
 
 examplePath :: FilePath
 examplePath = "examples/vehicle"
+
 
 datasetsX :: [FilePath]
 datasetsX = ["Vehicle_mass900kg_res.plt",
@@ -138,23 +140,25 @@ main = do
 ---------------------------------------------------------------------------------------
 -- * Plot Stacks
 
-
+{-
   mapM_ (Plots.stack  "Energy Flow Change at Tank in Section 6"
          (XIdx.energy (Idx.Section 6) System.Tank System.ConBattery) 1 )
     (zip (deltasets datasetsX) differenceExtEnvs)
+-}
 
 
 
-{-
-  let energyIndex = (XIdx.Energy (Idx.Section 6) System.Tank System.ConBattery)
+
+  let energyIndex = (XIdx.energy (Idx.Section 7) System.Tank System.ConBattery)
 
 --  print $ Plots.lookupStack energyIndex (last differenceExtEnvs)
 
   Plots.recordStackRow
-    "Energy Flow Change at Tank in Section 6"
-    energyIndex 0
-    (zip (deltasets datasetsX) differenceExtEnvs)
--}
+    "Energy Flow Change at Tank in Section 7"
+    energyIndex 
+    10
+    differenceExtEnvs
+
 ---------------------------------------------------------------------------------------
 -- * Plot Time Signals
 

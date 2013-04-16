@@ -43,8 +43,7 @@ import qualified Data.Map as M
 --import EFA.Utility(checkedLookup)
 --import qualified Data.NonEmpty as NonEmpty
 --import qualified EFA.Report.Format as Format
-import EFA.Report.FormatValue (FormatValue)
---import Data.Tuple.HT (mapFst)
+import EFA.Report.FormatValue (FormatValue, formatValue)
 import qualified EFA.Example.AssignMap as AssignMap
 
 --import Debug.Trace
@@ -86,9 +85,10 @@ stack:: (Show a, Ord i, FormatValue i, TDNode.C a, Show i) =>
         a t (EqRecord.Absolute (Result.Result (Stack.Stack i Double)))) ->
         IO ()
 stack ti energyIndex eps (recName,env) = do
---               AssignMap.print $ lookupStack energyIndex env
-               Plot.stackIO ("Record " ++ recName ++ "-" ++ ti)
-                  (Idx.delta $ Var.index energyIndex) $ AssignMap.threshold eps $ lookupStack energyIndex env
+--   AssignMap.print $ lookupStack energyIndex env
+   Plot.stackIO ("Record " ++ recName ++ "-" ++ ti)
+      (formatValue $ Idx.delta $ Var.index energyIndex)
+      (AssignMap.threshold eps $ lookupStack energyIndex env)
 
 
 reportStack::(Num a, Ord node, Ord i, Ord a, Show node, FormatValue a,
@@ -104,20 +104,21 @@ reportStack ti energyIndex eps (env) = do
                print (ti ++ show energyIndex)
                AssignMap.print $ AssignMap.threshold eps $ lookupStack energyIndex env
 
-recordStackRow:: (TDNode.C node, Ord node, Ord i, Show i, Show node, FormatValue i,
-                             FormatValue var) =>
+recordStackRow:: (TDNode.C node, Ord node, Ord i, Show i, Show node, FormatValue i) =>
                             String
                             -> XIdx.Energy node
                             -> Double
-                            -> [(var,
-                                 Env.Complete
-                                   node
-                                   t
-                                   (EqRecord.Absolute (Result.Result (Stack.Stack i Double))))]
+                            -> [Env.Complete node t
+                                   (EqRecord.Absolute (Result.Result (Stack.Stack i Double)))]
                             -> IO ()
 
-recordStackRow ti energyIndex eps envList = Plot.stacksIO ti valList
-  where valList = map (\ (_,y) -> (Idx.delta $ Var.index energyIndex, AssignMap.threshold eps $ lookupStack energyIndex y)) envList
+recordStackRow ti energyIndex eps envs =
+   Plot.stacksIO ti
+      (map (const $ formatValue $ Idx.delta $ Var.index energyIndex) envs) .
+   AssignMap.simultaneousThreshold eps .
+   AssignMap.transpose .
+   map (lookupStack energyIndex)
+    $ envs
 
 
 lookupStack:: (Ord i, Ord node, Show node) =>

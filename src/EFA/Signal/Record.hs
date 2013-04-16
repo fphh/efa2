@@ -37,6 +37,8 @@ import EFA.Signal.Data (Data(Data),
 
 import EFA.Signal.Base (Sign, BSum, BProd)
 
+import qualified EFA.Graph.Topology.Index as Idx
+
 import EFA.Report.Report (ToTable(toTable), Table(..), tvcat)
 import EFA.Report.Typ (TDisp, getDisplayTypName)
 import EFA.Report.Base (DispStorage1)
@@ -67,17 +69,6 @@ instance Show SigId where
   show (SigId x) = show x
 
 
--- | Indices for Power Position
--- data PPosIdx = PPosIdx !Idx.Node !Idx.Node deriving (Show, Eq, Ord)
-
------------------------------------------------------------------------------------
--- | Indices for Power Position
-data PPosIdx node = PPosIdx !node !node deriving (Show, Eq, Ord)
-
-flipPos ::  PPosIdx node -> PPosIdx node
-flipPos (PPosIdx idx1 idx2) = PPosIdx idx2 idx1
-
-
 type instance D.Value (Record s1 s2 t1 t2 id v a) = a
 
 
@@ -86,18 +77,17 @@ data Record s1 s2 t1 t2 id v a =
             (M.Map id (TC s2 t2 (Data (v :> Nil) a))) deriving (Show, Eq)
 
 
-
 type SignalRecord = Record Signal Signal (Typ A T Tt) (Typ UT UT UT) SigId
 
-type PowerRecord n = Record Signal Signal (Typ A T Tt) (Typ A P Tt) (PPosIdx n)
+type PowerRecord n = Record Signal Signal (Typ A T Tt) (Typ A P Tt) (Idx.PPos n)
 
-type FlowRecord n = Record Signal FSignal (Typ A T Tt) (Typ A F Tt) (PPosIdx n)
+type FlowRecord n = Record Signal FSignal (Typ A T Tt) (Typ A F Tt) (Idx.PPos n)
 
-type DTimeFlowRecord n = Record FSignal FSignal (Typ D T Tt) (Typ A F Tt) (PPosIdx n)
+type DTimeFlowRecord n = Record FSignal FSignal (Typ D T Tt) (Typ A F Tt) (Idx.PPos n)
 
 
 -- | Flow record to contain flow signals assigned to the tree
-newtype FlowState node = FlowState (M.Map (PPosIdx node) Sign) deriving (Show)
+newtype FlowState node = FlowState (M.Map (Idx.PPos node) Sign) deriving (Show)
 
 
 
@@ -228,14 +218,14 @@ genPowerRecord :: (Show (v a),
                    BProd a a,
                    BSum a,
                    Ord node) =>
-                  TSignal v a -> [(PPosIdx node, UTSignal v a, UTSignal v a)] -> PowerRecord node v a
+                  TSignal v a -> [(Idx.PPos node, UTSignal v a, UTSignal v a)] -> PowerRecord node v a
 genPowerRecord time =
    Record time .
       foldMap
          (\(pposIdx, sigA, sigB) ->
             M.fromList
                [(pposIdx, S.setType sigA),
-                (flipPos pposIdx, S.setType sigB)])
+                (Idx.flip pposIdx, S.setType sigB)])
 
 
 addSignals ::
@@ -405,23 +395,19 @@ major (S.TC (D.Data energyThreshold)) (S.TC (D.Data timeThreshold)) rec =
 -----------------------------------------------------------------------------------
 -- Various Class and Instance Definition for the different Sequence Datatypes
 
-instance (QC.Arbitrary node) => QC.Arbitrary (PPosIdx node) where
-   arbitrary = liftM2 PPosIdx QC.arbitrary QC.arbitrary
-   shrink (PPosIdx from to) = map (uncurry PPosIdx) $ QC.shrink (from, to)
-
 instance
    (Sample a, V.FromList v, V.Storage v a, QC.Arbitrary id, Ord id) =>
       QC.Arbitrary (Record s1 s2 t1 t2 id v a) where
    arbitrary = do
       xs <- QC.listOf arbitrarySample
       n <- QC.choose (1,5)
-      ppos <- QC.vectorOf n QC.arbitrary
+      pos <- QC.vectorOf n QC.arbitrary
       let vectorSamples =
              HTL.switchR [] (\equalSized _ -> equalSized) $
              HTL.sliceVertical n xs
       return $
          Record (S.fromList $ Match.take vectorSamples $ iterate (1+) 0) $
-         M.fromList $ zip ppos $ map S.fromList $ transpose vectorSamples
+         M.fromList $ zip pos $ map S.fromList $ transpose vectorSamples
 
 {-
 we need this class,
@@ -505,7 +491,7 @@ addRecName2SigId :: String -> SignalRecord v a -> SignalRecord v a
 addRecName2SigId name (Record time sigs) = Record time (M.mapKeys (\ (SigId x) -> SigId (name ++ "_" ++ x) ) sigs)
 
 -- | Plot Records with readible keys
-namePowers :: (Ord node, Show node,Show (v a)) =>  M.Map (PPosIdx node) SigId -> PowerRecord node v a -> SignalRecord v a
+namePowers :: (Ord node, Show node,Show (v a)) =>  M.Map (Idx.PPos node) SigId -> PowerRecord node v a -> SignalRecord v a
 namePowers powerNames rec = rmap S.untype $ rmapKeys f rec
   where f key = checkedLookup2 "Record.namePowers" powerNames key
 

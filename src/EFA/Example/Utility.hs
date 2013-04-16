@@ -45,8 +45,8 @@ makeNodes ns = map f ns
   where f (n, ty) = (makeNode n, ty)
 -}
 
-makeEdges :: [(node, node)] -> [Gr.LEdge node ()]
-makeEdges = map (\(a, b) -> (Gr.Edge a b, ()))
+makeEdges :: [(node, node)] -> [Gr.LEdge Gr.DirEdge node ()]
+makeEdges = map (\(a, b) -> (Gr.DirEdge a b, ()))
 
 {-
 makeSimpleEdges :: [(Int, Int)] -> [Gr.LEdge Idx.Node ()]
@@ -189,7 +189,6 @@ envFromFlowRecord =
                Map.singleton (XIdx.dTime section) (Signal.unpack times),
             Env.powerMap =
                Map.mapKeys
-                  (\(SigRecord.PPosIdx x y) ->
-                     Idx.structureEdge Idx.Power section x y) $
+                  (\(Idx.PPos x) -> Idx.InSection section $ Idx.Power x) $
                fmap Signal.unpack signals
          })

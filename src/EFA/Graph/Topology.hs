@@ -1,8 +1,11 @@
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE ExistentialQuantification #-}
 module EFA.Graph.Topology (
        NLabel (..), LNode, LDirNode, StNode,
        LEdge, LDirEdge,
        NodeType (..), storage,
        EdgeType (..),
+       FlowEdge (FlowEdge),
        FlowDirection (..),
        EdgeLabel,
        FlowDirectionField, getFlowDirection,
@@ -34,17 +37,19 @@ import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph as Gr
 import EFA.Graph (Graph)
 
+import Control.Monad (mplus)
+import Data.Foldable (Foldable, foldMap)
 import Data.Maybe.HT (toMaybe)
 import Data.Tuple.HT (snd3)
-import Control.Monad (mplus)
+import Data.Monoid ((<>))
 
 import qualified Test.QuickCheck as QC
 
 
 type LNode a = Gr.LNode (Idx.BndNode a) (NodeType ())
-type LEdge a = Gr.LEdge (Idx.BndNode a) FlowDirection
+type LEdge a = Gr.LEdge FlowEdge (Idx.BndNode a) FlowDirection
 type LDirNode a = Gr.LNode (Idx.BndNode a) (NodeType (Maybe StoreDir))
-type LDirEdge a = Gr.LEdge (Idx.BndNode a) ()
+type LDirEdge a = Gr.LEdge Gr.DirEdge (Idx.BndNode a) ()
 type StNode store a = Gr.LNode (Idx.BndNode a) (NodeType store)
 
 data
@@ -108,19 +113,70 @@ data EdgeType node =
    | StorageEdge (Idx.ForNode Idx.StorageEdge node)
    deriving (Eq, Ord, Show)
 
+data FlowEdge bndNode =
+        BndNode bndNode => FlowEdge {edgeType :: EdgeType (NodeOf bndNode)}
 
-edgeType :: Eq node => Gr.Edge (Idx.BndNode node) -> EdgeType node
-edgeType (Gr.Edge (Idx.BndNode sx nx) (Idx.BndNode sy ny)) =
-   if sx == sy
-     then
-        case sx of
-           Idx.AfterSection s ->
-              StructureEdge $ Idx.InSection s $ Idx.StructureEdge nx ny
-           _ -> error "structure edges must be in a section"
-     else
-        if nx == ny
-          then StorageEdge $ Idx.ForNode (Idx.StorageEdge sx sy) nx
-          else error "forbidden edge type"
+
+instance Foldable FlowEdge where
+   foldMap f e = f (Gr.from e) <> f (Gr.to e)
+
+instance Gr.Edge FlowEdge where
+   from (FlowEdge e) =
+      case e of
+         StructureEdge (Idx.InSection sec (Idx.StructureEdge node _)) ->
+            afterSecNode sec node
+         StorageEdge (Idx.ForNode (Idx.StorageEdge bnd _) node) ->
+            bndNode bnd node
+   to (FlowEdge e) =
+      case e of
+         StructureEdge (Idx.InSection sec (Idx.StructureEdge _ node)) ->
+            afterSecNode sec node
+         StorageEdge (Idx.ForNode (Idx.StorageEdge _ bnd) node) ->
+            bndNode bnd node
+
+instance (EqEdge bndNode) => Eq (FlowEdge bndNode) where
+   (==)  =  eqEdge
+
+class EqEdge bndNode where
+   eqEdge :: FlowEdge bndNode -> FlowEdge bndNode -> Bool
+
+instance (Eq node) => EqEdge (Idx.BndNode node) where
+   eqEdge (FlowEdge x) (FlowEdge y)  =  x==y
+
+
+instance (OrdEdge bndNode) => Ord (FlowEdge bndNode) where
+   compare  =  cmpEdge
+
+class EqEdge bndNode => OrdEdge bndNode where
+   cmpEdge :: FlowEdge bndNode -> FlowEdge bndNode -> Ordering
+
+instance (Ord node) => OrdEdge (Idx.BndNode node) where
+   cmpEdge (FlowEdge x) (FlowEdge y)  =  compare x y
+
+
+instance (ShowEdge bndNode) => Show (FlowEdge bndNode) where
+   showsPrec  =  showEdge
+
+class ShowEdge bndNode where
+   showEdge :: Int -> FlowEdge bndNode -> ShowS
+
+instance (Show node) => ShowEdge (Idx.BndNode node) where
+   showEdge p (FlowEdge e) = showsPrec p e
+
+
+class BndNode bndNode where
+   type NodeOf bndNode :: *
+   sectionFromBndNode :: bndNode -> Idx.Boundary
+   nodeFromBndNode :: bndNode -> NodeOf bndNode
+   afterSecNode :: Idx.Section -> NodeOf bndNode -> bndNode
+   bndNode :: Idx.Boundary -> NodeOf bndNode -> bndNode
+
+instance BndNode (Idx.BndNode node) where
+   type NodeOf (Idx.BndNode node) = node
+   sectionFromBndNode (Idx.BndNode bnd _node) = bnd
+   nodeFromBndNode (Idx.BndNode _bnd node) = node
+   afterSecNode = Idx.afterSecNode
+   bndNode = Idx.BndNode
 
 
 isActiveEdge :: FlowDirectionField el => el -> Bool
@@ -167,10 +223,10 @@ instance EdgeTypeField e => EdgeTypeField (e, l) where
 -}
 
 
-isStructureEdge :: Eq node => Gr.Edge (Idx.BndNode node) -> Bool
+isStructureEdge :: Eq node => FlowEdge (Idx.BndNode node) -> Bool
 isStructureEdge e = case edgeType e of StructureEdge _ -> True ; _ -> False
 
-isStorageEdge :: Eq node => Gr.Edge (Idx.BndNode node) -> Bool
+isStorageEdge :: Eq node => FlowEdge (Idx.BndNode node) -> Bool
 isStorageEdge e = case edgeType e of StorageEdge _ -> True ; _ -> False
 
 
@@ -186,46 +242,34 @@ isDirEdge = dir . getFlowDirection . snd
         dir _ = False
 -}
 
-type Topology a = Graph a (NodeType ()) ()
+type Topology a = Graph a Gr.DirEdge (NodeType ()) ()
 
-type FlowTopology a = Graph a (NodeType ()) FlowDirection
+type FlowTopology a = Graph a Gr.DirEdge (NodeType ()) FlowDirection
 
 type
    ClassifiedTopology a =
-      Graph a (NodeType (Maybe StoreDir)) FlowDirection
+      Graph a Gr.DirEdge (NodeType (Maybe StoreDir)) FlowDirection
 
 type
    SequFlowGraph a =
-      Graph (Idx.BndNode a) (NodeType (Maybe StoreDir)) FlowDirection
+      Graph (Idx.BndNode a) FlowEdge (NodeType (Maybe StoreDir)) FlowDirection
 
 type
    DirSequFlowGraph a =
-      Graph (Idx.BndNode a) (NodeType (Maybe StoreDir)) ()
+      Graph (Idx.BndNode a) FlowEdge (NodeType (Maybe StoreDir)) ()
+
 
 pathExists :: (Ord a) => a -> a -> FlowTopology a -> Bool
 pathExists src dst =
    let go topo a =
           not (Gr.isEmpty topo) &&
           (a==dst ||
-           (any (go (Gr.delNode topo a)) $ Gr.suc topo a))
+           (any (go (Gr.delNode a topo)) $ Gr.suc topo a))
    in  flip go src . Gr.lefilter isDirEdge
 
-{-
--- should we do it with a multiparamtypeclass?
-class FromTopology t s where
-      fromTopology :: t a -> s a
-
-instance FromTopology Topology SequFlowGraph where
-         fromTopology = Gr.ixmap nf . Gr.emap ef
-           where ef _ = Dir
-                 nf = Idx.BndNode (Idx.AfterSection (Idx.Section 0))
--}
-
--- name conflict with Equation.System.fromTopology?
+{-# DEPRECATED fromTopology "This function would just add a dummy section to all nodes. Currently it is not implemented." #-}
 fromTopology :: (Ord a) => ClassifiedTopology a -> SequFlowGraph a
-fromTopology = Gr.ixmap nf . Gr.emap ef
-  where ef = const Dir
-        nf = Idx.BndNode (Idx.AfterSection (Idx.Section 0))
+fromTopology = error "TD.fromTopology: unimplemented and unnecessary"
 
 {-
 In principle, we could remove "dead nodes", but
@@ -251,8 +295,8 @@ isStorageNode = isStorage . snd . snd3
 
 classifyStorages ::
    (FlowDirectionField el, Ord node) =>
-   Graph node (NodeType ()) el ->
-   Graph node (NodeType (Maybe StoreDir)) el
+   Graph node Gr.DirEdge (NodeType ()) el ->
+   Graph node Gr.DirEdge (NodeType (Maybe StoreDir)) el
 classifyStorages =
    Gr.nmapWithInOut
       (\(pre, (_n, nt), suc) ->
