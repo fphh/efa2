@@ -3,12 +3,20 @@ model Battery
   parameter Real resistance(start = 0.02, unit = "1") "Positive power multiplied, negative power devided by efficiency" annotation(Placement(visible = true, transformation(origin = {71.2644,78.1609}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   parameter Real voltage(start = 200, unit = "1") "Positive power multiplied, negative power devided by efficiency" annotation(Placement(visible = true, transformation(origin = {71.2644,78.1609}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Electrical.Analog.Sources.ConstantVoltage constantvoltage1(V = voltage) annotation(Placement(visible = true, transformation(origin = {-6.38889,-54.7222}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-  Modelica.Electrical.Analog.Basic.Resistor resistor1(R = resistance) annotation(Placement(visible = true, transformation(origin = {-47.5698,4.41263}, extent = {{-12,12},{12,-12}}, rotation = -90)));
+  Modelica.Electrical.Analog.Basic.Resistor resistor_innerResistance(R = resistance) annotation(Placement(visible = true, transformation(origin = {-47.5698,4.41263}, extent = {{-12,12},{12,-12}}, rotation = -90)));
   Modelica.Electrical.Analog.Interfaces.NegativePin pin_n annotation(Placement(visible = true, transformation(origin = {49.3759,51.8221}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {49.3759,51.8221}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Electrical.Analog.Interfaces.PositivePin pin_p annotation(Placement(visible = true, transformation(origin = {-51.5859,51.838}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {-51.5859,51.838}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  Real _internalCurrent_log annotation(Placement(visible = true, transformation(origin = {71.9444,78.8889}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  Real _internalVoltage_log annotation(Placement(visible = true, transformation(origin = {71.3889,79.1667}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  Real _poleCurrent_log annotation(Placement(visible = true, transformation(origin = {72.2222,79.1667}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  Real _poleVoltage_log annotation(Placement(visible = true, transformation(origin = {72.2222,79.1667}, extent = {{-12,-12},{12,12}}, rotation = 0)));
 equation
-  connect(pin_p,resistor1.p) annotation(Line(points = {{-51.5859,51.838},{-47.5698,51.838},{-47.5698,17},{-47.5698,16.4126}}));
+  connect(pin_p,resistor_innerResistance.p) annotation(Line(points = {{-51.5859,51.838},{-47.5698,51.838},{-47.5698,17},{-47.5698,16.4126}}));
   connect(constantvoltage1.n,pin_n) annotation(Line(points = {{5.61111,-54.7222},{28.0225,-54.7222},{28.0225,-54.7063},{49.3759,-54.7063},{49.3759,51.8221}}));
-  connect(resistor1.n,constantvoltage1.p) annotation(Line(points = {{-47.5698,-7.58737},{-47.6016,-7.58737},{-47.6016,-54.7222},{-18.3889,-54.7222}}));
+  connect(resistor_innerResistance.n,constantvoltage1.p) annotation(Line(points = {{-47.5698,-7.58737},{-47.6016,-7.58737},{-47.6016,-54.7222},{-18.3889,-54.7222}}));
+  _poleCurrent_log = pin_p.i;
+  _poleVoltage_log = pin_p.v;
+  _internalCurrent_log = constantvoltage1.i;
+  _internalVoltage_log = constantvoltage1.v;
 end Battery;
 

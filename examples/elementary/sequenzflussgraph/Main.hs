@@ -58,16 +58,15 @@ drawSeqGraph :: [TD.FlowTopology Node.Int] ->  IO ()
 drawSeqGraph sol = do
    xs <- parse `fmap`
            prompt "Gib kommagetrennt die gewuenschten Sektionsindices ein: "
-   Draw.sequFlowGraph (Draw.xterm "" $
-     Flow.mkSequenceTopology $
-     SD.fromList $ select sol xs)
+   Draw.xterm $
+     Draw.sequFlowGraph $
+       (Flow.mkSequenceTopology (SD.fromList $ select sol xs))
 
 
 main :: IO ()
 main = do
   let sol = StateAnalysis.advanced topoDreibein
 
-  concurrentlyMany_ $
-    Draw.flowTopologies sol :
-    drawSeqGraph sol :
-    []
+  concurrentlyMany_ [
+    Draw.xterm $ Draw.flowTopologies sol,
+    drawSeqGraph sol ]

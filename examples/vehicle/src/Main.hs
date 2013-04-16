@@ -29,7 +29,7 @@ import qualified Modules.Plots as Plots
 import qualified EFA.Example.Index as XIdx
 -- import qualified EFA.Signal.Plot as Plot
 import qualified EFA.Graph.Topology.Index as Idx
--- import qualified EFA.Equation.Environment as Env
+import qualified EFA.Equation.Environment as Env
 
 -- import qualified EFA.Equation.Record as EqRecord
 --import qualified EFA.Equation.Result as Result
@@ -40,8 +40,6 @@ import qualified EFA.Graph.Topology.Index as Idx
 --import qualified Data.NonEmpty as NonEmpty
 --import qualified EFA.Symbolic.SumProduct as SumProduct
 
-import qualified EFA.Signal.Colour as Colour
-
 import qualified EFA.Signal.Record as Record
 
 import qualified System.IO as IO
@@ -51,19 +49,25 @@ import System.FilePath ((</>))
 --import qualified Data.Map as M
 import qualified Data.List as L
 import Data.Tuple.HT (mapSnd)
+import qualified EFA.Example.Index as XIdx
+
+import qualified Data.GraphViz.Attributes.Colors.X11 as Colors
 
 examplePath :: FilePath
 examplePath = "examples/vehicle"
 
-datasetsX :: [(FilePath, Colour.C)]
-datasetsX = zip [-- "Vehicle_mass900kg_res.plt",
-                 "Vehicle_mass1000kg_res.plt",
-                 "Vehicle_mass1100kg_res.plt"] Colour.colours
 
-deltasets :: [(FilePath, Colour.C)]  ->   [(FilePath, Colour.C)]
-deltasets xs = zipWith (\(x, _) (y, c) -> (y ++ "_vs_" ++ x, c)) xs (tail xs)
+datasetsX :: [FilePath]
+datasetsX = ["Vehicle_mass900kg_res.plt",
+             "Vehicle_mass1000kg_res.plt",
+             "Vehicle_mass1100kg_res.plt"]
 
-zipWith3M_ :: Monad m => (t -> t1 -> t2 -> m b) -> [t] -> [t1] -> [t2] -> m ()
+deltasets :: [String]  ->   [String]
+deltasets xs = zipWith (\x y -> y ++ "_vs_" ++ x) xs (tail xs)
+
+zipWith3M_ ::
+  Monad m =>
+  (t -> t1 -> t2 -> m b) -> [t] -> [t1] -> [t2] -> m ()
 zipWith3M_ f x y z = mapM_ (\(x',y',z') -> f x' y' z') (zip3 x y z)
 
 main :: IO ()
@@ -81,7 +85,7 @@ main = do
 -- * Import signals from Csv-file
 
   path <- fmap (</> examplePath) $ getEnv "EFADATA"
-  rawSignalsX <- mapM modelicaPLTImport $ map ((path </>) . fst) datasetsX
+  rawSignalsX <- mapM modelicaPLTImport $ map (path </>) datasetsX
 
 ---------------------------------------------------------------------------------------
 -- * Conditioning, Sequencing and Integration
@@ -140,22 +144,25 @@ main = do
 ---------------------------------------------------------------------------------------
 -- * Plot Stacks
 
-
-  mapM_ (Plots.stack  "Energy Flow Change at Tank in Section 6"
-        (XIdx.energy (Idx.Section 6) System.Tank System.ConBattery) 1)
-        (zip (map fst $ deltasets datasetsX) differenceExtEnvs)
-
-
 {-
-  let energyIndex = (XIdx.Energy (Idx.Section 6) System.Tank System.ConBattery)
+  mapM_ (Plots.stack  "Energy Flow Change at Tank in Section 6"
+         (XIdx.energy (Idx.Section 6) System.Tank System.ConBattery) 1 )
+    (zip (deltasets datasetsX) differenceExtEnvs)
+-}
+
+
+
+
+  let energyIndex = (XIdx.energy (Idx.Section 7) System.Tank System.ConBattery)
 
 --  print $ Plots.lookupStack energyIndex (last differenceExtEnvs)
 
   Plots.recordStackRow
-    "Energy Flow Change at Tank in Section 6"
-    energyIndex 0
-    (zip (deltasets datasetsX) differenceExtEnvs)
--}
+    "Energy Flow Change at Tank in Section 7"
+    energyIndex 
+    10
+    differenceExtEnvs
+
 ---------------------------------------------------------------------------------------
 -- * Plot Time Signals
 
@@ -195,6 +202,22 @@ main = do
 
 ---------------------------------------------------------------------------------------
 -- * Draw Diagrams
+  let drawDelta ti topo env c = 
+        Draw.xterm $
+          Draw.title ti $
+          Draw.bgcolour c $
+          Draw.sequFlowGraphDeltaWithEnv topo env
+      drawAbs ti topo env c = 
+        Draw.xterm $
+          Draw.title ti $
+          Draw.bgcolour c $
+          Draw.sequFlowGraphAbsWithEnv topo env
+
+      colours = [ Colors.LightPink1,	 
+                  Colors.LightPink2,	 
+                  Colors.LightPink3,	 
+                  Colors.LightPink4 ]
+
 
   concurrentlyMany_ $ [
     -- Topologie
@@ -203,7 +226,6 @@ main = do
 
     -- Sectionen
 --    zipWith3M_ Draw.sequFlowGraphAbsWithEnv datasetsX sequenceFlowTopologyX externalEnvX,
-
 --    concurrentlyMany_ $
 --      L.zipWith3 Draw.sequFlowGraphAbsWithEnv
 --                 (L.zipWith3 Draw.xterm datasetsX sectionToposX externalEnvX)
@@ -218,15 +240,14 @@ main = do
     -- Vorhersage
 --    Draw.sequFlowGraphAbsWithEnv "Prediction" (head sequenceFlowTopologyX) prediction
     ]
-    ++ Draw.multi Draw.sequFlowGraphAbsWithEnv
-                  Draw.xterm
-                  (map fst datasetsX)
-                  sectionToposX
-                  externalEnvX
 
-    ++ Draw.multi Draw.sequFlowGraphDeltaWithEnv 
-                  Draw.xterm
-                  (map fst $ deltasets datasetsX)
-                  sectionToposX
-                  externalDeltaEnvX
-
+    ++ L.zipWith4 drawAbs
+         datasetsX
+         sectionToposX
+         externalEnvX
+         colours
+    ++ L.zipWith4 drawDelta
+         (deltasets datasetsX)
+         sectionToposX
+         externalDeltaEnvX
+         (tail colours)

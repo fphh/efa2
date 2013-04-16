@@ -30,7 +30,7 @@ import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Vector as Vec
 import qualified EFA.Signal.Signal as Sig
 
-import EFA.Signal.Record (PPosIdx(PPosIdx), SignalRecord, FlowRecord,
+import EFA.Signal.Record (SignalRecord, FlowRecord,
                           Record(Record), PowerRecord,
                           SignalRecord, getTime, newTimeBase)
 
@@ -168,7 +168,6 @@ external sequenceFlowTopology sequFlowRecord =  EqGen.solveFromMeasurement seque
 initStorage :: (Fractional a) => a
 initStorage = 0.7*3600*1000
 
-
 makeGivenFromExternal :: (Vec.Zipper v,
                           Vec.Walker v,
                           Vec.Singleton v,
@@ -191,8 +190,8 @@ makeGivenFromExternal idx sf =
    where f sec (Record t xs) =
            (Idx.Record idx (Idx.InSection sec Idx.DTime) .= sum (Sig.toList $ Sig.delta t)) <>
            fold (M.mapWithKey g xs)
-           where g (PPosIdx a b) e =
-                    Idx.Record idx (XIdx.energy sec a b) .= sum (Sig.toList e)
+           where g (Idx.PPos p) e =
+                    Idx.Record idx (Idx.InSection sec (Idx.Energy p)) .= sum (Sig.toList e)
 
 -------------------------------------------------------------------------------------------------
 -- ## Predict Energy Flow

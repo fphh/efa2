@@ -2,38 +2,29 @@
 
 module EFA.Signal.Colour where
 
-import qualified Data.Map as M
-
-
 import Data.Colour
 import Data.Colour.Names as Colour
-import Data.Colour.SRGB (sRGB24show, sRGB24read, toSRGB24, RGB(..))
-import qualified Data.GraphViz.Attributes.Colors as GV
+import Data.Colour.SRGB (sRGB24show)
+
+import qualified Data.Stream as Stream
+import Data.Stream (Stream)
+
+import EFA.Utility (zipWithTraversable)
+import Data.Traversable (Traversable)
 
 newtype C = C { unC :: String } deriving (Show)
 
 showf :: Colour Double -> C
 showf = C . sRGB24show
 
-
-
-class ConvertColour c where
-      convertColour :: C -> c
-
-instance ConvertColour GV.Color where
-         convertColour (C str) =
-           case toSRGB24 $ sRGB24read str of
-                RGB r g b -> GV.RGB r g b
-
-
-colourMap :: (Ord a) => [a] -> M.Map a C
-colourMap xs = M.fromList $ zip xs colours
+adorn :: Traversable f => f a -> f (C, a)
+adorn = zipWithTraversable (,) colours
 
 defltColour :: C
 defltColour = showf red
 
-colours :: [C]
-colours = cls ++ colours
+colours :: Stream C
+colours = Stream.cycle cls
 
 cls :: [C]
 cls = map showf [

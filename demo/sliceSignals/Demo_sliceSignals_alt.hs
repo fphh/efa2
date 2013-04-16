@@ -4,22 +4,23 @@
 
 module Main where
 
-import qualified Data.Map as M
+import qualified EFA.Example.Index as XIdx
+
+import qualified EFA.Graph.Topology.Node as Node
 
 import qualified EFA.Signal.Signal as S
 import EFA.Signal.Sequence
 import EFA.Signal.SequenceData
 import EFA.Signal.Record
-
+import EFA.Signal.Data ((:>), Nil, Data)
 
 import EFA.Report.Report
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
 
-import EFA.Signal.Data ((:>), Nil, Data)
+import qualified Data.Map as M
 
-import qualified EFA.Graph.Topology.Node as Node
 
 node0, node1 :: Node.Int
 node0 :~ node1 :~ _ = Stream.enumFrom minBound
@@ -31,10 +32,10 @@ p1, p2 :: S.TC s t (Data ([] :> Nil) Double)
 p1 = S.fromList [1,0,0,1,0,0]
 p2 = S.fromList [1,0,1,1,1,0]
 
-pmap :: M.Map (PPosIdx Node.Int) (S.TC s t (Data ([] :> Nil) Double))
+pmap :: M.Map (XIdx.PPos Node.Int) (S.TC s t (Data ([] :> Nil) Double))
 pmap = M.fromListWith
          (error "duplicate keys")
-         [(PPosIdx node0 node1, p1),(PPosIdx node1 node0, p2)]
+         [(XIdx.ppos node0 node1, p1),(XIdx.ppos node1 node0, p2)]
 
 rec, rec0 :: PowerRecord Node.Int [] Double
 rec = Record time pmap

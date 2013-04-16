@@ -1,10 +1,13 @@
 module EFA.Utility where
 
+import qualified Data.Stream as Stream
 import qualified Data.List.Match as Match
 import qualified Data.List.HT as LH
 import qualified Data.Set as S
 import qualified Data.Map as M
+import Data.Traversable (Traversable, mapAccumL)
 import Data.Tuple.HT (swap)
+import Data.Stream (Stream)
 
 
 checkedLookup :: (Ord k, Show k, Show v) => M.Map k v -> k -> v
@@ -48,6 +51,11 @@ differenceMapSet m s = M.difference m (mapFromSet (const ()) s)
 intersectionMapSet ::
    (Ord key) => M.Map key a -> S.Set key -> M.Map key a
 intersectionMapSet m s = M.intersection m (mapFromSet (const ()) s)
+
+zipWithTraversable ::
+   (Traversable f) => (a -> b -> c) -> Stream a -> f b -> f c
+zipWithTraversable f as0 =
+   snd . mapAccumL (\(Stream.Cons a as) b -> (as, f a b)) as0
 
 
 for :: [a] -> (a -> b) -> [b]
