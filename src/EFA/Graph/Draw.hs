@@ -70,9 +70,12 @@ import qualified Data.List as L
 import qualified Data.List.HT as HTL
 
 import Control.Monad (void)
+import Control.Category ((.))
 
 import Data.Foldable (foldMap, fold)
 import Data.Tuple.HT (mapFst)
+
+import Prelude hiding ((.))
 
 
 
@@ -157,18 +160,28 @@ dotFromSequFlowGraph (rngs, g) mtshow nshow eshow =
             edgeStmts = map (dotFromSecEdge eshow) interEs
           }
 
+
+graphStatementsAcc ::
+   Accessor.T (DotGraph t) (DotStatements t)
+graphStatementsAcc =
+   Accessor.fromSetGet (\s g -> g { graphStatements = s }) graphStatements
+
+attrStmtsAcc ::
+   Accessor.T (DotStatements n) [GlobalAttributes]
+attrStmtsAcc =
+   Accessor.fromSetGet (\stmts as -> as { attrStmts = stmts }) attrStmts
+
 setGlobalAttrs :: GlobalAttributes -> DotGraph T.Text -> DotGraph T.Text
-setGlobalAttrs attr g =  g { graphStatements = stmtsNew }
-  where stmts = graphStatements g
-        stmtsNew = stmts { attrStmts = attr : attrStmts stmts }
+setGlobalAttrs attr =
+   Accessor.modify (attrStmtsAcc . graphStatementsAcc) (attr:)
 
 title :: String -> DotGraph T.Text -> DotGraph T.Text
-title ti = setGlobalAttrs txt
-  where txt = GraphAttrs [Label (StrLabel (T.pack ti))]
+title ti =
+   setGlobalAttrs $ GraphAttrs [Label (StrLabel (T.pack ti))]
 
 bgcolour :: X11Colors.X11Color -> DotGraph T.Text -> DotGraph T.Text
-bgcolour c = setGlobalAttrs colour
-  where colour = GraphAttrs [BgColor [Colors.X11Color c]]
+bgcolour c =
+   setGlobalAttrs $ GraphAttrs [BgColor [Colors.X11Color c]]
 
 
 pdf, png, eps, svg, plain, fig, dot :: FilePath -> DotGraph T.Text -> IO ()
