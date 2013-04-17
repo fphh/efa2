@@ -15,7 +15,6 @@ module EFA.Graph.Topology (
        SequFlowGraph,
        DirSequFlowGraph,
        pathExists,
-       fromTopology,
        dirFromSequFlowGraph,
        isStorage,
        maybeStorage,
@@ -266,10 +265,6 @@ pathExists src dst =
           (a==dst ||
            (any (go (Gr.delNode a topo)) $ Gr.suc topo a))
    in  flip go src . Gr.lefilter isDirEdge
-
-{-# DEPRECATED fromTopology "This function would just add a dummy section to all nodes. Currently it is not implemented." #-}
-fromTopology :: (Ord a) => ClassifiedTopology a -> SequFlowGraph a
-fromTopology = error "TD.fromTopology: unimplemented and unnecessary"
 
 {-
 In principle, we could remove "dead nodes", but
