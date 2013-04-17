@@ -11,7 +11,7 @@ import EFA.Equation.Result (Result(..))
 import qualified Data.Map as M
 
 import Control.Applicative (liftA2)
-import Data.Monoid (Monoid, mempty, (<>))
+import Data.Monoid ((<>))
 import Data.Maybe (mapMaybe)
 import Data.Tuple.HT (mapPair)
 
@@ -19,6 +19,8 @@ import Data.Tuple.HT (mapPair)
 
 data RelativeDir = WithTopoDir
                  | AgainstTopoDir deriving (Eq, Show)
+
+type EnergyMap node a = M.Map (Idx.Energy node) a
 
 
 getRelativeDir ::
@@ -41,8 +43,8 @@ cumulatedEnergyFlow ::
   TD.Topology node ->
   TD.DirSequFlowGraph node ->
   Env.Complete node b (Rec.Absolute (Result a)) ->
-  ( Env.EnergyMap node (Rec.Absolute (Result a)),
-    Env.EnergyMap node (Rec.Absolute (Result a)) )
+  ( EnergyMap node (Rec.Absolute (Result a)),
+    EnergyMap node (Rec.Absolute (Result a)) )
 cumulatedEnergyFlow topo seqTopo env =
    mapPair (cum, cum) $ unzip $ mapMaybe f $ Gr.labEdges seqTopo
   where cum = M.unionsWith (liftA2 (liftA2 (+)))
@@ -51,10 +53,10 @@ cumulatedEnergyFlow topo seqTopo env =
           case TD.edgeType e of
              TD.StructureEdge idx@(Idx.InSection _sec (Idx.StructureEdge n n')) ->
                 let e1 = Idx.liftInSection Idx.Energy idx
-                    idx1 = Idx.InSection (Idx.Section 0) $ Idx.Energy (Idx.StructureEdge n n')
+                    idx1 = Idx.Energy (Idx.StructureEdge n n')
 
                     e2 = Idx.liftInSection Idx.Energy (Idx.flip idx)
-                    idx2 = Idx.InSection (Idx.Section 0) $ Idx.Energy (Idx.StructureEdge n' n)
+                    idx2 = Idx.Energy (Idx.StructureEdge n' n)
 
                     insert =
                        (M.singleton idx1 $ toDet $ M.lookup e1 em) <>
@@ -73,49 +75,14 @@ cumulatedEnergyFlow topo seqTopo env =
              _ -> Nothing
 
 
-cumulatedEnv ::
-  (Ord node) =>
-  TD.Topology node ->
-  Env.EnergyMap node (Rec.Absolute (Result a)) ->
-  ( TD.SequFlowGraph node,
-    Env.Complete node (Rec.Absolute (Result b)) (Rec.Absolute (Result a)))
-cumulatedEnv topo enEnv = (ctopo, env)
-  where env =
-           Env.Complete
-              (mempty {
-                 Env.storageMap =
-                   fmap (const $ Rec.Absolute Undetermined) $
-                   M.mapKeys (Idx.ForNode $ Idx.Storage bnd) $
-                   M.filter TD.isStorage $ Gr.nodeLabels topo })
-              (mempty {
-                 Env.energyMap = enEnv,
-                 Env.dtimeMap =
-                   M.singleton
-                     (Idx.InSection sec Idx.DTime)
-                     (Rec.Absolute Undetermined)
-               })
-
-        sec = Idx.Section 0
-        bnd = Idx.AfterSection sec
-        ctopo =
-           TD.fromTopology $
-           TD.classifyStorages $
-           Gr.emap (const TD.Dir) topo
-
-
 cumulate ::
   (Num a, Ord node, Show node) =>
   TD.Topology node ->
-  (t1, TD.SequFlowGraph node) ->
+  (ranges, TD.SequFlowGraph node) ->
   Env.Complete node b (Rec.Absolute (Result a)) ->
-  ( ( (t1, TD.SequFlowGraph node),
-       Env.Complete node (Rec.Absolute (Result a1)) (Rec.Absolute (Result a))),
-    ( (t1, TD.SequFlowGraph node),
-      Env.Complete node (Rec.Absolute (Result a2)) (Rec.Absolute (Result a))))
-cumulate topo (rngs, seqTopo) env =
-  ( ((rngs, ctopo), withDirEnv), ((rngs, crevTopo), againstDirEnv) )
-  where revTopo = Gr.reverse topo
-        (withDir, againstDir) =
+  ( ( TD.Topology node, EnergyMap node (Rec.Absolute (Result a)) ),
+    ( TD.Topology node, EnergyMap node (Rec.Absolute (Result a)) ) )
+cumulate topo (_rngs, seqTopo) env =
+  ( (topo, withDirEnv), (Gr.reverse topo, againstDirEnv) )
+  where (withDirEnv, againstDirEnv) =
            cumulatedEnergyFlow topo (TD.dirFromSequFlowGraph seqTopo) env
-        (ctopo, withDirEnv) = cumulatedEnv topo withDir
-        (crevTopo, againstDirEnv) = cumulatedEnv revTopo againstDir

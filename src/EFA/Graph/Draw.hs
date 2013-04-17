@@ -26,6 +26,7 @@ import qualified EFA.Equation.Variable as Var
 import qualified EFA.Example.Index as XIdx
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
+import qualified EFA.Graph.CumulatedFlow as Cum
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph as Gr
 import EFA.Graph.Topology
@@ -515,21 +516,45 @@ envDelta ::
 envDelta = envGen Idx.Delta
 
 
+
 sequFlowGraphCumulated ::
   (FormatValue a, Node.C node) =>
-  Flow.RangeGraph node ->
-  Env.Complete node (Record.Absolute a) (Record.Absolute a) ->
+  Topo.Topology node ->
+  Cum.EnergyMap node (Record.Absolute a) ->
   DotGraph T.Text
 sequFlowGraphCumulated g env =
-  dotFromSequFlowGraph  g (Just (formatTime aenv)) (formatNode aenv) (eshow . fst)
-  where aenv = envAbs env
-        eshow se =
-           case Topo.edgeType se of
-              StructureEdge e ->
-                 formatEnergy aenv e :
-                 --formatX env e :
-                 --formatEta env e :
-                 --formatX env (Idx.flip e) :
-                 formatEnergy aenv (Idx.flip e) :
-                 []
-              _ -> error "Intersection edge in cumulated diagramm"
+  DotGraph {
+    strictGraph = False,
+    directedGraph = True,
+    graphID = Just (Int 1),
+    graphStatements =
+      DotStmts {
+        attrStmts = [],
+        subGraphs = [],
+        nodeStmts = map dotFromTopoNode $ Gr.labNodes g,
+        edgeStmts = map (dotFromCumEdge env) $ Gr.labEdges g
+      }
+  }
+
+dotFromCumEdge ::
+  (FormatValue a, Node.C node) =>
+   Cum.EnergyMap node (Record.Absolute a) ->
+   Gr.LEdge Gr.DirEdge node () -> DotEdge T.Text
+dotFromCumEdge env (e, ()) =
+   DotEdge
+      (dotIdentFromNode x) (dotIdentFromNode y)
+      [displabel, Viz.Dir dir, structureEdgeColour]
+  where (DirEdge x y, dir, _order) = orientEdge (e, Topo.Dir)
+        displabel =
+           Label $ StrLabel $ T.pack $
+           L.intercalate "\n" $ map unUnicode $
+              formatEner (Idx.StructureEdge x y) :
+              formatEner (Idx.StructureEdge y x) :
+              []
+        formatEner idx =
+           Format.assign
+              (Format.edgeIdent Format.Energy)
+              (maybe
+                  (error $ "could not find cumulated energy index")
+                  (formatValue . Record.unAbsolute) $
+               M.lookup (Idx.Energy idx) env)
