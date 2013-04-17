@@ -101,5 +101,5 @@ main = do
 
   concurrentlyMany_ $ map Draw.xterm [
     Draw.sequFlowGraphAbsWithEnv seqTopo env,
-    uncurry Draw.sequFlowGraphCumulated with,
-    uncurry Draw.sequFlowGraphCumulated against ]
+    uncurry Draw.cumulatedFlow with,
+    uncurry Draw.cumulatedFlow against ]

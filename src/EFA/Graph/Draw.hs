@@ -4,10 +4,10 @@ module EFA.Graph.Draw (
   fig, dot,
   title, bgcolour,
   sequFlowGraph,
-  sequFlowGraphCumulated,
   sequFlowGraphWithEnv,
   sequFlowGraphAbsWithEnv, envAbs,
   sequFlowGraphDeltaWithEnv, envDelta,
+  cumulatedFlow,
   topologyWithEdgeLabels,
   Env(..),
   topology,
@@ -517,12 +517,12 @@ envDelta = envGen Idx.Delta
 
 
 
-sequFlowGraphCumulated ::
+cumulatedFlow ::
   (FormatValue a, Node.C node) =>
   Topo.Topology node ->
   Cum.EnergyMap node (Record.Absolute a) ->
   DotGraph T.Text
-sequFlowGraphCumulated g env =
+cumulatedFlow g env =
   DotGraph {
     strictGraph = False,
     directedGraph = True,
