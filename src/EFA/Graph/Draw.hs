@@ -71,7 +71,7 @@ import qualified Data.List.HT as HTL
 
 import Control.Monad (void)
 
-import Data.Foldable (foldMap)
+import Data.Foldable (foldMap, fold)
 import Data.Tuple.HT (mapFst)
 
 
@@ -266,13 +266,10 @@ dotFromTopoEdge ::
 dotFromTopoEdge edgeLabels e =
   case orientUndirEdge e of
          DirEdge x y ->
-           let from = dotIdentFromNode x
-               to = dotIdentFromNode y
-               lab = case M.lookup (x, y) edgeLabels of
-                          Just str -> T.pack str
-                          _ -> T.pack ""
+           let lab = T.pack $ fold $ M.lookup (x, y) edgeLabels
            in  DotEdge
-                 from to
+                 (dotIdentFromNode x)
+                 (dotIdentFromNode y)
                  [ Viz.Dir Viz.NoDir, structureEdgeColour,
                    Label (StrLabel lab), EdgeTooltip lab ]
 
