@@ -4,10 +4,10 @@ module EFA.Graph.Draw (
   fig, dot,
   title, bgcolour,
   sequFlowGraph,
-  sequFlowGraphCumulated,
   sequFlowGraphWithEnv,
   sequFlowGraphAbsWithEnv, envAbs,
   sequFlowGraphDeltaWithEnv, envDelta,
+  cumulatedFlow,
   topologyWithEdgeLabels,
   Env(..),
   topology,
@@ -26,6 +26,7 @@ import qualified EFA.Equation.Variable as Var
 import qualified EFA.Example.Index as XIdx
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
+import qualified EFA.Graph.CumulatedFlow as Cum
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph as Gr
 import EFA.Graph.Topology
@@ -70,9 +71,12 @@ import qualified Data.List as L
 import qualified Data.List.HT as HTL
 
 import Control.Monad (void)
+import Control.Category ((.))
 
-import Data.Foldable (foldMap)
+import Data.Foldable (foldMap, fold)
 import Data.Tuple.HT (mapFst)
+
+import Prelude hiding ((.))
 
 
 
@@ -157,18 +161,28 @@ dotFromSequFlowGraph (rngs, g) mtshow nshow eshow =
             edgeStmts = map (dotFromSecEdge eshow) interEs
           }
 
+
+graphStatementsAcc ::
+   Accessor.T (DotGraph t) (DotStatements t)
+graphStatementsAcc =
+   Accessor.fromSetGet (\s g -> g { graphStatements = s }) graphStatements
+
+attrStmtsAcc ::
+   Accessor.T (DotStatements n) [GlobalAttributes]
+attrStmtsAcc =
+   Accessor.fromSetGet (\stmts as -> as { attrStmts = stmts }) attrStmts
+
 setGlobalAttrs :: GlobalAttributes -> DotGraph T.Text -> DotGraph T.Text
-setGlobalAttrs attr g =  g { graphStatements = stmtsNew }
-  where stmts = graphStatements g
-        stmtsNew = stmts { attrStmts = attr : attrStmts stmts }
+setGlobalAttrs attr =
+   Accessor.modify (attrStmtsAcc . graphStatementsAcc) (attr:)
 
 title :: String -> DotGraph T.Text -> DotGraph T.Text
-title ti = setGlobalAttrs txt
-  where txt = GraphAttrs [Label (StrLabel (T.pack ti))]
+title ti =
+   setGlobalAttrs $ GraphAttrs [Label (StrLabel (T.pack ti))]
 
 bgcolour :: X11Colors.X11Color -> DotGraph T.Text -> DotGraph T.Text
-bgcolour c = setGlobalAttrs colour
-  where colour = GraphAttrs [BgColor [Colors.X11Color c]]
+bgcolour c =
+   setGlobalAttrs $ GraphAttrs [BgColor [Colors.X11Color c]]
 
 
 pdf, png, eps, svg, plain, fig, dot :: FilePath -> DotGraph T.Text -> IO ()
@@ -266,13 +280,10 @@ dotFromTopoEdge ::
 dotFromTopoEdge edgeLabels e =
   case orientUndirEdge e of
          DirEdge x y ->
-           let from = dotIdentFromNode x
-               to = dotIdentFromNode y
-               lab = case M.lookup (x, y) edgeLabels of
-                          Just str -> T.pack str
-                          _ -> T.pack ""
+           let lab = T.pack $ fold $ M.lookup (x, y) edgeLabels
            in  DotEdge
-                 from to
+                 (dotIdentFromNode x)
+                 (dotIdentFromNode y)
                  [ Viz.Dir Viz.NoDir, structureEdgeColour,
                    Label (StrLabel lab), EdgeTooltip lab ]
 
@@ -505,21 +516,45 @@ envDelta ::
 envDelta = envGen Idx.Delta
 
 
-sequFlowGraphCumulated ::
+
+cumulatedFlow ::
   (FormatValue a, Node.C node) =>
-  Flow.RangeGraph node ->
-  Env.Complete node (Record.Absolute a) (Record.Absolute a) ->
+  Topo.Topology node ->
+  Cum.EnergyMap node (Record.Absolute a) ->
   DotGraph T.Text
-sequFlowGraphCumulated g env =
-  dotFromSequFlowGraph  g (Just (formatTime aenv)) (formatNode aenv) (eshow . fst)
-  where aenv = envAbs env
-        eshow se =
-           case Topo.edgeType se of
-              StructureEdge e ->
-                 formatEnergy aenv e :
-                 --formatX env e :
-                 --formatEta env e :
-                 --formatX env (Idx.flip e) :
-                 formatEnergy aenv (Idx.flip e) :
-                 []
-              _ -> error "Intersection edge in cumulated diagramm"
+cumulatedFlow g env =
+  DotGraph {
+    strictGraph = False,
+    directedGraph = True,
+    graphID = Just (Int 1),
+    graphStatements =
+      DotStmts {
+        attrStmts = [],
+        subGraphs = [],
+        nodeStmts = map dotFromTopoNode $ Gr.labNodes g,
+        edgeStmts = map (dotFromCumEdge env) $ Gr.labEdges g
+      }
+  }
+
+dotFromCumEdge ::
+  (FormatValue a, Node.C node) =>
+   Cum.EnergyMap node (Record.Absolute a) ->
+   Gr.LEdge Gr.DirEdge node () -> DotEdge T.Text
+dotFromCumEdge env (e, ()) =
+   DotEdge
+      (dotIdentFromNode x) (dotIdentFromNode y)
+      [displabel, Viz.Dir dir, structureEdgeColour]
+  where (DirEdge x y, dir, _order) = orientEdge (e, Topo.Dir)
+        displabel =
+           Label $ StrLabel $ T.pack $
+           L.intercalate "\n" $ map unUnicode $
+              formatEner (Idx.StructureEdge x y) :
+              formatEner (Idx.StructureEdge y x) :
+              []
+        formatEner idx =
+           Format.assign
+              (Format.edgeIdent Format.Energy)
+              (maybe
+                  (error $ "could not find cumulated energy index")
+                  (formatValue . Record.unAbsolute) $
+               M.lookup (Idx.Energy idx) env)
