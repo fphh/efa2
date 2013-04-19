@@ -42,6 +42,10 @@ smart constructor
 indexSet :: Map i Stack.Branch -> IndexSet i
 indexSet = IndexSet
 
+deltaIndexSet :: (Ord i) => Map i Stack.Branch -> IndexSet i
+deltaIndexSet =
+   IndexSet . Map.filter (Stack.Delta==)
+
 newtype IndexSet i = IndexSet (Map i Stack.Branch)
    deriving (Eq, Ord, Show)
 
@@ -55,8 +59,7 @@ instance FormatValue i => FormatValue (IndexSet i) where
                   Stack.Before -> Idx.Before
                   Stack.Delta -> Idx.Delta) $
             formatValue i) $
-      filter p $ Map.toList x
-      where p (_, b) =  b == Stack.Delta
+      Map.toList x
 
 {- |
 Convert a list of AssignMaps to an AssignMap of lists.
