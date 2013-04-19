@@ -1,10 +1,12 @@
 module EFA.Example.AssignMap where
 
 import qualified EFA.Equation.Result as Result
+import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Stack as Stack
 import qualified EFA.Report.Format as Format
 import qualified EFA.Graph.Topology.Index as Idx
 import EFA.Equation.Result (Result)
+import EFA.Equation.Arithmetic ((~+))
 import EFA.Report.FormatValue (FormatValue, formatValue)
 import EFA.Report.Format (Format)
 import EFA.Utility (intersectionMapSet)
@@ -105,13 +107,13 @@ filterDeltaVars is =
 
 
 cumulate ::
-   (Ord (idx node), Num a) =>
+   (Ord (idx node), Arith.Sum a) =>
    [AssignMap (Idx.InSection idx node) a] ->
    AssignMap (idx node) a
 cumulate =
-   Map.unionsWith (+) .
+   Map.unionsWith (~+) .
    map
-      (Map.mapKeysWith (+)
+      (Map.mapKeysWith (~+)
          (Map.mapKeys (\(Idx.InSection _sec node) -> node)))
 
 
