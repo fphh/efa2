@@ -33,7 +33,7 @@ import qualified Data.Foldable as Fold
 import qualified Data.Map as M
 import Control.Monad (join)
 
-import EFA.Utility (checkedLookup,checkedLookup2)
+import EFA.Utility (checkedLookup, checkedLookup2, mapFromSet)
 
 
 
@@ -55,17 +55,18 @@ getEdgeState :: (Fractional a,
                  SV.Storage v Sign,
                  SV.Singleton v) =>
                 Topology node -> FlowRecord node v a -> EdgeStates node
-getEdgeState topo rec = EdgeStates $ M.fromList $ zip edges $ map f edges
+getEdgeState topo rec = EdgeStates $ mapFromSet f $ G.edgeSet topo
   where
-    edges = G.edges topo
-    f (DirEdge n1 n2)  = case sigSign $ S.sum $ s1 of
-                        (TC (Data (PSign))) -> (Pos,quality)
-                        (TC (Data (NSign))) -> (Neg,quality)
-                        (TC (Data (ZSign))) -> (Zero,quality)
-
-              where s1 = getSig rec (XIdx.ppos n1 n2)
-                    s2 = getSig rec (XIdx.ppos n2 n1)
-                    quality = edgeFlowQuality s1 s2
+    f (DirEdge n1 n2) =
+          case sigSign $ S.sum s1 of
+             TC (Data s) -> (convertSign s, edgeFlowQuality s1 s2)
+       where s1 = getSig rec (XIdx.ppos n1 n2)
+             s2 = getSig rec (XIdx.ppos n2 n1)
+             convertSign s =
+                case s of
+                   PSign -> Pos
+                   NSign -> Neg
+                   ZSign -> Zero
 
 edgeFlowQuality :: (Num d,
                     SV.Storage v d,
