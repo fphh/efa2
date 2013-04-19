@@ -1,10 +1,10 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Modules.Plots where
 
 --import Modules.System as System
 
+import EFA.Example.Utility (checkDetermined)
 import qualified EFA.Example.Index as XIdx
 import qualified EFA.Signal.Plot as Plot
 import qualified EFA.Hack.Plot as HPlot
@@ -20,12 +20,14 @@ import EFA.Signal.Record as Record
 -- import EFA.Hack.Record as HRecord
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Equation.Environment as Env
+import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Record as EqRecord
 import qualified EFA.Equation.Result as Result
 
 import qualified EFA.Equation.Stack as Stack
 import qualified EFA.Equation.Variable as Var
 --import qualified Data.Foldable as Fold
+import EFA.Equation.Arithmetic ((~+))
 
 import EFA.Report.Typ (TDisp)
 --import qualified EFA.Symbolic.SumProduct as SumProduct
@@ -39,9 +41,10 @@ import qualified Graphics.Gnuplot.Value.Tuple as Tuple
 --import EFA.Report.Typ (TDisp, DisplayType(Typ_T), getDisplayUnit, getDisplayTypName)
 --import qualified Graphics.Gnuplot.Advanced as Plot
 
+import qualified Data.Foldable as Fold
 import qualified Data.Map as M
 --import qualified Data.NonEmpty as NonEmpty
---import qualified EFA.Report.Format as Format
+-- import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
 import qualified EFA.Example.AssignMap as AssignMap
 
@@ -119,22 +122,38 @@ recordStackRow ti energyIndex eps envs =
    map (lookupStack energyIndex)
     $ envs
 
-{-
-cumStack:: (TDNode.C node, Ord node, Ord i, Show i, Show node, FormatValue i) =>
-                            String
-                            -> XIdx.Energy node
-                            -> Double
-                            -> [Env.Complete node t
-                                   (EqRecord.Absolute (Result.Result (Stack.Stack i Double)))]
-                            -> IO ()
 
+cumStack ::
+   (TDNode.C node, Ord node, Show node,
+    Ord i, Show i, FormatValue i) =>
+   String ->
+   Idx.Energy node ->
+   Double ->
+   Env.Complete node t
+      (EqRecord.Absolute (Result.Result (Stack.Stack i Double))) ->
+   IO ()
 cumStack ti energyIndex eps env =
-   Plot.stackIO ti
-   (formatValue $ Idx.delta $ Var.index energyIndex) -- (map (const $ formatValue $ Idx.delta $ Var.index energyIndex) envs) .
-   (AssignMap.threshold eps $
-    AssignMap.cumulate $
-    M.fromList map (lookupStack energyIndex) envs)
--}
+   Plot.stackIO ti (formatValue $ Idx.delta energyIndex) $
+   AssignMap.threshold eps $
+   M.mapKeys AssignMap.deltaIndexSet $
+   Stack.assignDeltaMap $
+   lookupCumStack energyIndex env
+
+lookupCumStack ::
+   (Ord i, Ord node, Show node,
+    Arith.Constant a, a ~ Arith.Scalar v, Arith.Integrate v) =>
+   Idx.Energy node ->
+   Env.Complete node t
+      (EqRecord.Absolute (Result.Result (Stack.Stack i v))) ->
+   Stack.Stack i a
+lookupCumStack e0 =
+   Fold.foldl (~+) Arith.zero .
+   fmap Arith.integrate .
+   fmap (checkDetermined "lookupCumStack") .
+   fmap EqRecord.unAbsolute .
+   M.filterWithKey (\(Idx.InSection _sec e) _ -> e == e0) .
+   Env.energyMap . Env.signal
+
 
 lookupStack:: (Ord i, Ord node, Show node) =>
                               XIdx.Energy node

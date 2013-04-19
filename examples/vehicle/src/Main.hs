@@ -154,20 +154,21 @@ main = do
 
 
 
-  let energyIndex = (XIdx.energy (Idx.Section 7) System.Tank System.ConBattery)
+  let energyIndex7 = Idx.InSection (Idx.Section 7) energyIndex
+      energyIndex  = Idx.Energy $ Idx.StructureEdge System.Tank System.ConBattery
 
 --  print $ Plots.lookupStack energyIndex (last differenceExtEnvs)
 
   Plots.recordStackRow
     "Energy Flow Change at Tank in Section 7"
-    energyIndex 
+    energyIndex7
     (1^^(-6))
     differenceExtEnvs
     
     
   Plots.cumStack
-    "Energy Flow Change at Tank in Section 7"
-    energyIndex 
+    "Cumulative Flow Change at Tank"
+    energyIndex
     (1^^(-6))
     differenceExtEnvs
    
