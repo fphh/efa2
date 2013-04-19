@@ -62,6 +62,7 @@ Library
     EFA.IO.PLTParser
     EFA.Utility
     EFA.Utility.Async
+    EFA.Utility.Map
     EFA.Utility.Stream
     EFA.Utility.TotalMap
     EFA.Utility.Trace

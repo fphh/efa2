@@ -17,7 +17,7 @@ import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph as Gr
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
-import EFA.Utility (checkedLookup)
+import EFA.Utility.Map (checkedLookup)
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (formatValue)

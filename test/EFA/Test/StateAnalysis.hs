@@ -5,7 +5,7 @@ import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 
 import qualified EFA.Graph as Gr
 import EFA.Graph.Topology (Topology)
-import EFA.Utility (mapFromSet)
+import qualified EFA.Utility.Map as MapU
 
 import qualified Data.List.Key as Key
 import qualified Data.Foldable as Fold
@@ -34,7 +34,7 @@ instance (QC.Arbitrary node, Ord node) => QC.Arbitrary (ArbTopology node) where
       edges <-
          fmap (M.fromList . take maxArbEdges) QC.arbitrary
       nodes <-
-         sequenceA $ mapFromSet (const QC.arbitrary) $
+         sequenceA $ MapU.fromSet (const QC.arbitrary) $
          Fold.foldMap (Fold.foldMap S.singleton) $
          M.keys edges
       return $ ArbTopology $

@@ -31,7 +31,8 @@ import qualified Data.Map as M
 import Control.Monad (join)
 import Data.Bool.HT (if')
 
-import EFA.Utility (checkedLookup, checkedLookup2, mapFromSet)
+import qualified EFA.Utility.Map as MapU
+import EFA.Utility.Map (checkedLookup, checkedLookup2)
 
 
 
@@ -53,7 +54,7 @@ getEdgeState :: (Fractional a,
                  SV.Storage v Sign,
                  SV.Singleton v) =>
                 Topology node -> FlowRecord node v a -> EdgeStates node
-getEdgeState topo rec = EdgeStates $ mapFromSet f $ Gr.edgeSet topo
+getEdgeState topo rec = EdgeStates $ MapU.fromSet f $ Gr.edgeSet topo
   where
     f (DirEdge n1 n2) =
           case sigSign $ S.sum s1 of

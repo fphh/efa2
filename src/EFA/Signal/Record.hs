@@ -60,7 +60,8 @@ import Data.Foldable (foldMap)
 import Data.List (transpose)
 import Data.Tuple.HT (mapFst)
 import Control.Monad (liftM2)
-import EFA.Utility (checkedLookup2, myShowList)
+import EFA.Utility.Map (checkedLookup2)
+import EFA.Utility (myShowList)
 
 
 newtype SigId = SigId String deriving (Eq, Ord)
