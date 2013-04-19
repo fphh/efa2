@@ -32,6 +32,7 @@ import EFA.Signal.Base (Sign(PSign, NSign, ZSign),BSum, DArith0)
 import qualified Data.Foldable as Fold
 import qualified Data.Map as M
 import Control.Monad (join)
+import Data.Bool.HT (if')
 
 import EFA.Utility (checkedLookup, checkedLookup2, mapFromSet)
 
@@ -81,12 +82,10 @@ edgeFlowQuality :: (Num d,
                    TC s typ (Data (v :> Nil) d)->
                    TC s typ (Data (v :> Nil) d)->
                    Quality
-edgeFlowQuality s1 s2 = if isConsistant
-                              then (if isClean then Clean else Dirty)
-                              else Wrong
-  where
-    isConsistant = sigSign (S.sum s1) == sigSign (S.sum s2)
-    isClean = not (S.hasSignChange s1) || (not $  S.hasSignChange s2)
+edgeFlowQuality s1 s2 =
+   if' (sigSign (S.sum s1) /= sigSign (S.sum s2)) Wrong $
+   if' (S.hasSignChange s1 && S.hasSignChange s2) Dirty $
+   Clean
 
 
 adjustSignsNew :: (SV.Walker v,
