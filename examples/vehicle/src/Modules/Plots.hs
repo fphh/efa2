@@ -120,6 +120,22 @@ recordStackRow ti energyIndex eps envs =
    map (lookupStack energyIndex)
     $ envs
 
+{-
+cumStack:: (TDNode.C node, Ord node, Ord i, Show i, Show node, FormatValue i) =>
+                            String
+                            -> XIdx.Energy node
+                            -> Double
+                            -> [Env.Complete node t
+                                   (EqRecord.Absolute (Result.Result (Stack.Stack i Double)))]
+                            -> IO ()
+
+cumStack ti energyIndex eps env =
+   Plot.stackIO ti
+   (formatValue $ Idx.delta $ Var.index energyIndex) -- (map (const $ formatValue $ Idx.delta $ Var.index energyIndex) envs) .
+   (AssignMap.threshold eps $
+    AssignMap.cumulate $
+    M.fromList map (lookupStack energyIndex) envs)
+-}
 
 lookupStack:: (Ord i, Ord node, Show node) =>
                               XIdx.Energy node
@@ -138,6 +154,22 @@ lookupStack energyIndex env =  case M.lookup energyIndex (Env.energyMap signalEn
    where
         Env.Complete _scalarEnv signalEnv = env
 
+{-
+lookupStacks:: (Ord i, Ord node, Show node) =>
+                              XIdx.Energy node
+                              -> Env.Complete
+                                   node t (EqRecord.Absolute (Result.Result (Stack.Stack i a)))
+                              -> M.Map (AssignMap.IndexSet i) a
 
+lookupStacks energyIndex env =  case M.lookup energyIndex (Env.energyMap signalEnv) of
+    Nothing -> error (show energyIndex ++ "undefined")
+    Just d ->
+      case EqRecord.unAbsolute d of
+        Result.Undetermined -> error (show energyIndex ++ "undetermined")
+        Result.Determined xs -> M.mapKeys AssignMap.indexSet $
+                             Stack.assignDeltaMap xs
 
+   where
+        Env.Complete _scalarEnv signalEnv = env
+-}
 

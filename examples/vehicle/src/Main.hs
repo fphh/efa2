@@ -27,6 +27,7 @@ import qualified Modules.Plots as Plots
 -- import qualified Modules.Signals as Signals
 
 import qualified EFA.Example.Index as XIdx
+import qualified EFA.Example.AssignMap as AssignMap
 -- import qualified EFA.Signal.Plot as Plot
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Equation.Environment as Env
@@ -160,8 +161,17 @@ main = do
   Plots.recordStackRow
     "Energy Flow Change at Tank in Section 7"
     energyIndex 
-    10
+    (1^^(-6))
     differenceExtEnvs
+    
+    
+  Plots.cumStack
+    "Energy Flow Change at Tank in Section 7"
+    energyIndex 
+    (1^^(-6))
+    differenceExtEnvs
+   
+    
 
 ---------------------------------------------------------------------------------------
 -- * Plot Time Signals
