@@ -98,8 +98,20 @@ filterDeltaVars is =
 
 cumulate ::
    (Ord (idx node), Num a) =>
-   Map (Map (Idx.InSection idx node) Stack.Branch) a ->
+   [Map (Map (Idx.InSection idx node) Stack.Branch) a] ->
    Map (Map (idx node) Stack.Branch) a
 cumulate =
-   Map.mapKeysWith (+)
+   Map.unionsWith (+) .
+   map
+      (Map.mapKeysWith (+)
+         (Map.mapKeys (\(Idx.InSection _sec node) -> node)))
+
+
+stripSection ::
+   (Ord (idx node)) =>
+   Map (Map (Idx.InSection idx node) Stack.Branch) a ->
+   Map (Map (idx node) Stack.Branch) a
+stripSection =
+   Map.mapKeysWith
+      (error "AssignMap.stripSection: multiple sections in one assignmap")
       (Map.mapKeys (\(Idx.InSection _sec node) -> node))
