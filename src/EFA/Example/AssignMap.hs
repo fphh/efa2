@@ -81,6 +81,14 @@ This allows to filter consistently across stacks.
 simultaneousThreshold :: (Ord i, Ord a, Num a) => a -> Map i [a] -> Map i [a]
 simultaneousThreshold x = Map.filter (any ((>=x) . abs))
 
+
+{-
+This is compatible with a @Stack i a@,
+but it may not be a perfect hyper-cube
+since some corners may be missing.
+-}
+type AssignMap i a = Map (Map i Stack.Branch) a
+
 {- |
 @filterDeltaVars vars@ keeps only the terms
 where every @var@ from @vars@ is a delta var.
@@ -88,8 +96,8 @@ where every @var@ from @vars@ is a delta var.
 filterDeltaVars ::
    (Ord i) =>
    [i] ->
-   Map (Map i Stack.Branch) a ->
-   Map (Map i Stack.Branch) a
+   AssignMap i a ->
+   AssignMap i a
 filterDeltaVars is =
    let set = Set.fromList is
    in  Map.filterWithKey
@@ -98,8 +106,8 @@ filterDeltaVars is =
 
 cumulate ::
    (Ord (idx node), Num a) =>
-   [Map (Map (Idx.InSection idx node) Stack.Branch) a] ->
-   Map (Map (idx node) Stack.Branch) a
+   [AssignMap (Idx.InSection idx node) a] ->
+   AssignMap (idx node) a
 cumulate =
    Map.unionsWith (+) .
    map
@@ -109,8 +117,8 @@ cumulate =
 
 stripSection ::
    (Ord (idx node)) =>
-   Map (Map (Idx.InSection idx node) Stack.Branch) a ->
-   Map (Map (idx node) Stack.Branch) a
+   AssignMap (Idx.InSection idx node) a ->
+   AssignMap (idx node) a
 stripSection =
    Map.mapKeysWith
       (error "AssignMap.stripSection: multiple sections in one assignmap")
