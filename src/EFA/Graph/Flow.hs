@@ -21,8 +21,6 @@ import EFA.Graph.Topology
           (Topology, FlowTopology, ClassifiedTopology, SequFlowGraph,
            FlowDirection(Dir, UnDir))
 
-import qualified EFA.Graph as G
-
 import qualified EFA.Signal.Vector as SV
 import EFA.Signal.Signal (fromScalar, sigSign, neg, TC(..))
 import qualified EFA.Signal.Signal as S
@@ -56,7 +54,7 @@ getEdgeState :: (Fractional a,
                  SV.Storage v Sign,
                  SV.Singleton v) =>
                 Topology node -> FlowRecord node v a -> EdgeStates node
-getEdgeState topo rec = EdgeStates $ mapFromSet f $ G.edgeSet topo
+getEdgeState topo rec = EdgeStates $ mapFromSet f $ Gr.edgeSet topo
   where
     f (DirEdge n1 n2) =
           case sigSign $ S.sum s1 of
