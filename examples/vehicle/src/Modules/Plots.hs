@@ -4,7 +4,6 @@ module Modules.Plots where
 
 --import Modules.System as System
 
-import EFA.Example.Utility (checkDetermined)
 import qualified EFA.Example.Index as XIdx
 import qualified EFA.Signal.Plot as Plot
 import qualified EFA.Hack.Plot as HPlot
@@ -149,7 +148,7 @@ lookupCumStack ::
 lookupCumStack e0 =
    Fold.foldl (~+) Arith.zero .
    fmap Arith.integrate .
-   fmap (checkDetermined "lookupCumStack") .
+   M.mapMaybe Result.toMaybe .
    fmap EqRecord.unAbsolute .
    M.filterWithKey (\(Idx.InSection _sec e) _ -> e == e0) .
    Env.energyMap . Env.signal
