@@ -610,7 +610,7 @@ fromGraph ::
   Bool ->
   TD.DirSequFlowGraph node -> EquationSystem rec node s a v
 fromGraph equalInOutSums g = mconcat $
-  fromEdges (M.keys $ Gr.edgeLabels g) :
+  fromEdges (Gr.edges g) :
   fromNodes equalInOutSums g :
   fromStorageSequences g :
   []

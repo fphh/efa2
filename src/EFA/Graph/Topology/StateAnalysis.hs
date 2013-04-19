@@ -134,7 +134,7 @@ splitNodesEdges topo =
    (Gr.fromMap
        (M.map (\(pre,l,suc) -> (l, S.size pre + S.size suc)) $ Gr.nodes topo)
        M.empty,
-    map fst $ Gr.labEdges topo)
+    Gr.edges topo)
 
 
 newtype
@@ -341,7 +341,7 @@ bruteForce :: (Ord node) => Topology node -> [FlowTopology node]
 bruteForce topo =
    filter (\g -> Fold.all (checkNode g) $ Gr.nodeSet g) .
    map (Gr.fromMap (Gr.nodeLabels topo) . M.fromList) $
-   mapM (edgeOrients . fst) $ Gr.labEdges topo
+   mapM edgeOrients $ Gr.edges topo
 
 {-
 This algorithm is made after reading R. Birds "Making a Century"

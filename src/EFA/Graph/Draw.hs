@@ -34,10 +34,8 @@ import EFA.Graph.Topology
            EdgeType(StructureEdge, StorageEdge),
            getFlowDirection,
            FlowDirectionField, FlowTopology)
---import EFA.Graph (Edge(Edge), labNodes, labEdges)
 import EFA.Graph (DirEdge(DirEdge), labNodes, labEdges)
 
--- import EFA.Graph.Topology.Node (ShowNode, showNode)
 import qualified EFA.Graph.Topology.Node as Node
 
 import Data.GraphViz (
@@ -261,7 +259,7 @@ dotFromTopology edgeLabels g =
         attrStmts = [],
         subGraphs = [],
         nodeStmts = map dotFromTopoNode $ Gr.labNodes g,
-        edgeStmts = map (dotFromTopoEdge edgeLabels . fst) $ Gr.labEdges g
+        edgeStmts = map (dotFromTopoEdge edgeLabels) $ Gr.edges g
       }
   }
 

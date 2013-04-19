@@ -46,10 +46,10 @@ cumulatedEnergyFlow ::
   ( EnergyMap node (Rec.Absolute (Result a)),
     EnergyMap node (Rec.Absolute (Result a)) )
 cumulatedEnergyFlow topo seqTopo env =
-   mapPair (cum, cum) $ unzip $ mapMaybe f $ Gr.labEdges seqTopo
+   mapPair (cum, cum) $ unzip $ mapMaybe f $ Gr.edges seqTopo
   where cum = M.unionsWith (liftA2 (liftA2 (+)))
         em = Env.energyMap $ Env.signal env
-        f (e, ()) =
+        f e =
           case TD.edgeType e of
              TD.StructureEdge idx@(Idx.InSection _sec (Idx.StructureEdge n n')) ->
                 let e1 = Idx.liftInSection Idx.Energy idx

@@ -8,8 +8,7 @@ import qualified EFA.Example.Index as XIdx
 import qualified EFA.Graph as Gr
 import EFA.Graph
           (DirEdge(DirEdge),
-           labNodes, labEdges,
-           insNodes, insEdges)
+           labNodes, insNodes, insEdges)
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
@@ -58,7 +57,7 @@ getEdgeState :: (Fractional a,
                 Topology node -> FlowRecord node v a -> EdgeStates node
 getEdgeState topo rec = EdgeStates $ M.fromList $ zip edges $ map f edges
   where
-    edges = M.keys $ G.edgeLabels topo
+    edges = G.edges topo
     f (DirEdge n1 n2)  = case sigSign $ S.sum $ s1 of
                         (TC (Data (PSign))) -> (Pos,quality)
                         (TC (Data (NSign))) -> (Neg,quality)
@@ -121,8 +120,8 @@ adjustSigns topo (FlowState state) (Record dt flow) =
               M.insert ppos (flow `checkedLookup` ppos)
                 $ M.insert ppos' (flow `checkedLookup` ppos') acc
                 where ppos' = Idx.flip ppos
-            uniquePPos = foldl h M.empty (labEdges topo)
-              where h acc (DirEdge idx1 idx2, ()) =
+            uniquePPos = foldl h M.empty (Gr.edges topo)
+              where h acc (DirEdge idx1 idx2) =
                       M.insert ppos (state `checkedLookup` ppos) acc
                       where ppos = XIdx.ppos idx1 idx2
 
@@ -153,12 +152,12 @@ genFlowTopology ::
 genFlowTopology topo (FlowState fs) =
    Gr.fromList (labNodes topo) $
    map
-      (\(DirEdge idx1 idx2, ()) ->
+      (\(DirEdge idx1 idx2) ->
          case fs `checkedLookup` XIdx.ppos idx1 idx2 of
             PSign -> (DirEdge idx1 idx2, Dir)
             NSign -> (DirEdge idx2 idx1, Dir)
             ZSign -> (DirEdge idx1 idx2, UnDir)) $
-   labEdges topo
+   Gr.edges topo
 
 
 mkSectionTopology ::
