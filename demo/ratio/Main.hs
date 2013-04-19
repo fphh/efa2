@@ -19,7 +19,7 @@ import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Graph as Gr
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
-import EFA.Utility (checkedLookup)
+import EFA.Utility.Map (checkedLookup)
 
 import Data.Ratio ((%))
 

@@ -31,7 +31,7 @@ import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Report.Report as Rep
 
 import qualified EFA.Utility.Stream as Stream
-import EFA.Utility (checkedLookup)
+import EFA.Utility.Map (checkedLookup)
 import EFA.Utility.Async (concurrentlyMany_)
 
 import EFA.Utility.Stream (Stream((:~)))

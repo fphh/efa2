@@ -43,8 +43,7 @@ module EFA.Graph (
    InOut,
    ) where
 
--- import EFA.Utility (mapFromSet, differenceMapSet, intersectionMapSet)
-
+-- import qualified EFA.Utility as MapU
 import qualified EFA.Utility.TypeConstructor as TC
 
 import qualified Data.Set as S
@@ -361,7 +360,7 @@ filterLEdges ::
    M.Map e el -> (n -> e) -> S.Set n -> [(n, el)]
 filterLEdges els edge =
    M.elems . M.intersectionWith (flip (,)) els .
-   M.mapKeys edge . mapFromSet id
+   M.mapKeys edge . MapU.fromSet id
 -}
 
 
@@ -427,7 +426,7 @@ delEdgeSet ::
    S.Set (e n) -> Graph n e nl el -> Graph n e nl el
 delEdgeSet es g =
    delEdgeHelp g
-      (differenceMapSet (edgeLabels g) es,
+      (MapU.differenceSet (edgeLabels g) es,
        S.toList es)
 
 delEdges ::
@@ -435,7 +434,7 @@ delEdges ::
    [e n] -> Graph n e nl el -> Graph n e nl el
 delEdges es g =
    delEdgeHelp g
-      (differenceMapSet (edgeLabels g) $ S.fromList es, es)
+      (MapU.differenceSet (edgeLabels g) $ S.fromList es, es)
 
 elfilter ::
    (Edge e, Ord (e n), Ord n) =>
@@ -480,7 +479,7 @@ compareELFilter ::
    (Graph Char DirEdge String Int, Graph Char DirEdge String Int)
 compareELFilter es =
    let ns =
-          mapFromSet (\n -> [n, toUpper n]) $
+          MapU.fromSet (\n -> [n, toUpper n]) $
           foldMap (foldMap S.singleton) $ M.keys es
    in  (elfilter even $ fromMap ns es,
         fromMap ns $ M.filter even es)

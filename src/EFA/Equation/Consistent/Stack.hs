@@ -13,7 +13,8 @@ import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Equation.Consistent.MultiValue as MV
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic ((~+), (~-), (~*), (~/))
-import EFA.Utility (differenceMapSet)
+
+import qualified EFA.Utility.Map as MapU
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
@@ -566,7 +567,7 @@ filter c1 (Filtered c0 s@(Stack is _x)) =
    liftA2 Filtered (mergeConditions c0 c1) $
    fmap
       (\c1' ->
-         (if Fold.any (Delta==) $ differenceMapSet c1' $ foldMap Set.singleton is
+         (if Fold.any (Delta==) $ MapU.differenceSet c1' $ foldMap Set.singleton is
             then fmap Arith.clear
             else id) $
          filterNaive c1' s)

@@ -9,8 +9,8 @@ import EFA.Equation.Result (Result)
 import EFA.Equation.Arithmetic ((~+))
 import EFA.Report.FormatValue (FormatValue, formatValue)
 import EFA.Report.Format (Format)
-import EFA.Utility (intersectionMapSet)
 
+import qualified EFA.Utility.Map as MapU
 import qualified EFA.Utility.TotalMap as TMap
 
 import qualified Data.Foldable as Fold
@@ -103,7 +103,7 @@ filterDeltaVars ::
 filterDeltaVars is =
    let set = Set.fromList is
    in  Map.filterWithKey
-          (\k _ -> Fold.all (Stack.Delta ==) $ intersectionMapSet k set)
+          (\k _ -> Fold.all (Stack.Delta ==) $ MapU.intersectionSet k set)
 
 
 cumulate ::

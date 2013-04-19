@@ -40,7 +40,6 @@ import qualified Graphics.Gnuplot.Value.Tuple as Tuple
 --import qualified Graphics.Gnuplot.Advanced as Plot
 
 import qualified Data.Map as M
---import EFA.Utility(checkedLookup)
 --import qualified Data.NonEmpty as NonEmpty
 --import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
