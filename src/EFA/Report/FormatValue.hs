@@ -77,10 +77,31 @@ formatSectionNode ::
 formatSectionNode (Idx.SecNode s n) =
    Format.section s `Format.sectionNode` Node.subscript n
 
+
 formatStructureEdge ::
    (Format output, Node.C node) =>
+   Format.EdgeVar -> Idx.StructureEdge node -> output
+formatStructureEdge e (Idx.StructureEdge x y) =
+   Format.subscript (Format.edgeIdent e) $
+   Node.subscript x `Format.link` Node.subscript y
+
+instance (Node.C node) => FormatValue (Idx.Energy node) where
+   formatValue (Idx.Energy e) = formatStructureEdge Format.Energy e
+
+instance (Node.C node) => FormatValue (Idx.Power node) where
+   formatValue (Idx.Power e) = formatStructureEdge Format.Power e
+
+instance (Node.C node) => FormatValue (Idx.Eta node) where
+   formatValue (Idx.Eta e) = formatStructureEdge Format.Eta e
+
+instance (Node.C node) => FormatValue (Idx.X node) where
+   formatValue (Idx.X e) = formatStructureEdge Format.X e
+
+
+formatStructureSecEdge ::
+   (Format output, Node.C node) =>
    Format.EdgeVar -> Idx.StructureEdge node -> Idx.Section -> output
-formatStructureEdge e (Idx.StructureEdge x y) s =
+formatStructureSecEdge e (Idx.StructureEdge x y) s =
    Format.subscript (Format.edgeIdent e) $
    Format.section s `Format.sectionNode`
       (Node.subscript x `Format.link` Node.subscript y)
@@ -95,16 +116,16 @@ formatStorageEdge e (Idx.StorageEdge s0 s1) n =
 
 
 instance FormatSignalIndex Idx.Energy where
-   formatSignalIndex (Idx.Energy e) = formatStructureEdge Format.Energy e
+   formatSignalIndex (Idx.Energy e) = formatStructureSecEdge Format.Energy e
 
 instance FormatSignalIndex Idx.Power where
-   formatSignalIndex (Idx.Power e) = formatStructureEdge Format.Power e
+   formatSignalIndex (Idx.Power e) = formatStructureSecEdge Format.Power e
 
 instance FormatSignalIndex Idx.Eta where
-   formatSignalIndex (Idx.Eta e) = formatStructureEdge Format.Eta e
+   formatSignalIndex (Idx.Eta e) = formatStructureSecEdge Format.Eta e
 
 instance FormatSignalIndex Idx.X where
-   formatSignalIndex (Idx.X e) = formatStructureEdge Format.X e
+   formatSignalIndex (Idx.X e) = formatStructureSecEdge Format.X e
 
 instance FormatSignalIndex Idx.DTime where
    formatSignalIndex Idx.DTime s =
