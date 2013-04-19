@@ -1,12 +1,15 @@
+{-# LANGUAGE TypeFamilies #-}
 module EFA.Graph.CumulatedFlow where
 
 import qualified EFA.Equation.Environment as Env
+import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Record as Rec
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph as Gr
 
-import EFA.Equation.Result (Result(..))
+import EFA.Equation.Arithmetic ((~+))
+import EFA.Equation.Result (Result(Undetermined, Determined))
 
 import qualified Data.Map as M
 
@@ -39,15 +42,16 @@ getRelativeDir g e =
 
 
 cumulatedEnergyFlow ::
-  (Num a, Ord node, Show node) =>
+  (Arith.Integrate v, Arith.Sum a, Arith.Scalar v ~ a, Arith.Constant a,
+   Ord node) =>
   TD.Topology node ->
   TD.DirSequFlowGraph node ->
-  Env.Complete node b (Rec.Absolute (Result a)) ->
+  Env.Complete node (Rec.Absolute (Result a)) (Rec.Absolute (Result v)) ->
   ( EnergyMap node (Rec.Absolute (Result a)),
     EnergyMap node (Rec.Absolute (Result a)) )
 cumulatedEnergyFlow topo seqTopo env =
    mapPair (cum, cum) $ unzip $ mapMaybe f $ Gr.edges seqTopo
-  where cum = M.unionsWith (liftA2 (liftA2 (+)))
+  where cum = M.unionsWith (liftA2 (liftA2 (~+)))
         em = Env.energyMap $ Env.signal env
         f e =
           case TD.edgeType e of
@@ -61,12 +65,15 @@ cumulatedEnergyFlow topo seqTopo env =
                     insert =
                        (M.singleton idx1 $ toDet $ M.lookup e1 em) <>
                        (M.singleton idx2 $ toDet $ M.lookup e2 em)
-                    toDet = maybe (Rec.Absolute Undetermined) id
+                    toDet =
+                       maybe
+                          (Rec.Absolute Undetermined)
+                          (fmap (fmap Arith.integrate))
 
                     insertzero =
                        M.singleton idx1 zero <>
                        M.singleton idx2 zero
-                    zero = Rec.Absolute (Determined 0)
+                    zero = Rec.Absolute $ Determined $ Arith.zero
 
                 in  Just $
                     case getRelativeDir topo $ Gr.DirEdge n n' of
@@ -76,10 +83,11 @@ cumulatedEnergyFlow topo seqTopo env =
 
 
 cumulate ::
-  (Num a, Ord node, Show node) =>
+  (Arith.Integrate v, Arith.Sum a, Arith.Scalar v ~ a, Arith.Constant a,
+   Ord node) =>
   TD.Topology node ->
   (ranges, TD.SequFlowGraph node) ->
-  Env.Complete node b (Rec.Absolute (Result a)) ->
+  Env.Complete node (Rec.Absolute (Result a)) (Rec.Absolute (Result v)) ->
   ( ( TD.Topology node, EnergyMap node (Rec.Absolute (Result a)) ),
     ( TD.Topology node, EnergyMap node (Rec.Absolute (Result a)) ) )
 cumulate topo (_rngs, seqTopo) env =
