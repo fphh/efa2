@@ -5,25 +5,24 @@ module EFA.Graph.Flow where
 
 import qualified EFA.Example.Index as XIdx
 
+import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Gr
+import EFA.Graph.Topology
+          (Topology, FlowTopology, ClassifiedTopology, SequFlowGraph,
+           FlowDirection(Dir, UnDir))
 import EFA.Graph
           (DirEdge(DirEdge),
            labNodes, insNodes, insEdges)
 
-import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Topology as Topo
+import qualified EFA.Signal.Signal as S
+import qualified EFA.Signal.Vector as SV
 import qualified EFA.Signal.SequenceData as SD
 import EFA.Signal.SequenceData (SequData)
 import EFA.Signal.Record
           (Record(Record), FlowState(FlowState), FlowRecord,
            getSig, rmapWithKey)
-import EFA.Graph.Topology
-          (Topology, FlowTopology, ClassifiedTopology, SequFlowGraph,
-           FlowDirection(Dir, UnDir))
-
-import qualified EFA.Signal.Vector as SV
 import EFA.Signal.Signal (fromScalar, sigSign, neg, TC(..))
-import qualified EFA.Signal.Signal as S
 import EFA.Signal.Data(Data(..), Nil, (:>))
 import EFA.Signal.Base (Sign(PSign, NSign, ZSign),BSum, DArith0)
 
