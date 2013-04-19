@@ -42,6 +42,10 @@ smart constructor
 indexSet :: Map i Stack.Branch -> IndexSet i
 indexSet = IndexSet
 
+deltaIndexSet :: (Ord i) => Map i Stack.Branch -> IndexSet i
+deltaIndexSet =
+   IndexSet . Map.filter (Stack.Delta==)
+
 newtype IndexSet i = IndexSet (Map i Stack.Branch)
    deriving (Eq, Ord, Show)
 
@@ -55,8 +59,7 @@ instance FormatValue i => FormatValue (IndexSet i) where
                   Stack.Before -> Idx.Before
                   Stack.Delta -> Idx.Delta) $
             formatValue i) $
-      filter p $ Map.toList x
-      where p (_, b) =  b == Stack.Delta
+      Map.toList x
 
 {- |
 Convert a list of AssignMaps to an AssignMap of lists.
@@ -95,8 +98,20 @@ filterDeltaVars is =
 
 cumulate ::
    (Ord (idx node), Num a) =>
-   Map (Map (Idx.InSection idx node) Stack.Branch) a ->
+   [Map (Map (Idx.InSection idx node) Stack.Branch) a] ->
    Map (Map (idx node) Stack.Branch) a
 cumulate =
-   Map.mapKeysWith (+)
+   Map.unionsWith (+) .
+   map
+      (Map.mapKeysWith (+)
+         (Map.mapKeys (\(Idx.InSection _sec node) -> node)))
+
+
+stripSection ::
+   (Ord (idx node)) =>
+   Map (Map (Idx.InSection idx node) Stack.Branch) a ->
+   Map (Map (idx node) Stack.Branch) a
+stripSection =
+   Map.mapKeysWith
+      (error "AssignMap.stripSection: multiple sections in one assignmap")
       (Map.mapKeys (\(Idx.InSection _sec node) -> node))

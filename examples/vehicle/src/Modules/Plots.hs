@@ -148,7 +148,7 @@ lookupStack energyIndex env =  case M.lookup energyIndex (Env.energyMap signalEn
     Just d ->
       case EqRecord.unAbsolute d of
         Result.Undetermined -> error (show energyIndex ++ "undetermined")
-        Result.Determined xs -> M.mapKeys AssignMap.indexSet $
+        Result.Determined xs -> M.mapKeys AssignMap.deltaIndexSet $
                              Stack.assignDeltaMap xs
 
    where

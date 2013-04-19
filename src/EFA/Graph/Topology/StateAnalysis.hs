@@ -4,15 +4,6 @@ module EFA.Graph.Topology.StateAnalysis (
    branchAndBound,
    prioritized,
    clustering, clusteringGreedy, clusteringMinimizing,
-
-   propBranchAndBound,
-   propPrioritized,
-   propClustering, propClusteringGreedy, propClusteringMinimizing,
-
-   speedBruteForce,
-   speedBranchAndBound,
-   speedPrioritized,
-   speedClustering,
    ) where
 
 import qualified EFA.Graph as Gr
@@ -20,9 +11,7 @@ import qualified EFA.Graph.Topology as Topo
 import EFA.Graph.Topology
           (FlowTopology, Topology,
            FlowDirection(UnDir, Dir), isActive)
-import EFA.Utility (mapFromSet)
 
-import qualified Data.List.Key as Key
 import qualified Data.Foldable as Fold
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Map as M
@@ -31,17 +20,11 @@ import qualified Data.FingerTree.PSQueue as PSQ
 import qualified Data.PriorityQueue.FingerTree as PQ
 import Data.FingerTree.PSQueue (PSQ)
 import Data.PriorityQueue.FingerTree (PQueue)
-import Data.Traversable (sequenceA)
 import Data.NonEmpty ((!:))
 import Control.Monad (foldM, guard)
 import Control.Functor.HT (void)
 import Data.Ord.HT (comparing)
 import Data.Eq.HT (equating)
-
-import qualified Test.QuickCheck as QC
-
-
--- import Debug.Trace
 
 
 type NodeType = Topo.NodeType ()
@@ -134,7 +117,7 @@ splitNodesEdges topo =
    (Gr.fromMap
        (M.map (\(pre,l,suc) -> (l, S.size pre + S.size suc)) $ Gr.nodes topo)
        M.empty,
-    map fst $ Gr.labEdges topo)
+    Gr.edges topo)
 
 
 newtype
@@ -341,7 +324,7 @@ bruteForce :: (Ord node) => Topology node -> [FlowTopology node]
 bruteForce topo =
    filter (\g -> Fold.all (checkNode g) $ Gr.nodeSet g) .
    map (Gr.fromMap (Gr.nodeLabels topo) . M.fromList) $
-   mapM (edgeOrients . fst) $ Gr.labEdges topo
+   mapM edgeOrients $ Gr.edges topo
 
 {-
 This algorithm is made after reading R. Birds "Making a Century"
@@ -388,92 +371,3 @@ clustering topo =
 
 advanced :: (Ord node) => Topology node -> [FlowTopology node]
 advanced = clustering
-
-
--- * tests
-
-
-maxArbEdges :: Int
-maxArbEdges = 6
-
-newtype ArbTopology node = ArbTopology (Topology node)
-   deriving (Show)
-
-instance (QC.Arbitrary node, Ord node) => QC.Arbitrary (ArbTopology node) where
-   shrink (ArbTopology g) =
-      case Gr.nodeSet g of
-         ns ->
-            map (ArbTopology . flip Gr.delNodeSet g .
-                 S.difference ns . S.fromList) $
-            QC.shrink $ S.toList ns
-   arbitrary = do
-      edges <-
-         fmap (M.fromList . take maxArbEdges) QC.arbitrary
-      nodes <-
-         sequenceA $ mapFromSet (const QC.arbitrary) $
-         Fold.foldMap (Fold.foldMap S.singleton) $
-         M.keys edges
-      return $ ArbTopology $
-         Gr.fromMap nodes $
-         M.mapKeys (\(Gr.UnDirEdge x y) -> Gr.DirEdge x y) edges
-
-propBranchAndBound :: (Eq node, Ord node) => ArbTopology node -> Bool
-propBranchAndBound (ArbTopology g) =
-   bruteForce g == branchAndBound g
-
-
-{- |
-I could declare an Ord instance for Graph,
-but I think that @graph0 < graph1@ should be a static error.
-Instead I use this function locally for 'Key.sort'.
--}
-graphIdent ::
-   (Ord node) =>
-   Gr.Graph node Gr.DirEdge nodeLabel edgeLabel ->
-   (M.Map node nodeLabel,
-    M.Map (Gr.DirEdge node) edgeLabel)
-graphIdent g = (Gr.nodeLabels g, Gr.edgeLabels g)
-
-{-
-I do not convert to Set, but use 'sort' in order to check for duplicates.
--}
-propPrioritized :: (Eq node, Ord node) => ArbTopology node -> Bool
-propPrioritized (ArbTopology g) =
-   Key.sort graphIdent (branchAndBound g)
-   ==
-   Key.sort graphIdent (prioritized g)
-
-propClustering :: (Eq node, Ord node) => ArbTopology node -> Bool
-propClustering (ArbTopology g) =
-   Key.sort graphIdent (branchAndBound g)
-   ==
-   Key.sort graphIdent (clustering g)
-
-propClusteringGreedy :: (Eq node, Ord node) => ArbTopology node -> Bool
-propClusteringGreedy (ArbTopology g) =
-   Key.sort graphIdent (branchAndBound g)
-   ==
-   Key.sort graphIdent (clusteringGreedy g)
-
-propClusteringMinimizing :: (Eq node, Ord node) => ArbTopology node -> Bool
-propClusteringMinimizing (ArbTopology g) =
-   Key.sort graphIdent (branchAndBound g)
-   ==
-   Key.sort graphIdent (clusteringMinimizing g)
-
-
-speedBruteForce :: (Eq node, Ord node) => ArbTopology node -> Bool
-speedBruteForce (ArbTopology g) =
-   bruteForce g == bruteForce g
-
-speedBranchAndBound :: (Eq node, Ord node) => ArbTopology node -> Bool
-speedBranchAndBound (ArbTopology g) =
-   branchAndBound g == branchAndBound g
-
-speedPrioritized :: (Eq node, Ord node) => ArbTopology node -> Bool
-speedPrioritized (ArbTopology g) =
-   prioritized g == prioritized g
-
-speedClustering :: (Eq node, Ord node) => ArbTopology node -> Bool
-speedClustering (ArbTopology g) =
-   clustering g == clustering g

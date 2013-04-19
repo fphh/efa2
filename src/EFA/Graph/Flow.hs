@@ -5,36 +5,33 @@ module EFA.Graph.Flow where
 
 import qualified EFA.Example.Index as XIdx
 
-import qualified EFA.Graph as Gr
-import EFA.Graph
-          (DirEdge(DirEdge),
-           labNodes, labEdges,
-           insNodes, insEdges)
-
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
+import qualified EFA.Graph as Gr
+import EFA.Graph.Topology
+          (Topology, FlowTopology, ClassifiedTopology, SequFlowGraph,
+           FlowDirection(Dir, UnDir))
+import EFA.Graph
+          (DirEdge(DirEdge),
+           labNodes, insNodes, insEdges)
+
+import qualified EFA.Signal.Signal as S
+import qualified EFA.Signal.Vector as SV
 import qualified EFA.Signal.SequenceData as SD
 import EFA.Signal.SequenceData (SequData)
 import EFA.Signal.Record
           (Record(Record), FlowState(FlowState), FlowRecord,
            getSig, rmapWithKey)
-import EFA.Graph.Topology
-          (Topology, FlowTopology, ClassifiedTopology, SequFlowGraph,
-           FlowDirection(Dir, UnDir))
-
-import qualified EFA.Graph as G
-
-import qualified EFA.Signal.Vector as SV
 import EFA.Signal.Signal (fromScalar, sigSign, neg, TC(..))
-import qualified EFA.Signal.Signal as S
 import EFA.Signal.Data(Data(..), Nil, (:>))
 import EFA.Signal.Base (Sign(PSign, NSign, ZSign),BSum, DArith0)
 
 import qualified Data.Foldable as Fold
 import qualified Data.Map as M
 import Control.Monad (join)
+import Data.Bool.HT (if')
 
-import EFA.Utility (checkedLookup,checkedLookup2)
+import EFA.Utility (checkedLookup, checkedLookup2, mapFromSet)
 
 
 
@@ -56,17 +53,18 @@ getEdgeState :: (Fractional a,
                  SV.Storage v Sign,
                  SV.Singleton v) =>
                 Topology node -> FlowRecord node v a -> EdgeStates node
-getEdgeState topo rec = EdgeStates $ M.fromList $ zip edges $ map f edges
+getEdgeState topo rec = EdgeStates $ mapFromSet f $ Gr.edgeSet topo
   where
-    edges = M.keys $ G.edgeLabels topo
-    f (DirEdge n1 n2)  = case sigSign $ S.sum $ s1 of
-                        (TC (Data (PSign))) -> (Pos,quality)
-                        (TC (Data (NSign))) -> (Neg,quality)
-                        (TC (Data (ZSign))) -> (Zero,quality)
-
-              where s1 = getSig rec (XIdx.ppos n1 n2)
-                    s2 = getSig rec (XIdx.ppos n2 n1)
-                    quality = edgeFlowQuality s1 s2
+    f (DirEdge n1 n2) =
+          case sigSign $ S.sum s1 of
+             TC (Data s) -> (convertSign s, edgeFlowQuality s1 s2)
+       where s1 = getSig rec (XIdx.ppos n1 n2)
+             s2 = getSig rec (XIdx.ppos n2 n1)
+             convertSign s =
+                case s of
+                   PSign -> Pos
+                   NSign -> Neg
+                   ZSign -> Zero
 
 edgeFlowQuality :: (Num d,
                     SV.Storage v d,
@@ -81,12 +79,10 @@ edgeFlowQuality :: (Num d,
                    TC s typ (Data (v :> Nil) d)->
                    TC s typ (Data (v :> Nil) d)->
                    Quality
-edgeFlowQuality s1 s2 = if isConsistant
-                              then (if isClean then Clean else Dirty)
-                              else Wrong
-  where
-    isConsistant = sigSign (S.sum s1) == sigSign (S.sum s2)
-    isClean = not (S.hasSignChange s1) || (not $  S.hasSignChange s2)
+edgeFlowQuality s1 s2 =
+   if' (sigSign (S.sum s1) /= sigSign (S.sum s2)) Wrong $
+   if' (S.hasSignChange s1 && S.hasSignChange s2) Dirty $
+   Clean
 
 
 adjustSignsNew :: (SV.Walker v,
@@ -121,8 +117,8 @@ adjustSigns topo (FlowState state) (Record dt flow) =
               M.insert ppos (flow `checkedLookup` ppos)
                 $ M.insert ppos' (flow `checkedLookup` ppos') acc
                 where ppos' = Idx.flip ppos
-            uniquePPos = foldl h M.empty (labEdges topo)
-              where h acc (DirEdge idx1 idx2, ()) =
+            uniquePPos = foldl h M.empty (Gr.edges topo)
+              where h acc (DirEdge idx1 idx2) =
                       M.insert ppos (state `checkedLookup` ppos) acc
                       where ppos = XIdx.ppos idx1 idx2
 
@@ -153,12 +149,12 @@ genFlowTopology ::
 genFlowTopology topo (FlowState fs) =
    Gr.fromList (labNodes topo) $
    map
-      (\(DirEdge idx1 idx2, ()) ->
+      (\(DirEdge idx1 idx2) ->
          case fs `checkedLookup` XIdx.ppos idx1 idx2 of
             PSign -> (DirEdge idx1 idx2, Dir)
             NSign -> (DirEdge idx2 idx1, Dir)
             ZSign -> (DirEdge idx1 idx2, UnDir)) $
-   labEdges topo
+   Gr.edges topo
 
 
 mkSectionTopology ::

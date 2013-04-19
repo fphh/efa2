@@ -6,7 +6,7 @@ module EFA.Graph (
    -- inEdges, outEdges,
    graphMap,
    nodeLabels,
-   edgeLabels,
+   edgeLabels, edgeSet, edges,
 
    LNode,
    Edge(from, to),
@@ -221,6 +221,16 @@ edgeLabels ::
    M.Map (edge node) edgeLabel
 edgeLabels =
    foldMap fst3 . graphMap
+
+edgeSet ::
+   (Ord (edge node), Ord node) =>
+   Graph node edge nodeLabel edgeLabel -> S.Set (edge node)
+edgeSet = foldMap (M.keysSet . fst3) . graphMap
+
+edges ::
+   (Ord (edge node), Ord node) =>
+   Graph node edge nodeLabel edgeLabel -> [edge node]
+edges = M.keys . edgeLabels
 
 
 reverse ::
