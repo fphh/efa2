@@ -165,15 +165,17 @@ main = do
     (1^^(-6))
     differenceExtEnvs
     
-    
+
+ {-    
   Plots.cumStack
     "Cumulative Flow Change at Tank"
     energyIndex
     (1^^(-6))
-    differenceExtEnvs
-   
+    (head differenceExtEnvs)
+-}   
     
-
+  print $ Plots.lookupCumStack energyIndex (last differenceExtEnvs)
+  
 ---------------------------------------------------------------------------------------
 -- * Plot Time Signals
 
