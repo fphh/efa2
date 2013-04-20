@@ -26,16 +26,16 @@ import qualified Modules.Analysis as Analysis
 import qualified Modules.Plots as Plots
 -- import qualified Modules.Signals as Signals
 
-import qualified EFA.Example.Index as XIdx
-import qualified EFA.Example.AssignMap as AssignMap
+--import qualified EFA.Example.Index as XIdx
+--import qualified EFA.Example.AssignMap as AssignMap
 -- import qualified EFA.Signal.Plot as Plot
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Equation.Environment as Env
+--import qualified EFA.Equation.Environment as Env
 
 -- import qualified EFA.Equation.Record as EqRecord
 --import qualified EFA.Equation.Result as Result
 
-import qualified EFA.Equation.Stack as Stack
+--import qualified EFA.Equation.Stack as Stack
 --import qualified EFA.Equation.Variable as Var
 --import qualified Data.Foldable as Fold
 --import qualified Data.NonEmpty as NonEmpty
@@ -47,14 +47,19 @@ import qualified System.IO as IO
 import System.Environment (getEnv)
 import System.FilePath ((</>))
 
-import qualified Data.Map as M
+--import qualified Data.Map as M
 import qualified Data.List as L
 import Data.Tuple.HT (mapSnd)
-import qualified EFA.Example.Index as XIdx
+--import qualified EFA.Example.Index as XIdx
 
 import qualified Data.GraphViz.Attributes.Colors.X11 as Colors
 
-import EFA.Report.FormatValue(RecordName(..),DeltaName(..), deltaName,formatValue)
+import EFA.Report.FormatValue(RecordName(..),
+                              DeltaName(..), 
+                              deltaName
+                              --         ,                              
+                              --formatValue
+                             )
 
 examplePath :: FilePath
 examplePath = "examples/vehicle"
@@ -66,7 +71,9 @@ fileNamesX = [-- "Vehicle_mass900kg_res.plt",
              "Vehicle_mass1100kg_res.plt"]
 
 datasetsX ::  [RecordName]
-datasetsX = map RecordName ["900kg","1000kg","1100kg"]
+datasetsX = map RecordName [--"900kg",
+                            "1000kg",
+                            "1100kg"]
 
 deltasetsX :: [DeltaName]
 deltasetsX = zipWith deltaName datasetsX (tail datasetsX)
@@ -168,33 +175,32 @@ main = do
     "Energy Flow Change at Tank in Section 7"
     deltasetsX
     energyIndex7
-    (1^^(-6))
+    (1^^(-6::Integer))
     differenceExtEnvs
     
   Plots.sectionStackRow
-    "Energy Flow Change at Tank in all Sections"
-    (last deltasetsX)
+    "Energy Flow Change at Tank in all Sections 1100 vs 1000"
     energyIndex
-    (10^5)
+    (10^(5::Integer))
     (last differenceExtEnvs)
 
 
-  print $ Plots.lookupAllStacks energyIndex (last differenceExtEnvs)
+--  print $ Plots.lookupAllStacks energyIndex (last differenceExtEnvs)
 
 
-{-     
+     
   Plots.cumStack
     "Cumulative Flow Change at Tank"
     energyIndex
-    (1^^(-1))
+    (1^^(-1::Integer))
     (head differenceExtEnvs)
--}   
-{-    
-  print $    AssignMap.threshold 0.001 $
-             M.mapKeys AssignMap.deltaIndexSet $
-             Stack.assignDeltaMap $    
+   
+    
+  print $    -- AssignMap.threshold 0.001 $
+--             M.mapKeys AssignMap.deltaIndexSet $
+--             Stack.assignDeltaMap $    
              Plots.lookupCumStack energyIndex (last differenceExtEnvs)
--}  
+  
 ---------------------------------------------------------------------------------------
 -- * Plot Time Signals
 
@@ -280,8 +286,8 @@ main = do
          sectionToposX
          externalEnvX
          colours
-{-    ++ L.zipWith4 drawDelta
+    ++ L.zipWith4 drawDelta
          deltasetsX
          sectionToposX
          externalDeltaEnvX
-         (tail colours)-}
+         (tail colours)

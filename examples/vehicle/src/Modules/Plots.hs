@@ -27,7 +27,7 @@ import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.Stack as Stack
 import qualified EFA.Equation.Variable as Var
 --import qualified Data.Foldable as Fold
-import EFA.Equation.Arithmetic ((~+))
+--import EFA.Equation.Arithmetic ((~+))
 
 import EFA.Report.Typ (TDisp)
 --import qualified EFA.Symbolic.SumProduct as SumProduct
@@ -41,7 +41,7 @@ import qualified Graphics.Gnuplot.Value.Tuple as Tuple
 --import EFA.Report.Typ (TDisp, DisplayType(Typ_T), getDisplayUnit, getDisplayTypName)
 --import qualified Graphics.Gnuplot.Advanced as Plot
 
-import qualified Data.Foldable as Fold
+--import qualified Data.Foldable as Fold
 import qualified Data.Map as M
 --import qualified Data.NonEmpty as NonEmpty
 -- import qualified EFA.Report.Format as Format
@@ -52,7 +52,8 @@ import qualified EFA.Example.AssignMap as AssignMap
 
 --import Data.Monoid ((<>))
 
-import EFA.Report.FormatValue(RecordName(..),DeltaName(..))
+import EFA.Report.FormatValue(-- RecordName(..),
+                              DeltaName(..))
 
 
 sigsWithSpeed ::(Fractional a, Ord a, Show (v a), V.Walker v, V.Storage v a,
@@ -143,13 +144,12 @@ recordStackRow ti deltaSets energyIndex eps envs =
 
 sectionStackRow:: (Ord node, TDNode.C node,Show i, Ord i, FormatValue i) =>
                   String
-                  -> DeltaName
                   -> Idx.Energy node
                   -> Double
                   -> Env.Complete node t 
                          (EqRecord.Absolute (Result.Result (Stack.Stack i Double)))
                   -> IO ()
-sectionStackRow ti deltaSets energyIndex eps env =
+sectionStackRow ti energyIndex eps env =
    Plot.stacksIO ti
    (map (formatValue . (\(Idx.InSection sec _) -> sec) .fst) stacks)  
    (AssignMap.simultaneousThreshold eps . AssignMap.transpose $ 
@@ -183,7 +183,6 @@ cumStack ti energyIndex eps env =
    Plot.stackIO ti (formatValue $ Idx.delta energyIndex) $
    AssignMap.threshold eps $
    M.mapKeys AssignMap.deltaIndexSet $
-   Stack.assignDeltaMap $
    lookupCumStack energyIndex env
 
 lookupCumStack ::
@@ -192,9 +191,11 @@ lookupCumStack ::
    Idx.Energy node ->
    Env.Complete node t
       (EqRecord.Absolute (Result.Result (Stack.Stack i v))) ->
-   Stack.Stack i a
+   M.Map (M.Map i Stack.Branch) a
 lookupCumStack e0 =
-   Fold.foldl (~+) Arith.zero .
+   M.unions .
+   map Stack.assignDeltaMap.
+   M.elems .
    fmap Arith.integrate .
    M.mapMaybe Result.toMaybe .
    fmap EqRecord.unAbsolute .
