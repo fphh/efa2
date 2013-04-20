@@ -127,7 +127,7 @@ pre topology rawSignals =  do
       epsT = Sig.toScalar 0
 
       epsE ::  TC Scalar (Typ A F Tt) (Data Nil Double)
-      epsE = Sig.toScalar 0
+      epsE = Sig.toScalar 1000
 
 
   let (sequencePowersFilt, sequenceFlowsFilt) =

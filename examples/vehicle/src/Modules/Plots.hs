@@ -1,4 +1,5 @@
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Modules.Plots where
 
@@ -51,6 +52,7 @@ import qualified EFA.Example.AssignMap as AssignMap
 
 --import Data.Monoid ((<>))
 
+import EFA.Report.FormatValue(RecordName(..),DeltaName(..))
 
 
 sigsWithSpeed ::(Fractional a, Ord a, Show (v a), V.Walker v, V.Storage v a,
@@ -104,7 +106,7 @@ reportStack::(Num a, Ord node, Ord i, Ord a, Show node, FormatValue a,
 reportStack ti energyIndex eps (env) = do
                print (ti ++ show energyIndex)
                AssignMap.print $ AssignMap.threshold eps $ lookupStack energyIndex env
-
+{-
 recordStackRow:: (TDNode.C node, Ord node, Ord i, Show i, Show node, FormatValue i) =>
                             String
                             -> XIdx.Energy node
@@ -120,7 +122,53 @@ recordStackRow ti energyIndex eps envs =
    AssignMap.transpose .
    map (lookupStack energyIndex)
     $ envs
+-}
 
+recordStackRow:: (TDNode.C node, Ord node, Ord i, Show i, Show node, FormatValue i) =>
+                            String
+                            -> [DeltaName]
+                            -> XIdx.Energy node
+                            -> Double
+                            -> [Env.Complete node t
+                                   (EqRecord.Absolute (Result.Result (Stack.Stack i Double)))]
+                            -> IO ()
+
+recordStackRow ti deltaSets energyIndex eps envs =
+   Plot.stacksIO ti
+   (map (formatValue . (\(DeltaName x) -> (DeltaName x))) deltaSets) 
+   (AssignMap.simultaneousThreshold eps .
+   AssignMap.transpose .
+   map (lookupStack energyIndex)
+    $ envs)
+
+sectionStackRow:: (Ord node, TDNode.C node,Show i, Ord i, FormatValue i) =>
+                  String
+                  -> DeltaName
+                  -> Idx.Energy node
+                  -> Double
+                  -> Env.Complete node t 
+                         (EqRecord.Absolute (Result.Result (Stack.Stack i Double)))
+                  -> IO ()
+sectionStackRow ti deltaSets energyIndex eps env =
+   Plot.stacksIO ti
+   (map (formatValue . (\(Idx.InSection sec _) -> sec) .fst) stacks)  
+   (AssignMap.simultaneousThreshold eps . AssignMap.transpose $ 
+    map (M.mapKeys AssignMap.deltaIndexSet . 
+         Stack.assignDeltaMap . snd) $ stacks)
+   where stacks = lookupAllStacks energyIndex env
+ 
+-- | Get all Stacks for a certain power position
+lookupAllStacks :: (Ord i, Ord node, Eq node) => Idx.Energy node
+                   -> Env.Complete node t 
+                         (EqRecord.Absolute (Result.Result (Stack.Stack i Double)))
+                   -> [(Idx.InSection Idx.Energy node,Stack.Stack i Double)]
+lookupAllStacks e0 =
+   M.toList .
+   fmap Arith.integrate .
+   M.mapMaybe Result.toMaybe .
+   fmap EqRecord.unAbsolute .
+   M.filterWithKey (\(Idx.InSection _sec e) _ -> e == e0) .
+   Env.energyMap . Env.signal
 
 cumStack ::
    (TDNode.C node, Ord node, Show node,
@@ -171,22 +219,4 @@ lookupStack energyIndex env =  case M.lookup energyIndex (Env.energyMap signalEn
    where
         Env.Complete _scalarEnv signalEnv = env
 
-{-
-lookupStacks:: (Ord i, Ord node, Show node) =>
-                              XIdx.Energy node
-                              -> Env.Complete
-                                   node t (EqRecord.Absolute (Result.Result (Stack.Stack i a)))
-                              -> M.Map (AssignMap.IndexSet i) a
-
-lookupStacks energyIndex env =  case M.lookup energyIndex (Env.energyMap signalEnv) of
-    Nothing -> error (show energyIndex ++ "undefined")
-    Just d ->
-      case EqRecord.unAbsolute d of
-        Result.Undetermined -> error (show energyIndex ++ "undetermined")
-        Result.Determined xs -> M.mapKeys AssignMap.indexSet $
-                             Stack.assignDeltaMap xs
-
-   where
-        Env.Complete _scalarEnv signalEnv = env
--}
 

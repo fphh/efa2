@@ -54,17 +54,22 @@ import qualified EFA.Example.Index as XIdx
 
 import qualified Data.GraphViz.Attributes.Colors.X11 as Colors
 
+import EFA.Report.FormatValue(RecordName(..),DeltaName(..), deltaName,formatValue)
+
 examplePath :: FilePath
 examplePath = "examples/vehicle"
 
 
-datasetsX :: [FilePath]
-datasetsX = ["Vehicle_mass900kg_res.plt",
+fileNamesX :: [FilePath]
+fileNamesX = [-- "Vehicle_mass900kg_res.plt",
              "Vehicle_mass1000kg_res.plt",
              "Vehicle_mass1100kg_res.plt"]
 
-deltasets :: [String]  ->   [String]
-deltasets xs = zipWith (\x y -> y ++ "_vs_" ++ x) xs (tail xs)
+datasetsX ::  [RecordName]
+datasetsX = map RecordName ["900kg","1000kg","1100kg"]
+
+deltasetsX :: [DeltaName]
+deltasetsX = zipWith deltaName datasetsX (tail datasetsX)
 
 zipWith3M_ ::
   Monad m =>
@@ -86,7 +91,7 @@ main = do
 -- * Import signals from Csv-file
 
   path <- fmap (</> examplePath) $ getEnv "EFADATA"
-  rawSignalsX <- mapM modelicaPLTImport $ map (path </>) datasetsX
+  rawSignalsX <- mapM modelicaPLTImport $ map (path </>) fileNamesX
 
 ---------------------------------------------------------------------------------------
 -- * Conditioning, Sequencing and Integration
@@ -158,13 +163,24 @@ main = do
       energyIndex  = Idx.Energy $ Idx.StructureEdge System.Tank System.ConBattery
 
 --  print $ Plots.lookupStack energyIndex7 (last differenceExtEnvs)
-{-
+
   Plots.recordStackRow
     "Energy Flow Change at Tank in Section 7"
+    deltasetsX
     energyIndex7
     (1^^(-6))
     differenceExtEnvs
--}    
+    
+  Plots.sectionStackRow
+    "Energy Flow Change at Tank in all Sections"
+    (last deltasetsX)
+    energyIndex
+    (10^5)
+    (last differenceExtEnvs)
+
+
+  print $ Plots.lookupAllStacks energyIndex (last differenceExtEnvs)
+
 
 {-     
   Plots.cumStack
@@ -173,12 +189,12 @@ main = do
     (1^^(-1))
     (head differenceExtEnvs)
 -}   
-    
+{-    
   print $    AssignMap.threshold 0.001 $
              M.mapKeys AssignMap.deltaIndexSet $
              Stack.assignDeltaMap $    
              Plots.lookupCumStack energyIndex (last differenceExtEnvs)
-  
+-}  
 ---------------------------------------------------------------------------------------
 -- * Plot Time Signals
 
@@ -215,24 +231,26 @@ main = do
 
 
 
-{-
+
 ---------------------------------------------------------------------------------------
 -- * Draw Diagrams
-  let drawDelta ti topo env c = 
-        Draw.xterm $
-          Draw.title ti $
+  
+  let -- drawDelta :: RecordName -> 
+      drawDelta ti topo env c = 
+          Draw.xterm $
+          Draw.title  ((\(DeltaName x) -> x) ti) $
           Draw.bgcolour c $
           Draw.sequFlowGraphDeltaWithEnv topo env
       drawAbs ti topo env c = 
         Draw.xterm $
-          Draw.title ti $
+          Draw.title ((\(RecordName x) -> x) ti) $
           Draw.bgcolour c $
           Draw.sequFlowGraphAbsWithEnv topo env
 
-      colours = [ Colors.LightPink1,	 
-                  Colors.LightPink2,	 
-                  Colors.LightPink3,	 
-                  Colors.LightPink4 ]
+      colours = [ Colors.White,	 
+                  Colors.Gray90,	 
+                  Colors.Gray80,	 
+                  Colors.Gray70 ]
 
 
   concurrentlyMany_ $ [
@@ -262,9 +280,8 @@ main = do
          sectionToposX
          externalEnvX
          colours
-    ++ L.zipWith4 drawDelta
-         (deltasets datasetsX)
+{-    ++ L.zipWith4 drawDelta
+         deltasetsX
          sectionToposX
          externalDeltaEnvX
-         (tail colours)
--}
+         (tail colours)-}
