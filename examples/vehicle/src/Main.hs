@@ -35,7 +35,7 @@ import qualified EFA.Equation.Environment as Env
 -- import qualified EFA.Equation.Record as EqRecord
 --import qualified EFA.Equation.Result as Result
 
---import qualified EFA.Equation.Stack as Stack
+import qualified EFA.Equation.Stack as Stack
 --import qualified EFA.Equation.Variable as Var
 --import qualified Data.Foldable as Fold
 --import qualified Data.NonEmpty as NonEmpty
@@ -47,7 +47,7 @@ import qualified System.IO as IO
 import System.Environment (getEnv)
 import System.FilePath ((</>))
 
---import qualified Data.Map as M
+import qualified Data.Map as M
 import qualified Data.List as L
 import Data.Tuple.HT (mapSnd)
 import qualified EFA.Example.Index as XIdx
@@ -157,24 +157,27 @@ main = do
   let energyIndex7 = Idx.InSection (Idx.Section 7) energyIndex
       energyIndex  = Idx.Energy $ Idx.StructureEdge System.Tank System.ConBattery
 
---  print $ Plots.lookupStack energyIndex (last differenceExtEnvs)
-
+--  print $ Plots.lookupStack energyIndex7 (last differenceExtEnvs)
+{-
   Plots.recordStackRow
     "Energy Flow Change at Tank in Section 7"
     energyIndex7
     (1^^(-6))
     differenceExtEnvs
-    
+-}    
 
- {-    
+{-     
   Plots.cumStack
     "Cumulative Flow Change at Tank"
     energyIndex
-    (1^^(-6))
+    (1^^(-1))
     (head differenceExtEnvs)
 -}   
     
-  print $ Plots.lookupCumStack energyIndex (last differenceExtEnvs)
+  print $    AssignMap.threshold 0.001 $
+             M.mapKeys AssignMap.deltaIndexSet $
+             Stack.assignDeltaMap $    
+             Plots.lookupCumStack energyIndex (last differenceExtEnvs)
   
 ---------------------------------------------------------------------------------------
 -- * Plot Time Signals
@@ -212,7 +215,7 @@ main = do
 
 
 
-
+{-
 ---------------------------------------------------------------------------------------
 -- * Draw Diagrams
   let drawDelta ti topo env c = 
@@ -264,3 +267,4 @@ main = do
          sectionToposX
          externalDeltaEnvX
          (tail colours)
+-}
