@@ -47,16 +47,9 @@ transpose (u0, u1, u2) (v0, v1, v2) (w0, w1, w2) =
   ((u0, v0, w0), (u1, v1, w1), (u2, v2, w2))
 
 det3 :: Pt -> Pt -> Pt -> Double
-det3
-   (a00, a01, a02)
-   (a10, a11, a12)
-   (a20, a21, a22) =
-      let a0 = (a01, a02)
-          a1 = (a11, a12)
-          a2 = (a21, a22)
-      in  a00 * det2 a1 a2 +
-          a10 * det2 a2 a0 +
-          a20 * det2 a0 a1
+det3 u v w =
+   let subDet (x,_,_) (_,y0,y1) (_,z0,z1) = x * det2 (y0,y1) (z0,z1)
+   in  subDet u v w + subDet v w u + subDet w u v
 
 det2 :: Pt2 -> Pt2 -> Double
 det2
