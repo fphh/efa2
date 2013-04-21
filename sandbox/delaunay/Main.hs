@@ -66,6 +66,10 @@ signedArea :: Pt2 -> Pt2 -> Pt2 -> Double
 signedArea a b c =
    det2 b c + det2 c a + det2 a b
 
+signedAreaT :: Pt -> Pt -> Double
+signedAreaT (a0,b0,c0) (a1,b1,c1) =
+   signedArea (a0,a1) (b0,b1) (c0,c1)
+
 isInTriangle :: Pt2 -> (Pt2, Pt2, Pt2) -> Bool
 isInTriangle a (b, c, d) = (x && y && z) || (not x && not y && not z)
   where x = positiveOrientation a b c
@@ -74,9 +78,8 @@ isInTriangle a (b, c, d) = (x && y && z) || (not x && not y && not z)
 
 getZ :: Pt -> Pt -> Pt -> Double -> Double -> Double
 getZ u v w x y =
-  (det3 p q r - det3 ones q r * x - det3 p ones r * y) / det3 p q ones
+  (det3 p q r - signedAreaT q r * x - signedAreaT r p * y) / signedAreaT p q
   where (p, q, r) = transpose u v w
-        ones = (1, 1, 1)
 
 
 
