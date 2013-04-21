@@ -32,11 +32,13 @@ x2 = (det3 p q r - det3 ones q r * x0 - det3 p ones r * x1) / det3 p q ones
 -}
 
 
+import Graphics.Triangulation.Delaunay (triangulate)
+import Data.Vector.V2 (Vector2(Vector2))
+
 import qualified Data.Map as M
 import qualified Data.List as L
 
-import Graphics.Triangulation.Delaunay (triangulate)
-import Data.Vector.V2 (Vector2(Vector2))
+import Data.List.HT (outerProduct)
 
 
 type Pt = (Double, Double, Double)
@@ -84,7 +86,7 @@ getZ u v w x y =
 
 
 mkKennfeld :: [Double] -> [[Pt]]
-mkKennfeld xs = map (\x -> map (\y -> f x y) xs) xs
+mkKennfeld xs = outerProduct f xs xs
   -- where f x y = (x+3*sin(y), (y-4*sin(x*0.7)), 3 + sin (y/5) * sin (x/4))
   where f x y = (x, y, 0)
 
@@ -187,7 +189,7 @@ range =  [-19, -18.5 .. 16]
 interpolation :: IO ()
 interpolation = do
   let del = delaunay (concat kennfeld)
-      tr = map (\x -> map (\y -> h (getTriangle del x y) x y) range) range
+      tr = outerProduct (\x y -> h (getTriangle del x y) x y) range range
       h (u, v, w) x y = show x ++ " " ++ show y ++ " " ++ show (getZ u v w x y)
   writeFile "interpolation.txt" (L.intercalate "\n\n" (map (L.intercalate "\n") tr))
 
