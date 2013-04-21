@@ -38,99 +38,127 @@ import Data.Vector.V2 (Vector2(Vector2))
 import qualified Data.Map as M
 import qualified Data.List as L
 
+import qualified Data.Traversable as Trav
+import qualified Data.Foldable as Fold
+import Control.Applicative (Applicative, pure, (<*>), liftA2, liftA3)
+import Data.Traversable (Traversable)
+import Data.Foldable (Foldable)
+
 import Data.List.HT (outerProduct)
+import Data.Tuple.HT (uncurry3)
+
+import qualified Prelude as P
+import Prelude hiding (unwords)
 
 
-type Pt = (Double, Double, Double)
-type Pt2 = (Double, Double)
+type Pt3 = Triple Double
+type Pt2 = Pair Double
 
-transpose :: (Pt, Pt, Pt) -> (Pt, Pt, Pt)
-transpose ((u0, u1, u2), (v0, v1, v2), (w0, w1, w2)) =
-  ((u0, v0, w0), (u1, v1, w1), (u2, v2, w2))
+data Pair a = Pair a a deriving (Eq, Show)
+data Triple a = Triple a a a deriving (Eq, Show)
 
-det3 :: Pt -> Pt -> Pt -> Double
-det3 u v w =
-   let subDet (x,_,_) (_,y0,y1) (_,z0,z1) = x * det2 (y0,y1) (z0,z1)
-   in  subDet u v w + subDet v w u + subDet w u v
+instance Functor Pair   where fmap = Trav.fmapDefault
+instance Functor Triple where fmap = Trav.fmapDefault
+
+instance Foldable Pair   where foldMap = Trav.foldMapDefault
+instance Foldable Triple where foldMap = Trav.foldMapDefault
+
+instance Traversable Pair where
+   traverse f (Pair x y) = liftA2 Pair (f x) (f y)
+
+instance Traversable Triple where
+   traverse f (Triple x y z) = liftA3 Triple (f x) (f y) (f z)
+
+instance Applicative Pair where
+   pure x = Pair x x
+   Pair fx fy <*> Pair x y = Pair (fx x) (fy y)
+
+instance Applicative Triple where
+   pure x = Triple x x x
+   Triple fx fy fz <*> Triple x y z = Triple (fx x) (fy y) (fz z)
+
+
+mapCyclic3 :: (a -> a -> b) -> Triple a -> Triple b
+mapCyclic3 f (Triple x y z) = Triple (f y z) (f z x) (f x y)
+
+det3 :: Triple Pt3 -> Double
+det3 tri =
+   let head3 (Triple x _ _) = x
+       tail3 (Triple _ y z) = Pair y z
+   in  Fold.sum $ liftA2 (*) (fmap head3 tri) (mapCyclic3 det2 $ fmap tail3 tri)
 
 det2 :: Pt2 -> Pt2 -> Double
-det2
-   (a00, a01)
-   (a10, a11) =
-      a00*a11 - a01*a10
+det2 (Pair a00 a01) (Pair a10 a11) =
+   a00*a11 - a01*a10
 
 positiveOrientation :: Pt2 -> Pt2 -> Pt2 -> Bool
 positiveOrientation a b c =
-   signedArea a b c > 0
+   signedArea (Triple a b c) > 0
 
 -- cf. HalfPlaneMap
-signedArea :: Pt2 -> Pt2 -> Pt2 -> Double
-signedArea a b c =
-   det2 b c + det2 c a + det2 a b
+signedArea :: Triple Pt2 -> Double
+signedArea = Fold.sum . mapCyclic3 det2
 
-signedAreaT :: Pt -> Pt -> Double
-signedAreaT (a0,b0,c0) (a1,b1,c1) =
-   signedArea (a0,a1) (b0,b1) (c0,c1)
+signedAreaT :: Pt3 -> Pt3 -> Double
+signedAreaT x y = signedArea $ liftA2 Pair x y
 
-isInTriangle :: Pt2 -> (Pt2, Pt2, Pt2) -> Bool
-isInTriangle a (b, c, d) = (x && y && z) || (not x && not y && not z)
-  where x = positiveOrientation a b c
-        y = positiveOrientation a d b
-        z = positiveOrientation a c d
+isInTriangle :: Pt2 -> Triple Pt2 -> Bool
+isInTriangle a tri = Fold.and bs || Fold.all not bs
+  where bs = mapCyclic3 (positiveOrientation a) tri
 
-getZ :: (Pt, Pt, Pt) -> Double -> Double -> Double
-getZ tri x y =
-  (det3 p q r - signedAreaT q r * x - signedAreaT r p * y) / signedAreaT p q
-  where (p, q, r) = transpose tri
+getZ :: Triple Pt3 -> Pt2 -> Double
+getZ tri (Pair x y) = (det3 triT - x*xa - y*ya) / za
+  where triT = Trav.sequenceA tri
+        (Triple xa ya za) = mapCyclic3 signedAreaT triT
 
+projectToTriangle :: Triple Pt3 -> Pt2 -> Pt3
+projectToTriangle tri p@(Pair x y) = Triple x y (getZ tri p)
 
 
-mkKennfeld :: [Double] -> [[Pt]]
+mkKennfeld :: [Double] -> [[Pt3]]
 mkKennfeld xs = outerProduct f xs xs
-  -- where f x y = (x+3*sin(y), (y-4*sin(x*0.7)), 3 + sin (y/5) * sin (x/4))
-  where f x y = (x, y, 0)
+  -- where f x y = Triple (x + 3*sin y) (y-4*sin(x*0.7)) (3 + sin (y/5) * sin (x/4))
+  where f x y = Triple x y 0
 
-kennfeld :: [[Pt]]
+kennfeld :: [[Pt3]]
 kennfeld = mkKennfeld [-20, -17 .. 20]
 
-project :: Pt -> Pt2
-project (x, y, _) = (x, y)
+project :: Pt3 -> Pt2
+project (Triple x y _) = Pair x y
 
-projectTriangle :: (Pt, Pt, Pt) -> (Pt2, Pt2, Pt2)
-projectTriangle (u, v, w) = (project u, project v, project w)
+projectTriangle :: Triple Pt3 -> Triple Pt2
+projectTriangle = fmap project
 
-pts2vec :: [Pt] -> [Vector2]
-pts2vec = map f
-  where f (x, y, _) = Vector2 x y
+ptToVec2 :: Pt2 -> Vector2
+ptToVec2 (Pair x y) = Vector2 x y
 
-vec2pts :: [Pt] -> [(Vector2, Vector2, Vector2)] -> [(Pt, Pt, Pt)]
-vec2pts pts =
-    map (\(u, v, w) -> (unproject u, unproject v, unproject w))
-  where m = M.fromList $ map (\(x, y, z) -> ((x, y), z)) pts
-        unproject (Vector2 x y) = (x, y, m M.! (x, y))
+vec2pts :: [Pt3] -> [(Vector2, Vector2, Vector2)] -> [Triple Pt3]
+vec2pts pts = map (fmap unproject . uncurry3 Triple)
+  where unproject (Vector2 x y) = Triple x y (m M.! (x,y))
+        m = M.fromList $ map (\(Triple x y z) -> ((x,y), z)) pts
 
-delaunay :: [Pt] -> [(Pt, Pt, Pt)]
-delaunay pts = vec2pts pts $ triangulate $ pts2vec pts
+delaunay :: [Pt3] -> [Triple Pt3]
+delaunay pts = vec2pts pts $ triangulate $ map (ptToVec2 . project) pts
 
-plotTriangulation :: [(Pt2, Pt2, Pt2)] -> String
+plotTriangulation :: [Triple Pt2] -> String
 plotTriangulation = L.intercalate "\n" . map f
-  where f (a, b, c) = g a ++ g b ++ g c ++ g a
-        g (x, y) = show x ++ " " ++ show y ++ "\n"
+  where f (Triple a b c) = g a ++ g b ++ g c ++ g a
+        g p = showWords p ++ "\n"
 
 
 -- set object 1 polygon from "tri.txt" to "tri.txt" fc rgb "blue"
 
-plotTri :: [(Pt, Pt, Pt)] -> String
+plotTri :: [Triple Pt2] -> String
 plotTri = L.intercalate "\n" . zipWith f [1..]
-  where f n (a, b, c) =
+  where f n (Triple a b c) =
           "set obj " ++ show n ++ " polygon from "
           ++ L.intercalate " to " [g a, g b, g c, g a] ++ "\n"
           ++ "set object " ++ show (n::Integer)
           ++ " fc rgb \"#eeeeff\" fillstyle solid 1.0 border lt -1 lw 1\n"
-        g (x, y, _) = show x ++ "," ++ show y ++ ",1"
+        g (Pair x y) = show x ++ "," ++ show y ++ ",1"
 
 
-triangles :: [(Pt, Pt, Pt)]
+triangles :: [Triple Pt3]
 triangles = delaunay (concat kennfeld)
 
 {-
@@ -149,11 +177,11 @@ isInTriangle (s1, s2, _) ((a1, a2, _), (b1, b2, _), (c1, c2, _)) =
 -}
 
 
-getTriangle :: [(Pt, Pt, Pt)] -> Double -> Double -> (Pt, Pt, Pt)
-getTriangle ts x y =
-  case dropWhile (not . isInTriangle (x, y) . projectTriangle) ts of
+getTriangle :: [Triple Pt3] -> Pt2 -> Triple Pt3
+getTriangle ts p =
+  case dropWhile (not . isInTriangle p . projectTriangle) ts of
        t:_ -> t
-       _ -> error ("no triangle found: " ++ show x ++ " " ++ show y)
+       _ -> error ("no triangle found: " ++ show p)
 
 {-
 plane :: (Num a, Fractional a, Show a) => (a, a, a, a) -> a -> a -> a
@@ -190,7 +218,8 @@ interpolation :: IO ()
 interpolation = do
   let del = delaunay (concat kennfeld)
   writeFile "interpolation.txt" $ showMesh $
-    outerProduct (\x y -> (x, y, getZ (getTriangle del x y) x y)) range range
+    map (map (\p -> projectToTriangle (getTriangle del p) p)) $
+    outerProduct Pair range range
 
 
 
@@ -200,19 +229,18 @@ kennf = do
   writeFile "kennfeld.txt" $ showMesh kennfeld
 
 
-showMesh :: (Show a) => [[(a,a,a)]] -> String
+showMesh :: (Show a, Foldable f) => [[f a]] -> String
 showMesh =
   L.intercalate "\n\n" .
   map (L.intercalate "\n" . map showWords)
 
-showWords :: (Show a) => (a,a,a) -> String
-showWords (x, y, z) = show x ++ " " ++ show y ++ " " ++ show z
-
+showWords :: (Foldable f, Show a) => f a -> String
+showWords = P.unwords . map show . Fold.toList
 
 
 
 triangulation :: IO ()
-triangulation = writeFile "tri.txt" $ plotTri triangles
+triangulation = writeFile "tri.txt" $ plotTri $ map (fmap project) triangles
 
 
 main :: IO ()
