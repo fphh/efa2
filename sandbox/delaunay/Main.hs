@@ -32,38 +32,52 @@ x2 = (det3 p q r - det3 ones q r * x0 - det3 p ones r * x1) / det3 p q ones
 -}
 
 
-import Control.Monad (liftM2)
-
 import qualified Data.Map as M
 import qualified Data.List as L
 
 import Graphics.Triangulation.Delaunay (triangulate)
 import Data.Vector.V2 (Vector2(Vector2))
 
-import Debug.Trace
-
 
 type Pt = (Double, Double, Double)
+type Pt2 = (Double, Double)
 
 transpose :: Pt -> Pt -> Pt -> (Pt, Pt, Pt)
 transpose (u0, u1, u2) (v0, v1, v2) (w0, w1, w2) =
   ((u0, v0, w0), (u1, v1, w1), (u2, v2, w2))
 
 det3 :: Pt -> Pt -> Pt -> Double
-det3 (a11, a12, a13)
-     (a21, a22, a23)
-     (a31, a32, a33) = a11*a22*a33 + a12*a23*a31 + a13*a21*a32
-                       - a13*a22*a31 - a12*a21*a33 - a11*a23*a32
+det3
+   (a00, a01, a02)
+   (a10, a11, a12)
+   (a20, a21, a22) =
+      let a0 = (a01, a02)
+          a1 = (a11, a12)
+          a2 = (a21, a22)
+      in  a00 * det2 a1 a2 +
+          a10 * det2 a2 a0 +
+          a20 * det2 a0 a1
 
-detGreaterZero :: Pt -> Pt -> Pt -> Bool
-detGreaterZero (a1, a2, _) (b1, b2, _) (c1, c2, _) =
-  det3 (a1, a2, 1) (b1, b2, 1) (c1, c2, 1) > 0
+det2 :: Pt2 -> Pt2 -> Double
+det2
+   (a00, a01)
+   (a10, a11) =
+      a00*a11 - a01*a10
 
-isInTriangle :: Pt -> (Pt, Pt, Pt) -> Bool
-isInTriangle a (b, c, d) = (x && y && z) || (not x && not y && not z) 
-  where x = detGreaterZero a b c
-        y = detGreaterZero a d b
-        z = detGreaterZero a c d
+positiveOrientation :: Pt2 -> Pt2 -> Pt2 -> Bool
+positiveOrientation a b c =
+   signedArea a b c > 0
+
+-- cf. HalfPlaneMap
+signedArea :: Pt2 -> Pt2 -> Pt2 -> Double
+signedArea a b c =
+   det2 b c + det2 c a + det2 a b
+
+isInTriangle :: Pt2 -> (Pt2, Pt2, Pt2) -> Bool
+isInTriangle a (b, c, d) = (x && y && z) || (not x && not y && not z)
+  where x = positiveOrientation a b c
+        y = positiveOrientation a d b
+        z = positiveOrientation a c d
 
 getZ :: Pt -> Pt -> Pt -> Double -> Double -> Double
 getZ u v w x y =
@@ -81,26 +95,29 @@ mkKennfeld xs = map (\x -> map (\y -> f x y) xs) xs
 kennfeld :: [[Pt]]
 kennfeld = mkKennfeld [-20, -17 .. 20]
 
+project :: Pt -> Pt2
+project (x, y, _) = (x, y)
+
+projectTriangle :: (Pt, Pt, Pt) -> (Pt2, Pt2, Pt2)
+projectTriangle (u, v, w) = (project u, project v, project w)
+
 pts2vec :: [Pt] -> [Vector2]
 pts2vec = map f
   where f (x, y, _) = Vector2 x y
 
 vec2pts :: [Pt] -> [(Vector2, Vector2, Vector2)] -> [(Pt, Pt, Pt)]
-vec2pts pts vs = map g vs
-  where m = M.fromList (map f pts)
-        f (x, y, z) = ((x, y), z)
-        g (Vector2 x1 y1, Vector2 x2 y2, Vector2 x3 y3) =
-          ( (x1, y1, m M.! (x1, y1)), 
-            (x2, y2, m M.! (x2, y2)),
-            (x3, y3, m M.! (x3, y3)) )
+vec2pts pts =
+    map (\(u, v, w) -> (unproject u, unproject v, unproject w))
+  where m = M.fromList $ map (\(x, y, z) -> ((x, y), z)) pts
+        unproject (Vector2 x y) = (x, y, m M.! (x, y))
 
 delaunay :: [Pt] -> [(Pt, Pt, Pt)]
 delaunay pts = vec2pts pts $ triangulate $ pts2vec pts
 
-plotTriangulation :: [(Pt, Pt, Pt)] -> String
+plotTriangulation :: [(Pt2, Pt2, Pt2)] -> String
 plotTriangulation = L.intercalate "\n" . map f
   where f (a, b, c) = g a ++ g b ++ g c ++ g a
-        g (x, y, _) = show x ++ " " ++ show y ++ "\n"
+        g (x, y) = show x ++ " " ++ show y ++ "\n"
 
 
 -- set object 1 polygon from "tri.txt" to "tri.txt" fc rgb "blue"
@@ -110,11 +127,11 @@ plotTri = L.intercalate "\n" . zipWith f [1..]
   where f n (a, b, c) =
           "set obj " ++ show n ++ " polygon from "
           ++ L.intercalate " to " [g a, g b, g c, g a] ++ "\n"
-          ++ "set object " ++ show n 
+          ++ "set object " ++ show (n::Integer)
           ++ " fc rgb \"#eeeeff\" fillstyle solid 1.0 border lt -1 lw 1\n"
         g (x, y, _) = show x ++ "," ++ show y ++ ",1"
 
-        
+
 tri :: [(Pt, Pt, Pt)]
 tri = delaunay (concat kennfeld)
 
@@ -136,7 +153,7 @@ isInTriangle (s1, s2, _) ((a1, a2, _), (b1, b2, _), (c1, c2, _)) =
 
 getTriangle :: [(Pt, Pt, Pt)] -> Double -> Double -> (Pt, Pt, Pt)
 getTriangle ts x y =
-  case dropWhile (not . isInTriangle (x, y, 0)) ts of
+  case dropWhile (not . isInTriangle (x, y) . projectTriangle) ts of
        t:_ -> t
        _ -> error ("no triangle found: " ++ show x ++ " " ++ show y)
 
@@ -174,9 +191,9 @@ range =  [-19, -18.5 .. 16]
 interpolation :: IO ()
 interpolation = do
   let del = delaunay (concat kennfeld)
-      tri = map (\x -> map (\y -> h (getTriangle del x y) x y) range) range
+      tr = map (\x -> map (\y -> h (getTriangle del x y) x y) range) range
       h (u, v, w) x y = show x ++ " " ++ show y ++ " " ++ show (getZ u v w x y)
-  writeFile "interpolation.txt" (L.intercalate "\n\n" (map (L.intercalate "\n") tri))
+  writeFile "interpolation.txt" (L.intercalate "\n\n" (map (L.intercalate "\n") tr))
 
 
 
