@@ -78,8 +78,8 @@ isInTriangle a (b, c, d) = (x && y && z) || (not x && not y && not z)
         y = positiveOrientation a d b
         z = positiveOrientation a c d
 
-getZ :: Pt -> Pt -> Pt -> Double -> Double -> Double
-getZ u v w x y =
+getZ :: (Pt, Pt, Pt) -> Double -> Double -> Double
+getZ (u, v, w) x y =
   (det3 p q r - signedAreaT q r * x - signedAreaT r p * y) / signedAreaT p q
   where (p, q, r) = transpose u v w
 
@@ -189,19 +189,24 @@ range =  [-19, -18.5 .. 16]
 interpolation :: IO ()
 interpolation = do
   let del = delaunay (concat kennfeld)
-      tr = outerProduct (\x y -> h (getTriangle del x y) x y) range range
-      h (u, v, w) x y = show x ++ " " ++ show y ++ " " ++ show (getZ u v w x y)
-  writeFile "interpolation.txt" (L.intercalate "\n\n" (map (L.intercalate "\n") tr))
+  writeFile "interpolation.txt" $ showMesh $
+    outerProduct (\x y -> (x, y, getZ (getTriangle del x y) x y)) range range
 
 
 
 
 kennf :: IO ()
 kennf = do
-  let h (x, y, z) = show x ++ " " ++ show y ++ " " ++ show z
-  writeFile "kennfeld.txt" (L.intercalate "\n\n" (map (L.intercalate "\n" . map h) kennfeld))
+  writeFile "kennfeld.txt" $ showMesh kennfeld
 
 
+showMesh :: (Show a) => [[(a,a,a)]] -> String
+showMesh =
+  L.intercalate "\n\n" .
+  map (L.intercalate "\n" . map showWords)
+
+showWords :: (Show a) => (a,a,a) -> String
+showWords (x, y, z) = show x ++ " " ++ show y ++ " " ++ show z
 
 
 
