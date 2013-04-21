@@ -159,3 +159,8 @@ instance ToTable Range where
          f (i1, i2) = toDoc id $ show i1 ++ " - " ++ show i2
 
 
+{-# DEPRECATED reIndex "pg: new Index type required which shows the reIndexing" #-}
+         
+reIndex :: [Int] -> SequData a -> SequData a
+reIndex xs (SequData ys) = SequData (zipWith f xs ys)
+  where f newIdx (Section (Idx.Section _) range a) = Section (Idx.Section $ fromIntegral newIdx) range a

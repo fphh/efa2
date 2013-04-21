@@ -135,7 +135,6 @@ pre topology  epsT epsE rawSignals =  (sequencePowersFilt, adjustedFlows, flowSt
         in  (flowState, Flow.adjustSigns topology flowState state))
       sequenceFlowsFilt
 
-    --  return (sequencePowersFilt, adjustedFlows, flowStates, powerSignals0, signals0)
 
 -------------------------------------------------------------------------------------------------
 -- ## Analyse External Energy Flow

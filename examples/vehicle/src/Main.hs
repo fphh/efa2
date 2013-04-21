@@ -45,6 +45,7 @@ import qualified EFA.Signal.Record as Record
 import EFA.Signal.Signal (TC(..), Scalar,toScalar)
 import EFA.Signal.Data (Data(..), Nil)
 import EFA.Signal.Typ (Typ, F, T, A, Tt)
+import qualified EFA.Signal.SequenceData as SD
 
 import qualified System.IO as IO
 import System.Environment (getEnv)
@@ -69,12 +70,12 @@ examplePath = "examples/vehicle"
 
 
 fileNamesX :: [FilePath]
-fileNamesX = [-- "Vehicle_mass900kg_res.plt",
+fileNamesX = ["Vehicle_mass900kg_res.plt",
              "Vehicle_mass1000kg_res.plt",
              "Vehicle_mass1100kg_res.plt"]
 
 datasetsX ::  [RecordName]
-datasetsX = map RecordName [--"900kg",
+datasetsX = map RecordName ["900kg",
                             "1000kg",
                             "1100kg"]
 
@@ -114,12 +115,21 @@ main = do
 
   let preProcessedDataX = map (Analysis.pre System.topology epsT epsE) rawSignalsX
 
-  let (_,sequenceFlowsFiltX,flowStatesX,powerSignalsX,signalsX) = L.unzip5 preProcessedDataX
+  let (_,sequenceFlowsFiltUnmappedX,flowStatesUnmappedX,powerSignalsX,signalsX) = L.unzip5 preProcessedDataX
 --  let (sequencePowersFiltX,sequenceFlowsFiltX,flowStatesX,powerSignalsX,signalsX) = L.unzip5 preProcessedDataX
 
   let allSignalsX = zipWith Record.combinePowerAndSignal powerSignalsX signalsX
 
 ---------------------------------------------------------------------------------------
+-- *  ReIndex Sequences to allow Sequence Matching 
+
+  let sequenceFlowsFiltX = map (SD.reIndex [1,2,7,8,16,17,19::Int]) sequenceFlowsFiltUnmappedX 
+--  let sequenceFlowsFiltX = sequenceFlowsFiltUnmappedX
+
+  let flowStatesX = map (SD.reIndex [1,2,7,8,16,17,19::Int]) flowStatesUnmappedX
+--  let sequenceFlowsFiltX = sequenceFlowsFiltUnmappedX
+
+  ---------------------------------------------------------------------------------------
 -- *  Generate Flow States as Graphs
 
   let flowToposX = map (Flow.genSequFlowTops System.topology) flowStatesX
@@ -128,7 +138,7 @@ main = do
 -- *  Generate Sequence Flow Graph
 
   let sequenceFlowTopologyX = map makeSeqFlowTopology flowToposX
-
+       
 ---------------------------------------------------------------------------------------
 -- *  Section Flow States as Graphs
 
@@ -139,13 +149,13 @@ main = do
 
   let externalEnvX = zipWith Analysis.external  sequenceFlowTopologyX sequenceFlowsFiltX
 
----------------------------------------------------------------------------------------
+
+  ---------------------------------------------------------------------------------------
 -- *  Make the Deltas for subsequent Datasets
 
 --  let externalDeltaEnvX =
 --        zipWith (flip Analysis.delta (head sequenceFlowsFiltX))
 --                      sequenceFlowTopologyX $ tail sequenceFlowsFiltX
-
 
   let externalDeltaEnvX =
         L.zipWith3  Analysis.delta sequenceFlowTopologyX
