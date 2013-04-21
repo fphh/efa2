@@ -85,65 +85,57 @@ sec2 = Idx.Section 2
 -------------------------------------------------------------------------------------------------
 -- ## Preprocessing of Signals
 
-pre :: Monad m =>
-     TD.Topology System.Node
-     -> SignalRecord [] Double
-     -> m (SD.SequData (PowerRecord System.Node [] Double),
-           SD.SequData (FlowRecord System.Node [] Double),
-           SD.SequData (Record.FlowState System.Node),
-           PowerRecord System.Node [] Double,
-           SignalRecord [] Double)
+pre :: TD.Topology System.Node
+      -> TC Scalar (Typ A T Tt) (Data Nil Double)
+      -> TC Scalar (Typ A F Tt) (Data Nil Double)
+      -> SignalRecord [] Double
+      -> (SD.SequData (PowerRecord System.Node [] Double),
+         SD.SequData (FlowRecord System.Node [] Double),
+         SD.SequData (Record.FlowState System.Node),
+         PowerRecord System.Node [] Double,
+         SignalRecord [] Double)
 
-pre topology rawSignals =  do
+pre topology  epsT epsE rawSignals =  (sequencePowersFilt, adjustedFlows, flowStates, powerSignals0, signals0)
+  where
+    ---------------------------------------------------------------------------------------
+    -- * Condition Signals, Calculate Powers, Remove ZeroNoise
 
----------------------------------------------------------------------------------------
--- * Condition Signals, Calculate Powers, Remove ZeroNoise
+    signals = Signals.condition rawSignals
+    powerSignals = Record.removeZeroNoise (10^^(-2::Int)) (Signals.calculatePower signals)
 
-  let signals = Signals.condition rawSignals
-  let powerSignals = Record.removeZeroNoise (10^^(-2::Int)) (Signals.calculatePower signals)
+    ---------------------------------------------------------------------------------------
+    -- * Add zerocrossings in Powersignals and Signals
 
----------------------------------------------------------------------------------------
--- * Add zerocrossings in Powersignals and Signals
+    powerSignals0 = addZeroCrossings powerSignals
+    signals0 = newTimeBase signals (getTime powerSignals0)
 
-  let powerSignals0 = addZeroCrossings powerSignals
-  let signals0 = newTimeBase signals (getTime powerSignals0)
-
----------------------------------------------------------------------------------------
--- * Cut Signals and filter on low time sektions
-
-
-  let sequencePowers :: SD.SequData (PowerRecord System.Node [] Double)
-      sequencePowers = genSequ powerSignals0
-
-  -- create sequence signal
-  -- let sequSig = Sig.scale (genSequenceSignal sequ) 10 :: Sig.UTSigL  --  (10  ^^ (-12::Int))
-  -- let sequenceSignals = sectionRecordsFromSequence signals0 sequ
-
----------------------------------------------------------------------------------------
--- * Integrate Power and Sections on maximum Energyflow
+    ---------------------------------------------------------------------------------------
+    -- * Cut Signals and filter on low time sektions
 
 
-  let epsT ::  TC Scalar (Typ A T Tt) (Data Nil Double)
-      epsT = Sig.toScalar 0
+    sequencePowers :: SD.SequData (PowerRecord System.Node [] Double)
+    sequencePowers = genSequ powerSignals0
 
-      epsE ::  TC Scalar (Typ A F Tt) (Data Nil Double)
-      epsE = Sig.toScalar 1000
+    -- create sequence signal
+    -- let sequSig = Sig.scale (genSequenceSignal sequ) 10 :: Sig.UTSigL  --  (10  ^^ (-12::Int))
+    -- let sequenceSignals = sectionRecordsFromSequence signals0 sequ
 
+    ---------------------------------------------------------------------------------------
+    -- * Integrate Power and Sections on maximum Energyflow
+    (sequencePowersFilt, sequenceFlowsFilt) =
+      SD.unzip $
+      SD.filter (Record.major epsE epsT . snd) $
+      fmap (\x -> (x, Record.partIntegrate x)) sequencePowers
 
-  let (sequencePowersFilt, sequenceFlowsFilt) =
-         SD.unzip $
-         SD.filter (Record.major epsE epsT . snd) $
-         fmap (\x -> (x, Record.partIntegrate x)) sequencePowers
+    (flowStates, adjustedFlows) =
+      SD.unzip $
+      fmap
+      (\state ->
+        let flowState = Flow.genFlowState state
+        in  (flowState, Flow.adjustSigns topology flowState state))
+      sequenceFlowsFilt
 
-  let (flowStates, adjustedFlows) =
-         SD.unzip $
-         fmap
-            (\state ->
-               let flowState = Flow.genFlowState state
-               in  (flowState, Flow.adjustSigns topology flowState state))
-            sequenceFlowsFilt
-
-  return (sequencePowersFilt, adjustedFlows, flowStates, powerSignals0, signals0)
+    --  return (sequencePowersFilt, adjustedFlows, flowStates, powerSignals0, signals0)
 
 -------------------------------------------------------------------------------------------------
 -- ## Analyse External Energy Flow

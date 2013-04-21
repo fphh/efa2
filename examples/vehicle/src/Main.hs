@@ -7,7 +7,7 @@ module Main where
 
 -- import EFA.Example.Utility (edgeVar)
 -- import EFA.Example.Absolute ((.=))
--- import qualified EFA.Equation.System as EqGen
+-- import qualified EFA.Equation.Sstem as EqGen
 import EFA.IO.PLTImport (modelicaPLTImport)
 import EFA.Signal.Sequence (makeSeqFlowTopology)
 import qualified EFA.Graph.Flow as Flow
@@ -42,6 +42,9 @@ import qualified EFA.Graph.Topology.Index as Idx
 --import qualified EFA.Symbolic.SumProduct as SumProduct
 
 import qualified EFA.Signal.Record as Record
+import EFA.Signal.Signal (TC(..), Scalar,toScalar)
+import EFA.Signal.Data (Data(..), Nil)
+import EFA.Signal.Typ (Typ, F, T, A, Tt)
 
 import qualified System.IO as IO
 import System.Environment (getEnv)
@@ -102,8 +105,14 @@ main = do
 
 ---------------------------------------------------------------------------------------
 -- * Conditioning, Sequencing and Integration
+  
+  let epsT ::  TC Scalar (Typ A T Tt) (Data Nil Double)
+      epsT = toScalar 0
 
-  preProcessedDataX <- mapM (Analysis.pre System.topology) rawSignalsX
+      epsE ::  TC Scalar (Typ A F Tt) (Data Nil Double)
+      epsE = toScalar 1000
+
+  let preProcessedDataX = map (Analysis.pre System.topology epsT epsE) rawSignalsX
 
   let (_,sequenceFlowsFiltX,flowStatesX,powerSignalsX,signalsX) = L.unzip5 preProcessedDataX
 --  let (sequencePowersFiltX,sequenceFlowsFiltX,flowStatesX,powerSignalsX,signalsX) = L.unzip5 preProcessedDataX
