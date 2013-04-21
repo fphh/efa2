@@ -44,8 +44,8 @@ import Data.List.HT (outerProduct)
 type Pt = (Double, Double, Double)
 type Pt2 = (Double, Double)
 
-transpose :: Pt -> Pt -> Pt -> (Pt, Pt, Pt)
-transpose (u0, u1, u2) (v0, v1, v2) (w0, w1, w2) =
+transpose :: (Pt, Pt, Pt) -> (Pt, Pt, Pt)
+transpose ((u0, u1, u2), (v0, v1, v2), (w0, w1, w2)) =
   ((u0, v0, w0), (u1, v1, w1), (u2, v2, w2))
 
 det3 :: Pt -> Pt -> Pt -> Double
@@ -79,9 +79,9 @@ isInTriangle a (b, c, d) = (x && y && z) || (not x && not y && not z)
         z = positiveOrientation a c d
 
 getZ :: (Pt, Pt, Pt) -> Double -> Double -> Double
-getZ (u, v, w) x y =
+getZ tri x y =
   (det3 p q r - signedAreaT q r * x - signedAreaT r p * y) / signedAreaT p q
-  where (p, q, r) = transpose u v w
+  where (p, q, r) = transpose tri
 
 
 
