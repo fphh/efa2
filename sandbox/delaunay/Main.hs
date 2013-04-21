@@ -130,8 +130,8 @@ plotTri = L.intercalate "\n" . zipWith f [1..]
         g (x, y, _) = show x ++ "," ++ show y ++ ",1"
 
 
-tri :: [(Pt, Pt, Pt)]
-tri = delaunay (concat kennfeld)
+triangles :: [(Pt, Pt, Pt)]
+triangles = delaunay (concat kennfeld)
 
 {-
 isInTriangle :: Pt -> (Pt, Pt, Pt) -> Bool
@@ -207,7 +207,7 @@ kennf = do
 
 
 triangulation :: IO ()
-triangulation = writeFile "tri.txt" (plotTri tri)
+triangulation = writeFile "tri.txt" $ plotTri triangles
 
 
 main :: IO ()
