@@ -1,10 +1,12 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE TypeOperators #-}
 module EFA.Example.Absolute (
    module EFA.Example.Absolute,
    (=.=),
    ) where
 
+import qualified EFA.Example.Index as XIdx
 import qualified EFA.Example.Utility as Utility
 
 import qualified EFA.Equation.Record as Record
@@ -13,6 +15,11 @@ import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Variable as Var
 import EFA.Equation.System ((=.=))
 import EFA.Equation.Result(Result(..))
+
+import qualified EFA.Signal.Record as SigRecord
+import qualified EFA.Signal.SequenceData as SD
+import qualified EFA.Signal.Signal as Signal
+import EFA.Signal.Data (Data, Nil, (:>))
 
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as Idx
@@ -24,8 +31,10 @@ import EFA.Utility (Pointed)
 import qualified UniqueLogic.ST.Expression as Expr
 import qualified UniqueLogic.ST.System as Sys
 
+import qualified Data.Map as Map
 import Control.Applicative (liftA, liftA2)
-import Data.Monoid ((<>))
+import Data.Foldable (fold)
+import Data.Monoid (mempty, (<>))
 
 
 type EquationSystem = EqGen.EquationSystem Record.Absolute
@@ -119,3 +128,21 @@ infix 0 .=
    idx node -> x ->
    EquationSystem node s a v
 evar .= val  =  variable evar =.= EqGen.constant val
+
+
+envFromFlowRecord ::
+   (Ord node) =>
+   SD.SequData (SigRecord.DTimeFlowRecord node v a) ->
+   Env.Signal node (Record.Absolute (Data (v :> Nil) a))
+envFromFlowRecord =
+   fmap Record.Absolute . fold .
+   SD.mapWithSection
+      (\section (SigRecord.Record times signals) ->
+         mempty {
+            Env.dtimeMap =
+               Map.singleton (XIdx.dTime section) (Signal.unpack times),
+            Env.powerMap =
+               Map.mapKeys
+                  (\(Idx.PPos x) -> Idx.InSection section $ Idx.Power x) $
+               fmap Signal.unpack signals
+         })
