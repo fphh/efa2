@@ -25,9 +25,8 @@ module EFA.Graph.Topology (
        edgeType,
        isStructureEdge,
        isStorageEdge,
-       isDirEdge, isStorageNode,
+       isDirEdge,
        defaultNLabel,
-       InOut,
        StoreDir(..),
        classifyStorages,
        ) where
@@ -39,7 +38,6 @@ import EFA.Graph (Graph)
 import Control.Monad (mplus)
 import Data.Foldable (Foldable, foldMap)
 import Data.Maybe.HT (toMaybe)
-import Data.Tuple.HT (snd3)
 import Data.Monoid ((<>))
 
 import qualified Test.QuickCheck as QC
@@ -282,12 +280,13 @@ dirFromSequFlowGraph =
    Gr.emap (const ()) . Gr.lefilter isDirEdge
 
 
-type InOut e n el = ([Gr.LEdge e n el], [Gr.LEdge e n el])
+data StoreDir = In | Out deriving (Eq, Show)
 
-isStorageNode :: (a, (b, NodeType sl), c) -> Bool
-isStorageNode = isStorage . snd . snd3
-
-
+{- |
+Classify the storages in in and out storages,
+looking only at edges, not at values.
+This means that nodes with in AND out edges cannot be treated.
+-}
 classifyStorages ::
    (FlowDirectionField el, Ord node) =>
    Graph node Gr.DirEdge (NodeType ()) el ->
@@ -295,21 +294,9 @@ classifyStorages ::
 classifyStorages =
    Gr.nmapWithInOut
       (\(pre, (_n, nt), suc) ->
-         fmap (\() -> maybeActiveSt (pre, suc)) nt)
-
--- | Classify the storages in in and out storages,
--- looking only at edges, not at values.
--- This means that nodes with in AND out edges cannot be treated.
-maybeActiveSt ::
-   (FlowDirectionField el) =>
-   InOut e n el -> Maybe StoreDir
-maybeActiveSt (ins, outs) =
-   mplus
-      (toMaybe (any (isActiveEdge . snd) ins)  In)
-      (toMaybe (any (isActiveEdge . snd) outs) Out)
-
-
-data StoreDir = In | Out deriving (Eq, Show)
+         let maybeDir es cls =
+                toMaybe (any (isActiveEdge . snd) es) cls
+         in  fmap (\() -> mplus (maybeDir pre In) (maybeDir suc Out)) nt)
 
 
 class StorageLabel a where
