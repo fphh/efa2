@@ -52,10 +52,6 @@ import qualified EFA.Example.AssignMap as AssignMap
 
 --import Data.Monoid ((<>))
 
-import EFA.Report.FormatValue(-- RecordName(..),
-                              DeltaName(..))
-
-
 sigsWithSpeed ::(Fractional a, Ord a, Show (v a), V.Walker v, V.Storage v a,
                                  V.Singleton v, V.FromList v, TDisp t2, TDisp t1, Atom.C a,
                                  Tuple.C a) =>
@@ -136,7 +132,7 @@ recordStackRow:: (TDNode.C node, Ord node, Ord i, Show i, Show node, FormatValue
 
 recordStackRow ti deltaSets energyIndex eps envs =
    Plot.stacksIO ti
-   (map (formatValue . (\(DeltaName x) -> (DeltaName x))) deltaSets) 
+   (map (formatValue) deltaSets) 
    (AssignMap.simultaneousThreshold eps .
    AssignMap.transpose .
    map (lookupStack energyIndex)

@@ -13,25 +13,11 @@ import qualified Data.NonEmpty as NonEmpty
 import Data.Foldable (Foldable, toList)
 import Data.Ratio (Ratio)
 
-newtype RecordName = RecordName String
-
-newtype DeltaName = DeltaName String
-
-deltaName :: RecordName -> RecordName -> DeltaName
-deltaName (RecordName x) (RecordName y) =  (DeltaName $ y ++ "_vs_" ++ x)
-
-
 class FormatValue a where
    formatValue :: Format output => a -> output
    
 instance FormatValue Idx.Section where
    formatValue = Format.literal . show
-
-instance FormatValue RecordName where
-   formatValue = Format.literal . (\(RecordName x) -> x) 
-
-instance FormatValue DeltaName where
-   formatValue = Format.literal . (\(DeltaName x) -> x) 
 
 instance FormatValue a => FormatValue [a] where
    formatValue = Format.list . map formatValue

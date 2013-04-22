@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE FlexibleContexts#-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module EFA.Signal.Record where
 
@@ -42,6 +42,8 @@ import qualified EFA.Graph.Topology.Index as Idx
 import EFA.Report.Report (ToTable(toTable), Table(..), tvcat)
 import EFA.Report.Typ (TDisp, getDisplayTypName)
 import EFA.Report.Base (DispStorage1)
+import EFA.Report.FormatValue(FormatValue,formatValue)
+import EFA.Report.Format as Format(literal)
 
 import Text.Printf (PrintfArg)
 import qualified Test.QuickCheck as QC
@@ -90,6 +92,19 @@ type DTimeFlowRecord n = Record FSignal FSignal (Typ D T Tt) (Typ A F Tt) (Idx.P
 -- | Flow record to contain flow signals assigned to the tree
 newtype FlowState node = FlowState (M.Map (Idx.PPos node) Sign) deriving (Show)
 
+
+newtype Name = Name String
+
+newtype DeltaName = DeltaName String
+
+deltaName :: Name -> Name -> DeltaName
+deltaName (Name x) (Name y) =  (DeltaName $ y ++ "_vs_" ++ x)
+
+instance FormatValue Name where
+   formatValue = Format.literal . (\(Name x) -> x) 
+
+instance FormatValue DeltaName where
+   formatValue = Format.literal . (\(DeltaName x) -> x) 
 
 
 rmap ::

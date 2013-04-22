@@ -42,6 +42,7 @@ import qualified EFA.Graph.Topology.Index as Idx
 --import qualified EFA.Symbolic.SumProduct as SumProduct
 
 import qualified EFA.Signal.Record as Record
+
 import EFA.Signal.Signal (TC(..), Scalar,toScalar)
 import EFA.Signal.Data (Data(..), Nil)
 import EFA.Signal.Typ (Typ, F, T, A, Tt)
@@ -58,12 +59,6 @@ import Data.Tuple.HT (mapSnd)
 
 import qualified Data.GraphViz.Attributes.Colors.X11 as Colors
 
-import EFA.Report.FormatValue(RecordName(..),
-                              DeltaName(..), 
-                              deltaName
-                              --         ,                              
-                              --formatValue
-                             )
 
 examplePath :: FilePath
 examplePath = "examples/vehicle"
@@ -74,13 +69,13 @@ fileNamesX = ["Vehicle_mass900kg_res.plt",
              "Vehicle_mass1000kg_res.plt",
              "Vehicle_mass1100kg_res.plt"]
 
-datasetsX ::  [RecordName]
-datasetsX = map RecordName ["900kg",
+datasetsX ::  [Record.Name]
+datasetsX = map Record.Name ["900kg",
                             "1000kg",
                             "1100kg"]
 
-deltasetsX :: [DeltaName]
-deltasetsX = zipWith deltaName datasetsX (tail datasetsX)
+deltasetsX :: [Record.DeltaName]
+deltasetsX = zipWith Record.deltaName datasetsX (tail datasetsX)
 
 zipWith3M_ ::
   Monad m =>
@@ -263,12 +258,12 @@ main = do
   let -- drawDelta :: RecordName -> 
       drawDelta ti topo env c = 
           Draw.xterm $
-          Draw.title  ((\(DeltaName x) -> x) ti) $
+          Draw.title  ((\(Record.DeltaName x) -> x) ti) $
           Draw.bgcolour c $
           Draw.sequFlowGraphDeltaWithEnv topo env
       drawAbs ti topo env c = 
         Draw.xterm $
-          Draw.title ((\(RecordName x) -> x) ti) $
+          Draw.title ((\(Record.Name x) -> x) ti) $
           Draw.bgcolour c $
           Draw.sequFlowGraphAbsWithEnv topo env
 
