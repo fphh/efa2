@@ -4,7 +4,15 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module EFA.Equation.System (
   EquationSystem, Expression, RecordExpression,
-  fromGraph, fromEnvResult, fromEnv,
+
+  fromGraph,
+  fromEnvResult,
+  fromEnvScalarResult,
+  fromEnvSignalResult,
+  fromEnv,
+  fromEnvScalar,
+  fromEnvSignal,
+
   solve, solveFromMeasurement, conservativelySolve,
   solveSimple,
 
@@ -553,18 +561,25 @@ fromMapResult ::
 fromMapResult =
    fold . M.mapWithKey (?=)
 
-fromEnvResult ::
-   (Eq a, Sum a, Eq v, Sum v, Ord node, Record rec) =>
-   Env.Complete node (rec (Result a)) (rec (Result v)) ->
+fromEnvScalarResult ::
+   (Eq a, Sum a, Ord node, Record rec) =>
+   Env.Scalar node (rec (Result a)) ->
    EquationSystem rec node s a v
-fromEnvResult
-   (Env.Complete (Env.Scalar me st se sx ss) (Env.Signal e p n dt x s)) =
+fromEnvScalarResult (Env.Scalar me st se sx ss) =
       mconcat $
          fromMapResult me :
          fromMapResult st :
          fromMapResult se :
          fromMapResult sx :
          fromMapResult ss :
+         []
+
+fromEnvSignalResult ::
+   (Eq v, Sum v, Ord node, Record rec) =>
+   Env.Signal node (rec (Result v)) ->
+   EquationSystem rec node s a v
+fromEnvSignalResult (Env.Signal e p n dt x s) =
+      mconcat $
          fromMapResult e :
          fromMapResult p :
          fromMapResult n :
@@ -572,6 +587,13 @@ fromEnvResult
          fromMapResult x :
          fromMapResult s :
          []
+
+fromEnvResult ::
+   (Eq a, Sum a, Eq v, Sum v, Ord node, Record rec) =>
+   Env.Complete node (rec (Result a)) (rec (Result v)) ->
+   EquationSystem rec node s a v
+fromEnvResult (Env.Complete envScalar envSignal) =
+   fromEnvScalarResult envScalar <> fromEnvSignalResult envSignal
 
 
 fromMap ::
@@ -582,18 +604,25 @@ fromMap ::
 fromMap =
    fold . M.mapWithKey (%=)
 
-fromEnv ::
-   (Eq a, Sum a, Eq v, Sum v, Ord node, Record rec) =>
-   Env.Complete node (rec a) (rec v) ->
+fromEnvScalar ::
+   (Eq a, Sum a, Ord node, Record rec) =>
+   Env.Scalar node (rec a) ->
    EquationSystem rec node s a v
-fromEnv
-   (Env.Complete (Env.Scalar me st se sx ss) (Env.Signal e p n dt x s)) =
+fromEnvScalar (Env.Scalar me st se sx ss) =
       mconcat $
          fromMap me :
          fromMap st :
          fromMap se :
          fromMap sx :
          fromMap ss :
+         []
+
+fromEnvSignal ::
+   (Eq v, Sum v, Ord node, Record rec) =>
+   Env.Signal node (rec v) ->
+   EquationSystem rec node s a v
+fromEnvSignal (Env.Signal e p n dt x s) =
+      mconcat $
          fromMap e :
          fromMap p :
          fromMap n :
@@ -601,6 +630,13 @@ fromEnv
          fromMap x :
          fromMap s :
          []
+
+fromEnv ::
+   (Eq a, Sum a, Eq v, Sum v, Ord node, Record rec) =>
+   Env.Complete node (rec a) (rec v) ->
+   EquationSystem rec node s a v
+fromEnv (Env.Complete envScalar envSignal) =
+   fromEnvScalar envScalar <> fromEnvSignal envSignal
 
 
 fromGraph ::
