@@ -175,6 +175,12 @@ storageEdge ::
 storageEdge mkIdx s0 s1 n =
    ForNode (mkIdx $ StorageEdge s0 s1) n
 
+storageEdgeFrom, storageEdgeTo ::
+   ForNode StorageEdge node -> BndNode node
+storageEdgeFrom (ForNode (StorageEdge sec _) n) = BndNode sec n
+storageEdgeTo   (ForNode (StorageEdge _ sec) n) = BndNode sec n
+
+
 
 class Flip edge where
    flip :: edge node -> edge node

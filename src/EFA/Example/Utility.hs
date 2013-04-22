@@ -7,8 +7,6 @@ module EFA.Example.Utility (
    (.=), (%=),
    ) where
 
-import qualified EFA.Example.Index as XIdx
-
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as TD
@@ -22,17 +20,12 @@ import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Symbolic.Mixed as Term
-import qualified EFA.Signal.Record as SigRecord
 import qualified EFA.Signal.SequenceData as SD
-import qualified EFA.Signal.Signal as Signal
 import EFA.Equation.System ((.=), (%=))
 import EFA.Equation.Result (Result)
-import EFA.Signal.Data (Data, Nil, (:>))
 import EFA.Utility (Pointed, point)
 
-import qualified Data.Map as Map
-import Data.Foldable (fold)
-import Data.Monoid (mempty, (<>))
+import Data.Monoid ((<>))
 
 
 
@@ -173,22 +166,3 @@ infix 0 #=, ~=
   EqRecord.Indexed rec (idx node) -> a ->
   EqGen.EquationSystem rec node s a v
 (#=)  =  (.=)
-
-
-
-envFromFlowRecord ::
-   (Ord node) =>
-   SD.SequData (SigRecord.DTimeFlowRecord node v a) ->
-   Env.Signal node (Data (v :> Nil) a)
-envFromFlowRecord =
-   fold .
-   SD.mapWithSection
-      (\section (SigRecord.Record times signals) ->
-         mempty {
-            Env.dtimeMap =
-               Map.singleton (XIdx.dTime section) (Signal.unpack times),
-            Env.powerMap =
-               Map.mapKeys
-                  (\(Idx.PPos x) -> Idx.InSection section $ Idx.Power x) $
-               fmap Signal.unpack signals
-         })

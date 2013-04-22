@@ -4,7 +4,15 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module EFA.Equation.System (
   EquationSystem, Expression, RecordExpression,
-  fromGraph, fromEnvResult, fromEnv,
+
+  fromGraph,
+  fromEnvResult,
+  fromEnvScalarResult,
+  fromEnvSignalResult,
+  fromEnv,
+  fromEnvScalar,
+  fromEnvSignal,
+
   solve, solveFromMeasurement, conservativelySolve,
   solveSimple,
 
@@ -553,18 +561,25 @@ fromMapResult ::
 fromMapResult =
    fold . M.mapWithKey (?=)
 
-fromEnvResult ::
-   (Eq a, Sum a, Eq v, Sum v, Ord node, Record rec) =>
-   Env.Complete node (rec (Result a)) (rec (Result v)) ->
+fromEnvScalarResult ::
+   (Eq a, Sum a, Ord node, Record rec) =>
+   Env.Scalar node (rec (Result a)) ->
    EquationSystem rec node s a v
-fromEnvResult
-   (Env.Complete (Env.Scalar me st se sx ss) (Env.Signal e p n dt x s)) =
+fromEnvScalarResult (Env.Scalar me st se sx ss) =
       mconcat $
          fromMapResult me :
          fromMapResult st :
          fromMapResult se :
          fromMapResult sx :
          fromMapResult ss :
+         []
+
+fromEnvSignalResult ::
+   (Eq v, Sum v, Ord node, Record rec) =>
+   Env.Signal node (rec (Result v)) ->
+   EquationSystem rec node s a v
+fromEnvSignalResult (Env.Signal e p n dt x s) =
+      mconcat $
          fromMapResult e :
          fromMapResult p :
          fromMapResult n :
@@ -572,6 +587,13 @@ fromEnvResult
          fromMapResult x :
          fromMapResult s :
          []
+
+fromEnvResult ::
+   (Eq a, Sum a, Eq v, Sum v, Ord node, Record rec) =>
+   Env.Complete node (rec (Result a)) (rec (Result v)) ->
+   EquationSystem rec node s a v
+fromEnvResult (Env.Complete envScalar envSignal) =
+   fromEnvScalarResult envScalar <> fromEnvSignalResult envSignal
 
 
 fromMap ::
@@ -582,18 +604,25 @@ fromMap ::
 fromMap =
    fold . M.mapWithKey (%=)
 
-fromEnv ::
-   (Eq a, Sum a, Eq v, Sum v, Ord node, Record rec) =>
-   Env.Complete node (rec a) (rec v) ->
+fromEnvScalar ::
+   (Eq a, Sum a, Ord node, Record rec) =>
+   Env.Scalar node (rec a) ->
    EquationSystem rec node s a v
-fromEnv
-   (Env.Complete (Env.Scalar me st se sx ss) (Env.Signal e p n dt x s)) =
+fromEnvScalar (Env.Scalar me st se sx ss) =
       mconcat $
          fromMap me :
          fromMap st :
          fromMap se :
          fromMap sx :
          fromMap ss :
+         []
+
+fromEnvSignal ::
+   (Eq v, Sum v, Ord node, Record rec) =>
+   Env.Signal node (rec v) ->
+   EquationSystem rec node s a v
+fromEnvSignal (Env.Signal e p n dt x s) =
+      mconcat $
          fromMap e :
          fromMap p :
          fromMap n :
@@ -601,6 +630,13 @@ fromEnv
          fromMap x :
          fromMap s :
          []
+
+fromEnv ::
+   (Eq a, Sum a, Eq v, Sum v, Ord node, Record rec) =>
+   Env.Complete node (rec a) (rec v) ->
+   EquationSystem rec node s a v
+fromEnv (Env.Complete envScalar envSignal) =
+   fromEnvScalar envScalar <> fromEnvSignal envSignal
 
 
 fromGraph ::
@@ -619,12 +655,14 @@ fromGraph equalInOutSums g = mconcat $
 
 fromEdges ::
   (Eq a, Sum a, Eq v, Product v, Record rec, Ord node) =>
-  [TD.FlowEdge (Idx.BndNode node)] -> EquationSystem rec node s a v
+  [TD.FlowEdge Gr.DirEdge (Idx.BndNode node)] ->
+  EquationSystem rec node s a v
 fromEdges =
    foldMap $ \se ->
       case TD.edgeType se of
-         TD.StructureEdge e@(Idx.InSection s _edge) ->
+         TD.StructureEdge edge@(Idx.InSection s _) ->
             let equ xy = energy xy =%= dtime s ~* power xy
+                e = TD.structureEdgeFromDirEdge edge
             in  equ e <> equ (Idx.flip e) <>
                 (power (Idx.flip e) =%= eta e ~* power e)
          TD.StorageEdge e -> stEnergy e =%= stEnergy (Idx.flip e)
@@ -641,6 +679,7 @@ fromNodes equalInOutSums =
             let -- these variables are used again in fromStorageSequences
                 stvarinsum = stinsum bn
                 stvaroutsum = stoutsum bn
+
                 msn = Idx.secNodeFromBndNode bn
                 withSecNode = flip foldMap msn
 
@@ -649,7 +688,7 @@ fromNodes equalInOutSums =
                    map
                       (\edge ->
                          case TD.edgeType edge of
-                            TD.StructureEdge e -> Left e
+                            TD.StructureEdge e -> Left $ TD.structureEdgeFromDirEdge e
                             TD.StorageEdge e -> Right e) .
                    S.toList
 

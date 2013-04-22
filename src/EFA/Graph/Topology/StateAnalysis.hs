@@ -8,9 +8,9 @@ module EFA.Graph.Topology.StateAnalysis (
 
 import qualified EFA.Graph as Gr
 import qualified EFA.Graph.Topology as Topo
-import EFA.Graph.Topology
-          (FlowTopology, Topology,
-           FlowDirection(UnDir, Dir), isActive)
+import EFA.Graph.Topology (FlowTopology, Topology)
+
+import qualified EFA.Utility.Map as MapU
 
 import qualified Data.Foldable as Fold
 import qualified Data.NonEmpty as NonEmpty
@@ -29,7 +29,7 @@ import Data.Eq.HT (equating)
 
 type NodeType = Topo.NodeType ()
 
--- How should it be orderd to be faster?
+-- How should it be ordered to be faster?
 checkNodeType :: NodeType -> Bool -> Bool -> Bool
 checkNodeType Topo.Crossing sucActive preActive = sucActive == preActive
 checkNodeType Topo.NoRestriction _ _ = True
@@ -41,7 +41,7 @@ checkNodeType Topo.DeadNode False False = True
 checkNodeType (Topo.Storage _) _ _ = True
 checkNodeType _ _ _ = False
 
--- Because of extend, we only do have to deal with Dir edges here!
+-- Because of extend, we only have to deal with Dir edges here!
 checkNode :: (Ord node) => FlowTopology node -> node -> Bool
 checkNode topo x =
    case M.lookup x $ Gr.graphMap topo of
@@ -79,8 +79,8 @@ checkCountNode topo x =
             (anyActive suc)
             (anyActive pre)
 
-anyActive :: M.Map n FlowDirection -> Bool
-anyActive = Fold.any isActive
+anyActive :: M.Map (Gr.EitherEdge node) () -> Bool
+anyActive = Fold.any Topo.isActive . M.keysSet
 
 admissibleCountTopology :: (Ord node) => CountTopology node -> Bool
 admissibleCountTopology topo =
@@ -89,23 +89,39 @@ admissibleCountTopology topo =
 
 type NumberOfAdj = Int
 type CountTopology node =
-        Gr.Graph node Gr.DirEdge (NodeType, NumberOfAdj) FlowDirection
+        Gr.Graph node Gr.EitherEdge (NodeType, NumberOfAdj) ()
+
+insEdge ::
+   Ord node =>
+   Gr.EitherEdge node -> CountTopology node -> CountTopology node
+insEdge e = Gr.insEdge (e, ())
+
+insEdgeSet ::
+   Ord node =>
+   S.Set (Gr.EitherEdge node) -> CountTopology node -> CountTopology node
+insEdgeSet e = Gr.insEdgeSet (MapU.fromSet (const ()) e)
+
+graphFromMap ::
+   (Gr.Edge e, Ord (e n), Ord n) =>
+   M.Map n nl -> S.Set (e n) -> Gr.Graph n e nl ()
+graphFromMap ns es =
+   Gr.fromMap ns (MapU.fromSet (const ()) es)
 
 
-edgeOrients :: Gr.DirEdge node -> [(Gr.DirEdge node, FlowDirection)]
+edgeOrients :: Ord node => Gr.DirEdge node -> [Gr.EitherEdge node]
 edgeOrients (Gr.DirEdge x y) =
-   (Gr.DirEdge x y, Dir) :
-   (Gr.DirEdge y x, Dir) : -- x and y inversed!
-   (Gr.DirEdge x y, UnDir) :
+   (Gr.EDirEdge $ Gr.DirEdge x y) :
+   (Gr.EDirEdge $ Gr.DirEdge y x) : -- x and y swapped!
+   (Gr.EUnDirEdge $ Gr.unDirEdge x y) :
    []
 
 admissibleEdges ::
    (Ord node) =>
    LNEdge node -> CountTopology node ->
-   [((Gr.DirEdge node, FlowDirection), CountTopology node)]
+   [(Gr.EitherEdge node, CountTopology node)]
 admissibleEdges e0 g0 = do
    e1 <- edgeOrients e0
-   let g1 = Gr.insEdge e1 g0
+   let g1 = insEdge e1 g0
    guard $ Fold.all (checkCountNode g1) e0
    return (e1, g1)
 
@@ -122,12 +138,13 @@ splitNodesEdges topo =
 
 newtype
    Alternatives node =
-      Alternatives {getAlternatives :: [(Gr.DirEdge node, FlowDirection)]}
+      Alternatives {getAlternatives :: [Gr.EitherEdge node]}
 
 instance Eq  (Alternatives a) where (==)     =  equating  (void . getAlternatives)
 instance Ord (Alternatives a) where compare  =  comparing (void . getAlternatives)
 
-alternatives :: (Ord node) => LNEdge node -> CountTopology node -> Alternatives node
+alternatives ::
+   (Ord node) => LNEdge node -> CountTopology node -> Alternatives node
 alternatives e g =
    Alternatives $ map fst $ admissibleEdges e g
 
@@ -141,7 +158,7 @@ recoursePrioEdge origTopo =
           case PSQ.minView queue of
              Nothing -> [tq]
              Just (bestEdge PSQ.:-> Alternatives edges, remQueue) -> do
-                newTopo <- map (flip Gr.insEdge topo) edges
+                newTopo <- map (flip insEdge topo) edges
                 recourse
                    (newTopo,
                     S.foldl
@@ -171,7 +188,7 @@ data
    Cluster node =
       Cluster {
          clusterNodes :: S.Set node,
-         clusterEdges :: [M.Map (Gr.DirEdge node) FlowDirection]
+         clusterEdges :: [S.Set (Gr.EitherEdge node)]
       }
 
 
@@ -180,7 +197,7 @@ emptyCluster ::
    CountTopology node -> Cluster node
 emptyCluster g =
    Cluster S.empty
-      (guard (admissibleCountTopology g) >> [M.empty])
+      (guard (admissibleCountTopology g) >> [S.empty])
 
 singletonCluster ::
    (Ord node) =>
@@ -188,7 +205,7 @@ singletonCluster ::
 singletonCluster g e =
    Cluster
       (Fold.foldMap S.singleton e)
-      (map (uncurry M.singleton . fst) $ admissibleEdges e g)
+      (map (S.singleton . fst) $ admissibleEdges e g)
 
 mergeCluster ::
    (Ord node) =>
@@ -199,8 +216,8 @@ mergeCluster topo c0 c1 =
    in  Cluster nodes $ do
           es0 <- clusterEdges c0
           es1 <- clusterEdges c1
-          let es2 = M.union es0 es1
-              g = Gr.insEdgeSet es2 topo
+          let es2 = S.union es0 es1
+              g = insEdgeSet es2 topo
           guard $ Fold.all (checkCountNode g) nodes
           return es2
 
@@ -221,7 +238,7 @@ mergeSmallestClusters topo queue0 =
          case PQ.minView queue1 of
             Nothing ->
                Left $
-               map (\es -> Gr.nmap fst $ Gr.insEdgeSet es topo) $
+               map (\es -> Gr.nmap fst $ insEdgeSet es topo) $
                clusterEdges c0
             Just (c1, queue2) -> Right $
                let c2 = mergeCluster topo c0 c1
@@ -270,7 +287,7 @@ mergeMinimizingClusterPairs topo (NonEmpty.Cons p ps) =
    case NonEmpty.fetch ps of
       Nothing ->
          Left $
-         map (\es -> Gr.nmap fst $ Gr.insEdgeSet es topo) $
+         map (\es -> Gr.nmap fst $ insEdgeSet es topo) $
          clusterEdges p
       Just partition0 ->
          Right $
@@ -299,7 +316,7 @@ mergeMinimizingCluster topo (NonEmpty.Cons p ps) =
    case NonEmpty.fetch ps of
       Nothing ->
          Left $
-         map (\es -> Gr.nmap fst $ Gr.insEdgeSet es topo) $
+         map (\es -> Gr.nmap fst $ insEdgeSet es topo) $
          clusterEdges p
       Just partition0 ->
          let (c0,partition1) =
@@ -323,7 +340,7 @@ type LNEdge node = Gr.DirEdge node
 bruteForce :: (Ord node) => Topology node -> [FlowTopology node]
 bruteForce topo =
    filter (\g -> Fold.all (checkNode g) $ Gr.nodeSet g) .
-   map (Gr.fromMap (Gr.nodeLabels topo) . M.fromList) $
+   map (graphFromMap (Gr.nodeLabels topo) . S.fromList) $
    mapM edgeOrients $ Gr.edges topo
 
 {-

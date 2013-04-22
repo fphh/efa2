@@ -9,11 +9,8 @@ import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Gr
 import EFA.Graph.Topology
-          (Topology, FlowTopology, ClassifiedTopology, SequFlowGraph,
-           FlowDirection(Dir, UnDir))
-import EFA.Graph
-          (DirEdge(DirEdge),
-           labNodes, insNodes, insEdges)
+          (Topology, FlowTopology, ClassifiedTopology, SequFlowGraph)
+import EFA.Graph (DirEdge(DirEdge), labNodes, insNodes)
 
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Vector as SV
@@ -148,13 +145,13 @@ genFlowTopology ::
   (Ord node, Show node) =>
   Topology node -> FlowState node -> FlowTopology node
 genFlowTopology topo (FlowState fs) =
-   Gr.fromList (labNodes topo) $
+   Gr.fromList (labNodes topo) $ map (flip (,) ()) $
    map
       (\(DirEdge idx1 idx2) ->
          case fs `checkedLookup` XIdx.ppos idx1 idx2 of
-            PSign -> (DirEdge idx1 idx2, Dir)
-            NSign -> (DirEdge idx2 idx1, Dir)
-            ZSign -> (DirEdge idx1 idx2, UnDir)) $
+            PSign -> Gr.EDirEdge $ DirEdge idx1 idx2
+            NSign -> Gr.EDirEdge $ DirEdge idx2 idx1
+            ZSign -> Gr.EUnDirEdge $ Gr.UnDirEdge idx1 idx2) $
    Gr.edges topo
 
 
@@ -164,14 +161,12 @@ mkSectionTopology ::
 mkSectionTopology sec =
    Gr.ixmap
       (Idx.afterSecNode sec)
-      (\(DirEdge x y) ->
-         Topo.FlowEdge $ Topo.StructureEdge $
-         Idx.InSection sec $ Idx.StructureEdge x y)
+      (Topo.FlowEdge . Topo.StructureEdge . Idx.InSection sec)
 
 
 mkStorageEdges ::
    node -> M.Map Idx.Section Topo.StoreDir ->
-   [(Topo.FlowEdge (Idx.BndNode node), FlowDirection)]
+   [Topo.FlowEdge Gr.EitherEdge (Idx.BndNode node)]
 mkStorageEdges node stores = do
    let (ins, outs) =
           M.partition (Topo.In ==) $ M.mapKeys Idx.AfterSection stores
@@ -179,24 +174,31 @@ mkStorageEdges node stores = do
    secout <- M.keys $ snd $ M.split secin outs
    return $
       (Topo.FlowEdge $ Topo.StorageEdge $
-       Idx.ForNode (Idx.StorageEdge secin secout) node,
-       Dir)
+       Idx.ForNode (Idx.StorageEdge secin secout) node)
 
 getActiveStoreSequences ::
    (Ord node) =>
    SequData (Topo.ClassifiedTopology node) ->
    M.Map node (M.Map Idx.Section Topo.StoreDir)
-getActiveStoreSequences sq =
+getActiveStoreSequences =
    Fold.foldl
       (M.unionWith (M.unionWith (error "duplicate section for node")))
-      M.empty $
+      M.empty
+   .
    SD.mapWithSection
       (\s g ->
-          fmap (M.singleton s) $
-          M.mapMaybe (join . Topo.maybeStorage) $ Gr.nodeLabels g) sq
+         fmap (M.singleton s) $
+         M.mapMaybe (join . Topo.maybeStorage) $ Gr.nodeLabels g)
 
 
 type RangeGraph node = (M.Map Idx.Section SD.Range, SequFlowGraph node)
+
+insEdges ::
+   Ord node =>
+   [Topo.FlowEdge Gr.EitherEdge (Idx.BndNode node)] ->
+   SequFlowGraph node ->
+   SequFlowGraph node
+insEdges = Gr.insEdges . map (flip (,) ())
 
 mkSequenceTopology ::
    (Ord node) =>
