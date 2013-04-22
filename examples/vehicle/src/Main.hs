@@ -7,7 +7,7 @@ module Main where
 
 -- import EFA.Example.Utility (edgeVar)
 -- import EFA.Example.Absolute ((.=))
--- import qualified EFA.Equation.System as EqGen
+-- import qualified EFA.Equation.Sstem as EqGen
 import EFA.IO.PLTImport (modelicaPLTImport)
 import EFA.Signal.Sequence (makeSeqFlowTopology)
 import qualified EFA.Graph.Flow as Flow
@@ -26,10 +26,11 @@ import qualified Modules.Analysis as Analysis
 import qualified Modules.Plots as Plots
 -- import qualified Modules.Signals as Signals
 
-import qualified EFA.Example.Index as XIdx
+--import qualified EFA.Example.Index as XIdx
+--import qualified EFA.Example.AssignMap as AssignMap
 -- import qualified EFA.Signal.Plot as Plot
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Equation.Environment as Env
+--import qualified EFA.Equation.Environment as Env
 
 -- import qualified EFA.Equation.Record as EqRecord
 --import qualified EFA.Equation.Result as Result
@@ -42,6 +43,11 @@ import qualified EFA.Equation.Environment as Env
 
 import qualified EFA.Signal.Record as Record
 
+import EFA.Signal.Signal (TC(..), Scalar,toScalar)
+import EFA.Signal.Data (Data(..), Nil)
+import EFA.Signal.Typ (Typ, F, T, A, Tt)
+import qualified EFA.Signal.SequenceData as SD
+
 import qualified System.IO as IO
 import System.Environment (getEnv)
 import System.FilePath ((</>))
@@ -49,21 +55,27 @@ import System.FilePath ((</>))
 --import qualified Data.Map as M
 import qualified Data.List as L
 import Data.Tuple.HT (mapSnd)
-import qualified EFA.Example.Index as XIdx
+--import qualified EFA.Example.Index as XIdx
 
 import qualified Data.GraphViz.Attributes.Colors.X11 as Colors
+
 
 examplePath :: FilePath
 examplePath = "examples/vehicle"
 
 
-datasetsX :: [FilePath]
-datasetsX = ["Vehicle_mass900kg_res.plt",
+fileNamesX :: [FilePath]
+fileNamesX = ["Vehicle_mass900kg_res.plt",
              "Vehicle_mass1000kg_res.plt",
              "Vehicle_mass1100kg_res.plt"]
 
-deltasets :: [String]  ->   [String]
-deltasets xs = zipWith (\x y -> y ++ "_vs_" ++ x) xs (tail xs)
+datasetsX ::  [Record.Name]
+datasetsX = map Record.Name ["900kg",
+                            "1000kg",
+                            "1100kg"]
+
+deltasetsX :: [Record.DeltaName]
+deltasetsX = zipWith Record.deltaName datasetsX (tail datasetsX)
 
 zipWith3M_ ::
   Monad m =>
@@ -85,19 +97,34 @@ main = do
 -- * Import signals from Csv-file
 
   path <- fmap (</> examplePath) $ getEnv "EFADATA"
-  rawSignalsX <- mapM modelicaPLTImport $ map (path </>) datasetsX
+  rawSignalsX <- mapM modelicaPLTImport $ map (path </>) fileNamesX
 
 ---------------------------------------------------------------------------------------
 -- * Conditioning, Sequencing and Integration
+  
+  let epsT ::  TC Scalar (Typ A T Tt) (Data Nil Double)
+      epsT = toScalar 0
 
-  preProcessedDataX <- mapM (Analysis.pre System.topology) rawSignalsX
+      epsE ::  TC Scalar (Typ A F Tt) (Data Nil Double)
+      epsE = toScalar 1000
 
-  let (_,sequenceFlowsFiltX,flowStatesX,powerSignalsX,signalsX) = L.unzip5 preProcessedDataX
+  let preProcessedDataX = map (Analysis.pre System.topology epsT epsE) rawSignalsX
+
+  let (_,sequenceFlowsFiltUnmappedX,flowStatesUnmappedX,powerSignalsX,signalsX) = L.unzip5 preProcessedDataX
 --  let (sequencePowersFiltX,sequenceFlowsFiltX,flowStatesX,powerSignalsX,signalsX) = L.unzip5 preProcessedDataX
 
   let allSignalsX = zipWith Record.combinePowerAndSignal powerSignalsX signalsX
 
 ---------------------------------------------------------------------------------------
+-- *  ReIndex Sequences to allow Sequence Matching 
+
+  let sequenceFlowsFiltX = map (SD.reIndex [1,2,7,8,16,17,19::Int]) sequenceFlowsFiltUnmappedX 
+--  let sequenceFlowsFiltX = sequenceFlowsFiltUnmappedX
+
+  let flowStatesX = map (SD.reIndex [1,2,7,8,16,17,19::Int]) flowStatesUnmappedX
+--  let sequenceFlowsFiltX = sequenceFlowsFiltUnmappedX
+
+  ---------------------------------------------------------------------------------------
 -- *  Generate Flow States as Graphs
 
   let flowToposX = map (Flow.genSequFlowTops System.topology) flowStatesX
@@ -106,7 +133,7 @@ main = do
 -- *  Generate Sequence Flow Graph
 
   let sequenceFlowTopologyX = map makeSeqFlowTopology flowToposX
-
+       
 ---------------------------------------------------------------------------------------
 -- *  Section Flow States as Graphs
 
@@ -117,13 +144,13 @@ main = do
 
   let externalEnvX = zipWith Analysis.external  sequenceFlowTopologyX sequenceFlowsFiltX
 
----------------------------------------------------------------------------------------
+
+  ---------------------------------------------------------------------------------------
 -- *  Make the Deltas for subsequent Datasets
 
 --  let externalDeltaEnvX =
 --        zipWith (flip Analysis.delta (head sequenceFlowsFiltX))
 --                      sequenceFlowTopologyX $ tail sequenceFlowsFiltX
-
 
   let externalDeltaEnvX =
         L.zipWith3  Analysis.delta sequenceFlowTopologyX
@@ -153,16 +180,41 @@ main = do
 
 
 
-  let energyIndex = (XIdx.energy (Idx.Section 7) System.Tank System.ConBattery)
+  let energyIndex7 = Idx.InSection (Idx.Section 7) energyIndex
+      energyIndex  = Idx.Energy $ Idx.StructureEdge System.Tank System.ConBattery
 
---  print $ Plots.lookupStack energyIndex (last differenceExtEnvs)
+--  print $ Plots.lookupStack energyIndex7 (last differenceExtEnvs)
 
   Plots.recordStackRow
     "Energy Flow Change at Tank in Section 7"
-    energyIndex 
-    10
+    deltasetsX
+    energyIndex7
+    (1^^(-6::Integer))
     differenceExtEnvs
+    
+  Plots.sectionStackRow
+    "Energy Flow Change at Tank in all Sections 1100 vs 1000"
+    energyIndex
+    (10^(5::Integer))
+    (last differenceExtEnvs)
 
+
+--  print $ Plots.lookupAllStacks energyIndex (last differenceExtEnvs)
+
+
+     
+  Plots.cumStack
+    "Cumulative Flow Change at Tank"
+    energyIndex
+    (1^^(-1::Integer))
+    (head differenceExtEnvs)
+   
+    
+  print $    -- AssignMap.threshold 0.001 $
+--             M.mapKeys AssignMap.deltaIndexSet $
+--             Stack.assignDeltaMap $    
+             Plots.lookupCumStack energyIndex (last differenceExtEnvs)
+  
 ---------------------------------------------------------------------------------------
 -- * Plot Time Signals
 
@@ -202,21 +254,23 @@ main = do
 
 ---------------------------------------------------------------------------------------
 -- * Draw Diagrams
-  let drawDelta ti topo env c = 
-        Draw.xterm $
-          Draw.title ti $
+  
+  let -- drawDelta :: RecordName -> 
+      drawDelta ti topo env c = 
+          Draw.xterm $
+          Draw.title  ((\(Record.DeltaName x) -> x) ti) $
           Draw.bgcolour c $
           Draw.sequFlowGraphDeltaWithEnv topo env
       drawAbs ti topo env c = 
         Draw.xterm $
-          Draw.title ti $
+          Draw.title ((\(Record.Name x) -> x) ti) $
           Draw.bgcolour c $
           Draw.sequFlowGraphAbsWithEnv topo env
 
-      colours = [ Colors.LightPink1,	 
-                  Colors.LightPink2,	 
-                  Colors.LightPink3,	 
-                  Colors.LightPink4 ]
+      colours = [ Colors.White,	 
+                  Colors.Gray90,	 
+                  Colors.Gray80,	 
+                  Colors.Gray70 ]
 
 
   concurrentlyMany_ $ [
@@ -247,7 +301,7 @@ main = do
          externalEnvX
          colours
     ++ L.zipWith4 drawDelta
-         (deltasets datasetsX)
+         deltasetsX
          sectionToposX
          externalDeltaEnvX
          (tail colours)

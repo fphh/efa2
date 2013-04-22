@@ -1,3 +1,6 @@
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
+
 module EFA.Report.FormatValue where
 
 import qualified EFA.Graph.Topology.Index as Idx
@@ -10,12 +13,9 @@ import qualified Data.NonEmpty as NonEmpty
 import Data.Foldable (Foldable, toList)
 import Data.Ratio (Ratio)
 
-
-
 class FormatValue a where
    formatValue :: Format output => a -> output
-
-
+   
 instance FormatValue a => FormatValue [a] where
    formatValue = Format.list . map formatValue
 

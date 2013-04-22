@@ -11,7 +11,6 @@ import Data.Word (Word)
 
 import Prelude hiding (flip)
 
-
 newtype Section = Section Word deriving (Show, Eq, Ord)
 
 instance Enum Section where
@@ -265,3 +264,5 @@ data DTime node = DTime deriving (Show, Ord, Eq)
 
 -- | Indices for Power Position
 newtype PPos node = PPos (StructureEdge node) deriving (Show, Ord, Eq)
+
+
