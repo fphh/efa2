@@ -81,11 +81,16 @@ instance Applicative Triple where
 mapCyclic3 :: (a -> a -> b) -> Triple a -> Triple b
 mapCyclic3 f (Triple x y z) = Triple (f y z) (f z x) (f x y)
 
+scalarProduct ::
+   (Num a, Applicative f, Foldable f) =>
+   f a -> f a -> a
+scalarProduct x y = Fold.sum $ liftA2 (*) x y
+
 det3 :: Triple Pt3 -> Double
 det3 tri =
    let head3 (Triple x _ _) = x
        tail3 (Triple _ y z) = Pair y z
-   in  Fold.sum $ liftA2 (*) (fmap head3 tri) (mapCyclic3 det2 $ fmap tail3 tri)
+   in  scalarProduct (fmap head3 tri) (mapCyclic3 det2 $ fmap tail3 tri)
 
 det2 :: Pt2 -> Pt2 -> Double
 det2 (Pair a00 a01) (Pair a10 a11) =
@@ -106,13 +111,18 @@ isInTriangle :: Pt2 -> Triple Pt2 -> Bool
 isInTriangle a tri = Fold.and bs || Fold.all not bs
   where bs = mapCyclic3 (positiveOrientation a) tri
 
-getZ :: Triple Pt3 -> Pt2 -> Double
-getZ tri (Pair x y) = (det3 triT - x*xa - y*ya) / za
-  where triT = Trav.sequenceA tri
-        (Triple xa ya za) = mapCyclic3 signedAreaT triT
+data Plane a = Plane {planeGradient :: Pair a, planeOffset :: a}
 
-projectToTriangle :: Triple Pt3 -> Pt2 -> Pt3
-projectToTriangle tri p@(Pair x y) = Triple x y (getZ tri p)
+planeFromTriangle :: Triple Pt3 -> Plane Double
+planeFromTriangle tri =
+    Plane (Pair (xa / za) (ya / za)) (det3 tri / za)
+  where (Triple xa ya za) = mapCyclic3 signedAreaT $ Trav.sequenceA tri
+
+getZ :: Plane Double -> Pt2 -> Double
+getZ (Plane g d) p = d - scalarProduct g p
+
+projectToTriangle :: Plane Double -> Pt2 -> Pt3
+projectToTriangle pln p@(Pair x y) = Triple x y (getZ pln p)
 
 
 mkKennfeld :: [Double] -> [[Pt3]]
@@ -126,19 +136,26 @@ kennfeld = mkKennfeld [-20, -17 .. 20]
 project :: Pt3 -> Pt2
 project (Triple x y _) = Pair x y
 
-projectTriangle :: Triple Pt3 -> Triple Pt2
-projectTriangle = fmap project
-
 ptToVec2 :: Pt2 -> Vector2
 ptToVec2 (Pair x y) = Vector2 x y
 
-vec2pts :: [Pt3] -> [(Vector2, Vector2, Vector2)] -> [Triple Pt3]
-vec2pts pts = map (fmap unproject . uncurry3 Triple)
+vecToPt2 :: Vector2 -> Pt2
+vecToPt2 (Vector2 x y) = Pair x y
+
+
+type TriangleMap = [(Triple Pt2, Plane Double)]
+
+vec2planes ::
+  [Pt3] -> [(Vector2, Vector2, Vector2)] -> TriangleMap
+vec2planes pts =
+  map
+    ((\tri -> (fmap vecToPt2 tri, planeFromTriangle $ fmap unproject tri)) .
+     uncurry3 Triple)
   where unproject (Vector2 x y) = Triple x y (m M.! (x,y))
         m = M.fromList $ map (\(Triple x y z) -> ((x,y), z)) pts
 
-delaunay :: [Pt3] -> [Triple Pt3]
-delaunay pts = vec2pts pts $ triangulate $ map (ptToVec2 . project) pts
+delaunay :: [Pt3] -> TriangleMap
+delaunay pts = vec2planes pts $ triangulate $ map (ptToVec2 . project) pts
 
 plotTriangulation :: [Triple Pt2] -> String
 plotTriangulation = L.intercalate "\n" . map f
@@ -158,7 +175,7 @@ plotTri = L.intercalate "\n" . zipWith f [1..]
         g (Pair x y) = show x ++ "," ++ show y ++ ",1"
 
 
-triangles :: [Triple Pt3]
+triangles :: TriangleMap
 triangles = delaunay (concat kennfeld)
 
 {-
@@ -177,10 +194,10 @@ isInTriangle (s1, s2, _) ((a1, a2, _), (b1, b2, _), (c1, c2, _)) =
 -}
 
 
-getTriangle :: [Triple Pt3] -> Pt2 -> Triple Pt3
+getTriangle :: TriangleMap -> Pt2 -> Plane Double
 getTriangle ts p =
-  case dropWhile (not . isInTriangle p . projectTriangle) ts of
-       t:_ -> t
+  case dropWhile (not . isInTriangle p . fst) ts of
+       t:_ -> snd t
        _ -> error ("no triangle found: " ++ show p)
 
 {-
@@ -240,7 +257,7 @@ showWords = P.unwords . map show . Fold.toList
 
 
 triangulation :: IO ()
-triangulation = writeFile "tri.txt" $ plotTri $ map (fmap project) triangles
+triangulation = writeFile "tri.txt" $ plotTri $ map fst triangles
 
 
 main :: IO ()
