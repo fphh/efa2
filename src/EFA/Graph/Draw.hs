@@ -30,12 +30,8 @@ import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.CumulatedFlow as Cum
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph as Gr
-import EFA.Graph.Topology
-          (NodeType(Storage),
-           EdgeType(StructureEdge, StorageEdge),
-           getFlowDirection,
-           FlowDirectionField, FlowTopology)
-import EFA.Graph (DirEdge(DirEdge), labNodes, labEdges)
+import EFA.Graph.Topology (NodeType(Storage), FlowTopology)
+import EFA.Graph (DirEdge(DirEdge), labNodes)
 
 import qualified EFA.Utility.TotalMap as TMap
 
@@ -73,7 +69,7 @@ import Control.Monad (void)
 import Control.Category ((.))
 
 import Data.Foldable (foldMap, fold)
-import Data.Tuple.HT (mapFst)
+import Data.Tuple.HT (mapFst, mapFst3)
 
 import Prelude hiding ((.))
 
@@ -108,9 +104,10 @@ dotFromSequFlowGraph ::
   Flow.RangeGraph node ->
   Maybe (Idx.Section -> Unicode) ->
   (Maybe Idx.Boundary -> Topo.LDirNode node -> Unicode) ->
-  (Topo.LEdge node -> [Unicode]) ->
+  (Idx.InSection Gr.EitherEdge node -> [Unicode]) ->
+  (Idx.ForNode Idx.StorageEdge node -> [Unicode]) ->
   DotGraph T.Text
-dotFromSequFlowGraph (rngs, g) mtshow nshow eshow =
+dotFromSequFlowGraph (rngs, g) mtshow nshow structureEdgeShow storageEdgeShow =
   DotGraph { strictGraph = False,
              directedGraph = True,
              graphID = Just (Int 1),
@@ -118,13 +115,14 @@ dotFromSequFlowGraph (rngs, g) mtshow nshow eshow =
 
   where (topoEs, interEs) =
            mapFst (M.fromListWith (++)) $
-           HTL.partitionMaybe
+           HTL.unzipEithers $
+           map
               (\e ->
-                 case Topo.edgeType $ fst e of
-                    Topo.StructureEdge (Idx.InSection s _) ->
-                       Just (Idx.AfterSection s, [e])
-                    _ -> Nothing) $
-           Gr.labEdges g
+                 case Topo.edgeType e of
+                    Topo.StructureEdge se@(Idx.InSection s _) ->
+                       Left (Idx.AfterSection s, [se])
+                    Topo.StorageEdge se -> Right se) $
+           Gr.edges g
 
         topoNs =
            M.fromListWith (++) $
@@ -137,7 +135,7 @@ dotFromSequFlowGraph (rngs, g) mtshow nshow eshow =
                [GraphAttrs [Label (StrLabel (T.pack str))]]
                []
                (map (dotFromSecNode (nshow before)) ns)
-               (map (dotFromSecEdge eshow) es)
+               (map (dotFromStructureEdge structureEdgeShow) es)
           where str =
                    case current of
                       Idx.Initial -> "Initial"
@@ -155,7 +153,7 @@ dotFromSequFlowGraph (rngs, g) mtshow nshow eshow =
               zipWith sg (Nothing : map Just (M.keys topoNs)) $ M.toAscList $
               TMap.intersectionPartialWith (,) (TMap.cons [] topoEs) topoNs,
             nodeStmts = [],
-            edgeStmts = map (dotFromSecEdge eshow) interEs
+            edgeStmts = map (dotFromStorageEdge storageEdgeShow) interEs
           }
 
 
@@ -203,23 +201,31 @@ dotFromSecNode nshow n@(x, nodeType) =
   DotNode (dotIdentFromBndNode x) (mkNodeAttrs nodeType displabel)
   where displabel = Label $ StrLabel $ T.pack $ unUnicode $ nshow n
 
-dotFromSecEdge ::
+dotFromStructureEdge ::
   (Node.C node) =>
-  (Topo.LEdge node -> [Unicode]) -> Topo.LEdge node -> DotEdge T.Text
-dotFromSecEdge eshow e =
+  (Idx.InSection Gr.EitherEdge node -> [Unicode]) ->
+  Idx.InSection Gr.EitherEdge node -> DotEdge T.Text
+dotFromStructureEdge eshow e =
    DotEdge
       (dotIdentFromBndNode x) (dotIdentFromBndNode y)
-      [displabel, Viz.Dir dir, colour, constraint]
-  where (DirEdge x y, dir, order) = orientEdge e
-        displabel =
-           Label $ StrLabel $ T.pack $
-           L.intercalate "\n" $ map unUnicode $ order $ eshow e
-        colour =
-           case Topo.edgeType $ fst e of
-              StorageEdge _ -> storageEdgeColour
-              StructureEdge _ -> structureEdgeColour
-        constraint =
-           Constraint $ Topo.isStructureEdge $ fst e
+      [labelFromLines $ order $ eshow e,
+       Viz.Dir dir, structureEdgeColour]
+  where (DirEdge x y, dir, order) = orientFlowEdge e
+
+dotFromStorageEdge ::
+  (Node.C node) =>
+  (Idx.ForNode Idx.StorageEdge node -> [Unicode]) ->
+  Idx.ForNode Idx.StorageEdge node -> DotEdge T.Text
+dotFromStorageEdge eshow e =
+   DotEdge
+      (dotIdentFromBndNode $ Idx.storageEdgeFrom e)
+      (dotIdentFromBndNode $ Idx.storageEdgeTo   e)
+      [labelFromLines $ eshow e, Viz.Dir Forward,
+       storageEdgeColour, Constraint False]
+
+labelFromLines :: [Unicode] -> Attribute
+labelFromLines =
+   Label . StrLabel . T.pack . L.intercalate "\n" . map unUnicode
 
 
 dotIdentFromBndNode :: (Node.C node) => Idx.BndNode node -> T.Text
@@ -237,7 +243,7 @@ sequFlowGraph ::
   (Node.C node) =>
   Flow.RangeGraph node ->  DotGraph T.Text
 sequFlowGraph topo =
-  dotFromSequFlowGraph topo Nothing nshow eshow
+  dotFromSequFlowGraph topo Nothing nshow eshow eshow
   where nshow _before (Idx.BndNode _ n, l) =
            Unicode $ unUnicode (Node.display n) ++ " - " ++ showType l
         eshow _ = []
@@ -275,8 +281,8 @@ dotFromTopoEdge ::
   M.Map (node, node) String ->
   DirEdge node -> DotEdge T.Text
 dotFromTopoEdge edgeLabels e =
-  case orientUndirEdge e of
-         DirEdge x y ->
+  case orientDirEdge e of
+     (DirEdge x y, _, _) ->
            let lab = T.pack $ fold $ M.lookup (x, y) edgeLabels
            in  DotEdge
                  (dotIdentFromNode x)
@@ -309,7 +315,7 @@ dotFromFlowTopology ident topo = DotSG True (Just (Int ident)) stmts
         labNodef (n, l) =
           Label $ StrLabel $ T.pack $
                   unUnicode (Node.display n) ++ " - " ++ showType l
-        es = map mkEdge (labEdges topo)
+        es = map mkEdge $ Gr.edges topo
         mkEdge el =
            case orientEdge el of
               (DirEdge x y, d, _) ->
@@ -324,25 +330,38 @@ flowTopologies ts = DotGraph False True Nothing stmts
         attrs = []
 
 
+orientFlowEdge ::
+   (Ord node) =>
+   Idx.InSection Gr.EitherEdge node ->
+   (DirEdge (Idx.BndNode node), DirType, [s] -> [s])
+orientFlowEdge (Idx.InSection sec e) =
+   mapFst3
+      (\(DirEdge x y) ->
+         DirEdge
+            (Idx.afterSecNode sec x)
+            (Idx.afterSecNode sec y)) $
+   case e of
+      Gr.EUnDirEdge ue -> (orientUndirEdge ue, NoDir, const [])
+      Gr.EDirEdge de -> orientDirEdge de
+
 orientEdge ::
-   (Gr.Edge edge, Ord n, FlowDirectionField el) =>
-   (edge n, el) -> (DirEdge n, DirType, [s] -> [s])
-orientEdge (e, l) =
-   let x = Gr.from e
-       y = Gr.to   e
-   in  case getFlowDirection l of
-          Topo.UnDir ->
-             (orientUndirEdge $ DirEdge x y, NoDir, const [])
-          Topo.Dir ->
-    --         if comparing (\(Idx.SecNode s n) -> n) x y == LT
-             if x < y
-               then (DirEdge x y, Forward, id)
-               else (DirEdge y x, Back, reverse)
+   (Ord node) =>
+   Gr.EitherEdge node -> (DirEdge node, DirType, [s] -> [s])
+orientEdge e =
+   case e of
+      Gr.EUnDirEdge ue ->
+         (orientUndirEdge ue, NoDir, const [])
+      Gr.EDirEdge de -> orientDirEdge de
 
+orientUndirEdge :: Ord node => Gr.UnDirEdge node -> DirEdge node
+orientUndirEdge (Gr.UnDirEdge x y) = DirEdge x y
 
-orientUndirEdge :: Ord n => DirEdge n -> DirEdge n
-orientUndirEdge (DirEdge x y) =
-   if x < y then DirEdge x y else DirEdge y x
+orientDirEdge :: Ord node => DirEdge node -> (DirEdge node, DirType, [s] -> [s])
+orientDirEdge (DirEdge x y) =
+--   if comparing (\(Idx.SecNode s n) -> n) x y == LT
+   if x < y
+     then (DirEdge x y, Forward, id)
+     else (DirEdge y x, Back, reverse)
 
 
 class StorageLabel a where
@@ -455,22 +474,25 @@ sequFlowGraphWithEnv ::
   Flow.RangeGraph node -> Env node Unicode -> DotGraph T.Text
 sequFlowGraphWithEnv g env =
   dotFromSequFlowGraph g 
-     (Just (formatTime env)) (formatNode env) (eshow . fst)
-  where eshow se =
-           case Topo.edgeType se of
-              StructureEdge e ->
-                 formatEnergy env e :
-                 formatX env e :
-                 formatEta env e :
-                 formatX env (Idx.flip e) :
-                 formatEnergy env (Idx.flip e) :
-                 []
-              StorageEdge e ->
-                 formatMaxEnergy env e :
-                 formatStEnergy env e :
-                 formatStX env e :
-                 formatStX env (Idx.flip e) :
-                 []
+     (Just (formatTime env)) (formatNode env) structEShow storeEShow
+  where structEShow (Idx.InSection sec ee) =
+           case ee of
+              Gr.EUnDirEdge _ -> []
+              Gr.EDirEdge (Gr.DirEdge x y) ->
+                 case Idx.InSection sec (Idx.StructureEdge x y) of
+                    e ->
+                       formatEnergy env e :
+                       formatX env e :
+                       formatEta env e :
+                       formatX env (Idx.flip e) :
+                       formatEnergy env (Idx.flip e) :
+                       []
+        storeEShow e =
+           formatMaxEnergy env e :
+           formatStEnergy env e :
+           formatStX env e :
+           formatStX env (Idx.flip e) :
+           []
 
 sequFlowGraphAbsWithEnv ::
    (FormatValue a, FormatValue v, Node.C node) =>
@@ -541,7 +563,7 @@ dotFromCumEdge env (e, ()) =
    DotEdge
       (dotIdentFromNode x) (dotIdentFromNode y)
       [displabel, Viz.Dir dir, structureEdgeColour]
-  where (DirEdge x y, dir, _order) = orientEdge (e, Topo.Dir)
+  where (DirEdge x y, dir, _order) = orientDirEdge e
         displabel =
            Label $ StrLabel $ T.pack $
            L.intercalate "\n" $ map unUnicode $

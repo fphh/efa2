@@ -54,9 +54,9 @@ Instead I use this function locally for 'Key.sort'.
 -}
 graphIdent ::
    (Ord node) =>
-   Gr.Graph node Gr.DirEdge nodeLabel edgeLabel ->
+   Gr.Graph node Gr.EitherEdge nodeLabel edgeLabel ->
    (M.Map node nodeLabel,
-    M.Map (Gr.DirEdge node) edgeLabel)
+    M.Map (Gr.EitherEdge node) edgeLabel)
 graphIdent g = (Gr.nodeLabels g, Gr.edgeLabels g)
 
 {-
