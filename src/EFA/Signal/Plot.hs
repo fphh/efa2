@@ -51,6 +51,7 @@ import qualified Graphics.Gnuplot.Advanced as Plot
 -- import qualified Graphics.Gnuplot.Terminal.WXT as WXT
 
 import qualified Graphics.Gnuplot.Terminal as Terminal
+import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 import qualified Graphics.Gnuplot.Plot as Plt
 import qualified Graphics.Gnuplot.Plot.TwoDimensional as Plot2D
 import qualified Graphics.Gnuplot.Plot.ThreeDimensional as Plot3D
@@ -101,7 +102,7 @@ run ::
    (Terminal.C term, Graph.C graph) =>
    term -> Opts.T graph -> Plt.T graph -> IO ()
 run terminal opts plt =
-   void $ Plot.plot terminal $ Frame.cons opts plt
+   void $ Plot.plotSync terminal $ Frame.cons opts plt
 
 
 -- | Simple Signal Plotting -- without time axis --------------------------------------------------------------
@@ -130,7 +131,7 @@ signalIO ::
    (Signal signal) =>
    String -> signal -> IO ()
 signalIO ti x =
-   void $ Plot.plotDefault $
+   void $ Plot.plotSync DefaultTerm.cons $
    Frame.cons (signalAttr ti x) $
    fmap signalStyle $ signal x
 
@@ -181,7 +182,7 @@ xyIO ::
    (XY tcX tcY) =>
    String -> tcX -> tcY -> IO ()
 xyIO ti x y =
-   void $ Plot.plotDefault $
+   void $ Plot.plotSync DefaultTerm.cons $
    Frame.cons (xyAttr ti x y) $
    xy x y
 
@@ -274,7 +275,7 @@ surfaceIO ti x y z = do
           Opts.grid True $
           Opts.size 1 1 $
           Opts.deflt
-   void $ Plot.plotDefault $
+   void $ Plot.plotSync DefaultTerm.cons $
       Frame.cons attrs $ surface x y z
 
 class
@@ -349,7 +350,7 @@ recordIO ::
     Tuple.C y, Atom.C y) =>
    String -> Record s1 s2 t1 t2 id v y -> IO ()
 recordIO name =
-   void . Plot.plotDefault . Frame.cons (recordAttr name) . record
+   void . Plot.plotSync DefaultTerm.cons . Frame.cons (recordAttr name) . record
 
 
 recordIOList ::
@@ -360,7 +361,7 @@ recordIOList ::
     Tuple.C y, Atom.C y) =>
    String -> [Record s1 s2 t1 t2 id v y] -> IO ()
 recordIOList name recList =
-   void $ Plot.plotDefault $ Frame.cons (recordAttr name) $ foldMap record recList
+   void $ Plot.plotSync DefaultTerm.cons $ Frame.cons (recordAttr name) $ foldMap record recList
 
 
 
@@ -440,7 +441,7 @@ sequenceIO ::
     SV.FromList v) =>
    String -> SequData (Record s1 s2 t1 t2 id v y) -> IO ()
 sequenceIO name =
-   Fold.mapM_ Plot.plotDefault . sequenceFrame name
+   Fold.mapM_ (Plot.plotSync DefaultTerm.cons) . sequenceFrame name
 
 sequenceSplit ::
    (TDisp t1, TDisp t2,
@@ -510,7 +511,12 @@ stackIO ::
    (FormatValue term, Show term, Ord term) =>
    String -> Format.ASCII -> M.Map term Double -> IO ()
 stackIO title var m =
-   void . Plot.plotDefault . Frame.cons (stackAttr title var) . stack $ m
+-- <<<<<<< Updated upstream
+   void .  Plot.plotSync DefaultTerm.cons . Frame.cons (stackAttr title var) . stack $ m
+{- =======
+   void . Plot.plotSync DefaultTerm.cons . Frame.cons (stackAttr title var) . stack colorMap $ m
+   where colorMap = Colour.colourMap (M.keys m)
+>>>>>>> Stashed changes -}
 
 
 stacksAttr ::
@@ -542,11 +548,23 @@ stacks =
 The length of @[var]@ must match the one of the @[Double]@ lists.
 -}
 stacksIO ::
+-- <<<<<<< Updated upstream
    (Ord term, FormatValue term, Show term) =>
    String -> [Format.ASCII] -> M.Map term [Double] -> IO ()
 stacksIO title vars xs =
-   void . Plot.plotDefault .
+   void . Plot.plotSync DefaultTerm.cons . -- Plot.plotDefault .
    Frame.cons (stacksAttr title vars) . stacks $ xs
+{- =======
+   (FormatValue var, Ord term, FormatValue term, Show term) =>
+   String -> [(var, M.Map term Double)] -> IO ()
+stacksIO title xs =
+   case unzip xs of
+      (vars, (y:ys)) ->
+         let colorMap = Colour.colourMap (M.keys y)
+         in  void . Plot.plotSync DefaultTerm.cons . Frame.cons (stacksAttr title vars)
+                  . stacks colorMap $ ys
+      _ -> error "stackIO: empty list"
+>>>>>>> Stashed changes -}
 
 class Atom.C (Value tc) => AxisLabel tc where
    type Value tc :: *

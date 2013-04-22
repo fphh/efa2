@@ -76,10 +76,8 @@ combineDistributions :: (V.Storage v ([Class a], [Int]),
 combineDistributions [] =  error("Error - empty list in combineDistributions")
 combineDistributions [d] = d
 combineDistributions (d:ds) = foldl f d ds
-  where f acc d = S.filter h $ combineWith g acc d
+  where f acc d = S.filter (not.null.snd) $ combineWith g acc d
         g (classes1,indices1) (classes2,indices2) = (classes1++classes2,L.intersect indices1 indices2)
-        h (_,[]) = False
-        h (_,_) = True
         -- vorher Kombination aller Klassen
 
 

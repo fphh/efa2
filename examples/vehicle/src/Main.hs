@@ -184,32 +184,33 @@ main = do
       energyIndex  = Idx.Energy $ Idx.StructureEdge System.Tank System.ConBattery
 
 --  print $ Plots.lookupStack energyIndex7 (last differenceExtEnvs)
-
-  Plots.recordStackRow
+  concurrentlyMany_ $ [
+    Plots.recordStackRow
     "Energy Flow Change at Tank in Section 7"
     deltasetsX
     energyIndex7
     (1^^(-6::Integer))
-    differenceExtEnvs
+    differenceExtEnvs , 
     
-  Plots.sectionStackRow
+    Plots.sectionStackRow
     "Energy Flow Change at Tank in all Sections 1100 vs 1000"
     energyIndex
     (10^(5::Integer))
-    (last differenceExtEnvs)
+    (last differenceExtEnvs),
 
 
---  print $ Plots.lookupAllStacks energyIndex (last differenceExtEnvs)
+    --  print $ Plots.lookupAllStacks energyIndex (last differenceExtEnvs)
 
 
-     
-  Plots.cumStack
+    
+    Plots.cumStack
     "Cumulative Flow Change at Tank"
     energyIndex
     (1^^(-1::Integer))
     (head differenceExtEnvs)
+    ]
    
-    
+{-    
   print $    -- AssignMap.threshold 0.001 $
 --             M.mapKeys AssignMap.deltaIndexSet $
 --             Stack.assignDeltaMap $    
@@ -305,3 +306,4 @@ main = do
          sectionToposX
          externalDeltaEnvX
          (tail colours)
+-}

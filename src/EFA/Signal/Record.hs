@@ -380,6 +380,14 @@ longerThan threshold r =
    case getTimeWindow r of
       (TC (Data x), TC (Data y)) -> abs (x - y) > threshold
 
+-- | Check for minimum duration
+longerEqual ::
+   (Num a, Ord a, V.Storage v a, V.Singleton v) =>
+   a -> Record s1 s2 (Typ A T Tt) t2 id v a -> Bool
+longerEqual threshold r =
+   case getTimeWindow r of
+      (TC (Data x), TC (Data y)) -> abs (x - y) >= threshold
+
 -- | Check for negligible energy flow
 energyBelow ::
    (Num a, SB.BSum a, Ord a, V.Walker v, V.Storage v a) =>
@@ -398,7 +406,7 @@ major ::
 major (S.TC (D.Data energyThreshold)) (S.TC (D.Data timeThreshold)) rec =
    not (energyBelow energyThreshold rec)
    &&
-   longerThan timeThreshold rec
+   longerEqual timeThreshold rec
 
 
 -----------------------------------------------------------------------------------

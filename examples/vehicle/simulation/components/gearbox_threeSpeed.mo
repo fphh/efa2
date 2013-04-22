@@ -6,10 +6,22 @@ model Gearbox
   Real _torqueOutputShaft_log annotation(Placement(visible = true, transformation(origin = {75,77.5862}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Real _speedInputShaft_log annotation(Placement(visible = true, transformation(origin = {75,78.0172}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Real _torqueInputShaft_log annotation(Placement(visible = true, transformation(origin = {75.431,77.5862}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-  Gearstage gearstage1 annotation(Placement(visible = true, transformation(origin = {-4.44444,-0.555555}, extent = {{-28.2953,-28.2953},{28.2953,28.2953}}, rotation = 0)));
+  Gearstage gearstage1 annotation(Placement(visible = true, transformation(origin = {18.8889,40}, extent = {{-28.2953,-28.2953},{28.2953,28.2953}}, rotation = 0)));
+  Gearstage gearstage2 annotation(Placement(visible = true, transformation(origin = {19.1667,-0.555556}, extent = {{-28.2954,-28.2954},{28.2954,28.2954}}, rotation = 0)));
+  Gearstage gearstage3 annotation(Placement(visible = true, transformation(origin = {18.6111,-41.3889}, extent = {{-28.2954,-28.2954},{28.2954,28.2954}}, rotation = 0)));
+  Modelica.Mechanics.Rotational.Components.Clutch clutch1 annotation(Placement(visible = true, transformation(origin = {-34.1667,40.8333}, extent = {{-8.19616,-8.19616},{8.19616,8.19616}}, rotation = 0)));
+  Modelica.Mechanics.Rotational.Components.Clutch clutch3 annotation(Placement(visible = true, transformation(origin = {-31.9444,-40.5556}, extent = {{-6.77369,-6.77369},{6.77369,6.77369}}, rotation = 0)));
+  Modelica.Mechanics.Rotational.Components.Clutch clutch2 annotation(Placement(visible = true, transformation(origin = {-32.5,-0.555556}, extent = {{-8.19616,-8.19616},{8.19616,8.19616}}, rotation = 0)));
 equation
-  connect(gearstage1.flange_outputShaft,flange_outputShaft) annotation(Line(points = {{21.6275,-1.1044},{90.2778,-1.1044},{90.2778,-1.93969},{92.1421,-1.93969}}));
-  connect(flange_inputShaft,gearstage1.flange_inputShaft) annotation(Line(points = {{-88.0947,0.116107},{-30.8333,0.116107},{-30.8333,-0.522702},{-29.3711,-0.522702}}));
+  connect(clutch3.flange_a,flange_inputShaft) annotation(Line(points = {{-38.7181,-40.5556},{-87.5,-40.5556},{-87.5,0.116107},{-88.0947,0.116107}}));
+  connect(clutch1.flange_a,flange_inputShaft) annotation(Line(points = {{-42.3628,40.8333},{-86.9444,40.8333},{-86.9444,0.116107},{-88.0947,0.116107}}));
+  connect(clutch3.flange_b,gearstage3.flange_inputShaft) annotation(Line(points = {{-25.1708,-40.5556},{-6.11111,-40.5556},{-6.11111,-41.356},{-6.31561,-41.356}}));
+  connect(clutch1.flange_b,gearstage1.flange_inputShaft) annotation(Line(points = {{-25.9705,40.8333},{-6.94444,40.8333},{-6.94444,40.0329},{-6.0378,40.0329}}));
+  connect(clutch2.flange_b,gearstage2.flange_inputShaft) annotation(Line(points = {{-24.3038,-0.555556},{-8.05556,-0.555556},{-8.05556,-0.522703},{-5.76006,-0.522703}}));
+  connect(flange_inputShaft,clutch2.flange_a) annotation(Line(points = {{-88.0947,0.116107},{-40.5556,0.116107},{-40.5556,-0.555556},{-40.6962,-0.555556}}));
+  connect(gearstage3.flange_outputShaft,flange_outputShaft) annotation(Line(points = {{44.6831,-41.9377},{92.7778,-41.9377},{92.7778,-1.93969},{92.1421,-1.93969}}));
+  connect(gearstage2.flange_outputShaft,flange_outputShaft) annotation(Line(points = {{45.2386,-1.1044},{93.0556,-1.1044},{93.0556,-1.93969},{92.1421,-1.93969}}));
+  connect(gearstage1.flange_outputShaft,flange_outputShaft) annotation(Line(points = {{44.9608,39.4512},{90.2778,39.4512},{90.2778,-1.93969},{92.1421,-1.93969}}));
   _torqueInputShaft_log = gearstage1.flange_inputShaft.tau;
   _speedInputShaft_log = gearstage1.inertia_inputShaft.w;
   _torqueOutputShaft_log = gearstage1.flange_outputShaft.tau;
