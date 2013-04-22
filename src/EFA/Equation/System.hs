@@ -619,12 +619,14 @@ fromGraph equalInOutSums g = mconcat $
 
 fromEdges ::
   (Eq a, Sum a, Eq v, Product v, Record rec, Ord node) =>
-  [TD.FlowEdge (Idx.BndNode node)] -> EquationSystem rec node s a v
+  [TD.FlowEdge Gr.DirEdge (Idx.BndNode node)] ->
+  EquationSystem rec node s a v
 fromEdges =
    foldMap $ \se ->
       case TD.edgeType se of
-         TD.StructureEdge e@(Idx.InSection s _edge) ->
+         TD.StructureEdge edge@(Idx.InSection s _) ->
             let equ xy = energy xy =%= dtime s ~* power xy
+                e = TD.structureEdgeFromDirEdge edge
             in  equ e <> equ (Idx.flip e) <>
                 (power (Idx.flip e) =%= eta e ~* power e)
          TD.StorageEdge e -> stEnergy e =%= stEnergy (Idx.flip e)
@@ -641,6 +643,7 @@ fromNodes equalInOutSums =
             let -- these variables are used again in fromStorageSequences
                 stvarinsum = stinsum bn
                 stvaroutsum = stoutsum bn
+
                 msn = Idx.secNodeFromBndNode bn
                 withSecNode = flip foldMap msn
 
@@ -649,7 +652,7 @@ fromNodes equalInOutSums =
                    map
                       (\edge ->
                          case TD.edgeType edge of
-                            TD.StructureEdge e -> Left e
+                            TD.StructureEdge e -> Left $ TD.structureEdgeFromDirEdge e
                             TD.StorageEdge e -> Right e) .
                    S.toList
 

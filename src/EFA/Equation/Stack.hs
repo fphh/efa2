@@ -138,7 +138,7 @@ mul times plus x0@(Stack is0 _) y0@(Stack js0 _) =
 
 instance (Ord i, Num a) => Num (Stack i a) where
    fromInteger = singleton . fromInteger
-   negate (Stack is s) = Stack is $ fmap negate s
+   negate = fmap negate
    (+) = add (+) (const 0)
    (*) = mul (*) (+)
 
@@ -186,7 +186,7 @@ instance (Ord i, Fractional a) => Fractional (Stack i a) where
 
 
 instance (Ord i, Arith.Sum a) => Arith.Sum (Stack i a) where
-   negate (Stack is s) = Stack is $ fmap Arith.negate s
+   negate = fmap Arith.negate
    (~+) = add (~+) Arith.clear
 
 instance (Ord i, Arith.Product a) => Arith.Product (Stack i a) where
@@ -210,7 +210,7 @@ instance (Ord i, Arith.Constant a) => Arith.Constant (Stack i a) where
 
 instance (Ord i, Arith.Integrate v) => Arith.Integrate (Stack i v) where
    type Scalar (Stack i v) = Stack i (Arith.Scalar v)
-   integrate (Stack is a) = Stack is $ fmap Arith.integrate a
+   integrate = fmap Arith.integrate
 
 
 singleton :: a -> Stack i a

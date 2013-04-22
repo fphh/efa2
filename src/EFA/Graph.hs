@@ -34,6 +34,7 @@ module EFA.Graph (
    -- delEdges,
    -- delEdgeSet,
    lefilter,
+   mapEdgesMaybe,
    -- elfilter,
    -- propELFilter,
    insNode, insNodes,
@@ -51,6 +52,7 @@ import qualified Data.Set as S
 import qualified Data.Map as M
 import qualified Data.Foldable as Fold
 import Control.Monad (liftM2)
+import Data.Maybe (mapMaybe)
 import Data.Monoid (Monoid, mempty, mappend)
 import Data.Foldable (Foldable, foldMap)
 import Data.Tuple.HT (fst3, snd3, thd3, mapFst3, mapThd3)
@@ -457,6 +459,21 @@ lefilter f =
           M.filterWithKey (curry f) outs)) .
    graphMap
 
+{- |
+You may only use this for filtering edges
+and use more specialised types as a result.
+You must not alter source and target nodes of edges.
+-}
+mapEdgesMaybe ::
+   (Edge e1, Ord (e1 n), Ord n) =>
+   (e0 n -> Maybe (e1 n)) ->
+   Graph n e0 nl el -> Graph n e1 nl el
+mapEdgesMaybe f =
+   let g = M.fromList . mapMaybe (\(k,a) -> fmap (flip (,) a) $ f k) . M.toList
+   in  Graph .
+       fmap (\(ins, nl, outs) -> (g ins, nl, g outs)) .
+       graphMap
+
 {-
 delEdgeHelp ::
    (Edge e, Ord n) =>
@@ -582,18 +599,16 @@ nodeSet :: Graph n e nl el -> S.Set n
 nodeSet = M.keysSet . graphMap
 
 
-type InOut n nl el = ([LNode n el], LNode n nl, [LNode n el])
+type InOut n e nl el = ([LEdge e n el], LNode n nl, [LEdge e n el])
 
 nmapWithInOut ::
    (Edge e, Ord (e n), Ord n) =>
-   (InOut n nl0 el -> nl1) -> Graph n e nl0 el -> Graph n e nl1 el
+   (InOut n e nl0 el -> nl1) -> Graph n e nl0 el -> Graph n e nl1 el
 nmapWithInOut f =
    Graph .
    M.mapWithKey
       (\n (ins,nl,outs) ->
-         (ins,
-          f (M.toList $ M.mapKeys from ins, (n,nl), M.toList $ M.mapKeys to outs),
-          outs)) .
+         (ins, f (M.toList ins, (n,nl), M.toList outs), outs)) .
    graphMap
 
 {-

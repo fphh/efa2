@@ -55,7 +55,7 @@ cumulatedEnergyFlow topo seqTopo env =
         em = Env.energyMap $ Env.signal env
         f e =
           case TD.edgeType e of
-             TD.StructureEdge (Idx.InSection sec (Idx.StructureEdge n n')) ->
+             TD.StructureEdge (Idx.InSection sec (Gr.DirEdge n n')) ->
                 let idx1 = Idx.Energy (Idx.StructureEdge n n')
                     idx2 = Idx.Energy (Idx.StructureEdge n' n)
 
