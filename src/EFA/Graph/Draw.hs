@@ -25,6 +25,7 @@ import qualified EFA.Equation.Variable as Var
 
 import qualified EFA.Example.Index as XIdx
 import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.CumulatedFlow as Cum
 import qualified EFA.Graph.Flow as Flow
@@ -36,7 +37,7 @@ import EFA.Graph.Topology
            FlowDirectionField, FlowTopology)
 import EFA.Graph (DirEdge(DirEdge), labNodes, labEdges)
 
-import qualified EFA.Graph.Topology.Node as Node
+import qualified EFA.Utility.TotalMap as TMap
 
 import Data.GraphViz (
           runGraphvizCanvas,
@@ -130,7 +131,7 @@ dotFromSequFlowGraph (rngs, g) mtshow nshow eshow =
            map (\nl@(Idx.BndNode s _, _) -> (s, [nl])) $
            Gr.labNodes g
 
-        sg before (current, (ns, es)) =
+        sg before (current, (es, ns)) =
             DotSG True (Just (Int $ fromEnum current)) $
             DotStmts
                [GraphAttrs [Label (StrLabel (T.pack str))]]
@@ -151,10 +152,8 @@ dotFromSequFlowGraph (rngs, g) mtshow nshow eshow =
           DotStmts {
             attrStmts = [],
             subGraphs =
-              zipWith sg (Nothing : map Just (M.keys topoNs)) $
-              M.toAscList $
-              M.intersectionWith (,) topoNs $
-              M.union topoEs (fmap (const []) topoNs),
+              zipWith sg (Nothing : map Just (M.keys topoNs)) $ M.toAscList $
+              TMap.intersectionPartialWith (,) (TMap.cons [] topoEs) topoNs,
             nodeStmts = [],
             edgeStmts = map (dotFromSecEdge eshow) interEs
           }

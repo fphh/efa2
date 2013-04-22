@@ -24,3 +24,11 @@ instance (Ord k) => Applicative (TotalMap k) where
          fmap ($ad) (Map.difference fm am) <>
          fmap (fd$) (Map.difference am fm) <>
          Map.intersectionWith ($) fm am
+
+intersectionPartialWith ::
+   (Ord k) =>
+   (a -> b -> c) -> TotalMap k a -> Map k b -> Map k c
+intersectionPartialWith f (TotalMap ad am) bm =
+   Map.intersectionWith f am bm
+   `Map.union`
+   fmap (f ad) bm
