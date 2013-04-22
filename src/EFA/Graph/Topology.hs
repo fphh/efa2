@@ -282,7 +282,7 @@ dirFromSequFlowGraph =
    Gr.emap (const ()) . Gr.lefilter isDirEdge
 
 
-type InOut n el = ([Gr.LNode n el], [Gr.LNode n el])
+type InOut e n el = ([Gr.LEdge e n el], [Gr.LEdge e n el])
 
 isStorageNode :: (a, (b, NodeType sl), c) -> Bool
 isStorageNode = isStorage . snd . snd3
@@ -301,8 +301,8 @@ classifyStorages =
 -- looking only at edges, not at values.
 -- This means that nodes with in AND out edges cannot be treated.
 maybeActiveSt ::
-   (Eq node, FlowDirectionField el) =>
-   InOut node el -> Maybe StoreDir
+   (FlowDirectionField el) =>
+   InOut e n el -> Maybe StoreDir
 maybeActiveSt (ins, outs) =
    mplus
       (toMaybe (any (isActiveEdge . snd) ins)  In)

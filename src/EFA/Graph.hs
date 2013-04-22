@@ -582,18 +582,16 @@ nodeSet :: Graph n e nl el -> S.Set n
 nodeSet = M.keysSet . graphMap
 
 
-type InOut n nl el = ([LNode n el], LNode n nl, [LNode n el])
+type InOut n e nl el = ([LEdge e n el], LNode n nl, [LEdge e n el])
 
 nmapWithInOut ::
    (Edge e, Ord (e n), Ord n) =>
-   (InOut n nl0 el -> nl1) -> Graph n e nl0 el -> Graph n e nl1 el
+   (InOut n e nl0 el -> nl1) -> Graph n e nl0 el -> Graph n e nl1 el
 nmapWithInOut f =
    Graph .
    M.mapWithKey
       (\n (ins,nl,outs) ->
-         (ins,
-          f (M.toList $ M.mapKeys from ins, (n,nl), M.toList $ M.mapKeys to outs),
-          outs)) .
+         (ins, f (M.toList ins, (n,nl), M.toList outs), outs)) .
    graphMap
 
 {-
