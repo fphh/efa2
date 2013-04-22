@@ -41,7 +41,7 @@ import qualified Graphics.Gnuplot.Value.Tuple as Tuple
 --import EFA.Report.Typ (TDisp, DisplayType(Typ_T), getDisplayUnit, getDisplayTypName)
 --import qualified Graphics.Gnuplot.Advanced as Plot
 
---import qualified Data.Foldable as Fold
+import qualified Data.Foldable as Fold
 import qualified Data.Map as M
 --import qualified Data.NonEmpty as NonEmpty
 -- import qualified EFA.Report.Format as Format
@@ -193,10 +193,7 @@ lookupCumStack ::
       (EqRecord.Absolute (Result.Result (Stack.Stack i v))) ->
    M.Map (M.Map i Stack.Branch) a
 lookupCumStack e0 =
-   M.unions .
-   map Stack.assignDeltaMap.
-   M.elems .
-   fmap Arith.integrate .
+   Fold.foldMap (Stack.assignDeltaMap . Arith.integrate) .
    M.mapMaybe Result.toMaybe .
    fmap EqRecord.unAbsolute .
    M.filterWithKey (\(Idx.InSection _sec e) _ -> e == e0) .
