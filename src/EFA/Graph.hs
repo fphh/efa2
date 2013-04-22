@@ -44,6 +44,7 @@ module EFA.Graph (
    ) where
 
 -- import qualified EFA.Utility as MapU
+import qualified EFA.Utility.TotalMap as TMap
 import qualified EFA.Utility.TypeConstructor as TC
 
 import qualified Data.Set as S
@@ -541,13 +542,12 @@ fromMap ::
    (Edge e, Ord (e n), Ord n) =>
    M.Map n nl -> M.Map (e n) el -> Graph n e nl el
 fromMap ns es =
-   let fill = flip M.union (fmap (const M.empty) ns)
-       ess = M.mapWithKey M.singleton es
+   let ess = M.mapWithKey M.singleton es
    in  Graph $
-       M.intersectionWith (\nl (ins,outs) -> (ins,nl,outs)) ns $
-       M.intersectionWith (,)
-          (fill $ M.mapKeysWith M.union to   ess)
-          (fill $ M.mapKeysWith M.union from ess)
+       TMap.intersectionPartialWith (\ins (outs, nl) -> (ins,nl,outs))
+          (TMap.cons M.empty $ M.mapKeysWith M.union to   ess) $
+       TMap.intersectionPartialWith (,)
+          (TMap.cons M.empty $ M.mapKeysWith M.union from ess) ns
 
 
 {-
