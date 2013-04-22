@@ -10,7 +10,6 @@ import qualified EFA.Signal.Plot as Plot
 import qualified EFA.Hack.Plot as HPlot
 import qualified EFA.Hack.Options as O
 import qualified EFA.Graph.Topology.Node as TDNode
-
 import qualified EFA.Signal.Vector as V
 
 --import EFA.Signal.Typ (Typ,A,T,P,Tt)
@@ -24,6 +23,10 @@ import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Record as EqRecord
 import qualified EFA.Equation.Result as Result
 
+--import qualified Data.NonEmpty as NonEmpty
+import EFA.Report.FormatValue (FormatValue, formatValue)
+import qualified EFA.Report.Format as Format
+
 import qualified EFA.Equation.Stack as Stack
 import qualified EFA.Equation.Variable as Var
 --import qualified Data.Foldable as Fold
@@ -31,6 +34,8 @@ import qualified EFA.Equation.Variable as Var
 
 import EFA.Report.Typ (TDisp)
 --import qualified EFA.Symbolic.SumProduct as SumProduct
+
+
 
 import qualified Graphics.Gnuplot.Value.Atom as Atom
 import qualified Graphics.Gnuplot.Value.Tuple as Tuple
@@ -43,9 +48,8 @@ import qualified Graphics.Gnuplot.Value.Tuple as Tuple
 
 --import qualified Data.Foldable as Fold
 import qualified Data.Map as M
---import qualified Data.NonEmpty as NonEmpty
--- import qualified EFA.Report.Format as Format
-import EFA.Report.FormatValue (FormatValue, formatValue)
+
+
 import qualified EFA.Example.AssignMap as AssignMap
 
 --import Debug.Trace
@@ -132,7 +136,7 @@ recordStackRow:: (TDNode.C node, Ord node, Ord i, Show i, Show node, FormatValue
 
 recordStackRow ti deltaSets energyIndex eps envs =
    Plot.stacksIO ti
-   (map (formatValue) deltaSets) 
+   (map (Format.literal . (\ (DeltaName x) -> x)) deltaSets) 
    (AssignMap.simultaneousThreshold eps .
    AssignMap.transpose .
    map (lookupStack energyIndex)
@@ -147,7 +151,7 @@ sectionStackRow:: (Ord node, TDNode.C node,Show i, Ord i, FormatValue i) =>
                   -> IO ()
 sectionStackRow ti energyIndex eps env =
    Plot.stacksIO ti
-   (map (formatValue . (\(Idx.InSection sec _) -> sec) .fst) stacks)  
+   (map (Format.literal . (\(Idx.InSection sec _) -> show sec) .fst) stacks)  
    (AssignMap.simultaneousThreshold eps . AssignMap.transpose $ 
     map (M.mapKeys AssignMap.deltaIndexSet . 
          Stack.assignDeltaMap . snd) $ stacks)

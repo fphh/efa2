@@ -16,9 +16,6 @@ import Data.Ratio (Ratio)
 class FormatValue a where
    formatValue :: Format output => a -> output
    
-instance FormatValue Idx.Section where
-   formatValue = Format.literal . show
-
 instance FormatValue a => FormatValue [a] where
    formatValue = Format.list . map formatValue
 

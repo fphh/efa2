@@ -42,8 +42,8 @@ import qualified EFA.Graph.Topology.Index as Idx
 import EFA.Report.Report (ToTable(toTable), Table(..), tvcat)
 import EFA.Report.Typ (TDisp, getDisplayTypName)
 import EFA.Report.Base (DispStorage1)
-import EFA.Report.FormatValue(FormatValue,formatValue)
-import EFA.Report.Format as Format(literal)
+--import EFA.Report.FormatValue(FormatValue,formatValue)
+--import EFA.Report.Format as Format(literal)
 
 import Text.Printf (PrintfArg)
 import qualified Test.QuickCheck as QC
@@ -99,13 +99,6 @@ newtype DeltaName = DeltaName String
 
 deltaName :: Name -> Name -> DeltaName
 deltaName (Name x) (Name y) =  (DeltaName $ y ++ "_vs_" ++ x)
-
-instance FormatValue Name where
-   formatValue = Format.literal . (\(Name x) -> x) 
-
-instance FormatValue DeltaName where
-   formatValue = Format.literal . (\(DeltaName x) -> x) 
-
 
 rmap ::
    (TC s1 t1 (Data (v :> Nil) a) -> TC s2 t2 (Data (v :> Nil) a)) ->
