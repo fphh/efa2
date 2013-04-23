@@ -76,16 +76,26 @@ import Data.Foldable (fold,
 
 --import qualified EFA.Equation.Record as EqRecord
 
-
+{-
+newtype Settings = Settings {filePath :: FileName,
+                             fileNames :: [FileName], 
+                             recordNames :: [RecordName],
+                             zeroToleranz :: Double,
+                             filterTime ::  TC Scalar (Typ A T Tt) (Data Nil Double),
+                             filterEnergy :: TC Scalar (Typ A F Tt) (Data Nil Double),
+                             deltaSectionMapping :: [Int]              
+                            }
+-}
 -------------------------------------------------------------------------------------------------
-
+{-
 sec2 :: Idx.Section
 sec2 = Idx.Section 2
-
+-}
 -------------------------------------------------------------------------------------------------
 -- ## Preprocessing of Signals
 
 pre :: TD.Topology System.Node
+      -> Double
       -> TC Scalar (Typ A T Tt) (Data Nil Double)
       -> TC Scalar (Typ A F Tt) (Data Nil Double)
       -> SignalRecord [] Double
@@ -95,13 +105,13 @@ pre :: TD.Topology System.Node
          PowerRecord System.Node [] Double,
          SignalRecord [] Double)
 
-pre topology  epsT epsE rawSignals =  (sequencePowersFilt, adjustedFlows, flowStates, powerSignals0, signals0)
+pre topology epsZero epsT epsE rawSignals =  (sequencePowersFilt, adjustedFlows, flowStates, powerSignals0, signals0)
   where
     ---------------------------------------------------------------------------------------
     -- * Condition Signals, Calculate Powers, Remove ZeroNoise
 
     signals = Signals.condition rawSignals
-    powerSignals = Record.removeZeroNoise (10^^(-2::Int)) (Signals.calculatePower signals)
+    powerSignals = Record.removeZeroNoise epsZero (Signals.calculatePower signals)
 
     ---------------------------------------------------------------------------------------
     -- * Add zerocrossings in Powersignals and Signals
@@ -135,7 +145,21 @@ pre topology  epsT epsE rawSignals =  (sequencePowersFilt, adjustedFlows, flowSt
         in  (flowState, Flow.adjustSigns topology flowState state))
       sequenceFlowsFilt
 
+{-
 
+-- New Approach with Untility-Funktions from HT - the challanges:   
+
+1. scalar value are in the moment double / signals are in data container. Best to move both to container
+2. switch to dTime with fmap Record.diffTime
+2. make delta - Analysis from two envs 
+
+external sequenceFlowTopology sequFlowRecord =  EqGen.solveFromMeasurement sequenceFlowTopology $ makeGivenFromExternal Idx.Absolute sequFlowRecord
+
+initStorage :: (Fractional a) => a
+initStorage = 0.7*3600*1000
+
+makeGivenFromExternal idx sf = EqGen.fromEnvSignal . EqAbs.envFromFlowRecord $ sf 
+-}
 -------------------------------------------------------------------------------------------------
 -- ## Analyse External Energy Flow
 

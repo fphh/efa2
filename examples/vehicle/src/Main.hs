@@ -59,11 +59,21 @@ import Data.Tuple.HT (mapSnd)
 
 import qualified Data.GraphViz.Attributes.Colors.X11 as Colors
 
-
 examplePath :: FilePath
 examplePath = "examples/vehicle"
 
+colours :: [Colors.X11Color]
+colours = [ Colors.White,	 
+            Colors.Gray90,	 
+            Colors.Gray80,	 
+            Colors.Gray70 ]
+ 
+zeroNoiseToleranz :: Double         
+zeroNoiseToleranz = 10^^(-2::Int)          
 
+-- | A. Generator steht
+
+{-
 fileNamesX :: [FilePath]
 fileNamesX = ["Vehicle_mass900kg_res.plt",
              "Vehicle_mass1000kg_res.plt",
@@ -76,6 +86,69 @@ datasetsX = map Record.Name ["900kg",
 
 deltasetsX :: [Record.DeltaName]
 deltasetsX = zipWith Record.deltaName datasetsX (tail datasetsX)
+
+
+sectionFilterTime ::  TC Scalar (Typ A T Tt) (Data Nil Double)
+sectionFilterTime = toScalar 0
+      
+sectionFilterEnergy ::  TC Scalar (Typ A F Tt) (Data Nil Double)
+sectionFilterEnergy = toScalar 1000
+
+recordStackRow_filterEnergy :: Double
+recordStackRow_filterEnergy = (1^^(-6::Integer))
+
+sectionStackRow_filterEnergy :: Double
+sectionStackRow_filterEnergy = (10^(5::Integer))
+
+cumStack_filterEnergy :: Double
+cumStack_filterEnergy = (1^^(-1::Integer))
+
+energyIndex7 :: Idx.InSection Idx.Energy System.Node
+energyIndex7 = Idx.InSection (Idx.Section 7) energyIndex
+
+energyIndex :: Idx.Energy System.Node
+energyIndex  = Idx.Energy $ Idx.StructureEdge System.Tank System.ConBattery
+
+
+-}
+-- | B. Generator läuft
+
+fileNamesX :: [FilePath]
+fileNamesX = ["Vehicle_mass900kg_V3_res.plt",
+             "Vehicle_mass1000kg_V3_res.plt",
+             "Vehicle_mass1100kg_V3_res.plt"]
+
+datasetsX ::  [Record.Name]
+datasetsX = map Record.Name ["900kg",
+                            "1000kg",
+                            "1100kg"]
+
+deltasetsX :: [Record.DeltaName]
+deltasetsX = zipWith Record.deltaName datasetsX (tail datasetsX)
+
+
+sectionFilterTime ::  TC Scalar (Typ A T Tt) (Data Nil Double)
+sectionFilterTime = toScalar 0
+      
+sectionFilterEnergy ::  TC Scalar (Typ A F Tt) (Data Nil Double)
+sectionFilterEnergy = toScalar 1000
+
+recordStackRow_filterEnergy :: Double
+recordStackRow_filterEnergy = (1^^(-6::Integer))
+
+sectionStackRow_filterEnergy :: Double
+sectionStackRow_filterEnergy = (10^(5::Integer))
+
+cumStack_filterEnergy :: Double
+cumStack_filterEnergy = (1^^(-1::Integer))
+
+energyIndex7 :: Idx.InSection Idx.Energy System.Node
+energyIndex7 = Idx.InSection (Idx.Section 7) energyIndex
+
+energyIndex :: Idx.Energy System.Node
+energyIndex  = Idx.Energy $ Idx.StructureEdge System.Tank System.ConBattery
+
+-----------------------------------------------------------------------
 
 zipWith3M_ ::
   Monad m =>
@@ -102,13 +175,8 @@ main = do
 ---------------------------------------------------------------------------------------
 -- * Conditioning, Sequencing and Integration
   
-  let epsT ::  TC Scalar (Typ A T Tt) (Data Nil Double)
-      epsT = toScalar 0
 
-      epsE ::  TC Scalar (Typ A F Tt) (Data Nil Double)
-      epsE = toScalar 1000
-
-  let preProcessedDataX = map (Analysis.pre System.topology epsT epsE) rawSignalsX
+  let preProcessedDataX = map (Analysis.pre System.topology zeroNoiseToleranz sectionFilterTime sectionFilterEnergy) rawSignalsX
 
   let (_,sequenceFlowsFiltUnmappedX,flowStatesUnmappedX,powerSignalsX,signalsX) = L.unzip5 preProcessedDataX
 --  let (sequencePowersFiltX,sequenceFlowsFiltX,flowStatesX,powerSignalsX,signalsX) = L.unzip5 preProcessedDataX
@@ -118,11 +186,11 @@ main = do
 ---------------------------------------------------------------------------------------
 -- *  ReIndex Sequences to allow Sequence Matching 
 
-  let sequenceFlowsFiltX = map (SD.reIndex [1,2,7,8,16,17,19::Int]) sequenceFlowsFiltUnmappedX 
---  let sequenceFlowsFiltX = sequenceFlowsFiltUnmappedX
+--  let sequenceFlowsFiltX = map (SD.reIndex [1,2,7,8,16,17,19::Int]) sequenceFlowsFiltUnmappedX 
+  let sequenceFlowsFiltX = sequenceFlowsFiltUnmappedX
 
-  let flowStatesX = map (SD.reIndex [1,2,7,8,16,17,19::Int]) flowStatesUnmappedX
---  let sequenceFlowsFiltX = sequenceFlowsFiltUnmappedX
+--  let flowStatesX = map (SD.reIndex [1,2,7,8,16,17,19::Int]) flowStatesUnmappedX
+  let flowStatesX = flowStatesUnmappedX
 
   ---------------------------------------------------------------------------------------
 -- *  Generate Flow States as Graphs
@@ -177,11 +245,9 @@ main = do
     (zip (deltasets datasetsX) differenceExtEnvs)
 -}
 
+{-
 
 
-
-  let energyIndex7 = Idx.InSection (Idx.Section 7) energyIndex
-      energyIndex  = Idx.Energy $ Idx.StructureEdge System.Tank System.ConBattery
 
 --  print $ Plots.lookupStack energyIndex7 (last differenceExtEnvs)
   concurrentlyMany_ $ [
@@ -189,13 +255,13 @@ main = do
     "Energy Flow Change at Tank in Section 7"
     deltasetsX
     energyIndex7
-    (1^^(-6::Integer))
+    recordStackRow_filterEnergy
     differenceExtEnvs , 
     
     Plots.sectionStackRow
     "Energy Flow Change at Tank in all Sections 1100 vs 1000"
     energyIndex
-    (10^(5::Integer))
+    sectionStackRow_filterEnergy
     (last differenceExtEnvs),
 
 
@@ -206,10 +272,10 @@ main = do
     Plots.cumStack
     "Cumulative Flow Change at Tank"
     energyIndex
-    (1^^(-1::Integer))
+    cumStack_filterEnergy
     (head differenceExtEnvs)
     ]
-   
+-}   
 {-    
   print $    -- AssignMap.threshold 0.001 $
 --             M.mapKeys AssignMap.deltaIndexSet $
@@ -251,7 +317,7 @@ main = do
 -- * Plot Efficiency Curves and Distributions
 
 
-
+-}
 
 ---------------------------------------------------------------------------------------
 -- * Draw Diagrams
@@ -268,10 +334,6 @@ main = do
           Draw.bgcolour c $
           Draw.sequFlowGraphAbsWithEnv topo env
 
-      colours = [ Colors.White,	 
-                  Colors.Gray90,	 
-                  Colors.Gray80,	 
-                  Colors.Gray70 ]
 
 
   concurrentlyMany_ $ [
@@ -306,4 +368,3 @@ main = do
          sectionToposX
          externalDeltaEnvX
          (tail colours)
--}
