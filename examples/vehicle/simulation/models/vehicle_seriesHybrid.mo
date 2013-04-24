@@ -22,7 +22,7 @@ model Vehicle_seriesHybrid
   BrakeSystem brakesystem1 annotation(Placement(visible = true, transformation(origin = {14.595,-19.257}, extent = {{-8.19616,8.19616},{8.19616,-8.19616}}, rotation = -90)));
   Driver driver1 annotation(Placement(visible = true, transformation(origin = {-61.0439,77.1532}, extent = {{-7.45106,-7.45106},{7.45106,7.45106}}, rotation = 0)));
   Modelica.Blocks.Sources.TimeTable timetable1(table = [0,0;10,0;20,120;39,120;40,0;50,0;60,0;70,120;500,120;510,0;520,0]) annotation(Placement(visible = true, transformation(origin = {-80.2058,79.833}, extent = {{-4.62652,-4.62652},{4.62652,4.62652}}, rotation = 0)));
-  Controller_SeriesHybrid controller_serieshybrid1 annotation(Placement(visible = true, transformation(origin = {-17.5823,50.465}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  Controller_SeriesHybrid controller_serieshybrid1(speedDemand = 300, torqueDemand = 150, maxSOC = 0.8, minSOC = 0.3, engineOnAtStart = true) annotation(Placement(visible = true, transformation(origin = {-17.5823,50.465}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Electrical.Analog.Basic.Ground ground3 annotation(Placement(visible = true, transformation(origin = {-52.3648,-14.8656}, extent = {{-8.19616,-8.19616},{8.19616,8.19616}}, rotation = 0)));
   Modelica.Electrical.Analog.Basic.Ground ground2 annotation(Placement(visible = true, transformation(origin = {-19.467,-25.0773}, extent = {{7.45106,7.45106},{-7.45106,-7.45106}}, rotation = -180)));
   GasPedal gaspedal1 annotation(Placement(visible = true, transformation(origin = {-38.7831,67.582}, extent = {{-7.45106,-7.45106},{7.45106,7.45106}}, rotation = 0)));
@@ -31,13 +31,13 @@ model Vehicle_seriesHybrid
   ElectricVehicleSystem electricVehicleSystem1(powerDemand = 1000) annotation(Placement(visible = true, transformation(origin = {-60,-30.2777}, extent = {{-7.45106,-7.45106},{7.45106,7.45106}}, rotation = 0)));
   Engine engine1(parMaxTorque = 170, parStartSpeed = 25, parDragTorque = 70, parEtaOpt = 0.35, parMaxSpeed = 500, engineFile = "maps/engine/base.txt") annotation(Placement(visible = true, transformation(origin = {-74.6585,0.291334}, extent = {{-13.2,-13.2},{13.2,13.2}}, rotation = 0)));
   ElectricGenerator generator(maxTorque = 200, maxPower = 50000, maxSpeed = 3000, maxEta = 0.95, inertia = 0.01, fileName = "maps/motor/base.txt") annotation(Placement(visible = true, transformation(origin = {-40,-0.420167}, extent = {{8.19616,8.19616},{-8.19616,-8.19616}}, rotation = -180)));
-  Battery battery1(resistance = 0.01, voltage = 200) annotation(Placement(visible = true, transformation(origin = {-75.9111,-52.2468}, extent = {{-10.9091,-10.9091},{10.9091,10.9091}}, rotation = 0)));
+  Battery battery1(resistance = 0.01, voltage = 200, maxEnergyCapacityInkWh = 1, startSOC = 0.78) annotation(Placement(visible = true, transformation(origin = {-75.6333,-51.969}, extent = {{-10.9091,-10.9091},{10.9091,10.9091}}, rotation = 0)));
 equation
-  connect(battery1.pin_p,generator.pin_p) annotation(Line(points = {{-81.4999,-46.5917},{-81.3499,-46.5917},{-81.3499,-36.9449},{-34.4583,-36.9449},{-34.4583,-6.06654},{-34.6671,-6.06654}}));
-  connect(battery1.pin_p,motor.pin_p) annotation(Line(points = {{-81.4999,-46.5917},{-81.3499,-46.5917},{-81.3499,-36.9449},{-29.4137,-36.9449},{-29.4137,-38.2112}}));
-  connect(battery1.controlbus1,motor.controlbus1) annotation(Line(points = {{-65.6802,-52.1305},{-44.7222,-52.1305},{-44.7222,-43.3333},{-31.9127,-43.3333},{-31.9127,-43.2201}}));
-  connect(battery1.pin_n,ground1.p) annotation(Line(points = {{-70.5247,-46.5935},{-68.4003,-46.5935},{-68.4003,-40.1448},{-61.6669,-40.1448}}));
-  connect(electricVehicleSystem1.pin_p,battery1.pin_p) annotation(Line(points = {{-66.1885,-27.0903},{-81.3094,-27.0903},{-81.3094,-36.9449},{-81.3499,-36.9449},{-81.3499,-46.5917},{-81.4999,-46.5917}}));
+  connect(electricVehicleSystem1.pin_p,battery1.pin_p) annotation(Line(points = {{-66.1885,-27.0903},{-81.3094,-27.0903},{-81.3094,-36.9449},{-81.3499,-36.9449},{-81.3499,-46.314},{-81.2221,-46.314}}));
+  connect(battery1.pin_n,ground1.p) annotation(Line(points = {{-70.2469,-46.3157},{-68.4003,-46.3157},{-68.4003,-40.1448},{-61.6669,-40.1448}}));
+  connect(battery1.controlbus1,motor.controlbus1) annotation(Line(points = {{-65.4024,-51.8528},{-44.7222,-51.8528},{-44.7222,-43.3333},{-31.9127,-43.3333},{-31.9127,-43.2201}}));
+  connect(battery1.pin_p,motor.pin_p) annotation(Line(points = {{-81.2221,-46.314},{-81.3499,-46.314},{-81.3499,-36.9449},{-29.4137,-36.9449},{-29.4137,-38.2112}}));
+  connect(battery1.pin_p,generator.pin_p) annotation(Line(points = {{-81.2221,-46.314},{-81.3499,-46.314},{-81.3499,-36.9449},{-34.4583,-36.9449},{-34.4583,-6.06654},{-34.6671,-6.06654}}));
   connect(generator.flange_shaft,engine1.flange_crankShaft) annotation(Line(points = {{-46.2515,-1.31847},{-64.1667,-1.31847},{-64.1667,-0.790217},{-63.6122,-0.790217}}));
   connect(generator.controlbus1,controller_serieshybrid1.controlbus1) annotation(Line(points = {{-32.2364,-1.03488},{4.16667,-1.03488},{4.16667,50.5556},{-8.61564,50.5556},{-8.61564,50.465}}));
   connect(generator.pin_n,ground3.p) annotation(Line(points = {{-40.4913,-6.04784},{-40.8333,-6.04784},{-40.8333,-6.66944},{-52.3648,-6.66944}}));

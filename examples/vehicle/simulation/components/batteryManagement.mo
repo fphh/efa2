@@ -8,9 +8,11 @@ model BatteryManagement
   ControlBus controlbus1 annotation(Placement(visible = true, transformation(origin = {71.9445,34.4445}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {71.9445,34.4445}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Blocks.Math.Add add_SOC annotation(Placement(visible = true, transformation(origin = {46.307,34.5349}, extent = {{-6.77369,-6.77369},{6.77369,6.77369}}, rotation = 0)));
   Modelica.Blocks.Continuous.Integrator integrator_calculateEnergy annotation(Placement(visible = true, transformation(origin = {-18.6746,39.7488}, extent = {{-8.19616,-8.19616},{8.19616,8.19616}}, rotation = 0)));
-  Modelica.Blocks.Math.Gain gain_toSOC(k = 1 / (1 * 3600 * 1000)) annotation(Placement(visible = true, transformation(origin = {13.1219,39.1472}, extent = {{-7.45106,-7.45106},{7.45106,7.45106}}, rotation = 0)));
-  Modelica.Blocks.Sources.Constant const_startSOC(k = 0.75) annotation(Placement(visible = true, transformation(origin = {-7.41849,12.1906}, extent = {{-8.19616,-8.19616},{8.19616,8.19616}}, rotation = 0)));
+  Modelica.Blocks.Math.Gain gain_toSOC(k = 1 / (maxEnergyCapacityInkWh * 3600 * 1000)) annotation(Placement(visible = true, transformation(origin = {13.1219,39.1472}, extent = {{-7.45106,-7.45106},{7.45106,7.45106}}, rotation = 0)));
+  Modelica.Blocks.Sources.Constant const_startSOC(k = startSOC) annotation(Placement(visible = true, transformation(origin = {-7.41849,12.1906}, extent = {{-8.19616,-8.19616},{8.19616,8.19616}}, rotation = 0)));
   Modelica.Electrical.Analog.Interfaces.NegativePin pin_n annotation(Placement(visible = true, transformation(origin = {2.38899,81.7436}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {2.38899,81.7436}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  parameter Real maxEnergyCapacityInkWh(start = 1);
+  parameter Real startSOC(start = 1);
 equation
   connect(voltagesensor1.n,pin_n) annotation(Line(points = {{-27.7778,-75.107},{-83.3333,-75.107},{-83.3333,81.7436},{2.38899,81.7436}}));
   connect(const_startSOC.y,add_SOC.u2) annotation(Line(points = {{1.59729,12.1906},{22.4419,12.1906},{22.4419,12.36},{38.1786,12.36},{38.1786,30.4707}}));

@@ -24,7 +24,7 @@ import EFA.Utility.Async (concurrentlyMany_)
 import qualified Modules.System as System
 import qualified Modules.Analysis as Analysis
 import qualified Modules.Plots as Plots
--- import qualified Modules.Signals as Signals
+import qualified Modules.Signals as Signals
 
 --import qualified EFA.Example.Index as XIdx
 --import qualified EFA.Example.AssignMap as AssignMap
@@ -109,14 +109,16 @@ energyIndex7 = Idx.InSection (Idx.Section 7) energyIndex
 energyIndex :: Idx.Energy System.Node
 energyIndex  = Idx.Energy $ Idx.StructureEdge System.Tank System.ConBattery
 
+sectionMapping :: [Int]
+sectionMapping = [1,2,7,8,16,17,19]
 
 -}
 -- | B. Generator läuft
 
 fileNamesX :: [FilePath]
-fileNamesX = ["Vehicle_mass900kg_V3_res.plt",
-             "Vehicle_mass1000kg_V3_res.plt",
-             "Vehicle_mass1100kg_V3_res.plt"]
+fileNamesX = ["Vehicle_mass900kg_V2_res.plt",
+             "Vehicle_mass1000kg_V2_res.plt",
+             "Vehicle_mass1100kg_V2_res.plt"]
 
 datasetsX ::  [Record.Name]
 datasetsX = map Record.Name ["900kg",
@@ -128,7 +130,7 @@ deltasetsX = zipWith Record.deltaName datasetsX (tail datasetsX)
 
 
 sectionFilterTime ::  TC Scalar (Typ A T Tt) (Data Nil Double)
-sectionFilterTime = toScalar 0
+sectionFilterTime = toScalar 0.1
       
 sectionFilterEnergy ::  TC Scalar (Typ A F Tt) (Data Nil Double)
 sectionFilterEnergy = toScalar 1000
@@ -148,7 +150,9 @@ energyIndex7 = Idx.InSection (Idx.Section 7) energyIndex
 energyIndex :: Idx.Energy System.Node
 energyIndex  = Idx.Energy $ Idx.StructureEdge System.Tank System.ConBattery
 
------------------------------------------------------------------------
+sectionMapping :: [Int]
+sectionMapping = [1,2,7,8,16,17,19]
+--------------------------------------------------------------------
 
 zipWith3M_ ::
   Monad m =>
@@ -281,11 +285,11 @@ main = do
 --             M.mapKeys AssignMap.deltaIndexSet $
 --             Stack.assignDeltaMap $    
              Plots.lookupCumStack energyIndex (last differenceExtEnvs)
-  
+-}  
 ---------------------------------------------------------------------------------------
 -- * Plot Time Signals
 
-{-
+
   let plotList = [
                   ("Vehicle", Signals.vehicle),
                   ("DriveLine", Signals.driveline),
@@ -298,9 +302,9 @@ main = do
   mapM_ (Plots.sigsWithSpeed allSignalsX) plotList
 
   -- Plots.sigsWithSpeed allSignalsX (head plotList)
-  Plot.recordIO "Test" (head allSignalsX)
--}
+--  Plot.recordIO "Test" (head allSignalsX)
 
+{-
 ---------------------------------------------------------------------------------------
 -- * Plot Operation Points
 {-

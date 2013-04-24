@@ -8,10 +8,12 @@ model Battery
   Real _internalVoltage_log annotation(Placement(visible = true, transformation(origin = {71.3889,79.1667}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Real _poleCurrent_log annotation(Placement(visible = true, transformation(origin = {72.2222,79.1667}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Real _poleVoltage_log annotation(Placement(visible = true, transformation(origin = {72.2222,79.1667}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-  BatteryManagement batterymanagement1 annotation(Placement(visible = true, transformation(origin = {-47.9574,20.6039}, extent = {{-12,12},{12,-12}}, rotation = -90)));
+  BatteryManagement batterymanagement1(maxEnergyCapacityInkWh = maxEnergyCapacityInkWh, startSOC = startSOC) annotation(Placement(visible = true, transformation(origin = {-47.9574,20.6039}, extent = {{-12,12},{12,-12}}, rotation = -90)));
   Modelica.Electrical.Analog.Interfaces.PositivePin pin_p annotation(Placement(visible = true, transformation(origin = {-51.2307,51.838}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {-51.2307,51.838}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Electrical.Analog.Basic.Resistor resistor_innerResistance(R = resistance) annotation(Placement(visible = true, transformation(origin = {-51.1222,-24.0066}, extent = {{-12,12},{12,-12}}, rotation = -90)));
   ControlBus controlbus1 annotation(Placement(visible = true, transformation(origin = {93.7833,1.06572}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {93.7833,1.06572}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  parameter Real maxEnergyCapacityInkWh(start = 1);
+  parameter Real startSOC(start = 1);
 equation
   connect(batterymanagement1.pin_n,pin_n) annotation(Line(points = {{-57.7574,30.8039},{-25.9325,30.8039},{-25.9325,30.5506},{49.3759,30.5506},{49.3759,51.8221}}));
   connect(batterymanagement1.controlbus1,controlbus1) annotation(Line(points = {{-43.824,11.9706},{-43.6945,11.9706},{-43.6945,1.06572},{93.7833,1.06572},{93.7833,1.06572}}));
