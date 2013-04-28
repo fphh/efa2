@@ -40,7 +40,7 @@ import Text.Printf (PrintfArg, printf)
 import qualified Data.List as L
 import Data.Function (id, (.), ($))
 import Prelude
-          (Show, Eq, Ord, Maybe, Bool, error, fmap,
+          (Show, Read, Eq, Ord, Maybe, Bool, error, fmap,
            String, (++),
            Int, Num, Fractional, fromRational, (+), (-), (/), (*))
 import qualified Prelude as P
@@ -49,7 +49,7 @@ import qualified Prelude as P
 ----------------------------------------------------------
 -- | Signal & Company
 
-newtype TC s t d = TC d  deriving (Show, Eq, Ord)
+newtype TC s t d = TC d  deriving (Show, Read, Eq, Ord)
 
 data Scalar
 
@@ -940,6 +940,10 @@ maximum, minimum ::
 maximum (TC x) = TC $ Data $ D.maximum x
 minimum (TC x) = TC $ Data $ D.minimum x
 
+minmax ::
+   (D.Maximum c, D.Storage c d, Ord d) =>
+   TC s typ (Data c d) -> TC Scalar typ (Data Nil (d, d))
+minmax (TC x) = TC $ Data $ D.minmax x
 
 -- | fit Signal range from 0 to 1 // ..*
 norm ::  (Eq d,
@@ -1181,7 +1185,9 @@ instance
       FV.FormatValue (TC s t a) where
    formatValue = formatValue
 
-findIndex ::  (SV.Storage v1 d1, SV.Find v1) => (d1 -> Bool) -> TC s1 t1 (Data (v1 :> Nil) d1) -> Maybe Int
+findIndex ::
+  (SV.Storage v1 d1, SV.Find v1) =>
+  (d1 -> Bool) -> TC s1 t1 (Data (v1 :> Nil) d1) -> Maybe Int
 findIndex f (TC xs) = D.findIndex f xs
 
 
@@ -1197,13 +1203,17 @@ interp1Lin :: (Eq d1,
               TC Signal t2 (Data (v1 :> Nil) d1) ->
               TC Sample t1 (Data Nil d1) ->
               TC Sample t2 (Data Nil d1)
-interp1Lin xSig ySig (TC (Data xVal)) = if x1 P.== x2 then TC $ Data $ (y1 P.+y2) P./2 else TC $ Data $ ((y2 P.- y1) P./(x2 P.-x1)) P.* (xVal P.- x1) P.+ y1
-                where
-                  idx = P.maybe (error "Out of Range") id $ findIndex (P.>= xVal) xSig
-                  TC (Data (x1)) = getSample xSig $ if idx P.== 0 then idx else idx-1 -- prevent negativ index when interpolating on first element
-                  TC (Data (x2)) = getSample xSig idx
-                  TC (Data (y1)) = getSample ySig $ if idx P.== 0 then idx else idx-1 -- prevent negativ index when interpolating on first element
-                  TC (Data (y2)) = getSample ySig idx
+interp1Lin xSig ySig (TC (Data xVal)) =
+  if x1 P.== x2
+     then toSample $ (y1 P.+y2) P./2
+     else toSample $ ((y2 P.- y1) P./(x2 P.-x1)) P.* (xVal P.- x1) P.+ y1
+  where idx = P.maybe (error "Out of Range") id $ findIndex (P.>= xVal) xSig
+        -- prevent negativ index when interpolating on first element
+        TC (Data x1) = getSample xSig $ if idx P.== 0 then idx else idx-1
+        TC (Data x2) = getSample xSig idx
+        -- prevent negativ index when interpolating on first element
+        TC (Data y1) = getSample ySig $ if idx P.== 0 then idx else idx-1
+        TC (Data y2) = getSample ySig idx
 
 
 getSample ::  (SV.Singleton v1,
@@ -1213,7 +1223,12 @@ getSample ::  (SV.Singleton v1,
               TC Signal t1 (Data (v1 :> Nil) d1) ->
               Int ->
               TC Sample t1 (Data Nil d1)
-getSample x idx = P.fst $ P.maybe (error "Error in EFA.Signal.Signal/getSample - Empty List") id $ viewL $ subSignal1D x [idx]
+getSample x =
+  P.fst
+  . P.maybe (error "Error in EFA.Signal.Signal/getSample - Empty List") id
+  . viewL
+  . subSignal1D x
+  . (:[])
 
 
 -- | get a signal slice with startIndex and Number of elements

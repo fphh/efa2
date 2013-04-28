@@ -25,6 +25,8 @@ import EFA.Signal.Base (Sign(PSign, NSign, ZSign),BSum, DArith0)
 
 import qualified Data.Foldable as Fold
 import qualified Data.Map as M
+import qualified Data.Set as Set
+
 import Control.Monad (join)
 import Data.Bool.HT (if')
 
@@ -176,8 +178,9 @@ mkStorageEdges node stores = do
       (Topo.FlowEdge $ Topo.StorageEdge $
        Idx.ForNode (Idx.StorageEdge secin secout) node)
 
+-- Kann man diese Funktion und die folgende (getStorages) vereinigen?
 getActiveStoreSequences ::
-   (Ord node) =>
+   (Ord node, Show node) =>
    SequData (Topo.ClassifiedTopology node) ->
    M.Map node (M.Map Idx.Section Topo.StoreDir)
 getActiveStoreSequences =
@@ -190,6 +193,13 @@ getActiveStoreSequences =
          fmap (M.singleton s) $
          M.mapMaybe (join . Topo.maybeStorage) $ Gr.nodeLabels g)
 
+getStorages ::
+  (Ord node, Show node) =>
+  SequData (Topo.ClassifiedTopology node) -> [node]
+getStorages sd = Set.toList $ Set.fromList $ concatMap h d
+  where SD.SequData d = SD.mapWithSection f sd
+        f _ g = M.keys $ M.filter Topo.isStorage $ Gr.nodeLabels g
+        h (SD.Section _ _ ns) = ns
 
 type RangeGraph node = (M.Map Idx.Section SD.Range, SequFlowGraph node)
 
@@ -200,17 +210,20 @@ insEdges ::
    SequFlowGraph node
 insEdges = Gr.insEdges . map (flip (,) ())
 
+-- Alle Storages sollen in die initiale Sektion,
+-- auch wenn sie nie aktive sind!
+-- Damit man beim initialisieren auch Werte zuweisen kann.
 mkSequenceTopology ::
-   (Ord node) =>
+   (Ord node, Show node) =>
    SequData (FlowTopology node) ->
    RangeGraph node
 mkSequenceTopology sd =
    (,) (Fold.fold $ SD.mapWithSectionRange (\s rng _ -> M.singleton s rng) sq) $
    insEdges (Fold.fold $ M.mapWithKey mkStorageEdges tracks) $
    insNodes
-      (map (\n -> (Idx.initBndNode n, Topo.Storage (Just Topo.In))) $
-       M.keys tracks) $
+      (map (\n -> (Idx.initBndNode n, Topo.Storage (Just Topo.In))) sts) $
    Fold.fold $
    SD.mapWithSection mkSectionTopology sq
-  where tracks = getActiveStoreSequences sq
-        sq = fmap Topo.classifyStorages sd
+  where sq = fmap Topo.classifyStorages sd
+        tracks = getActiveStoreSequences sq
+        sts = getStorages sq

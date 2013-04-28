@@ -103,7 +103,7 @@ secNodeFromBndNode (BndNode bnd node) =
 -- * Edge indices
 
 data StructureEdge node = StructureEdge node node
-   deriving (Show, Eq, Ord)
+   deriving (Show, Read, Eq, Ord)
 
 data StorageEdge node = StorageEdge Boundary Boundary
    deriving (Show, Eq, Ord)
@@ -263,6 +263,6 @@ data StSum node = StSum Direction Boundary deriving (Show, Ord, Eq)
 data DTime node = DTime deriving (Show, Ord, Eq)
 
 -- | Indices for Power Position
-newtype PPos node = PPos (StructureEdge node) deriving (Show, Ord, Eq)
+newtype PPos node = PPos (StructureEdge node) deriving (Show, Read, Ord, Eq)
 
 

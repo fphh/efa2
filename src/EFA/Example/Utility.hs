@@ -48,7 +48,7 @@ makeSimpleEdges es = map f es
 -}
 
 constructSeqTopo ::
-   (Ord node) =>
+   (Ord node, Show node) =>
    TD.Topology node -> [Int] -> Flow.RangeGraph node
 constructSeqTopo topo =
   Flow.mkSequenceTopology .

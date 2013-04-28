@@ -180,9 +180,11 @@ main = do
 -- * Conditioning, Sequencing and Integration
   
 
-  let preProcessedDataX = map (Analysis.pre System.topology zeroNoiseToleranz sectionFilterTime sectionFilterEnergy) rawSignalsX
+  let preProcessedDataX =
+        map (Analysis.pre System.topology zeroNoiseToleranz sectionFilterTime sectionFilterEnergy) rawSignalsX
 
-  let (_,sequenceFlowsFiltUnmappedX,flowStatesUnmappedX,powerSignalsX,signalsX) = L.unzip5 preProcessedDataX
+  let (_,sequenceFlowsFiltUnmappedX,flowStatesUnmappedX,powerSignalsX,signalsX) =
+        L.unzip5 preProcessedDataX
 --  let (sequencePowersFiltX,sequenceFlowsFiltX,flowStatesX,powerSignalsX,signalsX) = L.unzip5 preProcessedDataX
 
   let allSignalsX = zipWith Record.combinePowerAndSignal powerSignalsX signalsX

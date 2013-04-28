@@ -233,7 +233,7 @@ dotIdentFromBndNode (Idx.BndNode b n) =
    T.pack $ "s" ++ dotIdentFromBoundary b ++ "n" ++ Node.dotId n
 
 dotIdentFromBoundary :: Idx.Boundary -> String
-dotIdentFromBoundary Idx.Initial = "i"
+dotIdentFromBoundary Idx.Initial = "init"
 dotIdentFromBoundary (Idx.AfterSection (Idx.Section s)) = show s
 
 dotIdentFromNode :: (Node.C node) => node -> T.Text
@@ -450,9 +450,13 @@ lookupFormat ::
 lookupFormat recIdx mp k =
    maybe
       (error $ "could not find index " ++
-         (Format.unUnicode $ Var.formatIndex k))
-      (formatValue . Accessor.get (Record.access recIdx)) $
-   M.lookup k mp
+         (Format.unUnicode $ Var.formatIndex k)
+         ++ " in "
+         ++ (show $ M.map (Format.showRaw . showValue) $ M.mapKeys showIdx mp))
+      showValue $
+      M.lookup k mp
+   where showIdx = Format.unUnicode . Var.formatIndex
+         showValue = formatValue . Accessor.get (Record.access recIdx)
 
 lookupFormatAssign ::
    (Ord (idx node), Format.EdgeIdx idx, Var.FormatIndex idx,

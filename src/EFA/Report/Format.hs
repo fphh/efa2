@@ -84,6 +84,7 @@ class Format output where
    parenthesize, negate, recip :: output -> output
    plus, minus, multiply :: output -> output -> output
    power :: output -> Integer -> output
+   showRaw :: output -> String
 
 instance Format ASCII where
    -- may need some escaping for non-ASCII characters
@@ -115,7 +116,7 @@ instance Format ASCII where
          Idx.Before -> "[0]"
          Idx.After -> "[1]"
          Idx.Delta -> "d"
-   initial = ASCII "i"
+   initial = ASCII "init"
    section (Idx.Section s) = ASCII $ show s
    sectionNode (ASCII s) (ASCII x) = ASCII $ s ++ "." ++ x
 
@@ -140,6 +141,7 @@ instance Format ASCII where
    minus (ASCII x) (ASCII y) = ASCII $ x ++ " - " ++ y
    multiply (ASCII x) (ASCII y) = ASCII $ x ++ " * " ++ y
    power (ASCII x) n = ASCII $ x ++ "^" ++ showsPrec 10 n ""
+   showRaw (ASCII x) = x
 
 instance Format Unicode where
    literal = Unicode
@@ -175,7 +177,7 @@ instance Format Unicode where
          Idx.Before -> "\x2070"
          Idx.After -> "\xb9"
          Idx.Delta -> [deltaChar]
-   initial = Unicode "i"
+   initial = Unicode "init"
    section (Idx.Section s) = Unicode $ show s
    sectionNode (Unicode s) (Unicode x) = Unicode $ s ++ "." ++ x
 
@@ -212,6 +214,7 @@ instance Format Unicode where
             8 -> "\x2078"
             9 -> "\x2079"
             _ -> "^" ++ showsPrec 10 n ""
+   showRaw (Unicode x) = x
 
 ratioCharMap :: Integral a => M.Map (Ratio a) String
 ratioCharMap =
@@ -275,7 +278,7 @@ instance Format Latex where
          Idx.Before -> "\\leftexp{0}{" ++ rest ++ "}"
          Idx.After -> "\\leftexp{1}{" ++ rest ++ "}"
          Idx.Delta -> "\\Delta " ++ rest
-   initial = Latex "i"
+   initial = Latex "init"
    section (Idx.Section s) = Latex $ show s
    sectionNode (Latex s) (Latex x) = Latex $ s ++ ":" ++ x
 
@@ -300,6 +303,7 @@ instance Format Latex where
    minus (Latex x) (Latex y) = Latex $ x ++ " - " ++ y
    multiply (Latex x) (Latex y) = Latex $ x ++ " \\cdot " ++ y
    power (Latex x) n = Latex $ x ++ "^{" ++ show n ++ "}"
+   showRaw (Latex x) = x
 
 
 class Record record where
@@ -338,7 +342,7 @@ instance StorageIdx Idx.StX where storageVar _ = X
 directionShort :: Idx.Direction -> String
 directionShort d =
    case d of
-      Idx.In -> "i"
+      Idx.In -> "i" -- Verwirrung mit initial aus der Format-Klasse?
       Idx.Out -> "o"
 
 boundary :: Format output => Idx.Boundary -> output
