@@ -212,9 +212,9 @@ electric = [SigId "_vehicleSpeed_log",
 -- Building Signal Record for better Plotting of the original signals
 battery:: [SigId]
 battery  = [SigId "_vehicleSpeed_log",
-          SigId "battery1.poleVoltage_log",
-          SigId "battery1.poleCurrent_log",
-          SigId "battery1.onternalVoltage_log"
+          SigId "battery1._poleVoltage_log",
+          SigId "battery1._poleCurrent_log",
+          SigId "battery1._internalVoltage_log"
 --          SigId "_batteryInternalCurrent_log"
           ]
 
@@ -229,6 +229,12 @@ generator =  [SigId "_vehicleSpeed_log",
             SigId "engine1._speed_log"
             ]
 
+-- Building Signal Record for better Plotting of the original signals
+engine:: [SigId]
+engine =  [SigId "_vehicleSpeed_log",
+            SigId "engine1._speed_log",
+            SigId "engine1._torque_log",
+            SigId "engine1._fuelPower_log"]
 
 xyEngine :: (SigId,SigId)
 xyEngine = (SigId "engine1._speed_log", SigId "engine1._torque_log")

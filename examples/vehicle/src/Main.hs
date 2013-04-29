@@ -295,6 +295,7 @@ main = do
                   ("DriveLine", Signals.driveline),
                   ("Electric", Signals.electric),
                   ("Motor", Signals.motor),
+                  ("Engine", Signals.engine),
                   ("Generator", Signals.generator),
                   ("Battery", Signals.battery)
                  ]
