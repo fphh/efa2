@@ -124,7 +124,7 @@ makeSeqFlowGraph topo =
 
 
 makeSeqFlowTopology ::
-   (Ord node) =>
+   (Ord node, Show node) =>
    SequData (FlowTopology node) ->
    Flow.RangeGraph node
 makeSeqFlowTopology =

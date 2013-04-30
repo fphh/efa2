@@ -79,6 +79,13 @@ instance P.Show (Apply ab c) => P.Show (Data ab c) where
          (P.showString "Data " . P.shows x)
 
 
+-- Funktioniert dieser Parser korrekt?
+instance P.Read (Apply ab c) => P.Read (Data ab c) where
+   readsPrec n q = P.readParen (n >= 10)
+                     (\r -> [(Data x, t) | ("Data", s) <- P.lex r,
+                                           (x, t) <- P.readsPrec (n+1) s ]) q
+
+
 ---------------------------------------------------------
 -- | Type Synonym Convenience
 
@@ -497,15 +504,17 @@ _minimum =
 
 class Maximum c where
    maximum, minimum :: (Storage c d, Ord d) => Data c d -> d
+   minmax :: (Storage c d, Ord d) => Data c d -> (d, d)
 
 instance Maximum Nil where
    maximum (Data x) = x
    minimum (Data x) = x
+   minmax (Data x) = (x, x)
 
 instance (Maximum1 v2 v1) => Maximum (v2 :> v1) where
    maximum = fromMaybe (error "Data.maximum: empty vector") . maximum1
    minimum = fromMaybe (error "Data.minimum: empty vector") . minimum1
-
+   minmax = fromMaybe (error "Data.minmax: empty vector") . minmax1
 
 class Maximum1 v2 v1 where
    maximum1, minimum1 ::
@@ -515,15 +524,23 @@ class Maximum1 v2 v1 where
       -}
       (Storage (v2 :> v1) d, Ord d) =>
       Data (v2 :> v1) d -> Maybe d
+   minmax1 ::
+      (Storage (v2 :> v1) d, Ord d) =>
+      Data (v2 :> v1) d -> Maybe (d, d)
 
 instance SV.Singleton v => Maximum1 v Nil where
    maximum1 = Just . withNestedData SV.maximum
    minimum1 = Just . withNestedData SV.minimum
+   minmax1 = Just . withNestedData SV.minmax
 
 instance (SV.Walker v3, Maximum1 v2 v1) => Maximum1 v3 (v2 :> v1) where
    maximum1 xd = withNestedData (vecFoldlMap (liftOrd P.max) Nothing (maximum1 . subData xd)) xd
    minimum1 xd = withNestedData (vecFoldlMap (liftOrd P.min) Nothing (minimum1 . subData xd)) xd
-
+   minmax1 xd =
+      withNestedData (vecFoldlMap (liftOrd f) Nothing (minmax1 . subData xd)) xd
+      where f (a, b) (x, y) = (,)
+              (if a < x then a else x)
+              (if b > y then b else y)
 
 liftOrd :: (a -> a -> a) -> Maybe a -> Maybe a -> Maybe a
 liftOrd f (Just x) (Just y) = Just (f x y)

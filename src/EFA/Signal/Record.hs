@@ -19,8 +19,7 @@ import EFA.Signal.Signal
            TSamp,
            PSamp,
            PSamp1L,
-           PSamp2LL,
-           Scal)
+           PSamp2LL)
 import EFA.Signal.Typ (Typ,
                        A,
                        D,
@@ -51,6 +50,7 @@ import System.Random (Random)
 
 import qualified Data.Map as M
 import qualified Data.Set as Set
+import qualified Data.List as L
 import qualified Data.Foldable as Fold
 import qualified Data.List.HT as HTL
 import qualified Data.List.Key as Key
@@ -65,19 +65,21 @@ import Control.Monad (liftM2)
 import EFA.Utility.Map (checkedLookup2)
 import EFA.Utility (myShowList)
 
+newtype SigId = SigId String deriving (Eq, Ord, Show, Read)
 
-newtype SigId = SigId String deriving (Eq, Ord)
+{- 
+-- Don't use this, if you want read to work!!!
 
 instance Show SigId where
   show (SigId x) = show x
-
+-}
 
 type instance D.Value (Record s1 s2 t1 t2 id v a) = a
 
 
 data Record s1 s2 t1 t2 id v a =
      Record (TC s1 t1 (Data (v :> Nil) a))
-            (M.Map id (TC s2 t2 (Data (v :> Nil) a))) deriving (Show, Eq)
+            (M.Map id (TC s2 t2 (Data (v :> Nil) a))) deriving (Show, Read, Eq)
 
 
 type SignalRecord = Record Signal Signal (Typ A T Tt) (Typ UT UT UT) SigId
@@ -140,13 +142,18 @@ getSig ::
 getSig (Record _ sigMap) key = checkedLookup2 "getSig" sigMap key
 
 -- | Get Start and End time
+{- Wollen wir wirklich (Typ A T Tt) vorschreiben?
 getTimeWindow :: (Ord a,
                   V.Storage v a,
                   V.Singleton v) =>
                  Record s1 s2 (Typ A T Tt) t2 id v a ->
                  (Scal (Typ A T Tt) a, Scal (Typ A T Tt) a)
-getTimeWindow rec = (S.minimum t, S.maximum t)
-  where t = getTime rec
+-}
+getTimeWindow ::
+  (Ord d, V.Storage v d, V.Singleton v) =>
+  Record s1 s2 t1 t2 id v d ->
+  (TC Scalar t1 (Data Nil d), TC Scalar t1 (Data Nil d))
+getTimeWindow = S.unzip . S.minmax . getTime
 
 
 diffTime ::
@@ -220,14 +227,12 @@ extractLogSignals (Record time sMap) idList =
          else error $ "extractLogSignals: signals not found in record: " ++ show notFound ++ (myShowList $ M.keys sMap)
 
 
-genPowerRecord :: (Show (v a),
-                   V.Zipper v,
-                   V.Walker v,
-                   V.Storage v a,
-                   BProd a a,
-                   BSum a,
-                   Ord node) =>
-                  TSignal v a -> [(Idx.PPos node, UTSignal v a, UTSignal v a)] -> PowerRecord node v a
+genPowerRecord ::
+  ( Show (v a), V.Zipper v, V.Walker v,
+    V.Storage v a, BProd a a, BSum a, Ord node) =>
+  TSignal v a ->
+  [(Idx.PPos node, UTSignal v a, UTSignal v a)] ->
+  PowerRecord node v a
 genPowerRecord time =
    Record time .
       foldMap
@@ -242,20 +247,50 @@ addSignals ::
    [(id, TC s2 t2 (Data (v :> Nil) a))]  ->
    Record s1 s2 t1 t2 id v a -> Record s1 s2 t1 t2 id v a
 addSignals list (Record time m) =  (Record time (foldl f m list))
-  where f ma (ident,sig) = if S.len time == S.len sig
-                       then M.insert ident sig ma
-                       else error ("Error in addSignals - signal length differs: " ++ show ident)
+  where f ma (ident,sig) =
+          if S.len time == S.len sig
+             then M.insert ident sig ma
+             else error $ "Error in addSignals - signal length differs: "
+                          ++ show ident
 
 
 -- | adding signals of two records with same time vector by using Data.Map.union
 union ::
-   (Eq (v a), Ord id) =>
+   (Eq (v a), Ord id, Show id) =>
    Record s1 s2 t1 t2 id v a ->
    Record s1 s2 t1 t2 id v a ->
    Record s1 s2 t1 t2 id v a
-union (Record timeA mA) (Record timeB mB) = if timeA == timeB then Record timeA $ M.union mA mB
-                                            else error ("EFA.Signal.Record.union: time vectors differ")
+union (Record timeA mA) (Record timeB mB) =
+   if timeA == timeB
+      then Record timeA
+             (M.unionWith 
+                (error "EFA.Signal.Record.union: duplicate signal ids") mA mB)
+      else error "EFA.Signal.Record.union: time vectors differ"
 
+-- Wegen newTimeBase ist der Typ nicht so algemein wie bei "union" oben. Schade.
+unionWithNewTime ::
+  ( Eq (v a), Ord id, Show id, Fractional a, Ord a,
+    V.Filter v, V.Storage v a, V.Walker v, V.Singleton v,
+    V.Lookup v, V.Find v, V.Sort v) =>
+  [Record S.Signal S.Signal (Typ A T Tt) t2 id v a] ->
+  Record S.Signal S.Signal (Typ A T Tt) t2 id v a
+unionWithNewTime rs = Record newTime $
+  M.unionsWith (error "unionWithNewTime: duplicate signal ids") $
+    map ((\(Record _ m) -> m) . flip newTimeBase newTime) rs
+  where (starts, ends) = unzip $ map getTimeWindow rs
+        newTime = S.sort $ L.foldl1' S.append ts
+        ts = map (filt . getTime) rs
+        filt = S.filter (>= S.fromScalar (maximum starts))
+               . S.filter (<= S.fromScalar (minimum ends))
+
+
+-- | Modify the SigId
+modifySigId ::
+  (String -> String) ->
+  Record s1 s2 t1 t2 SigId v a ->
+  Record s1 s2 t1 t2 SigId v a
+modifySigId f = rmapKeys g
+  where g (SigId str) = SigId (f str)
 
 
 -- | Modify specified signals with function
@@ -266,29 +301,27 @@ modifySignals ::
     TC s2 t2 (Data (v :> Nil) a)) ->
    Record s1 s2 t1 t2 id v a ->
    Record s1 s2 t1 t2 id v a
-modifySignals idList f (Record time ma) =  (Record time (foldl g ma $ h idList))
-  where g m ident = M.adjust f ident m
-        h xs = case xs of
-          ModifyAll -> M.keys ma
-          ToModify x -> x
-
+modifySignals idList f (Record time ma) = 
+  Record time $
+  L.foldl' (flip $ M.adjust f) ma $
+  case idList of
+       ModifyAll -> M.keys ma
+       ToModify x -> x
 
 -- | Get maximum signal range for all signals specified
-maxRange :: (Ord a,
-             V.Storage v a,
-             V.Singleton v,
-             Ord id,
-             Show (v a),
-             Show id) =>
-            RangeFrom id ->
-            Record s1 s2 t1 t2 id v a ->
-            (TC Scalar t2 (Data Nil a), TC Scalar t2 (Data Nil a))
-maxRange list (Record _ m) = (TC $ Data (minimum $ map fst l), TC $ Data (maximum $ map snd l))
-  where l = map f $ map (\x -> (S.minimum x, S.maximum x)) $  map (checkedLookup2 "Signal/maxRange" m) $ h list
-        f (TC(Data x), TC(Data y)) = (x,y)
-        h z = case z of
-          RangeFromAll -> M.keys m
-          RangeFrom w -> w
+maxRange ::
+  ( Ord a, V.Storage v a, V.Singleton v,
+    Ord id, Show (v a), Show id) =>
+  RangeFrom id ->
+  Record s1 s2 t1 t2 id v a ->
+  (TC Scalar t2 (Data Nil a), TC Scalar t2 (Data Nil a))
+maxRange list (Record _ m) =
+  (S.toScalar $ minimum lmin, S.toScalar $ maximum lmax)
+  where (lmin, lmax) = unzip $
+          map (S.fromScalar . S.minmax . checkedLookup2 "Signal.maxRange" m) 
+              $ case list of
+                     RangeFromAll -> M.keys m
+                     RangeFrom w -> w
 
 
 -- | Get maximum signal range for all signals specified
@@ -336,15 +369,14 @@ norm :: (Fractional a,
         Record s1 s2 t1 t2 id v a -> Record s1 s2 t1 t2 id v a
 norm rec = rmap S.norm rec
 
+
 -- | Add interpolated data points in an existing record
-newTimeBase :: (Fractional a,
-                Ord a,
-                V.Find v,
-                V.Lookup v,
-                V.Walker v,
-                V.Singleton v,
-                V.Storage v a) =>
-               Record Signal Signal (Typ A T Tt) t2 id v a -> TSignal v a -> Record Signal Signal  (Typ A T Tt)  t2 id v a
+newTimeBase ::
+  (Fractional a, Ord a, V.Find v,
+   V.Lookup v, V.Walker v, V.Singleton v, V.Storage v a) =>
+  Record Signal Signal (Typ A T Tt) t2 id v a ->
+  TSignal v a ->
+  Record Signal Signal (Typ A T Tt) t2 id v a
 newTimeBase (Record time m) newTime = Record newTime (M.map f m)
   where f sig = S.interp1LinSig time sig newTime
 

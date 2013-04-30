@@ -19,13 +19,13 @@ import qualified Data.NonEmpty as NonEmpty
 import Data.Maybe.HT (toMaybe)
 import Data.Eq (Eq((==)))
 import Data.Function ((.), ($), id, flip)
-import Data.Maybe (Maybe(Just, Nothing), maybe, isJust)
+import Data.Maybe (Maybe(Just, Nothing), maybe, isJust, fromMaybe)
 import Data.Bool (Bool(False, True), (&&), not)
 import Data.Tuple (snd, fst)
 import Text.Show (Show, show)
-import Prelude (Num, Int, Integer, Ord, error, (++), (+), (-), subtract)
+import Prelude (Num, Int, Integer, Ord, error, (++), (+), (-), subtract, min, max)
 
-import Data.Ord (Ordering)
+import Data.Ord (Ordering, (>=), (<=))
 
 
 {- |
@@ -71,6 +71,7 @@ writeUnbox x =
 class Singleton vec where
    maximum :: (Ord d, Storage vec d) => vec d -> d
    minimum :: (Ord d, Storage vec d) => vec d -> d
+   minmax :: (Ord d, Storage vec d) => vec d -> (d, d)
    singleton :: (Storage vec d) => d -> vec d
    empty :: (Storage vec d) => vec d
    append :: (Storage vec d) => vec d -> vec d -> vec d
@@ -84,9 +85,30 @@ class Singleton vec where
    all :: (Storage vec d) => (d -> Bool) -> vec d -> Bool
    any :: (Storage vec d) => (d -> Bool) -> vec d -> Bool
 
+
+minmaxHelper :: (Ord d) => (d, d) -> d -> (d, d)
+minmaxHelper acc@(mini, maxi) x =
+  let mn = x >= mini
+      mx = x <= maxi
+  in  if mn && mx
+         then acc
+         else if not mn
+                 then (x, maxi)
+                 else (mini, x)
+
+
+{-
+-- slow!
+minmaxHelper :: (Ord d) => (d, d) -> d -> (d, d)
+minmaxHelper (a, b) x = (a `min` x, b `max` x)
+-}
+
 instance Singleton V.Vector where
    maximum x = V.maximum x
    minimum x = V.minimum x
+   minmax xs = V.foldl' minmaxHelper (y, y) ys
+     where (y, ys) =
+             fromMaybe (error "Signal.Vector.minmax: empty UV-Vector") (viewL xs)
    singleton x = V.singleton x
    empty = V.empty
    append = (V.++)
@@ -103,6 +125,13 @@ instance Singleton V.Vector where
 instance Singleton UV.Vector where
    maximum x = readUnbox UV.maximum x
    minimum x = readUnbox UV.minimum x
+   minmax x = (minimum x, maximum x)
+{-
+   -- how to get rid of unboxed constraint?
+   minmax xs = UV.foldl' minmaxHelper (y, y) ys
+     where (y, ys) =
+             fromMaybe (error "Signal.Vector.minmax: empty UV-Vector") (viewL xs)
+-}
    singleton x = writeUnbox (UV.singleton x)
    empty = writeUnbox UV.empty
    append = readUnbox (UV.++)
@@ -119,6 +148,8 @@ instance Singleton UV.Vector where
 instance Singleton [] where
    maximum x = L.maximum x
    minimum x = L.minimum x
+   minmax (x:xs) = L.foldl' minmaxHelper (x, x) xs
+   minmax [] = error "Signal.Vector.minmax: empty list"
    singleton x = [x]
    empty = []
    append = (++)

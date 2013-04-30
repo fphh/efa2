@@ -38,9 +38,8 @@ cls = map showf $
   Colour.chocolate :
   Colour.olive :
   Colour.purple :
-  Colour.white :
-  Colour.violet :
   Colour.lightblue :
+  Colour.violet :
   Colour.darkblue :
   Colour.lightcoral :
   Colour.darkcyan :
@@ -168,4 +167,5 @@ cls = map showf $
   Colour.wheat :
   Colour.whitesmoke :
   Colour.yellowgreen :
+  Colour.white :
   []

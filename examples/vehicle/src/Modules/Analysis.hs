@@ -105,7 +105,8 @@ pre :: TD.Topology System.Node
          PowerRecord System.Node [] Double,
          SignalRecord [] Double)
 
-pre topology epsZero epsT epsE rawSignals =  (sequencePowersFilt, adjustedFlows, flowStates, powerSignals0, signals0)
+pre topology epsZero epsT epsE rawSignals =
+  (sequencePowersFilt, adjustedFlows, flowStates, powerSignals0, signals0)
   where
     ---------------------------------------------------------------------------------------
     -- * Condition Signals, Calculate Powers, Remove ZeroNoise
@@ -178,7 +179,10 @@ external :: (Eq d, Num d,
             System.Node
             (EqRecord.Absolute (Result Double))
             (EqRecord.Absolute (Result d))
-external sequenceFlowTopology sequFlowRecord =  EqGen.solveFromMeasurement sequenceFlowTopology $ makeGivenFromExternal Idx.Absolute sequFlowRecord
+external sequenceFlowTopology sequFlowRecord =
+  EqGen.solveFromMeasurement
+    sequenceFlowTopology $
+    makeGivenFromExternal Idx.Absolute sequFlowRecord
 
 initStorage :: (Fractional a) => a
 initStorage = 0.7*3600*1000
@@ -281,11 +285,12 @@ delta :: (Vec.Zipper v1, Vec.Zipper v2,
          System.Node
          (EqRecord.Delta (Result Double))
          (EqRecord.Delta (Result d))
-delta sequenceFlowTopology sequenceFlow sequenceFlow'= EqGen.solveFromMeasurement sequenceFlowTopology
-                                                       $ (makeGivenFromExternal Idx.Before sequenceFlow <>
-                                                          makeGivenFromExternal Idx.After sequenceFlow')
+delta sequenceFlowTopology sequenceFlow sequenceFlow'= 
+  EqGen.solveFromMeasurement sequenceFlowTopology $
+    ( makeGivenFromExternal Idx.Before sequenceFlow <>
+      makeGivenFromExternal Idx.After sequenceFlow')
 
----------------------------------------------------------------------------------------------------
+------------------------------------------------------------------
 -- ## Make Difference Analysis
 
 
