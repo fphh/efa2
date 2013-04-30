@@ -103,17 +103,17 @@ sectionStackRow_filterEnergy = (10^(5::Integer))
 cumStack_filterEnergy :: Double
 cumStack_filterEnergy = (1^^(-1::Integer))
 
-energyIndex7 :: Idx.InSection Idx.Energy System.Node
-energyIndex7 = Idx.InSection (Idx.Section 7) energyIndex
+energyIndexSec :: Idx.InSection Idx.Energy System.Node
+energyIndexSec = Idx.InSection (Idx.Section 7) energyIndex
 
 energyIndex :: Idx.Energy System.Node
 energyIndex  = Idx.Energy $ Idx.StructureEdge System.Tank System.ConBattery
 
-sectionMapping :: [Int]
-sectionMapping = [1,2,7,8,16,17,19]
+sectionMapping :: [SD.SequData a] -> [SD.SequData a] 
+sectionMapping = map (SD.reIndex [1,2,7,8,16,17,19::Int]) 
 
--}
--- | B. Generator läuft
+
+-- | B. Generator läuft am Anfang kurz
 
 fileNamesX :: [FilePath]
 fileNamesX = ["Vehicle_mass900kg_V2_res.plt",
@@ -144,14 +144,64 @@ sectionStackRow_filterEnergy = (10^(5::Integer))
 cumStack_filterEnergy :: Double
 cumStack_filterEnergy = (1^^(-1::Integer))
 
-energyIndex7 :: Idx.InSection Idx.Energy System.Node
-energyIndex7 = Idx.InSection (Idx.Section 7) energyIndex
+energyIndexSec :: Idx.InSection Idx.Energy System.Node
+energyIndexSec = Idx.InSection (Idx.Section 8) energyIndex
 
 energyIndex :: Idx.Energy System.Node
 energyIndex  = Idx.Energy $ Idx.StructureEdge System.Tank System.ConBattery
 
+{-
 sectionMapping :: [Int]
 sectionMapping = [1,2,7,8,16,17,19]
+-}
+
+sectionMapping :: [SequData a] -> [SequData a]
+sectionMapping = id 
+
+
+-}
+-- | C. Generator läuft am Anfang kurz und startet dann wieder mitten drin
+
+fileNamesX :: [FilePath]
+fileNamesX = ["Vehicle_mass900kg_V3_res.plt",
+             "Vehicle_mass1000kg_V3_res.plt",
+             "Vehicle_mass1100kg_V3_res.plt"]
+
+datasetsX ::  [Record.Name]
+datasetsX = map Record.Name ["900kg",
+                            "1000kg",
+                            "1100kg"]
+
+deltasetsX :: [Record.DeltaName]
+deltasetsX = zipWith Record.deltaName datasetsX (tail datasetsX)
+
+
+sectionFilterTime ::  TC Scalar (Typ A T Tt) (Data Nil Double)
+sectionFilterTime = toScalar 0.1
+      
+sectionFilterEnergy ::  TC Scalar (Typ A F Tt) (Data Nil Double)
+sectionFilterEnergy = toScalar 1000
+
+recordStackRow_filterEnergy :: Double
+recordStackRow_filterEnergy = (1^^(-6::Integer))
+
+sectionStackRow_filterEnergy :: Double
+sectionStackRow_filterEnergy = (10^(5::Integer))
+
+cumStack_filterEnergy :: Double
+cumStack_filterEnergy = (1^^(-1::Integer))
+
+energyIndexSec :: Idx.InSection Idx.Energy System.Node
+-- energyIndexSec = Idx.InSection (Idx.Section 18) energyIndex
+energyIndexSec = Idx.InSection (Idx.Section 37) energyIndex
+
+energyIndex :: Idx.Energy System.Node
+--energyIndex  = Idx.Energy $ Idx.StructureEdge System.Tank System.ConBattery
+energyIndex  = Idx.Energy $ Idx.StructureEdge System.Battery System.ConBattery
+
+sectionMapping :: [SD.SequData a] -> [SD.SequData a]
+sectionMapping = map (SD.reIndex [8,11,13,14,18,32,37::Int]) 
+ 
 --------------------------------------------------------------------
 
 zipWith3M_ ::
@@ -190,11 +240,9 @@ main = do
 ---------------------------------------------------------------------------------------
 -- *  ReIndex Sequences to allow Sequence Matching 
 
---  let sequenceFlowsFiltX = map (SD.reIndex [1,2,7,8,16,17,19::Int]) sequenceFlowsFiltUnmappedX 
-  let sequenceFlowsFiltX = sequenceFlowsFiltUnmappedX
-
---  let flowStatesX = map (SD.reIndex [1,2,7,8,16,17,19::Int]) flowStatesUnmappedX
-  let flowStatesX = flowStatesUnmappedX
+  let sequenceFlowsFiltX = sectionMapping sequenceFlowsFiltUnmappedX
+        
+  let flowStatesX = sectionMapping flowStatesUnmappedX
 
   ---------------------------------------------------------------------------------------
 -- *  Generate Flow States as Graphs
@@ -247,20 +295,20 @@ main = do
   mapM_ (Plots.stack  "Energy Flow Change at Tank in Section 6"
          (XIdx.energy (Idx.Section 6) System.Tank System.ConBattery) 1 )
     (zip (deltasets datasetsX) differenceExtEnvs)
--}
-
-{-
 
 
 
---  print $ Plots.lookupStack energyIndex7 (last differenceExtEnvs)
-  concurrentlyMany_ $ [
+
+  print $ Plots.lookupStack energyIndexSec (last differenceExtEnvs)
+-} 
+{- 
+  concurrentlyMany_ $ [ 
     Plots.recordStackRow
-    "Energy Flow Change at Tank in Section 7"
+    ("Energy Flow Change at Tank in " ++ show energyIndexSec)
     deltasetsX
-    energyIndex7
+    energyIndexSec
     recordStackRow_filterEnergy
-    differenceExtEnvs , 
+    differenceExtEnvs  
     
     Plots.sectionStackRow
     "Energy Flow Change at Tank in all Sections 1100 vs 1000"
@@ -270,16 +318,16 @@ main = do
 
 
     --  print $ Plots.lookupAllStacks energyIndex (last differenceExtEnvs)
-
-
     
     Plots.cumStack
     "Cumulative Flow Change at Tank"
     energyIndex
     cumStack_filterEnergy
     (head differenceExtEnvs)
+
     ]
--}   
+-}
+   
 {-    
   print $    -- AssignMap.threshold 0.001 $
 --             M.mapKeys AssignMap.deltaIndexSet $
@@ -289,7 +337,7 @@ main = do
 ---------------------------------------------------------------------------------------
 -- * Plot Time Signals
 
-
+{-
   let plotList = [
                   ("Vehicle", Signals.vehicle),
                   ("DriveLine", Signals.driveline),
@@ -301,11 +349,11 @@ main = do
                  ]
 
   mapM_ (Plots.sigsWithSpeed allSignalsX) plotList
-
+-}
   -- Plots.sigsWithSpeed allSignalsX (head plotList)
 --  Plot.recordIO "Test" (head allSignalsX)
 
-{-
+
 ---------------------------------------------------------------------------------------
 -- * Plot Operation Points
 {-
@@ -322,7 +370,7 @@ main = do
 -- * Plot Efficiency Curves and Distributions
 
 
--}
+
 
 ---------------------------------------------------------------------------------------
 -- * Draw Diagrams
@@ -346,30 +394,48 @@ main = do
 --    Draw.topology System.topology, --  Draw.topology2pdf System.topology
 --    Draw.topologyWithEdgeLabels System.edgeNames System.topology,
 
-    -- Sectionen
---    zipWith3M_ Draw.sequFlowGraphAbsWithEnv datasetsX sequenceFlowTopologyX externalEnvX,
---    concurrentlyMany_ $
---      L.zipWith3 Draw.sequFlowGraphAbsWithEnv
---                 (L.zipWith3 Draw.xterm datasetsX sectionToposX externalEnvX)
-
-    -- Sections-Deltadiagramme
---    zipWith3M_ Draw.sequFlowGraphDeltaWithEnv (deltasets datasetsX) sequenceFlowTopologyX externalDeltaEnvX
-{-
-    concurrentlyMany_ $
-      L.zipWith3 Draw.sequFlowGraphDeltaWithEnv 
-                 (deltasets datasetsX) sectionToposX externalDeltaEnvX
--}
     -- Vorhersage
---    Draw.sequFlowGraphAbsWithEnv "Prediction" (head sequenceFlowTopologyX) prediction
+--    drawAbs (Record.Name "Prediction 900kg") (head sectionToposX) prediction Colors.Yellow
     ]
 
+    -- Section flow
     ++ L.zipWith4 drawAbs
          datasetsX
          sectionToposX
          externalEnvX
          colours
+         
+    -- Delta Section Flow     
     ++ L.zipWith4 drawDelta
          deltasetsX
          sectionToposX
          externalDeltaEnvX
          (tail colours)
+
+    -- Record Stack Row at specific position
+    ++ [Plots.recordStackRow
+         ("Energy Flow Change at Tank in " ++ show energyIndexSec)
+         deltasetsX
+         energyIndexSec
+         recordStackRow_filterEnergy
+         differenceExtEnvs]
+         
+    -- Section stack row at given ppos for a defined record
+    ++ [Plots.sectionStackRow
+        "Energy Flow Change at Tank in all Sections 1100 vs 1000"
+        energyIndex
+        sectionStackRow_filterEnergy
+        (last differenceExtEnvs)]
+
+--    ++ [print $ Plots.lookupAllStacks energyIndex (last differenceExtEnvs)]
+    ++ [print $ Plots.lookupStack energyIndexSec (last differenceExtEnvs)]
+    
+    -- overall stack at given position     
+    ++ [Plots.cumStack
+        "Cumulative Flow Change at Tank"
+        energyIndex
+        cumStack_filterEnergy
+        (head differenceExtEnvs)]
+
+    -- Prediction Based on a specific Record
+    ++ [drawAbs (Record.Name "Prediction 900kg") (head sectionToposX) prediction Colors.Yellow]

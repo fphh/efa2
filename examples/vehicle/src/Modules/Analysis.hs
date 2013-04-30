@@ -238,6 +238,7 @@ makeGivenForPrediction ::
 
 makeGivenForPrediction idx env =
     (Idx.Record idx (XIdx.storage Idx.initial System.Battery) .= initStorage)
+--    (Idx.Record idx (XIdx.storage (Idx.AfterSection $ Idx.Section 37) System.Battery) .= 250619)
     <> (Idx.Record idx (XIdx.storage Idx.initial System.VehicleInertia) .= 0)
     <> (foldMap f $ M.toList $ Env.etaMap $ Env.signal env)
     <> (foldMap f $ M.toList $ Env.dtimeMap $ Env.signal env)
@@ -246,12 +247,13 @@ makeGivenForPrediction idx env =
     where f (i, x)  =  i %= fmap (\(EqGen.Determined y) -> y) x
           g (Idx.InSection _ (Idx.Energy (Idx.StructureEdge x y))) _  =
              case (x,y) of
+                (System.Tank, System.ConBattery) -> True
                 (System.Resistance, System.Chassis) -> True
                 (System.VehicleInertia, System.Chassis) -> True
                 (System.RearBrakes, System.Chassis) -> True
                 (System.FrontBrakes, System.ConFrontBrakes) -> True
                 (System.ConES, System.ElectricSystem) -> True
-                (System.Battery, System.ConBattery) -> True
+           --     (System.Battery, System.ConBattery) -> True
                 _ -> False
           h (Idx.InSection _ (Idx.Energy (Idx.StructureEdge System.Resistance System.Chassis))) x =
                fmap (fmap (*1.1)) x
@@ -325,9 +327,8 @@ makeGivenForDifferentialAnalysis ::
   Env.Complete System.Node DeltaResult DeltaResult ->
   EquationSystemNumeric s
 makeGivenForDifferentialAnalysis (Env.Complete _ sig) =
---  (Idx.DTime sec2 .== 0) <>
   (XIdx.storage Idx.initial System.Battery .== initStorage) <>
---  (deltaPair (edgeVar Idx.Energy sec2 System.Tank System.ConBattery) 4 (-0.6)) <>
+--  (XIdx.storage (Idx.AfterSection $ Idx.Section 37) System.Battery .== 250619) <>
   (fold $ M.mapWithKey f $ Env.etaMap sig) <>
   (fold $ M.mapWithKey f $ Env.dtimeMap sig) <>
   (fold $ M.filterWithKey g $ M.mapWithKey f $ Env.energyMap sig) <>
@@ -339,10 +340,11 @@ makeGivenForDifferentialAnalysis (Env.Complete _ sig) =
 
         g (Idx.InSection _ (Idx.Energy (Idx.StructureEdge x y))) _ =
           case (x,y) of
+            (System.Tank, System.ConBattery) -> True
             (System.Resistance, System.Chassis) -> True
             (System.VehicleInertia, System.Chassis) -> True
             (System.RearBrakes, System.Chassis) -> True
             (System.FrontBrakes, System.ConFrontBrakes) -> True
             (System.ConES, System.ElectricSystem) -> True
-            (System.Battery, System.ConBattery) -> True
+--            (System.Battery, System.ConBattery) -> True -- Das sollte nicht angegeben werden müssen !!
             _ -> False
