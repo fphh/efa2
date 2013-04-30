@@ -328,7 +328,6 @@ makeGivenForDifferentialAnalysis ::
   EquationSystemNumeric s
 makeGivenForDifferentialAnalysis (Env.Complete _ sig) =
   (XIdx.storage Idx.initial System.Battery .== initStorage) <>
---  (XIdx.storage (Idx.AfterSection $ Idx.Section 37) System.Battery .== 250619) <>
   (fold $ M.mapWithKey f $ Env.etaMap sig) <>
   (fold $ M.mapWithKey f $ Env.dtimeMap sig) <>
   (fold $ M.filterWithKey g $ M.mapWithKey f $ Env.energyMap sig) <>

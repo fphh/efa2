@@ -193,7 +193,7 @@ cumStack_filterEnergy = (1^^(-1::Integer))
 
 energyIndexSec :: Idx.InSection Idx.Energy System.Node
 -- energyIndexSec = Idx.InSection (Idx.Section 18) energyIndex
-energyIndexSec = Idx.InSection (Idx.Section 37) energyIndex
+energyIndexSec = Idx.InSection (Idx.Section 18) energyIndex
 
 energyIndex :: Idx.Energy System.Node
 --energyIndex  = Idx.Energy $ Idx.StructureEdge System.Tank System.ConBattery
@@ -414,7 +414,7 @@ main = do
 
     -- Record Stack Row at specific position
     ++ [Plots.recordStackRow
-         ("Energy Flow Change at Tank in " ++ show energyIndexSec)
+         ("Energy Flow Change at " ++ show energyIndexSec)
          deltasetsX
          energyIndexSec
          recordStackRow_filterEnergy
@@ -428,11 +428,11 @@ main = do
         (last differenceExtEnvs)]
 
 --    ++ [print $ Plots.lookupAllStacks energyIndex (last differenceExtEnvs)]
-    ++ [print $ Plots.lookupStack energyIndexSec (last differenceExtEnvs)]
+--    ++ [print $ Plots.lookupStack energyIndexSec (last differenceExtEnvs)]
     
     -- overall stack at given position     
     ++ [Plots.cumStack
-        "Cumulative Flow Change at Tank"
+        "Cumulative Flow Change at  " ++ show energyIndex"
         energyIndex
         cumStack_filterEnergy
         (head differenceExtEnvs)]
