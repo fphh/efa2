@@ -148,7 +148,7 @@ pre topology epsZero epsT epsE rawSignals =
 
 {-
 
--- New Approach with Untility-Funktions from HT - the challanges:   
+-- New Approach with Utility-Funktions from HT - the challenges:   
 
 1. scalar value are in the moment double / signals are in data container. Best to move both to container
 2. switch to dTime with fmap Record.diffTime
@@ -242,11 +242,11 @@ makeGivenForPrediction ::
 
 makeGivenForPrediction idx env =
     (Idx.Record idx (XIdx.storage Idx.initial System.Battery) .= initStorage)
---    (Idx.Record idx (XIdx.storage (Idx.AfterSection $ Idx.Section 37) System.Battery) .= 250619)
     <> (Idx.Record idx (XIdx.storage Idx.initial System.VehicleInertia) .= 0)
+--    <> (foldMap f $ M.toList $ Env.etaMap $ Env.scalar env) -- hier müssen rote-Kante Gleichungen erzeugt werden
     <> (foldMap f $ M.toList $ Env.etaMap $ Env.signal env)
     <> (foldMap f $ M.toList $ Env.dtimeMap $ Env.signal env)
-    <> (foldMap f $ M.toList $ M.mapWithKey h $ M.filterWithKey g $
+    <> (foldMap f $ M.toList $ M.mapWithKey h $ M.filterWithKey i $ M.filterWithKey g $
                                Env.energyMap $ Env.signal env)
     where f (i, x)  =  i %= fmap (\(EqGen.Determined y) -> y) x
           g (Idx.InSection _ (Idx.Energy (Idx.StructureEdge x y))) _  =
@@ -262,6 +262,9 @@ makeGivenForPrediction idx env =
           h (Idx.InSection _ (Idx.Energy (Idx.StructureEdge System.Resistance System.Chassis))) x =
                fmap (fmap (*1.1)) x
           h _ r = r
+          i _ _ = True
+--         i (Idx.InSection (Idx.Section sec) (Idx.Energy (Idx.StructureEdge x y))) _ | sec == 18 || x == System.Tank || y == System.ConBattery = False    
+--          i (Idx.InSection (Idx.Section sec) (Idx.Energy (Idx.StructureEdge x y))) _ | otherwise = True    
 
 
 ---------------------------------------------------------------------------------------------------
@@ -335,7 +338,7 @@ makeGivenForDifferentialAnalysis (Env.Complete _ sig) =
   (XIdx.storage Idx.initial System.Battery .== initStorage) <>
   (fold $ M.mapWithKey f $ Env.etaMap sig) <>
   (fold $ M.mapWithKey f $ Env.dtimeMap sig) <>
-  (fold $ M.filterWithKey g $ M.mapWithKey f $ Env.energyMap sig) <>
+  (fold $  M.filterWithKey h $ M.filterWithKey g $ M.mapWithKey f $ Env.energyMap sig) <>
   mempty
   where f i rec =
            deltaPair i
@@ -352,3 +355,7 @@ makeGivenForDifferentialAnalysis (Env.Complete _ sig) =
             (System.ConES, System.ElectricSystem) -> True
 --            (System.Battery, System.ConBattery) -> True -- Das sollte nicht angegeben werden müssen !!
             _ -> False
+            
+        h _ _ = True
+        -- h (Idx.InSection (Idx.Section sec) (Idx.Energy (Idx.StructureEdge x y))) _ | sec == 18 || x == System.Tank || y == System.ConBattery = False    
+        -- h (Idx.InSection (Idx.Section sec) (Idx.Energy (Idx.StructureEdge x y))) _ | otherwise = True    

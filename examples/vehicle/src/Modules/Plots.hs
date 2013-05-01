@@ -70,11 +70,11 @@ sigsWithSpeed recList (ti, idList) =  do
 
 operation :: (Fractional a, Ord id, Show (v a), Show id, V.Walker v,
               V.Storage v a, V.FromList v, TDisp t2, Tuple.C a, Atom.C a) =>
-              [Char]
-              -> [([Char], Record s1 s2 t1 t2 id v a)] -> ([Char], (id, id)) -> IO ()
+              String
+              -> [(Record.Name, Record s1 s2 t1 t2 id v a)] -> ([Char], (id, id)) -> IO ()
 
 operation ti rList  (plotTitle, (idx,idy)) = mapM_ f rList
-  where f (recTitle, rec) = do
+  where f ((Record.Name recTitle), rec) = do
           let x = getSig rec idx
               y = getSig rec idy
           Plot.xyIO (ti ++ "_" ++ plotTitle ++ "_" ++ recTitle) x y

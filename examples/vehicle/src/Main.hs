@@ -59,6 +59,9 @@ import Data.Tuple.HT (mapSnd)
 
 import qualified Data.GraphViz.Attributes.Colors.X11 as Colors
 
+
+-- | O. Generelle Settings
+
 examplePath :: FilePath
 examplePath = "examples/vehicle"
 
@@ -70,6 +73,27 @@ colours = [ Colors.White,
  
 zeroNoiseToleranz :: Double         
 zeroNoiseToleranz = 10^^(-2::Int)          
+  
+                    
+-- List of Operation Point Plots                    
+xyList :: [(String,(Record.SigId,Record.SigId))]
+xyList = [
+  ("Engine", Signals.xyEngine),
+  ("Generator", Signals.xyGenerator),
+  ("Motor", Signals.xyMotor)
+  ]
+         
+-- List of Signal Plots         
+plotList :: [(String,[Record.SigId])]
+plotList = [
+  ("Vehicle", Signals.vehicle),
+  ("DriveLine", Signals.driveline),
+  ("Electric", Signals.electric),
+  ("Motor", Signals.motor),
+  ("Engine", Signals.engine),
+  ("Generator", Signals.generator),
+  ("Battery", Signals.battery)
+  ]
 
 -- | A. Generator steht
 
@@ -293,84 +317,6 @@ main = do
 ---------------------------------------------------------------------------------------
 -- * Plot Stacks
 
-{-
-  mapM_ (Plots.stack  "Energy Flow Change at Tank in Section 6"
-         (XIdx.energy (Idx.Section 6) System.Tank System.ConBattery) 1 )
-    (zip (deltasets datasetsX) differenceExtEnvs)
-
-
-
-
-  print $ Plots.lookupStack energyIndexSec (last differenceExtEnvs)
--} 
-{- 
-  concurrentlyMany_ $ [ 
-    Plots.recordStackRow
-    ("Energy Flow Change at Tank in " ++ show energyIndexSec)
-    deltasetsX
-    energyIndexSec
-    recordStackRow_filterEnergy
-    differenceExtEnvs  
-    
-    Plots.sectionStackRow
-    "Energy Flow Change at Tank in all Sections 1100 vs 1000"
-    energyIndex
-    sectionStackRow_filterEnergy
-    (last differenceExtEnvs),
-
-
-    --  print $ Plots.lookupAllStacks energyIndex (last differenceExtEnvs)
-    
-    Plots.cumStack
-    "Cumulative Flow Change at Tank"
-    energyIndex
-    cumStack_filterEnergy
-    (head differenceExtEnvs)
-
-    ]
--}
-   
-{-    
-  print $    -- AssignMap.threshold 0.001 $
---             M.mapKeys AssignMap.deltaIndexSet $
---             Stack.assignDeltaMap $    
-             Plots.lookupCumStack energyIndex (last differenceExtEnvs)
--}  
----------------------------------------------------------------------------------------
--- * Plot Time Signals
-
-{-
-  let plotList = [
-                  ("Vehicle", Signals.vehicle),
-                  ("DriveLine", Signals.driveline),
-                  ("Electric", Signals.electric),
-                  ("Motor", Signals.motor),
-                  ("Engine", Signals.engine),
-                  ("Generator", Signals.generator),
-                  ("Battery", Signals.battery)
-                 ]
-
-  mapM_ (Plots.sigsWithSpeed allSignalsX) plotList
--}
-  -- Plots.sigsWithSpeed allSignalsX (head plotList)
---  Plot.recordIO "Test" (head allSignalsX)
-
-
----------------------------------------------------------------------------------------
--- * Plot Operation Points
-{-
-  let xyList = [
-                  ("Engine", Signals.xyEngine),
-                  ("Generator", Signals.xyGenerator),
-                  ("Motor", Signals.xyMotor)
-                 ]
-
-  mapM_ (Plots.operation "Operation Points -" (zip datasetsX allSignalsX)) xyList
-
--}
----------------------------------------------------------------------------------------
--- * Plot Efficiency Curves and Distributions
-
 
 
 
@@ -393,13 +339,36 @@ main = do
 
   concurrentlyMany_ $ [
     -- Topologie
---    Draw.topology System.topology, --  Draw.topology2pdf System.topology
---    Draw.topologyWithEdgeLabels System.edgeNames System.topology,
-
-    -- Vorhersage
---    drawAbs (Record.Name "Prediction 900kg") (head sectionToposX) prediction Colors.Yellow
+    --  Draw.topology System.topology, 
+    --  Draw.topology2pdf System.topology
+    -- Draw.topologyWithEdgeLabels System.edgeNames System.topology,
     ]
 
+
+--  ++ [putStrLn ("Number of possible flow states: " ++ show (length System.flowStates))]
+    ++ [Draw.xterm $ Draw.flowTopologies (take 20 System.flowStates)]
+
+---------------------------------------------------------------------------------------
+-- * Plot Time Signals
+
+    ++ [mapM_ (Plots.sigsWithSpeed allSignalsX) plotList]
+
+  -- Plots.sigsWithSpeed allSignalsX (head plotList)
+  --  Plot.recordIO "Test" (head allSignalsX)
+
+---------------------------------------------------------------------------------------
+-- * Plot Operation Points
+
+    ++ [mapM_ (Plots.operation "Operation Points -" (zip datasetsX allSignalsX)) xyList]
+
+---------------------------------------------------------------------------------------
+-- * Plot Efficiency Curves and Distributions
+
+    -- ++ mapM_ (Plots.operation "Operation Points -" (zip datasetsX allSignalsX)) xyList
+
+---------------------------------------------------------------------------------------
+-- * Draw Diagrams
+     
     -- Section flow
     ++ L.zipWith4 drawAbs
          datasetsX
@@ -414,6 +383,9 @@ main = do
          externalDeltaEnvX
          (tail colours)
 
+---------------------------------------------------------------------------------------
+-- * Plot Stacks
+    
     -- Record Stack Row at specific position
     ++ [Plots.recordStackRow
          ("Energy Flow Change at " ++ show energyIndexSec)
@@ -438,6 +410,22 @@ main = do
         energyIndex
         cumStack_filterEnergy
         (head differenceExtEnvs)]
+         
+{-
+     ++ mapM_ (Plots.stack  "Energy Flow Change at Tank in Section 6"
+         (XIdx.energy (Idx.Section 6) System.Tank System.ConBattery) 1 )
+         (zip (deltasets datasetsX) differenceExtEnvs)
+
+     ++ [print $    -- AssignMap.threshold 0.001 $
+--             M.mapKeys AssignMap.deltaIndexSet $
+--             Stack.assignDeltaMap $    
+             Plots.lookupCumStack energyIndex (last differenceExtEnvs)]
+-}  
+
+         
+---------------------------------------------------------------------------------------
+-- * Draw Predicted Diagram
 
     -- Prediction Based on a specific Record
     ++ [drawAbs (Record.Name "Prediction 900kg") (head sectionToposX) prediction Colors.Yellow]
+    -- ++ [drawAbs (Record.Name "Prediction 900kg") (head sequenceFlowTopologyX) prediction Colors.Yellow]
