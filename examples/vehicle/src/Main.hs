@@ -434,7 +434,7 @@ main = do
     
     -- overall stack at given position     
     ++ [Plots.cumStack
-        "Cumulative Flow Change at  " ++ show energyIndex"
+        ("Cumulative Flow Change at  " ++ show energyIndex)
         energyIndex
         cumStack_filterEnergy
         (head differenceExtEnvs)]
