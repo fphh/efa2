@@ -248,7 +248,7 @@ makeGivenForPrediction idx env =
     <> (foldMap f $ M.toList $ Env.dtimeMap $ Env.signal env)
     <> (foldMap f $ M.toList $ M.mapWithKey h $ M.filterWithKey i $ M.filterWithKey g $
                                Env.energyMap $ Env.signal env)
-    where f (i, x)  =  i %= fmap (\(EqGen.Determined y) -> y) x
+    where f (j, x)  =  j %= fmap (\(EqGen.Determined y) -> y) x
           g (Idx.InSection _ (Idx.Energy (Idx.StructureEdge x y))) _  =
              case (x,y) of
                 (System.Tank, System.ConBattery) -> True

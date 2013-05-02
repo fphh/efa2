@@ -13,12 +13,12 @@ import qualified EFA.Hack.Options as O
 import qualified EFA.Graph.Topology.Node as TDNode
 import qualified EFA.Signal.Vector as V
 
-import EFA.Signal.Typ (--Typ,
-                       A,T,P,Tt,N)
+--import EFA.Signal.Typ (--Typ,
+--                       A,T,P,Tt,N)
 import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.Base as Base
-import EFA.Signal.Data (--Data,
-                        Nil,(:>))
+--import EFA.Signal.Data (--Data,
+--                        Nil,(:>))
 
 -- import EFA.Signal.Record (SigId(..), Record(..), PowerRecord, SignalRecord)
 import EFA.Signal.Record as Record
@@ -62,10 +62,10 @@ import qualified EFA.Example.AssignMap as AssignMap
 
 --import Data.Monoid ((<>))
 
-sigsWithSpeed ::(Fractional a, Ord a, Show (v a), V.Walker v, V.Storage v a,
-                                 V.Singleton v, V.FromList v, TDisp t2, TDisp t1, Atom.C a,
-                                 Tuple.C a) =>
-                                [Record s1 s2 t1 t2 SigId v a] -> (String, [SigId]) -> IO ()
+sigsWithSpeed ::(Fractional d, Ord d, Show (v d), V.Walker v, V.Storage v d,
+                                 V.Singleton v, V.FromList v, TDisp t2, TDisp t1, Atom.C d,
+                                 Tuple.C d) =>
+                                [Record s1 s2 t1 t2 SigId v d d] -> (String, [SigId]) -> IO ()
 
 
 sigsWithSpeed recList (ti, idList) =  do
@@ -74,10 +74,10 @@ sigsWithSpeed recList (ti, idList) =  do
                  O.leadSignalsMax (Record.RangeFrom idList, Record.ToModify [Record.SigId "speedsensor1.v"]) .
                  O.pointSize 0.1) (HPlot.RecList recList)
 
-operation :: (Fractional a, Ord id, Show (v a), Show id, V.Walker v,
-              V.Storage v a, V.FromList v, TDisp t2, Tuple.C a, Atom.C a) =>
+operation :: (Fractional d, Ord id, Show (v d), Show id, V.Walker v,
+              V.Storage v d, V.FromList v, TDisp t2, Tuple.C d, Atom.C d) =>
               String
-              -> [(Record.Name, Record s1 s2 t1 t2 id v a)] -> ([Char], (id, id)) -> IO ()
+              -> [(Record.Name, Record s1 s2 t1 t2 id v d d)] -> ([Char], (id, id)) -> IO ()
 
 operation ti rList  (plotTitle, (idx,idy)) = mapM_ f rList
   where f ((Record.Name recTitle), rec) = do

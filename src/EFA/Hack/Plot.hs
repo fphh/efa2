@@ -86,29 +86,29 @@ histogrammIO  stack key = do
 
 -- data Idx rec sec part = Idx rec sec part
 
-newtype RecList s1 s2 t1 t2 id v a = RecList [Record.Record s1 s2 t1 t2 id v a]
-newtype Sq s1 s2 t1 t2 id v a = Sq  (SequData (Record.Record s1 s2 t1 t2 id v a))
-newtype SqList s1 s2 t1 t2 id v a = SqList ([SequData (Record.Record s1 s2 t1 t2 id v a)])
-data RecSq s1 s2 t1 t2 id v a =  RecSq  (Record.Record s1 s2 t1 t2 id v a) (SequData (Record.Record s1 s2 t1 t2 id v a))
+newtype RecList s1 s2 t1 t2 id v d1 d2 = RecList [Record.Record s1 s2 t1 t2 id v d1 d2]
+newtype Sq s1 s2 t1 t2 id v d1 d2 = Sq  (SequData (Record.Record s1 s2 t1 t2 id v d1 d2))
+newtype SqList s1 s2 t1 t2 id v d1 d2 = SqList ([SequData (Record.Record s1 s2 t1 t2 id v d1 d2)])
+data RecSq s1 s2 t1 t2 id v d1 d2 =  RecSq  (Record.Record s1 s2 t1 t2 id v d1 d2) (SequData (Record.Record s1 s2 t1 t2 id v d1 d2))
 
 
 class Time r id where
   record2 :: (Terminal.C term,
-              Fractional a,
+              Fractional d,
               Ord id,
               Show id,
               SV.Walker v,
-              SV.Storage v a,
+              SV.Storage v d,
               SV.FromList v,
               TDisp t1,
               TDisp t2,
-              Atom.C a,
-              Tuple.C a,
-              Ord a,
-              Show (v a),
+              Atom.C d,
+              Tuple.C d,
+              Ord d,
+              Show (v d),
               SV.Singleton v) =>
              (PlOpts.T id WXT.T -> PlOpts.T id term)
-             -> r s1 s2 t1 t2 id v a
+             -> r s1 s2 t1 t2 id v d d
              -> IO ()
 
 -- | Plot a single record / eventually split plot in several windows
@@ -170,20 +170,20 @@ instance Time RecSq id where
 recordIO2 :: (Terminal.C term,
                Ord id,
                Show id,
-               Fractional a,
+               Fractional d,
                SV.Walker v,
-               SV.Storage v a,
+               SV.Storage v d,
                SV.FromList v,
                TDisp typ1,
                TDisp typ0,
-               Tuple.C a,
-               Atom.C a,
-               Ord a,
-               Show (v a),
+               Tuple.C d,
+               Atom.C d,
+               Ord d,
+               Show (v d),
                SV.Singleton v) =>
                (PlOpts.T id term)
               -> String
-              -> [Record.Record s1 s2 typ0 typ1 id v a]
+              -> [Record.Record s1 s2 typ0 typ1 id v d d]
               -> IO ()
 recordIO2 opts wtitle xs = void $ AGP.plot term $ frame $ Fold.fold $ zipWith (plotSingleRecord opts) recIdxList (map treatRecord xs)
   where
@@ -193,22 +193,22 @@ recordIO2 opts wtitle xs = void $ AGP.plot term $ frame $ Fold.fold $ zipWith (p
     term = PlOpts.buildTerminal wtitle opts
 
 recordIO2Sec :: (Terminal.C term,
-                 Ord a,
-                 Show (v a),
+                 Ord d,
+                 Show (v d),
                  SV.Singleton v,
                Ord id,
                Show id,
-               Fractional a,
+               Fractional d,
                SV.Walker v,
-               SV.Storage v a,
+               SV.Storage v d,
                SV.FromList v,
                TDisp typ1,
                TDisp typ0,
-               Tuple.C a,
-               Atom.C a) =>
+               Tuple.C d,
+               Atom.C d) =>
                (PlOpts.T id term)
               -> Idx.Section
-              -> [Record.Record s1 s2 typ0 typ1 id v a]
+              -> [Record.Record s1 s2 typ0 typ1 id v d d]
               -> IO ()
 recordIO2Sec opts (Idx.Section sec) =
    recordIO2 opts ("Sec" ++ show sec)
@@ -218,8 +218,8 @@ recordIO2Sec opts (Idx.Section sec) =
 plotSingleRecord ::
    (Show id, TDisp typ0, TDisp typ1,
     SV.Walker v, SV.FromList v,
-    SV.Storage v a, Fractional a, Atom.C a, Tuple.C a) =>
-   PlOpts.T id term -> Record.Idx -> Record s1 s2 typ0 typ1 id v a -> Plot2D.T a a
+    SV.Storage v d, Fractional d, Atom.C d, Tuple.C d) =>
+   PlOpts.T id term -> Record.Idx -> Record s1 s2 typ0 typ1 id v d d -> Plot2D.T d d
 plotSingleRecord opts recIdx (Record time pMap) =
    foldMap
       (\(key, sig) ->

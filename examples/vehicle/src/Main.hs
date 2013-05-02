@@ -353,7 +353,7 @@ main = do
 
 ---------------------------------------------------------------------------------------
 -- * Plot Time Signals
-{-
+
     ++ [mapM_ (Plots.sigsWithSpeed allSignalsX) plotList]
 
   -- Plots.sigsWithSpeed allSignalsX (head plotList)
@@ -363,7 +363,7 @@ main = do
 -- * Plot Operation Points
 
     ++ [mapM_ (Plots.operation "Operation Points -" (zip datasetsX allSignalsX)) xyList]
--}
+
 ---------------------------------------------------------------------------------------
 -- * Plot Efficiency Curves and Distributions
 
@@ -371,7 +371,7 @@ main = do
 
 ---------------------------------------------------------------------------------------
 -- * Draw Diagrams
-{-     
+     
     -- Section flow
     ++ L.zipWith4 drawAbs
          datasetsX
@@ -432,4 +432,3 @@ main = do
     -- Prediction Based on a specific Record
     ++ [drawAbs (Record.Name "Prediction 900kg") (head sectionToposX) prediction Colors.Yellow]
     -- ++ [drawAbs (Record.Name "Prediction 900kg") (head sequenceFlowTopologyX) prediction Colors.Yellow]
--}

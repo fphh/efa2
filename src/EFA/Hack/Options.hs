@@ -167,14 +167,14 @@ buildTerminal wti opts = f (terminalAcc opts)
 -- | Build the function to condition the record before plotting
 buildPrepFunction :: (Ord id,
                       Show id,
-                      Show (v a),
-                      Fractional a,
-                      Ord a,
+                      Show (v d2),
+                      Fractional d2,
+                      Ord d2,
                       V.Walker v,
-                      V.Storage v a,
+                      V.Storage v d2,
                       V.Singleton v) => T id term ->
-                     (Record.Record s1 s2 t1 t2 id v a ->
-                      Record.Record s1 s2 t1 t2 id v a)
+                     (Record.Record s1 s2 t1 t2 id v d1 d2 ->
+                      Record.Record s1 s2 t1 t2 id v d1 d2)
 buildPrepFunction  opts = f . j . h opts . g opts
   where
     f = Record.normSignals2Range (leadSignalsAcc opts)
