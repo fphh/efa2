@@ -849,6 +849,13 @@ findIndex ::
    (d -> Bool) -> Data (v :> Nil) d -> Maybe Int
 findIndex f = withNestedData (SV.findIndex f)
 
+findIndices ::
+   (SV.Find v, SV.Storage v d) =>
+   (d -> Bool) -> Data (v :> Nil) d -> Data (v :> Nil) Int
+findIndices f (Data x) = Data $ (SV.findIndices f) x
+
+
+
 slice ::
    (SV.Slice v, SV.Storage v d) =>
    Int -> Int -> Data (v :> Nil) d -> Data (v :> Nil) d
@@ -863,3 +870,5 @@ concat :: (SV.Storage v1 (Apply c d),
 concat (Data x) = Data $ SV.concat $ SV.toList x
 
 
+unique ::  (Ord d, SV.Unique v d) => Data (v :> Nil) d -> Data (v :> Nil) d
+unique (Data x) = Data $ SV.unique x 

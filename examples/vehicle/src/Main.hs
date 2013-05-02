@@ -1,5 +1,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE Rank2Types #-}
+
+
 module Main where
 
 ---------------------------------------------------------------------------------------
@@ -26,7 +28,7 @@ import qualified Modules.Analysis as Analysis
 import qualified Modules.Plots as Plots
 import qualified Modules.Signals as Signals
 
---import qualified EFA.Example.Index as XIdx
+import qualified EFA.Example.Index as XIdx
 --import qualified EFA.Example.AssignMap as AssignMap
 -- import qualified EFA.Signal.Plot as Plot
 import qualified EFA.Graph.Topology.Index as Idx
@@ -94,6 +96,13 @@ plotList = [
   ("Generator", Signals.generator),
   ("Battery", Signals.battery)
   ]
+
+-- List of Operation Point Plots                    
+etaList :: [(String,(XIdx.PPos System.Node,XIdx.PPos System.Node,XIdx.PPos System.Node))]
+etaList = [
+  ("Engine and Generator", Signals.etaEngineGenerator),
+  ("Motor and Gearbox", Signals.etaMotorGearbox)
+ ]
 
 -- | A. Generator steht
 
@@ -315,12 +324,6 @@ main = do
   let differenceExtEnvs = zipWith Analysis.difference sequenceFlowTopologyX externalDeltaEnvX
 
 ---------------------------------------------------------------------------------------
--- * Plot Stacks
-
-
-
-
----------------------------------------------------------------------------------------
 -- * Draw Diagrams
   
   let -- drawDelta :: RecordName -> 
@@ -350,7 +353,7 @@ main = do
 
 ---------------------------------------------------------------------------------------
 -- * Plot Time Signals
-
+{-
     ++ [mapM_ (Plots.sigsWithSpeed allSignalsX) plotList]
 
   -- Plots.sigsWithSpeed allSignalsX (head plotList)
@@ -360,15 +363,15 @@ main = do
 -- * Plot Operation Points
 
     ++ [mapM_ (Plots.operation "Operation Points -" (zip datasetsX allSignalsX)) xyList]
-
+-}
 ---------------------------------------------------------------------------------------
 -- * Plot Efficiency Curves and Distributions
 
-    -- ++ mapM_ (Plots.operation "Operation Points -" (zip datasetsX allSignalsX)) xyList
+    ++ [mapM_ (Plots.etaDist "Average Efficiency Curve -" (zip datasetsX powerSignalsX)) etaList]
 
 ---------------------------------------------------------------------------------------
 -- * Draw Diagrams
-     
+{-     
     -- Section flow
     ++ L.zipWith4 drawAbs
          datasetsX
@@ -429,3 +432,4 @@ main = do
     -- Prediction Based on a specific Record
     ++ [drawAbs (Record.Name "Prediction 900kg") (head sectionToposX) prediction Colors.Yellow]
     -- ++ [drawAbs (Record.Name "Prediction 900kg") (head sequenceFlowTopologyX) prediction Colors.Yellow]
+-}

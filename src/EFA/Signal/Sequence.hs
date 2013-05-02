@@ -518,5 +518,5 @@ sectionRecordsFromSequence rec = fmap (Record.slice rec)
 genSequenceSignal :: (V.FromList v, V.Storage v a, Num a) => Sequ -> S.UTSignal v a
 genSequenceSignal xs = S.fromList $ Fold.foldMap f xs
   where
-    f (idx1, idx2) = [1] ++ replicate (idx2-idx1-1) 0 ++ [-1]
+    f (S.SignalIdx idx1, S.SignalIdx idx2) = [1] ++ replicate (idx2-idx1-1) 0 ++ [-1]
 

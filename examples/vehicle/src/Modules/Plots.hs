@@ -1,5 +1,6 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Modules.Plots where
 
@@ -12,8 +13,13 @@ import qualified EFA.Hack.Options as O
 import qualified EFA.Graph.Topology.Node as TDNode
 import qualified EFA.Signal.Vector as V
 
---import EFA.Signal.Typ (Typ,A,T,P,Tt)
---import EFA.Signal.Signal (Signal)
+import EFA.Signal.Typ (--Typ,
+                       A,T,P,Tt,N)
+import qualified EFA.Signal.Signal as Sig
+import qualified EFA.Signal.Base as Base
+import EFA.Signal.Data (--Data,
+                        Nil,(:>))
+
 -- import EFA.Signal.Record (SigId(..), Record(..), PowerRecord, SignalRecord)
 import EFA.Signal.Record as Record
 -- import EFA.Hack.Record as HRecord
@@ -217,4 +223,29 @@ lookupStack energyIndex env =  case M.lookup energyIndex (Env.energyMap signalEn
    where
         Env.Complete _scalarEnv signalEnv = env
 
-
+{-# DEPRECATED etaDist "pg: This Plot should be generated from flow signals solver Data -- thinking needs to be done" #-}
+-- | Version basierend auf originalen Record Signalen 
+etaDist :: (Ord id, 
+            Show id, 
+            Show (v d), 
+            Base.BProd d d, 
+            Ord d,
+            V.Zipper v,
+            V.Walker v,
+            V.Storage v (d, d),
+            V.Storage v d,
+            Fractional d, 
+            V.FromList v, 
+            Atom.C d, 
+            Tuple.C d,
+            V.SortBy v,
+            Base.DArith0 d) => String -> [(Record.Name, PowerRecord id v d)] 
+           -> (String, (Idx.PPos id, Idx.PPos id, Idx.PPos id)) -> IO ()
+etaDist ti rList  (plotTitle, (idIn,idOut,idAbszisse)) = mapM_ f rList
+  where f ((Record.Name recTitle), rec) = do
+          let pin = Record.getSig rec idIn
+              pout = Record.getSig rec idOut
+              pAbszisse = Record.getSig rec idAbszisse
+              eta = Sig.eta pin pout
+              (x,y) = Sig.sortTwo (pAbszisse,eta) 
+          Plot.xyIO (ti ++ "_" ++ plotTitle ++ "_" ++ recTitle)  x y

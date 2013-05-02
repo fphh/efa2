@@ -23,10 +23,32 @@ import Data.Maybe (Maybe(Just, Nothing), maybe, isJust, fromMaybe)
 import Data.Bool (Bool(False, True), (&&), not)
 import Data.Tuple (snd, fst)
 import Text.Show (Show, show)
-import Prelude (Num, Int, Integer, Ord, error, (++), (+), (-), subtract, min, max)
+import Prelude (Num, Int, Integer, Ord, error, (++), (+), (-), subtract, min, max,fmap)
 
 import Data.Ord (Ordering, (>=), (<=))
+import qualified Data.Map as M
 
+-- import Data.Maybe (Maybe(..))
+
+
+
+{- Neat attempt with colossal failure
+newtype VectorIdx = VectorIdx Int
+
+unVectorIdx :: VectorIdx ->  Int
+unVectorIdx (VectorIdx x) = x 
+
+vectorIdx :: Int -> VectorIdx
+vectorIdx x = (VectorIdx x)
+
+
+maybeVectorIdx :: Maybe Int -> Maybe VectorIdx
+maybeVectorIdx x = case x of 
+                    Nothing -> Nothing
+                    Just idx -> Just (VectorIdx idx)
+                    
+instance UV.Unbox VectorIdx where                    
+-}                    
 
 {- |
 We could replace this by suitable:Suitable.
@@ -468,15 +490,19 @@ instance Reverse UV.Vector where
 
 class Find v where
   findIndex :: (Storage v d) => (d -> Bool) -> v d -> Maybe Int
+  findIndices :: (Storage v d) => (d -> Bool) -> v d -> v Int
 
 instance Find [] where
-  findIndex = L.findIndex
+  findIndex x = L.findIndex x
+  findIndices x = L.findIndices x
 
 instance Find V.Vector where
-  findIndex = V.findIndex
+  findIndex x = V.findIndex x
+  findIndices x = V.findIndices x
 
 instance Find UV.Vector where
   findIndex f xs = readUnbox (UV.findIndex f) xs
+  findIndices f xs = readUnbox (UV.findIndices f) xs
 
 
 class Slice v where
@@ -504,3 +530,17 @@ decumulate inStorage outStorage =
 propCumulate :: NonEmpty.T [] Integer -> [Integer] -> Bool
 propCumulate storage incoming =
    decumulate storage (cumulate storage incoming) == incoming
+
+-- | creates a vector of unique and sorted elements
+class Unique v d where
+  unique :: Ord d => v d  -> v d 
+  
+instance Unique [] d where 
+  unique = (\ x -> M.keys . M.fromList $ zip x x)
+  
+instance Unique V.Vector d where 
+  unique =  (\ x -> fromList . M.keys . M.fromList $ zip (toList x) (toList x))
+  
+instance (UV.Unbox d) => Unique UV.Vector  d where 
+  unique =  readUnbox (\ x -> fromList $ M.keys $ M.fromList $ toList $ UV.zip x x)
+  

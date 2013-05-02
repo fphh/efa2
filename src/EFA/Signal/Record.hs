@@ -19,7 +19,10 @@ import EFA.Signal.Signal
            TSamp,
            PSamp,
            PSamp1L,
-           PSamp2LL)
+           PSamp2LL, 
+           FDistrib,
+           UTDistr, 
+           FDistr)
 import EFA.Signal.Typ (Typ,
                        A,
                        D,
@@ -89,6 +92,8 @@ type PowerRecord n = Record Signal Signal (Typ A T Tt) (Typ A P Tt) (Idx.PPos n)
 type FlowRecord n = Record Signal FSignal (Typ A T Tt) (Typ A F Tt) (Idx.PPos n)
 
 type DTimeFlowRecord n = Record FSignal FSignal (Typ D T Tt) (Typ A F Tt) (Idx.PPos n)
+
+data DistRecord n v d = DistRecord (UTDistr v ([S.Class d], [S.SignalIdx])) (M.Map (Idx.PPos n) (FDistr v d))
 
 
 -- | Flow record to contain flow signals assigned to the tree
@@ -385,12 +390,12 @@ newTimeBase (Record time m) newTime = Record newTime (M.map f m)
 -- | Create a new Record by slicing time and all signals on given Indices
 slice ::
    (V.Slice v, V.Storage v a) =>
-   Record s1 s2 t1 t2 id v a -> (Int, Int) {- Range -} -> Record s1 s2 t1 t2 id v a
-slice (Record t m) (idx1,idx2) = Record (f t) (M.map f m)
+   Record s1 s2 t1 t2 id v a -> (S.SignalIdx, S.SignalIdx) {- Range -} -> Record s1 s2 t1 t2 id v a
+slice (Record t m) (sidx1@(S.SignalIdx idx1),S.SignalIdx idx2) = Record (f t) (M.map f m)
   where f ::
            (V.Slice v, V.Storage v a) =>
            TC s t (Data (v :> Nil) a) -> TC s t (Data (v :> Nil) a)
-        f = S.slice idx1 (idx2-idx1+1)
+        f = S.slice sidx1 (idx2-idx1+1)
 
 
 {- | Filter Sequence Flow
@@ -555,3 +560,29 @@ partIntegrate :: (Num a,
                   BProd a a) => PowerRecord node v a -> FlowRecord node v a
 partIntegrate rec@(Record time _) = rmap (S.partIntegrate time) rec
 
+
+distribution :: (V.FromList v, 
+                 V.Filter v, 
+                 Ord d,
+                 V.Unique v (S.Class d),
+                 V.Storage v S.SignalIdx,
+                 V.Storage v Int,
+                 V.Storage v (S.Class d), 
+                 RealFrac d, 
+                 Eq d,
+                 Num d,
+                 V.Walker v,
+                 V.Storage v d,
+                 V.Storage v ([S.Class d], [S.SignalIdx]),
+                 V.Lookup v,
+                 BSum d, 
+                 V.Find v, 
+                 Ord n, 
+                 Show n, 
+                 Show (v d)) => FlowRecord n v d -> [Idx.PPos n] -> d -> d -> DistRecord n v d
+distribution rec@(Record _ pMap) xs intervall offset = DistRecord classification energyDistribution 
+  where classification = S.combineDistributions $ 
+                         map ((S.genDistribution1D $ S.classifyEven intervall offset) . 
+                              S.changeSignalType . S.untype . 
+                              getSig rec) xs   
+        energyDistribution =  M.map (S.calcDistributionValues classification) pMap

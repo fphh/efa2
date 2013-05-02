@@ -245,3 +245,8 @@ xyGenerator = (SigId "engine1._speed_log", SigId "generator._torque_log")
 xyMotor :: (SigId,SigId)
 xyMotor = (SigId "motor._speed_log", SigId "motor._torque_log")
 
+etaEngineGenerator :: (XIdx.PPos Node,XIdx.PPos Node,XIdx.PPos Node)
+etaEngineGenerator = (XIdx.ppos  Tank ConBattery, XIdx.ppos ConBattery Tank, XIdx.ppos ConBattery Tank)
+
+etaMotorGearbox :: (XIdx.PPos Node,XIdx.PPos Node,XIdx.PPos Node)
+etaMotorGearbox = (XIdx.ppos ConES ConFrontBrakes, XIdx.ppos ConFrontBrakes ConES, XIdx.ppos ConFrontBrakes ConES)
