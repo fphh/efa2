@@ -123,6 +123,23 @@ adjustSigns topo (FlowState state) (Record dt flow) =
                       where ppos = XIdx.ppos idx1 idx2
 
 
+adjustSignsIgnoreUnknownPPos ::
+  (Show (v a), DArith0 a,
+  SV.Walker v, SV.Storage v a, Ord node, Show node) =>
+  Topology node ->
+  FlowState node -> FlowRecord node v a -> FlowRecord node v a
+adjustSignsIgnoreUnknownPPos topo (FlowState state) (Record dt flow) =
+   Record dt (M.foldrWithKey g M.empty uniquePPos)
+      where f m lkup ppos acc = 
+              maybe acc (flip (M.insert ppos) acc) (lkup ppos m)
+            g ppos si acc =
+              foldr (f flow $ (modify .) . M.lookup) acc [ppos, Idx.flip ppos]
+                where modify = case si of { NSign -> fmap neg; _ -> id }
+            uniquePPos = foldr h M.empty (Gr.edges topo)
+              where h (DirEdge idx1 idx2) =
+                      f state M.lookup (XIdx.ppos idx1 idx2)
+
+
 -- | Function to calculate flow states for the whole sequence
 genSequFState ::
   (SV.Walker v, SV.Storage v a, BSum a, Fractional a, Ord a) =>
@@ -142,6 +159,14 @@ genSequFlowTops ::
   Topology node -> SequData (FlowState node) -> SequData (FlowTopology node)
 genSequFlowTops topo = fmap (genFlowTopology topo)
 
+genSequFlowTopsIgnoreUnknownPPos ::
+  (Ord node, Show node) =>
+  Topology node -> SequData (FlowState node) -> SequData (FlowTopology node)
+genSequFlowTopsIgnoreUnknownPPos topo =
+  fmap (genFlowTopologyIgnoreUnknownPPos topo)
+
+
+
 -- | Function to generate Flow Topology -- only use one state per signal
 genFlowTopology ::
   (Ord node, Show node) =>
@@ -155,6 +180,23 @@ genFlowTopology topo (FlowState fs) =
             NSign -> Gr.EDirEdge $ DirEdge idx2 idx1
             ZSign -> Gr.EUnDirEdge $ Gr.UnDirEdge idx1 idx2) $
    Gr.edges topo
+
+genFlowTopologyIgnoreUnknownPPos ::
+  (Ord node, Show node) =>
+  Topology node -> FlowState node -> FlowTopology node
+genFlowTopologyIgnoreUnknownPPos topo (FlowState fs) =
+   Gr.fromList (labNodes topo) $ map (flip (,) ()) $
+   map
+      (\(DirEdge idx1 idx2) ->
+        let deflt = Gr.EUnDirEdge $ Gr.UnDirEdge idx1 idx2
+        in  maybe deflt
+              (\si -> case si of
+                           PSign -> Gr.EDirEdge $ DirEdge idx1 idx2
+                           NSign -> Gr.EDirEdge $ DirEdge idx2 idx1
+                           ZSign -> deflt) $
+              M.lookup (XIdx.ppos idx1 idx2) fs) $
+   Gr.edges topo
+
 
 
 mkSectionTopology ::

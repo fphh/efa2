@@ -19,6 +19,8 @@ module EFA.Signal.Plot (
    stack, stackAttr, stackIO,
    stacks, stacksAttr, stacksIO,
    getData,
+   plotTableLinear,
+   plotTable2D,
    ) where
 
 import qualified EFA.Signal.SequenceData as SD
@@ -43,6 +45,7 @@ import EFA.Report.Base (UnitScale(UnitScale), getUnitScale)
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
 
+import qualified EFA.IO.TableParser as Table
 
 import qualified Graphics.Gnuplot.Advanced as Plot
 -- import qualified Graphics.Gnuplot.Advanced as AGP
@@ -168,6 +171,7 @@ xyAttr ti x y =
    Opts.grid True $
    Opts.deflt
 
+
 xyStyle ::
    Int -> Plot2D.T x y -> Plot2D.T x y
 xyStyle n =
@@ -177,6 +181,7 @@ xyStyle n =
       LineSpec.lineWidth 1 $
       LineSpec.title (show $ "Signal" ++ show n) $
       LineSpec.deflt
+
 
 xyIO ::
    (XY tcX tcY) =>
@@ -261,6 +266,38 @@ instance
       (TC s t1 (Data (v2 :> v1 :> Nil) x))
       (TC s t2 (Data (v4 :> v3 :> Nil) y)) where
    xy x y = xy (toSigList x) (toSigList y)
+
+-- | Plotting Tables
+
+transposeTable ::
+  ([[Double]] -> [[Double]]) ->
+  Table.T Double -> Table.T Double
+transposeTable f (Table.T (x, y) lst) =
+  Table.T (y, x) (SV.transpose $ f lst)
+
+
+plotTable ::
+  ([[Double]] -> [[Double]]) ->
+  String -> Table.Map Double ->
+  IO ()
+plotTable f str tm =
+  case transposeTable f `fmap` M.lookup str tm of
+       Just (Table.T _ ds) ->
+            case ds of
+                 [] -> error "plotTable: no data"
+                 [_] -> error "plotTable: only x axis, no y values"
+                 (as:bbs) ->
+                   let xs :: S.TSig  -- Was fuer Signaltypen?
+                       xs = S.fromList as
+                       yys :: [S.TSig]
+                       yys = map S.fromList bbs
+                   in  xyIO str xs yys
+       Nothing -> error $ "Table " ++ str ++ " not found!"
+
+plotTableLinear, plotTable2D ::
+  String -> Table.Map Double -> IO ()
+plotTableLinear = plotTable id
+plotTable2D = plotTable tail
 
 
 -- | Plotting Surfaces
