@@ -8,17 +8,64 @@ module Modules.Plots where
 
 import qualified EFA.Example.Index as XIdx
 import qualified EFA.Signal.Plot as Plot
+import qualified EFA.Signal.PlotNeu as PlotNeu
 import qualified EFA.Hack.Plot as HPlot
 import qualified EFA.Hack.Options as O
 import qualified EFA.Graph.Topology.Node as TDNode
 import qualified EFA.Signal.Vector as V
 
---import EFA.Signal.Typ (--Typ,
---                       A,T,P,Tt,N)
+-- import qualified Graphics.Gnuplot.Advanced as Plot
+-- import qualified Graphics.Gnuplot.Advanced as AGP
+
+-- import qualified Graphics.Gnuplot.Terminal.X11 as X11
+-- import qualified Graphics.Gnuplot.Terminal.WXT as WXT
+
+import qualified Graphics.Gnuplot.Terminal as Terminal
+import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
+-- import qualified Graphics.Gnuplot.Plot as Plt
+import qualified Graphics.Gnuplot.Plot.TwoDimensional as Plot2D
+-- import qualified Graphics.Gnuplot.Plot.ThreeDimensional as Plot3D
+import qualified Graphics.Gnuplot.Graph.TwoDimensional as Graph2D
+
+-- import qualified Graphics.Gnuplot.Graph as Graph
+import qualified Graphics.Gnuplot.Value.Atom as Atom
+import qualified Graphics.Gnuplot.Value.Tuple as Tuple
+
+import qualified Graphics.Gnuplot.LineSpecification as LineSpec
+-- import qualified Graphics.Gnuplot.ColorSpecification as ColourSpec
+
+-- import qualified Graphics.Gnuplot.Frame as Frame
+-- import qualified Graphics.Gnuplot.Frame.Option as Opt
+-- import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
+-- import qualified Graphics.Gnuplot.Frame.OptionSet.Style as OptsStyle
+-- import qualified Graphics.Gnuplot.Frame.OptionSet.Histogram as Histogram
+
+import EFA.Report.Typ (TDisp, 
+                       DisplayType(Typ_T), 
+                       getDisplayUnit, 
+                       DeltaDisp,
+                       getDisplayTypName)
+
+import EFA.Signal.Typ (Typ,
+                       A,
+                       T,
+                       P,
+                       Tt,
+                       N
+                      )
 import qualified EFA.Signal.Signal as Sig
+import EFA.Signal.Signal(TC,(./),
+                         FSignal, 
+                         FFSignal,
+                         PFSignal,
+                         DTFSignal,
+                         FDistr,
+                         PDistr, 
+                         NDistr)
+
 import qualified EFA.Signal.Base as Base
---import EFA.Signal.Data (--Data,
---                        Nil,(:>))
+import EFA.Signal.Data (Data,
+                        Nil,(:>))
 
 -- import EFA.Signal.Record (SigId(..), Record(..), PowerRecord, SignalRecord)
 import EFA.Signal.Record as Record
@@ -55,12 +102,13 @@ import qualified Graphics.Gnuplot.Value.Tuple as Tuple
 import qualified Data.Foldable as Fold
 import qualified Data.Map as M
 
+import Control.Functor.HT (void)
 
 import qualified EFA.Example.AssignMap as AssignMap
 
 --import Debug.Trace
 
---import Data.Monoid ((<>))
+import Data.Monoid ((<>))
 
 sigsWithSpeed ::(Fractional d, Ord d, Show (v d), V.Walker v, V.Storage v d,
                                  V.Singleton v, V.FromList v, TDisp t2, TDisp t1, Atom.C d,
@@ -75,11 +123,14 @@ sigsWithSpeed recList (ti, idList) =  do
                  O.pointSize 0.1) (HPlot.RecList recList)
 
 operation :: (Fractional d, Ord id, Show (v d), Show id, V.Walker v,
-              V.Storage v d, V.FromList v, TDisp t2, Tuple.C d, Atom.C d) =>
-              String
-              -> [(Record.Name, Record s1 s2 t1 t2 id v d d)] -> ([Char], (id, id)) -> IO ()
+              V.Storage v d, V.FromList v, TDisp t2, Tuple.C d, Atom.C d, 
+              Terminal.C term) =>
+              String ->
+              term ->
+              (LineSpec.T -> LineSpec.T) -> 
+              [(Record.Name, Record s1 s2 t1 t2 id v d d)] -> ([Char], (id, id)) -> IO ()
 
-operation ti rList  (plotTitle, (idx,idy)) = mapM_ f rList
+operation ti term opts rList  (plotTitle, (idx,idy)) = mapM_ f rList
   where f ((Record.Name recTitle), rec) = do
           let x = getSig rec idx
               y = getSig rec idy
@@ -223,29 +274,77 @@ lookupStack energyIndex env =  case M.lookup energyIndex (Env.energyMap signalEn
    where
         Env.Complete _scalarEnv signalEnv = env
 
-{-# DEPRECATED etaDist "pg: This Plot should be generated from flow signals solver Data -- thinking needs to be done" #-}
 -- | Version basierend auf originalen Record Signalen 
-etaDist :: (Ord id, 
-            Show id, 
-            Show (v d), 
-            Base.BProd d d, 
-            Ord d,
-            V.Zipper v,
-            V.Walker v,
-            V.Storage v (d, d),
-            V.Storage v d,
-            Fractional d, 
-            V.FromList v, 
-            Atom.C d, 
-            Tuple.C d,
-            V.SortBy v,
-            Base.DArith0 d) => String -> [(Record.Name, PowerRecord id v d)] 
-           -> (String, (Idx.PPos id, Idx.PPos id, Idx.PPos id)) -> IO ()
-etaDist ti rList  (plotTitle, (idIn,idOut,idAbszisse)) = mapM_ f rList
+etaDistribution1D :: (Ord id, 
+                      Show id, 
+                      Show (v d), 
+                      Base.BProd d d, 
+                      Ord d,
+                      V.Zipper v,
+                      V.Walker v,
+                      V.Storage v (d, d),
+                      V.Storage v d,
+                      Fractional d, 
+                      V.FromList v, 
+                      Atom.C d, 
+                      Tuple.C d,
+                      V.SortBy v,
+                      V.Unique v (Sig.Class d),
+                      V.Storage v Sig.SignalIdx,
+                      V.Storage v Int,
+                      V.Storage v (Sig.Class d),
+                      V.Storage v ([Sig.Class d], [Sig.SignalIdx]),
+                      RealFrac d, 
+                      V.Lookup v, 
+                      V.Find v, 
+                      Base.BSum d,
+                      Base.DArith0 d, 
+                      V.Storage v (d, (d, d)),
+                      V.Singleton v) => 
+                     String  -> d -> d -> [(Record.Name, DTimeFlowRecord id v d)] 
+                     -> (String, (Idx.PPos id, Idx.PPos id, Idx.PPos id)) -> IO ()
+etaDistribution1D ti  intervall offset rList  (plotTitle, (idIn,idOut,idAbszisse)) = mapM_ f rList
   where f ((Record.Name recTitle), rec) = do
-          let pin = Record.getSig rec idIn
-              pout = Record.getSig rec idOut
-              pAbszisse = Record.getSig rec idAbszisse
-              eta = Sig.eta pin pout
+          let ein = getSig rec idIn
+              eout = getSig rec idOut
+              eAbszisse = getSig rec idAbszisse
+              pAbszisse = eAbszisse./dtime
+              dtime = getTime rec
+              eta = Sig.calcEtaWithSign eout ein eout
+              (pDist, einDist, eoutDist, nDist) = Sig.etaDistibution1D intervall offset
+                                                 dtime ein eout eout
               (x,y) = Sig.sortTwo (pAbszisse,eta) 
-          Plot.xyIO (ti ++ "_" ++ plotTitle ++ "_" ++ recTitle)  x y
+          etaIO (ti ++ "_" ++ plotTitle ++ "_" ++ recTitle) x y  pDist 
+            (Sig.scale (Sig.norm eoutDist) 100) nDist      
+
+
+etaIO :: (Fractional d,
+          V.Walker v,
+          V.Storage v d,
+          V.FromList v,
+          Atom.C d,
+          Tuple.C d) => 
+         String -> Sig.PFSignal v d -> Sig.NFSignal v d -> 
+         Sig.PDistr v d -> Sig.FDistr v d -> Sig.NDistr v d -> IO ()
+etaIO ti p n pDist eDist nDist =
+   Plot.run DefaultTerm.cons 
+   (Plot.xyAttr ti p n) $ 
+   Plot.xy p n <>
+   Plot.xy pDist nDist <> 
+   Plot.xy pDist eDist
+   
+
+etaIO2 :: (Fractional d,
+          V.Walker v,
+          V.Storage v d,
+          V.FromList v,
+          Atom.C d,
+          Tuple.C d) => 
+         String -> Sig.PFSignal v d -> Sig.NFSignal v d -> 
+         Sig.PDistr v d -> Sig.FDistr v d -> Sig.NDistr v d -> IO ()
+etaIO2 ti p n pDist eDist nDist =
+   PlotNeu.run DefaultTerm.cons 
+   (PlotNeu.xyFrame ti p n) $ 
+   PlotNeu.xy id show p n <>
+   PlotNeu.xy id show pDist nDist <> 
+   PlotNeu.xy id show pDist eDist

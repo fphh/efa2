@@ -264,13 +264,24 @@ infix 6 &+, &-
 ----------------------------------------------------------
 -- New Synonyms           ]
 
-type UTSignal v a = TC Signal (Typ UT UT UT) (Data (v :> Nil) a)
+-- Time Signals
 type TSignal v a = TC Signal (Typ A T Tt) (Data (v :> Nil) a)
+type PSignal v a = TC Signal (Typ A P Tt) (Data (v :> Nil) a)
+type UTSignal v a = TC Signal (Typ UT UT UT) (Data (v :> Nil) a)
 
+-- Flow Signals
 type FFSignal v a = TC FSignal (Typ A F Tt) (Data (v :> Nil) a)
+type UTFSignal v a = TC FSignal (Typ UT UT UT) (Data (v :> Nil) a)
+type PFSignal v a =  TC FSignal (Typ A P Tt) (Data (v :> Nil) a)
+type NFSignal v a =  TC FSignal (Typ A N Tt) (Data (v :> Nil) a)
+type DTFSignal v a =  TC FSignal (Typ D T Tt) (Data (v :> Nil) a)
 
+
+-- Distributions
 type UTDistr v a = TC FDistrib (Typ UT UT UT) (Data (v :> Nil) a)
 type FDistr v a = TC FDistrib (Typ A F Tt) (Data (v :> Nil) a)
+type PDistr v a = TC FDistrib (Typ A P Tt) (Data (v :> Nil) a)
+type NDistr v a = TC FDistrib (Typ A N Tt) (Data (v :> Nil) a)
 
 ----------------------------------------------------------
 -- Convenience Type Synonyms
@@ -1294,23 +1305,23 @@ concat ::   (SV.Storage v2 (v1 (Apply c d)),
            TC s t (Data (v2 :> v1 :> c) d) -> TC s t (Data (v1 :> c) d)
 concat (TC x) = TC (D.concat x) 
 
-
+ {-
 -- | Calculate an efficiency Time Signal from two Power time signals, 
 -- | p1 >= 0 means eta=p2/p1 else p1/p2
-eta ::  (SV.Storage v1 d1, 
+calcEta ::  (SV.Storage v1 d1, 
          SV.Storage v1 (d1, d1), 
          SV.Zipper v1, SV.Walker v1,Ord d1,Num d1, BProd d1 d1) => 
         TC Signal (Typ A P Tt) (Data (v1 :> Nil) d1) ->  
         TC Signal (Typ A P Tt) (Data (v1 :> Nil) d1) -> 
         TC Signal (Typ A N Tt) (Data (v1 :> Nil) d1) 
-eta p1 p2 = tmap f $ zip p1 p2
+calcEta p1 p2 = tmap f $ zip p1 p2
   where f :: (Ord d1,Num d1,BProd d1 d1)  => TC Sample (Typ A P Tt) (Data Nil (d1,d1)) ->
              TC Sample (Typ A N Tt) (Data Nil d1)
         f xy = if x P.>= (toSample 0) 
                then y./x 
                else x./y
           where (x,y) = unzip xy     
-
+-}
 
 -- * Distributions
 
@@ -1334,7 +1345,7 @@ genDistribution1D :: (SV.Unique v (Class d),
                       SV.Storage v Int,
                       SV.Storage v SignalIdx,
                       SV.Find v) =>
-                     (d -> Class d) -> UTSignal v d -> UTDistr v ([Class d], [SignalIdx])
+                     (d -> Class d) -> UTFSignal v d -> UTDistr v ([Class d], [SignalIdx])
 genDistribution1D classify sig = changeSignalType $ map count classes
   where classSig = map classify sig
         classes = unique classSig
@@ -1360,7 +1371,7 @@ combineWith f xs ys =
   fromList $ liftA2 f (toList xs) (toList ys)
 
 
-calcDistributionValues ::
+{-calcDistributionValues ::
   (Num d,
    SV.Walker v,
    SV.Storage v ([Class d], [SignalIdx]),
@@ -1368,6 +1379,65 @@ calcDistributionValues ::
    SV.Storage v d,
    SV.Lookup v,
    BSum d) =>
-  UTDistr v ([Class d],[SignalIdx]) -> FFSignal v d -> FDistr v d
+  UTDistr v ([Class d],[SignalIdx]) -> 
+  TC FSignal t (Data (v :> Nil) d) -> 
+  TC FDistrib t (Data (v :> Nil) d)-}
+calcDistributionValues :: (Eq d1, Num d1, SV.Walker v, SV.Storage v d1, SV.Lookup v,
+                           BSum d1, D.Storage c d1, D.Storage c (a, [SignalIdx]),
+                           D.Map c, FoldType s, SumType s ~ Scalar) =>
+                          TC FDistrib (Typ UT UT UT) (Data c (a, [SignalIdx]))
+                          -> TC s typ (Data (v :> Nil) d1)
+                          -> TC FDistrib (Typ delta1 t1 p1) (Data c d1)
 calcDistributionValues d s = setType $ map f d
   where f = fromScalar . sum . subSignal1D s . P.snd
+
+-- | etrigger or respectively ptrigger is the power signal used for classification
+-- | usually local ein or eout is used       
+-- | pDist is the effective average trigger power which should be used as 
+-- | Abszisse for efficiency over power         
+etaDistibution1D :: (P.RealFrac d,
+                     SV.Zipper v, 
+                     B.BProd d d, 
+                     SV.Lookup v, 
+                     B.BSum d, 
+                     Ord d,
+                     SV.Walker v,
+                     SV.Storage v d,
+                     SV.FromList v,
+                     SV.Find v, 
+                     SV.Unique v (Class d),
+                     SV.Storage v SignalIdx,
+                     SV.Storage v Int,
+                     SV.Storage v (Class d),
+                     SV.Storage v ([Class d], [SignalIdx]),
+                     SV.Storage v (d, d), 
+                     SV.Singleton v,
+                     SV.Storage v (d, (d, d))) => 
+                    d -> d -> DTFSignal v d ->  FFSignal v d -> FFSignal v d  -> FFSignal v d ->
+                    (PDistr v d, FDistr v d,FDistr v d, NDistr v d)
+etaDistibution1D intervall offset dtime  ein eout etrigger  = (pDist, einDist, eoutDist, nDist)  
+  where dist = genDistribution1D (classifyEven intervall offset) $ untype ptrigger
+        ptrigger = etrigger./dtime
+        einDist = calcDistributionValues dist ein        
+        eoutDist = calcDistributionValues dist eout       
+        etriggerDist = calcDistributionValues dist etrigger    
+        dtimeDist = calcDistributionValues dist dtime
+        nDist = calcEtaWithSign etriggerDist einDist eoutDist 
+        pDist = etriggerDist./ dtimeDist
+        
+        
+-- | Calculate an efficiency Time Signal from two Power time signals, 
+-- | pSign >= 0 means eta=p2/p1 else p1/p2 // PSign is usually p1 or p2
+calcEtaWithSign :: (SV.Storage v1 d1, 
+                    SV.Storage v1 (d1, (d1, d1)), 
+                    Fractional d1, 
+                    Ord d1,
+                    SV.Zipper v1,
+                    SV.Walker v1,
+                    SV.Storage v1 (d1, d1)) =>
+                   TC s (Typ A F Tt) (Data (v1 :> Nil) d1) ->
+                   TC s (Typ A F Tt) (Data (v1 :> Nil) d1) ->  
+                   TC s (Typ A F Tt) (Data (v1 :> Nil) d1) -> 
+                   TC s (Typ A N Tt) (Data (v1 :> Nil) d1) 
+calcEtaWithSign pSign p1 p2 = changeType $ map f $ changeSignalType $ zip pSign $ changeSignalType $ zip p1 p2
+  where f (z,(x,y)) = if z P.>= 0 then y P./ x else x P./ y

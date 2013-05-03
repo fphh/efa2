@@ -346,7 +346,7 @@ main = do
     --  Draw.topology2pdf System.topology
     -- Draw.topologyWithEdgeLabels System.edgeNames System.topology,
     ]
-
+{-
 
 --  ++ [putStrLn ("Number of possible flow states: " ++ show (length System.flowStates))]
     ++ [Draw.xterm $ Draw.flowTopologies (take 20 System.flowStates)]
@@ -363,12 +363,13 @@ main = do
 -- * Plot Operation Points
 
     ++ [mapM_ (Plots.operation "Operation Points -" (zip datasetsX allSignalsX)) xyList]
-
+-}
 ---------------------------------------------------------------------------------------
 -- * Plot Efficiency Curves and Distributions
 
-    ++ [mapM_ (Plots.etaDist "Average Efficiency Curve -" (zip datasetsX powerSignalsX)) etaList]
-
+    ++ [mapM_ (Plots.etaDistribution1D "Average Efficiency Curve -" 10000 5000
+               (zip datasetsX (map (Record.diffTime . Record.partIntegrate) powerSignalsX))) etaList]
+{-
 ---------------------------------------------------------------------------------------
 -- * Draw Diagrams
      
@@ -432,3 +433,4 @@ main = do
     -- Prediction Based on a specific Record
     ++ [drawAbs (Record.Name "Prediction 900kg") (head sectionToposX) prediction Colors.Yellow]
     -- ++ [drawAbs (Record.Name "Prediction 900kg") (head sequenceFlowTopologyX) prediction Colors.Yellow]
+-}
