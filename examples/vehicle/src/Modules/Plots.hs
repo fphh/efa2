@@ -115,7 +115,6 @@ sigsWithSpeed ::(Fractional d, Ord d, Show (v d), V.Walker v, V.Storage v d,
                                  Tuple.C d) =>
                                 [Record s1 s2 t1 t2 SigId v d d] -> (String, [SigId]) -> IO ()
 
-
 sigsWithSpeed recList (ti, idList) =  do
   HPlot.record2 (O.title ti .
                  O.extract idList .
@@ -145,8 +144,8 @@ stack:: (Show a, Ord i, FormatValue i, TDNode.C a, Show i) =>
         (String, Env.Complete
         a t (EqRecord.Absolute (Result.Result (Stack.Stack i Double)))) ->
         IO ()
+
 stack ti energyIndex eps (recName,env) = do
---   AssignMap.print $ lookupStack energyIndex env
    Plot.stackIO ("Record " ++ recName ++ "-" ++ ti)
       (formatValue $ Idx.delta $ Var.index energyIndex)
       (AssignMap.threshold eps $ lookupStack energyIndex env)
@@ -214,11 +213,11 @@ sectionStackRow ti energyIndex eps env =
          Stack.assignDeltaMap . snd) $ stacks)
    where stacks = lookupAllStacks energyIndex env
  
--- | Get all Stacks for a certain power position
 lookupAllStacks :: (Ord i, Ord node, Eq node) => Idx.Energy node
                    -> Env.Complete node t 
                          (EqRecord.Absolute (Result.Result (Stack.Stack i Double)))
                    -> [(Idx.InSection Idx.Energy node,Stack.Stack i Double)]
+
 lookupAllStacks e0 =
    M.toList .
    fmap Arith.integrate .
@@ -236,6 +235,7 @@ cumStack ::
    Env.Complete node t
       (EqRecord.Absolute (Result.Result (Stack.Stack i Double))) ->
    IO ()
+
 cumStack ti energyIndex eps env =
    Plot.stackIO ti (formatValue $ Idx.delta energyIndex) $
    AssignMap.threshold eps $
@@ -249,13 +249,13 @@ lookupCumStack ::
    Env.Complete node t
       (EqRecord.Absolute (Result.Result (Stack.Stack i v))) ->
    M.Map (M.Map i Stack.Branch) a
+
 lookupCumStack e0 =
    Fold.foldMap (Stack.assignDeltaMap . Arith.integrate) .
    M.mapMaybe Result.toMaybe .
    fmap EqRecord.unAbsolute .
    M.filterWithKey (\(Idx.InSection _sec e) _ -> e == e0) .
    Env.energyMap . Env.signal
-
 
 lookupStack:: (Ord i, Ord node, Show node) =>
                               XIdx.Energy node
@@ -303,6 +303,7 @@ etaDistribution1D :: (Ord id,
                       V.Singleton v) => 
                      String  -> d -> d -> [(Record.Name, DTimeFlowRecord id v d)] 
                      -> (String, (Idx.PPos id, Idx.PPos id, Idx.PPos id)) -> IO ()
+
 etaDistribution1D ti  intervall offset rList  (plotTitle, (idIn,idOut,idAbszisse)) = mapM_ f rList
   where f ((Record.Name recTitle), rec) = do
           let ein = getSig rec idIn

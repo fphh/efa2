@@ -9,15 +9,21 @@
 
 module EFA.Signal.PlotNeu (
    run,
-   signal, signalFrame, signalStyle, signalIO,
-   xy, xyBasic, xyFrame, xyStyle, xyIO,
-   surface, surfaceIO,
-   recordBasic, recordStyle, recordFrame, recordIO, recordIOList,
-   sequenceIO,
-   recordSplitPlus, recordSplit, sequenceSplit,
-   recordSelect, sequenceSelect,
-   stack, stackFrame, stackIO,
-   stacks, stacksFrame, stacksIO,
+   signal, signalFrame, signalStyle, 
+   -- signalIO,
+   xy, xyBasic, xyFrame, xyStyle, 
+   -- xyIO,
+   surface, 
+   --surfaceIO,
+   record, recordStyle, recordFrame, 
+   -- recordIO, recordIOList,
+   -- sequenceIO,
+   -- recordSplitPlus, recordSplit, sequenceSplit,
+   -- recordSelect, sequenceSelect,
+   stack, stackFrame, 
+   -- stackIO,
+   stacks, stacksFrame, 
+   -- stacksIO,
    getData,
    ) where
 
@@ -102,21 +108,20 @@ getData x = S.toList $ S.map (* fromRational s) x
 run ::
    (Terminal.C term, Graph.C graph) =>
    term -> Opts.T graph -> Plt.T graph -> IO ()
-run terminal opts plt =
-   void $ Plot.plotSync terminal $ Frame.cons opts plt
+run terminal frameAttr plt =
+   void $ Plot.plotSync terminal $ Frame.cons frameAttr plt
 
-
-(+++) :: (LineSpec.T -> LineSpec.T) -> (LineSpec.T -> LineSpec.T) -> (LineSpec.T -> LineSpec.T)
-(+++) opts change = opts . change  
 
 -- | Simple Signal Plotting -- plot signal values against signal index --------------------------------------------------------------
 
 
 -- | Default Signal Plot
+{-
 signalIO ::
    (Signal signal, Terminal.C term) =>
    String -> term -> (LineSpec.T -> LineSpec.T) -> signal -> IO ()
 signalIO ti terminal opts x = run terminal (signalFrame ti x)  (signal opts x)
+-}
 
 -- | Default Frame Options
 signalFrame ::
@@ -163,13 +168,13 @@ instance
 
 
 -- | Plotting Signals against each other, can be also used for time plots and curves over power -----------------------------
-
+{-
 xyIO ::
    (XY tcX tcY, Terminal.C term) =>
    String -> term -> (LineSpec.T -> LineSpec.T)-> (Int -> String) -> tcX -> tcY -> IO ()
 xyIO ti terminal opts legend x y =
    run terminal (xyFrame ti x y) (xy opts legend x y)
-
+-}
 xyFrame ::
    (AxisLabel tcX, AxisLabel tcY, Graph.C graph) =>
    String -> tcX -> tcY -> Opts.T graph
@@ -212,7 +217,7 @@ instance
     Atom.C y, Tuple.C y, Fractional y) =>
    XY (TC s t1 (Data (v1 :> Nil) x))
       (TC s t2 (Data (v2 :> Nil) y)) where
-   xy opts legend = xyBasic ((LineSpec.title $ legend 0) +++ opts)
+   xy opts legend = xyBasic ((LineSpec.title $ legend 0) . opts)
 
 instance
    (TDisp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 x,
@@ -224,7 +229,7 @@ instance
    xy opts legend x ys =
       mconcat $
       zipWith
-         (\ n y -> xyBasic ((LineSpec.title $ legend n) +++ opts) x y)
+         (\ n y -> xyBasic ((LineSpec.title $ legend n) . opts) x y)
          [(0::Int)..] ys
 
 instance
@@ -237,7 +242,7 @@ instance
    xy opts legend xs ys =
       mconcat $
       zipWith3
-         (\ n x y -> xyBasic ((LineSpec.title $ legend n) +++ opts) x y)
+         (\ n x y -> xyBasic ((LineSpec.title $ legend n) . opts) x y)
          [(0::Int)..] xs ys
 
 instance
@@ -268,7 +273,7 @@ instance
 
 
 -- | Plotting Records ---------------------------------------------------------------
-
+{-
 recordIO ::
    (Fractional d,
     Show id, Ord id,
@@ -282,22 +287,9 @@ recordIO ::
    Record s1 s2 t1 t2 id v d d -> IO ()
 recordIO ti term opts x =
    run term (recordFrame ti) (recordBasic opts x)
+-}
 
-recordIOList ::
-   (Fractional d,
-    Show id, Ord id,
-    SV.Walker v, SV.Storage v d, SV.FromList v,
-    TDisp t2, TDisp t1,
-    Tuple.C d, Atom.C d,
-    Terminal.C term) =>
-   String -> 
-   term -> 
-   (LineSpec.T -> LineSpec.T) ->
-   [Record s1 s2 t1 t2 id v d d] -> IO ()
-recordIOList ti term opts xs =
-    run term (recordFrame ti) $ foldMap (recordBasic opts) xs
   
--- | Line Style
 recordStyle :: (LineSpec.T -> LineSpec.T) -> Plot2D.T x y -> Plot2D.T x y   
 recordStyle opts = 
    fmap $ Graph2D.lineSpec $
@@ -307,7 +299,6 @@ recordStyle opts =
       LineSpec.lineWidth 1.6 $
       LineSpec.deflt
 
--- | Plot Frameibutes
 recordFrame ::
    (Graph.C graph) =>
    String -> Opts.T graph
@@ -318,24 +309,58 @@ recordFrame ti =
    Opts.yLabel ("")
    Opts.deflt
 
-recordBasic ::
+record ::
    (Show id, Ord id, TDisp typ0, TDisp typ1,
     SV.Walker v, SV.FromList v,
-    SV.Storage v d, Fractional d, Atom.C d, Tuple.C d) =>
+    SV.Storage v d1, Fractional d1, Atom.C d1, Tuple.C d1, Atom.C d2, Tuple.C d2, Fractional d2, SV.Storage v d2) =>
+   (id -> String) ->
    (LineSpec.T -> LineSpec.T) -> 
-   Record s1 s2 typ0 typ1 id v d d -> Plot2D.T d d
-recordBasic opts (Record time pMap) =
+   Record s1 s2 typ0 typ1 id v d1 d2 -> Plot2D.T d1 d2
+record showKey opts (Record time pMap) =
    Fold.fold $
    M.mapWithKey
       (\key (col, sig) ->
-         recordStyle (opts +++ (LineSpec.title $ show key) +++ (lineColour $ Colour.unC col)) $
+         recordStyle (opts . (LineSpec.title $ showKey key) . (lineColour $ Colour.unC col)) $
          Plot2D.list Graph2D.linesPoints $
          zip (getData time) (getData sig)) $
    Colour.adorn pMap
 
+recordList ::
+   (Ord id,
+    Show id,
+    SV.Walker v,
+    SV.FromList v,
+    TDisp t2,
+    TDisp t1,
+    Fractional d2,
+    Fractional d1,
+    SV.Storage v d2,
+    SV.Storage v d1,
+    Atom.C d2,
+    Atom.C d1,
+    Tuple.C d2,
+    Tuple.C d1) =>
+   (LineSpec.T -> LineSpec.T) ->
+   (Int -> LineSpec.T -> LineSpec.T) ->
+   [(Record.Name, Record s1 s2 t1 t2 id v d1 d2)] -> Plot2D.T d1 d2
+recordList opts varOpts xs =
+    Fold.fold $ zipWith (\(Record.Name name,x) k -> record (\ key -> name ++ "-" ++ show key) ((varOpts k). opts) x) xs [0..]
+
+sequence :: (Fractional d2, Fractional d1, Ord id,
+             Show id, SV.Walker v, SV.Storage v d2,
+             SV.Storage v d1, SV.FromList v, TDisp typ1,
+             TDisp typ2, Atom.C d2, Atom.C d1, Tuple.C d2,
+             Tuple.C d1) =>
+            (LineSpec.T -> LineSpec.T) ->
+            (Int -> LineSpec.T -> LineSpec.T) ->
+            SequData (Record s1 s2 typ1 typ2 id v d1 d2) ->
+            Plot2D.T d1 d2
+sequence opts varOpts (SD.SequData xs) = 
+  Fold.fold $ zipWith (\(SD.Section s _ x) k -> record (\key -> show "Sec " ++ show s ++ "-" ++ show key) ((varOpts k). opts) x) xs [0..]
+
 --------------------------------------------
 -- recordIO command to show max n signals per window
-
+{-
 recordSplit ::
    (TDisp t1, TDisp t2,
     Show id, Ord id,
@@ -461,7 +486,7 @@ sequenceSelect ::
    SequData (Record s1 s2 t1 t2 id v d d) ->  IO ()
 sequenceSelect idList ti term opts =
    sequenceIO ti term opts . fmap (Record.extract idList)
-
+-}
 
 -- | Plotting Stacks ---------------------------------------------------------------
 
@@ -541,7 +566,7 @@ stacksIO ::
    (Ord term, FormatValue term, Show term) =>
    String -> [Format.ASCII] -> M.Map term [Double] -> IO ()
 stacksIO title vars xs =
-   void . Plot.plotSync DefaultTerm.cons . -- Plot.plotDefault .
+   void . Plot.plotSync DefaultTerm.cons . 
    Frame.cons (stacksFrame title vars) . stacks $ xs
 
 class Atom.C (Value tc) => AxisLabel tc where
