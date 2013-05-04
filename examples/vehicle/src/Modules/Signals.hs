@@ -7,7 +7,7 @@ module Modules.Signals where
 import qualified EFA.Example.Index as XIdx
 
 import EFA.Signal.Record (SigId(SigId),
-                          getSig,getTime,extractLogSignals, 
+                          getSig,getTime,extractLogSignals,
                           PowerRecord, SignalRecord, genPowerRecord)
 
 -- import qualified EFA.Graph.Topology.Node as Node
@@ -27,8 +27,8 @@ condition rec = extractLogSignals rec
                  (SigId "engine1._torque_log",neg),
                  (SigId "engine1._fuelPower_log",id),
                  (SigId "engine1._switchOn_log",id),
-                 (SigId "electricVehicleSystem1._voltage_log",id),                 
-                 (SigId "electricVehicleSystem1._current_log",id),                 
+                 (SigId "electricVehicleSystem1._voltage_log",id),
+                 (SigId "electricVehicleSystem1._current_log",id),
                  (SigId "generator._speed_log",id),
                  (SigId "generator._current_log",neg),
                  (SigId "generator._voltage_log",neg),
@@ -47,17 +47,17 @@ condition rec = extractLogSignals rec
                  (SigId "gearbox1._speedOutputShaft_log",id),
                  (SigId "_frontBrakesLossPower_log",id),
                  (SigId "_frontBrakesSpeed_log",id),
-                 (SigId "_frontBrakesTorque_log",neg),                 
+                 (SigId "_frontBrakesTorque_log",neg),
                  (SigId "_rearBrakesLossPower_log",id),
                  (SigId "_rearBrakesSpeed_log",id),
-                 (SigId "_rearBrakesTorque_log",neg),                 
+                 (SigId "_rearBrakesTorque_log",neg),
                  (SigId "_frontWheelsTorque_log",id),
                  (SigId "_frontWheelsForce_log",neg),
                  (SigId "_rearWheelsTorque_log",neg),
                  (SigId "_rearWheelsForce_log",id),
                  (SigId "chassis1._resistanceForce_log",neg),
-                 (SigId "chassis1._propulsionForce_log",id),                 
-                 (SigId "_vehicleSpeed_log",id)                
+                 (SigId "chassis1._propulsionForce_log",id),
+                 (SigId "_vehicleSpeed_log",id)
                 ]
 
 ---------------------------------------------------------------------------------------

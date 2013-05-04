@@ -36,19 +36,19 @@ import qualified Data.Map as M
 newtype VectorIdx = VectorIdx Int
 
 unVectorIdx :: VectorIdx ->  Int
-unVectorIdx (VectorIdx x) = x 
+unVectorIdx (VectorIdx x) = x
 
 vectorIdx :: Int -> VectorIdx
 vectorIdx x = (VectorIdx x)
 
 
 maybeVectorIdx :: Maybe Int -> Maybe VectorIdx
-maybeVectorIdx x = case x of 
+maybeVectorIdx x = case x of
                     Nothing -> Nothing
                     Just idx -> Just (VectorIdx idx)
-                    
-instance UV.Unbox VectorIdx where                    
--}                    
+
+instance UV.Unbox VectorIdx where
+-}
 
 {- |
 We could replace this by suitable:Suitable.
@@ -533,14 +533,14 @@ propCumulate storage incoming =
 
 -- | creates a vector of unique and sorted elements
 class Unique v d where
-  unique :: Ord d => v d  -> v d 
-  
-instance Unique [] d where 
+  unique :: Ord d => v d  -> v d
+
+instance Unique [] d where
   unique = (\ x -> M.keys . M.fromList $ zip x x)
-  
-instance Unique V.Vector d where 
+
+instance Unique V.Vector d where
   unique =  (\ x -> fromList . M.keys . M.fromList $ zip (toList x) (toList x))
-  
-instance (UV.Unbox d) => Unique UV.Vector  d where 
+
+instance (UV.Unbox d) => Unique UV.Vector  d where
   unique =  readUnbox (\ x -> fromList $ M.keys $ M.fromList $ toList $ UV.zip x x)
   

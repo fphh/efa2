@@ -37,21 +37,21 @@ data EdgeVar = Energy | MaxEnergy | Power | Eta | X
 
 data Function = Absolute | Signum
    deriving (Eq, Ord, Show)
-            
+
 -- | actual though -- four usable figures
-formatReal :: (Ord a, Floating a, PrintfArg a) => a -> String            
+formatReal :: (Ord a, Floating a, PrintfArg a) => a -> String
 formatReal x | x == 0 = "0"
-             | abs x < 1 =   printf "%.5f" x               
+             | abs x < 1 =   printf "%.5f" x
              | abs x == 1 = "1"
-             | abs x == -1 = "-1"           
+             | abs x == -1 = "-1"
              | abs x < 10 = printf "%.4f" x
-             | abs x < 100 = printf "%.3f" x           
-             | abs x < 1000 = printf "%.2f" x           
-             | abs x < 10000 = printf "%.1f" x           
-             | abs x < 10^(6::Int) = printf "%.0f" x   
-             | abs x < 10^(9::Int) = (printf "%.3f" (x*10^^(-6::Int))) ++ " E6"            
-             | abs x < 10^(12::Int) = (printf "%.3f" (x*10^^(-9::Int))) ++ " E9"            
-             | abs x < 10^(15::Int) = (printf "%.3f" (x*10^^(-12::Int))) ++ " E12"            
+             | abs x < 100 = printf "%.3f" x
+             | abs x < 1000 = printf "%.2f" x
+             | abs x < 10000 = printf "%.1f" x
+             | abs x < 10^(6::Int) = printf "%.0f" x
+             | abs x < 10^(9::Int) = (printf "%.3f" (x*10^^(-6::Int))) ++ " E6"
+             | abs x < 10^(12::Int) = (printf "%.3f" (x*10^^(-9::Int))) ++ " E9"
+             | abs x < 10^(15::Int) = (printf "%.3f" (x*10^^(-12::Int))) ++ " E12"
              | otherwise = printf "%.e" x
 
 

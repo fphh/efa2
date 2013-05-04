@@ -871,4 +871,4 @@ concat (Data x) = Data $ SV.concat $ SV.toList x
 
 
 unique ::  (Ord d, SV.Unique v d) => Data (v :> Nil) d -> Data (v :> Nil) d
-unique (Data x) = Data $ SV.unique x 
+unique (Data x) = Data $ SV.unique x

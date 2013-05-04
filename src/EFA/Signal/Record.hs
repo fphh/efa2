@@ -19,9 +19,9 @@ import EFA.Signal.Signal
            TSamp,
            PSamp,
            PSamp1L,
-           PSamp2LL, 
+           PSamp2LL,
            FDistrib)
---           UTDistr, 
+--           UTDistr,
 --           FDistr)
 import EFA.Signal.Typ (Typ,
                        A,
@@ -70,7 +70,7 @@ import EFA.Utility (myShowList)
 
 newtype SigId = SigId String deriving (Eq, Ord, Show, Read)
 
-{- 
+{-
 -- Don't use this, if you want read to work!!!
 
 instance Show SigId where
@@ -87,9 +87,9 @@ data Record s1 s2 t1 t2 id v d1 d2 =
 
 type SignalRecord v d = Record Signal Signal (Typ A T Tt) (Typ UT UT UT) SigId v d d
 
-type PowerRecord n v d = Record Signal Signal (Typ A T Tt) (Typ A P Tt) (Idx.PPos n) v d d 
+type PowerRecord n v d = Record Signal Signal (Typ A T Tt) (Typ A P Tt) (Idx.PPos n) v d d
 
-type FlowRecord n v d = Record Signal FSignal (Typ A T Tt) (Typ A F Tt) (Idx.PPos n) v d d 
+type FlowRecord n v d = Record Signal FSignal (Typ A T Tt) (Typ A F Tt) (Idx.PPos n) v d d
 
 type DTimeFlowRecord n v d = Record FSignal FSignal (Typ D T Tt) (Typ A F Tt) (Idx.PPos n) v d d
 
@@ -251,7 +251,7 @@ genPowerRecord time =
 
 
 addSignals ::
-   (Ord id, 
+   (Ord id,
     V.Len (v d1),
     V.Len (v d2),
     Show id) =>
@@ -274,23 +274,23 @@ union ::
 union (Record timeA mA) (Record timeB mB) =
    if timeA == timeB
       then Record timeA
-             (M.unionWith 
+             (M.unionWith
                 (error "EFA.Signal.Record.union: duplicate signal ids") mA mB)
       else error "EFA.Signal.Record.union: time vectors differ"
 
 -- Wegen newTimeBase ist der Typ nicht so algemein wie bei "union" oben. Schade.
 unionWithNewTime ::
   ( Eq (v d),
-    Ord id, 
-    Show id, 
-    Fractional d, 
+    Ord id,
+    Show id,
+    Fractional d,
     Ord d,
-    V.Filter v, 
-    V.Storage v d, 
-    V.Walker v, 
+    V.Filter v,
+    V.Storage v d,
+    V.Walker v,
     V.Singleton v,
-    V.Lookup v, 
-    V.Find v, 
+    V.Lookup v,
+    V.Find v,
     V.Sort v) =>
   [Record S.Signal S.Signal (Typ A T Tt) t2 id v d d] ->
   Record S.Signal S.Signal (Typ A T Tt) t2 id v d d
@@ -321,7 +321,7 @@ modifySignals ::
     TC s2 t2 (Data (v :> Nil) d2)) ->
    Record s1 s2 t1 t2 id v d1 d2->
    Record s1 s2 t1 t2 id v d1 d2
-modifySignals idList f (Record time ma) = 
+modifySignals idList f (Record time ma) =
   Record time $
   L.foldl' (flip $ M.adjust f) ma $
   case idList of
@@ -338,7 +338,7 @@ maxRange ::
 maxRange list (Record _ m) =
   (S.toScalar $ minimum lmin, S.toScalar $ maximum lmax)
   where (lmin, lmax) = unzip $
-          map (S.fromScalar . S.minmax . checkedLookup2 "Signal.maxRange" m) 
+          map (S.fromScalar . S.minmax . checkedLookup2 "Signal.maxRange" m)
               $ case list of
                      RangeFromAll -> M.keys m
                      RangeFrom w -> w
@@ -464,12 +464,12 @@ major (S.TC (D.Data energyThreshold)) (S.TC (D.Data timeThreshold)) rec =
 -- Various Class and Instance Definition for the different Sequence Datatypes
 
 instance
-   (Sample d1, 
+   (Sample d1,
     Sample d2,
-    V.FromList v, 
-    V.Storage v d1, 
-    V.Storage v d2, 
-    QC.Arbitrary id, 
+    V.FromList v,
+    V.Storage v d1,
+    V.Storage v d2,
+    QC.Arbitrary id,
     Ord id) =>
       QC.Arbitrary (Record s1 s2 t1 t2 id v d1 d2) where
    arbitrary = do
@@ -502,22 +502,22 @@ instance (Random d, Integral d) => Sample (Ratio d) where
 
 
 instance
-   (V.Walker v, 
-    V.Singleton v, 
-    V.FromList v, 
-    V.Storage v d1, 
-    V.Storage v d2, 
+   (V.Walker v,
+    V.Singleton v,
+    V.FromList v,
+    V.Storage v d1,
+    V.Storage v d2,
     DispStorage1 v,
-    Ord d1, 
-    Fractional d1, 
-    PrintfArg d1, 
+    Ord d1,
+    Fractional d1,
+    PrintfArg d1,
     Show id,
-    Ord d2, 
-    Fractional d2, 
-    PrintfArg d2, 
-    S.DispApp s1, 
-    S.DispApp s2, 
-    TDisp t1, 
+    Ord d2,
+    Fractional d2,
+    PrintfArg d2,
+    S.DispApp s1,
+    S.DispApp s2,
+    TDisp t1,
     TDisp t2) =>
    ToTable (Record s1 s2 t1 t2 id v d1 d2) where
    toTable os (ti, Record time sigs) =
@@ -595,28 +595,28 @@ partIntegrate :: (Num d,
 partIntegrate rec@(Record time _) = rmap (S.partIntegrate time) rec
 
 
-distribution :: (V.FromList v, 
-                 V.Filter v, 
+distribution :: (V.FromList v,
+                 V.Filter v,
                  Ord d,
                  V.Unique v (S.Class d),
                  V.Storage v S.SignalIdx,
                  V.Storage v Int,
-                 V.Storage v (S.Class d), 
-                 RealFrac d, 
+                 V.Storage v (S.Class d),
+                 RealFrac d,
                  Eq d,
                  Num d,
                  V.Walker v,
                  V.Storage v d,
                  V.Storage v ([S.Class d], [S.SignalIdx]),
                  V.Lookup v,
-                 BSum d, 
-                 V.Find v, 
-                 Ord n, 
-                 Show n, 
+                 BSum d,
+                 V.Find v,
+                 Ord n,
+                 Show n,
                  Show (v d)) => FlowRecord n v d -> [Idx.PPos n] -> d -> d -> DistRecord n v d
-distribution rec@(Record _ pMap) xs intervall offset = Record classification energyDistribution 
-  where classification = S.combineDistributions $ 
-                         map ((S.genDistribution1D $ S.classifyEven intervall offset) . 
-                              S.changeSignalType . S.untype . 
-                              getSig rec) xs   
+distribution rec@(Record _ pMap) xs intervall offset = Record classification energyDistribution
+  where classification = S.combineDistributions $
+                         map ((S.genDistribution1D $ S.classifyEven intervall offset) .
+                              S.changeSignalType . S.untype .
+                              getSig rec) xs
         energyDistribution =  M.map (S.calcDistributionValues classification) pMap

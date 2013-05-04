@@ -2,7 +2,7 @@
 
 module EFA.IO.CSVImport (modelicaCSVImport, fortissCSVImport, filterWith, dontFilter) where
 
-import qualified Data.Map as M 
+import qualified Data.Map as M
 import qualified Data.List as L
 
 import Text.ParserCombinators.Parsec (parse)
@@ -68,7 +68,7 @@ fortissCSVImport ::
   [Int] ->
   ([[String]] -> [Int]) ->
   IO (SignalRecord [] Val)
-fortissCSVImport path idx filt = do 
+fortissCSVImport path idx filt = do
   text <- readFile path
   case parse (csvFile ';') path text of
     Left err ->

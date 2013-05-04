@@ -78,12 +78,12 @@ import Data.Foldable (fold,
 
 {-
 newtype Settings = Settings {filePath :: FileName,
-                             fileNames :: [FileName], 
+                             fileNames :: [FileName],
                              recordNames :: [RecordName],
                              zeroToleranz :: Double,
                              filterTime ::  TC Scalar (Typ A T Tt) (Data Nil Double),
                              filterEnergy :: TC Scalar (Typ A F Tt) (Data Nil Double),
-                             deltaSectionMapping :: [Int]              
+                             deltaSectionMapping :: [Int]
                             }
 -}
 -------------------------------------------------------------------------------------------------
@@ -148,18 +148,18 @@ pre topology epsZero epsT epsE rawSignals =
 
 {-
 
--- New Approach with Utility-Funktions from HT - the challenges:   
+-- New Approach with Utility-Funktions from HT - the challenges:
 
 1. scalar value are in the moment double / signals are in data container. Best to move both to container
 2. switch to dTime with fmap Record.diffTime
-2. make delta - Analysis from two envs 
+2. make delta - Analysis from two envs
 
 external sequenceFlowTopology sequFlowRecord =  EqGen.solveFromMeasurement sequenceFlowTopology $ makeGivenFromExternal Idx.Absolute sequFlowRecord
 
 initStorage :: (Fractional a) => a
 initStorage = 0.7*3600*1000
 
-makeGivenFromExternal idx sf = EqGen.fromEnvSignal . EqAbs.envFromFlowRecord $ sf 
+makeGivenFromExternal idx sf = EqGen.fromEnvSignal . EqAbs.envFromFlowRecord $ sf
 -}
 -------------------------------------------------------------------------------------------------
 -- ## Analyse External Energy Flow
@@ -263,8 +263,8 @@ makeGivenForPrediction idx env =
                fmap (fmap (*1.1)) x
           h _ r = r
           i _ _ = True
---         i (Idx.InSection (Idx.Section sec) (Idx.Energy (Idx.StructureEdge x y))) _ | sec == 18 || x == System.Tank || y == System.ConBattery = False    
---          i (Idx.InSection (Idx.Section sec) (Idx.Energy (Idx.StructureEdge x y))) _ | otherwise = True    
+--         i (Idx.InSection (Idx.Section sec) (Idx.Energy (Idx.StructureEdge x y))) _ | sec == 18 || x == System.Tank || y == System.ConBattery = False
+--          i (Idx.InSection (Idx.Section sec) (Idx.Energy (Idx.StructureEdge x y))) _ | otherwise = True
 
 
 ---------------------------------------------------------------------------------------------------
@@ -288,7 +288,7 @@ delta :: (Vec.Zipper v1, Vec.Zipper v2,
          System.Node
          (EqRecord.Delta (Result Double))
          (EqRecord.Delta (Result d))
-delta sequenceFlowTopology sequenceFlow sequenceFlow'= 
+delta sequenceFlowTopology sequenceFlow sequenceFlow'=
   EqGen.solveFromMeasurement sequenceFlowTopology $
     ( makeGivenFromExternal Idx.Before sequenceFlow <>
       makeGivenFromExternal Idx.After sequenceFlow')
@@ -355,7 +355,7 @@ makeGivenForDifferentialAnalysis (Env.Complete _ sig) =
             (System.ConES, System.ElectricSystem) -> True
 --            (System.Battery, System.ConBattery) -> True -- Das sollte nicht angegeben werden müssen !!
             _ -> False
-            
+
         h _ _ = True
-        -- h (Idx.InSection (Idx.Section sec) (Idx.Energy (Idx.StructureEdge x y))) _ | sec == 18 || x == System.Tank || y == System.ConBattery = False    
-        -- h (Idx.InSection (Idx.Section sec) (Idx.Energy (Idx.StructureEdge x y))) _ | otherwise = True    
+        -- h (Idx.InSection (Idx.Section sec) (Idx.Energy (Idx.StructureEdge x y))) _ | sec == 18 || x == System.Tank || y == System.ConBattery = False
+        -- h (Idx.InSection (Idx.Section sec) (Idx.Energy (Idx.StructureEdge x y))) _ | otherwise = True

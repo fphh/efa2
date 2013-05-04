@@ -25,7 +25,7 @@ import EFA.Utility.Async (concurrentlyMany_)
 
 import qualified Modules.System as System
 import qualified Modules.Analysis as Analysis
-import qualified Modules.Plots as Plots
+--import qualified Modules.Plots as Plots
 import qualified Modules.Signals as Signals
 
 import qualified EFA.Example.Index as XIdx
@@ -61,6 +61,8 @@ import Data.Tuple.HT (mapSnd)
 
 import qualified Data.GraphViz.Attributes.Colors.X11 as Colors
 
+import qualified EFA.Signal.PlotNeu as PlotNeu
+
 
 -- | O. Generelle Settings
 
@@ -68,24 +70,24 @@ examplePath :: FilePath
 examplePath = "examples/vehicle"
 
 colours :: [Colors.X11Color]
-colours = [ Colors.White,	 
-            Colors.Gray90,	 
-            Colors.Gray80,	 
+colours = [ Colors.White,	
+            Colors.Gray90,	
+            Colors.Gray80,	
             Colors.Gray70 ]
- 
-zeroNoiseToleranz :: Double         
-zeroNoiseToleranz = 10^^(-2::Int)          
-  
-                    
--- List of Operation Point Plots                    
+
+zeroNoiseToleranz :: Double
+zeroNoiseToleranz = 10^^(-2::Int)
+
+
+-- List of Operation Point Plots
 xyList :: [(String,(Record.SigId,Record.SigId))]
 xyList = [
   ("Engine", Signals.xyEngine),
   ("Generator", Signals.xyGenerator),
   ("Motor", Signals.xyMotor)
   ]
-         
--- List of Signal Plots         
+
+-- List of Signal Plots
 plotList :: [(String,[Record.SigId])]
 plotList = [
   ("Vehicle", Signals.vehicle),
@@ -97,7 +99,7 @@ plotList = [
   ("Battery", Signals.battery)
   ]
 
--- List of Operation Point Plots                    
+-- List of Operation Point Plots
 etaList :: [(String,(XIdx.PPos System.Node,XIdx.PPos System.Node,XIdx.PPos System.Node))]
 etaList = [
   ("Engine and Generator", Signals.etaEngineGenerator),
@@ -123,7 +125,7 @@ deltasetsX = zipWith Record.deltaName datasetsX (tail datasetsX)
 
 sectionFilterTime ::  TC Scalar (Typ A T Tt) (Data Nil Double)
 sectionFilterTime = toScalar 0
-      
+
 sectionFilterEnergy ::  TC Scalar (Typ A F Tt) (Data Nil Double)
 sectionFilterEnergy = toScalar 1000
 
@@ -142,8 +144,8 @@ energyIndexSec = Idx.InSection (Idx.Section 7) energyIndex
 energyIndex :: Idx.Energy System.Node
 energyIndex  = Idx.Energy $ Idx.StructureEdge System.Tank System.ConBattery
 
-sectionMapping :: [SD.SequData a] -> [SD.SequData a] 
-sectionMapping = map (SD.reIndex [1,2,7,8,16,17,19::Int]) 
+sectionMapping :: [SD.SequData a] -> [SD.SequData a]
+sectionMapping = map (SD.reIndex [1,2,7,8,16,17,19::Int])
 
 
 -- | B. Generator läuft am Anfang kurz
@@ -164,7 +166,7 @@ deltasetsX = zipWith Record.deltaName datasetsX (tail datasetsX)
 
 sectionFilterTime ::  TC Scalar (Typ A T Tt) (Data Nil Double)
 sectionFilterTime = toScalar 0.1
-      
+
 sectionFilterEnergy ::  TC Scalar (Typ A F Tt) (Data Nil Double)
 sectionFilterEnergy = toScalar 1000
 
@@ -189,7 +191,7 @@ sectionMapping = [1,2,7,8,16,17,19]
 -}
 
 sectionMapping :: [SequData a] -> [SequData a]
-sectionMapping = id 
+sectionMapping = id
 
 
 -}
@@ -211,7 +213,7 @@ deltasetsX = zipWith Record.deltaName datasetsX (tail datasetsX)
 
 sectionFilterTime ::  TC Scalar (Typ A T Tt) (Data Nil Double)
 sectionFilterTime = toScalar 0.1
-      
+
 sectionFilterEnergy ::  TC Scalar (Typ A F Tt) (Data Nil Double)
 sectionFilterEnergy = toScalar 1000
 
@@ -233,8 +235,8 @@ energyIndex :: Idx.Energy System.Node
 energyIndex  = Idx.Energy $ Idx.StructureEdge System.Battery System.ConBattery
 
 sectionMapping :: [SD.SequData a] -> [SD.SequData a]
-sectionMapping = map (SD.reIndex [8,11,13,14,18,32,37::Int]) 
- 
+sectionMapping = map (SD.reIndex [8,11,13,14,18,32,37::Int])
+
 --------------------------------------------------------------------
 
 zipWith3M_ ::
@@ -261,7 +263,7 @@ main = do
 
 ---------------------------------------------------------------------------------------
 -- * Conditioning, Sequencing and Integration
-  
+
 
   let preProcessedDataX =
         map (Analysis.pre System.topology zeroNoiseToleranz sectionFilterTime sectionFilterEnergy) rawSignalsX
@@ -273,10 +275,10 @@ main = do
   let allSignalsX = zipWith Record.combinePowerAndSignal powerSignalsX signalsX
 
 ---------------------------------------------------------------------------------------
--- *  ReIndex Sequences to allow Sequence Matching 
+-- *  ReIndex Sequences to allow Sequence Matching
 
   let sequenceFlowsFiltX = sectionMapping sequenceFlowsFiltUnmappedX
-        
+
   let flowStatesX = sectionMapping flowStatesUnmappedX
 
   ---------------------------------------------------------------------------------------
@@ -288,7 +290,7 @@ main = do
 -- *  Generate Sequence Flow Graph
 
   let sequenceFlowTopologyX = map makeSeqFlowTopology flowToposX
-       
+
 ---------------------------------------------------------------------------------------
 -- *  Section Flow States as Graphs
 
@@ -325,14 +327,14 @@ main = do
 
 ---------------------------------------------------------------------------------------
 -- * Draw Diagrams
-  
-  let -- drawDelta :: RecordName -> 
-      drawDelta ti topo env c = 
+
+  let -- drawDelta :: RecordName ->
+      drawDelta ti topo env c =
           Draw.xterm $
           Draw.title  ((\(Record.DeltaName x) -> x) ti) $
           Draw.bgcolour c $
           Draw.sequFlowGraphDeltaWithEnv topo env
-      drawAbs ti topo env c = 
+      drawAbs ti topo env c =
         Draw.xterm $
           Draw.title ((\(Record.Name x) -> x) ti) $
           Draw.bgcolour c $
@@ -342,7 +344,7 @@ main = do
 
   concurrentlyMany_ $ [
     -- Topologie
-    --  Draw.topology System.topology, 
+    --  Draw.topology System.topology,
     --  Draw.topology2pdf System.topology
     -- Draw.topologyWithEdgeLabels System.edgeNames System.topology,
     ]
@@ -367,20 +369,20 @@ main = do
 ---------------------------------------------------------------------------------------
 -- * Plot Efficiency Curves and Distributions
 
-    ++ [mapM_ (Plots.etaDistribution1D "Average Efficiency Curve -" 10000 5000
+    ++ [mapM_ (PlotNeu.etaDistr1DimIOfromRecordList "Average Efficiency Curve -" 10000 5000
                (zip datasetsX (map (Record.diffTime . Record.partIntegrate) powerSignalsX))) etaList]
 {-
 ---------------------------------------------------------------------------------------
 -- * Draw Diagrams
-     
+
     -- Section flow
     ++ L.zipWith4 drawAbs
          datasetsX
          sectionToposX
          externalEnvX
          colours
-         
-    -- Delta Section Flow     
+
+    -- Delta Section Flow
     ++ L.zipWith4 drawDelta
          deltasetsX
          sectionToposX
@@ -389,7 +391,7 @@ main = do
 
 ---------------------------------------------------------------------------------------
 -- * Plot Stacks
-    
+
     -- Record Stack Row at specific position
     ++ [Plots.recordStackRow
          ("Energy Flow Change at " ++ show energyIndexSec)
@@ -397,7 +399,7 @@ main = do
          energyIndexSec
          recordStackRow_filterEnergy
          differenceExtEnvs]
-         
+
     -- Section stack row at given ppos for a defined record
     ++ [Plots.sectionStackRow
         "Energy Flow Change at Tank in all Sections 1100 vs 1000"
@@ -407,14 +409,14 @@ main = do
 
 --    ++ [print $ Plots.lookupAllStacks energyIndex (last differenceExtEnvs)]
 --    ++ [print $ Plots.lookupStack energyIndexSec (last differenceExtEnvs)]
-    
-    -- overall stack at given position     
+
+    -- overall stack at given position
     ++ [Plots.cumStack
         ("Cumulative Flow Change at  " ++ show energyIndex)
         energyIndex
         cumStack_filterEnergy
         (head differenceExtEnvs)]
-         
+
 {-
      ++ mapM_ (Plots.stack  "Energy Flow Change at Tank in Section 6"
          (XIdx.energy (Idx.Section 6) System.Tank System.ConBattery) 1 )
@@ -422,11 +424,11 @@ main = do
 
      ++ [print $    -- AssignMap.threshold 0.001 $
 --             M.mapKeys AssignMap.deltaIndexSet $
---             Stack.assignDeltaMap $    
+--             Stack.assignDeltaMap $
              Plots.lookupCumStack energyIndex (last differenceExtEnvs)]
--}  
+-}
 
-         
+
 ---------------------------------------------------------------------------------------
 -- * Draw Predicted Diagram
 

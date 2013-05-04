@@ -38,7 +38,7 @@ getRelativeDir g e =
                  then AgainstTopoDir
                  else error "getTopologyDir: edge not found"
 
---relativeDirToFlowDir :: 
+--relativeDirToFlowDir ::
 
 
 cumulatedEnergyFlow ::

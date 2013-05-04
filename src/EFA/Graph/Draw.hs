@@ -477,7 +477,7 @@ sequFlowGraphWithEnv ::
   (Node.C node) =>
   Flow.RangeGraph node -> Env node Unicode -> DotGraph T.Text
 sequFlowGraphWithEnv g env =
-  dotFromSequFlowGraph g 
+  dotFromSequFlowGraph g
      (Just (formatTime env)) (formatNode env) structEShow storeEShow
   where structEShow (Idx.InSection sec ee) =
            case ee of
