@@ -19,8 +19,9 @@ module EFA.Signal.Plot (
    stack, stackAttr, stackIO,
    stacks, stacksAttr, stacksIO,
    getData,
-   plotTableLinear,
-   plotTable2D,
+   tableLinear,
+   tableLinear2D,
+   tableSurface,
    ) where
 
 import qualified EFA.Signal.SequenceData as SD
@@ -30,6 +31,7 @@ import qualified EFA.Signal.Vector as SV
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Colour as Colour
 
+import EFA.Signal.Typ (Typ, A, Y, Tt)
 import EFA.Signal.SequenceData (SequData)
 
 import EFA.Signal.Record (Record(Record))
@@ -77,10 +79,12 @@ import qualified Data.Map as M
 import qualified Data.List as L
 import qualified Data.Foldable as Fold
 import qualified Data.List.Key as Key
+import qualified Data.List.Match as Match
 import Control.Monad (zipWithM_)
 import Control.Functor.HT (void)
 import Data.Foldable (foldMap)
 import Data.Monoid (mconcat)
+
 
 -- import Control.Concurrent (threadDelay)
 
@@ -282,23 +286,45 @@ plotTable ::
   IO ()
 plotTable f str tm =
   case transposeTable f `fmap` M.lookup str tm of
+       Nothing -> error $ "plotTable: table " ++ str ++ " not found!"
        Just (Table.T _ ds) ->
             case ds of
                  [] -> error "plotTable: no data"
                  [_] -> error "plotTable: only x axis, no y values"
-                 (as:bbs) ->
-                   let xs :: S.TSig  -- Was fuer Signaltypen?
-                       xs = S.fromList as
-                       yys :: [S.TSig]
-                       yys = map S.fromList bbs
-                   in  xyIO str xs yys
-       Nothing -> error $ "Table " ++ str ++ " not found!"
+                 (as:bbs) -> xyIO str xs yys
+                   where -- Welcher Signaltyp?
+                         xs :: S.TSig
+                         xs = S.fromList as
+                         yys :: [S.TSig]
+                         yys = map S.fromList bbs
 
-plotTableLinear, plotTable2D ::
+tableLinear, tableLinear2D, tableSurface ::
   String -> Table.Map Double -> IO ()
-plotTableLinear = plotTable id
-plotTable2D = plotTable tail
+tableLinear = plotTable id
+tableLinear2D = plotTable tail
 
+
+varMat :: [a] -> [b] -> ([[a]], [[b]])
+varMat xs ys =
+  (Match.replicate ys xs, map (Match.replicate xs) ys)
+
+tableSurface str tm =
+  case M.lookup str tm of
+       Nothing -> error $ "tableSurface: table " ++ str ++ " not found!"
+       Just (Table.T _ ds) -> 
+            case ds of
+                 [] -> error "tableSurface: no data"
+                 [_] -> error "tableSurface: only x axis, no y values"
+                 (xs:as) ->
+                   case SV.transpose as of
+                        [] -> error "tableSurface: empty list"
+                        (ys:zs) -> surfaceIO str a b c
+                          where (xs', ys') = varMat (tail xs) ys
+                                -- Welcher Signaltyp ???
+                                a, b, c :: S.Test2 (Typ A Y Tt) Double
+                                a = S.fromList xs'
+                                b = S.fromList ys'
+                                c = S.fromList zs
 
 -- | Plotting Surfaces
 surfaceIO ::

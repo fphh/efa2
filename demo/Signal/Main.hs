@@ -14,7 +14,6 @@ import EFA.Signal.Typ (Typ, A, D, P, N, Tt)
 import EFA.Signal.Base (Val)
 import Control.Functor.HT (void)
 
-import qualified Graphics.Gnuplot.Graph as Graph
 import qualified Graphics.Gnuplot.Advanced as GnuPlot
 import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 import qualified Graphics.Gnuplot.Plot.TwoDimensional as Plot2D
@@ -23,9 +22,7 @@ import qualified Graphics.Gnuplot.LineSpecification as LineSpec
 import qualified Graphics.Gnuplot.ColorSpecification as Colour
 import qualified Graphics.Gnuplot.Frame as Frame
 import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
-import qualified Graphics.Gnuplot.Frame.OptionSet.Style as Style
 
-import Control.Applicative
 
 import Data.Monoid
 
@@ -92,7 +89,11 @@ terminate ::
 terminate func = fmap (Graph2D.lineSpec $ func $ LineSpec.deflt)
 
 
-
+{-
+myFrameStyle ::
+  gnuplot-0.5.2:Graphics.Gnuplot.Private.Plot.T (Graph2D.T Double Double) ->
+  Frame.T (Graph2D.T Double Double)
+-}
 myFrameStyle = Frame.cons $
   Opts.title "Dies ist der Titel!!!" $
   Opts.grid True $
@@ -116,6 +117,9 @@ main = do
   concurrentlyMany_ [
 
     void $ GnuPlot.plotSync DefaultTerm.cons $ plot,
+
+    void $ GnuPlot.plotSync DefaultTerm.cons $
+           myPlotStyle plot,
 
     void $ GnuPlot.plotSync DefaultTerm.cons $
            myFrameStyle $
