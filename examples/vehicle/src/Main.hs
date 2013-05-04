@@ -25,7 +25,7 @@ import EFA.Utility.Async (concurrentlyMany_)
 
 import qualified Modules.System as System
 import qualified Modules.Analysis as Analysis
-import qualified Modules.Plots as Plots
+--import qualified Modules.Plots as Plots
 import qualified Modules.Signals as Signals
 
 import qualified EFA.Example.Index as XIdx
@@ -60,6 +60,8 @@ import Data.Tuple.HT (mapSnd)
 --import qualified EFA.Example.Index as XIdx
 
 import qualified Data.GraphViz.Attributes.Colors.X11 as Colors
+
+import qualified EFA.Signal.PlotNeu as PlotNeu
 
 
 -- | O. Generelle Settings
@@ -367,7 +369,7 @@ main = do
 ---------------------------------------------------------------------------------------
 -- * Plot Efficiency Curves and Distributions
 
-    ++ [mapM_ (Plots.etaDistribution1D "Average Efficiency Curve -" 10000 5000
+    ++ [mapM_ (PlotNeu.etaDistr1DimIOfromRecordList "Average Efficiency Curve -" 10000 5000
                (zip datasetsX (map (Record.diffTime . Record.partIntegrate) powerSignalsX))) etaList]
 {-
 ---------------------------------------------------------------------------------------

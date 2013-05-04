@@ -78,6 +78,8 @@ Library
     EFA.Signal.Sequence
     EFA.Signal.Colour
     EFA.Signal.Plot
+    EFA.Signal.PlotBase
+    EFA.Signal.PlotNeu
     EFA.Symbolic.OperatorTree
     EFA.Symbolic.SumProduct
     EFA.Symbolic.Mixed

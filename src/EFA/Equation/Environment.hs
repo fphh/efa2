@@ -280,3 +280,22 @@ instance (Ord node) => Monoid (Complete node b a) where
    mempty = Complete mempty mempty
    mappend (Complete scalar0 signal0) (Complete scalar1 signal1) =
       Complete (mappend scalar0 scalar1) (mappend signal0 signal1)
+
+{-
+lookupStack:: (Ord i, Ord node, Show node) =>
+                              XIdx.Energy node
+                              -> Env.Complete
+                                   node t (EqRecord.Absolute (Result.Result (Stack.Stack i a)))
+                              -> M.Map (AssignMap.IndexSet i) a
+
+lookupStack energyIndex env =  case M.lookup energyIndex (Env.energyMap signalEnv) of
+    Nothing -> error (show energyIndex ++ "undefined")
+    Just d ->
+      case EqRecord.unAbsolute d of
+        Result.Undetermined -> error (show energyIndex ++ "undetermined")
+        Result.Determined xs -> M.mapKeys AssignMap.deltaIndexSet $
+                             Stack.assignDeltaMap xs
+
+   where
+        Env.Complete _scalarEnv signalEnv = env
+-}

@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeFamilies #-}
+
 module EFA.Example.AssignMap where
 
 import qualified EFA.Equation.Result as Result
@@ -5,6 +7,14 @@ import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Stack as Stack
 import qualified EFA.Report.Format as Format
 import qualified EFA.Graph.Topology.Index as Idx
+--import qualified EFA.Equation.Stack as Stack
+import qualified EFA.Equation.Environment as Env
+import qualified EFA.Equation.Record as EqRecord
+--import qualified EFA.Equation.Result as Result
+--import qualified EFA.Equation.Variable as Var
+-- import qualified EFA.Graph.Topology.Index as Idx
+-- import qualified EFA.Graph.Topology.Node as TDNode
+
 import EFA.Equation.Result (Result)
 import EFA.Equation.Arithmetic ((~+))
 import EFA.Report.FormatValue (FormatValue, formatValue)
@@ -125,3 +135,50 @@ stripSection =
    Map.mapKeysWith
       (error "AssignMap.stripSection: multiple sections in one assignmap")
       (Map.mapKeys (\(Idx.InSection _sec node) -> node))
+
+
+lookupStack:: (Ord i, Ord node, Show node) =>
+                              Idx.InSection Idx.Energy node
+                              -> Env.Complete
+                                   node t (EqRecord.Absolute (Result.Result (Stack.Stack i a)))
+                              -> Map.Map (IndexSet i) a
+
+lookupStack energyIndex env =  case Map.lookup energyIndex (Env.energyMap signalEnv) of
+    Nothing -> error (show energyIndex ++ "undefined")
+    Just d ->
+      case EqRecord.unAbsolute d of
+        Result.Undetermined -> error (show energyIndex ++ "undetermined")
+        Result.Determined xs -> Map.mapKeys deltaIndexSet $
+                             Stack.assignDeltaMap xs
+
+   where
+        Env.Complete _scalarEnv signalEnv = env
+
+lookupAllStacks :: (Ord i, Ord node, Eq node) => Idx.Energy node
+                   -> Env.Complete node t 
+                         (EqRecord.Absolute (Result.Result (Stack.Stack i Double)))
+                   -> [(Idx.InSection Idx.Energy node,Stack.Stack i Double)]
+
+lookupAllStacks e0 =
+   Map.toList .
+   fmap Arith.integrate .
+   Map.mapMaybe Result.toMaybe .
+   fmap EqRecord.unAbsolute .
+   Map.filterWithKey (\(Idx.InSection _sec e) _ -> e == e0) .
+   Env.energyMap . Env.signal
+
+
+lookupAggregatedStack ::
+   (Ord i, Ord node, Show node,
+    Arith.Constant a, a ~ Arith.Scalar v, Arith.Integrate v) =>
+   Idx.Energy node ->
+   Env.Complete node t
+      (EqRecord.Absolute (Result.Result (Stack.Stack i v))) ->
+   Map.Map (Map.Map i Stack.Branch) a
+
+lookupAggregatedStack e0 =
+   Fold.foldMap (Stack.assignDeltaMap . Arith.integrate) .
+   Map.mapMaybe Result.toMaybe .
+   fmap EqRecord.unAbsolute .
+   Map.filterWithKey (\(Idx.InSection _sec e) _ -> e == e0) .
+   Env.energyMap . Env.signal

@@ -6,26 +6,18 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE TypeSynonymInstances#-}
 
-
-module EFA.Signal.PlotNeu (
-   run,
-   signal, signalFrame, signalStyle, 
-   -- signalIO,
-   xy, xyBasic, xyFrame, xyStyle, 
-   -- xyIO,
+-- | PlotBase provide the basic functions to build Plots
+module EFA.Signal.PlotBase (module EFA.Signal.PlotBase) where
+{-   plotOne,
+   plotMany,
+   signal, 
+   xy, xyBasic, xyStyle, 
    surface, 
-   --surfaceIO,
-   record, recordStyle, recordFrame, 
-   -- recordIO, recordIOList,
-   -- sequenceIO,
-   -- recordSplitPlus, recordSplit, sequenceSplit,
-   -- recordSelect, sequenceSelect,
-   stack, stackFrame, 
-   -- stackIO,
-   stacks, stacksFrame, 
-   -- stacksIO,
+   record, recordStyle,
+   stack, 
+   stacks, 
    getData,
-   ) where
+   ) where-}
 
 import qualified EFA.Signal.SequenceData as SD
 import qualified EFA.Signal.Signal as S
@@ -43,7 +35,7 @@ import EFA.Signal.Signal (TC, toSigList, getDisplayType)
 -- import EFA.Signal.Base (BSum)
 
 import EFA.Signal.Data (Data, (:>), Nil, NestedList)
-import EFA.Report.Typ (TDisp, DisplayType(Typ_T), getDisplayUnit, getDisplayTypName)
+import EFA.Report.Typ (TDisp, getDisplayUnit, getDisplayTypName,DisplayType(Typ_T))
 import EFA.Report.Base (UnitScale(UnitScale), getUnitScale)
 
 import qualified EFA.Report.Format as Format
@@ -57,7 +49,7 @@ import qualified Graphics.Gnuplot.Advanced as Plot
 --import qualified Graphics.Gnuplot.Terminal.WXT as WXT
 
 import qualified Graphics.Gnuplot.Terminal as Terminal
-import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
+-- import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 import qualified Graphics.Gnuplot.Plot as Plt
 import qualified Graphics.Gnuplot.Plot.TwoDimensional as Plot2D
 import qualified Graphics.Gnuplot.Plot.ThreeDimensional as Plot3D
@@ -80,7 +72,7 @@ import qualified Data.Map as M
 import qualified Data.List as L
 import qualified Data.Foldable as Fold
 import qualified Data.List.Key as Key
-import Control.Monad (zipWithM_)
+-- import Control.Monad (zipWithM_)
 import Control.Functor.HT (void)
 import Data.Foldable (foldMap)
 import Data.Monoid (mconcat)
@@ -95,6 +87,59 @@ import EFA.Signal.Plot.Record as PlRecord
 
 -- import qualified EFA.Signal.Plot.Options as PlOpts
 
+-- | Generic IO Commands ---------------------------------------------------------------
+plotOne ::
+   (Terminal.C term, Graph.C graph) =>
+   term -> Opts.T graph -> Plt.T graph -> IO ()
+plotOne terminal frameAttr plt =
+   void $ Plot.plotSync terminal $ Frame.cons frameAttr plt
+
+plotMany ::
+   (Terminal.C term, Graph.C graph) =>
+   term -> Opts.T graph -> [Plt.T graph] -> IO ()
+plotMany terminal frameAttr pltList =
+   mapM_ (Plot.plotSync terminal . Frame.cons frameAttr ) pltList
+
+{-
+run ::
+   (Terminal.C term, Graph.C graph) =>
+   term -> Opts.T graph -> Plt.T graph -> IO ()
+run terminal frameAttr plt =
+   void $ Plot.plotSync terminal $ Frame.cons frameAttr plt
+-}
+
+{-  
+-- | Example how to generate frame attributes 
+
+frameAttr ::
+   (AxisLabel tc, Graph.C graph) =>
+   String -> tc -> Opts.T graph
+framAttr ti x =
+   Opts.title ti $
+   Opts.xLabel "Signal Index []" $
+   Opts.yLabel (genAxLabel x) $
+   Opts.grid True $
+   Opts.deflt
+-}
+
+
+-- | Class to generate Axis Labels 
+
+class Atom.C (Value tc) => AxisLabel tc where
+   type Value tc :: *
+   genAxLabel :: tc -> String
+
+instance (TDisp t, Atom.C (D.Value c)) => AxisLabel (TC s t c) where
+   type Value (TC s t c) = D.Value c
+   genAxLabel x =
+      let dispType = getDisplayType x
+      in  getDisplayTypName dispType ++
+             " [" ++ (show $ getDisplayUnit dispType) ++ "]"
+
+instance (AxisLabel tc) => AxisLabel [tc] where
+   type Value [tc] = Value tc
+   genAxLabel x = genAxLabel $ head x
+
 -- | Get Signal Plot Data (Unit Conversion)  ---------------------------------------------------------------
 
 getData ::
@@ -103,38 +148,26 @@ getData ::
 getData x = S.toList $ S.map (* fromRational s) x
    where (UnitScale s) = getUnitScale $ getDisplayUnit $ getDisplayType x
 
--- | Different function to show plots   ---------------------------------------------------------------
 
-run ::
-   (Terminal.C term, Graph.C graph) =>
-   term -> Opts.T graph -> Plt.T graph -> IO ()
-run terminal frameAttr plt =
-   void $ Plot.plotSync terminal $ Frame.cons frameAttr plt
+-- | Function to simplify linecolor setting
+
+lineColour :: String -> LineSpec.T -> LineSpec.T
+lineColour = LineSpec.lineColor . ColourSpec.name
 
 
 -- | Simple Signal Plotting -- plot signal values against signal index --------------------------------------------------------------
+-- | All styles can be overloaded by opts 
 
-
--- | Default Signal Plot
-{-
-signalIO ::
-   (Signal signal, Terminal.C term) =>
-   String -> term -> (LineSpec.T -> LineSpec.T) -> signal -> IO ()
-signalIO ti terminal opts x = run terminal (signalFrame ti x)  (signal opts x)
--}
-
--- | Default Frame Options
-signalFrame ::
+signalFrameAttr ::
    (AxisLabel tc, Graph.C graph) =>
    String -> tc -> Opts.T graph
-signalFrame ti x =
+signalFrameAttr ti x =
    Opts.title ti $
    Opts.xLabel "Signal Index []" $
    Opts.yLabel (genAxLabel x) $
    Opts.grid True $
    Opts.deflt
 
--- | Default Signal Line Style
 signalStyle :: (LineSpec.T -> LineSpec.T) -> Graph2D.T x y -> Graph2D.T x y
 signalStyle opts =
    Graph2D.lineSpec $
@@ -168,17 +201,11 @@ instance
 
 
 -- | Plotting Signals against each other, can be also used for time plots and curves over power -----------------------------
-{-
-xyIO ::
-   (XY tcX tcY, Terminal.C term) =>
-   String -> term -> (LineSpec.T -> LineSpec.T)-> (Int -> String) -> tcX -> tcY -> IO ()
-xyIO ti terminal opts legend x y =
-   run terminal (xyFrame ti x y) (xy opts legend x y)
--}
-xyFrame ::
+
+xyFrameAttr ::
    (AxisLabel tcX, AxisLabel tcY, Graph.C graph) =>
    String -> tcX -> tcY -> Opts.T graph
-xyFrame ti x y =
+xyFrameAttr ti x y =
    Opts.title ti $
    Opts.xLabel (genAxLabel x) $
    Opts.yLabel (genAxLabel y) $
@@ -273,32 +300,7 @@ instance
 
 
 -- | Plotting Records ---------------------------------------------------------------
-{-
-recordIO ::
-   (Fractional d,
-    Show id, Ord id,
-    SV.Walker v, SV.Storage v d, SV.FromList v,
-    TDisp t2, TDisp t1,
-    Tuple.C d, Atom.C d, 
-    Terminal.C term) =>
-   String -> 
-   term -> 
-   (LineSpec.T -> LineSpec.T) ->
-   Record s1 s2 t1 t2 id v d d -> IO ()
-recordIO ti term opts x =
-   run term (recordFrame ti) (recordBasic opts x)
--}
-
   
-recordStyle :: (LineSpec.T -> LineSpec.T) -> Plot2D.T x y -> Plot2D.T x y   
-recordStyle opts = 
-   fmap $ Graph2D.lineSpec $
-      opts $
-      LineSpec.pointSize 0.3$
-      LineSpec.pointType 1 $
-      LineSpec.lineWidth 1.6 $
-      LineSpec.deflt
-
 recordFrame ::
    (Graph.C graph) =>
    String -> Opts.T graph
@@ -308,6 +310,15 @@ recordFrame ti =
    Opts.xLabel ("Time [" ++ (show $ getDisplayUnit Typ_T) ++ "]") $
    Opts.yLabel ("")
    Opts.deflt
+
+recordStyle :: (LineSpec.T -> LineSpec.T) -> Plot2D.T x y -> Plot2D.T x y   
+recordStyle opts = 
+   fmap $ Graph2D.lineSpec $
+      opts $
+      LineSpec.pointSize 0.3$
+      LineSpec.pointType 1 $
+      LineSpec.lineWidth 1.6 $
+      LineSpec.deflt
 
 record ::
    (Show id, Ord id, TDisp typ0, TDisp typ1,
@@ -340,168 +351,34 @@ recordList ::
     Atom.C d1,
     Tuple.C d2,
     Tuple.C d1) =>
+   (id -> String) ->
    (LineSpec.T -> LineSpec.T) ->
    (Int -> LineSpec.T -> LineSpec.T) ->
    [(Record.Name, Record s1 s2 t1 t2 id v d1 d2)] -> Plot2D.T d1 d2
-recordList opts varOpts xs =
-    Fold.fold $ zipWith (\(Record.Name name,x) k -> record (\ key -> name ++ "-" ++ show key) ((varOpts k). opts) x) xs [0..]
+recordList showKey opts varOpts xs =
+    Fold.fold $ zipWith (\(Record.Name name,x) k -> record (\ key -> name ++ "-" ++ showKey key) ((varOpts k). opts) x) xs [0..]
+
+-- | Plotting Sequences ---------------------------------------------------------------
+
 
 sequence :: (Fractional d2, Fractional d1, Ord id,
              Show id, SV.Walker v, SV.Storage v d2,
              SV.Storage v d1, SV.FromList v, TDisp typ1,
              TDisp typ2, Atom.C d2, Atom.C d1, Tuple.C d2,
              Tuple.C d1) =>
+            (id -> String) ->
             (LineSpec.T -> LineSpec.T) ->
             (Int -> LineSpec.T -> LineSpec.T) ->
             SequData (Record s1 s2 typ1 typ2 id v d1 d2) ->
             Plot2D.T d1 d2
-sequence opts varOpts (SD.SequData xs) = 
-  Fold.fold $ zipWith (\(SD.Section s _ x) k -> record (\key -> show "Sec " ++ show s ++ "-" ++ show key) ((varOpts k). opts) x) xs [0..]
-
---------------------------------------------
--- recordIO command to show max n signals per window
-{-
-recordSplit ::
-   (TDisp t1, TDisp t2,
-    Show id, Ord id,
-    Fractional d,
-    Tuple.C d, Atom.C d,
-    SV.Walker v,
-    SV.Storage v d,
-    SV.FromList v, 
-    Terminal.C term) =>
-   Int -> 
-   String -> 
-   term ->
-   (LineSpec.T -> LineSpec.T) -> 
-   Record s1 s2 t1 t2 id v d d -> IO ()
-recordSplit n ti term opts r =
-   zipWithM_
-      (\k -> recordIO (ti ++ " - Part " ++ show (k::Int)) term opts)
-      [0..] (Record.split n r)
-
-recordSplitPlus ::
-   (TDisp t1, TDisp t2,
-    Show id, Ord id,
-    Fractional d,
-    Tuple.C d, Atom.C d,
-    SV.Walker v,
-    SV.Storage v d,
-    SV.FromList v,
-    Terminal.C term,
-    SV.Len (v d)) =>
-   Int -> 
-   String -> 
-   term ->
-   (LineSpec.T -> LineSpec.T) -> 
-   Record s1 s2 t1 t2 id v d d ->
-   [(id, TC s2 t2 (Data (v :> Nil) d))] -> IO ()
-recordSplitPlus n ti term opts r list =
-   zipWithM_
-      (\k -> recordIO (ti ++ " - Part " ++ show (k::Int)) term opts)
-      [0 ..] (map (Record.addSignals list) (Record.split n r))
-
---------------------------------------------
--- recordIO command to plot selected Signals only
-
-recordSelect ::
-   (TDisp t1, TDisp t2,
-    Show id, Ord id,
-    Fractional d,
-    Tuple.C d, Atom.C d,
-    SV.Walker v,
-    SV.Storage v d,
-    Terminal.C term,
-    SV.FromList v) =>
-   [id] -> 
-   String -> 
-   term ->
-   (LineSpec.T -> LineSpec.T) ->    
-   Record s1 s2 t1 t2 id v d d -> IO ()
-recordSelect idList ti term opts = recordIO ti term opts . Record.extract idList
-
-sequenceFrame ::
-   (Fractional d,
-    Show id, Ord id,
-    SV.Walker v, SV.Storage v d, SV.FromList v,
-    TDisp t2, TDisp t1,
-    Tuple.C d, Atom.C d) =>
-   String -> 
-   (LineSpec.T -> LineSpec.T) -> 
-   SequData (Record s1 s2 t1 t2 id v d d) ->
-   SequData (Frame.T (Graph2D.T d d))
-sequenceFrame ti opts =
-   SD.mapWithSection
-      (\x ->
-         Frame.cons (recordFrame ("Sequence " ++ ti ++ ", Record of " ++ show x)) .
-         recordBasic opts)
-
-sequenceIO ::
-   (TDisp t1, TDisp t2,
-    Show id, Ord id,
-    Fractional d,
-    Tuple.C d, Atom.C d,
-    SV.Walker v,
-    SV.Storage v d,
-    SV.FromList v, 
-    Terminal.C term) =>
-   String -> 
-   term ->
-   (LineSpec.T -> LineSpec.T) -> 
-   SequData (Record s1 s2 t1 t2 id v d d) -> IO ()
-sequenceIO ti term opts =
-   Fold.mapM_ (Plot.plotSync term) . sequenceFrame ti opts
-
-sequenceSplit ::
-   (TDisp t1, TDisp t2,
-    Show id, Ord id,
-    Fractional d,
-    Tuple.C d, Atom.C d,
-    SV.Walker v,
-    SV.Storage v d,
-    Terminal.C term,
-    SV.FromList v) =>
-   Int -> 
-   String -> 
-   term ->
-   (LineSpec.T -> LineSpec.T) -> 
-   SequData (Record s1 s2 t1 t2 id v d d) -> IO ()
-sequenceSplit n ti term opts =
-   Fold.sequence_ .
-   SD.mapWithSection (\ x -> recordSplit n (ti ++ " - " ++ show x) term opts)
-
-sequenceSelect ::
-   (TDisp t1, TDisp t2,
-    Show id, Ord id,
-    Fractional d,
-    Tuple.C d, Atom.C d,
-    SV.Walker v,
-    SV.Storage v d,
-    SV.FromList v, 
-    Terminal.C term) =>
-   [id] -> 
-   String -> 
-   term ->
-   (LineSpec.T -> LineSpec.T) -> 
-   SequData (Record s1 s2 t1 t2 id v d d) ->  IO ()
-sequenceSelect idList ti term opts =
-   sequenceIO ti term opts . fmap (Record.extract idList)
--}
+sequence showKey opts varOpts (SD.SequData xs) = 
+  Fold.fold $ zipWith (\(SD.Section s _ x) k -> record (\key -> show "Sec " ++ show s ++ "-" ++ showKey key) ((varOpts k). opts) x) xs [0..]
 
 -- | Plotting Stacks ---------------------------------------------------------------
 
 optKeyOutside :: Opts.T graph -> Opts.T graph
 optKeyOutside =
    Opts.add (Opt.custom "key" "position") ["outside"]
-
-lineColour :: String -> LineSpec.T -> LineSpec.T
-lineColour = LineSpec.lineColor . ColourSpec.name
-
-stackLineSpec ::
-   (FormatValue term, Show term) => term -> String -> Plot2D.T x y -> Plot2D.T x y
-stackLineSpec term colour =
-   fmap (Graph2D.lineSpec (LineSpec.title (Format.unASCII $ formatValue term)
-          (lineColour colour $ LineSpec.deflt)))
 
 stackFrame ::
    String -> Format.ASCII -> Opts.T (Graph2D.T Int Double)
@@ -514,9 +391,19 @@ stackFrame title var =
       Opts.xTicks2d [(Format.unASCII var, 0)] $
       Opts.deflt
 
+stackLineSpec ::
+   (FormatValue term, Show term) => term -> String -> Plot2D.T x y -> Plot2D.T x y
+stackLineSpec term colour =
+   fmap (Graph2D.lineSpec (LineSpec.title (Format.unASCII $ formatValue term)
+          (lineColour colour $ LineSpec.deflt)))
+
 stack ::
-   (FormatValue term, Show term, Ord term) =>
-   M.Map term Double -> Plot2D.T Int Double
+   (FormatValue term, Num d, Ord d,
+    Show term, 
+    Ord term, 
+    Atom.C d, 
+    Tuple.C d) =>
+   M.Map term d -> Plot2D.T Int d
 stack =
    foldMap
       (\(col, (term, val)) ->
@@ -526,13 +413,6 @@ stack =
    reverse .
    Key.sort (abs . snd) .
    M.toList
-
-
-stackIO ::
-   (FormatValue term, Show term, Ord term) =>
-   String -> Format.ASCII -> M.Map term Double -> IO ()
-stackIO title var m =
-   void .  Plot.plotSync DefaultTerm.cons . Frame.cons (stackFrame title var) . stack $ m
 
 stacksFrame ::
    String -> [Format.ASCII] -> Opts.T (Graph2D.T Int Double)
@@ -547,8 +427,14 @@ stacksFrame title vars =
       Opts.deflt
 
 stacks ::
-   (Ord term, FormatValue term, Show term) =>
-   M.Map term [Double] -> Plot2D.T Int Double
+   (Ord term,
+    Atom.C d, 
+    Tuple.C d,
+    Ord d,
+    Num d,
+    FormatValue term, 
+    Show term) =>
+   M.Map term [d] -> Plot2D.T Int d
 stacks =
    foldMap
       (\(col, (term, vals)) ->
@@ -559,48 +445,10 @@ stacks =
    Key.sort (maximum . map abs . snd) .
    M.toList
 
-{- |
-The length of @[var]@ must match the one of the @[Double]@ lists.
--}
-stacksIO ::
-   (Ord term, FormatValue term, Show term) =>
-   String -> [Format.ASCII] -> M.Map term [Double] -> IO ()
-stacksIO title vars xs =
-   void . Plot.plotSync DefaultTerm.cons . 
-   Frame.cons (stacksFrame title vars) . stacks $ xs
-
-class Atom.C (Value tc) => AxisLabel tc where
-   type Value tc :: *
-   genAxLabel :: tc -> String
-
-instance (TDisp t, Atom.C (D.Value c)) => AxisLabel (TC s t c) where
-   type Value (TC s t c) = D.Value c
-   genAxLabel x =
-      let dispType = getDisplayType x
-      in  getDisplayTypName dispType ++
-             " [" ++ (show $ getDisplayUnit dispType) ++ "]"
-
-instance (AxisLabel tc) => AxisLabel [tc] where
-   type Value [tc] = Value tc
-   genAxLabel x = genAxLabel $ head x
 
 
 
 -- | Plotting Surfaces ------------------------------------------------------------------------- 
-
-surfaceIO ::
-   Surface tcX tcY tcZ =>
-   String -> tcX -> tcY -> tcZ -> IO ()
-surfaceIO ti x y z = do
-   let attrs =
-          Opts.title ti $
-          Opts.xLabel (genAxLabel x) $
-          Opts.yLabel (genAxLabel y) $
-          Opts.grid True $
-          Opts.size 1 1 $
-          Opts.deflt
-   void $ Plot.plotSync DefaultTerm.cons $
-      Frame.cons attrs $ surface x y z
 
 class
    (AxisLabel tcX, AxisLabel tcY, AxisLabel tcZ) =>

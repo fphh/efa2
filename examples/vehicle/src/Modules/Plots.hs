@@ -7,11 +7,12 @@ module Modules.Plots where
 --import Modules.System as System
 
 import qualified EFA.Example.Index as XIdx
-import qualified EFA.Signal.Plot as Plot
+--import qualified EFA.Signal.Plot as Plot
 import qualified EFA.Signal.PlotNeu as PlotNeu
-import qualified EFA.Hack.Plot as HPlot
-import qualified EFA.Hack.Options as O
-import qualified EFA.Graph.Topology.Node as TDNode
+--import qualified EFA.Signal.PlotBase as PlotBase
+--import qualified EFA.Hack.Plot as HPlot
+--import qualified EFA.Hack.Options as O
+--import qualified EFA.Graph.Topology.Node as TDNode
 import qualified EFA.Signal.Vector as V
 
 -- import qualified Graphics.Gnuplot.Advanced as Plot
@@ -21,11 +22,11 @@ import qualified EFA.Signal.Vector as V
 -- import qualified Graphics.Gnuplot.Terminal.WXT as WXT
 
 import qualified Graphics.Gnuplot.Terminal as Terminal
-import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
+-- import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 -- import qualified Graphics.Gnuplot.Plot as Plt
-import qualified Graphics.Gnuplot.Plot.TwoDimensional as Plot2D
+--import qualified Graphics.Gnuplot.Plot.TwoDimensional as Plot2D
 -- import qualified Graphics.Gnuplot.Plot.ThreeDimensional as Plot3D
-import qualified Graphics.Gnuplot.Graph.TwoDimensional as Graph2D
+--import qualified Graphics.Gnuplot.Graph.TwoDimensional as Graph2D
 
 -- import qualified Graphics.Gnuplot.Graph as Graph
 import qualified Graphics.Gnuplot.Value.Atom as Atom
@@ -40,7 +41,7 @@ import qualified Graphics.Gnuplot.LineSpecification as LineSpec
 -- import qualified Graphics.Gnuplot.Frame.OptionSet.Style as OptsStyle
 -- import qualified Graphics.Gnuplot.Frame.OptionSet.Histogram as Histogram
 
-import EFA.Report.Typ (TDisp, 
+import EFA.Report.Typ (TDisp) {- 
                        DisplayType(Typ_T), 
                        getDisplayUnit, 
                        DeltaDisp,
@@ -53,7 +54,8 @@ import EFA.Signal.Typ (Typ,
                        Tt,
                        N
                       )
-import qualified EFA.Signal.Signal as Sig
+--import qualified EFA.Signal.Signal as Sig
+
 import EFA.Signal.Signal(TC,(./),
                          FSignal, 
                          FFSignal,
@@ -62,36 +64,37 @@ import EFA.Signal.Signal(TC,(./),
                          FDistr,
                          PDistr, 
                          NDistr)
-
-import qualified EFA.Signal.Base as Base
-import EFA.Signal.Data (Data,
-                        Nil,(:>))
+-}
+--import qualified EFA.Signal.Base as Base
+--import EFA.Signal.Data (Data,
+--                        Nil,(:>))
 
 -- import EFA.Signal.Record (SigId(..), Record(..), PowerRecord, SignalRecord)
 import EFA.Signal.Record as Record
 -- import EFA.Hack.Record as HRecord
-import qualified EFA.Graph.Topology.Index as Idx
+--import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Equation.Environment as Env
-import qualified EFA.Equation.Arithmetic as Arith
+--import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Record as EqRecord
 import qualified EFA.Equation.Result as Result
 
 --import qualified Data.NonEmpty as NonEmpty
-import EFA.Report.FormatValue (FormatValue, formatValue)
-import qualified EFA.Report.Format as Format
+import EFA.Report.FormatValue (FormatValue) 
+                               --formatValue)
+--import qualified EFA.Report.Format as Format
 
 import qualified EFA.Equation.Stack as Stack
-import qualified EFA.Equation.Variable as Var
+--import qualified EFA.Equation.Variable as Var
 --import qualified Data.Foldable as Fold
 --import EFA.Equation.Arithmetic ((~+))
 
-import EFA.Report.Typ (TDisp)
+--import EFA.Report.Typ (TDisp)
 --import qualified EFA.Symbolic.SumProduct as SumProduct
 
 
 
-import qualified Graphics.Gnuplot.Value.Atom as Atom
-import qualified Graphics.Gnuplot.Value.Tuple as Tuple
+--import qualified Graphics.Gnuplot.Value.Atom as Atom
+--import qualified Graphics.Gnuplot.Value.Tuple as Tuple
 --import Control.Functor.HT (void)
 --import qualified Graphics.Gnuplot.Frame as Frame
 --import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
@@ -99,17 +102,17 @@ import qualified Graphics.Gnuplot.Value.Tuple as Tuple
 --import EFA.Report.Typ (TDisp, DisplayType(Typ_T), getDisplayUnit, getDisplayTypName)
 --import qualified Graphics.Gnuplot.Advanced as Plot
 
-import qualified Data.Foldable as Fold
-import qualified Data.Map as M
+--import qualified Data.Foldable as Fold
+--import qualified Data.Map as M
 
-import Control.Functor.HT (void)
+--import Control.Functor.HT (void)
 
 import qualified EFA.Example.AssignMap as AssignMap
 
 --import Debug.Trace
 
-import Data.Monoid ((<>))
-
+--import Data.Monoid ((<>))
+{-
 sigsWithSpeed ::(Fractional d, Ord d, Show (v d), V.Walker v, V.Storage v d,
                                  V.Singleton v, V.FromList v, TDisp t2, TDisp t1, Atom.C d,
                                  Tuple.C d) =>
@@ -120,6 +123,30 @@ sigsWithSpeed recList (ti, idList) =  do
                  O.extract idList .
                  O.leadSignalsMax (Record.RangeFrom idList, Record.ToModify [Record.SigId "speedsensor1.v"]) .
                  O.pointSize 0.1) (HPlot.RecList recList)
+-}
+
+sigsWithSpeed :: (Fractional d1,
+                      Fractional d2,
+                      Ord d2,
+                      Show (v d2),
+                      V.Walker v,
+                      V.Storage v d1,
+                      V.Storage v d2,
+                      V.Singleton v,
+                      V.FromList v,
+                      TDisp t1,
+                      TDisp t2,
+                      Tuple.C d1,
+                      Tuple.C d2,
+                      Atom.C d1,
+                      Atom.C d2,
+                      Terminal.C term) => 
+                 String -> 
+                 term -> 
+                 [(Record.Name,Record s1 s2 t1 t2 SigId v d1 d2)] -> 
+                 [SigId] -> IO()
+sigsWithSpeed ti term recList idList = PlotNeu.recordIOList_extractWithLeadSignal ti term show id (Record.RangeFrom idList, Record.ToModify $ [Record.SigId "speedsensor1.v"]) recList
+
 
 operation :: (Fractional d, Ord id, Show (v d), Show id, V.Walker v,
               V.Storage v d, V.FromList v, TDisp t2, Tuple.C d, Atom.C d, 
@@ -133,10 +160,10 @@ operation ti term opts rList  (plotTitle, (idx,idy)) = mapM_ f rList
   where f ((Record.Name recTitle), rec) = do
           let x = getSig rec idx
               y = getSig rec idy
-          Plot.xyIO (ti ++ "_" ++ plotTitle ++ "_" ++ recTitle) x y
+          PlotNeu.xyIO (ti ++ "_" ++ plotTitle ++ "_" ++ recTitle) term opts show x y
 
 
-
+{-
 stack:: (Show a, Ord i, FormatValue i, TDNode.C a, Show i) =>
         String ->
         XIdx.Energy a ->
@@ -149,7 +176,7 @@ stack ti energyIndex eps (recName,env) = do
    Plot.stackIO ("Record " ++ recName ++ "-" ++ ti)
       (formatValue $ Idx.delta $ Var.index energyIndex)
       (AssignMap.threshold eps $ lookupStack energyIndex env)
-
+-}
 
 reportStack::(Num a, Ord node, Ord i, Ord a, Show node, FormatValue a,
                                FormatValue i) =>
@@ -162,7 +189,7 @@ reportStack::(Num a, Ord node, Ord i, Ord a, Show node, FormatValue a,
 
 reportStack ti energyIndex eps (env) = do
                print (ti ++ show energyIndex)
-               AssignMap.print $ AssignMap.threshold eps $ lookupStack energyIndex env
+               AssignMap.print $ AssignMap.threshold eps $ AssignMap.lookupStack energyIndex env
 {-
 recordStackRow:: (TDNode.C node, Ord node, Ord i, Show i, Show node, FormatValue i) =>
                             String
@@ -181,6 +208,7 @@ recordStackRow ti energyIndex eps envs =
     $ envs
 -}
 
+{-
 recordStackRow:: (TDNode.C node, Ord node, Ord i, Show i, Show node, FormatValue i) =>
                             String
                             -> [DeltaName]
@@ -273,7 +301,8 @@ lookupStack energyIndex env =  case M.lookup energyIndex (Env.energyMap signalEn
 
    where
         Env.Complete _scalarEnv signalEnv = env
-
+-}
+{-
 -- | Version basierend auf originalen Record Signalen 
 etaDistribution1D :: (Ord id, 
                       Show id, 
@@ -344,8 +373,9 @@ etaIO2 :: (Fractional d,
          String -> Sig.PFSignal v d -> Sig.NFSignal v d -> 
          Sig.PDistr v d -> Sig.FDistr v d -> Sig.NDistr v d -> IO ()
 etaIO2 ti p n pDist eDist nDist =
-   PlotNeu.run DefaultTerm.cons 
-   (PlotNeu.xyFrame ti p n) $ 
-   PlotNeu.xy id show p n <>
-   PlotNeu.xy id show pDist nDist <> 
-   PlotNeu.xy id show pDist eDist
+   PlotBase.plotOne DefaultTerm.cons 
+   (PlotBase.xyFrameAttr ti p n) $ 
+   PlotBase.xy id show p n <>
+   PlotBase.xy id show pDist nDist <> 
+   PlotBase.xy id show pDist eDist
+-}
