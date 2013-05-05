@@ -25,7 +25,9 @@ import EFA.Utility.Async (concurrentlyMany_)
 
 import qualified Modules.System as System
 import qualified Modules.Analysis as Analysis
---import qualified Modules.Plots as Plots
+import qualified Modules.Plots as Plots
+import qualified EFA.Signal.PlotNeu as PlotNeu
+
 import qualified Modules.Signals as Signals
 
 import qualified EFA.Example.Index as XIdx
@@ -44,6 +46,11 @@ import qualified EFA.Graph.Topology.Index as Idx
 --import qualified EFA.Symbolic.SumProduct as SumProduct
 
 import qualified EFA.Signal.Record as Record
+--import qualified Graphics.Gnuplot.Terminal.X11 as X11
+import qualified Graphics.Gnuplot.Terminal.WXT as WXT
+
+--import qualified Graphics.Gnuplot.Terminal as Terminal
+--import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 
 import EFA.Signal.Signal (TC(..), Scalar,toScalar)
 import EFA.Signal.Data (Data(..), Nil)
@@ -60,8 +67,6 @@ import Data.Tuple.HT (mapSnd)
 --import qualified EFA.Example.Index as XIdx
 
 import qualified Data.GraphViz.Attributes.Colors.X11 as Colors
-
-import qualified EFA.Signal.PlotNeu as PlotNeu
 
 
 -- | O. Generelle Settings
@@ -105,6 +110,12 @@ etaList = [
   ("Engine and Generator", Signals.etaEngineGenerator),
   ("Motor and Gearbox", Signals.etaMotorGearbox)
  ]
+          
+-- plotTerm :: X11.T        
+-- plotTerm = X11.cons 
+
+plotTerm :: WXT.T        
+plotTerm = WXT.cons 
 
 -- | A. Generator steht
 
@@ -237,6 +248,7 @@ energyIndex  = Idx.Energy $ Idx.StructureEdge System.Battery System.ConBattery
 sectionMapping :: [SD.SequData a] -> [SD.SequData a]
 sectionMapping = map (SD.reIndex [8,11,13,14,18,32,37::Int])
 
+
 --------------------------------------------------------------------
 
 zipWith3M_ ::
@@ -272,7 +284,7 @@ main = do
         L.unzip5 preProcessedDataX
 --  let (sequencePowersFiltX,sequenceFlowsFiltX,flowStatesX,powerSignalsX,signalsX) = L.unzip5 preProcessedDataX
 
-  let allSignalsX = zipWith Record.combinePowerAndSignal powerSignalsX signalsX
+  let allSignalsX = zipWith (Record.combinePowerAndSignalWithFunction System.convertPowerId) powerSignalsX signalsX
 
 ---------------------------------------------------------------------------------------
 -- *  ReIndex Sequences to allow Sequence Matching
@@ -348,30 +360,30 @@ main = do
     --  Draw.topology2pdf System.topology
     -- Draw.topologyWithEdgeLabels System.edgeNames System.topology,
     ]
-{-
 
+{-
 --  ++ [putStrLn ("Number of possible flow states: " ++ show (length System.flowStates))]
     ++ [Draw.xterm $ Draw.flowTopologies (take 20 System.flowStates)]
 
 ---------------------------------------------------------------------------------------
 -- * Plot Time Signals
 
-    ++ [mapM_ (Plots.sigsWithSpeed allSignalsX) plotList]
+    ++ [mapM_ (Plots.sigsWithSpeed plotTerm (zip datasetsX allSignalsX)) plotList]
 
   -- Plots.sigsWithSpeed allSignalsX (head plotList)
   --  Plot.recordIO "Test" (head allSignalsX)
-
+-}
 ---------------------------------------------------------------------------------------
 -- * Plot Operation Points
 
-    ++ [mapM_ (Plots.operation "Operation Points -" (zip datasetsX allSignalsX)) xyList]
--}
+    ++ [mapM_ (Plots.operation "Operation Points -" plotTerm id (zip datasetsX allSignalsX)) xyList]
+
 ---------------------------------------------------------------------------------------
 -- * Plot Efficiency Curves and Distributions
 
     ++ [mapM_ (PlotNeu.etaDistr1DimIOfromRecordList "Average Efficiency Curve -" 10000 5000
                (zip datasetsX (map (Record.diffTime . Record.partIntegrate) powerSignalsX))) etaList]
-{-
+
 ---------------------------------------------------------------------------------------
 -- * Draw Diagrams
 
@@ -393,7 +405,7 @@ main = do
 -- * Plot Stacks
 
     -- Record Stack Row at specific position
-    ++ [Plots.recordStackRow
+    ++ [PlotNeu.recordStackRowIO
          ("Energy Flow Change at " ++ show energyIndexSec)
          deltasetsX
          energyIndexSec
@@ -401,7 +413,7 @@ main = do
          differenceExtEnvs]
 
     -- Section stack row at given ppos for a defined record
-    ++ [Plots.sectionStackRow
+    ++ [PlotNeu.sectionStackRowIO
         "Energy Flow Change at Tank in all Sections 1100 vs 1000"
         energyIndex
         sectionStackRow_filterEnergy
@@ -411,17 +423,17 @@ main = do
 --    ++ [print $ Plots.lookupStack energyIndexSec (last differenceExtEnvs)]
 
     -- overall stack at given position
-    ++ [Plots.cumStack
+    ++ [PlotNeu.aggregatedStackIO
         ("Cumulative Flow Change at  " ++ show energyIndex)
         energyIndex
         cumStack_filterEnergy
         (head differenceExtEnvs)]
 
-{-
-     ++ mapM_ (Plots.stack  "Energy Flow Change at Tank in Section 6"
-         (XIdx.energy (Idx.Section 6) System.Tank System.ConBattery) 1 )
-         (zip (deltasets datasetsX) differenceExtEnvs)
 
+{-     ++ [mapM_ (PlotNeu.stackIOfromEnv  "Energy Flow Change at Tank in Section 6" 
+         (XIdx.energy (Idx.Section 6) System.Tank System.ConBattery) 1) 
+         (zip deltasetsX differenceExtEnvs)]-}
+{-
      ++ [print $    -- AssignMap.threshold 0.001 $
 --             M.mapKeys AssignMap.deltaIndexSet $
 --             Stack.assignDeltaMap $
@@ -435,4 +447,3 @@ main = do
     -- Prediction Based on a specific Record
     ++ [drawAbs (Record.Name "Prediction 900kg") (head sectionToposX) prediction Colors.Yellow]
     -- ++ [drawAbs (Record.Name "Prediction 900kg") (head sequenceFlowTopologyX) prediction Colors.Yellow]
--}

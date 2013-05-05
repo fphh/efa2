@@ -232,7 +232,8 @@ extractLogSignals (Record time sMap) idList =
        notFound = Set.difference (M.keysSet idMap) (M.keysSet sMap)
    in  if Set.null notFound
          then Record time $ M.intersectionWith ($) idMap sMap
-         else error $ "extractLogSignals: signals not found in record: " ++ show notFound ++ (myShowList $ M.keys sMap)
+         else error $ "extractLogSignals: signals not found in record: " ++ show notFound ++ 
+              "\n" ++ "Available Keys in Map : \n" ++ (myShowList $ M.keys sMap)
 
 
 genPowerRecord ::
@@ -570,21 +571,27 @@ powerToSignal (Record time m) = (Record time $
                                    M.mapKeys (\x -> SigId $ show x) $
                                    M.map S.untype m)
 
+-- | Plot Records with readible keys
+powerToSignalWithFunct :: (Ord node, Show node,Show (v d)) =>  (Idx.PPos node -> SigId) -> PowerRecord node v d -> SignalRecord v d
+powerToSignalWithFunct funct rec = rmap S.untype $ rmapKeys funct rec
+
 -- | Combine a power and a signal record together in a signal record (plotting)
 combinePowerAndSignal :: (Eq (v d),Show id) => PowerRecord id v d -> SignalRecord v d -> SignalRecord v d
 combinePowerAndSignal pr sr = union (powerToSignal pr) sr
+
+-- | Combine a power and a signal record together in a signal record (plotting)
+combinePowerAndSignalWithFunction :: (Eq (v d), 
+                                      Ord node, 
+                                      Show (v d), 
+                                      Show node) =>
+                                     (Idx.PPos node -> SigId) -> PowerRecord node v d -> SignalRecord v d -> SignalRecord v d
+combinePowerAndSignalWithFunction funct pr sr = union (powerToSignalWithFunct funct pr) sr
 
 -- | Add Record name to SigId -- can be used for plotting multiple records in one window
 addRecName2SigId :: String -> SignalRecord v d -> SignalRecord v d
 addRecName2SigId name (Record time sigs) = Record time (M.mapKeys (\ (SigId x) -> SigId (name ++ "_" ++ x) ) sigs)
 
--- | Plot Records with readible keys
-namePowers :: (Ord node, Show node,Show (v d)) =>  M.Map (Idx.PPos node) SigId -> PowerRecord node v d -> SignalRecord v d
-namePowers powerNames rec = rmap S.untype $ rmapKeys f rec
-  where f key = checkedLookup2 "Record.namePowers" powerNames key
-
-
--- | Plot Records with readible keys
+-- | Integrate power signal step wise to get a flow record
 partIntegrate :: (Num d,
                   V.Zipper v,
                   V.Walker v,
@@ -594,7 +601,7 @@ partIntegrate :: (Num d,
                   BProd d d) => PowerRecord node v d -> FlowRecord node v d
 partIntegrate rec@(Record time _) = rmap (S.partIntegrate time) rec
 
-
+-- | Classify a flow record to get a distribution record
 distribution :: (V.FromList v,
                  V.Filter v,
                  Ord d,

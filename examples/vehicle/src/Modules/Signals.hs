@@ -178,7 +178,7 @@ vehicle = [SigId "_vehicleSpeed_log",
            SigId "_frontBrakesTorque_log",
            SigId "_rearBrakesTorque_log",
            SigId "chassis1._resistanceForce_log",
-           SigId "PPos (StructureEdge Chassis VehicleInertia)"
+           SigId "Power-ToInertia"
           ]
 
 -- Building Signal Record for better Plotting of the original signals

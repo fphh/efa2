@@ -112,18 +112,6 @@ import qualified EFA.Example.AssignMap as AssignMap
 --import Debug.Trace
 
 --import Data.Monoid ((<>))
-{-
-sigsWithSpeed ::(Fractional d, Ord d, Show (v d), V.Walker v, V.Storage v d,
-                                 V.Singleton v, V.FromList v, TDisp t2, TDisp t1, Atom.C d,
-                                 Tuple.C d) =>
-                                [Record s1 s2 t1 t2 SigId v d d] -> (String, [SigId]) -> IO ()
-
-sigsWithSpeed recList (ti, idList) =  do
-  HPlot.record2 (O.title ti .
-                 O.extract idList .
-                 O.leadSignalsMax (Record.RangeFrom idList, Record.ToModify [Record.SigId "speedsensor1.v"]) .
-                 O.pointSize 0.1) (HPlot.RecList recList)
--}
 
 sigsWithSpeed :: (Fractional d1,
                       Fractional d2,
@@ -141,11 +129,10 @@ sigsWithSpeed :: (Fractional d1,
                       Atom.C d1,
                       Atom.C d2,
                       Terminal.C term) =>
-                 String ->
                  term ->
                  [(Record.Name,Record s1 s2 t1 t2 SigId v d1 d2)] ->
-                 [SigId] -> IO()
-sigsWithSpeed ti term recList idList = PlotNeu.recordIOList_extractWithLeadSignal ti term show id (Record.RangeFrom idList, Record.ToModify $ [Record.SigId "speedsensor1.v"]) recList
+                 (String,[SigId]) -> IO()
+sigsWithSpeed term recList (componentName, idList) = PlotNeu.recordIOList_extractWithLeadSignal ("Component " ++ componentName ++ " -  Signals with Vehicle Speed") term show id (Record.RangeFrom idList, Record.ToModify $ [Record.SigId "speedsensor1.v"]) recList
 
 
 operation :: (Fractional d, Ord id, Show (v d), Show id, V.Walker v,
@@ -160,23 +147,9 @@ operation ti term opts rList  (plotTitle, (idx,idy)) = mapM_ f rList
   where f ((Record.Name recTitle), rec) = do
           let x = getSig rec idx
               y = getSig rec idy
-          PlotNeu.xyIO (ti ++ "_" ++ plotTitle ++ "_" ++ recTitle) term opts show x y
+              legend n = recTitle ++ " - Torque over Speed"  
+          PlotNeu.xyIO (ti ++ "_" ++ plotTitle) term opts legend x y
 
-
-{-
-stack:: (Show a, Ord i, FormatValue i, TDNode.C a, Show i) =>
-        String ->
-        XIdx.Energy a ->
-        Double ->
-        (String, Env.Complete
-        a t (EqRecord.Absolute (Result.Result (Stack.Stack i Double)))) ->
-        IO ()
-
-stack ti energyIndex eps (recName,env) = do
-   Plot.stackIO ("Record " ++ recName ++ "-" ++ ti)
-      (formatValue $ Idx.delta $ Var.index energyIndex)
-      (AssignMap.threshold eps $ lookupStack energyIndex env)
--}
 
 reportStack::(Num a, Ord node, Ord i, Ord a, Show node, FormatValue a,
                                FormatValue i) =>
@@ -190,192 +163,3 @@ reportStack::(Num a, Ord node, Ord i, Ord a, Show node, FormatValue a,
 reportStack ti energyIndex eps (env) = do
                print (ti ++ show energyIndex)
                AssignMap.print $ AssignMap.threshold eps $ AssignMap.lookupStack energyIndex env
-{-
-recordStackRow:: (TDNode.C node, Ord node, Ord i, Show i, Show node, FormatValue i) =>
-                            String
-                            -> XIdx.Energy node
-                            -> Double
-                            -> [Env.Complete node t
-                                   (EqRecord.Absolute (Result.Result (Stack.Stack i Double)))]
-                            -> IO ()
-
-recordStackRow ti energyIndex eps envs =
-   Plot.stacksIO ti
-      (map (const $ formatValue $ Idx.delta $ Var.index energyIndex) envs) .
-   AssignMap.simultaneousThreshold eps .
-   AssignMap.transpose .
-   map (lookupStack energyIndex)
-    $ envs
--}
-
-{-
-recordStackRow:: (TDNode.C node, Ord node, Ord i, Show i, Show node, FormatValue i) =>
-                            String
-                            -> [DeltaName]
-                            -> XIdx.Energy node
-                            -> Double
-                            -> [Env.Complete node t
-                                   (EqRecord.Absolute (Result.Result (Stack.Stack i Double)))]
-                            -> IO ()
-
-recordStackRow ti deltaSets energyIndex eps envs =
-   Plot.stacksIO ti
-   (map (Format.literal . (\ (DeltaName x) -> x)) deltaSets)
-   (AssignMap.simultaneousThreshold eps .
-   AssignMap.transpose .
-   map (lookupStack energyIndex)
-    $ envs)
-
-sectionStackRow:: (Ord node, TDNode.C node,Show i, Ord i, FormatValue i) =>
-                  String
-                  -> Idx.Energy node
-                  -> Double
-                  -> Env.Complete node t
-                         (EqRecord.Absolute (Result.Result (Stack.Stack i Double)))
-                  -> IO ()
-sectionStackRow ti energyIndex eps env =
-   Plot.stacksIO ti
-   (map (Format.literal . (\(Idx.InSection sec _) -> show sec) .fst) stacks)
-   (AssignMap.simultaneousThreshold eps . AssignMap.transpose $
-    map (M.mapKeys AssignMap.deltaIndexSet .
-         Stack.assignDeltaMap . snd) $ stacks)
-   where stacks = lookupAllStacks energyIndex env
-
-lookupAllStacks :: (Ord i, Ord node, Eq node) => Idx.Energy node
-                   -> Env.Complete node t
-                         (EqRecord.Absolute (Result.Result (Stack.Stack i Double)))
-                   -> [(Idx.InSection Idx.Energy node,Stack.Stack i Double)]
-
-lookupAllStacks e0 =
-   M.toList .
-   fmap Arith.integrate .
-   M.mapMaybe Result.toMaybe .
-   fmap EqRecord.unAbsolute .
-   M.filterWithKey (\(Idx.InSection _sec e) _ -> e == e0) .
-   Env.energyMap . Env.signal
-
-cumStack ::
-   (TDNode.C node, Ord node, Show node,
-    Ord i, Show i, FormatValue i) =>
-   String ->
-   Idx.Energy node ->
-   Double ->
-   Env.Complete node t
-      (EqRecord.Absolute (Result.Result (Stack.Stack i Double))) ->
-   IO ()
-
-cumStack ti energyIndex eps env =
-   Plot.stackIO ti (formatValue $ Idx.delta energyIndex) $
-   AssignMap.threshold eps $
-   M.mapKeys AssignMap.deltaIndexSet $
-   lookupCumStack energyIndex env
-
-lookupCumStack ::
-   (Ord i, Ord node, Show node,
-    Arith.Constant a, a ~ Arith.Scalar v, Arith.Integrate v) =>
-   Idx.Energy node ->
-   Env.Complete node t
-      (EqRecord.Absolute (Result.Result (Stack.Stack i v))) ->
-   M.Map (M.Map i Stack.Branch) a
-
-lookupCumStack e0 =
-   Fold.foldMap (Stack.assignDeltaMap . Arith.integrate) .
-   M.mapMaybe Result.toMaybe .
-   fmap EqRecord.unAbsolute .
-   M.filterWithKey (\(Idx.InSection _sec e) _ -> e == e0) .
-   Env.energyMap . Env.signal
-
-lookupStack:: (Ord i, Ord node, Show node) =>
-                              XIdx.Energy node
-                              -> Env.Complete
-                                   node t (EqRecord.Absolute (Result.Result (Stack.Stack i a)))
-                              -> M.Map (AssignMap.IndexSet i) a
-
-lookupStack energyIndex env =  case M.lookup energyIndex (Env.energyMap signalEnv) of
-    Nothing -> error (show energyIndex ++ "undefined")
-    Just d ->
-      case EqRecord.unAbsolute d of
-        Result.Undetermined -> error (show energyIndex ++ "undetermined")
-        Result.Determined xs -> M.mapKeys AssignMap.deltaIndexSet $
-                             Stack.assignDeltaMap xs
-
-   where
-        Env.Complete _scalarEnv signalEnv = env
--}
-{-
--- | Version basierend auf originalen Record Signalen
-etaDistribution1D :: (Ord id,
-                      Show id,
-                      Show (v d),
-                      Base.BProd d d,
-                      Ord d,
-                      V.Zipper v,
-                      V.Walker v,
-                      V.Storage v (d, d),
-                      V.Storage v d,
-                      Fractional d,
-                      V.FromList v,
-                      Atom.C d,
-                      Tuple.C d,
-                      V.SortBy v,
-                      V.Unique v (Sig.Class d),
-                      V.Storage v Sig.SignalIdx,
-                      V.Storage v Int,
-                      V.Storage v (Sig.Class d),
-                      V.Storage v ([Sig.Class d], [Sig.SignalIdx]),
-                      RealFrac d,
-                      V.Lookup v,
-                      V.Find v,
-                      Base.BSum d,
-                      Base.DArith0 d,
-                      V.Storage v (d, (d, d)),
-                      V.Singleton v) =>
-                     String  -> d -> d -> [(Record.Name, DTimeFlowRecord id v d)]
-                     -> (String, (Idx.PPos id, Idx.PPos id, Idx.PPos id)) -> IO ()
-
-etaDistribution1D ti  intervall offset rList  (plotTitle, (idIn,idOut,idAbszisse)) = mapM_ f rList
-  where f ((Record.Name recTitle), rec) = do
-          let ein = getSig rec idIn
-              eout = getSig rec idOut
-              eAbszisse = getSig rec idAbszisse
-              pAbszisse = eAbszisse./dtime
-              dtime = getTime rec
-              eta = Sig.calcEtaWithSign eout ein eout
-              (pDist, einDist, eoutDist, nDist) = Sig.etaDistibution1D intervall offset
-                                                 dtime ein eout eout
-              (x,y) = Sig.sortTwo (pAbszisse,eta)
-          etaIO (ti ++ "_" ++ plotTitle ++ "_" ++ recTitle) x y  pDist
-            (Sig.scale (Sig.norm eoutDist) 100) nDist
-
-
-etaIO :: (Fractional d,
-          V.Walker v,
-          V.Storage v d,
-          V.FromList v,
-          Atom.C d,
-          Tuple.C d) =>
-         String -> Sig.PFSignal v d -> Sig.NFSignal v d ->
-         Sig.PDistr v d -> Sig.FDistr v d -> Sig.NDistr v d -> IO ()
-etaIO ti p n pDist eDist nDist =
-   Plot.run DefaultTerm.cons
-   (Plot.xyAttr ti p n) $
-   Plot.xy p n <>
-   Plot.xy pDist nDist <>
-   Plot.xy pDist eDist
-
-
-etaIO2 :: (Fractional d,
-          V.Walker v,
-          V.Storage v d,
-          V.FromList v,
-          Atom.C d,
-          Tuple.C d) =>
-         String -> Sig.PFSignal v d -> Sig.NFSignal v d ->
-         Sig.PDistr v d -> Sig.FDistr v d -> Sig.NDistr v d -> IO ()
-etaIO2 ti p n pDist eDist nDist =
-   PlotBase.plotOne DefaultTerm.cons
-   (PlotBase.xyFrameAttr ti p n) $
-   PlotBase.xy id show p n <>
-   PlotBase.xy id show pDist nDist <>
-   PlotBase.xy id show pDist eDist
--}
