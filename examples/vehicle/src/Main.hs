@@ -26,7 +26,7 @@ import EFA.Utility.Async (concurrentlyMany_)
 import qualified Modules.System as System
 import qualified Modules.Analysis as Analysis
 import qualified Modules.Plots as Plots
-import qualified EFA.Signal.PlotNeu as PlotNeu
+import qualified EFA.Signal.Plot as Plot
 
 import qualified Modules.Signals as Signals
 
@@ -381,7 +381,7 @@ main = do
 ---------------------------------------------------------------------------------------
 -- * Plot Efficiency Curves and Distributions
 
-    ++ [mapM_ (PlotNeu.etaDistr1DimIOfromRecordList "Average Efficiency Curve -" 10000 5000
+    ++ [mapM_ (Plot.etaDistr1DimIOfromRecordList "Average Efficiency Curve -" 10000 5000
                (zip datasetsX (map (Record.diffTime . Record.partIntegrate) powerSignalsX))) etaList]
 
 ---------------------------------------------------------------------------------------
@@ -405,7 +405,7 @@ main = do
 -- * Plot Stacks
 
     -- Record Stack Row at specific position
-    ++ [PlotNeu.recordStackRowIO
+    ++ [Plot.recordStackRowIO
          ("Energy Flow Change at " ++ show energyIndexSec)
          deltasetsX
          energyIndexSec
@@ -413,7 +413,7 @@ main = do
          differenceExtEnvs]
 
     -- Section stack row at given ppos for a defined record
-    ++ [PlotNeu.sectionStackRowIO
+    ++ [Plot.sectionStackRowIO
         "Energy Flow Change at Tank in all Sections 1100 vs 1000"
         energyIndex
         sectionStackRow_filterEnergy
@@ -423,14 +423,14 @@ main = do
 --    ++ [print $ Plots.lookupStack energyIndexSec (last differenceExtEnvs)]
 
     -- overall stack at given position
-    ++ [PlotNeu.aggregatedStackIO
+    ++ [Plot.aggregatedStackIO
         ("Cumulative Flow Change at  " ++ show energyIndex)
         energyIndex
         cumStack_filterEnergy
         (head differenceExtEnvs)]
 
 
-{-     ++ [mapM_ (PlotNeu.stackIOfromEnv  "Energy Flow Change at Tank in Section 6" 
+{-     ++ [mapM_ (Plot.stackIOfromEnv  "Energy Flow Change at Tank in Section 6" 
          (XIdx.energy (Idx.Section 6) System.Tank System.ConBattery) 1) 
          (zip deltasetsX differenceExtEnvs)]-}
 {-

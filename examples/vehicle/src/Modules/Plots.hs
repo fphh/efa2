@@ -8,10 +8,8 @@ module Modules.Plots where
 
 import qualified EFA.Example.Index as XIdx
 --import qualified EFA.Signal.Plot as Plot
-import qualified EFA.Signal.PlotNeu as PlotNeu
+import qualified EFA.Signal.Plot as Plot
 --import qualified EFA.Signal.PlotBase as PlotBase
---import qualified EFA.Hack.Plot as HPlot
---import qualified EFA.Hack.Options as O
 --import qualified EFA.Graph.Topology.Node as TDNode
 import qualified EFA.Signal.Vector as V
 
@@ -132,7 +130,7 @@ sigsWithSpeed :: (Fractional d1,
                  term ->
                  [(Record.Name,Record s1 s2 t1 t2 SigId v d1 d2)] ->
                  (String,[SigId]) -> IO()
-sigsWithSpeed term recList (componentName, idList) = PlotNeu.recordIOList_extractWithLeadSignal ("Component " ++ componentName ++ " -  Signals with Vehicle Speed") term show id (Record.RangeFrom idList, Record.ToModify $ [Record.SigId "speedsensor1.v"]) recList
+sigsWithSpeed term recList (componentName, idList) = Plot.recordIOList_extractWithLeadSignal ("Component " ++ componentName ++ " -  Signals with Vehicle Speed") term show id (Record.RangeFrom idList, Record.ToModify $ [Record.SigId "speedsensor1.v"]) recList
 
 
 operation :: (Fractional d, Ord id, Show (v d), Show id, V.Walker v,
@@ -148,7 +146,7 @@ operation ti term opts rList  (plotTitle, (idx,idy)) = mapM_ f rList
           let x = getSig rec idx
               y = getSig rec idy
               legend n = recTitle ++ " - Torque over Speed"  
-          PlotNeu.xyIO (ti ++ "_" ++ plotTitle) term opts legend x y
+          Plot.xyIO (ti ++ "_" ++ plotTitle) term opts legend x y
 
 
 reportStack::(Num a, Ord node, Ord i, Ord a, Show node, FormatValue a,

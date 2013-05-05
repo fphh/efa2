@@ -10,6 +10,7 @@ import EFA.Signal.Signal
 
 import EFA.Signal.Typ (Typ, A, D, P, N, Tt)
 import EFA.Signal.Base (Val)
+import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 
 
 -- Generate objects to work with
@@ -43,8 +44,8 @@ nVal2 = S.sum fSig2 ./ S.sum fSig1
 main :: IO ()
 main = do
 
-  Plot.xyIO "Power" time pSig1
-  Plot.xyIO "Power" time pSig2
+  Plot.xyIO "Power" DefaultTerm.cons id (\_ -> "Power") time pSig1
+  Plot.xyIO "Power" DefaultTerm.cons id (\_ -> "Power") time pSig2
 
   putStrLn (S.disp nVal2)
 

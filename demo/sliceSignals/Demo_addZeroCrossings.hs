@@ -11,7 +11,7 @@ import qualified EFA.Signal.Plot as Plot
 import EFA.Signal.Base (Val)
 
 import qualified Data.Map as M
-
+import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 
 data Node = Node0 | Node1 | Node2 deriving (Eq, Ord, Show)
 
@@ -38,4 +38,4 @@ main :: IO ()
 main = do
   print pRec
   print pRec0
-  Plot.recordIO "pRec0" pRec0
+  Plot.recordIO "pRec0" DefaultTerm.cons show id pRec0
