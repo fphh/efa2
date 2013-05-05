@@ -312,6 +312,7 @@ main = do
 -- *  Make Base Analysis on external Data
 
   let externalEnvX = zipWith Analysis.external  sequenceFlowTopologyX sequenceFlowsFiltX
+  let externalSignalEnvX = zipWith Analysis.external2  sequenceFlowTopologyX sequenceFlowsFiltX
 
 
   ---------------------------------------------------------------------------------------
@@ -331,6 +332,9 @@ main = do
 -- *  Make the Prediction
 
   let prediction = Analysis.prediction (head sequenceFlowTopologyX) (head externalEnvX)
+      
+  -- Hier gehts schief, wenn ich mit Signalen rechnen will
+--  let prediction2 = Analysis.prediction (head sequenceFlowTopologyX) (head externalSignalEnvX) 
 
 ---------------------------------------------------------------------------------------
 -- *  Make difference Analysis
