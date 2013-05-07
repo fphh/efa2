@@ -47,7 +47,7 @@ edgeList :: [(Node, Node, String, String, String)]
 edgeList = [(Tank, ConBattery, "Engine&Generator", "Fuel","GeneratorClamps"),
             (ConBattery, ConES,"Wire","Wire","Wire"),
             (ConES, ConFrontBrakes,"Motor&Gearbox","MotorClamps","OutShaft"),
-            (ConFrontBrakes, Chassis, "Front\\nWheels","FrontWheelHub","FrontTires"),
+            (ConFrontBrakes, Chassis, "FrontWheels","FrontWheelHub","FrontTires"),
             (Chassis, Resistance,"ToResistance","ToResistance","ToResistance"),
             (ConBattery, Battery,"BatteryResistance","BatteryClamps","BatteryCore"),
             (ConES, ElectricSystem,"DCDC","HighVoltage","LowVoltage"),
@@ -64,14 +64,21 @@ edgeNames = M.fromList el
 
 powerPositonNames :: M.Map (XIdx.PPos Node) SigId
 powerPositonNames = M.fromList $ concat $ map f edgeList
-  where f (n1,n2,_,l1,l2) = [(XIdx.ppos n1 n2, SigId l1),
-                             (XIdx.ppos n2 n1, SigId l2)]
+  where f (n1,n2,_,l1,l2) = [(XIdx.ppos n1 n2, SigId $ "Power-"++l1),
+                             (XIdx.ppos n2 n1, SigId $ "Power-"++l2)]
+
 showPowerId :: XIdx.PPos Node -> String
 showPowerId ppos = f (M.lookup  ppos powerPositonNames)
   where
-    f (Just pid) = show pid
+    f (Just sid) = show sid
     f Nothing = (show ppos)
 
+
+convertPowerId :: XIdx.PPos Node -> SigId
+convertPowerId ppos =  f (M.lookup  ppos powerPositonNames)
+  where
+    f (Just sid) = sid
+    f Nothing = SigId (show ppos)
 
 ----------------------------------------------------------------------
 -- * Calculate Flow States

@@ -46,7 +46,10 @@ import Data.Monoid ((<>))
 
 import Prelude hiding ((.))
 
+import qualified Graphics.Gnuplot.Terminal.WXT as WXT
 
+plotTerm :: WXT.T        
+plotTerm = WXT.cons 
 
 sec0, sec1 :: Idx.Section
 sec0 :~ sec1 :~ _ = Stream.enumFrom $ Idx.Section 0
@@ -403,7 +406,7 @@ main = do
 
   Plot.surfaceIO "P01" varX varY varP01
 
-  Plot.xyIO "N01 - Curve"  p10Lin' n01Lin'
+  Plot.xyIO "N01 - Curve"  plotTerm id (\_ -> "efficiency N01") p10Lin' n01Lin'
 
   -- Plots to check variable efficiency at storage -- charging
   Plot.surfaceIO "P13_0 - externe Ladeleistung" varX varY varP13_0
@@ -413,7 +416,7 @@ main = do
   Rep.report [] ("varP31_0",varP31_0)
 
   Plot.surfaceIO "N13 - Charging" varP31_0 varY varN13
-  Plot.xyIO "N13 - Charging"  varP31_0 varN13
+  Plot.xyIO "N13 - Charging"  plotTerm id (\_ -> "efficiency N13") varP31_0 varN13
   Rep.report  [] ("N13 - Charging",varN13)
 
 
@@ -425,7 +428,7 @@ main = do
 
   Rep.report  [] ("N31 - Discharging",varN31)
   Plot.surfaceIO "N31 - Discharging" varP13_1 varY varN31
-  Plot.xyIO "N31 - Discharging" varP13_1 varN31
+  Plot.xyIO "N31 - Discharging" plotTerm id (\_ -> "efficiency N31") varP13_1 varN31
 
 
   -- Check Losses
@@ -440,12 +443,12 @@ main = do
   Plot.surfaceIO "Loss" varX varY varLoss
 
   -- System loss in curves over split variation for multiple resistance values
-  Plot.xyIO "Loss" varX varLoss
+  Plot.xyIO "Loss"  plotTerm id (\_ -> "Loss") varX varLoss
 
   -- Total System Efficiency
   Rep.report  [] ("EtaSys",etaSysVar)
   Plot.surfaceIO "EtaSys" varX varY etaSysVar
-  Plot.xyIO "EtaSys" varX etaSysVar -- System efficiency in curves over split variation for multiple resistance values
+  Plot.xyIO "EtaSys" plotTerm id (\_ -> "EtaSys") varX etaSysVar -- System efficiency in curves over split variation for multiple resistance values
 
 -- ##################################
 

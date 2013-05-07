@@ -22,7 +22,7 @@ model Vehicle_seriesHybrid
   BrakeSystem brakesystem1 annotation(Placement(visible = true, transformation(origin = {14.595,-19.257}, extent = {{-8.19616,8.19616},{8.19616,-8.19616}}, rotation = -90)));
   Driver driver1 annotation(Placement(visible = true, transformation(origin = {-61.0439,77.1532}, extent = {{-7.45106,-7.45106},{7.45106,7.45106}}, rotation = 0)));
   Modelica.Blocks.Sources.TimeTable timetable1(table = [0,0;10,0;20,120;39,120;40,0;50,0;60,0;70,120;500,120;510,0;520,0]) annotation(Placement(visible = true, transformation(origin = {-80.2058,79.833}, extent = {{-4.62652,-4.62652},{4.62652,4.62652}}, rotation = 0)));
-  Controller_SeriesHybrid controller_serieshybrid1(speedDemand = 300, torqueDemand = 150, maxSOC = 0.8, minSOC = 0.3, engineOnAtStart = true) annotation(Placement(visible = true, transformation(origin = {-17.5823,50.465}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  Controller_SeriesHybrid controller_serieshybrid1(speedDemand = 300, torqueDemand = 150, maxSOC = 0.8, minSOC = 0.4, engineOnAtStart = true) annotation(Placement(visible = true, transformation(origin = {-17.5823,50.465}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Electrical.Analog.Basic.Ground ground3 annotation(Placement(visible = true, transformation(origin = {-52.3648,-14.8656}, extent = {{-8.19616,-8.19616},{8.19616,8.19616}}, rotation = 0)));
   Modelica.Electrical.Analog.Basic.Ground ground2 annotation(Placement(visible = true, transformation(origin = {-19.467,-25.0773}, extent = {{7.45106,7.45106},{-7.45106,-7.45106}}, rotation = -180)));
   GasPedal gaspedal1 annotation(Placement(visible = true, transformation(origin = {-38.7831,67.582}, extent = {{-7.45106,-7.45106},{7.45106,7.45106}}, rotation = 0)));

@@ -6,330 +6,130 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE TypeSynonymInstances#-}
 
-
-module EFA.Signal.Plot (
-   run,
-   signal, signalAttr, signalStyle, signalIO,
-   xy, xyBasic, xyAttr, xyStyle, xyIO,
-   surface, surfaceIO,
-   record, recordStyle, recordAttr, recordIO, recordIOList,
-   sequenceIO,
-   recordSplitPlus, recordSplit, sequenceSplit,
-   recordSelect, sequenceSelect,
-   stack, stackAttr, stackIO,
-   stacks, stacksAttr, stacksIO,
+-- | Module to offer most common plots
+module EFA.Signal.Plot (module EFA.Signal.Plot) where
+{-   run,
+   -- signalIO,
+   xy, xyBasic, xyFrame, xyStyle,
+   -- xyIO,
+   surface,
+   --surfaceIO,
+   record, recordStyle, recordFrame,
+   -- recordIO, recordIOList,
+   -- sequenceIO,
+   -- recordSplitPlus, recordSplit, sequenceSplit,
+   -- recordSelect, sequenceSelect,
+   stack, stackFrame,
+   -- stackIO,
+   stacks, stacksFrame,
+   -- stacksIO,
    getData,
-   tableLinear,
-   tableLinear2D,
-   tableSurface,
    ) where
 
+   ) where -}
+
 import qualified EFA.Signal.SequenceData as SD
-import qualified EFA.Signal.Signal as S
-import qualified EFA.Signal.Data as D
+--import qualified EFA.Signal.Signal as S
+--import qualified EFA.Signal.Data as D
 import qualified EFA.Signal.Vector as SV
 import qualified EFA.Signal.Record as Record
-import qualified EFA.Signal.Colour as Colour
+--import qualified EFA.Signal.Colour as Colour
 
-import EFA.Signal.Typ (Typ, A, Y, Tt)
 import EFA.Signal.SequenceData (SequData)
 
-import EFA.Signal.Record (Record(Record))
+import EFA.Signal.Record (Record)
 -- import EFA.Signal.SequenceData (SequData(..))
 
-import EFA.Signal.Signal (TC, toSigList, getDisplayType)
+--import EFA.Signal.Signal (TC, toSigList, getDisplayType)
 -- import EFA.Signal.Base (BSum)
 
-import EFA.Signal.Data (Data, (:>), Nil, NestedList)
-import EFA.Report.Typ (TDisp, DisplayType(Typ_T), getDisplayUnit, getDisplayTypName)
-import EFA.Report.Base (UnitScale(UnitScale), getUnitScale)
+--import EFA.Signal.Data (Data, (:>), Nil, NestedList)
+import EFA.Report.Typ (TDisp)
+                       --DisplayType(Typ_T),
+                       --getDisplayUnit,
+                       --getDisplayTypName)
+--import EFA.Report.Base (UnitScale(UnitScale), getUnitScale)
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
 
-import qualified EFA.IO.TableParser as Table
+import EFA.Signal.PlotBase
+
+import qualified EFA.Equation.Stack as Stack
+import qualified EFA.Equation.Environment as Env
+import qualified EFA.Equation.Record as EqRecord
+import qualified EFA.Equation.Result as Result
+import qualified EFA.Equation.Variable as Var
+import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Graph.Topology.Node as TDNode
+import qualified EFA.Example.AssignMap as AssignMap
+
+import qualified EFA.Signal.Signal as Sig
+import qualified EFA.Signal.Vector as V
+import qualified EFA.Signal.Base as Base
 
 import qualified Graphics.Gnuplot.Advanced as Plot
 -- import qualified Graphics.Gnuplot.Advanced as AGP
 
--- import qualified Graphics.Gnuplot.Terminal.X11 as X11
--- import qualified Graphics.Gnuplot.Terminal.WXT as WXT
+--import qualified Graphics.Gnuplot.Terminal.X11 as X11
+--import qualified Graphics.Gnuplot.Terminal.WXT as WXT
 
 import qualified Graphics.Gnuplot.Terminal as Terminal
 import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
-import qualified Graphics.Gnuplot.Plot as Plt
-import qualified Graphics.Gnuplot.Plot.TwoDimensional as Plot2D
-import qualified Graphics.Gnuplot.Plot.ThreeDimensional as Plot3D
-import qualified Graphics.Gnuplot.Graph.TwoDimensional as Graph2D
+--import qualified Graphics.Gnuplot.Plot as Plt
+--import qualified Graphics.Gnuplot.Plot.TwoDimensional as Plot2D
+--import qualified Graphics.Gnuplot.Plot.ThreeDimensional as Plot3D
+--import qualified Graphics.Gnuplot.Graph.TwoDimensional as Graph2D
 
-import qualified Graphics.Gnuplot.Graph as Graph
+--import qualified Graphics.Gnuplot.Graph as Graph
 import qualified Graphics.Gnuplot.Value.Atom as Atom
 import qualified Graphics.Gnuplot.Value.Tuple as Tuple
 
 import qualified Graphics.Gnuplot.LineSpecification as LineSpec
-import qualified Graphics.Gnuplot.ColorSpecification as ColourSpec
+--import qualified Graphics.Gnuplot.ColorSpecification as ColourSpec
 
 import qualified Graphics.Gnuplot.Frame as Frame
-import qualified Graphics.Gnuplot.Frame.Option as Opt
+--import qualified Graphics.Gnuplot.Frame.Option as Opt
 import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
-import qualified Graphics.Gnuplot.Frame.OptionSet.Style as OptsStyle
-import qualified Graphics.Gnuplot.Frame.OptionSet.Histogram as Histogram
+--import qualified Graphics.Gnuplot.Frame.OptionSet.Style as OptsStyle
+--import qualified Graphics.Gnuplot.Frame.OptionSet.Histogram as Histogram
+
 
 import qualified Data.Map as M
-import qualified Data.List as L
+--import qualified Data.List as L
 import qualified Data.Foldable as Fold
-import qualified Data.List.Key as Key
-import qualified Data.List.Match as Match
+
 import Control.Monad (zipWithM_)
 import Control.Functor.HT (void)
-import Data.Foldable (foldMap)
-import Data.Monoid (mconcat)
+--import Data.Foldable (foldMap)
+--import Data.Monoid (mconcat)
+import Data.Monoid ((<>))
 
 
 -- import Control.Concurrent (threadDelay)
 
-{-
-import EFA.Signal.Plot.Global as Global
-import EFA.Signal.Plot.Window as Window
-import EFA.Signal.Plot.Record as PlRecord
--}
 
--- import qualified EFA.Signal.Plot.Options as PlOpts
-
--- | Get Signal Plot Data (Unit Conversion)  ---------------------------------------------------------------
-
-getData ::
-   (TDisp typ, D.FromList c, D.Map c, D.Storage c a, Fractional a) =>
-   TC s typ (Data c a) -> NestedList c a
-getData x = S.toList $ S.map (* fromRational s) x
-   where (UnitScale s) = getUnitScale $ getDisplayUnit $ getDisplayType x
-
-
-run ::
-   (Terminal.C term, Graph.C graph) =>
-   term -> Opts.T graph -> Plt.T graph -> IO ()
-run terminal opts plt =
-   void $ Plot.plotSync terminal $ Frame.cons opts plt
-
-
--- | Simple Signal Plotting -- without time axis --------------------------------------------------------------
-
--- | Plotting Signals against each other --------------------------------------------------------------
-signalAttr ::
-   (AxisLabel tc, Graph.C graph) =>
-   String -> tc -> Opts.T graph
-signalAttr ti x =
-   Opts.title ti $
-   Opts.xLabel "Sample-Nr []" $
-   Opts.yLabel (genAxLabel x) $
-   Opts.grid True $
-   Opts.deflt
-
-signalStyle :: Graph2D.T x y -> Graph2D.T x y
-signalStyle =
-   Graph2D.lineSpec $
-      {- not supported by "lines" style
-      LineSpec.pointSize 2 $
-      -}
-      LineSpec.deflt
+-- | Simple Signal Plotting -- plot signal values against signal index --------------------------------------------------------------
 
 
 signalIO ::
-   (Signal signal) =>
-   String -> signal -> IO ()
-signalIO ti x =
-   void $ Plot.plotSync DefaultTerm.cons $
-   Frame.cons (signalAttr ti x) $
-   fmap signalStyle $ signal x
+   (Signal signal, Terminal.C term) =>
+   String -> term -> (LineSpec.T -> LineSpec.T) -> signal -> IO ()
+signalIO ti terminal opts x = plotOne terminal (signalFrameAttr ti x) (signal opts x)
 
-class AxisLabel tc => Signal tc where
-   signal :: tc -> Plot2D.T Int (Value tc)
-
-instance
-   (TDisp t, SV.Walker v1, SV.FromList v1, SV.Storage v1 y,
-    Atom.C y, Tuple.C y, Fractional y) =>
-      Signal (TC s t (Data (v1 :> Nil) y))  where
-   signal x =
-      Plot2D.list Graph2D.listLines $ getData x
-
-instance (Signal tc) => Signal [tc]  where
-   signal = foldMap signal
-
-instance
-   (TDisp t,
-    SV.Walker v1, SV.FromList v1, SV.Storage v1 y,
-    SV.FromList v2, SV.Storage v2 (v1 y),
-    Atom.C y, Tuple.C y, Fractional y) =>
-      Signal (TC s t (Data (v2 :> v1 :> Nil) y))  where
-   signal x = signal $ toSigList x
-
-
--- | Plotting Signals against each other --------------------------------------------------------------
-xyAttr ::
-   (AxisLabel tcX, AxisLabel tcY, Graph.C graph) =>
-   String -> tcX -> tcY -> Opts.T graph
-xyAttr ti x y =
-   Opts.title ti $
-   Opts.xLabel (genAxLabel x) $
-   Opts.yLabel (genAxLabel y) $
-   Opts.grid True $
-   Opts.deflt
-
-
-xyStyle ::
-   Int -> Plot2D.T x y -> Plot2D.T x y
-xyStyle n =
-   fmap $ Graph2D.lineSpec $
-      LineSpec.pointSize 0.1 $
-      LineSpec.pointType 7 $
-      LineSpec.lineWidth 1 $
-      LineSpec.title (show $ "Signal" ++ show n) $
-      LineSpec.deflt
-
-
-xyIO ::
-   (XY tcX tcY) =>
-   String -> tcX -> tcY -> IO ()
-xyIO ti x y =
-   void $ Plot.plotSync DefaultTerm.cons $
-   Frame.cons (xyAttr ti x y) $
-   xy x y
-
-class (AxisLabel tcX, AxisLabel tcY) => XY tcX tcY where
-   xy :: tcX -> tcY -> Plot2D.T (Value tcX) (Value tcY)
-
-xyBasic ::
-   (TDisp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 x,
-    TDisp t2, SV.Walker v2, SV.FromList v2, SV.Storage v2 y,
-    Atom.C x, Tuple.C x, Fractional x,
-    Atom.C y, Tuple.C y, Fractional y) =>
-   TC s t1 (Data (v1 :> Nil) x) ->
-   TC s t2 (Data (v2 :> Nil) y) ->
-   Plot2D.T x y
-xyBasic x y =
---   Plot2D.list Graph2D.linesPoints $ zip (getData x) (getData y)
-   Plot2D.list Graph2D.lines $ zip (getData x) (getData y)
-
-instance
-   (TDisp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 x,
-    TDisp t2, SV.Walker v2, SV.FromList v2, SV.Storage v2 y,
-    Atom.C x, Tuple.C x, Fractional x,
-    Atom.C y, Tuple.C y, Fractional y) =>
-   XY (TC s t1 (Data (v1 :> Nil) x))
-      (TC s t2 (Data (v2 :> Nil) y)) where
-   xy = xyBasic
-
-instance
-   (TDisp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 x,
-    TDisp t2, SV.Walker v2, SV.FromList v2, SV.Storage v2 y,
-    Atom.C x, Tuple.C x, Fractional x,
-    Atom.C y, Tuple.C y, Fractional y) =>
-   XY (TC s t1 (Data (v1 :> Nil) x))
-      [TC s t2 (Data (v2 :> Nil) y)] where
-   xy x ys =
-      mconcat $
-      zipWith
-         (\ n y -> xyStyle n $ xyBasic x y)
-         [(0::Int)..] ys
-
-instance
-   (TDisp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 x,
-    TDisp t2, SV.Walker v2, SV.FromList v2, SV.Storage v2 y,
-    Atom.C x, Tuple.C x, Fractional x,
-    Atom.C y, Tuple.C y, Fractional y) =>
-   XY [TC s t1 (Data (v1 :> Nil) x)]
-      [TC s t2 (Data (v2 :> Nil) y)] where
-   xy xs ys =
-      mconcat $
-      zipWith3
-         (\ n x y -> xyStyle n $ xyBasic x y)
-         [(0::Int)..] xs ys
-
-instance
-   (TDisp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 x,
-    TDisp t2, SV.Walker v2, SV.FromList v2, SV.Storage v2 y,
-    SV.FromList v3, SV.Storage v3 (v2 y),
-    Atom.C x, Tuple.C x, Fractional x,
-    Atom.C y, Tuple.C y, Fractional y) =>
-   XY (TC s t1 (Data (v1 :> Nil) x))
-      (TC s t2 (Data (v3 :> v2 :> Nil) y)) where
-   xy x y = xy x (toSigList y)
-
-instance
-   (TDisp t1,
-    TDisp t2,
-    SV.Walker v1,
-    SV.Walker v3,
-    SV.FromList v1, SV.Storage v1 x,
-    SV.FromList v3, SV.Storage v3 y,
-    SV.FromList v2, SV.Storage v2 (v1 x),
-    SV.FromList v4, SV.Storage v4 (v3 y),
-    Atom.C x, Tuple.C x, Fractional x,
-    Atom.C y, Tuple.C y, Fractional y) =>
-   XY
-      (TC s t1 (Data (v2 :> v1 :> Nil) x))
-      (TC s t2 (Data (v4 :> v3 :> Nil) y)) where
-   xy x y = xy (toSigList x) (toSigList y)
-
--- | Plotting Tables
-
-transposeTable ::
-  ([[Double]] -> [[Double]]) ->
-  Table.T Double -> Table.T Double
-transposeTable f (Table.T (x, y) lst) =
-  Table.T (y, x) (SV.transpose $ f lst)
-
-
-plotTable ::
-  ([[Double]] -> [[Double]]) ->
-  String -> Table.Map Double ->
-  IO ()
-plotTable f str tm =
-  case transposeTable f `fmap` M.lookup str tm of
-       Nothing -> error $ "plotTable: table " ++ str ++ " not found!"
-       Just (Table.T _ ds) ->
-            case ds of
-                 [] -> error "plotTable: no data"
-                 [_] -> error "plotTable: only x axis, no y values"
-                 (as:bbs) -> xyIO str xs yys
-                   where -- Welcher Signaltyp?
-                         xs :: S.TSig
-                         xs = S.fromList as
-                         yys :: [S.TSig]
-                         yys = map S.fromList bbs
-
+{-
 tableLinear, tableLinear2D, tableSurface ::
-  String -> Table.Map Double -> IO ()
-tableLinear = plotTable id
-tableLinear2D = plotTable tail
+  (Terminal.C term) =>
+  term -> String -> Table.Map Double -> IO ()
+tableLinear term str = plotOne term . plotTable id str
+tableLinear2D term str = plotOne term . plotTable tail str
+-}
 
-
-varMat :: [a] -> [b] -> ([[a]], [[b]])
-varMat xs ys =
-  (Match.replicate ys xs, map (Match.replicate xs) ys)
-
-tableSurface str tm =
-  case M.lookup str tm of
-       Nothing -> error $ "tableSurface: table " ++ str ++ " not found!"
-       Just (Table.T _ ds) -> 
-            case ds of
-                 [] -> error "tableSurface: no data"
-                 [_] -> error "tableSurface: only x axis, no y values"
-                 (xs:as) ->
-                   case SV.transpose as of
-                        [] -> error "tableSurface: empty list"
-                        (ys:zs) -> surfaceIO str a b c
-                          where (xs', ys') = varMat (tail xs) ys
-                                -- Welcher Signaltyp ???
-                                a, b, c :: S.Test2 (Typ A Y Tt) Double
-                                a = S.fromList xs'
-                                b = S.fromList ys'
-                                c = S.fromList zs
 
 -- | Plotting Surfaces
 surfaceIO ::
-   Surface tcX tcY tcZ =>
-   String -> tcX -> tcY -> tcZ -> IO ()
+  Surface tcX tcY tcZ =>
+  String -> tcX -> tcY -> tcZ -> IO ()
 surfaceIO ti x y z = do
    let attrs =
           Opts.title ti $
@@ -341,306 +141,375 @@ surfaceIO ti x y z = do
    void $ Plot.plotSync DefaultTerm.cons $
       Frame.cons attrs $ surface x y z
 
-class
-   (AxisLabel tcX, AxisLabel tcY, AxisLabel tcZ) =>
-      Surface tcX tcY tcZ where
-   surface :: tcX -> tcY -> tcZ -> Plot3D.T (Value tcX) (Value tcY) (Value tcZ)
 
-instance
-   (SV.FromList v1, SV.Storage v1 x, SV.FromList v2, SV.Storage v2 (v1 x), TDisp t1,
-    SV.FromList v3, SV.Storage v3 y, SV.FromList v4, SV.Storage v4 (v3 y), TDisp t2,
-    SV.FromList v5, SV.Storage v5 z, SV.FromList v6, SV.Storage v6 (v5 z), TDisp t3,
-    Atom.C x, Tuple.C x,
-    Atom.C y, Tuple.C y,
-    Atom.C z, Tuple.C z) =>
 
-      Surface
-         (TC s1 t1 (Data (v2 :> v1 :> Nil) x))
-         (TC s2 t2 (Data (v4 :> v3 :> Nil) y))
-         (TC s3 t3 (Data (v6 :> v5 :> Nil) z)) where
 
-   surface x y z =
-      Plot3D.mesh $
-      L.zipWith3 zip3 (S.toList2 x) (S.toList2 y) (S.toList2 z)
+-- | Plotting Signals against each other -----------------------------
+
+
+xyIO ::
+   (XY tcX tcY, Terminal.C term) =>
+   String -> term -> (LineSpec.T -> LineSpec.T)-> (Int -> String) -> tcX -> tcY -> IO ()
+xyIO ti terminal opts legend x y =
+   plotOne terminal (xyFrameAttr ti x y) (xy opts legend x y)
 
 
 -- | Plotting Records ---------------------------------------------------------------
 
--- | Line Style
-recordStyle :: (Show k) => k -> String -> Plot2D.T x y -> Plot2D.T x y
-recordStyle key colour =
-   fmap $ Graph2D.lineSpec $
-      LineSpec.pointSize 0.3$
-      LineSpec.pointType 1 $
-      LineSpec.lineWidth 1.6 $
-      lineColour colour $
-      LineSpec.title (show key) $
-      LineSpec.deflt
+recordIO :: (Terminal.C term,
+             Fractional d2,
+             Fractional d1,
+             Ord id,
+             Show id,
+             SV.Walker v,
+             SV.Storage v d2,
+             SV.Storage v d1,
+             SV.FromList v,
+             TDisp t2,
+             TDisp t1,
+             Atom.C d2,
+             Atom.C d1,
+             Tuple.C d2,
+             Tuple.C d1) =>
+            String ->
+            term ->
+            (id -> String) ->
+            (LineSpec.T -> LineSpec.T) ->
+            Record s1 s2 t1 t2 id v d1 d2 -> IO ()
+recordIO ti term showKey opts x =
+   plotOne term (recordFrame ti) (record showKey opts x)
 
--- | Plot Attributes
-recordAttr ::
-   (Graph.C graph) =>
-   String -> Opts.T graph
-recordAttr name =
-   Opts.title (name) $
-   Opts.grid True $
-   Opts.xLabel ("Time [" ++ (show $ getDisplayUnit Typ_T) ++ "]") $
-   Opts.yLabel ("")
---    Opts.yLabel (show  "[" ++ (show $ getDisplayUnit Typ_P) ++ "]") $
---   Opts.size (Scale 0.7) $
-   Opts.deflt
-
-
-record ::
-   (Show id, Ord id, TDisp typ0, TDisp typ1,
-    SV.Walker v, SV.FromList v,
-    SV.Storage v a, Fractional a, Atom.C a, Tuple.C a) =>
-   Record s1 s2 typ0 typ1 id v a -> Plot2D.T a a
-record (Record time pMap) =
-   Fold.fold $
-   M.mapWithKey
-      (\key (col, sig) ->
-         recordStyle key (Colour.unC col) $
-         Plot2D.list Graph2D.linesPoints $
-         zip (getData time) (getData sig)) $
-   Colour.adorn pMap
-
-recordIO ::
-   (Fractional y,
-    Show id, Ord id,
-    SV.Walker v, SV.Storage v y, SV.FromList v,
-    TDisp t2, TDisp t1,
-    Tuple.C y, Atom.C y) =>
-   String -> Record s1 s2 t1 t2 id v y -> IO ()
-recordIO name =
-   void . Plot.plotSync DefaultTerm.cons . Frame.cons (recordAttr name) . record
 
 
 recordIOList ::
-   (Fractional y,
-    Show id, Ord id,
-    SV.Walker v, SV.Storage v y, SV.FromList v,
-    TDisp t2, TDisp t1,
-    Tuple.C y, Atom.C y) =>
-   String -> [Record s1 s2 t1 t2 id v y] -> IO ()
-recordIOList name recList =
-   void $ Plot.plotSync DefaultTerm.cons $ Frame.cons (recordAttr name) $ foldMap record recList
+   (Ord id,
+    Show id,
+    SV.Walker v,
+    SV.FromList v,
+    TDisp t1,
+    TDisp t2,
+    Fractional d2,
+    Fractional d1,
+    SV.Storage v d2,
+    SV.Storage v d1,
+    Atom.C d2,
+    Atom.C d1,
+    Tuple.C d2,
+    Tuple.C d1,
+    Terminal.C term) =>
+   String ->
+   term ->
+   (id -> String) ->
+   (LineSpec.T -> LineSpec.T) ->
+   [(Record.Name,Record s1 s2 t1 t2 id v d1 d2)] -> IO ()
+recordIOList ti term showKey opts x =
+   plotOne term (recordFrame ti) (recordList showKey opts varOpts x)
+   where
+     varOpts n = LineSpec.lineStyle n
 
+{-# WARNING  recordIOList_extractWithLeadSignal "pg: Lead signals still need to be highlighted or scale to be displayed " #-}
+recordIOList_extractWithLeadSignal :: (Terminal.C term,
+                                       Fractional d2,
+                                       Fractional d1,
+                                       Ord id,
+                                       Show id,
+                                       SV.Walker v,
+                                       SV.Storage v d2,
+                                       SV.Storage v d1,
+                                       SV.FromList v,
+                                       TDisp t2,
+                                       TDisp t1,
+                                       Atom.C d2,
+                                       Atom.C d1,
+                                       Tuple.C d2,
+                                       Tuple.C d1,
+                                       Ord d2,
+                                       Show (v d2),
+                                       V.Singleton v) =>
+                                      String ->
+                                      term ->
+                                      (id -> String) ->
+                                      (LineSpec.T -> LineSpec.T) ->
+                                      (Record.RangeFrom id, Record.ToModify id) ->
+                                      [(Record.Name, Record s1 s2 t1 t2 id v d1 d2)] -> IO ()
+recordIOList_extractWithLeadSignal ti term showKey opts (extract, leadIds) recList =
+   plotOne term (recordFrame ti) (recordList showKey opts  (\n -> LineSpec.pointType n) $ finalRecs)
+  where extractedRecList = case extract of
+          Record.RangeFrom idList -> map (\(x,y) -> (x,Record.extract idList y)) recList
+          Record.RangeFromAll -> recList
 
+        finalRecs = map (\(x,y)->(x,Record.normSignals2Max75 (extract, leadIds) y)) extractedRecList
 
+-------------------------------------------
+-- Futher Record Plot Variants
+
+recordIOSplit ::
+   (Terminal.C term,
+    Fractional d1,
+    Fractional d2,
+    Ord id,
+    Show id,
+    SV.Walker v,
+    SV.Storage v d1,
+    SV.Storage v d2,
+    SV.FromList v,
+    TDisp t1,
+    TDisp t2,
+    Atom.C d1,
+    Atom.C d2,
+    Tuple.C d1,
+    Tuple.C d2) =>
+   Int ->
+   String ->
+   term ->
+   (id -> String) ->
+   (LineSpec.T -> LineSpec.T) ->
+   Record s1 s2 t1 t2 id v d1 d2 -> IO ()
+recordIOSplit n ti term showKey opts r =
+   zipWithM_
+      (\k -> recordIO (ti ++ " - Part " ++ show (k::Int)) term showKey opts)
+      [0..] (Record.split n r)
+
+{-
 recordSplitPlus ::
    (TDisp t1, TDisp t2,
     Show id, Ord id,
-    Fractional y,
-    Tuple.C y, Atom.C y,
+    Fractional d,
+    Tuple.C d, Atom.C d,
     SV.Walker v,
-    SV.Storage v y,
+    SV.Storage v d,
     SV.FromList v,
-    SV.Len (v y)) =>
-   Int -> String -> Record s1 s2 t1 t2 id v y ->
-   [(id, TC s2 t2 (Data (v :> Nil) y))] -> IO ()
-recordSplitPlus n name r list =
+    Terminal.C term,
+    SV.Len (v d)) =>
+   Int ->
+   String ->
+   term ->
+   (LineSpec.T -> LineSpec.T) ->
+   Record s1 s2 t1 t2 id v d d ->
+   [(id, TC s2 t2 (Data (v :> Nil) d))] -> IO ()
+recordSplitPlus n ti term opts r list =
    zipWithM_
-      (\k -> recordIO (name ++ " - Part " ++ show (k::Int)))
+      (\k -> recordIO (ti ++ " - Part " ++ show (k::Int)) term opts)
       [0 ..] (map (Record.addSignals list) (Record.split n r))
-
-
---------------------------------------------
--- recordIO command to show max n signals per window
-
-recordSplit ::
-   (TDisp t1, TDisp t2,
-    Show id, Ord id,
-    Fractional y,
-    Tuple.C y, Atom.C y,
-    SV.Walker v,
-    SV.Storage v y,
-    SV.FromList v) =>
-   Int -> String -> Record s1 s2 t1 t2 id v y -> IO ()
-recordSplit n name r =
-   zipWithM_
-      (\k -> recordIO (name ++ " - Part " ++ show (k::Int)))
-      [0..] (Record.split n r)
-
-
+-}
 --------------------------------------------
 -- recordIO command to plot selected Signals only
-
-recordSelect ::
-   (TDisp t1, TDisp t2,
-    Show id, Ord id,
-    Fractional y,
-    Tuple.C y, Atom.C y,
-    SV.Walker v,
-    SV.Storage v y,
-    SV.FromList v) =>
-   [id] -> String -> Record s1 s2 t1 t2 id v y -> IO ()
-recordSelect idList name = recordIO name . Record.extract idList
-
-
-
-
+{-
 sequenceFrame ::
-   (Fractional y,
+   (Fractional d,
     Show id, Ord id,
-    SV.Walker v, SV.Storage v y, SV.FromList v,
+    SV.Walker v, SV.Storage v d, SV.FromList v,
     TDisp t2, TDisp t1,
-    Tuple.C y, Atom.C y) =>
-   String -> SequData (Record s1 s2 t1 t2 id v y) ->
-   SequData (Frame.T (Graph2D.T y y))
-sequenceFrame sqName =
+    Tuple.C d, Atom.C d) =>
+   String ->
+   (LineSpec.T -> LineSpec.T) ->
+   SequData (Record s1 s2 t1 t2 id v d d) ->
+   SequData (Frame.T (Graph2D.T d d))
+
+sequenceFrame ti opts =
    SD.mapWithSection
       (\x ->
-         Frame.cons (recordAttr ("Sequence " ++ sqName ++ ", Record of " ++ show x)) .
-         record)
+         Frame.cons (recordFrame ("Sequence " ++ ti ++ ", Record of " ++ show x)) .
+         record opts)
+-}
 
 sequenceIO ::
-   (TDisp t1, TDisp t2,
-    Show id, Ord id,
-    Fractional y,
-    Tuple.C y, Atom.C y,
+   (Fractional d1,
+    Fractional d2,
+    Ord id,
+    Show id,
     SV.Walker v,
-    SV.Storage v y,
-    SV.FromList v) =>
-   String -> SequData (Record s1 s2 t1 t2 id v y) -> IO ()
-sequenceIO name =
-   Fold.mapM_ (Plot.plotSync DefaultTerm.cons) . sequenceFrame name
+    SV.Storage v d1,
+    SV.Storage v d2,
+    SV.FromList v,
+    TDisp t1,
+    TDisp t2,
+    Atom.C d1,
+    Atom.C d2,
+    Tuple.C d1,
+    Tuple.C d2,
+    Terminal.C term) =>
+   String ->
+   term ->
+   (id -> String) ->
+   (LineSpec.T -> LineSpec.T) ->
+   SequData (Record s1 s2 t1 t2 id v d1 d2) -> IO ()
+sequenceIO ti term showKey opts =
+  Fold.sequence_ .  SD.mapWithSection (\ x -> recordIO (ti ++ " - "++ show x) term showKey opts)
+   -- (Plot.plotSync term) . sequenceFrame ti opts
 
-sequenceSplit ::
-   (TDisp t1, TDisp t2,
-    Show id, Ord id,
-    Fractional y,
-    Tuple.C y, Atom.C y,
+sequenceIOSplit ::
+   (Fractional d2,
+    Fractional d1,
+    Ord id,
+    Show id,
     SV.Walker v,
-    SV.Storage v y,
-    SV.FromList v) =>
-   Int -> String -> SequData (Record s1 s2 t1 t2 id v y) -> IO ()
-sequenceSplit n name =
+    SV.Storage v d2,
+    SV.Storage v d1,
+    SV.FromList v,
+    TDisp t2,
+    TDisp t1,
+    Atom.C d2,
+    Atom.C d1,
+    Tuple.C d2,
+    Tuple.C d1,
+    Terminal.C term) =>
+   Int ->
+   String ->
+   term ->
+   (id -> String) ->
+   (LineSpec.T -> LineSpec.T) ->
+   SequData (Record s1 s2 t1 t2 id v d1 d2) -> IO ()
+sequenceIOSplit n ti term showKey opts =
    Fold.sequence_ .
-   SD.mapWithSection (\ x -> recordSplit n (name ++ " - " ++ show x))
+   SD.mapWithSection (\ x -> recordIOSplit n (ti ++ " - "++ show x) term showKey opts)
 
-sequenceSelect ::
-   (TDisp t1, TDisp t2,
-    Show id, Ord id,
-    Fractional y,
-    Tuple.C y, Atom.C y,
-    SV.Walker v,
-    SV.Storage v y,
-    SV.FromList v) =>
-   [id] -> String -> SequData (Record s1 s2 t1 t2 id v y) ->  IO ()
-sequenceSelect idList name =
-   sequenceIO name . fmap (Record.extract idList)
-
-
-optKeyOutside :: Opts.T graph -> Opts.T graph
-optKeyOutside =
-   Opts.add (Opt.custom "key" "position") ["outside"]
-
-lineColour :: String -> LineSpec.T -> LineSpec.T
-lineColour = LineSpec.lineColor . ColourSpec.name
-
-stackLineSpec ::
-   (FormatValue term, Show term) => term -> String -> Plot2D.T x y -> Plot2D.T x y
-stackLineSpec term colour =
-   fmap (Graph2D.lineSpec (LineSpec.title (Format.unASCII $ formatValue term)
-          (lineColour colour $ LineSpec.deflt)))
-
-stackAttr ::
-   String -> Format.ASCII -> Opts.T (Graph2D.T Int Double)
-stackAttr title var =
-   Opts.title title $
-      Histogram.rowstacked $
-      OptsStyle.fillBorderLineType (-1) $
-      OptsStyle.fillSolid $
-      optKeyOutside $
-      Opts.xTicks2d [(Format.unASCII var, 0)] $
-      Opts.deflt
-
-stack ::
-   (FormatValue term, Show term, Ord term) =>
-   M.Map term Double -> Plot2D.T Int Double
-stack =
-   foldMap
-      (\(col, (term, val)) ->
-         stackLineSpec term (Colour.unC col) $
-           Plot2D.list Graph2D.histograms [val]) .
-   Colour.adorn .
-   reverse .
-   Key.sort (abs . snd) .
-   M.toList
-
+-- | Plotting Stacks ---------------------------------------------------------------
 
 stackIO ::
    (FormatValue term, Show term, Ord term) =>
    String -> Format.ASCII -> M.Map term Double -> IO ()
 stackIO title var m =
--- <<<<<<< Updated upstream
-   void .  Plot.plotSync DefaultTerm.cons . Frame.cons (stackAttr title var) . stack $ m
-{- =======
-   void . Plot.plotSync DefaultTerm.cons . Frame.cons (stackAttr title var) . stack colorMap $ m
-   where colorMap = Colour.colourMap (M.keys m)
->>>>>>> Stashed changes -}
+   void .  Plot.plotSync DefaultTerm.cons . Frame.cons (stackFrame title var) . stack $ m
 
-
-stacksAttr ::
-   String -> [Format.ASCII] -> Opts.T (Graph2D.T Int Double)
-stacksAttr title vars =
-   Opts.title title $
-      Histogram.rowstacked $
-      OptsStyle.fillBorderLineType (-1) $
-      OptsStyle.fillSolid $
-      optKeyOutside $
-      Opts.boxwidthAbsolute 0.9 $
-      Opts.xTicks2d (zip (map Format.unASCII vars) [0..]) $
-      Opts.deflt
-
-stacks ::
-   (Ord term, FormatValue term, Show term) =>
-   M.Map term [Double] -> Plot2D.T Int Double
-stacks =
-   foldMap
-      (\(col, (term, vals)) ->
-         stackLineSpec term (Colour.unC col) $
-         Plot2D.list Graph2D.histograms vals) .
-   Colour.adorn .
-   reverse .
-   Key.sort (maximum . map abs . snd) .
-   M.toList
 
 {- |
 The length of @[var]@ must match the one of the @[Double]@ lists.
 -}
 stacksIO ::
--- <<<<<<< Updated upstream
    (Ord term, FormatValue term, Show term) =>
    String -> [Format.ASCII] -> M.Map term [Double] -> IO ()
 stacksIO title vars xs =
-   void . Plot.plotSync DefaultTerm.cons . -- Plot.plotDefault .
-   Frame.cons (stacksAttr title vars) . stacks $ xs
-{- =======
-   (FormatValue var, Ord term, FormatValue term, Show term) =>
-   String -> [(var, M.Map term Double)] -> IO ()
-stacksIO title xs =
-   case unzip xs of
-      (vars, (y:ys)) ->
-         let colorMap = Colour.colourMap (M.keys y)
-         in  void . Plot.plotSync DefaultTerm.cons . Frame.cons (stacksAttr title vars)
-                  . stacks colorMap $ ys
-      _ -> error "stackIO: empty list"
->>>>>>> Stashed changes -}
+   void . Plot.plotSync DefaultTerm.cons .
+   Frame.cons (stacksFrame title vars) . stacks $ xs
 
-class Atom.C (Value tc) => AxisLabel tc where
-   type Value tc :: *
-   genAxLabel :: tc -> String
 
-instance (TDisp t, Atom.C (D.Value c)) => AxisLabel (TC s t c) where
-   type Value (TC s t c) = D.Value c
-   genAxLabel x =
-      let dispType = getDisplayType x
-      in  getDisplayTypName dispType ++
-             " [" ++ (show $ getDisplayUnit dispType) ++ "]"
+stackIOfromEnv:: (Show node, Ord i, FormatValue i, TDNode.C node, Show i) =>
+        String ->
+        Idx.InSection Idx.Energy node ->
+        Double ->
+        (Record.DeltaName, Env.Complete
+        node t (EqRecord.Absolute (Result.Result (Stack.Stack i Double)))) ->
+        IO ()
 
-instance (AxisLabel tc) => AxisLabel [tc] where
-   type Value [tc] = Value tc
-   genAxLabel x = genAxLabel $ head x
+stackIOfromEnv ti energyIndex eps (Record.DeltaName recName, env) = do
+  stackIO ("Record " ++ recName ++ "-" ++ ti)
+    (formatValue $ Idx.delta $ Var.index energyIndex)
+    (AssignMap.threshold eps $ AssignMap.lookupStack energyIndex env)
 
+recordStackRowIO:: (TDNode.C node, Ord node, Ord i, Show i, Show node, FormatValue i) =>
+                            String
+                            -> [Record.DeltaName]
+                            -> Idx.InSection Idx.Energy node
+                            -> Double
+                            -> [Env.Complete node t
+                                   (EqRecord.Absolute (Result.Result (Stack.Stack i Double)))]
+                            -> IO ()
+
+recordStackRowIO ti deltaSets energyIndex eps envs =
+   stacksIO ti
+   (map (Format.literal . (\ (Record.DeltaName x) -> x)) deltaSets)
+   (AssignMap.simultaneousThreshold eps .
+   AssignMap.transpose .
+   map (AssignMap.lookupStack energyIndex)
+    $ envs)
+
+sectionStackRowIO:: (Ord node, TDNode.C node,Show i, Ord i, FormatValue i) =>
+                  String
+                  -> Idx.Energy node
+                  -> Double
+                  -> Env.Complete node t
+                         (EqRecord.Absolute (Result.Result (Stack.Stack i Double)))
+                  -> IO ()
+sectionStackRowIO ti energyIndex eps env =
+   stacksIO ti
+   (map (Format.literal . (\(Idx.InSection sec _) -> show sec) .fst) allStacks)
+   (AssignMap.simultaneousThreshold eps . AssignMap.transpose $
+    map (M.mapKeys AssignMap.deltaIndexSet .
+         Stack.assignDeltaMap . snd) $ allStacks)
+   where allStacks = AssignMap.lookupAllStacks energyIndex env
+
+aggregatedStackIO ::
+   (TDNode.C node, Ord node, Show node,
+    Ord i, Show i, FormatValue i) =>
+   String ->
+   Idx.Energy node ->
+   Double ->
+   Env.Complete node t
+      (EqRecord.Absolute (Result.Result (Stack.Stack i Double))) ->
+   IO ()
+
+aggregatedStackIO ti energyIndex eps env =
+  stackIO ti (formatValue $ Idx.delta energyIndex) $
+  AssignMap.threshold eps $
+  M.mapKeys AssignMap.deltaIndexSet $
+  AssignMap.lookupAggregatedStack energyIndex env
+
+
+-- | Plotting Average Efficiency Curves over Energy Flow Distribution -------------------------------
+
+-- | Simple plot with provided data p and n time signals, ideally sorted, fDist is energy distribution over power
+-- | and nDist is the averaged efficiency over power
+-- | pg: currently plots over input power, one should be able to choose
+etaDistr1DimIO :: (Fractional d,
+                  V.Walker v,
+                  V.Storage v d,
+                  V.FromList v,
+                  Atom.C d,
+                  Tuple.C d) =>
+                 String -> Sig.PFSignal v d -> Sig.NFSignal v d ->
+                 Sig.PDistr v d -> Sig.FDistr v d -> Sig.NDistr v d -> IO ()
+etaDistr1DimIO ti p n pDist fDist nDist =
+  plotOne DefaultTerm.cons
+  (xyFrameAttr ti p n) $
+  xy id (\_ -> "Efficiency Operation Points over Power")  p n <>
+  xy id (\_ -> "Averaged Efficiency over Power") pDist nDist <>
+  xy id (\_ -> "Input Energy Distribution over Power") pDist fDist
+
+
+-- | Plot efficiency distribution from List of Records
+-- | pg: currently plots over input power, one should be able to choose
+-- | You however can choose which power you want to plot and classify over (abszisse)
+etaDistr1DimIOfromRecordList :: (Ord id,
+                             Show id,
+                             Show (v d),
+                             Base.BProd d d,
+                             Ord d,
+                             V.Zipper v,
+                             V.Walker v,
+                             V.Storage v (d, d),
+                             V.Storage v d,
+                             Fractional d,
+                             V.FromList v,
+                             Atom.C d,
+                             Tuple.C d,
+                             V.SortBy v,
+                             V.Unique v (Sig.Class d),
+                             V.Storage v Sig.SignalIdx,
+                             V.Storage v Int,
+                             V.Storage v (Sig.Class d),
+                             V.Storage v ([Sig.Class d], [Sig.SignalIdx]),
+                             RealFrac d,
+                             V.Lookup v,
+                             V.Find v,
+                             Base.BSum d,
+                             Base.DArith0 d,
+                             V.Storage v (d, (d, d)),
+                             V.Singleton v) =>
+                            String  -> d -> d -> [(Record.Name, Record.DTimeFlowRecord id v d)]
+                            -> (String, (Idx.PPos id, Idx.PPos id, Idx.PPos id)) -> IO ()
+
+etaDistr1DimIOfromRecordList ti  intervall offset rList  (plotTitle, (idIn,idOut,idAbszisse)) = mapM_ f rList
+  where f ((Record.Name recTitle), rec) = do
+          let ein = Record.getSig rec idIn
+              eout = Record.getSig rec idOut
+              eAbszisse = Record.getSig rec idAbszisse
+              pAbszisse = eAbszisse Sig../dtime
+              dtime = Record.getTime rec
+              eta = Sig.calcEtaWithSign eout ein eout
+              (pDist, einDist , _ , nDist) = Sig.etaDistibution1D intervall offset
+                                                 dtime ein eout eout
+              (x,y) = Sig.sortTwo (pAbszisse,eta)
+          etaDistr1DimIO (ti ++ "_" ++ plotTitle ++ "_" ++ recTitle) x y  pDist
+            (Sig.scale (Sig.norm einDist) 100) nDist
+   

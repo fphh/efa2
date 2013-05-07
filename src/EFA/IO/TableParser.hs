@@ -1,9 +1,12 @@
 
 
-module EFA.IO.TableParser where
+module EFA.IO.TableParser (EFA.IO.TableParser.read, write) where
 
+import qualified System.IO as Sys
+import Control.Monad (forM_)
+
+import qualified Data.List as L
 import qualified Data.Map as M
-
 import Text.ParserCombinators.Parsec
 
 import Control.Applicative
@@ -11,9 +14,7 @@ import Control.Applicative
 
 import Prelude as P
 
-data T a = T (Int, Int) [[a]] deriving (Show)
-
-type Map a = M.Map String (T a)
+import EFA.IO.TableParserTypes (Map, T (..))
 
 read :: FilePath -> IO (Map Double)
 read file = readFile file >>= \txt ->
@@ -80,3 +81,17 @@ eol = cst $
 
 cst :: (Applicative f) => f a -> f ()
 cst = liftA (const ())
+
+
+------------------
+
+writeTable :: Sys.Handle -> (String, T Double) -> IO ()
+writeTable hdl (name, T xy ds) = do
+  let hd = "#1\ndouble " ++ name ++ show xy
+      body = L.intercalate "\n" $ 
+               map (L.intercalate " " . map show) ds
+  Sys.hPutStr hdl ("\n" ++ hd ++ "\n" ++ body ++ "\n")
+
+write :: FilePath -> Map Double -> IO ()
+write file tm = Sys.withFile file Sys.WriteMode $
+  forM_ (M.toList tm) . writeTable

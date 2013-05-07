@@ -60,6 +60,7 @@ Library
     EFA.IO.CSVParser
     EFA.IO.PLTImport
     EFA.IO.PLTParser
+    EFA.IO.TableParserTypes
     EFA.IO.TableParser
     EFA.Utility
     EFA.Utility.Async
@@ -79,6 +80,8 @@ Library
     EFA.Signal.Sequence
     EFA.Signal.Colour
     EFA.Signal.Plot
+    EFA.Signal.PlotBase
+    EFA.Signal.ConvertTable
     EFA.Symbolic.OperatorTree
     EFA.Symbolic.SumProduct
     EFA.Symbolic.Mixed
@@ -95,11 +98,6 @@ Library
     EFA.Graph.Topology.StateAnalysis
     EFA.Graph.Flow
     EFA.Graph.CumulatedFlow
---    EFA.Hack.Draw
-    EFA.Hack.Plot
-    EFA.Hack.Options
---    EFA.Hack.Record
-    EFA.Hack.Stack
     EFA.Equation.System
     EFA.Equation.Result
     EFA.Equation.Environment
@@ -160,6 +158,7 @@ Executable example-optimisingstorage
   GHC-Options: -Wall
   If flag(buildExamples)
     Build-Depends:
+      gnuplot,
       efa,
       vector,
       data-accessor,
@@ -241,6 +240,8 @@ Executable demo-tables
   If flag(buildDemos)
     Build-Depends:
       efa,
+      gnuplot,
+      containers,
       base
   Else
     Buildable: False
@@ -301,6 +302,7 @@ Executable demo-signalcalc
   GHC-Options: -Wall
   If flag(buildDemos)
     Build-Depends:
+      gnuplot,
       efa,
       gnuplot,
       utility-ht,
@@ -313,6 +315,7 @@ Executable demo-sequence
   GHC-Options: -Wall
   If flag(buildDemos)
     Build-Depends:
+      gnuplot,
       efa,
       containers,
       utility-ht,
@@ -326,6 +329,7 @@ Executable demo-addzerocrossings
   GHC-Options: -Wall
   If flag(buildDemos)
     Build-Depends:
+      gnuplot,
       efa,
       containers,
       utility-ht,

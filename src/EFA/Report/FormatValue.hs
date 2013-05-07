@@ -15,7 +15,7 @@ import Data.Ratio (Ratio)
 
 class FormatValue a where
    formatValue :: Format output => a -> output
-   
+
 instance FormatValue a => FormatValue [a] where
    formatValue = Format.list . map formatValue
 

@@ -19,6 +19,8 @@ import qualified EFA.Signal.Plot as Plot
 
 import qualified Data.Map as M
 
+import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
+
 
 mkSig :: Int -> [Val] -> PSigL
 mkSig m = S.fromList . concat . replicate m
@@ -71,9 +73,9 @@ main = do
   print pRec
   print pRec0
 
-  Plot.recordIO "PowerRecord" pRec
-  Plot.sequenceIO "SequA" sequRecA
-  Plot.sequenceIO "SequB" sequRecB
+  Plot.recordIO "PowerRecord" DefaultTerm.cons show id pRec
+  Plot.sequenceIO "SequA" DefaultTerm.cons show id sequRecA
+  Plot.sequenceIO "SequB" DefaultTerm.cons show id sequRecB
 
 {-
   {-

@@ -7,7 +7,7 @@ module Modules.Signals where
 import qualified EFA.Example.Index as XIdx
 
 import EFA.Signal.Record (SigId(SigId),
-                          getSig,getTime,extractLogSignals, 
+                          getSig,getTime,extractLogSignals,
                           PowerRecord, SignalRecord, genPowerRecord)
 
 -- import qualified EFA.Graph.Topology.Node as Node
@@ -27,8 +27,8 @@ condition rec = extractLogSignals rec
                  (SigId "engine1._torque_log",neg),
                  (SigId "engine1._fuelPower_log",id),
                  (SigId "engine1._switchOn_log",id),
-                 (SigId "electricVehicleSystem1._voltage_log",id),                 
-                 (SigId "electricVehicleSystem1._current_log",id),                 
+                 (SigId "electricVehicleSystem1._voltage_log",id),
+                 (SigId "electricVehicleSystem1._current_log",id),
                  (SigId "generator._speed_log",id),
                  (SigId "generator._current_log",neg),
                  (SigId "generator._voltage_log",neg),
@@ -47,17 +47,17 @@ condition rec = extractLogSignals rec
                  (SigId "gearbox1._speedOutputShaft_log",id),
                  (SigId "_frontBrakesLossPower_log",id),
                  (SigId "_frontBrakesSpeed_log",id),
-                 (SigId "_frontBrakesTorque_log",neg),                 
+                 (SigId "_frontBrakesTorque_log",neg),
                  (SigId "_rearBrakesLossPower_log",id),
                  (SigId "_rearBrakesSpeed_log",id),
-                 (SigId "_rearBrakesTorque_log",neg),                 
+                 (SigId "_rearBrakesTorque_log",neg),
                  (SigId "_frontWheelsTorque_log",id),
                  (SigId "_frontWheelsForce_log",neg),
                  (SigId "_rearWheelsTorque_log",neg),
                  (SigId "_rearWheelsForce_log",id),
                  (SigId "chassis1._resistanceForce_log",neg),
-                 (SigId "chassis1._propulsionForce_log",id),                 
-                 (SigId "_vehicleSpeed_log",id)                
+                 (SigId "chassis1._propulsionForce_log",id),
+                 (SigId "_vehicleSpeed_log",id)
                 ]
 
 ---------------------------------------------------------------------------------------
@@ -178,7 +178,7 @@ vehicle = [SigId "_vehicleSpeed_log",
            SigId "_frontBrakesTorque_log",
            SigId "_rearBrakesTorque_log",
            SigId "chassis1._resistanceForce_log",
-           SigId "PPos (StructureEdge Chassis VehicleInertia)"
+           SigId "Power-ToInertia"
           ]
 
 -- Building Signal Record for better Plotting of the original signals
@@ -212,9 +212,9 @@ electric = [SigId "_vehicleSpeed_log",
 -- Building Signal Record for better Plotting of the original signals
 battery:: [SigId]
 battery  = [SigId "_vehicleSpeed_log",
-          SigId "battery1.poleVoltage_log",
-          SigId "battery1.poleCurrent_log",
-          SigId "battery1.onternalVoltage_log"
+          SigId "battery1._poleVoltage_log",
+          SigId "battery1._poleCurrent_log",
+          SigId "battery1._internalVoltage_log"
 --          SigId "_batteryInternalCurrent_log"
           ]
 
@@ -229,6 +229,12 @@ generator =  [SigId "_vehicleSpeed_log",
             SigId "engine1._speed_log"
             ]
 
+-- Building Signal Record for better Plotting of the original signals
+engine:: [SigId]
+engine =  [SigId "_vehicleSpeed_log",
+            SigId "engine1._speed_log",
+            SigId "engine1._torque_log",
+            SigId "engine1._fuelPower_log"]
 
 xyEngine :: (SigId,SigId)
 xyEngine = (SigId "engine1._speed_log", SigId "engine1._torque_log")
@@ -239,3 +245,8 @@ xyGenerator = (SigId "engine1._speed_log", SigId "generator._torque_log")
 xyMotor :: (SigId,SigId)
 xyMotor = (SigId "motor._speed_log", SigId "motor._torque_log")
 
+etaEngineGenerator :: (XIdx.PPos Node,XIdx.PPos Node,XIdx.PPos Node)
+etaEngineGenerator = (XIdx.ppos  Tank ConBattery, XIdx.ppos ConBattery Tank, XIdx.ppos ConBattery Tank)
+
+etaMotorGearbox :: (XIdx.PPos Node,XIdx.PPos Node,XIdx.PPos Node)
+etaMotorGearbox = (XIdx.ppos ConES ConFrontBrakes, XIdx.ppos ConFrontBrakes ConES, XIdx.ppos ConFrontBrakes ConES)

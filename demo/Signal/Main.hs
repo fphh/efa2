@@ -3,6 +3,8 @@
 -- module Demo_Signal where
 
 import qualified EFA.Signal.Plot as Plot
+import qualified EFA.Signal.PlotBase as PlotBase
+
 import qualified EFA.Signal.Signal as S
 import EFA.Signal.SignalFill ((.-), (./), (.*))
 import EFA.Signal.Signal
@@ -22,7 +24,6 @@ import qualified Graphics.Gnuplot.LineSpecification as LineSpec
 import qualified Graphics.Gnuplot.ColorSpecification as Colour
 import qualified Graphics.Gnuplot.Frame as Frame
 import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
-
 
 import Data.Monoid
 
@@ -112,7 +113,7 @@ main :: IO ()
 main = do
 
   let plot :: Plot2D.T Double Double
-      plot = Plot.xy time [pSig1, pSig2]
+      plot = PlotBase.xy id (const "bla") time [pSig1, pSig2]
 
   concurrentlyMany_ [
 
