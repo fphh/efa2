@@ -4,7 +4,8 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE TypeSynonymInstances#-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 -- | PlotBase provide the basic functions to build Plots
 module EFA.Signal.PlotBase (module EFA.Signal.PlotBase) where
@@ -121,7 +122,6 @@ framAttr ti x =
    Opts.grid True $
    Opts.deflt
 -}
-
 
 -- | Class to generate Axis Labels
 
@@ -271,6 +271,7 @@ instance
       zipWith3
          (\ n x y -> xyBasic ((LineSpec.title $ legend n) . opts) x y)
          [(0::Int)..] xs ys
+
 
 instance
    (TDisp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 x,

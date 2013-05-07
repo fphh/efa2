@@ -24,6 +24,8 @@ module EFA.Signal.Plot (module EFA.Signal.Plot) where
    stacks, stacksFrame,
    -- stacksIO,
    getData,
+   ) where
+
    ) where -}
 
 import qualified EFA.Signal.SequenceData as SD
@@ -96,12 +98,13 @@ import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
 import qualified Data.Map as M
 --import qualified Data.List as L
 import qualified Data.Foldable as Fold
---import qualified Data.List.Key as Key
+
 import Control.Monad (zipWithM_)
 import Control.Functor.HT (void)
 --import Data.Foldable (foldMap)
 --import Data.Monoid (mconcat)
 import Data.Monoid ((<>))
+
 
 -- import Control.Concurrent (threadDelay)
 
@@ -113,6 +116,32 @@ signalIO ::
    (Signal signal, Terminal.C term) =>
    String -> term -> (LineSpec.T -> LineSpec.T) -> signal -> IO ()
 signalIO ti terminal opts x = plotOne terminal (signalFrameAttr ti x) (signal opts x)
+
+{-
+tableLinear, tableLinear2D, tableSurface ::
+  (Terminal.C term) =>
+  term -> String -> Table.Map Double -> IO ()
+tableLinear term str = plotOne term . plotTable id str
+tableLinear2D term str = plotOne term . plotTable tail str
+-}
+
+
+-- | Plotting Surfaces
+surfaceIO ::
+  Surface tcX tcY tcZ =>
+  String -> tcX -> tcY -> tcZ -> IO ()
+surfaceIO ti x y z = do
+   let attrs =
+          Opts.title ti $
+          Opts.xLabel (genAxLabel x) $
+          Opts.yLabel (genAxLabel y) $
+          Opts.grid True $
+          Opts.size 1 1 $
+          Opts.deflt
+   void $ Plot.plotSync DefaultTerm.cons $
+      Frame.cons attrs $ surface x y z
+
+
 
 
 -- | Plotting Signals against each other -----------------------------
@@ -415,23 +444,6 @@ aggregatedStackIO ti energyIndex eps env =
   AssignMap.threshold eps $
   M.mapKeys AssignMap.deltaIndexSet $
   AssignMap.lookupAggregatedStack energyIndex env
-
-
--- | Plotting Surfaces -------------------------------------------------------------------------
-
-surfaceIO ::
-   Surface tcX tcY tcZ =>
-   String -> tcX -> tcY -> tcZ -> IO ()
-surfaceIO ti x y z = do
-   let attrs =
-          Opts.title ti $
-          Opts.xLabel (genAxLabel x) $
-          Opts.yLabel (genAxLabel y) $
-          Opts.grid True $
-          Opts.size 1 1 $
-          Opts.deflt
-   void $ Plot.plotSync DefaultTerm.cons $
-      Frame.cons attrs $ surface x y z
 
 
 -- | Plotting Average Efficiency Curves over Energy Flow Distribution -------------------------------

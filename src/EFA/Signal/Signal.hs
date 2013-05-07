@@ -268,6 +268,11 @@ infix 6 &+, &-
 type TSignal v a = TC Signal (Typ A T Tt) (Data (v :> Nil) a)
 type PSignal v a = TC Signal (Typ A P Tt) (Data (v :> Nil) a)
 type UTSignal v a = TC Signal (Typ UT UT UT) (Data (v :> Nil) a)
+type UTSignal2 v2 v1 a = TC Signal (Typ UT UT UT) (Data (v2 :> v1 :> Nil) a)
+type NSignal2 v2 v1 a = TC Signal (Typ A N Tt) (Data (v2 :> v1 :> Nil) a)
+type PSignal2 v2 v1 a = TC Signal (Typ A P Tt) (Data (v2 :> v1 :> Nil) a)
+
+type NSignal v a = TC Signal (Typ A P Tt) (Data (v :> Nil) a)
 
 -- Flow Signals
 type FFSignal v a = TC FSignal (Typ A F Tt) (Data (v :> Nil) a)
@@ -327,6 +332,7 @@ type PSig = Sig1 (Typ A P Tt) Val
 type PSig2 = Sig2 (Typ A P Tt) Val
 type PSigL = Sig1L (Typ A P Tt) Val
 type PSig2L = Sig2L (Typ A P Tt) Val
+
 
 -- untyped
 type UTSig = Sig1 (Typ UT UT UT) Val

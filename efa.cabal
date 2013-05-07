@@ -60,6 +60,8 @@ Library
     EFA.IO.CSVParser
     EFA.IO.PLTImport
     EFA.IO.PLTParser
+    EFA.IO.TableParserTypes
+    EFA.IO.TableParser
     EFA.Utility
     EFA.Utility.Async
     EFA.Utility.Map
@@ -79,6 +81,7 @@ Library
     EFA.Signal.Colour
     EFA.Signal.Plot
     EFA.Signal.PlotBase
+    EFA.Signal.ConvertTable
     EFA.Symbolic.OperatorTree
     EFA.Symbolic.SumProduct
     EFA.Symbolic.Mixed
@@ -231,6 +234,20 @@ Executable demo-signalSolving
   Else
     Buildable: False
 
+Executable demo-tables
+  Main-Is: demo/tables/Main.hs
+  GHC-Options: -Wall
+  If flag(buildDemos)
+    Build-Depends:
+      efa,
+      gnuplot,
+      containers,
+      base
+  Else
+    Buildable: False
+
+
+
 Executable demo-symbolicSolving
   Main-Is: demo/symbolicSolving/Main.hs
   GHC-Options: -Wall
@@ -287,6 +304,8 @@ Executable demo-signalcalc
     Build-Depends:
       gnuplot,
       efa,
+      gnuplot,
+      utility-ht,
       base
   Else
     Buildable: False
