@@ -10,87 +10,111 @@ package Grid
     connect(storage1.pin_p,pin_p) annotation(Line(points = {{-28.7972,43.2351},{55.6765,43.2351},{55.6765,54.7222},{58.6111,54.7222}}));
   end StoragePlant;
   model HouseHold
+    parameter String filename(start = "maps/constOne.txt");
+    parameter String tablename(start = "power");
+    parameter Real powerScale(start = 1.0);
     annotation(Diagram(), Icon(graphics = {Rectangle(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,0}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-47.5,20.2778},{38.8889,-61.3889}}),Line(points = {{-63.6111,-0.277778},{-4.16667,67.5},{58.3333,-0.555556},{58.6111,0}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Rectangle(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,0}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{27.5,64.4444},{37.7778,28.3333}})}));
     Modelica.Electrical.Analog.Interfaces.PositivePin pin_p annotation(Placement(visible = true, transformation(origin = {-70.8333,36.1111}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {-70.8333,36.1111}, extent = {{-12,-12},{12,12}}, rotation = 0)));
     Modelica.Electrical.Analog.Basic.Ground ground1 annotation(Placement(visible = true, transformation(origin = {-26.5027,-33.8798}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-    Modelica.Blocks.Sources.TimeTable timetable1 annotation(Placement(visible = true, transformation(origin = {-42.0765,73.224}, extent = {{-12,-12},{12,12}}, rotation = 0)));
     Electric.PowerSink powersink1 annotation(Placement(visible = true, transformation(origin = {13.9969,23.9502}, extent = {{-25.7231,-25.7231},{25.7231,25.7231}}, rotation = 0)));
+    GHSimulation.Generic.PowerProfile powerprofile1(filename = filename, powerScale = powerScale, tablename = tablename) annotation(Placement(visible = true, transformation(origin = {-77.7605,77.7605}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   equation
+    connect(powerprofile1.y,powersink1.u) annotation(Line(points = {{-68.8025,78.8056},{-9.33126,78.8056},{-9.33126,42.8853},{-7.65339,42.8853}}));
     connect(powersink1.pin_n,ground1.p) annotation(Line(points = {{-7.15318,18.0911},{-26.4386,18.0911},{-26.4386,-21.8798},{-26.5027,-21.8798}}));
     connect(pin_p,powersink1.pin_p) annotation(Line(points = {{-70.8333,36.1111},{-6.22084,36.1111},{-6.22084,34.954},{-7.36756,34.954}}));
-    connect(timetable1.y,powersink1.u) annotation(Line(points = {{-28.8765,73.224},{-8.39813,73.224},{-8.39813,42.8853},{-7.65337,42.8853}}));
   end HouseHold;
-  model Wind
-    annotation(Diagram(), Icon(graphics = {Ellipse(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,0}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-28.3333,22.7778},{-17.7778,12.5}}),Line(points = {{-25,10},{-29.7222,-86.6667},{-16.9444,-86.6667},{-21.3889,10.5556}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Line(points = {{-17.2222,23.0556},{20.8333,67.5},{29.7222,71.1111},{34.4444,63.8889},{33.3333,56.6667},{-15.5556,20.8333}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Line(points = {{-16.6667,12.5},{22.2222,-34.1667},{22.7778,-39.7222},{16.6667,-42.5},{6.94444,-39.4444},{-19.1667,10.2778}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Line(points = {{-30.2778,20.5556},{-78.6111,40.5556},{-87.2222,38.8889},{-88.8889,31.6667},{-85.2778,26.9444},{-31.1111,16.3889}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25)}));
-    Modelica.Electrical.Analog.Interfaces.PositivePin pin_p annotation(Placement(visible = true, transformation(origin = {57.5,19.4444}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {57.5,19.4444}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-    Modelica.Blocks.Interfaces.RealOutput y annotation(Placement(visible = true, transformation(origin = {59.7222,52.5}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {59.7222,52.5}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-    Modelica.Electrical.Analog.Basic.Ground ground1 annotation(Placement(visible = true, transformation(origin = {8.19672,-20.2186}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-    Modelica.Blocks.Sources.TimeTable timetable1 annotation(Placement(visible = true, transformation(origin = {-66.9399,11.4754}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-    Electric.powerSourceSupply powersourcesupply1 annotation(Placement(visible = true, transformation(origin = {-7.46501,14.3079}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-  equation
-    connect(powersourcesupply1.pin_n,ground1.p) annotation(Line(points = {{2.74551,11.7921},{8.39813,11.7921},{8.39813,-8.2186},{8.19672,-8.2186}}));
-    connect(powersourcesupply1.pin_p,pin_p) annotation(Line(points = {{3.09025,18.2044},{55.6765,18.2044},{55.6765,19.4444},{57.5,19.4444}}));
-    connect(powersourcesupply1.coalPower,y) annotation(Line(points = {{1.33499,21.6079},{9.6423,21.6079},{9.6423,52.5661},{59.7222,52.5661},{59.7222,52.5}}));
-    connect(timetable1.y,powersourcesupply1.PowerDemand) annotation(Line(points = {{-53.7399,11.4754},{-17.7294,11.4754},{-17.7294,14.4325},{-17.1027,14.4325}}));
-  end Wind;
-  model Solar
-    annotation(Diagram(), Icon(graphics = {Ellipse(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,0}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-26.3889,69.1667},{9.72222,33.0556}}),Line(points = {{-52.7778,-1.66667},{26.1111,-17.5},{25.2778,-21.6667},{-53.6111,-6.66667},{-52.7778,-1.94444}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Line(points = {{-45.8333,-9.44444},{-46.6667,-44.7222},{-44.4444,-44.7222},{-44.1667,-8.33333}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Line(points = {{7.5,-19.1667},{7.5,-44.7222},{9.72222,-44.7222},{9.72222,-18.8889}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25)}));
-    Modelica.Electrical.Analog.Interfaces.PositivePin pin_p annotation(Placement(visible = true, transformation(origin = {57.5,19.4444}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {57.5,19.4444}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-    Modelica.Blocks.Interfaces.RealOutput y annotation(Placement(visible = true, transformation(origin = {59.7222,52.5}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {59.7222,52.5}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-    Modelica.Electrical.Analog.Basic.Ground ground1 annotation(Placement(visible = true, transformation(origin = {8.74317,-11.7486}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-    Modelica.Blocks.Sources.TimeTable timetable1 annotation(Placement(visible = true, transformation(origin = {-70.4918,12.8415}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-    Electric.powerSourceSupply powersourcesupply1 annotation(Placement(visible = true, transformation(origin = {-6.22084,21.7729}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-  equation
-    connect(powersourcesupply1.pin_n,ground1.p) annotation(Line(points = {{3.98968,19.2572},{9.33126,19.2572},{9.33126,0.2514},{8.74317,0.2514}}));
-    connect(powersourcesupply1.pin_p,pin_p) annotation(Line(points = {{4.33442,25.6694},{20.5288,25.6694},{20.5288,18.9736},{57.5,18.9736},{57.5,19.4444}}));
-    connect(powersourcesupply1.coalPower,y) annotation(Line(points = {{2.57916,29.0729},{6.84292,29.0729},{6.84292,51.633},{59.7222,51.633},{59.7222,52.5}}));
-    connect(timetable1.y,powersourcesupply1.PowerDemand) annotation(Line(points = {{-57.2918,12.8415},{-33.2815,12.8415},{-33.2815,22.084},{-15.8586,22.084},{-15.8586,21.8975}}));
-  end Solar;
-  model Industry
-    annotation(Diagram(), Icon(graphics = {Text(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,0}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-34.1667,25.5556},{39.7222,-5.55556}}, textString = "Coal Power Plant"),Rectangle(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,0}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-67.5,35.2778},{65.5556,-25.2778}}),Line(points = {{-62.7778,37.2222},{-23.3333,60.5556},{-23.3333,35.2778},{16.6667,57.5},{16.1111,35.8333},{53.8889,55},{53.8889,36.3889},{53.6111,35.2778}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Rectangle(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,0}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-66.6666,35.2778},{-45,92.5}})}));
-    Modelica.Electrical.Analog.Interfaces.PositivePin pin_p annotation(Placement(visible = true, transformation(origin = {-70.8333,36.1111}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {-70.8333,36.1111}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-    Modelica.Blocks.Sources.TimeTable timetable1 annotation(Placement(visible = true, transformation(origin = {-68.8525,71.8579}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-    Electric.PowerSink powersink1 annotation(Placement(visible = true, transformation(origin = {-6.53188,12.1306}, extent = {{-19.3261,-19.3261},{19.3261,19.3261}}, rotation = 0)));
-    Modelica.Electrical.Analog.Basic.Ground ground1 annotation(Placement(visible = true, transformation(origin = {-34.8367,-26.7496}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-  equation
-    connect(ground1.p,powersink1.pin_n) annotation(Line(points = {{-34.8367,-14.7496},{-34.8367,7.15397},{-22.4222,7.15397},{-22.4222,7.72854}}));
-    connect(pin_p,powersink1.pin_p) annotation(Line(points = {{-70.8333,36.1111},{-53.1882,36.1111},{-53.1882,19.9067},{-22.5833,19.9067},{-22.5833,20.3979}}));
-    connect(timetable1.y,powersink1.u) annotation(Line(points = {{-55.6525,71.8579},{-23.6392,71.8579},{-23.6392,26.3568},{-22.798,26.3568}}));
-  end Industry;
   model Transformer
+    parameter Real powerScale(start = 1.0);
+    parameter Real etaMax(start = 1.0);
+    parameter String filename(start = "maps/constOne.txt");
+    parameter String tablename(start = "eta");
     Modelica.Electrical.Analog.Interfaces.PositivePin pin_p annotation(Placement(visible = true, transformation(origin = {-81.1111,7.77778}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {-81.1111,7.77778}, extent = {{-12,-12},{12,12}}, rotation = 0)));
     annotation(Diagram(), Diagram(coordinateSystem(preserveAspectRatio = true, extent = {{-100,-100},{100,100}}, grid = {1,1}), graphics = {Ellipse(extent = {{-45,-50},{-20,-25}}, lineColor = {0,0,255}),Ellipse(extent = {{-45,-25},{-20,0}}, lineColor = {0,0,255}),Ellipse(extent = {{-45,0},{-20,25}}, lineColor = {0,0,255}),Ellipse(extent = {{-45,25},{-20,50}}, lineColor = {0,0,255}),Rectangle(extent = {{-72,-60},{-33,60}}, lineColor = {255,255,255}, fillColor = {255,255,255}, fillPattern = FillPattern.Solid),Line(points = {{-96,50},{-32,50}}, color = {0,0,255}),Line(points = {{-96,-50},{-32,-50}}, color = {0,0,255}),Ellipse(extent = {{20,-50},{45,-25}}, lineColor = {0,0,255}),Ellipse(extent = {{20,-25},{45,0}}, lineColor = {0,0,255}),Ellipse(extent = {{20,0},{45,25}}, lineColor = {0,0,255}),Ellipse(extent = {{20,25},{45,50}}, lineColor = {0,0,255}),Rectangle(extent = {{33,-60},{72,60}}, lineColor = {255,255,255}, fillColor = {255,255,255}, fillPattern = FillPattern.Solid),Line(points = {{32,50},{96,50}}, color = {0,0,255}),Line(points = {{32,-50},{96,-50}}, color = {0,0,255})}), Icon(graphics = {Ellipse(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,0}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-45,-50},{-20,-25}}),Ellipse(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,0}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-45,-25},{-20,0}}),Ellipse(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,0}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-45,0},{-20,25}}),Ellipse(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,0}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-45,25},{-20,50}}),Rectangle(rotation = 0, lineColor = {255,255,255}, fillColor = {255,255,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.Solid, lineThickness = 0.25, extent = {{-72,-60},{-33,60}}),Line(points = {{-90,50},{-32,50}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Line(points = {{-90,-50},{-32,-50}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Ellipse(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,0}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{20,-50},{45,-25}}),Ellipse(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,0}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{20,-25},{45,0}}),Ellipse(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,0}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{20,0},{45,25}}),Ellipse(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,0}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{20,25},{45,50}}),Rectangle(rotation = 0, lineColor = {255,255,255}, fillColor = {255,255,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.Solid, lineThickness = 0.25, extent = {{33,-60},{72,60}}),Line(points = {{32,50},{90,50}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Line(points = {{32,-50},{90,-50}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Text(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,0}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-151.47,-70.6066},{148.53,-110.607}}, textString = "Transformer"),Rectangle(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,0}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-65,-73.8889},{65,68.8889}}),Line(points = {{-81.0929,61.8142},{-2.44809,99.4536},{78.9508,63.9563}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25)}));
     Modelica.Electrical.Analog.Interfaces.NegativePin pin_n annotation(Placement(visible = true, transformation(origin = {76.6667,6.11111}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {76.6667,6.11111}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-    Electric.ElectricEfficiency electricefficiency1 annotation(Placement(visible = true, transformation(origin = {-8.39813,9.33126}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Electric.ElectricEfficiency electricefficiency1(powerScale = powerScale, etaMax = etaMax, filename = filename, tablename = tablename) annotation(Placement(visible = true, transformation(origin = {-8.39813,9.33126}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   equation
     connect(electricefficiency1.pin_n,pin_n) annotation(Line(points = {{1.36853,10.7979},{74.339,10.7979},{74.339,6.11111},{76.6667,6.11111}}));
     connect(pin_p,electricefficiency1.pin_p) annotation(Line(points = {{-81.1111,7.77778},{-17.4184,7.77778},{-17.4184,10.7979},{-17.5648,10.7979}}));
   end Transformer;
+  model Industry
+    parameter String filename(start = "maps/constOne.txt");
+    parameter String tablename(start = "power");
+    parameter Real powerScale(start = 1.0);
+    annotation(Diagram(), Icon(graphics = {Text(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,0}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-34.1667,25.5556},{39.7222,-5.55556}}, textString = "Coal Power Plant"),Rectangle(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,0}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-67.5,35.2778},{65.5556,-25.2778}}),Line(points = {{-62.7778,37.2222},{-23.3333,60.5556},{-23.3333,35.2778},{16.6667,57.5},{16.1111,35.8333},{53.8889,55},{53.8889,36.3889},{53.6111,35.2778}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Rectangle(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,0}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-66.6666,35.2778},{-45,92.5}})}));
+    Modelica.Electrical.Analog.Interfaces.PositivePin pin_p annotation(Placement(visible = true, transformation(origin = {-70.8333,36.1111}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {-70.8333,36.1111}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Electric.PowerSink powersink1 annotation(Placement(visible = true, transformation(origin = {-6.53188,12.1306}, extent = {{-19.3261,-19.3261},{19.3261,19.3261}}, rotation = 0)));
+    Modelica.Electrical.Analog.Basic.Ground ground1 annotation(Placement(visible = true, transformation(origin = {-34.8367,-26.7496}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    GHSimulation.Generic.PowerProfile powerprofile1(filename = filename, powerScale = powerScale, tablename = tablename) annotation(Placement(visible = true, transformation(origin = {-64.3857,73.0949}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  equation
+    connect(powerprofile1.y,powersink1.u) annotation(Line(points = {{-55.4277,74.14},{-24.2613,74.14},{-24.2613,26.3568},{-22.798,26.3568}}));
+    connect(ground1.p,powersink1.pin_n) annotation(Line(points = {{-34.8367,-14.7496},{-34.8367,7.15397},{-22.4222,7.15397},{-22.4222,7.72854}}));
+    connect(pin_p,powersink1.pin_p) annotation(Line(points = {{-70.8333,36.1111},{-53.1882,36.1111},{-53.1882,19.9067},{-22.5833,19.9067},{-22.5833,20.3979}}));
+  end Industry;
+  model Solar
+    parameter String filename(start = "maps/constOne.txt");
+    parameter String tablename(start = "power");
+    parameter Real powerScale(start = 1.0);
+    annotation(Diagram(), Icon(graphics = {Ellipse(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,0}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-26.3889,69.1667},{9.72222,33.0556}}),Line(points = {{-52.7778,-1.66667},{26.1111,-17.5},{25.2778,-21.6667},{-53.6111,-6.66667},{-52.7778,-1.94444}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Line(points = {{-45.8333,-9.44444},{-46.6667,-44.7222},{-44.4444,-44.7222},{-44.1667,-8.33333}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Line(points = {{7.5,-19.1667},{7.5,-44.7222},{9.72222,-44.7222},{9.72222,-18.8889}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25)}));
+    Modelica.Electrical.Analog.Interfaces.PositivePin pin_p annotation(Placement(visible = true, transformation(origin = {57.5,19.4444}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {57.5,19.4444}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Blocks.Interfaces.RealOutput y annotation(Placement(visible = true, transformation(origin = {59.7222,52.5}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {59.7222,52.5}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Electrical.Analog.Basic.Ground ground1 annotation(Placement(visible = true, transformation(origin = {8.74317,-11.7486}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Electric.powerSourceSupply powersourcesupply1 annotation(Placement(visible = true, transformation(origin = {-6.22084,21.7729}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    GHSimulation.Generic.PowerProfile powerprofile1(filename = filename, powerScale = powerScale, tablename = tablename) annotation(Placement(visible = true, transformation(origin = {-83.3592,21.4619}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  equation
+    connect(powerprofile1.y,powersourcesupply1.PowerDemand) annotation(Line(points = {{-74.4012,22.507},{-16.7963,22.507},{-16.7963,21.8975},{-15.8586,21.8975}}));
+    connect(powersourcesupply1.pin_n,ground1.p) annotation(Line(points = {{3.98968,19.2572},{9.33126,19.2572},{9.33126,0.2514},{8.74317,0.2514}}));
+    connect(powersourcesupply1.pin_p,pin_p) annotation(Line(points = {{4.33442,25.6694},{20.5288,25.6694},{20.5288,18.9736},{57.5,18.9736},{57.5,19.4444}}));
+    connect(powersourcesupply1.coalPower,y) annotation(Line(points = {{2.57916,29.0729},{6.84292,29.0729},{6.84292,51.633},{59.7222,51.633},{59.7222,52.5}}));
+  end Solar;
   model CoalPowerPlant
+    parameter String filename(start = "maps/constOne.txt");
+    parameter String tablename(start = "eta");
+    parameter Real powerScale(start = 1.0);
+    parameter Real maxEta(start = 1.0);
     annotation(Icon(graphics = {Text(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,0}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-61.9445,18.3334},{11.9444,-12.7778}}, textString = "Coal Power Plant"),Rectangle(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,0}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-67.5,35.2778},{18.8889,-26.6667}}),Rectangle(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,0}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-66.6666,35.2778},{-45,92.5}}),Line(points = {{-41.6667,-25},{-32.5,-13.6111},{-29.1667,-10},{-20.2778,-7.77778},{-13.3333,-6.11111},{-1.66667,-5.55556},{7.22222,-7.77778},{11.1111,-10},{13.0556,-13.6111},{15.5556,-19.4444},{18.6111,-26.6667},{-43.0556,-26.9444}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25)}), Diagram());
     Modelica.Blocks.Interfaces.RealInput u annotation(Placement(visible = true, transformation(origin = {-80.2778,9.72222}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {-80.2778,9.72222}, extent = {{-12,-12},{12,12}}, rotation = 0)));
     Modelica.Blocks.Interfaces.RealOutput y annotation(Placement(visible = true, transformation(origin = {59.7222,52.5}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {59.7222,52.5}, extent = {{-12,-12},{12,12}}, rotation = 0)));
     Modelica.Electrical.Analog.Interfaces.PositivePin pin_p annotation(Placement(visible = true, transformation(origin = {57.5,19.7176}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {57.5,19.7176}, extent = {{-12,-12},{12,12}}, rotation = 0)));
     Modelica.Electrical.Analog.Basic.Ground ground1 annotation(Placement(visible = true, transformation(origin = {23.4973,-23.4973}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-    Electric.powerSourceDemand powersourcedemand1 annotation(Placement(visible = true, transformation(origin = {-16.1742,11.8196}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Electric.powerSourceDemand powersourcedemand1(filename = filename, tablename = tablename, powerScale = powerScale, maxEta = maxEta) annotation(Placement(visible = true, transformation(origin = {-16.1742,12.1306}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   equation
-    connect(u,powersourcedemand1.PowerDemand) annotation(Line(points = {{-80.2778,9.72222},{-26.4386,9.72222},{-26.4386,11.9442},{-25.8119,11.9442}}));
-    connect(powersourcedemand1.coalPower,y) annotation(Line(points = {{-7.37419,19.1196},{0,19.1196},{0,51.3219},{59.7222,51.3219},{59.7222,52.5}}));
-    connect(powersourcedemand1.pin_n,ground1.p) annotation(Line(points = {{-5.96366,9.30381},{23.3281,9.30381},{23.3281,-11.4973},{23.4973,-11.4973}}));
-    connect(powersourcedemand1.pin_p,pin_p) annotation(Line(points = {{-5.61892,15.7161},{54.4323,15.7161},{54.4323,19.7176},{57.5,19.7176}}));
+    connect(powersourcedemand1.pin_p,pin_p) annotation(Line(points = {{-5.61894,16.0271},{54.4323,16.0271},{54.4323,19.7176},{57.5,19.7176}}));
+    connect(powersourcedemand1.pin_n,ground1.p) annotation(Line(points = {{-5.96368,9.61485},{23.3281,9.61485},{23.3281,-11.4973},{23.4973,-11.4973}}));
+    connect(powersourcedemand1.coalPower,y) annotation(Line(points = {{-7.3742,19.4306},{0,19.4306},{0,51.3219},{59.7222,51.3219},{59.7222,52.5}}));
+    connect(u,powersourcedemand1.PowerDemand) annotation(Line(points = {{-80.2778,9.72222},{-26.4386,9.72222},{-26.4386,12.2552},{-25.8119,12.2552}}));
   end CoalPowerPlant;
   model GasPowerPlant
+    parameter String filename(start = "maps/constOne.txt");
+    parameter String tablename(start = "eta");
+    parameter Real powerScale(start = 1.0);
+    parameter Real maxEta(start = 1.0);
     annotation(Diagram(), Icon(graphics = {Rectangle(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,0}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-67.5,35.2778},{35.8334,-35}}),Rectangle(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,0}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-66.6666,35.2778},{-45,92.5}}),Text(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,0}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-50,-48.3333},{19.1667,-63.3333}}, textString = "Gas Power Plant"),Line(points = {{-43.3333,17.2222},{-43.3333,-26.3889},{-6.38889,-15.8333},{-6.38889,8.05556},{-42.7778,19.7222}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Rectangle(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,0}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-54.7222,-8.05556},{5,-1.38889}})}));
     Modelica.Blocks.Interfaces.RealInput u annotation(Placement(visible = true, transformation(origin = {-80.2778,9.72222}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {-80.2778,9.72222}, extent = {{-12,-12},{12,12}}, rotation = 0)));
     Modelica.Electrical.Analog.Interfaces.PositivePin pin_p annotation(Placement(visible = true, transformation(origin = {57.5,19.4444}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {57.5,19.4444}, extent = {{-12,-12},{12,12}}, rotation = 0)));
     Modelica.Blocks.Interfaces.RealOutput y annotation(Placement(visible = true, transformation(origin = {59.7222,52.5}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {59.7222,52.5}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-    Electric.powerSourceDemand powersourcedemand1 annotation(Placement(visible = true, transformation(origin = {-22.395,22.7061}, extent = {{-12,-12},{12,12}}, rotation = 0)));
     Modelica.Electrical.Analog.Basic.Ground ground1 annotation(Placement(visible = true, transformation(origin = {-1.248,-24.3169}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Electric.powerSourceDemand powersourcedemand1(filename = filename, tablename = tablename, powerScale = powerScale, maxEta = maxEta) annotation(Placement(visible = true, transformation(origin = {-22.395,22.3951}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   equation
-    connect(powersourcedemand1.pin_n,ground1.p) annotation(Line(points = {{-12.1845,20.1903},{-0.933126,20.1903},{-0.933126,-12.3169},{-1.248,-12.3169}}));
-    connect(powersourcedemand1.pin_p,pin_p) annotation(Line(points = {{-11.8397,26.6026},{10.5754,26.6026},{10.5754,18.9736},{57.5,18.9736},{57.5,19.4444}}));
-    connect(powersourcedemand1.coalPower,y) annotation(Line(points = {{-13.595,30.0061},{21.4619,30.0061},{21.4619,53.8103},{59.7222,53.8103},{59.7222,52.5}}));
-    connect(u,powersourcedemand1.PowerDemand) annotation(Line(points = {{-80.2778,9.72222},{-32.6594,9.72222},{-32.6594,22.8307},{-32.0327,22.8307}}));
+    connect(u,powersourcedemand1.PowerDemand) annotation(Line(points = {{-80.2778,9.72222},{-32.6594,9.72222},{-32.6594,22.5196},{-32.0327,22.5196}}));
+    connect(powersourcedemand1.coalPower,y) annotation(Line(points = {{-13.595,29.6951},{21.4619,29.6951},{21.4619,53.8103},{59.7222,53.8103},{59.7222,52.5}}));
+    connect(powersourcedemand1.pin_p,pin_p) annotation(Line(points = {{-11.8397,26.2915},{10.5754,26.2915},{10.5754,18.9736},{57.5,18.9736},{57.5,19.4444}}));
+    connect(powersourcedemand1.pin_n,ground1.p) annotation(Line(points = {{-12.1845,19.8793},{-0.933126,19.8793},{-0.933126,-12.3169},{-1.248,-12.3169}}));
   end GasPowerPlant;
+  model Wind
+    parameter String filename(start = "maps/constOne.txt");
+    parameter String tablename(start = "power");
+    parameter Real powerScale(start = 1.0);
+    annotation(Diagram(), Icon(graphics = {Ellipse(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,0}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-28.3333,22.7778},{-17.7778,12.5}}),Line(points = {{-25,10},{-29.7222,-86.6667},{-16.9444,-86.6667},{-21.3889,10.5556}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Line(points = {{-17.2222,23.0556},{20.8333,67.5},{29.7222,71.1111},{34.4444,63.8889},{33.3333,56.6667},{-15.5556,20.8333}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Line(points = {{-16.6667,12.5},{22.2222,-34.1667},{22.7778,-39.7222},{16.6667,-42.5},{6.94444,-39.4444},{-19.1667,10.2778}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Line(points = {{-30.2778,20.5556},{-78.6111,40.5556},{-87.2222,38.8889},{-88.8889,31.6667},{-85.2778,26.9444},{-31.1111,16.3889}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25)}));
+    Modelica.Electrical.Analog.Interfaces.PositivePin pin_p annotation(Placement(visible = true, transformation(origin = {57.5,19.4444}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {57.5,19.4444}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Blocks.Interfaces.RealOutput y annotation(Placement(visible = true, transformation(origin = {59.7222,52.5}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {59.7222,52.5}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Electrical.Analog.Basic.Ground ground1 annotation(Placement(visible = true, transformation(origin = {8.19672,-20.2186}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Electric.powerSourceSupply powersourcesupply1 annotation(Placement(visible = true, transformation(origin = {-7.46501,14.3079}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    GHSimulation.Generic.PowerProfile powerprofile1(filename = filename, powerScale = powerScale, tablename = tablename) annotation(Placement(visible = true, transformation(origin = {-63.4525,17.4184}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  equation
+    connect(powerprofile1.y,powersourcesupply1.PowerDemand) annotation(Line(points = {{-54.4945,18.4635},{-17.7294,18.4635},{-17.7294,14.4325},{-17.1027,14.4325}}));
+    connect(powersourcesupply1.pin_n,ground1.p) annotation(Line(points = {{2.74551,11.7921},{8.39813,11.7921},{8.39813,-8.2186},{8.19672,-8.2186}}));
+    connect(powersourcesupply1.pin_p,pin_p) annotation(Line(points = {{3.09025,18.2044},{55.6765,18.2044},{55.6765,19.4444},{57.5,19.4444}}));
+    connect(powersourcesupply1.coalPower,y) annotation(Line(points = {{1.33499,21.6079},{9.6423,21.6079},{9.6423,52.5661},{59.7222,52.5661},{59.7222,52.5}}));
+  end Wind;
 end Grid;
 
