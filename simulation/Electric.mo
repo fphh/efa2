@@ -11,10 +11,12 @@ package Electric
     Real _voltage_log annotation(Placement(visible = true, transformation(origin = {71.6667,12.7778}, extent = {{-12,-12},{12,12}}, rotation = 0)));
     Real _powerDemand_log annotation(Placement(visible = true, transformation(origin = {71.1111,-20.2778}, extent = {{-12,-12},{12,12}}, rotation = 0)));
     Modelica.Blocks.Interfaces.RealInput u annotation(Placement(visible = true, transformation(origin = {-84.1667,73.6111}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {-84.1667,73.6111}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Blocks.Nonlinear.Limiter limiter1(uMin = 1) annotation(Placement(visible = true, transformation(origin = {-60.3421,19.2846}, extent = {{-6.1579,-6.1579},{6.1579,6.1579}}, rotation = 0)));
   equation
+    connect(limiter1.y,division_calculateCurrent.u2) annotation(Line(points = {{-53.5685,19.2846},{-35.4588,19.2846},{-35.4588,28.3078},{-35.051,28.3078}}));
+    connect(voltagesensor1.v,limiter1.u) annotation(Line(points = {{-73.5643,19.1667},{-73.5643,19.2846},{-67.7316,19.2846},{-67.7316,19.2846}}));
     connect(u,division_calculateCurrent.u1) annotation(Line(points = {{-84.1667,73.6111},{-37.7778,73.6111},{-37.7778,35},{-35.051,35},{-35.051,35.0256}}));
     connect(voltagesensor1.p,pin_n) annotation(Line(points = {{-79.7222,13.0088},{-80.2778,13.0088},{-80.2778,-20.2778},{-90,-20.2778}}));
-    connect(voltagesensor1.v,division_calculateCurrent.u2) annotation(Line(points = {{-73.5643,19.1667},{-73.5643,18.6111},{-35.8333,18.6111},{-35.8333,28.3078},{-35.051,28.3078}}));
     connect(pin_p,voltagesensor1.n) annotation(Line(points = {{-83.0556,42.7778},{-79.7222,42.7778},{-79.7222,31.1579},{-79.7222,25.3246}}));
     connect(division_calculateCurrent.y,signalcurrent1.i) annotation(Line(points = {{-22.1754,31.6667},{-10,31.6667},{-10,35.5555},{-9.38243,35.5555}}));
     connect(signalcurrent1.p,pin_n) annotation(Line(points = {{-4.16669,28.1045},{-4.16671,28.1045},{-4.16671,-19.4444},{-90,-19.4444},{-90,-20.2778}}));
@@ -23,22 +25,6 @@ package Electric
     _voltage_log = pin_p.v;
     _current_log = pin_p.i;
   end PowerSink;
-  model Storage
-    Modelica.Electrical.Analog.Interfaces.PositivePin pin_p annotation(Placement(visible = true, transformation(origin = {58.6111,54.7222}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {58.6111,54.7222}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-    annotation(Diagram(), Icon(graphics = {Ellipse(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,0}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-72.7778,63.8889},{39.7222,-46.6667}}),Text(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,0}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-56.1111,-3.61111},{22.7778,19.7222}}, textString = "Storage")}));
-    Modelica.Electrical.Analog.Interfaces.NegativePin pin_n annotation(Placement(visible = true, transformation(origin = {63.0556,-32.2222}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {63.0556,-32.2222}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-    Modelica.Electrical.Analog.Sources.ConstantVoltage constantvoltage1 annotation(Placement(visible = true, transformation(origin = {-68.3333,18.8889}, extent = {{12,-12},{-12,12}}, rotation = 90)));
-    Modelica.Electrical.Analog.Sensors.PowerSensor powersensor1 annotation(Placement(visible = true, transformation(origin = {59.7222,18.3333}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-    Electric.ElectricEfficiency electricefficiency1 annotation(Placement(visible = true, transformation(origin = {-5.59876,51.633}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-  equation
-    connect(constantvoltage1.n,pin_n) annotation(Line(points = {{-68.3333,30.8889},{-68.0556,30.8889},{-68.0556,-32.4668},{63.0556,-32.4668},{63.0556,-32.2222}}));
-    connect(pin_n,electricefficiency1.pin_n) annotation(Line(points = {{63.0556,-32.2222},{-14.3079,-32.2222},{-14.3079,46.3328},{-14.5194,46.3328}}));
-    connect(electricefficiency1.pin_p,constantvoltage1.n) annotation(Line(points = {{-14.8401,53.1743},{-68.7403,53.1743},{-68.7403,30.8889},{-68.3333,30.8889}}));
-    connect(electricefficiency1.positivepin1,pin_p) annotation(Line(points = {{3.84448,53.7978},{55.6765,53.7978},{55.6765,54.7222},{58.6111,54.7222}}));
-    connect(pin_p,powersensor1.nc) annotation(Line(points = {{58.6111,54.7222},{86.9444,54.7222},{86.9444,18.6111},{71.7222,18.6111},{71.7222,18.3333}}));
-    connect(powersensor1.nv,pin_n) annotation(Line(points = {{59.7222,6.33333},{61.9444,6.33333},{61.9444,-32.2222},{63.0556,-32.2222}}));
-    connect(pin_p,powersensor1.pv) annotation(Line(points = {{58.6111,54.7222},{59.7222,54.7222},{59.7222,30.3333},{59.7222,30.3333}}));
-  end Storage;
   model powerSourceSupply
     annotation(Diagram(), Icon(graphics = {Text(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,0}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-31.3889,-15},{41.3889,11.6667}}, textString = "Power Source"),Line(points = {{-57.5,-7.22222},{-0.555556,57.5},{61.3889,-3.33333},{6.38889,-61.1111},{-57.2222,-7.22222}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25)}));
     Modelica.Blocks.Interfaces.RealInput PowerSupply annotation(Placement(visible = true, transformation(origin = {-80.3143,1.03801}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {-80.3143,1.03801}, extent = {{-12,-12},{12,12}}, rotation = 0)));
@@ -52,8 +38,10 @@ package Electric
     parameter Real powerScale(start = 1.0) annotation(Placement(visible = true, transformation(origin = {74.028,76.2053}, extent = {{-12,-12},{12,12}}, rotation = 0)));
     parameter Real maxEta(start = 1.0) annotation(Placement(visible = true, transformation(origin = {74.028,76.2053}, extent = {{-12,-12},{12,12}}, rotation = 0)));
     Modelica.Electrical.Analog.Sensors.VoltageSensor voltagesensor1 annotation(Placement(visible = true, transformation(origin = {85.8476,9.33126}, extent = {{-12,12},{12,-12}}, rotation = -90)));
+    Modelica.Blocks.Nonlinear.Limiter limiter1(uMin = 1.0) annotation(Placement(visible = true, transformation(origin = {7.77605,-37.9471}, extent = {{7.45106,7.45106},{-7.45106,-7.45106}}, rotation = -180)));
   equation
-    connect(voltagesensor1.v,division1.u2) annotation(Line(points = {{73.8476,9.33126},{73.8476,8.70918},{46.0342,8.70918},{46.0342,-41.3686},{-27.9938,-41.3686},{-27.9938,-7.77605},{-21.966,-7.77605},{-21.966,-8.02812}}));
+    connect(limiter1.y,division1.u2) annotation(Line(points = {{-0.420112,-37.9471},{-30.4821,-37.9471},{-30.4821,-7.77605},{-21.966,-7.77605},{-21.966,-8.02812}}));
+    connect(limiter1.u,voltagesensor1.v) annotation(Line(points = {{16.7173,-37.9471},{51.3219,-37.9471},{51.3219,9.6423},{73.8476,9.6423},{73.8476,9.33126}}));
     connect(voltagesensor1.n,pin_n) annotation(Line(points = {{85.8476,-2.66874},{85.2255,-2.66874},{85.2255,-20.9649},{85.0877,-20.9649}}));
     connect(pin_p,voltagesensor1.p) annotation(Line(points = {{87.9605,32.4707},{86.1586,32.4707},{86.1586,21.3313},{85.8476,21.3313}}));
     connect(pin_n,signalcurrent1.p) annotation(Line(points = {{85.0877,-20.9649},{17.2101,-20.9649},{17.2101,-15.2102},{16.6213,-15.2102}}));
@@ -123,21 +111,23 @@ package Electric
     parameter String tablename(start = "eta") annotation(Placement(visible = true, transformation(origin = {72.1617,-73.717}, extent = {{-12,-12},{12,12}}, rotation = 0)));
     parameter Real powerScale(start = 1.0) annotation(Placement(visible = true, transformation(origin = {72.1617,-73.717}, extent = {{-12,-12},{12,12}}, rotation = 0)));
     parameter Real maxEta(start = 1.0) annotation(Placement(visible = true, transformation(origin = {72.1617,-73.717}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-    Modelica.Electrical.Analog.Sensors.VoltageSensor voltagesensor1 annotation(Placement(visible = true, transformation(origin = {54.7434,5.28771}, extent = {{-12,-12},{12,12}}, rotation = 0)));
-    Modelica.Electrical.Analog.Sources.SignalCurrent signalcurrent1 annotation(Placement(visible = true, transformation(origin = {0.758165,3.94375}, extent = {{12,-12},{-12,12}}, rotation = 90)));
-    Modelica.Blocks.Math.Division division1 annotation(Placement(visible = true, transformation(origin = {-40.1244,-4.66563}, extent = {{-9.91736,-9.91736},{9.91736,9.91736}}, rotation = 0)));
+    Modelica.Blocks.Math.Division division1(u2) annotation(Placement(visible = true, transformation(origin = {-40.1244,-4.66563}, extent = {{-9.91736,-9.91736},{9.91736,9.91736}}, rotation = 0)));
     powerOutEfficiency poweroutefficiency1(powerScale = powerScale, maxEta = maxEta, filename = filename, tablename = tablename) annotation(Placement(visible = true, transformation(origin = {30.8994,65.6221}, extent = {{-12,-12},{12,12}}, rotation = 0)));
     Modelica.Blocks.Interfaces.RealInput PowerDemand annotation(Placement(visible = true, transformation(origin = {-80.3143,1.34905}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {-80.3143,1.34905}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Electrical.Analog.Sensors.VoltageSensor voltagesensor1 annotation(Placement(visible = true, transformation(origin = {70.6065,6.53188}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Electrical.Analog.Sources.SignalCurrent signalcurrent1 annotation(Placement(visible = true, transformation(origin = {0.758165,-4.45438}, extent = {{12,-12},{-12,12}}, rotation = 90)));
+    Modelica.Blocks.Nonlinear.Limiter limiter1(uMin = 1) annotation(Placement(visible = true, transformation(origin = {-30.7932,-38.8802}, extent = {{12,12},{-12,-12}}, rotation = -180)));
   equation
-    connect(division1.u2,voltagesensor1.v) annotation(Line(points = {{-52.0252,-10.616},{-59.409,-10.616},{-59.409,-29.86},{23.0171,-29.86},{23.0171,5.28771},{42.7434,5.28771}}));
+    connect(limiter1.y,division1.u2) annotation(Line(points = {{-43.9932,-38.8802},{-61.8974,-38.8802},{-61.8974,-10.8865},{-52.0252,-10.8865},{-52.0252,-10.616}}));
+    connect(limiter1.u,voltagesensor1.v) annotation(Line(points = {{-16.3932,-38.8802},{33.5925,-38.8802},{33.5925,6.53188},{58.6065,6.53188},{58.6065,6.53188}}));
+    connect(division1.y,signalcurrent1.i) annotation(Line(points = {{-29.2153,-4.66563},{-8.70918,-4.66563},{-8.70918,-4.45438},{-7.64183,-4.45438}}));
+    connect(pin_n,signalcurrent1.p) annotation(Line(points = {{85.0877,-20.9649},{0.933126,-20.9649},{0.933126,-16.4544},{0.758165,-16.4544}}));
+    connect(signalcurrent1.n,pin_p) annotation(Line(points = {{0.758165,7.54562},{0.933126,7.54562},{0.933126,32.3484},{87.9605,32.3484},{87.9605,32.4707}}));
+    connect(voltagesensor1.n,pin_n) annotation(Line(points = {{70.6065,-5.46812},{70.6065,-5.46812},{70.6065,-20.5288},{85.0877,-20.5288},{85.0877,-20.9649}}));
+    connect(voltagesensor1.p,pin_p) annotation(Line(points = {{70.6065,18.5319},{70.2954,18.5319},{70.2954,32.4707},{87.9605,32.4707}}));
     connect(poweroutefficiency1.powerOut,PowerDemand) annotation(Line(points = {{21.5328,67.0554},{-74.028,67.0554},{-74.028,1.34905},{-80.3143,1.34905}}));
     connect(PowerDemand,division1.u1) annotation(Line(points = {{-80.3143,1.34905},{-52.2551,1.34905},{-52.2551,1.28478},{-52.0252,1.28478}}));
     connect(poweroutefficiency1.powerIn,powerIn) annotation(Line(points = {{39.2661,67.9221},{64.4444,67.9221},{64.4444,60.8333},{73.3333,60.8333}}));
-    connect(signalcurrent1.n,pin_p) annotation(Line(points = {{0.758165,15.9438},{0.933126,15.9438},{0.933126,32.3484},{87.9605,32.3484},{87.9605,32.4707}}));
-    connect(pin_n,signalcurrent1.p) annotation(Line(points = {{85.0877,-20.9649},{0.933126,-20.9649},{0.933126,-8.05625},{0.758165,-8.05625}}));
-    connect(division1.y,signalcurrent1.i) annotation(Line(points = {{-29.2153,-4.66563},{-8.70918,-4.66563},{-8.70918,3.94375},{-7.64184,3.94375}}));
-    connect(voltagesensor1.n,pin_n) annotation(Line(points = {{54.7434,-6.71229},{54.4323,-6.71229},{54.4323,-20.5288},{85.0877,-20.5288},{85.0877,-20.9649}}));
-    connect(voltagesensor1.p,pin_p) annotation(Line(points = {{54.7434,17.2877},{54.4323,17.2877},{54.4323,32.4707},{87.9605,32.4707}}));
   end powerSourceDemand;
   model ElectricEfficiency
     annotation(Icon(graphics = {Rectangle(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,0}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-63.8889,54.4444},{69.4444,-36.3889}}),Text(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,0}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-51.3889,-6.66667},{60.8333,10}}, textString = "Eta Electric"),Line(points = {{-50.2778,-21.3889},{57.2222,-21.3889},{46.3889,-18.3333},{46.3889,-25},{56.9444,-20.8333}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Line(points = {{-50.8333,-21.1111},{-50.8333,51.6667},{-54.4444,41.1111},{-46.1111,41.1111},{-50.2778,51.9444}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Line(points = {{-50.2778,-18.0556},{-45.2778,12.2222},{-35,25.8333},{-21.1111,36.9444},{4.16667,41.3889},{22.7778,44.1667},{53.6111,45.2778},{55.2778,45.8333}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25)}), Diagram());
@@ -156,14 +146,16 @@ package Electric
     Modelica.Electrical.Analog.Sensors.CurrentSensor currentsensor1 annotation(Placement(visible = true, transformation(origin = {-30.7932,19.2846}, extent = {{-12,-12},{12,12}}, rotation = 0)));
     Modelica.Blocks.Math.Product product2 annotation(Placement(visible = true, transformation(origin = {-69.3624,64.3857}, extent = {{-12,-12},{12,12}}, rotation = 0)));
     Modelica.Electrical.Analog.Basic.VariableResistor variableresistor1 annotation(Placement(visible = true, transformation(origin = {38.6296,17.9944}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Blocks.Nonlinear.Limiter limiter1(uMin = 0.01) annotation(Placement(visible = true, transformation(origin = {14.619,43.8569}, extent = {{-7.45106,-7.45106},{7.45106,7.45106}}, rotation = 0)));
   equation
+    connect(limiter1.u,currentsensor1.i) annotation(Line(points = {{5.67771,43.8569},{-4.04355,43.8569},{-4.04355,7.46501},{-30.7932,7.46501},{-30.7932,7.2846}}));
+    connect(limiter1.y,division1.u2) annotation(Line(points = {{22.8151,43.8569},{30.1711,43.8569},{30.1711,52.2551},{55.8955,52.2551},{55.8955,52.5201}}));
     connect(currentsensor1.n,variableresistor1.p) annotation(Line(points = {{-18.7932,19.2846},{26.1275,19.2846},{26.1275,17.9944},{26.6296,17.9944}}));
     connect(division1.y,variableresistor1.R) annotation(Line(points = {{83.4955,59.7201},{93.0016,59.7201},{93.0016,37.6361},{39.1913,37.6361},{39.1913,31.1944},{38.6296,31.1944}}));
     connect(positivepin1,variableresistor1.n) annotation(Line(points = {{78.6936,18.0404},{61.8974,18.0404},{61.8974,17.9944},{50.6296,17.9944}}));
     connect(voltagesensor1.v,product2.u1) annotation(Line(points = {{-65.4495,-11.5086},{-65.4495,30.7932},{-96.7341,30.7932},{-96.7341,72.1617},{-83.7624,72.1617},{-83.7624,71.5857}}));
     connect(currentsensor1.i,product2.u2) annotation(Line(points = {{-30.7932,7.2846},{-30.7932,38.5692},{-93.3126,38.5692},{-93.3126,57.5428},{-83.7624,57.5428},{-83.7624,57.1857}}));
     connect(product2.y,powerinefficiency1.powerIn) annotation(Line(points = {{-56.1624,64.3857},{-52.2551,64.3857},{-52.2551,69.5515},{-51.6684,69.5515}}));
-    connect(currentsensor1.i,division1.u2) annotation(Line(points = {{-30.7932,7.2846},{-30.7932,8.39813},{14.3079,8.39813},{14.3079,51.944},{55.8955,51.944},{55.8955,52.5201}}));
     connect(pin_p,currentsensor1.p) annotation(Line(points = {{-77.011,12.8443},{-41.9907,12.8443},{-41.9907,19.2846},{-42.7932,19.2846}}));
     connect(feedback1.y,division1.u1) annotation(Line(points = {{36.2973,78.3826},{55.0544,78.3826},{55.0544,66.9201},{55.8955,66.9201}}));
     connect(voltagesensor1.v,product1.u2) annotation(Line(points = {{-65.4495,-11.5086},{-65.4495,-11.1975},{-22.7061,-11.1975},{-22.7061,58.4759},{-13.9294,58.4759},{-13.9294,59.9094}}));
@@ -173,5 +165,21 @@ package Electric
     connect(pin_p,voltagesensor1.n) annotation(Line(points = {{-77.011,12.8443},{-77.4495,12.8443},{-77.4495,0.491446},{-77.4495,0.491446}}));
     connect(voltagesensor1.p,pin_n) annotation(Line(points = {{-77.4495,-23.5086},{-77.1384,-23.5086},{-77.1384,-44.168},{-74.339,-44.168}}));
   end ElectricEfficiency;
+  model Storage
+    Modelica.Electrical.Analog.Interfaces.PositivePin pin_p annotation(Placement(visible = true, transformation(origin = {58.6111,54.7222}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {58.6111,54.7222}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    annotation(Diagram(), Icon(graphics = {Ellipse(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,0}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-72.7778,63.8889},{39.7222,-46.6667}}),Text(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,0}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-56.1111,-3.61111},{22.7778,19.7222}}, textString = "Storage")}));
+    Modelica.Electrical.Analog.Interfaces.NegativePin pin_n annotation(Placement(visible = true, transformation(origin = {63.0556,-32.2222}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {63.0556,-32.2222}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Electrical.Analog.Sources.ConstantVoltage constantvoltage1(V = 1.0) annotation(Placement(visible = true, transformation(origin = {-68.3333,18.8889}, extent = {{12,-12},{-12,12}}, rotation = 90)));
+    Electric.ElectricEfficiency electricefficiency1(powerScale = powerScale, etaMax = etaMax, filename = filename, tablename = tablename) annotation(Placement(visible = true, transformation(origin = {-5.59876,51.633}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    parameter String filename(start = "maps/constOne.txt") annotation(Placement(visible = true, transformation(origin = {70.2955,-58.1648}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    parameter String tablename(start = "power") annotation(Placement(visible = true, transformation(origin = {70.2955,-58.1648}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    parameter Real powerScale(start = 1.0) annotation(Placement(visible = true, transformation(origin = {70.2955,-58.1648}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    parameter Real etaMax(start = 1.0) annotation(Placement(visible = true, transformation(origin = {70.2955,-58.1648}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  equation
+    connect(electricefficiency1.positivepin1,pin_p) annotation(Line(points = {{3.84447,53.7978},{57.8538,53.7978},{57.8538,54.7222},{58.6111,54.7222}}));
+    connect(constantvoltage1.n,pin_n) annotation(Line(points = {{-68.3333,30.8889},{-68.0556,30.8889},{-68.0556,-32.4668},{63.0556,-32.4668},{63.0556,-32.2222}}));
+    connect(pin_n,electricefficiency1.pin_n) annotation(Line(points = {{63.0556,-32.2222},{-14.3079,-32.2222},{-14.3079,46.3328},{-14.5194,46.3328}}));
+    connect(electricefficiency1.pin_p,constantvoltage1.n) annotation(Line(points = {{-14.8401,53.1743},{-68.7403,53.1743},{-68.7403,30.8889},{-68.3333,30.8889}}));
+  end Storage;
 end Electric;
 
