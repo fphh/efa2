@@ -226,9 +226,9 @@ recordIOList_extract ::
    String ->
    term ->
    (id -> String) ->
-   (LineSpec.T -> LineSpec.T) -> 
+   (LineSpec.T -> LineSpec.T) ->
    [(Record.Name,Record s1 s2 t1 t2 id v d1 d2)] ->
-   [id] ->   
+   [id] ->
    IO ()
 recordIOList_extract ti term showKey opts x idList =
    plotOne term (recordFrame ti) (recordList showKey opts varOpts $ map (\(x,y) -> (x,Record.extract idList y)) x)
@@ -540,4 +540,4 @@ etaDistr1DimIOfromRecordList ti  intervall offset rList  (plotTitle, (idIn,idOut
               (x,y) = Sig.sortTwo (pAbszisse,eta)
           etaDistr1DimIO (ti ++ "_" ++ plotTitle ++ "_" ++ recTitle) x y  pDist
             (Sig.scale (Sig.norm einDist) 100) nDist
-   
+

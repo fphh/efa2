@@ -110,12 +110,12 @@ etaList = [
   ("Engine and Generator", Signals.etaEngineGenerator),
   ("Motor and Gearbox", Signals.etaMotorGearbox)
  ]
-          
--- plotTerm :: X11.T        
--- plotTerm = X11.cons 
 
-plotTerm :: WXT.T        
-plotTerm = WXT.cons 
+-- plotTerm :: X11.T
+-- plotTerm = X11.cons
+
+plotTerm :: WXT.T
+plotTerm = WXT.cons
 
 -- | A. Generator steht
 
@@ -332,9 +332,9 @@ main = do
 -- *  Make the Prediction
 
   let prediction = Analysis.prediction (head sequenceFlowTopologyX) (head externalEnvX)
-      
+
   -- Hier gehts schief, wenn ich mit Signalen rechnen will
---  let prediction2 = Analysis.prediction (head sequenceFlowTopologyX) (head externalSignalEnvX) 
+--  let prediction2 = Analysis.prediction (head sequenceFlowTopologyX) (head externalSignalEnvX)
 
 ---------------------------------------------------------------------------------------
 -- *  Make difference Analysis
@@ -434,8 +434,8 @@ main = do
         (head differenceExtEnvs)]
 
 
-{-     ++ [mapM_ (Plot.stackIOfromEnv  "Energy Flow Change at Tank in Section 6" 
-         (XIdx.energy (Idx.Section 6) System.Tank System.ConBattery) 1) 
+{-     ++ [mapM_ (Plot.stackIOfromEnv  "Energy Flow Change at Tank in Section 6"
+         (XIdx.energy (Idx.Section 6) System.Tank System.ConBattery) 1)
          (zip deltasetsX differenceExtEnvs)]-}
 {-
      ++ [print $    -- AssignMap.threshold 0.001 $

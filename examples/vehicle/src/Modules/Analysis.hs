@@ -218,8 +218,8 @@ external2 sequenceFlowTopology sequFlowRecord =
   EqGen.solveFromMeasurement
     sequenceFlowTopology $
     makeGivenFromExternal2 sequFlowRecord -- $ Record.diffTime sequFlowRecord
-    
--- makeGivenFromExternal2 :: 
+
+-- makeGivenFromExternal2 ::
 -- makeGivenFromExternal2 env = EqGen.fromEnvSignal $ (fmap (fmap (D.foldl (+) 0) ) $ EqAbs.envFromFlowRecord env)
 makeGivenFromExternal2 sf = EqGen.fromEnvSignal $ EqAbs.envFromFlowRecord (fmap Record.diffTime sf)
 
@@ -270,7 +270,7 @@ makeGivenForPrediction idx env =
                 (System.ConES, System.ElectricSystem) -> True
            --     (System.Battery, System.ConBattery) -> True
                 _ -> False
-          h (Idx.InSection _ (Idx.Energy (Idx.StructureEdge System.Resistance System.Chassis))) x = 
+          h (Idx.InSection _ (Idx.Energy (Idx.StructureEdge System.Resistance System.Chassis))) x =
                fmap (fmap (*1.1)) x
           h _ r = r
           i _ _ = True

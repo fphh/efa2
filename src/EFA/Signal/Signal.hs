@@ -1005,15 +1005,15 @@ subSignal1D ::
 subSignal1D (TC (Data x)) idxs = TC $ Data $ SV.lookUp x $ P.map unSignalIdx idxs
 
 
-getColumn :: (SV.Storage v2 (v1 d), 
-              SV.Singleton v2, 
-              Eq (v1 d), 
-              SV.Lookup v2) => 
+getColumn :: (SV.Storage v2 (v1 d),
+              SV.Singleton v2,
+              Eq (v1 d),
+              SV.Lookup v2) =>
    TC s typ (Data (v2 :> v1 :> Nil) d) -> SignalIdx -> TC s typ (Data (v1 :> Nil) d)
-getColumn (TC (Data x)) idx = TC $ Data $ 
-                                  P.fst $ 
+getColumn (TC (Data x)) idx = TC $ Data $
+                                  P.fst $
                                   P.maybe (error "Error in Signal/subSignal2D1D empty list") id $
-                                  SV.viewL $ 
+                                  SV.viewL $
                                   SV.lookUp x $ [unSignalIdx idx]
 
 
@@ -1283,11 +1283,11 @@ getSample x =
   . viewL
   . subSignal1D x
   . (:[])
-  
-{-  
--- | get nested vector v1  
+
+{-
+-- | get nested vector v1
 getColumn :: TC Signal t1 (Data (v2 :> v1 :> Nil) d1) -> SignalIdx -> TC Signal t1 (Data (v1 :> Nil) d1)
-getColumn idx =   
+getColumn idx =
    P.fst
   . P.maybe (error "Error in EFA.Signal.Signal/getColumn - Empty List") id
   . viewL
@@ -1316,24 +1316,24 @@ interp1LinSig ::  (Eq d1,
                    TC Signal t2 (Data (v1 :> Nil) d1)
 interp1LinSig xSig ySig xSigLookup = tmap f xSigLookup
   where f x = interp1Lin xSig ySig x
-        
 
 
--- | Interpolate a 3-signal x-y surface, where in x points are aligned in rows         
+
+-- | Interpolate a 3-signal x-y surface, where in x points are aligned in rows
 {-# WARNING interp2WingProfile "pg: not yet tested, sample calculation could be done better" #-}
 
 interp2WingProfile :: (SV.Storage v1 d1,
-                       Ord d1, 
-                       SV.Find v1, 
+                       Ord d1,
+                       SV.Find v1,
                        Eq (v1 d1),
                        SV.Storage v2 (v1 d1),
                        SV.Singleton v2,
                        SV.Lookup v2 ,
-                       Fractional d1, 
-                       SV.Singleton v1, 
-                       SV.Lookup v1, 
-                       BProd d1 d1, 
-                       BSum d1, 
+                       Fractional d1,
+                       SV.Singleton v1,
+                       SV.Lookup v1,
+                       BProd d1 d1,
+                       BSum d1,
                        TSum t3 t3 t3
                       ) =>
                       TC Signal t1 (Data (v1 :> Nil) d1) ->
@@ -1347,16 +1347,16 @@ interp2WingProfile xSig ySig zSig xLookup yLookup = TC $ Data $ ((z2 P.-z1)P./(x
         -- find indices in x-axis
         xIdx@(SignalIdx idx) = P.maybe (error "Out of Range") id $ findIndex (P.>= fromSample xLookup) xSig
         xIdx1 = SignalIdx $ if idx P.== 0 then idx else idx-1
-        xIdx2 = xIdx   
-        
+        xIdx2 = xIdx
+
         -- get y and z data columns
-        yRow1 = getColumn ySig xIdx1 
-        yRow2 = getColumn ySig xIdx2 
+        yRow1 = getColumn ySig xIdx1
+        yRow2 = getColumn ySig xIdx2
         zRow1 = getColumn zSig xIdx1
         zRow2 = getColumn zSig xIdx2
 
         -- interpolate on y in these data columns
-        z1 = fromSample $ interp1Lin yRow1 zRow1 yLookup 
+        z1 = fromSample $ interp1Lin yRow1 zRow1 yLookup
         z2 = fromSample $ interp1Lin yRow2 zRow2 yLookup
         x1 = fromSample $ getSample xSig xIdx1
         x2 = fromSample $ getSample xSig xIdx2

@@ -145,7 +145,7 @@ operation ti term opts rList  (plotTitle, (idx,idy)) = mapM_ f rList
   where f ((Record.Name recTitle), rec) = do
           let x = getSig rec idx
               y = getSig rec idy
-              legend n = recTitle ++ " - Torque over Speed"  
+              legend n = recTitle ++ " - Torque over Speed"
           Plot.xyIO (ti ++ "_" ++ plotTitle) term opts legend x y
 
 

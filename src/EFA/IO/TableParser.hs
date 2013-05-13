@@ -88,7 +88,7 @@ cst = liftA (const ())
 writeTable :: Sys.Handle -> (String, T Double) -> IO ()
 writeTable hdl (name, T xy ds) = do
   let hd = "#1\ndouble " ++ name ++ show xy
-      body = L.intercalate "\n" $ 
+      body = L.intercalate "\n" $
                map (L.intercalate " " . map show) ds
   Sys.hPutStr hdl ("\n" ++ hd ++ "\n" ++ body ++ "\n")
 

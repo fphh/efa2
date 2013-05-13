@@ -130,7 +130,7 @@ adjustSignsIgnoreUnknownPPos ::
   FlowState node -> FlowRecord node v a -> FlowRecord node v a
 adjustSignsIgnoreUnknownPPos topo (FlowState state) (Record dt flow) =
    Record dt (M.foldrWithKey g M.empty uniquePPos)
-      where f m lkup ppos acc = 
+      where f m lkup ppos acc =
               maybe acc (flip (M.insert ppos) acc) (lkup ppos m)
             g ppos si acc =
               foldr (f flow $ (modify .) . M.lookup) acc [ppos, Idx.flip ppos]

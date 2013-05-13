@@ -2,7 +2,7 @@
 
 -- module Demo_Signal where
 
-import qualified EFA.Signal.Plot as Plot
+-- import qualified EFA.Signal.Plot as Plot
 import qualified EFA.Signal.PlotBase as PlotBase
 
 import qualified EFA.Signal.Signal as S
@@ -130,5 +130,5 @@ main = do
          (terminate histoStyle histograms <> lists),
 
     putStrLn (S.disp nVal2) ]
-    
+
 
