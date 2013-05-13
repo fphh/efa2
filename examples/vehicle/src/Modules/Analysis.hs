@@ -12,6 +12,7 @@ import Modules.Signals as Signals
 import qualified EFA.Example.Absolute as EqAbs
 
 import qualified EFA.Example.Index as XIdx
+
 import EFA.Example.Utility ((.=), (%=), checkDetermined)
 
 import qualified EFA.Equation.System as EqGen
@@ -44,6 +45,7 @@ import EFA.Signal.Sequence (-- genSequenceSignal,
 --import qualified EFA.Equation.Arithmetic as Arith
 --import qualified EFA.Signal.Vector as Vec
 import qualified EFA.Signal.Base as B
+import qualified EFA.Signal.Data as D
 
 --import qualified EFA.Signal.Signal as Sig
 import EFA.Signal.Signal (TC(..), Scalar)
@@ -211,6 +213,15 @@ makeGivenFromExternal idx sf =
            fold (M.mapWithKey g xs)
            where g (Idx.PPos p) e =
                     Idx.Record idx (Idx.InSection sec (Idx.Energy p)) .= sum (Sig.toList e)
+
+external2 sequenceFlowTopology sequFlowRecord =
+  EqGen.solveFromMeasurement
+    sequenceFlowTopology $
+    makeGivenFromExternal2 sequFlowRecord -- $ Record.diffTime sequFlowRecord
+
+-- makeGivenFromExternal2 ::
+-- makeGivenFromExternal2 env = EqGen.fromEnvSignal $ (fmap (fmap (D.foldl (+) 0) ) $ EqAbs.envFromFlowRecord env)
+makeGivenFromExternal2 sf = EqGen.fromEnvSignal $ EqAbs.envFromFlowRecord (fmap Record.diffTime sf)
 
 -------------------------------------------------------------------------------------------------
 -- ## Predict Energy Flow

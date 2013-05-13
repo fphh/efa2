@@ -104,7 +104,7 @@ import Control.Functor.HT (void)
 --import Data.Foldable (foldMap)
 --import Data.Monoid (mconcat)
 import Data.Monoid ((<>))
-
+import Data.Tuple.HT (mapSnd)
 
 -- import Control.Concurrent (threadDelay)
 
@@ -204,6 +204,34 @@ recordIOList ::
    [(Record.Name,Record s1 s2 t1 t2 id v d1 d2)] -> IO ()
 recordIOList ti term showKey opts x =
    plotOne term (recordFrame ti) (recordList showKey opts varOpts x)
+   where
+     varOpts n = LineSpec.lineStyle n
+
+recordIOList_extract ::
+   (Ord id,
+    Show id,
+    SV.Walker v,
+    SV.FromList v,
+    TDisp t1,
+    TDisp t2,
+    Fractional d2,
+    Fractional d1,
+    SV.Storage v d2,
+    SV.Storage v d1,
+    Atom.C d2,
+    Atom.C d1,
+    Tuple.C d2,
+    Tuple.C d1,
+    Terminal.C term) =>
+   String ->
+   term ->
+   (id -> String) ->
+   (LineSpec.T -> LineSpec.T) ->
+   [(Record.Name,Record s1 s2 t1 t2 id v d1 d2)] ->
+   [id] ->
+   IO ()
+recordIOList_extract ti term showKey opts x idList =
+   plotOne term (recordFrame ti) (recordList showKey opts varOpts $ map (\(x,y) -> (x,Record.extract idList y)) x)
    where
      varOpts n = LineSpec.lineStyle n
 
@@ -512,4 +540,4 @@ etaDistr1DimIOfromRecordList ti  intervall offset rList  (plotTitle, (idIn,idOut
               (x,y) = Sig.sortTwo (pAbszisse,eta)
           etaDistr1DimIO (ti ++ "_" ++ plotTitle ++ "_" ++ recTitle) x y  pDist
             (Sig.scale (Sig.norm einDist) 100) nDist
-   
+

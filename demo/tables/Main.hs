@@ -33,8 +33,8 @@ main = do
   tabEn <- Table.read "engine.txt"
   tabMo <- Table.read "motor.txt"
 
-  let em3D = 
-        CT.convertToSignal3D 
+  let em3D =
+        CT.convertToSignal3D
           (M.lookup "table2D_efficiencyMap" tabEn) :
         CT.convertToSignal3D
           (M.lookup "table2D_efficiencyMap_firstQuadrant" tabMo) :

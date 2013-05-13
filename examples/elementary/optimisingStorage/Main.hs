@@ -48,8 +48,8 @@ import Prelude hiding ((.))
 
 import qualified Graphics.Gnuplot.Terminal.WXT as WXT
 
-plotTerm :: WXT.T        
-plotTerm = WXT.cons 
+plotTerm :: WXT.T
+plotTerm = WXT.cons
 
 sec0, sec1 :: Idx.Section
 sec0 :~ sec1 :~ _ = Stream.enumFrom $ Idx.Section 0

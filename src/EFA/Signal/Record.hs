@@ -232,7 +232,7 @@ extractLogSignals (Record time sMap) idList =
        notFound = Set.difference (M.keysSet idMap) (M.keysSet sMap)
    in  if Set.null notFound
          then Record time $ M.intersectionWith ($) idMap sMap
-         else error $ "extractLogSignals: signals not found in record: " ++ show notFound ++ 
+         else error $ "extractLogSignals: signals not found in record: " ++ show notFound ++
               "\n" ++ "Available Keys in Map : \n" ++ (myShowList $ M.keys sMap)
 
 
@@ -580,9 +580,9 @@ combinePowerAndSignal :: (Eq (v d),Show id) => PowerRecord id v d -> SignalRecor
 combinePowerAndSignal pr sr = union (powerToSignal pr) sr
 
 -- | Combine a power and a signal record together in a signal record (plotting)
-combinePowerAndSignalWithFunction :: (Eq (v d), 
-                                      Ord node, 
-                                      Show (v d), 
+combinePowerAndSignalWithFunction :: (Eq (v d),
+                                      Ord node,
+                                      Show (v d),
                                       Show node) =>
                                      (Idx.PPos node -> SigId) -> PowerRecord node v d -> SignalRecord v d -> SignalRecord v d
 combinePowerAndSignalWithFunction funct pr sr = union (powerToSignalWithFunct funct pr) sr
