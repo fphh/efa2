@@ -3,7 +3,7 @@
 -- module Demo_Signal where
 
 -- import qualified EFA.Signal.Plot as Plot
-import qualified EFA.Signal.PlotBase as PlotBase
+import qualified EFA.Signal.Plot as Plot
 
 import qualified EFA.Signal.Signal as S
 import EFA.Signal.SignalFill ((.-), (./), (.*))
@@ -113,7 +113,7 @@ main :: IO ()
 main = do
 
   let plot :: Plot2D.T Double Double
-      plot = PlotBase.xy id (const "bla") time [pSig1, pSig2]
+      plot = Plot.xy id (const "bla") time [pSig1, pSig2]
 
   concurrentlyMany_ [
 

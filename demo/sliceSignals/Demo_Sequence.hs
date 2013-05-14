@@ -15,7 +15,7 @@ import EFA.Signal.Record (PowerRecord, Record(Record))
 
 import EFA.Signal.Signal (PSigL, (.++))
 import EFA.Signal.Base (Val)
-import qualified EFA.Signal.Plot as Plot
+import qualified EFA.Signal.PlotIO as PlotIO
 
 import qualified Data.Map as M
 
@@ -73,9 +73,9 @@ main = do
   print pRec
   print pRec0
 
-  Plot.recordIO "PowerRecord" DefaultTerm.cons show id pRec
-  Plot.sequenceIO "SequA" DefaultTerm.cons show id sequRecA
-  Plot.sequenceIO "SequB" DefaultTerm.cons show id sequRecB
+  PlotIO.record "PowerRecord" DefaultTerm.cons show id pRec
+  PlotIO.sequence "SequA" DefaultTerm.cons show id sequRecA
+  PlotIO.sequence "SequB" DefaultTerm.cons show id sequRecB
 
 {-
   {-

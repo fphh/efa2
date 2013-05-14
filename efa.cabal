@@ -79,8 +79,8 @@ Library
     EFA.Signal.SignalFill
     EFA.Signal.Sequence
     EFA.Signal.Colour
+    EFA.Signal.PlotIO
     EFA.Signal.Plot
-    EFA.Signal.PlotBase
     EFA.Signal.ConvertTable
     EFA.Symbolic.OperatorTree
     EFA.Symbolic.SumProduct

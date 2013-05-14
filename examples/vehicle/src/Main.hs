@@ -26,7 +26,7 @@ import EFA.Utility.Async (concurrentlyMany_)
 import qualified Modules.System as System
 import qualified Modules.Analysis as Analysis
 import qualified Modules.Plots as Plots
-import qualified EFA.Signal.Plot as Plot
+import qualified EFA.Signal.PlotIO as PlotIO
 
 import qualified Modules.Signals as Signals
 
@@ -345,14 +345,14 @@ main = do
 -- * Draw Diagrams
 
   let -- drawDelta :: RecordName ->
-      drawDelta ti topo env c =
-          Draw.xterm $
-          Draw.title  ((\(Record.DeltaName x) -> x) ti) $
+      drawDelta (Record.DeltaName ti) topo env c =
+          Draw.dot (ti ++ "vehicle_delta.dot") $
+          Draw.title ti $
           Draw.bgcolour c $
           Draw.sequFlowGraphDeltaWithEnv topo env
-      drawAbs ti topo env c =
-        Draw.xterm $
-          Draw.title ((\(Record.Name x) -> x) ti) $
+      drawAbs (Record.Name ti) topo env c =
+        Draw.dot (ti++"vehicle.dot")$
+          Draw.title ti $
           Draw.bgcolour c $
           Draw.sequFlowGraphAbsWithEnv topo env
 
@@ -385,7 +385,7 @@ main = do
 ---------------------------------------------------------------------------------------
 -- * Plot Efficiency Curves and Distributions
 
-    ++ [mapM_ (Plot.etaDistr1DimIOfromRecordList "Average Efficiency Curve -" 10000 5000
+    ++ [mapM_ (PlotIO.etaDistr1DimfromRecordList "Average Efficiency Curve -" 10000 5000
                (zip datasetsX (map (Record.diffTime . Record.partIntegrate) powerSignalsX))) etaList]
 
 ---------------------------------------------------------------------------------------
@@ -394,7 +394,7 @@ main = do
     -- Section flow
     ++ L.zipWith4 drawAbs
          datasetsX
-         sectionToposX
+         sequenceFlowTopologyX --sectionToposX
          externalEnvX
          colours
 
@@ -407,7 +407,7 @@ main = do
 
 ---------------------------------------------------------------------------------------
 -- * Plot Stacks
-
+{-
     -- Record Stack Row at specific position
     ++ [Plot.recordStackRowIO
          ("Energy Flow Change at " ++ show energyIndexSec)
@@ -433,7 +433,7 @@ main = do
         cumStack_filterEnergy
         (head differenceExtEnvs)]
 
-
+-}
 {-     ++ [mapM_ (Plot.stackIOfromEnv  "Energy Flow Change at Tank in Section 6"
          (XIdx.energy (Idx.Section 6) System.Tank System.ConBattery) 1)
          (zip deltasetsX differenceExtEnvs)]-}
