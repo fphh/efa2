@@ -32,7 +32,7 @@ import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Graph as Gr
 
-import qualified EFA.Signal.Plot as Plot
+import qualified EFA.Signal.PlotIO as PlotIO
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
@@ -219,7 +219,7 @@ mainNumeric = do
                 Map.mapKeys termFromIndex $
                 Record.assignDeltaMap x
          AssignMap.print assigns
-         Plot.stackIO "Decomposition of total output energy"
+         PlotIO.stack "Decomposition of total output energy"
             (formatValue $ Idx.delta $ Var.index eout)
             (AssignMap.ignoreUndetermined assigns)
 

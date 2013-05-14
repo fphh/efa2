@@ -18,7 +18,7 @@ import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Result as R
 import EFA.Equation.System ((=.=))
 
-import qualified EFA.Signal.Plot as Plot
+import qualified EFA.Signal.PlotIO as PlotIO
 import qualified EFA.Signal.Signal as S
 -- import qualified EFA.Signal.Data as D
 
@@ -379,76 +379,76 @@ main = do
 
   -- Plots to check the variation
 
-  Plot.surfaceIO "varX" varX varY varX
+  PlotIO.surface "varX" varX varY varX
   Rep.report [] ("varX",varX)
 
-  Plot.surfaceIO "varY" varX varY varY
+  PlotIO.surface "varY" varX varY varY
   Rep.report [] ("vary",varY)
 
   -- Plot to check consumer behaviour
 
-  Plot.surfaceIO "Eout" varX varY (eoutVar0 .+ (S.makeDelta eoutVar1))
+  PlotIO.surface "Eout" varX varY (eoutVar0 .+ (S.makeDelta eoutVar1))
   Rep.report [] ("Eout",(eoutVar0 .+ (S.makeDelta eoutVar1)))
 
-  Plot.surfaceIO "Pout0" varX varY varPout0
+  PlotIO.surface "Pout0" varX varY varPout0
   Rep.report [] ("Pout0",varPout0)
 
-  Plot.surfaceIO "Pout1" varX varY varPout1
+  PlotIO.surface "Pout1" varX varY varPout1
   Rep.report [] ("Pout1",varPout1)
 
 
   -- Plots to check variable efficiency at fuel converter
 
-  Plot.surfaceIO "N01" varX varY varN01
+  PlotIO.surface "N01" varX varY varN01
 
 
-  Plot.surfaceIO "P10" varX varY varP10
+  PlotIO.surface "P10" varX varY varP10
 
-  Plot.surfaceIO "P01" varX varY varP01
+  PlotIO.surface "P01" varX varY varP01
 
-  Plot.xyIO "N01 - Curve"  plotTerm id (\_ -> "efficiency N01") p10Lin' n01Lin'
+  PlotIO.xy "N01 - Curve"  plotTerm id (\_ -> "efficiency N01") p10Lin' n01Lin'
 
   -- Plots to check variable efficiency at storage -- charging
-  Plot.surfaceIO "P13_0 - externe Ladeleistung" varX varY varP13_0
+  PlotIO.surface "P13_0 - externe Ladeleistung" varX varY varP13_0
   Rep.report [] ("varP13_0",varP13_0)
 
-  Plot.surfaceIO "P31_0 - interne LadeLeistung" varX varY varP31_0
+  PlotIO.surface "P31_0 - interne LadeLeistung" varX varY varP31_0
   Rep.report [] ("varP31_0",varP31_0)
 
-  Plot.surfaceIO "N13 - Charging" varP31_0 varY varN13
-  Plot.xyIO "N13 - Charging"  plotTerm id (\_ -> "efficiency N13") varP31_0 varN13
+  PlotIO.surface "N13 - Charging" varP31_0 varY varN13
+  PlotIO.xy "N13 - Charging"  plotTerm id (\_ -> "efficiency N13") varP31_0 varN13
   Rep.report  [] ("N13 - Charging",varN13)
 
 
-  Plot.surfaceIO "P13_1 - externe Entladeleistung" varX varY varP13_1
+  PlotIO.surface "P13_1 - externe Entladeleistung" varX varY varP13_1
   Rep.report [] ("varP13_1",varP13_1)
 
-  Plot.surfaceIO "P31_1 - interne EntladeLeistung" varX varY varP31_1
+  PlotIO.surface "P31_1 - interne EntladeLeistung" varX varY varP31_1
   Rep.report [] ("varP31_1",varP31_1)
 
   Rep.report  [] ("N31 - Discharging",varN31)
-  Plot.surfaceIO "N31 - Discharging" varP13_1 varY varN31
-  Plot.xyIO "N31 - Discharging" plotTerm id (\_ -> "efficiency N31") varP13_1 varN31
+  PlotIO.surface "N31 - Discharging" varP13_1 varY varN31
+  PlotIO.xy "N31 - Discharging" plotTerm id (\_ -> "efficiency N31") varP13_1 varN31
 
 
   -- Check Losses
 
   -- Loss of N01
-  Plot.surfaceIO "LossA" varX varY varLossA
+  PlotIO.surface "LossA" varX varY varLossA
 
   -- Loss of the Rest of the system
-  Plot.surfaceIO "LossB" varX varY varLossB
+  PlotIO.surface "LossB" varX varY varLossB
 
   -- Total System Loss
-  Plot.surfaceIO "Loss" varX varY varLoss
+  PlotIO.surface "Loss" varX varY varLoss
 
   -- System loss in curves over split variation for multiple resistance values
-  Plot.xyIO "Loss"  plotTerm id (\_ -> "Loss") varX varLoss
+  PlotIO.xy "Loss"  plotTerm id (\_ -> "Loss") varX varLoss
 
   -- Total System Efficiency
   Rep.report  [] ("EtaSys",etaSysVar)
-  Plot.surfaceIO "EtaSys" varX varY etaSysVar
-  Plot.xyIO "EtaSys" plotTerm id (\_ -> "EtaSys") varX etaSysVar -- System efficiency in curves over split variation for multiple resistance values
+  PlotIO.surface "EtaSys" varX varY etaSysVar
+  PlotIO.xy "EtaSys" plotTerm id (\_ -> "EtaSys") varX etaSysVar -- System efficiency in curves over split variation for multiple resistance values
 
 -- ##################################
 

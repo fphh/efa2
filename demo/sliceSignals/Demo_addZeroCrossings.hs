@@ -7,7 +7,7 @@ import qualified EFA.Example.Index as XIdx
 import EFA.Signal.Sequence
 import EFA.Signal.Record
 import EFA.Signal.Signal as S
-import qualified EFA.Signal.Plot as Plot
+import qualified EFA.Signal.PlotIO as PlotIO
 import EFA.Signal.Base (Val)
 
 import qualified Data.Map as M
@@ -38,4 +38,4 @@ main :: IO ()
 main = do
   print pRec
   print pRec0
-  Plot.recordIO "pRec0" DefaultTerm.cons show id pRec0
+  PlotIO.record "pRec0" DefaultTerm.cons show id pRec0

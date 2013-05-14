@@ -7,7 +7,7 @@ module Main where
 import qualified Data.Map as M
 
 import qualified EFA.IO.TableParser as Table
-import qualified EFA.Signal.Plot as Plot
+import qualified EFA.Signal.PlotIO as PlotIO
 import qualified EFA.Signal.Signal as S
 
 import qualified Graphics.Gnuplot.Terminal.Default as Def
@@ -19,12 +19,12 @@ plot3D ::
   ( S.UTSignal2 [] [] Double,
     S.PSignal2 [] [] Double,
     S.NSignal2 [] [] Double ) -> IO ()
-plot3D (x, y, z) = Plot.surfaceIO "test" x y z
+plot3D (x, y, z) = PlotIO.surface "test" x y z
 
 plot2D ::
   ( S.PSignal [] Double,
     [ S.NSignal [] Double ] ) -> IO ()
-plot2D (x, y) = Plot.xyIO "test" Def.cons id (const "eta") x y
+plot2D (x, y) = PlotIO.xy "test" Def.cons id (const "eta") x y
 
 
 main :: IO ()
