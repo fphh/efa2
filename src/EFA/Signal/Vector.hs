@@ -147,13 +147,13 @@ instance Singleton V.Vector where
 instance Singleton UV.Vector where
    maximum x = readUnbox UV.maximum x
    minimum x = readUnbox UV.minimum x
-   minmax x = (minimum x, maximum x)
-{-
-   -- how to get rid of unboxed constraint?
-   minmax xs = UV.foldl' minmaxHelper (y, y) ys
-     where (y, ys) =
-             fromMaybe (error "Signal.Vector.minmax: empty UV-Vector") (viewL xs)
--}
+   minmax =
+     readUnbox $
+     \xs ->
+       let (y, ys) =
+               fromMaybe (error "Signal.Vector.minmax: empty UV-Vector") (viewL xs)
+       in  UV.foldl' minmaxHelper (y, y) ys
+
    singleton x = writeUnbox (UV.singleton x)
    empty = writeUnbox UV.empty
    append = readUnbox (UV.++)

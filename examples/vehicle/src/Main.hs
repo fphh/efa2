@@ -345,14 +345,14 @@ main = do
 -- * Draw Diagrams
 
   let -- drawDelta :: RecordName ->
-      drawDelta ti topo env c =
-          Draw.xterm $
-          Draw.title  ((\(Record.DeltaName x) -> x) ti) $
+      drawDelta (Record.DeltaName ti) topo env c =
+          Draw.dot (ti ++ "vehicle_delta.dot") $
+          Draw.title ti $
           Draw.bgcolour c $
           Draw.sequFlowGraphDeltaWithEnv topo env
-      drawAbs ti topo env c =
-        Draw.xterm $
-          Draw.title ((\(Record.Name x) -> x) ti) $
+      drawAbs (Record.Name ti) topo env c =
+        Draw.dot (ti++"vehicle.dot")$
+          Draw.title ti $
           Draw.bgcolour c $
           Draw.sequFlowGraphAbsWithEnv topo env
 
@@ -394,7 +394,7 @@ main = do
     -- Section flow
     ++ L.zipWith4 drawAbs
          datasetsX
-         sectionToposX
+         sequenceFlowTopologyX --sectionToposX
          externalEnvX
          colours
 
@@ -407,7 +407,7 @@ main = do
 
 ---------------------------------------------------------------------------------------
 -- * Plot Stacks
-
+{-
     -- Record Stack Row at specific position
     ++ [Plot.recordStackRowIO
          ("Energy Flow Change at " ++ show energyIndexSec)
@@ -433,7 +433,7 @@ main = do
         cumStack_filterEnergy
         (head differenceExtEnvs)]
 
-
+-}
 {-     ++ [mapM_ (Plot.stackIOfromEnv  "Energy Flow Change at Tank in Section 6"
          (XIdx.energy (Idx.Section 6) System.Tank System.ConBattery) 1)
          (zip deltasetsX differenceExtEnvs)]-}
