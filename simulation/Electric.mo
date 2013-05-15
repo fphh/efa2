@@ -157,5 +157,61 @@ package Electric
     _current_log = pin_p.i;
     _powerElectric_log = pin_p.i * pin_p.v;
   end powerSourceSupply;
+  model Battery
+    annotation(Diagram(), Icon(graphics = {Rectangle(rotation = 0, lineColor = {0,0,255}, fillColor = {225,225,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.Solid, lineThickness = 0.25, extent = {{-76.2013,-48.4622},{74.8721,28.4547}}),Text(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-59.7999,-93.541},{58.9598,-52.9208}}, textString = "Battery"),Text(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-106.187,40.6352},{46.655,65.3458}}, textString = "+"),Text(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-39.0233,35.8857},{84.295,72.412}}, textString = "-"),Rectangle(rotation = 0, lineColor = {0,0,255}, fillColor = {150,150,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.Solid, lineThickness = 0.25, extent = {{-84.5815,28.4875},{81.9383,39.9413}}),Line(points = {{-52.5698,20.2643},{-52.5698,-39.0602},{-17.3275,-39.0602},{-17.3275,20.2643}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Line(points = {{15.859,19.6769},{15.859,-38.4728},{48.1645,-38.4728},{48.1645,19.9706}}, rotation = 0, color = {0,0,255}, pattern = LinePattern.Solid, thickness = 0.25),Rectangle(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{76.0213,17.0515},{111.901,-15.6306}})}));
+    parameter Real resistance(start = 0.02, unit = "1") "Positive power multiplied, negative power devided by efficiency" annotation(Placement(visible = true, transformation(origin = {71.2644,78.1609}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    parameter Real voltage(start = 200, unit = "1") "Positive power multiplied, negative power devided by efficiency" annotation(Placement(visible = true, transformation(origin = {71.2644,78.1609}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Electrical.Analog.Sources.ConstantVoltage constantvoltage1(V = voltage) annotation(Placement(visible = true, transformation(origin = {-6.38889,-54.7222}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Electrical.Analog.Interfaces.NegativePin pin_n annotation(Placement(visible = true, transformation(origin = {49.3759,51.8221}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {49.3759,51.8221}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Real _internalCurrent_log annotation(Placement(visible = true, transformation(origin = {71.9444,78.8889}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Real _internalVoltage_log annotation(Placement(visible = true, transformation(origin = {71.3889,79.1667}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Real _poleCurrent_log annotation(Placement(visible = true, transformation(origin = {72.2222,79.1667}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Real _poleVoltage_log annotation(Placement(visible = true, transformation(origin = {72.2222,79.1667}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Electrical.Analog.Interfaces.PositivePin pin_p annotation(Placement(visible = true, transformation(origin = {-51.2307,51.838}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {-51.2307,51.838}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Electrical.Analog.Basic.Resistor resistor_innerResistance(R = resistance) annotation(Placement(visible = true, transformation(origin = {-51.1222,-24.0066}, extent = {{-12,12},{12,-12}}, rotation = -90)));
+    parameter Real maxEnergyCapacityInkWh(start = 1) annotation(Placement(visible = true, transformation(origin = {70.6444,79.7136}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    parameter Real startSOC(start = 1) annotation(Placement(visible = true, transformation(origin = {70.6444,79.7136}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Electric.BatteryManagement batterymanagement1 annotation(Placement(visible = true, transformation(origin = {-46.3007,16.2291}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Blocks.Interfaces.RealOutput y annotation(Placement(visible = true, transformation(origin = {76.3723,-2.86396}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {76.3723,-2.86396}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  equation
+    connect(batterymanagement1.SOC,y) annotation(Line(points = {{-41.9475,6.49165},{-40.5728,6.49165},{-40.5728,-2.86396},{76.3723,-2.86396},{76.3723,-2.86396}}));
+    connect(batterymanagement1.pin_n,constantvoltage1.n) annotation(Line(points = {{-36.4915,15.9424},{5.72792,15.9424},{5.72792,-54.7222},{5.61111,-54.7222}}));
+    connect(batterymanagement1.positivepin1,resistor_innerResistance.p) annotation(Line(points = {{-50.9674,7.59579},{-51.074,7.59579},{-51.074,-12.0066},{-51.1222,-12.0066}}));
+    connect(pin_p,batterymanagement1.pin_p) annotation(Line(points = {{-51.2307,51.838},{-50.5967,51.838},{-50.5967,26.6958},{-50.5674,26.6958}}));
+    connect(resistor_innerResistance.n,constantvoltage1.p) annotation(Line(points = {{-51.1222,-36.0066},{-51.5092,-36.0066},{-51.5092,-54.7222},{-18.3889,-54.7222}}));
+    connect(constantvoltage1.n,pin_n) annotation(Line(points = {{5.61111,-54.7222},{28.0225,-54.7222},{28.0225,-54.7063},{49.3759,-54.7063},{49.3759,51.8221}}));
+    _poleCurrent_log = pin_p.i;
+    _poleVoltage_log = pin_p.v;
+    _internalCurrent_log = constantvoltage1.i;
+    _internalVoltage_log = constantvoltage1.v;
+  end Battery;
+  model BatteryManagement
+    annotation(Diagram(graphics = {Text(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-70.8269,97.4161},{85.8269,50.7687}}, textString = "Calculate SOC from Measurements")}), Icon(graphics = {Text(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-34.4186,27.2868},{61.3954,-42.7907}}, textString = "BEM"),Rectangle(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-61.0852,62.3255},{88.3721,-80.6202}}),Rectangle(rotation = 0, lineColor = {255,170,0}, fillColor = {0,0,255}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 2, extent = {{52.5755,46.8917},{88.8099,22.0249}})}));
+    Modelica.Electrical.Analog.Interfaces.PositivePin pin_p annotation(Placement(visible = true, transformation(origin = {-87.2222,-35.5556}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {-87.2222,-35.5556}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Electrical.Analog.Interfaces.PositivePin positivepin1 annotation(Placement(visible = true, transformation(origin = {71.9444,-38.8889}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {71.9444,-38.8889}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Electrical.Analog.Sensors.CurrentSensor currentsensor1 annotation(Placement(visible = true, transformation(origin = {-1.38889,-35.5556}, extent = {{-6.77369,-6.77369},{6.77369,6.77369}}, rotation = 0)));
+    Modelica.Electrical.Analog.Sensors.VoltageSensor voltagesensor1 annotation(Placement(visible = true, transformation(origin = {-27.7778,-68.3333}, extent = {{-6.77369,6.77369},{6.77369,-6.77369}}, rotation = -90)));
+    Modelica.Blocks.Math.Product product_calulatePower annotation(Placement(visible = true, transformation(origin = {-50.3295,39.7222}, extent = {{-9.01578,-9.01578},{9.01578,9.01578}}, rotation = 0)));
+    Modelica.Blocks.Math.Add add_SOC annotation(Placement(visible = true, transformation(origin = {46.307,34.5349}, extent = {{-6.77369,-6.77369},{6.77369,6.77369}}, rotation = 0)));
+    Modelica.Blocks.Continuous.Integrator integrator_calculateEnergy annotation(Placement(visible = true, transformation(origin = {-18.6746,39.7488}, extent = {{-8.19616,-8.19616},{8.19616,8.19616}}, rotation = 0)));
+    Modelica.Blocks.Math.Gain gain_toSOC(k = 1 / (maxEnergyCapacityInkWh * 3600 * 1000)) annotation(Placement(visible = true, transformation(origin = {13.1219,39.1472}, extent = {{-7.45106,-7.45106},{7.45106,7.45106}}, rotation = 0)));
+    Modelica.Blocks.Sources.Constant const_startSOC(k = startSOC) annotation(Placement(visible = true, transformation(origin = {-7.41849,12.1906}, extent = {{-8.19616,-8.19616},{8.19616,8.19616}}, rotation = 0)));
+    Modelica.Electrical.Analog.Interfaces.NegativePin pin_n annotation(Placement(visible = true, transformation(origin = {2.38899,81.7436}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {2.38899,81.7436}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    parameter Real maxEnergyCapacityInkWh(start = 1) annotation(Placement(visible = true, transformation(origin = {49.642,-74.463}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    parameter Real startSOC(start = 1) annotation(Placement(visible = true, transformation(origin = {49.642,-74.463}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Blocks.Interfaces.RealOutput SOC annotation(Placement(visible = true, transformation(origin = {81.1456,36.2768}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {81.1456,36.2768}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  equation
+    connect(add_SOC.y,SOC) annotation(Line(points = {{53.7581,34.5349},{69.6897,34.5349},{69.6897,36.2768},{81.1456,36.2768}}));
+    connect(voltagesensor1.n,pin_n) annotation(Line(points = {{-27.7778,-75.107},{-83.3333,-75.107},{-83.3333,81.7436},{2.38899,81.7436}}));
+    connect(const_startSOC.y,add_SOC.u2) annotation(Line(points = {{1.59729,12.1906},{22.4419,12.1906},{22.4419,12.36},{38.1786,12.36},{38.1786,30.4707}}));
+    connect(integrator_calculateEnergy.y,gain_toSOC.u) annotation(Line(points = {{-9.65882,39.7488},{9.2054,39.7488},{9.2054,39.1472},{4.18064,39.1472}}));
+    connect(gain_toSOC.y,add_SOC.u1) annotation(Line(points = {{21.3181,39.1472},{47.345,39.1472},{47.345,38.5991},{38.1786,38.5991}}));
+    connect(product_calulatePower.y,integrator_calculateEnergy.u) annotation(Line(points = {{-40.4121,39.7222},{-26.1434,39.7222},{-26.1434,39.7488},{-28.51,39.7488}}));
+    connect(currentsensor1.i,product_calulatePower.u2) annotation(Line(points = {{-1.38889,-42.3293},{-1.38889,-50},{-71.1111,-50},{-71.1111,34.4444},{-61.1484,34.4444},{-61.1484,34.3127}}));
+    connect(voltagesensor1.v,product_calulatePower.u1) annotation(Line(points = {{-34.5515,-68.3333},{-34.5515,-68.6111},{-78.8889,-68.6111},{-78.8889,45.2778},{-61.1484,45.2778},{-61.1484,45.1317}}));
+    connect(pin_p,voltagesensor1.p) annotation(Line(points = {{-87.2222,-35.5556},{-28.3333,-35.5556},{-28.3333,-61.5596},{-27.7778,-61.5596}}));
+    connect(currentsensor1.n,positivepin1) annotation(Line(points = {{5.3848,-35.5556},{71.6667,-35.5556},{71.6667,-38.8889},{71.9444,-38.8889}}));
+    connect(pin_p,currentsensor1.p) annotation(Line(points = {{-87.2222,-35.5556},{-8.33333,-35.5556},{-8.33333,-35.5556},{-8.16258,-35.5556}}));
+  end BatteryManagement;
 end Electric;
 
