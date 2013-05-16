@@ -116,11 +116,13 @@ commonEnv =
    []
 
 givenSec0Mean :: Double -> Double -> EqGen.EquationSystem Node.Int s Double Double
-givenSec0Mean psink psinkConst =
+givenSec0Mean psink ratio =
    (commonEnv <>) $
    mconcat $
 
-   (XIdx.power sec0 sink crossing .= psinkConst) :
+--   (XIdx.power sec0 sink crossing .= psinkConst) :
+   (XIdx.power sec0 sink crossing .= 1.0) :
+
    (XIdx.eta sec0 crossing sink .= 0.8) :
    
    (XIdx.eta sec0 source crossing .= 0.9) :
@@ -137,7 +139,7 @@ givenSec0Mean psink psinkConst =
    []
 
 givenSec1Mean :: Double -> Double -> EqGen.EquationSystem Node.Int s Double Double
-givenSec1Mean psink psinkConst =
+givenSec1Mean psink ratio =
    (commonEnv <>) $
    mconcat $
 
@@ -161,6 +163,8 @@ givenSec1Mean psink psinkConst =
    (XIdx.power sec0 sink crossing .= psink) :
 
    []
+   where
+     psinkConst = ratio --ratio/(1-ratio) * psink
 
 
 
@@ -182,13 +186,13 @@ etaSys env =
 
 
 sinkRange :: [Double]
-sinkRange = [0.1, 0.2 .. 12]
+sinkRange = [0, 1 .. 12] -- [0.1, 0.2 .. 12]
 
-sinkRangeMean :: [Double]
-sinkRangeMean = [0.1, 0.2 .. 5]
+ratioRange :: [Double]
+ratioRange = [0, 1 .. 5] --  [0.1, 0.2 .. 5]
 
 varX', varY' :: [[Double]]
-(varX', varY') = Table.varMat sinkRange sinkRangeMean 
+(varX', varY') = Table.varMat sinkRange ratioRange 
 
 
 
@@ -208,8 +212,10 @@ main = do
       etaSys0 = Sig.fromList $ map f0 sinkRange
       etaSys1 = Sig.fromList $ map f1 sinkRange
 -}
-      varX, varY :: Sig.PSignal2 [] [] Double
+      varX :: Sig.PSignal2 [] [] Double
       varX = Sig.fromList2 varX'
+      
+      varY :: Sig.XSignal2 [] [] Double
       varY = Sig.fromList2 varY'
 
       f0 x y = etaSys $ EqGen.solve seqTopo $ givenSec0Mean x y
@@ -226,7 +232,7 @@ main = do
       etaSys0 = Sig.fromList2 $ zipWith (zipWith f0) varX' varY'
       etaSys1 = Sig.fromList2 $ zipWith (zipWith f1) varX' varY'
 
-      --f = ("Sektion " ++) . (++ " Durchschnitt") . show
+      f = ("Sektion " ++) . (++ " Durchschnitt") . show
 
 
  -- PlotIO.xy "Test" DefaultTerm.cons id f
@@ -236,5 +242,5 @@ main = do
       maxEtaSys = Sig.zipWith max etaSys0 etaSys1
 
   concurrentlyMany_ [
-    --PlotIO.surface "Test" DefaultTerm.cons id f varX varY [etaSys0, etaSys1],
+--    PlotIO.surface "Test" DefaultTerm.cons id f varX varY [etaSys0, etaSys1],
     PlotIO.surface "Test" DefaultTerm.cons id (const "Max") varX varY maxEtaSys ]
