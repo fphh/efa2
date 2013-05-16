@@ -185,10 +185,12 @@ sinkRange :: [Double]
 sinkRange = [0.1, 0.6 .. 12]
 
 sinkRangeMean :: [Double]
-sinkRangeMean = [0.1, 0.6 .. 5]
+sinkRangeMean = [0.1, 0.11 ] -- , 0.6 .. 5]
 
 varX', varY' :: [[Double]]
-(varX', varY') = Table.varMat sinkRange sinkRangeMean 
+(varX', varY') = Table.varMat sinkRange sinkRangeMean
+
+
 
 
 
@@ -207,6 +209,12 @@ main = do
       etaSys0, etaSys1 :: Sig.NSignal [] Double
       etaSys0 = Sig.fromList $ map f0 sinkRange
       etaSys1 = Sig.fromList $ map f1 sinkRange
+      
+      --etaSys0, etaSys1 :: Sig.NSignal2 [] [] Double
+      -- etaSys0 = Sig.fromList2 $ map f0 (liftA (,) sinkRange sinkRangeMean)
+      --etaSys1 = Sig.fromList2 $ map f1 (liftA (,) sinkRange sinkRangeMean)
+      --etaSys1 = undefined
+
 -}
       varX, varY :: Sig.PSignal2 [] [] Double
       varX = Sig.fromList2 varX'
@@ -215,26 +223,73 @@ main = do
       f0 x y = etaSys $ EqGen.solve seqTopo $ givenSec0Mean x y
       f1 x y = etaSys $ EqGen.solve seqTopo $ givenSec1Mean x y
 
-      
-      --etaSys0, etaSys1 :: Sig.NSignal2 [] [] Double
-      -- etaSys0 = Sig.fromList2 $ map f0 (liftA (,) sinkRange sinkRangeMean)
-      --etaSys1 = Sig.fromList2 $ map f1 (liftA (,) sinkRange sinkRangeMean)
-      --etaSys1 = undefined
-
-
       etaSys0, etaSys1 :: Sig.NSignal2 [] [] Double
       etaSys0 = Sig.fromList2 $ zipWith (zipWith f0) varX' varY'
       etaSys1 = Sig.fromList2 $ zipWith (zipWith f1) varX' varY'
 
-      f = ("Sektion " ++) . (++ " Durchschnitt") . show
+      -- f = ("Sektion " ++) . (++ " Durchschnitt") . show
 
-
- -- PlotIO.xy "Test" DefaultTerm.cons id f
- --           sinkRangeSig [etaSys0, etaSys1]
 
       maxEtaSys :: Sig.NSignal2 [] [] Double
       maxEtaSys = Sig.zipWith max etaSys0 etaSys1
 
   concurrentlyMany_ [
-    PlotIO.surface "Test" DefaultTerm.cons id f varX varY [etaSys0, etaSys1],
+    Draw.xterm $ Draw.sequFlowGraph seqTopo,
+    PlotIO.surface "Test" DefaultTerm.cons id (const "0 mean") varX varY etaSys0,
+    PlotIO.surface "Test" DefaultTerm.cons id (const "1 mean") varX varY etaSys1,
     PlotIO.surface "Test" DefaultTerm.cons id (const "Max") varX varY maxEtaSys ]
+
+
+getEnergy ::
+  TIdx.InSection TIdx.Energy Node.Int -> 
+  EqEnv.Complete
+    Node.Int
+    (EqRec.Absolute (Result Double))
+    (EqRec.Absolute (Result Double)) -> Double
+getEnergy n env = lookup
+  where 
+        lookup | 
+          EqRec.Absolute (Determined x) <-
+            checkedLookup (EqEnv.energyMap $ EqEnv.signal env) n = x
+
+
+
+main2 :: IO ()
+main2 = do
+  let y = 1
+
+      f e x = getEnergy e $ EqGen.solve seqTopo $ givenSec0Mean x y
+      esc1 = XIdx.energy sec1 sink crossing
+      ecs1 = XIdx.energy sec1 crossing sink
+      estc1 = XIdx.energy sec1 storage crossing
+
+      ecst0 = XIdx.energy sec0 crossing storage
+
+      eSource = XIdx.energy sec0 source crossing
+
+      sinkRangeSig :: Sig.PSignal [] Double
+      sinkRangeSig = Sig.fromList sinkRange
+
+      esc1Sig, ecs1Sig, estc1Sig, ecst0Sig, eSourceSig :: Sig.PSignal [] Double
+      esc1Sig = Sig.fromList $ map (f esc1) sinkRange
+      ecs1Sig = Sig.fromList $ map (f ecs1) sinkRange
+      estc1Sig = Sig.fromList $ map (f estc1) sinkRange
+      ecst0Sig = Sig.fromList $ map (f ecst0) sinkRange
+      eSourceSig = Sig.fromList $ map (f eSource) sinkRange
+
+      h x = etaSys $ EqGen.solve seqTopo $ givenSec0Mean x y
+      etaSysSig = Sig.fromList $ map h sinkRange
+
+      g 0 = "Sec 1, sink crossing"
+      g 1 = "Sec 1, crossing sink"
+      g 2 = "Sec 1, storage crossing"
+      g 3 = "Sec 0, crossing storage"
+      g 4 = "EtaSys"
+      g 5 = "Sec 0, source crossing"
+
+  concurrentlyMany_ [
+    PlotIO.xy "Test" DefaultTerm.cons id g sinkRangeSig 
+              [ esc1Sig, ecs1Sig, estc1Sig, ecst0Sig, etaSysSig, eSourceSig],
+    Draw.xterm $ Draw.sequFlowGraph seqTopo ]
+    
+
