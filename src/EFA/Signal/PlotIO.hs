@@ -129,7 +129,7 @@ tableLinear term str = run term . plotTable id str
 tableLinear2D term str = run term . plotTable tail str
 -}
 
-
+{-
 -- | Plotting Surfaces
 surface ::
   Plot.Surface tcX tcY tcZ =>
@@ -144,8 +144,16 @@ surface ti x y z = do
           Opts.deflt
    void $ Plot.plotSync DefaultTerm.cons $
       Frame.cons attrs $ Plot.surface x y z
+-}
 
-
+surface :: 
+  (Plot.Surface tcX tcY tcZ, Terminal.C term) =>
+  String -> term ->
+  (LineSpec.T -> LineSpec.T) ->
+  (Int -> String) ->
+  tcX -> tcY -> tcZ -> IO ()
+surface ti terminal opts legend x y z =
+  Plot.run terminal (Plot.xyFrameAttr ti x y) (Plot.surface opts legend x y z)
 
 
 -- | Plotting Signals against each other -----------------------------
