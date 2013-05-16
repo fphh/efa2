@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, ScopedTypeVariables, RankNTypes #-}
+{-# LANGUAGE TupleSections #-}
 
 
 module Main where
@@ -182,14 +182,13 @@ etaSys env =
 
 
 sinkRange :: [Double]
-sinkRange = [0.1, 0.6 .. 12]
+sinkRange = [0.1, 0.2 .. 12]
 
 sinkRangeMean :: [Double]
-sinkRangeMean = [0.1, 0.11 ] -- , 0.6 .. 5]
+sinkRangeMean = [0.1, 0.2 .. 5]
 
 varX', varY' :: [[Double]]
 (varX', varY') = Table.varMat sinkRange sinkRangeMean
-
 
 
 
@@ -233,11 +232,19 @@ main = do
       maxEtaSys :: Sig.NSignal2 [] [] Double
       maxEtaSys = Sig.zipWith max etaSys0 etaSys1
 
+      maxEtaSys0State, maxEtaSys1State :: Sig.NSignal2 [] [] (Double, Double)
+      maxEtaSys0State = Sig.map (,0) etaSys0
+      maxEtaSys1State = Sig.map (,1) etaSys1
+
+      maxEtaSysState :: Sig.UTSignal2 [] [] Double
+      maxEtaSysState = Sig.map snd (Sig.zipWith max maxEtaSys0State maxEtaSys1State)
+
   concurrentlyMany_ [
     Draw.xterm $ Draw.sequFlowGraph seqTopo,
     PlotIO.surface "Test" DefaultTerm.cons id (const "0 mean") varX varY etaSys0,
     PlotIO.surface "Test" DefaultTerm.cons id (const "1 mean") varX varY etaSys1,
-    PlotIO.surface "Test" DefaultTerm.cons id (const "Max") varX varY maxEtaSys ]
+    PlotIO.surface "Test" DefaultTerm.cons id (const "Max") varX varY maxEtaSys,
+    PlotIO.surface "Test" DefaultTerm.cons id (const "Max") varX varY maxEtaSysState ]
 
 
 getEnergy ::
