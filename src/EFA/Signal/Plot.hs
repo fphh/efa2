@@ -70,6 +70,7 @@ import qualified Graphics.Gnuplot.Plot as Plt
 import qualified Graphics.Gnuplot.Plot.TwoDimensional as Plot2D
 import qualified Graphics.Gnuplot.Plot.ThreeDimensional as Plot3D
 import qualified Graphics.Gnuplot.Graph.TwoDimensional as Graph2D
+import qualified Graphics.Gnuplot.Graph.ThreeDimensional as Graph3D
 
 import qualified Graphics.Gnuplot.Graph as Graph
 import qualified Graphics.Gnuplot.Value.Atom as Atom
@@ -251,10 +252,10 @@ instance
    xy opts legend = xyBasic ((LineSpec.title $ legend 0) . opts)
 
 instance
-   (TDisp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 x,
-    TDisp t2, SV.Walker v2, SV.FromList v2, SV.Storage v2 y,
-    Atom.C x, Tuple.C x, Fractional x,
-    Atom.C y, Tuple.C y, Fractional y) =>
+   ( TDisp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 x,
+     TDisp t2, SV.Walker v2, SV.FromList v2, SV.Storage v2 y,
+     Atom.C x, Tuple.C x, Fractional x,
+     Atom.C y, Tuple.C y, Fractional y ) =>
    XY (TC s t1 (Data (v1 :> Nil) x))
       [TC s t2 (Data (v2 :> Nil) y)] where
    xy opts legend x ys =
@@ -455,39 +456,22 @@ stacks =
 
 -- | Plotting Surfaces -------------------------------------------------------------------------
 
-{-
-xyzBasic ::
-   (TDisp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 x,
-    TDisp t2, SV.Walker v2, SV.FromList v2, SV.Storage v2 y,
-    TDisp t3, SV.Walker v3, SV.FromList v3, SV.Storage v3 y,
 
-    Atom.C x, Tuple.C x, Fractional x,
-    Atom.C y, Tuple.C y, Fractional y,
-    Atom.C z, Tuple.C z, Fractional z ) =>
-   (LineSpec.T -> LineSpec.T) ->
-   (TC s1 t1 (Data (v2 :> v1 :> Nil) x)) ->
-   (TC s2 t2 (Data (v4 :> v3 :> Nil) y)) ->
-   (TC s3 t3 (Data (v6 :> v5 :> Nil) z)) ->
-   Plot3D.T x y z
--}
-
-{-
 surfaceStyle ::
    (LineSpec.T -> LineSpec.T) -> Plot3D.T x y z -> Plot3D.T x y z
 surfaceStyle opts =
-   fmap $ Graph2D.lineSpec $
+   fmap $ Graph3D.lineSpec $
       opts $
       LineSpec.pointSize 0.1 $
       LineSpec.pointType 7 $
       LineSpec.lineWidth 1 $
       LineSpec.deflt
 
--}
 
-xyzBasic opts x y z =
-   -- (xyStyle opts) $ Plot2D.list Graph2D.lines $ zip (getData x) (getData y)
-   Plot3D.mesh $ L.zipWith3 zip3 (getData x) (getData y) (getData z)
-                            -- (S.toList2 x) (S.toList2 y) (S.toList2 z)
+surfaceBasic opts x y z =
+   surfaceStyle opts $
+     Plot3D.mesh $
+     L.zipWith3 zip3 (getData x) (getData y) (getData z)
 
 class
    (AxisLabel tcX, AxisLabel tcY, AxisLabel tcZ) =>
@@ -513,16 +497,14 @@ instance
          (TC s2 t2 (Data (v4 :> v3 :> Nil) y))
          (TC s3 t3 (Data (v6 :> v5 :> Nil) z)) where
 
-   surface opts _ = xyzBasic opts
-{-
-   surface _ _ x y z =
-      Plot3D.mesh $
-      L.zipWith3 zip3 (S.toList2 x) (S.toList2 y) (S.toList2 z)
--}
+   surface opts legend = surfaceBasic ((LineSpec.title $ legend 0) . opts)
 
-{-
+
 instance
-   (SV.FromList v1, SV.Storage v1 x, SV.FromList v2, SV.Storage v2 (v1 x), TDisp t1,
+   ( Fractional x, Fractional y, Fractional z,
+     SV.Walker v2, SV.Walker v1, SV.Walker v4,
+     SV.Walker v3, SV.Walker v6, SV.Walker v5,
+     SV.FromList v1, SV.Storage v1 x, SV.FromList v2, SV.Storage v2 (v1 x), TDisp t1,
     SV.FromList v3, SV.Storage v3 y, SV.FromList v4, SV.Storage v4 (v3 y), TDisp t2,
     SV.FromList v5, SV.Storage v5 z, SV.FromList v6, SV.Storage v6 (v5 z), TDisp t3,
     Atom.C x, Tuple.C x,
@@ -534,36 +516,8 @@ instance
          (TC s2 t2 (Data (v4 :> v3 :> Nil) y))
          [TC s3 t3 (Data (v6 :> v5 :> Nil) z)] where
 
-   surface _ _ x y zs =
-      Plot3D.mesh $ Fold.foldMap (surface x y) zs
- 
-      --void $ Plot.plotSync DefaultTerm.cons $
-      --   Frame.cons attrs (Fold.foldMap (surface x y) zs)
-
-
-
-
-      Plot3D.mesh $
-      L.zipWith3 zip3 (S.toList2 x) (S.toList2 y) (S.toList2 z)
-
-
-
-
-
-
-surfaceList ::
-  Plot.Surface tcX tcY tcZ =>
-  String -> tcX -> tcY -> [tcZ] -> IO ()
-surfaceList ti x y zs = do
-   let attrs =
-          Opts.title ti $
-          Opts.xLabel (Plot.genAxLabel x) $
-          Opts.yLabel (Plot.genAxLabel y) $
-          Opts.grid True $
-          Opts.size 1 1 $
-          Opts.deflt
-   void $ Plot.plotSync DefaultTerm.cons $
-      Frame.cons attrs (Fold.foldMap (Plot.surface x y) zs)
-
-
--}
+   surface opts legend x y zs =
+      mconcat $
+      zipWith
+         (\ n z -> surfaceBasic ((LineSpec.title $ legend n) . opts) x y z)
+         [(0::Int)..] zs

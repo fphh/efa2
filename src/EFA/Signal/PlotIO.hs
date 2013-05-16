@@ -4,7 +4,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE TypeSynonymInstances#-}
+{-# LANGUAGE TypeSynonymInstances #-}
 
 -- | Module to offer most common plots
 module EFA.Signal.PlotIO (
@@ -47,7 +47,7 @@ import EFA.Signal.Record (Record)
 --import EFA.Signal.Signal (TC, toSigList, getDisplayType)
 -- import EFA.Signal.Base (BSum)
 
---import EFA.Signal.Data (Data, (:>), Nil, NestedList)
+import EFA.Signal.Data (Data, (:>), Nil, NestedList)
 import EFA.Report.Typ (TDisp)
                        --DisplayType(Typ_T),
                        --getDisplayUnit,
@@ -129,22 +129,7 @@ tableLinear term str = run term . plotTable id str
 tableLinear2D term str = run term . plotTable tail str
 -}
 
-{-
 -- | Plotting Surfaces
-surface ::
-  Plot.Surface tcX tcY tcZ =>
-  String -> tcX -> tcY -> tcZ -> IO ()
-surface ti x y z = do
-   let attrs =
-          Opts.title ti $
-          Opts.xLabel (Plot.genAxLabel x) $
-          Opts.yLabel (Plot.genAxLabel y) $
-          Opts.grid True $
-          Opts.size 1 1 $
-          Opts.deflt
-   void $ Plot.plotSync DefaultTerm.cons $
-      Frame.cons attrs $ Plot.surface x y z
--}
 
 surface :: 
   (Plot.Surface tcX tcY tcZ, Terminal.C term) =>
@@ -154,6 +139,19 @@ surface ::
   tcX -> tcY -> tcZ -> IO ()
 surface ti terminal opts legend x y z =
   Plot.run terminal (Plot.xyFrameAttr ti x y) (Plot.surface opts legend x y z)
+
+{-
+combineWith ::
+  (Plot.Surface tcX tcY tcZ, Terminal.C term) =>
+  (tcZ -> tcZ -> tcZ) ->
+  String -> term ->
+  (LineSpec.T -> LineSpec.T) ->
+  (Int -> String) ->
+  tcX -> tcY -> tcZ -> tcZ -> IO ()
+combineWith f ti terminal opts legend x y z0 z1 =
+  Plot.run terminal (Plot.xyFrameAttr ti x y) $
+    Plot.surface opts legend x y (Sig.zipWith f z0 z1)
+-}
 
 
 -- | Plotting Signals against each other -----------------------------

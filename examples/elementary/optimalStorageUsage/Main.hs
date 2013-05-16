@@ -182,10 +182,10 @@ etaSys env =
 
 
 sinkRange :: [Double]
-sinkRange = [0.1, 0.2 .. 12]
+sinkRange = [0.1, 0.6 .. 12]
 
 sinkRangeMean :: [Double]
-sinkRangeMean = [0.1, 0.2 .. 5]
+sinkRangeMean = [0.1, 0.6 .. 5]
 
 varX', varY' :: [[Double]]
 (varX', varY') = Table.varMat sinkRange sinkRangeMean 
@@ -226,7 +226,7 @@ main = do
       etaSys0 = Sig.fromList2 $ zipWith (zipWith f0) varX' varY'
       etaSys1 = Sig.fromList2 $ zipWith (zipWith f1) varX' varY'
 
-      --f = ("Sektion " ++) . (++ " Durchschnitt") . show
+      f = ("Sektion " ++) . (++ " Durchschnitt") . show
 
 
  -- PlotIO.xy "Test" DefaultTerm.cons id f
@@ -236,5 +236,5 @@ main = do
       maxEtaSys = Sig.zipWith max etaSys0 etaSys1
 
   concurrentlyMany_ [
-    --PlotIO.surface "Test" DefaultTerm.cons id f varX varY [etaSys0, etaSys1],
+    PlotIO.surface "Test" DefaultTerm.cons id f varX varY [etaSys0, etaSys1],
     PlotIO.surface "Test" DefaultTerm.cons id (const "Max") varX varY maxEtaSys ]
