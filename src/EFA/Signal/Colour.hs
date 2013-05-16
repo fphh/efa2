@@ -29,7 +29,6 @@ cls :: [C]
 cls = map showf $
   Colour.red :
   Colour.blue :
-  Colour.yellow :
   Colour.green :
   Colour.orange :
   Colour.gray :
@@ -167,5 +166,6 @@ cls = map showf $
   Colour.wheat :
   Colour.whitesmoke :
   Colour.yellowgreen :
+  Colour.yellow :
   Colour.white :
   []
