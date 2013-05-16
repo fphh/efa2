@@ -164,7 +164,7 @@ givenSec1Mean psink ratio =
 
    []
    where
-     psinkConst = ratio --ratio/(1-ratio) * psink
+     psinkConst = ratio/(1-ratio) * psink
 
 
 
@@ -186,10 +186,17 @@ etaSys env =
 
 
 sinkRange :: [Double]
-sinkRange = [0, 1 .. 12] -- [0.1, 0.2 .. 12]
+sinkRange = [1,2 .. 12] -- [0.1, 0.2 .. 12]
 
 ratioRange :: [Double]
-ratioRange = [0, 1 .. 5] --  [0.1, 0.2 .. 5]
+ratioRange = [0.1, 0.2 .. 0.3] --  [0.1, 0.2 .. 5]
+
+{-=======
+sinkRange = [0.1, 0.6 .. 12]
+
+sinkRangeMean :: [Double]
+sinkRangeMean = [0.1, 0.6 .. 5]
+>>>>>>> master -}
 
 varX', varY' :: [[Double]]
 (varX', varY') = Table.varMat sinkRange ratioRange 
@@ -232,8 +239,9 @@ main = do
       etaSys0 = Sig.fromList2 $ zipWith (zipWith f0) varX' varY'
       etaSys1 = Sig.fromList2 $ zipWith (zipWith f1) varX' varY'
 
-      f = ("Sektion " ++) . (++ " Durchschnitt") . show
-
+--      f = ("Sektion " ++) . (++ " Durchschnitt") . show
+      f 0 = "Laden"
+      f 1 = "Entladen"
 
  -- PlotIO.xy "Test" DefaultTerm.cons id f
  --           sinkRangeSig [etaSys0, etaSys1]
@@ -242,5 +250,10 @@ main = do
       maxEtaSys = Sig.zipWith max etaSys0 etaSys1
 
   concurrentlyMany_ [
+
 --    PlotIO.surface "Test" DefaultTerm.cons id f varX varY [etaSys0, etaSys1],
-    PlotIO.surface "Test" DefaultTerm.cons id (const "Max") varX varY maxEtaSys ]
+    PlotIO.surface "Systemwirkungsgrad Entladen" DefaultTerm.cons id (const "") varX varY etaSys0,
+    PlotIO.surface "Systemwirkungsgrad Laden" DefaultTerm.cons id (const "") varX varY etaSys1,
+
+    PlotIO.surface "Systemwirkungsgrad Laden und Entladen" DefaultTerm.cons id f varX varY [etaSys0, etaSys1],
+    PlotIO.surface "Maximaler Systemwirkungsgrad" DefaultTerm.cons id (const "Max") varX varY maxEtaSys ]
