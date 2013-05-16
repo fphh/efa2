@@ -272,7 +272,7 @@ type UTSignal2 v2 v1 a = TC Signal (Typ UT UT UT) (Data (v2 :> v1 :> Nil) a)
 type NSignal2 v2 v1 a = TC Signal (Typ A N Tt) (Data (v2 :> v1 :> Nil) a)
 type PSignal2 v2 v1 a = TC Signal (Typ A P Tt) (Data (v2 :> v1 :> Nil) a)
 
-type NSignal v a = TC Signal (Typ A P Tt) (Data (v :> Nil) a)
+type NSignal v a = TC Signal (Typ A N Tt) (Data (v :> Nil) a)
 
 -- Flow Signals
 type FFSignal v a = TC FSignal (Typ A F Tt) (Data (v :> Nil) a)

@@ -221,7 +221,7 @@ dotFromStorageEdge eshow e =
       (dotIdentFromBndNode $ Idx.storageEdgeFrom e)
       (dotIdentFromBndNode $ Idx.storageEdgeTo   e)
       [labelFromLines $ eshow e, Viz.Dir Forward,
-       storageEdgeColour, Constraint False]
+       storageEdgeColour, Constraint True]
 
 labelFromLines :: [Unicode] -> Attribute
 labelFromLines =

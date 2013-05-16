@@ -224,8 +224,10 @@ xyStyle opts =
       LineSpec.lineWidth 1 $
       LineSpec.deflt
 
+
 class (AxisLabel tcX, AxisLabel tcY) => XY tcX tcY where
-   xy :: (LineSpec.T -> LineSpec.T) -> (Int -> String) -> tcX -> tcY -> Plot2D.T (Value tcX) (Value tcY)
+   xy :: (LineSpec.T -> LineSpec.T) -> 
+         (Int -> String) -> tcX -> tcY -> Plot2D.T (Value tcX) (Value tcY)
 
 xyBasic ::
    (TDisp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 x,
@@ -453,13 +455,53 @@ stacks =
 
 -- | Plotting Surfaces -------------------------------------------------------------------------
 
+{-
+xyzBasic ::
+   (TDisp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 x,
+    TDisp t2, SV.Walker v2, SV.FromList v2, SV.Storage v2 y,
+    TDisp t3, SV.Walker v3, SV.FromList v3, SV.Storage v3 y,
+
+    Atom.C x, Tuple.C x, Fractional x,
+    Atom.C y, Tuple.C y, Fractional y,
+    Atom.C z, Tuple.C z, Fractional z ) =>
+   (LineSpec.T -> LineSpec.T) ->
+   (TC s1 t1 (Data (v2 :> v1 :> Nil) x)) ->
+   (TC s2 t2 (Data (v4 :> v3 :> Nil) y)) ->
+   (TC s3 t3 (Data (v6 :> v5 :> Nil) z)) ->
+   Plot3D.T x y z
+-}
+
+{-
+surfaceStyle ::
+   (LineSpec.T -> LineSpec.T) -> Plot3D.T x y z -> Plot3D.T x y z
+surfaceStyle opts =
+   fmap $ Graph2D.lineSpec $
+      opts $
+      LineSpec.pointSize 0.1 $
+      LineSpec.pointType 7 $
+      LineSpec.lineWidth 1 $
+      LineSpec.deflt
+
+-}
+
+xyzBasic opts x y z =
+   -- (xyStyle opts) $ Plot2D.list Graph2D.lines $ zip (getData x) (getData y)
+   Plot3D.mesh $ L.zipWith3 zip3 (getData x) (getData y) (getData z)
+                            -- (S.toList2 x) (S.toList2 y) (S.toList2 z)
+
 class
    (AxisLabel tcX, AxisLabel tcY, AxisLabel tcZ) =>
       Surface tcX tcY tcZ where
-   surface :: tcX -> tcY -> tcZ -> Plot3D.T (Value tcX) (Value tcY) (Value tcZ)
+   surface ::
+      (LineSpec.T -> LineSpec.T) -> 
+      (Int -> String) ->
+      tcX -> tcY -> tcZ -> Plot3D.T (Value tcX) (Value tcY) (Value tcZ)
 
 instance
-   (SV.FromList v1, SV.Storage v1 x, SV.FromList v2, SV.Storage v2 (v1 x), TDisp t1,
+   ( Fractional x, Fractional y, Fractional z,
+     SV.Walker v2, SV.Walker v1, SV.Walker v4, SV.Walker v3,
+     SV.Walker v6, SV.Walker v5, SV.FromList v1,
+     SV.Storage v1 x, SV.FromList v2, SV.Storage v2 (v1 x), TDisp t1,
     SV.FromList v3, SV.Storage v3 y, SV.FromList v4, SV.Storage v4 (v3 y), TDisp t2,
     SV.FromList v5, SV.Storage v5 z, SV.FromList v6, SV.Storage v6 (v5 z), TDisp t3,
     Atom.C x, Tuple.C x,
@@ -471,6 +513,57 @@ instance
          (TC s2 t2 (Data (v4 :> v3 :> Nil) y))
          (TC s3 t3 (Data (v6 :> v5 :> Nil) z)) where
 
-   surface x y z =
+   surface opts _ = xyzBasic opts
+{-
+   surface _ _ x y z =
       Plot3D.mesh $
       L.zipWith3 zip3 (S.toList2 x) (S.toList2 y) (S.toList2 z)
+-}
+
+{-
+instance
+   (SV.FromList v1, SV.Storage v1 x, SV.FromList v2, SV.Storage v2 (v1 x), TDisp t1,
+    SV.FromList v3, SV.Storage v3 y, SV.FromList v4, SV.Storage v4 (v3 y), TDisp t2,
+    SV.FromList v5, SV.Storage v5 z, SV.FromList v6, SV.Storage v6 (v5 z), TDisp t3,
+    Atom.C x, Tuple.C x,
+    Atom.C y, Tuple.C y,
+    Atom.C z, Tuple.C z) =>
+
+      Surface
+         (TC s1 t1 (Data (v2 :> v1 :> Nil) x))
+         (TC s2 t2 (Data (v4 :> v3 :> Nil) y))
+         [TC s3 t3 (Data (v6 :> v5 :> Nil) z)] where
+
+   surface _ _ x y zs =
+      Plot3D.mesh $ Fold.foldMap (surface x y) zs
+ 
+      --void $ Plot.plotSync DefaultTerm.cons $
+      --   Frame.cons attrs (Fold.foldMap (surface x y) zs)
+
+
+
+
+      Plot3D.mesh $
+      L.zipWith3 zip3 (S.toList2 x) (S.toList2 y) (S.toList2 z)
+
+
+
+
+
+
+surfaceList ::
+  Plot.Surface tcX tcY tcZ =>
+  String -> tcX -> tcY -> [tcZ] -> IO ()
+surfaceList ti x y zs = do
+   let attrs =
+          Opts.title ti $
+          Opts.xLabel (Plot.genAxLabel x) $
+          Opts.yLabel (Plot.genAxLabel y) $
+          Opts.grid True $
+          Opts.size 1 1 $
+          Opts.deflt
+   void $ Plot.plotSync DefaultTerm.cons $
+      Frame.cons attrs (Fold.foldMap (Plot.surface x y) zs)
+
+
+-}
