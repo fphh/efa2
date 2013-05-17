@@ -19,7 +19,7 @@ data Node =  Nuklear | Coal | Oil | Gas |
              Sun | Wind | Water |
              Network | Transformer | LocalNetwork |
              HouseHold | Industry |
-             Rest | LocalRest           
+             Rest | LocalRest
           deriving (Eq, Ord, Enum, Show)
 
 instance Node.C Node where
@@ -96,7 +96,7 @@ topologyOpt :: TD.Topology Node
 topologyOpt = Gr.fromList ns (makeEdges es)
   where ns = [(Coal, TD.AlwaysSource),
               (Gas, TD.Source),
-              (Water, TD.storage), 
+              (Water, TD.storage),
               (Network,TD.Crossing),
               (Rest, TD.AlwaysSink),
               (LocalNetwork,TD.Crossing),
@@ -111,7 +111,7 @@ edgeListOpt = [(Coal, Network, "CoalPlant", "Coal","ElCoal"),
                (Water, Network,"WaterPlant","Water","ElWater"),
                (Network, Rest,"toRest","toRest","toRest"),
                (Network, LocalNetwork, "Transformer", "HighVoltage", "LowVoltage"),
-               (Gas, LocalNetwork,"GasPlant","Gas","ElGas"),             
+               (Gas, LocalNetwork,"GasPlant","Gas","ElGas"),
                (LocalNetwork, LocalRest, "toLocalRest", "toLocalRest", "toLocalRest")]
 
 flowStatesOpt :: [TD.FlowTopology Node]

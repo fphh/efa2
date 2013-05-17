@@ -227,7 +227,7 @@ xyStyle opts =
 
 
 class (AxisLabel tcX, AxisLabel tcY) => XY tcX tcY where
-   xy :: (LineSpec.T -> LineSpec.T) -> 
+   xy :: (LineSpec.T -> LineSpec.T) ->
          (Int -> String) -> tcX -> tcY -> Plot2D.T (Value tcX) (Value tcY)
 
 xyBasic ::
@@ -477,7 +477,7 @@ class
    (AxisLabel tcX, AxisLabel tcY, AxisLabel tcZ) =>
       Surface tcX tcY tcZ where
    surface ::
-      (LineSpec.T -> LineSpec.T) -> 
+      (LineSpec.T -> LineSpec.T) ->
       (Int -> String) ->
       tcX -> tcY -> tcZ -> Plot3D.T (Value tcX) (Value tcY) (Value tcZ)
 
