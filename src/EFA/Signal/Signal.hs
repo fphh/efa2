@@ -289,6 +289,11 @@ type FDistr v a = TC FDistrib (Typ A F Tt) (Data (v :> Nil) a)
 type PDistr v a = TC FDistrib (Typ A P Tt) (Data (v :> Nil) a)
 type NDistr v a = TC FDistrib (Typ A N Tt) (Data (v :> Nil) a)
 
+type UTTestRow2 v2 v1 a = TC TestRow (Typ UT UT UT)  (Data (v2 :> v1 :> Nil) a)
+type NTestRow2 v2 v1 a = TC TestRow (Typ A N Tt)  (Data (v2 :> v1 :> Nil) a)
+type FTestRow2 v2 v1 a = TC TestRow (Typ A F Tt)  (Data (v2 :> v1 :> Nil) a)
+type PTestRow2 v2 v1 a = TC TestRow (Typ A P Tt)  (Data (v2 :> v1 :> Nil) a)
+
 ----------------------------------------------------------
 -- Convenience Type Synonyms
 
