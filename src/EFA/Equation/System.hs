@@ -807,7 +807,10 @@ splitFactors ::
 splitFactors s ef xf ns =
    (s =%= NonEmpty.foldl1 (~+) (fmap ef ns))
    <>
-   foldMap (\n -> ef n =%= s ~* xf n) ns
+   (foldMap (\n -> ef n =%= s ~* xf n) ns)
+   -- fehlt das hier?
+--   <>
+--   (constantRecord 1 =%= NonEmpty.foldl1 (~+) (fmap xf ns))
 
 
 
