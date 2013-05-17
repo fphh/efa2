@@ -7,6 +7,8 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE TupleSections #-}
+
 
 module EFA.Signal.Signal where
 
@@ -151,6 +153,9 @@ zipWith ::
 zipWith f (TC da1) (TC da2) =
    TC $ D.zipWith f da1 da2
 
+
+
+
 ----------------------------------------------------------------
 -- Getyptes ZipWith
 tzipWith ::
@@ -274,6 +279,8 @@ type PSignal2 v2 v1 a = TC Signal (Typ A P Tt) (Data (v2 :> v1 :> Nil) a)
 type XSignal2 v2 v1 a = TC Signal (Typ A X Tt) (Data (v2 :> v1 :> Nil) a)
 
 type NSignal v a = TC Signal (Typ A N Tt) (Data (v :> Nil) a)
+
+type NTestRow v a = TC Signal (Typ A N Tt) (Data (v :> Nil) a)
 
 -- Flow Signals
 type FFSignal v a = TC FSignal (Typ A F Tt) (Data (v :> Nil) a)
@@ -526,6 +533,16 @@ map ::
    (D.Map c, D.Storage c d1, D.Storage c d2) =>
    (d1 -> d2) -> TC s typ (Data c d1) -> TC s typ (Data c d2)
 map f (TC x) = TC $ D.map f x
+
+
+{-# DEPRECATED map2 "soll generischer werden (auch fuer Funktionen (w1 d1 -> w2 d2)" #-}
+map2 ::
+  (SV.Walker v, SV.Storage w d1,
+    SV.Storage v (w d1), SV.Storage v d2) =>
+  (w d1 -> d2) ->
+  TC s typ (Data (v :> w :> Nil) d1) ->
+  TC s typ (Data (v :> Nil) d2)
+map2 f (TC x) = TC $ D.map2 f x
 
 ----------------------------------------------------------
 -- Getyptes SMap
@@ -1251,7 +1268,7 @@ unique ::  (Ord d1, SV.Unique v1 d1) => TC s1 t1 (Data (v1 :> Nil) d1) ->  TC s1
 unique (TC x) = TC $ D.unique x
 
 
-interp1Lin :: (Eq d1,
+interp1Lin :: (Eq d1, Show d1,
                Fractional d1,
                Num d1,
                Ord d1,
@@ -1259,15 +1276,18 @@ interp1Lin :: (Eq d1,
                SV.Find v1,
                SV.Singleton v1,
                SV.Lookup v1) =>
+              String ->
               TC Signal t1 (Data (v1 :> Nil) d1) ->
               TC Signal t2 (Data (v1 :> Nil) d1) ->
               TC Sample t1 (Data Nil d1) ->
               TC Sample t2 (Data Nil d1)
-interp1Lin xSig ySig (TC (Data xVal)) =
+interp1Lin caller xSig ySig (TC (Data xVal)) =
   if x1 P.== x2
      then toSample $ (y1 P.+y2) P./2
      else toSample $ ((y2 P.- y1) P./(x2 P.-x1)) P.* (xVal P.- x1) P.+ y1
-  where sIdx@(SignalIdx idx) = P.maybe (error "Out of Range") id $ findIndex (P.>= xVal) xSig
+  where sIdx@(SignalIdx idx) =
+          P.maybe (error $ "Out of Range: " ++ caller ++ ": "++ P.show xVal)
+                   id $ findIndex (P.>= xVal) xSig
         -- prevent negativ index when interpolating on first element
         TC (Data x1) = getSample xSig $ SignalIdx $ if idx P.== 0 then idx else idx-1
         TC (Data x2) = getSample xSig sIdx
@@ -1307,7 +1327,7 @@ slice (SignalIdx start) num (TC x) = TC $ D.slice start num x
 
 
 -- | Interpolate an x-y - Lookup-Curve with a signal. Also can be used to resample a signal with a new time vector
-interp1LinSig ::  (Eq d1,
+interp1LinSig ::  (Eq d1, Show d1,
                      Fractional d1,
                      Num d1,
                      Ord d1,
@@ -1316,19 +1336,20 @@ interp1LinSig ::  (Eq d1,
                      SV.Singleton v1,
                      SV.Lookup v1,
                      SV.Walker v1) =>
+                   String ->
                    TC Signal t1 (Data (v1 :> Nil) d1) ->
                    TC Signal t2 (Data (v1 :> Nil) d1) ->
                    TC Signal t1 (Data (v1 :> Nil) d1) ->
                    TC Signal t2 (Data (v1 :> Nil) d1)
-interp1LinSig xSig ySig xSigLookup = tmap f xSigLookup
-  where f x = interp1Lin xSig ySig x
+interp1LinSig caller xSig ySig xSigLookup = tmap f xSigLookup
+  where f x = interp1Lin caller xSig ySig x
 
 
 
 -- | Interpolate a 3-signal x-y surface, where in x points are aligned in rows
 {-# WARNING interp2WingProfile "pg: not yet tested, sample calculation could be done better" #-}
 
-interp2WingProfile :: (SV.Storage v1 d1,
+interp2WingProfile :: (SV.Storage v1 d1, Show d1,
                        Ord d1,
                        SV.Find v1,
                        Eq (v1 d1),
@@ -1342,13 +1363,14 @@ interp2WingProfile :: (SV.Storage v1 d1,
                        BSum d1,
                        TSum t3 t3 t3
                       ) =>
+                      String ->
                       TC Signal t1 (Data (v1 :> Nil) d1) ->
                       TC Signal t2 (Data (v2 :> v1 :> Nil) d1) ->
                       TC Signal t3 (Data (v2 :> v1 :> Nil) d1) ->
                       TC Sample t1 (Data Nil d1) ->
                       TC Sample t2 (Data Nil d1) ->
                       TC Sample t3 (Data Nil d1)
-interp2WingProfile xSig ySig zSig xLookup yLookup = TC $ Data $ ((z2 P.-z1)P./(x2 P.-x1)) P.*((fromSample xLookup) P.- x1)
+interp2WingProfile caller xSig ySig zSig xLookup yLookup = TC $ Data $ ((z2 P.-z1)P./(x2 P.-x1)) P.*((fromSample xLookup) P.- x1)
    where
         -- find indices in x-axis
         xIdx@(SignalIdx idx) = P.maybe (error "Out of Range") id $ findIndex (P.>= fromSample xLookup) xSig
@@ -1362,8 +1384,8 @@ interp2WingProfile xSig ySig zSig xLookup yLookup = TC $ Data $ ((z2 P.-z1)P./(x
         zRow2 = getColumn zSig xIdx2
 
         -- interpolate on y in these data columns
-        z1 = fromSample $ interp1Lin yRow1 zRow1 yLookup
-        z2 = fromSample $ interp1Lin yRow2 zRow2 yLookup
+        z1 = fromSample $ interp1Lin caller yRow1 zRow1 yLookup
+        z2 = fromSample $ interp1Lin caller yRow2 zRow2 yLookup
         x1 = fromSample $ getSample xSig xIdx1
         x2 = fromSample $ getSample xSig xIdx2
 
@@ -1521,3 +1543,44 @@ calcEtaWithSign :: (SV.Storage v1 d1,
                    TC s (Typ A N Tt) (Data (v1 :> Nil) d1)
 calcEtaWithSign pSign p1 p2 = changeType $ map f $ changeSignalType $ zip pSign $ changeSignalType $ zip p1 p2
   where f (z,(x,y)) = if z P.>= 0 then y P./ x else x P./ y
+
+
+-- | Index of maximum
+
+{-# DEPRECATED sigMax2 "Sollte auf Listen arbeiten" #-}
+sigMax2
+  :: (Num t, Ord t, Ord d1, D.ZipWith c, D.Storage c d1,
+      D.Storage c (d1, t), D.Storage c t) =>
+     TC s1 typ1 (Data c d1)
+     -> TC s1 typ1 (Data c d1)
+     -> TC (Arith s1 s1) typ3 (Data c t)
+sigMax2 etaSys0 etaSys1 = map P.snd a
+  where
+      -- maxEtaSys0State, maxEtaSys1State :: Sig.NSignal2 [] [] (Double, Int)
+      maxEtaSys0State = map (, 0) etaSys0
+      maxEtaSys1State = map (, 1) etaSys1
+
+
+      -- a :: Sig.UTSignal2 [] [] (Double, Int)
+      a = zipWith P.max maxEtaSys0State maxEtaSys1State
+
+
+{-
+
+am (zipwith P.max) gescheitert 
+
+sigMax2
+  :: (Ord d, D.ZipWith c, D.Storage c d,
+      D.Storage c (d, Int), D.Storage c Int) =>
+     [TC s1 typ1 (Data c d)]
+     -> TC (Arith s1 s1) typ3 (Data c Int)
+sigMax2 es = map P.snd as
+  where
+      tagEs = P.zipWith f es [0::Int ..]
+
+      f :: TC s1 typ1 (Data c d) -> Int -> UTSignal2 [] [] (d, Int)
+      f x n = map (, n) x
+
+      -- as :: UTSignal2 [] [] (d, Int)
+      --as = L.foldl (zipWith P.max) (P.head tagEs) (P.tail tagEs)
+-}

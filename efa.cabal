@@ -167,6 +167,23 @@ Executable example-optimisingstorage
   Else
     Buildable: False
 
+Executable example-optimalStorageUsage
+  Main-Is: examples/elementary/optimalStorageUsage/Main.hs
+  GHC-Options: -Wall
+  If flag(buildExamples)
+    Build-Depends:
+      gnuplot,
+      efa,
+      vector,
+      data-accessor,
+      utility-ht,
+      base
+  Else
+    Buildable: False
+
+
+
+
 Executable example-vehicle
   Hs-Source-Dirs: examples/vehicle/src
   Main-Is: Main.hs
