@@ -55,7 +55,7 @@ topoDreibein = Gr.fromList ns (makeEdges es)
                (sink, TD.Sink),
                (storage, TD.Storage ()) ]
         es = [ (source, crossing),
-               (crossing, sink), 
+               (crossing, sink),
                (crossing, storage) ]
 
 
@@ -70,7 +70,7 @@ seqTopo = Flow.mkSequenceTopology (select sol states)
 
 
 lookupStCrDown ::
-  EqGen.Expression node s a v Double -> 
+  EqGen.Expression node s a v Double ->
   EqGen.Expression node s a v Double
 lookupStCrDown = EqGen.liftF f
   where f = Sig.fromSample . Sig.interp1Lin xs ys . Sig.toSample
@@ -79,7 +79,7 @@ lookupStCrDown = EqGen.liftF f
         ys = Sig.fromList [0.50, 0.51 .. 0.8]
 
 lookupStCrUp ::
-  EqGen.Expression node s a v Double -> 
+  EqGen.Expression node s a v Double ->
   EqGen.Expression node s a v Double
 lookupStCrUp = EqGen.liftF f
   where f = Sig.fromSample . Sig.interp1Lin xs ys . Sig.toSample
@@ -88,7 +88,7 @@ lookupStCrUp = EqGen.liftF f
         ys = Sig.fromList [0.50, 0.51 .. 0.8]
 
 lookupCrSi ::
-  EqGen.Expression node s a v Double -> 
+  EqGen.Expression node s a v Double ->
   EqGen.Expression node s a v Double
 lookupCrSi = EqGen.liftF f
   where f = Sig.fromSample . Sig.interp1Lin xs ys . Sig.toSample
@@ -98,7 +98,7 @@ lookupCrSi = EqGen.liftF f
 
 
 lookupSoCr ::
-  EqGen.Expression node s a v Double -> 
+  EqGen.Expression node s a v Double ->
   EqGen.Expression node s a v Double
 lookupSoCr = EqGen.liftF f
   where f = Sig.fromSample . Sig.interp1Lin xs ys . Sig.toSample
@@ -123,7 +123,7 @@ givenSec0Mean psink ratio =
    (XIdx.power sec0 sink crossing .= psinkConst) :
 
    (XIdx.eta sec0 crossing sink .= 0.8) :
-   
+
    (XIdx.eta sec0 source crossing .= 0.9) :
 
    (XIdx.eta sec0 crossing storage .= 0.85) :
@@ -136,8 +136,8 @@ givenSec0Mean psink ratio =
 
    (XIdx.power sec1 sink crossing .= psink) :
    []
-   
-   where 
+
+   where
      psinkConst = ratioConst/(1-ratioConst) * psink
      ratioConst = 0.2
 
@@ -178,9 +178,9 @@ etaSys ::
     (EqRec.Absolute (Result Double)) ->
   Double
 etaSys env =
-  (lookup eSinkSec0 + lookup eSinkSec1) / (lookup eSource) 
-  where 
-        lookup n | 
+  (lookup eSinkSec0 + lookup eSinkSec1) / (lookup eSource)
+  where
+        lookup n |
           EqRec.Absolute (Determined x) <-
             checkedLookup (EqEnv.energyMap $ EqEnv.signal env) n = x
         eSource = XIdx.energy sec0 source crossing
@@ -196,7 +196,7 @@ ratioRange :: [Double]
 ratioRange = [0.1, 0.2 .. 0.3] --  [0.1, 0.2 .. 5]
 
 varX', varY' :: [[Double]]
-(varX', varY') = Table.varMat sinkRange ratioRange 
+(varX', varY') = Table.varMat sinkRange ratioRange
 
 main :: IO ()
 main = do
@@ -213,7 +213,7 @@ main = do
       etaSys0, etaSys1 :: Sig.NSignal [] Double
       etaSys0 = Sig.fromList $ map f0 sinkRange
       etaSys1 = Sig.fromList $ map f1 sinkRange
-      
+
       --etaSys0, etaSys1 :: Sig.NSignal2 [] [] Double
       -- etaSys0 = Sig.fromList2 $ map f0 (liftA (,) sinkRange sinkRangeMean)
       --etaSys1 = Sig.fromList2 $ map f1 (liftA (,) sinkRange sinkRangeMean)
@@ -222,7 +222,7 @@ main = do
 -}
       varX :: Sig.PSignal2 [] [] Double
       varX = Sig.fromList2 varX'
-      
+
       varY :: Sig.XSignal2 [] [] Double
       varY = Sig.fromList2 varY'
 
@@ -262,14 +262,14 @@ main = do
 
 
 getEnergy ::
-  TIdx.InSection TIdx.Energy Node.Int -> 
+  TIdx.InSection TIdx.Energy Node.Int ->
   EqEnv.Complete
     Node.Int
     (EqRec.Absolute (Result Double))
     (EqRec.Absolute (Result Double)) -> Double
 getEnergy n env = lookup
-  where 
-        lookup | 
+  where
+        lookup |
           EqRec.Absolute (Determined x) <-
             checkedLookup (EqEnv.energyMap $ EqEnv.signal env) n = x
 
@@ -309,8 +309,8 @@ main2 = do
       g 5 = "Sec 0, source crossing"
 
   concurrentlyMany_ [
-    PlotIO.xy "Test" DefaultTerm.cons id g sinkRangeSig 
+    PlotIO.xy "Test" DefaultTerm.cons id g sinkRangeSig
               [ esc1Sig, ecs1Sig, estc1Sig, ecst0Sig, etaSysSig, eSourceSig],
     Draw.xterm $ Draw.sequFlowGraph seqTopo ]
-    
+
 

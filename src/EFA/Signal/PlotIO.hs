@@ -131,7 +131,7 @@ tableLinear2D term str = run term . plotTable tail str
 
 -- | Plotting Surfaces
 
-surface :: 
+surface ::
   (Plot.Surface tcX tcY tcZ, Terminal.C term) =>
   String -> term ->
   (LineSpec.T -> LineSpec.T) ->
