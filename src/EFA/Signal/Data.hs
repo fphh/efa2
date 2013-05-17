@@ -225,6 +225,11 @@ instance (Fold c, Equal c, Map c) => SV.Walker (Data c) where
    foldl f b as = foldl f b `readData` as
    equalBy f as bs = equalBy f `readData` as `readData` bs
 
+map2 ::
+  (SV.Storage v d2, SV.Walker v, SV.Storage v (w d1), SV.Storage w d1) =>
+  (w d1 -> d2) -> Data (v :> w :> Nil) d1 -> Data (v :> Nil) d2
+map2 f xd = nestedData $
+  withNestedData (SV.map f) xd
 
 ----------------------------------------------------------
 -- | Zipping for normal Arithmetics

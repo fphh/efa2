@@ -120,7 +120,7 @@ pre topology epsZero epsT epsE rawSignals =
     -- * Add zerocrossings in Powersignals and Signals
 
     powerSignals0 = addZeroCrossings powerSignals
-    signals0 = newTimeBase signals (getTime powerSignals0)
+    signals0 = newTimeBase "pre" signals (getTime powerSignals0)
 
     ---------------------------------------------------------------------------------------
     -- * Cut Signals and filter on low time sektions

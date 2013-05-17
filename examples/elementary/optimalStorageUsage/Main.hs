@@ -1,4 +1,7 @@
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeOperators #-}
 
 
 module Main where
@@ -15,6 +18,9 @@ import qualified EFA.Graph as Gr
 import qualified EFA.Example.Absolute as EqGen
 
 import qualified EFA.Signal.SequenceData as SD
+import EFA.Signal.Data (Data, ZipWith, Storage, Nil, (:>))
+import qualified EFA.Signal.Data as D
+
 import qualified EFA.Example.Index as XIdx
 import qualified EFA.Graph.Topology.Index as TIdx
 
@@ -34,10 +40,15 @@ import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.ConvertTable as Table
 
+import qualified Data.List as L
+
 import Control.Applicative (liftA)
 
-
+import Data.Ord (comparing)
 import Data.Monoid (mconcat, (<>))
+import Data.Foldable (foldMap)
+
+import Debug.Trace
 
 
 sec0, sec1 :: TIdx.Section
@@ -64,47 +75,37 @@ select :: [topo] -> [Int] -> SD.SequData topo
 select ts = SD.fromList . map (ts !!)
 
 
-seqTopo = Flow.mkSequenceTopology (select sol states)
-  where states = [0, 3]
-        sol = StateAnalysis.advanced topoDreibein
+seqTopoFunc states = Flow.mkSequenceTopology (select sol states)
+  where sol = StateAnalysis.advanced topoDreibein
+
+seqTopo = seqTopoFunc [0, 3]
 
 
-lookupStCrDown ::
-  EqGen.Expression node s a v Double ->
-  EqGen.Expression node s a v Double
-lookupStCrDown = EqGen.liftF f
-  where f = Sig.fromSample . Sig.interp1Lin xs ys . Sig.toSample
-        xs, ys :: Sig.UTSignal [] Double
+lookupStCrDown :: Double -> Double
+lookupStCrDown = Sig.fromSample . Sig.interp1Lin "lookupStCrDown" xs ys . Sig.toSample
+  where xs, ys :: Sig.UTSignal [] Double
+        xs = Sig.fromList [0 .. 60]
+        ys = Sig.fromList [0.60, 0.605 .. 1]
+
+lookupStCrUp :: Double -> Double
+lookupStCrUp = Sig.fromSample . Sig.interp1Lin "lookupStCrUp" xs ys . Sig.toSample
+  where xs, ys :: Sig.UTSignal [] Double
+        xs = Sig.fromList [0 .. 60]
+        ys = Sig.fromList [0.40, 0.41 .. 1]
+
+
+lookupCrSi :: Double -> Double
+lookupCrSi = Sig.fromSample . Sig.interp1Lin "lookupCrSi" xs ys . Sig.toSample
+  where xs, ys :: Sig.UTSignal [] Double
         xs = Sig.fromList [0 .. 30]
-        ys = Sig.fromList [0.50, 0.51 .. 0.8]
-
-lookupStCrUp ::
-  EqGen.Expression node s a v Double ->
-  EqGen.Expression node s a v Double
-lookupStCrUp = EqGen.liftF f
-  where f = Sig.fromSample . Sig.interp1Lin xs ys . Sig.toSample
-        xs, ys :: Sig.UTSignal [] Double
-        xs = Sig.fromList [0 .. 30]
-        ys = Sig.fromList [0.50, 0.51 .. 0.8]
-
-lookupCrSi ::
-  EqGen.Expression node s a v Double ->
-  EqGen.Expression node s a v Double
-lookupCrSi = EqGen.liftF f
-  where f = Sig.fromSample . Sig.interp1Lin xs ys . Sig.toSample
-        xs, ys :: Sig.UTSignal [] Double
-        xs = Sig.fromList [0 .. 30]
-        ys = Sig.fromList [0.60, 0.61 .. 0.9]
+        ys = Sig.fromList [0.50, 0.51 .. 0.9]
 
 
-lookupSoCr ::
-  EqGen.Expression node s a v Double ->
-  EqGen.Expression node s a v Double
-lookupSoCr = EqGen.liftF f
-  where f = Sig.fromSample . Sig.interp1Lin xs ys . Sig.toSample
-        xs, ys :: Sig.UTSignal [] Double
-        xs = Sig.fromList [0 .. 30]
-        ys = Sig.fromList [0.70, 0.71 .. 1]
+lookupSoCr :: Double -> Double
+lookupSoCr = Sig.fromSample . Sig.interp1Lin "lookupSoCr" xs ys . Sig.toSample
+  where xs, ys :: Sig.UTSignal [] Double
+        xs = Sig.fromList [0 .. 60]
+        ys = Sig.fromList [0.40, 0.41 .. 1]
 
 commonEnv :: EqGen.EquationSystem Node.Int s Double Double
 commonEnv =
@@ -115,60 +116,56 @@ commonEnv =
    (XIdx.power sec0 storage crossing %= XIdx.power sec1 storage crossing) :
    []
 
-givenSec0Mean :: Double -> Double -> EqGen.EquationSystem Node.Int s Double Double
+givenSec0Mean ::
+  Double -> Double -> EqGen.EquationSystem Node.Int s Double Double
 givenSec0Mean psink ratio =
    (commonEnv <>) $
    mconcat $
 
-   (XIdx.power sec0 sink crossing .= psinkConst) :
+   (XIdx.x sec0 crossing storage .= 0.2) :
+   (XIdx.power sec1 sink crossing .= psink) :
 
-   (XIdx.eta sec0 crossing sink .= 0.8) :
 
-   (XIdx.eta sec0 source crossing .= 0.9) :
+   (XIdx.eta sec0 crossing sink .= 0.5) :
+   
+   (XIdx.eta sec0 source crossing .= 0.7) :
 
-   (XIdx.eta sec0 crossing storage .= 0.85) :
+   (XIdx.eta sec0 crossing storage .= 0.6) :
 
    ((EqGen.variable $ XIdx.eta sec1 storage crossing) =.=
-     lookupStCrUp (EqGen.variable $ XIdx.power sec1 crossing storage)) :
+     EqGen.liftF lookupStCrUp (EqGen.variable $ XIdx.power sec1 crossing storage)) :
 
    ((EqGen.variable $ XIdx.eta sec1 crossing sink) =.=
-     lookupCrSi (EqGen.variable $ XIdx.power sec1 sink crossing)) :
+     EqGen.liftF lookupCrSi (EqGen.variable $ XIdx.power sec1 sink crossing)) :
 
-   (XIdx.power sec1 sink crossing .= psink) :
    []
 
-   where
-     psinkConst = ratioConst/(1-ratioConst) * psink
-     ratioConst = 0.2
-
-givenSec1Mean :: Double -> Double -> EqGen.EquationSystem Node.Int s Double Double
-givenSec1Mean psink ratio =
+givenSec1Mean ::
+  Double -> Double -> EqGen.EquationSystem Node.Int s Double Double
+givenSec1Mean psink _ =
    (commonEnv <>) $
    mconcat $
 
 
-   (XIdx.power sec1 sink crossing .= psinkConst) :
+   (XIdx.power sec0 sink crossing .= psink) :
 
-   (XIdx.eta sec1 crossing sink .= 0.8) :
+   (XIdx.power sec1 sink crossing .= 2) :
+
+   (XIdx.eta sec1 crossing sink .= 0.9) :
 
    (XIdx.eta sec1 storage crossing .= 0.85) :
 
 
    ((EqGen.variable $ XIdx.eta sec0 crossing storage) =.=
-     lookupStCrDown (EqGen.variable $ XIdx.power sec0 storage crossing)) :
+     EqGen.liftF lookupStCrDown (EqGen.variable $ XIdx.power sec0 storage crossing)) :
 
    ((EqGen.variable $ XIdx.eta sec0 crossing sink) =.=
-     lookupCrSi (EqGen.variable $ XIdx.power sec0 sink crossing)) :
+     EqGen.liftF lookupCrSi (EqGen.variable $ XIdx.power sec0 sink crossing)) :
 
    ((EqGen.variable $ XIdx.eta sec0 source crossing) =.=
-     lookupSoCr (EqGen.variable $ XIdx.power sec0 crossing source)) :
-
-   (XIdx.power sec0 sink crossing .= psink) :
+     EqGen.liftF lookupSoCr (EqGen.variable $ XIdx.power sec0 crossing source)) :
 
    []
-   where
-     psinkConst = ratio/(1-ratio) * psink
-
 
 
 etaSys ::
@@ -183,43 +180,146 @@ etaSys env =
         lookup n |
           EqRec.Absolute (Determined x) <-
             checkedLookup (EqEnv.energyMap $ EqEnv.signal env) n = x
+          | otherwise = error (show n ++ "\n" ++ show (EqEnv.energyMap $ EqEnv.signal env))
+
+        eSource = XIdx.energy sec0 source crossing
+        eSinkSec0 = XIdx.energy sec0 sink crossing
+        eSinkSec1 = XIdx.energy sec1 sink crossing
+        
+
+
+sinkRange :: [Double]
+
+sinkRange = [0.1, 0.2 .. 20]
+
+ratioRange :: [Double]
+ratioRange = [0.1, 0.2 .. 0.9]
+
+varX', varY' :: [[Double]]
+(varX', varY') = Table.varMat sinkRange ratioRange
+
+hypotheticalUsage :: Sig.PSignal [] Double
+hypotheticalUsage = Sig.fromList [
+  3, 2, 6, 7,
+  7, 8, 8, 9, 6, 8, 5,
+  3, 2, 3, 4,
+  5, 5,
+  4, 6, 8, 9, 10, 9,
+  6, 5, 7, 8, 8, 
+  2, 3 ]
+
+-- noch ein bischen besser, falls p < kleinster wert in xs
+-- auch fuer mehrdimensionale Signale
+borderFunc ::
+  (Show d, Eq d, Ord d) =>
+  Sig.NTestRow [] Int -> Sig.PSignal [] d -> (d -> Int)
+borderFunc ss xs p =
+  case dropWhile ((< p) . fst) zs of
+       (_, s):_ -> s
+       _ -> error $ "Power " ++ show p ++ " out of range " ++ show zs
+  where ts = zip (Sig.toList ss) (Sig.toList xs)
+        ys = map f (L.groupBy (\x y -> fst x == fst y) ts)
+        f as = case last as of (a, b) -> (b, a)
+        zs = L.sortBy (comparing fst) ys
+
+sectionHU ::
+  Sig.PSignal [] d -> (d -> Int) -> [(Int, Sig.PSignal [] d)]
+sectionHU ss bf = ws
+  where ts = Sig.toList ss
+        us = L.groupBy (\x y -> fst x == fst y) $ zip (map bf ts) ts
+        ws = map f us
+        f ((s, w):xs) = (s, Sig.fromList (w:(map snd xs)))
+
+help f x = do
+  y <- x
+  return (EqGen.liftF f x)
+
+commonEnvHU ::
+  [TIdx.Section] ->
+  EqGen.EquationSystem Node.Int s (Data Nil Double) (Data ([] :> Nil) Double)
+commonEnvHU ss =
+  -- (foldMap (uncurry f) $ zip ss (tail ss))
+  -- <>
+  ( mconcat $
+    (XIdx.storage TIdx.Initial storage .= D.fromList 20.0) :
+    [] )
+  where f sec0 sec1 =
+          XIdx.power sec0 storage crossing
+            %= XIdx.power sec1 storage crossing
+
+givenEnvHUSec ::
+  (TIdx.Section, Sig.PSignal [] Double) ->
+  EqGen.EquationSystem Node.Int s (Data Nil Double) (Data ([] :> Nil) Double)
+givenEnvHUSec (sec, Sig.TC sig) =
+  mconcat $
+  (XIdx.dTime sec .= D.map (const 1.0) sig) :
+  (XIdx.power sec sink crossing .= sig) :
+
+  -- Warunung: Ueberschreibt:
+  (XIdx.x sec crossing sink .= D.map (const 0.3) sig) :
+
+  ((EqGen.variable $ XIdx.eta sec crossing sink) =.= 
+    EqGen.liftF (D.map lookupCrSi) (EqGen.variable $ XIdx.power sec sink crossing)) :
+
+{-
+  ((EqGen.variable $ XIdx.eta sec  crossing storage) =.=
+    EqGen.liftF (D.map lookupStCrDown) 
+                (EqGen.variable $ XIdx.power sec storage crossing)) :
+
+-}
+
+  -- invertieren!!! TODO!!!
+  ((EqGen.variable $ XIdx.eta sec  crossing storage) =.=
+    EqGen.liftF (D.map lookupStCrDown) 
+                (EqGen.variable $ XIdx.power sec crossing storage)) :
+
+
+  ((EqGen.variable $ XIdx.eta sec  storage crossing) =.=
+    EqGen.liftF (D.map lookupStCrUp) 
+                (EqGen.variable $ XIdx.power sec crossing storage)) :
+
+  ((EqGen.variable $ XIdx.eta sec  source crossing) =.=
+     EqGen.liftF (D.map lookupSoCr)
+                 (EqGen.variable $ XIdx.power sec crossing source)) :
+
+  []
+
+
+givenEnvHU ::
+  [Sig.PSignal [] Double] ->
+  EqGen.EquationSystem Node.Int s (Data Nil Double) (Data ([] :> Nil) Double)
+givenEnvHU xs =
+  let ys = zip (map TIdx.Section [0..]) xs
+  in  commonEnvHU (map fst ys)
+      <>
+      (foldMap givenEnvHUSec ys)
+
+
+
+etaSysHU ::
+  EqEnv.Complete
+    Node.Int
+    (EqRec.Absolute (Result Double))
+    (EqRec.Absolute (Result Double)) ->
+  Double
+etaSysHU env =
+  (lookup eSinkSec0 + lookup eSinkSec1) / (lookup eSource) 
+  where 
+        lookup n | 
+          EqRec.Absolute (Determined x) <-
+            checkedLookup (EqEnv.energyMap $ EqEnv.signal env) n = x
         eSource = XIdx.energy sec0 source crossing
         eSinkSec0 = XIdx.energy sec0 sink crossing
         eSinkSec1 = XIdx.energy sec1 sink crossing
 
 
-sinkRange :: [Double]
 
-sinkRange = [0.1,1 .. 12] -- [0.1, 0.2 .. 12]
-
-ratioRange :: [Double]
-ratioRange = [0.1, 0.2 .. 0.3] --  [0.1, 0.2 .. 5]
-
-varX', varY' :: [[Double]]
-(varX', varY') = Table.varMat sinkRange ratioRange
 
 main :: IO ()
 main = do
 
   let eqs = map givenSec1Mean sinkRange
 
-{-
-      f0 x = etaSys $ EqGen.solve seqTopo $ givenSec0Mean x
-      f1 x = etaSys $ EqGen.solve seqTopo $ givenSec1Mean x
-
-      sinkRangeSig :: Sig.PSignal [] Double
-      sinkRangeSig = Sig.fromList sinkRange
-
-      etaSys0, etaSys1 :: Sig.NSignal [] Double
-      etaSys0 = Sig.fromList $ map f0 sinkRange
-      etaSys1 = Sig.fromList $ map f1 sinkRange
-
-      --etaSys0, etaSys1 :: Sig.NSignal2 [] [] Double
-      -- etaSys0 = Sig.fromList2 $ map f0 (liftA (,) sinkRange sinkRangeMean)
-      --etaSys1 = Sig.fromList2 $ map f1 (liftA (,) sinkRange sinkRangeMean)
-      --etaSys1 = undefined
-
--}
       varX :: Sig.PSignal2 [] [] Double
       varX = Sig.fromList2 varX'
 
@@ -229,37 +329,91 @@ main = do
       f0 x y = etaSys $ EqGen.solve seqTopo $ givenSec0Mean x y
       f1 x y = etaSys $ EqGen.solve seqTopo $ givenSec1Mean x y
 
+
+      env0 = EqGen.solve seqTopo $ givenSec0Mean 4.0 0.4
+      env1 = EqGen.solve seqTopo $ givenSec1Mean 3.0 0.3
+
       etaSys0, etaSys1 :: Sig.NSignal2 [] [] Double
       etaSys0 = Sig.fromList2 $ zipWith (zipWith f0) varX' varY'
       etaSys1 = Sig.fromList2 $ zipWith (zipWith f1) varX' varY'
 
-
---      f = ("Sektion " ++) . (++ " Durchschnitt") . show
-      f 0 = "Laden"
-      f 1 = "Entladen"
+      sinkRangeSig :: Sig.PSignal [] Double
+      sinkRangeSig = Sig.fromList sinkRange
 
       maxEtaSys :: Sig.NSignal2 [] [] Double
       maxEtaSys = Sig.zipWith max etaSys0 etaSys1
 
-      maxEtaSys0State, maxEtaSys1State :: Sig.NSignal2 [] [] (Double, Double)
-      maxEtaSys0State = Sig.map (,0) etaSys0
-      maxEtaSys1State = Sig.map (,1) etaSys1
-
       maxEtaSysState :: Sig.UTSignal2 [] [] Double
-      maxEtaSysState = Sig.map snd (Sig.zipWith max maxEtaSys0State maxEtaSys1State)
+      maxEtaSysState = Sig.map fromIntegral $ Sig.sigMax2 etaSys0 etaSys1
+
+      maxEtaSys0, maxEtaSys1 :: Sig.NTestRow [] Double
+      maxEtaSys0 = Sig.map2 maximum (Sig.transpose2 $ Sig.changeSignalType etaSys0)
+      maxEtaSys1 = Sig.map2 maximum (Sig.transpose2 $ Sig.changeSignalType etaSys1)
+
+      maxEtaLinear = Sig.zipWith max maxEtaSys0 maxEtaSys1
+
+      maxEtaSysStateLinear :: Sig.NSignal [] Int
+      maxEtaSysStateLinear = Sig.sigMax2 maxEtaSys0 maxEtaSys1
+
+
+      bf = a . borderFunc maxEtaSysStateLinear sinkRangeSig
+           where a 0 = 3
+                 a 1 = 0
+
+      optimalState = Sig.map bf hypotheticalUsage
+
+      secHU = sectionHU hypotheticalUsage bf
+
+      (secs, secSigsHU) = unzip secHU
+      seqTopoHU = seqTopoFunc secs
+
+      envHU = EqGen.solve seqTopoHU $ givenEnvHU secSigsHU
+
+      f 0 = "Laden"
+      f 1 = "Entladen"
+
+      g 0 = "Laden"
+      g 1 = "Entladen"
+      g 2 = "maxEtaLinear"
+      g 3 = "Zustand"
+
+      h 0 = "Hypothetical Usage"
+      h 1 = "Optimal State"
+
 
   concurrentlyMany_ [
-    Draw.xterm $ Draw.sequFlowGraph seqTopo,
-    PlotIO.surface "Test" DefaultTerm.cons id f varX varY [etaSys0, etaSys1],
-    PlotIO.surface "Systemwirkungsgrad Entladen" DefaultTerm.cons id (const "") varX varY etaSys0,
-    PlotIO.surface "Systemwirkungsgrad Laden" DefaultTerm.cons id (const "") varX varY etaSys1,
-    PlotIO.surface "Systemwirkungsgrad Laden und Entladen" DefaultTerm.cons id f varX varY [etaSys0, etaSys1],
-    PlotIO.surface "Maximaler Systemwirkungsgrad" DefaultTerm.cons id (const "Max") varX varY maxEtaSys,
-{-    PlotIO.surface "Test" DefaultTerm.cons id (const "0 mean") varX varY etaSys0,
-    PlotIO.surface "Test" DefaultTerm.cons id (const "1 mean") varX varY etaSys1,
-    PlotIO.surface "Test" DefaultTerm.cons id (const "Max") varX varY maxEtaSys,-}
-    PlotIO.surface "Test" DefaultTerm.cons id (const "Max") varX varY maxEtaSysState ]
+{-  
+    Draw.xterm $
+      Draw.title "Section 0 Mean" $ Draw.sequFlowGraphAbsWithEnv seqTopo env0,
+    Draw.xterm $
+      Draw.title "Section 1 Mean" $ Draw.sequFlowGraphAbsWithEnv seqTopo env1,
 
+    Draw.xterm $ Draw.sequFlowGraph seqTopo,
+-}
+    Draw.xterm $
+      Draw.title "Hypothetical Usage Sequence Flow Graph" $
+      Draw.sequFlowGraphAbsWithEnv seqTopoHU envHU,
+
+    PlotIO.xy "Test" DefaultTerm.cons id g sinkRangeSig
+              [ maxEtaSys0, maxEtaSys1,
+                maxEtaLinear,
+                Sig.map fromIntegral maxEtaSysStateLinear],
+
+    PlotIO.xy "Optimale Zustände" DefaultTerm.cons id h sinkRangeSig
+              [hypotheticalUsage, Sig.map fromIntegral optimalState] ]
+
+{-
+    PlotIO.surface "Test" DefaultTerm.cons id f varX varY [etaSys0, etaSys1],
+    PlotIO.surface "Systemwirkungsgrad Entladen" 
+                   DefaultTerm.cons id (const "") varX varY etaSys0,
+    PlotIO.surface "Systemwirkungsgrad Laden"
+                   DefaultTerm.cons id (const "") varX varY etaSys1,
+    PlotIO.surface "Systemwirkungsgrad Laden und Entladen"
+                   DefaultTerm.cons id f varX varY [etaSys0, etaSys1],
+    PlotIO.surface "Maximaler Systemwirkungsgrad"
+                   DefaultTerm.cons id (const "Max") varX varY maxEtaSys,
+    PlotIO.surface "Test" DefaultTerm.cons id (const "Max") varX varY maxEtaSysState ]
+-}
 
 getEnergy ::
   TIdx.InSection TIdx.Energy Node.Int ->
@@ -272,7 +426,6 @@ getEnergy n env = lookup
         lookup |
           EqRec.Absolute (Determined x) <-
             checkedLookup (EqEnv.energyMap $ EqEnv.signal env) n = x
-
 
 
 main2 :: IO ()
@@ -312,5 +465,3 @@ main2 = do
     PlotIO.xy "Test" DefaultTerm.cons id g sinkRangeSig
               [ esc1Sig, ecs1Sig, estc1Sig, ecst0Sig, etaSysSig, eSourceSig],
     Draw.xterm $ Draw.sequFlowGraph seqTopo ]
-
-

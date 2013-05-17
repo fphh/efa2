@@ -47,7 +47,7 @@ import EFA.Signal.Record (Record)
 --import EFA.Signal.Signal (TC, toSigList, getDisplayType)
 -- import EFA.Signal.Base (BSum)
 
-import EFA.Signal.Data (Data, (:>), Nil, NestedList)
+-- import EFA.Signal.Data (Data, (:>), Nil, NestedList)
 import EFA.Report.Typ (TDisp)
                        --DisplayType(Typ_T),
                        --getDisplayUnit,
@@ -94,7 +94,7 @@ import qualified Graphics.Gnuplot.LineSpecification as LineSpec
 
 import qualified Graphics.Gnuplot.Frame as Frame
 --import qualified Graphics.Gnuplot.Frame.Option as Opt
-import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
+--import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
 --import qualified Graphics.Gnuplot.Frame.OptionSet.Style as OptsStyle
 --import qualified Graphics.Gnuplot.Frame.OptionSet.Histogram as Histogram
 

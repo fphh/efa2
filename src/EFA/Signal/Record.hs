@@ -281,7 +281,7 @@ union (Record timeA mA) (Record timeB mB) =
 
 -- Wegen newTimeBase ist der Typ nicht so algemein wie bei "union" oben. Schade.
 unionWithNewTime ::
-  ( Eq (v d),
+  ( Eq (v d), Show d,
     Ord id,
     Show id,
     Fractional d,
@@ -297,7 +297,7 @@ unionWithNewTime ::
   Record S.Signal S.Signal (Typ A T Tt) t2 id v d d
 unionWithNewTime rs = Record newTime $
   M.unionsWith (error "unionWithNewTime: duplicate signal ids") $
-    map ((\(Record _ m) -> m) . flip newTimeBase newTime) rs
+    map ((\(Record _ m) -> m) . flip (newTimeBase "unionWithNewTime") newTime) rs
   where (starts, ends) = unzip $ map getTimeWindow rs
         newTime = S.sort $ L.foldl1' S.append ts
         ts = map (filt . getTime) rs
@@ -393,13 +393,14 @@ norm rec = rmap S.norm rec
 
 -- | Add interpolated data points in an existing record
 newTimeBase ::
-  (Fractional d, Ord d, V.Find v,
+  (Fractional d, Ord d, V.Find v, Show d,
    V.Lookup v, V.Walker v, V.Singleton v, V.Storage v d) =>
+  String ->
   Record Signal Signal (Typ A T Tt) t2 id v d d ->
   TSignal v d ->
   Record Signal Signal (Typ A T Tt) t2 id v d d
-newTimeBase (Record time m) newTime = Record newTime (M.map f m)
-  where f sig = S.interp1LinSig time sig newTime
+newTimeBase caller (Record time m) newTime = Record newTime (M.map f m)
+  where f sig = S.interp1LinSig caller time sig newTime
 
 
 

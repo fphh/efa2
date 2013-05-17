@@ -85,7 +85,7 @@ lookupEtaWaterCharge ::
   EqGen.Expression node s a v Double ->
   EqGen.Expression node s a v Double
 lookupEtaWaterCharge = EqGen.liftF f
-  where f = Sig.fromSample . Sig.interp1Lin xs ys . Sig.toSample
+  where f = Sig.fromSample . Sig.interp1Lin "lookupEtaWaterCharge" xs ys . Sig.toSample
         xs, ys :: Sig.UTSignal [] Double
         xs = Sig.fromList [0 .. 30]
         ys = Sig.fromList [0.50, 0.51 .. 0.8]
@@ -94,7 +94,7 @@ lookupEtaWaterDisCharge ::
   EqGen.Expression node s a v Double ->
   EqGen.Expression node s a v Double
 lookupEtaWaterDisCharge = EqGen.liftF f
-  where f = Sig.fromSample . Sig.interp1Lin xs ys . Sig.toSample
+  where f = Sig.fromSample . Sig.interp1Lin "lookupEtaWaterDisCharge" xs ys . Sig.toSample
         xs, ys :: Sig.UTSignal [] Double
         xs = Sig.fromList [0 .. 30]
         ys = Sig.fromList [0.50, 0.51 .. 0.8]
@@ -103,7 +103,7 @@ lookupEtaCoal ::
   EqGen.Expression node s a v Double ->
   EqGen.Expression node s a v Double
 lookupEtaCoal = EqGen.liftF f
-  where f = Sig.fromSample . Sig.interp1Lin xs ys . Sig.toSample
+  where f = Sig.fromSample . Sig.interp1Lin "lookupEtaCoal" xs ys . Sig.toSample
         xs, ys :: Sig.UTSignal [] Double
         xs = Sig.fromList [0 .. 30]
         ys = Sig.fromList [0.50, 0.51 .. 0.8]
@@ -112,7 +112,7 @@ lookupEtaGas ::
   EqGen.Expression node s a v Double ->
   EqGen.Expression node s a v Double
 lookupEtaGas = EqGen.liftF f
-  where f = Sig.fromSample . Sig.interp1Lin xs ys . Sig.toSample
+  where f = Sig.fromSample . Sig.interp1Lin "lookupEtaGas" xs ys . Sig.toSample
         xs, ys :: Sig.UTSignal [] Double
         xs = Sig.fromList [0 .. 30]
         ys = Sig.fromList [0.50, 0.51 .. 0.8]
@@ -121,7 +121,7 @@ lookupEtaTransformerHL ::
   EqGen.Expression node s a v Double ->
   EqGen.Expression node s a v Double
 lookupEtaTransformerHL = EqGen.liftF f
-  where f = Sig.fromSample . Sig.interp1Lin xs ys . Sig.toSample
+  where f = Sig.fromSample . Sig.interp1Lin "lookupEtaTransformerHL" xs ys . Sig.toSample
         xs, ys :: Sig.UTSignal [] Double
         xs = Sig.fromList [0 .. 30]
         ys = Sig.fromList [0.50, 0.51 .. 0.8]

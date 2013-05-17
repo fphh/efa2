@@ -467,7 +467,18 @@ surfaceStyle opts =
       LineSpec.lineWidth 1 $
       LineSpec.deflt
 
-
+surfaceBasic ::
+  (Fractional a2, Fractional a1, Fractional a, D.FromList c2,
+   D.FromList c1, D.FromList c, D.Map c2, D.Map c1, D.Map c,
+   D.Storage c2 a2, D.Storage c1 a1, D.Storage c a, TDisp typ2,
+   TDisp typ1, TDisp typ, Atom.C z, Atom.C y, Atom.C x, Tuple.C z,
+   Tuple.C y, Tuple.C x, NestedList c2 a2 ~ [[z]],
+   NestedList c1 a1 ~ [[y]], NestedList c a ~ [[x]]) =>
+   (LineSpec.T -> LineSpec.T) ->
+   TC s typ (Data c a) ->
+   TC s1 typ1 (Data c1 a1) ->
+   TC s2 typ2 (Data c2 a2) ->
+   Plot3D.T x y z
 surfaceBasic opts x y z =
    surfaceStyle opts $
      Plot3D.mesh $
