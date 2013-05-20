@@ -6,7 +6,7 @@ import qualified EFA.Test.Stack as Stack
 import qualified EFA.Test.Utility as Util
 import qualified EFA.Test.Sequence as Seq
 
-import qualified EFA.CustomTest.EquationSystem as EqSys
+import qualified EFA.CustomTest.EquationSystem.EquationSystem as EqSys
 
 
 import Control.Functor.HT (void)

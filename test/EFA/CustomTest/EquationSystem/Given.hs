@@ -1,5 +1,5 @@
 
-module EFA.CustomTest.Given where
+module EFA.CustomTest.EquationSystem.Given where
 
 
 import qualified Data.Map as M

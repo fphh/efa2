@@ -1,6 +1,6 @@
 
 
-module EFA.CustomTest.EquationSystem where
+module EFA.CustomTest.EquationSystem.EquationSystem where
 
 
 import qualified EFA.Example.Absolute as EqGen
@@ -9,7 +9,7 @@ import qualified EFA.Graph.Draw as Draw
 import EFA.Utility.Async (concurrentlyMany_)
 
 
-import qualified EFA.CustomTest.Given as Given
+import qualified EFA.CustomTest.EquationSystem.Given as Given
 
 
 test :: IO ()
