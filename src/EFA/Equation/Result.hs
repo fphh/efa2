@@ -8,7 +8,7 @@ import Data.Monoid (mempty, Monoid(..))
 
 
 data Result a = Undetermined
-              | Determined a deriving (Show)
+              | Determined a deriving (Show, Eq)
 
 
 instance Functor Result where

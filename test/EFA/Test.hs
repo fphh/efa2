@@ -6,6 +6,9 @@ import qualified EFA.Test.Stack as Stack
 import qualified EFA.Test.Utility as Util
 import qualified EFA.Test.Sequence as Seq
 
+import qualified EFA.CustomTest.EquationSystem as EqSys
+
+
 import Control.Functor.HT (void)
 
 
@@ -16,3 +19,4 @@ main = do
    void $ Stack.runTests
    void $ Util.runTests
    void $ Seq.runTests
+   EqSys.test

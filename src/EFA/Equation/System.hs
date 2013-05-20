@@ -872,8 +872,6 @@ solveFromMeasurement ::
 solveFromMeasurement (_rngs, g) given =
   solveSimple (given <> fromGraph False (TD.dirFromSequFlowGraph g))
 
-
-
 --------------------------------------------------------------------
 
 -- Stellt die originalen Werte wieder her.
@@ -895,3 +893,6 @@ conservativelySolve (_rngs, g) given =
   solveSimple (given <> fromGraph True (TD.dirFromSequFlowGraph g))
   <>
   solveSimple given
+
+--------------------------------------------------------------------
+

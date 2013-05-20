@@ -45,7 +45,7 @@ data Signal node a =
       dtimeMap :: DTimeMap node a,
       xMap :: XMap node a,
       sumMap :: SumMap node a
-   } deriving (Show)
+   } deriving (Show, Eq)
 
 data Scalar node a =
    Scalar {
@@ -54,13 +54,13 @@ data Scalar node a =
       stEnergyMap :: StEnergyMap node a,
       stXMap :: StXMap node a,
       stSumMap :: StSumMap node a
-   } deriving (Show)
+   } deriving (Show, Eq)
 
 data Complete node b a =
    Complete {
       scalar :: Scalar node b,
       signal :: Signal node a
-   } deriving (Show)
+   } deriving (Show, Eq)
 
 
 class AccessPart env where
