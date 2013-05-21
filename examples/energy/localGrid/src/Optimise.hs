@@ -4,12 +4,12 @@ module Main where
 import qualified Modules.System as System
 import Modules.System (Node(..))
 
-
 --import qualified EFA.Signal.Record as Record
 import EFA.Utility.Async (concurrentlyMany_)
 import qualified EFA.Graph.Draw as Draw
 --import EFA.IO.PLTImport (modelicaPLTImport)
 import qualified EFA.Signal.Signal as Sig
+import qualified EFA.Signal.Vector as V
 --import EFA.Signal.Data (Data(..), Nil)
 --import EFA.Signal.Typ (Typ, F, T, A, Tt)
 import qualified EFA.Signal.SequenceData as SD
@@ -36,6 +36,9 @@ import qualified EFA.Signal.PlotIO as PlotIO
 import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 import qualified Data.GraphViz.Attributes.Colors.X11 as Colors
 
+import qualified EFA.Signal.ConvertTable as CT
+import qualified EFA.IO.TableParser as Table
+
 import qualified System.IO as IO
 --import System.Environment (getEnv)
 --import System.FilePath ((</>))
@@ -46,10 +49,12 @@ import Data.Monoid (mconcat, (<>))
 import EFA.Example.Absolute ( (.=), (%=), (=.=) )
 import EFA.Utility.Stream (Stream((:~)))
 
---import qualified Data.List as L
+import qualified Data.List as L
 --import qualified Data.Map as M
 --import qualified Modules.Analysis as Analysis
 --import Data.Tuple.HT (mapSnd)
+
+import qualified Data.Maybe as Maybe
 
 
 plotTerm :: DefaultTerm.T
@@ -66,6 +71,12 @@ gasPower = [0, 0.1 .. 1]
 
 waterPower :: [Double]
 waterPower = [0,0.2 .. 1]
+
+varXSig :: Sig.PTestRow [] Double
+varXSig = Sig.fromList waterPower
+
+varYSig :: Sig.PTestRow [] Double
+varYSig = Sig.fromList gasPower
 
 sec0, sec1 :: TIdx.Section
 sec0 :~ sec1 :~ _ = Stream.enumFrom $ TIdx.Section 0
@@ -209,30 +220,6 @@ givenOptimiseDischarging pRest pRestLocal pWater pGas =
    (XIdx.x sec0 Network LocalNetwork .= 0.5) :
 
    []
-{-
-etaSys ::
-  EqEnv.Complete
-    System.Node
-    (EqRec.Absolute (Result Double))
-    (EqRec.Absolute (Result Double)) ->
-  (Double, (Double,Double,Double,Double),(Double,Double,Double,Double))
-etaSys env =
-  ((lk eRest0 + lk eRest1 + lk eRestLocal0 + lk eRestLocal1) / (lk eGas0 + lk eGas1 + lk eCoal0 + lk eCoal1), 
-   ,(eCoal0,eGas0,eRest0,eRestLocal0),(eCoal1,eGas1,eRest1,eRestLocal1)) 
-  where
-        lk n = case checkedLookup (EqEnv.energyMap $ EqEnv.signal env) n of
-                  EqRec.Absolute (Determined x) -> x
-                  _ -> error "not determined"
-        eCoal0  =  (XIdx.energy sec0 Coal Network)
-        eGas0  =  (XIdx.energy sec0 Gas LocalNetwork)
-        eRest0  =  (XIdx.energy sec0 Network Rest)
-        eRestLocal0  =  (XIdx.energy sec0 LocalNetwork LocalRest)
-
-        eCoal1  =  (XIdx.energy sec1 Coal Network)
-        eGas1 =  (XIdx.energy sec1 Gas LocalNetwork)
-        eRest1  =  (XIdx.energy sec1 Network Rest)
-        eRestLocal1  =  (XIdx.energy sec1 LocalNetwork LocalRest)
--}
 
 select :: [topo] -> [Int] -> SD.SequData topo
 select ts = SD.fromList . map (ts !!)
@@ -360,14 +347,52 @@ eRestLocalDischarge1 = Sig.setType $ Sig.map (lookupAbsEnergy (XIdx.energy sec1 
 etaSysCharge :: Sig.NTestRow2 [] [] Double
 etaSysCharge = eOut Sig../ eIn
   where
-    eOut = (eRestCharge0 Sig..+ (Sig.makeDelta $ eRestCharge1 Sig..+ (Sig.makeDelta $ eRestLocalCharge0 Sig..+ (Sig.makeDelta eRestLocalCharge1))))
-    eIn = (eGasCharge0 Sig..+ (Sig.makeDelta $ eGasCharge1 Sig..+ (Sig.makeDelta $ eCoalCharge0  Sig..+ (Sig.makeDelta eCoalCharge1))))
+    eOut = (eRestCharge0 Sig..+ (Sig.makeDelta $ eRestCharge1 Sig..+ 
+                                 (Sig.makeDelta $ eRestLocalCharge0 Sig..+ (Sig.makeDelta eRestLocalCharge1))))
+    eIn = (eGasCharge0 Sig..+ (Sig.makeDelta $ eGasCharge1 Sig..+ 
+                               (Sig.makeDelta $ eCoalCharge0  Sig..+ (Sig.makeDelta eCoalCharge1))))
 
 etaSysDischarge :: Sig.NTestRow2 [] [] Double
 etaSysDischarge = eOut Sig../ eIn
   where
-    eOut = (eRestDischarge0 Sig..+ (Sig.makeDelta $ eRestDischarge1 Sig..+ (Sig.makeDelta $ eRestLocalDischarge0 Sig..+ (Sig.makeDelta eRestLocalDischarge1))))
-    eIn = (eGasDischarge0 Sig..+ (Sig.makeDelta $ eGasDischarge1 Sig..+ (Sig.makeDelta $ eCoalDischarge0  Sig..+ (Sig.makeDelta eCoalDischarge1))))
+    eOut = (eRestDischarge0 Sig..+ (Sig.makeDelta $ eRestDischarge1 Sig..+ 
+                                    (Sig.makeDelta $ eRestLocalDischarge0 Sig..+ (Sig.makeDelta eRestLocalDischarge1))))
+    eIn = (eGasDischarge0 Sig..+ (Sig.makeDelta $ eGasDischarge1 Sig..+ 
+                                  (Sig.makeDelta $ eCoalDischarge0  Sig..+ (Sig.makeDelta eCoalDischarge1))))
+    
+etaSysMax::    Sig.NTestRow2 [] [] Double
+etaSysMax = Sig.zipWith max etaSysCharge etaSysDischarge  
+      
+maxEtaSysState :: Sig.UTTestRow2 [] [] Double
+maxEtaSysState = Sig.map fromIntegral $ Sig.sigMax2 etaSysCharge etaSysDischarge
+
+etaLoeCharge::    Sig.NTestRow [] Double
+etaLoeCharge =  Sig.map2 maximum (Sig.transpose2 $ Sig.changeSignalType etaSysCharge)
+
+etaLoeDischarge :: Sig.NTestRow [] Double
+etaLoeDischarge =  Sig.map2 maximum (Sig.transpose2 $ Sig.changeSignalType etaSysDischarge)
+
+indexLoeCharge::    Sig.UTTestRow [] Int
+indexLoeCharge =  Sig.map2 (\x -> Maybe.fromJust $ V.findIndex (maximum x == ) x) (Sig.transpose2 $ Sig.untype etaSysCharge)
+
+indexLoeDischarge::    Sig.UTTestRow [] Int
+indexLoeDischarge =  Sig.map2 (\x -> Maybe.fromJust $ V.findIndex (maximum x == ) x) (Sig.transpose2 $ Sig.untype etaSysDischarge)
+
+indexLoeChargePlot::    Sig.UTTestRow [] Double
+indexLoeChargePlot =  Sig.map fromIntegral indexLoeCharge
+
+indexLoeDischargePlot::    Sig.UTTestRow [] Double
+indexLoeDischargePlot =  Sig.map fromIntegral indexLoeDischarge
+
+powerLoeCharge::    Sig.PTestRow [] Double
+powerLoeCharge =  Sig.setType $ Sig.map (\x -> gasPower L.!! x) $ indexLoeCharge
+
+powerLoeDischarge::    Sig.PTestRow [] Double
+powerLoeDischarge =  Sig.setType $ Sig.map (\x -> gasPower L.!! x) $ indexLoeDischarge
+
+
+noLegend :: Int -> String
+noLegend =  (const "")
 
 legend :: Int -> String
 legend 0 = "Laden"
@@ -388,8 +413,16 @@ main = do
 
   IO.hSetEncoding IO.stdout IO.utf8
   
-  
+   tabPower <- Table.read "../simulation/maps/power.txt"
 
+   let restPower = CT.convertToSignal2D 
+                   (M.lookup "Rest" tabPower)
+       localPower = CT.convertToSignal2D 
+                   (M.lookup "RestLocal" tabPower)
+                   
+                   
+
+ 
   concurrentlyMany_ $ [
 {-    Draw.xterm $ Draw.topologyWithEdgeLabels System.edgeNamesOpt System.topologyOpt,
     putStrLn ("Number of possible flow states: " ++ show (length System.flowStatesOpt)),
@@ -412,10 +445,16 @@ main = do
     PlotIO.surface "Optimiere Laden - eRestLocalCharge1" DefaultTerm.cons id (const "") varX varY eRestLocalCharge1,
 -}                                                                                   
     
-    PlotIO.surface "Systemwirkungsgrad Laden" DefaultTerm.cons id (const "") varX varY etaSysDischarge,
-    PlotIO.surface "Systemwirkungsgrad Entladen" DefaultTerm.cons id (const "") varX varY etaSysCharge,
-    PlotIO.surface "Systemwirkungsgrad Laden" DefaultTerm.cons id (const "") varX varY etaSysDischarge,
-    PlotIO.surface "Systemwirkungsgrad Laden und Entladen" DefaultTerm.cons id legend varX varY [etaSysCharge, etaSysDischarge]]
+    PlotIO.surface "System Efficiency Charging" DefaultTerm.cons id (const "") varX varY etaSysDischarge,
+    PlotIO.surface "System Efficiency Discharging" DefaultTerm.cons id (const "") varX varY etaSysCharge,
+    PlotIO.surface "System Efficiency Charging and Discharging" DefaultTerm.cons id legend varX varY [etaSysCharge, etaSysDischarge],
+    PlotIO.surface "Maximum System Efficiency " DefaultTerm.cons id noLegend varX varY etaSysMax,
+    PlotIO.surface "Maximum System Efficiency " DefaultTerm.cons id noLegend varX varY maxEtaSysState,
+    PlotIO.xy "Efficiency on Loe" DefaultTerm.cons id noLegend varXSig [etaLoeCharge, etaLoeDischarge], 
+    PlotIO.xy "Loe Index" DefaultTerm.cons id noLegend varXSig [indexLoeChargePlot, indexLoeDischargePlot], 
+    PlotIO.xy "Loe GasPower" DefaultTerm.cons id noLegend varXSig [powerLoeCharge, powerLoeDischarge]
+    
+    ]
 
 
 

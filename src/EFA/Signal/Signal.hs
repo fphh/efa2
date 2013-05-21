@@ -280,7 +280,11 @@ type XSignal2 v2 v1 a = TC Signal (Typ A X Tt) (Data (v2 :> v1 :> Nil) a)
 
 type NSignal v a = TC Signal (Typ A N Tt) (Data (v :> Nil) a)
 
-type NTestRow v a = TC Signal (Typ A N Tt) (Data (v :> Nil) a)
+type NTestRow v a = TC TestRow (Typ A N Tt) (Data (v :> Nil) a)
+type PTestRow v a = TC TestRow (Typ A P Tt) (Data (v :> Nil) a)
+type FTestRow v a = TC TestRow (Typ A F Tt) (Data (v :> Nil) a)
+type UTTestRow v a = TC TestRow (Typ UT UT UT) (Data (v :> Nil) a)
+
 
 -- Flow Signals
 type FFSignal v a = TC FSignal (Typ A F Tt) (Data (v :> Nil) a)

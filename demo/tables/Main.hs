@@ -30,16 +30,14 @@ plot2D (x, y) = PlotIO.xy "test" Def.cons id (const "eta") x y
 main :: IO ()
 main = do
 
-  tabEn <- Table.read "engine.txt"
-  tabMo <- Table.read "motor.txt"
+  tabPower <- Table.read "../simulation/maps/power.txt"
 
-  let em3D =
-        CT.convertToSignal3D
-          (M.lookup "table2D_efficiencyMap" tabEn) :
-        CT.convertToSignal3D
-          (M.lookup "table2D_efficiencyMap_firstQuadrant" tabMo) :
-        []
+  let restPower = CT.convertToSignal2D 
+                   (M.lookup "Rest" tabPower)
+      localPower = CT.convertToSignal2D 
+                   (M.lookup "RestLocal" tabPower)
 
+  
       em2D =
         CT.convertToSignal3D2D
           (M.lookup "table2D_efficiencyMap" tabEn) :
