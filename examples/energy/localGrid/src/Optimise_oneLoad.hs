@@ -74,12 +74,11 @@ colours = [ Colors.White,
             Colors.Gray80,	
             Colors.Gray70 ]
 
-gasPower :: [Double]
-gasPower = [0, 0.1 .. 1]
-
 waterPower :: [Double]
 waterPower = [0,0.2 .. 1]
 
+gasPower :: [Double]
+gasPower = [0, 0.1 .. 1]
 
 powerScaleWater ::  Double
 powerScaleWater = 5
@@ -91,23 +90,23 @@ powerScaleTransformer ::  Double
 powerScaleTransformer = 1
 
 powerScaleCoal ::  Double
-powerScaleTransformer = 1  
+powerScaleCoal = 1  
   
 
-varXSig :: Sig.PTestRow [] Double
-varXSig = Sig.fromList waterPower
+varWaterPowerSig :: Sig.PTestRow [] Double
+varWaterPowerSig = Sig.fromList waterPower
 
-varYSig :: Sig.PTestRow [] Double
-varYSig = Sig.fromList gasPower
+varGasPowerSig :: Sig.PTestRow [] Double
+varGasPowerSig = Sig.fromList gasPower
 
-varX', varY' :: [[Double]]
-(varX', varY') = CT.varMat waterPower gasPower
+varWaterPower', varGasPower' :: [[Double]]
+(varWaterPower', varGasPower') = CT.varMat waterPower gasPower
 
-varX :: Sig.PSignal2 [] [] Double
-varX = Sig.fromList2 varX'
+varWaterPower :: Sig.PSignal2 [] [] Double
+varWaterPower = Sig.fromList2 varWaterPower'
 
-varY :: Sig.PSignal2 [] [] Double
-varY = Sig.fromList2 varY'
+varGasPower :: Sig.PSignal2 [] [] Double
+varGasPower = Sig.fromList2 varGasPower'
 
 noLegend :: Int -> String
 noLegend =  (const "")
@@ -136,31 +135,31 @@ main = do
    tabEta <- Table.read "../simulation/maps/eta.txt"
 
    let etaWaterCharge :: Double -> Double
-       etaWaterCharge = Sig.fromSample . Sig.interp1Lin "etaWaterCharge" xs (head ys) . Sig.toSample
+       etaWaterCharge = Sig.fromSample . Sig.interp1Lin "etaWaterCharge" (Sig.scale xs powerScaleWater) (head ys) . Sig.toSample
          where xs :: Sig.PSignal [] Double
                ys :: [Sig.NSignal [] Double]
                (xs,ys) = CT.convertToSignal2D (M.lookup "storage" tabEta)
                         
    let etaWaterDischarge :: Double -> Double
-       etaWaterDischarge = Sig.fromSample . Sig.interp1Lin "etaWaterDischarge" xs (head ys) . Sig.toSample
+       etaWaterDischarge = Sig.fromSample . Sig.interp1Lin "etaWaterDischarge" (Sig.scale xs powerScaleWater) (head ys) . Sig.toSample
          where xs :: Sig.PSignal [] Double
                ys :: [Sig.NSignal [] Double]
                (xs,ys) = CT.convertToSignal2D (M.lookup "storage" tabEta)
    
    let etaGas :: Double -> Double
-       etaGas = Sig.fromSample . Sig.interp1Lin "etaGas" xs (head ys) . Sig.toSample
+       etaGas = Sig.fromSample . Sig.interp1Lin "etaGas" (Sig.scale xs powerScaleGas) (head ys) . Sig.toSample
          where xs :: Sig.PSignal [] Double
                ys :: [Sig.NSignal [] Double]
                (xs,ys) = CT.convertToSignal2D (M.lookup "gas" tabEta)
                
    let etaCoal :: Double -> Double
-       etaCoal = Sig.fromSample . Sig.interp1Lin "etaCoal" (Sig.scale xs 5 )(head ys) . Sig.toSample
+       etaCoal = Sig.fromSample . Sig.interp1Lin "etaCoal" (Sig.scale xs powerScaleCoal) (head ys) . Sig.toSample
          where xs :: Sig.PSignal [] Double
                ys :: [Sig.NSignal [] Double]
                (xs,ys) = CT.convertToSignal2D (M.lookup "coal" tabEta)
    
    let etaTransHL :: Double -> Double
-       etaTransHL = Sig.fromSample . Sig.interp1Lin "etaTransHL" xs (head ys) . Sig.toSample
+       etaTransHL = Sig.fromSample . Sig.interp1Lin "etaTransHL" (Sig.scale xs powerScaleTransformer) (head ys) . Sig.toSample
          where xs :: Sig.PSignal [] Double
                ys :: [Sig.NSignal [] Double]
                (xs,ys) = CT.convertToSignal2D (M.lookup "transformer" tabEta)
@@ -175,7 +174,7 @@ main = do
                      (EqRec.Absolute (Result Double))
                      (EqRec.Absolute (Result Double))))
 
-     envsCharge = Sig.fromList2 $ zipWith (zipWith (Optimisation.solveCharge etaWaterCharge etaCoal etaGas etaTransHL 1 1)) varX' varY'
+     envsCharge = Sig.fromList2 $ zipWith (zipWith (Optimisation.solveCharge etaWaterCharge etaCoal etaGas etaTransHL 1 1)) varWaterPower' varGasPower'
 
 
      envsDischarge :: Sig.UTTestRow2 [] []
@@ -183,7 +182,7 @@ main = do
                       Node
                       (EqRec.Absolute (Result Double))
                       (EqRec.Absolute (Result Double))))
-     envsDischarge = Sig.fromList2 $ zipWith (zipWith (Optimisation.solveDischarge etaWaterDischarge etaCoal etaGas etaTransHL 1 1)) varX' varY'
+     envsDischarge = Sig.fromList2 $ zipWith (zipWith (Optimisation.solveDischarge etaWaterDischarge etaCoal etaGas etaTransHL 1 1)) varWaterPower' varGasPower'
 
 
    -- Extract interesting values
@@ -330,21 +329,21 @@ powerLoeDischarge =  Sig.setType $ Sig.map (\x -> gasPower L.!! x) $ indexLoeDis
      Draw.sequFlowGraphAbsWithEnv System.seqTopoOpt $ 
      EqGen.solve System.seqTopoOpt $ Optimisation.givenDischarging etaWaterCharge etaCoal etaGas etaTransHL 1 1 1 1,
      
-     PlotIO.surface "Optimiere Laden - eRestCharge0" DefaultTerm.cons id (const "") varX varY eRestCharge0,
-     PlotIO.surface "Optimiere Laden - eRestCharge1" DefaultTerm.cons id (const "") varX varY eRestCharge0,
-     PlotIO.surface "Optimiere Laden - eRestLocalCharge0" DefaultTerm.cons id (const "") varX varY eRestLocalCharge0,
-     PlotIO.surface "Optimiere Laden - eRestLocalCharge1" DefaultTerm.cons id (const "") varX varY eRestLocalCharge1,
+     PlotIO.surface "Optimiere Laden - eRestCharge0" DefaultTerm.cons id (const "") varWaterPower varGasPower eRestCharge0,
+     PlotIO.surface "Optimiere Laden - eRestCharge1" DefaultTerm.cons id (const "") varWaterPower varGasPower eRestCharge0,
+     PlotIO.surface "Optimiere Laden - eRestLocalCharge0" DefaultTerm.cons id (const "") varWaterPower varGasPower eRestLocalCharge0,
+     PlotIO.surface "Optimiere Laden - eRestLocalCharge1" DefaultTerm.cons id (const "") varWaterPower varGasPower eRestLocalCharge1,
      
      
-     PlotIO.surface "System Efficiency Charging" DefaultTerm.cons id (const "") varX varY etaSysDischarge,
-     PlotIO.surface "System Efficiency Discharging" DefaultTerm.cons id (const "") varX varY etaSysCharge,
-     PlotIO.surface "System Efficiency Charging and Discharging" DefaultTerm.cons id legend varX varY [etaSysCharge, etaSysDischarge]]
+     PlotIO.surface "System Efficiency Charging" DefaultTerm.cons id (const "") varWaterPower varGasPower etaSysDischarge,
+     PlotIO.surface "System Efficiency Discharging" DefaultTerm.cons id (const "") varWaterPower varGasPower etaSysCharge,
+     PlotIO.surface "System Efficiency Charging and Discharging" DefaultTerm.cons id legend varWaterPower varGasPower [etaSysCharge, etaSysDischarge]]
 {-
-    PlotIO.surface "Maximum System Efficiency " DefaultTerm.cons id noLegend varX varY etaSysMax,
-    PlotIO.surface "Maximum System Efficiency " DefaultTerm.cons id noLegend varX varY maxEtaSysState,
-    PlotIO.xy "Efficiency on Loe" DefaultTerm.cons id noLegend varXSig [etaLoeCharge, etaLoeDischarge], 
-    PlotIO.xy "Loe Index" DefaultTerm.cons id noLegend varXSig [indexLoeChargePlot, indexLoeDischargePlot], 
-    PlotIO.xy "Loe GasPower" DefaultTerm.cons id noLegend varXSig [powerLoeCharge, powerLoeDischarge]
+    PlotIO.surface "Maximum System Efficiency " DefaultTerm.cons id noLegend varWaterPower varGasPower etaSysMax,
+    PlotIO.surface "Maximum System Efficiency " DefaultTerm.cons id noLegend varWaterPower varGasPower maxEtaSysState,
+    PlotIO.xy "Efficiency on Loe" DefaultTerm.cons id noLegend varWaterPowerSig [etaLoeCharge, etaLoeDischarge], 
+    PlotIO.xy "Loe Index" DefaultTerm.cons id noLegend varWaterPowerSig [indexLoeChargePlot, indexLoeDischargePlot], 
+    PlotIO.xy "Loe GasPower" DefaultTerm.cons id noLegend varWaterPowerSig [powerLoeCharge, powerLoeDischarge]
     ]
 
 -}

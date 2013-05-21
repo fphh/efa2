@@ -1,5 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-
+{-# LANGUAGE TypeOperators #-}
 module Main where
 
 
@@ -8,8 +8,8 @@ import qualified Modules.System as System
 import Modules.System (Node(..))
 --import qualified Modules.Analysis as Analysis
 import qualified Modules.Optimisation as Optimisation
-import Modules.Optimisation (sec0,sec1)
-import Modules.Utility as ModUt
+--import Modules.Optimisation (sec0,sec1)
+--import Modules.Utility as ModUt
 
 
 --import qualified EFA.Signal.Record as Record
@@ -18,7 +18,7 @@ import qualified EFA.Graph.Draw as Draw
 --import EFA.IO.PLTImport (modelicaPLTImport)
 import qualified EFA.Signal.Signal as Sig
 --import qualified EFA.Signal.Vector as V
---import EFA.Signal.Data (Data(..), Nil)
+--import EFA.Signal.Data (Data(..), Nil, (:>))
 --import EFA.Signal.Typ (Typ, F, T, A, Tt)
 --import qualified EFA.Signal.SequenceData as SD
 --import qualified EFA.Utility as Utility
@@ -32,14 +32,14 @@ import qualified EFA.Signal.Signal as Sig
 --import qualified EFA.Equation.Arithmetic as Arith
 --import qualified EFA.Equation.Environment as Env
 -- import qualified EFA.Signal.ConvertTable as Table
-import qualified EFA.Example.Absolute as EqGen
-import qualified EFA.Example.Index as XIdx
+--import qualified EFA.Example.Absolute as EqGen
+--import qualified EFA.Example.Index as XIdx
 --import qualified EFA.Graph.Topology.Index as TIdx
 import qualified EFA.Equation.Environment as EqEnv
 import qualified EFA.Equation.Record as EqRec
 import EFA.Equation.Result (Result(..))
 --import EFA.Utility.Map (checkedLookup)
-import qualified EFA.Signal.PlotIO as PlotIO
+--import qualified EFA.Signal.PlotIO as PlotIO
 
 import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 import qualified Data.GraphViz.Attributes.Colors.X11 as Colors
@@ -73,13 +73,40 @@ colours = [ Colors.White,
             Colors.Gray90,	
             Colors.Gray80,	
             Colors.Gray70 ]
+          
+-- ################### Vary Operation Demand
 
-gasPower :: [Double]
-gasPower = [0, 0.1 .. 1]
+restPower :: [Double]
+restPower = [0, 0.1 .. 0.9]
+
+localPower :: [Double]
+localPower = [0, 0.1 .. 0.8]
+
+varRestPower', varLocalPower' :: [[Double]]
+(varRestPower', varLocalPower') = CT.varMat restPower localPower
+
+restPowerScale :: Double
+restPowerScale = 1
+
+localPowerScale :: Double
+localPowerScale = 1
+
+varRestPower :: Sig.PSignal2 [] [] Double
+varRestPower = Sig.fromList2 varRestPower'
+
+varLocalPower :: Sig.PSignal2 [] [] Double
+varLocalPower = Sig.fromList2 varLocalPower'
+
+
+
+
+-- ################### Vary Degrees of Freedom
 
 waterPower :: [Double]
 waterPower = [0,0.2 .. 1]
 
+gasPower :: [Double]
+gasPower = [0, 0.1 .. 1]
 
 powerScaleWater ::  Double
 powerScaleWater = 5
@@ -91,23 +118,22 @@ powerScaleTransformer ::  Double
 powerScaleTransformer = 1
 
 powerScaleCoal ::  Double
-powerScaleTransformer = 1  
+powerScaleCoal = 1  
   
+varWaterPowerSig :: Sig.PTestRow [] Double
+varWaterPowerSig = Sig.fromList waterPower
 
-varXSig :: Sig.PTestRow [] Double
-varXSig = Sig.fromList waterPower
+varGasPowerSig :: Sig.PTestRow [] Double
+varGasPowerSig = Sig.fromList gasPower
 
-varYSig :: Sig.PTestRow [] Double
-varYSig = Sig.fromList gasPower
+varWaterPower', varGasPower' :: [[Double]]
+(varWaterPower', varGasPower') = CT.varMat waterPower gasPower
 
-varX', varY' :: [[Double]]
-(varX', varY') = CT.varMat waterPower gasPower
+varWaterPower :: Sig.PSignal2 [] [] Double
+varWaterPower = Sig.fromList2 varWaterPower'
 
-varX :: Sig.PSignal2 [] [] Double
-varX = Sig.fromList2 varX'
-
-varY :: Sig.PSignal2 [] [] Double
-varY = Sig.fromList2 varY'
+varGasPower :: Sig.PSignal2 [] [] Double
+varGasPower = Sig.fromList2 varGasPower'
 
 noLegend :: Int -> String
 noLegend =  (const "")
@@ -117,16 +143,9 @@ legend 0 = "Laden"
 legend 1 = "Entladen"
 legend _ = "Undefined"
 
-legendEnergy :: Int -> String
-legendEnergy 0 = "eRest0" 
-legendEnergy 1 = "eRestLocal0" 
-legendEnergy 2 = "eGas0" 
-legendEnergy 3 = "eCoal0" 
-legendEnergy 4 = "eRest1" 
-legendEnergy 5 = "eRestLocal1" 
-legendEnergy 6 = "eGas1" 
-legendEnergy 7 = "eCoal1" 
-legendEnergy _ = "Undefined"
+
+                 
+
 
 main :: IO ()
 main = do
@@ -136,107 +155,85 @@ main = do
    tabEta <- Table.read "../simulation/maps/eta.txt"
 
    let etaWaterCharge :: Double -> Double
-       etaWaterCharge = Sig.fromSample . Sig.interp1Lin "etaWaterCharge" xs (head ys) . Sig.toSample
+       etaWaterCharge = Sig.fromSample . Sig.interp1Lin "etaWaterCharge" (Sig.scale xs powerScaleWater) (head ys) . Sig.toSample
          where xs :: Sig.PSignal [] Double
                ys :: [Sig.NSignal [] Double]
                (xs,ys) = CT.convertToSignal2D (M.lookup "storage" tabEta)
                         
    let etaWaterDischarge :: Double -> Double
-       etaWaterDischarge = Sig.fromSample . Sig.interp1Lin "etaWaterDischarge" xs (head ys) . Sig.toSample
+       etaWaterDischarge = Sig.fromSample . Sig.interp1Lin "etaWaterDischarge" (Sig.scale xs powerScaleWater) (head ys) . Sig.toSample
          where xs :: Sig.PSignal [] Double
                ys :: [Sig.NSignal [] Double]
                (xs,ys) = CT.convertToSignal2D (M.lookup "storage" tabEta)
    
    let etaGas :: Double -> Double
-       etaGas = Sig.fromSample . Sig.interp1Lin "etaGas" xs (head ys) . Sig.toSample
+       etaGas = Sig.fromSample . Sig.interp1Lin "etaGas" (Sig.scale xs powerScaleGas) (head ys) . Sig.toSample
          where xs :: Sig.PSignal [] Double
                ys :: [Sig.NSignal [] Double]
                (xs,ys) = CT.convertToSignal2D (M.lookup "gas" tabEta)
                
    let etaCoal :: Double -> Double
-       etaCoal = Sig.fromSample . Sig.interp1Lin "etaCoal" (Sig.scale xs 5 )(head ys) . Sig.toSample
+       etaCoal = Sig.fromSample . Sig.interp1Lin "etaCoal" (Sig.scale xs powerScaleCoal) (head ys) . Sig.toSample
          where xs :: Sig.PSignal [] Double
                ys :: [Sig.NSignal [] Double]
                (xs,ys) = CT.convertToSignal2D (M.lookup "coal" tabEta)
    
    let etaTransHL :: Double -> Double
-       etaTransHL = Sig.fromSample . Sig.interp1Lin "etaTransHL" xs (head ys) . Sig.toSample
+       etaTransHL = Sig.fromSample . Sig.interp1Lin "etaTransHL" (Sig.scale xs powerScaleTransformer) (head ys) . Sig.toSample
          where xs :: Sig.PSignal [] Double
                ys :: [Sig.NSignal [] Double]
                (xs,ys) = CT.convertToSignal2D (M.lookup "transformer" tabEta)
 
    let 
+     
+     -- | Search DOF (Degree of Fredom) Space
+     searchCharge :: Double -> 
+                     Double -> 
+                     Sig.UTTestRow2 [] [] 
+                     (EqEnv.Complete  
+                       Node
+                       (EqRec.Absolute (Result Double))
+                       (EqRec.Absolute (Result Double)))
 
-     -- | Defining the given Variables for each Section
-
-     envsCharge :: Sig.UTTestRow2 [] [] 
-                   ((EqEnv.Complete  
-                     Node
-                     (EqRec.Absolute (Result Double))
-                     (EqRec.Absolute (Result Double))))
-
-     envsCharge = Sig.fromList2 $ zipWith (zipWith (Optimisation.solveCharge etaWaterCharge etaCoal etaGas etaTransHL 1 1)) varX' varY'
-
-
-     envsDischarge :: Sig.UTTestRow2 [] []
-                    ((EqEnv.Complete  
-                      Node
-                      (EqRec.Absolute (Result Double))
-                      (EqRec.Absolute (Result Double))))
-     envsDischarge = Sig.fromList2 $ zipWith (zipWith (Optimisation.solveDischarge etaWaterDischarge etaCoal etaGas etaTransHL 1 1)) varX' varY'
-
-
-   -- Extract interesting values
-
-     eGasCharge0 :: Sig.FTestRow2 [] [] Double
-     eGasCharge0 = Sig.setType $ Sig.map (ModUt.lookupAbsEnergy (XIdx.energy sec0 Gas LocalNetwork)) envsCharge
-
-     eCoalCharge0 :: Sig.FTestRow2 [] [] Double
-     eCoalCharge0 = Sig.setType $ Sig.map (ModUt.lookupAbsEnergy (XIdx.energy sec0 Coal Network)) envsCharge
-
-     eRestCharge0 :: Sig.FTestRow2 [] [] Double
-     eRestCharge0 = Sig.setType $ Sig.map (ModUt.lookupAbsEnergy (XIdx.energy sec0 Rest Network)) envsCharge
-
-     eRestLocalCharge0 :: Sig.FTestRow2 [] [] Double
-     eRestLocalCharge0 = Sig.setType $Sig.map (ModUt.lookupAbsEnergy (XIdx.energy sec0 LocalRest LocalNetwork)) envsCharge
-                       
-     eGasCharge1 :: Sig.FTestRow2 [] [] Double
-     eGasCharge1 = Sig.setType $Sig.map (ModUt.lookupAbsEnergy (XIdx.energy sec1 Gas LocalNetwork)) envsCharge
-
-     eCoalCharge1 :: Sig.FTestRow2 [] [] Double
-     eCoalCharge1 = Sig.setType $ Sig.map (ModUt.lookupAbsEnergy (XIdx.energy sec1 Coal Network)) envsCharge
-
-     eRestCharge1 :: Sig.FTestRow2 [] [] Double
-     eRestCharge1 = Sig.setType $ Sig.map (lookupAbsEnergy (XIdx.energy sec1 Rest Network)) envsCharge
-
-     eRestLocalCharge1 :: Sig.FTestRow2 [] [] Double
-     eRestLocalCharge1 = Sig.setType $ Sig.map (lookupAbsEnergy (XIdx.energy sec1 LocalRest LocalNetwork)) envsCharge
-
-     eGasDischarge0 :: Sig.FTestRow2 [] [] Double
-     eGasDischarge0 = Sig.setType $ Sig.map (ModUt.lookupAbsEnergy (XIdx.energy sec0 Gas LocalNetwork)) envsDischarge
-
-     eCoalDischarge0 :: Sig.FTestRow2 [] [] Double
-     eCoalDischarge0 = Sig.setType $ Sig.map (ModUt.lookupAbsEnergy (XIdx.energy sec0 Coal Network)) envsDischarge
-
-     eRestDischarge0 :: Sig.FTestRow2 [] [] Double
-     eRestDischarge0 = Sig.setType $ Sig.map (ModUt.lookupAbsEnergy (XIdx.energy sec0 Rest Network)) envsDischarge
-
-     eRestLocalDischarge0 :: Sig.FTestRow2 [] [] Double
-     eRestLocalDischarge0 = Sig.setType $Sig.map (ModUt.lookupAbsEnergy (XIdx.energy sec0 LocalRest LocalNetwork)) envsDischarge
-                          
-     eGasDischarge1 :: Sig.FTestRow2 [] [] Double
-     eGasDischarge1 = Sig.setType $ Sig.map (ModUt.lookupAbsEnergy (XIdx.energy sec1 Gas LocalNetwork)) envsDischarge
-
-     eCoalDischarge1 :: Sig.FTestRow2 [] [] Double
-     eCoalDischarge1 = Sig.setType $ Sig.map (ModUt.lookupAbsEnergy (XIdx.energy sec1 Coal Network)) envsDischarge
-
-     eRestDischarge1 :: Sig.FTestRow2 [] [] Double
-     eRestDischarge1 = Sig.setType $ Sig.map (ModUt.lookupAbsEnergy (XIdx.energy sec1 Rest Network)) envsDischarge
+     searchCharge rPower lPower = Sig.fromList2 $ 
+                                         zipWith (zipWith (Optimisation.solveCharge 
+                                                           etaWaterCharge etaCoal etaGas 
+                                                           etaTransHL rPower lPower)) 
+                                         varWaterPower' varGasPower'
+     
+    -- Search all Configuration Optimations
+     searchDischarge :: Double -> 
+                        Double -> 
+                        Sig.UTTestRow2 [] []
+                        ((EqEnv.Complete  
+                          Node
+                          (EqRec.Absolute (Result Double))
+                          (EqRec.Absolute (Result Double))))
+     searchDischarge rPower lPower = Sig.fromList2 $ 
+                                            zipWith (zipWith (Optimisation.solveDischarge 
+                                                              etaWaterDischarge etaCoal etaGas 
+                                                              etaTransHL rPower lPower)) 
+                                            varWaterPower' varGasPower'
+     
+    -- | Map Operation space room
+     mapCharge :: Sig.UTTestRow2 [] [] (Sig.UTTestRow2 [] []
+                         (EqEnv.Complete  
+                           Node
+                           (EqRec.Absolute (Result  Double))
+                           (EqRec.Absolute (Result  Double))))
+     mapCharge = Sig.fromList2 $ zipWith (zipWith searchCharge ) varRestPower' varLocalPower'
 
 
-     eRestLocalDischarge1 :: Sig.FTestRow2 [] [] Double
-     eRestLocalDischarge1 = Sig.setType $ Sig.map (ModUt.lookupAbsEnergy (XIdx.energy sec1 LocalRest LocalNetwork)) envsDischarge
+     mapDischarge :: Sig.UTTestRow2 [] [] (Sig.UTTestRow2 [] []
+                           (EqEnv.Complete  
+                             Node
+                             (EqRec.Absolute (Result Double))
+                             (EqRec.Absolute (Result Double))))
+     mapDischarge = Sig.fromList2 $ zipWith (zipWith searchDischarge ) varRestPower' varLocalPower'
 
+ 
+
+{-
      etaSysCharge :: Sig.NTestRow2 [] [] Double
      etaSysCharge = eOut Sig../ eIn
        where
@@ -256,36 +253,7 @@ main = do
      etaSysMax::    Sig.NTestRow2 [] [] Double
      etaSysMax = Sig.zipWith max etaSysCharge etaSysDischarge  
                 
-{-
-maxEtaSysState :: Sig.UTTestRow2 [] [] Double
-maxEtaSysState = Sig.map fromIntegral $ Sig.sigMax2 etaSysCharge etaSysDischarge
-
-etaLoeCharge::    Sig.NTestRow [] Double
-etaLoeCharge =  Sig.map2 maximum (Sig.transpose2 $ Sig.changeSignalType etaSysCharge)
-
-etaLoeDischarge :: Sig.NTestRow [] Double
-etaLoeDischarge =  Sig.map2 maximum (Sig.transpose2 $ Sig.changeSignalType etaSysDischarge)
-
-indexLoeCharge::    Sig.UTTestRow [] Int
-indexLoeCharge =  Sig.map2 (\x -> Maybe.fromJust $ V.findIndex (maximum x == ) x) (Sig.transpose2 $ Sig.untype etaSysCharge)
-
-indexLoeDischarge::    Sig.UTTestRow [] Int
-indexLoeDischarge =  Sig.map2 (\x -> Maybe.fromJust $ V.findIndex (maximum x == ) x) (Sig.transpose2 $ Sig.untype etaSysDischarge)
-
-indexLoeChargePlot::    Sig.UTTestRow [] Double
-indexLoeChargePlot =  Sig.map fromIntegral indexLoeCharge
-
-indexLoeDischargePlot::    Sig.UTTestRow [] Double
-indexLoeDischargePlot =  Sig.map fromIntegral indexLoeDischarge
-
-powerLoeCharge::    Sig.PTestRow [] Double
-powerLoeCharge =  Sig.setType $ Sig.map (\x -> gasPower L.!! x) $ indexLoeCharge
-
-powerLoeDischarge::    Sig.PTestRow [] Double
-powerLoeDischarge =  Sig.setType $ Sig.map (\x -> gasPower L.!! x) $ indexLoeDischarge
 -}
-
-
  
 
  
@@ -296,56 +264,5 @@ powerLoeDischarge =  Sig.setType $ Sig.map (\x -> gasPower L.!! x) $ indexLoeDis
      
      Draw.xterm $ Draw.flowTopologies (take 20 System.flowStatesOpt),
      
-     Draw.xterm $ Draw.sequFlowGraph System.seqTopoOpt,
-
-     Draw.xterm $ Draw.title "Optimise Charging00" $ 
-     Draw.sequFlowGraphAbsWithEnv System.seqTopoOpt $ 
-     EqGen.solve System.seqTopoOpt $ Optimisation.givenCharging etaWaterCharge etaCoal etaGas etaTransHL 1 1 0 0,
-     
-     Draw.xterm $ Draw.title "Optimise Charging01" $ 
-     Draw.sequFlowGraphAbsWithEnv System.seqTopoOpt $ 
-     EqGen.solve System.seqTopoOpt $ Optimisation.givenCharging etaWaterCharge etaCoal etaGas etaTransHL 1 1 0 1,
-     
-     Draw.xterm $ Draw.title "Optimise Charging10" $ 
-     Draw.sequFlowGraphAbsWithEnv System.seqTopoOpt $ 
-     EqGen.solve System.seqTopoOpt $ Optimisation.givenCharging etaWaterCharge etaCoal etaGas etaTransHL 1 1 1 0,
-     
-     Draw.xterm $ Draw.title "Optimise Charging11" $ 
-     Draw.sequFlowGraphAbsWithEnv System.seqTopoOpt $ 
-     EqGen.solve System.seqTopoOpt $ Optimisation.givenCharging etaWaterCharge etaCoal etaGas etaTransHL 1 1 1 1,
-     
-     Draw.xterm $ Draw.title "Optimise Discharging00" $ 
-     Draw.sequFlowGraphAbsWithEnv System.seqTopoOpt $ 
-     EqGen.solve System.seqTopoOpt $ Optimisation.givenDischarging etaWaterCharge etaCoal etaGas etaTransHL 1 1 0 0,
-     
-     Draw.xterm $ Draw.title "Optimise Discharging01" $ 
-     Draw.sequFlowGraphAbsWithEnv System.seqTopoOpt $ 
-     EqGen.solve System.seqTopoOpt $ Optimisation.givenDischarging etaWaterCharge etaCoal etaGas etaTransHL 1 1 0 1,
-     
-     Draw.xterm $ Draw.title "Optimise Discharging10" $ 
-     Draw.sequFlowGraphAbsWithEnv System.seqTopoOpt $ 
-     EqGen.solve System.seqTopoOpt $ Optimisation.givenDischarging etaWaterCharge etaCoal etaGas etaTransHL 1 1 1 0,
-     
-     Draw.xterm $ Draw.title "Optimise Discharging11" $ 
-     Draw.sequFlowGraphAbsWithEnv System.seqTopoOpt $ 
-     EqGen.solve System.seqTopoOpt $ Optimisation.givenDischarging etaWaterCharge etaCoal etaGas etaTransHL 1 1 1 1,
-     
-     PlotIO.surface "Optimiere Laden - eRestCharge0" DefaultTerm.cons id (const "") varX varY eRestCharge0,
-     PlotIO.surface "Optimiere Laden - eRestCharge1" DefaultTerm.cons id (const "") varX varY eRestCharge0,
-     PlotIO.surface "Optimiere Laden - eRestLocalCharge0" DefaultTerm.cons id (const "") varX varY eRestLocalCharge0,
-     PlotIO.surface "Optimiere Laden - eRestLocalCharge1" DefaultTerm.cons id (const "") varX varY eRestLocalCharge1,
-     
-     
-     PlotIO.surface "System Efficiency Charging" DefaultTerm.cons id (const "") varX varY etaSysDischarge,
-     PlotIO.surface "System Efficiency Discharging" DefaultTerm.cons id (const "") varX varY etaSysCharge,
-     PlotIO.surface "System Efficiency Charging and Discharging" DefaultTerm.cons id legend varX varY [etaSysCharge, etaSysDischarge]]
-{-
-    PlotIO.surface "Maximum System Efficiency " DefaultTerm.cons id noLegend varX varY etaSysMax,
-    PlotIO.surface "Maximum System Efficiency " DefaultTerm.cons id noLegend varX varY maxEtaSysState,
-    PlotIO.xy "Efficiency on Loe" DefaultTerm.cons id noLegend varXSig [etaLoeCharge, etaLoeDischarge], 
-    PlotIO.xy "Loe Index" DefaultTerm.cons id noLegend varXSig [indexLoeChargePlot, indexLoeDischargePlot], 
-    PlotIO.xy "Loe GasPower" DefaultTerm.cons id noLegend varXSig [powerLoeCharge, powerLoeDischarge]
-    ]
-
--}
+     Draw.xterm $ Draw.sequFlowGraph System.seqTopoOpt]
 
