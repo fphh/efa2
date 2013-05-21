@@ -140,7 +140,7 @@ Executable test-efa
     EFA.Test.MultiValue
     EFA.Test.Stack
     EFA.Test.Arithmetic
-
+    EFA.CustomTest.EquationSystem.EquationSystem
 
 Executable example-sequenzflussgraph
   Main-Is: examples/elementary/sequenzflussgraph/Main.hs

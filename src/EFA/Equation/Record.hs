@@ -37,7 +37,7 @@ lookupSignal (Idx.Record r v) =
    fmap (Accessor.get (access r)) . Env.lookupSignal v
 
 
-newtype Absolute a = Absolute {unAbsolute :: a} deriving (Show)
+newtype Absolute a = Absolute {unAbsolute :: a} deriving (Show, Eq)
 
 instance FormatValue a => FormatValue (Absolute a) where
    formatValue (Absolute a) = formatValue a
