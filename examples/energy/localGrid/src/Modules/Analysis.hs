@@ -7,15 +7,27 @@ module Modules.Analysis where
 ----------------------------------
 -- * Example Specific Imports
 import qualified Modules.System as System
+--import Modules.System (Node(..))
+
 import Modules.Signals as Signals
 
 import qualified EFA.Example.Absolute as EqAbs
+--import qualified EFA.Graph.Topology.Index as TIdx
+--import qualified EFA.Equation.Environment as EqEnv
+--import qualified EFA.Equation.Record as EqRec
+import EFA.Equation.Result (Result(..))
+--import EFA.Utility.Map (checkedLookup)
 
 import qualified EFA.Example.Index as XIdx
 
 import EFA.Example.Utility ((.=))
                             -- (%=),
                             -- checkDetermined)
+-- import qualified EFA.Example.Absolute ( (.=), (%=), (=.=) )
+--import EFA.Utility.Stream (Stream((:~)))
+--import qualified EFA.Utility.Stream as Stream
+import Data.Monoid (--mconcat, 
+                    (<>))
 
 import qualified EFA.Equation.System as EqGen
 -- import qualified EFA.Equation.Variable as Var
@@ -24,7 +36,7 @@ import qualified EFA.Equation.Arithmetic as Arith
 -- import qualified EFA.Equation.Stack as Stack
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Record as EqRecord
-import EFA.Equation.Result (Result(..))
+--import EFA.Equation.Result (Result(..))
 -- import EFA.Equation.Stack (Stack)
 
 import qualified EFA.Signal.SequenceData as SD
@@ -61,10 +73,10 @@ import EFA.Signal.Typ (Typ, F, T, A, Tt)
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as TD
-import qualified EFA.Graph.Topology.Node as TDNode
+--import qualified EFA.Graph.Topology.Node as TDNode
 import qualified EFA.Graph.Flow as Flow
 import qualified Data.Map as M
-import Data.Monoid ((<>))
+--import Data.Monoid ((<>))
                     --mempty)
 
 import Data.Foldable (fold)
@@ -82,21 +94,6 @@ import Data.Foldable (fold)
 
 --import qualified EFA.Equation.Record as EqRecord
 
-{-
-newtype Settings = Settings {filePath :: FileName,
-                             fileNames :: [FileName],
-                             recordNames :: [RecordName],
-                             zeroToleranz :: Double,
-                             filterTime ::  TC Scalar (Typ A T Tt) (Data Nil Double),
-                             filterEnergy :: TC Scalar (Typ A F Tt) (Data Nil Double),
-                             deltaSectionMapping :: [Int]
-                            }
--}
--------------------------------------------------------------------------------------------------
-{-
-sec2 :: Idx.Section
-sec2 = Idx.Section 2
--}
 -------------------------------------------------------------------------------------------------
 -- ## Preprocessing of Signals
 
@@ -152,21 +149,6 @@ pre topology epsZero epsT epsE rawSignals =
         in  (flowState, Flow.adjustSigns topology flowState state))
       sequenceFlowsFilt
 
-{-
-
--- New Approach with Utility-Funktions from HT - the challenges:
-
-1. scalar value are in the moment double / signals are in data container. Best to move both to container
-2. switch to dTime with fmap Record.diffTime
-2. make delta - Analysis from two envs
-
-external sequenceFlowTopology sequFlowRecord =  EqGen.solveFromMeasurement sequenceFlowTopology $ makeGivenFromExternal Idx.Absolute sequFlowRecord
-
-initStorage :: (Fractional a) => a
-initStorage = 0.7*3600*1000
-
-makeGivenFromExternal idx sf = EqGen.fromEnvSignal . EqAbs.envFromFlowRecord $ sf
--}
 -------------------------------------------------------------------------------------------------
 -- ## Analyse External Energy Flow
 
@@ -258,61 +240,6 @@ makeGivenFromExternal2 sf =
       (Idx.absolute (XIdx.storage Idx.initial System.Water) .= Data initStorage) <>
       (EqGen.fromEnvSignal $ EqAbs.envFromFlowRecord (fmap Record.diffTime sf))
 
--------------------------------------------------------------------------------------------------
--- ## Predict Energy Flow
-{-
-prediction ::
-   (Eq v, Eq a,
-    Fractional v, Fractional a,
-    Arith.Product a, Arith.Product v,
-    Arith.Integrate v, Arith.Scalar v ~ a) =>
-  Flow.RangeGraph System.Node ->
-   Env.Complete System.Node
-      (EqRecord.Absolute (Result a))
-      (EqRecord.Absolute (Result v)) ->
-   Env.Complete System.Node
-      (EqRecord.Absolute (Result a))
-      (EqRecord.Absolute (Result v))
-prediction sequenceFlowTopology env =
-   EqGen.solve sequenceFlowTopology (makeGivenForPrediction Idx.Absolute env)
-
-makeGivenForPrediction ::
-   (Eq v, Eq a,
-    Fractional v, Fractional a,
-    Arith.Sum v, Arith.Sum a,
-    EqGen.Record rec,
-    EqRecord.ToIndex rec ~ idx) =>
-   idx ->
-   Env.Complete System.Node (rec (Result a)) (rec (Result v)) ->
-   EqGen.EquationSystem rec System.Node s a v
-
-makeGivenForPrediction idx env =
-    (Idx.Record idx (XIdx.storage Idx.initial System.Battery) .= initStorage)
-    <> (Idx.Record idx (XIdx.storage Idx.initial System.VehicleInertia) .= 0)
---    <> (foldMap f $ M.toList $ Env.etaMap $ Env.scalar env) -- hier müssen rote-Kante Gleichungen erzeugt werden
-    <> (foldMap f $ M.toList $ Env.etaMap $ Env.signal env)
-    <> (foldMap f $ M.toList $ Env.dtimeMap $ Env.signal env)
-    <> (foldMap f $ M.toList $ M.mapWithKey h $ M.filterWithKey i $ M.filterWithKey g $
-                               Env.energyMap $ Env.signal env)
-    where f (j, x)  =  j %= fmap (\(EqGen.Determined y) -> y) x
-          g (Idx.InSection _ (Idx.Energy (Idx.StructureEdge x y))) _  =
-             case (x,y) of
-                (System.Tank, System.ConBattery) -> True
-                (System.Resistance, System.Chassis) -> True
-                (System.VehicleInertia, System.Chassis) -> True
-                (System.RearBrakes, System.Chassis) -> True
-                (System.FrontBrakes, System.ConFrontBrakes) -> True
-                (System.ConES, System.ElectricSystem) -> True
-           --     (System.Battery, System.ConBattery) -> True
-                _ -> False
-          h (Idx.InSection _ (Idx.Energy (Idx.StructureEdge System.Resistance System.Chassis))) x =
-               fmap (fmap (*1.1)) x
-          h _ r = r
-          i _ _ = True
---         i (Idx.InSection (Idx.Section sec) (Idx.Energy (Idx.StructureEdge x y))) _ | sec == 18 || x == System.Tank || y == System.ConBattery = False
---          i (Idx.InSection (Idx.Section sec) (Idx.Energy (Idx.StructureEdge x y))) _ | otherwise = True
--}
-
 ---------------------------------------------------------------------------------------------------
 -- ## Make Delta
 
@@ -338,71 +265,8 @@ delta sequenceFlowTopology sequenceFlow sequenceFlow'=
   EqGen.solveFromMeasurement sequenceFlowTopology $
     ( makeGivenFromExternal Idx.Before sequenceFlow <>
       makeGivenFromExternal Idx.After sequenceFlow')
-{-
-------------------------------------------------------------------
--- ## Make Difference Analysis
 
 
-type
-   EquationSystemNumeric s =
-      EqAbs.EquationSystem System.Node s
-         (Stack (Var.Any System.Node) Double)
-         (Stack (Var.Any System.Node) Double)
-
-type DeltaResult = EqRecord.Delta (R.Result Double)
 
 
-infix 0 .==
 
-(.==) ::
-  (Eq x, Arith.Sum x, x ~ Env.Element idx a v,
-   Env.AccessMap idx, Ord (idx node)) =>
-   idx node -> x ->
-   EqAbs.EquationSystem node s a v
-(.==) = (EqAbs..=)
-
-deltaPair ::
-   (Ord (idx System.Node), Env.AccessSignalMap idx) =>
-   Idx.InSection idx System.Node -> Double -> Double -> EquationSystemNumeric s
-deltaPair idx before delt =
-   idx .== Stack.deltaPair (Var.Signal $ Var.index idx) before delt
-
-difference ::
-   Flow.RangeGraph System.Node ->
-   Env.Complete System.Node DeltaResult DeltaResult ->
-   Env.Complete System.Node
-      (EqRecord.Absolute (Result (Stack (Var.Any System.Node) Double)))
-      (EqRecord.Absolute (Result (Stack (Var.Any System.Node) Double)))
-difference sequenceFlowTopology env =
-  EqGen.solve sequenceFlowTopology (makeGivenForDifferentialAnalysis env)
-
-
-makeGivenForDifferentialAnalysis ::
-  Env.Complete System.Node DeltaResult DeltaResult ->
-  EquationSystemNumeric s
-makeGivenForDifferentialAnalysis (Env.Complete _ sig) =
-  (XIdx.storage Idx.initial System.Battery .== initStorage) <>
-  (fold $ M.mapWithKey f $ Env.etaMap sig) <>
-  (fold $ M.mapWithKey f $ Env.dtimeMap sig) <>
-  (fold $  M.filterWithKey h $ M.filterWithKey g $ M.mapWithKey f $ Env.energyMap sig) <>
-  mempty
-  where f i rec =
-           deltaPair i
-              (checkDetermined "before" $ EqRecord.before rec)
-              (checkDetermined "delta"  $ EqRecord.delta rec)
-
-        g (Idx.InSection _ (Idx.Energy (Idx.StructureEdge x y))) _ =
-          case (x,y) of
-            (System.Tank, System.ConBattery) -> True
-            (System.Resistance, System.Chassis) -> True
-            (System.VehicleInertia, System.Chassis) -> True
-            (System.RearBrakes, System.Chassis) -> True
-            (System.FrontBrakes, System.ConFrontBrakes) -> True
-            (System.ConES, System.ElectricSystem) -> True
---            (System.Battery, System.ConBattery) -> True -- Das sollte nicht angegeben werden müssen !!
-            _ -> False
-
-        h _ _ = True
-        -- h (Idx.InSection (Idx.Section sec) (Idx.Energy (Idx.StructureEdge x y))) _ | sec == 18 || x == System.Tank || y == System.ConBattery = False
-        -- h (Idx.InSection (Idx.Section sec) (Idx.Energy (Idx.StructureEdge x y))) _ | otherwise = True
--}

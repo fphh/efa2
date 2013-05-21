@@ -139,88 +139,6 @@ lookupEtaTransformerHL = EqGen.liftF f
 
 -- | Defining the given Variables for each Section
 
-commonGiven :: EqGen.EquationSystem System.Node s Double Double
-commonGiven =
-   mconcat $
-   (XIdx.dTime sec0 .= 1) :
-   (XIdx.dTime sec1 .= 1) :
-   (XIdx.storage TIdx.Initial Water .= 0) :
-   (XIdx.energy sec0 Water Network  %= XIdx.energy sec1 Water Network) :
-   []
-
-givenOptimiseCharging :: Double -> Double -> Double -> Double -> EqGen.EquationSystem System.Node s Double Double
-givenOptimiseCharging pRest pRestLocal pWater pGas =
-   (commonGiven <>) $
-   mconcat $
-
-   -- Actual Section 0 Charhing to be varied and optimised
-   (XIdx.power sec0 Rest Network .= pRest) :
-   (XIdx.power sec0 LocalRest LocalNetwork .= pRestLocal) :
-   (XIdx.power sec0 Network Water .= pWater) :
-   (XIdx.power sec0 Gas LocalNetwork .= pGas) :
-   ((EqGen.variable $ XIdx.eta sec0 Network Water) =.=
-     lookupEtaWaterCharge (EqGen.variable $ XIdx.power sec0 Network Water)) :
-   ((EqGen.variable $ XIdx.eta sec0 Coal Network) =.=
-     lookupEtaCoal (EqGen.variable $ XIdx.power sec0 Network Coal)) :
-   ((EqGen.variable $ XIdx.eta sec0 Gas LocalNetwork) =.=
-     lookupEtaGas (EqGen.variable $ XIdx.power sec0 Gas LocalNetwork)) :
-   ((EqGen.variable $ XIdx.eta sec0 Network LocalNetwork) =.=
-     lookupEtaTransformerHL (EqGen.variable $ XIdx.power sec0 LocalNetwork Network)) :
-    (XIdx.eta sec0 Network Rest .= 1.0) :
-   (XIdx.eta sec0 LocalNetwork LocalRest .= 1.0) :
-
-   -- Average Section 1 discharging
-   (XIdx.eta sec1 Network Rest .= 1.0) :
-   (XIdx.eta sec1 LocalNetwork LocalRest .= 1.0) :
-   (XIdx.eta sec1 Network LocalNetwork .= 0.8) :
-   (XIdx.eta sec1 Coal Network .= 0.4) :
-   (XIdx.eta sec1 Gas LocalNetwork .= 0.4) :
-   (XIdx.eta sec1 Water Network .= 0.4) :
-   (XIdx.eta sec1 Network Water .= 0.4) :
---   (XIdx.x sec1 Network Coal .= 0.7) :
-   (XIdx.x sec1 Network Water .= 0.7) :
---   (XIdx.x sec1 LocalNetwork Gas .= 0) :
-   (XIdx.x sec1 LocalNetwork Network .= 1.0) :
-   (XIdx.x sec1 Network LocalNetwork .= 0.5) :
-
-   []
-
-givenOptimiseDischarging :: Double -> Double -> Double -> Double -> EqGen.EquationSystem System.Node s Double Double
-givenOptimiseDischarging pRest pRestLocal pWater pGas =
-   (commonGiven <>) $
-   mconcat $
-
-   -- Actual Section 1 discharging to be varied and optimised
-   (XIdx.power sec1 Rest Network .= pRest) :
-   (XIdx.power sec1 LocalRest LocalNetwork .= pRestLocal) :
-   (XIdx.power sec1 Network Water .= pWater) :
-   (XIdx.power sec1 Gas LocalNetwork .= pGas) :
-   ((EqGen.variable $ XIdx.eta sec1 Water Network) =.=
-     lookupEtaWaterDisCharge (EqGen.variable $ XIdx.power sec1 Network Water)) :
-   ((EqGen.variable $ XIdx.eta sec1 Coal Network) =.=
-     lookupEtaCoal (EqGen.variable $ XIdx.power sec1 Network Coal)) :
-   ((EqGen.variable $ XIdx.eta sec1 Gas LocalNetwork) =.=
-     lookupEtaGas (EqGen.variable $ XIdx.power sec1 Gas LocalNetwork)) :
-   ((EqGen.variable $ XIdx.eta sec1 Network LocalNetwork) =.=
-     lookupEtaTransformerHL (EqGen.variable $ XIdx.power sec1 LocalNetwork Network)) :
-   (XIdx.eta sec1 Network Rest .= 1.0) :
-   (XIdx.eta sec1 LocalNetwork LocalRest .= 1.0) :
-
-   -- Average Section 0 discharging
-   (XIdx.eta sec0 Network Rest .= 1.0) :
-   (XIdx.eta sec0 LocalNetwork LocalRest .= 1.0) :
-   (XIdx.eta sec0 Coal Network .= 0.4) :
-   (XIdx.eta sec0 Gas LocalNetwork .= 0.4) :
-   (XIdx.eta sec0 Water Network .= 0.4) :
-   (XIdx.eta sec0 Network Water .= 0.4) :
-   (XIdx.eta sec0 Network LocalNetwork .= 0.8) :
-   (XIdx.x sec0 Network Water .= 0.2) :
-   (XIdx.x sec0 Coal Network .= 0.5) :
-   (XIdx.x sec0 LocalNetwork Network .= 0.8) :
-   (XIdx.x sec0 Network LocalNetwork .= 0.5) :
-
-   []
-
 select :: [topo] -> [Int] -> SD.SequData topo
 select ts = SD.fromList . map (ts !!)
 
@@ -229,28 +147,6 @@ seqTopo = Flow.mkSequenceTopology (select System.flowStatesOpt [4,0])
 
 -- Solving Function for each Section
 
-solveCharge :: Double ->               
-               Double -> 
-               Double -> 
-               Double -> 
-               EqEnv.Complete  
-               Node
-               (EqRec.Absolute (Result Double))
-               (EqRec.Absolute (Result Double))
-solveCharge w x y z = EqGen.solve seqTopo $ givenOptimiseCharging w x y z
-
-
-solveDischarge :: Double ->               
-               Double -> 
-               Double -> 
-               Double -> 
-               EqEnv.Complete  
-               Node
-               (EqRec.Absolute (Result Double))
-               (EqRec.Absolute (Result Double))
-solveDischarge w x y z = EqGen.solve seqTopo $ givenOptimiseDischarging w x y z
-
--- Solve each Section
 envsCharge :: Sig.UTTestRow2 [] [] 
                ((EqEnv.Complete  
                Node
@@ -267,31 +163,6 @@ envsDischarge :: Sig.UTTestRow2 [] []
                (EqRec.Absolute (Result Double))))
 envsDischarge = Sig.fromList2 $ zipWith (zipWith (solveDischarge 1 1)) varX' varY'
 
-
-lookupAbsEnergy :: (Ord node, Show d, Show node) =>
-                   TIdx.InSection TIdx.Energy node -> 
-                   EqEnv.Complete node b (EqRec.Absolute (Result d)) ->                   
-                   d
-lookupAbsEnergy n env = case checkedLookup (EqEnv.energyMap $ EqEnv.signal env) n of
-                  EqRec.Absolute (Determined x) -> x
-                  EqRec.Absolute (Undetermined) -> error $ "not determined : " ++ show n 
-
-
-lookupAbsPower :: (Ord node, Show d, Show node) =>
-                   TIdx.InSection TIdx.Power node -> 
-                   EqEnv.Complete node b (EqRec.Absolute (Result d)) ->
-                   d
-lookupAbsPower n env = case checkedLookup (EqEnv.powerMap $ EqEnv.signal env) n of
-                  EqRec.Absolute (Determined x) -> x
-                  EqRec.Absolute (Undetermined) -> error $ "not determined : " ++ show n 
-
-lookupAbsEta :: (Ord node, Show d, Show node) =>
-                   TIdx.InSection TIdx.Power node -> 
-                   EqEnv.Complete node b (EqRec.Absolute (Result d)) ->                   
-                   d
-lookupAbsEta n env = case checkedLookup (EqEnv.powerMap $ EqEnv.signal env) n of
-                  EqRec.Absolute (Determined x) -> x
-                  EqRec.Absolute (Undetermined) -> error $ "not determined : " ++ show  n
 
 -- Extract interesting values
 
@@ -424,26 +295,26 @@ main = do
 
  
   concurrentlyMany_ $ [
-{-    Draw.xterm $ Draw.topologyWithEdgeLabels System.edgeNamesOpt System.topologyOpt,
+    Draw.xterm $ Draw.topologyWithEdgeLabels System.edgeNamesOpt System.topologyOpt,
     putStrLn ("Number of possible flow states: " ++ show (length System.flowStatesOpt)),
     Draw.xterm $ Draw.flowTopologies (take 20 System.flowStatesOpt),
     Draw.xterm $ Draw.sequFlowGraph seqTopo, -}
-{-
+
     Draw.xterm $ Draw.title "Optimise Charging00" $ Draw.sequFlowGraphAbsWithEnv seqTopo $ EqGen.solve seqTopo $ givenOptimiseCharging 1 1 0 0,
     Draw.xterm $ Draw.title "Optimise Charging01" $ Draw.sequFlowGraphAbsWithEnv seqTopo $ EqGen.solve seqTopo $ givenOptimiseCharging 1 1 0 1,
     Draw.xterm $ Draw.title "Optimise Charging10" $ Draw.sequFlowGraphAbsWithEnv seqTopo $ EqGen.solve seqTopo $ givenOptimiseCharging 1 1 1 0,
     Draw.xterm $ Draw.title "Optimise Charging11" $ Draw.sequFlowGraphAbsWithEnv seqTopo $ EqGen.solve seqTopo $ givenOptimiseCharging 1 1 1 1] -}
-{-    
+    
     Draw.xterm $ Draw.title "Optimise Discharging00" $ Draw.sequFlowGraphAbsWithEnv seqTopo $ EqGen.solve seqTopo $ givenOptimiseDischarging 1 1 0 0,
     Draw.xterm $ Draw.title "Optimise Discharging01" $ Draw.sequFlowGraphAbsWithEnv seqTopo $ EqGen.solve seqTopo $ givenOptimiseDischarging 1 1 0 1,
     Draw.xterm $ Draw.title "Optimise Discharging10" $ Draw.sequFlowGraphAbsWithEnv seqTopo $ EqGen.solve seqTopo $ givenOptimiseDischarging 1 1 1 0,
     Draw.xterm $ Draw.title "Optimise Discharging11" $ Draw.sequFlowGraphAbsWithEnv seqTopo $ EqGen.solve seqTopo $ givenOptimiseDischarging 1 1 1 1]
--}    
-{-    PlotIO.surface "Optimiere Laden - eRestCharge0" DefaultTerm.cons id (const "") varX varY eRestCharge0,
+    
+    PlotIO.surface "Optimiere Laden - eRestCharge0" DefaultTerm.cons id (const "") varX varY eRestCharge0,
     PlotIO.surface "Optimiere Laden - eRestCharge1" DefaultTerm.cons id (const "") varX varY eRestCharge0,
     PlotIO.surface "Optimiere Laden - eRestLocalCharge0" DefaultTerm.cons id (const "") varX varY eRestLocalCharge0,
     PlotIO.surface "Optimiere Laden - eRestLocalCharge1" DefaultTerm.cons id (const "") varX varY eRestLocalCharge1,
--}                                                                                   
+                                                                                   
     
     PlotIO.surface "System Efficiency Charging" DefaultTerm.cons id (const "") varX varY etaSysDischarge,
     PlotIO.surface "System Efficiency Discharging" DefaultTerm.cons id (const "") varX varY etaSysCharge,
@@ -453,7 +324,6 @@ main = do
     PlotIO.xy "Efficiency on Loe" DefaultTerm.cons id noLegend varXSig [etaLoeCharge, etaLoeDischarge], 
     PlotIO.xy "Loe Index" DefaultTerm.cons id noLegend varXSig [indexLoeChargePlot, indexLoeDischargePlot], 
     PlotIO.xy "Loe GasPower" DefaultTerm.cons id noLegend varXSig [powerLoeCharge, powerLoeDischarge]
-    
     ]
 
 
