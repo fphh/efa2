@@ -78,10 +78,10 @@ colours = [ Colors.White,
 -- ################### Vary Operation Demand
 
 restPower :: [Double]
-restPower = [0,0.2 .. 0.8]
+restPower = [0,0.1 .. 0.8]
 
 localPower :: [Double]
-localPower = [0.2,0.4 .. 1.0]
+localPower = [0.2,0.3 .. 1.0]
 
 varRestPower', varLocalPower' :: [[Double]]
 (varRestPower', varLocalPower') = CT.varMat restPower localPower
@@ -102,10 +102,10 @@ varLocalPower = Sig.fromList2 varLocalPower'
 -- ################### Vary Degrees of Freedom
 
 waterPower :: [Double]
-waterPower = [0,0.2 .. 0.8]
+waterPower = [0,0.1 .. 0.8]
 
 gasPower :: [Double]
-gasPower = [0, 0.2 .. 1.0]
+gasPower = [0, 0.1 .. 1.0]
 
 powerScaleWater ::  Double
 powerScaleWater = 1
@@ -205,12 +205,19 @@ maxEta :: Sig.UTSignal2 [] []
          Node
          (EqRec.Absolute (Result Double))
          (EqRec.Absolute (Result Double))) ->
-         (Double,(Maybe Sig.SignalIdx, Maybe Sig.SignalIdx))
-maxEta sigEnvs = (Sig.fromScalar maxEta, (xIdx, yIdx)) 
+         (Double, 
+          Maybe (EqEnv.Complete          
+                 Node
+                 (EqRec.Absolute (Result Double))
+                 (EqRec.Absolute (Result Double))))
+maxEta sigEnvs = (Sig.fromScalar maxEta, env) 
   where 
     etaSys = Sig.map calcEtaSys sigEnvs
     maxEta = Sig.maximum etaSys
     (xIdx, yIdx) = Sig.findIndex2 (== Sig.fromScalar maxEta) etaSys
+    env = case (xIdx, yIdx) of 
+      (Just xIdx', Just yIdx') -> Just $ Sig.getSample2D sigEnvs (xIdx',yIdx')
+      _ -> Nothing
     
 
 -- Sig.fromScalar $
@@ -277,15 +284,32 @@ main = do
      maxETADischarge :: Sig.NTestRow2 [] [] Double
      maxETADischarge = Sig.setType $ Sig.map fst $ Sig.map maxEta envsDischarge
 
-     indexCharge :: Sig.UTTestRow2 [] [] (Maybe Sig.SignalIdx,Maybe Sig.SignalIdx) 
-     indexCharge   = Sig.map snd $ Sig.map maxEta envsCharge
+     envsChargeOpt :: Sig.UTTestRow2 [] [] 
+                      (EqEnv.Complete  
+                       Node
+                       (EqRec.Absolute (Result Double))
+                       (EqRec.Absolute (Result Double)))
+     envsChargeOpt = Sig.map (Maybe.fromJust . snd) $ Sig.map maxEta envsCharge
      
-     indexCharge' :: Sig.UTTestRow2 [] [] (Double,Double)
-     indexCharge'  = Sig.map ( mapPair (fromIntegral . Sig.unSignalIdx . Maybe.fromJust, fromIntegral . Sig.unSignalIdx . Maybe.fromJust)) $ a
-                   where 
-                     a :: Sig.UTTestRow2 [] [] (Maybe Sig.SignalIdx,Maybe Sig.SignalIdx)
-                     a = Sig.map snd $ Sig.map maxEta envsCharge
+     envsDischargeOpt :: Sig.UTTestRow2 [] [] 
+                      (EqEnv.Complete  
+                       Node
+                       (EqRec.Absolute (Result Double))
+                       (EqRec.Absolute (Result Double)))
+     envsDischargeOpt = Sig.map (Maybe.fromJust . snd) $ Sig.map maxEta envsDischarge
+
+     powerGasChargeOpt :: Sig.PTestRow2 [] [] Double
+     powerGasChargeOpt = Sig.setType $ Sig.map  (ModUt.lookupAbsPower (XIdx.power sec0 Gas Network)) envsChargeOpt
+       
+     powerWaterChargeOpt :: Sig.PTestRow2 [] [] Double
+     powerWaterChargeOpt = Sig.setType $ Sig.map  (ModUt.lookupAbsPower (XIdx.power sec0 Water Network)) envsChargeOpt
      
+     powerGasDischargeOpt :: Sig.PTestRow2 [] [] Double
+     powerGasDischargeOpt = Sig.setType $ Sig.map  (ModUt.lookupAbsPower (XIdx.power sec0 Gas Network)) envsDischargeOpt
+       
+     powerWaterDischargeOpt :: Sig.PTestRow2 [] [] Double
+     powerWaterDischargeOpt = Sig.setType $ Sig.map  (ModUt.lookupAbsPower (XIdx.power sec0 Water Network)) envsDischargeOpt
+    
    concurrentlyMany_ $ [
      Draw.xterm $ Draw.topologyWithEdgeLabels System.edgeNamesOpt System.topologyOpt,
      
@@ -296,8 +320,12 @@ main = do
      Draw.xterm $ Draw.sequFlowGraph System.seqTopoOpt, 
 --     putStrLn $ show indexCharge,
      
-     PlotIO.surface "Charging" DefaultTerm.cons id noLegend varRestPower varLocalPower maxETACharge,
+     PlotIO.surface "Charging Optimal System Efficiency " DefaultTerm.cons id noLegend varRestPower varLocalPower maxETACharge,
+     PlotIO.surface "Charging Optimal Gas Power " DefaultTerm.cons id noLegend varRestPower varLocalPower powerGasChargeOpt,
+     PlotIO.surface "Charging Optimal Water Power " DefaultTerm.cons id noLegend varRestPower varLocalPower powerWaterChargeOpt,
      PlotIO.surface "Discharging" DefaultTerm.cons id noLegend varRestPower varLocalPower maxETADischarge,
+     PlotIO.surface "Disharging Optimal Gas Power " DefaultTerm.cons id noLegend varRestPower varLocalPower powerGasDischargeOpt,
+     PlotIO.surface "Discharging Optimal Water Power " DefaultTerm.cons id noLegend varRestPower varLocalPower powerWaterDischargeOpt,
      Draw.xterm $ Draw.title "Optimise Charging" $ 
      Draw.sequFlowGraphAbsWithEnv System.seqTopoOpt $ 
      EqGen.solve System.seqTopoOpt $ Optimisation.givenCharging etaWaterCharge etaCoal etaGas etaTransHL 0.4 0.1 0 0
@@ -306,6 +334,6 @@ main = do
    report [] ("RestPower", varRestPower)
    report [] ("LocalPower", varLocalPower)
    report [] ("waterPower", varWaterPower)
-   report [] ("indexChargeX", Sig.map fst indexCharge')
+--   report [] ("indexChargeX", Sig.map fst indexCharge')
    report [] ("gasPower", varGasPower)
-   report [] ("indexChargeY", Sig.map snd indexCharge')
+--   report [] ("indexChargeY", Sig.map snd indexCharge')

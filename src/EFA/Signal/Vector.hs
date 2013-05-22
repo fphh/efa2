@@ -474,7 +474,6 @@ lookUpGen look idxs =
       (_, invalidIdxs) ->
          error $ "Error in vLookup - indices out of Range: " ++ show invalidIdxs
 
-
 class Reverse v where
    reverse :: (Storage v d) => v d -> v d
 
@@ -543,4 +542,5 @@ instance Unique V.Vector d where
 
 instance (UV.Unbox d) => Unique UV.Vector  d where
   unique =  readUnbox (\ x -> fromList $ M.keys $ M.fromList $ toList $ UV.zip x x)
+  
   
