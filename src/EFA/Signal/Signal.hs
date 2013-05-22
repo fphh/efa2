@@ -48,6 +48,7 @@ import Prelude
            String, (++),
            Int, Num, Fractional, fromRational, (+), (-), (/), (*), fromIntegral)
 import qualified Prelude as P
+import Data.Maybe as Maybe
 
 
 ----------------------------------------------------------
@@ -1258,6 +1259,26 @@ findIndex ::
   (d1 -> Bool) -> TC s1 t1 (Data (v1 :> Nil) d1) -> Maybe SignalIdx
 findIndex f (TC xs) = fmap SignalIdx $ D.findIndex f xs
 
+
+findIndex2 :: (SV.Find v2 ,
+               SV.Find v1,
+               SV.Walker v2,
+               SV.Storage v2 (v1 d1),
+               SV.Storage v1 d1, 
+               SV.Storage v2 (Maybe Int),
+               SV.Singleton v2,
+               TailType s1, SV.Storage v2 Int, SV.Lookup v2, Head s1 ~ Sample) => 
+              (d1 -> Bool) -> 
+              TC s1 t1 (Data (v2 :> v1 :> Nil) d1) -> 
+              (Maybe SignalIdx, Maybe SignalIdx) 
+findIndex2 f x = (xIdx, yIdx)
+  where xIdx = findIndex (P./= P.Nothing) $ y
+        y = map2 (SV.findIndex f) x
+        yIdx = case xIdx of 
+          P.Just idx -> ((fmap SignalIdx) . fromSample . P.fst . Maybe.fromJust . viewL) $ subSignal1D y [idx] 
+          P.Nothing -> P.Nothing
+        
+          
 findIndices ::(SV.Walker v1,
                SV.Storage v1 SignalIdx,
                SV.Storage v1 Int,
