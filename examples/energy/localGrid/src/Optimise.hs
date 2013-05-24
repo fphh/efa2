@@ -266,23 +266,23 @@ main = do
 -- | Import Power Curves
 --   let powerWind :: Sig.PSignal [] Double
        timeWind :: Sig.TSignal [] Double        
-       powerSignalWind :: Sig.NSignal [] Double
+       powerSignalWind :: Sig.PSignal [] Double
        (timeWind,[powerSignalWind]) = CT.convertToSignal2D (M.lookup "wind" tabPower)
        
        timeSolar :: Sig.TSignal [] Double        
-       powerSignalSolar :: Sig.NSignal [] Double
+       powerSignalSolar :: Sig.PSignal [] Double
        (timeSolar,[powerSignalSolar]) = CT.convertToSignal2D (M.lookup "solar" tabPower)
        
        timeHouse :: Sig.TSignal [] Double        
-       powerSignalHouse :: Sig.NSignal [] Double
+       powerSignalHouse :: Sig.PSignal [] Double
        (timeHouse,[powerSignalHouse]) = CT.convertToSignal2D (M.lookup "house" tabPower)
        
        timeIndustry :: Sig.TSignal [] Double        
-       powerSignalIndustry :: Sig.NSignal [] Double
+       powerSignalIndustry :: Sig.PSignal [] Double
        (timeIndustry,[powerSignalIndustry]) = CT.convertToSignal2D (M.lookup "industry" tabPower)
        
-       powerSignalRest = powerSignalWind
-       powerSignalLocal = powerSignalSolar Sig..+ Sig.makeDelta (powerSignalHouse Sig..+ (Sig.makeDelta powerSignalIndustry))
+       powerSignalRest = Sig.scale powerSignalWind restPowerScale
+       powerSignalLocal = Sig.scale  (powerSignalSolar Sig..+ Sig.makeDelta (powerSignalHouse Sig..+ (Sig.makeDelta powerSignalIndustry))) localPowerScale
 
    let 
      
@@ -348,7 +348,20 @@ main = do
      powerTransformerDischargeOpt :: Sig.PTestRow2 [] [] Double
      powerTransformerDischargeOpt = Sig.setType $ Sig.map  (ModUt.lookupAbsPower (XIdx.power sec1 Network LocalNetwork)) envsDischargeOpt   
      
+{-     
+     powerSignalWaterOptCharge = Sig.interp2WingProfile "powerSignalWaterOptCharge" 
+                                 varRestPower varLocalPower powerWaterChargeOpt powerSignalRest powerSignalLocal 
      
+     powerSignalGasOptCharge = Sig.interp2WingProfile "powerSignalGasOptCharge" 
+                                 varRestPower varLocalPower powerGasChargeOpt powerSignalRest powerSignalLocal 
+                                 
+     powerSignalWaterOptDischarge = Sig.interp2WingProfile "powerSignalWaterOptDischarge" 
+                                 varRestPower varLocalPower powerWaterDischargeOpt powerSignalRest powerSignalLocal 
+     
+     powerSignalGasOptDischarge = Sig.interp2WingProfile "powerSignalGasOptDischarge" 
+                                 varRestPower varLocalPower powerGasDischargeOpt powerSignalRest powerSignalLocal 
+-}                                 
+                                 
   
    concurrentlyMany_ $ [
      Draw.xterm $ Draw.topologyWithEdgeLabels System.edgeNamesOpt System.topologyOpt,
