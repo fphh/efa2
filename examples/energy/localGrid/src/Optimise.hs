@@ -1,7 +1,15 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE FlexibleContexts #-}
+
 module Main where
 
+
+import EFA.Signal.Sequence (-- genSequenceSignal,
+                            addZeroCrossings,
+                            genSequ,
+                           -- sectionRecordsFromSequence
+                           )
 
 --import qualified Modules.Signals as Signals
 import qualified Modules.System as System
@@ -13,15 +21,16 @@ import Modules.Utility as ModUt
 
 import EFA.Report.Report(report)
 
---import qualified EFA.Signal.Record as Record
+import qualified EFA.Signal.Record as Record
 import EFA.Utility.Async (concurrentlyMany_)
 import qualified EFA.Graph.Draw as Draw
 --import EFA.IO.PLTImport (modelicaPLTImport)
 import qualified EFA.Signal.Signal as Sig
---import qualified EFA.Signal.Vector as V
+-- import qualified EFA.Signal.Vector as V
+import qualified Data.Vector as V
 --import EFA.Signal.Data (Data(..), Nil, (:>))
 --import EFA.Signal.Typ (Typ, F, T, A, Tt)
---import qualified EFA.Signal.SequenceData as SD
+import qualified EFA.Signal.SequenceData as SD
 --import qualified EFA.Utility as Utility
 --import EFA.Signal.Sequence (makeSeqFlowTopology)
 --import qualified EFA.Graph.Flow as Flow
@@ -35,7 +44,7 @@ import qualified EFA.Example.Index as XIdx
 -- import qualified EFA.Signal.ConvertTable as Table
 import qualified EFA.Example.Absolute as EqGen
 --import qualified EFA.Example.Index as XIdx
---import qualified EFA.Graph.Topology.Index as TIdx
+import qualified EFA.Graph.Topology.Index as TIdx
 import qualified EFA.Equation.Environment as EqEnv
 import qualified EFA.Equation.Record as EqRec
 import EFA.Equation.Result (Result(..))
@@ -78,10 +87,10 @@ colours = [ Colors.White,
 -- ################### Vary Operation Demand
 
 restPower :: [Double]
-restPower = [0,0.05 .. 0.4]
+restPower = [0,0.02 .. 0.4]
 
 localPower :: [Double]
-localPower = [0.1,0.15 .. 0.4]
+localPower = [0.1,0.12 .. 0.4]
 
 varRestPower', varLocalPower' :: [[Double]]
 (varRestPower', varLocalPower') = CT.varMat restPower localPower
@@ -89,23 +98,54 @@ varRestPower', varLocalPower' :: [[Double]]
 restPowerScale :: Double
 restPowerScale = 1
 
+varRestPower1D :: Sig.PSignal V.Vector Double
+varRestPower1D = Sig.fromList restPower
+
 localPowerScale :: Double
 localPowerScale = 1
 
-varRestPower :: Sig.PTestRow2 [] [] Double
+varRestPower :: Sig.PSignal2 V.Vector V.Vector Double
 varRestPower = Sig.fromList2 varRestPower'
 
-varLocalPower :: Sig.PTestRow2 [] [] Double
+varLocalPower :: Sig.PSignal2 V.Vector V.Vector Double
 varLocalPower = Sig.fromList2 varLocalPower'
 
+
+scaleTable :: (Num d) => M.Map String (d, d)
+scaleTable = M.fromList $
+--  ("storage",     (1, 1)) :
+--  ("gas",         (1, 1)) :
+--  ("transformer", (1, 1)) :
+  ("coal",        (5, 1)) :
+  []
+
+
+{-
+m ::
+  (TIdx.Flip (TIdx.InSection TIdx.Eta)) =>
+  TIdx.Section ->
+  M.Map (TIdx.InSection TIdx.Eta Node) (String, TIdx.InSection TIdx.Eta Node -> TIdx.InSection TIdx.Eta Node)
+-}
+m :: TIdx.Section -> M.Map (XIdx.Eta Node) (String, XIdx.Eta Node -> XIdx.Eta Node)
+m sec = M.fromList $
+  (XIdx.eta sec Water Network, ( "storage", id)) :
+  (XIdx.eta sec Network Water, ( "storage", id)) :
+  []
+
+{-
+ms ::
+  (TIdx.FlipoTIdx.Eta) =>
+  M.Map (XIdx.Eta Node) (String, XIdx.Eta Node -> XIdx.Eta Node)
+ms = mconcat $ map m [TIdx.Section 0, TIdx.Section 1]
+-}
 
 -- ################### Vary Degrees of Freedom
 
 waterPower :: [Double]
-waterPower = [0,0.2 .. 0.8]
+waterPower = [0,0.1 .. 0.8]
 
 gasPower :: [Double]
-gasPower = [0, 0.2 .. 1.0]
+gasPower = [0, 0.1 .. 1.0]
 
 powerScaleWater ::  Double
 powerScaleWater = 1
@@ -128,10 +168,10 @@ varGasPowerSig = Sig.fromList gasPower
 varWaterPower', varGasPower' :: [[Double]]
 (varWaterPower', varGasPower') = CT.varMat waterPower gasPower
 
-varWaterPower :: Sig.PSignal2 [] [] Double
+varWaterPower :: Sig.PSignal2 V.Vector V.Vector Double
 varWaterPower = Sig.fromList2 varWaterPower'
 
-varGasPower :: Sig.PSignal2 [] [] Double
+varGasPower :: Sig.PSignal2 V.Vector V.Vector Double
 varGasPower = Sig.fromList2 varGasPower'
 
 noLegend :: Int -> String
@@ -151,7 +191,7 @@ sweepCharge :: (Double -> Double) ->
                 Double -> 
                 [[Double]] -> 
                 [[Double]] -> 
-                Sig.UTSignal2 [] [] 
+                Sig.UTSignal2 V.Vector V.Vector 
                 (EqEnv.Complete  
                  Node
                  (EqRec.Absolute (Result Double))
@@ -172,7 +212,7 @@ sweepDischarge :: (Double -> Double) ->
                   Double -> 
                   [[Double]] -> 
                   [[Double]] -> 
-                  Sig.UTSignal2 [] []
+                  Sig.UTSignal2 V.Vector V.Vector
                   ((EqEnv.Complete  
                     Node
                     (EqRec.Absolute (Result Double))
@@ -204,7 +244,7 @@ calcEtaSys env =  if eCoal0 >= 0 && eCoal1 >= 0 && eTransformer0 >= 0 && eTransf
      etaSys = (eRest0 + eRest1 + eRestLocal0 + eRestLocal1) / (eGas0  + eGas1 + eCoal0 + eCoal1)
                  
 
-maxEta :: Sig.UTSignal2 [] [] 
+maxEta :: Sig.UTSignal2 V.Vector V.Vector 
          (EqEnv.Complete  
          Node
          (EqRec.Absolute (Result Double))
@@ -223,7 +263,8 @@ maxEta sigEnvs = (Sig.fromScalar etaMax, env)
     env = case (xIdx, yIdx) of 
       (Just xIdx', Just yIdx') -> Just $ Sig.getSample2D sigEnvs (xIdx',yIdx')
       _ -> Nothing
-    
+
+
 main :: IO ()
 main = do
 
@@ -289,7 +330,7 @@ main = do
 
      
     -- | Map Operation space room
-     envsCharge :: Sig.UTTestRow2 [] [] (Sig.UTSignal2 [] []
+     envsCharge :: Sig.UTSignal2 V.Vector V.Vector (Sig.UTSignal2 V.Vector V.Vector
                          (EqEnv.Complete  
                            Node
                            (EqRec.Absolute (Result  Double))
@@ -297,61 +338,66 @@ main = do
      envsCharge = Sig.fromList2 $ zipWith (zipWith (\ x y -> sweepCharge etaWaterCharge etaCoal etaGas etaTransHL x y varWaterPower' varGasPower')) varRestPower' varLocalPower'
 
 
-     envsDischarge :: Sig.UTTestRow2 [] [] (Sig.UTSignal2 [] []
+     envsDischarge :: Sig.UTSignal2 V.Vector V.Vector (Sig.UTSignal2 V.Vector V.Vector
                            (EqEnv.Complete  
                              Node
                              (EqRec.Absolute (Result Double))
                              (EqRec.Absolute (Result Double))))
      envsDischarge = Sig.fromList2 $ zipWith (zipWith (\ x y -> sweepDischarge etaWaterCharge etaCoal etaGas etaTransHL x y varWaterPower' varGasPower')) varRestPower' varLocalPower'
 
-     maxETACharge :: Sig.NTestRow2 [] [] Double
+     maxETACharge :: Sig.NSignal2 V.Vector V.Vector Double
      maxETACharge = Sig.setType $ Sig.map fst $ Sig.map maxEta envsCharge
-     maxETADischarge :: Sig.NTestRow2 [] [] Double
+     maxETADischarge :: Sig.NSignal2 V.Vector V.Vector Double
      maxETADischarge = Sig.setType $ Sig.map fst $ Sig.map maxEta envsDischarge
 
-     etaSysMax::    Sig.NTestRow2 [] [] Double
+     etaSysMax::    Sig.NSignal2 V.Vector V.Vector Double
      etaSysMax = Sig.zipWith max maxETACharge maxETADischarge
      
-     maxEtaSysState :: Sig.UTTestRow2 [] [] Double
+     maxEtaSysState :: Sig.UTSignal2 V.Vector V.Vector Double
      maxEtaSysState = Sig.map fromIntegral $ Sig.sigMax2 maxETACharge maxETADischarge
 
      
-     envsChargeOpt :: Sig.UTTestRow2 [] [] (Maybe
+     envsChargeOpt :: Sig.UTSignal2 V.Vector V.Vector (Maybe
                       (EqEnv.Complete  
                        Node
                        (EqRec.Absolute (Result Double))
                        (EqRec.Absolute (Result Double))))
      envsChargeOpt = Sig.map snd $ Sig.map maxEta envsCharge
      
-     envsDischargeOpt :: Sig.UTTestRow2 [] [] (Maybe
+     envsDischargeOpt :: Sig.UTSignal2 V.Vector V.Vector (Maybe
                       (EqEnv.Complete  
                        Node
                        (EqRec.Absolute (Result Double))
                        (EqRec.Absolute (Result Double))))
      envsDischargeOpt = Sig.map snd $ Sig.map maxEta envsDischarge
 
-     powerGasChargeOpt :: Sig.PTestRow2 [] [] Double
+     powerGasChargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
      powerGasChargeOpt = Sig.setType $ Sig.map  (ModUt.lookupAbsPower (XIdx.power sec0 Gas LocalNetwork)) envsChargeOpt
        
-     powerWaterChargeOpt :: Sig.PTestRow2 [] [] Double
+     powerWaterChargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
      powerWaterChargeOpt = Sig.setType $ Sig.map  (ModUt.lookupAbsPower (XIdx.power sec0 Water Network)) envsChargeOpt
      
-     powerGasDischargeOpt :: Sig.PTestRow2 [] [] Double
+     powerGasDischargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
      powerGasDischargeOpt = Sig.setType $ Sig.map  (ModUt.lookupAbsPower (XIdx.power sec1 LocalNetwork Gas)) envsDischargeOpt
        
-     powerWaterDischargeOpt :: Sig.PTestRow2 [] [] Double
+     powerWaterDischargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
      powerWaterDischargeOpt = Sig.setType $ Sig.map  (ModUt.lookupAbsPower (XIdx.power sec1 Water Network)) envsDischargeOpt
     
-     powerTransformerChargeOpt :: Sig.PTestRow2 [] [] Double
+     powerTransformerChargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
      powerTransformerChargeOpt = Sig.setType $ Sig.map  (ModUt.lookupAbsPower (XIdx.power sec0 Network LocalNetwork)) envsChargeOpt
      
-     powerTransformerDischargeOpt :: Sig.PTestRow2 [] [] Double
+     powerTransformerDischargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
      powerTransformerDischargeOpt = Sig.setType $ Sig.map  (ModUt.lookupAbsPower (XIdx.power sec1 Network LocalNetwork)) envsDischargeOpt   
-     
-{-     
-     powerSignalWaterOptCharge = Sig.interp2WingProfile "powerSignalWaterOptCharge" 
-                                 varRestPower varLocalPower powerWaterChargeOpt powerSignalRest powerSignalLocal 
-     
+      
+{-
+     powerSignalWaterOptCharge =
+       Sig.tzipWith
+         (\x y -> Sig.changeType $ Sig.interp2WingProfile
+           "powerSignalWaterOptCharge" 
+           varRestPower1D varLocalPower powerWaterChargeOpt x y)
+         powerSignalRest powerSignalLocal
+
+
      powerSignalGasOptCharge = Sig.interp2WingProfile "powerSignalGasOptCharge" 
                                  varRestPower varLocalPower powerGasChargeOpt powerSignalRest powerSignalLocal 
                                  
@@ -360,9 +406,9 @@ main = do
      
      powerSignalGasOptDischarge = Sig.interp2WingProfile "powerSignalGasOptDischarge" 
                                  varRestPower varLocalPower powerGasDischargeOpt powerSignalRest powerSignalLocal 
--}                                 
+                -}               
                                  
-  
+  {-
    concurrentlyMany_ $ [
      Draw.xterm $ Draw.topologyWithEdgeLabels System.edgeNamesOpt System.topologyOpt,
      putStrLn ("Number of possible flow states: " ++ show (length System.flowStatesOpt)),
@@ -386,7 +432,7 @@ main = do
      PlotIO.xy "Operation" DefaultTerm.cons id show powerSignalRest powerSignalLocal
      
      ]
-     
+     -}
      
 
    report [] ("RestPower", varRestPower)
@@ -394,3 +440,23 @@ main = do
    report [] ("waterPower", varWaterPower)
    report [] ("gasPower", varGasPower)
 
+
+   let time :: Sig.TSignal [] Double
+       time = Sig.fromList [0..23]
+       rec = Record.Record time $ 
+                 M.fromList [(TIdx.PPos (TIdx.StructureEdge Network Water),
+                              powerSignalRest)]
+
+       rec0 = addZeroCrossings rec
+
+
+       sequencePowers :: SD.SequData (Record.PowerRecord System.Node [] Double)
+       sequencePowers = genSequ rec0
+
+   let mstr = CT.makeEtaFunctions2D scaleTable tabEta
+       eqs = Optimisation.givenSimulate m mstr sequencePowers
+       envSim = EqGen.solve System.seqTopoOpt eqs
+
+   Draw.xterm $ Draw.sequFlowGraphAbsWithEnv System.seqTopoOpt envSim
+
+   return ()

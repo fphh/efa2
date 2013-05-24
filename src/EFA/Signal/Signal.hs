@@ -171,6 +171,10 @@ tzipWith f xs ys = zipWith g xs ys
    where g x y = fromSample $ f (toSample x) (toSample y)
 
 
+
+
+
+
 ----------------------------------------------------------------
 -- Signal crosswith with Rule of Signal Inheritance
 type family CrossArith s1 s2

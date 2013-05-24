@@ -22,12 +22,10 @@ lookupAbsPower :: (Ord node, Show d, Show node,Num d,Fractional d) =>
                    TIdx.InSection TIdx.Power node -> 
                    Maybe (EqEnv.Complete node b (EqRec.Absolute (Result d))) ->
                    d
-lookupAbsPower n mEnv = case mEnv of 
-  Just env -> case checkedLookup (EqEnv.powerMap $ EqEnv.signal env) n of
-                  EqRec.Absolute (Determined x) -> x
-                  EqRec.Absolute (Undetermined) -> error $ "not determined : " ++ show n 
-  Nothing -> -0.333                
-
+lookupAbsPower n = maybe (-0.333) f
+  where f env= case checkedLookup (EqEnv.powerMap $ EqEnv.signal env) n of
+                    EqRec.Absolute (Determined x) -> x
+                    EqRec.Absolute (Undetermined) -> error $ "not determined : " ++ show n 
 
 
 
