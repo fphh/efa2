@@ -7,8 +7,8 @@ import qualified Data.Map as M
 import Data.Tuple.HT (swap)
 
 
-checkedLookup :: (Ord k, Show k, Show v) => M.Map k v -> k -> v
-checkedLookup m k =
+checkedLookupOld :: (Ord k, Show k, Show v) => M.Map k v -> k -> v
+checkedLookupOld m k =
   case M.lookup k m of
     Nothing -> error $ "checkedLookup: " ++ show k  ++ "\n" ++ "Keys in Map:" ++ "\n" ++ (show $ M.keys m)
     Just x -> x
@@ -17,8 +17,8 @@ checkedLookup m k =
 -- | New improved ugly version with caller function name
 type Caller = String
 
-checkedLookup2 :: (Ord k, Show k, Show v) => Caller -> M.Map k v -> k -> v
-checkedLookup2 c m k =
+checkedLookup :: (Ord k, Show k, Show v) => Caller -> M.Map k v -> k -> v
+checkedLookup c m k =
   case M.lookup k m of
     Nothing -> error $ "Error in checkedLookup called by function " ++ show c ++
                " with the key: " ++ show k  ++ "\n" ++ "Keys in Map:" ++ "\n" ++

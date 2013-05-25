@@ -6,11 +6,12 @@ import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph as Gr
 import qualified EFA.Graph.Flow as Flow
+import qualified EFA.Signal.SequenceData as SD
 
 import EFA.Example.Utility (makeEdges)
 import qualified EFA.Example.Index as XIdx
 
-import qualified Modules.Utility as ModUt
+-- import qualified Modules.Utility as ModUt
 
 import EFA.Signal.Record (SigId(..))
 
@@ -130,7 +131,9 @@ edgeNamesOpt = M.fromList el
 
 ----------------------------------------------------------------------
 -- | SequenceTopology for Optimisation
+select :: [topo] -> [Int] -> SD.SequData topo
+select ts = SD.fromList . map (ts !!)
 
 seqTopoOpt :: Flow.RangeGraph Node
 --seqTopoOpt = Flow.mkSequenceTopology (ModUt.select flowStatesOpt [5,1])
-seqTopoOpt = Flow.mkSequenceTopology (ModUt.select flowStatesOpt [4,0])
+seqTopoOpt = Flow.mkSequenceTopology (select flowStatesOpt [4,0])

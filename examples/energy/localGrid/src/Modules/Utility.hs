@@ -1,20 +1,28 @@
+{-# LANGUAGE TypeOperators #-}
+
 module Modules.Utility where
 
 import qualified EFA.Graph.Topology.Index as TIdx
+import qualified EFA.Example.Index as XIdx
 import qualified EFA.Equation.Environment as EqEnv
 import qualified EFA.Equation.Record as EqRec
 import EFA.Equation.Result (Result(..))
 import EFA.Utility.Map (checkedLookup)
 import qualified EFA.Signal.SequenceData as SD
+import qualified Modules.System as System
+import qualified EFA.Signal.Record as Record
+import qualified EFA.Signal.Signal as Sig
+import EFA.Signal.Data (Data(..), Nil, (:>))
 
+import qualified Data.Map as M
 
 lookupAbsEnergy :: (Ord node, Show d, Show node) =>
                    TIdx.InSection TIdx.Energy node -> 
                    EqEnv.Complete node b (EqRec.Absolute (Result d)) ->                   
                    d
-lookupAbsEnergy n env = case checkedLookup (EqEnv.energyMap $ EqEnv.signal env) n of
+lookupAbsEnergy n env = case checkedLookup "Modules.Utility.lookupAbsEnergy" (EqEnv.energyMap $ EqEnv.signal env) n of
                   EqRec.Absolute (Determined x) -> x
-                  EqRec.Absolute (Undetermined) -> error $ "not determined : " ++ show n 
+                  EqRec.Absolute (Undetermined) -> error $ "Modules.Utility.lookupAbsEnergy - not determined : " ++ show n 
 
 
 
@@ -23,9 +31,9 @@ lookupAbsPower :: (Ord node, Show d, Show node,Num d,Fractional d) =>
                    Maybe (EqEnv.Complete node b (EqRec.Absolute (Result d))) ->
                    d
 lookupAbsPower n = maybe (-0.333) f
-  where f env= case checkedLookup (EqEnv.powerMap $ EqEnv.signal env) n of
+  where f env= case checkedLookup "Modules.Utility.lookupAbsPower" (EqEnv.powerMap $ EqEnv.signal env) n of
                     EqRec.Absolute (Determined x) -> x
-                    EqRec.Absolute (Undetermined) -> error $ "not determined : " ++ show n 
+                    EqRec.Absolute (Undetermined) -> error $ "Modules.Utility.lookupAbsPower - not determined : " ++ show n 
 
 
 
@@ -42,3 +50,17 @@ lookupAbsEta n env = case checkedLookup (EqEnv.powerMap $ EqEnv.signal env) n of
 
 select :: [topo] -> [Int] -> SD.SequData topo
 select ts = SD.fromList . map (ts !!)
+
+
+-- | Warning -- only works for one section in env
+envToPowerRecord ::  EqEnv.Complete  
+                     System.Node
+                     (EqRec.Absolute (Result (Data  Nil a)))
+                     (EqRec.Absolute (Result (Data (v :> Nil) a))) ->
+                     Sig.TSignal v a -> Integer -> Record.PowerRecord System.Node v a
+envToPowerRecord env time sec = Record.Record time (M.map i $ M.mapKeys h $ 
+                                                    (M.filterWithKey f $ EqEnv.powerMap $ EqEnv.signal env))
+  where f (TIdx.InSection (TIdx.Section section) (TIdx.Power (TIdx.StructureEdge _ _))) _ = (toInteger section) == sec  
+        h (TIdx.InSection (TIdx.Section section) (TIdx.Power (TIdx.StructureEdge n1 n2))) = TIdx.PPos (TIdx.StructureEdge n1 n2)
+        i (EqRec.Absolute (Determined dat)) = Sig.TC dat
+        i (EqRec.Absolute Undetermined) = error "Modules.Utility.envToPowerRecord - undetermined data" 

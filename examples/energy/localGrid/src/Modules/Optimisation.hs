@@ -23,6 +23,7 @@ import qualified EFA.Signal.Data as Data
 import qualified EFA.Signal.Base as Base
 
 import qualified EFA.Signal.Vector as SV
+import qualified Data.Vector as Vec
 
 import EFA.Equation.Result (Result(..))
 --import EFA.Utility.Map (checkedLookup)
@@ -174,21 +175,6 @@ givenDischarging lookupEtaWaterDisCharge lookupEtaCoal lookupEtaGas lookupEtaTra
 
    []
 
-{-
-solveSimulate :: 
-  M.Map String (d -> d) ->
-  M.Map String (d -> d) ->
-  EqEnv.Complete
-    Node
-    (EqRec.Absolute (Result d))
-    (EqRec.Absolute (Result d))
-solveSimulate etaWater etaCoal etaGas etaTrans pRest pRestLocal pWater pGas =
-  EqGen.solve System.seqTopoOpt $ 
-  givenDischarging etaWater etaCoal etaGas etaTrans pRest pRestLocal pWater pGas
-  where rec = Record 2
--}
-
-
 etaGiven ::
   (Eq (Data.Apply c d1), Eq (Data.Apply c d2), Ord (idx node),
    Ord (idx1 node), Ord k, EqArith.Sum d2, EqArith.Sum d1,
@@ -215,7 +201,7 @@ givenSimulate ::
   SV.Walker v,
   SV.Storage v a) =>
   (TIdx.Section -> 
-     M.Map (XIdx.Eta Node) (String, XIdx.Eta Node -> XIdx.Eta Node)) ->
+     M.Map (XIdx.Eta Node) (String, XIdx.Eta Node -> XIdx.Power Node)) ->
   M.Map String (a -> a) ->
   SD.SequData (Record.PowerRecord Node v a) ->
   EqGen.EquationSystem Node s (Data Nil a) (Data (v :> Nil) a)
@@ -226,31 +212,17 @@ givenSimulate mnodef mstr sf =
    where f sec (Record.Record t xs) =
            (TIdx.absolute (XIdx.dTime sec) EqUt..= (Sig.unpack $ Sig.delta t))
            <> etaGiven (mnodef sec) mstr
-           <> Fold.fold (M.mapWithKey g xs)
-           where g (TIdx.PPos (TIdx.StructureEdge p0 p1)) e =
+          <> Fold.fold (M.mapWithKey g $ M.filterWithKey h xs)
+           where 
+             h (TIdx.PPos (TIdx.StructureEdge Rest Network)) _ = True
+             h (TIdx.PPos (TIdx.StructureEdge LocalRest LocalNetwork)) _ = True
+             h (TIdx.PPos (TIdx.StructureEdge Network Water)) _ = True
+             h (TIdx.PPos (TIdx.StructureEdge LocalNetwork Gas)) _ = True
+             h _ _ = False
+             g (TIdx.PPos (TIdx.StructureEdge p0 p1)) e =
                    (TIdx.absolute (XIdx.energy sec p0 p1) EqUt..= Sig.unpack e)
 
 
 
 
-{-
- ((EqGen.variable $ XIdx.eta sec crossing sink) =.= 
-    EqGen.liftF (D.map lookupCrSi) (EqGen.variable $ XIdx.power sec sink crossing)) :
--}
 
-{-
-             ((EqGen.variable $ XIdx.eta sec Water Network) =.=
-              EqGen.liftF lookupEtaWaterDisCharge (EqGen.variable $ XIdx.power sec Network Water))
-
- :
-             ((EqGen.variable $ XIdx.eta sec Coal Network) =.=
-              EqGen.liftF lookupEtaCoal (EqGen.variable $ XIdx.power sec Network Coal)) :
-             ((EqGen.variable $ XIdx.eta sec Gas LocalNetwork) =.=
-              EqGen.liftF lookupEtaGas (EqGen.variable $ XIdx.power sec Gas LocalNetwork)) :
-             ((EqGen.variable $ XIdx.eta sec Network LocalNetwork) =.=
-              EqGen.liftF lookupEtaTransformerHL (EqGen.variable $ XIdx.power sec LocalNetwork Network)) :
-             ((EqGen.variable $ XIdx.eta sec LocalNetwork Network) =.=
-              EqGen.liftF lookupEtaTransformerHL (EqGen.variable $ XIdx.power sec LocalNetwork Network)) :
-             (XIdx.eta sec Network Rest .= 1.0) :
-             (XIdx.eta sec LocalNetwork LocalRest .= 1.0) : []) <>
--}

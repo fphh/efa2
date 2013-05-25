@@ -31,7 +31,7 @@ import Control.Monad (join)
 import Data.Bool.HT (if')
 
 import qualified EFA.Utility.Map as MapU
-import EFA.Utility.Map (checkedLookup, checkedLookup2)
+import EFA.Utility.Map (checkedLookup,checkedLookupOld)
 
 
 
@@ -94,7 +94,7 @@ adjustSignsNew :: (SV.Walker v,
                   FlowRecord node v a ->
                   FlowRecord node v a
 adjustSignsNew (EdgeStates m) rec = rmapWithKey f rec
-  where f key x = case checkedLookup2 "Flow.adjustSignsNew" m (g key) of
+  where f key x = case checkedLookup "Flow.adjustSignsNew" m (g key) of
           (Neg, _) -> neg x
           (Pos, _) -> x
           (Zero, _) -> x
@@ -109,17 +109,18 @@ adjustSigns ::
   FlowState node -> FlowRecord node v a -> FlowRecord node v a
 adjustSigns topo (FlowState state) (Record dt flow) =
    Record dt (M.foldrWithKey g M.empty uniquePPos)
-      where g ppos NSign acc =
-              M.insert ppos (neg (flow `checkedLookup` ppos))
-                $ M.insert ppos' (neg (flow `checkedLookup` ppos')) acc
+      where (!) = checkedLookup "Flow.adjustSigns"
+            g ppos NSign acc =
+              M.insert ppos (neg (flow ! ppos))
+                $ M.insert ppos' (neg (flow ! ppos')) acc
                 where ppos' = Idx.flip ppos
             g ppos _ acc =
-              M.insert ppos (flow `checkedLookup` ppos)
-                $ M.insert ppos' (flow `checkedLookup` ppos') acc
+              M.insert ppos (flow ! ppos)
+                $ M.insert ppos' (flow ! ppos') acc
                 where ppos' = Idx.flip ppos
             uniquePPos = foldl h M.empty (Gr.edges topo)
               where h acc (DirEdge idx1 idx2) =
-                      M.insert ppos (state `checkedLookup` ppos) acc
+                      M.insert ppos (state `checkedLookupOld` ppos) acc
                       where ppos = XIdx.ppos idx1 idx2
 
 
@@ -175,11 +176,12 @@ genFlowTopology topo (FlowState fs) =
    Gr.fromList (labNodes topo) $ map (flip (,) ()) $
    map
       (\(DirEdge idx1 idx2) ->
-         case fs `checkedLookup` XIdx.ppos idx1 idx2 of
+         case fs ! XIdx.ppos idx1 idx2 of
             PSign -> Gr.EDirEdge $ DirEdge idx1 idx2
             NSign -> Gr.EDirEdge $ DirEdge idx2 idx1
             ZSign -> Gr.EUnDirEdge $ Gr.UnDirEdge idx1 idx2) $
    Gr.edges topo
+   where (!) = checkedLookup "Flow.genFlowTopology"
 
 genFlowTopologyIgnoreUnknownPPos ::
   (Ord node, Show node) =>

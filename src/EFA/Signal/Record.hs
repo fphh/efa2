@@ -65,7 +65,7 @@ import Data.Foldable (foldMap)
 import Data.List (transpose)
 import Data.Tuple.HT (mapFst)
 import Control.Monad (liftM2)
-import EFA.Utility.Map (checkedLookup2)
+import EFA.Utility.Map (checkedLookup)
 import EFA.Utility (myShowList)
 
 newtype SigId = SigId String deriving (Eq, Ord, Show, Read)
@@ -146,7 +146,7 @@ getTime (Record time _) = time
 getSig ::
    (Show (v d), Ord id, Show id) =>
    Record s1 s2 t1 t2 id v d d -> id -> TC s2 t2 (Data (v :> Nil) d)
-getSig (Record _ sigMap) key = checkedLookup2 "getSig" sigMap key
+getSig (Record _ sigMap) key = checkedLookup "getSig" sigMap key
 
 -- | Get Start and End time
 {- Wollen wir wirklich (Typ A T Tt) vorschreiben?
@@ -281,7 +281,7 @@ union (Record timeA mA) (Record timeB mB) =
 
 -- Wegen newTimeBase ist der Typ nicht so algemein wie bei "union" oben. Schade.
 unionWithNewTime ::
-  ( Eq (v d), Show d,
+  ( Eq (v d), Show d,Show (v d),
     Ord id,
     Show id,
     Fractional d,
@@ -339,7 +339,7 @@ maxRange ::
 maxRange list (Record _ m) =
   (S.toScalar $ minimum lmin, S.toScalar $ maximum lmax)
   where (lmin, lmax) = unzip $
-          map (S.fromScalar . S.minmax . checkedLookup2 "Signal.maxRange" m)
+          map (S.fromScalar . S.minmax . checkedLookup "Signal.maxRange" m)
               $ case list of
                      RangeFromAll -> M.keys m
                      RangeFrom w -> w
@@ -393,7 +393,7 @@ norm rec = rmap S.norm rec
 
 -- | Add interpolated data points in an existing record
 newTimeBase ::
-  (Fractional d, Ord d, V.Find v, Show d,
+  (Fractional d, Ord d, V.Find v, Show d,Show (v d),
    V.Lookup v, V.Walker v, V.Singleton v, V.Storage v d) =>
   String ->
   Record Signal Signal (Typ A T Tt) t2 id v d d ->
@@ -628,3 +628,15 @@ distribution rec@(Record _ pMap) xs intervall offset = Record classification ene
                               S.changeSignalType . S.untype .
                               getSig rec) xs
         energyDistribution =  M.map (S.calcDistributionValues classification) pMap
+        
+-- | Careful quick hack        
+
+sumFlowRecord :: (V.FromList v, 
+                  Num d,
+                  V.Zipper v,
+                  V.Walker v,
+                  V.Storage v d,
+                  V.Singleton v,
+                  BSum d,
+                  BProd d d) => FlowRecord node v d -> FlowRecord node v d
+sumFlowRecord (Record time map) = Record (S.fromList $ [head $ S.toList time, last $ S.toList time]) (M.map (S.fromList . (\x -> [x]) . S.fromScalar . S.sum) map)

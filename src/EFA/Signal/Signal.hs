@@ -8,6 +8,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 
 module EFA.Signal.Signal where
@@ -69,6 +70,39 @@ data FClass
 
 data TestRow
 
+
+data SignalSample
+data FSignalSample
+data FDistribSample
+data TestRowSample
+
+
+----------------------------------------------------------------
+-- | Signal Types and their Samples 
+
+type family SigSample s
+type instance SigSample Signal = SignalSample 
+type instance SigSample FSignal = FSignalSample
+type instance SigSample FDistrib = FDistribSample
+type instance SigSample TestRow = TestRowSample
+
+type family UnSample s
+type instance UnSample SignalSample =  Signal
+type instance UnSample FSignalSample = FSignal
+type instance UnSample FDistribSample = FDistrib
+type instance UnSample TestRowSample = TestRow
+
+
+{-
+class GetSample signal sample where
+  signal -> sample 
+
+instance GetSample Signal Sample where
+-}  
+  
+  
+  
+  
 
 newtype SignalIdx = SignalIdx Int deriving (Show, Eq, Ord)
 
@@ -154,7 +188,16 @@ zipWith ::
 zipWith f (TC da1) (TC da2) =
    TC $ D.zipWith f da1 da2
 
-
+{-
+zipWithGeneric ::
+   (D.ZipWith c, D.Storage c d1, D.Storage c d2, D.Storage c d3) =>
+   (d1 -> d2 -> d3) ->
+   TC s1 typ1 (Data c d1) ->
+   TC s2 typ2 (Data c d2) ->
+   TC s3 typ3 (Data c d3)
+zipWithGeneric f (TC da1) (TC da2) =
+   TC $ D.zipWith f da1 da2
+-}
 
 
 ----------------------------------------------------------------
@@ -169,12 +212,28 @@ tzipWith ::
    TC (Arith s1 s2) typ3 (Data c d3)
 tzipWith f xs ys = zipWith g xs ys
    where g x y = fromSample $ f (toSample x) (toSample y)
+{-
+tzipWithGeneric ::
+   (D.ZipWith c, D.Storage c d1, D.Storage c d2, D.Storage c d3) =>
+   (TC s1 typ1 (Data Nil d1) ->
+    TC s2 typ2 (Data Nil d2) ->
+    TC s3 typ3 (Data Nil d3)) ->
+   TC s1 typ1 (Data c d1) ->
+   TC s2 typ2 (Data c d2) ->
+   TC s3 typ3 (Data c d3)
+tzipWithGeneric f xs ys = zipWithGeneric g xs ys
+   where g x y = fromSampleGeneric $ f (toSampleGeneric x) (toSampleGeneric y)
+-}
 
-
-
-
-
-
+tzipWithSimple ::  (D.ZipWith c, D.Storage c d) =>   
+   (TC Sample typ (Data Nil d) ->
+    TC Sample typ (Data Nil d) ->
+    TC Sample typ (Data Nil d)) ->
+    TC Signal typ (Data c d) ->
+    TC Signal typ (Data c d) ->
+    TC Signal typ (Data c d) 
+tzipWithSimple f xs ys = zipWith g xs ys
+   where g x y = fromSample $ f (toSample x) (toSample y)
 ----------------------------------------------------------------
 -- Signal crosswith with Rule of Signal Inheritance
 type family CrossArith s1 s2
@@ -484,6 +543,19 @@ toSample x = TC $ Data x
 
 fromSample :: TC Sample typ (Data Nil d) -> d
 fromSample (TC (Data x)) = x
+
+{-
+toSampleGeneric :: d -> TC (SigSample s) typ (Data Nil d)
+toSampleGeneric x = TC $ Data x
+
+fromSampleGeneric :: TC (SigSample s) typ (Data Nil d) -> d
+fromSampleGeneric (TC (Data x)) = x
+
+class FromToSample
+  toSampleGeneric ::  TC (SigSample s) typ (Data Nil d) -> d
+  fromSampleGeneric :: TC (SigSample s) typ (Data Nil d) -> d
+
+-}
 
 
 class ConstSignal s
@@ -1324,7 +1396,8 @@ interp1Lin :: (Eq d1, Show d1,
                SV.Storage v1 d1,
                SV.Find v1,
                SV.Singleton v1,
-               SV.Lookup v1) =>
+               SV.Lookup v1, 
+               Show (v1 d1)) =>
               String ->
               TC Signal t1 (Data (v1 :> Nil) d1) ->
               TC Signal t2 (Data (v1 :> Nil) d1) ->
@@ -1335,7 +1408,8 @@ interp1Lin caller xSig ySig (TC (Data xVal)) =
      then toSample $ (y1 P.+y2) P./2
      else toSample $ ((y2 P.- y1) P./(x2 P.-x1)) P.* (xVal P.- x1) P.+ y1
   where sIdx@(SignalIdx idx) =
-          P.maybe (error $ "Out of Range: " ++ caller ++ ": "++ P.show xVal)
+          P.maybe (error $ "interp1Lin - Out of Range: " ++ caller ++ ": "++ P.show xVal ++ "/n" 
+                   ++ P.show xSig ++ P.show ySig)
                    id $ findIndex (P.>= xVal) xSig
         -- prevent negativ index when interpolating on first element
         TC (Data x1) = getSample xSig $ SignalIdx $ if idx P.== 0 then idx else idx-1
@@ -1385,7 +1459,8 @@ interp1LinSig ::  (Eq d1, Show d1,
                      SV.Find v1,
                      SV.Singleton v1,
                      SV.Lookup v1,
-                     SV.Walker v1) =>
+                     SV.Walker v1, 
+                     Show (v1 d1)) =>
                    String ->
                    TC Signal t1 (Data (v1 :> Nil) d1) ->
                    TC Signal t2 (Data (v1 :> Nil) d1) ->
@@ -1399,7 +1474,8 @@ interp1LinSig caller xSig ySig xSigLookup = tmap f xSigLookup
 -- | Interpolate a 3-signal x-y surface, where in x points are aligned in rows
 {-# WARNING interp2WingProfile "pg: not yet tested, sample calculation could be done better" #-}
 
-interp2WingProfile :: (SV.Storage v1 d1, Show d1,
+interp2WingProfile :: (Show (v1 d1), 
+                       SV.Storage v1 d1, Show d1,
                        Ord d1,
                        SV.Find v1,
                        Eq (v1 d1),
@@ -1410,8 +1486,7 @@ interp2WingProfile :: (SV.Storage v1 d1, Show d1,
                        SV.Singleton v1,
                        SV.Lookup v1,
                        BProd d1 d1,
-                       BSum d1,
-                       TSum t3 t3 t3
+                       BSum d1
                       ) =>
                       String ->
                       TC Signal t1 (Data (v1 :> Nil) d1) ->
@@ -1420,10 +1495,11 @@ interp2WingProfile :: (SV.Storage v1 d1, Show d1,
                       TC Sample t1 (Data Nil d1) ->
                       TC Sample t2 (Data Nil d1) ->
                       TC Sample t3 (Data Nil d1)
-interp2WingProfile caller xSig ySig zSig xLookup yLookup = TC $ Data $ ((z2 P.-z1)P./(x2 P.-x1)) P.*((fromSample xLookup) P.- x1)
+interp2WingProfile caller xSig ySig zSig xLookup yLookup = if xIdx1 P.== xIdx2 then TC $ Data $ z1 
+                                                           else TC $ Data $ (((z2 P.- z1) P./(x2 P.- x1)) P.*((fromSample xLookup) P.- x1))+z1
    where
         -- find indices in x-axis
-        xIdx@(SignalIdx idx) = P.maybe (error "Out of Range") id $ findIndex (P.>= fromSample xLookup) xSig
+        xIdx@(SignalIdx idx) = P.maybe (error "interp2WingProfile - Out of Range") id $ findIndex (P.>= fromSample xLookup) xSig
         xIdx1 = SignalIdx $ if idx P.== 0 then idx else idx-1
         xIdx2 = xIdx
 
