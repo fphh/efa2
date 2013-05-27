@@ -89,13 +89,13 @@ colours = [ Colors.White,
             Colors.Gray80,	
             Colors.Gray70 ]
           
--- ################### Vary Operation Demand
+-- ################### Vary Power Demand
 
 restPower :: [Double]
-restPower = [0.2 .. 0.8]
+restPower = [0.2,0.4 .. 1.0]
 
 localPower :: [Double]
-localPower = [0.2 .. 2.2]
+localPower = [0.2,0.4 .. 2.2]
 
 varRestPower', varLocalPower' :: [[Double]]
 (varLocalPower', varRestPower') = CT.varMat localPower restPower 
@@ -152,14 +152,8 @@ noflip (TIdx.InSection sec ( TIdx.Eta (TIdx.StructureEdge n1 n2)))  = (TIdx.InSe
 myflip :: TIdx.InSection TIdx.Eta node -> TIdx.InSection TIdx.Power node
 myflip (TIdx.InSection sec ( TIdx.Eta (TIdx.StructureEdge n1 n2)))  = (TIdx.InSection sec (TIdx.Power (TIdx.StructureEdge n2 n1))) 
 
-{-
-ms ::
-  (TIdx.FlipoTIdx.Eta) =>
-  M.Map (XIdx.Eta Node) (String, XIdx.Eta Node -> XIdx.Eta Node)
-ms = mconcat $ map m [TIdx.Section 0, TIdx.Section 1]
--}
 
--- ################### Vary Degrees of Freedom
+-- ################### Vary Degrees of Freedom for Optimisation
 
 waterPower :: [Double]
 waterPower = [0.2,0.4 .. 0.8]
@@ -455,18 +449,9 @@ main = do
      time = Sig.fromList [0..23]
      rec = Record.Record time $ 
            M.fromList [(TIdx.PPos (TIdx.StructureEdge Rest Network), powerSignalRest), 
-              --         (TIdx.PPos (TIdx.StructureEdge Network Rest), powerSignalRest), -- dummy Signal for Sequenzing
                        (TIdx.PPos (TIdx.StructureEdge LocalRest LocalNetwork), powerSignalLocal),
-              --         (TIdx.PPos (TIdx.StructureEdge LocalNetwork LocalRest), powerSignalLocal),-- dummy Signal for Sequenzing                   
-              --         (TIdx.PPos (TIdx.StructureEdge Network LocalNetwork), powerSignalRest),-- dummy Signal for Sequenzing
-              --         (TIdx.PPos (TIdx.StructureEdge LocalNetwork Network), powerSignalRest),-- dummy Signal for Sequenzing
-                             
                        (TIdx.PPos (TIdx.StructureEdge Network Water), powerSignalWater), 
-                      -- (TIdx.PPos (TIdx.StructureEdge Water Network), powerSignalWater), -- dummy Signal for Sequenzing
                        (TIdx.PPos (TIdx.StructureEdge LocalNetwork Gas), powerSignalGas)
-                      -- (TIdx.PPos (TIdx.StructureEdge Gas LocalNetwork), powerSignalGas), -- dummy Signal for Sequenzing
-                      -- (TIdx.PPos (TIdx.StructureEdge Network Coal), powerSignalGas), -- dummy Signal for Sequenzing
-                      -- (TIdx.PPos (TIdx.StructureEdge Coal Network), powerSignalGas) -- dummy Signal for Sequenzing
                       ]
      
      -- | Sequenceflow from Selected Section
@@ -483,7 +468,7 @@ main = do
  
      powerRecSim = ModUt.envToPowerRecord envSim time 0
      
-     flipwater (TIdx.PPos (TIdx.StructureEdge Network Water)) x = Sig.neg x -- x -- id --Sig.neg x 
+     flipwater (TIdx.PPos (TIdx.StructureEdge Network Water)) x = Sig.neg x  --Sig.neg x 
      flipwater (TIdx.PPos (TIdx.StructureEdge Water Network)) x = Sig.neg x
      flipwater _ x = x
      powerRecSimCorr = Record.rmapWithKey flipwater powerRecSim
