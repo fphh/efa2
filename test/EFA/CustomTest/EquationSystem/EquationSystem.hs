@@ -3,21 +3,23 @@
 module EFA.CustomTest.EquationSystem.EquationSystem where
 
 
+import qualified EFA.CustomTest.EquationSystem.Given as Given
+
 import qualified EFA.Example.Absolute as EqGen
 import qualified EFA.Graph.Draw as Draw
 
 import EFA.Utility.Async (concurrentlyMany_)
 
-
-import qualified EFA.CustomTest.EquationSystem.Given as Given
-
+import System.Exit (exitFailure)
+import Control.Monad (when)
 
 
 test :: IO ()
 test = do
-  let env = EqGen.solve Given.seqTopo Given.originalGiven
-  putStrLn "Is the equation system for sequence flow graphs correct?"
-  print (Given.testEnv == env)
+  putStrLn "Check correctness of the equation system for sequence flow graphs."
+  when
+     (Given.testEnv /= EqGen.solve Given.seqTopo Given.originalGiven)
+     exitFailure
 
 
 main :: IO ()
