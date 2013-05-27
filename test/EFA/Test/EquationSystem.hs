@@ -1,9 +1,9 @@
 
 
-module EFA.CustomTest.EquationSystem.EquationSystem where
+module EFA.Test.EquationSystem where
 
 
-import qualified EFA.CustomTest.EquationSystem.Given as Given
+import qualified EFA.Test.EquationSystem.Given as Given
 
 import qualified EFA.Example.Absolute as EqGen
 import qualified EFA.Graph.Draw as Draw

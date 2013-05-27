@@ -1,5 +1,5 @@
 
-module EFA.CustomTest.EquationSystem.Given where
+module EFA.Test.EquationSystem.Given where
 
 
 import EFA.Example.Absolute ( (.=) )
