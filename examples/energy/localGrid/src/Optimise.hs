@@ -548,8 +548,8 @@ main = do
      report [] ("gasPower", varGasPower),
      Draw.xterm $ Draw.sequFlowGraphAbsWithEnv  seqTopoSim envSim,
      report [] ("powerRecordSim",powerRecSim),
-     PlotIO.record [] DefaultTerm.cons show  id rec,
-     PlotIO.record [] DefaultTerm.cons show  id powerRecSim,
+     PlotIO.record "Calculated Signals" DefaultTerm.cons show id rec,
+     PlotIO.record "Simulation Result" DefaultTerm.cons show id powerRecSim,
      
      PlotIO.signal "State"  DefaultTerm.cons id stateSignal ,
      PlotIO.signal "Interpolated Signals"  DefaultTerm.cons id [powerSignalWaterOptCharge, 

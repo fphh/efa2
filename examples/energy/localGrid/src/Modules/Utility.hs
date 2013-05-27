@@ -58,9 +58,14 @@ envToPowerRecord ::  EqEnv.Complete
                      (EqRec.Absolute (Result (Data  Nil a)))
                      (EqRec.Absolute (Result (Data (v :> Nil) a))) ->
                      Sig.TSignal v a -> Integer -> Record.PowerRecord System.Node v a
-envToPowerRecord env time sec = Record.Record time (M.map i $ M.mapKeys h $ 
-                                                    (M.filterWithKey f $ EqEnv.powerMap $ EqEnv.signal env))
-  where f (TIdx.InSection (TIdx.Section section) (TIdx.Power (TIdx.StructureEdge _ _))) _ = (toInteger section) == sec  
-        h (TIdx.InSection (TIdx.Section section) (TIdx.Power (TIdx.StructureEdge n1 n2))) = TIdx.PPos (TIdx.StructureEdge n1 n2)
+envToPowerRecord env time sec =
+  Record.Record time
+    (M.map i $ M.mapKeys h $ M.filterWithKey f $ EqEnv.powerMap $ EqEnv.signal env)
+  where f (TIdx.InSection (TIdx.Section section) (TIdx.Power (TIdx.StructureEdge _ _))) _ = 
+          toInteger section == sec  
+        h (TIdx.InSection (TIdx.Section section) (TIdx.Power (TIdx.StructureEdge n1 n2))) =
+          TIdx.PPos (TIdx.StructureEdge n1 n2)
+
         i (EqRec.Absolute (Determined dat)) = Sig.TC dat
-        i (EqRec.Absolute Undetermined) = error "Modules.Utility.envToPowerRecord - undetermined data" 
+        i (EqRec.Absolute Undetermined) =
+          error "Modules.Utility.envToPowerRecord - undetermined data" 
