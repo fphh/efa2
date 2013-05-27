@@ -61,6 +61,7 @@ import qualified Data.GraphViz.Attributes.Colors.X11 as Colors
 
 import qualified EFA.Signal.ConvertTable as CT
 import qualified EFA.IO.TableParser as Table
+import qualified EFA.IO.TableParserTypes as TPT
 
 import qualified System.IO as IO
 --import System.Environment (getEnv)
@@ -92,7 +93,7 @@ colours = [ Colors.White,
 -- ################### Vary Power Demand
 
 restPower :: [Double]
-restPower = [0.2,0.4 .. 1.0]
+restPower = [0.2,0.4 .. 2]
 
 localPower :: [Double]
 localPower = [0.2,0.4 .. 2.2]
@@ -131,10 +132,11 @@ scaleTableEta = M.fromList $
 m ::
   (TIdx.Flip (TIdx.InSection TIdx.Eta)) =>
   TIdx.Section ->
-  M.Map (TIdx.InSection TIdx.Eta Node) (String, TIdx.InSection TIdx.Eta Node -> TIdx.InSection TIdx.Eta Node)
+  M.Map (TIdx.InSection TIdx.Eta Node)
+        (String, TIdx.InSection TIdx.Eta Node -> TIdx.InSection TIdx.Eta Node)
 -}
-m :: TIdx.Section -> M.Map (XIdx.Eta Node) (String, XIdx.Eta Node -> XIdx.Power Node)
-m sec = M.fromList $
+etaAssign :: TIdx.Section -> M.Map (XIdx.Eta Node) (String, XIdx.Eta Node -> XIdx.Power Node)
+etaAssign sec = M.fromList $
   (XIdx.eta sec Water Network, ( "storage",myflip)) :
   (XIdx.eta sec Network Water, ( "storage", noflip)) :
   (XIdx.eta sec Coal Network, ( "coal", myflip)) :
@@ -212,30 +214,37 @@ sweepCharge :: (Double -> Double) ->
                  (EqRec.Absolute (Result Double)))
 
 sweepCharge etaWaterCharge etaCoal etaGas etaTransHL rPower lPower wPower gPower = Sig.fromList2 $ 
-                                          zipWith (zipWith (Optimisation.solveCharge 
+                                          zipWith (zipWith (undefined -- Optimisation.solveCharge 
                                                             etaWaterCharge etaCoal etaGas 
                                                             etaTransHL rPower lPower)) 
                                           wPower gPower
-     
--- | Sweep all Configuration Optimations
-sweepDischarge :: (Double -> Double) ->
-                  (Double -> Double) ->
-                  (Double -> Double) ->
-                  (Double -> Double) ->
-                  Double -> 
-                  Double -> 
-                  [[Double]] -> 
-                  [[Double]] -> 
-                  Sig.UTSignal2 V.Vector V.Vector
-                  ((EqEnv.Complete  
-                    Node
-                    (EqRec.Absolute (Result Double))
-                    (EqRec.Absolute (Result Double))))
-sweepDischarge etaWaterDischarge etaCoal etaGas etaTransHL rPower lPower wPower gPower = Sig.fromList2 $ 
-                                              zipWith (zipWith (Optimisation.solveDischarge 
-                                                                etaWaterDischarge etaCoal etaGas 
-                                                                etaTransHL rPower lPower)) 
-                                              wPower gPower
+ 
+-- | Sweep all Configuration Optimatisations
+sweepDischarge :: 
+  (TIdx.Section -> 
+    M.Map (XIdx.Eta Node) (String, XIdx.Eta Node -> XIdx.Power Node)) ->
+  M.Map String (Double -> Double) ->
+  Double -> 
+  Double -> 
+  [[Double]] -> 
+  [[Double]] -> 
+  Sig.UTSignal V.Vector
+    (EqEnv.Complete 
+      Node
+      (EqRec.Absolute (Result (Data Nil Double)))
+      (EqRec.Absolute (Result (Data (V.Vector :> Nil) Double))))
+sweepDischarge etaAssign etaFunc rPower lPower wPower gPower =
+  Sig.fromList res
+  where 
+        res = zipWith (Optimisation.solveDischarge etaAssign etaFunc rp lp) wp gp
+        -- len, ziemlich kühn ???
+        len = length (head wPower)
+        rp = Data $ V.replicate len rPower
+        lp = Data $ V.replicate len lPower
+        wp = map (Data . V.fromList) wPower  
+        gp = map (Data . V.fromList) gPower
+
+
 calcEtaSys :: (EqEnv.Complete  
                Node
                (EqRec.Absolute (Result Double))
@@ -279,6 +288,18 @@ maxEta sigEnvs = (Sig.fromScalar etaMax, env)
       _ -> Nothing
 
 
+getEtas :: M.Map String (a -> a) -> [String] -> [a -> a]
+getEtas etaFunc = map $
+  \str -> maybe (error $ str ++ " not found") id (M.lookup str etaFunc)
+
+
+getTimes ::
+  M.Map String (TPT.T Double) ->
+  [String] ->
+  [(Sig.TSignal [] Double, Sig.PSignal [] Double)]
+getTimes tabPower = map (f . CT.convertToSignal2D . flip M.lookup tabPower)
+  where f (x, [y]) = (x, y)
+
 main :: IO ()
 main = do
 
@@ -287,55 +308,18 @@ main = do
    tabEta <- Table.read "../simulation/maps/eta.txt"
    tabPower <- Table.read "../simulation/maps/power.txt"
 
--- | Import Efficiency Maps
-   let etaWaterCharge :: Double -> Double
-       etaWaterCharge = Sig.fromSample . Sig.interp1Lin "etaWaterCharge" (Sig.scale xs powerScaleWater) (head ys) . Sig.toSample
-         where xs :: Sig.PSignal [] Double
-               ys :: [Sig.NSignal [] Double]
-               (xs,ys) = CT.convertToSignal2D (M.lookup "storage" tabEta)
-                        
-   let etaWaterDischarge :: Double -> Double
-       etaWaterDischarge = Sig.fromSample . Sig.interp1Lin "etaWaterDischarge" (Sig.scale xs powerScaleWater) (head ys) . Sig.toSample
-         where xs :: Sig.PSignal [] Double
-               ys :: [Sig.NSignal [] Double]
-               (xs,ys) = CT.convertToSignal2D (M.lookup "storage" tabEta)
-   
-   let etaGas :: Double -> Double
-       etaGas = Sig.fromSample . Sig.interp1Lin "etaGas" (Sig.scale xs powerScaleGas) (head ys) . Sig.toSample
-         where xs :: Sig.PSignal [] Double
-               ys :: [Sig.NSignal [] Double]
-               (xs,ys) = CT.convertToSignal2D (M.lookup "gas" tabEta)
-               
-   let etaCoal :: Double -> Double
-       etaCoal = Sig.fromSample . Sig.interp1Lin "etaCoal" (Sig.scale xs powerScaleCoal) (head ys) . Sig.toSample
-         where xs :: Sig.PSignal [] Double
-               ys :: [Sig.NSignal [] Double]
-               (xs,ys) = CT.convertToSignal2D (M.lookup "coal" tabEta)
-   
-   let etaTransHL :: Double -> Double
-       etaTransHL = Sig.fromSample . Sig.interp1Lin "etaTransHL" (Sig.scale xs powerScaleTransformer) (head ys) . Sig.toSample
-         where xs :: Sig.PSignal [] Double
-               ys :: [Sig.NSignal [] Double]
-               (xs,ys) = CT.convertToSignal2D (M.lookup "transformer" tabEta) 
+   let etaFunc = CT.makeEtaFunctions2D scaleTableEta tabEta
+       etaWaterCharge:etaWaterDischarge:etaGas:etaCoal:etaTransHL:_ =
+         getEtas etaFunc ["storage", "storage", "gas", "coal", "transformer"]
 
 -- | Import Power Curves
-   let 
-       timeWind :: Sig.TSignal [] Double        
-       powerSignalWind :: Sig.PSignal [] Double
-       (timeWind,[powerSignalWind]) = CT.convertToSignal2D (M.lookup "wind" tabPower)
-       
-       timeSolar :: Sig.TSignal [] Double        
-       powerSignalSolar :: Sig.PSignal [] Double
-       (timeSolar,[powerSignalSolar]) = CT.convertToSignal2D (M.lookup "solar" tabPower)
-       
-       timeHouse :: Sig.TSignal [] Double        
-       powerSignalHouse :: Sig.PSignal [] Double
-       (timeHouse,[powerSignalHouse]) = CT.convertToSignal2D (M.lookup "house" tabPower)
-       
-       timeIndustry :: Sig.TSignal [] Double        
-       powerSignalIndustry :: Sig.PSignal [] Double
-       (timeIndustry,[powerSignalIndustry]) = CT.convertToSignal2D (M.lookup "industry" tabPower)
-       
+   let (timeWind, powerSignalWind) :
+         (timeSolar, powerSignalSolar) :
+         (timeHouse, powerSignalHouse) :
+         (timeIndustry, powerSignalIndustry) : _
+           = getTimes tabPower ["wind", "solar", "house", "industry"]
+
+  
        powerSignalRest = Sig.scale powerSignalWind restPowerScale
        powerSignalLocal = Sig.scale  (powerSignalSolar Sig..+ Sig.makeDelta (powerSignalHouse Sig..+ (Sig.makeDelta powerSignalIndustry))) localPowerScale
 
@@ -352,12 +336,25 @@ main = do
      envsCharge = Sig.fromList2 $ zipWith (zipWith (\ x y -> sweepCharge etaWaterCharge etaCoal etaGas etaTransHL x y varWaterPower' varGasPower')) varRestPower' varLocalPower'
 
 
+     -- hier verstehe ich es nicht mehr...
+     envsDischargeA :: 
+       [[Sig.UTSignal V.Vector
+           (EqEnv.Complete Node
+                           (EqRec.Absolute (Result (Data Nil Double)))
+                           (EqRec.Absolute (Result (Data (V.Vector :> Nil) Double))))]]
+     envsDischargeA =
+       zipWith 
+         (\x y -> zipWith 
+           (\a b -> sweepDischarge etaAssign etaFunc a b varWaterPower' varGasPower') x y)
+         varRestPower' varLocalPower'
+
+     -- das soll rauskommen: Bitte undefined definieren !!!
      envsDischarge :: Sig.UTSignal2 V.Vector V.Vector (Sig.UTSignal2 V.Vector V.Vector
                            (EqEnv.Complete  
                              Node
                              (EqRec.Absolute (Result Double))
                              (EqRec.Absolute (Result Double))))
-     envsDischarge = Sig.fromList2 $ zipWith (zipWith (\ x y -> sweepDischarge etaWaterCharge etaCoal etaGas etaTransHL x y varWaterPower' varGasPower')) varRestPower' varLocalPower'
+     envsDischarge = undefined envsDischargeA
 
      maxETACharge :: Sig.NSignal2 V.Vector V.Vector Double
      maxETACharge = Sig.setType $ Sig.map fst $ Sig.map maxEta envsCharge
@@ -386,22 +383,28 @@ main = do
      envsDischargeOpt = Sig.map snd $ Sig.map maxEta envsDischarge
 
      powerGasChargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
-     powerGasChargeOpt = Sig.setType $ Sig.map  (ModUt.lookupAbsPower (XIdx.power sec0 Gas LocalNetwork)) envsChargeOpt
+     powerGasChargeOpt = Sig.setType $
+       Sig.map (ModUt.lookupAbsPower (XIdx.power sec0 Gas LocalNetwork)) envsChargeOpt
        
      powerWaterChargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
-     powerWaterChargeOpt = Sig.setType $ Sig.map  (ModUt.lookupAbsPower (XIdx.power sec0 Water Network)) envsChargeOpt
+     powerWaterChargeOpt = Sig.setType $
+       Sig.map (ModUt.lookupAbsPower (XIdx.power sec0 Water Network)) envsChargeOpt
      
      powerGasDischargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
-     powerGasDischargeOpt = Sig.setType $ Sig.map  (ModUt.lookupAbsPower (XIdx.power sec1 LocalNetwork Gas)) envsDischargeOpt
+     powerGasDischargeOpt = Sig.setType $
+       Sig.map (ModUt.lookupAbsPower (XIdx.power sec1 LocalNetwork Gas)) envsDischargeOpt
        
      powerWaterDischargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
-     powerWaterDischargeOpt = Sig.setType $ Sig.map  (ModUt.lookupAbsPower (XIdx.power sec1 Water Network)) envsDischargeOpt
+     powerWaterDischargeOpt = Sig.setType $
+       Sig.map (ModUt.lookupAbsPower (XIdx.power sec1 Water Network)) envsDischargeOpt
     
      powerTransformerChargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
-     powerTransformerChargeOpt = Sig.setType $ Sig.map  (ModUt.lookupAbsPower (XIdx.power sec0 Network LocalNetwork)) envsChargeOpt
+     powerTransformerChargeOpt = Sig.setType $
+       Sig.map (ModUt.lookupAbsPower (XIdx.power sec0 Network LocalNetwork)) envsChargeOpt
      
      powerTransformerDischargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
-     powerTransformerDischargeOpt = Sig.setType $ Sig.map  (ModUt.lookupAbsPower (XIdx.power sec1 Network LocalNetwork)) envsDischargeOpt   
+     powerTransformerDischargeOpt = Sig.setType $
+       Sig.map (ModUt.lookupAbsPower (XIdx.power sec1 Network LocalNetwork)) envsDischargeOpt   
       
 
      powerSignalWaterOptCharge =
@@ -457,10 +460,9 @@ main = do
      -- | Sequenceflow from Selected Section
      seqTopoSim = Flow.mkSequenceTopology (ModUt.select System.flowStatesOpt [4])
      -- | Table with efficiency maps 
-     mstr = CT.makeEtaFunctions2D scaleTableEta tabEta
      
      -- | Generated Equation System
-     eqs = Optimisation.givenSimulate m mstr $ 
+     eqs = Optimisation.givenSimulate etaAssign etaFunc $ 
            SD.SequData [(SD.Section (TIdx.Section 0) (Sig.SignalIdx 0, Sig.SignalIdx 23) rec)] --sequencePowers
            
      -- | Simulation Result as Env      
@@ -501,9 +503,9 @@ main = do
      flowTopos = Flow.genSequFlowTops System.topologyOpt flowStates
      sequenceFlowTopologySim = makeSeqFlowTopology flowTopos
      envSimAnalysis = Analysis.external2 sequenceFlowTopologySim sequenceFlowsFilt
-     envSimAnalysisCumulated = Analysis.external2 sequenceFlowTopologySim (fmap Record.sumFlowRecord sequenceFlowsFilt)
+     envSimAnalysisCumulated = Analysis.external2 sequenceFlowTopologySim
+                                 (fmap Record.sumFlowRecord sequenceFlowsFilt)
 
-    
    concurrentlyMany_ $ [
      
      Draw.xterm $ Draw.topologyWithEdgeLabels System.edgeNamesOpt System.topologyOpt,
@@ -545,5 +547,66 @@ main = do
      Draw.xterm $ Draw.sequFlowGraphAbsWithEnv  sequenceFlowTopologySim envSimAnalysisCumulated
      
      ]
+
+
+
+
+
+
+
+-- Weg damit:
+
+
+{-
+
+       timeWind :: Sig.TSignal [] Double        
+       powerSignalWind :: Sig.PSignal [] Double
+       (timeWind,[powerSignalWind]) = CT.convertToSignal2D (M.lookup "wind" tabPower)
+       
+       timeSolar :: Sig.TSignal [] Double        
+       powerSignalSolar :: Sig.PSignal [] Double
+       (timeSolar,[powerSignalSolar]) = CT.convertToSignal2D (M.lookup "solar" tabPower)
+       
+       timeHouse :: Sig.TSignal [] Double        
+       powerSignalHouse :: Sig.PSignal [] Double
+       (timeHouse, [powerSignalHouse]) =  
+         (map (flip Sig.scale 1.2)) `fmap` (CT.convertToSignal2D (M.lookup "house" tabPower))
+       
+       timeIndustry :: Sig.TSignal [] Double        
+       powerSignalIndustry :: Sig.PSignal [] Double
+       (timeIndustry,[powerSignalIndustry]) = CT.convertToSignal2D (M.lookup "industry" tabPower)
      
-     
+
+-- | Import Efficiency Maps
+   let etaWaterCharge :: Double -> Double
+       etaWaterCharge = Sig.fromSample . Sig.interp1Lin "etaWaterCharge" (Sig.scale xs powerScaleWater) (head ys) . Sig.toSample
+         where xs :: Sig.PSignal [] Double
+               ys :: [Sig.NSignal [] Double]
+               (xs,ys) = CT.convertToSignal2D (M.lookup "storage" tabEta)
+ 
+                        
+   let etaWaterDischarge :: Double -> Double
+       etaWaterDischarge = Sig.fromSample . Sig.interp1Lin "etaWaterDischarge" (Sig.scale xs powerScaleWater) (head ys) . Sig.toSample
+         where xs :: Sig.PSignal [] Double
+               ys :: [Sig.NSignal [] Double]
+               (xs,ys) = CT.convertToSignal2D (M.lookup "storage" tabEta)
+   
+   let etaGas :: Double -> Double
+       etaGas = Sig.fromSample . Sig.interp1Lin "etaGas" (Sig.scale xs powerScaleGas) (head ys) . Sig.toSample
+         where xs :: Sig.PSignal [] Double
+               ys :: [Sig.NSignal [] Double]
+               (xs,ys) = CT.convertToSignal2D (M.lookup "gas" tabEta)
+
+   let etaCoal :: Double -> Double
+       etaCoal = Sig.fromSample . Sig.interp1Lin "etaCoal" (Sig.scale xs powerScaleCoal) (head ys) . Sig.toSample
+         where xs :: Sig.PSignal [] Double
+               ys :: [Sig.NSignal [] Double]
+               (xs,ys) = CT.convertToSignal2D (M.lookup "coal" tabEta)
+   
+   let etaTransHL :: Double -> Double
+       etaTransHL = Sig.fromSample . Sig.interp1Lin "etaTransHL" (Sig.scale xs powerScaleTransformer) (head ys) . Sig.toSample
+         where xs :: Sig.PSignal [] Double
+               ys :: [Sig.NSignal [] Double]
+               (xs,ys) = CT.convertToSignal2D (M.lookup "transformer" tabEta) 
+-}
+

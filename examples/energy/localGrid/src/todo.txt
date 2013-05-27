@@ -1,0 +1,15 @@
+
+* Record auch für Scalare anpassen: v -> (v :> Nil)
+
+* modelica extrapolation verhindern?
+
+* interp1Lin aufräumen
+
+* Wirkungsgradkennfelder in positiv und negativ trennen.
+
+* Stunden auf Sekunden umrechnen.
+
+* Netzlast auf Hochvoltnetz anbringen (evtl. Industrie) und Optimierung und Analyse konsistent machen.
+
+* Sektionen gehen verloren (Energiebeispiel Simulation)
+

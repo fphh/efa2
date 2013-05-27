@@ -1404,19 +1404,19 @@ interp1Lin :: (Eq d1, Show d1,
               TC Sample t1 (Data Nil d1) ->
               TC Sample t2 (Data Nil d1)
 interp1Lin caller xSig ySig (TC (Data xVal)) =
-  if x1 P.== x2
-     then toSample $ (y1 P.+y2) P./2
-     else toSample $ ((y2 P.- y1) P./(x2 P.-x1)) P.* (xVal P.- x1) P.+ y1
+  toSample $ ((y2 P.- y1) P./(x2 P.-x1)) P.* (xVal P.- x1) P.+ y1
   where sIdx@(SignalIdx idx) =
-          P.maybe (error $ "interp1Lin - Out of Range: " ++ caller ++ ": "++ P.show xVal ++ "/n" 
-                   ++ P.show xSig ++ P.show ySig)
-                   id $ findIndex (P.>= xVal) xSig
+          P.maybe (error msg) id $ findIndex (P.>= xVal) xSig
         -- prevent negativ index when interpolating on first element
-        TC (Data x1) = getSample xSig $ SignalIdx $ if idx P.== 0 then idx else idx-1
+        TC (Data x1) = getSample xSig $ SignalIdx $ if idx P.== 0 then error msg else idx-1
         TC (Data x2) = getSample xSig sIdx
         -- prevent negativ index when interpolating on first element
-        TC (Data y1) = getSample ySig $ SignalIdx $ if idx P.== 0 then idx else idx-1
+        TC (Data y1) = getSample ySig $ SignalIdx $ if idx P.== 0 then error msg else idx-1
         TC (Data y2) = getSample ySig sIdx
+        msg = "interp1Lin - Out of Range: " ++ caller ++ ": "++ P.show xVal ++ "\n" 
+                   ++ P.show xSig ++ P.show ySig
+
+
 
 
 getSample ::  (SV.Singleton v1,
@@ -1474,7 +1474,7 @@ interp1LinSig caller xSig ySig xSigLookup = tmap f xSigLookup
 -- | Interpolate a 3-signal x-y surface, where in x points are aligned in rows
 {-# WARNING interp2WingProfile "pg: not yet tested, sample calculation could be done better" #-}
 
-interp2WingProfile :: (Show (v1 d1), 
+interp2WingProfile :: (Show (v1 d1), Show (v2 (v1 d1)),
                        SV.Storage v1 d1, Show d1,
                        Ord d1,
                        SV.Find v1,
@@ -1495,13 +1495,13 @@ interp2WingProfile :: (Show (v1 d1),
                       TC Sample t1 (Data Nil d1) ->
                       TC Sample t2 (Data Nil d1) ->
                       TC Sample t3 (Data Nil d1)
-interp2WingProfile caller xSig ySig zSig xLookup yLookup = if xIdx1 P.== xIdx2 then TC $ Data $ z1 
-                                                           else TC $ Data $ (((z2 P.- z1) P./(x2 P.- x1)) P.*((fromSample xLookup) P.- x1))+z1
+interp2WingProfile caller xSig ySig zSig xLookup yLookup =
+   TC $ Data $ (((z2 P.- z1) P./(x2 P.- x1)) P.*((fromSample xLookup) P.- x1))+z1
    where
         -- find indices in x-axis
-        xIdx@(SignalIdx idx) = P.maybe (error "interp2WingProfile - Out of Range") id $ findIndex (P.>= fromSample xLookup) xSig
-        xIdx1 = SignalIdx $ if idx P.== 0 then idx else idx-1
-        xIdx2 = xIdx
+        xIdx2@(SignalIdx idx) =
+          P.maybe (error msg) id $ findIndex (P.>= fromSample xLookup) xSig
+        xIdx1 = SignalIdx $ if idx P.== 0 then error msg else idx-1
 
         -- get y and z data columns
         yRow1 = getColumn ySig xIdx1
@@ -1514,6 +1514,10 @@ interp2WingProfile caller xSig ySig zSig xLookup yLookup = if xIdx1 P.== xIdx2 t
         z2 = fromSample $ interp1Lin caller yRow2 zRow2 yLookup
         x1 = fromSample $ getSample xSig xIdx1
         x2 = fromSample $ getSample xSig xIdx2
+        msg = "interp2WingProfile - Out of Range: " ++ caller ++ ": " 
+              ++ P.show xLookup ++ ", " ++ P.show yLookup ++ "\n" 
+              ++ P.show xSig ++ "\n" ++ P.show ySig
+
 
 
 -- | Scale Signal by a given Number

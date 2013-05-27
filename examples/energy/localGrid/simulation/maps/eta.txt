@@ -46,7 +46,7 @@ double transformer(7,2)
   1.1    0.97
 double coal(12,2)   
  -10e6   0
-  0      0
+  0      0.1
   0.1    0.5
   0.2    0.6
   0.3	 0.8

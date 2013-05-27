@@ -42,46 +42,39 @@ import qualified Data.Map as M
 sec0, sec1 :: TIdx.Section
 sec0 :~ sec1 :~ _ = Stream.enumFrom $ TIdx.Section 0
 
-solveCharge :: (Double -> Double) -> 
-               (Double -> Double) -> 
-               (Double -> Double) -> 
-               (Double -> Double) -> Double ->               
-               Double -> 
-               Double -> 
-               Double -> 
-               EqEnv.Complete  
-               Node
-               (EqRec.Absolute (Result Double))
-               (EqRec.Absolute (Result Double))
-solveCharge etaWater etaCoal etaGas etaTrans pRest pRestLocal pWater pGas 
-  = EqGen.solve System.seqTopoOpt $ 
-    givenCharging etaWater etaCoal etaGas etaTrans pRest pRestLocal pWater pGas
- 
-solveDischarge :: (Double -> Double) -> 
-                  (Double -> Double) -> 
-                  (Double -> Double) -> 
-                  (Double -> Double) -> 
-                  Double ->               
-                  Double -> 
-                  Double -> 
-                  Double -> 
-                  EqEnv.Complete  
-                  Node
-                  (EqRec.Absolute (Result Double))
-                  (EqRec.Absolute (Result Double))
-solveDischarge etaWater etaCoal etaGas etaTrans pRest pRestLocal pWater pGas 
-  = EqGen.solve System.seqTopoOpt $ 
-    givenDischarging etaWater etaCoal etaGas etaTrans pRest pRestLocal pWater pGas
+solveDischarge ::
+  ( Num a, Eq (v a), Eq a, EqArith.Constant a, SV.FromList v,
+    Fractional a,
+    SV.Zipper v, SV.Walker v, SV.Storage v a, SV.Len (v a)) =>
+  (TIdx.Section -> 
+     M.Map (XIdx.Eta Node) (String, XIdx.Eta Node -> XIdx.Power Node)) ->
+  M.Map String (a -> a) ->
+  Data (v :> Nil) a ->
+  Data (v :> Nil) a ->
+  Data (v :> Nil) a ->
+  Data (v :> Nil) a ->
+  EqEnv.Complete  
+    Node
+    (EqRec.Absolute (Result (Data Nil a)))
+    (EqRec.Absolute (Result (Data (v :> Nil) a)))
+solveDischarge etaAssign etaFunc pRest pRestLocal pWater pGas =
+  EqGen.solve System.seqTopoOpt $ 
+    givenDischarging etaAssign etaFunc pRest pRestLocal pWater pGas
 
-commonGiven :: EqGen.EquationSystem System.Node s Double Double
-commonGiven =
+commonGiven ::
+  ( SV.FromList v, Eq (v a), EqArith.Sum a, SV.Zipper v, Num a, Eq a,
+    SV.Walker v, SV.Storage v a ) =>
+  Int ->
+  EqGen.EquationSystem System.Node s (Data Nil a) (Data (v :> Nil) a)
+commonGiven n =
    mconcat $
-   (XIdx.dTime sec0 .= 1) :
-   (XIdx.dTime sec1 .= 1) :
-   (XIdx.storage TIdx.Initial Water .= 0) :
+   (XIdx.dTime sec0 .= (Data.fromList $ replicate n 1)) :
+   (XIdx.dTime sec1 .= (Data.fromList $ replicate n 1)) :
+   (XIdx.storage TIdx.Initial Water .= Data 0) :
    (XIdx.energy sec0 Water Network  %= XIdx.energy sec1 Water Network) :
    []
 
+{-
 givenCharging :: (Double -> Double) -> 
                          (Double -> Double) -> 
                          (Double -> Double) -> 
@@ -128,7 +121,9 @@ givenCharging lookupEtaWaterCharge lookupEtaCoal lookupEtaGas lookupEtaTransform
    (XIdx.x sec1 Network LocalNetwork .= 0.5) :
 
    []
+-}
 
+{-
 givenDischarging :: (Double -> Double) ->                          
                             (Double -> Double) ->                        
                             (Double -> Double) ->  
@@ -174,6 +169,48 @@ givenDischarging lookupEtaWaterDisCharge lookupEtaCoal lookupEtaGas lookupEtaTra
    (XIdx.x sec0 Network LocalNetwork .= 0.5) :
 
    []
+-}
+
+
+givenDischarging ::
+  ( EqArith.Sum a, SV.Zipper v, SV.Walker v, SV.FromList v, Num a, Eq a,
+    Fractional a,
+    SV.Len (v a),
+    Eq (v a), SV.Storage v a ) =>
+  (TIdx.Section -> 
+     M.Map (XIdx.Eta Node) (String, XIdx.Eta Node -> XIdx.Power Node)) ->
+  M.Map String (a -> a) ->
+  Data (v :> Nil) a ->
+  Data (v :> Nil) a ->
+  Data (v :> Nil) a ->
+  Data (v :> Nil) a ->
+  EqGen.EquationSystem System.Node s (Data Nil a) (Data (v :> Nil) a)
+givenDischarging etaAssign etaFunc pRest pRestLocal pWater pGas =
+   ((commonGiven (Data.len pRest) <> etaGiven (etaAssign sec1) etaFunc) <>) $
+   mconcat $
+   -- Actual Section 1 discharging to be varied and optimised
+   (XIdx.power sec1 Rest Network .= pRest) :
+   (XIdx.power sec1 LocalRest LocalNetwork .= pRestLocal) :
+   (XIdx.power sec1 Network Water .= pWater) :
+   (XIdx.power sec1 Gas LocalNetwork .= pGas) :
+
+   -- Average Section 0 discharging
+--   (XIdx.eta sec0 Network Rest .= 1.0) :
+
+   (XIdx.eta sec0 LocalNetwork LocalRest .= Data.fromList [1.0]) :
+   (XIdx.eta sec0 Coal Network .= Data.fromList [0.4]) :
+   (XIdx.eta sec0 Gas LocalNetwork .= Data.fromList [0.4]) :
+   (XIdx.eta sec0 Water Network .= Data.fromList [0.4]) :
+   (XIdx.eta sec0 Network Water .= Data.fromList [0.4]) :
+   (XIdx.eta sec0 Network LocalNetwork .= Data.fromList [0.8]) :
+   (XIdx.x sec0 Network Water .= Data.fromList [0.2]) :
+   (XIdx.x sec0 Coal Network .= Data.fromList [0.5]) :
+   (XIdx.x sec0 LocalNetwork Network .= Data.fromList [0.8]) :
+   (XIdx.x sec0 Network LocalNetwork .= Data.fromList [0.5]) :
+
+
+   []
+
 
 etaGiven ::
   (Eq (Data.Apply c d1), Eq (Data.Apply c d2), Ord (idx node),
@@ -185,12 +222,11 @@ etaGiven ::
    M.Map (idx node) (k, idx node -> idx1 node) ->
    M.Map k (d1 -> d2) ->
    EqGen.EquationSystem node s a v
-etaGiven mnode mstr = Fold.fold $ M.mapWithKey f mnode
-  where f n (str, g) = maybe mempty eq (M.lookup str mstr)
-          where eq etaFunc =
+etaGiven etaAssign etaFunc = Fold.fold $ M.mapWithKey f etaAssign
+  where f n (str, g) = maybe mempty eq (M.lookup str etaFunc)
+          where eq ef =
                   EqGen.variable n =.=
-                    EqGen.liftF (Data.map etaFunc) (EqGen.variable $ g n)
-
+                    EqGen.liftF (Data.map ef) (EqGen.variable $ g n)
 
 givenSimulate ::
  (Num a, Eq a,
@@ -206,19 +242,14 @@ givenSimulate ::
   SD.SequData (Record.PowerRecord Node v a) ->
   EqGen.EquationSystem Node s (Data Nil a) (Data (v :> Nil) a)
 
-givenSimulate mnodef mstr sf =
+givenSimulate etaAssign etaFunc sf =
   (TIdx.absolute  (XIdx.storage TIdx.initial Water) EqUt..= Data 0)
    <> Fold.fold (SD.mapWithSection f sf)
    where f sec (Record.Record t xs) =
            (TIdx.absolute (XIdx.dTime sec) EqUt..= (Sig.unpack $ Sig.delta t))
-           <> etaGiven (mnodef sec) mstr
-          <> Fold.fold (M.mapWithKey g $ M.filterWithKey h xs)
+           <> etaGiven (etaAssign sec) etaFunc
+           <> Fold.fold (M.mapWithKey g xs)
            where 
-             h (TIdx.PPos (TIdx.StructureEdge Rest Network)) _ = True
-             h (TIdx.PPos (TIdx.StructureEdge LocalRest LocalNetwork)) _ = True
-             h (TIdx.PPos (TIdx.StructureEdge Network Water)) _ = True
-             h (TIdx.PPos (TIdx.StructureEdge LocalNetwork Gas)) _ = True
-             h _ _ = False
              g (TIdx.PPos (TIdx.StructureEdge p0 p1)) e =
                    (TIdx.absolute (XIdx.energy sec p0 p1) EqUt..= Sig.unpack e)
 
