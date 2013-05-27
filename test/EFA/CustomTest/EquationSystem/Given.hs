@@ -4,6 +4,7 @@ module EFA.CustomTest.EquationSystem.Given where
 
 import qualified Data.Map as M
 
+import Data.Ratio
 
 import EFA.Example.Absolute ( (.=) )
 import qualified EFA.Example.Absolute as EqGen
@@ -30,7 +31,7 @@ import qualified EFA.Graph as Gr
 
 import EFA.Equation.Record (Absolute(..))
 
-import EFA.Equation.Environment (Signal(..), Complete(..))
+import EFA.Equation.Environment (Signal(..), Scalar(..), Complete(..))
 import EFA.Equation.Result (Result(..))
 
 import Data.Monoid (mconcat)
@@ -54,18 +55,18 @@ topoDreibein = Gr.fromList ns (makeEdges es)
 seqTopo :: Flow.RangeGraph Node.Int
 seqTopo = constructSeqTopo topoDreibein [1, 0, 1]
 
-{-
+
 -- Hilfsfunktion, um das testGiven-Gleichungssystem zu bauen.
 -- Man übergibt ein gelöstes Env.
 -- Es muessen noch die richtigen Werte eingetragen werden.
 
 toTestGiven ::
   Complete Node.Int
-    (Absolute (Result Double)) 
-    (Absolute (Result Double)) -> 
+    (Absolute (Result Rational)) 
+    (Absolute (Result Rational)) -> 
   String
 toTestGiven (Complete scal sig) =
-  "testGiven :: EqGen.EquationSystem Node s Double Double\n" ++
+  "testGiven :: EqGen.EquationSystem Node s Rational Rational\n" ++
   "testGiven = mconcat $\n" ++
   concat [
     g $ powerMap sig,
@@ -82,17 +83,17 @@ toTestGiven (Complete scal sig) =
     "  []" ]
   where g :: (Show k, Show a) => M.Map k (Absolute (Result a)) -> String
         g = M.foldWithKey f ""
-        f idx v acc = "  ((" ++ show idx ++ ") .= " ++ showValue v ++ ") :\n" ++ acc
+        f idx v acc = "  ((" ++ show idx ++ ") .= "
+                        ++ showValue v ++ ") :\n" ++ acc
         showValue (Absolute (Determined x)) = show x
         showValue (Absolute Undetermined) = "?"
--}
 
 
 -- Nicht alle Werte sind von originalGiven berechenbar.
 testEnv ::
   Complete Node.Int
-    (Absolute (Result Double)) 
-    (Absolute (Result Double))
+    (Absolute (Result Rational)) 
+    (Absolute (Result Rational))
 testEnv = Complete scal sigNew
   where Complete scal sig = EqGen.solveWithoutTopology testGiven
         sigNew = sig {
@@ -113,164 +114,154 @@ testEnv = Complete scal sigNew
                      (Absolute Undetermined) (sumMap sig) }
 
 
-
-originalGiven :: EqGen.EquationSystem Node.Int s Double Double
+originalGiven :: EqGen.EquationSystem Node.Int s Rational Rational
 originalGiven =
    mconcat $
 
-   (XIdx.dTime sec0 .= 1) :
-   (XIdx.dTime sec1 .= 2) :
-   (XIdx.dTime sec2 .= 1) :
+   (XIdx.dTime sec0 .= 1 % 1) :
+   (XIdx.dTime sec1 .= 2 % 1) :
+   (XIdx.dTime sec2 .= 1 % 1) :
 
-   (XIdx.storage (Idx.afterSection sec2) node3 .= 10.0) :
-   (XIdx.power sec0 node2 node3 .= 4.0) :
+   (XIdx.storage (Idx.afterSection sec2) node3 .= 10 % 1) :
 
-   (XIdx.x sec0 node2 node3 .= 0.32) :
+   (XIdx.x sec0 node2 node3 .= 8 % 25) :
 
-   (XIdx.power sec1 node3 node2 .= 5) :
-   (XIdx.power sec2 node3 node2 .= 6) :
-   (XIdx.power sec3 node3 node2 .= 7) :
-   (XIdx.power sec4 node3 node2 .= 8) :
+   (XIdx.power sec0 node2 node3 .= 4 % 1) :
+   (XIdx.power sec1 node3 node2 .= 5 % 1) :
+   (XIdx.power sec2 node3 node2 .= 6 % 1) :
 
-   (XIdx.eta sec0 node3 node2 .= 0.25) :
-   (XIdx.eta sec0 node2 node1 .= 0.5) :
-   (XIdx.eta sec0 node0 node2 .= 0.75) :
+   (XIdx.eta sec0 node3 node2 .= 1 % 4) :
+   (XIdx.eta sec0 node2 node1 .= 1 % 2) :
+   (XIdx.eta sec0 node0 node2 .= 3 % 4) :
 
-   (XIdx.eta sec1 node0 node2 .= 0.4) :
-   (XIdx.eta sec1 node2 node3 .= 0.6) :
+   (XIdx.eta sec1 node0 node2 .= 2 % 5) :
+   (XIdx.eta sec1 node2 node3 .= 3 % 5) :
 
-   (XIdx.eta sec2 node0 node2 .= 0.7) :
-   (XIdx.eta sec2 node3 node2 .= 0.9) :
-   (XIdx.eta sec2 node2 node1 .= 1.0) :
+   (XIdx.eta sec2 node0 node2 .= 7 % 10) :
+   (XIdx.eta sec2 node3 node2 .= 9 % 10) :
+   (XIdx.eta sec2 node2 node1 .= 1 % 1) :
 
-   (XIdx.x sec1 node2 node3 .= 0.4) :
-   (XIdx.x sec2 node2 node0 .= 0.3) :
+   (XIdx.x sec1 node2 node3 .= 2 % 5) :
+
+   (XIdx.x sec2 node2 node0 .= 3 % 10) :
 
    []
 
 
 
 
-
-testGiven :: EqGen.EquationSystem Node.Int s Double Double
+testGiven :: EqGen.EquationSystem Node.Int s Rational Rational
 testGiven = mconcat $
-  ((InSection sec0 (Power (StructureEdge node0 node2))) .= 11.333333333333334) :
-  ((InSection sec0 (Power (StructureEdge node1 node2))) .= 6.25) :
-  ((InSection sec0 (Power (StructureEdge node2 node0))) .= 8.5) :
-  ((InSection sec0 (Power (StructureEdge node2 node1))) .= 12.5) :
-  ((InSection sec0 (Power (StructureEdge node2 node3))) .= 4.0) :
-  ((InSection sec0 (Power (StructureEdge node3 node2))) .= 16.0) :
-  ((InSection sec1 (Power (StructureEdge node0 node2))) .= 52.08333333333333) :
+  ((InSection (Section 0) (Power (StructureEdge (Node.Int 0) (Node.Int 2)))) .= 34 % 3) :
+  ((InSection (Section 0) (Power (StructureEdge (Node.Int 1) (Node.Int 2)))) .= 25 % 4) :
+  ((InSection (Section 0) (Power (StructureEdge (Node.Int 2) (Node.Int 0)))) .= 17 % 2) :
+  ((InSection (Section 0) (Power (StructureEdge (Node.Int 2) (Node.Int 1)))) .= 25 % 2) :
+  ((InSection (Section 0) (Power (StructureEdge (Node.Int 2) (Node.Int 3)))) .= 4 % 1) :
+  ((InSection (Section 0) (Power (StructureEdge (Node.Int 3) (Node.Int 2)))) .= 16 % 1) :
+  ((InSection (Section 1) (Power (StructureEdge (Node.Int 0) (Node.Int 2)))) .= 625 % 12) :
 
---  ((InSection sec1 (Power (StructureEdge node1 node2))) .= ?) :
+--  ((InSection (Section 1) (Power (StructureEdge (Node.Int 1) (Node.Int 2)))) .= ?) :
 
-  ((InSection sec1 (Power (StructureEdge node2 node0))) .= 20.833333333333332) :
-  ((InSection sec1 (Power (StructureEdge node2 node1))) .= 12.499999999999998) :
-  ((InSection sec1 (Power (StructureEdge node2 node3))) .= 8.333333333333334) :
-  ((InSection sec1 (Power (StructureEdge node3 node2))) .= 5.0) :
-  ((InSection sec2 (Power (StructureEdge node0 node2))) .= 3.3061224489795924) :
-  ((InSection sec2 (Power (StructureEdge node1 node2))) .= 7.714285714285715) :
-  ((InSection sec2 (Power (StructureEdge node2 node0))) .= 2.3142857142857145) :
-  ((InSection sec2 (Power (StructureEdge node2 node1))) .= 7.714285714285715) :
-  ((InSection sec2 (Power (StructureEdge node2 node3))) .= 5.4) :
-  ((InSection sec2 (Power (StructureEdge node3 node2))) .= 6.0) :
-  ((InSection (Section 3) (Power (StructureEdge node3 node2))) .= 7.0) :
-  ((InSection (Section 4) (Power (StructureEdge node3 node2))) .= 8.0) :
-  ((InSection sec0 (Energy (StructureEdge node0 node2))) .= 11.333333333333334) :
-  ((InSection sec0 (Energy (StructureEdge node1 node2))) .= 6.25) :
-  ((InSection sec0 (Energy (StructureEdge node2 node0))) .= 8.5) :
-  ((InSection sec0 (Energy (StructureEdge node2 node1))) .= 12.5) :
-  ((InSection sec0 (Energy (StructureEdge node2 node3))) .= 4.0) :
-  ((InSection sec0 (Energy (StructureEdge node3 node2))) .= 16.0) :
-  ((InSection sec1 (Energy (StructureEdge node0 node2))) .= 104.16666666666666) :
+  ((InSection (Section 1) (Power (StructureEdge (Node.Int 2) (Node.Int 0)))) .= 125 % 6) :
+  ((InSection (Section 1) (Power (StructureEdge (Node.Int 2) (Node.Int 1)))) .= 25 % 2) :
+  ((InSection (Section 1) (Power (StructureEdge (Node.Int 2) (Node.Int 3)))) .= 25 % 3) :
+  ((InSection (Section 1) (Power (StructureEdge (Node.Int 3) (Node.Int 2)))) .= 5 % 1) :
+  ((InSection (Section 2) (Power (StructureEdge (Node.Int 0) (Node.Int 2)))) .= 81 % 50) :
+  ((InSection (Section 2) (Power (StructureEdge (Node.Int 1) (Node.Int 2)))) .= 54 % 7) :
+  ((InSection (Section 2) (Power (StructureEdge (Node.Int 2) (Node.Int 0)))) .= 81 % 35) :
+  ((InSection (Section 2) (Power (StructureEdge (Node.Int 2) (Node.Int 1)))) .= 54 % 7) :
+  ((InSection (Section 2) (Power (StructureEdge (Node.Int 2) (Node.Int 3)))) .= 27 % 5) :
+  ((InSection (Section 2) (Power (StructureEdge (Node.Int 3) (Node.Int 2)))) .= 6 % 1) :
+  ((InSection (Section 0) (Energy (StructureEdge (Node.Int 0) (Node.Int 2)))) .= 34 % 3) :
+  ((InSection (Section 0) (Energy (StructureEdge (Node.Int 1) (Node.Int 2)))) .= 25 % 4) :
+  ((InSection (Section 0) (Energy (StructureEdge (Node.Int 2) (Node.Int 0)))) .= 17 % 2) :
+  ((InSection (Section 0) (Energy (StructureEdge (Node.Int 2) (Node.Int 1)))) .= 25 % 2) :
+  ((InSection (Section 0) (Energy (StructureEdge (Node.Int 2) (Node.Int 3)))) .= 4 % 1) :
+  ((InSection (Section 0) (Energy (StructureEdge (Node.Int 3) (Node.Int 2)))) .= 16 % 1) :
+  ((InSection (Section 1) (Energy (StructureEdge (Node.Int 0) (Node.Int 2)))) .= 625 % 6) :
 
---  ((InSection sec1 (Energy (StructureEdge node1 node2))) .= ?) :
+--  ((InSection (Section 1) (Energy (StructureEdge (Node.Int 1) (Node.Int 2)))) .= ?) :
 
-  ((InSection sec1 (Energy (StructureEdge node2 node0))) .= 41.666666666666664) :
-  ((InSection sec1 (Energy (StructureEdge node2 node1))) .= 24.999999999999996) :
-  ((InSection sec1 (Energy (StructureEdge node2 node3))) .= 16.666666666666668) :
-  ((InSection sec1 (Energy (StructureEdge node3 node2))) .= 10.0) :
-  ((InSection sec2 (Energy (StructureEdge node0 node2))) .= 3.3061224489795924) :
-  ((InSection sec2 (Energy (StructureEdge node1 node2))) .= 7.714285714285715) :
-  ((InSection sec2 (Energy (StructureEdge node2 node0))) .= 2.3142857142857145) :
-  ((InSection sec2 (Energy (StructureEdge node2 node1))) .= 7.714285714285715) :
-  ((InSection sec2 (Energy (StructureEdge node2 node3))) .= 5.4) :
-  ((InSection sec2 (Energy (StructureEdge node3 node2))) .= 6.0) :
-  ((InSection sec0 (Eta (StructureEdge node0 node2))) .= 0.75) :
-  ((InSection sec0 (Eta (StructureEdge node2 node1))) .= 0.5) :
-  ((InSection sec0 (Eta (StructureEdge node3 node2))) .= 0.25) :
-  ((InSection sec1 (Eta (StructureEdge node0 node2))) .= 0.4) :
+  ((InSection (Section 1) (Energy (StructureEdge (Node.Int 2) (Node.Int 0)))) .= 125 % 3) :
+  ((InSection (Section 1) (Energy (StructureEdge (Node.Int 2) (Node.Int 1)))) .= 25 % 1) :
+  ((InSection (Section 1) (Energy (StructureEdge (Node.Int 2) (Node.Int 3)))) .= 50 % 3) :
+  ((InSection (Section 1) (Energy (StructureEdge (Node.Int 3) (Node.Int 2)))) .= 10 % 1) :
+  ((InSection (Section 2) (Energy (StructureEdge (Node.Int 0) (Node.Int 2)))) .= 81 % 50) :
+  ((InSection (Section 2) (Energy (StructureEdge (Node.Int 1) (Node.Int 2)))) .= 54 % 7) :
+  ((InSection (Section 2) (Energy (StructureEdge (Node.Int 2) (Node.Int 0)))) .= 81 % 35) :
+  ((InSection (Section 2) (Energy (StructureEdge (Node.Int 2) (Node.Int 1)))) .= 54 % 7) :
+  ((InSection (Section 2) (Energy (StructureEdge (Node.Int 2) (Node.Int 3)))) .= 27 % 5) :
+  ((InSection (Section 2) (Energy (StructureEdge (Node.Int 3) (Node.Int 2)))) .= 6 % 1) :
+  ((InSection (Section 0) (Eta (StructureEdge (Node.Int 0) (Node.Int 2)))) .= 3 % 4) :
+  ((InSection (Section 0) (Eta (StructureEdge (Node.Int 2) (Node.Int 1)))) .= 1 % 2) :
+  ((InSection (Section 0) (Eta (StructureEdge (Node.Int 3) (Node.Int 2)))) .= 1 % 4) :
+  ((InSection (Section 1) (Eta (StructureEdge (Node.Int 0) (Node.Int 2)))) .= 2 % 5) :
 
---  ((InSection sec1 (Eta (StructureEdge node2 node1))) .= ?) :
+--  ((InSection (Section 1) (Eta (StructureEdge (Node.Int 2) (Node.Int 1)))) .= ?) :
 
-  ((InSection sec1 (Eta (StructureEdge node2 node3))) .= 0.6) :
-  ((InSection sec2 (Eta (StructureEdge node0 node2))) .= 0.7) :
-  ((InSection sec2 (Eta (StructureEdge node2 node1))) .= 1.0) :
-  ((InSection sec2 (Eta (StructureEdge node3 node2))) .= 0.9) :
-  ((InSection sec0 DTime) .= 1.0) :
-  ((InSection sec1 DTime) .= 2.0) :
-  ((InSection sec2 DTime) .= 1.0) :
-  ((InSection sec0 (X (StructureEdge node0 node2))) .= 1.0) :
-  ((InSection sec0 (X (StructureEdge node1 node2))) .= 1.0) :
-  ((InSection sec0 (X (StructureEdge node2 node0))) .= 0.68) :
-  ((InSection sec0 (X (StructureEdge node2 node1))) .= 1.0) :
-  ((InSection sec0 (X (StructureEdge node2 node3))) .= 0.32) :
-  ((InSection sec0 (X (StructureEdge node3 node2))) .= 1.0) :
-  ((InSection sec1 (X (StructureEdge node0 node2))) .= 1.0) :
-  ((InSection sec1 (X (StructureEdge node1 node2))) .= 1.0) :
-  ((InSection sec1 (X (StructureEdge node2 node0))) .= 1.0) :
-  ((InSection sec1 (X (StructureEdge node2 node1))) .= 0.6) :
-  ((InSection sec1 (X (StructureEdge node2 node3))) .= 0.4000000000000001) :
-  ((InSection sec1 (X (StructureEdge node3 node2))) .= 1.0) :
-  ((InSection sec2 (X (StructureEdge node0 node2))) .= 1.0) :
-  ((InSection sec2 (X (StructureEdge node1 node2))) .= 1.0) :
-  ((InSection sec2 (X (StructureEdge node2 node0))) .= 0.3) :
-  ((InSection sec2 (X (StructureEdge node2 node1))) .= 1.0) :
-  ((InSection sec2 (X (StructureEdge node2 node3))) .= 0.7) :
-  ((InSection sec2 (X (StructureEdge node3 node2))) .= 1.0) :
-  ((InSection sec0 (Sum In node1)) .= 6.25) :
-  ((InSection sec0 (Sum In node2)) .= 12.5) :
-  ((InSection sec0 (Sum Out node0)) .= 11.333333333333334) :
-  ((InSection sec0 (Sum Out node2)) .= 12.5) :
-  ((InSection sec0 (Sum Out node3)) .= 16.0) :
+  ((InSection (Section 1) (Eta (StructureEdge (Node.Int 2) (Node.Int 3)))) .= 3 % 5) :
+  ((InSection (Section 2) (Eta (StructureEdge (Node.Int 0) (Node.Int 2)))) .= 7 % 10) :
+  ((InSection (Section 2) (Eta (StructureEdge (Node.Int 2) (Node.Int 1)))) .= 1 % 1) :
+  ((InSection (Section 2) (Eta (StructureEdge (Node.Int 3) (Node.Int 2)))) .= 9 % 10) :
+  ((InSection (Section 0) DTime) .= 1 % 1) :
+  ((InSection (Section 1) DTime) .= 2 % 1) :
+  ((InSection (Section 2) DTime) .= 1 % 1) :
+  ((InSection (Section 0) (X (StructureEdge (Node.Int 0) (Node.Int 2)))) .= 1 % 1) :
+  ((InSection (Section 0) (X (StructureEdge (Node.Int 1) (Node.Int 2)))) .= 1 % 1) :
+  ((InSection (Section 0) (X (StructureEdge (Node.Int 2) (Node.Int 0)))) .= 17 % 25) :
+  ((InSection (Section 0) (X (StructureEdge (Node.Int 2) (Node.Int 1)))) .= 1 % 1) :
+  ((InSection (Section 0) (X (StructureEdge (Node.Int 2) (Node.Int 3)))) .= 8 % 25) :
+  ((InSection (Section 0) (X (StructureEdge (Node.Int 3) (Node.Int 2)))) .= 1 % 1) :
+  ((InSection (Section 1) (X (StructureEdge (Node.Int 0) (Node.Int 2)))) .= 1 % 1) :
+  ((InSection (Section 1) (X (StructureEdge (Node.Int 1) (Node.Int 2)))) .= 1 % 1) :
+  ((InSection (Section 1) (X (StructureEdge (Node.Int 2) (Node.Int 0)))) .= 1 % 1) :
+  ((InSection (Section 1) (X (StructureEdge (Node.Int 2) (Node.Int 1)))) .= 3 % 5) :
+  ((InSection (Section 1) (X (StructureEdge (Node.Int 2) (Node.Int 3)))) .= 2 % 5) :
+  ((InSection (Section 1) (X (StructureEdge (Node.Int 3) (Node.Int 2)))) .= 1 % 1) :
+  ((InSection (Section 2) (X (StructureEdge (Node.Int 0) (Node.Int 2)))) .= 1 % 1) :
+  ((InSection (Section 2) (X (StructureEdge (Node.Int 1) (Node.Int 2)))) .= 1 % 1) :
+  ((InSection (Section 2) (X (StructureEdge (Node.Int 2) (Node.Int 0)))) .= 3 % 10) :
+  ((InSection (Section 2) (X (StructureEdge (Node.Int 2) (Node.Int 1)))) .= 1 % 1) :
+  ((InSection (Section 2) (X (StructureEdge (Node.Int 2) (Node.Int 3)))) .= 7 % 10) :
+  ((InSection (Section 2) (X (StructureEdge (Node.Int 3) (Node.Int 2)))) .= 1 % 1) :
+  ((InSection (Section 0) (Sum In (Node.Int 1))) .= 25 % 4) :
+  ((InSection (Section 0) (Sum In (Node.Int 2))) .= 25 % 2) :
+  ((InSection (Section 0) (Sum Out (Node.Int 0))) .= 34 % 3) :
+  ((InSection (Section 0) (Sum Out (Node.Int 2))) .= 25 % 2) :
+  ((InSection (Section 0) (Sum Out (Node.Int 3))) .= 16 % 1) :
 
---  ((InSection sec1 (Sum In node1)) .= ?) :
+--  ((InSection (Section 1) (Sum In (Node.Int 1))) .= ?) :
 
-  ((InSection sec1 (Sum In node2)) .= 41.666666666666664) :
-  ((InSection sec1 (Sum In node3)) .= 10.0) :
-  ((InSection sec1 (Sum Out node0)) .= 104.16666666666666) :
-  ((InSection sec1 (Sum Out node2)) .= 41.666666666666664) :
-  ((InSection sec2 (Sum In node1)) .= 7.714285714285715) :
-  ((InSection sec2 (Sum In node2)) .= 7.714285714285715) :
-  ((InSection sec2 (Sum Out node0)) .= 3.3061224489795924) :
-  ((InSection sec2 (Sum Out node2)) .= 7.714285714285715) :
-  ((InSection sec2 (Sum Out node3)) .= 6.0) :
-
-  ((ForNode (MaxEnergy (StorageEdge Initial (AfterSection sec0))) node3) .= 22.0) :
-  ((ForNode (MaxEnergy (StorageEdge Initial (AfterSection sec2))) node3) .= 6.0) :
-  ((ForNode (MaxEnergy (StorageEdge (AfterSection sec1) (AfterSection sec2))) node3) .= 10.0) :
-
-  ((ForNode (Storage Initial) node3) .= 22.0) :
-  ((ForNode (Storage (AfterSection sec0)) node3) .= 6.0) :
-  ((ForNode (Storage (AfterSection sec1)) node3) .= 16.0) :
-  ((ForNode (Storage (AfterSection sec2)) node3) .= 10.0) :
-
-  ((ForNode (StEnergy (StorageEdge Initial (AfterSection sec0))) node3) .= 16.0) :
-  ((ForNode (StEnergy (StorageEdge Initial (AfterSection sec2))) node3) .= 2.25) :
-  ((ForNode (StEnergy (StorageEdge (AfterSection sec0) Initial)) node3) .= 16.0) :
-  ((ForNode (StEnergy (StorageEdge (AfterSection sec1) (AfterSection sec2))) node3) .= 3.75) :
-  ((ForNode (StEnergy (StorageEdge (AfterSection sec2) Initial)) node3) .= 2.25) :
-  ((ForNode (StEnergy (StorageEdge (AfterSection sec2) (AfterSection sec1))) node3) .= 3.75) :
-
-  ((ForNode (StX (StorageEdge Initial (AfterSection sec0))) node3) .= 0.8767123287671232) :
-  ((ForNode (StX (StorageEdge Initial (AfterSection sec2))) node3) .= 0.1232876712328767) :
-  ((ForNode (StX (StorageEdge (AfterSection sec0) Initial)) node3) .= 1.0) :
-  ((ForNode (StX (StorageEdge (AfterSection sec1) (AfterSection sec2))) node3) .= 1.0) :
-  ((ForNode (StX (StorageEdge (AfterSection sec2) Initial)) node3) .= 0.375) :
-  ((ForNode (StX (StorageEdge (AfterSection sec2) (AfterSection sec1))) node3) .= 0.625) :
-
-  ((ForNode (StSum In Initial) node3) .= 22.0) :
-  ((ForNode (StSum In (AfterSection sec1)) node3) .= 10.0) :
-  ((ForNode (StSum Out (AfterSection sec0)) node3) .= 16.0) :
-  ((ForNode (StSum Out (AfterSection sec2)) node3) .= 6.0) :
+  ((InSection (Section 1) (Sum In (Node.Int 2))) .= 125 % 3) :
+  ((InSection (Section 1) (Sum In (Node.Int 3))) .= 10 % 1) :
+  ((InSection (Section 1) (Sum Out (Node.Int 0))) .= 625 % 6) :
+  ((InSection (Section 1) (Sum Out (Node.Int 2))) .= 125 % 3) :
+  ((InSection (Section 2) (Sum In (Node.Int 1))) .= 54 % 7) :
+  ((InSection (Section 2) (Sum In (Node.Int 2))) .= 54 % 7) :
+  ((InSection (Section 2) (Sum Out (Node.Int 0))) .= 162 % 49) :
+  ((InSection (Section 2) (Sum Out (Node.Int 2))) .= 54 % 7) :
+  ((InSection (Section 2) (Sum Out (Node.Int 3))) .= 6 % 1) :
+  ((ForNode (MaxEnergy (StorageEdge Initial (AfterSection (Section 0)))) (Node.Int 3)) .= 22 % 1) :
+  ((ForNode (MaxEnergy (StorageEdge Initial (AfterSection (Section 2)))) (Node.Int 3)) .= 6 % 1) :
+  ((ForNode (MaxEnergy (StorageEdge (AfterSection (Section 1)) (AfterSection (Section 2)))) (Node.Int 3)) .= 10 % 1) :
+  ((ForNode (Storage Initial) (Node.Int 3)) .= 22 % 1) :
+  ((ForNode (Storage (AfterSection (Section 0))) (Node.Int 3)) .= 6 % 1) :
+  ((ForNode (Storage (AfterSection (Section 1))) (Node.Int 3)) .= 16 % 1) :
+  ((ForNode (Storage (AfterSection (Section 2))) (Node.Int 3)) .= 10 % 1) :
+  ((ForNode (StEnergy (StorageEdge Initial (AfterSection (Section 0)))) (Node.Int 3)) .= 16 % 1) :
+  ((ForNode (StEnergy (StorageEdge Initial (AfterSection (Section 2)))) (Node.Int 3)) .= 9 % 4) :
+  ((ForNode (StEnergy (StorageEdge (AfterSection (Section 0)) Initial)) (Node.Int 3)) .= 16 % 1) :
+  ((ForNode (StEnergy (StorageEdge (AfterSection (Section 1)) (AfterSection (Section 2)))) (Node.Int 3)) .= 15 % 4) :
+  ((ForNode (StEnergy (StorageEdge (AfterSection (Section 2)) Initial)) (Node.Int 3)) .= 9 % 4) :
+  ((ForNode (StEnergy (StorageEdge (AfterSection (Section 2)) (AfterSection (Section 1)))) (Node.Int 3)) .= 15 % 4) :
+  ((ForNode (StX (StorageEdge Initial (AfterSection (Section 0)))) (Node.Int 3)) .= 64 % 73) :
+  ((ForNode (StX (StorageEdge Initial (AfterSection (Section 2)))) (Node.Int 3)) .= 9 % 73) :
+  ((ForNode (StX (StorageEdge (AfterSection (Section 0)) Initial)) (Node.Int 3)) .= 1 % 1) :
+  ((ForNode (StX (StorageEdge (AfterSection (Section 1)) (AfterSection (Section 2)))) (Node.Int 3)) .= 1 % 1) :
+  ((ForNode (StX (StorageEdge (AfterSection (Section 2)) Initial)) (Node.Int 3)) .= 3 % 8) :
+  ((ForNode (StX (StorageEdge (AfterSection (Section 2)) (AfterSection (Section 1)))) (Node.Int 3)) .= 5 % 8) :
+  ((ForNode (StSum In Initial) (Node.Int 3)) .= 22 % 1) :
+  ((ForNode (StSum In (AfterSection (Section 1))) (Node.Int 3)) .= 10 % 1) :
+  ((ForNode (StSum Out (AfterSection (Section 0))) (Node.Int 3)) .= 16 % 1) :
+  ((ForNode (StSum Out (AfterSection (Section 2))) (Node.Int 3)) .= 6 % 1) :
   []
