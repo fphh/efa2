@@ -46,6 +46,9 @@ maxEnergy = Idx.storageEdge Idx.MaxEnergy
 stEnergy  = Idx.storageEdge Idx.StEnergy
 stX       = Idx.storageEdge Idx.StX
 
+stSum :: Idx.Direction -> Idx.Boundary -> node -> StSum node
+stSum dir bnd node = Idx.ForNode (Idx.StSum dir bnd) node
+
 storage :: Idx.Boundary -> node -> Storage node
 storage = Idx.ForNode . Idx.Storage
 

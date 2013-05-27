@@ -5,12 +5,7 @@ module EFA.Test.EquationSystem.Given where
 import EFA.Example.Absolute ( (.=) )
 import qualified EFA.Example.Absolute as EqGen
 
-import EFA.Graph.Topology.Index
-  ( Section(..), InSection(..), Power(..), ForNode(..),
-    Boundary(..), StorageEdge(..), Storage(..), StX(..),
-    Direction(..), Sum(..), StructureEdge(..), X(..),
-    Energy(..), Eta(..), MaxEnergy(..), StEnergy(..),
-    DTime(..), StSum(..) )
+import EFA.Graph.Topology.Index ( Direction(..) )
 
 import EFA.Utility.Stream (Stream((:~)))
 import qualified EFA.Utility.Stream as Stream
@@ -34,8 +29,11 @@ import qualified Data.Map as M
 import Data.Monoid (mconcat)
 
 
-sec0, sec1, sec2, sec3, sec4 :: Section
-sec0 :~ sec1 :~ sec2 :~ sec3 :~ sec4 :~ _ = Stream.enumFrom $ Section 0
+sec0, sec1, sec2, sec3, sec4 :: Idx.Section
+sec0 :~ sec1 :~ sec2 :~ sec3 :~ sec4 :~ _ = Stream.enumFrom $ Idx.Section 0
+
+bndi, bnd0, bnd1, bnd2, bnd3, bnd4 :: Idx.Boundary
+bndi :~ bnd0 :~ bnd1 :~ bnd2 :~ bnd3 :~ bnd4 :~ _ = Stream.enumFrom $ Idx.Initial
 
 node0, node1, node2, node3 :: Node.Int
 node0 :~ node1 :~ node2 :~ node3 :~ _ = Stream.enumFrom minBound
@@ -140,116 +138,116 @@ originalGiven =
 
 testGiven :: EqGen.EquationSystem Node.Int s Rational Rational
 testGiven = mconcat $
-  ((InSection (Section 0) (Power (StructureEdge (Node.Int 0) (Node.Int 2)))) .= 34 / 3) :
-  ((InSection (Section 0) (Power (StructureEdge (Node.Int 1) (Node.Int 2)))) .= 25 / 4) :
-  ((InSection (Section 0) (Power (StructureEdge (Node.Int 2) (Node.Int 0)))) .= 17 / 2) :
-  ((InSection (Section 0) (Power (StructureEdge (Node.Int 2) (Node.Int 1)))) .= 25 / 2) :
-  ((InSection (Section 0) (Power (StructureEdge (Node.Int 2) (Node.Int 3)))) .= 4 / 1) :
-  ((InSection (Section 0) (Power (StructureEdge (Node.Int 3) (Node.Int 2)))) .= 16 / 1) :
-  ((InSection (Section 1) (Power (StructureEdge (Node.Int 0) (Node.Int 2)))) .= 625 / 12) :
+  (XIdx.power sec0 node0 node2 .= 34 / 3) :
+  (XIdx.power sec0 node1 node2 .= 25 / 4) :
+  (XIdx.power sec0 node2 node0 .= 17 / 2) :
+  (XIdx.power sec0 node2 node1 .= 25 / 2) :
+  (XIdx.power sec0 node2 node3 .= 4 / 1) :
+  (XIdx.power sec0 node3 node2 .= 16 / 1) :
+  (XIdx.power sec1 node0 node2 .= 625 / 12) :
 
---  ((InSection (Section 1) (Power (StructureEdge (Node.Int 1) (Node.Int 2)))) .= ?) :
+--  (XIdx.power sec1 node1 node2 .= ?) :
 
-  ((InSection (Section 1) (Power (StructureEdge (Node.Int 2) (Node.Int 0)))) .= 125 / 6) :
-  ((InSection (Section 1) (Power (StructureEdge (Node.Int 2) (Node.Int 1)))) .= 25 / 2) :
-  ((InSection (Section 1) (Power (StructureEdge (Node.Int 2) (Node.Int 3)))) .= 25 / 3) :
-  ((InSection (Section 1) (Power (StructureEdge (Node.Int 3) (Node.Int 2)))) .= 5 / 1) :
-  ((InSection (Section 2) (Power (StructureEdge (Node.Int 0) (Node.Int 2)))) .= 81 / 50) :
-  ((InSection (Section 2) (Power (StructureEdge (Node.Int 1) (Node.Int 2)))) .= 54 / 7) :
-  ((InSection (Section 2) (Power (StructureEdge (Node.Int 2) (Node.Int 0)))) .= 81 / 35) :
-  ((InSection (Section 2) (Power (StructureEdge (Node.Int 2) (Node.Int 1)))) .= 54 / 7) :
-  ((InSection (Section 2) (Power (StructureEdge (Node.Int 2) (Node.Int 3)))) .= 27 / 5) :
-  ((InSection (Section 2) (Power (StructureEdge (Node.Int 3) (Node.Int 2)))) .= 6 / 1) :
-  ((InSection (Section 0) (Energy (StructureEdge (Node.Int 0) (Node.Int 2)))) .= 34 / 3) :
-  ((InSection (Section 0) (Energy (StructureEdge (Node.Int 1) (Node.Int 2)))) .= 25 / 4) :
-  ((InSection (Section 0) (Energy (StructureEdge (Node.Int 2) (Node.Int 0)))) .= 17 / 2) :
-  ((InSection (Section 0) (Energy (StructureEdge (Node.Int 2) (Node.Int 1)))) .= 25 / 2) :
-  ((InSection (Section 0) (Energy (StructureEdge (Node.Int 2) (Node.Int 3)))) .= 4 / 1) :
-  ((InSection (Section 0) (Energy (StructureEdge (Node.Int 3) (Node.Int 2)))) .= 16 / 1) :
-  ((InSection (Section 1) (Energy (StructureEdge (Node.Int 0) (Node.Int 2)))) .= 625 / 6) :
+  (XIdx.power sec1 node2 node0 .= 125 / 6) :
+  (XIdx.power sec1 node2 node1 .= 25 / 2) :
+  (XIdx.power sec1 node2 node3 .= 25 / 3) :
+  (XIdx.power sec1 node3 node2 .= 5 / 1) :
+  (XIdx.power sec2 node0 node2 .= 81 / 50) :
+  (XIdx.power sec2 node1 node2 .= 54 / 7) :
+  (XIdx.power sec2 node2 node0 .= 81 / 35) :
+  (XIdx.power sec2 node2 node1 .= 54 / 7) :
+  (XIdx.power sec2 node2 node3 .= 27 / 5) :
+  (XIdx.power sec2 node3 node2 .= 6 / 1) :
+  (XIdx.energy sec0 node0 node2 .= 34 / 3) :
+  (XIdx.energy sec0 node1 node2 .= 25 / 4) :
+  (XIdx.energy sec0 node2 node0 .= 17 / 2) :
+  (XIdx.energy sec0 node2 node1 .= 25 / 2) :
+  (XIdx.energy sec0 node2 node3 .= 4 / 1) :
+  (XIdx.energy sec0 node3 node2 .= 16 / 1) :
+  (XIdx.energy sec1 node0 node2 .= 625 / 6) :
 
---  ((InSection (Section 1) (Energy (StructureEdge (Node.Int 1) (Node.Int 2)))) .= ?) :
+--  (XIdx.energy sec1 node1 node2 .= ?) :
 
-  ((InSection (Section 1) (Energy (StructureEdge (Node.Int 2) (Node.Int 0)))) .= 125 / 3) :
-  ((InSection (Section 1) (Energy (StructureEdge (Node.Int 2) (Node.Int 1)))) .= 25 / 1) :
-  ((InSection (Section 1) (Energy (StructureEdge (Node.Int 2) (Node.Int 3)))) .= 50 / 3) :
-  ((InSection (Section 1) (Energy (StructureEdge (Node.Int 3) (Node.Int 2)))) .= 10 / 1) :
-  ((InSection (Section 2) (Energy (StructureEdge (Node.Int 0) (Node.Int 2)))) .= 81 / 50) :
-  ((InSection (Section 2) (Energy (StructureEdge (Node.Int 1) (Node.Int 2)))) .= 54 / 7) :
-  ((InSection (Section 2) (Energy (StructureEdge (Node.Int 2) (Node.Int 0)))) .= 81 / 35) :
-  ((InSection (Section 2) (Energy (StructureEdge (Node.Int 2) (Node.Int 1)))) .= 54 / 7) :
-  ((InSection (Section 2) (Energy (StructureEdge (Node.Int 2) (Node.Int 3)))) .= 27 / 5) :
-  ((InSection (Section 2) (Energy (StructureEdge (Node.Int 3) (Node.Int 2)))) .= 6 / 1) :
-  ((InSection (Section 0) (Eta (StructureEdge (Node.Int 0) (Node.Int 2)))) .= 3 / 4) :
-  ((InSection (Section 0) (Eta (StructureEdge (Node.Int 2) (Node.Int 1)))) .= 1 / 2) :
-  ((InSection (Section 0) (Eta (StructureEdge (Node.Int 3) (Node.Int 2)))) .= 1 / 4) :
-  ((InSection (Section 1) (Eta (StructureEdge (Node.Int 0) (Node.Int 2)))) .= 2 / 5) :
+  (XIdx.energy sec1 node2 node0 .= 125 / 3) :
+  (XIdx.energy sec1 node2 node1 .= 25 / 1) :
+  (XIdx.energy sec1 node2 node3 .= 50 / 3) :
+  (XIdx.energy sec1 node3 node2 .= 10 / 1) :
+  (XIdx.energy sec2 node0 node2 .= 81 / 50) :
+  (XIdx.energy sec2 node1 node2 .= 54 / 7) :
+  (XIdx.energy sec2 node2 node0 .= 81 / 35) :
+  (XIdx.energy sec2 node2 node1 .= 54 / 7) :
+  (XIdx.energy sec2 node2 node3 .= 27 / 5) :
+  (XIdx.energy sec2 node3 node2 .= 6 / 1) :
+  (XIdx.eta sec0 node0 node2 .= 3 / 4) :
+  (XIdx.eta sec0 node2 node1 .= 1 / 2) :
+  (XIdx.eta sec0 node3 node2 .= 1 / 4) :
+  (XIdx.eta sec1 node0 node2 .= 2 / 5) :
 
---  ((InSection (Section 1) (Eta (StructureEdge (Node.Int 2) (Node.Int 1)))) .= ?) :
+--  (XIdx.eta sec1 node2 node1 .= ?) :
 
-  ((InSection (Section 1) (Eta (StructureEdge (Node.Int 2) (Node.Int 3)))) .= 3 / 5) :
-  ((InSection (Section 2) (Eta (StructureEdge (Node.Int 0) (Node.Int 2)))) .= 7 / 10) :
-  ((InSection (Section 2) (Eta (StructureEdge (Node.Int 2) (Node.Int 1)))) .= 1 / 1) :
-  ((InSection (Section 2) (Eta (StructureEdge (Node.Int 3) (Node.Int 2)))) .= 9 / 10) :
-  ((InSection (Section 0) DTime) .= 1 / 1) :
-  ((InSection (Section 1) DTime) .= 2 / 1) :
-  ((InSection (Section 2) DTime) .= 1 / 1) :
-  ((InSection (Section 0) (X (StructureEdge (Node.Int 0) (Node.Int 2)))) .= 1 / 1) :
-  ((InSection (Section 0) (X (StructureEdge (Node.Int 1) (Node.Int 2)))) .= 1 / 1) :
-  ((InSection (Section 0) (X (StructureEdge (Node.Int 2) (Node.Int 0)))) .= 17 / 25) :
-  ((InSection (Section 0) (X (StructureEdge (Node.Int 2) (Node.Int 1)))) .= 1 / 1) :
-  ((InSection (Section 0) (X (StructureEdge (Node.Int 2) (Node.Int 3)))) .= 8 / 25) :
-  ((InSection (Section 0) (X (StructureEdge (Node.Int 3) (Node.Int 2)))) .= 1 / 1) :
-  ((InSection (Section 1) (X (StructureEdge (Node.Int 0) (Node.Int 2)))) .= 1 / 1) :
-  ((InSection (Section 1) (X (StructureEdge (Node.Int 1) (Node.Int 2)))) .= 1 / 1) :
-  ((InSection (Section 1) (X (StructureEdge (Node.Int 2) (Node.Int 0)))) .= 1 / 1) :
-  ((InSection (Section 1) (X (StructureEdge (Node.Int 2) (Node.Int 1)))) .= 3 / 5) :
-  ((InSection (Section 1) (X (StructureEdge (Node.Int 2) (Node.Int 3)))) .= 2 / 5) :
-  ((InSection (Section 1) (X (StructureEdge (Node.Int 3) (Node.Int 2)))) .= 1 / 1) :
-  ((InSection (Section 2) (X (StructureEdge (Node.Int 0) (Node.Int 2)))) .= 1 / 1) :
-  ((InSection (Section 2) (X (StructureEdge (Node.Int 1) (Node.Int 2)))) .= 1 / 1) :
-  ((InSection (Section 2) (X (StructureEdge (Node.Int 2) (Node.Int 0)))) .= 3 / 10) :
-  ((InSection (Section 2) (X (StructureEdge (Node.Int 2) (Node.Int 1)))) .= 1 / 1) :
-  ((InSection (Section 2) (X (StructureEdge (Node.Int 2) (Node.Int 3)))) .= 7 / 10) :
-  ((InSection (Section 2) (X (StructureEdge (Node.Int 3) (Node.Int 2)))) .= 1 / 1) :
-  ((InSection (Section 0) (Sum In (Node.Int 1))) .= 25 / 4) :
-  ((InSection (Section 0) (Sum In (Node.Int 2))) .= 25 / 2) :
-  ((InSection (Section 0) (Sum Out (Node.Int 0))) .= 34 / 3) :
-  ((InSection (Section 0) (Sum Out (Node.Int 2))) .= 25 / 2) :
-  ((InSection (Section 0) (Sum Out (Node.Int 3))) .= 16 / 1) :
+  (XIdx.eta sec1 node2 node3 .= 3 / 5) :
+  (XIdx.eta sec2 node0 node2 .= 7 / 10) :
+  (XIdx.eta sec2 node2 node1 .= 1 / 1) :
+  (XIdx.eta sec2 node3 node2 .= 9 / 10) :
+  (XIdx.dTime sec0 .= 1 / 1) :
+  (XIdx.dTime sec1 .= 2 / 1) :
+  (XIdx.dTime sec2 .= 1 / 1) :
+  (XIdx.x sec0 node0 node2 .= 1 / 1) :
+  (XIdx.x sec0 node1 node2 .= 1 / 1) :
+  (XIdx.x sec0 node2 node0 .= 17 / 25) :
+  (XIdx.x sec0 node2 node1 .= 1 / 1) :
+  (XIdx.x sec0 node2 node3 .= 8 / 25) :
+  (XIdx.x sec0 node3 node2 .= 1 / 1) :
+  (XIdx.x sec1 node0 node2 .= 1 / 1) :
+  (XIdx.x sec1 node1 node2 .= 1 / 1) :
+  (XIdx.x sec1 node2 node0 .= 1 / 1) :
+  (XIdx.x sec1 node2 node1 .= 3 / 5) :
+  (XIdx.x sec1 node2 node3 .= 2 / 5) :
+  (XIdx.x sec1 node3 node2 .= 1 / 1) :
+  (XIdx.x sec2 node0 node2 .= 1 / 1) :
+  (XIdx.x sec2 node1 node2 .= 1 / 1) :
+  (XIdx.x sec2 node2 node0 .= 3 / 10) :
+  (XIdx.x sec2 node2 node1 .= 1 / 1) :
+  (XIdx.x sec2 node2 node3 .= 7 / 10) :
+  (XIdx.x sec2 node3 node2 .= 1 / 1) :
+  (XIdx.sum sec0 In node1 .= 25 / 4) :
+  (XIdx.sum sec0 In node2 .= 25 / 2) :
+  (XIdx.sum sec0 Out node0 .= 34 / 3) :
+  (XIdx.sum sec0 Out node2 .= 25 / 2) :
+  (XIdx.sum sec0 Out node3 .= 16 / 1) :
 
---  ((InSection (Section 1) (Sum In (Node.Int 1))) .= ?) :
+--  (XIdx.sum sec1 In node1 .= ?) :
 
-  ((InSection (Section 1) (Sum In (Node.Int 2))) .= 125 / 3) :
-  ((InSection (Section 1) (Sum In (Node.Int 3))) .= 10 / 1) :
-  ((InSection (Section 1) (Sum Out (Node.Int 0))) .= 625 / 6) :
-  ((InSection (Section 1) (Sum Out (Node.Int 2))) .= 125 / 3) :
-  ((InSection (Section 2) (Sum In (Node.Int 1))) .= 54 / 7) :
-  ((InSection (Section 2) (Sum In (Node.Int 2))) .= 54 / 7) :
-  ((InSection (Section 2) (Sum Out (Node.Int 0))) .= 162 / 49) :
-  ((InSection (Section 2) (Sum Out (Node.Int 2))) .= 54 / 7) :
-  ((InSection (Section 2) (Sum Out (Node.Int 3))) .= 6 / 1) :
-  ((ForNode (MaxEnergy (StorageEdge Initial (AfterSection (Section 0)))) (Node.Int 3)) .= 22 / 1) :
-  ((ForNode (MaxEnergy (StorageEdge Initial (AfterSection (Section 2)))) (Node.Int 3)) .= 6 / 1) :
-  ((ForNode (MaxEnergy (StorageEdge (AfterSection (Section 1)) (AfterSection (Section 2)))) (Node.Int 3)) .= 10 / 1) :
-  ((ForNode (Storage Initial) (Node.Int 3)) .= 22 / 1) :
-  ((ForNode (Storage (AfterSection (Section 0))) (Node.Int 3)) .= 6 / 1) :
-  ((ForNode (Storage (AfterSection (Section 1))) (Node.Int 3)) .= 16 / 1) :
-  ((ForNode (Storage (AfterSection (Section 2))) (Node.Int 3)) .= 10 / 1) :
-  ((ForNode (StEnergy (StorageEdge Initial (AfterSection (Section 0)))) (Node.Int 3)) .= 16 / 1) :
-  ((ForNode (StEnergy (StorageEdge Initial (AfterSection (Section 2)))) (Node.Int 3)) .= 9 / 4) :
-  ((ForNode (StEnergy (StorageEdge (AfterSection (Section 0)) Initial)) (Node.Int 3)) .= 16 / 1) :
-  ((ForNode (StEnergy (StorageEdge (AfterSection (Section 1)) (AfterSection (Section 2)))) (Node.Int 3)) .= 15 / 4) :
-  ((ForNode (StEnergy (StorageEdge (AfterSection (Section 2)) Initial)) (Node.Int 3)) .= 9 / 4) :
-  ((ForNode (StEnergy (StorageEdge (AfterSection (Section 2)) (AfterSection (Section 1)))) (Node.Int 3)) .= 15 / 4) :
-  ((ForNode (StX (StorageEdge Initial (AfterSection (Section 0)))) (Node.Int 3)) .= 64 / 73) :
-  ((ForNode (StX (StorageEdge Initial (AfterSection (Section 2)))) (Node.Int 3)) .= 9 / 73) :
-  ((ForNode (StX (StorageEdge (AfterSection (Section 0)) Initial)) (Node.Int 3)) .= 1 / 1) :
-  ((ForNode (StX (StorageEdge (AfterSection (Section 1)) (AfterSection (Section 2)))) (Node.Int 3)) .= 1 / 1) :
-  ((ForNode (StX (StorageEdge (AfterSection (Section 2)) Initial)) (Node.Int 3)) .= 3 / 8) :
-  ((ForNode (StX (StorageEdge (AfterSection (Section 2)) (AfterSection (Section 1)))) (Node.Int 3)) .= 5 / 8) :
-  ((ForNode (StSum In Initial) (Node.Int 3)) .= 22 / 1) :
-  ((ForNode (StSum In (AfterSection (Section 1))) (Node.Int 3)) .= 10 / 1) :
-  ((ForNode (StSum Out (AfterSection (Section 0))) (Node.Int 3)) .= 16 / 1) :
-  ((ForNode (StSum Out (AfterSection (Section 2))) (Node.Int 3)) .= 6 / 1) :
+  (XIdx.sum sec1 In node2 .= 125 / 3) :
+  (XIdx.sum sec1 In node3 .= 10 / 1) :
+  (XIdx.sum sec1 Out node0 .= 625 / 6) :
+  (XIdx.sum sec1 Out node2 .= 125 / 3) :
+  (XIdx.sum sec2 In node1 .= 54 / 7) :
+  (XIdx.sum sec2 In node2 .= 54 / 7) :
+  (XIdx.sum sec2 Out node0 .= 162 / 49) :
+  (XIdx.sum sec2 Out node2 .= 54 / 7) :
+  (XIdx.sum sec2 Out node3 .= 6 / 1) :
+  (XIdx.maxEnergy bndi bnd0 node3 .= 22 / 1) :
+  (XIdx.maxEnergy bndi bnd2 node3 .= 6 / 1) :
+  (XIdx.maxEnergy bnd1 bnd2 node3 .= 10 / 1) :
+  (XIdx.storage bndi node3 .= 22 / 1) :
+  (XIdx.storage bnd0 node3 .= 6 / 1) :
+  (XIdx.storage bnd1 node3 .= 16 / 1) :
+  (XIdx.storage bnd2 node3 .= 10 / 1) :
+  (XIdx.stEnergy bndi bnd0 node3 .= 16 / 1) :
+  (XIdx.stEnergy bndi bnd2 node3 .= 9 / 4) :
+  (XIdx.stEnergy bnd0 bndi node3 .= 16 / 1) :
+  (XIdx.stEnergy bnd1 bnd2 node3 .= 15 / 4) :
+  (XIdx.stEnergy bnd2 bndi node3 .= 9 / 4) :
+  (XIdx.stEnergy bnd2 bnd1 node3 .= 15 / 4) :
+  (XIdx.stX bndi bnd0 node3 .= 64 / 73) :
+  (XIdx.stX bndi bnd2 node3 .= 9 / 73) :
+  (XIdx.stX bnd0 bndi node3 .= 1 / 1) :
+  (XIdx.stX bnd1 bnd2 node3 .= 1 / 1) :
+  (XIdx.stX bnd2 bndi node3 .= 3 / 8) :
+  (XIdx.stX bnd2 bnd1 node3 .= 5 / 8) :
+  (XIdx.stSum In bndi node3 .= 22 / 1) :
+  (XIdx.stSum In bnd1 node3 .= 10 / 1) :
+  (XIdx.stSum Out bnd0 node3 .= 16 / 1) :
+  (XIdx.stSum Out bnd2 node3 .= 6 / 1) :
   []
