@@ -21,7 +21,6 @@ import qualified EFA.Signal.SequenceData as SD
 import qualified EFA.Signal.Signal as Signal
 import EFA.Signal.Data (Data, Nil, (:>))
 
-import qualified EFA.Graph as Gr
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
@@ -53,13 +52,13 @@ solve ::
 solve = EqGen.solve
 
 
-solveWithoutTopology ::
+solveSimple ::
    (Eq a, Arith.Product a, a ~ Arith.Scalar v,
     Eq v, Arith.Product v, Arith.Integrate v,
     Node.C node) =>
    (forall s. EquationSystem node s a v) ->
    Env.Complete node (Record.Absolute (Result a)) (Record.Absolute (Result v))
-solveWithoutTopology = EqGen.solve (Map.empty, Gr.empty)
+solveSimple = EqGen.solveSimple
 
 
 constant :: x -> Expression node s a v x

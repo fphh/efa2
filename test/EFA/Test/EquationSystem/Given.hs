@@ -94,7 +94,7 @@ testEnv =
   Env.insert (XIdx.eta sec1 node2 node1) undet $
   Env.insert (XIdx.power sec1 node1 node2) undet $
   Env.insert (XIdx.energy sec1 node1 node2) undet $
-  EqGen.solveWithoutTopology testGiven
+  EqGen.solveSimple testGiven
 
 undet :: Record.Absolute (Result a)
 undet = Record.Absolute Undetermined
