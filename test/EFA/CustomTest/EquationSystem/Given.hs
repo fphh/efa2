@@ -2,10 +2,6 @@
 module EFA.CustomTest.EquationSystem.Given where
 
 
-import qualified Data.Map as M
-
-import Data.Ratio
-
 import EFA.Example.Absolute ( (.=) )
 import qualified EFA.Example.Absolute as EqGen
 
@@ -29,11 +25,13 @@ import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph as Gr
 
-import EFA.Equation.Record (Absolute(..))
-
-import EFA.Equation.Environment (Signal(..), Scalar(..), Complete(..))
+import qualified EFA.Equation.Record as Record
+import qualified EFA.Equation.Environment as Env
 import EFA.Equation.Result (Result(..))
 
+import qualified Data.Map as M
+
+import Data.Ratio ((%))
 import Data.Monoid (mconcat)
 
 
@@ -61,57 +59,57 @@ seqTopo = constructSeqTopo topoDreibein [1, 0, 1]
 -- Es muessen noch die richtigen Werte eingetragen werden.
 
 toTestGiven ::
-  Complete Node.Int
-    (Absolute (Result Rational)) 
-    (Absolute (Result Rational)) -> 
+  Env.Complete Node.Int
+    (Record.Absolute (Result Rational))
+    (Record.Absolute (Result Rational)) ->
   String
-toTestGiven (Complete scal sig) =
+toTestGiven (Env.Complete scal sig) =
   "testGiven :: EqGen.EquationSystem Node s Rational Rational\n" ++
   "testGiven = mconcat $\n" ++
   concat [
-    g $ powerMap sig,
-    g $ energyMap sig,
-    g $ etaMap sig,
-    g $ dtimeMap sig,
-    g $ xMap sig,
-    g $ sumMap sig,
-    g $ maxEnergyMap scal,
-    g $ storageMap scal,
-    g $ stEnergyMap scal,
-    g $ stXMap scal,
-    g $ stSumMap scal,
+    g $ Env.powerMap sig,
+    g $ Env.energyMap sig,
+    g $ Env.etaMap sig,
+    g $ Env.dtimeMap sig,
+    g $ Env.xMap sig,
+    g $ Env.sumMap sig,
+    g $ Env.maxEnergyMap scal,
+    g $ Env.storageMap scal,
+    g $ Env.stEnergyMap scal,
+    g $ Env.stXMap scal,
+    g $ Env.stSumMap scal,
     "  []" ]
-  where g :: (Show k, Show a) => M.Map k (Absolute (Result a)) -> String
+  where g :: (Show k, Show a) => M.Map k (Record.Absolute (Result a)) -> String
         g = M.foldWithKey f ""
         f idx v acc = "  ((" ++ show idx ++ ") .= "
                         ++ showValue v ++ ") :\n" ++ acc
-        showValue (Absolute (Determined x)) = show x
-        showValue (Absolute Undetermined) = "?"
+        showValue (Record.Absolute (Determined x)) = show x
+        showValue (Record.Absolute Undetermined) = "?"
 
 
 -- Nicht alle Werte sind von originalGiven berechenbar.
 testEnv ::
-  Complete Node.Int
-    (Absolute (Result Rational)) 
-    (Absolute (Result Rational))
-testEnv = Complete scal sigNew
-  where Complete scal sig = EqGen.solveWithoutTopology testGiven
+  Env.Complete Node.Int
+    (Record.Absolute (Result Rational))
+    (Record.Absolute (Result Rational))
+testEnv = Env.Complete scal sigNew
+  where Env.Complete scal sig = EqGen.solveWithoutTopology testGiven
         sigNew = sig {
-          energyMap = 
+          Env.energyMap =
             M.insert (InSection sec1
                      (Energy (StructureEdge node1 node2)))
-                     (Absolute Undetermined) (energyMap sig),
-          powerMap =
+                     (Record.Absolute Undetermined) (Env.energyMap sig),
+          Env.powerMap =
             M.insert (InSection sec1
                      (Power (StructureEdge node1 node2)))
-                     (Absolute Undetermined) (powerMap sig),
-          etaMap =
+                     (Record.Absolute Undetermined) (Env.powerMap sig),
+          Env.etaMap =
             M.insert (InSection sec1
                      (Eta (StructureEdge node2 node1)))
-                     (Absolute Undetermined) (etaMap sig),
-          sumMap =
+                     (Record.Absolute Undetermined) (Env.etaMap sig),
+          Env.sumMap =
             M.insert (InSection sec1 (Sum In node1))
-                     (Absolute Undetermined) (sumMap sig) }
+                     (Record.Absolute Undetermined) (Env.sumMap sig) }
 
 
 originalGiven :: EqGen.EquationSystem Node.Int s Rational Rational
