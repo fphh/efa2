@@ -91,24 +91,15 @@ testEnv ::
   Env.Complete Node.Int
     (Record.Absolute (Result Rational))
     (Record.Absolute (Result Rational))
-testEnv = Env.Complete scal sigNew
-  where Env.Complete scal sig = EqGen.solveWithoutTopology testGiven
-        sigNew = sig {
-          Env.energyMap =
-            M.insert (InSection sec1
-                     (Energy (StructureEdge node1 node2)))
-                     (Record.Absolute Undetermined) (Env.energyMap sig),
-          Env.powerMap =
-            M.insert (InSection sec1
-                     (Power (StructureEdge node1 node2)))
-                     (Record.Absolute Undetermined) (Env.powerMap sig),
-          Env.etaMap =
-            M.insert (InSection sec1
-                     (Eta (StructureEdge node2 node1)))
-                     (Record.Absolute Undetermined) (Env.etaMap sig),
-          Env.sumMap =
-            M.insert (InSection sec1 (Sum In node1))
-                     (Record.Absolute Undetermined) (Env.sumMap sig) }
+testEnv =
+  Env.insert (XIdx.sum sec1 Idx.In node1) undet $
+  Env.insert (XIdx.eta sec1 node2 node1) undet $
+  Env.insert (XIdx.power sec1 node1 node2) undet $
+  Env.insert (XIdx.energy sec1 node1 node2) undet $
+  EqGen.solveWithoutTopology testGiven
+
+undet :: Record.Absolute (Result a)
+undet = Record.Absolute Undetermined
 
 
 originalGiven :: EqGen.EquationSystem Node.Int s Rational Rational

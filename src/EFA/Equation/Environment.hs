@@ -155,6 +155,15 @@ accessMap ::
 accessMap =
    accessPartMap . accessPart
 
+insert ::
+   (AccessMap idx, Ord (idx node)) =>
+   idx node ->
+   Element idx a v ->
+   Complete node a v ->
+   Complete node a v
+insert idx val =
+   Accessor.modify accessMap $ M.insert idx val
+
 
 class (AccessPart (Environment idx), Var.Index idx) => AccessMap idx where
    type Environment idx :: * -> * -> *
