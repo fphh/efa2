@@ -290,6 +290,103 @@ instance (Ord node) => Monoid (Complete node b a) where
    mappend (Complete scalar0 signal0) (Complete scalar1 signal1) =
       Complete (mappend scalar0 scalar1) (mappend signal0 signal1)
 
+
+signalIntersectionWith ::
+   (Ord node) =>
+   (a -> b -> c) ->
+   Signal node a ->
+   Signal node b ->
+   Signal node c
+signalIntersectionWith f
+   (Signal e p n dt x s) (Signal e' p' n' dt' x' s') =
+      Signal
+         (M.intersectionWith f e e') (M.intersectionWith f p p')
+         (M.intersectionWith f n n') (M.intersectionWith f dt dt')
+         (M.intersectionWith f x x') (M.intersectionWith f s s')
+
+scalarIntersectionWith ::
+   (Ord node) =>
+   (a -> b -> c) ->
+   Scalar node a ->
+   Scalar node b ->
+   Scalar node c
+scalarIntersectionWith f
+   (Scalar me st se sx ss) (Scalar me' st' se' sx' ss') =
+      Scalar
+         (M.intersectionWith f me me') (M.intersectionWith f st st')
+         (M.intersectionWith f se se') (M.intersectionWith f sx sx')
+         (M.intersectionWith f ss ss')
+
+intersectionWith ::
+   (Ord node) =>
+   (a -> b -> c) ->
+   (u -> v -> w) ->
+   Complete node a u ->
+   Complete node b v ->
+   Complete node c w
+intersectionWith f g
+   (Complete scalar0 signal0) (Complete scalar1 signal1) =
+      Complete
+         (scalarIntersectionWith f scalar0 scalar1)
+         (signalIntersectionWith g signal0 signal1)
+
+
+signalDifference ::
+   (Ord node) =>
+   Signal node a ->
+   Signal node a ->
+   Signal node a
+signalDifference
+   (Signal e p n dt x s) (Signal e' p' n' dt' x' s') =
+      Signal
+         (M.difference e e') (M.difference p p')
+         (M.difference n n') (M.difference dt dt')
+         (M.difference x x') (M.difference s s')
+
+scalarDifference ::
+   (Ord node) =>
+   Scalar node a ->
+   Scalar node a ->
+   Scalar node a
+scalarDifference
+   (Scalar me st se sx ss) (Scalar me' st' se' sx' ss') =
+      Scalar
+         (M.difference me me') (M.difference st st')
+         (M.difference se se') (M.difference sx sx')
+         (M.difference ss ss')
+
+difference ::
+   (Ord node) =>
+   Complete node a v ->
+   Complete node a v ->
+   Complete node a v
+difference
+   (Complete scalar0 signal0) (Complete scalar1 signal1) =
+      Complete
+         (scalarDifference scalar0 scalar1)
+         (signalDifference signal0 signal1)
+
+signalFilter ::
+   Ord node =>
+   (a -> Bool) -> Signal node a -> Signal node a
+signalFilter f (Signal e p n dt x s) =
+   Signal (M.filter f e) (M.filter f p) (M.filter f n) (M.filter f dt) (M.filter f x) (M.filter f s)
+
+scalarFilter ::
+   Ord node =>
+   (a -> Bool) -> Scalar node a -> Scalar node a
+scalarFilter f (Scalar me st se sx ss) =
+   Scalar (M.filter f me) (M.filter f st) (M.filter f se) (M.filter f sx) (M.filter f ss)
+
+filter ::
+   Ord node =>
+   (a -> Bool) ->
+   (v -> Bool) ->
+   Complete node a v ->
+   Complete node a v
+filter f g (Complete scalar0 signal0) =
+   Complete (scalarFilter f scalar0) (signalFilter g signal0)
+
 {-
 lookupStack:: (Ord i, Ord node, Show node) =>
                               XIdx.Energy node
