@@ -20,9 +20,10 @@ lookupAbsEnergy :: (Ord node, Show d, Show node) =>
                    TIdx.InSection TIdx.Energy node -> 
                    EqEnv.Complete node b (EqRec.Absolute (Result d)) ->                   
                    d
-lookupAbsEnergy n env = case checkedLookup "Modules.Utility.lookupAbsEnergy" (EqEnv.energyMap $ EqEnv.signal env) n of
-                  EqRec.Absolute (Determined x) -> x
-                  EqRec.Absolute (Undetermined) -> error $ "Modules.Utility.lookupAbsEnergy - not determined : " ++ show n 
+lookupAbsEnergy n env = 
+  case checkedLookup "Modules.Utility.lookupAbsEnergy" (EqEnv.energyMap $ EqEnv.signal env) n of
+       EqRec.Absolute (Determined x) -> x
+       EqRec.Absolute (Undetermined) -> error $ "Modules.Utility.lookupAbsEnergy - not determined : " ++ show n 
 
 
 

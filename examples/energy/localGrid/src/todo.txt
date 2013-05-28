@@ -13,3 +13,4 @@
 
 * Sektionen gehen verloren (Energiebeispiel Simulation)
 
+* formatReal auch für Listen
