@@ -70,6 +70,7 @@ class Format output where
    empty :: output
    words, lines :: [output] -> output
    assign :: output -> output -> output
+   pair :: output -> output -> output
 
    function :: Function -> output -> output
    integral :: output -> output
@@ -103,6 +104,8 @@ instance Format ASCII where
    words = ASCII . unwords . map unASCII
    assign (ASCII lhs) (ASCII rhs) =
       ASCII $ lhs ++ " = " ++ rhs
+   pair (ASCII lhs) (ASCII rhs) =
+      ASCII $ "(" ++ lhs ++ ", " ++ rhs ++ ")"
 
    function f (ASCII rest) =
       ASCII $
@@ -164,6 +167,8 @@ instance Format Unicode where
    words = Unicode . unwords . map unUnicode
    assign (Unicode lhs) (Unicode rhs) =
       Unicode $ lhs ++ " = " ++ rhs
+   pair (Unicode lhs) (Unicode rhs) =
+      Unicode $ "(" ++ lhs ++ ", " ++ rhs ++ ")"
 
    function f (Unicode rest) =
       Unicode $
@@ -259,6 +264,8 @@ instance Format Latex where
    words = Latex . unwords . map unLatex
    assign (Latex lhs) (Latex rhs) =
       Latex $ lhs ++ " = " ++ rhs
+   pair (Latex lhs) (Latex rhs) =
+      Latex $ "(" ++ lhs ++ ", " ++ rhs ++ ")"
 
    function f (Latex rest) =
       Latex $
