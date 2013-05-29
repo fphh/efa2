@@ -19,3 +19,4 @@
 
 * scaling für powersignale und wirkungsgrade konsistent machen
 
+* unzip statt map fst und map snd

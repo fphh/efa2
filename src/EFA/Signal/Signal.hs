@@ -1510,8 +1510,9 @@ interp2WingProfile caller xSig ySig zSig xLookup yLookup =
         zRow2 = getColumn zSig xIdx2
 
         -- interpolate on y in these data columns
-        z1 = fromSample $ interp1Lin caller yRow1 zRow1 yLookup
-        z2 = fromSample $ interp1Lin caller yRow2 zRow2 yLookup
+        newCaller = "interp2WingProfile, " ++ caller
+        z1 = fromSample $ interp1Lin newCaller yRow1 zRow1 yLookup
+        z2 = fromSample $ interp1Lin newCaller yRow2 zRow2 yLookup
         x1 = fromSample $ getSample xSig xIdx1
         x2 = fromSample $ getSample xSig xIdx2
         msg = "interp2WingProfile - Out of Range: " ++ caller ++ ": " 

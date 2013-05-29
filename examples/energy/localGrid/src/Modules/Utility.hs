@@ -30,12 +30,13 @@ lookupAbsEnergy n env =
 
 
 
-lookupAbsPower :: (Ord node, Show d, Show node,Num d,Fractional d) =>
-                   TIdx.InSection TIdx.Power node -> 
-                   Maybe (EqEnv.Complete node b (EqRec.Absolute (Result d))) ->
-                   d
-lookupAbsPower n = maybe (-0.333) f
-  where f env= case checkedLookup "Modules.Utility.lookupAbsPower" (EqEnv.powerMap $ EqEnv.signal env) n of
+lookupAbsPower :: 
+  (Ord node, Show d, Show node,Num d,Fractional d) =>
+  TIdx.InSection TIdx.Power node -> 
+  Maybe (EqEnv.Complete node b (EqRec.Absolute (Result d))) -> d
+lookupAbsPower n = maybe (-1000) f
+  where f env = case checkedLookup "Modules.Utility.lookupAbsPower" 
+                     (EqEnv.powerMap $ EqEnv.signal env) n of
                     EqRec.Absolute (Determined x) -> x
                     EqRec.Absolute (Undetermined) -> error $ "Modules.Utility.lookupAbsPower - not determined : " ++ show n 
 

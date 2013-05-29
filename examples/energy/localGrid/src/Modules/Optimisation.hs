@@ -4,6 +4,7 @@
 
 module Modules.Optimisation where
 
+import Debug.Trace
 
 import qualified Modules.System as System
 import Modules.System (Node(..))
@@ -198,8 +199,10 @@ calcEtaSys :: (EqEnv.Complete
                (EqRec.Absolute (Result Double))
                (EqRec.Absolute (Result Double)))
               -> Double
-calcEtaSys env =  if eCoal0 >= 0 && eCoal1 >= 0 && eTransformer0 >= 0 && eTransformer1 >= 0 then etaSys else -0.333
-     where
+calcEtaSys env =
+  -- trace (show [eCoal0, eCoal1, eTransformer0, eTransformer1]) $
+  if eCoal0 > 0 && eCoal1 > 0 && eTransformer0 > 0 && eTransformer1 > 0 then etaSys else (0/0)
+  where
      eGas0 =  (ModUt.lookupAbsEnergy (XIdx.energy sec0 Gas LocalNetwork)) env
      eCoal0 =  (ModUt.lookupAbsEnergy (XIdx.energy sec0 Coal Network)) env
      eRest0 =  (ModUt.lookupAbsEnergy (XIdx.energy sec0 Rest Network)) env
@@ -227,7 +230,6 @@ maxEta :: Sig.UTSignal2 V.Vector V.Vector
 maxEta sigEnvs = (Sig.fromScalar etaMax, env) 
   where 
     etaSys = Sig.map calcEtaSys sigEnvs
---    etaMax = Sig.map (\x -> if isNaN x then -0.333 else x) $ Sig.maximum etaSys
     etaMax = Sig.maximum etaSys
     (xIdx, yIdx) = Sig.findIndex2 (== Sig.fromScalar etaMax) etaSys
     env = case (xIdx, yIdx) of 
@@ -236,92 +238,3 @@ maxEta sigEnvs = (Sig.fromScalar etaMax, env)
 
 
 
-
-
-{-
-
-givenCharging lookupEtaWaterCharge lookupEtaCoal lookupEtaGas lookupEtaTransformerHL pRest pRestLocal pWater pGas =
-   (commonGiven <>) $
-   mconcat $
-
-   -- Actual Section 0 Charhing to be varied and optimised
-   (XIdx.power sec0 Rest Network .= pRest) :
-   (XIdx.power sec0 LocalRest LocalNetwork .= pRestLocal) :
-   (XIdx.power sec0 Network Water .= pWater) :
-   (XIdx.power sec0 Gas LocalNetwork .= pGas) :
-   ((EqGen.variable $ XIdx.eta sec0 Network Water) =.=
-     EqGen.liftF lookupEtaWaterCharge (EqGen.variable $ XIdx.power sec0 Network Water)) :
-   ((EqGen.variable $ XIdx.eta sec0 Coal Network) =.=
-     EqGen.liftF lookupEtaCoal (EqGen.variable $ XIdx.power sec0 Network Coal)) :
-   ((EqGen.variable $ XIdx.eta sec0 Gas LocalNetwork) =.=
-     EqGen.liftF lookupEtaGas (EqGen.variable $ XIdx.power sec0 Gas LocalNetwork)) :
-   ((EqGen.variable $ XIdx.eta sec0 Network LocalNetwork) =.=
-     EqGen.liftF lookupEtaTransformerHL (EqGen.variable $ XIdx.power sec0 LocalNetwork Network)) :
-   ((EqGen.variable $ XIdx.eta sec0 LocalNetwork Network) =.=
-     EqGen.liftF lookupEtaTransformerHL (EqGen.variable $ XIdx.power sec0 LocalNetwork Network)) :
-    (XIdx.eta sec0 Network Rest .= 1.0) :
-   (XIdx.eta sec0 LocalNetwork LocalRest .= 1.0) :
-
-   -- Average Section 1 discharging
-   (XIdx.eta sec1 Network Rest .= 1.0) :
-   (XIdx.eta sec1 LocalNetwork LocalRest .= 1.0) :
-   (XIdx.eta sec1 Network LocalNetwork .= 0.8) :
-   (XIdx.eta sec1 Coal Network .= 0.4) :
-   (XIdx.eta sec1 Gas LocalNetwork .= 0.4) :
-   (XIdx.eta sec1 Water Network .= 0.4) :
-   (XIdx.eta sec1 Network Water .= 0.4) :
---   (XIdx.x sec1 Network Coal .= 0.7) :
-   (XIdx.x sec1 Network Water .= 0.7) :
---   (XIdx.x sec1 LocalNetwork Gas .= 0) :
-   (XIdx.x sec1 LocalNetwork Network .= 1.0) :
-   (XIdx.x sec1 Network LocalNetwork .= 0.5) :
-
-   []
-
-
-givenDischarging :: (Double -> Double) ->                          
-                            (Double -> Double) ->                        
-                            (Double -> Double) ->  
-                            (Double -> Double) ->  
-                            Double -> 
-                            Double -> 
-                            Double -> 
-                            Double -> 
-                            EqGen.EquationSystem System.Node s Double Double
-givenDischarging lookupEtaWaterDisCharge lookupEtaCoal lookupEtaGas lookupEtaTransformerHL pRest pRestLocal pWater pGas =
-   (commonGiven <>) $
-   mconcat $
-
-   -- Actual Section 1 discharging to be varied and optimised
-   (XIdx.power sec1 Rest Network .= pRest) :
-   (XIdx.power sec1 LocalRest LocalNetwork .= pRestLocal) :
-   (XIdx.power sec1 Network Water .= pWater) :
-   (XIdx.power sec1 Gas LocalNetwork .= pGas) :
-   ((EqGen.variable $ XIdx.eta sec1 Water Network) =.=
-     EqGen.liftF lookupEtaWaterDisCharge (EqGen.variable $ XIdx.power sec1 Network Water)) :
-   ((EqGen.variable $ XIdx.eta sec1 Coal Network) =.=
-     EqGen.liftF lookupEtaCoal (EqGen.variable $ XIdx.power sec1 Network Coal)) :
-   ((EqGen.variable $ XIdx.eta sec1 Gas LocalNetwork) =.=
-     EqGen.liftF lookupEtaGas (EqGen.variable $ XIdx.power sec1 Gas LocalNetwork)) :
-   ((EqGen.variable $ XIdx.eta sec1 Network LocalNetwork) =.=
-     EqGen.liftF lookupEtaTransformerHL (EqGen.variable $ XIdx.power sec1 LocalNetwork Network)) :
-   ((EqGen.variable $ XIdx.eta sec1 LocalNetwork Network) =.=
-     EqGen.liftF lookupEtaTransformerHL (EqGen.variable $ XIdx.power sec1 LocalNetwork Network)) :
-   (XIdx.eta sec1 Network Rest .= 1.0) :
-   (XIdx.eta sec1 LocalNetwork LocalRest .= 1.0) :
-
-   -- Average Section 0 discharging
-   (XIdx.eta sec0 Network Rest .= 1.0) :
-   (XIdx.eta sec0 LocalNetwork LocalRest .= 1.0) :
-   (XIdx.eta sec0 Coal Network .= 0.4) :
-   (XIdx.eta sec0 Gas LocalNetwork .= 0.4) :
-   (XIdx.eta sec0 Water Network .= 0.4) :
-   (XIdx.eta sec0 Network Water .= 0.4) :
-   (XIdx.eta sec0 Network LocalNetwork .= 0.8) :
-   (XIdx.x sec0 Network Water .= 0.2) :
-   (XIdx.x sec0 Coal Network .= 0.5) :
-   (XIdx.x sec0 LocalNetwork Network .= 0.8) :
-   (XIdx.x sec0 Network LocalNetwork .= 0.5) :
-
-   []
--}
