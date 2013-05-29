@@ -80,10 +80,10 @@ legend _ = "Undefined"
 
 scaleTableEta :: M.Map String (Double, Double)
 scaleTableEta = M.fromList $
-  ("storage",     (1, 1)) :
-  ("gas",         (1, 1)) :
-  ("transformer", (3.0, 1)) :
-  ("coal",        (6, 1)) :
+  ("storage",     (1, 0.8)) :
+  ("gas",         (1, 0.4)) :
+  ("transformer", (3.0, 0.95)) :
+  ("coal",        (6, 0.46)) :
   ("local",       (1, 1)) :
   ("rest",        (1, 1)) :
   []
@@ -473,6 +473,6 @@ main = do
                                                powerSignalGasOptCharge, 
                                                powerSignalGasOptDischarge],
      Draw.xterm $ Draw.sequFlowGraphAbsWithEnv  sequenceFlowTopologySim envSimAnalysis,
-     Draw.xterm $ Draw.sequFlowGraphAbsWithEnv  sequenceFlowTopologySim envSimAnalysisCumulated
+     Draw.pdf "Jupie.pdf" $ Draw.sequFlowGraphAbsWithEnv  sequenceFlowTopologySim envSimAnalysisCumulated
      
      ]

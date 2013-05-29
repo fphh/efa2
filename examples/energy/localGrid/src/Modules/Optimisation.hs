@@ -114,17 +114,16 @@ givenCharging etaAssign etaFunc pRest pRestLocal pWater pGas =
    -- Average Section 1 discharging
    (XIdx.eta sec1 Network Rest .= Data 1.0) :
    (XIdx.eta sec1 LocalNetwork LocalRest .= Data 1.0) :
-   (XIdx.eta sec1 Network LocalNetwork .= Data 0.8) :
-   (XIdx.eta sec1 Coal Network .= Data 0.4) :
-   (XIdx.eta sec1 Gas LocalNetwork .= Data 0.4) :
-   (XIdx.eta sec1 Water Network .= Data 0.4) :
-   (XIdx.eta sec1 Network Water .= Data 0.4) :
+   (XIdx.eta sec1 Network LocalNetwork .= Data 0.862) :
+   (XIdx.eta sec1 Coal Network .= Data 0.345) :
+   (XIdx.eta sec1 Gas LocalNetwork .= Data 0.346) :
+   (XIdx.eta sec1 Water Network .= Data 0.82) :
+--   (XIdx.eta sec1 Network Water .= Data 0.4) :
    -- (XIdx.x sec1 Network Coal .= Data 0.7) :
    (XIdx.x sec1 Network Water .= Data 0.7) :
 --   (XIdx.x sec1 LocalNetwork Gas .= Data 0) :
-   (XIdx.x sec1 LocalNetwork Network .= Data 1.0) :
-   (XIdx.x sec1 Network LocalNetwork .= Data 0.5) :
-
+   (XIdx.x sec1 Network LocalNetwork .= Data 0.766) :
+   (XIdx.x sec1 LocalNetwork Network .= Data 0.677) :
    []
 
 
@@ -153,18 +152,19 @@ givenDischarging etaAssign etaFunc pRest pRestLocal pWater pGas =
    (XIdx.power sec1 LocalRest LocalNetwork .= pRestLocal) :
    (XIdx.power sec1 Network Water .= pWater) :
    (XIdx.power sec1 LocalNetwork Gas .= pGas) :
-   (XIdx.eta sec0 LocalNetwork LocalRest .= Data 1.0) :
-   (XIdx.eta sec0 Coal Network .= Data 0.4) :
-   (XIdx.eta sec0 Gas LocalNetwork .= Data 0.4) :
-   (XIdx.eta sec0 Water Network .= Data 0.4) :
-   (XIdx.eta sec0 Network Water .= Data 0.4) :
-   (XIdx.eta sec0 Network LocalNetwork .= Data 0.8) :
-   (XIdx.eta sec0 Network Rest .= Data 1) :
 
-   (XIdx.x sec0 Network Water .= Data 0.2) :
-   (XIdx.x sec0 Coal Network .= Data 0.5) :
-   (XIdx.x sec0 LocalNetwork Network .= Data 0.8) :
-   (XIdx.x sec0 Network LocalNetwork .= Data 0.5) :
+   (XIdx.eta sec0 Coal Network .= Data 0.440) :
+   (XIdx.eta sec0 Gas LocalNetwork .= Data 0.303) :
+--   (XIdx.eta sec0 Water Network .= Data 0.331) :
+   (XIdx.eta sec0 Network Water .= Data 0.331) :
+   (XIdx.eta sec0 Network LocalNetwork .= Data 0.939) :
+   (XIdx.eta sec0 Network Rest .= Data 1) :
+   (XIdx.eta sec0 LocalNetwork LocalRest .= Data 1.0) :
+   
+   (XIdx.x sec0 Network Water .= Data 0.054) :
+   (XIdx.x sec0 Coal Network .= Data 1) :
+   (XIdx.x sec0 Network LocalNetwork .= Data 0.669) :   
+   (XIdx.x sec0 LocalNetwork Network .= Data 0.881) :
    []
 
 givenSimulate ::
