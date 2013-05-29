@@ -96,9 +96,13 @@ import Prelude hiding (sqrt, (.))
 
 type
    BK rec node s a v =
-      StateT (Env.Complete node (rec (Sys.Variable s a)) (rec (Sys.Variable s v)))
+      StateT
+         (Env.Complete node
+            (RecordVariable rec s a)
+            (RecordVariable rec s v))
          (WriterT (System s) (ST s))
 
+type RecordVariable rec s x = rec (Sys.Variable s x)
 
 newtype System s = System (Sys.M s ())
 
@@ -257,7 +261,7 @@ sqrt = liftF P.sqrt
 class (Traversable rec, Applicative rec, Record.C rec) => Record rec where
    newVariable ::
       (Eq a, Sum a) =>
-      WriterT (System s) (ST s) (rec (Sys.Variable s a))
+      WriterT (System s) (ST s) (RecordVariable rec s a)
    equalRecord ::
       (Eq a) =>
       Wrap rec (Expr.T s a) ->
@@ -442,15 +446,15 @@ newtype
          getAccessMap ::
             (Env.Environment idx ~ env) =>
             Accessor.T
-               (Env.Complete node (rec (Sys.Variable s a)) (rec (Sys.Variable s v)))
-               (M.Map (idx node) (rec (Sys.Variable s (Env.Element idx a v))))
+               (Env.Complete node (RecordVariable rec s a) (RecordVariable rec s v))
+               (M.Map (idx node) (RecordVariable rec s (Env.Element idx a v)))
       }
 
 accessMap ::
    (Env.AccessMap idx) =>
    Accessor.T
-      (Env.Complete node (rec (Sys.Variable s a)) (rec (Sys.Variable s v)))
-      (M.Map (idx node) (rec (Sys.Variable s (Env.Element idx a v))))
+      (Env.Complete node (RecordVariable rec s a) (RecordVariable rec s v))
+      (M.Map (idx node) (RecordVariable rec s (Env.Element idx a v)))
 accessMap =
    getAccessMap $
    Env.switchPart
@@ -820,7 +824,7 @@ splitFactors s ef xf ns =
 
 queryEnv ::
   (Traversable env, Traversable rec) =>
-  env (rec (Sys.Variable s a)) -> ST s (env (rec (Result a)))
+  env (RecordVariable rec s a) -> ST s (env (rec (Result a)))
 queryEnv =
   traverse (traverse (fmap (maybe Undetermined Determined) . Sys.query))
 
