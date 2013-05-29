@@ -14,3 +14,8 @@
 * Sektionen gehen verloren (Energiebeispiel Simulation)
 
 * formatReal auch für Listen
+
+* sweep auf zipWith auf signal2 umstellen
+
+* scaling für powersignale und wirkungsgrade konsistent machen
+

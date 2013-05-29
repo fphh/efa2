@@ -3,7 +3,7 @@
 module Modules.Utility where
 
 import qualified EFA.Graph.Topology.Index as TIdx
-import qualified EFA.Example.Index as XIdx
+-- import qualified EFA.Example.Index as XIdx
 import qualified EFA.Equation.Environment as EqEnv
 import qualified EFA.Equation.Record as EqRec
 import EFA.Equation.Result (Result(..))
@@ -13,6 +13,9 @@ import qualified Modules.System as System
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Signal as Sig
 import EFA.Signal.Data (Data(..), Nil, (:>))
+import qualified EFA.Signal.ConvertTable as CT
+-- import qualified EFA.IO.TableParser as Table
+import qualified EFA.IO.TableParserTypes as TPT
 
 import qualified Data.Map as M
 
@@ -49,8 +52,6 @@ lookupAbsEta n env = case checkedLookup (EqEnv.powerMap $ EqEnv.signal env) n of
                   EqRec.Absolute (Undetermined) -> error $ "not determined : " ++ show  n
 -}
 
-select :: [topo] -> [Int] -> SD.SequData topo
-select ts = SD.fromList . map (ts !!)
 
 
 -- | Warning -- only works for one section in env
@@ -70,3 +71,20 @@ envToPowerRecord env time sec =
         i (EqRec.Absolute (Determined dat)) = Sig.TC dat
         i (EqRec.Absolute Undetermined) =
           error "Modules.Utility.envToPowerRecord - undetermined data" 
+
+
+-- | Warum verwenden wir hier niht checkedLookup -- Fehlermeldung niht klar genug, kein caller eingezogen
+getEtas :: M.Map String (a -> a) -> [String] -> [a -> a]
+getEtas etaFunc = map $
+  \str -> maybe (error $ "getEtas :" ++ str ++ " not found") id (M.lookup str etaFunc)
+
+
+getTimes ::
+  M.Map String (TPT.T Double) ->
+  [String] ->
+  [(Sig.TSignal [] Double, Sig.PSignal [] Double)]
+getTimes tabPower = map (f . CT.convertToSignal2D . flip M.lookup tabPower)
+  where f (x, [y]) = (x, y)
+
+select :: [topo] -> [Int] -> SD.SequData topo
+select ts = SD.fromList . map (ts !!)

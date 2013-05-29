@@ -7,6 +7,7 @@ module Modules.Optimisation where
 
 import qualified Modules.System as System
 import Modules.System (Node(..))
+import Modules.Utility as ModUt
 
 import qualified EFA.Example.Absolute as EqGen
 -- import qualified EFA.Example.Absolute as EqAbs
@@ -23,7 +24,7 @@ import qualified EFA.Signal.Data as Data
 import qualified EFA.Signal.Base as Base
 
 import qualified EFA.Signal.Vector as SV
-import qualified Data.Vector as Vec
+-- import qualified Data.Vector as Vec
 
 import EFA.Equation.Result (Result(..))
 --import EFA.Utility.Map (checkedLookup)
@@ -37,7 +38,7 @@ import qualified EFA.Example.Utility as EqUt
 import EFA.Utility.Stream (Stream((:~)))
 import qualified Data.Foldable as Fold 
 import qualified Data.Map as M
-
+import qualified Data.Vector as V
 
 sec0, sec1 :: TIdx.Section
 sec0 :~ sec1 :~ _ = Stream.enumFrom $ TIdx.Section 0
@@ -191,6 +192,47 @@ givenSimulate etaAssign etaFunc sf =
                    (TIdx.absolute (XIdx.energy sec p0 p1) EqUt..= Sig.unpack e)
 
 
+-- | Avoid invalid solution by assigning NaN, which hits last in maximum
+calcEtaSys :: (EqEnv.Complete  
+               Node
+               (EqRec.Absolute (Result Double))
+               (EqRec.Absolute (Result Double)))
+              -> Double
+calcEtaSys env =  if eCoal0 >= 0 && eCoal1 >= 0 && eTransformer0 >= 0 && eTransformer1 >= 0 then etaSys else -0.333
+     where
+     eGas0 =  (ModUt.lookupAbsEnergy (XIdx.energy sec0 Gas LocalNetwork)) env
+     eCoal0 =  (ModUt.lookupAbsEnergy (XIdx.energy sec0 Coal Network)) env
+     eRest0 =  (ModUt.lookupAbsEnergy (XIdx.energy sec0 Rest Network)) env
+     eRestLocal0 = (ModUt.lookupAbsEnergy (XIdx.energy sec0 LocalRest LocalNetwork)) env
+     eGas1 = (ModUt.lookupAbsEnergy (XIdx.energy sec1 Gas LocalNetwork)) env
+     eCoal1 =  (ModUt.lookupAbsEnergy (XIdx.energy sec1 Coal Network)) env
+     eRest1 =  (lookupAbsEnergy (XIdx.energy sec1 Rest Network)) env
+     eRestLocal1 =  (lookupAbsEnergy (XIdx.energy sec1 LocalRest LocalNetwork)) env
+     eTransformer0 =  (ModUt.lookupAbsEnergy (XIdx.energy sec0 Network LocalNetwork)) env
+     eTransformer1 =  (ModUt.lookupAbsEnergy (XIdx.energy sec1 Network LocalNetwork)) env
+
+     etaSys = (eRest0 + eRest1 + eRestLocal0 + eRestLocal1) / (eGas0  + eGas1 + eCoal0 + eCoal1)
+                 
+
+maxEta :: Sig.UTSignal2 V.Vector V.Vector 
+         (EqEnv.Complete  
+         Node
+         (EqRec.Absolute (Result Double))
+         (EqRec.Absolute (Result Double))) ->
+         (Double, 
+          Maybe (EqEnv.Complete          
+                 Node
+                 (EqRec.Absolute (Result Double))
+                 (EqRec.Absolute (Result Double))))
+maxEta sigEnvs = (Sig.fromScalar etaMax, env) 
+  where 
+    etaSys = Sig.map calcEtaSys sigEnvs
+--    etaMax = Sig.map (\x -> if isNaN x then -0.333 else x) $ Sig.maximum etaSys
+    etaMax = Sig.maximum etaSys
+    (xIdx, yIdx) = Sig.findIndex2 (== Sig.fromScalar etaMax) etaSys
+    env = case (xIdx, yIdx) of 
+      (Just xIdx', Just yIdx') -> Just $ Sig.getSample2D sigEnvs (xIdx',yIdx')
+      _ -> Nothing
 
 
 
