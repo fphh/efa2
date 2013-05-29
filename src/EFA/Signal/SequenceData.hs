@@ -67,11 +67,21 @@ instance Foldable Section where
 instance Traversable Section where
    sequenceA (Section s rng a) = fmap (Section s rng) a
 
+{-
 fromList :: [a] -> SequData a
 fromList =
    SequData .
    zipWith
       (\s -> Section (Idx.Section s) (case fromIntegral s of r -> (r,r)))
+      [0 ..]
+-}
+
+fromList :: [a] -> SequData a
+fromList =
+   SequData .
+   zipWith
+      (\s -> let sidx = S.SignalIdx $ fromIntegral s
+             in  Section (Idx.Section s) (sidx, sidx))
       [0 ..]
 
 fromRangeList :: [(Range, a)] -> SequData a
@@ -81,7 +91,9 @@ fromRangeList =
 fromLengthList :: [(Int, a)] -> SequData a
 fromLengthList =
    fromRangeList . snd .
-   List.mapAccumL (\(S.SignalIdx idx) (len, x) -> (S.SignalIdx $ idx+len-1, ((S.SignalIdx idx, S.SignalIdx $ idx+len-1), x))) 0
+   flip List.mapAccumL (S.SignalIdx 0) f 
+   where f (S.SignalIdx idx) (len, x) =
+           (S.SignalIdx (idx+len-1), ((S.SignalIdx idx, S.SignalIdx (idx+len-1)), x))
 
 unzip :: SequData (a, b) -> (SequData a, SequData b)
 unzip (SequData xs) =

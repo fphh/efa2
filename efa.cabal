@@ -64,6 +64,7 @@ Library
     EFA.IO.TableParser
     EFA.Utility
     EFA.Utility.Async
+    EFA.Utility.Bifunctor
     EFA.Utility.Map
     EFA.Utility.Stream
     EFA.Utility.TotalMap
@@ -247,6 +248,7 @@ Executable optimise-energy
       utility-ht,
       non-empty,
       filepath,
+      vector,
       base
   Else
     Buildable: False

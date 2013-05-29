@@ -73,7 +73,7 @@ solve :: Rational -> String
 solve p =
   show p ++ "\t"
         ++ show (checkDetermined (show eta) $ Record.unAbsolute $
-                   checkedLookup (Env.etaMap $ Env.signal $ solveEnv p) eta)
+                   checkedLookup "solve" (Env.etaMap $ Env.signal $ solveEnv p) eta)
 
 solveEnv ::
   Rational ->

@@ -151,8 +151,12 @@ genSequ ::
 genSequ pRec =
    removeNilSections $ SD.fromRangeList $ zip (sequ++[lastSec]) pRecs
   where rSig = record2RSig pRec
+
+        inc (S.SignalIdx idx) = S.SignalIdx (idx+1)
+
         pRecs = map (rsig2SecRecord pRec) (seqRSig ++ [lastRSec])
-        ((lastSec,sequ),(lastRSec,seqRSig)) = recyc rTail rHead (((0,0),[]),(Record.singleton $ rHead,[]))
+        ((lastSec,sequ),(lastRSec,seqRSig)) =
+          recyc rTail rHead (((S.SignalIdx 0, S.SignalIdx 0),[]),(Record.singleton $ rHead,[]))
           where
             (rHead, rTail) = maybe err id $ Record.viewL rSig
             err = error ("Error in EFA.Signal.Sequence/genSequence, case 1 - empty rSig")
@@ -178,13 +182,14 @@ genSequ pRec =
             f NoEvent = (secRSig .++ xs2, sqRSig)                  -- continue incrementing
 
             g :: EventType -> (Range, [Range])
-            g LeftEvent = ((idx, idx+1), sq ++ [(lastIdx, idx)])
-            g RightEvent = ((idx+1, idx+1), sq ++ [(lastIdx, idx+1)])
-            g MixedEvent = ((idx+1, idx+1), sq ++ [(lastIdx, idx)] ++ [(idx, idx+1)])
-            g NoEvent = ((lastIdx, idx+1), sq)
+            g LeftEvent = ((idx, inc idx), sq ++ [(lastIdx, idx)])
+            g RightEvent = ((inc idx, inc idx), sq ++ [(lastIdx, inc idx)])
+            g MixedEvent = ((inc idx, inc idx), sq ++ [(lastIdx, idx)] ++ [(idx, inc idx)])
+            g NoEvent = ((lastIdx, inc idx), sq)
 
         -- Incoming rList is only one Point long -- append last sample to last section
-        recyc rsig _ (((lastIdx,idx),sq),(secRSig, sqRSig)) | (Record.len rsig) >=1 = (((lastIdx,idx+1),sq),(secRSig .++ rsig, sqRSig))
+        recyc rsig _ (((lastIdx,idx),sq),(secRSig, sqRSig)) | (Record.len rsig) >=1 =
+               (((lastIdx, inc idx),sq),(secRSig .++ rsig, sqRSig))
 
         -- Incoming rList is empty -- return result
         recyc _ _ acc = acc
