@@ -106,9 +106,9 @@ instance GetSample Signal Sample where
 
 newtype SignalIdx = SignalIdx Int deriving (Show, Eq, Ord)
 
-instance Num SignalIdx where
-  fromInteger x = SignalIdx $ P.fromInteger x
-  (+) (SignalIdx x) (SignalIdx y) = (SignalIdx $ x+y)
+--instance Num SignalIdx where
+--  fromInteger x = SignalIdx $ P.fromInteger x
+--  (+) (SignalIdx x) (SignalIdx y) = (SignalIdx $ x+y)
 
 
 unSignalIdx :: SignalIdx -> Int

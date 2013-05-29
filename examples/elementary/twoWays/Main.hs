@@ -122,8 +122,8 @@ solve e x =
   in  show e ++ " " ++ show x ++ " " ++
       Format.unUnicode (formatValue
          (liftA2 (/)
-             (Record.unAbsolute $ checkedLookup emap eout)
-             (Record.unAbsolute $ checkedLookup emap ein)))
+             (Record.unAbsolute $ checkedLookup "solve" emap eout)
+             (Record.unAbsolute $ checkedLookup "solve" emap ein)))
 
 main :: IO ()
 main =

@@ -154,10 +154,10 @@ solve x e =
                       (checkedLookup smap sto1)))
 -}
       Format.unUnicode (formatValue
-         (f <$> (Record.unAbsolute $ checkedLookup stemap esto)
-            <*> (Record.unAbsolute $ checkedLookup emap ein)
-            <*> (Record.unAbsolute $ checkedLookup emap eout0)
-            <*> (Record.unAbsolute $ checkedLookup emap eout1)))
+         (f <$> (Record.unAbsolute $ checkedLookup "solve" stemap esto)
+            <*> (Record.unAbsolute $ checkedLookup "solve" emap ein)
+            <*> (Record.unAbsolute $ checkedLookup "solve" emap eout0)
+            <*> (Record.unAbsolute $ checkedLookup "solve" emap eout1)))
 
 
 main :: IO ()

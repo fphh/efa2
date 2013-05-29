@@ -21,6 +21,8 @@ import EFA.Report.FormatValue (FormatValue, formatValue)
 
 import Prelude hiding (lookup, (.))
 
+import qualified EFA.Utility.Bifunctor as BF
+
 
 -- Environments
 type EnergyMap node a = M.Map (Idx.InSection Idx.Energy node) a
@@ -61,6 +63,12 @@ data Complete node b a =
       scalar :: Scalar node b,
       signal :: Signal node a
    } deriving (Show, Eq)
+
+
+instance BF.Bifunctor (Complete node) where
+         bimap f g (Complete scal sig) = Complete (fmap f scal) (fmap g sig)
+         first f (Complete scal sig) = Complete (fmap f scal) sig
+         second g (Complete scal sig) = Complete scal (fmap g sig)
 
 
 class AccessPart env where

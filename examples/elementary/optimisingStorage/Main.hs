@@ -184,7 +184,7 @@ getSignalVar ::
 getSignalVar varEnvs idx =
    S.changeSignalType $ S.fromList2 $
    map (map (unpackResult . Record.unAbsolute .
-             flip checkedLookup idx .
+             flip (checkedLookup "getSignalVar") idx .
              Accessor.get Env.accessMap)) $
    varEnvs
 

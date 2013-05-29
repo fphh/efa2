@@ -175,13 +175,8 @@ etaSys ::
     (EqRec.Absolute (Result Double)) ->
   Double
 etaSys env =
-  (lookup eSinkSec0 + lookup eSinkSec1) / (lookup eSource)
-  where
-        lookup n |
-          EqRec.Absolute (Determined x) <-
-            checkedLookup (EqEnv.energyMap $ EqEnv.signal env) n = x
-          | otherwise = error (show n ++ "\n" ++ show (EqEnv.energyMap $ EqEnv.signal env))
-
+  (lu eSinkSec0 + lu eSinkSec1) / (lu eSource)
+  where lu = lookUp "etaSys" env
         eSource = XIdx.energy sec0 source crossing
         eSinkSec0 = XIdx.energy sec0 sink crossing
         eSinkSec1 = XIdx.energy sec1 sink crossing
@@ -212,7 +207,7 @@ hypotheticalUsage = Sig.fromList [
 -- auch fuer mehrdimensionale Signale
 borderFunc ::
   (Show d, Eq d, Ord d) =>
-  Sig.NTestRow [] Int -> Sig.PSignal [] d -> (d -> Int)
+  Sig.UTTestRow [] Int -> Sig.PSignal [] d -> (d -> Int)
 borderFunc ss xs p =
   case dropWhile ((< p) . fst) zs of
        (_, s):_ -> s
@@ -294,6 +289,16 @@ givenEnvHU xs =
       <>
       (foldMap givenEnvHUSec ys)
 
+lookUp ::
+  (Ord node, Show node, Show t) =>
+  String ->
+  EqEnv.Complete node b (EqRec.Absolute (Result t)) ->
+  TIdx.InSection TIdx.Energy node -> t
+lookUp caller env n =
+  case checkedLookup caller
+         (EqEnv.energyMap $ EqEnv.signal env) n of
+       EqRec.Absolute (Determined x) -> x
+       otherwise -> error (show n ++ "\n" ++ show (EqEnv.energyMap $ EqEnv.signal env))
 
 
 etaSysHU ::
@@ -303,11 +308,8 @@ etaSysHU ::
     (EqRec.Absolute (Result Double)) ->
   Double
 etaSysHU env =
-  (lookup eSinkSec0 + lookup eSinkSec1) / (lookup eSource) 
-  where 
-        lookup n | 
-          EqRec.Absolute (Determined x) <-
-            checkedLookup (EqEnv.energyMap $ EqEnv.signal env) n = x
+  (lu eSinkSec0 + lu eSinkSec1) / (lu eSource) 
+  where lu = lookUp "etaSysHU" env
         eSource = XIdx.energy sec0 source crossing
         eSinkSec0 = XIdx.energy sec0 sink crossing
         eSinkSec1 = XIdx.energy sec1 sink crossing
@@ -352,7 +354,7 @@ main = do
 
       maxEtaLinear = Sig.zipWith max maxEtaSys0 maxEtaSys1
 
-      maxEtaSysStateLinear :: Sig.NSignal [] Int
+      maxEtaSysStateLinear :: Sig.UTTestRow [] Int
       maxEtaSysStateLinear = Sig.sigMax2 maxEtaSys0 maxEtaSys1
 
 
@@ -394,10 +396,12 @@ main = do
       Draw.title "Hypothetical Usage Sequence Flow Graph" $
       Draw.sequFlowGraphAbsWithEnv seqTopoHU envHU,
 
+{-
     PlotIO.xy "Test" DefaultTerm.cons id g sinkRangeSig
               [ maxEtaSys0, maxEtaSys1,
                 maxEtaLinear,
                 Sig.map fromIntegral maxEtaSysStateLinear],
+-}
 
     PlotIO.xy "Optimale Zustände" DefaultTerm.cons id h sinkRangeSig
               [hypotheticalUsage, Sig.map fromIntegral optimalState] ]
@@ -415,24 +419,11 @@ main = do
     PlotIO.surface "Test" DefaultTerm.cons id (const "Max") varX varY maxEtaSysState ]
 -}
 
-getEnergy ::
-  TIdx.InSection TIdx.Energy Node.Int ->
-  EqEnv.Complete
-    Node.Int
-    (EqRec.Absolute (Result Double))
-    (EqRec.Absolute (Result Double)) -> Double
-getEnergy n env = lookup
-  where
-        lookup |
-          EqRec.Absolute (Determined x) <-
-            checkedLookup (EqEnv.energyMap $ EqEnv.signal env) n = x
-
-
 main2 :: IO ()
 main2 = do
   let y = 1
 
-      f e x = getEnergy e $ EqGen.solve seqTopo $ givenSec0Mean x y
+      f e x = lookUp "f" (EqGen.solve seqTopo $ givenSec0Mean x y) e
       esc1 = XIdx.energy sec1 sink crossing
       ecs1 = XIdx.energy sec1 crossing sink
       estc1 = XIdx.energy sec1 storage crossing
