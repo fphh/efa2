@@ -90,11 +90,9 @@ terminate ::
 terminate func = fmap (Graph2D.lineSpec $ func $ LineSpec.deflt)
 
 
-{-
 myFrameStyle ::
-  gnuplot-0.5.2:Graphics.Gnuplot.Private.Plot.T (Graph2D.T Double Double) ->
+  Plot2D.T Double Double ->
   Frame.T (Graph2D.T Double Double)
--}
 myFrameStyle = Frame.cons $
   Opts.title "Dies ist der Titel!!!" $
   Opts.grid True $
