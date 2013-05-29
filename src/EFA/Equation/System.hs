@@ -111,13 +111,15 @@ instance Monoid (System s) where
    mappend (System x) (System y) = System $ x >>! y
 
 
+type Expr = Expr.T
+
 type
    Expression rec node s a v x =
-      Bookkeeping rec node s a v (Expr.T s x)
+      Bookkeeping rec node s a v (Expr s x)
 
 type
    RecordExpression rec node s a v x =
-      Bookkeeping rec node s a v (Wrap rec (Expr.T s x))
+      Bookkeeping rec node s a v (Wrap rec (Expr s x))
 
 newtype Wrap rec a = Wrap {unwrap :: rec a}
    deriving (Functor, Applicative, Fold.Foldable, Traversable)
@@ -177,15 +179,15 @@ instance
 
 {-
 -- only needed for simplified arithmetic on Absolute records
-instance (Num a) => Sum (Expr.T s a) where
+instance (Num a) => Sum (Expr s a) where
    (~+) = Expr.fromRule3 Rule.add
    (~-) = Expr.fromRule3 (\z x y -> Rule.add x y z)
 
-instance (Fractional a) => Product (Expr.T s a) where
+instance (Fractional a) => Product (Expr s a) where
    (~*) = Expr.fromRule3 Rule.mul
    (~/) = Expr.fromRule3 (\z x y -> Rule.mul x y z)
 
-instance (Fractional a) => Constant (Expr.T s a) where
+instance (Fractional a) => Constant (Expr s a) where
    zero = Expr.constant 0
    fromInteger'  = Expr.constant . fromInteger
    fromRational' = Expr.constant . fromRational
@@ -264,8 +266,8 @@ class (Traversable rec, Applicative rec, Record.C rec) => Record rec where
       WriterT (System s) (ST s) (RecordVariable rec s a)
    equalRecord ::
       (Eq a) =>
-      Wrap rec (Expr.T s a) ->
-      Wrap rec (Expr.T s a) ->
+      Wrap rec (Expr s a) ->
+      Wrap rec (Expr s a) ->
       System s
    liftE0 :: (Sum x) => x -> Wrap rec x
    liftE1 ::
