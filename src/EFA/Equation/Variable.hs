@@ -11,8 +11,8 @@ import EFA.Report.FormatValue
 
 
 data Any a =
-     Signal (Idx.InSection Signal a)
-   | Scalar (Idx.ForNode Scalar a)
+     Signal (InSectionSignal a)
+   | Scalar (ForNodeScalar a)
      deriving (Show, Eq, Ord)
 
 data Signal a =
@@ -34,16 +34,19 @@ data Scalar a =
 
 
 
+type InSectionSignal = Idx.InSection Signal
+type ForNodeScalar   = Idx.ForNode   Scalar
+
 class Index t where
    type Type t :: * -> *
    index :: t a -> Type t a
 
 instance SignalIndex idx => Index (Idx.InSection idx) where
-   type Type (Idx.InSection idx) = Idx.InSection Signal
+   type Type (Idx.InSection idx) = InSectionSignal
    index (Idx.InSection s x) = Idx.InSection s (signalIndex x)
 
 instance ScalarIndex idx => Index (Idx.ForNode idx) where
-   type Type (Idx.ForNode idx) = Idx.ForNode Scalar
+   type Type (Idx.ForNode idx) = ForNodeScalar
    index (Idx.ForNode x n) = Idx.ForNode (scalarIndex x) n
 
 
@@ -74,7 +77,7 @@ instance (Node.C node) => FormatValue (Any node) where
 
 formatSignalValue ::
    (Format output, Node.C node) =>
-   Idx.InSection Signal node -> output
+   InSectionSignal node -> output
 formatSignalValue (Idx.InSection s var) =
    case var of
       Energy idx -> formatSignalIndex idx s
@@ -86,7 +89,7 @@ formatSignalValue (Idx.InSection s var) =
 
 formatScalarValue ::
    (Format output, Node.C node) =>
-   Idx.ForNode Scalar node -> output
+   ForNodeScalar node -> output
 formatScalarValue (Idx.ForNode var n) =
    case var of
       MaxEnergy idx -> formatScalarIndex idx n

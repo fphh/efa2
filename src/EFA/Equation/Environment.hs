@@ -125,7 +125,7 @@ instance
 
 lookupSignal ::
    Ord node =>
-   Idx.InSection Var.Signal node -> Signal node a -> Maybe a
+   Var.InSectionSignal node -> Signal node a -> Maybe a
 lookupSignal (Idx.InSection s var) =
    case var of
       Var.Energy    idx -> M.lookup (Idx.InSection s idx) . energyMap
@@ -137,7 +137,7 @@ lookupSignal (Idx.InSection s var) =
 
 lookupScalar ::
    Ord node =>
-   Idx.ForNode Var.Scalar node -> Scalar node a -> Maybe a
+   Var.ForNodeScalar node -> Scalar node a -> Maybe a
 lookupScalar (Idx.ForNode var n) =
    case var of
       Var.MaxEnergy idx -> M.lookup (Idx.ForNode idx n) . maxEnergyMap

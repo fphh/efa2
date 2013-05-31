@@ -68,20 +68,20 @@ checkDetermined name rx =
 type
    SignalTerm rec term node =
       Term.Signal term
-         (EqRecord.Indexed rec (Idx.ForNode   Var.Scalar node))
-         (EqRecord.Indexed rec (Idx.InSection Var.Signal node))
+         (EqRecord.Indexed rec (Var.ForNodeScalar node))
+         (EqRecord.Indexed rec (Var.InSectionSignal node))
 
 type
    ScalarTerm rec term node =
       Term.Scalar term
-         (EqRecord.Indexed rec (Idx.ForNode   Var.Scalar node))
-         (EqRecord.Indexed rec (Idx.InSection Var.Signal node))
+         (EqRecord.Indexed rec (Var.ForNodeScalar node))
+         (EqRecord.Indexed rec (Var.InSectionSignal node))
 
 type
    ScalarAtom rec term node =
       Term.ScalarAtom term
-         (EqRecord.Indexed rec (Idx.ForNode   Var.Scalar node))
-         (EqRecord.Indexed rec (Idx.InSection Var.Signal node))
+         (EqRecord.Indexed rec (Var.ForNodeScalar node))
+         (EqRecord.Indexed rec (Var.InSectionSignal node))
 
 type
    SymbolicEquationSystem rec node s term =
@@ -93,8 +93,8 @@ type
 type
    VarTerm var recIdx term node =
       Term var term
-         (Idx.Record recIdx (Idx.ForNode   Var.Scalar node))
-         (Idx.Record recIdx (Idx.InSection Var.Signal node))
+         (Idx.Record recIdx (Var.ForNodeScalar node))
+         (Idx.Record recIdx (Var.InSectionSignal node))
 
 class (var ~ Variable (Term var)) => Symbol var where
    type Term var :: (* -> *) -> * -> * -> *

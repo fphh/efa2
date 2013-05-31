@@ -110,7 +110,7 @@ eta1 = XIdx.eta sec0 node1 node2
 
 termFromIndex ::
    IdxMultiDelta ->
-   [Idx.Record Idx.Delta (Idx.InSection Var.Signal Node.Int)]
+   [Idx.Record Idx.Delta (Var.InSectionSignal Node.Int)]
 termFromIndex
       (Idx.ExtDelta r2 (Idx.ExtDelta r1 (Idx.ExtDelta r0 Idx.Absolute))) =
    Idx.Record r2 (Var.index ein) :
