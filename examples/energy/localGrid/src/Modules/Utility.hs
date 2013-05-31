@@ -63,8 +63,8 @@ envToPowerRecord ::  EqEnv.Complete
                      Sig.TSignal v a -> Integer -> Record.PowerRecord System.Node v a
 envToPowerRecord env time sec =
   Record.Record time
-    (M.map i $ M.mapKeys h $ M.filterWithKey f $ EqEnv.powerMap $ EqEnv.signal env)
-  where f (TIdx.InSection (TIdx.Section section) (TIdx.Power (TIdx.StructureEdge _ _))) _ = 
+    (M.map i $ M.mapKeys h $ M.filterWithKey p $ EqEnv.powerMap $ EqEnv.signal env)
+  where p (TIdx.InSection (TIdx.Section section) (TIdx.Power (TIdx.StructureEdge _ _))) _ = 
           toInteger section == sec  
         h (TIdx.InSection (TIdx.Section section) (TIdx.Power (TIdx.StructureEdge n1 n2))) =
           TIdx.PPos (TIdx.StructureEdge n1 n2)

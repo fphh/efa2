@@ -190,7 +190,7 @@ givenSimulate etaAssign etaFunc sf =
            <> Fold.fold (M.mapWithKey g xs)
            where 
              g (TIdx.PPos (TIdx.StructureEdge p0 p1)) e =
-                   (TIdx.absolute (XIdx.energy sec p0 p1) EqUt..= Sig.unpack e)
+                   (TIdx.absolute (XIdx.power sec p0 p1) EqUt..= Sig.unpack e)
 
 
 -- | Avoid invalid solution by assigning NaN, which hits last in maximum

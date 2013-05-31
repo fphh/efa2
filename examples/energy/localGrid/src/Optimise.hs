@@ -27,6 +27,8 @@ import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Signal.Signal as Sig
 import EFA.Signal.Signal (TC,Scalar)
 import EFA.Signal.Data (Data(..), Nil, (:>), getData)
+import qualified EFA.Signal.Data as Data
+
 import EFA.Signal.Typ (Typ, F, T, A, Tt)
 import qualified EFA.Signal.SequenceData as SD
 import EFA.Signal.Sequence (makeSeqFlowTopology)
@@ -366,35 +368,51 @@ main = do
      powerSignalGas = Sig.zipWith (\state (x,y) -> if state==0 then x else y)
                         stateSignal (Sig.zip powerSignalGasOptCharge powerSignalGasOptDischarge)   
                                  
-     time :: Sig.TSignal [] Double
-     time = Sig.fromList [0..23]
-     rec = Record.Record time $ 
+     time' :: Sig.TSignal [] Double
+     time' = Sig.fromList [0 .. 23]
+
+     rec :: Record.PowerRecord Node [] Double
+     rec = -- addZeroCrossings $
+           -- Record.diffTime $
+           -- Record.rmap (Sig.changeSignalType . Sig.deltaMap (\x y -> (x+y)/2)) $ 
+           Record.Record time' $ 
            M.fromList [(TIdx.PPos (TIdx.StructureEdge Rest Network), powerSignalRest), 
                        (TIdx.PPos (TIdx.StructureEdge LocalRest LocalNetwork), powerSignalLocal),
                        (TIdx.PPos (TIdx.StructureEdge Network Water), powerSignalWater), 
                        (TIdx.PPos (TIdx.StructureEdge LocalNetwork Gas), powerSignalGas)
                       ]
-     
+
+{-
+   PlotIO.recordList "after zero" DefaultTerm.cons show id 
+                    [ (Record.Name "ohne zero", rec), 
+                      (Record.Name "mit zero", addZeroCrossings rec) ]
+   let
+-}
+
+     time = Record.getTime rec
+
      -- | Build Sequenceflow graph for simulation 
      seqTopoSim = Flow.mkSequenceTopology (ModUt.select System.flowStatesOpt [4])
      
      -- | Generate and solve Equation System
      eqs = Optimisation.givenSimulate etaAssign etaFunc $ 
-           SD.SequData [(SD.Section (TIdx.Section 0) (Sig.SignalIdx 0, Sig.SignalIdx 23) rec)]
+             SD.SequData [(SD.Section (TIdx.Section 0) undefined rec)]
+
      envSim = EqGen.solve seqTopoSim eqs
-     
+
+
      -- | extract power record from simulation env to allow subsequent EFA
      powerRecSim = ModUt.envToPowerRecord envSim time 0
      
      -- | flip signs of power signals at water edge, as edge flips direction between state 0 and 4
-     flipwater (TIdx.PPos (TIdx.StructureEdge Network Water)) x = Sig.neg x  --Sig.neg x 
+     flipwater (TIdx.PPos (TIdx.StructureEdge Network Water)) x = Sig.neg x
      flipwater (TIdx.PPos (TIdx.StructureEdge Water Network)) x = Sig.neg x
      flipwater _ x = x
      powerRecSimCorr = Record.rmapWithKey flipwater powerRecSim
      
      -- | make efa on simulation results  
      rec0 = addZeroCrossings powerRecSimCorr
-       
+          
      sectionFilterTime ::  TC Scalar (Typ A T Tt) (Data Nil Double)
      sectionFilterTime = Sig.toScalar 0
 
@@ -438,7 +456,7 @@ main = do
      putStrLn ("Number of possible flow states: " ++ show (length System.flowStatesOpt)),
      Draw.xterm $ Draw.flowTopologies (take 20 System.flowStatesOpt),
      Draw.xterm $ Draw.sequFlowGraph System.seqTopoOpt, 
-     
+
      PlotIO.surface "Optimal System Efficiency " DefaultTerm.cons id noLegend varRestPower varLocalPower etaSysMax,
      PlotIO.surface "Optimal State " DefaultTerm.cons id noLegend varRestPower varLocalPower maxEtaSysState,
      
@@ -455,23 +473,28 @@ main = do
      
      PlotIO.surface "Transformer Power Charge LV " DefaultTerm.cons id noLegend varRestPower varLocalPower powerTransformerChargeOptLV,
      PlotIO.surface "Transformer Power DisCharge LV" DefaultTerm.cons id noLegend varRestPower varLocalPower powerTransformerDischargeOptLV,
-     
-     PlotIO.xy "Operation" DefaultTerm.cons id show powerSignalRest powerSignalLocal,
+
+     -- PlotIO.xy "Operation" DefaultTerm.cons id show powerSignalRest powerSignalLocal,
      
      report [] ("RestPower", varRestPower),
      report [] ("LocalPower", varLocalPower),
      report [] ("waterPower", varWaterPower),
      report [] ("gasPower", varGasPower),
      Draw.xterm $ Draw.sequFlowGraphAbsWithEnv  seqTopoSim envSim,
-     report [] ("powerRecordSim",powerRecSim),
+     report [RAll] ("powerRecordSim", powerRecSim),
+     report [RAll] ("rec0", rec0),
+     report [RAll] ("rec", rec),
+
      PlotIO.record "Calculated Signals" DefaultTerm.cons show id rec,
      PlotIO.record "Simulation Result" DefaultTerm.cons show id powerRecSim,
      
      PlotIO.signal "State"  DefaultTerm.cons id stateSignal ,
+{-
      PlotIO.signal "Interpolated Signals"  DefaultTerm.cons id [powerSignalWaterOptCharge, 
                                                powerSignalWaterOptDischarge,
                                                powerSignalGasOptCharge, 
                                                powerSignalGasOptDischarge],
+-}
      Draw.xterm $ Draw.sequFlowGraphAbsWithEnv  sequenceFlowTopologySim envSimAnalysis,
      Draw.pdf "Jupie.pdf" $ Draw.sequFlowGraphAbsWithEnv  sequenceFlowTopologySim envSimAnalysisCumulated
      

@@ -93,6 +93,9 @@ type FlowRecord n v d = Record Signal FSignal (Typ A T Tt) (Typ A F Tt) (Idx.PPo
 
 type DTimeFlowRecord n v d = Record FSignal FSignal (Typ D T Tt) (Typ A F Tt) (Idx.PPos n) v d d
 
+type DTimePowerRecord n v d = Record FSignal FSignal (Typ D T Tt) (Typ A P Tt) (Idx.PPos n) v d d
+
+
 type DistRecord n v d = Record FDistrib FDistrib (Typ UT UT UT) (Typ A F Tt) (Idx.PPos n) v ([S.Class d], [S.SignalIdx]) d
 
 -- data DistRecord n v d = DistRecord (UTDistr v ([S.Class d], [S.SignalIdx])) (M.Map (Idx.PPos n) (FDistr v d))
@@ -164,6 +167,7 @@ getTimeWindow ::
 getTimeWindow = S.unzip . S.minmax . getTime
 
 
+
 diffTime ::
 {-
    (V.Zipper v, V.Walker v, V.Singleton v, V.Storage v a, BSum a,
@@ -171,10 +175,24 @@ diffTime ::
    Record Signal s2 (Typ abs t1 p1) t2 id v a ->
    Record FSignal s2 (Typ delta t1 p1) t2 id v a
 -}
+
    (V.Zipper v, V.Walker v, V.Singleton v, V.Storage v d, BSum d) =>
    FlowRecord node v d ->
    DTimeFlowRecord node v d
 diffTime (Record time signals) = Record (S.delta time) signals
+
+
+dTimePowerRecord ::
+   (V.Zipper v, V.Walker v, V.Singleton v, V.Storage v d, 
+   BSum d, Fractional d, Num d) =>
+   PowerRecord n v d ->
+   DTimePowerRecord n v d
+dTimePowerRecord (Record time signals) = 
+  rmap (S.deltaMap (\x y -> (x+y)/2)) $
+    Record (S.delta time) signals
+
+
+
 
 -- | Use carefully -- removes signal jitter around zero
 removeZeroNoise ::
@@ -545,11 +563,26 @@ type Samp1 = (TSamp, PSamp1L)
 type Samp = (TSamp, PSamp)
 
 
-viewL :: Sig -> Maybe (Samp1, Sig)
-viewL (t,ps) =
+--viewL :: Sig -> Maybe (Samp1, Sig)
+viewL
+  :: (V.Storage v1 (D.Apply v2 d), V.Storage v3 (D.Apply v4 d1),
+      V.Singleton v1, V.Singleton v3, S.TailType s, S.TailType s1) =>
+     (TC s typ (Data (v1 :> v2) d), TC s1 typ1 (Data (v3 :> v4) d1))
+     -> Maybe
+          ((TC (S.Head s) typ (Data v2 d), TC (S.Head s1) typ1 (Data v4 d1)),
+           (TC s typ (Data (v1 :> v2) d), TC s1 typ1 (Data (v3 :> v4) d1)))
+
+viewL (t, ps) =
    liftM2 zipPairs (S.viewL t) (S.viewL ps)
 
-viewR :: Sig -> Maybe (Sig, Samp1)
+--viewR :: Sig -> Maybe (Sig, Samp1)
+viewR
+  :: (V.Storage v1 (D.Apply v2 d), V.Storage v3 (D.Apply v4 d1),
+      V.Singleton v1, V.Singleton v3, S.TailType s, S.TailType s1) =>
+     (TC s typ (Data (v1 :> v2) d), TC s1 typ1 (Data (v3 :> v4) d1))
+     -> Maybe
+          ((TC s typ (Data (v1 :> v2) d), TC s1 typ1 (Data (v3 :> v4) d1)),
+           (TC (S.Head s) typ (Data v2 d), TC (S.Head s1) typ1 (Data v4 d1)))
 viewR (t,ps) =
    liftM2 zipPairs (S.viewR t) (S.viewR ps)
 
@@ -559,7 +592,12 @@ zipPairs (a,b) (c,d) = ((a,c), (b,d))
 len :: Sig -> Int
 len  (t,ps) = min (S.len t) (S.len ps)
 
-singleton :: Samp1 -> Sig
+singleton
+  :: (V.Storage v (D.Apply c d), V.Storage v1 (D.Apply c1 d1),
+      S.Singleton s v c, S.Singleton s1 v1 c1) =>
+     (TC (S.SingletonSource s) t (Data c d),
+      TC (S.SingletonSource s1) t1 (Data c1 d1))
+     -> (TC s t (Data (v :> c) d), TC s1 t1 (Data (v1 :> c1) d1))
 singleton (t,ps) = (S.singleton t, S.singleton ps)
 
 
