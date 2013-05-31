@@ -216,6 +216,56 @@ calcEtaSys env =
 
      etaSys = (eRest0 + eRest1 + eRestLocal0 + eRestLocal1) / (eGas0  + eGas1 + eCoal0 + eCoal1)
                  
+{- -- | Avoid invalid solution by assigning NaN, which hits last in maximum
+calcOptFunc :: (EqEnv.Complete  
+               Node
+               (EqRec.Absolute (Result Double))
+               (EqRec.Absolute (Result Double)))
+              -> Double
+calcOptFunc env =
+  -- trace (show [eCoal0, eCoal1, eTransformer0, eTransformer1]) $
+  if eCoal0 > 0 && eCoal1 > 0 && eTransformer0 > 0 && eTransformer1 > 0 then etaSys else (0/0)
+  where
+     eGas0 =  (ModUt.lookupAbsEnergy (XIdx.energy sec0 Gas LocalNetwork)) env
+     eCoal0 =  (ModUt.lookupAbsEnergy (XIdx.energy sec0 Coal Network)) env
+     eRest0 =  (ModUt.lookupAbsEnergy (XIdx.energy sec0 Rest Network)) env
+     eRestLocal0 = (ModUt.lookupAbsEnergy (XIdx.energy sec0 LocalRest LocalNetwork)) env
+     eGas1 = (ModUt.lookupAbsEnergy (XIdx.energy sec1 Gas LocalNetwork)) env
+     eCoal1 =  (ModUt.lookupAbsEnergy (XIdx.energy sec1 Coal Network)) env
+     eRest1 =  (lookupAbsEnergy (XIdx.energy sec1 Rest Network)) env
+     eRestLocal1 =  (lookupAbsEnergy (XIdx.energy sec1 LocalRest LocalNetwork)) env
+     eTransformer0 =  (ModUt.lookupAbsEnergy (XIdx.energy sec0 Network LocalNetwork)) env
+     eTransformer1 =  (ModUt.lookupAbsEnergy (XIdx.energy sec1 Network LocalNetwork)) env
+     eCharge = (ModUt.lookupAbsEnergy (XIdx.energy sec0 Water Network)) env
+     eDisCharge = (ModUt.lookupAbsEnergy (XIdx.energy sec1 Water Network)) env
+
+     etaSys = (eRest0 + eRest1 + eRestLocal0 + eRestLocal1) / (eGas0  + eGas1 + eCoal0 + eCoal1)
+     optFuncCharge = eCharge*socDrive+etaSys
+     optFuncDischarge = -eDischarge*socDrive+etaSys
+     
+-- | Avoid invalid solution by assigning NaN, which hits last in maximum
+calcEtaSys :: (EqEnv.Complete  
+               Node
+               (EqRec.Absolute (Result Double))
+               (EqRec.Absolute (Result Double)))
+              -> Double
+calcEtaSys env =
+  -- trace (show [eCoal0, eCoal1, eTransformer0, eTransformer1]) $
+  if eCoal0 > 0 && eCoal1 > 0 && eTransformer0 > 0 && eTransformer1 > 0 then etaSys else (0/0)
+  where
+     eGas0 =  (ModUt.lookupAbsEnergy (XIdx.energy sec0 Gas LocalNetwork)) env
+     eCoal0 =  (ModUt.lookupAbsEnergy (XIdx.energy sec0 Coal Network)) env
+     eRest0 =  (ModUt.lookupAbsEnergy (XIdx.energy sec0 Rest Network)) env
+     eRestLocal0 = (ModUt.lookupAbsEnergy (XIdx.energy sec0 LocalRest LocalNetwork)) env
+     eGas1 = (ModUt.lookupAbsEnergy (XIdx.energy sec1 Gas LocalNetwork)) env
+     eCoal1 =  (ModUt.lookupAbsEnergy (XIdx.energy sec1 Coal Network)) env
+     eRest1 =  (lookupAbsEnergy (XIdx.energy sec1 Rest Network)) env
+     eRestLocal1 =  (lookupAbsEnergy (XIdx.energy sec1 LocalRest LocalNetwork)) env
+     eTransformer0 =  (ModUt.lookupAbsEnergy (XIdx.energy sec0 Network LocalNetwork)) env
+     eTransformer1 =  (ModUt.lookupAbsEnergy (XIdx.energy sec1 Network LocalNetwork)) env
+
+     etaSys = (eRest0 + eRest1 + eRestLocal0 + eRestLocal1) / (eGas0  + eGas1 + eCoal0 + eCoal1)
+-}
 
 maxEta :: Sig.UTSignal2 V.Vector V.Vector 
          (EqEnv.Complete  
