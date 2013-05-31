@@ -89,9 +89,9 @@ liftF2 = liftA2 . Expr.fromRule3 . Sys.assignment3 ""
 
 
 
-type SignalTerm term node = SymVar.SignalTerm Record.Absolute term node
-type ScalarTerm term node = SymVar.ScalarTerm Record.Absolute term node
-type ScalarAtom term node = SymVar.ScalarAtom Record.Absolute term node
+type SignalTerm term node = SymVar.SignalTerm Idx.Absolute term node
+type ScalarTerm term node = SymVar.ScalarTerm Idx.Absolute term node
+type ScalarAtom term node = SymVar.ScalarAtom Idx.Absolute term node
 
 type VarTerm var term node = SymVar.VarTerm var Idx.Absolute term node
 

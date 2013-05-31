@@ -2,10 +2,10 @@ module Main where
 
 import qualified EFA.Example.Index as XIdx
 import EFA.Example.Utility
-          (makeEdges, constructSeqTopo, (=<>), (.=))
+          (SymbolicEquationSystem,
+           makeEdges, constructSeqTopo, (=<>), (.=))
 
 import qualified EFA.Symbolic.SumProduct as SumProduct
-import EFA.Symbolic.Variable (ScalarTerm, SignalTerm)
 
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Record as Record
@@ -43,9 +43,7 @@ topoDreibein = Gr.fromList ns (makeEdges es)
 Use SumProduct.Term here since it simplifies automatically.
 -}
 given ::
-   EqGen.EquationSystem Record.Delta Node.Int s
-      (ScalarTerm Record.Delta SumProduct.Term Node.Int)
-      (SignalTerm Record.Delta SumProduct.Term Node.Int)
+   SymbolicEquationSystem Record.Delta Node.Int s SumProduct.Term
 given =
    (Idx.delta (XIdx.dTime sec0) .= zero) <>
 

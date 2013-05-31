@@ -5,6 +5,7 @@ module EFA.Example.Utility (
    ) where
 
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
+import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph as Gr
@@ -64,8 +65,8 @@ checkDetermined name rx =
 type
    SymbolicEquationSystem rec node s term =
       EqGen.EquationSystem rec node s
-         (ScalarTerm rec term node)
-         (SignalTerm rec term node)
+         (ScalarTerm (EqRecord.ToIndex rec) term node)
+         (SignalTerm (EqRecord.ToIndex rec) term node)
 
 
 givenSymbol ::
@@ -75,13 +76,13 @@ givenSymbol ::
   and it is better not to compare them at all.
   We should remove the Eq constraint as soon as unique-logic allows it.
   -}
-  (t ~ VarTerm var (EqRecord.ToIndex rec) term node,
+  (t ~ VarTerm var recIdx term node,
    Eq t, Arith.Sum t,
-   t ~ Env.Element idx (ScalarTerm rec term node) (SignalTerm rec term node),
-   EqGen.Record rec,
+   t ~ Env.Element idx (ScalarTerm recIdx term node) (SignalTerm recIdx term node),
+   EqGen.Record rec, recIdx ~ EqRecord.ToIndex rec,
    Ord (idx node), Pointed term,
    Var.Type idx ~ var, Symbol var, Env.AccessMap idx) =>
-  EqRecord.Indexed rec (idx node) ->
+  Idx.Record recIdx (idx node) ->
   SymbolicEquationSystem rec node s term
 givenSymbol idx =
    idx .= varSymbol idx
@@ -90,13 +91,13 @@ givenSymbol idx =
 infixr 6 =<>
 
 (=<>) ::
-  (t ~ VarTerm var (EqRecord.ToIndex rec) term node,
+  (t ~ VarTerm var recIdx term node,
    Eq t, Arith.Sum t,
-   t ~ Env.Element idx (ScalarTerm rec term node) (SignalTerm rec term node),
-   EqGen.Record rec,
+   t ~ Env.Element idx (ScalarTerm recIdx term node) (SignalTerm recIdx term node),
+   EqGen.Record rec, recIdx ~ EqRecord.ToIndex rec,
    Ord (idx node), Pointed term,
    Var.Type idx ~ var, Symbol var, Env.AccessMap idx) =>
-  EqRecord.Indexed rec (idx node) ->
+  Idx.Record recIdx (idx node) ->
   SymbolicEquationSystem rec node s term ->
   SymbolicEquationSystem rec node s term
 idx =<> eqsys = givenSymbol idx <> eqsys

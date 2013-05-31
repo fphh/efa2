@@ -5,7 +5,6 @@ module EFA.Symbolic.Variable where
 
 import qualified EFA.Graph.Topology.Index as Idx
 
-import qualified EFA.Equation.Record as EqRecord
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Symbolic.Mixed as Term
 import EFA.Utility (Pointed, point)
@@ -13,22 +12,22 @@ import EFA.Utility (Pointed, point)
 
 
 type
-   SignalTerm rec term node =
+   SignalTerm recIdx term node =
       Term.Signal term
-         (EqRecord.Indexed rec (Var.ForNodeScalar node))
-         (EqRecord.Indexed rec (Var.InSectionSignal node))
+         (Idx.Record recIdx (Var.ForNodeScalar node))
+         (Idx.Record recIdx (Var.InSectionSignal node))
 
 type
-   ScalarTerm rec term node =
+   ScalarTerm recIdx term node =
       Term.Scalar term
-         (EqRecord.Indexed rec (Var.ForNodeScalar node))
-         (EqRecord.Indexed rec (Var.InSectionSignal node))
+         (Idx.Record recIdx (Var.ForNodeScalar node))
+         (Idx.Record recIdx (Var.InSectionSignal node))
 
 type
-   ScalarAtom rec term node =
+   ScalarAtom recIdx term node =
       Term.ScalarAtom term
-         (EqRecord.Indexed rec (Var.ForNodeScalar node))
-         (EqRecord.Indexed rec (Var.InSectionSignal node))
+         (Idx.Record recIdx (Var.ForNodeScalar node))
+         (Idx.Record recIdx (Var.InSectionSignal node))
 
 
 type
