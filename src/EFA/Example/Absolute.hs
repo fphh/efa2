@@ -13,6 +13,7 @@ import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Variable as Var
+import qualified EFA.Symbolic.Variable as SymVar
 import EFA.Equation.System ((=.=))
 import EFA.Equation.Result(Result(..))
 
@@ -88,27 +89,27 @@ liftF2 = liftA2 . Expr.fromRule3 . Sys.assignment3 ""
 
 
 
-type SignalTerm term node = Utility.SignalTerm Record.Absolute term node
-type ScalarTerm term node = Utility.ScalarTerm Record.Absolute term node
-type ScalarAtom term node = Utility.ScalarAtom Record.Absolute term node
+type SignalTerm term node = SymVar.SignalTerm Record.Absolute term node
+type ScalarTerm term node = SymVar.ScalarTerm Record.Absolute term node
+type ScalarAtom term node = SymVar.ScalarAtom Record.Absolute term node
 
-type VarTerm var term node = Utility.VarTerm var Idx.Absolute term node
+type VarTerm var term node = SymVar.VarTerm var Idx.Absolute term node
 
 type
    SymbolicEquationSystem node s term =
       Utility.SymbolicEquationSystem Record.Absolute node s term
 
 symbol ::
-   (Utility.Symbol var, Pointed term) =>
+   (SymVar.Symbol var, Pointed term) =>
    var node -> VarTerm var term node
-symbol = Utility.symbol . Idx.absolute
+symbol = SymVar.symbol . Idx.absolute
 
 givenSymbol ::
   (t ~ VarTerm var term node,
    Eq t, Arith.Sum t,
    t ~ Env.Element idx (ScalarTerm term node) (SignalTerm term node),
    Ord (idx node), Pointed term,
-   Var.Type idx ~ var, Utility.Symbol var, Env.AccessMap idx) =>
+   Var.Type idx ~ var, SymVar.Symbol var, Env.AccessMap idx) =>
   idx node ->
   SymbolicEquationSystem node s term
 givenSymbol idx =
@@ -122,7 +123,7 @@ infixr 6 =<>
    Eq t, Arith.Sum t,
    t ~ Env.Element idx (ScalarTerm term node) (SignalTerm term node),
    Ord (idx node), Pointed term,
-   Var.Type idx ~ var, Utility.Symbol var, Env.AccessMap idx) =>
+   Var.Type idx ~ var, SymVar.Symbol var, Env.AccessMap idx) =>
    idx node ->
    SymbolicEquationSystem node s term ->
    SymbolicEquationSystem node s term

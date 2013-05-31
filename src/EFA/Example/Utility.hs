@@ -1,14 +1,10 @@
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
 module EFA.Example.Utility (
    module EFA.Example.Utility,
    (.=), (%=),
    ) where
 
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
-import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph as Gr
@@ -19,11 +15,11 @@ import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Arithmetic as Arith
-import qualified EFA.Symbolic.Mixed as Term
 import qualified EFA.Signal.SequenceData as SD
+import EFA.Symbolic.Variable (VarTerm, ScalarTerm, SignalTerm, Symbol, varSymbol)
 import EFA.Equation.System ((.=), (%=))
 import EFA.Equation.Result (Result)
-import EFA.Utility (Pointed, point)
+import EFA.Utility (Pointed)
 
 import Data.Monoid ((<>))
 
@@ -66,60 +62,10 @@ checkDetermined name rx =
 
 
 type
-   SignalTerm rec term node =
-      Term.Signal term
-         (EqRecord.Indexed rec (Var.ForNodeScalar node))
-         (EqRecord.Indexed rec (Var.InSectionSignal node))
-
-type
-   ScalarTerm rec term node =
-      Term.Scalar term
-         (EqRecord.Indexed rec (Var.ForNodeScalar node))
-         (EqRecord.Indexed rec (Var.InSectionSignal node))
-
-type
-   ScalarAtom rec term node =
-      Term.ScalarAtom term
-         (EqRecord.Indexed rec (Var.ForNodeScalar node))
-         (EqRecord.Indexed rec (Var.InSectionSignal node))
-
-type
    SymbolicEquationSystem rec node s term =
       EqGen.EquationSystem rec node s
          (ScalarTerm rec term node)
          (SignalTerm rec term node)
-
-
-type
-   VarTerm var recIdx term node =
-      Term var term
-         (Idx.Record recIdx (Var.ForNodeScalar node))
-         (Idx.Record recIdx (Var.InSectionSignal node))
-
-class (var ~ Variable (Term var)) => Symbol var where
-   type Term var :: (* -> *) -> * -> * -> *
-   type Variable term :: * -> *
-   symbol ::
-      Pointed term =>
-      Idx.Record recIdx (var node) ->
-      VarTerm var recIdx term node
-
-instance Symbol (Idx.InSection Var.Signal) where
-   type Term (Idx.InSection Var.Signal) = Term.Signal
-   type Variable Term.Signal = Idx.InSection Var.Signal
-   symbol = Term.Signal . point
-
-instance Symbol (Idx.ForNode Var.Scalar) where
-   type Term (Idx.ForNode Var.Scalar) = Term.Scalar
-   type Variable Term.Scalar = Idx.ForNode Var.Scalar
-   symbol = Term.Scalar . point . Term.ScalarVariable
-
-
-varSymbol ::
-   (Pointed term, Var.Index idx, Var.Type idx ~ var, Symbol var) =>
-   Idx.Record recIdx (idx node) -> VarTerm var recIdx term node
-varSymbol idx =
-   symbol (fmap Var.index idx)
 
 
 givenSymbol ::

@@ -1,12 +1,15 @@
 module Main where
 
 import qualified EFA.Example.Index as XIdx
-import EFA.Example.Utility (ScalarTerm, SignalTerm, (=<>))
+import EFA.Example.Utility ((=<>))
 
 import qualified EFA.Symbolic.SumProduct as SumProduct
+import EFA.Symbolic.Variable (ScalarTerm, SignalTerm)
+
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Record as Record
 import EFA.Equation.System ((=%=))
+import EFA.Equation.Arithmetic ((~*))
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
@@ -14,13 +17,12 @@ import EFA.Utility.Stream (Stream((:~)))
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 
-import EFA.Equation.Arithmetic ((~*))
-
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
 
 import Data.Monoid (mempty, (<>))
 import System.IO
+
 
 sec0 :: Idx.Section
 sec0 = Idx.Section 0

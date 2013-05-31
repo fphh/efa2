@@ -3,7 +3,6 @@ module Main where
 
 import qualified EFA.Example.NestedDelta as NestedDelta
 import qualified EFA.Example.AssignMap as AssignMap
-import qualified EFA.Example.Utility as Utility
 import qualified EFA.Example.Index as XIdx
 import EFA.Example.NestedDelta
           (ParameterRecord,
@@ -19,6 +18,7 @@ import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Arithmetic as Arith
 
+import qualified EFA.Symbolic.Variable as SymVar
 import qualified EFA.Symbolic.SumProduct as SumProduct
 import qualified EFA.Symbolic.OperatorTree as Op
 import qualified EFA.Symbolic.Mixed as Term
@@ -60,8 +60,8 @@ topoLinear = Gr.fromList ns (makeEdges es)
         es = [(node0, node1), (node1, node2)]
 
 
-type SignalTerm = Utility.SignalTerm Record.Delta SumProduct.Term Node.Int
-type ScalarTerm = Utility.ScalarTerm Record.Delta SumProduct.Term Node.Int
+type SignalTerm = SymVar.SignalTerm Record.Delta SumProduct.Term Node.Int
+type ScalarTerm = SymVar.ScalarTerm Record.Delta SumProduct.Term Node.Int
 
 type IdxMultiDelta = Idx.ExtDelta (Idx.ExtDelta (Idx.ExtDelta Idx.Absolute))
 type RecMultiDelta = Record.ExtDelta (Record.ExtDelta (Record.ExtDelta Record.Absolute))

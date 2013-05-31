@@ -2,10 +2,11 @@ module Main where
 
 import qualified EFA.Example.Index as XIdx
 import EFA.Example.Utility
-          (ScalarTerm, SignalTerm,
-           makeEdges, constructSeqTopo, (=<>), (.=))
+          (makeEdges, constructSeqTopo, (=<>), (.=))
 
 import qualified EFA.Symbolic.SumProduct as SumProduct
+import EFA.Symbolic.Variable (ScalarTerm, SignalTerm)
+
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Record as Record
 import EFA.Equation.Arithmetic (zero)
