@@ -115,6 +115,13 @@ instance Symbol (Idx.ForNode Var.Scalar) where
    symbol = Term.Scalar . point . Term.ScalarVariable
 
 
+varSymbol ::
+   (Pointed term, Var.Index idx, Var.Type idx ~ var, Symbol var) =>
+   Idx.Record recIdx (idx node) -> VarTerm var recIdx term node
+varSymbol idx =
+   symbol (fmap Var.index idx)
+
+
 givenSymbol ::
   {-
   The Eq constraint is requested by unique-logic but not really needed.
@@ -131,7 +138,7 @@ givenSymbol ::
   EqRecord.Indexed rec (idx node) ->
   SymbolicEquationSystem rec node s term
 givenSymbol idx =
-   idx .= symbol (fmap Var.index idx)
+   idx .= varSymbol idx
 
 
 infixr 6 =<>

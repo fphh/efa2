@@ -69,7 +69,7 @@ infixr 6 *=<>, -=<>
    Idx.InSection idx Node.Int ->
    EquationSystemSymbolic s -> EquationSystemSymbolic s
 idx *=<> eqsys =
-   (idx .= (Stack.singleton $ Utility.symbol $ Idx.before $ Var.index idx))
+   (idx .= (Stack.singleton $ Utility.varSymbol $ Idx.before idx))
    <>
    eqsys
 

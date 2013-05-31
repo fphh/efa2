@@ -155,8 +155,8 @@ parameterSymbol ::
 
 parameterSymbol param idx =
    runOuterExtrusion param
-      (Utility.symbol (Idx.before $ Var.index idx))
-      (Utility.symbol (Idx.delta $ Var.index idx))
+      (Utility.varSymbol $ Idx.before idx)
+      (Utility.varSymbol $ Idx.delta  idx)
 
 absoluteSymbol ::
    (Pointed term,
@@ -169,7 +169,7 @@ absoluteSymbol ::
    idx node -> rec (Result t)
 
 absoluteSymbol absolute idx =
-   absoluteRecord absolute (Utility.symbol (Idx.before $ Var.index idx))
+   absoluteRecord absolute (Utility.varSymbol $ Idx.before idx)
 
 parameterRecord ::
    (Arith.Sum x) =>
