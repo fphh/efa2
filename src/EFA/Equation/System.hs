@@ -59,9 +59,9 @@ import EFA.Equation.Arithmetic
 
 import EFA.Utility ((>>!))
 
-import UniqueLogic.ST.Expression ((=:=))
-import qualified UniqueLogic.ST.Expression as Expr
-import qualified UniqueLogic.ST.System as Sys
+import UniqueLogic.ST.TF.Expression ((=:=))
+import qualified UniqueLogic.ST.TF.Expression as Expr
+import qualified UniqueLogic.ST.TF.System.Simple as Sys
 
 import qualified Data.Accessor.Monad.Trans.State as AccessState
 import qualified Data.Accessor.Basic as Accessor
@@ -69,6 +69,7 @@ import qualified Data.Accessor.Basic as Accessor
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT, execStateT)
 import Control.Monad.Trans.Writer (WriterT, runWriterT, tell)
+import Control.Monad.Trans.Identity (IdentityT)
 
 import Control.Monad.ST (ST, runST)
 import Control.Monad (liftM2)
@@ -104,14 +105,14 @@ type
 
 type RecordVariable rec s x = rec (Sys.Variable s x)
 
-newtype System s = System (Sys.M s ())
+newtype System s = System (Sys.T s ())
 
 instance Monoid (System s) where
    mempty = System $ return ()
    mappend (System x) (System y) = System $ x >>! y
 
 
-type Expr = Expr.T
+type Expr = Expr.T IdentityT
 
 type
    Expression rec node s a v x =
@@ -145,7 +146,7 @@ liftF ::
   (x -> y) ->
   RecordExpression rec node s a v x ->
   RecordExpression rec node s a v y
-liftF = liftA . liftE1 . Expr.fromRule2 . Sys.assignment2 ""
+liftF = liftA . liftE1 . Expr.fromRule2 . Sys.assignment2
 
 liftF2 ::
   (Record rec, Sum z) =>
@@ -153,7 +154,7 @@ liftF2 ::
   RecordExpression rec node s a v x ->
   RecordExpression rec node s a v y ->
   RecordExpression rec node s a v z
-liftF2 = liftA2 . liftE2 . Expr.fromRule3 . Sys.assignment3 ""
+liftF2 = liftA2 . liftE2 . Expr.fromRule3 . Sys.assignment3
 
 
 instance (Record rec, Sum a) => Sum (Wrap rec a) where

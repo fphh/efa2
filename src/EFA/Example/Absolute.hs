@@ -29,8 +29,8 @@ import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Utility (Pointed)
 
-import qualified UniqueLogic.ST.Expression as Expr
-import qualified UniqueLogic.ST.System as Sys
+import qualified UniqueLogic.ST.TF.Expression as Expr
+import qualified UniqueLogic.ST.TF.System.Simple as Sys
 
 import qualified Data.Map as Map
 import Control.Applicative (liftA, liftA2)
@@ -77,7 +77,7 @@ liftF ::
   (x -> y) ->
   Expression node s a v x ->
   Expression node s a v y
-liftF = liftA . Expr.fromRule2 . Sys.assignment2 ""
+liftF = liftA . Expr.fromRule2 . Sys.assignment2
 
 liftF2 ::
   (Arith.Sum z) =>
@@ -85,7 +85,7 @@ liftF2 ::
   Expression node s a v x ->
   Expression node s a v y ->
   Expression node s a v z
-liftF2 = liftA2 . Expr.fromRule3 . Sys.assignment3 ""
+liftF2 = liftA2 . Expr.fromRule3 . Sys.assignment3
 
 
 
