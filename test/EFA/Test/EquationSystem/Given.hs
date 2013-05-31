@@ -63,25 +63,29 @@ toTestGiven ::
 toTestGiven (Env.Complete scal sig) =
   "testGiven :: EqGen.EquationSystem Node s Rational Rational\n" ++
   "testGiven = mconcat $\n" ++
-  concat [
-    g $ Env.powerMap sig,
-    g $ Env.energyMap sig,
-    g $ Env.etaMap sig,
-    g $ Env.dtimeMap sig,
-    g $ Env.xMap sig,
-    g $ Env.sumMap sig,
-    g $ Env.maxEnergyMap scal,
-    g $ Env.storageMap scal,
-    g $ Env.stEnergyMap scal,
-    g $ Env.stXMap scal,
-    g $ Env.stSumMap scal,
-    "  []" ]
-  where g :: (Show k, Show a) => M.Map k (Record.Absolute (Result a)) -> String
-        g = M.foldWithKey f ""
-        f idx v acc = "  ((" ++ show idx ++ ") .= "
-                        ++ showValue v ++ ") :\n" ++ acc
-        showValue (Record.Absolute (Determined x)) = show x
-        showValue (Record.Absolute Undetermined) = "?"
+  (
+    g (Env.powerMap sig) .
+    g (Env.energyMap sig) .
+    g (Env.etaMap sig) .
+    g (Env.dtimeMap sig) .
+    g (Env.xMap sig) .
+    g (Env.sumMap sig) .
+    g (Env.maxEnergyMap scal) .
+    g (Env.storageMap scal) .
+    g (Env.stEnergyMap scal) .
+    g (Env.stXMap scal) .
+    g (Env.stSumMap scal) .
+    id $ "  []")
+  where g :: (Show k, Show a) => M.Map k (Record.Absolute (Result a)) -> ShowS
+        g =
+          flip $ M.foldWithKey $
+            \idx v ->
+              showString "  ((" . shows idx .
+              showString ") .= " . showValue v . showString ") :\n"
+        showValue (Record.Absolute v) =
+          case v of
+            Determined x -> shows x
+            Undetermined -> showString "?"
 
 
 -- Nicht alle Werte sind von originalGiven berechenbar.
