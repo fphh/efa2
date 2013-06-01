@@ -22,3 +22,7 @@
 * unzip statt map fst und map snd
 
 * addZeroCrossings x == addZeroCrossings (addZeroCrossings x) ?
+
+* solver braucht einen simulationsmodus, wo er mit absoluter Zeit
+  oder mit n = p2/p1 rechnet
+  oder wir stellen alle Gleichungen eta auf p2/p1 um

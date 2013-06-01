@@ -118,10 +118,7 @@ givenCharging etaAssign etaFunc pRest pRestLocal pWater pGas =
    (XIdx.eta sec1 Coal Network .= Data 0.345) :
    (XIdx.eta sec1 Gas LocalNetwork .= Data 0.346) :
    (XIdx.eta sec1 Water Network .= Data 0.82) :
---   (XIdx.eta sec1 Network Water .= Data 0.4) :
-   -- (XIdx.x sec1 Network Coal .= Data 0.7) :
    (XIdx.x sec1 Network Water .= Data 0.7) :
---   (XIdx.x sec1 LocalNetwork Gas .= Data 0) :
    (XIdx.x sec1 Network LocalNetwork .= Data 0.766) :
    (XIdx.x sec1 LocalNetwork Network .= Data 0.677) :
    []
@@ -155,7 +152,6 @@ givenDischarging etaAssign etaFunc pRest pRestLocal pWater pGas =
 
    (XIdx.eta sec0 Coal Network .= Data 0.440) :
    (XIdx.eta sec0 Gas LocalNetwork .= Data 0.303) :
---   (XIdx.eta sec0 Water Network .= Data 0.331) :
    (XIdx.eta sec0 Network Water .= Data 0.331) :
    (XIdx.eta sec0 Network LocalNetwork .= Data 0.939) :
    (XIdx.eta sec0 Network Rest .= Data 1) :
@@ -171,7 +167,7 @@ givenSimulate ::
  (Num a, Eq a,
   Base.BSum a, EqArith.Sum a,
   Eq (v a),
-  SV.Zipper v,
+  SV.Zipper v,SV.FromList v,SV.Len (v a),
   SV.Singleton v,
   SV.Walker v,
   SV.Storage v a) =>
@@ -185,12 +181,12 @@ givenSimulate etaAssign etaFunc sf =
   (TIdx.absolute  (XIdx.storage TIdx.initial Water) EqUt..= Data 0)
    <> Fold.fold (SD.mapWithSection f sf)
    where f sec (Record.Record t xs) =
-           (TIdx.absolute (XIdx.dTime sec) EqUt..= (Sig.unpack $ Sig.delta t))
+           (TIdx.absolute (XIdx.dTime sec) EqUt..= (Data  $ SV.fromList $ replicate (Sig.len t) 1)) --Sig.delta t))
            <> etaGiven (etaAssign sec) etaFunc
            <> Fold.fold (M.mapWithKey g xs)
            where 
-             g (TIdx.PPos (TIdx.StructureEdge p0 p1)) e =
-                   (TIdx.absolute (XIdx.power sec p0 p1) EqUt..= Sig.unpack e)
+             g (TIdx.PPos (TIdx.StructureEdge p0 p1)) p =
+                   (TIdx.absolute (XIdx.power sec p0 p1) EqUt..= Sig.unpack p) -- $ Sip.deltaMap (\x y -> (x+y)/2) p)
 
 
 -- | Avoid invalid solution by assigning NaN, which hits last in maximum
@@ -200,7 +196,6 @@ calcEtaSys :: (EqEnv.Complete
                (EqRec.Absolute (Result Double)))
               -> Double
 calcEtaSys env =
-  -- trace (show [eCoal0, eCoal1, eTransformer0, eTransformer1]) $
   if eCoal0 > 0 && eCoal1 > 0 && eTransformer0 > 0 && eTransformer1 > 0 then etaSys else (0/0)
   where
      eGas0 =  (ModUt.lookupAbsEnergy (XIdx.energy sec0 Gas LocalNetwork)) env
