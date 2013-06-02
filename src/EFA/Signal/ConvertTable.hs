@@ -90,7 +90,8 @@ convertToSignal3D Nothing = error "convertToSignal3D: table not found"
 makeEtaFunctions2D ::
   forall d. ( Fractional d, Ord d, Show d,
     Base.BProd d d) =>
-  M.Map String (d, d) -> TPT.Map d -> M.Map String (d -> d)
+  M.Map String (d, d) -> 
+  TPT.Map d -> M.Map String (d -> d)
 makeEtaFunctions2D sm = M.mapWithKey f
   where f k t = Sig.fromSample . 
                   Sig.interp1Lin k xsig ysig . 
@@ -100,3 +101,24 @@ makeEtaFunctions2D sm = M.mapWithKey f
                xsig = maybe xs (Sig.scale xs . fst) (M.lookup k sm)
                ysig = maybe y (Sig.scale y . snd) (M.lookup k sm)
 
+
+{-
+-- Only first column of table is used.
+makeEtaFunctions2D ::
+  forall d. ( Fractional d, Ord d, Show d,
+    Base.BProd d d) =>
+  M.Map String (d, d) -> 
+  M.Map (idx node) (k, idx node -> idx1 node) ->
+  TPT.Map d ->    
+  M.Map String (d -> d)
+makeEtaFunctions2D sm etaAssign = M.mapWithKey f
+  where {-f k t = Sig.fromSample . 
+                  Sig.interp1Lin k xsig ysig . 
+                  Sig.toSample-}
+    
+         where xs, y :: Sig.PSignal [] d
+               (xs, y:_) = convertToSignal2D (Just t)
+               xsig = maybe xs (Sig.scale xs . fst) (M.lookup k sm)
+               ysig = maybe y (Sig.scale y . snd) (M.lookup k sm)
+
+-}

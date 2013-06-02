@@ -91,6 +91,8 @@ type PowerRecord n v d = Record Signal Signal (Typ A T Tt) (Typ A P Tt) (Idx.PPo
 
 type FlowRecord n v d = Record Signal FSignal (Typ A T Tt) (Typ A F Tt) (Idx.PPos n) v d d
 
+-- type CumFlowRecord n v d = Record Scalar Scalar (Typ A T Tt) (Typ A F Tt) (Idx.PPos n) v d d
+
 type DTimeFlowRecord n v d = Record FSignal FSignal (Typ D T Tt) (Typ A F Tt) (Idx.PPos n) v d d
 
 type DTimePowerRecord n v d = Record FSignal FSignal (Typ D T Tt) (Typ A P Tt) (Idx.PPos n) v d d
@@ -677,4 +679,17 @@ sumFlowRecord :: (V.FromList v,
                   V.Singleton v,
                   BSum d,
                   BProd d d) => FlowRecord node v d -> FlowRecord node v d
-sumFlowRecord (Record time map) = Record (S.fromList $ [head $ S.toList time, last $ S.toList time]) (M.map (S.fromList . (\x -> [x]) . S.fromScalar . S.sum) map)
+sumFlowRecord (Record time pmap) = Record (S.fromList $ [head $ S.toList time, last $ S.toList time]) (M.map (S.fromList . (\x -> [x]) . S.fromScalar . S.sum) pmap)
+
+
+{-
+sumFlowRecord :: (V.FromList v, 
+                  Num d,
+                  V.Zipper v,
+                  V.Walker v,
+                  V.Storage v d,
+                  V.Singleton v,
+                  BSum d,
+                  BProd d d) => DTimeFlowRecord node v d -> CumFlowRecord node v d
+sumFlowRecord (Record dtime map) = Record (S.sum dtime) (M.map (S.sum) map)
+-}

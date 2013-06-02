@@ -66,7 +66,7 @@ envToPowerRecord env time sec =
     (M.map i $ M.mapKeys h $ M.filterWithKey p $ EqEnv.powerMap $ EqEnv.signal env)
   where p (TIdx.InSection (TIdx.Section section) (TIdx.Power (TIdx.StructureEdge _ _))) _ = 
           toInteger section == sec  
-        h (TIdx.InSection (TIdx.Section section) (TIdx.Power (TIdx.StructureEdge n1 n2))) =
+        h (TIdx.InSection (TIdx.Section _) (TIdx.Power (TIdx.StructureEdge n1 n2))) =
           TIdx.PPos (TIdx.StructureEdge n1 n2)
 
         i (EqRec.Absolute (Determined dat)) = Sig.TC dat
@@ -80,12 +80,13 @@ getEtas etaFunc = map $
   \str -> maybe (error $ "getEtas :" ++ str ++ " not found") id (M.lookup str etaFunc)
 
 
-getTimes ::
+getPowerSignals ::
   M.Map String (TPT.T Double) ->
   [String] ->
   [(Sig.TSignal [] Double, Sig.PSignal [] Double)]
-getTimes tabPower = map (f . CT.convertToSignal2D . flip M.lookup tabPower)
+getPowerSignals tabPower = map (f . CT.convertToSignal2D . flip M.lookup tabPower)
   where f (x, [y]) = (x, y)
+        f (_, []) = error "getTimes: no power data available" 
 
 select :: [topo] -> [Int] -> SD.SequData topo
 select ts = SD.fromList . map (ts !!)

@@ -40,7 +40,7 @@ import qualified EFA.Equation.Record as EqRecord
 -- import EFA.Equation.Stack (Stack)
 
 import qualified EFA.Signal.SequenceData as SD
-import qualified EFA.Signal.Sequence as Seq
+--import qualified EFA.Signal.Sequence as Seq
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Vector as Vec
 import qualified EFA.Signal.Signal as Sig

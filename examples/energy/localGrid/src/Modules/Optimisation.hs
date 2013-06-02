@@ -4,7 +4,7 @@
 
 module Modules.Optimisation where
 
-import Debug.Trace
+-- import Debug.Trace
 
 import qualified Modules.System as System
 import Modules.System (Node(..))
@@ -46,7 +46,7 @@ sec0 :~ sec1 :~ _ = Stream.enumFrom $ TIdx.Section 0
 
 type SolveFunc a =
   (TIdx.Section -> 
-     M.Map (XIdx.Eta Node) (String, XIdx.Eta Node -> XIdx.Power Node)) ->
+     M.Map (XIdx.Eta Node) (String, String, XIdx.Eta Node -> XIdx.Power Node)) ->
   M.Map String (a -> a) ->
   Data Nil a ->
   Data Nil a ->
@@ -67,7 +67,7 @@ commonGiven =
    (XIdx.storage TIdx.Initial Water .= Data 0) :
    (XIdx.energy sec0 Water Network  %= XIdx.energy sec1 Water Network) :
    []
-
+{-
 etaGiven ::
   (Eq (Data.Apply c d1), Eq (Data.Apply c d2), Ord (idx node),
    Ord (idx1 node), Ord k, EqArith.Sum d2, EqArith.Sum d1,
@@ -83,19 +83,43 @@ etaGiven etaAssign etaFunc = Fold.fold $ M.mapWithKey f etaAssign
           where eq ef =
                   EqGen.variable n =.=
                     EqGen.liftF (Data.map ef) (EqGen.variable $ g n)
+-}
+
+etaGiven :: (Eq (Data.Apply c d1), Eq (Data.Apply c d2), Fractional d2, Num d1,
+          Ord (idx1 node), Ord (idx node), Ord d1, Ord k, EqArith.Sum d1,
+          EqArith.Sum d2, EqEnv.AccessMap idx1, EqEnv.AccessMap idx,
+          Data.ZipWith c, Data.Storage c d2, Data.Storage c d1,
+          EqEnv.PartElement (EqEnv.Environment idx) a v ~ Data c d2,
+          EqEnv.PartElement (EqEnv.Environment idx1) a v ~ Data c d1) =>
+         M.Map (idx node) (k, k, idx node -> idx1 node) ->
+         M.Map k (d1 -> d2) ->
+         EqGen.EquationSystem node s a v
+etaGiven etaAssign etaFunc = Fold.fold $ M.mapWithKey f etaAssign
+  where f n (strP, strN, g) = maybe mempty eq etaFunctionPosNeg
+          where eq ef =
+                  EqGen.variable n =.=
+                    EqGen.liftF (Data.map ef) (EqGen.variable $ g n)
+                    
+                etaFunctionPosNeg = case (etaPos,etaNeg) of
+                  (Just np, Just nn) -> Just (\ x -> if x>=0 then np x else 1/(nn (-x))) 
+                  (Just np, Nothing) -> Just np 
+                  (Nothing, Just nn) -> Just (\ x -> 1/(nn (-x))) 
+                  (Nothing, Nothing) -> Nothing
+                etaPos = (M.lookup strP etaFunc)   
+                etaNeg = (M.lookup strN etaFunc)   
 
 
 solveCharge ::
-  ( Eq a, EqArith.Product a, EqArith.Integrate (Data Nil a),
+  ( Eq a, EqArith.Product a, EqArith.Integrate (Data Nil a),Ord a,
     Fractional a, EqArith.Scalar (Data Nil a) ~ Data Nil a) => SolveFunc a
 solveCharge etaAssign etaFunc pRest pRestLocal pWater pGas =
   EqGen.solve System.seqTopoOpt $
     givenCharging etaAssign etaFunc pRest pRestLocal pWater pGas
 
 givenCharging ::
-  (Eq a, Num a, EqArith.Sum a, Fractional a) => 
+  (Eq a, Num a, EqArith.Sum a, Fractional a,Ord a) => 
   (TIdx.Section -> 
-     M.Map (XIdx.Eta Node) (String, XIdx.Eta Node -> XIdx.Power Node)) ->
+     M.Map (XIdx.Eta Node) (String, String, XIdx.Eta Node -> XIdx.Power Node)) ->
   M.Map String (a -> a) ->
   Data Nil a ->
   Data Nil a ->
@@ -126,16 +150,16 @@ givenCharging etaAssign etaFunc pRest pRestLocal pWater pGas =
 
 
 solveDischarge ::
-  ( Eq a, EqArith.Product a, EqArith.Integrate (Data Nil a),
+  ( Eq a, EqArith.Product a, EqArith.Integrate (Data Nil a),Ord a,
     Fractional a, EqArith.Scalar (Data Nil a) ~ Data Nil a) => SolveFunc a
 solveDischarge etaAssign etaFunc pRest pRestLocal pWater pGas =
   EqGen.solve System.seqTopoOpt $
     givenDischarging etaAssign etaFunc pRest pRestLocal pWater pGas
 
 givenDischarging ::
-  (Eq a, Num a, EqArith.Sum a, Fractional a) => 
+  (Eq a, Num a, EqArith.Sum a, Fractional a,Ord a) => 
   (TIdx.Section -> 
-     M.Map (XIdx.Eta Node) (String, XIdx.Eta Node -> XIdx.Power Node)) ->
+     M.Map (XIdx.Eta Node) (String, String, XIdx.Eta Node -> XIdx.Power Node)) ->
   M.Map String (a -> a) ->
   Data Nil a ->
   Data Nil a ->
@@ -164,7 +188,7 @@ givenDischarging etaAssign etaFunc pRest pRestLocal pWater pGas =
    []
 
 givenSimulate ::
- (Num a, Eq a,
+ (Num a, Eq a,Fractional a, Ord a,
   Base.BSum a, EqArith.Sum a,
   Eq (v a),
   SV.Zipper v,SV.FromList v,SV.Len (v a),
@@ -172,7 +196,7 @@ givenSimulate ::
   SV.Walker v,
   SV.Storage v a) =>
   (TIdx.Section -> 
-     M.Map (XIdx.Eta Node) (String, XIdx.Eta Node -> XIdx.Power Node)) ->
+     M.Map (XIdx.Eta Node) (String, String, XIdx.Eta Node -> XIdx.Power Node)) ->
   M.Map String (a -> a) ->
   SD.SequData (Record.PowerRecord Node v a) ->
   EqGen.EquationSystem Node s (Data Nil a) (Data (v :> Nil) a)

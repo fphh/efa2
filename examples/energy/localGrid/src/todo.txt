@@ -26,3 +26,13 @@
 * solver braucht einen simulationsmodus, wo er mit absoluter Zeit
   oder mit n = p2/p1 rechnet
   oder wir stellen alle Gleichungen eta auf p2/p1 um
+
+* cumuliertes Env nach Scalar (es gibt kein Scalares Record ) -- notwendig ? 
+
+* env2PowerRecord - hack ersetzen
+
+* getEtas nach Utility
+
+* ConvertTable diskutieren 
+
+* variable Länge von Zeit und Leist

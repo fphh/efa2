@@ -9,10 +9,12 @@ module Main where
 import qualified Modules.System as System
 import Modules.System (Node(..))
 import qualified Modules.Optimisation as Optimisation
-import Modules.Optimisation (sec0,sec1, maxEta, calcEtaSys)
+import Modules.Optimisation (sec0,sec1, maxEta
+                            -- calcEtaSys
+                            )
 import Modules.Utility as ModUt
 import qualified Modules.Analysis as Analysis
-import Modules.Utility(getEtas, getTimes,select)
+-- import Modules.Utility(getEtas, getPowerSignals,select)
 
 
 import EFA.Signal.Sequence (-- genSequenceSignal,
@@ -27,7 +29,7 @@ import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Signal.Signal as Sig
 import EFA.Signal.Signal (TC,Scalar)
 import EFA.Signal.Data (Data(..), Nil, (:>), getData)
-import qualified EFA.Signal.Data as Data
+--import qualified EFA.Signal.Data as Data
 
 import EFA.Signal.Typ (Typ, F, T, A, Tt)
 import qualified EFA.Signal.SequenceData as SD
@@ -58,7 +60,7 @@ import qualified Data.Vector as V
 import qualified Data.GraphViz.Attributes.Colors.X11 as Colors
 
 
-import Data.Maybe (fromJust)
+--import Data.Maybe (fromJust)
 
 -- ################### Plot Stuff
 
@@ -79,7 +81,6 @@ legend 0 = "Laden"
 legend 1 = "Entladen"
 legend _ = "Undefined"
 
-
 scaleTableEta :: M.Map String (Double, Double)
 scaleTableEta = M.fromList $
   ("storage",     (1, 0.8)) :
@@ -92,26 +93,26 @@ scaleTableEta = M.fromList $
 
 -- ################### Efficiency Curves
 
-etaAssign :: TIdx.Section -> M.Map (XIdx.Eta Node) (String, XIdx.Eta Node -> XIdx.Power Node)
+etaAssign :: TIdx.Section -> M.Map (XIdx.Eta Node) (String, String, XIdx.Eta Node -> XIdx.Power Node)
 etaAssign sec = M.fromList $
-  (XIdx.eta sec Water Network, ( "storage",myflip)) :
-  (XIdx.eta sec Network Water, ( "storage", noflip)) :
+  (XIdx.eta sec Water Network, ( "storage","storage", myflip)) :
+  (XIdx.eta sec Network Water, ( "storage","storage", noflip)) :
 
-  (XIdx.eta sec Coal Network, ( "coal", myflip)) :
-  (XIdx.eta sec Network Coal, ( "coal", noflip)) :
+  (XIdx.eta sec Coal Network, ( "coal","coal", myflip)) :
+  (XIdx.eta sec Network Coal, ( "coal","coal", noflip)) :
 
-  (XIdx.eta sec Gas LocalNetwork, ( "gas", myflip)) :
-  (XIdx.eta sec LocalNetwork Gas, ( "gas", noflip)) :
+  (XIdx.eta sec Gas LocalNetwork, ( "gas","gas", myflip)) :
+  (XIdx.eta sec LocalNetwork Gas, ( "gas","gas", noflip)) :
 
 
-  (XIdx.eta sec Network LocalNetwork, ( "transformer", myflip)) :
-  (XIdx.eta sec LocalNetwork Network, ( "transformer", noflip)) :
+  (XIdx.eta sec Network LocalNetwork, ( "transformer","transformer", myflip)) :
+  (XIdx.eta sec LocalNetwork Network, ( "transformer","transformer", noflip)) :
 
-  (XIdx.eta sec LocalNetwork LocalRest, ( "local", myflip)) :
-  (XIdx.eta sec LocalRest LocalNetwork, ( "local", noflip)) :
+  (XIdx.eta sec LocalNetwork LocalRest, ( "local","local", myflip)) :
+  (XIdx.eta sec LocalRest LocalNetwork, ( "local","local", noflip)) :
 
-  (XIdx.eta sec Network Rest, ( "rest", myflip)) :
-  (XIdx.eta sec Rest Network, ( "rest", noflip)) :
+  (XIdx.eta sec Network Rest, ( "rest", "rest", myflip)) :
+  (XIdx.eta sec Rest Network, ( "rest", "rest", noflip)) :
 
   []
 
@@ -222,7 +223,7 @@ main = do
          (timeSolar, powerSignalSolar) :
          (timeHouse, powerSignalHouse) :
          (timeIndustry, powerSignalIndustry) : _
-           = getTimes tabPower ["wind", "solar", "house", "industry"]
+           = getPowerSignals tabPower ["wind", "solar", "house", "industry"]
 
   
        powerSignalRest = Sig.scale powerSignalWind restPowerScale

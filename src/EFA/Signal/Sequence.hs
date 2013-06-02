@@ -351,17 +351,16 @@ record2RSig
 
 record2RSig (Record t pMap) = (t, S.transpose2 $ fromSigList $ M.elems pMap)
 
---rsig2Record :: Ord node => RSigX a -> PowerRecord node [] a -> PowerRecord node [] a
+rsig2Record :: Ord node => RSigX a -> PowerRecord node [] a -> PowerRecord node [] a
 rsig2Record (t, ps) (Record _ pMap) =
    Record t $ updateMap pMap $ toSigList $ S.transpose2 ps
 
-{-
+
 rsig2SecRecord ::
    (V.Convert [] v, V.Storage v a, Ord node) =>
    PowerRecord node [] a ->
    RSigX a ->
    PowerRecord node v a
--}
 rsig2SecRecord (Record _ pMap) (t, ps) =
    Record (S.convert t) $
    updateMap pMap $ map S.convert $ toSigList $ S.transpose2 ps
