@@ -1,20 +1,17 @@
-{- | Skript to demonstrate Calculations and other Operations on Signals -}
+{- | Script to demonstrate Calculations and other Operations on Signals -}
 
 -- module Demo_Signal where
 
--- import qualified EFA.Signal.Plot as Plot
 import qualified EFA.Signal.Plot as Plot
 
 import qualified EFA.Signal.Signal as S
 import EFA.Signal.SignalFill ((.-), (./), (.*))
-import EFA.Signal.Signal
-  (PSig, TSig, Scal, FFSig)
+import EFA.Signal.Signal (PSig, TSig, Scal, FFSig)
 
 import EFA.Utility.Async (concurrentlyMany_)
 
 import EFA.Signal.Typ (Typ, A, D, P, N, Tt)
 import EFA.Signal.Base (Val)
-import Control.Functor.HT (void)
 
 import qualified Graphics.Gnuplot.Advanced as GnuPlot
 import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
@@ -25,7 +22,9 @@ import qualified Graphics.Gnuplot.ColorSpecification as Colour
 import qualified Graphics.Gnuplot.Frame as Frame
 import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
 
-import Data.Monoid
+import Control.Functor.HT (void)
+import Data.Monoid ((<>))
+
 
 -- Generate objects to work with
 offset :: Scal (Typ D P Tt) Val
@@ -90,11 +89,9 @@ terminate ::
 terminate func = fmap (Graph2D.lineSpec $ func $ LineSpec.deflt)
 
 
-{-
 myFrameStyle ::
-  gnuplot-0.5.2:Graphics.Gnuplot.Private.Plot.T (Graph2D.T Double Double) ->
+  Plot2D.T Double Double ->
   Frame.T (Graph2D.T Double Double)
--}
 myFrameStyle = Frame.cons $
   Opts.title "Dies ist der Titel!!!" $
   Opts.grid True $

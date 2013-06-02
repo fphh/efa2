@@ -2,6 +2,8 @@
 module Main where
 
 import qualified EFA.Example.Index as XIdx
+import qualified EFA.Example.Absolute as EqGen
+import EFA.Example.Absolute ((=.=))
 import EFA.Example.Utility
   ( makeEdges, constructSeqTopo )
 
@@ -12,11 +14,10 @@ import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Graph as Gr
 
-import qualified EFA.Example.Absolute as EqGen
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Result as R
-import EFA.Equation.System ((=.=))
+import qualified EFA.Equation.Arithmetic as Arith
 
 import qualified EFA.Signal.PlotIO as PlotIO
 import qualified EFA.Signal.Signal as S
@@ -26,19 +27,15 @@ import EFA.Signal.Signal(Test2, (.+), (.-), (./))
 import EFA.Signal.Typ (A, P, Tt, F, N, Typ, Y)
 import EFA.Signal.Base(Val)
 
-import qualified EFA.Equation.Arithmetic as Arith
-
 import qualified EFA.Report.Report as Rep
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Map (checkedLookup)
 import EFA.Utility.Async (concurrentlyMany_)
-
 import EFA.Utility.Stream (Stream((:~)))
 
-import qualified Data.Vector.Unboxed as UV
-
 import qualified Data.Accessor.Basic as Accessor
+import qualified Data.Vector.Unboxed as UV
 import qualified Data.List.Match as Match
 
 import Control.Category ((.))

@@ -43,8 +43,11 @@ import qualified EFA.Signal.ConvertTable as Table
 import qualified Data.List as L
 import qualified Data.Map as M
 import qualified Data.Set as S
+-- <<<<<<< HEAD
 
 import Data.Tuple.HT (fst3, thd3)
+-- =======
+-- >>>>>>> master
 
 import Control.Applicative (liftA)
 
@@ -185,11 +188,30 @@ etaSys env = (eSinkSec0 + eSinkSec1) / eSource
         eSinkSec0 = lu $ XIdx.energy sec0 sink crossing
         eSinkSec1 = lu $ XIdx.energy sec1 sink crossing
         
+--  <<<<<<< HEAD
 -}
+-- =======
+{-
+etaSys2 ::
+  (Show a, Ord a) =>
+  Flow.RangeGraph a ->
+  EqEnv.Complete
+    Node.Int
+    (EqRec.Absolute (Result Double))
+    (EqRec.Absolute (Result Double)) ->
+  Double
+-}
+etaSys2 (_, topo) _ = trace (show sinks) undefined
+  where sinks = M.filter isSink $ Gr.nodeEdges topo
+        isSink (_, el, x) =
+          case el of
+               TD.AlwaysSource -> S.size x > 0
+               TD.Source -> S.size x > 0
+               _ -> False
+-- >>>>>>> master
 
 
 sinkRange :: [Double]
-
 sinkRange = [0.1, 0.2 .. 20]
 
 ratioRange :: [Double]
@@ -365,8 +387,6 @@ etaSysHU env =
         eSinkSec1 = XIdx.energy sec1 sink crossing
 
 
-
-
 main :: IO ()
 main = do
 
@@ -378,10 +398,15 @@ main = do
       varY :: Sig.XSignal2 [] [] Double
       varY = Sig.fromList2 varY'
 
+-- <<<<<<< HEAD
       f0 x y = etaSys seqTopo $ EqGen.solve seqTopo $ givenSec0Mean x y
       f1 x y = etaSys seqTopo $ EqGen.solve seqTopo $ givenSec1Mean x y
-
-
+{--
+-- =======
+      f0 x y = etaSys2 seqTopo $ EqGen.solve seqTopo $ givenSec0Mean x y
+      f1 x y = etaSys2 seqTopo $ EqGen.solve seqTopo $ givenSec1Mean x y
+>>>>>>> master
+--}
 
       env0 = EqGen.solve seqTopo $ givenSec0Mean 4.0 0.4
       env1 = EqGen.solve seqTopo $ givenSec1Mean 3.0 0.3

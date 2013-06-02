@@ -86,6 +86,7 @@ Library
     EFA.Symbolic.OperatorTree
     EFA.Symbolic.SumProduct
     EFA.Symbolic.Mixed
+    EFA.Symbolic.Variable
     EFA.Report.Typ
     EFA.Report.Base
     EFA.Report.Report
@@ -141,7 +142,8 @@ Executable test-efa
     EFA.Test.MultiValue
     EFA.Test.Stack
     EFA.Test.Arithmetic
-    EFA.CustomTest.EquationSystem.EquationSystem
+    EFA.Test.EquationSystem
+    EFA.Test.EquationSystem.Given
 
 Executable example-sequenzflussgraph
   Main-Is: examples/elementary/sequenzflussgraph/Main.hs
@@ -296,6 +298,20 @@ Executable demo-signalSolving
       base
   Else
     Buildable: False
+
+Executable demo-unknownSignal
+  Main-Is: demo/unknownSignal/Main.hs
+  GHC-Options: -Wall
+  If flag(buildDemos)
+    Build-Depends:
+      efa,
+      gnuplot,
+      containers,
+      base
+  Else
+    Buildable: False
+
+
 
 Executable demo-tables
   Main-Is: demo/tables/Main.hs
