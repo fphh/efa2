@@ -5,8 +5,12 @@ module EFA.Test.EquationSystem where
 
 import qualified EFA.Test.EquationSystem.Given as Given
 
+import qualified EFA.Equation.Environment as Env
 import qualified EFA.Example.Absolute as EqGen
 import qualified EFA.Graph.Draw as Draw
+
+import qualified EFA.Report.Format as Format
+import EFA.Report.FormatValue (formatValue)
 
 import EFA.Utility.Async (concurrentlyMany_)
 
@@ -27,7 +31,21 @@ main = do
 
   let env = EqGen.solve Given.seqTopo Given.originalGiven
 
-  print (Given.testEnv == env)
+  putStrLn "Assignments in expected Env but not in computed one:"
+  putStrLn $ Format.unUnicode $ formatValue $
+     Env.difference Given.testEnv env
+
+  putStrLn "Assignments in computed Env but not in expected one:"
+  putStrLn $ Format.unUnicode $ formatValue $
+     Env.difference env Given.testEnv
+
+  putStrLn "Conflicts between computed and expected Env:"
+  putStrLn $ Format.unUnicode $ formatValue $
+     Env.filter (uncurry (/=)) (uncurry (/=)) $
+     Env.intersectionWith (,) (,) Given.testEnv env
+
+  putStrLn "These lists should all be empty."
+  -- print (Given.testEnv == env)
 
   concurrentlyMany_ [
     Draw.xterm $

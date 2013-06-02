@@ -1,7 +1,4 @@
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
 module EFA.Example.Utility (
    module EFA.Example.Utility,
    (.=), (%=),
@@ -19,11 +16,11 @@ import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Arithmetic as Arith
-import qualified EFA.Symbolic.Mixed as Term
 import qualified EFA.Signal.SequenceData as SD
+import EFA.Symbolic.Variable (VarTerm, ScalarTerm, SignalTerm, Symbol, varSymbol)
 import EFA.Equation.System ((.=), (%=))
 import EFA.Equation.Result (Result)
-import EFA.Utility (Pointed, point)
+import EFA.Utility (Pointed)
 
 import Data.Monoid ((<>))
 
@@ -66,53 +63,10 @@ checkDetermined name rx =
 
 
 type
-   SignalTerm rec term node =
-      Term.Signal term
-         (EqRecord.Indexed rec (Idx.ForNode   Var.Scalar node))
-         (EqRecord.Indexed rec (Idx.InSection Var.Signal node))
-
-type
-   ScalarTerm rec term node =
-      Term.Scalar term
-         (EqRecord.Indexed rec (Idx.ForNode   Var.Scalar node))
-         (EqRecord.Indexed rec (Idx.InSection Var.Signal node))
-
-type
-   ScalarAtom rec term node =
-      Term.ScalarAtom term
-         (EqRecord.Indexed rec (Idx.ForNode   Var.Scalar node))
-         (EqRecord.Indexed rec (Idx.InSection Var.Signal node))
-
-type
    SymbolicEquationSystem rec node s term =
       EqGen.EquationSystem rec node s
-         (ScalarTerm rec term node)
-         (SignalTerm rec term node)
-
-
-type
-   VarTerm var recIdx term node =
-      Term var term
-         (Idx.Record recIdx (Idx.ForNode   Var.Scalar node))
-         (Idx.Record recIdx (Idx.InSection Var.Signal node))
-
-class (var ~ Variable (Term var)) => Symbol var where
-   type Term var :: (* -> *) -> * -> * -> *
-   type Variable term :: * -> *
-   symbol ::
-      Pointed term =>
-      Idx.Record recIdx (var node) ->
-      VarTerm var recIdx term node
-
-instance Symbol (Idx.InSection Var.Signal) where
-   type Term (Idx.InSection Var.Signal) = Term.Signal
-   type Variable Term.Signal = Idx.InSection Var.Signal
-   symbol = Term.Signal . point
-
-instance Symbol (Idx.ForNode Var.Scalar) where
-   type Term (Idx.ForNode Var.Scalar) = Term.Scalar
-   type Variable Term.Scalar = Idx.ForNode Var.Scalar
-   symbol = Term.Scalar . point . Term.ScalarVariable
+         (ScalarTerm (EqRecord.ToIndex rec) term node)
+         (SignalTerm (EqRecord.ToIndex rec) term node)
 
 
 givenSymbol ::
@@ -122,28 +76,28 @@ givenSymbol ::
   and it is better not to compare them at all.
   We should remove the Eq constraint as soon as unique-logic allows it.
   -}
-  (t ~ VarTerm var (EqRecord.ToIndex rec) term node,
+  (t ~ VarTerm var recIdx term node,
    Eq t, Arith.Sum t,
-   t ~ Env.Element idx (ScalarTerm rec term node) (SignalTerm rec term node),
-   EqGen.Record rec,
+   t ~ Env.Element idx (ScalarTerm recIdx term node) (SignalTerm recIdx term node),
+   EqGen.Record rec, recIdx ~ EqRecord.ToIndex rec,
    Ord (idx node), Pointed term,
    Var.Type idx ~ var, Symbol var, Env.AccessMap idx) =>
-  EqRecord.Indexed rec (idx node) ->
+  Idx.Record recIdx (idx node) ->
   SymbolicEquationSystem rec node s term
 givenSymbol idx =
-   idx .= symbol (fmap Var.index idx)
+   idx .= varSymbol idx
 
 
 infixr 6 =<>
 
 (=<>) ::
-  (t ~ VarTerm var (EqRecord.ToIndex rec) term node,
+  (t ~ VarTerm var recIdx term node,
    Eq t, Arith.Sum t,
-   t ~ Env.Element idx (ScalarTerm rec term node) (SignalTerm rec term node),
-   EqGen.Record rec,
+   t ~ Env.Element idx (ScalarTerm recIdx term node) (SignalTerm recIdx term node),
+   EqGen.Record rec, recIdx ~ EqRecord.ToIndex rec,
    Ord (idx node), Pointed term,
    Var.Type idx ~ var, Symbol var, Env.AccessMap idx) =>
-  EqRecord.Indexed rec (idx node) ->
+  Idx.Record recIdx (idx node) ->
   SymbolicEquationSystem rec node s term ->
   SymbolicEquationSystem rec node s term
 idx =<> eqsys = givenSymbol idx <> eqsys

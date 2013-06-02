@@ -6,8 +6,7 @@ import qualified EFA.Example.Index as XIdx
 import qualified EFA.Example.Absolute as EqGen
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
-import EFA.Equation.System ((=.=))
-import EFA.Example.Absolute ((.=))
+import EFA.Example.Absolute ((.=), (=.=))
 import EFA.Equation.Result (Result)
 import EFA.Example.Utility (constructSeqTopo, makeEdges, checkDetermined)
 

@@ -13,6 +13,7 @@ import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Variable as Var
+import qualified EFA.Symbolic.Variable as SymVar
 import EFA.Equation.System ((=.=))
 import EFA.Equation.Result(Result(..))
 
@@ -21,7 +22,6 @@ import qualified EFA.Signal.SequenceData as SD
 import qualified EFA.Signal.Signal as Signal
 import EFA.Signal.Data (Data, Nil, (:>))
 
-import qualified EFA.Graph as Gr
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
@@ -53,13 +53,13 @@ solve ::
 solve = EqGen.solve
 
 
-solveWithoutTopology ::
+solveSimple ::
    (Eq a, Arith.Product a, a ~ Arith.Scalar v,
     Eq v, Arith.Product v, Arith.Integrate v,
     Node.C node) =>
    (forall s. EquationSystem node s a v) ->
    Env.Complete node (Record.Absolute (Result a)) (Record.Absolute (Result v))
-solveWithoutTopology = EqGen.solve (Map.empty, Gr.empty)
+solveSimple = EqGen.solveSimple
 
 
 constant :: x -> Expression node s a v x
@@ -89,27 +89,27 @@ liftF2 = liftA2 . Expr.fromRule3 . Sys.assignment3 ""
 
 
 
-type SignalTerm term node = Utility.SignalTerm Record.Absolute term node
-type ScalarTerm term node = Utility.ScalarTerm Record.Absolute term node
-type ScalarAtom term node = Utility.ScalarAtom Record.Absolute term node
+type SignalTerm term node = SymVar.SignalTerm Idx.Absolute term node
+type ScalarTerm term node = SymVar.ScalarTerm Idx.Absolute term node
+type ScalarAtom term node = SymVar.ScalarAtom Idx.Absolute term node
 
-type VarTerm var term node = Utility.VarTerm var Idx.Absolute term node
+type VarTerm var term node = SymVar.VarTerm var Idx.Absolute term node
 
 type
    SymbolicEquationSystem node s term =
       Utility.SymbolicEquationSystem Record.Absolute node s term
 
 symbol ::
-   (Utility.Symbol var, Pointed term) =>
+   (SymVar.Symbol var, Pointed term) =>
    var node -> VarTerm var term node
-symbol = Utility.symbol . Idx.absolute
+symbol = SymVar.symbol . Idx.absolute
 
 givenSymbol ::
   (t ~ VarTerm var term node,
    Eq t, Arith.Sum t,
    t ~ Env.Element idx (ScalarTerm term node) (SignalTerm term node),
    Ord (idx node), Pointed term,
-   Var.Type idx ~ var, Utility.Symbol var, Env.AccessMap idx) =>
+   Var.Type idx ~ var, SymVar.Symbol var, Env.AccessMap idx) =>
   idx node ->
   SymbolicEquationSystem node s term
 givenSymbol idx =
@@ -123,7 +123,7 @@ infixr 6 =<>
    Eq t, Arith.Sum t,
    t ~ Env.Element idx (ScalarTerm term node) (SignalTerm term node),
    Ord (idx node), Pointed term,
-   Var.Type idx ~ var, Utility.Symbol var, Env.AccessMap idx) =>
+   Var.Type idx ~ var, SymVar.Symbol var, Env.AccessMap idx) =>
    idx node ->
    SymbolicEquationSystem node s term ->
    SymbolicEquationSystem node s term

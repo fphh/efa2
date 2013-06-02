@@ -2,21 +2,21 @@
 module Main where
 
 import qualified EFA.Example.AssignMap as AssignMap
-import qualified EFA.Example.Utility as Utility
+import qualified EFA.Example.Absolute as EqGen
 import qualified EFA.Example.Index as XIdx
 import EFA.Example.Utility (makeEdges, constructSeqTopo)
 import EFA.Example.Absolute ((.=))
-import EFA.Equation.Stack (Stack)
+
+import qualified EFA.Symbolic.Variable as SymVar
+import qualified EFA.Symbolic.SumProduct as SumProduct
 
 import qualified EFA.Equation.Stack as Stack
-import qualified EFA.Example.Absolute as EqGen
 import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Arithmetic as Arith
-
-import qualified EFA.Symbolic.SumProduct as SumProduct
+import EFA.Equation.Stack (Stack)
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
@@ -52,8 +52,8 @@ topoLinear = Gr.fromList ns (makeEdges es)
         es = [(node0, node1), (node1, node2)]
 
 
-type SignalTerm = Utility.SignalTerm Record.Delta SumProduct.Term Node.Int
-type ScalarTerm = Utility.ScalarTerm Record.Delta SumProduct.Term Node.Int
+type SignalTerm = SymVar.SignalTerm Idx.Delta SumProduct.Term Node.Int
+type ScalarTerm = SymVar.ScalarTerm Idx.Delta SumProduct.Term Node.Int
 
 
 type
@@ -69,7 +69,7 @@ infixr 6 *=<>, -=<>
    Idx.InSection idx Node.Int ->
    EquationSystemSymbolic s -> EquationSystemSymbolic s
 idx *=<> eqsys =
-   (idx .= (Stack.singleton $ Utility.symbol $ Idx.before $ Var.index idx))
+   (idx .= (Stack.singleton $ SymVar.varSymbol $ Idx.before idx))
    <>
    eqsys
 
@@ -81,8 +81,8 @@ idx -=<> eqsys =
       let var = Var.index idx
       in  Stack.deltaPair
              (Var.Signal var)
-             (Utility.symbol (Idx.before var))
-             (Utility.symbol (Idx.delta  var)))
+             (SymVar.symbol (Idx.before var))
+             (SymVar.symbol (Idx.delta  var)))
    <>
    eqsys
 
