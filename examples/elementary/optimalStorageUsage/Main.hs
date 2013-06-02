@@ -41,6 +41,10 @@ import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.ConvertTable as Table
 
 import qualified Data.List as L
+import qualified Data.Map as M
+import qualified Data.Set as S
+
+import Data.Tuple.HT (fst3, thd3)
 
 import Control.Applicative (liftA)
 
@@ -168,19 +172,20 @@ givenSec1Mean psink _ =
    []
 
 
+{-
 etaSys ::
   EqEnv.Complete
     Node.Int
     (EqRec.Absolute (Result Double))
     (EqRec.Absolute (Result Double)) ->
   Double
-etaSys env =
-  (lu eSinkSec0 + lu eSinkSec1) / (lu eSource)
+etaSys env = (eSinkSec0 + eSinkSec1) / eSource
   where lu = lookUp "etaSys" env
-        eSource = XIdx.energy sec0 source crossing
-        eSinkSec0 = XIdx.energy sec0 sink crossing
-        eSinkSec1 = XIdx.energy sec1 sink crossing
+        eSource = lu $ XIdx.energy sec0 source crossing
+        eSinkSec0 = lu $ XIdx.energy sec0 sink crossing
+        eSinkSec1 = lu $ XIdx.energy sec1 sink crossing
         
+-}
 
 
 sinkRange :: [Double]
@@ -289,6 +294,51 @@ givenEnvHU xs =
       <>
       (foldMap givenEnvHUSec ys)
 
+
+
+{-
+etaSys ::
+  Flow.RangeGraph Node.Int ->
+  EqEnv.Complete
+    Node.Int
+    (EqRec.Absolute (Result Double))
+    (EqRec.Absolute (Result Double)) ->
+  Double
+-}
+
+etaSys ::
+  (Show a, Num a, Fractional a, Show node, Ord node) =>
+  Flow.RangeGraph node ->
+  EqEnv.Complete node b (EqRec.Absolute (Result a)) -> a
+etaSys (_, topo) env = sum sinks / sum sources
+  where m = M.elems $ Gr.nodeEdges topo
+        sinks = map (S.foldl sinkEnergies 0 . fst3) $ filter isActiveSink m
+        sources = map (S.foldl sourceEnergies 0 . thd3) $ filter isActiveSource m
+
+        isActiveSink (ns, TD.AlwaysSink, _) = p ns
+        isActiveSink (ns, TD.Sink, _) = p ns
+        isActiveSink _ = False
+
+        isActiveSource (_, TD.AlwaysSource, ns) = p ns
+        isActiveSource (_, TD.Source, ns) = p ns
+        isActiveSource _ = False
+ 
+        p = (> 0) . 
+            S.size .
+            S.filter
+              (\(TD.FlowEdge (TD.StructureEdge (TIdx.InSection _ e))) -> TD.isActive e)
+
+        sinkEnergies acc 
+          (TD.FlowEdge (TD.StructureEdge (TIdx.InSection sec 
+                       (Gr.EDirEdge (Gr.DirEdge a b))))) =
+            acc + lookUp "etaSys" env (XIdx.energy sec b a)
+
+        sourceEnergies acc 
+          (TD.FlowEdge (TD.StructureEdge (TIdx.InSection sec 
+                       (Gr.EDirEdge (Gr.DirEdge a b))))) =
+            acc + lookUp "etaSys" env (XIdx.energy sec a b)
+
+
 lookUp ::
   (Ord node, Show node, Show t) =>
   String ->
@@ -328,8 +378,9 @@ main = do
       varY :: Sig.XSignal2 [] [] Double
       varY = Sig.fromList2 varY'
 
-      f0 x y = etaSys $ EqGen.solve seqTopo $ givenSec0Mean x y
-      f1 x y = etaSys $ EqGen.solve seqTopo $ givenSec1Mean x y
+      f0 x y = etaSys seqTopo $ EqGen.solve seqTopo $ givenSec0Mean x y
+      f1 x y = etaSys seqTopo $ EqGen.solve seqTopo $ givenSec1Mean x y
+
 
 
       env0 = EqGen.solve seqTopo $ givenSec0Mean 4.0 0.4
@@ -382,16 +433,15 @@ main = do
       h 0 = "Hypothetical Usage"
       h 1 = "Optimal State"
 
-
   concurrentlyMany_ [
-{-  
+
     Draw.xterm $
       Draw.title "Section 0 Mean" $ Draw.sequFlowGraphAbsWithEnv seqTopo env0,
     Draw.xterm $
       Draw.title "Section 1 Mean" $ Draw.sequFlowGraphAbsWithEnv seqTopo env1,
 
     Draw.xterm $ Draw.sequFlowGraph seqTopo,
--}
+
     Draw.xterm $
       Draw.title "Hypothetical Usage Sequence Flow Graph" $
       Draw.sequFlowGraphAbsWithEnv seqTopoHU envHU,
@@ -404,9 +454,9 @@ main = do
 -}
 
     PlotIO.xy "Optimale Zustände" DefaultTerm.cons id h sinkRangeSig
-              [hypotheticalUsage, Sig.map fromIntegral optimalState] ]
+              [hypotheticalUsage, Sig.map fromIntegral optimalState],
 
-{-
+
     PlotIO.surface "Test" DefaultTerm.cons id f varX varY [etaSys0, etaSys1],
     PlotIO.surface "Systemwirkungsgrad Entladen" 
                    DefaultTerm.cons id (const "") varX varY etaSys0,
@@ -417,7 +467,7 @@ main = do
     PlotIO.surface "Maximaler Systemwirkungsgrad"
                    DefaultTerm.cons id (const "Max") varX varY maxEtaSys,
     PlotIO.surface "Test" DefaultTerm.cons id (const "Max") varX varY maxEtaSysState ]
--}
+
 
 main2 :: IO ()
 main2 = do
@@ -442,7 +492,7 @@ main2 = do
       ecst0Sig = Sig.fromList $ map (f ecst0) sinkRange
       eSourceSig = Sig.fromList $ map (f eSource) sinkRange
 
-      h x = etaSys $ EqGen.solve seqTopo $ givenSec0Mean x y
+      h x = etaSys seqTopo $ EqGen.solve seqTopo $ givenSec0Mean x y
       etaSysSig = Sig.fromList $ map h sinkRange
 
       g 0 = "Sec 1, sink crossing"
