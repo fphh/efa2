@@ -372,7 +372,7 @@ main = do
      time' = Sig.fromList [0 .. 23]
 
      rec :: Record.PowerRecord Node [] Double
-     rec = -- addZeroCrossings $
+     rec = addZeroCrossings $
            -- Record.diffTime $
            -- Record.rmap (Sig.changeSignalType . Sig.deltaMap (\x y -> (x+y)/2)) $ 
            Record.Record time' $ 
