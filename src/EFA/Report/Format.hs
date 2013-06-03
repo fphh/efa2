@@ -81,7 +81,7 @@ class Format output where
    direction :: Idx.Direction -> output
    delta :: output -> output
    edgeIdent :: EdgeVar -> output
-   dtime, sum, storage :: output
+   dtime, signalSum, scalarSum, storage :: output
    parenthesize, negate, recip :: output -> output
    plus, minus, multiply :: output -> output -> output
    power :: output -> Integer -> output
@@ -134,7 +134,8 @@ instance Format ASCII where
          X -> "x"
          Eta -> "n"
    dtime = ASCII "dt"
-   sum = ASCII "S"
+   signalSum = ASCII "SS"
+   scalarSum = ASCII "Ss"
    storage = ASCII "s"
 
    parenthesize (ASCII x) = ASCII $ "(" ++ x ++ ")"
@@ -195,9 +196,10 @@ instance Format Unicode where
          MaxEnergy -> "\xCA"
          Power -> "P"
          X -> "x"
-         Eta -> "\x03b7"
+         Eta -> "\x03B7"
    dtime = Unicode "dt"
-   sum = Unicode "\x2211"
+   signalSum = Unicode "\x03A3"
+   scalarSum = Unicode "\x03C3"
    storage = Unicode "s"
 
    parenthesize (Unicode x) = Unicode $ "(" ++ x ++ ")"
@@ -300,7 +302,8 @@ instance Format Latex where
          X -> "x"
          Eta -> "\\eta"
    dtime = Latex "\\dif t"
-   sum = Latex "\\Sigma"
+   signalSum = Latex "\\Sigma"
+   scalarSum = Latex "\\sigma"
    storage = Latex "s"
 
    parenthesize (Latex x) = Latex $ "(" ++ x ++ ")"

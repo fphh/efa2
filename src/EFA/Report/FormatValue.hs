@@ -136,7 +136,7 @@ instance FormatSignalIndex Idx.DTime where
 
 instance FormatSignalIndex Idx.Sum where
    formatSignalIndex (Idx.Sum dir n) s =
-      Format.subscript Format.sum $
+      Format.subscript Format.signalSum $
       Format.direction dir `Format.connect`
          formatSectionNode (Idx.SecNode s n)
 
@@ -157,7 +157,7 @@ instance FormatScalarIndex Idx.StX where
 
 instance FormatScalarIndex Idx.StSum where
    formatScalarIndex (Idx.StSum dir bnd) n =
-      Format.subscript Format.sum $
+      Format.subscript Format.scalarSum $
       Format.direction dir `Format.connect`
          formatBoundaryNode (Idx.BndNode bnd n)
 
