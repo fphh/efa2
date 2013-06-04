@@ -120,15 +120,13 @@ main = do
       pm = Env.powerMap (Env.signal e)
 
       rec :: Rec.PowerRecord Node.Int [] Double
-      rec = Rec.Record time (M.mapKeys f $ M.map g $ M.filter p pm)
-
-      p (EqRec.Absolute x) = Res.isDet x
+      rec = Rec.Record time (M.mapKeys f $ M.mapMaybe g pm)
 
       f (Idx.InSection _ (Idx.Power (Idx.StructureEdge n1 n2))) =
         Idx.PPos (Idx.StructureEdge n1 n2)
 
-      g (EqRec.Absolute (Res.Determined dat)) = Sig.TC dat
-      g _ = error "Unmöglicher Fehler !!!"
+      g (EqRec.Absolute (Res.Determined dat)) = Just $ Sig.TC dat
+      g _ = Nothing
 
   concurrentlyMany_ [
     PlotIO.record "Power Signals" DefaultTerm.cons show id rec,
