@@ -29,3 +29,7 @@ instance Foldable Result where
 toMaybe :: Result a -> Maybe a
 toMaybe Undetermined = Nothing
 toMaybe (Determined x) = Just x
+
+isDet :: Result a -> Bool
+isDet (Determined _) = True
+isDet _ = False

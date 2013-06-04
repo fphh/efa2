@@ -297,6 +297,20 @@ Executable demo-signalSolving
   Else
     Buildable: False
 
+Executable demo-unknownSignal
+  Main-Is: demo/unknownSignal/Main.hs
+  GHC-Options: -Wall
+  If flag(buildDemos)
+    Build-Depends:
+      efa,
+      gnuplot,
+      containers,
+      base
+  Else
+    Buildable: False
+
+
+
 Executable demo-tables
   Main-Is: demo/tables/Main.hs
   GHC-Options: -Wall
