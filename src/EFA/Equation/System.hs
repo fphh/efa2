@@ -682,11 +682,7 @@ fromNodes ::
 fromNodes equalInOutSums =
   fold . M.mapWithKey f . Gr.nodeEdges
    where f bn (ins, nodeType, outs) =
-            let -- these variables are used again in fromStorageSequences
-                stvarinsum = stinsum bn
-                stvaroutsum = stoutsum bn
-
-                msn = Idx.secNodeFromBndNode bn
+            let msn = Idx.secNodeFromBndNode bn
                 withSecNode = flip foldMap msn
 
                 partition =
@@ -723,19 +719,23 @@ fromNodes equalInOutSums =
                              TD.In ->
                                 fromInStorages bn outsStore
                                 <>
-                                splitStoreEqs stvarinsum outsStore
+                                {-
+                                With Exit storages we must use stinsum here.
+                                splitStoreEqs (stinsum bn) outsStore
+                                -}
+                                withLocalVar (\s -> splitStoreEqs s outsStore)
                                 <>
-                                (stvarinsum =%=
+                                (stinsum bn =%=
                                  case msn of
                                     Nothing -> storage bn
                                     Just sn -> integrate $ insum sn)
                              TD.Out ->
                                 fromOutStorages insStore
                                 <>
-                                splitStoreEqs stvaroutsum insStore
+                                splitStoreEqs (stoutsum bn) insStore
                                 <>
                                 (withSecNode $ \sn ->
-                                   stvaroutsum =%= integrate (outsum sn))
+                                   stoutsum bn =%= integrate (outsum sn))
                    _ -> mempty
                 <>
                 (withSecNode $ \sn ->
