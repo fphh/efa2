@@ -177,6 +177,7 @@ Executable example-optimalStorageUsage
       gnuplot,
       efa,
       vector,
+      containers,
       data-accessor,
       utility-ht,
       base
