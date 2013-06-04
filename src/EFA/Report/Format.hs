@@ -155,7 +155,10 @@ instance Format Unicode where
    ratio r =
       Unicode $
       M.findWithDefault
-         (show (numerator r) ++ "/" ++ show (denominator r))
+         (show (numerator r) ++
+          if denominator r == 1
+            then ""
+            else "/" ++ show (denominator r))
          r ratioCharMap
 
    subscript (Unicode t) (Unicode s) = Unicode $ t ++ "_" ++ s
