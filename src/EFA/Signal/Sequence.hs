@@ -6,13 +6,8 @@ module EFA.Signal.Sequence where
 
 
 import qualified EFA.Graph.Flow as Flow
--- import qualified EFA.Graph.Topology.Index as Idx
---import qualified EFA.Signal.Data as D
+import EFA.Graph.Topology (Topology, FlowTopology)
 
-import EFA.Graph.Topology (Topology,
-                           FlowTopology
-                          -- SequFlowGraph
-                          )
 import qualified EFA.Signal.SequenceData as SD
 
 import qualified EFA.Signal.Base as SB
@@ -152,7 +147,7 @@ genSequ pRec =
    removeNilSections $ SD.fromRangeList $ zip (sequ++[lastSec]) pRecs
   where rSig = record2RSig pRec
         pRecs = map (rsig2SecRecord pRec) (seqRSig ++ [lastRSec])
-        ((lastSec,sequ),(lastRSec,seqRSig)) = recyc rTail rHead (((0,0),[]),(Record.singleton $ rHead,[]))
+        ((lastSec,sequ),(lastRSec,seqRSig)) = recyc rTail rHead (((S.SignalIdx 0, S.SignalIdx 0),[]),(Record.singleton $ rHead,[]))
           where
             (rHead, rTail) = maybe err id $ Record.viewL rSig
             err = error ("Error in EFA.Signal.Sequence/genSequence, case 1 - empty rSig")
@@ -178,13 +173,13 @@ genSequ pRec =
             f NoEvent = (secRSig .++ xs2, sqRSig)                  -- continue incrementing
 
             g :: EventType -> (Range, [Range])
-            g LeftEvent = ((idx, idx+1), sq ++ [(lastIdx, idx)])
-            g RightEvent = ((idx+1, idx+1), sq ++ [(lastIdx, idx+1)])
-            g MixedEvent = ((idx+1, idx+1), sq ++ [(lastIdx, idx)] ++ [(idx, idx+1)])
-            g NoEvent = ((lastIdx, idx+1), sq)
+            g LeftEvent = ((idx, succ idx), sq ++ [(lastIdx, idx)])
+            g RightEvent = ((succ idx, succ idx), sq ++ [(lastIdx, succ idx)])
+            g MixedEvent = ((succ idx, succ idx), sq ++ [(lastIdx, idx)] ++ [(idx, succ idx)])
+            g NoEvent = ((lastIdx, succ idx), sq)
 
         -- Incoming rList is only one Point long -- append last sample to last section
-        recyc rsig _ (((lastIdx,idx),sq),(secRSig, sqRSig)) | (Record.len rsig) >=1 = (((lastIdx,idx+1),sq),(secRSig .++ rsig, sqRSig))
+        recyc rsig _ (((lastIdx,idx),sq),(secRSig, sqRSig)) | (Record.len rsig) >=1 = (((lastIdx, succ idx),sq),(secRSig .++ rsig, sqRSig))
 
         -- Incoming rList is empty -- return result
         recyc _ _ acc = acc
