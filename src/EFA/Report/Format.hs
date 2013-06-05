@@ -155,10 +155,7 @@ instance Format Unicode where
    ratio r =
       Unicode $
       M.findWithDefault
-         (show (numerator r) ++
-          if denominator r == 1
-            then ""
-            else "/" ++ show (denominator r))
+         (show (numerator r) ++ "/" ++ show (denominator r))
          r ratioCharMap
 
    subscript (Unicode t) (Unicode s) = Unicode $ t ++ "_" ++ s
@@ -317,6 +314,13 @@ instance Format Latex where
    multiply (Latex x) (Latex y) = Latex $ x ++ " \\cdot " ++ y
    power (Latex x) n = Latex $ x ++ "^{" ++ show n ++ "}"
    showRaw (Latex x) = x
+
+
+ratioAuto :: (Integral a, Show a, Format output) => Ratio a -> output
+ratioAuto r =
+   if denominator r == 1
+     then integer $ toInteger $ numerator r
+     else ratio r
 
 
 class Record record where

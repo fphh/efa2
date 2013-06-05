@@ -29,7 +29,7 @@ instance FormatValue Double where
    formatValue = Format.real
 
 instance (Integral a, Show a) => FormatValue (Ratio a) where
-   formatValue = Format.ratio
+   formatValue = Format.ratioAuto
 
 instance FormatValue Char where
    formatValue = formatChar
