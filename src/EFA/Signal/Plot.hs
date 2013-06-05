@@ -210,6 +210,7 @@ xyFrameAttr ::
    String -> tcX -> tcY -> Opts.T graph
 xyFrameAttr ti x y =
    Opts.title ti $
+   Opts.add (Opt.custom "hidden3d" "") ["back offset 1 trianglepattern 3 undefined 1 altdiagonal bentover"] $
    Opts.xLabel (genAxLabel x) $
    Opts.yLabel (genAxLabel y) $
    Opts.grid True $

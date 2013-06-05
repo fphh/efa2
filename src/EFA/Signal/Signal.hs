@@ -1108,17 +1108,13 @@ subSignal1D ::
    TC s typ (Data (v :> Nil) d) -> [SignalIdx] -> TC s typ (Data (v :> Nil) d)
 subSignal1D (TC (Data x)) idxs = TC $ Data $ SV.lookUp x $ P.map unSignalIdx idxs
 
-getSample2D :: (SV.FromList v1, 
-                SV.FromList v2, 
-                SV.Walker v2, 
-                SV.Storage v2 (v1 d), 
-                Eq d, 
-                SV.Storage v1 d, 
-                SV.Lookup v1, 
-                Eq (v1 d), 
-                SV.Lookup v2) => 
-               TC s typ (Data (v2 :> v1 :> Nil) d) -> (SignalIdx, SignalIdx) -> d
-getSample2D (TC (Data x)) (SignalIdx idx,SignalIdx idy) =  P.head $ SV.toList $ P.flip SV.lookUp [idy] $ P.head $ SV.toList $ SV.lookUp x [idx]
+getSample2D :: 
+  (SV.FromList v1, SV.FromList v2, SV.Walker v2, 
+  SV.Storage v2 (v1 d), Eq d, SV.Storage v1 d, 
+  SV.Lookup v1, Eq (v1 d), SV.Lookup v2) => 
+  TC s typ (Data (v2 :> v1 :> Nil) d) -> SignalIdx -> SignalIdx -> d
+getSample2D (TC (Data x)) (SignalIdx idx) (SignalIdx idy) = 
+  P.head $ SV.toList $ P.flip SV.lookUp [idy] $ P.head $ SV.toList $ SV.lookUp x [idx]
 
 {-
 subSignal2D ::
@@ -1406,7 +1402,7 @@ interp1Lin :: (Eq d1, Show d1,
 interp1Lin caller xSig ySig (TC (Data xVal)) =
   toSample $ ((y2 P.- y1) P./(x2 P.-x1)) P.* (xVal P.- x1) P.+ y1
   where sIdx@(SignalIdx idx) =
-          P.maybe (error msg) id $ findIndex (P.>= xVal) xSig
+          P.maybe (error msg) id $ findIndex (P.> xVal) xSig
         -- prevent negativ index when interpolating on first element
         TC (Data x1) = getSample xSig $ SignalIdx $ if idx P.== 0 then error msg else idx-1
         TC (Data x2) = getSample xSig sIdx

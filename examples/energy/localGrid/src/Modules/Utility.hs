@@ -19,17 +19,6 @@ import qualified EFA.IO.TableParserTypes as TPT
 
 import qualified Data.Map as M
 
-lookupAbsEnergy :: (Ord node, Show d, Show node) =>
-                   TIdx.InSection TIdx.Energy node -> 
-                   EqEnv.Complete node b (EqRec.Absolute (Result d)) ->                   
-                   d
-lookupAbsEnergy n env = 
-  case checkedLookup "Modules.Utility.lookupAbsEnergy" (EqEnv.energyMap $ EqEnv.signal env) n of
-       EqRec.Absolute (Determined x) -> x
-       EqRec.Absolute (Undetermined) -> error $ "Modules.Utility.lookupAbsEnergy - not determined : " ++ show n 
-
-
-
 lookupAbsPower :: 
   (Ord node, Show d, Show node,Num d,Fractional d) =>
   TIdx.InSection TIdx.Power node -> 
@@ -39,19 +28,6 @@ lookupAbsPower n = maybe (-1000) f
                      (EqEnv.powerMap $ EqEnv.signal env) n of
                     EqRec.Absolute (Determined x) -> x
                     EqRec.Absolute (Undetermined) -> error $ "Modules.Utility.lookupAbsPower - not determined : " ++ show n 
-
-
-
-{-
-
-lookupAbsEta :: (Ord node, Show d, Show node) =>
-                   TIdx.InSection TIdx.Power node -> 
-                   Maybe (EqEnv.Complete node b (EqRec.Absolute (Result d))) ->                   
-                   d
-lookupAbsEta n env = case checkedLookup (EqEnv.powerMap $ EqEnv.signal env) n of
-                  EqRec.Absolute (Determined x) -> x
-                  EqRec.Absolute (Undetermined) -> error $ "not determined : " ++ show  n
--}
 
 
 
@@ -87,6 +63,3 @@ getPowerSignals ::
 getPowerSignals tabPower = map (f . CT.convertToSignal2D . flip M.lookup tabPower)
   where f (x, [y]) = (x, y)
         f (_, []) = error "getTimes: no power data available" 
-
-select :: [topo] -> [Int] -> SD.SequData topo
-select ts = SD.fromList . map (ts !!)
