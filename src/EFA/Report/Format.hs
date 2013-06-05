@@ -209,18 +209,22 @@ instance Format Unicode where
    minus (Unicode x) (Unicode y) = Unicode $ x ++ " - " ++ y
    multiply (Unicode x) (Unicode y) = Unicode $ x ++ "\xb7" ++ y
    power (Unicode x) n =
-      Unicode $ x ++
-         case n of
-            1 -> "\xb9"
-            2 -> "\xb2"
-            3 -> "\xb3"
-            4 -> "\x2074"
-            5 -> "\x2075"
-            6 -> "\x2076"
-            7 -> "\x2077"
-            8 -> "\x2078"
-            9 -> "\x2079"
-            _ -> "^" ++ showsPrec 10 n ""
+      -- writing many digits in superscript looks ugly in a monospace font
+      let super c =
+             case c of
+                '0' -> '\x2070'
+                '1' -> '\xb9'
+                '2' -> '\xb2'
+                '3' -> '\xb3'
+                '4' -> '\x2074'
+                '5' -> '\x2075'
+                '6' -> '\x2076'
+                '7' -> '\x2077'
+                '8' -> '\x2078'
+                '9' -> '\x2079'
+                '-' -> '\x207B'
+                _ -> c
+      in  Unicode $ x ++ map super (show n)
    showRaw (Unicode x) = x
 
 ratioCharMap :: Integral a => M.Map (Ratio a) String
