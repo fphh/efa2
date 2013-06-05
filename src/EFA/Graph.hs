@@ -91,6 +91,10 @@ isConsistent :: (Ord n, Eq el) => Graph n DirEdge nl el -> Bool
 isConsistent (Graph ns) =
    foldMap fst3 ns == foldMap thd3 ns
    &&
+   S.isSubsetOf
+      (foldMap (foldMap (foldMap S.singleton) . M.keys . fst3) ns)
+      (M.keysSet ns)
+   &&
    (Fold.and $ flip M.mapWithKey ns $
       \n (ins,_nl,outs) ->
          Fold.all ((n==) . to) (M.keysSet ins) &&
