@@ -45,6 +45,7 @@ import qualified Data.List as L
 import Data.Function (id, (.), ($))
 import Prelude
           (Show, Read, Eq, Ord, Maybe, Bool, error, fmap,
+           Enum, toEnum, fromEnum,
            String, (++),
            Int, Num, Fractional, fromRational, (+), (-), (/), (*), fromIntegral)
 import qualified Prelude as P
@@ -71,13 +72,13 @@ data TestRow
 
 newtype SignalIdx = SignalIdx Int deriving (Show, Eq, Ord)
 
-instance Num SignalIdx where
-  fromInteger x = SignalIdx $ P.fromInteger x
-  (+) (SignalIdx x) (SignalIdx y) = (SignalIdx $ x+y)
-
+instance Enum SignalIdx where
+   fromEnum = unSignalIdx
+   toEnum = SignalIdx
 
 unSignalIdx :: SignalIdx -> Int
 unSignalIdx (SignalIdx x) = x
+
 
 typ :: TC s t d -> t
 typ _ = error "Signal.typ: got phantom type"

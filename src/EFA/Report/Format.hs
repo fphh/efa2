@@ -35,7 +35,15 @@ newtype Latex = Latex { unLatex :: String }
 
 data EdgeVar = Energy | MaxEnergy | Power | Eta | X
 
-data Function = Absolute | Signum
+{-
+We need the ConstOne function in the solver
+in order to create a signal for the sum of split factors,
+whose length matches the length of other signals.
+A different approach would be to manage the length of signals
+as quantity for the solver,
+but then we would need a length function.
+-}
+data Function = Absolute | Signum | ConstOne
    deriving (Eq, Ord, Show)
 
 -- | actual though -- four usable figures
@@ -81,7 +89,7 @@ class Format output where
    direction :: Idx.Direction -> output
    delta :: output -> output
    edgeIdent :: EdgeVar -> output
-   dtime, sum, storage :: output
+   dtime, signalSum, scalarSum, storage :: output
    parenthesize, negate, recip :: output -> output
    plus, minus, multiply :: output -> output -> output
    power :: output -> Integer -> output
@@ -112,6 +120,7 @@ instance Format ASCII where
       case f of
          Absolute -> "|" ++ rest ++ "|"
          Signum -> "sgn(" ++ rest ++ ")"
+         ConstOne -> "constone(" ++ rest ++ ")"
    integral (ASCII x) = ASCII $ "integrate(" ++ x ++ ")"
    recordDelta d (ASCII rest) =
       ASCII $ (++rest) $
@@ -134,7 +143,8 @@ instance Format ASCII where
          X -> "x"
          Eta -> "n"
    dtime = ASCII "dt"
-   sum = ASCII "S"
+   signalSum = ASCII "SS"
+   scalarSum = ASCII "Ss"
    storage = ASCII "s"
 
    parenthesize (ASCII x) = ASCII $ "(" ++ x ++ ")"
@@ -175,6 +185,7 @@ instance Format Unicode where
       case f of
          Absolute -> "|" ++ rest ++ "|"
          Signum -> "sgn(" ++ rest ++ ")"
+         ConstOne -> "\x2474(" ++ rest ++ ")"
    integral (Unicode x) = Unicode $ "\x222B(" ++ x ++ ")"
    recordDelta d (Unicode rest) =
       Unicode $ (++rest) $
@@ -195,9 +206,10 @@ instance Format Unicode where
          MaxEnergy -> "\xCA"
          Power -> "P"
          X -> "x"
-         Eta -> "\x03b7"
+         Eta -> "\x03B7"
    dtime = Unicode "dt"
-   sum = Unicode "\x2211"
+   signalSum = Unicode "\x03A3"
+   scalarSum = Unicode "\x03C3"
    storage = Unicode "s"
 
    parenthesize (Unicode x) = Unicode $ "(" ++ x ++ ")"
@@ -207,18 +219,22 @@ instance Format Unicode where
    minus (Unicode x) (Unicode y) = Unicode $ x ++ " - " ++ y
    multiply (Unicode x) (Unicode y) = Unicode $ x ++ "\xb7" ++ y
    power (Unicode x) n =
-      Unicode $ x ++
-         case n of
-            1 -> "\xb9"
-            2 -> "\xb2"
-            3 -> "\xb3"
-            4 -> "\x2074"
-            5 -> "\x2075"
-            6 -> "\x2076"
-            7 -> "\x2077"
-            8 -> "\x2078"
-            9 -> "\x2079"
-            _ -> "^" ++ showsPrec 10 n ""
+      -- writing many digits in superscript looks ugly in a monospace font
+      let super c =
+             case c of
+                '0' -> '\x2070'
+                '1' -> '\xb9'
+                '2' -> '\xb2'
+                '3' -> '\xb3'
+                '4' -> '\x2074'
+                '5' -> '\x2075'
+                '6' -> '\x2076'
+                '7' -> '\x2077'
+                '8' -> '\x2078'
+                '9' -> '\x2079'
+                '-' -> '\x207B'
+                _ -> c
+      in  Unicode $ x ++ map super (show n)
    showRaw (Unicode x) = x
 
 ratioCharMap :: Integral a => M.Map (Ratio a) String
@@ -272,6 +288,7 @@ instance Format Latex where
       case f of
          Absolute -> "\\abs{" ++ rest ++ "}"
          Signum -> "\\sgn{\\left(" ++ rest ++ "\\right)}"
+         ConstOne -> "\\mathbb{1}(" ++ rest ++ ")"
    integral (Latex x) = Latex $ "\\int\\left(" ++ x ++ "\\right)"
    recordDelta d (Latex rest) =
       Latex $
@@ -300,7 +317,8 @@ instance Format Latex where
          X -> "x"
          Eta -> "\\eta"
    dtime = Latex "\\dif t"
-   sum = Latex "\\Sigma"
+   signalSum = Latex "\\Sigma"
+   scalarSum = Latex "\\sigma"
    storage = Latex "s"
 
    parenthesize (Latex x) = Latex $ "(" ++ x ++ ")"
@@ -311,6 +329,13 @@ instance Format Latex where
    multiply (Latex x) (Latex y) = Latex $ x ++ " \\cdot " ++ y
    power (Latex x) n = Latex $ x ++ "^{" ++ show n ++ "}"
    showRaw (Latex x) = x
+
+
+ratioAuto :: (Integral a, Show a, Format output) => Ratio a -> output
+ratioAuto r =
+   if denominator r == 1
+     then integer $ toInteger $ numerator r
+     else ratio r
 
 
 class Record record where

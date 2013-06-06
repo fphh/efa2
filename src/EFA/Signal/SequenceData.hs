@@ -71,7 +71,7 @@ fromList :: [a] -> SequData a
 fromList =
    SequData .
    zipWith
-      (\s -> Section (Idx.Section s) (case fromIntegral s of r -> (r,r)))
+      (\s -> Section (Idx.Section s) (case S.SignalIdx $ fromIntegral s of r -> (r,r)))
       [0 ..]
 
 fromRangeList :: [(Range, a)] -> SequData a
@@ -81,7 +81,11 @@ fromRangeList =
 fromLengthList :: [(Int, a)] -> SequData a
 fromLengthList =
    fromRangeList . snd .
-   List.mapAccumL (\(S.SignalIdx idx) (len, x) -> (S.SignalIdx $ idx+len-1, ((S.SignalIdx idx, S.SignalIdx $ idx+len-1), x))) 0
+   List.mapAccumL
+      (\(S.SignalIdx idx) (len, x) ->
+         (S.SignalIdx $ idx+len-1,
+          ((S.SignalIdx idx, S.SignalIdx $ idx+len-1), x)))
+      (S.SignalIdx 0)
 
 unzip :: SequData (a, b) -> (SequData a, SequData b)
 unzip (SequData xs) =

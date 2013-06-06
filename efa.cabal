@@ -178,6 +178,7 @@ Executable example-optimalStorageUsage
       gnuplot,
       efa,
       vector,
+      containers,
       data-accessor,
       utility-ht,
       base
@@ -297,6 +298,20 @@ Executable demo-signalSolving
       base
   Else
     Buildable: False
+
+Executable demo-unknownSignal
+  Main-Is: demo/unknownSignal/Main.hs
+  GHC-Options: -Wall
+  If flag(buildDemos)
+    Build-Depends:
+      efa,
+      gnuplot,
+      containers,
+      base
+  Else
+    Buildable: False
+
+
 
 Executable demo-tables
   Main-Is: demo/tables/Main.hs

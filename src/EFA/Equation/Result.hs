@@ -29,3 +29,8 @@ instance Foldable Result where
 toMaybe :: Result a -> Maybe a
 toMaybe Undetermined = Nothing
 toMaybe (Determined x) = Just x
+
+{-# DEPRECATED isDet "Using isDet you risk non-total functions. Better use Result.toMaybe or pattern matching." #-}
+isDet :: Result a -> Bool
+isDet (Determined _) = True
+isDet _ = False

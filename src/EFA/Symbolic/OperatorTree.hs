@@ -63,6 +63,7 @@ instance Product (Term idx) where
    (~*) = (:*)
    (~/) = (&/)
    recip = Recip
+   constOne = Function Format.ConstOne
 
 instance Constant (Term idx) where
    zero = Const 0
@@ -212,6 +213,7 @@ evaluate f =
                 case fn of
                    Format.Absolute -> abs $ go x
                    Format.Signum -> signum $ go x
+                   Format.ConstOne -> 1
 
              Minus x -> negate $ go x
              Recip x -> recip $ go x
@@ -237,6 +239,7 @@ delta =
           case fn of
              Format.Absolute -> function fn a
              Format.Signum -> function fn a
+             Format.ConstOne -> Arith.clear $ before a
        go (Minus t) = Minus $ go t
        go (s :+ t) = go s + go t
        go (Recip s) =
