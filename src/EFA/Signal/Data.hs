@@ -15,7 +15,8 @@ import Data.Monoid (Monoid(mempty, mappend, mconcat))
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic
           (Sum, (~+), (~-),
-           Product, (~*), (~/))
+           Product, (~*), (~/),
+           Constant)
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
@@ -294,6 +295,12 @@ instance (ZipWith c, Storage c a, Product a) => Product (Data c a) where
    (~*) = zipWith (~*)
    (~/) = zipWith (~/)
    recip = map Arith.recip
+   constOne = map Arith.constOne
+
+instance (Constant a) => Constant (Data Nil a) where
+   zero = Data Arith.zero
+   fromInteger = Data . Arith.fromInteger
+   fromRational = Data . Arith.fromRational
 
 
 {- |

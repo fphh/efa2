@@ -165,6 +165,7 @@ instance (Record rec, Product a) => Product (Wrap rec a) where
    (~*) = liftE2 (~*)
    (~/) = liftE2 (~/)
    recip = liftE1 Arith.recip
+   constOne = liftE1 Arith.constOne
 
 instance (Record rec, Constant a) => Constant (Wrap rec a) where
    zero = pure zero
@@ -203,6 +204,7 @@ instance (Product x) => Product (Bookkeeping rec node s a v x) where
    (~*) = liftA2 (~*)
    (~/) = liftA2 (~/)
    recip = fmap Arith.recip
+   constOne = fmap Arith.constOne
 
 instance (Constant x) => Constant (Bookkeeping rec node s a v x) where
    zero = pure zero

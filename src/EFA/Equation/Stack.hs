@@ -202,6 +202,7 @@ instance (Ord i, Arith.Product a) => Arith.Product (Stack i a) where
    -- recip = recip Arith.recip (~*) Arith.negate (~+)
    recip = fromMultiValue . Arith.recip . toMultiValue
    x ~/ y = fromMultiValue $ toMultiValue x ~/ toMultiValue y
+   constOne = fromMultiValue . Arith.constOne . toMultiValue
 
 instance (Ord i, Arith.Constant a) => Arith.Constant (Stack i a) where
    zero = singleton Arith.zero

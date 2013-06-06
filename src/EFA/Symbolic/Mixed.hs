@@ -61,6 +61,7 @@ instance
    (~*) = liftSignal2 (~*)
    (~/) = liftSignal2 (~/)
    recip = liftSignal Arith.recip
+   constOne = liftSignal Arith.constOne
 
 instance
    (Constant (term signal)) =>
@@ -143,6 +144,7 @@ instance
    (~*) = liftScalar2 (~*)
    (~/) = liftScalar2 (~/)
    recip = liftScalar Arith.recip
+   constOne = liftScalar Arith.constOne
 
 instance
    (Constant (term (ScalarAtom term scalar signal))) =>

@@ -27,6 +27,14 @@ class Sum a where
 class Sum a => Product a where
    (~*), (~/) :: a -> a -> a
    recip :: a -> a
+   {- |
+   We need this to generate constant signals with value 1
+   and a length that matches another signal.
+   It should be @constOne x = x/x@ where @0/0=1@.
+   Once we support length measurements of signals,
+   we should remove this method, again.
+   -}
+   constOne :: a -> a
    x ~/ y = x ~* recip y
 
 class Product a => Constant a where
@@ -40,9 +48,9 @@ instance Sum Float where (~+) = (+); (~-) = (-); negate = P.negate
 instance Sum Double where (~+) = (+); (~-) = (-); negate = P.negate
 instance Integral a => Sum (Ratio a) where (~+) = (+); (~-) = (-); negate = P.negate
 
-instance Product Float where (~*) = (*); (~/) = (/); recip = P.recip
-instance Product Double where (~*) = (*); (~/) = (/); recip = P.recip
-instance Integral a => Product (Ratio a) where (~*) = (*); (~/) = (/); recip = P.recip
+instance Product Float where (~*) = (*); (~/) = (/); recip = P.recip; constOne = const 1
+instance Product Double where (~*) = (*); (~/) = (/); recip = P.recip; constOne = const 1
+instance Integral a => Product (Ratio a) where (~*) = (*); (~/) = (/); recip = P.recip; constOne = const 1
 
 instance Constant Float where
    zero = 0
@@ -92,6 +100,7 @@ instance (Product a) => Product (Expr.T s a) where
    (~*) = Expr.fromRule3 ruleMul
    (~/) = Expr.fromRule3 (\z x y -> ruleMul x y z)
    recip = Expr.fromRule2 ruleRecip
+   constOne = Expr.fromRule2 $ Sys.assignment2 "constOne" constOne
 
 instance (Constant a) => Constant (Expr.T s a) where
    zero = Expr.constant zero
@@ -134,3 +143,6 @@ In the future we might make this a method of the Sum class.
 -}
 clear :: Sum a => a -> a
 clear x = x~-x
+
+one :: Constant a => a
+one = fromInteger 1

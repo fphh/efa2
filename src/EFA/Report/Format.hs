@@ -35,7 +35,15 @@ newtype Latex = Latex { unLatex :: String }
 
 data EdgeVar = Energy | MaxEnergy | Power | Eta | X
 
-data Function = Absolute | Signum
+{-
+We need the ConstOne function in the solver
+in order to create a signal for the sum of split factors,
+whose length matches the length of other signals.
+A different approach would be to manage the length of signals
+as quantity for the solver,
+but then we would need a length function.
+-}
+data Function = Absolute | Signum | ConstOne
    deriving (Eq, Ord, Show)
 
 -- | actual though -- four usable figures
@@ -112,6 +120,7 @@ instance Format ASCII where
       case f of
          Absolute -> "|" ++ rest ++ "|"
          Signum -> "sgn(" ++ rest ++ ")"
+         ConstOne -> "constone(" ++ rest ++ ")"
    integral (ASCII x) = ASCII $ "integrate(" ++ x ++ ")"
    recordDelta d (ASCII rest) =
       ASCII $ (++rest) $
@@ -176,6 +185,7 @@ instance Format Unicode where
       case f of
          Absolute -> "|" ++ rest ++ "|"
          Signum -> "sgn(" ++ rest ++ ")"
+         ConstOne -> "\x2474(" ++ rest ++ ")"
    integral (Unicode x) = Unicode $ "\x222B(" ++ x ++ ")"
    recordDelta d (Unicode rest) =
       Unicode $ (++rest) $
@@ -278,6 +288,7 @@ instance Format Latex where
       case f of
          Absolute -> "\\abs{" ++ rest ++ "}"
          Signum -> "\\sgn{\\left(" ++ rest ++ "\\right)}"
+         ConstOne -> "\\mathbb{1}(" ++ rest ++ ")"
    integral (Latex x) = Latex $ "\\int\\left(" ++ x ++ "\\right)"
    recordDelta d (Latex rest) =
       Latex $
