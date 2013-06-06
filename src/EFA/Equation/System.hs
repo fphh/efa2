@@ -648,7 +648,7 @@ fromEnv (Env.Complete envScalar envSignal) =
 
 
 fromGraph ::
-  (Eq a, Product a, a ~ Scalar v,
+  (Eq a, Constant a, a ~ Scalar v,
    Eq v, Product v, Integrate v,
    Record rec, Node.C node) =>
   Bool ->
@@ -676,7 +676,7 @@ fromEdges =
          TD.StorageEdge e -> stEnergy e =%= stEnergy (Idx.flip e)
 
 fromNodes ::
-  (Eq a, Product a, a ~ Scalar v,
+  (Eq a, Constant a, a ~ Scalar v,
    Eq v, Product v, Integrate v,
    Record rec, Node.C node) =>
   Bool ->
@@ -701,14 +701,14 @@ fromNodes equalInOutSums =
                    mapPair (map Idx.flip, map Idx.flip) $
                    partition ins
 
-                splitStructEqs varsum edges =
+                splitStructEqs sec varsum edges =
                    foldMap
-                      (splitFactors varsum energy xfactor)
+                      (splitFactors varsum energy (Arith.constOne (dtime sec)) xfactor)
                       (NonEmpty.fetch edges)
 
                 splitStoreEqs varsum edges =
                    foldMap
-                      (splitFactors varsum stEnergy stxfactor)
+                      (splitFactors varsum stEnergy Arith.one stxfactor)
                       (NonEmpty.fetch edges)
 
             in  -- siehe bug 2013-02-12-sum-equations-storage
@@ -740,10 +740,10 @@ fromNodes equalInOutSums =
                                    stoutsum bn =%= integrate (outsum sn))
                    _ -> mempty
                 <>
-                (withSecNode $ \sn ->
-                   splitStructEqs (insum sn) insStruct
+                (withSecNode $ \sn@(Idx.SecNode sec _) ->
+                   splitStructEqs sec (insum sn) insStruct
                    <>
-                   splitStructEqs (outsum sn) outsStruct)
+                   splitStructEqs sec (outsum sn) outsStruct)
 
 
 fromStorageSequences ::
@@ -797,28 +797,28 @@ fromInStorages sn outs =
           (stinsum sn : zipWith (~-) maxEnergies stEnergies)
 
 fromOutStorages ::
-  (Eq a, Product a, Record rec, Node.C node) =>
+  (Eq a, Constant a, Record rec, Node.C node) =>
   [Idx.ForNode Idx.StorageEdge node] ->
   EquationSystem rec node s a v
 fromOutStorages ins =
    withLocalVar $ \s ->
       foldMap
-         (splitFactors s (maxEnergy . Idx.flip) stxfactor)
+         (splitFactors s (maxEnergy . Idx.flip) Arith.one stxfactor)
          (NonEmpty.fetch ins)
 
 splitFactors ::
    (Eq x, Product x, Record rec) =>
    RecordExpression rec node s a v x ->
    (secnode -> RecordExpression rec node s a v x) ->
+   RecordExpression rec node s a v x ->
    (secnode -> RecordExpression rec node s a v x) ->
    NonEmpty.T [] secnode -> EquationSystem rec node s a v
-splitFactors s ef xf ns =
+splitFactors s ef one xf ns =
    (s =%= NonEmpty.foldl1 (~+) (fmap ef ns))
    <>
+   (one =%= NonEmpty.foldl1 (~+) (fmap xf ns))
+   <>
    (foldMap (\n -> ef n =%= s ~* xf n) ns)
-   -- fehlt das hier?
---   <>
---   (constantRecord 1 =%= NonEmpty.foldl1 (~+) (fmap xf ns))
 
 
 
@@ -857,7 +857,7 @@ but you may also insert complex relations like
 .
 -}
 solve ::
-  (Eq a, Product a, a ~ Scalar v,
+  (Eq a, Constant a, a ~ Scalar v,
    Eq v, Product v, Integrate v,
    Record rec, Node.C node) =>
   Flow.RangeGraph node ->
@@ -871,7 +871,7 @@ solve (_rngs, g) given =
 
 
 solveFromMeasurement ::
-  (Eq a, Product a, a ~ Scalar v,
+  (Eq a, Constant a, a ~ Scalar v,
    Eq v, Product v, Integrate v,
    Record rec, Node.C node) =>
   Flow.RangeGraph node ->
@@ -891,7 +891,7 @@ solveFromMeasurement (_rngs, g) given =
 -- (im Moment 273 und 274) auszukommentieren.
 
 conservativelySolve ::
-  (Eq a, Product a, a ~ Scalar v,
+  (Eq a, Constant a, a ~ Scalar v,
    Eq v, Product v, Integrate v,
    Record rec, Node.C node) =>
   Flow.RangeGraph node ->

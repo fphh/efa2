@@ -44,7 +44,7 @@ type Expression node s a v x = EqGen.Expression Record.Absolute node s a v x
 
 
 solve ::
-   (Eq a, Arith.Product a, a ~ Arith.Scalar v,
+   (Eq a, Arith.Constant a, a ~ Arith.Scalar v,
     Eq v, Arith.Product v, Arith.Integrate v,
     Node.C node) =>
    Flow.RangeGraph node ->
@@ -54,7 +54,7 @@ solve = EqGen.solve
 
 
 solveSimple ::
-   (Eq a, Arith.Product a, a ~ Arith.Scalar v,
+   (Eq a, Arith.Constant a, a ~ Arith.Scalar v,
     Eq v, Arith.Product v, Arith.Integrate v,
     Node.C node) =>
    (forall s. EquationSystem node s a v) ->

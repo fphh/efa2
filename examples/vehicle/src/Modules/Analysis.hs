@@ -229,7 +229,7 @@ makeGivenFromExternal2 sf = EqGen.fromEnvSignal $ EqAbs.envFromFlowRecord (fmap 
 prediction ::
    (Eq v, Eq a,
     Fractional v, Fractional a,
-    Arith.Product a, Arith.Product v,
+    Arith.Constant a, Arith.Product v,
     Arith.Integrate v, Arith.Scalar v ~ a) =>
   Flow.RangeGraph System.Node ->
    Env.Complete System.Node
