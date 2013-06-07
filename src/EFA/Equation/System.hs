@@ -13,7 +13,7 @@ module EFA.Equation.System (
   fromEnvScalar,
   fromEnvSignal,
 
-  solve, solveFromMeasurement, conservativelySolve,
+  solve, solveFromMeasurement,
   solveSimple,
 
   constant,
@@ -879,28 +879,3 @@ solveFromMeasurement ::
   Env.Complete node (rec (Result a)) (rec (Result v))
 solveFromMeasurement (_rngs, g) given =
   solveSimple (given <> fromGraph False (TD.dirFromSequFlowGraph g))
-
---------------------------------------------------------------------
-
--- Stellt die originalen Werte wieder her.
--- Die auf grund der Missachtung originaler Werte
--- falsch berechneten Werte bleiben aber erhalten.
--- Eine andere Lösung wäre, die Zeilen
---     (varinsum =%= varoutsum)
---     <>
--- (im Moment 273 und 274) auszukommentieren.
-
-conservativelySolve ::
-  (Eq a, Constant a, a ~ Scalar v,
-   Eq v, Product v, Integrate v,
-   Record rec, Node.C node) =>
-  Flow.RangeGraph node ->
-  (forall s. EquationSystem rec node s a v) ->
-  Env.Complete node (rec (Result a)) (rec (Result v))
-conservativelySolve (_rngs, g) given =
-  solveSimple (given <> fromGraph True (TD.dirFromSequFlowGraph g))
-  <>
-  solveSimple given
-
---------------------------------------------------------------------
-
