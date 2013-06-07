@@ -394,8 +394,7 @@ stack =
          stackLineSpec term col $
          Plot2D.list Graph2D.histograms [val]) .
    Colour.adorn .
-   reverse .
-   Key.sort (abs . snd) .
+   Key.sort (negate . abs . snd) .
    M.toList
 
 stacksFrameAttr ::
@@ -425,8 +424,7 @@ stacks =
          stackLineSpec term col $
          Plot2D.list Graph2D.histograms vals) .
    Colour.adorn .
-   reverse .
-   Key.sort (maximum . map abs . snd) .
+   Key.sort (negate . maximum . map abs . snd) .
    M.toList
 
 
