@@ -133,8 +133,8 @@ getData x = S.toList $ S.map (* fromRational s) x
 
 -- | Function to simplify linecolor setting
 
-lineColour :: String -> LineSpec.T -> LineSpec.T
-lineColour = LineSpec.lineColor . ColourSpec.name
+lineColour :: Colour.Name -> LineSpec.T -> LineSpec.T
+lineColour = LineSpec.lineColor . ColourSpec.name . Colour.unpackName
 
 
 -- | Simple Signal Plotting -- plot signal values against signal index --------------------------------------------------------------
@@ -316,7 +316,7 @@ record showKey opts (Record time pMap) =
    Fold.fold $
    M.mapWithKey
       (\key (col, sig) ->
-         recordStyle (opts . (LineSpec.title $ showKey key) . (lineColour $ Colour.unpackName col)) $
+         recordStyle (opts . (LineSpec.title $ showKey key) . (lineColour col)) $
          Plot2D.list Graph2D.linesPoints $
          zip (getData time) (getData sig)) $
    Colour.adorn pMap
@@ -377,7 +377,8 @@ stackFrameAttr title var =
       Opts.deflt
 
 stackLineSpec ::
-   (FormatValue term, Show term) => term -> String -> Plot2D.T x y -> Plot2D.T x y
+   (FormatValue term, Show term) =>
+   term -> Colour.Name -> Plot2D.T x y -> Plot2D.T x y
 stackLineSpec term colour =
    fmap (Graph2D.lineSpec (LineSpec.title (Format.unASCII $ formatValue term)
           (lineColour colour $ LineSpec.deflt)))
@@ -392,8 +393,8 @@ stack ::
 stack =
    foldMap
       (\(col, (term, val)) ->
-         stackLineSpec term (Colour.unpackName col) $
-           Plot2D.list Graph2D.histograms [val]) .
+         stackLineSpec term col $
+         Plot2D.list Graph2D.histograms [val]) .
    Colour.adorn .
    reverse .
    Key.sort (abs . snd) .
@@ -423,7 +424,7 @@ stacks ::
 stacks =
    foldMap
       (\(col, (term, vals)) ->
-         stackLineSpec term (Colour.unpackName col) $
+         stackLineSpec term col $
          Plot2D.list Graph2D.histograms vals) .
    Colour.adorn .
    reverse .
