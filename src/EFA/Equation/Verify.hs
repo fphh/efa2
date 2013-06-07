@@ -2,7 +2,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE UndecidableInstances #-}
 module EFA.Equation.Verify where
 
 import qualified EFA.Graph.Topology.Index as Idx
@@ -108,20 +107,20 @@ type MixedTerm mixedTerm recIdx node =
            (Idx.Record recIdx (Var.InSectionSignal node))
 
 instance
-   (Format output, FormatValue b, Eq b,
+   (Format output, FormatValue a, Eq a,
     FormatValue (MixedTerm mixedTerm recIdx node)) =>
       LocalVar (Track output)
-         (Pair.T (MixedTerm mixedTerm recIdx node) b) where
-   localVariable = localVariable_
+         (Pair.T (MixedTerm mixedTerm recIdx node) a) where
+   localVariable = localVariableTracked
 
 instance
-   (Format output, FormatValue b, Eq b,
+   (Format output, FormatValue a, Eq a,
     FormatValue (MixedTerm (mixedTerm term) recIdx node),
     Pointed term, mixedTerm ~ SymVar.Term var, SymVar.Symbol var) =>
       GlobalVar (Track output)
-         (Pair.T (MixedTerm (mixedTerm term) recIdx node) b)
+         (Pair.T (MixedTerm (mixedTerm term) recIdx node) a)
          recIdx var node where
-   globalVariable = globalVariable_
+   globalVariable = globalVariableTracked
 
 
 type Ignore = IdentityT
@@ -137,23 +136,23 @@ instance GlobalVar IdentityT a recIdx var node where
    globalVariable _ = SysSimple.globalVariable
 
 
-globalVariable_ ::
+globalVariableTracked ::
    (Format output, Format.Record recIdx, FormatValue (idx node),
-    FormatValue varTerm, FormatValue b, Eq b,
+    FormatValue varTerm, FormatValue a, Eq a,
     Pointed term, Var.Index idx, Var.Type idx ~ var, SymVar.Symbol var,
     varTerm ~ SymVar.VarTerm var recIdx term node) =>
    Idx.Record recIdx (idx node) ->
-   ST s (Variable output s varTerm b)
-globalVariable_ idx =
+   ST s (Variable output s varTerm a)
+globalVariableTracked idx =
    Sys.globalVariable
       (\al av ->
          Sys.updateAndCheck (inconsistency $ Just $ formatValue idx) al av .
          logUpdate idx)
 
-localVariable_ ::
-   (FormatValue term, Eq b, FormatValue b, Format output) =>
-   ST s (Variable output s term b)
-localVariable_ =
+localVariableTracked ::
+   (FormatValue term, Eq a, FormatValue a, Format output) =>
+   ST s (Variable output s term a)
+localVariableTracked =
    Sys.globalVariable
       (\al av ->
          Sys.updateAndCheck (inconsistency Nothing) al av .
@@ -173,12 +172,12 @@ inconsistency name old new =
 
 logUpdate ::
    (Format output, Format.Record recIdx, FormatValue (idx node),
-    FormatValue varTerm, FormatValue b,
+    FormatValue varTerm, FormatValue a,
     Pointed term, Var.Index idx, Var.Type idx ~ var, SymVar.Symbol var,
     varTerm ~ SymVar.VarTerm var recIdx term node) =>
    Idx.Record recIdx (idx node) ->
-   MaybeT (ST s) (Pair.T varTerm b) ->
-   MaybeT (UMT.Wrap (Track output) (ST s)) (Pair.T varTerm b)
+   MaybeT (ST s) (Pair.T varTerm a) ->
+   MaybeT (UMT.Wrap (Track output) (ST s)) (Pair.T varTerm a)
 logUpdate idx act = do
    tn@(Pair.Cons _ x) <- mapMaybeT UMT.lift act
    MT.lift $ UMT.wrap $ Track $ MT.lift $
