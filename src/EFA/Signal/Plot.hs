@@ -12,13 +12,11 @@ module EFA.Signal.Plot (
    Signal,
    xy,
    xyBasic,
-   xyStyle,
    xyFrameAttr,
    XY,
    surface,
    Surface,
    record,
-   recordStyle,
    recordFrameAttr,
    recordList,
    sequence,
@@ -194,15 +192,12 @@ xyFrameAttr ti x y =
    Opts.grid True $
    Opts.deflt
 
-xyStyle ::
-   (LineSpec.T -> LineSpec.T) -> Plot2D.T x y -> Plot2D.T x y
-xyStyle opts =
-   fmap $ Graph2D.lineSpec $
-      opts $
-      LineSpec.pointSize 0.1 $
-      LineSpec.pointType 7 $
-      LineSpec.lineWidth 1 $
-      LineSpec.deflt
+xyLineSpec :: LineSpec.T
+xyLineSpec =
+   LineSpec.pointSize 0.1 $
+   LineSpec.pointType 7 $
+   LineSpec.lineWidth 1 $
+   LineSpec.deflt
 
 
 class (AxisLabel tcX, AxisLabel tcY) => XY tcX tcY where
@@ -219,7 +214,8 @@ xyBasic ::
    TC s t2 (Data (v2 :> Nil) y) ->
    Plot2D.T x y
 xyBasic opts x y =
-   (xyStyle opts) $ Plot2D.list Graph2D.lines $ zip (getData x) (getData y)
+   fmap (Graph2D.lineSpec $ opts xyLineSpec) $
+   Plot2D.list Graph2D.lines $ zip (getData x) (getData y)
 
 instance
    (TDisp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 x,
@@ -296,19 +292,18 @@ recordFrameAttr ti =
    Opts.yLabel ("")
    Opts.deflt
 
-recordStyle :: (LineSpec.T -> LineSpec.T) -> Plot2D.T x y -> Plot2D.T x y
-recordStyle opts =
-   fmap $ Graph2D.lineSpec $
-      opts $
-      LineSpec.pointSize 0.3$
-      LineSpec.pointType 1 $
-      LineSpec.lineWidth 1.6 $
-      LineSpec.deflt
+recordLineSpec :: LineSpec.T
+recordLineSpec =
+   LineSpec.pointSize 0.3$
+   LineSpec.pointType 1 $
+   LineSpec.lineWidth 1.6 $
+   LineSpec.deflt
 
 record ::
    (Show id, Ord id, TDisp typ0, TDisp typ1,
     SV.Walker v, SV.FromList v,
-    SV.Storage v d1, Fractional d1, Atom.C d1, Tuple.C d1, Atom.C d2, Tuple.C d2, Fractional d2, SV.Storage v d2) =>
+    SV.Storage v d1, Fractional d1, Atom.C d1, Tuple.C d1,
+    SV.Storage v d2, Fractional d2, Atom.C d2, Tuple.C d2) =>
    (id -> String) ->
    (LineSpec.T -> LineSpec.T) ->
    Record s1 s2 typ0 typ1 id v d1 d2 -> Plot2D.T d1 d2
@@ -316,7 +311,10 @@ record showKey opts (Record time pMap) =
    Fold.fold $
    M.mapWithKey
       (\key (col, sig) ->
-         recordStyle (opts . (LineSpec.title $ showKey key) . (lineColour col)) $
+         fmap
+            (Graph2D.lineSpec
+               (opts $ LineSpec.title (showKey key) $
+                lineColour col $ recordLineSpec)) $
          Plot2D.list Graph2D.linesPoints $
          zip (getData time) (getData sig)) $
    Colour.adorn pMap
@@ -437,15 +435,12 @@ stacks =
 -- | Plotting Surfaces -------------------------------------------------------------------------
 
 
-surfaceStyle ::
-   (LineSpec.T -> LineSpec.T) -> Plot3D.T x y z -> Plot3D.T x y z
-surfaceStyle opts =
-   fmap $ Graph3D.lineSpec $
-      opts $
-      LineSpec.pointSize 0.1 $
-      LineSpec.pointType 7 $
-      LineSpec.lineWidth 1 $
-      LineSpec.deflt
+surfaceLineSpec :: LineSpec.T
+surfaceLineSpec =
+   LineSpec.pointSize 0.1 $
+   LineSpec.pointType 7 $
+   LineSpec.lineWidth 1 $
+   LineSpec.deflt
 
 surfaceBasic ::
   (Fractional a2, Fractional a1, Fractional a, D.FromList c2,
@@ -460,9 +455,8 @@ surfaceBasic ::
    TC s2 typ2 (Data c2 a2) ->
    Plot3D.T x y z
 surfaceBasic opts x y z =
-   surfaceStyle opts $
-     Plot3D.mesh $
-     L.zipWith3 zip3 (getData x) (getData y) (getData z)
+   fmap (Graph3D.lineSpec $ opts surfaceLineSpec) $
+   Plot3D.mesh $ L.zipWith3 zip3 (getData x) (getData y) (getData z)
 
 class
    (AxisLabel tcX, AxisLabel tcY, AxisLabel tcZ) =>
