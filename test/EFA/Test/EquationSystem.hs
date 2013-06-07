@@ -49,8 +49,8 @@ main = do
 
   concurrentlyMany_ [
     Draw.xterm $
-      Draw.title "Falsch" $
+      Draw.title "Aktuell berechnet" $
       Draw.sequFlowGraphAbsWithEnv Given.seqTopo env,
     Draw.xterm $
-      Draw.title "Richtig" $
+      Draw.title "Zielvorgabe" $
       Draw.sequFlowGraphAbsWithEnv Given.seqTopo Given.testEnv ]
