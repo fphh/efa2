@@ -418,12 +418,11 @@ sectionStackRow:: (Ord node, TDNode.C node,Show i, Ord i, FormatValue i) =>
                          (EqRecord.Absolute (Result.Result (Stack.Stack i Double)))
                   -> IO ()
 sectionStackRow ti energyIndex eps env =
-   stacks ti
-   (map (Format.literal . (\(Idx.InSection sec _) -> show sec) .fst) allStacks)
-   (AssignMap.simultaneousThreshold eps . AssignMap.transpose $
-    map (M.mapKeys AssignMap.deltaIndexSet .
-         Stack.assignDeltaMap . snd) $ allStacks)
-   where allStacks = AssignMap.lookupAllStacks energyIndex env
+   case unzip $ M.toList $ AssignMap.lookupEnergyStacks energyIndex env of
+      (idxs, energyStacks) ->
+         stacks ti (map (Format.literal . show) idxs) $
+         AssignMap.simultaneousThreshold eps . AssignMap.transpose $
+         map (M.mapKeys AssignMap.deltaIndexSet) energyStacks
 
 aggregatedStack ::
    (TDNode.C node, Ord node, Show node,
@@ -438,8 +437,8 @@ aggregatedStack ::
 aggregatedStack ti energyIndex eps env =
   stack ti (formatValue $ Idx.delta energyIndex) $
   AssignMap.threshold eps $
-  M.mapKeys AssignMap.deltaIndexSet $
-  AssignMap.lookupAggregatedStack energyIndex env
+  M.mapKeys AssignMap.deltaIndexSet $ Fold.fold $
+  AssignMap.lookupEnergyStacks energyIndex env
 
 
 -- | Plotting Average Efficiency Curves over Energy Flow Distribution -------------------------------

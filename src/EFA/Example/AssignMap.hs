@@ -151,31 +151,16 @@ lookupStack energyIndex (Env.Complete _scalarEnv signalEnv) =
               Map.mapKeys deltaIndexSet $
               Stack.assignDeltaMap xs
 
-lookupAllStacks :: (Ord i, Ord node, Eq node) => Idx.Energy node
-                   -> Env.Complete node t
-                         (EqRecord.Absolute (Result.Result (Stack.Stack i Double)))
-                   -> [(Idx.InSection Idx.Energy node,Stack.Stack i Double)]
-
-lookupAllStacks e0 =
-   Map.toList .
-   fmap Arith.integrate .
-   Map.mapMaybe Result.toMaybe .
-   fmap EqRecord.unAbsolute .
-   Map.filterWithKey (\(Idx.InSection _sec e) _ -> e == e0) .
-   Env.energyMap . Env.signal
-
-
-lookupAggregatedStack ::
-   (Ord i, Ord node, Show node,
-    Arith.Constant a, a ~ Arith.Scalar v, Arith.Integrate v) =>
+lookupEnergyStacks ::
+   (Ord i, Ord node, a ~ Arith.Scalar v, Arith.Integrate v) =>
    Idx.Energy node ->
    Env.Complete node t
       (EqRecord.Absolute (Result.Result (Stack.Stack i v))) ->
-   Map.Map (Map.Map i Stack.Branch) a
-
-lookupAggregatedStack e0 =
-   Fold.foldMap (Stack.assignDeltaMap . Arith.integrate) .
+   Map Idx.Section (Map (Map i Stack.Branch) a)
+lookupEnergyStacks e0 =
+   fmap (Stack.assignDeltaMap . Arith.integrate) .
    Map.mapMaybe Result.toMaybe .
    fmap EqRecord.unAbsolute .
+   Map.mapKeys (\(Idx.InSection sec _) -> sec) .
    Map.filterWithKey (\(Idx.InSection _sec e) _ -> e == e0) .
    Env.energyMap . Env.signal
