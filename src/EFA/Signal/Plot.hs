@@ -3,9 +3,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 
 -- | PlotBase provide the basic functions to build Plots
 module EFA.Signal.Plot (
@@ -34,7 +31,6 @@ module EFA.Signal.Plot (
    genAxLabel
    ) where
 
-import Prelude hiding (sequence)
 import qualified EFA.Signal.SequenceData as SD
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Data as D
@@ -43,29 +39,20 @@ import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Colour as Colour
 
 import EFA.Signal.SequenceData (SequData)
-
 import EFA.Signal.Record (Record(Record))
--- import EFA.Signal.SequenceData (SequData(..))
-
 import EFA.Signal.Signal (TC, toSigList, getDisplayType)
--- import EFA.Signal.Base (BSum)
-
 import EFA.Signal.Data (Data, (:>), Nil, NestedList)
-import EFA.Report.Typ (TDisp, getDisplayUnit, getDisplayTypName,DisplayType(Typ_T))
+
+import EFA.Report.Typ
+          (TDisp, DisplayType(Typ_T), getDisplayUnit, getDisplayTypName)
 import EFA.Report.Base (UnitScale(UnitScale), getUnitScale)
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
 
-
 import qualified Graphics.Gnuplot.Advanced as Plot
--- import qualified Graphics.Gnuplot.Advanced as AGP
-
---import qualified Graphics.Gnuplot.Terminal.X11 as X11
---import qualified Graphics.Gnuplot.Terminal.WXT as WXT
 
 import qualified Graphics.Gnuplot.Terminal as Terminal
--- import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 import qualified Graphics.Gnuplot.Plot as Plt
 import qualified Graphics.Gnuplot.Plot.TwoDimensional as Plot2D
 import qualified Graphics.Gnuplot.Plot.ThreeDimensional as Plot3D
@@ -89,20 +76,12 @@ import qualified Data.Map as M
 import qualified Data.List as L
 import qualified Data.Foldable as Fold
 import qualified Data.List.Key as Key
--- import Control.Monad (zipWithM_)
 import Control.Functor.HT (void)
 import Data.Foldable (foldMap)
 import Data.Monoid (mconcat)
 
--- import Control.Concurrent (threadDelay)
+import Prelude hiding (sequence)
 
-{-
-import EFA.Signal.Plot.Global as Global
-import EFA.Signal.Plot.Window as Window
-import EFA.Signal.Plot.Record as PlRecord
--}
-
--- import qualified EFA.Signal.Plot.Options as PlOpts
 
 -- | Generic IO Commands ---------------------------------------------------------------
 run ::

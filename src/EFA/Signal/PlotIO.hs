@@ -1,10 +1,5 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 
 -- | Module to offer most common plots
 module EFA.Signal.PlotIO (
@@ -31,34 +26,20 @@ module EFA.Signal.PlotIO (
    aggregatedStack
    ) where
 
-import Prelude hiding(sequence)
+import qualified EFA.Signal.Plot as Plot
+import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.SequenceData as SD
---import qualified EFA.Signal.Signal as S
---import qualified EFA.Signal.Data as D
 import qualified EFA.Signal.Vector as SV
 import qualified EFA.Signal.Record as Record
---import qualified EFA.Signal.Colour as Colour
-
+import qualified EFA.Signal.Base as Base
 import EFA.Signal.SequenceData (SequData)
-
 import EFA.Signal.Record (Record)
--- import EFA.Signal.SequenceData (SequData(..))
-
---import EFA.Signal.Signal (TC, toSigList, getDisplayType)
--- import EFA.Signal.Base (BSum)
-
--- import EFA.Signal.Data (Data, (:>), Nil, NestedList)
-import EFA.Report.Typ (TDisp)
-                       --DisplayType(Typ_T),
-                       --getDisplayUnit,
-                       --getDisplayTypName)
---import EFA.Report.Base (UnitScale(UnitScale), getUnitScale)
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
+import EFA.Report.Typ (TDisp)
 
-import qualified EFA.Signal.Plot as Plot
-
+import qualified EFA.Example.AssignMap as AssignMap
 import qualified EFA.Equation.Stack as Stack
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Record as EqRecord
@@ -66,51 +47,28 @@ import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as TDNode
-import qualified EFA.Example.AssignMap as AssignMap
-
-import qualified EFA.Signal.Signal as Sig
-import qualified EFA.Signal.Vector as V
-import qualified EFA.Signal.Base as Base
 
 import qualified Graphics.Gnuplot.Advanced as Plot
--- import qualified Graphics.Gnuplot.Advanced as AGP
-
---import qualified Graphics.Gnuplot.Terminal.X11 as X11
---import qualified Graphics.Gnuplot.Terminal.WXT as WXT
 
 import qualified Graphics.Gnuplot.Terminal as Terminal
 import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
---import qualified Graphics.Gnuplot.Plot as Plt
---import qualified Graphics.Gnuplot.Plot.TwoDimensional as Plot2D
---import qualified Graphics.Gnuplot.Plot.ThreeDimensional as Plot3D
 --import qualified Graphics.Gnuplot.Graph.TwoDimensional as Graph2D
 
---import qualified Graphics.Gnuplot.Graph as Graph
 import qualified Graphics.Gnuplot.Value.Atom as Atom
 import qualified Graphics.Gnuplot.Value.Tuple as Tuple
 
 import qualified Graphics.Gnuplot.LineSpecification as LineSpec
---import qualified Graphics.Gnuplot.ColorSpecification as ColourSpec
 
 import qualified Graphics.Gnuplot.Frame as Frame
---import qualified Graphics.Gnuplot.Frame.Option as Opt
---import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
---import qualified Graphics.Gnuplot.Frame.OptionSet.Style as OptsStyle
---import qualified Graphics.Gnuplot.Frame.OptionSet.Histogram as Histogram
-
 
 import qualified Data.Map as M
---import qualified Data.List as L
 import qualified Data.Foldable as Fold
 
 import Control.Monad (zipWithM_)
 import Control.Functor.HT (void)
---import Data.Foldable (foldMap)
---import Data.Monoid (mconcat)
 import Data.Monoid ((<>))
---import Data.Tuple.HT (mapSnd)
 
--- import Control.Concurrent (threadDelay)
+import Prelude hiding (sequence)
 
 
 -- | Simple Signal Plotting -- plot signal values against signal index --------------------------------------------------------------
@@ -263,7 +221,7 @@ recordList_extractWithLeadSignal :: (Terminal.C term,
                                        Tuple.C d1,
                                        Ord d2,
                                        Show (v d2),
-                                       V.Singleton v) =>
+                                       SV.Singleton v) =>
                                       String ->
                                       term ->
                                       (id -> String) ->
@@ -490,9 +448,9 @@ aggregatedStack ti energyIndex eps env =
 -- | and nDist is the averaged efficiency over power
 -- | pg: currently plots over input power, one should be able to choose
 etaDistr1Dim :: (Fractional d,
-                  V.Walker v,
-                  V.Storage v d,
-                  V.FromList v,
+                  SV.Walker v,
+                  SV.Storage v d,
+                  SV.FromList v,
                   Atom.C d,
                   Tuple.C d) =>
                  String -> Sig.PFSignal v d -> Sig.NFSignal v d ->
@@ -513,27 +471,27 @@ etaDistr1DimfromRecordList :: (Ord id,
                              Show (v d),
                              Base.BProd d d,
                              Ord d,
-                             V.Zipper v,
-                             V.Walker v,
-                             V.Storage v (d, d),
-                             V.Storage v d,
+                             SV.Zipper v,
+                             SV.Walker v,
+                             SV.Storage v (d, d),
+                             SV.Storage v d,
                              Fractional d,
-                             V.FromList v,
+                             SV.FromList v,
                              Atom.C d,
                              Tuple.C d,
-                             V.SortBy v,
-                             V.Unique v (Sig.Class d),
-                             V.Storage v Sig.SignalIdx,
-                             V.Storage v Int,
-                             V.Storage v (Sig.Class d),
-                             V.Storage v ([Sig.Class d], [Sig.SignalIdx]),
+                             SV.SortBy v,
+                             SV.Unique v (Sig.Class d),
+                             SV.Storage v Sig.SignalIdx,
+                             SV.Storage v Int,
+                             SV.Storage v (Sig.Class d),
+                             SV.Storage v ([Sig.Class d], [Sig.SignalIdx]),
                              RealFrac d,
-                             V.Lookup v,
-                             V.Find v,
+                             SV.Lookup v,
+                             SV.Find v,
                              Base.BSum d,
                              Base.DArith0 d,
-                             V.Storage v (d, (d, d)),
-                             V.Singleton v) =>
+                             SV.Storage v (d, (d, d)),
+                             SV.Singleton v) =>
                             String  -> d -> d -> [(Record.Name, Record.DTimeFlowRecord id v d)]
                             -> (String, (Idx.PPos id, Idx.PPos id, Idx.PPos id)) -> IO ()
 
