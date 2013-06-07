@@ -316,7 +316,7 @@ record showKey opts (Record time pMap) =
    Fold.fold $
    M.mapWithKey
       (\key (col, sig) ->
-         recordStyle (opts . (LineSpec.title $ showKey key) . (lineColour $ Colour.unC col)) $
+         recordStyle (opts . (LineSpec.title $ showKey key) . (lineColour $ Colour.unpackName col)) $
          Plot2D.list Graph2D.linesPoints $
          zip (getData time) (getData sig)) $
    Colour.adorn pMap
@@ -392,7 +392,7 @@ stack ::
 stack =
    foldMap
       (\(col, (term, val)) ->
-         stackLineSpec term (Colour.unC col) $
+         stackLineSpec term (Colour.unpackName col) $
            Plot2D.list Graph2D.histograms [val]) .
    Colour.adorn .
    reverse .
@@ -423,7 +423,7 @@ stacks ::
 stacks =
    foldMap
       (\(col, (term, vals)) ->
-         stackLineSpec term (Colour.unC col) $
+         stackLineSpec term (Colour.unpackName col) $
          Plot2D.list Graph2D.histograms vals) .
    Colour.adorn .
    reverse .
