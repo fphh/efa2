@@ -15,6 +15,7 @@ module EFA.Equation.System (
 
   solve, solveFromMeasurement, conservativelySolve,
   solveSimple,
+  solveTracked, solveSimpleTracked,
 
   constant,
   constantRecord,
@@ -42,13 +43,16 @@ module EFA.Equation.System (
 
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
+import qualified EFA.Equation.Verify as Verify
+import qualified EFA.Equation.Variable as Var
+import qualified EFA.Equation.Pair as Pair
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph as Gr
 
-import EFA.Equation.Result(Result(..))
+import EFA.Report.FormatValue (FormatValue)
 
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic
@@ -56,20 +60,22 @@ import EFA.Equation.Arithmetic
            Product, (~*), (~/),
            Constant, zero,
            Integrate, Scalar, integrate)
+import EFA.Equation.Result(Result(..))
 
 import EFA.Utility ((>>!))
 
 import UniqueLogic.ST.TF.Expression ((=:=))
 import qualified UniqueLogic.ST.TF.Expression as Expr
-import qualified UniqueLogic.ST.TF.System.Simple as Sys
+import qualified UniqueLogic.ST.TF.System as Sys
 
 import qualified Data.Accessor.Monad.Trans.State as AccessState
 import qualified Data.Accessor.Basic as Accessor
 
+import qualified Control.Monad.Exception.Synchronous as ME
+import qualified Control.Monad.Trans.Class as MT
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT, execStateT)
 import Control.Monad.Trans.Writer (WriterT, runWriterT, tell)
-import Control.Monad.Trans.Identity (IdentityT)
 
 import Control.Monad.ST (ST, runST)
 import Control.Monad (liftM2)
@@ -85,7 +91,7 @@ import qualified Data.List as List
 import qualified Data.NonEmpty as NonEmpty
 
 import qualified Data.Foldable as Fold
-import Data.Traversable (Traversable, traverse, sequenceA)
+import Data.Traversable (Traversable, traverse, for, sequenceA)
 import Data.Foldable (foldMap, fold)
 import Data.Monoid (Monoid, (<>), mempty, mappend, mconcat)
 import Data.Tuple.HT (mapPair)
@@ -96,64 +102,64 @@ import Prelude hiding (sqrt, (.))
 
 
 type
-   BK rec node s a v =
+   BK mode rec node s a v =
       StateT
          (Env.Complete node
-            (RecordVariable rec s a)
-            (RecordVariable rec s v))
-         (WriterT (System s) (ST s))
+            (RecordVariable mode rec s a)
+            (RecordVariable mode rec s v))
+         (WriterT (System mode s) (ST s))
 
-type RecordVariable rec s x = rec (Sys.Variable s x)
+type RecordVariable mode rec s x = rec (Sys.Variable mode s x)
 
-newtype System s = System (Sys.T s ())
+newtype System mode s = System (Sys.T mode s ())
 
-instance Monoid (System s) where
+instance Monoid (System mode s) where
    mempty = System $ return ()
    mappend (System x) (System y) = System $ x >>! y
 
 
-type Expr = Expr.T IdentityT
+type Expr mode = Expr.T mode
 
 type
-   Expression rec node s a v x =
-      Bookkeeping rec node s a v (Expr s x)
+   Expression mode rec node s a v x =
+      Bookkeeping mode rec node s a v (Expr mode s x)
 
 type
-   RecordExpression rec node s a v x =
-      Bookkeeping rec node s a v (Wrap rec (Expr s x))
+   RecordExpression mode rec node s a v x =
+      Bookkeeping mode rec node s a v (Wrap rec (Expr mode s x))
 
 newtype Wrap rec a = Wrap {unwrap :: rec a}
    deriving (Functor, Applicative, Fold.Foldable, Traversable)
 
 
 newtype
-   Bookkeeping rec node s a v x =
-      Bookkeeping (BK rec node s a v x)
+   Bookkeeping mode rec node s a v x =
+      Bookkeeping (BK mode rec node s a v x)
    deriving (Functor, Applicative)
 
 newtype
-   EquationSystem rec node s a v =
-      EquationSystem (BK rec node s a v ())
+   EquationSystem mode rec node s a v =
+      EquationSystem (BK mode rec node s a v ())
 
-instance Monoid (EquationSystem rec node s a v) where
+instance Monoid (EquationSystem mode rec node s a v) where
    mempty = EquationSystem $ return ()
    mappend (EquationSystem x) (EquationSystem y) =
       EquationSystem $ x >>! y
 
 
 liftF ::
-  (Record rec, Sum y) =>
+  (Sys.Value mode y, Record rec, Sum y) =>
   (x -> y) ->
-  RecordExpression rec node s a v x ->
-  RecordExpression rec node s a v y
+  RecordExpression mode rec node s a v x ->
+  RecordExpression mode rec node s a v y
 liftF = liftA . liftE1 . Expr.fromRule2 . Sys.assignment2
 
 liftF2 ::
-  (Record rec, Sum z) =>
+  (Sys.Value mode z, Record rec, Sum z) =>
   (x -> y -> z) ->
-  RecordExpression rec node s a v x ->
-  RecordExpression rec node s a v y ->
-  RecordExpression rec node s a v z
+  RecordExpression mode rec node s a v x ->
+  RecordExpression mode rec node s a v y ->
+  RecordExpression mode rec node s a v z
 liftF2 = liftA2 . liftE2 . Expr.fromRule3 . Sys.assignment3
 
 
@@ -181,45 +187,45 @@ instance
 
 {-
 -- only needed for simplified arithmetic on Absolute records
-instance (Num a) => Sum (Expr s a) where
+instance (Num a) => Sum (Expr mode s a) where
    (~+) = Expr.fromRule3 Rule.add
    (~-) = Expr.fromRule3 (\z x y -> Rule.add x y z)
 
-instance (Fractional a) => Product (Expr s a) where
+instance (Fractional a) => Product (Expr mode s a) where
    (~*) = Expr.fromRule3 Rule.mul
    (~/) = Expr.fromRule3 (\z x y -> Rule.mul x y z)
 
-instance (Fractional a) => Constant (Expr s a) where
+instance (Fractional a) => Constant (Expr mode s a) where
    zero = Expr.constant 0
    fromInteger'  = Expr.constant . fromInteger
    fromRational' = Expr.constant . fromRational
 -}
 
 
-instance (Sum x) => Sum (Bookkeeping rec node s a v x) where
+instance (Sum x) => Sum (Bookkeeping mode rec node s a v x) where
    (~+) = liftA2 (~+)
    (~-) = liftA2 (~-)
    negate = fmap Arith.negate
 
-instance (Product x) => Product (Bookkeeping rec node s a v x) where
+instance (Product x) => Product (Bookkeeping mode rec node s a v x) where
    (~*) = liftA2 (~*)
    (~/) = liftA2 (~/)
    recip = fmap Arith.recip
    constOne = fmap Arith.constOne
 
-instance (Constant x) => Constant (Bookkeeping rec node s a v x) where
+instance (Constant x) => Constant (Bookkeeping mode rec node s a v x) where
    zero = pure zero
    fromInteger  = pure . Arith.fromInteger
    fromRational = pure . Arith.fromRational
 
-instance (Integrate x) => Integrate (Bookkeeping rec node s a v x) where
-   type Scalar (Bookkeeping rec node s a v x) =
-           Bookkeeping rec node s a v (Scalar x)
+instance (Integrate x) => Integrate (Bookkeeping mode rec node s a v x) where
+   type Scalar (Bookkeeping mode rec node s a v x) =
+           Bookkeeping mode rec node s a v (Scalar x)
    integrate = fmap integrate
 
 
 
-instance (Num x) => Num (Bookkeeping rec node s a v x) where
+instance (Num x) => Num (Bookkeeping mode rec node s a v x) where
    fromInteger = pure . fromInteger
 
    (*) = liftA2 (*)
@@ -230,12 +236,12 @@ instance (Num x) => Num (Bookkeeping rec node s a v x) where
    signum = fmap signum
 
 
-instance (Fractional x) => Fractional (Bookkeeping rec node s a v x) where
+instance (Fractional x) => Fractional (Bookkeeping mode rec node s a v x) where
    fromRational = pure . fromRational
    (/) = liftA2 (/)
 
 {-
-instance (Floating x) => Floating (Bookkeeping rec node s a v x) where
+instance (Floating x) => Floating (Bookkeeping mode rec node s a v x) where
          pi = constant pi
          exp = liftF exp
          sqrt = liftF sqrt
@@ -257,21 +263,43 @@ instance (Floating x) => Floating (Bookkeeping rec node s a v x) where
 -}
 
 sqrt ::
-   (Sum x, Floating x, Record rec) =>
-   RecordExpression rec node s a v x ->
-   RecordExpression rec node s a v x
+   (Sys.Value mode x, Sum x, Floating x, Record rec) =>
+   RecordExpression mode rec node s a v x ->
+   RecordExpression mode rec node s a v x
 sqrt = liftF P.sqrt
 
 
-class (Traversable rec, Applicative rec, Record.C rec) => Record rec where
-   newVariable ::
-      (Eq a, Sum a) =>
-      WriterT (System s) (ST s) (RecordVariable rec s a)
+localVariable ::
+   (Record rec, Verify.LocalVar mode a, Sum a) =>
+   WriterT (System mode s) (ST s) (RecordVariable mode rec s a)
+localVariable = do
+   vars <- lift $ sequenceA $ pure Verify.localVariable
+   tell $ recordRules vars
+   return vars
+
+globalVariable ::
+   (Record rec, Verify.GlobalVar mode a (Record.ToIndex rec) var node,
+    Var.Index idx, Var.Type idx ~ var, FormatValue (idx node),
+    Sum a) =>
+   idx node ->
+   WriterT (System mode s) (ST s) (RecordVariable mode rec s a)
+globalVariable idx = do
+   vars <-
+      lift $ for Record.indices $ \recIdx ->
+         Verify.globalVariable $ Idx.Record recIdx idx
+   tell $ recordRules vars
+   return vars
+
+
+class (Traversable rec, Applicative rec, Record.IndexSet rec) => Record rec where
+   recordRules ::
+      (Sys.Value mode a, Sum a) =>
+      RecordVariable mode rec s a -> System mode s
    equalRecord ::
-      (Eq a) =>
-      Wrap rec (Expr s a) ->
-      Wrap rec (Expr s a) ->
-      System s
+      (Verify.LocalVar mode a) =>
+      Wrap rec (Expr mode s a) ->
+      Wrap rec (Expr mode s a) ->
+      System mode s
    liftE0 :: (Sum x) => x -> Wrap rec x
    liftE1 ::
       (Sum y) =>
@@ -285,8 +313,7 @@ class (Traversable rec, Applicative rec, Record.C rec) => Record rec where
 
 instance Record Record.Absolute where
 
-   newVariable =
-      lift $ fmap Record.Absolute Sys.globalVariable
+   recordRules _ = mempty
 
    equalRecord (Wrap (Record.Absolute x)) (Wrap (Record.Absolute y)) =
       System (x =:= y)
@@ -301,11 +328,8 @@ instance Record Record.Absolute where
 
 instance Record Record.Delta where
 
-   newVariable = do
-      vars <- lift $ sequenceA $ pure Sys.globalVariable
-      tell $ System $
-         Arith.ruleAdd (Record.before vars) (Record.delta vars) (Record.after vars)
-      return vars
+   recordRules vars = System $
+      Arith.ruleAdd (Record.before vars) (Record.delta vars) (Record.after vars)
 
    {-
    I omit equality on the delta part since it would be redundant.
@@ -340,14 +364,15 @@ extDeltaCons b a =
 
 instance (Record rec) => Record (Record.ExtDelta rec) where
 
-   newVariable = do
-      vars <- liftA3 Record.ExtDelta newVariable newVariable newVariable
-      tell $ System $ Fold.sequence_ $
+   recordRules vars =
+      recordRules (Record.extBefore vars) <>
+      recordRules (Record.extDelta vars) <>
+      recordRules (Record.extAfter vars) <>
+      (System $ Fold.sequence_ $
          liftA3 Arith.ruleAdd
             (Record.extBefore vars)
             (Record.extDelta vars)
-            (Record.extAfter vars)
-      return vars
+            (Record.extAfter vars))
 
    {-
    I omit equality on the delta part since it would be redundant.
@@ -374,16 +399,16 @@ instance (Record rec) => Record (Record.ExtDelta rec) where
 infix 0 =.=, =%=
 
 (=.=) ::
-  (Eq x) =>
-  Expression rec node s a v x -> Expression rec node s a v x ->
-  EquationSystem rec node s a v
+  (Verify.LocalVar mode x) =>
+  Expression mode rec node s a v x -> Expression mode rec node s a v x ->
+  EquationSystem mode rec node s a v
 (Bookkeeping xs) =.= (Bookkeeping ys) =
   EquationSystem $ lift . tell . System =<< liftM2 (=:=) xs ys
 
 (=%=) ::
-  (Eq x, Record rec) =>
-  RecordExpression rec node s a v x -> RecordExpression rec node s a v x ->
-  EquationSystem rec node s a v
+  (Verify.LocalVar mode x, Record rec) =>
+  RecordExpression mode rec node s a v x -> RecordExpression mode rec node s a v x ->
+  EquationSystem mode rec node s a v
 (Bookkeeping xs) =%= (Bookkeeping ys) =
   EquationSystem $ lift . tell =<< liftM2 equalRecord xs ys
 
@@ -391,27 +416,27 @@ infix 0 =.=, =%=
 infix 0 .=, %=, ?=
 
 (.=) ::
-   (Eq x, Arith.Sum x, Record rec,
+   (Verify.GlobalVar mode x (Record.ToIndex rec) (Var.Type idx) node, Arith.Sum x, Record rec,
     Env.Element idx a v ~ x,
-    Env.AccessMap idx, Ord (idx node)) =>
+    Env.AccessMap idx, Ord (idx node), FormatValue (idx node)) =>
    Record.Indexed rec (idx node) -> x ->
-   EquationSystem rec node s a v
+   EquationSystem mode rec node s a v
 evar .= val  =  variable evar =.= constant val
 
 (%=) ::
-   (Eq x, Arith.Sum x, Record rec,
+   (Verify.GlobalVar mode x (Record.ToIndex rec) (Var.Type idx) node, Arith.Sum x, Record rec,
     Env.Element idx a v ~ x,
-    Env.AccessMap idx, Ord (idx node)) =>
+    Env.AccessMap idx, Ord (idx node), FormatValue (idx node)) =>
    idx node -> rec x ->
-   EquationSystem rec node s a v
+   EquationSystem mode rec node s a v
 evar %= val  =  variableRecord evar =%= constantRecord val
 
 (?=) ::
-   (Eq x, Arith.Sum x, Record rec,
+   (Verify.GlobalVar mode x (Record.ToIndex rec) (Var.Type idx) node, Arith.Sum x, Record rec,
     Env.Element idx a v ~ x,
-    Env.AccessMap idx, Ord (idx node)) =>
+    Env.AccessMap idx, Ord (idx node), FormatValue (idx node)) =>
    idx node -> rec (Result x) ->
-   EquationSystem rec node s a v
+   EquationSystem mode rec node s a v
 evar ?= val  =
    join $
    fmap
@@ -422,25 +447,29 @@ evar ?= val  =
       (variableRecord evar)
 
 join ::
-   Bookkeeping rec node s a v (EquationSystem rec node s a v) ->
-   EquationSystem rec node s a v
+   Bookkeeping mode rec node s a v (EquationSystem mode rec node s a v) ->
+   EquationSystem mode rec node s a v
 join (Bookkeeping m) =
    EquationSystem $ m >>= \(EquationSystem sys) -> sys
 
 
-constant :: x -> Expression rec node s a v x
+constant ::
+  (Sys.Value mode x) =>
+  x -> Expression mode rec node s a v x
 constant = pure . Expr.constant
 
-constantRecord :: (Record rec) => rec x -> RecordExpression rec node s a v x
+constantRecord ::
+  (Sys.Value mode x, Record rec) =>
+  rec x -> RecordExpression mode rec node s a v x
 constantRecord = pure . Wrap . fmap Expr.constant
 
 
 withLocalVar ::
-  (Eq x, Sum x, Record rec) =>
-  (RecordExpression rec node s a v x -> EquationSystem rec node s a v) ->
-  EquationSystem rec node s a v
+  (Verify.LocalVar mode x, Sum x, Record rec) =>
+  (RecordExpression mode rec node s a v x -> EquationSystem mode rec node s a v) ->
+  EquationSystem mode rec node s a v
 withLocalVar f = EquationSystem $ do
-   v <- lift newVariable
+   v <- lift localVariable
    case f $ pure $ Wrap $ fmap Expr.fromVariable v of
         EquationSystem act -> act
 
@@ -451,15 +480,15 @@ newtype
          getAccessMap ::
             (Env.Environment idx ~ env) =>
             Accessor.T
-               (Env.Complete node (RecordVariable rec s a) (RecordVariable rec s v))
-               (M.Map (idx node) (RecordVariable rec s (Env.Element idx a v)))
+               (Env.Complete node (RecordVariable mode rec s a) (RecordVariable mode rec s v))
+               (M.Map (idx node) (RecordVariable mode rec s (Env.Element idx a v)))
       }
 
 accessMap ::
    (Env.AccessMap idx) =>
    Accessor.T
-      (Env.Complete node (RecordVariable rec s a) (RecordVariable rec s v))
-      (M.Map (idx node) (RecordVariable rec s (Env.Element idx a v)))
+      (Env.Complete node (RecordVariable mode rec s a) (RecordVariable mode rec s v))
+      (M.Map (idx node) (RecordVariable mode rec s (Env.Element idx a v)))
 accessMap =
    getAccessMap $
    Env.switchPart
@@ -468,92 +497,92 @@ accessMap =
 
 
 variableRecord ::
-   (Eq x, Sum x, x ~ Env.Element idx a v,
-    Env.AccessMap idx, Ord (idx node), Record rec) =>
-   idx node -> RecordExpression rec node s a v x
+   (Verify.GlobalVar mode x (Record.ToIndex rec) (Var.Type idx) node, Sum x, x ~ Env.Element idx a v,
+    Env.AccessMap idx, Ord (idx node), FormatValue (idx node), Record rec) =>
+   idx node -> RecordExpression mode rec node s a v x
 variableRecord idx =
   Bookkeeping $ fmap Wrap $ do
     oldMap <- AccessState.get accessMap
     case M.lookup idx oldMap of
       Just var -> return $ fmap Expr.fromVariable var
       Nothing -> do
-        var <- lift newVariable
+        var <- lift $ globalVariable idx
         AccessState.set accessMap $ M.insert idx var oldMap
         return (fmap Expr.fromVariable var)
 
 variable ::
-   (Eq x, Sum x, x ~ Env.Element idx a v,
-    Env.AccessMap idx, Ord (idx node), Record rec) =>
+   (Verify.GlobalVar mode x (Record.ToIndex rec) (Var.Type idx) node, Sum x, x ~ Env.Element idx a v,
+    Env.AccessMap idx, Ord (idx node), FormatValue (idx node), Record rec) =>
    Record.Indexed rec (idx node) ->
-   Expression rec node s a v x
+   Expression mode rec node s a v x
 variable (Idx.Record recIdx idx) =
    fmap (Accessor.get (Record.access recIdx) . unwrap) $
    variableRecord idx
 
 
 power ::
-   (Eq v, Sum v, Record rec, Ord node) =>
-   Idx.InSection Idx.StructureEdge node -> RecordExpression rec node s a v v
+   (Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node, Sum v, Record rec, Node.C node) =>
+   Idx.InSection Idx.StructureEdge node -> RecordExpression mode rec node s a v v
 power = variableRecord . Idx.liftInSection Idx.Power
 
 energy ::
-   (Eq v, Sum v, Record rec, Ord node) =>
-   Idx.InSection Idx.StructureEdge node -> RecordExpression rec node s a v v
+   (Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node, Sum v, Record rec, Node.C node) =>
+   Idx.InSection Idx.StructureEdge node -> RecordExpression mode rec node s a v v
 energy = variableRecord . Idx.liftInSection Idx.Energy
 
 maxEnergy ::
-   (Eq a, Sum a, Record rec, Ord node) =>
-   Idx.ForNode Idx.StorageEdge node -> RecordExpression rec node s a v a
+   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Sum a, Record rec, Node.C node) =>
+   Idx.ForNode Idx.StorageEdge node -> RecordExpression mode rec node s a v a
 maxEnergy = variableRecord . Idx.liftForNode Idx.MaxEnergy
 
 stEnergy ::
-   (Eq a, Sum a, Record rec, Ord node) =>
-   Idx.ForNode Idx.StorageEdge node -> RecordExpression rec node s a v a
+   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Sum a, Record rec, Node.C node) =>
+   Idx.ForNode Idx.StorageEdge node -> RecordExpression mode rec node s a v a
 stEnergy = variableRecord . Idx.liftForNode Idx.StEnergy
 
 eta ::
-   (Eq v, Sum v, Record rec, Ord node) =>
-   Idx.InSection Idx.StructureEdge node -> RecordExpression rec node s a v v
+   (Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node, Sum v, Record rec, Node.C node) =>
+   Idx.InSection Idx.StructureEdge node -> RecordExpression mode rec node s a v v
 eta = variableRecord . Idx.liftInSection Idx.Eta
 
 xfactor ::
-   (Eq v, Sum v, Record rec, Ord node) =>
-   Idx.InSection Idx.StructureEdge node -> RecordExpression rec node s a v v
+   (Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node, Sum v, Record rec, Node.C node) =>
+   Idx.InSection Idx.StructureEdge node -> RecordExpression mode rec node s a v v
 xfactor = variableRecord . Idx.liftInSection Idx.X
 
 stxfactor ::
-   (Eq a, Sum a, Record rec, Ord node) =>
-   Idx.ForNode Idx.StorageEdge node -> RecordExpression rec node s a v a
+   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Sum a, Record rec, Node.C node) =>
+   Idx.ForNode Idx.StorageEdge node -> RecordExpression mode rec node s a v a
 stxfactor = variableRecord . Idx.liftForNode Idx.StX
 
 insum ::
-   (Eq v, Sum v, Record rec, Ord node) =>
-   Idx.SecNode node -> RecordExpression rec node s a v v
+   (Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node, Sum v, Record rec, Node.C node) =>
+   Idx.SecNode node -> RecordExpression mode rec node s a v v
 insum = variableRecord . Idx.inSection (Idx.Sum Idx.In)
 
 outsum ::
-   (Eq v, Sum v, Record rec, Ord node) =>
-   Idx.SecNode node -> RecordExpression rec node s a v v
+   (Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node, Sum v, Record rec, Node.C node) =>
+   Idx.SecNode node -> RecordExpression mode rec node s a v v
 outsum = variableRecord . Idx.inSection (Idx.Sum Idx.Out)
 
 stinsum ::
-   (Eq a, Sum a, Record rec, Ord node) =>
-   Idx.BndNode node -> RecordExpression rec node s a v a
+   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Sum a, Record rec, Node.C node) =>
+   Idx.BndNode node -> RecordExpression mode rec node s a v a
 stinsum = variableRecord . Idx.forNode (Idx.StSum Idx.In)
 
 stoutsum ::
-   (Eq a, Sum a, Record rec, Ord node) =>
-   Idx.BndNode node -> RecordExpression rec node s a v a
+   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Sum a, Record rec, Node.C node) =>
+   Idx.BndNode node -> RecordExpression mode rec node s a v a
 stoutsum = variableRecord . Idx.forNode (Idx.StSum Idx.Out)
 
 storage ::
-   (Eq a, Sum a, Record rec, Ord node) =>
-   Idx.BndNode node -> RecordExpression rec node s a v a
+   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Sum a, Record rec, Node.C node) =>
+   Idx.BndNode node -> RecordExpression mode rec node s a v a
 storage = variableRecord . Idx.forNode Idx.Storage
 
 dtime ::
-   (Eq v, Sum v, Record rec, Ord node) =>
-   Idx.Section -> RecordExpression rec node s a v v
+   (Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node, Sum v, Record rec, Node.C node) =>
+   Idx.Section -> RecordExpression mode rec node s a v v
 dtime = variableRecord . flip Idx.InSection Idx.DTime
 
 
@@ -563,17 +592,17 @@ mwhen False _ = mempty
 
 
 fromMapResult ::
-   (Eq x, Sum x, x ~ Env.Element idx a v,
-    Env.AccessMap idx, Ord (idx node), Record rec) =>
+   (Verify.GlobalVar mode x (Record.ToIndex rec) (Var.Type idx) node, Sum x, x ~ Env.Element idx a v,
+    Env.AccessMap idx, Ord (idx node), FormatValue (idx node), Record rec) =>
    M.Map (idx node) (rec (Result x)) ->
-   EquationSystem rec node s a v
+   EquationSystem mode rec node s a v
 fromMapResult =
    fold . M.mapWithKey (?=)
 
 fromEnvScalarResult ::
-   (Eq a, Sum a, Ord node, Record rec) =>
+   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Sum a, Node.C node, Record rec) =>
    Env.Scalar node (rec (Result a)) ->
-   EquationSystem rec node s a v
+   EquationSystem mode rec node s a v
 fromEnvScalarResult (Env.Scalar me st se sx ss) =
       mconcat $
          fromMapResult me :
@@ -584,9 +613,9 @@ fromEnvScalarResult (Env.Scalar me st se sx ss) =
          []
 
 fromEnvSignalResult ::
-   (Eq v, Sum v, Ord node, Record rec) =>
+   (Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node, Sum v, Node.C node, Record rec) =>
    Env.Signal node (rec (Result v)) ->
-   EquationSystem rec node s a v
+   EquationSystem mode rec node s a v
 fromEnvSignalResult (Env.Signal e p n dt x s) =
       mconcat $
          fromMapResult e :
@@ -598,25 +627,26 @@ fromEnvSignalResult (Env.Signal e p n dt x s) =
          []
 
 fromEnvResult ::
-   (Eq a, Sum a, Eq v, Sum v, Ord node, Record rec) =>
+   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Sum a,
+    Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node, Sum v, Node.C node, Record rec) =>
    Env.Complete node (rec (Result a)) (rec (Result v)) ->
-   EquationSystem rec node s a v
+   EquationSystem mode rec node s a v
 fromEnvResult (Env.Complete envScalar envSignal) =
    fromEnvScalarResult envScalar <> fromEnvSignalResult envSignal
 
 
 fromMap ::
-   (Eq x, Sum x, x ~ Env.Element idx a v,
-    Env.AccessMap idx, Ord (idx node), Record rec) =>
+   (Verify.GlobalVar mode x (Record.ToIndex rec) (Var.Type idx) node, Sum x, x ~ Env.Element idx a v,
+    Env.AccessMap idx, Ord (idx node), FormatValue (idx node), Record rec) =>
    M.Map (idx node) (rec x) ->
-   EquationSystem rec node s a v
+   EquationSystem mode rec node s a v
 fromMap =
    fold . M.mapWithKey (%=)
 
 fromEnvScalar ::
-   (Eq a, Sum a, Ord node, Record rec) =>
+   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Sum a, Node.C node, Record rec) =>
    Env.Scalar node (rec a) ->
-   EquationSystem rec node s a v
+   EquationSystem mode rec node s a v
 fromEnvScalar (Env.Scalar me st se sx ss) =
       mconcat $
          fromMap me :
@@ -627,9 +657,9 @@ fromEnvScalar (Env.Scalar me st se sx ss) =
          []
 
 fromEnvSignal ::
-   (Eq v, Sum v, Ord node, Record rec) =>
+   (Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node, Sum v, Node.C node, Record rec) =>
    Env.Signal node (rec v) ->
-   EquationSystem rec node s a v
+   EquationSystem mode rec node s a v
 fromEnvSignal (Env.Signal e p n dt x s) =
       mconcat $
          fromMap e :
@@ -641,19 +671,20 @@ fromEnvSignal (Env.Signal e p n dt x s) =
          []
 
 fromEnv ::
-   (Eq a, Sum a, Eq v, Sum v, Ord node, Record rec) =>
+   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Sum a,
+    Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node, Sum v, Node.C node, Record rec) =>
    Env.Complete node (rec a) (rec v) ->
-   EquationSystem rec node s a v
+   EquationSystem mode rec node s a v
 fromEnv (Env.Complete envScalar envSignal) =
    fromEnvScalar envScalar <> fromEnvSignal envSignal
 
 
 fromGraph ::
-  (Eq a, Constant a, a ~ Scalar v,
-   Eq v, Product v, Integrate v,
+  (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Constant a, a ~ Scalar v,
+   Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node, Product v, Integrate v,
    Record rec, Node.C node) =>
   Bool ->
-  TD.DirSequFlowGraph node -> EquationSystem rec node s a v
+  TD.DirSequFlowGraph node -> EquationSystem mode rec node s a v
 fromGraph equalInOutSums g = mconcat $
   fromEdges (Gr.edges g) :
   fromNodes equalInOutSums g :
@@ -663,9 +694,10 @@ fromGraph equalInOutSums g = mconcat $
 -----------------------------------------------------------------
 
 fromEdges ::
-  (Eq a, Sum a, Eq v, Product v, Record rec, Ord node) =>
+  (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Sum a,
+   Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node, Product v, Record rec, Node.C node) =>
   [TD.FlowEdge Gr.DirEdge (Idx.BndNode node)] ->
-  EquationSystem rec node s a v
+  EquationSystem mode rec node s a v
 fromEdges =
    foldMap $ \se ->
       case TD.edgeType se of
@@ -677,11 +709,11 @@ fromEdges =
          TD.StorageEdge e -> stEnergy e =%= stEnergy (Idx.flip e)
 
 fromNodes ::
-  (Eq a, Constant a, a ~ Scalar v,
-   Eq v, Product v, Integrate v,
+  (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Constant a, a ~ Scalar v,
+   Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node, Product v, Integrate v,
    Record rec, Node.C node) =>
   Bool ->
-  TD.DirSequFlowGraph node -> EquationSystem rec node s a v
+  TD.DirSequFlowGraph node -> EquationSystem mode rec node s a v
 fromNodes equalInOutSums =
   fold . M.mapWithKey f . Gr.nodeEdges
    where f bn (ins, nodeType, outs) =
@@ -748,10 +780,10 @@ fromNodes equalInOutSums =
 
 
 fromStorageSequences ::
-  (Eq a, Sum a, a ~ Scalar v,
-   Eq v, Product v, Integrate v,
+  (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Sum a, a ~ Scalar v,
+   Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node, Product v, Integrate v,
    Record rec, Node.C node) =>
-  TD.DirSequFlowGraph node -> EquationSystem rec node s a v
+  TD.DirSequFlowGraph node -> EquationSystem mode rec node s a v
 fromStorageSequences =
    foldMap (mconcat . LH.mapAdjacent f . M.toList) . getStorageSequences
   where f (before, _) (now, dir) =
@@ -783,11 +815,11 @@ _getNode :: Idx.BndNode a -> a
 _getNode (Idx.BndNode _ n) = n
 
 fromInStorages ::
-  (Eq a, Sum a, a ~ Scalar v,
-   Eq v, Product v, Integrate v,
+  (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Sum a, a ~ Scalar v,
+   Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node, Product v, Integrate v,
    Record rec, Node.C node) =>
   Idx.BndNode node -> [Idx.ForNode Idx.StorageEdge node] ->
-  EquationSystem rec node s a v
+  EquationSystem mode rec node s a v
 fromInStorages sn outs =
    let toSec (Idx.ForNode (Idx.StorageEdge _ x) _) = x
        souts = List.sortBy (comparing toSec) outs
@@ -798,9 +830,9 @@ fromInStorages sn outs =
           (stinsum sn : zipWith (~-) maxEnergies stEnergies)
 
 fromOutStorages ::
-  (Eq a, Constant a, Record rec, Node.C node) =>
+  (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Constant a, Record rec, Node.C node) =>
   [Idx.ForNode Idx.StorageEdge node] ->
-  EquationSystem rec node s a v
+  EquationSystem mode rec node s a v
 fromOutStorages ins =
    withLocalVar $ \s ->
       foldMap
@@ -808,12 +840,12 @@ fromOutStorages ins =
          (NonEmpty.fetch ins)
 
 splitFactors ::
-   (Eq x, Product x, Record rec) =>
-   RecordExpression rec node s a v x ->
-   (secnode -> RecordExpression rec node s a v x) ->
-   RecordExpression rec node s a v x ->
-   (secnode -> RecordExpression rec node s a v x) ->
-   NonEmpty.T [] secnode -> EquationSystem rec node s a v
+   (Verify.LocalVar mode x, Product x, Record rec) =>
+   RecordExpression mode rec node s a v x ->
+   (secnode -> RecordExpression mode rec node s a v x) ->
+   RecordExpression mode rec node s a v x ->
+   (secnode -> RecordExpression mode rec node s a v x) ->
+   NonEmpty.T [] secnode -> EquationSystem mode rec node s a v
 splitFactors s ef one xf ns =
    (s =%= NonEmpty.foldl1 (~+) (fmap ef ns))
    <>
@@ -829,20 +861,36 @@ splitFactors s ef one xf ns =
 
 queryEnv ::
   (Traversable env, Traversable rec) =>
-  env (RecordVariable rec s a) -> ST s (env (rec (Result a)))
+  env (RecordVariable mode rec s a) -> ST s (env (rec (Result a)))
 queryEnv =
   traverse (traverse (fmap (maybe Undetermined Determined) . Sys.query))
 
 solveSimple ::
   (Record rec, Node.C node) =>
-  (forall s. EquationSystem rec node s a v) ->
+  (forall s. EquationSystem Verify.Ignore rec node s a v) ->
   Env.Complete node (rec (Result a)) (rec (Result v))
 solveSimple sys = runST $ do
   let EquationSystem eqsys = sys
   (Env.Complete scalmap sigmap, System eqs) <-
      runWriterT $ execStateT eqsys mempty
-  Sys.solve eqs
+  Verify.runIgnorant $ Sys.solve eqs
   liftA2 Env.Complete (queryEnv scalmap) (queryEnv sigmap)
+
+solveSimpleTracked ::
+  (Record rec, Node.C node) =>
+  (forall s. EquationSystem (Verify.Track output) rec node s a v) ->
+  (ME.Exceptional
+     (Verify.Exception output)
+     (Env.Complete node (rec (Result a)) (rec (Result v))),
+   Verify.Assigns output)
+solveSimpleTracked sys = runST $ do
+  let EquationSystem eqsys = sys
+  (Env.Complete scalmap sigmap, System eqs) <-
+     runWriterT $ execStateT eqsys mempty
+  runWriterT $ ME.runExceptionalT $ Verify.runTrack $ do
+     Sys.solveBreadthFirst eqs
+     liftA2 Env.Complete
+        (MT.lift $ queryEnv scalmap) (MT.lift $ queryEnv sigmap)
 
 {- |
 In the input 'EquationSystem' you can pass simple variable assignments
@@ -858,25 +906,40 @@ but you may also insert complex relations like
 .
 -}
 solve ::
-  (Eq a, Constant a, a ~ Scalar v,
-   Eq v, Product v, Integrate v,
+  (Constant a, a ~ Scalar v,
+   Product v, Integrate v,
    Record rec, Node.C node) =>
   Flow.RangeGraph node ->
-  (forall s. EquationSystem rec node s a v) ->
+  (forall s. EquationSystem Verify.Ignore rec node s a v) ->
   Env.Complete node (rec (Result a)) (rec (Result v))
 solve (_rngs, g) given =
   solveSimple (given <> fromGraph True (TD.dirFromSequFlowGraph g))
+
+solveTracked ::
+  (Verify.GlobalVar (Verify.Track output) a (Record.ToIndex rec) Var.ForNodeScalar node,
+   Constant a, a ~ Scalar v, a ~ Pair.T termScalar an,
+   Verify.GlobalVar (Verify.Track output) v (Record.ToIndex rec) Var.InSectionSignal node,
+   Product v, Integrate v, v ~ Pair.T termSignal vn,
+   Record rec, Node.C node) =>
+  Flow.RangeGraph node ->
+  (forall s. EquationSystem (Verify.Track output) rec node s a v) ->
+  (ME.Exceptional
+     (Verify.Exception output)
+     (Env.Complete node (rec (Result a)) (rec (Result v))),
+   Verify.Assigns output)
+solveTracked (_rngs, g) given =
+  solveSimpleTracked (given <> fromGraph True (TD.dirFromSequFlowGraph g))
 
 
 --------------------------------------------------------------------
 
 
 solveFromMeasurement ::
-  (Eq a, Constant a, a ~ Scalar v,
-   Eq v, Product v, Integrate v,
+  (Constant a, a ~ Scalar v,
+   Product v, Integrate v,
    Record rec, Node.C node) =>
   Flow.RangeGraph node ->
-  (forall s. EquationSystem rec node s a v) ->
+  (forall s. EquationSystem Verify.Ignore rec node s a v) ->
   Env.Complete node (rec (Result a)) (rec (Result v))
 solveFromMeasurement (_rngs, g) given =
   solveSimple (given <> fromGraph False (TD.dirFromSequFlowGraph g))
@@ -892,11 +955,11 @@ solveFromMeasurement (_rngs, g) given =
 -- (im Moment 273 und 274) auszukommentieren.
 
 conservativelySolve ::
-  (Eq a, Constant a, a ~ Scalar v,
-   Eq v, Product v, Integrate v,
+  (Constant a, a ~ Scalar v,
+   Product v, Integrate v,
    Record rec, Node.C node) =>
   Flow.RangeGraph node ->
-  (forall s. EquationSystem rec node s a v) ->
+  (forall s. EquationSystem Verify.Ignore rec node s a v) ->
   Env.Complete node (rec (Result a)) (rec (Result v))
 conservativelySolve (_rngs, g) given =
   solveSimple (given <> fromGraph True (TD.dirFromSequFlowGraph g))

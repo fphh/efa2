@@ -2,7 +2,7 @@ module Main where
 
 import qualified EFA.Example.Index as XIdx
 import EFA.Example.Utility
-          (SymbolicEquationSystem,
+          (SymbolicEquationSystem, Ignore,
            makeEdges, constructSeqTopo, (=<>), (.=))
 
 import qualified EFA.Symbolic.SumProduct as SumProduct
@@ -43,7 +43,7 @@ topoDreibein = Gr.fromList ns (makeEdges es)
 Use SumProduct.Term here since it simplifies automatically.
 -}
 given ::
-   SymbolicEquationSystem Record.Delta Node.Int s SumProduct.Term
+   SymbolicEquationSystem Ignore Record.Delta Node.Int s SumProduct.Term
 given =
    (Idx.delta (XIdx.dTime sec0) .= zero) <>
 

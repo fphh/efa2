@@ -13,7 +13,7 @@ import qualified EFA.Example.Absolute as EqAbs
 
 import qualified EFA.Example.Index as XIdx
 
-import EFA.Example.Utility ((.=), (%=), checkDetermined)
+import EFA.Example.Utility (Ignore, (.=), (%=), checkDetermined)
 
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Variable as Var
@@ -57,6 +57,8 @@ import EFA.Signal.Typ (Typ, F, T, A, Tt)
 --import qualified EFA.Report.Report as Rep
 --import EFA.Signal.Typ
 
+import EFA.Report.FormatValue (FormatValue, FormatSignalIndex)
+
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Flow as Flow
@@ -65,6 +67,7 @@ import Data.Monoid ((<>),mempty)
 
 import Data.Foldable (fold,
                       foldMap)
+
 
 --import qualified EFA.Equation.Environment as Env
 --import EFA.Equation.Result (Result(..))
@@ -202,7 +205,7 @@ makeGivenFromExternal :: (Vec.Zipper v,
                           idx ~ EqRecord.ToIndex rec) =>
                          idx ->
                          SD.SequData (FlowRecord System.Node v d) ->
-                         EqGen.EquationSystem rec System.Node s Double d
+                         EqGen.EquationSystem Ignore rec System.Node s Double d
 
 makeGivenFromExternal idx sf =
    (Idx.Record idx (XIdx.storage Idx.initial System.Battery) .= initStorage)
@@ -249,7 +252,7 @@ makeGivenForPrediction ::
     EqRecord.ToIndex rec ~ idx) =>
    idx ->
    Env.Complete System.Node (rec (Result a)) (rec (Result v)) ->
-   EqGen.EquationSystem rec System.Node s a v
+   EqGen.EquationSystem Ignore rec System.Node s a v
 
 makeGivenForPrediction idx env =
     (Idx.Record idx (XIdx.storage Idx.initial System.Battery) .= initStorage)
@@ -321,13 +324,13 @@ infix 0 .==
 
 (.==) ::
   (Eq x, Arith.Sum x, x ~ Env.Element idx a v,
-   Env.AccessMap idx, Ord (idx node)) =>
+   Env.AccessMap idx, Ord (idx node), FormatValue (idx node)) =>
    idx node -> x ->
    EqAbs.EquationSystem node s a v
 (.==) = (EqAbs..=)
 
 deltaPair ::
-   (Ord (idx System.Node), Env.AccessSignalMap idx) =>
+   (Ord (idx System.Node), Env.AccessSignalMap idx, FormatSignalIndex idx) =>
    Idx.InSection idx System.Node -> Double -> Double -> EquationSystemNumeric s
 deltaPair idx before delt =
    idx .== Stack.deltaPair (Var.Signal $ Var.index idx) before delt

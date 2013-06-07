@@ -111,6 +111,8 @@ Library
     EFA.Equation.Consistent.MultiValue
     EFA.Equation.Consistent.Stack
     EFA.Equation.Consistent.Dimension
+    EFA.Equation.Pair
+    EFA.Equation.Verify
     EFA.Example.Utility
     EFA.Example.Absolute
     EFA.Example.NestedDelta
@@ -131,6 +133,7 @@ Executable test-efa
       -- alternative: checkers
       QuickCheck,
       containers,
+      explicit-exception,
       utility-ht,
       template-haskell ==2.7.*,
       base

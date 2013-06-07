@@ -5,15 +5,17 @@ module EFA.Example.NestedDelta (
    ) where
 
 import qualified EFA.Equation.System as EqGen
-import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Arithmetic as Arith
+import qualified EFA.Equation.Verify as Verify
+import qualified EFA.Equation.Variable as Var
 import qualified EFA.Symbolic.Variable as SymVar
 import EFA.Equation.Result (Result(Determined, Undetermined))
 import EFA.Equation.System ((?=))
 
 import qualified EFA.Graph.Topology.Index as Idx
+import EFA.Report.FormatValue (FormatValue)
 import EFA.Utility (Pointed)
 
 import qualified Data.NonEmpty as NonEmpty
@@ -185,26 +187,29 @@ absoluteRecord = runInnerExtrusion
 
 
 givenParameterSymbol ::
-   (EqGen.Record rec, Pointed term,
+   (Verify.GlobalVar mode t recIdx var node,
+    EqGen.Record rec, Record.ToIndex rec ~ recIdx,
+    Pointed term,
     t ~ SymVar.VarTerm var Idx.Delta term node,
     Eq t, Arith.Sum t, Arith.Constant t,
     t ~ Env.Element idx scalar signal,
-    Ord (idx node),
+    Ord (idx node), FormatValue (idx node),
     Var.Type idx ~ var, SymVar.Symbol var, Env.AccessMap idx) =>
 
    idx node ->
    OuterExtrusion rec t ->
-   EqGen.EquationSystem rec node s scalar signal
+   EqGen.EquationSystem mode rec node s scalar signal
 givenParameterSymbol idx param =
    idx ?= parameterSymbol param idx
 
 
 givenParameterNumber ::
-   (EqGen.Record rec,
+   (Verify.GlobalVar mode x recIdx var node,
+    EqGen.Record rec, Record.ToIndex rec ~ recIdx, Var.Type idx ~ var,
     Eq x, Arith.Sum x, x ~ Env.Element idx a v,
-    Ord (idx node), Env.AccessMap idx, Var.Index idx) =>
+    Ord (idx node), FormatValue (idx node), Env.AccessMap idx, Var.Index idx) =>
    idx node -> x -> x ->
    OuterExtrusion rec x ->
-   EqGen.EquationSystem rec node s a v
+   EqGen.EquationSystem mode rec node s a v
 givenParameterNumber idx x y param =
    idx ?= parameterRecord param x y
