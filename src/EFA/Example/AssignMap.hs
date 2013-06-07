@@ -5,15 +5,12 @@ module EFA.Example.AssignMap where
 import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Stack as Stack
-import qualified EFA.Report.Format as Format
-import qualified EFA.Graph.Topology.Index as Idx
---import qualified EFA.Equation.Stack as Stack
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Record as EqRecord
---import qualified EFA.Equation.Result as Result
---import qualified EFA.Equation.Variable as Var
--- import qualified EFA.Graph.Topology.Index as Idx
--- import qualified EFA.Graph.Topology.Node as TDNode
+import qualified EFA.Example.Index as XIdx
+import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Graph.Topology.Node as Node
+import qualified EFA.Report.Format as Format
 
 import EFA.Equation.Result (Result)
 import EFA.Equation.Arithmetic ((~+))
@@ -137,22 +134,22 @@ stripSection =
       (Map.mapKeys (\(Idx.InSection _sec node) -> node))
 
 
-lookupStack:: (Ord i, Ord node, Show node) =>
-                              Idx.InSection Idx.Energy node
-                              -> Env.Complete
-                                   node t (EqRecord.Absolute (Result.Result (Stack.Stack i a)))
-                              -> Map.Map (IndexSet i) a
-
-lookupStack energyIndex env =  case Map.lookup energyIndex (Env.energyMap signalEnv) of
-    Nothing -> error (show energyIndex ++ "undefined")
-    Just d ->
-      case EqRecord.unAbsolute d of
-        Result.Undetermined -> error (show energyIndex ++ "undetermined")
-        Result.Determined xs -> Map.mapKeys deltaIndexSet $
-                             Stack.assignDeltaMap xs
-
-   where
-        Env.Complete _scalarEnv signalEnv = env
+lookupStack ::
+   (Ord i, Node.C node) =>
+   XIdx.Energy node ->
+   Env.Complete
+      node t (EqRecord.Absolute (Result.Result (Stack.Stack i a))) ->
+   Map.Map (IndexSet i) a
+lookupStack energyIndex (Env.Complete _scalarEnv signalEnv) =
+  let eidxName = Format.unUnicode (formatValue energyIndex)
+  in  case Map.lookup energyIndex (Env.energyMap signalEnv) of
+        Nothing -> error (eidxName ++ " undefined")
+        Just d ->
+          case EqRecord.unAbsolute d of
+            Result.Undetermined -> error (eidxName ++ "undetermined")
+            Result.Determined xs ->
+              Map.mapKeys deltaIndexSet $
+              Stack.assignDeltaMap xs
 
 lookupAllStacks :: (Ord i, Ord node, Eq node) => Idx.Energy node
                    -> Env.Complete node t

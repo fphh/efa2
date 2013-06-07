@@ -10,7 +10,7 @@ import qualified EFA.Example.Index as XIdx
 --import qualified EFA.Signal.Plot as Plot
 import qualified EFA.Signal.PlotIO as PlotIO
 --import qualified EFA.Signal.PlotBase as PlotBase
---import qualified EFA.Graph.Topology.Node as TDNode
+import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Signal.Vector as V
 
 -- import qualified Graphics.Gnuplot.Advanced as Plot
@@ -77,9 +77,8 @@ import qualified EFA.Equation.Record as EqRecord
 import qualified EFA.Equation.Result as Result
 
 --import qualified Data.NonEmpty as NonEmpty
-import EFA.Report.FormatValue (FormatValue)
-                               --formatValue)
---import qualified EFA.Report.Format as Format
+import EFA.Report.FormatValue (FormatValue, formatValue)
+import qualified EFA.Report.Format as Format
 
 import qualified EFA.Equation.Stack as Stack
 --import qualified EFA.Equation.Variable as Var
@@ -149,15 +148,16 @@ operation ti term opts rList  (plotTitle, (idx,idy)) = mapM_ f rList
           PlotIO.xy (ti ++ "_" ++ plotTitle) term opts legend x y
 
 
-reportStack::(Num a, Ord node, Ord i, Ord a, Show node, FormatValue a,
+reportStack::(Num a, Node.C node, Ord i, Ord a, FormatValue a,
                                FormatValue i) =>
-                              [Char]
+                              String
                               -> XIdx.Energy node
                               -> a
                               -> Env.Complete
                                    node t (EqRecord.Absolute (Result.Result (Stack.Stack i a)))
                               -> IO ()
 
-reportStack ti energyIndex eps (env) = do
-               print (ti ++ show energyIndex)
-               AssignMap.print $ AssignMap.threshold eps $ AssignMap.lookupStack energyIndex env
+reportStack ti energyIndex eps env = do
+   print (ti ++ Format.unUnicode (formatValue energyIndex))
+   AssignMap.print $ AssignMap.threshold eps $
+      AssignMap.lookupStack energyIndex env

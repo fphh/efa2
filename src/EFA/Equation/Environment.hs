@@ -386,22 +386,3 @@ filter ::
    Complete node a v
 filter f g (Complete scalar0 signal0) =
    Complete (scalarFilter f scalar0) (signalFilter g signal0)
-
-{-
-lookupStack:: (Ord i, Ord node, Show node) =>
-                              XIdx.Energy node
-                              -> Env.Complete
-                                   node t (EqRecord.Absolute (Result.Result (Stack.Stack i a)))
-                              -> M.Map (AssignMap.IndexSet i) a
-
-lookupStack energyIndex env =  case M.lookup energyIndex (Env.energyMap signalEnv) of
-    Nothing -> error (show energyIndex ++ "undefined")
-    Just d ->
-      case EqRecord.unAbsolute d of
-        Result.Undetermined -> error (show energyIndex ++ "undetermined")
-        Result.Determined xs -> M.mapKeys AssignMap.deltaIndexSet $
-                             Stack.assignDeltaMap xs
-
-   where
-        Env.Complete _scalarEnv signalEnv = env
--}
