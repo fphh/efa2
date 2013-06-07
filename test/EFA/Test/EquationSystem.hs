@@ -42,8 +42,8 @@ checkException solution =
          putStrLn $ Format.unUnicode $ Format.assign var val
       exitFailure
 
-test :: IO ()
-test = do
+correctness :: IO ()
+correctness = do
   putStrLn "Check correctness of the equation system for sequence flow graphs."
   testEnv <- checkException Given.testEnv
   env <- checkException Given.solvedEnv
@@ -76,8 +76,14 @@ consistency = do
   env <- fmap Given.numericEnv $ checkException $
     EqGen.solveTracked Given.seqTopo Given.testGiven
   testEnv <- checkException Given.testEnv
-  showDifferences testEnv env
+  -- showDifferences testEnv env
   when (testEnv /= env) exitFailure
+
+runTests :: IO ()
+runTests = do
+  correctness
+  consistency
+
 
 main :: IO ()
 main = do
