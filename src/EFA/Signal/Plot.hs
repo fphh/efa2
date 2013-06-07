@@ -19,14 +19,14 @@ module EFA.Signal.Plot (
    Surface,
    record,
    recordStyle,
-   recordFrame,
+   recordFrameAttr,
    recordList,
    sequence,
    optKeyOutside,
    stack,
-   stackFrame,
+   stackFrameAttr,
    stacks,
-   stacksFrame,
+   stacksFrameAttr,
    getData,
    genAxLabel
    ) where
@@ -286,10 +286,10 @@ instance
 
 -- | Plotting Records ---------------------------------------------------------------
 
-recordFrame ::
+recordFrameAttr ::
    (Graph.C graph) =>
    String -> Opts.T graph
-recordFrame ti =
+recordFrameAttr ti =
    Opts.title (ti) $
    Opts.grid True $
    Opts.xLabel ("Time [" ++ (show $ getDisplayUnit Typ_T) ++ "]") $
@@ -365,9 +365,9 @@ optKeyOutside :: Opts.T graph -> Opts.T graph
 optKeyOutside =
    Opts.add (Opt.custom "key" "position") ["outside"]
 
-stackFrame ::
+stackFrameAttr ::
    String -> Format.ASCII -> Opts.T (Graph2D.T Int Double)
-stackFrame title var =
+stackFrameAttr title var =
    Opts.title title $
       Histogram.rowstacked $
       OptsStyle.fillBorderLineType (-1) $
@@ -399,9 +399,9 @@ stack =
    Key.sort (abs . snd) .
    M.toList
 
-stacksFrame ::
+stacksFrameAttr ::
    String -> [Format.ASCII] -> Opts.T (Graph2D.T Int Double)
-stacksFrame title vars =
+stacksFrameAttr title vars =
    Opts.title title $
       Histogram.rowstacked $
       OptsStyle.fillBorderLineType (-1) $

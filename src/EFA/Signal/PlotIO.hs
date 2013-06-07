@@ -145,7 +145,7 @@ record :: (Terminal.C term,
             (LineSpec.T -> LineSpec.T) ->
             Record s1 s2 t1 t2 id v d1 d2 -> IO ()
 record ti term showKey opts x =
-   Plot.run term (Plot.recordFrame ti) (Plot.record showKey opts x)
+   Plot.run term (Plot.recordFrameAttr ti) (Plot.record showKey opts x)
 
 
 
@@ -171,7 +171,7 @@ recordList ::
    (LineSpec.T -> LineSpec.T) ->
    [(Record.Name,Record s1 s2 t1 t2 id v d1 d2)] -> IO ()
 recordList ti term showKey opts x =
-   Plot.run term (Plot.recordFrame ti) (Plot.recordList showKey opts varOpts x)
+   Plot.run term (Plot.recordFrameAttr ti) (Plot.recordList showKey opts varOpts x)
    where
      varOpts n = LineSpec.lineStyle n
 
@@ -199,7 +199,7 @@ recordList_extract ::
    [id] ->
    IO ()
 recordList_extract ti term showKey opts xs idList =
-   Plot.run term (Plot.recordFrame ti) (Plot.recordList showKey opts varOpts $ map (\(x,y) -> (x,Record.extract idList y)) xs)
+   Plot.run term (Plot.recordFrameAttr ti) (Plot.recordList showKey opts varOpts $ map (\(x,y) -> (x,Record.extract idList y)) xs)
    where
      varOpts n = LineSpec.lineStyle n
 
@@ -229,7 +229,7 @@ recordList_extractWithLeadSignal :: (Terminal.C term,
                                       (Record.RangeFrom id, Record.ToModify id) ->
                                       [(Record.Name, Record s1 s2 t1 t2 id v d1 d2)] -> IO ()
 recordList_extractWithLeadSignal ti term showKey opts (extract, leadIds) recList =
-   Plot.run term (Plot.recordFrame ti) (Plot.recordList showKey opts  (\n -> LineSpec.pointType n) $ finalRecs)
+   Plot.run term (Plot.recordFrameAttr ti) (Plot.recordList showKey opts  (\n -> LineSpec.pointType n) $ finalRecs)
   where extractedRecList = case extract of
           Record.RangeFrom idList -> map (\(x,y) -> (x,Record.extract idList y)) recList
           Record.RangeFromAll -> recList
@@ -366,7 +366,7 @@ stack ::
    (FormatValue term, Show term, Ord term) =>
    String -> Format.ASCII -> M.Map term Double -> IO ()
 stack title var m =
-   void .  Plot.plotSync DefaultTerm.cons . Frame.cons (Plot.stackFrame title var) . Plot.stack $ m
+   void .  Plot.plotSync DefaultTerm.cons . Frame.cons (Plot.stackFrameAttr title var) . Plot.stack $ m
 
 
 {- |
@@ -377,7 +377,7 @@ stacks ::
    String -> [Format.ASCII] -> M.Map term [Double] -> IO ()
 stacks title vars xs =
    void . Plot.plotSync DefaultTerm.cons .
-   Frame.cons (Plot.stacksFrame title vars) . Plot.stacks $ xs
+   Frame.cons (Plot.stacksFrameAttr title vars) . Plot.stacks $ xs
 
 
 stackfromEnv:: (Show node, Ord i, FormatValue i, TDNode.C node, Show i) =>
