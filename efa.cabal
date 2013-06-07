@@ -203,7 +203,6 @@ Executable example-vehicle
       graphviz,
       utility-ht,
       containers,
-      utility-ht,
       non-empty,
       filepath,
       base
@@ -225,7 +224,6 @@ Executable example-energy
       graphviz,
       utility-ht,
       containers,
-      utility-ht,
       non-empty,
       filepath,
       base
@@ -247,7 +245,6 @@ Executable optimise-energy
       graphviz,
       utility-ht,
       containers,
-      utility-ht,
       non-empty,
       filepath,
       base
