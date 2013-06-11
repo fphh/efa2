@@ -37,13 +37,16 @@ import qualified Data.NonEmpty.Mixed as NonEmptyM
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.List.HT as HTL
 import qualified Data.List as L
+import qualified Data.Set as Set
 import qualified Data.Map as M
 import qualified Data.IntSet as IntSet
 import Data.IntSet (IntSet)
+import Data.Set (Set)
+import Data.Ratio (Ratio)
 
 import Data.Bool.HT (if')
 import Data.Eq.HT (equating)
-import Data.Tuple.HT (mapPair)
+import Data.Tuple.HT (mapPair, mapSnd)
 import Control.Functor.HT (void)
 import Control.Monad (liftM2)
 import Data.Monoid (Monoid, mempty, mconcat)
@@ -485,6 +488,159 @@ approxPowerRecord eps
 approxAbs :: (Real a) => a -> a -> a -> Bool
 approxAbs eps x y =
    abs (x-y) <= eps
+
+
+
+
+-- * Third approach using a Monoid structure
+
+{-
+We divide the problem into three functionalities:
+
+* Chop a single signal
+* Combine chopped signals
+* Flatten combinable chunks into a plain sequence of signal bundles
+
+This has several advantages:
+
+* you can chop lists, vectors and other stream types
+* you can combine chunks with different element types
+
+
+We should use a NonEmpty type for the chunks.
+-}
+data Chopped t v a = Chopped (v a) [(Set t, v a)]
+   deriving (Show)
+
+chopVector ::
+   (V.Storage v a, V.Split v, V.FromList v, RealFrac a) =>
+   v a -> Chopped a v a
+chopVector v0 =
+   (\(v1,vs1) ->
+      foldr
+         (\(v,t) ~(Chopped v2 vs2) -> Chopped v $ (t,v2):vs2)
+         (Chopped v1 []) vs1) $
+   L.mapAccumL
+      (\v (k,t) ->
+         case V.splitAt k v of
+            (prefix,suffix) -> (suffix, (prefix, Set.singleton t))) v0 $
+   snd $ L.mapAccumL (\k0 (k1,t) -> (k1, (k1-k0,t))) (-1) $
+   catMaybes $ zipWith (\k -> fmap ((,) k)) [0..] $
+   HTL.mapAdjacent checkZeroCrossing $ V.toList v0
+
+{-
+chopVector :: v a -> Chopped a v a
+chopVector v0 =
+   case SV.viewL v of
+      Nothing -> Chopped v []
+      Just (vh,v1) ->
+         mapAccumL  $
+         catMaybes $ zipWith (\k -> fmap ((,) k)) [0..] $
+         SV.toList $ SV.zipWith checkZeroCrossing v0 v1
+-}
+
+instance Functor v => Functor (Chopped t v) where
+   fmap f (Chopped v vs) =
+      Chopped (fmap f v) (map (mapSnd $ fmap f) vs)
+
+{-
+Could be made an instance of the semigroupoids:Apply class.
+-}
+combineChopped ::
+   (Ord t, V.Walker v, V.Zipper v, V.Length v, V.Split v,
+    V.Storage v a, V.Storage v b, V.Storage v c) =>
+   (a -> b -> c) ->
+   Chopped t v a -> Chopped t v b -> Chopped t v c
+combineChopped f =
+   let cons ct ~(Chopped c1 cs1) = (ct, c1) : cs1
+       go (Chopped a0 as0) (Chopped b0 bs0) =
+          Chopped (V.zipWith f a0 b0) $
+          case compare (V.length a0) (V.length b0) of
+             EQ ->
+                case (as0, bs0) of
+                   ((at,a1):as1, (bt,b1):bs1) ->
+                      cons (Set.union at bt) $
+                      go (Chopped a1 as1) (Chopped b1 bs1)
+                   _ -> []
+             LT ->
+                case as0 of
+                   [] -> []
+                   (at,a1):as1 ->
+                      cons at $
+                      go (Chopped a1 as1) (Chopped (V.drop (V.length a0) b0) bs0)
+             GT ->
+                case bs0 of
+                   [] -> []
+                   (bt,b1):bs1 ->
+                      cons bt $
+                      go (Chopped (V.drop (V.length b0) a0) as0) (Chopped b1 bs1)
+   in  go
+
+{-
+Possible tests:
+   combineChopped a a = fmap (\x -> (x,x)) (combineChopped a)
+
+   bei Ergebnis von chopVector:
+      an der Schnittstelle muss wenigstens eine Zahl null sein
+
+   teste laziness
+
+combineChopped (,) (chopVector [3,3,-1,-1,-1,-1,-1,-1::Double]) (chopVector [1,1,-1,-1,-1,-1,1,1::Double])
+-}
+
+
+flattenChopped ::
+   (V.Singleton v, V.Storage v a) =>
+   (t -> a -> a -> a) ->
+   Chopped t v a -> [v a]
+flattenChopped interpol =
+   let go (Chopped a0 as0) =
+          case as0 of
+             [] -> [a0]
+             (at,a1):as1 ->
+                case (V.viewR a0, V.viewL a1) of
+                   (Just (_,al), Just (ar,_)) ->
+                      maybe
+                         (error "set of cutting points must be non-empty")
+                         (\(as2,a2) -> as2 ++ go (Chopped a2 as1)) $
+                      HTL.viewR $
+                      HTL.mapAdjacent V.append $ (a0:) $ (++[a1]) $
+                      map (\t -> V.singleton $ interpol t al ar) $
+                      Set.toList at
+                   _ -> error "all chunks must be non-empty"
+   in  go
+
+-- we could move this to Arithmetic
+class Interpolate v where
+   type Factor v :: *
+   interpolateVector :: Factor v -> v -> v -> v
+
+instance Interpolate Float where
+   type Factor Float = Float
+   interpolateVector = interpolate
+
+instance Interpolate Double where
+   type Factor Double = Double
+   interpolateVector = interpolate
+
+instance (Integral a) => Interpolate (Ratio a) where
+   type Factor (Ratio a) = Ratio a
+   interpolateVector = interpolate
+
+instance
+   (Interpolate u, Interpolate v, Factor u ~ Factor v) =>
+      Interpolate (u,v) where
+   type Factor (u,v) = Factor u
+   interpolateVector t (ul,vl) (ur,vr) =
+      (interpolateVector t ul ur, interpolateVector t vl vr)
+
+instance
+   (Interpolate u, Interpolate v, Interpolate w,
+    Factor u ~ Factor v, Factor v ~ Factor w) =>
+      Interpolate (u,v,w) where
+   type Factor (u,v,w) = Factor u
+   interpolateVector t (ul,vl,wl) (ur,vr,wr) =
+      (interpolateVector t ul ur, interpolateVector t vl vr, interpolateVector t wl wr)
 
 
 
