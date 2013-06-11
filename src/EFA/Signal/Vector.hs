@@ -519,6 +519,26 @@ instance Slice UV.Vector where
   slice start num = readUnbox (UV.slice start num)
 
 
+class Split v where
+  drop, take :: (Storage v d) => Int -> v d -> v d
+  splitAt :: (Storage v d) => Int -> v d -> (v d, v d)
+
+instance Split [] where
+  drop = L.drop
+  take = L.take
+  splitAt = L.splitAt
+
+instance Split V.Vector where
+  drop = V.drop
+  take = V.take
+  splitAt = V.splitAt
+
+instance Split UV.Vector where
+  drop k = readUnbox (UV.drop k)
+  take k = readUnbox (UV.take k)
+  splitAt k = readUnbox (UV.splitAt k)
+
+
 cumulate :: (Num a) => NonEmpty.T [] a -> [a] -> [a]
 cumulate storage =
    NonEmpty.tail . NonEmptyM.scanl (+) (NonEmpty.last storage)
