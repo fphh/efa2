@@ -13,6 +13,8 @@ import qualified Data.Vector as V
 import qualified Data.List as L
 import qualified Data.List.HT as LH
 
+import qualified Data.Set as Set
+
 import qualified Data.NonEmpty.Mixed as NonEmptyM
 import qualified Data.NonEmpty as NonEmpty
 
@@ -26,7 +28,6 @@ import Text.Show (Show, show)
 import Prelude (Num, Int, Integer, Ord, error, (++), (+), (-), subtract, min, max,fmap)
 
 import Data.Ord (Ordering, (>=), (<=))
-import qualified Data.Map as M
 
 -- import Data.Maybe (Maybe(..))
 
@@ -531,16 +532,16 @@ propCumulate :: NonEmpty.T [] Integer -> [Integer] -> Bool
 propCumulate storage incoming =
    decumulate storage (cumulate storage incoming) == incoming
 
+
 -- | creates a vector of unique and sorted elements
 class Unique v d where
   unique :: Ord d => v d  -> v d
 
 instance Unique [] d where
-  unique = (\ x -> M.keys . M.fromList $ zip x x)
+  unique = Set.toList . Set.fromList
 
 instance Unique V.Vector d where
-  unique =  (\ x -> fromList . M.keys . M.fromList $ zip (toList x) (toList x))
+  unique = fromList . Set.toList . Set.fromList . toList
 
-instance (UV.Unbox d) => Unique UV.Vector  d where
-  unique =  readUnbox (\ x -> fromList $ M.keys $ M.fromList $ toList $ UV.zip x x)
-  
+instance (UV.Unbox d) => Unique UV.Vector d where
+  unique = readUnbox (fromList . Set.toList . Set.fromList . toList)
