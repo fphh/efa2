@@ -493,6 +493,11 @@ unconsData (TC (Data x)) = x
 consData :: Apply c d -> TC s typ (Data c d)
 consData x = TC (Data x)
 
+liftData ::
+   (Apply c0 a0 -> Apply c1 a1) ->
+   TC s typ (Data c0 a0) -> TC s typ (Data c1 a1)
+liftData f = consData . f . unconsData
+
 
 fromSigList ::
    (SV.Storage v (Apply c d), SV.FromList v) =>
