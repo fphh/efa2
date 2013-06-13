@@ -586,6 +586,24 @@ Possible tests:
 mappend (pattern [3,3,-1,-1,-1,-1,-1,-1::Double]) (pattern [1,1,-1,-1,-1,-1,1,1::Double])
 -}
 
+chopSignal ::
+   (Num a, V.Split v, V.Singleton v, V.Storage v a) =>
+   Pattern a ->
+   TC S.Signal (Typ A t Tt) (Data (v :> Nil) a) ->
+   [TC S.Signal (Typ A t Tt) (Data (v :> Nil) a)]
+chopSignal p = S.toSigList . S.liftData (chopVectorInterpolate p)
+
+chopRecord ::
+   (RealFrac a, V.FromList v, V.Split v, V.Singleton v, V.Storage v a) =>
+   PowerRecord node v a -> SequData (PowerRecord node v a)
+chopRecord (Record t m) =
+   let p@(Pattern chunks) = Fold.foldMap (pattern . S.unconsData) m
+   in  SD.fromLengthList $
+       zip (map fst chunks) $
+       zipWith Record
+          (chopSignal p t)
+          (Trav.traverse (chopSignal p) m)
+
 
 
 
