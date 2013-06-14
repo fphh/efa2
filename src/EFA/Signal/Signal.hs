@@ -1497,8 +1497,8 @@ calcDistributionValues d s = setType $ map f d
 -- | etrigger or respectively ptrigger is the power signal used for classification
 -- | usually local ein or eout is used
 -- | pDist is the effective average trigger power which should be used as
--- | Abszisse for efficiency over power
-etaDistibution1D :: (P.RealFrac d,
+-- | abscissa for efficiency over power
+etaDistribution1D :: (P.RealFrac d,
                      SV.Zipper v,
                      B.BProd d d,
                      SV.Lookup v,
@@ -1518,8 +1518,8 @@ etaDistibution1D :: (P.RealFrac d,
                      SV.Storage v (d, (d, d))) =>
                     d -> d -> DTFSignal v d ->  FFSignal v d -> FFSignal v d  -> FFSignal v d ->
                     (PDistr v d, FDistr v d,FDistr v d, NDistr v d)
-etaDistibution1D intervall offs dtime  ein eout etrigger  = (pDist, einDist, eoutDist, nDist)
-  where dist = genDistribution1D (classifyEven intervall offs) $ untype ptrigger
+etaDistribution1D interval offs dtime  ein eout etrigger  = (pDist, einDist, eoutDist, nDist)
+  where dist = genDistribution1D (classifyEven interval offs) $ untype ptrigger
         ptrigger = etrigger./dtime
         einDist = calcDistributionValues dist ein
         eoutDist = calcDistributionValues dist eout

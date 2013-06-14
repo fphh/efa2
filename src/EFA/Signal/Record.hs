@@ -605,14 +605,11 @@ partIntegrate rec@(Record time _) = rmap (S.partIntegrate time) rec
 -- | Classify a flow record to get a distribution record
 distribution :: (V.FromList v,
                  V.Filter v,
-                 Ord d,
                  V.Unique v (S.Class d),
                  V.Storage v S.SignalIdx,
                  V.Storage v Int,
                  V.Storage v (S.Class d),
                  RealFrac d,
-                 Eq d,
-                 Num d,
                  V.Walker v,
                  V.Storage v d,
                  V.Storage v ([S.Class d], [S.SignalIdx]),
@@ -622,9 +619,9 @@ distribution :: (V.FromList v,
                  Ord n,
                  Show n,
                  Show (v d)) => FlowRecord n v d -> [Idx.PPos n] -> d -> d -> DistRecord n v d
-distribution rec@(Record _ pMap) xs intervall offset = Record classification energyDistribution
+distribution rec@(Record _ pMap) xs interval offset = Record classification energyDistribution
   where classification = S.combineDistributions $
-                         map ((S.genDistribution1D $ S.classifyEven intervall offset) .
+                         map ((S.genDistribution1D $ S.classifyEven interval offset) .
                               S.changeSignalType . S.untype .
                               getSig rec) xs
         energyDistribution =  M.map (S.calcDistributionValues classification) pMap

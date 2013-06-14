@@ -464,7 +464,7 @@ etaDistr1Dim ti p n pDist fDist nDist =
 
 -- | Plot efficiency distribution from List of Records
 -- | pg: currently plots over input power, one should be able to choose
--- | You however can choose which power you want to plot and classify over (abszisse)
+-- | You however can choose which power you want to plot and classify over (abscissa)
 etaDistr1DimfromRecordList :: (Ord id,
                              Show id,
                              Show (v d),
@@ -494,17 +494,17 @@ etaDistr1DimfromRecordList :: (Ord id,
                             String  -> d -> d -> [(Record.Name, Record.DTimeFlowRecord id v d)]
                             -> (String, (Idx.PPos id, Idx.PPos id, Idx.PPos id)) -> IO ()
 
-etaDistr1DimfromRecordList ti  intervall offset rList  (plotTitle, (idIn,idOut,idAbszisse)) = mapM_ f rList
+etaDistr1DimfromRecordList ti  interval offset rList  (plotTitle, (idIn,idOut,idAbscissa)) = mapM_ f rList
   where f ((Record.Name recTitle), rec) = do
           let ein = Record.getSig rec idIn
               eout = Record.getSig rec idOut
-              eAbszisse = Record.getSig rec idAbszisse
-              pAbszisse = eAbszisse Sig../dtime
+              eAbscissa = Record.getSig rec idAbscissa
+              pAbscissa = eAbscissa Sig../dtime
               dtime = Record.getTime rec
               eta = Sig.calcEtaWithSign eout ein eout
-              (pDist, einDist , _ , nDist) = Sig.etaDistibution1D intervall offset
+              (pDist, einDist , _ , nDist) = Sig.etaDistribution1D interval offset
                                                  dtime ein eout eout
-              (x,y) = Sig.sortTwo (pAbszisse,eta)
+              (x,y) = Sig.sortTwo (pAbscissa,eta)
           etaDistr1Dim (ti ++ "_" ++ plotTitle ++ "_" ++ recTitle) x y  pDist
             (Sig.scale (Sig.norm einDist) 100) nDist
 
