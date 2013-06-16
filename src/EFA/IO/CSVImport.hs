@@ -15,7 +15,6 @@ import qualified Data.NonEmpty.Class as NonEmptyC
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Zip as Zip
 import qualified Data.Map as Map
-import qualified Data.List as List
 
 
 makeCSVRecord ::
@@ -52,26 +51,23 @@ modelicaCSVImport path = do
 
 
 
-type Filter = [NonEmpty.T [] String] -> [Int]
+type Filter = NonEmpty.T [] [String] -> NonEmpty.T [] [String]
 
 filterWith :: Int -> (String -> Bool) -> Filter
-filterWith r p cs = List.findIndices p (NonEmpty.tail (cs !! r))
+filterWith r p = NonEmpty.mapTail (filter (p . (!! r)))
 
 dontFilter :: Filter
-dontFilter = filterWith 0 (const True)
+dontFilter = id
 
 fortissCSVRecord ::
   NonEmpty.T [] Int -> Filter ->
   NonEmpty.T [] [String] ->
   SignalRecord [] Val
 fortissCSVRecord idx filt hs =
-  Record (S.fromList $ getRows time) (Map.fromList js)
-  where ths = Zip.transposeClip hs
-        rowIdx = filt ths
-        getRows as = map (read . (as !!)) rowIdx
+  Record (S.fromList $ map read time) (Map.fromList $ map f ks)
+  where ths = Zip.transposeClip $ filt hs
         NonEmpty.Cons (NonEmpty.Cons _ time) ks = fmap (ths !!) idx
-        js = map f ks
-        f (NonEmpty.Cons ti xs) = (SigId ti, S.fromList $ getRows xs)
+        f (NonEmpty.Cons ti xs) = (SigId ti, S.fromList $ map read xs)
 
 
 -- | Main Fortiss CSV Import Function
