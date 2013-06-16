@@ -2,29 +2,30 @@
 
 module EFA.IO.TableParser (EFA.IO.TableParser.read, write) where
 
-import qualified System.IO as Sys
-import Control.Monad (forM_)
+import EFA.IO.TableParserTypes (Map, T (..))
+import EFA.IO.Parser (number, eol)
+
+import qualified System.IO as IO
 
 import qualified Data.List as L
 import qualified Data.Map as M
-import Text.ParserCombinators.Parsec
 
-import Control.Applicative
-       (liftA, liftA2, (*>), (<*), (<$>), Applicative)
+import Text.ParserCombinators.Parsec
+import Control.Applicative (Applicative, liftA, liftA2, (*>), (<*))
+import Control.Monad (forM_, void)
 
 import Prelude as P
 
-import EFA.IO.TableParserTypes (Map, T (..))
 
 read :: FilePath -> IO (Map Double)
 read file = readFile file >>= \txt ->
   case parse tables file txt of
        Right tb -> return tb
-       Left err -> error (show err)
+       Left err -> ioError $ userError $ show err
 
 tables :: (Read a) => Parser (M.Map String (T a))
 tables = liftA M.fromList $
-  endBy table ((cst $ lookAhead double) <|> commentOrEol <|> eof)
+  endBy table ((void $ lookAhead double) <|> commentOrEol <|> eof)
 
 table :: (Read a) => Parser (String, T a)
 table = do
@@ -55,10 +56,7 @@ commentOrEol :: Parser ()
 commentOrEol = spacesNeol >> (eol <|> comment)
 
 comment :: Parser ()
-comment = between (char '#') eol (cst $ many neol)
-
-number :: (Read v) => Parser v
-number = P.read <$> (many1 $ oneOf "0123456789+-eE.")
+comment = between (char '#') eol (void $ many neol)
 
 sp :: Parser a -> Parser a
 sp = (spacesNeol >>)
@@ -67,31 +65,21 @@ spacesNeol :: Parser ()
 spacesNeol = skipMany separator
 
 separator :: Parser ()
-separator = cst $ oneOf "\t "
+separator = void $ oneOf "\t "
 
 neol :: Parser ()
-neol = cst $ noneOf "\n\r"
-
-eol :: Parser ()
-eol = cst $
-      try (string "\n\r")
-  <|> try (string "\r\n")
-  <|> string "\n"
-  <|> string "\r"
-
-cst :: (Applicative f) => f a -> f ()
-cst = liftA (const ())
+neol = void $ noneOf "\n\r"
 
 
 ------------------
 
-writeTable :: Sys.Handle -> (String, T Double) -> IO ()
+writeTable :: IO.Handle -> (String, T Double) -> IO ()
 writeTable hdl (name, T xy ds) = do
   let hd = "#1\ndouble " ++ name ++ show xy
       body = L.intercalate "\n" $
                map (L.intercalate " " . map show) ds
-  Sys.hPutStr hdl ("\n" ++ hd ++ "\n" ++ body ++ "\n")
+  IO.hPutStr hdl ("\n" ++ hd ++ "\n" ++ body ++ "\n")
 
 write :: FilePath -> Map Double -> IO ()
-write file tm = Sys.withFile file Sys.WriteMode $
+write file tm = IO.withFile file IO.WriteMode $
   forM_ (M.toList tm) . writeTable

@@ -25,10 +25,11 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.NonEmpty.Class as NonEmptyC
 import qualified Data.NonEmpty as NonEmpty
+import qualified Data.Empty as Empty
 import qualified Data.List.HT as ListHT
 import qualified Data.Foldable as Fold
 import Control.Applicative (Applicative, pure, liftA2, (<*>))
-import Data.NonEmpty (Empty(Empty), (!:))
+import Data.NonEmpty ((!:))
 import Data.Map (Map)
 import Data.Traversable (sequenceA)
 import Data.Foldable (Foldable, foldMap)
@@ -91,7 +92,7 @@ instance (Show i, Show a) => Show (Stack i a) where
 
 
 type family Sum (idx :: * -> *) :: * -> *  -- must be removed
-type instance Sum Empty = Value
+type instance Sum Empty.T = Value
 type instance Sum (NonEmpty.T idx) = Plus (Sum idx)
 
 
@@ -117,17 +118,17 @@ newtype
    WrapFunctor a b idx =
       WrapFunctor {unwrapFunctor :: Cube idx a -> Cube idx b}
 
-mapCubeValue :: (a -> b) -> Cube Empty a -> Cube Empty b
+mapCubeValue :: (a -> b) -> Cube Empty.T a -> Cube Empty.T b
 mapCubeValue f = valueCube . f . valueFromCube
 
-valueFromCube :: Cube Empty a -> a
+valueFromCube :: Cube Empty.T a -> a
 valueFromCube (Cube (Value a)) = a
 
 splitCube ::
    Cube (NonEmpty.T idx) a -> (Cube idx a, Cube idx a)
 splitCube (Cube (Plus a d)) = (Cube a, Cube d)
 
-valueCube :: a -> Cube Empty a
+valueCube :: a -> Cube Empty.T a
 valueCube a = Cube $ Value a
 
 plusCube ::
@@ -217,7 +218,7 @@ newtype Index f i idx = Index {runIndex :: idx i -> f idx}
 
 switchIndex ::
    (Dim.C idx) =>
-   (Empty i -> f Empty) ->
+   (Empty.T i -> f Empty.T) ->
    (forall didx. Dim.C didx => NonEmpty.T didx i -> f (NonEmpty.T didx)) ->
    idx i -> f idx
 switchIndex f g =
@@ -229,7 +230,7 @@ newtype
       Switch {runSwitch :: ExStack idx i a -> x}
 
 switchStack ::
-   (ExStack Empty i a -> x) ->
+   (ExStack Empty.T i a -> x) ->
    (forall didx. Dim.C didx =>
     ExStack (NonEmpty.T didx) i a -> x) ->
    Stack i a -> x
@@ -242,7 +243,7 @@ switchStack f g (Stack is s) =
 descent :: Stack i a -> Either a (i, (Stack i a, Stack i a))
 descent =
    switchStack
-      (\(ExStack Empty (Value a)) -> Left a)
+      (\(ExStack Empty.Cons (Value a)) -> Left a)
       (\(ExStack (NonEmpty.Cons i is) (Plus x y)) ->
           Right (i, (Stack is x, Stack is y)))
 
@@ -283,7 +284,7 @@ newtype
 
 fillValueMask ::
    (Ord i, Dim.C idx) =>
-   Empty i -> idx i -> FillMask Empty idx i
+   Empty.T i -> idx i -> FillMask Empty.T idx i
 fillValueMask l =
    getFillRightMask .
    switchIndex
@@ -345,8 +346,8 @@ class
       Cube (FillToIndex mask) a
 
 instance Fill FillStop where
-   type FillFromIndex FillStop = Empty
-   type FillToIndex FillStop = Empty
+   type FillFromIndex FillStop = Empty.T
+   type FillToIndex FillStop = Empty.T
    fill _clear FillStop x = Cube x
 
 instance Fill mask => Fill (FillTake mask) where
@@ -476,11 +477,11 @@ instance (Ord i, Arith.Integrate v) => Arith.Integrate (Stack i v) where
 
 
 singleton :: a -> Stack i a
-singleton = Stack Empty . Value
+singleton = Stack Empty.Cons . Value
 
 deltaPair :: i -> a -> a -> Stack i a
 deltaPair i a d =
-   Stack (i!:Empty) $ Plus (Value a) (Value d)
+   Stack (i!:Empty.Cons) $ Plus (Value a) (Value d)
 
 exPlus ::
    i ->
@@ -516,7 +517,7 @@ normalize s = fmap (~/ absolute s) s
 
 
 toList :: Dim.C idx => Cube idx a -> NonEmpty.T [] a
-toList = fold NonEmpty.append . fmap NonEmpty.singleton
+toList = fold NonEmptyC.append . fmap NonEmpty.singleton
 
 {- |
 You may use 'Data.Foldable.sum' for evaluation with respect to 'Num' class.
@@ -607,8 +608,8 @@ class (Dim.C (FilterToIndex mask), Dim.C (FilterFromIndex mask)) => Filter mask 
       ExStack (FilterToIndex mask) i a
 
 instance Filter TakeStop where
-   type FilterFromIndex TakeStop = Empty
-   type FilterToIndex TakeStop = Empty
+   type FilterFromIndex TakeStop = Empty.T
+   type FilterToIndex TakeStop = Empty.T
    exFilter TakeStop (ExStack is s) = (ExStack is s)
 
 instance Filter mask => Filter (TakeAll mask) where
@@ -630,7 +631,7 @@ filterMask ::
    (Dim.C idx, Ord i) => Map i Branch -> idx i -> FilterMask idx
 filterMask cond =
    switchIndex
-      (\Empty -> FilterMask TakeStop)
+      (\Empty.Cons -> FilterMask TakeStop)
       (\(NonEmpty.Cons i is) ->
          case filterMask cond is of
             FilterMask mask ->
@@ -664,8 +665,8 @@ exToMultiValue ::
 exToMultiValue plus =
    runExToMultiValue $
    switch
-      (ExToMultiValue $ \(ExStack Empty (Value x)) ->
-         MV.ExMultiValue Empty (MV.Leaf x))
+      (ExToMultiValue $ \(ExStack Empty.Cons (Value x)) ->
+         MV.ExMultiValue Empty.Cons (MV.Leaf x))
       (ExToMultiValue $ \x ->
          case splitPlus x of
             (i, (a,d)) ->
@@ -702,7 +703,7 @@ exFromMultiValue minus =
    runExFromMultiValue $
    switch
       (ExFromMultiValue $
-       \(MV.ExMultiValue Empty (MV.Leaf x)) -> ExStack Empty (Value x))
+       \(MV.ExMultiValue Empty.Cons (MV.Leaf x)) -> ExStack Empty.Cons (Value x))
       (ExFromMultiValue $
        \(MV.ExMultiValue (NonEmpty.Cons i is) (MV.Branch a0 b0)) ->
          case (cubeFromExStack $ exFromMultiValue minus (MV.ExMultiValue is a0),
@@ -741,7 +742,7 @@ assigns s =
    case descent s of
       Left a -> NonEmpty.singleton ([], a)
       Right (i, (a0,a1)) ->
-         NonEmpty.append
+         NonEmptyC.append
             (fmap (mapFst (Idx.before i :)) $ assigns a0)
             (fmap (mapFst (Idx.delta  i :)) $ assigns a1)
 
@@ -766,8 +767,8 @@ shrinkValues =
    runShrink $
    switch
       (Shrink $
-       \(ExStack Empty (Value a)) ->
-           map (ExStack Empty . Value) $ QC.shrink a)
+       \(ExStack Empty.Cons (Value a)) ->
+           map (ExStack Empty.Cons . Value) $ QC.shrink a)
       (Shrink $ \x ->
          case splitPlus x of
             (i, (a0,a1)) ->

@@ -14,6 +14,7 @@ import qualified Test.QuickCheck as QC
 
 import qualified Data.Map as Map
 import qualified Data.Set as Set
+import qualified Data.NonEmpty.Class as NonEmptyC
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.List.HT as ListHT
 import qualified Data.Foldable as Fold
@@ -229,7 +230,7 @@ normalize s = fmap (~/ absolute s) s
 
 
 toList :: Sum a -> NonEmpty.T [] a
-toList = fold NonEmpty.append . fmap NonEmpty.singleton
+toList = fold NonEmptyC.append . fmap NonEmpty.singleton
 
 {- |
 You may use 'Data.Foldable.sum' for evaluation with respect to 'Num' class.
@@ -371,7 +372,7 @@ assigns s =
    case descent s of
       Left a -> NonEmpty.singleton (Map.empty, a)
       Right (i, (a0,a1)) ->
-         NonEmpty.append
+         NonEmptyC.append
             (fmap (mapFst (Map.insert i Before)) $ assigns a0)
             (fmap (mapFst (Map.insert i Delta )) $ assigns a1)
 

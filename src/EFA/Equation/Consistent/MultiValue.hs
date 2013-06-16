@@ -5,6 +5,7 @@ module EFA.Equation.Consistent.MultiValue where
 import qualified EFA.Equation.Consistent.Dimension as Dim
 
 import qualified Data.NonEmpty as NonEmpty
+import qualified Data.Empty as Empty
 import Control.Applicative (Applicative, pure, (<*>), liftA2)
 import Data.Traversable (Traversable, sequenceA)
 import Data.Foldable (Foldable, foldMap)
@@ -26,7 +27,7 @@ data Branch tree a = Branch (tree a) (tree a)
 
 
 type family Tree (idx :: * -> *) :: * -> *
-type instance Tree NonEmpty.Empty = Leaf
+type instance Tree Empty.T = Leaf
 type instance Tree (NonEmpty.T idx) = Branch (Tree idx)
 
 

@@ -13,6 +13,7 @@ import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
 
 import qualified Data.Accessor.Basic as Accessor
+import qualified Data.NonEmpty.Class as NonEmptyC
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Map as Map
 import Data.NonEmpty ((!:))
@@ -183,7 +184,7 @@ instance Assigns Delta where
 
 instance Assigns rec => Assigns (ExtDelta rec) where
    assigns r =
-      NonEmpty.append
+      NonEmptyC.append
          (fmap (mapFst (Idx.ExtDelta Idx.Before)) $ assigns (extBefore r))
          (fmap (mapFst (Idx.ExtDelta Idx.Delta))  $ assigns (extDelta r))
 

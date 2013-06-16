@@ -34,15 +34,15 @@ import EFA.Signal.Data (Data(Data), Nil, (:>))
 
 import qualified Data.Traversable as Trav
 import qualified Data.Foldable as Fold
+import qualified Data.NonEmpty.Set as NonEmptySet
 import qualified Data.NonEmpty.Mixed as NonEmptyM
+import qualified Data.NonEmpty.Class as NonEmptyC
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.List.HT as HTL
 import qualified Data.List as L
-import qualified Data.Set as Set
 import qualified Data.Map as M
 import qualified Data.IntSet as IntSet
 import Data.IntSet (IntSet)
-import Data.Set (Set)
 
 import Data.Bool.HT (if')
 import Data.Eq.HT (equating)
@@ -510,7 +510,7 @@ This has several advantages:
 We should use a NonEmpty type for the chunks and for the time set.
 Note the similarity to our EventList datatypes.
 -}
-newtype Pattern a = Pattern [(Int, Set a)]
+newtype Pattern a = Pattern [(Int, NonEmptySet.T a)]
    deriving (Show)
 
 pattern ::
@@ -518,7 +518,7 @@ pattern ::
    v a -> Pattern a
 pattern v0 =
    Pattern $ snd $
-   L.mapAccumL (\k0 (k1,t) -> (k1, (k1-k0, Set.singleton t))) (-1) $
+   L.mapAccumL (\k0 (k1,t) -> (k1, (k1-k0, NonEmptySet.singleton t))) (-1) $
    catMaybes $ zipWith (\k -> fmap ((,) k)) [0..] $
    HTL.mapAdjacent checkZeroCrossing $ V.toList v0
 
@@ -532,7 +532,7 @@ instance (Ord a) => Monoid (Pattern a) where
           go p [] = p
           go (ac@(ak,at):as) (bc@(bk,bt):bs) =
              case compare ak bk of
-                EQ -> (ak, Set.union at bt) : go as bs
+                EQ -> (ak, NonEmptySet.union at bt) : go as bs
                 LT -> ac : go as ((bk-ak,bt) : bs)
                 GT -> bc : go ((ak-bk,at) : as) bs
       in  Pattern $ go pa pb
@@ -554,13 +554,12 @@ chopVectorInterpolate (Pattern p) =
        go (ts:tss) (v0:v1:vs) =
           case (V.viewR v0, V.viewL v1) of
              (Just (_,al), Just (ar,_)) ->
-                maybe
-                   (error "set of cutting points must be non-empty")
-                   (\(vs2,v2) -> vs2 ++ go tss (v2:vs)) $
-                HTL.viewR $
-                HTL.mapAdjacent V.append $ (v0:) $ (++[v1]) $
-                map (\t -> V.singleton $ interpolate t al ar) $
-                Set.toAscList ts
+                (\(vs2,v2) -> vs2 ++ go tss (v2:vs)) $
+                NonEmpty.viewR $
+                NonEmpty.mapAdjacent V.append $
+                NonEmpty.cons v0 $ flip NonEmptyC.snoc v1 $
+                fmap (\t -> V.singleton $ interpolate t al ar) $
+                NonEmptySet.toAscList ts
              _ -> error "all chunks must be non-empty"
        go _ _ = error "lists must be equally long"
    in  case unzip p of

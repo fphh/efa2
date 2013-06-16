@@ -15,7 +15,6 @@ import qualified Data.List.HT as LH
 
 import qualified Data.Set as Set
 
-import qualified Data.NonEmpty.Mixed as NonEmptyM
 import qualified Data.NonEmpty as NonEmpty
 
 import Data.Maybe.HT (toMaybe)
@@ -541,7 +540,7 @@ instance Split UV.Vector where
 
 cumulate :: (Num a) => NonEmpty.T [] a -> [a] -> [a]
 cumulate storage =
-   NonEmpty.tail . NonEmptyM.scanl (+) (NonEmpty.last storage)
+   NonEmpty.tail . NonEmpty.scanl (+) (NonEmpty.last storage)
 
 decumulate :: (Num a) => NonEmpty.T [] a -> [a] -> [a]
 decumulate inStorage outStorage =

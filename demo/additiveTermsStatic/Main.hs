@@ -40,6 +40,7 @@ import EFA.Report.FormatValue (FormatValue, formatValue)
 import qualified Data.Foldable as Fold
 import qualified Data.Map as Map
 import qualified Data.NonEmpty as NonEmpty
+import qualified Data.Empty as Empty
 import Data.NonEmpty ((!:))
 import Data.Monoid (mempty, (<>))
 
@@ -88,7 +89,7 @@ absolute = NestedDelta.getAbsoluteRecord params
 params ::
    (Arith.Sum a) =>
    ParameterRecord
-      (NonEmpty.T (NonEmpty.T (NonEmpty.T NonEmpty.Empty)))
+      (NonEmpty.T (NonEmpty.T (NonEmpty.T Empty.T)))
       RecMultiDelta a
 params =
    beforeDelta &&> beforeDelta &&> beforeDelta &&> NestedDelta.parameterStart
@@ -139,7 +140,7 @@ givenSymbolic =
          (givenParameterSymbol ein  !:
           givenParameterSymbol eta0 !:
           givenParameterSymbol eta1 !:
-          NonEmpty.Empty)
+          Empty.Cons)
          (NestedDelta.getParameterRecord params)) <>
 
    mempty
@@ -199,7 +200,7 @@ givenNumeric =
          (givenParameterNumber ein  4.00 (-0.6) !:
           givenParameterNumber eta0 0.25   0.1  !:
           givenParameterNumber eta1 0.85   0.05 !:
-          NonEmpty.Empty)
+          Empty.Cons)
          (NestedDelta.getParameterRecord params)) <>
 
    mempty

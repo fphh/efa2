@@ -2,75 +2,83 @@
 
 module EFA.IO.CSVImport (modelicaCSVImport, fortissCSVImport, filterWith, dontFilter) where
 
-import qualified Data.Map as M
-import qualified Data.List as L
-
+import EFA.IO.CSVParser (csvFileWithHeader)
 import Text.ParserCombinators.Parsec (parse)
+import qualified EFA.IO.CSVParser as CSV
 
 import EFA.Signal.Record(Record(Record),SignalRecord, SigId(SigId))
-
-import qualified EFA.Signal.Signal as S
-import qualified EFA.Signal.Vector as SV
-
-import EFA.IO.CSVParser (csvFile)
-
 import EFA.Signal.Base (Val)
 
-import Debug.Trace
+import qualified EFA.Signal.Signal as S
+
+import qualified Data.NonEmpty.Class as NonEmptyC
+import qualified Data.NonEmpty as NonEmpty
+import qualified Data.Zip as Zip
+import qualified Data.Map as Map
 
 
-makeCSVRecord ::  [[String]] -> SignalRecord [] Val
-makeCSVRecord [] = error "This is not possible!"
-makeCSVRecord (h:hs) =
-  Record (S.fromList time) (M.fromList $ zip sigIdents (map S.fromList sigs))
-  where sigIdents = map SigId (tail h)
-        time:sigs = SV.transpose (map (map read . init) hs)
+makeCSVRecord ::
+  (NonEmpty.T (NonEmpty.T []) SigId,
+   [NonEmpty.T (NonEmpty.T []) Val]) ->
+  SignalRecord [] Val
+makeCSVRecord (NonEmpty.Cons _timeStr sigNames, hs) =
+  let NonEmpty.Cons time sigs =
+        Zip.transposeClip $ fmap NonEmpty.init hs
+  in  Record
+        (S.fromList time)
+        (Map.fromList $
+         zip
+           (NonEmpty.init sigNames)
+           (map S.fromList sigs))
 
 -- | Main Modelica CSV Import Function
 modelicaCSVImport :: FilePath -> IO (SignalRecord [] Val)
 modelicaCSVImport path = do
-  let ioerr = ioError . userError
   text <- readFile path
-  case parse (csvFile ',') path text of
-    Left err -> ioerr $ "Parse error in file " ++ show err
-    Right table ->
-      case table of
-        (("time":_):_) -> return $ makeCSVRecord table
-        [] -> ioerr $ "Empty CSV file " ++ show path
-        _ -> ioerr $ "First column of " ++ show path ++ " is not \"time\""
+  let checkTime str =
+        case str of
+          "time" -> Right $ SigId str
+          _ -> Left "time column expected"
+      cellContent "" = Right 0 -- needed for the right dummy column
+      cellContent str = CSV.cellContent str
+      parser =
+        csvFileWithHeader
+          (NonEmpty.Cons checkTime $ NonEmptyC.repeat (Right . SigId))
+          cellContent ','
+  case parse parser path text of
+    Left err -> ioError . userError $ "Parse error in file " ++ show err
+    Right table -> return $ makeCSVRecord table
 
 
 
+type Filter = [[Val]] -> [[Val]]
 
-filterWith :: Int -> (String -> Bool) -> [[String]] -> [Int]
-filterWith r p cs = L.findIndices p (tail (cs !! r))
+filterWith :: Int -> (Val -> Bool) -> Filter
+filterWith r p = filter (p . (!! r))
 
-dontFilter :: [[String]] -> [Int]
-dontFilter = filterWith 0 (const True)
+dontFilter :: Filter
+dontFilter = id
 
 fortissCSVRecord ::
-  [Int] -> [[String]] ->
-  ([[String]] -> [Int]) -> SignalRecord [] Val
-fortissCSVRecord _ [] _ = error "This is not possible!"
-fortissCSVRecord idx hs filt =
-  Record (S.fromList $ getRows time) (M.fromList js)
-  where ths = SV.transpose hs
-        rowIdx = filt ths
-        getRows as = map (read . (as !!)) rowIdx
-        (_:time):ks = map (ths !!) idx
-        js = map f ks
-        f (ti:xs) = (SigId ti, S.fromList $ getRows xs)
+  NonEmpty.T [] Int -> Filter ->
+  ([SigId], [[Val]]) ->
+  SignalRecord [] Val
+fortissCSVRecord idx filt (ids, hs) =
+  Record (S.fromList time) (fmap S.fromList $ Map.fromList ks)
+  where ths = zip ids $ Zip.transposeClip $ filt hs
+        NonEmpty.Cons (_, time) ks = fmap (ths !!) idx
 
 
 -- | Main Fortiss CSV Import Function
 fortissCSVImport ::
   FilePath ->
-  [Int] ->
-  ([[String]] -> [Int]) ->
+  NonEmpty.T [] Int -> Filter ->
   IO (SignalRecord [] Val)
 fortissCSVImport path idx filt = do
   text <- readFile path
-  case parse (csvFile ';') path text of
+  let parser =
+        csvFileWithHeader (NonEmptyC.repeat (Right . SigId)) CSV.cellContent ';'
+  case parse parser path text of
     Left err ->
       ioError $ userError $ "Parse error in file " ++ show err
-    Right table -> return $ fortissCSVRecord idx table filt
+    Right table -> return $ fortissCSVRecord idx filt table
