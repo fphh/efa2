@@ -5,7 +5,7 @@ import Text.ParserCombinators.Parsec (Parser)
 
 import qualified Data.NonEmpty as NonEmpty
 
-import Control.Applicative (Applicative, liftA, liftA2, (*>), (<*))
+import Control.Applicative (Applicative, liftA2, (<*))
 
 
 number :: (Read v) => Parser v
@@ -14,6 +14,14 @@ number = do
    case reads str of
       [(n,"")] -> return n
       _ -> fail $ "invalid number string: " ++ show str
+
+cellContent ::
+  (Read a) =>
+  String -> Parser a
+cellContent str =
+  case reads str of
+    [(a,"")] -> return a
+    _ -> fail $ "could not parse cell content: " ++ show str
 
 
 class Sequence f where

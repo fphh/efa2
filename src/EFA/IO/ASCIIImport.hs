@@ -3,7 +3,9 @@
 
 module EFA.IO.ASCIIImport (modelicaASCIIImport) where
 
+import qualified EFA.IO.Parser as EFAParser
 import EFA.IO.CSVParser (csvFile)
+import Text.ParserCombinators.Parsec (Parser, parse)
 
 import EFA.Signal.Record (Record(Record),SignalRecord, SigId(SigId))
 
@@ -14,16 +16,7 @@ import qualified Data.Traversable as Trav
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Zip as Zip
 import qualified Data.Map as Map
-import Text.ParserCombinators.Parsec (Parser, parse)
 
-
-parseCellContent ::
-  (Read a) =>
-  String -> Parser a
-parseCellContent str =
-  case reads str of
-    [(a,"")] -> return a
-    _ -> fail $ "could not parse cell content: " ++ show str
 
 makeASCIIRecord ::
   (SV.Storage v a, SV.FromList v, Read a) =>
@@ -31,7 +24,7 @@ makeASCIIRecord ::
   Parser (SignalRecord v a)
 makeASCIIRecord hs = do
   NonEmpty.Cons time sigs <-
-    Trav.mapM (Trav.mapM parseCellContent) $
+    Trav.mapM (Trav.mapM EFAParser.cellContent) $
     Zip.transposeClip $ fmap NonEmpty.init $ NonEmpty.flatten hs
   return $
     Record
