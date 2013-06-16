@@ -2,9 +2,10 @@
 
 module EFA.IO.TableParser (EFA.IO.TableParser.read, write) where
 
-import qualified System.IO as Sys
 import EFA.IO.TableParserTypes (Map, T (..))
 import EFA.IO.Parser (number)
+
+import qualified System.IO as IO
 
 import qualified Data.List as L
 import qualified Data.Map as M
@@ -79,13 +80,13 @@ eol = void $
 
 ------------------
 
-writeTable :: Sys.Handle -> (String, T Double) -> IO ()
+writeTable :: IO.Handle -> (String, T Double) -> IO ()
 writeTable hdl (name, T xy ds) = do
   let hd = "#1\ndouble " ++ name ++ show xy
       body = L.intercalate "\n" $
                map (L.intercalate " " . map show) ds
-  Sys.hPutStr hdl ("\n" ++ hd ++ "\n" ++ body ++ "\n")
+  IO.hPutStr hdl ("\n" ++ hd ++ "\n" ++ body ++ "\n")
 
 write :: FilePath -> Map Double -> IO ()
-write file tm = Sys.withFile file Sys.WriteMode $
+write file tm = IO.withFile file IO.WriteMode $
   forM_ (M.toList tm) . writeTable
