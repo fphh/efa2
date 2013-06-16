@@ -1,12 +1,23 @@
 module EFA.IO.Parser where
 
 import qualified Text.ParserCombinators.Parsec as Parsec
-import Text.ParserCombinators.Parsec (Parser)
+import Text.ParserCombinators.Parsec (Parser, (<?>), (<|>))
 
 import qualified Data.NonEmpty as NonEmpty
 
 import Control.Applicative (Applicative, liftA2, (<*))
+import Control.Monad.HT (void)
 
+
+eol :: Parser ()
+eol =
+  void (
+        Parsec.try (Parsec.string "\n\r")
+    <|> Parsec.try (Parsec.string "\r\n")
+    <|> Parsec.string "\n"
+    <|> Parsec.string "\r"
+    <?> "end of line"
+  )
 
 number :: (Read v) => Parser v
 number = do

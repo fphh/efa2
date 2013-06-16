@@ -3,7 +3,7 @@
 module EFA.IO.TableParser (EFA.IO.TableParser.read, write) where
 
 import EFA.IO.TableParserTypes (Map, T (..))
-import EFA.IO.Parser (number)
+import EFA.IO.Parser (number, eol)
 
 import qualified System.IO as IO
 
@@ -69,13 +69,6 @@ separator = void $ oneOf "\t "
 
 neol :: Parser ()
 neol = void $ noneOf "\n\r"
-
-eol :: Parser ()
-eol = void $
-      try (string "\n\r")
-  <|> try (string "\r\n")
-  <|> string "\n"
-  <|> string "\r"
 
 
 ------------------

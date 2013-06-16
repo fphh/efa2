@@ -8,7 +8,7 @@ module EFA.IO.CSVParser (csvFile) where
 import Text.ParserCombinators.Parsec
 
 import qualified EFA.IO.Parser as EFAParser
-import EFA.IO.Parser (Sequence)
+import EFA.IO.Parser (Sequence, eol)
 
 
 -- | Takes a separator character.
@@ -36,10 +36,3 @@ quotedChar :: Parser Char
 quotedChar =
         noneOf "\""
     <|> try (string "\"\"" >> return '"')
-
-eol :: Parser String
-eol =   try (string "\n\r")
-    <|> try (string "\r\n")
-    <|> string "\n"
-    <|> string "\r"
-    <?> "end of line"

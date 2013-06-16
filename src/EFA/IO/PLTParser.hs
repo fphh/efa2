@@ -5,7 +5,7 @@ module EFA.IO.PLTParser where
 import EFA.Signal.Record (SigId(SigId))
 
 import qualified EFA.IO.Parser as EFAParser
-import EFA.IO.Parser (Sequence, number)
+import EFA.IO.Parser (Sequence, number, eol)
 import Text.ParserCombinators.Parsec
 import Control.Applicative ((*>), liftA2)
 
@@ -29,10 +29,3 @@ dataline = manyTill (noneOf "\n\r") (string ", ") *> number
 
 removeClutter :: Parser String
 removeClutter = manyTill anyChar datasetToken
-
-eol :: Parser String
-eol =   try (string "\n\r")
-    <|> try (string "\r\n")
-    <|> string "\n"
-    <|> string "\r"
-    <?> "end of line"
