@@ -21,7 +21,7 @@ read :: FilePath -> IO (Map Double)
 read file = readFile file >>= \txt ->
   case parse tables file txt of
        Right tb -> return tb
-       Left err -> error (show err)
+       Left err -> ioError $ userError $ show err
 
 tables :: (Read a) => Parser (M.Map String (T a))
 tables = liftA M.fromList $
