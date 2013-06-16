@@ -2,9 +2,12 @@
 
 module EFA.IO.PLTParser where
 
+import EFA.Signal.Record (SigId(SigId))
+
+import EFA.IO.Parser (number)
 import Text.ParserCombinators.Parsec
 import Control.Applicative ((*>), liftA2)
-import EFA.Signal.Record (SigId(SigId))
+
 
 type Table v = (SigId, [v])
 
@@ -20,9 +23,6 @@ table = liftA2 f (removeClutter *> header) (endBy dataline eol)
 
 header :: Parser String
 header = manyTill anyChar eol
-
-number :: (Read v) => Parser v
-number = read `fmap` (many $ oneOf "0123456789+-eE.")
 
 dataline :: (Read v) => Parser v
 dataline = manyTill (noneOf "\n\r") (string ", ") *> number

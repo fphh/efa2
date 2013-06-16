@@ -62,6 +62,7 @@ Library
     EFA.IO.PLTParser
     EFA.IO.TableParserTypes
     EFA.IO.TableParser
+    EFA.IO.Parser
     EFA.Utility
     EFA.Utility.Async
     EFA.Utility.Map
