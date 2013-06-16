@@ -3,26 +3,29 @@
 
 module EFA.IO.ASCIIImport (modelicaASCIIImport) where
 
-import qualified Data.Map as M
-import Text.ParserCombinators.Parsec (parse)
+import EFA.IO.CSVParser (csvFile)
 
 import EFA.Signal.Record (Record(Record),SignalRecord, SigId(SigId))
 
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Vector as SV
 
-import EFA.IO.CSVParser (csvFile)
-
+import qualified Data.NonEmpty as NonEmpty
+import qualified Data.Zip as Zip
+import qualified Data.Map as Map
+import Text.ParserCombinators.Parsec (parse)
 
 
 makeASCIIRecord ::
   (SV.Storage t v, SV.FromList t, Read v) =>
-  [[String]] -> SignalRecord t v
-makeASCIIRecord [] = error "This is not possible!"
+  NonEmpty.T [] (NonEmpty.T (NonEmpty.T []) String) ->
+  SignalRecord t v
 makeASCIIRecord hs =
-  Record (S.fromList time) (M.fromList $ zip sigIdents (map S.fromList sigs))
+  Record (S.fromList time) (Map.fromList $ zip sigIdents $ map S.fromList sigs)
   where sigIdents = map (SigId . ("sig_" ++) . show) [(0::Int)..]
-        time:sigs = SV.transpose (map (map read . init) hs)
+        NonEmpty.Cons time sigs =
+           Zip.transposeClip $ fmap (fmap read . NonEmpty.init) $
+           NonEmpty.flatten hs
 
 -- | Main ASCII Import Function
 modelicaASCIIImport ::

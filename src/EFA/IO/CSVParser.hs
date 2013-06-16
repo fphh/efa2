@@ -7,15 +7,22 @@ module EFA.IO.CSVParser (csvFile) where
 
 import Text.ParserCombinators.Parsec
 
+import qualified EFA.IO.Parser as EFAParser
+import EFA.IO.Parser (Sequence)
+
 
 -- | Takes a separator character.
-csvFile :: Char -> Parser [[String]]
-csvFile sepChar = endBy (line sepChar) eol
+csvFile ::
+  (Sequence table, Sequence line) =>
+  Char -> Parser (table (line String))
+csvFile sepChar = EFAParser.endBy (line sepChar) eol
 
-line :: Char -> Parser [String]
+line ::
+  Sequence line =>
+  Char -> Parser (line String)
 line sepChar = do
   skipMany (char sepChar) -- remove seperators from the beginning of a line
-  sepBy (cell sepChar) (char sepChar)
+  EFAParser.sepBy (cell sepChar) (char sepChar)
 
 cell :: Char -> Parser String
 cell sepChar = quotedCell <|> many (noneOf (sepChar:"\n\r"))
