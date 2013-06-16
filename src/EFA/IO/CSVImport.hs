@@ -2,7 +2,7 @@
 
 module EFA.IO.CSVImport (modelicaCSVImport, fortissCSVImport, filterWith, dontFilter) where
 
-import EFA.IO.CSVParser (csvFile, csvFileWithHeader)
+import EFA.IO.CSVParser (csvFileWithHeader)
 import Text.ParserCombinators.Parsec (parse)
 import qualified EFA.IO.CSVParser as CSV
 
@@ -51,23 +51,22 @@ modelicaCSVImport path = do
 
 
 
-type Filter = NonEmpty.T [] [String] -> NonEmpty.T [] [String]
+type Filter = [[Val]] -> [[Val]]
 
-filterWith :: Int -> (String -> Bool) -> Filter
-filterWith r p = NonEmpty.mapTail (filter (p . (!! r)))
+filterWith :: Int -> (Val -> Bool) -> Filter
+filterWith r p = filter (p . (!! r))
 
 dontFilter :: Filter
 dontFilter = id
 
 fortissCSVRecord ::
   NonEmpty.T [] Int -> Filter ->
-  NonEmpty.T [] [String] ->
+  ([SigId], [[Val]]) ->
   SignalRecord [] Val
-fortissCSVRecord idx filt hs =
-  Record (S.fromList $ map read time) (Map.fromList $ map f ks)
-  where ths = Zip.transposeClip $ filt hs
-        NonEmpty.Cons (NonEmpty.Cons _ time) ks = fmap (ths !!) idx
-        f (NonEmpty.Cons ti xs) = (SigId ti, S.fromList $ map read xs)
+fortissCSVRecord idx filt (ids, hs) =
+  Record (S.fromList time) (fmap S.fromList $ Map.fromList ks)
+  where ths = zip ids $ Zip.transposeClip $ filt hs
+        NonEmpty.Cons (_, time) ks = fmap (ths !!) idx
 
 
 -- | Main Fortiss CSV Import Function
@@ -77,7 +76,9 @@ fortissCSVImport ::
   IO (SignalRecord [] Val)
 fortissCSVImport path idx filt = do
   text <- readFile path
-  case parse (fmap (fortissCSVRecord idx filt) $ csvFile ';') path text of
+  let parser =
+        csvFileWithHeader (NonEmptyC.repeat (Right . SigId)) CSV.cellContent ';'
+  case parse parser path text of
     Left err ->
       ioError $ userError $ "Parse error in file " ++ show err
-    Right table -> return table
+    Right table -> return $ fortissCSVRecord idx filt table
