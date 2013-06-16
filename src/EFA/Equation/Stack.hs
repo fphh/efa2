@@ -1,12 +1,11 @@
 {-# LANGUAGE TypeFamilies #-}
 module EFA.Equation.Stack where
 
-import qualified EFA.Graph.Topology.Index as Idx
-
 import qualified EFA.Equation.MultiValue as MV
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic ((~+), (~-), (~*), (~/))
-import EFA.Utility (differenceMapSet)
+
+import qualified EFA.Utility.Map as MapU
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
@@ -24,7 +23,7 @@ import Data.Map (Map)
 import Data.Traversable (sequenceA)
 import Data.Foldable (Foldable, foldMap)
 import Data.Monoid ((<>))
-import Data.Tuple.HT (mapFst, swap)
+import Data.Tuple.HT (mapFst)
 import Data.Maybe.HT (toMaybe)
 
 import qualified Prelude as P
@@ -140,7 +139,7 @@ mul times plus x0@(Stack is0 _) y0@(Stack js0 _) =
 
 instance (Ord i, Num a) => Num (Stack i a) where
    fromInteger = singleton . fromInteger
-   negate (Stack is s) = Stack is $ fmap negate s
+   negate = fmap negate
    (+) = add (+) (const 0)
    (*) = mul (*) (+)
 
@@ -188,7 +187,7 @@ instance (Ord i, Fractional a) => Fractional (Stack i a) where
 
 
 instance (Ord i, Arith.Sum a) => Arith.Sum (Stack i a) where
-   negate (Stack is s) = Stack is $ fmap Arith.negate s
+   negate = fmap Arith.negate
    (~+) = add (~+) Arith.clear
 
 instance (Ord i, Arith.Product a) => Arith.Product (Stack i a) where
@@ -204,6 +203,7 @@ instance (Ord i, Arith.Product a) => Arith.Product (Stack i a) where
    -- recip = recip Arith.recip (~*) Arith.negate (~+)
    recip = fromMultiValue . Arith.recip . toMultiValue
    x ~/ y = fromMultiValue $ toMultiValue x ~/ toMultiValue y
+   constOne = fromMultiValue . Arith.constOne . toMultiValue
 
 instance (Ord i, Arith.Constant a) => Arith.Constant (Stack i a) where
    zero = singleton Arith.zero
@@ -212,7 +212,7 @@ instance (Ord i, Arith.Constant a) => Arith.Constant (Stack i a) where
 
 instance (Ord i, Arith.Integrate v) => Arith.Integrate (Stack i v) where
    type Scalar (Stack i v) = Stack i (Arith.Scalar v)
-   integrate (Stack is a) = Stack is $ fmap Arith.integrate a
+   integrate = fmap Arith.integrate
 
 
 singleton :: a -> Stack i a
@@ -288,7 +288,7 @@ filter c1 (Filtered c0 s@(Stack is _x)) =
    liftA2 Filtered (mergeConditions c0 c1) $
    fmap
       (\c1' ->
-         (if Fold.any (Delta==) $ differenceMapSet c1' $ Set.fromList is
+         (if Fold.any (Delta==) $ MapU.differenceSet c1' $ Set.fromList is
             then fmap Arith.clear
             else id) $
          filterNaive c1' s)
@@ -357,20 +357,10 @@ fromMultiValueGen minus (MV.MultiValue indices tree) =
 
 toMultiValueGen :: (a -> a -> a) -> Stack i a -> MV.MultiValue i a
 toMultiValueGen plus (Stack indices tree) =
-   let go (Value a) = MV.Leaf a
-       go (Plus a0 a1) =
-          MV.Branch (go a0) (liftA2 plus (go a1) (go a0))
-   in  MV.MultiValue indices $ go tree
+   MV.MultiValue indices $
+   fold (\a0 a1 -> MV.Branch a0 (liftA2 plus a1 a0)) $
+   fmap MV.Leaf tree
 
-
-assignsIndexList ::
-   (Ord i) => Stack i a -> NonEmpty.T [] ([Idx.Record Idx.Delta i], a)
-assignsIndexList =
-   let flatten :: Map i Branch -> [Idx.Record Idx.Delta i]
-       flatten =
-          map (uncurry Idx.Record . swap) . Map.toList .
-          fmap (\b -> case b of Before -> Idx.Before; Delta -> Idx.Delta)
-   in  fmap (mapFst flatten) . assigns
 
 assignDeltaMap :: (Ord i) => Stack i a -> Map (Map i Branch) a
 assignDeltaMap =

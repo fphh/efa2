@@ -2,7 +2,7 @@
 
 module EFA.IO.PLTImport where
 
-import qualified Data.Map as M 
+import qualified Data.Map as M
 
 import Text.ParserCombinators.Parsec (parse)
 import EFA.Signal.Record(Record(Record),SignalRecord, SigId(SigId))

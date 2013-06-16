@@ -2,20 +2,21 @@
 
 module Main where
 
-
-import qualified Data.Map as M 
+import qualified EFA.Example.Index as XIdx
 
 import EFA.Signal.Sequence
 import EFA.Signal.Record
 import EFA.Signal.Signal as S
-import qualified EFA.Signal.Plot as Plot
+import qualified EFA.Signal.PlotIO as PlotIO
 import EFA.Signal.Base (Val)
 
+import qualified Data.Map as M
+import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 
 data Node = Node0 | Node1 | Node2 deriving (Eq, Ord, Show)
 
 t :: TSigL
-t = S.fromList [0,1,2] 
+t = S.fromList [0,1,2]
 
 p1, p2, p3 :: PSigL
 p1 = S.fromList [-1,1,1]
@@ -26,9 +27,9 @@ pRec :: PowerRecord Node [] Val
 pRec = Record t
          (M.fromListWith
             (error "duplicate keys")
-            [ (PPosIdx Node0 Node1, p1),
-              (PPosIdx Node1 Node0, p2),
-              (PPosIdx Node1 Node2, p3)])
+            [ (XIdx.ppos Node0 Node1, p1),
+              (XIdx.ppos Node1 Node0, p2),
+              (XIdx.ppos Node1 Node2, p3)])
 
 pRec0 :: PowerRecord Node [] Val
 pRec0 = addZeroCrossings pRec
@@ -37,4 +38,4 @@ main :: IO ()
 main = do
   print pRec
   print pRec0
-  Plot.recordIO "pRec0" pRec0
+  PlotIO.record "pRec0" DefaultTerm.cons show id pRec0

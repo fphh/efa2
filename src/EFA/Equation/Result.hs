@@ -4,11 +4,11 @@ module EFA.Equation.Result where
 
 import Control.Applicative (Applicative, pure, (<*>))
 import Data.Foldable (Foldable, foldMap)
-import Data.Monoid (mempty)
+import Data.Monoid (mempty, Monoid(..))
 
 
 data Result a = Undetermined
-              | Determined a deriving (Show)
+              | Determined a deriving (Show, Eq)
 
 
 instance Functor Result where
@@ -25,3 +25,12 @@ instance Foldable Result where
     case r of
       Undetermined -> mempty
       Determined x -> f x
+
+toMaybe :: Result a -> Maybe a
+toMaybe Undetermined = Nothing
+toMaybe (Determined x) = Just x
+
+{-# DEPRECATED isDet "Using isDet you risk non-total functions. Better use Result.toMaybe or pattern matching." #-}
+isDet :: Result a -> Bool
+isDet (Determined _) = True
+isDet _ = False

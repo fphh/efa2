@@ -15,7 +15,8 @@ import Data.Monoid (Monoid(mempty, mappend, mconcat))
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic
           (Sum, (~+), (~-),
-           Product, (~*), (~/))
+           Product, (~*), (~/),
+           Constant)
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
@@ -77,6 +78,13 @@ instance P.Show (Apply ab c) => P.Show (Data ab c) where
    showsPrec n (Data x) =
       P.showParen (n>=10)
          (P.showString "Data " . P.shows x)
+
+
+-- Funktioniert dieser Parser korrekt?
+instance P.Read (Apply ab c) => P.Read (Data ab c) where
+   readsPrec n q = P.readParen (n >= 10)
+                     (\r -> [(Data x, t) | ("Data", s) <- P.lex r,
+                                           (x, t) <- P.readsPrec (n+1) s ]) q
 
 
 ---------------------------------------------------------
@@ -218,6 +226,11 @@ instance (Fold c, Equal c, Map c) => SV.Walker (Data c) where
    foldl f b as = foldl f b `readData` as
    equalBy f as bs = equalBy f `readData` as `readData` bs
 
+map2 ::
+  (SV.Storage v d2, SV.Walker v, SV.Storage v (w d1), SV.Storage w d1) =>
+  (w d1 -> d2) -> Data (v :> w :> Nil) d1 -> Data (v :> Nil) d2
+map2 f xd = nestedData $
+  withNestedData (SV.map f) xd
 
 ----------------------------------------------------------
 -- | Zipping for normal Arithmetics
@@ -282,6 +295,12 @@ instance (ZipWith c, Storage c a, Product a) => Product (Data c a) where
    (~*) = zipWith (~*)
    (~/) = zipWith (~/)
    recip = map Arith.recip
+   constOne = map Arith.constOne
+
+instance (Constant a) => Constant (Data Nil a) where
+   zero = Data Arith.zero
+   fromInteger = Data . Arith.fromInteger
+   fromRational = Data . Arith.fromRational
 
 
 {- |
@@ -497,15 +516,17 @@ _minimum =
 
 class Maximum c where
    maximum, minimum :: (Storage c d, Ord d) => Data c d -> d
+   minmax :: (Storage c d, Ord d) => Data c d -> (d, d)
 
 instance Maximum Nil where
    maximum (Data x) = x
    minimum (Data x) = x
+   minmax (Data x) = (x, x)
 
 instance (Maximum1 v2 v1) => Maximum (v2 :> v1) where
    maximum = fromMaybe (error "Data.maximum: empty vector") . maximum1
    minimum = fromMaybe (error "Data.minimum: empty vector") . minimum1
-
+   minmax = fromMaybe (error "Data.minmax: empty vector") . minmax1
 
 class Maximum1 v2 v1 where
    maximum1, minimum1 ::
@@ -515,15 +536,23 @@ class Maximum1 v2 v1 where
       -}
       (Storage (v2 :> v1) d, Ord d) =>
       Data (v2 :> v1) d -> Maybe d
+   minmax1 ::
+      (Storage (v2 :> v1) d, Ord d) =>
+      Data (v2 :> v1) d -> Maybe (d, d)
 
 instance SV.Singleton v => Maximum1 v Nil where
    maximum1 = Just . withNestedData SV.maximum
    minimum1 = Just . withNestedData SV.minimum
+   minmax1 = Just . withNestedData SV.minmax
 
 instance (SV.Walker v3, Maximum1 v2 v1) => Maximum1 v3 (v2 :> v1) where
    maximum1 xd = withNestedData (vecFoldlMap (liftOrd P.max) Nothing (maximum1 . subData xd)) xd
    minimum1 xd = withNestedData (vecFoldlMap (liftOrd P.min) Nothing (minimum1 . subData xd)) xd
-
+   minmax1 xd =
+      withNestedData (vecFoldlMap (liftOrd f) Nothing (minmax1 . subData xd)) xd
+      where f (a, b) (x, y) = (,)
+              (if a < x then a else x)
+              (if b > y then b else y)
 
 liftOrd :: (a -> a -> a) -> Maybe a -> Maybe a -> Maybe a
 liftOrd f (Just x) (Just y) = Just (f x y)
@@ -832,17 +861,26 @@ findIndex ::
    (d -> Bool) -> Data (v :> Nil) d -> Maybe Int
 findIndex f = withNestedData (SV.findIndex f)
 
+findIndices ::
+   (SV.Find v, SV.Storage v d) =>
+   (d -> Bool) -> Data (v :> Nil) d -> Data (v :> Nil) Int
+findIndices f (Data x) = Data $ (SV.findIndices f) x
+
+
+
 slice ::
    (SV.Slice v, SV.Storage v d) =>
    Int -> Int -> Data (v :> Nil) d -> Data (v :> Nil) d
 slice idx n = withNestedData (Data . SV.slice idx n)
 
 
-concat :: (SV.Storage v1 (Apply c d), 
-           SV.Singleton v1, 
-           SV.Storage v2 (v1 (Apply c d)), 
-           SV.FromList v2) 
+concat :: (SV.Storage v1 (Apply c d),
+           SV.Singleton v1,
+           SV.Storage v2 (v1 (Apply c d)),
+           SV.FromList v2)
           => Data (v2 :> v1 :> c) d -> Data (v1 :> c) d
-concat (Data x) = Data $ SV.concat $ SV.toList x 
+concat (Data x) = Data $ SV.concat $ SV.toList x
 
 
+unique ::  (Ord d, SV.Unique v d) => Data (v :> Nil) d -> Data (v :> Nil) d
+unique (Data x) = Data $ SV.unique x

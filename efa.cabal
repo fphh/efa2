@@ -44,13 +44,14 @@ Library
     containers >=0.4 && <0.6,
     data-accessor-transformers >=0.2.1 && <0.3,
     data-accessor >=0.2.2 && <0.3,
-    utility-ht ==0.0.*,
+    utility-ht >=0.0.9 && <0.1,
     QuickCheck >=2.4 && <2.6,
     transformers >= 0.3 && < 0.4,
     unique-logic >= 0.2 && < 0.3,
     parsec >=3.1 && <3.2,
+    filepath >=1.3 && <1.4,
     base ==4.5.*,
-    filepath
+    colour
   Hs-Source-Dirs:      src
   GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs
   Exposed-Modules:
@@ -59,11 +60,15 @@ Library
     EFA.IO.CSVParser
     EFA.IO.PLTImport
     EFA.IO.PLTParser
+    EFA.IO.TableParserTypes
+    EFA.IO.TableParser
     EFA.Utility
     EFA.Utility.Async
+    EFA.Utility.Map
     EFA.Utility.Stream
     EFA.Utility.TotalMap
     EFA.Utility.Trace
+    EFA.Utility.TypeConstructor
     EFA.Signal.Base
     EFA.Signal.SequenceData
     EFA.Signal.Typ
@@ -73,11 +78,14 @@ Library
     EFA.Signal.Signal
     EFA.Signal.SignalFill
     EFA.Signal.Sequence
+    EFA.Signal.Colour
+    EFA.Signal.PlotIO
     EFA.Signal.Plot
-    EFA.Signal.Plot.Options
+    EFA.Signal.ConvertTable
     EFA.Symbolic.OperatorTree
     EFA.Symbolic.SumProduct
     EFA.Symbolic.Mixed
+    EFA.Symbolic.Variable
     EFA.Report.Typ
     EFA.Report.Base
     EFA.Report.Report
@@ -90,10 +98,7 @@ Library
     EFA.Graph.Topology.Node
     EFA.Graph.Topology.StateAnalysis
     EFA.Graph.Flow
---    EFA.Hack.Draw
-    EFA.Hack.Plot
-    EFA.Hack.Record
-    EFA.Hack.Stack
+    EFA.Graph.CumulatedFlow
     EFA.Equation.System
     EFA.Equation.Result
     EFA.Equation.Environment
@@ -102,11 +107,14 @@ Library
     EFA.Equation.Arithmetic
     EFA.Equation.MultiValue
     EFA.Equation.Stack
-    EFA.Equation.MultiValueConsistent
-    EFA.Equation.StackConsistent
+    EFA.Equation.Consistent.MultiValue
+    EFA.Equation.Consistent.Stack
+    EFA.Equation.Consistent.Dimension
     EFA.Example.Utility
     EFA.Example.Absolute
     EFA.Example.NestedDelta
+    EFA.Example.AssignMap
+    EFA.Example.Index
 
 
 -- sollte man auf Cabal-Test umstellen,
@@ -133,7 +141,8 @@ Executable test-efa
     EFA.Test.MultiValue
     EFA.Test.Stack
     EFA.Test.Arithmetic
-
+    EFA.Test.EquationSystem
+    EFA.Test.EquationSystem.Given
 
 Executable example-sequenzflussgraph
   Main-Is: examples/elementary/sequenzflussgraph/Main.hs
@@ -151,6 +160,7 @@ Executable example-optimisingstorage
   GHC-Options: -Wall
   If flag(buildExamples)
     Build-Depends:
+      gnuplot,
       efa,
       vector,
       data-accessor,
@@ -159,6 +169,24 @@ Executable example-optimisingstorage
   Else
     Buildable: False
 
+Executable example-optimalStorageUsage
+  Main-Is: examples/elementary/optimalStorageUsage/Main.hs
+  GHC-Options: -Wall
+  If flag(buildExamples)
+    Build-Depends:
+      gnuplot,
+      efa,
+      vector,
+      containers,
+      data-accessor,
+      utility-ht,
+      base
+  Else
+    Buildable: False
+
+
+
+
 Executable example-vehicle
   Hs-Source-Dirs: examples/vehicle/src
   Main-Is: Main.hs
@@ -166,13 +194,59 @@ Executable example-vehicle
     Modules.Plots
     Modules.Signals
     Modules.System
-    Modules.Analysis    
+    Modules.Analysis
   GHC-Options: -Wall
   If flag(buildExamples)
     Build-Depends:
       efa,
       gnuplot,
+      graphviz,
+      utility-ht,
       containers,
+      non-empty,
+      filepath,
+      base
+  Else
+    Buildable: False
+
+Executable example-energy
+  Hs-Source-Dirs: examples/energy/localGrid/src
+  Main-Is: Main.hs
+  Other-Modules:
+    Modules.Signals
+    Modules.System
+    Modules.Analysis
+  GHC-Options: -Wall
+  If flag(buildExamples)
+    Build-Depends:
+      efa,
+      gnuplot,
+      graphviz,
+      utility-ht,
+      containers,
+      non-empty,
+      filepath,
+      base
+  Else
+    Buildable: False
+
+Executable optimise-energy
+  Hs-Source-Dirs: examples/energy/localGrid/src
+  Main-Is: Optimise.hs
+  Other-Modules:
+    Modules.Signals
+    Modules.System
+    Modules.Analysis
+  GHC-Options: -Wall
+  If flag(buildExamples)
+    Build-Depends:
+      efa,
+      gnuplot,
+      graphviz,
+      utility-ht,
+      containers,
+      non-empty,
+      filepath,
       base
   Else
     Buildable: False
@@ -198,17 +272,6 @@ Executable example-twoways
   Else
     Buildable: False
 
-Executable example-readandcut
-  Main-Is: examples/elementary/readAndCut/Main.hs
-  GHC-Options: -Wall
-  If flag(buildExamples)
-     Build-Depends:
-       efa,
-       base,
-       containers
-  Else
-    Buildable: False
-
 
 
 Executable demo-numericSolving
@@ -217,6 +280,7 @@ Executable demo-numericSolving
   If flag(buildDemos)
     Build-Depends:
       efa,
+      graphviz,
       base
   Else
     Buildable: False
@@ -230,6 +294,34 @@ Executable demo-signalSolving
       base
   Else
     Buildable: False
+
+Executable demo-unknownSignal
+  Main-Is: demo/unknownSignal/Main.hs
+  GHC-Options: -Wall
+  If flag(buildDemos)
+    Build-Depends:
+      efa,
+      gnuplot,
+      containers,
+      base
+  Else
+    Buildable: False
+
+
+
+Executable demo-tables
+  Main-Is: demo/tables/Main.hs
+  GHC-Options: -Wall
+  If flag(buildDemos)
+    Build-Depends:
+      efa,
+      gnuplot,
+      containers,
+      base
+  Else
+    Buildable: False
+
+
 
 Executable demo-symbolicSolving
   Main-Is: demo/symbolicSolving/Main.hs
@@ -285,7 +377,10 @@ Executable demo-signalcalc
   GHC-Options: -Wall
   If flag(buildDemos)
     Build-Depends:
+      gnuplot,
       efa,
+      gnuplot,
+      utility-ht,
       base
   Else
     Buildable: False
@@ -295,6 +390,7 @@ Executable demo-sequence
   GHC-Options: -Wall
   If flag(buildDemos)
     Build-Depends:
+      gnuplot,
       efa,
       containers,
       utility-ht,
@@ -308,6 +404,7 @@ Executable demo-addzerocrossings
   GHC-Options: -Wall
   If flag(buildDemos)
     Build-Depends:
+      gnuplot,
       efa,
       containers,
       utility-ht,
@@ -460,6 +557,16 @@ Executable demo-lookupeta
 
 Executable demo-deltaLogic
   Main-Is: demo/deltaLogic/Main.hs
+  GHC-Options: -Wall
+  If flag(buildDemos)
+    Build-Depends:
+      efa,
+      base
+  Else
+    Buildable: False
+
+Executable demo-cumulatedEnergyFlow
+  Main-Is: demo/cumulatedEnergyFlow/Main.hs
   GHC-Options: -Wall
   If flag(buildDemos)
     Build-Depends:

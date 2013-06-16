@@ -13,19 +13,42 @@ import qualified Data.Vector as V
 import qualified Data.List as L
 import qualified Data.List.HT as LH
 
+import qualified Data.Set as Set
+
 import qualified Data.NonEmpty as NonEmpty
 
 import Data.Maybe.HT (toMaybe)
 import Data.Eq (Eq((==)))
 import Data.Function ((.), ($), id, flip)
-import Data.Maybe (Maybe(Just, Nothing), maybe, isJust)
+import Data.Maybe (Maybe(Just, Nothing), maybe, isJust, fromMaybe)
 import Data.Bool (Bool(False, True), (&&), not)
 import Data.Tuple (snd, fst)
 import Text.Show (Show, show)
-import Prelude (Num, Int, Integer, Ord, error, (++), (+), (-), subtract)
+import Prelude (Num, Int, Integer, Ord, error, (++), (+), (-), subtract, min, max,fmap)
 
-import Data.Ord (Ordering)
+import Data.Ord (Ordering, (>=), (<=))
 
+-- import Data.Maybe (Maybe(..))
+
+
+
+{- Neat attempt with colossal failure
+newtype VectorIdx = VectorIdx Int
+
+unVectorIdx :: VectorIdx ->  Int
+unVectorIdx (VectorIdx x) = x
+
+vectorIdx :: Int -> VectorIdx
+vectorIdx x = (VectorIdx x)
+
+
+maybeVectorIdx :: Maybe Int -> Maybe VectorIdx
+maybeVectorIdx x = case x of
+                    Nothing -> Nothing
+                    Just idx -> Just (VectorIdx idx)
+
+instance UV.Unbox VectorIdx where
+-}
 
 {- |
 We could replace this by suitable:Suitable.
@@ -70,6 +93,7 @@ writeUnbox x =
 class Singleton vec where
    maximum :: (Ord d, Storage vec d) => vec d -> d
    minimum :: (Ord d, Storage vec d) => vec d -> d
+   minmax :: (Ord d, Storage vec d) => vec d -> (d, d)
    singleton :: (Storage vec d) => d -> vec d
    empty :: (Storage vec d) => vec d
    append :: (Storage vec d) => vec d -> vec d -> vec d
@@ -83,9 +107,30 @@ class Singleton vec where
    all :: (Storage vec d) => (d -> Bool) -> vec d -> Bool
    any :: (Storage vec d) => (d -> Bool) -> vec d -> Bool
 
+
+minmaxHelper :: (Ord d) => (d, d) -> d -> (d, d)
+minmaxHelper acc@(mini, maxi) x =
+  let mn = x >= mini
+      mx = x <= maxi
+  in  if mn && mx
+         then acc
+         else if not mn
+                 then (x, maxi)
+                 else (mini, x)
+
+
+{-
+-- slow!
+minmaxHelper :: (Ord d) => (d, d) -> d -> (d, d)
+minmaxHelper (a, b) x = (a `min` x, b `max` x)
+-}
+
 instance Singleton V.Vector where
    maximum x = V.maximum x
    minimum x = V.minimum x
+   minmax xs = V.foldl' minmaxHelper (y, y) ys
+     where (y, ys) =
+             fromMaybe (error "Signal.Vector.minmax: empty UV-Vector") (viewL xs)
    singleton x = V.singleton x
    empty = V.empty
    append = (V.++)
@@ -102,6 +147,13 @@ instance Singleton V.Vector where
 instance Singleton UV.Vector where
    maximum x = readUnbox UV.maximum x
    minimum x = readUnbox UV.minimum x
+   minmax =
+     readUnbox $
+     \xs ->
+       let (y, ys) =
+               fromMaybe (error "Signal.Vector.minmax: empty UV-Vector") (viewL xs)
+       in  UV.foldl' minmaxHelper (y, y) ys
+
    singleton x = writeUnbox (UV.singleton x)
    empty = writeUnbox UV.empty
    append = readUnbox (UV.++)
@@ -118,6 +170,8 @@ instance Singleton UV.Vector where
 instance Singleton [] where
    maximum x = L.maximum x
    minimum x = L.minimum x
+   minmax (x:xs) = L.foldl' minmaxHelper (x, x) xs
+   minmax [] = error "Signal.Vector.minmax: empty list"
    singleton x = [x]
    empty = []
    append = (++)
@@ -436,16 +490,20 @@ instance Reverse UV.Vector where
 
 class Find v where
   findIndex :: (Storage v d) => (d -> Bool) -> v d -> Maybe Int
-  
-instance Find [] where  
-  findIndex = L.findIndex
-  
+  findIndices :: (Storage v d) => (d -> Bool) -> v d -> v Int
+
+instance Find [] where
+  findIndex x = L.findIndex x
+  findIndices x = L.findIndices x
+
 instance Find V.Vector where
-  findIndex = V.findIndex
+  findIndex x = V.findIndex x
+  findIndices x = V.findIndices x
 
 instance Find UV.Vector where
   findIndex f xs = readUnbox (UV.findIndex f) xs
-   
+  findIndices f xs = readUnbox (UV.findIndices f) xs
+
 
 class Slice v where
   slice :: (Storage v d) => Int -> Int -> v d -> v d
@@ -460,6 +518,26 @@ instance Slice UV.Vector where
   slice start num = readUnbox (UV.slice start num)
 
 
+class Split v where
+  drop, take :: (Storage v d) => Int -> v d -> v d
+  splitAt :: (Storage v d) => Int -> v d -> (v d, v d)
+
+instance Split [] where
+  drop = L.drop
+  take = L.take
+  splitAt = L.splitAt
+
+instance Split V.Vector where
+  drop = V.drop
+  take = V.take
+  splitAt = V.splitAt
+
+instance Split UV.Vector where
+  drop k = readUnbox (UV.drop k)
+  take k = readUnbox (UV.take k)
+  splitAt k = readUnbox (UV.splitAt k)
+
+
 cumulate :: (Num a) => NonEmpty.T [] a -> [a] -> [a]
 cumulate storage =
    NonEmpty.tail . NonEmpty.scanl (+) (NonEmpty.last storage)
@@ -472,3 +550,17 @@ decumulate inStorage outStorage =
 propCumulate :: NonEmpty.T [] Integer -> [Integer] -> Bool
 propCumulate storage incoming =
    decumulate storage (cumulate storage incoming) == incoming
+
+
+-- | creates a vector of unique and sorted elements
+class Unique v d where
+  unique :: Ord d => v d  -> v d
+
+instance Unique [] d where
+  unique = Set.toList . Set.fromList
+
+instance Unique V.Vector d where
+  unique = fromList . Set.toList . Set.fromList . toList
+
+instance (UV.Unbox d) => Unique UV.Vector d where
+  unique = readUnbox (fromList . Set.toList . Set.fromList . toList)

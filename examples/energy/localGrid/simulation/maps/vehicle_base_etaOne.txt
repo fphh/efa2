@@ -1,0 +1,24 @@
+#1
+double maxTorque(7,2)   # relative max torque curve fitting for a diesel engine
+  0      0
+  0.04   0   # minimum firing speed
+  0.2    0.4
+  0.3    0.85
+  0.5    1
+  0.7    0.85
+  1      0.8
+double dragTorque(7,2)   # relative drag torque curve fitting for a diesel engine, negative speeds not included
+-1      1.0
+-0.5    0.7
+-0.001  0.4   # standstill
+0       0   # standstill
+0.001   -0.4 # rotation   
+0.5     -0.7
+1       -1.0
+double table2D_efficiencyMap(6,6)   # relative diesel engine efficiency map 
+0     0    0.25  0.5    0.75   1.0  # u[2] grid points = relative torque
+0     1    1     1      1      1
+0.25  1    1     1      1      1 
+0.5   1    1     1      1      1
+0.75  1    1     1      1      1
+1     1    1     1      1      1

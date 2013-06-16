@@ -3,20 +3,23 @@
 
 module Main where
 
+import qualified EFA.Example.Index as XIdx
+
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Sequence as Sequ
 
-import EFA.Signal.SequenceData (Sequ,SequData)
-import EFA.Signal.Record
-          (PPosIdx(PPosIdx), PowerRecord, Record(Record))
+import EFA.Signal.SequenceData (SequData)
+import EFA.Signal.Record (PowerRecord, Record(Record))
 
-         
-          
+
+
 import EFA.Signal.Signal (PSigL, (.++))
 import EFA.Signal.Base (Val)
-import qualified EFA.Signal.Plot as Plot
+import qualified EFA.Signal.PlotIO as PlotIO
 
 import qualified Data.Map as M
+
+import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 
 
 mkSig :: Int -> [Val] -> PSigL
@@ -39,10 +42,10 @@ s31 = [0, 0.25, 0.25, 0, -0.6, -0.6]
 n :: Int
 n = 2
 
-pPosIdx :: Int -> Int -> PPosIdx Int
-pPosIdx x y = PPosIdx x y
+pPosIdx :: Int -> Int -> XIdx.PPos Int
+pPosIdx x y = XIdx.ppos x y
 
-pMap :: M.Map (PPosIdx Int) PSigL
+pMap :: M.Map (XIdx.PPos Int) PSigL
 pMap =
    M.fromListWith (error "duplicate keys") $
       (pPosIdx 0 1, mkSigEnd n s01) :
@@ -58,9 +61,8 @@ pRec, pRec0 :: (PowerRecord Int [] Val)
 pRec = Record (S.fromList time) pMap
 pRec0 = Sequ.addZeroCrossings pRec
 
-sequ :: Sequ
 sequRecA, sequRecB :: SequData (PowerRecord Int [] Val)
-(sequ,sequRecA) = Sequ.genSequ pRec0
+sequRecA = Sequ.genSequ pRec0
 
 sequRecB = Sequ.chopAtZeroCrossingsPowerRecord pRec
 
@@ -71,11 +73,9 @@ main = do
   print pRec
   print pRec0
 
-  print sequ
-
-  Plot.recordIO "PowerRecord" pRec
-  Plot.sequenceIO "SequA" sequRecA
-  Plot.sequenceIO "SequB" sequRecB
+  PlotIO.record "PowerRecord" DefaultTerm.cons show id pRec
+  PlotIO.sequence "SequA" DefaultTerm.cons show id sequRecA
+  PlotIO.sequence "SequB" DefaultTerm.cons show id sequRecB
 
 {-
   {-

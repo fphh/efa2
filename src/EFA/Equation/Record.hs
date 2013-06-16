@@ -32,13 +32,13 @@ type Indexed rec = Idx.Record (ToIndex rec)
 
 lookupSignal ::
    (C rec, Ord node) =>
-   Indexed rec (Var.Signal node) ->
+   Indexed rec (Var.InSectionSignal node) ->
    Env.Signal node (rec a) -> Maybe a
 lookupSignal (Idx.Record r v) =
    fmap (Accessor.get (access r)) . Env.lookupSignal v
 
 
-newtype Absolute a = Absolute {unAbsolute :: a} deriving (Show)
+newtype Absolute a = Absolute {unAbsolute :: a} deriving (Show, Eq)
 
 instance FormatValue a => FormatValue (Absolute a) where
    formatValue (Absolute a) = formatValue a
@@ -94,11 +94,15 @@ extDeltaCons b a = ExtDelta {extBefore = b, extAfter = a, extDelta = a~-b}
 
 instance FormatValue (f a) => FormatValue (ExtDelta f a) where
    formatValue rec =
-      Format.list $
-         Format.assign (Format.literal "delta")  (formatValue $ extDelta rec) :
-         Format.assign (Format.literal "before") (formatValue $ extBefore rec) :
-         Format.assign (Format.literal "after")  (formatValue $ extAfter rec) :
-         []
+      let assign idx sel =
+             Format.assign
+                (Format.recordDelta idx Format.empty)
+                (formatValue $ sel rec)
+      in  Format.list $
+             assign Idx.Delta  extDelta  :
+             assign Idx.Before extBefore :
+             assign Idx.After  extAfter  :
+             []
 
 instance Functor f => Functor (ExtDelta f) where
    fmap f (ExtDelta d b a) = ExtDelta (fmap f d) (fmap f b) (fmap f a)

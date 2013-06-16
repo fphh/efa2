@@ -1,38 +1,22 @@
 module EFA.Utility where
 
+import qualified Data.Stream as Stream
 import qualified Data.List.Match as Match
 import qualified Data.List.HT as LH
-import qualified Data.Set as S
-import qualified Data.Map as M
-import Data.Tuple.HT (swap)
+import Data.Traversable (Traversable, mapAccumL)
+import Data.Stream (Stream)
 
 
-checkedLookup :: (Ord k, Show k, Show v) => M.Map k v -> k -> v
-checkedLookup m k =
-  case M.lookup k m of
-    Nothing -> error $ "checkedLookup: " ++ show k  ++ "\n" ++ "Keys in Map:" ++ "\n" ++ (show $ M.keys m)
-    Just x -> x
 
 checkJust :: String -> Maybe a -> a
 checkJust _ (Just x) = x
 checkJust str _ = error ("checkJust called from " ++ str)
 
 
-reverseMap :: (Ord b) => M.Map a b -> M.Map b a
-reverseMap = M.fromList . map swap . M.toList
-
--- M.fromSet is available from containers-0.5
-mapFromSet ::
-   (Ord key) => (key -> a) -> S.Set key -> M.Map key a
-mapFromSet f = M.fromAscList . map (\k -> (k, f k)) . S.toAscList
-
-differenceMapSet ::
-   (Ord key) => M.Map key a -> S.Set key -> M.Map key a
-differenceMapSet m s = M.difference m (mapFromSet (const ()) s)
-
-intersectionMapSet ::
-   (Ord key) => M.Map key a -> S.Set key -> M.Map key a
-intersectionMapSet m s = M.intersection m (mapFromSet (const ()) s)
+zipWithTraversable ::
+   (Traversable f) => (a -> b -> c) -> Stream a -> f b -> f c
+zipWithTraversable f as0 =
+   snd . mapAccumL (\(Stream.Cons a as) b -> (as, f a b)) as0
 
 
 for :: [a] -> (a -> b) -> [b]

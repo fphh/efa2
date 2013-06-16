@@ -9,7 +9,8 @@ import Data.Ratio (Ratio, numerator, denominator)
 
 import Text.Printf (PrintfArg, printf)
 
-import Prelude hiding (words, lines, sum)
+import qualified Prelude as P
+import Prelude hiding (words, lines, sum, negate)
 
 
 -- * special Unicode characters
@@ -34,13 +35,40 @@ newtype Latex = Latex { unLatex :: String }
 
 data EdgeVar = Energy | MaxEnergy | Power | Eta | X
 
-data Function = Absolute | Signum
+{-
+We need the ConstOne function in the solver
+in order to create a signal for the sum of split factors,
+whose length matches the length of other signals.
+A different approach would be to manage the length of signals
+as quantity for the solver,
+but then we would need a length function.
+-}
+data Function = Absolute | Signum | ConstOne
    deriving (Eq, Ord, Show)
+
+-- | actual though -- four usable figures
+formatReal :: (Ord a, Floating a, PrintfArg a) => a -> String
+formatReal x | x == 0 = "0"
+             | abs x < 1 =   printf "%.5f" x
+             | abs x == 1 = "1"
+             | abs x == -1 = "-1"
+             | abs x < 10 = printf "%.4f" x
+             | abs x < 100 = printf "%.3f" x
+             | abs x < 1000 = printf "%.2f" x
+             | abs x < 10000 = printf "%.1f" x
+             | abs x < 10^(6::Int) = printf "%.0f" x
+             | abs x < 10^(9::Int) = (printf "%.3f" (x*10^^(-6::Int))) ++ " E6"
+             | abs x < 10^(12::Int) = (printf "%.3f" (x*10^^(-9::Int))) ++ " E9"
+             | abs x < 10^(15::Int) = (printf "%.3f" (x*10^^(-12::Int))) ++ " E12"
+             | otherwise = printf "%.e" x
+
+
+
 
 class Format output where
    literal :: String -> output
    integer :: Integer -> output
-   real :: (Floating a, PrintfArg a) => a -> output
+   real :: (Floating a, PrintfArg a, Ord a) => a -> output
    ratio :: (Integral a, Show a) => Ratio a -> output
    subscript :: output -> output -> output
    connect :: output -> output -> output
@@ -50,6 +78,7 @@ class Format output where
    empty :: output
    words, lines :: [output] -> output
    assign :: output -> output -> output
+   pair :: output -> output -> output
 
    function :: Function -> output -> output
    integral :: output -> output
@@ -60,17 +89,18 @@ class Format output where
    direction :: Idx.Direction -> output
    delta :: output -> output
    edgeIdent :: EdgeVar -> output
-   dtime, sum, storage :: output
-   parenthesize, minus, recip :: output -> output
-   plus, multiply :: output -> output -> output
+   dtime, signalSum, scalarSum, storage :: output
+   parenthesize, negate, recip :: output -> output
+   plus, minus, multiply :: output -> output -> output
    power :: output -> Integer -> output
+   showRaw :: output -> String
 
 instance Format ASCII where
    -- may need some escaping for non-ASCII characters
    literal = ASCII
    integer = ASCII . show
    -- real = ASCII . show
-   real = ASCII . printf "%.6f"
+   real = ASCII . formatReal
    ratio r = ASCII $ show (numerator r) ++ "/" ++ show (denominator r)
    subscript (ASCII t) (ASCII s) = ASCII $ t ++ "_" ++ s
    connect (ASCII t) (ASCII s) = ASCII $ t ++ "_" ++ s
@@ -82,12 +112,15 @@ instance Format ASCII where
    words = ASCII . unwords . map unASCII
    assign (ASCII lhs) (ASCII rhs) =
       ASCII $ lhs ++ " = " ++ rhs
+   pair (ASCII lhs) (ASCII rhs) =
+      ASCII $ "(" ++ lhs ++ ", " ++ rhs ++ ")"
 
    function f (ASCII rest) =
       ASCII $
       case f of
          Absolute -> "|" ++ rest ++ "|"
          Signum -> "sgn(" ++ rest ++ ")"
+         ConstOne -> "constone(" ++ rest ++ ")"
    integral (ASCII x) = ASCII $ "integrate(" ++ x ++ ")"
    recordDelta d (ASCII rest) =
       ASCII $ (++rest) $
@@ -95,7 +128,7 @@ instance Format ASCII where
          Idx.Before -> "[0]"
          Idx.After -> "[1]"
          Idx.Delta -> "d"
-   initial = ASCII "i"
+   initial = ASCII "init"
    section (Idx.Section s) = ASCII $ show s
    sectionNode (ASCII s) (ASCII x) = ASCII $ s ++ "." ++ x
 
@@ -110,21 +143,24 @@ instance Format ASCII where
          X -> "x"
          Eta -> "n"
    dtime = ASCII "dt"
-   sum = ASCII "S"
+   signalSum = ASCII "SS"
+   scalarSum = ASCII "Ss"
    storage = ASCII "s"
 
    parenthesize (ASCII x) = ASCII $ "(" ++ x ++ ")"
-   minus (ASCII x) = ASCII $ '-' : x
+   negate (ASCII x) = ASCII $ '-' : x
    recip (ASCII x) = ASCII $ "1/(" ++ x ++ ")"
    plus (ASCII x) (ASCII y) = ASCII $ x ++ " + " ++ y
+   minus (ASCII x) (ASCII y) = ASCII $ x ++ " - " ++ y
    multiply (ASCII x) (ASCII y) = ASCII $ x ++ " * " ++ y
    power (ASCII x) n = ASCII $ x ++ "^" ++ showsPrec 10 n ""
+   showRaw (ASCII x) = x
 
 instance Format Unicode where
    literal = Unicode
    integer = Unicode . show
    -- real = Unicode . show
-   real = Unicode . printf "%.6f"
+   real = Unicode . formatReal -- printf "%.6f"
    ratio r =
       Unicode $
       M.findWithDefault
@@ -141,12 +177,15 @@ instance Format Unicode where
    words = Unicode . unwords . map unUnicode
    assign (Unicode lhs) (Unicode rhs) =
       Unicode $ lhs ++ " = " ++ rhs
+   pair (Unicode lhs) (Unicode rhs) =
+      Unicode $ "(" ++ lhs ++ ", " ++ rhs ++ ")"
 
    function f (Unicode rest) =
       Unicode $
       case f of
          Absolute -> "|" ++ rest ++ "|"
          Signum -> "sgn(" ++ rest ++ ")"
+         ConstOne -> "\x2474(" ++ rest ++ ")"
    integral (Unicode x) = Unicode $ "\x222B(" ++ x ++ ")"
    recordDelta d (Unicode rest) =
       Unicode $ (++rest) $
@@ -154,7 +193,7 @@ instance Format Unicode where
          Idx.Before -> "\x2070"
          Idx.After -> "\xb9"
          Idx.Delta -> [deltaChar]
-   initial = Unicode "i"
+   initial = Unicode "init"
    section (Idx.Section s) = Unicode $ show s
    sectionNode (Unicode s) (Unicode x) = Unicode $ s ++ "." ++ x
 
@@ -167,29 +206,36 @@ instance Format Unicode where
          MaxEnergy -> "\xCA"
          Power -> "P"
          X -> "x"
-         Eta -> "\x03b7"
+         Eta -> "\x03B7"
    dtime = Unicode "dt"
-   sum = Unicode "\x2211"
+   signalSum = Unicode "\x03A3"
+   scalarSum = Unicode "\x03C3"
    storage = Unicode "s"
 
    parenthesize (Unicode x) = Unicode $ "(" ++ x ++ ")"
-   minus (Unicode x) = Unicode $ '-' : x
+   negate (Unicode x) = Unicode $ '-' : x
    recip (Unicode x) = Unicode $ "\x215f(" ++ x ++ ")"
    plus (Unicode x) (Unicode y) = Unicode $ x ++ " + " ++ y
+   minus (Unicode x) (Unicode y) = Unicode $ x ++ " - " ++ y
    multiply (Unicode x) (Unicode y) = Unicode $ x ++ "\xb7" ++ y
    power (Unicode x) n =
-      Unicode $ x ++
-         case n of
-            1 -> "\xb9"
-            2 -> "\xb2"
-            3 -> "\xb3"
-            4 -> "\x2074"
-            5 -> "\x2075"
-            6 -> "\x2076"
-            7 -> "\x2077"
-            8 -> "\x2078"
-            9 -> "\x2079"
-            _ -> "^" ++ showsPrec 10 n ""
+      -- writing many digits in superscript looks ugly in a monospace font
+      let super c =
+             case c of
+                '0' -> '\x2070'
+                '1' -> '\xb9'
+                '2' -> '\xb2'
+                '3' -> '\xb3'
+                '4' -> '\x2074'
+                '5' -> '\x2075'
+                '6' -> '\x2076'
+                '7' -> '\x2077'
+                '8' -> '\x2078'
+                '9' -> '\x2079'
+                '-' -> '\x207B'
+                _ -> c
+      in  Unicode $ x ++ map super (show n)
+   showRaw (Unicode x) = x
 
 ratioCharMap :: Integral a => M.Map (Ratio a) String
 ratioCharMap =
@@ -215,7 +261,7 @@ ratioCharMap =
           (5/8, '\x215D') :
           (7/8, '\x215E') :
           []
-   in  M.union xys (fmap ('-':) $ M.mapKeys negate xys)
+   in  M.union xys (fmap ('-':) $ M.mapKeys P.negate xys)
 
 
 instance Format Latex where
@@ -234,12 +280,15 @@ instance Format Latex where
    words = Latex . unwords . map unLatex
    assign (Latex lhs) (Latex rhs) =
       Latex $ lhs ++ " = " ++ rhs
+   pair (Latex lhs) (Latex rhs) =
+      Latex $ "(" ++ lhs ++ ", " ++ rhs ++ ")"
 
    function f (Latex rest) =
       Latex $
       case f of
          Absolute -> "\\abs{" ++ rest ++ "}"
          Signum -> "\\sgn{\\left(" ++ rest ++ "\\right)}"
+         ConstOne -> "\\mathbb{1}(" ++ rest ++ ")"
    integral (Latex x) = Latex $ "\\int\\left(" ++ x ++ "\\right)"
    recordDelta d (Latex rest) =
       Latex $
@@ -253,7 +302,7 @@ instance Format Latex where
          Idx.Before -> "\\leftexp{0}{" ++ rest ++ "}"
          Idx.After -> "\\leftexp{1}{" ++ rest ++ "}"
          Idx.Delta -> "\\Delta " ++ rest
-   initial = Latex "i"
+   initial = Latex "init"
    section (Idx.Section s) = Latex $ show s
    sectionNode (Latex s) (Latex x) = Latex $ s ++ ":" ++ x
 
@@ -268,15 +317,25 @@ instance Format Latex where
          X -> "x"
          Eta -> "\\eta"
    dtime = Latex "\\dif t"
-   sum = Latex "\\Sigma"
+   signalSum = Latex "\\Sigma"
+   scalarSum = Latex "\\sigma"
    storage = Latex "s"
 
    parenthesize (Latex x) = Latex $ "(" ++ x ++ ")"
-   minus (Latex x) = Latex $ '-' : x
+   negate (Latex x) = Latex $ '-' : x
    recip (Latex x) = Latex $ "\\frac{1}{" ++ x ++ "}"
    plus (Latex x) (Latex y) = Latex $ x ++ " + " ++ y
+   minus (Latex x) (Latex y) = Latex $ x ++ " - " ++ y
    multiply (Latex x) (Latex y) = Latex $ x ++ " \\cdot " ++ y
    power (Latex x) n = Latex $ x ++ "^{" ++ show n ++ "}"
+   showRaw (Latex x) = x
+
+
+ratioAuto :: (Integral a, Show a, Format output) => Ratio a -> output
+ratioAuto r =
+   if denominator r == 1
+     then integer $ toInteger $ numerator r
+     else ratio r
 
 
 class Record record where
@@ -292,20 +351,30 @@ instance Record rec => Record (Idx.ExtDelta rec) where
    record (Idx.ExtDelta d r) = recordDelta d . record r
 
 
-class EdgeIdx idx where edgeVar :: idx -> EdgeVar
-instance EdgeIdx (Idx.Energy node) where edgeVar _ = Energy
-instance EdgeIdx (Idx.MaxEnergy node) where edgeVar _ = MaxEnergy
-instance EdgeIdx (Idx.Power node) where edgeVar _ = Power
-instance EdgeIdx (Idx.Eta node) where edgeVar _ = Eta
-instance EdgeIdx (Idx.X node) where edgeVar _ = X
-instance EdgeIdx (Idx.StEnergy node) where edgeVar _ = Energy
-instance EdgeIdx (Idx.StX node) where edgeVar _ = X
+class EdgeIdx idx where edgeVar :: idx node -> EdgeVar
+
+instance StructureIdx idx => EdgeIdx (Idx.InSection idx) where
+   edgeVar = structureVar
+
+class StructureIdx idx where structureVar :: Idx.InSection idx node -> EdgeVar
+instance StructureIdx Idx.Energy where structureVar _ = Energy
+instance StructureIdx Idx.Power where structureVar _ = Power
+instance StructureIdx Idx.Eta where structureVar _ = Eta
+instance StructureIdx Idx.X where structureVar _ = X
+
+instance StorageIdx idx => EdgeIdx (Idx.ForNode idx) where
+   edgeVar = storageVar
+
+class StorageIdx idx where storageVar :: Idx.ForNode idx node -> EdgeVar
+instance StorageIdx Idx.MaxEnergy where storageVar _ = MaxEnergy
+instance StorageIdx Idx.StEnergy where storageVar _ = Energy
+instance StorageIdx Idx.StX where storageVar _ = X
 
 
 directionShort :: Idx.Direction -> String
 directionShort d =
    case d of
-      Idx.In -> "i"
+      Idx.In -> "i" -- Verwirrung mit initial aus der Format-Klasse?
       Idx.Out -> "o"
 
 boundary :: Format output => Idx.Boundary -> output

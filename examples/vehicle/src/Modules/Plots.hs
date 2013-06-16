@@ -1,25 +1,97 @@
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Modules.Plots where
 
-import Modules.System as System
+--import Modules.System as System
 
-import qualified EFA.Signal.Plot as Plot
-
+import qualified EFA.Example.Index as XIdx
+--import qualified EFA.Signal.Plot as Plot
+import qualified EFA.Signal.PlotIO as PlotIO
+--import qualified EFA.Signal.PlotBase as PlotBase
+import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Signal.Vector as V
 
-import EFA.Signal.Typ (Typ,A,T,P,Tt)
-import EFA.Signal.Signal (Signal)
--- import EFA.Signal.Record (SigId(..), Record(..), PowerRecord, SignalRecord)
-import EFA.Signal.Record as Record
-import EFA.Hack.Record as HRecord
+-- import qualified Graphics.Gnuplot.Advanced as Plot
+-- import qualified Graphics.Gnuplot.Advanced as AGP
 
+-- import qualified Graphics.Gnuplot.Terminal.X11 as X11
+-- import qualified Graphics.Gnuplot.Terminal.WXT as WXT
 
-import EFA.Report.Typ (TDisp)
+import qualified Graphics.Gnuplot.Terminal as Terminal
+-- import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
+-- import qualified Graphics.Gnuplot.Plot as Plt
+--import qualified Graphics.Gnuplot.Plot.TwoDimensional as Plot2D
+-- import qualified Graphics.Gnuplot.Plot.ThreeDimensional as Plot3D
+--import qualified Graphics.Gnuplot.Graph.TwoDimensional as Graph2D
 
+-- import qualified Graphics.Gnuplot.Graph as Graph
 import qualified Graphics.Gnuplot.Value.Atom as Atom
 import qualified Graphics.Gnuplot.Value.Tuple as Tuple
+
+import qualified Graphics.Gnuplot.LineSpecification as LineSpec
+-- import qualified Graphics.Gnuplot.ColorSpecification as ColourSpec
+
+-- import qualified Graphics.Gnuplot.Frame as Frame
+-- import qualified Graphics.Gnuplot.Frame.Option as Opt
+-- import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
+-- import qualified Graphics.Gnuplot.Frame.OptionSet.Style as OptsStyle
+-- import qualified Graphics.Gnuplot.Frame.OptionSet.Histogram as Histogram
+
+import EFA.Report.Typ (TDisp) {-
+                       DisplayType(Typ_T),
+                       getDisplayUnit,
+                       DeltaDisp,
+                       getDisplayTypName)
+
+import EFA.Signal.Typ (Typ,
+                       A,
+                       T,
+                       P,
+                       Tt,
+                       N
+                      )
+--import qualified EFA.Signal.Signal as Sig
+
+import EFA.Signal.Signal(TC,(./),
+                         FSignal,
+                         FFSignal,
+                         PFSignal,
+                         DTFSignal,
+                         FDistr,
+                         PDistr,
+                         NDistr)
+-}
+--import qualified EFA.Signal.Base as Base
+--import EFA.Signal.Data (Data,
+--                        Nil,(:>))
+
+-- import EFA.Signal.Record (SigId(..), Record(..), PowerRecord, SignalRecord)
+import EFA.Signal.Record as Record
+-- import EFA.Hack.Record as HRecord
+--import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Equation.Environment as Env
+--import qualified EFA.Equation.Arithmetic as Arith
+import qualified EFA.Equation.Record as EqRecord
+import qualified EFA.Equation.Result as Result
+
+--import qualified Data.NonEmpty as NonEmpty
+import EFA.Report.FormatValue (FormatValue, formatValue)
+import qualified EFA.Report.Format as Format
+
+import qualified EFA.Equation.Stack as Stack
+--import qualified EFA.Equation.Variable as Var
+--import qualified Data.Foldable as Fold
+--import EFA.Equation.Arithmetic ((~+))
+
+--import EFA.Report.Typ (TDisp)
+--import qualified EFA.Symbolic.SumProduct as SumProduct
+
+
+
+--import qualified Graphics.Gnuplot.Value.Atom as Atom
+--import qualified Graphics.Gnuplot.Value.Tuple as Tuple
 --import Control.Functor.HT (void)
 --import qualified Graphics.Gnuplot.Frame as Frame
 --import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
@@ -27,222 +99,65 @@ import qualified Graphics.Gnuplot.Value.Tuple as Tuple
 --import EFA.Report.Typ (TDisp, DisplayType(Typ_T), getDisplayUnit, getDisplayTypName)
 --import qualified Graphics.Gnuplot.Advanced as Plot
 
-import qualified Data.Map as M
-import EFA.Utility(checkedLookup)
+--import qualified Data.Foldable as Fold
+--import qualified Data.Map as M
+
+--import Control.Functor.HT (void)
+
+import qualified EFA.Example.AssignMap as AssignMap
 
 --import Debug.Trace
 
 --import Data.Monoid ((<>))
 
----------------------------------------------------------------------------------------
-  -- | * Group Signals for Plotting
-
-class (Fractional a,
-           Show (v a),
-           V.FromList v,
-           V.Walker v,
-           V.Storage v a,
-           Atom.C a,
-           Tuple.C a) =>  Plottable v a where                             
-instance Plottable [] Double where    
-  
-  
-plot:: (TDisp t1,
-        TDisp t2,
-        Ord id,
-        Show id,
-        Plottable v a) =>
-       String -> Record s t1 t2 id v a -> [id] -> IO()  
-plot title rec sigIds = Plot.recordSelect sigIds title rec
-                           
-                           
--- Building Signal Record for better Plotting of the original signals 
-vehicle ::(Plottable v a) =>
-          SignalRecord v a -> IO()                           
-vehicle rec = plot "Vehicle" rec [SigId "speedsensor1.v",
-                                  SigId "idealrollingwheel1.flangeR.tau",
-                                  SigId "idealrollingwheel2.flangeR.tau",
-                                  SigId "brake1.tau",
-                                  SigId "brake2.tau",
-                                  SigId "drivingresistance1.force1.f"
-                                 ]
-
--- Building Signal Record for better Plotting of the original signals 
-driveline:: Plottable v a =>  SignalRecord v a -> IO()
-driveline rec =  plot "DriveLine" rec [SigId "speedsensor1.v",
-                                       SigId "electricmotor1.flange_a.tau",
-                                       SigId "gearbox1.flange_a.tau",                        
-                                       SigId "gearbox1.flange_b.tau"
-                                      ]
-             
--- Building Signal Record for better Plotting of the original signals 
-motor:: Plottable v a =>  SignalRecord v a -> IO()
-motor rec = plot "Motor" rec [SigId "speedsensor1.v",                        
-                              SigId "electricmotor1.flange_a.tau",
-                              SigId "electricmotor1.speedsensor1.w",
-                              SigId "electricmotor1.signalcurrent1.p.i",
-                              SigId "electricmotor1.signalcurrent1.p.v"
-                             ]
-            
--- Building Signal Record for better Plotting of the original signals 
-electric:: Plottable v a =>  SignalRecord v a -> IO()
-electric rec =  plot "Electric" rec [SigId "speedsensor1.v",                        
-                                 SigId "potentialsensor1.p.v",
-                                 SigId "battery1.pin_p.i",
-                                 SigId "electricmotor1.signalcurrent1.p.i",
-                                 SigId "electricmotor1.signalcurrent1.p.v",
-                                 SigId "electricmotor2.signalcurrent1.p.i",
-                                 SigId "electricmotor2.signalcurrent1.v"
-                                ]
-            
--- Building Signal Record for better Plotting of the original signals 
-battery:: Plottable v a =>  SignalRecord v a -> IO()
-battery rec = plot "Battery" rec [SigId "speedsensor1.v",                        
-                                  SigId "potentialsensor1.p.v",
-                                  SigId "battery1.pin_p.i",
-                                  SigId "battery1.constantvoltage1.v",
-                                  SigId "battery1.constantvoltage1.i"
-                                 ]
-          
-
--- Building Signal Record for better Plotting of the original signals 
-generator:: Plottable v a =>  SignalRecord v a -> IO()
-generator rec = plot "Generator" rec [SigId "speedsensor1.v",                        
-                                      SigId "electricmotor2.signalcurrent1.p.i",
-                                      SigId "electricmotor2.signalcurrent1.v",
-                                      SigId "electricmotor2.flange_a.tau",
-                                      SigId "electricmotor2.speedsensor1.w",
-                                      SigId "engine1.Speed",
-                                      SigId "engine1.Speed"                       
-                                     ]
-  
- 
--- Plot Power Records with readible 
-mkPlotPowers :: Show (v a) => PowerRecord Node v a -> Record Signal (Typ A T Tt) (Typ A P Tt) SigId v a 
-mkPlotPowers (Record time pMap) = Record time newMap
-  where -- replace old with new keys
-    newMap = M.mapKeys f pMap
-    f key = checkedLookup System.powerPositonNames key
-    
-genPowers :: Plottable v a => PowerRecord Node v a -> IO()
-genPowers pRec =  plot "GenerationPowers" (mkPlotPowers pRec) [SigId "Fuel",    
-                                                          --   SigId "CrankShaft",
-                                                             SigId "BatteryClamps",
-                                                             SigId "BatteryCore",
-                                                             SigId "Wire"
-                                                            ]
-
-propPowers :: (Show (v a), Plottable v a) => PowerRecord Node v a -> IO()
-propPowers pRec = plot "PropulsionPowers" (mkPlotPowers pRec) [SigId "MotorClamps",
-                                                             SigId "OutShaft",
-                                                             SigId "ToFrontBrakes",
-                                                             SigId "FrontWheelHub",
-                                                             SigId "FrontTires"
-                                                              ]
-                  
-vehPowers :: (Show (v a), Plottable v a) => PowerRecord Node v a -> IO()
-vehPowers pRec = plot "VehiclePowers"  (mkPlotPowers pRec) [SigId "ToFrontBrakes",
-                                                          SigId "RearTires",    
-                                                          SigId "ToInertia",
-                                                          SigId "ToResistance"
-                                                         ]
-
-
-
-
-
-{-
-vehPowers2 :: (Show (v a), Plottable v a) => [String] -> [PowerRecord Node v a] -> IO()
-vehPowers2 recNames powerRecords = Plot.recordIOList "VehiclePowers" (zipWith g recNames $ map HRecord.namePowers powerRecords) 
-  where
-    f rec = Record.extract [SigId "ToFrontBrakes",                                                     
-                            SigId "RearTires",                                                       
-                            SigId "ToInertia",                                                       
-                            SigId "ToResistance"
-                           ] $ mkPlotPowers rec 
-            
-    g name (Record time sigs) = Record time (M.mapKeys (\ (SigId x) -> SigId (name ++ "_" ++ x) ) sigs)
--}    
-
-plotPowers :: (Fractional a,
+sigsWithSpeed :: (Fractional d1,
+                      Fractional d2,
+                      Ord d2,
+                      Show (v d2),
                       V.Walker v,
-                      V.Storage v a,
+                      V.Storage v d1,
+                      V.Storage v d2,
+                      V.Singleton v,
                       V.FromList v,
-                      Tuple.C a,
-                      Atom.C a, 
-                      Show (v a)) =>
-              M.Map (PPosIdx System.Node) (SigId) ->  [String] -> [PowerRecord Node v a] -> [SigId]-> IO() 
-plotPowers signalNameMap recNames powerRecords sigIDList = if length recNames == length powerRecords then
-                                                     Plot.recordIOList "VehiclePowers" $  zipWith HRecord.recName recNames $ 
-                                                     map (Record.extract sigIDList) $                                                    
-                                                     (map (HRecord.namePowers signalNameMap) powerRecords)
-                                                  else error("Length between List of Records and Names doesn't match")
+                      TDisp t1,
+                      TDisp t2,
+                      Tuple.C d1,
+                      Tuple.C d2,
+                      Atom.C d1,
+                      Atom.C d2,
+                      Terminal.C term) =>
+                 term ->
+                 [(Record.Name,Record s1 s2 t1 t2 SigId v d1 d2)] ->
+                 (String,[SigId]) -> IO()
+sigsWithSpeed term recList (componentName, idList) = PlotIO.recordList_extractWithLeadSignal ("Component " ++ componentName ++ " -  Signals with Vehicle Speed") term show id (Record.RangeFrom idList, Record.ToModify $ [Record.SigId "speedsensor1.v"]) recList
 
 
-{-
+operation :: (Fractional d, Ord id, Show (v d), Show id, V.Walker v,
+              V.Storage v d, V.FromList v, TDisp t2, Tuple.C d, Atom.C d,
+              Terminal.C term) =>
+              String ->
+              term ->
+              (LineSpec.T -> LineSpec.T) ->
+              [(Record.Name, Record s1 s2 t1 t2 id v d d)] -> ([Char], (id, id)) -> IO ()
+
+operation ti term opts rList  (plotTitle, (idx,idy)) = mapM_ f rList
+  where f ((Record.Name recTitle), rec) = do
+          let x = getSig rec idx
+              y = getSig rec idy
+              legend n = recTitle ++ " - Torque over Speed"
+          PlotIO.xy (ti ++ "_" ++ plotTitle) term opts legend x y
 
 
--- Can differ between Plots
+reportStack::(Num a, Node.C node, Ord i, Ord a, FormatValue a,
+                               FormatValue i) =>
+                              String
+                              -> XIdx.Energy node
+                              -> a
+                              -> Env.Complete
+                                   node t (EqRecord.Absolute (Result.Result (Stack.Stack i a)))
+                              -> IO ()
 
-
-preProcessing: 
-- Signal / Signal to PlotRecord 
-- Record -> PlotRecord
-- [Record] -> PlotRecord
-- Sequ -> PlotRecord
-
-
-
-
-
-plotOpts = Terminal Pdf FilePath | Y-Label Name | Title | Grid
-
--- Can differ between Plots and Records
-rStyleOpts = LineWidth | IncrementLineWith | IncrementLineStyle | LineSyleList | Increment
-
--- 
-RecordOpts = Selection .. | NamePowers | NameSignals | AddLeadingSignal | Normate  (Record -> Record commutierbar)
-
-MultiOpts = AutoWindowNames Title |  Split Int with LeadingSignal | Split 
-
-
-alternative Idee: 
-
-timePlotData = SplitRecord Int Record | 
-
-
--- Alternativ rPlot = timePlot
-
-time :: String -> [PlotOpts] -> [StyleOpts] -> [RecordOpts] -> [Record] -> IO ()
-time title Options recordList = 
-
-void . Plot.default . Frame.cons (recordAttr) .  $ foldMap record recList
-
-
--- alternative Anwendungen !!
-
--- vorher in Record konvertieren
-time :: String -> [PlotOpts] -> [StyleOpts] -> [RecordOpts] -> (Time,Signal) -> IO ()
-
-time :: String -> [PlotOpts] -> [StyleOpts] -> [RecordOpts] -> Record -> IO ()
-time :: String -> [PlotOpts] -> [StyleOpts] -> [RecordOpts] -> [Record] -> IO ()
-
-time :: String -> [PlotOpts] -> [StyleOpts] -> [RecordOpts] -> (Record,SequData Record) -> IO ()
-
--- vorher in record-Liste konvertieren 
-time :: String -> [PlotOpts] -> [StyleOpts] -> [RecordOpts] -> [SequData Record] -> IO ()
-
-
-timeIO :: String -> [(plotOpts,([styleopts, recordOpts,record]))] 
-
-
-!! Keine Typ-Sicherheit, wenn wir nur Gaph2D.T verwenden !! --> alles Zeit auf Achse
-
-time :: String -> [Gaph2D.T]
-
-rStyleOpts = LineWidth | IncrementLineWith | IncrementLineStyle | LineSyleList | Increment
-
--}
-
-------------------
-
+reportStack ti energyIndex eps env = do
+   print (ti ++ Format.unUnicode (formatValue energyIndex))
+   AssignMap.print $ AssignMap.threshold eps $
+      AssignMap.lookupStack energyIndex env

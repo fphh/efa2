@@ -2,22 +2,23 @@
 
 module Main where
 
+import qualified EFA.Example.Index as XIdx
+import qualified EFA.Example.Absolute as EqGen
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
-import qualified EFA.Example.Absolute as EqGen
-import EFA.Equation.System ((=.=))
-import EFA.Example.Absolute ((.=))
+import EFA.Example.Absolute ((.=), (=.=))
 import EFA.Equation.Result (Result)
-import EFA.Example.Utility (constructSeqTopo, edgeVar, makeEdges, checkDetermined)
+import EFA.Example.Utility (constructSeqTopo, makeEdges, checkDetermined)
 
+import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Draw as Draw
+import qualified EFA.Graph as Gr
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
-import EFA.Utility (checkedLookup)
-import EFA.Graph (mkGraph)
+import EFA.Utility.Map (checkedLookup)
 
 import Data.Ratio ((%))
 
@@ -36,11 +37,11 @@ instance Node.C Node where
 
 
 linearOne :: TD.Topology Node
-linearOne = mkGraph nodes (makeEdges edges)
+linearOne = Gr.fromList nodes (makeEdges edges)
   where nodes = [(Sink, TD.AlwaysSink), (Source, TD.AlwaysSource)]
         edges = [(Sink, Source)]
 
-seqTopo :: TD.SequFlowGraph Node
+seqTopo :: Flow.RangeGraph Node
 seqTopo = constructSeqTopo linearOne [0]
 
 enRange :: [Rational]
@@ -49,11 +50,11 @@ enRange = (1%100):[1%2, 1 .. 9]
 
 type Expr s a x = EqGen.Expression Node s a a x
 
-c :: Idx.Power Node
-c = edgeVar Idx.Power sec0 Source Sink
+c :: XIdx.Power Node
+c = XIdx.power sec0 Source Sink
 
-eta :: Idx.Eta Node
-eta = edgeVar Idx.Eta sec0 Source Sink
+eta :: XIdx.Eta Node
+eta = XIdx.eta sec0 Source Sink
 
 
 functionEta :: (Fractional x) => Expr s a x -> Expr s a x
@@ -62,7 +63,7 @@ functionEta p = 0.2 * p
 given :: Rational -> EqGen.EquationSystem Node s Rational Rational
 given p =
    mconcat $
-   (Idx.DTime sec0 .= 1) :
+   (XIdx.dTime sec0 .= 1) :
    (c .= p) :
    []
 
@@ -89,4 +90,4 @@ main = do
 
   let env = solveEnv 0.5
 
-  Draw.sequFlowGraphAbsWithEnv "" seqTopo env
+  Draw.xterm $ Draw.sequFlowGraphAbsWithEnv seqTopo env

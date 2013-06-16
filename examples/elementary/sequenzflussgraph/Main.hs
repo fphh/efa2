@@ -1,20 +1,19 @@
 module Main where
 
 import EFA.Example.Utility (makeEdges)
-
-import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import EFA.Utility.Async (concurrentlyMany_)
 
-import qualified EFA.Graph.Draw as Draw
+import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
+import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Graph.Flow as Flow
-import EFA.Graph (mkGraph)
-import EFA.Signal.SequenceData
+import qualified EFA.Graph as Gr
+
+import qualified EFA.Signal.SequenceData as SD
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
-
-import qualified EFA.Graph.Topology.Node as Node
 
 import Data.List.HT (chop)
 import Data.Char (isSpace)
@@ -24,11 +23,11 @@ node0 :~ node1 :~ node2 :~ node3 :~ _ = Stream.enumFrom minBound
 
 
 topoDreibein :: TD.Topology Node.Int
-topoDreibein = mkGraph ns (makeEdges es)
+topoDreibein = Gr.fromList ns (makeEdges es)
   where ns = [ (node0, TD.NoRestriction),
                (node1, TD.NoRestriction),
                (node2, TD.Crossing),
-               (node3, TD.Storage) ]
+               (node3, TD.storage) ]
         es = [ (node0, node2), (node1, node2), (node2, node3) ]
 
 
@@ -56,18 +55,18 @@ select :: [topo] -> [Int] -> [topo]
 select ts = map (ts!!)
 
 drawSeqGraph :: [TD.FlowTopology Node.Int] ->  IO ()
-drawSeqGraph sol =
-   Draw.sequFlowGraph "" .
-   Flow.mkSequenceTopology .
-   SequData . select sol . parse =<<
-   prompt "Gib kommagetrennt die gewuenschten Sektionsindices ein: "
+drawSeqGraph sol = do
+   xs <- parse `fmap`
+           prompt "Gib kommagetrennt die gewuenschten Sektionsindices ein: "
+   Draw.xterm $
+     Draw.sequFlowGraph $
+       (Flow.mkSequenceTopology (SD.fromList $ select sol xs))
 
 
 main :: IO ()
 main = do
   let sol = StateAnalysis.advanced topoDreibein
 
-  concurrentlyMany_ $
-    Draw.flowTopologies sol :
-    drawSeqGraph sol :
-    []
+  concurrentlyMany_ [
+    Draw.xterm $ Draw.flowTopologies sol,
+    drawSeqGraph sol ]

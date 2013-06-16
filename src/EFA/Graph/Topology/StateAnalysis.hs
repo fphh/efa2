@@ -4,24 +4,14 @@ module EFA.Graph.Topology.StateAnalysis (
    branchAndBound,
    prioritized,
    clustering, clusteringGreedy, clusteringMinimizing,
-
-   propBranchAndBound,
-   propPrioritized,
-   propClustering, propClusteringGreedy, propClusteringMinimizing,
-
-   speedBruteForce,
-   speedBranchAndBound,
-   speedPrioritized,
-   speedClustering,
    ) where
 
 import qualified EFA.Graph as Gr
-import EFA.Graph.Topology
-          (FlowTopology, Topology, NodeType(..),
-           FlowDirection(UnDir, Dir), isActive)
-import EFA.Utility (mapFromSet)
+import qualified EFA.Graph.Topology as Topo
+import EFA.Graph.Topology (FlowTopology, Topology)
 
-import qualified Data.List.Key as Key
+import qualified EFA.Utility.Map as MapU
+
 import qualified Data.Foldable as Fold
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Map as M
@@ -30,40 +20,36 @@ import qualified Data.FingerTree.PSQueue as PSQ
 import qualified Data.PriorityQueue.FingerTree as PQ
 import Data.FingerTree.PSQueue (PSQ)
 import Data.PriorityQueue.FingerTree (PQueue)
-import Data.Traversable (sequenceA)
-import Data.Monoid (mappend)
 import Data.NonEmpty ((!:))
-import Control.Monad (liftM2, foldM, guard)
+import Control.Monad (foldM, guard)
 import Control.Functor.HT (void)
 import Data.Ord.HT (comparing)
 import Data.Eq.HT (equating)
 
-import qualified Test.QuickCheck as QC
 
+type NodeType = Topo.NodeType ()
 
--- import Debug.Trace
-
--- How should it be orderd to be faster?
+-- How should it be ordered to be faster?
 checkNodeType :: NodeType -> Bool -> Bool -> Bool
-checkNodeType Crossing sucActive preActive = sucActive == preActive
-checkNodeType NoRestriction _ _ = True
-checkNodeType Source _ False = True
-checkNodeType AlwaysSource True False = True
-checkNodeType Sink False _ = True
-checkNodeType AlwaysSink False True = True
-checkNodeType DeadNode False False = True
-checkNodeType Storage _ _ = True
+checkNodeType Topo.Crossing sucActive preActive = sucActive == preActive
+checkNodeType Topo.NoRestriction _ _ = True
+checkNodeType Topo.Source _ False = True
+checkNodeType Topo.AlwaysSource True False = True
+checkNodeType Topo.Sink False _ = True
+checkNodeType Topo.AlwaysSink False True = True
+checkNodeType Topo.DeadNode False False = True
+checkNodeType (Topo.Storage _) _ _ = True
 checkNodeType _ _ _ = False
 
--- Because of extend, we only do have to deal with Dir edges here!
+-- Because of extend, we only have to deal with Dir edges here!
 checkNode :: (Ord node) => FlowTopology node -> node -> Bool
 checkNode topo x =
-   case M.lookup x $ Gr.nodes topo of
+   case M.lookup x $ Gr.graphMap topo of
       Nothing -> error "checkNode: node not in graph"
       Just (pre, node, suc) ->
          checkNodeType node
-            (anyActive $ Gr.sucEdgeLabels topo x suc)
-            (anyActive $ Gr.preEdgeLabels topo x pre)
+            (anyActive suc)
+            (anyActive pre)
 
 
 infix 1 `implies`
@@ -74,27 +60,27 @@ implies x y = not x || y
 checkIncompleteNodeType :: NodeType -> Bool -> Bool -> Bool -> Bool
 checkIncompleteNodeType typ complete sucActive preActive =
    case typ of
-      Crossing -> complete `implies` sucActive == preActive
-      Source -> not preActive
-      AlwaysSource -> not preActive && (complete `implies` sucActive)
-      Sink -> not sucActive
-      AlwaysSink -> not sucActive && (complete `implies` preActive)
-      Storage -> True
-      NoRestriction -> True
-      DeadNode -> not sucActive && not preActive
+      Topo.Crossing -> complete `implies` sucActive == preActive
+      Topo.Source -> not preActive
+      Topo.AlwaysSource -> not preActive && (complete `implies` sucActive)
+      Topo.Sink -> not sucActive
+      Topo.AlwaysSink -> not sucActive && (complete `implies` preActive)
+      Topo.Storage _ -> True
+      Topo.NoRestriction -> True
+      Topo.DeadNode -> not sucActive && not preActive
 
 checkCountNode :: (Ord node) => CountTopology node -> node -> Bool
 checkCountNode topo x =
-   case M.lookup x $ Gr.nodes topo of
+   case M.lookup x $ Gr.graphMap topo of
       Nothing -> error "checkNode: node not in graph"
       Just (pre, (node, nadj), suc) ->
          checkIncompleteNodeType node
-            (S.size pre + S.size suc == nadj)
-            (anyActive $ Gr.sucEdgeLabels topo x suc)
-            (anyActive $ Gr.preEdgeLabels topo x pre)
+            (M.size pre + M.size suc == nadj)
+            (anyActive suc)
+            (anyActive pre)
 
-anyActive :: [(n, FlowDirection)] -> Bool
-anyActive = any (isActive . snd)
+anyActive :: M.Map (Gr.EitherEdge node) () -> Bool
+anyActive = Fold.any Topo.isActive . M.keysSet
 
 admissibleCountTopology :: (Ord node) => CountTopology node -> Bool
 admissibleCountTopology topo =
@@ -102,45 +88,63 @@ admissibleCountTopology topo =
 
 
 type NumberOfAdj = Int
-type CountTopology node = Gr.Graph node (NodeType, NumberOfAdj) FlowDirection
+type CountTopology node =
+        Gr.Graph node Gr.EitherEdge (NodeType, NumberOfAdj) ()
+
+insEdge ::
+   Ord node =>
+   Gr.EitherEdge node -> CountTopology node -> CountTopology node
+insEdge e = Gr.insEdge (e, ())
+
+insEdgeSet ::
+   Ord node =>
+   S.Set (Gr.EitherEdge node) -> CountTopology node -> CountTopology node
+insEdgeSet e = Gr.insEdgeSet (MapU.fromSet (const ()) e)
+
+graphFromMap ::
+   (Gr.Edge e, Ord (e n), Ord n) =>
+   M.Map n nl -> S.Set (e n) -> Gr.Graph n e nl ()
+graphFromMap ns es =
+   Gr.fromMap ns (MapU.fromSet (const ()) es)
 
 
-edgeOrients :: Gr.Edge node -> [(Gr.Edge node, FlowDirection)]
-edgeOrients (Gr.Edge x y) =
-   (Gr.Edge x y, Dir) :
-   (Gr.Edge y x, Dir) : -- x and y inversed!
-   (Gr.Edge x y, UnDir) :
+edgeOrients :: Ord node => Gr.DirEdge node -> [Gr.EitherEdge node]
+edgeOrients (Gr.DirEdge x y) =
+   (Gr.EDirEdge $ Gr.DirEdge x y) :
+   (Gr.EDirEdge $ Gr.DirEdge y x) : -- x and y swapped!
+   (Gr.EUnDirEdge $ Gr.unDirEdge x y) :
    []
 
 admissibleEdges ::
    (Ord node) =>
    LNEdge node -> CountTopology node ->
-   [((Gr.Edge node, FlowDirection), CountTopology node)]
+   [(Gr.EitherEdge node, CountTopology node)]
 admissibleEdges e0 g0 = do
    e1 <- edgeOrients e0
-   let g1 = Gr.insEdge e1 g0
+   let g1 = insEdge e1 g0
    guard $ Fold.all (checkCountNode g1) e0
    return (e1, g1)
 
 expand :: (Ord node) => LNEdge node -> CountTopology node -> [CountTopology node]
 expand e g = map snd $ admissibleEdges e g
 
-splitNodesEdges :: (Ord node) => Topology node -> (CountTopology node, [Gr.Edge node])
+splitNodesEdges :: (Ord node) => Topology node -> (CountTopology node, [Gr.DirEdge node])
 splitNodesEdges topo =
    (Gr.fromMap
        (M.map (\(pre,l,suc) -> (l, S.size pre + S.size suc)) $ Gr.nodes topo)
        M.empty,
-    map fst $ Gr.labEdges topo)
+    Gr.edges topo)
 
 
 newtype
    Alternatives node =
-      Alternatives {getAlternatives :: [(Gr.Edge node, FlowDirection)]}
+      Alternatives {getAlternatives :: [Gr.EitherEdge node]}
 
 instance Eq  (Alternatives a) where (==)     =  equating  (void . getAlternatives)
 instance Ord (Alternatives a) where compare  =  comparing (void . getAlternatives)
 
-alternatives :: (Ord node) => LNEdge node -> CountTopology node -> Alternatives node
+alternatives ::
+   (Ord node) => LNEdge node -> CountTopology node -> Alternatives node
 alternatives e g =
    Alternatives $ map fst $ admissibleEdges e g
 
@@ -154,7 +158,7 @@ recoursePrioEdge origTopo =
           case PSQ.minView queue of
              Nothing -> [tq]
              Just (bestEdge PSQ.:-> Alternatives edges, remQueue) -> do
-                newTopo <- map (flip Gr.insEdge topo) edges
+                newTopo <- map (flip insEdge topo) edges
                 recourse
                    (newTopo,
                     S.foldl
@@ -184,7 +188,7 @@ data
    Cluster node =
       Cluster {
          clusterNodes :: S.Set node,
-         clusterEdges :: [M.Map (Gr.Edge node) FlowDirection]
+         clusterEdges :: [S.Set (Gr.EitherEdge node)]
       }
 
 
@@ -193,15 +197,15 @@ emptyCluster ::
    CountTopology node -> Cluster node
 emptyCluster g =
    Cluster S.empty
-      (guard (admissibleCountTopology g) >> [M.empty])
+      (guard (admissibleCountTopology g) >> [S.empty])
 
 singletonCluster ::
    (Ord node) =>
-   CountTopology node -> Gr.Edge node -> Cluster node
+   CountTopology node -> Gr.DirEdge node -> Cluster node
 singletonCluster g e =
    Cluster
       (Fold.foldMap S.singleton e)
-      (map (uncurry M.singleton . fst) $ admissibleEdges e g)
+      (map (S.singleton . fst) $ admissibleEdges e g)
 
 mergeCluster ::
    (Ord node) =>
@@ -212,8 +216,8 @@ mergeCluster topo c0 c1 =
    in  Cluster nodes $ do
           es0 <- clusterEdges c0
           es1 <- clusterEdges c1
-          let es2 = M.union es0 es1
-              g = Gr.insEdgeSet es2 topo
+          let es2 = S.union es0 es1
+              g = insEdgeSet es2 topo
           guard $ Fold.all (checkCountNode g) nodes
           return es2
 
@@ -234,7 +238,7 @@ mergeSmallestClusters topo queue0 =
          case PQ.minView queue1 of
             Nothing ->
                Left $
-               map (\es -> Gr.nmap fst $ Gr.insEdgeSet es topo) $
+               map (\es -> Gr.nmap fst $ insEdgeSet es topo) $
                clusterEdges c0
             Just (c1, queue2) -> Right $
                let c2 = mergeCluster topo c0 c1
@@ -283,7 +287,7 @@ mergeMinimizingClusterPairs topo (NonEmpty.Cons p ps) =
    case NonEmpty.fetch ps of
       Nothing ->
          Left $
-         map (\es -> Gr.nmap fst $ Gr.insEdgeSet es topo) $
+         map (\es -> Gr.nmap fst $ insEdgeSet es topo) $
          clusterEdges p
       Just partition0 ->
          Right $
@@ -312,7 +316,7 @@ mergeMinimizingCluster topo (NonEmpty.Cons p ps) =
    case NonEmpty.fetch ps of
       Nothing ->
          Left $
-         map (\es -> Gr.nmap fst $ Gr.insEdgeSet es topo) $
+         map (\es -> Gr.nmap fst $ insEdgeSet es topo) $
          clusterEdges p
       Just partition0 ->
          let (c0,partition1) =
@@ -329,15 +333,15 @@ mergeMinimizingCluster topo (NonEmpty.Cons p ps) =
              NonEmpty.removeEach partition1
 
 
-type LNEdge node = Gr.Edge node
+type LNEdge node = Gr.DirEdge node
 
 -- * various algorithms
 
 bruteForce :: (Ord node) => Topology node -> [FlowTopology node]
 bruteForce topo =
    filter (\g -> Fold.all (checkNode g) $ Gr.nodeSet g) .
-   map (Gr.fromMap (Gr.nodeLabels topo) . M.fromList) $
-   mapM (edgeOrients . fst) $ Gr.labEdges topo
+   map (graphFromMap (Gr.nodeLabels topo) . S.fromList) $
+   mapM edgeOrients $ Gr.edges topo
 
 {-
 This algorithm is made after reading R. Birds "Making a Century"
@@ -384,106 +388,3 @@ clustering topo =
 
 advanced :: (Ord node) => Topology node -> [FlowTopology node]
 advanced = clustering
-
-
--- * tests
-
-data UndirEdge n = UndirEdge n n
-   deriving (Eq, Ord, Show)
-
-undirEdge :: Ord n => n -> n -> UndirEdge n
-undirEdge x y =
-   if x<y then UndirEdge x y else UndirEdge y x
-
-instance (QC.Arbitrary n, Ord n) => QC.Arbitrary (UndirEdge n) where
-   arbitrary = liftM2 undirEdge QC.arbitrary QC.arbitrary
-   shrink (UndirEdge x y) =
-      S.toList $ S.fromList $ map (uncurry undirEdge) $ QC.shrink (x,y)
-
-instance Fold.Foldable UndirEdge where
-   foldMap f (UndirEdge x y) = mappend (f x) (f y)
-
-
-maxArbEdges :: Int
-maxArbEdges = 6
-
-newtype ArbTopology node = ArbTopology (Topology node)
-   deriving (Show)
-
-instance (QC.Arbitrary node, Ord node) => QC.Arbitrary (ArbTopology node) where
-   shrink (ArbTopology g) =
-      case Gr.nodeSet g of
-         ns ->
-            map (ArbTopology . flip Gr.delNodeSet g .
-                 S.difference ns . S.fromList) $
-            QC.shrink $ S.toList ns
-   arbitrary = do
-      edges <-
-         fmap (M.fromList . take maxArbEdges) QC.arbitrary
-      nodes <-
-         sequenceA $ mapFromSet (const QC.arbitrary) $
-         Fold.foldMap (Fold.foldMap S.singleton) $
-         M.keys edges
-      return $ ArbTopology $
-         Gr.fromMap nodes $
-         M.mapKeys (\(UndirEdge x y) -> Gr.Edge x y) edges
-
-propBranchAndBound :: (Eq node, Ord node) => ArbTopology node -> Bool
-propBranchAndBound (ArbTopology g) =
-   bruteForce g == branchAndBound g
-
-
-{- |
-I could declare an Ord instance for Graph,
-but I think that @graph0 < graph1@ should be a static error.
-Instead I use this function locally for 'Key.sort'.
--}
-graphIdent ::
-   Gr.Graph node nodeLabel edgeLabel ->
-   (M.Map node nodeLabel,
-    M.Map (Gr.Edge node) edgeLabel)
-graphIdent g = (Gr.nodeLabels g, Gr.edgeLabels g)
-
-{-
-I do not convert to Set, but use 'sort' in order to check for duplicates.
--}
-propPrioritized :: (Eq node, Ord node) => ArbTopology node -> Bool
-propPrioritized (ArbTopology g) =
-   Key.sort graphIdent (branchAndBound g)
-   ==
-   Key.sort graphIdent (prioritized g)
-
-propClustering :: (Eq node, Ord node) => ArbTopology node -> Bool
-propClustering (ArbTopology g) =
-   Key.sort graphIdent (branchAndBound g)
-   ==
-   Key.sort graphIdent (clustering g)
-
-propClusteringGreedy :: (Eq node, Ord node) => ArbTopology node -> Bool
-propClusteringGreedy (ArbTopology g) =
-   Key.sort graphIdent (branchAndBound g)
-   ==
-   Key.sort graphIdent (clusteringGreedy g)
-
-propClusteringMinimizing :: (Eq node, Ord node) => ArbTopology node -> Bool
-propClusteringMinimizing (ArbTopology g) =
-   Key.sort graphIdent (branchAndBound g)
-   ==
-   Key.sort graphIdent (clusteringMinimizing g)
-
-
-speedBruteForce :: (Eq node, Ord node) => ArbTopology node -> Bool
-speedBruteForce (ArbTopology g) =
-   bruteForce g == bruteForce g
-
-speedBranchAndBound :: (Eq node, Ord node) => ArbTopology node -> Bool
-speedBranchAndBound (ArbTopology g) =
-   branchAndBound g == branchAndBound g
-
-speedPrioritized :: (Eq node, Ord node) => ArbTopology node -> Bool
-speedPrioritized (ArbTopology g) =
-   prioritized g == prioritized g
-
-speedClustering :: (Eq node, Ord node) => ArbTopology node -> Bool
-speedClustering (ArbTopology g) =
-   clustering g == clustering g

@@ -4,15 +4,14 @@ module EFA.Example.NestedDelta (
    (?=),
    ) where
 
-import qualified EFA.Example.Utility as Utility
-import EFA.Equation.System ((?=))
-
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Arithmetic as Arith
+import qualified EFA.Symbolic.Variable as SymVar
 import EFA.Equation.Result (Result(Determined, Undetermined))
+import EFA.Equation.System ((?=))
 
 import qualified EFA.Graph.Topology.Index as Idx
 import EFA.Utility (Pointed)
@@ -146,31 +145,31 @@ e &&> ParameterRecord inner xs =
 
 parameterSymbol ::
    (Pointed term,
-    t ~ Utility.VarTerm var Idx.Delta term node,
+    t ~ SymVar.VarTerm var Idx.Delta term node,
     Eq t, Arith.Sum t, Arith.Constant t,
     Ord (idx node),
-    Var.Type idx ~ var, Utility.Symbol var, Env.AccessMap idx) =>
+    Var.Type idx ~ var, SymVar.Symbol var, Env.AccessMap idx) =>
 
    OuterExtrusion rec t ->
    idx node -> rec (Result t)
 
 parameterSymbol param idx =
    runOuterExtrusion param
-      (Utility.symbol (Idx.before $ Var.index idx))
-      (Utility.symbol (Idx.delta $ Var.index idx))
+      (SymVar.varSymbol $ Idx.before idx)
+      (SymVar.varSymbol $ Idx.delta  idx)
 
 absoluteSymbol ::
    (Pointed term,
-    t ~ Utility.VarTerm var Idx.Delta term node,
+    t ~ SymVar.VarTerm var Idx.Delta term node,
     Eq t, Arith.Sum t, Arith.Constant t,
     Ord (idx node),
-    Var.Type idx ~ var, Utility.Symbol var, Env.AccessMap idx) =>
+    Var.Type idx ~ var, SymVar.Symbol var, Env.AccessMap idx) =>
 
    InnerExtrusion rec t ->
    idx node -> rec (Result t)
 
 absoluteSymbol absolute idx =
-   absoluteRecord absolute (Utility.symbol (Idx.before $ Var.index idx))
+   absoluteRecord absolute (SymVar.varSymbol $ Idx.before idx)
 
 parameterRecord ::
    (Arith.Sum x) =>
@@ -188,12 +187,11 @@ absoluteRecord = runInnerExtrusion
 
 givenParameterSymbol ::
    (EqGen.Record rec, Pointed term,
-    t ~ Utility.VarTerm var Idx.Delta term node,
+    t ~ SymVar.VarTerm var Idx.Delta term node,
     Eq t, Arith.Sum t, Arith.Constant t,
-    EqGen.Element idx rec s scalar signal
-       ~ EqGen.VariableRecord rec s t,
+    t ~ Env.Element idx scalar signal,
     Ord (idx node),
-    Var.Type idx ~ var, Utility.Symbol var, Env.AccessMap idx) =>
+    Var.Type idx ~ var, SymVar.Symbol var, Env.AccessMap idx) =>
 
    idx node ->
    OuterExtrusion rec t ->
@@ -204,10 +202,8 @@ givenParameterSymbol idx param =
 
 givenParameterNumber ::
    (EqGen.Record rec,
-    Eq x, Arith.Sum x,
-    Ord (idx node), Env.AccessMap idx, Var.Index idx,
-    EqGen.Element idx rec s a v
-       ~ EqGen.VariableRecord rec s x) =>
+    Eq x, Arith.Sum x, x ~ Env.Element idx a v,
+    Ord (idx node), Env.AccessMap idx, Var.Index idx) =>
    idx node -> x -> x ->
    OuterExtrusion rec x ->
    EqGen.EquationSystem rec node s a v
