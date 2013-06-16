@@ -28,14 +28,6 @@ number = do
       [(n,"")] -> return n
       _ -> fail $ "invalid number string: " ++ show str
 
-cellContent ::
-  (Read a) =>
-  String -> Parser a
-cellContent str =
-  case reads str of
-    [(a,"")] -> return a
-    _ -> fail $ "could not parse cell content: " ++ show str
-
 
 class Traversable f => Sequence f where
    sepBy :: Parser a -> Parser sep -> Parser (f a)
