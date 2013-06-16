@@ -2,49 +2,53 @@
 
 module EFA.IO.CSVImport (modelicaCSVImport, fortissCSVImport, filterWith, dontFilter) where
 
-import qualified EFA.IO.Parser as EFAParser
 import EFA.IO.CSVParser (csvFile, csvFileWithHeader)
-import Text.ParserCombinators.Parsec (Parser, parse)
+import Text.ParserCombinators.Parsec (parse)
+import qualified EFA.IO.CSVParser as CSV
 
 import EFA.Signal.Record(Record(Record),SignalRecord, SigId(SigId))
 import EFA.Signal.Base (Val)
 
 import qualified EFA.Signal.Signal as S
 
-import qualified Data.Traversable as Trav
+import qualified Data.NonEmpty.Class as NonEmptyC
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Zip as Zip
 import qualified Data.Map as Map
 import qualified Data.List as List
-import Control.Monad (when)
 
-
-type Line = NonEmpty.T (NonEmpty.T []) String
 
 makeCSVRecord ::
-  (Line, [Line]) ->
-  Parser (SignalRecord [] Val)
-makeCSVRecord (NonEmpty.Cons timeStr sigNames, hs) = do
-  when (timeStr /= "time") $
-    fail $ "First column should be \"time\", but is " ++ show timeStr
-  NonEmpty.Cons time sigs <-
-    Trav.mapM (Trav.mapM EFAParser.cellContent) $
-    Zip.transposeClip $ fmap NonEmpty.init hs
-  return $
-    Record
-      (S.fromList time)
-      (Map.fromList $
-       zip
-         (map SigId $ NonEmpty.init sigNames)
-         (map S.fromList sigs))
+  (NonEmpty.T (NonEmpty.T []) SigId,
+   [NonEmpty.T (NonEmpty.T []) Val]) ->
+  SignalRecord [] Val
+makeCSVRecord (NonEmpty.Cons _timeStr sigNames, hs) =
+  let NonEmpty.Cons time sigs =
+        Zip.transposeClip $ fmap NonEmpty.init hs
+  in  Record
+        (S.fromList time)
+        (Map.fromList $
+         zip
+           (NonEmpty.init sigNames)
+           (map S.fromList sigs))
 
 -- | Main Modelica CSV Import Function
 modelicaCSVImport :: FilePath -> IO (SignalRecord [] Val)
 modelicaCSVImport path = do
   text <- readFile path
-  case parse (makeCSVRecord =<< csvFileWithHeader ',') path text of
+  let checkTime str =
+        case str of
+          "time" -> Right $ SigId str
+          _ -> Left "time column expected"
+      cellContent "" = Right 0 -- needed for the right dummy column
+      cellContent str = CSV.cellContent str
+      parser =
+        csvFileWithHeader
+          (NonEmpty.Cons checkTime $ NonEmptyC.repeat (Right . SigId))
+          cellContent ','
+  case parse parser path text of
     Left err -> ioError . userError $ "Parse error in file " ++ show err
-    Right table -> return table
+    Right table -> return $ makeCSVRecord table
 
 
 

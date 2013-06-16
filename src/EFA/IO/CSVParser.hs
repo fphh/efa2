@@ -1,6 +1,6 @@
 
 
-module EFA.IO.CSVParser (csvFile, csvFileWithHeader) where
+module EFA.IO.CSVParser (csvFile, csvFileWithHeader, cellContent) where
 
 
 -- Geklaut und adaptiert aus Real World Haskell, Kapitel 16
@@ -19,27 +19,56 @@ csvFile ::
   Char -> Parser (table (line String))
 csvFile sepChar = EFAParser.endBy (line sepChar) eol
 
-csvFileWithHeader ::
-  (Sequence line) =>
-  Char -> Parser (line String, [line String])
-csvFileWithHeader sepChar = do
-  headerLine <- line sepChar <* eol
-  body <- endBy (fixedLine headerLine sepChar) eol
-  return (headerLine, body)
-
 line ::
   Sequence line =>
   Char -> Parser (line String)
 line sepChar = do
-  skipMany (char sepChar) -- remove separators from the beginning of a line
+  -- remove separators from the beginning of a line
+  skipMany (char sepChar)
   EFAParser.sepBy (cell sepChar) (char sepChar)
+
+
+type Interpret a = String -> Either String a
+
+cellContent :: (Read a) => Interpret a
+cellContent str =
+  case reads str of
+    [(a,"")] -> Right a
+    _ -> Left $ "could not parse cell content: " ++ show str
+
+interpret :: Interpret a -> Parser String -> Parser a
+interpret intp p = do
+  str <- p
+  case intp str of
+    Left msg -> fail msg
+    Right a -> return a
+
+
+csvFileWithHeader ::
+  (Sequence line) =>
+  line (Interpret header) ->
+  Interpret a ->
+  Char -> Parser (line header, [line a])
+csvFileWithHeader intpHeader intpData sepChar = do
+  hdrLine <- headerLine intpHeader sepChar <* eol
+  body <- endBy (fixedLine intpData hdrLine sepChar) eol
+  return (hdrLine, body)
+
+headerLine ::
+  Sequence line =>
+  line (Interpret header) -> Char -> Parser (line header)
+headerLine intps sepChar = do
+  -- remove separators from the beginning of a line
+  skipMany (char sepChar)
+  EFAParser.sepByVar (fmap (flip interpret $ cell sepChar) intps) (char sepChar)
 
 fixedLine ::
   (Sequence line) =>
-  line a -> Char -> Parser (line String)
-fixedLine n sepChar = do
-  skipMany (char sepChar) -- remove separators from the beginning of a line
-  EFAParser.sepByMatch n (cell sepChar) (char sepChar)
+  Interpret a -> line void -> Char -> Parser (line a)
+fixedLine intp n sepChar = do
+  -- remove separators from the beginning of a line
+  skipMany (char sepChar)
+  EFAParser.sepByMatch n (interpret intp $ cell sepChar) (char sepChar)
 
 cell :: Char -> Parser String
 cell sepChar = quotedCell <|> many (noneOf (sepChar:"\n\r"))
