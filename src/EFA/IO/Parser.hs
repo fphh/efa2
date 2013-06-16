@@ -12,10 +12,8 @@ import Control.Monad.HT (void)
 eol :: Parser ()
 eol =
   void (
-        Parsec.try (Parsec.string "\n\r")
-    <|> Parsec.try (Parsec.string "\r\n")
-    <|> Parsec.string "\n"
-    <|> Parsec.string "\r"
+        (Parsec.char '\n' >> Parsec.optional (Parsec.char '\r'))
+    <|> (Parsec.char '\r' >> Parsec.optional (Parsec.char '\n'))
     <?> "end of line"
   )
 
