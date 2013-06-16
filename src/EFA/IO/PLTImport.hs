@@ -2,30 +2,34 @@
 
 module EFA.IO.PLTImport where
 
-import qualified Data.Map as M
+import EFA.IO.PLTParser (Table, pltFile)
+import Text.ParserCombinators.Parsec (Parser, parse)
 
-import Text.ParserCombinators.Parsec (parse)
 import EFA.Signal.Record(Record(Record),SignalRecord, SigId(SigId))
 
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Vector as SV
 
-import EFA.IO.PLTParser (pltFile, Table)
+import qualified Data.NonEmpty as NonEmpty
+import qualified Data.Map as Map
+
 
 makePLTRecord ::
-  (SV.FromList t, SV.Storage t v) => [Table v] -> SignalRecord t v
-makePLTRecord ((SigId "time", time):table) =
-  Record (S.fromList time) (M.map S.fromList $ M.fromList table)
-makePLTRecord ((SigId _ , _):_) = error "makePLTRecord no time"
-makePLTRecord [] = error "makePLTRecord empty list"
+  (SV.FromList v, SV.Storage v a) =>
+  NonEmpty.T [] (Table a) ->
+  Parser (SignalRecord v a)
+makePLTRecord (NonEmpty.Cons (SigId timeStr, time) table) =
+  case timeStr of
+    "time" ->
+      return $ Record (S.fromList time) (fmap S.fromList $ Map.fromList table)
+    _ -> fail "makePLTRecord no time"
 
 modelicaPLTImport ::
   (SV.Storage t v, SV.FromList t, Read v) =>
   FilePath -> IO (SignalRecord t v)
 modelicaPLTImport path = do
   text <- readFile path
-  case parse pltFile path text of
+  case parse (makePLTRecord =<< pltFile) path text of
     Left err ->
       ioError $ userError $ "Parse error in file " ++ show err
-    Right table -> return $ makePLTRecord table
-
+    Right table -> return table
