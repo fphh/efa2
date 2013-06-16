@@ -4,8 +4,9 @@ import qualified Text.ParserCombinators.Parsec as Parsec
 import Text.ParserCombinators.Parsec (Parser, (<?>), (<|>))
 
 import qualified Data.NonEmpty as NonEmpty
+import Data.Traversable (Traversable, sequenceA)
 
-import Control.Applicative (Applicative, liftA2, (<*))
+import Control.Applicative (Applicative, liftA2, (<*), (<$))
 import Control.Monad.HT (void)
 
 
@@ -33,7 +34,7 @@ cellContent str =
     _ -> fail $ "could not parse cell content: " ++ show str
 
 
-class Sequence f where
+class Traversable f => Sequence f where
    sepBy :: Parser a -> Parser sep -> Parser (f a)
    many :: Parser a -> Parser (f a)
 
@@ -47,3 +48,9 @@ instance Sequence f => Sequence (NonEmpty.T f) where
 
 endBy :: Sequence f => Parser a -> Parser sep -> Parser (f a)
 endBy p sep = many (p <* sep)
+
+sepByMatch ::
+   (Sequence f) =>
+   f void -> Parser a -> Parser sep -> Parser (f a)
+sepByMatch n p sep =
+   sequenceA $ NonEmpty.init $ NonEmpty.Cons p $ (sep>>p) <$ n

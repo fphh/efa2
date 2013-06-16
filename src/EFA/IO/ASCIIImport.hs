@@ -4,7 +4,7 @@
 module EFA.IO.ASCIIImport (modelicaASCIIImport) where
 
 import qualified EFA.IO.Parser as EFAParser
-import EFA.IO.CSVParser (csvFile)
+import EFA.IO.CSVParser (csvFileWithHeader)
 import Text.ParserCombinators.Parsec (Parser, parse)
 
 import EFA.Signal.Record (Record(Record),SignalRecord, SigId(SigId))
@@ -18,14 +18,16 @@ import qualified Data.Zip as Zip
 import qualified Data.Map as Map
 
 
+type Line = NonEmpty.T (NonEmpty.T []) String
+
 makeASCIIRecord ::
   (SV.Storage v a, SV.FromList v, Read a) =>
-  NonEmpty.T [] (NonEmpty.T (NonEmpty.T []) String) ->
+  (Line, [Line]) ->
   Parser (SignalRecord v a)
-makeASCIIRecord hs = do
+makeASCIIRecord (h,hs) = do
   NonEmpty.Cons time sigs <-
     Trav.mapM (Trav.mapM EFAParser.cellContent) $
-    Zip.transposeClip $ fmap NonEmpty.init $ NonEmpty.flatten hs
+    Zip.transposeClip $ fmap NonEmpty.init $ h:hs
   return $
     Record
       (S.fromList time)
@@ -40,7 +42,7 @@ modelicaASCIIImport ::
   FilePath -> IO (SignalRecord v a)
 modelicaASCIIImport path = do
   text <- readFile path
-  case parse (makeASCIIRecord =<< csvFile ' ') path text of
+  case parse (makeASCIIRecord =<< csvFileWithHeader ' ') path text of
     Left err ->
       ioError $ userError $ "Parse error in file " ++ show err
     Right table -> return table

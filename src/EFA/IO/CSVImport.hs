@@ -3,7 +3,7 @@
 module EFA.IO.CSVImport (modelicaCSVImport, fortissCSVImport, filterWith, dontFilter) where
 
 import qualified EFA.IO.Parser as EFAParser
-import EFA.IO.CSVParser (csvFile)
+import EFA.IO.CSVParser (csvFile, csvFileWithHeader)
 import Text.ParserCombinators.Parsec (Parser, parse)
 
 import EFA.Signal.Record(Record(Record),SignalRecord, SigId(SigId))
@@ -19,10 +19,12 @@ import qualified Data.List as List
 import Control.Monad (when)
 
 
+type Line = NonEmpty.T (NonEmpty.T []) String
+
 makeCSVRecord ::
-  NonEmpty.T [] (NonEmpty.T (NonEmpty.T []) String) ->
+  (Line, [Line]) ->
   Parser (SignalRecord [] Val)
-makeCSVRecord (NonEmpty.Cons (NonEmpty.Cons timeStr sigNames) hs) = do
+makeCSVRecord (NonEmpty.Cons timeStr sigNames, hs) = do
   when (timeStr /= "time") $
     fail $ "First column should be \"time\", but is " ++ show timeStr
   NonEmpty.Cons time sigs <-
@@ -40,7 +42,7 @@ makeCSVRecord (NonEmpty.Cons (NonEmpty.Cons timeStr sigNames) hs) = do
 modelicaCSVImport :: FilePath -> IO (SignalRecord [] Val)
 modelicaCSVImport path = do
   text <- readFile path
-  case parse (makeCSVRecord =<< csvFile ',') path text of
+  case parse (makeCSVRecord =<< csvFileWithHeader ',') path text of
     Left err -> ioError . userError $ "Parse error in file " ++ show err
     Right table -> return table
 
