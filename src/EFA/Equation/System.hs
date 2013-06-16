@@ -74,6 +74,7 @@ import qualified Data.Map as M
 import qualified Data.Set as S
 import qualified Data.List.HT as LH
 
+import qualified Data.NonEmpty.Class as NonEmptyC
 import qualified Data.NonEmpty as NonEmpty
 
 import qualified Data.Foldable as Fold
@@ -753,7 +754,7 @@ fromInStorages ::
   EquationSystem rec node s a v
 fromInStorages (_, sn@(Idx.BndNode sec n), outs) =
    flip foldMap
-      (fmap NonEmpty.sort $ NonEmpty.fetch outs) $ \souts ->
+      (fmap NonEmptyC.sort $ NonEmpty.fetch outs) $ \souts ->
          -- The next equation is special for the initial Section.
          (Idx.storageEdge maxEnergy sec (NonEmpty.head souts) n =%=
           if sec == Idx.initial

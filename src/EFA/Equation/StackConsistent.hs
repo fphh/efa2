@@ -422,7 +422,7 @@ normalize s = fmap (~/ absolute s) s
 
 
 toList :: SumC sum => sum a -> NonEmpty.T [] a
-toList = fold NonEmpty.append . fmap NonEmpty.singleton
+toList = fold NonEmptyC.append . fmap NonEmpty.singleton
 
 {- |
 You may use 'Data.Foldable.sum' for evaluation with respect to 'Num' class.
@@ -573,7 +573,7 @@ assigns s =
    case descent s of
       Left a -> NonEmpty.singleton ([], a)
       Right (i, (a0,a1)) ->
-         NonEmpty.append
+         NonEmptyC.append
             (fmap (mapFst (Idx.before i :)) $ assigns a0)
             (fmap (mapFst (Idx.delta  i :)) $ assigns a1)
 

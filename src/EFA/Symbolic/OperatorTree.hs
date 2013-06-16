@@ -14,6 +14,7 @@ import EFA.Equation.Arithmetic
 
 import EFA.Utility (Pointed, point)
 
+import qualified Data.NonEmpty.Class as NonEmptyC
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Stream as Stream
 import Data.Stream (Stream)
@@ -146,7 +147,7 @@ formatTerm =
 expand :: Term a -> NonEmpty.T [] (Term a)
 expand = go
   where go (Minus u) = fmap Minus (go u)
-        go (u :+ v) = NonEmpty.append (go u) (go v)
+        go (u :+ v) = NonEmptyC.append (go u) (go v)
         go (u :* v) = liftM2 (:*) (go u) (go v)
         go s = NonEmpty.singleton s
 
