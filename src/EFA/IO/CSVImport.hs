@@ -52,15 +52,16 @@ modelicaCSVImport path = do
 
 
 
+type Filter = [NonEmpty.T [] String] -> [Int]
 
-filterWith :: Int -> (String -> Bool) -> [[String]] -> [Int]
-filterWith r p cs = List.findIndices p (tail (cs !! r))
+filterWith :: Int -> (String -> Bool) -> Filter
+filterWith r p cs = List.findIndices p (NonEmpty.tail (cs !! r))
 
-dontFilter :: [[String]] -> [Int]
+dontFilter :: Filter
 dontFilter = filterWith 0 (const True)
 
 fortissCSVRecord ::
-  NonEmpty.T [] Int -> ([NonEmpty.T [] String] -> [Int]) ->
+  NonEmpty.T [] Int -> Filter ->
   NonEmpty.T [] [String] ->
   SignalRecord [] Val
 fortissCSVRecord idx filt hs =
@@ -76,8 +77,7 @@ fortissCSVRecord idx filt hs =
 -- | Main Fortiss CSV Import Function
 fortissCSVImport ::
   FilePath ->
-  NonEmpty.T [] Int ->
-  ([NonEmpty.T [] String] -> [Int]) ->
+  NonEmpty.T [] Int -> Filter ->
   IO (SignalRecord [] Val)
 fortissCSVImport path idx filt = do
   text <- readFile path
