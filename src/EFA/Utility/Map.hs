@@ -2,8 +2,9 @@ module EFA.Utility.Map where
 
 import EFA.Utility (myShowList)
 
-import qualified Data.Set as S
+import qualified Data.Set as Set
 import qualified Data.Map as M
+import Data.Set (Set)
 import Data.Tuple.HT (swap)
 
 
@@ -31,13 +32,13 @@ reverse = M.fromList . map swap . M.toList
 
 -- M.fromSet is available from containers-0.5
 fromSet ::
-   (Ord key) => (key -> a) -> S.Set key -> M.Map key a
-fromSet f = M.fromAscList . map (\k -> (k, f k)) . S.toAscList
+   (Ord key) => (key -> a) -> Set key -> M.Map key a
+fromSet f = M.fromAscList . map (\k -> (k, f k)) . Set.toAscList
 
 differenceSet ::
-   (Ord key) => M.Map key a -> S.Set key -> M.Map key a
+   (Ord key) => M.Map key a -> Set key -> M.Map key a
 differenceSet m s = M.difference m (fromSet (const ()) s)
 
 intersectionSet ::
-   (Ord key) => M.Map key a -> S.Set key -> M.Map key a
+   (Ord key) => M.Map key a -> Set key -> M.Map key a
 intersectionSet m s = M.intersection m (fromSet (const ()) s)

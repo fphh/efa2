@@ -84,7 +84,7 @@ import Control.Applicative (Applicative, pure, liftA, liftA2, liftA3)
 import Control.Category ((.))
 
 import qualified Data.Map as M
-import qualified Data.Set as S
+import qualified Data.Set as Set
 import qualified Data.List.HT as ListHT
 import qualified Data.List as List
 
@@ -727,7 +727,7 @@ fromNodes equalInOutSums =
                          case TD.edgeType edge of
                             TD.StructureEdge e -> Left $ TD.structureEdgeFromDirEdge e
                             TD.StorageEdge e -> Right e) .
-                   S.toList
+                   Set.toList
 
                 (outsStruct, outsStore) = partition outs
                 (insStruct,  insStore) =

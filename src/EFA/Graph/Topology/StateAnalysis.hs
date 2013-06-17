@@ -15,12 +15,13 @@ import qualified EFA.Utility.Map as MapU
 import qualified Data.Foldable as Fold
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Map as M
-import qualified Data.Set as S
+import qualified Data.Set as Set
 import qualified Data.FingerTree.PSQueue as PSQ
 import qualified Data.PriorityQueue.FingerTree as PQ
 import Data.FingerTree.PSQueue (PSQ)
 import Data.PriorityQueue.FingerTree (PQueue)
 import Data.NonEmpty ((!:))
+import Data.Set (Set)
 import Control.Monad (foldM, guard)
 import Control.Functor.HT (void)
 import Data.Ord.HT (comparing)
@@ -98,12 +99,12 @@ insEdge e = Gr.insEdge (e, ())
 
 insEdgeSet ::
    Ord node =>
-   S.Set (Gr.EitherEdge node) -> CountTopology node -> CountTopology node
+   Set (Gr.EitherEdge node) -> CountTopology node -> CountTopology node
 insEdgeSet e = Gr.insEdgeSet (MapU.fromSet (const ()) e)
 
 graphFromMap ::
    (Gr.Edge e, Ord (e n), Ord n) =>
-   M.Map n nl -> S.Set (e n) -> Gr.Graph n e nl ()
+   M.Map n nl -> Set (e n) -> Gr.Graph n e nl ()
 graphFromMap ns es =
    Gr.fromMap ns (MapU.fromSet (const ()) es)
 
@@ -131,7 +132,7 @@ expand e g = map snd $ admissibleEdges e g
 splitNodesEdges :: (Ord node) => Topology node -> (CountTopology node, [Gr.DirEdge node])
 splitNodesEdges topo =
    (Gr.fromMap
-       (M.map (\(pre,l,suc) -> (l, S.size pre + S.size suc)) $ Gr.nodes topo)
+       (M.map (\(pre,l,suc) -> (l, Set.size pre + Set.size suc)) $ Gr.nodes topo)
        M.empty,
     Gr.edges topo)
 
@@ -161,7 +162,7 @@ recoursePrioEdge origTopo =
                 newTopo <- map (flip insEdge topo) edges
                 recourse
                    (newTopo,
-                    S.foldl
+                    Set.foldl
                        (\q e -> PSQ.adjust (const $ alternatives e newTopo) e q)
                        remQueue $
                     Fold.foldMap (Gr.adjEdges origTopo) bestEdge)
@@ -182,13 +183,13 @@ The edge set in all list elements must be equal if neglecting edge orientation.
 
 We maintain the set of nodes only for reasons of efficiency.
 For @Cluster ns ess@ it must hold
-@ns == (foldMap (foldMap S.singleton) $ M.keys $ head ess)@.
+@ns == (foldMap (foldMap Set.singleton) $ M.keys $ head ess)@.
 -}
 data
    Cluster node =
       Cluster {
-         clusterNodes :: S.Set node,
-         clusterEdges :: [S.Set (Gr.EitherEdge node)]
+         clusterNodes :: Set node,
+         clusterEdges :: [Set (Gr.EitherEdge node)]
       }
 
 
@@ -196,27 +197,27 @@ emptyCluster ::
    (Ord node) =>
    CountTopology node -> Cluster node
 emptyCluster g =
-   Cluster S.empty
-      (guard (admissibleCountTopology g) >> [S.empty])
+   Cluster Set.empty
+      (guard (admissibleCountTopology g) >> [Set.empty])
 
 singletonCluster ::
    (Ord node) =>
    CountTopology node -> Gr.DirEdge node -> Cluster node
 singletonCluster g e =
    Cluster
-      (Fold.foldMap S.singleton e)
-      (map (S.singleton . fst) $ admissibleEdges e g)
+      (Fold.foldMap Set.singleton e)
+      (map (Set.singleton . fst) $ admissibleEdges e g)
 
 mergeCluster ::
    (Ord node) =>
    CountTopology node ->
    Cluster node -> Cluster node -> Cluster node
 mergeCluster topo c0 c1 =
-   let nodes = S.union (clusterNodes c0) (clusterNodes c1)
+   let nodes = Set.union (clusterNodes c0) (clusterNodes c1)
    in  Cluster nodes $ do
           es0 <- clusterEdges c0
           es1 <- clusterEdges c1
-          let es2 = S.union es0 es1
+          let es2 = Set.union es0 es1
               g = insEdgeSet es2 topo
           guard $ Fold.all (checkCountNode g) nodes
           return es2
@@ -340,7 +341,7 @@ type LNEdge node = Gr.DirEdge node
 bruteForce :: (Ord node) => Topology node -> [FlowTopology node]
 bruteForce topo =
    filter (\g -> Fold.all (checkNode g) $ Gr.nodeSet g) .
-   map (graphFromMap (Gr.nodeLabels topo) . S.fromList) $
+   map (graphFromMap (Gr.nodeLabels topo) . Set.fromList) $
    mapM edgeOrients $ Gr.edges topo
 
 {-
