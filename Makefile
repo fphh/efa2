@@ -1,6 +1,9 @@
 SRCDIRS = src demo examples test
 TESTDIR = efatest
 
+HTDIR = $(HOME)/haskell
+HTPKGS = gnuplot non-empty unique-logic utility
+
 hlint.html: $(SRCDIRS) hlint/efa2.hs
 	hlint $(SRCDIRS) --hint=hlint/efa2.hs --report=$@
 
@@ -22,6 +25,20 @@ testgit-again:
 
 testgit-revert:
 	(cd /tmp/$(TESTDIR)/ && git reset HEAD^ && git checkout -f)
+
+htpkg-get:
+	(cd $(HTDIR) && \
+	   darcs get http://code.haskell.org/gnuplot/ && \
+	   darcs get http://code.haskell.org/~thielema/utility/ && \
+	   darcs get http://code.haskell.org/~thielema/non-empty/ && \
+	   darcs get http://code.haskell.org/~thielema/unique-logic/ )
+
+htpkg-pull:
+	(for pkg in $(HTPKGS); do (cd $(HTDIR)/$$pkg && darcs pull -a); done)
+
+htpkg-install:
+	for pkg in $(HTPKGS); do echo $(HTDIR)/$$pkg; done | \
+	   xargs cabal install .
 
 ghci:
 	ghci -i:src:test -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs demo/numericSolving/Main.hs
