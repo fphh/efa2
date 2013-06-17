@@ -41,7 +41,7 @@ import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.ConvertTable as Table
 
 import qualified Data.List as L
-import qualified Data.Map as M
+import qualified Data.Map as Map
 import qualified Data.Set as Set
 
 import Control.Applicative (liftA)
@@ -199,7 +199,7 @@ etaSys2 ::
   Double
 -}
 etaSys2 (_, topo) _ = trace (show sinks) undefined
-  where sinks = M.filter isSink $ Gr.nodeEdges topo
+  where sinks = Map.filter isSink $ Gr.nodeEdges topo
         isSink (_, el, x) =
           case el of
                TD.AlwaysSource -> Set.size x > 0

@@ -14,13 +14,14 @@ import qualified EFA.Utility.Map as MapU
 
 import qualified Data.Foldable as Fold
 import qualified Data.NonEmpty as NonEmpty
-import qualified Data.Map as M
+import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.FingerTree.PSQueue as PSQ
 import qualified Data.PriorityQueue.FingerTree as PQ
 import Data.FingerTree.PSQueue (PSQ)
 import Data.PriorityQueue.FingerTree (PQueue)
 import Data.NonEmpty ((!:))
+import Data.Map (Map)
 import Data.Set (Set)
 import Control.Monad (foldM, guard)
 import Control.Functor.HT (void)
@@ -45,7 +46,7 @@ checkNodeType _ _ _ = False
 -- Because of extend, we only have to deal with Dir edges here!
 checkNode :: (Ord node) => FlowTopology node -> node -> Bool
 checkNode topo x =
-   case M.lookup x $ Gr.graphMap topo of
+   case Map.lookup x $ Gr.graphMap topo of
       Nothing -> error "checkNode: node not in graph"
       Just (pre, node, suc) ->
          checkNodeType node
@@ -72,16 +73,16 @@ checkIncompleteNodeType typ complete sucActive preActive =
 
 checkCountNode :: (Ord node) => CountTopology node -> node -> Bool
 checkCountNode topo x =
-   case M.lookup x $ Gr.graphMap topo of
+   case Map.lookup x $ Gr.graphMap topo of
       Nothing -> error "checkNode: node not in graph"
       Just (pre, (node, nadj), suc) ->
          checkIncompleteNodeType node
-            (M.size pre + M.size suc == nadj)
+            (Map.size pre + Map.size suc == nadj)
             (anyActive suc)
             (anyActive pre)
 
-anyActive :: M.Map (Gr.EitherEdge node) () -> Bool
-anyActive = Fold.any Topo.isActive . M.keysSet
+anyActive :: Map (Gr.EitherEdge node) () -> Bool
+anyActive = Fold.any Topo.isActive . Map.keysSet
 
 admissibleCountTopology :: (Ord node) => CountTopology node -> Bool
 admissibleCountTopology topo =
@@ -104,7 +105,7 @@ insEdgeSet e = Gr.insEdgeSet (MapU.fromSet (const ()) e)
 
 graphFromMap ::
    (Gr.Edge e, Ord (e n), Ord n) =>
-   M.Map n nl -> Set (e n) -> Gr.Graph n e nl ()
+   Map n nl -> Set (e n) -> Gr.Graph n e nl ()
 graphFromMap ns es =
    Gr.fromMap ns (MapU.fromSet (const ()) es)
 
@@ -132,8 +133,8 @@ expand e g = map snd $ admissibleEdges e g
 splitNodesEdges :: (Ord node) => Topology node -> (CountTopology node, [Gr.DirEdge node])
 splitNodesEdges topo =
    (Gr.fromMap
-       (M.map (\(pre,l,suc) -> (l, Set.size pre + Set.size suc)) $ Gr.nodes topo)
-       M.empty,
+       (Map.map (\(pre,l,suc) -> (l, Set.size pre + Set.size suc)) $ Gr.nodes topo)
+       Map.empty,
     Gr.edges topo)
 
 
@@ -183,7 +184,7 @@ The edge set in all list elements must be equal if neglecting edge orientation.
 
 We maintain the set of nodes only for reasons of efficiency.
 For @Cluster ns ess@ it must hold
-@ns == (foldMap (foldMap Set.singleton) $ M.keys $ head ess)@.
+@ns == (foldMap (foldMap Set.singleton) $ Map.keys $ head ess)@.
 -}
 data
    Cluster node =

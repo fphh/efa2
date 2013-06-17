@@ -2,7 +2,8 @@ module EFA.Report.Format where
 
 import qualified EFA.Graph.Topology.Index as Idx
 
-import qualified Data.Map as M
+import qualified Data.Map as Map
+import Data.Map (Map)
 
 import Data.List (intercalate)
 import Data.Ratio (Ratio, numerator, denominator)
@@ -163,7 +164,7 @@ instance Format Unicode where
    real = Unicode . formatReal -- printf "%.6f"
    ratio r =
       Unicode $
-      M.findWithDefault
+      Map.findWithDefault
          (show (numerator r) ++ "/" ++ show (denominator r))
          r ratioCharMap
 
@@ -237,11 +238,11 @@ instance Format Unicode where
       in  Unicode $ x ++ map super (show n)
    showRaw (Unicode x) = x
 
-ratioCharMap :: Integral a => M.Map (Ratio a) String
+ratioCharMap :: Integral a => Map (Ratio a) String
 ratioCharMap =
    let xys =
           fmap (:[]) $
-          M.fromList $
+          Map.fromList $
           (1/4, '\xbc') :
           (1/2, '\xbd') :
           (3/4, '\xbe') :
@@ -261,7 +262,7 @@ ratioCharMap =
           (5/8, '\x215D') :
           (7/8, '\x215E') :
           []
-   in  M.union xys (fmap ('-':) $ M.mapKeys P.negate xys)
+   in  Map.union xys (fmap ('-':) $ Map.mapKeys P.negate xys)
 
 
 instance Format Latex where

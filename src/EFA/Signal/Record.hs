@@ -5,12 +5,12 @@
 module EFA.Signal.Record where
 
 import qualified EFA.Signal.Signal as S
-import EFA.Signal.Signal (TC(..), Scalar)
 import qualified EFA.Signal.Data as D
 import qualified EFA.Signal.Vector as V
 import qualified EFA.Signal.Base as SB
 import EFA.Signal.Signal
-          (-- TC(TC),
+          (TC(TC),
+           Scalar,
            Signal,
            FSignal,
            TSigL,
@@ -51,7 +51,7 @@ import Text.Printf (PrintfArg)
 import qualified Test.QuickCheck as QC
 import System.Random (Random)
 
-import qualified Data.Map as M
+import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.List as L
 import qualified Data.Foldable as Fold
@@ -59,12 +59,13 @@ import qualified Data.List.HT as ListHT
 import qualified Data.List.Key as Key
 import qualified Data.List.Match as Match
 
+import Control.Monad (liftM2)
 import Data.NonEmpty ((!:))
 import Data.Ratio (Ratio, (%))
 import Data.Foldable (foldMap)
 import Data.List (transpose)
 import Data.Tuple.HT (mapFst)
-import Control.Monad (liftM2)
+import Data.Map (Map)
 import EFA.Utility.Map (checkedLookup2)
 import EFA.Utility (myShowList)
 
@@ -82,7 +83,7 @@ type instance D.Value (Record s1 s2 t1 t2 id v d1 d2) = d2
 
 data Record s1 s2 t1 t2 id v d1 d2 =
      Record (TC s1 t1 (Data (v :> Nil) d1))
-            (M.Map id (TC s2 t2 (Data (v :> Nil) d2))) deriving (Show, Read, Eq)
+            (Map id (TC s2 t2 (Data (v :> Nil) d2))) deriving (Show, Read, Eq)
 
 
 type SignalRecord v d = Record Signal Signal (Typ A T Tt) (Typ UT UT UT) SigId v d d
@@ -95,11 +96,11 @@ type DTimeFlowRecord n v d = Record FSignal FSignal (Typ D T Tt) (Typ A F Tt) (I
 
 type DistRecord n v d = Record FDistrib FDistrib (Typ UT UT UT) (Typ A F Tt) (Idx.PPos n) v ([S.Class d], [S.SignalIdx]) d
 
--- data DistRecord n v d = DistRecord (UTDistr v ([S.Class d], [S.SignalIdx])) (M.Map (Idx.PPos n) (FDistr v d))
+-- data DistRecord n v d = DistRecord (UTDistr v ([S.Class d], [S.SignalIdx])) (Map (Idx.PPos n) (FDistr v d))
 
 
 -- | Flow record to contain flow signals assigned to the tree
-newtype FlowState node = FlowState (M.Map (Idx.PPos node) Sign) deriving (Show)
+newtype FlowState node = FlowState (Map (Idx.PPos node) Sign) deriving (Show)
 
 
 newtype Name = Name String
@@ -112,13 +113,13 @@ deltaName (Name x) (Name y) =  (DeltaName $ y ++ "_vs_" ++ x)
 rmap ::
    (TC s1 t1 (Data (v :> Nil) d2) -> TC s2 t2 (Data (v :> Nil) d2)) ->
    Record s s1 t t1 id v d1 d2 -> Record s s2 t t2 id v d1 d2
-rmap f (Record t ma) = Record t (M.map f ma)
+rmap f (Record t ma) = Record t (Map.map f ma)
 
 rmapKeys ::
    (Ord id2) =>
    (id1 -> id2) ->
    Record s1 s2 t1 t2 id1 v d1 d2 -> Record s1 s2 t1 t2 id2 v d1 d2
-rmapKeys f (Record t ma) = Record t (M.mapKeys f ma)
+rmapKeys f (Record t ma) = Record t (Map.mapKeys f ma)
 
 rmapWithKey ::
    (id ->
@@ -126,7 +127,7 @@ rmapWithKey ::
     TC s1 t1 (Data (v :> Nil) d2)) ->
    Record s s0 t t0 id v d1 d2 ->
    Record s s1 t t1 id v d1 d2
-rmapWithKey f (Record t ma) = Record t (M.mapWithKey f ma)
+rmapWithKey f (Record t ma) = Record t (Map.mapWithKey f ma)
 -----------------------------------------------------------------------------------
 -- | Indice Record Number
 
@@ -181,7 +182,7 @@ removeZeroNoise ::
    (V.Walker v, V.Storage v d, Ord d, Num d) =>
    d -> PowerRecord node v d -> PowerRecord node v d
 removeZeroNoise threshold (Record time pMap) =
-   Record time $ M.map (S.map (hardShrinkage threshold)) pMap
+   Record time $ Map.map (S.map (hardShrinkage threshold)) pMap
 
 hardShrinkage :: (Ord d, Num d) => d -> d -> d
 hardShrinkage threshold x =
@@ -205,7 +206,7 @@ split ::
    (Ord id) =>
    Int -> Record s1 s2 t1 t2 id v d1 d2 -> [Record s1 s2 t1 t2 id v d1 d2]
 split n (Record time pMap) =
-   map (Record time . M.fromList) $ ListHT.sliceVertical n $ M.toList pMap
+   map (Record time . Map.fromList) $ ListHT.sliceVertical n $ Map.toList pMap
 
 
 sortSigList ::
@@ -228,12 +229,12 @@ extractLogSignals ::
    [(id, TC s2 t2 (Data (v :> Nil) d2) -> TC s2 t2 (Data (v :> Nil) d2))] ->
    Record s1 s2 t1 t2 id v d1 d2
 extractLogSignals (Record time sMap) idList =
-   let idMap = M.fromList idList
-       notFound = Set.difference (M.keysSet idMap) (M.keysSet sMap)
+   let idMap = Map.fromList idList
+       notFound = Set.difference (Map.keysSet idMap) (Map.keysSet sMap)
    in  if Set.null notFound
-         then Record time $ M.intersectionWith ($) idMap sMap
+         then Record time $ Map.intersectionWith ($) idMap sMap
          else error $ "extractLogSignals: signals not found in record: " ++ show notFound ++
-              "\n" ++ "Available Keys in Map : \n" ++ (myShowList $ M.keys sMap)
+              "\n" ++ "Available Keys in Map : \n" ++ (myShowList $ Map.keys sMap)
 
 
 genPowerRecord ::
@@ -246,7 +247,7 @@ genPowerRecord time =
    Record time .
       foldMap
          (\(pposIdx, sigA, sigB) ->
-            M.fromList
+            Map.fromList
                [(pposIdx, S.setType sigA),
                 (Idx.flip pposIdx, S.setType sigB)])
 
@@ -261,7 +262,7 @@ addSignals ::
 addSignals list (Record time m) =  (Record time (foldl f m list))
   where f ma (ident,sig) =
           if S.len time == S.len sig
-             then M.insert ident sig ma
+             then Map.insert ident sig ma
              else error $ "Error in addSignals - signal length differs: "
                           ++ show ident
 
@@ -275,7 +276,7 @@ union ::
 union (Record timeA mA) (Record timeB mB) =
    if timeA == timeB
       then Record timeA
-             (M.unionWith
+             (Map.unionWith
                 (error "EFA.Signal.Record.union: duplicate signal ids") mA mB)
       else error "EFA.Signal.Record.union: time vectors differ"
 
@@ -296,7 +297,7 @@ unionWithNewTime ::
   [Record S.Signal S.Signal (Typ A T Tt) t2 id v d d] ->
   Record S.Signal S.Signal (Typ A T Tt) t2 id v d d
 unionWithNewTime rs = Record newTime $
-  M.unionsWith (error "unionWithNewTime: duplicate signal ids") $
+  Map.unionsWith (error "unionWithNewTime: duplicate signal ids") $
     map ((\(Record _ m) -> m) . flip (newTimeBase "unionWithNewTime") newTime) rs
   where (starts, ends) = unzip $ map getTimeWindow rs
         newTime = S.sort $ L.foldl1' S.append ts
@@ -324,9 +325,9 @@ modifySignals ::
    Record s1 s2 t1 t2 id v d1 d2
 modifySignals idList f (Record time ma) =
   Record time $
-  L.foldl' (flip $ M.adjust f) ma $
+  L.foldl' (flip $ Map.adjust f) ma $
   case idList of
-       ModifyAll -> M.keys ma
+       ModifyAll -> Map.keys ma
        ToModify x -> x
 
 -- | Get maximum signal range for all signals specified
@@ -341,7 +342,7 @@ maxRange list (Record _ m) =
   where (lmin, lmax) = unzip $
           map (S.fromScalar . S.minmax . checkedLookup2 "Signal.maxRange" m)
               $ case list of
-                     RangeFromAll -> M.keys m
+                     RangeFromAll -> Map.keys m
                      RangeFrom w -> w
 
 
@@ -399,7 +400,7 @@ newTimeBase ::
   Record Signal Signal (Typ A T Tt) t2 id v d d ->
   TSignal v d ->
   Record Signal Signal (Typ A T Tt) t2 id v d d
-newTimeBase caller (Record time m) newTime = Record newTime (M.map f m)
+newTimeBase caller (Record time m) newTime = Record newTime (Map.map f m)
   where f sig = S.interp1LinSig caller time sig newTime
 
 
@@ -408,7 +409,7 @@ newTimeBase caller (Record time m) newTime = Record newTime (M.map f m)
 slice ::
    (V.Slice v, V.Storage v d) =>
    Record s1 s2 t1 t2 id v d d -> (S.SignalIdx, S.SignalIdx) {- Range -} -> Record s1 s2 t1 t2 id v d d
-slice (Record t m) (sidx1@(S.SignalIdx idx1),S.SignalIdx idx2) = Record (f t) (M.map f m)
+slice (Record t m) (sidx1@(S.SignalIdx idx1),S.SignalIdx idx2) = Record (f t) (Map.map f m)
   where f ::
            (V.Slice v, V.Storage v d) =>
            TC s t (Data (v :> Nil) d) -> TC s t (Data (v :> Nil) d)
@@ -483,7 +484,7 @@ instance
              ListHT.sliceVertical n xs
       return $
          Record (S.fromList $ Match.take vectorSamples $ iterate (1+) 0) $
-         M.fromList $ zip pos $ map S.fromList $ transpose vectorSamples
+         Map.fromList $ zip pos $ map S.fromList $ transpose vectorSamples
 
 {-
 we need this class,
@@ -531,7 +532,7 @@ instance
          tableFormat = tableFormat t,
          tableSubTitle = ""}]
 
-      where sigList = M.toList sigs
+      where sigList = Map.toList sigs
             t = tvcat $ S.toTable os ("Time",time) !:
                         concatMap (toTable os . mapFst show) sigList
 
@@ -569,8 +570,8 @@ singleton (t,ps) = (S.singleton t, S.singleton ps)
 -- | Convert a power record to a signal record
 powerToSignal :: (Show id) =>  PowerRecord id v d -> SignalRecord v d
 powerToSignal (Record time m) = (Record time $
-                                   M.mapKeys (\x -> SigId $ show x) $
-                                   M.map S.untype m)
+                                   Map.mapKeys (\x -> SigId $ show x) $
+                                   Map.map S.untype m)
 
 -- | Plot Records with readible keys
 powerToSignalWithFunct :: (Ord node, Show node,Show (v d)) =>  (Idx.PPos node -> SigId) -> PowerRecord node v d -> SignalRecord v d
@@ -590,7 +591,7 @@ combinePowerAndSignalWithFunction funct pr sr = union (powerToSignalWithFunct fu
 
 -- | Add Record name to SigId -- can be used for plotting multiple records in one window
 addRecName2SigId :: String -> SignalRecord v d -> SignalRecord v d
-addRecName2SigId name (Record time sigs) = Record time (M.mapKeys (\ (SigId x) -> SigId (name ++ "_" ++ x) ) sigs)
+addRecName2SigId name (Record time sigs) = Record time (Map.mapKeys (\ (SigId x) -> SigId (name ++ "_" ++ x) ) sigs)
 
 -- | Integrate power signal step wise to get a flow record
 partIntegrate :: (Num d,
@@ -624,4 +625,4 @@ distribution rec@(Record _ pMap) xs interval offset = Record classification ener
                          map ((S.genDistribution1D $ S.classifyEven interval offset) .
                               S.changeSignalType . S.untype .
                               getSig rec) xs
-        energyDistribution =  M.map (S.calcDistributionValues classification) pMap
+        energyDistribution =  Map.map (S.calcDistributionValues classification) pMap

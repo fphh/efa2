@@ -10,7 +10,7 @@ import EFA.Signal.Signal as S
 import qualified EFA.Signal.PlotIO as PlotIO
 import EFA.Signal.Base (Val)
 
-import qualified Data.Map as M
+import qualified Data.Map as Map
 import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 
 data Node = Node0 | Node1 | Node2 deriving (Eq, Ord, Show)
@@ -25,7 +25,7 @@ p3 = S.fromList [-1,6,-6]
 
 pRec :: PowerRecord Node [] Val
 pRec = Record t
-         (M.fromListWith
+         (Map.fromListWith
             (error "duplicate keys")
             [ (XIdx.ppos Node0 Node1, p1),
               (XIdx.ppos Node1 Node0, p2),

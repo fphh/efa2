@@ -83,7 +83,7 @@ import Control.Monad (liftM2)
 import Control.Applicative (Applicative, pure, liftA, liftA2, liftA3)
 import Control.Category ((.))
 
-import qualified Data.Map as M
+import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.List.HT as ListHT
 import qualified Data.List as List
@@ -91,6 +91,8 @@ import qualified Data.List as List
 import qualified Data.NonEmpty as NonEmpty
 
 import qualified Data.Foldable as Fold
+
+import Data.Map (Map)
 import Data.Traversable (Traversable, traverse, for, sequenceA)
 import Data.Foldable (foldMap, fold)
 import Data.Monoid (Monoid, (<>), mempty, mappend, mconcat)
@@ -481,14 +483,14 @@ newtype
             (Env.Environment idx ~ env) =>
             Accessor.T
                (Env.Complete node (RecordVariable mode rec s a) (RecordVariable mode rec s v))
-               (M.Map (idx node) (RecordVariable mode rec s (Env.Element idx a v)))
+               (Map (idx node) (RecordVariable mode rec s (Env.Element idx a v)))
       }
 
 accessMap ::
    (Env.AccessMap idx) =>
    Accessor.T
       (Env.Complete node (RecordVariable mode rec s a) (RecordVariable mode rec s v))
-      (M.Map (idx node) (RecordVariable mode rec s (Env.Element idx a v)))
+      (Map (idx node) (RecordVariable mode rec s (Env.Element idx a v)))
 accessMap =
    getAccessMap $
    Env.switchPart
@@ -503,11 +505,11 @@ variableRecord ::
 variableRecord idx =
   Bookkeeping $ fmap Wrap $ do
     oldMap <- AccessState.get accessMap
-    case M.lookup idx oldMap of
+    case Map.lookup idx oldMap of
       Just var -> return $ fmap Expr.fromVariable var
       Nothing -> do
         var <- lift $ globalVariable idx
-        AccessState.set accessMap $ M.insert idx var oldMap
+        AccessState.set accessMap $ Map.insert idx var oldMap
         return (fmap Expr.fromVariable var)
 
 variable ::
@@ -594,10 +596,10 @@ mwhen False _ = mempty
 fromMapResult ::
    (Verify.GlobalVar mode x (Record.ToIndex rec) (Var.Type idx) node, Sum x, x ~ Env.Element idx a v,
     Env.AccessMap idx, Ord (idx node), FormatValue (idx node), Record rec) =>
-   M.Map (idx node) (rec (Result x)) ->
+   Map (idx node) (rec (Result x)) ->
    EquationSystem mode rec node s a v
 fromMapResult =
-   fold . M.mapWithKey (?=)
+   fold . Map.mapWithKey (?=)
 
 fromEnvScalarResult ::
    (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Sum a, Node.C node, Record rec) =>
@@ -638,10 +640,10 @@ fromEnvResult (Env.Complete envScalar envSignal) =
 fromMap ::
    (Verify.GlobalVar mode x (Record.ToIndex rec) (Var.Type idx) node, Sum x, x ~ Env.Element idx a v,
     Env.AccessMap idx, Ord (idx node), FormatValue (idx node), Record rec) =>
-   M.Map (idx node) (rec x) ->
+   Map (idx node) (rec x) ->
    EquationSystem mode rec node s a v
 fromMap =
-   fold . M.mapWithKey (%=)
+   fold . Map.mapWithKey (%=)
 
 fromEnvScalar ::
    (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Sum a, Node.C node, Record rec) =>
@@ -715,7 +717,7 @@ fromNodes ::
   Bool ->
   TD.DirSequFlowGraph node -> EquationSystem mode rec node s a v
 fromNodes equalInOutSums =
-  fold . M.mapWithKey f . Gr.nodeEdges
+  fold . Map.mapWithKey f . Gr.nodeEdges
    where f bn (ins, nodeType, outs) =
             let msn = Idx.secNodeFromBndNode bn
                 withSecNode = flip foldMap msn
@@ -785,7 +787,7 @@ fromStorageSequences ::
    Record rec, Node.C node) =>
   TD.DirSequFlowGraph node -> EquationSystem mode rec node s a v
 fromStorageSequences =
-   foldMap (mconcat . ListHT.mapAdjacent f . M.toList) . getStorageSequences
+   foldMap (mconcat . ListHT.mapAdjacent f . Map.toList) . getStorageSequences
   where f (before, _) (now, dir) =
            storage now
            =%=
@@ -799,13 +801,13 @@ fromStorageSequences =
 getStorageSequences ::
   (Node.C node) =>
   TD.DirSequFlowGraph node ->
-  M.Map node (M.Map (Idx.BndNode node) (Maybe TD.StoreDir))
+  Map node (Map (Idx.BndNode node) (Maybe TD.StoreDir))
 getStorageSequences =
   foldl
-     (M.unionWith (M.unionWith (error "duplicate boundary for node")))
-     M.empty .
-  map (\(bn@(Idx.BndNode _ n), dir) -> M.singleton n $ M.singleton bn dir) .
-  M.toList . M.mapMaybe TD.maybeStorage . Gr.nodeLabels
+     (Map.unionWith (Map.unionWith (error "duplicate boundary for node")))
+     Map.empty .
+  map (\(bn@(Idx.BndNode _ n), dir) -> Map.singleton n $ Map.singleton bn dir) .
+  Map.toList . Map.mapMaybe TD.maybeStorage . Gr.nodeLabels
 
 
 _getBoundary :: Idx.BndNode a -> Idx.Boundary

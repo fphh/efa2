@@ -61,7 +61,7 @@ import qualified System.IO as IO
 import System.Environment (getEnv)
 import System.FilePath ((</>))
 
---import qualified Data.Map as M
+--import qualified Data.Map as Map
 import qualified Data.List as L
 import Data.Tuple.HT (mapSnd)
 --import qualified EFA.Example.Index as XIdx
@@ -439,7 +439,7 @@ main = do
          (zip deltasetsX differenceExtEnvs)]-}
 {-
      ++ [print $    -- AssignMap.threshold 0.001 $
---             M.mapKeys AssignMap.deltaIndexSet $
+--             Map.mapKeys AssignMap.deltaIndexSet $
 --             Stack.assignDeltaMap $
              Plots.lookupCumStack energyIndex (last differenceExtEnvs)]
 -}

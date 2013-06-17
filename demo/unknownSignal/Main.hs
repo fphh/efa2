@@ -3,7 +3,7 @@
 
 module Main where
 
-import qualified Data.Map as M
+import qualified Data.Map as Map
 
 import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.PlotIO as PlotIO
@@ -120,7 +120,7 @@ main = do
       pm = Env.powerMap (Env.signal e)
 
       rec :: Rec.PowerRecord Node.Int [] Double
-      rec = Rec.Record time (M.mapKeys f $ M.mapMaybe g pm)
+      rec = Rec.Record time (Map.mapKeys f $ Map.mapMaybe g pm)
 
       f (Idx.InSection _ (Idx.Power (Idx.StructureEdge n1 n2))) =
         Idx.PPos (Idx.StructureEdge n1 n2)

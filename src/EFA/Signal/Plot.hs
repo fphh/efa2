@@ -70,10 +70,11 @@ import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
 import qualified Graphics.Gnuplot.Frame.OptionSet.Style as OptsStyle
 import qualified Graphics.Gnuplot.Frame.OptionSet.Histogram as Histogram
 
-import qualified Data.Map as M
+import qualified Data.Map as Map
 import qualified Data.List as L
 import qualified Data.Foldable as Fold
 import qualified Data.List.Key as Key
+import Data.Map (Map)
 import Control.Functor.HT (void)
 import Data.Foldable (foldMap)
 import Data.Monoid (mconcat)
@@ -309,7 +310,7 @@ record ::
    Record s1 s2 typ0 typ1 id v d1 d2 -> Plot2D.T d1 d2
 record showKey opts (Record time pMap) =
    Fold.fold $
-   M.mapWithKey
+   Map.mapWithKey
       (\key (col, sig) ->
          fmap
             (Graph2D.lineSpec
@@ -387,7 +388,7 @@ stack ::
     Ord term,
     Atom.C d,
     Tuple.C d) =>
-   M.Map term d -> Plot2D.T Int d
+   Map term d -> Plot2D.T Int d
 stack =
    foldMap
       (\(col, (term, val)) ->
@@ -395,7 +396,7 @@ stack =
          Plot2D.list Graph2D.histograms [val]) .
    Colour.adorn .
    Key.sort (negate . abs . snd) .
-   M.toList
+   Map.toList
 
 stacksFrameAttr ::
    String -> [Format.ASCII] -> Opts.T (Graph2D.T Int Double)
@@ -417,7 +418,7 @@ stacks ::
     Num d,
     FormatValue term,
     Show term) =>
-   M.Map term [d] -> Plot2D.T Int d
+   Map term [d] -> Plot2D.T Int d
 stacks =
    foldMap
       (\(col, (term, vals)) ->
@@ -425,7 +426,7 @@ stacks =
          Plot2D.list Graph2D.histograms vals) .
    Colour.adorn .
    Key.sort (negate . maximum . map abs . snd) .
-   M.toList
+   Map.toList
 
 
 

@@ -61,15 +61,16 @@ import qualified Data.Accessor.Basic as Accessor
 
 import qualified Data.Text.Lazy as T
 
-import qualified Data.Map as M
+import qualified Data.Map as Map
 import qualified Data.List as L
 import qualified Data.List.HT as ListHT
 
-import Control.Monad (void)
-import Control.Category ((.))
-
+import Data.Map (Map)
 import Data.Foldable (foldMap, fold)
 import Data.Tuple.HT (mapFst, mapFst3)
+
+import Control.Monad (void)
+import Control.Category ((.))
 
 import Prelude hiding ((.))
 
@@ -114,7 +115,7 @@ dotFromSequFlowGraph (rngs, g) mtshow nshow structureEdgeShow storageEdgeShow =
              graphStatements = stmts }
 
   where (topoEs, interEs) =
-           mapFst (M.fromListWith (++)) $
+           mapFst (Map.fromListWith (++)) $
            ListHT.unzipEithers $
            map
               (\e ->
@@ -125,7 +126,7 @@ dotFromSequFlowGraph (rngs, g) mtshow nshow structureEdgeShow storageEdgeShow =
            Gr.edges g
 
         topoNs =
-           M.fromListWith (++) $
+           Map.fromListWith (++) $
            map (\nl@(Idx.BndNode s _, _) -> (s, [nl])) $
            Gr.labNodes g
 
@@ -141,7 +142,7 @@ dotFromSequFlowGraph (rngs, g) mtshow nshow structureEdgeShow storageEdgeShow =
                       Idx.Initial -> "Initial"
                       Idx.AfterSection s ->
                          show s ++
-                         (case M.lookup s rngs of
+                         (case Map.lookup s rngs of
                              Just (from, to) -> " / Range " ++ show from ++ "-" ++ show to
                              Nothing -> error $ "missing range for " ++ show s) ++
                          (flip foldMap mtshow $ \tshow ->
@@ -150,7 +151,7 @@ dotFromSequFlowGraph (rngs, g) mtshow nshow structureEdgeShow storageEdgeShow =
           DotStmts {
             attrStmts = [],
             subGraphs =
-              zipWith sg (Nothing : map Just (M.keys topoNs)) $ M.toAscList $
+              zipWith sg (Nothing : map Just (Map.keys topoNs)) $ Map.toAscList $
               TMap.intersectionPartialWith (,) (TMap.cons [] topoEs) topoNs,
             nodeStmts = [],
             edgeStmts = map (dotFromStorageEdge storageEdgeShow) interEs
@@ -252,7 +253,7 @@ sequFlowGraph topo =
 
 dotFromTopology ::
   (Node.C node) =>
-  M.Map (node, node) String ->
+  Map (node, node) String ->
   Topo.Topology node -> DotGraph T.Text
 dotFromTopology edgeLabels g =
   DotGraph {
@@ -278,12 +279,12 @@ dotFromTopoNode (x, typ) =
 
 dotFromTopoEdge ::
   (Node.C node) =>
-  M.Map (node, node) String ->
+  Map (node, node) String ->
   DirEdge node -> DotEdge T.Text
 dotFromTopoEdge edgeLabels e =
   case orientDirEdge e of
      (DirEdge x y, _, _) ->
-           let lab = T.pack $ fold $ M.lookup (x, y) edgeLabels
+           let lab = T.pack $ fold $ Map.lookup (x, y) edgeLabels
            in  DotEdge
                  (dotIdentFromNode x)
                  (dotIdentFromNode y)
@@ -293,11 +294,11 @@ dotFromTopoEdge edgeLabels e =
 
 
 topology :: (Node.C node) => Topo.Topology node -> DotGraph T.Text
-topology topo = dotFromTopology M.empty topo
+topology topo = dotFromTopology Map.empty topo
 
 topologyWithEdgeLabels ::
   (Node.C node) =>
-  M.Map (node, node) String -> Topo.Topology node -> DotGraph T.Text
+  Map (node, node) String -> Topo.Topology node -> DotGraph T.Text
 topologyWithEdgeLabels edgeLabels topo =
    dotFromTopology edgeLabels topo
 
@@ -446,15 +447,15 @@ data Env node output =
 lookupFormat ::
    (Ord (idx node), Var.FormatIndex idx, Record.C rec,
     FormatValue a, Format output, Node.C node) =>
-   Record.ToIndex rec -> M.Map (idx node) (rec a) -> idx node -> output
+   Record.ToIndex rec -> Map (idx node) (rec a) -> idx node -> output
 lookupFormat recIdx mp k =
    maybe
       (error $ "could not find index " ++
          (Format.unUnicode $ Var.formatIndex k)
          ++ " in "
-         ++ (show $ M.map (Format.showRaw . showValue) $ M.mapKeys showIdx mp))
+         ++ (show $ Map.map (Format.showRaw . showValue) $ Map.mapKeys showIdx mp))
       showValue $
-      M.lookup k mp
+      Map.lookup k mp
    where showIdx = Format.unUnicode . Var.formatIndex
          showValue = formatValue . Accessor.get (Record.access recIdx)
 
@@ -463,7 +464,7 @@ lookupFormatAssign ::
     Record.C rec,
     FormatValue a, Format output, Node.C node) =>
    Record.ToIndex rec ->
-   M.Map (idx node) (rec a) ->
+   Map (idx node) (rec a) ->
    (edge node -> idx node) ->
    (edge node -> output)
 lookupFormatAssign rec mp makeIdx x =
@@ -580,4 +581,4 @@ dotFromCumEdge env (e, ()) =
               (maybe
                   (error $ "could not find cumulated energy index")
                   (formatValue . Record.unAbsolute) $
-               M.lookup (Idx.Energy idx) env)
+               Map.lookup (Idx.Energy idx) env)

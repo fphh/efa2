@@ -19,7 +19,7 @@ import qualified EFA.Signal.Plot as Plot
 
 
 import qualified Data.List as L
-import qualified Data.Map as M
+import qualified Data.Map as Map
 
 -- | Without Typed Container First
 
@@ -60,7 +60,7 @@ generateDistribution :: (V.Storage v ([Class a],[Int]),
                S.UTSignal v (Class a) -> S.UTDistr v ([Class a], [Int])
 generateDistribution classSig = S.fromList (map f classes)
   where list = S.toList classSig
-        classes = map fst $ M.toList $ M.fromList $ zip list list
+        classes = map fst $ Map.toList $ Map.fromList $ zip list list
         f clss = ([clss], L.findIndices (\x -> clss == x) list)
 
 

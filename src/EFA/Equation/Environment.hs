@@ -6,7 +6,8 @@ import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Equation.Variable as Var
 
-import qualified Data.Map as M
+import qualified Data.Map as Map
+import Data.Map (Map)
 
 import qualified Data.Accessor.Basic as Accessor
 import Control.Category ((.))
@@ -23,18 +24,18 @@ import Prelude hiding (lookup, (.))
 
 
 -- Environments
-type EnergyMap node a = M.Map (Idx.InSection Idx.Energy node) a
-type PowerMap node a = M.Map (Idx.InSection Idx.Power node) a
-type EtaMap node a = M.Map (Idx.InSection Idx.Eta node) a
-type DTimeMap node a = M.Map (Idx.InSection Idx.DTime node) a
-type XMap node a = M.Map (Idx.InSection Idx.X node) a
-type SumMap node a = M.Map (Idx.InSection Idx.Sum node) a
+type EnergyMap node a = Map (Idx.InSection Idx.Energy node) a
+type PowerMap node a = Map (Idx.InSection Idx.Power node) a
+type EtaMap node a = Map (Idx.InSection Idx.Eta node) a
+type DTimeMap node a = Map (Idx.InSection Idx.DTime node) a
+type XMap node a = Map (Idx.InSection Idx.X node) a
+type SumMap node a = Map (Idx.InSection Idx.Sum node) a
 
-type MaxEnergyMap node a = M.Map (Idx.ForNode Idx.MaxEnergy node) a
-type StorageMap node a = M.Map (Idx.ForNode Idx.Storage node) a
-type StEnergyMap node a = M.Map (Idx.ForNode Idx.StEnergy node) a
-type StXMap node a = M.Map (Idx.ForNode Idx.StX node) a
-type StSumMap node a = M.Map (Idx.ForNode Idx.StSum node) a
+type MaxEnergyMap node a = Map (Idx.ForNode Idx.MaxEnergy node) a
+type StorageMap node a = Map (Idx.ForNode Idx.Storage node) a
+type StEnergyMap node a = Map (Idx.ForNode Idx.StEnergy node) a
+type StXMap node a = Map (Idx.ForNode Idx.StX node) a
+type StSumMap node a = Map (Idx.ForNode Idx.StSum node) a
 
 
 data Signal node a =
@@ -100,9 +101,9 @@ formatAssign lhs rhs =
 
 formatMap ::
    (Var.FormatIndex idx, Node.C node, FormatValue a, Format output) =>
-   M.Map (idx node) a -> [output]
+   Map (idx node) a -> [output]
 formatMap =
-   map (uncurry formatAssign) . M.toList
+   map (uncurry formatAssign) . Map.toList
 
 
 instance
@@ -128,30 +129,30 @@ lookupSignal ::
    Var.InSectionSignal node -> Signal node a -> Maybe a
 lookupSignal (Idx.InSection s var) =
    case var of
-      Var.Energy    idx -> M.lookup (Idx.InSection s idx) . energyMap
-      Var.Power     idx -> M.lookup (Idx.InSection s idx) . powerMap
-      Var.Eta       idx -> M.lookup (Idx.InSection s idx) . etaMap
-      Var.DTime     idx -> M.lookup (Idx.InSection s idx) . dtimeMap
-      Var.X         idx -> M.lookup (Idx.InSection s idx) . xMap
-      Var.Sum       idx -> M.lookup (Idx.InSection s idx) . sumMap
+      Var.Energy    idx -> Map.lookup (Idx.InSection s idx) . energyMap
+      Var.Power     idx -> Map.lookup (Idx.InSection s idx) . powerMap
+      Var.Eta       idx -> Map.lookup (Idx.InSection s idx) . etaMap
+      Var.DTime     idx -> Map.lookup (Idx.InSection s idx) . dtimeMap
+      Var.X         idx -> Map.lookup (Idx.InSection s idx) . xMap
+      Var.Sum       idx -> Map.lookup (Idx.InSection s idx) . sumMap
 
 lookupScalar ::
    Ord node =>
    Var.ForNodeScalar node -> Scalar node a -> Maybe a
 lookupScalar (Idx.ForNode var n) =
    case var of
-      Var.MaxEnergy idx -> M.lookup (Idx.ForNode idx n) . maxEnergyMap
-      Var.Storage   idx -> M.lookup (Idx.ForNode idx n) . storageMap
-      Var.StEnergy  idx -> M.lookup (Idx.ForNode idx n) . stEnergyMap
-      Var.StX       idx -> M.lookup (Idx.ForNode idx n) . stXMap
-      Var.StSum     idx -> M.lookup (Idx.ForNode idx n) . stSumMap
+      Var.MaxEnergy idx -> Map.lookup (Idx.ForNode idx n) . maxEnergyMap
+      Var.Storage   idx -> Map.lookup (Idx.ForNode idx n) . storageMap
+      Var.StEnergy  idx -> Map.lookup (Idx.ForNode idx n) . stEnergyMap
+      Var.StX       idx -> Map.lookup (Idx.ForNode idx n) . stXMap
+      Var.StSum     idx -> Map.lookup (Idx.ForNode idx n) . stSumMap
 
 
 type Element idx a v = PartElement (Environment idx) a v
 
 accessMap ::
    (AccessMap idx) =>
-   Accessor.T (Complete node a v) (M.Map (idx node) (Element idx a v))
+   Accessor.T (Complete node a v) (Map (idx node) (Element idx a v))
 accessMap =
    accessPartMap . accessPart
 
@@ -162,7 +163,7 @@ insert ::
    Complete node a v ->
    Complete node a v
 insert idx val =
-   Accessor.modify accessMap $ M.insert idx val
+   Accessor.modify accessMap $ Map.insert idx val
 
 
 class (AccessPart (Environment idx), Var.Index idx) => AccessMap idx where
@@ -170,7 +171,7 @@ class (AccessPart (Environment idx), Var.Index idx) => AccessMap idx where
    accessPartMap ::
       Accessor.T
          (Environment idx node a)
-         (M.Map (idx node) a)
+         (Map (idx node) a)
 
 instance (AccessSignalMap idx) => AccessMap (Idx.InSection idx) where
    type Environment (Idx.InSection idx) = Signal
@@ -183,7 +184,7 @@ instance (AccessScalarMap idx) => AccessMap (Idx.ForNode idx) where
 
 class (Var.SignalIndex idx) => AccessSignalMap idx where
    accessSignalMap ::
-      Accessor.T (Signal node a) (M.Map (Idx.InSection idx node) a)
+      Accessor.T (Signal node a) (Map (Idx.InSection idx node) a)
 
 instance AccessSignalMap Idx.Energy where
    accessSignalMap =
@@ -212,7 +213,7 @@ instance AccessSignalMap Idx.Sum where
 
 class (Var.ScalarIndex idx) => AccessScalarMap idx where
    accessScalarMap ::
-      Accessor.T (Scalar node a) (M.Map (Idx.ForNode idx node) a)
+      Accessor.T (Scalar node a) (Map (Idx.ForNode idx node) a)
 
 instance AccessScalarMap Idx.MaxEnergy where
    accessScalarMap =
@@ -275,21 +276,21 @@ f <?> x = f <*> sequenceA x
 
 
 instance (Ord node) => Monoid (Signal node a) where
-   mempty = Signal M.empty M.empty M.empty M.empty M.empty M.empty
+   mempty = Signal Map.empty Map.empty Map.empty Map.empty Map.empty Map.empty
    mappend
          (Signal e p n dt x s)
          (Signal e' p' n' dt' x' s') =
       Signal
-         (M.union e e') (M.union p p') (M.union n n')
-         (M.union dt dt') (M.union x x') (M.union s s')
+         (Map.union e e') (Map.union p p') (Map.union n n')
+         (Map.union dt dt') (Map.union x x') (Map.union s s')
 
 instance (Ord node) => Monoid (Scalar node a) where
-   mempty = Scalar M.empty M.empty M.empty M.empty M.empty
+   mempty = Scalar Map.empty Map.empty Map.empty Map.empty Map.empty
    mappend (Scalar me st se sx ss) (Scalar me' st' se' sx' ss') =
       Scalar
-         (M.union me me') (M.union st st')
-         (M.union se se') (M.union sx sx')
-         (M.union ss ss')
+         (Map.union me me') (Map.union st st')
+         (Map.union se se') (Map.union sx sx')
+         (Map.union ss ss')
 
 instance (Ord node) => Monoid (Complete node b a) where
    mempty = Complete mempty mempty
@@ -306,9 +307,9 @@ signalIntersectionWith ::
 signalIntersectionWith f
    (Signal e p n dt x s) (Signal e' p' n' dt' x' s') =
       Signal
-         (M.intersectionWith f e e') (M.intersectionWith f p p')
-         (M.intersectionWith f n n') (M.intersectionWith f dt dt')
-         (M.intersectionWith f x x') (M.intersectionWith f s s')
+         (Map.intersectionWith f e e') (Map.intersectionWith f p p')
+         (Map.intersectionWith f n n') (Map.intersectionWith f dt dt')
+         (Map.intersectionWith f x x') (Map.intersectionWith f s s')
 
 scalarIntersectionWith ::
    (Ord node) =>
@@ -319,9 +320,9 @@ scalarIntersectionWith ::
 scalarIntersectionWith f
    (Scalar me st se sx ss) (Scalar me' st' se' sx' ss') =
       Scalar
-         (M.intersectionWith f me me') (M.intersectionWith f st st')
-         (M.intersectionWith f se se') (M.intersectionWith f sx sx')
-         (M.intersectionWith f ss ss')
+         (Map.intersectionWith f me me') (Map.intersectionWith f st st')
+         (Map.intersectionWith f se se') (Map.intersectionWith f sx sx')
+         (Map.intersectionWith f ss ss')
 
 intersectionWith ::
    (Ord node) =>
@@ -345,9 +346,9 @@ signalDifference ::
 signalDifference
    (Signal e p n dt x s) (Signal e' p' n' dt' x' s') =
       Signal
-         (M.difference e e') (M.difference p p')
-         (M.difference n n') (M.difference dt dt')
-         (M.difference x x') (M.difference s s')
+         (Map.difference e e') (Map.difference p p')
+         (Map.difference n n') (Map.difference dt dt')
+         (Map.difference x x') (Map.difference s s')
 
 scalarDifference ::
    (Ord node) =>
@@ -357,9 +358,9 @@ scalarDifference ::
 scalarDifference
    (Scalar me st se sx ss) (Scalar me' st' se' sx' ss') =
       Scalar
-         (M.difference me me') (M.difference st st')
-         (M.difference se se') (M.difference sx sx')
-         (M.difference ss ss')
+         (Map.difference me me') (Map.difference st st')
+         (Map.difference se se') (Map.difference sx sx')
+         (Map.difference ss ss')
 
 difference ::
    (Ord node) =>
@@ -376,13 +377,13 @@ signalFilter ::
    Ord node =>
    (a -> Bool) -> Signal node a -> Signal node a
 signalFilter f (Signal e p n dt x s) =
-   Signal (M.filter f e) (M.filter f p) (M.filter f n) (M.filter f dt) (M.filter f x) (M.filter f s)
+   Signal (Map.filter f e) (Map.filter f p) (Map.filter f n) (Map.filter f dt) (Map.filter f x) (Map.filter f s)
 
 scalarFilter ::
    Ord node =>
    (a -> Bool) -> Scalar node a -> Scalar node a
 scalarFilter f (Scalar me st se sx ss) =
-   Scalar (M.filter f me) (M.filter f st) (M.filter f se) (M.filter f sx) (M.filter f ss)
+   Scalar (Map.filter f me) (Map.filter f st) (Map.filter f se) (Map.filter f sx) (Map.filter f ss)
 
 filter ::
    Ord node =>

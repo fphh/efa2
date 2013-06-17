@@ -61,8 +61,9 @@ import qualified Graphics.Gnuplot.LineSpecification as LineSpec
 
 import qualified Graphics.Gnuplot.Frame as Frame
 
-import qualified Data.Map as M
+import qualified Data.Map as Map
 import qualified Data.Foldable as Fold
+import Data.Map (Map)
 
 import Control.Monad (zipWithM_)
 import Control.Functor.HT (void)
@@ -364,7 +365,7 @@ sequenceSplit n ti term showKey opts =
 
 stack ::
    (FormatValue term, Show term, Ord term) =>
-   String -> Format.ASCII -> M.Map term Double -> IO ()
+   String -> Format.ASCII -> Map term Double -> IO ()
 stack title var m =
    void .  Plot.plotSync DefaultTerm.cons . Frame.cons (Plot.stackFrameAttr title var) . Plot.stack $ m
 
@@ -374,7 +375,7 @@ The length of @[var]@ must match the one of the @[Double]@ lists.
 -}
 stacks ::
    (Ord term, FormatValue term, Show term) =>
-   String -> [Format.ASCII] -> M.Map term [Double] -> IO ()
+   String -> [Format.ASCII] -> Map term [Double] -> IO ()
 stacks title vars xs =
    void . Plot.plotSync DefaultTerm.cons .
    Frame.cons (Plot.stacksFrameAttr title vars) . Plot.stacks $ xs
@@ -418,11 +419,11 @@ sectionStackRow:: (Ord node, TDNode.C node,Show i, Ord i, FormatValue i) =>
                          (EqRecord.Absolute (Result.Result (Stack.Stack i Double)))
                   -> IO ()
 sectionStackRow ti energyIndex eps env =
-   case unzip $ M.toList $ AssignMap.lookupEnergyStacks energyIndex env of
+   case unzip $ Map.toList $ AssignMap.lookupEnergyStacks energyIndex env of
       (idxs, energyStacks) ->
          stacks ti (map (Format.literal . show) idxs) $
          AssignMap.simultaneousThreshold eps . AssignMap.transpose $
-         map (M.mapKeys AssignMap.deltaIndexSet) energyStacks
+         map (Map.mapKeys AssignMap.deltaIndexSet) energyStacks
 
 aggregatedStack ::
    (TDNode.C node, Ord node, Show node,
@@ -437,7 +438,7 @@ aggregatedStack ::
 aggregatedStack ti energyIndex eps env =
   stack ti (formatValue $ Idx.delta energyIndex) $
   AssignMap.threshold eps $
-  M.mapKeys AssignMap.deltaIndexSet $ Fold.fold $
+  Map.mapKeys AssignMap.deltaIndexSet $ Fold.fold $
   AssignMap.lookupEnergyStacks energyIndex env
 
 

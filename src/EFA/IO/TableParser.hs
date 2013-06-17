@@ -8,7 +8,7 @@ import EFA.IO.Parser (number, eol)
 import qualified System.IO as IO
 
 import qualified Data.List as L
-import qualified Data.Map as M
+import qualified Data.Map as Map
 
 import Text.ParserCombinators.Parsec
 import Control.Applicative (Applicative, liftA, liftA2, (*>), (<*))
@@ -23,8 +23,8 @@ read file = readFile file >>= \txt ->
        Right tb -> return tb
        Left err -> ioError $ userError $ show err
 
-tables :: (Read a) => Parser (M.Map String (T a))
-tables = liftA M.fromList $
+tables :: (Read a) => Parser (Map a)
+tables = liftA Map.fromList $
   endBy table ((void $ lookAhead double) <|> commentOrEol <|> eof)
 
 table :: (Read a) => Parser (String, T a)
@@ -82,4 +82,4 @@ writeTable hdl (name, T xy ds) = do
 
 write :: FilePath -> Map Double -> IO ()
 write file tm = IO.withFile file IO.WriteMode $
-  forM_ (M.toList tm) . writeTable
+  forM_ (Map.toList tm) . writeTable

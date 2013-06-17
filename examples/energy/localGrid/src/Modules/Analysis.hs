@@ -63,7 +63,7 @@ import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Topology.Node as TDNode
 import qualified EFA.Graph.Flow as Flow
-import qualified Data.Map as M
+import qualified Data.Map as Map
 import Data.Monoid ((<>))
                     --mempty)
 
@@ -213,7 +213,7 @@ makeGivenFromExternal idx sf =
    <> fold (SD.mapWithSection f sf)
    where f sec (Record t xs) =
            (Idx.Record idx (Idx.InSection sec Idx.DTime) .= sum (Sig.toList $ Sig.delta t)) <>
-           fold (M.mapWithKey g xs)
+           fold (Map.mapWithKey g xs)
            where g (Idx.PPos p) e =
                     Idx.Record idx (Idx.InSection sec (Idx.Energy p)) .= sum (Sig.toList e)
 
@@ -289,10 +289,10 @@ makeGivenForPrediction ::
 makeGivenForPrediction idx env =
     (Idx.Record idx (XIdx.storage Idx.initial System.Battery) .= initStorage)
     <> (Idx.Record idx (XIdx.storage Idx.initial System.VehicleInertia) .= 0)
---    <> (foldMap f $ M.toList $ Env.etaMap $ Env.scalar env) -- hier müssen rote-Kante Gleichungen erzeugt werden
-    <> (foldMap f $ M.toList $ Env.etaMap $ Env.signal env)
-    <> (foldMap f $ M.toList $ Env.dtimeMap $ Env.signal env)
-    <> (foldMap f $ M.toList $ M.mapWithKey h $ M.filterWithKey i $ M.filterWithKey g $
+--    <> (foldMap f $ Map.toList $ Env.etaMap $ Env.scalar env) -- hier müssen rote-Kante Gleichungen erzeugt werden
+    <> (foldMap f $ Map.toList $ Env.etaMap $ Env.signal env)
+    <> (foldMap f $ Map.toList $ Env.dtimeMap $ Env.signal env)
+    <> (foldMap f $ Map.toList $ Map.mapWithKey h $ Map.filterWithKey i $ Map.filterWithKey g $
                                Env.energyMap $ Env.signal env)
     where f (j, x)  =  j %= fmap (\(EqGen.Determined y) -> y) x
           g (Idx.InSection _ (Idx.Energy (Idx.StructureEdge x y))) _  =
@@ -382,9 +382,9 @@ makeGivenForDifferentialAnalysis ::
   EquationSystemNumeric s
 makeGivenForDifferentialAnalysis (Env.Complete _ sig) =
   (XIdx.storage Idx.initial System.Battery .== initStorage) <>
-  (fold $ M.mapWithKey f $ Env.etaMap sig) <>
-  (fold $ M.mapWithKey f $ Env.dtimeMap sig) <>
-  (fold $  M.filterWithKey h $ M.filterWithKey g $ M.mapWithKey f $ Env.energyMap sig) <>
+  (fold $ Map.mapWithKey f $ Env.etaMap sig) <>
+  (fold $ Map.mapWithKey f $ Env.dtimeMap sig) <>
+  (fold $  Map.filterWithKey h $ Map.filterWithKey g $ Map.mapWithKey f $ Env.energyMap sig) <>
   mempty
   where f i rec =
            deltaPair i

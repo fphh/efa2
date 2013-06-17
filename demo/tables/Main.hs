@@ -4,7 +4,7 @@
 
 module Main where
 
-import qualified Data.Map as M
+import qualified Data.Map as Map
 
 import qualified EFA.IO.TableParser as Table
 import qualified EFA.Signal.PlotIO as PlotIO
@@ -35,22 +35,22 @@ main = do
 
   let em3D =
         CT.convertToSignal3D
-          (M.lookup "table2D_efficiencyMap" tabEn) :
+          (Map.lookup "table2D_efficiencyMap" tabEn) :
         CT.convertToSignal3D
-          (M.lookup "table2D_efficiencyMap_firstQuadrant" tabMo) :
+          (Map.lookup "table2D_efficiencyMap_firstQuadrant" tabMo) :
         []
 
       em2D =
         CT.convertToSignal3D2D
-          (M.lookup "table2D_efficiencyMap" tabEn) :
+          (Map.lookup "table2D_efficiencyMap" tabEn) :
         CT.convertToSignal3D2D
-          (M.lookup "table2D_efficiencyMap_firstQuadrant" tabMo) :
+          (Map.lookup "table2D_efficiencyMap_firstQuadrant" tabMo) :
         CT.convertToSignal2D
-          (M.lookup "maxTorque" tabEn) :
+          (Map.lookup "maxTorque" tabEn) :
         CT.convertToSignal2D
-          (M.lookup "dragTorque" tabEn) :
+          (Map.lookup "dragTorque" tabEn) :
         []
 
-  Table.write "combined.txt" (M.union tabEn tabEn)
+  Table.write "combined.txt" (Map.union tabEn tabEn)
   mapM_ plot3D em3D
   mapM_ plot2D em2D

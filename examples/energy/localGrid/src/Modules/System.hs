@@ -12,7 +12,8 @@ import qualified EFA.Example.Index as XIdx
 import EFA.Signal.Record (SigId(..))
 
 
-import qualified Data.Map as M
+import qualified Data.Map as Map
+import Data.Map (Map)
 
 
 data Node =  Nuklear | Coal | Oil | Gas |
@@ -60,26 +61,26 @@ edgeList = [(Coal, Network, "CoalPlant", "Coal","ElCoal"),
             (Sun, LocalNetwork, "SolarPlant", "SunLight", "elSolar")]
 
 
-edgeNames :: M.Map (Node, Node) String
-edgeNames = M.fromList el
+edgeNames :: Map (Node, Node) String
+edgeNames = Map.fromList el
   where el = map f edgeList
         f (x, y, lab, _, _) = ((x, y), lab)
 
 
-powerPositonNames :: M.Map (XIdx.PPos Node) SigId
-powerPositonNames = M.fromList $ concat $ map f edgeList
+powerPositonNames :: Map (XIdx.PPos Node) SigId
+powerPositonNames = Map.fromList $ concat $ map f edgeList
   where f (n1,n2,_,l1,l2) = [(XIdx.ppos n1 n2, SigId $ "Power-"++l1),
                              (XIdx.ppos n2 n1, SigId $ "Power-"++l2)]
 
 showPowerId :: XIdx.PPos Node -> String
-showPowerId ppos = f (M.lookup  ppos powerPositonNames)
+showPowerId ppos = f (Map.lookup  ppos powerPositonNames)
   where
     f (Just sid) = show sid
     f Nothing = (show ppos)
 
 
 convertPowerId :: XIdx.PPos Node -> SigId
-convertPowerId ppos =  f (M.lookup  ppos powerPositonNames)
+convertPowerId ppos =  f (Map.lookup  ppos powerPositonNames)
   where
     f (Just sid) = sid
     f Nothing = SigId (show ppos)
@@ -117,7 +118,7 @@ edgeListOpt = [(Coal, Network, "CoalPlant", "Coal","ElCoal"),
 flowStatesOpt :: [TD.FlowTopology Node]
 flowStatesOpt = StateAnalysis.advanced topologyOpt
 
-edgeNamesOpt :: M.Map (Node, Node) String
-edgeNamesOpt = M.fromList el
+edgeNamesOpt :: Map (Node, Node) String
+edgeNamesOpt = Map.fromList el
   where el = map f edgeListOpt
         f (x, y, lab, _, _) = ((x, y), lab)

@@ -11,7 +11,8 @@ import qualified EFA.Graph as Gr
 import EFA.Equation.Arithmetic ((~+))
 import EFA.Equation.Result (Result(Undetermined, Determined))
 
-import qualified Data.Map as M
+import qualified Data.Map as Map
+import Data.Map (Map)
 
 import Control.Applicative (liftA2)
 import Data.Monoid ((<>))
@@ -23,7 +24,7 @@ import Data.Tuple.HT (mapPair)
 data RelativeDir = WithTopoDir
                  | AgainstTopoDir deriving (Eq, Show)
 
-type EnergyMap node a = M.Map (Idx.Energy node) a
+type EnergyMap node a = Map (Idx.Energy node) a
 
 
 getRelativeDir ::
@@ -32,9 +33,9 @@ getRelativeDir ::
 getRelativeDir g e =
   case Gr.edgeLabels g of
     es ->
-      if M.member e es
+      if Map.member e es
          then WithTopoDir
-         else if M.member (Gr.reverseEdge e) es
+         else if Map.member (Gr.reverseEdge e) es
                  then AgainstTopoDir
                  else error "getTopologyDir: edge not found"
 
@@ -51,7 +52,7 @@ cumulatedEnergyFlow ::
     EnergyMap node (Rec.Absolute (Result a)) )
 cumulatedEnergyFlow topo seqTopo env =
    mapPair (cum, cum) $ unzip $ mapMaybe f $ Gr.edges seqTopo
-  where cum = M.unionsWith (liftA2 (liftA2 (~+)))
+  where cum = Map.unionsWith (liftA2 (liftA2 (~+)))
         em = Env.energyMap $ Env.signal env
         f e =
           case TD.edgeType e of
@@ -60,19 +61,19 @@ cumulatedEnergyFlow topo seqTopo env =
                     idx2 = Idx.Energy (Idx.StructureEdge n' n)
 
                     transfer idx =
-                       M.singleton idx $
+                       Map.singleton idx $
                        maybe
                           (Rec.Absolute Undetermined)
                           (fmap $ fmap Arith.integrate) $
-                       M.lookup (Idx.InSection sec idx) em
+                       Map.lookup (Idx.InSection sec idx) em
 
                     insert =
                        transfer idx1 <> transfer idx2
 
                     zero = Rec.Absolute $ Determined Arith.zero
                     insertzero =
-                       M.singleton idx1 zero <>
-                       M.singleton idx2 zero
+                       Map.singleton idx1 zero <>
+                       Map.singleton idx2 zero
 
                 in  Just $
                     case getRelativeDir topo $ Gr.DirEdge n n' of

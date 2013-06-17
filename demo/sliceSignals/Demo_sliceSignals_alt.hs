@@ -19,7 +19,8 @@ import EFA.Report.Report
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
 
-import qualified Data.Map as M
+import qualified Data.Map as Map
+import Data.Map (Map)
 
 
 node0, node1 :: Node.Int
@@ -32,8 +33,8 @@ p1, p2 :: S.TC s t (Data ([] :> Nil) Double)
 p1 = S.fromList [1,0,0,1,0,0]
 p2 = S.fromList [1,0,1,1,1,0]
 
-pmap :: M.Map (XIdx.PPos Node.Int) (S.TC s t (Data ([] :> Nil) Double))
-pmap = M.fromListWith
+pmap :: Map (XIdx.PPos Node.Int) (S.TC s t (Data ([] :> Nil) Double))
+pmap = Map.fromListWith
          (error "duplicate keys")
          [(XIdx.ppos node0 node1, p1),(XIdx.ppos node1 node0, p2)]
 

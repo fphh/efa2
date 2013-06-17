@@ -31,7 +31,7 @@ import System.FilePath ((</>))
 
 
 import qualified Data.List as L
---import qualified Data.Map as M
+--import qualified Data.Map as Map
 import qualified Modules.Analysis as Analysis
 import Data.Tuple.HT (mapSnd)
 
@@ -132,7 +132,7 @@ main = do
 ---------------------------------------------------------------------------------------
 -- * State Analysis
   let Record.Record _ sigs = head rawSignalsX
---  putStrLn $ Utility.myShowList $ M.keys sigs
+--  putStrLn $ Utility.myShowList $ Map.keys sigs
 
   let -- drawDelta :: RecordName ->
       drawDelta ti topo env c =

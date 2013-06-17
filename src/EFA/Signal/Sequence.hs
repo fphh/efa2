@@ -41,10 +41,10 @@ import qualified Data.NonEmpty.Class as NonEmptyC
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.List.HT as ListHT
 import qualified Data.List as L
-import qualified Data.Map as M
+import qualified Data.Map as Map
 import qualified Data.IntSet as IntSet
 import Data.IntSet (IntSet)
-
+import Data.Map (Map)
 import Data.NonEmpty ((!:))
 import Data.Bool.HT (if')
 import Data.Eq.HT (equating)
@@ -315,12 +315,12 @@ filterTZero =
 -- * Conversions between Record.Sig and Record
 
 -- | Generate rSig from Power Record
-updateMap :: Ord k => M.Map k a -> [b] -> M.Map k b
+updateMap :: Ord k => Map k a -> [b] -> Map k b
 updateMap pmap xs =
-   case M.keys pmap of
+   case Map.keys pmap of
       keys ->
          if void keys == void xs
-           then M.fromList $ zip keys xs
+           then Map.fromList $ zip keys xs
            else error "Error in updateMap - map and List length don't match"
 
 type RSigX a =
@@ -328,7 +328,7 @@ type RSigX a =
          TC S.Sample (Typ A P Tt) (Data ([] :> [] :> Nil) a))
 
 record2RSig :: PowerRecord node [] a -> RSigX a
-record2RSig (Record t pMap) = (t, S.transpose2 $ fromSigList $ M.elems pMap)
+record2RSig (Record t pMap) = (t, S.transpose2 $ fromSigList $ Map.elems pMap)
 
 rsig2Record :: Ord node => RSigX a -> PowerRecord node [] a -> PowerRecord node [] a
 rsig2Record (t, ps) (Record _ pMap) =
@@ -357,9 +357,9 @@ checkZeroCrossing :: (RealFrac a) => a -> a -> Maybe a
 checkZeroCrossing x0 x1 =
    toMaybe (compare x0 0 /= compare x1 0) (-x0/(x1-x0))
 
-multiZeroCrossings :: (RealFrac a) => [a] -> [a] -> M.Map a IntSet
+multiZeroCrossings :: (RealFrac a) => [a] -> [a] -> Map a IntSet
 multiZeroCrossings xs ys =
-   M.fromListWith IntSet.union $ catMaybes $
+   Map.fromListWith IntSet.union $ catMaybes $
    zipWith (fmap . flip (,) . IntSet.singleton) [0..] $
    zipWith checkZeroCrossing xs ys
 {-
@@ -414,7 +414,7 @@ chopAtZeroCrossings =
             (\s ->
                let ss = (interpolate (fst s) xt yt, sample s xs ys)
                in  [(False, ss), (True, ss)]) $
-         M.toAscList $
+         Map.toAscList $
          multiZeroCrossings xs ys)
 
 zeroCrossingsPerInterval :: (RealFrac a) => [[a]] -> [[[a]]]
@@ -423,7 +423,7 @@ zeroCrossingsPerInterval =
       (\xs ys ->
          xs :
          (map (\s -> sample s xs ys) $
-          M.toAscList $ multiZeroCrossings xs ys) ++
+          Map.toAscList $ multiZeroCrossings xs ys) ++
          ys :
          [])
 
@@ -450,15 +450,15 @@ concatPowerRecords ::
    SequData (PowerRecord node v a) -> PowerRecord node v a
 concatPowerRecords recs =
    case Fold.toList recs of
-      [] -> Record mempty M.empty
+      [] -> Record mempty Map.empty
       Record time0 pMap0 : recs0 ->
          let recs1 = map tailPowerRecord recs0
          in  Record
                 (mconcat $ time0 : map (\(Record times _) -> times) recs1)
-                (M.mapWithKey
+                (Map.mapWithKey
                     (\idx pSig ->
                        mconcat $ pSig :
-                       mapMaybe (\(Record _ pMap) -> M.lookup idx pMap) recs1)
+                       mapMaybe (\(Record _ pMap) -> Map.lookup idx pMap) recs1)
                     pMap0)
 
 tailPowerRecord ::
@@ -477,15 +477,15 @@ approxSequPwrRecord eps xs ys =
    V.equalBy (approxPowerRecord eps) (Fold.toList xs) (Fold.toList ys)
 
 approxPowerRecord ::
-   (V.Walker v, V.Storage v a, Real a,Ord node) =>
+   (V.Walker v, V.Storage v a, Real a, Ord node) =>
    a -> PowerRecord node v a -> PowerRecord node v a -> Bool
 approxPowerRecord eps
       (Record xt xm) (Record yt ym) =
    S.equalBy (approxAbs eps) xt yt
    &&
-   M.keys xm == M.keys ym
+   Map.keys xm == Map.keys ym
    &&
-   Fold.and (M.intersectionWith (S.equalBy (approxAbs eps)) xm ym)
+   Fold.and (Map.intersectionWith (S.equalBy (approxAbs eps)) xm ym)
 
 approxAbs :: (Real a) => a -> a -> a -> Bool
 approxAbs eps x y =

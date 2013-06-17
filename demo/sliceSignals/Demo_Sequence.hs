@@ -17,7 +17,8 @@ import EFA.Signal.Signal (PSigL, (.++))
 import EFA.Signal.Base (Val)
 import qualified EFA.Signal.PlotIO as PlotIO
 
-import qualified Data.Map as M
+import qualified Data.Map as Map
+import Data.Map (Map)
 
 import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 
@@ -45,9 +46,9 @@ n = 2
 pPosIdx :: Int -> Int -> XIdx.PPos Int
 pPosIdx x y = XIdx.ppos x y
 
-pMap :: M.Map (XIdx.PPos Int) PSigL
+pMap :: Map (XIdx.PPos Int) PSigL
 pMap =
-   M.fromListWith (error "duplicate keys") $
+   Map.fromListWith (error "duplicate keys") $
       (pPosIdx 0 1, mkSigEnd n s01) :
       (pPosIdx 1 0, mkSigEnd n s10) :
       (pPosIdx 1 2, mkSigEnd n s12) :
