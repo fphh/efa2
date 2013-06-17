@@ -63,7 +63,7 @@ import qualified Data.Text.Lazy as T
 
 import qualified Data.Map as M
 import qualified Data.List as L
-import qualified Data.List.HT as HTL
+import qualified Data.List.HT as ListHT
 
 import Control.Monad (void)
 import Control.Category ((.))
@@ -115,7 +115,7 @@ dotFromSequFlowGraph (rngs, g) mtshow nshow structureEdgeShow storageEdgeShow =
 
   where (topoEs, interEs) =
            mapFst (M.fromListWith (++)) $
-           HTL.unzipEithers $
+           ListHT.unzipEithers $
            map
               (\e ->
                  case Topo.edgeType e of

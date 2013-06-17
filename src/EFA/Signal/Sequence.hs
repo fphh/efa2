@@ -39,7 +39,7 @@ import qualified Data.NonEmpty.Set as NonEmptySet
 import qualified Data.NonEmpty.Mixed as NonEmptyM
 import qualified Data.NonEmpty.Class as NonEmptyC
 import qualified Data.NonEmpty as NonEmpty
-import qualified Data.List.HT as HTL
+import qualified Data.List.HT as ListHT
 import qualified Data.List as L
 import qualified Data.Map as M
 import qualified Data.IntSet as IntSet
@@ -406,7 +406,7 @@ removeDuplicates f = map NonEmpty.head . NonEmptyM.groupBy (equating f)
 chopAtZeroCrossings :: (RealFrac a) => [(a, [a])] -> [[(a, [a])]]
 chopAtZeroCrossings =
    map (map snd) .
-   HTL.segmentBefore fst .
+   ListHT.segmentBefore fst .
    expandIntervals
       ((,) False)
       (\(xt,xs) (yt,ys) ->
@@ -419,7 +419,7 @@ chopAtZeroCrossings =
 
 zeroCrossingsPerInterval :: (RealFrac a) => [[a]] -> [[[a]]]
 zeroCrossingsPerInterval =
-   HTL.mapAdjacent
+   ListHT.mapAdjacent
       (\xs ys ->
          xs :
          (map (\s -> sample s xs ys) $
@@ -431,7 +431,7 @@ chopAtZeroCrossingsRSig :: (RealFrac a) => RSigX a -> [RSigX a]
 chopAtZeroCrossingsRSig (TC (Data times), TC (Data vectorSignal)) =
    map (mapPair (TC . Data, TC . Data)) $
    map unzip $
-   filter (HTL.lengthAtLeast 2) $
+   filter (ListHT.lengthAtLeast 2) $
 --   map (removeDuplicates fst) $
    chopAtZeroCrossings $
    zip times vectorSignal
@@ -537,7 +537,7 @@ intPattern =
    IntPattern . snd .
    L.mapAccumL (\k0 (k1,t) -> (k1, (k1-k0, NonEmptySet.singleton t))) (-1) .
    catMaybes . zipWith (\k -> fmap ((,) k)) [0..] .
-   HTL.mapAdjacent checkZeroCrossing . V.toList
+   ListHT.mapAdjacent checkZeroCrossing . V.toList
 
 
 {- |
@@ -576,8 +576,8 @@ pattern ::
 pattern =
    Pattern .
    map (mapPair (NonEmpty.Cons () . V.fromList . void, NonEmptySet.singleton)) .
-   fst . HTL.segmentAfterMaybe id .
-   HTL.mapAdjacent checkZeroCrossing . V.toList
+   fst . ListHT.segmentAfterMaybe id .
+   ListHT.mapAdjacent checkZeroCrossing . V.toList
 
 
 chopVector ::

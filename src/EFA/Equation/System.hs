@@ -85,7 +85,7 @@ import Control.Category ((.))
 
 import qualified Data.Map as M
 import qualified Data.Set as S
-import qualified Data.List.HT as LH
+import qualified Data.List.HT as ListHT
 import qualified Data.List as List
 
 import qualified Data.NonEmpty as NonEmpty
@@ -721,7 +721,7 @@ fromNodes equalInOutSums =
                 withSecNode = flip foldMap msn
 
                 partition =
-                   LH.unzipEithers .
+                   ListHT.unzipEithers .
                    map
                       (\edge ->
                          case TD.edgeType edge of
@@ -785,7 +785,7 @@ fromStorageSequences ::
    Record rec, Node.C node) =>
   TD.DirSequFlowGraph node -> EquationSystem mode rec node s a v
 fromStorageSequences =
-   foldMap (mconcat . LH.mapAdjacent f . M.toList) . getStorageSequences
+   foldMap (mconcat . ListHT.mapAdjacent f . M.toList) . getStorageSequences
   where f (before, _) (now, dir) =
            storage now
            =%=

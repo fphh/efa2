@@ -11,7 +11,7 @@ import qualified Data.Vector.Unboxed as UV
 import qualified Data.Vector as V
 
 import qualified Data.List as L
-import qualified Data.List.HT as LH
+import qualified Data.List.HT as ListHT
 import qualified Data.List.Match as Match
 
 import qualified Data.Set as Set
@@ -199,8 +199,8 @@ instance Singleton [] where
    -- tail = L.tail
    -- last = L.last
    -- init = L.init
-   viewL = LH.viewL
-   viewR = LH.viewR
+   viewL = ListHT.viewL
+   viewR = ListHT.viewR
    all = L.all
    any = L.any
 
@@ -515,7 +515,7 @@ instance Lookup UV.Vector where
 {-# INLINE lookUpGen #-}
 lookUpGen :: Show i => (i -> Maybe a) -> [i] -> [a]
 lookUpGen look idxs =
-   case LH.partitionMaybe look idxs of
+   case ListHT.partitionMaybe look idxs of
       (ys, []) -> ys
       (_, invalidIdxs) ->
          error $ "Error in vLookup - indices out of Range: " ++ show invalidIdxs
@@ -626,7 +626,7 @@ cumulate storage =
 
 decumulate :: (Num a) => NonEmpty.T [] a -> [a] -> [a]
 decumulate inStorage outStorage =
-   LH.mapAdjacent subtract $ NonEmpty.last inStorage : outStorage
+   ListHT.mapAdjacent subtract $ NonEmpty.last inStorage : outStorage
 
 
 propCumulate :: NonEmpty.T [] Integer -> [Integer] -> Bool

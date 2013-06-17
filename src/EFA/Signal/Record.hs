@@ -55,7 +55,7 @@ import qualified Data.Map as M
 import qualified Data.Set as Set
 import qualified Data.List as L
 import qualified Data.Foldable as Fold
-import qualified Data.List.HT as HTL
+import qualified Data.List.HT as ListHT
 import qualified Data.List.Key as Key
 import qualified Data.List.Match as Match
 
@@ -205,7 +205,7 @@ split ::
    (Ord id) =>
    Int -> Record s1 s2 t1 t2 id v d1 d2 -> [Record s1 s2 t1 t2 id v d1 d2]
 split n (Record time pMap) =
-   map (Record time . M.fromList) $ HTL.sliceVertical n $ M.toList pMap
+   map (Record time . M.fromList) $ ListHT.sliceVertical n $ M.toList pMap
 
 
 sortSigList ::
@@ -479,8 +479,8 @@ instance
       n <- QC.choose (1,5)
       pos <- QC.vectorOf n QC.arbitrary
       let vectorSamples =
-             HTL.switchR [] (\equalSized _ -> equalSized) $
-             HTL.sliceVertical n xs
+             ListHT.switchR [] (\equalSized _ -> equalSized) $
+             ListHT.sliceVertical n xs
       return $
          Record (S.fromList $ Match.take vectorSamples $ iterate (1+) 0) $
          M.fromList $ zip pos $ map S.fromList $ transpose vectorSamples
