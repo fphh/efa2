@@ -1,6 +1,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module EFA.Signal.Sequence where
 
@@ -44,6 +45,7 @@ import qualified Data.Map as M
 import qualified Data.IntSet as IntSet
 import Data.IntSet (IntSet)
 
+import Data.NonEmpty ((!:))
 import Data.Bool.HT (if')
 import Data.Eq.HT (equating)
 import Data.Tuple.HT (mapPair, swap)
@@ -510,24 +512,15 @@ This has several advantages:
 We should use a NonEmpty type for the chunks and for the time set.
 Note the similarity to our EventList datatypes.
 -}
-newtype Pattern a = Pattern [(Int, NonEmptySet.T a)]
+newtype IntPattern a = IntPattern [(Int, NonEmptySet.T a)]
    deriving (Show)
-
-pattern ::
-   (V.Storage v a, V.FromList v, RealFrac a) =>
-   v a -> Pattern a
-pattern v0 =
-   Pattern $ snd $
-   L.mapAccumL (\k0 (k1,t) -> (k1, (k1-k0, NonEmptySet.singleton t))) (-1) $
-   catMaybes $ zipWith (\k -> fmap ((,) k)) [0..] $
-   HTL.mapAdjacent checkZeroCrossing $ V.toList v0
 
 {-
 tests: test Monoid laws
 -}
-instance (Ord a) => Monoid (Pattern a) where
-   mempty = Pattern []
-   mappend (Pattern pa) (Pattern pb) =
+instance (Ord a) => Monoid (IntPattern a) where
+   mempty = IntPattern []
+   mappend (IntPattern pa) (IntPattern pb) =
       let go [] p = p
           go p [] = p
           go (ac@(ak,at):as) (bc@(bk,bt):bs) =
@@ -535,40 +528,138 @@ instance (Ord a) => Monoid (Pattern a) where
                 EQ -> (ak, NonEmptySet.union at bt) : go as bs
                 LT -> ac : go as ((bk-ak,bt) : bs)
                 GT -> bc : go ((ak-bk,at) : as) bs
+      in  IntPattern $ go pa pb
+
+intPattern ::
+   (V.Storage v a, V.FromList v, RealFrac a) =>
+   v a -> IntPattern a
+intPattern =
+   IntPattern . snd .
+   L.mapAccumL (\k0 (k1,t) -> (k1, (k1-k0, NonEmptySet.singleton t))) (-1) .
+   catMaybes . zipWith (\k -> fmap ((,) k)) [0..] .
+   HTL.mapAdjacent checkZeroCrossing . V.toList
+
+
+
+newtype Pattern v a = Pattern [(NonEmpty.T v (), NonEmptySet.T a)]
+   deriving (Show)
+
+{-
+tests: test Monoid laws
+-}
+instance
+   (V.DiffLength v, V.Storage v (), V.Core v ~ v, Ord a) =>
+      Monoid (Pattern v a) where
+   mempty = Pattern []
+   mappend (Pattern pa) (Pattern pb) =
+      let go [] p = p
+          go p [] = p
+          go (ac@(ak,at):as) (bc@(bk,bt):bs) =
+             case V.diffLength ak bk of
+                V.NoRemainder -> (ak, NonEmptySet.union at bt) : go as bs
+                V.RemainderLeft  ck -> ac : go as ((ck, bt) : bs)
+                V.RemainderRight ck -> bc : go ((ck, at) : as) bs
       in  Pattern $ go pa pb
 
+pattern ::
+   (V.Storage v a, V.Storage v (), V.FromList v, RealFrac a) =>
+   v a -> Pattern v a
+pattern =
+   Pattern .
+   map (mapPair (NonEmpty.Cons () . V.fromList . void, NonEmptySet.singleton)) .
+   fst . HTL.segmentAfterMaybe id .
+   HTL.mapAdjacent checkZeroCrossing . V.toList
 
--- return NonEmpty [] (v a), use NonEmpty.snoc
+
 chopVector ::
-   (V.Split v, V.Storage v a) =>
-   [Int] -> v a -> [v a]
+   (V.SplitMatch v, V.Singleton v, V.Core v ~ v,
+    V.Storage v a, V.Storage v ()) =>
+   [NonEmpty.T v ()] -> v a -> NonEmpty.T [] (NonEmpty.T v a)
 chopVector ks v0 =
-   (\(w,ws) -> ws ++ [w]) $
-   L.mapAccumL (\v k -> swap $ V.splitAt k v) v0 ks
+   (\(y,ys) -> NonEmpty.snoc ys $ checkedFetch y) $
+   L.mapAccumL (\v k -> swap $ V.splitAtMatch k $ checkedFetch v) v0 ks
+
+{- |
+partial function
+
+I need it, since I do not know, how to prove,
+that the chunks sum up to the whole signal.
+-}
+checkedFetch ::
+   (V.Singleton v, V.Storage v a) =>
+   v a -> NonEmpty.T v a
+checkedFetch xs =
+   case V.viewL xs of
+      Nothing -> error "empty vector - This may mean that signals of different lengths were chopped."
+      Just (y,ys) -> NonEmpty.Cons y ys
+
+
+type Chunk v = NonEmpty.T v
 
 chopVectorInterpolate ::
-   (V.Singleton v, V.Split v, V.Storage v a, Num a) =>
-   Pattern a -> v a -> [v a]
+   (Trav.Traversable v, NonEmptyC.Append v,
+    NonEmptyC.Empty v, NonEmptyC.Cons v,
+    V.Singleton v, V.SplitMatch v,
+    V.Storage v a, V.Storage v (), V.Core v ~ v,
+    Num a) =>
+   Pattern v a -> v a -> [Chunk v a]
 chopVectorInterpolate (Pattern p) =
-   let go [] [v] = [v]
-       go (ts:tss) (v0:v1:vs) =
-          case (V.viewR v0, V.viewL v1) of
-             (Just (_,al), Just (ar,_)) ->
-                (\(vs2,v2) -> vs2 ++ go tss (v2:vs)) $
+   let go [] (NonEmpty.Cons v []) = [v]
+       go (ts:tss) (NonEmpty.Cons v0 (v1:vs)) =
+          case (NonEmpty.last v0, NonEmpty.head v1) of
+             (al, ar) ->
+                (\(vs2,v2) -> vs2 ++ go tss (v2 !: vs)) $
                 NonEmpty.viewR $
-                NonEmpty.mapAdjacent V.append $
+                NonEmpty.mapAdjacent NonEmptyC.append $
                 NonEmpty.cons v0 $ flip NonEmptyC.snoc v1 $
-                fmap (\t -> V.singleton $ interpolate t al ar) $
+                fmap (\t -> NonEmpty.singleton $ interpolate t al ar) $
                 NonEmptySet.toAscList ts
-             _ -> error "all chunks must be non-empty"
        go _ _ = error "lists must be equally long"
    in  case unzip p of
           (ks,ts) -> go ts . chopVector ks
 
+{-
+Usually the chunks should have at least two elements:
+A beginning and an ending point.
+The only exception I can see
+can happen for an input signal of length one.
+We could enforce an input signal of at least length two,
+but I do not know, how to prove then that the Chunks have at least two elements.
+-}
+type Chunk2 v = NonEmpty.T (NonEmpty.T v)
+
+chopVectorInterpolate2 ::
+   (Trav.Traversable v, NonEmptyC.Append v,
+    NonEmptyC.Empty v, NonEmptyC.Cons v,
+    V.Singleton v, V.SplitMatch v,
+    V.Storage v a, V.Storage v (), V.Core v ~ v,
+    Num a) =>
+   Pattern v a -> v a -> [Chunk2 v a]
+chopVectorInterpolate2 (Pattern p) =
+   let go [] (NonEmpty.Cons v []) = [NonEmpty.mapTail checkedFetch v]  -- we called 'flatten' in the last round, maybe too early
+       go (ts:tss) (NonEmpty.Cons v0 (v1:vs)) =
+          case (NonEmpty.last v0, NonEmpty.head v1) of
+             (al, ar) ->
+                (\(vs2,v2) -> vs2 ++ go tss (NonEmpty.flatten v2 !: vs)) $
+                NonEmpty.viewR $
+                NonEmpty.mapAdjacent NonEmpty.append $
+                NonEmpty.cons v0 $ flip NonEmptyC.snoc v1 $
+                fmap (\t -> NonEmpty.singleton $ interpolate t al ar) $
+                NonEmptySet.toAscList ts
+       go _ _ = error "lists must be equally long"
+   in  case unzip p of
+          (ks,ts) -> go ts . chopVector ks
+
+
 chopVectorContainer ::
-   (RealFrac a, V.Split v, V.Singleton v, V.FromList v, V.Storage v a,
-    Trav.Traversable f) =>
-   f (v a) -> [f (v a)]
+   (Trav.Traversable v, NonEmptyC.Append v,
+    NonEmptyC.Empty v, NonEmptyC.Cons v,
+    V.FromList v, V.DiffLength v,
+    V.SplitMatch v, V.Singleton v,
+    V.Storage v a, V.Storage v (), V.Core v ~ v,
+    Trav.Traversable f,
+    RealFrac a) =>
+   f (v a) -> [f (Chunk v a)]
 chopVectorContainer m =
    let p = Fold.foldMap pattern m
    in  Trav.traverse (chopVectorInterpolate p) m
@@ -586,23 +677,32 @@ mappend (pattern [3,3,-1,-1,-1,-1,-1,-1::Double]) (pattern [1,1,-1,-1,-1,-1,1,1:
 -}
 
 chopSignal ::
-   (Num a, V.Split v, V.Singleton v, V.Storage v a) =>
-   Pattern a ->
+   (Trav.Traversable v, NonEmptyC.Append v,
+    NonEmptyC.Empty v, NonEmptyC.Cons v,
+    V.SplitMatch v, V.Singleton v,
+    V.Storage v a, V.Storage v (), V.Core v ~ v,
+    Num a) =>
+   Pattern v a ->
    TC S.Signal (Typ A t Tt) (Data (v :> Nil) a) ->
-   [TC S.Signal (Typ A t Tt) (Data (v :> Nil) a)]
+   [TC S.Signal (Typ A t Tt) (Data (Chunk v :> Nil) a)]
 chopSignal p = S.toSigList . S.liftData (chopVectorInterpolate p)
 
 chopRecord ::
-   (RealFrac a, V.FromList v, V.Split v, V.Singleton v, V.Storage v a) =>
-   PowerRecord node v a -> SequData (PowerRecord node v a)
+   (Trav.Traversable v, NonEmptyC.Append v,
+    NonEmptyC.Empty v, NonEmptyC.Cons v,
+    V.FromList v, V.DiffLength v,
+    V.Length v, V.SplitMatch v, V.Singleton v,
+    V.Storage v a, V.Storage v (), V.Core v ~ v,
+    RealFrac a) =>
+   PowerRecord node v a ->
+   SequData (PowerRecord node (Chunk v) a)
 chopRecord (Record t m) =
    let p@(Pattern chunks) = Fold.foldMap (pattern . S.unconsData) m
    in  SD.fromLengthList $
-       zip (map fst chunks) $
+       zip (map (V.length . fst) chunks) $
        zipWith Record
           (chopSignal p t)
           (Trav.traverse (chopSignal p) m)
-
 
 
 

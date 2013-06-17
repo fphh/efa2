@@ -12,11 +12,13 @@ import qualified Data.Vector as V
 
 import qualified Data.List as L
 import qualified Data.List.HT as LH
+import qualified Data.List.Match as Match
 
 import qualified Data.Set as Set
 
 import qualified Data.NonEmpty as NonEmpty
 
+import Data.Tuple.HT (mapFst)
 import Data.Maybe.HT (toMaybe)
 import Data.Eq (Eq((==)))
 import Data.Function ((.), ($), id, flip)
@@ -24,7 +26,7 @@ import Data.Maybe (Maybe(Just, Nothing), maybe, isJust, fromMaybe)
 import Data.Bool (Bool(False, True), (&&), not)
 import Data.Tuple (snd, fst)
 import Text.Show (Show, show)
-import Prelude (Num, Int, Integer, Ord, error, (++), (+), (-), subtract, min, max,fmap)
+import Prelude (Num, Int, Integer, Ord, error, (++), (+), (-), subtract, min, max, fmap, succ)
 
 import Data.Ord (Ordering, (>=), (<=))
 
@@ -79,6 +81,23 @@ writeUnbox ::
    (Storage UV.Vector a => UV.Vector a)
 writeUnbox x =
    let z = case constraints z of UnboxedVectorConstraints -> x
+   in  z
+
+
+instance (Storage v y) => Storage (NonEmpty.T v) y where
+   data Constraints (NonEmpty.T v) y = (Storage v y) => NonEmptyConstraints
+   constraints _ = NonEmptyConstraints
+
+readNonEmpty ::
+   (Storage v a => NonEmpty.T v a -> b) ->
+   (Storage (NonEmpty.T v) a => NonEmpty.T v a -> b)
+readNonEmpty f x = case constraints x of NonEmptyConstraints -> f x
+
+writeNonEmpty ::
+   (Storage v a => NonEmpty.T v a) ->
+   (Storage (NonEmpty.T v) a => NonEmpty.T v a)
+writeNonEmpty x =
+   let z = case constraints z of NonEmptyConstraints -> x
    in  z
 
 
@@ -341,6 +360,9 @@ lenCheck x y = len x == len y
 class Length vec where
    length :: Storage vec a => vec a -> Int
 
+instance Length v => Length (NonEmpty.T v) where
+   length = readNonEmpty $ succ . length . NonEmpty.tail
+
 instance Length [] where
    length = L.length
 
@@ -349,6 +371,30 @@ instance Length V.Vector where
 
 instance Length UV.Vector where
    length = readUnbox UV.length
+
+
+type family Core (v :: * -> *) :: * -> *
+type instance Core (NonEmpty.T f) = Core f
+type instance Core [] = []
+type instance Core V.Vector = V.Vector
+type instance Core UV.Vector = UV.Vector
+
+data Remainder v a b =
+     RemainderLeft (NonEmpty.T v a)
+   | NoRemainder
+   | RemainderRight (NonEmpty.T v b)
+
+class DiffLength v where
+   diffLength ::
+      (Storage v a, Storage (Core v) a,
+       Storage v b, Storage (Core v) b) =>
+      v a -> v b -> Remainder (Core v) a b
+
+instance DiffLength v => DiffLength (NonEmpty.T v) where
+   diffLength =
+      readNonEmpty $ \(NonEmpty.Cons _ as) ->
+      readNonEmpty $ \(NonEmpty.Cons _ bs) ->
+         diffLength as bs
 
 
 --------------------------------------------------------------
@@ -536,6 +582,42 @@ instance Split UV.Vector where
   drop k = readUnbox (UV.drop k)
   take k = readUnbox (UV.take k)
   splitAt k = readUnbox (UV.splitAt k)
+
+
+class SplitMatch v where
+  dropMatch :: (Storage v b, Storage v d, Storage (Core v) d) => v b -> v d -> Core v d
+  takeMatch :: (Storage v b, Storage v d) => v b -> v d -> v d
+  splitAtMatch :: (Storage v b, Storage v d) => v b -> v d -> (v d, Core v d)
+
+instance SplitMatch v => SplitMatch (NonEmpty.T v) where
+  dropMatch =
+     readNonEmpty $ \(NonEmpty.Cons _ xs) ->
+     readNonEmpty $ \(NonEmpty.Cons _ ys) ->
+        dropMatch xs ys
+  takeMatch =
+     readNonEmpty $ \(NonEmpty.Cons _ xs) ->
+     readNonEmpty $ \(NonEmpty.Cons y ys) ->
+        NonEmpty.Cons y $ takeMatch xs ys
+  splitAtMatch =
+     readNonEmpty $ \(NonEmpty.Cons _ xs) ->
+     readNonEmpty $ \(NonEmpty.Cons y ys) ->
+        mapFst (NonEmpty.Cons y) $ splitAtMatch xs ys
+
+
+instance SplitMatch [] where
+  dropMatch = Match.drop
+  takeMatch = Match.take
+  splitAtMatch = Match.splitAt
+
+instance SplitMatch V.Vector where
+  dropMatch = drop . length
+  takeMatch = take . length
+  splitAtMatch = splitAt . length
+
+instance SplitMatch UV.Vector where
+  dropMatch = drop . length
+  takeMatch = take . length
+  splitAtMatch = splitAt . length
 
 
 cumulate :: (Num a) => NonEmpty.T [] a -> [a] -> [a]
