@@ -244,6 +244,12 @@ instance Functor (Scalar node) where
    fmap f (Scalar me st se sx ss) =
       Scalar (fmap f me) (fmap f st) (fmap f se) (fmap f sx) (fmap f ss)
 
+completeFMap ::
+   (a0 -> a1) -> (v0 -> v1) ->
+   Complete node a0 v0 -> Complete node a1 v1
+completeFMap f g (Complete scalar0 signal0) =
+   Complete (fmap f scalar0) (fmap g signal0)
+
 
 instance Foldable (Signal node) where
    foldMap = foldMapDefault

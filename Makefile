@@ -2,7 +2,7 @@ SRCDIRS = src demo examples test
 TESTDIR = efatest
 
 HTDIR = $(HOME)/haskell
-HTPKGS = gnuplot non-empty unique-logic utility
+HTPKGS = gnuplot non-empty unique-logic-tf utility
 
 hlint.html: $(SRCDIRS) hlint/efa2.hs
 	hlint $(SRCDIRS) --hint=hlint/efa2.hs --report=$@
@@ -31,7 +31,7 @@ htpkg-get:
 	   darcs get http://code.haskell.org/gnuplot/ && \
 	   darcs get http://code.haskell.org/~thielema/utility/ && \
 	   darcs get http://code.haskell.org/~thielema/non-empty/ && \
-	   darcs get http://code.haskell.org/~thielema/unique-logic/ )
+	   darcs get http://code.haskell.org/~thielema/unique-logic-tf/ )
 
 htpkg-pull:
 	(for pkg in $(HTPKGS); do (cd $(HTDIR)/$$pkg && darcs pull -a); done)

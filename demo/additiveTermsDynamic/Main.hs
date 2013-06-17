@@ -30,7 +30,7 @@ import qualified EFA.Graph as Gr
 import qualified EFA.Signal.PlotIO as PlotIO
 
 import qualified EFA.Report.Format as Format
-import EFA.Report.FormatValue (FormatValue, formatValue)
+import EFA.Report.FormatValue (FormatSignalIndex, FormatValue, formatValue)
 
 import qualified Data.Map as Map
 import Data.Monoid (mempty, (<>))
@@ -65,7 +65,7 @@ type
 infixr 6 *=<>, -=<>
 
 (*=<>) ::
-   (Ord (idx Node.Int), Env.AccessSignalMap idx) =>
+   (Ord (idx Node.Int), FormatSignalIndex idx, Env.AccessSignalMap idx) =>
    Idx.InSection idx Node.Int ->
    EquationSystemSymbolic s -> EquationSystemSymbolic s
 idx *=<> eqsys =
@@ -74,7 +74,7 @@ idx *=<> eqsys =
    eqsys
 
 (-=<>) ::
-   (Ord (idx Node.Int), Env.AccessSignalMap idx) =>
+   (Ord (idx Node.Int), FormatSignalIndex idx, Env.AccessSignalMap idx) =>
    Idx.InSection idx Node.Int -> EquationSystemSymbolic s -> EquationSystemSymbolic s
 idx -=<> eqsys =
    (idx .=
@@ -118,7 +118,7 @@ type
          (Stack (Var.Any Node.Int) Double)
 
 deltaPair ::
-   (Ord (idx Node.Int), Env.AccessSignalMap idx) =>
+   (Ord (idx Node.Int), FormatSignalIndex idx, Env.AccessSignalMap idx) =>
    Idx.InSection idx Node.Int -> Double -> Double -> EquationSystemNumeric s
 deltaPair idx before delta =
    idx .= Stack.deltaPair (Var.Signal $ Var.index idx) before delta

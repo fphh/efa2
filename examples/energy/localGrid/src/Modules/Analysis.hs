@@ -13,7 +13,7 @@ import qualified EFA.Example.Absolute as EqAbs
 
 import qualified EFA.Example.Index as XIdx
 
-import EFA.Example.Utility ((.=))
+import EFA.Example.Utility (Ignore, (.=))
                             -- (%=),
                             -- checkDetermined)
 
@@ -206,7 +206,7 @@ makeGivenFromExternal :: (Vec.Zipper v,
                           idx ~ EqRecord.ToIndex rec) =>
                          idx ->
                          SD.SequData (FlowRecord System.Node v d) ->
-                         EqGen.EquationSystem rec System.Node s Double d
+                         EqGen.EquationSystem Ignore rec System.Node s Double d
 
 makeGivenFromExternal idx sf =
    (Idx.Record idx (XIdx.storage Idx.initial System.Water) .= initStorage)
@@ -252,7 +252,7 @@ makeGivenFromExternal2 :: -- forall System.Node s d (v :: * -> *) d1.
                                          (Fractional d, Eq d, Eq (v d), Vec.Singleton v, Vec.Storage v d,
                                           Vec.Walker v, B.BSum d, Vec.Zipper v, Arith.Sum d) =>
                                          SD.SequData (FlowRecord System.Node v d)
-                                         -> EqGen.EquationSystem
+                                         -> EqGen.EquationSystem Ignore
                                               EqRecord.Absolute System.Node s (Data Nil d) (Data (v D.:> Nil) d)
 makeGivenFromExternal2 sf =
       (Idx.absolute (XIdx.storage Idx.initial System.Water) .= Data initStorage) <>

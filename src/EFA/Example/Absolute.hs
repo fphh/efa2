@@ -29,8 +29,10 @@ import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Utility (Pointed)
 
-import qualified UniqueLogic.ST.Expression as Expr
-import qualified UniqueLogic.ST.System as Sys
+import EFA.Report.FormatValue (FormatValue)
+
+import qualified UniqueLogic.ST.TF.Expression as Expr
+import qualified UniqueLogic.ST.TF.System.Simple as Sys
 
 import qualified Data.Map as Map
 import Control.Applicative (liftA, liftA2)
@@ -38,9 +40,9 @@ import Data.Foldable (fold)
 import Data.Monoid (mempty, (<>))
 
 
-type EquationSystem = EqGen.EquationSystem Record.Absolute
+type EquationSystem = EqGen.EquationSystem Utility.Ignore Record.Absolute
 
-type Expression node s a v x = EqGen.Expression Record.Absolute node s a v x
+type Expression node s a v x = EqGen.Expression Utility.Ignore Record.Absolute node s a v x
 
 
 solve ::
@@ -67,7 +69,7 @@ constant = EqGen.constant
 
 variable ::
    (Eq x, Arith.Sum x, x ~ Env.Element idx a v,
-    Env.AccessMap idx, Ord (idx node)) =>
+    Env.AccessMap idx, Ord (idx node), FormatValue (idx node)) =>
    idx node -> Expression node s a v x
 variable = EqGen.variable . Idx.absolute
 
@@ -77,7 +79,7 @@ liftF ::
   (x -> y) ->
   Expression node s a v x ->
   Expression node s a v y
-liftF = liftA . Expr.fromRule2 . Sys.assignment2 ""
+liftF = liftA . Expr.fromRule2 . Sys.assignment2
 
 liftF2 ::
   (Arith.Sum z) =>
@@ -85,7 +87,7 @@ liftF2 ::
   Expression node s a v x ->
   Expression node s a v y ->
   Expression node s a v z
-liftF2 = liftA2 . Expr.fromRule3 . Sys.assignment3 ""
+liftF2 = liftA2 . Expr.fromRule3 . Sys.assignment3
 
 
 
@@ -97,7 +99,7 @@ type VarTerm var term node = SymVar.VarTerm var Idx.Absolute term node
 
 type
    SymbolicEquationSystem node s term =
-      Utility.SymbolicEquationSystem Record.Absolute node s term
+      Utility.SymbolicEquationSystem Utility.Ignore Record.Absolute node s term
 
 symbol ::
    (SymVar.Symbol var, Pointed term) =>
@@ -108,7 +110,7 @@ givenSymbol ::
   (t ~ VarTerm var term node,
    Eq t, Arith.Sum t,
    t ~ Env.Element idx (ScalarTerm term node) (SignalTerm term node),
-   Ord (idx node), Pointed term,
+   Ord (idx node), FormatValue (idx node), Pointed term,
    Var.Type idx ~ var, SymVar.Symbol var, Env.AccessMap idx) =>
   idx node ->
   SymbolicEquationSystem node s term
@@ -122,7 +124,7 @@ infixr 6 =<>
   (t ~ VarTerm var term node,
    Eq t, Arith.Sum t,
    t ~ Env.Element idx (ScalarTerm term node) (SignalTerm term node),
-   Ord (idx node), Pointed term,
+   Ord (idx node), FormatValue (idx node), Pointed term,
    Var.Type idx ~ var, SymVar.Symbol var, Env.AccessMap idx) =>
    idx node ->
    SymbolicEquationSystem node s term ->
@@ -134,7 +136,7 @@ infix 0 .=, %=
 
 (.=) ::
   (Eq x, Arith.Sum x, x ~ Env.Element idx a v,
-   Env.AccessMap idx, Ord (idx node)) =>
+   Env.AccessMap idx, Ord (idx node), FormatValue (idx node)) =>
    idx node -> x ->
    EquationSystem node s a v
 evar .= val  =  variable evar =.= EqGen.constant val
@@ -144,7 +146,7 @@ evar .= val  =  variable evar =.= EqGen.constant val
 
 (%=) ::
   (Eq x, Arith.Sum x, x ~ Env.Element idx a v,
-  Env.AccessMap idx, Ord (idx node)) =>
+  Env.AccessMap idx, Ord (idx node), FormatValue (idx node)) =>
   idx node -> idx node -> EquationSystem node s a v
 x %= y = variable x =.= variable y
 

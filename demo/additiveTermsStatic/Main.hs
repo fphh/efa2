@@ -9,7 +9,7 @@ import EFA.Example.NestedDelta
            givenParameterSymbol, givenParameterNumber,
            beforeDelta, extrudeStart,
            (<&), (<&>), (&>), (&&>), (?=))
-import EFA.Example.Utility (makeEdges, constructSeqTopo)
+import EFA.Example.Utility (Ignore, makeEdges, constructSeqTopo)
 import EFA.Equation.Result (Result)
 
 import qualified EFA.Equation.System as EqGen
@@ -69,7 +69,7 @@ type RecMultiDelta = Record.ExtDelta (Record.ExtDelta (Record.ExtDelta Record.Ab
 
 type
    EquationSystemSymbolic s =
-      EqGen.EquationSystem RecMultiDelta Node.Int s ScalarTerm SignalTerm
+      EqGen.EquationSystem Ignore RecMultiDelta Node.Int s ScalarTerm SignalTerm
 
 
 
@@ -178,7 +178,7 @@ mainSymbolic = do
 
 type
    EquationSystemNumeric s =
-      EqGen.EquationSystem RecMultiDelta Node.Int s Double Double
+      EqGen.EquationSystem Ignore RecMultiDelta Node.Int s Double Double
 
 
 _givenNumeric :: EquationSystemNumeric s

@@ -1,31 +1,42 @@
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module EFA.Test.EquationSystem.Given where
 
+import EFA.Equation.System ( (=.=) )
+import qualified EFA.Equation.System as EqGen
+import qualified EFA.Equation.Verify as Verify
+import qualified EFA.Equation.Variable as Var
+import qualified EFA.Equation.Pair as Pair
+import qualified EFA.Equation.Arithmetic as Arith
+import qualified EFA.Equation.Record as Record
+import qualified EFA.Equation.Environment as Env
+import EFA.Equation.Result (Result(..))
 
-import EFA.Example.Absolute ( (.=) )
-import qualified EFA.Example.Absolute as EqGen
-
+import qualified EFA.Symbolic.Variable as SymVar
+import EFA.Symbolic.SumProduct ( Term )
 import EFA.Graph.Topology.Index ( Direction(..) )
 
-import EFA.Utility.Stream (Stream((:~)))
 import qualified EFA.Utility.Stream as Stream
-import qualified EFA.Example.Index as XIdx
-import qualified EFA.Graph.Topology.Index as Idx
+import EFA.Utility.Stream (Stream((:~)))
 
+import qualified EFA.Example.Index as XIdx
 import EFA.Example.Utility ( makeEdges, constructSeqTopo )
 
-
+import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph as Gr
 
-import qualified EFA.Equation.Record as Record
-import qualified EFA.Equation.Environment as Env
-import EFA.Equation.Result (Result(..))
+import qualified EFA.Report.Format as Format
+import EFA.Report.FormatValue (FormatValue)
+
+import qualified Control.Monad.Exception.Synchronous as ME
 
 import qualified Data.Map as M
 
+import Data.Tuple.HT (mapFst)
 import Data.Monoid (mconcat)
 
 
@@ -89,22 +100,63 @@ toTestGiven (Env.Complete scal sig) =
 
 
 -- Nicht alle Werte sind von originalGiven berechenbar.
-testEnv ::
-  Env.Complete Node.Int
-    (Record.Absolute (Result Rational))
-    (Record.Absolute (Result Rational))
+testEnv, solvedEnv ::
+  (ME.Exceptional
+     (Verify.Exception Format.Unicode)
+     (Env.Complete Node.Int
+        (Record.Absolute (Result Rational))
+        (Record.Absolute (Result Rational))),
+   Verify.Assigns Format.Unicode)
 testEnv =
-  Env.insert (XIdx.sum sec1 Idx.In node1) undet $
-  Env.insert (XIdx.eta sec1 node2 node1) undet $
-  Env.insert (XIdx.power sec1 node1 node2) undet $
-  Env.insert (XIdx.energy sec1 node1 node2) undet $
-  EqGen.solveSimple testGiven
+  mapFst (fmap
+    (Env.insert (XIdx.sum sec1 Idx.In node1) undet .
+     Env.insert (XIdx.eta sec1 node2 node1) undet .
+     Env.insert (XIdx.power sec1 node1 node2) undet .
+     Env.insert (XIdx.energy sec1 node1 node2) undet .
+     numericEnv)) $
+  EqGen.solveSimpleTracked testGiven
 
 undet :: Record.Absolute (Result a)
 undet = Record.Absolute Undetermined
 
+solvedEnv =
+  mapFst (fmap numericEnv) $
+  EqGen.solveTracked seqTopo originalGiven
 
-originalGiven :: EqGen.EquationSystem Node.Int s Rational Rational
+numericEnv ::
+  Env.Complete node
+    (Record.Absolute (Result (Pair.T at an)))
+    (Record.Absolute (Result (Pair.T vt vn))) ->
+  Env.Complete node
+    (Record.Absolute (Result an))
+    (Record.Absolute (Result vn))
+numericEnv =
+  Env.completeFMap (fmap $ fmap Pair.second) (fmap $ fmap Pair.second)
+
+
+infix 0 .=
+
+(.=) ::
+  (Arith.Constant x, x ~ Env.Element idx TrackedScalar TrackedSignal,
+   Verify.GlobalVar (Verify.Track Format.Unicode) x Idx.Absolute (Var.Type idx) Node.Int,
+   Env.AccessMap idx, Ord (idx Node.Int), FormatValue (idx Node.Int)) =>
+   idx Node.Int -> Rational ->
+   EquationSystem s
+evar .= val  =
+   EqGen.variable (Idx.absolute evar)
+   =.=
+   EqGen.constant (Arith.fromRational val)
+
+
+type TrackedSignal = Pair.T (SymVar.SignalTerm Idx.Absolute Term Node.Int) Rational
+type TrackedScalar = Pair.T (SymVar.ScalarTerm Idx.Absolute Term Node.Int) Rational
+
+type EquationSystem s =
+        EqGen.EquationSystem
+           (Verify.Track Format.Unicode)
+           Record.Absolute Node.Int s TrackedScalar TrackedSignal
+
+originalGiven :: EquationSystem s
 originalGiven =
    mconcat $
 
@@ -140,7 +192,7 @@ originalGiven =
 
 
 
-testGiven :: EqGen.EquationSystem Node.Int s Rational Rational
+testGiven :: EquationSystem s
 testGiven = mconcat $
   (XIdx.power sec0 node0 node2 .= 34 / 3) :
   (XIdx.power sec0 node1 node2 .= 25 / 4) :

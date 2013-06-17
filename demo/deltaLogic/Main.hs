@@ -1,7 +1,7 @@
 module Main where
 
 import qualified EFA.Example.Index as XIdx
-import EFA.Example.Utility (SymbolicEquationSystem, (=<>))
+import EFA.Example.Utility (SymbolicEquationSystem, Ignore, (=<>))
 
 import qualified EFA.Symbolic.SumProduct as SumProduct
 
@@ -34,7 +34,7 @@ node0 :~ node1 :~ _ = Stream.enumFrom minBound
 Use SumProduct.Term here since it simplifies automatically.
 -}
 given, sys ::
-   SymbolicEquationSystem Record.Delta Node.Int s SumProduct.Term
+   SymbolicEquationSystem Ignore Record.Delta Node.Int s SumProduct.Term
 given =
    Idx.before (XIdx.power sec0 node0 node1) =<>
    Idx.before (XIdx.eta sec0 node0 node1) =<>

@@ -19,4 +19,4 @@ main = do
    void $ Stack.runTests
    void $ Util.runTests
    void $ Seq.runTests
-   EqSys.test
+   EqSys.runTests
