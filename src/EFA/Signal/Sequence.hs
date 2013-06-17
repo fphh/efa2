@@ -540,7 +540,16 @@ intPattern =
    HTL.mapAdjacent checkZeroCrossing . V.toList
 
 
+{- |
+In contrast to 'IntPattern' I use @NonEmpty.T v ()@
+for measuring lengths of chunks.
+This has two advantages:
 
+* Using the non-empty type the compiler
+  can check non-emptiness for cutting operations.
+
+* If @v@ is a lazy type we can measure length lazily.
+-}
 newtype Pattern v a = Pattern [(NonEmpty.T v (), NonEmptySet.T a)]
    deriving (Show)
 
