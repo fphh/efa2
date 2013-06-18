@@ -33,10 +33,14 @@ import qualified EFA.Report.Base as ReportBase
 import qualified EFA.Report.Report as Report
 import qualified EFA.Report.Typ as Typ
 
+import qualified Data.Map as Map
+import qualified Data.Set as Set
+import Data.Map (Map)
+import Data.Set (Set)
+
 import Data.Monoid (Monoid, mempty, mappend, mconcat)
 import Data.Tuple.HT (mapPair)
 import Data.Ord (comparing)
--- import qualified Data.Map as M
 import Control.Applicative (liftA2)
 
 import Text.Printf (PrintfArg, printf)
@@ -1449,17 +1453,26 @@ genDistribution1D :: (SV.Unique v (Class d),
                       SV.Storage v SignalIdx,
                       SV.Find v) =>
                      (d -> Class d) -> UTFSignal v d -> UTDistr v ([Class d], [SignalIdx])
-genDistribution1D classify sig = changeSignalType $ map count classes
+genDistribution1D classify sig = changeSignalType $ map count $ unique classSig
   where classSig = map classify sig
-        classes = unique classSig
-        count cl = ([cl], toList $ findIndices (\x -> cl P.== x) classSig)
+        count cl = ([cl], toList $ findIndices (cl P.==) classSig)
+
+genDistributionND ::
+   (Ord d, SV.Storage v (Class d),
+    SV.Storage v d, SV.Walker v, SV.FromList v) =>
+   (d -> Class d) -> [UTFSignal v d] -> Map [Class d] (Set SignalIdx)
+genDistributionND classify =
+   Map.fromListWith Set.union .
+   P.flip L.zip (fmap Set.singleton [SignalIdx 0 ..]) .
+   L.transpose . fmap (toList . map classify)
+
+
 
 -- | combine an amount of N 1d-Distributions in an N-d distribution
 combineDistributions :: (SV.Storage v ([Class d], [SignalIdx]),
                          SV.FromList v,SV.Filter v) =>
                         [UTDistr v ([Class d], [SignalIdx])] -> UTDistr v ([Class d],[SignalIdx])
 combineDistributions [] =  error("Error - empty list in combineDistributions")
-combineDistributions [d] = d
 combineDistributions (d:ds) = P.foldl f d ds
   where f acc e = filter (P.not . P.null . P.snd) $ combineWith g acc e
         g (classes1,indices1) (classes2,indices2) = (classes1++classes2,L.intersect indices1 indices2)
