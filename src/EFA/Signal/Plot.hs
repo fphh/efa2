@@ -12,7 +12,10 @@ module EFA.Signal.Plot (
    run,
    signal,
    signalFrameAttr,
+   heatmap, xyzrange3d, cbrange, xyzlabel,
+   paletteGH, paletteGray, paletteHSV,
    Signal,
+   Value,
    xy,
    xyBasic,
    xyStyle,
@@ -171,6 +174,7 @@ signalFrameAttr ti x =
    Opts.grid True $
    Opts.deflt
 
+
 signalStyle :: (LineSpec.T -> LineSpec.T) -> Graph2D.T x y -> Graph2D.T x y
 signalStyle opts =
    Graph2D.lineSpec $
@@ -215,6 +219,58 @@ xyFrameAttr ti x y =
    Opts.yLabel (genAxLabel y) $
    Opts.grid True $
    Opts.deflt
+
+heatmap :: (Graph.C graph) => Opts.T graph -> Opts.T graph
+heatmap =
+  Opts.add (Opt.custom "view" "") ["map"] .
+  Opts.add (Opt.custom "pm3d" "") ["at b"]
+
+
+
+xyzrange3d ::
+  (Tuple.C x, Atom.C x,
+  Tuple.C y, Atom.C y,
+  Tuple.C z, Atom.C z) =>
+  (x, x) -> (y, y) -> (z, z) ->
+  Opts.T (Graph3D.T x y z) -> Opts.T (Graph3D.T x y z)
+xyzrange3d xr yr zr =
+  Opts.xRange3d xr .
+  Opts.yRange3d yr .
+  Opts.zRange3d zr
+
+cbrange ::
+  (Tuple.C x, Atom.C x,
+  Tuple.C y, Atom.C y,
+  Tuple.C z, Atom.C z,
+  Show a) =>
+  (a, a) ->
+  Opts.T (Graph3D.T x y z) -> Opts.T (Graph3D.T x y z)
+cbrange (l, h) =
+  Opts.add (Opt.custom "cbrange" "") ["[" ++ show l ++ ":" ++ show h ++ "]"]
+
+xyzlabel ::
+  (Atom.C x, Atom.C y, Atom.C z) =>
+  String -> String -> String ->
+  Opts.T (Graph3D.T x y z) -> Opts.T (Graph3D.T x y z)
+xyzlabel xstr ystr zstr =
+  Opts.xLabel xstr .
+  Opts.yLabel ystr .
+  Opts.zLabel zstr
+
+paletteGH ::
+  (Graph.C graph) => Opts.T graph -> Opts.T graph
+paletteGH = Opts.add (Opt.custom "palette" "")
+  ["defined (0 \"#000044\", 1 \"#336dbf\", 2 \"#3dafe2\", 3 \"#21bced\", 4 \"#87d6f9\", 5 \"#f9af60\", 6 \"#f9af60\", 7 \"#ffaa00\")"]
+
+paletteGray ::
+  (Graph.C graph) => Opts.T graph -> Opts.T graph
+paletteGray = 
+  Opts.add (Opt.custom "palette" "") ["defined ( 0 0 0 0, 1 1 1 1 )"]
+
+paletteHSV ::
+  (Graph.C graph) => Opts.T graph -> Opts.T graph
+paletteHSV =
+  Opts.add (Opt.custom "palette" "") ["model HSV defined ( 0 0 1 1, 1 1 1 1 )"]
 
 xyStyle ::
    (LineSpec.T -> LineSpec.T) -> Plot2D.T x y -> Plot2D.T x y

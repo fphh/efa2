@@ -13,7 +13,7 @@ module EFA.Equation.System (
   fromEnvScalar,
   fromEnvSignal,
 
-  solve, solveFromMeasurement, conservativelySolve,
+  solve, solve2, solveFromMeasurement, conservativelySolve,
   solveSimple,
 
   constant,
@@ -863,6 +863,13 @@ solve ::
   Env.Complete node (rec (Result a)) (rec (Result v))
 solve (_rngs, g) given =
   solveSimple (given <> fromGraph True (TD.dirFromSequFlowGraph g))
+
+solve2 ::
+  (Node.C node, Record rec) =>
+  (forall s. EquationSystem rec node s a v) ->
+  (forall s. EquationSystem rec node s a v) ->
+  Env.Complete node (rec (Result a)) (rec (Result v))
+solve2 eqs given = solveSimple (eqs <> given)
 
 
 --------------------------------------------------------------------

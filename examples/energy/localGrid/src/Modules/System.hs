@@ -19,7 +19,7 @@ import EFA.Signal.Record (SigId(..))
 import qualified Data.Map as M
 
 
-data Node =  Nuklear | Coal | Oil | Gas |
+data Node =  Nuclear | Coal | Oil | Gas |
              Sun | Wind | Water |
              Network | Transformer | LocalNetwork |
              HouseHold | Industry |

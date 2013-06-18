@@ -1,6 +1,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE RankNTypes #-}
 
 module Modules.Optimisation where
 
@@ -19,6 +20,7 @@ import qualified EFA.Equation.Record as EqRec
 import qualified EFA.Equation.Arithmetic as EqArith
 
 import qualified EFA.Graph.Flow as Flow
+import qualified EFA.Graph.Topology as TD
 
 import qualified EFA.Signal.SequenceData as SD
 import qualified EFA.Signal.Record as Record
@@ -94,12 +96,20 @@ etaGiven etaAssign etaFunc = Fold.fold $ M.mapWithKey f etaAssign
                                         (M.lookup strN etaFunc)
                 err str x = error ("not defined: " ++ show str ++ " for " ++ show x)
 
+{-
+eqs ::
+  (a ~ EqArith.Scalar v, Eq a,
+   Eq v, EqArith.Product a, EqArith.Product v, EqArith.Integrate v) =>
+  EqGen.EquationSystem Node s a v
+eqs = EqGen.fromGraph True (TD.dirFromSequFlowGraph (snd System.seqTopoOpt))
+-}
 
 solveCharge ::
   ( Eq a, Show a, EqArith.Product a, EqArith.Integrate (Data Nil a),Ord a,
-    Fractional a, EqArith.Scalar (Data Nil a) ~ Data Nil a) => SolveFunc a
-solveCharge etaAssign etaFunc pRest pRestLocal pWater pGas =
-  EqGen.solve System.seqTopoOpt $
+    Fractional a, EqArith.Scalar (Data Nil a) ~ Data Nil a) =>
+  (forall s. EqGen.EquationSystem Node s (Data Nil a) (Data Nil a)) -> SolveFunc a
+solveCharge eqs etaAssign etaFunc pRest pRestLocal pWater pGas =
+  EqGen.solve2 eqs $
     givenCharging etaAssign etaFunc pRest pRestLocal pWater pGas
 
 givenCharging ::
@@ -135,12 +145,14 @@ givenCharging etaAssign etaFunc pRest pRestLocal pWater pGas =
 
 
 
-solveDischarge ::
+solveDischarge :: 
   ( Eq a, Show a, EqArith.Product a, EqArith.Integrate (Data Nil a),Ord a,
-    Fractional a, EqArith.Scalar (Data Nil a) ~ Data Nil a) => SolveFunc a
-solveDischarge etaAssign etaFunc pRest pRestLocal pWater pGas =
-  EqGen.solve System.seqTopoOpt $
+    Fractional a, EqArith.Scalar (Data Nil a) ~ Data Nil a) =>
+  (forall s. EqGen.EquationSystem Node s (Data Nil a) (Data Nil a)) -> SolveFunc a
+solveDischarge eqs etaAssign etaFunc pRest pRestLocal pWater pGas =
+  EqGen.solve2 eqs $
     givenDischarging etaAssign etaFunc pRest pRestLocal pWater pGas
+
 
 givenDischarging ::
   (Eq a, Num a, Show a, EqArith.Sum a, Fractional a,Ord a) => 
