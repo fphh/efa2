@@ -159,8 +159,8 @@ frameOpts ::
   Opts.T (Graph3D.T Double Double Double)
 frameOpts =
   Plot.heatmap .
-  Plot.xyzrange3d (0.2, 2) (0.3, 3.3) (0, 1.01) .
-  Plot.cbrange (0, 1) .
+  -- Plot.xyzrange3d (0.2, 2) (0.3, 3.3) (0.2, 1.01) .
+  -- Plot.cbrange (0.2, 1) .
   Plot.xyzlabel "Rest Power [W]" "Local Power [W]" "" .
   Plot.paletteGH
 
@@ -258,9 +258,10 @@ makePics ::
   Double ->
   ( Sig.UTSignal2 V.Vector V.Vector Double,
     Sig.PSignal2 V.Vector V.Vector Double, 
-    Sig.PSignal2 V.Vector V.Vector Double )
+    Sig.PSignal2 V.Vector V.Vector Double,
+    Sig.NSignal2 V.Vector V.Vector Double )
 makePics eqs tabEta tabPower socDrive = t
-  where t = (state, optWater, optGas)
+  where t = (state, optWater, optGas, etaSysMax)
         state = Sig.map fromIntegral $ Sig.sigMax2 maxETACharge maxETADischarge
 
         optWater = combineOptimalMaps maxEtaSysState
@@ -272,7 +273,9 @@ makePics eqs tabEta tabPower socDrive = t
         maxEtaSysState = Sig.map fromIntegral $ 
           Sig.sigMax2 maxETACharge maxETADischarge
 
-
+        etaSysMax :: Sig.NSignal2 V.Vector V.Vector Double
+        etaSysMax = Sig.zipWith max maxETACharge maxETADischarge
+  
         powerWaterChargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
         powerWaterChargeOpt = Sig.setType $
           Sig.map (ModUt.lookupAbsPower (XIdx.power sec0 Network Water)) envsChargeOpt
@@ -321,7 +324,7 @@ makePics eqs tabEta tabPower socDrive = t
         gFmap = fmap $ fmap getData
         etaFunc = CT.makeEtaFunctions2D scaleTableEta tabEta
 
-
+{-
 main :: IO ()
 main = do
 
@@ -359,12 +362,21 @@ main = do
            frameOpts noLegend varRestPower varLocalPower
            pic
 
+       plotetasyspng n pic = 
+         PlotIO.surfaceWithOpts "System Efficiency [%]" 
+           (PNG.cons ("etasys/etasys" ++ printf "%02d" n ++ ".png"))
+           id 
+           frameOpts noLegend varRestPower varLocalPower
+           pic
+
+
        plotpng (n, x) =
-         let (s, w, g) = makePics eqs tabEta tabPower x
-         in  do concurrentlyMany_ [
-                  plotstatepng n s ]
-                  --plotwaterpng n w,
-                  --plotgaspng n g ]
+         let (s, w, g, e) = makePics eqs tabEta tabPower x
+         in  --concurrentlyMany_ [
+             do
+               plotetasyspng n s
+               plotwaterpng n w
+               plotgaspng n g
 
 
 
@@ -376,8 +388,7 @@ main = do
      mapM_ plotpng lst2 ]
 
 
-
-{-
+-}
 
 main :: IO ()
 main = do
@@ -387,6 +398,11 @@ main = do
    tabEta <- Table.read "../simulation/maps/eta.txt"
    tabPower <- Table.read "../simulation/maps/power.txt"
    
+   let eqsys ::
+         (a ~ EqArith.Scalar v, Eq a,
+         Eq v, EqArith.Product a, EqArith.Product v, EqArith.Integrate v) =>
+         EqGen.EquationSystem Node s a v
+       eqsys = EqGen.fromGraph True (TD.dirFromSequFlowGraph (snd System.seqTopoOpt))
 
    -- |Import Efficiency Curves
    let etaFunc = CT.makeEtaFunctions2D scaleTableEta tabEta
@@ -422,8 +438,8 @@ main = do
               Node
               (EqRec.Absolute (Result Double))
               (EqRec.Absolute (Result Double))))
-     envsCharge =  Sig.map (Sig.map envFmap) $ 
-       doubleSweep Optimisation.solveCharge
+     envsCharge = Sig.map (Sig.map envFmap) $ 
+       doubleSweep (Optimisation.solveCharge eqsys)
                    etaFunc varWaterPower' varGasPower' varRestPower' varLocalPower'
 
      envsDischarge ::
@@ -434,7 +450,7 @@ main = do
              (EqRec.Absolute (Result Double))
              (EqRec.Absolute (Result Double))))
      envsDischarge = Sig.map (Sig.map envFmap) $ 
-       doubleSweep Optimisation.solveDischarge
+       doubleSweep (Optimisation.solveDischarge eqsys)
                    etaFunc varWaterPower' varGasPower' varRestPower' varLocalPower'
 
      -- | Get maximum Efficiency Envelope for charge and discharge
@@ -592,8 +608,10 @@ main = do
      seqTopoSim = Flow.mkSequenceTopology (select System.flowStatesOpt [4])
      
      -- | Generate and solve Equation System
+
+     eqs :: EqGen.EquationSystem Node s (Data Nil Double) (Data ([] :> Nil) Double)
      eqs = Optimisation.givenSimulate etaAssign etaFunc $ 
-             SD.SequData [(SD.Section (TIdx.Section 0) undefined rec)]
+             SD.SequData [SD.Section (TIdx.Section 0) undefined rec]
 
      envSim = EqGen.solve seqTopoSim eqs
 
@@ -654,43 +672,37 @@ main = do
    concurrentlyMany_ $ [
      --putStrLn ("Storage Balance: " ++ show (ES.balance sequenceFlowTopologySim envSimAnalysisCumulated)),
 
-{-
+
      Draw.xterm $ Draw.topologyWithEdgeLabels System.edgeNamesOpt System.topologyOpt,
      putStrLn ("Number of possible flow states: " ++ show (length System.flowStatesOpt)),
      Draw.xterm $ Draw.flowTopologies (take 20 System.flowStatesOpt),
      Draw.xterm $ Draw.sequFlowGraph System.seqTopoOpt, 
--}
 
-{-
      PlotIO.surfaceWithOpts "Optimal System Efficiency" DefaultTerm.cons id frameOpts noLegend varRestPower varLocalPower etaSysMax,
--}
+
 
      PlotIO.surfaceWithOpts "Optimal State" DefaultTerm.cons id frameOpts noLegend varRestPower varLocalPower maxEtaSysState,
-
-  {-   
+  
      PlotIO.surfaceWithOpts "Charging Optimal System Efficiency " DefaultTerm.cons id frameOpts noLegend varRestPower varLocalPower maxETACharge,
      PlotIO.surfaceWithOpts "Discharging Optimal System Efficiency " DefaultTerm.cons id frameOpts noLegend varRestPower varLocalPower maxETADischarge,
--}
 
      --PlotIO.surface "Discharging Optimal System Efficiency " DefaultTerm.cons id noLegend varRestPower varLocalPower maxETADischarge,
 
 
-{-
+
      PlotIO.surfaceWithOpts "Charging Optimal Gas Power" DefaultTerm.cons id frameOpts noLegend varRestPower varLocalPower powerGasChargeOpt,
      PlotIO.surfaceWithOpts "Charging Optimal Water Power" DefaultTerm.cons id frameOpts noLegend varRestPower varLocalPower powerWaterChargeOpt,
- -}
+
     
 --     PlotIO.surface "Discharging" DefaultTerm.cons id noLegend varRestPower varLocalPower maxETADischarge,
 
-{-
+
      PlotIO.surfaceWithOpts "Discharging Optimal Gas Power " DefaultTerm.cons id frameOpts noLegend varRestPower varLocalPower powerGasDischargeOpt,
      PlotIO.surfaceWithOpts "Discharging Optimal Water Power " DefaultTerm.cons id frameOpts noLegend varRestPower varLocalPower powerWaterDischargeOpt,
 
      PlotIO.surfaceWithOpts "Optimal Water Power" DefaultTerm.cons id frameOpts noLegend varRestPower varLocalPower optWater,
      PlotIO.surfaceWithOpts "Optimal Gas Power" DefaultTerm.cons id frameOpts noLegend varRestPower varLocalPower optGas,
--}
 
-{-
      
      --PlotIO.surface "Transformer Power Charge HV " DefaultTerm.cons id noLegend varRestPower varLocalPower powerTransformerChargeOpt,
      --PlotIO.surface "Transformer Power DisCharge HV" DefaultTerm.cons id noLegend varRestPower varLocalPower powerTransformerDischargeOpt,
@@ -708,9 +720,7 @@ main = do
      report [RAll] ("powerRecordSim", powerRecSim),
      report [RAll] ("rec0", rec0),
      report [RAll] ("rec", rec),
--}
 
-{-
      PlotIO.record "Calculated Signals" DefaultTerm.cons show id rec,
      PlotIO.record "Simulation Result" DefaultTerm.cons show id powerRecSim,
      
@@ -720,7 +730,6 @@ main = do
                                                powerSignalWaterOptDischarge,
                                                powerSignalGasOptCharge, 
                                                powerSignalGasOptDischarge],
--}
 
      --Draw.xterm $ Draw.sequFlowGraphAbsWithEnv  sequenceFlowTopologySim envSimAnalysis,
      --Draw.xterm $ Draw.sequFlowGraphAbsWithEnv  seqTopoSim envSim,
@@ -729,4 +738,3 @@ main = do
      
        return ()
      ]
--}

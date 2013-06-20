@@ -13,7 +13,6 @@ import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Topology.Index as TIdx
 import qualified EFA.Graph.Flow as Flow
 import EFA.Signal.Data (Data(..), Nil, (:>))
-import qualified EFA.Signal.Data as Data
 
 
 import qualified EFA.Example.Index as XIdx
@@ -23,8 +22,6 @@ import qualified EFA.Utility.Bifunctor as BF
 
 import Data.Tuple.HT (fst3, thd3)
 
-import qualified EFA.Signal.Signal as Sig
-
 import qualified Data.Set as S
 import qualified Data.Map as M
 import qualified Data.List as L
@@ -33,9 +30,11 @@ import Control.Applicative (liftA2)
 
 import Data.Traversable (sequenceA)
 
+import Data.Maybe (mapMaybe)
+
 import Data.Ord (comparing)
 
-import Debug.Trace
+import Data.Eq.HT (equating)
 
 
 lookupAbsEnergy ::
@@ -81,8 +80,8 @@ etaSys (_, topo) env = liftA2 (/) (sumRes sinks) (sumRes sources)
             Gr.lefilter (TD.isStructureEdge . fst) $
             TD.dirFromSequFlowGraph topo
 
-        sinks = concatMap (map sinkEnergies . S.toList . fst3) $ filter isActiveSink m
-        sources = concatMap (map sourceEnergies . S.toList . thd3) $ filter isActiveSource m
+        sinks = concatMap (mapMaybe sinkEnergies . S.toList . fst3) $ filter isActiveSink m
+        sources = concatMap (mapMaybe sourceEnergies . S.toList . thd3) $ filter isActiveSource m
 
         sumRes = fmap sum . sequenceA
 
@@ -96,14 +95,13 @@ etaSys (_, topo) env = liftA2 (/) (sumRes sinks) (sumRes sources)
  
         sinkEnergies
           (TD.FlowEdge (TD.StructureEdge (TIdx.InSection sec (Gr.DirEdge a b)))) =
-            lookupAbsEnergy "etaSys, sinkEnergies" env (XIdx.energy sec b a)
-
+            Just $ lookupAbsEnergy "etaSys, sinkEnergies" env (XIdx.energy sec b a)
+        sinkEnergies _ = Nothing
+            
         sourceEnergies 
           (TD.FlowEdge (TD.StructureEdge (TIdx.InSection sec (Gr.DirEdge a b)))) =
-            lookupAbsEnergy "etaSys" env (XIdx.energy sec a b)
-
-equalBy :: (Eq b) => (a -> b) -> a -> a -> Bool
-equalBy f x y = f x == f y
+            Just $ lookupAbsEnergy "etaSys, sourceEnergies" env (XIdx.energy sec a b)
+        sourceEnergies _ = Nothing
 
 
 newtype InBalance node a = InBalance (M.Map node a) deriving (Show)
@@ -142,11 +140,12 @@ storageBalance (_, topo) env = InOutBalance inBalance outBalance
         inSt = concatMap (map Gr.to . S.toList . fst3) $ filter isInSt m
         outSt = concatMap (map Gr.from . S.toList . thd3) $ filter isOutSt m
 
+        -- hier soll ein Map das groupBy und sortBy ersetzen!!!
         inStEs = map (concatMap inFunc) $ 
-                 L.groupBy (equalBy getNode) $ 
+                 L.groupBy (equating getNode) $ 
                  L.sortBy (comparing getNode) inSt
         outStEs = map (concatMap outFunc) $
-                  L.groupBy (equalBy getNode) $
+                  L.groupBy (equating getNode) $
                   L.sortBy (comparing getNode) outSt
         getNode (TIdx.BndNode _ x) = x
 
@@ -194,9 +193,20 @@ bal topo env = S.fold f M.empty keys
         f k = M.insert k (liftA2 (-) (lu k ins) (lu k outs))
 
 
+{-
 balance ::
   (Num d, Ord node, Show d, Show node) =>
   Flow.RangeGraph node ->
   EqEnv.Complete node b (EqRec.Absolute (Result (Data ([] :> Nil) d))) ->
   M.Map node (Result d)
+-}
+
+balance ::
+  (Num d, Ord node, Show d, Show node) =>
+  Flow.RangeGraph node ->
+  EqEnv.Complete node b (EqRec.Absolute (Result (Data ([] :> Nil) d))) ->
+  M.Map node (Result d)
+
+
+
 balance topo env = bal topo (BF.second (fmap (fmap (\(Data x) -> sum x))) env)

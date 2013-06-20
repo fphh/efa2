@@ -116,6 +116,7 @@ Library
     EFA.Example.NestedDelta
     EFA.Example.AssignMap
     EFA.Example.Index
+    EFA.Example.EtaSys
 
 
 -- sollte man auf Cabal-Test umstellen,
@@ -180,6 +181,7 @@ Executable example-optimalStorageUsage
       vector,
       data-accessor,
       utility-ht,
+      containers,
       base
   Else
     Buildable: False

@@ -43,11 +43,9 @@ import qualified EFA.Signal.ConvertTable as Table
 import qualified Data.List as L
 import qualified Data.Map as M
 import qualified Data.Set as S
--- <<<<<<< HEAD
 
 import Data.Tuple.HT (fst3, thd3)
--- =======
--- >>>>>>> master
+
 
 import Control.Applicative (liftA)
 
@@ -482,16 +480,16 @@ main = do
               [hypotheticalUsage, Sig.map fromIntegral optimalState],
 
 
-    PlotIO.surface "Test" DefaultTerm.cons id f varX varY [etaSys0, etaSys1],
+    PlotIO.surface "Test" DefaultTerm.cons f varX varY [etaSys0, etaSys1],
     PlotIO.surface "Systemwirkungsgrad Entladen" 
-                   DefaultTerm.cons id (const "") varX varY etaSys0,
+                   DefaultTerm.cons (const "") varX varY etaSys0,
     PlotIO.surface "Systemwirkungsgrad Laden"
-                   DefaultTerm.cons id (const "") varX varY etaSys1,
+                   DefaultTerm.cons (const "") varX varY etaSys1,
     PlotIO.surface "Systemwirkungsgrad Laden und Entladen"
-                   DefaultTerm.cons id f varX varY [etaSys0, etaSys1],
+                   DefaultTerm.cons f varX varY [etaSys0, etaSys1],
     PlotIO.surface "Maximaler Systemwirkungsgrad"
-                   DefaultTerm.cons id (const "Max") varX varY maxEtaSys,
-    PlotIO.surface "Test" DefaultTerm.cons id (const "Max") varX varY maxEtaSysState ]
+                   DefaultTerm.cons (const "Max") varX varY maxEtaSys,
+    PlotIO.surface "Test" DefaultTerm.cons (const "Max") varX varY maxEtaSysState ]
 
 
 main2 :: IO ()
