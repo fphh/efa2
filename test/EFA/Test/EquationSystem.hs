@@ -38,9 +38,15 @@ checkException solution =
       putStrLn $ Format.unUnicode lhs
       putStrLn $ Format.unUnicode rhs
       putStrLn $ "assignments so far:"
-      forM_ assigns $ \(Verify.Assign var val) ->
-         putStrLn $ Format.unUnicode $ Format.assign var val
+      printAssignments assigns
       exitFailure
+
+
+printAssignments ::
+  Verify.Assigns Format.Unicode -> IO ()
+printAssignments assigns =
+  forM_ assigns $ \(Verify.Assign var val) ->
+    putStrLn $ Format.unUnicode $ Format.assign var val
 
 correctness :: IO ()
 correctness = do
