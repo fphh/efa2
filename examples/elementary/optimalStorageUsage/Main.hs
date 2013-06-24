@@ -114,7 +114,7 @@ commonEnv =
    mconcat $
    (XIdx.dTime sec0 .= 1) :
    (XIdx.dTime sec1 .= 1) :
-   (XIdx.storage TIdx.Initial storage .= 0) :
+   (XIdx.storage TIdx.initial storage .= 0) :
    (XIdx.power sec0 storage crossing %= XIdx.power sec1 storage crossing) :
    []
 
@@ -259,7 +259,7 @@ commonEnvHU ss =
   -- (foldMap (uncurry f) $ zip ss (tail ss))
   -- <>
   ( mconcat $
-    (XIdx.storage TIdx.Initial storage .= D.fromList 20.0) :
+    (XIdx.storage TIdx.initial storage .= D.fromList 20.0) :
     [] )
   where f sec0 sec1 =
           XIdx.power sec0 storage crossing

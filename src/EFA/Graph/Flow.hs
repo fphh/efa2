@@ -214,7 +214,7 @@ mkStorageEdges ::
    [Topo.FlowEdge Gr.EitherEdge (Idx.BndNode node)]
 mkStorageEdges node stores = do
    let (ins, outs) =
-          Map.partition (Topo.In ==) $ Map.mapKeys Idx.AfterSection stores
+          Map.partition (Topo.In ==) $ Map.mapKeys Idx.afterSection stores
    secin <- Idx.initial : Map.keys ins
    secout <- Map.keys $ snd $ Map.split secin outs
    return $

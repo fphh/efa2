@@ -44,7 +44,7 @@ sec0, sec1, sec2, sec3, sec4 :: Idx.Section
 sec0 :~ sec1 :~ sec2 :~ sec3 :~ sec4 :~ _ = Stream.enumFrom $ Idx.Section 0
 
 bndi, bnd0, bnd1, bnd2, bnd3, bnd4 :: Idx.Boundary
-bndi :~ bnd0 :~ bnd1 :~ bnd2 :~ bnd3 :~ bnd4 :~ _ = Stream.enumFrom $ Idx.Initial
+bndi :~ bnd0 :~ bnd1 :~ bnd2 :~ bnd3 :~ bnd4 :~ _ = Stream.enumFrom $ Idx.initial
 
 node0, node1, node2, node3 :: Node.Int
 node0 :~ node1 :~ node2 :~ node3 :~ _ = Stream.enumFrom minBound

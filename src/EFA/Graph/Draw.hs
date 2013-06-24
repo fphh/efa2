@@ -121,7 +121,7 @@ dotFromSequFlowGraph (rngs, g) mtshow nshow structureEdgeShow storageEdgeShow =
               (\e ->
                  case Topo.edgeType e of
                     Topo.StructureEdge se@(Idx.InSection s _) ->
-                       Left (Idx.AfterSection s, [se])
+                       Left (Idx.afterSection s, [se])
                     Topo.StorageEdge se -> Right se) $
            Gr.edges g
 

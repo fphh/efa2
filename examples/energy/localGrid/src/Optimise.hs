@@ -133,7 +133,7 @@ commonGiven =
    mconcat $
    (XIdx.dTime sec0 .= 1) :
    (XIdx.dTime sec1 .= 1) :
-   (XIdx.storage TIdx.Initial Water .= 0) :
+   (XIdx.storage TIdx.initial Water .= 0) :
    (XIdx.energy sec0 Water Network  %= XIdx.energy sec1 Water Network) :
    []
 
