@@ -22,7 +22,9 @@ import EFA.Report.Format (Format, Unicode(Unicode, unUnicode))
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Variable as Var
+
 import qualified EFA.Signal.SequenceData as SD
+import EFA.Signal.Signal (SignalIdx(SignalIdx))
 
 import qualified EFA.Example.Index as XIdx
 import qualified EFA.Graph.Topology.Index as Idx
@@ -169,7 +171,8 @@ dotFromSectionGraph rngs mtshow nshow structureEdgeShow
               Idx.Following (Idx.NoInit s) ->
                  show s ++
                  (case Map.lookup s rngs of
-                     Just (from, to) -> " / Range " ++ show from ++ "-" ++ show to
+                     Just (SignalIdx from, SignalIdx to) ->
+                        " / Range " ++ show from ++ "-" ++ show to
                      Nothing -> error $ "missing range for " ++ show s) ++
                  (flip foldMap mtshow $ \tshow ->
                     " / Time " ++ unUnicode (tshow s))
