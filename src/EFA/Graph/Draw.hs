@@ -22,6 +22,7 @@ import EFA.Report.Format (Format, Unicode(Unicode, unUnicode))
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Variable as Var
+import qualified EFA.Signal.SequenceData as SD
 
 import qualified EFA.Example.Index as XIdx
 import qualified EFA.Graph.Topology.Index as Idx
@@ -130,32 +131,48 @@ dotFromSequFlowGraph (rngs, g) mtshow nshow structureEdgeShow storageEdgeShow =
            map (\nl@(Idx.TimeNode s _, _) -> (s, [nl])) $
            Gr.labNodes g
 
-        sg before (current, (es, ns)) =
-            DotSG True (Just (Int $ fromEnum current)) $
-            DotStmts
-               [GraphAttrs [Label (StrLabel (T.pack str))]]
-               []
-               (map (dotFromSecNode (nshow before)) ns)
-               (map (dotFromStructureEdge structureEdgeShow) es)
-          where str =
-                   case current of
-                      Idx.Following Idx.Init -> "Initial"
-                      Idx.Following (Idx.NoInit s) ->
-                         show s ++
-                         (case Map.lookup s rngs of
-                             Just (from, to) -> " / Range " ++ show from ++ "-" ++ show to
-                             Nothing -> error $ "missing range for " ++ show s) ++
-                         (flip foldMap mtshow $ \tshow ->
-                            " / Time " ++ unUnicode (tshow s))
         stmts =
           DotStmts {
             attrStmts = [],
             subGraphs =
-              zipWith sg (Nothing : map Just (Map.keys topoNs)) $ Map.toAscList $
+              zipWith
+                 (dotFromSectionGraph rngs mtshow nshow structureEdgeShow)
+                 (Nothing : map Just (Map.keys topoNs)) $
+              Map.toAscList $
               TMap.intersectionPartialWith (,) (TMap.cons [] topoEs) topoNs,
             nodeStmts = [],
             edgeStmts = map (dotFromStorageEdge storageEdgeShow) interEs
           }
+
+dotFromSectionGraph ::
+  (Node.C node) =>
+  Map Idx.Section SD.Range ->
+  Maybe (Idx.Section -> Unicode) ->
+  (mbnd -> Topo.StNode store node -> Unicode) ->
+  (Idx.InSection Gr.EitherEdge node -> [Unicode]) ->
+  mbnd ->
+  (Idx.Boundary,
+   ([Idx.InSection Gr.EitherEdge node],
+    [Topo.StNode store node])) ->
+  DotSubGraph T.Text
+dotFromSectionGraph rngs mtshow nshow structureEdgeShow
+  before (current, (es, ns)) =
+    DotSG True (Just (Int $ fromEnum current)) $
+    DotStmts
+      [GraphAttrs [Label (StrLabel (T.pack str))]]
+      []
+      (map (dotFromSecNode (nshow before)) ns)
+      (map (dotFromStructureEdge structureEdgeShow) es)
+  where str =
+           case current of
+              Idx.Following Idx.Init -> "Initial"
+              Idx.Following (Idx.NoInit s) ->
+                 show s ++
+                 (case Map.lookup s rngs of
+                     Just (from, to) -> " / Range " ++ show from ++ "-" ++ show to
+                     Nothing -> error $ "missing range for " ++ show s) ++
+                 (flip foldMap mtshow $ \tshow ->
+                    " / Time " ++ unUnicode (tshow s))
 
 
 graphStatementsAcc ::
