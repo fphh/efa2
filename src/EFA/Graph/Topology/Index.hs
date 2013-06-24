@@ -78,25 +78,27 @@ after :: idx -> Record Delta idx
 after = Record After
 
 
+data TimeNode time node = TimeNode time node deriving (Show, Eq, Ord)
 
-data SecNode node = SecNode Section node deriving (Show, Eq, Ord)
-data BndNode node = BndNode Boundary node deriving (Show, Eq, Ord)
+type SecNode = TimeNode Section
+type BndNode = TimeNode Boundary
+
 
 initBndNode :: node -> BndNode node
-initBndNode = BndNode Initial
+initBndNode = TimeNode Initial
 
 afterSecNode :: Section -> node -> BndNode node
-afterSecNode s = BndNode (AfterSection s)
+afterSecNode s = TimeNode (AfterSection s)
 
 bndNodeFromSecNode :: SecNode node -> BndNode node
-bndNodeFromSecNode (SecNode sec node) =
-   BndNode (AfterSection sec) node
+bndNodeFromSecNode (TimeNode sec node) =
+   TimeNode (AfterSection sec) node
 
 secNodeFromBndNode :: BndNode node -> Maybe (SecNode node)
-secNodeFromBndNode (BndNode bnd node) =
+secNodeFromBndNode (TimeNode bnd node) =
    case bnd of
       Initial -> Nothing
-      AfterSection sec -> Just (SecNode sec node)
+      AfterSection sec -> Just (TimeNode sec node)
 
 
 
@@ -123,7 +125,7 @@ data InSection idx node = InSection Section (idx node)
 
 inSection ::
    (node -> idx node) -> SecNode node -> InSection idx node
-inSection makeIdx (SecNode sec edge) =
+inSection makeIdx (TimeNode sec edge) =
    InSection sec (makeIdx edge)
 
 liftInSection ::
@@ -137,7 +139,7 @@ data ForNode idx node = ForNode (idx node) node
 
 forNode ::
    (Boundary -> idx node) -> BndNode node -> ForNode idx node
-forNode makeIdx (BndNode bnd node) =
+forNode makeIdx (TimeNode bnd node) =
    ForNode (makeIdx bnd) node
 
 liftForNode ::
@@ -177,8 +179,8 @@ storageEdge mkIdx s0 s1 n =
 
 storageEdgeFrom, storageEdgeTo ::
    ForNode StorageEdge node -> BndNode node
-storageEdgeFrom (ForNode (StorageEdge sec _) n) = BndNode sec n
-storageEdgeTo   (ForNode (StorageEdge _ sec) n) = BndNode sec n
+storageEdgeFrom (ForNode (StorageEdge sec _) n) = TimeNode sec n
+storageEdgeTo   (ForNode (StorageEdge _ sec) n) = TimeNode sec n
 
 
 

@@ -775,7 +775,7 @@ fromNodes equalInOutSums =
                                    stoutsum bn =%= integrate (outsum sn))
                    _ -> mempty
                 <>
-                (withSecNode $ \sn@(Idx.SecNode sec _) ->
+                (withSecNode $ \sn@(Idx.TimeNode sec _) ->
                    splitStructEqs sec (insum sn) insStruct
                    <>
                    splitStructEqs sec (outsum sn) outsStruct)
@@ -806,15 +806,15 @@ getStorageSequences =
   foldl
      (Map.unionWith (Map.unionWith (error "duplicate boundary for node")))
      Map.empty .
-  map (\(bn@(Idx.BndNode _ n), dir) -> Map.singleton n $ Map.singleton bn dir) .
+  map (\(bn@(Idx.TimeNode _ n), dir) -> Map.singleton n $ Map.singleton bn dir) .
   Map.toList . Map.mapMaybe TD.maybeStorage . Gr.nodeLabels
 
 
 _getBoundary :: Idx.BndNode a -> Idx.Boundary
-_getBoundary (Idx.BndNode s _) = s
+_getBoundary (Idx.TimeNode s _) = s
 
 _getNode :: Idx.BndNode a -> a
-_getNode (Idx.BndNode _ n) = n
+_getNode (Idx.TimeNode _ n) = n
 
 fromInStorages ::
   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Sum a, a ~ Scalar v,

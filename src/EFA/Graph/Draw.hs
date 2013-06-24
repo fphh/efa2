@@ -127,7 +127,7 @@ dotFromSequFlowGraph (rngs, g) mtshow nshow structureEdgeShow storageEdgeShow =
 
         topoNs =
            Map.fromListWith (++) $
-           map (\nl@(Idx.BndNode s _, _) -> (s, [nl])) $
+           map (\nl@(Idx.TimeNode s _, _) -> (s, [nl])) $
            Gr.labNodes g
 
         sg before (current, (es, ns)) =
@@ -230,7 +230,7 @@ labelFromLines =
 
 
 dotIdentFromBndNode :: (Node.C node) => Idx.BndNode node -> T.Text
-dotIdentFromBndNode (Idx.BndNode b n) =
+dotIdentFromBndNode (Idx.TimeNode b n) =
    T.pack $ "s" ++ dotIdentFromBoundary b ++ "n" ++ Node.dotId n
 
 dotIdentFromBoundary :: Idx.Boundary -> String
@@ -245,7 +245,7 @@ sequFlowGraph ::
   Flow.RangeGraph node ->  DotGraph T.Text
 sequFlowGraph topo =
   dotFromSequFlowGraph topo Nothing nshow eshow eshow
-  where nshow _before (Idx.BndNode _ n, l) =
+  where nshow _before (Idx.TimeNode _ n, l) =
            Unicode $ unUnicode (Node.display n) ++ " - " ++ showType l
         eshow _ = []
 
@@ -400,7 +400,7 @@ formatNodeStorage ::
    Env.StorageMap node (rec a) ->
    Env.StSumMap node (rec a) ->
    Maybe Idx.Boundary -> Topo.LDirNode node -> output
-formatNodeStorage rec st ss mBeforeBnd (n@(Idx.BndNode _bnd nid), ty) =
+formatNodeStorage rec st ss mBeforeBnd (n@(Idx.TimeNode _bnd nid), ty) =
    Format.lines $
    Node.display nid :
    Format.words [formatNodeType ty] :

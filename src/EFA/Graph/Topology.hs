@@ -1,5 +1,6 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE FlexibleInstances #-}
 module EFA.Graph.Topology (
        NLabel (..), LNode, LDirNode, StNode,
        LEdge, LDirEdge,
@@ -203,10 +204,10 @@ class BndNode bndNode where
 
 instance BndNode (Idx.BndNode node) where
    type NodeOf (Idx.BndNode node) = node
-   sectionFromBndNode (Idx.BndNode bnd _node) = bnd
-   nodeFromBndNode (Idx.BndNode _bnd node) = node
+   sectionFromBndNode (Idx.TimeNode bnd _node) = bnd
+   nodeFromBndNode (Idx.TimeNode _time node) = node
    afterSecNode = Idx.afterSecNode
-   bndNode = Idx.BndNode
+   bndNode = Idx.TimeNode
 
 
 
