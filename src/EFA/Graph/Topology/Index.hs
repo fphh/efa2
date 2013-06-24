@@ -23,27 +23,30 @@ instance Enum Section where
         then fromIntegral n
         else error "Section.fromEnum: number too big"
 
-data Boundary = Initial | AfterSection Section deriving (Show, Eq, Ord)
+
+data Init a = Init | NoInit a deriving (Show, Eq, Ord)
+data Exit a = Exit | NoExit a deriving (Show, Eq, Ord)
+newtype Boundary = Following (Init Section) deriving (Show, Eq, Ord)
 
 instance Enum Boundary where
    toEnum n =
       if n == -1
-        then Initial
-        else AfterSection $ toEnum n
-   fromEnum Initial = -1
-   fromEnum (AfterSection n) = fromEnum n
+        then Following Init
+        else Following $ NoInit $ toEnum n
+   fromEnum (Following Init) = -1
+   fromEnum (Following (NoInit n)) = fromEnum n
 
 initial :: Boundary
-initial = Initial
+initial = Following Init
 
 afterSection :: Section -> Boundary
-afterSection = AfterSection
+afterSection = Following . NoInit
 
 beforeSection :: Section -> Boundary
 beforeSection s =
    if s == Section 0
-     then Initial
-     else AfterSection (pred s)
+     then Following Init
+     else Following (NoInit (pred s))
 
 
 data Absolute = Absolute deriving (Show, Eq, Ord)
@@ -85,20 +88,20 @@ type BndNode = TimeNode Boundary
 
 
 initBndNode :: node -> BndNode node
-initBndNode = TimeNode Initial
+initBndNode = TimeNode (Following Init)
 
 afterSecNode :: Section -> node -> BndNode node
-afterSecNode s = TimeNode (AfterSection s)
+afterSecNode s = TimeNode (Following (NoInit s))
 
 bndNodeFromSecNode :: SecNode node -> BndNode node
 bndNodeFromSecNode (TimeNode sec node) =
-   TimeNode (AfterSection sec) node
+   TimeNode (Following (NoInit sec)) node
 
 secNodeFromBndNode :: BndNode node -> Maybe (SecNode node)
 secNodeFromBndNode (TimeNode bnd node) =
    case bnd of
-      Initial -> Nothing
-      AfterSection sec -> Just (TimeNode sec node)
+      Following Init -> Nothing
+      Following (NoInit sec) -> Just (TimeNode sec node)
 
 
 

@@ -139,8 +139,8 @@ dotFromSequFlowGraph (rngs, g) mtshow nshow structureEdgeShow storageEdgeShow =
                (map (dotFromStructureEdge structureEdgeShow) es)
           where str =
                    case current of
-                      Idx.Initial -> "Initial"
-                      Idx.AfterSection s ->
+                      Idx.Following Idx.Init -> "Initial"
+                      Idx.Following (Idx.NoInit s) ->
                          show s ++
                          (case Map.lookup s rngs of
                              Just (from, to) -> " / Range " ++ show from ++ "-" ++ show to
@@ -234,8 +234,8 @@ dotIdentFromBndNode (Idx.TimeNode b n) =
    T.pack $ "s" ++ dotIdentFromBoundary b ++ "n" ++ Node.dotId n
 
 dotIdentFromBoundary :: Idx.Boundary -> String
-dotIdentFromBoundary Idx.Initial = "init"
-dotIdentFromBoundary (Idx.AfterSection (Idx.Section s)) = show s
+dotIdentFromBoundary (Idx.Following Idx.Init) = "init"
+dotIdentFromBoundary (Idx.Following (Idx.NoInit (Idx.Section s))) = show s
 
 dotIdentFromNode :: (Node.C node) => node -> T.Text
 dotIdentFromNode n = T.pack $ Node.dotId n

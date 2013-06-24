@@ -379,5 +379,5 @@ directionShort d =
       Idx.Out -> "o"
 
 boundary :: Format output => Idx.Boundary -> output
-boundary Idx.Initial = initial
-boundary (Idx.AfterSection s) = section s
+boundary (Idx.Following Idx.Init) = initial
+boundary (Idx.Following (Idx.NoInit s)) = section s
