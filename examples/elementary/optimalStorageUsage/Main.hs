@@ -360,7 +360,7 @@ main = do
       maxEtaSys = Sig.zipWith max etaSys0 etaSys1
 
       maxEtaSysState :: Sig.UTSignal2 [] [] Double
-      maxEtaSysState = Sig.map fromIntegral $ Sig.sigMax2 etaSys0 etaSys1
+      maxEtaSysState = Sig.map fromIntegral $ Sig.argMax etaSys0 etaSys1
 
       maxEtaSys0, maxEtaSys1 :: Sig.NTestRow [] Double
       maxEtaSys0 = Sig.map2 maximum (Sig.transpose2 $ Sig.changeSignalType etaSys0)
@@ -369,7 +369,7 @@ main = do
       maxEtaLinear = Sig.zipWith max maxEtaSys0 maxEtaSys1
 
       maxEtaSysStateLinear :: Sig.NSignal [] Int
-      maxEtaSysStateLinear = Sig.sigMax2 maxEtaSys0 maxEtaSys1
+      maxEtaSysStateLinear = Sig.argMax maxEtaSys0 maxEtaSys1
 
 
       bf = a . borderFunc maxEtaSysStateLinear sinkRangeSig
