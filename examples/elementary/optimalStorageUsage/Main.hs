@@ -34,15 +34,17 @@ import EFA.Equation.Result (Result(..))
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
-import EFA.Utility.Map (checkedLookup)
+import EFA.Utility.Map (checkedLookup2)
 import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 
 import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.ConvertTable as Table
 
-import qualified Data.List as L
+import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Set as Set
+
+import Data.Tuple.HT (fst3, thd3)
 
 import Control.Applicative (liftA)
 
@@ -177,41 +179,29 @@ etaSys ::
     (EqRec.Absolute (Result Double)) ->
   Double
 etaSys env =
-  (lookup eSinkSec0 + lookup eSinkSec1) / (lookup eSource)
-  where
-        lookup n |
-          EqRec.Absolute (Determined x) <-
-            checkedLookup (EqEnv.energyMap $ EqEnv.signal env) n = x
-          | otherwise = error (show n ++ "\n" ++ show (EqEnv.energyMap $ EqEnv.signal env))
-
+  (lu eSinkSec0 + lu eSinkSec1) / (lu eSource)
+  where lu = lookUp "etaSys" env
         eSource = XIdx.energy sec0 source crossing
         eSinkSec0 = XIdx.energy sec0 sink crossing
         eSinkSec1 = XIdx.energy sec1 sink crossing
         
-{-
-etaSys2 ::
-  (Show a, Ord a) =>
-  Flow.RangeGraph a ->
-  EqEnv.Complete
-    Node.Int
-    (EqRec.Absolute (Result Double))
-    (EqRec.Absolute (Result Double)) ->
-  Double
--}
-etaSys2 (_, topo) _ = trace (show sinks) undefined
-  where sinks = Map.filter isSink $ Gr.nodeEdges topo
-        isSink (_, el, x) =
-          case el of
-               TD.AlwaysSource -> Set.size x > 0
-               TD.Source -> Set.size x > 0
-               _ -> False
+
+lookUp ::
+  (Ord node, Show node, Show t) =>
+  String ->
+  EqEnv.Complete node b (EqRec.Absolute (Result t)) ->
+  TIdx.InSection TIdx.Energy node -> t
+lookUp caller env n =
+  case checkedLookup2 caller (EqEnv.energyMap $ EqEnv.signal env) n of
+       EqRec.Absolute (Determined x) -> x
+       otherwise -> error (show n ++ "\n" ++ show (EqEnv.energyMap $ EqEnv.signal env))
 
 
 sinkRange :: [Double]
-sinkRange = [0.1, 0.2 .. 20]
+sinkRange = [0.1] -- , 0.2 .. 20]
 
 ratioRange :: [Double]
-ratioRange = [0.1, 0.2 .. 0.9]
+ratioRange = [0.1] -- , 0.2 .. 0.9]
 
 varX', varY' :: [[Double]]
 (varX', varY') = Table.varMat sinkRange ratioRange
@@ -228,23 +218,27 @@ hypotheticalUsage = Sig.fromList [
 
 -- noch ein bischen besser, falls p < kleinster wert in xs
 -- auch fuer mehrdimensionale Signale
+{-
 borderFunc ::
   (Show d, Eq d, Ord d) =>
-  Sig.NTestRow [] Int -> Sig.PSignal [] d -> (d -> Int)
+  Sig.UTTestRow [] Int -> Sig.PSignal [] d -> (d -> Int)
+-}
+
+-- sortBy groupBy equation !!!
 borderFunc ss xs p =
   case dropWhile ((< p) . fst) zs of
        (_, s):_ -> s
        _ -> error $ "Power " ++ show p ++ " out of range " ++ show zs
   where ts = zip (Sig.toList ss) (Sig.toList xs)
-        ys = map f (L.groupBy (\x y -> fst x == fst y) ts)
+        ys = map f (List.groupBy (\x y -> fst x == fst y) ts)
         f as = case last as of (a, b) -> (b, a)
-        zs = L.sortBy (comparing fst) ys
+        zs = List.sortBy (comparing fst) ys
 
 sectionHU ::
   Sig.PSignal [] d -> (d -> Int) -> [(Int, Sig.PSignal [] d)]
 sectionHU ss bf = ws
   where ts = Sig.toList ss
-        us = L.groupBy (\x y -> fst x == fst y) $ zip (map bf ts) ts
+        us = List.groupBy (\x y -> fst x == fst y) $ zip (map bf ts) ts
         ws = map f us
         f ((s, w):xs) = (s, Sig.fromList (w:(map snd xs)))
 
@@ -312,8 +306,6 @@ givenEnvHU xs =
       <>
       (foldMap givenEnvHUSec ys)
 
-
-
 etaSysHU ::
   EqEnv.Complete
     Node.Int
@@ -321,14 +313,13 @@ etaSysHU ::
     (EqRec.Absolute (Result Double)) ->
   Double
 etaSysHU env =
-  (lookup eSinkSec0 + lookup eSinkSec1) / (lookup eSource) 
-  where 
-        lookup n | 
-          EqRec.Absolute (Determined x) <-
-            checkedLookup (EqEnv.energyMap $ EqEnv.signal env) n = x
+  (lu eSinkSec0 + lu eSinkSec1) / (lu eSource) 
+  where lu = lookUp "etaSysHU" env
         eSource = XIdx.energy sec0 source crossing
         eSinkSec0 = XIdx.energy sec0 sink crossing
         eSinkSec1 = XIdx.energy sec1 sink crossing
+
+
 
 
 main :: IO ()
@@ -342,8 +333,8 @@ main = do
       varY :: Sig.XSignal2 [] [] Double
       varY = Sig.fromList2 varY'
 
-      f0 x y = etaSys2 seqTopo $ EqGen.solve seqTopo $ givenSec0Mean x y
-      f1 x y = etaSys2 seqTopo $ EqGen.solve seqTopo $ givenSec1Mean x y
+      f0 x y = etaSys $ EqGen.solve seqTopo $ givenSec0Mean x y
+      f1 x y = etaSys $ EqGen.solve seqTopo $ givenSec1Mean x y
 
 
       env0 = EqGen.solve seqTopo $ givenSec0Mean 4.0 0.4
@@ -368,7 +359,7 @@ main = do
 
       maxEtaLinear = Sig.zipWith max maxEtaSys0 maxEtaSys1
 
-      maxEtaSysStateLinear :: Sig.NSignal [] Int
+      --maxEtaSysStateLinear :: Sig.UTTestRow [] Int
       maxEtaSysStateLinear = Sig.argMax maxEtaSys0 maxEtaSys1
 
 
@@ -410,10 +401,12 @@ main = do
       Draw.title "Hypothetical Usage Sequence Flow Graph" $
       Draw.sequFlowGraphAbsWithEnv seqTopoHU envHU,
 
+{-
     PlotIO.xy "Test" DefaultTerm.cons id g sinkRangeSig
               [ maxEtaSys0, maxEtaSys1,
                 maxEtaLinear,
                 Sig.map fromIntegral maxEtaSysStateLinear],
+-}
 
     PlotIO.xy "Optimale Zustände" DefaultTerm.cons id h sinkRangeSig
               [hypotheticalUsage, Sig.map fromIntegral optimalState] ]
@@ -431,24 +424,11 @@ main = do
     PlotIO.surface "Test" DefaultTerm.cons id (const "Max") varX varY maxEtaSysState ]
 -}
 
-getEnergy ::
-  TIdx.InSection TIdx.Energy Node.Int ->
-  EqEnv.Complete
-    Node.Int
-    (EqRec.Absolute (Result Double))
-    (EqRec.Absolute (Result Double)) -> Double
-getEnergy n env = lookup
-  where
-        lookup |
-          EqRec.Absolute (Determined x) <-
-            checkedLookup (EqEnv.energyMap $ EqEnv.signal env) n = x
-
-
 main2 :: IO ()
 main2 = do
   let y = 1
 
-      f e x = getEnergy e $ EqGen.solve seqTopo $ givenSec0Mean x y
+      f e x = lookUp "f" (EqGen.solve seqTopo $ givenSec0Mean x y) e
       esc1 = XIdx.energy sec1 sink crossing
       ecs1 = XIdx.energy sec1 crossing sink
       estc1 = XIdx.energy sec1 storage crossing
