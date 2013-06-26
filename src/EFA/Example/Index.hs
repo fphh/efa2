@@ -38,19 +38,43 @@ sum :: Idx.Section -> Idx.Direction -> node -> Sum node
 sum sec dir = Idx.InSection sec . Idx.Sum dir
 
 
-maxEnergy :: Idx.AugmentedSection -> Idx.AugmentedSection -> node -> MaxEnergy node
-stEnergy :: Idx.AugmentedSection -> Idx.AugmentedSection -> node -> StEnergy node
-stX :: Idx.AugmentedSection -> Idx.AugmentedSection -> node -> StX node
+maxEnergy ::
+   (Idx.ToAugmentedSection from, Idx.ToAugmentedSection to) =>
+   from -> to -> node -> MaxEnergy node
 
-maxEnergy = Idx.storageEdge Idx.MaxEnergy
-stEnergy  = Idx.storageEdge Idx.StEnergy
-stX       = Idx.storageEdge Idx.StX
+stEnergy ::
+   (Idx.ToAugmentedSection from, Idx.ToAugmentedSection to) =>
+   from -> to -> node -> StEnergy node
 
-stSum :: Idx.Direction -> Idx.AugmentedSection -> node -> StSum node
-stSum dir bnd node = Idx.ForNode (Idx.StSum dir bnd) node
+stX ::
+   (Idx.ToAugmentedSection from, Idx.ToAugmentedSection to) =>
+   from -> to -> node -> StX node
+
+maxEnergy = storageEdge Idx.MaxEnergy
+stEnergy  = storageEdge Idx.StEnergy
+stX       = storageEdge Idx.StX
+
+storageEdge ::
+   (Idx.ToAugmentedSection from, Idx.ToAugmentedSection to) =>
+   (Idx.StorageEdge node -> idx node) ->
+   from -> to -> node -> Idx.ForNode idx node
+storageEdge mkIdx a b =
+   Idx.storageEdge mkIdx (Idx.augmentSection a) (Idx.augmentSection b)
+
+stSum ::
+   (Idx.ToAugmentedSection sec) =>
+   Idx.Direction -> sec -> node -> StSum node
+stSum dir sec node = Idx.ForNode (Idx.StSum dir (Idx.augmentSection sec)) node
 
 storage :: Idx.Boundary -> node -> Storage node
 storage = Idx.ForNode . Idx.Storage
 
 ppos :: node -> node -> Idx.PPos node
 ppos a b = Idx.PPos $ Idx.StructureEdge a b
+
+
+initSection :: Idx.InitOrSection
+initSection = Idx.Init
+
+exitSection :: Idx.SectionOrExit
+exitSection = Idx.Exit

@@ -29,13 +29,60 @@ instance Enum Section where
 data Init a = Init | NoInit a deriving (Show, Eq, Ord)
 data Exit a = Exit | NoExit a deriving (Show, Eq, Ord)
 
-type AugmentedSection = Init (Exit Section)
+type InitOrSection = Init Section
+type SectionOrExit = Exit Section
+type AugmentedSection = Init SectionOrExit
 
-augmentSection :: Section -> AugmentedSection
-augmentSection = NoInit . NoExit
 
-initSection :: AugmentedSection
-initSection = Init
+instance Functor Init where
+   fmap _ Init = Init
+   fmap f (NoInit a) = NoInit $ f a
+
+instance Functor Exit where
+   fmap _ Exit = Exit
+   fmap f (NoExit a) = NoExit $ f a
+
+
+class ToAugmentedSection sec where
+   augmentSection :: sec -> AugmentedSection
+
+instance ToAugmentedSection Section where
+   augmentSection = NoInit . NoExit
+
+instance ToSectionOrExit sec => ToAugmentedSection (Init sec) where
+   augmentSection = fmap sectionOrExit
+
+instance ToSection sec => ToAugmentedSection (Exit sec) where
+   augmentSection = NoInit . fmap toSection
+
+
+class ToInitOrSection sec where
+   initOrSection :: sec -> InitOrSection
+
+instance ToInitOrSection Section where
+   initOrSection = NoInit
+
+instance ToSection sec => ToInitOrSection (Init sec) where
+   initOrSection = fmap toSection
+
+
+class ToSectionOrExit sec where
+   sectionOrExit :: sec -> SectionOrExit
+
+instance ToSectionOrExit Section where
+   sectionOrExit = NoExit
+
+instance ToSection sec => ToSectionOrExit (Exit sec) where
+   sectionOrExit = fmap toSection
+
+
+class ToSection sec where
+   toSection :: sec -> Section
+
+instance ToSection Section where
+   toSection = id
+
+
 
 boundaryFromAugSection :: AugmentedSection -> Maybe Boundary
 boundaryFromAugSection x =
@@ -46,10 +93,7 @@ boundaryFromAugSection x =
       NoInit (NoExit s) -> Just $ NoInit s
 
 augSectionFromBoundary :: Boundary -> AugmentedSection
-augSectionFromBoundary (Following bnd) =
-   case bnd of
-      Init -> Init
-      NoInit sec -> NoInit $ NoExit sec
+augSectionFromBoundary (Following bnd) = fmap NoExit bnd
 
 
 newtype Boundary = Following (Init Section) deriving (Show, Eq, Ord)

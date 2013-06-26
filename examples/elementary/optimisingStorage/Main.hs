@@ -106,7 +106,7 @@ eout0 = XIdx.energy sec0 N2 N1
 eout1 = XIdx.energy sec1 N2 N1
 
 e33 :: Expr s Double
-e33 = EqGen.variable $ XIdx.stEnergy Idx.initSection (Idx.augmentSection sec1) N3
+e33 = EqGen.variable $ XIdx.stEnergy XIdx.initSection sec1 N3
 
 time :: Idx.Section -> Expr s Double
 time = EqGen.variable . XIdx.dTime
