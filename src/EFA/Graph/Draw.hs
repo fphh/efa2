@@ -473,9 +473,10 @@ data Env node output =
       formatEnergy,
       formatX,
       formatEta    :: Idx.InSection Idx.StructureEdge node -> output,
-      formatMaxEnergy,
+      formatMaxEnergy
+                   :: Idx.ForNode Idx.StorageEdge node -> output,
       formatStEnergy,
-      formatStX    :: Idx.ForNode Idx.StorageEdge node -> output,
+      formatStX    :: Idx.ForNode Idx.StorageTrans node -> output,
       formatTime   :: Idx.Section -> output,
       formatNode   :: Maybe Idx.Boundary -> Topo.LDirNode node -> output
    }
@@ -529,11 +530,13 @@ sequFlowGraphWithEnv g env =
                        formatEnergy env (Idx.flip e) :
                        []
         storeEShow e =
-           formatMaxEnergy env e :
-           formatStEnergy env e :
-           formatStX env e :
-           formatStX env (Idx.flip e) :
-           []
+           case Idx.liftForNode Idx.storageTransFromEdge e of
+              se ->
+                 formatMaxEnergy env e :
+                 formatStEnergy env se :
+                 formatStX env se :
+                 formatStX env (Idx.flip se) :
+                 []
 
 sequFlowGraphAbsWithEnv ::
    (FormatValue a, FormatValue v, Node.C node) =>

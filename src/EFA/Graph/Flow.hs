@@ -213,10 +213,13 @@ mkStorageEdges ::
    node -> Map Idx.Section Topo.StoreDir ->
    [Topo.FlowEdge Gr.EitherEdge (Idx.AugNode node)]
 mkStorageEdges node stores = do
-   let (ins, outs) =
-          Map.partition (Topo.In ==) $ Map.mapKeys Idx.augmentSection stores
-   secin <- Idx.Init : Map.keys ins
-   secout <- Map.keys $ snd $ Map.split secin outs
+   let (ins, outs) = Map.partition (Topo.In ==) stores
+   secin <- Idx.Init : map Idx.NoInit (Map.keys ins)
+   secout <-
+      map Idx.NoExit $ Map.keys $
+      case secin of
+         Idx.Init -> outs
+         Idx.NoInit s -> snd $ Map.split s outs
    return $
       (Topo.FlowEdge $ Topo.StorageEdge $
        Idx.ForNode (Idx.StorageEdge secin secout) node)

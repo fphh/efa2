@@ -25,7 +25,6 @@ instance Enum Section where
         then fromIntegral n
         else error "Section.fromEnum: number too big"
 
-
 data Init a = Init | NoInit a deriving (Show, Eq, Ord)
 data Exit a = Exit | NoExit a deriving (Show, Eq, Ord)
 
@@ -83,6 +82,13 @@ instance ToSection Section where
    toSection = id
 
 
+allowInit :: SectionOrExit -> AugmentedSection
+allowInit = NoInit
+
+allowExit :: InitOrSection -> AugmentedSection
+allowExit = fmap NoExit
+
+
 
 boundaryFromAugSection :: AugmentedSection -> Maybe Boundary
 boundaryFromAugSection x =
@@ -93,7 +99,7 @@ boundaryFromAugSection x =
       NoInit (NoExit s) -> Just $ NoInit s
 
 augSectionFromBoundary :: Boundary -> AugmentedSection
-augSectionFromBoundary (Following bnd) = fmap NoExit bnd
+augSectionFromBoundary (Following bnd) = allowExit bnd
 
 
 newtype Boundary = Following (Init Section) deriving (Show, Eq, Ord)
@@ -192,17 +198,34 @@ secNode = TimeNode
 data StructureEdge node = StructureEdge node node
    deriving (Show, Read, Eq, Ord)
 
-data StorageEdge node = StorageEdge AugmentedSection AugmentedSection
+{- |
+A storage edge is always directed from an early to a later section.
+However, a splitting factor exists both in chronological and reversed order.
+On the other hand in the future we may use chronological order exclusively
+and register two split factors per edge.
+-}
+data StorageEdge node = StorageEdge InitOrSection SectionOrExit
+   deriving (Show, Eq, Ord)
+
+data StorageTrans node = StorageTrans AugmentedSection AugmentedSection
    deriving (Show, Eq, Ord)
 
 instance TC.Eq StructureEdge where eq = (==)
 instance TC.Eq StorageEdge   where eq = (==)
+instance TC.Eq StorageTrans  where eq = (==)
 
 instance TC.Ord StructureEdge where cmp = compare
 instance TC.Ord StorageEdge   where cmp = compare
+instance TC.Ord StorageTrans  where cmp = compare
 
 instance TC.Show StructureEdge where showsPrec = showsPrec
 instance TC.Show StorageEdge   where showsPrec = showsPrec
+instance TC.Show StorageTrans  where showsPrec = showsPrec
+
+
+storageTransFromEdge :: StorageEdge node -> StorageTrans node
+storageTransFromEdge (StorageEdge s0 s1) =
+   StorageTrans (allowExit s0) (allowInit s1)
 
 
 data InSection idx node = InSection Section (idx node)
@@ -258,14 +281,21 @@ structureEdge mkIdx s x y =
 
 storageEdge ::
    (StorageEdge node -> idx node) ->
-   AugmentedSection -> AugmentedSection -> node -> ForNode idx node
+   InitOrSection -> SectionOrExit -> node -> ForNode idx node
 storageEdge mkIdx s0 s1 n =
    ForNode (mkIdx $ StorageEdge s0 s1) n
 
+storageTrans ::
+   (StorageTrans node -> idx node) ->
+   AugmentedSection -> AugmentedSection -> node -> ForNode idx node
+storageTrans mkIdx s0 s1 n =
+   ForNode (mkIdx $ StorageTrans s0 s1) n
+
+
 storageEdgeFrom, storageEdgeTo ::
    ForNode StorageEdge node -> AugNode node
-storageEdgeFrom (ForNode (StorageEdge sec _) n) = TimeNode sec n
-storageEdgeTo   (ForNode (StorageEdge _ sec) n) = TimeNode sec n
+storageEdgeFrom (ForNode (StorageEdge sec _) n) = TimeNode (allowExit sec) n
+storageEdgeTo   (ForNode (StorageEdge _ sec) n) = TimeNode (allowInit sec) n
 
 
 
@@ -283,8 +313,8 @@ instance Flip StructureEdge where
 instance Flip idx => Flip (ForNode idx) where
    flip (ForNode idx n) = ForNode (flip idx) n
 
-instance Flip StorageEdge where
-   flip (StorageEdge s0 s1) = StorageEdge s1 s0
+instance Flip StorageTrans where
+   flip (StorageTrans s0 s1) = StorageTrans s1 s0
 
 
 instance Flip Power where
@@ -316,7 +346,7 @@ instance (QC.Arbitrary node) => QC.Arbitrary (PPos node) where
 -- | Energy variables.
 newtype Energy node = Energy (StructureEdge node) deriving (Show, Ord, Eq)
 
-newtype StEnergy node = StEnergy (StorageEdge node) deriving (Show, Ord, Eq)
+newtype StEnergy node = StEnergy (StorageTrans node) deriving (Show, Ord, Eq)
 
 
 -- | Energy variables for hypothetical outgoing energies.
@@ -333,7 +363,7 @@ newtype Eta node = Eta (StructureEdge node) deriving (Show, Ord, Eq)
 -- | Splitting factors.
 newtype X node = X (StructureEdge node) deriving (Show, Ord, Eq)
 
-newtype StX node = StX (StorageEdge node) deriving (Show, Ord, Eq)
+newtype StX node = StX (StorageTrans node) deriving (Show, Ord, Eq)
 
 newtype Storage node = Storage Boundary deriving (Show, Ord, Eq)
 

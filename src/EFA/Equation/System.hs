@@ -96,7 +96,6 @@ import Data.Map (Map)
 import Data.Traversable (Traversable, traverse, for, sequenceA)
 import Data.Foldable (foldMap, fold)
 import Data.Monoid (Monoid, (<>), mempty, mappend, mconcat)
-import Data.Tuple.HT (mapPair)
 import Data.Ord.HT (comparing)
 import Data.Maybe (mapMaybe)
 
@@ -540,7 +539,7 @@ maxEnergy = variableRecord . Idx.liftForNode Idx.MaxEnergy
 
 stEnergy ::
    (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Sum a, Record rec, Node.C node) =>
-   Idx.ForNode Idx.StorageEdge node -> RecordExpression mode rec node s a v a
+   Idx.ForNode Idx.StorageTrans node -> RecordExpression mode rec node s a v a
 stEnergy = variableRecord . Idx.liftForNode Idx.StEnergy
 
 eta ::
@@ -555,7 +554,7 @@ xfactor = variableRecord . Idx.liftInSection Idx.X
 
 stxfactor ::
    (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Sum a, Record rec, Node.C node) =>
-   Idx.ForNode Idx.StorageEdge node -> RecordExpression mode rec node s a v a
+   Idx.ForNode Idx.StorageTrans node -> RecordExpression mode rec node s a v a
 stxfactor = variableRecord . Idx.liftForNode Idx.StX
 
 insum ::
@@ -588,6 +587,12 @@ dtime ::
    Idx.Section -> RecordExpression mode rec node s a v v
 dtime = variableRecord . flip Idx.InSection Idx.DTime
 
+
+storageTransFromEdge ::
+   Idx.ForNode Idx.StorageEdge node ->
+   Idx.ForNode Idx.StorageTrans node
+storageTransFromEdge =
+   Idx.liftForNode Idx.storageTransFromEdge
 
 mwhen :: Monoid a => Bool -> a -> a
 mwhen True t = t
@@ -709,7 +714,9 @@ fromEdges =
                 e = TD.structureEdgeFromDirEdge edge
             in  equ e <> equ (Idx.flip e) <>
                 (power (Idx.flip e) =%= eta e ~* power e)
-         TD.StorageEdge e -> stEnergy e =%= stEnergy (Idx.flip e)
+         TD.StorageEdge ste ->
+            case storageTransFromEdge ste of
+               e -> stEnergy e =%= stEnergy (Idx.flip e)
 
 fromNodes ::
   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Constant a, a ~ Scalar v,
@@ -734,9 +741,7 @@ fromNodes equalInOutSums =
                    Set.toList
 
                 (outsStruct, outsStore) = partition outs
-                (insStruct,  insStore) =
-                   mapPair (map Idx.flip, map Idx.flip) $
-                   partition ins
+                (insStruct,  insStore)  = partition ins
 
                 splitStructEqs sec varsum edges =
                    foldMap
@@ -762,7 +767,9 @@ fromNodes equalInOutSums =
                                 With Exit storages we must use stinsum here.
                                 splitStoreEqs (stinsum bn) outsStore
                                 -}
-                                withLocalVar (\s -> splitStoreEqs s outsStore)
+                                withLocalVar (\s ->
+                                   splitStoreEqs s $
+                                   map storageTransFromEdge outsStore)
                                 <>
                                 (stinsum an =%=
                                  case msn of
@@ -774,14 +781,15 @@ fromNodes equalInOutSums =
                              TD.Out ->
                                 fromOutStorages insStore
                                 <>
-                                splitStoreEqs (stoutsum an) insStore
+                                splitStoreEqs (stoutsum an)
+                                   (map (Idx.flip . storageTransFromEdge) insStore)
                                 <>
                                 (withSecNode $ \sn ->
                                    stoutsum an =%= integrate (outsum sn))
                    _ -> mempty
                 <>
                 (withSecNode $ \sn@(Idx.TimeNode sec _) ->
-                   splitStructEqs sec (insum sn) insStruct
+                   splitStructEqs sec (insum sn) (map Idx.flip insStruct)
                    <>
                    splitStructEqs sec (outsum sn) outsStruct)
 
@@ -840,7 +848,7 @@ fromInStorages sn outs =
    let toSec (Idx.ForNode (Idx.StorageEdge _ x) _) = x
        souts = List.sortBy (comparing toSec) outs
        maxEnergies = map maxEnergy souts
-       stEnergies  = map stEnergy  souts
+       stEnergies  = map (stEnergy . storageTransFromEdge) souts
    in  mconcat $
        zipWith (=%=) maxEnergies
           (stinsum sn : zipWith (~-) maxEnergies stEnergies)
@@ -852,7 +860,8 @@ fromOutStorages ::
 fromOutStorages ins =
    withLocalVar $ \s ->
       foldMap
-         (splitFactors s (maxEnergy . Idx.flip) Arith.one stxfactor)
+         (splitFactors s maxEnergy Arith.one
+            (stxfactor . Idx.flip . storageTransFromEdge))
          (NonEmpty.fetch ins)
 
 splitFactors ::

@@ -385,6 +385,14 @@ boundary :: Format output => Idx.Boundary -> output
 boundary (Idx.Following Idx.Init) = initial
 boundary (Idx.Following (Idx.NoInit s)) = section s
 
+initOrSection :: Format output => Idx.InitOrSection -> output
+initOrSection (Idx.Init) = initial
+initOrSection (Idx.NoInit s) = section s
+
+sectionOrExit :: Format output => Idx.SectionOrExit -> output
+sectionOrExit (Idx.NoExit s) = section s
+sectionOrExit (Idx.Exit) = exit
+
 augmentedSection :: Format output => Idx.AugmentedSection -> output
 augmentedSection Idx.Init = initial
 augmentedSection (Idx.NoInit (Idx.NoExit s)) = section s

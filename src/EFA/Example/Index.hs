@@ -39,7 +39,7 @@ sum sec dir = Idx.InSection sec . Idx.Sum dir
 
 
 maxEnergy ::
-   (Idx.ToAugmentedSection from, Idx.ToAugmentedSection to) =>
+   (Idx.ToInitOrSection from, Idx.ToSectionOrExit to) =>
    from -> to -> node -> MaxEnergy node
 
 stEnergy ::
@@ -51,20 +51,29 @@ stX ::
    from -> to -> node -> StX node
 
 maxEnergy = storageEdge Idx.MaxEnergy
-stEnergy  = storageEdge Idx.StEnergy
-stX       = storageEdge Idx.StX
+stEnergy  = storageTrans Idx.StEnergy
+stX       = storageTrans Idx.StX
 
 storageEdge ::
-   (Idx.ToAugmentedSection from, Idx.ToAugmentedSection to) =>
+   (Idx.ToInitOrSection from, Idx.ToSectionOrExit to) =>
    (Idx.StorageEdge node -> idx node) ->
    from -> to -> node -> Idx.ForNode idx node
 storageEdge mkIdx a b =
-   Idx.storageEdge mkIdx (Idx.augmentSection a) (Idx.augmentSection b)
+   Idx.storageEdge mkIdx (Idx.initOrSection a) (Idx.sectionOrExit b)
+
+storageTrans ::
+   (Idx.ToAugmentedSection from, Idx.ToAugmentedSection to) =>
+   (Idx.StorageTrans node -> idx node) ->
+   from -> to -> node -> Idx.ForNode idx node
+storageTrans mkIdx a b =
+   Idx.storageTrans mkIdx (Idx.augmentSection a) (Idx.augmentSection b)
+
 
 stSum ::
    (Idx.ToAugmentedSection sec) =>
    Idx.Direction -> sec -> node -> StSum node
 stSum dir sec node = Idx.ForNode (Idx.StSum dir (Idx.augmentSection sec)) node
+
 
 storage :: Idx.Boundary -> node -> Storage node
 storage = Idx.ForNode . Idx.Storage

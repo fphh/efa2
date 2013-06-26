@@ -130,13 +130,13 @@ instance Gr.Edge structEdge => Gr.Edge (FlowEdge structEdge) where
          StructureEdge (Idx.InSection sec se) ->
             secNode sec $ Gr.from se
          StorageEdge (Idx.ForNode (Idx.StorageEdge sec _) node) ->
-            augNode sec node
+            augNode (Idx.allowExit sec) node
    to (FlowEdge e) =
       case e of
          StructureEdge (Idx.InSection sec se) ->
             secNode sec $ Gr.to se
          StorageEdge (Idx.ForNode (Idx.StorageEdge _ sec) node) ->
-            augNode sec node
+            augNode (Idx.allowInit sec) node
 
 wrapEdgeType :: EdgeType structEdge node -> EdgeType (TC.Wrap structEdge) node
 wrapEdgeType et =
