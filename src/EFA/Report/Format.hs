@@ -84,7 +84,7 @@ class Format output where
    function :: Function -> output -> output
    integral :: output -> output
    recordDelta :: Idx.Delta -> output -> output
-   initial :: output
+   initial, exit :: output
    section :: Idx.Section -> output
    sectionNode :: output -> output -> output
    direction :: Idx.Direction -> output
@@ -130,6 +130,7 @@ instance Format ASCII where
          Idx.After -> "[1]"
          Idx.Delta -> "d"
    initial = ASCII "init"
+   exit = ASCII "exit"
    section (Idx.Section s) = ASCII $ show s
    sectionNode (ASCII s) (ASCII x) = ASCII $ s ++ "." ++ x
 
@@ -195,6 +196,7 @@ instance Format Unicode where
          Idx.After -> "\xb9"
          Idx.Delta -> [deltaChar]
    initial = Unicode "init"
+   exit = Unicode "exit"
    section (Idx.Section s) = Unicode $ show s
    sectionNode (Unicode s) (Unicode x) = Unicode $ s ++ "." ++ x
 
@@ -303,7 +305,8 @@ instance Format Latex where
          Idx.Before -> "\\leftexp{0}{" ++ rest ++ "}"
          Idx.After -> "\\leftexp{1}{" ++ rest ++ "}"
          Idx.Delta -> "\\Delta " ++ rest
-   initial = Latex "init"
+   initial = Latex "\\mbox{init}"
+   exit = Latex "\\mbox{exit}"
    section (Idx.Section s) = Latex $ show s
    sectionNode (Latex s) (Latex x) = Latex $ s ++ ":" ++ x
 
@@ -381,3 +384,8 @@ directionShort d =
 boundary :: Format output => Idx.Boundary -> output
 boundary (Idx.Following Idx.Init) = initial
 boundary (Idx.Following (Idx.NoInit s)) = section s
+
+augmentedSection :: Format output => Idx.AugmentedSection -> output
+augmentedSection Idx.Init = initial
+augmentedSection (Idx.NoInit (Idx.NoExit s)) = section s
+augmentedSection (Idx.NoInit Idx.Exit) = exit

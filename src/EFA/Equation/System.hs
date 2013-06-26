@@ -98,6 +98,7 @@ import Data.Foldable (foldMap, fold)
 import Data.Monoid (Monoid, (<>), mempty, mappend, mconcat)
 import Data.Tuple.HT (mapPair)
 import Data.Ord.HT (comparing)
+import Data.Maybe (mapMaybe)
 
 import qualified Prelude as P
 import Prelude hiding (sqrt, (.))
@@ -569,12 +570,12 @@ outsum = variableRecord . Idx.inSection (Idx.Sum Idx.Out)
 
 stinsum ::
    (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Sum a, Record rec, Node.C node) =>
-   Idx.BndNode node -> RecordExpression mode rec node s a v a
+   Idx.AugNode node -> RecordExpression mode rec node s a v a
 stinsum = variableRecord . Idx.forNode (Idx.StSum Idx.In)
 
 stoutsum ::
    (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Sum a, Record rec, Node.C node) =>
-   Idx.BndNode node -> RecordExpression mode rec node s a v a
+   Idx.AugNode node -> RecordExpression mode rec node s a v a
 stoutsum = variableRecord . Idx.forNode (Idx.StSum Idx.Out)
 
 storage ::
@@ -698,7 +699,7 @@ fromGraph equalInOutSums g = mconcat $
 fromEdges ::
   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Sum a,
    Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node, Product v, Record rec, Node.C node) =>
-  [TD.FlowEdge Gr.DirEdge (Idx.BndNode node)] ->
+  [TD.FlowEdge Gr.DirEdge (Idx.AugNode node)] ->
   EquationSystem mode rec node s a v
 fromEdges =
    foldMap $ \se ->
@@ -718,8 +719,9 @@ fromNodes ::
   TD.DirSequFlowGraph node -> EquationSystem mode rec node s a v
 fromNodes equalInOutSums =
   fold . Map.mapWithKey f . Gr.nodeEdges
-   where f bn (ins, nodeType, outs) =
-            let msn = Idx.secNodeFromBndNode bn
+   where f an (ins, nodeType, outs) =
+            let mbn = Idx.bndNodeFromAugNode an
+                msn = Idx.secNodeFromBndNode =<< mbn
                 withSecNode = flip foldMap msn
 
                 partition =
@@ -754,7 +756,7 @@ fromNodes equalInOutSums =
                    TD.Storage (Just dir) ->
                           case dir of
                              TD.In ->
-                                fromInStorages bn outsStore
+                                fromInStorages an outsStore
                                 <>
                                 {-
                                 With Exit storages we must use stinsum here.
@@ -762,17 +764,20 @@ fromNodes equalInOutSums =
                                 -}
                                 withLocalVar (\s -> splitStoreEqs s outsStore)
                                 <>
-                                (stinsum bn =%=
+                                (stinsum an =%=
                                  case msn of
-                                    Nothing -> storage bn
-                                    Just sn -> integrate $ insum sn)
+                                    Just sn -> integrate $ insum sn
+                                    Nothing ->
+                                       case mbn of
+                                          Just bn -> storage bn
+                                          Nothing -> error "Exit node must not be an In storage")
                              TD.Out ->
                                 fromOutStorages insStore
                                 <>
-                                splitStoreEqs (stoutsum bn) insStore
+                                splitStoreEqs (stoutsum an) insStore
                                 <>
                                 (withSecNode $ \sn ->
-                                   stoutsum bn =%= integrate (outsum sn))
+                                   stoutsum an =%= integrate (outsum sn))
                    _ -> mempty
                 <>
                 (withSecNode $ \sn@(Idx.TimeNode sec _) ->
@@ -787,21 +792,30 @@ fromStorageSequences ::
    Record rec, Node.C node) =>
   TD.DirSequFlowGraph node -> EquationSystem mode rec node s a v
 fromStorageSequences =
-   foldMap (mconcat . ListHT.mapAdjacent f . Map.toList) . getStorageSequences
-  where f (before, _) (now, dir) =
-           storage now
-           =%=
-           case dir of
-              Nothing     -> storage before
-              Just TD.In  -> storage before ~+ stinsum now
-              Just TD.Out -> storage before ~- stoutsum now
+   let f xm =
+          let xs = Map.toList xm
+              storages =
+                 map storage $ mapMaybe Idx.bndNodeFromAugNode $ map fst xs
+              charge store (now, dir) =
+                 case dir of
+                    Nothing     -> store
+                    Just TD.In  -> store ~+ stinsum now
+                    Just TD.Out -> store ~- stoutsum now
+          in  mconcat $
+              zipWith (=%=) storages $
+                 case ListHT.viewL xs of
+                    Just ((initIdx, Just TD.In),ys) ->
+                       stinsum initIdx : zipWith charge storages ys
+                    Just _ -> error "Init storage is not In"
+                    Nothing -> error "empty storage sequence"
+   in  foldMap f . getStorageSequences
 
 
 -- Storages must not have more than one in or out edge.
 getStorageSequences ::
   (Node.C node) =>
   TD.DirSequFlowGraph node ->
-  Map node (Map (Idx.BndNode node) (Maybe TD.StoreDir))
+  Map node (Map (Idx.AugNode node) (Maybe TD.StoreDir))
 getStorageSequences =
   foldl
      (Map.unionWith (Map.unionWith (error "duplicate boundary for node")))
@@ -820,7 +834,7 @@ fromInStorages ::
   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Sum a, a ~ Scalar v,
    Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node, Product v, Integrate v,
    Record rec, Node.C node) =>
-  Idx.BndNode node -> [Idx.ForNode Idx.StorageEdge node] ->
+  Idx.AugNode node -> [Idx.ForNode Idx.StorageEdge node] ->
   EquationSystem mode rec node s a v
 fromInStorages sn outs =
    let toSec (Idx.ForNode (Idx.StorageEdge _ x) _) = x

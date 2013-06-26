@@ -38,15 +38,15 @@ sum :: Idx.Section -> Idx.Direction -> node -> Sum node
 sum sec dir = Idx.InSection sec . Idx.Sum dir
 
 
-maxEnergy :: Idx.Boundary -> Idx.Boundary -> node -> MaxEnergy node
-stEnergy :: Idx.Boundary -> Idx.Boundary -> node -> StEnergy node
-stX :: Idx.Boundary -> Idx.Boundary -> node -> StX node
+maxEnergy :: Idx.AugmentedSection -> Idx.AugmentedSection -> node -> MaxEnergy node
+stEnergy :: Idx.AugmentedSection -> Idx.AugmentedSection -> node -> StEnergy node
+stX :: Idx.AugmentedSection -> Idx.AugmentedSection -> node -> StX node
 
 maxEnergy = Idx.storageEdge Idx.MaxEnergy
 stEnergy  = Idx.storageEdge Idx.StEnergy
 stX       = Idx.storageEdge Idx.StX
 
-stSum :: Idx.Direction -> Idx.Boundary -> node -> StSum node
+stSum :: Idx.Direction -> Idx.AugmentedSection -> node -> StSum node
 stSum dir bnd node = Idx.ForNode (Idx.StSum dir bnd) node
 
 storage :: Idx.Boundary -> node -> Storage node

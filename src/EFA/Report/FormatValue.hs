@@ -114,7 +114,7 @@ formatStorageEdge ::
    Format.EdgeVar -> Idx.StorageEdge node -> node -> output
 formatStorageEdge e (Idx.StorageEdge s0 s1) n =
    Format.subscript (Format.edgeIdent e) $
-   (Format.boundary s0 `Format.link` Format.boundary s1)
+   (Format.augmentedSection s0 `Format.link` Format.augmentedSection s1)
       `Format.sectionNode` Node.subscript n
 
 
@@ -156,10 +156,10 @@ instance FormatScalarIndex Idx.StX where
    formatScalarIndex (Idx.StX e) = formatStorageEdge Format.X e
 
 instance FormatScalarIndex Idx.StSum where
-   formatScalarIndex (Idx.StSum dir bnd) n =
+   formatScalarIndex (Idx.StSum dir s) n =
       Format.subscript Format.scalarSum $
       Format.direction dir `Format.connect`
-         formatBoundaryNode (Idx.TimeNode bnd n)
+         Format.augmentedSection s `Format.sectionNode` Node.subscript n
 
 
 formatChar :: Format output => Char -> output

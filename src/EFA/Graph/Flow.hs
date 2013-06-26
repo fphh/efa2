@@ -205,17 +205,17 @@ mkSectionTopology ::
   Idx.Section -> ClassifiedTopology node -> SequFlowGraph node
 mkSectionTopology sec =
    Gr.ixmap
-      (Idx.afterSecNode sec)
+      (Idx.TimeNode (Idx.augmentSection sec))
       (Topo.FlowEdge . Topo.StructureEdge . Idx.InSection sec)
 
 
 mkStorageEdges ::
    node -> Map Idx.Section Topo.StoreDir ->
-   [Topo.FlowEdge Gr.EitherEdge (Idx.BndNode node)]
+   [Topo.FlowEdge Gr.EitherEdge (Idx.AugNode node)]
 mkStorageEdges node stores = do
    let (ins, outs) =
-          Map.partition (Topo.In ==) $ Map.mapKeys Idx.afterSection stores
-   secin <- Idx.initial : Map.keys ins
+          Map.partition (Topo.In ==) $ Map.mapKeys Idx.augmentSection stores
+   secin <- Idx.Init : Map.keys ins
    secout <- Map.keys $ snd $ Map.split secin outs
    return $
       (Topo.FlowEdge $ Topo.StorageEdge $
@@ -248,7 +248,7 @@ type RangeGraph node = (Map Idx.Section SD.Range, SequFlowGraph node)
 
 insEdges ::
    Ord node =>
-   [Topo.FlowEdge Gr.EitherEdge (Idx.BndNode node)] ->
+   [Topo.FlowEdge Gr.EitherEdge (Idx.AugNode node)] ->
    SequFlowGraph node ->
    SequFlowGraph node
 insEdges = Gr.insEdges . map (flip (,) ())
@@ -264,7 +264,7 @@ mkSequenceTopology sd =
    (,) (Fold.fold $ SD.mapWithSectionRange (\s rng _ -> Map.singleton s rng) sq) $
    insEdges (Fold.fold $ Map.mapWithKey mkStorageEdges tracks) $
    insNodes
-      (map (\n -> (Idx.initBndNode n, Topo.Storage (Just Topo.In))) sts) $
+      (map (\n -> (Idx.initSecNode n, Topo.Storage (Just Topo.In))) sts) $
    Fold.fold $
    SD.mapWithSection mkSectionTopology sq
   where sq = fmap Topo.classifyStorages sd

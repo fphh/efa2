@@ -42,7 +42,7 @@ import Data.GraphViz (
           runGraphvizCanvas,
           GraphvizCanvas(Xlib),
           runGraphvizCommand,
-          GraphID(Int),
+          GraphID(Int,Str),
           GlobalAttributes(GraphAttrs),
           GraphvizCommand(Dot),
           DotEdge(DotEdge),
@@ -124,7 +124,7 @@ dotFromSequFlowGraph (rngs, g) mtshow nshow structureEdgeShow storageEdgeShow =
               (\e ->
                  case Topo.edgeType e of
                     Topo.StructureEdge se@(Idx.InSection s _) ->
-                       Left (Idx.afterSection s, [se])
+                       Left (Idx.augmentSection s, [se])
                     Topo.StorageEdge se -> Right se) $
            Gr.edges g
 
@@ -150,25 +150,26 @@ dotFromSectionGraph ::
   (Node.C node) =>
   Map Idx.Section SD.Range ->
   Maybe (Idx.Section -> Unicode) ->
-  (mbnd -> Topo.StNode store node -> Unicode) ->
+  (Maybe Idx.Boundary -> Topo.StNode store node -> Unicode) ->
   (Idx.InSection Gr.EitherEdge node -> [Unicode]) ->
-  mbnd ->
-  (Idx.Boundary,
+  Maybe Idx.AugmentedSection ->
+  (Idx.AugmentedSection,
    ([Idx.InSection Gr.EitherEdge node],
     [Topo.StNode store node])) ->
   DotSubGraph T.Text
 dotFromSectionGraph rngs mtshow nshow structureEdgeShow
   before (current, (es, ns)) =
-    DotSG True (Just (Int $ fromEnum current)) $
+    DotSG True (Just $ Str $ T.pack $ dotIdentFromAugSection current) $
     DotStmts
       [GraphAttrs [Label (StrLabel (T.pack str))]]
       []
-      (map (dotFromSecNode (nshow before)) ns)
+      (map (dotFromSecNode (nshow $ fmap boundaryFromAugSection before)) ns)
       (map (dotFromStructureEdge structureEdgeShow) es)
   where str =
            case current of
-              Idx.Following Idx.Init -> "Initial"
-              Idx.Following (Idx.NoInit s) ->
+              Idx.Init -> "Init"
+              Idx.NoInit Idx.Exit -> "Exit"
+              Idx.NoInit (Idx.NoExit s) ->
                  show s ++
                  (case Map.lookup s rngs of
                      Just (SignalIdx from, SignalIdx to) ->
@@ -176,6 +177,11 @@ dotFromSectionGraph rngs mtshow nshow structureEdgeShow
                      Nothing -> error $ "missing range for " ++ show s) ++
                  (flip foldMap mtshow $ \tshow ->
                     " / Time " ++ unUnicode (tshow s))
+
+boundaryFromAugSection :: Idx.Init (Idx.Exit Idx.Section) -> Idx.Boundary
+boundaryFromAugSection x =
+   case Idx.boundaryFromAugSection x of
+      Just y -> y
 
 
 graphStatementsAcc ::
@@ -219,7 +225,7 @@ dotFromSecNode ::
   (Topo.StNode store node -> Unicode) ->
   Topo.StNode store node -> DotNode T.Text
 dotFromSecNode nshow n@(x, nodeType) =
-  DotNode (dotIdentFromBndNode x) (mkNodeAttrs nodeType displabel)
+  DotNode (dotIdentFromAugNode x) (mkNodeAttrs nodeType displabel)
   where displabel = Label $ StrLabel $ T.pack $ unUnicode $ nshow n
 
 dotFromStructureEdge ::
@@ -228,7 +234,7 @@ dotFromStructureEdge ::
   Idx.InSection Gr.EitherEdge node -> DotEdge T.Text
 dotFromStructureEdge eshow e =
    DotEdge
-      (dotIdentFromBndNode x) (dotIdentFromBndNode y)
+      (dotIdentFromSecNode x) (dotIdentFromSecNode y)
       [labelFromLines $ order $ eshow e,
        Viz.Dir dir, structureEdgeColour]
   where (DirEdge x y, dir, order) = orientFlowEdge e
@@ -239,8 +245,8 @@ dotFromStorageEdge ::
   Idx.ForNode Idx.StorageEdge node -> DotEdge T.Text
 dotFromStorageEdge eshow e =
    DotEdge
-      (dotIdentFromBndNode $ Idx.storageEdgeFrom e)
-      (dotIdentFromBndNode $ Idx.storageEdgeTo   e)
+      (dotIdentFromAugNode $ Idx.storageEdgeFrom e)
+      (dotIdentFromAugNode $ Idx.storageEdgeTo   e)
       [labelFromLines $ eshow e, Viz.Dir Forward,
        storageEdgeColour, Constraint True]
 
@@ -249,13 +255,21 @@ labelFromLines =
    Label . StrLabel . T.pack . L.intercalate "\n" . map unUnicode
 
 
-dotIdentFromBndNode :: (Node.C node) => Idx.BndNode node -> T.Text
-dotIdentFromBndNode (Idx.TimeNode b n) =
-   T.pack $ "s" ++ dotIdentFromBoundary b ++ "n" ++ Node.dotId n
+dotIdentFromSecNode :: (Node.C node) => Idx.SecNode node -> T.Text
+dotIdentFromSecNode (Idx.TimeNode s n) =
+   T.pack $ "s" ++ dotIdentFromSection s ++ "n" ++ Node.dotId n
 
-dotIdentFromBoundary :: Idx.Boundary -> String
-dotIdentFromBoundary (Idx.Following Idx.Init) = "init"
-dotIdentFromBoundary (Idx.Following (Idx.NoInit (Idx.Section s))) = show s
+dotIdentFromSection :: Idx.Section -> String
+dotIdentFromSection (Idx.Section s) = show s
+
+dotIdentFromAugNode :: (Node.C node) => Idx.AugNode node -> T.Text
+dotIdentFromAugNode (Idx.TimeNode b n) =
+   T.pack $ "s" ++ dotIdentFromAugSection b ++ "n" ++ Node.dotId n
+
+dotIdentFromAugSection :: Idx.AugmentedSection -> String
+dotIdentFromAugSection Idx.Init = "init"
+dotIdentFromAugSection (Idx.NoInit Idx.Exit) = "exit"
+dotIdentFromAugSection (Idx.NoInit (Idx.NoExit s)) = dotIdentFromSection s
 
 dotIdentFromNode :: (Node.C node) => node -> T.Text
 dotIdentFromNode n = T.pack $ Node.dotId n
@@ -354,13 +368,13 @@ flowTopologies ts = DotGraph False True Nothing stmts
 orientFlowEdge ::
    (Ord node) =>
    Idx.InSection Gr.EitherEdge node ->
-   (DirEdge (Idx.BndNode node), DirType, [s] -> [s])
+   (DirEdge (Idx.SecNode node), DirType, [s] -> [s])
 orientFlowEdge (Idx.InSection sec e) =
    mapFst3
       (\(DirEdge x y) ->
          DirEdge
-            (Idx.afterSecNode sec x)
-            (Idx.afterSecNode sec y)) $
+            (Idx.secNode sec x)
+            (Idx.secNode sec y)) $
    case e of
       Gr.EUnDirEdge ue -> (orientUndirEdge ue, NoDir, const [])
       Gr.EDirEdge de -> orientDirEdge de
@@ -420,17 +434,19 @@ formatNodeStorage ::
    Env.StorageMap node (rec a) ->
    Env.StSumMap node (rec a) ->
    Maybe Idx.Boundary -> Topo.LDirNode node -> output
-formatNodeStorage rec st ss mBeforeBnd (n@(Idx.TimeNode _bnd nid), ty) =
+formatNodeStorage rec st ss mBeforeBnd (n@(Idx.TimeNode sec nid), ty) =
    Format.lines $
    Node.display nid :
    Format.words [formatNodeType ty] :
       case ty of
          Storage dir ->
+          let nst = Idx.TimeNode (boundaryFromAugSection sec) nid
+          in
             case mBeforeBnd of
-               Nothing -> [lookupFormat rec st $ Idx.forNode Idx.Storage n]
+               Nothing -> [lookupFormat rec st $ Idx.forNode Idx.Storage nst]
                Just beforeBnd ->
                   case (lookupFormat rec st $ XIdx.storage beforeBnd nid,
-                        lookupFormat rec st $ Idx.forNode Idx.Storage n) of
+                        lookupFormat rec st $ Idx.forNode Idx.Storage nst) of
                      (before, after) ->
                         before :
                         (case dir of

@@ -9,7 +9,9 @@ import Data.Ord.HT (comparing)
 import Data.Eq.HT (equating)
 import Data.Word (Word)
 
+import qualified Prelude as P
 import Prelude hiding (flip)
+
 
 newtype Section = Section Word deriving (Show, Eq, Ord)
 
@@ -26,6 +28,30 @@ instance Enum Section where
 
 data Init a = Init | NoInit a deriving (Show, Eq, Ord)
 data Exit a = Exit | NoExit a deriving (Show, Eq, Ord)
+
+type AugmentedSection = Init (Exit Section)
+
+augmentSection :: Section -> AugmentedSection
+augmentSection = NoInit . NoExit
+
+initSection :: AugmentedSection
+initSection = Init
+
+boundaryFromAugSection :: AugmentedSection -> Maybe Boundary
+boundaryFromAugSection x =
+   fmap Following $
+   case x of
+      Init -> Just Init
+      NoInit Exit -> Nothing
+      NoInit (NoExit s) -> Just $ NoInit s
+
+augSectionFromBoundary :: Boundary -> AugmentedSection
+augSectionFromBoundary (Following bnd) =
+   case bnd of
+      Init -> Init
+      NoInit sec -> NoInit $ NoExit sec
+
+
 newtype Boundary = Following (Init Section) deriving (Show, Eq, Ord)
 
 instance Enum Boundary where
@@ -84,11 +110,12 @@ after = Record After
 data TimeNode time node = TimeNode time node deriving (Show, Eq, Ord)
 
 type SecNode = TimeNode Section
+type AugNode = TimeNode AugmentedSection
 type BndNode = TimeNode Boundary
 
 
-initBndNode :: node -> BndNode node
-initBndNode = TimeNode (Following Init)
+initSecNode :: node -> AugNode node
+initSecNode = TimeNode Init
 
 afterSecNode :: Section -> node -> BndNode node
 afterSecNode s = TimeNode (Following (NoInit s))
@@ -103,6 +130,17 @@ secNodeFromBndNode (TimeNode bnd node) =
       Following Init -> Nothing
       Following (NoInit sec) -> Just (TimeNode sec node)
 
+augNodeFromBndNode :: BndNode node -> AugNode node
+augNodeFromBndNode (TimeNode bnd node) =
+   TimeNode (augSectionFromBoundary bnd) node
+
+bndNodeFromAugNode :: AugNode node -> Maybe (BndNode node)
+bndNodeFromAugNode (TimeNode aug node) =
+   fmap (P.flip TimeNode node) $ boundaryFromAugSection aug
+
+secNode :: Section -> node -> SecNode node
+secNode = TimeNode
+
 
 
 -- * Edge indices
@@ -110,7 +148,7 @@ secNodeFromBndNode (TimeNode bnd node) =
 data StructureEdge node = StructureEdge node node
    deriving (Show, Read, Eq, Ord)
 
-data StorageEdge node = StorageEdge Boundary Boundary
+data StorageEdge node = StorageEdge AugmentedSection AugmentedSection
    deriving (Show, Eq, Ord)
 
 instance TC.Eq StructureEdge where eq = (==)
@@ -141,7 +179,7 @@ data ForNode idx node = ForNode (idx node) node
    deriving (Show, Eq, Ord)
 
 forNode ::
-   (Boundary -> idx node) -> BndNode node -> ForNode idx node
+   (time -> idx node) -> TimeNode time node -> ForNode idx node
 forNode makeIdx (TimeNode bnd node) =
    ForNode (makeIdx bnd) node
 
@@ -176,12 +214,12 @@ structureEdge mkIdx s x y =
 
 storageEdge ::
    (StorageEdge node -> idx node) ->
-   Boundary -> Boundary -> node -> ForNode idx node
+   AugmentedSection -> AugmentedSection -> node -> ForNode idx node
 storageEdge mkIdx s0 s1 n =
    ForNode (mkIdx $ StorageEdge s0 s1) n
 
 storageEdgeFrom, storageEdgeTo ::
-   ForNode StorageEdge node -> BndNode node
+   ForNode StorageEdge node -> AugNode node
 storageEdgeFrom (ForNode (StorageEdge sec _) n) = TimeNode sec n
 storageEdgeTo   (ForNode (StorageEdge _ sec) n) = TimeNode sec n
 
@@ -259,7 +297,7 @@ data Direction = In | Out deriving (Show, Eq, Ord)
 
 data Sum node = Sum Direction node deriving (Show, Ord, Eq)
 
-data StSum node = StSum Direction Boundary deriving (Show, Ord, Eq)
+data StSum node = StSum Direction AugmentedSection deriving (Show, Ord, Eq)
 
 
 -- * Other indices
