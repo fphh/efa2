@@ -29,10 +29,10 @@ topoDreibein = Gr.fromList ns (makeEdges es)
 treeDreibein :: TD.Topology Node.Int
 treeDreibein =
    Tree.toGraph $
-   Tree.cons node3 TD.storage
-      <+ (Tree.cons node2 TD.Crossing
-             <+ Tree.cons node1 TD.Sink
-             <+ Tree.cons node0 TD.Source)
+   Tree.storage node3
+      <+ (Tree.crossing node2
+             <+ Tree.sink node1
+             <+ Tree.source node0)
 
 
 runTests :: IO ()
