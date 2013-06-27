@@ -1,4 +1,5 @@
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE FlexibleContexts #-}
 module EFA.Equation.Environment where
 
@@ -57,10 +58,10 @@ data Scalar node a =
       stSumMap :: StSumMap node a
    } deriving (Show, Eq)
 
-data Complete node b a =
+data Complete node a v =
    Complete {
-      scalar :: Scalar node b,
-      signal :: Signal node a
+      scalar :: Scalar node a,
+      signal :: Signal node v
    } deriving (Show, Eq)
 
 
@@ -237,33 +238,93 @@ instance AccessScalarMap Idx.StSum where
 
 
 
-instance Functor (Signal node) where
-   fmap f (Signal e p n dt x s) =
-      Signal (fmap f e) (fmap f p) (fmap f n) (fmap f dt) (fmap f x) (fmap f s)
+signalLift0 ::
+   (Ord node) =>
+   (forall k. Ord k => Map k a) ->
+   Signal node a
+signalLift0 f =
+   Signal f f f f f f
 
-instance Functor (Scalar node) where
-   fmap f (Scalar me st se sx ss) =
-      Scalar (fmap f me) (fmap f st) (fmap f se) (fmap f sx) (fmap f ss)
+scalarLift0 ::
+   (Ord node) =>
+   (forall k. Ord k => Map k a) ->
+   Scalar node a
+scalarLift0 f =
+   Scalar f f f f f
+
+
+signalLift1 ::
+   (Ord node) =>
+   (forall k. Ord k => Map k a -> Map k b) ->
+   Signal node a -> Signal node b
+signalLift1 f (Signal e p n dt x s) =
+   Signal (f e) (f p) (f n) (f dt) (f x) (f s)
+
+scalarLift1 ::
+   (Ord node) =>
+   (forall k. Ord k => Map k a -> Map k b) ->
+   Scalar node a -> Scalar node b
+scalarLift1 f (Scalar me st se sx ss) =
+   Scalar (f me) (f st) (f se) (f sx) (f ss)
+
+lift1 ::
+   (Scalar node a0 -> Scalar node a) ->
+   (Signal node v0 -> Signal node v) ->
+   Complete node a0 v0 ->
+   Complete node a v
+lift1 f g (Complete scalar0 signal0) =
+   Complete (f scalar0) (g signal0)
+
+
+signalLift2 ::
+   (Ord node) =>
+   (forall k. Ord k => Map k a -> Map k b -> Map k c) ->
+   Signal node a -> Signal node b -> Signal node c
+signalLift2 f (Signal e p n dt x s) (Signal e' p' n' dt' x' s') =
+   Signal (f e e') (f p p') (f n n') (f dt dt') (f x x') (f s s')
+
+scalarLift2 ::
+   (Ord node) =>
+   (forall k. Ord k => Map k a -> Map k b -> Map k c) ->
+   Scalar node a -> Scalar node b -> Scalar node c
+scalarLift2 f (Scalar me st se sx ss) (Scalar me' st' se' sx' ss') =
+   Scalar (f me me') (f st st') (f se se') (f sx sx') (f ss ss')
+
+lift2 ::
+   (Scalar node a0 -> Scalar node a1 -> Scalar node a) ->
+   (Signal node v0 -> Signal node v1 -> Signal node v) ->
+   Complete node a0 v0 ->
+   Complete node a1 v1 ->
+   Complete node a v
+lift2 f g (Complete scalar0 signal0) (Complete scalar1 signal1) =
+   Complete (f scalar0 scalar1) (g signal0 signal1)
+
+
+instance Ord node => Functor (Signal node) where
+   fmap f = signalLift1 (fmap f)
+
+instance Ord node => Functor (Scalar node) where
+   fmap f = scalarLift1 (fmap f)
 
 completeFMap ::
+   Ord node =>
    (a0 -> a1) -> (v0 -> v1) ->
    Complete node a0 v0 -> Complete node a1 v1
-completeFMap f g (Complete scalar0 signal0) =
-   Complete (fmap f scalar0) (fmap g signal0)
+completeFMap f g = lift1 (fmap f) (fmap g)
 
 
-instance Foldable (Signal node) where
+instance Ord node => Foldable (Signal node) where
    foldMap = foldMapDefault
 
-instance Foldable (Scalar node) where
+instance Ord node => Foldable (Scalar node) where
    foldMap = foldMapDefault
 
 
-instance Traversable (Signal node) where
+instance Ord node => Traversable (Signal node) where
    sequenceA (Signal e p n dt x s) =
       pure Signal <?> e <?> p <?> n <?> dt <?> x <?> s
 
-instance Traversable (Scalar node) where
+instance Ord node => Traversable (Scalar node) where
    sequenceA (Scalar me st se sx ss) =
       pure Scalar <?> me <?> st <?> se <?> sx <?> ss
 
@@ -274,28 +335,17 @@ infixl 4 <?>
 f <?> x = f <*> sequenceA x
 
 
-
 instance (Ord node) => Monoid (Signal node a) where
-   mempty = Signal Map.empty Map.empty Map.empty Map.empty Map.empty Map.empty
-   mappend
-         (Signal e p n dt x s)
-         (Signal e' p' n' dt' x' s') =
-      Signal
-         (Map.union e e') (Map.union p p') (Map.union n n')
-         (Map.union dt dt') (Map.union x x') (Map.union s s')
+   mempty = signalLift0 Map.empty
+   mappend = signalLift2 Map.union
 
 instance (Ord node) => Monoid (Scalar node a) where
-   mempty = Scalar Map.empty Map.empty Map.empty Map.empty Map.empty
-   mappend (Scalar me st se sx ss) (Scalar me' st' se' sx' ss') =
-      Scalar
-         (Map.union me me') (Map.union st st')
-         (Map.union se se') (Map.union sx sx')
-         (Map.union ss ss')
+   mempty = scalarLift0 Map.empty
+   mappend = scalarLift2 Map.union
 
 instance (Ord node) => Monoid (Complete node b a) where
    mempty = Complete mempty mempty
-   mappend (Complete scalar0 signal0) (Complete scalar1 signal1) =
-      Complete (mappend scalar0 scalar1) (mappend signal0 signal1)
+   mappend = lift2 mappend mappend
 
 
 signalIntersectionWith ::
@@ -304,12 +354,8 @@ signalIntersectionWith ::
    Signal node a ->
    Signal node b ->
    Signal node c
-signalIntersectionWith f
-   (Signal e p n dt x s) (Signal e' p' n' dt' x' s') =
-      Signal
-         (Map.intersectionWith f e e') (Map.intersectionWith f p p')
-         (Map.intersectionWith f n n') (Map.intersectionWith f dt dt')
-         (Map.intersectionWith f x x') (Map.intersectionWith f s s')
+signalIntersectionWith f =
+   signalLift2 (Map.intersectionWith f)
 
 scalarIntersectionWith ::
    (Ord node) =>
@@ -317,12 +363,8 @@ scalarIntersectionWith ::
    Scalar node a ->
    Scalar node b ->
    Scalar node c
-scalarIntersectionWith f
-   (Scalar me st se sx ss) (Scalar me' st' se' sx' ss') =
-      Scalar
-         (Map.intersectionWith f me me') (Map.intersectionWith f st st')
-         (Map.intersectionWith f se se') (Map.intersectionWith f sx sx')
-         (Map.intersectionWith f ss ss')
+scalarIntersectionWith f =
+   scalarLift2 (Map.intersectionWith f)
 
 intersectionWith ::
    (Ord node) =>
@@ -331,11 +373,10 @@ intersectionWith ::
    Complete node a u ->
    Complete node b v ->
    Complete node c w
-intersectionWith f g
-   (Complete scalar0 signal0) (Complete scalar1 signal1) =
-      Complete
-         (scalarIntersectionWith f scalar0 scalar1)
-         (signalIntersectionWith g signal0 signal1)
+intersectionWith f g =
+   lift2
+      (scalarIntersectionWith f)
+      (signalIntersectionWith g)
 
 
 signalDifference ::
@@ -343,47 +384,35 @@ signalDifference ::
    Signal node a ->
    Signal node a ->
    Signal node a
-signalDifference
-   (Signal e p n dt x s) (Signal e' p' n' dt' x' s') =
-      Signal
-         (Map.difference e e') (Map.difference p p')
-         (Map.difference n n') (Map.difference dt dt')
-         (Map.difference x x') (Map.difference s s')
+signalDifference =
+   signalLift2 Map.difference
 
 scalarDifference ::
    (Ord node) =>
    Scalar node a ->
    Scalar node a ->
    Scalar node a
-scalarDifference
-   (Scalar me st se sx ss) (Scalar me' st' se' sx' ss') =
-      Scalar
-         (Map.difference me me') (Map.difference st st')
-         (Map.difference se se') (Map.difference sx sx')
-         (Map.difference ss ss')
+scalarDifference =
+   scalarLift2 Map.difference
 
 difference ::
    (Ord node) =>
    Complete node a v ->
    Complete node a v ->
    Complete node a v
-difference
-   (Complete scalar0 signal0) (Complete scalar1 signal1) =
-      Complete
-         (scalarDifference scalar0 scalar1)
-         (signalDifference signal0 signal1)
+difference =
+   lift2 scalarDifference signalDifference
+
 
 signalFilter ::
    Ord node =>
    (a -> Bool) -> Signal node a -> Signal node a
-signalFilter f (Signal e p n dt x s) =
-   Signal (Map.filter f e) (Map.filter f p) (Map.filter f n) (Map.filter f dt) (Map.filter f x) (Map.filter f s)
+signalFilter f = signalLift1 (Map.filter f)
 
 scalarFilter ::
    Ord node =>
    (a -> Bool) -> Scalar node a -> Scalar node a
-scalarFilter f (Scalar me st se sx ss) =
-   Scalar (Map.filter f me) (Map.filter f st) (Map.filter f se) (Map.filter f sx) (Map.filter f ss)
+scalarFilter f = scalarLift1 (Map.filter f)
 
 filter ::
    Ord node =>

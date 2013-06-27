@@ -124,6 +124,7 @@ solvedEnv =
   EqGen.solveTracked seqTopo originalGiven
 
 numericEnv ::
+  (Ord node) =>
   Env.Complete node
     (Record.Absolute (Result (Pair.T at an)))
     (Record.Absolute (Result (Pair.T vt vn))) ->
