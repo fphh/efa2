@@ -1,5 +1,7 @@
 module EFA.Test.Tree where
 
+import EFA.TestUtility as Test
+
 import qualified EFA.Example.Tree as Tree
 import EFA.Example.Utility ( makeEdges )
 import EFA.Example.Tree ( (<+) )
@@ -35,4 +37,5 @@ treeDreibein =
 
 runTests :: IO ()
 runTests =
-   print $ topoDreibein == treeDreibein
+   Test.single "Tree syntax" $
+      topoDreibein == treeDreibein

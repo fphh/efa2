@@ -150,6 +150,7 @@ Executable test-efa
     EFA.Test.EquationSystem
     EFA.Test.EquationSystem.Given
     EFA.Test.Tree
+    EFA.TestUtility
 
 Executable example-sequenzflussgraph
   Main-Is: examples/elementary/sequenzflussgraph/Main.hs
