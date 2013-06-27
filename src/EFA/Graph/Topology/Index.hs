@@ -26,7 +26,7 @@ instance Enum Section where
         else error "Section.fromEnum: number too big"
 
 data Init a = Init | NoInit a deriving (Show, Eq, Ord)
-data Exit a = Exit | NoExit a deriving (Show, Eq, Ord)
+data Exit a = NoExit a | Exit deriving (Show, Eq, Ord)
 
 type InitOrSection = Init Section
 type SectionOrExit = Exit Section
