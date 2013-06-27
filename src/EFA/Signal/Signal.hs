@@ -1,13 +1,11 @@
-{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE EmptyDataDecls #-}
-{-# LANGUAGE TupleSections #-}
 
 
 module EFA.Signal.Signal where
@@ -1561,40 +1559,27 @@ calcEtaWithSign pSign p1 p2 = changeType $ map f $ changeSignalType $ zip pSign 
 
 -- | Index of maximum
 
-{-# DEPRECATED sigMax2 "Sollte auf Listen arbeiten" #-}
-sigMax2
-  :: (Num t, Ord t, Ord d1, D.ZipWith c, D.Storage c d1,
-      D.Storage c (d1, t), D.Storage c t) =>
-     TC s1 typ1 (Data c d1)
-     -> TC s1 typ1 (Data c d1)
-     -> TC (Arith s1 s1) typ3 (Data c t)
-sigMax2 etaSys0 etaSys1 = map P.snd a
-  where
-      -- maxEtaSys0State, maxEtaSys1State :: Sig.NSignal2 [] [] (Double, Int)
-      maxEtaSys0State = map (, 0) etaSys0
-      maxEtaSys1State = map (, 1) etaSys1
+argMax ::
+   (Ord d, D.ZipWith c, D.Storage c d,
+    D.Storage c (d, Int), D.Storage c Int) =>
+   TC s typ0 (Data c d) ->
+   TC s typ0 (Data c d) ->
+   TC (Arith s s) typ1 (Data c Int)
+argMax etaSys0 etaSys1 =
+   map P.snd $
+   zipWith P.max
+      (map (P.flip (,) 0) etaSys0)
+      (map (P.flip (,) 1) etaSys1)
 
+argMaximum ::
+   (Ord d, SV.FromList v, SV.Storage v d, SV.Storage v Int) =>
+   [TC s typ0 (Data (v :> Nil) d)] ->
+   TC (Arith s s) typ1 (Data (v :> Nil) Int)
+argMaximum =
+   consData . SV.fromList .
+   L.map listArgMax . L.transpose .
+   L.map (SV.toList . unconsData)
 
-      -- a :: Sig.UTSignal2 [] [] (Double, Int)
-      a = zipWith P.max maxEtaSys0State maxEtaSys1State
-
-
-{-
-
-am (zipwith P.max) gescheitert 
-
-sigMax2
-  :: (Ord d, D.ZipWith c, D.Storage c d,
-      D.Storage c (d, Int), D.Storage c Int) =>
-     [TC s1 typ1 (Data c d)]
-     -> TC (Arith s1 s1) typ3 (Data c Int)
-sigMax2 es = map P.snd as
-  where
-      tagEs = P.zipWith f es [0::Int ..]
-
-      f :: TC s1 typ1 (Data c d) -> Int -> UTSignal2 [] [] (d, Int)
-      f x n = map (, n) x
-
-      -- as :: UTSignal2 [] [] (d, Int)
-      --as = L.foldl (zipWith P.max) (P.head tagEs) (P.tail tagEs)
--}
+listArgMax :: Ord a => [a] -> Int
+listArgMax =
+   P.fst . L.maximumBy (comparing P.snd) . L.zip [0..]

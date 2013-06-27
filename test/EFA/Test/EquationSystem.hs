@@ -2,6 +2,7 @@
 
 module EFA.Test.EquationSystem where
 
+import EFA.TestUtility as Test
 
 import qualified EFA.Test.EquationSystem.Given as Given
 
@@ -19,7 +20,6 @@ import EFA.Utility.Async (concurrentlyMany_)
 import qualified Control.Monad.Exception.Synchronous as ME
 
 import System.Exit (exitFailure)
-import Control.Monad (when)
 import Data.Foldable (forM_)
 
 
@@ -38,16 +38,22 @@ checkException solution =
       putStrLn $ Format.unUnicode lhs
       putStrLn $ Format.unUnicode rhs
       putStrLn $ "assignments so far:"
-      forM_ assigns $ \(Verify.Assign var val) ->
-         putStrLn $ Format.unUnicode $ Format.assign var val
+      printAssignments assigns
       exitFailure
 
+
+printAssignments ::
+  Verify.Assigns Format.Unicode -> IO ()
+printAssignments assigns =
+  forM_ assigns $ \(Verify.Assign var val) ->
+    putStrLn $ Format.unUnicode $ Format.assign var val
+
 correctness :: IO ()
-correctness = do
-  putStrLn "Check correctness of the equation system for sequence flow graphs."
+correctness =
+  Test.singleIO "Check correctness of the equation system for sequence flow graphs." $ do
   testEnv <- checkException Given.testEnv
   env <- checkException Given.solvedEnv
-  when (testEnv /= env) exitFailure
+  return $ testEnv == env
 
 
 showDifferences ::
@@ -64,20 +70,20 @@ showDifferences testEnv env = do
   putStrLn $ Format.unUnicode $ formatValue $
      Env.difference env testEnv
 
-  putStrLn "Conflicts between computed and expected Env:"
+  putStrLn "Conflicts between expected and computed Env:"
   putStrLn $ Format.unUnicode $ formatValue $
      Env.filter (uncurry (/=)) (uncurry (/=)) $
      Env.intersectionWith (,) (,) testEnv env
 
 
 consistency :: IO ()
-consistency = do
-  putStrLn "Check consistency of the equation system for sequence flow graphs."
+consistency =
+  Test.singleIO "Check consistency of the equation system for sequence flow graphs." $ do
   env <- fmap Given.numericEnv $ checkException $
     EqGen.solveTracked Given.seqTopo Given.testGiven
   testEnv <- checkException Given.testEnv
   -- showDifferences testEnv env
-  when (testEnv /= env) exitFailure
+  return $ testEnv == env
 
 runTests :: IO ()
 runTests = do
