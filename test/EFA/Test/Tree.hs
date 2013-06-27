@@ -1,4 +1,4 @@
-module Main where
+module EFA.Test.Tree where
 
 import qualified EFA.Example.Tree as Tree
 import EFA.Example.Utility ( makeEdges )
@@ -33,6 +33,6 @@ treeDreibein =
              <+ Tree.cons node0 TD.Source)
 
 
-main :: IO ()
-main =
+runTests :: IO ()
+runTests =
    print $ topoDreibein == treeDreibein
