@@ -862,12 +862,6 @@ getStorageSequences =
   Map.toList . Map.mapMaybe TD.maybeStorage . Gr.nodeLabels
 
 
-_getBoundary :: Idx.BndNode a -> Idx.Boundary
-_getBoundary (Idx.TimeNode s _) = s
-
-_getNode :: Idx.BndNode a -> a
-_getNode (Idx.TimeNode _ n) = n
-
 fromInStorages ::
   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Sum a, a ~ Scalar v,
    Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node, Product v, Integrate v,

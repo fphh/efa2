@@ -25,10 +25,8 @@ import EFA.Signal.Base (Sign(PSign, NSign, ZSign),BSum, DArith0)
 
 import qualified Data.Foldable as Fold
 import qualified Data.Map as Map
-import qualified Data.Set as Set
 
 import Data.Map (Map)
-import Control.Monad (join)
 import Data.Bool.HT (if')
 
 import qualified EFA.Utility.Map as MapU
@@ -224,12 +222,11 @@ mkStorageEdges node stores = do
       (Topo.FlowEdge $ Topo.StorageEdge $
        Idx.ForNode (Idx.StorageEdge secin secout) node)
 
--- Kann man diese Funktion und die folgende (getStorages) vereinigen?
-getActiveStoreSequences ::
+getStorageSequences ::
    (Ord node, Show node) =>
    SequData (Topo.ClassifiedTopology node) ->
-   Map node (Map Idx.Section Topo.StoreDir)
-getActiveStoreSequences =
+   Map node (Map Idx.Section (Maybe Topo.StoreDir))
+getStorageSequences =
    Fold.foldl
       (Map.unionWith (Map.unionWith (error "duplicate section for node")))
       Map.empty
@@ -237,15 +234,7 @@ getActiveStoreSequences =
    SD.mapWithSection
       (\s g ->
          fmap (Map.singleton s) $
-         Map.mapMaybe (join . Topo.maybeStorage) $ Gr.nodeLabels g)
-
-getStorages ::
-  (Ord node, Show node) =>
-  SequData (Topo.ClassifiedTopology node) -> [node]
-getStorages sd = Set.toList $ Set.fromList $ concatMap h d
-  where SD.SequData d = SD.mapWithSection f sd
-        f _ g = Map.keys $ Map.filter Topo.isStorage $ Gr.nodeLabels g
-        h (SD.Section _ _ ns) = ns
+         Map.mapMaybe Topo.maybeStorage $ Gr.nodeLabels g)
 
 type RangeGraph node = (Map Idx.Section SD.Range, SequFlowGraph node)
 
@@ -256,20 +245,24 @@ insEdges ::
    SequFlowGraph node
 insEdges = Gr.insEdges . map (flip (,) ())
 
--- Alle Storages sollen in die initiale Sektion,
--- auch wenn sie nie aktive sind!
--- Damit man beim initialisieren auch Werte zuweisen kann.
+{-
+Alle Storages sollen in die initiale Sektion,
+auch wenn sie nie aktiv sind!
+So kann man beim Initialisieren auch Werte zuweisen.
+-}
 mkSequenceTopology ::
    (Ord node, Show node) =>
    SequData (FlowTopology node) ->
    RangeGraph node
 mkSequenceTopology sd =
    (,) (Fold.fold $ SD.mapWithSectionRange (\s rng _ -> Map.singleton s rng) sq) $
-   insEdges (Fold.fold $ Map.mapWithKey mkStorageEdges tracks) $
+   insEdges
+      (Fold.fold $ Map.mapWithKey mkStorageEdges $
+       -- Map.filter (not . Map.null) $   -- required?
+       fmap (Map.mapMaybe id) tracks) $
    insNodes
-      (map (\n -> (Idx.initSecNode n, Topo.Storage (Just Topo.In))) sts) $
+      (map (\n -> (Idx.initSecNode n, Topo.Storage (Just Topo.In))) $ Map.keys tracks) $
    Fold.fold $
    SD.mapWithSection mkSectionTopology sq
   where sq = fmap Topo.classifyStorages sd
-        tracks = getActiveStoreSequences sq
-        sts = getStorages sq
+        tracks = getStorageSequences sq
