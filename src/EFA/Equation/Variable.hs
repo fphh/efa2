@@ -29,7 +29,8 @@ data Scalar a =
    | Storage (Idx.Storage a)
    | StEnergy (Idx.StEnergy a)
    | StX (Idx.StX a)
-   | StSum (Idx.StSum a)
+   | StInSum (Idx.StInSum a)
+   | StOutSum (Idx.StOutSum a)
      deriving (Show, Eq, Ord)
 
 
@@ -68,7 +69,8 @@ instance ScalarIndex Idx.MaxEnergy where scalarIndex = MaxEnergy
 instance ScalarIndex Idx.Storage   where scalarIndex = Storage
 instance ScalarIndex Idx.StEnergy  where scalarIndex = StEnergy
 instance ScalarIndex Idx.StX       where scalarIndex = StX
-instance ScalarIndex Idx.StSum     where scalarIndex = StSum
+instance ScalarIndex Idx.StInSum   where scalarIndex = StInSum
+instance ScalarIndex Idx.StOutSum  where scalarIndex = StOutSum
 
 
 instance (Node.C node) => FormatValue (Any node) where
@@ -96,7 +98,8 @@ formatScalarValue (Idx.ForNode var n) =
       Storage idx -> formatScalarIndex idx n
       StEnergy idx -> formatScalarIndex idx n
       StX idx -> formatScalarIndex idx n
-      StSum idx -> formatScalarIndex idx n
+      StInSum idx -> formatScalarIndex idx n
+      StOutSum idx -> formatScalarIndex idx n
 
 
 class FormatIndex idx where

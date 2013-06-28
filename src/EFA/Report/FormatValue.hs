@@ -163,12 +163,21 @@ instance FormatScalarIndex Idx.StEnergy where
 instance FormatScalarIndex Idx.StX where
    formatScalarIndex (Idx.StX e) = formatStorageTrans Format.X e
 
-instance FormatScalarIndex Idx.StSum where
-   formatScalarIndex (Idx.StSum dir s) n =
-      Format.subscript Format.scalarSum $
-      Format.direction dir `Format.connect`
-         Format.augmentedSection s `Format.sectionNode` Node.subscript n
+instance FormatScalarIndex Idx.StInSum where
+   formatScalarIndex (Idx.StInSum s) n =
+      formatStSum Idx.In (Format.augmentedSection s) n
 
+instance FormatScalarIndex Idx.StOutSum where
+   formatScalarIndex (Idx.StOutSum s) n =
+      formatStSum Idx.Out (Format.augmentedSection s) n
+
+formatStSum ::
+   (Format output, Node.C node) =>
+   Idx.Direction -> output -> node -> output
+formatStSum dir s n =
+   Format.subscript Format.scalarSum $
+   Format.direction dir `Format.connect`
+      s `Format.sectionNode` Node.subscript n
 
 formatChar :: Format output => Char -> output
 formatChar = Format.literal . (:[])

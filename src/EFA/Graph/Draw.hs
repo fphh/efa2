@@ -432,9 +432,10 @@ formatNodeStorage ::
    (Record.C rec, FormatValue a, Format output, Node.C node) =>
    Record.ToIndex rec ->
    Env.StorageMap node (rec a) ->
-   Env.StSumMap node (rec a) ->
+   Env.StInSumMap node (rec a) ->
+   Env.StOutSumMap node (rec a) ->
    Maybe Idx.Boundary -> Topo.LDirNode node -> output
-formatNodeStorage rec st ss mBeforeBnd (n@(Idx.TimeNode sec nid), ty) =
+formatNodeStorage rec st sis sos mBeforeBnd (n@(Idx.TimeNode sec nid), ty) =
    Format.lines $
    Node.display nid :
    Format.words [formatNodeType ty] :
@@ -452,12 +453,12 @@ formatNodeStorage rec st ss mBeforeBnd (n@(Idx.TimeNode sec nid), ty) =
                         (case dir of
                            Just Topo.In ->
                               [Format.plus Format.empty $
-                                  lookupFormat rec ss $
-                                  Idx.forNode (Idx.StSum Idx.In) n]
+                                  lookupFormat rec sis $
+                                  Idx.forNode Idx.StInSum n]
                            Just Topo.Out ->
                               [Format.minus Format.empty $
-                                  lookupFormat rec ss $
-                                  Idx.forNode (Idx.StSum Idx.Out) n]
+                                  lookupFormat rec sos $
+                                  Idx.forNode Idx.StOutSum n]
                            Nothing -> []) ++
                         Format.assign Format.empty after :
                         []
@@ -557,7 +558,7 @@ envGen ::
     Record.C rec, Node.C node) =>
    Record.ToIndex rec ->
    Env.Complete node (rec a) (rec v) -> Env node output
-envGen rec (Env.Complete (Env.Scalar me st se sx ss) (Env.Signal e _p n dt x _s)) =
+envGen rec (Env.Complete (Env.Scalar me st se sx sis sos) (Env.Signal e _p n dt x _s)) =
    Env
       (lookupFormatAssign rec e $ Idx.liftInSection Idx.Energy)
       (lookupFormatAssign rec x $ Idx.liftInSection Idx.X)
@@ -566,7 +567,7 @@ envGen rec (Env.Complete (Env.Scalar me st se sx ss) (Env.Signal e _p n dt x _s)
       (lookupFormatAssign rec se $ Idx.liftForNode Idx.StEnergy)
       (lookupFormatAssign rec sx $ Idx.liftForNode Idx.StX)
       (lookupFormat rec dt . flip Idx.InSection Idx.DTime)
-      (formatNodeStorage rec st ss)
+      (formatNodeStorage rec st sis sos)
 
 envAbs ::
    (FormatValue a, FormatValue v, Format output, Node.C node) =>

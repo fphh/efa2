@@ -371,7 +371,9 @@ data Direction = In | Out deriving (Show, Eq, Ord)
 
 data Sum node = Sum Direction node deriving (Show, Ord, Eq)
 
-data StSum node = StSum Direction AugmentedSection deriving (Show, Ord, Eq)
+data StInSum node = StInSum AugmentedSection deriving (Show, Ord, Eq)
+
+data StOutSum node = StOutSum AugmentedSection deriving (Show, Ord, Eq)
 
 
 -- * Other indices

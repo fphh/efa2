@@ -36,7 +36,8 @@ type MaxEnergyMap node a = Map (Idx.ForNode Idx.MaxEnergy node) a
 type StorageMap node a = Map (Idx.ForNode Idx.Storage node) a
 type StEnergyMap node a = Map (Idx.ForNode Idx.StEnergy node) a
 type StXMap node a = Map (Idx.ForNode Idx.StX node) a
-type StSumMap node a = Map (Idx.ForNode Idx.StSum node) a
+type StInSumMap node a = Map (Idx.ForNode Idx.StInSum node) a
+type StOutSumMap node a = Map (Idx.ForNode Idx.StOutSum node) a
 
 
 data Signal node a =
@@ -55,7 +56,8 @@ data Scalar node a =
       storageMap :: StorageMap node a,
       stEnergyMap :: StEnergyMap node a,
       stXMap :: StXMap node a,
-      stSumMap :: StSumMap node a
+      stInSumMap :: StInSumMap node a,
+      stOutSumMap :: StOutSumMap node a
    } deriving (Show, Eq)
 
 data Complete node a v =
@@ -110,7 +112,7 @@ formatMap =
 instance
    (Node.C node, FormatValue b, FormatValue a) =>
       FormatValue (Complete node b a) where
-   formatValue (Complete (Scalar me st se sx ss) (Signal e p n dt x s)) =
+   formatValue (Complete (Scalar me st se sx sis sos) (Signal e p n dt x s)) =
       Format.lines $
          formatMap e ++
          formatMap se ++
@@ -121,7 +123,8 @@ instance
          formatMap x ++
          formatMap sx ++
          formatMap s ++
-         formatMap ss ++
+         formatMap sis ++
+         formatMap sos ++
          formatMap st
 
 
@@ -146,7 +149,8 @@ lookupScalar (Idx.ForNode var n) =
       Var.Storage   idx -> Map.lookup (Idx.ForNode idx n) . storageMap
       Var.StEnergy  idx -> Map.lookup (Idx.ForNode idx n) . stEnergyMap
       Var.StX       idx -> Map.lookup (Idx.ForNode idx n) . stXMap
-      Var.StSum     idx -> Map.lookup (Idx.ForNode idx n) . stSumMap
+      Var.StInSum   idx -> Map.lookup (Idx.ForNode idx n) . stInSumMap
+      Var.StOutSum  idx -> Map.lookup (Idx.ForNode idx n) . stOutSumMap
 
 
 type Element idx a v = PartElement (Environment idx) a v
@@ -232,9 +236,13 @@ instance AccessScalarMap Idx.StX where
    accessScalarMap =
       Accessor.fromSetGet (\x c -> c{stXMap = x}) stXMap
 
-instance AccessScalarMap Idx.StSum where
+instance AccessScalarMap Idx.StInSum where
    accessScalarMap =
-      Accessor.fromSetGet (\x c -> c{stSumMap = x}) stSumMap
+      Accessor.fromSetGet (\x c -> c{stInSumMap = x}) stInSumMap
+
+instance AccessScalarMap Idx.StOutSum where
+   accessScalarMap =
+      Accessor.fromSetGet (\x c -> c{stOutSumMap = x}) stOutSumMap
 
 
 
@@ -250,7 +258,7 @@ scalarLift0 ::
    (forall k. Ord k => Map k a) ->
    Scalar node a
 scalarLift0 f =
-   Scalar f f f f f
+   Scalar f f f f f f
 
 
 signalLift1 ::
@@ -264,8 +272,8 @@ scalarLift1 ::
    (Ord node) =>
    (forall k. Ord k => Map k a -> Map k b) ->
    Scalar node a -> Scalar node b
-scalarLift1 f (Scalar me st se sx ss) =
-   Scalar (f me) (f st) (f se) (f sx) (f ss)
+scalarLift1 f (Scalar me st se sx sis sos) =
+   Scalar (f me) (f st) (f se) (f sx) (f sis) (f sos)
 
 lift1 ::
    (Scalar node a0 -> Scalar node a) ->
@@ -287,8 +295,8 @@ scalarLift2 ::
    (Ord node) =>
    (forall k. Ord k => Map k a -> Map k b -> Map k c) ->
    Scalar node a -> Scalar node b -> Scalar node c
-scalarLift2 f (Scalar me st se sx ss) (Scalar me' st' se' sx' ss') =
-   Scalar (f me me') (f st st') (f se se') (f sx sx') (f ss ss')
+scalarLift2 f (Scalar me st se sx sis sos) (Scalar me' st' se' sx' sis' sos') =
+   Scalar (f me me') (f st st') (f se se') (f sx sx') (f sis sis') (f sos sos')
 
 lift2 ::
    (Scalar node a0 -> Scalar node a1 -> Scalar node a) ->
@@ -325,8 +333,8 @@ instance Ord node => Traversable (Signal node) where
       pure Signal <?> e <?> p <?> n <?> dt <?> x <?> s
 
 instance Ord node => Traversable (Scalar node) where
-   sequenceA (Scalar me st se sx ss) =
-      pure Scalar <?> me <?> st <?> se <?> sx <?> ss
+   sequenceA (Scalar me st se sx sis sos) =
+      pure Scalar <?> me <?> st <?> se <?> sx <?> sis <?> sos
 
 infixl 4 <?>
 (<?>) ::

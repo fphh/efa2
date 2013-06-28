@@ -16,7 +16,8 @@ type MaxEnergy node = Idx.ForNode Idx.MaxEnergy node
 type StEnergy node  = Idx.ForNode Idx.StEnergy node
 type StX node       = Idx.ForNode Idx.StX node
 type Storage node   = Idx.ForNode Idx.Storage node
-type StSum node     = Idx.ForNode Idx.StSum node
+type StInSum node   = Idx.ForNode Idx.StInSum node
+type StOutSum node  = Idx.ForNode Idx.StOutSum node
 
 type PPos = Idx.PPos
 
@@ -69,10 +70,17 @@ storageTrans mkIdx a b =
    Idx.storageTrans mkIdx (Idx.augmentSection a) (Idx.augmentSection b)
 
 
-stSum ::
-   (Idx.ToAugmentedSection sec) =>
-   Idx.Direction -> sec -> node -> StSum node
-stSum dir sec node = Idx.ForNode (Idx.StSum dir (Idx.augmentSection sec)) node
+stInSum ::
+   (Idx.ToInitOrSection sec) =>
+   sec -> node -> StInSum node
+stInSum sec =
+   Idx.ForNode (Idx.StInSum (fmap Idx.NoExit $ Idx.initOrSection sec))
+
+stOutSum ::
+   (Idx.ToSectionOrExit sec) =>
+   sec -> node -> StOutSum node
+stOutSum sec =
+   Idx.ForNode (Idx.StOutSum (Idx.NoInit $ Idx.sectionOrExit sec))
 
 
 storage :: Idx.Boundary -> node -> Storage node

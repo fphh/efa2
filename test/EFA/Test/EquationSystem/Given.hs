@@ -89,7 +89,8 @@ toTestGiven (Env.Complete scal sig) =
     g (Env.storageMap scal) .
     g (Env.stEnergyMap scal) .
     g (Env.stXMap scal) .
-    g (Env.stSumMap scal) .
+    g (Env.stInSumMap scal) .
+    g (Env.stOutSumMap scal) .
     id $ "  []")
   where g :: (Show k, Show a) => M.Map k (Record.Absolute (Result a)) -> ShowS
         g =
@@ -307,8 +308,8 @@ testGiven = mconcat $
   (XIdx.stX sec1 sec2 node3 .= 1 / 1) :
   (XIdx.stX sec2 seci node3 .= 3 / 8) :
   (XIdx.stX sec2 sec1 node3 .= 5 / 8) :
-  (XIdx.stSum In seci node3 .= 22 / 1) :
-  (XIdx.stSum In sec1 node3 .= 10 / 1) :
-  (XIdx.stSum Out sec0 node3 .= 16 / 1) :
-  (XIdx.stSum Out sec2 node3 .= 6 / 1) :
+  (XIdx.stInSum seci node3 .= 22 / 1) :
+  (XIdx.stInSum sec1 node3 .= 10 / 1) :
+  (XIdx.stOutSum sec0 node3 .= 16 / 1) :
+  (XIdx.stOutSum sec2 node3 .= 6 / 1) :
   []

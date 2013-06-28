@@ -570,12 +570,12 @@ outsum = variableRecord . Idx.inSection (Idx.Sum Idx.Out)
 stinsum ::
    (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Sum a, Record rec, Node.C node) =>
    Idx.AugNode node -> RecordExpression mode rec node s a v a
-stinsum = variableRecord . Idx.forNode (Idx.StSum Idx.In)
+stinsum = variableRecord . Idx.forNode Idx.StInSum
 
 stoutsum ::
    (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Sum a, Record rec, Node.C node) =>
    Idx.AugNode node -> RecordExpression mode rec node s a v a
-stoutsum = variableRecord . Idx.forNode (Idx.StSum Idx.Out)
+stoutsum = variableRecord . Idx.forNode Idx.StOutSum
 
 storage ::
    (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Sum a, Record rec, Node.C node) =>
@@ -611,13 +611,14 @@ fromEnvScalarResult ::
    (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Sum a, Node.C node, Record rec) =>
    Env.Scalar node (rec (Result a)) ->
    EquationSystem mode rec node s a v
-fromEnvScalarResult (Env.Scalar me st se sx ss) =
+fromEnvScalarResult (Env.Scalar me st se sx sis sos) =
       mconcat $
          fromMapResult me :
          fromMapResult st :
          fromMapResult se :
          fromMapResult sx :
-         fromMapResult ss :
+         fromMapResult sis :
+         fromMapResult sos :
          []
 
 fromEnvSignalResult ::
@@ -655,13 +656,14 @@ fromEnvScalar ::
    (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Sum a, Node.C node, Record rec) =>
    Env.Scalar node (rec a) ->
    EquationSystem mode rec node s a v
-fromEnvScalar (Env.Scalar me st se sx ss) =
+fromEnvScalar (Env.Scalar me st se sx sis sos) =
       mconcat $
          fromMap me :
          fromMap st :
          fromMap se :
          fromMap sx :
-         fromMap ss :
+         fromMap sis :
+         fromMap sos :
          []
 
 fromEnvSignal ::
