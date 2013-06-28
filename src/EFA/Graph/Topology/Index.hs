@@ -42,6 +42,52 @@ instance Functor Exit where
    fmap f (NoExit a) = NoExit $ f a
 
 
+section :: MaybeSection sec => Word -> sec
+section = fromSection . Section
+
+class MaybeSection sec where
+   fromSection :: Section -> sec
+
+instance MaybeSection Section where
+   fromSection = id
+
+instance MaybeSection sec => MaybeSection (Init sec) where
+   fromSection = NoInit . fromSection
+
+instance MaybeSection sec => MaybeSection (Exit sec) where
+   fromSection = NoExit . fromSection
+
+
+class MaybeSection sec => MaybeInit sec where
+   initSection :: sec
+
+instance MaybeSection sec => MaybeInit (Init sec) where
+   initSection = Init
+
+instance MaybeInit sec => MaybeInit (Exit sec) where
+   initSection = NoExit initSection
+
+
+class MaybeSection sec => MaybeExit sec where
+   exitSection :: sec
+
+instance MaybeSection sec => MaybeExit (Exit sec) where
+   exitSection = Exit
+
+instance MaybeExit sec => MaybeExit (Init sec) where
+   exitSection = NoInit exitSection
+
+
+fromAugmentedSection ::
+   (MaybeSection sec, MaybeInit sec, MaybeExit sec) =>
+   AugmentedSection -> sec
+fromAugmentedSection a =
+   case a of
+      Init -> initSection
+      NoInit Exit -> exitSection
+      NoInit (NoExit s) -> fromSection s
+
+
 class ToAugmentedSection sec where
    augmentSection :: sec -> AugmentedSection
 

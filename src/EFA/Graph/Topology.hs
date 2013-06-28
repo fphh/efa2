@@ -1,6 +1,5 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ExistentialQuantification #-}
-{-# LANGUAGE FlexibleInstances #-}
 module EFA.Graph.Topology (
        NLabel (..), LNode, LDirNode, StNode,
        LEdge, LDirEdge,
@@ -157,7 +156,7 @@ class EqFlowEdge augNode where
       TC.Eq structEdge =>
       FlowEdge structEdge augNode -> FlowEdge structEdge augNode -> Bool
 
-instance (Eq node) => EqFlowEdge (Idx.AugNode node) where
+instance (Eq node) => EqFlowEdge (Idx.TimeNode sec node) where
    eqFlowEdge (FlowEdge x) (FlowEdge y) = TC.eq x y
 
 
@@ -174,7 +173,7 @@ class EqFlowEdge augNode => OrdFlowEdge augNode where
       TC.Ord structEdge =>
       FlowEdge structEdge augNode -> FlowEdge structEdge augNode -> Ordering
 
-instance (Ord node) => OrdFlowEdge (Idx.AugNode node) where
+instance (Ord node) => OrdFlowEdge (Idx.TimeNode sec node) where
    cmpFlowEdge (FlowEdge x) (FlowEdge y)  =  TC.cmp x y
 
 
@@ -191,7 +190,7 @@ class ShowFlowEdge augNode where
       TC.Show structEdge =>
       Int -> FlowEdge structEdge augNode -> ShowS
 
-instance (Show node) => ShowFlowEdge (Idx.AugNode node) where
+instance (Show node) => ShowFlowEdge (Idx.TimeNode sec node) where
    showFlowEdge p (FlowEdge e) = TC.showsPrec p e
 
 
@@ -200,11 +199,12 @@ class AugNode augNode where
    secNode :: Idx.Section -> NodeOf augNode -> augNode
    augNode :: Idx.AugmentedSection -> NodeOf augNode -> augNode
 
-instance AugNode (Idx.AugNode node) where
-   type NodeOf (Idx.AugNode node) = node
-   secNode s = Idx.TimeNode (Idx.NoInit (Idx.NoExit s))
-   augNode = Idx.TimeNode
-
+instance
+   (Idx.MaybeSection sec, Idx.MaybeInit sec, Idx.MaybeExit sec) =>
+      AugNode (Idx.TimeNode sec node) where
+   type NodeOf (Idx.TimeNode sec node) = node
+   secNode = Idx.TimeNode . Idx.fromSection
+   augNode = Idx.TimeNode . Idx.fromAugmentedSection
 
 
 {-
