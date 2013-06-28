@@ -197,16 +197,11 @@ instance (Show node) => ShowFlowEdge (Idx.AugNode node) where
 
 class AugNode augNode where
    type NodeOf augNode :: *
-   nodeFromBndNode :: augNode -> NodeOf augNode
    secNode :: Idx.Section -> NodeOf augNode -> augNode
    augNode :: Idx.AugmentedSection -> NodeOf augNode -> augNode
 
 instance AugNode (Idx.AugNode node) where
    type NodeOf (Idx.AugNode node) = node
-{-
-   sectionFromBndNode (Idx.TimeNode bnd _node) = bnd
--}
-   nodeFromBndNode (Idx.TimeNode _time node) = node
    secNode s = Idx.TimeNode (Idx.NoInit (Idx.NoExit s))
    augNode = Idx.TimeNode
 
