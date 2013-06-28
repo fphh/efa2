@@ -12,7 +12,6 @@ module EFA.Graph.Draw (
   Env(..),
   topology,
   flowTopologies,
-  dotFromTopology -- pg inserted for Hack.Draw
   ) where
 
 import qualified EFA.Report.Format as Format
