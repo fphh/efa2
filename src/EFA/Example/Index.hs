@@ -75,12 +75,14 @@ stInSum ::
    sec -> node -> StInSum node
 stInSum sec =
    Idx.ForNode (Idx.StInSum (fmap Idx.NoExit $ Idx.initOrSection sec))
+--   Idx.ForNode (Idx.StInSum (Idx.initOrSection sec))
 
 stOutSum ::
    (Idx.ToSectionOrExit sec) =>
    sec -> node -> StOutSum node
 stOutSum sec =
    Idx.ForNode (Idx.StOutSum (Idx.NoInit $ Idx.sectionOrExit sec))
+--   Idx.ForNode (Idx.StOutSum (Idx.sectionOrExit sec))
 
 
 storage :: Idx.Boundary -> node -> Storage node

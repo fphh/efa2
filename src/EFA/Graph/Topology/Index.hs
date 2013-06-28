@@ -371,6 +371,17 @@ data Direction = In | Out deriving (Show, Eq, Ord)
 
 data Sum node = Sum Direction node deriving (Show, Ord, Eq)
 
+{-
+These types would be more precise,
+but since we cannot assert the restricted range of sections
+statically in many places,
+this only leads to a lot of incomplete case analyses.
+
+data StInSum node = StInSum InitOrSection deriving (Show, Ord, Eq)
+
+data StOutSum node = StOutSum SectionOrExit deriving (Show, Ord, Eq)
+-}
+
 data StInSum node = StInSum AugmentedSection deriving (Show, Ord, Eq)
 
 data StOutSum node = StOutSum AugmentedSection deriving (Show, Ord, Eq)

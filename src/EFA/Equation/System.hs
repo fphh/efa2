@@ -570,11 +570,13 @@ outsum = variableRecord . Idx.inSection (Idx.Sum Idx.Out)
 stinsum ::
    (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Sum a, Record rec, Node.C node) =>
    Idx.AugNode node -> RecordExpression mode rec node s a v a
+--   Idx.TimeNode Idx.InitOrSection node -> RecordExpression mode rec node s a v a
 stinsum = variableRecord . Idx.forNode Idx.StInSum
 
 stoutsum ::
    (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Sum a, Record rec, Node.C node) =>
    Idx.AugNode node -> RecordExpression mode rec node s a v a
+--    Idx.TimeNode Idx.SectionOrExit node -> RecordExpression mode rec node s a v a
 stoutsum = variableRecord . Idx.forNode Idx.StOutSum
 
 storage ::
