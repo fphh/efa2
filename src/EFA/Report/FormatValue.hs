@@ -158,7 +158,7 @@ instance FormatScalarIndex Idx.Storage where
       formatBoundaryNode (Idx.TimeNode bnd n)
 
 instance FormatScalarIndex Idx.StEnergy where
-   formatScalarIndex (Idx.StEnergy e) = formatStorageTrans Format.Energy e
+   formatScalarIndex (Idx.StEnergy e) = formatStorageEdge Format.Energy e
 
 instance FormatScalarIndex Idx.StX where
    formatScalarIndex (Idx.StX e) = formatStorageTrans Format.X e

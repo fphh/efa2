@@ -44,7 +44,7 @@ maxEnergy ::
    from -> to -> node -> MaxEnergy node
 
 stEnergy ::
-   (Idx.ToAugmentedSection from, Idx.ToAugmentedSection to) =>
+   (Idx.ToInitOrSection from, Idx.ToSectionOrExit to) =>
    from -> to -> node -> StEnergy node
 
 stX ::
@@ -52,7 +52,7 @@ stX ::
    from -> to -> node -> StX node
 
 maxEnergy = storageEdge Idx.MaxEnergy
-stEnergy  = storageTrans Idx.StEnergy
+stEnergy  = storageEdge Idx.StEnergy
 stX       = storageTrans Idx.StX
 
 storageEdge ::

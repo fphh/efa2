@@ -395,7 +395,7 @@ instance (QC.Arbitrary node) => QC.Arbitrary (PPos node) where
 -- | Energy variables.
 newtype Energy node = Energy (StructureEdge node) deriving (Show, Ord, Eq)
 
-newtype StEnergy node = StEnergy (StorageTrans node) deriving (Show, Ord, Eq)
+newtype StEnergy node = StEnergy (StorageEdge node) deriving (Show, Ord, Eq)
 
 
 -- | Energy variables for hypothetical outgoing energies.

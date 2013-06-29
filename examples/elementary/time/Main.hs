@@ -93,7 +93,7 @@ p31 sec = EqGen.variable $ XIdx.power sec N3 N1
 
 --esto :: Expr s Double
 esto :: XIdx.StEnergy Node
-esto = XIdx.stEnergy sec1 XIdx.initSection N3
+esto = XIdx.stEnergy XIdx.initSection sec1 N3
 
 ein, eout0, eout1 :: XIdx.Energy Node
 ein = XIdx.energy sec0 N0 N1

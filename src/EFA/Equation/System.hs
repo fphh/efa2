@@ -547,7 +547,7 @@ maxEnergy = variableRecord . Idx.liftForNode Idx.MaxEnergy
 stEnergy ::
    (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node,
     Sum a, Record rec, Node.C node) =>
-   Idx.ForNode Idx.StorageTrans node -> RecordExpression mode rec node s a v a
+   Idx.ForNode Idx.StorageEdge node -> RecordExpression mode rec node s a v a
 stEnergy = variableRecord . Idx.liftForNode Idx.StEnergy
 
 eta ::
@@ -778,7 +778,8 @@ fromNodes equalInOutSums =
 
                 splitStoreEqs varsum prex edges =
                    foldMap
-                      (splitFactors varsum stEnergy Arith.one (stxfactor . prex))
+                      (splitFactors varsum stEnergy Arith.one
+                         (stxfactor . prex . storageTransFromEdge))
                       (NonEmpty.fetch edges)
 
             in  -- siehe bug 2013-02-12-sum-equations-storage
@@ -791,8 +792,7 @@ fromNodes equalInOutSums =
                              TD.In ->
                                 fromInStorages an outsStore
                                 <>
-                                (splitStoreEqs (stinsum an) id $
-                                 map storageTransFromEdge outsStore)
+                                splitStoreEqs (stinsum an) id outsStore
                                 <>
                                 (stinsum an =%=
                                  case msn of
@@ -804,8 +804,7 @@ fromNodes equalInOutSums =
                              TD.Out ->
                                 fromOutStorages insStore
                                 <>
-                                (splitStoreEqs (stoutsum an) Idx.flip $
-                                 map storageTransFromEdge insStore)
+                                splitStoreEqs (stoutsum an) Idx.flip insStore
                                 <>
                                 (withSecNode $ \sn ->
                                    stoutsum an =%= integrate (outsum sn))
@@ -865,7 +864,7 @@ fromInStorages sn outs =
    let toSec (Idx.ForNode (Idx.StorageEdge _ x) _) = x
        souts = List.sortBy (comparing toSec) outs
        maxEnergies = map maxEnergy souts
-       stEnergies  = map (stEnergy . storageTransFromEdge) souts
+       stEnergies  = map stEnergy souts
    in  mconcat $
        zipWith (=%=) maxEnergies
           (stinsum sn : zipWith (~-) maxEnergies stEnergies)
