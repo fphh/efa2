@@ -442,9 +442,9 @@ data Direction = In | Out deriving (Show, Eq, Ord)
 
 data Sum node = Sum Direction node deriving (Show, Ord, Eq)
 
-data StInSum node = StInSum InitOrSection deriving (Show, Ord, Eq)
+data StInSum node = StInSum SectionOrExit deriving (Show, Ord, Eq)
 
-data StOutSum node = StOutSum SectionOrExit deriving (Show, Ord, Eq)
+data StOutSum node = StOutSum InitOrSection deriving (Show, Ord, Eq)
 
 
 -- * Other indices

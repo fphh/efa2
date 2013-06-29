@@ -443,11 +443,11 @@ formatNodeStorage rec st sis sos mBeforeBnd (Idx.TimeNode aug nid, ty) =
          Storage dir ->
             case (aug, mBeforeBnd) of
                (Idx.Init, Nothing) ->
-                  [lookupFormat rec sis $ XIdx.stInSum XIdx.initSection nid]
+                  [lookupFormat rec sos $ XIdx.stOutSum XIdx.initSection nid]
                (Idx.Init, Just _) ->
                   error "initial section has no predecessor"
                (Idx.NoInit Idx.Exit, Just _) ->
-                  [lookupFormat rec sos $ XIdx.stOutSum XIdx.exitSection nid]
+                  [lookupFormat rec sis $ XIdx.stInSum XIdx.exitSection nid]
                (Idx.NoInit (Idx.NoExit sec), Just beforeBnd) ->
                   case (lookupFormat rec st $ XIdx.storage beforeBnd nid,
                         lookupFormat rec st $ XIdx.storage (Idx.afterSection sec) nid) of
@@ -456,10 +456,10 @@ formatNodeStorage rec st sis sos mBeforeBnd (Idx.TimeNode aug nid, ty) =
                         (case dir of
                            Just Topo.In ->
                               [Format.plus Format.empty $
-                               lookupFormat rec sis $ XIdx.stInSum sec nid]
+                               lookupFormat rec sos $ XIdx.stOutSum sec nid]
                            Just Topo.Out ->
                               [Format.minus Format.empty $
-                               lookupFormat rec sos $ XIdx.stOutSum sec nid]
+                               lookupFormat rec sis $ XIdx.stInSum sec nid]
                            Nothing -> []) ++
                         Format.assign Format.empty after :
                         []

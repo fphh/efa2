@@ -71,16 +71,16 @@ storageTrans mkIdx a b =
 
 
 stInSum ::
-   (Idx.ToInitOrSection sec) =>
+   (Idx.ToSectionOrExit sec) =>
    sec -> node -> StInSum node
 stInSum sec =
-   Idx.ForNode (Idx.StInSum (Idx.initOrSection sec))
+   Idx.ForNode (Idx.StInSum (Idx.sectionOrExit sec))
 
 stOutSum ::
-   (Idx.ToSectionOrExit sec) =>
+   (Idx.ToInitOrSection sec) =>
    sec -> node -> StOutSum node
 stOutSum sec =
-   Idx.ForNode (Idx.StOutSum (Idx.sectionOrExit sec))
+   Idx.ForNode (Idx.StOutSum (Idx.initOrSection sec))
 
 
 storage :: Idx.Boundary -> node -> Storage node

@@ -316,10 +316,10 @@ testGiven = mconcat $
   (XIdx.stX sec2 sec1 node3 .= 5 / 8) :
   (XIdx.stX sece seci node3 .= 3 / 8) :
   (XIdx.stX sece sec1 node3 .= 5 / 8) :
-  (XIdx.stInSum seci node3 .= 22 / 1) :
-  (XIdx.stInSum sec1 node3 .= 10 / 1) :
-  (XIdx.stOutSum sec0 node3 .= 16 / 1) :
-  (XIdx.stOutSum sec2 node3 .= 6 / 1) :
-  (XIdx.stOutSum sece node3 .= 10) :
+  (XIdx.stInSum sec0 node3 .= 16 / 1) :
+  (XIdx.stInSum sec2 node3 .= 6 / 1) :
+  (XIdx.stInSum sece node3 .= 10) :
+  (XIdx.stOutSum seci node3 .= 22 / 1) :
+  (XIdx.stOutSum sec1 node3 .= 10 / 1) :
 
   []

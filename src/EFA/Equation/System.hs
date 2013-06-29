@@ -582,13 +582,13 @@ outsum = variableRecord . Idx.inSection (Idx.Sum Idx.Out)
 stinsum ::
    (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node,
     Sum a, Record rec, Node.C node) =>
-   Idx.TimeNode Idx.InitOrSection node -> RecordExpression mode rec node s a v a
+   Idx.TimeNode Idx.SectionOrExit node -> RecordExpression mode rec node s a v a
 stinsum = variableRecord . Idx.forNode Idx.StInSum
 
 stoutsum ::
    (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node,
     Sum a, Record rec, Node.C node) =>
-    Idx.TimeNode Idx.SectionOrExit node -> RecordExpression mode rec node s a v a
+    Idx.TimeNode Idx.InitOrSection node -> RecordExpression mode rec node s a v a
 stoutsum = variableRecord . Idx.forNode Idx.StOutSum
 
 storage ::
@@ -789,9 +789,9 @@ fromNodes equalInOutSums =
                          Just (TD.ViewNodeIn rn) ->
                                 fromInStorages rn outsStore
                                 <>
-                                splitStoreEqs (stinsum rn) id outsStore
+                                splitStoreEqs (stoutsum rn) id outsStore
                                 <>
-                                (stinsum rn =%=
+                                (stoutsum rn =%=
                                  case msn of
                                     Just sn -> integrate $ insum sn
                                     Nothing ->
@@ -801,10 +801,10 @@ fromNodes equalInOutSums =
                          Just (TD.ViewNodeOut rn) ->
                                 fromOutStorages insStore
                                 <>
-                                splitStoreEqs (stoutsum rn) Idx.flip insStore
+                                splitStoreEqs (stinsum rn) Idx.flip insStore
                                 <>
                                 (withSecNode $ \sn ->
-                                   stoutsum rn =%= integrate (outsum sn))
+                                   stinsum rn =%= integrate (outsum sn))
                          Nothing -> mempty
                    _ -> mempty
                 <>
@@ -824,15 +824,15 @@ fromStorageSequences =
           let charge old now (Idx.TimeNode aug n, dir) =
                  case (aug, dir) of
                     (Idx.Init, Just TD.In) ->
-                       now =%= withNode stinsum Idx.Init n
+                       now =%= withNode stoutsum Idx.Init n
                     (Idx.NoInit Idx.Exit, Just TD.Out) ->
-                       old =%= withNode stoutsum Idx.Exit n
+                       old =%= withNode stinsum Idx.Exit n
                     (Idx.NoInit (Idx.NoExit sec), _) ->
                        now =%=
                        case dir of
                           Nothing -> old
-                          Just TD.In  -> old ~+ withNode stinsum  (Idx.NoInit sec) n
-                          Just TD.Out -> old ~- withNode stoutsum (Idx.NoExit sec) n
+                          Just TD.In  -> old ~+ withNode stoutsum (Idx.NoInit sec) n
+                          Just TD.Out -> old ~- withNode stinsum  (Idx.NoExit sec) n
                     _ -> error "inconsistency between section and storage direction"
               storages =
                  map
@@ -874,7 +874,7 @@ fromInStorages sn outs =
        stEnergies  = map stEnergy souts
    in  mconcat $
        zipWith (=%=) maxEnergies
-          (stinsum sn : zipWith (~-) maxEnergies stEnergies)
+          (stoutsum sn : zipWith (~-) maxEnergies stEnergies)
 
 fromOutStorages ::
   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node,
