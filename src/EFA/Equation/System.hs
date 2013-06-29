@@ -784,22 +784,22 @@ fromNodes equalInOutSums =
                       mwhen equalInOutSums $
                       withSecNode $ \sn -> insum sn =%= outsum sn
                    TD.Storage dir ->
-                      case TD.viewNodeDir (an,dir) of
-                         Just (TD.ViewNodeIn rn) ->
+                      flip foldMap (TD.viewNodeDir (an,dir)) $ \view ->
+                         case view of
+                            TD.ViewNodeIn rn ->
                                 fromInStorages rn outsStore
                                 <>
                                 splitStoreEqs (stoutsum rn) id outsStore
                                 <>
                                 (withSecNode $ \sn ->
                                     stoutsum rn =%= integrate (insum sn))
-                         Just (TD.ViewNodeOut rn) ->
+                            TD.ViewNodeOut rn ->
                                 fromOutStorages insStore
                                 <>
                                 splitStoreEqs (stinsum rn) Idx.flip insStore
                                 <>
                                 (withSecNode $ \sn ->
                                    stinsum rn =%= integrate (outsum sn))
-                         Nothing -> mempty
                    _ -> mempty
                 <>
                 (withSecNode $ \sn@(Idx.TimeNode sec _) ->
