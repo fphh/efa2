@@ -24,6 +24,8 @@ module EFA.Graph.Topology (
        defaultNLabel,
        StoreDir(..),
        classifyStorages,
+       viewNodeDir,
+       ViewNodeDir(..),
        ) where
 
 import qualified EFA.Graph.Topology.Index as Idx
@@ -280,6 +282,24 @@ classifyStorages =
          let maybeDir es cls =
                 toMaybe (any (isActive . fst) es) cls
          in  fmap (\() -> mplus (maybeDir pre In) (maybeDir suc Out)) nt)
+
+data ViewNodeDir node =
+     ViewNodeIn  (Idx.TimeNode Idx.InitOrSection node)
+   | ViewNodeOut (Idx.TimeNode Idx.SectionOrExit node)
+
+viewNodeDir ::
+   (Idx.AugNode node, Maybe StoreDir) ->
+   Maybe (ViewNodeDir node)
+viewNodeDir (node, mdir) =
+   flip fmap mdir $ \dir ->
+      case dir of
+         In ->
+            maybe (error "Exit node must be Out storage") ViewNodeIn $
+            Idx.maybeExitNode node
+         Out ->
+            maybe (error "Init node must be In storage") ViewNodeOut $
+            Idx.maybeInitNode node
+
 
 
 class StorageLabel a where

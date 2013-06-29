@@ -583,15 +583,13 @@ outsum = variableRecord . Idx.inSection (Idx.Sum Idx.Out)
 stinsum ::
    (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node,
     Sum a, Record rec, Node.C node) =>
-   Idx.AugNode node -> RecordExpression mode rec node s a v a
---   Idx.TimeNode Idx.InitOrSection node -> RecordExpression mode rec node s a v a
+   Idx.TimeNode Idx.InitOrSection node -> RecordExpression mode rec node s a v a
 stinsum = variableRecord . Idx.forNode Idx.StInSum
 
 stoutsum ::
    (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node,
     Sum a, Record rec, Node.C node) =>
-   Idx.AugNode node -> RecordExpression mode rec node s a v a
---    Idx.TimeNode Idx.SectionOrExit node -> RecordExpression mode rec node s a v a
+    Idx.TimeNode Idx.SectionOrExit node -> RecordExpression mode rec node s a v a
 stoutsum = variableRecord . Idx.forNode Idx.StOutSum
 
 storage ::
@@ -787,27 +785,28 @@ fromNodes equalInOutSums =
                    TD.Crossing ->
                       mwhen equalInOutSums $
                       withSecNode $ \sn -> insum sn =%= outsum sn
-                   TD.Storage (Just dir) ->
-                          case dir of
-                             TD.In ->
-                                fromInStorages an outsStore
+                   TD.Storage dir ->
+                      case TD.viewNodeDir (an,dir) of
+                         Just (TD.ViewNodeIn rn) ->
+                                fromInStorages rn outsStore
                                 <>
-                                splitStoreEqs (stinsum an) id outsStore
+                                splitStoreEqs (stinsum rn) id outsStore
                                 <>
-                                (stinsum an =%=
+                                (stinsum rn =%=
                                  case msn of
                                     Just sn -> integrate $ insum sn
                                     Nothing ->
                                        case mbn of
                                           Just bn -> storage bn
                                           Nothing -> error "Exit node must be an Out storage")
-                             TD.Out ->
+                         Just (TD.ViewNodeOut rn) ->
                                 fromOutStorages insStore
                                 <>
-                                splitStoreEqs (stoutsum an) Idx.flip insStore
+                                splitStoreEqs (stoutsum rn) Idx.flip insStore
                                 <>
                                 (withSecNode $ \sn ->
-                                   stoutsum an =%= integrate (outsum sn))
+                                   stoutsum rn =%= integrate (outsum sn))
+                         Nothing -> mempty
                    _ -> mempty
                 <>
                 (withSecNode $ \sn@(Idx.TimeNode sec _) ->
@@ -826,17 +825,17 @@ fromStorageSequences =
           let xs = Map.toList xm
               storages =
                  map storage $ mapMaybe Idx.bndNodeFromAugNode $ map fst xs
-              charge store (now, dir) =
-                 case dir of
-                    Nothing     -> store
-                    Just TD.In  -> store ~+ stinsum now
-                    Just TD.Out -> store ~- stoutsum now
+              charge store nowDir =
+                 case nowDir of
+                    Nothing                   -> store
+                    Just (TD.ViewNodeIn  now) -> store ~+ stinsum now
+                    Just (TD.ViewNodeOut now) -> store ~- stoutsum now
           in  mconcat $
               zipWith (=%=) storages $
-                 case ListHT.viewL xs of
-                    Just ((initIdx, Just TD.In),ys) ->
-                       stinsum initIdx : zipWith charge storages ys
-                    Just _ -> error "Init storage is not In"
+                 case ListHT.viewL $ map TD.viewNodeDir xs of
+                    Just (Just (TD.ViewNodeIn n), ys) ->
+                       stinsum n : zipWith charge storages ys
+                    Just _ -> error "first storage section must be Init"
                     Nothing -> error "empty storage sequence"
    in  foldMap f . getStorageSequences
 
@@ -858,7 +857,7 @@ fromInStorages ::
   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Sum a, a ~ Scalar v,
    Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node, Product v, Integrate v,
    Record rec, Node.C node) =>
-  Idx.AugNode node -> [Idx.ForNode Idx.StorageEdge node] ->
+  Idx.TimeNode Idx.InitOrSection node -> [Idx.ForNode Idx.StorageEdge node] ->
   EquationSystem mode rec node s a v
 fromInStorages sn outs =
    let toSec (Idx.ForNode (Idx.StorageEdge _ x) _) = x

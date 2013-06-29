@@ -165,13 +165,11 @@ instance FormatScalarIndex Idx.StX where
 
 instance FormatScalarIndex Idx.StInSum where
    formatScalarIndex (Idx.StInSum s) n =
-      formatStSum Idx.In (Format.augmentedSection s) n
---      formatStSum Idx.In (Format.initOrSection s) n
+      formatStSum Idx.In (Format.initOrSection s) n
 
 instance FormatScalarIndex Idx.StOutSum where
    formatScalarIndex (Idx.StOutSum s) n =
-      formatStSum Idx.Out (Format.augmentedSection s) n
---      formatStSum Idx.Out (Format.sectionOrExit s) n
+      formatStSum Idx.Out (Format.sectionOrExit s) n
 
 formatStSum ::
    (Format output, Node.C node) =>

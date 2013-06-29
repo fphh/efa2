@@ -134,6 +134,18 @@ allowInit = NoInit
 allowExit :: InitOrSection -> AugmentedSection
 allowExit = fmap NoExit
 
+maybeInit :: AugmentedSection -> Maybe SectionOrExit
+maybeInit aug =
+   case aug of
+      Init -> Nothing
+      NoInit sec -> Just sec
+
+maybeExit :: AugmentedSection -> Maybe InitOrSection
+maybeExit aug =
+   case aug of
+      Init -> Just Init
+      NoInit Exit -> Nothing
+      NoInit (NoExit sec) -> Just $ NoInit sec
 
 
 boundaryFromAugSection :: AugmentedSection -> Maybe Boundary
@@ -210,6 +222,9 @@ type AugNode = TimeNode AugmentedSection
 type BndNode = TimeNode Boundary
 
 
+secNode :: Section -> node -> SecNode node
+secNode = TimeNode
+
 initSecNode :: node -> AugNode node
 initSecNode = TimeNode initSection
 
@@ -237,8 +252,15 @@ bndNodeFromAugNode :: AugNode node -> Maybe (BndNode node)
 bndNodeFromAugNode (TimeNode aug node) =
    fmap (P.flip TimeNode node) $ boundaryFromAugSection aug
 
-secNode :: Section -> node -> SecNode node
-secNode = TimeNode
+
+maybeInitNode :: AugNode node -> Maybe (TimeNode SectionOrExit node)
+maybeInitNode (TimeNode aug node) =
+   fmap (P.flip TimeNode node) $ maybeInit aug
+
+maybeExitNode :: AugNode node -> Maybe (TimeNode InitOrSection node)
+maybeExitNode (TimeNode aug node) =
+   fmap (P.flip TimeNode node) $ maybeExit aug
+
 
 
 
@@ -420,20 +442,9 @@ data Direction = In | Out deriving (Show, Eq, Ord)
 
 data Sum node = Sum Direction node deriving (Show, Ord, Eq)
 
-{-
-These types would be more precise,
-but since we cannot assert the restricted range of sections
-statically in many places,
-this only leads to a lot of incomplete case analyses.
-
 data StInSum node = StInSum InitOrSection deriving (Show, Ord, Eq)
 
 data StOutSum node = StOutSum SectionOrExit deriving (Show, Ord, Eq)
--}
-
-data StInSum node = StInSum AugmentedSection deriving (Show, Ord, Eq)
-
-data StOutSum node = StOutSum AugmentedSection deriving (Show, Ord, Eq)
 
 
 -- * Other indices
