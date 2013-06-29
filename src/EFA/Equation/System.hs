@@ -97,7 +97,6 @@ import Data.Traversable (Traversable, traverse, for, sequenceA)
 import Data.Foldable (foldMap, fold)
 import Data.Monoid (Monoid, (<>), mempty, mappend, mconcat)
 import Data.Ord.HT (comparing)
-import Data.Maybe (mapMaybe)
 
 import qualified Prelude as P
 import Prelude hiding (sqrt, (.))
@@ -821,23 +820,32 @@ fromStorageSequences ::
    Record rec, Node.C node) =>
   TD.DirSequFlowGraph node -> EquationSystem mode rec node s a v
 fromStorageSequences =
-   let f xm =
-          let xs = Map.toList xm
+   let f xs =
+          let charge old now (Idx.TimeNode aug n, dir) =
+                 case (aug, dir) of
+                    (Idx.Init, Just TD.In) ->
+                       now =%= withNode stinsum Idx.Init n
+                    (Idx.NoInit Idx.Exit, Just TD.Out) ->
+                       old =%= withNode stoutsum Idx.Exit n
+                    (Idx.NoInit (Idx.NoExit sec), _) ->
+                       now =%=
+                       case dir of
+                          Nothing -> old
+                          Just TD.In  -> old ~+ withNode stinsum  (Idx.NoInit sec) n
+                          Just TD.Out -> old ~- withNode stoutsum (Idx.NoExit sec) n
+                    _ -> error "inconsistency between section and storage direction"
               storages =
-                 map storage $ mapMaybe Idx.bndNodeFromAugNode $ map fst xs
-              charge store nowDir =
-                 case nowDir of
-                    Nothing                   -> store
-                    Just (TD.ViewNodeIn  now) -> store ~+ stinsum now
-                    Just (TD.ViewNodeOut now) -> store ~- stoutsum now
+                 map
+                    (maybe (error "no storage content after Exit") storage .
+                     Idx.bndNodeFromAugNode . fst)
+                    xs
           in  mconcat $
-              zipWith (=%=) storages $
-                 case ListHT.viewL $ map TD.viewNodeDir xs of
-                    Just (Just (TD.ViewNodeIn n), ys) ->
-                       stinsum n : zipWith charge storages ys
-                    Just _ -> error "first storage section must be Init"
-                    Nothing -> error "empty storage sequence"
-   in  foldMap f . getStorageSequences
+              zipWith3 charge
+                 (error "no storage content before Init" : storages) storages xs
+   in  foldMap (f . Map.toList) . getStorageSequences
+
+withNode :: (Idx.TimeNode time node -> expr) -> time -> node -> expr
+withNode f sec node = f $ Idx.TimeNode sec node
 
 
 -- Storages must not have more than one in or out edge.
