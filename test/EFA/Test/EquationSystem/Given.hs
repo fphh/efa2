@@ -46,6 +46,9 @@ sec0 :~ sec1 :~ sec2 :~ sec3 :~ sec4 :~ _ = Stream.enumFrom $ Idx.Section 0
 seci :: Idx.InitOrSection
 seci = XIdx.initSection
 
+sece :: Idx.SectionOrExit
+sece = XIdx.exitSection
+
 bndi, bnd0, bnd1, bnd2, bnd3, bnd4 :: Idx.Boundary
 bndi :~ bnd0 :~ bnd1 :~ bnd2 :~ bnd3 :~ bnd4 :~ _ =
    Stream.enumFrom $ Idx.initial
@@ -292,24 +295,36 @@ testGiven = mconcat $
   (XIdx.maxEnergy seci sec0 node3 .= 22 / 1) :
   (XIdx.maxEnergy seci sec2 node3 .= 6 / 1) :
   (XIdx.maxEnergy sec1 sec2 node3 .= 10 / 1) :
+  (XIdx.maxEnergy seci sece node3 .= 15 / 4) :
+  (XIdx.maxEnergy sec1 sece node3 .= 25 / 4) :
   (XIdx.storage bndi node3 .= 22 / 1) :
   (XIdx.storage bnd0 node3 .= 6 / 1) :
   (XIdx.storage bnd1 node3 .= 16 / 1) :
   (XIdx.storage bnd2 node3 .= 10 / 1) :
   (XIdx.stEnergy seci sec0 node3 .= 16 / 1) :
   (XIdx.stEnergy seci sec2 node3 .= 9 / 4) :
+  (XIdx.stEnergy seci sece node3 .= 15 / 4) :
   (XIdx.stEnergy sec0 seci node3 .= 16 / 1) :
   (XIdx.stEnergy sec1 sec2 node3 .= 15 / 4) :
+  (XIdx.stEnergy sec1 sece node3 .= 25 / 4) :
   (XIdx.stEnergy sec2 seci node3 .= 9 / 4) :
   (XIdx.stEnergy sec2 sec1 node3 .= 15 / 4) :
-  (XIdx.stX seci sec0 node3 .= 64 / 73) :
-  (XIdx.stX seci sec2 node3 .= 9 / 73) :
+  (XIdx.stEnergy sece seci node3 .= 15 / 4) :
+  (XIdx.stEnergy sece sec1 node3 .= 25 / 4) :
+  (XIdx.stX seci sec0 node3 .= 8 / 11) :
+  (XIdx.stX seci sec2 node3 .= 9 / 88) :
+  (XIdx.stX seci sece node3 .= 15 / 88) :
   (XIdx.stX sec0 seci node3 .= 1 / 1) :
-  (XIdx.stX sec1 sec2 node3 .= 1 / 1) :
+  (XIdx.stX sec1 sec2 node3 .= 3 / 8) :
+  (XIdx.stX sec1 sece node3 .= 5 / 8) :
   (XIdx.stX sec2 seci node3 .= 3 / 8) :
   (XIdx.stX sec2 sec1 node3 .= 5 / 8) :
+  (XIdx.stX sece seci node3 .= 3 / 8) :
+  (XIdx.stX sece sec1 node3 .= 5 / 8) :
   (XIdx.stInSum seci node3 .= 22 / 1) :
   (XIdx.stInSum sec1 node3 .= 10 / 1) :
   (XIdx.stOutSum sec0 node3 .= 16 / 1) :
   (XIdx.stOutSum sec2 node3 .= 6 / 1) :
+  (XIdx.stOutSum sece node3 .= 10) :
+
   []

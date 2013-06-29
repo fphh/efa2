@@ -211,10 +211,13 @@ type BndNode = TimeNode Boundary
 
 
 initSecNode :: node -> AugNode node
-initSecNode = TimeNode Init
+initSecNode = TimeNode initSection
+
+exitSecNode :: node -> AugNode node
+exitSecNode = TimeNode exitSection
 
 afterSecNode :: Section -> node -> BndNode node
-afterSecNode s = TimeNode (Following (NoInit s))
+afterSecNode s = TimeNode $ afterSection s
 
 bndNodeFromSecNode :: SecNode node -> BndNode node
 bndNodeFromSecNode (TimeNode sec node) =

@@ -793,13 +793,8 @@ fromNodes equalInOutSums =
                              TD.In ->
                                 fromInStorages an outsStore
                                 <>
-                                {-
-                                With Exit storages we must use stinsum here.
-                                splitStoreEqs (stinsum bn) outsStore
-                                -}
-                                withLocalVar (\s ->
-                                   splitStoreEqs s $
-                                   map storageTransFromEdge outsStore)
+                                (splitStoreEqs (stinsum an) $
+                                 map storageTransFromEdge outsStore)
                                 <>
                                 (stinsum an =%=
                                  case msn of
@@ -807,7 +802,7 @@ fromNodes equalInOutSums =
                                     Nothing ->
                                        case mbn of
                                           Just bn -> storage bn
-                                          Nothing -> error "Exit node must not be an In storage")
+                                          Nothing -> error "Exit node must be an Out storage")
                              TD.Out ->
                                 fromOutStorages insStore
                                 <>

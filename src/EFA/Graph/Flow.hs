@@ -214,7 +214,7 @@ mkStorageEdges node stores = do
    let (ins, outs) = Map.partition (Topo.In ==) stores
    secin <- Idx.Init : map Idx.NoInit (Map.keys ins)
    secout <-
-      map Idx.NoExit $ Map.keys $
+      (++[Idx.Exit]) $ map Idx.NoExit $ Map.keys $
       case secin of
          Idx.Init -> outs
          Idx.NoInit s -> snd $ Map.split s outs
@@ -261,7 +261,10 @@ mkSequenceTopology sd =
        -- Map.filter (not . Map.null) $   -- required?
        fmap (Map.mapMaybe id) tracks) $
    insNodes
-      (map (\n -> (Idx.initSecNode n, Topo.Storage (Just Topo.In))) $ Map.keys tracks) $
+      (concatMap (\n ->
+          [(Idx.initSecNode n, Topo.Storage $ Just Topo.In),
+           (Idx.exitSecNode n, Topo.Storage $ Just Topo.Out)]) $
+       Map.keys tracks) $
    Fold.fold $
    SD.mapWithSection mkSectionTopology sq
   where sq = fmap Topo.classifyStorages sd

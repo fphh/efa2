@@ -137,13 +137,19 @@ dotFromSequFlowGraph (rngs, g) mtshow nshow structureEdgeShow storageEdgeShow =
             attrStmts = [],
             subGraphs =
               zipWith
-                 (dotFromSectionGraph rngs mtshow nshow structureEdgeShow)
-                 (Nothing : map Just (Map.keys topoNs)) $
+                (dotFromSectionGraph rngs mtshow nshow structureEdgeShow)
+                (Nothing :
+                 map (assertJust . Idx.boundaryFromAugSection)
+                    (Map.keys topoNs)) $
               Map.toAscList $
               TMap.intersectionPartialWith (,) (TMap.cons [] topoEs) topoNs,
             nodeStmts = [],
             edgeStmts = map (dotFromStorageEdge storageEdgeShow) interEs
           }
+
+        assertJust (Just y) = Just y
+        assertJust Nothing =
+           error "Exit section cannot predecessor of another section"
 
 dotFromSectionGraph ::
   (Node.C node) =>
@@ -151,7 +157,7 @@ dotFromSectionGraph ::
   Maybe (Idx.Section -> Unicode) ->
   (Maybe Idx.Boundary -> Topo.StNode store node -> Unicode) ->
   (Idx.InSection Gr.EitherEdge node -> [Unicode]) ->
-  Maybe Idx.AugmentedSection ->
+  Maybe Idx.Boundary ->
   (Idx.AugmentedSection,
    ([Idx.InSection Gr.EitherEdge node],
     [Topo.StNode store node])) ->
@@ -162,7 +168,7 @@ dotFromSectionGraph rngs mtshow nshow structureEdgeShow
     DotStmts
       [GraphAttrs [Label (StrLabel (T.pack str))]]
       []
-      (map (dotFromSecNode (nshow $ fmap boundaryFromAugSection before)) ns)
+      (map (dotFromSecNode (nshow before)) ns)
       (map (dotFromStructureEdge structureEdgeShow) es)
   where str =
            case current of
@@ -176,11 +182,6 @@ dotFromSectionGraph rngs mtshow nshow structureEdgeShow
                      Nothing -> error $ "missing range for " ++ show s) ++
                  (flip foldMap mtshow $ \tshow ->
                     " / Time " ++ unUnicode (tshow s))
-
-boundaryFromAugSection :: Idx.Init (Idx.Exit Idx.Section) -> Idx.Boundary
-boundaryFromAugSection x =
-   case Idx.boundaryFromAugSection x of
-      Just y -> y
 
 
 graphStatementsAcc ::
@@ -434,19 +435,22 @@ formatNodeStorage ::
    Env.StInSumMap node (rec a) ->
    Env.StOutSumMap node (rec a) ->
    Maybe Idx.Boundary -> Topo.LDirNode node -> output
-formatNodeStorage rec st sis sos mBeforeBnd (n@(Idx.TimeNode sec nid), ty) =
+formatNodeStorage rec st sis sos mBeforeBnd (n@(Idx.TimeNode aug nid), ty) =
    Format.lines $
    Node.display nid :
    Format.words [formatNodeType ty] :
       case ty of
          Storage dir ->
-          let nst = Idx.TimeNode (boundaryFromAugSection sec) nid
-          in
-            case mBeforeBnd of
-               Nothing -> [lookupFormat rec st $ Idx.forNode Idx.Storage nst]
-               Just beforeBnd ->
+            case (aug, mBeforeBnd) of
+               (Idx.Init, Nothing) ->
+                  [lookupFormat rec sis $ Idx.forNode Idx.StInSum n]
+               (Idx.Init, Just _) ->
+                  error "initial section has no predecessor"
+               (Idx.NoInit Idx.Exit, Just _) ->
+                  [lookupFormat rec sos $ Idx.forNode Idx.StOutSum n]
+               (Idx.NoInit (Idx.NoExit sec), Just beforeBnd) ->
                   case (lookupFormat rec st $ XIdx.storage beforeBnd nid,
-                        lookupFormat rec st $ Idx.forNode Idx.Storage nst) of
+                        lookupFormat rec st $ XIdx.storage (Idx.afterSection sec) nid) of
                      (before, after) ->
                         before :
                         (case dir of
@@ -461,6 +465,8 @@ formatNodeStorage rec st sis sos mBeforeBnd (n@(Idx.TimeNode sec nid), ty) =
                            Nothing -> []) ++
                         Format.assign Format.empty after :
                         []
+               (Idx.NoInit _, Nothing) ->
+                  error "a true section must have a predecessor"
          _ -> []
 
 
