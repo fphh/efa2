@@ -744,9 +744,7 @@ fromEdges =
                 e = TD.structureEdgeFromDirEdge edge
             in  equ e <> equ (Idx.flip e) <>
                 (power (Idx.flip e) =%= eta e ~* power e)
-         TD.StorageEdge ste ->
-            case storageTransFromEdge ste of
-               e -> stEnergy e =%= stEnergy (Idx.flip e)
+         TD.StorageEdge _ -> mempty
 
 fromNodes ::
   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Constant a, a ~ Scalar v,
@@ -778,9 +776,9 @@ fromNodes equalInOutSums =
                       (splitFactors varsum energy (Arith.constOne (dtime sec)) xfactor)
                       (NonEmpty.fetch edges)
 
-                splitStoreEqs varsum edges =
+                splitStoreEqs varsum prex edges =
                    foldMap
-                      (splitFactors varsum stEnergy Arith.one stxfactor)
+                      (splitFactors varsum stEnergy Arith.one (stxfactor . prex))
                       (NonEmpty.fetch edges)
 
             in  -- siehe bug 2013-02-12-sum-equations-storage
@@ -793,7 +791,7 @@ fromNodes equalInOutSums =
                              TD.In ->
                                 fromInStorages an outsStore
                                 <>
-                                (splitStoreEqs (stinsum an) $
+                                (splitStoreEqs (stinsum an) id $
                                  map storageTransFromEdge outsStore)
                                 <>
                                 (stinsum an =%=
@@ -806,8 +804,8 @@ fromNodes equalInOutSums =
                              TD.Out ->
                                 fromOutStorages insStore
                                 <>
-                                splitStoreEqs (stoutsum an)
-                                   (map (Idx.flip . storageTransFromEdge) insStore)
+                                (splitStoreEqs (stoutsum an) Idx.flip $
+                                 map storageTransFromEdge insStore)
                                 <>
                                 (withSecNode $ \sn ->
                                    stoutsum an =%= integrate (outsum sn))
