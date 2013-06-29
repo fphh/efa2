@@ -752,8 +752,7 @@ fromNodes ::
 fromNodes equalInOutSums =
   fold . Map.mapWithKey f . Gr.nodeEdges
    where f an (ins, nodeType, outs) =
-            let mbn = Idx.bndNodeFromAugNode an
-                msn = Idx.secNodeFromBndNode =<< mbn
+            let msn = Idx.secNodeFromBndNode =<< Idx.bndNodeFromAugNode an
                 withSecNode = flip foldMap msn
 
                 partition =
@@ -791,13 +790,8 @@ fromNodes equalInOutSums =
                                 <>
                                 splitStoreEqs (stoutsum rn) id outsStore
                                 <>
-                                (stoutsum rn =%=
-                                 case msn of
-                                    Just sn -> integrate $ insum sn
-                                    Nothing ->
-                                       case mbn of
-                                          Just bn -> storage bn
-                                          Nothing -> error "Exit node must be an Out storage")
+                                (withSecNode $ \sn ->
+                                    stoutsum rn =%= integrate (insum sn))
                          Just (TD.ViewNodeOut rn) ->
                                 fromOutStorages insStore
                                 <>
