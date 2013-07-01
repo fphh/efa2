@@ -1,7 +1,6 @@
 {-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE Rank2Types #-}
 
 module Modules.Optimisation where
 
@@ -35,9 +34,7 @@ import EFA.Signal.Data (Data(..), Nil, (:>))
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
 
-import EFA.Report.FormatValue (FormatValue)
-
-import qualified Data.Foldable as Fold 
+import qualified Data.Foldable as Fold
 import qualified Data.Map as M
 import qualified Data.Vector as V
 import Data.Monoid (mconcat, (<>))
@@ -48,15 +45,17 @@ import Control.Applicative (liftA2)
 sec0, sec1 :: TIdx.Section
 sec0 :~ sec1 :~ _ = Stream.enumFrom $ TIdx.Section 0
 
+type EtaAssignMap =
+        M.Map (XIdx.Eta Node) (String, String, XIdx.Eta Node -> XIdx.Power Node)
+
 type SolveFunc a =
-  (TIdx.Section -> 
-     M.Map (XIdx.Eta Node) (String, String, XIdx.Eta Node -> XIdx.Power Node)) ->
+  (TIdx.Section -> EtaAssignMap) ->
   M.Map String (a -> a) ->
   Data Nil a ->
   Data Nil a ->
   Data Nil a ->
   Data Nil a ->
-  EqEnv.Complete  
+  EqEnv.Complete
     Node
     (EqRec.Absolute (Result (Data Nil a)))
     (EqRec.Absolute (Result (Data Nil a)))
@@ -73,19 +72,11 @@ commonGiven =
    []
 
 etaGiven ::
-   (Show key, Ord key,
-    Eq (Data.Apply c d1), Eq (Data.Apply c d2),
-    Ord (idx2 node), Ord (idx1 node),
-    Num d1, Show d1, Ord d1, EqArith.Sum d1,
-    Fractional d2, EqArith.Sum d2,
-    FormatValue (idx2 node), FormatValue (idx1 node),
-    EqEnv.AccessMap idx1, EqEnv.AccessMap idx2,
-    Data.ZipWith c, Data.Storage c d2, Data.Storage c d1,
-    EqEnv.Element idx1 a v ~ Data c d2,
-    EqEnv.Element idx2 a v ~ Data c d1) =>
-   M.Map (idx1 node) (key, key, idx1 node -> idx2 node) ->
-   M.Map key (d1 -> d2) ->
-   EqGen.EquationSystem node s a v
+   (Fractional a, Ord a, Show a, EqArith.Sum a,
+    Data.Apply c a ~ v, Eq v, Data.ZipWith c, Data.Storage c a) =>
+   EtaAssignMap ->
+   M.Map String (a -> a) ->
+   EqGen.EquationSystem Node s x (Data c a)
 etaGiven etaAssign etaFunc = Fold.fold $ M.mapWithKey f etaAssign
   where f n (strP, strN, g) =
           EqGen.variable n =.= EqGen.liftF (Data.map ef) (EqGen.variable $ g n)
@@ -105,15 +96,15 @@ eqs = EqGen.fromGraph True (TD.dirFromSequFlowGraph (snd System.seqTopoOpt))
 
 solveCharge ::
   (Ord a, Fractional a, Show a, EqArith.Sum a) =>
-  (forall s. EqGen.EquationSystem Node s (Data Nil a) (Data Nil a)) -> SolveFunc a
+  (forall s. EqGen.EquationSystem Node s (Data Nil a) (Data Nil a)) ->
+  SolveFunc a
 solveCharge eqs etaAssign etaFunc pRest pRestLocal pWater pGas =
   EqGen.solve2 eqs $
     givenCharging etaAssign etaFunc pRest pRestLocal pWater pGas
 
 givenCharging ::
   (Ord a, Fractional a, Show a, EqArith.Sum a) =>
-  (TIdx.Section ->
-     M.Map (XIdx.Eta Node) (String, String, XIdx.Eta Node -> XIdx.Power Node)) ->
+  (TIdx.Section -> EtaAssignMap) ->
   M.Map String (a -> a) ->
   Data Nil a ->
   Data Nil a ->
@@ -146,7 +137,8 @@ givenCharging etaAssign etaFunc pRest pRestLocal pWater pGas =
 solveDischarge ::
   ( Eq a, Show a, EqArith.Product a, EqArith.Integrate a, Ord a,
     Fractional a, EqArith.Scalar (Data Nil a) ~ Data Nil a) =>
-  (forall s. EqGen.EquationSystem Node s (Data Nil a) (Data Nil a)) -> SolveFunc a
+  (forall s. EqGen.EquationSystem Node s (Data Nil a) (Data Nil a)) ->
+  SolveFunc a
 solveDischarge eqs etaAssign etaFunc pRest pRestLocal pWater pGas =
   EqGen.solve2 eqs $
     givenDischarging etaAssign etaFunc pRest pRestLocal pWater pGas
@@ -154,8 +146,7 @@ solveDischarge eqs etaAssign etaFunc pRest pRestLocal pWater pGas =
 
 givenDischarging ::
   (Eq a, Num a, Show a, EqArith.Sum a, Fractional a,Ord a) =>
-  (TIdx.Section ->
-     M.Map (XIdx.Eta Node) (String, String, XIdx.Eta Node -> XIdx.Power Node)) ->
+  (TIdx.Section -> EtaAssignMap) ->
   M.Map String (a -> a) ->
   Data Nil a ->
   Data Nil a ->
@@ -191,8 +182,7 @@ givenSimulate ::
   SV.Singleton v,
   SV.Walker v,
   SV.Storage v a) =>
-  (TIdx.Section ->
-     M.Map (XIdx.Eta Node) (String, String, XIdx.Eta Node -> XIdx.Power Node)) ->
+  (TIdx.Section -> EtaAssignMap) ->
   M.Map String (a -> a) ->
   SD.SequData (Record.PowerRecord Node v a) ->
   EqGen.EquationSystem Node s (Data Nil a) (Data (v :> Nil) a)
