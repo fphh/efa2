@@ -520,7 +520,6 @@ lookUpGen look idxs =
       (_, invalidIdxs) ->
          error $ "Error in vLookup - indices out of Range: " ++ show invalidIdxs
 
-
 class Reverse v where
    reverse :: (Storage v d) => v d -> v d
 

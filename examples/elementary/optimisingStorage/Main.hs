@@ -181,7 +181,7 @@ getSignalVar ::
 getSignalVar varEnvs idx =
    S.changeSignalType $ S.fromList2 $
    map (map (unpackResult . Record.unAbsolute .
-             flip checkedLookup idx .
+             flip (checkedLookup "getSignalVar") idx .
              Accessor.get Env.accessMap)) $
    varEnvs
 
@@ -376,75 +376,75 @@ main = do
 
   -- Plots to check the variation
 
-  PlotIO.surface "varX"  plotTerm id (\_ -> "") varX varY varX
+  PlotIO.surface "varX"  plotTerm (\_ -> "") varX varY varX
   Rep.report [] ("varX",varX)
 
-  PlotIO.surface "varY" plotTerm id (\_ -> "")  varX varY varY
+  PlotIO.surface "varY" plotTerm (\_ -> "")  varX varY varY
   Rep.report [] ("vary",varY)
 
   -- Plot to check consumer behaviour
 
-  PlotIO.surface "Eout" plotTerm id (\_ -> "")  varX varY (eoutVar0 .+ (S.makeDelta eoutVar1))
+  PlotIO.surface "Eout" plotTerm (\_ -> "")  varX varY (eoutVar0 .+ (S.makeDelta eoutVar1))
   Rep.report [] ("Eout",(eoutVar0 .+ (S.makeDelta eoutVar1)))
 
-  PlotIO.surface "Pout0" plotTerm id (\_ -> "")  varX varY varPout0
+  PlotIO.surface "Pout0" plotTerm (\_ -> "")  varX varY varPout0
   Rep.report [] ("Pout0",varPout0)
 
-  PlotIO.surface "Pout1" plotTerm id (\_ -> "")  varX varY varPout1
+  PlotIO.surface "Pout1" plotTerm (\_ -> "")  varX varY varPout1
   Rep.report [] ("Pout1",varPout1)
 
 
   -- Plots to check variable efficiency at fuel converter
 
-  PlotIO.surface "N01" plotTerm id (\_ -> "")  varX varY varN01
+  PlotIO.surface "N01" plotTerm (\_ -> "")  varX varY varN01
 
 
-  PlotIO.surface "P10" plotTerm id (\_ -> "")  varX varY varP10
+  PlotIO.surface "P10" plotTerm (\_ -> "")  varX varY varP10
 
-  PlotIO.surface "P01" plotTerm id (\_ -> "")  varX varY varP01
+  PlotIO.surface "P01" plotTerm (\_ -> "")  varX varY varP01
 
   PlotIO.xy "N01 - Curve"  plotTerm id (\_ -> "efficiency N01") p10Lin' n01Lin'
 
   -- Plots to check variable efficiency at storage -- charging
-  PlotIO.surface "P13_0 - externe Ladeleistung" plotTerm id (\_ -> "") varX varY varP13_0
+  PlotIO.surface "P13_0 - externe Ladeleistung" plotTerm (\_ -> "") varX varY varP13_0
   Rep.report [] ("varP13_0",varP13_0)
 
-  PlotIO.surface "P31_0 - interne LadeLeistung" plotTerm id (\_ -> "") varX varY varP31_0
+  PlotIO.surface "P31_0 - interne LadeLeistung" plotTerm (\_ -> "") varX varY varP31_0
   Rep.report [] ("varP31_0",varP31_0)
 
-  PlotIO.surface "N13 - Charging" plotTerm id (\_ -> "") varP31_0 varY varN13
+  PlotIO.surface "N13 - Charging" plotTerm (\_ -> "") varP31_0 varY varN13
   PlotIO.xy "N13 - Charging"  plotTerm id (\_ -> "efficiency N13") varP31_0 varN13
   Rep.report  [] ("N13 - Charging",varN13)
 
 
-  PlotIO.surface "P13_1 - externe Entladeleistung" plotTerm id (\_ -> "") varX varY varP13_1
+  PlotIO.surface "P13_1 - externe Entladeleistung" plotTerm (\_ -> "") varX varY varP13_1
   Rep.report [] ("varP13_1",varP13_1)
 
-  PlotIO.surface "P31_1 - interne EntladeLeistung" plotTerm id (\_ -> "") varX varY varP31_1
+  PlotIO.surface "P31_1 - interne EntladeLeistung" plotTerm (\_ -> "") varX varY varP31_1
   Rep.report [] ("varP31_1",varP31_1)
 
   Rep.report  [] ("N31 - Discharging",varN31)
-  PlotIO.surface  "N31 - Discharging" plotTerm id (\_ -> "")  varP13_1 varY varN31
+  PlotIO.surface  "N31 - Discharging" plotTerm (\_ -> "")  varP13_1 varY varN31
   PlotIO.xy "N31 - Discharging" plotTerm id (\_ -> "efficiency N31") varP13_1 varN31
 
 
   -- Check Losses
 
   -- Loss of N01
-  PlotIO.surface "LossA" plotTerm id (\_ -> "") varX varY varLossA
+  PlotIO.surface "LossA" plotTerm (\_ -> "") varX varY varLossA
 
   -- Loss of the Rest of the system
-  PlotIO.surface "LossB" plotTerm id (\_ -> "") varX varY varLossB
+  PlotIO.surface "LossB" plotTerm (\_ -> "") varX varY varLossB
 
   -- Total System Loss
-  PlotIO.surface "Loss" plotTerm id (\_ -> "") varX varY varLoss
+  PlotIO.surface "Loss" plotTerm (\_ -> "") varX varY varLoss
 
   -- System loss in curves over split variation for multiple resistance values
   PlotIO.xy "Loss"  plotTerm id (\_ -> "Loss") varX varLoss
 
   -- Total System Efficiency
   Rep.report  [] ("EtaSys",etaSysVar)
-  PlotIO.surface "EtaSys" plotTerm id (\_ -> "") varX varY etaSysVar
+  PlotIO.surface "EtaSys" plotTerm (\_ -> "") varX varY etaSysVar
   PlotIO.xy "EtaSys" plotTerm id (\_ -> "EtaSys") varX etaSysVar -- System efficiency in curves over split variation for multiple resistance values
 
 -- ##################################

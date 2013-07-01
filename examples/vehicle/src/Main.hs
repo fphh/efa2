@@ -360,9 +360,9 @@ main = do
 
   concurrentlyMany_ $ [
     -- Topologie
-    --  Draw.topology System.topology,
+    --Draw.topology System.topology,
     --  Draw.topology2pdf System.topology
-    -- Draw.topologyWithEdgeLabels System.edgeNames System.topology,
+    --Draw.topologyWithEdgeLabels System.edgeNames System.topology,
     ]
 
 {-
@@ -380,7 +380,7 @@ main = do
 ---------------------------------------------------------------------------------------
 -- * Plot Operation Points
 
-    ++ [mapM_ (Plots.operation "Operation Points -" plotTerm id (zip datasetsX allSignalsX)) xyList]
+    -- ++ [mapM_ (Plots.operation "Operation Points -" plotTerm id (zip datasetsX allSignalsX)) xyList]
 
 ---------------------------------------------------------------------------------------
 -- * Plot Efficiency Curves and Distributions
@@ -425,15 +425,15 @@ main = do
 
 --    ++ [print $ Plots.lookupAllStacks energyIndex (last differenceExtEnvs)]
 --    ++ [print $ Plots.lookupStack energyIndexSec (last differenceExtEnvs)]
-
+-}
     -- overall stack at given position
-    ++ [Plot.aggregatedStackIO
+    ++ [PlotIO.aggregatedStack
         ("Cumulative Flow Change at  " ++ show energyIndex)
         energyIndex
         cumStack_filterEnergy
         (head differenceExtEnvs)]
 
--}
+
 {-     ++ [mapM_ (Plot.stackIOfromEnv  "Energy Flow Change at Tank in Section 6"
          (XIdx.energy (Idx.Section 6) System.Tank System.ConBattery) 1)
          (zip deltasetsX differenceExtEnvs)]-}

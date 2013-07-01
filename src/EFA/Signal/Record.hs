@@ -66,7 +66,7 @@ import Data.Foldable (foldMap)
 import Data.List (transpose)
 import Data.Tuple.HT (mapFst)
 import Data.Map (Map)
-import EFA.Utility.Map (checkedLookup2)
+import EFA.Utility.Map (checkedLookup)
 import EFA.Utility (myShowList)
 
 newtype SigId = SigId String deriving (Eq, Ord, Show, Read)
@@ -92,7 +92,12 @@ type PowerRecord n v d = Record Signal Signal (Typ A T Tt) (Typ A P Tt) (Idx.PPo
 
 type FlowRecord n v d = Record Signal FSignal (Typ A T Tt) (Typ A F Tt) (Idx.PPos n) v d d
 
+-- type CumFlowRecord n v d = Record Scalar Scalar (Typ A T Tt) (Typ A F Tt) (Idx.PPos n) v d d
+
 type DTimeFlowRecord n v d = Record FSignal FSignal (Typ D T Tt) (Typ A F Tt) (Idx.PPos n) v d d
+
+type DTimePowerRecord n v d = Record FSignal FSignal (Typ D T Tt) (Typ A P Tt) (Idx.PPos n) v d d
+
 
 type DistRecord n v d = Record FDistrib FDistrib (Typ UT UT UT) (Typ A F Tt) (Idx.PPos n) v ([S.Class d], [S.SignalIdx]) d
 
@@ -147,7 +152,7 @@ getTime (Record time _) = time
 getSig ::
    (Show (v d), Ord id, Show id) =>
    Record s1 s2 t1 t2 id v d d -> id -> TC s2 t2 (Data (v :> Nil) d)
-getSig (Record _ sigMap) key = checkedLookup2 "getSig" sigMap key
+getSig (Record _ sigMap) key = checkedLookup "getSig" sigMap key
 
 -- | Get Start and End time
 {- Wollen wir wirklich (Typ A T Tt) vorschreiben?
@@ -165,6 +170,7 @@ getTimeWindow ::
 getTimeWindow = S.unzip . S.minmax . getTime
 
 
+
 diffTime ::
 {-
    (V.Zipper v, V.Walker v, V.Singleton v, V.Storage v a, BSum a,
@@ -172,10 +178,24 @@ diffTime ::
    Record Signal s2 (Typ abs t1 p1) t2 id v a ->
    Record FSignal s2 (Typ delta t1 p1) t2 id v a
 -}
+
    (V.Zipper v, V.Walker v, V.Singleton v, V.Storage v d, BSum d) =>
    FlowRecord node v d ->
    DTimeFlowRecord node v d
 diffTime (Record time signals) = Record (S.delta time) signals
+
+
+dTimePowerRecord ::
+   (V.Zipper v, V.Walker v, V.Singleton v, V.Storage v d, 
+   BSum d, Fractional d, Num d) =>
+   PowerRecord n v d ->
+   DTimePowerRecord n v d
+dTimePowerRecord (Record time signals) = 
+  rmap (S.deltaMap (\x y -> (x+y)/2)) $
+    Record (S.delta time) signals
+
+
+
 
 -- | Use carefully -- removes signal jitter around zero
 removeZeroNoise ::
@@ -282,7 +302,7 @@ union (Record timeA mA) (Record timeB mB) =
 
 -- Wegen newTimeBase ist der Typ nicht so algemein wie bei "union" oben. Schade.
 unionWithNewTime ::
-  ( Eq (v d), Show d,
+  ( Eq (v d), Show d,Show (v d),
     Ord id,
     Show id,
     Fractional d,
@@ -340,7 +360,7 @@ maxRange ::
 maxRange list (Record _ m) =
   (S.toScalar $ minimum lmin, S.toScalar $ maximum lmax)
   where (lmin, lmax) = unzip $
-          map (S.fromScalar . S.minmax . checkedLookup2 "Signal.maxRange" m)
+          map (S.fromScalar . S.minmax . checkedLookup "Signal.maxRange" m)
               $ case list of
                      RangeFromAll -> Map.keys m
                      RangeFrom w -> w
@@ -394,7 +414,7 @@ norm rec = rmap S.norm rec
 
 -- | Add interpolated data points in an existing record
 newTimeBase ::
-  (Fractional d, Ord d, V.Find v, Show d,
+  (Fractional d, Ord d, V.Find v, Show d,Show (v d),
    V.Lookup v, V.Walker v, V.Singleton v, V.Storage v d) =>
   String ->
   Record Signal Signal (Typ A T Tt) t2 id v d d ->
@@ -546,11 +566,26 @@ type Samp1 = (TSamp, PSamp1L)
 type Samp = (TSamp, PSamp)
 
 
-viewL :: Sig -> Maybe (Samp1, Sig)
-viewL (t,ps) =
+--viewL :: Sig -> Maybe (Samp1, Sig)
+viewL
+  :: (V.Storage v1 (D.Apply v2 d), V.Storage v3 (D.Apply v4 d1),
+      V.Singleton v1, V.Singleton v3, S.TailType s, S.TailType s1) =>
+     (TC s typ (Data (v1 :> v2) d), TC s1 typ1 (Data (v3 :> v4) d1))
+     -> Maybe
+          ((TC (S.Head s) typ (Data v2 d), TC (S.Head s1) typ1 (Data v4 d1)),
+           (TC s typ (Data (v1 :> v2) d), TC s1 typ1 (Data (v3 :> v4) d1)))
+
+viewL (t, ps) =
    liftM2 zipPairs (S.viewL t) (S.viewL ps)
 
-viewR :: Sig -> Maybe (Sig, Samp1)
+--viewR :: Sig -> Maybe (Sig, Samp1)
+viewR
+  :: (V.Storage v1 (D.Apply v2 d), V.Storage v3 (D.Apply v4 d1),
+      V.Singleton v1, V.Singleton v3, S.TailType s, S.TailType s1) =>
+     (TC s typ (Data (v1 :> v2) d), TC s1 typ1 (Data (v3 :> v4) d1))
+     -> Maybe
+          ((TC s typ (Data (v1 :> v2) d), TC s1 typ1 (Data (v3 :> v4) d1)),
+           (TC (S.Head s) typ (Data v2 d), TC (S.Head s1) typ1 (Data v4 d1)))
 viewR (t,ps) =
    liftM2 zipPairs (S.viewR t) (S.viewR ps)
 
@@ -560,7 +595,12 @@ zipPairs (a,b) (c,d) = ((a,c), (b,d))
 len :: Sig -> Int
 len  (t,ps) = min (S.len t) (S.len ps)
 
-singleton :: Samp1 -> Sig
+singleton
+  :: (V.Storage v (D.Apply c d), V.Storage v1 (D.Apply c1 d1),
+      S.Singleton s v c, S.Singleton s1 v1 c1) =>
+     (TC (S.SingletonSource s) t (Data c d),
+      TC (S.SingletonSource s1) t1 (Data c1 d1))
+     -> (TC s t (Data (v :> c) d), TC s1 t1 (Data (v1 :> c1) d1))
 singleton (t,ps) = (S.singleton t, S.singleton ps)
 
 
@@ -626,3 +666,28 @@ distribution rec@(Record _ pMap) xs interval offset = Record classification ener
                               S.changeSignalType . S.untype .
                               getSig rec) xs
         energyDistribution =  Map.map (S.calcDistributionValues classification) pMap
+
+-- | Careful quick hack        
+
+sumFlowRecord :: (V.FromList v, 
+                  Num d,
+                  V.Zipper v,
+                  V.Walker v,
+                  V.Storage v d,
+                  V.Singleton v,
+                  BSum d,
+                  BProd d d) => FlowRecord node v d -> FlowRecord node v d
+sumFlowRecord (Record time pmap) = Record (S.fromList $ [head $ S.toList time, last $ S.toList time]) (Map.map (S.fromList . (\x -> [x]) . S.fromScalar . S.sum) pmap)
+
+
+{-
+sumFlowRecord :: (V.FromList v, 
+                  Num d,
+                  V.Zipper v,
+                  V.Walker v,
+                  V.Storage v d,
+                  V.Singleton v,
+                  BSum d,
+                  BProd d d) => DTimeFlowRecord node v d -> CumFlowRecord node v d
+sumFlowRecord (Record dtime map) = Record (S.sum dtime) (Map.map (S.sum) map)
+-}

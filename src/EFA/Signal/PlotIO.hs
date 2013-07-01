@@ -5,7 +5,7 @@
 module EFA.Signal.PlotIO (
    signal,
    xy,
-   surface,
+   surface, surfaceWithOpts,
    record,
    recordList,
    sequence,
@@ -32,7 +32,12 @@ import qualified EFA.Signal.SequenceData as SD
 import qualified EFA.Signal.Vector as SV
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Base as Base
+
+import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
+
 import EFA.Signal.SequenceData (SequData)
+import qualified Graphics.Gnuplot.Graph.ThreeDimensional as Graph3D
+
 import EFA.Signal.Record (Record)
 
 import qualified EFA.Report.Format as Format
@@ -90,14 +95,25 @@ tableLinear2D term str = run term . plotTable tail str
 
 -- | Plotting Surfaces
 
-surface ::
+
+surfaceWithOpts ::
   (Plot.Surface tcX tcY tcZ, Terminal.C term) =>
   String -> term ->
   (LineSpec.T -> LineSpec.T) ->
+  (Opts.T (Graph3D.T (Plot.Value tcX) (Plot.Value tcY) (Plot.Value tcZ)) ->
+    Opts.T (Graph3D.T (Plot.Value tcX) (Plot.Value tcY) (Plot.Value tcZ))) ->
   (Int -> String) ->
   tcX -> tcY -> tcZ -> IO ()
-surface ti terminal opts legend x y z =
-  Plot.run terminal (Plot.xyFrameAttr ti x y) (Plot.surface opts legend x y z)
+surfaceWithOpts ti terminal opts fopts legend x y z =
+  Plot.run terminal (fopts $ Plot.xyFrameAttr ti x y) 
+                    (Plot.surface opts legend x y z)
+
+surface :: 
+  (Plot.Surface tcX tcY tcZ, Terminal.C term) =>
+  String -> term ->
+  (Int -> String) ->
+  tcX -> tcY -> tcZ -> IO ()
+surface ti terminal legend x y z = surfaceWithOpts ti terminal id id legend x y z
 
 {-
 combineWith ::

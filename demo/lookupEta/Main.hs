@@ -78,7 +78,7 @@ solve p =
                <> given p)
   in  show p ++ " " ++
       Format.unUnicode (formatValue
-         (checkedLookup (Env.etaMap $ Env.signal env) eta))
+         (checkedLookup "solve" (Env.etaMap $ Env.signal env) eta))
 
 main :: IO ()
 main =

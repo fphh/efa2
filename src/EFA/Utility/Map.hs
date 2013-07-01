@@ -9,18 +9,13 @@ import Data.Map (Map)
 import Data.Tuple.HT (swap)
 
 
-checkedLookup :: (Ord k, Show k, Show v) => Map k v -> k -> v
-checkedLookup m k =
-  case Map.lookup k m of
-    Nothing -> error $ "checkedLookup: " ++ show k  ++ "\n" ++ "Keys in Map:" ++ "\n" ++ (show $ Map.keys m)
-    Just x -> x
-
-
 -- | New improved ugly version with caller function name
 type Caller = String
 
-checkedLookup2 :: (Ord k, Show k, Show v) => Caller -> Map k v -> k -> v
-checkedLookup2 c m k =
+
+checkedLookup ::
+  (Ord k, Show k, Show v) => Caller -> Map k v -> k -> v
+checkedLookup c m k =
   case Map.lookup k m of
     Nothing -> error $ "Error in checkedLookup called by function " ++ show c ++
                " with the key: " ++ show k  ++ "\n" ++ "Keys in Map:" ++ "\n" ++

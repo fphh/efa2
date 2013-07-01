@@ -1,5 +1,6 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeOperators #-}
 
 
 module Modules.Analysis where
@@ -30,6 +31,7 @@ import qualified EFA.Signal.SequenceData as SD
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Vector as Vec
 import qualified EFA.Signal.Signal as Sig
+import qualified EFA.Graph.Topology.Node as TDNode
 
 import EFA.Signal.Record (SignalRecord, FlowRecord,
                           Record(Record), PowerRecord,
@@ -216,6 +218,24 @@ makeGivenFromExternal idx sf =
            fold (Map.mapWithKey g xs)
            where g (Idx.PPos p) e =
                     Idx.Record idx (Idx.InSection sec (Idx.Energy p)) .= sum (Sig.toList e)
+external2 :: (Eq a, Eq (v a), Vec.Singleton v, Vec.Storage v a, Vec.Walker v,
+              TDNode.C node, Arith.Constant a, B.BSum a,
+              Vec.Zipper v) =>
+             Flow.RangeGraph node ->
+             SD.SequData 
+             (Record
+              Sig.Signal
+              Sig.FSignal
+              (Typ A T Tt)
+              (Typ A F Tt)
+              (Idx.PPos node)
+              v
+              a
+              a) ->
+             Env.Complete 
+             node
+             (EqRecord.Absolute (Result (Data Nil a)))
+             (EqRecord.Absolute (Result (Data (v D.:> Nil) a)))
 
 external2 sequenceFlowTopology sequFlowRecord =
   EqGen.solveFromMeasurement
@@ -223,7 +243,13 @@ external2 sequenceFlowTopology sequFlowRecord =
     makeGivenFromExternal2 sequFlowRecord -- $ Record.diffTime sequFlowRecord
 
 -- makeGivenFromExternal2 ::
--- makeGivenFromExternal2 env = EqGen.fromEnvSignal $ (fmap (fmap (D.foldl (+) 0) ) $ EqAbs.envFromFlowRecord env)
+--  makeGivenFromExternal2 env = EqGen.fromEnvSignal $ (fmap (fmap (D.foldl (+) 0) ) $ EqAbs.envFromFlowRecord env)
+makeGivenFromExternal2 :: (Eq (v a1), Ord node, Arith.Sum a1, Vec.Zipper v,
+                           Vec.Walker v, Vec.Storage v a1, Vec.Singleton v,
+                           B.BSum a1) =>
+                          SD.SequData (FlowRecord node v a1) ->
+                          EqGen.EquationSystem
+                          EqRecord.Absolute node s a (Data (v D.:> Nil) a1)
 makeGivenFromExternal2 sf = EqGen.fromEnvSignal $ EqAbs.envFromFlowRecord (fmap Record.diffTime sf)
 
 -------------------------------------------------------------------------------------------------

@@ -57,6 +57,9 @@ constructSeqTopo topo =
   SD.fromList
 
 
+select :: [topo] -> [Int] -> SD.SequData topo
+select ts = SD.fromList . map (ts !!)
+
 
 checkDetermined :: String -> Result a -> a
 checkDetermined name rx =

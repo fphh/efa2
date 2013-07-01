@@ -7,15 +7,27 @@ module Modules.Analysis where
 ----------------------------------
 -- * Example Specific Imports
 import qualified Modules.System as System
+--import Modules.System (Node(..))
+
 import Modules.Signals as Signals
 
 import qualified EFA.Example.Absolute as EqAbs
+--import qualified EFA.Graph.Topology.Index as TIdx
+--import qualified EFA.Equation.Environment as EqEnv
+--import qualified EFA.Equation.Record as EqRec
+import EFA.Equation.Result (Result(..))
+--import EFA.Utility.Map (checkedLookup)
 
 import qualified EFA.Example.Index as XIdx
 
 import EFA.Example.Utility (Ignore, (.=))
                             -- (%=),
                             -- checkDetermined)
+-- import qualified EFA.Example.Absolute ( (.=), (%=), (=.=) )
+--import EFA.Utility.Stream (Stream((:~)))
+--import qualified EFA.Utility.Stream as Stream
+import Data.Monoid (--mconcat, 
+                    (<>))
 
 import qualified EFA.Equation.System as EqGen
 -- import qualified EFA.Equation.Variable as Var
@@ -24,7 +36,7 @@ import qualified EFA.Equation.Arithmetic as Arith
 -- import qualified EFA.Equation.Stack as Stack
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Record as EqRecord
-import EFA.Equation.Result (Result(..))
+--import EFA.Equation.Result (Result(..))
 -- import EFA.Equation.Stack (Stack)
 
 import qualified EFA.Signal.SequenceData as SD
@@ -61,14 +73,21 @@ import EFA.Signal.Typ (Typ, F, T, A, Tt)
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as TD
-import qualified EFA.Graph.Topology.Node as TDNode
+--import qualified EFA.Graph.Topology.Node as TDNode
 import qualified EFA.Graph.Flow as Flow
+<<<<<<< HEAD
 import qualified Data.Map as Map
 import Data.Monoid ((<>))
+=======
+import qualified Data.Map as M
+--import Data.Monoid ((<>))
+>>>>>>> philipp_neu
                     --mempty)
 
 import Data.Foldable (fold)
                       --foldMap)
+
+import Debug.Trace
 
 --import qualified EFA.Equation.Environment as Env
 --import EFA.Equation.Result (Result(..))
@@ -82,21 +101,6 @@ import Data.Foldable (fold)
 
 --import qualified EFA.Equation.Record as EqRecord
 
-{-
-newtype Settings = Settings {filePath :: FileName,
-                             fileNames :: [FileName],
-                             recordNames :: [RecordName],
-                             zeroToleranz :: Double,
-                             filterTime ::  TC Scalar (Typ A T Tt) (Data Nil Double),
-                             filterEnergy :: TC Scalar (Typ A F Tt) (Data Nil Double),
-                             deltaSectionMapping :: [Int]
-                            }
--}
--------------------------------------------------------------------------------------------------
-{-
-sec2 :: Idx.Section
-sec2 = Idx.Section 2
--}
 -------------------------------------------------------------------------------------------------
 -- ## Preprocessing of Signals
 
@@ -152,21 +156,6 @@ pre topology epsZero epsT epsE rawSignals =
         in  (flowState, Flow.adjustSigns topology flowState state))
       sequenceFlowsFilt
 
-{-
-
--- New Approach with Utility-Funktions from HT - the challenges:
-
-1. scalar value are in the moment double / signals are in data container. Best to move both to container
-2. switch to dTime with fmap Record.diffTime
-2. make delta - Analysis from two envs
-
-external sequenceFlowTopology sequFlowRecord =  EqGen.solveFromMeasurement sequenceFlowTopology $ makeGivenFromExternal Idx.Absolute sequFlowRecord
-
-initStorage :: (Fractional a) => a
-initStorage = 0.7*3600*1000
-
-makeGivenFromExternal idx sf = EqGen.fromEnvSignal . EqAbs.envFromFlowRecord $ sf
--}
 -------------------------------------------------------------------------------------------------
 -- ## Analyse External Energy Flow
 
@@ -258,6 +247,7 @@ makeGivenFromExternal2 sf =
       (Idx.absolute (XIdx.storage Idx.initial System.Water) .= Data initStorage) <>
       (EqGen.fromEnvSignal $ EqAbs.envFromFlowRecord (fmap Record.diffTime sf))
 
+<<<<<<< HEAD
 -------------------------------------------------------------------------------------------------
 -- ## Predict Energy Flow
 {-
@@ -313,6 +303,8 @@ makeGivenForPrediction idx env =
 --          i (Idx.InSection (Idx.Section sec) (Idx.Energy (Idx.StructureEdge x y))) _ | otherwise = True
 -}
 
+=======
+>>>>>>> philipp_neu
 ---------------------------------------------------------------------------------------------------
 -- ## Make Delta
 
@@ -334,10 +326,11 @@ delta :: (Vec.Zipper v1, Vec.Zipper v2,
          System.Node
          (EqRecord.Delta (Result Double))
          (EqRecord.Delta (Result d))
-delta sequenceFlowTopology sequenceFlow sequenceFlow'=
+delta sequenceFlowTopology sequenceFlow sequenceFlow' =
   EqGen.solveFromMeasurement sequenceFlowTopology $
     ( makeGivenFromExternal Idx.Before sequenceFlow <>
       makeGivenFromExternal Idx.After sequenceFlow')
+<<<<<<< HEAD
 {-
 ------------------------------------------------------------------
 -- ## Make Difference Analysis
@@ -406,3 +399,10 @@ makeGivenForDifferentialAnalysis (Env.Complete _ sig) =
         -- h (Idx.InSection (Idx.Section sec) (Idx.Energy (Idx.StructureEdge x y))) _ | sec == 18 || x == System.Tank || y == System.ConBattery = False
         -- h (Idx.InSection (Idx.Section sec) (Idx.Energy (Idx.StructureEdge x y))) _ | otherwise = True
 -}
+=======
+
+
+
+
+
+>>>>>>> philipp_neu

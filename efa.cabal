@@ -66,6 +66,7 @@ Library
     EFA.IO.Parser
     EFA.Utility
     EFA.Utility.Async
+    EFA.Utility.Bifunctor
     EFA.Utility.Map
     EFA.Utility.Stream
     EFA.Utility.TotalMap
@@ -120,6 +121,7 @@ Library
     EFA.Example.AssignMap
     EFA.Example.Index
     EFA.Example.Tree
+    EFA.Example.EtaSys
 
 
 -- sollte man auf Cabal-Test umstellen,
@@ -188,76 +190,80 @@ Executable example-optimalStorageUsage
       containers,
       data-accessor,
       utility-ht,
-      base
-  Else
-    Buildable: False
-
-
-
-
-Executable example-vehicle
-  Hs-Source-Dirs: examples/vehicle/src
-  Main-Is: Main.hs
-  Other-Modules:
-    Modules.Plots
-    Modules.Signals
-    Modules.System
-    Modules.Analysis
-  GHC-Options: -Wall
-  If flag(buildExamples)
-    Build-Depends:
-      efa,
-      gnuplot,
-      graphviz,
-      utility-ht,
       containers,
-      non-empty,
-      filepath,
       base
   Else
     Buildable: False
 
-Executable example-energy
-  Hs-Source-Dirs: examples/energy/localGrid/src
-  Main-Is: Main.hs
-  Other-Modules:
-    Modules.Signals
-    Modules.System
-    Modules.Analysis
-  GHC-Options: -Wall
-  If flag(buildExamples)
-    Build-Depends:
-      efa,
-      gnuplot,
-      graphviz,
-      utility-ht,
-      containers,
-      non-empty,
-      filepath,
-      base
-  Else
-    Buildable: False
 
-Executable optimise-energy
-  Hs-Source-Dirs: examples/energy/localGrid/src
-  Main-Is: Optimise.hs
-  Other-Modules:
-    Modules.Signals
-    Modules.System
-    Modules.Analysis
-  GHC-Options: -Wall
-  If flag(buildExamples)
-    Build-Depends:
-      efa,
-      gnuplot,
-      graphviz,
-      utility-ht,
-      containers,
-      non-empty,
-      filepath,
-      base
-  Else
-    Buildable: False
+
+
+--Executable example-vehicle
+--  Hs-Source-Dirs: examples/vehicle/src
+--  Main-Is: Main.hs
+--  Other-Modules:
+--    Modules.Plots
+--    Modules.Signals
+--    Modules.System
+--    Modules.Analysis
+--  GHC-Options: -Wall
+--  If flag(buildExamples)
+--    Build-Depends:
+--     efa,
+--      gnuplot,
+--      graphviz,
+--     utility-ht,
+--      containers,
+--      non-empty,
+--      filepath,
+--      base
+--  Else
+--    Buildable: False
+
+
+--Executable example-energy
+--  Hs-Source-Dirs: examples/energy/localGrid/src
+--  Main-Is: Main.hs
+--  Other-Modules:
+--    Modules.Signals
+--    Modules.System
+--    Modules.Analysis
+--  GHC-Options: -Wall
+--  If flag(buildExamples)
+--   Build-Depends:
+--      efa,
+--      gnuplot,
+--      graphviz,
+--      utility-ht,
+--     containers,
+--      non-empty,
+--      filepath,
+--      base
+--  Else
+--    Buildable: False
+
+
+--Executable optimise-energy
+--  Hs-Source-Dirs: examples/energy/localGrid/src
+--  Main-Is: Optimise.hs
+--  Other-Modules:
+--    Modules.Signals
+--    Modules.System
+--    Modules.Analysis
+--  GHC-Options: -Wall
+--  If flag(buildExamples)
+--    Build-Depends:
+--      efa,
+--      gnuplot,
+--      graphviz,
+--      utility-ht,
+--      containers,
+--      non-empty,
+--      filepath,
+--      vector,
+--      base
+--  Else
+--    Buildable: False
 
 Executable example-time
   Main-Is: examples/elementary/time/Main.hs

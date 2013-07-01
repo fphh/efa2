@@ -491,7 +491,7 @@ lookupFormat ::
    Record.ToIndex rec -> Map (idx node) (rec a) -> idx node -> output
 lookupFormat recIdx mp k =
    maybe
-      (error $ "could not find index " ++
+      (error $ "Draw.lookupFormat - could not find index " ++
          (Format.unUnicode $ Var.formatIndex k)
          ++ " in "
          ++ (show $ Map.map (Format.showRaw . showValue) $ Map.mapKeys showIdx mp))

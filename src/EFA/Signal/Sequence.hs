@@ -151,6 +151,9 @@ genSequ ::
 genSequ pRec =
    removeNilSections $ SD.fromRangeList $ zip (sequ++[lastSec]) pRecs
   where rSig = record2RSig pRec
+
+        inc (S.SignalIdx idx) = S.SignalIdx (idx+1)
+
         pRecs = map (rsig2SecRecord pRec) (seqRSig ++ [lastRSec])
         ((lastSec,sequ),(lastRSec,seqRSig)) = recyc rTail rHead (((S.SignalIdx 0, S.SignalIdx 0),[]),(Record.singleton $ rHead,[]))
           where
@@ -178,13 +181,15 @@ genSequ pRec =
             f NoEvent = (secRSig .++ xs2, sqRSig)                  -- continue incrementing
 
             g :: EventType -> (Range, [Range])
-            g LeftEvent = ((idx, succ idx), sq ++ [(lastIdx, idx)])
-            g RightEvent = ((succ idx, succ idx), sq ++ [(lastIdx, succ idx)])
-            g MixedEvent = ((succ idx, succ idx), sq ++ [(lastIdx, idx)] ++ [(idx, succ idx)])
-            g NoEvent = ((lastIdx, succ idx), sq)
+
+            g LeftEvent = ((idx, inc idx), sq ++ [(lastIdx, idx)])
+            g RightEvent = ((inc idx, inc idx), sq ++ [(lastIdx, inc idx)])
+            g MixedEvent = ((inc idx, inc idx), sq ++ [(lastIdx, idx)] ++ [(idx, inc idx)])
+            g NoEvent = ((lastIdx, inc idx), sq)
 
         -- Incoming rList is only one Point long -- append last sample to last section
-        recyc rsig _ (((lastIdx,idx),sq),(secRSig, sqRSig)) | (Record.len rsig) >=1 = (((lastIdx, succ idx),sq),(secRSig .++ rsig, sqRSig))
+        recyc rsig _ (((lastIdx,idx),sq),(secRSig, sqRSig)) | (Record.len rsig) >=1 =
+               (((lastIdx, inc idx),sq),(secRSig .++ rsig, sqRSig))
 
         -- Incoming rList is empty -- return result
         recyc _ _ acc = acc
@@ -224,7 +229,14 @@ stepX p1 p2
    | otherwise = toSample NoStep  -- nostep
 
 
-addZeroCrossings ::(Ord node) => PowerRecord node [] Val -> PowerRecord node [] Val
+--addZeroCrossings ::(Ord node) => PowerRecord node [] Val -> PowerRecord node [] Val
+ 
+--addZeroCrossings ::
+--  Record t0 t1 (Typ A T Tt) (Typ A P Tt) id0 [] Double Double ->
+addZeroCrossings ::
+  (Ord node) =>
+  PowerRecord node [] Double ->
+  PowerRecord node [] Double
 addZeroCrossings r = rsig2Record rSigNew0 r
   where rSigNew0 =
            case record2RSig r of
@@ -327,12 +339,20 @@ type RSigX a =
         (TC S.Signal (Typ A T Tt) (Data ([] :> Nil) a),
          TC S.Sample (Typ A P Tt) (Data ([] :> [] :> Nil) a))
 
-record2RSig :: PowerRecord node [] a -> RSigX a
+
+
+record2RSig :: 
+  (V.Transpose v1 v2, V.Storage v1 d, V.Storage v2 (v1 d),
+      V.FromList v2, S.TransposeType s1 s2) =>
+     Record t s1 t1 typ k v1 t2 d
+     -> (TC t t1 (Data (v1 :> Nil) t2),
+         TC s2 typ (Data (v2 :> (v1 :> Nil)) d))
 record2RSig (Record t pMap) = (t, S.transpose2 $ fromSigList $ Map.elems pMap)
 
 rsig2Record :: Ord node => RSigX a -> PowerRecord node [] a -> PowerRecord node [] a
 rsig2Record (t, ps) (Record _ pMap) =
    Record t $ updateMap pMap $ toSigList $ S.transpose2 ps
+
 
 rsig2SecRecord ::
    (V.Convert [] v, V.Storage v a, Ord node) =>

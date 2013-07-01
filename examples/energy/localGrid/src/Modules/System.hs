@@ -5,9 +5,13 @@ import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph as Gr
+import qualified EFA.Graph.Flow as Flow
+import qualified EFA.Signal.SequenceData as SD
 
-import EFA.Example.Utility (makeEdges)
+import EFA.Example.Utility (makeEdges, select)
 import qualified EFA.Example.Index as XIdx
+
+-- import qualified Modules.Utility as ModUt
 
 import EFA.Signal.Record (SigId(..))
 
@@ -16,7 +20,7 @@ import qualified Data.Map as Map
 import Data.Map (Map)
 
 
-data Node =  Nuklear | Coal | Oil | Gas |
+data Node =  Nuclear | Coal | Oil | Gas |
              Sun | Wind | Water |
              Network | Transformer | LocalNetwork |
              HouseHold | Industry |
@@ -92,7 +96,10 @@ flowStates :: [TD.FlowTopology Node]
 flowStates = StateAnalysis.advanced topology
 
 
--- | SubTopology for Optimisation
+
+
+----------------------------------------------------------------------
+-- | Topology for Optimisation
 topologyOpt :: TD.Topology Node
 topologyOpt = Gr.fromList ns (makeEdges es)
   where ns = [(Coal, TD.AlwaysSource),
@@ -122,3 +129,10 @@ edgeNamesOpt :: Map (Node, Node) String
 edgeNamesOpt = Map.fromList el
   where el = map f edgeListOpt
         f (x, y, lab, _, _) = ((x, y), lab)
+
+----------------------------------------------------------------------
+-- | SequenceTopology for Optimisation
+
+seqTopoOpt :: Flow.RangeGraph Node
+--seqTopoOpt = Flow.mkSequenceTopology (ModUt.select flowStatesOpt [5,1])
+seqTopoOpt = Flow.mkSequenceTopology (select flowStatesOpt [4,0])

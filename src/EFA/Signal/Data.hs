@@ -460,6 +460,11 @@ instance
          (withNestedData
             (SV.map (getData . readNested integrate . subData xd)) xd)
 
+instance
+   (Arith.Constant a) =>
+      Arith.Integrate (Data Nil a) where
+   type Scalar (Data Nil a) = Data Nil a
+   integrate = id
 
 instance
    (SV.Storage v (Apply c a), Storage c a,

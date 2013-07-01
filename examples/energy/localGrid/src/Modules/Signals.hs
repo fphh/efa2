@@ -11,9 +11,13 @@ import EFA.Signal.Record (SigId(SigId),
                           PowerRecord, SignalRecord, genPowerRecord)
 
 -- import qualified EFA.Graph.Topology.Node as Node
-import EFA.Signal.Signal((.*), (.-), neg, TC, Signal, len, fromList)
-import EFA.Signal.Typ(UT,Typ)
-import EFA.Signal.Data(Data(..),Nil, (:>))
+import EFA.Signal.Signal(
+  --(.*), (.-), 
+  neg 
+  --TC, Signal, len, fromList
+  )
+--import EFA.Signal.Typ(UT,Typ)
+--import EFA.Signal.Data(Data(..),Nil, (:>))
 
 import Modules.System  (Node(..))
 

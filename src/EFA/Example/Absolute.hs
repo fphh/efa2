@@ -25,6 +25,7 @@ import EFA.Signal.Data (Data, Nil, (:>))
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
+import qualified EFA.Graph.Topology as TD
 
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Utility (Pointed)
@@ -63,6 +64,22 @@ solveSimple ::
    Env.Complete node (Record.Absolute (Result a)) (Record.Absolute (Result v))
 solveSimple = EqGen.solveSimple
 
+
+solve2 ::
+  (Node.C node) =>
+  (forall s. EquationSystem node s a v) ->
+  (forall s. EquationSystem node s a v) ->
+   Env.Complete node (Record.Absolute (Result a)) (Record.Absolute (Result v))
+solve2 = EqGen.solve2
+
+
+fromGraph ::
+  (Arith.Constant a, a ~ Arith.Scalar v, Eq v,
+   Eq a, Arith.Product v,
+   Arith.Product a, Arith.Integrate v, Node.C node) =>
+  Bool ->
+  TD.DirSequFlowGraph node -> EquationSystem node s a v
+fromGraph = EqGen.fromGraph
 
 constant :: x -> Expression node s a v x
 constant = EqGen.constant
