@@ -159,7 +159,7 @@ frameOpts ::
   Opts.T (Graph3D.T Double Double Double)
 frameOpts =
   Plot.heatmap .
-  -- Plot.xyzrange3d (0.2, 2) (0.3, 3.3) (0.2, 1.01) .
+  Plot.xyzrange3d (0.2, 2) (0.3, 3.3) (0, 1) .
   -- Plot.cbrange (0.2, 1) .
   Plot.xyzlabel "Rest Power [W]" "Local Power [W]" "" .
   Plot.paletteGH
@@ -325,6 +325,7 @@ makePics eqs tabEta tabPower socDrive = t
         etaFunc = CT.makeEtaFunctions2D scaleTableEta tabEta
 
 {-
+
 main :: IO ()
 main = do
 
@@ -340,7 +341,8 @@ main = do
 
        plotwaterpng n pic = 
          PlotIO.surfaceWithOpts "Optimal Water Power" 
-           (PNG.cons ("waterpics/optimal_water_power" ++ printf "%02d" n ++ ".png"))
+           --(PNG.cons ("waterpics/optimal_water_power" ++ printf "%02d" n ++ ".png"))
+           DefaultTerm.cons
            id 
            frameOpts noLegend varRestPower varLocalPower
            pic
@@ -348,8 +350,8 @@ main = do
 
        plotgaspng n pic = 
          PlotIO.surfaceWithOpts "Optimal Gas Power [W]" 
-           (PNG.cons ("gaspics/optimal_gas_power" ++ printf "%02d" n ++ ".png"))
-           -- DefaultTerm.cons
+           --(PNG.cons ("gaspics/optimal_gas_power" ++ printf "%02d" n ++ ".png"))
+           DefaultTerm.cons
            id 
            frameOpts noLegend varRestPower varLocalPower
            pic
@@ -357,7 +359,8 @@ main = do
 
        plotstatepng n pic = 
          PlotIO.surfaceWithOpts "Optimal State" 
-           (PNG.cons ("statepics/state_matrix" ++ printf "%02d" n ++ ".png"))
+           --(PNG.cons ("statepics/state_matrix" ++ printf "%02d" n ++ ".png"))
+           DefaultTerm.cons
            id 
            frameOpts noLegend varRestPower varLocalPower
            pic
@@ -372,11 +375,10 @@ main = do
 
        plotpng (n, x) =
          let (s, w, g, e) = makePics eqs tabEta tabPower x
-         in  --concurrentlyMany_ [
-             do
-               plotetasyspng n s
-               plotwaterpng n w
-               plotgaspng n g
+         in  concurrentlyMany_ [
+               -- plotstatepng n s
+               plotwaterpng n w,
+               plotgaspng n g ]
 
 
 
@@ -384,8 +386,8 @@ main = do
        (lst1, lst2) = splitAt 20 $ take 40 $ zip [0::Int, 1 ..] [0, 0.001 ..]
 
    concurrentlyMany_ [
-     mapM_ plotpng lst1,
-     mapM_ plotpng lst2 ]
+     mapM_ plotpng [(lst1 ++ lst2) !! 30] ]
+     -- mapM_ plotpng lst2 ]
 
 
 -}
@@ -460,7 +462,7 @@ main = do
      --maxETADischarge :: Sig.NSignal2 V.Vector V.Vector Double
      --maxETADischarge = Sig.setType $ Sig.map fst $ Sig.map maxEta envsDischarge
 
-     socDrive = 0.0211
+     socDrive = 0.0
      maxOptChargeFunc = maxOpt System.seqTopoOpt True socDrive
      maxOptDischargeFunc = maxOpt System.seqTopoOpt False socDrive
 
@@ -595,6 +597,16 @@ main = do
                        (TIdx.PPos (TIdx.StructureEdge LocalNetwork Gas), powerSignalGas)
                       ]
 
+
+     recConsumers :: Record.PowerRecord Node [] Double
+     recConsumers = addZeroCrossings $
+           -- Record.diffTime $
+           -- Record.rmap (Sig.changeSignalType . Sig.deltaMap (\x y -> (x+y)/2)) $ 
+           Record.Record time' $ 
+           M.fromList [(TIdx.PPos (TIdx.StructureEdge Rest Network), powerSignalRest), 
+                       (TIdx.PPos (TIdx.StructureEdge LocalRest LocalNetwork), powerSignalLocal)
+                      ]
+
 {-
    PlotIO.recordList "after zero" DefaultTerm.cons show id 
                     [ (Record.Name "ohne zero", rec), 
@@ -672,12 +684,15 @@ main = do
    concurrentlyMany_ $ [
      --putStrLn ("Storage Balance: " ++ show (ES.balance sequenceFlowTopologySim envSimAnalysisCumulated)),
 
+{-
 
      Draw.xterm $ Draw.topologyWithEdgeLabels System.edgeNamesOpt System.topologyOpt,
+
      putStrLn ("Number of possible flow states: " ++ show (length System.flowStatesOpt)),
      Draw.xterm $ Draw.flowTopologies (take 20 System.flowStatesOpt),
+-}
      Draw.xterm $ Draw.sequFlowGraph System.seqTopoOpt, 
-
+{-
      PlotIO.surfaceWithOpts "Optimal System Efficiency" DefaultTerm.cons id frameOpts noLegend varRestPower varLocalPower etaSysMax,
 
 
@@ -720,8 +735,12 @@ main = do
      report [RAll] ("powerRecordSim", powerRecSim),
      report [RAll] ("rec0", rec0),
      report [RAll] ("rec", rec),
-
+-}
      PlotIO.record "Calculated Signals" DefaultTerm.cons show id rec,
+
+{-
+     PlotIO.record "Local / Rest" DefaultTerm.cons show id recConsumers,
+
      PlotIO.record "Simulation Result" DefaultTerm.cons show id powerRecSim,
      
      PlotIO.signal "State"  DefaultTerm.cons id stateSignal ,
@@ -730,11 +749,11 @@ main = do
                                                powerSignalWaterOptDischarge,
                                                powerSignalGasOptCharge, 
                                                powerSignalGasOptDischarge],
+-}
+     Draw.xterm $ Draw.sequFlowGraphAbsWithEnv  sequenceFlowTopologySim envSimAnalysis,
+     Draw.xterm $ Draw.sequFlowGraphAbsWithEnv  seqTopoSim envSim,
 
-     --Draw.xterm $ Draw.sequFlowGraphAbsWithEnv  sequenceFlowTopologySim envSimAnalysis,
-     --Draw.xterm $ Draw.sequFlowGraphAbsWithEnv  seqTopoSim envSim,
-
-     -- Draw.xterm $ Draw.sequFlowGraphAbsWithEnv sequenceFlowTopologySim envSimAnalysisCumulated
-     
+     Draw.xterm $ Draw.sequFlowGraphAbsWithEnv sequenceFlowTopologySim envSimAnalysisCumulated,
+ 
        return ()
      ]
