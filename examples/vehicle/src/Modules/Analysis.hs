@@ -71,18 +71,6 @@ import Data.Foldable (fold,
                       foldMap)
 
 
---import qualified EFA.Equation.Environment as Env
---import EFA.Equation.Result (Result(..))
---import qualified EFA.Signal.Record as Record
-----------------------------------
--- * Example Specific Imports
---import qualified Modules.System as System
---import Modules.Signals as Signals
---import Modules.Plots as Plots
---import qualified EFA.Graph.Topology as TD
-
---import qualified EFA.Equation.Record as EqRecord
-
 {-
 newtype Settings = Settings {filePath :: FileName,
                              fileNames :: [FileName],
@@ -218,24 +206,21 @@ makeGivenFromExternal idx sf =
            fold (Map.mapWithKey g xs)
            where g (Idx.PPos p) e =
                     Idx.Record idx (Idx.InSection sec (Idx.Energy p)) .= sum (Sig.toList e)
-external2 :: (Eq a, Eq (v a), Vec.Singleton v, Vec.Storage v a, Vec.Walker v,
-              TDNode.C node, Arith.Constant a, B.BSum a,
-              Vec.Zipper v) =>
-             Flow.RangeGraph node ->
-             SD.SequData 
-             (Record
-              Sig.Signal
-              Sig.FSignal
-              (Typ A T Tt)
-              (Typ A F Tt)
-              (Idx.PPos node)
-              v
-              a
-              a) ->
-             Env.Complete 
-             node
-             (EqRecord.Absolute (Result (Data Nil a)))
-             (EqRecord.Absolute (Result (Data (v D.:> Nil) a)))
+
+external2 ::
+   (Eq a, Eq (v a), Vec.Singleton v, Vec.Storage v a, Vec.Walker v,
+    TDNode.C node, Arith.Constant a, B.BSum a, Vec.Zipper v) =>
+   Flow.RangeGraph node ->
+   SD.SequData
+      (Record Sig.Signal Sig.FSignal
+          (Typ A T Tt)
+          (Typ A F Tt)
+          (Idx.PPos node)
+          v a a) ->
+   Env.Complete
+      node
+      (EqRecord.Absolute (Result (Data Nil a)))
+      (EqRecord.Absolute (Result (Data (v D.:> Nil) a)))
 
 external2 sequenceFlowTopology sequFlowRecord =
   EqGen.solveFromMeasurement
@@ -244,13 +229,14 @@ external2 sequenceFlowTopology sequFlowRecord =
 
 -- makeGivenFromExternal2 ::
 --  makeGivenFromExternal2 env = EqGen.fromEnvSignal $ (fmap (fmap (D.foldl (+) 0) ) $ EqAbs.envFromFlowRecord env)
-makeGivenFromExternal2 :: (Eq (v a1), Ord node, Arith.Sum a1, Vec.Zipper v,
-                           Vec.Walker v, Vec.Storage v a1, Vec.Singleton v,
-                           B.BSum a1) =>
-                          SD.SequData (FlowRecord node v a1) ->
-                          EqGen.EquationSystem
-                          EqRecord.Absolute node s a (Data (v D.:> Nil) a1)
-makeGivenFromExternal2 sf = EqGen.fromEnvSignal $ EqAbs.envFromFlowRecord (fmap Record.diffTime sf)
+makeGivenFromExternal2 ::
+   (Eq (v a), TDNode.C node, Arith.Sum a, Vec.Zipper v,
+    Vec.Walker v, Vec.Storage v a, Vec.Singleton v,
+    B.BSum a) =>
+   SD.SequData (FlowRecord node v a) ->
+   EqAbs.EquationSystem node s (Data Nil a) (Data (v D.:> Nil) a)
+makeGivenFromExternal2 =
+   EqGen.fromEnvSignal . EqAbs.envFromFlowRecord . fmap Record.diffTime
 
 -------------------------------------------------------------------------------------------------
 -- ## Predict Energy Flow
@@ -260,7 +246,7 @@ prediction ::
     Fractional v, Fractional a,
     Arith.Constant a, Arith.Product v,
     Arith.Integrate v, Arith.Scalar v ~ a) =>
-  Flow.RangeGraph System.Node ->
+   Flow.RangeGraph System.Node ->
    Env.Complete System.Node
       (EqRecord.Absolute (Result a))
       (EqRecord.Absolute (Result v)) ->

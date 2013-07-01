@@ -453,12 +453,12 @@ makePics ::
   TPT.Map Double ->
   Double ->
   ( Sig.UTSignal2 V.Vector V.Vector Double,
-    Sig.PSignal2 V.Vector V.Vector Double, 
+    Sig.PSignal2 V.Vector V.Vector Double,
     Sig.PSignal2 V.Vector V.Vector Double,
     Sig.NSignal2 V.Vector V.Vector Double )
 makePics eqs tabEta tabPower socDrive = t
   where t = (state, optWater, optGas, etaSysMax)
-        state = Sig.map fromIntegral $ Sig.sigMax2 maxETACharge maxETADischarge
+        state = Sig.map fromIntegral $ Sig.argMax maxETACharge maxETADischarge
 
         optWater = combineOptimalMaps maxEtaSysState
                      powerWaterChargeOpt powerWaterDischargeOpt
@@ -466,17 +466,17 @@ makePics eqs tabEta tabPower socDrive = t
                      powerGasChargeOpt powerGasDischargeOpt
 
         maxEtaSysState :: Sig.UTSignal2 V.Vector V.Vector Double
-        maxEtaSysState = Sig.map fromIntegral $ 
-          Sig.sigMax2 maxETACharge maxETADischarge
+        maxEtaSysState = Sig.map fromIntegral $
+          Sig.argMax maxETACharge maxETADischarge
 
         etaSysMax :: Sig.NSignal2 V.Vector V.Vector Double
         etaSysMax = Sig.zipWith max maxETACharge maxETADischarge
-  
+
         powerWaterChargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
         powerWaterChargeOpt = Sig.setType $
           Sig.map (ModUt.lookupAbsPower (XIdx.power sec0 Network Water)) envsChargeOpt
-     
-       
+
+
         powerWaterDischargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
         powerWaterDischargeOpt = Sig.setType $
           Sig.map (ModUt.lookupAbsPower (XIdx.power sec1 Network Water)) envsDischargeOpt
@@ -485,7 +485,7 @@ makePics eqs tabEta tabPower socDrive = t
         powerGasChargeOpt = Sig.setType $
           Sig.map (ModUt.lookupAbsPower (XIdx.power sec0 LocalNetwork Gas))
                   envsChargeOpt
-     
+
 
         powerGasDischargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
         powerGasDischargeOpt = Sig.setType $
@@ -495,16 +495,16 @@ makePics eqs tabEta tabPower socDrive = t
         maxETACharge :: Sig.NSignal2 V.Vector V.Vector Double
         maxETACharge = Sig.setType $ Sig.map fst $
           Sig.map maxOptChargeFunc envsCharge
-     
+
         maxETADischarge :: Sig.NSignal2 V.Vector V.Vector Double
         maxETADischarge = Sig.setType $ Sig.map fst $
           Sig.map maxOptDischargeFunc envsDischarge
 
-        envsCharge =  Sig.map (Sig.map envFmap) $ 
+        envsCharge =  Sig.map (Sig.map envFmap) $
           doubleSweep (Optimisation.solveCharge eqs)
                    etaFunc varWaterPower' varGasPower' varRestPower' varLocalPower'
 
-        envsDischarge = Sig.map (Sig.map envFmap) $ 
+        envsDischarge = Sig.map (Sig.map envFmap) $
           doubleSweep (Optimisation.solveDischarge eqs)
                    etaFunc varWaterPower' varGasPower' varRestPower' varLocalPower'
 
@@ -592,13 +592,13 @@ main :: IO ()
 main = do
 
    IO.hSetEncoding IO.stdout IO.utf8
-    
+
    tabEta <- Table.read "../simulation/maps/eta.txt"
    tabPower <- Table.read "../simulation/maps/power.txt"
-   
+
    let eqsys ::
-         (a ~ EqArith.Scalar v, Eq a,
-         Eq v, EqArith.Product a, EqArith.Product v, EqArith.Integrate v) =>
+         (a ~ EqArith.Scalar v, Eq a, Eq v,
+          EqArith.Constant a, EqArith.Product v, EqArith.Integrate v) =>
          EqGen.EquationSystem Node s a v
        eqsys = EqGen.fromGraph True (TD.dirFromSequFlowGraph (snd System.seqTopoOpt))
 
@@ -614,47 +614,47 @@ main = do
          (timeIndustry, powerSignalIndustry) : _
            = getPowerSignals tabPower ["wind", "solar", "house", "industry"]
 
-  
+
        powerSignalRest = Sig.scale powerSignalWind restPowerScale
        powerSignalLocal = Sig.offset
-                          (Sig.scale  (powerSignalSolar Sig..+ 
-                                      Sig.makeDelta (powerSignalHouse Sig..+ 
+                          (Sig.scale  (powerSignalSolar Sig..+
+                                      Sig.makeDelta (powerSignalHouse Sig..+
                                                      (Sig.makeDelta powerSignalIndustry)))
                           localPowerScale) 0.5
 
-   let  
+   let
      envFmap (EqEnv.Complete scal sig) =
        EqEnv.Complete (fmap gFmap scal) (fmap gFmap sig)
      gFmap = fmap $ fmap getData
 
-     
-    -- | Speep optimisation and operation space for charge and discharge case 
+
+    -- | Speep optimisation and operation space for charge and discharge case
      envsCharge ::
        Sig.UTSignal2 V.Vector V.Vector
          (Sig.UTSignal2 V.Vector V.Vector
-           (EqEnv.Complete  
+           (EqEnv.Complete
               Node
               (EqRec.Absolute (Result Double))
               (EqRec.Absolute (Result Double))))
-     envsCharge = Sig.map (Sig.map envFmap) $ 
+     envsCharge = Sig.map (Sig.map envFmap) $
        doubleSweep (Optimisation.solveCharge eqsys)
                    etaFunc varWaterPower' varGasPower' varRestPower' varLocalPower'
 
      envsDischarge ::
        Sig.UTSignal2 V.Vector V.Vector
          (Sig.UTSignal2 V.Vector V.Vector
-           (EqEnv.Complete 
+           (EqEnv.Complete
              Node
              (EqRec.Absolute (Result Double))
              (EqRec.Absolute (Result Double))))
-     envsDischarge = Sig.map (Sig.map envFmap) $ 
+     envsDischarge = Sig.map (Sig.map envFmap) $
        doubleSweep (Optimisation.solveDischarge eqsys)
                    etaFunc varWaterPower' varGasPower' varRestPower' varLocalPower'
 
      -- | Get maximum Efficiency Envelope for charge and discharge
      --maxETACharge :: Sig.NSignal2 V.Vector V.Vector Double
      --maxETACharge = Sig.setType $ Sig.map fst $ Sig.map maxEta envsCharge
-     
+
      --maxETADischarge :: Sig.NSignal2 V.Vector V.Vector Double
      --maxETADischarge = Sig.setType $ Sig.map fst $ Sig.map maxEta envsDischarge
 
@@ -665,7 +665,7 @@ main = do
      maxETACharge :: Sig.NSignal2 V.Vector V.Vector Double
      maxETACharge = Sig.setType $ Sig.map fst $
       Sig.map maxOptChargeFunc envsCharge
-     
+
      maxETADischarge :: Sig.NSignal2 V.Vector V.Vector Double
      maxETADischarge = Sig.setType $ Sig.map fst $
        Sig.map maxOptDischargeFunc envsDischarge
@@ -673,26 +673,26 @@ main = do
 
 
 
-     -- | Get maximum efficiency for both cases 
+     -- | Get maximum efficiency for both cases
      etaSysMax :: Sig.NSignal2 V.Vector V.Vector Double
      etaSysMax = Sig.zipWith max maxETACharge maxETADischarge
-     
-     maxEtaSysState :: Sig.UTSignal2 V.Vector V.Vector Double
-     maxEtaSysState = Sig.map fromIntegral $ 
-       Sig.sigMax2 maxETACharge maxETADischarge
 
-     
+     maxEtaSysState :: Sig.UTSignal2 V.Vector V.Vector Double
+     maxEtaSysState = Sig.map fromIntegral $
+       Sig.argMax maxETACharge maxETADischarge
+
+
      -- | Get the correspondig optimal envs for both states
 
      envsChargeOpt :: Sig.UTSignal2 V.Vector V.Vector (Maybe
-                      (EqEnv.Complete  
+                      (EqEnv.Complete
                        Node
                        (EqRec.Absolute (Result Double))
                        (EqRec.Absolute (Result Double))))
      envsChargeOpt = Sig.map snd $ Sig.map maxOptChargeFunc envsCharge
 
      envsDischargeOpt :: Sig.UTSignal2 V.Vector V.Vector (Maybe
-                      (EqEnv.Complete  
+                      (EqEnv.Complete
                        Node
                        (EqRec.Absolute (Result Double))
                        (EqRec.Absolute (Result Double))))

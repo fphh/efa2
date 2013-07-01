@@ -5,50 +5,45 @@
 
 module Modules.Optimisation where
 
--- import Debug.Trace
-
 import qualified Modules.System as System
 import Modules.System (Node(..))
-import Modules.Utility as ModUt
 
 import qualified EFA.Example.Absolute as EqGen
 -- import qualified EFA.Example.Absolute as EqAbs
-import qualified EFA.Graph.Topology.Index as TIdx
 import qualified EFA.Example.Index as XIdx
+import qualified EFA.Example.Utility as EqUt
+import qualified EFA.Example.EtaSys as ES
+import EFA.Example.Absolute ( (.=), (%=), (=.=) )
+
 import qualified EFA.Equation.Environment as EqEnv
 import qualified EFA.Equation.Record as EqRec
 import qualified EFA.Equation.Arithmetic as EqArith
+import EFA.Equation.Result (Result(..))
 
+import qualified EFA.Graph.Topology.Index as TIdx
 import qualified EFA.Graph.Flow as Flow
-import qualified EFA.Graph.Topology as TD
 
 import qualified EFA.Signal.SequenceData as SD
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.Data as Data
 import qualified EFA.Signal.Base as Base
-
 import qualified EFA.Signal.Vector as SV
--- import qualified Data.Vector as Vec
 
-import EFA.Equation.Result (Result(..))
---import EFA.Utility.Map (checkedLookup)
 import EFA.Signal.Data (Data(..), Nil, (:>))
 
 import qualified EFA.Utility.Stream as Stream
-
-import Data.Monoid (mconcat, (<>), mempty)
-import EFA.Example.Absolute ( (.=), (%=), (=.=) )
-import qualified EFA.Example.Utility as EqUt
-import qualified EFA.Example.EtaSys as ES
-
-
 import EFA.Utility.Stream (Stream((:~)))
+
+import EFA.Report.FormatValue (FormatValue)
+
 import qualified Data.Foldable as Fold 
 import qualified Data.Map as M
 import qualified Data.Vector as V
+import Data.Monoid (mconcat, (<>))
 
 import Control.Applicative (liftA2)
+
 
 sec0, sec1 :: TIdx.Section
 sec0 :~ sec1 :~ _ = Stream.enumFrom $ TIdx.Section 0
@@ -73,26 +68,30 @@ commonGiven =
    mconcat $
    (XIdx.dTime sec0 .= Data 1) :
    (XIdx.dTime sec1 .= Data 1) :
-   (XIdx.storage TIdx.Init Water .= Data 0) :
+   (XIdx.storage TIdx.initial Water .= Data 0) :
    (XIdx.energy sec0 Water Network  %= XIdx.energy sec1 Water Network) :
    []
 
-etaGiven :: (Eq (Data.Apply c d1), Eq (Data.Apply c d2), Fractional d2, Num d1,
-         Show key, Show d1,
-          Ord (idx1 node), Ord (idx node), Ord d1, Ord key, EqArith.Sum d1,
-          EqArith.Sum d2, EqEnv.AccessMap idx1, EqEnv.AccessMap idx,
-          Data.ZipWith c, Data.Storage c d2, Data.Storage c d1,
-          EqEnv.PartElement (EqEnv.Environment idx) a v ~ Data c d2,
-          EqEnv.PartElement (EqEnv.Environment idx1) a v ~ Data c d1) =>
-         M.Map (idx node) (key, key, idx node -> idx1 node) ->
-         M.Map key (d1 -> d2) ->
-         EqGen.EquationSystem node s a v
+etaGiven ::
+   (Show key, Ord key,
+    Eq (Data.Apply c d1), Eq (Data.Apply c d2),
+    Ord (idx2 node), Ord (idx1 node),
+    Num d1, Show d1, Ord d1, EqArith.Sum d1,
+    Fractional d2, EqArith.Sum d2,
+    FormatValue (idx2 node), FormatValue (idx1 node),
+    EqEnv.AccessMap idx1, EqEnv.AccessMap idx2,
+    Data.ZipWith c, Data.Storage c d2, Data.Storage c d1,
+    EqEnv.Element idx1 a v ~ Data c d2,
+    EqEnv.Element idx2 a v ~ Data c d1) =>
+   M.Map (idx1 node) (key, key, idx1 node -> idx2 node) ->
+   M.Map key (d1 -> d2) ->
+   EqGen.EquationSystem node s a v
 etaGiven etaAssign etaFunc = Fold.fold $ M.mapWithKey f etaAssign
   where f n (strP, strN, g) =
           EqGen.variable n =.= EqGen.liftF (Data.map ef) (EqGen.variable $ g n)
           where ef x = if x >= 0 then fpos x else fneg x
                 fpos = maybe (err strP) id (M.lookup strP etaFunc)
-                fneg = maybe (err strN) (\n -> recip . n . negate) 
+                fneg = maybe (err strN) (\h -> recip . h . negate)
                                         (M.lookup strN etaFunc)
                 err str x = error ("not defined: " ++ show str ++ " for " ++ show x)
 
@@ -105,16 +104,15 @@ eqs = EqGen.fromGraph True (TD.dirFromSequFlowGraph (snd System.seqTopoOpt))
 -}
 
 solveCharge ::
-  ( Eq a, Show a, EqArith.Product a, EqArith.Integrate (Data Nil a),Ord a,
-    Fractional a, EqArith.Scalar (Data Nil a) ~ Data Nil a) =>
+  (Ord a, Fractional a, Show a, EqArith.Sum a) =>
   (forall s. EqGen.EquationSystem Node s (Data Nil a) (Data Nil a)) -> SolveFunc a
 solveCharge eqs etaAssign etaFunc pRest pRestLocal pWater pGas =
   EqGen.solve2 eqs $
     givenCharging etaAssign etaFunc pRest pRestLocal pWater pGas
 
 givenCharging ::
-  (Eq a, Num a, Show a, EqArith.Sum a, Fractional a, Ord a) => 
-  (TIdx.Section -> 
+  (Ord a, Fractional a, Show a, EqArith.Sum a) =>
+  (TIdx.Section ->
      M.Map (XIdx.Eta Node) (String, String, XIdx.Eta Node -> XIdx.Power Node)) ->
   M.Map String (a -> a) ->
   Data Nil a ->
@@ -145,8 +143,8 @@ givenCharging etaAssign etaFunc pRest pRestLocal pWater pGas =
 
 
 
-solveDischarge :: 
-  ( Eq a, Show a, EqArith.Product a, EqArith.Integrate (Data Nil a),Ord a,
+solveDischarge ::
+  ( Eq a, Show a, EqArith.Product a, EqArith.Integrate a, Ord a,
     Fractional a, EqArith.Scalar (Data Nil a) ~ Data Nil a) =>
   (forall s. EqGen.EquationSystem Node s (Data Nil a) (Data Nil a)) -> SolveFunc a
 solveDischarge eqs etaAssign etaFunc pRest pRestLocal pWater pGas =
@@ -155,8 +153,8 @@ solveDischarge eqs etaAssign etaFunc pRest pRestLocal pWater pGas =
 
 
 givenDischarging ::
-  (Eq a, Num a, Show a, EqArith.Sum a, Fractional a,Ord a) => 
-  (TIdx.Section -> 
+  (Eq a, Num a, Show a, EqArith.Sum a, Fractional a,Ord a) =>
+  (TIdx.Section ->
      M.Map (XIdx.Eta Node) (String, String, XIdx.Eta Node -> XIdx.Power Node)) ->
   M.Map String (a -> a) ->
   Data Nil a ->
@@ -193,7 +191,7 @@ givenSimulate ::
   SV.Singleton v,
   SV.Walker v,
   SV.Storage v a) =>
-  (TIdx.Section -> 
+  (TIdx.Section ->
      M.Map (XIdx.Eta Node) (String, String, XIdx.Eta Node -> XIdx.Power Node)) ->
   M.Map String (a -> a) ->
   SD.SequData (Record.PowerRecord Node v a) ->
@@ -203,15 +201,15 @@ givenSimulate etaAssign etaFunc sf =
   (TIdx.absolute  (XIdx.storage TIdx.initial Water) EqUt..= Data 0)
    <> Fold.fold (SD.mapWithSection f sf)
    where f sec (Record.Record t xs) =
-           (TIdx.absolute (XIdx.dTime sec) EqUt..= 
+           (TIdx.absolute (XIdx.dTime sec) EqUt..=
              (Data  $ SV.fromList $ replicate (Sig.len t) 1))
            <> etaGiven (etaAssign sec) etaFunc
            <> Fold.fold (M.mapWithKey g xs)
-           where 
+           where
              g (TIdx.PPos (TIdx.StructureEdge p0 p1)) p =
                    (TIdx.absolute (XIdx.power sec p0 p1) EqUt..= Sig.unpack p)
 
-      
+
 -- | Avoid invalid solution by assigning NaN, which hits last in maximum
 -- b == True -> Charge
 -- b == False -> Discharge
@@ -220,14 +218,14 @@ calcOptFunc ::
   Flow.RangeGraph Node ->
   Bool ->
   Double ->
-  (EqEnv.Complete  
+  (EqEnv.Complete
     Node
     (EqRec.Absolute (Result Double))
     (EqRec.Absolute (Result Double))) -> Double
 calcOptFunc topo b socDrive env =
-  if and (map (>0) [eCoal0, eCoal1, eTrans0, eTrans1]) then res else nan
+  if all (>0) [eCoal0, eCoal1, eTrans0, eTrans1] then res else nan
   where nan = 0/0
-        lu idx = EqUt.checkDetermined (show idx) $ 
+        lu idx = EqUt.checkDetermined (show idx) $
                    ES.lookupAbsEnergy "calcOptFunc" env idx
         eCoal      = lu $ XIdx.energy sec0 Coal Network
         eCoal0     = lu $ XIdx.energy sec0 Coal Network
