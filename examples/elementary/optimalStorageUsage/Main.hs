@@ -18,18 +18,18 @@ import qualified EFA.Graph as Gr
 import qualified EFA.Example.Absolute as EqGen
 
 import qualified EFA.Signal.SequenceData as SD
-import EFA.Signal.Data (Data, ZipWith, Storage, Nil, (:>))
+import EFA.Signal.Data (Data, Nil, (:>))
 import qualified EFA.Signal.Data as D
 
 import qualified EFA.Example.Index as XIdx
 import qualified EFA.Graph.Topology.Index as TIdx
 
 import qualified EFA.Equation.Record as EqRec
-import qualified EFA.Equation.Arithmetic as EqArith
 import qualified EFA.Equation.Environment as EqEnv
 import qualified EFA.Signal.PlotIO as PlotIO
 
 import EFA.Example.Absolute ( (.=), (%=), (=.=) )
+import EFA.Example.EtaSys (etaSys)
 import EFA.Equation.Result (Result(..))
 
 import qualified EFA.Utility.Stream as Stream
@@ -44,12 +44,8 @@ import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 
-import Data.Tuple.HT (fst3, thd3)
+import Data.Eq.HT (equating)
 
-import Data.Tuple.HT (fst3, thd3)
-
-
-import Control.Applicative (liftA)
 
 import Data.Ord (comparing)
 import Data.Monoid (mconcat, (<>))
@@ -81,10 +77,11 @@ topoDreibein = Gr.fromList ns (makeEdges es)
 select :: [topo] -> [Int] -> SD.SequData topo
 select ts = SD.fromList . map (ts !!)
 
-
+seqTopoFunc :: [Int] -> Flow.RangeGraph Node.Int
 seqTopoFunc states = Flow.mkSequenceTopology (select sol states)
   where sol = StateAnalysis.advanced topoDreibein
 
+seqTopo :: Flow.RangeGraph Node.Int
 seqTopo = seqTopoFunc [0, 3]
 
 
@@ -125,7 +122,7 @@ commonEnv =
 
 givenSec0Mean ::
   Double -> Double -> EqGen.EquationSystem Node.Int s Double Double
-givenSec0Mean psink ratio =
+givenSec0Mean psink _ =
    (commonEnv <>) $
    mconcat $
 
@@ -175,16 +172,10 @@ givenSec1Mean psink _ =
    []
 
 
-{-
-etaSys2 ::
-  (Show a, Ord a) =>
-  Flow.RangeGraph a ->
-  EqEnv.Complete
-    Node.Int
-    (EqRec.Absolute (Result Double))
-    (EqRec.Absolute (Result Double)) ->
-  Double
--}
+
+etaSys2 :: 
+  (Ord (edge k), Ord k, Show k, Show (edge k), Show t2, Gr.Edge edge) =>
+  (t1, Gr.Graph k edge (TD.NodeType t2) edgeLabel) -> t -> a
 etaSys2 (_, topo) _ = trace (show sinks) undefined
   where sinks = Map.filter isSink $ Gr.nodeEdges topo
         isSink (_, el, x) =
@@ -214,7 +205,11 @@ hypotheticalUsage = Sig.fromList [
   6, 5, 7, 8, 8, 
   2, 3 ]
 
-
+borderFunc ::
+  (Eq b, Ord a, Show b, Show a, D.FromList c1, D.FromList c,
+  D.Storage c1 d1, D.Storage c d, D.NestedList c1 d1 ~ [a],
+  D.NestedList c d ~ [b]) =>
+  Sig.TC s t (Data c d) -> Sig.TC s1 t1 (Data c1 d1) -> a -> b
 borderFunc ss xs p =
   case dropWhile ((< p) . fst) zs of
        (_, s):_ -> s
@@ -228,26 +223,26 @@ sectionHU ::
   Sig.PSignal [] d -> (d -> Int) -> [(Int, Sig.PSignal [] d)]
 sectionHU ss bf = ws
   where ts = Sig.toList ss
-        us = List.groupBy (\x y -> fst x == fst y) $ zip (map bf ts) ts
+        us = List.groupBy (equating fst) $ zip (map bf ts) ts
         ws = map f us
         f ((s, w):xs) = (s, Sig.fromList (w:(map snd xs)))
+        f _ = error "sectionHU: Unbekannter Fehler!"
 
-help f x = do
-  y <- x
-  return (EqGen.liftF f x)
 
 commonEnvHU ::
   [TIdx.Section] ->
   EqGen.EquationSystem Node.Int s (Data Nil Double) (Data ([] :> Nil) Double)
-commonEnvHU ss =
+commonEnvHU _ =
   -- (foldMap (uncurry f) $ zip ss (tail ss))
   -- <>
   ( mconcat $
     (XIdx.storage TIdx.initial storage .= D.fromList 20.0) :
     [] )
+{-
   where f sec0 sec1 =
           XIdx.power sec0 storage crossing
             %= XIdx.power sec1 storage crossing
+-}
 
 givenEnvHUSec ::
   (TIdx.Section, Sig.PSignal [] Double) ->
@@ -295,7 +290,7 @@ givenEnvHU xs =
       <>
       (foldMap givenEnvHUSec ys)
 
-
+{-
 etaSys ::
   (Show a, Num a, Fractional a, Show node, Ord node) =>
   Flow.RangeGraph node ->
@@ -322,12 +317,13 @@ etaSys (_, topo) env = sum sinks / sum sources
           (TD.FlowEdge (TD.StructureEdge (TIdx.InSection sec 
                        (Gr.EDirEdge (Gr.DirEdge a b))))) =
             acc + lookUp "etaSys" env (XIdx.energy sec b a)
+        sinkEnergies = error "etaSys: sinkEnergies"
 
         sourceEnergies acc 
           (TD.FlowEdge (TD.StructureEdge (TIdx.InSection sec 
                        (Gr.EDirEdge (Gr.DirEdge a b))))) =
             acc + lookUp "etaSys" env (XIdx.energy sec a b)
-
+-}
 
 lookUp ::
   (Ord node, Show node, Show t) =>
@@ -338,7 +334,7 @@ lookUp caller env n =
   case checkedLookup caller
          (EqEnv.energyMap $ EqEnv.signal env) n of
        EqRec.Absolute (Determined x) -> x
-       otherwise -> error (show n ++ "\n" ++ show (EqEnv.energyMap $ EqEnv.signal env))
+       _ -> error (show n ++ "\n" ++ show (EqEnv.energyMap $ EqEnv.signal env))
 
 
 etaSysHU ::
@@ -360,17 +356,17 @@ etaSysHU env =
 main :: IO ()
 main = do
 
-  let eqs = map givenSec1Mean sinkRange
-
-      varX :: Sig.PSignal2 [] [] Double
+  let varX :: Sig.PSignal2 [] [] Double
       varX = Sig.fromList2 varX'
 
       varY :: Sig.XSignal2 [] [] Double
       varY = Sig.fromList2 varY'
 
+      getDet (Determined x) = x
+      getDet _ = error "getDet"
 
-      f0 x y = etaSys seqTopo $ EqGen.solve seqTopo $ givenSec0Mean x y
-      f1 x y = etaSys seqTopo $ EqGen.solve seqTopo $ givenSec1Mean x y
+      f0 x y = getDet $ etaSys seqTopo $ EqGen.solve seqTopo $ givenSec0Mean x y
+      f1 x y = getDet $ etaSys seqTopo $ EqGen.solve seqTopo $ givenSec1Mean x y
 
       env0 = EqGen.solve seqTopo $ givenSec0Mean 4.0 0.4
       env1 = EqGen.solve seqTopo $ givenSec1Mean 3.0 0.3
@@ -392,6 +388,7 @@ main = do
       maxEtaSys0 = Sig.map2 maximum (Sig.transpose2 $ Sig.changeSignalType etaSys0)
       maxEtaSys1 = Sig.map2 maximum (Sig.transpose2 $ Sig.changeSignalType etaSys1)
 
+      maxEtaLinear :: Sig.NTestRow [] Double
       maxEtaLinear = Sig.zipWith max maxEtaSys0 maxEtaSys1
 
 
@@ -401,6 +398,7 @@ main = do
       bf = a . borderFunc maxEtaSysStateLinear sinkRangeSig
            where a 0 = 3
                  a 1 = 0
+                 a _ = error "bf"
 
       optimalState = Sig.map bf hypotheticalUsage
 
@@ -413,14 +411,17 @@ main = do
 
       f 0 = "Laden"
       f 1 = "Entladen"
+      f _ = error "f"
 
       g 0 = "Laden"
       g 1 = "Entladen"
       g 2 = "maxEtaLinear"
       g 3 = "Zustand"
+      g _ = error "g"
 
       h 0 = "Hypothetical Usage"
       h 1 = "Optimal State"
+      h _ = error "h"
 
   concurrentlyMany_ [
 
@@ -458,7 +459,7 @@ main = do
                    DefaultTerm.cons (const "Max") varX varY maxEtaSys,
     PlotIO.surface "Test" DefaultTerm.cons (const "Max") varX varY maxEtaSysState ]
 
-
+{-
 main2 :: IO ()
 main2 = do
   let y = 1
@@ -472,10 +473,10 @@ main2 = do
 
       eSource = XIdx.energy sec0 source crossing
 
-      sinkRangeSig :: Sig.PSignal [] Double
+      -- sinkRangeSig :: Sig.PSignal [] Double
       sinkRangeSig = Sig.fromList sinkRange
 
-      esc1Sig, ecs1Sig, estc1Sig, ecst0Sig, eSourceSig :: Sig.PSignal [] Double
+      --esc1Sig, ecs1Sig, estc1Sig, ecst0Sig, eSourceSig :: Sig.PSignal [] Double
       esc1Sig = Sig.fromList $ map (f esc1) sinkRange
       ecs1Sig = Sig.fromList $ map (f ecs1) sinkRange
       estc1Sig = Sig.fromList $ map (f estc1) sinkRange
@@ -496,3 +497,4 @@ main2 = do
     PlotIO.xy "Test" DefaultTerm.cons id g sinkRangeSig
               [ esc1Sig, ecs1Sig, estc1Sig, ecst0Sig, etaSysSig, eSourceSig],
     Draw.xterm $ Draw.sequFlowGraph seqTopo ]
+-}
