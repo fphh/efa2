@@ -1,8 +1,7 @@
-{-# LANGUAGE TypeOperators #-}
-
 
 module EFA.Example.EtaSys where
 
+import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Record as EqRec
 import qualified EFA.Equation.Environment as EqEnv
 import EFA.Equation.Result (Result(..))
@@ -153,18 +152,20 @@ checkedMapUnions =
    Map.unionsWith (Map.unionWith (error "duplicate section for node"))
 
 sumBalance ::
-   (Num inb, Num outb) =>
+   (Arith.Constant inb, Arith.Constant outb) =>
    InOutBalance node (Map isec inb) (Map osec outb) ->
    InOutBalance node inb outb
 
 sumBalance (InOutBalance ins outs) =
-   InOutBalance (fmap Fold.sum ins) (fmap Fold.sum outs)
+   InOutBalance
+      (fmap (Fold.foldl (Arith.~+) Arith.zero) ins)
+      (fmap (Fold.foldl (Arith.~+) Arith.zero) outs)
 
 diffBalance ::
-   (Ord node, Num a) =>
+   (Ord node, Arith.Constant a) =>
    InOutBalance node a a -> Balance node a
 diffBalance (InOutBalance (InBalance ins) (OutBalance outs)) =
-   Map.intersectionWith (-) ins outs
+   Map.intersectionWith (Arith.~-) ins outs
 
 
 
@@ -172,7 +173,7 @@ type Balance node a = Map node a
 
 
 balance ::
-   (Show node, Ord node, Show a, Num a) =>
+   (Show node, Ord node, Show a, Arith.Constant a) =>
    Flow.RangeGraph node ->
    EqEnv.Complete node a v ->
    Balance node a
