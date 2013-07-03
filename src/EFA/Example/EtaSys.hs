@@ -11,29 +11,21 @@ import qualified EFA.Graph as Gr
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Topology.Index as TIdx
 import qualified EFA.Graph.Flow as Flow
-import EFA.Signal.Data (Data(..), Nil, (:>))
-
 
 import qualified EFA.Example.Index as XIdx
 
 import EFA.Utility.Map (checkedLookup)
-import qualified EFA.Utility.Bifunctor as BF
-
-import Data.Tuple.HT (fst3, thd3)
 
 import qualified Data.Set as Set
 import qualified Data.Map as Map ; import Data.Map (Map)
-import qualified Data.List as List
 
 import Control.Applicative (liftA2)
 
+import qualified Data.Foldable as Fold
 import Data.Traversable (sequenceA)
-
 import Data.Maybe (mapMaybe)
 
-import Data.Ord (comparing)
-
-import Data.Eq.HT (equating)
+import Data.Tuple.HT (mapPair, fst3, thd3)
 
 
 lookupAbsEnergy ::
@@ -111,12 +103,13 @@ newtype OutBalance node a = OutBalance (Map node a) deriving (Show)
 instance Functor (OutBalance node) where
    fmap f (OutBalance m) = OutBalance (fmap f m)
 
-data InOutBalance node a =
-   InOutBalance (InBalance node a) (OutBalance node a) deriving (Show)
+data InOutBalance node inb outb =
+   InOutBalance (InBalance node inb) (OutBalance node outb) deriving (Show)
 
-
+{-
 instance Functor (InOutBalance node) where
    fmap f (InOutBalance ins outs) = InOutBalance (fmap f ins) (fmap f outs)
+-}
 
 
 {-
@@ -124,88 +117,64 @@ siehe Graph.Flow, Graph.Draw
 -}
 
 storageBalance ::
-  (Show node, Ord node, Show a) =>
-  Flow.RangeGraph node ->
-  EqEnv.Complete node b (EqRec.Absolute (Result a)) ->
-  InOutBalance node (Result [a])
+   (Show node, Ord node, Show a) =>
+   Flow.RangeGraph node ->
+   EqEnv.Complete node a v ->
+   InOutBalance node (Map TIdx.InitOrSection a) (Map TIdx.SectionOrExit a)
 
-storageBalance (_, topo) env = InOutBalance inBalance outBalance
-  where structTopo = Gr.lefilter (TD.isStructureEdge . fst) $
-                     TD.dirFromSequFlowGraph topo
+storageBalance (_, g) (EqEnv.Complete env _) =
+   uncurry InOutBalance $
+   mapPair
+      (InBalance . checkedMapUnions,
+       OutBalance . checkedMapUnions) $
+   unzip $
+   map
+      (\view ->
+         case view of
+            TD.ViewNodeIn (TIdx.TimeNode sec node) ->
+               (Map.singleton node $ Map.singleton sec $
+                checkedLookup "storageBalance stOutSum" (EqEnv.stOutSumMap env) $
+                XIdx.stOutSum sec node,
+                Map.empty)
+            TD.ViewNodeOut (TIdx.TimeNode sec node) ->
+               (Map.empty,
+                Map.singleton node $ Map.singleton sec $
+                checkedLookup "storageBalance stInSum" (EqEnv.stInSumMap env) $
+                XIdx.stInSum sec node)) $
+   mapMaybe TD.viewNodeDir $
+   Map.toList $
+   Map.mapMaybe TD.maybeStorage $
+   Gr.nodeLabels g
 
-
-        m = Map.elems $ Gr.nodeEdges structTopo
-
-        inSt = concatMap (map Gr.to . Set.toList . fst3) $ filter isInSt m
-        outSt = concatMap (map Gr.from . Set.toList . thd3) $ filter isOutSt m
-
-        -- hier soll ein Map das groupBy und sortBy ersetzen!!!
-        inStEs = map (concatMap inFunc) $
-                 List.groupBy (equating getNode) $
-                 List.sortBy (comparing getNode) inSt
-        outStEs = map (concatMap outFunc) $
-                  List.groupBy (equating getNode) $
-                  List.sortBy (comparing getNode) outSt
-        getNode (TIdx.TimeNode _ x) = x
-
-        inFunc x = map (g x . getNode) $ Gr.pre structTopo x
-        outFunc x = map (g x . getNode) $ Gr.suc structTopo x
-
-        g (TIdx.TimeNode (TIdx.NoInit (TIdx.NoExit sec)) x) y =
-          (x, lookupAbsEnergy "storageBalance" env (XIdx.energy sec x y))
-
-
-        isInSt (ns, TD.Storage _, _) = hasStructureEdge ns
-        isInSt _ = False
-
-        isOutSt (_, TD.Storage _, ns) = hasStructureEdge ns
-        isOutSt _ = False
-
-        inBalance = InBalance $ Map.fromList $ map h inStEs
-        outBalance = OutBalance $ Map.fromList $ map h outStEs
-        h xs = (fst $ head xs, sequenceA $ map snd xs)
-
-
+checkedMapUnions ::
+   (Ord node, Ord sec) =>
+   [Map node (Map sec a)] -> Map node (Map sec a)
+checkedMapUnions =
+   Map.unionsWith (Map.unionWith (error "duplicate section for node"))
 
 sumBalance ::
-  (Num a) =>
-  InOutBalance node (Result [a]) -> InOutBalance node (Result a)
+   (Num inb, Num outb) =>
+   InOutBalance node (Map isec inb) (Map osec outb) ->
+   InOutBalance node inb outb
 
-sumBalance = fmap (fmap sum)
+sumBalance (InOutBalance ins outs) =
+   InOutBalance (fmap Fold.sum ins) (fmap Fold.sum outs)
+
+diffBalance ::
+   (Ord node, Num a) =>
+   InOutBalance node a a -> Balance node a
+diffBalance (InOutBalance (InBalance ins) (OutBalance outs)) =
+   Map.intersectionWith (-) ins outs
 
 
 
 type Balance node a = Map node a
 
 
-
-bal ::
-  (Show node, Ord node, Show a, Num a) =>
-  Flow.RangeGraph node ->
-  EqEnv.Complete node b (EqRec.Absolute (Result a)) ->
-  Balance node (Result a)
-bal topo env = Set.fold f Map.empty keys
-  where InOutBalance (InBalance ins) (OutBalance outs) =
-          sumBalance $ storageBalance topo env
-        keys = Set.union (Map.keysSet ins) (Map.keysSet outs)
-        lu k = maybe (Determined 0) id . Map.lookup k
-        f k = Map.insert k (liftA2 (-) (lu k ins) (lu k outs))
-
-
-{-
 balance ::
-  (Num d, Ord node, Show d, Show node) =>
-  Flow.RangeGraph node ->
-  EqEnv.Complete node b (EqRec.Absolute (Result (Data ([] :> Nil) d))) ->
-  Map node (Result d)
--}
-
-balance ::
-  (Num d, Ord node, Show d, Show node) =>
-  Flow.RangeGraph node ->
-  EqEnv.Complete node b (EqRec.Absolute (Result (Data ([] :> Nil) d))) ->
-  Map node (Result d)
-
-
-
-balance topo env = bal topo (BF.second (fmap (fmap (\(Data x) -> sum x))) env)
+   (Show node, Ord node, Show a, Num a) =>
+   Flow.RangeGraph node ->
+   EqEnv.Complete node a v ->
+   Balance node a
+balance topo =
+   diffBalance . sumBalance . storageBalance topo
