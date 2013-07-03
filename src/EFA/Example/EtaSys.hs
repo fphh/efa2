@@ -14,6 +14,7 @@ import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Example.Index as XIdx
 
 import EFA.Utility.Map (checkedLookup)
+import qualified Data.Accessor.Basic as Acc
 
 import qualified Data.Set as Set
 import qualified Data.Map as Map ; import Data.Map (Map)
@@ -112,9 +113,8 @@ instance Functor (InOutBalance node) where
 
 
 {-
-siehe Graph.Flow, Graph.Draw
+cf. Graph.Flow.getStorageSequences
 -}
-
 storageBalance ::
    (Show node, Ord node, Show a) =>
    Flow.RangeGraph node ->
@@ -130,18 +130,11 @@ storageBalance (_, g) (EqEnv.Complete env _) =
    map
       (\view ->
          case view of
-            TD.ViewNodeIn (TIdx.TimeNode sec node) ->
-               (Map.singleton node $ Map.singleton sec $
-                checkedLookup "storageBalance stOutSum" (EqEnv.stOutSumMap env) $
-                XIdx.stOutSum sec node,
-                Map.empty)
-            TD.ViewNodeOut (TIdx.TimeNode sec node) ->
-               (Map.empty,
-                Map.singleton node $ Map.singleton sec $
-                checkedLookup "storageBalance stInSum" (EqEnv.stInSumMap env) $
-                XIdx.stInSum sec node)) $
-   mapMaybe TD.viewNodeDir $
-   Map.toList $
+            TD.ViewNodeIn node ->
+               (singletonStSum XIdx.stOutSum env node, Map.empty)
+            TD.ViewNodeOut node ->
+               (Map.empty, singletonStSum XIdx.stInSum env node)) $
+   mapMaybe TD.viewNodeDir $ Map.toList $
    Map.mapMaybe TD.maybeStorage $
    Gr.nodeLabels g
 
@@ -150,6 +143,15 @@ checkedMapUnions ::
    [Map node (Map sec a)] -> Map node (Map sec a)
 checkedMapUnions =
    Map.unionsWith (Map.unionWith (error "duplicate section for node"))
+
+singletonStSum ::
+   (Ord node, Ord (idx node), EqEnv.AccessScalarMap idx) =>
+   (sec -> node -> TIdx.ForNode idx node) -> EqEnv.Scalar node a ->
+   TIdx.TimeNode sec node -> Map node (Map sec a)
+singletonStSum mkIdx env (TIdx.TimeNode sec node) =
+   Map.singleton node $ Map.singleton sec $
+   Map.findWithDefault (error "storageBalance") (mkIdx sec node) $
+   Acc.get EqEnv.accessScalarMap env
 
 sumBalance ::
    (Arith.Constant inb, Arith.Constant outb) =>
