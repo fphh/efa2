@@ -3,7 +3,8 @@
 module EFA.IO.CSVImport (
   modelicaCSVImport,
   fortissCSVImport, filterWith, dontFilter,
-  fortissCSVImportStruct, CSV.Header, CSV.Name(..), CSV.TrimmedName(..),
+  fortissCSVImportStruct,
+  CSV.Header, CSV.Name(..), CSV.TrimmedName(..), CSV.Transpose(..),
   ) where
 
 import EFA.IO.CSVParser (csvFileWithHeader)

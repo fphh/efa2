@@ -16,7 +16,9 @@ test1:: IO ()
 test1 = do
   (hd,rec) <- CSV.fortissCSVImportStruct "fortiss.csv"
   print hd
-  print $ filter ((CSV.TrimmedName "PERCENT" ==) . thd3) $
+  print $
+     CSV.transpose $
+     filter ((CSV.TrimmedName "PERCENT" ==) . thd3) $
      (rec :: [(CSV.Name, Double, CSV.TrimmedName)])
 
 main :: IO ()

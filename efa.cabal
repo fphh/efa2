@@ -482,6 +482,7 @@ Executable demo-csvimport
   If flag(buildDemos)
     Build-Depends:
       efa,
+      utility-ht,
       base
   Else
     Buildable: False
