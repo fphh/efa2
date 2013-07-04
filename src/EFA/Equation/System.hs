@@ -849,9 +849,7 @@ getStorageSequences ::
   TD.DirSequFlowGraph node ->
   Map node (Map (Idx.AugNode node) (Maybe TD.StoreDir))
 getStorageSequences =
-  foldl
-     (Map.unionWith (Map.unionWith (error "duplicate boundary for node")))
-     Map.empty .
+  Map.unionsWith (Map.unionWith (error "duplicate boundary for node")) .
   map (\(bn@(Idx.TimeNode _ n), dir) -> Map.singleton n $ Map.singleton bn dir) .
   Map.toList . Map.mapMaybe TD.maybeStorage . Gr.nodeLabels
 
