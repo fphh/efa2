@@ -4,7 +4,7 @@
 module EFA.IO.CSVParser (
   csvFile,
   csvFileWithHeader, cellContent,
-  Header, Name, Cells, CellsParser, structuredCell,
+  Header, Name(..), TrimmedName(..), Cells, CellsParser, structuredCell,
   csvFileWithStructure,
   ) where
 
@@ -17,6 +17,7 @@ import qualified EFA.IO.Parser as EFAParser
 import EFA.IO.Parser (Sequence, eol)
 
 import Control.Applicative (liftA2, liftA3, (<*))
+import Data.String.HT (trim)
 
 
 -- | Takes a separator character.
@@ -96,13 +97,24 @@ instance Cells Double where
 instance CellsParser Double where
   structuredCell = interpret cellContent . cell
 
-newtype Name = Name String deriving (Show)
+
+newtype Name = Name String deriving (Show, Eq)
 
 instance Cells Name where
   type Header Name = Name
 
 instance CellsParser Name where
   structuredCell = fmap Name . cell
+
+
+newtype TrimmedName = TrimmedName String deriving (Show, Eq)
+
+instance Cells TrimmedName where
+  type Header TrimmedName = Name
+
+instance CellsParser TrimmedName where
+  structuredCell = fmap (TrimmedName . trim) . cell
+
 
 instance Cells a => Cells [a] where
   type Header [a] = [Name]
