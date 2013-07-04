@@ -8,7 +8,7 @@ import EFA.Equation.Result (Result(..))
 
 import qualified EFA.Graph as Gr
 import qualified EFA.Graph.Topology as TD
-import qualified EFA.Graph.Topology.Index as TIdx
+import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Flow as Flow
 
 import qualified EFA.Example.Index as XIdx
@@ -80,12 +80,12 @@ etaSys (_, topo) env = liftA2 (/) (sumRes sinks) (sumRes sources)
         isActiveSource _ = False
 
         sinkEnergies
-          (TD.FlowEdge (TD.StructureEdge (TIdx.InSection sec (Gr.DirEdge a b)))) =
+          (TD.FlowEdge (TD.StructureEdge (Idx.InSection sec (Gr.DirEdge a b)))) =
             Just $ lookupAbsEnergy "etaSys, sinkEnergies" env (XIdx.energy sec b a)
         sinkEnergies _ = Nothing
 
         sourceEnergies
-          (TD.FlowEdge (TD.StructureEdge (TIdx.InSection sec (Gr.DirEdge a b)))) =
+          (TD.FlowEdge (TD.StructureEdge (Idx.InSection sec (Gr.DirEdge a b)))) =
             Just $ lookupAbsEnergy "etaSys, sourceEnergies" env (XIdx.energy sec a b)
         sourceEnergies _ = Nothing
 
@@ -99,29 +99,29 @@ cf. Graph.Flow.getStorageSequences, Equation.System.getStorageSequences
 storageBalanceRelative ::
    (Ord node, Arith.Sum a) =>
    EqEnv.Complete node a v ->
-   Map node (Map TIdx.AugmentedSection a)
+   Map node (Map Idx.AugmentedSection a)
 storageBalanceRelative (EqEnv.Complete env _) =
    Map.unionWith
       (Map.unionWith (error "storage cannot be In and Out at the same time"))
-      (sequences (\(TIdx.StInSum sec) -> TIdx.augmentSection sec) $
+      (sequences (\(Idx.StInSum sec) -> Idx.augmentSection sec) $
        EqEnv.stInSumMap env)
-      (sequences (\(TIdx.StOutSum sec) -> TIdx.augmentSection sec) $
+      (sequences (\(Idx.StOutSum sec) -> Idx.augmentSection sec) $
        fmap Arith.negate $ EqEnv.stOutSumMap env)
 
 storageBalanceAbsolute ::
    (Ord node, Arith.Sum a) =>
    EqEnv.Complete node a v ->
-   Map node (Map TIdx.Boundary a)
+   Map node (Map Idx.Boundary a)
 storageBalanceAbsolute (EqEnv.Complete env _) =
-   sequences (\(TIdx.Storage bnd) -> bnd) $ EqEnv.storageMap env
+   sequences (\(Idx.Storage bnd) -> bnd) $ EqEnv.storageMap env
 
 sequences ::
    (Ord node, Ord sec) =>
    (idx node -> sec) ->
-   Map (TIdx.ForNode idx node) a -> Map node (Map sec a)
+   Map (Idx.ForNode idx node) a -> Map node (Map sec a)
 sequences sec env =
    Map.unionsWith (Map.unionWith (error "duplicate section for node")) $
    map
-      (\(TIdx.ForNode idx node, a) ->
+      (\(Idx.ForNode idx node, a) ->
          Map.singleton node $ Map.singleton (sec idx) a) $
    Map.toList env
