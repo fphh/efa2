@@ -92,67 +92,43 @@ etaSys (_, topo) env = liftA2 (/) (sumRes sinks) (sumRes sources)
         sourceEnergies _ = Nothing
 
 
-newtype InBalance node a = InBalance (Map node a) deriving (Show)
-
-instance Functor (InBalance node) where
-   fmap f (InBalance m) = InBalance (fmap f m)
-
-
-newtype OutBalance node a = OutBalance (Map node a) deriving (Show)
-
-instance Functor (OutBalance node) where
-   fmap f (OutBalance m) = OutBalance (fmap f m)
-
-data InOutBalance node inb outb =
-   InOutBalance (InBalance node inb) (OutBalance node outb) deriving (Show)
-
-{-
-instance Functor (InOutBalance node) where
-   fmap f (InOutBalance ins outs) = InOutBalance (fmap f ins) (fmap f outs)
--}
+type Balance node a = Map node a
 
 
 {-
 cf. Graph.Flow.getStorageSequences
 -}
 storageBalance ::
-   (Show node, Ord node, Show a) =>
+   (Show node, Ord node, Arith.Sum a, Show a) =>
    Flow.RangeGraph node ->
    EqEnv.Complete node a v ->
-   InOutBalance node (Map TIdx.InitOrSection a) (Map TIdx.SectionOrExit a)
+   Map node (Map TIdx.AugmentedSection a)
 
 storageBalance (_, g) (EqEnv.Complete env _) =
-   uncurry InOutBalance $
-   mapPair
-      (InBalance . checkedMapUnions,
-       OutBalance . checkedMapUnions) $
-   unzip $
+   Map.unionsWith (Map.unionWith (error "duplicate section for node")) $
    map
       (\view ->
          case view of
             TD.ViewNodeIn node ->
-               (singletonStSum XIdx.stOutSum env node, Map.empty)
+               singletonStSum XIdx.stOutSum env node
             TD.ViewNodeOut node ->
-               (Map.empty, singletonStSum XIdx.stInSum env node)) $
+               fmap (fmap Arith.negate) $
+               singletonStSum XIdx.stInSum env node) $
    mapMaybe TD.viewNodeDir $ Map.toList $
    Map.mapMaybe TD.maybeStorage $
    Gr.nodeLabels g
 
-checkedMapUnions ::
-   (Ord node, Ord sec) =>
-   [Map node (Map sec a)] -> Map node (Map sec a)
-checkedMapUnions =
-   Map.unionsWith (Map.unionWith (error "duplicate section for node"))
-
 singletonStSum ::
-   (Ord node, Ord (idx node), EqEnv.AccessScalarMap idx) =>
+   (Ord node, Ord (idx node), EqEnv.AccessScalarMap idx,
+    TIdx.ToAugmentedSection sec) =>
    (sec -> node -> TIdx.ForNode idx node) -> EqEnv.Scalar node a ->
-   TIdx.TimeNode sec node -> Map node (Map sec a)
+   TIdx.TimeNode sec node -> Map node (Map TIdx.AugmentedSection a)
 singletonStSum mkIdx env (TIdx.TimeNode sec node) =
-   Map.singleton node $ Map.singleton sec $
+   Map.singleton node $ Map.singleton (TIdx.augmentSection sec) $
    Map.findWithDefault (error "storageBalance") (mkIdx sec node) $
    Acc.get EqEnv.accessScalarMap env
 
+{-
 sumBalance ::
    (Arith.Constant inb, Arith.Constant outb) =>
    InOutBalance node (Map isec inb) (Map osec outb) ->
@@ -171,9 +147,6 @@ diffBalance (InOutBalance (InBalance ins) (OutBalance outs)) =
 
 
 
-type Balance node a = Map node a
-
-
 balance ::
    (Show node, Ord node, Show a, Arith.Constant a) =>
    Flow.RangeGraph node ->
@@ -181,3 +154,4 @@ balance ::
    Balance node a
 balance topo =
    diffBalance . sumBalance . storageBalance topo
+-}
