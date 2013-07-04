@@ -5,6 +5,7 @@ import qualified EFA.Graph.Topology.Index as Idx
 import qualified Data.Map as Map
 import Data.Map (Map)
 
+import Data.Bool.HT (if')
 import Data.List (intercalate)
 import Data.Ratio (Ratio, numerator, denominator)
 
@@ -47,29 +48,11 @@ but then we would need a length function.
 data Function = Absolute | Signum | ConstOne
    deriving (Eq, Ord, Show)
 
--- | actual though -- four usable figures
-formatReal :: (Ord a, Floating a, PrintfArg a) => a -> String
-formatReal x | x == 0 = "0"
-             | abs x < 1 =   printf "%.5f" x
-             | abs x == 1 = "1"
-             | abs x == -1 = "-1"
-             | abs x < 10 = printf "%.4f" x
-             | abs x < 100 = printf "%.3f" x
-             | abs x < 1000 = printf "%.2f" x
-             | abs x < 10000 = printf "%.1f" x
-             | abs x < 10^(6::Int) = printf "%.0f" x
-             | abs x < 10^(9::Int) = (printf "%.3f" (x*10^^(-6::Int))) ++ " E6"
-             | abs x < 10^(12::Int) = (printf "%.3f" (x*10^^(-9::Int))) ++ " E9"
-             | abs x < 10^(15::Int) = (printf "%.3f" (x*10^^(-12::Int))) ++ " E12"
-             | otherwise = printf "%.e" x
-
-
-
 
 class Format output where
    literal :: String -> output
    integer :: Integer -> output
-   real :: (Floating a, PrintfArg a, Ord a) => a -> output
+   real :: (RealFrac a, PrintfArg a, Ord a) => a -> output
    ratio :: (Integral a, Show a) => Ratio a -> output
    subscript :: output -> output -> output
    connect :: output -> output -> output
@@ -100,8 +83,7 @@ instance Format ASCII where
    -- may need some escaping for non-ASCII characters
    literal = ASCII
    integer = ASCII . show
-   -- real = ASCII . show
-   real = ASCII . formatReal
+   real = ASCII . realExp
    ratio r = ASCII $ show (numerator r) ++ "/" ++ show (denominator r)
    subscript (ASCII t) (ASCII s) = ASCII $ t ++ "_" ++ s
    connect (ASCII t) (ASCII s) = ASCII $ t ++ "_" ++ s
@@ -161,8 +143,7 @@ instance Format ASCII where
 instance Format Unicode where
    literal = Unicode
    integer = Unicode . show
-   -- real = Unicode . show
-   real = Unicode . formatReal -- printf "%.6f"
+   real = Unicode . realExp
    ratio r =
       Unicode $
       Map.findWithDefault
@@ -340,6 +321,25 @@ ratioAuto r =
    if denominator r == 1
      then integer $ toInteger $ numerator r
      else ratio r
+
+
+
+-- | actual though -- for usable figures
+realExp :: (RealFrac a, PrintfArg a) => a -> String
+realExp x =
+   case round x of
+      xi ->
+         if' (abs x < 100 && x == fromInteger xi) (show xi) $
+         if' (abs x < 1) (printf "%.5f" x) $
+         if' (abs x < 10) (printf "%.4f" x) $
+         if' (abs x < 100) (printf "%.3f" x) $
+         if' (abs x < 1000) (printf "%.2f" x) $
+         if' (abs x < 10000) (printf "%.1f" x) $
+         if' (abs x < 1e6) (printf "%.0f" x) $
+         if' (abs x < 1e9) (printf "%.3f E6" (x*1e-6)) $
+         if' (abs x < 1e12) (printf "%.3f E9" (x*1e-9)) $
+         if' (abs x < 1e15) (printf "%.3f E12" (x*1e-12)) $
+         (printf "%.e" x)
 
 
 class Record record where
