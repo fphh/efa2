@@ -14,18 +14,16 @@ import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Example.Index as XIdx
 
 import EFA.Utility.Map (checkedLookup)
-import qualified Data.Accessor.Basic as Acc
 
 import qualified Data.Set as Set
 import qualified Data.Map as Map ; import Data.Map (Map)
 
 import Control.Applicative (liftA2)
 
-import qualified Data.Foldable as Fold
 import Data.Traversable (sequenceA)
 import Data.Maybe (mapMaybe)
 
-import Data.Tuple.HT (mapPair, fst3, thd3)
+import Data.Tuple.HT (fst3, thd3)
 
 
 lookupAbsEnergy ::
@@ -96,62 +94,34 @@ type Balance node a = Map node a
 
 
 {-
-cf. Graph.Flow.getStorageSequences
+cf. Graph.Flow.getStorageSequences, Equation.System.getStorageSequences
 -}
-storageBalance ::
-   (Show node, Ord node, Arith.Sum a, Show a) =>
-   Flow.RangeGraph node ->
+storageBalanceRelative ::
+   (Ord node, Arith.Sum a) =>
    EqEnv.Complete node a v ->
    Map node (Map TIdx.AugmentedSection a)
+storageBalanceRelative (EqEnv.Complete env _) =
+   Map.unionWith
+      (Map.unionWith (error "storage cannot be In and Out at the same time"))
+      (sequences (\(TIdx.StInSum sec) -> TIdx.augmentSection sec) $
+       EqEnv.stInSumMap env)
+      (sequences (\(TIdx.StOutSum sec) -> TIdx.augmentSection sec) $
+       fmap Arith.negate $ EqEnv.stOutSumMap env)
 
-storageBalance (_, g) (EqEnv.Complete env _) =
+storageBalanceAbsolute ::
+   (Ord node, Arith.Sum a) =>
+   EqEnv.Complete node a v ->
+   Map node (Map TIdx.Boundary a)
+storageBalanceAbsolute (EqEnv.Complete env _) =
+   sequences (\(TIdx.Storage bnd) -> bnd) $ EqEnv.storageMap env
+
+sequences ::
+   (Ord node, Ord sec) =>
+   (idx node -> sec) ->
+   Map (TIdx.ForNode idx node) a -> Map node (Map sec a)
+sequences sec env =
    Map.unionsWith (Map.unionWith (error "duplicate section for node")) $
    map
-      (\view ->
-         case view of
-            TD.ViewNodeIn node ->
-               singletonStSum XIdx.stOutSum env node
-            TD.ViewNodeOut node ->
-               fmap (fmap Arith.negate) $
-               singletonStSum XIdx.stInSum env node) $
-   mapMaybe TD.viewNodeDir $ Map.toList $
-   Map.mapMaybe TD.maybeStorage $
-   Gr.nodeLabels g
-
-singletonStSum ::
-   (Ord node, Ord (idx node), EqEnv.AccessScalarMap idx,
-    TIdx.ToAugmentedSection sec) =>
-   (sec -> node -> TIdx.ForNode idx node) -> EqEnv.Scalar node a ->
-   TIdx.TimeNode sec node -> Map node (Map TIdx.AugmentedSection a)
-singletonStSum mkIdx env (TIdx.TimeNode sec node) =
-   Map.singleton node $ Map.singleton (TIdx.augmentSection sec) $
-   Map.findWithDefault (error "storageBalance") (mkIdx sec node) $
-   Acc.get EqEnv.accessScalarMap env
-
-{-
-sumBalance ::
-   (Arith.Constant inb, Arith.Constant outb) =>
-   InOutBalance node (Map isec inb) (Map osec outb) ->
-   InOutBalance node inb outb
-
-sumBalance (InOutBalance ins outs) =
-   InOutBalance
-      (fmap (Fold.foldl (Arith.~+) Arith.zero) ins)
-      (fmap (Fold.foldl (Arith.~+) Arith.zero) outs)
-
-diffBalance ::
-   (Ord node, Arith.Constant a) =>
-   InOutBalance node a a -> Balance node a
-diffBalance (InOutBalance (InBalance ins) (OutBalance outs)) =
-   Map.intersectionWith (Arith.~-) ins outs
-
-
-
-balance ::
-   (Show node, Ord node, Show a, Arith.Constant a) =>
-   Flow.RangeGraph node ->
-   EqEnv.Complete node a v ->
-   Balance node a
-balance topo =
-   diffBalance . sumBalance . storageBalance topo
--}
+      (\(TIdx.ForNode idx node, a) ->
+         Map.singleton node $ Map.singleton (sec idx) a) $
+   Map.toList env
