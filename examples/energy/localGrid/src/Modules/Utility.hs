@@ -17,7 +17,8 @@ import qualified EFA.Signal.ConvertTable as CT
 import qualified EFA.IO.TableParserTypes as TPT
 
 import qualified Data.NonEmpty as NonEmpty
-import qualified Data.Map as M
+import qualified Data.Map as Map ; import Data.Map (Map)
+
 
 lookupAbsPower ::
   (Ord node, Show d, Show node,Num d,Fractional d) =>
@@ -39,7 +40,7 @@ envToPowerRecord ::  EqEnv.Complete
                      Sig.TSignal v a -> TIdx.Section -> Record.PowerRecord System.Node v a
 envToPowerRecord env time sec =
   Record.Record time
-    (M.map i $ M.mapKeys h $ M.filterWithKey p $ EqEnv.powerMap $ EqEnv.signal env)
+    (Map.map i $ Map.mapKeys h $ Map.filterWithKey p $ EqEnv.powerMap $ EqEnv.signal env)
   where p (TIdx.InSection section (TIdx.Power (TIdx.StructureEdge _ _))) _ =
           section == sec
         h (TIdx.InSection (TIdx.Section _) (TIdx.Power (TIdx.StructureEdge n1 n2))) =
@@ -51,16 +52,16 @@ envToPowerRecord env time sec =
 
 
 -- | Warum verwenden wir hier niht checkedLookup -- Fehlermeldung nicht klar genug, kein caller eingezogen
-getEtas :: M.Map String (a -> a) -> [String] -> [a -> a]
+getEtas :: Map String (a -> a) -> [String] -> [a -> a]
 getEtas etaFunc = map $
-  \str -> M.findWithDefault (error $ "getEtas :" ++ str ++ " not found") str etaFunc
+  \str -> Map.findWithDefault (error $ "getEtas :" ++ str ++ " not found") str etaFunc
 
 
 getPowerSignals ::
-  M.Map String (TPT.T Double) ->
+  Map String (TPT.T Double) ->
   [String] ->
   [(Sig.TSignal [] Double, Sig.PSignal [] Double)]
 getPowerSignals tabPower =
     map (f . CT.convertToSignal2D .
-         flip (M.findWithDefault (error "getPowerSignals: signal not found")) tabPower)
+         flip (Map.findWithDefault (error "getPowerSignals: signal not found")) tabPower)
   where f (x, NonEmpty.Cons y []) = (x, y)

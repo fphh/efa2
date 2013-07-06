@@ -13,9 +13,9 @@ import qualified EFA.IO.TableParserTypes as TPT
 
 import qualified EFA.Signal.Base as Base
 
+import qualified Data.Map as Map ; import Data.Map (Map)
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.List.Match as Match
-import qualified Data.Map as M
 
 
 
@@ -75,15 +75,15 @@ convertToSignal3D (T _ ds) =
 makeEtaFunctions2D ::
   ( Fractional d, Ord d, Show d,
     Base.BProd d d) =>
-  M.Map String (d, d) ->
-  TPT.Map d -> M.Map String (d -> d)
-makeEtaFunctions2D sm = M.mapWithKey f
+  Map String (d, d) ->
+  TPT.Map d -> Map String (d -> d)
+makeEtaFunctions2D sm = Map.mapWithKey f
   where f k t = Sig.fromSample .
                   Sig.interp1Lin k xsig ysig .
                   Sig.toSample
          where (xs, NonEmpty.Cons y _) = convertToSignal2D t
-               xsig = maybe xs (Sig.scale xs . fst) (M.lookup k sm)
-               ysig = maybe y (Sig.scale y . snd) (M.lookup k sm)
+               xsig = maybe xs (Sig.scale xs . fst) (Map.lookup k sm)
+               ysig = maybe y (Sig.scale y . snd) (Map.lookup k sm)
 
 
 {-
@@ -91,18 +91,18 @@ makeEtaFunctions2D sm = M.mapWithKey f
 makeEtaFunctions2D ::
   forall d. ( Fractional d, Ord d, Show d,
     Base.BProd d d) =>
-  M.Map String (d, d) ->
-  M.Map (idx node) (k, idx node -> idx1 node) ->
+  Map String (d, d) ->
+  Map (idx node) (k, idx node -> idx1 node) ->
   TPT.Map d ->
-  M.Map String (d -> d)
-makeEtaFunctions2D sm etaAssign = M.mapWithKey f
+  Map String (d -> d)
+makeEtaFunctions2D sm etaAssign = Map.mapWithKey f
   where {-f k t = Sig.fromSample .
                   Sig.interp1Lin k xsig ysig .
                   Sig.toSample-}
 
          where xs, y :: Sig.PSignal [] d
                (xs, y:_) = convertToSignal2D (Just t)
-               xsig = maybe xs (Sig.scale xs . fst) (M.lookup k sm)
-               ysig = maybe y (Sig.scale y . snd) (M.lookup k sm)
+               xsig = maybe xs (Sig.scale xs . fst) (Map.lookup k sm)
+               ysig = maybe y (Sig.scale y . snd) (Map.lookup k sm)
 
 -}

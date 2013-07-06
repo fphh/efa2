@@ -58,7 +58,7 @@ import qualified System.IO as IO
 --import EFA.Utility.Stream (Stream((:~)))
 
 --import qualified Data.List as L
-import qualified Data.Map as M
+import qualified Data.Map as Map
 --import qualified Modules.Analysis as Analysis
 --import Data.Tuple.HT (mapSnd)
 
@@ -117,59 +117,59 @@ legend 1 = "Entladen"
 legend _ = "Undefined"
 
 legendEnergy :: Int -> String
-legendEnergy 0 = "eRest0" 
-legendEnergy 1 = "eRestLocal0" 
-legendEnergy 2 = "eGas0" 
-legendEnergy 3 = "eCoal0" 
-legendEnergy 4 = "eRest1" 
-legendEnergy 5 = "eRestLocal1" 
-legendEnergy 6 = "eGas1" 
-legendEnergy 7 = "eCoal1" 
+legendEnergy 0 = "eRest0"
+legendEnergy 1 = "eRestLocal0"
+legendEnergy 2 = "eGas0"
+legendEnergy 3 = "eCoal0"
+legendEnergy 4 = "eRest1"
+legendEnergy 5 = "eRestLocal1"
+legendEnergy 6 = "eGas1"
+legendEnergy 7 = "eCoal1"
 legendEnergy _ = "Undefined"
 
 main :: IO ()
 main = do
 
    IO.hSetEncoding IO.stdout IO.utf8
-    
+
    tabEta <- Table.read "../simulation/maps/eta.txt"
 
    let etaWaterCharge :: Double -> Double
        etaWaterCharge = Sig.fromSample . Sig.interp1Lin "etaWaterCharge" (Sig.scale xs powerScaleWater) (head ys) . Sig.toSample
          where xs :: Sig.PSignal [] Double
                ys :: [Sig.NSignal [] Double]
-               (xs,ys) = CT.convertToSignal2D (M.lookup "storage" tabEta)
-                        
+               (xs,ys) = CT.convertToSignal2D (Map.lookup "storage" tabEta)
+
    let etaWaterDischarge :: Double -> Double
        etaWaterDischarge = Sig.fromSample . Sig.interp1Lin "etaWaterDischarge" (Sig.scale xs powerScaleWater) (head ys) . Sig.toSample
          where xs :: Sig.PSignal [] Double
                ys :: [Sig.NSignal [] Double]
-               (xs,ys) = CT.convertToSignal2D (M.lookup "storage" tabEta)
-   
+               (xs,ys) = CT.convertToSignal2D (Map.lookup "storage" tabEta)
+
    let etaGas :: Double -> Double
        etaGas = Sig.fromSample . Sig.interp1Lin "etaGas" (Sig.scale xs powerScaleGas) (head ys) . Sig.toSample
          where xs :: Sig.PSignal [] Double
                ys :: [Sig.NSignal [] Double]
-               (xs,ys) = CT.convertToSignal2D (M.lookup "gas" tabEta)
-               
+               (xs,ys) = CT.convertToSignal2D (Map.lookup "gas" tabEta)
+
    let etaCoal :: Double -> Double
        etaCoal = Sig.fromSample . Sig.interp1Lin "etaCoal" (Sig.scale xs powerScaleCoal) (head ys) . Sig.toSample
          where xs :: Sig.PSignal [] Double
                ys :: [Sig.NSignal [] Double]
-               (xs,ys) = CT.convertToSignal2D (M.lookup "coal" tabEta)
-   
+               (xs,ys) = CT.convertToSignal2D (Map.lookup "coal" tabEta)
+
    let etaTransHL :: Double -> Double
        etaTransHL = Sig.fromSample . Sig.interp1Lin "etaTransHL" (Sig.scale xs powerScaleTransformer) (head ys) . Sig.toSample
          where xs :: Sig.PSignal [] Double
                ys :: [Sig.NSignal [] Double]
-               (xs,ys) = CT.convertToSignal2D (M.lookup "transformer" tabEta)
+               (xs,ys) = CT.convertToSignal2D (Map.lookup "transformer" tabEta)
 
-   let 
+   let
 
      -- | Defining the given Variables for each Section
 
-     envsCharge :: Sig.UTTestRow2 [] [] 
-                   ((EqEnv.Complete  
+     envsCharge :: Sig.UTTestRow2 [] []
+                   ((EqEnv.Complete
                      Node
                      (EqRec.Absolute (Result Double))
                      (EqRec.Absolute (Result Double))))
@@ -178,7 +178,7 @@ main = do
 
 
      envsDischarge :: Sig.UTTestRow2 [] []
-                    ((EqEnv.Complete  
+                    ((EqEnv.Complete
                       Node
                       (EqRec.Absolute (Result Double))
                       (EqRec.Absolute (Result Double))))

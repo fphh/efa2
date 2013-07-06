@@ -9,13 +9,13 @@ module Main where
 
 
 import qualified Modules.System as System
-import Modules.System (Node(..))
 import qualified Modules.Optimisation as Optimisation
+import qualified Modules.Analysis as Analysis
+import Modules.System (Node(..))
 import Modules.Optimisation (sec0,sec1, maxEta, maxOpt,
                             -- calcEtaSys
                             )
 import Modules.Utility as ModUt
-import qualified Modules.Analysis as Analysis
 -- import Modules.Utility(getEtas, getPowerSignals,select)
 
 import qualified EFA.Example.EtaSys as ES
@@ -23,68 +23,55 @@ import qualified EFA.Example.Index as XIdx
 import qualified EFA.Example.Absolute as EqGen
 import EFA.Example.Utility (select)
 
-import EFA.Signal.Sequence (-- genSequenceSignal,
-                            addZeroCrossings,
-                            genSequ,
-                           -- sectionRecordsFromSequence
-                           )
-import EFA.Report.Report(report,ROpt(..))
-import qualified EFA.Signal.Record as Record
-import EFA.Utility.Async (concurrentlyMany_)
-import qualified EFA.Graph.Draw as Draw
-import qualified EFA.Signal.Signal as Sig
-import EFA.Signal.Signal (TC,Scalar)
-import EFA.Signal.Data (Data(..), Nil, (:>), getData)
---import qualified EFA.Signal.Data as Data
-
-import EFA.Signal.Typ (Typ, F, T, A, Tt)
-import qualified EFA.Signal.SequenceData as SD
-import EFA.Signal.Sequence (makeSeqFlowTopology)
-import qualified EFA.Graph.Flow as Flow
-
-import qualified EFA.Graph.Topology as TD
-import qualified EFA.Equation.Arithmetic as EqArith
-
---import qualified EFA.Graph.Draw as Draw
-import qualified EFA.Signal.Plot as Plot
---import qualified EFA.Equation.Arithmetic as Arith
---import qualified EFA.Equation.Environment as Env
---import qualified EFA.Example.Index as XIdx
 import qualified EFA.Graph.Topology.Index as TIdx
+import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.Flow as Flow
+import qualified EFA.Graph.Draw as Draw
+
+import qualified EFA.Equation.Arithmetic as EqArith
 import qualified EFA.Equation.Environment as EqEnv
 import qualified EFA.Equation.Record as EqRec
 import EFA.Equation.Result (Result(..))
---import EFA.Utility.Map (checkedLookup)
+
+import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.PlotIO as PlotIO
+import qualified EFA.Signal.Plot as Plot
+import qualified EFA.Signal.Data as Data
 import qualified EFA.Signal.ConvertTable as CT
+import qualified EFA.Signal.Vector as SV
+import qualified EFA.Signal.SequenceData as SD
+import qualified EFA.Signal.Signal as Sig
+import EFA.Signal.Sequence (makeSeqFlowTopology, addZeroCrossings, genSequ,)
+import EFA.Signal.Signal (TC,Scalar)
+import EFA.Signal.Data (Data(..), Nil, (:>), getData)
+import EFA.Signal.Typ (Typ, F, T, A, Tt)
+
+import EFA.Utility.Async (concurrentlyMany_)
+import EFA.Report.Report(report,ROpt(..))
+
 import qualified EFA.IO.TableParser as Table
 import qualified EFA.IO.TableParserTypes as TPT
-import qualified EFA.Signal.Vector as SV
 
 import qualified EFA.Utility.Bifunctor as BF
 
 import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
-
 import qualified Graphics.Gnuplot.Terminal.PostScript as PostScript
 import qualified Graphics.Gnuplot.Terminal.PNG as PNG
-
-import qualified System.IO as IO
-import qualified Data.Map as M
-import qualified Data.Vector as V
-import qualified Data.GraphViz.Attributes.Colors.X11 as Colors
-
-import qualified EFA.Signal.Data as Data
 
 import qualified Graphics.Gnuplot.Graph.ThreeDimensional as Graph3D
 import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
 
+import qualified Data.Map as Map ; import Data.Map (Map)
+import qualified Data.Vector as V
+import qualified Data.GraphViz.Attributes.Colors.X11 as Colors
+
 import Text.Printf (printf)
 
 import Data.Maybe (fromJust)
-
 import Data.Tuple.HT (fst3, snd3, thd3)
 
-import Debug.Trace
+import qualified System.IO as IO
+
 
 -- ################### Plot Stuff
 
@@ -291,7 +278,7 @@ etaSysCharge = Sig.fromList2 $ zipWith (zipWith (solveCharge 10 10)) varX' varY'
 etaSysDischarge = Sig.fromList2 $ zipWith (zipWith (solveDischarge 10 10)) varX' varY'
 =======
 -}
-          
+
 noLegend :: Int -> String
 noLegend =  (const "")
 -- >>>>>>> philipp_neu
@@ -301,8 +288,8 @@ legend 0 = "Laden"
 legend 1 = "Entladen"
 legend _ = "Undefined"
 
-scaleTableEta :: M.Map String (Double, Double)
-scaleTableEta = M.fromList $
+scaleTableEta :: Map String (Double, Double)
+scaleTableEta = Map.fromList $
   ("storage",     (1, 0.8)) :
   ("gas",         (1, 0.4)) :
   ("transformer", (3.0, 0.95)) :
@@ -315,8 +302,8 @@ scaleTableEta = M.fromList $
 
 etaAssign ::
   TIdx.Section ->
-  M.Map (XIdx.Eta Node) (String, String, XIdx.Eta Node -> XIdx.Power Node)
-etaAssign sec = M.fromList $
+  Map (XIdx.Eta Node) (String, String, XIdx.Eta Node -> XIdx.Power Node)
+etaAssign sec = Map.fromList $
   (XIdx.eta sec Water Network, ( "storage", "storage", myflip)) :
   (XIdx.eta sec Network Water, ( "storage", "storage", noflip)) :
 
@@ -417,18 +404,18 @@ sweep func xs ys = Sig.fromList2 $ zipWith (zipWith func) xs ys
 
 doubleSweep ::
   Optimisation.SolveFunc Double ->
-  M.Map String (Double -> Double) ->
+  Map String (Double -> Double) ->
   [[Double]] ->
   [[Double]] ->
-  [[Double]] -> 
+  [[Double]] ->
   [[Double]] ->
   Sig.UTSignal2 V.Vector V.Vector
     (Sig.UTSignal2 V.Vector V.Vector
-      (EqEnv.Complete 
+      (EqEnv.Complete
         Node
         (EqRec.Absolute (Result (Data Nil Double)))
         (EqRec.Absolute (Result (Data Nil Double)))))
-doubleSweep func etaFunc varOptX varOptY varX varY= 
+doubleSweep func etaFunc varOptX varOptY varX varY=
   sweep f (mm varX) (mm varY)
   where f x y =
           sweep (func etaAssign etaFunc x y) xo yo
@@ -787,7 +774,7 @@ main = do
            -- Record.diffTime $
            -- Record.rmap (Sig.changeSignalType . Sig.deltaMap (\x y -> (x+y)/2)) $
            Record.Record time' $
-           M.fromList [(TIdx.PPos (TIdx.StructureEdge Rest Network), powerSignalRest),
+           Map.fromList [(TIdx.PPos (TIdx.StructureEdge Rest Network), powerSignalRest),
                        (TIdx.PPos (TIdx.StructureEdge LocalRest LocalNetwork), powerSignalLocal),
                        (TIdx.PPos (TIdx.StructureEdge Network Water), powerSignalWater),
                        (TIdx.PPos (TIdx.StructureEdge LocalNetwork Gas), powerSignalGas)
@@ -799,7 +786,7 @@ main = do
            -- Record.diffTime $
            -- Record.rmap (Sig.changeSignalType . Sig.deltaMap (\x y -> (x+y)/2)) $
            Record.Record time' $
-           M.fromList [(TIdx.PPos (TIdx.StructureEdge Rest Network), powerSignalRest),
+           Map.fromList [(TIdx.PPos (TIdx.StructureEdge Rest Network), powerSignalRest),
                        (TIdx.PPos (TIdx.StructureEdge LocalRest LocalNetwork), powerSignalLocal)
                       ]
 
