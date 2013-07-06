@@ -35,12 +35,12 @@ envToPowerRecord ::  EqEnv.Complete
                      System.Node
                      (EqRec.Absolute (Result (Data  Nil a)))
                      (EqRec.Absolute (Result (Data (v :> Nil) a))) ->
-                     Sig.TSignal v a -> Integer -> Record.PowerRecord System.Node v a
+                     Sig.TSignal v a -> TIdx.Section -> Record.PowerRecord System.Node v a
 envToPowerRecord env time sec =
   Record.Record time
     (M.map i $ M.mapKeys h $ M.filterWithKey p $ EqEnv.powerMap $ EqEnv.signal env)
-  where p (TIdx.InSection (TIdx.Section section) (TIdx.Power (TIdx.StructureEdge _ _))) _ =
-          toInteger section == sec
+  where p (TIdx.InSection section (TIdx.Power (TIdx.StructureEdge _ _))) _ =
+          section == sec
         h (TIdx.InSection (TIdx.Section _) (TIdx.Power (TIdx.StructureEdge n1 n2))) =
           TIdx.PPos (TIdx.StructureEdge n1 n2)
 
@@ -49,10 +49,10 @@ envToPowerRecord env time sec =
           error "Modules.Utility.envToPowerRecord - undetermined data"
 
 
--- | Warum verwenden wir hier niht checkedLookup -- Fehlermeldung niht klar genug, kein caller eingezogen
+-- | Warum verwenden wir hier niht checkedLookup -- Fehlermeldung nicht klar genug, kein caller eingezogen
 getEtas :: M.Map String (a -> a) -> [String] -> [a -> a]
 getEtas etaFunc = map $
-  \str -> maybe (error $ "getEtas :" ++ str ++ " not found") id (M.lookup str etaFunc)
+  \str -> M.findWithDefault (error $ "getEtas :" ++ str ++ " not found") str etaFunc
 
 
 getPowerSignals ::
