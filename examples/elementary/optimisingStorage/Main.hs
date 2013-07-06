@@ -20,6 +20,7 @@ import qualified EFA.Equation.Result as R
 import qualified EFA.Equation.Arithmetic as Arith
 
 import qualified EFA.Signal.PlotIO as PlotIO
+import qualified EFA.Signal.ConvertTable as Table
 import qualified EFA.Signal.Signal as S
 -- import qualified EFA.Signal.Data as D
 
@@ -34,16 +35,16 @@ import EFA.Utility.Map (checkedLookup)
 import EFA.Utility.Async (concurrentlyMany_)
 import EFA.Utility.Stream (Stream((:~)))
 
+import qualified Graphics.Gnuplot.Terminal.WXT as WXT
+
 import qualified Data.Accessor.Basic as Accessor
 import qualified Data.Vector.Unboxed as UV
-import qualified Data.List.Match as Match
 
 import Control.Category ((.))
 import Data.Monoid ((<>))
 
 import Prelude hiding ((.))
 
-import qualified Graphics.Gnuplot.Terminal.WXT as WXT
 
 plotTerm :: WXT.T
 plotTerm = WXT.cons
@@ -152,11 +153,6 @@ given y' p' nParam' =
         p = EqGen.constant p'
 
 
-varMat :: [a] -> [b] -> ([[a]], [[b]])
-varMat xs ys =
-   (Match.replicate ys xs, map (Match.replicate xs) ys)
-
-
 type AbsoluteResult = Record.Absolute (R.Result Val)
 
 -- | r is inner Resistance of Battery
@@ -226,7 +222,7 @@ nsto_const = 0.95
 
 -- | Choose Variation here
 varX',varY' :: [[Double]]
-(varX', varY') = varMat yrange prange
+(varX', varY') = Table.varMat yrange prange
 
 -- | Set the type for Graph Display here -- take UT for Resistance
 
