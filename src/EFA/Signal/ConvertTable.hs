@@ -1,6 +1,6 @@
 
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeOperators #-}
 
 module EFA.Signal.ConvertTable where
 
@@ -10,7 +10,7 @@ import qualified Data.Map as M
 
 import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.Vector as SV
-import qualified EFA.Signal.Data as Data
+import EFA.Signal.Data (Data, Nil, (:>))
 
 import EFA.IO.TableParserTypes (T(..))
 import qualified EFA.IO.TableParserTypes as TPT
@@ -26,11 +26,10 @@ transposeTable f (T (x, y) lst) =
 
 
 convertHelp ::
-  ( Data.FromList cx, Data.Storage cx a, Data.NestedList cx a ~ [a],
-    Data.FromList cy, Data.Storage cy a, Data.NestedList cy a ~ [a] ) =>
   ([[a]] -> [[a]]) ->
   T a ->
-  (Sig.TC sx tx (Data.Data cx a), [Sig.TC sy ty (Data.Data cy a)])
+  (Sig.TC sx tx (Data ([] :> Nil) a),
+   [Sig.TC sy ty (Data ([] :> Nil) a)])
 convertHelp f t =
   case transposeTable f t of
        (T _ []) -> error "convertHelp: no data"
@@ -40,10 +39,9 @@ convertHelp f t =
                yys = map Sig.fromList bbs
 
 convertToSignal2D, convertToSignal3D2D ::
-  ( Data.FromList cx, Data.Storage cx a, Data.NestedList cx a ~ [a],
-    Data.FromList cy, Data.Storage cy a, Data.NestedList cy a ~ [a] ) =>
   T a ->
-  (Sig.TC sx tx (Data.Data cx a), [Sig.TC sy ty (Data.Data cy a)])
+  (Sig.TC sx tx (Data ([] :> Nil) a),
+   [Sig.TC sy ty (Data ([] :> Nil) a)])
 convertToSignal2D = convertHelp id
 convertToSignal3D2D = convertHelp tail
 
@@ -54,13 +52,10 @@ varMat xs ys =
 
 
 convertToSignal3D ::
-  ( Data.FromList cx, Data.Storage cx a, Data.NestedList cx a ~ [[a]],
-    Data.FromList cy, Data.Storage cy a, Data.NestedList cy a ~ [[a]],
-    Data.FromList cz, Data.Storage cz a, Data.NestedList cz a ~ [[a]] ) =>
   T a ->
-  (Sig.TC sx tx (Data.Data cx a),
-   Sig.TC sy ty (Data.Data cy a),
-   Sig.TC sz tz (Data.Data cz a))
+  (Sig.TC sx tx (Data ([] :> [] :> Nil) a),
+   Sig.TC sy ty (Data ([] :> [] :> Nil) a),
+   Sig.TC sz tz (Data ([] :> [] :> Nil) a))
 convertToSignal3D (T _ ds) =
   case ds of
        [] -> error "convertToSignal3D: no data"
@@ -78,7 +73,7 @@ convertToSignal3D (T _ ds) =
 
 -- Only first column of table is used.
 makeEtaFunctions2D ::
-  forall d. ( Fractional d, Ord d, Show d,
+  ( Fractional d, Ord d, Show d,
     Base.BProd d d) =>
   M.Map String (d, d) ->
   TPT.Map d -> M.Map String (d -> d)
@@ -86,8 +81,7 @@ makeEtaFunctions2D sm = M.mapWithKey f
   where f k t = Sig.fromSample .
                   Sig.interp1Lin k xsig ysig .
                   Sig.toSample
-         where xs, y :: Sig.PSignal [] d
-               (xs, y:_) = convertToSignal2D t
+         where (xs, y:_) = convertToSignal2D t
                xsig = maybe xs (Sig.scale xs . fst) (M.lookup k sm)
                ysig = maybe y (Sig.scale y . snd) (M.lookup k sm)
 
