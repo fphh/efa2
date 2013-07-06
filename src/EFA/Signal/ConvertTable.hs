@@ -26,13 +26,11 @@ transposeTable f (T (x, y) lst) =
 
 
 convertHelp ::
-  ( Data.FromList cx, Data.Storage cx dx,
-    Data.NestedList cx dx ~ [b],
-    Data.FromList cy, Data.Storage cy dy,
-    Data.NestedList cy dy ~ [b] ) =>
-  ([[b]] -> [[b]]) ->
-  T b ->
-  (Sig.TC sx tx (Data.Data cx dx), [Sig.TC sy ty (Data.Data cy dy)])
+  ( Data.FromList cx, Data.Storage cx a, Data.NestedList cx a ~ [a],
+    Data.FromList cy, Data.Storage cy a, Data.NestedList cy a ~ [a] ) =>
+  ([[a]] -> [[a]]) ->
+  T a ->
+  (Sig.TC sx tx (Data.Data cx a), [Sig.TC sy ty (Data.Data cy a)])
 convertHelp f t =
   case transposeTable f t of
        (T _ []) -> error "convertHelp: no data"
@@ -42,14 +40,10 @@ convertHelp f t =
                yys = map Sig.fromList bbs
 
 convertToSignal2D, convertToSignal3D2D ::
-  ( Data.FromList cy,
-    Data.FromList cx,
-    Data.Storage cy dy,
-    Data.Storage cx dx,
-    Data.NestedList cy dy ~ [b],
-    Data.NestedList cx dx ~ [b]) =>
-  T b ->
-  (Sig.TC sx tx (Data.Data cx dx), [Sig.TC sy ty (Data.Data cy dy)])
+  ( Data.FromList cx, Data.Storage cx a, Data.NestedList cx a ~ [a],
+    Data.FromList cy, Data.Storage cy a, Data.NestedList cy a ~ [a] ) =>
+  T a ->
+  (Sig.TC sx tx (Data.Data cx a), [Sig.TC sy ty (Data.Data cy a)])
 convertToSignal2D = convertHelp id
 convertToSignal3D2D = convertHelp tail
 
@@ -59,16 +53,14 @@ varMat xs ys =
   (Match.replicate ys xs, map (Match.replicate xs) ys)
 
 
-convertToSignal3D :: (Data.FromList c, Data.FromList c1,
-      Data.FromList c2, Data.Storage c d,
-      Data.Storage c1 d1, Data.Storage c2 d2,
-      Data.NestedList c2 d2 ~ [[b]],
-      Data.NestedList c1 d1 ~ [[b]],
-      Data.NestedList c d ~ [[b]]) =>
-     T b
-     -> (Sig.TC s t (Data.Data c1 d1),
-         Sig.TC s1 t1 (Data.Data c2 d2),
-         Sig.TC s2 t2 (Data.Data c d))
+convertToSignal3D ::
+  ( Data.FromList cx, Data.Storage cx a, Data.NestedList cx a ~ [[a]],
+    Data.FromList cy, Data.Storage cy a, Data.NestedList cy a ~ [[a]],
+    Data.FromList cz, Data.Storage cz a, Data.NestedList cz a ~ [[a]] ) =>
+  T a ->
+  (Sig.TC sx tx (Data.Data cx a),
+   Sig.TC sy ty (Data.Data cy a),
+   Sig.TC sz tz (Data.Data cz a))
 convertToSignal3D (T _ ds) =
   case ds of
        [] -> error "convertToSignal3D: no data"
