@@ -31,16 +31,15 @@ convertHelp ::
     Data.FromList cy, Data.Storage cy dy,
     Data.NestedList cy dy ~ [b] ) =>
   ([[b]] -> [[b]]) ->
-  Maybe (T b) ->
+  T b ->
   (Sig.TC sx tx (Data.Data cx dx), [Sig.TC sy ty (Data.Data cy dy)])
-convertHelp f (Just t) =
+convertHelp f t =
   case transposeTable f t of
        (T _ []) -> error "convertHelp: no data"
        (T _ [_]) -> error "convertHelp: only x axis, no y values"
        (T _ (as:bbs)) -> (xs, yys)
          where xs = Sig.fromList as
                yys = map Sig.fromList bbs
-convertHelp _ Nothing = error "convertHelp: table not found"
 
 convertToSignal2D, convertToSignal3D2D ::
   ( Data.FromList cy,
@@ -49,7 +48,7 @@ convertToSignal2D, convertToSignal3D2D ::
     Data.Storage cx dx,
     Data.NestedList cy dy ~ [b],
     Data.NestedList cx dx ~ [b]) =>
-  Maybe (T b) ->
+  T b ->
   (Sig.TC sx tx (Data.Data cx dx), [Sig.TC sy ty (Data.Data cy dy)])
 convertToSignal2D = convertHelp id
 convertToSignal3D2D = convertHelp tail
@@ -66,11 +65,11 @@ convertToSignal3D :: (Data.FromList c, Data.FromList c1,
       Data.NestedList c2 d2 ~ [[b]],
       Data.NestedList c1 d1 ~ [[b]],
       Data.NestedList c d ~ [[b]]) =>
-     Maybe (T b)
+     T b
      -> (Sig.TC s t (Data.Data c1 d1),
          Sig.TC s1 t1 (Data.Data c2 d2),
          Sig.TC s2 t2 (Data.Data c d))
-convertToSignal3D (Just (T _ ds)) =
+convertToSignal3D (T _ ds) =
   case ds of
        [] -> error "convertToSignal3D: no data"
        [_] -> error "convertToSignal3D: only x axis, no y values"
@@ -82,7 +81,6 @@ convertToSignal3D (Just (T _ ds)) =
                       a = Sig.fromList xs'
                       b = Sig.fromList ys'
                       c = Sig.fromList zs
-convertToSignal3D Nothing = error "convertToSignal3D: table not found"
 
 
 
@@ -90,14 +88,14 @@ convertToSignal3D Nothing = error "convertToSignal3D: table not found"
 makeEtaFunctions2D ::
   forall d. ( Fractional d, Ord d, Show d,
     Base.BProd d d) =>
-  M.Map String (d, d) -> 
+  M.Map String (d, d) ->
   TPT.Map d -> M.Map String (d -> d)
 makeEtaFunctions2D sm = M.mapWithKey f
-  where f k t = Sig.fromSample . 
-                  Sig.interp1Lin k xsig ysig . 
+  where f k t = Sig.fromSample .
+                  Sig.interp1Lin k xsig ysig .
                   Sig.toSample
          where xs, y :: Sig.PSignal [] d
-               (xs, y:_) = convertToSignal2D (Just t)
+               (xs, y:_) = convertToSignal2D t
                xsig = maybe xs (Sig.scale xs . fst) (M.lookup k sm)
                ysig = maybe y (Sig.scale y . snd) (M.lookup k sm)
 
@@ -107,15 +105,15 @@ makeEtaFunctions2D sm = M.mapWithKey f
 makeEtaFunctions2D ::
   forall d. ( Fractional d, Ord d, Show d,
     Base.BProd d d) =>
-  M.Map String (d, d) -> 
+  M.Map String (d, d) ->
   M.Map (idx node) (k, idx node -> idx1 node) ->
-  TPT.Map d ->    
+  TPT.Map d ->
   M.Map String (d -> d)
 makeEtaFunctions2D sm etaAssign = M.mapWithKey f
-  where {-f k t = Sig.fromSample . 
-                  Sig.interp1Lin k xsig ysig . 
+  where {-f k t = Sig.fromSample .
+                  Sig.interp1Lin k xsig ysig .
                   Sig.toSample-}
-    
+
          where xs, y :: Sig.PSignal [] d
                (xs, y:_) = convertToSignal2D (Just t)
                xsig = maybe xs (Sig.scale xs . fst) (M.lookup k sm)

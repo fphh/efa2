@@ -1,18 +1,15 @@
 
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeFamilies #-}
-
 module Main where
-
-import qualified Data.Map as Map
 
 import qualified EFA.IO.TableParser as Table
 import qualified EFA.Signal.PlotIO as PlotIO
 import qualified EFA.Signal.Signal as S
+import qualified EFA.Signal.ConvertTable as CT
+import EFA.Utility.Map (checkedLookup)
 
 import qualified Graphics.Gnuplot.Terminal.Default as Def
 
-import qualified EFA.Signal.ConvertTable as CT
+import qualified Data.Map as Map
 
 
 plot3D ::
@@ -35,20 +32,20 @@ main = do
 
   let em3D =
         CT.convertToSignal3D
-          (Map.lookup "table2D_efficiencyMap" tabEn) :
+          (checkedLookup "demo/table" tabEn "table2D_efficiencyMap") :
         CT.convertToSignal3D
-          (Map.lookup "table2D_efficiencyMap_firstQuadrant" tabMo) :
+          (checkedLookup "demo/table" tabMo "table2D_efficiencyMap_firstQuadrant") :
         []
 
       em2D =
         CT.convertToSignal3D2D
-          (Map.lookup "table2D_efficiencyMap" tabEn) :
+          (checkedLookup "demo/table" tabEn "table2D_efficiencyMap") :
         CT.convertToSignal3D2D
-          (Map.lookup "table2D_efficiencyMap_firstQuadrant" tabMo) :
+          (checkedLookup "demo/table" tabMo "table2D_efficiencyMap_firstQuadrant") :
         CT.convertToSignal2D
-          (Map.lookup "maxTorque" tabEn) :
+          (checkedLookup "demo/table" tabEn "maxTorque") :
         CT.convertToSignal2D
-          (Map.lookup "dragTorque" tabEn) :
+          (checkedLookup "demo/table" tabEn "dragTorque") :
         []
 
   Table.write "combined.txt" (Map.union tabEn tabEn)
