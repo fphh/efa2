@@ -16,6 +16,7 @@ import qualified EFA.Signal.ConvertTable as CT
 -- import qualified EFA.IO.TableParser as Table
 import qualified EFA.IO.TableParserTypes as TPT
 
+import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Map as M
 
 lookupAbsPower ::
@@ -62,5 +63,4 @@ getPowerSignals ::
 getPowerSignals tabPower =
     map (f . CT.convertToSignal2D .
          flip (M.findWithDefault (error "getPowerSignals: signal not found")) tabPower)
-  where f (x, [y]) = (x, y)
-        f (_, []) = error "getTimes: no power data available"
+  where f (x, NonEmpty.Cons y []) = (x, y)

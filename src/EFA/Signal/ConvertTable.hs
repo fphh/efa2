@@ -4,10 +4,6 @@
 
 module EFA.Signal.ConvertTable where
 
-import qualified Data.List.Match as Match
-import qualified Data.Map as M
-
-
 import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.Vector as SV
 import EFA.Signal.Data (Data, Nil, (:>))
@@ -16,6 +12,10 @@ import EFA.IO.TableParserTypes (T(..))
 import qualified EFA.IO.TableParserTypes as TPT
 
 import qualified EFA.Signal.Base as Base
+
+import qualified Data.NonEmpty as NonEmpty
+import qualified Data.List.Match as Match
+import qualified Data.Map as M
 
 
 
@@ -29,19 +29,19 @@ convertHelp ::
   ([[a]] -> [[a]]) ->
   T a ->
   (Sig.TC sx tx (Data ([] :> Nil) a),
-   [Sig.TC sy ty (Data ([] :> Nil) a)])
+   NonEmpty.T [] (Sig.TC sy ty (Data ([] :> Nil) a)))
 convertHelp f t =
   case transposeTable f t of
-       (T _ []) -> error "convertHelp: no data"
-       (T _ [_]) -> error "convertHelp: only x axis, no y values"
-       (T _ (as:bbs)) -> (xs, yys)
-         where xs = Sig.fromList as
-               yys = map Sig.fromList bbs
+    T _ [] -> error "convertHelp: no data"
+    T _ [_] -> error "convertHelp: only x axis, no y values"
+    T _ (as:bs:bbs) ->
+      (Sig.fromList as,
+       fmap Sig.fromList $ NonEmpty.cons bs bbs)
 
 convertToSignal2D, convertToSignal3D2D ::
   T a ->
   (Sig.TC sx tx (Data ([] :> Nil) a),
-   [Sig.TC sy ty (Data ([] :> Nil) a)])
+   NonEmpty.T [] (Sig.TC sy ty (Data ([] :> Nil) a)))
 convertToSignal2D = convertHelp id
 convertToSignal3D2D = convertHelp tail
 
@@ -81,7 +81,7 @@ makeEtaFunctions2D sm = M.mapWithKey f
   where f k t = Sig.fromSample .
                   Sig.interp1Lin k xsig ysig .
                   Sig.toSample
-         where (xs, y:_) = convertToSignal2D t
+         where (xs, NonEmpty.Cons y _) = convertToSignal2D t
                xsig = maybe xs (Sig.scale xs . fst) (M.lookup k sm)
                ysig = maybe y (Sig.scale y . snd) (M.lookup k sm)
 

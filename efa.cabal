@@ -330,6 +330,7 @@ Executable demo-tables
     Build-Depends:
       efa,
       gnuplot,
+      non-empty,
       containers,
       base
   Else

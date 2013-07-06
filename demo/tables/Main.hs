@@ -9,6 +9,7 @@ import EFA.Utility.Map (checkedLookup)
 
 import qualified Graphics.Gnuplot.Terminal.Default as Def
 
+import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Map as Map
 
 
@@ -20,8 +21,10 @@ plot3D (x, y, z) = PlotIO.surface "test" Def.cons (\_->"") x y z
 
 plot2D ::
   ( S.PSignal [] Double,
-    [ S.NSignal [] Double ] ) -> IO ()
-plot2D (x, y) = PlotIO.xy "test" Def.cons id (const "eta") x y
+    NonEmpty.T [] (S.NSignal [] Double) ) -> IO ()
+plot2D (x, y) =
+  PlotIO.xy "test" Def.cons id (const "eta") x $
+  NonEmpty.flatten y
 
 
 main :: IO ()
@@ -29,6 +32,7 @@ main = do
 
   tabEn <- Table.read "engine.txt"
   tabMo <- Table.read "motor.txt"
+  Table.write "combined.txt" (Map.union tabEn tabEn)
 
   let em3D =
         CT.convertToSignal3D
@@ -48,6 +52,5 @@ main = do
           (checkedLookup "demo/table" tabEn "dragTorque") :
         []
 
-  Table.write "combined.txt" (Map.union tabEn tabEn)
   mapM_ plot3D em3D
   mapM_ plot2D em2D
