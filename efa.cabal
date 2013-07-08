@@ -110,9 +110,6 @@ Library
     EFA.Equation.Arithmetic
     EFA.Equation.MultiValue
     EFA.Equation.Stack
-    EFA.Equation.Consistent.MultiValue
-    EFA.Equation.Consistent.Stack
-    EFA.Equation.Consistent.Dimension
     EFA.Equation.Pair
     EFA.Equation.Verify
     EFA.Example.Utility
