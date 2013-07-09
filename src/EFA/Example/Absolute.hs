@@ -164,9 +164,9 @@ x %= y = variable x =.= variable y
 envFromFlowRecord ::
    (Ord node) =>
    SD.SequData (SigRecord.DTimeFlowRecord node v a) ->
-   Env.Signal node (Record.Absolute (Data (v :> Nil) a))
+   Env.Signal node (Data (v :> Nil) a)
 envFromFlowRecord =
-   fmap Record.Absolute . fold .
+   fold .
    SD.mapWithSection
       (\section (SigRecord.Record times signals) ->
          mempty {

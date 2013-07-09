@@ -154,7 +154,7 @@ external sequenceFlowTopology sequFlowRecord =  EqGen.solveFromMeasurement seque
 initStorage :: (Fractional a) => a
 initStorage = 0.7*3600*1000
 
-makeGivenFromExternal idx sf = EqGen.fromEnvSignal . EqAbs.envFromFlowRecord $ sf
+makeGivenFromExternal idx sf = EqAbs.fromEnvSignal . EqAbs.envFromFlowRecord $ sf
 -}
 -------------------------------------------------------------------------------------------------
 -- ## Analyse External Energy Flow
@@ -228,7 +228,7 @@ external2 sequenceFlowTopology sequFlowRecord =
     makeGivenFromExternal2 sequFlowRecord -- $ Record.diffTime sequFlowRecord
 
 -- makeGivenFromExternal2 ::
---  makeGivenFromExternal2 env = EqGen.fromEnvSignal $ (fmap (fmap (D.foldl (+) 0) ) $ EqAbs.envFromFlowRecord env)
+--  makeGivenFromExternal2 env = EqAbs.fromEnvSignal $ (fmap (fmap (D.foldl (+) 0) ) $ EqAbs.envFromFlowRecord env)
 makeGivenFromExternal2 ::
    (Eq (v a), TDNode.C node, Arith.Sum a, Vec.Zipper v,
     Vec.Walker v, Vec.Storage v a, Vec.Singleton v,
@@ -236,7 +236,7 @@ makeGivenFromExternal2 ::
    SD.SequData (FlowRecord node v a) ->
    EqAbs.EquationSystem node s (Data Nil a) (Data (v D.:> Nil) a)
 makeGivenFromExternal2 =
-   EqGen.fromEnvSignal . EqAbs.envFromFlowRecord . fmap Record.diffTime
+   EqAbs.fromEnvSignal . EqAbs.envFromFlowRecord . fmap Record.diffTime
 
 -------------------------------------------------------------------------------------------------
 -- ## Predict Energy Flow

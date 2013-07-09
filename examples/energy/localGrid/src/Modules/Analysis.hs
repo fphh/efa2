@@ -229,7 +229,7 @@ makeGivenFromExternal2 :: -- forall System.Node s d (v :: * -> *) d1.
                                               System.Node s (Data Nil d) (Data (v D.:> Nil) d)
 makeGivenFromExternal2 sf =
       (Idx.absolute (XIdx.storage Idx.initial System.Water) .= Data initStorage) <>
-      (EqGen.fromEnvSignal $ EqAbs.envFromFlowRecord (fmap Record.diffTime sf))
+      (EqAbs.fromEnvSignal $ EqAbs.envFromFlowRecord (fmap Record.diffTime sf))
 
 ---------------------------------------------------------------------------------------------------
 -- ## Make Delta
