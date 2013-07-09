@@ -2,25 +2,30 @@ module Main where
 
 import qualified Modules.Signals as Signals
 import qualified Modules.System as System
+import qualified Modules.Analysis as Analysis
 
+import qualified EFA.Example.Index as XIdx
+
+import qualified EFA.Equation.Arithmetic as Arith
+import qualified EFA.Equation.Environment as Env
+
+import qualified EFA.Signal.SequenceData as SD
 import qualified EFA.Signal.Record as Record
-import EFA.Utility.Async (concurrentlyMany_)
-import qualified EFA.Graph.Draw as Draw
-import EFA.IO.PLTImport (modelicaPLTImport)
+-- import qualified EFA.Signal.Plot as Plot
 import EFA.Signal.Signal (TC(..), Scalar,toScalar)
 import EFA.Signal.Data (Data(..), Nil)
 import EFA.Signal.Typ (Typ, F, T, A, Tt)
-import qualified EFA.Signal.SequenceData as SD
---import qualified EFA.Utility as Utility
 import EFA.Signal.Sequence (makeSeqFlowTopology)
+
+import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Graph.Flow as Flow
---import qualified EFA.Graph.Draw as Draw
-import EFA.Graph(lefilter)
-import qualified EFA.Signal.Plot as Plot
-import EFA.Graph.Topology(isStructureEdge)
-import qualified EFA.Example.Index as XIdx
-import qualified EFA.Equation.Arithmetic as Arith
-import qualified EFA.Equation.Environment as Env
+import EFA.Graph (lefilter)
+import EFA.Graph.Topology (isStructureEdge)
+
+--import qualified EFA.Utility as Utility
+import EFA.Utility.Async (concurrentlyMany_)
+
+import EFA.IO.PLTImport (modelicaPLTImport)
 
 import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 import qualified Data.GraphViz.Attributes.Colors.X11 as Colors
@@ -32,7 +37,6 @@ import System.FilePath ((</>))
 
 import qualified Data.List as L
 --import qualified Data.Map as Map
-import qualified Modules.Analysis as Analysis
 import Data.Tuple.HT (mapSnd)
 
 
