@@ -13,7 +13,7 @@ module EFA.Equation.System (
   fromEnvScalar,
   fromEnvSignal,
 
-  solve, solve2, solveFromMeasurement,
+  solve, solveFromMeasurement,
 
   solveSimple,
   solveTracked, solveSimpleTracked,
@@ -971,13 +971,6 @@ solveTracked ::
    Verify.Assigns output)
 solveTracked (_rngs, g) given =
   solveSimpleTracked (given <> fromGraph True (TD.dirFromSequFlowGraph g))
-
-solve2 ::
-  (Node.C node, Record rec) =>
-  (forall s. EquationSystem Verify.Ignore rec node s a v) ->
-  (forall s. EquationSystem Verify.Ignore rec node s a v) ->
-  Env.Complete node (rec (Result a)) (rec (Result v))
-solve2 eqs given = solveSimple (eqs <> given)
 
 
 --------------------------------------------------------------------

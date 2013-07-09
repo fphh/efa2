@@ -14,7 +14,6 @@ import qualified EFA.Example.EtaSys as ES
 import EFA.Example.Absolute ( (.=), (%=), (=.=) )
 
 import qualified EFA.Equation.Environment as EqEnv
-import qualified EFA.Equation.Record as EqRec
 import qualified EFA.Equation.Arithmetic as EqArith
 import EFA.Equation.Result (Result(..))
 
@@ -98,8 +97,8 @@ solveCharge ::
   (forall s. EqGen.EquationSystem Node s (Data Nil a) (Data Nil a)) ->
   SolveFunc a
 solveCharge eqs etaAssign etaFunc pRest pRestLocal pWater pGas =
-  EqGen.solve2 eqs $
-    givenCharging etaAssign etaFunc pRest pRestLocal pWater pGas
+  EqGen.solveSimple $
+    eqs <> givenCharging etaAssign etaFunc pRest pRestLocal pWater pGas
 
 givenCharging ::
   (Ord a, Fractional a, Show a, EqArith.Sum a) =>
@@ -139,8 +138,8 @@ solveDischarge ::
   (forall s. EqGen.EquationSystem Node s (Data Nil a) (Data Nil a)) ->
   SolveFunc a
 solveDischarge eqs etaAssign etaFunc pRest pRestLocal pWater pGas =
-  EqGen.solve2 eqs $
-    givenDischarging etaAssign etaFunc pRest pRestLocal pWater pGas
+  EqGen.solveSimple $
+    eqs <> givenDischarging etaAssign etaFunc pRest pRestLocal pWater pGas
 
 
 givenDischarging ::

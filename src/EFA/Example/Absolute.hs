@@ -59,24 +59,12 @@ solve graph sys =
 
 
 solveSimple ::
-   (Eq a, Arith.Constant a, a ~ Arith.Scalar v,
-    Eq v, Arith.Product v, Arith.Integrate v,
-    Node.C node) =>
+   (Node.C node) =>
    (forall s. EquationSystem node s a v) ->
    Env.Complete node (Result a) (Result v)
 solveSimple sys =
    Env.completeFMap Record.unAbsolute Record.unAbsolute $
    EqGen.solveSimple sys
-
-
-solve2 ::
-   (Node.C node) =>
-   (forall s. EquationSystem node s a v) ->
-   (forall s. EquationSystem node s a v) ->
-   Env.Complete node (Result a) (Result v)
-solve2 sys0 sys1 =
-   Env.completeFMap Record.unAbsolute Record.unAbsolute $
-   EqGen.solve2 sys0 sys1
 
 
 fromGraph ::
