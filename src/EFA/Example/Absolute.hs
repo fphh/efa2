@@ -177,3 +177,23 @@ envFromFlowRecord =
                   (\(Idx.PPos x) -> Idx.InSection section $ Idx.Power x) $
                fmap Signal.unpack signals
          })
+
+
+fromEnvScalar ::
+   (Eq a, Arith.Sum a, Node.C node) =>
+   Env.Scalar node a ->
+   EquationSystem node s a v
+fromEnvScalar = EqGen.fromEnvScalar . fmap Record.Absolute
+
+fromEnvSignal ::
+   (Eq v, Arith.Sum v, Node.C node) =>
+   Env.Signal node v ->
+   EquationSystem node s a v
+fromEnvSignal = EqGen.fromEnvSignal . fmap Record.Absolute
+
+fromEnv ::
+   (Eq a, Arith.Sum a, Eq v, Arith.Sum v, Node.C node) =>
+   Env.Complete node a v ->
+   EquationSystem node s a v
+fromEnv (Env.Complete envScalar envSignal) =
+   fromEnvScalar envScalar <> fromEnvSignal envSignal
