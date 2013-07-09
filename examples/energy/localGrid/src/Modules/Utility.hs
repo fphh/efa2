@@ -5,7 +5,6 @@ module Modules.Utility where
 import qualified EFA.Graph.Topology.Index as TIdx
 -- import qualified EFA.Example.Index as XIdx
 import qualified EFA.Equation.Environment as EqEnv
-import qualified EFA.Equation.Record as EqRec
 import EFA.Equation.Result (Result(..))
 import EFA.Utility.Map (checkedLookup)
 import qualified Modules.System as System
@@ -23,21 +22,22 @@ import qualified Data.Map as Map ; import Data.Map (Map)
 lookupAbsPower ::
   (Ord node, Show d, Show node,Num d,Fractional d) =>
   TIdx.InSection TIdx.Power node ->
-  Maybe (EqEnv.Complete node b (EqRec.Absolute (Result d))) -> d
+  Maybe (EqEnv.Complete node b (Result d)) -> d
 lookupAbsPower n = maybe (-1000) f
   where f env = case checkedLookup "Modules.Utility.lookupAbsPower"
                      (EqEnv.powerMap $ EqEnv.signal env) n of
-                    EqRec.Absolute (Determined x) -> x
-                    EqRec.Absolute (Undetermined) -> error $ "Modules.Utility.lookupAbsPower - not determined : " ++ show n
+                    Determined x -> x
+                    Undetermined -> error $ "Modules.Utility.lookupAbsPower - not determined : " ++ show n
 
 
 
 -- | Warning -- only works for one section in env
-envToPowerRecord ::  EqEnv.Complete
-                     System.Node
-                     (EqRec.Absolute (Result (Data  Nil a)))
-                     (EqRec.Absolute (Result (Data (v :> Nil) a))) ->
-                     Sig.TSignal v a -> TIdx.Section -> Record.PowerRecord System.Node v a
+envToPowerRecord :: EqEnv.Complete
+                      System.Node
+                      (Result (Data  Nil a))
+                      (Result (Data (v :> Nil) a)) ->
+                    Sig.TSignal v a -> TIdx.Section ->
+                    Record.PowerRecord System.Node v a
 envToPowerRecord env time sec =
   Record.Record time
     (Map.map i $ Map.mapKeys h $ Map.filterWithKey p $ EqEnv.powerMap $ EqEnv.signal env)
@@ -46,8 +46,8 @@ envToPowerRecord env time sec =
         h (TIdx.InSection (TIdx.Section _) (TIdx.Power (TIdx.StructureEdge n1 n2))) =
           TIdx.PPos (TIdx.StructureEdge n1 n2)
 
-        i (EqRec.Absolute (Determined dat)) = Sig.TC dat
-        i (EqRec.Absolute Undetermined) =
+        i (Determined dat) = Sig.TC dat
+        i Undetermined =
           error "Modules.Utility.envToPowerRecord - undetermined data"
 
 

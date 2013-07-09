@@ -52,8 +52,10 @@ solve ::
     Node.C node) =>
    Flow.RangeGraph node ->
    (forall s. EquationSystem node s a v) ->
-   Env.Complete node (Record.Absolute (Result a)) (Record.Absolute (Result v))
-solve = EqGen.solve
+   Env.Complete node (Result a) (Result v)
+solve graph sys =
+   Env.completeFMap Record.unAbsolute Record.unAbsolute $
+   EqGen.solve graph sys
 
 
 solveSimple ::
@@ -61,16 +63,20 @@ solveSimple ::
     Eq v, Arith.Product v, Arith.Integrate v,
     Node.C node) =>
    (forall s. EquationSystem node s a v) ->
-   Env.Complete node (Record.Absolute (Result a)) (Record.Absolute (Result v))
-solveSimple = EqGen.solveSimple
+   Env.Complete node (Result a) (Result v)
+solveSimple sys =
+   Env.completeFMap Record.unAbsolute Record.unAbsolute $
+   EqGen.solveSimple sys
 
 
 solve2 ::
-  (Node.C node) =>
-  (forall s. EquationSystem node s a v) ->
-  (forall s. EquationSystem node s a v) ->
-   Env.Complete node (Record.Absolute (Result a)) (Record.Absolute (Result v))
-solve2 = EqGen.solve2
+   (Node.C node) =>
+   (forall s. EquationSystem node s a v) ->
+   (forall s. EquationSystem node s a v) ->
+   Env.Complete node (Result a) (Result v)
+solve2 sys0 sys1 =
+   Env.completeFMap Record.unAbsolute Record.unAbsolute $
+   EqGen.solve2 sys0 sys1
 
 
 fromGraph ::

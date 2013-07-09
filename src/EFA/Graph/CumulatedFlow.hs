@@ -3,7 +3,6 @@ module EFA.Graph.CumulatedFlow where
 
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Arithmetic as Arith
-import qualified EFA.Equation.Record as Rec
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph as Gr
@@ -47,12 +46,11 @@ cumulatedEnergyFlow ::
    Ord node) =>
   TD.Topology node ->
   TD.DirSequFlowGraph node ->
-  Env.Complete node (Rec.Absolute (Result a)) (Rec.Absolute (Result v)) ->
-  ( EnergyMap node (Rec.Absolute (Result a)),
-    EnergyMap node (Rec.Absolute (Result a)) )
+  Env.Complete node (Result a) (Result v) ->
+  ( EnergyMap node (Result a), EnergyMap node (Result a) )
 cumulatedEnergyFlow topo seqTopo env =
    mapPair (cum, cum) $ unzip $ mapMaybe f $ Gr.edges seqTopo
-  where cum = Map.unionsWith (liftA2 (liftA2 (~+)))
+  where cum = Map.unionsWith (liftA2 (~+))
         em = Env.energyMap $ Env.signal env
         f e =
           case TD.edgeType e of
@@ -62,15 +60,13 @@ cumulatedEnergyFlow topo seqTopo env =
 
                     transfer idx =
                        Map.singleton idx $
-                       maybe
-                          (Rec.Absolute Undetermined)
-                          (fmap $ fmap Arith.integrate) $
+                       maybe Undetermined (fmap Arith.integrate) $
                        Map.lookup (Idx.InSection sec idx) em
 
                     insert =
                        transfer idx1 <> transfer idx2
 
-                    zero = Rec.Absolute $ Determined Arith.zero
+                    zero = Determined Arith.zero
                     insertzero =
                        Map.singleton idx1 zero <>
                        Map.singleton idx2 zero
@@ -87,9 +83,9 @@ cumulate ::
    Ord node) =>
   TD.Topology node ->
   (ranges, TD.SequFlowGraph node) ->
-  Env.Complete node (Rec.Absolute (Result a)) (Rec.Absolute (Result v)) ->
-  ( ( TD.Topology node, EnergyMap node (Rec.Absolute (Result a)) ),
-    ( TD.Topology node, EnergyMap node (Rec.Absolute (Result a)) ) )
+  Env.Complete node (Result a) (Result v) ->
+  ( ( TD.Topology node, EnergyMap node (Result a) ),
+    ( TD.Topology node, EnergyMap node (Result a) ) )
 cumulate topo (_rngs, seqTopo) env =
   ( (topo, withDirEnv), (Gr.reverse topo, againstDirEnv) )
   where (withDirEnv, againstDirEnv) =

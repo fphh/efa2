@@ -5,7 +5,7 @@ import qualified EFA.Example.Index as XIdx
 import qualified EFA.Example.Absolute as EqGen
 import EFA.Example.Absolute ((=.=))
 import EFA.Example.Utility
-  ( makeEdges, constructSeqTopo )
+  ( makeEdges, constructSeqTopo, checkDetermined )
 
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as Idx
@@ -14,7 +14,6 @@ import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Graph as Gr
 
-import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Result as R
 import qualified EFA.Equation.Arithmetic as Arith
@@ -153,7 +152,7 @@ given y' p' nParam' =
         p = EqGen.constant p'
 
 
-type AbsoluteResult = Record.Absolute (R.Result Val)
+type AbsoluteResult = R.Result Val
 
 -- | r is inner Resistance of Battery
 solve ::
@@ -162,21 +161,15 @@ solve ::
 solve nPar y p = EqGen.solve seqTopo (given y p nPar)
 
 
--- | fuck safety just unpack this crap ;-) -- PG
-unpackResult :: R.Result a -> a
-unpackResult (R.Determined x) = x
-unpackResult (R.Undetermined) = error("No Result")
-
-
 -- | Checked Lookup
 getSignalVar ::
    (Ord (idx Node), Show (idx Node), Env.AccessSignalMap idx,
     Show a, UV.Unbox a) =>
-   [[Env.Complete Node (Record.Absolute (R.Result a)) (Record.Absolute (R.Result a))]] ->
+   [[Env.Complete Node (R.Result a) (R.Result a)]] ->
    Idx.InSection idx Node -> Test2 (Typ A u Tt) a
 getSignalVar varEnvs idx =
    S.changeSignalType $ S.fromList2 $
-   map (map (unpackResult . Record.unAbsolute .
+   map (map (checkDetermined "getSignalVar" .
              flip (checkedLookup "getSignalVar") idx .
              Accessor.get Env.accessMap)) $
    varEnvs

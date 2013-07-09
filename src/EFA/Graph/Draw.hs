@@ -545,7 +545,7 @@ sequFlowGraphWithEnv g env =
 sequFlowGraphAbsWithEnv ::
    (FormatValue a, FormatValue v, Node.C node) =>
    Flow.RangeGraph node ->
-   Env.Complete node (Record.Absolute a) (Record.Absolute v) ->
+   Env.Complete node a v ->
    DotGraph T.Text
 sequFlowGraphAbsWithEnv topo = sequFlowGraphWithEnv topo . envAbs
 
@@ -574,8 +574,8 @@ envGen rec (Env.Complete (Env.Scalar me st se sx sis sos) (Env.Signal e _p n dt 
 
 envAbs ::
    (FormatValue a, FormatValue v, Format output, Node.C node) =>
-   Env.Complete node (Record.Absolute a) (Record.Absolute v) -> Env node output
-envAbs = envGen Idx.Absolute
+   Env.Complete node a v -> Env node output
+envAbs = envGen Idx.Absolute . Env.completeFMap Record.Absolute Record.Absolute
 
 envDelta ::
    (FormatValue a, FormatValue v, Format output, Node.C node) =>
@@ -587,7 +587,7 @@ envDelta = envGen Idx.Delta
 cumulatedFlow ::
   (FormatValue a, Node.C node) =>
   Topo.Topology node ->
-  Cum.EnergyMap node (Record.Absolute a) ->
+  Cum.EnergyMap node a ->
   DotGraph T.Text
 cumulatedFlow g env =
   DotGraph {
@@ -605,7 +605,7 @@ cumulatedFlow g env =
 
 dotFromCumEdge ::
   (FormatValue a, Node.C node) =>
-   Cum.EnergyMap node (Record.Absolute a) ->
+   Cum.EnergyMap node a ->
    Gr.LEdge Gr.DirEdge node () -> DotEdge T.Text
 dotFromCumEdge env (e, ()) =
    DotEdge
@@ -623,5 +623,5 @@ dotFromCumEdge env (e, ()) =
               (Format.edgeIdent Format.Energy)
               (maybe
                   (error $ "could not find cumulated energy index")
-                  (formatValue . Record.unAbsolute) $
+                  formatValue $
                Map.lookup (Idx.Energy idx) env)

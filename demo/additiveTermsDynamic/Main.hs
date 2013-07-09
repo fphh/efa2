@@ -13,7 +13,6 @@ import qualified EFA.Symbolic.SumProduct as SumProduct
 import qualified EFA.Equation.Stack as Stack
 import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.Variable as Var
-import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Stack (Stack)
@@ -149,7 +148,7 @@ mainNumeric = do
    case Map.lookup eout (Env.energyMap signalEnv) of
       Nothing -> error "undefined E_2_1"
       Just d ->
-         case Record.unAbsolute d of
+         case d of
             Result.Undetermined -> error "undetermined E_2_1"
             Result.Determined x -> do
                let assigns =

@@ -2,7 +2,6 @@
 module EFA.Example.EtaSys where
 
 import qualified EFA.Equation.Arithmetic as Arith
-import qualified EFA.Equation.Record as EqRec
 import qualified EFA.Equation.Environment as EqEnv
 import EFA.Equation.Result (Result(..))
 
@@ -29,27 +28,27 @@ import Data.Tuple.HT (fst3, thd3)
 lookupAbsEnergy ::
   (Ord node, Show node, Show t) =>
   String ->
-  EqEnv.Complete node b (EqRec.Absolute (Result t)) ->
+  EqEnv.Complete node b (Result t) ->
   XIdx.Energy node -> Result t
-lookupAbsEnergy caller env n = EqRec.unAbsolute $
+lookupAbsEnergy caller env n =
   checkedLookup caller (EqEnv.energyMap $ EqEnv.signal env) n
 
 
 lookupAbsPower ::
   (Ord node, Show node, Show t) =>
   String ->
-  EqEnv.Complete node b (EqRec.Absolute (Result t)) ->
+  EqEnv.Complete node b (Result t) ->
   XIdx.Power node -> Result t
-lookupAbsPower caller env n = EqRec.unAbsolute $
+lookupAbsPower caller env n =
   checkedLookup caller (EqEnv.powerMap $ EqEnv.signal env) n
 
 
 lookupAbsEta ::
   (Ord node, Show node, Show t) =>
   String ->
-  EqEnv.Complete node b (EqRec.Absolute (Result t)) ->
+  EqEnv.Complete node b (Result t) ->
   XIdx.Eta node -> Result t
-lookupAbsEta caller env n = EqRec.unAbsolute $
+lookupAbsEta caller env n =
   checkedLookup caller (EqEnv.etaMap $ EqEnv.signal env) n
 
 hasStructureEdge :: Set.Set a -> Bool
@@ -59,7 +58,7 @@ hasStructureEdge = not . Set.null
 etaSys ::
   (Show a, Num a, Fractional a, Show node, Ord node) =>
   Flow.RangeGraph node ->
-  EqEnv.Complete node b (EqRec.Absolute (Result a)) -> Result a
+  EqEnv.Complete node b (Result a) -> Result a
 etaSys (_, topo) env = liftA2 (/) (sumRes sinks) (sumRes sources)
   where m = Map.elems $
             Gr.nodeEdges $

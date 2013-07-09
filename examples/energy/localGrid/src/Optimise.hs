@@ -12,7 +12,7 @@ import qualified Modules.System as System
 import qualified Modules.Optimisation as Optimisation
 import qualified Modules.Analysis as Analysis
 import Modules.System (Node(..))
-import Modules.Optimisation (sec0,sec1, maxEta, maxOpt,
+import Modules.Optimisation (EnvDouble, sec0,sec1, maxEta, maxOpt,
                             -- calcEtaSys
                             )
 import Modules.Utility as ModUt
@@ -236,12 +236,7 @@ givenOptimiseDischarging pRest pRestLocal pCoal pGas =
 
    []
 
-etaSys ::
-  EqEnv.Complete
-    System.Node
-    (EqRec.Absolute (Result Double))
-    (EqRec.Absolute (Result Double)) ->
-  Double
+etaSys :: EnvDouble -> Double
 etaSys env =
   (lk eRest0 + lk eRest1 + lk eRestLocal0 + lk eRestLocal1) / (lk eGas0 + lk eGas1 + lk eCoal0 + lk eCoal1)
   where
@@ -413,8 +408,8 @@ doubleSweep ::
     (Sig.UTSignal2 V.Vector V.Vector
       (EqEnv.Complete
         Node
-        (EqRec.Absolute (Result (Data Nil Double)))
-        (EqRec.Absolute (Result (Data Nil Double)))))
+        (Result (Data Nil Double))
+        (Result (Data Nil Double))))
 doubleSweep func etaFunc varOptX varOptY varX varY=
   sweep f (mm varX) (mm varY)
   where f x y =
@@ -433,6 +428,12 @@ combineOptimalMaps state charge discharge =
   Sig.zipWith f state $ Sig.zip charge discharge
   where f s (c, d) = if s < 0.1 then c else d
 
+envGetData ::
+  (Ord node) =>
+  EqEnv.Complete node (Result (Data va a)) (Result (Data vv v)) ->
+  EqEnv.Complete node (Result (Data.Apply va a)) (Result (Data.Apply vv v))
+envGetData =
+  EqEnv.completeFMap (fmap getData) (fmap getData)
 
 makePics ::
   (forall s. EqGen.EquationSystem Node s (Data Nil Double) (Data Nil Double)) ->
@@ -487,11 +488,11 @@ makePics eqs tabEta tabPower socDrive = t
         maxETADischarge = Sig.setType $ Sig.map fst $
           Sig.map maxOptDischargeFunc envsDischarge
 
-        envsCharge =  Sig.map (Sig.map envFmap) $
+        envsCharge =  Sig.map (Sig.map envGetData) $
           doubleSweep (Optimisation.solveCharge eqs)
                    etaFunc varWaterPower' varGasPower' varRestPower' varLocalPower'
 
-        envsDischarge = Sig.map (Sig.map envFmap) $
+        envsDischarge = Sig.map (Sig.map envGetData) $
           doubleSweep (Optimisation.solveDischarge eqs)
                    etaFunc varWaterPower' varGasPower' varRestPower' varLocalPower'
 
@@ -502,9 +503,6 @@ makePics eqs tabEta tabPower socDrive = t
 
         envsDischargeOpt = Sig.map snd $ Sig.map maxOptDischargeFunc envsDischarge
 
-        envFmap (EqEnv.Complete scal sig) =
-          EqEnv.Complete (fmap gFmap scal) (fmap gFmap sig)
-        gFmap = fmap $ fmap getData
         etaFunc = CT.makeEtaFunctions2D scaleTableEta tabEta
 
 {-
@@ -610,31 +608,18 @@ main = do
                           localPowerScale) 0.5
 
    let
-     envFmap (EqEnv.Complete scal sig) =
-       EqEnv.Complete (fmap gFmap scal) (fmap gFmap sig)
-     gFmap = fmap $ fmap getData
-
-
     -- | Speep optimisation and operation space for charge and discharge case
      envsCharge ::
        Sig.UTSignal2 V.Vector V.Vector
-         (Sig.UTSignal2 V.Vector V.Vector
-           (EqEnv.Complete
-              Node
-              (EqRec.Absolute (Result Double))
-              (EqRec.Absolute (Result Double))))
-     envsCharge = Sig.map (Sig.map envFmap) $
+         (Sig.UTSignal2 V.Vector V.Vector EnvDouble)
+     envsCharge = Sig.map (Sig.map envGetData) $
        doubleSweep (Optimisation.solveCharge eqsys)
                    etaFunc varWaterPower' varGasPower' varRestPower' varLocalPower'
 
      envsDischarge ::
        Sig.UTSignal2 V.Vector V.Vector
-         (Sig.UTSignal2 V.Vector V.Vector
-           (EqEnv.Complete
-             Node
-             (EqRec.Absolute (Result Double))
-             (EqRec.Absolute (Result Double))))
-     envsDischarge = Sig.map (Sig.map envFmap) $
+         (Sig.UTSignal2 V.Vector V.Vector EnvDouble)
+     envsDischarge = Sig.map (Sig.map envGetData) $
        doubleSweep (Optimisation.solveDischarge eqsys)
                    etaFunc varWaterPower' varGasPower' varRestPower' varLocalPower'
 
@@ -671,18 +656,10 @@ main = do
 
      -- | Get the correspondig optimal envs for both states
 
-     envsChargeOpt :: Sig.UTSignal2 V.Vector V.Vector (Maybe
-                      (EqEnv.Complete
-                       Node
-                       (EqRec.Absolute (Result Double))
-                       (EqRec.Absolute (Result Double))))
+     envsChargeOpt :: Sig.UTSignal2 V.Vector V.Vector (Maybe EnvDouble)
      envsChargeOpt = Sig.map snd $ Sig.map maxOptChargeFunc envsCharge
 
-     envsDischargeOpt :: Sig.UTSignal2 V.Vector V.Vector (Maybe
-                      (EqEnv.Complete
-                       Node
-                       (EqRec.Absolute (Result Double))
-                       (EqRec.Absolute (Result Double))))
+     envsDischargeOpt :: Sig.UTSignal2 V.Vector V.Vector (Maybe EnvDouble)
      envsDischargeOpt = Sig.map snd $ Sig.map maxOptDischargeFunc envsDischarge
 
 

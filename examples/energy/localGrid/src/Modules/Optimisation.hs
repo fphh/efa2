@@ -8,7 +8,6 @@ import qualified Modules.System as System
 import Modules.System (Node(..))
 
 import qualified EFA.Example.Absolute as EqGen
--- import qualified EFA.Example.Absolute as EqAbs
 import qualified EFA.Example.Index as XIdx
 import qualified EFA.Example.Utility as EqUt
 import qualified EFA.Example.EtaSys as ES
@@ -57,8 +56,8 @@ type SolveFunc a =
   Data Nil a ->
   EqEnv.Complete
     Node
-    (EqRec.Absolute (Result (Data Nil a)))
-    (EqRec.Absolute (Result (Data Nil a)))
+    (Result (Data Nil a))
+    (Result (Data Nil a))
 
 commonGiven ::
   (EqArith.Sum a, Num a, Eq a) =>
@@ -204,14 +203,15 @@ givenSimulate etaAssign etaFunc sf =
 -- b == True -> Charge
 -- b == False -> Discharge
 
+type
+   EnvDouble =
+      EqEnv.Complete Node (Result Double) (Result Double)
+
 calcOptFunc ::
   Flow.RangeGraph Node ->
   Bool ->
   Double ->
-  (EqEnv.Complete
-    Node
-    (EqRec.Absolute (Result Double))
-    (EqRec.Absolute (Result Double))) -> Double
+  EnvDouble -> Double
 calcOptFunc topo b socDrive env =
   if all (>0) [eCoal0, eCoal1, eTrans0, eTrans1] then res else nan
   where nan = 0/0
@@ -232,32 +232,16 @@ calcOptFunc topo b socDrive env =
 
 maxEta ::
   Flow.RangeGraph Node ->
-  Sig.UTSignal2 V.Vector V.Vector
-  (EqEnv.Complete
-    Node
-    (EqRec.Absolute (Result Double))
-    (EqRec.Absolute (Result Double))) ->
-    (Double,
-      Maybe (EqEnv.Complete
-              Node
-              (EqRec.Absolute (Result Double))
-              (EqRec.Absolute (Result Double))))
+  Sig.UTSignal2 V.Vector V.Vector EnvDouble ->
+  (Double, Maybe EnvDouble)
 maxEta topo sigEnvs = maxOpt topo True 0 sigEnvs
 
 maxOpt ::
   Flow.RangeGraph Node ->
   Bool ->
   Double ->
-  Sig.UTSignal2 V.Vector V.Vector
-    (EqEnv.Complete
-      Node
-      (EqRec.Absolute (Result Double))
-      (EqRec.Absolute (Result Double))) ->
-    (Double,
-      Maybe (EqEnv.Complete
-              Node
-              (EqRec.Absolute (Result Double))
-              (EqRec.Absolute (Result Double))))
+  Sig.UTSignal2 V.Vector V.Vector EnvDouble ->
+  (Double, Maybe EnvDouble)
 maxOpt topo b socDrive sigEnvs = (etaMax, env)
   where etaSys = Sig.map (calcOptFunc topo b socDrive) sigEnvs
         etaMax = Sig.fromScalar $ Sig.maximum etaSys

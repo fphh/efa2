@@ -225,8 +225,8 @@ makeGivenFromExternal2 :: -- forall System.Node s d (v :: * -> *) d1.
                                          (Fractional d, Eq d, Eq (v d), Vec.Singleton v, Vec.Storage v d,
                                           Vec.Walker v, B.BSum d, Vec.Zipper v, Arith.Sum d) =>
                                          SD.SequData (FlowRecord System.Node v d)
-                                         -> EqGen.EquationSystem Ignore
-                                              EqRecord.Absolute System.Node s (Data Nil d) (Data (v D.:> Nil) d)
+                                         -> EqAbs.EquationSystem
+                                              System.Node s (Data Nil d) (Data (v D.:> Nil) d)
 makeGivenFromExternal2 sf =
       (Idx.absolute (XIdx.storage Idx.initial System.Water) .= Data initStorage) <>
       (EqGen.fromEnvSignal $ EqAbs.envFromFlowRecord (fmap Record.diffTime sf))

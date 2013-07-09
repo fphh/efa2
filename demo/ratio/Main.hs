@@ -4,7 +4,6 @@ module Main where
 
 import qualified EFA.Example.Index as XIdx
 import qualified EFA.Example.Absolute as EqGen
-import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
 import EFA.Example.Absolute ((.=), (=.=))
 import EFA.Equation.Result (Result)
@@ -71,14 +70,12 @@ given p =
 solve :: Rational -> String
 solve p =
   show p ++ "\t"
-        ++ show (checkDetermined (show eta) $ Record.unAbsolute $
+        ++ show (checkDetermined (show eta) $
                    checkedLookup "solve" (Env.etaMap $ Env.signal $ solveEnv p) eta)
 
 solveEnv ::
   Rational ->
-  Env.Complete Node
-    (Record.Absolute (Result Rational))
-    (Record.Absolute (Result Rational))
+  Env.Complete Node (Result Rational) (Result Rational)
 solveEnv p =
   EqGen.solve seqTopo
     ((EqGen.variable eta =.= functionEta (EqGen.variable c)) <> given p)
