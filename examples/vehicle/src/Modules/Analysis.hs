@@ -64,7 +64,7 @@ import EFA.Report.FormatValue (FormatValue, FormatSignalIndex)
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Flow as Flow
-import qualified Data.Map as Map
+import qualified Data.Map as Map ; import Data.Map (Map)
 import Data.Monoid ((<>),mempty)
 
 import Data.Foldable (fold)
@@ -323,6 +323,19 @@ deltaPair ::
 deltaPair idx before delt =
    idx .== Stack.deltaPair (Var.Signal $ Var.index idx) before delt
 
+stackFromDeltaMap ::
+   (Ord (idx System.Node), Env.AccessSignalMap idx, FormatSignalIndex idx) =>
+   Map (Idx.InSection idx System.Node) DeltaResult ->
+   EquationSystemNumeric s
+stackFromDeltaMap =
+   fold .
+   Map.mapWithKey
+      (\i rec ->
+         deltaPair i
+            (checkDetermined "before" $ EqRecord.before rec)
+            (checkDetermined "delta"  $ EqRecord.delta rec))
+
+
 difference ::
    Flow.RangeGraph System.Node ->
    Env.Complete System.Node DeltaResult DeltaResult ->
@@ -338,15 +351,11 @@ makeGivenForDifferentialAnalysis ::
   EquationSystemNumeric s
 makeGivenForDifferentialAnalysis (Env.Complete _ sig) =
   (XIdx.storage Idx.initial System.Battery .== initStorage) <>
-  (fold $ Map.mapWithKey f $ Env.etaMap sig) <>
-  (fold $ Map.mapWithKey f $ Env.dtimeMap sig) <>
-  (fold $ Map.filterWithKey (const . filterCriterion) $
-   Map.mapWithKey f $ Env.energyMap sig) <>
+  (stackFromDeltaMap $ Env.etaMap sig) <>
+  (stackFromDeltaMap $ Env.dtimeMap sig) <>
+  (stackFromDeltaMap $ Map.filterWithKey (const . filterCriterion) $
+   Env.energyMap sig) <>
   mempty
-  where f i rec =
-           deltaPair i
-              (checkDetermined "before" $ EqRecord.before rec)
-              (checkDetermined "delta"  $ EqRecord.delta rec)
 
 
 filterCriterion, filterCriterionExtra :: XIdx.Energy System.Node -> Bool
