@@ -168,13 +168,11 @@ external :: (Eq d, Num d,
              Vec.Singleton v,
              B.BSum d,
              Vec.FromList v, Arith.Scalar d ~ Double) =>
-            Flow.RangeGraph System.Node
-            -> SD.SequData (FlowRecord System.Node v d)
-            -> Env.Complete
-            System.Node
-            (EqRecord.Absolute (Result Double))
-            (EqRecord.Absolute (Result d))
+            Flow.RangeGraph System.Node ->
+            SD.SequData (FlowRecord System.Node v d) ->
+            Env.Complete System.Node (Result Double) (Result d)
 external sequenceFlowTopology sequFlowRecord =
+  Env.completeFMap EqRecord.unAbsolute EqRecord.unAbsolute $
   EqGen.solveFromMeasurement
     sequenceFlowTopology $
     makeGivenFromExternal Idx.Absolute sequFlowRecord
@@ -242,39 +240,31 @@ makeGivenFromExternal2 =
 -- ## Predict Energy Flow
 
 prediction ::
-   (Eq v, Eq a,
-    Fractional v, Fractional a,
-    Arith.Constant a, Arith.Product v,
+   (Eq v, Fractional v, Arith.Product v,
+    Eq a, Fractional a, Arith.Constant a,
     Arith.Integrate v, Arith.Scalar v ~ a) =>
    Flow.RangeGraph System.Node ->
-   Env.Complete System.Node
-      (EqRecord.Absolute (Result a))
-      (EqRecord.Absolute (Result v)) ->
-   Env.Complete System.Node
-      (EqRecord.Absolute (Result a))
-      (EqRecord.Absolute (Result v))
+   Env.Complete System.Node (Result a) (Result v) ->
+   Env.Complete System.Node (Result a) (Result v)
 prediction sequenceFlowTopology env =
-   EqGen.solve sequenceFlowTopology (makeGivenForPrediction Idx.Absolute env)
+   EqAbs.solve sequenceFlowTopology (makeGivenForPrediction env)
 
 makeGivenForPrediction ::
-   (Eq v, Eq a,
-    Fractional v, Fractional a,
-    Arith.Sum v, Arith.Sum a,
-    EqGen.Record rec,
-    EqRecord.ToIndex rec ~ idx) =>
-   idx ->
-   Env.Complete System.Node (rec (Result a)) (rec (Result v)) ->
-   EqGen.EquationSystem Ignore rec System.Node s a v
+   (Eq a, Fractional a, Arith.Sum a,
+    Eq v, Fractional v, Arith.Sum v) =>
+   Env.Complete System.Node (Result a) (Result v) ->
+   EqAbs.EquationSystem System.Node s a v
 
-makeGivenForPrediction idx env =
-    (Idx.Record idx (XIdx.storage Idx.initial System.Battery) .= initStorage)
-    <> (Idx.Record idx (XIdx.storage Idx.initial System.VehicleInertia) .= 0)
+makeGivenForPrediction env =
+    (Idx.absolute (XIdx.storage Idx.initial System.Battery) .= initStorage)
+    <> (Idx.absolute (XIdx.storage Idx.initial System.VehicleInertia) .= 0)
 --    <> (foldMap f $ Map.toList $ Env.etaMap $ Env.scalar env) -- hier müssen rote-Kante Gleichungen erzeugt werden
     <> (foldMap f $ Map.toList $ Env.etaMap $ Env.signal env)
     <> (foldMap f $ Map.toList $ Env.dtimeMap $ Env.signal env)
-    <> (foldMap f $ Map.toList $ Map.mapWithKey h $ Map.filterWithKey i $ Map.filterWithKey g $
-                               Env.energyMap $ Env.signal env)
-    where f (j, x)  =  j %= fmap (\(EqGen.Determined y) -> y) x
+    <> (foldMap f $ Map.toList $ Map.mapWithKey h $
+        Map.filterWithKey i $ Map.filterWithKey g $
+        Env.energyMap $ Env.signal env)
+    where f (j, x)  =  j %= EqRecord.Absolute (checkDetermined "makeGivenForPrediction" x)
           g (Idx.InSection _ (Idx.Energy (Idx.StructureEdge x y))) _  =
              case (x,y) of
                 (System.Tank, System.ConBattery) -> True
@@ -286,7 +276,7 @@ makeGivenForPrediction idx env =
            --     (System.Battery, System.ConBattery) -> True
                 _ -> False
           h (Idx.InSection _ (Idx.Energy (Idx.StructureEdge System.Resistance System.Chassis))) x =
-               fmap (fmap (*1.1)) x
+               fmap (*1.1) x
           h _ r = r
           i _ _ = True
 --         i (Idx.InSection (Idx.Section sec) (Idx.Energy (Idx.StructureEdge x y))) _ | sec == 18 || x == System.Tank || y == System.ConBattery = False
