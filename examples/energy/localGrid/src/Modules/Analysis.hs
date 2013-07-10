@@ -141,8 +141,8 @@ pre topology epsZero epsT epsE rawSignals =
 -------------------------------------------------------------------------------------------------
 -- ## Analyse External Energy Flow
 
-external :: (Eq d, Num d,
-             Arith.Product d,
+external :: (Eq d,
+             Arith.Constant d,
              Arith.Integrate d,
              Vec.Storage v d,
              Vec.Zipper v,
@@ -161,16 +161,15 @@ external sequenceFlowTopology sequFlowRecord =
     sequenceFlowTopology $
     makeGivenFromExternal Idx.Absolute sequFlowRecord
 
-initStorage :: (Fractional a) => a
-initStorage = 0.7*3600*1000
+initStorage :: (Arith.Constant a) => a
+initStorage = Arith.fromRational $ 0.7*3600*1000
 
 makeGivenFromExternal :: (Vec.Zipper v,
                           Vec.Walker v,
                           Vec.Singleton v,
                           B.BSum d,
                           Eq d,
-                          Num d,
-                          Arith.Sum d,
+                          Arith.Constant d,
                           Vec.Storage v d,
                           Vec.FromList v,
                           EqGen.Record rec,
@@ -183,48 +182,37 @@ makeGivenFromExternal idx sf =
    (Idx.Record idx (XIdx.storage Idx.initial System.Water) .= initStorage)
    <> fold (SD.mapWithSection f sf)
    where f sec (Record t xs) =
-           (Idx.Record idx (Idx.InSection sec Idx.DTime) .= sum (Sig.toList $ Sig.delta t)) <>
+           (Idx.Record idx (Idx.InSection sec Idx.DTime) .=
+              Arith.integrate (Sig.toList $ Sig.delta t)) <>
            fold (Map.mapWithKey g xs)
            where g (Idx.PPos p) e =
-                    Idx.Record idx (Idx.InSection sec (Idx.Energy p)) .= sum (Sig.toList e)
+                    Idx.Record idx (Idx.InSection sec (Idx.Energy p)) .=
+                       Arith.integrate (Sig.toList e)
 
-external2 :: -- forall node (v :: * -> *) d.
-                            (Fractional d,
-                             Eq d,
-                             Eq (v d),
-                             Vec.Singleton v,
-                             Vec.Storage v d,
-                             Vec.Walker v,
-                             B.BSum d,
-                             Vec.Zipper v,
-                             Arith.Constant d) =>
-                            Flow.RangeGraph System.Node
-                            -> SD.SequData
-                                 (Record
-                                    Sig.Signal
-                                    Sig.FSignal
-                                    (Typ A T Tt)
-                                    (Typ A F Tt)
-                                    (Idx.PPos System.Node)
-                                    v
-                                    d
-                                    d)
-                            -> Env.Complete
-                                 System.Node
-                                 (EqRecord.Absolute (Result (Data Nil d)))
-                                 (EqRecord.Absolute (Result (Data (v D.:> Nil) d)))
+external2 ::
+   (Eq a, Eq (v a), Vec.Singleton v, Vec.Storage v a, Vec.Walker v,
+    Arith.Constant a, B.BSum a, Vec.Zipper v) =>
+   Flow.RangeGraph System.Node ->
+   SD.SequData
+      (Record Sig.Signal Sig.FSignal
+          (Typ A T Tt)
+          (Typ A F Tt)
+          (Idx.PPos System.Node)
+          v a a) ->
+   Env.Complete System.Node
+      (Result (Data Nil a))
+      (Result (Data (v D.:> Nil) a))
 external2 sequenceFlowTopology sequFlowRecord =
-  EqGen.solveFromMeasurement
-    sequenceFlowTopology $
+  Env.completeFMap EqRecord.unAbsolute EqRecord.unAbsolute $
+  EqGen.solveFromMeasurement sequenceFlowTopology $
     makeGivenFromExternal2 sequFlowRecord -- $ Record.diffTime sequFlowRecord
 
 -- makeGivenFromExternal2 env = EqGen.fromEnvSignal $ (fmap (fmap (D.foldl (+) 0) ) $ EqAbs.envFromFlowRecord env)
-makeGivenFromExternal2 :: -- forall System.Node s d (v :: * -> *) d1.
-                                         (Fractional d, Eq d, Eq (v d), Vec.Singleton v, Vec.Storage v d,
-                                          Vec.Walker v, B.BSum d, Vec.Zipper v, Arith.Sum d) =>
-                                         SD.SequData (FlowRecord System.Node v d)
-                                         -> EqAbs.EquationSystem
-                                              System.Node s (Data Nil d) (Data (v D.:> Nil) d)
+makeGivenFromExternal2 ::
+   (Eq d, Eq (v d), Vec.Singleton v, Vec.Storage v d,
+    Vec.Walker v, B.BSum d, Vec.Zipper v, Arith.Constant d) =>
+   SD.SequData (FlowRecord System.Node v d) ->
+   EqAbs.EquationSystem System.Node s (Data Nil d) (Data (v D.:> Nil) d)
 makeGivenFromExternal2 sf =
       (Idx.absolute (XIdx.storage Idx.initial System.Water) .= Data initStorage) <>
       (EqAbs.fromEnvSignal $ EqAbs.envFromFlowRecord (fmap Record.diffTime sf))
@@ -239,8 +227,7 @@ delta :: (Vec.Zipper v1, Vec.Zipper v2,
           Vec.FromList v1,Vec.FromList v2,
           B.BSum d,
           Eq d,
-          Num d,
-          Arith.Product d,
+          Arith.Constant d,
           Arith.Integrate d,
           Arith.Scalar d ~ Double) =>
          Flow.RangeGraph System.Node
