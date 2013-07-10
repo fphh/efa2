@@ -14,7 +14,7 @@ import qualified EFA.Example.Absolute as EqAbs
 
 import qualified EFA.Example.Index as XIdx
 
-import EFA.Example.Utility (Ignore, (.=), (%=), checkDetermined)
+import EFA.Example.Utility (Ignore, (.=), checkDetermined)
 
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Variable as Var
@@ -67,8 +67,7 @@ import qualified EFA.Graph.Flow as Flow
 import qualified Data.Map as Map
 import Data.Monoid ((<>),mempty)
 
-import Data.Foldable (fold,
-                      foldMap)
+import Data.Foldable (fold)
 
 
 {-
@@ -256,16 +255,15 @@ makeGivenForPrediction ::
    EqAbs.EquationSystem System.Node s a v
 
 makeGivenForPrediction env =
-    (Idx.absolute (XIdx.storage Idx.initial System.Battery) .= initStorage)
-    <> (Idx.absolute (XIdx.storage Idx.initial System.VehicleInertia) .= 0)
---    <> (foldMap f $ Map.toList $ Env.etaMap $ Env.scalar env) -- hier müssen rote-Kante Gleichungen erzeugt werden
-    <> (foldMap f $ Map.toList $ Env.etaMap $ Env.signal env)
-    <> (foldMap f $ Map.toList $ Env.dtimeMap $ Env.signal env)
-    <> (foldMap f $ Map.toList $ Map.mapWithKey h $
+    (XIdx.storage Idx.initial System.Battery .== initStorage)
+    <> (XIdx.storage Idx.initial System.VehicleInertia .== 0)
+--    <> (EqAbs.fromMap $ Env.etaMap $ Env.scalar env) -- hier müssen rote-Kante Gleichungen erzeugt werden
+    <> (EqAbs.fromMap $ Env.etaMap $ Env.signal env)
+    <> (EqAbs.fromMap $ Env.dtimeMap $ Env.signal env)
+    <> (EqAbs.fromMap $ Map.mapWithKey h $
         Map.filterWithKey (const . filterCriterion) $
         Env.energyMap $ Env.signal env)
-    where f (j, x)  =  j %= EqRecord.Absolute x
-          h (Idx.InSection _ (Idx.Energy
+    where h (Idx.InSection _ (Idx.Energy
                (Idx.StructureEdge System.Resistance System.Chassis))) x =
                x*1.1
           h _ r = r

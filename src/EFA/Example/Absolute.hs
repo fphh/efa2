@@ -35,7 +35,7 @@ import EFA.Report.FormatValue (FormatValue)
 import qualified UniqueLogic.ST.TF.Expression as Expr
 import qualified UniqueLogic.ST.TF.System.Simple as Sys
 
-import qualified Data.Map as Map
+import qualified Data.Map as Map ; import Data.Map (Map)
 import Control.Applicative (liftA, liftA2)
 import Data.Foldable (fold)
 import Data.Monoid (mempty, (<>))
@@ -197,3 +197,11 @@ fromEnv ::
    EquationSystem node s a v
 fromEnv (Env.Complete envScalar envSignal) =
    fromEnvScalar envScalar <> fromEnvSignal envSignal
+
+fromMap ::
+   (Arith.Sum x, x ~ Env.Element idx a v,
+    Env.AccessMap idx, Ord (idx node), FormatValue (idx node)) =>
+   Map (idx node) x ->
+   EquationSystem node s a v
+fromMap =
+   EqGen.fromMap . fmap Record.Absolute

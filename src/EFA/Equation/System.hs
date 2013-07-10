@@ -6,9 +6,11 @@ module EFA.Equation.System (
   EquationSystem, Expression, RecordExpression,
 
   fromGraph,
+  fromMapResult,
   fromEnvResult,
   fromEnvScalarResult,
   fromEnvSignalResult,
+  fromMap,
   fromEnv,
   fromEnvScalar,
   fromEnvSignal,
