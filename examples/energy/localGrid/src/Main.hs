@@ -52,8 +52,8 @@ colours = [ Colors.White,
             Colors.Gray80,	
             Colors.Gray70 ]
 
-zeroNoiseToleranz :: Double
-zeroNoiseToleranz = 10^^(-2::Int)
+zeroNoiseTolerance :: Double
+zeroNoiseTolerance = 10^^(-2::Int)
 
 fileNamesX :: [FilePath]
 
@@ -108,7 +108,7 @@ main = do
   rawSignalsX <- mapM modelicaPLTImport $ map (path </>) fileNamesX :: IO ([Record.SignalRecord [] Double])
 
   let preProcessedDataX =
-        map (Analysis.pre System.topology zeroNoiseToleranz sectionFilterTime sectionFilterEnergy) rawSignalsX
+        map (Analysis.pre System.topology zeroNoiseTolerance sectionFilterTime sectionFilterEnergy) rawSignalsX
 
       (_,sequenceFlowsFiltUnmappedX,flowStatesUnmappedX,powerSignalsX,signalsX) =
         L.unzip5 preProcessedDataX
