@@ -262,27 +262,13 @@ makeGivenForPrediction env =
     <> (foldMap f $ Map.toList $ Env.etaMap $ Env.signal env)
     <> (foldMap f $ Map.toList $ Env.dtimeMap $ Env.signal env)
     <> (foldMap f $ Map.toList $ Map.mapWithKey h $
-        -- Map.filterWithKey i $
-        Map.filterWithKey g $
+        Map.filterWithKey (const . filterCriterion) $
         Env.energyMap $ Env.signal env)
     where f (j, x)  =  j %= EqRecord.Absolute x
-          g (Idx.InSection _ (Idx.Energy (Idx.StructureEdge x y))) _  =
-             case (x,y) of
-                (System.Tank, System.ConBattery) -> True
-                (System.Resistance, System.Chassis) -> True
-                (System.VehicleInertia, System.Chassis) -> True
-                (System.RearBrakes, System.Chassis) -> True
-                (System.FrontBrakes, System.ConFrontBrakes) -> True
-                (System.ConES, System.ElectricSystem) -> True
-           --     (System.Battery, System.ConBattery) -> True
-                _ -> False
           h (Idx.InSection _ (Idx.Energy
                (Idx.StructureEdge System.Resistance System.Chassis))) x =
                x*1.1
           h _ r = r
-          _i (Idx.InSection (Idx.Section sec) (Idx.Energy
-               (Idx.StructureEdge x y))) _ =
-             not $ sec == 18 || x == System.Tank || y == System.ConBattery
 
 
 ---------------------------------------------------------------------------------------------------
@@ -356,24 +342,29 @@ makeGivenForDifferentialAnalysis (Env.Complete _ sig) =
   (XIdx.storage Idx.initial System.Battery .== initStorage) <>
   (fold $ Map.mapWithKey f $ Env.etaMap sig) <>
   (fold $ Map.mapWithKey f $ Env.dtimeMap sig) <>
-  (fold $  Map.filterWithKey h $ Map.filterWithKey g $ Map.mapWithKey f $ Env.energyMap sig) <>
+  (fold $ Map.filterWithKey (const . filterCriterion) $
+   Map.mapWithKey f $ Env.energyMap sig) <>
   mempty
   where f i rec =
            deltaPair i
               (checkDetermined "before" $ EqRecord.before rec)
               (checkDetermined "delta"  $ EqRecord.delta rec)
 
-        g (Idx.InSection _ (Idx.Energy (Idx.StructureEdge x y))) _ =
-          case (x,y) of
-            (System.Tank, System.ConBattery) -> True
-            (System.Resistance, System.Chassis) -> True
-            (System.VehicleInertia, System.Chassis) -> True
-            (System.RearBrakes, System.Chassis) -> True
-            (System.FrontBrakes, System.ConFrontBrakes) -> True
-            (System.ConES, System.ElectricSystem) -> True
---            (System.Battery, System.ConBattery) -> True -- Das sollte nicht angegeben werden müssen !!
-            _ -> False
 
-        h _ _ = True
-        -- h (Idx.InSection (Idx.Section sec) (Idx.Energy (Idx.StructureEdge x y))) _ | sec == 18 || x == System.Tank || y == System.ConBattery = False
-        -- h (Idx.InSection (Idx.Section sec) (Idx.Energy (Idx.StructureEdge x y))) _ | otherwise = True
+filterCriterion, filterCriterionExtra :: XIdx.Energy System.Node -> Bool
+filterCriterion (Idx.InSection _ (Idx.Energy (Idx.StructureEdge x y))) =
+   -- filterCriterionExtra e &&
+   case (x,y) of
+      (System.Tank, System.ConBattery) -> True
+      (System.Resistance, System.Chassis) -> True
+      (System.VehicleInertia, System.Chassis) -> True
+      (System.RearBrakes, System.Chassis) -> True
+      (System.FrontBrakes, System.ConFrontBrakes) -> True
+      (System.ConES, System.ElectricSystem) -> True
+--       (System.Battery, System.ConBattery) -> True -- Das sollte nicht angegeben werden müssen !!
+      _ -> False
+
+filterCriterionExtra
+   (Idx.InSection (Idx.Section sec) (Idx.Energy
+     (Idx.StructureEdge x y))) =
+   not $ sec == 18 || x == System.Tank || y == System.ConBattery
