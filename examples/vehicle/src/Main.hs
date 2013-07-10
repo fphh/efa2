@@ -235,11 +235,6 @@ sectionMapping = map (SD.reIndex [8,11,13,14,18,32,37::Int])
 
 --------------------------------------------------------------------
 
-zipWith3M_ ::
-  Monad m =>
-  (t -> t1 -> t2 -> m b) -> [t] -> [t1] -> [t2] -> m ()
-zipWith3M_ f x y z = mapM_ (\(x',y',z') -> f x' y' z') (zip3 x y z)
-
 main :: IO ()
 main = do
 
