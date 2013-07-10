@@ -138,15 +138,14 @@ main = do
   let Record.Record _ sigs = head rawSignalsX
 --  putStrLn $ Utility.myShowList $ Map.keys sigs
 
-  let -- drawDelta :: RecordName ->
-      drawDelta ti topo env c =
+  let drawDelta (Record.DeltaName ti) topo env c =
           Draw.xterm $
-          Draw.title  ((\(Record.DeltaName x) -> x) ti) $
+          Draw.title ti $
           Draw.bgcolour c $
           Draw.sequFlowGraphDeltaWithEnv topo env
-      drawAbs ti topo env c =
-        Draw.xterm $
-          Draw.title ((\(Record.Name x) -> x) ti) $
+      drawAbs (Record.Name ti) topo env c =
+          Draw.xterm $
+          Draw.title ti $
           Draw.bgcolour c $
           Draw.sequFlowGraphAbsWithEnv topo env
 
