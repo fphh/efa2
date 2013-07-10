@@ -262,7 +262,8 @@ makeGivenForPrediction env =
     <> (foldMap f $ Map.toList $ Env.etaMap $ Env.signal env)
     <> (foldMap f $ Map.toList $ Env.dtimeMap $ Env.signal env)
     <> (foldMap f $ Map.toList $ Map.mapWithKey h $
-        Map.filterWithKey i $ Map.filterWithKey g $
+        -- Map.filterWithKey i $
+        Map.filterWithKey g $
         Env.energyMap $ Env.signal env)
     where f (j, x)  =  j %= EqRecord.Absolute x
           g (Idx.InSection _ (Idx.Energy (Idx.StructureEdge x y))) _  =
@@ -279,9 +280,9 @@ makeGivenForPrediction env =
                (Idx.StructureEdge System.Resistance System.Chassis))) x =
                x*1.1
           h _ r = r
-          i _ _ = True
---         i (Idx.InSection (Idx.Section sec) (Idx.Energy (Idx.StructureEdge x y))) _ | sec == 18 || x == System.Tank || y == System.ConBattery = False
---          i (Idx.InSection (Idx.Section sec) (Idx.Energy (Idx.StructureEdge x y))) _ | otherwise = True
+          _i (Idx.InSection (Idx.Section sec) (Idx.Energy
+               (Idx.StructureEdge x y))) _ =
+             not $ sec == 18 || x == System.Tank || y == System.ConBattery
 
 
 ---------------------------------------------------------------------------------------------------
