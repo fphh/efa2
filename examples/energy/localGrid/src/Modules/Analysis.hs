@@ -141,22 +141,15 @@ pre topology epsZero epsT epsE rawSignals =
 -------------------------------------------------------------------------------------------------
 -- ## Analyse External Energy Flow
 
-external :: (Eq d,
-             Arith.Constant d,
-             Arith.Integrate d,
-             Vec.Storage v d,
-             Vec.Zipper v,
-             Vec.Walker v,
-             Vec.Singleton v,
-             B.BSum d,
-             Vec.FromList v, Arith.Scalar d ~ Double) =>
-            Flow.RangeGraph System.Node
-            -> SD.SequData (FlowRecord System.Node v d)
-            -> Env.Complete
-            System.Node
-            (EqRecord.Absolute (Result Double))
-            (EqRecord.Absolute (Result d))
+external ::
+   (Eq d, Arith.Constant d, Arith.Integrate d, Arith.Scalar d ~ Double, B.BSum d,
+    Vec.Storage v d, Vec.Zipper v, Vec.Walker v,
+    Vec.Singleton v, Vec.FromList v) =>
+   Flow.RangeGraph System.Node ->
+   SD.SequData (FlowRecord System.Node v d) ->
+   Env.Complete System.Node (Result Double) (Result d)
 external sequenceFlowTopology sequFlowRecord =
+  Env.completeFMap EqRecord.unAbsolute EqRecord.unAbsolute $
   EqGen.solveFromMeasurement
     sequenceFlowTopology $
     makeGivenFromExternal Idx.Absolute sequFlowRecord
