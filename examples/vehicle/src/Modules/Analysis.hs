@@ -244,7 +244,7 @@ prediction ::
     Eq a, Fractional a, Arith.Constant a,
     Arith.Integrate v, Arith.Scalar v ~ a) =>
    Flow.RangeGraph System.Node ->
-   Env.Complete System.Node (Result a) (Result v) ->
+   Env.Complete System.Node a v ->
    Env.Complete System.Node (Result a) (Result v)
 prediction sequenceFlowTopology env =
    EqAbs.solve sequenceFlowTopology (makeGivenForPrediction env)
@@ -252,7 +252,7 @@ prediction sequenceFlowTopology env =
 makeGivenForPrediction ::
    (Eq a, Fractional a, Arith.Sum a,
     Eq v, Fractional v, Arith.Sum v) =>
-   Env.Complete System.Node (Result a) (Result v) ->
+   Env.Complete System.Node a v ->
    EqAbs.EquationSystem System.Node s a v
 
 makeGivenForPrediction env =
@@ -264,7 +264,7 @@ makeGivenForPrediction env =
     <> (foldMap f $ Map.toList $ Map.mapWithKey h $
         Map.filterWithKey i $ Map.filterWithKey g $
         Env.energyMap $ Env.signal env)
-    where f (j, x)  =  j %= EqRecord.Absolute (checkDetermined "makeGivenForPrediction" x)
+    where f (j, x)  =  j %= EqRecord.Absolute x
           g (Idx.InSection _ (Idx.Energy (Idx.StructureEdge x y))) _  =
              case (x,y) of
                 (System.Tank, System.ConBattery) -> True
@@ -275,8 +275,9 @@ makeGivenForPrediction env =
                 (System.ConES, System.ElectricSystem) -> True
            --     (System.Battery, System.ConBattery) -> True
                 _ -> False
-          h (Idx.InSection _ (Idx.Energy (Idx.StructureEdge System.Resistance System.Chassis))) x =
-               fmap (*1.1) x
+          h (Idx.InSection _ (Idx.Energy
+               (Idx.StructureEdge System.Resistance System.Chassis))) x =
+               x*1.1
           h _ r = r
           i _ _ = True
 --         i (Idx.InSection (Idx.Section sec) (Idx.Energy (Idx.StructureEdge x y))) _ | sec == 18 || x == System.Tank || y == System.ConBattery = False

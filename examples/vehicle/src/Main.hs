@@ -7,7 +7,7 @@ module Main where
 ---------------------------------------------------------------------------------------
 -- * Import other Modules
 
--- import EFA.Example.Utility (edgeVar)
+import EFA.Example.Utility (checkDetermined)
 -- import EFA.Example.Absolute ((.=))
 -- import qualified EFA.Equation.Sstem as EqGen
 import EFA.IO.PLTImport (modelicaPLTImport)
@@ -34,7 +34,7 @@ import qualified EFA.Example.Index as XIdx
 --import qualified EFA.Example.AssignMap as AssignMap
 -- import qualified EFA.Signal.Plot as Plot
 import qualified EFA.Graph.Topology.Index as Idx
---import qualified EFA.Equation.Environment as Env
+import qualified EFA.Equation.Environment as Env
 
 -- import qualified EFA.Equation.Record as EqRecord
 --import qualified EFA.Equation.Result as Result
@@ -331,7 +331,13 @@ main = do
  ---------------------------------------------------------------------------------------
 -- *  Make the Prediction
 
-  let prediction = Analysis.prediction (head sequenceFlowTopologyX) (head externalEnvX)
+  let prediction =
+         Analysis.prediction
+            (head sequenceFlowTopologyX)
+            (Env.completeFMap
+                (checkDetermined "prediction scalar")
+                (checkDetermined "prediction signal") $
+             head externalEnvX)
 
   -- Hier gehts schief, wenn ich mit Signalen rechnen will
 --  let prediction2 = Analysis.prediction (head sequenceFlowTopologyX) (head externalSignalEnvX)
