@@ -11,7 +11,7 @@ import qualified EFA.Equation.Environment as Env
 
 import qualified EFA.Signal.SequenceData as SD
 import qualified EFA.Signal.Record as Record
--- import qualified EFA.Signal.Plot as Plot
+import qualified EFA.Signal.PlotIO as PlotIO
 import EFA.Signal.Signal (TC(..), Scalar,toScalar)
 import EFA.Signal.Data (Data(..), Nil)
 import EFA.Signal.Typ (Typ, F, T, A, Tt)
@@ -22,7 +22,7 @@ import qualified EFA.Graph.Flow as Flow
 import EFA.Graph (lefilter)
 import EFA.Graph.Topology (isStructureEdge)
 
---import qualified EFA.Utility as Utility
+import qualified EFA.Utility as Utility
 import EFA.Utility.Async (concurrentlyMany_)
 
 import EFA.IO.PLTImport (modelicaPLTImport)
@@ -36,8 +36,9 @@ import System.FilePath ((</>))
 
 
 import qualified Data.List as L
---import qualified Data.Map as Map
+import qualified Data.Map as Map
 import Data.Tuple.HT (mapSnd)
+import Control.Monad (when)
 
 
 plotTerm :: DefaultTerm.T
@@ -98,6 +99,9 @@ etaList = [
 sectionMapping :: [SD.SequData a] -> [SD.SequData a]
 sectionMapping = id -- map (SD.reIndex [8,11,13,14,18,32,37::Int])
 
+ignore :: [a] -> [a]
+ignore _ = []
+
 
 main :: IO ()
 main = do
@@ -135,8 +139,9 @@ main = do
 
 ---------------------------------------------------------------------------------------
 -- * State Analysis
-  let Record.Record _ sigs = head rawSignalsX
---  putStrLn $ Utility.myShowList $ Map.keys sigs
+  when False $ do
+    let Record.Record _ sigs = head rawSignalsX
+    putStrLn $ Utility.myShowList $ Map.keys sigs
 
   let drawDelta (Record.DeltaName ti) topo env c =
           Draw.xterm $
@@ -156,25 +161,28 @@ main = do
 
 ---------------------------------------------------------------------------------------
 -- * Draw flow states
-{-
-    ++ [putStrLn ("Number of possible flow states: " ++ show (length System.flowStates))]
-    ++ [Draw.xterm $ Draw.flowTopologies (take 20 System.flowStates)]
+    ++ ignore [putStrLn ("Number of possible flow states: " ++ show (length System.flowStates))]
+    ++ ignore [Draw.xterm $ Draw.flowTopologies (take 20 System.flowStates)]
 
 ---------------------------------------------------------------------------------------
 -- * Plot Time Signals
 
 --    ++ Plots.sigsWithSpeed allSignalsX (head plotList)
-    ++ [Plot.recordIO "Test" plotTerm show id (head rawSignalsX)]
+    ++ ignore [PlotIO.record "Test" plotTerm show id (head rawSignalsX)]
 
-    ++ [mapM_ (\(x,y) -> Plot.recordIOList_extract ("Signals of Component " ++ x)
-                         plotTerm show id (zip datasetsX allSignalsX) y) plotList]
+    ++ ignore
+          [mapM_
+              (\(x,y) ->
+                  PlotIO.recordList_extract ("Signals of Component " ++ x)
+                     plotTerm show id (zip datasetsX allSignalsX) y) plotList]
 
 ---------------------------------------------------------------------------------------
 -- * Plot Efficiency Curves and Distributions
 
-    ++ [mapM_ (Plot.etaDistr1DimIOfromRecordList "Average Efficiency Curve -" 10000 5000
+    ++ ignore
+       [mapM_ (PlotIO.etaDistr1DimfromRecordList "Average Efficiency Curve -" 10000 5000
                (zip datasetsX (map (Record.diffTime . Record.partIntegrate) powerSignalsX))) etaList]
--}
+
 ---------------------------------------------------------------------------------------
 -- * Draw Section flows
 
@@ -183,16 +191,17 @@ main = do
          sectionToposX
          externalEnvX
          colours]
-{-
+
 ---------------------------------------------------------------------------------------
 -- * Draw Delta Section flows
 
-    ++ L.zipWith4 drawDelta
+    ++ ignore
+       (L.zipWith4 drawDelta
          deltasetsX
          sectionToposX
          externalDeltaEnvX
-         (tail colours)
--}
+         (tail colours))
+
 ---------------------------------------------------------------------------------------
 -- * Draw Section flows
 
