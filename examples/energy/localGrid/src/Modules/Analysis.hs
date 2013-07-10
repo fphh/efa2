@@ -7,46 +7,42 @@ module Modules.Analysis where
 ----------------------------------
 -- * Example Specific Imports
 import qualified Modules.System as System
+import qualified Modules.Signals as Signals
 --import Modules.System (Node(..))
 
-import Modules.Signals as Signals
-
-import qualified EFA.Example.Absolute as EqAbs
---import qualified EFA.Graph.Topology.Index as TIdx
---import qualified EFA.Equation.Environment as EqEnv
---import qualified EFA.Equation.Record as EqRec
-import EFA.Equation.Result (Result(..))
---import EFA.Utility.Map (checkedLookup)
-
 import qualified EFA.Example.Index as XIdx
-
+import qualified EFA.Example.Absolute as EqAbs
 import EFA.Example.Utility (Ignore, (.=))
-                            -- checkDetermined)
---import EFA.Utility.Stream (Stream((:~)))
---import qualified EFA.Utility.Stream as Stream
-import Data.Monoid (--mconcat, 
-                    (<>))
+
+import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.Flow as Flow
+
+-- import qualified EFA.Utility.Stream as Stream
+-- import EFA.Utility.Stream (Stream((:~)))
+-- import EFA.Utility.Map (checkedLookup)
 
 import qualified EFA.Equation.System as EqGen
--- import qualified EFA.Equation.Variable as Var
--- import qualified EFA.Equation.Result as R
 import qualified EFA.Equation.Arithmetic as Arith
--- import qualified EFA.Equation.Stack as Stack
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Record as EqRecord
---import EFA.Equation.Result (Result(..))
+-- import qualified EFA.Equation.Stack as Stack
+import EFA.Equation.Result (Result(..))
 -- import EFA.Equation.Stack (Stack)
 
 import qualified EFA.Signal.SequenceData as SD
---import qualified EFA.Signal.Sequence as Seq
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Vector as Vec
 import qualified EFA.Signal.Signal as Sig
+import qualified EFA.Signal.Base as B
+import qualified EFA.Signal.Data as D
+import EFA.Signal.Signal (TC(..), Scalar)
+import EFA.Signal.Data (Data(..), Nil)
+import EFA.Signal.Typ (Typ, F, T, A, Tt)
 
 import EFA.Signal.Record (SignalRecord, FlowRecord,
                           Record(Record), PowerRecord,
                           SignalRecord, getTime, newTimeBase)
-
 
 import EFA.Signal.Sequence (-- genSequenceSignal,
                             addZeroCrossings,
@@ -54,34 +50,10 @@ import EFA.Signal.Sequence (-- genSequenceSignal,
                            -- sectionRecordsFromSequence
                            )
 
---import qualified EFA.Equation.Arithmetic as Arith
---import qualified EFA.Signal.Vector as Vec
-import qualified EFA.Signal.Base as B
-import qualified EFA.Signal.Data as D
-
---import qualified EFA.Signal.Signal as Sig
-import EFA.Signal.Signal (TC(..), Scalar)
-import EFA.Signal.Data (Data(..), Nil)
-import EFA.Signal.Typ (Typ, F, T, A, Tt)
-
---import qualified EFA.Equation.Stack as Stack
---import EFA.Equation.Stack (Stack)
---import qualified EFA.Report.Report as Rep
---import EFA.Signal.Typ
-
-import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Topology as TD
---import qualified EFA.Graph.Topology.Node as TDNode
-import qualified EFA.Graph.Flow as Flow
 import qualified Data.Map as Map
-
+import Data.Monoid ((<>))
 import Data.Foldable (fold)
-                      --foldMap)
 
-
---import qualified EFA.Equation.Environment as Env
---import EFA.Equation.Result (Result(..))
---import qualified EFA.Signal.Record as Record
 
 -------------------------------------------------------------------------------------------------
 -- ## Preprocessing of Signals
