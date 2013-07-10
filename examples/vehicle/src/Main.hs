@@ -4,69 +4,53 @@
 
 module Main where
 
----------------------------------------------------------------------------------------
--- * Import other Modules
+import qualified Modules.System as System
+import qualified Modules.Analysis as Analysis
+import qualified Modules.Signals as Signals
+-- import qualified Modules.Plots as Plots
 
+import qualified EFA.Example.Index as XIdx
+-- import qualified EFA.Example.AssignMap as AssignMap
 import EFA.Example.Utility (checkDetermined)
 -- import EFA.Example.Absolute ((.=))
--- import qualified EFA.Equation.Sstem as EqGen
-import EFA.IO.PLTImport (modelicaPLTImport)
+
+import qualified EFA.Signal.Record as Record
+import qualified EFA.Signal.PlotIO as PlotIO
+import qualified EFA.Signal.SequenceData as SD
+-- import qualified EFA.Signal.Plot as Plot
 import EFA.Signal.Sequence (makeSeqFlowTopology)
+import EFA.Signal.Signal (TC(..), Scalar,toScalar)
+import EFA.Signal.Data (Data(..), Nil)
+import EFA.Signal.Typ (Typ, F, T, A, Tt)
+
+import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Draw as Draw
--- import qualified EFA.Report.Format as Format
--- import EFA.Report.FormatValue (formatValue)
+
+import qualified EFA.Equation.Environment as Env
+-- import qualified EFA.Equation.Stack as Stack
+
+import EFA.IO.PLTImport (modelicaPLTImport)
 import EFA.Graph.Topology(isStructureEdge)
 import EFA.Graph(lefilter)
 import EFA.Utility.Async (concurrentlyMany_)
 
-----------------------------------
--- * Example Specific Imports
 
-import qualified Modules.System as System
-import qualified Modules.Analysis as Analysis
-import qualified Modules.Plots as Plots
-import qualified EFA.Signal.PlotIO as PlotIO
-
-import qualified Modules.Signals as Signals
-
-import qualified EFA.Example.Index as XIdx
---import qualified EFA.Example.AssignMap as AssignMap
--- import qualified EFA.Signal.Plot as Plot
-import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Equation.Environment as Env
-
--- import qualified EFA.Equation.Record as EqRecord
---import qualified EFA.Equation.Result as Result
-
---import qualified EFA.Equation.Stack as Stack
---import qualified EFA.Equation.Variable as Var
---import qualified Data.Foldable as Fold
---import qualified Data.NonEmpty as NonEmpty
---import qualified EFA.Symbolic.SumProduct as SumProduct
-
-import qualified EFA.Signal.Record as Record
 --import qualified Graphics.Gnuplot.Terminal.X11 as X11
 import qualified Graphics.Gnuplot.Terminal.WXT as WXT
 
 --import qualified Graphics.Gnuplot.Terminal as Terminal
 --import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 
-import EFA.Signal.Signal (TC(..), Scalar,toScalar)
-import EFA.Signal.Data (Data(..), Nil)
-import EFA.Signal.Typ (Typ, F, T, A, Tt)
-import qualified EFA.Signal.SequenceData as SD
+import qualified Data.GraphViz.Attributes.Colors.X11 as Colors
 
 import qualified System.IO as IO
 import System.Environment (getEnv)
 import System.FilePath ((</>))
 
---import qualified Data.Map as Map
+-- import qualified Data.Map as Map
 import qualified Data.List as L
 import Data.Tuple.HT (mapSnd)
---import qualified EFA.Example.Index as XIdx
-
-import qualified Data.GraphViz.Attributes.Colors.X11 as Colors
 
 
 -- | O. Generelle Settings
