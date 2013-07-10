@@ -23,6 +23,7 @@ import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Stack as Stack
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Record as EqRecord
+import EFA.Equation.Arithmetic ((~*))
 import EFA.Equation.Result (Result(..))
 import EFA.Equation.Stack (Stack)
 
@@ -158,8 +159,8 @@ makeGivenFromExternal idx sf = EqAbs.fromEnvSignal . EqAbs.envFromFlowRecord $ s
 -------------------------------------------------------------------------------------------------
 -- ## Analyse External Energy Flow
 
-external :: (Eq d, Num d,
-             Arith.Product d,
+external :: (Eq d,
+             Arith.Constant d,
              Arith.Integrate d,
              Vec.Storage v d,
              Vec.Zipper v,
@@ -176,16 +177,15 @@ external sequenceFlowTopology sequFlowRecord =
     sequenceFlowTopology $
     makeGivenFromExternal Idx.Absolute sequFlowRecord
 
-initStorage :: (Fractional a) => a
-initStorage = 0.7*3600*1000
+initStorage :: (Arith.Constant a) => a
+initStorage = Arith.fromRational $ 0.7*3600*1000
 
 makeGivenFromExternal :: (Vec.Zipper v,
                           Vec.Walker v,
                           Vec.Singleton v,
                           B.BSum d,
                           Eq d,
-                          Num d,
-                          Arith.Sum d,
+                          Arith.Constant d,
                           Vec.Storage v d,
                           Vec.FromList v,
                           EqGen.Record rec,
@@ -199,10 +199,12 @@ makeGivenFromExternal idx sf =
    <> (Idx.Record idx (XIdx.storage Idx.initial System.VehicleInertia) .= 0)
    <> fold (SD.mapWithSection f sf)
    where f sec (Record t xs) =
-           (Idx.Record idx (Idx.InSection sec Idx.DTime) .= sum (Sig.toList $ Sig.delta t)) <>
+           (Idx.Record idx (Idx.InSection sec Idx.DTime) .=
+              Arith.integrate (Sig.toList $ Sig.delta t)) <>
            fold (Map.mapWithKey g xs)
            where g (Idx.PPos p) e =
-                    Idx.Record idx (Idx.InSection sec (Idx.Energy p)) .= sum (Sig.toList e)
+                    Idx.Record idx (Idx.InSection sec (Idx.Energy p)) .=
+                       Arith.integrate (Sig.toList e)
 
 external2 ::
    (Eq a, Eq (v a), Vec.Singleton v, Vec.Storage v a, Vec.Walker v,
@@ -239,8 +241,8 @@ makeGivenFromExternal2 =
 -- ## Predict Energy Flow
 
 prediction ::
-   (Eq v, Fractional v, Arith.Product v,
-    Eq a, Fractional a, Arith.Constant a,
+   (Eq a, Arith.Constant a,
+    Eq v, Arith.Constant v,
     Arith.Integrate v, Arith.Scalar v ~ a) =>
    Flow.RangeGraph System.Node ->
    Env.Complete System.Node a v ->
@@ -249,14 +251,14 @@ prediction sequenceFlowTopology env =
    EqAbs.solve sequenceFlowTopology (makeGivenForPrediction env)
 
 makeGivenForPrediction ::
-   (Eq a, Fractional a, Arith.Sum a,
-    Eq v, Fractional v, Arith.Sum v) =>
+   (Eq a, Arith.Constant a,
+    Eq v, Arith.Constant v) =>
    Env.Complete System.Node a v ->
    EqAbs.EquationSystem System.Node s a v
 
 makeGivenForPrediction env =
     (XIdx.storage Idx.initial System.Battery .== initStorage)
-    <> (XIdx.storage Idx.initial System.VehicleInertia .== 0)
+    <> (XIdx.storage Idx.initial System.VehicleInertia .== Arith.zero)
 --    <> (EqAbs.fromMap $ Env.etaMap $ Env.scalar env) -- hier müssen rote-Kante Gleichungen erzeugt werden
     <> (EqAbs.fromMap $ Env.etaMap $ Env.signal env)
     <> (EqAbs.fromMap $ Env.dtimeMap $ Env.signal env)
@@ -265,7 +267,7 @@ makeGivenForPrediction env =
         Env.energyMap $ Env.signal env)
     where h (Idx.InSection _ (Idx.Energy
                (Idx.StructureEdge System.Resistance System.Chassis))) x =
-               x*1.1
+               x ~* Arith.fromRational 1.1
           h _ r = r
 
 
@@ -279,8 +281,7 @@ delta :: (Vec.Zipper v1, Vec.Zipper v2,
           Vec.FromList v1,Vec.FromList v2,
           B.BSum d,
           Eq d,
-          Num d,
-          Arith.Product d,
+          Arith.Constant d,
           Arith.Integrate d,
           Arith.Scalar d ~ Double) =>
          Flow.RangeGraph System.Node
