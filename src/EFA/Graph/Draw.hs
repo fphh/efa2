@@ -9,7 +9,6 @@ module EFA.Graph.Draw (
   sequFlowGraphDeltaWithEnv,
   cumulatedFlow,
   topologyWithEdgeLabels,
-  Env(..),
   topology,
   flowTopologies,
   ) where
@@ -467,23 +466,6 @@ formatNodeStorage rec st sis sos mBeforeBnd (Idx.TimeNode aug nid, ty) =
          _ -> []
 
 
-{- |
-The 'Env' shall contain only values and functions for display.
-It shall not contain values needed for computations.
--}
-data Env node output =
-   Env {
-      formatEnergy,
-      formatX,
-      formatEta    :: Idx.InSection Idx.StructureEdge node -> output,
-      formatMaxEnergy,
-      formatStEnergy
-                   :: Idx.ForNode Idx.StorageEdge node -> output,
-      formatStX    :: Idx.ForNode Idx.StorageTrans node -> output,
-      formatTime   :: Idx.Section -> output,
-      formatNode   :: Maybe Idx.Boundary -> Topo.LDirNode node -> output
-   }
-
 lookupFormat ::
    (Ord (idx node), Var.FormatIndex idx, Format.Record recIdx,
     FormatValue a, Format output, Node.C node) =>
@@ -515,30 +497,47 @@ lookupFormatAssign rec mp makeIdx x =
             (lookupFormat rec mp idx)
 
 sequFlowGraphWithEnv ::
-  (Node.C node) =>
-  Flow.RangeGraph node -> Env node Unicode -> DotGraph T.Text
-sequFlowGraphWithEnv g env =
-  dotFromSequFlowGraph g
-     (Just (formatTime env)) (formatNode env) structEShow storeEShow
-  where structEShow (Idx.InSection sec ee) =
+  (Format.Record recIdx, FormatValue a, FormatValue v, Node.C node) =>
+  recIdx -> Flow.RangeGraph node ->
+  Env.Complete node a v -> DotGraph T.Text
+sequFlowGraphWithEnv recIdx g
+    (Env.Complete (Env.Scalar me st se sx sis sos) (Env.Signal e _p n dt x _s)) =
+  dotFromSequFlowGraph g (Just formatTime) formatNode structEShow storeEShow
+  where formatEnergy =
+           lookupFormatAssign recIdx e $ Idx.liftInSection Idx.Energy
+        formatX =
+           lookupFormatAssign recIdx x $ Idx.liftInSection Idx.X
+        formatEta =
+           lookupFormatAssign recIdx n $ Idx.liftInSection Idx.Eta
+        formatMaxEnergy =
+           lookupFormatAssign recIdx me $ Idx.liftForNode Idx.MaxEnergy
+        formatStEnergy =
+           lookupFormatAssign recIdx se $ Idx.liftForNode Idx.StEnergy
+        formatStX =
+           lookupFormatAssign recIdx sx $ Idx.liftForNode Idx.StX
+        formatTime =
+           lookupFormat recIdx dt . flip Idx.InSection Idx.DTime
+        formatNode =
+           formatNodeStorage recIdx st sis sos
+        structEShow (Idx.InSection sec ee) =
            case ee of
               Gr.EUnDirEdge _ -> []
-              Gr.EDirEdge (Gr.DirEdge x y) ->
-                 case Idx.InSection sec (Idx.StructureEdge x y) of
-                    e ->
-                       formatEnergy env e :
-                       formatX env e :
-                       formatEta env e :
-                       formatX env (Idx.flip e) :
-                       formatEnergy env (Idx.flip e) :
+              Gr.EDirEdge (Gr.DirEdge from to) ->
+                 case Idx.InSection sec (Idx.StructureEdge from to) of
+                    edge ->
+                       formatEnergy edge :
+                       formatX edge :
+                       formatEta edge :
+                       formatX (Idx.flip edge) :
+                       formatEnergy (Idx.flip edge) :
                        []
-        storeEShow e =
-           case Idx.liftForNode Idx.storageTransFromEdge e of
-              se ->
-                 formatMaxEnergy env e :
-                 formatStEnergy env e :
-                 formatStX env se :
-                 formatStX env (Idx.flip se) :
+        storeEShow edge =
+           case Idx.liftForNode Idx.storageTransFromEdge edge of
+              te ->
+                 formatMaxEnergy edge :
+                 formatStEnergy edge :
+                 formatStX te :
+                 formatStX (Idx.flip te) :
                  []
 
 sequFlowGraphAbsWithEnv ::
@@ -546,31 +545,15 @@ sequFlowGraphAbsWithEnv ::
    Flow.RangeGraph node ->
    Env.Complete node a v ->
    DotGraph T.Text
-sequFlowGraphAbsWithEnv topo =
-   sequFlowGraphWithEnv topo . envGen Idx.Absolute
+sequFlowGraphAbsWithEnv =
+   sequFlowGraphWithEnv Idx.Absolute
 
 sequFlowGraphDeltaWithEnv ::
    (FormatValue a, FormatValue v, Node.C node) =>
    Flow.RangeGraph node ->
    Env.Complete node a v -> DotGraph T.Text
-sequFlowGraphDeltaWithEnv topo =
-   sequFlowGraphWithEnv topo . envGen Idx.Delta
-
-
-envGen ::
-   (Format.Record recIdx, FormatValue a, FormatValue v,
-    Format output, Node.C node) =>
-   recIdx -> Env.Complete node a v -> Env node output
-envGen recIdx (Env.Complete (Env.Scalar me st se sx sis sos) (Env.Signal e _p n dt x _s)) =
-   Env
-      (lookupFormatAssign recIdx e $ Idx.liftInSection Idx.Energy)
-      (lookupFormatAssign recIdx x $ Idx.liftInSection Idx.X)
-      (lookupFormatAssign recIdx n $ Idx.liftInSection Idx.Eta)
-      (lookupFormatAssign recIdx me $ Idx.liftForNode Idx.MaxEnergy)
-      (lookupFormatAssign recIdx se $ Idx.liftForNode Idx.StEnergy)
-      (lookupFormatAssign recIdx sx $ Idx.liftForNode Idx.StX)
-      (lookupFormat recIdx dt . flip Idx.InSection Idx.DTime)
-      (formatNodeStorage recIdx st sis sos)
+sequFlowGraphDeltaWithEnv =
+   sequFlowGraphWithEnv Idx.Delta
 
 
 cumulatedFlow ::
