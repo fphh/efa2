@@ -5,8 +5,8 @@ module EFA.Graph.Draw (
   title, bgcolour,
   sequFlowGraph,
   sequFlowGraphWithEnv,
-  sequFlowGraphAbsWithEnv, envAbs,
-  sequFlowGraphDeltaWithEnv, envDelta,
+  sequFlowGraphAbsWithEnv,
+  sequFlowGraphDeltaWithEnv,
   cumulatedFlow,
   topologyWithEdgeLabels,
   Env(..),
@@ -546,13 +546,15 @@ sequFlowGraphAbsWithEnv ::
    Flow.RangeGraph node ->
    Env.Complete node a v ->
    DotGraph T.Text
-sequFlowGraphAbsWithEnv topo = sequFlowGraphWithEnv topo . envAbs
+sequFlowGraphAbsWithEnv topo =
+   sequFlowGraphWithEnv topo . envGen Idx.Absolute
 
 sequFlowGraphDeltaWithEnv ::
    (FormatValue a, FormatValue v, Node.C node) =>
    Flow.RangeGraph node ->
    Env.Complete node a v -> DotGraph T.Text
-sequFlowGraphDeltaWithEnv topo = sequFlowGraphWithEnv topo . envDelta
+sequFlowGraphDeltaWithEnv topo =
+   sequFlowGraphWithEnv topo . envGen Idx.Delta
 
 
 envGen ::
@@ -569,16 +571,6 @@ envGen recIdx (Env.Complete (Env.Scalar me st se sx sis sos) (Env.Signal e _p n 
       (lookupFormatAssign recIdx sx $ Idx.liftForNode Idx.StX)
       (lookupFormat recIdx dt . flip Idx.InSection Idx.DTime)
       (formatNodeStorage recIdx st sis sos)
-
-envAbs ::
-   (FormatValue a, FormatValue v, Format output, Node.C node) =>
-   Env.Complete node a v -> Env node output
-envAbs = envGen Idx.Absolute
-
-envDelta ::
-   (FormatValue a, FormatValue v, Format output, Node.C node) =>
-   Env.Complete node a v -> Env node output
-envDelta = envGen Idx.Delta
 
 
 cumulatedFlow ::
