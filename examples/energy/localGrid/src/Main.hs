@@ -199,5 +199,5 @@ main = do
     ++ [head $ L.zipWith4 drawAbs
          [Record.Name "Signal"]
          sectionToposX
-         (map (\(Env.Complete scal sig) -> Env.Complete scal (fmap (fmap (fmap Arith.integrate)) sig)) externalSignalEnvX)
+         (map (Env.completeFMap id (fmap (fmap Arith.integrate))) externalSignalEnvX)
          colours]
