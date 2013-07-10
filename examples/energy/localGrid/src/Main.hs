@@ -5,9 +5,11 @@ import qualified Modules.System as System
 import qualified Modules.Analysis as Analysis
 
 import qualified EFA.Example.Index as XIdx
+import EFA.Example.Utility (checkDetermined)
 
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Environment as Env
+import qualified EFA.Equation.Record as EqRecord
 
 import qualified EFA.Signal.SequenceData as SD
 import qualified EFA.Signal.Record as Record
@@ -34,7 +36,7 @@ import qualified System.IO as IO
 import System.Environment (getEnv)
 import System.FilePath ((</>))
 
-
+import qualified Data.List.HT as ListHT
 import qualified Data.List as L
 import qualified Data.Map as Map
 import Data.Tuple.HT (mapSnd)
@@ -129,13 +131,18 @@ main = do
 
       sectionToposX =  map (mapSnd (lefilter (isStructureEdge .fst))) sequenceFlowTopologyX
 
-      externalEnvX = zipWith Analysis.external  sequenceFlowTopologyX sequenceFlowsFiltX
-      externalSignalEnvX = zipWith Analysis.external2  sequenceFlowTopologyX sequenceFlowsFiltX
+      externalEnvX =
+         map (Env.completeFMap
+                (checkDetermined "external scalar")
+                (checkDetermined "external signal")) $
+         zipWith Analysis.external  sequenceFlowTopologyX sequenceFlowsFiltX
+      externalSignalEnvX =
+         zipWith Analysis.external2 sequenceFlowTopologyX sequenceFlowsFiltX
 
       externalDeltaEnvX =
-        L.zipWith3  Analysis.delta sequenceFlowTopologyX
-        sequenceFlowsFiltX
-        (tail sequenceFlowsFiltX)
+        ListHT.mapAdjacent
+           (Env.intersectionWith EqRecord.deltaCons EqRecord.deltaCons)
+           externalEnvX
 
 ---------------------------------------------------------------------------------------
 -- * State Analysis

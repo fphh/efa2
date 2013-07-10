@@ -28,6 +28,7 @@ import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Draw as Draw
 
 import qualified EFA.Equation.Environment as Env
+import qualified EFA.Equation.Record as EqRecord
 -- import qualified EFA.Equation.Stack as Stack
 
 import EFA.IO.PLTImport (modelicaPLTImport)
@@ -49,6 +50,7 @@ import System.Environment (getEnv)
 import System.FilePath ((</>))
 
 -- import qualified Data.Map as Map
+import qualified Data.List.HT as ListHT
 import qualified Data.List as L
 import Data.Tuple.HT (mapSnd)
 
@@ -290,8 +292,13 @@ main = do
 ---------------------------------------------------------------------------------------
 -- *  Make Base Analysis on external Data
 
-  let externalEnvX = zipWith Analysis.external  sequenceFlowTopologyX sequenceFlowsFiltX
-  let externalSignalEnvX = zipWith Analysis.external2  sequenceFlowTopologyX sequenceFlowsFiltX
+  let externalEnvX =
+         map (Env.completeFMap
+                (checkDetermined "external scalar")
+                (checkDetermined "external signal")) $
+         zipWith Analysis.external  sequenceFlowTopologyX sequenceFlowsFiltX
+  let externalSignalEnvX =
+         zipWith Analysis.external2 sequenceFlowTopologyX sequenceFlowsFiltX
 
 
   ---------------------------------------------------------------------------------------
@@ -302,9 +309,9 @@ main = do
 --                      sequenceFlowTopologyX $ tail sequenceFlowsFiltX
 
   let externalDeltaEnvX =
-        L.zipWith3  Analysis.delta sequenceFlowTopologyX
-        sequenceFlowsFiltX
-        (tail sequenceFlowsFiltX)
+        ListHT.mapAdjacent
+           (Env.intersectionWith EqRecord.deltaCons EqRecord.deltaCons)
+           externalEnvX
 
 
  ---------------------------------------------------------------------------------------
@@ -313,10 +320,7 @@ main = do
   let prediction =
          Analysis.prediction
             (head sequenceFlowTopologyX)
-            (Env.completeFMap
-                (checkDetermined "prediction scalar")
-                (checkDetermined "prediction signal") $
-             head externalEnvX)
+            (head externalEnvX)
 
   -- Hier gehts schief, wenn ich mit Signalen rechnen will
 --  let prediction2 = Analysis.prediction (head sequenceFlowTopologyX) (head externalSignalEnvX)
@@ -336,7 +340,7 @@ main = do
           Draw.bgcolour c $
           Draw.sequFlowGraphDeltaWithEnv topo env
       drawAbs (Record.Name ti) topo env c =
-        Draw.dot (ti++"vehicle.dot")$
+          Draw.dot (ti++"vehicle.dot")$
           Draw.title ti $
           Draw.bgcolour c $
           Draw.sequFlowGraphAbsWithEnv topo env

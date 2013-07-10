@@ -8,17 +8,15 @@ module Modules.Analysis where
 ----------------------------------
 -- * Example Specific Imports
 import qualified Modules.System as System
-import Modules.Signals as Signals
+import qualified Modules.Signals as Signals
 
 import qualified EFA.Example.Absolute as EqAbs
-
 import qualified EFA.Example.Index as XIdx
 
-import EFA.Example.Utility (Ignore, (.=), checkDetermined)
+import EFA.Example.Utility (Ignore, (.=))
 
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Variable as Var
-import qualified EFA.Equation.Result as R
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Stack as Stack
 import qualified EFA.Equation.Environment as Env
@@ -32,7 +30,8 @@ import qualified EFA.Signal.SequenceData as SD
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Vector as Vec
 import qualified EFA.Signal.Signal as Sig
-import qualified EFA.Graph.Topology.Node as TDNode
+import qualified EFA.Signal.Base as B
+import qualified EFA.Signal.Data as D
 
 import EFA.Signal.Record (SignalRecord, FlowRecord,
                           Record(Record), PowerRecord,
@@ -46,22 +45,15 @@ import EFA.Signal.Sequence (-- genSequenceSignal,
                            )
 
 --import qualified EFA.Equation.Arithmetic as Arith
---import qualified EFA.Signal.Vector as Vec
-import qualified EFA.Signal.Base as B
-import qualified EFA.Signal.Data as D
 
 --import qualified EFA.Signal.Signal as Sig
 import EFA.Signal.Signal (TC(..), Scalar)
 import EFA.Signal.Data (Data(..), Nil)
 import EFA.Signal.Typ (Typ, F, T, A, Tt)
 
---import qualified EFA.Equation.Stack as Stack
---import EFA.Equation.Stack (Stack)
---import qualified EFA.Report.Report as Rep
---import EFA.Signal.Typ
-
 import EFA.Report.FormatValue (FormatValue, FormatSignalIndex)
 
+import qualified EFA.Graph.Topology.Node as TDNode
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Flow as Flow
@@ -218,12 +210,12 @@ external2 ::
           v a a) ->
    Env.Complete
       node
-      (EqRecord.Absolute (Result (Data Nil a)))
-      (EqRecord.Absolute (Result (Data (v D.:> Nil) a)))
+      (Result (Data Nil a))
+      (Result (Data (v D.:> Nil) a))
 
 external2 sequenceFlowTopology sequFlowRecord =
-  EqGen.solveFromMeasurement
-    sequenceFlowTopology $
+  Env.completeFMap EqRecord.unAbsolute EqRecord.unAbsolute $
+  EqGen.solveFromMeasurement sequenceFlowTopology $
     makeGivenFromExternal2 sequFlowRecord -- $ Record.diffTime sequFlowRecord
 
 -- makeGivenFromExternal2 ::
@@ -256,15 +248,14 @@ makeGivenForPrediction ::
    Env.Complete System.Node a v ->
    EqAbs.EquationSystem System.Node s a v
 
-makeGivenForPrediction env =
+makeGivenForPrediction (Env.Complete _scal sig) =
     (XIdx.storage Idx.initial System.Battery .== initStorage)
     <> (XIdx.storage Idx.initial System.VehicleInertia .== Arith.zero)
---    <> (EqAbs.fromMap $ Env.etaMap $ Env.scalar env) -- hier müssen rote-Kante Gleichungen erzeugt werden
-    <> (EqAbs.fromMap $ Env.etaMap $ Env.signal env)
-    <> (EqAbs.fromMap $ Env.dtimeMap $ Env.signal env)
+--    <> (EqAbs.fromMap $ Env.etaMap scal) -- hier müssen rote-Kante Gleichungen erzeugt werden
+    <> (EqAbs.fromMap $ Env.etaMap sig)
+    <> (EqAbs.fromMap $ Env.dtimeMap sig)
     <> (EqAbs.fromMap $ Map.mapWithKey h $
-        Map.filterWithKey (const . filterCriterion) $
-        Env.energyMap $ Env.signal env)
+        Map.filterWithKey (const . filterCriterion) $ Env.energyMap sig)
     where h (Idx.InSection _ (Idx.Energy
                (Idx.StructureEdge System.Resistance System.Chassis))) x =
                x ~* Arith.fromRational 1.1
@@ -306,8 +297,6 @@ type
          (Stack (Var.Any System.Node) Double)
          (Stack (Var.Any System.Node) Double)
 
-type DeltaResult = EqRecord.Delta (R.Result Double)
-
 
 infix 0 .==
 
@@ -324,31 +313,27 @@ deltaPair ::
 deltaPair idx before delt =
    idx .== Stack.deltaPair (Var.Signal $ Var.index idx) before delt
 
+type DeltaDouble = EqRecord.Delta Double
+
 stackFromDeltaMap ::
    (Ord (idx System.Node), Env.AccessSignalMap idx, FormatSignalIndex idx) =>
-   Map (Idx.InSection idx System.Node) DeltaResult ->
+   Map (Idx.InSection idx System.Node) DeltaDouble ->
    EquationSystemNumeric s
 stackFromDeltaMap =
    fold .
-   Map.mapWithKey
-      (\i rec ->
-         deltaPair i
-            (checkDetermined "before" $ EqRecord.before rec)
-            (checkDetermined "delta"  $ EqRecord.delta rec))
-
+   Map.mapWithKey (\i d -> deltaPair i (EqRecord.before d) (EqRecord.delta d))
 
 difference ::
    Flow.RangeGraph System.Node ->
-   Env.Complete System.Node DeltaResult DeltaResult ->
+   Env.Complete System.Node DeltaDouble DeltaDouble ->
    Env.Complete System.Node
       (EqRecord.Absolute (Result (Stack (Var.Any System.Node) Double)))
       (EqRecord.Absolute (Result (Stack (Var.Any System.Node) Double)))
 difference sequenceFlowTopology env =
   EqGen.solve sequenceFlowTopology (makeGivenForDifferentialAnalysis env)
 
-
 makeGivenForDifferentialAnalysis ::
-  Env.Complete System.Node DeltaResult DeltaResult ->
+  Env.Complete System.Node DeltaDouble DeltaDouble ->
   EquationSystemNumeric s
 makeGivenForDifferentialAnalysis (Env.Complete _ sig) =
   (XIdx.storage Idx.initial System.Battery .== initStorage) <>

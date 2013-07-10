@@ -552,7 +552,7 @@ sequFlowGraphAbsWithEnv topo = sequFlowGraphWithEnv topo . envAbs
 sequFlowGraphDeltaWithEnv ::
    (FormatValue a, FormatValue v, Node.C node) =>
    Flow.RangeGraph node ->
-   Env.Complete node (Record.Delta a) (Record.Delta v) -> DotGraph T.Text
+   Env.Complete node a v -> DotGraph T.Text
 sequFlowGraphDeltaWithEnv topo = sequFlowGraphWithEnv topo . envDelta
 
 
@@ -579,8 +579,12 @@ envAbs = envGen Idx.Absolute . Env.completeFMap Record.Absolute Record.Absolute
 
 envDelta ::
    (FormatValue a, FormatValue v, Format output, Node.C node) =>
-   Env.Complete node (Record.Delta a) (Record.Delta v) -> Env node output
-envDelta = envGen Idx.Delta
+   Env.Complete node a v -> Env node output
+envDelta =
+   envGen Idx.Delta .
+   Env.completeFMap
+      (\x -> Record.Delta {Record.delta = x})
+      (\x -> Record.Delta {Record.delta = x})
 
 
 

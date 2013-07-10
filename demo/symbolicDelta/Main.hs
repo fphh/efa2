@@ -7,6 +7,7 @@ import EFA.Example.Utility
 
 import qualified EFA.Symbolic.SumProduct as SumProduct
 
+import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Record as Record
 import EFA.Equation.Arithmetic (zero)
@@ -75,4 +76,6 @@ main = do
   let seqTopo = constructSeqTopo topoDreibein [1]
       env = EqGen.solve seqTopo given
 
-  Draw.xterm $ Draw.sequFlowGraphDeltaWithEnv seqTopo env
+  -- Draw.xterm $ Draw.sequFlowGraphAbsWithEnv seqTopo env
+  Draw.xterm $ Draw.sequFlowGraphDeltaWithEnv seqTopo $
+     Env.completeFMap Record.delta Record.delta env
