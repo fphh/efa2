@@ -28,7 +28,7 @@ module EFA.Equation.System (
   Record, Wrap(Wrap, unwrap),
 
   (=.=), (.=),
-  (=%=), (%=),
+  (=%=), (%=), (=%%=),
   (?=),
   variable,
   variableRecord,
@@ -419,7 +419,15 @@ infix 0 =.=, =%=
   EquationSystem $ lift . tell =<< liftM2 equalRecord xs ys
 
 
-infix 0 .=, %=, ?=
+infix 0 =%%=, .=, %=, ?=
+
+(=%%=) ::
+   (Verify.GlobalVar mode x (Record.ToIndex rec) (Var.Type idx) node,
+    Arith.Sum x, Record rec, Env.Element idx a v ~ x,
+    Env.AccessMap idx, Ord (idx node), FormatValue (idx node)) =>
+   idx node -> idx node ->
+   EquationSystem mode rec node s a v
+x =%%= y  =  variableRecord x =%= variableRecord y
 
 (.=) ::
    (Verify.GlobalVar mode x (Record.ToIndex rec) (Var.Type idx) node,

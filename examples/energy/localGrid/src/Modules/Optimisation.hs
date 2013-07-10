@@ -11,7 +11,7 @@ import qualified EFA.Example.Absolute as EqGen
 import qualified EFA.Example.Index as XIdx
 import qualified EFA.Example.Utility as EqUt
 import qualified EFA.Example.EtaSys as ES
-import EFA.Example.Absolute ( (.=), (%=), (=.=) )
+import EFA.Example.Absolute ( (.=), (=%%=), (=.=) )
 
 import qualified EFA.Equation.Environment as EqEnv
 import qualified EFA.Equation.Arithmetic as EqArith
@@ -66,7 +66,7 @@ commonGiven =
    (XIdx.dTime sec0 .= Data 1) :
    (XIdx.dTime sec1 .= Data 1) :
    (XIdx.storage TIdx.initial Water .= Data 0) :
-   (XIdx.energy sec0 Water Network  %= XIdx.energy sec1 Water Network) :
+   (XIdx.energy sec0 Water Network =%%= XIdx.energy sec1 Water Network) :
    []
 
 etaGiven ::

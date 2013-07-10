@@ -54,7 +54,6 @@ import qualified System.IO as IO
 --import qualified EFA.Utility.Stream as Stream
 
 -- import Data.Monoid (mconcat, (<>))
---import EFA.Example.Absolute ( (.=), (%=), (=.=) )
 --import EFA.Utility.Stream (Stream((:~)))
 
 --import qualified Data.List as L

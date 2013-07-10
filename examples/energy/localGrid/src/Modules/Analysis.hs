@@ -21,9 +21,7 @@ import EFA.Equation.Result (Result(..))
 import qualified EFA.Example.Index as XIdx
 
 import EFA.Example.Utility (Ignore, (.=))
-                            -- (%=),
                             -- checkDetermined)
--- import qualified EFA.Example.Absolute ( (.=), (%=), (=.=) )
 --import EFA.Utility.Stream (Stream((:~)))
 --import qualified EFA.Utility.Stream as Stream
 import Data.Monoid (--mconcat, 

@@ -143,7 +143,7 @@ infixr 6 =<>
 idx =<> eqsys = givenSymbol idx <> eqsys
 
 
-infix 0 .=, %=
+infix 0 .=, =%%=
 
 (.=) ::
   (Eq x, Arith.Sum x, x ~ Env.Element idx a v,
@@ -154,12 +154,12 @@ evar .= val  =  variable evar =.= EqGen.constant val
 
 
 
-
-(%=) ::
+(=%%=) ::
   (Eq x, Arith.Sum x, x ~ Env.Element idx a v,
   Env.AccessMap idx, Ord (idx node), FormatValue (idx node)) =>
   idx node -> idx node -> EquationSystem node s a v
-x %= y = variable x =.= variable y
+(=%%=) = (EqGen.=%%=)
+
 
 envFromFlowRecord ::
    (Ord node) =>
