@@ -38,8 +38,6 @@ import qualified System.IO as IO
 import System.Environment (getEnv)
 import System.FilePath ((</>))
 
-import qualified Data.List.HT as ListHT
-import qualified Data.List as L
 import qualified Data.Map as Map
 import Data.Tuple.HT (mapSnd)
 import Control.Monad (when)
@@ -51,26 +49,26 @@ plotTerm = DefaultTerm.cons
 examplePath :: FilePath
 examplePath = "examples/energy/localGrid"
 
-colours :: [Colors.X11Color]
-colours = [ Colors.White,	
-            Colors.Gray90,	
-            Colors.Gray80,	
-            Colors.Gray70 ]
-
 zeroNoiseTolerance :: Double
 zeroNoiseTolerance = 10^^(-2::Int)
 
-fileNamesX :: [FilePath]
+data
+  Dataset =
+    Dataset {
+      datasetPath  :: FilePath,
+      datasetName  :: Record.Name,
+      datasetColor :: Colors.X11Color
+    }
 
-fileNamesX = ["powerNetwork_res.plt",
-              "powerNetworkETA_res.plt"]
+dataset :: FilePath -> String -> Colors.X11Color -> Dataset
+dataset fn name = Dataset fn (Record.Name name)
 
-datasetsX ::  [Record.Name]
-datasetsX = map Record.Name ["Base",
-                             "ETA"]
+datasetA, datasetB :: Dataset
+datasetA = dataset "powerNetwork_res.plt" "Base" Colors.White
+datasetB = dataset "powerNetworkETA_res.plt" "ETA" Colors.Gray90
 
-deltasetsX :: [Record.DeltaName]
-deltasetsX = zipWith Record.deltaName datasetsX (tail datasetsX)
+deltasetName :: Record.DeltaName
+deltasetName = Record.deltaName (datasetName datasetA) (datasetName datasetB)
 
 sectionFilterTime ::  TC Scalar (Typ A T Tt) (Data Nil Double)
 sectionFilterTime = toScalar 0.1
@@ -100,8 +98,8 @@ etaList = [
   ("Transformer", Signals.etaTransformer)
  ]
 
-sectionMapping :: [SD.SequData a] -> [SD.SequData a]
-sectionMapping = id -- map (SD.reIndex [8,11,13,14,18,32,37::Int])
+sectionMapping :: SD.SequData a -> SD.SequData a
+sectionMapping = id -- SD.reIndex [8,11,13,14,18,32,37::Int])
 
 ignore :: [a] -> [a]
 ignore _ = []
@@ -110,67 +108,74 @@ ignore _ = []
 type Env = Env.Complete System.Node
 
 process ::
-   [Record.SignalRecord [] Double] ->
-   ([Record.SignalRecord [] Double],
-       [Env Double Double],
-       [Env (EqRecord.Delta Double) (EqRecord.Delta Double)],
-       [Env
-          (Result (Data Nil Double))
-          (Result (Data ([] :> Nil) Double))],
-       [Record.PowerRecord System.Node [] Double],
-       [Flow.RangeGraph System.Node])
+   Record.SignalRecord [] Double ->
+   (Record.SignalRecord [] Double,
+    Env Double Double,
+    Env (Result (Data Nil Double)) (Result (Data ([] :> Nil) Double)),
+    Record.PowerRecord System.Node [] Double,
+    Flow.RangeGraph System.Node)
 
-process rawSignalsX =
-  let preProcessedDataX =
-        map (Analysis.pre System.topology zeroNoiseTolerance sectionFilterTime sectionFilterEnergy) rawSignalsX
+process rawSignals =
+  let (_, sequenceFlowsFiltUnmapped, flowStatesUnmapped, powerSignals, signal) =
+        Analysis.pre System.topology
+          zeroNoiseTolerance sectionFilterTime sectionFilterEnergy
+          rawSignals
 
-      (_,sequenceFlowsFiltUnmappedX,flowStatesUnmappedX,powerSignalsX,signalsX) =
-        L.unzip5 preProcessedDataX
+      allSignals =
+        Record.combinePowerAndSignalWithFunction System.convertPowerId
+          powerSignals signal
 
-      allSignalsX = zipWith (Record.combinePowerAndSignalWithFunction System.convertPowerId) powerSignalsX signalsX
+      sequenceFlowsFilt = sectionMapping sequenceFlowsFiltUnmapped
 
-      sequenceFlowsFiltX = sectionMapping sequenceFlowsFiltUnmappedX
+      flowStates = sectionMapping flowStatesUnmapped
 
-      flowStatesX = sectionMapping flowStatesUnmappedX
+      flowTopos = Flow.genSequFlowTops System.topology flowStates
 
-      flowToposX = map (Flow.genSequFlowTops System.topology) flowStatesX
+      sequenceFlowTopology = makeSeqFlowTopology flowTopos
 
-      sequenceFlowTopologyX = map makeSeqFlowTopology flowToposX
+      sectionTopos =
+        mapSnd (lefilter (isStructureEdge .fst)) sequenceFlowTopology
 
-      sectionToposX =  map (mapSnd (lefilter (isStructureEdge .fst))) sequenceFlowTopologyX
+      externalEnv =
+        Env.completeFMap
+          (checkDetermined "external scalar")
+          (checkDetermined "external signal") $
+        Analysis.external  sequenceFlowTopology sequenceFlowsFilt
+      externalSignalEnv =
+        Analysis.external2 sequenceFlowTopology sequenceFlowsFilt
 
-      externalEnvX =
-         map (Env.completeFMap
-                (checkDetermined "external scalar")
-                (checkDetermined "external signal")) $
-         zipWith Analysis.external  sequenceFlowTopologyX sequenceFlowsFiltX
-      externalSignalEnvX =
-         zipWith Analysis.external2 sequenceFlowTopologyX sequenceFlowsFiltX
+  in  (allSignals, externalEnv, externalSignalEnv,
+       powerSignals, sectionTopos)
 
-      externalDeltaEnvX =
-        ListHT.mapAdjacent
-           (Env.intersectionWith EqRecord.deltaCons EqRecord.deltaCons)
-           externalEnvX
 
-  in  (allSignalsX, externalEnvX, externalDeltaEnvX, externalSignalEnvX,
-       powerSignalsX, sectionToposX)
-
+importDataset :: FilePath -> IO (Record.SignalRecord [] Double)
+importDataset fileName = do
+  path <- fmap (</> examplePath) $ getEnv "EFADATA"
+  modelicaPLTImport $ path </> fileName
 
 main :: IO ()
 main = do
 
   IO.hSetEncoding IO.stdout IO.utf8
+  rawSignalsA <- importDataset $ datasetPath datasetA
+  rawSignalsB <- importDataset $ datasetPath datasetB
 
-  path <- fmap (</> examplePath) $ getEnv "EFADATA"
-  rawSignalsX <- mapM modelicaPLTImport $ map (path </>) fileNamesX :: IO [Record.SignalRecord [] Double]
+  let (allSignalsA, externalEnvA, externalSignalEnvA,
+       powerSignalsA, sectionToposA) = process rawSignalsA
 
-  let (allSignalsX, externalEnvX, externalDeltaEnvX, externalSignalEnvX,
-       powerSignalsX, sectionToposX) = process rawSignalsX
+      (allSignalsB, externalEnvB, _externalSignalEnvB,
+       powerSignalsB, _sectionToposB) = process rawSignalsB
+
+      externalDeltaEnv =
+        Env.intersectionWith
+          EqRecord.deltaCons EqRecord.deltaCons
+          externalEnvA externalEnvB
+
 
 ---------------------------------------------------------------------------------------
 -- * State Analysis
   when False $ do
-    let Record.Record _ sigs = head rawSignalsX
+    let Record.Record _ sigs = rawSignalsA
     putStrLn $ Utility.myShowList $ Map.keys sigs
 
   let drawDelta (Record.DeltaName ti) topo env c =
@@ -198,45 +203,53 @@ main = do
 -- * Plot Time Signals
 
 --    ++ Plots.sigsWithSpeed allSignalsX (head plotList)
-    ++ ignore [PlotIO.record "Test" plotTerm show id (head rawSignalsX)]
+    ++ ignore [PlotIO.record "Test" plotTerm show id rawSignalsA]
 
     ++ ignore
           [mapM_
               (\(x,y) ->
                   PlotIO.recordList_extract ("Signals of Component " ++ x)
-                     plotTerm show id (zip datasetsX allSignalsX) y) plotList]
+                     plotTerm show id
+                     [(datasetName datasetA, allSignalsA),
+                      (datasetName datasetB, allSignalsB)]
+                     y)
+              plotList]
 
 ---------------------------------------------------------------------------------------
 -- * Plot Efficiency Curves and Distributions
 
     ++ ignore
-       [mapM_ (PlotIO.etaDistr1DimfromRecordList "Average Efficiency Curve -" 10000 5000
-               (zip datasetsX (map (Record.diffTime . Record.partIntegrate) powerSignalsX))) etaList]
+       [mapM_
+           (PlotIO.etaDistr1DimfromRecordList
+               "Average Efficiency Curve -" 10000 5000
+               (let g ds powerRec =
+                       (datasetName ds,
+                        Record.diffTime . Record.partIntegrate $ powerRec)
+                in  [g datasetA powerSignalsA,
+                     g datasetB powerSignalsB]))
+           etaList]
 
 ---------------------------------------------------------------------------------------
 -- * Draw Section flows
 
-    ++ [head $ L.zipWith4 drawAbs
-         datasetsX
-         sectionToposX
-         externalEnvX
-         colours]
+    ++ [drawAbs (datasetName datasetA)
+          sectionToposA
+          externalEnvA
+          (datasetColor datasetA)]
 
 ---------------------------------------------------------------------------------------
 -- * Draw Delta Section flows
 
     ++ ignore
-       (L.zipWith4 drawDelta
-         deltasetsX
-         sectionToposX
-         externalDeltaEnvX
-         (tail colours))
+       [drawDelta deltasetName
+          sectionToposA
+          externalDeltaEnv
+          Colors.Gray90]
 
 ---------------------------------------------------------------------------------------
 -- * Draw Section flows
 
-    ++ [head $ L.zipWith4 drawAbs
-         [Record.Name "Signal"]
-         sectionToposX
-         (map (Env.completeFMap id (fmap (fmap Arith.integrate))) externalSignalEnvX)
-         colours]
+    ++ [drawAbs (Record.Name "Signal")
+         sectionToposA
+         (Env.completeFMap id (fmap (fmap Arith.integrate)) externalSignalEnvA)
+         (datasetColor datasetA)]
