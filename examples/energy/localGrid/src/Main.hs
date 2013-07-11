@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeOperators #-}
 module Main where
 
 import qualified Modules.Signals as Signals
@@ -10,19 +11,20 @@ import EFA.Example.Utility (checkDetermined)
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Record as EqRecord
+import EFA.Equation.Result (Result)
 
 import qualified EFA.Signal.SequenceData as SD
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.PlotIO as PlotIO
 import EFA.Signal.Signal (TC(..), Scalar,toScalar)
-import EFA.Signal.Data (Data(..), Nil)
+import EFA.Signal.Data (Data(..), Nil, (:>))
 import EFA.Signal.Typ (Typ, F, T, A, Tt)
 import EFA.Signal.Sequence (makeSeqFlowTopology)
 
 import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Graph.Flow as Flow
-import EFA.Graph (lefilter)
 import EFA.Graph.Topology (isStructureEdge)
+import EFA.Graph (lefilter)
 
 import qualified EFA.Utility as Utility
 import EFA.Utility.Async (concurrentlyMany_)
@@ -105,14 +107,20 @@ ignore :: [a] -> [a]
 ignore _ = []
 
 
-main :: IO ()
-main = do
+type Env = Env.Complete System.Node
 
-  IO.hSetEncoding IO.stdout IO.utf8
+process ::
+   [Record.SignalRecord [] Double] ->
+   ([Record.SignalRecord [] Double],
+       [Env Double Double],
+       [Env (EqRecord.Delta Double) (EqRecord.Delta Double)],
+       [Env
+          (Result (Data Nil Double))
+          (Result (Data ([] :> Nil) Double))],
+       [Record.PowerRecord System.Node [] Double],
+       [Flow.RangeGraph System.Node])
 
-  path <- fmap (</> examplePath) $ getEnv "EFADATA"
-  rawSignalsX <- mapM modelicaPLTImport $ map (path </>) fileNamesX :: IO ([Record.SignalRecord [] Double])
-
+process rawSignalsX =
   let preProcessedDataX =
         map (Analysis.pre System.topology zeroNoiseTolerance sectionFilterTime sectionFilterEnergy) rawSignalsX
 
@@ -143,6 +151,21 @@ main = do
         ListHT.mapAdjacent
            (Env.intersectionWith EqRecord.deltaCons EqRecord.deltaCons)
            externalEnvX
+
+  in  (allSignalsX, externalEnvX, externalDeltaEnvX, externalSignalEnvX,
+       powerSignalsX, sectionToposX)
+
+
+main :: IO ()
+main = do
+
+  IO.hSetEncoding IO.stdout IO.utf8
+
+  path <- fmap (</> examplePath) $ getEnv "EFADATA"
+  rawSignalsX <- mapM modelicaPLTImport $ map (path </>) fileNamesX :: IO [Record.SignalRecord [] Double]
+
+  let (allSignalsX, externalEnvX, externalDeltaEnvX, externalSignalEnvX,
+       powerSignalsX, sectionToposX) = process rawSignalsX
 
 ---------------------------------------------------------------------------------------
 -- * State Analysis
