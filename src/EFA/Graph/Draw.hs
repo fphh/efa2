@@ -69,7 +69,6 @@ import qualified Data.Accessor.Basic as Accessor
 import qualified Data.Text.Lazy as T
 
 import qualified Data.Map as Map
-import qualified Data.List as L
 import qualified Data.List.HT as ListHT
 
 import Data.Map (Map)
@@ -260,7 +259,7 @@ dotFromStorageEdge eshow e =
 
 labelFromLines :: [Unicode] -> Attribute
 labelFromLines =
-   Label . StrLabel . T.pack . L.intercalate "\n" . map unUnicode
+   Label . StrLabel . T.pack . concatMap (++"\\l") . map unUnicode
 
 
 dotIdentFromSecNode :: (Node.C node) => Idx.SecNode node -> T.Text
@@ -637,8 +636,7 @@ dotFromCumEdge env (e, ()) =
       [displabel, Viz.Dir dir, structureEdgeColour]
   where (DirEdge x y, dir, _order) = orientDirEdge e
         displabel =
-           Label $ StrLabel $ T.pack $
-           L.intercalate "\n" $ map unUnicode $
+           labelFromLines $
               formatEner (Idx.StructureEdge x y) :
               formatEner (Idx.StructureEdge y x) :
               []
