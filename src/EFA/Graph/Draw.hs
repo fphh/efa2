@@ -12,6 +12,7 @@ module EFA.Graph.Draw (
   Options, optionsDefault,
   absoluteVariable, deltaVariable,
   showVariableIndex, hideVariableIndex,
+  showStorageEdge, hideStorageEdge,
 
   cumulatedFlow,
   topologyWithEdgeLabels,
@@ -73,6 +74,7 @@ import qualified Data.List.HT as ListHT
 
 import Data.Map (Map)
 import Data.Foldable (foldMap, fold)
+import Data.Maybe.HT (toMaybe)
 import Data.Tuple.HT (mapFst, mapFst3, mapPair)
 
 import Control.Monad (void)
@@ -112,7 +114,7 @@ dotFromSequFlowGraph ::
   Maybe (Idx.Section -> Unicode) ->
   (Maybe Idx.Boundary -> Topo.LDirNode node -> Unicode) ->
   (Idx.InSection Gr.EitherEdge node -> [Unicode]) ->
-  (Idx.ForNode Idx.StorageEdge node -> [Unicode]) ->
+  Maybe (Idx.ForNode Idx.StorageEdge node -> [Unicode]) ->
   DotGraph T.Text
 dotFromSequFlowGraph (rngs, g) mtshow nshow structureEdgeShow storageEdgeShow =
   DotGraph { strictGraph = False,
@@ -148,7 +150,9 @@ dotFromSequFlowGraph (rngs, g) mtshow nshow structureEdgeShow storageEdgeShow =
               Map.toAscList $
               TMap.intersectionPartialWith (,) (TMap.cons [] topoEs) topoNs,
             nodeStmts = [],
-            edgeStmts = map (dotFromStorageEdge storageEdgeShow) interEs
+            edgeStmts =
+              flip foldMap storageEdgeShow $ \eshow ->
+                map (dotFromStorageEdge eshow) interEs
           }
 
         assertJust (Just y) = Just y
@@ -280,9 +284,9 @@ dotIdentFromNode n = T.pack $ Node.dotId n
 
 sequFlowGraph ::
   (Node.C node) =>
-  Flow.RangeGraph node ->  DotGraph T.Text
+  Flow.RangeGraph node -> DotGraph T.Text
 sequFlowGraph topo =
-  dotFromSequFlowGraph topo Nothing nshow eshow eshow
+  dotFromSequFlowGraph topo Nothing nshow eshow (Just eshow)
   where nshow _before (Idx.TimeNode _ n, l) =
            Unicode $ unUnicode (Node.display n) ++ " - " ++ showType l
         eshow _ = []
@@ -436,18 +440,21 @@ formatNodeType = Format.literal . showType
 data Options output =
    Options {
       optRecordIndex :: output -> output,
-      optVariableIndex :: Bool
+      optVariableIndex :: Bool,
+      optStorageEdge :: Bool
    }
 
 optionsDefault :: Format output => Options output
 optionsDefault =
    Options {
       optRecordIndex = id,
-      optVariableIndex = False
+      optVariableIndex = False,
+      optStorageEdge = True
    }
 
 absoluteVariable, deltaVariable,
-   showVariableIndex, hideVariableIndex
+   showVariableIndex, hideVariableIndex,
+   showStorageEdge, hideStorageEdge
    :: Format output => Options output -> Options output
 absoluteVariable opts =
    opts { optRecordIndex = Format.record Idx.Absolute }
@@ -455,11 +462,14 @@ absoluteVariable opts =
 deltaVariable opts =
    opts { optRecordIndex = Format.record Idx.Delta }
 
-showVariableIndex opts =
-   opts { optVariableIndex = True }
+showVariableIndex opts = opts { optVariableIndex = True }
+hideVariableIndex opts = opts { optVariableIndex = False }
 
-hideVariableIndex opts =
-   opts { optVariableIndex = False }
+{-
+If storage edges are shown then the subgraphs are not aligned vertically.
+-}
+showStorageEdge opts = opts { optStorageEdge = True }
+hideStorageEdge opts = opts { optStorageEdge = False }
 
 
 formatNodeStorage ::
@@ -542,7 +552,9 @@ sequFlowGraphWithEnv ::
   Env.Complete node a v -> DotGraph T.Text
 sequFlowGraphWithEnv opts g
     (Env.Complete (Env.Scalar me st se sx sis sos) (Env.Signal e _p n dt x _s)) =
-  dotFromSequFlowGraph g (Just formatTime) formatNode structEShow storeEShow
+  dotFromSequFlowGraph g
+    (Just formatTime) formatNode structEShow
+    (toMaybe (optStorageEdge opts) storeEShow)
   where formatEnergy =
            lookupFormatAssign opts e $ Idx.liftInSection Idx.Energy
         formatX =
