@@ -3,10 +3,16 @@ module EFA.Graph.Draw (
   eps, plain, svg,
   fig, dot,
   title, bgcolour,
+
   sequFlowGraph,
   sequFlowGraphWithEnv,
   sequFlowGraphAbsWithEnv,
   sequFlowGraphDeltaWithEnv,
+
+  Options, optionsDefault,
+  absoluteVariable, deltaVariable,
+  showVariableIndex, hideVariableIndex,
+
   cumulatedFlow,
   topologyWithEdgeLabels,
   topology,
@@ -429,26 +435,31 @@ formatNodeType = Format.literal . showType
 
 data Options output =
    Options {
-      optRecordIndex :: output -> output
+      optRecordIndex :: output -> output,
+      optVariableIndex :: Bool
    }
 
 optionsDefault :: Format output => Options output
 optionsDefault =
    Options {
-      optRecordIndex = id
+      optRecordIndex = id,
+      optVariableIndex = False
    }
 
-optionsAbsoluteVariable, optionsDeltaVariable
+absoluteVariable, deltaVariable,
+   showVariableIndex, hideVariableIndex
    :: Format output => Options output -> Options output
-optionsAbsoluteVariable opts =
-   opts {
-      optRecordIndex = Format.record Idx.Absolute
-   }
+absoluteVariable opts =
+   opts { optRecordIndex = Format.record Idx.Absolute }
 
-optionsDeltaVariable opts =
-   opts {
-      optRecordIndex = Format.record Idx.Delta
-   }
+deltaVariable opts =
+   opts { optRecordIndex = Format.record Idx.Delta }
+
+showVariableIndex opts =
+   opts { optVariableIndex = True }
+
+hideVariableIndex opts =
+   opts { optVariableIndex = False }
 
 
 formatNodeStorage ::
@@ -519,7 +530,10 @@ lookupFormatAssign opts mp makeIdx x =
    case makeIdx x of
       idx ->
          Format.assign
-            (optRecordIndex opts $ Format.edgeIdent $ Format.edgeVar idx)
+            (optRecordIndex opts $
+             if optVariableIndex opts
+               then Var.formatIndex idx
+               else Format.edgeIdent $ Format.edgeVar idx)
             (lookupFormat opts mp idx)
 
 sequFlowGraphWithEnv ::
@@ -572,14 +586,14 @@ sequFlowGraphAbsWithEnv ::
    Env.Complete node a v ->
    DotGraph T.Text
 sequFlowGraphAbsWithEnv =
-   sequFlowGraphWithEnv $ optionsAbsoluteVariable optionsDefault
+   sequFlowGraphWithEnv $ absoluteVariable optionsDefault
 
 sequFlowGraphDeltaWithEnv ::
    (FormatValue a, FormatValue v, Node.C node) =>
    Flow.RangeGraph node ->
    Env.Complete node a v -> DotGraph T.Text
 sequFlowGraphDeltaWithEnv =
-   sequFlowGraphWithEnv $ optionsDeltaVariable optionsDefault
+   sequFlowGraphWithEnv $ deltaVariable optionsDefault
 
 
 cumulatedFlow ::
