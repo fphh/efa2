@@ -828,11 +828,11 @@ fromStorageSequences =
    let f xs =
           let charge old now (Idx.TimeNode aug n, dir) =
                  case (aug, dir) of
-                    (Idx.Init, Just TD.In) ->
-                       now =%= withNode stoutsum Idx.Init n
-                    (Idx.NoInit Idx.Exit, Just TD.Out) ->
+                    (Idx.Exit, Just TD.Out) ->
                        old =%= withNode stinsum Idx.Exit n
-                    (Idx.NoInit (Idx.NoExit sec), _) ->
+                    (Idx.NoExit Idx.Init, Just TD.In) ->
+                       now =%= withNode stoutsum Idx.Init n
+                    (Idx.NoExit (Idx.NoInit sec), _) ->
                        now =%=
                        case dir of
                           Nothing -> old

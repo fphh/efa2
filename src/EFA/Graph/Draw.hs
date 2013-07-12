@@ -202,15 +202,12 @@ dotFromSectionGraph rngs mtshow nshow structureEdgeShow
   before (current, (es, ns)) =
     DotSG True (Just $ Str $ T.pack $ dotIdentFromAugSection current) $
     DotStmts
-      [GraphAttrs [Label (StrLabel (T.pack str))]]
+      [GraphAttrs [Label $ StrLabel $ T.pack $ str current]]
       []
       (map (dotFromSecNode (nshow before)) ns)
       (map (dotFromStructureEdge structureEdgeShow) es)
   where str =
-           case current of
-              Idx.Init -> "Init"
-              Idx.NoInit Idx.Exit -> "Exit"
-              Idx.NoInit (Idx.NoExit s) ->
+           Idx.switchAugmentedSection "Init" "Exit" $ \s ->
                  show s ++
                  (case Map.lookup s rngs of
                      Just (SignalIdx from, SignalIdx to) ->
@@ -363,9 +360,8 @@ dotIdentFromAugNode (Idx.TimeNode b n) =
    T.pack $ "s" ++ dotIdentFromAugSection b ++ "n" ++ Node.dotId n
 
 dotIdentFromAugSection :: Idx.AugmentedSection -> String
-dotIdentFromAugSection Idx.Init = "init"
-dotIdentFromAugSection (Idx.NoInit Idx.Exit) = "exit"
-dotIdentFromAugSection (Idx.NoInit (Idx.NoExit s)) = dotIdentFromSection s
+dotIdentFromAugSection =
+   Idx.switchAugmentedSection "init" "exit" dotIdentFromSection
 
 dotIdentFromBndNode :: (Node.C node) => Idx.BndNode node -> T.Text
 dotIdentFromBndNode (Idx.TimeNode b n) =
@@ -590,17 +586,17 @@ formatNodeStorage opts st sis sos mBeforeBnd (Idx.TimeNode aug nid, ty) =
       case ty of
          Storage dir ->
             case (aug, mBeforeBnd) of
-               (Idx.Init, Nothing) ->
-                  [lookupFormat opts sos $ XIdx.stOutSum XIdx.initSection nid]
-               (Idx.Init, Just _) ->
-                  error "initial section has no predecessor"
-               (Idx.NoInit Idx.Exit, Just _) ->
+               (Idx.Exit, Just _) ->
                   [lookupFormat opts sis $ XIdx.stInSum XIdx.exitSection nid]
-               (Idx.NoInit (Idx.NoExit sec), Just beforeBnd) ->
+               (Idx.NoExit Idx.Init, Nothing) ->
+                  [lookupFormat opts sos $ XIdx.stOutSum XIdx.initSection nid]
+               (Idx.NoExit Idx.Init, Just _) ->
+                  error "initial section has no predecessor"
+               (Idx.NoExit (Idx.NoInit sec), Just beforeBnd) ->
                   if optStorage opts
                     then formatStorageUpdate opts sis sos dir sec nid
                     else formatStorageEquation opts st sis sos dir beforeBnd sec nid
-               (Idx.NoInit _, Nothing) ->
+               (_, Nothing) ->
                   error "a true section must have a predecessor"
          _ -> []
 

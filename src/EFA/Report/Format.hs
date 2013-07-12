@@ -394,6 +394,5 @@ sectionOrExit (Idx.NoExit s) = section s
 sectionOrExit (Idx.Exit) = exit
 
 augmentedSection :: Format output => Idx.AugmentedSection -> output
-augmentedSection Idx.Init = initial
-augmentedSection (Idx.NoInit (Idx.NoExit s)) = section s
-augmentedSection (Idx.NoInit Idx.Exit) = exit
+augmentedSection =
+   Idx.switchAugmentedSection initial exit section

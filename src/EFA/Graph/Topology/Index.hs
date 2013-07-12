@@ -10,7 +10,7 @@ import Data.Eq.HT (equating)
 import Data.Word (Word)
 
 import qualified Prelude as P
-import Prelude hiding (flip)
+import Prelude hiding (init, flip)
 
 
 newtype Section = Section Word deriving (Show, Eq, Ord)
@@ -30,7 +30,7 @@ data Exit a = NoExit a | Exit deriving (Show, Eq, Ord)
 
 type InitOrSection = Init Section
 type SectionOrExit = Exit Section
-type AugmentedSection = Init SectionOrExit
+type AugmentedSection = Exit InitOrSection
 
 
 instance Functor Init where
@@ -78,27 +78,33 @@ instance MaybeExit sec => MaybeExit (Init sec) where
    exitSection = NoInit exitSection
 
 
+switchAugmentedSection ::
+   a -> a -> (Section -> a) ->
+   AugmentedSection -> a
+switchAugmentedSection init exit secf aug =
+   case aug of
+      Exit -> exit
+      NoExit Init -> init
+      NoExit (NoInit s) -> secf s
+
 fromAugmentedSection ::
    (MaybeSection sec, MaybeInit sec, MaybeExit sec) =>
    AugmentedSection -> sec
-fromAugmentedSection a =
-   case a of
-      Init -> initSection
-      NoInit Exit -> exitSection
-      NoInit (NoExit s) -> fromSection s
+fromAugmentedSection =
+   switchAugmentedSection initSection exitSection fromSection
 
 
 class ToAugmentedSection sec where
    augmentSection :: sec -> AugmentedSection
 
 instance ToAugmentedSection Section where
-   augmentSection = NoInit . NoExit
+   augmentSection = NoExit . NoInit
 
-instance ToSectionOrExit sec => ToAugmentedSection (Init sec) where
-   augmentSection = fmap sectionOrExit
+instance ToSection sec => ToAugmentedSection (Init sec) where
+   augmentSection = NoExit . fmap toSection
 
-instance ToSection sec => ToAugmentedSection (Exit sec) where
-   augmentSection = NoInit . fmap toSection
+instance ToInitOrSection sec => ToAugmentedSection (Exit sec) where
+   augmentSection = fmap initOrSection
 
 
 class ToInitOrSection sec where
@@ -129,32 +135,25 @@ instance ToSection Section where
 
 
 allowInit :: SectionOrExit -> AugmentedSection
-allowInit = NoInit
+allowInit = fmap NoInit
 
 allowExit :: InitOrSection -> AugmentedSection
-allowExit = fmap NoExit
+allowExit = NoExit
 
 maybeInit :: AugmentedSection -> Maybe SectionOrExit
-maybeInit aug =
-   case aug of
-      Init -> Nothing
-      NoInit sec -> Just sec
+maybeInit =
+   switchAugmentedSection Nothing (Just Exit) (Just . NoExit)
 
 maybeExit :: AugmentedSection -> Maybe InitOrSection
 maybeExit aug =
    case aug of
-      Init -> Just Init
-      NoInit Exit -> Nothing
-      NoInit (NoExit sec) -> Just $ NoInit sec
+      Exit -> Nothing
+      NoExit sec -> Just sec
 
 
 boundaryFromAugSection :: AugmentedSection -> Maybe Boundary
-boundaryFromAugSection x =
-   fmap Following $
-   case x of
-      Init -> Just Init
-      NoInit Exit -> Nothing
-      NoInit (NoExit s) -> Just $ NoInit s
+boundaryFromAugSection =
+   fmap Following . maybeExit
 
 augSectionFromBoundary :: Boundary -> AugmentedSection
 augSectionFromBoundary (Following bnd) = allowExit bnd
