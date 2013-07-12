@@ -67,7 +67,7 @@ import qualified Data.List.HT as ListHT
 
 import Data.Map (Map)
 import Data.Foldable (foldMap, fold)
-import Data.Tuple.HT (mapFst, mapFst3)
+import Data.Tuple.HT (mapFst, mapFst3, mapPair)
 
 import Control.Monad (void)
 import Control.Category ((.))
@@ -497,14 +497,16 @@ lookupFormat ::
    Options output -> Map (idx node) a -> idx node -> output
 lookupFormat _opts mp k =
    maybe
-      (error $ "Draw.lookupFormat - could not find index " ++
-         (Format.unUnicode $ Var.formatIndex k)
+      (error $ "Draw.lookupFormat - could not find index "
+         ++ (Format.unUnicode $ Var.formatIndex k)
          ++ " in "
-         ++ (show $ Map.map (Format.showRaw . showValue) $ Map.mapKeys showIdx mp))
+         ++ (show $
+             map (mapPair (Format.unUnicode . Var.formatIndex,
+                           Format.showRaw . showValue)) $
+             Map.toList mp))
       showValue $
       Map.lookup k mp
-   where showIdx = Format.unUnicode . Var.formatIndex
-         showValue = formatValue
+   where showValue = formatValue
 
 lookupFormatAssign ::
    (Ord (idx node), Format.EdgeIdx idx, Var.FormatIndex idx,
