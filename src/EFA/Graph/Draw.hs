@@ -426,14 +426,39 @@ formatNodeType ::
    NodeType store -> output
 formatNodeType = Format.literal . showType
 
+
+data Options output =
+   Options {
+      optRecordIndex :: output -> output
+   }
+
+optionsDefault :: Format output => Options output
+optionsDefault =
+   Options {
+      optRecordIndex = id
+   }
+
+optionsAbsoluteVariable, optionsDeltaVariable
+   :: Format output => Options output -> Options output
+optionsAbsoluteVariable opts =
+   opts {
+      optRecordIndex = Format.record Idx.Absolute
+   }
+
+optionsDeltaVariable opts =
+   opts {
+      optRecordIndex = Format.record Idx.Delta
+   }
+
+
 formatNodeStorage ::
-   (Format.Record recIdx, FormatValue a, Format output, Node.C node) =>
-   recIdx ->
+   (FormatValue a, Format output, Node.C node) =>
+   Options output ->
    Env.StorageMap node a ->
    Env.StInSumMap node a ->
    Env.StOutSumMap node a ->
    Maybe Idx.Boundary -> Topo.LDirNode node -> output
-formatNodeStorage rec st sis sos mBeforeBnd (Idx.TimeNode aug nid, ty) =
+formatNodeStorage opts st sis sos mBeforeBnd (Idx.TimeNode aug nid, ty) =
    Format.lines $
    Node.display nid :
    Format.words [formatNodeType ty] :
@@ -441,23 +466,23 @@ formatNodeStorage rec st sis sos mBeforeBnd (Idx.TimeNode aug nid, ty) =
          Storage dir ->
             case (aug, mBeforeBnd) of
                (Idx.Init, Nothing) ->
-                  [lookupFormat rec sos $ XIdx.stOutSum XIdx.initSection nid]
+                  [lookupFormat opts sos $ XIdx.stOutSum XIdx.initSection nid]
                (Idx.Init, Just _) ->
                   error "initial section has no predecessor"
                (Idx.NoInit Idx.Exit, Just _) ->
-                  [lookupFormat rec sis $ XIdx.stInSum XIdx.exitSection nid]
+                  [lookupFormat opts sis $ XIdx.stInSum XIdx.exitSection nid]
                (Idx.NoInit (Idx.NoExit sec), Just beforeBnd) ->
-                  case (lookupFormat rec st $ XIdx.storage beforeBnd nid,
-                        lookupFormat rec st $ XIdx.storage (Idx.afterSection sec) nid) of
+                  case (lookupFormat opts st $ XIdx.storage beforeBnd nid,
+                        lookupFormat opts st $ XIdx.storage (Idx.afterSection sec) nid) of
                      (before, after) ->
                         before :
                         (case dir of
                            Just Topo.In ->
                               [Format.plus Format.empty $
-                               lookupFormat rec sos $ XIdx.stOutSum sec nid]
+                               lookupFormat opts sos $ XIdx.stOutSum sec nid]
                            Just Topo.Out ->
                               [Format.minus Format.empty $
-                               lookupFormat rec sis $ XIdx.stInSum sec nid]
+                               lookupFormat opts sis $ XIdx.stInSum sec nid]
                            Nothing -> []) ++
                         Format.assign Format.empty after :
                         []
@@ -467,10 +492,10 @@ formatNodeStorage rec st sis sos mBeforeBnd (Idx.TimeNode aug nid, ty) =
 
 
 lookupFormat ::
-   (Ord (idx node), Var.FormatIndex idx, Format.Record recIdx,
+   (Ord (idx node), Var.FormatIndex idx,
     FormatValue a, Format output, Node.C node) =>
-   recIdx -> Map (idx node) a -> idx node -> output
-lookupFormat _recIdx mp k =
+   Options output -> Map (idx node) a -> idx node -> output
+lookupFormat _opts mp k =
    maybe
       (error $ "Draw.lookupFormat - could not find index " ++
          (Format.unUnicode $ Var.formatIndex k)
@@ -482,43 +507,42 @@ lookupFormat _recIdx mp k =
          showValue = formatValue
 
 lookupFormatAssign ::
-   (Ord (idx node),
-    Format.EdgeIdx idx, Var.FormatIndex idx, Format.Record recIdx,
+   (Ord (idx node), Format.EdgeIdx idx, Var.FormatIndex idx,
     FormatValue a, Format output, Node.C node) =>
-   recIdx ->
+   Options output ->
    Map (idx node) a ->
    (edge node -> idx node) ->
    (edge node -> output)
-lookupFormatAssign rec mp makeIdx x =
+lookupFormatAssign opts mp makeIdx x =
    case makeIdx x of
       idx ->
          Format.assign
-            (Format.record rec $ Format.edgeIdent $ Format.edgeVar idx)
-            (lookupFormat rec mp idx)
+            (optRecordIndex opts $ Format.edgeIdent $ Format.edgeVar idx)
+            (lookupFormat opts mp idx)
 
 sequFlowGraphWithEnv ::
-  (Format.Record recIdx, FormatValue a, FormatValue v, Node.C node) =>
-  recIdx -> Flow.RangeGraph node ->
+  (FormatValue a, FormatValue v, Node.C node) =>
+  Options Unicode -> Flow.RangeGraph node ->
   Env.Complete node a v -> DotGraph T.Text
-sequFlowGraphWithEnv recIdx g
+sequFlowGraphWithEnv opts g
     (Env.Complete (Env.Scalar me st se sx sis sos) (Env.Signal e _p n dt x _s)) =
   dotFromSequFlowGraph g (Just formatTime) formatNode structEShow storeEShow
   where formatEnergy =
-           lookupFormatAssign recIdx e $ Idx.liftInSection Idx.Energy
+           lookupFormatAssign opts e $ Idx.liftInSection Idx.Energy
         formatX =
-           lookupFormatAssign recIdx x $ Idx.liftInSection Idx.X
+           lookupFormatAssign opts x $ Idx.liftInSection Idx.X
         formatEta =
-           lookupFormatAssign recIdx n $ Idx.liftInSection Idx.Eta
+           lookupFormatAssign opts n $ Idx.liftInSection Idx.Eta
         formatMaxEnergy =
-           lookupFormatAssign recIdx me $ Idx.liftForNode Idx.MaxEnergy
+           lookupFormatAssign opts me $ Idx.liftForNode Idx.MaxEnergy
         formatStEnergy =
-           lookupFormatAssign recIdx se $ Idx.liftForNode Idx.StEnergy
+           lookupFormatAssign opts se $ Idx.liftForNode Idx.StEnergy
         formatStX =
-           lookupFormatAssign recIdx sx $ Idx.liftForNode Idx.StX
+           lookupFormatAssign opts sx $ Idx.liftForNode Idx.StX
         formatTime =
-           lookupFormat recIdx dt . flip Idx.InSection Idx.DTime
+           lookupFormat opts dt . flip Idx.InSection Idx.DTime
         formatNode =
-           formatNodeStorage recIdx st sis sos
+           formatNodeStorage opts st sis sos
         structEShow (Idx.InSection sec ee) =
            case ee of
               Gr.EUnDirEdge _ -> []
@@ -546,14 +570,14 @@ sequFlowGraphAbsWithEnv ::
    Env.Complete node a v ->
    DotGraph T.Text
 sequFlowGraphAbsWithEnv =
-   sequFlowGraphWithEnv Idx.Absolute
+   sequFlowGraphWithEnv $ optionsAbsoluteVariable optionsDefault
 
 sequFlowGraphDeltaWithEnv ::
    (FormatValue a, FormatValue v, Node.C node) =>
    Flow.RangeGraph node ->
    Env.Complete node a v -> DotGraph T.Text
 sequFlowGraphDeltaWithEnv =
-   sequFlowGraphWithEnv Idx.Delta
+   sequFlowGraphWithEnv $ optionsDeltaVariable optionsDefault
 
 
 cumulatedFlow ::
