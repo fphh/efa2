@@ -126,5 +126,10 @@ package Grid
     connect(storage1.pin_n,ground1.p) annotation(Line(points = {{-27.9382,26.4321},{11.8196,26.4321},{11.8196,-18.8743},{12.0219,-18.8743}}));
     connect(storage1.pin_p,pin_p) annotation(Line(points = {{-28.7972,43.2351},{55.6765,43.2351},{55.6765,54.7222},{58.6111,54.7222}}));
   end StoragePlant;
+  model Controller
+    annotation(Icon(graphics = {Text(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,0}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-88.6554,1.68065},{29.4118,36.9748}}, textString = "Controller"),Rectangle(rotation = 0, lineColor = {0,0,255}, fillColor = {0,0,0}, pattern = LinePattern.Solid, fillPattern = FillPattern.None, lineThickness = 0.25, extent = {{-99.5798,91.1764},{82.353,-54.6219}})}));
+    Modelica.Blocks.Interfaces.RealOutput y1 annotation(Placement(visible = true, transformation(origin = {59.7222,52.5}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {59.7222,52.5}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+    Modelica.Blocks.Interfaces.RealOutput y2 annotation(Placement(visible = true, transformation(origin = {59.7222,2.5}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {59.7222,52.5}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  end Controller;
 end Grid;
 
