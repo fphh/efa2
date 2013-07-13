@@ -7,48 +7,42 @@ module Modules.Analysis where
 ----------------------------------
 -- * Example Specific Imports
 import qualified Modules.System as System
+import qualified Modules.Signals as Signals
 --import Modules.System (Node(..))
 
-import Modules.Signals as Signals
-
-import qualified EFA.Example.Absolute as EqAbs
---import qualified EFA.Graph.Topology.Index as TIdx
---import qualified EFA.Equation.Environment as EqEnv
---import qualified EFA.Equation.Record as EqRec
-import EFA.Equation.Result (Result(..))
---import EFA.Utility.Map (checkedLookup)
-
 import qualified EFA.Example.Index as XIdx
-
+import qualified EFA.Example.Absolute as EqAbs
 import EFA.Example.Utility (Ignore, (.=))
-                            -- (%=),
-                            -- checkDetermined)
--- import qualified EFA.Example.Absolute ( (.=), (%=), (=.=) )
---import EFA.Utility.Stream (Stream((:~)))
---import qualified EFA.Utility.Stream as Stream
-import Data.Monoid (--mconcat, 
-                    (<>))
+
+import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.Flow as Flow
+
+-- import qualified EFA.Utility.Stream as Stream
+-- import EFA.Utility.Stream (Stream((:~)))
+-- import EFA.Utility.Map (checkedLookup)
 
 import qualified EFA.Equation.System as EqGen
--- import qualified EFA.Equation.Variable as Var
--- import qualified EFA.Equation.Result as R
 import qualified EFA.Equation.Arithmetic as Arith
--- import qualified EFA.Equation.Stack as Stack
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Record as EqRecord
---import EFA.Equation.Result (Result(..))
+-- import qualified EFA.Equation.Stack as Stack
+import EFA.Equation.Result (Result(..))
 -- import EFA.Equation.Stack (Stack)
 
 import qualified EFA.Signal.SequenceData as SD
---import qualified EFA.Signal.Sequence as Seq
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Vector as Vec
 import qualified EFA.Signal.Signal as Sig
+import qualified EFA.Signal.Base as B
+import qualified EFA.Signal.Data as D
+import EFA.Signal.Signal (TC(..), Scalar)
+import EFA.Signal.Data (Data(..), Nil)
+import EFA.Signal.Typ (Typ, F, T, A, Tt)
 
 import EFA.Signal.Record (SignalRecord, FlowRecord,
                           Record(Record), PowerRecord,
                           SignalRecord, getTime, newTimeBase)
-
 
 import EFA.Signal.Sequence (-- genSequenceSignal,
                             addZeroCrossings,
@@ -56,34 +50,10 @@ import EFA.Signal.Sequence (-- genSequenceSignal,
                            -- sectionRecordsFromSequence
                            )
 
---import qualified EFA.Equation.Arithmetic as Arith
---import qualified EFA.Signal.Vector as Vec
-import qualified EFA.Signal.Base as B
-import qualified EFA.Signal.Data as D
-
---import qualified EFA.Signal.Signal as Sig
-import EFA.Signal.Signal (TC(..), Scalar)
-import EFA.Signal.Data (Data(..), Nil)
-import EFA.Signal.Typ (Typ, F, T, A, Tt)
-
---import qualified EFA.Equation.Stack as Stack
---import EFA.Equation.Stack (Stack)
---import qualified EFA.Report.Report as Rep
---import EFA.Signal.Typ
-
-import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Topology as TD
---import qualified EFA.Graph.Topology.Node as TDNode
-import qualified EFA.Graph.Flow as Flow
 import qualified Data.Map as Map
-
+import Data.Monoid ((<>))
 import Data.Foldable (fold)
-                      --foldMap)
 
-
---import qualified EFA.Equation.Environment as Env
---import EFA.Equation.Result (Result(..))
---import qualified EFA.Signal.Record as Record
 
 -------------------------------------------------------------------------------------------------
 -- ## Preprocessing of Signals
@@ -143,36 +113,28 @@ pre topology epsZero epsT epsE rawSignals =
 -------------------------------------------------------------------------------------------------
 -- ## Analyse External Energy Flow
 
-external :: (Eq d, Num d,
-             Arith.Product d,
-             Arith.Integrate d,
-             Vec.Storage v d,
-             Vec.Zipper v,
-             Vec.Walker v,
-             Vec.Singleton v,
-             B.BSum d,
-             Vec.FromList v, Arith.Scalar d ~ Double) =>
-            Flow.RangeGraph System.Node
-            -> SD.SequData (FlowRecord System.Node v d)
-            -> Env.Complete
-            System.Node
-            (EqRecord.Absolute (Result Double))
-            (EqRecord.Absolute (Result d))
+external ::
+   (Eq d, Arith.Constant d, Arith.Integrate d, Arith.Scalar d ~ Double, B.BSum d,
+    Vec.Storage v d, Vec.Zipper v, Vec.Walker v,
+    Vec.Singleton v, Vec.FromList v) =>
+   Flow.RangeGraph System.Node ->
+   SD.SequData (FlowRecord System.Node v d) ->
+   Env.Complete System.Node (Result Double) (Result d)
 external sequenceFlowTopology sequFlowRecord =
+  Env.completeFMap EqRecord.unAbsolute EqRecord.unAbsolute $
   EqGen.solveFromMeasurement
     sequenceFlowTopology $
     makeGivenFromExternal Idx.Absolute sequFlowRecord
 
-initStorage :: (Fractional a) => a
-initStorage = 0.7*3600*1000
+initStorage :: (Arith.Constant a) => a
+initStorage = Arith.fromRational $ 0.7*3600*1000
 
 makeGivenFromExternal :: (Vec.Zipper v,
                           Vec.Walker v,
                           Vec.Singleton v,
                           B.BSum d,
                           Eq d,
-                          Num d,
-                          Arith.Sum d,
+                          Arith.Constant d,
                           Vec.Storage v d,
                           Vec.FromList v,
                           EqGen.Record rec,
@@ -185,51 +147,40 @@ makeGivenFromExternal idx sf =
    (Idx.Record idx (XIdx.storage Idx.initial System.Water) .= initStorage)
    <> fold (SD.mapWithSection f sf)
    where f sec (Record t xs) =
-           (Idx.Record idx (Idx.InSection sec Idx.DTime) .= sum (Sig.toList $ Sig.delta t)) <>
+           (Idx.Record idx (Idx.InSection sec Idx.DTime) .=
+              Arith.integrate (Sig.toList $ Sig.delta t)) <>
            fold (Map.mapWithKey g xs)
            where g (Idx.PPos p) e =
-                    Idx.Record idx (Idx.InSection sec (Idx.Energy p)) .= sum (Sig.toList e)
+                    Idx.Record idx (Idx.InSection sec (Idx.Energy p)) .=
+                       Arith.integrate (Sig.toList e)
 
-external2 :: -- forall node (v :: * -> *) d.
-                            (Fractional d,
-                             Eq d,
-                             Eq (v d),
-                             Vec.Singleton v,
-                             Vec.Storage v d,
-                             Vec.Walker v,
-                             B.BSum d,
-                             Vec.Zipper v,
-                             Arith.Constant d) =>
-                            Flow.RangeGraph System.Node
-                            -> SD.SequData
-                                 (Record
-                                    Sig.Signal
-                                    Sig.FSignal
-                                    (Typ A T Tt)
-                                    (Typ A F Tt)
-                                    (Idx.PPos System.Node)
-                                    v
-                                    d
-                                    d)
-                            -> Env.Complete
-                                 System.Node
-                                 (EqRecord.Absolute (Result (Data Nil d)))
-                                 (EqRecord.Absolute (Result (Data (v D.:> Nil) d)))
+external2 ::
+   (Eq a, Eq (v a), Vec.Singleton v, Vec.Storage v a, Vec.Walker v,
+    Arith.Constant a, B.BSum a, Vec.Zipper v) =>
+   Flow.RangeGraph System.Node ->
+   SD.SequData
+      (Record Sig.Signal Sig.FSignal
+          (Typ A T Tt)
+          (Typ A F Tt)
+          (Idx.PPos System.Node)
+          v a a) ->
+   Env.Complete System.Node
+      (Result (Data Nil a))
+      (Result (Data (v D.:> Nil) a))
 external2 sequenceFlowTopology sequFlowRecord =
-  EqGen.solveFromMeasurement
-    sequenceFlowTopology $
+  Env.completeFMap EqRecord.unAbsolute EqRecord.unAbsolute $
+  EqGen.solveFromMeasurement sequenceFlowTopology $
     makeGivenFromExternal2 sequFlowRecord -- $ Record.diffTime sequFlowRecord
 
 -- makeGivenFromExternal2 env = EqGen.fromEnvSignal $ (fmap (fmap (D.foldl (+) 0) ) $ EqAbs.envFromFlowRecord env)
-makeGivenFromExternal2 :: -- forall System.Node s d (v :: * -> *) d1.
-                                         (Fractional d, Eq d, Eq (v d), Vec.Singleton v, Vec.Storage v d,
-                                          Vec.Walker v, B.BSum d, Vec.Zipper v, Arith.Sum d) =>
-                                         SD.SequData (FlowRecord System.Node v d)
-                                         -> EqGen.EquationSystem Ignore
-                                              EqRecord.Absolute System.Node s (Data Nil d) (Data (v D.:> Nil) d)
+makeGivenFromExternal2 ::
+   (Eq d, Eq (v d), Vec.Singleton v, Vec.Storage v d,
+    Vec.Walker v, B.BSum d, Vec.Zipper v, Arith.Constant d) =>
+   SD.SequData (FlowRecord System.Node v d) ->
+   EqAbs.EquationSystem System.Node s (Data Nil d) (Data (v D.:> Nil) d)
 makeGivenFromExternal2 sf =
       (Idx.absolute (XIdx.storage Idx.initial System.Water) .= Data initStorage) <>
-      (EqGen.fromEnvSignal $ EqAbs.envFromFlowRecord (fmap Record.diffTime sf))
+      (EqAbs.fromEnvSignal $ EqAbs.envFromFlowRecord (fmap Record.diffTime sf))
 
 ---------------------------------------------------------------------------------------------------
 -- ## Make Delta
@@ -241,8 +192,7 @@ delta :: (Vec.Zipper v1, Vec.Zipper v2,
           Vec.FromList v1,Vec.FromList v2,
           B.BSum d,
           Eq d,
-          Num d,
-          Arith.Product d,
+          Arith.Constant d,
           Arith.Integrate d,
           Arith.Scalar d ~ Double) =>
          Flow.RangeGraph System.Node

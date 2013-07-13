@@ -7,7 +7,6 @@ import EFA.Example.Absolute ((.=), (=.=))
 import qualified EFA.Example.Index as XIdx
 import qualified EFA.Example.Absolute as EqGen
 
-import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Arithmetic as Arith
 
@@ -151,10 +150,10 @@ solve x e =
                       (checkedLookup smap sto1)))
 -}
       Format.unUnicode (formatValue
-         (f <$> (Record.unAbsolute $ checkedLookup "solve" stemap esto)
-            <*> (Record.unAbsolute $ checkedLookup "solve" emap ein)
-            <*> (Record.unAbsolute $ checkedLookup "solve" emap eout0)
-            <*> (Record.unAbsolute $ checkedLookup "solve" emap eout1)))
+         (f <$> (checkedLookup "solve" stemap esto)
+            <*> (checkedLookup "solve" emap ein)
+            <*> (checkedLookup "solve" emap eout0)
+            <*> (checkedLookup "solve" emap eout1)))
 
 
 main :: IO ()

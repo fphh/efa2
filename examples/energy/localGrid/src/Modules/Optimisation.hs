@@ -8,14 +8,12 @@ import qualified Modules.System as System
 import Modules.System (Node(..))
 
 import qualified EFA.Example.Absolute as EqGen
--- import qualified EFA.Example.Absolute as EqAbs
 import qualified EFA.Example.Index as XIdx
 import qualified EFA.Example.Utility as EqUt
 import qualified EFA.Example.EtaSys as ES
-import EFA.Example.Absolute ( (.=), (%=), (=.=) )
+import EFA.Example.Absolute ( (.=), (=%%=), (=.=) )
 
 import qualified EFA.Equation.Environment as EqEnv
-import qualified EFA.Equation.Record as EqRec
 import qualified EFA.Equation.Arithmetic as EqArith
 import EFA.Equation.Result (Result(..))
 
@@ -34,9 +32,9 @@ import EFA.Signal.Data (Data(..), Nil, (:>))
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
 
-import qualified Data.Foldable as Fold
-import qualified Data.Map as M
+import qualified Data.Map as Map ; import Data.Map (Map)
 import qualified Data.Vector as V
+import qualified Data.Foldable as Fold
 import Data.Monoid (mconcat, (<>))
 
 import Control.Applicative (liftA2)
@@ -46,19 +44,19 @@ sec0, sec1 :: TIdx.Section
 sec0 :~ sec1 :~ _ = Stream.enumFrom $ TIdx.Section 0
 
 type EtaAssignMap =
-        M.Map (XIdx.Eta Node) (String, String, XIdx.Eta Node -> XIdx.Power Node)
+        Map (XIdx.Eta Node) (String, String, XIdx.Eta Node -> XIdx.Power Node)
 
 type SolveFunc a =
   (TIdx.Section -> EtaAssignMap) ->
-  M.Map String (a -> a) ->
+  Map String (a -> a) ->
   Data Nil a ->
   Data Nil a ->
   Data Nil a ->
   Data Nil a ->
   EqEnv.Complete
     Node
-    (EqRec.Absolute (Result (Data Nil a)))
-    (EqRec.Absolute (Result (Data Nil a)))
+    (Result (Data Nil a))
+    (Result (Data Nil a))
 
 commonGiven ::
   (EqArith.Sum a, Num a, Eq a) =>
@@ -68,22 +66,22 @@ commonGiven =
    (XIdx.dTime sec0 .= Data 1) :
    (XIdx.dTime sec1 .= Data 1) :
    (XIdx.storage TIdx.initial Water .= Data 0) :
-   (XIdx.energy sec0 Water Network  %= XIdx.energy sec1 Water Network) :
+   (XIdx.energy sec0 Water Network =%%= XIdx.energy sec1 Water Network) :
    []
 
 etaGiven ::
    (Fractional a, Ord a, Show a, EqArith.Sum a,
     Data.Apply c a ~ v, Eq v, Data.ZipWith c, Data.Storage c a) =>
    EtaAssignMap ->
-   M.Map String (a -> a) ->
+   Map String (a -> a) ->
    EqGen.EquationSystem Node s x (Data c a)
-etaGiven etaAssign etaFunc = Fold.fold $ M.mapWithKey f etaAssign
+etaGiven etaAssign etaFunc = Fold.fold $ Map.mapWithKey f etaAssign
   where f n (strP, strN, g) =
           EqGen.variable n =.= EqGen.liftF (Data.map ef) (EqGen.variable $ g n)
           where ef x = if x >= 0 then fpos x else fneg x
-                fpos = maybe (err strP) id (M.lookup strP etaFunc)
+                fpos = maybe (err strP) id (Map.lookup strP etaFunc)
                 fneg = maybe (err strN) (\h -> recip . h . negate)
-                                        (M.lookup strN etaFunc)
+                                        (Map.lookup strN etaFunc)
                 err str x = error ("not defined: " ++ show str ++ " for " ++ show x)
 
 {-
@@ -99,13 +97,13 @@ solveCharge ::
   (forall s. EqGen.EquationSystem Node s (Data Nil a) (Data Nil a)) ->
   SolveFunc a
 solveCharge eqs etaAssign etaFunc pRest pRestLocal pWater pGas =
-  EqGen.solve2 eqs $
-    givenCharging etaAssign etaFunc pRest pRestLocal pWater pGas
+  EqGen.solveSimple $
+    eqs <> givenCharging etaAssign etaFunc pRest pRestLocal pWater pGas
 
 givenCharging ::
   (Ord a, Fractional a, Show a, EqArith.Sum a) =>
   (TIdx.Section -> EtaAssignMap) ->
-  M.Map String (a -> a) ->
+  Map String (a -> a) ->
   Data Nil a ->
   Data Nil a ->
   Data Nil a ->
@@ -140,14 +138,14 @@ solveDischarge ::
   (forall s. EqGen.EquationSystem Node s (Data Nil a) (Data Nil a)) ->
   SolveFunc a
 solveDischarge eqs etaAssign etaFunc pRest pRestLocal pWater pGas =
-  EqGen.solve2 eqs $
-    givenDischarging etaAssign etaFunc pRest pRestLocal pWater pGas
+  EqGen.solveSimple $
+    eqs <> givenDischarging etaAssign etaFunc pRest pRestLocal pWater pGas
 
 
 givenDischarging ::
   (Eq a, Num a, Show a, EqArith.Sum a, Fractional a,Ord a) =>
   (TIdx.Section -> EtaAssignMap) ->
-  M.Map String (a -> a) ->
+  Map String (a -> a) ->
   Data Nil a ->
   Data Nil a ->
   Data Nil a ->
@@ -167,10 +165,10 @@ givenDischarging etaAssign etaFunc pRest pRestLocal pWater pGas =
    (XIdx.eta sec0 Network LocalNetwork .= Data 0.939) :
    (XIdx.eta sec0 Network Rest .= Data 1) :
    (XIdx.eta sec0 LocalNetwork LocalRest .= Data 1.0) :
-   
+
    (XIdx.x sec0 Network Water .= Data 0.054) :
    (XIdx.x sec0 Coal Network .= Data 1) :
-   (XIdx.x sec0 Network LocalNetwork .= Data 0.669) :   
+   (XIdx.x sec0 Network LocalNetwork .= Data 0.669) :
    (XIdx.x sec0 LocalNetwork Network .= Data 0.881) :
    []
 
@@ -183,7 +181,7 @@ givenSimulate ::
   SV.Walker v,
   SV.Storage v a) =>
   (TIdx.Section -> EtaAssignMap) ->
-  M.Map String (a -> a) ->
+  Map String (a -> a) ->
   SD.SequData (Record.PowerRecord Node v a) ->
   EqGen.EquationSystem Node s (Data Nil a) (Data (v :> Nil) a)
 
@@ -194,7 +192,7 @@ givenSimulate etaAssign etaFunc sf =
            (TIdx.absolute (XIdx.dTime sec) EqUt..=
              (Data  $ SV.fromList $ replicate (Sig.len t) 1))
            <> etaGiven (etaAssign sec) etaFunc
-           <> Fold.fold (M.mapWithKey g xs)
+           <> Fold.fold (Map.mapWithKey g xs)
            where
              g (TIdx.PPos (TIdx.StructureEdge p0 p1)) p =
                    (TIdx.absolute (XIdx.power sec p0 p1) EqUt..= Sig.unpack p)
@@ -204,14 +202,15 @@ givenSimulate etaAssign etaFunc sf =
 -- b == True -> Charge
 -- b == False -> Discharge
 
+type
+   EnvDouble =
+      EqEnv.Complete Node (Result Double) (Result Double)
+
 calcOptFunc ::
   Flow.RangeGraph Node ->
   Bool ->
   Double ->
-  (EqEnv.Complete
-    Node
-    (EqRec.Absolute (Result Double))
-    (EqRec.Absolute (Result Double))) -> Double
+  EnvDouble -> Double
 calcOptFunc topo b socDrive env =
   if all (>0) [eCoal0, eCoal1, eTrans0, eTrans1] then res else nan
   where nan = 0/0
@@ -232,33 +231,17 @@ calcOptFunc topo b socDrive env =
 
 maxEta ::
   Flow.RangeGraph Node ->
-  Sig.UTSignal2 V.Vector V.Vector 
-  (EqEnv.Complete  
-    Node
-    (EqRec.Absolute (Result Double))
-    (EqRec.Absolute (Result Double))) ->
-    (Double, 
-      Maybe (EqEnv.Complete          
-              Node
-              (EqRec.Absolute (Result Double))
-              (EqRec.Absolute (Result Double))))
-maxEta topo sigEnvs = maxOpt topo True 0 sigEnvs 
+  Sig.UTSignal2 V.Vector V.Vector EnvDouble ->
+  (Double, Maybe EnvDouble)
+maxEta topo sigEnvs = maxOpt topo True 0 sigEnvs
 
 maxOpt ::
   Flow.RangeGraph Node ->
   Bool ->
   Double ->
-  Sig.UTSignal2 V.Vector V.Vector
-    (EqEnv.Complete  
-      Node
-      (EqRec.Absolute (Result Double))
-      (EqRec.Absolute (Result Double))) ->
-    (Double, 
-      Maybe (EqEnv.Complete          
-              Node
-              (EqRec.Absolute (Result Double))
-              (EqRec.Absolute (Result Double))))
-maxOpt topo b socDrive sigEnvs = (etaMax, env) 
+  Sig.UTSignal2 V.Vector V.Vector EnvDouble ->
+  (Double, Maybe EnvDouble)
+maxOpt topo b socDrive sigEnvs = (etaMax, env)
   where etaSys = Sig.map (calcOptFunc topo b socDrive) sigEnvs
         etaMax = Sig.fromScalar $ Sig.maximum etaSys
         (xIdx, yIdx) = Sig.findIndex2 (== etaMax) etaSys

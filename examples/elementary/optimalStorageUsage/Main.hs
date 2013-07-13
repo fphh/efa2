@@ -28,7 +28,7 @@ import qualified EFA.Equation.Record as EqRec
 import qualified EFA.Equation.Environment as EqEnv
 import qualified EFA.Signal.PlotIO as PlotIO
 
-import EFA.Example.Absolute ( (.=), (%=), (=.=) )
+import EFA.Example.Absolute ( (.=), (=%%=), (=.=) )
 import EFA.Example.EtaSys (etaSys)
 import EFA.Equation.Result (Result(..))
 
@@ -117,7 +117,7 @@ commonEnv =
    (XIdx.dTime sec0 .= 1) :
    (XIdx.dTime sec1 .= 1) :
    (XIdx.storage TIdx.initial storage .= 0) :
-   (XIdx.power sec0 storage crossing %= XIdx.power sec1 storage crossing) :
+   (XIdx.power sec0 storage crossing =%%= XIdx.power sec1 storage crossing) :
    []
 
 givenSec0Mean ::
@@ -241,7 +241,7 @@ commonEnvHU _ =
 {-
   where f sec0 sec1 =
           XIdx.power sec0 storage crossing
-            %= XIdx.power sec1 storage crossing
+            =%%= XIdx.power sec1 storage crossing
 -}
 
 givenEnvHUSec ::

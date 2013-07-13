@@ -1,6 +1,3 @@
-{-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE FlexibleInstances #-}
-
 module EFA.Report.FormatValue where
 
 import qualified EFA.Graph.Topology.Index as Idx
@@ -19,7 +16,7 @@ class FormatValue a where
 instance FormatValue a => FormatValue [a] where
    formatValue = Format.list . map formatValue
 
-instance FormatValue a => FormatValue (a,a) where
+instance (FormatValue a, FormatValue b) => FormatValue (a,b) where
    formatValue (x,y) = Format.pair (formatValue x) (formatValue y)
 
 instance (Foldable f, FormatValue a) => FormatValue (NonEmpty.T f a) where

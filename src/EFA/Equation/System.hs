@@ -6,14 +6,16 @@ module EFA.Equation.System (
   EquationSystem, Expression, RecordExpression,
 
   fromGraph,
+  fromMapResult,
   fromEnvResult,
   fromEnvScalarResult,
   fromEnvSignalResult,
+  fromMap,
   fromEnv,
   fromEnvScalar,
   fromEnvSignal,
 
-  solve, solve2, solveFromMeasurement,
+  solve, solveFromMeasurement,
 
   solveSimple,
   solveTracked, solveSimpleTracked,
@@ -26,7 +28,7 @@ module EFA.Equation.System (
   Record, Wrap(Wrap, unwrap),
 
   (=.=), (.=),
-  (=%=), (%=),
+  (=%=), (%=), (=%%=),
   (?=),
   variable,
   variableRecord,
@@ -417,7 +419,15 @@ infix 0 =.=, =%=
   EquationSystem $ lift . tell =<< liftM2 equalRecord xs ys
 
 
-infix 0 .=, %=, ?=
+infix 0 =%%=, .=, %=, ?=
+
+(=%%=) ::
+   (Verify.GlobalVar mode x (Record.ToIndex rec) (Var.Type idx) node,
+    Arith.Sum x, Record rec, Env.Element idx a v ~ x,
+    Env.AccessMap idx, Ord (idx node), FormatValue (idx node)) =>
+   idx node -> idx node ->
+   EquationSystem mode rec node s a v
+x =%%= y  =  variableRecord x =%= variableRecord y
 
 (.=) ::
    (Verify.GlobalVar mode x (Record.ToIndex rec) (Var.Type idx) node,
@@ -818,11 +828,11 @@ fromStorageSequences =
    let f xs =
           let charge old now (Idx.TimeNode aug n, dir) =
                  case (aug, dir) of
-                    (Idx.Init, Just TD.In) ->
-                       now =%= withNode stoutsum Idx.Init n
-                    (Idx.NoInit Idx.Exit, Just TD.Out) ->
+                    (Idx.Exit, Just TD.Out) ->
                        old =%= withNode stinsum Idx.Exit n
-                    (Idx.NoInit (Idx.NoExit sec), _) ->
+                    (Idx.NoExit Idx.Init, Just TD.In) ->
+                       now =%= withNode stoutsum Idx.Init n
+                    (Idx.NoExit (Idx.NoInit sec), _) ->
                        now =%=
                        case dir of
                           Nothing -> old
@@ -849,9 +859,7 @@ getStorageSequences ::
   TD.DirSequFlowGraph node ->
   Map node (Map (Idx.AugNode node) (Maybe TD.StoreDir))
 getStorageSequences =
-  foldl
-     (Map.unionWith (Map.unionWith (error "duplicate boundary for node")))
-     Map.empty .
+  Map.unionsWith (Map.unionWith (error "duplicate boundary for node")) .
   map (\(bn@(Idx.TimeNode _ n), dir) -> Map.singleton n $ Map.singleton bn dir) .
   Map.toList . Map.mapMaybe TD.maybeStorage . Gr.nodeLabels
 
@@ -973,13 +981,6 @@ solveTracked ::
    Verify.Assigns output)
 solveTracked (_rngs, g) given =
   solveSimpleTracked (given <> fromGraph True (TD.dirFromSequFlowGraph g))
-
-solve2 ::
-  (Node.C node, Record rec) =>
-  (forall s. EquationSystem Verify.Ignore rec node s a v) ->
-  (forall s. EquationSystem Verify.Ignore rec node s a v) ->
-  Env.Complete node (rec (Result a)) (rec (Result v))
-solve2 eqs given = solveSimple (eqs <> given)
 
 
 --------------------------------------------------------------------

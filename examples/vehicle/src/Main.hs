@@ -4,69 +4,55 @@
 
 module Main where
 
----------------------------------------------------------------------------------------
--- * Import other Modules
+import qualified Modules.System as System
+import qualified Modules.Analysis as Analysis
+import qualified Modules.Signals as Signals
+-- import qualified Modules.Plots as Plots
 
--- import EFA.Example.Utility (edgeVar)
+import qualified EFA.Example.Index as XIdx
+-- import qualified EFA.Example.AssignMap as AssignMap
+import EFA.Example.Utility (checkDetermined)
 -- import EFA.Example.Absolute ((.=))
--- import qualified EFA.Equation.Sstem as EqGen
-import EFA.IO.PLTImport (modelicaPLTImport)
+
+import qualified EFA.Signal.Record as Record
+import qualified EFA.Signal.PlotIO as PlotIO
+import qualified EFA.Signal.SequenceData as SD
+-- import qualified EFA.Signal.Plot as Plot
 import EFA.Signal.Sequence (makeSeqFlowTopology)
+import EFA.Signal.Signal (TC(..), Scalar,toScalar)
+import EFA.Signal.Data (Data(..), Nil)
+import EFA.Signal.Typ (Typ, F, T, A, Tt)
+
+import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Draw as Draw
--- import qualified EFA.Report.Format as Format
--- import EFA.Report.FormatValue (formatValue)
+
+import qualified EFA.Equation.Environment as Env
+import qualified EFA.Equation.Record as EqRecord
+-- import qualified EFA.Equation.Stack as Stack
+
+import EFA.IO.PLTImport (modelicaPLTImport)
 import EFA.Graph.Topology(isStructureEdge)
 import EFA.Graph(lefilter)
 import EFA.Utility.Async (concurrentlyMany_)
 
-----------------------------------
--- * Example Specific Imports
 
-import qualified Modules.System as System
-import qualified Modules.Analysis as Analysis
-import qualified Modules.Plots as Plots
-import qualified EFA.Signal.PlotIO as PlotIO
-
-import qualified Modules.Signals as Signals
-
-import qualified EFA.Example.Index as XIdx
---import qualified EFA.Example.AssignMap as AssignMap
--- import qualified EFA.Signal.Plot as Plot
-import qualified EFA.Graph.Topology.Index as Idx
---import qualified EFA.Equation.Environment as Env
-
--- import qualified EFA.Equation.Record as EqRecord
---import qualified EFA.Equation.Result as Result
-
---import qualified EFA.Equation.Stack as Stack
---import qualified EFA.Equation.Variable as Var
---import qualified Data.Foldable as Fold
---import qualified Data.NonEmpty as NonEmpty
---import qualified EFA.Symbolic.SumProduct as SumProduct
-
-import qualified EFA.Signal.Record as Record
 --import qualified Graphics.Gnuplot.Terminal.X11 as X11
 import qualified Graphics.Gnuplot.Terminal.WXT as WXT
 
 --import qualified Graphics.Gnuplot.Terminal as Terminal
 --import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 
-import EFA.Signal.Signal (TC(..), Scalar,toScalar)
-import EFA.Signal.Data (Data(..), Nil)
-import EFA.Signal.Typ (Typ, F, T, A, Tt)
-import qualified EFA.Signal.SequenceData as SD
+import qualified Data.GraphViz.Attributes.Colors.X11 as Colors
 
 import qualified System.IO as IO
 import System.Environment (getEnv)
 import System.FilePath ((</>))
 
---import qualified Data.Map as Map
+-- import qualified Data.Map as Map
+import qualified Data.List.HT as ListHT
 import qualified Data.List as L
 import Data.Tuple.HT (mapSnd)
---import qualified EFA.Example.Index as XIdx
-
-import qualified Data.GraphViz.Attributes.Colors.X11 as Colors
 
 
 -- | O. Generelle Settings
@@ -251,11 +237,6 @@ sectionMapping = map (SD.reIndex [8,11,13,14,18,32,37::Int])
 
 --------------------------------------------------------------------
 
-zipWith3M_ ::
-  Monad m =>
-  (t -> t1 -> t2 -> m b) -> [t] -> [t1] -> [t2] -> m ()
-zipWith3M_ f x y z = mapM_ (\(x',y',z') -> f x' y' z') (zip3 x y z)
-
 main :: IO ()
 main = do
 
@@ -311,8 +292,13 @@ main = do
 ---------------------------------------------------------------------------------------
 -- *  Make Base Analysis on external Data
 
-  let externalEnvX = zipWith Analysis.external  sequenceFlowTopologyX sequenceFlowsFiltX
-  let externalSignalEnvX = zipWith Analysis.external2  sequenceFlowTopologyX sequenceFlowsFiltX
+  let externalEnvX =
+         map (Env.completeFMap
+                (checkDetermined "external scalar")
+                (checkDetermined "external signal")) $
+         zipWith Analysis.external  sequenceFlowTopologyX sequenceFlowsFiltX
+  let externalSignalEnvX =
+         zipWith Analysis.external2 sequenceFlowTopologyX sequenceFlowsFiltX
 
 
   ---------------------------------------------------------------------------------------
@@ -323,15 +309,18 @@ main = do
 --                      sequenceFlowTopologyX $ tail sequenceFlowsFiltX
 
   let externalDeltaEnvX =
-        L.zipWith3  Analysis.delta sequenceFlowTopologyX
-        sequenceFlowsFiltX
-        (tail sequenceFlowsFiltX)
+        ListHT.mapAdjacent
+           (Env.intersectionWith EqRecord.deltaCons EqRecord.deltaCons)
+           externalEnvX
 
 
  ---------------------------------------------------------------------------------------
 -- *  Make the Prediction
 
-  let prediction = Analysis.prediction (head sequenceFlowTopologyX) (head externalEnvX)
+  let prediction =
+         Analysis.prediction
+            (head sequenceFlowTopologyX)
+            (head externalEnvX)
 
   -- Hier gehts schief, wenn ich mit Signalen rechnen will
 --  let prediction2 = Analysis.prediction (head sequenceFlowTopologyX) (head externalSignalEnvX)
@@ -351,7 +340,7 @@ main = do
           Draw.bgcolour c $
           Draw.sequFlowGraphDeltaWithEnv topo env
       drawAbs (Record.Name ti) topo env c =
-        Draw.dot (ti++"vehicle.dot")$
+          Draw.dot (ti++"vehicle.dot")$
           Draw.title ti $
           Draw.bgcolour c $
           Draw.sequFlowGraphAbsWithEnv topo env

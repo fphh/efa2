@@ -110,9 +110,6 @@ Library
     EFA.Equation.Arithmetic
     EFA.Equation.MultiValue
     EFA.Equation.Stack
-    EFA.Equation.Consistent.MultiValue
-    EFA.Equation.Consistent.Stack
-    EFA.Equation.Consistent.Dimension
     EFA.Equation.Pair
     EFA.Equation.Verify
     EFA.Example.Utility
@@ -330,6 +327,7 @@ Executable demo-tables
     Build-Depends:
       efa,
       gnuplot,
+      non-empty,
       containers,
       base
   Else
@@ -482,6 +480,7 @@ Executable demo-csvimport
   If flag(buildDemos)
     Build-Depends:
       efa,
+      utility-ht,
       base
   Else
     Buildable: False

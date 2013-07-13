@@ -229,9 +229,9 @@ getStorageSequences ::
    SequData (Topo.ClassifiedTopology node) ->
    Map node (Map Idx.Section (Maybe Topo.StoreDir))
 getStorageSequences =
-   Fold.foldl
-      (Map.unionWith (Map.unionWith (error "duplicate section for node")))
-      Map.empty
+   Map.unionsWith (Map.unionWith (error "duplicate section for node"))
+   .
+   Fold.toList
    .
    SD.mapWithSection
       (\s g ->

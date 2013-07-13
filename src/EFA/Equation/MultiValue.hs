@@ -1,5 +1,10 @@
 {-# LANGUAGE TypeFamilies #-}
-module EFA.Equation.MultiValue where
+module EFA.Equation.MultiValue (
+   MultiValue(..),  -- constructors exported for Stack
+   singleton, pair, deltaPair,
+
+   eqRelaxed,
+   ) where
 
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic
@@ -8,89 +13,60 @@ import EFA.Equation.Arithmetic
            Constant, zero,
            Integrate, Scalar, integrate)
 
+
 import qualified Test.QuickCheck as QC
 
 import qualified Data.Set as Set
-
 import qualified Data.Foldable as Fold
-import qualified Data.List.HT as ListHT
 import Control.Applicative (Applicative, pure, (<*>), liftA2)
-import Data.Traversable (Traversable, sequenceA)
+import Data.Traversable (Traversable, traverse, sequenceA)
 import Data.Foldable (Foldable, foldMap)
 import Data.Monoid ((<>))
+import Data.Tuple.HT (mapPair)
+
 
 
 {- |
-The length of the list must match the depth of the tree.
-The indices must be in strictly ascending order.
+The indices of type @i@ must be in strictly descending order.
 -}
-data MultiValue i a = MultiValue [i] (Tree a)
+{-
+Cf. "Numerical Representations as Higher-Order Nested Datatypes" by Ralf Hinze
+-}
+data MultiValue i a =
+     MultiValue a
+   | Dim i (MultiValue i (a, a))
    deriving (Show, Eq)
 
-data Tree a =
-     Leaf a
-   | Branch (Tree a) (Tree a)
-   deriving (Show, Eq)
+instance Functor (MultiValue i) where
+   fmap f n =
+      case n of
+         MultiValue a -> MultiValue $ f a
+         Dim i c -> Dim i $ fmap (mapPair (f,f)) c
 
-instance Functor Tree where
-   fmap f (Leaf a) = Leaf (f a)
-   fmap f (Branch a0 a1) = Branch (fmap f a0) (fmap f a1)
+instance Ord i => Applicative (MultiValue i) where
+   pure a = MultiValue a
+   MultiValue f <*> a = fmap f a
+   f <*> MultiValue a = fmap ($a) f
+   fd@(Dim i f) <*> ad@(Dim j a) =
+      case compare i j of
+         EQ -> Dim i $ liftA2 mapPair f a
+         GT -> Dim i $ liftA2 (\(f0,f1) x -> (f0 x, f1 x)) f ad
+         LT -> Dim j $ liftA2 (\g (x0,x1) -> (g x0, g x1)) fd a
 
--- | must only be applied if the index sets match
-instance Applicative Tree where
-   pure = Leaf
-   Leaf f <*> Leaf a = Leaf $ f a
-   Branch f g <*> Branch a b = Branch (f <*> a) (g <*> b)
-   _ <*> _ = error "MultiValue.<*>: non-matching data structures"
+{- breaks abstraction -}
+instance Foldable (MultiValue i) where
+   foldMap f (MultiValue a) = f a
+   foldMap f (Dim _i c) = foldMap (\(a0,a1) -> f a0 <> f a1)  c
 
-instance Foldable Tree where
-   foldMap f (Leaf a) = f a
-   foldMap f (Branch a0 a1) = foldMap f a0 <> foldMap f a1
-
-instance Traversable Tree where
-   sequenceA (Leaf a) = fmap Leaf a
-   sequenceA (Branch a0 a1) = liftA2 Branch (sequenceA a0) (sequenceA a1)
-
-
-mergeTrees :: Ord i => [i] -> Tree a -> [i] -> Tree b -> Tree (a,b)
-mergeTrees [] (Leaf a) _ bs = fmap ((,) a) bs
-mergeTrees _ as [] (Leaf b) = fmap (flip (,) b) as
-mergeTrees it@(i:is) a@(Branch a0 a1) jt@(j:js) b@(Branch b0 b1) =
-   case compare i j of
-      EQ -> Branch (mergeTrees is a0 js b0) (mergeTrees is a1 js b1)
-      LT -> Branch (mergeTrees is a0 jt b ) (mergeTrees is a1 jt b )
-      GT -> Branch (mergeTrees it a  js b0) (mergeTrees it a  js b1)
-mergeTrees _ _ _ _ = error "MultiValue.mergeTrees: inconsistent data structure"
-
-mergeIndices :: Ord i => [i] -> [i] -> [i]
-mergeIndices [] js = js
-mergeIndices is [] = is
-mergeIndices it@(i:is) jt@(j:js) =
-   case compare i j of
-      EQ -> i : mergeIndices is js
-      LT -> i : mergeIndices is jt
-      GT -> j : mergeIndices it js
+{- breaks abstraction -}
+instance Traversable (MultiValue i) where
+   sequenceA (MultiValue a) = fmap MultiValue a
+   sequenceA (Dim i c) = fmap (Dim i) $ traverse (uncurry $ liftA2 (,)) c
 
 
 eqRelaxed :: (Ord i, Eq a) => MultiValue i a -> MultiValue i a -> Bool
-eqRelaxed a b = case liftA2 (==) a b of MultiValue _is tree -> Fold.and tree
+eqRelaxed a b = Fold.and $ liftA2 (==) a b
 
-
-instance (Ord i) => Functor (MultiValue i) where
-   fmap f (MultiValue is a) = MultiValue is (fmap f a)
-
-instance (Ord i) => Applicative (MultiValue i) where
-   pure = singleton
-   MultiValue is a <*> MultiValue js b =
-      MultiValue
-         (mergeIndices is js)
-         (fmap (uncurry ($)) $ mergeTrees is a js b)
-
-instance (Ord i) => Foldable (MultiValue i) where
-   foldMap f (MultiValue _is a) = foldMap f a
-
-instance (Ord i) => Traversable (MultiValue i) where
-   sequenceA (MultiValue is a) = fmap (MultiValue is) $ sequenceA a
 
 
 instance (Ord i, Num a) => Num (MultiValue i a) where
@@ -130,16 +106,14 @@ instance (Ord i, Integrate v) => Integrate (MultiValue i v) where
 
 
 singleton :: a -> MultiValue i a
-singleton = MultiValue [] . Leaf
+singleton = MultiValue
 
 pair :: i -> a -> a -> MultiValue i a
-pair i a0 a1 = MultiValue [i] (Branch (Leaf a0) (Leaf a1))
+pair i a0 a1 = Dim i $ MultiValue (a0, a1)
 
 deltaPair :: Sum a => i -> a -> a -> MultiValue i a
-deltaPair i a0 a1 = MultiValue [i] (Branch (Leaf a0) (Leaf (a0~+a1)))
+deltaPair i a0 a1 = pair i a0 (a0~+a1)
 
-constant :: [i] -> a -> MultiValue i a
-constant is a = MultiValue is $ foldr (\_ b -> Branch b b) (Leaf a) is
 
 
 instance
@@ -147,16 +121,25 @@ instance
       QC.Arbitrary (MultiValue i a) where
    arbitrary =
       sequenceA . flip constant QC.arbitrary .
-         take 4 . Set.toList . Set.fromList =<< QC.arbitrary
+         reverse . take 4 . Set.toAscList . Set.fromList =<< QC.arbitrary
 
-   shrink (MultiValue it tree) =
-      (case tree of
-         Leaf _ -> []
-         Branch a0 a1 ->
-            concatMap (\(_,is) -> [MultiValue is a0, MultiValue is a1]) $
-            ListHT.removeEach it)
-      ++
-      (let go (Leaf x) = map Leaf $ QC.shrink x
-           go (Branch a0 a1) =
-              map (flip Branch a1) (go a0) ++ map (Branch a0) (go a1)
-       in  map (MultiValue it) $ go tree)
+   shrink cube =
+      removeEachDimension cube ++ removeValues cube
+
+
+-- * private functions
+
+constant :: [i] -> a -> MultiValue i a
+constant [] a = MultiValue a
+constant (i:is) a = Dim i $ constant is (a,a)
+
+removeEachDimension :: MultiValue i a -> [MultiValue i a]
+removeEachDimension (MultiValue _) = []
+removeEachDimension (Dim i cube) =
+   fmap fst cube :
+   fmap snd cube :
+   map (Dim i) (removeEachDimension cube)
+
+removeValues :: (QC.Arbitrary a) => MultiValue i a -> [MultiValue i a]
+removeValues (MultiValue a) = map MultiValue $ QC.shrink a
+removeValues (Dim i cube) = map (Dim i) $ removeValues cube

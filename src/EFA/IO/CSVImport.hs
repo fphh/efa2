@@ -1,6 +1,11 @@
 -- | Modelica CSV Import
 
-module EFA.IO.CSVImport (modelicaCSVImport, fortissCSVImport, filterWith, dontFilter) where
+module EFA.IO.CSVImport (
+  modelicaCSVImport,
+  fortissCSVImport, filterWith, dontFilter,
+  fortissCSVImportStruct,
+  CSV.Header, CSV.Name(..), CSV.TrimmedName(..), CSV.Transpose(..),
+  ) where
 
 import EFA.IO.CSVParser (csvFileWithHeader)
 import Text.ParserCombinators.Parsec (parse)
@@ -82,3 +87,15 @@ fortissCSVImport path idx filt = do
     Left err ->
       ioError $ userError $ "Parse error in file " ++ show err
     Right table -> return $ fortissCSVRecord idx filt table
+
+
+fortissCSVImportStruct ::
+  (CSV.Cells cols) =>
+  FilePath -> IO (CSV.Header cols, [cols])
+fortissCSVImportStruct path = do
+  text <- readFile path
+  let parser = CSV.csvFileWithStructure ';'
+  case parse parser path text of
+    Left err ->
+      ioError $ userError $ "Parse error in file " ++ show err
+    Right table -> return table

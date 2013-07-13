@@ -1,18 +1,16 @@
 
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeFamilies #-}
-
 module Main where
-
-import qualified Data.Map as Map
 
 import qualified EFA.IO.TableParser as Table
 import qualified EFA.Signal.PlotIO as PlotIO
 import qualified EFA.Signal.Signal as S
+import qualified EFA.Signal.ConvertTable as CT
+import EFA.Utility.Map (checkedLookup)
 
 import qualified Graphics.Gnuplot.Terminal.Default as Def
 
-import qualified EFA.Signal.ConvertTable as CT
+import qualified Data.NonEmpty as NonEmpty
+import qualified Data.Map as Map
 
 
 plot3D ::
@@ -23,8 +21,10 @@ plot3D (x, y, z) = PlotIO.surface "test" Def.cons (\_->"") x y z
 
 plot2D ::
   ( S.PSignal [] Double,
-    [ S.NSignal [] Double ] ) -> IO ()
-plot2D (x, y) = PlotIO.xy "test" Def.cons id (const "eta") x y
+    NonEmpty.T [] (S.NSignal [] Double) ) -> IO ()
+plot2D (x, y) =
+  PlotIO.xy "test" Def.cons id (const "eta") x $
+  NonEmpty.flatten y
 
 
 main :: IO ()
@@ -32,25 +32,25 @@ main = do
 
   tabEn <- Table.read "engine.txt"
   tabMo <- Table.read "motor.txt"
+  Table.write "combined.txt" (Map.union tabEn tabEn)
 
   let em3D =
         CT.convertToSignal3D
-          (Map.lookup "table2D_efficiencyMap" tabEn) :
+          (checkedLookup "demo/table" tabEn "table2D_efficiencyMap") :
         CT.convertToSignal3D
-          (Map.lookup "table2D_efficiencyMap_firstQuadrant" tabMo) :
+          (checkedLookup "demo/table" tabMo "table2D_efficiencyMap_firstQuadrant") :
         []
 
       em2D =
         CT.convertToSignal3D2D
-          (Map.lookup "table2D_efficiencyMap" tabEn) :
+          (checkedLookup "demo/table" tabEn "table2D_efficiencyMap") :
         CT.convertToSignal3D2D
-          (Map.lookup "table2D_efficiencyMap_firstQuadrant" tabMo) :
+          (checkedLookup "demo/table" tabMo "table2D_efficiencyMap_firstQuadrant") :
         CT.convertToSignal2D
-          (Map.lookup "maxTorque" tabEn) :
+          (checkedLookup "demo/table" tabEn "maxTorque") :
         CT.convertToSignal2D
-          (Map.lookup "dragTorque" tabEn) :
+          (checkedLookup "demo/table" tabEn "dragTorque") :
         []
 
-  Table.write "combined.txt" (Map.union tabEn tabEn)
   mapM_ plot3D em3D
   mapM_ plot2D em2D

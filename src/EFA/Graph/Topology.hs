@@ -46,7 +46,7 @@ import qualified Test.QuickCheck as QC
 
 type LNode a = Gr.LNode (Idx.AugNode a) (NodeType ())
 type LEdge a = Gr.LEdge (FlowEdge Gr.EitherEdge) (Idx.AugNode a) ()
-type LDirNode a = Gr.LNode (Idx.AugNode a) (NodeType (Maybe StoreDir))
+type LDirNode a = StNode (Maybe StoreDir) a
 type LDirEdge a = Gr.LEdge Gr.DirEdge (Idx.AugNode a) ()
 type StNode store a = Gr.LNode (Idx.AugNode a) (NodeType store)
 

@@ -6,7 +6,6 @@ import qualified EFA.Example.Absolute as EqGen
 import EFA.Example.Absolute ((.=), (=.=))
 import EFA.Example.Utility (makeEdges, constructSeqTopo)
 
-import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Arithmetic as Arith
 
@@ -120,8 +119,8 @@ solve e x =
   in  show e ++ " " ++ show x ++ " " ++
       Format.unUnicode (formatValue
          (liftA2 (/)
-             (Record.unAbsolute $ checkedLookup "solve" emap eout)
-             (Record.unAbsolute $ checkedLookup "solve" emap ein)))
+             (checkedLookup "solve" emap eout)
+             (checkedLookup "solve" emap ein)))
 
 main :: IO ()
 main =

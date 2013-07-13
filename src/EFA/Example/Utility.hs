@@ -1,7 +1,7 @@
 {-# LANGUAGE TypeFamilies #-}
 module EFA.Example.Utility (
    module EFA.Example.Utility,
-   (.=), (%=),
+   (.=), (%=), (=%%=),
    Verify.Ignore,
    ) where
 
@@ -20,7 +20,7 @@ import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Signal.SequenceData as SD
 import EFA.Symbolic.Variable (VarTerm, ScalarTerm, SignalTerm, Symbol, varSymbol)
-import EFA.Equation.System ((.=), (%=))
+import EFA.Equation.System ((.=), (%=), (=%%=))
 import EFA.Equation.Result (Result)
 import EFA.Utility (Pointed)
 

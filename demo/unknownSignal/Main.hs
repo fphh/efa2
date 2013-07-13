@@ -3,23 +3,18 @@
 
 module Main where
 
-import qualified Data.Map as Map
-
 import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.PlotIO as PlotIO
 import qualified EFA.Signal.Record as Rec
-import EFA.Signal.Data (Data, (:>), Nil)
 import qualified EFA.Signal.Data as Data
+import EFA.Signal.Data (Data, (:>), Nil)
 
 import qualified EFA.Example.Index as XIdx
 import qualified EFA.Example.Absolute as EqGen
 import EFA.Example.Absolute ( (.=), (=.=) )
-
 import EFA.Example.Utility ( makeEdges, constructSeqTopo )
 
 import qualified EFA.Equation.Result as Res
-import qualified EFA.Equation.Record as EqRec
-
 import qualified EFA.Equation.Environment as Env
 
 import qualified EFA.Graph.Topology.Node as Node
@@ -28,12 +23,13 @@ import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Graph as Gr
 
-
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
 
 import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 import EFA.Utility.Async (concurrentlyMany_)
+
+import qualified Data.Map as Map
 
 import Data.Monoid (mconcat)
 
@@ -125,7 +121,7 @@ main = do
       f (Idx.InSection _ (Idx.Power (Idx.StructureEdge n1 n2))) =
         Idx.PPos (Idx.StructureEdge n1 n2)
 
-      g (EqRec.Absolute (Res.Determined dat)) = Just $ Sig.TC dat
+      g (Res.Determined dat) = Just $ Sig.TC dat
       g _ = Nothing
 
   concurrentlyMany_ [
