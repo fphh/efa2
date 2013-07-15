@@ -61,7 +61,7 @@ import Data.GraphViz (
           graphID,
           GraphvizOutput(..))
 
-import Data.GraphViz.Attributes.Complete as Viz
+import Data.GraphViz.Attributes.Complete as Viz hiding (Order)
 import qualified Data.GraphViz.Attributes.Colors as Colors
 import qualified Data.GraphViz.Attributes.Colors.X11 as X11Colors
 
@@ -298,9 +298,9 @@ dotFromStructureEdge ::
 dotFromStructureEdge eshow e =
    DotEdge
       (dotIdentFromSecNode x) (dotIdentFromSecNode y)
-      [labelFromLines $ order $ eshow e,
+      [labelFromLines $ order ord $ eshow e,
        Viz.Dir dir, structureEdgeColour]
-  where (DirEdge x y, dir, order) = orientFlowEdge e
+  where (DirEdge x y, dir, ord) = orientFlowEdge e
 
 dotFromStorageEdge ::
   (Node.C node) =>
@@ -467,10 +467,16 @@ flowTopologies ts = DotGraph False True Nothing stmts
         attrs = []
 
 
+data Order = Id | Reverse deriving (Eq, Show)
+
+order :: Order -> [a] -> [a]
+order Id = id
+order Reverse = reverse
+
 orientFlowEdge ::
    (Ord node) =>
    Idx.InSection Gr.EitherEdge node ->
-   (DirEdge (Idx.SecNode node), DirType, [s] -> [s])
+   (DirEdge (Idx.SecNode node), DirType, Order)
 orientFlowEdge (Idx.InSection sec e) =
    mapFst3
       (\(DirEdge x y) ->
@@ -478,27 +484,26 @@ orientFlowEdge (Idx.InSection sec e) =
             (Idx.secNode sec x)
             (Idx.secNode sec y)) $
    case e of
-      Gr.EUnDirEdge ue -> (orientUndirEdge ue, NoDir, const [])
+      Gr.EUnDirEdge ue -> (orientUndirEdge ue, NoDir, Id)
       Gr.EDirEdge de -> orientDirEdge de
 
 orientEdge ::
    (Ord node) =>
-   Gr.EitherEdge node -> (DirEdge node, DirType, [s] -> [s])
+   Gr.EitherEdge node -> (DirEdge node, DirType, Order)
 orientEdge e =
    case e of
-      Gr.EUnDirEdge ue ->
-         (orientUndirEdge ue, NoDir, const [])
+      Gr.EUnDirEdge ue -> (orientUndirEdge ue, NoDir, Id)
       Gr.EDirEdge de -> orientDirEdge de
 
 orientUndirEdge :: Ord node => Gr.UnDirEdge node -> DirEdge node
 orientUndirEdge (Gr.UnDirEdge x y) = DirEdge x y
 
-orientDirEdge :: Ord node => DirEdge node -> (DirEdge node, DirType, [s] -> [s])
+orientDirEdge :: Ord node => DirEdge node -> (DirEdge node, DirType, Order)
 orientDirEdge (DirEdge x y) =
 --   if comparing (\(Idx.SecNode s n) -> n) x y == LT
    if x < y
-     then (DirEdge x y, Forward, id)
-     else (DirEdge y x, Back, reverse)
+     then (DirEdge x y, Forward, Id)
+     else (DirEdge y x, Back, Reverse)
 
 
 class StorageLabel a where
