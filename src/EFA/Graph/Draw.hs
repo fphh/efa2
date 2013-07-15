@@ -128,9 +128,9 @@ instance Foldable Triple where
    foldMap f (Triple pre eta suc) = f pre <> f eta <> f suc
 
 
-type StructureEdgeShow node =
-        (Bool,
-         Idx.InSection Gr.EitherEdge node -> Triple [Unicode])
+data StructureEdgeShow node =
+     HideEtaNode (Idx.InSection Gr.EitherEdge node -> [Unicode])
+   | ShowEtaNode (Idx.InSection Gr.EitherEdge node -> Triple [Unicode])
 
 type StorageEdgeShow node =
         Idx.ForNode Idx.StorageEdge node -> [Unicode]
@@ -221,7 +221,7 @@ dotFromSectionGraph ::
    ([Idx.InSection Gr.EitherEdge node],
     [Topo.StNode store node])) ->
   DotSubGraph T.Text
-dotFromSectionGraph rngs mtshow nshow (etaNode, structureEdgeShow)
+dotFromSectionGraph rngs mtshow nshow structureEdgeShow
   before (current, (es, ns)) =
     DotSG True (Just $ Str $ T.pack $ dotIdentFromAugSection current) $
     DotStmts
@@ -229,15 +229,15 @@ dotFromSectionGraph rngs mtshow nshow (etaNode, structureEdgeShow)
       []
       dns des
   where (dns,des) =
-           if etaNode
-             then
-                case unzip $
-                     map (dotFromStructureEdgeEta structureEdgeShow) es of
+           case structureEdgeShow of
+             ShowEtaNode eshow ->
+                case unzip $ map (dotFromStructureEdgeEta eshow) es of
                    (dns0,des0) ->
                       (map (dotFromSecNode (nshow before)) ns ++ dns0,
                        concat des0)
-             else (map (dotFromSecNode (nshow before)) ns,
-                   map (dotFromStructureEdge $ fold . structureEdgeShow) es)
+             HideEtaNode eshow ->
+                (map (dotFromSecNode (nshow before)) ns,
+                 map (dotFromStructureEdge eshow) es)
         str =
            Idx.switchAugmentedSection "Init" "Exit" $ \s ->
                  show s ++
@@ -442,7 +442,7 @@ sequFlowGraph ::
   Flow.RangeGraph node -> DotGraph T.Text
 sequFlowGraph topo =
   dotFromSequFlowGraph topo Nothing nshow Nothing
-     (False, const $ Triple [] [] []) (Just $ const [])
+     (HideEtaNode $ const []) (Just $ const [])
   where nshow _before (Idx.TimeNode _ n, l) =
            Unicode $ unUnicode (Node.display n) ++ " - " ++ showType l
 
@@ -779,7 +779,10 @@ sequFlowGraphWithEnv opts g
     (Env.Complete (Env.Scalar me st se sx sis sos) (Env.Signal e _p n dt x _s)) =
   dotFromSequFlowGraph g (Just formatTime)
     formatNode (toMaybe (optStorage opts) formatStorageContent)
-    (optEtaNode opts, structEShow) (toMaybe (optStorageEdge opts) storeEShow)
+    (if optEtaNode opts
+       then ShowEtaNode structEShowEta
+       else HideEtaNode structEShow)
+    (toMaybe (optStorageEdge opts) storeEShow)
   where formatEnergy =
            lookupFormatAssign opts e $ Idx.liftInSection Idx.Energy
         formatX =
@@ -792,26 +795,41 @@ sequFlowGraphWithEnv opts g
            lookupFormatAssign opts se $ Idx.liftForNode Idx.StEnergy
         formatStX =
            lookupFormatAssign opts sx $ Idx.liftForNode Idx.StX
+        formatEtaPlain =
+           lookupFormat opts n . Idx.liftInSection Idx.Eta
         formatTime =
            lookupFormat opts dt . flip Idx.InSection Idx.DTime
         formatNode =
            formatNodeStorage opts st sis sos
         formatStorageContent =
            formatNodeContent opts st
-        structEShow (Idx.InSection sec ee) =
+
+        structEShowEta (Idx.InSection sec ee) =
            case ee of
               Gr.EUnDirEdge _ -> Triple [] [] []
               Gr.EDirEdge (Gr.DirEdge from to) ->
                  case Idx.InSection sec (Idx.StructureEdge from to) of
-                    edge -> Triple
-                      (formatEnergy edge :
+                    edge ->
+                      Triple
+                         (formatEnergy edge : formatX edge : [])
+                         (formatEtaPlain edge : [])
+                         (formatX (Idx.flip edge) :
+                          formatEnergy (Idx.flip edge) :
+                          [])
+
+        structEShow (Idx.InSection sec ee) =
+           case ee of
+              Gr.EUnDirEdge _ -> []
+              Gr.EDirEdge (Gr.DirEdge from to) ->
+                 case Idx.InSection sec (Idx.StructureEdge from to) of
+                    edge ->
+                       formatEnergy edge :
                        formatX edge :
-                       [])
-                      (formatEta edge :
-                       [])
-                      (formatX (Idx.flip edge) :
+                       formatEta edge :
+                       formatX (Idx.flip edge) :
                        formatEnergy (Idx.flip edge) :
-                       [])
+                       []
+
         storeEShow edge =
            case Idx.liftForNode Idx.storageTransFromEdge edge of
               te ->
