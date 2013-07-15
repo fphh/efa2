@@ -62,7 +62,13 @@ import Data.GraphViz (
           graphID,
           GraphvizOutput(..))
 
-import Data.GraphViz.Attributes.Complete as Viz hiding (Order)
+import Data.GraphViz.Attributes.Complete (
+          Attribute(Label, Color, FillColor),
+          Label(StrLabel),
+          Color(RGB),
+          )
+
+import qualified Data.GraphViz.Attributes.Complete as Viz
 import qualified Data.GraphViz.Attributes.Colors as Colors
 import qualified Data.GraphViz.Attributes.Colors.X11 as X11Colors
 
@@ -97,14 +103,14 @@ storageEdgeColour = Color [RGB 200 0 0]
 contentEdgeColour :: Attribute
 contentEdgeColour = Color [RGB 0 200 0]
 
-shape :: NodeType a -> Shape
-shape Topo.Crossing = PlainText
-shape Topo.Source = DiamondShape
-shape Topo.AlwaysSource = MDiamond
-shape Topo.Sink = BoxShape
-shape Topo.AlwaysSink = MSquare
-shape (Topo.Storage _) = Ellipse
-shape _ = BoxShape
+shape :: NodeType a -> Viz.Shape
+shape Topo.Crossing = Viz.PlainText
+shape Topo.Source = Viz.DiamondShape
+shape Topo.AlwaysSource = Viz.MDiamond
+shape Topo.Sink = Viz.BoxShape
+shape Topo.AlwaysSink = Viz.MSquare
+shape (Topo.Storage _) = Viz.Ellipse
+shape _ = Viz.BoxShape
 
 color :: NodeType a -> Attribute
 color (Topo.Storage _) = FillColor [RGB 251 177 97] -- ghlightorange
@@ -112,7 +118,8 @@ color _ = FillColor [RGB 136 215 251]  -- ghverylightblue
 
 mkNodeAttrs :: NodeType a -> Attribute -> [Attribute]
 mkNodeAttrs nodeType label =
-  [ label, Style [SItem Filled []], Shape (shape nodeType), color nodeType ]
+  [ label, Viz.Style [Viz.SItem Viz.Filled []],
+    Viz.Shape (shape nodeType), color nodeType ]
 
 
 data Triple a = Triple a a a
@@ -281,7 +288,7 @@ title ti =
 
 bgcolour :: X11Colors.X11Color -> DotGraph T.Text -> DotGraph T.Text
 bgcolour c =
-   setGlobalAttrs $ GraphAttrs [BgColor [Colors.X11Color c]]
+   setGlobalAttrs $ GraphAttrs [Viz.BgColor [Colors.X11Color c]]
 
 
 pdf, png, eps, svg, plain, fig, dot :: FilePath -> DotGraph T.Text -> IO ()
@@ -355,8 +362,8 @@ dotFromStorageEdge eshow e =
    DotEdge
       (dotIdentFromAugNode $ Idx.storageEdgeFrom e)
       (dotIdentFromAugNode $ Idx.storageEdgeTo   e)
-      [labelFromLines $ eshow e, Viz.Dir Forward,
-       storageEdgeColour, Constraint True]
+      [labelFromLines $ eshow e, Viz.Dir Viz.Forward,
+       storageEdgeColour, Viz.Constraint True]
 
 dotFromContentEdge ::
   (Node.C node) =>
@@ -365,7 +372,7 @@ dotFromContentEdge ::
   [DotEdge T.Text]
 dotFromContentEdge mbefore ns =
   let dotEdge from to =
-         DotEdge from to [Viz.Dir Forward, contentEdgeColour]
+         DotEdge from to [Viz.Dir Viz.Forward, contentEdgeColour]
   in  concatMap
          (\(sn@(Idx.TimeNode _sec n), t) ->
             let withBefore f =
@@ -479,7 +486,7 @@ dotFromTopoEdge edgeLabels e =
                  (dotIdentFromNode x)
                  (dotIdentFromNode y)
                  [ Viz.Dir Viz.NoDir, structureEdgeColour,
-                   Label (StrLabel lab), EdgeTooltip lab ]
+                   Label (StrLabel lab), Viz.EdgeTooltip lab ]
 
 
 
@@ -542,7 +549,7 @@ order Reverse = reverse
 orientFlowEdge ::
    (Ord node) =>
    Idx.InSection Gr.EitherEdge node ->
-   (DirEdge (Idx.SecNode node), DirType, Order)
+   (DirEdge (Idx.SecNode node), Viz.DirType, Order)
 orientFlowEdge (Idx.InSection sec e) =
    mapFst3
       (\(DirEdge x y) ->
@@ -550,15 +557,15 @@ orientFlowEdge (Idx.InSection sec e) =
             (Idx.secNode sec x)
             (Idx.secNode sec y)) $
    case e of
-      Gr.EUnDirEdge ue -> (orientUndirEdge ue, NoDir, Id)
+      Gr.EUnDirEdge ue -> (orientUndirEdge ue, Viz.NoDir, Id)
       Gr.EDirEdge de -> orientDirEdge de
 
 orientEdge ::
    (Ord node) =>
-   Gr.EitherEdge node -> (DirEdge node, DirType, Order)
+   Gr.EitherEdge node -> (DirEdge node, Viz.DirType, Order)
 orientEdge e =
    case e of
-      Gr.EUnDirEdge ue -> (orientUndirEdge ue, NoDir, Id)
+      Gr.EUnDirEdge ue -> (orientUndirEdge ue, Viz.NoDir, Id)
       Gr.EDirEdge de -> orientDirEdge de
 
 orientUndirEdge :: Ord node => Gr.UnDirEdge node -> DirEdge node
@@ -566,12 +573,12 @@ orientUndirEdge (Gr.UnDirEdge x y) = DirEdge x y
 
 orientDirEdge ::
    (Ord node) =>
-   DirEdge node -> (DirEdge node, DirType, Order)
+   DirEdge node -> (DirEdge node, Viz.DirType, Order)
 orientDirEdge (DirEdge x y) =
 --   if comparing (\(Idx.SecNode s n) -> n) x y == LT
    if x < y
-     then (DirEdge x y, Forward, Id)
-     else (DirEdge y x, Back, Reverse)
+     then (DirEdge x y, Viz.Forward, Id)
+     else (DirEdge y x, Viz.Back, Reverse)
 
 
 class StorageLabel a where
