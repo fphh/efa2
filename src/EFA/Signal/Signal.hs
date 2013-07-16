@@ -35,6 +35,7 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Data.Map (Map)
 import Data.Set (Set)
+import qualified Data.List.Match as Match
 
 import Data.Monoid (Monoid, mempty, mappend, mconcat)
 import Data.Tuple.HT (mapPair)
@@ -1714,3 +1715,16 @@ argMaximum =
 listArgMax :: Ord a => [a] -> Int
 listArgMax =
    P.fst . L.maximumBy (comparing P.snd) . L.zip [0..]
+
+
+variation2D :: (SV.Storage v2 (v1 d),
+                SV.Storage v1 d,
+                SV.FromList v1,
+                SV.FromList v2) =>
+               TC s typ (Data (v1 :> Nil) d) ->  
+               TC s typ (Data (v1 :> Nil) d) -> 
+               (TC s typ (Data (v2 :> v1 :> Nil) d),
+                TC s typ (Data (v2 :> v1 :> Nil) d))
+variation2D xs ys = (fromList2 $ Match.replicate (toList ys) (toList xs), fromList2 $ L.map (Match.replicate (toList xs)) (toList ys))
+{-variation2D xs ys = (Match.replicate ys xs, L.map (Match.replicate xs) ys)
+    --where toList = id-}
