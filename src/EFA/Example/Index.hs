@@ -16,7 +16,8 @@ type MaxEnergy node = Idx.ForNode Idx.MaxEnergy node
 type StEnergy node  = Idx.ForNode Idx.StEnergy node
 type StX node       = Idx.ForNode Idx.StX node
 type Storage node   = Idx.ForNode Idx.Storage node
-type StSum node     = Idx.ForNode Idx.StSum node
+type StInSum node   = Idx.ForNode Idx.StInSum node
+type StOutSum node  = Idx.ForNode Idx.StOutSum node
 
 type PPos = Idx.PPos
 
@@ -38,16 +39,59 @@ sum :: Idx.Section -> Idx.Direction -> node -> Sum node
 sum sec dir = Idx.InSection sec . Idx.Sum dir
 
 
-maxEnergy :: Idx.Boundary -> Idx.Boundary -> node -> MaxEnergy node
-stEnergy :: Idx.Boundary -> Idx.Boundary -> node -> StEnergy node
-stX :: Idx.Boundary -> Idx.Boundary -> node -> StX node
+maxEnergy ::
+   (Idx.ToInitOrSection from, Idx.ToSectionOrExit to) =>
+   from -> to -> node -> MaxEnergy node
 
-maxEnergy = Idx.storageEdge Idx.MaxEnergy
-stEnergy  = Idx.storageEdge Idx.StEnergy
-stX       = Idx.storageEdge Idx.StX
+stEnergy ::
+   (Idx.ToInitOrSection from, Idx.ToSectionOrExit to) =>
+   from -> to -> node -> StEnergy node
+
+stX ::
+   (Idx.ToAugmentedSection from, Idx.ToAugmentedSection to) =>
+   from -> to -> node -> StX node
+
+maxEnergy = storageEdge Idx.MaxEnergy
+stEnergy  = storageEdge Idx.StEnergy
+stX       = storageTrans Idx.StX
+
+storageEdge ::
+   (Idx.ToInitOrSection from, Idx.ToSectionOrExit to) =>
+   (Idx.StorageEdge node -> idx node) ->
+   from -> to -> node -> Idx.ForNode idx node
+storageEdge mkIdx a b =
+   Idx.storageEdge mkIdx (Idx.initOrSection a) (Idx.sectionOrExit b)
+
+storageTrans ::
+   (Idx.ToAugmentedSection from, Idx.ToAugmentedSection to) =>
+   (Idx.StorageTrans node -> idx node) ->
+   from -> to -> node -> Idx.ForNode idx node
+storageTrans mkIdx a b =
+   Idx.storageTrans mkIdx (Idx.augmentSection a) (Idx.augmentSection b)
+
+
+stInSum ::
+   (Idx.ToSectionOrExit sec) =>
+   sec -> node -> StInSum node
+stInSum sec =
+   Idx.ForNode (Idx.StInSum (Idx.sectionOrExit sec))
+
+stOutSum ::
+   (Idx.ToInitOrSection sec) =>
+   sec -> node -> StOutSum node
+stOutSum sec =
+   Idx.ForNode (Idx.StOutSum (Idx.initOrSection sec))
+
 
 storage :: Idx.Boundary -> node -> Storage node
 storage = Idx.ForNode . Idx.Storage
 
 ppos :: node -> node -> Idx.PPos node
 ppos a b = Idx.PPos $ Idx.StructureEdge a b
+
+
+initSection :: Idx.InitOrSection
+initSection = Idx.Init
+
+exitSection :: Idx.SectionOrExit
+exitSection = Idx.Exit

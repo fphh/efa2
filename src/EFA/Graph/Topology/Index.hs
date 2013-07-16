@@ -9,7 +9,9 @@ import Data.Ord.HT (comparing)
 import Data.Eq.HT (equating)
 import Data.Word (Word)
 
-import Prelude hiding (flip)
+import qualified Prelude as P
+import Prelude hiding (init, flip)
+
 
 newtype Section = Section Word deriving (Show, Eq, Ord)
 
@@ -23,27 +25,161 @@ instance Enum Section where
         then fromIntegral n
         else error "Section.fromEnum: number too big"
 
-data Boundary = Initial | AfterSection Section deriving (Show, Eq, Ord)
+data Init a = Init | NoInit a deriving (Show, Eq, Ord)
+data Exit a = NoExit a | Exit deriving (Show, Eq, Ord)
+
+type InitOrSection = Init Section
+type SectionOrExit = Exit Section
+type AugmentedSection = Exit InitOrSection
+
+
+instance Functor Init where
+   fmap _ Init = Init
+   fmap f (NoInit a) = NoInit $ f a
+
+instance Functor Exit where
+   fmap _ Exit = Exit
+   fmap f (NoExit a) = NoExit $ f a
+
+
+section :: MaybeSection sec => Word -> sec
+section = fromSection . Section
+
+class MaybeSection sec where
+   fromSection :: Section -> sec
+
+instance MaybeSection Section where
+   fromSection = id
+
+instance MaybeSection sec => MaybeSection (Init sec) where
+   fromSection = NoInit . fromSection
+
+instance MaybeSection sec => MaybeSection (Exit sec) where
+   fromSection = NoExit . fromSection
+
+
+class MaybeSection sec => MaybeInit sec where
+   initSection :: sec
+
+instance MaybeSection sec => MaybeInit (Init sec) where
+   initSection = Init
+
+instance MaybeInit sec => MaybeInit (Exit sec) where
+   initSection = NoExit initSection
+
+
+class MaybeSection sec => MaybeExit sec where
+   exitSection :: sec
+
+instance MaybeSection sec => MaybeExit (Exit sec) where
+   exitSection = Exit
+
+instance MaybeExit sec => MaybeExit (Init sec) where
+   exitSection = NoInit exitSection
+
+
+switchAugmentedSection ::
+   a -> a -> (Section -> a) ->
+   AugmentedSection -> a
+switchAugmentedSection init exit secf aug =
+   case aug of
+      Exit -> exit
+      NoExit Init -> init
+      NoExit (NoInit s) -> secf s
+
+fromAugmentedSection ::
+   (MaybeSection sec, MaybeInit sec, MaybeExit sec) =>
+   AugmentedSection -> sec
+fromAugmentedSection =
+   switchAugmentedSection initSection exitSection fromSection
+
+
+class ToAugmentedSection sec where
+   augmentSection :: sec -> AugmentedSection
+
+instance ToAugmentedSection Section where
+   augmentSection = NoExit . NoInit
+
+instance ToSection sec => ToAugmentedSection (Init sec) where
+   augmentSection = NoExit . fmap toSection
+
+instance ToInitOrSection sec => ToAugmentedSection (Exit sec) where
+   augmentSection = fmap initOrSection
+
+
+class ToInitOrSection sec where
+   initOrSection :: sec -> InitOrSection
+
+instance ToInitOrSection Section where
+   initOrSection = NoInit
+
+instance ToSection sec => ToInitOrSection (Init sec) where
+   initOrSection = fmap toSection
+
+
+class ToSectionOrExit sec where
+   sectionOrExit :: sec -> SectionOrExit
+
+instance ToSectionOrExit Section where
+   sectionOrExit = NoExit
+
+instance ToSection sec => ToSectionOrExit (Exit sec) where
+   sectionOrExit = fmap toSection
+
+
+class ToSection sec where
+   toSection :: sec -> Section
+
+instance ToSection Section where
+   toSection = id
+
+
+allowInit :: SectionOrExit -> AugmentedSection
+allowInit = fmap NoInit
+
+allowExit :: InitOrSection -> AugmentedSection
+allowExit = NoExit
+
+maybeInit :: AugmentedSection -> Maybe SectionOrExit
+maybeInit =
+   switchAugmentedSection Nothing (Just Exit) (Just . NoExit)
+
+maybeExit :: AugmentedSection -> Maybe InitOrSection
+maybeExit aug =
+   case aug of
+      Exit -> Nothing
+      NoExit sec -> Just sec
+
+
+boundaryFromAugSection :: AugmentedSection -> Maybe Boundary
+boundaryFromAugSection =
+   fmap Following . maybeExit
+
+augSectionFromBoundary :: Boundary -> AugmentedSection
+augSectionFromBoundary (Following bnd) = allowExit bnd
+
+
+newtype Boundary = Following (Init Section) deriving (Show, Eq, Ord)
 
 instance Enum Boundary where
    toEnum n =
       if n == -1
-        then Initial
-        else AfterSection $ toEnum n
-   fromEnum Initial = -1
-   fromEnum (AfterSection n) = fromEnum n
+        then Following Init
+        else Following $ NoInit $ toEnum n
+   fromEnum (Following Init) = -1
+   fromEnum (Following (NoInit n)) = fromEnum n
 
 initial :: Boundary
-initial = Initial
+initial = Following Init
 
 afterSection :: Section -> Boundary
-afterSection = AfterSection
+afterSection = Following . NoInit
 
 beforeSection :: Section -> Boundary
 beforeSection s =
    if s == Section 0
-     then Initial
-     else AfterSection (pred s)
+     then Following Init
+     else Following (NoInit (pred s))
 
 
 data Absolute = Absolute deriving (Show, Eq, Ord)
@@ -78,44 +214,88 @@ after :: idx -> Record Delta idx
 after = Record After
 
 
+data TimeNode time node = TimeNode time node deriving (Show, Eq, Ord)
 
-data SecNode node = SecNode Section node deriving (Show, Eq, Ord)
-data BndNode node = BndNode Boundary node deriving (Show, Eq, Ord)
+type SecNode = TimeNode Section
+type AugNode = TimeNode AugmentedSection
+type BndNode = TimeNode Boundary
 
-initBndNode :: node -> BndNode node
-initBndNode = BndNode Initial
+
+secNode :: Section -> node -> SecNode node
+secNode = TimeNode
+
+initSecNode :: node -> AugNode node
+initSecNode = TimeNode initSection
+
+exitSecNode :: node -> AugNode node
+exitSecNode = TimeNode exitSection
 
 afterSecNode :: Section -> node -> BndNode node
-afterSecNode s = BndNode (AfterSection s)
+afterSecNode s = TimeNode $ afterSection s
 
 bndNodeFromSecNode :: SecNode node -> BndNode node
-bndNodeFromSecNode (SecNode sec node) =
-   BndNode (AfterSection sec) node
+bndNodeFromSecNode (TimeNode sec node) =
+   TimeNode (Following (NoInit sec)) node
 
 secNodeFromBndNode :: BndNode node -> Maybe (SecNode node)
-secNodeFromBndNode (BndNode bnd node) =
+secNodeFromBndNode (TimeNode bnd node) =
    case bnd of
-      Initial -> Nothing
-      AfterSection sec -> Just (SecNode sec node)
+      Following Init -> Nothing
+      Following (NoInit sec) -> Just (TimeNode sec node)
+
+augNodeFromBndNode :: BndNode node -> AugNode node
+augNodeFromBndNode (TimeNode bnd node) =
+   TimeNode (augSectionFromBoundary bnd) node
+
+bndNodeFromAugNode :: AugNode node -> Maybe (BndNode node)
+bndNodeFromAugNode (TimeNode aug node) =
+   fmap (P.flip TimeNode node) $ boundaryFromAugSection aug
+
+
+maybeInitNode :: AugNode node -> Maybe (TimeNode SectionOrExit node)
+maybeInitNode (TimeNode aug node) =
+   fmap (P.flip TimeNode node) $ maybeInit aug
+
+maybeExitNode :: AugNode node -> Maybe (TimeNode InitOrSection node)
+maybeExitNode (TimeNode aug node) =
+   fmap (P.flip TimeNode node) $ maybeExit aug
+
 
 
 
 -- * Edge indices
 
 data StructureEdge node = StructureEdge node node
+   deriving (Show, Read, Eq, Ord)
+
+{- |
+A storage edge is always directed from an early to a later section.
+However, a splitting factor exists both in chronological and reversed order.
+On the other hand in the future we may use chronological order exclusively
+and register two split factors per edge.
+-}
+data StorageEdge node = StorageEdge InitOrSection SectionOrExit
    deriving (Show, Eq, Ord)
 
-data StorageEdge node = StorageEdge Boundary Boundary
+data StorageTrans node = StorageTrans AugmentedSection AugmentedSection
    deriving (Show, Eq, Ord)
 
 instance TC.Eq StructureEdge where eq = (==)
 instance TC.Eq StorageEdge   where eq = (==)
+instance TC.Eq StorageTrans  where eq = (==)
 
 instance TC.Ord StructureEdge where cmp = compare
 instance TC.Ord StorageEdge   where cmp = compare
+instance TC.Ord StorageTrans  where cmp = compare
 
 instance TC.Show StructureEdge where showsPrec = showsPrec
 instance TC.Show StorageEdge   where showsPrec = showsPrec
+instance TC.Show StorageTrans  where showsPrec = showsPrec
+
+
+storageTransFromEdge :: StorageEdge node -> StorageTrans node
+storageTransFromEdge (StorageEdge s0 s1) =
+   StorageTrans (allowExit s0) (allowInit s1)
 
 
 data InSection idx node = InSection Section (idx node)
@@ -123,7 +303,7 @@ data InSection idx node = InSection Section (idx node)
 
 inSection ::
    (node -> idx node) -> SecNode node -> InSection idx node
-inSection makeIdx (SecNode sec edge) =
+inSection makeIdx (TimeNode sec edge) =
    InSection sec (makeIdx edge)
 
 liftInSection ::
@@ -136,8 +316,8 @@ data ForNode idx node = ForNode (idx node) node
    deriving (Show, Eq, Ord)
 
 forNode ::
-   (Boundary -> idx node) -> BndNode node -> ForNode idx node
-forNode makeIdx (BndNode bnd node) =
+   (time -> idx node) -> TimeNode time node -> ForNode idx node
+forNode makeIdx (TimeNode bnd node) =
    ForNode (makeIdx bnd) node
 
 liftForNode ::
@@ -171,14 +351,21 @@ structureEdge mkIdx s x y =
 
 storageEdge ::
    (StorageEdge node -> idx node) ->
-   Boundary -> Boundary -> node -> ForNode idx node
+   InitOrSection -> SectionOrExit -> node -> ForNode idx node
 storageEdge mkIdx s0 s1 n =
    ForNode (mkIdx $ StorageEdge s0 s1) n
 
+storageTrans ::
+   (StorageTrans node -> idx node) ->
+   AugmentedSection -> AugmentedSection -> node -> ForNode idx node
+storageTrans mkIdx s0 s1 n =
+   ForNode (mkIdx $ StorageTrans s0 s1) n
+
+
 storageEdgeFrom, storageEdgeTo ::
-   ForNode StorageEdge node -> BndNode node
-storageEdgeFrom (ForNode (StorageEdge sec _) n) = BndNode sec n
-storageEdgeTo   (ForNode (StorageEdge _ sec) n) = BndNode sec n
+   ForNode StorageEdge node -> AugNode node
+storageEdgeFrom (ForNode (StorageEdge sec _) n) = TimeNode (allowExit sec) n
+storageEdgeTo   (ForNode (StorageEdge _ sec) n) = TimeNode (allowInit sec) n
 
 
 
@@ -196,8 +383,8 @@ instance Flip StructureEdge where
 instance Flip idx => Flip (ForNode idx) where
    flip (ForNode idx n) = ForNode (flip idx) n
 
-instance Flip StorageEdge where
-   flip (StorageEdge s0 s1) = StorageEdge s1 s0
+instance Flip StorageTrans where
+   flip (StorageTrans s0 s1) = StorageTrans s1 s0
 
 
 instance Flip Power where
@@ -246,7 +433,7 @@ newtype Eta node = Eta (StructureEdge node) deriving (Show, Ord, Eq)
 -- | Splitting factors.
 newtype X node = X (StructureEdge node) deriving (Show, Ord, Eq)
 
-newtype StX node = StX (StorageEdge node) deriving (Show, Ord, Eq)
+newtype StX node = StX (StorageTrans node) deriving (Show, Ord, Eq)
 
 newtype Storage node = Storage Boundary deriving (Show, Ord, Eq)
 
@@ -254,7 +441,9 @@ data Direction = In | Out deriving (Show, Eq, Ord)
 
 data Sum node = Sum Direction node deriving (Show, Ord, Eq)
 
-data StSum node = StSum Direction Boundary deriving (Show, Ord, Eq)
+data StInSum node = StInSum SectionOrExit deriving (Show, Ord, Eq)
+
+data StOutSum node = StOutSum InitOrSection deriving (Show, Ord, Eq)
 
 
 -- * Other indices
@@ -263,6 +452,6 @@ data StSum node = StSum Direction Boundary deriving (Show, Ord, Eq)
 data DTime node = DTime deriving (Show, Ord, Eq)
 
 -- | Indices for Power Position
-newtype PPos node = PPos (StructureEdge node) deriving (Show, Ord, Eq)
+newtype PPos node = PPos (StructureEdge node) deriving (Show, Read, Ord, Eq)
 
 

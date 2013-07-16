@@ -3,19 +3,17 @@
 module Main where
 
 import EFA.Example.Utility ( makeEdges, constructSeqTopo, )
-import EFA.Example.Absolute ((.=))
+import EFA.Example.Absolute ((.=), (=.=))
 import qualified EFA.Example.Index as XIdx
+import qualified EFA.Example.Absolute as EqGen
+
+import qualified EFA.Equation.Environment as Env
+import qualified EFA.Equation.Arithmetic as Arith
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Async (concurrentlyMany_)
 import EFA.Utility.Map (checkedLookup)
-
 import EFA.Utility.Stream (Stream((:~)))
-
-import qualified EFA.Example.Absolute as EqGen
-import qualified EFA.Equation.Record as Record
-import qualified EFA.Equation.Environment as Env
-import EFA.Equation.System ((=.=))
 
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as Idx
@@ -25,8 +23,6 @@ import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Graph as Gr
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (formatValue)
-
-import qualified EFA.Equation.Arithmetic as Arith
 
 import Control.Applicative ((<$>), (<*>)) -- (liftA4)
 
@@ -96,7 +92,7 @@ p31 sec = EqGen.variable $ XIdx.power sec N3 N1
 
 --esto :: Expr s Double
 esto :: XIdx.StEnergy Node
-esto = XIdx.stEnergy (Idx.AfterSection sec1) Idx.initial N3
+esto = XIdx.stEnergy XIdx.initSection sec1 N3
 
 ein, eout0, eout1 :: XIdx.Energy Node
 ein = XIdx.energy sec0 N0 N1
@@ -154,10 +150,10 @@ solve x e =
                       (checkedLookup smap sto1)))
 -}
       Format.unUnicode (formatValue
-         (f <$> (Record.unAbsolute $ checkedLookup stemap esto)
-            <*> (Record.unAbsolute $ checkedLookup emap ein)
-            <*> (Record.unAbsolute $ checkedLookup emap eout0)
-            <*> (Record.unAbsolute $ checkedLookup emap eout1)))
+         (f <$> (checkedLookup "solve" stemap esto)
+            <*> (checkedLookup "solve" emap ein)
+            <*> (checkedLookup "solve" emap eout0)
+            <*> (checkedLookup "solve" emap eout1)))
 
 
 main :: IO ()

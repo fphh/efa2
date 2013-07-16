@@ -1,18 +1,14 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module EFA.Signal.Sequence where
 
 
 import qualified EFA.Graph.Flow as Flow
--- import qualified EFA.Graph.Topology.Index as Idx
---import qualified EFA.Signal.Data as D
+import EFA.Graph.Topology (Topology, FlowTopology)
 
-import EFA.Graph.Topology (Topology,
-                           FlowTopology
-                          -- SequFlowGraph
-                          )
 import qualified EFA.Signal.SequenceData as SD
 
 import qualified EFA.Signal.Base as SB
@@ -37,21 +33,25 @@ import EFA.Signal.Signal
 import EFA.Signal.Typ (Typ, STy, Tt, T, P, A)
 import EFA.Signal.Data (Data(Data), Nil, (:>))
 
+import qualified Data.Traversable as Trav
 import qualified Data.Foldable as Fold
+import qualified Data.NonEmpty.Set as NonEmptySet
 import qualified Data.NonEmpty.Mixed as NonEmptyM
+import qualified Data.NonEmpty.Class as NonEmptyC
 import qualified Data.NonEmpty as NonEmpty
-import qualified Data.List.HT as HTL
+import qualified Data.List.HT as ListHT
 import qualified Data.List as L
-import qualified Data.Map as M
+import qualified Data.Map as Map
 import qualified Data.IntSet as IntSet
 import Data.IntSet (IntSet)
-
+import Data.Map (Map)
+import Data.NonEmpty ((!:))
 import Data.Bool.HT (if')
 import Data.Eq.HT (equating)
-import Data.Tuple.HT (mapPair)
+import Data.Tuple.HT (mapPair, swap)
 import Control.Functor.HT (void)
 import Control.Monad (liftM2)
-import Data.Monoid (Monoid, mempty, mconcat)
+import Data.Monoid (Monoid, mempty, mappend, mconcat)
 import Data.Maybe (catMaybes, mapMaybe)
 import Data.Maybe.HT (toMaybe)
 
@@ -124,7 +124,7 @@ makeSeqFlowGraph topo =
 
 
 makeSeqFlowTopology ::
-   (Ord node) =>
+   (Ord node, Show node) =>
    SequData (FlowTopology node) ->
    Flow.RangeGraph node
 makeSeqFlowTopology =
@@ -151,8 +151,11 @@ genSequ ::
 genSequ pRec =
    removeNilSections $ SD.fromRangeList $ zip (sequ++[lastSec]) pRecs
   where rSig = record2RSig pRec
+
+        inc (S.SignalIdx idx) = S.SignalIdx (idx+1)
+
         pRecs = map (rsig2SecRecord pRec) (seqRSig ++ [lastRSec])
-        ((lastSec,sequ),(lastRSec,seqRSig)) = recyc rTail rHead (((0,0),[]),(Record.singleton $ rHead,[]))
+        ((lastSec,sequ),(lastRSec,seqRSig)) = recyc rTail rHead (((S.SignalIdx 0, S.SignalIdx 0),[]),(Record.singleton $ rHead,[]))
           where
             (rHead, rTail) = maybe err id $ Record.viewL rSig
             err = error ("Error in EFA.Signal.Sequence/genSequence, case 1 - empty rSig")
@@ -178,13 +181,15 @@ genSequ pRec =
             f NoEvent = (secRSig .++ xs2, sqRSig)                  -- continue incrementing
 
             g :: EventType -> (Range, [Range])
-            g LeftEvent = ((idx, idx+1), sq ++ [(lastIdx, idx)])
-            g RightEvent = ((idx+1, idx+1), sq ++ [(lastIdx, idx+1)])
-            g MixedEvent = ((idx+1, idx+1), sq ++ [(lastIdx, idx)] ++ [(idx, idx+1)])
-            g NoEvent = ((lastIdx, idx+1), sq)
+
+            g LeftEvent = ((idx, inc idx), sq ++ [(lastIdx, idx)])
+            g RightEvent = ((inc idx, inc idx), sq ++ [(lastIdx, inc idx)])
+            g MixedEvent = ((inc idx, inc idx), sq ++ [(lastIdx, idx)] ++ [(idx, inc idx)])
+            g NoEvent = ((lastIdx, inc idx), sq)
 
         -- Incoming rList is only one Point long -- append last sample to last section
-        recyc rsig _ (((lastIdx,idx),sq),(secRSig, sqRSig)) | (Record.len rsig) >=1 = (((lastIdx,idx+1),sq),(secRSig .++ rsig, sqRSig))
+        recyc rsig _ (((lastIdx,idx),sq),(secRSig, sqRSig)) | (Record.len rsig) >=1 =
+               (((lastIdx, inc idx),sq),(secRSig .++ rsig, sqRSig))
 
         -- Incoming rList is empty -- return result
         recyc _ _ acc = acc
@@ -224,7 +229,14 @@ stepX p1 p2
    | otherwise = toSample NoStep  -- nostep
 
 
-addZeroCrossings ::(Ord node) => PowerRecord node [] Val -> PowerRecord node [] Val
+--addZeroCrossings ::(Ord node) => PowerRecord node [] Val -> PowerRecord node [] Val
+ 
+--addZeroCrossings ::
+--  Record t0 t1 (Typ A T Tt) (Typ A P Tt) id0 [] Double Double ->
+addZeroCrossings ::
+  (Ord node) =>
+  PowerRecord node [] Double ->
+  PowerRecord node [] Double
 addZeroCrossings r = rsig2Record rSigNew0 r
   where rSigNew0 =
            case record2RSig r of
@@ -315,24 +327,32 @@ filterTZero =
 -- * Conversions between Record.Sig and Record
 
 -- | Generate rSig from Power Record
-updateMap :: Ord k => M.Map k a -> [b] -> M.Map k b
+updateMap :: Ord k => Map k a -> [b] -> Map k b
 updateMap pmap xs =
-   case M.keys pmap of
+   case Map.keys pmap of
       keys ->
          if void keys == void xs
-           then M.fromList $ zip keys xs
+           then Map.fromList $ zip keys xs
            else error "Error in updateMap - map and List length don't match"
 
 type RSigX a =
         (TC S.Signal (Typ A T Tt) (Data ([] :> Nil) a),
          TC S.Sample (Typ A P Tt) (Data ([] :> [] :> Nil) a))
 
-record2RSig :: PowerRecord node [] a -> RSigX a
-record2RSig (Record t pMap) = (t, S.transpose2 $ fromSigList $ M.elems pMap)
+
+
+record2RSig :: 
+  (V.Transpose v1 v2, V.Storage v1 d, V.Storage v2 (v1 d),
+      V.FromList v2, S.TransposeType s1 s2) =>
+     Record t s1 t1 typ k v1 t2 d
+     -> (TC t t1 (Data (v1 :> Nil) t2),
+         TC s2 typ (Data (v2 :> (v1 :> Nil)) d))
+record2RSig (Record t pMap) = (t, S.transpose2 $ fromSigList $ Map.elems pMap)
 
 rsig2Record :: Ord node => RSigX a -> PowerRecord node [] a -> PowerRecord node [] a
 rsig2Record (t, ps) (Record _ pMap) =
    Record t $ updateMap pMap $ toSigList $ S.transpose2 ps
+
 
 rsig2SecRecord ::
    (V.Convert [] v, V.Storage v a, Ord node) =>
@@ -357,9 +377,9 @@ checkZeroCrossing :: (RealFrac a) => a -> a -> Maybe a
 checkZeroCrossing x0 x1 =
    toMaybe (compare x0 0 /= compare x1 0) (-x0/(x1-x0))
 
-multiZeroCrossings :: (RealFrac a) => [a] -> [a] -> M.Map a IntSet
+multiZeroCrossings :: (RealFrac a) => [a] -> [a] -> Map a IntSet
 multiZeroCrossings xs ys =
-   M.fromListWith IntSet.union $ catMaybes $
+   Map.fromListWith IntSet.union $ catMaybes $
    zipWith (fmap . flip (,) . IntSet.singleton) [0..] $
    zipWith checkZeroCrossing xs ys
 {-
@@ -373,7 +393,7 @@ but I hope that it is easier to fuse.
 clearAt :: Num a => IntSet -> [a] -> [a]
 clearAt ns = zipWith (\i -> if' (IntSet.member i ns) 0) [0..]
 
-interpolate :: (RealFrac a) => a -> a -> a -> a
+interpolate :: (Num a) => a -> a -> a -> a
 interpolate i x y = (1-i)*x + i*y
 
 {-
@@ -406,7 +426,7 @@ removeDuplicates f = map NonEmpty.head . NonEmptyM.groupBy (equating f)
 chopAtZeroCrossings :: (RealFrac a) => [(a, [a])] -> [[(a, [a])]]
 chopAtZeroCrossings =
    map (map snd) .
-   HTL.segmentBefore fst .
+   ListHT.segmentBefore fst .
    expandIntervals
       ((,) False)
       (\(xt,xs) (yt,ys) ->
@@ -414,16 +434,16 @@ chopAtZeroCrossings =
             (\s ->
                let ss = (interpolate (fst s) xt yt, sample s xs ys)
                in  [(False, ss), (True, ss)]) $
-         M.toAscList $
+         Map.toAscList $
          multiZeroCrossings xs ys)
 
 zeroCrossingsPerInterval :: (RealFrac a) => [[a]] -> [[[a]]]
 zeroCrossingsPerInterval =
-   HTL.mapAdjacent
+   ListHT.mapAdjacent
       (\xs ys ->
          xs :
          (map (\s -> sample s xs ys) $
-          M.toAscList $ multiZeroCrossings xs ys) ++
+          Map.toAscList $ multiZeroCrossings xs ys) ++
          ys :
          [])
 
@@ -431,7 +451,7 @@ chopAtZeroCrossingsRSig :: (RealFrac a) => RSigX a -> [RSigX a]
 chopAtZeroCrossingsRSig (TC (Data times), TC (Data vectorSignal)) =
    map (mapPair (TC . Data, TC . Data)) $
    map unzip $
-   filter (HTL.lengthAtLeast 2) $
+   filter (ListHT.lengthAtLeast 2) $
 --   map (removeDuplicates fst) $
    chopAtZeroCrossings $
    zip times vectorSignal
@@ -450,15 +470,15 @@ concatPowerRecords ::
    SequData (PowerRecord node v a) -> PowerRecord node v a
 concatPowerRecords recs =
    case Fold.toList recs of
-      [] -> Record mempty M.empty
+      [] -> Record mempty Map.empty
       Record time0 pMap0 : recs0 ->
          let recs1 = map tailPowerRecord recs0
          in  Record
                 (mconcat $ time0 : map (\(Record times _) -> times) recs1)
-                (M.mapWithKey
+                (Map.mapWithKey
                     (\idx pSig ->
                        mconcat $ pSig :
-                       mapMaybe (\(Record _ pMap) -> M.lookup idx pMap) recs1)
+                       mapMaybe (\(Record _ pMap) -> Map.lookup idx pMap) recs1)
                     pMap0)
 
 tailPowerRecord ::
@@ -477,19 +497,241 @@ approxSequPwrRecord eps xs ys =
    V.equalBy (approxPowerRecord eps) (Fold.toList xs) (Fold.toList ys)
 
 approxPowerRecord ::
-   (V.Walker v, V.Storage v a, Real a,Ord node) =>
+   (V.Walker v, V.Storage v a, Real a, Ord node) =>
    a -> PowerRecord node v a -> PowerRecord node v a -> Bool
 approxPowerRecord eps
       (Record xt xm) (Record yt ym) =
    S.equalBy (approxAbs eps) xt yt
    &&
-   M.keys xm == M.keys ym
+   Map.keys xm == Map.keys ym
    &&
-   Fold.and (M.intersectionWith (S.equalBy (approxAbs eps)) xm ym)
+   Fold.and (Map.intersectionWith (S.equalBy (approxAbs eps)) xm ym)
 
 approxAbs :: (Real a) => a -> a -> a -> Bool
 approxAbs eps x y =
    abs (x-y) <= eps
+
+
+
+
+-- * Third approach using a Monoid structure
+
+{-
+We divide the problem into three functionalities:
+
+* For every signal determine the positions of phase changes.
+* Combine the position lists (this is a Monoid)
+* Chop every signal according to the combined positions list.
+
+This has several advantages:
+
+* you can chop lists, vectors and other stream types without resorting to lists
+* you can combine chunks with different element types
+
+
+We should use a NonEmpty type for the chunks and for the time set.
+Note the similarity to our EventList datatypes.
+-}
+newtype IntPattern a = IntPattern [(Int, NonEmptySet.T a)]
+   deriving (Show)
+
+{-
+tests: test Monoid laws
+-}
+instance (Ord a) => Monoid (IntPattern a) where
+   mempty = IntPattern []
+   mappend (IntPattern pa) (IntPattern pb) =
+      let go [] p = p
+          go p [] = p
+          go (ac@(ak,at):as) (bc@(bk,bt):bs) =
+             case compare ak bk of
+                EQ -> (ak, NonEmptySet.union at bt) : go as bs
+                LT -> ac : go as ((bk-ak,bt) : bs)
+                GT -> bc : go ((ak-bk,at) : as) bs
+      in  IntPattern $ go pa pb
+
+intPattern ::
+   (V.Storage v a, V.FromList v, RealFrac a) =>
+   v a -> IntPattern a
+intPattern =
+   IntPattern . snd .
+   L.mapAccumL (\k0 (k1,t) -> (k1, (k1-k0, NonEmptySet.singleton t))) (-1) .
+   catMaybes . zipWith (\k -> fmap ((,) k)) [0..] .
+   ListHT.mapAdjacent checkZeroCrossing . V.toList
+
+
+{- |
+In contrast to 'IntPattern' I use @NonEmpty.T v ()@
+for measuring lengths of chunks.
+This has two advantages:
+
+* Using the non-empty type the compiler
+  can check non-emptiness for cutting operations.
+
+* If @v@ is a lazy type we can measure length lazily.
+-}
+newtype Pattern v a = Pattern [(NonEmpty.T v (), NonEmptySet.T a)]
+   deriving (Show)
+
+{-
+tests: test Monoid laws
+-}
+instance
+   (V.DiffLength v, V.Storage v (), V.Core v ~ v, Ord a) =>
+      Monoid (Pattern v a) where
+   mempty = Pattern []
+   mappend (Pattern pa) (Pattern pb) =
+      let go [] p = p
+          go p [] = p
+          go (ac@(ak,at):as) (bc@(bk,bt):bs) =
+             case V.diffLength ak bk of
+                V.NoRemainder -> (ak, NonEmptySet.union at bt) : go as bs
+                V.RemainderLeft  ck -> ac : go as ((ck, bt) : bs)
+                V.RemainderRight ck -> bc : go ((ck, at) : as) bs
+      in  Pattern $ go pa pb
+
+pattern ::
+   (V.Storage v a, V.Storage v (), V.FromList v, RealFrac a) =>
+   v a -> Pattern v a
+pattern =
+   Pattern .
+   map (mapPair (NonEmpty.Cons () . V.fromList . void, NonEmptySet.singleton)) .
+   fst . ListHT.segmentAfterMaybe id .
+   ListHT.mapAdjacent checkZeroCrossing . V.toList
+
+
+chopVector ::
+   (V.SplitMatch v, V.Singleton v, V.Core v ~ v,
+    V.Storage v a, V.Storage v ()) =>
+   [NonEmpty.T v ()] -> v a -> NonEmpty.T [] (NonEmpty.T v a)
+chopVector ks v0 =
+   (\(y,ys) -> NonEmpty.snoc ys $ checkedFetch y) $
+   L.mapAccumL (\v k -> swap $ V.splitAtMatch k $ checkedFetch v) v0 ks
+
+{- |
+partial function
+
+I need it, since I do not know, how to prove,
+that the chunks sum up to the whole signal.
+-}
+checkedFetch ::
+   (V.Singleton v, V.Storage v a) =>
+   v a -> NonEmpty.T v a
+checkedFetch xs =
+   case V.viewL xs of
+      Nothing -> error "empty vector - This may mean that signals of different lengths were chopped."
+      Just (y,ys) -> NonEmpty.Cons y ys
+
+
+type Chunk v = NonEmpty.T v
+
+chopVectorInterpolate ::
+   (Trav.Traversable v, NonEmptyC.Append v,
+    NonEmptyC.Empty v, NonEmptyC.Cons v,
+    V.Singleton v, V.SplitMatch v,
+    V.Storage v a, V.Storage v (), V.Core v ~ v,
+    Num a) =>
+   Pattern v a -> v a -> [Chunk v a]
+chopVectorInterpolate (Pattern p) =
+   let go [] (NonEmpty.Cons v []) = [v]
+       go (ts:tss) (NonEmpty.Cons v0 (v1:vs)) =
+          case (NonEmpty.last v0, NonEmpty.head v1) of
+             (al, ar) ->
+                (\(vs2,v2) -> vs2 ++ go tss (v2 !: vs)) $
+                NonEmpty.viewR $
+                NonEmpty.mapAdjacent NonEmptyC.append $
+                NonEmpty.cons v0 $ flip NonEmptyC.snoc v1 $
+                fmap (\t -> NonEmpty.singleton $ interpolate t al ar) $
+                NonEmptySet.toAscList ts
+       go _ _ = error "lists must be equally long"
+   in  case unzip p of
+          (ks,ts) -> go ts . chopVector ks
+
+{-
+Usually the chunks should have at least two elements:
+A beginning and an ending point.
+The only exception I can see
+can happen for an input signal of length one.
+We could enforce an input signal of at least length two,
+but I do not know, how to prove then that the Chunks have at least two elements.
+-}
+type Chunk2 v = NonEmpty.T (NonEmpty.T v)
+
+chopVectorInterpolate2 ::
+   (Trav.Traversable v, NonEmptyC.Append v,
+    NonEmptyC.Empty v, NonEmptyC.Cons v,
+    V.Singleton v, V.SplitMatch v,
+    V.Storage v a, V.Storage v (), V.Core v ~ v,
+    Num a) =>
+   Pattern v a -> v a -> [Chunk2 v a]
+chopVectorInterpolate2 (Pattern p) =
+   let go [] (NonEmpty.Cons v []) = [NonEmpty.mapTail checkedFetch v]  -- we called 'flatten' in the last round, maybe too early
+       go (ts:tss) (NonEmpty.Cons v0 (v1:vs)) =
+          case (NonEmpty.last v0, NonEmpty.head v1) of
+             (al, ar) ->
+                (\(vs2,v2) -> vs2 ++ go tss (NonEmpty.flatten v2 !: vs)) $
+                NonEmpty.viewR $
+                NonEmpty.mapAdjacent NonEmpty.append $
+                NonEmpty.cons v0 $ flip NonEmptyC.snoc v1 $
+                fmap (\t -> NonEmpty.singleton $ interpolate t al ar) $
+                NonEmptySet.toAscList ts
+       go _ _ = error "lists must be equally long"
+   in  case unzip p of
+          (ks,ts) -> go ts . chopVector ks
+
+
+chopVectorContainer ::
+   (Trav.Traversable v, NonEmptyC.Append v,
+    NonEmptyC.Empty v, NonEmptyC.Cons v,
+    V.FromList v, V.DiffLength v,
+    V.SplitMatch v, V.Singleton v,
+    V.Storage v a, V.Storage v (), V.Core v ~ v,
+    Trav.Traversable f,
+    RealFrac a) =>
+   f (v a) -> [f (Chunk v a)]
+chopVectorContainer m =
+   let p = Fold.foldMap pattern m
+   in  Trav.traverse (chopVectorInterpolate p) m
+
+{-
+Possible tests:
+   p <> p == (p::Pattern)
+
+   bei Ergebnis von chopVectorContainer:
+      an der Schnittstelle muss wenigstens eine Zahl null sein
+
+   teste laziness
+
+mappend (pattern [3,3,-1,-1,-1,-1,-1,-1::Double]) (pattern [1,1,-1,-1,-1,-1,1,1::Double])
+-}
+
+chopSignal ::
+   (Trav.Traversable v, NonEmptyC.Append v,
+    NonEmptyC.Empty v, NonEmptyC.Cons v,
+    V.SplitMatch v, V.Singleton v,
+    V.Storage v a, V.Storage v (), V.Core v ~ v,
+    Num a) =>
+   Pattern v a ->
+   TC S.Signal (Typ A t Tt) (Data (v :> Nil) a) ->
+   [TC S.Signal (Typ A t Tt) (Data (Chunk v :> Nil) a)]
+chopSignal p = S.toSigList . S.liftData (chopVectorInterpolate p)
+
+chopRecord ::
+   (Trav.Traversable v, NonEmptyC.Append v,
+    NonEmptyC.Empty v, NonEmptyC.Cons v,
+    V.FromList v, V.DiffLength v,
+    V.Length v, V.SplitMatch v, V.Singleton v,
+    V.Storage v a, V.Storage v (), V.Core v ~ v,
+    RealFrac a) =>
+   PowerRecord node v a ->
+   SequData (PowerRecord node (Chunk v) a)
+chopRecord (Record t m) =
+   let p@(Pattern chunks) = Fold.foldMap (pattern . S.unconsData) m
+   in  SD.fromLengthList $
+       zip (map (V.length . fst) chunks) $
+       zipWith Record
+          (chopSignal p t)
+          (Trav.traverse (chopSignal p) m)
 
 
 
@@ -510,7 +752,7 @@ extractCuttingTimes = fmap Record.getTimeWindow
 
 {-# DEPRECATED sectionRecordsFromSequence "better use fmap (Record.slice rec)" #-}
 -- | Create SequencePowerRecord by extracting Slices from Indices given by Sequence
-sectionRecordsFromSequence ::  (V.Slice v, V.Storage v a) => Record s1 s2 t1 t2 id v a -> Sequ -> SequData (Record s1 s2 t1 t2 id v a)
+sectionRecordsFromSequence ::  (V.Slice v, V.Storage v d) => Record s1 s2 t1 t2 id v d d -> Sequ -> SequData (Record s1 s2 t1 t2 id v d d)
 sectionRecordsFromSequence rec = fmap (Record.slice rec)
 
 
@@ -518,5 +760,5 @@ sectionRecordsFromSequence rec = fmap (Record.slice rec)
 genSequenceSignal :: (V.FromList v, V.Storage v a, Num a) => Sequ -> S.UTSignal v a
 genSequenceSignal xs = S.fromList $ Fold.foldMap f xs
   where
-    f (idx1, idx2) = [1] ++ replicate (idx2-idx1-1) 0 ++ [-1]
+    f (S.SignalIdx idx1, S.SignalIdx idx2) = [1] ++ replicate (idx2-idx1-1) 0 ++ [-1]
 

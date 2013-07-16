@@ -18,7 +18,8 @@ import EFA.Utility (idxList)
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
 
-import qualified Data.Map as M
+import qualified Data.Map as Map
+import Data.Map (Map)
 
 
 
@@ -34,16 +35,16 @@ t = "zero crossing"
 p :: S.TC s t (Data ([] :> Nil) Double)
 p = S.fromList [2, 2, 2, -2, -2]
 
-pmap :: M.Map (XIdx.PPos Node.Int) (S.TC s t (Data ([] :> Nil) Double))
-pmap = M.fromListWith
-         (error "duplicate keys") 
+pmap :: Map (XIdx.PPos Node.Int) (S.TC s t (Data ([] :> Nil) Double))
+pmap = Map.fromListWith
+         (error "duplicate keys")
          [(XIdx.ppos node0 node1,  p)]
 
 
 titleList :: [String]
 titleList = [t]
 
-pmapList :: [M.Map (XIdx.PPos Node.Int) (S.TC s t (Data ([] :> Nil) Double))]
+pmapList :: [Map (XIdx.PPos Node.Int) (S.TC s t (Data ([] :> Nil) Double))]
 pmapList = [pmap]
 
 recList :: [PowerRecord Node.Int [] Double]

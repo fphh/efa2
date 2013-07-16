@@ -3,14 +3,13 @@ module Main where
 
 import qualified EFA.Example.NestedDelta as NestedDelta
 import qualified EFA.Example.AssignMap as AssignMap
-import qualified EFA.Example.Utility as Utility
 import qualified EFA.Example.Index as XIdx
 import EFA.Example.NestedDelta
           (ParameterRecord,
            givenParameterSymbol, givenParameterNumber,
            beforeDelta, extrudeStart,
            (<&), (<&>), (&>), (&&>), (?=))
-import EFA.Example.Utility (makeEdges, constructSeqTopo)
+import EFA.Example.Utility (Ignore, makeEdges, constructSeqTopo)
 import EFA.Equation.Result (Result)
 
 import qualified EFA.Equation.System as EqGen
@@ -19,6 +18,7 @@ import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Arithmetic as Arith
 
+import qualified EFA.Symbolic.Variable as SymVar
 import qualified EFA.Symbolic.SumProduct as SumProduct
 import qualified EFA.Symbolic.OperatorTree as Op
 import qualified EFA.Symbolic.Mixed as Term
@@ -32,7 +32,7 @@ import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Graph as Gr
 
-import qualified EFA.Signal.Plot as Plot
+import qualified EFA.Signal.PlotIO as PlotIO
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
@@ -40,6 +40,7 @@ import EFA.Report.FormatValue (FormatValue, formatValue)
 import qualified Data.Foldable as Fold
 import qualified Data.Map as Map
 import qualified Data.NonEmpty as NonEmpty
+import qualified Data.Empty as Empty
 import Data.NonEmpty ((!:))
 import Data.Monoid (mempty, (<>))
 
@@ -60,15 +61,15 @@ topoLinear = Gr.fromList ns (makeEdges es)
         es = [(node0, node1), (node1, node2)]
 
 
-type SignalTerm = Utility.SignalTerm Record.Delta SumProduct.Term Node.Int
-type ScalarTerm = Utility.ScalarTerm Record.Delta SumProduct.Term Node.Int
+type SignalTerm = SymVar.SignalTerm Idx.Delta SumProduct.Term Node.Int
+type ScalarTerm = SymVar.ScalarTerm Idx.Delta SumProduct.Term Node.Int
 
 type IdxMultiDelta = Idx.ExtDelta (Idx.ExtDelta (Idx.ExtDelta Idx.Absolute))
 type RecMultiDelta = Record.ExtDelta (Record.ExtDelta (Record.ExtDelta Record.Absolute))
 
 type
    EquationSystemSymbolic s =
-      EqGen.EquationSystem RecMultiDelta Node.Int s ScalarTerm SignalTerm
+      EqGen.EquationSystem Ignore RecMultiDelta Node.Int s ScalarTerm SignalTerm
 
 
 
@@ -88,7 +89,7 @@ absolute = NestedDelta.getAbsoluteRecord params
 params ::
    (Arith.Sum a) =>
    ParameterRecord
-      (NonEmpty.T (NonEmpty.T (NonEmpty.T NonEmpty.Empty)))
+      (NonEmpty.T (NonEmpty.T (NonEmpty.T Empty.T)))
       RecMultiDelta a
 params =
    beforeDelta &&> beforeDelta &&> beforeDelta &&> NestedDelta.parameterStart
@@ -110,7 +111,7 @@ eta1 = XIdx.eta sec0 node1 node2
 
 termFromIndex ::
    IdxMultiDelta ->
-   [Idx.Record Idx.Delta (Idx.InSection Var.Signal Node.Int)]
+   [Idx.Record Idx.Delta (Var.InSectionSignal Node.Int)]
 termFromIndex
       (Idx.ExtDelta r2 (Idx.ExtDelta r1 (Idx.ExtDelta r0 Idx.Absolute))) =
    Idx.Record r2 (Var.index ein) :
@@ -139,7 +140,7 @@ givenSymbolic =
          (givenParameterSymbol ein  !:
           givenParameterSymbol eta0 !:
           givenParameterSymbol eta1 !:
-          NonEmpty.Empty)
+          Empty.Cons)
          (NestedDelta.getParameterRecord params)) <>
 
    mempty
@@ -177,7 +178,7 @@ mainSymbolic = do
 
 type
    EquationSystemNumeric s =
-      EqGen.EquationSystem RecMultiDelta Node.Int s Double Double
+      EqGen.EquationSystem Ignore RecMultiDelta Node.Int s Double Double
 
 
 _givenNumeric :: EquationSystemNumeric s
@@ -199,7 +200,7 @@ givenNumeric =
          (givenParameterNumber ein  4.00 (-0.6) !:
           givenParameterNumber eta0 0.25   0.1  !:
           givenParameterNumber eta1 0.85   0.05 !:
-          NonEmpty.Empty)
+          Empty.Cons)
          (NestedDelta.getParameterRecord params)) <>
 
    mempty
@@ -219,7 +220,7 @@ mainNumeric = do
                 Map.mapKeys termFromIndex $
                 Record.assignDeltaMap x
          AssignMap.print assigns
-         Plot.stackIO "Decomposition of total output energy"
+         PlotIO.stack "Decomposition of total output energy"
             (formatValue $ Idx.delta $ Var.index eout)
             (AssignMap.ignoreUndetermined assigns)
 

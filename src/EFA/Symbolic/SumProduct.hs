@@ -131,6 +131,7 @@ instance Ord idx => Arith.Product (Term idx) where
    (~*) = (*)
    (~/) = (/)
    recip = recip
+   constOne = Function Format.ConstOne
 
 instance Ord idx => Arith.Constant (Term idx) where
    zero = zero
@@ -153,6 +154,7 @@ evaluate f =
                 case fn of
                    Format.Absolute -> abs $ term x
                    Format.Signum -> signum $ term x
+                   Format.ConstOne -> 1
              Sum s ->
                 case NonEmpty.fetch $ Map.toList s of
                    Nothing -> 0

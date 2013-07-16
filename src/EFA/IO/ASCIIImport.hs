@@ -3,7 +3,7 @@
 
 module EFA.IO.ASCIIImport (modelicaASCIIImport) where
 
-import qualified Data.Map as M
+import EFA.IO.CSVParser (csvFileWithHeader, cellContent)
 import Text.ParserCombinators.Parsec (parse)
 
 import EFA.Signal.Record (Record(Record),SignalRecord, SigId(SigId))
@@ -11,26 +11,34 @@ import EFA.Signal.Record (Record(Record),SignalRecord, SigId(SigId))
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Vector as SV
 
-import EFA.IO.CSVParser (csvFile)
-
+import qualified Data.NonEmpty.Class as NonEmptyC
+import qualified Data.NonEmpty as NonEmpty
+import qualified Data.Zip as Zip
+import qualified Data.Map as Map
 
 
 makeASCIIRecord ::
-  (SV.Storage t v, SV.FromList t, Read v) =>
-  [[String]] -> SignalRecord t v
-makeASCIIRecord [] = error "This is not possible!"
+  (SV.Storage v a, SV.FromList v) =>
+  [NonEmpty.T (NonEmpty.T []) a] -> SignalRecord v a
 makeASCIIRecord hs =
-  Record (S.fromList time) (M.fromList $ zip sigIdents (map S.fromList sigs))
-  where sigIdents = map (SigId . ("sig_" ++) . show) [(0::Int)..]
-        time:sigs = SV.transpose (map (map read . init) hs)
+  let NonEmpty.Cons time sigs =
+        Zip.transposeClip $ map NonEmpty.init hs
+  in  Record
+        (S.fromList time)
+        (Map.fromList $
+         zip
+           (map (SigId . ("sig_" ++) . show) [(0::Int)..])
+           (map S.fromList sigs))
 
 -- | Main ASCII Import Function
 modelicaASCIIImport ::
-  (SV.Storage t v, SV.FromList t, Read v) =>
-  FilePath -> IO (SignalRecord t v)
+  (SV.Storage v a, SV.FromList v, Read a) =>
+  FilePath -> IO (SignalRecord v a)
 modelicaASCIIImport path = do
   text <- readFile path
-  case parse (csvFile ' ') path text of
+  let parser =
+        csvFileWithHeader (NonEmptyC.repeat cellContent) cellContent ' '
+  case parse parser path text of
     Left err ->
       ioError $ userError $ "Parse error in file " ++ show err
-    Right table -> return $ makeASCIIRecord table
+    Right table -> return $ makeASCIIRecord $ uncurry (:) table

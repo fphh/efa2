@@ -2,7 +2,7 @@ module EFA.Utility where
 
 import qualified Data.Stream as Stream
 import qualified Data.List.Match as Match
-import qualified Data.List.HT as LH
+import qualified Data.List.HT as ListHT
 import Data.Traversable (Traversable, mapAccumL)
 import Data.Stream (Stream)
 
@@ -23,7 +23,7 @@ for :: [a] -> (a -> b) -> [b]
 for = flip map
 
 pairs :: [a] -> [(a, a)]
-pairs = LH.mapAdjacent (,)
+pairs = ListHT.mapAdjacent (,)
 
 -- | Yet another zipping function. A somehow generalised version of 'dmap'.
 -- 'prop_ysaf' checks for this property:

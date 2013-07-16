@@ -11,25 +11,24 @@ import Data.Stream (Stream)
 import EFA.Utility (zipWithTraversable)
 import Data.Traversable (Traversable)
 
-newtype C = C { unC :: String } deriving (Show)
+newtype Name = Name { unpackName :: String } deriving (Show)
 
-showf :: Colour Double -> C
-showf = C . sRGB24show
+showf :: Colour Double -> Name
+showf = Name . sRGB24show
 
-adorn :: Traversable f => f a -> f (C, a)
+adorn :: Traversable f => f a -> f (Name, a)
 adorn = zipWithTraversable (,) colours
 
-defltColour :: C
+defltColour :: Name
 defltColour = showf Colour.red
 
-colours :: Stream C
+colours :: Stream Name
 colours = Stream.cycle cls
 
-cls :: [C]
+cls :: [Name]
 cls = map showf $
   Colour.red :
   Colour.blue :
-  Colour.yellow :
   Colour.green :
   Colour.orange :
   Colour.gray :
@@ -38,9 +37,8 @@ cls = map showf $
   Colour.chocolate :
   Colour.olive :
   Colour.purple :
-  Colour.white :
-  Colour.violet :
   Colour.lightblue :
+  Colour.violet :
   Colour.darkblue :
   Colour.lightcoral :
   Colour.darkcyan :
@@ -168,4 +166,6 @@ cls = map showf $
   Colour.wheat :
   Colour.whitesmoke :
   Colour.yellowgreen :
+  Colour.yellow :
+  Colour.white :
   []

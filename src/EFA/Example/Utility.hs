@@ -1,10 +1,8 @@
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
 module EFA.Example.Utility (
    module EFA.Example.Utility,
-   (.=), (%=),
+   (.=), (%=), (=%%=),
+   Verify.Ignore,
    ) where
 
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
@@ -17,13 +15,16 @@ import qualified EFA.Equation.Record as EqRecord
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Result as Result
+import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Arithmetic as Arith
-import qualified EFA.Symbolic.Mixed as Term
 import qualified EFA.Signal.SequenceData as SD
-import EFA.Equation.System ((.=), (%=))
+import EFA.Symbolic.Variable (VarTerm, ScalarTerm, SignalTerm, Symbol, varSymbol)
+import EFA.Equation.System ((.=), (%=), (=%%=))
 import EFA.Equation.Result (Result)
-import EFA.Utility (Pointed, point)
+import EFA.Utility (Pointed)
+
+import EFA.Report.FormatValue (FormatValue)
 
 import Data.Monoid ((<>))
 
@@ -48,13 +49,16 @@ makeSimpleEdges es = map f es
 -}
 
 constructSeqTopo ::
-   (Ord node) =>
+   (Ord node, Show node) =>
    TD.Topology node -> [Int] -> Flow.RangeGraph node
 constructSeqTopo topo =
   Flow.mkSequenceTopology .
   fmap (StateAnalysis.bruteForce topo !!) .
   SD.fromList
 
+
+select :: [topo] -> [Int] -> SD.SequData topo
+select ts = SD.fromList . map (ts !!)
 
 
 checkDetermined :: String -> Result a -> a
@@ -64,55 +68,11 @@ checkDetermined name rx =
       Result.Determined x -> x
 
 
-
 type
-   SignalTerm rec term node =
-      Term.Signal term
-         (EqRecord.Indexed rec (Idx.ForNode   Var.Scalar node))
-         (EqRecord.Indexed rec (Idx.InSection Var.Signal node))
-
-type
-   ScalarTerm rec term node =
-      Term.Scalar term
-         (EqRecord.Indexed rec (Idx.ForNode   Var.Scalar node))
-         (EqRecord.Indexed rec (Idx.InSection Var.Signal node))
-
-type
-   ScalarAtom rec term node =
-      Term.ScalarAtom term
-         (EqRecord.Indexed rec (Idx.ForNode   Var.Scalar node))
-         (EqRecord.Indexed rec (Idx.InSection Var.Signal node))
-
-type
-   SymbolicEquationSystem rec node s term =
-      EqGen.EquationSystem rec node s
-         (ScalarTerm rec term node)
-         (SignalTerm rec term node)
-
-
-type
-   VarTerm var recIdx term node =
-      Term var term
-         (Idx.Record recIdx (Idx.ForNode   Var.Scalar node))
-         (Idx.Record recIdx (Idx.InSection Var.Signal node))
-
-class (var ~ Variable (Term var)) => Symbol var where
-   type Term var :: (* -> *) -> * -> * -> *
-   type Variable term :: * -> *
-   symbol ::
-      Pointed term =>
-      Idx.Record recIdx (var node) ->
-      VarTerm var recIdx term node
-
-instance Symbol (Idx.InSection Var.Signal) where
-   type Term (Idx.InSection Var.Signal) = Term.Signal
-   type Variable Term.Signal = Idx.InSection Var.Signal
-   symbol = Term.Signal . point
-
-instance Symbol (Idx.ForNode Var.Scalar) where
-   type Term (Idx.ForNode Var.Scalar) = Term.Scalar
-   type Variable Term.Scalar = Idx.ForNode Var.Scalar
-   symbol = Term.Scalar . point . Term.ScalarVariable
+   SymbolicEquationSystem mode rec node s term =
+      EqGen.EquationSystem mode rec node s
+         (ScalarTerm (EqRecord.ToIndex rec) term node)
+         (SignalTerm (EqRecord.ToIndex rec) term node)
 
 
 givenSymbol ::
@@ -122,30 +82,32 @@ givenSymbol ::
   and it is better not to compare them at all.
   We should remove the Eq constraint as soon as unique-logic allows it.
   -}
-  (t ~ VarTerm var (EqRecord.ToIndex rec) term node,
+  (Verify.GlobalVar mode t recIdx var node,
+   t ~ VarTerm var recIdx term node,
    Eq t, Arith.Sum t,
-   t ~ Env.Element idx (ScalarTerm rec term node) (SignalTerm rec term node),
-   EqGen.Record rec,
-   Ord (idx node), Pointed term,
+   t ~ Env.Element idx (ScalarTerm recIdx term node) (SignalTerm recIdx term node),
+   EqGen.Record rec, recIdx ~ EqRecord.ToIndex rec,
+   Ord (idx node), FormatValue (idx node), Pointed term,
    Var.Type idx ~ var, Symbol var, Env.AccessMap idx) =>
-  EqRecord.Indexed rec (idx node) ->
-  SymbolicEquationSystem rec node s term
+  Idx.Record recIdx (idx node) ->
+  SymbolicEquationSystem mode rec node s term
 givenSymbol idx =
-   idx .= symbol (fmap Var.index idx)
+   idx .= varSymbol idx
 
 
 infixr 6 =<>
 
 (=<>) ::
-  (t ~ VarTerm var (EqRecord.ToIndex rec) term node,
+  (Verify.GlobalVar mode t recIdx var node,
+   t ~ VarTerm var recIdx term node,
    Eq t, Arith.Sum t,
-   t ~ Env.Element idx (ScalarTerm rec term node) (SignalTerm rec term node),
-   EqGen.Record rec,
-   Ord (idx node), Pointed term,
+   t ~ Env.Element idx (ScalarTerm recIdx term node) (SignalTerm recIdx term node),
+   EqGen.Record rec, recIdx ~ EqRecord.ToIndex rec,
+   Ord (idx node), FormatValue (idx node), Pointed term,
    Var.Type idx ~ var, Symbol var, Env.AccessMap idx) =>
-  EqRecord.Indexed rec (idx node) ->
-  SymbolicEquationSystem rec node s term ->
-  SymbolicEquationSystem rec node s term
+  Idx.Record recIdx (idx node) ->
+  SymbolicEquationSystem mode rec node s term ->
+  SymbolicEquationSystem mode rec node s term
 idx =<> eqsys = givenSymbol idx <> eqsys
 
 
@@ -153,16 +115,22 @@ infix 0 #=, ~=
 
 -- | @(.=)@ restricted to signals
 (~=) ::
-  (Eq v, Arith.Sum v, EqGen.Record rec,
-   Env.AccessMap idx, Env.Environment idx ~ Env.Signal, Ord (idx node)) =>
-  EqRecord.Indexed rec (idx node) -> v ->
-  EqGen.EquationSystem rec node s a v
+  (Verify.GlobalVar mode v recIdx var node, Arith.Sum v,
+   var ~ Var.InSectionSignal, var ~ Var.Type idx,
+   recIdx ~ EqRecord.ToIndex rec, EqGen.Record rec,
+   Env.AccessMap idx, Env.Environment idx ~ Env.Signal,
+   Ord (idx node), FormatValue (idx node)) =>
+  Idx.Record recIdx (idx node) -> v ->
+  EqGen.EquationSystem mode rec node s a v
 (~=)  =  (.=)
 
 -- | @(.=)@ restricted to scalars
 (#=) ::
-  (Eq a, Arith.Sum a, EqGen.Record rec,
-   Env.AccessMap idx, Env.Environment idx ~ Env.Scalar, Ord (idx node)) =>
-  EqRecord.Indexed rec (idx node) -> a ->
-  EqGen.EquationSystem rec node s a v
+  (Verify.GlobalVar mode a recIdx var node, Arith.Sum a,
+   var ~ Var.ForNodeScalar, var ~ Var.Type idx,
+   recIdx ~ EqRecord.ToIndex rec, EqGen.Record rec,
+   Env.AccessMap idx, Env.Environment idx ~ Env.Scalar,
+   Ord (idx node), FormatValue (idx node)) =>
+  Idx.Record recIdx (idx node) -> a ->
+  EqGen.EquationSystem mode rec node s a v
 (#=)  =  (.=)

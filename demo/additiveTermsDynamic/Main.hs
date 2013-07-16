@@ -2,21 +2,20 @@
 module Main where
 
 import qualified EFA.Example.AssignMap as AssignMap
-import qualified EFA.Example.Utility as Utility
+import qualified EFA.Example.Absolute as EqGen
 import qualified EFA.Example.Index as XIdx
 import EFA.Example.Utility (makeEdges, constructSeqTopo)
 import EFA.Example.Absolute ((.=))
-import EFA.Equation.Stack (Stack)
+
+import qualified EFA.Symbolic.Variable as SymVar
+import qualified EFA.Symbolic.SumProduct as SumProduct
 
 import qualified EFA.Equation.Stack as Stack
-import qualified EFA.Example.Absolute as EqGen
 import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.Variable as Var
-import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Arithmetic as Arith
-
-import qualified EFA.Symbolic.SumProduct as SumProduct
+import EFA.Equation.Stack (Stack)
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
@@ -27,10 +26,10 @@ import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Graph as Gr
 
-import qualified EFA.Signal.Plot as Plot
+import qualified EFA.Signal.PlotIO as PlotIO
 
 import qualified EFA.Report.Format as Format
-import EFA.Report.FormatValue (FormatValue, formatValue)
+import EFA.Report.FormatValue (FormatSignalIndex, FormatValue, formatValue)
 
 import qualified Data.Map as Map
 import Data.Monoid (mempty, (<>))
@@ -52,8 +51,8 @@ topoLinear = Gr.fromList ns (makeEdges es)
         es = [(node0, node1), (node1, node2)]
 
 
-type SignalTerm = Utility.SignalTerm Record.Delta SumProduct.Term Node.Int
-type ScalarTerm = Utility.ScalarTerm Record.Delta SumProduct.Term Node.Int
+type SignalTerm = SymVar.SignalTerm Idx.Delta SumProduct.Term Node.Int
+type ScalarTerm = SymVar.ScalarTerm Idx.Delta SumProduct.Term Node.Int
 
 
 type
@@ -65,24 +64,24 @@ type
 infixr 6 *=<>, -=<>
 
 (*=<>) ::
-   (Ord (idx Node.Int), Env.AccessSignalMap idx) =>
+   (Ord (idx Node.Int), FormatSignalIndex idx, Env.AccessSignalMap idx) =>
    Idx.InSection idx Node.Int ->
    EquationSystemSymbolic s -> EquationSystemSymbolic s
 idx *=<> eqsys =
-   (idx .= (Stack.singleton $ Utility.symbol $ Idx.before $ Var.index idx))
+   (idx .= (Stack.singleton $ SymVar.varSymbol $ Idx.before idx))
    <>
    eqsys
 
 (-=<>) ::
-   (Ord (idx Node.Int), Env.AccessSignalMap idx) =>
+   (Ord (idx Node.Int), FormatSignalIndex idx, Env.AccessSignalMap idx) =>
    Idx.InSection idx Node.Int -> EquationSystemSymbolic s -> EquationSystemSymbolic s
 idx -=<> eqsys =
    (idx .=
       let var = Var.index idx
       in  Stack.deltaPair
              (Var.Signal var)
-             (Utility.symbol (Idx.before var))
-             (Utility.symbol (Idx.delta  var)))
+             (SymVar.symbol (Idx.before var))
+             (SymVar.symbol (Idx.delta  var)))
    <>
    eqsys
 
@@ -118,7 +117,7 @@ type
          (Stack (Var.Any Node.Int) Double)
 
 deltaPair ::
-   (Ord (idx Node.Int), Env.AccessSignalMap idx) =>
+   (Ord (idx Node.Int), FormatSignalIndex idx, Env.AccessSignalMap idx) =>
    Idx.InSection idx Node.Int -> Double -> Double -> EquationSystemNumeric s
 deltaPair idx before delta =
    idx .= Stack.deltaPair (Var.Signal $ Var.index idx) before delta
@@ -149,14 +148,14 @@ mainNumeric = do
    case Map.lookup eout (Env.energyMap signalEnv) of
       Nothing -> error "undefined E_2_1"
       Just d ->
-         case Record.unAbsolute d of
+         case d of
             Result.Undetermined -> error "undetermined E_2_1"
             Result.Determined x -> do
                let assigns =
                       Map.mapKeys AssignMap.indexSet $
                       Stack.assignDeltaMap x
                AssignMap.print assigns
-               Plot.stackIO "Decomposition of total output energy"
+               PlotIO.stack "Decomposition of total output energy"
                   (formatValue $ Idx.delta $ Var.index eout) assigns
 
 

@@ -35,11 +35,8 @@ topoDreibein = Gr.fromList ns (makeEdges es)
         es = [(node0, node2), (node1, node2), (node2, node3)]
 
 
-type SignalTerm = EqGen.SignalTerm SumProduct.Term Node.Int
-type ScalarTerm = EqGen.ScalarTerm SumProduct.Term Node.Int
-
-
-given :: EqGen.EquationSystem Node.Int s ScalarTerm SignalTerm
+given ::
+   EqGen.SymbolicEquationSystem Node.Int s SumProduct.Term
 given =
    XIdx.dTime sec0 =<>
 

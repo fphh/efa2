@@ -1,6 +1,3 @@
-{-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE FlexibleInstances #-}
-
 module EFA.Report.FormatValue where
 
 import qualified EFA.Graph.Topology.Index as Idx
@@ -15,9 +12,12 @@ import Data.Ratio (Ratio)
 
 class FormatValue a where
    formatValue :: Format output => a -> output
-   
+
 instance FormatValue a => FormatValue [a] where
    formatValue = Format.list . map formatValue
+
+instance (FormatValue a, FormatValue b) => FormatValue (a,b) where
+   formatValue (x,y) = Format.pair (formatValue x) (formatValue y)
 
 instance (Foldable f, FormatValue a) => FormatValue (NonEmpty.T f a) where
    formatValue = formatValue . toList
@@ -26,7 +26,7 @@ instance FormatValue Double where
    formatValue = Format.real
 
 instance (Integral a, Show a) => FormatValue (Ratio a) where
-   formatValue = Format.ratio
+   formatValue = Format.ratioAuto
 
 instance FormatValue Char where
    formatValue = formatChar
@@ -68,13 +68,13 @@ class FormatScalarIndex idx where
 formatBoundaryNode ::
    (Format output, Node.C node) =>
    Idx.BndNode node -> output
-formatBoundaryNode (Idx.BndNode s n) =
+formatBoundaryNode (Idx.TimeNode s n) =
    Format.boundary s `Format.sectionNode` Node.subscript n
 
 formatSectionNode ::
    (Format output, Node.C node) =>
    Idx.SecNode node -> output
-formatSectionNode (Idx.SecNode s n) =
+formatSectionNode (Idx.TimeNode s n) =
    Format.section s `Format.sectionNode` Node.subscript n
 
 
@@ -111,7 +111,15 @@ formatStorageEdge ::
    Format.EdgeVar -> Idx.StorageEdge node -> node -> output
 formatStorageEdge e (Idx.StorageEdge s0 s1) n =
    Format.subscript (Format.edgeIdent e) $
-   (Format.boundary s0 `Format.link` Format.boundary s1)
+   (Format.initOrSection s0 `Format.link` Format.sectionOrExit s1)
+      `Format.sectionNode` Node.subscript n
+
+formatStorageTrans ::
+   (Format output, Node.C node) =>
+   Format.EdgeVar -> Idx.StorageTrans node -> node -> output
+formatStorageTrans e (Idx.StorageTrans s0 s1) n =
+   Format.subscript (Format.edgeIdent e) $
+   (Format.augmentedSection s0 `Format.link` Format.augmentedSection s1)
       `Format.sectionNode` Node.subscript n
 
 
@@ -133,9 +141,9 @@ instance FormatSignalIndex Idx.DTime where
 
 instance FormatSignalIndex Idx.Sum where
    formatSignalIndex (Idx.Sum dir n) s =
-      Format.subscript Format.sum $
+      Format.subscript Format.signalSum $
       Format.direction dir `Format.connect`
-         formatSectionNode (Idx.SecNode s n)
+         formatSectionNode (Idx.TimeNode s n)
 
 
 instance FormatScalarIndex Idx.MaxEnergy where
@@ -144,20 +152,29 @@ instance FormatScalarIndex Idx.MaxEnergy where
 instance FormatScalarIndex Idx.Storage where
    formatScalarIndex (Idx.Storage bnd) n =
       Format.subscript Format.storage $
-      formatBoundaryNode (Idx.BndNode bnd n)
+      formatBoundaryNode (Idx.TimeNode bnd n)
 
 instance FormatScalarIndex Idx.StEnergy where
    formatScalarIndex (Idx.StEnergy e) = formatStorageEdge Format.Energy e
 
 instance FormatScalarIndex Idx.StX where
-   formatScalarIndex (Idx.StX e) = formatStorageEdge Format.X e
+   formatScalarIndex (Idx.StX e) = formatStorageTrans Format.X e
 
-instance FormatScalarIndex Idx.StSum where
-   formatScalarIndex (Idx.StSum dir bnd) n =
-      Format.subscript Format.sum $
-      Format.direction dir `Format.connect`
-         formatBoundaryNode (Idx.BndNode bnd n)
+instance FormatScalarIndex Idx.StInSum where
+   formatScalarIndex (Idx.StInSum s) n =
+      formatStSum Idx.In (Format.sectionOrExit s) n
 
+instance FormatScalarIndex Idx.StOutSum where
+   formatScalarIndex (Idx.StOutSum s) n =
+      formatStSum Idx.Out (Format.initOrSection s) n
+
+formatStSum ::
+   (Format output, Node.C node) =>
+   Idx.Direction -> output -> node -> output
+formatStSum dir s n =
+   Format.subscript Format.scalarSum $
+   Format.direction dir `Format.connect`
+      s `Format.sectionNode` Node.subscript n
 
 formatChar :: Format output => Char -> output
 formatChar = Format.literal . (:[])

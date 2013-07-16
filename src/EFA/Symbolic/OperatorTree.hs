@@ -14,6 +14,7 @@ import EFA.Equation.Arithmetic
 
 import EFA.Utility (Pointed, point)
 
+import qualified Data.NonEmpty.Class as NonEmptyC
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Stream as Stream
 import Data.Stream (Stream)
@@ -63,6 +64,7 @@ instance Product (Term idx) where
    (~*) = (:*)
    (~/) = (&/)
    recip = Recip
+   constOne = Function Format.ConstOne
 
 instance Constant (Term idx) where
    zero = Const 0
@@ -146,7 +148,7 @@ formatTerm =
 expand :: Term a -> NonEmpty.T [] (Term a)
 expand = go
   where go (Minus u) = fmap Minus (go u)
-        go (u :+ v) = NonEmpty.append (go u) (go v)
+        go (u :+ v) = NonEmptyC.append (go u) (go v)
         go (u :* v) = liftM2 (:*) (go u) (go v)
         go s = NonEmpty.singleton s
 
@@ -212,6 +214,7 @@ evaluate f =
                 case fn of
                    Format.Absolute -> abs $ go x
                    Format.Signum -> signum $ go x
+                   Format.ConstOne -> 1
 
              Minus x -> negate $ go x
              Recip x -> recip $ go x
@@ -237,6 +240,7 @@ delta =
           case fn of
              Format.Absolute -> function fn a
              Format.Signum -> function fn a
+             Format.ConstOne -> Arith.clear $ before a
        go (Minus t) = Minus $ go t
        go (s :+ t) = go s + go t
        go (Recip s) =

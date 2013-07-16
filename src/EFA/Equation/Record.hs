@@ -13,6 +13,7 @@ import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
 
 import qualified Data.Accessor.Basic as Accessor
+import qualified Data.NonEmpty.Class as NonEmptyC
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Map as Map
 import Data.NonEmpty ((!:))
@@ -31,13 +32,13 @@ type Indexed rec = Idx.Record (ToIndex rec)
 
 lookupSignal ::
    (C rec, Ord node) =>
-   Indexed rec (Idx.InSection Var.Signal node) ->
+   Indexed rec (Var.InSectionSignal node) ->
    Env.Signal node (rec a) -> Maybe a
 lookupSignal (Idx.Record r v) =
    fmap (Accessor.get (access r)) . Env.lookupSignal v
 
 
-newtype Absolute a = Absolute {unAbsolute :: a} deriving (Show)
+newtype Absolute a = Absolute {unAbsolute :: a} deriving (Show, Eq)
 
 instance FormatValue a => FormatValue (Absolute a) where
    formatValue (Absolute a) = formatValue a
@@ -183,7 +184,7 @@ instance Assigns Delta where
 
 instance Assigns rec => Assigns (ExtDelta rec) where
    assigns r =
-      NonEmpty.append
+      NonEmptyC.append
          (fmap (mapFst (Idx.ExtDelta Idx.Before)) $ assigns (extBefore r))
          (fmap (mapFst (Idx.ExtDelta Idx.Delta))  $ assigns (extDelta r))
 

@@ -35,6 +35,7 @@ instance (Product a) => Product (Triple a) where
    (~*) = liftA2 (~*)
    (~/) = liftA2 (~/)
    recip = fmap Arith.recip
+   constOne = fmap Arith.constOne
 
 instance (Constant a) => Constant (Triple a) where
    zero = pure zero

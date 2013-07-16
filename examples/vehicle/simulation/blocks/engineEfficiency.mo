@@ -9,22 +9,25 @@ model EngineEfficiency
   Modelica.Blocks.Nonlinear.Limiter preventNegtiveFuelConsumption(uMin = 0, uMax = 10 ^ 12) annotation(Placement(visible = true, transformation(origin = {43.2773,-8.82353}, extent = {{-8.19616,-8.19616},{8.19616,8.19616}}, rotation = 0)));
   Modelica.Blocks.Tables.CombiTable2D EfficiencyMap(table = [0,0,1;0,0,1;1,2,3], tableOnFile = true, tableName = "table2D_efficiencyMap", fileName = parTableFile) annotation(Placement(visible = true, transformation(origin = {0.829465,35.7143}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Blocks.Math.Gain speedScale(k = 1 / parSpeedScale) annotation(Placement(visible = true, transformation(origin = {-44.5432,42.8572}, extent = {{-8.19616,-8.19616},{8.19616,8.19616}}, rotation = 0)));
-  Modelica.Blocks.Math.Gain efficiencyScale(k = parEfficiencyScale) annotation(Placement(visible = true, transformation(origin = {34.0389,35.7143}, extent = {{-7.45106,-7.45106},{7.45106,7.45106}}, rotation = 0)));
   Modelica.Blocks.Math.Division division1 annotation(Placement(visible = true, transformation(origin = {10.084,-20.5882}, extent = {{-7.45106,-7.45106},{7.45106,7.45106}}, rotation = 0)));
   Modelica.Blocks.Interfaces.RealInput minTorque annotation(Placement(visible = true, transformation(origin = {-80.7989,-87.1318}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {-77.5233,-87.7869}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Blocks.Interfaces.RealInput torque annotation(Placement(visible = true, transformation(origin = {-76.8682,-32.7563}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {-82.3529,-68.0672}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Blocks.Interfaces.RealInput maxTorque annotation(Placement(visible = true, transformation(origin = {-74.9028,-58.9614}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {-74.9028,-58.9614}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   RelativeTorque relativetorque1 annotation(Placement(visible = true, transformation(origin = {-30.5726,-59.3981}, extent = {{-12,-12},{12,12}}, rotation = 0)));
+  Modelica.Blocks.Nonlinear.Limiter limiter1(uMax = 1, uMin = 0.1) annotation(Placement(visible = true, transformation(origin = {65,35.5556}, extent = {{-6.1579,-6.1579},{6.1579,6.1579}}, rotation = 0)));
+  Modelica.Blocks.Math.Gain efficiencyScale(k = parEfficiencyScale) annotation(Placement(visible = true, transformation(origin = {43.4833,35.4365}, extent = {{-7.45106,-7.45106},{7.45106,7.45106}}, rotation = 0)));
+  Modelica.Blocks.Sources.Constant const(k = 1) annotation(Placement(visible = true, transformation(origin = {9.44444,77.5}, extent = {{-9.01578,-9.01578},{9.01578,9.01578}}, rotation = 0)));
 equation
+  connect(EfficiencyMap.y,efficiencyScale.u) annotation(Line(points = {{14.0295,35.7143},{34.1667,35.7143},{34.1667,35.4365},{34.5421,35.4365}}));
+  connect(efficiencyScale.y,limiter1.u) annotation(Line(points = {{51.6795,35.4365},{58.0556,35.4365},{58.0556,35.5556},{57.6105,35.5556}}));
+  connect(limiter1.y,division1.u2) annotation(Line(points = {{71.7737,35.5556},{77.5,35.5556},{77.5,8.61111},{-9.16667,8.61111},{-9.16667,-25},{1.14273,-25},{1.14273,-25.0588}}));
   connect(torque,calculatePower.u2) annotation(Line(points = {{-76.8682,-32.7563},{-48.0426,-32.7563},{-48.0426,-19.5967},{-47.1766,-19.5967}}));
   connect(relativetorque1.output_relativeTorque,EfficiencyMap.u2) annotation(Line(points = {{-21.144,-55.5158},{-14.4128,-55.5158},{-14.4128,28.5143},{-13.5705,28.5143}}));
   connect(minTorque,relativetorque1.input_minTorque) annotation(Line(points = {{-80.7989,-87.1318},{-42.1465,-87.1318},{-42.1465,-63.2301},{-39.4465,-63.2301}}));
   connect(maxTorque,relativetorque1.input_maxTorque) annotation(Line(points = {{-74.9028,-58.9614},{-41.273,-58.9614},{-41.273,-58.4906},{-39.0432,-58.4906}}));
   connect(torque,relativetorque1.input_torque) annotation(Line(points = {{-76.8682,-32.7563},{-42.5832,-32.7563},{-42.5832,-54.0032},{-39.7995,-54.0032}}));
-  connect(division1.u2,efficiencyScale.y) annotation(Line(points = {{1.14277,-25.0589},{-8.40336,-25.0589},{-8.40336,13.4454},{66.8067,13.4454},{66.8067,35.2941},{42.2351,35.2941},{42.2351,35.7143}}));
   connect(division1.y,preventNegtiveFuelConsumption.u) annotation(Line(points = {{18.2802,-20.5882},{32.3529,-20.5882},{32.3529,-8.82353},{33.4419,-8.82353}}));
   connect(calculatePower.y,division1.u1) annotation(Line(points = {{-30.0391,-15.1261},{-5.46218,-15.1261},{-5.46218,-16.1176},{1.14277,-16.1176}}));
-  connect(EfficiencyMap.y,efficiencyScale.u) annotation(Line(points = {{14.0295,35.7143},{21.8487,35.7143},{21.8487,35.7143},{25.0977,35.7143}}));
   connect(speed,speedScale.u) annotation(Line(points = {{-81.9328,42.8571},{-54.6218,42.8571},{-54.6218,42.8572},{-54.3786,42.8572}}));
   connect(speedScale.y,EfficiencyMap.u1) annotation(Line(points = {{-35.5275,42.8572},{-15.9664,42.8572},{-15.9664,42.9143},{-13.5705,42.9143}}));
   connect(preventNegtiveFuelConsumption.y,y) annotation(Line(points = {{52.2931,-8.82353},{65.9664,-8.82353},{65.9664,-5.46218},{75.2101,-5.46218}}));

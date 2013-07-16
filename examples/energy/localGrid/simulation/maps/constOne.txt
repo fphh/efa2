@@ -1,0 +1,9 @@
+#1
+double power(3,2)   # constant efficiency map
+ -1      1
+  0      1
+  1      1
+double eta(3,2)   # constant efficiency map
+ -1      1
+  0      1
+  1      1

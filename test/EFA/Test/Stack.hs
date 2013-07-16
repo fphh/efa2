@@ -71,7 +71,7 @@ prop_filterMerge (AMap c0) (AMap c1) x =
 
 prop_filterPlus :: AMap Char Stack.Branch -> IntStack -> IntStack -> Bool
 prop_filterPlus (AMap c) x y =
-   let filt = fmap Stack.filteredStack . Stack.filter c . Stack.startFilter
+   let filt = fmap Stack.filtered . Stack.filter c . Stack.startFilter
    in  filt (x + y)  ==  liftA2 (+) (filt x) (filt y)
 
 
@@ -156,7 +156,8 @@ prop_swapMinus x y  =  (x-y) == negate (y-x)
 
 prop_inversePlus :: IntStack -> Bool
 prop_inversePlus =
-   Law.eqWith Stack.eqRelaxed $ Law.prop_GroupInverse 0 (+) negate Law.T
+   Law.eqWith Stack.eqRelaxedNum $
+   Law.prop_GroupInverse 0 (+) negate Law.T
 
 prop_distributivePlus :: IntStack -> IntStack -> IntStack -> Bool
 prop_distributivePlus x y z  =  (x+y)*z == x*z + y*z

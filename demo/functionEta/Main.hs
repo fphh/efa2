@@ -3,11 +3,10 @@ module Main where
 
 import qualified EFA.Example.Absolute as EqGen
 import qualified EFA.Example.Index as XIdx
-import EFA.Example.Absolute ((.=))
+import EFA.Example.Absolute ((.=), (=.=))
 import EFA.Example.Utility (constructSeqTopo, makeEdges)
 
 import qualified EFA.Equation.Environment as Env
-import EFA.Equation.System ((=.=))
 
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as Idx
@@ -74,7 +73,7 @@ solve p =
             ((EqGen.variable eta =.= functionEta (EqGen.variable c)) <> given p)
   in  show p ++ " " ++
       Format.unUnicode (formatValue
-         (checkedLookup (Env.etaMap (Env.signal env)) eta))
+         (checkedLookup "solve" (Env.etaMap (Env.signal env)) eta))
 
 main :: IO ()
 main =

@@ -2,10 +2,12 @@ module Main where
 
 import qualified EFA.Example.Index as XIdx
 import EFA.Example.Utility
-          (ScalarTerm, SignalTerm,
+          (SymbolicEquationSystem, Ignore,
            makeEdges, constructSeqTopo, (=<>), (.=))
 
 import qualified EFA.Symbolic.SumProduct as SumProduct
+
+import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Record as Record
 import EFA.Equation.Arithmetic (zero)
@@ -42,9 +44,7 @@ topoDreibein = Gr.fromList ns (makeEdges es)
 Use SumProduct.Term here since it simplifies automatically.
 -}
 given ::
-   EqGen.EquationSystem Record.Delta Node.Int s
-      (ScalarTerm Record.Delta SumProduct.Term Node.Int)
-      (SignalTerm Record.Delta SumProduct.Term Node.Int)
+   SymbolicEquationSystem Ignore Record.Delta Node.Int s SumProduct.Term
 given =
    (Idx.delta (XIdx.dTime sec0) .= zero) <>
 
@@ -76,4 +76,6 @@ main = do
   let seqTopo = constructSeqTopo topoDreibein [1]
       env = EqGen.solve seqTopo given
 
-  Draw.xterm $ Draw.sequFlowGraphDeltaWithEnv seqTopo env
+  -- Draw.xterm $ Draw.sequFlowGraphAbsWithEnv seqTopo env
+  Draw.xterm $ Draw.sequFlowGraphDeltaWithEnv seqTopo $
+     Env.completeFMap Record.delta Record.delta env

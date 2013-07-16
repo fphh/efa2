@@ -15,9 +15,12 @@ import EFA.Signal.Record (PowerRecord, Record(Record))
 
 import EFA.Signal.Signal (PSigL, (.++))
 import EFA.Signal.Base (Val)
-import qualified EFA.Signal.Plot as Plot
+import qualified EFA.Signal.PlotIO as PlotIO
 
-import qualified Data.Map as M
+import qualified Data.Map as Map
+import Data.Map (Map)
+
+import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 
 
 mkSig :: Int -> [Val] -> PSigL
@@ -43,9 +46,9 @@ n = 2
 pPosIdx :: Int -> Int -> XIdx.PPos Int
 pPosIdx x y = XIdx.ppos x y
 
-pMap :: M.Map (XIdx.PPos Int) PSigL
+pMap :: Map (XIdx.PPos Int) PSigL
 pMap =
-   M.fromListWith (error "duplicate keys") $
+   Map.fromListWith (error "duplicate keys") $
       (pPosIdx 0 1, mkSigEnd n s01) :
       (pPosIdx 1 0, mkSigEnd n s10) :
       (pPosIdx 1 2, mkSigEnd n s12) :
@@ -71,9 +74,9 @@ main = do
   print pRec
   print pRec0
 
-  Plot.recordIO "PowerRecord" pRec
-  Plot.sequenceIO "SequA" sequRecA
-  Plot.sequenceIO "SequB" sequRecB
+  PlotIO.record "PowerRecord" DefaultTerm.cons show id pRec
+  PlotIO.sequence "SequA" DefaultTerm.cons show id sequRecA
+  PlotIO.sequence "SequB" DefaultTerm.cons show id sequRecB
 
 {-
   {-

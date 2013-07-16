@@ -1,5 +1,21 @@
 {-# LANGUAGE TypeFamilies #-}
-module EFA.Equation.Stack where
+module EFA.Equation.Stack (
+   Stack,
+   fromMultiValue,
+   toMultiValue,
+
+   singleton,
+   deltaPair,
+   absolute,
+   normalize,
+
+   Branch(..), Filtered(..),
+   filter, filterNaive, startFilter, mergeConditions,
+   eqRelaxedNum,
+
+   mapIndicesMonotonic,
+   toList, evaluate, assignDeltaMap, assigns, mapWithIndices,
+   ) where
 
 import qualified EFA.Equation.MultiValue as MV
 import qualified EFA.Equation.Arithmetic as Arith
@@ -14,15 +30,14 @@ import qualified Test.QuickCheck as QC
 
 import qualified Data.Map as Map
 import qualified Data.Set as Set
+import qualified Data.NonEmpty.Class as NonEmptyC
 import qualified Data.NonEmpty as NonEmpty
-import qualified Data.List.HT as ListHT
 import qualified Data.Foldable as Fold
 import Control.Applicative (liftA2)
 import Data.Map (Map)
 import Data.Traversable (sequenceA)
-import Data.Foldable (Foldable, foldMap)
 import Data.Monoid ((<>))
-import Data.Tuple.HT (mapFst)
+import Data.Tuple.HT (mapPair)
 import Data.Maybe.HT (toMaybe)
 
 import qualified Prelude as P
@@ -30,152 +45,164 @@ import Prelude hiding (recip, filter)
 
 
 {- |
-The length of the list must match the depth of the tree.
-The indices must be in strictly ascending order.
+The indices of type @i@ must be in strictly descending order.
 -}
-data Stack i a = Stack [i] (Sum a)
-   deriving (Show, Eq)
-
-data Sum a =
-     Value a
-   | Plus (Sum a) (Sum a)
+data Stack i a =
+     Stack a
+   | Dim i (Stack i (a, a))
    deriving (Show, Eq)
 
 instance Functor (Stack i) where
-   fmap f (Stack is s) = Stack is (fmap f s)
+   fmap f n =
+      case n of
+         Stack a -> Stack $ f a
+         Dim i c -> Dim i $ fmap (mapPair (f,f)) c
 
-instance Functor Sum where
-   fmap f (Value a) = Value (f a)
-   fmap f (Plus a0 a1) = Plus (fmap f a0) (fmap f a1)
-
-instance Foldable Sum where
-   foldMap f = fold (<>) . fmap f
 
 
 instance FormatValue a => FormatValue (Stack i a) where
-   formatValue (Stack _ s) = formatValue s
-
-instance FormatValue a => FormatValue (Sum a) where
    formatValue = fold Format.plus . fmap formatValue
 
+
+indices :: Stack i a -> [i]
+indices (Stack _) = []
+indices (Dim i a) = i : indices a
+
 {- |
-The index function must generate an index list with ascending index order.
+The index function must generate an index list with descending index order.
 That is, it must be monotonic
 at least on the indices that are present in the stack.
 -}
 mapIndicesMonotonic :: (Ord j) => (i -> j) -> Stack i a -> Stack j a
-mapIndicesMonotonic g (Stack is s) =
-   let js = map g is
-   in  if ListHT.isAscending js
-         then Stack js s
-         else error "Stack.mapIndicesMonotonic: non-monotonic index function"
+mapIndicesMonotonic _ (Stack a) = Stack a
+mapIndicesMonotonic g (Dim i a) =
+   Dim (g i) $ mapIndicesMonotonic g a
 
 
-descent :: Stack i a -> Either a (i, (Stack i a, Stack i a))
-descent (Stack [] (Value a)) = Left a
-descent (Stack (i:is) (Plus a0 a1)) = Right (i, (Stack is a0, Stack is a1))
-descent _ = error "Stack.descent: inconsistent data structure"
+double0 :: a -> (a, a)
+double0 a = (a, a)
+
+double1 :: (a -> b) -> (a, a) -> (b, b)
+double1 clear = mapPair (clear, clear)
+
+double2 :: (a -> b -> c) -> (a, a) -> (b, b) -> (c, c)
+double2 plus (a0,a1) (b0,b1) = (plus a0 b0, plus a1 b1)
+
+descent2 ::
+   (Ord i) =>
+   (a -> b -> c) ->
+   (i -> Stack i (a,a) -> Stack i b -> c) ->
+   (i -> Stack i a -> Stack i (b,b) -> c) ->
+   (i -> Stack i (a,a) -> Stack i (b,b) -> c) ->
+   Stack i a -> Stack i b -> c
+descent2 final gt lt eq x0 y0 =
+   case (x0,y0) of
+      (Stack x, Stack y) -> final x y
+      (Dim i x, Stack _) -> gt i x y0
+      (Stack _, Dim j y) -> lt j x0 y
+      (Dim i x, Dim j y) ->
+         case compare i j of
+            GT -> gt i x y0
+            LT -> lt j x0 y
+            EQ -> eq i x y
 
 
-eqRelaxed :: (Ord i, Eq a, Num a) => Stack i a -> Stack i a -> Bool
-eqRelaxed =
-   let go a b =
-          case (descent a, descent b) of
-             (Left av, Left bv) -> av==bv
-             (Left _, Right (_, (b0, b1))) -> go a b0 && go 0 b1
-             (Right (_, (a0, a1)), Left _) -> go a0 b && go a1 0
-             (Right (i, (a0, a1)), Right (j, (b0, b1))) ->
-                case compare i j of
-                   EQ -> go a0 b0 && go a1 b1
-                   LT -> go a0 b && go a1 0
-                   GT -> go a b0 && go 0 b1
-   in  go
+eqRelaxedNum ::
+   (Ord i, Eq a, Num a) =>
+   Stack i a -> Stack i a -> Bool
+eqRelaxedNum = eqRelaxed (==) (0==) (==0)
+
+eqRelaxed ::
+   (Ord i) =>
+   (a -> b -> Bool) ->
+   (a -> Bool) -> (b -> Bool) ->
+   Stack i a -> Stack i b -> Bool
+eqRelaxed eq isZeroA isZeroB =
+   descent2 eq
+      (\_i ->
+         eqRelaxed
+            (\(a0,a1) b -> eq a0 b && isZeroA a1)
+            (uncurry (&&) . double1 isZeroA)
+            isZeroB)
+      (\_i ->
+         eqRelaxed
+            (\a (b0,b1) -> eq a b0 && isZeroB b1)
+            isZeroA
+            (uncurry (&&) . double1 isZeroB))
+      (\_i ->
+         eqRelaxed
+            (\a b -> uncurry (&&) $ double2 eq a b)
+            (uncurry (&&) . double1 isZeroA)
+            (uncurry (&&) . double1 isZeroB))
 
 
 add ::
    (Ord i) =>
-   (a -> a -> a) -> (a -> a) ->
-   Stack i a -> Stack i a -> Stack i a
-add plus clear x0@(Stack is0 _) y0@(Stack js0 _) =
-   let go a b =
-          case (descent a, descent b) of
-             (Left av, Left bv) -> Value $ plus av bv
-             (Left _, Right (_, (b0, Stack _ b1))) -> Plus (go a b0) b1
-             (Right (_, (a0, Stack _ a1)), Left _) -> Plus (go a0 b) a1
-             (Right (i, (a0, a1)), Right (j, (b0, b1))) ->
-                case compare i j of
-                   EQ -> Plus (go a0 b0) (go a1 b1)
-                   LT -> Plus (go a0 b) (go a1 (fmap clear b))
-                   GT -> Plus (go a b0) (go (fmap clear a) b1)
-   in  Stack (MV.mergeIndices is0 js0) $ go x0 y0
+   (a -> b -> c) -> (a -> a) -> (b -> b) ->
+   Stack i a -> Stack i b -> Stack i c
+add plus clearA clearB =
+   descent2
+      (\x y -> Stack $ plus x y)
+      (\i x y ->
+         Dim i $
+         add
+            (\a b -> double2 plus a (b, clearB b))
+            (double1 clearA) clearB
+            x y)
+      (\i x y ->
+         Dim i $
+         add
+            (\a b -> double2 plus (a, clearA a) b)
+            clearA (double1 clearB)
+            x y)
+      (\i x y ->
+         Dim i $
+         add (double2 plus) (double1 clearA) (double1 clearB) x y)
 
 mul ::
    (Ord i) =>
-   (a -> a -> a) -> (a -> a -> a) ->
-   Stack i a -> Stack i a -> Stack i a
-mul times plus x0@(Stack is0 _) y0@(Stack js0 _) =
-   let go a b =
-          case (descent a, descent b) of
-             (Left av, _) -> case b of Stack _ bs -> fmap (times av) bs
-             (_, Left bv) -> case a of Stack _ as -> fmap (flip times bv) as
-             (Right (i, (a0, a1)), Right (j, (b0, b1))) ->
-                case compare i j of
-{-
-                   EQ ->
-                      Plus (go a0 b0)
-                         (addMatch plus (go a0 b1) $
-                          go a1 (case (b0,b1) of
-                                    (Stack ks bs0, Stack _ bs1) ->
-                                       Stack ks $ addMatch plus bs0 bs1))
--}
-                   EQ ->
-                       Plus (go a0 b0)
-                          (addMatch plus (go a0 b1) $
-                           addMatch plus (go a1 b0) $ go a1 b1)
-                   LT -> Plus (go a0 b) (go a1 b)
-                   GT -> Plus (go a b0) (go a b1)
-   in  Stack (MV.mergeIndices is0 js0) $ go x0 y0
+   (a -> b -> c) ->
+   (a -> b -> c) -> (c -> c -> c) ->
+   (a -> a) -> (b -> b) ->
+   Stack i a -> Stack i b -> Stack i c
+mul times plus plusC clearA clearB =
+   descent2
+      (\x y -> Stack $ times x y)
+      (\i x y ->
+         Dim i $
+         mul
+            (\a b -> double2 times a (double0 b))
+            (\(a0,a1) b -> (plus a0 b, plus a1 (clearB b))) (double2 plusC)
+            (double1 clearA) clearB
+            x y)
+      (\i x y ->
+         Dim i $
+         mul
+            (\a b -> double2 times (double0 a) b)
+            (\a (b0,b1) -> (plus a b0, plus (clearA a) b1)) (double2 plusC)
+            clearA (double1 clearB)
+            x y)
+      (\i x y ->
+         Dim i $
+         mul
+            (\(a0,a1) (b0,b1) ->
+               (times a0 b0,
+                plusC (times a0 b1) $
+                plusC (times a1 b0) $
+                times a1 b1))
+            (double2 plus) (double2 plusC)
+            (double1 clearA) (double1 clearB)
+            x y)
 
 instance (Ord i, Num a) => Num (Stack i a) where
    fromInteger = singleton . fromInteger
    negate = fmap negate
-   (+) = add (+) (const 0)
-   (*) = mul (*) (+)
+   (+) = add (+) (const 0) (const 0)
+   (*) = mul (*) (+) (+) (const 0) (const 0)
 
    abs = fromMultiValueNum . abs . toMultiValueNum
    signum = fromMultiValueNum . signum . toMultiValueNum
 
-
-addMatch :: (a -> a -> a) -> Sum a -> Sum a -> Sum a
-addMatch plus =
-   let go (Value x) (Value y) = Value $ plus x y
-       go (Plus x0 x1) (Plus y0 y1) = Plus (go x0 y0) (go x1 y1)
-       go _ _ = error "Stack.addMatch: inconsistent data structure"
-   in  go
-
-mulMatch :: (a -> a -> a) -> (a -> a -> a) -> Sum a -> Sum a -> Sum a
-mulMatch times plus =
-   let go (Value x) (Value y) = Value (times x y)
-       go (Plus x0 x1) (Plus y0 y1) =
-          Plus (go x0 y0)
-             (addMatch plus (go x0 y1) $ go x1 $ addMatch plus y0 y1)
-       go _ _ = error "Stack.mulMatch: inconsistent data structure"
-   in  go
-
-recip ::
-   (Ord i) =>
-   (a -> a) -> (a -> a -> a) ->
-   (a -> a) -> (a -> a -> a) ->
-   Stack i a -> Stack i a
-recip rec times neg plus (Stack is s) =
-   let go (Value a) = Value $ rec a
-       go (Plus a d) =
-          let ra = go a
-              rd = go (addMatch plus a d)
-          in  Plus ra $
-                 fmap neg $ mulMatch times plus d $ mulMatch times plus ra rd
-       -- 1/(a+d) - 1/a = -d/(a*(a+d))
-   in  Stack is $ go s
 
 instance (Ord i, Fractional a) => Fractional (Stack i a) where
    fromRational = singleton . fromRational
@@ -187,10 +214,10 @@ instance (Ord i, Fractional a) => Fractional (Stack i a) where
 
 instance (Ord i, Arith.Sum a) => Arith.Sum (Stack i a) where
    negate = fmap Arith.negate
-   (~+) = add (~+) Arith.clear
+   (~+) = add (~+) Arith.clear Arith.clear
 
 instance (Ord i, Arith.Product a) => Arith.Product (Stack i a) where
-   (~*) = mul (~*) (~+)
+   (~*) = mul (~*) (~+) (~+) Arith.clear Arith.clear
    {-
    If we are going through the MultiValue,
    then chances are higher that divisions like @x/x@ are detected
@@ -202,6 +229,7 @@ instance (Ord i, Arith.Product a) => Arith.Product (Stack i a) where
    -- recip = recip Arith.recip (~*) Arith.negate (~+)
    recip = fromMultiValue . Arith.recip . toMultiValue
    x ~/ y = fromMultiValue $ toMultiValue x ~/ toMultiValue y
+   constOne = fromMultiValue . Arith.constOne . toMultiValue
 
 instance (Ord i, Arith.Constant a) => Arith.Constant (Stack i a) where
    zero = singleton Arith.zero
@@ -214,33 +242,32 @@ instance (Ord i, Arith.Integrate v) => Arith.Integrate (Stack i v) where
 
 
 singleton :: a -> Stack i a
-singleton = Stack [] . Value
+singleton = Stack
 
 deltaPair :: i -> a -> a -> Stack i a
-deltaPair i a d = Stack [i] $ Plus (Value a) (Value d)
+deltaPair i a d = Dim i $ Stack (a, d)
 
 -- could be a simple Semigroup.Foldable.head if it would exist
 absolute :: Stack i a -> a
-absolute (Stack _ s) = fold const s
+absolute (Stack x) = x
+absolute (Dim _ x) = fst $ absolute x
 
 normalize :: (Arith.Product a) => Stack i a -> Stack i a
 normalize s = fmap (~/ absolute s) s
 
 
-toList :: Sum a -> NonEmpty.T [] a
-toList = fold NonEmpty.append . fmap NonEmpty.singleton
+toList :: Stack i a -> NonEmpty.T [] a
+toList = fold NonEmptyC.append . fmap NonEmpty.singleton
 
 {- |
 You may use 'Data.Foldable.sum' for evaluation with respect to 'Num' class.
 -}
-evaluate :: Arith.Sum a => Sum a -> a
+evaluate :: Arith.Sum a => Stack i a -> a
 evaluate = fold (~+)
 
-fold :: (a -> a -> a) -> Sum a -> a
-fold op =
-   let go (Value a) = a
-       go (Plus a d) = go a `op` go d
-   in  go
+fold :: (a -> a -> a) -> Stack i a -> a
+fold _op (Stack x) = x
+fold op (Dim _ x) = fold op $ fmap (uncurry op) x
 
 
 data Branch = Before | Delta deriving (Eq, Ord, Show)
@@ -256,8 +283,8 @@ The index sets of the map and the stack must be distinct.
 -}
 data Filtered i a =
    Filtered {
-      filterCorner :: Map i Branch,
-      filteredStack :: Stack i a
+      corner :: Map i Branch,
+      filtered :: Stack i a
    } deriving (Eq, Show)
 
 startFilter :: Stack i a -> Filtered i a
@@ -282,11 +309,12 @@ or vice versa, then you get 'Nothing'.
 filter ::
    (Ord i, Arith.Sum a) =>
    Map i Branch -> Filtered i a -> Maybe (Filtered i a)
-filter c1 (Filtered c0 s@(Stack is _x)) =
+filter c1 (Filtered c0 s) =
    liftA2 Filtered (mergeConditions c0 c1) $
    fmap
       (\c1' ->
-         (if Fold.any (Delta==) $ MapU.differenceSet c1' $ Set.fromList is
+         (if Fold.any (Delta==) $ MapU.differenceSet c1' $
+             Set.fromList $ indices s
             then fmap Arith.clear
             else id) $
          filterNaive c1' s)
@@ -313,18 +341,13 @@ This is because it selects not only certain branches
 but also re-declares @delta@ branches as @before@ branches.
 -}
 filterNaive :: (Ord i) => Map i Branch -> Stack i a -> Stack i a
-filterNaive cond s0@(Stack is0 _) =
-   let go s =
-          case descent s of
-             Left a -> Value a
-             Right (i, (a, d)) ->
-                case Map.lookup i cond of
-                   Nothing -> Plus (go a) (go d)
-                   Just Before -> go a
-                   Just Delta  -> go d
-   in  Stack
-          (Set.toAscList $ Set.difference (Set.fromList is0) (Map.keysSet cond))
-          (go s0)
+filterNaive _cond (Stack a) = Stack a
+filterNaive cond (Dim i a) =
+   (case Map.lookup i cond of
+      Nothing -> Dim i
+      Just Before -> fmap fst
+      Just Delta  -> fmap snd) $
+   filterNaive cond a
 
 
 {- |
@@ -347,17 +370,20 @@ toMultiValueNum = toMultiValueGen (+)
 
 
 fromMultiValueGen :: (a -> a -> a) -> MV.MultiValue i a -> Stack i a
-fromMultiValueGen minus (MV.MultiValue indices tree) =
-   let go (MV.Leaf a) = Value a
-       go (MV.Branch a0 a1) =
-          Plus (go a0) (go $ liftA2 minus a1 a0)
-   in  Stack indices $ go tree
+fromMultiValueGen _minus (MV.MultiValue cube) = Stack cube
+fromMultiValueGen minus (MV.Dim i cube) =
+   Dim i $
+   fromMultiValueGen
+      (\(x0,x1) (y0,y1) -> (minus x0 y0, minus x1 y1)) $
+   fmap (\(x,y) -> (x, minus y x)) cube
 
 toMultiValueGen :: (a -> a -> a) -> Stack i a -> MV.MultiValue i a
-toMultiValueGen plus (Stack indices tree) =
-   MV.MultiValue indices $
-   fold (\a0 a1 -> MV.Branch a0 (liftA2 plus a1 a0)) $
-   fmap MV.Leaf tree
+toMultiValueGen _plus (Stack cube) = MV.MultiValue cube
+toMultiValueGen plus (Dim i cube) =
+   MV.Dim i $
+   fmap (\(x,y) -> (x, plus y x)) $
+   toMultiValueGen
+      (\(x0,x1) (y0,y1) -> (plus x0 y0, plus x1 y1)) cube
 
 
 assignDeltaMap :: (Ord i) => Stack i a -> Map (Map i Branch) a
@@ -366,13 +392,20 @@ assignDeltaMap =
    NonEmpty.tail . assigns
 
 assigns :: (Ord i) => Stack i a -> NonEmpty.T [] (Map i Branch, a)
-assigns s =
-   case descent s of
-      Left a -> NonEmpty.singleton (Map.empty, a)
-      Right (i, (a0,a1)) ->
-         NonEmpty.append
-            (fmap (mapFst (Map.insert i Before)) $ assigns a0)
-            (fmap (mapFst (Map.insert i Delta )) $ assigns a1)
+assigns = fold NonEmptyC.append . fmap NonEmpty.singleton . mapWithIndices (,)
+
+mapWithIndices ::
+   (Ord i) =>
+   (Map i Branch -> a -> b) ->
+   Stack i a -> Stack i b
+mapWithIndices f (Stack a) = Stack $ f Map.empty a
+mapWithIndices f (Dim i a) =
+   Dim i $
+   mapWithIndices
+      (\is (a0,a1) ->
+         (f (Map.insert i Before is) a0,
+          f (Map.insert i Delta  is) a1))
+      a
 
 
 instance
@@ -380,14 +413,19 @@ instance
       QC.Arbitrary (Stack i a) where
    arbitrary = fmap fromMultiValue QC.arbitrary
 
-   shrink (Stack it tree) =
-      (case tree of
-         Value _ -> []
-         Plus a0 a1 ->
-            concatMap (\(_,is) -> [Stack is a0, Stack is a1]) $
-            ListHT.removeEach it)
-      ++
-      (let go (Value x) = map Value $ QC.shrink x
-           go (Plus a0 a1) =
-              map (flip Plus a1) (go a0) ++ map (Plus a0) (go a1)
-       in  map (Stack it) $ go tree)
+   shrink cube =
+      removeEachDimension cube ++ removeValues cube
+
+
+-- * private functions
+
+removeEachDimension :: Stack i a -> [Stack i a]
+removeEachDimension (Stack _) = []
+removeEachDimension (Dim i cube) =
+   fmap fst cube :
+   fmap snd cube :
+   map (Dim i) (removeEachDimension cube)
+
+removeValues :: (QC.Arbitrary a) => Stack i a -> [Stack i a]
+removeValues (Stack a) = map Stack $ QC.shrink a
+removeValues (Dim i cube) = map (Dim i) $ removeValues cube

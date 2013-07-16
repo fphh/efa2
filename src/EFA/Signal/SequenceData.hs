@@ -67,12 +67,21 @@ instance Foldable Section where
 instance Traversable Section where
    sequenceA (Section s rng a) = fmap (Section s rng) a
 
+{-
+fromList :: [a] -> SequData a
+fromList =
+   SequData .
+   zipWith
+      (\s -> Section (Idx.Section s) (case S.SignalIdx $ fromIntegral s of r -> (r,r)))
+      [0 ..]
+-}
 
 fromList :: [a] -> SequData a
 fromList =
    SequData .
    zipWith
-      (\s -> Section (Idx.Section s) (case fromIntegral s of r -> (r,r)))
+      (\s -> let sidx = S.SignalIdx $ fromIntegral s
+             in  Section (Idx.Section s) (sidx, sidx))
       [0 ..]
 
 fromRangeList :: [(Range, a)] -> SequData a
@@ -82,7 +91,12 @@ fromRangeList =
 fromLengthList :: [(Int, a)] -> SequData a
 fromLengthList =
    fromRangeList . snd .
-   List.mapAccumL (\time (len, x) -> (time+len-1, ((time, time+len-1), x))) 0
+   List.mapAccumL
+      (\(S.SignalIdx idx) (len, x) ->
+         (S.SignalIdx $ idx+len-1,
+          ((S.SignalIdx idx, S.SignalIdx $ idx+len-1), x)))
+      (S.SignalIdx 0)
+
 
 unzip :: SequData (a, b) -> (SequData a, SequData b)
 unzip (SequData xs) =
@@ -129,10 +143,24 @@ instance ToTable a => Report.ToTable (SequData a) where
 
 
 instance
-   (V.Walker v, V.Singleton v, V.FromList v, V.Storage v a, DispStorage1 v,
-    Ord a, Fractional a, PrintfArg a, Show id,
-    S.DispApp s1, S.DispApp s2, TDisp t1, TDisp t2) =>
-      ToTable (Record.Record s1 s2 t1 t2 id v a) where
+   (V.Walker v,
+    V.Singleton v,
+    V.FromList v,
+    V.Storage v d2,
+    DispStorage1 v,
+    Ord d2,
+    Fractional d2,
+    PrintfArg d2,
+    Fractional d1,
+    Ord d1,
+    V.Storage v d1,
+    PrintfArg d1,
+    Show id,
+    S.DispApp s1,
+    S.DispApp s2,
+    TDisp t1,
+    TDisp t2) =>
+      ToTable (Record.Record s1 s2 t1 t2 id v d1 d2) where
    toTable os (_ti, rs) =
       Fold.fold $ mapWithSection (\ sec r -> Report.toTable os (show sec, r)) rs
 
@@ -160,7 +188,7 @@ instance ToTable Range where
 
 
 {-# DEPRECATED reIndex "pg: new Index type required which shows the reIndexing" #-}
-         
+
 reIndex :: [Int] -> SequData a -> SequData a
 reIndex xs (SequData ys) = SequData (zipWith f xs ys)
   where f newIdx (Section (Idx.Section _) range a) = Section (Idx.Section $ fromIntegral newIdx) range a

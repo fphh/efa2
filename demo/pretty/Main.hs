@@ -12,7 +12,7 @@ import EFA.Signal.Data ((:>), Nil, Data)
 
 import EFA.Report.Report (report, ROpt(..))
 
-import qualified Data.Map as M
+import qualified Data.Map as Map
 
 
 data Node = Node0 | Node1 deriving (Eq, Ord, Enum, Show)
@@ -38,7 +38,7 @@ t = S.fromList [0..4]
 
 r :: PowerRecord Node [] Double
 r = Record t
-      (M.fromListWith
+      (Map.fromListWith
          (error "duplicate keys")
          [(XIdx.ppos Node0 Node1, p1), (XIdx.ppos Node1 Node0, p2)])
 

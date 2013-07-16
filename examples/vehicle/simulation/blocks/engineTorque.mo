@@ -16,7 +16,6 @@ model EngineTorque
   parameter String dragTorqueFile(start = "") "" annotation(Placement(visible = true, transformation(origin = {71.2644,78.1609}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Blocks.Sources.Constant const(k = parStartSpeed) annotation(Placement(visible = true, transformation(origin = {-63.4453,-34.0336}, extent = {{-7.45106,-7.45106},{7.45106,7.45106}}, rotation = 0)));
   Modelica.Blocks.Math.Gain speedScale(k = 1 / parSpeedScale) annotation(Placement(visible = true, transformation(origin = {-62.5997,-60.5042}, extent = {{-5.59809,-5.59809},{5.59809,5.59809}}, rotation = 0)));
-  Modelica.Blocks.Math.Gain minTorqueScale(k = parDragTorqueScale) annotation(Placement(visible = true, transformation(origin = {11.0382,-60.084}, extent = {{-6.1579,-6.1579},{6.1579,6.1579}}, rotation = 0)));
   Modelica.Blocks.Interfaces.RealOutput torque annotation(Placement(visible = true, transformation(origin = {86.9748,-35.7143}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {86.9748,-35.7143}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Blocks.Interfaces.RealOutput y annotation(Placement(visible = true, transformation(origin = {87.0617,14.91}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {87.0617,14.91}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Blocks.Interfaces.RealOutput realoutput1 annotation(Placement(visible = true, transformation(origin = {88.0669,-82.3613}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {88.0669,-82.3613}, extent = {{-12,-12},{12,12}}, rotation = 0)));
@@ -25,7 +24,12 @@ model EngineTorque
   Modelica.Blocks.Interfaces.BooleanInput engineOn annotation(Placement(visible = true, transformation(origin = {-79.832,39.4958}, extent = {{-12,-12},{12,12}}, rotation = 0), iconTransformation(origin = {-79.832,39.4958}, extent = {{-12,-12},{12,12}}, rotation = 0)));
   Modelica.Blocks.Tables.CombiTable1Ds dragTorque(tableOnFile = true, fileName = dragTorqueFile, tableName = "dragTorque") annotation(Placement(visible = true, transformation(origin = {-34.874,-60.9244}, extent = {{-8.19616,-8.19616},{8.19616,8.19616}}, rotation = 0)));
   Modelica.Blocks.Tables.CombiTable1Ds maxTorque(tableOnFile = true, tableName = "maxTorque", fileName = maxTorqueFile) annotation(Placement(visible = true, transformation(origin = {-36.5438,30.6723}, extent = {{-7.45106,-7.45106},{7.45106,7.45106}}, rotation = 0)));
+  Modelica.Blocks.Math.Gain minTorqueScale(k = parDragTorqueScale) annotation(Placement(visible = true, transformation(origin = {11.316,-60.084}, extent = {{-6.1579,-6.1579},{6.1579,6.1579}}, rotation = 0)));
 equation
+  connect(extractor2.y,minTorqueScale.u) annotation(Line(points = {{-2.72823,-60.5042},{6.30252,-60.5042},{6.30252,-60.084},{3.9265,-60.084}}));
+  connect(minTorqueScale.y,switch1.u3) annotation(Line(points = {{18.0897,-60.084},{18.4874,-60.084},{18.4874,-15.8006},{18.3159,-15.8006}}));
+  connect(minTorqueScale.y,variablelimiter1.limit2) annotation(Line(points = {{18.0897,-60.084},{47.8992,-60.084},{47.8992,-58.2376},{47.7276,-58.2376}}));
+  connect(minTorqueScale.y,realoutput1) annotation(Line(points = {{18.0897,-60.084},{27.5035,-60.084},{27.5035,-82.3613},{88.0669,-82.3613}}));
   connect(maxTorque.y,extractor1.u) annotation(Line(points = {{-28.3476,30.6723},{-7.56303,30.6723},{-7.56303,29.8319},{-24.0674,29.8319}}));
   connect(speedScale.y,maxTorque.u) annotation(Line(points = {{-56.4418,-60.5042},{-53.3613,-60.5042},{-53.3613,29.8319},{-45.485,29.8319},{-45.485,30.6723}}));
   connect(dragTorque.y,extractor2.u) annotation(Line(points = {{-25.8582,-60.9244},{-24.7899,-60.9244},{-24.7899,-60.5042},{-19.8657,-60.5042}}));
@@ -35,10 +39,6 @@ equation
   connect(greaterequal1.u1,speed) annotation(Line(points = {{-47.3735,-20.1681},{-78.9916,-20.1681},{-78.9916,-12.6051},{-80.2521,-12.6051}}));
   connect(speed,speedScale.u) annotation(Line(points = {{-80.2521,-12.6051},{-70.1681,-12.6051},{-70.1681,-58.8235},{-69.3174,-58.8235},{-69.3174,-60.5042}}));
   connect(torqueDemand,variablelimiter1.u) annotation(Line(points = {{-81.9328,-67.6471},{36.5546,-67.6471},{36.5546,-51.6807},{47.7276,-51.6807}}));
-  connect(minTorqueScale.y,realoutput1) annotation(Line(points = {{17.8119,-60.084},{27.5035,-60.084},{27.5035,-79.8403},{69.1593,-79.8403}}));
-  connect(minTorqueScale.y,variablelimiter1.limit2) annotation(Line(points = {{17.8119,-60.084},{47.8992,-60.084},{47.8992,-58.2376},{47.7276,-58.2376}}));
-  connect(minTorqueScale.y,switch1.u3) annotation(Line(points = {{17.8119,-60.084},{18.4874,-60.084},{18.4874,-15.8006},{18.3159,-15.8006}}));
-  connect(extractor2.y,minTorqueScale.u) annotation(Line(points = {{-2.72823,-60.5042},{6.30252,-60.5042},{6.30252,-60.084},{3.64877,-60.084}}));
   connect(const.y,greaterequal1.u2) annotation(Line(points = {{-55.2492,-34.0336},{-51.6807,-34.0336},{-51.6807,-27.3807},{-47.3735,-27.3807}}));
   connect(extractor1.y,maxTorqueScale.u) annotation(Line(points = {{-6.92989,29.8319},{5.04202,29.8319},{5.04202,30.2521},{-2.34746,30.2521}}));
   connect(integerconstant1.y,extractor1.index) annotation(Line(points = {{-30.8795,-82.3529},{-19.7479,-82.3529},{-19.7479,20.8907},{-15.1261,20.8907}}));
