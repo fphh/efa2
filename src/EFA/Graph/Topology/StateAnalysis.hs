@@ -254,6 +254,11 @@ data ShortestList a b =
       shortestListValue :: b
    }
 
+smallestCluster ::
+   Cluster node -> b ->
+   ShortestList (Set (Gr.EitherEdge node)) b
+smallestCluster = ShortestList . clusterEdges
+
 {- |
 The result list may not equal one of the input lists.
 We should replace this by Peano numbers.
@@ -298,7 +303,7 @@ mergeMinimizingClusterPairs topo (NonEmpty.Cons p ps) =
                NonEmpty.flatten $ NonEmpty.removeEach $ p !: partition0
             (c1, partition2) <- NonEmpty.removeEach partition1
             let c = mergeCluster topo c0 c1
-            return $ ShortestList (clusterEdges c) (c !: partition2)
+            return $ smallestCluster c (c !: partition2)
 
 {- |
 Merge the cluster with the minimal number of possibilities
@@ -323,7 +328,7 @@ mergeMinimizingCluster topo (NonEmpty.Cons p ps) =
       Just partition0 ->
          let (c0,partition1) =
                 shortestList $
-                fmap (\(c,cs) -> ShortestList (clusterEdges c) (c,cs)) $
+                fmap (\(c,cs) -> smallestCluster c (c,cs)) $
                 NonEmpty.flatten $
                 NonEmpty.removeEach $ p !: partition0
          in  Right $
@@ -331,7 +336,7 @@ mergeMinimizingCluster topo (NonEmpty.Cons p ps) =
              fmap
                 (\(c,cs) ->
                    let cm = mergeCluster topo c0 c
-                   in  ShortestList (clusterEdges cm) (cm!:cs)) $
+                   in  smallestCluster cm (cm!:cs)) $
              NonEmpty.removeEach partition1
 
 
