@@ -6,23 +6,21 @@ module EFA.Graph.Topology.StateAnalysis (
    clustering, clusteringGreedy, clusteringMinimizing,
    ) where
 
-import qualified EFA.Graph as Gr
 import qualified EFA.Graph.Topology as Topo
+import qualified EFA.Graph as Gr
 import EFA.Graph.Topology (FlowTopology, Topology)
 
 import qualified EFA.Utility.Map as MapU
 
+import qualified Data.Map as Map; import Data.Map (Map)
+import qualified Data.Set as Set; import Data.Set (Set)
 import qualified Data.Foldable as Fold
 import qualified Data.NonEmpty as NonEmpty
-import qualified Data.Map as Map
-import qualified Data.Set as Set
 import qualified Data.FingerTree.PSQueue as PSQ
 import qualified Data.PriorityQueue.FingerTree as PQ
 import Data.FingerTree.PSQueue (PSQ)
 import Data.PriorityQueue.FingerTree (PQueue)
 import Data.NonEmpty ((!:))
-import Data.Map (Map)
-import Data.Set (Set)
 import Control.Monad (foldM, guard)
 import Control.Functor.HT (void)
 import Data.Ord.HT (comparing)
