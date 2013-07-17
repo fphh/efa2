@@ -6,7 +6,7 @@ import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph as Gr
-import EFA.Example.Utility (makeEdges)
+import EFA.Application.Utility (makeEdges)
 
 import qualified EFA.Graph.Topology.Node as Node
 

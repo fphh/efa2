@@ -3,7 +3,7 @@
 
 module Main where
 
-import qualified EFA.Example.Index as XIdx
+import qualified EFA.Application.Index as XIdx
 
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Sequence as Sequ

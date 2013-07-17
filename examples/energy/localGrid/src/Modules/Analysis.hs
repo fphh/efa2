@@ -10,9 +10,9 @@ import qualified Modules.System as System
 import qualified Modules.Signals as Signals
 --import Modules.System (Node(..))
 
-import qualified EFA.Example.Index as XIdx
-import qualified EFA.Example.Absolute as EqAbs
-import EFA.Example.Utility (Ignore, (.=))
+import qualified EFA.Application.Index as XIdx
+import qualified EFA.Application.Absolute as EqAbs
+import EFA.Application.Utility (Ignore, (.=))
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as TD

@@ -10,10 +10,10 @@ module Modules.Analysis where
 import qualified Modules.System as System
 import qualified Modules.Signals as Signals
 
-import qualified EFA.Example.Absolute as EqAbs
-import qualified EFA.Example.Index as XIdx
+import qualified EFA.Application.Absolute as EqAbs
+import qualified EFA.Application.Index as XIdx
 
-import EFA.Example.Utility (Ignore, (.=))
+import EFA.Application.Utility (Ignore, (.=))
 
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Variable as Var

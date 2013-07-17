@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeFamilies #-}
-module EFA.Example.NestedDelta (
-   module EFA.Example.NestedDelta,
+module EFA.Application.NestedDelta (
+   module EFA.Application.NestedDelta,
    (?=),
    ) where
 

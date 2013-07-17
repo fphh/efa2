@@ -1,20 +1,15 @@
 module Modules.System where
 
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
-
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as TD
-import qualified EFA.Graph as Gr
 import qualified EFA.Graph.Flow as Flow
-import qualified EFA.Signal.SequenceData as SD
+import qualified EFA.Graph as Gr
 
-import EFA.Example.Utility (makeEdges, select)
-import qualified EFA.Example.Index as XIdx
-
--- import qualified Modules.Utility as ModUt
+import qualified EFA.Application.Index as XIdx
+import EFA.Application.Utility (makeEdges, select)
 
 import EFA.Signal.Record (SigId(..))
-
 
 import qualified Data.Map as Map
 import Data.Map (Map)

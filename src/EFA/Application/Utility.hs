@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeFamilies #-}
-module EFA.Example.Utility (
-   module EFA.Example.Utility,
+module EFA.Application.Utility (
+   module EFA.Application.Utility,
    (.=), (%=), (=%%=),
    Verify.Ignore,
    ) where

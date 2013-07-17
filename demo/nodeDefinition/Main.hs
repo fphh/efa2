@@ -10,12 +10,12 @@ import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Draw as Draw
-import qualified EFA.Utility.Stream as Stream
-import qualified EFA.Report.Format as Format
 import qualified EFA.Graph as Gr
+import qualified EFA.Report.Format as Format
+import qualified EFA.Utility.Stream as Stream
+import EFA.Application.Utility (makeEdges)
 import EFA.Utility.Async (concurrentlyMany_)
 import EFA.Utility.Stream (Stream((:~)))
-import EFA.Example.Utility (makeEdges)
 
 
 sec0 :: Idx.Section

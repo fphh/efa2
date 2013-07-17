@@ -26,25 +26,21 @@ module EFA.Signal.PlotIO (
    aggregatedStack
    ) where
 
+import qualified EFA.Application.AssignMap as AssignMap
+
 import qualified EFA.Signal.Plot as Plot
 import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.SequenceData as SD
 import qualified EFA.Signal.Vector as SV
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Base as Base
-
-import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
-
-import EFA.Signal.SequenceData (SequData)
-import qualified Graphics.Gnuplot.Graph.ThreeDimensional as Graph3D
-
 import EFA.Signal.Record (Record)
+import EFA.Signal.SequenceData (SequData)
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
 import EFA.Report.Typ (TDisp)
 
-import qualified EFA.Example.AssignMap as AssignMap
 import qualified EFA.Equation.Stack as Stack
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Record as EqRecord
@@ -53,10 +49,11 @@ import qualified EFA.Equation.Variable as Var
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as TDNode
 
+import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
 import qualified Graphics.Gnuplot.Advanced as Plot
-
 import qualified Graphics.Gnuplot.Terminal as Terminal
 import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
+import qualified Graphics.Gnuplot.Graph.ThreeDimensional as Graph3D
 --import qualified Graphics.Gnuplot.Graph.TwoDimensional as Graph2D
 
 import qualified Graphics.Gnuplot.Value.Atom as Atom
