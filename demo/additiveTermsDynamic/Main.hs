@@ -1,11 +1,11 @@
 {-# LANGUAGE TypeFamilies #-}
 module Main where
 
-import qualified EFA.Example.AssignMap as AssignMap
-import qualified EFA.Example.Absolute as EqGen
-import qualified EFA.Example.Index as XIdx
-import EFA.Example.Utility (makeEdges, constructSeqTopo)
-import EFA.Example.Absolute ((.=))
+import qualified EFA.Application.AssignMap as AssignMap
+import qualified EFA.Application.Absolute as EqGen
+import qualified EFA.Application.Index as XIdx
+import EFA.Application.Utility (makeEdges, constructSeqTopo)
+import EFA.Application.Absolute ((.=))
 
 import qualified EFA.Symbolic.Variable as SymVar
 import qualified EFA.Symbolic.SumProduct as SumProduct
@@ -34,7 +34,8 @@ import EFA.Report.FormatValue (FormatSignalIndex, FormatValue, formatValue)
 import qualified Data.Map as Map
 import Data.Monoid (mempty, (<>))
 
-import System.IO
+import qualified System.IO as IO
+
 
 sec0 :: Idx.Section
 sec0 = Idx.Section 0
@@ -160,4 +161,4 @@ mainNumeric = do
 
 
 main :: IO ()
-main = hSetEncoding stdout utf8 >> mainNumeric >> mainSymbolic
+main = IO.hSetEncoding IO.stdout IO.utf8 >> mainNumeric >> mainSymbolic

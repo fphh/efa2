@@ -2,8 +2,8 @@
 
 module Modules.System where
 
-import qualified EFA.Example.Index as XIdx
-import EFA.Example.Utility (makeEdges)
+import qualified EFA.Application.Index as XIdx
+import EFA.Application.Utility (makeEdges)
 
 import EFA.Signal.Record (SigId(..))
 

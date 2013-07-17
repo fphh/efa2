@@ -1,13 +1,13 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE TypeOperators #-}
-module EFA.Example.Absolute (
-   module EFA.Example.Absolute,
+module EFA.Application.Absolute (
+   module EFA.Application.Absolute,
    (=.=),
    ) where
 
-import qualified EFA.Example.Index as XIdx
-import qualified EFA.Example.Utility as Utility
+import qualified EFA.Application.Index as XIdx
+import qualified EFA.Application.Utility as Utility
 
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.System as EqGen

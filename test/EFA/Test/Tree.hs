@@ -1,10 +1,10 @@
 module EFA.Test.Tree where
 
-import EFA.TestUtility as Test
+import qualified EFA.TestUtility as Test
 
-import qualified EFA.Example.Tree as Tree
-import EFA.Example.Utility ( makeEdges )
-import EFA.Example.Tree ( (<+) )
+import qualified EFA.Application.Tree as Tree
+import EFA.Application.Utility ( makeEdges )
+import EFA.Application.Tree ( (<+) )
 
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as TD

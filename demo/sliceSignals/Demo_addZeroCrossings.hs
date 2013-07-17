@@ -2,12 +2,12 @@
 
 module Main where
 
-import qualified EFA.Example.Index as XIdx
+import qualified EFA.Application.Index as XIdx
 
+import qualified EFA.Signal.PlotIO as PlotIO
 import EFA.Signal.Sequence
 import EFA.Signal.Record
 import EFA.Signal.Signal as S
-import qualified EFA.Signal.PlotIO as PlotIO
 import EFA.Signal.Base (Val)
 
 import qualified Data.Map as Map

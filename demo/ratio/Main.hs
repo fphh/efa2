@@ -2,12 +2,12 @@
 
 module Main where
 
-import qualified EFA.Example.Index as XIdx
-import qualified EFA.Example.Absolute as EqGen
+import qualified EFA.Application.Index as XIdx
+import qualified EFA.Application.Absolute as EqGen
 import qualified EFA.Equation.Environment as Env
-import EFA.Example.Absolute ((.=), (=.=))
 import EFA.Equation.Result (Result)
-import EFA.Example.Utility (constructSeqTopo, makeEdges, checkDetermined)
+import EFA.Application.Absolute ((.=), (=.=))
+import EFA.Application.Utility (constructSeqTopo, makeEdges, checkDetermined)
 
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as Idx

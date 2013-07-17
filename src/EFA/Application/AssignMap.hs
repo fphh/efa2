@@ -1,13 +1,13 @@
 {-# LANGUAGE TypeFamilies #-}
 
-module EFA.Example.AssignMap where
+module EFA.Application.AssignMap where
 
 import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Stack as Stack
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Record as EqRecord
-import qualified EFA.Example.Index as XIdx
+import qualified EFA.Application.Index as XIdx
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Report.Format as Format

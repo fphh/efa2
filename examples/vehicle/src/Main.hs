@@ -9,10 +9,10 @@ import qualified Modules.Analysis as Analysis
 import qualified Modules.Signals as Signals
 -- import qualified Modules.Plots as Plots
 
-import qualified EFA.Example.Index as XIdx
--- import qualified EFA.Example.AssignMap as AssignMap
-import EFA.Example.Utility (checkDetermined)
--- import EFA.Example.Absolute ((.=))
+import qualified EFA.Application.Index as XIdx
+-- import qualified EFA.Application.AssignMap as AssignMap
+import EFA.Application.Utility (checkDetermined)
+-- import EFA.Application.Absolute ((.=))
 
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.PlotIO as PlotIO

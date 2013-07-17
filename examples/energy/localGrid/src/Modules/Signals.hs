@@ -4,22 +4,15 @@
 
 module Modules.Signals where
 
-import qualified EFA.Example.Index as XIdx
+import Modules.System (Node(..))
+
+import qualified EFA.Application.Index as XIdx
 
 import EFA.Signal.Record (SigId(SigId),
                           getSig,getTime,extractLogSignals,
                           PowerRecord, SignalRecord, genPowerRecord)
 
--- import qualified EFA.Graph.Topology.Node as Node
-import EFA.Signal.Signal(
-  --(.*), (.-), 
-  neg 
-  --TC, Signal, len, fromList
-  )
---import EFA.Signal.Typ(UT,Typ)
---import EFA.Signal.Data(Data(..),Nil, (:>))
-
-import Modules.System  (Node(..))
+import EFA.Signal.Signal (neg)
 
 
 ---------------------------------------------------------------------------------------

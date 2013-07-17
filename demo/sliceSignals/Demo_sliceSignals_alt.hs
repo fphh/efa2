@@ -4,7 +4,7 @@
 
 module Main where
 
-import qualified EFA.Example.Index as XIdx
+import qualified EFA.Application.Index as XIdx
 
 import qualified EFA.Graph.Topology.Node as Node
 
@@ -14,7 +14,7 @@ import EFA.Signal.SequenceData
 import EFA.Signal.Record
 import EFA.Signal.Data ((:>), Nil, Data)
 
-import EFA.Report.Report
+import EFA.Report.Report (ROpt(RAll), report)
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))

@@ -1,4 +1,4 @@
-module EFA.Example.Tree where
+module EFA.Application.Tree where
 
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph as Gr

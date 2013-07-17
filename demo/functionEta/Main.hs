@@ -1,10 +1,10 @@
 -- | Demonstriert, wie man ein eta als Funktion definiert.
 module Main where
 
-import qualified EFA.Example.Absolute as EqGen
-import qualified EFA.Example.Index as XIdx
-import EFA.Example.Absolute ((.=), (=.=))
-import EFA.Example.Utility (constructSeqTopo, makeEdges)
+import qualified EFA.Application.Absolute as EqGen
+import qualified EFA.Application.Index as XIdx
+import EFA.Application.Absolute ((.=), (=.=))
+import EFA.Application.Utility (constructSeqTopo, makeEdges)
 
 import qualified EFA.Equation.Environment as Env
 

@@ -9,10 +9,10 @@ import qualified EFA.Signal.Record as Rec
 import qualified EFA.Signal.Data as Data
 import EFA.Signal.Data (Data, (:>), Nil)
 
-import qualified EFA.Example.Index as XIdx
-import qualified EFA.Example.Absolute as EqGen
-import EFA.Example.Absolute ( (.=), (=.=) )
-import EFA.Example.Utility ( makeEdges, constructSeqTopo )
+import qualified EFA.Application.Index as XIdx
+import qualified EFA.Application.Absolute as EqGen
+import EFA.Application.Absolute ( (.=), (=.=) )
+import EFA.Application.Utility ( makeEdges, constructSeqTopo )
 
 import qualified EFA.Equation.Result as Res
 import qualified EFA.Equation.Environment as Env
