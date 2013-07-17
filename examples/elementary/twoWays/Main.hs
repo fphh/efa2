@@ -1,10 +1,10 @@
 
 module Main where
 
-import qualified EFA.Example.Index as XIdx
-import qualified EFA.Example.Absolute as EqGen
-import EFA.Example.Absolute ((.=), (=.=))
-import EFA.Example.Utility (makeEdges, constructSeqTopo)
+import qualified EFA.Application.Index as XIdx
+import qualified EFA.Application.Absolute as EqGen
+import EFA.Application.Absolute ((.=), (=.=))
+import EFA.Application.Utility (makeEdges, constructSeqTopo)
 
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Arithmetic as Arith

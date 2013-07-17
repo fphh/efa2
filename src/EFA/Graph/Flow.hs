@@ -3,7 +3,7 @@
 
 module EFA.Graph.Flow where
 
-import qualified EFA.Example.Index as XIdx
+import qualified EFA.Application.Index as XIdx
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
@@ -23,14 +23,14 @@ import EFA.Signal.Signal (fromScalar, sigSign, neg, TC(..))
 import EFA.Signal.Data(Data(..), Nil, (:>))
 import EFA.Signal.Base (Sign(PSign, NSign, ZSign),BSum, DArith0)
 
+import qualified EFA.Utility.Map as MapU
+import EFA.Utility.Map (checkedLookup)
+
 import qualified Data.Foldable as Fold
 import qualified Data.Map as Map
 
 import Data.Map (Map)
 import Data.Bool.HT (if')
-
-import qualified EFA.Utility.Map as MapU
-import EFA.Utility.Map (checkedLookup)
 
 
 

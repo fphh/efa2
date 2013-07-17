@@ -1,4 +1,4 @@
-module EFA.Example.Index where
+module EFA.Application.Index where
 
 import qualified EFA.Graph.Topology.Index as Idx
 

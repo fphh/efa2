@@ -1,15 +1,15 @@
 {-# LANGUAGE TypeFamilies #-}
 module Main where
 
-import qualified EFA.Example.NestedDelta as NestedDelta
-import qualified EFA.Example.AssignMap as AssignMap
-import qualified EFA.Example.Index as XIdx
-import EFA.Example.NestedDelta
+import qualified EFA.Application.NestedDelta as NestedDelta
+import qualified EFA.Application.AssignMap as AssignMap
+import qualified EFA.Application.Index as XIdx
+import EFA.Application.NestedDelta
           (ParameterRecord,
            givenParameterSymbol, givenParameterNumber,
            beforeDelta, extrudeStart,
            (<&), (<&>), (&>), (&&>), (?=))
-import EFA.Example.Utility (Ignore, makeEdges, constructSeqTopo)
+import EFA.Application.Utility (Ignore, makeEdges, constructSeqTopo)
 import EFA.Equation.Result (Result)
 
 import qualified EFA.Equation.System as EqGen

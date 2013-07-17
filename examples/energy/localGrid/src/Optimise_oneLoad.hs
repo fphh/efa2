@@ -2,66 +2,35 @@
 
 module Main where
 
-
---import qualified Modules.Signals as Signals
-import qualified Modules.System as System
-import Modules.System (Node(..))
---import qualified Modules.Analysis as Analysis
 import qualified Modules.Optimisation as Optimisation
+import qualified Modules.System as System
 import Modules.Optimisation (sec0,sec1)
+import Modules.System (Node(..))
 import Modules.Utility as ModUt
 
+import qualified EFA.Application.Absolute as EqGen
+import qualified EFA.Application.Index as XIdx
 
---import qualified EFA.Signal.Record as Record
-import EFA.Utility.Async (concurrentlyMany_)
 import qualified EFA.Graph.Draw as Draw
---import EFA.IO.PLTImport (modelicaPLTImport)
+
+import EFA.Utility.Async (concurrentlyMany_)
+
+import qualified EFA.Signal.ConvertTable as CT
+import qualified EFA.Signal.PlotIO as PlotIO
 import qualified EFA.Signal.Signal as Sig
---import qualified EFA.Signal.Vector as V
---import EFA.Signal.Data (Data(..), Nil)
---import EFA.Signal.Typ (Typ, F, T, A, Tt)
---import qualified EFA.Signal.SequenceData as SD
---import qualified EFA.Utility as Utility
---import EFA.Signal.Sequence (makeSeqFlowTopology)
---import qualified EFA.Graph.Flow as Flow
---import qualified EFA.Graph.Draw as Draw
---import EFA.Graph(lefilter)
---import qualified EFA.Signal.Plot as Plot
---import EFA.Graph.Topology(isStructureEdge)
---import qualified EFA.Example.Index as XIdx
---import qualified EFA.Equation.Arithmetic as Arith
---import qualified EFA.Equation.Environment as Env
--- import qualified EFA.Signal.ConvertTable as Table
-import qualified EFA.Example.Absolute as EqGen
-import qualified EFA.Example.Index as XIdx
---import qualified EFA.Graph.Topology.Index as TIdx
+
 import qualified EFA.Equation.Environment as EqEnv
 import qualified EFA.Equation.Record as EqRec
 import EFA.Equation.Result (Result(..))
---import EFA.Utility.Map (checkedLookup)
-import qualified EFA.Signal.PlotIO as PlotIO
+
+import qualified EFA.IO.TableParser as Table
 
 import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 import qualified Data.GraphViz.Attributes.Colors.X11 as Colors
 
-import qualified EFA.Signal.ConvertTable as CT
-import qualified EFA.IO.TableParser as Table
-
 import qualified System.IO as IO
---import System.Environment (getEnv)
---import System.FilePath ((</>))
 
---import qualified EFA.Utility.Stream as Stream
-
--- import Data.Monoid (mconcat, (<>))
---import EFA.Utility.Stream (Stream((:~)))
-
---import qualified Data.List as L
 import qualified Data.Map as Map
---import qualified Modules.Analysis as Analysis
---import Data.Tuple.HT (mapSnd)
-
---import qualified Data.Maybe as Maybe
 
 
 plotTerm :: DefaultTerm.T

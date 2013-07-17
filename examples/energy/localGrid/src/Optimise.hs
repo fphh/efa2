@@ -18,10 +18,10 @@ import Modules.Optimisation (EnvDouble, sec0,sec1, maxEta, maxOpt,
 import Modules.Utility as ModUt
 -- import Modules.Utility(getEtas, getPowerSignals,select)
 
-import qualified EFA.Example.EtaSys as ES
-import qualified EFA.Example.Index as XIdx
-import qualified EFA.Example.Absolute as EqGen
-import EFA.Example.Utility (select)
+import qualified EFA.Application.EtaSys as ES
+import qualified EFA.Application.Index as XIdx
+import qualified EFA.Application.Absolute as EqGen
+import EFA.Application.Utility (select)
 
 import qualified EFA.Graph.Topology.Index as TIdx
 import qualified EFA.Graph.Topology as TD
