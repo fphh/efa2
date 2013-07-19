@@ -790,8 +790,7 @@ fromNodes equalInOutSums =
                          (stxfactor . prex . storageTransFromEdge))
                       (NonEmpty.fetch edges)
 
-            in  -- siehe bug 2013-02-12-sum-equations-storage
-                case nodeType of
+            in  case nodeType of
                    TD.Crossing ->
                       mwhen equalInOutSums $
                       withSecNode $ \sn -> insum sn =%= outsum sn
