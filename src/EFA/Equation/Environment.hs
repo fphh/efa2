@@ -8,8 +8,13 @@ import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Equation.Variable as Var
 
-import qualified Data.Map as Map
-import Data.Map (Map)
+import qualified EFA.Report.Format as Format
+import EFA.Report.Format (Format)
+import EFA.Report.FormatValue (FormatValue, formatValue)
+
+import qualified EFA.Utility.Bifunctor as BF
+
+import qualified Data.Map as Map; import Data.Map (Map)
 
 import qualified Data.Accessor.Basic as Accessor
 import Control.Category ((.))
@@ -18,13 +23,7 @@ import Data.Traversable (Traversable, sequenceA, foldMapDefault)
 import Data.Foldable (Foldable, foldMap)
 import Data.Monoid (Monoid, mempty, mappend)
 
-import qualified EFA.Report.Format as Format
-import EFA.Report.Format (Format)
-import EFA.Report.FormatValue (FormatValue, formatValue)
-
 import Prelude hiding (lookup, (.))
-
-import qualified EFA.Utility.Bifunctor as BF
 
 
 -- Environments
