@@ -30,7 +30,8 @@ data Exit a = NoExit a | Exit deriving (Show, Eq, Ord)
 
 type InitOrSection = Init Section
 type SectionOrExit = Exit Section
-type AugmentedSection = Exit InitOrSection
+type Augmented sec = Exit (Init sec)
+type AugmentedSection = Augmented Section
 
 
 instance Functor Init where
@@ -134,10 +135,10 @@ instance ToSection Section where
    toSection = id
 
 
-allowInit :: SectionOrExit -> AugmentedSection
+allowInit :: Exit sec -> Augmented sec
 allowInit = fmap NoInit
 
-allowExit :: InitOrSection -> AugmentedSection
+allowExit :: Init sec -> Augmented sec
 allowExit = NoExit
 
 maybeInit :: AugmentedSection -> Maybe SectionOrExit
@@ -274,26 +275,26 @@ However, a splitting factor exists both in chronological and reversed order.
 On the other hand in the future we may use chronological order exclusively
 and register two split factors per edge.
 -}
-data StorageEdge node = StorageEdge InitOrSection SectionOrExit
+data StorageEdge sec node = StorageEdge (Init sec) (Exit sec)
    deriving (Show, Eq, Ord)
 
-data StorageTrans node = StorageTrans AugmentedSection AugmentedSection
+data StorageTrans sec node = StorageTrans (Augmented sec) (Augmented sec)
    deriving (Show, Eq, Ord)
 
 instance TC.Eq StructureEdge where eq = (==)
-instance TC.Eq StorageEdge   where eq = (==)
-instance TC.Eq StorageTrans  where eq = (==)
+instance (Eq sec) => TC.Eq (StorageEdge sec)  where eq = (==)
+instance (Eq sec) => TC.Eq (StorageTrans sec) where eq = (==)
 
 instance TC.Ord StructureEdge where cmp = compare
-instance TC.Ord StorageEdge   where cmp = compare
-instance TC.Ord StorageTrans  where cmp = compare
+instance (Ord sec) => TC.Ord (StorageEdge sec)  where cmp = compare
+instance (Ord sec) => TC.Ord (StorageTrans sec) where cmp = compare
 
 instance TC.Show StructureEdge where showsPrec = showsPrec
-instance TC.Show StorageEdge   where showsPrec = showsPrec
-instance TC.Show StorageTrans  where showsPrec = showsPrec
+instance (Show sec) => TC.Show (StorageEdge sec)  where showsPrec = showsPrec
+instance (Show sec) => TC.Show (StorageTrans sec) where showsPrec = showsPrec
 
 
-storageTransFromEdge :: StorageEdge node -> StorageTrans node
+storageTransFromEdge :: StorageEdge sec node -> StorageTrans sec node
 storageTransFromEdge (StorageEdge s0 s1) =
    StorageTrans (allowExit s0) (allowInit s1)
 
@@ -350,20 +351,20 @@ structureEdge mkIdx s x y =
    InSection s $ mkIdx $ StructureEdge x y
 
 storageEdge ::
-   (StorageEdge node -> idx node) ->
-   InitOrSection -> SectionOrExit -> node -> ForNode idx node
+   (StorageEdge sec node -> idx node) ->
+   Init sec -> Exit sec -> node -> ForNode idx node
 storageEdge mkIdx s0 s1 n =
    ForNode (mkIdx $ StorageEdge s0 s1) n
 
 storageTrans ::
-   (StorageTrans node -> idx node) ->
-   AugmentedSection -> AugmentedSection -> node -> ForNode idx node
+   (StorageTrans sec node -> idx node) ->
+   Augmented sec -> Augmented sec -> node -> ForNode idx node
 storageTrans mkIdx s0 s1 n =
    ForNode (mkIdx $ StorageTrans s0 s1) n
 
 
 storageEdgeFrom, storageEdgeTo ::
-   ForNode StorageEdge node -> AugNode node
+   ForNode (StorageEdge Section) node -> AugNode node
 storageEdgeFrom (ForNode (StorageEdge sec _) n) = TimeNode (allowExit sec) n
 storageEdgeTo   (ForNode (StorageEdge _ sec) n) = TimeNode (allowInit sec) n
 
@@ -383,7 +384,7 @@ instance Flip StructureEdge where
 instance Flip idx => Flip (ForNode idx) where
    flip (ForNode idx n) = ForNode (flip idx) n
 
-instance Flip StorageTrans where
+instance Flip (StorageTrans sec) where
    flip (StorageTrans s0 s1) = StorageTrans s1 s0
 
 
@@ -416,13 +417,13 @@ instance (QC.Arbitrary node) => QC.Arbitrary (PPos node) where
 -- | Energy variables.
 newtype Energy node = Energy (StructureEdge node) deriving (Show, Ord, Eq)
 
-newtype StEnergy node = StEnergy (StorageEdge node) deriving (Show, Ord, Eq)
+newtype StEnergy node = StEnergy (StorageEdge Section node) deriving (Show, Ord, Eq)
 
 
 -- | Energy variables for hypothetical outgoing energies.
 -- At storage edges they describe the maximum energy
 -- that a storage could deliver.
-newtype MaxEnergy node = MaxEnergy (StorageEdge node) deriving (Show, Ord, Eq)
+newtype MaxEnergy node = MaxEnergy (StorageEdge Section node) deriving (Show, Ord, Eq)
 
 -- | Power variables.
 newtype Power node = Power (StructureEdge node) deriving (Show, Ord, Eq)
@@ -433,7 +434,7 @@ newtype Eta node = Eta (StructureEdge node) deriving (Show, Ord, Eq)
 -- | Splitting factors.
 newtype X node = X (StructureEdge node) deriving (Show, Ord, Eq)
 
-newtype StX node = StX (StorageTrans node) deriving (Show, Ord, Eq)
+newtype StX node = StX (StorageTrans Section node) deriving (Show, Ord, Eq)
 
 newtype Storage node = Storage Boundary deriving (Show, Ord, Eq)
 

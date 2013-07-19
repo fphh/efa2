@@ -133,7 +133,7 @@ data StructureEdgeShow node =
    | ShowEtaNode (Idx.InSection Gr.EitherEdge node -> Triple [Unicode])
 
 type StorageEdgeShow node =
-        Idx.ForNode Idx.StorageEdge node -> [Unicode]
+        Idx.ForNode XIdx.StorageEdge node -> [Unicode]
 
 dotFromSequFlowGraph ::
   (Node.C node) =>
@@ -357,7 +357,7 @@ dotFromStructureEdgeEta eshow e =
 dotFromStorageEdge ::
   (Node.C node) =>
   StorageEdgeShow node ->
-  Idx.ForNode Idx.StorageEdge node -> DotEdge T.Text
+  Idx.ForNode XIdx.StorageEdge node -> DotEdge T.Text
 dotFromStorageEdge eshow e =
    DotEdge
       (dotIdentFromAugNode $ Idx.storageEdgeFrom e)

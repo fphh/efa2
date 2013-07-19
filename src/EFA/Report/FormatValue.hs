@@ -108,7 +108,7 @@ formatStructureSecEdge e (Idx.StructureEdge x y) s =
 
 formatStorageEdge ::
    (Format output, Node.C node) =>
-   Format.EdgeVar -> Idx.StorageEdge node -> node -> output
+   Format.EdgeVar -> Idx.StorageEdge Idx.Section node -> node -> output
 formatStorageEdge e (Idx.StorageEdge s0 s1) n =
    Format.subscript (Format.edgeIdent e) $
    (Format.initOrSection s0 `Format.link` Format.sectionOrExit s1)
@@ -116,7 +116,7 @@ formatStorageEdge e (Idx.StorageEdge s0 s1) n =
 
 formatStorageTrans ::
    (Format output, Node.C node) =>
-   Format.EdgeVar -> Idx.StorageTrans node -> node -> output
+   Format.EdgeVar -> Idx.StorageTrans Idx.Section node -> node -> output
 formatStorageTrans e (Idx.StorageTrans s0 s1) n =
    Format.subscript (Format.edgeIdent e) $
    (Format.augmentedSection s0 `Format.link` Format.augmentedSection s1)
