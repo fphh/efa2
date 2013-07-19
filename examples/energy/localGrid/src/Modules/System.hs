@@ -129,5 +129,5 @@ edgeNamesOpt = Map.fromList el
 -- | SequenceTopology for Optimisation
 
 seqTopoOpt :: Flow.RangeGraph Node
---seqTopoOpt = Flow.mkSequenceTopology (ModUt.select flowStatesOpt [5,1])
-seqTopoOpt = Flow.mkSequenceTopology (select flowStatesOpt [4,0])
+--seqTopoOpt = Flow.sequenceGraph (ModUt.select flowStatesOpt [5,1])
+seqTopoOpt = Flow.sequenceGraph (select flowStatesOpt [4,0])

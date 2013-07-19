@@ -52,7 +52,7 @@ constructSeqTopo ::
    (Ord node, Show node) =>
    TD.Topology node -> [Int] -> Flow.RangeGraph node
 constructSeqTopo topo =
-  Flow.mkSequenceTopology .
+  Flow.sequenceGraph .
   fmap (StateAnalysis.bruteForce topo !!) .
   SD.fromList
 

@@ -74,7 +74,7 @@ select :: [topo] -> [Int] -> SD.SequData topo
 select ts = SD.fromList . map (ts !!)
 
 seqTopoFunc :: [Int] -> Flow.RangeGraph Node.Int
-seqTopoFunc states = Flow.mkSequenceTopology (select sol states)
+seqTopoFunc states = Flow.sequenceGraph (select sol states)
   where sol = StateAnalysis.advanced topoDreibein
 
 seqTopo :: Flow.RangeGraph Node.Int

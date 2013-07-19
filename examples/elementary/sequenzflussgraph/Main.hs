@@ -60,7 +60,7 @@ drawSeqGraph sol = do
            prompt "Gib kommagetrennt die gewuenschten Sektionsindices ein: "
    Draw.xterm $
      Draw.sequFlowGraph $
-       (Flow.mkSequenceTopology (SD.fromList $ select sol xs))
+       (Flow.sequenceGraph (SD.fromList $ select sol xs))
 
 
 main :: IO ()

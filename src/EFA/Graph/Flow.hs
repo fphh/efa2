@@ -199,19 +199,19 @@ genFlowTopologyIgnoreUnknownPPos topo (FlowState fs) =
 
 
 
-mkSectionTopology ::
+sectionFromClassTopo ::
   (Ord node) =>
   Idx.Section -> ClassifiedTopology node -> SequFlowGraph node
-mkSectionTopology sec =
+sectionFromClassTopo sec =
    Gr.ixmap
       (Idx.TimeNode (Idx.augmentSection sec))
       (Topo.FlowEdge . Topo.StructureEdge . Idx.InSection sec)
 
 
-mkStorageEdges ::
+storageEdges ::
    node -> Map Idx.Section Topo.StoreDir ->
    [Topo.FlowEdge Gr.EitherEdge (Idx.AugNode node)]
-mkStorageEdges node stores = do
+storageEdges node stores = do
    let (ins, outs) = Map.partition (Topo.In ==) stores
    secin <- Idx.Init : map Idx.NoInit (Map.keys ins)
    secout <-
@@ -251,14 +251,14 @@ Alle Storages sollen in die initiale Sektion,
 auch wenn sie nie aktiv sind!
 So kann man beim Initialisieren auch Werte zuweisen.
 -}
-mkSequenceTopology ::
+sequenceGraph ::
    (Ord node, Show node) =>
    SequData (FlowTopology node) ->
    RangeGraph node
-mkSequenceTopology sd =
+sequenceGraph sd =
    (,) (Fold.fold $ SD.mapWithSectionRange (\s rng _ -> Map.singleton s rng) sq) $
    insEdges
-      (Fold.fold $ Map.mapWithKey mkStorageEdges $
+      (Fold.fold $ Map.mapWithKey storageEdges $
        -- Map.filter (not . Map.null) $   -- required?
        fmap (Map.mapMaybe id) tracks) $
    insNodes
@@ -267,6 +267,6 @@ mkSequenceTopology sd =
            (Idx.exitSecNode n, Topo.Storage $ Just Topo.Out)]) $
        Map.keys tracks) $
    Fold.fold $
-   SD.mapWithSection mkSectionTopology sq
+   SD.mapWithSection sectionFromClassTopo sq
   where sq = fmap Topo.classifyStorages sd
         tracks = getStorageSequences sq

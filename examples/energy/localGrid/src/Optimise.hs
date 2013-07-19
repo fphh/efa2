@@ -258,7 +258,7 @@ select :: [topo] -> [Int] -> SD.SequData topo
 select ts = SD.fromList . map (ts !!)
 
 seqTopo :: Flow.RangeGraph Node
-seqTopo = Flow.mkSequenceTopology (select System.flowStatesOpt [4,0])
+seqTopo = Flow.sequenceGraph (select System.flowStatesOpt [4,0])
 
 solveCharge :: Double -> Double -> Double -> Double -> Double
 solveCharge w x y z = etaSys $ EqGen.solve seqTopo $ givenOptimiseCharging w x y z
@@ -777,7 +777,7 @@ main = do
      time = Record.getTime rec
 
      -- | Build Sequenceflow graph for simulation
-     seqTopoSim = Flow.mkSequenceTopology (select System.flowStatesOpt [4])
+     seqTopoSim = Flow.sequenceGraph (select System.flowStatesOpt [4])
 
      -- | Generate and solve Equation System
 
