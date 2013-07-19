@@ -3,7 +3,9 @@
 
 module EFA.Test.EquationSystem.Given where
 
-import EFA.Equation.System ( (=.=) )
+import qualified EFA.Application.Index as XIdx
+import EFA.Application.Utility ( makeEdges, constructSeqTopo )
+
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Variable as Var
@@ -12,22 +14,20 @@ import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
 import EFA.Equation.Result (Result(..))
+import EFA.Equation.System ( (=.=) )
 
 import qualified EFA.Symbolic.Variable as SymVar
 import EFA.Symbolic.SumProduct ( Term )
-import EFA.Graph.Topology.Index ( Direction(..) )
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
-
-import qualified EFA.Example.Index as XIdx
-import EFA.Example.Utility ( makeEdges, constructSeqTopo )
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph as Gr
+import EFA.Graph.Topology.Index ( Direction(..) )
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue)

@@ -37,7 +37,7 @@ data Node = Gas
           | Verteiler            
           | Batterie
           | Wasser  
-             deriving (Eq, Ord, Enum, Show, Read)
+             deriving (Eq, Ord, Enum, Show)
 
 instance Node.C Node where
    display = Node.displayDefault
@@ -58,8 +58,6 @@ topology = Gr.fromList nodes (makeEdges edges)
 
         edges = map f edgeList
           where f (n1,n2,_,_,_) = (n1,n2)
-
--- Problem -- nicht alle Labels erscheinen !!
 
 -- Define Edges with all their Properties
 edgeList :: [(Node, Node, String, String, String)]
@@ -87,6 +85,7 @@ powerPositonNames = Map.fromList $ concat $ map f edgeList
 flowStates :: [TD.FlowTopology Node]
 flowStates = StateAnalysis.advanced topology
 
-
+{-
 seqTopology :: Flow.RangeGraph Node
 seqTopology = Flow.mkSequenceTopology (select flowStates [0,1])
+-}

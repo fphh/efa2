@@ -3,7 +3,7 @@
 
 module EFA.Graph.Flow where
 
-import qualified EFA.Example.Index as XIdx
+import qualified EFA.Application.Index as XIdx
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
@@ -23,14 +23,14 @@ import EFA.Signal.Signal (fromScalar, sigSign, neg, TC(..))
 import EFA.Signal.Data(Data(..), Nil, (:>))
 import EFA.Signal.Base (Sign(PSign, NSign, ZSign),BSum, DArith0)
 
+import qualified EFA.Utility.Map as MapU
+import EFA.Utility.Map (checkedLookup)
+
 import qualified Data.Foldable as Fold
 import qualified Data.Map as Map
 
 import Data.Map (Map)
 import Data.Bool.HT (if')
-
-import qualified EFA.Utility.Map as MapU
-import EFA.Utility.Map (checkedLookup)
 
 
 
@@ -92,12 +92,12 @@ adjustSignsNew :: (SV.Walker v,
                   EdgeStates node ->
                   FlowRecord node v a ->
                   FlowRecord node v a
-adjustSignsNew (EdgeStates m) rec = rmapWithKey f rec
-  where f key x = case checkedLookup "Flow.adjustSignsNew" m (g key) of
-          (Neg, _) -> neg x
-          (Pos, _) -> x
-          (Zero, _) -> x
-        g (Idx.PPos (Idx.StructureEdge n1 n2)) = DirEdge n1 n2
+adjustSignsNew (EdgeStates m) = rmapWithKey f
+  where f (Idx.PPos (Idx.StructureEdge n1 n2)) x =
+           case checkedLookup "Flow.adjustSignsNew" m $ DirEdge n1 n2 of
+              (Neg, _) -> neg x
+              (Pos, _) -> x
+              (Zero, _) -> x
 
 
 
@@ -108,7 +108,7 @@ adjustSigns ::
   FlowState node -> FlowRecord node v a -> FlowRecord node v a
 adjustSigns topo (FlowState state) (Record dt flow) =
    Record dt (Map.foldrWithKey g Map.empty uniquePPos)
-      where (!) = checkedLookup "EFA.Graph.Flow.adjustSigns"
+      where m!k = checkedLookup "EFA.Graph.Flow.adjustSigns" m k
             g ppos NSign acc =
               Map.insert ppos (neg (flow ! ppos))
                 $ Map.insert ppos' (neg (flow ! ppos')) acc
@@ -119,9 +119,8 @@ adjustSigns topo (FlowState state) (Record dt flow) =
                 where ppos' = Idx.flip ppos
             uniquePPos = foldl h Map.empty (Gr.edges topo)
               where h acc (DirEdge idx1 idx2) =
-                      Map.insert ppos (f ppos state) acc
+                      Map.insert ppos (state ! ppos) acc
                       where ppos = XIdx.ppos idx1 idx2
-                    f a = maybe (error "EFA.Graph.Flow.adjustSigns") id . Map.lookup a
 
 adjustSignsIgnoreUnknownPPos ::
   (Show (v a), DArith0 a,

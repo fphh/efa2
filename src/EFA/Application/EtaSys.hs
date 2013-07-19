@@ -1,16 +1,16 @@
 
-module EFA.Example.EtaSys where
+module EFA.Application.EtaSys where
+
+import qualified EFA.Application.Index as XIdx
 
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Environment as EqEnv
 import EFA.Equation.Result (Result(..))
 
-import qualified EFA.Graph as Gr
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Flow as Flow
-
-import qualified EFA.Example.Index as XIdx
+import qualified EFA.Graph as Gr
 
 import EFA.Utility.Map (checkedLookup)
 

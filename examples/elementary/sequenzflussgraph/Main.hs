@@ -1,7 +1,6 @@
 module Main where
 
-import EFA.Example.Utility (makeEdges)
-import EFA.Utility.Async (concurrentlyMany_)
+import EFA.Application.Utility (makeEdges)
 
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Node as Node
@@ -14,6 +13,7 @@ import qualified EFA.Signal.SequenceData as SD
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
+import EFA.Utility.Async (concurrentlyMany_)
 
 import Data.List.HT (chop)
 import Data.Char (isSpace)

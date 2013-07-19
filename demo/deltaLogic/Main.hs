@@ -1,7 +1,7 @@
 module Main where
 
-import qualified EFA.Example.Index as XIdx
-import EFA.Example.Utility (SymbolicEquationSystem, Ignore, (=<>))
+import qualified EFA.Application.Index as XIdx
+import EFA.Application.Utility (SymbolicEquationSystem, Ignore, (=<>))
 
 import qualified EFA.Symbolic.SumProduct as SumProduct
 
@@ -19,8 +19,8 @@ import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
 
+import qualified System.IO as IO
 import Data.Monoid (mempty, (<>))
-import System.IO
 
 
 sec0 :: Idx.Section
@@ -53,7 +53,7 @@ sys =
 
 main :: IO ()
 main = do
-   hSetEncoding stdout utf8
+   IO.hSetEncoding IO.stdout IO.utf8
    putStr $ Format.unUnicode $ formatValue $ EqGen.solveSimple given
    putStrLn ""
    putStr $ Format.unUnicode $ formatValue $ EqGen.solveSimple (given <> sys)

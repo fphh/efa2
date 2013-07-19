@@ -6,52 +6,48 @@
 
 module Main where
 
-import EFA.Example.Utility (makeEdges)
-import EFA.Utility.Async (concurrentlyMany_)
+import qualified EFA.Application.Absolute as EqGen
+import qualified EFA.Application.Index as XIdx
+import EFA.Application.Absolute ( (.=), (=%%=), (=.=) )
+import EFA.Application.EtaSys (etaSys)
+import EFA.Application.Utility (makeEdges)
 
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
+import qualified EFA.Graph.Topology.Index as TIdx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph as Gr
-import qualified EFA.Example.Absolute as EqGen
 
+import qualified EFA.Signal.Signal as Sig
+import qualified EFA.Signal.ConvertTable as Table
 import qualified EFA.Signal.SequenceData as SD
-import EFA.Signal.Data (Data, Nil, (:>))
 import qualified EFA.Signal.Data as D
-
-import qualified EFA.Example.Index as XIdx
-import qualified EFA.Graph.Topology.Index as TIdx
+import qualified EFA.Signal.PlotIO as PlotIO
+import EFA.Signal.Data (Data, Nil, (:>))
 
 import qualified EFA.Equation.Record as EqRec
 import qualified EFA.Equation.Environment as EqEnv
-import qualified EFA.Signal.PlotIO as PlotIO
-
-import EFA.Example.Absolute ( (.=), (=%%=), (=.=) )
-import EFA.Example.EtaSys (etaSys)
 import EFA.Equation.Result (Result(..))
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
 import EFA.Utility.Map (checkedLookup)
-import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
+import EFA.Utility.Async (concurrentlyMany_)
 
-import qualified EFA.Signal.Signal as Sig
-import qualified EFA.Signal.ConvertTable as Table
+import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 
 import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 
 import Data.Eq.HT (equating)
-
-
 import Data.Ord (comparing)
 import Data.Monoid (mconcat, (<>))
 import Data.Foldable (foldMap)
 
-import Debug.Trace
+import Debug.Trace (trace)
 
 
 sec0, sec1 :: TIdx.Section

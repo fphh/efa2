@@ -102,6 +102,9 @@ Library
     EFA.Graph.Topology.StateAnalysis
     EFA.Graph.Flow
     EFA.Graph.CumulatedFlow
+    EFA.Graph.StateFlow
+    EFA.Graph.StateFlow.Index
+    EFA.Graph.StateFlow.Environment
     EFA.Equation.System
     EFA.Equation.Result
     EFA.Equation.Environment
@@ -112,13 +115,13 @@ Library
     EFA.Equation.Stack
     EFA.Equation.Pair
     EFA.Equation.Verify
-    EFA.Example.Utility
-    EFA.Example.Absolute
-    EFA.Example.NestedDelta
-    EFA.Example.AssignMap
-    EFA.Example.Index
-    EFA.Example.Tree
-    EFA.Example.EtaSys
+    EFA.Application.Utility
+    EFA.Application.Absolute
+    EFA.Application.NestedDelta
+    EFA.Application.AssignMap
+    EFA.Application.Index
+    EFA.Application.Tree
+    EFA.Application.EtaSys
 
 
 -- sollte man auf Cabal-Test umstellen,

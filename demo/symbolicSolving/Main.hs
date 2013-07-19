@@ -1,11 +1,11 @@
 module Main where
 
-import qualified EFA.Example.Index as XIdx
-import EFA.Example.Utility (makeEdges, constructSeqTopo)
-import EFA.Example.Absolute ((=<>))
+import qualified EFA.Application.Index as XIdx
+import EFA.Application.Utility (makeEdges, constructSeqTopo)
+import EFA.Application.Absolute ((=<>))
 
 import qualified EFA.Symbolic.SumProduct as SumProduct
-import qualified EFA.Example.Absolute as EqGen
+import qualified EFA.Application.Absolute as EqGen
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))

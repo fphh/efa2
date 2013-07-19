@@ -69,6 +69,7 @@ class Format output where
    recordDelta :: Idx.Delta -> output -> output
    initial, exit :: output
    section :: Idx.Section -> output
+   state :: Idx.State -> output
    sectionNode :: output -> output -> output
    direction :: Idx.Direction -> output
    delta :: output -> output
@@ -114,6 +115,7 @@ instance Format ASCII where
    initial = ASCII "init"
    exit = ASCII "exit"
    section (Idx.Section s) = ASCII $ show s
+   state (Idx.State s) = ASCII $ show s
    sectionNode (ASCII s) (ASCII x) = ASCII $ s ++ "." ++ x
 
    direction = ASCII . directionShort
@@ -179,6 +181,7 @@ instance Format Unicode where
    initial = Unicode "init"
    exit = Unicode "exit"
    section (Idx.Section s) = Unicode $ show s
+   state (Idx.State s) = Unicode $ show s
    sectionNode (Unicode s) (Unicode x) = Unicode $ s ++ "." ++ x
 
    direction = Unicode . directionShort
@@ -289,6 +292,7 @@ instance Format Latex where
    initial = Latex "\\mbox{init}"
    exit = Latex "\\mbox{exit}"
    section (Idx.Section s) = Latex $ show s
+   state (Idx.State s) = Latex $ show s
    sectionNode (Latex s) (Latex x) = Latex $ s ++ ":" ++ x
 
    direction = Latex . directionShort
@@ -371,8 +375,8 @@ instance StorageIdx idx => EdgeIdx (Idx.ForNode idx) where
 
 class StorageIdx idx where storageVar :: Idx.ForNode idx node -> EdgeVar
 instance StorageIdx Idx.MaxEnergy where storageVar _ = MaxEnergy
-instance StorageIdx Idx.StEnergy where storageVar _ = Energy
-instance StorageIdx Idx.StX where storageVar _ = X
+instance StorageIdx (Idx.StEnergy sec) where storageVar _ = Energy
+instance StorageIdx (Idx.StX sec) where storageVar _ = X
 
 
 directionShort :: Idx.Direction -> String
@@ -385,14 +389,18 @@ boundary :: Format output => Idx.Boundary -> output
 boundary (Idx.Following Idx.Init) = initial
 boundary (Idx.Following (Idx.NoInit s)) = section s
 
-initOrSection :: Format output => Idx.InitOrSection -> output
-initOrSection (Idx.Init) = initial
-initOrSection (Idx.NoInit s) = section s
+class Part sec where part :: Format output => sec -> output
+instance Part Idx.Section where part = section
+instance Part Idx.State where part = state
 
-sectionOrExit :: Format output => Idx.SectionOrExit -> output
-sectionOrExit (Idx.NoExit s) = section s
-sectionOrExit (Idx.Exit) = exit
+initOrOther :: (Part sec, Format output) => Idx.Init sec -> output
+initOrOther (Idx.Init) = initial
+initOrOther (Idx.NoInit s) = part s
 
-augmentedSection :: Format output => Idx.AugmentedSection -> output
-augmentedSection =
-   Idx.switchAugmentedSection initial exit section
+otherOrExit :: (Part sec, Format output) => Idx.Exit sec -> output
+otherOrExit (Idx.NoExit s) = part s
+otherOrExit (Idx.Exit) = exit
+
+augmented :: (Part sec, Format output) => Idx.Augmented sec -> output
+augmented =
+   Idx.switchAugmented initial exit part

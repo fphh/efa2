@@ -7,11 +7,11 @@ module Modules.Optimisation where
 import qualified Modules.System as System
 import Modules.System (Node(..))
 
-import qualified EFA.Example.Absolute as EqGen
-import qualified EFA.Example.Index as XIdx
-import qualified EFA.Example.Utility as EqUt
-import qualified EFA.Example.EtaSys as ES
-import EFA.Example.Absolute ( (.=), (=%%=), (=.=) )
+import qualified EFA.Application.Absolute as EqGen
+import qualified EFA.Application.Index as XIdx
+import qualified EFA.Application.Utility as EqUt
+import qualified EFA.Application.EtaSys as ES
+import EFA.Application.Absolute ( (.=), (=%%=), (=.=) )
 
 import qualified EFA.Equation.Environment as EqEnv
 import qualified EFA.Equation.Arithmetic as EqArith
@@ -205,6 +205,8 @@ givenSimulate etaAssign etaFunc sf =
 type
    EnvDouble =
       EqEnv.Complete Node (Result Double) (Result Double)
+
+
 
 calcOptFunc ::
   Flow.RangeGraph Node ->

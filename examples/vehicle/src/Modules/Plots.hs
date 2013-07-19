@@ -4,111 +4,29 @@
 
 module Modules.Plots where
 
---import Modules.System as System
+import qualified EFA.Application.Index as XIdx
+import qualified EFA.Application.AssignMap as AssignMap
 
-import qualified EFA.Example.Index as XIdx
---import qualified EFA.Signal.Plot as Plot
 import qualified EFA.Signal.PlotIO as PlotIO
---import qualified EFA.Signal.PlotBase as PlotBase
-import qualified EFA.Graph.Topology.Node as Node
+import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Vector as V
 
--- import qualified Graphics.Gnuplot.Advanced as Plot
--- import qualified Graphics.Gnuplot.Advanced as AGP
+import qualified EFA.Graph.Topology.Node as Node
 
--- import qualified Graphics.Gnuplot.Terminal.X11 as X11
--- import qualified Graphics.Gnuplot.Terminal.WXT as WXT
-
-import qualified Graphics.Gnuplot.Terminal as Terminal
--- import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
--- import qualified Graphics.Gnuplot.Plot as Plt
---import qualified Graphics.Gnuplot.Plot.TwoDimensional as Plot2D
--- import qualified Graphics.Gnuplot.Plot.ThreeDimensional as Plot3D
---import qualified Graphics.Gnuplot.Graph.TwoDimensional as Graph2D
-
--- import qualified Graphics.Gnuplot.Graph as Graph
-import qualified Graphics.Gnuplot.Value.Atom as Atom
-import qualified Graphics.Gnuplot.Value.Tuple as Tuple
-
-import qualified Graphics.Gnuplot.LineSpecification as LineSpec
--- import qualified Graphics.Gnuplot.ColorSpecification as ColourSpec
-
--- import qualified Graphics.Gnuplot.Frame as Frame
--- import qualified Graphics.Gnuplot.Frame.Option as Opt
--- import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
--- import qualified Graphics.Gnuplot.Frame.OptionSet.Style as OptsStyle
--- import qualified Graphics.Gnuplot.Frame.OptionSet.Histogram as Histogram
-
-import EFA.Report.Typ (TDisp) {-
-                       DisplayType(Typ_T),
-                       getDisplayUnit,
-                       DeltaDisp,
-                       getDisplayTypName)
-
-import EFA.Signal.Typ (Typ,
-                       A,
-                       T,
-                       P,
-                       Tt,
-                       N
-                      )
---import qualified EFA.Signal.Signal as Sig
-
-import EFA.Signal.Signal(TC,(./),
-                         FSignal,
-                         FFSignal,
-                         PFSignal,
-                         DTFSignal,
-                         FDistr,
-                         PDistr,
-                         NDistr)
--}
---import qualified EFA.Signal.Base as Base
---import EFA.Signal.Data (Data,
---                        Nil,(:>))
-
--- import EFA.Signal.Record (SigId(..), Record(..), PowerRecord, SignalRecord)
-import EFA.Signal.Record as Record
--- import EFA.Hack.Record as HRecord
---import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Equation.Environment as Env
---import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Record as EqRecord
 import qualified EFA.Equation.Result as Result
-
---import qualified Data.NonEmpty as NonEmpty
-import EFA.Report.FormatValue (FormatValue, formatValue)
-import qualified EFA.Report.Format as Format
-
 import qualified EFA.Equation.Stack as Stack
---import qualified EFA.Equation.Variable as Var
---import qualified Data.Foldable as Fold
---import EFA.Equation.Arithmetic ((~+))
 
---import EFA.Report.Typ (TDisp)
---import qualified EFA.Symbolic.SumProduct as SumProduct
+import qualified EFA.Report.Format as Format
+import EFA.Report.FormatValue (FormatValue, formatValue)
+import EFA.Report.Typ (TDisp)
 
+import qualified Graphics.Gnuplot.Terminal as Terminal
+import qualified Graphics.Gnuplot.Value.Atom as Atom
+import qualified Graphics.Gnuplot.Value.Tuple as Tuple
+import qualified Graphics.Gnuplot.LineSpecification as LineSpec
 
-
---import qualified Graphics.Gnuplot.Value.Atom as Atom
---import qualified Graphics.Gnuplot.Value.Tuple as Tuple
---import Control.Functor.HT (void)
---import qualified Graphics.Gnuplot.Frame as Frame
---import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
---import qualified Graphics.Gnuplot.Graph as Graph
---import EFA.Report.Typ (TDisp, DisplayType(Typ_T), getDisplayUnit, getDisplayTypName)
---import qualified Graphics.Gnuplot.Advanced as Plot
-
---import qualified Data.Foldable as Fold
---import qualified Data.Map as M
-
---import Control.Functor.HT (void)
-
-import qualified EFA.Example.AssignMap as AssignMap
-
---import Debug.Trace
-
---import Data.Monoid ((<>))
 
 sigsWithSpeed :: (Fractional d1,
                       Fractional d2,

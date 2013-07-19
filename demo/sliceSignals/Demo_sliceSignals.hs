@@ -4,7 +4,7 @@ module Main where
 
 -- | Demonstriert das Schneiden von Signalen
 
-import qualified EFA.Example.Index as XIdx
+import qualified EFA.Application.Index as XIdx
 
 import qualified EFA.Graph.Topology.Node as Node
 

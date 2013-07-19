@@ -32,7 +32,7 @@ import qualified EFA.Equation.Variable as Var
 import qualified EFA.Signal.SequenceData as SD
 import EFA.Signal.Signal (SignalIdx(SignalIdx))
 
-import qualified EFA.Example.Index as XIdx
+import qualified EFA.Application.Index as XIdx
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
@@ -40,7 +40,7 @@ import qualified EFA.Graph.CumulatedFlow as Cum
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph as Gr
 import EFA.Graph.Topology (NodeType(Storage), FlowTopology)
-import EFA.Graph (DirEdge(DirEdge), labNodes)
+import EFA.Graph (DirEdge(DirEdge))
 
 import qualified EFA.Utility.TotalMap as TMap
 
@@ -63,9 +63,7 @@ import Data.GraphViz (
           GraphvizOutput(..))
 
 import Data.GraphViz.Attributes.Complete (
-          Attribute(Label, Color, FillColor),
-          Label(StrLabel),
-          Color(RGB),
+          Attribute(Color, FillColor), Color(RGB),
           )
 
 import qualified Data.GraphViz.Attributes.Complete as Viz
@@ -133,7 +131,7 @@ data StructureEdgeShow node =
    | ShowEtaNode (Idx.InSection Gr.EitherEdge node -> Triple [Unicode])
 
 type StorageEdgeShow node =
-        Idx.ForNode Idx.StorageEdge node -> [Unicode]
+        Idx.ForNode XIdx.StorageEdge node -> [Unicode]
 
 dotFromSequFlowGraph ::
   (Node.C node) =>
@@ -225,7 +223,7 @@ dotFromSectionGraph rngs mtshow nshow structureEdgeShow
   before (current, (es, ns)) =
     DotSG True (Just $ Str $ T.pack $ dotIdentFromAugSection current) $
     DotStmts
-      [GraphAttrs [Label $ StrLabel $ T.pack $ str current]]
+      [GraphAttrs [labelFromString $ str current]]
       []
       dns des
   where (dns,des) =
@@ -239,7 +237,7 @@ dotFromSectionGraph rngs mtshow nshow structureEdgeShow
                 (map (dotFromSecNode (nshow before)) ns,
                  map (dotFromStructureEdge eshow) es)
         str =
-           Idx.switchAugmentedSection "Init" "Exit" $ \s ->
+           Idx.switchAugmented "Init" "Exit" $ \s ->
                  show s ++
                  (case Map.lookup s rngs of
                      Just (SignalIdx from, SignalIdx to) ->
@@ -257,7 +255,7 @@ dotFromStorageGraph nshow (current, ns) =
   DotSG True
     (Just $ Str $ T.pack $ "b" ++ dotIdentFromBoundary (Idx.Following current)) $
   DotStmts
-    [GraphAttrs [Label $ StrLabel $ T.pack $ "After " ++
+    [GraphAttrs [labelFromString $ "After " ++
      case current of
         Idx.Init -> "Init"
         Idx.NoInit (Idx.Section s) -> show s]]
@@ -284,7 +282,7 @@ setGlobalAttrs attr =
 
 title :: String -> DotGraph T.Text -> DotGraph T.Text
 title ti =
-   setGlobalAttrs $ GraphAttrs [Label (StrLabel (T.pack ti))]
+   setGlobalAttrs $ GraphAttrs [labelFromString ti]
 
 bgcolour :: X11Colors.X11Color -> DotGraph T.Text -> DotGraph T.Text
 bgcolour c =
@@ -311,7 +309,7 @@ dotFromSecNode ::
 dotFromSecNode nshow n@(x, nodeType) =
   DotNode
     (dotIdentFromAugNode x)
-    (mkNodeAttrs nodeType $ Label $ StrLabel $ T.pack $ unUnicode $ nshow n)
+    (mkNodeAttrs nodeType $ labelFromUnicode $ nshow n)
 
 dotFromBndNode ::
   (Node.C node) =>
@@ -321,7 +319,7 @@ dotFromBndNode nshow n =
   DotNode
     (dotIdentFromBndNode n)
     (mkNodeAttrs (Topo.Storage ()) $
-     Label $ StrLabel $ T.pack $ unUnicode $ nshow n)
+     labelFromUnicode $ nshow n)
 
 dotFromStructureEdge ::
   (Node.C node) =>
@@ -357,7 +355,7 @@ dotFromStructureEdgeEta eshow e =
 dotFromStorageEdge ::
   (Node.C node) =>
   StorageEdgeShow node ->
-  Idx.ForNode Idx.StorageEdge node -> DotEdge T.Text
+  Idx.ForNode XIdx.StorageEdge node -> DotEdge T.Text
 dotFromStorageEdge eshow e =
    DotEdge
       (dotIdentFromAugNode $ Idx.storageEdgeFrom e)
@@ -396,8 +394,13 @@ dotFromContentEdge mbefore ns =
 
 
 labelFromLines :: [Unicode] -> Attribute
-labelFromLines =
-   Label . StrLabel . T.pack . concatMap (++"\\l") . map unUnicode
+labelFromLines = labelFromString . concatMap (++"\\l") . map unUnicode
+
+labelFromUnicode :: Unicode -> Attribute
+labelFromUnicode = labelFromString . unUnicode
+
+labelFromString :: String -> Attribute
+labelFromString = Viz.Label . Viz.StrLabel . T.pack
 
 
 dotIdentFromSecNode :: (Node.C node) => Idx.SecNode node -> T.Text
@@ -413,7 +416,7 @@ dotIdentFromAugNode (Idx.TimeNode b n) =
 
 dotIdentFromAugSection :: Idx.AugmentedSection -> String
 dotIdentFromAugSection =
-   Idx.switchAugmentedSection "init" "exit" dotIdentFromSection
+   Idx.switchAugmented "init" "exit" dotIdentFromSection
 
 dotIdentFromBndNode :: (Node.C node) => Idx.BndNode node -> T.Text
 dotIdentFromBndNode (Idx.TimeNode b n) =
@@ -443,8 +446,7 @@ sequFlowGraph ::
 sequFlowGraph topo =
   dotFromSequFlowGraph topo Nothing nshow Nothing
      (HideEtaNode $ const []) (Just $ const [])
-  where nshow _before (Idx.TimeNode _ n, l) =
-           Unicode $ unUnicode (Node.display n) ++ " - " ++ showType l
+  where nshow _before (Idx.TimeNode _ n, l) = formatTypedNode (n,l)
 
 
 
@@ -471,8 +473,9 @@ dotFromTopoNode ::
   (Node.C node, StorageLabel store) =>
   Gr.LNode node (Topo.NodeType store) -> DotNode T.Text
 dotFromTopoNode (x, typ) =
-  DotNode (dotIdentFromNode x) (mkNodeAttrs typ displabel)
-  where displabel = Label $ StrLabel $ T.pack $ unUnicode (Node.display x)
+  DotNode
+    (dotIdentFromNode x)
+    (mkNodeAttrs typ $ labelFromUnicode $ Node.display x)
 
 dotFromTopoEdge ::
   (Node.C node) =>
@@ -486,7 +489,7 @@ dotFromTopoEdge edgeLabels e =
                  (dotIdentFromNode x)
                  (dotIdentFromNode y)
                  [ Viz.Dir Viz.NoDir, structureEdgeColour,
-                   Label (StrLabel lab), Viz.EdgeTooltip lab ]
+                   Viz.Label $ Viz.StrLabel lab, Viz.EdgeTooltip lab ]
 
 
 
@@ -502,18 +505,16 @@ topologyWithEdgeLabels edgeLabels topo =
 dotFromFlowTopology ::
   (Node.C node) =>
   Int -> FlowTopology node -> DotSubGraph T.Text
-dotFromFlowTopology ident topo = DotSG True (Just (Int ident)) stmts
-  where stmts = DotStmts attrs [] ns es
-        attrs = [GraphAttrs [labelf ident]]
-        ns = map mkNode (labNodes topo)
-        idf x = T.pack $ show ident ++ "_" ++ Node.dotId x
-        labelf x = Label $ StrLabel $ T.pack (show x)
+dotFromFlowTopology ident topo =
+  DotSG True (Just (Int ident)) $
+  DotStmts
+    [GraphAttrs [labelFromString $ show ident]] []
+    (map mkNode $ Gr.labNodes topo)
+    (map mkEdge $ Gr.edges topo)
+  where idf x = T.pack $ show ident ++ "_" ++ Node.dotId x
         mkNode x@(n, t) =
-          DotNode (idf n) (mkNodeAttrs t (labNodef x))
-        labNodef (n, l) =
-          Label $ StrLabel $ T.pack $
-                  unUnicode (Node.display n) ++ " - " ++ showType l
-        es = map mkEdge $ Gr.edges topo
+           DotNode (idf n)
+              (mkNodeAttrs t $ labelFromUnicode $ formatTypedNode x)
         mkEdge el =
            case orientEdge el of
               (DirEdge x y, d, _) ->
@@ -609,6 +610,12 @@ formatNodeType ::
    (Format output, StorageLabel store) =>
    NodeType store -> output
 formatNodeType = Format.literal . showType
+
+formatTypedNode ::
+   (Node.C node, StorageLabel store) =>
+   (node, NodeType store) -> Unicode
+formatTypedNode (n, l) =
+   Unicode $ unUnicode (Node.display n) ++ " - " ++ showType l
 
 
 data Options output =

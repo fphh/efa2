@@ -2,18 +2,21 @@
 
 module Modules.Utility where
 
+import qualified Modules.System as System
+
 import qualified EFA.Graph.Topology.Index as TIdx
--- import qualified EFA.Example.Index as XIdx
+
 import qualified EFA.Equation.Environment as EqEnv
 import EFA.Equation.Result (Result(..))
-import EFA.Utility.Map (checkedLookup)
-import qualified Modules.System as System
+
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Signal as Sig
-import EFA.Signal.Data (Data(..), Nil, (:>))
 import qualified EFA.Signal.ConvertTable as CT
--- import qualified EFA.IO.TableParser as Table
+import EFA.Signal.Data (Data(..), Nil, (:>))
+
 import qualified EFA.IO.TableParserTypes as TPT
+
+import EFA.Utility.Map (checkedLookup)
 
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Map as Map ; import Data.Map (Map)

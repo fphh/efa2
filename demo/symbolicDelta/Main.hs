@@ -1,7 +1,7 @@
 module Main where
 
-import qualified EFA.Example.Index as XIdx
-import EFA.Example.Utility
+import qualified EFA.Application.Index as XIdx
+import EFA.Application.Utility
           (SymbolicEquationSystem, Ignore,
            makeEdges, constructSeqTopo, (=<>), (.=))
 
