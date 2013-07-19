@@ -83,18 +83,18 @@ scalarEnvFromSequenceEnv secMap (Env.Scalar _me _st se _sx sis sos) =
    StateEnv.Scalar
       (cumulateScalarMap
          (\(Idx.StEnergy (Idx.StorageEdge from to)) ->
-            Idx.StateStEnergy $ Idx.StorageEdge
+            Idx.StEnergy $ Idx.StorageEdge
                (fmap (UMap.checkedLookup "cumulate StEnergyMap from" secMap) from)
                (fmap (UMap.checkedLookup "cumulate StEnergyMap to"   secMap) to))
          se)
       Map.empty
       (cumulateScalarMap
          (\(Idx.StInSum aug) ->
-            Idx.StateStInSum $
+            Idx.StInSum $
             fmap (UMap.checkedLookup "cumulate StInSumMap" secMap) aug) sis)
       (cumulateScalarMap
          (\(Idx.StOutSum aug) ->
-            Idx.StateStOutSum $
+            Idx.StOutSum $
             fmap (UMap.checkedLookup "cumulate StOutSumMap" secMap) aug) sos)
 
 cumulateScalarMap ::

@@ -27,10 +27,10 @@ data Signal a =
 data Scalar a =
      MaxEnergy (Idx.MaxEnergy a)
    | Storage (Idx.Storage a)
-   | StEnergy (Idx.StEnergy a)
-   | StX (Idx.StX a)
-   | StInSum (Idx.StInSum a)
-   | StOutSum (Idx.StOutSum a)
+   | StEnergy (Idx.StEnergy Idx.Section a)
+   | StX (Idx.StX Idx.Section a)
+   | StInSum (Idx.StInSum Idx.Section a)
+   | StOutSum (Idx.StOutSum Idx.Section a)
      deriving (Show, Eq, Ord)
 
 
@@ -67,10 +67,21 @@ class ScalarIndex t where
 
 instance ScalarIndex Idx.MaxEnergy where scalarIndex = MaxEnergy
 instance ScalarIndex Idx.Storage   where scalarIndex = Storage
-instance ScalarIndex Idx.StEnergy  where scalarIndex = StEnergy
-instance ScalarIndex Idx.StX       where scalarIndex = StX
-instance ScalarIndex Idx.StInSum   where scalarIndex = StInSum
-instance ScalarIndex Idx.StOutSum  where scalarIndex = StOutSum
+instance (Idx.ToSection sec) => ScalarIndex (Idx.StEnergy sec) where
+   scalarIndex (Idx.StEnergy (Idx.StorageEdge from to)) =
+      StEnergy $ Idx.StEnergy $
+      Idx.StorageEdge (fmap Idx.toSection from) (fmap Idx.toSection to)
+instance (Idx.ToSection sec) => ScalarIndex (Idx.StX sec) where
+   scalarIndex (Idx.StX (Idx.StorageTrans from to)) =
+      StX $ Idx.StX $
+      Idx.StorageTrans
+         (fmap (fmap Idx.toSection) from) (fmap (fmap Idx.toSection) to)
+instance (Idx.ToSection sec) => ScalarIndex (Idx.StInSum sec) where
+   scalarIndex (Idx.StInSum sec) =
+      StInSum $ Idx.StInSum $ fmap Idx.toSection sec
+instance (Idx.ToSection sec) => ScalarIndex (Idx.StOutSum sec) where
+   scalarIndex (Idx.StOutSum sec) =
+      StOutSum $ Idx.StOutSum $ fmap Idx.toSection sec
 
 
 instance (Node.C node) => FormatValue (Any node) where

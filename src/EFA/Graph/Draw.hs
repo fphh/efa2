@@ -237,7 +237,7 @@ dotFromSectionGraph rngs mtshow nshow structureEdgeShow
                 (map (dotFromSecNode (nshow before)) ns,
                  map (dotFromStructureEdge eshow) es)
         str =
-           Idx.switchAugmentedSection "Init" "Exit" $ \s ->
+           Idx.switchAugmented "Init" "Exit" $ \s ->
                  show s ++
                  (case Map.lookup s rngs of
                      Just (SignalIdx from, SignalIdx to) ->
@@ -416,7 +416,7 @@ dotIdentFromAugNode (Idx.TimeNode b n) =
 
 dotIdentFromAugSection :: Idx.AugmentedSection -> String
 dotIdentFromAugSection =
-   Idx.switchAugmentedSection "init" "exit" dotIdentFromSection
+   Idx.switchAugmented "init" "exit" dotIdentFromSection
 
 dotIdentFromBndNode :: (Node.C node) => Idx.BndNode node -> T.Text
 dotIdentFromBndNode (Idx.TimeNode b n) =

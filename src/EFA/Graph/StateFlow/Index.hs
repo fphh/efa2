@@ -14,10 +14,10 @@ type Sum node       = Idx.InState Idx.Sum node
 
 type Storage node   = Idx.ForNode Idx.Storage node
 type MaxEnergy node = Idx.ForNode Idx.MaxEnergy node
-type StEnergy node  = Idx.ForNode Idx.StateStEnergy node
-type StX node       = Idx.ForNode Idx.StateStX node
-type StInSum node   = Idx.ForNode Idx.StateStInSum node
-type StOutSum node  = Idx.ForNode Idx.StateStOutSum node
+type StEnergy node  = Idx.ForNode (Idx.StEnergy Idx.State) node
+type StX node       = Idx.ForNode (Idx.StX Idx.State) node
+type StInSum node   = Idx.ForNode (Idx.StInSum Idx.State) node
+type StOutSum node  = Idx.ForNode (Idx.StOutSum Idx.State) node
 
 type PPos = Idx.PPos
 

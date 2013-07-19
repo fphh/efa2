@@ -1,6 +1,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 module EFA.Equation.Environment where
 
 import qualified EFA.Application.Index as XIdx
@@ -236,19 +237,19 @@ instance AccessScalarMap Idx.Storage where
    accessScalarMap =
       Accessor.fromSetGet (\x c -> c{storageMap = x}) storageMap
 
-instance AccessScalarMap Idx.StEnergy where
+instance AccessScalarMap (Idx.StEnergy Idx.Section) where
    accessScalarMap =
       Accessor.fromSetGet (\x c -> c{stEnergyMap = x}) stEnergyMap
 
-instance AccessScalarMap Idx.StX where
+instance AccessScalarMap (Idx.StX Idx.Section) where
    accessScalarMap =
       Accessor.fromSetGet (\x c -> c{stXMap = x}) stXMap
 
-instance AccessScalarMap Idx.StInSum where
+instance AccessScalarMap (Idx.StInSum Idx.Section) where
    accessScalarMap =
       Accessor.fromSetGet (\x c -> c{stInSumMap = x}) stInSumMap
 
-instance AccessScalarMap Idx.StOutSum where
+instance AccessScalarMap (Idx.StOutSum Idx.Section) where
    accessScalarMap =
       Accessor.fromSetGet (\x c -> c{stOutSumMap = x}) stOutSumMap
 

@@ -95,10 +95,10 @@ instance MaybeExit sec => MaybeExit (Init sec) where
    exitSection = NoInit exitSection
 
 
-switchAugmentedSection ::
-   a -> a -> (Section -> a) ->
-   AugmentedSection -> a
-switchAugmentedSection init exit secf aug =
+switchAugmented ::
+   a -> a -> (sec -> a) ->
+   Augmented sec -> a
+switchAugmented init exit secf aug =
    case aug of
       Exit -> exit
       NoExit Init -> init
@@ -108,7 +108,7 @@ fromAugmentedSection ::
    (MaybeSection sec, MaybeInit sec, MaybeExit sec) =>
    AugmentedSection -> sec
 fromAugmentedSection =
-   switchAugmentedSection initSection exitSection fromSection
+   switchAugmented initSection exitSection fromSection
 
 
 class ToAugmentedSection sec where
@@ -159,7 +159,7 @@ allowExit = NoExit
 
 maybeInit :: AugmentedSection -> Maybe SectionOrExit
 maybeInit =
-   switchAugmentedSection Nothing (Just Exit) (Just . NoExit)
+   switchAugmented Nothing (Just Exit) (Just . NoExit)
 
 maybeExit :: AugmentedSection -> Maybe InitOrSection
 maybeExit aug =
@@ -381,12 +381,6 @@ instance TC.Show idx => TC.Show (InSection idx) where showsPrec p = showsPrec p 
 instance TC.Show idx => TC.Show (ForNode   idx) where showsPrec p = showsPrec p . wrapForNode
 
 
-structureEdge ::
-   (StructureEdge node -> idx node) ->
-   Section -> node -> node -> InSection idx node
-structureEdge mkIdx s x y =
-   InSection s $ mkIdx $ StructureEdge x y
-
 storageEdge ::
    (StorageEdge sec node -> idx node) ->
    Init sec -> Exit sec -> node -> ForNode idx node
@@ -454,9 +448,7 @@ instance (QC.Arbitrary node) => QC.Arbitrary (PPos node) where
 -- | Energy variables.
 newtype Energy node = Energy (StructureEdge node) deriving (Show, Ord, Eq)
 
-newtype StEnergy node = StEnergy (StorageEdge Section node) deriving (Show, Ord, Eq)
-
-newtype StateStEnergy node = StateStEnergy (StorageEdge State node) deriving (Show, Ord, Eq)
+newtype StEnergy sec node = StEnergy (StorageEdge sec node) deriving (Show, Ord, Eq)
 
 
 -- | Energy variables for hypothetical outgoing energies.
@@ -473,9 +465,7 @@ newtype Eta node = Eta (StructureEdge node) deriving (Show, Ord, Eq)
 -- | Splitting factors.
 newtype X node = X (StructureEdge node) deriving (Show, Ord, Eq)
 
-newtype StX node = StX (StorageTrans Section node) deriving (Show, Ord, Eq)
-
-newtype StateStX node = StateStX (StorageTrans State node) deriving (Show, Ord, Eq)
+newtype StX sec node = StX (StorageTrans sec node) deriving (Show, Ord, Eq)
 
 newtype Storage node = Storage Boundary deriving (Show, Ord, Eq)
 
@@ -483,13 +473,9 @@ data Direction = In | Out deriving (Show, Eq, Ord)
 
 data Sum node = Sum Direction node deriving (Show, Ord, Eq)
 
-data StInSum node = StInSum SectionOrExit deriving (Show, Ord, Eq)
+data StInSum sec node = StInSum (Exit sec) deriving (Show, Ord, Eq)
 
-data StOutSum node = StOutSum InitOrSection deriving (Show, Ord, Eq)
-
-data StateStInSum node = StateStInSum StateOrExit deriving (Show, Ord, Eq)
-
-data StateStOutSum node = StateStOutSum InitOrState deriving (Show, Ord, Eq)
+data StOutSum sec node = StOutSum (Init sec) deriving (Show, Ord, Eq)
 
 
 -- * Other indices
