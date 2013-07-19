@@ -6,6 +6,7 @@ import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Graph.StateFlow.Environment as StateEnv
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph as Gr
 import EFA.Graph.Topology
           (FlowTopology, ClassifiedTopology, StateFlowGraph)
@@ -31,10 +32,12 @@ import Data.Tuple.HT (mapPair)
 
 
 
+type Topology node nodeLabel = Gr.Graph node Gr.EitherEdge nodeLabel ()
+
 states ::
-   (Ord node) =>
-   SequData (TD.FlowTopology node) ->
-   Map (TD.FlowTopology node) Idx.State
+   (Ord node, Ord nodeLabel) =>
+   SequData (Topology node nodeLabel) ->
+   Map (Topology node nodeLabel) Idx.State
 states =
    Map.fromAscList .
    flip zip [Idx.State 0 ..] .
@@ -55,9 +58,9 @@ identify k = do
                return i
 
 stateMaps ::
-   (Ord node) =>
-   SequData (TD.FlowTopology node) ->
-   (Map Idx.State (TD.FlowTopology node),
+   (Ord node, Ord nodeLabel) =>
+   SequData (Topology node nodeLabel) ->
+   (Map Idx.State (Topology node nodeLabel),
     Map Idx.Section Idx.State)
 stateMaps sq =
    mapPair (fold, fold) $ unzip $ Fold.toList $
@@ -86,10 +89,8 @@ scalarEnvFromSequenceEnv ::
 scalarEnvFromSequenceEnv secMap (Env.Scalar _me _st se _sx sis sos) =
    StateEnv.Scalar
       (cumulateScalarMap
-         (\(Idx.StEnergy (Idx.StorageEdge from to)) ->
-            Idx.StEnergy $ Idx.StorageEdge
-               (fmap (UMap.checkedLookup "cumulate StEnergyMap from" secMap) from)
-               (fmap (UMap.checkedLookup "cumulate StEnergyMap to"   secMap) to))
+         (\(Idx.StEnergy e) ->
+            Idx.StEnergy $ mapStorageEdge "cumulate StEnergyMap" secMap e)
          se)
       Map.empty
       (cumulateScalarMap
@@ -100,6 +101,15 @@ scalarEnvFromSequenceEnv secMap (Env.Scalar _me _st se _sx sis sos) =
          (\(Idx.StOutSum aug) ->
             Idx.StOutSum $
             fmap (UMap.checkedLookup "cumulate StOutSumMap" secMap) aug) sos)
+
+mapStorageEdge ::
+   (Ord sec, Show sec, Show state) =>
+   String -> Map sec state ->
+   Idx.StorageEdge sec node -> Idx.StorageEdge state node
+mapStorageEdge caller secMap (Idx.StorageEdge from to) =
+   Idx.StorageEdge
+      (fmap (UMap.checkedLookup (caller ++ " from") secMap) from)
+      (fmap (UMap.checkedLookup (caller ++ " to")   secMap) to)
 
 cumulateScalarMap ::
    (Ord node, Ord (stateIdx node), Arith.Sum a) =>
@@ -137,10 +147,10 @@ cumulateSignalMap secMap =
 
 
 stateFlow ::
-   (Ord node, Arith.Sum a) =>
-   SequData (TD.FlowTopology node) ->
+   (Ord node, Ord nodeLabel, Arith.Sum a) =>
+   SequData (Topology node nodeLabel) ->
    Env.Complete node a a ->
-   (Map Idx.State (TD.FlowTopology node),
+   (Map Idx.State (Topology node nodeLabel),
     StateEnv.Complete node a a)
 stateFlow sq env =
    case stateMaps sq of
@@ -202,7 +212,8 @@ stateGraph ::
 stateGraph sd =
    insEdges
       (map (TD.FlowEdge . TD.StorageEdge) $ Fold.fold $
-       Map.mapWithKey (map . flip Idx.ForNode) $ fmap storageEdges $
+       Map.mapWithKey (map . flip Idx.ForNode) $
+       fmap (map (mapStorageEdge "stateGraph" secMap) . Flow.storageEdges) $
        fmap (Map.mapMaybe id) tracks) $
    Gr.insNodes
       (concatMap (\n ->
@@ -210,6 +221,7 @@ stateGraph sd =
            (exitSecNode n, TD.Storage $ Just TD.Out)]) $
        Map.keys tracks) $
    Fold.fold $
-   Map.mapWithKey stateFromClassTopo sq
-  where sq = fmap TD.classifyStorages $ fst $ stateMaps sd
-        tracks = getStorageSequences sq
+   Map.mapWithKey stateFromClassTopo stateMap
+  where sq = fmap TD.classifyStorages sd
+        (stateMap, secMap) = stateMaps sq
+        tracks = Flow.getStorageSequences sq

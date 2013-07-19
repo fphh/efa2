@@ -267,7 +267,7 @@ structureEdgeFromDirEdge (Idx.InSection s (Gr.DirEdge x y)) =
    Idx.InSection s (Idx.StructureEdge x y)
 
 
-data StoreDir = In | Out deriving (Eq, Show)
+data StoreDir = In | Out deriving (Eq, Ord, Show)
 
 {- |
 Classify the storages in in and out storages,
