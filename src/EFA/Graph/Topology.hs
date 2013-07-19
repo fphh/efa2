@@ -1,5 +1,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
 module EFA.Graph.Topology (
        NLabel (..), LNode, LDirNode, StNode,
        LEdge, LDirEdge,
@@ -11,6 +13,8 @@ module EFA.Graph.Topology (
        ClassifiedTopology,
        SequFlowGraph,
        DirSequFlowGraph,
+       StateFlowGraph,
+       DirStateFlowGraph,
        pathExists,
        dirFromSequFlowGraph,
        structureEdgeFromDirEdge,
@@ -32,7 +36,6 @@ import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph as Gr
 import EFA.Graph (Graph)
 
-import qualified EFA.Utility.TypeConstructor as TC
 
 import Control.Monad (mplus)
 import Data.Foldable (Foldable, foldMap)
@@ -112,14 +115,19 @@ isStorageEdge :: Eq node => FlowEdge structEdge (Idx.AugNode node) -> Bool
 isStorageEdge e = case edgeType e of StorageEdge _ -> True ; _ -> False
 
 
-data EdgeType structEdge node =
-     StructureEdge (Idx.InSection structEdge node)
-   | StorageEdge (Idx.ForNode (Idx.StorageEdge Idx.Section) node)
+data EdgeType (inPart :: (* -> *) -> * -> *) part structEdge node =
+     StructureEdge (inPart structEdge node)
+   | StorageEdge (Idx.ForNode (Idx.StorageEdge part) node)
    deriving (Eq, Ord, Show)
 
 data FlowEdge structEdge augNode =
-        AugNode augNode =>
-           FlowEdge {edgeType :: EdgeType structEdge (NodeOf augNode)}
+        (AugNode augNode, Part (PartOf augNode)) =>
+           FlowEdge {
+              edgeType ::
+                 EdgeType
+                    (InPartOf (PartOf augNode)) (PartOf augNode)
+                    structEdge (NodeOf augNode)
+           }
 
 
 instance Gr.Edge structEdge => Foldable (FlowEdge structEdge) where
@@ -128,85 +136,65 @@ instance Gr.Edge structEdge => Foldable (FlowEdge structEdge) where
 instance Gr.Edge structEdge => Gr.Edge (FlowEdge structEdge) where
    from (FlowEdge e) =
       case e of
-         StructureEdge (Idx.InSection sec se) ->
-            secNode sec $ Gr.from se
+         StructureEdge sn ->
+            flip switchInPart sn $ \ sec se -> secNode sec $ Gr.from se
          StorageEdge (Idx.ForNode (Idx.StorageEdge sec _) node) ->
             augNode (Idx.allowExit sec) node
    to (FlowEdge e) =
       case e of
-         StructureEdge (Idx.InSection sec se) ->
-            secNode sec $ Gr.to se
+         StructureEdge sn ->
+            flip switchInPart sn $ \ sec se -> secNode sec $ Gr.to se
          StorageEdge (Idx.ForNode (Idx.StorageEdge _ sec) node) ->
             augNode (Idx.allowInit sec) node
 
-wrapEdgeType :: EdgeType structEdge node -> EdgeType (TC.Wrap structEdge) node
-wrapEdgeType et =
-   case et of
-      StructureEdge e -> StructureEdge $ Idx.wrapInSection e
-      StorageEdge e -> StorageEdge e
-
-instance (TC.Eq structEdge) => TC.Eq (EdgeType structEdge) where
-   eq = equating wrapEdgeType
 
 instance
-   (TC.Eq structEdge, EqFlowEdge augNode) =>
-      Eq (FlowEdge structEdge augNode) where
-   (==)  =  eqFlowEdge
-
-class EqFlowEdge augNode where
-   eqFlowEdge ::
-      TC.Eq structEdge =>
-      FlowEdge structEdge augNode -> FlowEdge structEdge augNode -> Bool
-
-instance (Eq node) => EqFlowEdge (Idx.TimeNode sec node) where
-   eqFlowEdge (FlowEdge x) (FlowEdge y) = TC.eq x y
-
-
-instance (TC.Ord structEdge) => TC.Ord (EdgeType structEdge) where
-   cmp = comparing wrapEdgeType
+   (Eq node, Eq (structEdge node)) =>
+      Eq (FlowEdge structEdge (Idx.AugNode node)) where
+   (==) = equating edgeType
 
 instance
-   (TC.Ord structEdge, OrdFlowEdge augNode) =>
-      Ord (FlowEdge structEdge augNode) where
-   compare  =  cmpFlowEdge
-
-class EqFlowEdge augNode => OrdFlowEdge augNode where
-   cmpFlowEdge ::
-      TC.Ord structEdge =>
-      FlowEdge structEdge augNode -> FlowEdge structEdge augNode -> Ordering
-
-instance (Ord node) => OrdFlowEdge (Idx.TimeNode sec node) where
-   cmpFlowEdge (FlowEdge x) (FlowEdge y)  =  TC.cmp x y
-
-
-instance (TC.Show structEdge) => TC.Show (EdgeType structEdge) where
-   showsPrec p = showsPrec p . wrapEdgeType
+   (Ord node, Ord (structEdge node)) =>
+      Ord (FlowEdge structEdge (Idx.AugNode node)) where
+   compare = comparing edgeType
 
 instance
-   (TC.Show structEdge, ShowFlowEdge augNode) =>
-      Show (FlowEdge structEdge augNode) where
-   showsPrec  =  showFlowEdge
+   (Eq node, Eq (structEdge node)) =>
+      Eq (FlowEdge structEdge (Idx.AugStateNode node)) where
+   (==) = equating edgeType
 
-class ShowFlowEdge augNode where
-   showFlowEdge ::
-      TC.Show structEdge =>
-      Int -> FlowEdge structEdge augNode -> ShowS
+instance
+   (Ord node, Ord (structEdge node)) =>
+      Ord (FlowEdge structEdge (Idx.AugStateNode node)) where
+   compare = comparing edgeType
 
-instance (Show node) => ShowFlowEdge (Idx.TimeNode sec node) where
-   showFlowEdge p (FlowEdge e) = TC.showsPrec p e
+
+
+class Part sec where
+   type InPartOf sec :: (* -> *) -> * -> *
+   switchInPart :: (sec -> idx node -> a) -> InPartOf sec idx node -> a
+
+instance Part Idx.Section where
+   type InPartOf Idx.Section = Idx.InSection
+   switchInPart f (Idx.InSection sec idx) = f sec idx
+
+instance Part Idx.State where
+   type InPartOf Idx.State = Idx.InState
+   switchInPart f (Idx.InState sec idx) = f sec idx
 
 
 class AugNode augNode where
+   type PartOf augNode :: *
    type NodeOf augNode :: *
-   secNode :: Idx.Section -> NodeOf augNode -> augNode
-   augNode :: Idx.AugmentedSection -> NodeOf augNode -> augNode
+   secNode :: PartOf augNode -> NodeOf augNode -> augNode
+   augNode :: Idx.Augmented (PartOf augNode) -> NodeOf augNode -> augNode
 
-instance
-   (Idx.MaybeSection sec, Idx.MaybeInit sec, Idx.MaybeExit sec) =>
-      AugNode (Idx.TimeNode sec node) where
-   type NodeOf (Idx.TimeNode sec node) = node
-   secNode = Idx.TimeNode . Idx.fromSection
-   augNode = Idx.TimeNode . Idx.fromAugmentedSection
+instance AugNode (Idx.TimeNode (Idx.Augmented sec) node) where
+   type PartOf (Idx.TimeNode (Idx.Augmented sec) node) = sec
+   type NodeOf (Idx.TimeNode (Idx.Augmented sec) node) = node
+   secNode = Idx.TimeNode . Idx.augment
+   augNode = Idx.TimeNode
+
 
 
 {-
@@ -228,6 +216,19 @@ type
 type
    DirSequFlowGraph a =
       Graph (Idx.AugNode a) (FlowEdge Gr.DirEdge) (NodeType (Maybe StoreDir)) ()
+
+
+type
+   StateFlowGraph a =
+      Graph
+         (Idx.AugStateNode a) (FlowEdge Gr.EitherEdge)
+         (NodeType (Maybe StoreDir)) ()
+
+type
+   DirStateFlowGraph a =
+      Graph
+         (Idx.AugStateNode a) (FlowEdge Gr.DirEdge)
+         (NodeType (Maybe StoreDir)) ()
 
 
 pathExists :: (Ord a) => a -> a -> Topology a -> Bool

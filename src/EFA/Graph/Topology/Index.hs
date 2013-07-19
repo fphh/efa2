@@ -48,6 +48,7 @@ type InitOrSection = Init Section
 type SectionOrExit = Exit Section
 type Augmented sec = Exit (Init sec)
 type AugmentedSection = Augmented Section
+type AugmentedState   = Augmented State
 
 
 instance Functor Init where
@@ -157,6 +158,10 @@ allowInit = fmap NoInit
 allowExit :: Init sec -> Augmented sec
 allowExit = NoExit
 
+augment :: sec -> Augmented sec
+augment = NoExit . NoInit
+
+
 maybeInit :: AugmentedSection -> Maybe SectionOrExit
 maybeInit =
    switchAugmented Nothing (Just Exit) (Just . NoExit)
@@ -237,6 +242,8 @@ type StateNode = TimeNode State
 type SecNode = TimeNode Section
 type AugNode = TimeNode AugmentedSection
 type BndNode = TimeNode Boundary
+
+type AugStateNode = TimeNode AugmentedState
 
 
 secNode :: Section -> node -> SecNode node

@@ -6,6 +6,9 @@ import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Graph.StateFlow.Environment as StateEnv
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph as Gr
+import EFA.Graph.Topology
+          (FlowTopology, ClassifiedTopology, StateFlowGraph)
 
 import EFA.Equation.Arithmetic ((~+))
 
@@ -21,6 +24,7 @@ import qualified Data.Set as Set
 import qualified Data.Stream as Stream; import Data.Stream (Stream)
 
 import qualified Data.Foldable as Fold
+import Control.Applicative (liftA2)
 import Data.Traversable (traverse)
 import Data.Foldable (foldMap, fold)
 import Data.Tuple.HT (mapPair)
@@ -142,3 +146,71 @@ stateFlow sq env =
    case stateMaps sq of
       (stateMap, secMap) ->
          (stateMap, envFromSequenceEnv secMap env)
+
+
+
+stateFromClassTopo ::
+  (Ord node) =>
+  Idx.State -> ClassifiedTopology node -> StateFlowGraph node
+stateFromClassTopo state =
+   Gr.ixmap
+      (Idx.TimeNode (Idx.augment state))
+      (TD.FlowEdge . TD.StructureEdge . Idx.InState state)
+
+
+storageEdges ::
+   node -> Map Idx.State TD.StoreDir ->
+   [TD.FlowEdge Gr.EitherEdge (Idx.AugStateNode node)]
+storageEdges node stores =
+   case Map.partition (TD.In ==) stores of
+      (ins, outs) ->
+         fmap (TD.FlowEdge . TD.StorageEdge . flip Idx.ForNode node) $
+         liftA2 Idx.StorageEdge
+            (Idx.Init : map Idx.NoInit (Map.keys ins))
+            (Idx.Exit : map Idx.NoExit (Map.keys outs))
+
+getStorageSequences ::
+   (Ord node, Show node) =>
+   Map Idx.State (TD.ClassifiedTopology node) ->
+   Map node (Map Idx.State (Maybe TD.StoreDir))
+getStorageSequences =
+   Map.unionsWith (Map.unionWith (error "duplicate section for node"))
+   .
+   Map.elems
+   .
+   Map.mapWithKey
+      (\s g ->
+         fmap (Map.singleton s) $
+         Map.mapMaybe TD.maybeStorage $ Gr.nodeLabels g)
+
+
+insEdges ::
+   Ord node =>
+   [TD.FlowEdge Gr.EitherEdge (Idx.AugStateNode node)] ->
+   StateFlowGraph node ->
+   StateFlowGraph node
+insEdges = Gr.insEdges . map (flip (,) ())
+
+initSecNode :: node -> Idx.AugStateNode node
+initSecNode = Idx.TimeNode (Idx.NoExit Idx.Init)
+
+exitSecNode :: node -> Idx.AugStateNode node
+exitSecNode = Idx.TimeNode Idx.Exit
+
+stateGraph ::
+   (Ord node, Show node) =>
+   SequData (FlowTopology node) ->
+   StateFlowGraph node
+stateGraph sd =
+   insEdges
+      (Fold.fold $ Map.mapWithKey storageEdges $
+       fmap (Map.mapMaybe id) tracks) $
+   Gr.insNodes
+      (concatMap (\n ->
+          [(initSecNode n, TD.Storage $ Just TD.In),
+           (exitSecNode n, TD.Storage $ Just TD.Out)]) $
+       Map.keys tracks) $
+   Fold.fold $
+   Map.mapWithKey stateFromClassTopo sq
+  where sq = fmap TD.classifyStorages $ fst $ stateMaps sd
+        tracks = getStorageSequences sq
