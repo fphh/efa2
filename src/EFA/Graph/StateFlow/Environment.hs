@@ -3,7 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 module EFA.Graph.StateFlow.Environment where
 
-import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Graph.StateFlow.Index as XIdx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Equation.Variable as Var
 
@@ -26,17 +26,17 @@ import Prelude hiding (lookup, (.))
 
 
 -- Environments
-type EnergyMap node a = Map (Idx.InState Idx.Energy node) a
-type PowerMap node a = Map (Idx.InState Idx.Power node) a
-type EtaMap node a = Map (Idx.InState Idx.Eta node) a
-type DTimeMap node a = Map (Idx.InState Idx.DTime node) a
-type XMap node a = Map (Idx.InState Idx.X node) a
-type SumMap node a = Map (Idx.InState Idx.Sum node) a
+type EnergyMap node a = Map (XIdx.Energy node) a
+type PowerMap node a = Map (XIdx.Power node) a
+type EtaMap node a = Map (XIdx.Eta node) a
+type DTimeMap node a = Map (XIdx.DTime node) a
+type XMap node a = Map (XIdx.X node) a
+type SumMap node a = Map (XIdx.Sum node) a
 
-type StEnergyMap node a = Map (Idx.ForNode Idx.StateStEnergy node) a
-type StXMap node a = Map (Idx.ForNode Idx.StateStX node) a
-type StInSumMap node a = Map (Idx.ForNode Idx.StateStInSum node) a
-type StOutSumMap node a = Map (Idx.ForNode Idx.StateStOutSum node) a
+type StEnergyMap node a = Map (XIdx.StEnergy node) a
+type StXMap node a = Map (XIdx.StX node) a
+type StInSumMap node a = Map (XIdx.StInSum node) a
+type StOutSumMap node a = Map (XIdx.StOutSum node) a
 
 
 data Signal node a =
