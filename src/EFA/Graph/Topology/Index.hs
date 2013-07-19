@@ -13,6 +13,22 @@ import qualified Prelude as P
 import Prelude hiding (init, flip)
 
 
+newtype State = State Word deriving (Show, Eq, Ord)
+
+instance Enum State where
+   toEnum n =
+      if n >=0
+        then State $ fromIntegral n
+        else error "State.toEnum: negative number"
+   fromEnum (State n) =
+      if n <= fromIntegral (maxBound::Int)
+        then fromIntegral n
+        else error "State.fromEnum: number too big"
+
+type InitOrState = Init State
+type StateOrExit = Exit State
+
+
 newtype Section = Section Word deriving (Show, Eq, Ord)
 
 instance Enum Section where
@@ -217,6 +233,7 @@ after = Record After
 
 data TimeNode time node = TimeNode time node deriving (Show, Eq, Ord)
 
+type StateNode = TimeNode State
 type SecNode = TimeNode Section
 type AugNode = TimeNode AugmentedSection
 type BndNode = TimeNode Boundary
@@ -299,6 +316,20 @@ storageTransFromEdge (StorageEdge s0 s1) =
    StorageTrans (allowExit s0) (allowInit s1)
 
 
+data InState idx node = InState State (idx node)
+   deriving (Show, Eq, Ord)
+
+inState ::
+   (node -> idx node) -> StateNode node -> InState idx node
+inState makeIdx (TimeNode sec edge) =
+   InState sec (makeIdx edge)
+
+liftInState ::
+   (idx0 node -> idx1 node) ->
+   InState idx0 node -> InState idx1 node
+liftInState f (InState sec edge) =
+   InState sec $ f edge
+
 data InSection idx node = InSection Section (idx node)
    deriving (Show, Eq, Ord)
 
@@ -328,18 +359,24 @@ liftForNode f (ForNode edge node) =
    ForNode (f edge) node
 
 
+wrapInState :: InState idx node -> InState (TC.Wrap idx) node
+wrapInState (InState s e)  =  InState s (TC.Wrap e)
+
 wrapInSection :: InSection idx node -> InSection (TC.Wrap idx) node
 wrapInSection (InSection s e)  =  InSection s (TC.Wrap e)
 
 wrapForNode :: ForNode idx node -> ForNode (TC.Wrap idx) node
 wrapForNode (ForNode e n)  =  ForNode (TC.Wrap e) n
 
+instance TC.Eq idx => TC.Eq (InState   idx) where eq = equating wrapInState
 instance TC.Eq idx => TC.Eq (InSection idx) where eq = equating wrapInSection
 instance TC.Eq idx => TC.Eq (ForNode   idx) where eq = equating wrapForNode
 
+instance TC.Ord idx => TC.Ord (InState   idx) where cmp = comparing wrapInState
 instance TC.Ord idx => TC.Ord (InSection idx) where cmp = comparing wrapInSection
 instance TC.Ord idx => TC.Ord (ForNode   idx) where cmp = comparing wrapForNode
 
+instance TC.Show idx => TC.Show (InState   idx) where showsPrec p = showsPrec p . wrapInState
 instance TC.Show idx => TC.Show (InSection idx) where showsPrec p = showsPrec p . wrapInSection
 instance TC.Show idx => TC.Show (ForNode   idx) where showsPrec p = showsPrec p . wrapForNode
 
@@ -419,6 +456,8 @@ newtype Energy node = Energy (StructureEdge node) deriving (Show, Ord, Eq)
 
 newtype StEnergy node = StEnergy (StorageEdge Section node) deriving (Show, Ord, Eq)
 
+newtype StateStEnergy node = StateStEnergy (StorageEdge State node) deriving (Show, Ord, Eq)
+
 
 -- | Energy variables for hypothetical outgoing energies.
 -- At storage edges they describe the maximum energy
@@ -436,6 +475,8 @@ newtype X node = X (StructureEdge node) deriving (Show, Ord, Eq)
 
 newtype StX node = StX (StorageTrans Section node) deriving (Show, Ord, Eq)
 
+newtype StateStX node = StateStX (StorageTrans State node) deriving (Show, Ord, Eq)
+
 newtype Storage node = Storage Boundary deriving (Show, Ord, Eq)
 
 data Direction = In | Out deriving (Show, Eq, Ord)
@@ -445,6 +486,10 @@ data Sum node = Sum Direction node deriving (Show, Ord, Eq)
 data StInSum node = StInSum SectionOrExit deriving (Show, Ord, Eq)
 
 data StOutSum node = StOutSum InitOrSection deriving (Show, Ord, Eq)
+
+data StateStInSum node = StateStInSum StateOrExit deriving (Show, Ord, Eq)
+
+data StateStOutSum node = StateStOutSum InitOrState deriving (Show, Ord, Eq)
 
 
 -- * Other indices

@@ -102,6 +102,8 @@ Library
     EFA.Graph.Topology.StateAnalysis
     EFA.Graph.Flow
     EFA.Graph.CumulatedFlow
+    EFA.Graph.StateFlow
+    EFA.Graph.StateFlow.Environment
     EFA.Equation.System
     EFA.Equation.Result
     EFA.Equation.Environment
