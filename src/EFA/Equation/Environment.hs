@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 module EFA.Equation.Environment where
 
+import qualified EFA.Application.Index as XIdx
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Equation.Variable as Var
@@ -27,19 +28,19 @@ import qualified EFA.Utility.Bifunctor as BF
 
 
 -- Environments
-type EnergyMap node a = Map (Idx.InSection Idx.Energy node) a
-type PowerMap node a = Map (Idx.InSection Idx.Power node) a
-type EtaMap node a = Map (Idx.InSection Idx.Eta node) a
-type DTimeMap node a = Map (Idx.InSection Idx.DTime node) a
-type XMap node a = Map (Idx.InSection Idx.X node) a
-type SumMap node a = Map (Idx.InSection Idx.Sum node) a
+type EnergyMap node a = Map (XIdx.Energy node) a
+type PowerMap node a = Map (XIdx.Power node) a
+type EtaMap node a = Map (XIdx.Eta node) a
+type DTimeMap node a = Map (XIdx.DTime node) a
+type XMap node a = Map (XIdx.X node) a
+type SumMap node a = Map (XIdx.Sum node) a
 
-type MaxEnergyMap node a = Map (Idx.ForNode Idx.MaxEnergy node) a
-type StorageMap node a = Map (Idx.ForNode Idx.Storage node) a
-type StEnergyMap node a = Map (Idx.ForNode Idx.StEnergy node) a
-type StXMap node a = Map (Idx.ForNode Idx.StX node) a
-type StInSumMap node a = Map (Idx.ForNode Idx.StInSum node) a
-type StOutSumMap node a = Map (Idx.ForNode Idx.StOutSum node) a
+type MaxEnergyMap node a = Map (XIdx.MaxEnergy node) a
+type StorageMap node a = Map (XIdx.Storage node) a
+type StEnergyMap node a = Map (XIdx.StEnergy node) a
+type StXMap node a = Map (XIdx.StX node) a
+type StInSumMap node a = Map (XIdx.StInSum node) a
+type StOutSumMap node a = Map (XIdx.StOutSum node) a
 
 
 data Signal node a =
