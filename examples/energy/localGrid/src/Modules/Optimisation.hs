@@ -206,6 +206,8 @@ type
    EnvDouble =
       EqEnv.Complete Node (Result Double) (Result Double)
 
+{-
+
 calcOptFunc ::
   Flow.RangeGraph Node ->
   Bool ->
@@ -246,3 +248,4 @@ maxOpt topo b socDrive sigEnvs = (etaMax, env)
         etaMax = Sig.fromScalar $ Sig.maximum etaSys
         (xIdx, yIdx) = Sig.findIndex2 (== etaMax) etaSys
         env = liftA2 (Sig.getSample2D sigEnvs) xIdx yIdx
+-}
