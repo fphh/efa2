@@ -1,4 +1,6 @@
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module EFA.Application.Optimisation where 
 
@@ -7,6 +9,18 @@ import qualified EFA.Signal.Signal as Sig
 import EFA.Signal.Signal (TC,Scalar)
 import EFA.Signal.Data (Data(..), Nil, (:>), getData)
 import EFA.Signal.Typ (Typ, F, T, A, Tt, UT)
+import qualified EFA.Graph.Flow as Flow
+import qualified EFA.Application.EtaSys as ES
+import qualified EFA.Application.Index as XIdx
+import qualified EFA.Graph.Topology.Index as TIdx
+import qualified EFA.Signal.Record as Record
+import qualified EFA.Signal.Data as Data
+import EFA.Equation.Result (Result(..))
+import qualified EFA.Application.Utility as EqUt
+import qualified EFA.Equation.Environment as EqEnv
+
+import qualified Data.Vector as V
+import Control.Applicative (liftA2)
 
 -- | 
 doubleSweep :: (SV.Zipper v2,
@@ -34,6 +48,7 @@ doubleSweep fsolve varOptX varOptY varX varY =
   where f x y =
           Sig.untype $ Sig.convert $ Sig.zipWith (fsolve x y) varOptX varOptY
 
+{-
 calcOptFunc ::
   Flow.RangeGraph Node ->
   Bool ->
@@ -77,7 +92,7 @@ maxOpt topo b socDrive sigEnvs = (etaMax, env)
         (xIdx, yIdx) = Sig.findIndex2 (== etaMax) etaSys
         env = liftA2 (Sig.getSample2D sigEnvs) xIdx yIdx
 
-
+-}
 
 combineOptimalMaps ::
   Sig.UTSignal2 V.Vector V.Vector Double ->

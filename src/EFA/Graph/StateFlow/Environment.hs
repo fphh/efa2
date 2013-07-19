@@ -1,11 +1,9 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-module EFA.Equation.Environment where
+module EFA.Graph.StateFlow.Environment where
 
-import qualified EFA.Application.Index as XIdx
-import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Graph.StateFlow.Index as XIdx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Equation.Variable as Var
 
@@ -35,8 +33,6 @@ type DTimeMap node a = Map (XIdx.DTime node) a
 type XMap node a = Map (XIdx.X node) a
 type SumMap node a = Map (XIdx.Sum node) a
 
-type MaxEnergyMap node a = Map (XIdx.MaxEnergy node) a
-type StorageMap node a = Map (XIdx.Storage node) a
 type StEnergyMap node a = Map (XIdx.StEnergy node) a
 type StXMap node a = Map (XIdx.StX node) a
 type StInSumMap node a = Map (XIdx.StInSum node) a
@@ -55,8 +51,6 @@ data Signal node a =
 
 data Scalar node a =
    Scalar {
-      maxEnergyMap :: MaxEnergyMap node a,
-      storageMap :: StorageMap node a,
       stEnergyMap :: StEnergyMap node a,
       stXMap :: StXMap node a,
       stInSumMap :: StInSumMap node a,
@@ -71,9 +65,9 @@ data Complete node a v =
 
 
 instance (Ord node) => BF.Bifunctor (Complete node) where
-         bimap f g (Complete scal sig) = Complete (fmap f scal) (fmap g sig)
-         first f (Complete scal sig) = Complete (fmap f scal) sig
-         second g (Complete scal sig) = Complete scal (fmap g sig)
+   bimap f g (Complete scal sig) = Complete (fmap f scal) (fmap g sig)
+   first f (Complete scal sig) = Complete (fmap f scal) sig
+   second g (Complete scal sig) = Complete scal (fmap g sig)
 
 
 class AccessPart env where
@@ -118,143 +112,6 @@ formatMap =
    map (uncurry formatAssign) . Map.toList
 
 
-instance
-   (Node.C node, FormatValue b, FormatValue a) =>
-      FormatValue (Complete node b a) where
-   formatValue (Complete (Scalar me st se sx sis sos) (Signal e p n dt x s)) =
-      Format.lines $
-         formatMap e ++
-         formatMap se ++
-         formatMap me ++
-         formatMap p ++
-         formatMap n ++
-         formatMap dt ++
-         formatMap x ++
-         formatMap sx ++
-         formatMap s ++
-         formatMap sis ++
-         formatMap sos ++
-         formatMap st
-
-
-lookupSignal ::
-   Ord node =>
-   Var.InSectionSignal node -> Signal node a -> Maybe a
-lookupSignal (Idx.InSection s var) =
-   case var of
-      Var.Energy    idx -> Map.lookup (Idx.InSection s idx) . energyMap
-      Var.Power     idx -> Map.lookup (Idx.InSection s idx) . powerMap
-      Var.Eta       idx -> Map.lookup (Idx.InSection s idx) . etaMap
-      Var.DTime     idx -> Map.lookup (Idx.InSection s idx) . dtimeMap
-      Var.X         idx -> Map.lookup (Idx.InSection s idx) . xMap
-      Var.Sum       idx -> Map.lookup (Idx.InSection s idx) . sumMap
-
-lookupScalar ::
-   Ord node =>
-   Var.ForNodeScalar node -> Scalar node a -> Maybe a
-lookupScalar (Idx.ForNode var n) =
-   case var of
-      Var.MaxEnergy idx -> Map.lookup (Idx.ForNode idx n) . maxEnergyMap
-      Var.Storage   idx -> Map.lookup (Idx.ForNode idx n) . storageMap
-      Var.StEnergy  idx -> Map.lookup (Idx.ForNode idx n) . stEnergyMap
-      Var.StX       idx -> Map.lookup (Idx.ForNode idx n) . stXMap
-      Var.StInSum   idx -> Map.lookup (Idx.ForNode idx n) . stInSumMap
-      Var.StOutSum  idx -> Map.lookup (Idx.ForNode idx n) . stOutSumMap
-
-
-type Element idx a v = PartElement (Environment idx) a v
-
-accessMap ::
-   (AccessMap idx) =>
-   Accessor.T (Complete node a v) (Map (idx node) (Element idx a v))
-accessMap =
-   accessPartMap . accessPart
-
-insert ::
-   (AccessMap idx, Ord (idx node)) =>
-   idx node ->
-   Element idx a v ->
-   Complete node a v ->
-   Complete node a v
-insert idx val =
-   Accessor.modify accessMap $ Map.insert idx val
-
-
-class (AccessPart (Environment idx), Var.Index idx) => AccessMap idx where
-   type Environment idx :: * -> * -> *
-   accessPartMap ::
-      Accessor.T
-         (Environment idx node a)
-         (Map (idx node) a)
-
-instance (AccessSignalMap idx) => AccessMap (Idx.InSection idx) where
-   type Environment (Idx.InSection idx) = Signal
-   accessPartMap = accessSignalMap
-
-instance (AccessScalarMap idx) => AccessMap (Idx.ForNode idx) where
-   type Environment (Idx.ForNode idx) = Scalar
-   accessPartMap = accessScalarMap
-
-
-class (Var.SignalIndex idx) => AccessSignalMap idx where
-   accessSignalMap ::
-      Accessor.T (Signal node a) (Map (Idx.InSection idx node) a)
-
-instance AccessSignalMap Idx.Energy where
-   accessSignalMap =
-      Accessor.fromSetGet (\x c -> c{energyMap = x}) energyMap
-
-instance AccessSignalMap Idx.Power where
-   accessSignalMap =
-      Accessor.fromSetGet (\x c -> c{powerMap = x}) powerMap
-
-instance AccessSignalMap Idx.Eta where
-   accessSignalMap =
-      Accessor.fromSetGet (\x c -> c{etaMap = x}) etaMap
-
-instance AccessSignalMap Idx.DTime where
-   accessSignalMap =
-      Accessor.fromSetGet (\x c -> c{dtimeMap = x}) dtimeMap
-
-instance AccessSignalMap Idx.X where
-   accessSignalMap =
-      Accessor.fromSetGet (\x c -> c{xMap = x}) xMap
-
-instance AccessSignalMap Idx.Sum where
-   accessSignalMap =
-      Accessor.fromSetGet (\x c -> c{sumMap = x}) sumMap
-
-
-class (Var.ScalarIndex idx) => AccessScalarMap idx where
-   accessScalarMap ::
-      Accessor.T (Scalar node a) (Map (Idx.ForNode idx node) a)
-
-instance AccessScalarMap Idx.MaxEnergy where
-   accessScalarMap =
-      Accessor.fromSetGet (\x c -> c{maxEnergyMap = x}) maxEnergyMap
-
-instance AccessScalarMap Idx.Storage where
-   accessScalarMap =
-      Accessor.fromSetGet (\x c -> c{storageMap = x}) storageMap
-
-instance AccessScalarMap (Idx.StEnergy Idx.Section) where
-   accessScalarMap =
-      Accessor.fromSetGet (\x c -> c{stEnergyMap = x}) stEnergyMap
-
-instance AccessScalarMap (Idx.StX Idx.Section) where
-   accessScalarMap =
-      Accessor.fromSetGet (\x c -> c{stXMap = x}) stXMap
-
-instance AccessScalarMap (Idx.StInSum Idx.Section) where
-   accessScalarMap =
-      Accessor.fromSetGet (\x c -> c{stInSumMap = x}) stInSumMap
-
-instance AccessScalarMap (Idx.StOutSum Idx.Section) where
-   accessScalarMap =
-      Accessor.fromSetGet (\x c -> c{stOutSumMap = x}) stOutSumMap
-
-
-
 signalLift0 ::
    (Ord node) =>
    (forall k. Ord k => Map k a) ->
@@ -267,7 +124,7 @@ scalarLift0 ::
    (forall k. Ord k => Map k a) ->
    Scalar node a
 scalarLift0 f =
-   Scalar f f f f f f
+   Scalar f f f f
 
 
 signalLift1 ::
@@ -281,8 +138,8 @@ scalarLift1 ::
    (Ord node) =>
    (forall k. Ord k => Map k a -> Map k b) ->
    Scalar node a -> Scalar node b
-scalarLift1 f (Scalar me st se sx sis sos) =
-   Scalar (f me) (f st) (f se) (f sx) (f sis) (f sos)
+scalarLift1 f (Scalar se sx sis sos) =
+   Scalar (f se) (f sx) (f sis) (f sos)
 
 lift1 ::
    (Scalar node a0 -> Scalar node a) ->
@@ -304,8 +161,8 @@ scalarLift2 ::
    (Ord node) =>
    (forall k. Ord k => Map k a -> Map k b -> Map k c) ->
    Scalar node a -> Scalar node b -> Scalar node c
-scalarLift2 f (Scalar me st se sx sis sos) (Scalar me' st' se' sx' sis' sos') =
-   Scalar (f me me') (f st st') (f se se') (f sx sx') (f sis sis') (f sos sos')
+scalarLift2 f (Scalar se sx sis sos) (Scalar se' sx' sis' sos') =
+   Scalar (f se se') (f sx sx') (f sis sis') (f sos sos')
 
 lift2 ::
    (Scalar node a0 -> Scalar node a1 -> Scalar node a) ->
@@ -342,8 +199,8 @@ instance Ord node => Traversable (Signal node) where
       pure Signal <?> e <?> p <?> n <?> dt <?> x <?> s
 
 instance Ord node => Traversable (Scalar node) where
-   sequenceA (Scalar me st se sx sis sos) =
-      pure Scalar <?> me <?> st <?> se <?> sx <?> sis <?> sos
+   sequenceA (Scalar se sx sis sos) =
+      pure Scalar <?> se <?> sx <?> sis <?> sos
 
 infixl 4 <?>
 (<?>) ::
@@ -420,6 +277,7 @@ difference ::
 difference =
    lift2 scalarDifference signalDifference
 
+
 signalFilter ::
    Ord node =>
    (a -> Bool) -> Signal node a -> Signal node a
@@ -438,14 +296,3 @@ filter ::
    Complete node a v
 filter f g (Complete scalar0 signal0) =
    Complete (scalarFilter f scalar0) (signalFilter g signal0)
-
-signalFilterWithKey ::
-   Ord node =>
-   (forall k. k -> a -> Bool) -> Signal node a -> Signal node a
-signalFilterWithKey f = signalLift1 (Map.filterWithKey f)
-
-scalarFilterWithKey ::
-   Ord node =>
-   (forall k. k -> a -> Bool) -> Scalar node a -> Scalar node a
-scalarFilterWithKey f = scalarLift1 (Map.filterWithKey f)
-

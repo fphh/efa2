@@ -75,7 +75,7 @@ newtype Graph node edge nodeLabel edgeLabel =
             (Map (edge node) edgeLabel,
              nodeLabel,
              Map (edge node) edgeLabel)
-   } deriving (Eq)
+   } deriving (Eq, Ord)
 
 instance
    (Edge e, Ord n, Ord (e n),

@@ -12,14 +12,17 @@ type X node         = Idx.InSection Idx.X node
 type DTime node     = Idx.InSection Idx.DTime node
 type Sum node       = Idx.InSection Idx.Sum node
 
-type MaxEnergy node = Idx.ForNode Idx.MaxEnergy node
-type StEnergy node  = Idx.ForNode Idx.StEnergy node
-type StX node       = Idx.ForNode Idx.StX node
 type Storage node   = Idx.ForNode Idx.Storage node
-type StInSum node   = Idx.ForNode Idx.StInSum node
-type StOutSum node  = Idx.ForNode Idx.StOutSum node
+type MaxEnergy node = Idx.ForNode Idx.MaxEnergy node
+type StEnergy node  = Idx.ForNode (Idx.StEnergy Idx.Section) node
+type StX node       = Idx.ForNode (Idx.StX Idx.Section) node
+type StInSum node   = Idx.ForNode (Idx.StInSum Idx.Section) node
+type StOutSum node  = Idx.ForNode (Idx.StOutSum Idx.Section) node
 
 type PPos = Idx.PPos
+
+type StorageEdge  = Idx.StorageEdge  Idx.Section
+type StorageTrans = Idx.StorageTrans Idx.Section
 
 
 energy :: Idx.Section -> node -> node -> Energy node
@@ -27,10 +30,17 @@ power :: Idx.Section -> node -> node -> Power node
 eta :: Idx.Section -> node -> node -> Eta node
 x :: Idx.Section -> node -> node -> X node
 
-energy    = Idx.structureEdge Idx.Energy
-power     = Idx.structureEdge Idx.Power
-eta       = Idx.structureEdge Idx.Eta
-x         = Idx.structureEdge Idx.X
+energy    = structureEdge Idx.Energy
+power     = structureEdge Idx.Power
+eta       = structureEdge Idx.Eta
+x         = structureEdge Idx.X
+
+structureEdge ::
+   (Idx.StructureEdge node -> idx node) ->
+   Idx.Section -> node -> node -> Idx.InSection idx node
+structureEdge mkIdx s from to =
+   Idx.InSection s $ mkIdx $ Idx.StructureEdge from to
+
 
 dTime :: Idx.Section -> DTime node
 dTime sec = Idx.InSection sec Idx.DTime
@@ -57,14 +67,14 @@ stX       = storageTrans Idx.StX
 
 storageEdge ::
    (Idx.ToInitOrSection from, Idx.ToSectionOrExit to) =>
-   (Idx.StorageEdge node -> idx node) ->
+   (StorageEdge node -> idx node) ->
    from -> to -> node -> Idx.ForNode idx node
 storageEdge mkIdx a b =
    Idx.storageEdge mkIdx (Idx.initOrSection a) (Idx.sectionOrExit b)
 
 storageTrans ::
    (Idx.ToAugmentedSection from, Idx.ToAugmentedSection to) =>
-   (Idx.StorageTrans node -> idx node) ->
+   (StorageTrans node -> idx node) ->
    from -> to -> node -> Idx.ForNode idx node
 storageTrans mkIdx a b =
    Idx.storageTrans mkIdx (Idx.augmentSection a) (Idx.augmentSection b)

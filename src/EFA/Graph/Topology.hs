@@ -114,7 +114,7 @@ isStorageEdge e = case edgeType e of StorageEdge _ -> True ; _ -> False
 
 data EdgeType structEdge node =
      StructureEdge (Idx.InSection structEdge node)
-   | StorageEdge (Idx.ForNode Idx.StorageEdge node)
+   | StorageEdge (Idx.ForNode (Idx.StorageEdge Idx.Section) node)
    deriving (Eq, Ord, Show)
 
 data FlowEdge structEdge augNode =

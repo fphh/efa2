@@ -12,10 +12,11 @@ import qualified Modules.System as System
 import qualified Modules.Optimisation as Optimisation
 import qualified Modules.Analysis as Analysis
 import Modules.System (Node(..))
-import Modules.Optimisation (EnvDouble, sec0,sec1, -- maxEta, maxOpt,
+import Modules.Optimisation (EnvDouble, sec0,sec1, maxEta, maxOpt,
                             -- calcEtaSys
                             )
-import qualified EFA.Application.Optimisation (maxEta, maxOpt)
+import qualified EFA.Application.Optimisation as ApplOpt -- (maxEta, maxOpt)
+import EFA.Application.Optimisation as ApplOpt (myflip,noflip)
   
 import Modules.Utility as ModUt
 -- import Modules.Utility(getEtas, getPowerSignals,select)
@@ -194,7 +195,7 @@ varWaterPower = Sig.fromList2 varWaterPower'
 varGasPower :: Sig.PSignal2 V.Vector V.Vector Double
 varGasPower = Sig.fromList2 varGasPower'
 
-{-
+
 sweep ::(SV.Storage c2 d,
           SV.Storage c1 (c2 d), SV.FromList c2,
           SV.FromList c1) =>
@@ -223,7 +224,7 @@ doubleSweep func etaFunc varOptX varOptY varX varY=
         yo = mm varOptY
         mm = map (map Data)
 
--}
+
 
 makePics ::
   (forall s. EqGen.EquationSystem Node s (Data Nil Double) (Data Nil Double)) ->
@@ -238,9 +239,9 @@ makePics eqs tabEta tabPower socDrive = t
   where t = (state, optWater, optGas, etaSysMax)
         state = Sig.map fromIntegral $ Sig.argMax maxETACharge maxETADischarge
 
-        optWater = combineOptimalMaps maxEtaSysState
+        optWater = ApplOpt.combineOptimalMaps maxEtaSysState
                      powerWaterChargeOpt powerWaterDischargeOpt
-        optGas = combineOptimalMaps maxEtaSysState
+        optGas = ApplOpt.combineOptimalMaps maxEtaSysState
                      powerGasChargeOpt powerGasDischargeOpt
 
         maxEtaSysState :: Sig.UTSignal2 V.Vector V.Vector Double
@@ -278,11 +279,11 @@ makePics eqs tabEta tabPower socDrive = t
         maxETADischarge = Sig.setType $ Sig.map fst $
           Sig.map maxOptDischargeFunc envsDischarge
 
-        envsCharge =  Sig.map (Sig.map envGetData) $
+        envsCharge =  Sig.map (Sig.map ApplOpt.envGetData) $
           doubleSweep (Optimisation.solveCharge eqs)
                    etaFunc varWaterPower' varGasPower' varRestPower' varLocalPower'
 
-        envsDischarge = Sig.map (Sig.map envGetData) $
+        envsDischarge = Sig.map (Sig.map ApplOpt.envGetData) $
           doubleSweep (Optimisation.solveDischarge eqs)
                    etaFunc varWaterPower' varGasPower' varRestPower' varLocalPower'
 
@@ -402,14 +403,14 @@ main = do
      envsCharge ::
        Sig.UTSignal2 V.Vector V.Vector
          (Sig.UTSignal2 V.Vector V.Vector EnvDouble)
-     envsCharge = Sig.map (Sig.map envGetData) $
+     envsCharge = Sig.map (Sig.map ApplOpt.envGetData) $
        doubleSweep (Optimisation.solveCharge eqsys)
                    etaFunc varWaterPower' varGasPower' varRestPower' varLocalPower'
 
      envsDischarge ::
        Sig.UTSignal2 V.Vector V.Vector
          (Sig.UTSignal2 V.Vector V.Vector EnvDouble)
-     envsDischarge = Sig.map (Sig.map envGetData) $
+     envsDischarge = Sig.map (Sig.map ApplOpt.envGetData) $
        doubleSweep (Optimisation.solveDischarge eqsys)
                    etaFunc varWaterPower' varGasPower' varRestPower' varLocalPower'
 
@@ -627,8 +628,8 @@ main = do
                   (Sig.getSample2D (Sig.getSample2D envsDischarge (Sig.SignalIdx 1, Sig.SignalIdx 1)) (Sig.SignalIdx 1, Sig.SignalIdx 1)) ]
 
 -}
-   let optGas = combineOptimalMaps maxEtaSysState powerGasChargeOpt powerGasDischargeOpt
-       optWater = combineOptimalMaps maxEtaSysState powerWaterChargeOpt powerWaterDischargeOpt
+   let optGas = ApplOpt.combineOptimalMaps maxEtaSysState powerGasChargeOpt powerGasDischargeOpt
+       optWater = ApplOpt.combineOptimalMaps maxEtaSysState powerWaterChargeOpt powerWaterDischargeOpt
 
 
    concurrentlyMany_ $ [

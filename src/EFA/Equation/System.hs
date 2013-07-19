@@ -44,6 +44,7 @@ module EFA.Equation.System (
   Result(..),
   ) where
 
+import qualified EFA.Application.Index as XIdx
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Verify as Verify
@@ -551,13 +552,13 @@ energy = variableRecord . Idx.liftInSection Idx.Energy
 maxEnergy ::
    (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node,
     Sum a, Record rec, Node.C node) =>
-   Idx.ForNode Idx.StorageEdge node -> RecordExpression mode rec node s a v a
+   Idx.ForNode XIdx.StorageEdge node -> RecordExpression mode rec node s a v a
 maxEnergy = variableRecord . Idx.liftForNode Idx.MaxEnergy
 
 stEnergy ::
    (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node,
     Sum a, Record rec, Node.C node) =>
-   Idx.ForNode Idx.StorageEdge node -> RecordExpression mode rec node s a v a
+   Idx.ForNode XIdx.StorageEdge node -> RecordExpression mode rec node s a v a
 stEnergy = variableRecord . Idx.liftForNode Idx.StEnergy
 
 eta ::
@@ -575,7 +576,7 @@ xfactor = variableRecord . Idx.liftInSection Idx.X
 stxfactor ::
    (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node,
     Sum a, Record rec, Node.C node) =>
-   Idx.ForNode Idx.StorageTrans node -> RecordExpression mode rec node s a v a
+   Idx.ForNode XIdx.StorageTrans node -> RecordExpression mode rec node s a v a
 stxfactor = variableRecord . Idx.liftForNode Idx.StX
 
 insum ::
@@ -616,8 +617,8 @@ dtime = variableRecord . flip Idx.InSection Idx.DTime
 
 
 storageTransFromEdge ::
-   Idx.ForNode Idx.StorageEdge node ->
-   Idx.ForNode Idx.StorageTrans node
+   Idx.ForNode XIdx.StorageEdge node ->
+   Idx.ForNode XIdx.StorageTrans node
 storageTransFromEdge =
    Idx.liftForNode Idx.storageTransFromEdge
 
@@ -789,8 +790,7 @@ fromNodes equalInOutSums =
                          (stxfactor . prex . storageTransFromEdge))
                       (NonEmpty.fetch edges)
 
-            in  -- siehe bug 2013-02-12-sum-equations-storage
-                case nodeType of
+            in  case nodeType of
                    TD.Crossing ->
                       mwhen equalInOutSums $
                       withSecNode $ \sn -> insum sn =%= outsum sn
@@ -868,7 +868,7 @@ fromInStorages ::
   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Sum a, a ~ Scalar v,
    Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node, Product v, Integrate v,
    Record rec, Node.C node) =>
-  Idx.TimeNode Idx.InitOrSection node -> [Idx.ForNode Idx.StorageEdge node] ->
+  Idx.TimeNode Idx.InitOrSection node -> [Idx.ForNode XIdx.StorageEdge node] ->
   EquationSystem mode rec node s a v
 fromInStorages sn outs =
    let toSec (Idx.ForNode (Idx.StorageEdge _ x) _) = x
@@ -882,7 +882,7 @@ fromInStorages sn outs =
 fromOutStorages ::
   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node,
    Constant a, Record rec, Node.C node) =>
-  [Idx.ForNode Idx.StorageEdge node] ->
+  [Idx.ForNode XIdx.StorageEdge node] ->
   EquationSystem mode rec node s a v
 fromOutStorages ins =
    withLocalVar $ \s ->

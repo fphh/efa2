@@ -107,19 +107,19 @@ formatStructureSecEdge e (Idx.StructureEdge x y) s =
       (Node.subscript x `Format.link` Node.subscript y)
 
 formatStorageEdge ::
-   (Format output, Node.C node) =>
-   Format.EdgeVar -> Idx.StorageEdge node -> node -> output
+   (Format.Part sec, Format output, Node.C node) =>
+   Format.EdgeVar -> Idx.StorageEdge sec node -> node -> output
 formatStorageEdge e (Idx.StorageEdge s0 s1) n =
    Format.subscript (Format.edgeIdent e) $
-   (Format.initOrSection s0 `Format.link` Format.sectionOrExit s1)
+   (Format.initOrOther s0 `Format.link` Format.otherOrExit s1)
       `Format.sectionNode` Node.subscript n
 
 formatStorageTrans ::
-   (Format output, Node.C node) =>
-   Format.EdgeVar -> Idx.StorageTrans node -> node -> output
+   (Format.Part sec, Format output, Node.C node) =>
+   Format.EdgeVar -> Idx.StorageTrans sec node -> node -> output
 formatStorageTrans e (Idx.StorageTrans s0 s1) n =
    Format.subscript (Format.edgeIdent e) $
-   (Format.augmentedSection s0 `Format.link` Format.augmentedSection s1)
+   (Format.augmented s0 `Format.link` Format.augmented s1)
       `Format.sectionNode` Node.subscript n
 
 
@@ -154,19 +154,19 @@ instance FormatScalarIndex Idx.Storage where
       Format.subscript Format.storage $
       formatBoundaryNode (Idx.TimeNode bnd n)
 
-instance FormatScalarIndex Idx.StEnergy where
+instance (Format.Part sec) => FormatScalarIndex (Idx.StEnergy sec) where
    formatScalarIndex (Idx.StEnergy e) = formatStorageEdge Format.Energy e
 
-instance FormatScalarIndex Idx.StX where
+instance (Format.Part sec) => FormatScalarIndex (Idx.StX sec) where
    formatScalarIndex (Idx.StX e) = formatStorageTrans Format.X e
 
-instance FormatScalarIndex Idx.StInSum where
+instance (Format.Part sec) => FormatScalarIndex (Idx.StInSum sec) where
    formatScalarIndex (Idx.StInSum s) n =
-      formatStSum Idx.In (Format.sectionOrExit s) n
+      formatStSum Idx.In (Format.otherOrExit s) n
 
-instance FormatScalarIndex Idx.StOutSum where
+instance (Format.Part sec) => FormatScalarIndex (Idx.StOutSum sec) where
    formatScalarIndex (Idx.StOutSum s) n =
-      formatStSum Idx.Out (Format.initOrSection s) n
+      formatStSum Idx.Out (Format.initOrOther s) n
 
 formatStSum ::
    (Format output, Node.C node) =>
