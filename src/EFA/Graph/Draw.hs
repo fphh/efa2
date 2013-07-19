@@ -63,9 +63,7 @@ import Data.GraphViz (
           GraphvizOutput(..))
 
 import Data.GraphViz.Attributes.Complete (
-          Attribute(Label, Color, FillColor),
-          Label(StrLabel),
-          Color(RGB),
+          Attribute(Color, FillColor), Color(RGB),
           )
 
 import qualified Data.GraphViz.Attributes.Complete as Viz
@@ -402,7 +400,7 @@ labelFromUnicode :: Unicode -> Attribute
 labelFromUnicode = labelFromString . unUnicode
 
 labelFromString :: String -> Attribute
-labelFromString = Label . StrLabel . T.pack
+labelFromString = Viz.Label . Viz.StrLabel . T.pack
 
 
 dotIdentFromSecNode :: (Node.C node) => Idx.SecNode node -> T.Text
@@ -491,7 +489,7 @@ dotFromTopoEdge edgeLabels e =
                  (dotIdentFromNode x)
                  (dotIdentFromNode y)
                  [ Viz.Dir Viz.NoDir, structureEdgeColour,
-                   Label (StrLabel lab), Viz.EdgeTooltip lab ]
+                   Viz.Label $ Viz.StrLabel lab, Viz.EdgeTooltip lab ]
 
 
 
