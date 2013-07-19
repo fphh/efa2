@@ -209,9 +209,8 @@ sectionFromClassTopo sec =
 
 
 storageEdges ::
-   node -> Map Idx.Section Topo.StoreDir ->
-   [Topo.FlowEdge Gr.EitherEdge (Idx.AugNode node)]
-storageEdges node stores = do
+   Map Idx.Section Topo.StoreDir -> [Idx.StorageEdge Idx.Section node]
+storageEdges stores = do
    let (ins, outs) = Map.partition (Topo.In ==) stores
    secin <- Idx.Init : map Idx.NoInit (Map.keys ins)
    secout <-
@@ -219,9 +218,7 @@ storageEdges node stores = do
       case secin of
          Idx.Init -> outs
          Idx.NoInit s -> snd $ Map.split s outs
-   return $
-      (Topo.FlowEdge $ Topo.StorageEdge $
-       Idx.ForNode (Idx.StorageEdge secin secout) node)
+   return $ Idx.StorageEdge secin secout
 
 getStorageSequences ::
    (Ord node, Show node) =>
@@ -258,7 +255,8 @@ sequenceGraph ::
 sequenceGraph sd =
    (,) (Fold.fold $ SD.mapWithSectionRange (\s rng _ -> Map.singleton s rng) sq) $
    insEdges
-      (Fold.fold $ Map.mapWithKey storageEdges $
+      (map (Topo.FlowEdge . Topo.StorageEdge) $ Fold.fold $
+       Map.mapWithKey (map . flip Idx.ForNode) $ fmap storageEdges $
        -- Map.filter (not . Map.null) $   -- required?
        fmap (Map.mapMaybe id) tracks) $
    insNodes

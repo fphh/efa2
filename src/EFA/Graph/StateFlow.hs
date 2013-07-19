@@ -159,12 +159,10 @@ stateFromClassTopo state =
 
 
 storageEdges ::
-   node -> Map Idx.State TD.StoreDir ->
-   [TD.FlowEdge Gr.EitherEdge (Idx.AugStateNode node)]
-storageEdges node stores =
+   Map Idx.State TD.StoreDir -> [Idx.StorageEdge Idx.State node]
+storageEdges stores =
    case Map.partition (TD.In ==) stores of
       (ins, outs) ->
-         fmap (TD.FlowEdge . TD.StorageEdge . flip Idx.ForNode node) $
          liftA2 Idx.StorageEdge
             (Idx.Init : map Idx.NoInit (Map.keys ins))
             (Idx.Exit : map Idx.NoExit (Map.keys outs))
@@ -203,7 +201,8 @@ stateGraph ::
    StateFlowGraph node
 stateGraph sd =
    insEdges
-      (Fold.fold $ Map.mapWithKey storageEdges $
+      (map (TD.FlowEdge . TD.StorageEdge) $ Fold.fold $
+       Map.mapWithKey (map . flip Idx.ForNode) $ fmap storageEdges $
        fmap (Map.mapMaybe id) tracks) $
    Gr.insNodes
       (concatMap (\n ->
