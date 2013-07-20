@@ -192,19 +192,6 @@ getStorageSequences =
          Map.mapMaybe TD.maybeStorage $ Gr.nodeLabels g)
 
 
-insEdges ::
-   Ord node =>
-   [TD.FlowEdge Gr.EitherEdge (Idx.AugStateNode node)] ->
-   StateFlowGraph node ->
-   StateFlowGraph node
-insEdges = Gr.insEdges . map (flip (,) ())
-
-initSecNode :: node -> Idx.AugStateNode node
-initSecNode = Idx.TimeNode (Idx.NoExit Idx.Init)
-
-exitSecNode :: node -> Idx.AugStateNode node
-exitSecNode = Idx.TimeNode Idx.Exit
-
 {- |
 Insert all possible storage edges.
 -}
@@ -213,20 +200,11 @@ stateGraphAllStorageEdges ::
    SequData (FlowTopology node) ->
    StateFlowGraph node
 stateGraphAllStorageEdges sd =
-   insEdges
-      (map (TD.FlowEdge . TD.StorageEdge) $ Fold.fold $
-       Map.mapWithKey (map . flip Idx.ForNode) $ fmap storageEdges $
-       fmap (Map.mapMaybe id) tracks) $
-   Gr.insNodes
-      (concatMap (\n ->
-          [(initSecNode n, TD.Storage $ Just TD.In),
-           (exitSecNode n, TD.Storage $ Just TD.Out)]) $
-       Map.keys tracks) $
-   Fold.fold $
-   Map.mapWithKey stateFromClassTopo sq
+   Flow.insEdges (fmap (storageEdges . Map.mapMaybe id) tracks) $
+   Flow.insNodes (Map.keys tracks) $
+   Fold.fold $ Map.mapWithKey stateFromClassTopo sq
   where sq = fmap TD.classifyStorages $ fst $ stateMaps sd
         tracks = getStorageSequences sq
-
 
 {- |
 Insert only the storage edges that have counterparts in the sequence flow graph.
@@ -236,18 +214,11 @@ stateGraphActualStorageEdges ::
    SequData (FlowTopology node) ->
    StateFlowGraph node
 stateGraphActualStorageEdges sd =
-   insEdges
-      (map (TD.FlowEdge . TD.StorageEdge) $ Fold.fold $
-       Map.mapWithKey (map . flip Idx.ForNode) $
-       fmap (map (mapStorageEdge "stateGraph" secMap) . Flow.storageEdges) $
-       fmap (Map.mapMaybe id) tracks) $
-   Gr.insNodes
-      (concatMap (\n ->
-          [(initSecNode n, TD.Storage $ Just TD.In),
-           (exitSecNode n, TD.Storage $ Just TD.Out)]) $
-       Map.keys tracks) $
-   Fold.fold $
-   Map.mapWithKey stateFromClassTopo stateMap
+   Flow.insEdges
+      (fmap (map (mapStorageEdge "stateGraph" secMap) .
+             Flow.storageEdges . Map.mapMaybe id) tracks) $
+   Flow.insNodes (Map.keys tracks) $
+   Fold.fold $ Map.mapWithKey stateFromClassTopo stateMap
   where sq = fmap TD.classifyStorages sd
         (stateMap, secMap) = stateMaps sq
         tracks = Flow.getStorageSequences sq

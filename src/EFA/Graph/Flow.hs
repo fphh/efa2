@@ -10,7 +10,7 @@ import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Gr
 import EFA.Graph.Topology
           (Topology, FlowTopology, ClassifiedTopology, SequFlowGraph)
-import EFA.Graph (DirEdge(DirEdge), labNodes, insNodes)
+import EFA.Graph (DirEdge(DirEdge), labNodes)
 
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Vector as SV
@@ -204,7 +204,7 @@ sectionFromClassTopo ::
   Idx.Section -> ClassifiedTopology node -> SequFlowGraph node
 sectionFromClassTopo sec =
    Gr.ixmap
-      (Idx.TimeNode (Idx.augmentSection sec))
+      (Idx.TimeNode (Idx.augment sec))
       (Topo.FlowEdge . Topo.StructureEdge . Idx.InSection sec)
 
 
@@ -236,12 +236,31 @@ getStorageSequences =
 
 type RangeGraph node = (Map Idx.Section SD.Range, SequFlowGraph node)
 
+type FlowEdge = Topo.FlowEdge Gr.EitherEdge
+type AugNode sec = Idx.TimeNode (Idx.Augmented sec)
+
 insEdges ::
-   Ord node =>
-   [Topo.FlowEdge Gr.EitherEdge (Idx.AugSecNode node)] ->
-   SequFlowGraph node ->
-   SequFlowGraph node
-insEdges = Gr.insEdges . map (flip (,) ())
+   (Ord sec, Ord node, Ord (FlowEdge (AugNode sec node)), Topo.Part sec) =>
+   Map node [Idx.StorageEdge sec node] ->
+   Topo.FlowGraph sec node ->
+   Topo.FlowGraph sec node
+insEdges =
+   Gr.insEdges .
+   map (flip (,) () . Topo.FlowEdge . Topo.StorageEdge) . Fold.fold .
+   Map.mapWithKey (map . flip Idx.ForNode)
+
+insNodes ::
+   (Ord sec, Ord node) =>
+   [node] ->
+   Topo.FlowGraph sec node ->
+   Topo.FlowGraph sec node
+insNodes storages =
+   Gr.insNodes $
+      concatMap
+         (\n ->
+            [(Idx.initAugNode n, Topo.Storage $ Just Topo.In),
+             (Idx.exitAugNode n, Topo.Storage $ Just Topo.Out)])
+         storages
 
 {-
 Alle Storages sollen in die initiale Sektion,
@@ -255,16 +274,10 @@ sequenceGraph ::
 sequenceGraph sd =
    (,) (Fold.fold $ SD.mapWithSectionRange (\s rng _ -> Map.singleton s rng) sq) $
    insEdges
-      (map (Topo.FlowEdge . Topo.StorageEdge) $ Fold.fold $
-       Map.mapWithKey (map . flip Idx.ForNode) $ fmap storageEdges $
+      (fmap storageEdges $
        -- Map.filter (not . Map.null) $   -- required?
        fmap (Map.mapMaybe id) tracks) $
-   insNodes
-      (concatMap (\n ->
-          [(Idx.initSecNode n, Topo.Storage $ Just Topo.In),
-           (Idx.exitSecNode n, Topo.Storage $ Just Topo.Out)]) $
-       Map.keys tracks) $
-   Fold.fold $
-   SD.mapWithSection sectionFromClassTopo sq
+   insNodes (Map.keys tracks) $
+   Fold.fold $ SD.mapWithSection sectionFromClassTopo sq
   where sq = fmap Topo.classifyStorages sd
         tracks = getStorageSequences sq

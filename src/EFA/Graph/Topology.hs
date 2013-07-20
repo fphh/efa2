@@ -8,9 +8,12 @@ module EFA.Graph.Topology (
        NodeType (..), storage,
        EdgeType (..),
        FlowEdge (FlowEdge),
+       Part,
        Topology,
        FlowTopology,
        ClassifiedTopology,
+       FlowGraph,
+       DirFlowGraph,
        SequFlowGraph,
        DirSequFlowGraph,
        StateFlowGraph,
@@ -209,26 +212,25 @@ type
    ClassifiedTopology a =
       Graph a Gr.EitherEdge (NodeType (Maybe StoreDir)) ()
 
-type
-   SequFlowGraph a =
-      Graph (Idx.AugSecNode a) (FlowEdge Gr.EitherEdge) (NodeType (Maybe StoreDir)) ()
 
 type
-   DirSequFlowGraph a =
-      Graph (Idx.AugSecNode a) (FlowEdge Gr.DirEdge) (NodeType (Maybe StoreDir)) ()
-
-
-type
-   StateFlowGraph a =
+   FlowGraph sec node =
       Graph
-         (Idx.AugStateNode a) (FlowEdge Gr.EitherEdge)
+         (Idx.AugNode sec node) (FlowEdge Gr.EitherEdge)
          (NodeType (Maybe StoreDir)) ()
 
 type
-   DirStateFlowGraph a =
+   DirFlowGraph sec node =
       Graph
-         (Idx.AugStateNode a) (FlowEdge Gr.DirEdge)
+         (Idx.AugNode sec node) (FlowEdge Gr.DirEdge)
          (NodeType (Maybe StoreDir)) ()
+
+
+type SequFlowGraph node = FlowGraph Idx.Section node
+type DirSequFlowGraph node = DirFlowGraph Idx.Section node
+
+type StateFlowGraph node = FlowGraph Idx.State node
+type DirStateFlowGraph node = DirFlowGraph Idx.State node
 
 
 pathExists :: (Ord a) => a -> a -> Topology a -> Bool
