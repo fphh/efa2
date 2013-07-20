@@ -47,11 +47,11 @@ import Data.Monoid ((<>))
 import qualified Test.QuickCheck as QC
 
 
-type LNode a = Gr.LNode (Idx.AugNode a) (NodeType ())
-type LEdge a = Gr.LEdge (FlowEdge Gr.EitherEdge) (Idx.AugNode a) ()
+type LNode a = Gr.LNode (Idx.AugSecNode a) (NodeType ())
+type LEdge a = Gr.LEdge (FlowEdge Gr.EitherEdge) (Idx.AugSecNode a) ()
 type LDirNode a = StNode (Maybe StoreDir) a
-type LDirEdge a = Gr.LEdge Gr.DirEdge (Idx.AugNode a) ()
-type StNode store a = Gr.LNode (Idx.AugNode a) (NodeType store)
+type LDirEdge a = Gr.LEdge Gr.DirEdge (Idx.AugSecNode a) ()
+type StNode store a = Gr.LNode (Idx.AugSecNode a) (NodeType store)
 
 data
    NodeType a =
@@ -108,10 +108,10 @@ isInactive :: Gr.EitherEdge node -> Bool
 isInactive = not . isActive
 
 
-isStructureEdge :: Eq node => FlowEdge structEdge (Idx.AugNode node) -> Bool
+isStructureEdge :: Eq node => FlowEdge structEdge (Idx.AugNode sec node) -> Bool
 isStructureEdge e = case edgeType e of StructureEdge _ -> True ; _ -> False
 
-isStorageEdge :: Eq node => FlowEdge structEdge (Idx.AugNode node) -> Bool
+isStorageEdge :: Eq node => FlowEdge structEdge (Idx.AugNode sec node) -> Bool
 isStorageEdge e = case edgeType e of StorageEdge _ -> True ; _ -> False
 
 
@@ -150,12 +150,12 @@ instance Gr.Edge structEdge => Gr.Edge (FlowEdge structEdge) where
 
 instance
    (Eq node, Eq (structEdge node)) =>
-      Eq (FlowEdge structEdge (Idx.AugNode node)) where
+      Eq (FlowEdge structEdge (Idx.AugSecNode node)) where
    (==) = equating edgeType
 
 instance
    (Ord node, Ord (structEdge node)) =>
-      Ord (FlowEdge structEdge (Idx.AugNode node)) where
+      Ord (FlowEdge structEdge (Idx.AugSecNode node)) where
    compare = comparing edgeType
 
 instance
@@ -189,9 +189,9 @@ class AugNode augNode where
    secNode :: PartOf augNode -> NodeOf augNode -> augNode
    augNode :: Idx.Augmented (PartOf augNode) -> NodeOf augNode -> augNode
 
-instance AugNode (Idx.TimeNode (Idx.Augmented sec) node) where
-   type PartOf (Idx.TimeNode (Idx.Augmented sec) node) = sec
-   type NodeOf (Idx.TimeNode (Idx.Augmented sec) node) = node
+instance AugNode (Idx.AugNode sec node) where
+   type PartOf (Idx.AugNode sec node) = sec
+   type NodeOf (Idx.AugNode sec node) = node
    secNode = Idx.TimeNode . Idx.augment
    augNode = Idx.TimeNode
 
@@ -211,11 +211,11 @@ type
 
 type
    SequFlowGraph a =
-      Graph (Idx.AugNode a) (FlowEdge Gr.EitherEdge) (NodeType (Maybe StoreDir)) ()
+      Graph (Idx.AugSecNode a) (FlowEdge Gr.EitherEdge) (NodeType (Maybe StoreDir)) ()
 
 type
    DirSequFlowGraph a =
-      Graph (Idx.AugNode a) (FlowEdge Gr.DirEdge) (NodeType (Maybe StoreDir)) ()
+      Graph (Idx.AugSecNode a) (FlowEdge Gr.DirEdge) (NodeType (Maybe StoreDir)) ()
 
 
 type
@@ -289,7 +289,7 @@ data ViewNodeDir node =
    | ViewNodeOut (Idx.TimeNode Idx.SectionOrExit node)
 
 viewNodeDir ::
-   (Idx.AugNode node, Maybe StoreDir) ->
+   (Idx.AugSecNode node, Maybe StoreDir) ->
    Maybe (ViewNodeDir node)
 viewNodeDir (node, mdir) =
    flip fmap mdir $ \dir ->

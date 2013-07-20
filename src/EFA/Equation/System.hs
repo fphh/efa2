@@ -743,7 +743,7 @@ fromEdges ::
   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Sum a,
    Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node,
    Product v, Record rec, Node.C node) =>
-  [TD.FlowEdge Gr.DirEdge (Idx.AugNode node)] ->
+  [TD.FlowEdge Gr.DirEdge (Idx.AugSecNode node)] ->
   EquationSystem mode rec node s a v
 fromEdges =
    foldMap $ \se ->
@@ -857,7 +857,7 @@ withNode f sec node = f $ Idx.TimeNode sec node
 getStorageSequences ::
   (Node.C node) =>
   TD.DirSequFlowGraph node ->
-  Map node (Map (Idx.AugNode node) (Maybe TD.StoreDir))
+  Map node (Map (Idx.AugSecNode node) (Maybe TD.StoreDir))
 getStorageSequences =
   Map.unionsWith (Map.unionWith (error "duplicate boundary for node")) .
   map (\(bn@(Idx.TimeNode _ n), dir) -> Map.singleton n $ Map.singleton bn dir) .

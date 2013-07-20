@@ -162,11 +162,11 @@ augment :: sec -> Augmented sec
 augment = NoExit . NoInit
 
 
-maybeInit :: AugmentedSection -> Maybe SectionOrExit
+maybeInit :: Augmented sec -> Maybe (Exit sec)
 maybeInit =
    switchAugmented Nothing (Just Exit) (Just . NoExit)
 
-maybeExit :: AugmentedSection -> Maybe InitOrSection
+maybeExit :: Augmented sec -> Maybe (Init sec)
 maybeExit aug =
    case aug of
       Exit -> Nothing
@@ -240,20 +240,27 @@ data TimeNode time node = TimeNode time node deriving (Show, Eq, Ord)
 
 type StateNode = TimeNode State
 type SecNode = TimeNode Section
-type AugNode = TimeNode AugmentedSection
+type AugNode sec = TimeNode (Augmented sec)
 type BndNode = TimeNode Boundary
 
-type AugStateNode = TimeNode AugmentedState
+type AugSecNode = AugNode Section
+type AugStateNode = AugNode State
 
 
 secNode :: Section -> node -> SecNode node
 secNode = TimeNode
 
-initSecNode :: node -> AugNode node
+initSecNode :: node -> AugSecNode node
 initSecNode = TimeNode initSection
 
-exitSecNode :: node -> AugNode node
+exitSecNode :: node -> AugSecNode node
 exitSecNode = TimeNode exitSection
+
+initAugNode :: node -> AugNode sec node
+initAugNode = TimeNode (NoExit Init)
+
+exitAugNode :: node -> AugNode sec node
+exitAugNode = TimeNode Exit
 
 afterSecNode :: Section -> node -> BndNode node
 afterSecNode s = TimeNode $ afterSection s
@@ -268,20 +275,20 @@ secNodeFromBndNode (TimeNode bnd node) =
       Following Init -> Nothing
       Following (NoInit sec) -> Just (TimeNode sec node)
 
-augNodeFromBndNode :: BndNode node -> AugNode node
+augNodeFromBndNode :: BndNode node -> AugSecNode node
 augNodeFromBndNode (TimeNode bnd node) =
    TimeNode (augSectionFromBoundary bnd) node
 
-bndNodeFromAugNode :: AugNode node -> Maybe (BndNode node)
+bndNodeFromAugNode :: AugSecNode node -> Maybe (BndNode node)
 bndNodeFromAugNode (TimeNode aug node) =
    fmap (P.flip TimeNode node) $ boundaryFromAugSection aug
 
 
-maybeInitNode :: AugNode node -> Maybe (TimeNode SectionOrExit node)
+maybeInitNode :: AugNode sec node -> Maybe (TimeNode (Exit sec) node)
 maybeInitNode (TimeNode aug node) =
    fmap (P.flip TimeNode node) $ maybeInit aug
 
-maybeExitNode :: AugNode node -> Maybe (TimeNode InitOrSection node)
+maybeExitNode :: AugNode sec node -> Maybe (TimeNode (Init sec) node)
 maybeExitNode (TimeNode aug node) =
    fmap (P.flip TimeNode node) $ maybeExit aug
 
@@ -402,7 +409,7 @@ storageTrans mkIdx s0 s1 n =
 
 
 storageEdgeFrom, storageEdgeTo ::
-   ForNode (StorageEdge Section) node -> AugNode node
+   ForNode (StorageEdge sec) node -> AugNode sec node
 storageEdgeFrom (ForNode (StorageEdge sec _) n) = TimeNode (allowExit sec) n
 storageEdgeTo   (ForNode (StorageEdge _ sec) n) = TimeNode (allowInit sec) n
 

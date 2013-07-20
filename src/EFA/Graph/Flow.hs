@@ -238,7 +238,7 @@ type RangeGraph node = (Map Idx.Section SD.Range, SequFlowGraph node)
 
 insEdges ::
    Ord node =>
-   [Topo.FlowEdge Gr.EitherEdge (Idx.AugNode node)] ->
+   [Topo.FlowEdge Gr.EitherEdge (Idx.AugSecNode node)] ->
    SequFlowGraph node ->
    SequFlowGraph node
 insEdges = Gr.insEdges . map (flip (,) ())

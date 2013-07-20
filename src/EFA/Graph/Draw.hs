@@ -410,7 +410,7 @@ dotIdentFromSecNode (Idx.TimeNode s n) =
 dotIdentFromSection :: Idx.Section -> String
 dotIdentFromSection (Idx.Section s) = show s
 
-dotIdentFromAugNode :: (Node.C node) => Idx.AugNode node -> T.Text
+dotIdentFromAugNode :: (Node.C node) => Idx.AugSecNode node -> T.Text
 dotIdentFromAugNode (Idx.TimeNode b n) =
    T.pack $ "s" ++ dotIdentFromAugSection b ++ "n" ++ Node.dotId n
 
