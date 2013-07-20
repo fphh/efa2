@@ -205,11 +205,37 @@ initSecNode = Idx.TimeNode (Idx.NoExit Idx.Init)
 exitSecNode :: node -> Idx.AugStateNode node
 exitSecNode = Idx.TimeNode Idx.Exit
 
-stateGraph ::
+{- |
+Insert all possible storage edges.
+-}
+stateGraphAllStorageEdges ::
    (Ord node, Show node) =>
    SequData (FlowTopology node) ->
    StateFlowGraph node
-stateGraph sd =
+stateGraphAllStorageEdges sd =
+   insEdges
+      (map (TD.FlowEdge . TD.StorageEdge) $ Fold.fold $
+       Map.mapWithKey (map . flip Idx.ForNode) $ fmap storageEdges $
+       fmap (Map.mapMaybe id) tracks) $
+   Gr.insNodes
+      (concatMap (\n ->
+          [(initSecNode n, TD.Storage $ Just TD.In),
+           (exitSecNode n, TD.Storage $ Just TD.Out)]) $
+       Map.keys tracks) $
+   Fold.fold $
+   Map.mapWithKey stateFromClassTopo sq
+  where sq = fmap TD.classifyStorages $ fst $ stateMaps sd
+        tracks = getStorageSequences sq
+
+
+{- |
+Insert only the storage edges that have counterparts in the sequence flow graph.
+-}
+stateGraphActualStorageEdges ::
+   (Ord node, Show node) =>
+   SequData (FlowTopology node) ->
+   StateFlowGraph node
+stateGraphActualStorageEdges sd =
    insEdges
       (map (TD.FlowEdge . TD.StorageEdge) $ Fold.fold $
        Map.mapWithKey (map . flip Idx.ForNode) $
