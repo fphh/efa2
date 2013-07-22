@@ -422,6 +422,9 @@ class Flip edge where
 instance Flip idx => Flip (InSection idx) where
    flip (InSection s idx) = InSection s (flip idx)
 
+instance Flip idx => Flip (InState idx) where
+   flip (InState s idx) = InState s (flip idx)
+
 instance Flip StructureEdge where
    flip (StructureEdge x y) = StructureEdge y x
 
@@ -435,6 +438,12 @@ instance Flip (StorageTrans sec) where
 
 instance Flip Power where
    flip (Power x) = Power $ flip x
+
+instance Flip Energy where
+   flip (Energy x) = Energy $ flip x
+
+instance Flip (StX sec) where
+   flip (StX x) = StX $ flip x
 
 instance Flip PPos where
    flip (PPos x) = PPos $ flip x
