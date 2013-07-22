@@ -121,7 +121,7 @@ cumulate =
    Map.unionsWith (~+) .
    map
       (Map.mapKeysWith (~+)
-         (Map.mapKeys (\(Idx.InSection _sec node) -> node)))
+         (Map.mapKeys (\(Idx.InPart _sec node) -> node)))
 
 
 stripSection ::
@@ -131,7 +131,7 @@ stripSection ::
 stripSection =
    Map.mapKeysWith
       (error "AssignMap.stripSection: multiple sections in one assignmap")
-      (Map.mapKeys (\(Idx.InSection _sec node) -> node))
+      (Map.mapKeys (\(Idx.InPart _sec node) -> node))
 
 
 lookupStack ::
@@ -161,6 +161,6 @@ lookupEnergyStacks e0 =
    fmap (Stack.assignDeltaMap . Arith.integrate) .
    Map.mapMaybe Result.toMaybe .
    fmap EqRecord.unAbsolute .
-   Map.mapKeys (\(Idx.InSection sec _) -> sec) .
-   Map.filterWithKey (\(Idx.InSection _sec e) _ -> e == e0) .
+   Map.mapKeys (\(Idx.InPart sec _) -> sec) .
+   Map.filterWithKey (\(Idx.InPart _sec e) _ -> e == e0) .
    Env.energyMap . Env.signal

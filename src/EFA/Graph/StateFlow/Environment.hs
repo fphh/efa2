@@ -307,7 +307,7 @@ currySignal =
       (error "StateFlow.Environment.currySignal: duplicate key")) .
    Map.elems .
    Map.mapWithKey
-      (\(Idx.InState state idx) a ->
+      (\(Idx.InPart state idx) a ->
          Map.singleton state $ Map.singleton idx a)
 
 uncurrySignal ::
@@ -316,4 +316,4 @@ uncurrySignal ::
 uncurrySignal =
    Map.unionsWith (error "StateFlow.Environment.uncurrySignal: duplicate key") .
    Map.elems .
-   Map.mapWithKey (Map.mapKeys . Idx.InState)
+   Map.mapWithKey (Map.mapKeys . Idx.InPart)

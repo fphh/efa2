@@ -8,7 +8,6 @@ module EFA.Graph.Topology (
        NodeType (..), storage,
        EdgeType (..),
        FlowEdge (FlowEdge),
-       Part,
        Topology,
        FlowTopology,
        ClassifiedTopology,
@@ -118,18 +117,16 @@ isStorageEdge :: Eq node => FlowEdge structEdge (Idx.AugNode sec node) -> Bool
 isStorageEdge e = case edgeType e of StorageEdge _ -> True ; _ -> False
 
 
-data EdgeType (inPart :: (* -> *) -> * -> *) part structEdge node =
-     StructureEdge (inPart structEdge node)
+data EdgeType part structEdge node =
+     StructureEdge (Idx.InPart part structEdge node)
    | StorageEdge (Idx.ForNode (Idx.StorageEdge part) node)
    deriving (Eq, Ord, Show)
 
 data FlowEdge structEdge augNode =
-        (AugNode augNode, Part (PartOf augNode)) =>
+        (AugNode augNode) =>
            FlowEdge {
               edgeType ::
-                 EdgeType
-                    (InPartOf (PartOf augNode)) (PartOf augNode)
-                    structEdge (NodeOf augNode)
+                 EdgeType (PartOf augNode) structEdge (NodeOf augNode)
            }
 
 
@@ -139,14 +136,14 @@ instance Gr.Edge structEdge => Foldable (FlowEdge structEdge) where
 instance Gr.Edge structEdge => Gr.Edge (FlowEdge structEdge) where
    from (FlowEdge e) =
       case e of
-         StructureEdge sn ->
-            flip switchInPart sn $ \ sec se -> secNode sec $ Gr.from se
+         StructureEdge (Idx.InPart sec se) ->
+            secNode sec $ Gr.from se
          StorageEdge (Idx.ForNode (Idx.StorageEdge sec _) node) ->
             augNode (Idx.allowExit sec) node
    to (FlowEdge e) =
       case e of
-         StructureEdge sn ->
-            flip switchInPart sn $ \ sec se -> secNode sec $ Gr.to se
+         StructureEdge (Idx.InPart sec se) ->
+            secNode sec $ Gr.to se
          StorageEdge (Idx.ForNode (Idx.StorageEdge _ sec) node) ->
             augNode (Idx.allowInit sec) node
 
@@ -171,19 +168,6 @@ instance
       Ord (FlowEdge structEdge (Idx.AugStateNode node)) where
    compare = comparing edgeType
 
-
-
-class Part sec where
-   type InPartOf sec :: (* -> *) -> * -> *
-   switchInPart :: (sec -> idx node -> a) -> InPartOf sec idx node -> a
-
-instance Part Idx.Section where
-   type InPartOf Idx.Section = Idx.InSection
-   switchInPart f (Idx.InSection sec idx) = f sec idx
-
-instance Part Idx.State where
-   type InPartOf Idx.State = Idx.InState
-   switchInPart f (Idx.InState sec idx) = f sec idx
 
 
 class AugNode augNode where
@@ -257,16 +241,16 @@ dirFromSequFlowGraph =
    Gr.mapEdgesMaybe $ \fe ->
       case edgeType fe of
          StorageEdge se -> Just $ FlowEdge $ StorageEdge se
-         StructureEdge (Idx.InSection sec ee) ->
+         StructureEdge (Idx.InPart sec ee) ->
             case ee of
                Gr.EDirEdge de ->
-                  Just $ FlowEdge $ StructureEdge $ Idx.InSection sec de
+                  Just $ FlowEdge $ StructureEdge $ Idx.InPart sec de
                Gr.EUnDirEdge _ -> Nothing
 
 structureEdgeFromDirEdge ::
-   Idx.InSection Gr.DirEdge node -> Idx.InSection Idx.StructureEdge node
-structureEdgeFromDirEdge (Idx.InSection s (Gr.DirEdge x y)) =
-   Idx.InSection s (Idx.StructureEdge x y)
+   Idx.InPart part Gr.DirEdge node -> Idx.InPart part Idx.StructureEdge node
+structureEdgeFromDirEdge (Idx.InPart s (Gr.DirEdge x y)) =
+   Idx.InPart s (Idx.StructureEdge x y)
 
 
 data StoreDir = In | Out deriving (Eq, Ord, Show)

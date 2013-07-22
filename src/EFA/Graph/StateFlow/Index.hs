@@ -39,14 +39,14 @@ structureEdge ::
    (Idx.StructureEdge node -> idx node) ->
    Idx.State -> node -> node -> Idx.InState idx node
 structureEdge mkIdx s from to =
-   Idx.InState s $ mkIdx $ Idx.StructureEdge from to
+   Idx.InPart s $ mkIdx $ Idx.StructureEdge from to
 
 
 dTime :: Idx.State -> DTime node
-dTime sec = Idx.InState sec Idx.DTime
+dTime sec = Idx.InPart sec Idx.DTime
 
 sum :: Idx.State -> Idx.Direction -> node -> Sum node
-sum sec dir = Idx.InState sec . Idx.Sum dir
+sum sec dir = Idx.InPart sec . Idx.Sum dir
 
 
 ppos :: node -> node -> Idx.PPos node

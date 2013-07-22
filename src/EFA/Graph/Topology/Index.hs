@@ -330,33 +330,41 @@ storageTransFromEdge (StorageEdge s0 s1) =
    StorageTrans (allowExit s0) (allowInit s1)
 
 
-data InState idx node = InState State (idx node)
+data InPart part idx node = InPart part (idx node)
    deriving (Show, Eq, Ord)
+
+type InSection = InPart Section
+type InState = InPart State
+
+
+inPart ::
+   (node -> idx node) -> TimeNode part node -> InPart part idx node
+inPart makeIdx (TimeNode sec edge) = InPart sec (makeIdx edge)
+
+liftInPart ::
+   (idx0 node -> idx1 node) ->
+   InPart part idx0 node -> InPart part idx1 node
+liftInPart f (InPart sec edge) = InPart sec $ f edge
+
 
 inState ::
    (node -> idx node) -> StateNode node -> InState idx node
-inState makeIdx (TimeNode sec edge) =
-   InState sec (makeIdx edge)
+inState = inPart
 
 liftInState ::
    (idx0 node -> idx1 node) ->
    InState idx0 node -> InState idx1 node
-liftInState f (InState sec edge) =
-   InState sec $ f edge
+liftInState = liftInPart
 
-data InSection idx node = InSection Section (idx node)
-   deriving (Show, Eq, Ord)
 
 inSection ::
    (node -> idx node) -> SecNode node -> InSection idx node
-inSection makeIdx (TimeNode sec edge) =
-   InSection sec (makeIdx edge)
+inSection = inPart
 
 liftInSection ::
    (idx0 node -> idx1 node) ->
    InSection idx0 node -> InSection idx1 node
-liftInSection f (InSection sec edge) =
-   InSection sec $ f edge
+liftInSection = liftInPart
 
 data ForNode idx node = ForNode (idx node) node
    deriving (Show, Eq, Ord)
@@ -373,26 +381,26 @@ liftForNode f (ForNode edge node) =
    ForNode (f edge) node
 
 
-wrapInState :: InState idx node -> InState (TC.Wrap idx) node
-wrapInState (InState s e)  =  InState s (TC.Wrap e)
-
-wrapInSection :: InSection idx node -> InSection (TC.Wrap idx) node
-wrapInSection (InSection s e)  =  InSection s (TC.Wrap e)
+wrapInPart :: InPart part idx node -> InPart part (TC.Wrap idx) node
+wrapInPart = liftInPart TC.Wrap
 
 wrapForNode :: ForNode idx node -> ForNode (TC.Wrap idx) node
-wrapForNode (ForNode e n)  =  ForNode (TC.Wrap e) n
+wrapForNode = liftForNode TC.Wrap
 
-instance TC.Eq idx => TC.Eq (InState   idx) where eq = equating wrapInState
-instance TC.Eq idx => TC.Eq (InSection idx) where eq = equating wrapInSection
-instance TC.Eq idx => TC.Eq (ForNode   idx) where eq = equating wrapForNode
+instance (Eq part, TC.Eq idx) => TC.Eq (InPart part idx) where
+   eq = equating wrapInPart
+instance TC.Eq idx => TC.Eq (ForNode idx) where
+   eq = equating wrapForNode
 
-instance TC.Ord idx => TC.Ord (InState   idx) where cmp = comparing wrapInState
-instance TC.Ord idx => TC.Ord (InSection idx) where cmp = comparing wrapInSection
-instance TC.Ord idx => TC.Ord (ForNode   idx) where cmp = comparing wrapForNode
+instance (Ord part, TC.Ord idx) => TC.Ord (InPart part idx) where
+   cmp = comparing wrapInPart
+instance TC.Ord idx => TC.Ord (ForNode idx) where
+   cmp = comparing wrapForNode
 
-instance TC.Show idx => TC.Show (InState   idx) where showsPrec p = showsPrec p . wrapInState
-instance TC.Show idx => TC.Show (InSection idx) where showsPrec p = showsPrec p . wrapInSection
-instance TC.Show idx => TC.Show (ForNode   idx) where showsPrec p = showsPrec p . wrapForNode
+instance (Show part, TC.Show idx) => TC.Show (InPart part idx) where
+   showsPrec p = showsPrec p . wrapInPart
+instance TC.Show idx => TC.Show (ForNode idx) where
+   showsPrec p = showsPrec p . wrapForNode
 
 
 storageEdge ::
@@ -419,11 +427,8 @@ class Flip edge where
    flip :: edge node -> edge node
 
 
-instance Flip idx => Flip (InSection idx) where
-   flip (InSection s idx) = InSection s (flip idx)
-
-instance Flip idx => Flip (InState idx) where
-   flip (InState s idx) = InState s (flip idx)
+instance Flip idx => Flip (InPart part idx) where
+   flip (InPart s idx) = InPart s (flip idx)
 
 instance Flip StructureEdge where
    flip (StructureEdge x y) = StructureEdge y x

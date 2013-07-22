@@ -205,7 +205,7 @@ sectionFromClassTopo ::
 sectionFromClassTopo sec =
    Gr.ixmap
       (Idx.TimeNode (Idx.augment sec))
-      (Topo.FlowEdge . Topo.StructureEdge . Idx.InSection sec)
+      (Topo.FlowEdge . Topo.StructureEdge . Idx.InPart sec)
 
 
 storageEdges ::
@@ -240,7 +240,7 @@ type FlowEdge = Topo.FlowEdge Gr.EitherEdge
 type AugNode sec = Idx.TimeNode (Idx.Augmented sec)
 
 insEdges ::
-   (Ord sec, Ord node, Ord (FlowEdge (AugNode sec node)), Topo.Part sec) =>
+   (Ord sec, Ord node, Ord (FlowEdge (AugNode sec node))) =>
    Map node [Idx.StorageEdge sec node] ->
    Topo.FlowGraph sec node ->
    Topo.FlowGraph sec node

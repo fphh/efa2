@@ -188,8 +188,8 @@ cumulateSignalMap ::
    Map (Idx.InState idx node) a
 cumulateSignalMap add secMap =
    Map.mapKeysWith add
-      (\(Idx.InSection sec idx) ->
-         Idx.InState (UMap.checkedLookup "cumulateSignalMap" secMap sec) idx)
+      (\(Idx.InPart sec idx) ->
+         Idx.InPart (UMap.checkedLookup "cumulateSignalMap" secMap sec) idx)
 
 powerMap ::
    (Ord node) =>
@@ -202,7 +202,7 @@ powerMap divide dtMap eMap =
    Map.intersectionWith
       (\dt ->
          Map.mapKeys (\(Idx.Energy e) -> Idx.Power e) . fmap (flip divide dt))
-      (Map.mapKeys (\(Idx.InState state Idx.DTime) -> state) dtMap)
+      (Map.mapKeys (\(Idx.InPart state Idx.DTime) -> state) dtMap)
       (StateEnv.currySignal eMap)
 
 etaMap ::
@@ -222,13 +222,13 @@ xMap ::
 xMap divide sumMap =
    Map.mapKeys (Idx.liftInState (\(Idx.Energy e) -> Idx.X e)) .
    Map.mapWithKey
-      (\(Idx.InState state (Idx.Energy (Idx.StructureEdge from _to))) e ->
+      (\(Idx.InPart state (Idx.Energy (Idx.StructureEdge from _to))) e ->
           {-
           If both In and Out sum are present, then they must be equal.
           -}
-          case Map.lookup (Idx.InState state (Idx.Sum Idx.In  from)) sumMap
+          case Map.lookup (Idx.InPart state (Idx.Sum Idx.In  from)) sumMap
                <|>
-               Map.lookup (Idx.InState state (Idx.Sum Idx.Out from)) sumMap of
+               Map.lookup (Idx.InPart state (Idx.Sum Idx.Out from)) sumMap of
              Nothing -> error "StateFlow.xMap: unavailable Sum value"
              Just s -> divide e s)
 
@@ -252,7 +252,7 @@ stateFromClassTopo ::
 stateFromClassTopo state =
    Gr.ixmap
       (Idx.TimeNode (Idx.augment state))
-      (TD.FlowEdge . TD.StructureEdge . Idx.InState state)
+      (TD.FlowEdge . TD.StructureEdge . Idx.InPart state)
 
 
 storageEdges ::

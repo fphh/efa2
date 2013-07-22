@@ -54,14 +54,14 @@ cumulatedEnergyFlow topo seqTopo env =
         em = Env.energyMap $ Env.signal env
         f e =
           case TD.edgeType e of
-             TD.StructureEdge (Idx.InSection sec (Gr.DirEdge n n')) ->
+             TD.StructureEdge (Idx.InPart sec (Gr.DirEdge n n')) ->
                 let idx1 = Idx.Energy (Idx.StructureEdge n n')
                     idx2 = Idx.Energy (Idx.StructureEdge n' n)
 
                     transfer idx =
                        Map.singleton idx $
                        maybe Undetermined (fmap Arith.integrate) $
-                       Map.lookup (Idx.InSection sec idx) em
+                       Map.lookup (Idx.InPart sec idx) em
 
                     insert =
                        transfer idx1 <> transfer idx2

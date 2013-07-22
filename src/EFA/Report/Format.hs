@@ -361,10 +361,10 @@ instance Record rec => Record (Idx.ExtDelta rec) where
 
 class EdgeIdx idx where edgeVar :: idx node -> EdgeVar
 
-instance StructureIdx idx => EdgeIdx (Idx.InSection idx) where
+instance StructureIdx idx => EdgeIdx (Idx.InPart part idx) where
    edgeVar = structureVar
 
-class StructureIdx idx where structureVar :: Idx.InSection idx node -> EdgeVar
+class StructureIdx idx where structureVar :: Idx.InPart part idx node -> EdgeVar
 instance StructureIdx Idx.Energy where structureVar _ = Energy
 instance StructureIdx Idx.Power where structureVar _ = Power
 instance StructureIdx Idx.Eta where structureVar _ = Eta

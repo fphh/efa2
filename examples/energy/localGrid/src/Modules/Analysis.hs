@@ -147,11 +147,11 @@ makeGivenFromExternal idx sf =
    (Idx.Record idx (XIdx.storage Idx.initial System.Water) .= initStorage)
    <> fold (SD.mapWithSection f sf)
    where f sec (Record t xs) =
-           (Idx.Record idx (Idx.InSection sec Idx.DTime) .=
+           (Idx.Record idx (Idx.InPart sec Idx.DTime) .=
               Arith.integrate (Sig.toList $ Sig.delta t)) <>
            fold (Map.mapWithKey g xs)
            where g (Idx.PPos p) e =
-                    Idx.Record idx (Idx.InSection sec (Idx.Energy p)) .=
+                    Idx.Record idx (Idx.InPart sec (Idx.Energy p)) .=
                        Arith.integrate (Sig.toList e)
 
 external2 ::

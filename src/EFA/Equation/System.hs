@@ -613,7 +613,7 @@ dtime ::
    (Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node,
     Sum v, Record rec, Node.C node) =>
    Idx.Section -> RecordExpression mode rec node s a v v
-dtime = variableRecord . flip Idx.InSection Idx.DTime
+dtime = variableRecord . flip Idx.InPart Idx.DTime
 
 
 storageTransFromEdge ::
@@ -748,7 +748,7 @@ fromEdges ::
 fromEdges =
    foldMap $ \se ->
       case TD.edgeType se of
-         TD.StructureEdge edge@(Idx.InSection s _) ->
+         TD.StructureEdge edge@(Idx.InPart s _) ->
             let equ xy = energy xy =%= dtime s ~* power xy
                 e = TD.structureEdgeFromDirEdge edge
             in  equ e <> equ (Idx.flip e) <>

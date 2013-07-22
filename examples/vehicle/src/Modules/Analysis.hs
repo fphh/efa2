@@ -26,7 +26,6 @@ import EFA.Equation.Result (Result(..))
 import EFA.Equation.Stack (Stack)
 
 import qualified EFA.Signal.SequenceData as SD
---import qualified EFA.Signal.Sequence as Seq
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Vector as Vec
 import qualified EFA.Signal.Signal as Sig
@@ -191,11 +190,11 @@ makeGivenFromExternal idx sf =
    <> (Idx.Record idx (XIdx.storage Idx.initial System.VehicleInertia) .= 0)
    <> fold (SD.mapWithSection f sf)
    where f sec (Record t xs) =
-           (Idx.Record idx (Idx.InSection sec Idx.DTime) .=
+           (Idx.Record idx (Idx.InPart sec Idx.DTime) .=
               Arith.integrate (Sig.toList $ Sig.delta t)) <>
            fold (Map.mapWithKey g xs)
            where g (Idx.PPos p) e =
-                    Idx.Record idx (Idx.InSection sec (Idx.Energy p)) .=
+                    Idx.Record idx (Idx.InPart sec (Idx.Energy p)) .=
                        Arith.integrate (Sig.toList e)
 
 external2 ::
@@ -256,7 +255,7 @@ makeGivenForPrediction (Env.Complete _scal sig) =
     <> (EqAbs.fromMap $ Env.dtimeMap sig)
     <> (EqAbs.fromMap $ Map.mapWithKey h $
         Map.filterWithKey (const . filterCriterion) $ Env.energyMap sig)
-    where h (Idx.InSection _ (Idx.Energy
+    where h (Idx.InPart _ (Idx.Energy
                (Idx.StructureEdge System.Resistance System.Chassis))) x =
                x ~* Arith.fromRational 1.1
           h _ r = r
@@ -345,7 +344,7 @@ makeGivenForDifferentialAnalysis (Env.Complete _ sig) =
 
 
 filterCriterion, filterCriterionExtra :: XIdx.Energy System.Node -> Bool
-filterCriterion (Idx.InSection _ (Idx.Energy (Idx.StructureEdge x y))) =
+filterCriterion (Idx.InPart _ (Idx.Energy (Idx.StructureEdge x y))) =
    -- filterCriterionExtra e &&
    case (x,y) of
       (System.Tank, System.ConBattery) -> True
@@ -358,6 +357,5 @@ filterCriterion (Idx.InSection _ (Idx.Energy (Idx.StructureEdge x y))) =
       _ -> False
 
 filterCriterionExtra
-   (Idx.InSection (Idx.Section sec) (Idx.Energy
-     (Idx.StructureEdge x y))) =
-   not $ sec == 18 || x == System.Tank || y == System.ConBattery
+      (Idx.InPart sec (Idx.Energy (Idx.StructureEdge x y))) =
+   not $ sec == Idx.Section 18 || x == System.Tank || y == System.ConBattery

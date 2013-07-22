@@ -155,7 +155,7 @@ dotFromSequFlowGraph (rngs, g)
            map
               (\e ->
                  case Topo.edgeType e of
-                    Topo.StructureEdge se@(Idx.InSection s _) ->
+                    Topo.StructureEdge se@(Idx.InPart s _) ->
                        Left (Idx.augmentSection s, [se])
                     Topo.StorageEdge se -> Right se) $
            Gr.edges g
@@ -551,7 +551,7 @@ orientFlowEdge ::
    (Ord node) =>
    Idx.InSection Gr.EitherEdge node ->
    (DirEdge (Idx.SecNode node), Viz.DirType, Order)
-orientFlowEdge (Idx.InSection sec e) =
+orientFlowEdge (Idx.InPart sec e) =
    mapFst3
       (\(DirEdge x y) ->
          DirEdge
@@ -805,17 +805,17 @@ sequFlowGraphWithEnv opts g
         formatEtaPlain =
            lookupFormat opts n . Idx.liftInSection Idx.Eta
         formatTime =
-           lookupFormat opts dt . flip Idx.InSection Idx.DTime
+           lookupFormat opts dt . flip Idx.InPart Idx.DTime
         formatNode =
            formatNodeStorage opts st sis sos
         formatStorageContent =
            formatNodeContent opts st
 
-        structEShowEta (Idx.InSection sec ee) =
+        structEShowEta (Idx.InPart sec ee) =
            case ee of
               Gr.EUnDirEdge _ -> Triple [] [] []
               Gr.EDirEdge (Gr.DirEdge from to) ->
-                 case Idx.InSection sec (Idx.StructureEdge from to) of
+                 case Idx.InPart sec (Idx.StructureEdge from to) of
                     edge ->
                       Triple
                          (formatEnergy edge : formatX edge : [])
@@ -824,11 +824,11 @@ sequFlowGraphWithEnv opts g
                           formatEnergy (Idx.flip edge) :
                           [])
 
-        structEShow (Idx.InSection sec ee) =
+        structEShow (Idx.InPart sec ee) =
            case ee of
               Gr.EUnDirEdge _ -> []
               Gr.EDirEdge (Gr.DirEdge from to) ->
-                 case Idx.InSection sec (Idx.StructureEdge from to) of
+                 case Idx.InPart sec (Idx.StructureEdge from to) of
                     edge ->
                        formatEnergy edge :
                        formatX edge :

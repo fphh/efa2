@@ -48,8 +48,10 @@ instance FormatValue rec => FormatValue (Idx.ExtDelta rec) where
    formatValue (Idx.ExtDelta d r) = Format.recordDelta d $ formatValue r
 
 
-instance (FormatSignalIndex idx, Node.C node) => FormatValue (Idx.InSection idx node) where
-   formatValue (Idx.InSection s idx) = formatSignalIndex idx s
+instance
+   (FormatSignalIndex idx, Format.Part part, Node.C node) =>
+      FormatValue (Idx.InPart part idx node) where
+   formatValue (Idx.InPart s idx) = formatSignalIndex idx s
 
 instance (FormatScalarIndex idx, Node.C node) => FormatValue (Idx.ForNode idx node) where
    formatValue (Idx.ForNode idx n) = formatScalarIndex idx n
@@ -57,8 +59,8 @@ instance (FormatScalarIndex idx, Node.C node) => FormatValue (Idx.ForNode idx no
 
 class FormatSignalIndex idx where
    formatSignalIndex ::
-      (Node.C node, Format output) =>
-      idx node -> Idx.Section -> output
+      (Node.C node, Format.Part part, Format output) =>
+      idx node -> part -> output
 
 class FormatScalarIndex idx where
    formatScalarIndex ::
@@ -71,11 +73,11 @@ formatBoundaryNode ::
 formatBoundaryNode (Idx.TimeNode s n) =
    Format.boundary s `Format.sectionNode` Node.subscript n
 
-formatSectionNode ::
-   (Format output, Node.C node) =>
-   Idx.SecNode node -> output
-formatSectionNode (Idx.TimeNode s n) =
-   Format.section s `Format.sectionNode` Node.subscript n
+formatTimeNode ::
+   (Format output, Format.Part part, Node.C node) =>
+   Idx.TimeNode part node -> output
+formatTimeNode (Idx.TimeNode s n) =
+   Format.part s `Format.sectionNode` Node.subscript n
 
 
 formatStructureEdge ::
@@ -99,11 +101,11 @@ instance (Node.C node) => FormatValue (Idx.X node) where
 
 
 formatStructureSecEdge ::
-   (Format output, Node.C node) =>
-   Format.EdgeVar -> Idx.StructureEdge node -> Idx.Section -> output
+   (Format output, Format.Part part, Node.C node) =>
+   Format.EdgeVar -> Idx.StructureEdge node -> part -> output
 formatStructureSecEdge e (Idx.StructureEdge x y) s =
    Format.subscript (Format.edgeIdent e) $
-   Format.section s `Format.sectionNode`
+   Format.part s `Format.sectionNode`
       (Node.subscript x `Format.link` Node.subscript y)
 
 formatStorageEdge ::
@@ -137,13 +139,13 @@ instance FormatSignalIndex Idx.X where
 
 instance FormatSignalIndex Idx.DTime where
    formatSignalIndex Idx.DTime s =
-      Format.subscript Format.dtime $ Format.section s
+      Format.subscript Format.dtime $ Format.part s
 
 instance FormatSignalIndex Idx.Sum where
    formatSignalIndex (Idx.Sum dir n) s =
       Format.subscript Format.signalSum $
       Format.direction dir `Format.connect`
-         formatSectionNode (Idx.TimeNode s n)
+         formatTimeNode (Idx.TimeNode s n)
 
 
 instance FormatScalarIndex Idx.MaxEnergy where

@@ -108,7 +108,7 @@ env =
 
 main :: IO ()
 main = do
-  
+
 
   let seqTopo = constructSeqTopo topoDreibein [0]
 
@@ -118,16 +118,15 @@ main = do
       rec :: Rec.PowerRecord Node.Int [] Double
       rec = Rec.Record time (Map.mapKeys f $ Map.mapMaybe g pm)
 
-      f (Idx.InSection _ (Idx.Power (Idx.StructureEdge n1 n2))) =
-        Idx.PPos (Idx.StructureEdge n1 n2)
+      f (Idx.InPart _ (Idx.Power edge)) = Idx.PPos edge
 
       g (Res.Determined dat) = Just $ Sig.TC dat
       g _ = Nothing
 
   concurrentlyMany_ [
     PlotIO.record "Power Signals" DefaultTerm.cons show id rec,
-    PlotIO.recordList_extract "Power Signals" DefaultTerm.cons show id [(Rec.Name "bla", rec)] 
-                              [ Idx.PPos (Idx.StructureEdge node1 node0), 
+    PlotIO.recordList_extract "Power Signals" DefaultTerm.cons show id [(Rec.Name "bla", rec)]
+                              [ Idx.PPos (Idx.StructureEdge node1 node0),
                                 Idx.PPos (Idx.StructureEdge node1 node2),
                                 Idx.PPos (Idx.StructureEdge node1 node3) ],
 

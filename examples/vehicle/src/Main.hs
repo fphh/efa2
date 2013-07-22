@@ -136,7 +136,7 @@ cumStack_filterEnergy :: Double
 cumStack_filterEnergy = (1^^(-1::Integer))
 
 energyIndexSec :: XIdx.Energy System.Node
-energyIndexSec = Idx.InSection (Idx.Section 7) energyIndex
+energyIndexSec = Idx.InPart (Idx.Section 7) energyIndex
 
 energyIndex :: Idx.Energy System.Node
 energyIndex  = Idx.Energy $ Idx.StructureEdge System.Tank System.ConBattery
@@ -177,7 +177,7 @@ cumStack_filterEnergy :: Double
 cumStack_filterEnergy = (1^^(-1::Integer))
 
 energyIndexSec :: XIdx.Energy System.Node
-energyIndexSec = Idx.InSection (Idx.Section 8) energyIndex
+energyIndexSec = Idx.InPart (Idx.Section 8) energyIndex
 
 energyIndex :: Idx.Energy System.Node
 energyIndex  = Idx.Energy $ Idx.StructureEdge System.Tank System.ConBattery
@@ -224,7 +224,7 @@ cumStack_filterEnergy :: Double
 cumStack_filterEnergy = (1^^(-1::Integer))
 
 energyIndexSec :: XIdx.Energy System.Node
-energyIndexSec = Idx.InSection (Idx.Section 18) energyIndex
+energyIndexSec = Idx.InPart (Idx.Section 18) energyIndex
 
 energyIndex :: Idx.Energy System.Node
 --energyIndex  = Idx.Energy $ Idx.StructureEdge System.Tank System.ConBattery

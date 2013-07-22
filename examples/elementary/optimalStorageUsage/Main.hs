@@ -306,16 +306,16 @@ etaSys (_, topo) env = sum sinks / sum sources
         p = (> 0) .
             Set.size .
             Set.filter
-              (\(TD.FlowEdge (TD.StructureEdge (TIdx.InSection _ e))) -> TD.isActive e)
+              (\(TD.FlowEdge (TD.StructureEdge (TIdx.InPart _ e))) -> TD.isActive e)
 
         sinkEnergies acc
-          (TD.FlowEdge (TD.StructureEdge (TIdx.InSection sec
+          (TD.FlowEdge (TD.StructureEdge (TIdx.InPart sec
                        (Gr.EDirEdge (Gr.DirEdge a b))))) =
             acc + lookUp "etaSys" env (XIdx.energy sec b a)
         sinkEnergies = error "etaSys: sinkEnergies"
 
         sourceEnergies acc
-          (TD.FlowEdge (TD.StructureEdge (TIdx.InSection sec
+          (TD.FlowEdge (TD.StructureEdge (TIdx.InPart sec
                        (Gr.EDirEdge (Gr.DirEdge a b))))) =
             acc + lookUp "etaSys" env (XIdx.energy sec a b)
 -}
