@@ -221,7 +221,7 @@ storageEdges stores = do
    return $ Idx.StorageEdge secin secout
 
 getStorageSequences ::
-   (Ord node, Show node) =>
+   (Ord node) =>
    SequData (Topo.ClassifiedTopology node) ->
    Map node (Map Idx.Section (Maybe Topo.StoreDir))
 getStorageSequences =
@@ -268,7 +268,7 @@ auch wenn sie nie aktiv sind!
 So kann man beim Initialisieren auch Werte zuweisen.
 -}
 sequenceGraph ::
-   (Ord node, Show node) =>
+   (Ord node) =>
    SequData (FlowTopology node) ->
    RangeGraph node
 sequenceGraph sd =

@@ -265,7 +265,7 @@ storageEdges stores =
             (Idx.Exit : map Idx.NoExit (Map.keys outs))
 
 getStorageSequences ::
-   (Ord node, Show node) =>
+   (Ord node) =>
    Map Idx.State (TD.ClassifiedTopology node) ->
    Map node (Map Idx.State (Maybe TD.StoreDir))
 getStorageSequences =
@@ -283,7 +283,7 @@ getStorageSequences =
 Insert all possible storage edges.
 -}
 stateGraphAllStorageEdges ::
-   (Ord node, Show node) =>
+   (Ord node) =>
    SequData (FlowTopology node) ->
    StateFlowGraph node
 stateGraphAllStorageEdges sd =
@@ -297,7 +297,7 @@ stateGraphAllStorageEdges sd =
 Insert only the storage edges that have counterparts in the sequence flow graph.
 -}
 stateGraphActualStorageEdges ::
-   (Ord node, Show node) =>
+   (Ord node) =>
    SequData (FlowTopology node) ->
    StateFlowGraph node
 stateGraphActualStorageEdges sd =
