@@ -4,6 +4,7 @@ module Modules.Utility where
 
 import qualified Modules.System as System
 
+import qualified EFA.Application.Index as XIdx
 import qualified EFA.Graph.Topology.Index as TIdx
 
 import qualified EFA.Equation.Environment as EqEnv
@@ -24,7 +25,7 @@ import qualified Data.Map as Map ; import Data.Map (Map)
 
 lookupAbsPower ::
   (Ord node, Show d, Show node,Num d,Fractional d) =>
-  TIdx.InSection TIdx.Power node ->
+  XIdx.Power node ->
   Maybe (EqEnv.Complete node b (Result d)) -> d
 lookupAbsPower n = maybe (-1000) f
   where f env = case checkedLookup "Modules.Utility.lookupAbsPower"

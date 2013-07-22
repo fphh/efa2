@@ -320,14 +320,12 @@ etaAssign sec = Map.fromList $
 
   []
 
-noflip :: TIdx.InSection TIdx.Eta node -> TIdx.InSection TIdx.Power node
-noflip (TIdx.InSection sec ( TIdx.Eta (TIdx.StructureEdge n1 n2))) = 
-  TIdx.InSection sec (TIdx.Power (TIdx.StructureEdge n1 n2))
+noflip :: XIdx.Eta node -> XIdx.Power node
+noflip = TIdx.liftInSection $ \(TIdx.Eta e) -> TIdx.Power e
 
 
-myflip :: TIdx.InSection TIdx.Eta node -> TIdx.InSection TIdx.Power node
-myflip (TIdx.InSection sec ( TIdx.Eta (TIdx.StructureEdge n1 n2))) = 
-  TIdx.InSection sec (TIdx.Power (TIdx.StructureEdge n2 n1))
+myflip :: XIdx.Eta node -> XIdx.Power node
+myflip = TIdx.liftInSection $ \(TIdx.Eta e) -> TIdx.Power $ TIdx.flip e
 
 -- ################### Vary Power Demand
 
@@ -349,7 +347,7 @@ localPower :: [Double]
 localPower = [0.3, 0.4 .. 3.3]
 
 varRestPower', varLocalPower' :: [[Double]]
-(varLocalPower', varRestPower') = CT.varMat localPower restPower 
+(varLocalPower', varRestPower') = CT.varMat localPower restPower
 
 restPowerScale :: Double
 restPowerScale = 1
@@ -511,7 +509,7 @@ main :: IO ()
 main = do
 
    IO.hSetEncoding IO.stdout IO.utf8
-    
+
    tabEta <- Table.read "../simulation/maps/eta.txt"
    tabPower <- Table.read "../simulation/maps/power.txt"
    let eqs ::
@@ -520,36 +518,36 @@ main = do
          EqGen.EquationSystem Node s a v
        eqs = EqGen.fromGraph True (TD.dirFromSequFlowGraph (snd System.seqTopoOpt))
 
-       plotwaterpng n pic = 
-         PlotIO.surfaceWithOpts "Optimal Water Power" 
+       plotwaterpng n pic =
+         PlotIO.surfaceWithOpts "Optimal Water Power"
            --(PNG.cons ("waterpics/optimal_water_power" ++ printf "%02d" n ++ ".png"))
            DefaultTerm.cons
-           id 
+           id
            frameOpts noLegend varRestPower varLocalPower
            pic
 
 
-       plotgaspng n pic = 
-         PlotIO.surfaceWithOpts "Optimal Gas Power [W]" 
+       plotgaspng n pic =
+         PlotIO.surfaceWithOpts "Optimal Gas Power [W]"
            --(PNG.cons ("gaspics/optimal_gas_power" ++ printf "%02d" n ++ ".png"))
            DefaultTerm.cons
-           id 
+           id
            frameOpts noLegend varRestPower varLocalPower
            pic
 
 
-       plotstatepng n pic = 
-         PlotIO.surfaceWithOpts "Optimal State" 
+       plotstatepng n pic =
+         PlotIO.surfaceWithOpts "Optimal State"
            --(PNG.cons ("statepics/state_matrix" ++ printf "%02d" n ++ ".png"))
            DefaultTerm.cons
-           id 
+           id
            frameOpts noLegend varRestPower varLocalPower
            pic
 
-       plotetasyspng n pic = 
-         PlotIO.surfaceWithOpts "System Efficiency [%]" 
+       plotetasyspng n pic =
+         PlotIO.surfaceWithOpts "System Efficiency [%]"
            (PNG.cons ("etasys/etasys" ++ printf "%02d" n ++ ".png"))
-           id 
+           id
            frameOpts noLegend varRestPower varLocalPower
            pic
 
@@ -812,7 +810,7 @@ main = do
          SD.unzip $
          SD.filter (Record.major sectionFilterEnergy sectionFilterTime . snd) $
          fmap (\x -> (x, Record.partIntegrate x)) sequencePowers
-   
+
      (flowStates, adjustedFlows) =
          SD.unzip $
          fmap
@@ -851,13 +849,13 @@ main = do
      putStrLn ("Number of possible flow states: " ++ show (length System.flowStatesOpt)),
      Draw.xterm $ Draw.flowTopologies (take 20 System.flowStatesOpt),
 -}
-     Draw.xterm $ Draw.sequFlowGraph System.seqTopoOpt, 
+     Draw.xterm $ Draw.sequFlowGraph System.seqTopoOpt,
 {-
      PlotIO.surfaceWithOpts "Optimal System Efficiency" DefaultTerm.cons id frameOpts noLegend varRestPower varLocalPower etaSysMax,
 
 
      PlotIO.surfaceWithOpts "Optimal State" DefaultTerm.cons id frameOpts noLegend varRestPower varLocalPower maxEtaSysState,
-  
+
      PlotIO.surfaceWithOpts "Charging Optimal System Efficiency " DefaultTerm.cons id frameOpts noLegend varRestPower varLocalPower maxETACharge,
      PlotIO.surfaceWithOpts "Discharging Optimal System Efficiency " DefaultTerm.cons id frameOpts noLegend varRestPower varLocalPower maxETADischarge,
 
@@ -868,7 +866,7 @@ main = do
      PlotIO.surfaceWithOpts "Charging Optimal Gas Power" DefaultTerm.cons id frameOpts noLegend varRestPower varLocalPower powerGasChargeOpt,
      PlotIO.surfaceWithOpts "Charging Optimal Water Power" DefaultTerm.cons id frameOpts noLegend varRestPower varLocalPower powerWaterChargeOpt,
 
-    
+
 --     PlotIO.surface "Discharging" DefaultTerm.cons id noLegend varRestPower varLocalPower maxETADischarge,
 
 
@@ -878,16 +876,16 @@ main = do
      PlotIO.surfaceWithOpts "Optimal Water Power" DefaultTerm.cons id frameOpts noLegend varRestPower varLocalPower optWater,
      PlotIO.surfaceWithOpts "Optimal Gas Power" DefaultTerm.cons id frameOpts noLegend varRestPower varLocalPower optGas,
 
-     
+
      --PlotIO.surface "Transformer Power Charge HV " DefaultTerm.cons id noLegend varRestPower varLocalPower powerTransformerChargeOpt,
      --PlotIO.surface "Transformer Power DisCharge HV" DefaultTerm.cons id noLegend varRestPower varLocalPower powerTransformerDischargeOpt,
-     
+
      --PlotIO.surface "Transformer Power Charge LV " DefaultTerm.cons id noLegend varRestPower varLocalPower powerTransformerChargeOptLV,
      --PlotIO.surface "Transformer Power DisCharge LV" DefaultTerm.cons id noLegend varRestPower varLocalPower powerTransformerDischargeOptLV,
 
      -- PlotIO.xy "Operation" DefaultTerm.cons id show powerSignalRest powerSignalLocal,
 
-   
+
      report [] ("RestPower", varRestPower),
      report [] ("LocalPower", varLocalPower),
      report [] ("waterPower", varWaterPower),
@@ -902,18 +900,18 @@ main = do
      PlotIO.record "Local / Rest" DefaultTerm.cons show id recConsumers,
 
      PlotIO.record "Simulation Result" DefaultTerm.cons show id powerRecSim,
-     
+
      PlotIO.signal "State"  DefaultTerm.cons id stateSignal ,
 
-     PlotIO.signal "Interpolated Signals"  DefaultTerm.cons id [powerSignalWaterOptCharge, 
+     PlotIO.signal "Interpolated Signals"  DefaultTerm.cons id [powerSignalWaterOptCharge,
                                                powerSignalWaterOptDischarge,
-                                               powerSignalGasOptCharge, 
+                                               powerSignalGasOptCharge,
                                                powerSignalGasOptDischarge],
 -}
      Draw.xterm $ Draw.sequFlowGraphAbsWithEnv  sequenceFlowTopologySim envSimAnalysis,
      Draw.xterm $ Draw.sequFlowGraphAbsWithEnv  seqTopoSim envSim,
 
      Draw.xterm $ Draw.sequFlowGraphAbsWithEnv sequenceFlowTopologySim envSimAnalysisCumulated,
- 
+
        return ()
      ]

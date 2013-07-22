@@ -135,7 +135,7 @@ sectionStackRow_filterEnergy = (10^(5::Integer))
 cumStack_filterEnergy :: Double
 cumStack_filterEnergy = (1^^(-1::Integer))
 
-energyIndexSec :: Idx.InSection Idx.Energy System.Node
+energyIndexSec :: XIdx.Energy System.Node
 energyIndexSec = Idx.InSection (Idx.Section 7) energyIndex
 
 energyIndex :: Idx.Energy System.Node
@@ -176,7 +176,7 @@ sectionStackRow_filterEnergy = (10^(5::Integer))
 cumStack_filterEnergy :: Double
 cumStack_filterEnergy = (1^^(-1::Integer))
 
-energyIndexSec :: Idx.InSection Idx.Energy System.Node
+energyIndexSec :: XIdx.Energy System.Node
 energyIndexSec = Idx.InSection (Idx.Section 8) energyIndex
 
 energyIndex :: Idx.Energy System.Node
@@ -223,8 +223,7 @@ sectionStackRow_filterEnergy = (10^(5::Integer))
 cumStack_filterEnergy :: Double
 cumStack_filterEnergy = (1^^(-1::Integer))
 
-energyIndexSec :: Idx.InSection Idx.Energy System.Node
--- energyIndexSec = Idx.InSection (Idx.Section 18) energyIndex
+energyIndexSec :: XIdx.Energy System.Node
 energyIndexSec = Idx.InSection (Idx.Section 18) energyIndex
 
 energyIndex :: Idx.Energy System.Node

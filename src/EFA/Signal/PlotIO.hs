@@ -27,6 +27,7 @@ module EFA.Signal.PlotIO (
    ) where
 
 import qualified EFA.Application.AssignMap as AssignMap
+import qualified EFA.Application.Index as XIdx
 
 import qualified EFA.Signal.Plot as Plot
 import qualified EFA.Signal.Signal as Sig
@@ -102,10 +103,10 @@ surfaceWithOpts ::
   (Int -> String) ->
   tcX -> tcY -> tcZ -> IO ()
 surfaceWithOpts ti terminal opts fopts legend x y z =
-  Plot.run terminal (fopts $ Plot.xyFrameAttr ti x y) 
+  Plot.run terminal (fopts $ Plot.xyFrameAttr ti x y)
                     (Plot.surface opts legend x y z)
 
-surface :: 
+surface ::
   (Plot.Surface tcX tcY tcZ, Terminal.C term) =>
   String -> term ->
   (Int -> String) ->
@@ -396,7 +397,7 @@ stacks title vars xs =
 
 stackfromEnv:: (Show node, Ord i, FormatValue i, TDNode.C node, Show i) =>
         String ->
-        Idx.InSection Idx.Energy node ->
+        XIdx.Energy node ->
         Double ->
         (Record.DeltaName, Env.Complete
         node t (EqRecord.Absolute (Result.Result (Stack.Stack i Double)))) ->
@@ -410,7 +411,7 @@ stackfromEnv ti energyIndex eps (Record.DeltaName recName, env) = do
 recordStackRow:: (TDNode.C node, Ord node, Ord i, Show i, Show node, FormatValue i) =>
                             String
                             -> [Record.DeltaName]
-                            -> Idx.InSection Idx.Energy node
+                            -> XIdx.Energy node
                             -> Double
                             -> [Env.Complete node t
                                    (EqRecord.Absolute (Result.Result (Stack.Stack i Double)))]
