@@ -13,6 +13,7 @@ import EFA.Graph.Topology
           (FlowTopology, ClassifiedTopology, StateFlowGraph)
 
 import EFA.Equation.Arithmetic ((~+), (~/))
+import EFA.Equation.Result (Result)
 
 import qualified EFA.Signal.SequenceData as SD
 import EFA.Signal.SequenceData (SequData)
@@ -79,31 +80,43 @@ envFromSequenceEnv ::
    StateEnv.Complete node a a
 envFromSequenceEnv secMap (Env.Complete scalar signal) =
    StateEnv.Complete
-      (scalarEnvFromSequenceEnv secMap scalar)
-      (signalEnvFromSequenceEnv secMap signal)
+      (scalarEnvFromSequenceEnv (~/) (~+) secMap scalar)
+      (signalEnvFromSequenceEnv (~/) (~+) secMap signal)
+
+envFromSequenceEnvResult ::
+   (Ord node, Arith.Product a) =>
+   Map Idx.Section Idx.State ->
+   Env.Complete node (Result a) (Result a) ->
+   StateEnv.Complete node (Result a) (Result a)
+envFromSequenceEnvResult secMap (Env.Complete scalar signal) =
+   StateEnv.Complete
+      (scalarEnvFromSequenceEnv (liftA2 (~/)) (liftA2 (~+)) secMap scalar)
+      (signalEnvFromSequenceEnv (liftA2 (~/)) (liftA2 (~+)) secMap signal)
 
 scalarEnvFromSequenceEnv ::
-   (Ord node, Arith.Product a) =>
+   (Ord node) =>
+   (a -> a -> a) ->
+   (a -> a -> a) ->
    Map Idx.Section Idx.State ->
    Env.Scalar node a ->
    StateEnv.Scalar node a
-scalarEnvFromSequenceEnv secMap (Env.Scalar _me _st se _sx sis sos) =
+scalarEnvFromSequenceEnv divide add secMap (Env.Scalar _me _st se _sx sis sos) =
    let eMap =
-          flip cumulateScalarMap se
+          flip (cumulateScalarMap add) se
              (\(Idx.StEnergy e) ->
                 Idx.StEnergy $ mapStorageEdge "cumulate StEnergyMap" secMap e)
        inSumMap =
-          flip cumulateScalarMap sis
+          flip (cumulateScalarMap add) sis
              (\(Idx.StInSum aug) ->
                 Idx.StInSum $
                 fmap (UMap.checkedLookup "cumulate StInSumMap" secMap) aug)
        outSumMap =
-          flip cumulateScalarMap sos
+          flip (cumulateScalarMap add) sos
              (\(Idx.StOutSum aug) ->
                 Idx.StOutSum $
                 fmap (UMap.checkedLookup "cumulate StOutSumMap" secMap) aug)
    in  StateEnv.Scalar
-          eMap (stXMap inSumMap outSumMap eMap)
+          eMap (stXMap divide inSumMap outSumMap eMap)
           inSumMap outSumMap
 
 mapStorageEdge ::
@@ -116,88 +129,97 @@ mapStorageEdge caller secMap (Idx.StorageEdge from to) =
       (fmap (UMap.checkedLookup (caller ++ " to")   secMap) to)
 
 cumulateScalarMap ::
-   (Ord node, Ord (stateIdx node), Arith.Sum a) =>
+   (Ord node, Ord (stateIdx node)) =>
+   (a -> a -> a) ->
    (secIdx node -> stateIdx node) ->
    Map (Idx.ForNode secIdx node) a ->
    Map (Idx.ForNode stateIdx node) a
-cumulateScalarMap f =
-   Map.mapKeysWith (~+)
+cumulateScalarMap add f =
+   Map.mapKeysWith add
       (\(Idx.ForNode aug node) -> Idx.ForNode (f aug) node)
 
 stXMap ::
-   (Ord node, Arith.Product a) =>
+   (Ord node) =>
+   (a -> a -> a) ->
    Map (StateIdx.StInSum node) a ->
    Map (StateIdx.StOutSum node) a ->
    Map (StateIdx.StEnergy node) a ->
    Map (StateIdx.StX node) a
-stXMap inSumMap outSumMap =
+stXMap divide inSumMap outSumMap =
    fold .
    Map.mapWithKey
       (\(Idx.ForNode (Idx.StEnergy edge@(Idx.StorageEdge from to)) node) e ->
          let stx = Idx.ForNode (Idx.StX (Idx.storageTransFromEdge edge)) node
          in  Map.singleton stx
-                (e ~/
+                (divide e $
                  Map.findWithDefault (error "StateFlow.stXMap from")
                     (Idx.ForNode (Idx.StOutSum from) node) outSumMap)
              `Map.union`
              Map.singleton (Idx.flip stx)
-                (e ~/
+                (divide e $
                  Map.findWithDefault (error "StateFlow.stXMap from")
                     (Idx.ForNode (Idx.StInSum to) node) inSumMap))
 
 
 signalEnvFromSequenceEnv ::
-   (Ord node, Arith.Product a) =>
+   (Ord node) =>
+   (a -> a -> a) ->
+   (a -> a -> a) ->
    Map Idx.Section Idx.State ->
    Env.Signal node a ->
    StateEnv.Signal node a
-signalEnvFromSequenceEnv secMap (Env.Signal e _p _n dt _x s) =
-   let eState = cumulateSignalMap secMap e
-       dtState = cumulateSignalMap secMap dt
-       sumState = cumulateSignalMap secMap s
+signalEnvFromSequenceEnv divide add secMap (Env.Signal e _p _n dt _x s) =
+   let eState = cumulateSignalMap add secMap e
+       dtState = cumulateSignalMap add secMap dt
+       sumState = cumulateSignalMap add secMap s
    in  StateEnv.Signal
           eState
-          (powerMap dtState eState)
-          (etaMap eState)
+          (powerMap divide dtState eState)
+          (etaMap divide eState)
           dtState
-          (xMap sumState eState)
+          (xMap divide sumState eState)
           sumState
 
 cumulateSignalMap ::
-   (Ord (idx node), Arith.Sum a) =>
+   (Ord (idx node)) =>
+   (a -> a -> a) ->
    Map Idx.Section Idx.State ->
    Map (Idx.InSection idx node) a ->
    Map (Idx.InState idx node) a
-cumulateSignalMap secMap =
-   Map.mapKeysWith (~+)
+cumulateSignalMap add secMap =
+   Map.mapKeysWith add
       (\(Idx.InSection sec idx) ->
          Idx.InState (UMap.checkedLookup "cumulateSignalMap" secMap sec) idx)
 
 powerMap ::
-   (Ord node, Arith.Product a) =>
+   (Ord node) =>
+   (a -> a -> a) ->
    Map (StateIdx.DTime node) a ->
    Map (StateIdx.Energy node) a ->
    Map (StateIdx.Power node) a
-powerMap dtMap eMap =
+powerMap divide dtMap eMap =
    StateEnv.uncurrySignal $
    Map.intersectionWith
-      (\dt -> Map.mapKeys (\(Idx.Energy e) -> Idx.Power e) . fmap (~/dt))
+      (\dt ->
+         Map.mapKeys (\(Idx.Energy e) -> Idx.Power e) . fmap (flip divide dt))
       (Map.mapKeys (\(Idx.InState state Idx.DTime) -> state) dtMap)
       (StateEnv.currySignal eMap)
 
 etaMap ::
-   (Ord node, Arith.Product a) =>
+   (Ord node) =>
+   (a -> a -> a) ->
    Map (StateIdx.Energy node) a -> Map (StateIdx.Eta node) a
-etaMap eMap =
+etaMap divide eMap =
    Map.mapKeys (Idx.liftInState (\(Idx.Energy e) -> Idx.Eta e)) $
-   Map.intersectionWith (~/) (Map.mapKeys Idx.flip eMap) eMap
+   Map.intersectionWith divide (Map.mapKeys Idx.flip eMap) eMap
 
 xMap ::
-   (Ord node, Arith.Product a) =>
+   (Ord node) =>
+   (a -> a -> a) ->
    Map (StateIdx.Sum node) a ->
    Map (StateIdx.Energy node) a ->
    Map (StateIdx.X node) a
-xMap sumMap =
+xMap divide sumMap =
    Map.mapKeys (Idx.liftInState (\(Idx.Energy e) -> Idx.X e)) .
    Map.mapWithKey
       (\(Idx.InState state (Idx.Energy (Idx.StructureEdge from _to))) e ->
@@ -208,7 +230,7 @@ xMap sumMap =
                <|>
                Map.lookup (Idx.InState state (Idx.Sum Idx.Out from)) sumMap of
              Nothing -> error "StateFlow.xMap: unavailable Sum value"
-             Just s -> e ~/ s)
+             Just s -> divide e s)
 
 
 stateFlow ::
