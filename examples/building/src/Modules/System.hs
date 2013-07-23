@@ -14,9 +14,10 @@ import qualified EFA.Graph.Flow as Flow
 
 --import EFA.Signal.Signal ((.+), (./))
 
+import qualified EFA.Application.Utility as AppUt
 
-import EFA.Example.Utility (makeEdges, select)
-import qualified EFA.Example.Index as XIdx
+import EFA.Application.Utility (makeEdges, select)
+import qualified EFA.Application.Index as XIdx
 
 -- import qualified Modules.Utility as ModUt
 
@@ -29,26 +30,26 @@ import Data.Map (Map)
 data Node = Gas
           | Hausnetz
           | Kohle
-          | Netz  
+          | Netz
           | Netzlast
           | Netzspeicher
-          | Netzanschluss            
-          | Sonne            
-          | Verteiler            
+          | Netzanschluss
+          | Sonne
+          | Verteiler
           | Batterie
-          | Wasser  
+          | Wasser
              deriving (Eq, Ord, Enum, Show)
 
 instance Node.C Node where
    display = Node.displayDefault
    subscript = Node.subscriptDefault
    dotId = Node.dotIdDefault
-
+{-
 topology :: TD.Topology Node
 topology = Gr.fromList nodes (makeEdges edges)
-  where nodes = [(Sonne, TD.Source), 
-                 (Verteiler, TD.Crossing), 
-                 (Batterie, TD.Storage ()),                 
+  where nodes = [(Sonne, TD.Source),
+                 (Verteiler, TD.Crossing),
+                 (Batterie, TD.Storage ()),
                  (Hausnetz, TD.Sink),
                  (Netz, TD.Crossing),
                  (Kohle, TD.Source),
@@ -57,16 +58,31 @@ topology = Gr.fromList nodes (makeEdges edges)
                  (Netzlast,TD.Sink)]
 
         edges = map f edgeList
-          where f (n1,n2,_,_,_) = (n1,n2)
+          where f (n1,n2,_,_,_) = (n1,n2)-}
+
+topology :: TD.Topology Node
+topology = AppUt.makeTopology nodeList edgeList
+
+
+nodeList :: [(Node,TD.NodeType ())]
+nodeList = [(Sonne, TD.Source),
+            (Verteiler, TD.Crossing),
+            (Batterie, TD.Storage ()),
+            (Hausnetz, TD.Sink),
+            (Netz, TD.Crossing),
+            (Kohle, TD.Source),
+            (Gas, TD.Source),
+            (Wasser, TD.Storage()),
+            (Netzlast,TD.Sink)]
 
 -- Define Edges with all their Properties
-edgeList :: [(Node, Node, String, String, String)]
+edgeList :: AppUt.LabeledEdgeList Node
 edgeList = [(Sonne, Verteiler,"Solaranlage","Strahlung","Solar220V"),
-            (Verteiler, Batterie, "Batterie","Batterie220V","Batterie DC"),     
+            (Verteiler, Batterie, "Batterie","Batterie220V","Batterie DC"),
             (Verteiler, Hausnetz,"","",""),
-            (Verteiler, Netz,"Trafo","Zähler",""),  
+            (Verteiler, Netz,"Trafo","Zähler",""),
             (Netz,Netzlast,"","",""),
-            (Gas,Netz,"GasKW","",""), 
+            (Gas,Netz,"GasKW","",""),
             (Kohle,Netz,"KohleKW","",""),
             (Netz,Wasser,"SpeicherKW","","")]
 
@@ -85,7 +101,6 @@ powerPositonNames = Map.fromList $ concat $ map f edgeList
 flowStates :: [TD.FlowTopology Node]
 flowStates = StateAnalysis.advanced topology
 
-{-
+
 seqTopology :: Flow.RangeGraph Node
 seqTopology = Flow.mkSequenceTopology (select flowStates [0,1])
--}

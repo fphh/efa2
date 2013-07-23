@@ -247,7 +247,7 @@ paletteGH = Opts.add (Opt.custom "palette" "")
 
 paletteGray ::
   (Graph.C graph) => Opts.T graph -> Opts.T graph
-paletteGray = 
+paletteGray =
   Opts.add (Opt.custom "palette" "") ["defined ( 0 0 0 0, 1 1 1 1 )"]
 
 paletteHSV ::

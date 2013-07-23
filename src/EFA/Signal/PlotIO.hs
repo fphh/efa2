@@ -102,10 +102,10 @@ surfaceWithOpts ::
   (Int -> String) ->
   tcX -> tcY -> tcZ -> IO ()
 surfaceWithOpts ti terminal opts fopts legend x y z =
-  Plot.run terminal (fopts $ Plot.xyFrameAttr ti x y) 
+  Plot.run terminal (fopts $ Plot.xyFrameAttr ti x y)
                     (Plot.surface opts legend x y z)
 
-surface :: 
+surface ::
   (Plot.Surface tcX tcY tcZ, Terminal.C term) =>
   String -> term ->
   (Int -> String) ->
