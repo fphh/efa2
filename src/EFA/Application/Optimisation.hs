@@ -175,15 +175,16 @@ givenAverageWithoutSectionX ::(Eq v, EqArith.Sum v, Node.C node,
                EqEnv.Complete node a v  ->
                EqGen.EquationSystem node s a v
 
-givenAverageWithoutSectionX secToRemove (EqEnv.Complete scalar signal) = (EqGen.fromMap $ EqEnv.dtimeMap signal) <>
-                                                                         (EqGen.fromMap $ Map.filterWithKey f $ EqEnv.etaMap signal) <>
-                                                                         (EqGen.fromMap $ Map.filterWithKey g $  EqEnv.xMap signal) <>
-                                                                         (EqGen.fromMap $ EqEnv.stXMap scalar) <>
-                                                                         (EqGen.fromMap $ EqEnv.stInSumMap scalar) <>
-                                                                         (EqGen.fromMap $ EqEnv.stOutSumMap scalar)
-                                                                         where
-                                                                           f (TIdx.InSection sec (TIdx.Eta _)) _ = sec /= secToRemove
-                                                                           g (TIdx.InSection sec (TIdx.X _)) _ = sec /= secToRemove
+givenAverageWithoutSectionX secToRemove (EqEnv.Complete scalar signal) =
+   (EqGen.fromMap $ EqEnv.dtimeMap signal) <>
+   (EqGen.fromMap $ Map.filterWithKey f $ EqEnv.etaMap signal) <>
+   (EqGen.fromMap $ Map.filterWithKey f $ EqEnv.xMap signal) <>
+   (EqGen.fromMap $ EqEnv.stXMap scalar) <>
+   (EqGen.fromMap $ EqEnv.stInSumMap scalar) <>
+   (EqGen.fromMap $ EqEnv.stOutSumMap scalar)
+   where
+     f :: TIdx.InSection idx node -> v -> Bool
+     f (TIdx.InSection sec _) _ = sec /= secToRemove
 
 givenForOptimisation :: (EqArith.Constant a,
                          Node.C node,
