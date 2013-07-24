@@ -1,5 +1,6 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE UndecidableInstances #-}
 module EFA.Graph.Topology (
        NLabel (..), LNode, LDirNode, StNode,
        LEdge, LDirEdge,
@@ -9,8 +10,12 @@ module EFA.Graph.Topology (
        Topology,
        FlowTopology,
        ClassifiedTopology,
+       FlowGraph,
+       DirFlowGraph,
        SequFlowGraph,
        DirSequFlowGraph,
+       StateFlowGraph,
+       DirStateFlowGraph,
        pathExists,
        dirFromSequFlowGraph,
        structureEdgeFromDirEdge,
@@ -32,7 +37,6 @@ import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph as Gr
 import EFA.Graph (Graph)
 
-import qualified EFA.Utility.TypeConstructor as TC
 
 import Control.Monad (mplus)
 import Data.Foldable (Foldable, foldMap)
@@ -44,11 +48,11 @@ import Data.Monoid ((<>))
 import qualified Test.QuickCheck as QC
 
 
-type LNode a = Gr.LNode (Idx.AugNode a) (NodeType ())
-type LEdge a = Gr.LEdge (FlowEdge Gr.EitherEdge) (Idx.AugNode a) ()
-type LDirNode a = StNode (Maybe StoreDir) a
-type LDirEdge a = Gr.LEdge Gr.DirEdge (Idx.AugNode a) ()
-type StNode store a = Gr.LNode (Idx.AugNode a) (NodeType store)
+type LNode a = Gr.LNode (Idx.AugSecNode a) (NodeType ())
+type LEdge a = Gr.LEdge (FlowEdge Gr.EitherEdge) (Idx.AugSecNode a) ()
+type LDirNode part a = StNode part (Maybe StoreDir) a
+type LDirEdge a = Gr.LEdge Gr.DirEdge (Idx.AugSecNode a) ()
+type StNode part store a = Gr.LNode (Idx.AugNode part a) (NodeType store)
 
 data
    NodeType a =
@@ -105,21 +109,24 @@ isInactive :: Gr.EitherEdge node -> Bool
 isInactive = not . isActive
 
 
-isStructureEdge :: Eq node => FlowEdge structEdge (Idx.AugNode node) -> Bool
+isStructureEdge :: Eq node => FlowEdge structEdge (Idx.AugNode sec node) -> Bool
 isStructureEdge e = case edgeType e of StructureEdge _ -> True ; _ -> False
 
-isStorageEdge :: Eq node => FlowEdge structEdge (Idx.AugNode node) -> Bool
+isStorageEdge :: Eq node => FlowEdge structEdge (Idx.AugNode sec node) -> Bool
 isStorageEdge e = case edgeType e of StorageEdge _ -> True ; _ -> False
 
 
-data EdgeType structEdge node =
-     StructureEdge (Idx.InSection structEdge node)
-   | StorageEdge (Idx.ForNode (Idx.StorageEdge Idx.Section) node)
+data EdgeType part structEdge node =
+     StructureEdge (Idx.InPart part structEdge node)
+   | StorageEdge (Idx.ForNode (Idx.StorageEdge part) node)
    deriving (Eq, Ord, Show)
 
 data FlowEdge structEdge augNode =
-        AugNode augNode =>
-           FlowEdge {edgeType :: EdgeType structEdge (NodeOf augNode)}
+        (AugNode augNode) =>
+           FlowEdge {
+              edgeType ::
+                 EdgeType (CorePartOf augNode) structEdge (NodeOf augNode)
+           }
 
 
 instance Gr.Edge structEdge => Foldable (FlowEdge structEdge) where
@@ -128,85 +135,65 @@ instance Gr.Edge structEdge => Foldable (FlowEdge structEdge) where
 instance Gr.Edge structEdge => Gr.Edge (FlowEdge structEdge) where
    from (FlowEdge e) =
       case e of
-         StructureEdge (Idx.InSection sec se) ->
-            secNode sec $ Gr.from se
+         StructureEdge (Idx.InPart sec se) ->
+            augNode (Idx.augment sec) $ Gr.from se
          StorageEdge (Idx.ForNode (Idx.StorageEdge sec _) node) ->
             augNode (Idx.allowExit sec) node
    to (FlowEdge e) =
       case e of
-         StructureEdge (Idx.InSection sec se) ->
-            secNode sec $ Gr.to se
+         StructureEdge (Idx.InPart sec se) ->
+            augNode (Idx.augment sec) $ Gr.to se
          StorageEdge (Idx.ForNode (Idx.StorageEdge _ sec) node) ->
             augNode (Idx.allowInit sec) node
 
-wrapEdgeType :: EdgeType structEdge node -> EdgeType (TC.Wrap structEdge) node
-wrapEdgeType et =
-   case et of
-      StructureEdge e -> StructureEdge $ Idx.wrapInSection e
-      StorageEdge e -> StorageEdge e
-
-instance (TC.Eq structEdge) => TC.Eq (EdgeType structEdge) where
-   eq = equating wrapEdgeType
 
 instance
-   (TC.Eq structEdge, EqFlowEdge augNode) =>
+   (part ~ CorePartOf augNode, node ~ NodeOf augNode,
+    Eq part, Eq node, Eq (structEdge node)) =>
       Eq (FlowEdge structEdge augNode) where
-   (==)  =  eqFlowEdge
-
-class EqFlowEdge augNode where
-   eqFlowEdge ::
-      TC.Eq structEdge =>
-      FlowEdge structEdge augNode -> FlowEdge structEdge augNode -> Bool
-
-instance (Eq node) => EqFlowEdge (Idx.TimeNode sec node) where
-   eqFlowEdge (FlowEdge x) (FlowEdge y) = TC.eq x y
-
-
-instance (TC.Ord structEdge) => TC.Ord (EdgeType structEdge) where
-   cmp = comparing wrapEdgeType
+   (==) = equating edgeType
 
 instance
-   (TC.Ord structEdge, OrdFlowEdge augNode) =>
+   (part ~ CorePartOf augNode, node ~ NodeOf augNode,
+    Ord part, Ord node, Ord (structEdge node)) =>
       Ord (FlowEdge structEdge augNode) where
-   compare  =  cmpFlowEdge
-
-class EqFlowEdge augNode => OrdFlowEdge augNode where
-   cmpFlowEdge ::
-      TC.Ord structEdge =>
-      FlowEdge structEdge augNode -> FlowEdge structEdge augNode -> Ordering
-
-instance (Ord node) => OrdFlowEdge (Idx.TimeNode sec node) where
-   cmpFlowEdge (FlowEdge x) (FlowEdge y)  =  TC.cmp x y
+   compare = comparing edgeType
 
 
-instance (TC.Show structEdge) => TC.Show (EdgeType structEdge) where
-   showsPrec p = showsPrec p . wrapEdgeType
-
-instance
-   (TC.Show structEdge, ShowFlowEdge augNode) =>
-      Show (FlowEdge structEdge augNode) where
-   showsPrec  =  showFlowEdge
-
-class ShowFlowEdge augNode where
-   showFlowEdge ::
-      TC.Show structEdge =>
-      Int -> FlowEdge structEdge augNode -> ShowS
-
-instance (Show node) => ShowFlowEdge (Idx.TimeNode sec node) where
-   showFlowEdge p (FlowEdge e) = TC.showsPrec p e
+type CorePartOf part = NoInit (NoExit (PartOf part))
 
 
 class AugNode augNode where
+   type PartOf augNode :: *
    type NodeOf augNode :: *
-   secNode :: Idx.Section -> NodeOf augNode -> augNode
-   augNode :: Idx.AugmentedSection -> NodeOf augNode -> augNode
+   augNode ::
+      Idx.Augmented (CorePartOf augNode) -> NodeOf augNode -> augNode
 
 instance
-   (Idx.MaybeSection sec, Idx.MaybeInit sec, Idx.MaybeExit sec) =>
-      AugNode (Idx.TimeNode sec node) where
-   type NodeOf (Idx.TimeNode sec node) = node
-   secNode = Idx.TimeNode . Idx.fromSection
-   augNode = Idx.TimeNode . Idx.fromAugmentedSection
+   (Exit part, Init (NoExit part)) =>
+      AugNode (Idx.PartNode part node) where
+   type PartOf (Idx.PartNode part node) = part
+   type NodeOf (Idx.PartNode part node) = node
+   augNode = Idx.PartNode . absorbExit . fmap absorbInit
+
+
+class Exit part where
+   type NoExit part :: *
+   absorbExit :: Idx.Exit (NoExit part) -> part
+
+instance Exit (Idx.Exit part) where
+   type NoExit (Idx.Exit part) = part
+   absorbExit = id
+
+
+class Init part where
+   type NoInit part :: *
+   absorbInit :: Idx.Init (NoInit part) -> part
+
+instance Init (Idx.Init part) where
+   type NoInit (Idx.Init part) = part
+   absorbInit = id
+
 
 
 {-
@@ -221,13 +208,25 @@ type
    ClassifiedTopology a =
       Graph a Gr.EitherEdge (NodeType (Maybe StoreDir)) ()
 
-type
-   SequFlowGraph a =
-      Graph (Idx.AugNode a) (FlowEdge Gr.EitherEdge) (NodeType (Maybe StoreDir)) ()
 
 type
-   DirSequFlowGraph a =
-      Graph (Idx.AugNode a) (FlowEdge Gr.DirEdge) (NodeType (Maybe StoreDir)) ()
+   FlowGraph sec node =
+      Graph
+         (Idx.AugNode sec node) (FlowEdge Gr.EitherEdge)
+         (NodeType (Maybe StoreDir)) ()
+
+type
+   DirFlowGraph sec node =
+      Graph
+         (Idx.AugNode sec node) (FlowEdge Gr.DirEdge)
+         (NodeType (Maybe StoreDir)) ()
+
+
+type SequFlowGraph node = FlowGraph Idx.Section node
+type DirSequFlowGraph node = DirFlowGraph Idx.Section node
+
+type StateFlowGraph node = FlowGraph Idx.State node
+type DirStateFlowGraph node = DirFlowGraph Idx.State node
 
 
 pathExists :: (Ord a) => a -> a -> Topology a -> Bool
@@ -254,19 +253,19 @@ dirFromSequFlowGraph =
    Gr.mapEdgesMaybe $ \fe ->
       case edgeType fe of
          StorageEdge se -> Just $ FlowEdge $ StorageEdge se
-         StructureEdge (Idx.InSection sec ee) ->
+         StructureEdge (Idx.InPart sec ee) ->
             case ee of
                Gr.EDirEdge de ->
-                  Just $ FlowEdge $ StructureEdge $ Idx.InSection sec de
+                  Just $ FlowEdge $ StructureEdge $ Idx.InPart sec de
                Gr.EUnDirEdge _ -> Nothing
 
 structureEdgeFromDirEdge ::
-   Idx.InSection Gr.DirEdge node -> Idx.InSection Idx.StructureEdge node
-structureEdgeFromDirEdge (Idx.InSection s (Gr.DirEdge x y)) =
-   Idx.InSection s (Idx.StructureEdge x y)
+   Idx.InPart part Gr.DirEdge node -> Idx.InPart part Idx.StructureEdge node
+structureEdgeFromDirEdge (Idx.InPart s (Gr.DirEdge x y)) =
+   Idx.InPart s (Idx.StructureEdge x y)
 
 
-data StoreDir = In | Out deriving (Eq, Show)
+data StoreDir = In | Out deriving (Eq, Ord, Show)
 
 {- |
 Classify the storages in in and out storages,
@@ -283,13 +282,13 @@ classifyStorages =
                 toMaybe (any (isActive . fst) es) cls
          in  fmap (\() -> mplus (maybeDir pre In) (maybeDir suc Out)) nt)
 
-data ViewNodeDir node =
-     ViewNodeIn  (Idx.TimeNode Idx.InitOrSection node)
-   | ViewNodeOut (Idx.TimeNode Idx.SectionOrExit node)
+data ViewNodeDir part node =
+     ViewNodeIn  (Idx.PartNode (Idx.Init part) node)
+   | ViewNodeOut (Idx.PartNode (Idx.Exit part) node)
 
 viewNodeDir ::
-   (Idx.AugNode node, Maybe StoreDir) ->
-   Maybe (ViewNodeDir node)
+   (Idx.AugNode part node, Maybe StoreDir) ->
+   Maybe (ViewNodeDir part node)
 viewNodeDir (node, mdir) =
    flip fmap mdir $ \dir ->
       case dir of

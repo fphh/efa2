@@ -103,4 +103,4 @@ flowStates = StateAnalysis.advanced topology
 
 
 seqTopology :: Flow.RangeGraph Node
-seqTopology = Flow.mkSequenceTopology (select flowStates [0,1])
+seqTopology = Flow.sequenceGraph (select flowStates [0,1])

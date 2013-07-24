@@ -39,14 +39,14 @@ structureEdge ::
    (Idx.StructureEdge node -> idx node) ->
    Idx.Section -> node -> node -> Idx.InSection idx node
 structureEdge mkIdx s from to =
-   Idx.InSection s $ mkIdx $ Idx.StructureEdge from to
+   Idx.InPart s $ mkIdx $ Idx.StructureEdge from to
 
 
 dTime :: Idx.Section -> DTime node
-dTime sec = Idx.InSection sec Idx.DTime
+dTime sec = Idx.InPart sec Idx.DTime
 
 sum :: Idx.Section -> Idx.Direction -> node -> Sum node
-sum sec dir = Idx.InSection sec . Idx.Sum dir
+sum sec dir = Idx.InPart sec . Idx.Sum dir
 
 
 maxEnergy ::

@@ -4,6 +4,7 @@ module Modules.Utility where
 
 import qualified Modules.System as System
 
+import qualified EFA.Application.Index as XIdx
 import qualified EFA.Graph.Topology.Index as TIdx
 
 import qualified EFA.Equation.Environment as EqEnv
@@ -24,7 +25,7 @@ import qualified Data.Map as Map ; import Data.Map (Map)
 
 lookupAbsPower ::
   (Ord node, Show d, Show node,Num d,Fractional d) =>
-  TIdx.InSection TIdx.Power node ->
+  XIdx.Power node ->
   Maybe (EqEnv.Complete node b (Result d)) -> d
 lookupAbsPower n = maybe (-1000) f
   where f env = case checkedLookup "Modules.Utility.lookupAbsPower"
@@ -44,17 +45,15 @@ envToPowerRecord :: EqEnv.Complete
 envToPowerRecord env time sec =
   Record.Record time
     (Map.map i $ Map.mapKeys h $ Map.filterWithKey p $ EqEnv.powerMap $ EqEnv.signal env)
-  where p (TIdx.InSection section (TIdx.Power (TIdx.StructureEdge _ _))) _ =
-          section == sec
-        h (TIdx.InSection (TIdx.Section _) (TIdx.Power (TIdx.StructureEdge n1 n2))) =
-          TIdx.PPos (TIdx.StructureEdge n1 n2)
+  where p (TIdx.InPart section (TIdx.Power _)) _  =  section == sec
+        h (TIdx.InPart _ (TIdx.Power edge))  =  TIdx.PPos edge
 
         i (Determined dat) = Sig.TC dat
         i Undetermined =
           error "Modules.Utility.envToPowerRecord - undetermined data"
 
 
--- | Warum verwenden wir hier niht checkedLookup -- Fehlermeldung nicht klar genug, kein caller eingezogen
+-- | no checkedLookup because this would require Show (a -> a)
 getEtas :: Map String (a -> a) -> [String] -> [a -> a]
 getEtas etaFunc = map $
   \str -> Map.findWithDefault (error $ "getEtas :" ++ str ++ " not found") str etaFunc

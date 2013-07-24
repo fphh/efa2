@@ -9,6 +9,8 @@ module EFA.Graph.Draw (
   sequFlowGraphAbsWithEnv,
   sequFlowGraphDeltaWithEnv,
 
+  stateFlowGraphWithEnv,
+
   Options, optionsDefault,
   absoluteVariable, deltaVariable,
   showVariableIndex, hideVariableIndex,
@@ -26,6 +28,7 @@ import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
 import EFA.Report.Format (Format, Unicode(Unicode, unUnicode))
 
+import qualified EFA.Graph.StateFlow.Environment as StateEnv
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Variable as Var
 
@@ -126,44 +129,28 @@ instance Foldable Triple where
    foldMap f (Triple pre eta suc) = f pre <> f eta <> f suc
 
 
-data StructureEdgeShow node =
-     HideEtaNode (Idx.InSection Gr.EitherEdge node -> [Unicode])
-   | ShowEtaNode (Idx.InSection Gr.EitherEdge node -> Triple [Unicode])
+data StructureEdgeShow part node =
+     HideEtaNode (Idx.InPart part Gr.EitherEdge node -> [Unicode])
+   | ShowEtaNode (Idx.InPart part Gr.EitherEdge node -> Triple [Unicode])
 
-type StorageEdgeShow node =
-        Idx.ForNode XIdx.StorageEdge node -> [Unicode]
+type StorageEdgeShow part node =
+        Idx.ForNode (Idx.StorageEdge part) node -> [Unicode]
 
 dotFromSequFlowGraph ::
   (Node.C node) =>
   Flow.RangeGraph node ->
   Maybe (Idx.Section -> Unicode) ->
-  (Maybe Idx.Boundary -> Topo.LDirNode node -> Unicode) ->
+  (Maybe Idx.Boundary -> Topo.LDirNode Idx.Section node -> Unicode) ->
   Maybe (Idx.BndNode node -> Unicode) ->
-  StructureEdgeShow node ->
-  Maybe (StorageEdgeShow node) ->
+  StructureEdgeShow Idx.Section node ->
+  Maybe (StorageEdgeShow Idx.Section node) ->
   DotGraph T.Text
 dotFromSequFlowGraph (rngs, g)
-    mtshow nshow storageNodeShow structureEdgeShow storageEdgeShow =
-  DotGraph { strictGraph = False,
-             directedGraph = True,
-             graphID = Just (Int 1),
-             graphStatements = stmts }
+    mtshow nshow storeNShow structEShow storeEShow =
+       dotDirGraph stmts
 
-  where (topoEs, interEs) =
-           mapFst (Map.fromListWith (++)) $
-           ListHT.unzipEithers $
-           map
-              (\e ->
-                 case Topo.edgeType e of
-                    Topo.StructureEdge se@(Idx.InSection s _) ->
-                       Left (Idx.augmentSection s, [se])
-                    Topo.StorageEdge se -> Right se) $
-           Gr.edges g
-
-        topoNs =
-           Map.fromListWith (++) $
-           map (\nl@(Idx.TimeNode s _, _) -> (s, [nl])) $
-           Gr.labNodes g
+  where (topoEs, interEs) = groupEdges g
+        topoNs = groupNodes g
 
         storageConnections =
            zip
@@ -179,10 +166,10 @@ dotFromSequFlowGraph (rngs, g)
             subGraphs =
               map
                 (uncurry $
-                 dotFromSectionGraph rngs mtshow nshow structureEdgeShow)
+                 dotFromSectionGraph rngs mtshow nshow structEShow)
               storageConnections
               ++
-              (case storageNodeShow of
+              (case storeNShow of
                  Nothing -> []
                  Just s ->
                     mapMaybe
@@ -192,7 +179,7 @@ dotFromSequFlowGraph (rngs, g)
                     Map.toList topoNs),
             nodeStmts = [],
             edgeStmts =
-              (case storageNodeShow of
+              (case storeNShow of
                 Nothing -> []
                 Just _ ->
                   concatMap
@@ -200,8 +187,7 @@ dotFromSequFlowGraph (rngs, g)
                         dotFromContentEdge before ns)
                      storageConnections)
               ++
-              (flip foldMap storageEdgeShow $ \eshow ->
-                map (dotFromStorageEdge eshow) interEs)
+              dotFromStorageEdges storeEShow interEs
           }
 
         assertJust (Just y) = Just y
@@ -212,29 +198,29 @@ dotFromSectionGraph ::
   (Node.C node) =>
   Map Idx.Section SD.Range ->
   Maybe (Idx.Section -> Unicode) ->
-  (Maybe Idx.Boundary -> Topo.StNode store node -> Unicode) ->
-  StructureEdgeShow node ->
+  (Maybe Idx.Boundary -> Topo.StNode Idx.Section store node -> Unicode) ->
+  StructureEdgeShow Idx.Section node ->
   Maybe Idx.Boundary ->
   (Idx.AugmentedSection,
    ([Idx.InSection Gr.EitherEdge node],
-    [Topo.StNode store node])) ->
+    [Topo.StNode Idx.Section store node])) ->
   DotSubGraph T.Text
-dotFromSectionGraph rngs mtshow nshow structureEdgeShow
+dotFromSectionGraph rngs mtshow nshow structEShow
   before (current, (es, ns)) =
-    DotSG True (Just $ Str $ T.pack $ dotIdentFromAugSection current) $
+    DotSG True (Just $ Str $ T.pack $ dotIdentFromAugmented current) $
     DotStmts
       [GraphAttrs [labelFromString $ str current]]
       []
       dns des
   where (dns,des) =
-           case structureEdgeShow of
+           case structEShow of
              ShowEtaNode eshow ->
                 case unzip $ map (dotFromStructureEdgeEta eshow) es of
                    (dns0,des0) ->
-                      (map (dotFromSecNode (nshow before)) ns ++ dns0,
+                      (map (dotFromAugNode (nshow before)) ns ++ dns0,
                        concat des0)
              HideEtaNode eshow ->
-                (map (dotFromSecNode (nshow before)) ns,
+                (map (dotFromAugNode (nshow before)) ns,
                  map (dotFromStructureEdge eshow) es)
         str =
            Idx.switchAugmented "Init" "Exit" $ \s ->
@@ -249,7 +235,7 @@ dotFromSectionGraph rngs mtshow nshow structureEdgeShow
 dotFromStorageGraph ::
   (Node.C node) =>
   (Idx.BndNode node -> Unicode) ->
-  (Idx.InitOrSection, [Topo.StNode store node]) ->
+  (Idx.InitOrSection, [Topo.StNode Idx.Section store node]) ->
   DotSubGraph T.Text
 dotFromStorageGraph nshow (current, ns) =
   DotSG True
@@ -264,6 +250,89 @@ dotFromStorageGraph nshow (current, ns) =
      mapMaybe Idx.bndNodeFromAugNode $ map fst $
      mapMaybe (\(n,t) -> fmap ((,) n) $ Topo.maybeStorage t) ns)
     []
+
+
+dotFromStateFlowGraph ::
+  (Node.C node) =>
+  Topo.StateFlowGraph node ->
+  Maybe (Idx.State -> Unicode) ->
+  (Topo.LDirNode Idx.State node -> Unicode) ->
+  StructureEdgeShow Idx.State node ->
+  Maybe (StorageEdgeShow Idx.State node) ->
+  DotGraph T.Text
+dotFromStateFlowGraph g mtshow nshow structEShow storeEShow =
+  case groupEdges g of
+    (topoEs, interEs) ->
+      dotDirGraph $
+      DotStmts {
+        attrStmts = [],
+        subGraphs =
+          map (dotFromStateGraph mtshow nshow structEShow) $
+          Map.toAscList $
+          TMap.intersectionPartialWith (,)
+             (TMap.cons [] topoEs)
+             (groupNodes g),
+        nodeStmts = [],
+        edgeStmts = dotFromStorageEdges storeEShow interEs
+      }
+
+
+dotFromStateGraph ::
+  (Node.C node) =>
+  Maybe (Idx.State -> Unicode) ->
+  (Topo.StNode Idx.State store node -> Unicode) ->
+  StructureEdgeShow Idx.State node ->
+  (Idx.AugmentedState,
+   ([Idx.InState Gr.EitherEdge node],
+    [Topo.StNode Idx.State store node])) ->
+  DotSubGraph T.Text
+dotFromStateGraph mtshow nshow structEShow (current, (es, ns)) =
+    DotSG True (Just $ Str $ T.pack $ dotIdentFromAugmented current) $
+    DotStmts
+      [GraphAttrs [labelFromString $ str current]]
+      []
+      dns des
+  where (dns,des) =
+           case structEShow of
+             ShowEtaNode eshow ->
+                case unzip $ map (dotFromStructureEdgeEta eshow) es of
+                   (dns0,des0) ->
+                      (map (dotFromAugNode nshow) ns ++ dns0,
+                       concat des0)
+             HideEtaNode eshow ->
+                (map (dotFromAugNode nshow) ns,
+                 map (dotFromStructureEdge eshow) es)
+        str =
+           Idx.switchAugmented "Init" "Exit" $ \s ->
+              show s ++
+              (flip foldMap mtshow $ \tshow ->
+                 " / Time " ++ unUnicode (tshow s))
+
+
+groupEdges ::
+   (Ord part, Ord node) =>
+   Topo.FlowGraph part node ->
+   (Map (Idx.Augmented part) [Idx.InPart part Gr.EitherEdge node],
+    [Idx.ForNode (Idx.StorageEdge part) node])
+groupEdges g =
+   mapFst (Map.fromListWith (++)) $
+   ListHT.unzipEithers $
+   map
+      (\e ->
+         case Topo.edgeType e of
+            Topo.StructureEdge se@(Idx.InPart s _) ->
+               Left (Idx.augment s, [se])
+            Topo.StorageEdge se -> Right se) $
+   Gr.edges g
+
+groupNodes ::
+   (Ord (e (Idx.PartNode part node)), Ord part, Ord node, Gr.Edge e) =>
+   Gr.Graph (Idx.PartNode part node) e nl el ->
+   Map part [(Idx.PartNode part node, nl)]
+groupNodes g =
+   Map.fromListWith (++) $
+   map (\nl@(Idx.PartNode s _, _) -> (s, [nl])) $
+   Gr.labNodes g
 
 
 graphStatementsAcc ::
@@ -302,11 +371,11 @@ xterm :: DotGraph T.Text -> IO ()
 xterm g = void $ runGraphvizCanvas Dot g Xlib
 
 
-dotFromSecNode ::
-  (Node.C node) =>
-  (Topo.StNode store node -> Unicode) ->
-  Topo.StNode store node -> DotNode T.Text
-dotFromSecNode nshow n@(x, nodeType) =
+dotFromAugNode ::
+  (Part part, Node.C node) =>
+  (Topo.StNode part store node -> Unicode) ->
+  Topo.StNode part store node -> DotNode T.Text
+dotFromAugNode nshow n@(x, nodeType) =
   DotNode
     (dotIdentFromAugNode x)
     (mkNodeAttrs nodeType $ labelFromUnicode $ nshow n)
@@ -322,20 +391,20 @@ dotFromBndNode nshow n =
      labelFromUnicode $ nshow n)
 
 dotFromStructureEdge ::
-  (Node.C node) =>
-  (Idx.InSection Gr.EitherEdge node -> [Unicode]) ->
-  Idx.InSection Gr.EitherEdge node -> DotEdge T.Text
+  (Node.C node, Part part) =>
+  (Idx.InPart part Gr.EitherEdge node -> [Unicode]) ->
+  Idx.InPart part Gr.EitherEdge node -> DotEdge T.Text
 dotFromStructureEdge eshow e =
    DotEdge
-      (dotIdentFromSecNode x) (dotIdentFromSecNode y)
+      (dotIdentFromPartNode x) (dotIdentFromPartNode y)
       [labelFromLines $ order ord $ eshow e,
        Viz.Dir dir, structureEdgeColour]
   where (DirEdge x y, dir, ord) = orientFlowEdge e
 
 dotFromStructureEdgeEta ::
-  (Node.C node) =>
-  (Idx.InSection Gr.EitherEdge node -> Triple [Unicode]) ->
-  Idx.InSection Gr.EitherEdge node ->
+  (Node.C node, Part part) =>
+  (Idx.InPart part Gr.EitherEdge node -> Triple [Unicode]) ->
+  Idx.InPart part Gr.EitherEdge node ->
   (DotNode T.Text, [DotEdge T.Text])
 dotFromStructureEdgeEta eshow e =
    let (DirEdge x y, dir, ord) = orientFlowEdge e
@@ -343,19 +412,27 @@ dotFromStructureEdgeEta eshow e =
        did = dotIdentFromEtaNode x y
    in  (DotNode did [labelFromLines eta],
         [DotEdge
-            (dotIdentFromSecNode x) did
+            (dotIdentFromPartNode x) did
             [labelFromLines pre,
              Viz.Dir dir, structureEdgeColour],
          DotEdge
-            did (dotIdentFromSecNode y)
+            did (dotIdentFromPartNode y)
             [labelFromLines suc,
              Viz.Dir dir, structureEdgeColour]])
 
 
+dotFromStorageEdges ::
+  (Node.C node, Part part) =>
+  Maybe (StorageEdgeShow part node) ->
+  [Idx.ForNode (Idx.StorageEdge part) node] -> [DotEdge T.Text]
+dotFromStorageEdges storeEShow interEs =
+   flip foldMap storeEShow $ \eshow ->
+      map (dotFromStorageEdge eshow) interEs
+
 dotFromStorageEdge ::
-  (Node.C node) =>
-  StorageEdgeShow node ->
-  Idx.ForNode XIdx.StorageEdge node -> DotEdge T.Text
+  (Node.C node, Part part) =>
+  StorageEdgeShow part node ->
+  Idx.ForNode (Idx.StorageEdge part) node -> DotEdge T.Text
 dotFromStorageEdge eshow e =
    DotEdge
       (dotIdentFromAugNode $ Idx.storageEdgeFrom e)
@@ -366,15 +443,15 @@ dotFromStorageEdge eshow e =
 dotFromContentEdge ::
   (Node.C node) =>
   Maybe Idx.Boundary ->
-  [Topo.LDirNode node] ->
+  [Topo.LDirNode Idx.Section node] ->
   [DotEdge T.Text]
 dotFromContentEdge mbefore ns =
   let dotEdge from to =
          DotEdge from to [Viz.Dir Viz.Forward, contentEdgeColour]
   in  concatMap
-         (\(sn@(Idx.TimeNode _sec n), t) ->
+         (\(sn@(Idx.PartNode _sec n), t) ->
             let withBefore f =
-                   foldMap (\before -> f $ Idx.TimeNode before n) mbefore
+                   foldMap (\before -> f $ Idx.PartNode before n) mbefore
                 withCurrent f =
                    foldMap f (Idx.bndNodeFromAugNode sn)
             in  (withBefore $ \from ->
@@ -403,37 +480,46 @@ labelFromString :: String -> Attribute
 labelFromString = Viz.Label . Viz.StrLabel . T.pack
 
 
-dotIdentFromSecNode :: (Node.C node) => Idx.SecNode node -> T.Text
-dotIdentFromSecNode (Idx.TimeNode s n) =
-   T.pack $ "s" ++ dotIdentFromSection s ++ "n" ++ Node.dotId n
+class Part part where
+   dotIdentFromPart :: part -> String
 
-dotIdentFromSection :: Idx.Section -> String
-dotIdentFromSection (Idx.Section s) = show s
+instance Part Idx.Section where
+   dotIdentFromPart (Idx.Section s) = show s
 
-dotIdentFromAugNode :: (Node.C node) => Idx.AugNode node -> T.Text
-dotIdentFromAugNode (Idx.TimeNode b n) =
-   T.pack $ "s" ++ dotIdentFromAugSection b ++ "n" ++ Node.dotId n
+instance Part Idx.State where
+   dotIdentFromPart (Idx.State s) = show s
 
-dotIdentFromAugSection :: Idx.AugmentedSection -> String
-dotIdentFromAugSection =
-   Idx.switchAugmented "init" "exit" dotIdentFromSection
+
+dotIdentFromPartNode ::
+   (Part part, Node.C node) => Idx.PartNode part node -> T.Text
+dotIdentFromPartNode (Idx.PartNode s n) =
+   T.pack $ "s" ++ dotIdentFromPart s ++ "n" ++ Node.dotId n
+
+dotIdentFromAugNode ::
+   (Part part, Node.C node) => Idx.AugNode part node -> T.Text
+dotIdentFromAugNode (Idx.PartNode b n) =
+   T.pack $ "s" ++ dotIdentFromAugmented b ++ "n" ++ Node.dotId n
+
+dotIdentFromAugmented :: (Part part) => Idx.Augmented part -> String
+dotIdentFromAugmented =
+   Idx.switchAugmented "init" "exit" dotIdentFromPart
 
 dotIdentFromBndNode :: (Node.C node) => Idx.BndNode node -> T.Text
-dotIdentFromBndNode (Idx.TimeNode b n) =
+dotIdentFromBndNode (Idx.PartNode b n) =
    T.pack $ "b" ++ dotIdentFromBoundary b ++ "n" ++ Node.dotId n
 
 dotIdentFromBoundary :: Idx.Boundary -> String
 dotIdentFromBoundary (Idx.Following a) =
    case a of
       Idx.Init -> "init"
-      Idx.NoInit s -> dotIdentFromSection s
+      Idx.NoInit s -> dotIdentFromPart s
 
 dotIdentFromEtaNode ::
-   (Node.C node) =>
-   Idx.SecNode node -> Idx.SecNode node -> T.Text
-dotIdentFromEtaNode (Idx.TimeNode s x) (Idx.TimeNode _s y) =
+   (Node.C node, Part part) =>
+   Idx.PartNode part node -> Idx.PartNode part node -> T.Text
+dotIdentFromEtaNode (Idx.PartNode s x) (Idx.PartNode _s y) =
    T.pack $
-      "s" ++ dotIdentFromSection s ++
+      "s" ++ dotIdentFromPart s ++
       "x" ++ Node.dotId x ++
       "y" ++ Node.dotId y
 
@@ -446,7 +532,7 @@ sequFlowGraph ::
 sequFlowGraph topo =
   dotFromSequFlowGraph topo Nothing nshow Nothing
      (HideEtaNode $ const []) (Just $ const [])
-  where nshow _before (Idx.TimeNode _ n, l) = formatTypedNode (n,l)
+  where nshow _before (Idx.PartNode _ n, l) = formatTypedNode (n,l)
 
 
 
@@ -549,14 +635,14 @@ order Reverse = reverse
 
 orientFlowEdge ::
    (Ord node) =>
-   Idx.InSection Gr.EitherEdge node ->
-   (DirEdge (Idx.SecNode node), Viz.DirType, Order)
-orientFlowEdge (Idx.InSection sec e) =
+   Idx.InPart part Gr.EitherEdge node ->
+   (DirEdge (Idx.PartNode part node), Viz.DirType, Order)
+orientFlowEdge (Idx.InPart sec e) =
    mapFst3
       (\(DirEdge x y) ->
          DirEdge
-            (Idx.secNode sec x)
-            (Idx.secNode sec y)) $
+            (Idx.PartNode sec x)
+            (Idx.PartNode sec y)) $
    case e of
       Gr.EUnDirEdge ue -> (orientUndirEdge ue, Viz.NoDir, Id)
       Gr.EDirEdge de -> orientDirEdge de
@@ -671,8 +757,8 @@ formatNodeStorage ::
    Env.StorageMap node a ->
    Env.StInSumMap node a ->
    Env.StOutSumMap node a ->
-   Maybe Idx.Boundary -> Topo.LDirNode node -> output
-formatNodeStorage opts st sis sos mBeforeBnd (Idx.TimeNode aug nid, ty) =
+   Maybe Idx.Boundary -> Topo.LDirNode Idx.Section node -> output
+formatNodeStorage opts st sis sos mBeforeBnd (Idx.PartNode aug nid, ty) =
    Format.lines $
    Node.display nid :
    Format.words [formatNodeType ty] :
@@ -740,8 +826,29 @@ formatNodeContent ::
    Options output ->
    Env.StorageMap node a ->
    Idx.BndNode node -> output
-formatNodeContent opts st (Idx.TimeNode bnd nid) =
+formatNodeContent opts st (Idx.PartNode bnd nid) =
    lookupFormat opts st $ XIdx.storage bnd nid
+
+
+formatStateNode ::
+   (FormatValue a, Format output, Node.C node) =>
+   Options output ->
+   StateEnv.StInSumMap node a ->
+   StateEnv.StOutSumMap node a ->
+   Topo.LDirNode Idx.State node -> output
+formatStateNode opts sis sos (augNode@(Idx.PartNode _aug nid), ty) =
+   Format.lines $
+   Node.display nid :
+   Format.words [formatNodeType ty] :
+      case ty of
+         Storage dir ->
+            case Topo.viewNodeDir (augNode, dir) of
+               Nothing -> []
+               Just (Topo.ViewNodeIn (Idx.PartNode part node)) ->
+                  [lookupFormat opts sos $ Idx.ForNode (Idx.StOutSum part) node]
+               Just (Topo.ViewNodeOut (Idx.PartNode part node)) ->
+                  [lookupFormat opts sis $ Idx.ForNode (Idx.StInSum part) node]
+         _ -> []
 
 
 lookupFormat ::
@@ -786,56 +893,20 @@ sequFlowGraphWithEnv opts g
     (Env.Complete (Env.Scalar me st se sx sis sos) (Env.Signal e _p n dt x _s)) =
   dotFromSequFlowGraph g (Just formatTime)
     formatNode (toMaybe (optStorage opts) formatStorageContent)
-    (if optEtaNode opts
-       then ShowEtaNode structEShowEta
-       else HideEtaNode structEShow)
+    (structureEdgeShow opts e x n)
     (toMaybe (optStorageEdge opts) storeEShow)
-  where formatEnergy =
-           lookupFormatAssign opts e $ Idx.liftInSection Idx.Energy
-        formatX =
-           lookupFormatAssign opts x $ Idx.liftInSection Idx.X
-        formatEta =
-           lookupFormatAssign opts n $ Idx.liftInSection Idx.Eta
-        formatMaxEnergy =
+  where formatMaxEnergy =
            lookupFormatAssign opts me $ Idx.liftForNode Idx.MaxEnergy
         formatStEnergy =
            lookupFormatAssign opts se $ Idx.liftForNode Idx.StEnergy
         formatStX =
            lookupFormatAssign opts sx $ Idx.liftForNode Idx.StX
-        formatEtaPlain =
-           lookupFormat opts n . Idx.liftInSection Idx.Eta
         formatTime =
-           lookupFormat opts dt . flip Idx.InSection Idx.DTime
+           lookupFormat opts dt . flip Idx.InPart Idx.DTime
         formatNode =
            formatNodeStorage opts st sis sos
         formatStorageContent =
            formatNodeContent opts st
-
-        structEShowEta (Idx.InSection sec ee) =
-           case ee of
-              Gr.EUnDirEdge _ -> Triple [] [] []
-              Gr.EDirEdge (Gr.DirEdge from to) ->
-                 case Idx.InSection sec (Idx.StructureEdge from to) of
-                    edge ->
-                      Triple
-                         (formatEnergy edge : formatX edge : [])
-                         (formatEtaPlain edge : [])
-                         (formatX (Idx.flip edge) :
-                          formatEnergy (Idx.flip edge) :
-                          [])
-
-        structEShow (Idx.InSection sec ee) =
-           case ee of
-              Gr.EUnDirEdge _ -> []
-              Gr.EDirEdge (Gr.DirEdge from to) ->
-                 case Idx.InSection sec (Idx.StructureEdge from to) of
-                    edge ->
-                       formatEnergy edge :
-                       formatX edge :
-                       formatEta edge :
-                       formatX (Idx.flip edge) :
-                       formatEnergy (Idx.flip edge) :
-                       []
 
         storeEShow edge =
            case Idx.liftForNode Idx.storageTransFromEdge edge of
@@ -862,24 +933,97 @@ sequFlowGraphDeltaWithEnv =
    sequFlowGraphWithEnv $ deltaVariable optionsDefault
 
 
+stateFlowGraphWithEnv ::
+  (FormatValue a, FormatValue v, Node.C node) =>
+  Options Unicode -> Topo.StateFlowGraph node ->
+  StateEnv.Complete node a v -> DotGraph T.Text
+stateFlowGraphWithEnv opts g
+    (StateEnv.Complete
+       (StateEnv.Scalar se sx sis sos)
+       (StateEnv.Signal e _p n dt x _s)) =
+  dotFromStateFlowGraph g (Just formatTime)
+    formatNode
+    (structureEdgeShow opts e x n)
+    (toMaybe (optStorageEdge opts) storeEShow)
+  where formatStEnergy =
+           lookupFormatAssign opts se $ Idx.liftForNode Idx.StEnergy
+        formatStX =
+           lookupFormatAssign opts sx $ Idx.liftForNode Idx.StX
+        formatTime =
+           lookupFormat opts dt . flip Idx.InPart Idx.DTime
+        formatNode =
+           formatStateNode opts sis sos
+
+        storeEShow edge =
+           case Idx.liftForNode Idx.storageTransFromEdge edge of
+              te ->
+                 formatStEnergy edge :
+                 formatStX te :
+                 formatStX (Idx.flip te) :
+                 []
+
+
+structureEdgeShow ::
+  (Node.C node, Ord part, FormatValue a, Format.Part part) =>
+  Options Unicode ->
+  Map (Idx.InPart part Idx.Energy node) a ->
+  Map (Idx.InPart part Idx.X node) a ->
+  Map (Idx.InPart part Idx.Eta node) a ->
+  StructureEdgeShow part node
+structureEdgeShow opts e x n =
+  let formatEnergy =
+         lookupFormatAssign opts e $ Idx.liftInPart Idx.Energy
+      formatX =
+         lookupFormatAssign opts x $ Idx.liftInPart Idx.X
+      formatEta =
+         lookupFormatAssign opts n $ Idx.liftInPart Idx.Eta
+      formatEtaPlain =
+         lookupFormat opts n . Idx.liftInPart Idx.Eta
+
+      structEShowEta (Idx.InPart sec ee) =
+         case ee of
+            Gr.EUnDirEdge _ -> Triple [] [] []
+            Gr.EDirEdge (Gr.DirEdge from to) ->
+               case Idx.InPart sec (Idx.StructureEdge from to) of
+                  edge ->
+                    Triple
+                       (formatEnergy edge : formatX edge : [])
+                       (formatEtaPlain edge : [])
+                       (formatX (Idx.flip edge) :
+                        formatEnergy (Idx.flip edge) :
+                        [])
+
+      structEShow (Idx.InPart sec ee) =
+         case ee of
+            Gr.EUnDirEdge _ -> []
+            Gr.EDirEdge (Gr.DirEdge from to) ->
+               case Idx.InPart sec (Idx.StructureEdge from to) of
+                  edge ->
+                     formatEnergy edge :
+                     formatX edge :
+                     formatEta edge :
+                     formatX (Idx.flip edge) :
+                     formatEnergy (Idx.flip edge) :
+                     []
+
+  in  if optEtaNode opts
+        then ShowEtaNode structEShowEta
+        else HideEtaNode structEShow
+
+
 cumulatedFlow ::
   (FormatValue a, Node.C node) =>
   Topo.Topology node ->
   Cum.EnergyMap node a ->
   DotGraph T.Text
 cumulatedFlow g env =
-  DotGraph {
-    strictGraph = False,
-    directedGraph = True,
-    graphID = Just (Int 1),
-    graphStatements =
+   dotDirGraph $
       DotStmts {
         attrStmts = [],
         subGraphs = [],
         nodeStmts = map dotFromTopoNode $ Gr.labNodes g,
         edgeStmts = map (dotFromCumEdge env) $ Gr.labEdges g
       }
-  }
 
 dotFromCumEdge ::
   (FormatValue a, Node.C node) =>
@@ -902,3 +1046,13 @@ dotFromCumEdge env (e, ()) =
                   (error $ "could not find cumulated energy index")
                   formatValue $
                Map.lookup (Idx.Energy idx) env)
+
+
+dotDirGraph :: DotStatements str -> DotGraph str
+dotDirGraph stmts =
+  DotGraph {
+    strictGraph = False,
+    directedGraph = True,
+    graphID = Just (Int 1),
+    graphStatements = stmts
+  }

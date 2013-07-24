@@ -4,6 +4,7 @@
 module EFA.Graph.StateFlow.Environment where
 
 import qualified EFA.Graph.StateFlow.Index as XIdx
+import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Equation.Variable as Var
 
@@ -296,3 +297,23 @@ filter ::
    Complete node a v
 filter f g (Complete scalar0 signal0) =
    Complete (scalarFilter f scalar0) (signalFilter g signal0)
+
+
+currySignal ::
+   (Ord (idx node)) =>
+   Map (Idx.InState idx node) v -> Map Idx.State (Map (idx node) v)
+currySignal =
+   Map.unionsWith (Map.unionWith
+      (error "StateFlow.Environment.currySignal: duplicate key")) .
+   Map.elems .
+   Map.mapWithKey
+      (\(Idx.InPart state idx) a ->
+         Map.singleton state $ Map.singleton idx a)
+
+uncurrySignal ::
+   (Ord (idx node)) =>
+   Map Idx.State (Map (idx node) v) -> Map (Idx.InState idx node) v
+uncurrySignal =
+   Map.unionsWith (error "StateFlow.Environment.uncurrySignal: duplicate key") .
+   Map.elems .
+   Map.mapWithKey (Map.mapKeys . Idx.InPart)

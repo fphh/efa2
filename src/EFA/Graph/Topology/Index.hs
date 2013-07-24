@@ -48,6 +48,7 @@ type InitOrSection = Init Section
 type SectionOrExit = Exit Section
 type Augmented sec = Exit (Init sec)
 type AugmentedSection = Augmented Section
+type AugmentedState   = Augmented State
 
 
 instance Functor Init where
@@ -157,11 +158,15 @@ allowInit = fmap NoInit
 allowExit :: Init sec -> Augmented sec
 allowExit = NoExit
 
-maybeInit :: AugmentedSection -> Maybe SectionOrExit
+augment :: sec -> Augmented sec
+augment = NoExit . NoInit
+
+
+maybeInit :: Augmented sec -> Maybe (Exit sec)
 maybeInit =
    switchAugmented Nothing (Just Exit) (Just . NoExit)
 
-maybeExit :: AugmentedSection -> Maybe InitOrSection
+maybeExit :: Augmented sec -> Maybe (Init sec)
 maybeExit aug =
    case aug of
       Exit -> Nothing
@@ -231,52 +236,61 @@ after :: idx -> Record Delta idx
 after = Record After
 
 
-data TimeNode time node = TimeNode time node deriving (Show, Eq, Ord)
+data PartNode part node = PartNode part node deriving (Show, Eq, Ord)
 
-type StateNode = TimeNode State
-type SecNode = TimeNode Section
-type AugNode = TimeNode AugmentedSection
-type BndNode = TimeNode Boundary
+type StateNode = PartNode State
+type SecNode = PartNode Section
+type AugNode sec = PartNode (Augmented sec)
+type BndNode = PartNode Boundary
+
+type AugSecNode = AugNode Section
+type AugStateNode = AugNode State
 
 
 secNode :: Section -> node -> SecNode node
-secNode = TimeNode
+secNode = PartNode
 
-initSecNode :: node -> AugNode node
-initSecNode = TimeNode initSection
+initSecNode :: node -> AugSecNode node
+initSecNode = PartNode initSection
 
-exitSecNode :: node -> AugNode node
-exitSecNode = TimeNode exitSection
+exitSecNode :: node -> AugSecNode node
+exitSecNode = PartNode exitSection
+
+initAugNode :: node -> AugNode sec node
+initAugNode = PartNode (NoExit Init)
+
+exitAugNode :: node -> AugNode sec node
+exitAugNode = PartNode Exit
 
 afterSecNode :: Section -> node -> BndNode node
-afterSecNode s = TimeNode $ afterSection s
+afterSecNode s = PartNode $ afterSection s
 
 bndNodeFromSecNode :: SecNode node -> BndNode node
-bndNodeFromSecNode (TimeNode sec node) =
-   TimeNode (Following (NoInit sec)) node
+bndNodeFromSecNode (PartNode sec node) =
+   PartNode (Following (NoInit sec)) node
 
 secNodeFromBndNode :: BndNode node -> Maybe (SecNode node)
-secNodeFromBndNode (TimeNode bnd node) =
+secNodeFromBndNode (PartNode bnd node) =
    case bnd of
       Following Init -> Nothing
-      Following (NoInit sec) -> Just (TimeNode sec node)
+      Following (NoInit sec) -> Just (PartNode sec node)
 
-augNodeFromBndNode :: BndNode node -> AugNode node
-augNodeFromBndNode (TimeNode bnd node) =
-   TimeNode (augSectionFromBoundary bnd) node
+augNodeFromBndNode :: BndNode node -> AugSecNode node
+augNodeFromBndNode (PartNode bnd node) =
+   PartNode (augSectionFromBoundary bnd) node
 
-bndNodeFromAugNode :: AugNode node -> Maybe (BndNode node)
-bndNodeFromAugNode (TimeNode aug node) =
-   fmap (P.flip TimeNode node) $ boundaryFromAugSection aug
+bndNodeFromAugNode :: AugSecNode node -> Maybe (BndNode node)
+bndNodeFromAugNode (PartNode aug node) =
+   fmap (P.flip PartNode node) $ boundaryFromAugSection aug
 
 
-maybeInitNode :: AugNode node -> Maybe (TimeNode SectionOrExit node)
-maybeInitNode (TimeNode aug node) =
-   fmap (P.flip TimeNode node) $ maybeInit aug
+maybeInitNode :: AugNode sec node -> Maybe (PartNode (Exit sec) node)
+maybeInitNode (PartNode aug node) =
+   fmap (P.flip PartNode node) $ maybeInit aug
 
-maybeExitNode :: AugNode node -> Maybe (TimeNode InitOrSection node)
-maybeExitNode (TimeNode aug node) =
-   fmap (P.flip TimeNode node) $ maybeExit aug
+maybeExitNode :: AugNode sec node -> Maybe (PartNode (Init sec) node)
+maybeExitNode (PartNode aug node) =
+   fmap (P.flip PartNode node) $ maybeExit aug
 
 
 
@@ -316,40 +330,48 @@ storageTransFromEdge (StorageEdge s0 s1) =
    StorageTrans (allowExit s0) (allowInit s1)
 
 
-data InState idx node = InState State (idx node)
+data InPart part idx node = InPart part (idx node)
    deriving (Show, Eq, Ord)
+
+type InSection = InPart Section
+type InState = InPart State
+
+
+inPart ::
+   (node -> idx node) -> PartNode part node -> InPart part idx node
+inPart makeIdx (PartNode sec edge) = InPart sec (makeIdx edge)
+
+liftInPart ::
+   (idx0 node -> idx1 node) ->
+   InPart part idx0 node -> InPart part idx1 node
+liftInPart f (InPart sec edge) = InPart sec $ f edge
+
 
 inState ::
    (node -> idx node) -> StateNode node -> InState idx node
-inState makeIdx (TimeNode sec edge) =
-   InState sec (makeIdx edge)
+inState = inPart
 
 liftInState ::
    (idx0 node -> idx1 node) ->
    InState idx0 node -> InState idx1 node
-liftInState f (InState sec edge) =
-   InState sec $ f edge
+liftInState = liftInPart
 
-data InSection idx node = InSection Section (idx node)
-   deriving (Show, Eq, Ord)
 
 inSection ::
    (node -> idx node) -> SecNode node -> InSection idx node
-inSection makeIdx (TimeNode sec edge) =
-   InSection sec (makeIdx edge)
+inSection = inPart
 
 liftInSection ::
    (idx0 node -> idx1 node) ->
    InSection idx0 node -> InSection idx1 node
-liftInSection f (InSection sec edge) =
-   InSection sec $ f edge
+liftInSection = liftInPart
 
 data ForNode idx node = ForNode (idx node) node
    deriving (Show, Eq, Ord)
 
 forNode ::
-   (time -> idx node) -> TimeNode time node -> ForNode idx node
-forNode makeIdx (TimeNode bnd node) =
+   (part -> idx node) -> PartNode part node -> ForNode idx node
+forNode makeIdx (PartNode bnd node) =
    ForNode (makeIdx bnd) node
 
 liftForNode ::
@@ -359,26 +381,26 @@ liftForNode f (ForNode edge node) =
    ForNode (f edge) node
 
 
-wrapInState :: InState idx node -> InState (TC.Wrap idx) node
-wrapInState (InState s e)  =  InState s (TC.Wrap e)
-
-wrapInSection :: InSection idx node -> InSection (TC.Wrap idx) node
-wrapInSection (InSection s e)  =  InSection s (TC.Wrap e)
+wrapInPart :: InPart part idx node -> InPart part (TC.Wrap idx) node
+wrapInPart = liftInPart TC.Wrap
 
 wrapForNode :: ForNode idx node -> ForNode (TC.Wrap idx) node
-wrapForNode (ForNode e n)  =  ForNode (TC.Wrap e) n
+wrapForNode = liftForNode TC.Wrap
 
-instance TC.Eq idx => TC.Eq (InState   idx) where eq = equating wrapInState
-instance TC.Eq idx => TC.Eq (InSection idx) where eq = equating wrapInSection
-instance TC.Eq idx => TC.Eq (ForNode   idx) where eq = equating wrapForNode
+instance (Eq part, TC.Eq idx) => TC.Eq (InPart part idx) where
+   eq = equating wrapInPart
+instance TC.Eq idx => TC.Eq (ForNode idx) where
+   eq = equating wrapForNode
 
-instance TC.Ord idx => TC.Ord (InState   idx) where cmp = comparing wrapInState
-instance TC.Ord idx => TC.Ord (InSection idx) where cmp = comparing wrapInSection
-instance TC.Ord idx => TC.Ord (ForNode   idx) where cmp = comparing wrapForNode
+instance (Ord part, TC.Ord idx) => TC.Ord (InPart part idx) where
+   cmp = comparing wrapInPart
+instance TC.Ord idx => TC.Ord (ForNode idx) where
+   cmp = comparing wrapForNode
 
-instance TC.Show idx => TC.Show (InState   idx) where showsPrec p = showsPrec p . wrapInState
-instance TC.Show idx => TC.Show (InSection idx) where showsPrec p = showsPrec p . wrapInSection
-instance TC.Show idx => TC.Show (ForNode   idx) where showsPrec p = showsPrec p . wrapForNode
+instance (Show part, TC.Show idx) => TC.Show (InPart part idx) where
+   showsPrec p = showsPrec p . wrapInPart
+instance TC.Show idx => TC.Show (ForNode idx) where
+   showsPrec p = showsPrec p . wrapForNode
 
 
 storageEdge ::
@@ -395,9 +417,9 @@ storageTrans mkIdx s0 s1 n =
 
 
 storageEdgeFrom, storageEdgeTo ::
-   ForNode (StorageEdge Section) node -> AugNode node
-storageEdgeFrom (ForNode (StorageEdge sec _) n) = TimeNode (allowExit sec) n
-storageEdgeTo   (ForNode (StorageEdge _ sec) n) = TimeNode (allowInit sec) n
+   ForNode (StorageEdge sec) node -> AugNode sec node
+storageEdgeFrom (ForNode (StorageEdge sec _) n) = PartNode (allowExit sec) n
+storageEdgeTo   (ForNode (StorageEdge _ sec) n) = PartNode (allowInit sec) n
 
 
 
@@ -405,8 +427,8 @@ class Flip edge where
    flip :: edge node -> edge node
 
 
-instance Flip idx => Flip (InSection idx) where
-   flip (InSection s idx) = InSection s (flip idx)
+instance Flip idx => Flip (InPart part idx) where
+   flip (InPart s idx) = InPart s (flip idx)
 
 instance Flip StructureEdge where
    flip (StructureEdge x y) = StructureEdge y x
@@ -421,6 +443,12 @@ instance Flip (StorageTrans sec) where
 
 instance Flip Power where
    flip (Power x) = Power $ flip x
+
+instance Flip Energy where
+   flip (Energy x) = Energy $ flip x
+
+instance Flip (StX sec) where
+   flip (StX x) = StX $ flip x
 
 instance Flip PPos where
    flip (PPos x) = PPos $ flip x

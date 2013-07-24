@@ -612,3 +612,13 @@ Executable demo-cumulatedEnergyFlow
       base
   Else
     Buildable: False
+
+Executable demo-stateFlow
+  Main-Is: demo/stateFlow/Main.hs
+  GHC-Options: -Wall
+  If flag(buildDemos)
+    Build-Depends:
+      efa,
+      base
+  Else
+    Buildable: False

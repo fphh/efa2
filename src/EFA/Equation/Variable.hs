@@ -3,6 +3,7 @@ module EFA.Equation.Variable where
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
+import qualified EFA.Report.Format as Format
 import EFA.Report.Format (Format)
 import EFA.Report.FormatValue
           (FormatValue, formatValue,
@@ -35,6 +36,7 @@ data Scalar a =
 
 
 
+type InPartSignal part = Idx.InPart part Signal
 type InSectionSignal = Idx.InSection Signal
 type ForNodeScalar   = Idx.ForNode   Scalar
 
@@ -42,9 +44,9 @@ class Index t where
    type Type t :: * -> *
    index :: t a -> Type t a
 
-instance SignalIndex idx => Index (Idx.InSection idx) where
-   type Type (Idx.InSection idx) = InSectionSignal
-   index (Idx.InSection s x) = Idx.InSection s (signalIndex x)
+instance SignalIndex idx => Index (Idx.InPart part idx) where
+   type Type (Idx.InPart part idx) = InPartSignal part
+   index (Idx.InPart s x) = Idx.InPart s (signalIndex x)
 
 instance ScalarIndex idx => Index (Idx.ForNode idx) where
    type Type (Idx.ForNode idx) = ForNodeScalar
@@ -89,9 +91,9 @@ instance (Node.C node) => FormatValue (Any node) where
    formatValue (Scalar var) = formatScalarValue var
 
 formatSignalValue ::
-   (Format output, Node.C node) =>
-   InSectionSignal node -> output
-formatSignalValue (Idx.InSection s var) =
+   (Format output, Format.Part part, Node.C node) =>
+   InPartSignal part node -> output
+formatSignalValue (Idx.InPart s var) =
    case var of
       Energy idx -> formatSignalIndex idx s
       Power idx -> formatSignalIndex idx s
@@ -116,15 +118,17 @@ formatScalarValue (Idx.ForNode var n) =
 class FormatIndex idx where
    formatIndex :: (Node.C node, Format output) => idx node -> output
 
-instance FormatSignalIndex idx => FormatIndex (Idx.InSection idx) where
-   formatIndex (Idx.InSection s idx) = formatSignalIndex idx s
+instance
+   (Format.Part part, FormatSignalIndex idx) =>
+      FormatIndex (Idx.InPart part idx) where
+   formatIndex (Idx.InPart s idx) = formatSignalIndex idx s
 
 instance FormatScalarIndex idx => FormatIndex (Idx.ForNode idx) where
    formatIndex (Idx.ForNode idx n) = formatScalarIndex idx n
 
 
 instance FormatSignalIndex Signal where
-   formatSignalIndex edge sec = formatSignalValue (Idx.InSection sec edge)
+   formatSignalIndex edge sec = formatSignalValue (Idx.InPart sec edge)
 
 instance FormatScalarIndex Scalar where
    formatScalarIndex edge node = formatScalarValue (Idx.ForNode edge node)

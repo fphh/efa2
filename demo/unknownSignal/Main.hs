@@ -118,8 +118,7 @@ main = do
       rec :: Rec.PowerRecord Node.Int [] Double
       rec = Rec.Record time (Map.mapKeys f $ Map.mapMaybe g pm)
 
-      f (Idx.InSection _ (Idx.Power (Idx.StructureEdge n1 n2))) =
-        Idx.PPos (Idx.StructureEdge n1 n2)
+      f (Idx.InPart _ (Idx.Power edge)) = Idx.PPos edge
 
       g (Res.Determined dat) = Just $ Sig.TC dat
       g _ = Nothing

@@ -184,7 +184,7 @@ givenAverageWithoutSectionX secToRemove (EqEnv.Complete scalar signal) =
    (EqGen.fromMap $ EqEnv.stOutSumMap scalar)
    where
      f :: TIdx.InSection idx node -> v -> Bool
-     f (TIdx.InSection sec _) _ = sec /= secToRemove
+     f (TIdx.InPart sec _) _ = sec /= secToRemove
 
 givenForOptimisation :: (EqArith.Constant a,
                          Node.C node,

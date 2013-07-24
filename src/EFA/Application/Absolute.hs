@@ -174,7 +174,7 @@ envFromFlowRecord =
                Map.singleton (XIdx.dTime section) (Signal.unpack times),
             Env.powerMap =
                Map.mapKeys
-                  (\(Idx.PPos x) -> Idx.InSection section $ Idx.Power x) $
+                  (\(Idx.PPos x) -> Idx.InPart section $ Idx.Power x) $
                fmap Signal.unpack signals
          })
 

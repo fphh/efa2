@@ -1,4 +1,3 @@
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeOperators #-}
@@ -74,7 +73,7 @@ select :: [topo] -> [Int] -> SD.SequData topo
 select ts = SD.fromList . map (ts !!)
 
 seqTopoFunc :: [Int] -> Flow.RangeGraph Node.Int
-seqTopoFunc states = Flow.mkSequenceTopology (select sol states)
+seqTopoFunc states = Flow.sequenceGraph (select sol states)
   where sol = StateAnalysis.advanced topoDreibein
 
 seqTopo :: Flow.RangeGraph Node.Int
@@ -307,16 +306,16 @@ etaSys (_, topo) env = sum sinks / sum sources
         p = (> 0) .
             Set.size .
             Set.filter
-              (\(TD.FlowEdge (TD.StructureEdge (TIdx.InSection _ e))) -> TD.isActive e)
+              (\(TD.FlowEdge (TD.StructureEdge (TIdx.InPart _ e))) -> TD.isActive e)
 
         sinkEnergies acc
-          (TD.FlowEdge (TD.StructureEdge (TIdx.InSection sec
+          (TD.FlowEdge (TD.StructureEdge (TIdx.InPart sec
                        (Gr.EDirEdge (Gr.DirEdge a b))))) =
             acc + lookUp "etaSys" env (XIdx.energy sec b a)
         sinkEnergies = error "etaSys: sinkEnergies"
 
         sourceEnergies acc
-          (TD.FlowEdge (TD.StructureEdge (TIdx.InSection sec
+          (TD.FlowEdge (TD.StructureEdge (TIdx.InPart sec
                        (Gr.EDirEdge (Gr.DirEdge a b))))) =
             acc + lookUp "etaSys" env (XIdx.energy sec a b)
 -}
@@ -325,7 +324,7 @@ lookUp ::
   (Ord node, Show node, Show t) =>
   String ->
   EqEnv.Complete node b (EqRec.Absolute (Result t)) ->
-  TIdx.InSection TIdx.Energy node -> t
+  XIdx.Energy node -> t
 lookUp caller env n =
   case checkedLookup caller
          (EqEnv.energyMap $ EqEnv.signal env) n of

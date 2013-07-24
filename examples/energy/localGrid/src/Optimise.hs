@@ -569,7 +569,7 @@ main = do
      time = Record.getTime rec
 
      -- | Build Sequenceflow graph for simulation
-     seqTopoSim = Flow.mkSequenceTopology (select System.flowStatesOpt [4])
+     seqTopoSim = Flow.sequenceGraph (select System.flowStatesOpt [4])
 
      -- | Generate and solve Equation System
 

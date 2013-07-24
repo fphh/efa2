@@ -594,13 +594,13 @@ outsum = variableRecord . Idx.inSection (Idx.Sum Idx.Out)
 stinsum ::
    (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node,
     Sum a, Record rec, Node.C node) =>
-   Idx.TimeNode Idx.SectionOrExit node -> RecordExpression mode rec node s a v a
+   Idx.PartNode Idx.SectionOrExit node -> RecordExpression mode rec node s a v a
 stinsum = variableRecord . Idx.forNode Idx.StInSum
 
 stoutsum ::
    (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node,
     Sum a, Record rec, Node.C node) =>
-    Idx.TimeNode Idx.InitOrSection node -> RecordExpression mode rec node s a v a
+    Idx.PartNode Idx.InitOrSection node -> RecordExpression mode rec node s a v a
 stoutsum = variableRecord . Idx.forNode Idx.StOutSum
 
 storage ::
@@ -613,7 +613,7 @@ dtime ::
    (Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node,
     Sum v, Record rec, Node.C node) =>
    Idx.Section -> RecordExpression mode rec node s a v v
-dtime = variableRecord . flip Idx.InSection Idx.DTime
+dtime = variableRecord . flip Idx.InPart Idx.DTime
 
 
 storageTransFromEdge ::
@@ -743,12 +743,12 @@ fromEdges ::
   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Sum a,
    Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node,
    Product v, Record rec, Node.C node) =>
-  [TD.FlowEdge Gr.DirEdge (Idx.AugNode node)] ->
+  [TD.FlowEdge Gr.DirEdge (Idx.AugSecNode node)] ->
   EquationSystem mode rec node s a v
 fromEdges =
    foldMap $ \se ->
       case TD.edgeType se of
-         TD.StructureEdge edge@(Idx.InSection s _) ->
+         TD.StructureEdge edge@(Idx.InPart s _) ->
             let equ xy = energy xy =%= dtime s ~* power xy
                 e = TD.structureEdgeFromDirEdge edge
             in  equ e <> equ (Idx.flip e) <>
@@ -813,7 +813,7 @@ fromNodes equalInOutSums =
                                    stinsum rn =%= integrate (outsum sn))
                    _ -> mempty
                 <>
-                (withSecNode $ \sn@(Idx.TimeNode sec _) ->
+                (withSecNode $ \sn@(Idx.PartNode sec _) ->
                    splitStructEqs sec (insum sn) (map Idx.flip insStruct)
                    <>
                    splitStructEqs sec (outsum sn) outsStruct)
@@ -826,7 +826,7 @@ fromStorageSequences ::
   TD.DirSequFlowGraph node -> EquationSystem mode rec node s a v
 fromStorageSequences =
    let f xs =
-          let charge old now (Idx.TimeNode aug n, dir) =
+          let charge old now (Idx.PartNode aug n, dir) =
                  case (aug, dir) of
                     (Idx.Exit, Just TD.Out) ->
                        old =%= withNode stinsum Idx.Exit n
@@ -849,18 +849,18 @@ fromStorageSequences =
                  (error "no storage content before Init" : storages) storages xs
    in  foldMap (f . Map.toList) . getStorageSequences
 
-withNode :: (Idx.TimeNode time node -> expr) -> time -> node -> expr
-withNode f sec node = f $ Idx.TimeNode sec node
+withNode :: (Idx.PartNode part node -> expr) -> part -> node -> expr
+withNode f sec node = f $ Idx.PartNode sec node
 
 
 -- Storages must not have more than one in or out edge.
 getStorageSequences ::
   (Node.C node) =>
   TD.DirSequFlowGraph node ->
-  Map node (Map (Idx.AugNode node) (Maybe TD.StoreDir))
+  Map node (Map (Idx.AugSecNode node) (Maybe TD.StoreDir))
 getStorageSequences =
   Map.unionsWith (Map.unionWith (error "duplicate boundary for node")) .
-  map (\(bn@(Idx.TimeNode _ n), dir) -> Map.singleton n $ Map.singleton bn dir) .
+  map (\(bn@(Idx.PartNode _ n), dir) -> Map.singleton n $ Map.singleton bn dir) .
   Map.toList . Map.mapMaybe TD.maybeStorage . Gr.nodeLabels
 
 
@@ -868,7 +868,7 @@ fromInStorages ::
   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Sum a, a ~ Scalar v,
    Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node, Product v, Integrate v,
    Record rec, Node.C node) =>
-  Idx.TimeNode Idx.InitOrSection node -> [Idx.ForNode XIdx.StorageEdge node] ->
+  Idx.PartNode Idx.InitOrSection node -> [Idx.ForNode XIdx.StorageEdge node] ->
   EquationSystem mode rec node s a v
 fromInStorages sn outs =
    let toSec (Idx.ForNode (Idx.StorageEdge _ x) _) = x

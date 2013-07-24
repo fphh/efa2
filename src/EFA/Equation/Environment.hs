@@ -140,14 +140,14 @@ instance
 lookupSignal ::
    Ord node =>
    Var.InSectionSignal node -> Signal node a -> Maybe a
-lookupSignal (Idx.InSection s var) =
+lookupSignal (Idx.InPart s var) =
    case var of
-      Var.Energy    idx -> Map.lookup (Idx.InSection s idx) . energyMap
-      Var.Power     idx -> Map.lookup (Idx.InSection s idx) . powerMap
-      Var.Eta       idx -> Map.lookup (Idx.InSection s idx) . etaMap
-      Var.DTime     idx -> Map.lookup (Idx.InSection s idx) . dtimeMap
-      Var.X         idx -> Map.lookup (Idx.InSection s idx) . xMap
-      Var.Sum       idx -> Map.lookup (Idx.InSection s idx) . sumMap
+      Var.Energy    idx -> Map.lookup (Idx.InPart s idx) . energyMap
+      Var.Power     idx -> Map.lookup (Idx.InPart s idx) . powerMap
+      Var.Eta       idx -> Map.lookup (Idx.InPart s idx) . etaMap
+      Var.DTime     idx -> Map.lookup (Idx.InPart s idx) . dtimeMap
+      Var.X         idx -> Map.lookup (Idx.InPart s idx) . xMap
+      Var.Sum       idx -> Map.lookup (Idx.InPart s idx) . sumMap
 
 lookupScalar ::
    Ord node =>
