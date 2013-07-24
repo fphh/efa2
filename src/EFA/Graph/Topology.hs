@@ -179,8 +179,8 @@ class AugNode augNode where
 instance AugNode (Idx.AugNode sec node) where
    type PartOf (Idx.AugNode sec node) = sec
    type NodeOf (Idx.AugNode sec node) = node
-   secNode = Idx.TimeNode . Idx.augment
-   augNode = Idx.TimeNode
+   secNode = Idx.PartNode . Idx.augment
+   augNode = Idx.PartNode
 
 
 
@@ -271,8 +271,8 @@ classifyStorages =
          in  fmap (\() -> mplus (maybeDir pre In) (maybeDir suc Out)) nt)
 
 data ViewNodeDir node =
-     ViewNodeIn  (Idx.TimeNode Idx.InitOrSection node)
-   | ViewNodeOut (Idx.TimeNode Idx.SectionOrExit node)
+     ViewNodeIn  (Idx.PartNode Idx.InitOrSection node)
+   | ViewNodeOut (Idx.PartNode Idx.SectionOrExit node)
 
 viewNodeDir ::
    (Idx.AugSecNode node, Maybe StoreDir) ->

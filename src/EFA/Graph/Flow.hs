@@ -204,7 +204,7 @@ sectionFromClassTopo ::
   Idx.Section -> ClassifiedTopology node -> SequFlowGraph node
 sectionFromClassTopo sec =
    Gr.ixmap
-      (Idx.TimeNode (Idx.augment sec))
+      (Idx.PartNode (Idx.augment sec))
       (Topo.FlowEdge . Topo.StructureEdge . Idx.InPart sec)
 
 
@@ -237,7 +237,7 @@ getStorageSequences =
 type RangeGraph node = (Map Idx.Section SD.Range, SequFlowGraph node)
 
 type FlowEdge = Topo.FlowEdge Gr.EitherEdge
-type AugNode sec = Idx.TimeNode (Idx.Augmented sec)
+type AugNode sec = Idx.PartNode (Idx.Augmented sec)
 
 insEdges ::
    (Ord sec, Ord node, Ord (FlowEdge (AugNode sec node))) =>

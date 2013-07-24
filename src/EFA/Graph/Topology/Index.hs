@@ -236,61 +236,61 @@ after :: idx -> Record Delta idx
 after = Record After
 
 
-data TimeNode time node = TimeNode time node deriving (Show, Eq, Ord)
+data PartNode part node = PartNode part node deriving (Show, Eq, Ord)
 
-type StateNode = TimeNode State
-type SecNode = TimeNode Section
-type AugNode sec = TimeNode (Augmented sec)
-type BndNode = TimeNode Boundary
+type StateNode = PartNode State
+type SecNode = PartNode Section
+type AugNode sec = PartNode (Augmented sec)
+type BndNode = PartNode Boundary
 
 type AugSecNode = AugNode Section
 type AugStateNode = AugNode State
 
 
 secNode :: Section -> node -> SecNode node
-secNode = TimeNode
+secNode = PartNode
 
 initSecNode :: node -> AugSecNode node
-initSecNode = TimeNode initSection
+initSecNode = PartNode initSection
 
 exitSecNode :: node -> AugSecNode node
-exitSecNode = TimeNode exitSection
+exitSecNode = PartNode exitSection
 
 initAugNode :: node -> AugNode sec node
-initAugNode = TimeNode (NoExit Init)
+initAugNode = PartNode (NoExit Init)
 
 exitAugNode :: node -> AugNode sec node
-exitAugNode = TimeNode Exit
+exitAugNode = PartNode Exit
 
 afterSecNode :: Section -> node -> BndNode node
-afterSecNode s = TimeNode $ afterSection s
+afterSecNode s = PartNode $ afterSection s
 
 bndNodeFromSecNode :: SecNode node -> BndNode node
-bndNodeFromSecNode (TimeNode sec node) =
-   TimeNode (Following (NoInit sec)) node
+bndNodeFromSecNode (PartNode sec node) =
+   PartNode (Following (NoInit sec)) node
 
 secNodeFromBndNode :: BndNode node -> Maybe (SecNode node)
-secNodeFromBndNode (TimeNode bnd node) =
+secNodeFromBndNode (PartNode bnd node) =
    case bnd of
       Following Init -> Nothing
-      Following (NoInit sec) -> Just (TimeNode sec node)
+      Following (NoInit sec) -> Just (PartNode sec node)
 
 augNodeFromBndNode :: BndNode node -> AugSecNode node
-augNodeFromBndNode (TimeNode bnd node) =
-   TimeNode (augSectionFromBoundary bnd) node
+augNodeFromBndNode (PartNode bnd node) =
+   PartNode (augSectionFromBoundary bnd) node
 
 bndNodeFromAugNode :: AugSecNode node -> Maybe (BndNode node)
-bndNodeFromAugNode (TimeNode aug node) =
-   fmap (P.flip TimeNode node) $ boundaryFromAugSection aug
+bndNodeFromAugNode (PartNode aug node) =
+   fmap (P.flip PartNode node) $ boundaryFromAugSection aug
 
 
-maybeInitNode :: AugNode sec node -> Maybe (TimeNode (Exit sec) node)
-maybeInitNode (TimeNode aug node) =
-   fmap (P.flip TimeNode node) $ maybeInit aug
+maybeInitNode :: AugNode sec node -> Maybe (PartNode (Exit sec) node)
+maybeInitNode (PartNode aug node) =
+   fmap (P.flip PartNode node) $ maybeInit aug
 
-maybeExitNode :: AugNode sec node -> Maybe (TimeNode (Init sec) node)
-maybeExitNode (TimeNode aug node) =
-   fmap (P.flip TimeNode node) $ maybeExit aug
+maybeExitNode :: AugNode sec node -> Maybe (PartNode (Init sec) node)
+maybeExitNode (PartNode aug node) =
+   fmap (P.flip PartNode node) $ maybeExit aug
 
 
 
@@ -338,8 +338,8 @@ type InState = InPart State
 
 
 inPart ::
-   (node -> idx node) -> TimeNode part node -> InPart part idx node
-inPart makeIdx (TimeNode sec edge) = InPart sec (makeIdx edge)
+   (node -> idx node) -> PartNode part node -> InPart part idx node
+inPart makeIdx (PartNode sec edge) = InPart sec (makeIdx edge)
 
 liftInPart ::
    (idx0 node -> idx1 node) ->
@@ -370,8 +370,8 @@ data ForNode idx node = ForNode (idx node) node
    deriving (Show, Eq, Ord)
 
 forNode ::
-   (time -> idx node) -> TimeNode time node -> ForNode idx node
-forNode makeIdx (TimeNode bnd node) =
+   (part -> idx node) -> PartNode part node -> ForNode idx node
+forNode makeIdx (PartNode bnd node) =
    ForNode (makeIdx bnd) node
 
 liftForNode ::
@@ -418,8 +418,8 @@ storageTrans mkIdx s0 s1 n =
 
 storageEdgeFrom, storageEdgeTo ::
    ForNode (StorageEdge sec) node -> AugNode sec node
-storageEdgeFrom (ForNode (StorageEdge sec _) n) = TimeNode (allowExit sec) n
-storageEdgeTo   (ForNode (StorageEdge _ sec) n) = TimeNode (allowInit sec) n
+storageEdgeFrom (ForNode (StorageEdge sec _) n) = PartNode (allowExit sec) n
+storageEdgeTo   (ForNode (StorageEdge _ sec) n) = PartNode (allowInit sec) n
 
 
 

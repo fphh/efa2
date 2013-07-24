@@ -70,13 +70,13 @@ class FormatScalarIndex idx where
 formatBoundaryNode ::
    (Format output, Node.C node) =>
    Idx.BndNode node -> output
-formatBoundaryNode (Idx.TimeNode s n) =
+formatBoundaryNode (Idx.PartNode s n) =
    Format.boundary s `Format.sectionNode` Node.subscript n
 
 formatTimeNode ::
    (Format output, Format.Part part, Node.C node) =>
-   Idx.TimeNode part node -> output
-formatTimeNode (Idx.TimeNode s n) =
+   Idx.PartNode part node -> output
+formatTimeNode (Idx.PartNode s n) =
    Format.part s `Format.sectionNode` Node.subscript n
 
 
@@ -145,7 +145,7 @@ instance FormatSignalIndex Idx.Sum where
    formatSignalIndex (Idx.Sum dir n) s =
       Format.subscript Format.signalSum $
       Format.direction dir `Format.connect`
-         formatTimeNode (Idx.TimeNode s n)
+         formatTimeNode (Idx.PartNode s n)
 
 
 instance FormatScalarIndex Idx.MaxEnergy where
@@ -154,7 +154,7 @@ instance FormatScalarIndex Idx.MaxEnergy where
 instance FormatScalarIndex Idx.Storage where
    formatScalarIndex (Idx.Storage bnd) n =
       Format.subscript Format.storage $
-      formatBoundaryNode (Idx.TimeNode bnd n)
+      formatBoundaryNode (Idx.PartNode bnd n)
 
 instance (Format.Part sec) => FormatScalarIndex (Idx.StEnergy sec) where
    formatScalarIndex (Idx.StEnergy e) = formatStorageEdge Format.Energy e

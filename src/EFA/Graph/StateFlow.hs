@@ -251,7 +251,7 @@ stateFromClassTopo ::
   Idx.State -> ClassifiedTopology node -> StateFlowGraph node
 stateFromClassTopo state =
    Gr.ixmap
-      (Idx.TimeNode (Idx.augment state))
+      (Idx.PartNode (Idx.augment state))
       (TD.FlowEdge . TD.StructureEdge . Idx.InPart state)
 
 

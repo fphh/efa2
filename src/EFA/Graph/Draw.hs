@@ -162,7 +162,7 @@ dotFromSequFlowGraph (rngs, g)
 
         topoNs =
            Map.fromListWith (++) $
-           map (\nl@(Idx.TimeNode s _, _) -> (s, [nl])) $
+           map (\nl@(Idx.PartNode s _, _) -> (s, [nl])) $
            Gr.labNodes g
 
         storageConnections =
@@ -372,9 +372,9 @@ dotFromContentEdge mbefore ns =
   let dotEdge from to =
          DotEdge from to [Viz.Dir Viz.Forward, contentEdgeColour]
   in  concatMap
-         (\(sn@(Idx.TimeNode _sec n), t) ->
+         (\(sn@(Idx.PartNode _sec n), t) ->
             let withBefore f =
-                   foldMap (\before -> f $ Idx.TimeNode before n) mbefore
+                   foldMap (\before -> f $ Idx.PartNode before n) mbefore
                 withCurrent f =
                    foldMap f (Idx.bndNodeFromAugNode sn)
             in  (withBefore $ \from ->
@@ -404,14 +404,14 @@ labelFromString = Viz.Label . Viz.StrLabel . T.pack
 
 
 dotIdentFromSecNode :: (Node.C node) => Idx.SecNode node -> T.Text
-dotIdentFromSecNode (Idx.TimeNode s n) =
+dotIdentFromSecNode (Idx.PartNode s n) =
    T.pack $ "s" ++ dotIdentFromSection s ++ "n" ++ Node.dotId n
 
 dotIdentFromSection :: Idx.Section -> String
 dotIdentFromSection (Idx.Section s) = show s
 
 dotIdentFromAugNode :: (Node.C node) => Idx.AugSecNode node -> T.Text
-dotIdentFromAugNode (Idx.TimeNode b n) =
+dotIdentFromAugNode (Idx.PartNode b n) =
    T.pack $ "s" ++ dotIdentFromAugSection b ++ "n" ++ Node.dotId n
 
 dotIdentFromAugSection :: Idx.AugmentedSection -> String
@@ -419,7 +419,7 @@ dotIdentFromAugSection =
    Idx.switchAugmented "init" "exit" dotIdentFromSection
 
 dotIdentFromBndNode :: (Node.C node) => Idx.BndNode node -> T.Text
-dotIdentFromBndNode (Idx.TimeNode b n) =
+dotIdentFromBndNode (Idx.PartNode b n) =
    T.pack $ "b" ++ dotIdentFromBoundary b ++ "n" ++ Node.dotId n
 
 dotIdentFromBoundary :: Idx.Boundary -> String
@@ -431,7 +431,7 @@ dotIdentFromBoundary (Idx.Following a) =
 dotIdentFromEtaNode ::
    (Node.C node) =>
    Idx.SecNode node -> Idx.SecNode node -> T.Text
-dotIdentFromEtaNode (Idx.TimeNode s x) (Idx.TimeNode _s y) =
+dotIdentFromEtaNode (Idx.PartNode s x) (Idx.PartNode _s y) =
    T.pack $
       "s" ++ dotIdentFromSection s ++
       "x" ++ Node.dotId x ++
@@ -446,7 +446,7 @@ sequFlowGraph ::
 sequFlowGraph topo =
   dotFromSequFlowGraph topo Nothing nshow Nothing
      (HideEtaNode $ const []) (Just $ const [])
-  where nshow _before (Idx.TimeNode _ n, l) = formatTypedNode (n,l)
+  where nshow _before (Idx.PartNode _ n, l) = formatTypedNode (n,l)
 
 
 
@@ -672,7 +672,7 @@ formatNodeStorage ::
    Env.StInSumMap node a ->
    Env.StOutSumMap node a ->
    Maybe Idx.Boundary -> Topo.LDirNode node -> output
-formatNodeStorage opts st sis sos mBeforeBnd (Idx.TimeNode aug nid, ty) =
+formatNodeStorage opts st sis sos mBeforeBnd (Idx.PartNode aug nid, ty) =
    Format.lines $
    Node.display nid :
    Format.words [formatNodeType ty] :
@@ -740,7 +740,7 @@ formatNodeContent ::
    Options output ->
    Env.StorageMap node a ->
    Idx.BndNode node -> output
-formatNodeContent opts st (Idx.TimeNode bnd nid) =
+formatNodeContent opts st (Idx.PartNode bnd nid) =
    lookupFormat opts st $ XIdx.storage bnd nid
 
 
