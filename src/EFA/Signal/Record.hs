@@ -186,11 +186,11 @@ diffTime (Record time signals) = Record (S.delta time) signals
 
 
 dTimePowerRecord ::
-   (V.Zipper v, V.Walker v, V.Singleton v, V.Storage v d, 
+   (V.Zipper v, V.Walker v, V.Singleton v, V.Storage v d,
    BSum d, Fractional d, Num d) =>
    PowerRecord n v d ->
    DTimePowerRecord n v d
-dTimePowerRecord (Record time signals) = 
+dTimePowerRecord (Record time signals) =
   rmap (S.deltaMap (\x y -> (x+y)/2)) $
     Record (S.delta time) signals
 
@@ -667,9 +667,9 @@ distribution rec@(Record _ pMap) xs interval offset = Record classification ener
                               getSig rec) xs
         energyDistribution =  Map.map (S.calcDistributionValues classification) pMap
 
--- | Careful quick hack        
+-- | Careful quick hack
 
-sumFlowRecord :: (V.FromList v, 
+sumFlowRecord :: (V.FromList v,
                   Num d,
                   V.Zipper v,
                   V.Walker v,
@@ -681,7 +681,7 @@ sumFlowRecord (Record time pmap) = Record (S.fromList $ [head $ S.toList time, l
 
 
 {-
-sumFlowRecord :: (V.FromList v, 
+sumFlowRecord :: (V.FromList v,
                   Num d,
                   V.Zipper v,
                   V.Walker v,

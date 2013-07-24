@@ -230,7 +230,7 @@ stepX p1 p2
 
 
 --addZeroCrossings ::(Ord node) => PowerRecord node [] Val -> PowerRecord node [] Val
- 
+
 --addZeroCrossings ::
 --  Record t0 t1 (Typ A T Tt) (Typ A P Tt) id0 [] Double Double ->
 addZeroCrossings ::
@@ -341,7 +341,7 @@ type RSigX a =
 
 
 
-record2RSig :: 
+record2RSig ::
   (V.Transpose v1 v2, V.Storage v1 d, V.Storage v2 (v1 d),
       V.FromList v2, S.TransposeType s1 s2) =>
      Record t s1 t1 typ k v1 t2 d

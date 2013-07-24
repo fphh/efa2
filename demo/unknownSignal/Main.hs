@@ -108,7 +108,7 @@ env =
 
 main :: IO ()
 main = do
-  
+
 
   let seqTopo = constructSeqTopo topoDreibein [0]
 
@@ -126,8 +126,8 @@ main = do
 
   concurrentlyMany_ [
     PlotIO.record "Power Signals" DefaultTerm.cons show id rec,
-    PlotIO.recordList_extract "Power Signals" DefaultTerm.cons show id [(Rec.Name "bla", rec)] 
-                              [ Idx.PPos (Idx.StructureEdge node1 node0), 
+    PlotIO.recordList_extract "Power Signals" DefaultTerm.cons show id [(Rec.Name "bla", rec)]
+                              [ Idx.PPos (Idx.StructureEdge node1 node0),
                                 Idx.PPos (Idx.StructureEdge node1 node2),
                                 Idx.PPos (Idx.StructureEdge node1 node3) ],
 

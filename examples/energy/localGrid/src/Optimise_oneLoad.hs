@@ -50,7 +50,7 @@ gasPower = [0, 0.1 .. 1]
 
 powerScaleWater ::  Double
 powerScaleWater = 5
-  
+
 powerScaleGas ::  Double
 powerScaleGas = 1
 
@@ -58,8 +58,8 @@ powerScaleTransformer ::  Double
 powerScaleTransformer = 1
 
 powerScaleCoal ::  Double
-powerScaleCoal = 1  
-  
+powerScaleCoal = 1
+
 
 varWaterPowerSig :: Sig.PTestRow [] Double
 varWaterPowerSig = Sig.fromList waterPower
@@ -166,7 +166,7 @@ main = do
 
      eRestLocalCharge0 :: Sig.FTestRow2 [] [] Double
      eRestLocalCharge0 = Sig.setType $Sig.map (ModUt.lookupAbsEnergy (XIdx.energy sec0 LocalRest LocalNetwork)) envsCharge
-                       
+
      eGasCharge1 :: Sig.FTestRow2 [] [] Double
      eGasCharge1 = Sig.setType $Sig.map (ModUt.lookupAbsEnergy (XIdx.energy sec1 Gas LocalNetwork)) envsCharge
 
@@ -190,7 +190,7 @@ main = do
 
      eRestLocalDischarge0 :: Sig.FTestRow2 [] [] Double
      eRestLocalDischarge0 = Sig.setType $Sig.map (ModUt.lookupAbsEnergy (XIdx.energy sec0 LocalRest LocalNetwork)) envsDischarge
-                          
+
      eGasDischarge1 :: Sig.FTestRow2 [] [] Double
      eGasDischarge1 = Sig.setType $ Sig.map (ModUt.lookupAbsEnergy (XIdx.energy sec1 Gas LocalNetwork)) envsDischarge
 
@@ -207,22 +207,22 @@ main = do
      etaSysCharge :: Sig.NTestRow2 [] [] Double
      etaSysCharge = eOut Sig../ eIn
        where
-         eOut = (eRestCharge0 Sig..+ (Sig.makeDelta $ eRestCharge1 Sig..+ 
+         eOut = (eRestCharge0 Sig..+ (Sig.makeDelta $ eRestCharge1 Sig..+
                                  (Sig.makeDelta $ eRestLocalCharge0 Sig..+ (Sig.makeDelta eRestLocalCharge1))))
-         eIn = (eGasCharge0 Sig..+ (Sig.makeDelta $ eGasCharge1 Sig..+ 
+         eIn = (eGasCharge0 Sig..+ (Sig.makeDelta $ eGasCharge1 Sig..+
                                (Sig.makeDelta $ eCoalCharge0  Sig..+ (Sig.makeDelta eCoalCharge1))))
 
      etaSysDischarge :: Sig.NTestRow2 [] [] Double
      etaSysDischarge = eOut Sig../ eIn
       where
-        eOut = (eRestDischarge0 Sig..+ (Sig.makeDelta $ eRestDischarge1 Sig..+ 
+        eOut = (eRestDischarge0 Sig..+ (Sig.makeDelta $ eRestDischarge1 Sig..+
                                         (Sig.makeDelta $ eRestLocalDischarge0 Sig..+ (Sig.makeDelta eRestLocalDischarge1))))
-        eIn = (eGasDischarge0 Sig..+ (Sig.makeDelta $ eGasDischarge1 Sig..+ 
+        eIn = (eGasDischarge0 Sig..+ (Sig.makeDelta $ eGasDischarge1 Sig..+
                                   (Sig.makeDelta $ eCoalDischarge0  Sig..+ (Sig.makeDelta eCoalDischarge1))))
-    
+
      etaSysMax::    Sig.NTestRow2 [] [] Double
-     etaSysMax = Sig.zipWith max etaSysCharge etaSysDischarge  
-                
+     etaSysMax = Sig.zipWith max etaSysCharge etaSysDischarge
+
 {-
 maxEtaSysState :: Sig.UTTestRow2 [] [] Double
 maxEtaSysState = Sig.map fromIntegral $ Sig.sigMax2 etaSysCharge etaSysDischarge
@@ -253,64 +253,64 @@ powerLoeDischarge =  Sig.setType $ Sig.map (\x -> gasPower L.!! x) $ indexLoeDis
 -}
 
 
- 
 
- 
+
+
    concurrentlyMany_ $ [
      Draw.xterm $ Draw.topologyWithEdgeLabels System.edgeNamesOpt System.topologyOpt,
-     
+
      putStrLn ("Number of possible flow states: " ++ show (length System.flowStatesOpt)),
-     
+
      Draw.xterm $ Draw.flowTopologies (take 20 System.flowStatesOpt),
-     
+
      Draw.xterm $ Draw.sequFlowGraph System.seqTopoOpt,
 
-     Draw.xterm $ Draw.title "Optimise Charging00" $ 
-     Draw.sequFlowGraphAbsWithEnv System.seqTopoOpt $ 
+     Draw.xterm $ Draw.title "Optimise Charging00" $
+     Draw.sequFlowGraphAbsWithEnv System.seqTopoOpt $
      EqGen.solve System.seqTopoOpt $ Optimisation.givenCharging etaWaterCharge etaCoal etaGas etaTransHL 1 1 0 0,
-     
-     Draw.xterm $ Draw.title "Optimise Charging01" $ 
-     Draw.sequFlowGraphAbsWithEnv System.seqTopoOpt $ 
+
+     Draw.xterm $ Draw.title "Optimise Charging01" $
+     Draw.sequFlowGraphAbsWithEnv System.seqTopoOpt $
      EqGen.solve System.seqTopoOpt $ Optimisation.givenCharging etaWaterCharge etaCoal etaGas etaTransHL 1 1 0 1,
-     
-     Draw.xterm $ Draw.title "Optimise Charging10" $ 
-     Draw.sequFlowGraphAbsWithEnv System.seqTopoOpt $ 
+
+     Draw.xterm $ Draw.title "Optimise Charging10" $
+     Draw.sequFlowGraphAbsWithEnv System.seqTopoOpt $
      EqGen.solve System.seqTopoOpt $ Optimisation.givenCharging etaWaterCharge etaCoal etaGas etaTransHL 1 1 1 0,
-     
-     Draw.xterm $ Draw.title "Optimise Charging11" $ 
-     Draw.sequFlowGraphAbsWithEnv System.seqTopoOpt $ 
+
+     Draw.xterm $ Draw.title "Optimise Charging11" $
+     Draw.sequFlowGraphAbsWithEnv System.seqTopoOpt $
      EqGen.solve System.seqTopoOpt $ Optimisation.givenCharging etaWaterCharge etaCoal etaGas etaTransHL 1 1 1 1,
-     
-     Draw.xterm $ Draw.title "Optimise Discharging00" $ 
-     Draw.sequFlowGraphAbsWithEnv System.seqTopoOpt $ 
+
+     Draw.xterm $ Draw.title "Optimise Discharging00" $
+     Draw.sequFlowGraphAbsWithEnv System.seqTopoOpt $
      EqGen.solve System.seqTopoOpt $ Optimisation.givenDischarging etaWaterCharge etaCoal etaGas etaTransHL 1 1 0 0,
-     
-     Draw.xterm $ Draw.title "Optimise Discharging01" $ 
-     Draw.sequFlowGraphAbsWithEnv System.seqTopoOpt $ 
+
+     Draw.xterm $ Draw.title "Optimise Discharging01" $
+     Draw.sequFlowGraphAbsWithEnv System.seqTopoOpt $
      EqGen.solve System.seqTopoOpt $ Optimisation.givenDischarging etaWaterCharge etaCoal etaGas etaTransHL 1 1 0 1,
-     
-     Draw.xterm $ Draw.title "Optimise Discharging10" $ 
-     Draw.sequFlowGraphAbsWithEnv System.seqTopoOpt $ 
+
+     Draw.xterm $ Draw.title "Optimise Discharging10" $
+     Draw.sequFlowGraphAbsWithEnv System.seqTopoOpt $
      EqGen.solve System.seqTopoOpt $ Optimisation.givenDischarging etaWaterCharge etaCoal etaGas etaTransHL 1 1 1 0,
-     
-     Draw.xterm $ Draw.title "Optimise Discharging11" $ 
-     Draw.sequFlowGraphAbsWithEnv System.seqTopoOpt $ 
+
+     Draw.xterm $ Draw.title "Optimise Discharging11" $
+     Draw.sequFlowGraphAbsWithEnv System.seqTopoOpt $
      EqGen.solve System.seqTopoOpt $ Optimisation.givenDischarging etaWaterCharge etaCoal etaGas etaTransHL 1 1 1 1,
-     
+
      PlotIO.surface "Optimiere Laden - eRestCharge0" DefaultTerm.cons id (const "") varWaterPower varGasPower eRestCharge0,
      PlotIO.surface "Optimiere Laden - eRestCharge1" DefaultTerm.cons id (const "") varWaterPower varGasPower eRestCharge0,
      PlotIO.surface "Optimiere Laden - eRestLocalCharge0" DefaultTerm.cons id (const "") varWaterPower varGasPower eRestLocalCharge0,
      PlotIO.surface "Optimiere Laden - eRestLocalCharge1" DefaultTerm.cons id (const "") varWaterPower varGasPower eRestLocalCharge1,
-     
-     
+
+
      PlotIO.surface "System Efficiency Charging" DefaultTerm.cons id (const "") varWaterPower varGasPower etaSysDischarge,
      PlotIO.surface "System Efficiency Discharging" DefaultTerm.cons id (const "") varWaterPower varGasPower etaSysCharge,
      PlotIO.surface "System Efficiency Charging and Discharging" DefaultTerm.cons id legend varWaterPower varGasPower [etaSysCharge, etaSysDischarge]]
 {-
     PlotIO.surface "Maximum System Efficiency " DefaultTerm.cons id noLegend varWaterPower varGasPower etaSysMax,
     PlotIO.surface "Maximum System Efficiency " DefaultTerm.cons id noLegend varWaterPower varGasPower maxEtaSysState,
-    PlotIO.xy "Efficiency on Loe" DefaultTerm.cons id noLegend varWaterPowerSig [etaLoeCharge, etaLoeDischarge], 
-    PlotIO.xy "Loe Index" DefaultTerm.cons id noLegend varWaterPowerSig [indexLoeChargePlot, indexLoeDischargePlot], 
+    PlotIO.xy "Efficiency on Loe" DefaultTerm.cons id noLegend varWaterPowerSig [etaLoeCharge, etaLoeDischarge],
+    PlotIO.xy "Loe Index" DefaultTerm.cons id noLegend varWaterPowerSig [indexLoeChargePlot, indexLoeDischargePlot],
     PlotIO.xy "Loe GasPower" DefaultTerm.cons id noLegend varWaterPowerSig [powerLoeCharge, powerLoeDischarge]
     ]
 

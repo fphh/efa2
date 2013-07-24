@@ -7,7 +7,9 @@ import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph as Gr
 
 import qualified EFA.Application.Index as XIdx
-import EFA.Application.Utility (makeEdges, select)
+-- import EFA.Application.Utility (makeEdges, select)
+
+import EFA.Application.Utility as AppUt
 
 import EFA.Signal.Record (SigId(..))
 
@@ -29,27 +31,22 @@ instance Node.C Node where
 
 ----------------------------------------------------------------------
 -- * Define System Topology
+
 topology :: TD.Topology Node
-topology = Gr.fromList ns (makeEdges es)
-  where ns = [(Coal, TD.AlwaysSource),
-              (Gas, TD.Source),
-              (Water, TD.storage),
-              (Sun, TD.Source),
-              (Wind, TD.Source),
-              (Network, TD.Crossing),
-              (LocalNetwork,TD.Crossing),
-              (HouseHold, TD.AlwaysSink),
-              (Industry, TD.AlwaysSink)]
+topology = AppUt.makeTopology nodeList edgeList
 
-        --extract edge Info
-        es = map f edgeList
-          where f (n1,n2,_,_,_) = (n1,n2)
+nodeList :: [(Node,TD.NodeType ())]
+nodeList = [(Coal, TD.AlwaysSource),
+            (Gas, TD.Source),
+            (Water, TD.storage),
+            (Sun, TD.Source),
+            (Wind, TD.Source),
+            (Network, TD.Crossing),
+            (LocalNetwork,TD.Crossing),
+            (HouseHold, TD.AlwaysSink),
+            (Industry, TD.AlwaysSink)]
 
-
--- Define Edges with all their Properties
-type EdgeName = String
-
-edgeList :: [(Node, Node, EdgeName, String, String)]
+edgeList :: AppUt.LabeledEdgeList Node
 edgeList = [(Coal, Network, "CoalPlant", "Coal","ElCoal"),
             (Gas, Network,"GasPlant","Gas","ElGas"),
             (Water, Network,"WaterPlant","Water","ElWater"),
@@ -109,7 +106,7 @@ topologyOpt = Gr.fromList ns (makeEdges es)
           where f (n1,n2,_,_,_) = (n1,n2)
 
 
-edgeListOpt :: [(Node, Node, EdgeName, String, String)]
+edgeListOpt :: AppUt.LabeledEdgeList Node
 edgeListOpt = [(Coal, Network, "CoalPlant", "Coal","ElCoal"),
                (Water, Network,"WaterPlant","Water","ElWater"),
                (Network, Rest,"toRest","toRest","toRest"),
@@ -129,5 +126,4 @@ edgeNamesOpt = Map.fromList el
 -- | SequenceTopology for Optimisation
 
 seqTopoOpt :: Flow.RangeGraph Node
---seqTopoOpt = Flow.mkSequenceTopology (ModUt.select flowStatesOpt [5,1])
 seqTopoOpt = Flow.mkSequenceTopology (select flowStatesOpt [4,0])

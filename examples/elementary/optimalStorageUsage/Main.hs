@@ -127,7 +127,7 @@ givenSec0Mean psink _ =
 
 
    (XIdx.eta sec0 crossing sink .= 0.5) :
-   
+
    (XIdx.eta sec0 source crossing .= 0.7) :
 
    (XIdx.eta sec0 crossing storage .= 0.6) :
@@ -169,7 +169,7 @@ givenSec1Mean psink _ =
 
 
 
-etaSys2 :: 
+etaSys2 ::
   (Ord (edge k), Ord k, Show k, Show (edge k), Show t2, Gr.Edge edge) =>
   (t1, Gr.Graph k edge (TD.NodeType t2) edgeLabel) -> t -> a
 etaSys2 (_, topo) _ = trace (show sinks) undefined
@@ -198,7 +198,7 @@ hypotheticalUsage = Sig.fromList [
   3, 2, 3, 4,
   5, 5,
   4, 6, 8, 9, 10, 9,
-  6, 5, 7, 8, 8, 
+  6, 5, 7, 8, 8,
   2, 3 ]
 
 borderFunc ::
@@ -251,24 +251,24 @@ givenEnvHUSec (sec, Sig.TC sig) =
   -- Warunung: Ueberschreibt:
   (XIdx.x sec crossing sink .= D.map (const 0.3) sig) :
 
-  ((EqGen.variable $ XIdx.eta sec crossing sink) =.= 
+  ((EqGen.variable $ XIdx.eta sec crossing sink) =.=
     EqGen.liftF (D.map lookupCrSi) (EqGen.variable $ XIdx.power sec sink crossing)) :
 
 {-
   ((EqGen.variable $ XIdx.eta sec  crossing storage) =.=
-    EqGen.liftF (D.map lookupStCrDown) 
+    EqGen.liftF (D.map lookupStCrDown)
                 (EqGen.variable $ XIdx.power sec storage crossing)) :
 
 -}
 
   -- invertieren!!! TODO!!!
   ((EqGen.variable $ XIdx.eta sec  crossing storage) =.=
-    EqGen.liftF (D.map lookupStCrDown) 
+    EqGen.liftF (D.map lookupStCrDown)
                 (EqGen.variable $ XIdx.power sec crossing storage)) :
 
 
   ((EqGen.variable $ XIdx.eta sec  storage crossing) =.=
-    EqGen.liftF (D.map lookupStCrUp) 
+    EqGen.liftF (D.map lookupStCrUp)
                 (EqGen.variable $ XIdx.power sec crossing storage)) :
 
   ((EqGen.variable $ XIdx.eta sec  source crossing) =.=
@@ -303,20 +303,20 @@ etaSys (_, topo) env = sum sinks / sum sources
         isActiveSource (_, TD.AlwaysSource, ns) = p ns
         isActiveSource (_, TD.Source, ns) = p ns
         isActiveSource _ = False
- 
-        p = (> 0) . 
+
+        p = (> 0) .
             Set.size .
             Set.filter
               (\(TD.FlowEdge (TD.StructureEdge (TIdx.InSection _ e))) -> TD.isActive e)
 
-        sinkEnergies acc 
-          (TD.FlowEdge (TD.StructureEdge (TIdx.InSection sec 
+        sinkEnergies acc
+          (TD.FlowEdge (TD.StructureEdge (TIdx.InSection sec
                        (Gr.EDirEdge (Gr.DirEdge a b))))) =
             acc + lookUp "etaSys" env (XIdx.energy sec b a)
         sinkEnergies = error "etaSys: sinkEnergies"
 
-        sourceEnergies acc 
-          (TD.FlowEdge (TD.StructureEdge (TIdx.InSection sec 
+        sourceEnergies acc
+          (TD.FlowEdge (TD.StructureEdge (TIdx.InSection sec
                        (Gr.EDirEdge (Gr.DirEdge a b))))) =
             acc + lookUp "etaSys" env (XIdx.energy sec a b)
 -}
@@ -340,7 +340,7 @@ etaSysHU ::
     (EqRec.Absolute (Result Double)) ->
   Double
 etaSysHU env =
-  (lu eSinkSec0 + lu eSinkSec1) / (lu eSource) 
+  (lu eSinkSec0 + lu eSinkSec1) / (lu eSource)
   where lu = lookUp "etaSysHU" env
         eSource = XIdx.energy sec0 source crossing
         eSinkSec0 = XIdx.energy sec0 sink crossing
@@ -444,7 +444,7 @@ main = do
 
 
     PlotIO.surface "Test" DefaultTerm.cons f varX varY [etaSys0, etaSys1],
-    PlotIO.surface "Systemwirkungsgrad Entladen" 
+    PlotIO.surface "Systemwirkungsgrad Entladen"
                    DefaultTerm.cons (const "") varX varY etaSys0,
     PlotIO.surface "Systemwirkungsgrad Laden"
                    DefaultTerm.cons (const "") varX varY etaSys1,
