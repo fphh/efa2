@@ -15,8 +15,8 @@ import Modules.System (Node(..))
 import Modules.Optimisation (EnvDouble, sec0,sec1, maxEta, maxOpt,
                             -- calcEtaSys
                             )
-import qualified EFA.Application.Optimisation as ApplOpt -- (maxEta, maxOpt)
-import EFA.Application.Optimisation as ApplOpt (myflip,noflip)
+import qualified EFA.Application.Optimisation as AppOpt -- (maxEta, maxOpt)
+import EFA.Application.Optimisation as AppOpt (etaOverPowerIn,etaOverPowerOut)
 
 import Modules.Utility as ModUt
 -- import Modules.Utility(getEtas, getPowerSignals,select)
@@ -25,6 +25,7 @@ import qualified EFA.Application.EtaSys as ES
 import qualified EFA.Application.Index as XIdx
 import qualified EFA.Application.Absolute as EqGen
 import EFA.Application.Utility (select)
+import qualified EFA.Application.Utility as AppUt
 
 import qualified EFA.Graph.Topology.Index as TIdx
 import qualified EFA.Graph.Topology as TD
@@ -121,24 +122,24 @@ etaAssign ::
   TIdx.Section ->
   Map (XIdx.Eta Node) (String, String, XIdx.Eta Node -> XIdx.Power Node)
 etaAssign sec = Map.fromList $
-  (XIdx.eta sec Water Network, ( "storage", "storage", myflip)) :
-  (XIdx.eta sec Network Water, ( "storage", "storage", noflip)) :
+  (XIdx.eta sec Water Network, ( "storage", "storage", etaOverPowerIn)) :
+  (XIdx.eta sec Network Water, ( "storage", "storage", etaOverPowerOut)) :
 
-  (XIdx.eta sec Coal Network, ( "coal", "coal", myflip)) :
-  (XIdx.eta sec Network Coal, ( "coal", "coal", noflip)) :
+  (XIdx.eta sec Coal Network, ( "coal", "coal", etaOverPowerIn)) :
+  (XIdx.eta sec Network Coal, ( "coal", "coal", etaOverPowerOut)) :
 
-  (XIdx.eta sec Gas LocalNetwork, ( "gas", "gas", myflip)) :
-  (XIdx.eta sec LocalNetwork Gas, ( "gas", "gas", noflip)) :
+  (XIdx.eta sec Gas LocalNetwork, ( "gas", "gas", etaOverPowerIn)) :
+  (XIdx.eta sec LocalNetwork Gas, ( "gas", "gas", etaOverPowerOut)) :
 
 
-  (XIdx.eta sec Network LocalNetwork, ( "transformer", "transformer", myflip)) :
-  (XIdx.eta sec LocalNetwork Network, ( "transformer", "transformer", noflip)) :
+  (XIdx.eta sec Network LocalNetwork, ( "transformer", "transformer", etaOverPowerIn)) :
+  (XIdx.eta sec LocalNetwork Network, ( "transformer", "transformer", etaOverPowerOut)) :
 
-  (XIdx.eta sec LocalNetwork LocalRest, ( "local", "local", myflip)) :
-  (XIdx.eta sec LocalRest LocalNetwork, ( "local", "local", noflip)) :
+  (XIdx.eta sec LocalNetwork LocalRest, ( "local", "local", etaOverPowerIn)) :
+  (XIdx.eta sec LocalRest LocalNetwork, ( "local", "local", etaOverPowerOut)) :
 
-  (XIdx.eta sec Network Rest, ( "rest", "rest", myflip)) :
-  (XIdx.eta sec Rest Network, ( "rest", "rest", noflip)) :
+  (XIdx.eta sec Network Rest, ( "rest", "rest", etaOverPowerIn)) :
+  (XIdx.eta sec Rest Network, ( "rest", "rest", etaOverPowerOut)) :
 
   []
 
@@ -239,9 +240,9 @@ makePics eqs tabEta tabPower socDrive = t
   where t = (state, optWater, optGas, etaSysMax)
         state = Sig.map fromIntegral $ Sig.argMax maxETACharge maxETADischarge
 
-        optWater = ApplOpt.combineOptimalMaps maxEtaSysState
+        optWater = AppOpt.combineOptimalMaps maxEtaSysState
                      powerWaterChargeOpt powerWaterDischargeOpt
-        optGas = ApplOpt.combineOptimalMaps maxEtaSysState
+        optGas = AppOpt.combineOptimalMaps maxEtaSysState
                      powerGasChargeOpt powerGasDischargeOpt
 
         maxEtaSysState :: Sig.UTSignal2 V.Vector V.Vector Double
@@ -279,11 +280,11 @@ makePics eqs tabEta tabPower socDrive = t
         maxETADischarge = Sig.setType $ Sig.map fst $
           Sig.map maxOptDischargeFunc envsDischarge
 
-        envsCharge =  Sig.map (Sig.map ApplOpt.envGetData) $
+        envsCharge =  Sig.map (Sig.map AppUt.envGetData) $
           doubleSweep (Optimisation.solveCharge eqs)
                    etaFunc varWaterPower' varGasPower' varRestPower' varLocalPower'
 
-        envsDischarge = Sig.map (Sig.map ApplOpt.envGetData) $
+        envsDischarge = Sig.map (Sig.map AppUt.envGetData) $
           doubleSweep (Optimisation.solveDischarge eqs)
                    etaFunc varWaterPower' varGasPower' varRestPower' varLocalPower'
 
@@ -403,14 +404,14 @@ main = do
      envsCharge ::
        Sig.UTSignal2 V.Vector V.Vector
          (Sig.UTSignal2 V.Vector V.Vector EnvDouble)
-     envsCharge = Sig.map (Sig.map ApplOpt.envGetData) $
+     envsCharge = Sig.map (Sig.map AppUt.envGetData) $
        doubleSweep (Optimisation.solveCharge eqsys)
                    etaFunc varWaterPower' varGasPower' varRestPower' varLocalPower'
 
      envsDischarge ::
        Sig.UTSignal2 V.Vector V.Vector
          (Sig.UTSignal2 V.Vector V.Vector EnvDouble)
-     envsDischarge = Sig.map (Sig.map ApplOpt.envGetData) $
+     envsDischarge = Sig.map (Sig.map AppUt.envGetData) $
        doubleSweep (Optimisation.solveDischarge eqsys)
                    etaFunc varWaterPower' varGasPower' varRestPower' varLocalPower'
 
@@ -628,8 +629,8 @@ main = do
                   (Sig.getSample2D (Sig.getSample2D envsDischarge (Sig.SignalIdx 1, Sig.SignalIdx 1)) (Sig.SignalIdx 1, Sig.SignalIdx 1)) ]
 
 -}
-   let optGas = ApplOpt.combineOptimalMaps maxEtaSysState powerGasChargeOpt powerGasDischargeOpt
-       optWater = ApplOpt.combineOptimalMaps maxEtaSysState powerWaterChargeOpt powerWaterDischargeOpt
+   let optGas = AppOpt.combineOptimalMaps maxEtaSysState powerGasChargeOpt powerGasDischargeOpt
+       optWater = AppOpt.combineOptimalMaps maxEtaSysState powerWaterChargeOpt powerWaterDischargeOpt
 
 
    concurrentlyMany_ $ [

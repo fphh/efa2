@@ -13,9 +13,8 @@ import EFA.Equation.System((=%%=))
 import qualified EFA.Application.Index as XIdx
 --import qualified EFA.Application.Utility as EqUt
 --import qualified EFA.Application.EtaSys as ES
-import EFA.Application.Absolute ( (.=),
-                              (=.=) )
-  
+import EFA.Application.Absolute ( (.=)) --(=.=) )
+
 
 
 import qualified EFA.Equation.Environment as EqEnv
@@ -25,31 +24,32 @@ import EFA.Equation.Result (Result(..))
 import qualified EFA.Graph.Topology.Index as TIdx
 import qualified EFA.Graph.Flow as Flow
 --import qualified EFA.Graph.Topology.Node as TDNode
-import qualified EFA.Graph.Topology as TD
+--import qualified EFA.Graph.Topology as TD
 
 --import qualified EFA.Signal.SequenceData as SD
 --import qualified EFA.Signal.Record as Record
-import qualified EFA.Signal.Signal as Sig
-import EFA.Signal.Typ(UT,Typ)
-import EFA.Signal.Signal(TC(..))
-import qualified EFA.Signal.Data as Data
+--import qualified EFA.Signal.Signal as Sig
+--import EFA.Signal.Typ(UT,Typ)
+--import EFA.Signal.Signal(TC(..))
+--import qualified EFA.Signal.Data as Data
 --import qualified EFA.Signal.Base as Base
-import qualified EFA.Signal.Vector as SV
+--import qualified EFA.Signal.Vector as SV
 
 import EFA.Signal.Data (Data(..),
-                        Nil,
-                        (:>))
+                        Nil)
+                        --(:>))
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
 
 import qualified Data.Map as Map ; import Data.Map (Map)
 -- import qualified Data.Vector as V
-import qualified Data.Foldable as Fold
-import Data.Monoid (mconcat, (<>))
+--import qualified Data.Foldable as Fold
+import Data.Monoid (mconcat) --, (<>))
 
-import EFA.Application.Utility (makeEdges, select, envGetData)
-import EFA.Application.Optimisation (etaOverPowerIn, etaOverPowerOut,makeEtaFuncGiven)
+import EFA.Application.Utility (envGetData) --makeEdges, select,
+import EFA.Application.Optimisation (etaOverPowerIn, etaOverPowerOut)
+import qualified EFA.Application.Optimisation as AppOpt
 
 sec0, sec1 :: TIdx.Section
 sec0 :~ sec1 :~ _ = Stream.enumFrom $ TIdx.Section 0
@@ -71,36 +71,35 @@ solve ::
   a ->
   a ->
   EnvResult a
-solve seqTopology env sec etaFunc pHouse pNetload pWater pBattery = envGetData $
-  EqGen.solveSimple $
-    EqGen.fromGraph True (TD.dirFromSequFlowGraph (snd seqTopology)) <>
-    given env sec etaFunc (g pHouse) (g pNetload) (g pWater) (g pBattery)
-    where g = Data
+solve seqTopology env sec etaFunc pHouse pNetload pWater pBattery = envGetData $ EqGen.solveSimple $
+    AppOpt.givenForOptimisation seqTopology env etaAssign etaFunc sec
+      commonGiven (givenSecLoad sec (g pHouse) (g pNetload)) (givenSecDOF sec (g pWater) (g pBattery))
+  where g = Data
 
-given ::
-  (Ord a, Fractional a, Show a, EqArith.Sum a) =>
-  Env a->
-  TIdx.Section ->
-  Map String (a -> a) ->
-  Data Nil a ->
-  Data Nil a ->
-  Data Nil a ->
-  Data Nil a ->
-  EqSystemData a
-
-given env sec etaFunc pHouse pNetload pWater pBattery =
-   (((commonGiven <> makeEtaFuncGiven etaAssign sec etaFunc) <>
-   givenAverage env) <>) $
-   mconcat $
+givenSecLoad :: (Eq a, EqArith.Sum a) =>
+                TIdx.Section ->
+                Data Nil a ->
+                Data Nil a ->
+                EqSystemData a
+givenSecLoad sec pHouse pNetload =  mconcat $
    (XIdx.power sec Hausnetz Verteiler .= pHouse) :
    (XIdx.power sec Netzlast Netz .= pNetload) :
+   []
+
+givenSecDOF :: (Eq a, EqArith.Sum a) =>
+                TIdx.Section ->
+               Data Nil a ->
+               Data Nil a ->
+               EqSystemData a
+givenSecDOF sec pWater pBattery =  mconcat $
    (XIdx.power sec Netz Wasser .= pWater) :
    (XIdx.power sec Verteiler Batterie .= pBattery) :
    []
 
+
 commonGiven ::
   (EqArith.Sum a, Num a, Eq a) =>
-  EqGen.EquationSystem System.Node s (Data Nil a) (Data Nil a)
+  EqSystemData a
 commonGiven =
    mconcat $
    (XIdx.dTime sec0 .= Data 1) :
@@ -108,14 +107,6 @@ commonGiven =
    (XIdx.storage TIdx.initial Wasser .= Data 0) :
    (XIdx.energy sec0 Wasser Netz =%%= XIdx.energy sec1 Wasser Netz) :
    []
-
-
--- | TODO -- hier fehlt eine Filterfunktion !!
-givenAverage ::(Eq a, EqArith.Sum a)=>
-               Env a  ->
-               EqSystemData a
-givenAverage env = EqGen.fromEnv env
-
 
 
 etaAssign ::

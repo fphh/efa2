@@ -8,17 +8,17 @@ module EFA.Application.Utility (
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as TD
-import qualified EFA.Graph.Topology.Node as Node
+--import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph as Gr
 
-import qualified EFA.Graph.Topology.Index as TIdx
+--import qualified EFA.Graph.Topology.Index as TIdx
 
 import qualified EFA.Signal.Data as Data
-import EFA.Signal.Data (Data(..))
+--import EFA.Signal.Data (Data(..))
 
 import qualified EFA.Equation.Record as EqRecord
-import qualified EFA.Equation.Arithmetic as EqArith
+--import qualified EFA.Equation.Arithmetic as EqArith
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Result as Result
@@ -40,7 +40,7 @@ import EFA.Report.FormatValue (FormatValue)
 import Data.Monoid ((<>))
 import Data.Map (Map)
 import qualified Data.Map as Map
-import qualified Data.Foldable as Fold
+--import qualified Data.Foldable as Fold
 
 
 

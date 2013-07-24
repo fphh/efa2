@@ -4,7 +4,7 @@ import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as TD
-import qualified EFA.Graph as Gr
+--import qualified EFA.Graph as Gr
 import qualified EFA.Graph.Flow as Flow
 --import qualified EFA.Signal.SequenceData as SD
 --import qualified EFA.Signal.Base as Base
@@ -16,7 +16,7 @@ import qualified EFA.Graph.Flow as Flow
 
 import qualified EFA.Application.Utility as AppUt
 
-import EFA.Application.Utility (makeEdges, select)
+import EFA.Application.Utility (select) -- makeEdges,
 import qualified EFA.Application.Index as XIdx
 
 -- import qualified Modules.Utility as ModUt

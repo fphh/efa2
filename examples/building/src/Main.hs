@@ -3,14 +3,14 @@ module Main where
 
 import qualified Modules.System as System
 import qualified Modules.Optimisation as Optimisation
-import Modules.Optimisation(Env(..),
+--import Modules.Optimisation(Env(..),
                       --      envGetData,
                        --     doubleSweep,
-                            EnvResult)
+import Modules.Optimisation(EnvResult)
 
 
 import qualified EFA.Application.Optimisation as AppOpt
-import qualified EFA.Application.Utility as AppUt
+--import qualified EFA.Application.Utility as AppUt
 
 import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Signal.Signal as Sig
@@ -20,8 +20,8 @@ import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
 import qualified Graphics.Gnuplot.Graph.ThreeDimensional as Graph3D
 
 import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
-import qualified Graphics.Gnuplot.Terminal.PostScript as PostScript
-import qualified Graphics.Gnuplot.Terminal.PNG as PNG
+--import qualified Graphics.Gnuplot.Terminal.PostScript as PostScript
+--import qualified Graphics.Gnuplot.Terminal.PNG as PNG
 
 import qualified EFA.Signal.PlotIO as PlotIO
 import qualified EFA.Signal.Plot as Plot
@@ -31,7 +31,7 @@ import qualified EFA.IO.TableParser as Table
 
 import qualified Data.Map as Map; import Data.Map (Map)
 import qualified Data.Vector as V
-import qualified Data.Vector.Unboxed as UV
+--import qualified Data.Vector.Unboxed as UV
 
 -- | Graphik Optionen
 plotTerm :: DefaultTerm.T
@@ -109,7 +109,7 @@ main = do
 
         envAverage = undefined
 
-        -- | solve the system for all kombinations for a selected section -- muss auf n sektionen erweitert werden 
+        -- | solve the system for all kombinations for a selected section -- muss auf n sektionen erweitert werden
         envs :: Sig.UTSignal2 V.Vector V.Vector
          (Sig.UTSignal2 V.Vector V.Vector (EnvResult Double))
         envs = AppOpt.doubleSweep (Optimisation.solve System.seqTopology envAverage section etaFunctionMap)
