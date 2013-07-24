@@ -240,7 +240,7 @@ type FlowEdge = Topo.FlowEdge Gr.EitherEdge
 type AugNode sec = Idx.PartNode (Idx.Augmented sec)
 
 insEdges ::
-   (Ord sec, Ord node, Ord (FlowEdge (AugNode sec node))) =>
+   (Ord sec, Ord node) =>
    Map node [Idx.StorageEdge sec node] ->
    Topo.FlowGraph sec node ->
    Topo.FlowGraph sec node

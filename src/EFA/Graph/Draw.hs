@@ -1,4 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
 module EFA.Graph.Draw (
   pdf, png, xterm,
   eps, plain, svg,
@@ -311,8 +310,7 @@ dotFromStateGraph mtshow nshow structEShow (current, (es, ns)) =
 
 
 groupEdges ::
-   (Ord (Topo.FlowEdge Gr.EitherEdge (Idx.AugNode part node)),
-    Ord part, Ord node) =>
+   (Ord part, Ord node) =>
    Topo.FlowGraph part node ->
    (Map (Idx.Augmented part) [Idx.InPart part Gr.EitherEdge node],
     [Idx.ForNode (Idx.StorageEdge part) node])

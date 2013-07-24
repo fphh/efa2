@@ -1,7 +1,6 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ExistentialQuantification #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE UndecidableInstances #-}
 module EFA.Graph.Topology (
        NLabel (..), LNode, LDirNode, StNode,
        LEdge, LDirEdge,
@@ -126,7 +125,7 @@ data FlowEdge structEdge augNode =
         (AugNode augNode) =>
            FlowEdge {
               edgeType ::
-                 EdgeType (PartOf augNode) structEdge (NodeOf augNode)
+                 EdgeType (CorePartOf augNode) structEdge (NodeOf augNode)
            }
 
 
@@ -137,50 +136,63 @@ instance Gr.Edge structEdge => Gr.Edge (FlowEdge structEdge) where
    from (FlowEdge e) =
       case e of
          StructureEdge (Idx.InPart sec se) ->
-            secNode sec $ Gr.from se
+            augNode (Idx.augment sec) $ Gr.from se
          StorageEdge (Idx.ForNode (Idx.StorageEdge sec _) node) ->
             augNode (Idx.allowExit sec) node
    to (FlowEdge e) =
       case e of
          StructureEdge (Idx.InPart sec se) ->
-            secNode sec $ Gr.to se
+            augNode (Idx.augment sec) $ Gr.to se
          StorageEdge (Idx.ForNode (Idx.StorageEdge _ sec) node) ->
             augNode (Idx.allowInit sec) node
 
 
 instance
-   (Eq node, Eq (structEdge node)) =>
-      Eq (FlowEdge structEdge (Idx.AugSecNode node)) where
+   (part ~ CorePartOf augNode, node ~ NodeOf augNode,
+    Eq part, Eq node, Eq (structEdge node)) =>
+      Eq (FlowEdge structEdge augNode) where
    (==) = equating edgeType
 
 instance
-   (Ord node, Ord (structEdge node)) =>
-      Ord (FlowEdge structEdge (Idx.AugSecNode node)) where
+   (part ~ CorePartOf augNode, node ~ NodeOf augNode,
+    Ord part, Ord node, Ord (structEdge node)) =>
+      Ord (FlowEdge structEdge augNode) where
    compare = comparing edgeType
 
-instance
-   (Eq node, Eq (structEdge node)) =>
-      Eq (FlowEdge structEdge (Idx.AugStateNode node)) where
-   (==) = equating edgeType
 
-instance
-   (Ord node, Ord (structEdge node)) =>
-      Ord (FlowEdge structEdge (Idx.AugStateNode node)) where
-   compare = comparing edgeType
-
+type CorePartOf part = NoInit (NoExit (PartOf part))
 
 
 class AugNode augNode where
    type PartOf augNode :: *
    type NodeOf augNode :: *
-   secNode :: PartOf augNode -> NodeOf augNode -> augNode
-   augNode :: Idx.Augmented (PartOf augNode) -> NodeOf augNode -> augNode
+   augNode ::
+      Idx.Augmented (CorePartOf augNode) -> NodeOf augNode -> augNode
 
-instance AugNode (Idx.AugNode sec node) where
-   type PartOf (Idx.AugNode sec node) = sec
-   type NodeOf (Idx.AugNode sec node) = node
-   secNode = Idx.PartNode . Idx.augment
-   augNode = Idx.PartNode
+instance
+   (Exit part, Init (NoExit part)) =>
+      AugNode (Idx.PartNode part node) where
+   type PartOf (Idx.PartNode part node) = part
+   type NodeOf (Idx.PartNode part node) = node
+   augNode = Idx.PartNode . absorbExit . fmap absorbInit
+
+
+class Exit part where
+   type NoExit part :: *
+   absorbExit :: Idx.Exit (NoExit part) -> part
+
+instance Exit (Idx.Exit part) where
+   type NoExit (Idx.Exit part) = part
+   absorbExit = id
+
+
+class Init part where
+   type NoInit part :: *
+   absorbInit :: Idx.Init (NoInit part) -> part
+
+instance Init (Idx.Init part) where
+   type NoInit (Idx.Init part) = part
+   absorbInit = id
 
 
 
