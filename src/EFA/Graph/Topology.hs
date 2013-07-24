@@ -51,9 +51,9 @@ import qualified Test.QuickCheck as QC
 
 type LNode a = Gr.LNode (Idx.AugSecNode a) (NodeType ())
 type LEdge a = Gr.LEdge (FlowEdge Gr.EitherEdge) (Idx.AugSecNode a) ()
-type LDirNode a = StNode (Maybe StoreDir) a
+type LDirNode part a = StNode part (Maybe StoreDir) a
 type LDirEdge a = Gr.LEdge Gr.DirEdge (Idx.AugSecNode a) ()
-type StNode store a = Gr.LNode (Idx.AugSecNode a) (NodeType store)
+type StNode part store a = Gr.LNode (Idx.AugNode part a) (NodeType store)
 
 data
    NodeType a =
@@ -270,13 +270,13 @@ classifyStorages =
                 toMaybe (any (isActive . fst) es) cls
          in  fmap (\() -> mplus (maybeDir pre In) (maybeDir suc Out)) nt)
 
-data ViewNodeDir node =
-     ViewNodeIn  (Idx.PartNode Idx.InitOrSection node)
-   | ViewNodeOut (Idx.PartNode Idx.SectionOrExit node)
+data ViewNodeDir part node =
+     ViewNodeIn  (Idx.PartNode (Idx.Init part) node)
+   | ViewNodeOut (Idx.PartNode (Idx.Exit part) node)
 
 viewNodeDir ::
-   (Idx.AugSecNode node, Maybe StoreDir) ->
-   Maybe (ViewNodeDir node)
+   (Idx.AugNode part node, Maybe StoreDir) ->
+   Maybe (ViewNodeDir part node)
 viewNodeDir (node, mdir) =
    flip fmap mdir $ \dir ->
       case dir of
