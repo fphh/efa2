@@ -99,8 +99,9 @@ varBattery, varStorage :: Sig.PSignal2 V.Vector V.Vector Double
 main :: IO()
 main = do
 
-    tabEta <- Table.read "../maps/eta.txt"
+    -- tabEta <- Table.read "../maps/eta.txt"
 --    tabPower <- Table.read "../maps/power.txt"
+    tabEta <- Table.read "../../energy/localGrid/simulation/maps/eta.txt"
 
    -- |Import Efficiency Curves
     let etaFunctionMap = CT.makeEtaFunctions2D scaleTableEta tabEta

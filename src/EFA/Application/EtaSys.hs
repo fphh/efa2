@@ -2,6 +2,7 @@
 module EFA.Application.EtaSys where
 
 import qualified EFA.Application.Index as XIdx
+import qualified EFA.Application.Utility as AppUt
 
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Environment as EqEnv
@@ -88,6 +89,10 @@ etaSys (_, topo) env = liftA2 (/) (sumRes sinks) (sumRes sources)
             Just $ lookupAbsEnergy "etaSys, sourceEnergies" env (XIdx.energy sec a b)
         sourceEnergies _ = Nothing
 
+--detEtaSys :: Flow.RangeGraph Node -> EnvDouble -> Double
+detEtaSys topo = AppUt.checkDetermined "detEtaSys" . etaSys topo
+
+-------------------------------------------------------------
 
 type Balance node a = Map node a
 

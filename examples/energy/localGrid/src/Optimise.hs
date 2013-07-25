@@ -12,10 +12,8 @@ import qualified Modules.System as System
 import qualified Modules.Optimisation as Optimisation
 import qualified Modules.Analysis as Analysis
 import Modules.System (Node(..))
-import Modules.Optimisation (EnvDouble, sec0,sec1, maxEta, maxOpt,
-                            -- calcEtaSys
-                            )
-import qualified EFA.Application.Optimisation as AppOpt -- (maxEta, maxOpt)
+import Modules.Optimisation (EnvDouble, sec0,sec1, maxEta, optimalSolution, SocDrive(..), lookupDetPower, condition, penalty )
+import qualified EFA.Application.Optimisation as AppOpt -- (maxEta, optimalSolution)
 import EFA.Application.Optimisation as AppOpt (etaOverPowerIn,etaOverPowerOut)
 
 import Modules.Utility as ModUt
@@ -225,7 +223,17 @@ doubleSweep func etaFunc varOptX varOptY varX varY=
         yo = mm varOptY
         mm = map (map Data)
 
+maxOptChargeFunc, maxOptDischargeFunc ::
+  Double ->
+  Sig.UTSignal2 V.Vector V.Vector EnvDouble ->
+  (Double, EnvDouble)
+maxOptChargeFunc socDrive =
+  maybe (error "maxOptChargeFunc") id .
+  optimalSolution condition (penalty $ ChargeDrive socDrive) System.seqTopoOpt
 
+maxOptDischargeFunc socDrive = 
+  maybe (error "maxOptDischargeFunc") id .
+  optimalSolution condition (penalty $ DischargeDrive socDrive) System.seqTopoOpt
 
 makePics ::
   (forall s. EqGen.EquationSystem Node s (Data Nil Double) (Data Nil Double)) ->
@@ -238,6 +246,10 @@ makePics ::
     Sig.NSignal2 V.Vector V.Vector Double )
 makePics eqs tabEta tabPower socDrive = t
   where t = (state, optWater, optGas, etaSysMax)
+
+        chargeFunc = maxOptChargeFunc socDrive
+        dischargeFunc = maxOptDischargeFunc socDrive
+
         state = Sig.map fromIntegral $ Sig.argMax maxETACharge maxETADischarge
 
         optWater = AppOpt.combineOptimalMaps maxEtaSysState
@@ -245,42 +257,40 @@ makePics eqs tabEta tabPower socDrive = t
         optGas = AppOpt.combineOptimalMaps maxEtaSysState
                      powerGasChargeOpt powerGasDischargeOpt
 
-        maxEtaSysState :: Sig.UTSignal2 V.Vector V.Vector Double
+        --maxEtaSysState :: Sig.UTSignal2 V.Vector V.Vector Double
         maxEtaSysState = Sig.map fromIntegral $
           Sig.argMax maxETACharge maxETADischarge
 
-        etaSysMax :: Sig.NSignal2 V.Vector V.Vector Double
+        --etaSysMax :: Sig.NSignal2 V.Vector V.Vector Double
         etaSysMax = Sig.zipWith max maxETACharge maxETADischarge
 
-        powerWaterChargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
+        --powerWaterChargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
         powerWaterChargeOpt = Sig.setType $
-          Sig.map (ModUt.lookupAbsPower (XIdx.power sec0 Network Water)) envsChargeOpt
+          Sig.map (lookupDetPower $ XIdx.power sec0 Network Water) envsChargeOpt
 
 
-        powerWaterDischargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
+        --powerWaterDischargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
         powerWaterDischargeOpt = Sig.setType $
-          Sig.map (ModUt.lookupAbsPower (XIdx.power sec1 Network Water)) envsDischargeOpt
+          Sig.map (lookupDetPower $ XIdx.power sec1 Network Water) envsDischargeOpt
 
-        powerGasChargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
+        -- powerGasChargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
         powerGasChargeOpt = Sig.setType $
-          Sig.map (ModUt.lookupAbsPower (XIdx.power sec0 LocalNetwork Gas))
-                  envsChargeOpt
+          Sig.map (lookupDetPower $ XIdx.power sec0 LocalNetwork Gas) envsChargeOpt
 
 
-        powerGasDischargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
+        --powerGasDischargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
         powerGasDischargeOpt = Sig.setType $
-          Sig.map (ModUt.lookupAbsPower (XIdx.power sec1 LocalNetwork Gas))
-                  envsDischargeOpt
+          Sig.map (lookupDetPower $ XIdx.power sec1 LocalNetwork Gas) envsDischargeOpt
 
-        maxETACharge :: Sig.NSignal2 V.Vector V.Vector Double
+        --maxETACharge :: Sig.NSignal2 V.Vector V.Vector Double
         maxETACharge = Sig.setType $ Sig.map fst $
-          Sig.map maxOptChargeFunc envsCharge
+          Sig.map chargeFunc envsCharge
 
-        maxETADischarge :: Sig.NSignal2 V.Vector V.Vector Double
+        --maxETADischarge :: Sig.NSignal2 V.Vector V.Vector Double
         maxETADischarge = Sig.setType $ Sig.map fst $
-          Sig.map maxOptDischargeFunc envsDischarge
+          Sig.map dischargeFunc envsDischarge
 
-        envsCharge =  Sig.map (Sig.map AppUt.envGetData) $
+        envsCharge = Sig.map (Sig.map AppUt.envGetData) $
           doubleSweep (Optimisation.solveCharge eqs)
                    etaFunc varWaterPower' varGasPower' varRestPower' varLocalPower'
 
@@ -288,12 +298,9 @@ makePics eqs tabEta tabPower socDrive = t
           doubleSweep (Optimisation.solveDischarge eqs)
                    etaFunc varWaterPower' varGasPower' varRestPower' varLocalPower'
 
-        maxOptChargeFunc = maxOpt System.seqTopoOpt True socDrive
-        maxOptDischargeFunc = maxOpt System.seqTopoOpt False socDrive
+        envsChargeOpt = Sig.map snd $ Sig.map chargeFunc envsCharge
 
-        envsChargeOpt = Sig.map snd $ Sig.map maxOptChargeFunc envsCharge
-
-        envsDischargeOpt = Sig.map snd $ Sig.map maxOptDischargeFunc envsDischarge
+        envsDischargeOpt = Sig.map snd $ Sig.map dischargeFunc envsDischarge
 
         etaFunc = CT.makeEtaFunctions2D scaleTableEta tabEta
 
@@ -415,24 +422,17 @@ main = do
        doubleSweep (Optimisation.solveDischarge eqsys)
                    etaFunc varWaterPower' varGasPower' varRestPower' varLocalPower'
 
-     -- | Get maximum Efficiency Envelope for charge and discharge
-     --maxETACharge :: Sig.NSignal2 V.Vector V.Vector Double
-     --maxETACharge = Sig.setType $ Sig.map fst $ Sig.map maxEta envsCharge
-
-     --maxETADischarge :: Sig.NSignal2 V.Vector V.Vector Double
-     --maxETADischarge = Sig.setType $ Sig.map fst $ Sig.map maxEta envsDischarge
-
      socDrive = 0.0
-     maxOptChargeFunc = maxOpt System.seqTopoOpt True socDrive
-     maxOptDischargeFunc = maxOpt System.seqTopoOpt False socDrive
+     chargeFunc = maxOptChargeFunc socDrive
+     dischargeFunc = maxOptDischargeFunc socDrive
 
      maxETACharge :: Sig.NSignal2 V.Vector V.Vector Double
      maxETACharge = Sig.setType $ Sig.map fst $
-      Sig.map maxOptChargeFunc envsCharge
+      Sig.map chargeFunc envsCharge
 
      maxETADischarge :: Sig.NSignal2 V.Vector V.Vector Double
      maxETADischarge = Sig.setType $ Sig.map fst $
-       Sig.map maxOptDischargeFunc envsDischarge
+       Sig.map dischargeFunc envsDischarge
 
 
 
@@ -448,44 +448,44 @@ main = do
 
      -- | Get the correspondig optimal envs for both states
 
-     envsChargeOpt :: Sig.UTSignal2 V.Vector V.Vector (Maybe EnvDouble)
-     envsChargeOpt = Sig.map snd $ Sig.map maxOptChargeFunc envsCharge
+     envsChargeOpt :: Sig.UTSignal2 V.Vector V.Vector EnvDouble
+     envsChargeOpt = Sig.map snd $ Sig.map chargeFunc envsCharge
 
-     envsDischargeOpt :: Sig.UTSignal2 V.Vector V.Vector (Maybe EnvDouble)
-     envsDischargeOpt = Sig.map snd $ Sig.map maxOptDischargeFunc envsDischarge
+     envsDischargeOpt :: Sig.UTSignal2 V.Vector V.Vector EnvDouble
+     envsDischargeOpt = Sig.map snd $ Sig.map dischargeFunc envsDischarge
 
 
      powerGasChargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
      powerGasChargeOpt = Sig.setType $
-       Sig.map (ModUt.lookupAbsPower (XIdx.power sec0 LocalNetwork Gas)) envsChargeOpt
+       Sig.map (lookupDetPower $ XIdx.power sec0 LocalNetwork Gas) envsChargeOpt
 
      powerWaterChargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
      powerWaterChargeOpt = Sig.setType $
-       Sig.map (ModUt.lookupAbsPower (XIdx.power sec0 Network Water)) envsChargeOpt
+       Sig.map (lookupDetPower $ XIdx.power sec0 Network Water) envsChargeOpt
 
      powerGasDischargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
      powerGasDischargeOpt = Sig.setType $
-       Sig.map (ModUt.lookupAbsPower (XIdx.power sec1 LocalNetwork Gas)) envsDischargeOpt
+       Sig.map (lookupDetPower $ XIdx.power sec1 LocalNetwork Gas) envsDischargeOpt
 
      powerWaterDischargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
      powerWaterDischargeOpt = Sig.setType $
-       Sig.map (ModUt.lookupAbsPower (XIdx.power sec1 Network Water)) envsDischargeOpt
+       Sig.map (lookupDetPower $ XIdx.power sec1 Network Water) envsDischargeOpt
 
      powerTransformerChargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
      powerTransformerChargeOpt = Sig.setType $
-       Sig.map (ModUt.lookupAbsPower (XIdx.power sec0 Network LocalNetwork)) envsChargeOpt
+       Sig.map (lookupDetPower $ XIdx.power sec0 Network LocalNetwork) envsChargeOpt
 
      powerTransformerDischargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
      powerTransformerDischargeOpt = Sig.setType $
-       Sig.map (ModUt.lookupAbsPower (XIdx.power sec1 Network LocalNetwork)) envsDischargeOpt
+       Sig.map (lookupDetPower $ XIdx.power sec1 Network LocalNetwork) envsDischargeOpt
 
      powerTransformerChargeOptLV :: Sig.PSignal2 V.Vector V.Vector Double
      powerTransformerChargeOptLV = Sig.setType $
-       Sig.map (ModUt.lookupAbsPower (XIdx.power sec0 LocalNetwork Network)) envsChargeOpt
+       Sig.map (lookupDetPower $ XIdx.power sec0 LocalNetwork Network) envsChargeOpt
 
      powerTransformerDischargeOptLV :: Sig.PSignal2 V.Vector V.Vector Double
      powerTransformerDischargeOptLV = Sig.setType $
-       Sig.map (ModUt.lookupAbsPower (XIdx.power sec1 LocalNetwork Network)) envsDischargeOpt
+       Sig.map (lookupDetPower $ XIdx.power sec1 LocalNetwork Network) envsDischargeOpt
 
      ------------------------------------------------------------------------------------------
      -- | Start Simulation Here
