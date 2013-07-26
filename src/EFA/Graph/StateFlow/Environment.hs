@@ -115,6 +115,24 @@ formatMap =
    map (uncurry formatAssign) . Map.toList
 
 
+instance
+   (Node.C node, FormatValue b, FormatValue a) =>
+      FormatValue (Complete node b a) where
+   formatValue (Complete (Scalar se sx sis sos) (Signal e p n dt x s)) =
+      Format.lines $
+         formatMap e ++
+         formatMap se ++
+         formatMap p ++
+         formatMap n ++
+         formatMap dt ++
+         formatMap x ++
+         formatMap sx ++
+         formatMap s ++
+         formatMap sis ++
+         formatMap sos ++
+         []
+
+
 
 
 type Element idx a v = PartElement (Environment idx) a v
