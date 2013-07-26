@@ -139,12 +139,12 @@ combineOptimalMaps state charge discharge =
 -- | Function to specifiy that an efficiency function in etaAssign is to be looked up with input power
 etaOverPowerIn :: XIdx.Eta node -> XIdx.Power node
 etaOverPowerIn =
-   TIdx.liftInSection $ \(TIdx.Eta e) -> TIdx.Power e
+   TIdx.liftInSection $ \(TIdx.Eta e) -> TIdx.Power $ TIdx.flip e
 
 -- | Function to specifiy that an efficiency function in etaAssign is to be looked up with output power
 etaOverPowerOut :: XIdx.Eta node -> XIdx.Power node
 etaOverPowerOut =
-   TIdx.liftInSection $ \(TIdx.Eta e) -> TIdx.Power $ TIdx.flip e
+   TIdx.liftInSection $ \(TIdx.Eta e) -> TIdx.Power e
 
 
 type EtaAssignMap node =

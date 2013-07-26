@@ -247,8 +247,7 @@ type Condition = EnvDouble -> Bool
 
 condition :: EqEnv.Complete Node b (Result Double) -> Bool
 condition env = all (>0) [eCoal0, eCoal1, eTrans0, eTrans1]
-  where eCoal      = lookupDetEnergy (XIdx.energy sec0 Coal Network) env
-        eCoal0     = lookupDetEnergy (XIdx.energy sec0 Coal Network) env
+  where eCoal0     = lookupDetEnergy (XIdx.energy sec0 Coal Network) env
         eCoal1     = lookupDetEnergy (XIdx.energy sec1 Coal Network) env
         eTrans0    = lookupDetEnergy (XIdx.energy sec0 Network LocalNetwork) env
         eTrans1    = lookupDetEnergy (XIdx.energy sec1 Network LocalNetwork) env
