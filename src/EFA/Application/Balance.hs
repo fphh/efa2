@@ -1,6 +1,6 @@
+-- | Import as Balance
 
 module EFA.Application.Balance where
--- | Import as Balance
 
 import qualified Data.Map as Map ; import Data.Map (Map)
 import qualified EFA.Graph.Topology.Index as Idx
