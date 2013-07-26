@@ -123,6 +123,7 @@ Library
     EFA.Application.Index
     EFA.Application.Tree
     EFA.Application.EtaSys
+    EFA.Application.Optimisation
 
 
 -- sollte man auf Cabal-Test umstellen,
@@ -251,6 +252,27 @@ Executable optimise-energy
     Modules.Signals
     Modules.System
     Modules.Analysis
+  GHC-Options: -Wall
+  If flag(buildExamples)
+    Build-Depends:
+      efa,
+      gnuplot,
+      graphviz,
+      utility-ht,
+      containers,
+      non-empty,
+      filepath,
+      vector,
+      base
+  Else
+    Buildable: False
+
+Executable example-building
+  Hs-Source-Dirs: examples/building/src
+  Main-Is: Main.hs
+  Other-Modules:
+    Modules.System
+    Modules.Optimisation
   GHC-Options: -Wall
   If flag(buildExamples)
     Build-Depends:

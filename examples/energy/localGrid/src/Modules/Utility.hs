@@ -23,18 +23,6 @@ import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Map as Map ; import Data.Map (Map)
 
 
-lookupAbsPower ::
-  (Ord node, Show d, Show node,Num d,Fractional d) =>
-  XIdx.Power node ->
-  Maybe (EqEnv.Complete node b (Result d)) -> d
-lookupAbsPower n = maybe (-1000) f
-  where f env = case checkedLookup "Modules.Utility.lookupAbsPower"
-                     (EqEnv.powerMap $ EqEnv.signal env) n of
-                    Determined x -> x
-                    Undetermined -> error $ "Modules.Utility.lookupAbsPower - not determined : " ++ show n
-
-
-
 -- | Warning -- only works for one section in env
 envToPowerRecord :: EqEnv.Complete
                       System.Node

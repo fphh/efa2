@@ -420,7 +420,6 @@ difference ::
 difference =
    lift2 scalarDifference signalDifference
 
-
 signalFilter ::
    Ord node =>
    (a -> Bool) -> Signal node a -> Signal node a
@@ -439,3 +438,14 @@ filter ::
    Complete node a v
 filter f g (Complete scalar0 signal0) =
    Complete (scalarFilter f scalar0) (signalFilter g signal0)
+
+signalFilterWithKey ::
+   Ord node =>
+   (forall k. k -> a -> Bool) -> Signal node a -> Signal node a
+signalFilterWithKey f = signalLift1 (Map.filterWithKey f)
+
+scalarFilterWithKey ::
+   Ord node =>
+   (forall k. k -> a -> Bool) -> Scalar node a -> Scalar node a
+scalarFilterWithKey f = scalarLift1 (Map.filterWithKey f)
+

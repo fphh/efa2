@@ -12,9 +12,10 @@ import qualified Modules.System as System
 import qualified Modules.Optimisation as Optimisation
 import qualified Modules.Analysis as Analysis
 import Modules.System (Node(..))
-import Modules.Optimisation (EnvDouble, sec0,sec1, maxEta, maxOpt,
-                            -- calcEtaSys
-                            )
+import Modules.Optimisation (EnvDouble, sec0,sec1, maxEta, optimalSolution, SocDrive(..), lookupDetPower, condition, penalty )
+import qualified EFA.Application.Optimisation as AppOpt -- (maxEta, optimalSolution)
+import EFA.Application.Optimisation as AppOpt (etaOverPowerIn,etaOverPowerOut)
+
 import Modules.Utility as ModUt
 -- import Modules.Utility(getEtas, getPowerSignals,select)
 
@@ -22,6 +23,7 @@ import qualified EFA.Application.EtaSys as ES
 import qualified EFA.Application.Index as XIdx
 import qualified EFA.Application.Absolute as EqGen
 import EFA.Application.Utility (select)
+import qualified EFA.Application.Utility as AppUt
 
 import qualified EFA.Graph.Topology.Index as TIdx
 import qualified EFA.Graph.Topology as TD
@@ -44,7 +46,7 @@ import qualified EFA.Signal.Signal as Sig
 import EFA.Signal.Sequence (makeSeqFlowTopology, addZeroCrossings, genSequ,)
 import EFA.Signal.Signal (TC,Scalar)
 import EFA.Signal.Data (Data(..), Nil, (:>), getData)
-import EFA.Signal.Typ (Typ, F, T, A, Tt)
+import EFA.Signal.Typ (Typ, F, T, A, Tt,UT)
 
 import EFA.Utility.Async (concurrentlyMany_)
 import EFA.Report.Report(report,ROpt(..))
@@ -84,199 +86,18 @@ colours = [ Colors.White,
             Colors.Gray80,	
             Colors.Gray70 ]
 
-{-
-<<<<<<< HEAD
-
-restPower :: [Double]
-restPower = [1,2 .. 5]
-
-localPower :: [Double]
-localPower = [1, 2 .. 6]
-
-sec0, sec1 :: TIdx.Section
-sec0 :~ sec1 :~ _ = Stream.enumFrom $ TIdx.Section 0
-
-varX', varY' :: [[Double]]
-(varX', varY') = Table.varMat restPower localPower
-
-varX :: Sig.PSignal2 [] [] Double
-varX = Sig.fromList2 varX'
-
-varY :: Sig.PSignal2 [] [] Double
-varY = Sig.fromList2 varY'
-
--- | Defining the given Variables
-
-lookupEtaWaterCharge ::
-  EqGen.Expression node s a v Double ->
-  EqGen.Expression node s a v Double
-lookupEtaWaterCharge = EqGen.liftF f
-  where f = Sig.fromSample . Sig.interp1Lin "lookupEtaWaterCharge" xs ys . Sig.toSample
-        xs, ys :: Sig.UTSignal [] Double
-        xs = Sig.fromList [0 .. 30]
-        ys = Sig.fromList [0.50, 0.51 .. 0.8]
-
-lookupEtaWaterDisCharge ::
-  EqGen.Expression node s a v Double ->
-  EqGen.Expression node s a v Double
-lookupEtaWaterDisCharge = EqGen.liftF f
-  where f = Sig.fromSample . Sig.interp1Lin "lookupEtaWaterDisCharge" xs ys . Sig.toSample
-        xs, ys :: Sig.UTSignal [] Double
-        xs = Sig.fromList [0 .. 30]
-        ys = Sig.fromList [0.50, 0.51 .. 0.8]
-
-lookupEtaCoal ::
-  EqGen.Expression node s a v Double ->
-  EqGen.Expression node s a v Double
-lookupEtaCoal = EqGen.liftF f
-  where f = Sig.fromSample . Sig.interp1Lin "lookupEtaCoal" xs ys . Sig.toSample
-        xs, ys :: Sig.UTSignal [] Double
-        xs = Sig.fromList [0 .. 30]
-        ys = Sig.fromList [0.50, 0.51 .. 0.8]
-
-lookupEtaGas ::
-  EqGen.Expression node s a v Double ->
-  EqGen.Expression node s a v Double
-lookupEtaGas = EqGen.liftF f
-  where f = Sig.fromSample . Sig.interp1Lin "lookupEtaGas" xs ys . Sig.toSample
-        xs, ys :: Sig.UTSignal [] Double
-        xs = Sig.fromList [0 .. 30]
-        ys = Sig.fromList [0.50, 0.51 .. 0.8]
-
-lookupEtaTransformerHL ::
-  EqGen.Expression node s a v Double ->
-  EqGen.Expression node s a v Double
-lookupEtaTransformerHL = EqGen.liftF f
-  where f = Sig.fromSample . Sig.interp1Lin "lookupEtaTransformerHL" xs ys . Sig.toSample
-        xs, ys :: Sig.UTSignal [] Double
-        xs = Sig.fromList [0 .. 30]
-        ys = Sig.fromList [0.50, 0.51 .. 0.8]
-
--- | Defining the given Variables
-
-commonGiven :: EqGen.EquationSystem System.Node s Double Double
-commonGiven =
-   mconcat $
-   (XIdx.dTime sec0 .= 1) :
-   (XIdx.dTime sec1 .= 1) :
-   (XIdx.storage TIdx.initial Water .= 0) :
-   (XIdx.energy sec0 Water Network  %= XIdx.energy sec1 Water Network) :
-   []
-
-givenOptimiseCharging :: Double -> Double -> Double -> Double -> EqGen.EquationSystem System.Node s Double Double
-givenOptimiseCharging pRest pRestLocal pCoal pGas =
-   (commonGiven <>) $
-   mconcat $
-
-   -- Actual Section 0 Charhing to be varied and optimised
-   (XIdx.power sec0 Rest Network .= pRest) :
-   (XIdx.power sec0 LocalRest LocalNetwork .= pRestLocal) :
-   (XIdx.power sec0 Coal Network .= pCoal) :
-   (XIdx.power sec0 Gas LocalNetwork .= pGas) :
-   ((EqGen.variable $ XIdx.eta sec0 Network Water) =.=
-     lookupEtaWaterCharge (EqGen.variable $ XIdx.power sec0 Network Water)) :
-   ((EqGen.variable $ XIdx.eta sec0 Coal Network) =.=
-     lookupEtaCoal (EqGen.variable $ XIdx.power sec0 Coal Network)) :
-   ((EqGen.variable $ XIdx.eta sec0 Gas LocalNetwork) =.=
-     lookupEtaGas (EqGen.variable $ XIdx.power sec0 Gas LocalNetwork)) :
-   ((EqGen.variable $ XIdx.eta sec0 Network LocalNetwork) =.=
-     lookupEtaTransformerHL (EqGen.variable $ XIdx.power sec0 LocalNetwork Network)) :
-    (XIdx.eta sec0 Network Rest .= 1.0) :
-   (XIdx.eta sec0 LocalNetwork LocalRest .= 1.0) :
-
-   -- Average Section 1 discharging
-   (XIdx.eta sec1 Network Rest .= 1.0) :
-   (XIdx.eta sec1 LocalNetwork LocalRest .= 1.0) :
-   (XIdx.eta sec1 Network LocalNetwork .= 0.8) :
-   (XIdx.eta sec1 Coal Network .= 0.4) :
-   (XIdx.eta sec1 Gas LocalNetwork .= 0.4) :
-   (XIdx.eta sec1 Water Network .= 0.4) :
-   (XIdx.eta sec1 Network Water .= 0.4) :
---   (XIdx.x sec1 Network Coal .= 0.7) :
-   (XIdx.x sec1 Network Water .= 0.7) :
---   (XIdx.x sec1 LocalNetwork Gas .= 0) :
-   (XIdx.x sec1 LocalNetwork Network .= 1.0) :
-   (XIdx.x sec1 Network LocalNetwork .= 0.5) :
-
-   []
-
-givenOptimiseDischarging :: Double -> Double -> Double -> Double -> EqGen.EquationSystem System.Node s Double Double
-givenOptimiseDischarging pRest pRestLocal pCoal pGas =
-   (commonGiven <>) $
-   mconcat $
-
-   -- Actual Section 1 discharging to be varied and optimised
-   (XIdx.power sec1 Rest Network .= pRest) :
-   (XIdx.power sec1 LocalRest LocalNetwork .= pRestLocal) :
-   (XIdx.power sec1 Coal Network .= pCoal) :
-   (XIdx.power sec1 Gas LocalNetwork .= pGas) :
-   ((EqGen.variable $ XIdx.eta sec1 Water Network) =.=
-     lookupEtaWaterDisCharge (EqGen.variable $ XIdx.power sec1 Network Water)) :
-   ((EqGen.variable $ XIdx.eta sec1 Coal Network) =.=
-     lookupEtaCoal (EqGen.variable $ XIdx.power sec1 Coal Network)) :
-   ((EqGen.variable $ XIdx.eta sec1 Gas LocalNetwork) =.=
-     lookupEtaGas (EqGen.variable $ XIdx.power sec1 Gas LocalNetwork)) :
-   ((EqGen.variable $ XIdx.eta sec1 Network LocalNetwork) =.=
-     lookupEtaTransformerHL (EqGen.variable $ XIdx.power sec1 LocalNetwork Network)) :
-   (XIdx.eta sec1 Network Rest .= 1.0) :
-   (XIdx.eta sec1 LocalNetwork LocalRest .= 1.0) :
-
-   -- Average Section 0 discharging
-   (XIdx.eta sec0 Network Rest .= 1.0) :
-   (XIdx.eta sec0 LocalNetwork LocalRest .= 1.0) :
-   (XIdx.eta sec0 Coal Network .= 0.4) :
-   (XIdx.eta sec0 Gas LocalNetwork .= 0.4) :
-   (XIdx.eta sec0 Water Network .= 0.4) :
-   (XIdx.eta sec0 Network Water .= 0.4) :
-   (XIdx.eta sec0 Network LocalNetwork .= 0.8) :
-   (XIdx.x sec0 Network Water .= 0.2) :
-   (XIdx.x sec0 Coal Network .= 0.5) :
-   (XIdx.x sec0 LocalNetwork Network .= 1.0) :
-   (XIdx.x sec0 Network LocalNetwork .= 0.5) :
-
-   []
-
-etaSys :: EnvDouble -> Double
-etaSys env =
-  (lk eRest0 + lk eRest1 + lk eRestLocal0 + lk eRestLocal1) / (lk eGas0 + lk eGas1 + lk eCoal0 + lk eCoal1)
-  where
-        lk n = case checkedLookup (EqEnv.energyMap $ EqEnv.signal env) n of
-                  EqRec.Absolute (Determined x) -> x
-                  _ -> error "not determined"
-        eCoal0  =  (XIdx.energy sec0 Coal Network)
-        eGas0  =  (XIdx.energy sec0 Gas LocalNetwork)
-        eRest0  =  (XIdx.energy sec0 Network Rest)
-        eRestLocal0  =  (XIdx.energy sec0 LocalNetwork LocalRest)
-
-        eCoal1  =  (XIdx.energy sec1 Coal Network)
-        eGas1 =  (XIdx.energy sec1 Gas LocalNetwork)
-        eRest1  =  (XIdx.energy sec1 Network Rest)
-        eRestLocal1  =  (XIdx.energy sec1 LocalNetwork LocalRest)
-           --  | otherwise = error "not found"
-
-select :: [topo] -> [Int] -> SD.SequData topo
-select ts = SD.fromList . map (ts !!)
-
-seqTopo :: Flow.RangeGraph Node
-seqTopo = Flow.sequenceGraph (select System.flowStatesOpt [4,0])
-
-solveCharge :: Double -> Double -> Double -> Double -> Double
-solveCharge w x y z = etaSys $ EqGen.solve seqTopo $ givenOptimiseCharging w x y z
-
-solveDischarge :: Double -> Double -> Double -> Double -> Double
-solveDischarge w x y z = etaSys $ EqGen.solve seqTopo $ givenOptimiseDischarging w x y z
-
--- envsCharge =
-
-etaSysCharge, etaSysDischarge :: Sig.NSignal2 [] [] Double
-etaSysCharge = Sig.fromList2 $ zipWith (zipWith (solveCharge 10 10)) varX' varY'
-etaSysDischarge = Sig.fromList2 $ zipWith (zipWith (solveDischarge 10 10)) varX' varY'
-=======
--}
+frameOpts ::
+  Opts.T (Graph3D.T Double Double Double) ->
+  Opts.T (Graph3D.T Double Double Double)
+frameOpts =
+  Plot.heatmap .
+  Plot.xyzrange3d (0.2, 2) (0.3, 3.3) (0, 1) .
+  -- Plot.cbrange (0.2, 1) .
+  Plot.xyzlabel "Rest Power [W]" "Local Power [W]" "" .
+  Plot.paletteGH
 
 noLegend :: Int -> String
 noLegend =  (const "")
--- >>>>>>> philipp_neu
 
 legend :: Int -> String
 legend 0 = "Laden"
@@ -299,46 +120,31 @@ etaAssign ::
   TIdx.Section ->
   Map (XIdx.Eta Node) (String, String, XIdx.Eta Node -> XIdx.Power Node)
 etaAssign sec = Map.fromList $
-  (XIdx.eta sec Water Network, ( "storage", "storage", myflip)) :
-  (XIdx.eta sec Network Water, ( "storage", "storage", noflip)) :
+  (XIdx.eta sec Water Network, ( "storage", "storage", etaOverPowerIn)) :
+  (XIdx.eta sec Network Water, ( "storage", "storage", etaOverPowerOut)) :
 
-  (XIdx.eta sec Coal Network, ( "coal", "coal", myflip)) :
-  (XIdx.eta sec Network Coal, ( "coal", "coal", noflip)) :
+  (XIdx.eta sec Coal Network, ( "coal", "coal", etaOverPowerIn)) :
+  (XIdx.eta sec Network Coal, ( "coal", "coal", etaOverPowerOut)) :
 
-  (XIdx.eta sec Gas LocalNetwork, ( "gas", "gas", myflip)) :
-  (XIdx.eta sec LocalNetwork Gas, ( "gas", "gas", noflip)) :
+  (XIdx.eta sec Gas LocalNetwork, ( "gas", "gas", etaOverPowerIn)) :
+  (XIdx.eta sec LocalNetwork Gas, ( "gas", "gas", etaOverPowerOut)) :
 
 
-  (XIdx.eta sec Network LocalNetwork, ( "transformer", "transformer", myflip)) :
-  (XIdx.eta sec LocalNetwork Network, ( "transformer", "transformer", noflip)) :
+  (XIdx.eta sec Network LocalNetwork, ( "transformer", "transformer", etaOverPowerIn)) :
+  (XIdx.eta sec LocalNetwork Network, ( "transformer", "transformer", etaOverPowerOut)) :
 
-  (XIdx.eta sec LocalNetwork LocalRest, ( "local", "local", myflip)) :
-  (XIdx.eta sec LocalRest LocalNetwork, ( "local", "local", noflip)) :
+  (XIdx.eta sec LocalNetwork LocalRest, ( "local", "local", etaOverPowerIn)) :
+  (XIdx.eta sec LocalRest LocalNetwork, ( "local", "local", etaOverPowerOut)) :
 
-  (XIdx.eta sec Network Rest, ( "rest", "rest", myflip)) :
-  (XIdx.eta sec Rest Network, ( "rest", "rest", noflip)) :
+  (XIdx.eta sec Network Rest, ( "rest", "rest", etaOverPowerIn)) :
+  (XIdx.eta sec Rest Network, ( "rest", "rest", etaOverPowerOut)) :
 
   []
 
-noflip :: XIdx.Eta node -> XIdx.Power node
-noflip = TIdx.liftInSection $ \(TIdx.Eta e) -> TIdx.Power e
-
-
-myflip :: XIdx.Eta node -> XIdx.Power node
-myflip = TIdx.liftInSection $ \(TIdx.Eta e) -> TIdx.Power $ TIdx.flip e
 
 -- ################### Vary Power Demand
 
 
-frameOpts ::
-  Opts.T (Graph3D.T Double Double Double) ->
-  Opts.T (Graph3D.T Double Double Double)
-frameOpts =
-  Plot.heatmap .
-  Plot.xyzrange3d (0.2, 2) (0.3, 3.3) (0, 1) .
-  -- Plot.cbrange (0.2, 1) .
-  Plot.xyzlabel "Rest Power [W]" "Local Power [W]" "" .
-  Plot.paletteGH
 
 restPower :: [Double]
 restPower = [0.2, 0.3 .. 2]
@@ -388,6 +194,7 @@ varWaterPower = Sig.fromList2 varWaterPower'
 varGasPower :: Sig.PSignal2 V.Vector V.Vector Double
 varGasPower = Sig.fromList2 varGasPower'
 
+
 sweep ::(SV.Storage c2 d,
           SV.Storage c1 (c2 d), SV.FromList c2,
           SV.FromList c1) =>
@@ -416,22 +223,17 @@ doubleSweep func etaFunc varOptX varOptY varX varY=
         yo = mm varOptY
         mm = map (map Data)
 
+maxOptChargeFunc, maxOptDischargeFunc ::
+  Double ->
+  Sig.UTSignal2 V.Vector V.Vector EnvDouble ->
+  (Double, EnvDouble)
+maxOptChargeFunc socDrive =
+  maybe (error "maxOptChargeFunc") id .
+  optimalSolution condition (penalty $ ChargeDrive socDrive) System.seqTopoOpt
 
-combineOptimalMaps ::
-  Sig.UTSignal2 V.Vector V.Vector Double ->
-  Sig.PSignal2 V.Vector V.Vector Double ->
-  Sig.PSignal2 V.Vector V.Vector Double ->
-  Sig.PSignal2 V.Vector V.Vector Double
-combineOptimalMaps state charge discharge =
-  Sig.zipWith f state $ Sig.zip charge discharge
-  where f s (c, d) = if s < 0.1 then c else d
-
-envGetData ::
-  (Ord node) =>
-  EqEnv.Complete node (Result (Data va a)) (Result (Data vv v)) ->
-  EqEnv.Complete node (Result (Data.Apply va a)) (Result (Data.Apply vv v))
-envGetData =
-  EqEnv.completeFMap (fmap getData) (fmap getData)
+maxOptDischargeFunc socDrive = 
+  maybe (error "maxOptDischargeFunc") id .
+  optimalSolution condition (penalty $ DischargeDrive socDrive) System.seqTopoOpt
 
 makePics ::
   (forall s. EqGen.EquationSystem Node s (Data Nil Double) (Data Nil Double)) ->
@@ -444,62 +246,61 @@ makePics ::
     Sig.NSignal2 V.Vector V.Vector Double )
 makePics eqs tabEta tabPower socDrive = t
   where t = (state, optWater, optGas, etaSysMax)
+
+        chargeFunc = maxOptChargeFunc socDrive
+        dischargeFunc = maxOptDischargeFunc socDrive
+
         state = Sig.map fromIntegral $ Sig.argMax maxETACharge maxETADischarge
 
-        optWater = combineOptimalMaps maxEtaSysState
+        optWater = AppOpt.combineOptimalMaps maxEtaSysState
                      powerWaterChargeOpt powerWaterDischargeOpt
-        optGas = combineOptimalMaps maxEtaSysState
+        optGas = AppOpt.combineOptimalMaps maxEtaSysState
                      powerGasChargeOpt powerGasDischargeOpt
 
-        maxEtaSysState :: Sig.UTSignal2 V.Vector V.Vector Double
+        --maxEtaSysState :: Sig.UTSignal2 V.Vector V.Vector Double
         maxEtaSysState = Sig.map fromIntegral $
           Sig.argMax maxETACharge maxETADischarge
 
-        etaSysMax :: Sig.NSignal2 V.Vector V.Vector Double
+        --etaSysMax :: Sig.NSignal2 V.Vector V.Vector Double
         etaSysMax = Sig.zipWith max maxETACharge maxETADischarge
 
-        powerWaterChargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
+        --powerWaterChargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
         powerWaterChargeOpt = Sig.setType $
-          Sig.map (ModUt.lookupAbsPower (XIdx.power sec0 Network Water)) envsChargeOpt
+          Sig.map (lookupDetPower $ XIdx.power sec0 Network Water) envsChargeOpt
 
 
-        powerWaterDischargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
+        --powerWaterDischargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
         powerWaterDischargeOpt = Sig.setType $
-          Sig.map (ModUt.lookupAbsPower (XIdx.power sec1 Network Water)) envsDischargeOpt
+          Sig.map (lookupDetPower $ XIdx.power sec1 Network Water) envsDischargeOpt
 
-        powerGasChargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
+        -- powerGasChargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
         powerGasChargeOpt = Sig.setType $
-          Sig.map (ModUt.lookupAbsPower (XIdx.power sec0 LocalNetwork Gas))
-                  envsChargeOpt
+          Sig.map (lookupDetPower $ XIdx.power sec0 LocalNetwork Gas) envsChargeOpt
 
 
-        powerGasDischargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
+        --powerGasDischargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
         powerGasDischargeOpt = Sig.setType $
-          Sig.map (ModUt.lookupAbsPower (XIdx.power sec1 LocalNetwork Gas))
-                  envsDischargeOpt
+          Sig.map (lookupDetPower $ XIdx.power sec1 LocalNetwork Gas) envsDischargeOpt
 
-        maxETACharge :: Sig.NSignal2 V.Vector V.Vector Double
+        --maxETACharge :: Sig.NSignal2 V.Vector V.Vector Double
         maxETACharge = Sig.setType $ Sig.map fst $
-          Sig.map maxOptChargeFunc envsCharge
+          Sig.map chargeFunc envsCharge
 
-        maxETADischarge :: Sig.NSignal2 V.Vector V.Vector Double
+        --maxETADischarge :: Sig.NSignal2 V.Vector V.Vector Double
         maxETADischarge = Sig.setType $ Sig.map fst $
-          Sig.map maxOptDischargeFunc envsDischarge
+          Sig.map dischargeFunc envsDischarge
 
-        envsCharge =  Sig.map (Sig.map envGetData) $
+        envsCharge = Sig.map (Sig.map AppUt.envGetData) $
           doubleSweep (Optimisation.solveCharge eqs)
                    etaFunc varWaterPower' varGasPower' varRestPower' varLocalPower'
 
-        envsDischarge = Sig.map (Sig.map envGetData) $
+        envsDischarge = Sig.map (Sig.map AppUt.envGetData) $
           doubleSweep (Optimisation.solveDischarge eqs)
                    etaFunc varWaterPower' varGasPower' varRestPower' varLocalPower'
 
-        maxOptChargeFunc = maxOpt System.seqTopoOpt True socDrive
-        maxOptDischargeFunc = maxOpt System.seqTopoOpt False socDrive
+        envsChargeOpt = Sig.map snd $ Sig.map chargeFunc envsCharge
 
-        envsChargeOpt = Sig.map snd $ Sig.map maxOptChargeFunc envsCharge
-
-        envsDischargeOpt = Sig.map snd $ Sig.map maxOptDischargeFunc envsDischarge
+        envsDischargeOpt = Sig.map snd $ Sig.map dischargeFunc envsDischarge
 
         etaFunc = CT.makeEtaFunctions2D scaleTableEta tabEta
 
@@ -610,35 +411,28 @@ main = do
      envsCharge ::
        Sig.UTSignal2 V.Vector V.Vector
          (Sig.UTSignal2 V.Vector V.Vector EnvDouble)
-     envsCharge = Sig.map (Sig.map envGetData) $
+     envsCharge = Sig.map (Sig.map AppUt.envGetData) $
        doubleSweep (Optimisation.solveCharge eqsys)
                    etaFunc varWaterPower' varGasPower' varRestPower' varLocalPower'
 
      envsDischarge ::
        Sig.UTSignal2 V.Vector V.Vector
          (Sig.UTSignal2 V.Vector V.Vector EnvDouble)
-     envsDischarge = Sig.map (Sig.map envGetData) $
+     envsDischarge = Sig.map (Sig.map AppUt.envGetData) $
        doubleSweep (Optimisation.solveDischarge eqsys)
                    etaFunc varWaterPower' varGasPower' varRestPower' varLocalPower'
 
-     -- | Get maximum Efficiency Envelope for charge and discharge
-     --maxETACharge :: Sig.NSignal2 V.Vector V.Vector Double
-     --maxETACharge = Sig.setType $ Sig.map fst $ Sig.map maxEta envsCharge
-
-     --maxETADischarge :: Sig.NSignal2 V.Vector V.Vector Double
-     --maxETADischarge = Sig.setType $ Sig.map fst $ Sig.map maxEta envsDischarge
-
      socDrive = 0.0
-     maxOptChargeFunc = maxOpt System.seqTopoOpt True socDrive
-     maxOptDischargeFunc = maxOpt System.seqTopoOpt False socDrive
+     chargeFunc = maxOptChargeFunc socDrive
+     dischargeFunc = maxOptDischargeFunc socDrive
 
      maxETACharge :: Sig.NSignal2 V.Vector V.Vector Double
      maxETACharge = Sig.setType $ Sig.map fst $
-      Sig.map maxOptChargeFunc envsCharge
+      Sig.map chargeFunc envsCharge
 
      maxETADischarge :: Sig.NSignal2 V.Vector V.Vector Double
      maxETADischarge = Sig.setType $ Sig.map fst $
-       Sig.map maxOptDischargeFunc envsDischarge
+       Sig.map dischargeFunc envsDischarge
 
 
 
@@ -654,44 +448,44 @@ main = do
 
      -- | Get the correspondig optimal envs for both states
 
-     envsChargeOpt :: Sig.UTSignal2 V.Vector V.Vector (Maybe EnvDouble)
-     envsChargeOpt = Sig.map snd $ Sig.map maxOptChargeFunc envsCharge
+     envsChargeOpt :: Sig.UTSignal2 V.Vector V.Vector EnvDouble
+     envsChargeOpt = Sig.map snd $ Sig.map chargeFunc envsCharge
 
-     envsDischargeOpt :: Sig.UTSignal2 V.Vector V.Vector (Maybe EnvDouble)
-     envsDischargeOpt = Sig.map snd $ Sig.map maxOptDischargeFunc envsDischarge
+     envsDischargeOpt :: Sig.UTSignal2 V.Vector V.Vector EnvDouble
+     envsDischargeOpt = Sig.map snd $ Sig.map dischargeFunc envsDischarge
 
 
      powerGasChargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
      powerGasChargeOpt = Sig.setType $
-       Sig.map (ModUt.lookupAbsPower (XIdx.power sec0 LocalNetwork Gas)) envsChargeOpt
+       Sig.map (lookupDetPower $ XIdx.power sec0 LocalNetwork Gas) envsChargeOpt
 
      powerWaterChargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
      powerWaterChargeOpt = Sig.setType $
-       Sig.map (ModUt.lookupAbsPower (XIdx.power sec0 Network Water)) envsChargeOpt
+       Sig.map (lookupDetPower $ XIdx.power sec0 Network Water) envsChargeOpt
 
      powerGasDischargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
      powerGasDischargeOpt = Sig.setType $
-       Sig.map (ModUt.lookupAbsPower (XIdx.power sec1 LocalNetwork Gas)) envsDischargeOpt
+       Sig.map (lookupDetPower $ XIdx.power sec1 LocalNetwork Gas) envsDischargeOpt
 
      powerWaterDischargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
      powerWaterDischargeOpt = Sig.setType $
-       Sig.map (ModUt.lookupAbsPower (XIdx.power sec1 Network Water)) envsDischargeOpt
+       Sig.map (lookupDetPower $ XIdx.power sec1 Network Water) envsDischargeOpt
 
      powerTransformerChargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
      powerTransformerChargeOpt = Sig.setType $
-       Sig.map (ModUt.lookupAbsPower (XIdx.power sec0 Network LocalNetwork)) envsChargeOpt
+       Sig.map (lookupDetPower $ XIdx.power sec0 Network LocalNetwork) envsChargeOpt
 
      powerTransformerDischargeOpt :: Sig.PSignal2 V.Vector V.Vector Double
      powerTransformerDischargeOpt = Sig.setType $
-       Sig.map (ModUt.lookupAbsPower (XIdx.power sec1 Network LocalNetwork)) envsDischargeOpt
+       Sig.map (lookupDetPower $ XIdx.power sec1 Network LocalNetwork) envsDischargeOpt
 
      powerTransformerChargeOptLV :: Sig.PSignal2 V.Vector V.Vector Double
      powerTransformerChargeOptLV = Sig.setType $
-       Sig.map (ModUt.lookupAbsPower (XIdx.power sec0 LocalNetwork Network)) envsChargeOpt
+       Sig.map (lookupDetPower $ XIdx.power sec0 LocalNetwork Network) envsChargeOpt
 
      powerTransformerDischargeOptLV :: Sig.PSignal2 V.Vector V.Vector Double
      powerTransformerDischargeOptLV = Sig.setType $
-       Sig.map (ModUt.lookupAbsPower (XIdx.power sec1 LocalNetwork Network)) envsDischargeOpt
+       Sig.map (lookupDetPower $ XIdx.power sec1 LocalNetwork Network) envsDischargeOpt
 
      ------------------------------------------------------------------------------------------
      -- | Start Simulation Here
@@ -835,8 +629,8 @@ main = do
                   (Sig.getSample2D (Sig.getSample2D envsDischarge (Sig.SignalIdx 1, Sig.SignalIdx 1)) (Sig.SignalIdx 1, Sig.SignalIdx 1)) ]
 
 -}
-   let optGas = combineOptimalMaps maxEtaSysState powerGasChargeOpt powerGasDischargeOpt
-       optWater = combineOptimalMaps maxEtaSysState powerWaterChargeOpt powerWaterDischargeOpt
+   let optGas = AppOpt.combineOptimalMaps maxEtaSysState powerGasChargeOpt powerGasDischargeOpt
+       optWater = AppOpt.combineOptimalMaps maxEtaSysState powerWaterChargeOpt powerWaterDischargeOpt
 
 
    concurrentlyMany_ $ [

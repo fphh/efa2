@@ -35,6 +35,7 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Data.Map (Map)
 import Data.Set (Set)
+import qualified Data.List.Match as Match
 
 import Data.Monoid (Monoid, mempty, mappend, mconcat)
 import Data.Tuple.HT (mapPair)
@@ -80,10 +81,10 @@ data TestRowSample
 
 
 ----------------------------------------------------------------
--- | Signal Types and their Samples 
+-- | Signal Types and their Samples
 
 type family SigSample s
-type instance SigSample Signal = SignalSample 
+type instance SigSample Signal = SignalSample
 type instance SigSample FSignal = FSignalSample
 type instance SigSample FDistrib = FDistribSample
 type instance SigSample TestRow = TestRowSample
@@ -97,14 +98,14 @@ type instance UnSample TestRowSample = TestRow
 
 {-
 class GetSample signal sample where
-  signal -> sample 
+  signal -> sample
 
 instance GetSample Signal Sample where
--}  
-  
-  
-  
-  
+-}
+
+
+
+
 
 newtype SignalIdx = SignalIdx Int deriving (Show, Eq, Ord)
 
@@ -227,13 +228,13 @@ tzipWithGeneric f xs ys = zipWithGeneric g xs ys
    where g x y = fromSampleGeneric $ f (toSampleGeneric x) (toSampleGeneric y)
 -}
 
-tzipWithSimple ::  (D.ZipWith c, D.Storage c d) =>   
+tzipWithSimple ::  (D.ZipWith c, D.Storage c d) =>
    (TC Sample typ (Data Nil d) ->
     TC Sample typ (Data Nil d) ->
     TC Sample typ (Data Nil d)) ->
     TC Signal typ (Data c d) ->
     TC Signal typ (Data c d) ->
-    TC Signal typ (Data c d) 
+    TC Signal typ (Data c d)
 tzipWithSimple f xs ys = zipWith g xs ys
    where g x y = fromSample $ f (toSample x) (toSample y)
 ----------------------------------------------------------------
@@ -1115,12 +1116,12 @@ subSignal1D ::
    TC s typ (Data (v :> Nil) d) -> [SignalIdx] -> TC s typ (Data (v :> Nil) d)
 subSignal1D (TC (Data x)) idxs = TC $ Data $ SV.lookUp x $ P.map unSignalIdx idxs
 
-getSample2D :: 
-  (SV.FromList v1, SV.FromList v2, SV.Walker v2, 
-  SV.Storage v2 (v1 d), Eq d, SV.Storage v1 d, 
-  SV.Lookup v1, Eq (v1 d), SV.Lookup v2) => 
+getSample2D ::
+  (SV.FromList v1, SV.FromList v2, SV.Walker v2,
+  SV.Storage v2 (v1 d), Eq d, SV.Storage v1 d,
+  SV.Lookup v1, Eq (v1 d), SV.Lookup v2) =>
   TC s typ (Data (v2 :> v1 :> Nil) d) -> SignalIdx -> SignalIdx -> d
-getSample2D (TC (Data x)) (SignalIdx idx) (SignalIdx idy) = 
+getSample2D (TC (Data x)) (SignalIdx idx) (SignalIdx idy) =
   P.head $ SV.toList $ P.flip SV.lookUp [idy] $ P.head $ SV.toList $ SV.lookUp x [idx]
 
 {-
@@ -1360,24 +1361,24 @@ findIndex2 :: (SV.Find v2 ,
                SV.Find v1,
                SV.Walker v2,
                SV.Storage v2 (v1 d1),
-               SV.Storage v1 d1, 
+               SV.Storage v1 d1,
                SV.Storage v2 (Maybe Int),
                SV.Singleton v2,
-               TailType s1, 
-               SV.Storage v2 Int, 
-               SV.Lookup v2, 
-               Head s1 ~ Sample) => 
-              (d1 -> Bool) -> 
-              TC s1 t1 (Data (v2 :> v1 :> Nil) d1) -> 
-              (Maybe SignalIdx, Maybe SignalIdx) 
+               TailType s1,
+               SV.Storage v2 Int,
+               SV.Lookup v2,
+               Head s1 ~ Sample) =>
+              (d1 -> Bool) ->
+              TC s1 t1 (Data (v2 :> v1 :> Nil) d1) ->
+              (Maybe SignalIdx, Maybe SignalIdx)
 findIndex2 f x = (xIdx, yIdx)
   where xIdx = findIndex (P./= P.Nothing) $ y
         y = map2 (SV.findIndex f) x
-        yIdx = case xIdx of 
-          P.Just idx -> ((fmap SignalIdx) . fromSample . P.fst . Maybe.fromJust . viewL) $ subSignal1D y [idx] 
+        yIdx = case xIdx of
+          P.Just idx -> ((fmap SignalIdx) . fromSample . P.fst . Maybe.fromJust . viewL) $ subSignal1D y [idx]
           P.Nothing -> P.Nothing
-        
-          
+
+
 findIndices ::(SV.Walker v1,
                SV.Storage v1 SignalIdx,
                SV.Storage v1 Int,
@@ -1399,7 +1400,7 @@ interp1Lin :: (Eq d1, Show d1,
                SV.Storage v1 d1,
                SV.Find v1,
                SV.Singleton v1,
-               SV.Lookup v1, 
+               SV.Lookup v1,
                Show (v1 d1)) =>
               String ->
               TC Signal t1 (Data (v1 :> Nil) d1) ->
@@ -1416,7 +1417,7 @@ interp1Lin caller xSig ySig (TC (Data xVal)) =
         -- prevent negativ index when interpolating on first element
         TC (Data y1) = getSample ySig $ SignalIdx $ if idx P.== 0 then error msg else idx-1
         TC (Data y2) = getSample ySig sIdx
-        msg = "interp1Lin - Out of Range: " ++ caller ++ ": "++ P.show xVal ++ "\n" 
+        msg = "interp1Lin - Out of Range: " ++ caller ++ ": "++ P.show xVal ++ "\n"
                    ++ P.show xSig ++ P.show ySig
 
 
@@ -1462,7 +1463,7 @@ interp1LinSig ::  (Eq d1, Show d1,
                      SV.Find v1,
                      SV.Singleton v1,
                      SV.Lookup v1,
-                     SV.Walker v1, 
+                     SV.Walker v1,
                      Show (v1 d1)) =>
                    String ->
                    TC Signal t1 (Data (v1 :> Nil) d1) ->
@@ -1518,8 +1519,8 @@ interp2WingProfile caller xSig ySig zSig xLookup yLookup =
         z2 = fromSample $ interp1Lin newCaller yRow2 zRow2 yLookup
         x1 = fromSample $ getSample xSig xIdx1
         x2 = fromSample $ getSample xSig xIdx2
-        msg = "interp2WingProfile - Out of Range: " ++ caller ++ ": " 
-              ++ P.show xLookup ++ ", " ++ P.show yLookup ++ "\n" 
+        msg = "interp2WingProfile - Out of Range: " ++ caller ++ ": "
+              ++ P.show xLookup ++ ", " ++ P.show yLookup ++ "\n"
               ++ P.show xSig ++ "\n" ++ P.show ySig
 
 
@@ -1714,3 +1715,16 @@ argMaximum =
 listArgMax :: Ord a => [a] -> Int
 listArgMax =
    P.fst . L.maximumBy (comparing P.snd) . L.zip [0..]
+
+
+variation2D :: (SV.Storage v2 (v1 d),
+                SV.Storage v1 d,
+                SV.FromList v1,
+                SV.FromList v2) =>
+               TC s typ (Data (v1 :> Nil) d) ->
+               TC s typ (Data (v1 :> Nil) d) ->
+               (TC s typ (Data (v2 :> v1 :> Nil) d),
+                TC s typ (Data (v2 :> v1 :> Nil) d))
+variation2D xs ys = (fromList2 $ Match.replicate (toList ys) (toList xs), fromList2 $ L.map (Match.replicate (toList xs)) (toList ys))
+{-variation2D xs ys = (Match.replicate ys xs, L.map (Match.replicate xs) ys)
+    --where toList = id-}

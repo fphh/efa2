@@ -20,6 +20,8 @@ import EFA.Equation.Result (Result(..))
 import qualified EFA.Graph.Topology.Index as TIdx
 import qualified EFA.Graph.Flow as Flow
 
+import qualified EFA.Application.Utility as AppUt
+
 import qualified EFA.Signal.SequenceData as SD
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Signal as Sig
@@ -206,43 +208,78 @@ type
    EnvDouble =
       EqEnv.Complete Node (Result Double) (Result Double)
 
-calcOptFunc ::
-  Flow.RangeGraph Node ->
-  Bool ->
-  Double ->
-  EnvDouble -> Double
-calcOptFunc topo b socDrive env =
-  if all (>0) [eCoal0, eCoal1, eTrans0, eTrans1] then res else nan
-  where nan = 0/0
-        lu idx = EqUt.checkDetermined (show idx) $
-                   ES.lookupAbsEnergy "calcOptFunc" env idx
-        eCoal      = lu $ XIdx.energy sec0 Coal Network
-        eCoal0     = lu $ XIdx.energy sec0 Coal Network
-        eCoal1     = lu $ XIdx.energy sec1 Coal Network
-        eTrans0    = lu $ XIdx.energy sec0 Network LocalNetwork
-        eTrans1    = lu $ XIdx.energy sec1 Network LocalNetwork
 
-        eCharge    = lu $ XIdx.energy sec0 Water Network
-        eDischarge = lu $ XIdx.energy sec1 Water Network
+lookupDetPower ::
+  XIdx.Power Node -> EqEnv.Complete Node b (Result Double) -> Double
+lookupDetPower idx =
+  AppUt.checkDetermined ("lookupDetPower determined: " ++ show idx) .
+  flip (ES.lookupAbsPower ("lookupDetPower lookup: " ++ show idx)) idx
 
-        Determined etaSys = ES.etaSys topo env
-        res = etaSys + socDrive * (if b then eCharge else -eDischarge)
+lookupDetEnergy ::
+  XIdx.Energy Node -> EqEnv.Complete Node b (Result Double) -> Double
+lookupDetEnergy idx =
+  AppUt.checkDetermined ("lookupDetEnergy determined: " ++ show idx) .
+  flip (ES.lookupAbsEnergy ("lookupDetEnergy lookup: " ++ show idx)) idx
 
+
+-----------------------------------------------------------------------------
+
+data SocDrive a = NoDrive
+                | ChargeDrive a
+                | DischargeDrive a deriving (Show, Eq)
+
+
+type Penalty = EnvDouble -> Double
+
+penalty :: SocDrive Double -> EqEnv.Complete Node b (Result Double) -> Double
+penalty socDrive env =
+  case socDrive of
+       NoDrive -> 0
+       ChargeDrive soc -> soc * eCharge
+       DischargeDrive soc -> soc * negate eDischarge
+  where eCharge    = lookupDetEnergy (XIdx.energy sec0 Water Network) env
+        eDischarge = lookupDetEnergy (XIdx.energy sec1 Water Network) env
+
+-----------------------------------------------------------------------------
+
+
+type Condition = EnvDouble -> Bool
+
+condition :: EqEnv.Complete Node b (Result Double) -> Bool
+condition env = all (>0) [eCoal0, eCoal1, eTrans0, eTrans1]
+  where eCoal      = lookupDetEnergy (XIdx.energy sec0 Coal Network) env
+        eCoal0     = lookupDetEnergy (XIdx.energy sec0 Coal Network) env
+        eCoal1     = lookupDetEnergy (XIdx.energy sec1 Coal Network) env
+        eTrans0    = lookupDetEnergy (XIdx.energy sec0 Network LocalNetwork) env
+        eTrans1    = lookupDetEnergy (XIdx.energy sec1 Network LocalNetwork) env
+
+-----------------------------------------------------------------------------
 
 maxEta ::
   Flow.RangeGraph Node ->
   Sig.UTSignal2 V.Vector V.Vector EnvDouble ->
-  (Double, Maybe EnvDouble)
-maxEta topo sigEnvs = maxOpt topo True 0 sigEnvs
+  Maybe (Double, EnvDouble)
+maxEta topo sigEnvs =
+  optimalSolution condition (penalty NoDrive) topo sigEnvs
 
-maxOpt ::
+
+------------------------------------------------------------------------------
+
+-- soll z.B. in EtaSys kommen:
+
+optimalSolution ::
+  Condition ->
+  Penalty ->
   Flow.RangeGraph Node ->
-  Bool ->
-  Double ->
   Sig.UTSignal2 V.Vector V.Vector EnvDouble ->
-  (Double, Maybe EnvDouble)
-maxOpt topo b socDrive sigEnvs = (etaMax, env)
-  where etaSys = Sig.map (calcOptFunc topo b socDrive) sigEnvs
+  Maybe (Double, EnvDouble)
+optimalSolution cond penalty topo sigEnvs = liftA2 (,) etaMax env
+  where etaSys = Sig.map go sigEnvs
+        go env =
+          case cond env of 
+               True -> Just $ ES.detEtaSys topo env + penalty env
+               False -> Nothing
         etaMax = Sig.fromScalar $ Sig.maximum etaSys
         (xIdx, yIdx) = Sig.findIndex2 (== etaMax) etaSys
         env = liftA2 (Sig.getSample2D sigEnvs) xIdx yIdx
+

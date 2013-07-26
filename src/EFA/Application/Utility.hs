@@ -8,10 +8,17 @@ module EFA.Application.Utility (
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as TD
+--import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph as Gr
 
+--import qualified EFA.Graph.Topology.Index as TIdx
+
+import qualified EFA.Signal.Data as Data
+--import EFA.Signal.Data (Data(..))
+
 import qualified EFA.Equation.Record as EqRecord
+--import qualified EFA.Equation.Arithmetic as EqArith
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Result as Result
@@ -21,12 +28,19 @@ import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Signal.SequenceData as SD
 import EFA.Symbolic.Variable (VarTerm, ScalarTerm, SignalTerm, Symbol, varSymbol)
 import EFA.Equation.System ((.=), (%=), (=%%=))
+
 import EFA.Equation.Result (Result)
 import EFA.Utility (Pointed)
+
+import qualified EFA.Application.Index as XIdx
+-- import EFA.Application.Absolute ( (.=), (=.=) )
 
 import EFA.Report.FormatValue (FormatValue)
 
 import Data.Monoid ((<>))
+import Data.Map (Map)
+import qualified Data.Map as Map
+--import qualified Data.Foldable as Fold
 
 
 
@@ -47,6 +61,34 @@ makeSimpleEdges :: [(Int, Int)] -> [Gr.LEdge Idx.Node ()]
 makeSimpleEdges es = map f es
   where f (a, b) = (Gr.Edge (Idx.Node a) (Idx.Node b), ())
 -}
+
+-- @ HT neue Utility Funktionen für Topologie-Definition, bitte prüfen
+type EdgeLabel = String
+type PPosLabel = String
+
+type LabeledEdgeList node = [(node, node, EdgeLabel, PPosLabel, PPosLabel)]
+type PPosLableMap node = Map (XIdx.PPos node) String
+
+-- | Generate Topology with simple edge List
+makeTopologySimple ::  (Ord node) => [(node,TD.NodeType ())] ->  [(node,node)] -> TD.Topology node
+makeTopologySimple ns es = Gr.fromList ns (makeEdges es)
+
+-- | Generate Topology from labeled edge List
+makeTopology ::  (Ord node) => [(node,TD.NodeType ())] ->  LabeledEdgeList node -> TD.Topology node
+makeTopology ns es = Gr.fromList ns (makeEdges $ map f es)
+  where  f (n1,n2,_,_,_) = (n1,n2)
+
+
+-- | Edge Label map used for displaying topology with labeled edges
+makeEdgeNameMap :: (Ord node) => LabeledEdgeList node -> Map (node, node) String
+makeEdgeNameMap edgeList = Map.fromList $ map f edgeList
+  where f (x, y, lab, _, _) = ((x, y), lab)
+
+-- | Generate Label Map for Power Positions
+makePPosLabelMap :: (Ord node) => LabeledEdgeList node -> PPosLableMap node
+makePPosLabelMap edgeList = Map.fromList $ concat $ map f edgeList
+  where f (n1,n2,_,l1,l2) = [(XIdx.ppos n1 n2, l1),
+                             (XIdx.ppos n2 n1, l2)]
 
 constructSeqTopo ::
    (Ord node, Show node) =>
@@ -134,3 +176,14 @@ infix 0 #=, ~=
   Idx.Record recIdx (idx node) -> a ->
   EqGen.EquationSystem mode rec node s a v
 (#=)  =  (.=)
+
+-- | Unpack scalar result values in env from Data constructor
+envGetData ::
+  (Ord node) =>
+  Env.Complete node (Result (Data.Data va a)) (Result (Data.Data vv v)) ->
+  Env.Complete node (Result (Data.Apply va a)) (Result (Data.Apply vv v))
+envGetData =
+  Env.completeFMap (fmap Data.getData) (fmap Data.getData)
+
+
+
