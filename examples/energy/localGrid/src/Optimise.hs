@@ -129,7 +129,6 @@ etaAssign sec = Map.fromList $
   (XIdx.eta sec Gas LocalNetwork, ( "gas", "gas", etaOverPowerIn)) :
   (XIdx.eta sec LocalNetwork Gas, ( "gas", "gas", etaOverPowerOut)) :
 
-
   (XIdx.eta sec Network LocalNetwork, ( "transformer", "transformer", etaOverPowerIn)) :
   (XIdx.eta sec LocalNetwork Network, ( "transformer", "transformer", etaOverPowerOut)) :
 
