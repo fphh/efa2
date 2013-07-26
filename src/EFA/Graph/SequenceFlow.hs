@@ -14,11 +14,12 @@ import qualified Data.Map as Map ; import Data.Map (Map)
 
 
 data
-   SequenceFlowGraph node structEdge nodeLabel structLabel storageLabel =
+   SequenceFlowGraph node structEdge
+         nodeLabel initLabel exitLabel structLabel storageLabel =
       FlowGraph {
          storages ::
             Map node
-               ((nodeLabel, nodeLabel),
+               ((initLabel, exitLabel),
                 Map (XIdx.StorageEdge node) storageLabel),
          sequ ::
             SD.SequData
@@ -29,8 +30,11 @@ type
    RangeGraph node =
       SequenceFlowGraph
          node Gr.EitherEdge
-         (Topo.NodeType (Maybe Topo.StoreDir)) () ()
+         (Topo.NodeType (Maybe Topo.StoreDir))
+         InitIn ExitOut () ()
 
+data InitIn  = InitIn
+data ExitOut = ExitOut
 
 {-
 Alle Storages sollen in die initiale Sektion,
@@ -45,9 +49,7 @@ sequenceGraph sd =
    in  FlowGraph {
           storages =
              fmap
-                ((,)
-                   (Topo.Storage $ Just Topo.In,
-                    Topo.Storage $ Just Topo.Out) .
+                ((,) (InitIn, ExitOut) .
                  Map.fromListWith (error "duplicate storage edge") .
                  map (flip (,) ()) . Flow.storageEdges . Map.mapMaybe id) $
              Flow.getStorageSequences sq,
