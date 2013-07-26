@@ -7,15 +7,17 @@ module EFA.Application.Absolute (
    ) where
 
 import qualified EFA.Application.Index as XIdx
-import qualified EFA.Application.Utility as Utility
+import qualified EFA.Application.Symbolic as Symbolic
 
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Variable as Var
-import qualified EFA.Symbolic.Variable as SymVar
+import qualified EFA.Equation.Verify as Verify
 import EFA.Equation.System ((=.=))
 import EFA.Equation.Result(Result(..))
+
+import qualified EFA.Symbolic.Variable as SymVar
 
 import qualified EFA.Signal.Record as SigRecord
 import qualified EFA.Signal.SequenceData as SD
@@ -41,9 +43,9 @@ import Data.Foldable (fold)
 import Data.Monoid (mempty, (<>))
 
 
-type EquationSystem = EqGen.EquationSystem Utility.Ignore Record.Absolute
+type EquationSystem = EqGen.EquationSystem Verify.Ignore Record.Absolute
 
-type Expression node s a v x = EqGen.Expression Utility.Ignore Record.Absolute node s a v x
+type Expression node s a v x = EqGen.Expression Verify.Ignore Record.Absolute node s a v x
 
 
 solve ::
@@ -102,15 +104,15 @@ liftF2 = liftA2 . Expr.fromRule3 . Sys.assignment3
 
 
 
-type SignalTerm term node = Utility.SignalTerm Idx.Absolute term node
-type ScalarTerm term node = Utility.ScalarTerm Idx.Absolute term node
-type ScalarAtom term node = Utility.ScalarAtom Idx.Absolute term node
+type SignalTerm term node = Symbolic.SignalTerm Idx.Absolute term node
+type ScalarTerm term node = Symbolic.ScalarTerm Idx.Absolute term node
+type ScalarAtom term node = Symbolic.ScalarAtom Idx.Absolute term node
 
 type VarTerm var term node = SymVar.VarTerm var Idx.Absolute term node
 
 type
    SymbolicEquationSystem node s term =
-      Utility.SymbolicEquationSystem Utility.Ignore Record.Absolute node s term
+      Symbolic.EquationSystem Verify.Ignore Record.Absolute node s term
 
 symbol ::
    (SymVar.Symbol var, Pointed term) =>

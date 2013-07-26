@@ -12,7 +12,6 @@ import qualified Modules.Signals as Signals
 
 import qualified EFA.Application.Index as XIdx
 import qualified EFA.Application.Absolute as EqAbs
-import EFA.Application.Utility (Ignore, (.=))
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as TD
@@ -28,6 +27,8 @@ import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Record as EqRecord
 -- import qualified EFA.Equation.Stack as Stack
 import EFA.Equation.Result (Result(..))
+import EFA.Equation.Verify (Ignore)
+import EFA.Equation.System ((.=))
 -- import EFA.Equation.Stack (Stack)
 
 import qualified EFA.Signal.SequenceData as SD

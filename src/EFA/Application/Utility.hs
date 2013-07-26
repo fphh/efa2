@@ -1,9 +1,5 @@
 {-# LANGUAGE TypeFamilies #-}
-module EFA.Application.Utility (
-   module EFA.Application.Utility,
-   (.=), (%=), (=%%=),
-   Verify.Ignore,
-   ) where
+module EFA.Application.Utility where
 
 import qualified EFA.Application.Index as XIdx
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
@@ -14,29 +10,21 @@ import qualified EFA.Graph as Gr
 
 import qualified EFA.Signal.SequenceData as SD
 import qualified EFA.Signal.Data as Data
---import EFA.Signal.Data (Data(..))
 
 import qualified EFA.Equation.Record as EqRecord
---import qualified EFA.Equation.Arithmetic as EqArith
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Arithmetic as Arith
-import EFA.Equation.System ((.=), (%=), (=%%=))
+import EFA.Equation.System ((.=))
 import EFA.Equation.Result (Result)
-
-import qualified EFA.Symbolic.Variable as SymVar
-import EFA.Symbolic.Variable (VarTerm, Symbol, varSymbol)
-import EFA.Utility (Pointed)
 
 import EFA.Report.FormatValue (FormatValue)
 
-import Data.Monoid ((<>))
 import Data.Map (Map)
 import qualified Data.Map as Map
---import qualified Data.Foldable as Fold
 
 
 
@@ -106,61 +94,12 @@ checkDetermined name rx =
       Result.Determined x -> x
 
 
-type
-   ScalarTerm recIdx term node =
-      SymVar.ScalarTerm recIdx term Idx.Section node
-
-type
-   ScalarAtom recIdx term node =
-      SymVar.ScalarAtom recIdx term Idx.Section node
-
-type
-   SignalTerm recIdx term node =
-      SymVar.SignalTerm recIdx term Idx.Section node
-
-type
-   SymbolicEquationSystem mode rec node s term =
-      EqGen.EquationSystem mode rec node s
-         (ScalarTerm (EqRecord.ToIndex rec) term node)
-         (SignalTerm (EqRecord.ToIndex rec) term node)
-
-
-givenSymbol ::
-  {-
-  The Eq constraint is requested by unique-logic but not really needed.
-  It is not easily possible to compare the terms for equal meaning
-  and it is better not to compare them at all.
-  We should remove the Eq constraint as soon as unique-logic allows it.
-  -}
-  (Verify.GlobalVar mode t recIdx var node,
-   t ~ VarTerm var recIdx term node,
-   Eq t, Arith.Sum t,
-   t ~ Env.Element idx (ScalarTerm recIdx term node) (SignalTerm recIdx term node),
-   EqGen.Record rec, recIdx ~ EqRecord.ToIndex rec,
-   Ord (idx node), FormatValue (idx node), Pointed term,
-   Var.Type idx ~ var, Symbol var, Env.AccessMap idx) =>
-  Idx.Record recIdx (idx node) ->
-  SymbolicEquationSystem mode rec node s term
-givenSymbol idx =
-   idx .= varSymbol idx
-
-
-infixr 6 =<>
-
-(=<>) ::
-  (Verify.GlobalVar mode t recIdx var node,
-   t ~ VarTerm var recIdx term node,
-   Eq t, Arith.Sum t,
-   t ~ Env.Element idx (ScalarTerm recIdx term node) (SignalTerm recIdx term node),
-   EqGen.Record rec, recIdx ~ EqRecord.ToIndex rec,
-   Ord (idx node), FormatValue (idx node), Pointed term,
-   Var.Type idx ~ var, Symbol var, Env.AccessMap idx) =>
-  Idx.Record recIdx (idx node) ->
-  SymbolicEquationSystem mode rec node s term ->
-  SymbolicEquationSystem mode rec node s term
-idx =<> eqsys = givenSymbol idx <> eqsys
-
-
+{-
+Two restricted variants of (.=).
+I added them in the hope for simpler type signatures.
+The type signatures are still complex, unfortunately.
+The symbols are not used, too.
+-}
 infix 0 #=, ~=
 
 -- | @(.=)@ restricted to signals
@@ -192,6 +131,3 @@ envGetData ::
   Env.Complete node (Result (Data.Apply va a)) (Result (Data.Apply vv v))
 envGetData =
   Env.completeFMap (fmap Data.getData) (fmap Data.getData)
-
-
-

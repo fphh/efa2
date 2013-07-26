@@ -119,6 +119,7 @@ Library
     EFA.Equation.Verify
     EFA.Application.Utility
     EFA.Application.Absolute
+    EFA.Application.Symbolic
     EFA.Application.NestedDelta
     EFA.Application.AssignMap
     EFA.Application.Index

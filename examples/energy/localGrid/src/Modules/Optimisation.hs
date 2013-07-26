@@ -9,7 +9,6 @@ import Modules.System (Node(..))
 
 import qualified EFA.Application.Absolute as EqGen
 import qualified EFA.Application.Index as XIdx
-import qualified EFA.Application.Utility as EqUt
 import qualified EFA.Application.EtaSys as ES
 import EFA.Application.Absolute ( (.=), (=%%=), (=.=) )
 
@@ -188,16 +187,16 @@ givenSimulate ::
   EqGen.EquationSystem Node s (Data Nil a) (Data (v :> Nil) a)
 
 givenSimulate etaAssign etaFunc sf =
-  (TIdx.absolute  (XIdx.storage TIdx.initial Water) EqUt..= Data 0)
+  (XIdx.storage TIdx.initial Water .= Data 0)
    <> Fold.fold (SD.mapWithSection f sf)
    where f sec (Record.Record t xs) =
-           (TIdx.absolute (XIdx.dTime sec) EqUt..=
+           (XIdx.dTime sec .=
              (Data  $ SV.fromList $ replicate (Sig.len t) 1))
            <> etaGiven (etaAssign sec) etaFunc
            <> Fold.fold (Map.mapWithKey g xs)
            where
              g (TIdx.PPos (TIdx.StructureEdge p0 p1)) p =
-                   (TIdx.absolute (XIdx.power sec p0 p1) EqUt..= Sig.unpack p)
+                   (XIdx.power sec p0 p1 .= Sig.unpack p)
 
 
 -- | Avoid invalid solution by assigning NaN, which hits last in maximum

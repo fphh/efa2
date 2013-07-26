@@ -4,7 +4,7 @@ module Main where
 import qualified EFA.Application.AssignMap as AssignMap
 import qualified EFA.Application.Absolute as EqGen
 import qualified EFA.Application.Index as XIdx
-import qualified EFA.Application.Utility as Utility
+import qualified EFA.Application.Symbolic as Symbolic
 import EFA.Application.Utility (makeEdges, constructSeqTopo)
 import EFA.Application.Absolute ((.=))
 
@@ -53,8 +53,8 @@ topoLinear = Gr.fromList ns (makeEdges es)
         es = [(node0, node1), (node1, node2)]
 
 
-type SignalTerm = Utility.SignalTerm Idx.Delta SumProduct.Term Node.Int
-type ScalarTerm = Utility.ScalarTerm Idx.Delta SumProduct.Term Node.Int
+type SignalTerm = Symbolic.SignalTerm Idx.Delta SumProduct.Term Node.Int
+type ScalarTerm = Symbolic.ScalarTerm Idx.Delta SumProduct.Term Node.Int
 
 
 type

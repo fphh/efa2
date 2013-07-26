@@ -4,13 +4,13 @@ module Main where
 import qualified EFA.Application.NestedDelta as NestedDelta
 import qualified EFA.Application.AssignMap as AssignMap
 import qualified EFA.Application.Index as XIdx
-import qualified EFA.Application.Utility as Utility
+import qualified EFA.Application.Symbolic as Symbolic
 import EFA.Application.NestedDelta
           (ParameterRecord,
            givenParameterSymbol, givenParameterNumber,
            beforeDelta, extrudeStart,
            (<&), (<&>), (&>), (&&>), (?=))
-import EFA.Application.Utility (Ignore, makeEdges, constructSeqTopo)
+import EFA.Application.Utility (makeEdges, constructSeqTopo)
 import EFA.Equation.Result (Result)
 
 import qualified EFA.Equation.System as EqGen
@@ -61,15 +61,16 @@ topoLinear = Gr.fromList ns (makeEdges es)
         es = [(node0, node1), (node1, node2)]
 
 
-type SignalTerm = Utility.SignalTerm Idx.Delta SumProduct.Term Node.Int
-type ScalarTerm = Utility.ScalarTerm Idx.Delta SumProduct.Term Node.Int
+type SignalTerm = Symbolic.SignalTerm Idx.Delta SumProduct.Term Node.Int
+type ScalarTerm = Symbolic.ScalarTerm Idx.Delta SumProduct.Term Node.Int
 
 type IdxMultiDelta = Idx.ExtDelta (Idx.ExtDelta (Idx.ExtDelta Idx.Absolute))
 type RecMultiDelta = Record.ExtDelta (Record.ExtDelta (Record.ExtDelta Record.Absolute))
 
 type
    EquationSystemSymbolic s =
-      EqGen.EquationSystem Ignore RecMultiDelta Node.Int s ScalarTerm SignalTerm
+      EqGen.EquationSystem Symbolic.Ignore
+         RecMultiDelta Node.Int s ScalarTerm SignalTerm
 
 
 
@@ -178,7 +179,8 @@ mainSymbolic = do
 
 type
    EquationSystemNumeric s =
-      EqGen.EquationSystem Ignore RecMultiDelta Node.Int s Double Double
+      EqGen.EquationSystem Symbolic.Ignore
+         RecMultiDelta Node.Int s Double Double
 
 
 _givenNumeric :: EquationSystemNumeric s
