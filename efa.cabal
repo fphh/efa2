@@ -123,6 +123,7 @@ Library
     EFA.Application.Index
     EFA.Application.Tree
     EFA.Application.EtaSys
+    EFA.Application.Balance
     EFA.Application.Optimisation
 
 
