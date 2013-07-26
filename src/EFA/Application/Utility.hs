@@ -5,15 +5,14 @@ module EFA.Application.Utility (
    Verify.Ignore,
    ) where
 
+import qualified EFA.Application.Index as XIdx
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as TD
---import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph as Gr
 
---import qualified EFA.Graph.Topology.Index as TIdx
-
+import qualified EFA.Signal.SequenceData as SD
 import qualified EFA.Signal.Data as Data
 --import EFA.Signal.Data (Data(..))
 
@@ -25,15 +24,12 @@ import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Arithmetic as Arith
-import qualified EFA.Signal.SequenceData as SD
-import EFA.Symbolic.Variable (VarTerm, ScalarTerm, SignalTerm, Symbol, varSymbol)
 import EFA.Equation.System ((.=), (%=), (=%%=))
-
 import EFA.Equation.Result (Result)
-import EFA.Utility (Pointed)
 
-import qualified EFA.Application.Index as XIdx
--- import EFA.Application.Absolute ( (.=), (=.=) )
+import qualified EFA.Symbolic.Variable as SymVar
+import EFA.Symbolic.Variable (VarTerm, Symbol, varSymbol)
+import EFA.Utility (Pointed)
 
 import EFA.Report.FormatValue (FormatValue)
 
@@ -111,6 +107,18 @@ checkDetermined name rx =
 
 
 type
+   ScalarTerm recIdx term node =
+      SymVar.ScalarTerm recIdx term Idx.Section node
+
+type
+   ScalarAtom recIdx term node =
+      SymVar.ScalarAtom recIdx term Idx.Section node
+
+type
+   SignalTerm recIdx term node =
+      SymVar.SignalTerm recIdx term Idx.Section node
+
+type
    SymbolicEquationSystem mode rec node s term =
       EqGen.EquationSystem mode rec node s
          (ScalarTerm (EqRecord.ToIndex rec) term node)
@@ -169,7 +177,7 @@ infix 0 #=, ~=
 -- | @(.=)@ restricted to scalars
 (#=) ::
   (Verify.GlobalVar mode a recIdx var node, Arith.Sum a,
-   var ~ Var.ForNodeScalar, var ~ Var.Type idx,
+   var ~ Var.ForNodeSectionScalar, var ~ Var.Type idx,
    recIdx ~ EqRecord.ToIndex rec, EqGen.Record rec,
    Env.AccessMap idx, Env.Environment idx ~ Env.Scalar,
    Ord (idx node), FormatValue (idx node)) =>

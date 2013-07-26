@@ -151,7 +151,7 @@ lookupSignal (Idx.InPart s var) =
 
 lookupScalar ::
    Ord node =>
-   Var.ForNodeScalar node -> Scalar node a -> Maybe a
+   Var.ForNodeSectionScalar node -> Scalar node a -> Maybe a
 lookupScalar (Idx.ForNode var n) =
    case var of
       Var.MaxEnergy idx -> Map.lookup (Idx.ForNode idx n) . maxEnergyMap

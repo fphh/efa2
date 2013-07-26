@@ -3,6 +3,7 @@
 
 module EFA.Test.EquationSystem.Given where
 
+import qualified EFA.Application.Absolute as EqAbs
 import qualified EFA.Application.Index as XIdx
 import EFA.Application.Utility ( makeEdges, constructSeqTopo )
 
@@ -16,7 +17,6 @@ import qualified EFA.Equation.Environment as Env
 import EFA.Equation.Result (Result(..))
 import EFA.Equation.System ( (=.=) )
 
-import qualified EFA.Symbolic.Variable as SymVar
 import EFA.Symbolic.SumProduct ( Term )
 
 import qualified EFA.Utility.Stream as Stream
@@ -157,8 +157,8 @@ evar .= val  =
    EqGen.constant (Arith.fromRational val)
 
 
-type TrackedSignal = Pair.T (SymVar.SignalTerm Idx.Absolute Term Node.Int) Rational
-type TrackedScalar = Pair.T (SymVar.ScalarTerm Idx.Absolute Term Node.Int) Rational
+type TrackedSignal = Pair.T (EqAbs.SignalTerm Term Node.Int) Rational
+type TrackedScalar = Pair.T (EqAbs.ScalarTerm Term Node.Int) Rational
 
 type EquationSystem s =
         EqGen.EquationSystem

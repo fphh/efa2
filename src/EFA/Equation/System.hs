@@ -550,13 +550,13 @@ energy ::
 energy = variableRecord . Idx.liftInSection Idx.Energy
 
 maxEnergy ::
-   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node,
+   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeSectionScalar node,
     Sum a, Record rec, Node.C node) =>
    Idx.ForNode XIdx.StorageEdge node -> RecordExpression mode rec node s a v a
 maxEnergy = variableRecord . Idx.liftForNode Idx.MaxEnergy
 
 stEnergy ::
-   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node,
+   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeSectionScalar node,
     Sum a, Record rec, Node.C node) =>
    Idx.ForNode XIdx.StorageEdge node -> RecordExpression mode rec node s a v a
 stEnergy = variableRecord . Idx.liftForNode Idx.StEnergy
@@ -574,7 +574,7 @@ xfactor ::
 xfactor = variableRecord . Idx.liftInSection Idx.X
 
 stxfactor ::
-   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node,
+   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeSectionScalar node,
     Sum a, Record rec, Node.C node) =>
    Idx.ForNode XIdx.StorageTrans node -> RecordExpression mode rec node s a v a
 stxfactor = variableRecord . Idx.liftForNode Idx.StX
@@ -592,19 +592,19 @@ outsum ::
 outsum = variableRecord . Idx.inSection (Idx.Sum Idx.Out)
 
 stinsum ::
-   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node,
+   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeSectionScalar node,
     Sum a, Record rec, Node.C node) =>
    Idx.PartNode Idx.SectionOrExit node -> RecordExpression mode rec node s a v a
 stinsum = variableRecord . Idx.forNode Idx.StInSum
 
 stoutsum ::
-   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node,
+   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeSectionScalar node,
     Sum a, Record rec, Node.C node) =>
     Idx.PartNode Idx.InitOrSection node -> RecordExpression mode rec node s a v a
 stoutsum = variableRecord . Idx.forNode Idx.StOutSum
 
 storage ::
-   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node,
+   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeSectionScalar node,
     Sum a, Record rec, Node.C node) =>
    Idx.BndNode node -> RecordExpression mode rec node s a v a
 storage = variableRecord . Idx.forNode Idx.Storage
@@ -637,7 +637,7 @@ fromMapResult =
    fold . Map.mapWithKey (?=)
 
 fromEnvScalarResult ::
-   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node,
+   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeSectionScalar node,
     Sum a, Node.C node, Record rec) =>
    Env.Scalar node (rec (Result a)) ->
    EquationSystem mode rec node s a v
@@ -667,7 +667,7 @@ fromEnvSignalResult (Env.Signal e p n dt x s) =
          []
 
 fromEnvResult ::
-   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Sum a,
+   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeSectionScalar node, Sum a,
     Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node, Sum v,
     Node.C node, Record rec) =>
    Env.Complete node (rec (Result a)) (rec (Result v)) ->
@@ -686,7 +686,7 @@ fromMap =
    fold . Map.mapWithKey (%=)
 
 fromEnvScalar ::
-   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node,
+   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeSectionScalar node,
     Sum a, Node.C node, Record rec) =>
    Env.Scalar node (rec a) ->
    EquationSystem mode rec node s a v
@@ -716,7 +716,7 @@ fromEnvSignal (Env.Signal e p n dt x s) =
          []
 
 fromEnv ::
-   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Sum a,
+   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeSectionScalar node, Sum a,
     Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node, Sum v,
     Node.C node, Record rec) =>
    Env.Complete node (rec a) (rec v) ->
@@ -726,7 +726,7 @@ fromEnv (Env.Complete envScalar envSignal) =
 
 
 fromGraph ::
-  (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Constant a, a ~ Scalar v,
+  (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeSectionScalar node, Constant a, a ~ Scalar v,
    Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node, Product v, Integrate v,
    Record rec, Node.C node) =>
   Bool ->
@@ -740,7 +740,7 @@ fromGraph equalInOutSums g = mconcat $
 -----------------------------------------------------------------
 
 fromEdges ::
-  (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Sum a,
+  (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeSectionScalar node, Sum a,
    Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node,
    Product v, Record rec, Node.C node) =>
   [TD.FlowEdge Gr.DirEdge (Idx.AugSecNode node)] ->
@@ -756,7 +756,7 @@ fromEdges =
          TD.StorageEdge _ -> mempty
 
 fromNodes ::
-  (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Constant a, a ~ Scalar v,
+  (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeSectionScalar node, Constant a, a ~ Scalar v,
    Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node, Product v, Integrate v,
    Record rec, Node.C node) =>
   Bool ->
@@ -820,7 +820,7 @@ fromNodes equalInOutSums =
 
 
 fromStorageSequences ::
-  (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Sum a, a ~ Scalar v,
+  (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeSectionScalar node, Sum a, a ~ Scalar v,
    Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node, Product v, Integrate v,
    Record rec, Node.C node) =>
   TD.DirSequFlowGraph node -> EquationSystem mode rec node s a v
@@ -865,7 +865,7 @@ getStorageSequences =
 
 
 fromInStorages ::
-  (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node, Sum a, a ~ Scalar v,
+  (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeSectionScalar node, Sum a, a ~ Scalar v,
    Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node, Product v, Integrate v,
    Record rec, Node.C node) =>
   Idx.PartNode Idx.InitOrSection node -> [Idx.ForNode XIdx.StorageEdge node] ->
@@ -880,7 +880,7 @@ fromInStorages sn outs =
           (stoutsum sn : zipWith (~-) maxEnergies stEnergies)
 
 fromOutStorages ::
-  (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeScalar node,
+  (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeSectionScalar node,
    Constant a, Record rec, Node.C node) =>
   [Idx.ForNode XIdx.StorageEdge node] ->
   EquationSystem mode rec node s a v
@@ -968,7 +968,7 @@ solve (_rngs, g) given =
   solveSimple (given <> fromGraph True (TD.dirFromSequFlowGraph g))
 
 solveTracked ::
-  (Verify.GlobalVar (Verify.Track output) a (Record.ToIndex rec) Var.ForNodeScalar node,
+  (Verify.GlobalVar (Verify.Track output) a (Record.ToIndex rec) Var.ForNodeSectionScalar node,
    Constant a, a ~ Scalar v, a ~ Pair.T termScalar an,
    Verify.GlobalVar (Verify.Track output) v (Record.ToIndex rec) Var.InSectionSignal node,
    Product v, Integrate v, v ~ Pair.T termSignal vn,
