@@ -316,7 +316,7 @@ main = do
          (a ~ EqArith.Scalar v, Eq a,
          Eq v, EqArith.Product a, EqArith.Product v, EqArith.Integrate v) =>
          EqGen.EquationSystem Node s a v
-       eqs = EqGen.fromGraph True (TD.dirFromSequFlowGraph (snd System.seqTopoOpt))
+       eqs = EqGen.fromGraph True (TD.dirFromFlowGraph (snd System.seqTopoOpt))
 
        plotwaterpng n pic =
          PlotIO.surfaceWithOpts "Optimal Water Power"
@@ -383,7 +383,7 @@ main = do
          (a ~ EqArith.Scalar v, Eq a, Eq v,
           EqArith.Constant a, EqArith.Product v, EqArith.Integrate v) =>
          EqGen.EquationSystem Node s a v
-       eqsys = EqGen.fromGraph True (TD.dirFromSequFlowGraph (snd System.seqTopoOpt))
+       eqsys = EqGen.fromGraph True (TD.dirFromFlowGraph (snd System.seqTopoOpt))
 
    -- |Import Efficiency Curves
    let etaFunc = CT.makeEtaFunctions2D scaleTableEta tabEta

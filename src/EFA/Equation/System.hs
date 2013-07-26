@@ -965,7 +965,7 @@ solve ::
   (forall s. EquationSystem Verify.Ignore rec node s a v) ->
   Env.Complete node (rec (Result a)) (rec (Result v))
 solve (_rngs, g) given =
-  solveSimple (given <> fromGraph True (TD.dirFromSequFlowGraph g))
+  solveSimple (given <> fromGraph True (TD.dirFromFlowGraph g))
 
 solveTracked ::
   (Verify.GlobalVar (Verify.Track output) a (Record.ToIndex rec) Var.ForNodeSectionScalar node,
@@ -980,7 +980,7 @@ solveTracked ::
      (Env.Complete node (rec (Result a)) (rec (Result v))),
    Verify.Assigns output)
 solveTracked (_rngs, g) given =
-  solveSimpleTracked (given <> fromGraph True (TD.dirFromSequFlowGraph g))
+  solveSimpleTracked (given <> fromGraph True (TD.dirFromFlowGraph g))
 
 
 --------------------------------------------------------------------
@@ -994,4 +994,4 @@ solveFromMeasurement ::
   (forall s. EquationSystem Verify.Ignore rec node s a v) ->
   Env.Complete node (rec (Result a)) (rec (Result v))
 solveFromMeasurement (_rngs, g) given =
-  solveSimple (given <> fromGraph False (TD.dirFromSequFlowGraph g))
+  solveSimple (given <> fromGraph False (TD.dirFromFlowGraph g))

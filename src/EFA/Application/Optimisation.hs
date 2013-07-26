@@ -205,7 +205,7 @@ givenForOptimisation :: (EqArith.Constant a,
 
 givenForOptimisation seqTopology env etaAssign etaFunc sec commonGiven givenLoad givenDOF =
   commonGiven <>
-  EqGen.fromGraph True (TD.dirFromSequFlowGraph (snd seqTopology)) <>
+  EqGen.fromGraph True (TD.dirFromFlowGraph (snd seqTopology)) <>
   makeEtaFuncGiven etaAssign sec etaFunc <>
   givenAverageWithoutSectionX sec env <>
   givenLoad <>
