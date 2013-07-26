@@ -8,17 +8,12 @@ module EFA.Application.Optimisation where
 import qualified EFA.Application.Absolute as EqGen
 --import qualified EFA.Application.EtaSys as ES
 import qualified EFA.Application.Index as XIdx
-import EFA.Application.Absolute ( --(.=),
-                                  (=.=) )
+import EFA.Application.Absolute ( (=.=) )
 
 --import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Signal as Sig
-import qualified EFA.Signal.Vector as SV
 import qualified EFA.Signal.Data as Data
-import EFA.Signal.Signal (TC)
-                            --, Scalar)
-import EFA.Signal.Data (Data(..), Nil, (:>)) --, getData)
-import EFA.Signal.Typ (Typ, UT) --F, T, A, Tt, UT)
+import EFA.Signal.Data (Data(..), Nil)
 
 import qualified EFA.Graph.Topology.Index as TIdx
 import qualified EFA.Graph.Flow as Flow
@@ -29,41 +24,13 @@ import qualified EFA.Graph.Topology as TD
 import qualified EFA.Equation.Environment as EqEnv
 
 import qualified EFA.Equation.Arithmetic as EqArith
---import EFA.Equation.Result (Result(..))
 
+import qualified Data.Vector as V
 import qualified Data.Map as Map
 import qualified Data.Foldable as Fold
-import qualified Data.Vector as V
---import Control.Applicative (liftA2)
 import Data.Map (Map)
 import Data.Monoid((<>))
 
--- | Map a two dimensional load room (varX, varY) and find per load situation
--- | the optimal solution in the 2d-solution room (two degrees of freevarOptX varOptY)
-doubleSweep :: (SV.Zipper v2,
-                SV.Zipper v1,
-                SV.Walker v2,
-                SV.Walker v1,
-                SV.Storage v2 (v1 a),
-                SV.Storage v1 a,
-                SV.Storage v2 (v1 b),
-                SV.Storage v1 b,
-                SV.FromList v2,
-                SV.Convert v1 v1,
-                SV.Storage v2 (v1 (TC (Sig.Arith s s) (Typ UT UT UT) (Data (v2 :> (v1 :> Nil)) b))),
-                SV.Storage v1 (TC (Sig.Arith s s) (Typ UT UT UT) (Data (v2 :> (v1 :> Nil)) b)),
-               Sig.Arith s s ~ Sig.Signal) =>
-               (a -> a -> a -> a -> b) ->
-               TC s typ (Data (v2 :> v1 :> Nil) a) ->
-               TC s typ (Data (v2 :> v1 :> Nil) a) ->
-               TC s typ (Data (v2 :> v1 :> Nil) a) ->
-               TC s typ (Data (v2 :> v1 :> Nil) a) ->
-               Sig.UTSignal2 v2  v1 (Sig.UTSignal2 v2  v1 b)
-
-doubleSweep fsolve varOptX varOptY varX varY =
-  Sig.untype $ Sig.zipWith f varX  varY
-  where f x y =
-          Sig.untype $ Sig.convert $ Sig.zipWith (fsolve x y) varOptX varOptY
 
 {-
 

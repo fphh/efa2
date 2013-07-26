@@ -146,10 +146,10 @@ etaAssign sec = Map.fromList $
 
 
 restPower :: [Double]
-restPower = [0.2, 0.3 .. 2]
+restPower = [0.2, 0.4 .. 2]
 
 localPower :: [Double]
-localPower = [0.3, 0.4 .. 3.3]
+localPower = [0.3, 0.5 .. 3.3]
 
 varRestPower', varLocalPower' :: [[Double]]
 (varLocalPower', varRestPower') = CT.varMat localPower restPower
@@ -303,7 +303,7 @@ makePics eqs tabEta tabPower socDrive = t
 
         etaFunc = CT.makeEtaFunctions2D scaleTableEta tabEta
 
-{-
+
 
 main :: IO ()
 main = do
@@ -312,11 +312,7 @@ main = do
 
    tabEta <- Table.read "../simulation/maps/eta.txt"
    tabPower <- Table.read "../simulation/maps/power.txt"
-   let eqs ::
-         (a ~ EqArith.Scalar v, Eq a,
-         Eq v, EqArith.Product a, EqArith.Product v, EqArith.Integrate v) =>
-         EqGen.EquationSystem Node s a v
-       eqs = EqGen.fromGraph True (TD.dirFromSequFlowGraph (snd System.seqTopoOpt))
+   let eqs = EqGen.fromGraph True (TD.dirFromSequFlowGraph (snd System.seqTopoOpt))
 
        plotwaterpng n pic =
          PlotIO.surfaceWithOpts "Optimal Water Power"
@@ -369,8 +365,8 @@ main = do
      -- mapM_ plotpng lst2 ]
 
 
--}
 
+{-
 main :: IO ()
 main = do
 
@@ -708,3 +704,4 @@ main = do
 
        return ()
      ]
+-}

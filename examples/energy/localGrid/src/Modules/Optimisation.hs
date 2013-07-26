@@ -259,20 +259,20 @@ maxEta ::
   Sig.UTSignal2 V.Vector V.Vector EnvDouble ->
   Maybe (Double, EnvDouble)
 maxEta topo sigEnvs =
-  optimalSolution condition (penalty NoDrive) topo sigEnvs
+  optimalSolution2D condition (penalty NoDrive) topo sigEnvs
 
 
 ------------------------------------------------------------------------------
 
 -- soll z.B. in EtaSys kommen:
 
-optimalSolution ::
+optimalSolution2D ::
   Condition ->
   Penalty ->
   Flow.RangeGraph Node ->
   Sig.UTSignal2 V.Vector V.Vector EnvDouble ->
   Maybe (Double, EnvDouble)
-optimalSolution cond penalty topo sigEnvs = liftA2 (,) etaMax env
+optimalSolution2D cond penalty topo sigEnvs = liftA2 (,) etaMax env
   where etaSys = Sig.map go sigEnvs
         go env =
           case cond env of 

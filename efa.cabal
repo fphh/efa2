@@ -124,6 +124,7 @@ Library
     EFA.Application.EtaSys
     EFA.Application.Balance
     EFA.Application.Optimisation
+    EFA.Application.Sweep
 
 
 -- sollte man auf Cabal-Test umstellen,
