@@ -4,7 +4,6 @@ module EFA.Application.EtaSys where
 import qualified EFA.Application.Index as XIdx
 import qualified EFA.Application.Utility as AppUt
 
-import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Environment as EqEnv
 import EFA.Equation.Result (Result(..))
 
@@ -16,7 +15,7 @@ import qualified EFA.Graph as Gr
 import EFA.Utility.Map (checkedLookup)
 
 import qualified Data.Set as Set
-import qualified Data.Map as Map ; import Data.Map (Map)
+import qualified Data.Map as Map
 
 import Control.Applicative (liftA2)
 
@@ -89,43 +88,9 @@ etaSys (_, topo) env = liftA2 (/) (sumRes sinks) (sumRes sources)
             Just $ lookupAbsEnergy "etaSys, sourceEnergies" env (XIdx.energy sec a b)
         sourceEnergies _ = Nothing
 
---detEtaSys :: Flow.RangeGraph Node -> EnvDouble -> Double
+
+
+detEtaSys ::
+  (Fractional c, Ord node, Show node, Show c) =>
+  Flow.RangeGraph node -> EqEnv.Complete node b (Result c) -> c
 detEtaSys topo = AppUt.checkDetermined "detEtaSys" . etaSys topo
-
--------------------------------------------------------------
-
-type Balance node a = Map node a
-
-
-{-
-cf. Graph.Flow.getStorageSequences, Equation.System.getStorageSequences
--}
-storageBalanceRelative ::
-   (Ord node, Arith.Sum a) =>
-   EqEnv.Complete node a v ->
-   Map node (Map Idx.AugmentedSection a)
-storageBalanceRelative (EqEnv.Complete env _) =
-   Map.unionWith
-      (Map.unionWith (error "storage cannot be In and Out at the same time"))
-      (sequences (\(Idx.StInSum sec) -> Idx.augmentSection sec) $
-       EqEnv.stInSumMap env)
-      (sequences (\(Idx.StOutSum sec) -> Idx.augmentSection sec) $
-       fmap Arith.negate $ EqEnv.stOutSumMap env)
-
-storageBalanceAbsolute ::
-   (Ord node, Arith.Sum a) =>
-   EqEnv.Complete node a v ->
-   Map node (Map Idx.Boundary a)
-storageBalanceAbsolute (EqEnv.Complete env _) =
-   sequences (\(Idx.Storage bnd) -> bnd) $ EqEnv.storageMap env
-
-sequences ::
-   (Ord node, Ord sec) =>
-   (idx node -> sec) ->
-   Map (Idx.ForNode idx node) a -> Map node (Map sec a)
-sequences sec env =
-   Map.unionsWith (Map.unionWith (error "duplicate section for node")) $
-   map
-      (\(Idx.ForNode idx node, a) ->
-         Map.singleton node $ Map.singleton (sec idx) a) $
-   Map.toList env
