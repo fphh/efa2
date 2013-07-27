@@ -11,6 +11,7 @@ import Modules.Optimisation(EnvResult)
 
 import qualified EFA.Application.Optimisation as AppOpt
 --import qualified EFA.Application.Utility as AppUt
+import qualified EFA.Application.Sweep as Sweep
 
 import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Signal.Signal as Sig
@@ -76,10 +77,10 @@ scaleTableEta = Map.fromList $
 
 -- | varying the network loads
 loadHousePower :: Sig.PSignal V.Vector Double
-loadHousePower = Sig.fromList $ [0.3, 0.4 .. 3.3]
+loadHousePower = Sig.fromList [0.3, 0.4 .. 3.3]
 
 loadNetPower :: Sig.PSignal V.Vector Double
-loadNetPower = Sig.fromList $ [0.2, 0.3 .. 2]
+loadNetPower = Sig.fromList [0.2, 0.3 .. 2]
 
 varLoadHouse, varLoadNet :: Sig.PSignal2 V.Vector V.Vector Double
 (varLoadHouse, varLoadNet) = Sig.variation2D loadHousePower loadNetPower
@@ -88,10 +89,10 @@ varLoadHouse, varLoadNet :: Sig.PSignal2 V.Vector V.Vector Double
 -- | varying degrees of freedom
 
 batteryPower :: Sig.PSignal V.Vector Double
-batteryPower = Sig.fromList $ [0.3, 0.4 .. 3.3]
+batteryPower = Sig.fromList [0.3, 0.4 .. 3.3]
 
 storagePower :: Sig.PSignal V.Vector Double
-storagePower = Sig.fromList $ [0.2, 0.3 .. 2]
+storagePower = Sig.fromList [0.2, 0.3 .. 2]
 
 varBattery, varStorage :: Sig.PSignal2 V.Vector V.Vector Double
 (varBattery, varStorage) = Sig.variation2D batteryPower storagePower
@@ -99,9 +100,9 @@ varBattery, varStorage :: Sig.PSignal2 V.Vector V.Vector Double
 main :: IO()
 main = do
 
-    -- tabEta <- Table.read "../maps/eta.txt"
+    --tabEta <- Table.read "../maps/eta.txt"
 --    tabPower <- Table.read "../maps/power.txt"
-    tabEta <- Table.read "../../energy/localGrid/simulation/maps/eta.txt"
+    tabEta <- Table.read "../../energy/localGrid/simulation/maps/power.txt"
 
    -- |Import Efficiency Curves
     let etaFunctionMap = CT.makeEtaFunctions2D scaleTableEta tabEta
@@ -110,15 +111,15 @@ main = do
 
         envAverage = undefined
 
-        -- | solve the system for all kombinations for a selected section -- muss auf n sektionen erweitert werden
+        -- | solve the system for all combinations for a selected section -- muss auf n sektionen erweitert werden
         envs :: Sig.UTSignal2 V.Vector V.Vector
          (Sig.UTSignal2 V.Vector V.Vector (EnvResult Double))
-        envs = AppOpt.doubleSweep (Optimisation.solve System.seqTopology envAverage section etaFunctionMap)
+        envs = Sweep.doubleSweep (Optimisation.solve System.seqTopology envAverage section etaFunctionMap)
              varBattery varStorage varLoadHouse varLoadNet
 
     Draw.xterm $ Draw.topologyWithEdgeLabels System.edgeNames System.topology
 
-    PlotIO.surfaceWithOpts "Variation" DefaultTerm.cons id frameOpts noLegend varLoadHouse varLoadNet varLoadNet
+    --PlotIO.surfaceWithOpts "Variation" DefaultTerm.cons id frameOpts noLegend varLoadHouse varLoadNet varLoadNet
 
 
 

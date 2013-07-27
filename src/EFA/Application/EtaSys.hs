@@ -17,6 +17,7 @@ import EFA.Utility.Map (checkedLookup)
 import qualified Data.Set as Set
 import qualified Data.Map as Map
 
+
 import Control.Applicative (liftA2)
 
 import Data.Traversable (sequenceA)
@@ -91,6 +92,24 @@ etaSys (_, topo) env = liftA2 (/) (sumRes sinks) (sumRes sources)
 
 
 detEtaSys ::
-  (Fractional c, Ord node, Show node, Show c) =>
-  Flow.RangeGraph node -> EqEnv.Complete node b (Result c) -> c
+  (Fractional v, Ord node, Show node, Show v) =>
+  Flow.RangeGraph node -> EqEnv.Complete node a (Result v) -> v
 detEtaSys topo = AppUt.checkDetermined "detEtaSys" . etaSys topo
+
+
+
+type Condition node a v = EqEnv.Complete node a (Result v) -> Bool
+type Forcing node a v = EqEnv.Complete node a (Result v) -> v
+
+
+objectiveFunction ::
+  (Fractional v, Show v, Num v, Ord node, Show node) =>
+  Condition node a v ->
+  Forcing node a v ->
+  Flow.RangeGraph node ->
+  EqEnv.Complete node a (Result v) ->
+  Maybe v
+objectiveFunction cond forcing topo env =
+  case cond env of 
+       True -> Just $ detEtaSys topo env + forcing env
+       False -> Nothing

@@ -12,9 +12,9 @@ import qualified Modules.System as System
 import qualified Modules.Optimisation as Optimisation
 import qualified Modules.Analysis as Analysis
 import Modules.System (Node(..))
-import Modules.Optimisation (EnvDouble, sec0,sec1, maxEta, optimalSolution, SocDrive(..), lookupDetPower, condition, penalty )
-import qualified EFA.Application.Optimisation as AppOpt -- (maxEta, optimalSolution)
+import Modules.Optimisation (EnvDouble, sec0,sec1, maxEta, SocDrive(..), lookupDetPower, condition, forcing )
 import EFA.Application.Optimisation as AppOpt (etaOverPowerIn,etaOverPowerOut)
+import qualified EFA.Application.Sweep as Sweep
 
 import Modules.Utility as ModUt
 -- import Modules.Utility(getEtas, getPowerSignals,select)
@@ -24,11 +24,14 @@ import qualified EFA.Application.Index as XIdx
 import qualified EFA.Application.Absolute as EqGen
 import EFA.Application.Utility (select)
 import qualified EFA.Application.Utility as AppUt
+import qualified EFA.Application.Optimisation as AppOpt
+import qualified EFA.Application.Sweep as Sweep
 
 import qualified EFA.Graph.Topology.Index as TIdx
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Draw as Draw
+import qualified EFA.Graph as Graph
 
 import qualified EFA.Equation.Arithmetic as EqArith
 import qualified EFA.Equation.Environment as EqEnv
@@ -66,6 +69,8 @@ import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
 import qualified Data.Map as Map ; import Data.Map (Map)
 import qualified Data.Vector as V
 import qualified Data.GraphViz.Attributes.Colors.X11 as Colors
+
+import qualified EFA.Graph.StateFlow.Environment as StFlEnv
 
 import Text.Printf (printf)
 
@@ -228,11 +233,13 @@ maxOptChargeFunc, maxOptDischargeFunc ::
   (Double, EnvDouble)
 maxOptChargeFunc socDrive =
   maybe (error "maxOptChargeFunc") id .
-  optimalSolution condition (penalty $ ChargeDrive socDrive) System.seqTopoOpt
+  Sweep.optimalSolution2D condition 
+    (forcing $ ChargeDrive socDrive) System.seqTopoOpt
 
 maxOptDischargeFunc socDrive = 
   maybe (error "maxOptDischargeFunc") id .
-  optimalSolution condition (penalty $ DischargeDrive socDrive) System.seqTopoOpt
+  Sweep.optimalSolution2D condition
+    (forcing $ DischargeDrive socDrive) System.seqTopoOpt
 
 makePics ::
   (forall s. EqGen.EquationSystem Node s (Data Nil Double) (Data Nil Double)) ->
@@ -251,9 +258,9 @@ makePics eqs tabEta tabPower socDrive = t
 
         state = Sig.map fromIntegral $ Sig.argMax maxETACharge maxETADischarge
 
-        optWater = AppOpt.combineOptimalMaps maxEtaSysState
+        optWater = Sweep.combineOptimalMaps maxEtaSysState
                      powerWaterChargeOpt powerWaterDischargeOpt
-        optGas = AppOpt.combineOptimalMaps maxEtaSysState
+        optGas = Sweep.combineOptimalMaps maxEtaSysState
                      powerGasChargeOpt powerGasDischargeOpt
 
         --maxEtaSysState :: Sig.UTSignal2 V.Vector V.Vector Double
@@ -303,6 +310,51 @@ makePics eqs tabEta tabPower socDrive = t
 
         etaFunc = CT.makeEtaFunctions2D scaleTableEta tabEta
 
+
+
+stateFlow2SequFlow :: (Ord node) => TD.StateFlowGraph node -> TD.SequFlowGraph node
+stateFlow2SequFlow = Graph.ixmap f g
+  where f :: TIdx.AugNode TIdx.State node -> TIdx.AugNode TIdx.Section node
+        f (TIdx.PartNode TIdx.Exit x) = TIdx.PartNode TIdx.Exit x
+        f (TIdx.PartNode (TIdx.NoExit TIdx.Init) x) =
+          TIdx.PartNode (TIdx.NoExit TIdx.Init) x
+        f (TIdx.PartNode (TIdx.NoExit (TIdx.NoInit (TIdx.State i))) x) = 
+          TIdx.PartNode (TIdx.NoExit (TIdx.NoInit (TIdx.Section i))) x
+
+        g :: TD.FlowEdge Graph.EitherEdge (TIdx.AugNode TIdx.State node) ->
+             TD.FlowEdge Graph.EitherEdge (TIdx.AugNode TIdx.Section node)
+        g = undefined
+
+
+stateEnv2SequEnv :: (Ord node) => StFlEnv.Complete node a v -> EqEnv.Complete node a v
+stateEnv2SequEnv (StFlEnv.Complete scal sig) =
+  let StFlEnv.Scalar a b c d = scal
+      StFlEnv.Signal u v w x y z = sig
+      scalNew = EqEnv.Scalar
+                  Map.empty
+                  Map.empty
+                  (Map.mapKeys f a)
+                  (Map.mapKeys g b) 
+                  (Map.mapKeys h c)
+                  undefined
+
+      f (TIdx.ForNode (TIdx.StEnergy (TIdx.StorageEdge 
+          (TIdx.NoInit (TIdx.State i)) 
+          (TIdx.NoExit (TIdx.State j)))) b) =
+        (TIdx.ForNode (TIdx.StEnergy (TIdx.StorageEdge
+          (TIdx.NoInit (TIdx.Section i))
+          (TIdx.NoExit (TIdx.Section j)))) b)
+
+      g (TIdx.ForNode (TIdx.StX (TIdx.StorageTrans 
+          (TIdx.NoExit (TIdx.NoInit (TIdx.State i)))
+          (TIdx.NoExit (TIdx.NoInit (TIdx.State j))))) b) =
+        (TIdx.ForNode (TIdx.StX (TIdx.StorageTrans 
+          (TIdx.NoExit (TIdx.NoInit (TIdx.Section i)))
+          (TIdx.NoExit (TIdx.NoInit (TIdx.Section j))))) b)
+
+      h = undefined
+
+  in EqEnv.Complete scalNew undefined
 
 
 main :: IO ()

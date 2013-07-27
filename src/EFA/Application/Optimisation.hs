@@ -4,14 +4,10 @@
 
 module EFA.Application.Optimisation where
 
---import qualified EFA.Application.Utility as EqUt
 import qualified EFA.Application.Absolute as EqGen
---import qualified EFA.Application.EtaSys as ES
 import qualified EFA.Application.Index as XIdx
 import EFA.Application.Absolute ( (=.=) )
 
---import qualified EFA.Signal.Record as Record
-import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.Data as Data
 import EFA.Signal.Data (Data(..), Nil)
 
@@ -25,79 +21,12 @@ import qualified EFA.Equation.Environment as EqEnv
 
 import qualified EFA.Equation.Arithmetic as EqArith
 
-import qualified Data.Vector as V
 import qualified Data.Map as Map
 import qualified Data.Foldable as Fold
 import Data.Map (Map)
 import Data.Monoid((<>))
 
 
-{-
-
-calcOptfunc muss verallgemeinert werden.
-
-1. ein socDrive pro Speicher
-2. wie kann ich automatisch alle Speicherinhalte kontrollieren
-3. wie kriege ich das Vorzeichen (ein/ausspeichern ??)
-4. undetermined / determined soll ich das weiterhin übernehmen oder was eigenes machen
-5.
-
-calcOptFunc ::
-  Flow.RangeGraph Node ->
-  Bool ->
-  Double ->
-  EnvDouble -> Result Double
-calcOptFunc topo b socDrive env = case  ES.etaSys topo env of
-   Determined etaSys -> etaSys + socDrive * (if b then eCharge else -eDischarge)
-   Undetermined ->
-
-  if all (>0) [eCoal0, eCoal1, eTrans0, eTrans1] then res else nan
-  where nan = 0/0
-        lu idx = EqUt.checkDetermined (show idx) $
-                   ES.lookupAbsEnergy "calcOptFunc" env idx
-        eCoal      = lu $ XIdx.energy sec0 Coal Network
-        eCoal0     = lu $ XIdx.energy sec0 Coal Network
-        eCoal1     = lu $ XIdx.energy sec1 Coal Network
-        eTrans0    = lu $ XIdx.energy sec0 Network LocalNetwork
-        eTrans1    = lu $ XIdx.energy sec1 Network LocalNetwork
-
-        eCharge    = lu $ XIdx.energy sec0 Water Network
-        eDischarge = lu $ XIdx.energy sec1 Water Network
-
-        Determined etaSys = ES.etaSys topo env
-        res = etaSys + socDrive * (if b then eCharge else -eDischarge)
-
-
-maxEta ::
-  Flow.RangeGraph Node ->
-  Sig.UTSignal2 V.Vector V.Vector EnvDouble ->
-  (Double, Maybe EnvDouble)
-maxEta topo sigEnvs = maxOpt topo True 0 sigEnvs
-
-
-
-maxOpt ::
-  Flow.RangeGraph Node ->
-  Bool ->
-  Double ->
-  Sig.UTSignal2 V.Vector V.Vector EnvDouble ->
-  (Double, Maybe EnvDouble)
-maxOpt topo b socDrive sigEnvs = (etaMax, env)
-  where etaSys = Sig.map (calcOptFunc topo b socDrive) sigEnvs
-        etaMax = Sig.fromScalar $ Sig.maximum etaSys
-        (xIdx, yIdx) = Sig.findIndex2 (== etaMax) etaSys
-        env = liftA2 (Sig.getSample2D sigEnvs) xIdx yIdx
-
--}
-
-combineOptimalMaps ::
-  Sig.UTSignal2 V.Vector V.Vector Double ->
-  Sig.PSignal2 V.Vector V.Vector Double ->
-  Sig.PSignal2 V.Vector V.Vector Double ->
-  Sig.PSignal2 V.Vector V.Vector Double
-combineOptimalMaps state charge discharge =
-  Sig.zipWith f state $ Sig.zip charge discharge
-  where f s (c, d) = if s < 0.1 then c else d
 
 
 -- | TODO Functios below could ventually be moved to a module Application/Given
@@ -177,4 +106,3 @@ givenForOptimisation seqTopology env etaAssign etaFunc sec commonGiven givenLoad
   givenAverageWithoutSectionX sec env <>
   givenLoad <>
   givenDOF
-  

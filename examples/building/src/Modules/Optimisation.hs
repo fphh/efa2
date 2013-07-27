@@ -61,7 +61,7 @@ type EnvResult a = EqEnv.Complete Node (Result a) (Result a)
 type EqSystemData a =  (forall s. EqGen.EquationSystem System.Node s (Data Nil a) (Data Nil a))
 
 solve ::
-  (Ord a, Fractional a, Show a, EqArith.Sum a,EqArith.Constant a) =>
+  (Ord a, Fractional a, Show a, EqArith.Sum a, EqArith.Constant a) =>
   Flow.RangeGraph Node ->
   Env a ->
   TIdx.Section ->
@@ -71,10 +71,12 @@ solve ::
   a ->
   a ->
   EnvResult a
-solve seqTopology env sec etaFunc pHouse pNetload pWater pBattery = envGetData $ EqGen.solveSimple $
+solve seqTopology env sec etaFunc pHouse pNetload pWater pBattery =
+  envGetData $ EqGen.solveSimple $
     AppOpt.givenForOptimisation seqTopology env etaAssign etaFunc sec
-      commonGiven (givenSecLoad sec (g pHouse) (g pNetload)) (givenSecDOF sec (g pWater) (g pBattery))
-  where g = Data
+      commonGiven
+      (givenSecLoad sec (Data pHouse) (Data pNetload))
+      (givenSecDOF sec (Data pWater) (Data pBattery))
 
 givenSecLoad :: (Eq a, EqArith.Sum a) =>
                 TIdx.Section ->

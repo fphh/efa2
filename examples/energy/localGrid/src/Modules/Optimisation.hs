@@ -11,6 +11,8 @@ import qualified EFA.Application.Absolute as EqGen
 import qualified EFA.Application.Index as XIdx
 import qualified EFA.Application.Utility as EqUt
 import qualified EFA.Application.EtaSys as ES
+import qualified EFA.Application.Sweep as Sweep
+
 import EFA.Application.Absolute ( (.=), (=%%=), (=.=) )
 
 import qualified EFA.Equation.Environment as EqEnv
@@ -229,10 +231,9 @@ data SocDrive a = NoDrive
                 | DischargeDrive a deriving (Show, Eq)
 
 
-type Penalty = EnvDouble -> Double
 
-penalty :: SocDrive Double -> EqEnv.Complete Node b (Result Double) -> Double
-penalty socDrive env =
+forcing :: SocDrive Double -> EqEnv.Complete Node b (Result Double) -> Double
+forcing socDrive env =
   case socDrive of
        NoDrive -> 0
        ChargeDrive soc -> soc * eCharge
@@ -242,8 +243,6 @@ penalty socDrive env =
 
 -----------------------------------------------------------------------------
 
-
-type Condition = EnvDouble -> Bool
 
 condition :: EqEnv.Complete Node b (Result Double) -> Bool
 condition env = all (>0) [eCoal0, eCoal1, eTrans0, eTrans1]
@@ -259,26 +258,5 @@ maxEta ::
   Sig.UTSignal2 V.Vector V.Vector EnvDouble ->
   Maybe (Double, EnvDouble)
 maxEta topo sigEnvs =
-  optimalSolution2D condition (penalty NoDrive) topo sigEnvs
-
-
-------------------------------------------------------------------------------
-
--- soll z.B. in EtaSys kommen:
-
-optimalSolution2D ::
-  Condition ->
-  Penalty ->
-  Flow.RangeGraph Node ->
-  Sig.UTSignal2 V.Vector V.Vector EnvDouble ->
-  Maybe (Double, EnvDouble)
-optimalSolution2D cond penalty topo sigEnvs = liftA2 (,) etaMax env
-  where etaSys = Sig.map go sigEnvs
-        go env =
-          case cond env of 
-               True -> Just $ ES.detEtaSys topo env + penalty env
-               False -> Nothing
-        etaMax = Sig.fromScalar $ Sig.maximum etaSys
-        (xIdx, yIdx) = Sig.findIndex2 (== etaMax) etaSys
-        env = liftA2 (Sig.getSample2D sigEnvs) xIdx yIdx
+  Sweep.optimalSolution2D condition (forcing NoDrive) topo sigEnvs
 
