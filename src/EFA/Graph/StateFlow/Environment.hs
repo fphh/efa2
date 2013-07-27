@@ -1,11 +1,13 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
 module EFA.Graph.StateFlow.Environment where
 
 import qualified EFA.Graph.StateFlow.Index as XIdx
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
+
 import qualified EFA.Equation.Variable as Var
 
 import qualified EFA.Report.Format as Format
@@ -111,6 +113,110 @@ formatMap ::
    Map (idx node) a -> [output]
 formatMap =
    map (uncurry formatAssign) . Map.toList
+
+
+instance
+   (Node.C node, FormatValue b, FormatValue a) =>
+      FormatValue (Complete node b a) where
+   formatValue (Complete (Scalar se sx sis sos) (Signal e p n dt x s)) =
+      Format.lines $
+         formatMap e ++
+         formatMap se ++
+         formatMap p ++
+         formatMap n ++
+         formatMap dt ++
+         formatMap x ++
+         formatMap sx ++
+         formatMap s ++
+         formatMap sis ++
+         formatMap sos ++
+         []
+
+
+
+
+type Element idx a v = PartElement (Environment idx) a v
+
+accessMap ::
+   (AccessMap idx) =>
+   Accessor.T (Complete node a v) (Map (idx node) (Element idx a v))
+accessMap =
+   accessPartMap . accessPart
+
+insert ::
+   (AccessMap idx, Ord (idx node)) =>
+   idx node ->
+   Element idx a v ->
+   Complete node a v ->
+   Complete node a v
+insert idx val =
+   Accessor.modify accessMap $ Map.insert idx val
+
+
+class (AccessPart (Environment idx), Var.Index idx) => AccessMap idx where
+   type Environment idx :: * -> * -> *
+   accessPartMap ::
+      Accessor.T
+         (Environment idx node a)
+         (Map (idx node) a)
+
+instance (AccessSignalMap idx) => AccessMap (Idx.InState idx) where
+   type Environment (Idx.InState idx) = Signal
+   accessPartMap = accessSignalMap
+
+instance (AccessScalarMap idx) => AccessMap (Idx.ForNode idx) where
+   type Environment (Idx.ForNode idx) = Scalar
+   accessPartMap = accessScalarMap
+
+
+class (Var.SignalIndex idx) => AccessSignalMap idx where
+   accessSignalMap ::
+      Accessor.T (Signal node a) (Map (Idx.InState idx node) a)
+
+instance AccessSignalMap Idx.Energy where
+   accessSignalMap =
+      Accessor.fromSetGet (\x c -> c{energyMap = x}) energyMap
+
+instance AccessSignalMap Idx.Power where
+   accessSignalMap =
+      Accessor.fromSetGet (\x c -> c{powerMap = x}) powerMap
+
+instance AccessSignalMap Idx.Eta where
+   accessSignalMap =
+      Accessor.fromSetGet (\x c -> c{etaMap = x}) etaMap
+
+instance AccessSignalMap Idx.DTime where
+   accessSignalMap =
+      Accessor.fromSetGet (\x c -> c{dtimeMap = x}) dtimeMap
+
+instance AccessSignalMap Idx.X where
+   accessSignalMap =
+      Accessor.fromSetGet (\x c -> c{xMap = x}) xMap
+
+instance AccessSignalMap Idx.Sum where
+   accessSignalMap =
+      Accessor.fromSetGet (\x c -> c{sumMap = x}) sumMap
+
+
+class (Var.ScalarIndex idx) => AccessScalarMap idx where
+   accessScalarMap ::
+      Accessor.T (Scalar node a) (Map (Idx.ForNode idx node) a)
+
+instance AccessScalarMap (Idx.StEnergy Idx.State) where
+   accessScalarMap =
+      Accessor.fromSetGet (\x c -> c{stEnergyMap = x}) stEnergyMap
+
+instance AccessScalarMap (Idx.StX Idx.State) where
+   accessScalarMap =
+      Accessor.fromSetGet (\x c -> c{stXMap = x}) stXMap
+
+instance AccessScalarMap (Idx.StInSum Idx.State) where
+   accessScalarMap =
+      Accessor.fromSetGet (\x c -> c{stInSumMap = x}) stInSumMap
+
+instance AccessScalarMap (Idx.StOutSum Idx.State) where
+   accessScalarMap =
+      Accessor.fromSetGet (\x c -> c{stOutSumMap = x}) stOutSumMap
 
 
 signalLift0 ::

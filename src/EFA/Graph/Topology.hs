@@ -17,7 +17,7 @@ module EFA.Graph.Topology (
        StateFlowGraph,
        DirStateFlowGraph,
        pathExists,
-       dirFromSequFlowGraph,
+       dirFromFlowGraph,
        structureEdgeFromDirEdge,
        isStorage,
        maybeStorage,
@@ -246,10 +246,10 @@ Anyway, I don't remove dead nodes,
 because it will make DirSequFlowGraph more complicated
 or the generation of storage equations will be more complicated.
 -}
-dirFromSequFlowGraph ::
-   (Ord node) =>
-   SequFlowGraph node -> DirSequFlowGraph node
-dirFromSequFlowGraph =
+dirFromFlowGraph ::
+   (Ord part, Ord node) =>
+   FlowGraph part node -> DirFlowGraph part node
+dirFromFlowGraph =
    Gr.mapEdgesMaybe $ \fe ->
       case edgeType fe of
          StorageEdge se -> Just $ FlowEdge $ StorageEdge se

@@ -4,6 +4,7 @@ module Main where
 import qualified EFA.Application.AssignMap as AssignMap
 import qualified EFA.Application.Absolute as EqGen
 import qualified EFA.Application.Index as XIdx
+import qualified EFA.Application.Symbolic as Symbolic
 import EFA.Application.Utility (makeEdges, constructSeqTopo)
 import EFA.Application.Absolute ((.=))
 
@@ -52,15 +53,15 @@ topoLinear = Gr.fromList ns (makeEdges es)
         es = [(node0, node1), (node1, node2)]
 
 
-type SignalTerm = SymVar.SignalTerm Idx.Delta SumProduct.Term Node.Int
-type ScalarTerm = SymVar.ScalarTerm Idx.Delta SumProduct.Term Node.Int
+type SignalTerm = Symbolic.SignalTerm Idx.Delta SumProduct.Term Node.Int
+type ScalarTerm = Symbolic.ScalarTerm Idx.Delta SumProduct.Term Node.Int
 
 
 type
    EquationSystemSymbolic s =
       EqGen.EquationSystem Node.Int s
-         (Stack (Var.Any Node.Int) ScalarTerm)
-         (Stack (Var.Any Node.Int) SignalTerm)
+         (Stack (Var.SectionAny Node.Int) ScalarTerm)
+         (Stack (Var.SectionAny Node.Int) SignalTerm)
 
 infixr 6 *=<>, -=<>
 
@@ -114,8 +115,8 @@ mainSymbolic = do
 type
    EquationSystemNumeric s =
       EqGen.EquationSystem Node.Int s
-         (Stack (Var.Any Node.Int) Double)
-         (Stack (Var.Any Node.Int) Double)
+         (Stack (Var.SectionAny Node.Int) Double)
+         (Stack (Var.SectionAny Node.Int) Double)
 
 deltaPair ::
    (Ord (idx Node.Int), FormatSignalIndex idx, Env.AccessSignalMap idx) =>

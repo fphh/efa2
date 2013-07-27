@@ -11,34 +11,41 @@ import EFA.Report.FormatValue
            FormatScalarIndex, formatScalarIndex)
 
 
-data Any a =
-     Signal (InSectionSignal a)
-   | Scalar (ForNodeScalar a)
+data Any part node =
+     Signal (InPartSignal part node)
+   | Scalar (ForNodeScalar part node)
      deriving (Show, Eq, Ord)
 
-data Signal a =
-     Energy (Idx.Energy a)
-   | Power (Idx.Power a)
-   | Eta (Idx.Eta a)
-   | DTime (Idx.DTime a)
-   | X (Idx.X a)
-   | Sum (Idx.Sum a)
+type SectionAny = Any Idx.Section
+type StateAny   = Any Idx.State
+
+
+data Signal node =
+     Energy (Idx.Energy node)
+   | Power (Idx.Power node)
+   | Eta (Idx.Eta node)
+   | DTime (Idx.DTime node)
+   | X (Idx.X node)
+   | Sum (Idx.Sum node)
      deriving (Show, Eq, Ord)
 
-data Scalar a =
-     MaxEnergy (Idx.MaxEnergy a)
-   | Storage (Idx.Storage a)
-   | StEnergy (Idx.StEnergy Idx.Section a)
-   | StX (Idx.StX Idx.Section a)
-   | StInSum (Idx.StInSum Idx.Section a)
-   | StOutSum (Idx.StOutSum Idx.Section a)
+data Scalar part node =
+     MaxEnergy (Idx.MaxEnergy node)
+   | Storage (Idx.Storage node)
+   | StEnergy (Idx.StEnergy part node)
+   | StX (Idx.StX part node)
+   | StInSum (Idx.StInSum part node)
+   | StOutSum (Idx.StOutSum part node)
      deriving (Show, Eq, Ord)
 
 
-
-type InPartSignal part = Idx.InPart part Signal
+type InPartSignal part  = Idx.InPart part Signal
 type InSectionSignal = Idx.InSection Signal
-type ForNodeScalar   = Idx.ForNode   Scalar
+type InStateSignal   = Idx.InState Signal
+
+type ForNodeScalar part = Idx.ForNode (Scalar part)
+type ForNodeSectionScalar = ForNodeScalar Idx.Section
+type ForNodeStateScalar   = ForNodeScalar Idx.State
 
 class Index t where
    type Type t :: * -> *
@@ -46,11 +53,11 @@ class Index t where
 
 instance SignalIndex idx => Index (Idx.InPart part idx) where
    type Type (Idx.InPart part idx) = InPartSignal part
-   index (Idx.InPart s x) = Idx.InPart s (signalIndex x)
+   index = Idx.liftInPart signalIndex
 
 instance ScalarIndex idx => Index (Idx.ForNode idx) where
-   type Type (Idx.ForNode idx) = ForNodeScalar
-   index (Idx.ForNode x n) = Idx.ForNode (scalarIndex x) n
+   type Type (Idx.ForNode idx) = ForNodeScalar (ScalarPart idx)
+   index = Idx.liftForNode scalarIndex
 
 
 class SignalIndex t where
@@ -65,28 +72,37 @@ instance SignalIndex Idx.Sum    where signalIndex = Sum
 
 
 class ScalarIndex t where
-   scalarIndex :: t a -> Scalar a
+   type ScalarPart t :: *
+   scalarIndex :: t a -> Scalar (ScalarPart t) a
 
-instance ScalarIndex Idx.MaxEnergy where scalarIndex = MaxEnergy
-instance ScalarIndex Idx.Storage   where scalarIndex = Storage
-instance (Idx.ToSection sec) => ScalarIndex (Idx.StEnergy sec) where
-   scalarIndex (Idx.StEnergy (Idx.StorageEdge from to)) =
-      StEnergy $ Idx.StEnergy $
-      Idx.StorageEdge (fmap Idx.toSection from) (fmap Idx.toSection to)
-instance (Idx.ToSection sec) => ScalarIndex (Idx.StX sec) where
-   scalarIndex (Idx.StX (Idx.StorageTrans from to)) =
-      StX $ Idx.StX $
-      Idx.StorageTrans
-         (fmap (fmap Idx.toSection) from) (fmap (fmap Idx.toSection) to)
-instance (Idx.ToSection sec) => ScalarIndex (Idx.StInSum sec) where
-   scalarIndex (Idx.StInSum sec) =
-      StInSum $ Idx.StInSum $ fmap Idx.toSection sec
-instance (Idx.ToSection sec) => ScalarIndex (Idx.StOutSum sec) where
-   scalarIndex (Idx.StOutSum sec) =
-      StOutSum $ Idx.StOutSum $ fmap Idx.toSection sec
+instance ScalarIndex Idx.MaxEnergy where
+   type ScalarPart Idx.MaxEnergy = Idx.Section
+   scalarIndex = MaxEnergy
+
+instance ScalarIndex Idx.Storage where
+   type ScalarPart Idx.Storage = Idx.Section
+   scalarIndex = Storage
+
+instance ScalarIndex (Idx.StEnergy part) where
+   type ScalarPart (Idx.StEnergy part) = part
+   scalarIndex = StEnergy
+
+instance ScalarIndex (Idx.StX part) where
+   type ScalarPart (Idx.StX part) = part
+   scalarIndex = StX
+
+instance ScalarIndex (Idx.StInSum part) where
+   type ScalarPart (Idx.StInSum part) = part
+   scalarIndex = StInSum
+
+instance ScalarIndex (Idx.StOutSum part) where
+   type ScalarPart (Idx.StOutSum part) = part
+   scalarIndex = StOutSum
 
 
-instance (Node.C node) => FormatValue (Any node) where
+instance
+   (Format.Part part, Node.C node) =>
+      FormatValue (Any part node) where
    formatValue (Signal var) = formatSignalValue var
    formatValue (Scalar var) = formatScalarValue var
 
@@ -103,8 +119,8 @@ formatSignalValue (Idx.InPart s var) =
       Sum idx -> formatSignalIndex idx s
 
 formatScalarValue ::
-   (Format output, Node.C node) =>
-   ForNodeScalar node -> output
+   (Format output, Format.Part part, Node.C node) =>
+   ForNodeScalar part node -> output
 formatScalarValue (Idx.ForNode var n) =
    case var of
       MaxEnergy idx -> formatScalarIndex idx n
@@ -130,5 +146,5 @@ instance FormatScalarIndex idx => FormatIndex (Idx.ForNode idx) where
 instance FormatSignalIndex Signal where
    formatSignalIndex edge sec = formatSignalValue (Idx.InPart sec edge)
 
-instance FormatScalarIndex Scalar where
+instance (Format.Part part) => FormatScalarIndex (Scalar part) where
    formatScalarIndex edge node = formatScalarValue (Idx.ForNode edge node)

@@ -57,14 +57,14 @@ hasStructureEdge = not . Set.null
 
 
 etaSys ::
-  (Show a, Num a, Fractional a, Show node, Ord node) =>
+  (Show a, Fractional a, Show node, Ord node) =>
   Flow.RangeGraph node ->
   EqEnv.Complete node b (Result a) -> Result a
 etaSys (_, topo) env = liftA2 (/) (sumRes sinks) (sumRes sources)
   where m = Map.elems $
             Gr.nodeEdges $
             Gr.lefilter (TD.isStructureEdge . fst) $
-            TD.dirFromSequFlowGraph topo
+            TD.dirFromFlowGraph topo
 
         sinks = concatMap (mapMaybe sinkEnergies . Set.toList . fst3) $ filter isActiveSink m
         sources = concatMap (mapMaybe sourceEnergies . Set.toList . thd3) $ filter isActiveSource m

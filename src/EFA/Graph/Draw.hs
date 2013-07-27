@@ -314,25 +314,25 @@ groupEdges ::
    Topo.FlowGraph part node ->
    (Map (Idx.Augmented part) [Idx.InPart part Gr.EitherEdge node],
     [Idx.ForNode (Idx.StorageEdge part) node])
-groupEdges g =
-   mapFst (Map.fromListWith (++)) $
-   ListHT.unzipEithers $
+groupEdges =
+   mapFst (Map.fromListWith (++)) .
+   ListHT.unzipEithers .
    map
       (\e ->
          case Topo.edgeType e of
             Topo.StructureEdge se@(Idx.InPart s _) ->
                Left (Idx.augment s, [se])
-            Topo.StorageEdge se -> Right se) $
-   Gr.edges g
+            Topo.StorageEdge se -> Right se) .
+   Gr.edges
 
 groupNodes ::
    (Ord (e (Idx.PartNode part node)), Ord part, Ord node, Gr.Edge e) =>
    Gr.Graph (Idx.PartNode part node) e nl el ->
    Map part [(Idx.PartNode part node, nl)]
-groupNodes g =
-   Map.fromListWith (++) $
-   map (\nl@(Idx.PartNode s _, _) -> (s, [nl])) $
-   Gr.labNodes g
+groupNodes =
+   Map.fromListWith (++) .
+   map (\nl@(Idx.PartNode s _, _) -> (s, [nl])) .
+   Gr.labNodes
 
 
 graphStatementsAcc ::

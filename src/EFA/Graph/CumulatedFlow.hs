@@ -89,4 +89,4 @@ cumulate ::
 cumulate topo (_rngs, seqTopo) env =
   ( (topo, withDirEnv), (Gr.reverse topo, againstDirEnv) )
   where (withDirEnv, againstDirEnv) =
-           cumulatedEnergyFlow topo (TD.dirFromSequFlowGraph seqTopo) env
+           cumulatedEnergyFlow topo (TD.dirFromFlowGraph seqTopo) env

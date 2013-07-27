@@ -12,46 +12,49 @@ import EFA.Utility (Pointed, point)
 
 
 type
-   SignalTerm recIdx term node =
+   SignalTerm recIdx term part node =
       Term.Signal term
-         (Idx.Record recIdx (Var.ForNodeScalar node))
-         (Idx.Record recIdx (Var.InSectionSignal node))
+         (Idx.Record recIdx (Var.ForNodeScalar part node))
+         (Idx.Record recIdx (Var.InPartSignal part node))
 
 type
-   ScalarTerm recIdx term node =
+   ScalarTerm recIdx term part node =
       Term.Scalar term
-         (Idx.Record recIdx (Var.ForNodeScalar node))
-         (Idx.Record recIdx (Var.InSectionSignal node))
+         (Idx.Record recIdx (Var.ForNodeScalar part node))
+         (Idx.Record recIdx (Var.InPartSignal part node))
 
 type
-   ScalarAtom recIdx term node =
+   ScalarAtom recIdx term part node =
       Term.ScalarAtom term
-         (Idx.Record recIdx (Var.ForNodeScalar node))
-         (Idx.Record recIdx (Var.InSectionSignal node))
+         (Idx.Record recIdx (Var.ForNodeScalar part node))
+         (Idx.Record recIdx (Var.InPartSignal part node))
 
 
 type
    VarTerm var recIdx term node =
       Term var term
-         (Idx.Record recIdx (Var.ForNodeScalar node))
-         (Idx.Record recIdx (Var.InSectionSignal node))
+         (Idx.Record recIdx (Var.ForNodeScalar (Part var) node))
+         (Idx.Record recIdx (Var.InPartSignal (Part var) node))
 
-class (var ~ Variable (Term var)) => Symbol var where
+class (var ~ Variable (Term var) (Part var)) => Symbol var where
    type Term var :: (* -> *) -> * -> * -> *
-   type Variable term :: * -> *
+   type Part var :: *
+   type Variable term part :: * -> *
    symbol ::
       Pointed term =>
       Idx.Record recIdx (var node) ->
       VarTerm var recIdx term node
 
-instance Symbol (Idx.InSection Var.Signal) where
-   type Term (Idx.InSection Var.Signal) = Term.Signal
-   type Variable Term.Signal = Idx.InSection Var.Signal
+instance Symbol (Var.InPartSignal part) where
+   type Term (Var.InPartSignal part) = Term.Signal
+   type Part (Var.InPartSignal part) = part
+   type Variable Term.Signal part = Var.InPartSignal part
    symbol = Term.Signal . point
 
-instance Symbol (Idx.ForNode Var.Scalar) where
-   type Term (Idx.ForNode Var.Scalar) = Term.Scalar
-   type Variable Term.Scalar = Idx.ForNode Var.Scalar
+instance Symbol (Var.ForNodeScalar part) where
+   type Term (Var.ForNodeScalar part) = Term.Scalar
+   type Part (Var.ForNodeScalar part) = part
+   type Variable Term.Scalar part = Var.ForNodeScalar part
    symbol = Term.Scalar . point . Term.ScalarVariable
 
 

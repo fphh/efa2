@@ -101,24 +101,25 @@ class LocalVar w a => GlobalVar w a recIdx var node where
 type Variable output s a b = Sys.Variable (Track output) s (Pair.T a b)
 
 
-type MixedTerm mixedTerm recIdx node =
+type MixedTerm mixedTerm recIdx part node =
         mixedTerm
-           (Idx.Record recIdx (Var.ForNodeScalar node))
-           (Idx.Record recIdx (Var.InSectionSignal node))
+           (Idx.Record recIdx (Var.ForNodeScalar part node))
+           (Idx.Record recIdx (Var.InPartSignal part node))
 
 instance
    (Format output, FormatValue a, Eq a,
-    FormatValue (MixedTerm mixedTerm recIdx node)) =>
+    FormatValue (MixedTerm mixedTerm recIdx part node)) =>
       LocalVar (Track output)
-         (Pair.T (MixedTerm mixedTerm recIdx node) a) where
+         (Pair.T (MixedTerm mixedTerm recIdx part node) a) where
    localVariable = localVariableTracked
 
 instance
    (Format output, FormatValue a, Eq a,
-    FormatValue (MixedTerm (mixedTerm term) recIdx node),
-    Pointed term, mixedTerm ~ SymVar.Term var, SymVar.Symbol var) =>
+    FormatValue (MixedTerm (mixedTerm term) recIdx part node),
+    Pointed term, SymVar.Symbol var,
+    mixedTerm ~ SymVar.Term var, part ~ SymVar.Part var) =>
       GlobalVar (Track output)
-         (Pair.T (MixedTerm (mixedTerm term) recIdx node) a)
+         (Pair.T (MixedTerm (mixedTerm term) recIdx part node) a)
          recIdx var node where
    globalVariable = globalVariableTracked
 

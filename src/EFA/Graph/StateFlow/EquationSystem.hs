@@ -2,7 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-module EFA.Equation.System (
+module EFA.Graph.StateFlow.EquationSystem (
   EquationSystem, Expression, RecordExpression,
 
   fromGraph,
@@ -34,29 +34,27 @@ module EFA.Equation.System (
   variableRecord,
   power,
   energy,
-  maxEnergy,
   eta,
   xfactor,
   insum,
   outsum,
-  storage,
   dtime,
   Result(..),
   ) where
 
-import qualified EFA.Application.Index as XIdx
-import qualified EFA.Equation.Record as Record
-import qualified EFA.Equation.Environment as Env
-import qualified EFA.Equation.Verify as Verify
-import qualified EFA.Equation.Variable as Var
-import qualified EFA.Equation.Pair as Pair
-import qualified EFA.Graph.Flow as Flow
+import qualified EFA.Graph.StateFlow.Environment as Env
+import qualified EFA.Graph.StateFlow.Index as XIdx
+
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph as Gr
+import EFA.Graph.Topology (StateFlowGraph)
 
-import EFA.Report.FormatValue (FormatValue)
+import qualified EFA.Equation.Record as Record
+import qualified EFA.Equation.Verify as Verify
+import qualified EFA.Equation.Variable as Var
+import qualified EFA.Equation.Pair as Pair
 
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic
@@ -65,6 +63,8 @@ import EFA.Equation.Arithmetic
            Constant, zero,
            Integrate, Scalar, integrate)
 import EFA.Equation.Result(Result(..))
+
+import EFA.Report.FormatValue (FormatValue)
 
 import EFA.Utility ((>>!))
 
@@ -90,17 +90,15 @@ import Control.Category ((.))
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.List.HT as ListHT
-import qualified Data.List as List
 
 import qualified Data.NonEmpty as NonEmpty
 
 import qualified Data.Foldable as Fold
 
 import Data.Map (Map)
-import Data.Traversable (Traversable, traverse, for, sequenceA)
+import Data.Traversable (Traversable, traverse, for)
 import Data.Foldable (foldMap, fold)
 import Data.Monoid (Monoid, (<>), mempty, mappend, mconcat)
-import Data.Ord.HT (comparing)
 
 import qualified Prelude as P
 import Prelude hiding (sqrt, (.))
@@ -273,14 +271,6 @@ sqrt ::
    RecordExpression mode rec node s a v x
 sqrt = liftF P.sqrt
 
-
-localVariable ::
-   (Record rec, Verify.LocalVar mode a, Sum a) =>
-   WriterT (System mode s) (ST s) (RecordVariable mode rec s a)
-localVariable = do
-   vars <- lift $ sequenceA $ pure Verify.localVariable
-   tell $ recordRules vars
-   return vars
 
 globalVariable ::
    (Record rec, Verify.GlobalVar mode a (Record.ToIndex rec) var node,
@@ -479,16 +469,6 @@ constantRecord ::
 constantRecord = pure . Wrap . fmap Expr.constant
 
 
-withLocalVar ::
-  (Verify.LocalVar mode x, Sum x, Record rec) =>
-  (RecordExpression mode rec node s a v x -> EquationSystem mode rec node s a v) ->
-  EquationSystem mode rec node s a v
-withLocalVar f = EquationSystem $ do
-   v <- lift localVariable
-   case f $ pure $ Wrap $ fmap Expr.fromVariable v of
-        EquationSystem act -> act
-
-
 newtype
    AccessMap rec node s a v idx env =
       AccessMap {
@@ -538,81 +518,69 @@ variable (Idx.Record recIdx idx) =
 
 
 power ::
-   (Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node,
+   (Verify.GlobalVar mode v (Record.ToIndex rec) Var.InStateSignal node,
     Sum v, Record rec, Node.C node) =>
-   Idx.InSection Idx.StructureEdge node -> RecordExpression mode rec node s a v v
-power = variableRecord . Idx.liftInSection Idx.Power
+   Idx.InState Idx.StructureEdge node -> RecordExpression mode rec node s a v v
+power = variableRecord . Idx.liftInState Idx.Power
 
 energy ::
-   (Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node,
+   (Verify.GlobalVar mode v (Record.ToIndex rec) Var.InStateSignal node,
     Sum v, Record rec, Node.C node) =>
-   Idx.InSection Idx.StructureEdge node -> RecordExpression mode rec node s a v v
-energy = variableRecord . Idx.liftInSection Idx.Energy
-
-maxEnergy ::
-   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeSectionScalar node,
-    Sum a, Record rec, Node.C node) =>
-   Idx.ForNode XIdx.StorageEdge node -> RecordExpression mode rec node s a v a
-maxEnergy = variableRecord . Idx.liftForNode Idx.MaxEnergy
+   Idx.InState Idx.StructureEdge node -> RecordExpression mode rec node s a v v
+energy = variableRecord . Idx.liftInState Idx.Energy
 
 stEnergy ::
-   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeSectionScalar node,
+   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeStateScalar node,
     Sum a, Record rec, Node.C node) =>
    Idx.ForNode XIdx.StorageEdge node -> RecordExpression mode rec node s a v a
 stEnergy = variableRecord . Idx.liftForNode Idx.StEnergy
 
 eta ::
-   (Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node,
+   (Verify.GlobalVar mode v (Record.ToIndex rec) Var.InStateSignal node,
     Sum v, Record rec, Node.C node) =>
-   Idx.InSection Idx.StructureEdge node -> RecordExpression mode rec node s a v v
-eta = variableRecord . Idx.liftInSection Idx.Eta
+   Idx.InState Idx.StructureEdge node -> RecordExpression mode rec node s a v v
+eta = variableRecord . Idx.liftInState Idx.Eta
 
 xfactor ::
-   (Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node,
+   (Verify.GlobalVar mode v (Record.ToIndex rec) Var.InStateSignal node,
     Sum v, Record rec, Node.C node) =>
-   Idx.InSection Idx.StructureEdge node -> RecordExpression mode rec node s a v v
-xfactor = variableRecord . Idx.liftInSection Idx.X
+   Idx.InState Idx.StructureEdge node -> RecordExpression mode rec node s a v v
+xfactor = variableRecord . Idx.liftInState Idx.X
 
 stxfactor ::
-   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeSectionScalar node,
+   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeStateScalar node,
     Sum a, Record rec, Node.C node) =>
    Idx.ForNode XIdx.StorageTrans node -> RecordExpression mode rec node s a v a
 stxfactor = variableRecord . Idx.liftForNode Idx.StX
 
 insum ::
-   (Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node,
+   (Verify.GlobalVar mode v (Record.ToIndex rec) Var.InStateSignal node,
     Sum v, Record rec, Node.C node) =>
-   Idx.SecNode node -> RecordExpression mode rec node s a v v
-insum = variableRecord . Idx.inSection (Idx.Sum Idx.In)
+   Idx.StateNode node -> RecordExpression mode rec node s a v v
+insum = variableRecord . Idx.inState (Idx.Sum Idx.In)
 
 outsum ::
-   (Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node,
+   (Verify.GlobalVar mode v (Record.ToIndex rec) Var.InStateSignal node,
     Sum v, Record rec, Node.C node) =>
-   Idx.SecNode node -> RecordExpression mode rec node s a v v
-outsum = variableRecord . Idx.inSection (Idx.Sum Idx.Out)
+   Idx.StateNode node -> RecordExpression mode rec node s a v v
+outsum = variableRecord . Idx.inState (Idx.Sum Idx.Out)
 
 stinsum ::
-   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeSectionScalar node,
+   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeStateScalar node,
     Sum a, Record rec, Node.C node) =>
-   Idx.PartNode Idx.SectionOrExit node -> RecordExpression mode rec node s a v a
+   Idx.PartNode Idx.StateOrExit node -> RecordExpression mode rec node s a v a
 stinsum = variableRecord . Idx.forNode Idx.StInSum
 
 stoutsum ::
-   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeSectionScalar node,
+   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeStateScalar node,
     Sum a, Record rec, Node.C node) =>
-    Idx.PartNode Idx.InitOrSection node -> RecordExpression mode rec node s a v a
+    Idx.PartNode Idx.InitOrState node -> RecordExpression mode rec node s a v a
 stoutsum = variableRecord . Idx.forNode Idx.StOutSum
 
-storage ::
-   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeSectionScalar node,
-    Sum a, Record rec, Node.C node) =>
-   Idx.BndNode node -> RecordExpression mode rec node s a v a
-storage = variableRecord . Idx.forNode Idx.Storage
-
 dtime ::
-   (Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node,
+   (Verify.GlobalVar mode v (Record.ToIndex rec) Var.InStateSignal node,
     Sum v, Record rec, Node.C node) =>
-   Idx.Section -> RecordExpression mode rec node s a v v
+   Idx.State -> RecordExpression mode rec node s a v v
 dtime = variableRecord . flip Idx.InPart Idx.DTime
 
 
@@ -637,14 +605,12 @@ fromMapResult =
    fold . Map.mapWithKey (?=)
 
 fromEnvScalarResult ::
-   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeSectionScalar node,
+   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeStateScalar node,
     Sum a, Node.C node, Record rec) =>
    Env.Scalar node (rec (Result a)) ->
    EquationSystem mode rec node s a v
-fromEnvScalarResult (Env.Scalar me st se sx sis sos) =
+fromEnvScalarResult (Env.Scalar se sx sis sos) =
       mconcat $
-         fromMapResult me :
-         fromMapResult st :
          fromMapResult se :
          fromMapResult sx :
          fromMapResult sis :
@@ -652,7 +618,7 @@ fromEnvScalarResult (Env.Scalar me st se sx sis sos) =
          []
 
 fromEnvSignalResult ::
-   (Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node,
+   (Verify.GlobalVar mode v (Record.ToIndex rec) Var.InStateSignal node,
     Sum v, Node.C node, Record rec) =>
    Env.Signal node (rec (Result v)) ->
    EquationSystem mode rec node s a v
@@ -667,8 +633,8 @@ fromEnvSignalResult (Env.Signal e p n dt x s) =
          []
 
 fromEnvResult ::
-   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeSectionScalar node, Sum a,
-    Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node, Sum v,
+   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeStateScalar node, Sum a,
+    Verify.GlobalVar mode v (Record.ToIndex rec) Var.InStateSignal node, Sum v,
     Node.C node, Record rec) =>
    Env.Complete node (rec (Result a)) (rec (Result v)) ->
    EquationSystem mode rec node s a v
@@ -686,14 +652,12 @@ fromMap =
    fold . Map.mapWithKey (%=)
 
 fromEnvScalar ::
-   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeSectionScalar node,
+   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeStateScalar node,
     Sum a, Node.C node, Record rec) =>
    Env.Scalar node (rec a) ->
    EquationSystem mode rec node s a v
-fromEnvScalar (Env.Scalar me st se sx sis sos) =
+fromEnvScalar (Env.Scalar se sx sis sos) =
       mconcat $
-         fromMap me :
-         fromMap st :
          fromMap se :
          fromMap sx :
          fromMap sis :
@@ -701,7 +665,7 @@ fromEnvScalar (Env.Scalar me st se sx sis sos) =
          []
 
 fromEnvSignal ::
-   (Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node,
+   (Verify.GlobalVar mode v (Record.ToIndex rec) Var.InStateSignal node,
     Sum v, Node.C node, Record rec) =>
    Env.Signal node (rec v) ->
    EquationSystem mode rec node s a v
@@ -716,8 +680,8 @@ fromEnvSignal (Env.Signal e p n dt x s) =
          []
 
 fromEnv ::
-   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeSectionScalar node, Sum a,
-    Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node, Sum v,
+   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeStateScalar node, Sum a,
+    Verify.GlobalVar mode v (Record.ToIndex rec) Var.InStateSignal node, Sum v,
     Node.C node, Record rec) =>
    Env.Complete node (rec a) (rec v) ->
    EquationSystem mode rec node s a v
@@ -726,24 +690,23 @@ fromEnv (Env.Complete envScalar envSignal) =
 
 
 fromGraph ::
-  (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeSectionScalar node, Constant a, a ~ Scalar v,
-   Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node, Product v, Integrate v,
+  (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeStateScalar node, Constant a, a ~ Scalar v,
+   Verify.GlobalVar mode v (Record.ToIndex rec) Var.InStateSignal node, Product v, Integrate v,
    Record rec, Node.C node) =>
   Bool ->
-  TD.DirSequFlowGraph node -> EquationSystem mode rec node s a v
+  TD.DirStateFlowGraph node -> EquationSystem mode rec node s a v
 fromGraph equalInOutSums g = mconcat $
   fromEdges (Gr.edges g) :
   fromNodes equalInOutSums g :
-  fromStorageSequences g :
   []
 
 -----------------------------------------------------------------
 
 fromEdges ::
-  (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeSectionScalar node, Sum a,
-   Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node,
+  (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeStateScalar node, Sum a,
+   Verify.GlobalVar mode v (Record.ToIndex rec) Var.InStateSignal node,
    Product v, Record rec, Node.C node) =>
-  [TD.FlowEdge Gr.DirEdge (Idx.AugSecNode node)] ->
+  [TD.FlowEdge Gr.DirEdge (Idx.AugStateNode node)] ->
   EquationSystem mode rec node s a v
 fromEdges =
    foldMap $ \se ->
@@ -756,16 +719,17 @@ fromEdges =
          TD.StorageEdge _ -> mempty
 
 fromNodes ::
-  (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeSectionScalar node, Constant a, a ~ Scalar v,
-   Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node, Product v, Integrate v,
+  (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeStateScalar node, Constant a, a ~ Scalar v,
+   Verify.GlobalVar mode v (Record.ToIndex rec) Var.InStateSignal node, Product v, Integrate v,
    Record rec, Node.C node) =>
   Bool ->
-  TD.DirSequFlowGraph node -> EquationSystem mode rec node s a v
+  TD.DirStateFlowGraph node -> EquationSystem mode rec node s a v
 fromNodes equalInOutSums =
   fold . Map.mapWithKey f . Gr.nodeEdges
-   where f an (ins, nodeType, outs) =
-            let msn = Idx.secNodeFromBndNode =<< Idx.bndNodeFromAugNode an
-                withSecNode = flip foldMap msn
+   where f an@(Idx.PartNode part node) (ins, nodeType, outs) =
+            let withStateNode g =
+                   Idx.switchAugmented mempty mempty
+                      (\state -> g $ Idx.PartNode state node) part
 
                 partition =
                    ListHT.unzipEithers .
@@ -793,111 +757,35 @@ fromNodes equalInOutSums =
             in  case nodeType of
                    TD.Crossing ->
                       mwhen equalInOutSums $
-                      withSecNode $ \sn -> insum sn =%= outsum sn
+                      withStateNode $ \sn -> insum sn =%= outsum sn
                    TD.Storage dir ->
                       flip foldMap (TD.viewNodeDir (an,dir)) $ \view ->
                          case view of
                             TD.ViewNodeIn rn ->
-                                fromInStorages rn outsStore
-                                <>
                                 splitStoreEqs (stoutsum rn) id outsStore
                                 <>
-                                (withSecNode $ \sn ->
+                                (withStateNode $ \sn ->
                                     stoutsum rn =%= integrate (insum sn))
                             TD.ViewNodeOut rn ->
-                                fromOutStorages insStore
-                                <>
                                 splitStoreEqs (stinsum rn) Idx.flip insStore
                                 <>
-                                (withSecNode $ \sn ->
+                                (withStateNode $ \sn ->
                                    stinsum rn =%= integrate (outsum sn))
                    _ -> mempty
                 <>
-                (withSecNode $ \sn@(Idx.PartNode sec _) ->
+                (withStateNode $ \sn@(Idx.PartNode sec _) ->
                    splitStructEqs sec (insum sn) (map Idx.flip insStruct)
                    <>
                    splitStructEqs sec (outsum sn) outsStruct)
 
 
-fromStorageSequences ::
-  (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeSectionScalar node, Sum a, a ~ Scalar v,
-   Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node, Product v, Integrate v,
-   Record rec, Node.C node) =>
-  TD.DirSequFlowGraph node -> EquationSystem mode rec node s a v
-fromStorageSequences =
-   let f xs =
-          let charge old now (Idx.PartNode aug n, dir) =
-                 case (aug, dir) of
-                    (Idx.Exit, Just TD.Out) ->
-                       old =%= withNode stinsum Idx.Exit n
-                    (Idx.NoExit Idx.Init, Just TD.In) ->
-                       now =%= withNode stoutsum Idx.Init n
-                    (Idx.NoExit (Idx.NoInit sec), _) ->
-                       now =%=
-                       case dir of
-                          Nothing -> old
-                          Just TD.In  -> old ~+ withNode stoutsum (Idx.NoInit sec) n
-                          Just TD.Out -> old ~- withNode stinsum  (Idx.NoExit sec) n
-                    _ -> error "inconsistency between section and storage direction"
-              storages =
-                 map
-                    (maybe (error "no storage content after Exit") storage .
-                     Idx.bndNodeFromAugNode . fst)
-                    xs
-          in  mconcat $
-              zipWith3 charge
-                 (error "no storage content before Init" : storages) storages xs
-   in  foldMap (f . Map.toList) . getStorageSequences
-
-withNode :: (Idx.PartNode part node -> expr) -> part -> node -> expr
-withNode f sec node = f $ Idx.PartNode sec node
-
-
--- Storages must not have more than one in or out edge.
-getStorageSequences ::
-  (Node.C node) =>
-  TD.DirSequFlowGraph node ->
-  Map node (Map (Idx.AugSecNode node) (Maybe TD.StoreDir))
-getStorageSequences =
-  Map.unionsWith (Map.unionWith (error "duplicate boundary for node")) .
-  map (\(bn@(Idx.PartNode _ n), dir) -> Map.singleton n $ Map.singleton bn dir) .
-  Map.toList . Map.mapMaybe TD.maybeStorage . Gr.nodeLabels
-
-
-fromInStorages ::
-  (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeSectionScalar node, Sum a, a ~ Scalar v,
-   Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node, Product v, Integrate v,
-   Record rec, Node.C node) =>
-  Idx.PartNode Idx.InitOrSection node -> [Idx.ForNode XIdx.StorageEdge node] ->
-  EquationSystem mode rec node s a v
-fromInStorages sn outs =
-   let toSec (Idx.ForNode (Idx.StorageEdge _ x) _) = x
-       souts = List.sortBy (comparing toSec) outs
-       maxEnergies = map maxEnergy souts
-       stEnergies  = map stEnergy souts
-   in  mconcat $
-       zipWith (=%=) maxEnergies
-          (stoutsum sn : zipWith (~-) maxEnergies stEnergies)
-
-fromOutStorages ::
-  (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeSectionScalar node,
-   Constant a, Record rec, Node.C node) =>
-  [Idx.ForNode XIdx.StorageEdge node] ->
-  EquationSystem mode rec node s a v
-fromOutStorages ins =
-   withLocalVar $ \s ->
-      foldMap
-         (splitFactors s maxEnergy Arith.one
-            (stxfactor . Idx.flip . storageTransFromEdge))
-         (NonEmpty.fetch ins)
-
 splitFactors ::
    (Verify.LocalVar mode x, Product x, Record rec) =>
    RecordExpression mode rec node s a v x ->
-   (secnode -> RecordExpression mode rec node s a v x) ->
+   (stateNode -> RecordExpression mode rec node s a v x) ->
    RecordExpression mode rec node s a v x ->
-   (secnode -> RecordExpression mode rec node s a v x) ->
-   NonEmpty.T [] secnode -> EquationSystem mode rec node s a v
+   (stateNode -> RecordExpression mode rec node s a v x) ->
+   NonEmpty.T [] stateNode -> EquationSystem mode rec node s a v
 splitFactors s ef one xf ns =
    (s =%= NonEmpty.foldl1 (~+) (fmap ef ns))
    <>
@@ -961,25 +849,25 @@ solve ::
   (Constant a, a ~ Scalar v,
    Product v, Integrate v,
    Record rec, Node.C node) =>
-  Flow.RangeGraph node ->
+  StateFlowGraph node ->
   (forall s. EquationSystem Verify.Ignore rec node s a v) ->
   Env.Complete node (rec (Result a)) (rec (Result v))
-solve (_rngs, g) given =
+solve g given =
   solveSimple (given <> fromGraph True (TD.dirFromFlowGraph g))
 
 solveTracked ::
-  (Verify.GlobalVar (Verify.Track output) a (Record.ToIndex rec) Var.ForNodeSectionScalar node,
+  (Verify.GlobalVar (Verify.Track output) a (Record.ToIndex rec) Var.ForNodeStateScalar node,
    Constant a, a ~ Scalar v, a ~ Pair.T termScalar an,
-   Verify.GlobalVar (Verify.Track output) v (Record.ToIndex rec) Var.InSectionSignal node,
+   Verify.GlobalVar (Verify.Track output) v (Record.ToIndex rec) Var.InStateSignal node,
    Product v, Integrate v, v ~ Pair.T termSignal vn,
    Record rec, Node.C node) =>
-  Flow.RangeGraph node ->
+  StateFlowGraph node ->
   (forall s. EquationSystem (Verify.Track output) rec node s a v) ->
   (ME.Exceptional
      (Verify.Exception output)
      (Env.Complete node (rec (Result a)) (rec (Result v))),
    Verify.Assigns output)
-solveTracked (_rngs, g) given =
+solveTracked g given =
   solveSimpleTracked (given <> fromGraph True (TD.dirFromFlowGraph g))
 
 
@@ -990,8 +878,8 @@ solveFromMeasurement ::
   (Constant a, a ~ Scalar v,
    Product v, Integrate v,
    Record rec, Node.C node) =>
-  Flow.RangeGraph node ->
+  StateFlowGraph node ->
   (forall s. EquationSystem Verify.Ignore rec node s a v) ->
   Env.Complete node (rec (Result a)) (rec (Result v))
-solveFromMeasurement (_rngs, g) given =
+solveFromMeasurement g given =
   solveSimple (given <> fromGraph False (TD.dirFromFlowGraph g))

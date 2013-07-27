@@ -13,8 +13,6 @@ import qualified Modules.Signals as Signals
 import qualified EFA.Application.Absolute as EqAbs
 import qualified EFA.Application.Index as XIdx
 
-import EFA.Application.Utility (Ignore, (.=))
-
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Arithmetic as Arith
@@ -24,6 +22,8 @@ import qualified EFA.Equation.Record as EqRecord
 import EFA.Equation.Arithmetic ((~*))
 import EFA.Equation.Result (Result(..))
 import EFA.Equation.Stack (Stack)
+import EFA.Equation.Verify (Ignore)
+import EFA.Equation.System ((.=))
 
 import qualified EFA.Signal.SequenceData as SD
 import qualified EFA.Signal.Record as Record
@@ -293,8 +293,8 @@ delta sequenceFlowTopology sequenceFlow sequenceFlow'=
 type
    EquationSystemNumeric s =
       EqAbs.EquationSystem System.Node s
-         (Stack (Var.Any System.Node) Double)
-         (Stack (Var.Any System.Node) Double)
+         (Stack (Var.SectionAny System.Node) Double)
+         (Stack (Var.SectionAny System.Node) Double)
 
 
 infix 0 .==
@@ -326,8 +326,8 @@ difference ::
    Flow.RangeGraph System.Node ->
    Env.Complete System.Node DeltaDouble DeltaDouble ->
    Env.Complete System.Node
-      (EqRecord.Absolute (Result (Stack (Var.Any System.Node) Double)))
-      (EqRecord.Absolute (Result (Stack (Var.Any System.Node) Double)))
+      (EqRecord.Absolute (Result (Stack (Var.SectionAny System.Node) Double)))
+      (EqRecord.Absolute (Result (Stack (Var.SectionAny System.Node) Double)))
 difference sequenceFlowTopology env =
   EqGen.solve sequenceFlowTopology (makeGivenForDifferentialAnalysis env)
 
