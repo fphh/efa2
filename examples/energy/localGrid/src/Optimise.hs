@@ -233,10 +233,10 @@ maxOptChargeFunc, maxOptDischargeFunc ::
   (Double, EnvDouble)
 maxOptChargeFunc socDrive =
   maybe (error "maxOptChargeFunc") id .
-  Sweep.optimalSolution2D condition 
+  Sweep.optimalSolution2D condition
     (forcing $ ChargeDrive socDrive) System.seqTopoOpt
 
-maxOptDischargeFunc socDrive = 
+maxOptDischargeFunc socDrive =
   maybe (error "maxOptDischargeFunc") id .
   Sweep.optimalSolution2D condition
     (forcing $ DischargeDrive socDrive) System.seqTopoOpt
@@ -318,7 +318,7 @@ stateFlow2SequFlow = Graph.ixmap f g
         f (TIdx.PartNode TIdx.Exit x) = TIdx.PartNode TIdx.Exit x
         f (TIdx.PartNode (TIdx.NoExit TIdx.Init) x) =
           TIdx.PartNode (TIdx.NoExit TIdx.Init) x
-        f (TIdx.PartNode (TIdx.NoExit (TIdx.NoInit (TIdx.State i))) x) = 
+        f (TIdx.PartNode (TIdx.NoExit (TIdx.NoInit (TIdx.State i))) x) =
           TIdx.PartNode (TIdx.NoExit (TIdx.NoInit (TIdx.Section i))) x
 
         g :: TD.FlowEdge Graph.EitherEdge (TIdx.AugNode TIdx.State node) ->
@@ -334,21 +334,21 @@ stateEnv2SequEnv (StFlEnv.Complete scal sig) =
                   Map.empty
                   Map.empty
                   (Map.mapKeys f a)
-                  (Map.mapKeys g b) 
+                  (Map.mapKeys g b)
                   (Map.mapKeys h c)
                   undefined
 
-      f (TIdx.ForNode (TIdx.StEnergy (TIdx.StorageEdge 
-          (TIdx.NoInit (TIdx.State i)) 
+      f (TIdx.ForNode (TIdx.StEnergy (TIdx.StorageEdge
+          (TIdx.NoInit (TIdx.State i))
           (TIdx.NoExit (TIdx.State j)))) b) =
         (TIdx.ForNode (TIdx.StEnergy (TIdx.StorageEdge
           (TIdx.NoInit (TIdx.Section i))
           (TIdx.NoExit (TIdx.Section j)))) b)
 
-      g (TIdx.ForNode (TIdx.StX (TIdx.StorageTrans 
+      g (TIdx.ForNode (TIdx.StX (TIdx.StorageTrans
           (TIdx.NoExit (TIdx.NoInit (TIdx.State i)))
           (TIdx.NoExit (TIdx.NoInit (TIdx.State j))))) b) =
-        (TIdx.ForNode (TIdx.StX (TIdx.StorageTrans 
+        (TIdx.ForNode (TIdx.StX (TIdx.StorageTrans
           (TIdx.NoExit (TIdx.NoInit (TIdx.Section i)))
           (TIdx.NoExit (TIdx.NoInit (TIdx.Section j))))) b)
 

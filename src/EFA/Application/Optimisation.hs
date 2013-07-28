@@ -15,10 +15,13 @@ import qualified EFA.Graph.Topology.Index as TIdx
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.StateFlow.EquationSystem as EqGenState
+--import qualified EFA.Graph.StateFlow.Environment as EqEnvState
 
+--import qualified EFA.Equation.Record as EqRecord
 
 import qualified EFA.Equation.Environment as EqEnv
-
+import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Arithmetic as EqArith
 
 import qualified Data.Map as Map
@@ -81,7 +84,25 @@ givenAverageWithoutSectionX secToRemove (EqEnv.Complete scalar signal) =
    where
      f :: TIdx.InSection idx node -> v -> Bool
      f (TIdx.InPart sec _) _ = sec /= secToRemove
+{-
+-- | Takes all non-energy and non-power values from an env, removes values in section x and generate given equations
+givenAverageWithoutStateX ::(Eq v, EqArith.Sum v, Node.C node,
+                Ord node,Eq a, EqArith.Sum a) =>
+               TIdx.State ->
+               EqEnvState.Complete node a v  ->
+               EqGenState.EquationSystem Verify.Ignore EqRecord.Absolute node s a v
 
+givenAverageWithoutStateX stateToRemove (EqEnvState.Complete scalar signal) =
+   (EqGenState.fromMap $ EqEnvState.dtimeMap signal) <>
+   (EqGenState.fromMap $ Map.filterWithKey f $ EqEnvState.etaMap signal) <>
+   (EqGenState.fromMap $ Map.filterWithKey f $ EqEnvState.xMap signal) <>
+   (EqGenState.fromMap $ EqEnvState.stXMap scalar) <>
+   (EqGenState.fromMap $ EqEnvState.stInSumMap scalar) <>
+   (EqGenState.fromMap $ EqEnvState.stOutSumMap scalar)
+   where
+     f :: TIdx.InState idx node -> v -> Bool
+     f (TIdx.InPart state _) _ = state /= stateToRemove
+-}
 givenForOptimisation :: (EqArith.Constant a,
                          Node.C node,
                          Fractional a,

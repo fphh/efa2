@@ -4,9 +4,10 @@ import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.StateFlow as StateFlow
 --import qualified EFA.Graph as Gr
 import qualified EFA.Graph.Flow as Flow
---import qualified EFA.Signal.SequenceData as SD
+import qualified EFA.Signal.SequenceData as SD
 --import qualified EFA.Signal.Base as Base
 --import qualified EFA.Signal.Record as Rec
 --import qualified EFA.Signal.Typ as Typ
@@ -27,8 +28,8 @@ import EFA.Signal.Record (SigId(..))
 import qualified Data.Map as Map
 import Data.Map (Map)
 
-data Node = Gas
-          | Hausnetz
+data Node = --Gas
+           Hausnetz
           | Kohle
           | Netz
           | Netzlast
@@ -65,15 +66,15 @@ topology = AppUt.makeTopology nodeList edgeList
 
 
 nodeList :: [(Node,TD.NodeType ())]
-nodeList = [(Sonne, TD.Source),
+nodeList = [(Sonne, TD.AlwaysSource),
             (Verteiler, TD.Crossing),
             (Batterie, TD.Storage ()),
-            (Hausnetz, TD.Sink),
+            (Hausnetz, TD.AlwaysSink),
             (Netz, TD.Crossing),
-            (Kohle, TD.Source),
-            (Gas, TD.Source),
+            (Kohle, TD.AlwaysSource),
+--            (Gas, TD.Source),
             (Wasser, TD.Storage()),
-            (Netzlast,TD.Sink)]
+            (Netzlast,TD.AlwaysSink)]
 
 -- Define Edges with all their Properties
 edgeList :: AppUt.LabeledEdgeList Node
@@ -82,7 +83,7 @@ edgeList = [(Sonne, Verteiler,"Solaranlage","Strahlung","Solar220V"),
             (Verteiler, Hausnetz,"","",""),
             (Verteiler, Netz,"Trafo","Zähler",""),
             (Netz,Netzlast,"","",""),
-            (Gas,Netz,"GasKW","",""),
+--            (Gas,Netz,"GasKW","",""),
             (Kohle,Netz,"KohleKW","",""),
             (Netz,Wasser,"SpeicherKW","","")]
 
@@ -104,3 +105,7 @@ flowStates = StateAnalysis.advanced topology
 
 seqTopology :: Flow.RangeGraph Node
 seqTopology = Flow.sequenceGraph (select flowStates [0,1])
+
+
+stateFlowGraph :: TD.StateFlowGraph Node
+stateFlowGraph =   StateFlow.stateGraphActualStorageEdges $ fmap (flowStates !!) $ SD.fromList [1, 0, 1] 

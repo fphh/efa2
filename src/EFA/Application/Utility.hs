@@ -3,6 +3,7 @@ module EFA.Application.Utility where
 
 import qualified EFA.Application.Index as XIdx
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
+--import qualified EFA.Graph.StateFlow.Environment as StateEnv
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Flow as Flow
@@ -13,6 +14,7 @@ import qualified EFA.Signal.Data as Data
 
 import qualified EFA.Equation.Record as EqRecord
 import qualified EFA.Equation.Environment as Env
+
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.Verify as Verify
@@ -131,3 +133,5 @@ envGetData ::
   Env.Complete node (Result (Data.Apply va a)) (Result (Data.Apply vv v))
 envGetData =
   Env.completeFMap (fmap Data.getData) (fmap Data.getData)
+
+

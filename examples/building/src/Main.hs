@@ -7,14 +7,20 @@ import qualified Modules.Optimisation as Optimisation
                       --      envGetData,
                        --     doubleSweep,
 import Modules.Optimisation(EnvResult)
-
+import EFA.Equation.Result (Result(..))
 
 import qualified EFA.Application.Optimisation as AppOpt
 --import qualified EFA.Application.Utility as AppUt
 import qualified EFA.Application.Sweep as Sweep
 
+import EFA.Signal.Data(Data,Nil)
+
+
 import qualified EFA.Graph.Draw as Draw
+import qualified EFA.Graph.StateFlow as StateFlow
+import qualified EFA.Graph.StateFlow.Environment as StateEnv
 import qualified EFA.Signal.Signal as Sig
+import qualified EFA.Signal.SequenceData as SD
 
 import qualified Data.GraphViz.Attributes.Colors.X11 as Colors
 import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
@@ -97,29 +103,38 @@ storagePower = Sig.fromList [0.2, 0.3 .. 2]
 varBattery, varStorage :: Sig.PSignal2 V.Vector V.Vector Double
 (varBattery, varStorage) = Sig.variation2D batteryPower storagePower
 
+envStateFlowAverage :: StateEnv.Complete System.Node (Result (Data Nil Double)) (Result (Data Nil Double))
+envStateFlowAverage  = undefined
+
+
 main :: IO()
 main = do
 
-    --tabEta <- Table.read "../maps/eta.txt"
---    tabPower <- Table.read "../maps/power.txt"
-    tabEta <- Table.read "../../energy/localGrid/simulation/maps/power.txt"
+    tabEta <- Table.read "../maps/eta.txt"
+    tabPower <- Table.read "../maps/power.txt"
+
 
    -- |Import Efficiency Curves
     let etaFunctionMap = CT.makeEtaFunctions2D scaleTableEta tabEta
 
-        section = undefined
-
+        state = undefined
         envAverage = undefined
 
         -- | solve the system for all combinations for a selected section -- muss auf n sektionen erweitert werden
-        envs :: Sig.UTSignal2 V.Vector V.Vector
-         (Sig.UTSignal2 V.Vector V.Vector (EnvResult Double))
-        envs = Sweep.doubleSweep (Optimisation.solve System.seqTopology envAverage section etaFunctionMap)
+
+        sweepState :: Sig.UTSignal2 V.Vector V.Vector
+         (Sig.UTSignal2 V.Vector V.Vector ( StateEnv.Complete System.Node (Result Double) (Result Double)))
+        sweepState = Sweep.doubleSweep (Optimisation.solve2 System.stateFlowGraph envStateFlowAverage state etaFunctionMap)
              varBattery varStorage varLoadHouse varLoadNet
+
+
 
     Draw.xterm $ Draw.topologyWithEdgeLabels System.edgeNames System.topology
 
-    --PlotIO.surfaceWithOpts "Variation" DefaultTerm.cons id frameOpts noLegend varLoadHouse varLoadNet varLoadNet
+    Draw.xterm $ Draw.flowTopologies $ System.flowStates
+
+    Draw.xterm $ Draw.stateFlowGraphWithEnv Draw.optionsDefault System.stateFlowGraph envStateFlowAverage
+   --PlotIO.surfaceWithOpts "Variation" DefaultTerm.cons id frameOpts noLegend varLoadHouse varLoadNet varLoadNet
 
 
 

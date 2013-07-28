@@ -110,6 +110,6 @@ objectiveFunction ::
   EqEnv.Complete node a (Result v) ->
   Maybe v
 objectiveFunction cond forcing topo env =
-  case cond env of 
+  case cond env of
        True -> Just $ detEtaSys topo env + forcing env
        False -> Nothing
