@@ -119,15 +119,18 @@ Library
     EFA.Equation.Verify
     EFA.Application.Utility
     EFA.Application.Absolute
+    EFA.Application.AbsoluteState
     EFA.Application.Symbolic
     EFA.Application.NestedDelta
     EFA.Application.AssignMap
     EFA.Application.Index
+    EFA.Application.IndexState
     EFA.Application.Tree
     EFA.Application.EtaSys
     EFA.Application.Balance
     EFA.Application.Optimisation
     EFA.Application.Sweep
+    EFA.Application.Simulation
 
 
 -- sollte man auf Cabal-Test umstellen,

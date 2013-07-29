@@ -12,44 +12,44 @@ import qualified Modules.System as System
 import qualified Modules.Optimisation as Optimisation
 import qualified Modules.Analysis as Analysis
 import Modules.System (Node(..))
-import Modules.Optimisation (EnvDouble, sec0,sec1, maxEta, SocDrive(..), lookupDetPower, condition, forcing )
+import Modules.Optimisation (EnvDouble, sec0,sec1, SocDrive(..), lookupDetPower, condition, forcing )
 import EFA.Application.Optimisation as AppOpt (etaOverPowerIn,etaOverPowerOut)
 import qualified EFA.Application.Sweep as Sweep
 
 import Modules.Utility as ModUt
 -- import Modules.Utility(getEtas, getPowerSignals,select)
 
-import qualified EFA.Application.EtaSys as ES
+--import qualified EFA.Application.EtaSys as ES
 import qualified EFA.Application.Index as XIdx
 import qualified EFA.Application.Absolute as EqGen
 import EFA.Application.Utility (select)
 import qualified EFA.Application.Utility as AppUt
-import qualified EFA.Application.Optimisation as AppOpt
-import qualified EFA.Application.Sweep as Sweep
+--import qualified EFA.Application.Optimisation as AppOpt
+--import qualified EFA.Application.Sweep as Sweep
 
 import qualified EFA.Graph.Topology.Index as TIdx
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Draw as Draw
-import qualified EFA.Graph as Graph
+--import qualified EFA.Graph as Graph
 
 import qualified EFA.Equation.Arithmetic as EqArith
 import qualified EFA.Equation.Environment as EqEnv
-import qualified EFA.Equation.Record as EqRec
+--import qualified EFA.Equation.Record as EqRec
 import EFA.Equation.Result (Result(..))
 
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.PlotIO as PlotIO
 import qualified EFA.Signal.Plot as Plot
-import qualified EFA.Signal.Data as Data
+--import qualified EFA.Signal.Data as Data
 import qualified EFA.Signal.ConvertTable as CT
 import qualified EFA.Signal.Vector as SV
 import qualified EFA.Signal.SequenceData as SD
 import qualified EFA.Signal.Signal as Sig
 import EFA.Signal.Sequence (makeSeqFlowTopology, addZeroCrossings, genSequ,)
 import EFA.Signal.Signal (TC,Scalar)
-import EFA.Signal.Data (Data(..), Nil, (:>), getData)
-import EFA.Signal.Typ (Typ, F, T, A, Tt,UT)
+import EFA.Signal.Data (Data(..), Nil, (:>))-- getData)
+import EFA.Signal.Typ (Typ, F, T, A, Tt) --,UT)
 
 import EFA.Utility.Async (concurrentlyMany_)
 import EFA.Report.Report(report,ROpt(..))
@@ -57,11 +57,11 @@ import EFA.Report.Report(report,ROpt(..))
 import qualified EFA.IO.TableParser as Table
 import qualified EFA.IO.TableParserTypes as TPT
 
-import qualified EFA.Utility.Bifunctor as BF
+--import qualified EFA.Utility.Bifunctor as BF
 
 import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
-import qualified Graphics.Gnuplot.Terminal.PostScript as PostScript
-import qualified Graphics.Gnuplot.Terminal.PNG as PNG
+--import qualified Graphics.Gnuplot.Terminal.PostScript as PostScript
+--import qualified Graphics.Gnuplot.Terminal.PNG as PNG
 
 import qualified Graphics.Gnuplot.Graph.ThreeDimensional as Graph3D
 import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
@@ -70,12 +70,12 @@ import qualified Data.Map as Map ; import Data.Map (Map)
 import qualified Data.Vector as V
 import qualified Data.GraphViz.Attributes.Colors.X11 as Colors
 
-import qualified EFA.Graph.StateFlow.Environment as StFlEnv
+--import qualified EFA.Graph.StateFlow.Environment as StFlEnv
 
-import Text.Printf (printf)
+--import Text.Printf (printf)
 
-import Data.Maybe (fromJust)
-import Data.Tuple.HT (fst3, snd3, thd3)
+--import Data.Maybe (fromJust)
+--import Data.Tuple.HT (fst3, snd3, thd3)
 
 import qualified System.IO as IO
 
@@ -244,13 +244,12 @@ maxOptDischargeFunc socDrive =
 makePics ::
   (forall s. EqGen.EquationSystem Node s (Data Nil Double) (Data Nil Double)) ->
   TPT.Map Double ->
-  TPT.Map Double ->
   Double ->
   ( Sig.UTSignal2 V.Vector V.Vector Double,
     Sig.PSignal2 V.Vector V.Vector Double,
     Sig.PSignal2 V.Vector V.Vector Double,
     Sig.NSignal2 V.Vector V.Vector Double )
-makePics eqs tabEta tabPower socDrive = t
+makePics eqs tabEta socDrive = t
   where t = (state, optWater, optGas, etaSysMax)
 
         chargeFunc = maxOptChargeFunc socDrive
@@ -310,7 +309,9 @@ makePics eqs tabEta tabPower socDrive = t
 
         etaFunc = CT.makeEtaFunctions2D scaleTableEta tabEta
 
+{-
 
+-- Alternative Approch to get StateFlowGraph Data
 
 stateFlow2SequFlow :: (Ord node) => TD.StateFlowGraph node -> TD.SequFlowGraph node
 stateFlow2SequFlow = Graph.ixmap f g
@@ -355,7 +356,9 @@ stateEnv2SequEnv (StFlEnv.Complete scal sig) =
       h = undefined
 
   in EqEnv.Complete scalNew undefined
+-}
 
+{-
 
 main :: IO ()
 main = do
@@ -406,7 +409,7 @@ main = do
 
 
        plotpng (n, x) =
-         let (s, w, g, e) = makePics eqs tabEta tabPower x
+         let (s, w, g, e) = makePics eqs tabEta x
          in  concurrentlyMany_ [
                -- plotstatepng n s
                plotwaterpng n w,
@@ -421,9 +424,9 @@ main = do
      mapM_ plotpng [(lst1 ++ lst2) !! 30] ]
      -- mapM_ plotpng lst2 ]
 
+-}
 
 
-{-
 main :: IO ()
 main = do
 
@@ -440,14 +443,14 @@ main = do
 
    -- |Import Efficiency Curves
    let etaFunc = CT.makeEtaFunctions2D scaleTableEta tabEta
-       etaWaterCharge:etaWaterDischarge:etaGas:etaCoal:etaTransHL:_ =
-         getEtas etaFunc ["storage", "storage", "gas", "coal", "transformer"]
+{-       etaWaterCharge:etaWaterDischarge:etaGas:etaCoal:etaTransHL:_ =
+         getEtas etaFunc ["storage", "storage", "gas", "coal", "transformer"]-}
 
    -- | Import Power Curves
-   let (timeWind, powerSignalWind) :
-         (timeSolar, powerSignalSolar) :
-         (timeHouse, powerSignalHouse) :
-         (timeIndustry, powerSignalIndustry) : _
+   let (_, powerSignalWind) :
+         (_, powerSignalSolar) :
+         (_, powerSignalHouse) :
+         (_, powerSignalIndustry) : _
            = getPowerSignals tabPower ["wind", "solar", "house", "industry"]
 
 
@@ -652,7 +655,7 @@ main = do
 
      sequencePowers :: SD.SequData (Record.PowerRecord System.Node [] Double)
      sequencePowers = genSequ rec0
-     (sequencePowersFilt, sequenceFlowsFilt) =
+     (_, sequenceFlowsFilt) =
          SD.unzip $
          SD.filter (Record.major sectionFilterEnergy sectionFilterTime . snd) $
          fmap (\x -> (x, Record.partIntegrate x)) sequencePowers
@@ -681,8 +684,8 @@ main = do
                   (Sig.getSample2D (Sig.getSample2D envsDischarge (Sig.SignalIdx 1, Sig.SignalIdx 1)) (Sig.SignalIdx 1, Sig.SignalIdx 1)) ]
 
 -}
-   let optGas = AppOpt.combineOptimalMaps maxEtaSysState powerGasChargeOpt powerGasDischargeOpt
-       optWater = AppOpt.combineOptimalMaps maxEtaSysState powerWaterChargeOpt powerWaterDischargeOpt
+   let optGas = Sweep.combineOptimalMaps maxEtaSysState powerGasChargeOpt powerGasDischargeOpt
+       optWater = Sweep.combineOptimalMaps maxEtaSysState powerWaterChargeOpt powerWaterDischargeOpt
 
 
    concurrentlyMany_ $ [
@@ -696,7 +699,7 @@ main = do
      Draw.xterm $ Draw.flowTopologies (take 20 System.flowStatesOpt),
 -}
      Draw.xterm $ Draw.sequFlowGraph System.seqTopoOpt,
-{-
+
      PlotIO.surfaceWithOpts "Optimal System Efficiency" DefaultTerm.cons id frameOpts noLegend varRestPower varLocalPower etaSysMax,
 
 
@@ -723,11 +726,11 @@ main = do
      PlotIO.surfaceWithOpts "Optimal Gas Power" DefaultTerm.cons id frameOpts noLegend varRestPower varLocalPower optGas,
 
 
-     --PlotIO.surface "Transformer Power Charge HV " DefaultTerm.cons id noLegend varRestPower varLocalPower powerTransformerChargeOpt,
-     --PlotIO.surface "Transformer Power DisCharge HV" DefaultTerm.cons id noLegend varRestPower varLocalPower powerTransformerDischargeOpt,
+     PlotIO.surfaceWithOpts "Transformer Power Charge HV " DefaultTerm.cons id frameOpts noLegend varRestPower varLocalPower powerTransformerChargeOpt,
+     PlotIO.surfaceWithOpts "Transformer Power DisCharge HV" DefaultTerm.cons id frameOpts noLegend varRestPower varLocalPower powerTransformerDischargeOpt,
 
-     --PlotIO.surface "Transformer Power Charge LV " DefaultTerm.cons id noLegend varRestPower varLocalPower powerTransformerChargeOptLV,
-     --PlotIO.surface "Transformer Power DisCharge LV" DefaultTerm.cons id noLegend varRestPower varLocalPower powerTransformerDischargeOptLV,
+     PlotIO.surfaceWithOpts "Transformer Power Charge LV " DefaultTerm.cons id frameOpts noLegend varRestPower varLocalPower powerTransformerChargeOptLV,
+     PlotIO.surfaceWithOpts "Transformer Power DisCharge LV" DefaultTerm.cons id frameOpts noLegend varRestPower varLocalPower powerTransformerDischargeOptLV,
 
      -- PlotIO.xy "Operation" DefaultTerm.cons id show powerSignalRest powerSignalLocal,
 
@@ -739,12 +742,12 @@ main = do
      report [RAll] ("powerRecordSim", powerRecSim),
      report [RAll] ("rec0", rec0),
      report [RAll] ("rec", rec),
--}
+
      PlotIO.record "Calculated Signals" DefaultTerm.cons show id rec,
 
-{-
-     PlotIO.record "Local / Rest" DefaultTerm.cons show id recConsumers,
 
+     PlotIO.record "Local / Rest" DefaultTerm.cons show id recConsumers,
+{-
      PlotIO.record "Simulation Result" DefaultTerm.cons show id powerRecSim,
 
      PlotIO.signal "State"  DefaultTerm.cons id stateSignal ,
@@ -761,4 +764,4 @@ main = do
 
        return ()
      ]
--}
+

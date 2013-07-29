@@ -20,6 +20,7 @@ import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph as Gr
 
 import qualified EFA.Signal.Signal as Sig
+import EFA.Signal.Typ(Typ,A,P,Tt)
 import qualified EFA.Signal.ConvertTable as Table
 import qualified EFA.Signal.SequenceData as SD
 import qualified EFA.Signal.Data as D
@@ -178,8 +179,6 @@ etaSys2 (_, topo) _ = trace (show sinks) undefined
                TD.AlwaysSource -> Set.size x > 0
                TD.Source -> Set.size x > 0
                _ -> False
-
-
 
 sinkRange :: [Double]
 sinkRange = [0.1] -- , 0.2 .. 20]
@@ -373,6 +372,9 @@ main = do
       sinkRangeSig :: Sig.PSignal [] Double
       sinkRangeSig = Sig.fromList sinkRange
 
+      sinkRangeSig2 :: Sig.TC Sig.TestRow (Typ A P Tt) (Data ([] :> Nil) Double)
+      sinkRangeSig2 = Sig.fromList sinkRange
+
       maxEtaSys :: Sig.NSignal2 [] [] Double
       maxEtaSys = Sig.zipWith max etaSys0 etaSys1
 
@@ -431,12 +433,12 @@ main = do
       Draw.title "Hypothetical Usage Sequence Flow Graph" $
       Draw.sequFlowGraphAbsWithEnv seqTopoHU envHU,
 
-{-
-    PlotIO.xy "Test" DefaultTerm.cons id g sinkRangeSig
+
+    PlotIO.xy "Test" DefaultTerm.cons id g sinkRangeSig2
               [ maxEtaSys0, maxEtaSys1,
                 maxEtaLinear,
-                Sig.map fromIntegral maxEtaSysStateLinear],
--}
+                Sig.setType $ Sig.map fromIntegral maxEtaSysStateLinear],
+
 
     PlotIO.xy "Optimale Zustände" DefaultTerm.cons id h sinkRangeSig
               [hypotheticalUsage, Sig.map fromIntegral optimalState],

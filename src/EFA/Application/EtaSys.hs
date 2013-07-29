@@ -2,17 +2,22 @@
 module EFA.Application.EtaSys where
 
 import qualified EFA.Application.Index as XIdx
+import qualified EFA.Application.IndexState as XIdxState
+
 import qualified EFA.Application.Utility as AppUt
 
 import qualified EFA.Equation.Environment as EqEnv
+import qualified EFA.Graph.StateFlow.Environment as EqEnvState
+
 import EFA.Equation.Result (Result(..))
 
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Topology.Index as Idx
+
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph as Gr
 
-import EFA.Utility.Map (checkedLookup)
+--import EFA.Utility.Map (checkedLookup)
 
 import qualified Data.Set as Set
 import qualified Data.Map as Map
@@ -25,32 +30,6 @@ import Data.Maybe (mapMaybe)
 
 import Data.Tuple.HT (fst3, thd3)
 
-
-lookupAbsEnergy ::
-  (Ord node, Show node, Show t) =>
-  String ->
-  EqEnv.Complete node b (Result t) ->
-  XIdx.Energy node -> Result t
-lookupAbsEnergy caller env n =
-  checkedLookup caller (EqEnv.energyMap $ EqEnv.signal env) n
-
-
-lookupAbsPower ::
-  (Ord node, Show node, Show t) =>
-  String ->
-  EqEnv.Complete node b (Result t) ->
-  XIdx.Power node -> Result t
-lookupAbsPower caller env n =
-  checkedLookup caller (EqEnv.powerMap $ EqEnv.signal env) n
-
-
-lookupAbsEta ::
-  (Ord node, Show node, Show t) =>
-  String ->
-  EqEnv.Complete node b (Result t) ->
-  XIdx.Eta node -> Result t
-lookupAbsEta caller env n =
-  checkedLookup caller (EqEnv.etaMap $ EqEnv.signal env) n
 
 hasStructureEdge :: Set.Set a -> Bool
 hasStructureEdge = not . Set.null
@@ -81,14 +60,46 @@ etaSys (_, topo) env = liftA2 (/) (sumRes sinks) (sumRes sources)
 
         sinkEnergies
           (TD.FlowEdge (TD.StructureEdge (Idx.InPart sec (Gr.DirEdge a b)))) =
-            Just $ lookupAbsEnergy "etaSys, sinkEnergies" env (XIdx.energy sec b a)
+            Just $ AppUt.lookupAbsEnergy "etaSys, sinkEnergies" env (XIdx.energy sec b a)
         sinkEnergies _ = Nothing
 
         sourceEnergies
           (TD.FlowEdge (TD.StructureEdge (Idx.InPart sec (Gr.DirEdge a b)))) =
-            Just $ lookupAbsEnergy "etaSys, sourceEnergies" env (XIdx.energy sec a b)
+            Just $ AppUt.lookupAbsEnergy "etaSys, sourceEnergies" env (XIdx.energy sec a b)
         sourceEnergies _ = Nothing
 
+etaSysState ::
+  (Show a, Fractional a, Show node, Ord node) =>
+  TD.StateFlowGraph node ->
+  EqEnvState.Complete node b (Result a) -> Result a
+etaSysState topo env = liftA2 (/) (sumRes sinks) (sumRes sources)
+  where m = Map.elems $
+            Gr.nodeEdges $
+            Gr.lefilter (TD.isStructureEdge . fst) $
+            TD.dirFromFlowGraph topo
+
+        sinks = concatMap (mapMaybe sinkEnergies . Set.toList . fst3) $ filter isActiveSink m
+        sources = concatMap (mapMaybe sourceEnergies . Set.toList . thd3) $ filter isActiveSource m
+
+        sumRes = fmap sum . sequenceA
+
+        isActiveSink (ns, TD.AlwaysSink, _) = hasStructureEdge ns
+        isActiveSink (ns, TD.Sink, _) = hasStructureEdge ns
+        isActiveSink _ = False
+
+        isActiveSource (_, TD.AlwaysSource, ns) = hasStructureEdge ns
+        isActiveSource (_, TD.Source, ns) = hasStructureEdge ns
+        isActiveSource _ = False
+
+        sinkEnergies
+          (TD.FlowEdge (TD.StructureEdge (Idx.InPart sec (Gr.DirEdge a b)))) =
+            Just $ AppUt.lookupAbsEnergyState "etaSys, sinkEnergies" env (XIdxState.energy sec b a)
+        sinkEnergies _ = Nothing
+
+        sourceEnergies
+          (TD.FlowEdge (TD.StructureEdge (Idx.InPart sec (Gr.DirEdge a b)))) =
+            Just $ AppUt.lookupAbsEnergyState "etaSys, sourceEnergies" env (XIdxState.energy sec a b)
+        sourceEnergies _ = Nothing
 
 
 detEtaSys ::
@@ -96,10 +107,17 @@ detEtaSys ::
   Flow.RangeGraph node -> EqEnv.Complete node a (Result v) -> v
 detEtaSys topo = AppUt.checkDetermined "detEtaSys" . etaSys topo
 
+detEtaSysState ::
+  (Fractional v, Ord node, Show node, Show v) =>
+  TD.StateFlowGraph node -> EqEnvState.Complete node a (Result v) -> v
+detEtaSysState topo = AppUt.checkDetermined "detEtaSys" . etaSysState topo
 
 
 type Condition node a v = EqEnv.Complete node a (Result v) -> Bool
+type ConditionState node a v = EqEnvState.Complete node a (Result v) -> Bool
+
 type Forcing node a v = EqEnv.Complete node a (Result v) -> v
+type ForcingState node a v = EqEnvState.Complete node a (Result v) -> v
 
 
 objectiveFunction ::
@@ -112,4 +130,17 @@ objectiveFunction ::
 objectiveFunction cond forcing topo env =
   case cond env of
        True -> Just $ detEtaSys topo env + forcing env
+       False -> Nothing
+
+
+objectiveFunctionState ::
+  (Fractional v, Show v, Num v, Ord node, Show node) =>
+  ConditionState node a v ->
+  ForcingState node a v ->
+  TD.StateFlowGraph node ->
+  EqEnvState.Complete node a (Result v) ->
+  Maybe v
+objectiveFunctionState cond forcing topo env =
+  case cond env of
+       True -> Just $ detEtaSysState topo env + forcing env
        False -> Nothing

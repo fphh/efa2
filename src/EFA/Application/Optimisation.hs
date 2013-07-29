@@ -4,36 +4,60 @@
 
 module EFA.Application.Optimisation where
 
-import qualified EFA.Application.Absolute as EqGen
+--import qualified EFA.Application.Absolute as EqGen
+import qualified EFA.Application.AbsoluteState as EqGenState
+
 import qualified EFA.Application.Index as XIdx
-import EFA.Application.Absolute ( (=.=) )
+import qualified EFA.Application.IndexState as XIdxState
+--import EFA.Application.Absolute ( (=.=) )
+import EFA.Application.AbsoluteState ( (=.=) )
+--import qualified EFA.Application.Absolute as AppAbs
 
 import qualified EFA.Signal.Data as Data
-import EFA.Signal.Data (Data(..), Nil)
+import EFA.Signal.Data (Data(..), Nil) --,(:>))
 
+import qualified EFA.Graph as Graph
 import qualified EFA.Graph.Topology.Index as TIdx
-import qualified EFA.Graph.Flow as Flow
+--import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as TD
-import qualified EFA.Graph.StateFlow.EquationSystem as EqGenState
---import qualified EFA.Graph.StateFlow.Environment as EqEnvState
-
+import qualified EFA.Graph.StateFlow.Environment as EqEnvState
+--import qualified EFA.Equation.Environment as EqEnv
 --import qualified EFA.Equation.Record as EqRecord
+import qualified EFA.Graph.StateFlow.Index as SFIdx
 
-import qualified EFA.Equation.Environment as EqEnv
-import qualified EFA.Equation.Verify as Verify
+
+--import qualified EFA.Signal.Vector as SV
+--import qualified EFA.Signal.Base as Base
+--import qualified EFA.Signal.Signal as Sig
+--import qualified EFA.Signal.Record as Record
+--import qualified EFA.Signal.SequenceData as SD
+
+
+--import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Arithmetic as EqArith
+
 
 import qualified Data.Map as Map
 import qualified Data.Foldable as Fold
 import Data.Map (Map)
-import Data.Monoid((<>))
-
-
+import Data.Monoid((<>),mempty)
+import Data.Maybe (mapMaybe)
+import qualified Data.Set as Set
 
 
 -- | TODO Functios below could ventually be moved to a module Application/Given
 
+
+-- | Function to specifiy that an efficiency function in etaAssign is to be looked up with input power
+etaOverPowerInState :: XIdxState.Eta node -> XIdxState.Power node
+etaOverPowerInState =
+   TIdx.liftInState $ \(TIdx.Eta e) -> TIdx.Power $ TIdx.flip e
+
+-- | Function to specifiy that an efficiency function in etaAssign is to be looked up with output power
+etaOverPowerOutState :: XIdxState.Eta node -> XIdxState.Power node
+etaOverPowerOutState =
+   TIdx.liftInState $ \(TIdx.Eta e) -> TIdx.Power e
 
 -- | Function to specifiy that an efficiency function in etaAssign is to be looked up with input power
 etaOverPowerIn :: XIdx.Eta node -> XIdx.Power node
@@ -45,22 +69,21 @@ etaOverPowerOut :: XIdx.Eta node -> XIdx.Power node
 etaOverPowerOut =
    TIdx.liftInSection $ \(TIdx.Eta e) -> TIdx.Power e
 
-
 type EtaAssignMap node =
-        Map (XIdx.Eta node) (String, String, XIdx.Eta node -> XIdx.Power node)
+        Map (XIdxState.Eta node) (String, String, XIdxState.Eta node -> XIdxState.Power node)
 
 
 -- | Generate given equations using efficiency curves or functions for a specified section
 makeEtaFuncGiven ::
    (Fractional a, Ord a, Show a, EqArith.Sum a,
     Data.Apply c a ~ v, Eq v, Data.ZipWith c, Data.Storage c a, Node.C node) =>
-   (TIdx.Section -> EtaAssignMap node) ->
-   TIdx.Section ->
+   (TIdx.State -> EtaAssignMap node) ->
+   TIdx.State ->
    Map String (a -> a) ->
-   EqGen.EquationSystem node s x (Data c a)
-makeEtaFuncGiven etaAssign sec etaFunc = Fold.fold $ Map.mapWithKey f (etaAssign sec)
+   EqGenState.EquationSystem node s x (Data c a)
+makeEtaFuncGiven etaAssign state etaFunc = Fold.fold $ Map.mapWithKey f (etaAssign state)
   where f n (strP, strN, g) =
-          EqGen.variable n =.= EqGen.liftF (Data.map ef) (EqGen.variable $ g n)
+          EqGenState.variable n =.= EqGenState.liftF (Data.map ef) (EqGenState.variable $ g n)
           where ef x = if x >= 0 then fpos x else fneg x
                 fpos = maybe (err strP) id (Map.lookup strP etaFunc)
                 fneg = maybe (err strN) (\h -> recip . h . negate)
@@ -68,29 +91,11 @@ makeEtaFuncGiven etaAssign sec etaFunc = Fold.fold $ Map.mapWithKey f (etaAssign
                 err str x = error ("not defined: " ++ show str ++ " for " ++ show x)
 
 -- | Takes all non-energy and non-power values from an env, removes values in section x and generate given equations
-givenAverageWithoutSectionX ::(Eq v, EqArith.Sum v, Node.C node,
-                Ord node,Eq a, EqArith.Sum a) =>
-               TIdx.Section ->
-               EqEnv.Complete node a v  ->
-               EqGen.EquationSystem node s a v
-
-givenAverageWithoutSectionX secToRemove (EqEnv.Complete scalar signal) =
-   (EqGen.fromMap $ EqEnv.dtimeMap signal) <>
-   (EqGen.fromMap $ Map.filterWithKey f $ EqEnv.etaMap signal) <>
-   (EqGen.fromMap $ Map.filterWithKey f $ EqEnv.xMap signal) <>
-   (EqGen.fromMap $ EqEnv.stXMap scalar) <>
-   (EqGen.fromMap $ EqEnv.stInSumMap scalar) <>
-   (EqGen.fromMap $ EqEnv.stOutSumMap scalar)
-   where
-     f :: TIdx.InSection idx node -> v -> Bool
-     f (TIdx.InPart sec _) _ = sec /= secToRemove
-{-
--- | Takes all non-energy and non-power values from an env, removes values in section x and generate given equations
 givenAverageWithoutStateX ::(Eq v, EqArith.Sum v, Node.C node,
                 Ord node,Eq a, EqArith.Sum a) =>
                TIdx.State ->
                EqEnvState.Complete node a v  ->
-               EqGenState.EquationSystem Verify.Ignore EqRecord.Absolute node s a v
+               EqGenState.EquationSystem node s a v
 
 givenAverageWithoutStateX stateToRemove (EqEnvState.Complete scalar signal) =
    (EqGenState.fromMap $ EqEnvState.dtimeMap signal) <>
@@ -102,7 +107,7 @@ givenAverageWithoutStateX stateToRemove (EqEnvState.Complete scalar signal) =
    where
      f :: TIdx.InState idx node -> v -> Bool
      f (TIdx.InPart state _) _ = state /= stateToRemove
--}
+
 givenForOptimisation :: (EqArith.Constant a,
                          Node.C node,
                          Fractional a,
@@ -110,20 +115,54 @@ givenForOptimisation :: (EqArith.Constant a,
                          Show a,
                          EqArith.Sum a,
                          Ord node) =>
-   Flow.RangeGraph node ->
-   EqEnv.Complete node (Data Nil a) (Data Nil a)  ->
-   (TIdx.Section -> EtaAssignMap node) ->
+   TD.StateFlowGraph node -> --Flow.RangeGraph node ->
+   EqEnvState.Complete node (Data Nil a) (Data Nil a)  ->
+   (TIdx.State -> EtaAssignMap node) ->
    Map String (a -> a) ->
-   TIdx.Section ->
-   EqGen.EquationSystem node s (Data Nil a) (Data Nil a) ->
-   EqGen.EquationSystem node s (Data Nil a) (Data Nil a) ->
-   EqGen.EquationSystem node s (Data Nil a) (Data Nil a) ->
-   EqGen.EquationSystem node s (Data Nil a) (Data Nil a)
+   TIdx.State ->
+   EqGenState.EquationSystem node s (Data Nil a) (Data Nil a) ->
+   EqGenState.EquationSystem node s (Data Nil a) (Data Nil a) ->
+   EqGenState.EquationSystem node s (Data Nil a) (Data Nil a) ->
+   EqGenState.EquationSystem node s (Data Nil a) (Data Nil a)
 
-givenForOptimisation seqTopology env etaAssign etaFunc sec commonGiven givenLoad givenDOF =
+givenForOptimisation stateFlowGraph env etaAssign etaFunc state commonGiven givenLoad givenDOF =
   commonGiven <>
-  EqGen.fromGraph True (TD.dirFromFlowGraph (snd seqTopology)) <>
-  makeEtaFuncGiven etaAssign sec etaFunc <>
-  givenAverageWithoutSectionX sec env <>
+  EqGenState.fromGraph True (TD.dirFromFlowGraph stateFlowGraph) <> -- (TD.dirFromFlowGraph (snd stateFlowGraph)) <>
+  makeEtaFuncGiven etaAssign state etaFunc <>
+  givenAverageWithoutStateX state env <>
   givenLoad <>
   givenDOF
+
+
+initialEnv ::(Ord node, Num d, Fractional d) =>
+  TD.StateFlowGraph node -> EqEnvState.Complete node (Data Nil d) (Data Nil d)
+initialEnv g =
+  mempty { EqEnvState.signal =
+    mempty { EqEnvState.etaMap = Map.fromList $ zip es $ repeat (Data 0.5),
+             EqEnvState.xMap = Map.fromList xs,
+             EqEnvState.dtimeMap = Map.fromList $ zip dts $ repeat (Data 1) }}
+  where es = mapMaybe f $ Graph.edges g
+        state (TD.FlowEdge (TD.StructureEdge (TIdx.InPart s _))) = Just s
+        state _ = Nothing
+        node (TIdx.PartNode _ n) = n
+        f e = fmap (\s -> SFIdx.eta s (node $ Graph.from e) (node $ Graph.to e)) (state e)
+
+
+        nodestate (TIdx.PartNode (TIdx.NoExit (TIdx.NoInit s)) _) = Just s
+        nodestate _ = Nothing
+
+
+        gfilt = Graph.lefilter p g
+        p (TD.FlowEdge (TD.StructureEdge _), _) = True
+        p _ = False
+
+        ns = Graph.nodes gfilt
+        h n (ins, _, outs) acc =
+          filter (not . null) $
+          flip (maybe acc) (nodestate n) $
+            \s -> let x = SFIdx.x s (node n) . node
+                  in  map x (Set.toList ins) : map x (Set.toList outs) : acc
+        xs = concatMap xfactors $ Map.foldWithKey h [] ns
+        xfactors ys = zip ys (repeat $ Data (1/(fromIntegral $ length ys))) -- @HT numerisch ok?
+
+        dts = map SFIdx.dTime $ Set.toList $ Set.fromList $ mapMaybe nodestate (Map.keys ns) 

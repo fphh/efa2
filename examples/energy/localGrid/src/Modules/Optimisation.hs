@@ -9,7 +9,7 @@ import Modules.System (Node(..))
 
 import qualified EFA.Application.Absolute as EqGen
 import qualified EFA.Application.Index as XIdx
-import qualified EFA.Application.EtaSys as ES
+--import qualified EFA.Application.EtaSys as ES
 import qualified EFA.Application.Sweep as Sweep
 
 import EFA.Application.Absolute ( (.=), (=%%=), (=.=) )
@@ -40,7 +40,7 @@ import qualified Data.Vector as V
 import qualified Data.Foldable as Fold
 import Data.Monoid (mconcat, (<>))
 
-import Control.Applicative (liftA2)
+--import Control.Applicative (liftA2)
 
 
 sec0, sec1 :: TIdx.Section
@@ -214,13 +214,13 @@ lookupDetPower ::
   XIdx.Power Node -> EqEnv.Complete Node b (Result Double) -> Double
 lookupDetPower idx =
   AppUt.checkDetermined ("lookupDetPower determined: " ++ show idx) .
-  flip (ES.lookupAbsPower ("lookupDetPower lookup: " ++ show idx)) idx
+  flip (AppUt.lookupAbsPower ("lookupDetPower lookup: " ++ show idx)) idx
 
 lookupDetEnergy ::
   XIdx.Energy Node -> EqEnv.Complete Node b (Result Double) -> Double
 lookupDetEnergy idx =
   AppUt.checkDetermined ("lookupDetEnergy determined: " ++ show idx) .
-  flip (ES.lookupAbsEnergy ("lookupDetEnergy lookup: " ++ show idx)) idx
+  flip (AppUt.lookupAbsEnergy ("lookupDetEnergy lookup: " ++ show idx)) idx
 
 
 -----------------------------------------------------------------------------

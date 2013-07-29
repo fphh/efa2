@@ -3,7 +3,8 @@ module EFA.Application.Utility where
 
 import qualified EFA.Application.Index as XIdx
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
---import qualified EFA.Graph.StateFlow.Environment as StateEnv
+import qualified EFA.Graph.StateFlow.Environment as EqEnvState
+import qualified EFA.Application.IndexState as XIdxState
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Flow as Flow
@@ -13,7 +14,7 @@ import qualified EFA.Signal.SequenceData as SD
 import qualified EFA.Signal.Data as Data
 
 import qualified EFA.Equation.Record as EqRecord
-import qualified EFA.Equation.Environment as Env
+import qualified EFA.Equation.Environment as EqEnv
 
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Result as Result
@@ -24,6 +25,8 @@ import EFA.Equation.System ((.=))
 import EFA.Equation.Result (Result)
 
 import EFA.Report.FormatValue (FormatValue)
+
+import EFA.Utility.Map (checkedLookup)
 
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -48,7 +51,7 @@ makeSimpleEdges es = map f es
   where f (a, b) = (Gr.Edge (Idx.Node a) (Idx.Node b), ())
 -}
 
--- @ HT neue Utility Funktionen für Topologie-Definition, bitte prüfen
+-- @HT neue Utility Funktionen für Topologie-Definition, bitte prüfen
 type EdgeLabel = String
 type PPosLabel = String
 
@@ -109,7 +112,7 @@ infix 0 #=, ~=
   (Verify.GlobalVar mode v recIdx var node, Arith.Sum v,
    var ~ Var.InSectionSignal, var ~ Var.Type idx,
    recIdx ~ EqRecord.ToIndex rec, EqGen.Record rec,
-   Env.AccessMap idx, Env.Environment idx ~ Env.Signal,
+   EqEnv.AccessMap idx, EqEnv.Environment idx ~ EqEnv.Signal,
    Ord (idx node), FormatValue (idx node)) =>
   Idx.Record recIdx (idx node) -> v ->
   EqGen.EquationSystem mode rec node s a v
@@ -120,7 +123,7 @@ infix 0 #=, ~=
   (Verify.GlobalVar mode a recIdx var node, Arith.Sum a,
    var ~ Var.ForNodeSectionScalar, var ~ Var.Type idx,
    recIdx ~ EqRecord.ToIndex rec, EqGen.Record rec,
-   Env.AccessMap idx, Env.Environment idx ~ Env.Scalar,
+   EqEnv.AccessMap idx, EqEnv.Environment idx ~ EqEnv.Scalar,
    Ord (idx node), FormatValue (idx node)) =>
   Idx.Record recIdx (idx node) -> a ->
   EqGen.EquationSystem mode rec node s a v
@@ -129,9 +132,77 @@ infix 0 #=, ~=
 -- | Unpack scalar result values in env from Data constructor
 envGetData ::
   (Ord node) =>
-  Env.Complete node (Result (Data.Data va a)) (Result (Data.Data vv v)) ->
-  Env.Complete node (Result (Data.Apply va a)) (Result (Data.Apply vv v))
+  EqEnv.Complete node (Result (Data.Data va a)) (Result (Data.Data vv v)) ->
+  EqEnv.Complete node (Result (Data.Apply va a)) (Result (Data.Apply vv v))
 envGetData =
-  Env.completeFMap (fmap Data.getData) (fmap Data.getData)
+  EqEnv.completeFMap (fmap Data.getData) (fmap Data.getData)
 
 
+--  @HH mit @HT klären ob lookup funktionen notwenig und sinnvoll, PG
+
+lookupAbsEnergy ::
+  (Ord node, Show node, Show t) =>
+  String ->
+  EqEnv.Complete node b (Result t) ->
+  XIdx.Energy node -> Result t
+lookupAbsEnergy caller env n =
+  checkedLookup caller (EqEnv.energyMap $ EqEnv.signal env) n
+
+lookupAbsPower ::
+  (Ord node, Show node, Show t) =>
+  String ->
+  EqEnv.Complete node b (Result t) ->
+  XIdx.Power node -> Result t
+lookupAbsPower caller env n =
+  checkedLookup caller (EqEnv.powerMap $ EqEnv.signal env) n
+
+lookupAbsEta ::
+  (Ord node, Show node, Show t) =>
+  String ->
+  EqEnv.Complete node b (Result t) ->
+  XIdx.Eta node -> Result t
+lookupAbsEta caller env n =
+  checkedLookup caller (EqEnv.etaMap $ EqEnv.signal env) n
+
+lookupDetPower ::(Ord node, Show d, Show node) =>
+  XIdx.Power node -> EqEnv.Complete node b (Result d) -> d
+lookupDetPower idx =
+  checkDetermined ("lookupDetPower determined: " ++ show idx) .
+  flip (lookupAbsPower ("lookupDetPower lookup: " ++ show idx)) idx
+
+lookupDetEnergy ::(Ord node, Show d, Show node) =>
+  XIdx.Energy node -> EqEnv.Complete node b (Result d) -> d
+lookupDetEnergy idx =
+  checkDetermined ("lookupDetEnergy determined: " ++ show idx) .
+  flip (lookupAbsEnergy ("lookupDetEnergy lookup: " ++ show idx)) idx
+
+
+--  @HT schon wieder code-Duplication wegen Stateenv - was können wir da machen ?
+
+lookupAbsEnergyState ::
+  (Ord node, Show node, Show t) =>
+  String ->
+  EqEnvState.Complete node b (Result t) ->
+  XIdxState.Energy node -> Result t
+lookupAbsEnergyState caller env n =
+  checkedLookup caller (EqEnvState.energyMap $ EqEnvState.signal env) n
+
+lookupAbsPowerState ::
+  (Ord node, Show node, Show t) =>
+  String ->
+  EqEnvState.Complete node b (Result t) ->
+  XIdxState.Power node -> Result t
+lookupAbsPowerState caller env n =
+  checkedLookup caller (EqEnvState.powerMap $ EqEnvState.signal env) n
+
+lookupDetPowerState ::(Ord node, Show d, Show node) =>
+  XIdxState.Power node -> EqEnvState.Complete node b (Result d) -> d
+lookupDetPowerState idx =
+  checkDetermined ("lookupDetPower determined: " ++ show idx) .
+  flip (lookupAbsPowerState ("lookupDetPower lookup: " ++ show idx)) idx
+
+lookupDetEnergyState ::(Ord node, Show d, Show node) =>
+  XIdxState.Energy node -> EqEnvState.Complete node b (Result d) -> d
+lookupDetEnergyState idx =
+  checkDetermined ("lookupDetEnergy determined: " ++ show idx) .
+  flip (lookupAbsEnergyState ("lookupDetEnergy lookup: " ++ show idx)) idx

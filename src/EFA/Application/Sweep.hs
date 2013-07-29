@@ -9,12 +9,15 @@ import EFA.Signal.Data (Data(..), Nil, (:>))
 import EFA.Signal.Typ (Typ, UT)
 import EFA.Signal.Signal (TC)
 import qualified EFA.Signal.Signal as Sig
+--import qualified EFA.Signal.Data as Data
 
 import qualified EFA.Equation.Environment as EqEnv
+import qualified EFA.Graph.StateFlow.Environment as EqEnvState
 import EFA.Equation.Result (Result)
 
 import qualified EFA.Application.EtaSys as ES
 import qualified EFA.Graph.Flow as Flow
+import qualified EFA.Graph.Topology as TD
 
 import Control.Applicative (liftA2)
 
@@ -74,3 +77,15 @@ optimalSolution2D cond forcing topo sigEnvs = liftA2 (,) etaMax env
         (xIdx, yIdx) = Sig.findIndex2 (== etaMax) etaSys
         env = liftA2 (Sig.getSample2D sigEnvs) xIdx yIdx
 
+optimalSolution2DState ::
+  (Fractional v, Ord node, Show node, Show v, Ord v, Eq a) =>
+  ES.ConditionState node a v ->
+  ES.ForcingState node a v ->
+  TD.StateFlowGraph node ->
+  Sig.UTSignal2 V.Vector V.Vector (EqEnvState.Complete node a (Result v)) ->
+  Maybe (v, EqEnvState.Complete node a (Result v))
+optimalSolution2DState cond forcing topo sigEnvs = liftA2 (,) etaMax env
+  where etaSys = Sig.map (ES.objectiveFunctionState cond forcing topo) sigEnvs
+        etaMax = Sig.fromScalar $ Sig.maximum etaSys
+        (xIdx, yIdx) = Sig.findIndex2 (== etaMax) etaSys
+        env = liftA2 (Sig.getSample2D sigEnvs) xIdx yIdx

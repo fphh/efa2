@@ -12,6 +12,7 @@ import qualified EFA.Signal.SequenceData as SD
 --import qualified EFA.Signal.Record as Rec
 --import qualified EFA.Signal.Typ as Typ
 --import qualified EFA.Signal.Vector as Vec
+import qualified EFA.Graph.Topology.Index as TIdx
 
 --import EFA.Signal.Signal ((.+), (./))
 
@@ -19,6 +20,8 @@ import qualified EFA.Application.Utility as AppUt
 
 import EFA.Application.Utility (select) -- makeEdges,
 import qualified EFA.Application.Index as XIdx
+import qualified EFA.Application.IndexState as XIdxState
+import EFA.Application.Optimisation (etaOverPowerInState, etaOverPowerOutState)
 
 -- import qualified Modules.Utility as ModUt
 
@@ -108,4 +111,64 @@ seqTopology = Flow.sequenceGraph (select flowStates [0,1])
 
 
 stateFlowGraph :: TD.StateFlowGraph Node
-stateFlowGraph =   StateFlow.stateGraphActualStorageEdges $ fmap (flowStates !!) $ SD.fromList [1, 0, 1] 
+stateFlowGraph =   StateFlow.stateGraphActualStorageEdges $ fmap (flowStates !!) $ SD.fromList [1, 0, 1]
+
+{-
+-- | TODO -- Wirkungsgrade nur in der gewollten Richtiung ansetzen !!
+etaAssign ::
+  TIdx.Section ->
+  Map (XIdx.Eta Node) (String, String, XIdx.Eta Node -> XIdx.Power Node)
+etaAssign sec = Map.fromList $
+  (XIdx.eta sec Wasser Netz, ( "solar", "solar", etaOverPowerOut)) :
+  (XIdx.eta sec Netz Wasser, ( "solar", "solar", etaOverPowerIn)) :
+
+  (XIdx.eta sec Wasser Netz, ( "storage", "storage", etaOverPowerOut)) :
+  (XIdx.eta sec Netz Wasser, ( "storage", "storage", etaOverPowerIn)) :
+
+  (XIdx.eta sec Verteiler Netz, ( "trafo", "trafo", etaOverPowerOut)) :
+  (XIdx.eta sec Netz Verteiler, ( "trafo", "trafo", etaOverPowerIn)) :
+
+  (XIdx.eta sec Kohle Netz, ( "coal", "coal", etaOverPowerOut)) :
+  (XIdx.eta sec Netz Kohle, ( "coal", "coal", etaOverPowerIn)) :
+
+{-  (XIdx.eta sec Gas Netz, ( "gas", "gas", etaOverPowerOut)) :
+  (XIdx.eta sec Netz Gas, ( "gas", "gas", etaOverPowerIn)) : -}
+
+  (XIdx.eta sec Netz Netzlast, ( "constOne", "constOne", etaOverPowerOut)) :
+  (XIdx.eta sec Netzlast Netz, ( "constOne", "constOne", etaOverPowerIn)) :
+
+  (XIdx.eta sec Hausnetz Verteiler, ( "constOne", "constOne", etaOverPowerOut)) :
+  (XIdx.eta sec Verteiler Hausnetz, ( "constOne", "constOne", etaOverPowerIn)) :
+
+  []
+-}
+
+-- | TODO -- Wirkungsgrade nur in der gewollten Richtung ansetzen !!
+etaAssignState ::
+  TIdx.State ->
+  Map (XIdxState.Eta Node) (String, String, XIdxState.Eta Node -> XIdxState.Power Node)
+etaAssignState state = Map.fromList $
+  (XIdxState.eta state Sonne Verteiler, ( "solar", "solar", etaOverPowerOutState)) :
+  (XIdxState.eta state Verteiler Sonne, ( "solar", "solar", etaOverPowerInState)) :
+
+  (XIdxState.eta state Wasser Netz, ( "water", "water", etaOverPowerOutState)) :
+  (XIdxState.eta state Netz Wasser, ( "water", "water", etaOverPowerInState)) :
+
+  (XIdxState.eta state Verteiler Netz, ( "trafo", "trafo", etaOverPowerOutState)) :
+  (XIdxState.eta state Netz Verteiler, ( "trafo", "trafo", etaOverPowerInState)) :
+
+  (XIdxState.eta state Kohle Netz, ( "coal", "coal", etaOverPowerOutState)) :
+  (XIdxState.eta state Netz Kohle, ( "coal", "coal", etaOverPowerInState)) :
+
+{-  (XIdxState.eta state Gas Netz, ( "gas", "gas", etaOverPowerOut)) :
+  (XIdxState.eta state Netz Gas, ( "gas", "gas", etaOverPowerIn)) : -}
+
+  (XIdxState.eta state Netz Netzlast, ( "constOne", "constOne", etaOverPowerOutState)) :
+  (XIdxState.eta state Netzlast Netz, ( "constOne", "constOne", etaOverPowerInState)) :
+
+  (XIdxState.eta state Hausnetz Verteiler, ( "constOne", "constOne", etaOverPowerOutState)) :
+  (XIdxState.eta state Verteiler Hausnetz, ( "constOne", "constOne", etaOverPowerInState)) :
+
+  (XIdxState.eta state Batterie Verteiler, ( "battery", "battery", etaOverPowerOutState)) :
+  (XIdxState.eta state Verteiler Batterie, ( "battery", "battery", etaOverPowerInState)) :
+  []

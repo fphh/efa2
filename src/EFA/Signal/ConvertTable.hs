@@ -106,3 +106,36 @@ makeEtaFunctions2D sm etaAssign = Map.mapWithKey f
                ysig = maybe y (Sig.scale y . snd) (Map.lookup k sm)
 
 -}
+
+-- | no checkedLookup because this would require Show (a -> a)
+getEtas :: Map String (a -> a) -> [String] -> [a -> a]
+getEtas etaFunc = map $
+  \str -> Map.findWithDefault (error $ "getEtas :" ++ str ++ " not found") str etaFunc
+
+
+--  @HH -- Fehlermeldung bitte beseitigen PG
+-- Warning: Pattern match(es) are non-exhaustive
+--             In an equation for `f':
+--                 Patterns not matched: (_, NonEmpty.Cons _ (_ : _))
+
+getPowerSignals ::
+  Map String (TPT.T Double) ->
+  [String] ->
+  [(Sig.TSignal [] Double, Sig.PSignal [] Double)]
+getPowerSignals tabPower =
+    map (f . convertToSignal2D .
+         flip (Map.findWithDefault (error "getPowerSignals: signal not found")) tabPower)
+  where f (x, NonEmpty.Cons y []) = (x, y)
+
+
+getPowerSignalsWithSameTime ::
+  Map String (TPT.T Double) ->
+  [String] ->
+  (Sig.TSignal [] Double,[Sig.PSignal [] Double])
+getPowerSignalsWithSameTime tabPower signalNames = (f times, powers)
+  where  (times,powers) = unzip $ getPowerSignals tabPower signalNames
+         f ts = case ts of
+            [] ->  error "Error in getPowerSignalsWithSameTime: no time vectors in imported Signals"
+            x:[] -> x
+            x:xs -> if all (x==) xs then x
+                    else error "Error in getPowerSignalsWithSameTime: differing time vectors on imported Signals"

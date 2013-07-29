@@ -624,7 +624,7 @@ map ::
 map f (TC x) = TC $ D.map f x
 
 
-{-# DEPRECATED map2 "soll generischer werden (auch fuer Funktionen (w1 d1 -> w2 d2)" #-}
+-- TODO map2 "soll generischer werden (auch fuer Funktionen (w1 d1 -> w2 d2)"
 map2 ::
   (SV.Walker v, SV.Storage w d1,
     SV.Storage v (w d1), SV.Storage v d2) =>
@@ -653,46 +653,7 @@ deltaMap ::
    TC FSignal typ (Data (v2 :> v1) d2)
 deltaMap f (TC x) = TC $ D.deltaMap f x
 
-{-
-----------------------------------------------------------
--- Getyptes DeltaMap
 
-class TDeltaMap s1 s2 c d1 d2 where
-      tdeltaMap :: (TC Scalar typ1 (Data Nil d1) -> TC Scalar typ1 (Data Nil d1) -> TC Scalar typ2 (Data Nil d2)) -> TC s1 typ1 (c d1) -> TC s2 typ2 (c d2)
-
-instance (SDeltaMap s1 s2 c d1 d2) => TDeltaMap s1 s2 c d1 d2 where
-      tdeltaMap f xs = changeType $ deltaMap g xs where g x y = fromScalar $ f (toScalar x) (toScalar y)
-
-
-----------------------------------------------------------
--- Doppeltes Getyptes DeltaMap -- deltaMap ueber powerRecord
-{-
-class  TDeltaMap2 s1 s2 s3 c1 c2 c3 d1 d2 d3 where
-      tdeltaMap2 :: (TC Scalar typ1 (Data Nil (d1,d1))-> TC Scalar typ2 (Data Nil (d2,d2)) -> TC Scalar typ3 (Data Nil d3))  ->  TC s1 typ1 (c1 d1) ->  TC s2 typ2 (c2 d2) ->  TC s3 typ3 (c3 d3)
-      tdeltaMap2Reverse :: (TC Scalar typ1 (Data Nil (d1,d1))-> TC Scalar typ2 (Data Nil (d2,d2)) -> TC Scalar typ3 (Data Nil d3))  ->  TC s1 typ1 (c1 d1) ->  TC s2 typ2 (c2 d2) ->  TC s3 typ3 (c3 d3)
-
-instance (Arith s1 s1 s1, D.ZipWith c1 c1 c1 (d1, d1) (d2, d2) d3, D.ZipWith c1 c1 c1 d1 d1 (d1, d1), D.ZipWith c1 c1 c1 d2 d2 (d2, d2), STail s1 c1 d1, STail s1 c1 d2) =>  TDeltaMap2 s1 s1 s1 c1 c1 c1 d1 d2 d3 where
-  tdeltaMap2 f xs ys = changeSignalType $ (tzipWith f dxs dys)
-    where dxs = zipWith (,) xs (tail xs)
-          dys = zipWith (,) ys (tail ys)
-  tdeltaMap2Reverse f xs ys = changeSignalType $ (tzipWith f dxs dys)
-    where dxs = zipWith (,) (tail xs) xs
-          dys = zipWith (,) (tail ys) ys
-
-
-class  TDeltaMap2 s1 s2 s3 c1 c2 c3 d1 d2 d3 where
-      tdeltaMap2 :: (TC Scalar typ1 (Data Nil (d1,d1))-> TC Scalar typ2 (Data Nil (d2,d2)) -> TC Scalar typ3 (Data Nil d3))  ->  TC s1 typ1 (c1 d1) ->  TC s2 typ2 (c2 d2) ->  (TC s3 typ3 (c3 d3),
-      tdeltaMap2Reverse :: (TC Scalar typ1 (Data Nil (d1,d1))-> TC Scalar typ2 (Data Nil (d2,d2)) -> TC Scalar typ3 (Data Nil d3))  ->  TC s1 typ1 (c1 d1) ->  TC s2 typ2 (c2 d2) ->  TC s3 typ3 (c3 d3)
-
-instance (Arith s1 s1 s1, D.ZipWith c1 c1 c1 (d1, d1) (d2, d2) d3, D.ZipWith c1 c1 c1 d1 d1 (d1, d1), D.ZipWith c1 c1 c1 d2 d2 (d2, d2), STail s1 c1 d1, STail s1 c1 d2) =>  TDeltaMap2 s1 s1 s1 c1 c1 c1 d1 d2 d3 where
-  tdeltaMap2 f xs ys = changeSignalType $ (tzipWith f dxs dys)
-    where dxs = zipWith (,) xs (tail xs)
-          dys = zipWith (,) ys (tail ys)
-  tdeltaMap2Reverse f xs ys = changeSignalType $ (tzipWith f dxs dys)
-    where dxs = zipWith (,) (tail xs) xs
-          dys = zipWith (,) (tail ys) ys
--}
--}
 ---------------------------------------------------------
 -- sFold
 
@@ -1476,8 +1437,7 @@ interp1LinSig caller xSig ySig xSigLookup = tmap f xSigLookup
 
 
 -- | Interpolate a 3-signal x-y surface, where in x points are aligned in rows
-{-# WARNING interp2WingProfile "pg: not yet tested, sample calculation could be done better" #-}
-
+-- | TODO - interp2WinProfile verallgemeinern, so dass es statt mit Signal auch mit TestRow klappt
 interp2WingProfile :: (Show (v1 d1), Show (v2 (v1 d1)),
                        SV.Storage v1 d1, Show d1,
                        Ord d1,
@@ -1522,6 +1482,37 @@ interp2WingProfile caller xSig ySig zSig xLookup yLookup =
         msg = "interp2WingProfile - Out of Range: " ++ caller ++ ": "
               ++ P.show xLookup ++ ", " ++ P.show yLookup ++ "\n"
               ++ P.show xSig ++ "\n" ++ P.show ySig
+
+
+interp2WingProfileWithSignal :: (SV.Zipper v3,
+                                 SV.Walker v3,
+                                 SV.Storage v3 d,
+                                 Eq (v1 d),
+                                 Fractional d,
+                                 Ord d,
+                                 Show d,
+                                 Show (v2 (v1 d)),
+                                 Show (v1 d),
+                                 SV.Storage v2 (v1 d),
+                                 SV.Storage v1 d,
+                                 SV.Singleton v1,
+                                 SV.Singleton v2,
+                                 SV.Lookup v1,
+                                 SV.Lookup v2,
+                                 SV.Find v1,
+                                 BSum d,
+                                 BProd d d) =>
+                                String ->
+                    TC Signal t1 (Data (v1 :> Nil) d) ->
+                    TC Signal t2 (Data (v2 :> v1 :> Nil) d) ->
+                    TC Signal t3 (Data (v2 :> v1 :> Nil) d) ->
+                    TC Signal t1 (Data (v3 :> Nil) d) ->
+                    TC Signal t2 (Data (v3 :> Nil) d) ->
+                    TC Signal t3 (Data (v3 :> Nil) d)
+interp2WingProfileWithSignal caller x1d y2d z2d xSig ySig = tzipWith
+         (\x y -> interp2WingProfile
+           (caller ++ " - interp2WingProfileWithSignal")
+           x1d y2d z2d x y) xSig ySig
 
 
 

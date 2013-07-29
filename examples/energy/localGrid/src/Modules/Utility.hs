@@ -4,7 +4,7 @@ module Modules.Utility where
 
 import qualified Modules.System as System
 
-import qualified EFA.Application.Index as XIdx
+--import qualified EFA.Application.Index as XIdx
 import qualified EFA.Graph.Topology.Index as TIdx
 
 import qualified EFA.Equation.Environment as EqEnv
@@ -17,7 +17,7 @@ import EFA.Signal.Data (Data(..), Nil, (:>))
 
 import qualified EFA.IO.TableParserTypes as TPT
 
-import EFA.Utility.Map (checkedLookup)
+--import EFA.Utility.Map (checkedLookup)
 
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Map as Map ; import Data.Map (Map)
@@ -47,6 +47,7 @@ getEtas etaFunc = map $
   \str -> Map.findWithDefault (error $ "getEtas :" ++ str ++ " not found") str etaFunc
 
 
+-- @HH Fehlermeldung bei f beseitigen - PG
 getPowerSignals ::
   Map String (TPT.T Double) ->
   [String] ->
