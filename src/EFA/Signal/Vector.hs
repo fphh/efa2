@@ -28,7 +28,7 @@ import Data.Tuple (snd, fst)
 import Text.Show (Show, show)
 import Prelude (Num, Int, Integer, Ord, error, (++), (+), (-), subtract, min, max, fmap, succ)
 
-import Data.Ord (Ordering, (>=), (<=))
+import Data.Ord (Ordering, (>=), (<=), (<), (>))
 
 -- import Data.Maybe (Maybe(..))
 
@@ -127,6 +127,7 @@ class Singleton vec where
    any :: (Storage vec d) => (d -> Bool) -> vec d -> Bool
 
 
+{-
 minmaxHelper :: (Ord d) => (d, d) -> d -> (d, d)
 minmaxHelper acc@(mini, maxi) x =
   let mn = x >= mini
@@ -136,6 +137,14 @@ minmaxHelper acc@(mini, maxi) x =
          else if not mn
                  then (x, maxi)
                  else (mini, x)
+-}
+
+minmaxHelper :: (Ord d) => (d, d) -> d -> (d, d)
+minmaxHelper (mini, maxi) x =
+  case (x < mini, x > maxi) of
+       (False, False) -> (mini, maxi)
+       (True, _) -> (x, maxi)
+       (_, True) -> (mini, x)
 
 
 {-
@@ -149,7 +158,7 @@ instance Singleton V.Vector where
    minimum x = V.minimum x
    minmax xs = V.foldl' minmaxHelper (y, y) ys
      where (y, ys) =
-             fromMaybe (error "Signal.Vector.minmax: empty UV-Vector") (viewL xs)
+              fromMaybe (error "Signal.Vector.minmax: empty UV-Vector") (viewL xs)
    singleton x = V.singleton x
    empty = V.empty
    append = (V.++)
