@@ -11,6 +11,7 @@ import qualified Modules.Optimisation as Optimisation
 import Modules.Optimisation(EnvResult)
 import Modules.System(Node(..))
 
+import EFA.Utility.Async (concurrentlyMany_)
 
 import qualified EFA.Application.IndexState as XIdxState
 
@@ -135,12 +136,12 @@ main = do
 
         state = TIdx.State 0
 
-        envAverage = AppOpt.initialEnv System.stateFlowGraph
+        envAverage = AppOpt.initialEnv System.Wasser System.stateFlowGraph
 
         testEnv :: EnvResult (Double)
         testEnv = --Optimisation.envGetData $
-                  Optimisation.solve System.stateFlowGraph
-                                       envAverage state System.etaAssignState etaFunctionMap sunPower coalPower
+          Optimisation.solve System.stateFlowGraph
+            envAverage state System.etaAssignState etaFunctionMap sunPower coalPower
                                        (1::Double) (1) (1) (1)
 
         -- solve the system for all combinations for a selected section
@@ -196,16 +197,19 @@ main = do
 
 
 
+    concurrentlyMany_ [
+      --Draw.xterm $ Draw.topologyWithEdgeLabels System.edgeNames System.topology,
 
-    Draw.xterm $ Draw.topologyWithEdgeLabels System.edgeNames System.topology
-    Draw.xterm $ Draw.stateFlowGraphWithEnv Draw.optionsDefault System.stateFlowGraph testEnv
+      --Draw.xterm $ Draw.flowTopologies System.flowStates,
+      Draw.xterm $ Draw.stateFlowGraphWithEnv Draw.optionsDefault System.stateFlowGraph testEnv ]
 
+{-
     PlotIO.surfaceWithOpts "Variation" DefaultTerm.cons id frameOpts noLegend
       varLoadHouse varLoadNet varLoadNet
 
     PlotIO.surfaceWithOpts "Variation" DefaultTerm.cons id frameOpts noLegend
       varLoadHouse varLoadNet optFunct
-
+-}
 
 
 

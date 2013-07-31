@@ -111,7 +111,9 @@ seqTopology = Flow.sequenceGraph (select flowStates [0,1])
 
 
 stateFlowGraph :: TD.StateFlowGraph Node
-stateFlowGraph =   StateFlow.stateGraphActualStorageEdges $ fmap (flowStates !!) $ SD.fromList [1, 0, 1]
+stateFlowGraph = 
+  StateFlow.stateGraphActualStorageEdges
+  $ AppUt.select flowStates [0, 3, 9, 12]
 
 {-
 -- | TODO -- Wirkungsgrade nur in der gewollten Richtiung ansetzen !!
@@ -151,8 +153,8 @@ etaAssignState state = Map.fromList $
   (XIdxState.eta state Sonne Verteiler, ( "solar", "solar", etaOverPowerOutState)) :
   (XIdxState.eta state Verteiler Sonne, ( "solar", "solar", etaOverPowerInState)) :
 
-  (XIdxState.eta state Wasser Netz, ( "water", "water", etaOverPowerOutState)) :
-  (XIdxState.eta state Netz Wasser, ( "water", "water", etaOverPowerInState)) :
+  (XIdxState.eta state Netz Wasser, ( "water", "water", etaOverPowerOutState)) :
+  (XIdxState.eta state Wasser Netz, ( "water", "water", etaOverPowerInState)) :
 
   (XIdxState.eta state Verteiler Netz, ( "trafo", "trafo", etaOverPowerOutState)) :
   (XIdxState.eta state Netz Verteiler, ( "trafo", "trafo", etaOverPowerInState)) :
@@ -169,6 +171,6 @@ etaAssignState state = Map.fromList $
   (XIdxState.eta state Hausnetz Verteiler, ( "constOne", "constOne", etaOverPowerOutState)) :
   (XIdxState.eta state Verteiler Hausnetz, ( "constOne", "constOne", etaOverPowerInState)) :
 
-  (XIdxState.eta state Batterie Verteiler, ( "battery", "battery", etaOverPowerOutState)) :
-  (XIdxState.eta state Verteiler Batterie, ( "battery", "battery", etaOverPowerInState)) :
+  (XIdxState.eta state Verteiler Batterie, ( "battery", "battery", etaOverPowerOutState)) :
+  (XIdxState.eta state Batterie Verteiler, ( "battery", "battery", etaOverPowerInState)) :
   []

@@ -1,6 +1,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module EFA.Application.Optimisation where
 
@@ -45,6 +46,7 @@ import Data.Monoid((<>),mempty)
 import Data.Maybe (mapMaybe)
 import qualified Data.Set as Set
 
+import Debug.Trace
 
 -- | TODO Functios below could ventually be moved to a module Application/Given
 
@@ -101,6 +103,7 @@ givenAverageWithoutStateX stateToRemove (EqEnvState.Complete scalar signal) =
    (EqGenState.fromMap $ EqEnvState.dtimeMap signal) <>
    (EqGenState.fromMap $ Map.filterWithKey f $ EqEnvState.etaMap signal) <>
    (EqGenState.fromMap $ Map.filterWithKey f $ EqEnvState.xMap signal) <>
+   (EqGenState.fromMap $ EqEnvState.stEnergyMap scalar) <>
    (EqGenState.fromMap $ EqEnvState.stXMap scalar) <>
    (EqGenState.fromMap $ EqEnvState.stInSumMap scalar) <>
    (EqGenState.fromMap $ EqEnvState.stOutSumMap scalar)
@@ -134,13 +137,23 @@ givenForOptimisation stateFlowGraph env etaAssign etaFunc state commonGiven give
   givenDOF
 
 
-initialEnv ::(Ord node, Num d, Fractional d) =>
-  TD.StateFlowGraph node -> EqEnvState.Complete node (Data Nil d) (Data Nil d)
-initialEnv g =
-  mempty { EqEnvState.signal =
-    mempty { EqEnvState.etaMap = Map.fromList $ zip es $ repeat (Data 0.5),
-             EqEnvState.xMap = Map.fromList xs,
-             EqEnvState.dtimeMap = Map.fromList $ zip dts $ repeat (Data 1) }}
+initialEnv ::
+  forall node d.
+  (Ord node, Num d, Fractional d, Show node) =>
+  node ->
+  TD.StateFlowGraph node ->
+  EqEnvState.Complete node (Data Nil d) (Data Nil d)
+initialEnv xStorageEdgesNode g =
+  -- @HT: Warum braucht das aeussere mempty die Typsignatur?
+  (mempty :: EqEnvState.Complete node (Data Nil d) (Data Nil d)) { 
+    EqEnvState.signal =
+      mempty { EqEnvState.etaMap = Map.fromList $ zip es $ repeat (Data 0.5),
+               EqEnvState.xMap = Map.fromList xs,
+               EqEnvState.dtimeMap = Map.fromList $ zip dts $ repeat (Data 1) },
+    EqEnvState.scalar =
+      mempty {
+               EqEnvState.stXMap = Map.fromList $ zip xEdges1 $ repeat (Data 0.5),
+               EqEnvState.stEnergyMap = Map.fromList $ zip stKeys $ repeat (Data 0) } }
   where es = mapMaybe f $ Graph.edges g
         state (TD.FlowEdge (TD.StructureEdge (TIdx.InPart s _))) = Just s
         state _ = Nothing
@@ -163,6 +176,64 @@ initialEnv g =
             \s -> let x = SFIdx.x s (node n) . node
                   in  map x (Set.toList ins) : map x (Set.toList outs) : acc
         xs = concatMap xfactors $ Map.foldWithKey h [] ns
-        xfactors ys = zip ys (repeat $ Data (1/(fromIntegral $ length ys))) -- @HT numerisch ok?
 
-        dts = map SFIdx.dTime $ Set.toList $ Set.fromList $ mapMaybe nodestate (Map.keys ns) 
+        -- @HT numerisch ok?
+        xfactors ys = zip ys (repeat $ Data (1/(fromIntegral $ length ys))) 
+
+        dts = map SFIdx.dTime 
+              $ Set.toList
+              $ Set.fromList
+              $ mapMaybe nodestate
+              $ Map.keys ns
+
+        xEdges1 = mapMaybe q1 $ Graph.edges g
+        q1 (TD.FlowEdge (TD.StorageEdge (TIdx.ForNode (TIdx.StorageEdge s0 s1) n))) 
+          | n == xStorageEdgesNode =
+            (Just . flip TIdx.ForNode n . TIdx.StX)
+            $ uncurry TIdx.StorageTrans
+            $ case (s0, s1) of
+                   (TIdx.Init, TIdx.Exit) ->
+                     (TIdx.NoExit TIdx.Init, TIdx.Exit)
+                   (TIdx.Init, TIdx.NoExit s) ->
+                     (TIdx.NoExit TIdx.Init, TIdx.NoExit (TIdx.NoInit s))
+                   (TIdx.NoInit s, TIdx.Exit) ->
+                     (TIdx.NoExit (TIdx.NoInit s), TIdx.Exit)
+                   (TIdx.NoInit s, TIdx.NoExit t) ->
+                     (TIdx.NoExit (TIdx.NoInit s), TIdx.NoExit (TIdx.NoInit t))
+        q1 _ = Nothing
+
+{-
+        xEdges2 = mapMaybe q2 $ Graph.edges g
+        q2 (TD.FlowEdge (TD.StorageEdge (TIdx.ForNode (TIdx.StorageEdge s0 s1) n))) 
+          | n == xStorageEdgesNode =
+            (Just . flip TIdx.ForNode n . TIdx.StX)
+            $ uncurry (flip TIdx.StorageTrans)
+            $ case (s0, s1) of
+                   (TIdx.Init, TIdx.Exit) ->
+                     (TIdx.NoExit TIdx.Init, TIdx.Exit)
+                   (TIdx.Init, TIdx.NoExit s) ->
+                     (TIdx.NoExit TIdx.Init, TIdx.NoExit (TIdx.NoInit s))
+                   (TIdx.NoInit s, TIdx.Exit) ->
+                     (TIdx.NoExit (TIdx.NoInit s), TIdx.Exit)
+                   (TIdx.NoInit s, TIdx.NoExit t) ->
+                     (TIdx.NoExit (TIdx.NoInit s), TIdx.NoExit (TIdx.NoInit t))
+        q2 _ = Nothing
+-}
+
+
+        stKeys = Map.foldWithKey q [] $ Graph.nodes g
+        q (TIdx.PartNode (TIdx.NoExit TIdx.Init) n) (_, _, outs) =
+          (map (\(TIdx.PartNode next _) ->
+                  case next of
+                       TIdx.Exit -> TIdx.ForNode (TIdx.StEnergy (TIdx.StorageEdge TIdx.Init TIdx.Exit)) n
+                       TIdx.NoExit (TIdx.NoInit s) -> TIdx.ForNode (TIdx.StEnergy (TIdx.StorageEdge TIdx.Init (TIdx.NoExit s))) n)
+               (Set.toList outs) ++)
+        q _ _ = id
+
+{-
+[
+(PartNode (NoExit Init) Batterie,fromList [PartNode Exit Batterie]),
+
+
+(PartNode (NoExit Init) Wasser,fromList [PartNode Exit Wasser])]
+-}
