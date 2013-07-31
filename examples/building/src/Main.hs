@@ -76,7 +76,7 @@ legend 0 = "Laden"
 legend 1 = "Entladen"
 legend _ = "Undefined"
 
-
+{-
 -- | Skalierung des Modells
 scaleTableEta :: Map String (Double, Double)
 scaleTableEta = Map.fromList $
@@ -87,34 +87,45 @@ scaleTableEta = Map.fromList $
   ("constOne",       (1, 1)) :
   ("solar",       (1, 1)) :
   []
+-}
 
--- | constant loads
-sunPower :: Double
-sunPower = 1
+scaleTableEta :: Map String (Double, Double)
+scaleTableEta = Map.fromList $
+  ("storage",     (1, 0.8)) :
+  ("gas",         (1, 0.4)) :
+  ("transformer", (3.0, 0.95)) :
+  ("coal",        (6, 0.46)) :
+  ("local",       (1, 1)) :
+  ("rest",        (1, 1)) :
+  []
 
-coalPower :: Double
-coalPower =  1
+
+
+restPowerScale :: Double
+restPowerScale = 1
+
+localPowerScale :: Double
+localPowerScale = 1.2
 
 -- | varying the network loads
-loadHousePower :: Sig.PSignal V.Vector Double
-loadHousePower = Sig.fromList [0.3, 0.4 .. 3.3]
+varLocal1D :: Sig.PSignal V.Vector Double
+varLocal1D = Sig.fromList [0.3, 0.4 .. 3.3]
 
-loadNetPower :: Sig.PSignal V.Vector Double
-loadNetPower = Sig.fromList [0.2, 0.3 .. 2]
+varRest1D :: Sig.PSignal V.Vector Double
+varRest1D = Sig.fromList [0.2, 0.3 .. 2]
 
-varLoadHouse, varLoadNet :: Sig.PSignal2 V.Vector V.Vector Double
-(varLoadHouse, varLoadNet) = Sig.variation2D loadHousePower loadNetPower
-
+varLocal, varRest :: Sig.PSignal2 V.Vector V.Vector Double
+(varLocal, varRest) = Sig.variation2D varLocal1D varRest1D
 
 -- | varying degrees of freedom
-batteryPower :: Sig.PSignal V.Vector Double
-batteryPower = Sig.fromList [0.3, 0.4 .. 3.3]
+waterPower :: Sig.PSignal V.Vector Double
+waterPower = Sig.fromList [0.3, 0.4 .. 3.3]
 
-storagePower :: Sig.PSignal V.Vector Double
-storagePower = Sig.fromList [0.2, 0.3 .. 2]
+gasPower :: Sig.PSignal V.Vector Double
+gasPower = Sig.fromList [0.2, 0.3 .. 2]
 
-varBattery, varStorage :: Sig.PSignal2 V.Vector V.Vector Double
-(varBattery, varStorage) = Sig.variation2D batteryPower storagePower
+varWater, varGas :: Sig.PSignal2 V.Vector V.Vector Double
+(varWater, varGas) = Sig.variation2D waterPower gasPower
 
 main :: IO()
 main = do
@@ -126,9 +137,24 @@ main = do
 
     let etaFunctionMap = CT.makeEtaFunctions2D scaleTableEta tabEta
 
-        -- @HT - warum war das nochmal gefährlich ? Wie gehts besser ?
+  {-      -- @HT - warum war das nochmal gefährlich ? Wie gehts besser ?
         (time, [powerSignalHouse, powerSignalNetLoad, powerSignalSun])
-           = CT.getPowerSignalsWithSameTime tabPower ["house", "netload", "sun"]
+           = CT.getPowerSignalsWithSameTime tabPower ["house", "netload", "sun"] -}
+
+         -- | Import Power Curves
+        (time, [powerSignalWind,
+               powerSignalSolar,
+               powerSignalHouse,
+               powerSignalIndustry]) = CT.getPowerSignalsWithSameTime tabPower
+                                       ["wind", "solar", "house", "industry"]
+
+
+        powerSignalRest = Sig.scale powerSignalWind restPowerScale
+        powerSignalLocal = Sig.offset
+                          (Sig.scale  (powerSignalSolar Sig..+
+                                      Sig.makeDelta (powerSignalHouse Sig..+
+                                                     (Sig.makeDelta powerSignalIndustry)))
+                          localPowerScale) 0.5
 
     -- | Optimisation of Operation Points
 
@@ -136,12 +162,12 @@ main = do
 
         state = TIdx.State 0
 
-        envAverage = AppOpt.initialEnv System.Wasser System.stateFlowGraph
+        envAverage = AppOpt.initialEnv System.Water System.stateFlowGraph
 
         testEnv :: EnvResult (Double)
         testEnv = --Optimisation.envGetData $
           Optimisation.solve System.stateFlowGraph
-            envAverage state System.etaAssignState etaFunctionMap sunPower coalPower
+            envAverage state System.etaAssignState etaFunctionMap
                                        (1::Double) (1) (1) (1)
 
         -- solve the system for all combinations for a selected section
@@ -149,8 +175,8 @@ main = do
         envsSweep :: Sig.UTSignal2 V.Vector V.Vector
          (Sig.UTSignal2 V.Vector V.Vector (EnvResult Double))
         envsSweep = Sweep.doubleSweep (Optimisation.solve System.stateFlowGraph
-                                       envAverage state System.etaAssignState etaFunctionMap sunPower coalPower)
-             varBattery varStorage varLoadHouse varLoadNet
+                                       envAverage state System.etaAssignState etaFunctionMap)
+             varWater varGas varLocal varRest
 
         force = Optimisation.forcing $ Optimisation.ChargeDrive 0
 
@@ -164,30 +190,31 @@ main = do
 
         optWaterPowerMap :: Sig.PSignal2 V.Vector V.Vector Double
         optWaterPowerMap = Sig.setType $ Sig.map (AppUt.lookupDetPowerState $
-                                                    XIdxState.power state Netz Wasser) envsOpt
+                                                    XIdxState.power state Network Water) envsOpt
 
-        optBatteryPowerMap :: Sig.PSignal2 V.Vector V.Vector Double
-        optBatteryPowerMap = Sig.setType $ Sig.map (AppUt.lookupDetPowerState $
-                                                    XIdxState.power state Netz Wasser) envsOpt
+        optGasPowerMap :: Sig.PSignal2 V.Vector V.Vector Double
+        optGasPowerMap = Sig.setType $ Sig.map (AppUt.lookupDetPowerState $
+                                                    XIdxState.power state LocalNetwork Gas) envsOpt
 
     -- Simulate optimal Solution
     let
 
        powerSignalWaterOpt = Sig.interp2WingProfileWithSignal "Main/powerSignalWaterOpt"
-           loadHousePower varLoadNet optWaterPowerMap
-           powerSignalHouse powerSignalNetLoad
+           varLocal1D varRest optWaterPowerMap
+           powerSignalLocal powerSignalRest
 
        powerSignalBatteryOpt = Sig.interp2WingProfileWithSignal "Main/powerSignalBatteryOpt"
-           loadHousePower varLoadNet optBatteryPowerMap
-           powerSignalHouse powerSignalNetLoad
+           varLocal1D varRest optGasPowerMap
+           powerSignalLocal powerSignalRest
+
 
        givenSignals :: Record.PowerRecord Node [] Double
        givenSignals = Seq.addZeroCrossings $
            Record.Record time $
-           Map.fromList [(TIdx.PPos (TIdx.StructureEdge Netz Wasser), powerSignalWaterOpt),
-                       (TIdx.PPos (TIdx.StructureEdge Verteiler Batterie), powerSignalBatteryOpt),
-                       (TIdx.PPos (TIdx.StructureEdge Netz Netzlast), powerSignalNetLoad),
-                       (TIdx.PPos (TIdx.StructureEdge Verteiler Hausnetz), powerSignalHouse)
+           Map.fromList [(TIdx.PPos (TIdx.StructureEdge Network Water), powerSignalWaterOpt),
+                       (TIdx.PPos (TIdx.StructureEdge LocalNetwork Gas), powerSignalBatteryOpt),
+                       (TIdx.PPos (TIdx.StructureEdge LocalRest LocalNetwork), powerSignalRest),
+                       (TIdx.PPos (TIdx.StructureEdge Rest Network), powerSignalLocal)
                       ]
 
        -- | Build Sequenceflow graph for simulation
@@ -200,7 +227,7 @@ main = do
     concurrentlyMany_ [
       --Draw.xterm $ Draw.topologyWithEdgeLabels System.edgeNames System.topology,
 
-      --Draw.xterm $ Draw.flowTopologies System.flowStates,
+      Draw.xterm $ Draw.flowTopologies System.flowStates,
       Draw.xterm $ Draw.stateFlowGraphWithEnv Draw.optionsDefault System.stateFlowGraph testEnv ]
 
 {-

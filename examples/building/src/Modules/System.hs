@@ -7,7 +7,7 @@ import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.StateFlow as StateFlow
 --import qualified EFA.Graph as Gr
 import qualified EFA.Graph.Flow as Flow
-import qualified EFA.Signal.SequenceData as SD
+--import qualified EFA.Signal.SequenceData as SD
 --import qualified EFA.Signal.Base as Base
 --import qualified EFA.Signal.Record as Rec
 --import qualified EFA.Signal.Typ as Typ
@@ -30,7 +30,7 @@ import EFA.Signal.Record (SigId(..))
 
 import qualified Data.Map as Map
 import Data.Map (Map)
-
+{-
 data Node = --Gas
            Hausnetz
           | Kohle
@@ -43,6 +43,14 @@ data Node = --Gas
           | Batterie
           | Wasser
              deriving (Eq, Ord, Enum, Show)
+-}
+
+data Node =  Nuclear | Coal | Oil | Gas |
+             Sun | Wind | Water |
+             Network | Transformer | LocalNetwork |
+             HouseHold | Industry |
+             Rest | LocalRest
+          deriving (Eq, Ord, Enum, Show)
 
 instance Node.C Node where
    display = Node.displayDefault
@@ -67,7 +75,7 @@ topology = Gr.fromList nodes (makeEdges edges)
 topology :: TD.Topology Node
 topology = AppUt.makeTopology nodeList edgeList
 
-
+{-
 nodeList :: [(Node,TD.NodeType ())]
 nodeList = [(Sonne, TD.AlwaysSource),
             (Verteiler, TD.Crossing),
@@ -89,6 +97,25 @@ edgeList = [(Sonne, Verteiler,"Solaranlage","Strahlung","Solar220V"),
 --            (Gas,Netz,"GasKW","",""),
             (Kohle,Netz,"KohleKW","",""),
             (Netz,Wasser,"SpeicherKW","","")]
+-}
+
+nodeList :: [(Node,TD.NodeType ())]
+nodeList = [(Coal, TD.AlwaysSource),
+            (Gas, TD.Source),
+            (Water, TD.storage),
+            (Network,TD.Crossing),
+            (Rest, TD.AlwaysSink),
+            (LocalNetwork,TD.Crossing),
+            (LocalRest, TD.AlwaysSink)]
+
+
+edgeList :: AppUt.LabeledEdgeList Node
+edgeList = [(Coal, Network, "CoalPlant", "Coal","ElCoal"),
+               (Water, Network,"WaterPlant","Water","ElWater"),
+               (Network, Rest,"toRest","toRest","toRest"),
+               (Network, LocalNetwork, "Transformer", "HighVoltage", "LowVoltage"),
+               (Gas, LocalNetwork,"GasPlant","Gas","ElGas"),
+               (LocalNetwork, LocalRest, "toLocalRest", "toLocalRest", "toLocalRest")]
 
 edgeNames :: Map (Node, Node) String
 edgeNames = Map.fromList el
@@ -111,47 +138,18 @@ seqTopology = Flow.sequenceGraph (select flowStates [0,1])
 
 
 stateFlowGraph :: TD.StateFlowGraph Node
-stateFlowGraph = 
+stateFlowGraph =
   StateFlow.stateGraphActualStorageEdges
-  $ AppUt.select flowStates [0, 3, 9, 12]
-
+--  $ AppUt.select flowStates [0, 3, 9, 12]
+  $ AppUt.select flowStates [0,4]
 {-
--- | TODO -- Wirkungsgrade nur in der gewollten Richtiung ansetzen !!
-etaAssign ::
-  TIdx.Section ->
-  Map (XIdx.Eta Node) (String, String, XIdx.Eta Node -> XIdx.Power Node)
-etaAssign sec = Map.fromList $
-  (XIdx.eta sec Wasser Netz, ( "solar", "solar", etaOverPowerOut)) :
-  (XIdx.eta sec Netz Wasser, ( "solar", "solar", etaOverPowerIn)) :
-
-  (XIdx.eta sec Wasser Netz, ( "storage", "storage", etaOverPowerOut)) :
-  (XIdx.eta sec Netz Wasser, ( "storage", "storage", etaOverPowerIn)) :
-
-  (XIdx.eta sec Verteiler Netz, ( "trafo", "trafo", etaOverPowerOut)) :
-  (XIdx.eta sec Netz Verteiler, ( "trafo", "trafo", etaOverPowerIn)) :
-
-  (XIdx.eta sec Kohle Netz, ( "coal", "coal", etaOverPowerOut)) :
-  (XIdx.eta sec Netz Kohle, ( "coal", "coal", etaOverPowerIn)) :
-
-{-  (XIdx.eta sec Gas Netz, ( "gas", "gas", etaOverPowerOut)) :
-  (XIdx.eta sec Netz Gas, ( "gas", "gas", etaOverPowerIn)) : -}
-
-  (XIdx.eta sec Netz Netzlast, ( "constOne", "constOne", etaOverPowerOut)) :
-  (XIdx.eta sec Netzlast Netz, ( "constOne", "constOne", etaOverPowerIn)) :
-
-  (XIdx.eta sec Hausnetz Verteiler, ( "constOne", "constOne", etaOverPowerOut)) :
-  (XIdx.eta sec Verteiler Hausnetz, ( "constOne", "constOne", etaOverPowerIn)) :
-
-  []
--}
-
 -- | TODO -- Wirkungsgrade nur in der gewollten Richtung ansetzen !!
 etaAssignState ::
   TIdx.State ->
   Map (XIdxState.Eta Node) (String, String, XIdxState.Eta Node -> XIdxState.Power Node)
 etaAssignState state = Map.fromList $
-  (XIdxState.eta state Sonne Verteiler, ( "solar", "solar", etaOverPowerOutState)) :
-  (XIdxState.eta state Verteiler Sonne, ( "solar", "solar", etaOverPowerInState)) :
+{-  (XIdxState.eta state Sonne Verteiler, ( "solar", "solar", etaOverPowerOutState)) :
+  (XIdxState.eta state Verteiler Sonne, ( "solar", "solar", etaOverPowerInState)) :-}
 
   (XIdxState.eta state Netz Wasser, ( "water", "water", etaOverPowerOutState)) :
   (XIdxState.eta state Wasser Netz, ( "water", "water", etaOverPowerInState)) :
@@ -173,4 +171,29 @@ etaAssignState state = Map.fromList $
 
   (XIdxState.eta state Verteiler Batterie, ( "battery", "battery", etaOverPowerOutState)) :
   (XIdxState.eta state Batterie Verteiler, ( "battery", "battery", etaOverPowerInState)) :
+  []
+-}
+
+etaAssignState ::
+  TIdx.State ->
+  Map (XIdxState.Eta Node) (String, String, XIdxState.Eta Node -> XIdxState.Power Node)
+etaAssignState sec = Map.fromList $
+  (XIdxState.eta sec Water Network, ( "storage", "storage", etaOverPowerInState)) :
+  (XIdxState.eta sec Network Water, ( "storage", "storage", etaOverPowerOutState)) :
+
+  (XIdxState.eta sec Coal Network, ( "coal", "coal", etaOverPowerInState)) :
+  (XIdxState.eta sec Network Coal, ( "coal", "coal", etaOverPowerOutState)) :
+
+  (XIdxState.eta sec Gas LocalNetwork, ( "gas", "gas", etaOverPowerInState)) :
+  (XIdxState.eta sec LocalNetwork Gas, ( "gas", "gas", etaOverPowerOutState)) :
+
+  (XIdxState.eta sec Network LocalNetwork, ( "transformer", "transformer", etaOverPowerInState)) :
+  (XIdxState.eta sec LocalNetwork Network, ( "transformer", "transformer", etaOverPowerOutState)) :
+
+  (XIdxState.eta sec LocalNetwork LocalRest, ( "local", "local", etaOverPowerInState)) :
+  (XIdxState.eta sec LocalRest LocalNetwork, ( "local", "local", etaOverPowerOutState)) :
+
+  (XIdxState.eta sec Network Rest, ( "rest", "rest", etaOverPowerInState)) :
+  (XIdxState.eta sec Rest Network, ( "rest", "rest", etaOverPowerOutState)) :
+
   []

@@ -145,7 +145,7 @@ initialEnv ::
   EqEnvState.Complete node (Data Nil d) (Data Nil d)
 initialEnv xStorageEdgesNode g =
   -- @HT: Warum braucht das aeussere mempty die Typsignatur?
-  (mempty :: EqEnvState.Complete node (Data Nil d) (Data Nil d)) { 
+  (mempty :: EqEnvState.Complete node (Data Nil d) (Data Nil d)) {
     EqEnvState.signal =
       mempty { EqEnvState.etaMap = Map.fromList $ zip es $ repeat (Data 0.5),
                EqEnvState.xMap = Map.fromList xs,
@@ -178,16 +178,16 @@ initialEnv xStorageEdgesNode g =
         xs = concatMap xfactors $ Map.foldWithKey h [] ns
 
         -- @HT numerisch ok?
-        xfactors ys = zip ys (repeat $ Data (1/(fromIntegral $ length ys))) 
+        xfactors ys = zip ys (repeat $ Data (1/(fromIntegral $ length ys)))
 
-        dts = map SFIdx.dTime 
+        dts = map SFIdx.dTime
               $ Set.toList
               $ Set.fromList
               $ mapMaybe nodestate
               $ Map.keys ns
 
         xEdges1 = mapMaybe q1 $ Graph.edges g
-        q1 (TD.FlowEdge (TD.StorageEdge (TIdx.ForNode (TIdx.StorageEdge s0 s1) n))) 
+        q1 (TD.FlowEdge (TD.StorageEdge (TIdx.ForNode (TIdx.StorageEdge s0 s1) n)))
           | n == xStorageEdgesNode =
             (Just . flip TIdx.ForNode n . TIdx.StX)
             $ uncurry TIdx.StorageTrans
@@ -204,7 +204,7 @@ initialEnv xStorageEdgesNode g =
 
 {-
         xEdges2 = mapMaybe q2 $ Graph.edges g
-        q2 (TD.FlowEdge (TD.StorageEdge (TIdx.ForNode (TIdx.StorageEdge s0 s1) n))) 
+        q2 (TD.FlowEdge (TD.StorageEdge (TIdx.ForNode (TIdx.StorageEdge s0 s1) n)))
           | n == xStorageEdgesNode =
             (Just . flip TIdx.ForNode n . TIdx.StX)
             $ uncurry (flip TIdx.StorageTrans)

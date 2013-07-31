@@ -79,28 +79,22 @@ solve ::
   a ->
   a ->
   a ->
-  a ->
-  a ->
   EnvResult a
-solve stateFlowGraph env state etaAssign etaFunc pHouse pNetload pWater pBattery pSun pCoal =
+solve stateFlowGraph env state etaAssign etaFunc pLocal pRest pWater pGas =
   envGetData $ EqGen.solveSimple $
     AppOpt.givenForOptimisation stateFlowGraph env etaAssign etaFunc state
       commonGiven
-      (givenSecLoad state (Data pHouse) (Data pNetload) (Data pSun) (Data pCoal))
-      (givenSecDOF state (Data pWater) (Data pBattery))
+      (givenSecLoad state (Data pLocal) (Data pRest))
+      (givenSecDOF state (Data pWater) (Data pGas))
 
 givenSecLoad :: (Eq a, EqArith.Sum a) =>
                 TIdx.State ->
                 Data Nil a ->
                 Data Nil a ->
-                Data Nil a ->
-                Data Nil a ->
                 EqSystemData a
-givenSecLoad state pHouse pNetload pSun pCoal =  mconcat $
-   (XIdx.power state Hausnetz Verteiler .= pHouse) :
-   (XIdx.power state Netzlast Netz .= pNetload) :
-   (XIdx.power state Sonne Verteiler .= pSun) :
-   (XIdx.power state Kohle Netz .= pCoal) :
+givenSecLoad state pLocal pRest =  mconcat $
+   (XIdx.power state LocalRest LocalNetwork .= pLocal) :
+   (XIdx.power state Rest Network .= pRest) :
    []
 
 givenSecDOF :: (Eq a, EqArith.Sum a) =>
@@ -108,9 +102,9 @@ givenSecDOF :: (Eq a, EqArith.Sum a) =>
                Data Nil a ->
                Data Nil a ->
                EqSystemData a
-givenSecDOF state pWater pBattery =  mconcat $
-   (XIdx.power state Netz Wasser .= pWater) :
-   (XIdx.power state Verteiler Batterie .= pBattery) :
+givenSecDOF state pWater pGas =  mconcat $
+   (XIdx.power state Network Water .= pWater) :
+   (XIdx.power state LocalNetwork Gas .= pGas) :
    []
 
 
@@ -122,15 +116,15 @@ commonGiven =
    mconcat $
    (XIdx.dTime state0 .= Data 1) :
    (XIdx.dTime state1 .= Data 1) :
-   -- (XIdx.energy state0 Wasser Netz EqGen.=%%= XIdx.energy state1 Wasser Netz) :
-   -- (XIdx.energy state0 Batterie Verteiler EqGen.=%%= XIdx.energy state1 Batterie Verteiler) :
+   (XIdx.energy state0 Water Network EqGen.=%%= XIdx.energy state1 Water Network) :
+   -- (XIdx.energy state0 Batterie LocalNetwork EqGen.=%%= XIdx.energy state1 Batterie LocalNetwork) :
 
 
 
 --   (XIdx.storage TIdx.initial Wasser .= Data 0) :
 --   (XIdx.storage TIdx.initial Batterie .= Data 0) :
---   (XIdx.energy state0 Wasser Netz =%%= XIdx.energy state1 Wasser Netz) :
---   (XIdx.energy state0 Batterie Verteiler =%%= XIdx.energy state1 Verteiler Batterie) :
+--   (XIdx.energy state0 Wasser Network =%%= XIdx.energy state1 Wasser Network) :
+--   (XIdx.energy state0 Batterie LocalNetwork =%%= XIdx.energy state1 LocalNetwork Batterie) :
    []
 
 
