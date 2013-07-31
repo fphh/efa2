@@ -151,10 +151,11 @@ initialEnv xStorageEdgesNode g =
                EqEnvState.xMap = Map.fromList xs,
                EqEnvState.dtimeMap = Map.fromList $ zip dts $ repeat (Data 1) },
     EqEnvState.scalar =
-      mempty {
-               EqEnvState.stXMap = Map.fromList $ zip xEdges1 $ repeat (Data 0.5),
-               EqEnvState.stEnergyMap = Map.fromList $ zip stKeys $ repeat (Data 0) } }
-  where es = mapMaybe f $ Graph.edges g
+      mempty { EqEnvState.stXMap = Map.fromList stxs } }
+               -- EqEnvState.stEnergyMap = Map.fromList $ zip stKeys $ repeat (Data 0) } }
+  where gdir = TD.dirFromFlowGraph g
+
+        es = mapMaybe f $ Graph.edges gdir
         state (TD.FlowEdge (TD.StructureEdge (TIdx.InPart s _))) = Just s
         state _ = Nothing
         node (TIdx.PartNode _ n) = n
@@ -164,29 +165,43 @@ initialEnv xStorageEdgesNode g =
         nodestate (TIdx.PartNode (TIdx.NoExit (TIdx.NoInit s)) _) = Just s
         nodestate _ = Nothing
 
-
-        gfilt = Graph.lefilter p g
-        p (TD.FlowEdge (TD.StructureEdge _), _) = True
-        p _ = False
-
-        ns = Graph.nodes gfilt
+        ns = Graph.nodes gdir
         h n (ins, _, outs) acc =
-          filter (not . null) $
           flip (maybe acc) (nodestate n) $
             \s -> let x = SFIdx.x s (node n) . node
-                  in  map x (Set.toList ins) : map x (Set.toList outs) : acc
+                      il = map x (Set.toList ins)
+                      ol = map x (Set.toList outs)
+                  in  filter (not . null) [il, ol] ++ acc
+
         xs = concatMap xfactors $ Map.foldWithKey h [] ns
 
         -- @HT numerisch ok?
         xfactors ys = zip ys (repeat $ Data (1/(fromIntegral $ length ys)))
+
+        isStorage (_, nt, _) = TD.isStorage nt
+
+        sts = Map.filter isStorage
+              $ Graph.nodes
+              $ Graph.lefilter (\(e, ()) -> TD.isStorageEdge e) gdir
+
+        nstate (TIdx.PartNode s _) = s
+
+        hstx n (ins, _, outs) acc =
+          let stx = SFIdx.stx 
+                    . flip TIdx.PartNode (node n)
+                    . TIdx.StorageTrans (nstate n) . nstate
+              il = map stx (Set.toList ins)
+              ol = map stx (Set.toList outs) 
+          in  filter (not . null) [il, ol] ++ acc
+        stxs = concatMap xfactors $ Map.foldWithKey hstx [] sts
 
         dts = map SFIdx.dTime
               $ Set.toList
               $ Set.fromList
               $ mapMaybe nodestate
               $ Map.keys ns
-
-        xEdges1 = mapMaybe q1 $ Graph.edges g
+{-
+        xEdges1 = mapMaybe q1 $ Graph.edges gdir
         q1 (TD.FlowEdge (TD.StorageEdge (TIdx.ForNode (TIdx.StorageEdge s0 s1) n)))
           | n == xStorageEdgesNode =
             (Just . flip TIdx.ForNode n . TIdx.StX)
@@ -194,46 +209,25 @@ initialEnv xStorageEdgesNode g =
             $ case (s0, s1) of
                    (TIdx.Init, TIdx.Exit) ->
                      (TIdx.NoExit TIdx.Init, TIdx.Exit)
+
                    (TIdx.Init, TIdx.NoExit s) ->
                      (TIdx.NoExit TIdx.Init, TIdx.NoExit (TIdx.NoInit s))
+
                    (TIdx.NoInit s, TIdx.Exit) ->
                      (TIdx.NoExit (TIdx.NoInit s), TIdx.Exit)
+
                    (TIdx.NoInit s, TIdx.NoExit t) ->
                      (TIdx.NoExit (TIdx.NoInit s), TIdx.NoExit (TIdx.NoInit t))
         q1 _ = Nothing
-
-{-
-        xEdges2 = mapMaybe q2 $ Graph.edges g
-        q2 (TD.FlowEdge (TD.StorageEdge (TIdx.ForNode (TIdx.StorageEdge s0 s1) n)))
-          | n == xStorageEdgesNode =
-            (Just . flip TIdx.ForNode n . TIdx.StX)
-            $ uncurry (flip TIdx.StorageTrans)
-            $ case (s0, s1) of
-                   (TIdx.Init, TIdx.Exit) ->
-                     (TIdx.NoExit TIdx.Init, TIdx.Exit)
-                   (TIdx.Init, TIdx.NoExit s) ->
-                     (TIdx.NoExit TIdx.Init, TIdx.NoExit (TIdx.NoInit s))
-                   (TIdx.NoInit s, TIdx.Exit) ->
-                     (TIdx.NoExit (TIdx.NoInit s), TIdx.Exit)
-                   (TIdx.NoInit s, TIdx.NoExit t) ->
-                     (TIdx.NoExit (TIdx.NoInit s), TIdx.NoExit (TIdx.NoInit t))
-        q2 _ = Nothing
 -}
 
-
-        stKeys = Map.foldWithKey q [] $ Graph.nodes g
+        stKeys = Map.foldWithKey q [] $ Graph.nodes gdir
         q (TIdx.PartNode (TIdx.NoExit TIdx.Init) n) (_, _, outs) =
-          (map (\(TIdx.PartNode next _) ->
-                  case next of
-                       TIdx.Exit -> TIdx.ForNode (TIdx.StEnergy (TIdx.StorageEdge TIdx.Init TIdx.Exit)) n
-                       TIdx.NoExit (TIdx.NoInit s) -> TIdx.ForNode (TIdx.StEnergy (TIdx.StorageEdge TIdx.Init (TIdx.NoExit s))) n)
-               (Set.toList outs) ++)
+          (map (flip qf n) (Set.toList outs) ++)
         q _ _ = id
 
-{-
-[
-(PartNode (NoExit Init) Batterie,fromList [PartNode Exit Batterie]),
+        qf (TIdx.PartNode TIdx.Exit _) =
+          TIdx.ForNode (TIdx.StEnergy (TIdx.StorageEdge TIdx.Init TIdx.Exit))
+        qf (TIdx.PartNode (TIdx.NoExit (TIdx.NoInit s)) _) =
+          TIdx.ForNode (TIdx.StEnergy (TIdx.StorageEdge TIdx.Init (TIdx.NoExit s)))
 
-
-(PartNode (NoExit Init) Wasser,fromList [PartNode Exit Wasser])]
--}

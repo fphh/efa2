@@ -41,6 +41,11 @@ structureEdge ::
 structureEdge mkIdx s from to =
    Idx.InPart s $ mkIdx $ Idx.StructureEdge from to
 
+stx ::
+   Idx.PartNode (Idx.StorageTrans sec node) node ->
+   Idx.ForNode (Idx.StX sec) node
+stx = Idx.forNode Idx.StX
+
 
 dTime :: Idx.State -> DTime node
 dTime sec = Idx.InPart sec Idx.DTime

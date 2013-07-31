@@ -46,6 +46,8 @@ import qualified EFA.IO.TableParser as Table
 
 import qualified Data.Map as Map; import Data.Map (Map)
 import qualified Data.Vector as V
+import Data.Tuple (swap)
+
 --import qualified Data.Vector.Unboxed as UV
 
 -- | Graphik Optionen
@@ -130,105 +132,101 @@ varWater, varGas :: Sig.PSignal2 V.Vector V.Vector Double
 main :: IO()
 main = do
 
-    -- | Import Maps and power demand profiles
+  -- | Import Maps and power demand profiles
 
-    tabEta <- Table.read "../maps/eta.txt"
-    tabPower <- Table.read "../maps/power.txt"
+  tabEta <- Table.read "../maps/eta.txt"
+  tabPower <- Table.read "../maps/power.txt"
 
-    let etaFunctionMap = CT.makeEtaFunctions2D scaleTableEta tabEta
+  let etaFunctionMap = CT.makeEtaFunctions2D scaleTableEta tabEta
 
   {-      -- @HT - warum war das nochmal gefährlich ? Wie gehts besser ?
         (time, [powerSignalHouse, powerSignalNetLoad, powerSignalSun])
            = CT.getPowerSignalsWithSameTime tabPower ["house", "netload", "sun"] -}
 
          -- | Import Power Curves
-        (time, [powerSignalWind,
-               powerSignalSolar,
-               powerSignalHouse,
-               powerSignalIndustry]) = CT.getPowerSignalsWithSameTime tabPower
+      (time, [powerSignalWind,
+              powerSignalSolar,
+              powerSignalHouse,
+              powerSignalIndustry]) = CT.getPowerSignalsWithSameTime tabPower
                                        ["wind", "solar", "house", "industry"]
 
-
-        powerSignalRest = Sig.scale powerSignalWind restPowerScale
-        powerSignalLocal = Sig.offset
+      powerSignalRest = Sig.scale powerSignalWind restPowerScale
+      powerSignalLocal = Sig.offset
                           (Sig.scale  (powerSignalSolar Sig..+
                                       Sig.makeDelta (powerSignalHouse Sig..+
                                                      (Sig.makeDelta powerSignalIndustry)))
                           localPowerScale) 0.5
 
-    -- | Optimisation of Operation Points
+  -- | Optimisation of Operation Points
 
-    let
+  let state0 = TIdx.State 0
 
-        state = TIdx.State 0
+      envAverage = AppOpt.initialEnv System.Water System.stateFlowGraph
 
-        envAverage = AppOpt.initialEnv System.Water System.stateFlowGraph
+      testEnv :: EnvResult (Double)
+      testEnv =
+        Optimisation.solve System.stateFlowGraph
+          envAverage state0 System.etaAssignState etaFunctionMap 1 1 1 1
 
-        testEnv :: EnvResult (Double)
-        testEnv = --Optimisation.envGetData $
-          Optimisation.solve System.stateFlowGraph
-            envAverage state System.etaAssignState etaFunctionMap
-                                       (1::Double) (1) (1) (1)
+      -- solve the system for all combinations for a selected section
+      -- TODO sun power needs to become a parameter or optimal setup needs to be changed
+      envsSweep ::
+        Sig.UTSignal2 V.Vector V.Vector (Sig.UTSignal2 V.Vector V.Vector (EnvResult Double))
+      envsSweep =
+       Sweep.doubleSweep
+         (Optimisation.solve System.stateFlowGraph envAverage
+                             state0 System.etaAssignState etaFunctionMap)
+         varWater varGas varLocal varRest
 
-        -- solve the system for all combinations for a selected section
-        -- TODO sun power needs to become a parameter or optimal setup needs to be changed
-        envsSweep :: Sig.UTSignal2 V.Vector V.Vector
-         (Sig.UTSignal2 V.Vector V.Vector (EnvResult Double))
-        envsSweep = Sweep.doubleSweep (Optimisation.solve System.stateFlowGraph
-                                       envAverage state System.etaAssignState etaFunctionMap)
-             varWater varGas varLocal varRest
+      force = Optimisation.forcing $ Optimisation.ChargeDrive 0
 
-        force = Optimisation.forcing $ Optimisation.ChargeDrive 0
+      ensMaybeOpt = Sig.map
+        (f . Sweep.optimalSolution2DState (const True) force System.stateFlowGraph)
+        envsSweep
+      f =  maybe (error "Optimal Solution in at least one load condition not available") swap
 
-        ensMaybeOpt = Sig.map (Sweep.optimalSolution2DState (\x -> True)
-                               force System.stateFlowGraph) envsSweep
+      optFunct :: Sig.NSignal2 V.Vector V.Vector Double
+      envsOpt :: Sig.UTSignal2 V.Vector V.Vector (EnvResult Double)
+      (envsOpt, optFunct) = fmap Sig.setType (Sig.unzip ensMaybeOpt)
 
-        optFunct :: Sig.NSignal2 V.Vector V.Vector Double
-        envsOpt :: Sig.UTSignal2 V.Vector V.Vector (EnvResult Double)
-        (optFunct,envsOpt) = (Sig.setType $ Sig.map (fst .f) ensMaybeOpt,Sig.map (snd .f) ensMaybeOpt)
-          where f =  maybe (error "Optimal Solution in at least one load condition not available") id
 
-        optWaterPowerMap :: Sig.PSignal2 V.Vector V.Vector Double
-        optWaterPowerMap = Sig.setType $ Sig.map (AppUt.lookupDetPowerState $
-                                                    XIdxState.power state Network Water) envsOpt
+      optWaterPowerMap, optGasPowerMap :: Sig.PSignal2 V.Vector V.Vector Double
 
-        optGasPowerMap :: Sig.PSignal2 V.Vector V.Vector Double
-        optGasPowerMap = Sig.setType $ Sig.map (AppUt.lookupDetPowerState $
-                                                    XIdxState.power state LocalNetwork Gas) envsOpt
+      optWaterPowerMap = Sig.setType $
+        Sig.map (AppUt.lookupDetPowerState $ XIdxState.power state0 Network Water) envsOpt
+
+      optGasPowerMap = Sig.setType $
+        Sig.map (AppUt.lookupDetPowerState $ XIdxState.power state0 LocalNetwork Gas) envsOpt
 
     -- Simulate optimal Solution
-    let
+  let powerSignalWaterOpt =
+        Sig.interp2WingProfileWithSignal "Main/powerSignalWaterOpt"
+          varLocal1D varRest optWaterPowerMap powerSignalLocal powerSignalRest
 
-       powerSignalWaterOpt = Sig.interp2WingProfileWithSignal "Main/powerSignalWaterOpt"
-           varLocal1D varRest optWaterPowerMap
-           powerSignalLocal powerSignalRest
-
-       powerSignalBatteryOpt = Sig.interp2WingProfileWithSignal "Main/powerSignalBatteryOpt"
-           varLocal1D varRest optGasPowerMap
-           powerSignalLocal powerSignalRest
+      powerSignalBatteryOpt =
+        Sig.interp2WingProfileWithSignal "Main/powerSignalBatteryOpt"
+          varLocal1D varRest optGasPowerMap powerSignalLocal powerSignalRest
 
 
-       givenSignals :: Record.PowerRecord Node [] Double
-       givenSignals = Seq.addZeroCrossings $
-           Record.Record time $
-           Map.fromList [(TIdx.PPos (TIdx.StructureEdge Network Water), powerSignalWaterOpt),
-                       (TIdx.PPos (TIdx.StructureEdge LocalNetwork Gas), powerSignalBatteryOpt),
-                       (TIdx.PPos (TIdx.StructureEdge LocalRest LocalNetwork), powerSignalRest),
-                       (TIdx.PPos (TIdx.StructureEdge Rest Network), powerSignalLocal)
-                      ]
+      givenSignals :: Record.PowerRecord Node [] Double
+      givenSignals = Seq.addZeroCrossings $ Record.Record time $ Map.fromList $
+        (TIdx.PPos (TIdx.StructureEdge Network Water), powerSignalWaterOpt) :
+        (TIdx.PPos (TIdx.StructureEdge LocalNetwork Gas), powerSignalBatteryOpt) :
+        (TIdx.PPos (TIdx.StructureEdge LocalRest LocalNetwork), powerSignalRest): 
+        (TIdx.PPos (TIdx.StructureEdge Rest Network), powerSignalLocal) : []
 
-       -- | Build Sequenceflow graph for simulation
-       seqTopoSim = Flow.sequenceGraph (AppUt.select System.flowStates [0])
+      -- | Build Sequenceflow graph for simulation
+      --seqTopoSim = Flow.sequenceGraph (AppUt.select System.flowStates [0])
 
-       envSim = AppSim.solve System.topology System.etaAssignState etaFunctionMap givenSignals
+      envSim = AppSim.solve System.topology System.etaAssignState etaFunctionMap givenSignals
 
 
+  print testEnv
+  concurrentlyMany_ [
+    --Draw.xterm $ Draw.topologyWithEdgeLabels System.edgeNames System.topology,
 
-    concurrentlyMany_ [
-      --Draw.xterm $ Draw.topologyWithEdgeLabels System.edgeNames System.topology,
-
-      Draw.xterm $ Draw.flowTopologies System.flowStates,
-      Draw.xterm $ Draw.stateFlowGraphWithEnv Draw.optionsDefault System.stateFlowGraph testEnv ]
+    -- Draw.xterm $ Draw.flowTopologies System.flowStates,
+    Draw.xterm $ Draw.stateFlowGraphWithEnv Draw.optionsDefault System.stateFlowGraph testEnv ]
 
 {-
     PlotIO.surfaceWithOpts "Variation" DefaultTerm.cons id frameOpts noLegend

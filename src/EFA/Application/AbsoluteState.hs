@@ -172,6 +172,7 @@ evar .= val  =  variable evar =.= EqGen.constant val
   idx node -> idx node -> EquationSystem node s a v
 (=%%=) = (EqGen.=%%=)
 
+
 {-
 envFromFlowRecord ::
    (Ord node) =>

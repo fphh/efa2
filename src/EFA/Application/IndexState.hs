@@ -48,10 +48,13 @@ dTime sec = Idx.InPart sec Idx.DTime
 sum :: Idx.State -> Idx.Direction -> node -> Sum node
 sum sec dir = Idx.InPart sec . Idx.Sum dir
 
+
 {-
 maxEnergy ::
    (Idx.ToInitOrState from, Idx.ToStateOrExit to) =>
    from -> to -> node -> MaxEnergy node
+
+
 
 stEnergy ::
    (Idx.ToInitOrState from, Idx.ToStateOrExit to) =>
@@ -60,11 +63,16 @@ stEnergy ::
 stX ::
    (Idx.ToAugmentedState from, Idx.ToAugmentedState to) =>
    from -> to -> node -> StX node
+-}
 
-maxEnergy = storageEdge Idx.MaxEnergy
-stEnergy  = storageEdge Idx.StEnergy
-stX       = storageTrans Idx.StX
+stEnergy ::
+  Idx.Init sec -> Idx.Exit sec -> node -> Idx.ForNode (Idx.StEnergy sec) node
 
+stEnergy  = Idx.storageEdge Idx.StEnergy
+stX       = Idx.storageTrans Idx.StX
+maxEnergy = Idx.storageEdge Idx.MaxEnergy
+
+{-
 storageEdge ::
    (Idx.ToInitOrState from, Idx.ToStateOrExit to) =>
    (StorageEdge node -> idx node) ->

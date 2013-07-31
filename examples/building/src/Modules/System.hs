@@ -139,7 +139,7 @@ seqTopology = Flow.sequenceGraph (select flowStates [0,1])
 
 stateFlowGraph :: TD.StateFlowGraph Node
 stateFlowGraph =
-  StateFlow.stateGraphActualStorageEdges
+  StateFlow.stateGraphAllStorageEdges
 --  $ AppUt.select flowStates [0, 3, 9, 12]
   $ AppUt.select flowStates [0,4]
 {-

@@ -116,8 +116,9 @@ commonGiven =
    mconcat $
    (XIdx.dTime state0 .= Data 1) :
    (XIdx.dTime state1 .= Data 1) :
+   -- ((XIdx.stEnergy TIdx.Init TIdx.Exit Water) EqGen.=%%= (XIdx.energy state1 Water Network)) :
+
    (XIdx.energy state0 Water Network EqGen.=%%= XIdx.energy state1 Water Network) :
-   -- (XIdx.energy state0 Batterie LocalNetwork EqGen.=%%= XIdx.energy state1 Batterie LocalNetwork) :
 
 
 
