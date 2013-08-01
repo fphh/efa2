@@ -66,13 +66,15 @@ etaOverPowerIn :: XIdx.Eta node -> XIdx.Power node
 etaOverPowerIn =
    TIdx.liftInSection $ \(TIdx.Eta e) -> TIdx.Power $ TIdx.flip e
 
--- | Function to specifiy that an efficiency function in etaAssign is to be looked up with output power
+-- | Function to specifiy that an efficiency function 
+-- | in etaAssign is to be looked up with output power
 etaOverPowerOut :: XIdx.Eta node -> XIdx.Power node
 etaOverPowerOut =
    TIdx.liftInSection $ \(TIdx.Eta e) -> TIdx.Power e
 
 type EtaAssignMap node =
-        Map (XIdxState.Eta node) (String, String, XIdxState.Eta node -> XIdxState.Power node)
+  Map (XIdxState.Eta node)
+      (String, String, XIdxState.Eta node -> XIdxState.Power node)
 
 
 -- | Generate given equations using efficiency curves or functions for a specified section
@@ -92,13 +94,13 @@ makeEtaFuncGiven etaAssign state etaFunc = Fold.fold $ Map.mapWithKey f (etaAssi
                                         (Map.lookup strN etaFunc)
                 err str x = error ("not defined: " ++ show str ++ " for " ++ show x)
 
--- | Takes all non-energy and non-power values from an env, removes values in section x and generate given equations
-givenAverageWithoutStateX ::(Eq v, EqArith.Sum v, Node.C node,
-                Ord node,Eq a, EqArith.Sum a) =>
-               TIdx.State ->
-               EqEnvState.Complete node a v  ->
-               EqGenState.EquationSystem node s a v
-
+-- | Takes all non-energy and non-power values from an env,
+-- | removes values in section x and generate given equations
+givenAverageWithoutStateX ::
+  (Eq v, EqArith.Sum v, Node.C node, Ord node,Eq a, EqArith.Sum a) =>
+  TIdx.State ->
+  EqEnvState.Complete node a v  ->
+  EqGenState.EquationSystem node s a v
 givenAverageWithoutStateX stateToRemove (EqEnvState.Complete scalar signal) =
    (EqGenState.fromMap $ EqEnvState.dtimeMap signal) <>
    (EqGenState.fromMap $ Map.filterWithKey f $ EqEnvState.etaMap signal) <>
@@ -107,30 +109,25 @@ givenAverageWithoutStateX stateToRemove (EqEnvState.Complete scalar signal) =
    (EqGenState.fromMap $ EqEnvState.stXMap scalar) <>
    (EqGenState.fromMap $ EqEnvState.stInSumMap scalar) <>
    (EqGenState.fromMap $ EqEnvState.stOutSumMap scalar)
-   where
-     f :: TIdx.InState idx node -> v -> Bool
-     f (TIdx.InPart state _) _ = state /= stateToRemove
+   where f :: TIdx.InState idx node -> v -> Bool
+         f (TIdx.InPart state _) _ = state /= stateToRemove
 
-givenForOptimisation :: (EqArith.Constant a,
-                         Node.C node,
-                         Fractional a,
-                         Ord a,
-                         Show a,
-                         EqArith.Sum a,
-                         Ord node) =>
-   TD.StateFlowGraph node -> --Flow.RangeGraph node ->
-   EqEnvState.Complete node (Data Nil a) (Data Nil a)  ->
-   (TIdx.State -> EtaAssignMap node) ->
-   Map String (a -> a) ->
-   TIdx.State ->
-   EqGenState.EquationSystem node s (Data Nil a) (Data Nil a) ->
-   EqGenState.EquationSystem node s (Data Nil a) (Data Nil a) ->
-   EqGenState.EquationSystem node s (Data Nil a) (Data Nil a) ->
-   EqGenState.EquationSystem node s (Data Nil a) (Data Nil a)
+givenForOptimisation ::
+  (EqArith.Constant a, Node.C node, Fractional a,
+  Ord a, Show a, EqArith.Sum a, Ord node) =>
+  TD.StateFlowGraph node ->
+  EqEnvState.Complete node (Data Nil a) (Data Nil a)  ->
+  (TIdx.State -> EtaAssignMap node) ->
+  Map String (a -> a) ->
+  TIdx.State ->
+  EqGenState.EquationSystem node s (Data Nil a) (Data Nil a) ->
+  EqGenState.EquationSystem node s (Data Nil a) (Data Nil a) ->
+  EqGenState.EquationSystem node s (Data Nil a) (Data Nil a) ->
+  EqGenState.EquationSystem node s (Data Nil a) (Data Nil a)
 
 givenForOptimisation stateFlowGraph env etaAssign etaFunc state commonGiven givenLoad givenDOF =
   commonGiven <>
-  EqGenState.fromGraph True (TD.dirFromFlowGraph stateFlowGraph) <> -- (TD.dirFromFlowGraph (snd stateFlowGraph)) <>
+  EqGenState.fromGraph True (TD.dirFromFlowGraph stateFlowGraph) <>
   makeEtaFuncGiven etaAssign state etaFunc <>
   givenAverageWithoutStateX state env <>
   givenLoad <>

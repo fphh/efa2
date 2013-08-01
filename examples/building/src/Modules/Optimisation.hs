@@ -2,71 +2,44 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE FlexibleContexts #-}
+
 module Modules.Optimisation where
 
 import qualified Modules.System as System
 import Modules.System (Node(..))
 
--- import qualified EFA.Application.Absolute as EqGen
 import qualified EFA.Application.AbsoluteState as EqGen
 
---import EFA.Equation.System((=%%=))
---import EFA.Graph.StateFlow.EquationSystem((=%%=))
-
-
 import qualified EFA.Application.IndexState as XIdx
---import qualified EFA.Application.Utility as EqUt
---import qualified EFA.Application.EtaSys as ES
---import EFA.Application.Absolute ( (.=)) --(=.=) )
-import EFA.Application.AbsoluteState ( (.=)) --(=.=) )
+import EFA.Application.AbsoluteState ((.=))
 
-
---import qualified EFA.Equation.Environment as EqEnv
 import qualified EFA.Graph.StateFlow.Environment as EqEnv
 import qualified EFA.Equation.Arithmetic as EqArith
 import EFA.Equation.Result (Result(..))
 
 import qualified EFA.Graph.Topology.Index as TIdx
---import qualified EFA.Graph.Flow as Flow
---import qualified EFA.Graph.Topology.Node as TDNode
 import qualified EFA.Graph.Topology as TD
-
---import qualified EFA.Signal.SequenceData as SD
---import qualified EFA.Signal.Record as Record
---import qualified EFA.Signal.Signal as Sig
---import EFA.Signal.Typ(UT,Typ)
---import EFA.Signal.Signal(TC(..))
 import qualified EFA.Signal.Data as Data
---import qualified EFA.Signal.Base as Base
---import qualified EFA.Signal.Vector as SV
-
-import EFA.Signal.Data (Data(..),
-                        Nil)
-                        --(:>))
-
+import EFA.Signal.Data (Data(..), Nil)
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
-
---import qualified Data.Map as Map ;
 import Data.Map (Map)
--- import qualified Data.Vector as V
---import qualified Data.Foldable as Fold
-import Data.Monoid (mconcat) --, (<>))
+import Data.Monoid (mconcat)
 
---import EFA.Application.Utility (envGetData) --makeEdges, select,
---import EFA.Application.Optimisation (etaOverPowerIn, etaOverPowerOut)
 import qualified EFA.Application.Optimisation as AppOpt
 
 state0, state1 :: TIdx.State
 state0 :~ state1 :~ _ = Stream.enumFrom $ TIdx.State 0
 
 type Env a = EqEnv.Complete Node (Data Nil a) (Data Nil a)
-type EnvResultData a = EqEnv.Complete Node (Result (Data Nil a)) (Result (Data Nil a))
+--type EnvResultData a = EqEnv.Complete Node (Result (Data Nil a)) (Result (Data Nil a))
 type EnvResult a = EqEnv.Complete Node (Result a) (Result a)
 
-type EqSystemData a =  (forall s. EqGen.EquationSystem System.Node s (Data Nil a) (Data Nil a))
+type EqSystemData a = 
+  forall s. EqGen.EquationSystem System.Node s (Data Nil a) (Data Nil a)
 
-type EtaAssignMap node = Map (XIdx.Eta node) (String, String, XIdx.Eta node -> XIdx.Power node)
+type EtaAssignMap node =
+  Map (XIdx.Eta node) (String, String, XIdx.Eta node -> XIdx.Power node)
 
 solve ::
   (Ord a, Fractional a, Show a, EqArith.Sum a, EqArith.Constant a) =>
@@ -75,14 +48,15 @@ solve ::
   TIdx.State ->
   (TIdx.State -> EtaAssignMap Node)->
   Map String (a -> a) ->
-  a ->
-  a ->
-  a ->
-  a ->
-  EnvResult a
+  a -> a -> a -> a -> EnvResult a
 solve stateFlowGraph env state etaAssign etaFunc pLocal pRest pWater pGas =
   envGetData $ EqGen.solveSimple $
-    AppOpt.givenForOptimisation stateFlowGraph env etaAssign etaFunc state
+    AppOpt.givenForOptimisation 
+      stateFlowGraph
+      env
+      etaAssign
+      etaFunc
+      state
       commonGiven
       (givenSecLoad state (Data pLocal) (Data pRest))
       (givenSecDOF state (Data pWater) (Data pGas))
