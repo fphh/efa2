@@ -87,15 +87,15 @@ restScale = 1
 localScale = 1.0
 
 local, rest, water, gas :: [Double]
-local = [0.3, 0.5 .. 3.3]
-rest =  [0.2, 0.4 .. 2]
-water = [0.3, 0.5 .. 1]
-gas =   [0.2, 0.4 .. 1]
+--local = [0.3, 0.5 .. 3.3]
+--rest =  [0.2, 0.4 .. 2]
+--water = [0.3, 0.5 .. 1]
+--gas =   [0.2, 0.4 .. 1]
 
---local = [0.5, 0.7]
---rest =  [0.2, 0.4]
---water = [0.3, 1]
---gas =   [0.2, 0.4]
+local = [0.5, 0.7]
+rest =  [0.2, 0.4]
+water = [0.3, 1]
+gas =   [0.2, 0.4]
 
 
 interpolate :: Map [Double] Double -> [[Double]] -> [Double]
@@ -122,6 +122,8 @@ main = do
 
       initEnv = AppOpt.initialEnv System.Water System.stateFlowGraph
 
+      --- ( von hier       -- pro State ein envsSweep erzeugen (chargem, discharge)
+      
       solveFunc =
         Optimisation.solve
           System.stateFlowGraph
@@ -154,6 +156,8 @@ main = do
 
       optGasPower =
         Map.map (AppUt.lookupDetPowerState localToGasPower) maxEtaEnv
+        
+      -- ) bis hier kapseln und pro state ausführen  
 
 
   let
@@ -188,7 +192,15 @@ main = do
           System.etaAssignState
           etaFunctionMap
           givenSignals
-
+          
+      -- 1. envSim zu Record machen und dann die ganz normale efa-Analyse laufen lasen -> Sequenzflussgraph
+      -- 2. Sequenzflussgraph zu Zustandsflussgraph
+      -- 3. Initenv ersetzen => erste Iterationsschleife (brauch ein Akzeptanz-Kriterium für X und eta), 
+      -- 3q. Akzeptanzfunktion schreiben mit Euklidscher oder Prozentpunkte abweichung oder Delta
+      -- 4. Äußere Schleife -- SOC-Faktor (Balance-Funktion) -- (SOC-ZielSOC)*Force
+      -- 4a -- visualisierung der Iteration
+      
+  print envsSweep
   concurrentlyMany_ [
     --Draw.xterm $ Draw.topologyWithEdgeLabels System.edgeNames System.topology,
 
