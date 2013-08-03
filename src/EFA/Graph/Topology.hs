@@ -259,10 +259,8 @@ dirFromFlowGraph =
                   Just $ FlowEdge $ StructureEdge $ Idx.InPart sec de
                Gr.EUnDirEdge _ -> Nothing
 
-structureEdgeFromDirEdge ::
-   Idx.InPart part Gr.DirEdge node -> Idx.InPart part Idx.StructureEdge node
-structureEdgeFromDirEdge (Idx.InPart s (Gr.DirEdge x y)) =
-   Idx.InPart s (Idx.StructureEdge x y)
+structureEdgeFromDirEdge :: Gr.DirEdge node -> Idx.StructureEdge node
+structureEdgeFromDirEdge (Gr.DirEdge x y) = Idx.StructureEdge x y
 
 
 data StoreDir = In | Out deriving (Eq, Ord, Show)

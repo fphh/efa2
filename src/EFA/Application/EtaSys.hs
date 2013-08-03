@@ -79,13 +79,15 @@ etaSys (_, topo) env = liftA2 (/) (sumRes sinks) (sumRes sources)
         isActiveSource _ = False
 
         sinkEnergies
-          (TD.FlowEdge (TD.StructureEdge (Idx.InPart sec (Gr.DirEdge a b)))) =
-            Just $ lookupAbsEnergy "etaSys, sinkEnergies" env (XIdx.energy sec b a)
+          (TD.FlowEdge (TD.StructureEdge e)) =
+            Just $ lookupAbsEnergy "etaSys, sinkEnergies" env $ Idx.flip $
+            Idx.liftInPart (Idx.Energy . TD.structureEdgeFromDirEdge) e
         sinkEnergies _ = Nothing
 
         sourceEnergies
-          (TD.FlowEdge (TD.StructureEdge (Idx.InPart sec (Gr.DirEdge a b)))) =
-            Just $ lookupAbsEnergy "etaSys, sourceEnergies" env (XIdx.energy sec a b)
+          (TD.FlowEdge (TD.StructureEdge e)) =
+            Just $ lookupAbsEnergy "etaSys, sourceEnergies" env $
+            Idx.liftInPart (Idx.Energy . TD.structureEdgeFromDirEdge) e
         sourceEnergies _ = Nothing
 
 
