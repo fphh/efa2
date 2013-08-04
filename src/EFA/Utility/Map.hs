@@ -22,6 +22,21 @@ checkedLookup c m k =
                (myShowList $ Map.keys m)
     Just x -> x
 
+{- |
+The set of keys must be equal and this is checked dynamically.
+-}
+checkedZipWith ::
+  (Ord k) =>
+  Caller ->
+  (a -> b -> c) ->
+  Map k a -> Map k b -> Map k c
+checkedZipWith caller f ma mb =
+  if Map.keysSet ma == Map.keysSet mb
+    then Map.intersectionWith f ma mb
+    else error $
+            "checkedZipWith called by function " ++ caller ++
+            ": key sets differ"
+
 
 reverse :: (Ord b) => Map a b -> Map b a
 reverse = Map.fromList . map swap . Map.toList

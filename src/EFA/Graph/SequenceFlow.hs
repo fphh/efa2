@@ -21,17 +21,23 @@ import Data.Maybe (mapMaybe)
 import Prelude hiding (sequence)
 
 
+type
+   Storages node initLabel exitLabel storageLabel =
+      Map node
+         ((initLabel, exitLabel),
+          Map (XIdx.StorageEdge node) storageLabel)
+
+type
+   Sequence node structEdge nodeLabel structLabel =
+      SD.SequData
+         (Gr.Graph node structEdge nodeLabel structLabel)
+
 data
    Graph node structEdge
          nodeLabel initLabel exitLabel structLabel storageLabel =
       Graph {
-         storages ::
-            Map node
-               ((initLabel, exitLabel),
-                Map (XIdx.StorageEdge node) storageLabel),
-         sequence ::
-            SD.SequData
-               (Gr.Graph node structEdge nodeLabel structLabel)
+         storages :: Storages node initLabel exitLabel storageLabel,
+         sequence :: Sequence node structEdge nodeLabel structLabel
       }
 
 type
