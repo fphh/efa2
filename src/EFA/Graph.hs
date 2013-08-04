@@ -17,7 +17,7 @@ module EFA.Graph (
 
    reverse,
    reverseEdge,
-   ixmap, nmap, emap, nmapWithInOut,
+   ixmap, nmap, emap, nmapWithInOut, nmapWithKey, emapWithKey,
    empty,
    union,
    -- getLEdge,
@@ -597,9 +597,21 @@ nmap :: (nl0 -> nl1) -> Graph n e nl0 el -> Graph n e nl1 el
 nmap f =
    Graph . fmap (\(ins,n,outs) -> (ins, f n, outs)) . graphMap
 
+nmapWithKey :: (n -> nl0 -> nl1) -> Graph n e nl0 el -> Graph n e nl1 el
+nmapWithKey f =
+   Graph .
+   Map.mapWithKey (\n (ins,nl,outs) -> (ins, f n nl, outs)) .
+   graphMap
+
 emap :: (el0 -> el1) -> Graph n e nl el0 -> Graph n e nl el1
 emap f =
    Graph . fmap (\(ins,n,outs) -> (fmap f ins, n, fmap f outs)) . graphMap
+
+emapWithKey :: (e n -> el0 -> el1) -> Graph n e nl el0 -> Graph n e nl el1
+emapWithKey f =
+   Graph .
+   fmap (\(ins,n,outs) -> (Map.mapWithKey f ins, n, Map.mapWithKey f outs)) .
+   graphMap
 
 nodeSet :: Graph n e nl el -> Set n
 nodeSet = Map.keysSet . graphMap
