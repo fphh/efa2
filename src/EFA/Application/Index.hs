@@ -48,6 +48,10 @@ dTime sec = Idx.InPart sec Idx.DTime
 sum :: Idx.Section -> Idx.Direction -> node -> Sum node
 sum sec dir = Idx.InPart sec . Idx.Sum dir
 
+inSum, outSum :: Idx.Section -> node -> Sum node
+inSum  = flip sum Idx.In
+outSum = flip sum Idx.Out
+
 
 maxEnergy ::
    (Idx.ToInitOrSection from, Idx.ToSectionOrExit to) =>
