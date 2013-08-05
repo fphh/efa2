@@ -103,6 +103,14 @@ unzip (SequData xs) =
    mapPair (SequData, SequData) $ List.unzip $
    map (\x -> (fmap fst x, fmap snd x)) xs
 
+{-
+This would be more efficient in a Map based data structure.
+-}
+lookup :: Idx.Section -> SequData a -> Maybe a
+lookup sec (SequData xs) =
+   fmap (\(Section _sec _rng a) -> a) $
+   List.find (\(Section seci _rng _a) -> sec == seci) xs
+
 
 mapWithSection :: (Idx.Section -> a -> b) -> SequData a -> SequData b
 mapWithSection f (SequData xs) =

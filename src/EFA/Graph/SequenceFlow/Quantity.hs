@@ -11,6 +11,20 @@ module EFA.Graph.SequenceFlow.Quantity (
    sequenceFromEnv,
 
    dirFromFlowGraph,
+
+   lookupPower,
+   lookupEnergy,
+   lookupX,
+   lookupEta,
+   lookupDTime,
+   lookupSum,
+
+   lookupStorage,
+   lookupMaxEnergy,
+   lookupStEnergy,
+   lookupStX,
+   lookupStInSum,
+   lookupStOutSum,
    ) where
 
 import qualified EFA.Application.Index as XIdx
@@ -26,6 +40,7 @@ import qualified EFA.Signal.SequenceData as SD
 
 import qualified EFA.Utility.Map as MapU
 
+import Control.Monad (mplus)
 import Control.Applicative (Applicative, pure, liftA2, (<*>))
 
 import qualified Data.Map as Map ; import Data.Map (Map)
@@ -331,3 +346,115 @@ sequenceFromEnv ((stInSumMap, stOutSumMap), env) =
                        lookupFlow "flowEta" sec e Idx.Eta
                  })
               g)
+
+
+lookupPower ::
+   (Ord node) => XIdx.Power node -> Graph node a v -> Maybe v
+lookupPower =
+   lookupStruct flowPowerOut flowPowerIn (\(Idx.Power se) -> se)
+
+lookupEnergy ::
+   (Ord node) => XIdx.Energy node -> Graph node a v -> Maybe v
+lookupEnergy =
+   lookupStruct flowEnergyOut flowEnergyIn (\(Idx.Energy se) -> se)
+
+lookupX ::
+   (Ord node) => XIdx.X node -> Graph node a v -> Maybe v
+lookupX =
+   lookupStruct flowXOut flowXIn (\(Idx.X se) -> se)
+
+lookupStruct ::
+   (Ord node) =>
+   (Flow v -> v) ->
+   (Flow v -> v) ->
+   (idx node -> Idx.StructureEdge node) ->
+   Idx.InSection idx node -> Graph node a v -> Maybe v
+lookupStruct fieldOut fieldIn unpackIdx =
+   withTopology $ \idx topo ->
+      case unpackIdx idx of
+         se ->
+            mplus
+               (fmap fieldOut $
+                Gr.lookupEdge (Topo.dirEdgeFromStructureEdge se) topo)
+               (fmap fieldIn $
+                Gr.lookupEdge (Topo.dirEdgeFromStructureEdge $ Idx.flip se) topo)
+
+
+lookupEta :: (Ord node) => XIdx.Eta node -> Graph node a v -> Maybe v
+lookupEta =
+   withTopology $ \(Idx.Eta se) topo ->
+      fmap flowEta $ Gr.lookupEdge (Topo.dirEdgeFromStructureEdge se) topo
+
+
+lookupSum :: (Ord node) => XIdx.Sum node -> Graph node a v -> Maybe v
+lookupSum =
+   withTopology $ \(Idx.Sum dir node) topo -> do
+      sums <- Gr.lookupNode node topo
+      fmap flowSum $
+         case dir of
+            Idx.In  -> sumIn sums
+            Idx.Out -> sumOut sums
+
+
+withTopology ::
+   (idx node -> Topology node a v -> Maybe r) ->
+   Idx.InSection idx node ->
+   Graph node a v ->
+   Maybe r
+withTopology f (Idx.InPart sec idx) g =
+   f idx . snd =<< SD.lookup sec (sequence g)
+
+
+lookupDTime :: XIdx.DTime node -> Graph node a v -> Maybe v
+lookupDTime (Idx.InPart sec Idx.DTime) =
+   fmap fst . SD.lookup sec . sequence
+
+
+lookupStorage ::
+   (Ord node) => XIdx.Storage node -> Graph node a v -> Maybe a
+lookupStorage (Idx.ForNode (Idx.Storage bnd) node) g = do
+   (_,stores,_) <- Map.lookup node $ storages g
+   Map.lookup bnd stores
+
+lookupMaxEnergy ::
+   (Ord node) => XIdx.MaxEnergy node -> Graph node a v -> Maybe a
+lookupMaxEnergy (Idx.ForNode (Idx.MaxEnergy se) node) g = do
+   (_,_,edges) <- Map.lookup node $ storages g
+   fmap carryMaxEnergy $ Map.lookup se edges
+
+lookupStEnergy ::
+   (Ord node) => XIdx.StEnergy node -> Graph node a v -> Maybe a
+lookupStEnergy (Idx.ForNode (Idx.StEnergy se) node) g = do
+   (_,_,edges) <- Map.lookup node $ storages g
+   fmap carryEnergy $ Map.lookup se edges
+
+lookupStX ::
+   (Ord node) => XIdx.StX node -> Graph node a v -> Maybe a
+lookupStX (Idx.ForNode (Idx.StX se) node) g = do
+   (_,_,edges) <- Map.lookup node $ storages g
+   Idx.withStorageEdgeFromTrans
+      (fmap carryXIn  . flip Map.lookup edges)
+      (fmap carryXOut . flip Map.lookup edges)
+      se
+
+lookupStInSum ::
+   (Ord node) => XIdx.StInSum node -> Graph node a v -> Maybe a
+lookupStInSum (Idx.ForNode (Idx.StInSum aug) node) g =
+   case aug of
+      Idx.Exit -> do
+         ((_,exit),_,_) <- Map.lookup node $ storages g
+         return exit
+      Idx.NoExit sec ->
+         fmap carrySum . sumOut =<<
+         Gr.lookupNode node . snd =<< SD.lookup sec (sequence g)
+
+lookupStOutSum ::
+   (Ord node) => XIdx.StOutSum node -> Graph node a v -> Maybe a
+lookupStOutSum (Idx.ForNode (Idx.StOutSum aug) node) g =
+   case aug of
+      Idx.Init -> do
+         ((init,_),_,_) <- Map.lookup node $ storages g
+         return init
+      Idx.NoInit sec ->
+         fmap carrySum . sumIn =<<
+         Gr.lookupNode node . snd =<< SD.lookup sec (sequence g)

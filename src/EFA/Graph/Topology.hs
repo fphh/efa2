@@ -19,6 +19,7 @@ module EFA.Graph.Topology (
        pathExists,
        dirFromFlowGraph,
        structureEdgeFromDirEdge,
+       dirEdgeFromStructureEdge,
        isStorage,
        maybeStorage,
        isActive,
@@ -261,6 +262,9 @@ dirFromFlowGraph =
 
 structureEdgeFromDirEdge :: Gr.DirEdge node -> Idx.StructureEdge node
 structureEdgeFromDirEdge (Gr.DirEdge x y) = Idx.StructureEdge x y
+
+dirEdgeFromStructureEdge :: Idx.StructureEdge node -> Gr.DirEdge node
+dirEdgeFromStructureEdge (Idx.StructureEdge x y) = Gr.DirEdge x y
 
 
 data StoreDir = In | Out deriving (Eq, Ord, Show)
