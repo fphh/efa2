@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances #-}
 module EFA.Graph.SequenceFlow.Quantity (
    Graph, Topology, Sequence, Storages,
    Sums, Sum, Carry, Flow,
@@ -30,6 +31,7 @@ module EFA.Graph.SequenceFlow.Quantity (
 import qualified EFA.Application.Index as XIdx
 
 import qualified EFA.Equation.Environment as Env
+import qualified EFA.Equation.Variable as Var
 
 import qualified EFA.Graph.SequenceFlow as SeqFlow
 import qualified EFA.Graph.Topology.Index as Idx
@@ -248,7 +250,7 @@ storagesFromEnv ::
    SeqFlow.Storages node SeqFlow.InitIn SeqFlow.ExitOut () ->
    Storages node a
 storagesFromEnv env =
-   let lookup caller idx m =
+   let lookupEnv caller idx m =
           fromMaybe (error $ "storagesFromEnv: " ++ caller) $
           Map.lookup idx m
 
@@ -258,27 +260,27 @@ storagesFromEnv env =
            curryNodeMap $ Env.storageMap env)
        .
        (Map.mapWithKey $ \node (_initExit, edges) ->
-          ((lookup "stOutSum" (XIdx.stOutSum XIdx.initSection node) $
+          ((lookupEnv "stOutSum" (XIdx.stOutSum XIdx.initSection node) $
             Env.stOutSumMap env,
-            lookup "stInSum"  (XIdx.stInSum  XIdx.exitSection node) $
+            lookupEnv "stInSum"  (XIdx.stInSum  XIdx.exitSection node) $
             Env.stInSumMap  env),
            Map.mapWithKey
               (\edge () ->
                  Carry {
                     carryMaxEnergy =
-                       lookup "carryMaxEnergy"
+                       lookupEnv "carryMaxEnergy"
                           (Idx.ForNode (Idx.MaxEnergy edge) node) $
                        Env.maxEnergyMap env,
                     carryEnergy =
-                       lookup "carryEnergy"
+                       lookupEnv "carryEnergy"
                           (Idx.ForNode (Idx.StEnergy edge) node) $
                        Env.stEnergyMap env,
                     carryXOut =
-                       lookup "carryXOut"
+                       lookupEnv "carryXOut"
                           (Idx.ForNode (Idx.StX $ Idx.storageTransFromEdge edge) node) $
                        Env.stXMap env,
                     carryXIn =
-                       lookup "carryXIn"
+                       lookupEnv "carryXIn"
                           (Idx.ForNode (Idx.StX $ Idx.flip $ Idx.storageTransFromEdge edge) node) $
                        Env.stXMap env
                  })
@@ -303,18 +305,18 @@ sequenceFromEnv ::
    SeqFlow.Sequence node Gr.DirEdge nodeType () ->
    Sequence node a v
 sequenceFromEnv ((stInSumMap, stOutSumMap), env) =
-   let lookup caller idx m =
+   let lookupEnv caller idx m =
           fromMaybe (error $ "sequenceFromEnv: " ++ caller) $
           Map.lookup idx m
 
        lookupFlow caller sec e idx =
-          lookup caller
+          lookupEnv caller
              (Idx.InPart sec $ idx $
               Topo.structureEdgeFromDirEdge e) $
           Acc.get Env.accessSignalMap env
 
    in  SD.mapWithSection $ \sec g ->
-          (lookup "dtime" (XIdx.dTime sec) $ Env.dtimeMap env,
+          (lookupEnv "dtime" (XIdx.dTime sec) $ Env.dtimeMap env,
            Gr.nmapWithKey
               (\n _nt ->
                  Sums {
@@ -458,3 +460,62 @@ lookupStOutSum (Idx.ForNode (Idx.StOutSum aug) node) g =
       Idx.NoInit sec ->
          fmap carrySum . sumIn =<<
          Gr.lookupNode node . snd =<< SD.lookup sec (sequence g)
+
+
+
+class (Var.Index idx) => AccessMap idx where
+   lookup ::
+      (Ord node) =>
+      idx node -> Graph node a v -> Maybe (Env.Element idx a v)
+
+instance (LookupSignal idx) => AccessMap (Idx.InSection idx) where
+   lookup = lookupSignal
+
+instance (LookupScalar idx) => AccessMap (Idx.ForNode idx) where
+   lookup = lookupScalar
+
+
+class (Var.SignalIndex idx) => LookupSignal idx where
+   lookupSignal ::
+      (Ord node) => Idx.InSection idx node -> Graph node a v -> Maybe v
+
+instance LookupSignal Idx.Energy where
+   lookupSignal = lookupEnergy
+
+instance LookupSignal Idx.Power where
+   lookupSignal = lookupPower
+
+instance LookupSignal Idx.Eta where
+   lookupSignal = lookupEta
+
+instance LookupSignal Idx.DTime where
+   lookupSignal = lookupDTime
+
+instance LookupSignal Idx.X where
+   lookupSignal = lookupX
+
+instance LookupSignal Idx.Sum where
+   lookupSignal = lookupSum
+
+
+class (Var.ScalarIndex idx) => LookupScalar idx where
+   lookupScalar ::
+      (Ord node) => Idx.ForNode idx node -> Graph node a v -> Maybe a
+
+instance LookupScalar Idx.MaxEnergy where
+   lookupScalar = lookupMaxEnergy
+
+instance LookupScalar Idx.Storage where
+   lookupScalar = lookupStorage
+
+instance LookupScalar (Idx.StEnergy Idx.Section) where
+   lookupScalar = lookupStEnergy
+
+instance LookupScalar (Idx.StX Idx.Section) where
+   lookupScalar = lookupStX
+
+instance LookupScalar (Idx.StInSum Idx.Section) where
+   lookupScalar = lookupStInSum
+
+instance LookupScalar (Idx.StOutSum Idx.Section) where
+   lookupScalar = lookupStOutSum
