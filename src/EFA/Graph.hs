@@ -20,9 +20,8 @@ module EFA.Graph (
    ixmap, nmap, emap, nmapWithInOut, nmapWithKey, emapWithKey,
    empty,
    union,
-   -- getLEdge,
+   lookupNode, lookupEdge,
    isEmpty,
-   -- lab,
    labNodes,
    labEdges,
    adjEdges,
@@ -315,20 +314,15 @@ outEdges = fmap thd3 . nodes
 nodeLabels :: (Edge e, Ord (e n), Ord n) => Graph n e nl el -> Map n nl
 nodeLabels = fmap snd3 . nodes
 
-{-
-getLEdge :: (Ord n) => Graph n nl el -> n -> n -> Maybe (LEdge n el)
-getLEdge g x y =
-   let e = Edge x y
-   in  fmap ((,) e) $ Map.lookup e (edgeLabels g)
--}
+lookupEdge :: (Edge e, Ord (e n), Ord n) => e n -> Graph n e nl el -> Maybe el
+lookupEdge e (Graph g) =
+   Map.lookup e . fst3 =<< Map.lookup (from e) g
 
 isEmpty :: Graph n e nl el -> Bool
 isEmpty = Map.null . graphMap
 
-{-
-lab :: Ord n => Graph n nl el -> n -> Maybe nl
-lab g n = fmap snd3 $ Map.lookup n (nodes g)
--}
+lookupNode :: (Ord n) => n -> Graph n e nl el -> Maybe nl
+lookupNode n (Graph g) = fmap snd3 $ Map.lookup n g
 
 labNodes :: (Edge e, Ord (e n), Ord n) => Graph n e nl el -> [LNode n nl]
 labNodes = Map.toList . nodeLabels
