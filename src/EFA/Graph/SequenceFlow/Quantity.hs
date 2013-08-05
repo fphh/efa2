@@ -1,4 +1,17 @@
-module EFA.Graph.SequenceFlow.Quantity where
+module EFA.Graph.SequenceFlow.Quantity (
+   Graph, Topology, Sequence, Storages,
+   Sums, Sum, Carry, Flow,
+
+   envFromGraph,
+   envFromStorages,
+   envFromSequence,
+
+   graphFromEnv,
+   storagesFromEnv,
+   sequenceFromEnv,
+
+   dirFromFlowGraph,
+   ) where
 
 import qualified EFA.Application.Index as XIdx
 
@@ -33,9 +46,12 @@ type
           Map (XIdx.StorageEdge node) (Carry a))
 
 type
+   Topology node a v =
+      Gr.Graph node Gr.DirEdge (Sums a v) (Flow v)
+
+type
    Sequence node a v =
-      SD.SequData
-         (v, Gr.Graph node Gr.DirEdge (Sums a v) (Flow v))
+      SD.SequData (v, Topology node a v)
 
 data
    Graph node a v =
