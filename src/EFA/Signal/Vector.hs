@@ -20,17 +20,15 @@ import qualified Data.NonEmpty as NonEmpty
 
 import Data.Tuple.HT (mapFst)
 import Data.Maybe.HT (toMaybe)
+import Data.Ord (Ordering, (>=), (<=), (<), (>))
 import Data.Eq (Eq((==)))
 import Data.Function ((.), ($), id, flip)
 import Data.Maybe (Maybe(Just, Nothing), maybe, isJust, fromMaybe)
 import Data.Bool (Bool(False, True), (&&), not)
 import Data.Tuple (snd, fst)
 import Text.Show (Show, show)
+
 import Prelude (Num, Int, Integer, Ord, error, (++), (+), (-), subtract, min, max, fmap, succ)
-
-import Data.Ord (Ordering, (>=), (<=), (<), (>))
-
--- import Data.Maybe (Maybe(..))
 
 
 
@@ -127,9 +125,8 @@ class Singleton vec where
    any :: (Storage vec d) => (d -> Bool) -> vec d -> Bool
 
 
-{-
-minmaxHelper :: (Ord d) => (d, d) -> d -> (d, d)
-minmaxHelper acc@(mini, maxi) x =
+_minmaxSemiStrict :: (Ord d) => (d, d) -> d -> (d, d)
+_minmaxSemiStrict acc@(mini, maxi) x =
   let mn = x >= mini
       mx = x <= maxi
   in  if mn && mx
@@ -137,26 +134,25 @@ minmaxHelper acc@(mini, maxi) x =
          else if not mn
                  then (x, maxi)
                  else (mini, x)
--}
 
-minmaxHelper :: (Ord d) => (d, d) -> d -> (d, d)
-minmaxHelper (mini, maxi) x =
+minmaxStrict :: (Ord d) => (d, d) -> d -> (d, d)
+minmaxStrict (mini, maxi) x =
   case (x < mini, x > maxi) of
-       (False, False) -> (mini, maxi)
-       (True, _) -> (x, maxi)
-       (_, True) -> (mini, x)
+    (False, False) -> (mini, maxi)
+    (True,  False) -> (x, maxi)
+    (False, True)  -> (mini, x)
+    (True,  True)  -> error "minmax: lower bound larger than upper bound"
 
 
-{-
--- slow!
-minmaxHelper :: (Ord d) => (d, d) -> d -> (d, d)
-minmaxHelper (a, b) x = (a `min` x, b `max` x)
--}
+-- space leak
+_minmaxLazy :: (Ord d) => (d, d) -> d -> (d, d)
+_minmaxLazy (a, b) x = (a `min` x, b `max` x)
+
 
 instance Singleton V.Vector where
    maximum x = V.maximum x
    minimum x = V.minimum x
-   minmax xs = V.foldl' minmaxHelper (y, y) ys
+   minmax xs = V.foldl' minmaxStrict (y, y) ys
      where (y, ys) =
               fromMaybe (error "Signal.Vector.minmax: empty UV-Vector") (viewL xs)
    singleton x = V.singleton x
@@ -180,7 +176,7 @@ instance Singleton UV.Vector where
      \xs ->
        let (y, ys) =
                fromMaybe (error "Signal.Vector.minmax: empty UV-Vector") (viewL xs)
-       in  UV.foldl' minmaxHelper (y, y) ys
+       in  UV.foldl' minmaxStrict (y, y) ys
 
    singleton x = writeUnbox (UV.singleton x)
    empty = writeUnbox UV.empty
@@ -198,7 +194,7 @@ instance Singleton UV.Vector where
 instance Singleton [] where
    maximum x = L.maximum x
    minimum x = L.minimum x
-   minmax (x:xs) = L.foldl' minmaxHelper (x, x) xs
+   minmax (x:xs) = L.foldl' minmaxStrict (x, x) xs
    minmax [] = error "Signal.Vector.minmax: empty list"
    singleton x = [x]
    empty = []
