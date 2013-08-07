@@ -18,7 +18,7 @@ import EFA.Equation.Result (Result)
 import qualified EFA.Signal.SequenceData as SD
 import EFA.Signal.SequenceData (SequData)
 
-import qualified EFA.Utility.Map as UMap
+import qualified EFA.Utility.Map as MapU
 
 import qualified Control.Monad.Trans.State as MS
 
@@ -109,12 +109,12 @@ scalarEnvFromSequenceEnv divide add secMap (Env.Scalar _me _st se _sx sis sos) =
           flip (cumulateScalarMap add) sis
              (\(Idx.StInSum aug) ->
                 Idx.StInSum $
-                fmap (UMap.checkedLookup "cumulate StInSumMap" secMap) aug)
+                fmap (MapU.checkedLookup "cumulate StInSumMap" secMap) aug)
        outSumMap =
           flip (cumulateScalarMap add) sos
              (\(Idx.StOutSum aug) ->
                 Idx.StOutSum $
-                fmap (UMap.checkedLookup "cumulate StOutSumMap" secMap) aug)
+                fmap (MapU.checkedLookup "cumulate StOutSumMap" secMap) aug)
    in  StateEnv.Scalar
           eMap (stXMap divide inSumMap outSumMap eMap)
           inSumMap outSumMap
@@ -125,8 +125,8 @@ mapStorageEdge ::
    Idx.StorageEdge sec node -> Idx.StorageEdge state node
 mapStorageEdge caller secMap (Idx.StorageEdge from to) =
    Idx.StorageEdge
-      (fmap (UMap.checkedLookup (caller ++ " from") secMap) from)
-      (fmap (UMap.checkedLookup (caller ++ " to")   secMap) to)
+      (fmap (MapU.checkedLookup (caller ++ " from") secMap) from)
+      (fmap (MapU.checkedLookup (caller ++ " to")   secMap) to)
 
 cumulateScalarMap ::
    (Ord node, Ord (stateIdx node)) =>
@@ -189,7 +189,7 @@ cumulateSignalMap ::
 cumulateSignalMap add secMap =
    Map.mapKeysWith add
       (\(Idx.InPart sec idx) ->
-         Idx.InPart (UMap.checkedLookup "cumulateSignalMap" secMap sec) idx)
+         Idx.InPart (MapU.checkedLookup "cumulateSignalMap" secMap sec) idx)
 
 powerMap ::
    (Ord node) =>
