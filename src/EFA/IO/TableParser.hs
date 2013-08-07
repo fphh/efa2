@@ -29,7 +29,7 @@ tables = liftA Map.fromList $
 
 table :: (Read a) => Parser (String, T a)
 table = do
-  _ <- many commentOrEol
+  skipMany commentOrEol
   (str, dim) <- header
   ds <- many line
   return (str, T dim ds)
