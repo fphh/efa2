@@ -8,6 +8,8 @@ import Data.Set (Set)
 import Data.Map (Map)
 import Data.Tuple.HT (swap)
 
+import Prelude hiding (curry, uncurry)
+
 
 -- | New improved ugly version with caller function name
 type Caller = String
@@ -53,3 +55,28 @@ differenceSet m s = Map.difference m (fromSet (const ()) s)
 intersectionSet ::
    (Ord key) => Map key a -> Set key -> Map key a
 intersectionSet m s = Map.intersection m (fromSet (const ()) s)
+
+
+
+curry ::
+   (Ord k0, Ord k1) =>
+   Caller ->
+   (k -> (k0, k1)) ->
+   Map k a -> Map k0 (Map k1 a)
+curry caller f =
+   Map.unionsWith (Map.unionWith (error $ caller ++ ".curry: duplicate key")) .
+   Map.elems .
+   Map.mapWithKey
+      (\k a ->
+         case f k of
+            (k0, k1) -> Map.singleton k0 $ Map.singleton k1 a)
+
+uncurry ::
+   (Ord k) =>
+   Caller ->
+   (k0 -> k1 -> k) ->
+   Map k0 (Map k1 v) -> Map k v
+uncurry caller f =
+   Map.unionsWith (error $ caller ++ ".uncurry: duplicate key") .
+   Map.elems .
+   Map.mapWithKey (Map.mapKeys . f)

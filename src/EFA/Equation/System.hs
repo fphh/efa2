@@ -66,6 +66,7 @@ import EFA.Equation.Arithmetic
            Integrate, Scalar, integrate)
 import EFA.Equation.Result(Result(..))
 
+import qualified EFA.Utility.Map as MapU
 import EFA.Utility ((>>!))
 
 import UniqueLogic.ST.TF.Expression ((=:=))
@@ -861,9 +862,10 @@ getStorageSequences ::
   TD.DirSequFlowGraph node ->
   Map node (Map (Idx.AugSecNode node) (Maybe TD.StoreDir))
 getStorageSequences =
-  Map.unionsWith (Map.unionWith (error "duplicate boundary for node")) .
-  map (\(bn@(Idx.PartNode _ n), dir) -> Map.singleton n $ Map.singleton bn dir) .
-  Map.toList . Map.mapMaybe TD.maybeStorage . Gr.nodeLabels
+  MapU.curry "EquationSystem.getStorageSequences"
+    (\bn@(Idx.PartNode _ n) -> (n, bn))
+  .
+  Map.mapMaybe TD.maybeStorage . Gr.nodeLabels
 
 
 fromInStorages ::

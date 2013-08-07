@@ -256,8 +256,9 @@ storagesFromEnv env =
 
    in  MapU.checkedZipWith "storagesFromEnv"
           (\stores (sums, edges) -> (sums, stores, edges))
-          (fmap (Map.mapKeys (\(Idx.Storage store) -> store)) $
-           curryNodeMap $ Env.storageMap env)
+          (MapU.curry "SequenceFlow.Quantity.storagesFromEnv"
+              (\(Idx.ForNode (Idx.Storage idx) node) -> (node, idx)) $
+           Env.storageMap env)
        .
        (Map.mapWithKey $ \node (_initExit, edges) ->
           ((lookupEnv "stOutSum" (XIdx.stOutSum XIdx.initSection node) $
@@ -285,17 +286,6 @@ storagesFromEnv env =
                        Env.stXMap env
                  })
               edges))
-
-curryNodeMap ::
-   (Ord node, Ord (idx node)) =>
-   Map (Idx.ForNode idx node) a -> Map node (Map (idx node) a)
-curryNodeMap =
-   Map.unionsWith (Map.unionWith
-      (error "SequenceFlow.Quantity.curryNodeMap: duplicate key")) .
-   Map.elems .
-   Map.mapWithKey
-      (\(Idx.ForNode idx node) a ->
-         Map.singleton node $ Map.singleton idx a)
 
 
 sequenceFromEnv ::
