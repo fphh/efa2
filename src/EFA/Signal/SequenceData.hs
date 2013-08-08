@@ -22,6 +22,7 @@ import EFA.Signal.Signal(SignalIdx)
 
 import qualified Data.List.HT as ListHT
 import qualified Data.List as List
+import qualified Data.Map as Map ; import Data.Map (Map)
 import qualified Data.Foldable as Fold
 import Data.Traversable (Traversable, traverse, sequenceA, foldMapDefault)
 import Data.Foldable (Foldable, foldMap)
@@ -110,6 +111,17 @@ lookup :: Idx.Section -> SequData a -> Maybe a
 lookup sec (SequData xs) =
    fmap (\(Section _sec _rng a) -> a) $
    List.find (\(Section seci _rng _a) -> sec == seci) xs
+
+toMap :: SequData a -> Map Idx.Section (Range, a)
+toMap (SequData xs) =
+   Map.fromListWith (error "duplicate section") $
+   map (\(Section sec rng a) -> (sec, (rng, a))) xs
+
+fromMap :: Map Idx.Section (Range, a) -> SequData a
+fromMap =
+   SequData .
+   map (\(sec, (rng, a)) -> Section sec rng a) .
+   Map.toList
 
 
 mapWithSection :: (Idx.Section -> a -> b) -> SequData a -> SequData b

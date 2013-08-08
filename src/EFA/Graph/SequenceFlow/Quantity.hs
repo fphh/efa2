@@ -40,8 +40,6 @@ import qualified EFA.Graph as Gr
 
 import EFA.Graph.SequenceFlow (sequence, storages)
 
-import qualified EFA.Signal.SequenceData as SD
-
 import Control.Monad (mplus)
 import Control.Applicative (Applicative, pure, liftA2, (<*>))
 
@@ -167,8 +165,8 @@ envFromSequence ::
     Env.Signal node v)
 envFromSequence =
    Fold.fold .
-   SD.mapWithSection
-      (\sec (dtime, topo) ->
+   Map.mapWithKey
+      (\sec (_rng, (dtime, topo)) ->
          let nls = Gr.nodeLabels topo
              els = Gr.edgeLabels topo
              sumOutMap = Map.mapMaybe sumOut nls
@@ -225,7 +223,7 @@ graphFromEnv (Env.Complete envScalar envSignal) g =
       sequence =
          sequenceFromEnv
             ((Env.stInSumMap envScalar, Env.stOutSumMap envScalar), envSignal) $
-         fmap (mapSnd dirFromFlowGraph) $ SeqFlow.sequence g
+         fmap (mapSnd (mapSnd dirFromFlowGraph)) $ SeqFlow.sequence g
    }
 
 dirFromFlowGraph ::
@@ -297,7 +295,8 @@ sequenceFromEnv ((stInSumMap, stOutSumMap), env) =
               Topo.structureEdgeFromDirEdge e) $
           Acc.get Env.accessSignalMap env
 
-   in  SD.mapWithSection $ \sec ((), g) ->
+   in  Map.mapWithKey $ \sec (rng, ((), g)) ->
+          (,) rng $
           (lookupEnv "dtime" (XIdx.dTime sec) $ Env.dtimeMap env,
            Gr.mapNodeWithKey
               (\n _nt ->
@@ -386,12 +385,12 @@ withTopology ::
    Graph node a v ->
    Maybe r
 withTopology f (Idx.InPart sec idx) g =
-   f idx . snd =<< SD.lookup sec (sequence g)
+   f idx . snd =<< seqLookup sec g
 
 
 lookupDTime :: XIdx.DTime node -> Graph node a v -> Maybe v
 lookupDTime (Idx.InPart sec Idx.DTime) =
-   fmap fst . SD.lookup sec . sequence
+   fmap fst . seqLookup sec
 
 
 lookupStorage ::
@@ -430,7 +429,7 @@ lookupStInSum (Idx.ForNode (Idx.StInSum aug) node) g =
          return exit
       Idx.NoExit sec ->
          fmap carrySum . sumOut =<<
-         Gr.lookupNode node . snd =<< SD.lookup sec (sequence g)
+         Gr.lookupNode node . snd =<< seqLookup sec g
 
 lookupStOutSum ::
    (Ord node) => XIdx.StOutSum node -> Graph node a v -> Maybe a
@@ -441,8 +440,11 @@ lookupStOutSum (Idx.ForNode (Idx.StOutSum aug) node) g =
          return init
       Idx.NoInit sec ->
          fmap carrySum . sumIn =<<
-         Gr.lookupNode node . snd =<< SD.lookup sec (sequence g)
+         Gr.lookupNode node . snd =<< seqLookup sec g
 
+seqLookup ::
+   Idx.Section -> Graph node a v -> Maybe (v, Topology node a v)
+seqLookup sec = fmap snd . Map.lookup sec . sequence
 
 
 class (Var.Index idx) => AccessMap idx where

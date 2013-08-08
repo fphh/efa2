@@ -30,8 +30,9 @@ type
 
 type
    Sequence node structEdge sectionLabel nodeLabel structLabel =
-      SD.SequData
-         (sectionLabel, Gr.Graph node structEdge nodeLabel structLabel)
+      Map Idx.Section
+         (SD.Range,
+          (sectionLabel, Gr.Graph node structEdge nodeLabel structLabel))
 
 data
    Graph node structEdge
@@ -68,19 +69,17 @@ sequenceGraph sd =
                 (storageMapFromList (Fold.toList $ SD.mapWithSection const sq) .
                  Flow.storageEdges . Map.mapMaybe id) $
              Flow.getStorageSequences sq,
-          sequence = fmap ((,) ()) sq
+          sequence = SD.toMap $ fmap ((,) ()) sq
        }
 
 flatten ::
    (Ord node) =>
    RangeGraph node -> Flow.RangeGraph node
 flatten (Graph tracks sq) =
-   (,)
-      (Fold.fold $
-       SD.mapWithSectionRange (\s rng _ -> Map.singleton s rng) sq) $
+   (,) (fmap fst sq) $
    Flow.insEdges (fmap (Map.keys . thd3) tracks) $
    Flow.insNodes (Map.keys tracks) $
-   Fold.fold $ SD.mapWithSection Flow.sectionFromClassTopo $ fmap snd sq
+   Fold.fold $ Map.mapWithKey Flow.sectionFromClassTopo $ fmap (snd . snd) sq
 
 {-
 Init and Exit sections must be present.
@@ -95,10 +94,8 @@ structure (rngs, g) =
    in  Graph {
           storages = fmap (storageMapFromList (Map.keys nodes)) storeEdges,
           sequence =
-             SD.SequData $
-             map (\(sec, (rng, topo)) -> SD.Section sec rng ((), topo)) $
-             Map.toAscList $
              Map.intersectionWith (,) rngs $
+             fmap ((,) ()) $
              Map.intersectionWith
                 (\ns es -> Gr.fromList ns $ map (flip (,) ()) es)
                 nodes structEdges
@@ -110,7 +107,10 @@ storageMapFromList ::
    [e] ->
    ((InitIn, ExitOut), Map Idx.Boundary (), Map e ())
 storageMapFromList secs =
-   (,,) (InitIn, ExitOut) (Map.fromList $ map (flip (,) () . Idx.Following) $ Idx.Init : map Idx.NoInit secs).
+   (,,)
+      (InitIn, ExitOut)
+      (Map.fromList $ map (flip (,) () . Idx.Following) $
+       Idx.Init : map Idx.NoInit secs).
    Map.fromListWith (error "duplicate storage edge") .
    map (flip (,) ())
 
