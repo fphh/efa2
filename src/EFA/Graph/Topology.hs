@@ -278,7 +278,7 @@ classifyStorages ::
    (Ord node) =>
    FlowTopology node -> ClassifiedTopology node
 classifyStorages =
-   Gr.nmapWithInOut
+   Gr.mapNodeWithInOut
       (\(pre, (_n, nt), suc) ->
          let maybeDir es cls =
                 toMaybe (any (isActive . fst) es) cls

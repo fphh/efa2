@@ -307,7 +307,7 @@ sequenceFromEnv ((stInSumMap, stOutSumMap), env) =
 
    in  SD.mapWithSection $ \sec g ->
           (lookupEnv "dtime" (XIdx.dTime sec) $ Env.dtimeMap env,
-           Gr.nmapWithKey
+           Gr.mapNodeWithKey
               (\n _nt ->
                  Sums {
                     sumIn  =
@@ -319,7 +319,7 @@ sequenceFromEnv ((stInSumMap, stOutSumMap), env) =
                           (Map.lookup (XIdx.stInSum sec n) stInSumMap)
                           (Map.lookup (XIdx.outSum sec n) $ Env.sumMap env)
                  }) $
-           Gr.emapWithKey
+           Gr.mapEdgeWithKey
               (\e () ->
                  Flow {
                     flowPowerOut =

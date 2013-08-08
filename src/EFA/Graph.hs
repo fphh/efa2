@@ -17,7 +17,9 @@ module EFA.Graph (
 
    reverse,
    reverseEdge,
-   ixmap, nmap, emap, nmapWithInOut, nmapWithKey, emapWithKey,
+   ixmap,
+   mapNode, mapNodeWithInOut, mapNodeWithKey,
+   mapEdge, mapEdgeWithKey,
    empty,
    union,
    lookupNode, lookupEdge,
@@ -587,22 +589,22 @@ makeOutMap = makeMap (from, to)
 makeInMap  = makeMap (to, from)
 -}
 
-nmap :: (nl0 -> nl1) -> Graph n e nl0 el -> Graph n e nl1 el
-nmap f =
+mapNode :: (nl0 -> nl1) -> Graph n e nl0 el -> Graph n e nl1 el
+mapNode f =
    Graph . fmap (\(ins,n,outs) -> (ins, f n, outs)) . graphMap
 
-nmapWithKey :: (n -> nl0 -> nl1) -> Graph n e nl0 el -> Graph n e nl1 el
-nmapWithKey f =
+mapNodeWithKey :: (n -> nl0 -> nl1) -> Graph n e nl0 el -> Graph n e nl1 el
+mapNodeWithKey f =
    Graph .
    Map.mapWithKey (\n (ins,nl,outs) -> (ins, f n nl, outs)) .
    graphMap
 
-emap :: (el0 -> el1) -> Graph n e nl el0 -> Graph n e nl el1
-emap f =
+mapEdge :: (el0 -> el1) -> Graph n e nl el0 -> Graph n e nl el1
+mapEdge f =
    Graph . fmap (\(ins,n,outs) -> (fmap f ins, n, fmap f outs)) . graphMap
 
-emapWithKey :: (e n -> el0 -> el1) -> Graph n e nl el0 -> Graph n e nl el1
-emapWithKey f =
+mapEdgeWithKey :: (e n -> el0 -> el1) -> Graph n e nl el0 -> Graph n e nl el1
+mapEdgeWithKey f =
    Graph .
    fmap (\(ins,n,outs) -> (Map.mapWithKey f ins, n, Map.mapWithKey f outs)) .
    graphMap
@@ -613,10 +615,10 @@ nodeSet = Map.keysSet . graphMap
 
 type InOut n e nl el = ([LEdge e n el], LNode n nl, [LEdge e n el])
 
-nmapWithInOut ::
+mapNodeWithInOut ::
    (Edge e, Ord (e n), Ord n) =>
    (InOut n e nl0 el -> nl1) -> Graph n e nl0 el -> Graph n e nl1 el
-nmapWithInOut f =
+mapNodeWithInOut f =
    Graph .
    Map.mapWithKey
       (\n (ins,nl,outs) ->
