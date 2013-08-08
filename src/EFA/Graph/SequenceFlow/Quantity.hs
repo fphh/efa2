@@ -40,8 +40,6 @@ import qualified EFA.Graph as Gr
 
 import qualified EFA.Signal.SequenceData as SD
 
-import qualified EFA.Utility.Map as MapU
-
 import Control.Monad (mplus)
 import Control.Applicative (Applicative, pure, liftA2, (<*>))
 
@@ -49,6 +47,7 @@ import qualified Data.Map as Map ; import Data.Map (Map)
 import qualified Data.Foldable as Fold
 import qualified Data.Accessor.Basic as Acc
 
+import Data.Tuple.HT (mapSnd)
 import Data.Maybe (fromMaybe)
 import Data.Monoid (mempty, (<>))
 
@@ -231,7 +230,7 @@ graphFromEnv (Env.Complete envScalar envSignal) g =
       sequence =
          sequenceFromEnv
             ((Env.stInSumMap envScalar, Env.stOutSumMap envScalar), envSignal) $
-         fmap dirFromFlowGraph $ SeqFlow.sequence g
+         fmap (mapSnd dirFromFlowGraph) $ SeqFlow.sequence g
    }
 
 dirFromFlowGraph ::
@@ -247,24 +246,22 @@ dirFromFlowGraph =
 storagesFromEnv ::
    (Ord node) =>
    Env.Scalar node a ->
-   SeqFlow.Storages node SeqFlow.InitIn SeqFlow.ExitOut () ->
+   SeqFlow.Storages node SeqFlow.InitIn SeqFlow.ExitOut () () ->
    Storages node a
 storagesFromEnv env =
    let lookupEnv caller idx m =
           fromMaybe (error $ "storagesFromEnv: " ++ caller) $
           Map.lookup idx m
 
-   in  MapU.checkedZipWith "storagesFromEnv"
-          (\stores (sums, edges) -> (sums, stores, edges))
-          (MapU.curry "SequenceFlow.Quantity.storagesFromEnv"
-              (\(Idx.ForNode (Idx.Storage idx) node) -> (node, idx)) $
-           Env.storageMap env)
-       .
-       (Map.mapWithKey $ \node (_initExit, edges) ->
+   in  Map.mapWithKey $ \node (_initExit, bnds, edges) ->
           ((lookupEnv "stOutSum" (XIdx.stOutSum XIdx.initSection node) $
             Env.stOutSumMap env,
             lookupEnv "stInSum"  (XIdx.stInSum  XIdx.exitSection node) $
             Env.stInSumMap  env),
+           Map.mapWithKey
+              (\bnd () ->
+                 lookupEnv "storage" (XIdx.storage bnd node) $
+                 Env.storageMap env) bnds,
            Map.mapWithKey
               (\edge () ->
                  Carry {
@@ -285,14 +282,14 @@ storagesFromEnv env =
                           (Idx.ForNode (Idx.StX $ Idx.flip $ Idx.storageTransFromEdge edge) node) $
                        Env.stXMap env
                  })
-              edges))
+              edges)
 
 
 sequenceFromEnv ::
    (Ord node) =>
    ((Env.StInSumMap node a, Env.StOutSumMap node a),
     Env.Signal node v) ->
-   SeqFlow.Sequence node Gr.DirEdge nodeType () ->
+   SeqFlow.Sequence node Gr.DirEdge () nodeType () ->
    Sequence node a v
 sequenceFromEnv ((stInSumMap, stOutSumMap), env) =
    let lookupEnv caller idx m =
@@ -305,7 +302,7 @@ sequenceFromEnv ((stInSumMap, stOutSumMap), env) =
               Topo.structureEdgeFromDirEdge e) $
           Acc.get Env.accessSignalMap env
 
-   in  SD.mapWithSection $ \sec g ->
+   in  SD.mapWithSection $ \sec ((), g) ->
           (lookupEnv "dtime" (XIdx.dTime sec) $ Env.dtimeMap env,
            Gr.mapNodeWithKey
               (\n _nt ->

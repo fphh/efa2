@@ -15,37 +15,39 @@ import qualified Data.Map as Map ; import Data.Map (Map)
 import qualified Data.Foldable as Fold
 import qualified Data.List.HT as ListHT
 
-import Data.Tuple.HT (mapPair)
+import Data.Tuple.HT (mapPair, thd3)
 import Data.Maybe (mapMaybe)
 
 import Prelude hiding (sequence)
 
 
 type
-   Storages node initLabel exitLabel storageLabel =
+   Storages node initLabel exitLabel boundaryLabel storageLabel =
       Map node
          ((initLabel, exitLabel),
+          Map Idx.Boundary boundaryLabel,
           Map (XIdx.StorageEdge node) storageLabel)
 
 type
-   Sequence node structEdge nodeLabel structLabel =
+   Sequence node structEdge sectionLabel nodeLabel structLabel =
       SD.SequData
-         (Gr.Graph node structEdge nodeLabel structLabel)
+         (sectionLabel, Gr.Graph node structEdge nodeLabel structLabel)
 
 data
    Graph node structEdge
-         nodeLabel initLabel exitLabel structLabel storageLabel =
+         sectionLabel nodeLabel initLabel exitLabel boundaryLabel
+         structLabel storageLabel =
       Graph {
-         storages :: Storages node initLabel exitLabel storageLabel,
-         sequence :: Sequence node structEdge nodeLabel structLabel
+         storages :: Storages node initLabel exitLabel boundaryLabel storageLabel,
+         sequence :: Sequence node structEdge sectionLabel nodeLabel structLabel
       }
 
 type
    RangeGraph node =
       Graph
-         node Gr.EitherEdge
+         node Gr.EitherEdge ()
          (Topo.NodeType (Maybe Topo.StoreDir))
-         InitIn ExitOut () ()
+         InitIn ExitOut () () ()
 
 data InitIn  = InitIn
 data ExitOut = ExitOut
@@ -63,9 +65,10 @@ sequenceGraph sd =
    in  Graph {
           storages =
              fmap
-                (storageMapFromList . Flow.storageEdges . Map.mapMaybe id) $
+                (storageMapFromList (Fold.toList $ SD.mapWithSection const sq) .
+                 Flow.storageEdges . Map.mapMaybe id) $
              Flow.getStorageSequences sq,
-          sequence = sq
+          sequence = fmap ((,) ()) sq
        }
 
 flatten ::
@@ -75,9 +78,9 @@ flatten (Graph tracks sq) =
    (,)
       (Fold.fold $
        SD.mapWithSectionRange (\s rng _ -> Map.singleton s rng) sq) $
-   Flow.insEdges (fmap (Map.keys . snd) tracks) $
+   Flow.insEdges (fmap (Map.keys . thd3) tracks) $
    Flow.insNodes (Map.keys tracks) $
-   Fold.fold $ SD.mapWithSection Flow.sectionFromClassTopo sq
+   Fold.fold $ SD.mapWithSection Flow.sectionFromClassTopo $ fmap snd sq
 
 {-
 Init and Exit sections must be present.
@@ -90,10 +93,10 @@ structure (rngs, g) =
    let nodes = groupNodes g
        (structEdges, storeEdges) = groupEdges g
    in  Graph {
-          storages = fmap storageMapFromList storeEdges,
+          storages = fmap (storageMapFromList (Map.keys nodes)) storeEdges,
           sequence =
              SD.SequData $
-             map (\(sec, (rng, topo)) -> SD.Section sec rng topo) $
+             map (\(sec, (rng, topo)) -> SD.Section sec rng ((), topo)) $
              Map.toAscList $
              Map.intersectionWith (,) rngs $
              Map.intersectionWith
@@ -103,9 +106,11 @@ structure (rngs, g) =
 
 storageMapFromList ::
    (Ord e) =>
-   [e] -> ((InitIn, ExitOut), Map e ())
-storageMapFromList =
-   (,) (InitIn, ExitOut) .
+   [Idx.Section] ->
+   [e] ->
+   ((InitIn, ExitOut), Map Idx.Boundary (), Map e ())
+storageMapFromList secs =
+   (,,) (InitIn, ExitOut) (Map.fromList $ map (flip (,) () . Idx.Following) $ Idx.Init : map Idx.NoInit secs).
    Map.fromListWith (error "duplicate storage edge") .
    map (flip (,) ())
 
