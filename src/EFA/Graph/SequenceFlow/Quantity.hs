@@ -38,6 +38,8 @@ import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Gr
 
+import EFA.Graph.SequenceFlow (sequence, storages)
+
 import qualified EFA.Signal.SequenceData as SD
 
 import Control.Monad (mplus)
@@ -55,26 +57,19 @@ import Prelude hiding (lookup, init, sequence)
 
 
 type
-   Storages node a =
-      Map node
-         ((a, a),
-          Map Idx.Boundary a,
-          Map (XIdx.StorageEdge node) (Carry a))
+   Storages node a = SeqFlow.Storages node a a a (Carry a)
 
 type
    Topology node a v =
       Gr.Graph node Gr.DirEdge (Sums a v) (Flow v)
 
 type
-   Sequence node a v =
-      SD.SequData (v, Topology node a v)
+   Sequence node a v = SeqFlow.Sequence node Gr.DirEdge v (Sums a v) (Flow v)
 
-data
+type
    Graph node a v =
-      Graph {
-         storages :: Storages node a,
-         sequence :: Sequence node a v
-      }
+      SeqFlow.Graph node Gr.DirEdge
+         v (Sums a v) a a a (Flow v) (Carry a)
 
 data Carry a =
    Carry {
@@ -225,7 +220,7 @@ graphFromEnv ::
    Env.Complete node a v ->
    SeqFlow.RangeGraph node -> Graph node a v
 graphFromEnv (Env.Complete envScalar envSignal) g =
-   Graph {
+   SeqFlow.Graph {
       storages = storagesFromEnv envScalar $ SeqFlow.storages g,
       sequence =
          sequenceFromEnv
