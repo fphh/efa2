@@ -20,7 +20,7 @@ module EFA.Graph (
    ixmap,
    mapNode, mapNodeWithInOut, mapNodeWithKey,
    mapEdge, mapEdgeWithKey,
-   traverseNode, traverseEdge,
+   traverseNode, traverseEdge, traverse,
    empty,
    union,
    lookupNode, lookupEdge,
@@ -52,10 +52,10 @@ import qualified EFA.Utility.TypeConstructor as TC
 
 import qualified Data.Set as Set
 import qualified Data.Map as Map
+import qualified Data.Traversable as Trav
 import qualified Data.Foldable as Fold
 import Control.Monad (liftM2)
-import Control.Applicative (Applicative, liftA2)
-import Data.Traversable (traverse)
+import Control.Applicative (Applicative, liftA2, liftA3)
 import Data.Foldable (Foldable, foldMap)
 import Data.Set (Set)
 import Data.Map (Map)
@@ -662,7 +662,7 @@ traverseNode ::
    (nl0 -> f nl1) -> Graph n e nl0 el -> f (Graph n e nl1 el)
 traverseNode f =
    fmap Graph .
-   traverse (\(ins,n,outs) -> fmap (\fn -> (ins, fn, outs)) (f n)) .
+   Trav.traverse (\(ins,n,outs) -> fmap (\fn -> (ins, fn, outs)) (f n)) .
    graphMap
 
 {- |
@@ -676,7 +676,21 @@ traverseEdge ::
    (el0 -> f el1) -> Graph n e nl el0 -> f (Graph n e nl el1)
 traverseEdge f =
    fmap Graph .
-   traverse
+   Trav.traverse
       (\(ins,n,outs) ->
-         liftA2 (\fi fo -> (fi,n,fo)) (traverse f ins) (traverse f outs)) .
+         liftA2
+            (\fi fo -> (fi,n,fo))
+            (Trav.traverse f ins) (Trav.traverse f outs)) .
+   graphMap
+
+traverse ::
+   (Applicative f) =>
+   (nl0 -> f nl1) ->
+   (el0 -> f el1) ->
+   Graph n e nl0 el0 -> f (Graph n e nl1 el1)
+traverse fn fe =
+   fmap Graph .
+   Trav.traverse
+      (\(ins,n,outs) ->
+         liftA3 (,,) (Trav.traverse fe ins) (fn n) (Trav.traverse fe outs)) .
    graphMap
