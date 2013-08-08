@@ -20,6 +20,7 @@ module EFA.Graph (
    ixmap,
    mapNode, mapNodeWithInOut, mapNodeWithKey,
    mapEdge, mapEdgeWithKey,
+   traverseNode, traverseEdge,
    empty,
    union,
    lookupNode, lookupEdge,
@@ -53,11 +54,13 @@ import qualified Data.Set as Set
 import qualified Data.Map as Map
 import qualified Data.Foldable as Fold
 import Control.Monad (liftM2)
+import Control.Applicative (Applicative, liftA2)
+import Data.Traversable (traverse)
+import Data.Foldable (Foldable, foldMap)
 import Data.Set (Set)
 import Data.Map (Map)
 import Data.Maybe (mapMaybe)
 import Data.Monoid (Monoid, mempty, mappend)
-import Data.Foldable (Foldable, foldMap)
 import Data.Tuple.HT (fst3, snd3, thd3, mapFst3, mapThd3)
 -- import Data.Char (toUpper)
 
@@ -649,3 +652,31 @@ mapGraph ::
    (InOut n nl el -> a) -> Graph n e nl el -> [a]
 mapGraph f g = map f (mkInOutGraphFormat g)
 -}
+
+{- |
+Don't rely on a particular order of traversal!
+That is, the actions should commute.
+-}
+traverseNode ::
+   (Applicative f) =>
+   (nl0 -> f nl1) -> Graph n e nl0 el -> f (Graph n e nl1 el)
+traverseNode f =
+   fmap Graph .
+   traverse (\(ins,n,outs) -> fmap (\fn -> (ins, fn, outs)) (f n)) .
+   graphMap
+
+{- |
+Don't rely on a particular order of traversal!
+Due to the current implementation all edges are accessed twice.
+Don't rely on this behaviour!
+That is, the actions should be commutative and non-destructive.
+-}
+traverseEdge ::
+   (Applicative f) =>
+   (el0 -> f el1) -> Graph n e nl el0 -> f (Graph n e nl el1)
+traverseEdge f =
+   fmap Graph .
+   traverse
+      (\(ins,n,outs) ->
+         liftA2 (\fi fo -> (fi,n,fo)) (traverse f ins) (traverse f outs)) .
+   graphMap
