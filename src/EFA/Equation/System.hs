@@ -519,14 +519,14 @@ variableRecord ::
     Env.AccessMap idx, Ord (idx node), FormatValue (idx node), Record rec) =>
    idx node -> RecordExpression mode rec node s a v x
 variableRecord idx =
-  Bookkeeping $ fmap Wrap $ do
+  Bookkeeping $ fmap (Wrap . fmap Expr.fromVariable) $ do
     oldMap <- AccessState.get accessMap
     case Map.lookup idx oldMap of
-      Just var -> return $ fmap Expr.fromVariable var
+      Just var -> return var
       Nothing -> do
         var <- lift $ globalVariable idx
         AccessState.set accessMap $ Map.insert idx var oldMap
-        return (fmap Expr.fromVariable var)
+        return var
 
 variable ::
    (Verify.GlobalVar mode x (Record.ToIndex rec) (Var.Type idx) node,
