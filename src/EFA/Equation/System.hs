@@ -788,9 +788,9 @@ fromNodes equalInOutSums =
                       (splitFactors varsum energy (Arith.constOne (dtime sec)) xfactor)
                       (NonEmpty.fetch edges)
 
-                splitStoreEqs varsum prex edges =
+                splitStoreEqs varsum ener prex edges =
                    foldMap
-                      (splitFactors varsum stEnergy Arith.one
+                      (splitFactors varsum ener Arith.one
                          (stxfactor . prex . storageTransFromEdge))
                       (NonEmpty.fetch edges)
 
@@ -804,14 +804,15 @@ fromNodes equalInOutSums =
                             TD.ViewNodeIn rn ->
                                 fromInStorages rn outsStore
                                 <>
-                                splitStoreEqs (stoutsum rn) id outsStore
+                                splitStoreEqs (stoutsum rn) stEnergy id outsStore
                                 <>
                                 (withSecNode $ \sn ->
                                     stoutsum rn =%= integrate (insum sn))
                             TD.ViewNodeOut rn ->
-                                fromOutStorages insStore
+                                (withLocalVar $ \s ->
+                                   splitStoreEqs s maxEnergy Idx.flip insStore)
                                 <>
-                                splitStoreEqs (stinsum rn) Idx.flip insStore
+                                splitStoreEqs (stinsum rn) stEnergy Idx.flip insStore
                                 <>
                                 (withSecNode $ \sn ->
                                    stinsum rn =%= integrate (outsum sn))
@@ -883,18 +884,6 @@ fromInStorages sn outs =
    in  mconcat $
        zipWith (=%=) maxEnergies
           (stoutsum sn : zipWith (~-) maxEnergies stEnergies)
-
-fromOutStorages ::
-  (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeSectionScalar node,
-   Constant a, Record rec, Node.C node) =>
-  [Idx.ForNode XIdx.StorageEdge node] ->
-  EquationSystem mode rec node s a v
-fromOutStorages ins =
-   withLocalVar $ \s ->
-      foldMap
-         (splitFactors s maxEnergy Arith.one
-            (stxfactor . Idx.flip . storageTransFromEdge))
-         (NonEmpty.fetch ins)
 
 splitFactors ::
    (Verify.LocalVar mode x, Product x, Record rec) =>
