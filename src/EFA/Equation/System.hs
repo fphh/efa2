@@ -49,7 +49,6 @@ import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Variable as Var
-import qualified EFA.Equation.Pair as Pair
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
@@ -963,9 +962,9 @@ solve (_rngs, g) given =
 
 solveTracked ::
   (Verify.GlobalVar (Verify.Track output) a (Record.ToIndex rec) Var.ForNodeSectionScalar node,
-   Constant a, a ~ Scalar v, a ~ Pair.T termScalar an,
+   Constant a, a ~ Scalar v,
    Verify.GlobalVar (Verify.Track output) v (Record.ToIndex rec) Var.InSectionSignal node,
-   Product v, Integrate v, v ~ Pair.T termSignal vn,
+   Product v, Integrate v,
    Record rec, Node.C node) =>
   Flow.RangeGraph node ->
   (forall s. EquationSystem (Verify.Track output) rec node s a v) ->
