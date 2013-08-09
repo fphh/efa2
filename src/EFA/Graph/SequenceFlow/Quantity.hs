@@ -4,12 +4,15 @@ module EFA.Graph.SequenceFlow.Quantity (
    Sums, Sum, Carry, Flow,
 
    envFromGraph,
-   envFromStorages,
-   envFromSequence,
-
    graphFromEnv,
-   storagesFromEnv,
-   sequenceFromEnv,
+
+   graphFromPlain,
+   storagesFromPlain,
+   sequenceFromPlain,
+
+   mapGraphWithVar,
+   mapStoragesWithVar,
+   mapSequenceWithVar,
 
    dirFromFlowGraph,
 
@@ -41,17 +44,16 @@ import qualified EFA.Graph as Gr
 import EFA.Graph.SequenceFlow (sequence, storages)
 
 import Control.Monad (mplus)
-import Control.Applicative (Applicative, pure, liftA2, (<*>))
+import Control.Applicative (Applicative, pure, (<*>), (<$))
 
 import qualified Data.Map as Map ; import Data.Map (Map)
 import qualified Data.Foldable as Fold
-import qualified Data.Accessor.Basic as Acc
 
 import Data.Tuple.HT (mapSnd)
 import Data.Maybe (fromMaybe)
 import Data.Monoid (mempty, (<>))
 
-import Prelude hiding (lookup, init, sequence)
+import Prelude hiding (lookup, init, sequence, sin, sum)
 
 
 type
@@ -217,118 +219,15 @@ graphFromEnv ::
    (Ord node) =>
    Env.Complete node a v ->
    SeqFlow.RangeGraph node -> Graph node a v
-graphFromEnv (Env.Complete envScalar envSignal) g =
-   SeqFlow.Graph {
-      storages = storagesFromEnv envScalar $ SeqFlow.storages g,
-      sequence =
-         sequenceFromEnv
-            ((Env.stInSumMap envScalar, Env.stOutSumMap envScalar), envSignal) $
-         fmap (mapSnd (mapSnd dirFromFlowGraph)) $ SeqFlow.sequence g
-   }
-
-dirFromFlowGraph ::
-   (Ord n) =>
-   Gr.Graph n Gr.EitherEdge nl el -> Gr.Graph n Gr.DirEdge nl el
-dirFromFlowGraph =
-   Gr.mapEdgesMaybe $ \ee ->
-      case ee of
-         Gr.EDirEdge de -> Just de
-         Gr.EUnDirEdge _ -> Nothing
-
-
-storagesFromEnv ::
-   (Ord node) =>
-   Env.Scalar node a ->
-   SeqFlow.Storages node SeqFlow.InitIn SeqFlow.ExitOut () () ->
-   Storages node a
-storagesFromEnv env =
-   let lookupEnv caller idx m =
-          fromMaybe (error $ "storagesFromEnv: " ++ caller) $
-          Map.lookup idx m
-
-   in  Map.mapWithKey $ \node (_initExit, bnds, edges) ->
-          ((lookupEnv "stOutSum" (XIdx.stOutSum XIdx.initSection node) $
-            Env.stOutSumMap env,
-            lookupEnv "stInSum"  (XIdx.stInSum  XIdx.exitSection node) $
-            Env.stInSumMap  env),
-           Map.mapWithKey
-              (\bnd () ->
-                 lookupEnv "storage" (XIdx.storage bnd node) $
-                 Env.storageMap env) bnds,
-           Map.mapWithKey
-              (\edge () ->
-                 Carry {
-                    carryMaxEnergy =
-                       lookupEnv "carryMaxEnergy"
-                          (Idx.ForNode (Idx.MaxEnergy edge) node) $
-                       Env.maxEnergyMap env,
-                    carryEnergy =
-                       lookupEnv "carryEnergy"
-                          (Idx.ForNode (Idx.StEnergy edge) node) $
-                       Env.stEnergyMap env,
-                    carryXOut =
-                       lookupEnv "carryXOut"
-                          (Idx.ForNode (Idx.StX $ Idx.storageTransFromEdge edge) node) $
-                       Env.stXMap env,
-                    carryXIn =
-                       lookupEnv "carryXIn"
-                          (Idx.ForNode (Idx.StX $ Idx.flip $ Idx.storageTransFromEdge edge) node) $
-                       Env.stXMap env
-                 })
-              edges)
-
-
-sequenceFromEnv ::
-   (Ord node) =>
-   ((Env.StInSumMap node a, Env.StOutSumMap node a),
-    Env.Signal node v) ->
-   SeqFlow.Sequence node Gr.DirEdge () nodeType () ->
-   Sequence node a v
-sequenceFromEnv ((stInSumMap, stOutSumMap), env) =
-   let lookupEnv caller idx m =
-          fromMaybe (error $ "sequenceFromEnv: " ++ caller) $
-          Map.lookup idx m
-
-       lookupFlow caller sec e idx =
-          lookupEnv caller
-             (Idx.InPart sec $ idx $
-              Topo.structureEdgeFromDirEdge e) $
-          Acc.get Env.accessSignalMap env
-
-   in  Map.mapWithKey $ \sec (rng, ((), g)) ->
-          (,) rng $
-          (lookupEnv "dtime" (XIdx.dTime sec) $ Env.dtimeMap env,
-           Gr.mapNodeWithKey
-              (\n _nt ->
-                 Sums {
-                    sumIn  =
-                       liftA2 Sum
-                          (Map.lookup (XIdx.stOutSum sec n) stOutSumMap)
-                          (Map.lookup (XIdx.inSum sec n) $ Env.sumMap env),
-                    sumOut =
-                       liftA2 Sum
-                          (Map.lookup (XIdx.stInSum sec n) stInSumMap)
-                          (Map.lookup (XIdx.outSum sec n) $ Env.sumMap env)
-                 }) $
-           Gr.mapEdgeWithKey
-              (\e () ->
-                 Flow {
-                    flowPowerOut =
-                       lookupFlow "flowPowerOut" sec e Idx.Power,
-                    flowPowerIn =
-                       lookupFlow "flowPowerIn" sec e (Idx.Power . Idx.flip),
-                    flowEnergyOut =
-                       lookupFlow "flowEnergyOut" sec e Idx.Energy,
-                    flowEnergyIn =
-                       lookupFlow "flowEnergyIn" sec e (Idx.Energy . Idx.flip),
-                    flowXOut =
-                       lookupFlow "flowXOut" sec e Idx.X,
-                    flowXIn =
-                       lookupFlow "flowXIn" sec e (Idx.X . Idx.flip),
-                    flowEta =
-                       lookupFlow "flowEta" sec e Idx.Eta
-                 })
-              g)
+graphFromEnv (Env.Complete envScalar envSignal) =
+   mapGraphWithVar
+      (\idx () ->
+         fromMaybe (error "graphFromEnv.lookupScalar") $
+         Env.lookupScalar idx envScalar)
+      (\idx () ->
+         fromMaybe (error "graphFromEnv.lookupSignal") $
+         Env.lookupSignal idx envSignal) .
+   graphFromPlain
 
 
 lookupPower ::
@@ -503,3 +402,147 @@ instance LookupScalar (Idx.StInSum Idx.Section) where
 
 instance LookupScalar (Idx.StOutSum Idx.Section) where
    lookupScalar = lookupStOutSum
+
+
+
+graphFromPlain ::
+   (Ord node) =>
+   SeqFlow.RangeGraph node -> Graph node () ()
+graphFromPlain g =
+   SeqFlow.Graph {
+      storages = storagesFromPlain $ SeqFlow.storages g,
+      sequence =
+         sequenceFromPlain $
+         fmap (mapSnd (mapSnd dirFromFlowGraph)) $ SeqFlow.sequence g
+   }
+
+dirFromFlowGraph ::
+   (Ord n) =>
+   Gr.Graph n Gr.EitherEdge nl el -> Gr.Graph n Gr.DirEdge nl el
+dirFromFlowGraph =
+   Gr.mapEdgesMaybe $ \ee ->
+      case ee of
+         Gr.EDirEdge de -> Just de
+         Gr.EUnDirEdge _ -> Nothing
+
+
+storagesFromPlain ::
+   (Ord node) =>
+   SeqFlow.Storages node SeqFlow.InitIn SeqFlow.ExitOut () () ->
+   Storages node ()
+storagesFromPlain =
+   Map.map $
+      \(_initExit, bnds, edges) ->
+         (((), ()),
+          () <$ bnds,
+          pure () <$ edges)
+
+
+sequenceFromPlain ::
+   (Ord node) =>
+   SeqFlow.Sequence node Gr.DirEdge ()
+      (Topo.NodeType (Maybe Topo.StoreDir)) () ->
+   Sequence node () ()
+sequenceFromPlain =
+   let sum = Sum () ()
+       inSum   = Sums { sumIn = Nothing,  sumOut = Nothing }
+       outSum  = Sums { sumIn = Just sum, sumOut = Nothing }
+       noSum   = Sums { sumIn = Nothing,  sumOut = Just sum }
+       bothSum = Sums { sumIn = Just sum, sumOut = Just sum }
+   in  Map.map $ \(rng, ((), gr)) ->
+          (,) rng $
+          ((),
+           Gr.mapNode
+              (\nt ->
+                 case nt of
+                    Topo.Storage Nothing -> noSum
+                    Topo.Storage (Just Topo.In) -> inSum
+                    Topo.Storage (Just Topo.Out) -> outSum
+                    Topo.Sink -> inSum
+                    Topo.AlwaysSink -> inSum
+                    Topo.Source -> outSum
+                    Topo.AlwaysSource -> outSum
+                    Topo.Crossing -> bothSum
+                    Topo.DeadNode -> noSum
+                    Topo.NoRestriction -> bothSum) $
+           Gr.mapEdge (const $ pure ()) gr)
+
+
+
+mapGraphWithVar ::
+   (Ord node) =>
+   (Var.ForNodeSectionScalar node -> a0 -> a1) ->
+   (Var.InSectionSignal node -> v0 -> v1) ->
+   Graph node a0 v0 ->
+   Graph node a1 v1
+mapGraphWithVar f g gr =
+   SeqFlow.Graph {
+      storages = mapStoragesWithVar f $ storages gr,
+      sequence = mapSequenceWithVar f g $ sequence gr
+   }
+
+mapStoragesWithVar ::
+   (Ord node) =>
+   (Var.ForNodeSectionScalar node -> a0 -> a1) ->
+   Storages node a0 ->
+   Storages node a1
+mapStoragesWithVar f =
+   let applyScalar idx node = f $ Idx.ForNode (Var.scalarIndex idx) node
+   in  Map.mapWithKey $ \node ((init, exit), bnds, edges) ->
+          ((applyScalar (Idx.StOutSum Idx.initSection) node init,
+            applyScalar (Idx.StInSum  Idx.exitSection) node exit),
+           Map.mapWithKey
+              (\bnd a -> applyScalar (Idx.Storage bnd) node a)
+              bnds,
+           Map.mapWithKey
+              (\edge carry ->
+                 Carry {
+                    carryMaxEnergy = applyScalar (Idx.MaxEnergy edge),
+                    carryEnergy = applyScalar (Idx.StEnergy edge),
+                    carryXOut = applyScalar (Idx.StX $ Idx.storageTransFromEdge edge),
+                    carryXIn = applyScalar (Idx.StX $ Idx.flip $ Idx.storageTransFromEdge edge)
+                 } <*> pure node <*> carry)
+              edges)
+
+mapSequenceWithVar ::
+   (Ord node) =>
+   (Var.ForNodeSectionScalar node -> a0 -> a1) ->
+   (Var.InSectionSignal node -> v0 -> v1) ->
+   Sequence node a0 v0 ->
+   Sequence node a1 v1
+mapSequenceWithVar f g =
+   let applyScalar idx = f $ Idx.liftForNode Var.scalarIndex idx
+       applySignal idx = g $ Idx.liftInPart Var.signalIndex idx
+       applyFlow idx sec e =
+          g $ Idx.InPart sec $ Var.signalIndex $ idx $
+          Topo.structureEdgeFromDirEdge e
+
+   in  Map.mapWithKey $ \sec (rng, (dtime, gr)) ->
+          (,) rng $
+          (applySignal (XIdx.dTime sec) dtime,
+           Gr.mapNodeWithKey
+              (\n (Sums {sumIn = sin, sumOut = sout}) ->
+                 Sums {
+                    sumIn =
+                       flip fmap sin $ \(Sum {carrySum = cs, flowSum = fs}) ->
+                          Sum
+                             (applyScalar (XIdx.stOutSum sec n) cs)
+                             (applySignal (XIdx.inSum sec n) fs),
+                    sumOut =
+                       flip fmap sout $ \(Sum {carrySum = cs, flowSum = fs}) ->
+                          Sum
+                             (applyScalar (XIdx.stInSum sec n) cs)
+                             (applySignal (XIdx.outSum sec n) fs)
+                 }) $
+           Gr.mapEdgeWithKey
+              (\e flow ->
+                 Flow {
+                    flowPowerOut = applyFlow Idx.Power,
+                    flowPowerIn = applyFlow (Idx.Power . Idx.flip),
+                    flowEnergyOut = applyFlow Idx.Energy,
+                    flowEnergyIn = applyFlow (Idx.Energy . Idx.flip),
+                    flowXOut = applyFlow Idx.X,
+                    flowXIn = applyFlow (Idx.X . Idx.flip),
+                    flowEta = applyFlow Idx.Eta
+                 } <*> pure sec <*> pure e <*> flow)
+              gr)
