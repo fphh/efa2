@@ -3,6 +3,14 @@ module EFA.Graph.SequenceFlow.Quantity (
    Graph, Topology, Sequence, Storages,
    Sums, Sum, Carry, Flow,
 
+   mapGraph,
+   mapStorages,
+   mapSequence,
+
+   traverseGraph,
+   traverseStorages,
+   traverseSequence,
+
    envFromGraph,
    graphFromEnv,
 
@@ -44,16 +52,18 @@ import qualified EFA.Graph as Gr
 import EFA.Graph.SequenceFlow (sequence, storages)
 
 import Control.Monad (mplus)
-import Control.Applicative (Applicative, pure, (<*>), (<$))
+import Control.Applicative (Applicative, pure, liftA2, liftA3, (<*>), (<$))
 
 import qualified Data.Map as Map ; import Data.Map (Map)
 import qualified Data.Foldable as Fold
 
+import Data.Traversable (Traversable, traverse, foldMapDefault)
+import Data.Foldable (Foldable)
 import Data.Tuple.HT (mapSnd)
 import Data.Maybe (fromMaybe)
 import Data.Monoid (mempty, (<>))
 
-import Prelude hiding (lookup, init, sequence, sin, sum)
+import Prelude hiding (lookup, init, seq, sequence, sin, sum)
 
 
 type
@@ -99,6 +109,22 @@ instance Functor Flow where
       Flow (f pout) (f eout) (f xout) (f eta) (f xin) (f ein) (f pin)
 
 
+instance Foldable Carry where
+   foldMap = foldMapDefault
+
+instance Foldable Flow where
+   foldMap = foldMapDefault
+
+
+instance Traversable Carry where
+   traverse f (Carry me e xout xin) =
+      pure Carry <*> f me <*> f e <*> f xout <*> f xin
+
+instance Traversable Flow where
+   traverse f (Flow pout eout xout eta xin ein pin) =
+      pure Flow <*> f pout <*> f eout <*> f xout <*> f eta <*> f xin <*> f ein <*> f pin
+
+
 instance Applicative Carry where
    pure a = Carry a a a a
    Carry fme fe fxout fxin <*> Carry me e xout xin =
@@ -111,6 +137,112 @@ instance Applicative Flow where
       Flow
          (fpout pout) (feout eout) (fxout xout)
          (feta eta) (fxin xin) (fein ein) (fpin pin)
+
+
+mapGraph ::
+   (a0 -> a1) ->
+   (v0 -> v1) ->
+   Graph node a0 v0 -> Graph node a1 v1
+mapGraph f g gr =
+   SeqFlow.Graph {
+      sequence = mapSequence f g $ sequence gr,
+      storages = mapStorages f   $ storages gr
+   }
+
+mapSequence ::
+   (a0 -> a1) ->
+   (v0 -> v1) ->
+   Sequence node a0 v0 -> Sequence node a1 v1
+mapSequence f g =
+   fmap
+      (\(rng, (dt, gr)) ->
+         (rng,
+          (g dt,
+           Gr.mapNode (mapSums f g) $
+           Gr.mapEdge (fmap g) gr)))
+
+mapSums ::
+   (a0 -> a1) ->
+   (v0 -> v1) ->
+   Sums a0 v0 -> Sums a1 v1
+mapSums f g s =
+   Sums {
+      sumIn  = fmap (mapSum f g) $ sumIn  s,
+      sumOut = fmap (mapSum f g) $ sumOut s
+   }
+
+mapSum ::
+   (a0 -> a1) ->
+   (v0 -> v1) ->
+   Sum a0 v0 -> Sum a1 v1
+mapSum f g s =
+   Sum {
+      carrySum = f $ carrySum s,
+      flowSum  = g $ flowSum  s
+   }
+
+mapStorages ::
+   (a0 -> a1) ->
+   Storages node a0 -> Storages node a1
+mapStorages f =
+   fmap
+      (\((init, exit), storage, edges) ->
+         ((f init, f exit),
+          fmap f storage,
+          fmap (fmap f) edges))
+
+
+traverseGraph ::
+   (Applicative f) =>
+   (a0 -> f a1) ->
+   (v0 -> f v1) ->
+   Graph node a0 v0 -> f (Graph node a1 v1)
+traverseGraph f g (SeqFlow.Graph sts seq) =
+   liftA2 SeqFlow.Graph
+      (traverseStorages f   $ sts)
+      (traverseSequence f g $ seq)
+
+traverseSequence ::
+   (Applicative f) =>
+   (a0 -> f a1) ->
+   (v0 -> f v1) ->
+   Sequence node a0 v0 -> f (Sequence node a1 v1)
+traverseSequence f g =
+   traverse
+      (\(rng, (dt, gr)) ->
+         fmap ((,) rng) $
+         liftA2 (,) (g dt)
+            (Gr.traverse (traverseSums f g) (traverse g) gr))
+
+traverseSums ::
+   (Applicative f) =>
+   (a0 -> f a1) ->
+   (v0 -> f v1) ->
+   Sums a0 v0 -> f (Sums a1 v1)
+traverseSums f g (Sums i o) =
+   liftA2 Sums
+      (traverse (traverseSum f g) i)
+      (traverse (traverseSum f g) o)
+
+traverseSum ::
+   (Applicative f) =>
+   (a0 -> f a1) ->
+   (v0 -> f v1) ->
+   Sum a0 v0 -> f (Sum a1 v1)
+traverseSum f g (Sum cs fs) =
+   liftA2 Sum (f cs) (g fs)
+
+traverseStorages ::
+   (Applicative f) =>
+   (a0 -> f a1) ->
+   Storages node a0 -> f (Storages node a1)
+traverseStorages f =
+   traverse
+      (\((init, exit), storage, edges) ->
+         liftA3 (,,)
+            (liftA2 (,) (f init) (f exit))
+            (traverse f storage)
+            (traverse (traverse f) edges))
 
 
 envFromGraph ::
