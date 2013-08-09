@@ -97,6 +97,10 @@ class LocalVar w a => GlobalVar w a recIdx var node where
        Var.Index idx, Var.Type idx ~ var) =>
       Idx.Record recIdx (idx node) -> ST s (Sys.Variable w s a)
 
+   globalVariableDyn ::
+      (Format.Record recIdx, FormatValue (var node)) =>
+      Idx.Record recIdx (var node) -> ST s (Sys.Variable w s a)
+
 
 type Variable output s a b = Sys.Variable (Track output) s (Pair.T a b)
 
@@ -121,7 +125,8 @@ instance
       GlobalVar (Track output)
          (Pair.T (MixedTerm (mixedTerm term) recIdx part node) a)
          recIdx var node where
-   globalVariable = globalVariableTracked
+   globalVariable = globalVariableTracked SymVar.varSymbol
+   globalVariableDyn = globalVariableTracked SymVar.symbol
 
 
 type Ignore = IdentityT
@@ -135,20 +140,20 @@ instance LocalVar IdentityT a where
 
 instance GlobalVar IdentityT a recIdx var node where
    globalVariable _ = SysSimple.globalVariable
+   globalVariableDyn _ = SysSimple.globalVariable
 
 
 globalVariableTracked ::
    (Format output, Format.Record recIdx, FormatValue (idx node),
-    FormatValue varTerm, FormatValue a, Eq a,
-    Pointed term, Var.Index idx, Var.Type idx ~ var, SymVar.Symbol var,
-    varTerm ~ SymVar.VarTerm var recIdx term node) =>
+    FormatValue varTerm, FormatValue a, Eq a) =>
+   (Idx.Record recIdx (idx node) -> varTerm) ->
    Idx.Record recIdx (idx node) ->
    ST s (Variable output s varTerm a)
-globalVariableTracked idx =
+globalVariableTracked symbol idx =
    Sys.globalVariable
       (\al av ->
          Sys.updateAndCheck (inconsistency $ Just $ formatValue idx) al av .
-         logUpdate idx)
+         logUpdate symbol idx)
 
 localVariableTracked ::
    (FormatValue term, Eq a, FormatValue a, Format output) =>
@@ -173,14 +178,13 @@ inconsistency name old new =
 
 logUpdate ::
    (Format output, Format.Record recIdx, FormatValue (idx node),
-    FormatValue varTerm, FormatValue a,
-    Pointed term, Var.Index idx, Var.Type idx ~ var, SymVar.Symbol var,
-    varTerm ~ SymVar.VarTerm var recIdx term node) =>
+    FormatValue varTerm, FormatValue a) =>
+   (Idx.Record recIdx (idx node) -> varTerm) ->
    Idx.Record recIdx (idx node) ->
    MaybeT (ST s) (Pair.T varTerm a) ->
    MaybeT (UMT.Wrap (Track output) (ST s)) (Pair.T varTerm a)
-logUpdate idx act = do
+logUpdate symbol idx act = do
    tn@(Pair.Cons _ x) <- mapMaybeT UMT.lift act
    MT.lift $ UMT.wrap $ Track $ MT.lift $
-      writer (Pair.Cons (SymVar.varSymbol idx) x,
+      writer (Pair.Cons (symbol idx) x,
               [Assign (formatValue idx) (formatValue tn)])
