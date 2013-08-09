@@ -1,7 +1,9 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 module EFA.Graph.SequenceFlow.Quantity (
-   Graph, Topology, Sequence, Storages,
-   Sums, Sum, Carry, Flow,
+   Graph, SeqFlow.sequence, SeqFlow.storages,
+   Topology, Sequence, Storages,
+   Sums(..), Sum(..), Carry(..), Flow(..),
 
    mapGraph,
    mapStorages,
@@ -37,6 +39,11 @@ module EFA.Graph.SequenceFlow.Quantity (
    lookupStX,
    lookupStInSum,
    lookupStOutSum,
+   lookupSums,
+
+   Lookup, lookup,
+   LookupScalar, lookupScalar,
+   LookupSignal, lookupSignal,
    ) where
 
 import qualified EFA.Application.Index as XIdx
@@ -51,7 +58,7 @@ import qualified EFA.Graph as Gr
 
 import EFA.Graph.SequenceFlow (sequence, storages)
 
-import Control.Monad (mplus)
+import Control.Monad (mplus, (<=<))
 import Control.Applicative (Applicative, pure, liftA2, liftA3, (<*>), (<$))
 
 import qualified Data.Map as Map ; import Data.Map (Map)
@@ -459,8 +466,7 @@ lookupStInSum (Idx.ForNode (Idx.StInSum aug) node) g =
          ((_,exit),_,_) <- Map.lookup node $ storages g
          return exit
       Idx.NoExit sec ->
-         fmap carrySum . sumOut =<<
-         Gr.lookupNode node . snd =<< seqLookup sec g
+         fmap carrySum . sumOut =<< lookupSums (Idx.secNode sec node) g
 
 lookupStOutSum ::
    (Ord node) => XIdx.StOutSum node -> Graph node a v -> Maybe a
@@ -470,23 +476,28 @@ lookupStOutSum (Idx.ForNode (Idx.StOutSum aug) node) g =
          ((init,_),_,_) <- Map.lookup node $ storages g
          return init
       Idx.NoInit sec ->
-         fmap carrySum . sumIn =<<
-         Gr.lookupNode node . snd =<< seqLookup sec g
+         fmap carrySum . sumIn =<< lookupSums (Idx.secNode sec node) g
+
+lookupSums ::
+   (Ord node) =>
+   Idx.SecNode node -> Graph node a v -> Maybe (Sums a v)
+lookupSums (Idx.PartNode sec node) =
+   Gr.lookupNode node . snd <=< seqLookup sec
 
 seqLookup ::
    Idx.Section -> Graph node a v -> Maybe (v, Topology node a v)
 seqLookup sec = fmap snd . Map.lookup sec . sequence
 
 
-class (Var.Index idx) => AccessMap idx where
+class (Env.AccessPart (Env.Environment idx), Var.Index idx) => Lookup idx where
    lookup ::
       (Ord node) =>
       idx node -> Graph node a v -> Maybe (Env.Element idx a v)
 
-instance (LookupSignal idx) => AccessMap (Idx.InSection idx) where
+instance (LookupSignal idx) => Lookup (Idx.InSection idx) where
    lookup = lookupSignal
 
-instance (LookupScalar idx) => AccessMap (Idx.ForNode idx) where
+instance (LookupScalar idx) => Lookup (Idx.ForNode idx) where
    lookup = lookupScalar
 
 
