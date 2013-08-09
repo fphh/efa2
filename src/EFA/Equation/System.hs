@@ -59,6 +59,7 @@ import qualified EFA.Graph as Gr
 import EFA.Report.FormatValue (FormatValue)
 
 import qualified EFA.Equation.Arithmetic as Arith
+import qualified EFA.Equation.Result as Result
 import EFA.Equation.Arithmetic
           (Sum, (~+), (~-),
            Product, (~*), (~/),
@@ -917,9 +918,9 @@ splitFactors s ef one xf ns =
 
 queryEnv ::
   (Traversable env, Traversable rec) =>
-  env (RecordVariable mode rec s a) -> ST s (env (rec (Result a)))
+  env (RecordVariable mode rec s x) -> ST s (env (rec (Result x)))
 queryEnv =
-  traverse (traverse (fmap (maybe Undetermined Determined) . Sys.query))
+  traverse (traverse (fmap Result.fromMaybe . Sys.query))
 
 solveSimple ::
   (Record rec, Node.C node) =>
