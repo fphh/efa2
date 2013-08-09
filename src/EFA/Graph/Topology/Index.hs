@@ -180,6 +180,12 @@ boundaryFromAugSection =
 augSectionFromBoundary :: Boundary -> AugmentedSection
 augSectionFromBoundary (Following bnd) = allowExit bnd
 
+sectionFromBoundary :: Boundary -> Maybe Section
+sectionFromBoundary (Following bnd) =
+   case bnd of
+      Init -> Nothing
+      NoInit sec -> Just sec
+
 
 newtype Boundary = Following (Init Section) deriving (Show, Eq, Ord)
 
@@ -271,9 +277,7 @@ bndNodeFromSecNode (PartNode sec node) =
 
 secNodeFromBndNode :: BndNode node -> Maybe (SecNode node)
 secNodeFromBndNode (PartNode bnd node) =
-   case bnd of
-      Following Init -> Nothing
-      Following (NoInit sec) -> Just (PartNode sec node)
+   fmap (P.flip PartNode node) $ sectionFromBoundary bnd
 
 augNodeFromBndNode :: BndNode node -> AugSecNode node
 augNodeFromBndNode (PartNode bnd node) =
