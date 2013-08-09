@@ -31,25 +31,6 @@ import Text.Show (Show, show)
 import Prelude (Num, Int, Integer, Ord, error, (++), (+), (-), subtract, min, max, fmap, succ)
 
 
-
-{- Neat attempt with colossal failure
-newtype VectorIdx = VectorIdx Int
-
-unVectorIdx :: VectorIdx ->  Int
-unVectorIdx (VectorIdx x) = x
-
-vectorIdx :: Int -> VectorIdx
-vectorIdx x = (VectorIdx x)
-
-
-maybeVectorIdx :: Maybe Int -> Maybe VectorIdx
-maybeVectorIdx x = case x of
-                    Nothing -> Nothing
-                    Just idx -> Just (VectorIdx idx)
-
-instance UV.Unbox VectorIdx where
--}
-
 {- |
 We could replace this by suitable:Suitable.
 -}
