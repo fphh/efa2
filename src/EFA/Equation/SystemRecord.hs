@@ -30,6 +30,8 @@ newtype Wrap rec a = Wrap {unwrap :: rec a}
 
 type Variable mode rec s x = rec (Sys.Variable mode s x)
 
+type Expr mode rec s x = Wrap rec (Expr.T mode s x)
+
 
 newtype System mode s = System (Sys.T mode s ())
 
@@ -38,17 +40,14 @@ instance Monoid (System mode s) where
    mappend (System x) (System y) = System $ x >>! y
 
 
-type Expr mode = Expr.T mode
-
-
 class (Traversable rec, Applicative rec, Record.IndexSet rec) => Record rec where
    rules ::
       (Sys.Value mode a, Sum a) =>
       Variable mode rec s a -> System mode s
    equal ::
       (Sys.Value mode a) =>
-      Wrap rec (Expr mode s a) ->
-      Wrap rec (Expr mode s a) ->
+      Expr mode rec s a ->
+      Expr mode rec s a ->
       System mode s
    lift0 :: (Sum x) => x -> Wrap rec x
    lift1 ::

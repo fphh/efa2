@@ -31,7 +31,7 @@ import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.SystemRecord as SysRecord
 import EFA.Equation.SystemRecord
-          (System(System), Expr, Record, Wrap(Wrap, unwrap))
+          (System(System), Record, Wrap(Wrap, unwrap))
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
@@ -91,6 +91,8 @@ type
             (SysRecord.Variable mode rec s v))
          (WriterT (System mode s) (ST s))
 
+
+type Expr mode = Expr.T mode
 
 type
    Expression mode rec node s a v x =
