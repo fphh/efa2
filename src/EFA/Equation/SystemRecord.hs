@@ -32,7 +32,7 @@ import Prelude hiding (lookup, init, sqrt, (.))
 newtype Wrap rec a = Wrap {unwrap :: rec a}
    deriving (Functor, Applicative, Foldable, Traversable)
 
-type RecordVariable mode rec s x = rec (Sys.Variable mode s x)
+type Variable mode rec s x = rec (Sys.Variable mode s x)
 
 
 newtype System mode s = System (Sys.T mode s ())
@@ -46,20 +46,20 @@ type Expr mode = Expr.T mode
 
 
 class (Traversable rec, Applicative rec, Record.IndexSet rec) => Record rec where
-   recordRules ::
+   rules ::
       (Sys.Value mode a, Sum a) =>
-      RecordVariable mode rec s a -> System mode s
-   equalRecord ::
+      Variable mode rec s a -> System mode s
+   equal ::
       (Sys.Value mode a) =>
       Wrap rec (Expr mode s a) ->
       Wrap rec (Expr mode s a) ->
       System mode s
-   liftE0 :: (Sum x) => x -> Wrap rec x
-   liftE1 ::
+   lift0 :: (Sum x) => x -> Wrap rec x
+   lift1 ::
       (Sum y) =>
       (x -> y) ->
       Wrap rec x -> Wrap rec y
-   liftE2 ::
+   lift2 ::
       (Sum z) =>
       (x -> y -> z) ->
       Wrap rec x -> Wrap rec y -> Wrap rec z
@@ -67,38 +67,38 @@ class (Traversable rec, Applicative rec, Record.IndexSet rec) => Record rec wher
 
 instance Record Record.Absolute where
 
-   recordRules _ = mempty
+   rules _ = mempty
 
-   equalRecord (Wrap (Record.Absolute x)) (Wrap (Record.Absolute y)) =
+   equal (Wrap (Record.Absolute x)) (Wrap (Record.Absolute y)) =
       System (x =:= y)
 
-   liftE0 = Wrap . Record.Absolute
+   lift0 = Wrap . Record.Absolute
 
-   liftE1 f (Wrap (Record.Absolute x)) = Wrap $ Record.Absolute $ f x
+   lift1 f (Wrap (Record.Absolute x)) = Wrap $ Record.Absolute $ f x
 
-   liftE2 f (Wrap (Record.Absolute x)) (Wrap (Record.Absolute y)) =
+   lift2 f (Wrap (Record.Absolute x)) (Wrap (Record.Absolute y)) =
       Wrap $ Record.Absolute $ f x y
 
 
 instance Record Record.Delta where
 
-   recordRules vars = System $
+   rules vars = System $
       Arith.ruleAdd (Record.before vars) (Record.delta vars) (Record.after vars)
 
    {-
    I omit equality on the delta part since it would be redundant.
    -}
-   equalRecord (Wrap recX) (Wrap recY) =
+   equal (Wrap recX) (Wrap recY) =
       System (Record.before recX =:= Record.before recY) <>
       System (Record.after  recX =:= Record.after  recY)
 
-   liftE0 x = Wrap $ Record.deltaCons x x
+   lift0 x = Wrap $ Record.deltaCons x x
 
-   liftE1 f (Wrap rec) =
+   lift1 f (Wrap rec) =
       Wrap $
       Record.deltaCons (f $ Record.before rec) (f $ Record.after rec)
 
-   liftE2 f (Wrap recX) (Wrap recY) =
+   lift2 f (Wrap recX) (Wrap recY) =
       Wrap $
       Record.deltaCons
          (f (Record.before recX) (Record.before recY))
@@ -117,10 +117,10 @@ extDeltaCons b a =
 
 instance (Record rec) => Record (Record.ExtDelta rec) where
 
-   recordRules vars =
-      recordRules (Record.extBefore vars) <>
-      recordRules (Record.extDelta vars) <>
-      recordRules (Record.extAfter vars) <>
+   rules vars =
+      rules (Record.extBefore vars) <>
+      rules (Record.extDelta vars) <>
+      rules (Record.extAfter vars) <>
       (System $ Fold.sequence_ $
          liftA3 Arith.ruleAdd
             (Record.extBefore vars)
@@ -130,43 +130,43 @@ instance (Record rec) => Record (Record.ExtDelta rec) where
    {-
    I omit equality on the delta part since it would be redundant.
    -}
-   equalRecord (Wrap recX) (Wrap recY) =
-      equalRecord (Wrap $ Record.extBefore recX) (Wrap $ Record.extBefore recY) <>
-      equalRecord (Wrap $ Record.extAfter  recX) (Wrap $ Record.extAfter  recY)
+   equal (Wrap recX) (Wrap recY) =
+      equal (Wrap $ Record.extBefore recX) (Wrap $ Record.extBefore recY) <>
+      equal (Wrap $ Record.extAfter  recX) (Wrap $ Record.extAfter  recY)
 
-   liftE0 x = Wrap $ extDeltaCons (liftE0 x) (liftE0 x)
+   lift0 x = Wrap $ extDeltaCons (lift0 x) (lift0 x)
 
-   liftE1 f (Wrap rec) =
+   lift1 f (Wrap rec) =
       Wrap $
       extDeltaCons
-         (liftE1 f $ Wrap $ Record.extBefore rec)
-         (liftE1 f $ Wrap $ Record.extAfter rec)
+         (lift1 f $ Wrap $ Record.extBefore rec)
+         (lift1 f $ Wrap $ Record.extAfter rec)
 
-   liftE2 f (Wrap recX) (Wrap recY) =
+   lift2 f (Wrap recX) (Wrap recY) =
       Wrap $
       extDeltaCons
-         (liftE2 f (Wrap $ Record.extBefore recX) (Wrap $ Record.extBefore recY))
-         (liftE2 f (Wrap $ Record.extAfter  recX) (Wrap $ Record.extAfter  recY))
+         (lift2 f (Wrap $ Record.extBefore recX) (Wrap $ Record.extBefore recY))
+         (lift2 f (Wrap $ Record.extAfter  recX) (Wrap $ Record.extAfter  recY))
 
 
 instance (Record rec, Sum a) => Sum (Wrap rec a) where
-   (~+) = liftE2 (~+)
-   (~-) = liftE2 (~-)
-   negate = liftE1 Arith.negate
+   (~+) = lift2 (~+)
+   (~-) = lift2 (~-)
+   negate = lift1 Arith.negate
 
 instance (Record rec, Product a) => Product (Wrap rec a) where
-   (~*) = liftE2 (~*)
-   (~/) = liftE2 (~/)
-   recip = liftE1 Arith.recip
-   constOne = liftE1 Arith.constOne
+   (~*) = lift2 (~*)
+   (~/) = lift2 (~/)
+   recip = lift1 Arith.recip
+   constOne = lift1 Arith.constOne
 
 instance (Record rec, Constant a) => Constant (Wrap rec a) where
    zero = pure zero
-   fromInteger  = liftE0 . Arith.fromInteger
-   fromRational = liftE0 . Arith.fromRational
+   fromInteger  = lift0 . Arith.fromInteger
+   fromRational = lift0 . Arith.fromRational
 
 instance
    (Record rec, Integrate v, Sum (Scalar v)) =>
       Integrate (Wrap rec v) where
    type Scalar (Wrap rec v) = Wrap rec (Scalar v)
-   integrate = liftE1 integrate
+   integrate = lift1 integrate

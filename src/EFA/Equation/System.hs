@@ -50,9 +50,9 @@ import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Variable as Var
+import qualified EFA.Equation.SystemRecord as SysRecord
 import EFA.Equation.SystemRecord
-          (System(System), Expr, RecordVariable, Record, Wrap(Wrap, unwrap),
-           recordRules, equalRecord, liftE1, liftE2)
+          (System(System), Expr, Record, Wrap(Wrap, unwrap))
 
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as Idx
@@ -114,8 +114,8 @@ type
    BK mode rec node s a v =
       StateT
          (Env.Complete node
-            (RecordVariable mode rec s a)
-            (RecordVariable mode rec s v))
+            (SysRecord.Variable mode rec s a)
+            (SysRecord.Variable mode rec s v))
          (WriterT (System mode s) (ST s))
 
 
@@ -148,7 +148,7 @@ liftF ::
   (x -> y) ->
   RecordExpression mode rec node s a v x ->
   RecordExpression mode rec node s a v y
-liftF = liftA . liftE1 . Expr.fromRule2 . Sys.assignment2
+liftF = liftA . SysRecord.lift1 . Expr.fromRule2 . Sys.assignment2
 
 liftF2 ::
   (Sys.Value mode z, Record rec, Sum z) =>
@@ -156,7 +156,7 @@ liftF2 ::
   RecordExpression mode rec node s a v x ->
   RecordExpression mode rec node s a v y ->
   RecordExpression mode rec node s a v z
-liftF2 = liftA2 . liftE2 . Expr.fromRule3 . Sys.assignment3
+liftF2 = liftA2 . SysRecord.lift2 . Expr.fromRule3 . Sys.assignment3
 
 
 {-
@@ -245,10 +245,10 @@ sqrt = liftF P.sqrt
 
 localVariable ::
    (Record rec, Verify.LocalVar mode a, Sum a) =>
-   WriterT (System mode s) (ST s) (RecordVariable mode rec s a)
+   WriterT (System mode s) (ST s) (SysRecord.Variable mode rec s a)
 localVariable = do
    vars <- lift $ sequenceA $ pure Verify.localVariable
-   tell $ recordRules vars
+   tell $ SysRecord.rules vars
    return vars
 
 globalVariable ::
@@ -256,12 +256,12 @@ globalVariable ::
     Var.Index idx, Var.Type idx ~ var, FormatValue (idx node),
     Sum a) =>
    idx node ->
-   WriterT (System mode s) (ST s) (RecordVariable mode rec s a)
+   WriterT (System mode s) (ST s) (SysRecord.Variable mode rec s a)
 globalVariable idx = do
    vars <-
       lift $ for Record.indices $ \recIdx ->
          Verify.globalVariable $ Idx.Record recIdx idx
-   tell $ recordRules vars
+   tell $ SysRecord.rules vars
    return vars
 
 
@@ -281,7 +281,7 @@ infix 0 =.=, =%=
   RecordExpression mode rec node s a v x ->
   EquationSystem mode rec node s a v
 (Bookkeeping xs) =%= (Bookkeeping ys) =
-  EquationSystem $ lift . tell =<< liftM2 equalRecord xs ys
+  EquationSystem $ lift . tell =<< liftM2 SysRecord.equal xs ys
 
 
 infix 0 =%%=, .=, %=, ?=
@@ -359,15 +359,15 @@ newtype
          getAccessMap ::
             (Env.Environment idx ~ env) =>
             Accessor.T
-               (Env.Complete node (RecordVariable mode rec s a) (RecordVariable mode rec s v))
-               (Map (idx node) (RecordVariable mode rec s (Env.Element idx a v)))
+               (Env.Complete node (SysRecord.Variable mode rec s a) (SysRecord.Variable mode rec s v))
+               (Map (idx node) (SysRecord.Variable mode rec s (Env.Element idx a v)))
       }
 
 accessMap ::
    (Env.AccessMap idx) =>
    Accessor.T
-      (Env.Complete node (RecordVariable mode rec s a) (RecordVariable mode rec s v))
-      (Map (idx node) (RecordVariable mode rec s (Env.Element idx a v)))
+      (Env.Complete node (SysRecord.Variable mode rec s a) (SysRecord.Variable mode rec s v))
+      (Map (idx node) (SysRecord.Variable mode rec s (Env.Element idx a v)))
 accessMap =
    getAccessMap $
    Env.switchPart
@@ -769,7 +769,7 @@ splitFactors s ef one xf ns =
 
 queryEnv ::
   (Traversable env, Traversable rec) =>
-  env (RecordVariable mode rec s x) -> ST s (env (rec (Result x)))
+  env (SysRecord.Variable mode rec s x) -> ST s (env (rec (Result x)))
 queryEnv =
   traverse (traverse (fmap Result.fromMaybe . Sys.query))
 

@@ -29,9 +29,9 @@ import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Variable as Var
+import qualified EFA.Equation.SystemRecord as SysRecord
 import EFA.Equation.SystemRecord
-          (System(System), Expr, RecordVariable, Record, Wrap(Wrap, unwrap),
-           recordRules, equalRecord, liftE1, liftE2)
+          (System(System), Expr, Record, Wrap(Wrap, unwrap))
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
@@ -87,8 +87,8 @@ type
    BK mode rec node s a v =
       ReaderT
          (SeqFlow.Graph node
-            (RecordVariable mode rec s a)
-            (RecordVariable mode rec s v))
+            (SysRecord.Variable mode rec s a)
+            (SysRecord.Variable mode rec s v))
          (WriterT (System mode s) (ST s))
 
 
@@ -122,7 +122,7 @@ liftF ::
    (x -> y) ->
    RecordExpression mode rec node s a v x ->
    RecordExpression mode rec node s a v y
-liftF = liftA . liftE1 . Expr.fromRule2 . Sys.assignment2
+liftF = liftA . SysRecord.lift1 . Expr.fromRule2 . Sys.assignment2
 
 liftF2 ::
    (Sys.Value mode z, Record rec, Sum z) =>
@@ -130,7 +130,7 @@ liftF2 ::
    RecordExpression mode rec node s a v x ->
    RecordExpression mode rec node s a v y ->
    RecordExpression mode rec node s a v z
-liftF2 = liftA2 . liftE2 . Expr.fromRule3 . Sys.assignment3
+liftF2 = liftA2 . SysRecord.lift2 . Expr.fromRule3 . Sys.assignment3
 
 
 instance (Sum x) => Sum (Bookkeeping mode rec node s a v x) where
@@ -180,22 +180,22 @@ sqrt = liftF P.sqrt
 
 localVariable ::
    (Record rec, Verify.LocalVar mode a, Sum a) =>
-   WriterT (System mode s) (ST s) (RecordVariable mode rec s a)
+   WriterT (System mode s) (ST s) (SysRecord.Variable mode rec s a)
 localVariable = do
    vars <- lift $ sequenceA $ pure Verify.localVariable
-   tell $ recordRules vars
+   tell $ SysRecord.rules vars
    return vars
 
 globalVariable ::
    (Record rec, Verify.GlobalVar mode a (Record.ToIndex rec) var node,
     Sum a, FormatValue (var node)) =>
    var node ->
-   WriterT (System mode s) (ST s) (RecordVariable mode rec s a)
+   WriterT (System mode s) (ST s) (SysRecord.Variable mode rec s a)
 globalVariable var = do
    vars <-
       lift $ for Record.indices $ \recIdx ->
          Verify.globalVariableDyn $ Idx.Record recIdx var
-   tell $ recordRules vars
+   tell $ SysRecord.rules vars
    return vars
 
 
@@ -215,7 +215,7 @@ infix 0 =.=, =%=
    RecordExpression mode rec node s a v x ->
    EquationSystem mode rec node s a v
 (Bookkeeping xs) =%= (Bookkeeping ys) =
-   EquationSystem $ lift . tell =<< liftM2 equalRecord xs ys
+   EquationSystem $ lift . tell =<< liftM2 SysRecord.equal xs ys
 
 
 infix 0 =%%=, .=, %=, ?=
@@ -291,20 +291,20 @@ newtype
             (Env.Environment idx ~ env) =>
             idx node ->
             SeqFlow.Graph node
-               (RecordVariable mode rec s a)
-               (RecordVariable mode rec s v) ->
+               (SysRecord.Variable mode rec s a)
+               (SysRecord.Variable mode rec s v) ->
             Maybe
-               (RecordVariable mode rec s (Env.Element idx a v))
+               (SysRecord.Variable mode rec s (Env.Element idx a v))
       }
 
 lookup ::
    (SeqFlow.Lookup idx, Node.C node) =>
    idx node ->
    SeqFlow.Graph node
-      (RecordVariable mode rec s a)
-      (RecordVariable mode rec s v) ->
+      (SysRecord.Variable mode rec s a)
+      (SysRecord.Variable mode rec s v) ->
    Maybe
-      (RecordVariable mode rec s (Env.Element idx a v))
+      (SysRecord.Variable mode rec s (Env.Element idx a v))
 lookup =
    getLookup $
    Env.switchPart
@@ -339,8 +339,8 @@ fromGraph ::
     Record rec, Node.C node) =>
    Bool ->
    SeqFlow.Graph node
-      (RecordVariable mode rec s a)
-      (RecordVariable mode rec s v) ->
+      (SysRecord.Variable mode rec s a)
+      (SysRecord.Variable mode rec s v) ->
    EquationSystem mode rec node s a v
 fromGraph equalInOutSums gv =
    case
@@ -593,8 +593,8 @@ variables ::
    SeqFlowPlain.RangeGraph node ->
    WriterT (System mode s) (ST s)
       (SeqFlow.Graph node
-         (RecordVariable mode rec s a)
-         (RecordVariable mode rec s v))
+         (SysRecord.Variable mode rec s a)
+         (SysRecord.Variable mode rec s v))
 variables =
    SeqFlow.traverseGraph id id
    .
@@ -607,8 +607,8 @@ variables =
 query ::
    (Traversable rec) =>
    SeqFlow.Graph node
-      (RecordVariable mode rec s a)
-      (RecordVariable mode rec s v) ->
+      (SysRecord.Variable mode rec s a)
+      (SysRecord.Variable mode rec s v) ->
    ST s
       (SeqFlow.Graph node
          (rec (Result a))
@@ -630,8 +630,8 @@ setup ::
    EquationSystem mode rec node s a v ->
    ST s
       (SeqFlow.Graph node
-         (RecordVariable mode rec s a)
-         (RecordVariable mode rec s v),
+         (SysRecord.Variable mode rec s a)
+         (SysRecord.Variable mode rec s v),
        Sys.T mode s ())
 setup equalInOutSums gr sys = do
    (vars, System eqs) <-
