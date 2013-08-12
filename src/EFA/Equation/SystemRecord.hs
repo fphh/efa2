@@ -18,15 +18,11 @@ import qualified UniqueLogic.ST.TF.System as Sys
 import UniqueLogic.ST.TF.Expression ((=:=))
 
 import Control.Applicative (Applicative, pure, liftA3)
-import Control.Category ((.))
 
 import qualified Data.Foldable as Fold
 import Data.Traversable (Traversable)
 import Data.Foldable (Foldable)
 import Data.Monoid (Monoid, (<>), mempty, mappend)
-
-import qualified Prelude as P
-import Prelude hiding (lookup, init, sqrt, (.))
 
 
 newtype Wrap rec a = Wrap {unwrap :: rec a}
