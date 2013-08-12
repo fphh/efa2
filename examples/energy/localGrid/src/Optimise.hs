@@ -151,10 +151,12 @@ etaAssign sec = Map.fromList $
 
 
 restPower :: [Double]
-restPower = [0.2, 0.4 .. 2]
+-- restPower = [0.2, 0.4 .. 2]
+restPower = [0.1, 0.6]
 
 localPower :: [Double]
-localPower = [0.3, 0.5 .. 3.3]
+-- localPower = [0.3, 0.5 .. 3.3]
+localPower = [0.4, 0.8]
 
 varRestPower', varLocalPower' :: [[Double]]
 (varLocalPower', varRestPower') = CT.varMat localPower restPower
@@ -166,7 +168,8 @@ varRestPower1D :: Sig.PSignal V.Vector Double
 varRestPower1D = Sig.fromList restPower
 
 localPowerScale :: Double
-localPowerScale = 1.2
+-- localPowerScale = 1.2
+localPowerScale = 1
 
 varRestPower :: Sig.PSignal2 V.Vector V.Vector Double
 varRestPower = Sig.fromList2 varRestPower'
@@ -178,10 +181,12 @@ varLocalPower = Sig.fromList2 varLocalPower'
 -- ################### Vary Degrees of Freedom for Optimisation
 
 waterPower :: [Double]
+--waterPower = [0.2,0.4 .. 0.8]
 waterPower = [0.2,0.4 .. 0.8]
 
 gasPower :: [Double]
-gasPower = [0.2,0.4 .. 1.0]
+-- gasPower = [0.2,0.4 .. 1.0]
+gasPower = [0.3, 0.7]
 
 varWaterPowerSig :: Sig.PTestRow [] Double
 varWaterPowerSig = Sig.fromList waterPower
@@ -454,12 +459,11 @@ main = do
            = getPowerSignals tabPower ["wind", "solar", "house", "industry"]
 
 
-       powerSignalRest = Sig.scale powerSignalWind restPowerScale
-       powerSignalLocal = Sig.offset
-                          (Sig.scale  (powerSignalSolar Sig..+
-                                      Sig.makeDelta (powerSignalHouse Sig..+
-                                                     (Sig.makeDelta powerSignalIndustry)))
-                          localPowerScale) 0.5
+       powerSignalRest = Sig.scale restPowerScale powerSignalWind
+       powerSignalLocal = Sig.offset 0.5 $ Sig.scale localPowerScale $
+         powerSignalSolar
+         Sig..+ Sig.makeDelta powerSignalHouse
+         Sig..+ Sig.makeDelta powerSignalIndustry
 
    let
     -- | Speep optimisation and operation space for charge and discharge case

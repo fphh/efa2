@@ -234,7 +234,7 @@ stepX p1 p2
 --addZeroCrossings ::
 --  Record t0 t1 (Typ A T Tt) (Typ A P Tt) id0 [] Double Double ->
 addZeroCrossings ::
-  (Ord node) =>
+  Ord node =>
   PowerRecord node [] Double ->
   PowerRecord node [] Double
 addZeroCrossings r = rsig2Record rSigNew0 r

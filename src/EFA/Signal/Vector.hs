@@ -518,7 +518,7 @@ lookUpGen look idxs =
    case ListHT.partitionMaybe look idxs of
       (ys, []) -> ys
       (_, invalidIdxs) ->
-         error $ "Error in vLookup - indices out of Range: " ++ show invalidIdxs
+         error $ "lookUpGen: indices out of Range: " ++ show invalidIdxs
 
 class Reverse v where
    reverse :: (Storage v d) => v d -> v d

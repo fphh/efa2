@@ -1,68 +1,88 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Main where
 
 
 import qualified Modules.System as System
 import qualified Modules.Optimisation as Optimisation
---import Modules.Optimisation(Env(..),
-                      --      envGetData,
-                       --     doubleSweep,
+
+
 import Modules.Optimisation(EnvResult)
 import Modules.System(Node(..))
 
-import EFA.Utility.Async (concurrentlyMany_)
+-- import EFA.Utility.Async (concurrentlyMany_)
 
 import qualified EFA.Application.IndexState as XIdxState
+import qualified EFA.Application.OneStorage as One
 
 import qualified EFA.Application.Sweep as Sweep
-import qualified EFA.Application.EtaSys as EtaSys
 import qualified EFA.Application.Utility as AppUt
 import qualified EFA.Application.Optimisation as AppOpt
 import qualified EFA.Application.Simulation as AppSim
+import qualified EFA.Application.Index as XIdx
+import qualified EFA.Application.Absolute as AppAbs
 
 import qualified EFA.Graph.Draw as Draw
-
-import qualified EFA.Signal.Signal as Sig
--- import EFA.Signal.Data(Data(..),Nil) --,Nil,(:>))
-
+import qualified EFA.Graph.Flow as Flow
+import qualified EFA.Graph.StateFlow as StateFlow
+import qualified EFA.Graph.StateFlow.Environment as SFEnv
+import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Topology.Index as TIdx
-
-import qualified Data.GraphViz.Attributes.Colors.X11 as Colors
-import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
-import qualified Graphics.Gnuplot.Graph.ThreeDimensional as Graph3D
+import qualified EFA.Graph.Topology.Node as Node
 
 import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 --import qualified Graphics.Gnuplot.Terminal.PostScript as PostScript
---import qualified Graphics.Gnuplot.Terminal.PNG as PNG
 
+import qualified EFA.Signal.Signal as Sig; import EFA.Signal.Signal (TC,Scalar)
 import qualified EFA.Signal.PlotIO as PlotIO
-import qualified EFA.Signal.Plot as Plot
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Sequence as Seq
-
+import qualified EFA.Signal.SequenceData as SD
 import qualified EFA.Signal.ConvertTable as CT
+import qualified EFA.Signal.Vector as Vec
+import qualified EFA.Signal.Base as Base
+
+import EFA.Signal.Data (Data(..), Nil, (:>))
+import EFA.Signal.Typ (Typ, F, T, A, Tt)
+
 import qualified EFA.IO.TableParser as Table
+
+import qualified EFA.Equation.System as EqGen; import EFA.Equation.System ((.=))
+import qualified EFA.Equation.Environment as EqEnv
+import qualified EFA.Equation.Record as EqRecord
+import qualified EFA.Equation.Arithmetic as Arith
+import EFA.Equation.Result (Result(..), isDet)
+
+import EFA.Utility.Bifunctor (bimap, second)
+
+import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
+import qualified Graphics.Gnuplot.Graph.ThreeDimensional as Graph3D
+
 
 import qualified Data.Map as Map; import Data.Map (Map)
 import qualified Data.Vector as V
-import qualified Data.List as List
 
-import Data.Monoid (mempty)
-import Data.Tuple (swap)
-import Data.Function (on)
+import Data.Monoid ((<>))
+import Data.Tuple.HT (fst3, snd3, thd3)
+import Data.Foldable (foldMap)
+
+import Control.Functor.HT (for)
 
 
 frameOpts ::
   Opts.T (Graph3D.T Double Double Double) ->
   Opts.T (Graph3D.T Double Double Double)
-frameOpts =
+frameOpts = id
+{-
 --  Plot.heatmap .
   Plot.xyzrange3d (0.2, 2) (0.3, 3.3) (0, 1) .
   -- Plot.cbrange (0.2, 1) .
   Plot.xyzlabel "Load I Power [W]" "Load II Power [W]" "" .
   Plot.paletteGH
+-}
 
 noLegend :: Int -> String
 noLegend =  (const "")
@@ -74,39 +94,303 @@ legend _ = "Undefined"
 
 scaleTableEta :: Map String (Double, Double)
 scaleTableEta = Map.fromList $
-  ("storage",     (1, 0.8)) :
-  ("gas",         (1, 0.4)) :
+  ("storage",     (3, 0.8)) :
+  ("gas",         (3, 0.4)) :
   ("transformer", (3.0, 0.95)) :
-  ("coal",        (6, 0.46)) :
+  ("coal",        (10, 0.46)) :
   ("local",       (1, 1)) :
   ("rest",        (1, 1)) :
   []
 
 restScale, localScale :: Double
-restScale = 1
+restScale = 1.0
 localScale = 1.0
 
+------------------------------------------------------------------------
+
 local, rest, water, gas :: [Double]
---local = [0.3, 0.5 .. 3.3]
---rest =  [0.2, 0.4 .. 2]
---water = [0.3, 0.5 .. 1]
---gas =   [0.2, 0.4 .. 1]
+{-
+local = [0.1, 0.5]
+rest =  [0.2, 0.6]
+water = [0.3, 0.7]
+gas =   [0.4, 0.8]
+-}
 
-local = [0.5, 0.7]
-rest =  [0.2, 0.4]
-water = [0.3, 1]
-gas =   [0.2, 0.4]
+local = [0.2, 0.7, 1.0, 1.9, 3]
+rest =  [0.2, 0.7, 0.8, 1.9, 3]
+water = [0.2, 0.3, 0.9, 1.9, 3]
+gas =   [0.2, 0.7, 1.1, 2.7, 3]
 
 
-interpolate :: Map [Double] Double -> [[Double]] -> [Double]
-interpolate m xs = map (snd . findNearest m') xs'
-  where f = sum . map (^2)
-        xs' = map f xs
-        m' = Map.toList $ Map.mapKeys f m
-        findNearest xs x =
-          snd $ List.minimumBy (compare `on` fst)
-              $ map (\y -> (abs $ x - fst y, y)) xs
+sweepPts :: Sweep.Points Double
+sweepPts = Sweep.Points [local, rest] [water, gas]
 
+optimalPower :: One.OptimalPower Node
+optimalPower =
+  One.optimalPower [(Optimisation.state0, lst), (Optimisation.state1, lst)]
+  where lst = [(Network, Water), (LocalNetwork, Gas)]
+
+force :: One.SocDrive Double
+force = One.ChargeDrive 0
+
+initStorage :: (Arith.Constant a) => [(Node, a)]
+initStorage = [(System.Water, Arith.fromRational $ 0.7*3600*1000)]
+
+unzipMap :: Map k (a, b) -> (Map k a, Map k b)
+unzipMap m = (Map.map fst m, Map.map snd m)
+
+unzip3Map :: Map k (a, b, c) -> (Map k a, Map k b, Map k c)
+unzip3Map m = (Map.map fst3 m, Map.map snd3 m, Map.map thd3 m)
+
+
+
+-- @HT Hier wollen wir unabhaengig von Node und Double werden
+-- also z.B. nur Typvariablen node und v sollen vorkommen.
+optimalEtasWithPowers ::
+  One.OptimalEnvParams Node Double ->
+  One.SocDrive Double ->
+  SFEnv.Complete Node (Data Nil Double) (Data Nil Double) ->
+  One.OptimalEtaWithEnv Node Double
+optimalEtasWithPowers params forceFactor env =
+  Map.foldWithKey f Map.empty op
+  where op = One.optimalPowers params
+        forcing = One.noforcing forceFactor
+        stateFlowGraph = One.stateFlowGraph params
+        etaMap = One.etaMap params
+        f state ps acc = Map.insert state (Map.fromList res) acc
+          where 
+                solveFunc =
+                  Optimisation.solve
+                    stateFlowGraph
+                    System.etaAssignState
+                    etaMap
+                    env
+                    state
+
+                envsSweep :: Map [Double] [EnvResult Double]
+                envsSweep =
+                  Sweep.doubleSweep solveFunc (One.points params)
+
+                optEtaEnv = for envsSweep $
+                  Sweep.optimalSolutionState 
+                    --One.nocondition
+                    Optimisation.condition
+                    forcing
+                    stateFlowGraph
+
+                res = map g ps
+                g p = (p, h p optEtaEnv)
+                h (n0, n1) = Map.mapMaybe (fmap (fmap (AppUt.lookupDetPowerState q)))
+                  where q = XIdxState.power state n0 n1
+
+------------------------------------------------------------------------
+
+-- | Warning -- only works for one section in env
+envToPowerRecord ::
+  Sig.TSignal [] Double ->
+  SFEnv.Complete System.Node (Result (Data  Nil Double)) (Result (Data ([] :> Nil) Double)) ->
+  Record.PowerRecord System.Node [] Double
+envToPowerRecord time env =
+  (Seq.addZeroCrossings
+  . Record.Record time
+  . Map.map i
+  . Map.mapKeys h 
+  . Map.filterWithKey p
+  . SFEnv.powerMap
+  . SFEnv.signal) env
+  where p (TIdx.InPart st _) _ = st == TIdx.State 0
+        h (TIdx.InPart _ (TIdx.Power edge)) = TIdx.PPos edge
+
+        i (Determined dat) = Sig.TC dat
+        i Undetermined =
+          error "envToPowerRecord - undetermined data"
+
+external ::
+  (Eq (v a), Arith.Constant a, Base.BSum a, Vec.Zipper v,
+  Vec.Walker v, Vec.Singleton v, Vec.Storage v a, Node.C node) =>
+  [(node, a)] ->
+  Flow.RangeGraph node ->
+  SD.SequData
+    (Record.Record Sig.Signal Sig.FSignal
+      (Typ A T Tt) (Typ A F Tt) (TIdx.PPos node) v a a) ->
+  EqEnv.Complete node (Result (Data Nil a)) (Result (Data (v :> Nil) a))
+
+external initSto sfTopo sfRec =
+  EqEnv.completeFMap EqRecord.unAbsolute EqRecord.unAbsolute $
+  EqGen.solveFromMeasurement sfTopo $
+  (AppAbs.fromEnvSignal $ AppAbs.envFromFlowRecord (fmap Record.diffTime sfRec))
+  <> foldMap f initSto
+  where f (st, val) = 
+          TIdx.absolute (XIdx.storage TIdx.initial st) .= Data val
+
+varRestPower', varLocalPower' :: [[Double]]
+(varLocalPower', varRestPower') = CT.varMat local rest
+
+restSig :: Sig.PSignal V.Vector Double
+restSig = Sig.fromList rest
+
+varRestPower :: Sig.PSignal2 V.Vector V.Vector Double
+varRestPower = Sig.fromList2 varRestPower'
+
+varLocalPower :: Sig.PSignal2 V.Vector V.Vector Double
+varLocalPower = Sig.fromList2 varLocalPower'
+
+
+
+to2DMatrix ::
+  (Vec.Storage v1 a, Vec.Storage v2 (v1 a),
+  Vec.FromList v1, Vec.FromList v2, Ord a) =>
+  Map [a] a ->
+  TC tr (Typ x y z)  (Data (v2 :> v1 :> Nil) a)
+to2DMatrix =
+  Sig.fromList2 . map snd . Map.toList . Map.foldWithKey f Map.empty 
+  where f [line, _] v = Map.insertWith (++) line [v]
+        f _ _ = error $ "to2DMatrix: more than two values in the key of map"
+
+optimalMaps :: (Num a, Ord a, Ord node) =>
+  Map TIdx.State (Map (node, node) (Map [a] (a, a))) ->
+  ( Sig.NSignal2 V.Vector V.Vector a,
+    Sig.UTSignal2 V.Vector V.Vector a,
+    Map (node, node) (Sig.PSignal2 V.Vector V.Vector a) )
+optimalMaps =
+  (\(eta, st, power) -> (head $ Map.elems eta, head $ Map.elems st, power))
+  . unzip3Map
+  . Map.map (h . unzip3Map)
+  . Map.unionsWith (Map.unionWith max)
+  . Map.elems
+  . Map.mapWithKey f
+  where f st = Map.map (Map.map (g st))
+        g st (eta, power) = (eta, st, power)
+        h (eta, st, power) =
+          (to2DMatrix eta, to2DMatrix (Map.map unpackState st), to2DMatrix power)
+        unpackState (TIdx.State s) = fromIntegral s
+
+
+givenSignals ::
+  Ord node =>
+  Sig.TSignal [] Double ->
+  Map (node, node) (Sig.PSignal [] Double) ->
+  [(node, node, Sig.PSignal [] Double)] ->
+  Record.PowerRecord node [] Double
+givenSignals time optps ns =
+  Seq.addZeroCrossings
+  $ Record.Record time
+  $ Map.fromList
+  $ Map.foldWithKey g ns' optps
+  where fromto n0 n1 = TIdx.PPos $ TIdx.StructureEdge n0 n1
+        ns' = map (\(n0, n1, sig) -> (fromto n0 n1, sig)) ns
+        g (n0, n1) sig = ((fromto n0 n1, sig):)
+
+solveAndCalibrateAvgEffWithGraph ::
+  Sig.TSignal [] Double ->
+  Sig.PSignal [] Double ->
+  Sig.PSignal [] Double ->
+  Map String (Double -> Double) ->
+  ( Topo.StateFlowGraph Node,
+    SFEnv.Complete Node (Data Nil Double) (Data Nil Double) ) ->
+  IO ( Topo.StateFlowGraph Node,
+    SFEnv.Complete Node (Data Nil Double) (Data Nil Double) )
+solveAndCalibrateAvgEffWithGraph time prest plocal etaMap (stateFlowGraph, env) = do
+  let sectionFilterTime ::  TC Scalar (Typ A T Tt) (Data Nil Double)
+      sectionFilterTime = Sig.toScalar 0
+
+      sectionFilterEnergy ::  TC Scalar (Typ A F Tt) (Data Nil Double)
+      sectionFilterEnergy = Sig.toScalar 0
+
+      optParams =
+        One.OptimalEnvParams 
+          etaMap
+          sweepPts
+          optimalPower
+          stateFlowGraph
+
+      optEtaWithPowers ::
+        Map TIdx.State (Map (Node, Node) (Map [Double] (Double, Double)))
+      optEtaWithPowers = optimalEtasWithPowers optParams force env
+      (_optEta, _optState, optPower) = optimalMaps optEtaWithPowers
+
+      optPowerInterp ::
+        Map (Node, Node) (Sig.PSignal [] Double)
+      optPowerInterp = for optPower $ \powerStateOpt ->
+        let f = Sig.interp2WingProfile "solveAndCalibrateAvgEffWithGraph"
+                                       restSig varLocalPower
+        in  Sig.tzipWith (f powerStateOpt) prest plocal
+
+
+      givenSigs :: Record.PowerRecord Node [] Double
+      givenSigs = givenSignals time optPowerInterp $
+        (LocalRest, LocalNetwork, plocal) :
+        (Rest, Network, prest) : []
+
+      envSims =
+        AppSim.solve
+          System.topology
+          System.etaAssignState
+          etaMap
+          givenSigs
+
+      recZeroCross = envToPowerRecord time envSims
+
+      sequencePowers :: SD.SequData (Record.PowerRecord System.Node [] Double)
+      sequencePowers = Seq.genSequ recZeroCross
+
+      sequenceFlowsFilt :: SD.SequData (Record.FlowRecord Node [] Double)
+      sequenceFlowsFilt =
+        snd
+        $ SD.unzip
+        $ SD.filter (Record.major sectionFilterEnergy sectionFilterTime . snd)
+        $ fmap (\x -> (x, Record.partIntegrate x)) sequencePowers
+
+      flowStatesWithAdj ::
+        ( SD.SequData (Record.FlowState Node), 
+          SD.SequData (Record.FlowRecord Node [] Double) )
+      flowStatesWithAdj =
+        SD.unzip
+        $ fmap (\rec ->
+                 let flowState = Flow.genFlowState rec
+                 in  (flowState, Flow.adjustSigns System.topology flowState rec))
+        sequenceFlowsFilt
+
+      stateFlowEnvWithGraph ::
+        ( Topo.StateFlowGraph Node,
+          SFEnv.Complete Node (Data Nil Double) (Data Nil Double) )
+
+      stateFlowEnvWithGraph =
+        let sequ = Flow.genSequFlowTops System.topology (fst flowStatesWithAdj)
+            envLocal = external initStorage 
+                           (Seq.makeSeqFlowTopology sequ) (snd flowStatesWithAdj)
+            e = second (fmap Arith.integrate) envLocal
+            sm = snd $ StateFlow.stateMaps sequ
+            unDet (Determined x) = x
+            unDet _ = error "solveAndCalibrateAvgEffWithGraph: undetermined value"
+        in  ( StateFlow.stateGraphAllStorageEdges sequ,
+              bimap unDet unDet $ SFEnv.filter isDet isDet $
+                StateFlow.envFromSequenceEnvResult sm e)
+
+  Draw.xterm $ Draw.stateFlowGraph (fst stateFlowEnvWithGraph)
+
+  PlotIO.record "Calculated Signals" DefaultTerm.cons show id recZeroCross
+
+  Draw.xterm $ uncurry (Draw.stateFlowGraphWithEnv Draw.optionsDefault)
+                           stateFlowEnvWithGraph
+  return stateFlowEnvWithGraph
+
+
+
+
+{-
+solveAndCalibrateAvgEff ::
+  (Sig.TSignal [] Double, [Sig.PSignal [] Double]) ->
+  Map String (Double -> Double) ->
+  ( Topo.StateFlowGraph Node,
+    SFEnv.Complete Node (Data Nil Double) (Data Nil Double) ) ->
+  [(Topo.StateFlowGraph Node,
+    SFEnv.Complete Node (Data Nil Double) (Data Nil Double))]
+solveAndCalibrateAvgEff sigs etaMap envWithGraph =
+  List.iterate ( -- fmap (AppOpt.givenAverageWithoutState Optimisation.state0)
+                 solveAndCalibrateAvgEffWithGraph sigs etaMap) 
+               envWithGraph
+-}
 
 main :: IO()
 main = do
@@ -116,97 +400,37 @@ main = do
   tabEta <- Table.read "../maps/eta.txt"
   tabPower <- Table.read "../maps/power.txt"
 
-
-
-  let etaFunctionMap = CT.makeEtaFunctions2D scaleTableEta tabEta
-
+  let etaMap = CT.makeEtaFunctions2D scaleTableEta tabEta
       initEnv = AppOpt.initialEnv System.Water System.stateFlowGraph
 
-      --- ( von hier       -- pro State ein envsSweep erzeugen (chargem, discharge)
-      
-      solveFunc =
-        Optimisation.solve
-          System.stateFlowGraph
-          initEnv
-          state0
-          System.etaAssignState
-          etaFunctionMap
 
-      envsSweep :: Map [Double] [EnvResult Double]
-
-      envsSweep =
-        Sweep.doubleSweep solveFunc ([local, rest], [water, gas])
-
-
-      force = Optimisation.forcing $ Optimisation.ChargeDrive 0
-
-      maxEtaEnv = Map.map
-        (snd . Sweep.optimalSolutionState 
-          (const True)
-          force
-          System.stateFlowGraph)
-          envsSweep
-
-      state0 = TIdx.State 0
-      restToWaterPower = XIdxState.power state0 Network Water
-      localToGasPower = XIdxState.power state0 LocalNetwork Gas
-
-      optWaterPower =
-        Map.map (AppUt.lookupDetPowerState restToWaterPower) maxEtaEnv
-
-      optGasPower =
-        Map.map (AppUt.lookupDetPowerState localToGasPower) maxEtaEnv
-        
-      -- ) bis hier kapseln und pro state ausführen  
-
-
-  let
-      (time', [pwind', psolar', phouse', pindustry']) =
+      (time, [pwind, psolar, phouse, pindustry]) =
         CT.getPowerSignalsWithSameTime tabPower
           ["wind", "solar", "house", "industry"]
 
-      (time, [pwind, psolar, phouse, pindustry]) =
-        (Sig.toList time', map Sig.toList [pwind', psolar', phouse', pindustry'])
-
-      prest = map (restScale*) pwind
-      plocal = map ((0.5+) . (localScale*)) $
-        zipWith3 (\x y z -> x+y+z) psolar phouse pindustry
+      prest = Sig.scale restScale pwind
+      plocal = Sig.offset 0.4 $ Sig.scale localScale $
+        psolar Sig..+ Sig.makeDelta phouse Sig..+ Sig.makeDelta pindustry
 
 
-      pwater = interpolate optWaterPower (zipWith (\x y -> [x, y]) plocal prest)
-      pgas = interpolate optGasPower (zipWith (\x y -> [x, y]) plocal prest)
+  new1 <- solveAndCalibrateAvgEffWithGraph
+            time prest plocal
+            etaMap
+            (System.stateFlowGraph, initEnv)
 
-      fromto = (TIdx.PPos .) . TIdx.StructureEdge
+  new2 <- solveAndCalibrateAvgEffWithGraph
+            time prest plocal
+            etaMap
+            new1
 
-      givenSignals :: Record.PowerRecord Node [] Double
-      givenSignals = 
-        Seq.addZeroCrossings $ Record.Record (Sig.fromList time) $ Map.fromList $
-          (fromto Network Water, Sig.fromList pwater) :
-          (fromto LocalNetwork Gas, Sig.fromList pgas) :
-          (fromto LocalRest LocalNetwork, Sig.fromList prest): 
-          (fromto Rest Network, Sig.fromList plocal) : []
+  new3 <- solveAndCalibrateAvgEffWithGraph
+            time prest plocal
+            etaMap
+            new2
 
-      envSim =
-        AppSim.solve
-          System.topology
-          System.etaAssignState
-          etaFunctionMap
-          givenSignals
-          
-      -- 1. envSim zu Record machen und dann die ganz normale efa-Analyse laufen lasen -> Sequenzflussgraph
-      -- 2. Sequenzflussgraph zu Zustandsflussgraph
-      -- 3. Initenv ersetzen => erste Iterationsschleife (brauch ein Akzeptanz-Kriterium für X und eta), 
-      -- 3q. Akzeptanzfunktion schreiben mit Euklidscher oder Prozentpunkte abweichung oder Delta
-      -- 4. Äußere Schleife -- SOC-Faktor (Balance-Funktion) -- (SOC-ZielSOC)*Force
-      -- 4a -- visualisierung der Iteration
-      
-  print envsSweep
-  concurrentlyMany_ [
-    --Draw.xterm $ Draw.topologyWithEdgeLabels System.edgeNames System.topology,
+  _ <- solveAndCalibrateAvgEffWithGraph
+            time prest plocal
+            etaMap
+            new3
 
-    -- Draw.xterm $ Draw.flowTopologies System.flowStates,
- 
-   Draw.xterm $
-      Draw.stateFlowGraphWithEnv Draw.optionsDefault System.stateFlowGraph envSim
-    ]
-
+  return ()

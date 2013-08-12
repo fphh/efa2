@@ -81,9 +81,12 @@ makeEtaFunctions2D sm = Map.mapWithKey f
   where f k t = Sig.fromSample .
                   Sig.interp1Lin k xsig ysig .
                   Sig.toSample
-         where (xs, NonEmpty.Cons y _) = convertToSignal2D t
-               xsig = maybe xs (Sig.scale xs . fst) (Map.lookup k sm)
-               ysig = maybe y (Sig.scale y . snd) (Map.lookup k sm)
+          where (xs, NonEmpty.Cons y _) = convertToSignal2D t
+                (xsig, ysig) = flip (maybe (xs, y)) (Map.lookup k sm) $
+                  \(a, b) -> (Sig.scale a xs, Sig.scale b y)
+
+
+
 
 
 {-
@@ -126,6 +129,7 @@ getPowerSignals tabPower =
     map (f . convertToSignal2D .
          flip (Map.findWithDefault (error "getPowerSignals: signal not found")) tabPower)
   where f (x, NonEmpty.Cons y []) = (x, y)
+        f _ = error $ "getPowerSignals: NonEmpty.Cons contains more than one element"
 
 
 getPowerSignalsWithSameTime ::

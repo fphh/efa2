@@ -15,6 +15,7 @@ module EFA.Signal.Plot (
    Value,
    xy,
    xyBasic,
+   xyStyle,
    xyFrameAttr,
    XY,
    surface,

@@ -27,15 +27,6 @@ import qualified EFA.Graph.StateFlow.Environment as EqEnvState
 --import qualified EFA.Equation.Record as EqRecord
 import qualified EFA.Graph.StateFlow.Index as SFIdx
 
-
---import qualified EFA.Signal.Vector as SV
---import qualified EFA.Signal.Base as Base
---import qualified EFA.Signal.Signal as Sig
---import qualified EFA.Signal.Record as Record
---import qualified EFA.Signal.SequenceData as SD
-
-
---import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Arithmetic as EqArith
 
 
@@ -45,8 +36,6 @@ import Data.Map (Map)
 import Data.Monoid((<>),mempty)
 import Data.Maybe (mapMaybe)
 import qualified Data.Set as Set
-
-import Debug.Trace
 
 -- | TODO Functios below could ventually be moved to a module Application/Given
 
@@ -105,12 +94,31 @@ givenAverageWithoutStateX stateToRemove (EqEnvState.Complete scalar signal) =
    (EqGenState.fromMap $ EqEnvState.dtimeMap signal) <>
    (EqGenState.fromMap $ Map.filterWithKey f $ EqEnvState.etaMap signal) <>
    (EqGenState.fromMap $ Map.filterWithKey f $ EqEnvState.xMap signal) <>
-   (EqGenState.fromMap $ EqEnvState.stEnergyMap scalar) <>
-   (EqGenState.fromMap $ EqEnvState.stXMap scalar) <>
-   (EqGenState.fromMap $ EqEnvState.stInSumMap scalar) <>
-   (EqGenState.fromMap $ EqEnvState.stOutSumMap scalar)
+--   (EqGenState.fromMap $ EqEnvState.stEnergyMap scalar) <>
+   (EqGenState.fromMap $ EqEnvState.stXMap scalar)
+--   (EqGenState.fromMap $ EqEnvState.stInSumMap scalar) <>
+--   (EqGenState.fromMap $ EqEnvState.stOutSumMap scalar)
    where f :: TIdx.InState idx node -> v -> Bool
          f (TIdx.InPart state _) _ = state /= stateToRemove
+
+
+givenAverageWithoutState ::
+  forall node v a.
+  (Eq v, EqArith.Sum v, Node.C node, Ord node, Eq a, EqArith.Sum a) =>
+  TIdx.State ->
+  EqEnvState.Complete node a v ->
+  EqEnvState.Complete node a v
+givenAverageWithoutState _stateToRemove (EqEnvState.Complete scalar signal) =
+  (mempty :: EqEnvState.Complete node (Data Nil d) (Data Nil d)) {
+    EqEnvState.signal =
+      mempty { EqEnvState.etaMap = EqEnvState.etaMap signal,
+               EqEnvState.xMap   = EqEnvState.xMap signal,
+               EqEnvState.dtimeMap = EqEnvState.dtimeMap signal },
+    EqEnvState.scalar =
+      mempty { EqEnvState.stXMap = EqEnvState.stXMap scalar } }
+--  where f :: TIdx.InState idx node -> v -> Bool
+--        f (TIdx.InPart state _) _ = state /= stateToRemove
+
 
 givenForOptimisation ::
   (EqArith.Constant a, Node.C node, Fractional a,
@@ -140,7 +148,7 @@ initialEnv ::
   node ->
   TD.StateFlowGraph node ->
   EqEnvState.Complete node (Data Nil d) (Data Nil d)
-initialEnv xStorageEdgesNode g =
+initialEnv _xStorageEdgesNode g =
   -- @HT: Warum braucht das aeussere mempty die Typsignatur?
   (mempty :: EqEnvState.Complete node (Data Nil d) (Data Nil d)) {
     EqEnvState.signal =
@@ -149,7 +157,6 @@ initialEnv xStorageEdgesNode g =
                EqEnvState.dtimeMap = Map.fromList $ zip dts $ repeat (Data 1) },
     EqEnvState.scalar =
       mempty { EqEnvState.stXMap = Map.fromList stxs } }
-               -- EqEnvState.stEnergyMap = Map.fromList $ zip stKeys $ repeat (Data 0) } }
   where gdir = TD.dirFromFlowGraph g
 
         es = mapMaybe f $ Graph.edges gdir
@@ -165,10 +172,11 @@ initialEnv xStorageEdgesNode g =
         ns = Graph.nodes gdir
         h n (ins, _, outs) acc =
           flip (maybe acc) (nodestate n) $
-            \s -> let x = SFIdx.x s (node n) . node
-                      il = map x (Set.toList ins)
-                      ol = map x (Set.toList outs)
-                  in  filter (not . null) [il, ol] ++ acc
+            \st ->
+              let x = SFIdx.x st (node n) . node
+                  il = map x $ filter ((nstate n ==) . nstate) (Set.toList ins)
+                  ol = map x $ filter ((nstate n ==) . nstate) (Set.toList outs) 
+              in  filter (not . null) [il, ol] ++ acc
 
         xs = concatMap xfactors $ Map.foldWithKey h [] ns
 
@@ -197,27 +205,8 @@ initialEnv xStorageEdgesNode g =
               $ Set.fromList
               $ mapMaybe nodestate
               $ Map.keys ns
+
 {-
-        xEdges1 = mapMaybe q1 $ Graph.edges gdir
-        q1 (TD.FlowEdge (TD.StorageEdge (TIdx.ForNode (TIdx.StorageEdge s0 s1) n)))
-          | n == xStorageEdgesNode =
-            (Just . flip TIdx.ForNode n . TIdx.StX)
-            $ uncurry TIdx.StorageTrans
-            $ case (s0, s1) of
-                   (TIdx.Init, TIdx.Exit) ->
-                     (TIdx.NoExit TIdx.Init, TIdx.Exit)
-
-                   (TIdx.Init, TIdx.NoExit s) ->
-                     (TIdx.NoExit TIdx.Init, TIdx.NoExit (TIdx.NoInit s))
-
-                   (TIdx.NoInit s, TIdx.Exit) ->
-                     (TIdx.NoExit (TIdx.NoInit s), TIdx.Exit)
-
-                   (TIdx.NoInit s, TIdx.NoExit t) ->
-                     (TIdx.NoExit (TIdx.NoInit s), TIdx.NoExit (TIdx.NoInit t))
-        q1 _ = Nothing
--}
-
         stKeys = Map.foldWithKey q [] $ Graph.nodes gdir
         q (TIdx.PartNode (TIdx.NoExit TIdx.Init) n) (_, _, outs) =
           (map (flip qf n) (Set.toList outs) ++)
@@ -227,4 +216,4 @@ initialEnv xStorageEdgesNode g =
           TIdx.ForNode (TIdx.StEnergy (TIdx.StorageEdge TIdx.Init TIdx.Exit))
         qf (TIdx.PartNode (TIdx.NoExit (TIdx.NoInit s)) _) =
           TIdx.ForNode (TIdx.StEnergy (TIdx.StorageEdge TIdx.Init (TIdx.NoExit s)))
-
+-}

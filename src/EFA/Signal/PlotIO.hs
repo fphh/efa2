@@ -521,5 +521,5 @@ etaDistr1DimfromRecordList ti  interval offset rList  (plotTitle, (idIn,idOut,id
                                                  dtime ein eout eout
               (x,y) = Sig.sortTwo (pAbscissa,eta)
           etaDistr1Dim (ti ++ "_" ++ plotTitle ++ "_" ++ recTitle) x y  pDist
-            (Sig.scale (Sig.norm einDist) 100) nDist
+            (Sig.scale 100 $ Sig.norm einDist) nDist
 

@@ -66,10 +66,24 @@ stX ::
 -}
 
 stEnergy ::
-  Idx.Init sec -> Idx.Exit sec -> node -> Idx.ForNode (Idx.StEnergy sec) node
-
+  Idx.Init sec ->
+  Idx.Exit sec ->
+  node ->
+  Idx.ForNode (Idx.StEnergy sec) node
 stEnergy  = Idx.storageEdge Idx.StEnergy
+
+stX ::
+  Idx.Augmented sec ->
+  Idx.Augmented sec ->
+  node ->
+  Idx.ForNode (Idx.StX sec) node
 stX       = Idx.storageTrans Idx.StX
+
+maxEnergy ::
+  Idx.Init Idx.Section ->
+  Idx.Exit Idx.Section ->
+  node ->
+  Idx.ForNode Idx.MaxEnergy node
 maxEnergy = Idx.storageEdge Idx.MaxEnergy
 
 {-
@@ -114,3 +128,5 @@ initState = Idx.Init
 exitState :: Idx.StateOrExit
 exitState = Idx.Exit
 -}
+
+

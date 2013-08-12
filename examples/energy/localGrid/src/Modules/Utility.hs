@@ -17,11 +17,11 @@ import EFA.Signal.Data (Data(..), Nil, (:>))
 
 import qualified EFA.IO.TableParserTypes as TPT
 
+
 --import EFA.Utility.Map (checkedLookup)
 
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.Map as Map ; import Data.Map (Map)
-
 
 -- | Warning -- only works for one section in env
 envToPowerRecord :: EqEnv.Complete

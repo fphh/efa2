@@ -80,13 +80,13 @@ flowStates = StateAnalysis.advanced topology
 
 
 seqTopology :: Flow.RangeGraph Node
-seqTopology = Flow.sequenceGraph (select flowStates [0,1])
+seqTopology = Flow.sequenceGraph (select flowStates [0, 4])
 
 
 stateFlowGraph :: TD.StateFlowGraph Node
 stateFlowGraph =
   StateFlow.stateGraphAllStorageEdges
-  $ AppUt.select flowStates [0]
+  $ AppUt.select flowStates [0, 4]
 
 etaAssignState ::
   TIdx.State ->

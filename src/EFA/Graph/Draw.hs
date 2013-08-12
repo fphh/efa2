@@ -9,6 +9,7 @@ module EFA.Graph.Draw (
   sequFlowGraphAbsWithEnv,
   sequFlowGraphDeltaWithEnv,
 
+  stateFlowGraph,
   stateFlowGraphWithEnv,
 
   Options, optionsDefault,
@@ -533,6 +534,16 @@ sequFlowGraph topo =
   dotFromSequFlowGraph topo Nothing nshow Nothing
      (HideEtaNode $ const []) (Just $ const [])
   where nshow _before (Idx.PartNode _ n, l) = formatTypedNode (n,l)
+
+
+stateFlowGraph ::
+  (Node.C node) =>
+  Topo.StateFlowGraph node -> DotGraph T.Text
+stateFlowGraph topo =
+  dotFromStateFlowGraph topo Nothing nshow
+     (HideEtaNode $ const []) (Just $ const [])
+  -- where nshow _before (Idx.PartNode _ n, l) = formatTypedNode (n,l)
+  where nshow _before = Unicode ""
 
 
 

@@ -17,8 +17,6 @@ import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph as Gr
 
---import EFA.Utility.Map (checkedLookup)
-
 import qualified Data.Set as Set
 import qualified Data.Map as Map
 
@@ -110,7 +108,8 @@ detEtaSys topo = AppUt.checkDetermined "detEtaSys" . etaSys topo
 detEtaSysState ::
   (Fractional v, Ord node, Show node, Show v) =>
   TD.StateFlowGraph node -> EqEnvState.Complete node a (Result v) -> v
-detEtaSysState topo = AppUt.checkDetermined "detEtaSys" . etaSysState topo
+detEtaSysState topo =
+  AppUt.checkDetermined "detEtaSysState\n" . etaSysState topo
 
 
 type Condition node a v = EqEnv.Complete node a (Result v) -> Bool

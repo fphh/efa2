@@ -289,8 +289,8 @@ crossWith f (TC da1) (TC da2) = TC $ D.crossWith f da1 da2
 (.-) x y = zipWith (..-) x y
 
 
-infix 7 .*, ./
-infix 6 .+,.-
+infixl 7 .*, ./
+infixl 6 .+,.-
 
 
 ----------------------------------------------------------
@@ -1373,13 +1373,16 @@ interp1Lin caller xSig ySig (TC (Data xVal)) =
   where sIdx@(SignalIdx idx) =
           P.maybe (error msg) id $ findIndex (P.> xVal) xSig
         -- prevent negativ index when interpolating on first element
-        TC (Data x1) = getSample xSig $ SignalIdx $ if idx P.== 0 then error msg else idx-1
+        TC (Data x1) = getSample xSig $ SignalIdx $ 
+          if idx P.== 0 then error msg else idx-1
         TC (Data x2) = getSample xSig sIdx
         -- prevent negativ index when interpolating on first element
-        TC (Data y1) = getSample ySig $ SignalIdx $ if idx P.== 0 then error msg else idx-1
+        TC (Data y1) = getSample ySig $ SignalIdx $
+          if idx P.== 0 then error msg else idx-1
         TC (Data y2) = getSample ySig sIdx
-        msg = "interp1Lin - Out of Range: " ++ caller ++ ": "++ P.show xVal ++ "\n"
-                   ++ P.show xSig ++ P.show ySig
+        msg = "interp1Lin - Out of Range: " ++ caller ++ ": "++ P.show xVal
+          ++ "\nxsig = " ++ P.show xSig
+          ++ "\nysig = " ++ P.show ySig
 
 
 
@@ -1517,12 +1520,16 @@ interp2WingProfileWithSignal caller x1d y2d z2d xSig ySig = tzipWith
 
 
 -- | Scale Signal by a given Number
-scale ::  (BProd d1 d1, D.Map c1, D.Storage c1 d1) => TC s1 t1 (Data c1 d1) -> d1 ->  TC s1 t1 (Data c1 d1)
-scale x fact = map (fact ..*) x
+scale ::
+  (BProd d1 d1, D.Map c1, D.Storage c1 d1) =>
+  d1 -> TC s1 t1 (Data c1 d1) ->  TC s1 t1 (Data c1 d1)
+scale fact = map (fact ..*)
 
 -- | Scale Signal by a given Number
-offset ::  (BSum d1, D.Map c1, D.Storage c1 d1) => TC s1 t1 (Data c1 d1) -> d1 ->  TC s1 t1 (Data c1 d1)
-offset x offs = map (offs ..+) x
+offset :: 
+  (BSum d1, D.Map c1, D.Storage c1 d1) =>
+  d1 -> TC s1 t1 (Data c1 d1) ->  TC s1 t1 (Data c1 d1)
+offset offs = map (offs ..+)
 
 
 -- | Reshape 2d to 1d

@@ -7,10 +7,6 @@
 
 module EFA.Application.Sweep where
 
-import qualified EFA.Signal.Vector as SV
-import EFA.Signal.Data (Data(..), Nil, (:>))
-import EFA.Signal.Typ (Typ, UT)
-import EFA.Signal.Signal (TC)
 import qualified EFA.Signal.Signal as Sig
 --import qualified EFA.Signal.Data as Data
 
@@ -74,9 +70,14 @@ instance Sweep a b b where
          sweep f [x] = f x
          sweep _ _ = error "sweep: How many arguments did you supply?"
 
+data Points v = Points {
+  fstPoints :: [[v]],
+  sndPoints :: [[v]] } deriving (Show)
+
+
 doubleSweep ::
-  (Ord a, Sweep a b c) => (a -> b) -> ([[a]], [[a]]) -> Map [a] [c]
-doubleSweep f (xs, ys) = List.foldl' h Map.empty $ map g vs
+  (Ord a, Sweep a b c) => (a -> b) -> Points a -> Map [a] [c]
+doubleSweep f (Points xs ys) = List.foldl' h Map.empty $ map g vs
   where vs = sequence (xs ++ ys)
         len = length xs
         g bs = (take len bs, sweep f bs)
@@ -125,8 +126,10 @@ optimalSolutionState ::
   ES.ForcingState node a v ->
   TD.StateFlowGraph node ->
   [EqEnvState.Complete node a (Result v)] ->
-  (v, EqEnvState.Complete node a (Result v))
+  Maybe (v, EqEnvState.Complete node a (Result v))
 optimalSolutionState cond forcing topo envs =
-  List.maximumBy (compare `on` fst) es
+  case es of
+       [] -> Nothing
+       fs -> Just $ List.maximumBy (compare `on` fst) fs
   where es = mapMaybe f envs
         f e = fmap (,e) $ ES.objectiveFunctionState cond forcing topo e

@@ -14,12 +14,13 @@ type Caller = String
 
 
 checkedLookup ::
-  (Ord k, Show k, Show v) => Caller -> Map k v -> k -> v
+  (Ord k, Show k) => Caller -> Map k v -> k -> v
 checkedLookup c m k =
   case Map.lookup k m of
-    Nothing -> error $ "Error in checkedLookup called by function " ++ show c ++
-               " with the key: " ++ show k  ++ "\n" ++ "Keys in Map:" ++ "\n" ++
-               (myShowList $ Map.keys m)
+    Nothing ->
+      error $ "CheckedLookup error in " ++ c ++ "\n"
+              ++ "key: " ++ show k  ++ "\n"
+              ++ "keys in map:\n" ++ myShowList (Map.keys m) ++ "\n"
     Just x -> x
 
 

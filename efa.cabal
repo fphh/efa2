@@ -131,6 +131,7 @@ Library
     EFA.Application.Optimisation
     EFA.Application.Sweep
     EFA.Application.Simulation
+    EFA.Application.OneStorage
 
 
 -- sollte man auf Cabal-Test umstellen,

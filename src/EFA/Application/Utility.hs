@@ -3,7 +3,7 @@ module EFA.Application.Utility where
 
 import qualified EFA.Application.Index as XIdx
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
-import qualified EFA.Graph.StateFlow.Environment as EqEnvState
+import qualified EFA.Graph.StateFlow.Environment as SFEnv
 import qualified EFA.Application.IndexState as XIdxState
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as TD
@@ -22,16 +22,15 @@ import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.System ((.=))
-import EFA.Equation.Result (Result)
+import EFA.Equation.Result (Result(..))
 
 import EFA.Report.FormatValue (FormatValue)
 
 import EFA.Utility.Map (checkedLookup)
+import EFA.Utility (myShowList)
 
 import Data.Map (Map)
 import qualified Data.Map as Map
-
-
 
 {-
 makeNode :: Int -> Idx.Node
@@ -167,14 +166,14 @@ lookupAbsEta caller env n =
 lookupDetPower ::(Ord node, Show d, Show node) =>
   XIdx.Power node -> EqEnv.Complete node b (Result d) -> d
 lookupDetPower idx =
-  checkDetermined ("lookupDetPower determined: " ++ show idx) .
-  flip (lookupAbsPower ("lookupDetPower lookup: " ++ show idx)) idx
+  checkDetermined ("lookupDetPower (2): " ++ show idx) .
+  flip (lookupAbsPower ("lookupDetPower (1): " ++ show idx)) idx
 
 lookupDetEnergy ::(Ord node, Show d, Show node) =>
   XIdx.Energy node -> EqEnv.Complete node b (Result d) -> d
 lookupDetEnergy idx =
-  checkDetermined ("lookupDetEnergy determined: " ++ show idx) .
-  flip (lookupAbsEnergy ("lookupDetEnergy lookup: " ++ show idx)) idx
+  checkDetermined ("lookupDetEnergy (2): " ++ show idx) .
+  flip (lookupAbsEnergy ("lookupDetEnergy (1): " ++ show idx)) idx
 
 
 --  @HT schon wieder code-Duplication wegen Stateenv - was können wir da machen ?
@@ -182,27 +181,41 @@ lookupDetEnergy idx =
 lookupAbsEnergyState ::
   (Ord node, Show node, Show t) =>
   String ->
-  EqEnvState.Complete node b (Result t) ->
+  SFEnv.Complete node b (Result t) ->
   XIdxState.Energy node -> Result t
 lookupAbsEnergyState caller env n =
-  checkedLookup caller (EqEnvState.energyMap $ EqEnvState.signal env) n
+  checkedLookup caller (SFEnv.energyMap $ SFEnv.signal env) n
 
 lookupAbsPowerState ::
   (Ord node, Show node, Show t) =>
   String ->
-  EqEnvState.Complete node b (Result t) ->
+  SFEnv.Complete node b (Result t) ->
   XIdxState.Power node -> Result t
 lookupAbsPowerState caller env n =
-  checkedLookup caller (EqEnvState.powerMap $ EqEnvState.signal env) n
+  checkedLookup caller (SFEnv.powerMap $ SFEnv.signal env) n
 
-lookupDetPowerState ::(Ord node, Show d, Show node) =>
-  XIdxState.Power node -> EqEnvState.Complete node b (Result d) -> d
+lookupDetPowerState ::
+  (Ord node, Show d, Show node) =>
+  XIdxState.Power node -> SFEnv.Complete node b (Result d) -> d
 lookupDetPowerState idx =
-  checkDetermined ("lookupDetPower determined: " ++ show idx) .
-  flip (lookupAbsPowerState ("lookupDetPower lookup: " ++ show idx)) idx
+  checkDetermined ("lookupDetPowerState (2): " ++ show idx) .
+  flip (lookupAbsPowerState ("lookupDetPowerState (1): " ++ show idx)) idx
 
-lookupDetEnergyState ::(Ord node, Show d, Show node) =>
-  XIdxState.Energy node -> EqEnvState.Complete node b (Result d) -> d
-lookupDetEnergyState idx =
-  checkDetermined ("lookupDetEnergy determined: " ++ show idx) .
-  flip (lookupAbsEnergyState ("lookupDetEnergy lookup: " ++ show idx)) idx
+lookupDetEnergyState ::
+  (Ord node, Show d, Show node, Show b) =>
+  XIdxState.Energy node -> SFEnv.Complete node b (Result d) -> d
+lookupDetEnergyState idx env =
+  checkDetermined ("lookupDetEnergyState (2):\n" ++ show idx ++ "\n" ++ show env) $
+  flip (lookupAbsEnergyState ("lookupDetEnergyState (1):\n" ++ show idx ++ "\n" ++ show env)) idx env
+
+lookupEnergyStateMaybe ::
+  (Ord node, Show d, Show node, Show b) =>
+  XIdxState.Energy node -> SFEnv.Complete node b (Result d) -> Maybe d
+lookupEnergyStateMaybe idx env =
+  fmap toDet
+  $ Map.lookup idx (SFEnv.energyMap $ SFEnv.signal env)
+  where toDet (Determined x) = x
+        toDet _ =
+          error $ "lookupDetEnergyState undetermined value at "
+                  ++ show idx ++ "\nin\n"
+                  ++ myShowList (Map.keys $ SFEnv.energyMap $ SFEnv.signal env)
