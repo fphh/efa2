@@ -423,7 +423,7 @@ fromInStorages stoutsum outs =
    let maxEnergies = map SeqFlow.carryMaxEnergy outs
        stEnergies  = map SeqFlow.carryEnergy outs
    in  mconcat $
-       splitStoreEqs stoutsum SeqFlow.carryEnergy SeqFlow.carryXOut outs :
+       EqSys.fromInStorages stoutsum outs :
        zipWith (=&=) maxEnergies
           (stoutsum : zipWith (~-) maxEnergies stEnergies)
 
@@ -436,7 +436,7 @@ fromOutStorages stinsum ins =
    (withLocalVar $ \s ->
       splitStoreEqs s SeqFlow.carryMaxEnergy SeqFlow.carryXIn ins)
    <>
-   splitStoreEqs stinsum SeqFlow.carryEnergy SeqFlow.carryXIn ins
+   EqSys.fromOutStorages stinsum ins
 
 
 variables ::

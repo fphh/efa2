@@ -182,6 +182,22 @@ splitStructEqs dtime varsum energy xfactor =
    NonEmpty.fetch
 
 
+fromInStorages ::
+   (Verify.LocalVar mode x, Constant x, Record rec,
+    rx ~ SysRecord.Expr mode rec s x) =>
+   rx -> [SeqFlow.Carry rx] ->
+   System mode s
+fromInStorages stoutsum outs =
+   splitStoreEqs stoutsum SeqFlow.carryEnergy SeqFlow.carryXOut outs
+
+fromOutStorages ::
+   (Verify.LocalVar mode x, Constant x, Record rec,
+    rx ~ SysRecord.Expr mode rec s x) =>
+   rx -> [SeqFlow.Carry rx] ->
+   System mode s
+fromOutStorages stinsum ins =
+   splitStoreEqs stinsum SeqFlow.carryEnergy SeqFlow.carryXIn ins
+
 splitStoreEqs ::
    (Verify.LocalVar mode x, Constant x, Record rec,
     rx ~ Expr mode rec s x) =>
