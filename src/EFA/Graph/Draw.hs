@@ -649,11 +649,7 @@ orientFlowEdge ::
    Idx.InPart part Gr.EitherEdge node ->
    (DirEdge (Idx.PartNode part node), Viz.DirType, Order)
 orientFlowEdge (Idx.InPart sec e) =
-   mapFst3
-      (\(DirEdge x y) ->
-         DirEdge
-            (Idx.PartNode sec x)
-            (Idx.PartNode sec y)) $
+   mapFst3 (fmap (Idx.PartNode sec)) $
    case e of
       Gr.EUnDirEdge ue -> (orientUndirEdge ue, Viz.NoDir, Id)
       Gr.EDirEdge de -> orientDirEdge de
@@ -994,8 +990,8 @@ structureEdgeShow opts e x n =
       structEShowEta (Idx.InPart sec ee) =
          case ee of
             Gr.EUnDirEdge _ -> Triple [] [] []
-            Gr.EDirEdge (Gr.DirEdge from to) ->
-               case Idx.InPart sec (Idx.StructureEdge from to) of
+            Gr.EDirEdge de ->
+               case Idx.InPart sec (Topo.structureEdgeFromDirEdge de) of
                   edge ->
                     Triple
                        (formatEnergy edge : formatX edge : [])
@@ -1007,8 +1003,8 @@ structureEdgeShow opts e x n =
       structEShow (Idx.InPart sec ee) =
          case ee of
             Gr.EUnDirEdge _ -> []
-            Gr.EDirEdge (Gr.DirEdge from to) ->
-               case Idx.InPart sec (Idx.StructureEdge from to) of
+            Gr.EDirEdge de ->
+               case Idx.InPart sec (Topo.structureEdgeFromDirEdge de) of
                   edge ->
                      formatEnergy edge :
                      formatX edge :
@@ -1044,11 +1040,12 @@ dotFromCumEdge env (e, ()) =
    DotEdge
       (dotIdentFromNode x) (dotIdentFromNode y)
       [displabel, Viz.Dir dir, structureEdgeColour]
-  where (DirEdge x y, dir, _) = orientDirEdge e
+  where (de@(DirEdge x y), dir, _) = orientDirEdge e
+        se = Topo.structureEdgeFromDirEdge de
         displabel =
            labelFromLines $
-              formatEner (Idx.StructureEdge x y) :
-              formatEner (Idx.StructureEdge y x) :
+              formatEner se :
+              formatEner (Idx.flip se) :
               []
         formatEner idx =
            Format.assign

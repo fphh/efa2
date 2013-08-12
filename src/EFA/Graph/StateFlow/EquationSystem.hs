@@ -713,7 +713,7 @@ fromEdges =
       case TD.edgeType se of
          TD.StructureEdge edge@(Idx.InPart s _) ->
             let equ xy = energy xy =%= dtime s ~* power xy
-                e = TD.structureEdgeFromDirEdge edge
+                e = Idx.liftInPart TD.structureEdgeFromDirEdge edge
             in  equ e <> equ (Idx.flip e) <>
                 (power (Idx.flip e) =%= eta e ~* power e)
          TD.StorageEdge _ -> mempty
@@ -736,7 +736,9 @@ fromNodes equalInOutSums =
                    map
                       (\edge ->
                          case TD.edgeType edge of
-                            TD.StructureEdge e -> Left $ TD.structureEdgeFromDirEdge e
+                            TD.StructureEdge e ->
+                               Left $
+                               Idx.liftInPart TD.structureEdgeFromDirEdge e
                             TD.StorageEdge e -> Right e) .
                    Set.toList
 

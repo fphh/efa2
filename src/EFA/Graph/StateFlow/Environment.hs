@@ -15,6 +15,7 @@ import EFA.Report.Format (Format)
 import EFA.Report.FormatValue (FormatValue, formatValue)
 
 import qualified EFA.Utility.Bifunctor as BF
+import qualified EFA.Utility.Map as MapU
 
 import qualified Data.Map as Map; import Data.Map (Map)
 
@@ -409,17 +410,11 @@ currySignal ::
    (Ord (idx node)) =>
    Map (Idx.InState idx node) v -> Map Idx.State (Map (idx node) v)
 currySignal =
-   Map.unionsWith (Map.unionWith
-      (error "StateFlow.Environment.currySignal: duplicate key")) .
-   Map.elems .
-   Map.mapWithKey
-      (\(Idx.InPart state idx) a ->
-         Map.singleton state $ Map.singleton idx a)
+   MapU.curry "StateFlow.Environment.currySignal"
+      (\(Idx.InPart state idx) -> (state, idx))
 
 uncurrySignal ::
    (Ord (idx node)) =>
    Map Idx.State (Map (idx node) v) -> Map (Idx.InState idx node) v
 uncurrySignal =
-   Map.unionsWith (error "StateFlow.Environment.uncurrySignal: duplicate key") .
-   Map.elems .
-   Map.mapWithKey (Map.mapKeys . Idx.InPart)
+   MapU.uncurry "StateFlow.Environment.uncurrySignal" Idx.InPart

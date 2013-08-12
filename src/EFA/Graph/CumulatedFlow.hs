@@ -54,9 +54,10 @@ cumulatedEnergyFlow topo seqTopo env =
         em = Env.energyMap $ Env.signal env
         f e =
           case TD.edgeType e of
-             TD.StructureEdge (Idx.InPart sec (Gr.DirEdge n n')) ->
-                let idx1 = Idx.Energy (Idx.StructureEdge n n')
-                    idx2 = Idx.Energy (Idx.StructureEdge n' n)
+             TD.StructureEdge (Idx.InPart sec de) ->
+                let se = TD.structureEdgeFromDirEdge de
+                    idx1 = Idx.Energy se
+                    idx2 = Idx.Energy $ Idx.flip se
 
                     transfer idx =
                        Map.singleton idx $
@@ -72,7 +73,7 @@ cumulatedEnergyFlow topo seqTopo env =
                        Map.singleton idx2 zero
 
                 in  Just $
-                    case getRelativeDir topo $ Gr.DirEdge n n' of
+                    case getRelativeDir topo de of
                        WithTopoDir -> (insert, insertzero)
                        AgainstTopoDir -> (insertzero, insert)
              _ -> Nothing

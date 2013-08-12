@@ -17,12 +17,14 @@ module EFA.Graph (
 
    reverse,
    reverseEdge,
-   ixmap, nmap, emap, nmapWithInOut,
+   ixmap,
+   mapNode, mapNodeWithInOut, mapNodeWithKey,
+   mapEdge, mapEdgeWithKey,
+   traverseNode, traverseEdge, traverse,
    empty,
    union,
-   -- getLEdge,
+   lookupNode, lookupEdge,
    isEmpty,
-   -- lab,
    labNodes,
    labEdges,
    adjEdges,
@@ -50,13 +52,15 @@ import qualified EFA.Utility.TypeConstructor as TC
 
 import qualified Data.Set as Set
 import qualified Data.Map as Map
+import qualified Data.Traversable as Trav
 import qualified Data.Foldable as Fold
 import Control.Monad (liftM2)
+import Control.Applicative (Applicative, pure, liftA3)
+import Data.Foldable (Foldable, foldMap)
 import Data.Set (Set)
 import Data.Map (Map)
 import Data.Maybe (mapMaybe)
 import Data.Monoid (Monoid, mempty, mappend)
-import Data.Foldable (Foldable, foldMap)
 import Data.Tuple.HT (fst3, snd3, thd3, mapFst3, mapThd3)
 -- import Data.Char (toUpper)
 
@@ -315,20 +319,15 @@ outEdges = fmap thd3 . nodes
 nodeLabels :: (Edge e, Ord (e n), Ord n) => Graph n e nl el -> Map n nl
 nodeLabels = fmap snd3 . nodes
 
-{-
-getLEdge :: (Ord n) => Graph n nl el -> n -> n -> Maybe (LEdge n el)
-getLEdge g x y =
-   let e = Edge x y
-   in  fmap ((,) e) $ Map.lookup e (edgeLabels g)
--}
+lookupEdge :: (Edge e, Ord (e n), Ord n) => e n -> Graph n e nl el -> Maybe el
+lookupEdge e (Graph g) =
+   Map.lookup e . fst3 =<< Map.lookup (from e) g
 
 isEmpty :: Graph n e nl el -> Bool
 isEmpty = Map.null . graphMap
 
-{-
-lab :: Ord n => Graph n nl el -> n -> Maybe nl
-lab g n = fmap snd3 $ Map.lookup n (nodes g)
--}
+lookupNode :: (Ord n) => n -> Graph n e nl el -> Maybe nl
+lookupNode n (Graph g) = fmap snd3 $ Map.lookup n g
 
 labNodes :: (Edge e, Ord (e n), Ord n) => Graph n e nl el -> [LNode n nl]
 labNodes = Map.toList . nodeLabels
@@ -593,13 +592,25 @@ makeOutMap = makeMap (from, to)
 makeInMap  = makeMap (to, from)
 -}
 
-nmap :: (nl0 -> nl1) -> Graph n e nl0 el -> Graph n e nl1 el
-nmap f =
+mapNode :: (nl0 -> nl1) -> Graph n e nl0 el -> Graph n e nl1 el
+mapNode f =
    Graph . fmap (\(ins,n,outs) -> (ins, f n, outs)) . graphMap
 
-emap :: (el0 -> el1) -> Graph n e nl el0 -> Graph n e nl el1
-emap f =
+mapNodeWithKey :: (n -> nl0 -> nl1) -> Graph n e nl0 el -> Graph n e nl1 el
+mapNodeWithKey f =
+   Graph .
+   Map.mapWithKey (\n (ins,nl,outs) -> (ins, f n nl, outs)) .
+   graphMap
+
+mapEdge :: (el0 -> el1) -> Graph n e nl el0 -> Graph n e nl el1
+mapEdge f =
    Graph . fmap (\(ins,n,outs) -> (fmap f ins, n, fmap f outs)) . graphMap
+
+mapEdgeWithKey :: (e n -> el0 -> el1) -> Graph n e nl el0 -> Graph n e nl el1
+mapEdgeWithKey f =
+   Graph .
+   fmap (\(ins,n,outs) -> (Map.mapWithKey f ins, n, Map.mapWithKey f outs)) .
+   graphMap
 
 nodeSet :: Graph n e nl el -> Set n
 nodeSet = Map.keysSet . graphMap
@@ -607,10 +618,10 @@ nodeSet = Map.keysSet . graphMap
 
 type InOut n e nl el = ([LEdge e n el], LNode n nl, [LEdge e n el])
 
-nmapWithInOut ::
+mapNodeWithInOut ::
    (Edge e, Ord (e n), Ord n) =>
    (InOut n e nl0 el -> nl1) -> Graph n e nl0 el -> Graph n e nl1 el
-nmapWithInOut f =
+mapNodeWithInOut f =
    Graph .
    Map.mapWithKey
       (\n (ins,nl,outs) ->
@@ -641,3 +652,37 @@ mapGraph ::
    (InOut n nl el -> a) -> Graph n e nl el -> [a]
 mapGraph f g = map f (mkInOutGraphFormat g)
 -}
+
+{- |
+Same restrictions as in 'traverse'.
+-}
+traverseNode ::
+   (Applicative f) =>
+   (nl0 -> f nl1) -> Graph n e nl0 el -> f (Graph n e nl1 el)
+traverseNode f = traverse f pure
+
+{- |
+Same restrictions as in 'traverse'.
+-}
+traverseEdge ::
+   (Applicative f) =>
+   (el0 -> f el1) -> Graph n e nl el0 -> f (Graph n e nl el1)
+traverseEdge f = traverse pure f
+
+{- |
+Don't rely on a particular order of traversal!
+Due to the current implementation all edges are accessed twice.
+Don't rely on this behaviour!
+That is, the actions should be commutative and non-destructive.
+-}
+traverse ::
+   (Applicative f) =>
+   (nl0 -> f nl1) ->
+   (el0 -> f el1) ->
+   Graph n e nl0 el0 -> f (Graph n e nl1 el1)
+traverse fn fe =
+   fmap Graph .
+   Trav.traverse
+      (\(ins,n,outs) ->
+         liftA3 (,,) (Trav.traverse fe ins) (fn n) (Trav.traverse fe outs)) .
+   graphMap

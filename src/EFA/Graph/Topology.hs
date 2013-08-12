@@ -19,6 +19,7 @@ module EFA.Graph.Topology (
        pathExists,
        dirFromFlowGraph,
        structureEdgeFromDirEdge,
+       dirEdgeFromStructureEdge,
        isStorage,
        maybeStorage,
        isActive,
@@ -259,10 +260,11 @@ dirFromFlowGraph =
                   Just $ FlowEdge $ StructureEdge $ Idx.InPart sec de
                Gr.EUnDirEdge _ -> Nothing
 
-structureEdgeFromDirEdge ::
-   Idx.InPart part Gr.DirEdge node -> Idx.InPart part Idx.StructureEdge node
-structureEdgeFromDirEdge (Idx.InPart s (Gr.DirEdge x y)) =
-   Idx.InPart s (Idx.StructureEdge x y)
+structureEdgeFromDirEdge :: Gr.DirEdge node -> Idx.StructureEdge node
+structureEdgeFromDirEdge (Gr.DirEdge x y) = Idx.StructureEdge x y
+
+dirEdgeFromStructureEdge :: Idx.StructureEdge node -> Gr.DirEdge node
+dirEdgeFromStructureEdge (Idx.StructureEdge x y) = Gr.DirEdge x y
 
 
 data StoreDir = In | Out deriving (Eq, Ord, Show)
@@ -276,7 +278,7 @@ classifyStorages ::
    (Ord node) =>
    FlowTopology node -> ClassifiedTopology node
 classifyStorages =
-   Gr.nmapWithInOut
+   Gr.mapNodeWithInOut
       (\(pre, (_n, nt), suc) ->
          let maybeDir es cls =
                 toMaybe (any (isActive . fst) es) cls

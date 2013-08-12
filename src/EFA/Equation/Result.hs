@@ -30,6 +30,10 @@ toMaybe :: Result a -> Maybe a
 toMaybe Undetermined = Nothing
 toMaybe (Determined x) = Just x
 
+fromMaybe :: Maybe a -> Result a
+fromMaybe Nothing = Undetermined
+fromMaybe (Just x) = Determined x
+
 {-# DEPRECATED isDet "Using isDet you risk non-total functions. Better use Result.toMaybe or pattern matching." #-}
 isDet :: Result a -> Bool
 isDet (Determined _) = True

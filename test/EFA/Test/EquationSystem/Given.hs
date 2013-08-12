@@ -27,7 +27,6 @@ import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph as Gr
-import EFA.Graph.Topology.Index ( Direction(..) )
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue)
@@ -117,7 +116,7 @@ testEnv, solvedEnv ::
    Verify.Assigns Format.Unicode)
 testEnv =
   mapFst (fmap
-    (Env.insert (XIdx.sum sec1 Idx.In node1) undet .
+    (Env.insert (XIdx.inSum sec1 node1) undet .
      Env.insert (XIdx.eta sec1 node2 node1) undet .
      Env.insert (XIdx.power sec1 node1 node2) undet .
      Env.insert (XIdx.energy sec1 node1 node2) undet .
@@ -275,23 +274,23 @@ testGiven = mconcat $
   (XIdx.x sec2 node2 node1 .= 1 / 1) :
   (XIdx.x sec2 node2 node3 .= 7 / 10) :
   (XIdx.x sec2 node3 node2 .= 1 / 1) :
-  (XIdx.sum sec0 In node1 .= 25 / 4) :
-  (XIdx.sum sec0 In node2 .= 25 / 2) :
-  (XIdx.sum sec0 Out node0 .= 34 / 3) :
-  (XIdx.sum sec0 Out node2 .= 25 / 2) :
-  (XIdx.sum sec0 Out node3 .= 16 / 1) :
+  (XIdx.inSum sec0 node1 .= 25 / 4) :
+  (XIdx.inSum sec0 node2 .= 25 / 2) :
+  (XIdx.outSum sec0 node0 .= 34 / 3) :
+  (XIdx.outSum sec0 node2 .= 25 / 2) :
+  (XIdx.outSum sec0 node3 .= 16 / 1) :
 
---  (XIdx.sum sec1 In node1 .= ?) :
+--  (XIdx.inSum sec1 node1 .= ?) :
 
-  (XIdx.sum sec1 In node2 .= 125 / 3) :
-  (XIdx.sum sec1 In node3 .= 10 / 1) :
-  (XIdx.sum sec1 Out node0 .= 625 / 6) :
-  (XIdx.sum sec1 Out node2 .= 125 / 3) :
-  (XIdx.sum sec2 In node1 .= 54 / 7) :
-  (XIdx.sum sec2 In node2 .= 54 / 7) :
-  (XIdx.sum sec2 Out node0 .= 162 / 49) :
-  (XIdx.sum sec2 Out node2 .= 54 / 7) :
-  (XIdx.sum sec2 Out node3 .= 6 / 1) :
+  (XIdx.inSum sec1 node2 .= 125 / 3) :
+  (XIdx.inSum sec1 node3 .= 10 / 1) :
+  (XIdx.outSum sec1 node0 .= 625 / 6) :
+  (XIdx.outSum sec1 node2 .= 125 / 3) :
+  (XIdx.inSum sec2 node1 .= 54 / 7) :
+  (XIdx.inSum sec2 node2 .= 54 / 7) :
+  (XIdx.outSum sec2 node0 .= 162 / 49) :
+  (XIdx.outSum sec2 node2 .= 54 / 7) :
+  (XIdx.outSum sec2 node3 .= 6 / 1) :
   (XIdx.maxEnergy seci sec0 node3 .= 22 / 1) :
   (XIdx.maxEnergy seci sec2 node3 .= 6 / 1) :
   (XIdx.maxEnergy sec1 sec2 node3 .= 10 / 1) :

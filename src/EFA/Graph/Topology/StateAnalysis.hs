@@ -238,7 +238,7 @@ mergeSmallestClusters topo queue0 =
          case PQ.minView queue1 of
             Nothing ->
                Left $
-               map (\es -> Gr.nmap fst $ insEdgeSet es topo) $
+               map (\es -> Gr.mapNode fst $ insEdgeSet es topo) $
                clusterEdges c0
             Just (c1, queue2) -> Right $
                let c2 = mergeCluster topo c0 c1
@@ -292,7 +292,7 @@ mergeMinimizingClusterPairs topo (NonEmpty.Cons p ps) =
    case NonEmpty.fetch ps of
       Nothing ->
          Left $
-         map (\es -> Gr.nmap fst $ insEdgeSet es topo) $
+         map (\es -> Gr.mapNode fst $ insEdgeSet es topo) $
          clusterEdges p
       Just partition0 ->
          Right $
@@ -321,7 +321,7 @@ mergeMinimizingCluster topo (NonEmpty.Cons p ps) =
    case NonEmpty.fetch ps of
       Nothing ->
          Left $
-         map (\es -> Gr.nmap fst $ insEdgeSet es topo) $
+         map (\es -> Gr.mapNode fst $ insEdgeSet es topo) $
          clusterEdges p
       Just partition0 ->
          let (c0,partition1) =
@@ -354,7 +354,7 @@ in Pearls of Functional Algorithm Design.
 -}
 branchAndBound :: (Ord node) => Topology node -> [FlowTopology node]
 branchAndBound topo =
-   map (Gr.nmap fst) $
+   map (Gr.mapNode fst) $
    uncurry (foldM (flip expand)) $
    splitNodesEdges topo
 
@@ -363,7 +363,7 @@ prioritized topo =
    let (cleanTopo, es) = splitNodesEdges topo
    in  guard (admissibleCountTopology cleanTopo)
        >>
-       (map (Gr.nmap fst . fst) $
+       (map (Gr.mapNode fst . fst) $
         recoursePrioEdge topo $
         (cleanTopo,
          PSQ.fromList $ map (\e -> e PSQ.:-> alternatives e cleanTopo) es))

@@ -49,7 +49,6 @@ import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Variable as Var
-import qualified EFA.Equation.Pair as Pair
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
@@ -59,6 +58,7 @@ import qualified EFA.Graph as Gr
 import EFA.Report.FormatValue (FormatValue)
 
 import qualified EFA.Equation.Arithmetic as Arith
+import qualified EFA.Equation.Result as Result
 import EFA.Equation.Arithmetic
           (Sum, (~+), (~-),
            Product, (~*), (~/),
@@ -66,6 +66,7 @@ import EFA.Equation.Arithmetic
            Integrate, Scalar, integrate)
 import EFA.Equation.Result(Result(..))
 
+import qualified EFA.Utility.Map as MapU
 import EFA.Utility ((>>!))
 
 import UniqueLogic.ST.TF.Expression ((=:=))
@@ -517,14 +518,14 @@ variableRecord ::
     Env.AccessMap idx, Ord (idx node), FormatValue (idx node), Record rec) =>
    idx node -> RecordExpression mode rec node s a v x
 variableRecord idx =
-  Bookkeeping $ fmap Wrap $ do
+  Bookkeeping $ fmap (Wrap . fmap Expr.fromVariable) $ do
     oldMap <- AccessState.get accessMap
     case Map.lookup idx oldMap of
-      Just var -> return $ fmap Expr.fromVariable var
+      Just var -> return var
       Nothing -> do
         var <- lift $ globalVariable idx
         AccessState.set accessMap $ Map.insert idx var oldMap
-        return (fmap Expr.fromVariable var)
+        return var
 
 variable ::
    (Verify.GlobalVar mode x (Record.ToIndex rec) (Var.Type idx) node,
@@ -750,7 +751,7 @@ fromEdges =
       case TD.edgeType se of
          TD.StructureEdge edge@(Idx.InPart s _) ->
             let equ xy = energy xy =%= dtime s ~* power xy
-                e = TD.structureEdgeFromDirEdge edge
+                e = Idx.liftInPart TD.structureEdgeFromDirEdge edge
             in  equ e <> equ (Idx.flip e) <>
                 (power (Idx.flip e) =%= eta e ~* power e)
          TD.StorageEdge _ -> mempty
@@ -772,7 +773,9 @@ fromNodes equalInOutSums =
                    map
                       (\edge ->
                          case TD.edgeType edge of
-                            TD.StructureEdge e -> Left $ TD.structureEdgeFromDirEdge e
+                            TD.StructureEdge e ->
+                               Left $
+                               Idx.liftInPart TD.structureEdgeFromDirEdge e
                             TD.StorageEdge e -> Right e) .
                    Set.toList
 
@@ -784,9 +787,9 @@ fromNodes equalInOutSums =
                       (splitFactors varsum energy (Arith.constOne (dtime sec)) xfactor)
                       (NonEmpty.fetch edges)
 
-                splitStoreEqs varsum prex edges =
+                splitStoreEqs varsum ener prex edges =
                    foldMap
-                      (splitFactors varsum stEnergy Arith.one
+                      (splitFactors varsum ener Arith.one
                          (stxfactor . prex . storageTransFromEdge))
                       (NonEmpty.fetch edges)
 
@@ -800,14 +803,15 @@ fromNodes equalInOutSums =
                             TD.ViewNodeIn rn ->
                                 fromInStorages rn outsStore
                                 <>
-                                splitStoreEqs (stoutsum rn) id outsStore
+                                splitStoreEqs (stoutsum rn) stEnergy id outsStore
                                 <>
                                 (withSecNode $ \sn ->
                                     stoutsum rn =%= integrate (insum sn))
                             TD.ViewNodeOut rn ->
-                                fromOutStorages insStore
+                                (withLocalVar $ \s ->
+                                   splitStoreEqs s maxEnergy Idx.flip insStore)
                                 <>
-                                splitStoreEqs (stinsum rn) Idx.flip insStore
+                                splitStoreEqs (stinsum rn) stEnergy Idx.flip insStore
                                 <>
                                 (withSecNode $ \sn ->
                                    stinsum rn =%= integrate (outsum sn))
@@ -859,9 +863,10 @@ getStorageSequences ::
   TD.DirSequFlowGraph node ->
   Map node (Map (Idx.AugSecNode node) (Maybe TD.StoreDir))
 getStorageSequences =
-  Map.unionsWith (Map.unionWith (error "duplicate boundary for node")) .
-  map (\(bn@(Idx.PartNode _ n), dir) -> Map.singleton n $ Map.singleton bn dir) .
-  Map.toList . Map.mapMaybe TD.maybeStorage . Gr.nodeLabels
+  MapU.curry "EquationSystem.getStorageSequences"
+    (\bn@(Idx.PartNode _ n) -> (n, bn))
+  .
+  Map.mapMaybe TD.maybeStorage . Gr.nodeLabels
 
 
 fromInStorages ::
@@ -878,18 +883,6 @@ fromInStorages sn outs =
    in  mconcat $
        zipWith (=%=) maxEnergies
           (stoutsum sn : zipWith (~-) maxEnergies stEnergies)
-
-fromOutStorages ::
-  (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeSectionScalar node,
-   Constant a, Record rec, Node.C node) =>
-  [Idx.ForNode XIdx.StorageEdge node] ->
-  EquationSystem mode rec node s a v
-fromOutStorages ins =
-   withLocalVar $ \s ->
-      foldMap
-         (splitFactors s maxEnergy Arith.one
-            (stxfactor . Idx.flip . storageTransFromEdge))
-         (NonEmpty.fetch ins)
 
 splitFactors ::
    (Verify.LocalVar mode x, Product x, Record rec) =>
@@ -913,9 +906,9 @@ splitFactors s ef one xf ns =
 
 queryEnv ::
   (Traversable env, Traversable rec) =>
-  env (RecordVariable mode rec s a) -> ST s (env (rec (Result a)))
+  env (RecordVariable mode rec s x) -> ST s (env (rec (Result x)))
 queryEnv =
-  traverse (traverse (fmap (maybe Undetermined Determined) . Sys.query))
+  traverse (traverse (fmap Result.fromMaybe . Sys.query))
 
 solveSimple ::
   (Record rec, Node.C node) =>
@@ -969,9 +962,9 @@ solve (_rngs, g) given =
 
 solveTracked ::
   (Verify.GlobalVar (Verify.Track output) a (Record.ToIndex rec) Var.ForNodeSectionScalar node,
-   Constant a, a ~ Scalar v, a ~ Pair.T termScalar an,
+   Constant a, a ~ Scalar v,
    Verify.GlobalVar (Verify.Track output) v (Record.ToIndex rec) Var.InSectionSignal node,
-   Product v, Integrate v, v ~ Pair.T termSignal vn,
+   Product v, Integrate v,
    Record rec, Node.C node) =>
   Flow.RangeGraph node ->
   (forall s. EquationSystem (Verify.Track output) rec node s a v) ->

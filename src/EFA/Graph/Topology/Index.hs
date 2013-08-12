@@ -180,6 +180,12 @@ boundaryFromAugSection =
 augSectionFromBoundary :: Boundary -> AugmentedSection
 augSectionFromBoundary (Following bnd) = allowExit bnd
 
+sectionFromBoundary :: Boundary -> Maybe Section
+sectionFromBoundary (Following bnd) =
+   case bnd of
+      Init -> Nothing
+      NoInit sec -> Just sec
+
 
 newtype Boundary = Following (Init Section) deriving (Show, Eq, Ord)
 
@@ -271,9 +277,7 @@ bndNodeFromSecNode (PartNode sec node) =
 
 secNodeFromBndNode :: BndNode node -> Maybe (SecNode node)
 secNodeFromBndNode (PartNode bnd node) =
-   case bnd of
-      Following Init -> Nothing
-      Following (NoInit sec) -> Just (PartNode sec node)
+   fmap (P.flip PartNode node) $ sectionFromBoundary bnd
 
 augNodeFromBndNode :: BndNode node -> AugSecNode node
 augNodeFromBndNode (PartNode bnd node) =
@@ -328,6 +332,34 @@ instance (Show sec) => TC.Show (StorageTrans sec) where showsPrec = showsPrec
 storageTransFromEdge :: StorageEdge sec node -> StorageTrans sec node
 storageTransFromEdge (StorageEdge s0 s1) =
    StorageTrans (allowExit s0) (allowInit s1)
+
+withStorageEdgeFromTrans ::
+   Ord part =>
+   (StorageEdge part node -> a) ->
+   (StorageEdge part node -> a) ->
+   StorageTrans part node -> a
+withStorageEdgeFromTrans fIn fOut (StorageTrans stFrom stTo) =
+   case (stFrom, stTo) of
+      (NoExit from, Exit) ->
+         fOut $ StorageEdge from Exit
+      (NoExit Init, NoExit (NoInit to)) ->
+         fOut $ StorageEdge Init (NoExit to)
+
+      (Exit, NoExit from) ->
+         fIn $ StorageEdge from Exit
+      (NoExit (NoInit to), NoExit Init) ->
+         fIn $ StorageEdge Init (NoExit to)
+
+      (NoExit (NoInit x), NoExit (NoInit y)) ->
+         case compare x y of
+            LT -> fOut $ StorageEdge (NoInit x) (NoExit y)
+            GT -> fIn  $ StorageEdge (NoInit y) (NoExit x)
+            EQ -> error "storage loop in section"
+
+      (NoExit Init, NoExit Init) ->
+         error "storage loop at Init"
+      (Exit, Exit) ->
+         error "storage loop at Exit"
 
 
 data InPart part idx node = InPart part (idx node)
