@@ -2,7 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-module EFA.Graph.SequenceFlow.EquationSystem (
+module EFA.Flow.Sequence.EquationSystem (
    EquationSystem, Expression, RecordExpression,
 
    solve, solveFromMeasurement, solveTracked,
@@ -26,8 +26,8 @@ import qualified EFA.Flow.EquationSystem as EqSys
 import EFA.Flow.EquationSystem
           (fromTopology, splitStoreEqs, withLocalVar, (=&=))
 
-import qualified EFA.Graph.SequenceFlow.Quantity as SeqFlow
-import qualified EFA.Graph.SequenceFlow as SeqFlowPlain
+import qualified EFA.Flow.Sequence.Quantity as SeqFlow
+import qualified EFA.Flow.Sequence as SeqFlowPlain
 
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env

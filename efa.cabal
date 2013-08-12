@@ -106,9 +106,6 @@ Library
     EFA.Graph.StateFlow.Index
     EFA.Graph.StateFlow.Environment
     EFA.Graph.StateFlow.EquationSystem
-    EFA.Graph.SequenceFlow
-    EFA.Graph.SequenceFlow.Quantity
-    EFA.Graph.SequenceFlow.EquationSystem
     EFA.Equation.System
     EFA.Equation.Result
     EFA.Equation.Environment
@@ -119,6 +116,9 @@ Library
     EFA.Equation.Stack
     EFA.Equation.Pair
     EFA.Equation.Verify
+    EFA.Flow.Sequence
+    EFA.Flow.Sequence.Quantity
+    EFA.Flow.Sequence.EquationSystem
     EFA.Application.Utility
     EFA.Application.Absolute
     EFA.Application.Symbolic

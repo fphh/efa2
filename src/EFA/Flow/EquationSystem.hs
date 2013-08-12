@@ -4,7 +4,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module EFA.Flow.EquationSystem where
 
-import qualified EFA.Graph.SequenceFlow.Quantity as SeqFlow
+import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.SystemRecord as SysRecord

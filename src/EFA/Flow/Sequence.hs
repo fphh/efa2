@@ -1,4 +1,4 @@
-module EFA.Graph.SequenceFlow where
+module EFA.Flow.Sequence where
 
 import qualified EFA.Application.Index as XIdx
 

@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-module EFA.Graph.SequenceFlow.Quantity (
+module EFA.Flow.Sequence.Quantity (
    Graph, SeqFlow.sequence, SeqFlow.storages,
    Topology, Sequence, Storages,
    Sums(..), Sum(..), Carry(..), Flow(..),
@@ -51,12 +51,12 @@ import qualified EFA.Application.Index as XIdx
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Variable as Var
 
-import qualified EFA.Graph.SequenceFlow as SeqFlow
+import qualified EFA.Flow.Sequence as SeqFlow
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Gr
 
-import EFA.Graph.SequenceFlow (sequence, storages)
+import EFA.Flow.Sequence (sequence, storages)
 
 import Control.Monad (mplus, (<=<))
 import Control.Applicative (Applicative, pure, liftA2, liftA3, (<*>), (<$))
