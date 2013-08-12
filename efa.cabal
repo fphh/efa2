@@ -108,6 +108,7 @@ Library
     EFA.Graph.StateFlow.EquationSystem
     EFA.Graph.SequenceFlow
     EFA.Graph.SequenceFlow.Quantity
+    EFA.Graph.SequenceFlow.EquationSystem
     EFA.Equation.System
     EFA.Equation.Result
     EFA.Equation.Environment
