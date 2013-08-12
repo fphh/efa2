@@ -22,6 +22,10 @@ module EFA.Graph.SequenceFlow.EquationSystem (
 
    ) where
 
+import qualified EFA.Flow.EquationSystem as EqSys
+import EFA.Flow.EquationSystem
+          (fromTopology, splitStoreEqs, withLocalVar, (=&=))
+
 import qualified EFA.Graph.SequenceFlow.Quantity as SeqFlow
 import qualified EFA.Graph.SequenceFlow as SeqFlowPlain
 
@@ -35,7 +39,6 @@ import EFA.Equation.SystemRecord
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph as Gr
 
 import EFA.Report.FormatValue (FormatValue)
 
@@ -65,16 +68,15 @@ import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.Writer (WriterT, runWriterT, tell)
 
 import Control.Monad.ST (ST, runST)
-import Control.Monad (liftM2, guard)
+import Control.Monad (liftM2)
 
 import Control.Applicative (Applicative, pure, liftA, liftA2)
 import Control.Category ((.))
 
 import qualified Data.Map as Map
-import qualified Data.NonEmpty as NonEmpty
 
 import Data.Map (Map)
-import Data.Traversable (Traversable, traverse, for, sequenceA)
+import Data.Traversable (Traversable, traverse, for)
 import Data.Foldable (foldMap, fold)
 import Data.Monoid (Monoid, (<>), mempty, mappend, mconcat)
 import Data.Tuple.HT (mapFst)
@@ -100,7 +102,7 @@ type
 
 type
    RecordExpression mode rec node s a v x =
-      Bookkeeping mode rec node s a v (Wrap rec (Expr mode s x))
+      Bookkeeping mode rec node s a v (SysRecord.Expr mode rec s x)
 
 
 newtype
@@ -179,14 +181,6 @@ sqrt ::
    RecordExpression mode rec node s a v x
 sqrt = liftF P.sqrt
 
-
-localVariable ::
-   (Record rec, Verify.LocalVar mode a, Sum a) =>
-   WriterT (System mode s) (ST s) (SysRecord.Variable mode rec s a)
-localVariable = do
-   vars <- lift $ sequenceA $ pure Verify.localVariable
-   tell $ SysRecord.rules vars
-   return vars
 
 globalVariable ::
    (Record rec, Verify.GlobalVar mode a (Record.ToIndex rec) var node,
@@ -275,17 +269,6 @@ constantRecord ::
 constantRecord = pure . Wrap . fmap Expr.constant
 
 
-withLocalVar ::
-   (Verify.LocalVar mode x, Sum x, Record rec) =>
-   (RecordExpression mode rec node s a v x ->
-    EquationSystem mode rec node s a v) ->
-   EquationSystem mode rec node s a v
-withLocalVar f = EquationSystem $ do
-   v <- lift localVariable
-   case f $ pure $ Wrap $ fmap Expr.fromVariable v of
-      EquationSystem act -> act
-
-
 newtype
    Lookup rec node s a v idx env =
       Lookup {
@@ -343,12 +326,12 @@ fromGraph ::
    SeqFlow.Graph node
       (SysRecord.Variable mode rec s a)
       (SysRecord.Variable mode rec s v) ->
-   EquationSystem mode rec node s a v
+   EqSys.System mode s
 fromGraph equalInOutSums gv =
    case
       SeqFlow.mapGraph
-         (pure . Wrap . fmap Expr.fromVariable)
-         (pure . Wrap . fmap Expr.fromVariable) gv of
+         (Wrap . fmap Expr.fromVariable)
+         (Wrap . fmap Expr.fromVariable) gv of
       g ->
          mconcat $
             foldMap
@@ -357,56 +340,12 @@ fromGraph equalInOutSums gv =
             fromStorageSequences g :
             []
 
-fromTopology ::
-   (Verify.LocalVar mode a, Sum a, a ~ Scalar v,
-    Verify.LocalVar mode v, Integrate v, Product v,
-    Record rec, Node.C node) =>
-   Bool ->
-   RecordExpression mode rec node s a v v ->
-   SeqFlow.Topology node
-      (RecordExpression mode rec node s a v a)
-      (RecordExpression mode rec node s a v v) ->
-   EquationSystem mode rec node s a v
-fromTopology equalInOutSums dtime topo =
-   foldMap (fromEdge dtime) (Gr.edgeLabels topo)
-   <>
-   foldMap (fromSums equalInOutSums) (Gr.nodeLabels topo)
-   <>
-   foldMap
-      (\(ins,ss,outs) ->
-         (flip foldMap (SeqFlow.sumIn ss) $ \s ->
-            splitStructEqs dtime (SeqFlow.flowSum s)
-               SeqFlow.flowEnergyIn SeqFlow.flowXIn $ Map.elems ins)
-         <>
-         (flip foldMap (SeqFlow.sumOut ss) $ \s ->
-            splitStructEqs dtime (SeqFlow.flowSum s)
-               SeqFlow.flowEnergyOut SeqFlow.flowXOut $ Map.elems outs))
-      (Gr.graphMap topo)
-
-fromEdge ::
-   (Sys.Value mode x, Product x, Record rec) =>
-   RecordExpression mode rec node s a v x ->
-   SeqFlow.Flow (RecordExpression mode rec node s a v x) ->
-   EquationSystem mode rec node s a v
-fromEdge dtime
-      (SeqFlow.Flow {
-         SeqFlow.flowEnergyOut = eout,
-         SeqFlow.flowPowerOut = pout,
-         SeqFlow.flowEnergyIn = ein,
-         SeqFlow.flowPowerIn = pin,
-         SeqFlow.flowEta = eta
-      }) =
-   (eout =%= dtime ~* pout) <>
-   (ein  =%= dtime ~* pin)  <>
-   (pout =%= eta ~* pin)
-
-
 fromStorageSequences ::
    (Verify.LocalVar mode a, Constant a, Record rec, Node.C node) =>
    SeqFlow.Graph node
-      (RecordExpression mode rec node s a v a)
-      (RecordExpression mode rec node s a v v) ->
-   EquationSystem mode rec node s a v
+      (SysRecord.Expr mode rec s a)
+      (SysRecord.Expr mode rec s v) ->
+   EqSys.System mode s
 fromStorageSequences g =
    let stoutsum sec node =
           maybe (error "fromStorageSequences inStorages") id $
@@ -436,13 +375,13 @@ fromStorageSequences g =
 
 fromStorageSequence ::
    (Sys.Value mode a, Sum a, Record rec, Node.C node,
-    ra ~ RecordExpression mode rec node s a v a,
-    rv ~ RecordExpression mode rec node s a v v) =>
+    ra ~ SysRecord.Expr mode rec s a,
+    rv ~ SysRecord.Expr mode rec s v) =>
    SeqFlow.Graph node ra rv ->
    node ->
    (ra, ra) ->
    Map Idx.Boundary ra ->
-   EquationSystem mode rec node s a v
+   EqSys.System mode s
 fromStorageSequence g node (init,exit) storageMap =
    let storages = Map.toList storageMap
    in  mconcat $
@@ -455,11 +394,11 @@ fromStorageSequence g node (init,exit) storageMap =
 
 charge ::
    (Sys.Value mode a, Sum a, Record rec, Node.C node,
-    ra ~ RecordExpression mode rec node s a v a) =>
+    ra ~ SysRecord.Expr mode rec s a) =>
    SeqFlow.Graph node ra rv ->
    node ->
    ra -> (Maybe Idx.Section, ra) ->
-   EquationSystem mode rec node s a v
+   EqSys.System mode s
 charge g node old (aug, now) =
    let sums =
           case aug of
@@ -468,124 +407,36 @@ charge g node old (aug, now) =
                 maybe (error "missing sum") id $
                 SeqFlow.lookupSums (Idx.secNode sec node) g
    in  condSum now (SeqFlow.sumOut sums)
-       =%=
+       =&=
        condSum old (SeqFlow.sumIn  sums)
 
 condSum :: (Sum a) => a -> Maybe (SeqFlow.Sum a v) -> a
 condSum x = maybe x (\s -> x ~+ SeqFlow.carrySum s)
 
 
-
-fromSums ::
-   (Verify.LocalVar mode a, Sum a, a ~ Scalar v,
-    Verify.LocalVar mode v, Integrate v,
-    Record rec,
-    ra ~ RecordExpression mode rec node s a v a,
-    rv ~ RecordExpression mode rec node s a v v) =>
-   Bool ->
-   SeqFlow.Sums ra rv ->
-   EquationSystem mode rec node s a v
-fromSums equalInOutSums s =
-   let sumIn  = SeqFlow.sumIn s
-       sumOut = SeqFlow.sumOut s
-   in  (fold $
-          guard equalInOutSums
-          >>
-          liftA2 equalSums sumIn sumOut)
-       <>
-       fromSum sumIn
-       <>
-       fromSum sumOut
-
-equalSums ::
-   (Sys.Value mode a, Sys.Value mode v, Record rec,
-    ra ~ RecordExpression mode rec node s a v a,
-    rv ~ RecordExpression mode rec node s a v v) =>
-   SeqFlow.Sum ra rv ->
-   SeqFlow.Sum ra rv ->
-   EquationSystem mode rec node s a v
-equalSums x y =
-   (SeqFlow.flowSum x =%= SeqFlow.flowSum y)
-   <>
-   (SeqFlow.carrySum x =%= SeqFlow.carrySum y)
-
-fromSum ::
-   (Verify.LocalVar mode a, Sum a, a ~ Scalar v,
-    Verify.LocalVar mode v, Integrate v,
-    Record rec,
-    ra ~ RecordExpression mode rec node s a v a,
-    rv ~ RecordExpression mode rec node s a v v) =>
-   Maybe (SeqFlow.Sum ra rv) ->
-   EquationSystem mode rec node s a v
-fromSum =
-   foldMap $ \s -> SeqFlow.carrySum s =%= Arith.integrate (SeqFlow.flowSum s)
-
-
-splitStructEqs ::
-   (Verify.LocalVar mode x, Product x, Record rec,
-    rx ~ RecordExpression mode rec node s a v x) =>
-   rx ->
-   rx ->
-   (SeqFlow.Flow rx -> rx) ->
-   (SeqFlow.Flow rx -> rx) ->
-   [SeqFlow.Flow rx] ->
-   EquationSystem mode rec node s a v
-splitStructEqs dtime varsum energy xfactor =
-   foldMap (splitFactors varsum energy (Arith.constOne dtime) xfactor)
-   .
-   NonEmpty.fetch
-
-
 fromInStorages ::
    (Verify.LocalVar mode x, Constant x, Record rec,
-    rx ~ RecordExpression mode rec node s a v x) =>
+    rx ~ SysRecord.Expr mode rec s x) =>
    rx -> [SeqFlow.Carry rx] ->
-   EquationSystem mode rec node s a v
+   EqSys.System mode s
 fromInStorages stoutsum outs =
    let maxEnergies = map SeqFlow.carryMaxEnergy outs
        stEnergies  = map SeqFlow.carryEnergy outs
    in  mconcat $
        splitStoreEqs stoutsum SeqFlow.carryEnergy SeqFlow.carryXOut outs :
-       zipWith (=%=) maxEnergies
+       zipWith (=&=) maxEnergies
           (stoutsum : zipWith (~-) maxEnergies stEnergies)
 
 fromOutStorages ::
    (Verify.LocalVar mode x, Constant x, Record rec,
-    rx ~ RecordExpression mode rec node s a v x) =>
+    rx ~ SysRecord.Expr mode rec s x) =>
    rx -> [SeqFlow.Carry rx] ->
-   EquationSystem mode rec node s a v
+   EqSys.System mode s
 fromOutStorages stinsum ins =
    (withLocalVar $ \s ->
       splitStoreEqs s SeqFlow.carryMaxEnergy SeqFlow.carryXIn ins)
    <>
    splitStoreEqs stinsum SeqFlow.carryEnergy SeqFlow.carryXIn ins
-
-splitStoreEqs ::
-   (Verify.LocalVar mode x, Constant x, Record rec,
-    rx ~ RecordExpression mode rec node s a v x) =>
-   rx ->
-   (SeqFlow.Carry rx -> rx) ->
-   (SeqFlow.Carry rx -> rx) ->
-   [SeqFlow.Carry rx] ->
-   EquationSystem mode rec node s a v
-splitStoreEqs varsum energy xfactor =
-   foldMap (splitFactors varsum energy Arith.one xfactor)
-   .
-   NonEmpty.fetch
-
-splitFactors ::
-   (Verify.LocalVar mode x, Product x, Record rec,
-    rx ~ RecordExpression mode rec node s a v x) =>
-   rx -> (secnode -> rx) ->
-   rx -> (secnode -> rx) ->
-   NonEmpty.T [] secnode -> EquationSystem mode rec node s a v
-splitFactors s ef one xf ns =
-   (s =%= NonEmpty.foldl1 (~+) (fmap ef ns))
-   <>
-   (one =%= NonEmpty.foldl1 (~+) (fmap xf ns))
-   <>
-   (foldMap (\n -> ef n =%= s ~* xf n) ns)
-
 
 
 variables ::
@@ -635,12 +486,12 @@ setup ::
          (SysRecord.Variable mode rec s a)
          (SysRecord.Variable mode rec s v),
        Sys.T mode s ())
-setup equalInOutSums gr sys = do
+setup equalInOutSums gr given = do
    (vars, System eqs) <-
       runWriterT $ do
          vars <- variables gr
-         flip runReaderT vars $ runEquationSystem $
-            fromGraph equalInOutSums vars <> sys
+         EqSys.runSystem $ fromGraph equalInOutSums vars
+         runReaderT (runEquationSystem given) vars
          return vars
    return (vars, eqs)
 
