@@ -129,6 +129,8 @@ Library
     EFA.Application.EtaSys
     EFA.Application.Balance
     EFA.Application.Optimisation
+  Other-Modules:
+    EFA.Equation.SystemRecord
 
 
 -- sollte man auf Cabal-Test umstellen,

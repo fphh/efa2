@@ -45,10 +45,15 @@ module EFA.Equation.System (
   ) where
 
 import qualified EFA.Application.Index as XIdx
+
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Variable as Var
+import EFA.Equation.SystemRecord
+          (System(System), Expr, RecordVariable, Record, Wrap(Wrap, unwrap),
+           recordRules, equalRecord, liftE1, liftE2)
+
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
@@ -85,7 +90,7 @@ import Control.Monad.Trans.Writer (WriterT, runWriterT, tell)
 import Control.Monad.ST (ST, runST)
 import Control.Monad (liftM2)
 
-import Control.Applicative (Applicative, pure, liftA, liftA2, liftA3)
+import Control.Applicative (Applicative, pure, liftA, liftA2)
 import Control.Category ((.))
 
 import qualified Data.Map as Map
@@ -94,8 +99,6 @@ import qualified Data.List.HT as ListHT
 import qualified Data.List as List
 
 import qualified Data.NonEmpty as NonEmpty
-
-import qualified Data.Foldable as Fold
 
 import Data.Map (Map)
 import Data.Traversable (Traversable, traverse, for, sequenceA)
@@ -115,16 +118,6 @@ type
             (RecordVariable mode rec s v))
          (WriterT (System mode s) (ST s))
 
-type RecordVariable mode rec s x = rec (Sys.Variable mode s x)
-
-newtype System mode s = System (Sys.T mode s ())
-
-instance Monoid (System mode s) where
-   mempty = System $ return ()
-   mappend (System x) (System y) = System $ x >>! y
-
-
-type Expr mode = Expr.T mode
 
 type
    Expression mode rec node s a v x =
@@ -133,9 +126,6 @@ type
 type
    RecordExpression mode rec node s a v x =
       Bookkeeping mode rec node s a v (Wrap rec (Expr mode s x))
-
-newtype Wrap rec a = Wrap {unwrap :: rec a}
-   deriving (Functor, Applicative, Fold.Foldable, Traversable)
 
 
 newtype
@@ -168,28 +158,6 @@ liftF2 ::
   RecordExpression mode rec node s a v z
 liftF2 = liftA2 . liftE2 . Expr.fromRule3 . Sys.assignment3
 
-
-instance (Record rec, Sum a) => Sum (Wrap rec a) where
-   (~+) = liftE2 (~+)
-   (~-) = liftE2 (~-)
-   negate = liftE1 Arith.negate
-
-instance (Record rec, Product a) => Product (Wrap rec a) where
-   (~*) = liftE2 (~*)
-   (~/) = liftE2 (~/)
-   recip = liftE1 Arith.recip
-   constOne = liftE1 Arith.constOne
-
-instance (Record rec, Constant a) => Constant (Wrap rec a) where
-   zero = pure zero
-   fromInteger  = liftE0 . Arith.fromInteger
-   fromRational = liftE0 . Arith.fromRational
-
-instance
-   (Record rec, Integrate v, Sum (Scalar v)) =>
-      Integrate (Wrap rec v) where
-   type Scalar (Wrap rec v) = Wrap rec (Scalar v)
-   integrate = liftE1 integrate
 
 {-
 -- only needed for simplified arithmetic on Absolute records
@@ -295,111 +263,6 @@ globalVariable idx = do
          Verify.globalVariable $ Idx.Record recIdx idx
    tell $ recordRules vars
    return vars
-
-
-class (Traversable rec, Applicative rec, Record.IndexSet rec) => Record rec where
-   recordRules ::
-      (Sys.Value mode a, Sum a) =>
-      RecordVariable mode rec s a -> System mode s
-   equalRecord ::
-      (Verify.LocalVar mode a) =>
-      Wrap rec (Expr mode s a) ->
-      Wrap rec (Expr mode s a) ->
-      System mode s
-   liftE0 :: (Sum x) => x -> Wrap rec x
-   liftE1 ::
-      (Sum y) =>
-      (x -> y) ->
-      Wrap rec x -> Wrap rec y
-   liftE2 ::
-      (Sum z) =>
-      (x -> y -> z) ->
-      Wrap rec x -> Wrap rec y -> Wrap rec z
-
-
-instance Record Record.Absolute where
-
-   recordRules _ = mempty
-
-   equalRecord (Wrap (Record.Absolute x)) (Wrap (Record.Absolute y)) =
-      System (x =:= y)
-
-   liftE0 = Wrap . Record.Absolute
-
-   liftE1 f (Wrap (Record.Absolute x)) = Wrap $ Record.Absolute $ f x
-
-   liftE2 f (Wrap (Record.Absolute x)) (Wrap (Record.Absolute y)) =
-      Wrap $ Record.Absolute $ f x y
-
-
-instance Record Record.Delta where
-
-   recordRules vars = System $
-      Arith.ruleAdd (Record.before vars) (Record.delta vars) (Record.after vars)
-
-   {-
-   I omit equality on the delta part since it would be redundant.
-   -}
-   equalRecord (Wrap recX) (Wrap recY) =
-      System (Record.before recX =:= Record.before recY) <>
-      System (Record.after  recX =:= Record.after  recY)
-
-   liftE0 x = Wrap $ Record.deltaCons x x
-
-   liftE1 f (Wrap rec) =
-      Wrap $
-      Record.deltaCons (f $ Record.before rec) (f $ Record.after rec)
-
-   liftE2 f (Wrap recX) (Wrap recY) =
-      Wrap $
-      Record.deltaCons
-         (f (Record.before recX) (Record.before recY))
-         (f (Record.after  recX) (Record.after  recY))
-
-
--- maybe we should move this to Record, together with the 'Wrap' type
-extDeltaCons ::
-   (Record f, Sum a) => Wrap f a -> Wrap f a -> Record.ExtDelta f a
-extDeltaCons b a =
-   Record.ExtDelta {
-      Record.extBefore = unwrap b,
-      Record.extAfter = unwrap a,
-      Record.extDelta = unwrap (a ~- b)
-   }
-
-
-instance (Record rec) => Record (Record.ExtDelta rec) where
-
-   recordRules vars =
-      recordRules (Record.extBefore vars) <>
-      recordRules (Record.extDelta vars) <>
-      recordRules (Record.extAfter vars) <>
-      (System $ Fold.sequence_ $
-         liftA3 Arith.ruleAdd
-            (Record.extBefore vars)
-            (Record.extDelta vars)
-            (Record.extAfter vars))
-
-   {-
-   I omit equality on the delta part since it would be redundant.
-   -}
-   equalRecord (Wrap recX) (Wrap recY) =
-      equalRecord (Wrap $ Record.extBefore recX) (Wrap $ Record.extBefore recY) <>
-      equalRecord (Wrap $ Record.extAfter  recX) (Wrap $ Record.extAfter  recY)
-
-   liftE0 x = Wrap $ extDeltaCons (liftE0 x) (liftE0 x)
-
-   liftE1 f (Wrap rec) =
-      Wrap $
-      extDeltaCons
-         (liftE1 f $ Wrap $ Record.extBefore rec)
-         (liftE1 f $ Wrap $ Record.extAfter rec)
-
-   liftE2 f (Wrap recX) (Wrap recY) =
-      Wrap $
-      extDeltaCons
-         (liftE2 f (Wrap $ Record.extBefore recX) (Wrap $ Record.extBefore recY))
-         (liftE2 f (Wrap $ Record.extAfter  recX) (Wrap $ Record.extAfter  recY))
 
 
 infix 0 =.=, =%=
