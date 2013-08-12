@@ -46,17 +46,21 @@ module EFA.Flow.Sequence.Quantity (
    LookupSignal, lookupSignal,
    ) where
 
+
+import qualified EFA.Flow.Quantity as Quant
+import qualified EFA.Flow.Sequence as SeqFlow
+import EFA.Flow.Sequence (sequence, storages)
+import EFA.Flow.Quantity
+          (Topology, Sums(..), Sum(..), Flow(..), mapSums, traverseSums)
+
 import qualified EFA.Application.Index as XIdx
 
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Variable as Var
 
-import qualified EFA.Flow.Sequence as SeqFlow
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Gr
-
-import EFA.Flow.Sequence (sequence, storages)
 
 import Control.Monad (mplus, (<=<))
 import Control.Applicative (Applicative, pure, liftA2, liftA3, (<*>), (<$))
@@ -77,10 +81,6 @@ type
    Storages node a = SeqFlow.Storages node a a a (Carry a)
 
 type
-   Topology node a v =
-      Gr.Graph node Gr.DirEdge (Sums a v) (Flow v)
-
-type
    Sequence node a v = SeqFlow.Sequence node Gr.DirEdge v (Sums a v) (Flow v)
 
 type
@@ -93,33 +93,19 @@ data Carry a =
       carryMaxEnergy, carryEnergy, carryXOut, carryXIn :: a
    }
 
-data Flow v =
-   Flow {
-      flowPowerOut, flowEnergyOut, flowXOut,
-      flowEta,
-      flowXIn, flowEnergyIn, flowPowerIn :: v
-   }
 
-data Sums a v =
-   Sums { sumIn, sumOut :: Maybe (Sum a v) }
-
-data Sum a v =
-   Sum { carrySum :: a, flowSum :: v }
+instance Quant.Carry Carry where
+   carryEnergy = carryEnergy
+   carryXOut   = carryXOut
+   carryXIn    = carryXIn
 
 
 instance Functor Carry where
    fmap f (Carry me e xout xin) =
       Carry (f me) (f e) (f xout) (f xin)
 
-instance Functor Flow where
-   fmap f (Flow pout eout xout eta xin ein pin) =
-      Flow (f pout) (f eout) (f xout) (f eta) (f xin) (f ein) (f pin)
-
 
 instance Foldable Carry where
-   foldMap = foldMapDefault
-
-instance Foldable Flow where
    foldMap = foldMapDefault
 
 
@@ -127,23 +113,11 @@ instance Traversable Carry where
    traverse f (Carry me e xout xin) =
       pure Carry <*> f me <*> f e <*> f xout <*> f xin
 
-instance Traversable Flow where
-   traverse f (Flow pout eout xout eta xin ein pin) =
-      pure Flow <*> f pout <*> f eout <*> f xout <*> f eta <*> f xin <*> f ein <*> f pin
-
 
 instance Applicative Carry where
    pure a = Carry a a a a
    Carry fme fe fxout fxin <*> Carry me e xout xin =
       Carry (fme me) (fe e) (fxout xout) (fxin xin)
-
-instance Applicative Flow where
-   pure a = Flow a a a a a a a
-   Flow fpout feout fxout feta fxin fein fpin
-         <*> Flow pout eout xout eta xin ein pin =
-      Flow
-         (fpout pout) (feout eout) (fxout xout)
-         (feta eta) (fxin xin) (fein ein) (fpin pin)
 
 
 mapGraph ::
@@ -167,26 +141,6 @@ mapSequence f g =
           (g dt,
            Gr.mapNode (mapSums f g) $
            Gr.mapEdge (fmap g) gr)))
-
-mapSums ::
-   (a0 -> a1) ->
-   (v0 -> v1) ->
-   Sums a0 v0 -> Sums a1 v1
-mapSums f g s =
-   Sums {
-      sumIn  = fmap (mapSum f g) $ sumIn  s,
-      sumOut = fmap (mapSum f g) $ sumOut s
-   }
-
-mapSum ::
-   (a0 -> a1) ->
-   (v0 -> v1) ->
-   Sum a0 v0 -> Sum a1 v1
-mapSum f g s =
-   Sum {
-      carrySum = f $ carrySum s,
-      flowSum  = g $ flowSum  s
-   }
 
 mapStorages ::
    (a0 -> a1) ->
@@ -220,24 +174,6 @@ traverseSequence f g =
          fmap ((,) rng) $
          liftA2 (,) (g dt)
             (Gr.traverse (traverseSums f g) (traverse g) gr))
-
-traverseSums ::
-   (Applicative f) =>
-   (a0 -> f a1) ->
-   (v0 -> f v1) ->
-   Sums a0 v0 -> f (Sums a1 v1)
-traverseSums f g (Sums i o) =
-   liftA2 Sums
-      (traverse (traverseSum f g) i)
-      (traverse (traverseSum f g) o)
-
-traverseSum ::
-   (Applicative f) =>
-   (a0 -> f a1) ->
-   (v0 -> f v1) ->
-   Sum a0 v0 -> f (Sum a1 v1)
-traverseSum f g (Sum cs fs) =
-   liftA2 Sum (f cs) (g fs)
 
 traverseStorages ::
    (Applicative f) =>

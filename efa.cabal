@@ -131,6 +131,7 @@ Library
     EFA.Application.Optimisation
   Other-Modules:
     EFA.Equation.SystemRecord
+    EFA.Flow.Quantity
     EFA.Flow.EquationSystem
 
 

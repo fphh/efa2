@@ -4,7 +4,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module EFA.Flow.EquationSystem where
 
-import qualified EFA.Flow.Sequence.Quantity as SeqFlow
+import qualified EFA.Flow.Quantity as Quant
 
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.SystemRecord as SysRecord
@@ -85,7 +85,7 @@ fromTopology ::
     Record rec, Node.C node) =>
    Bool ->
    Expr mode rec s v ->
-   SeqFlow.Topology node
+   Quant.Topology node
       (Expr mode rec s a)
       (Expr mode rec s v) ->
    System mode s
@@ -96,27 +96,27 @@ fromTopology equalInOutSums dtime topo =
    <>
    foldMap
       (\(ins,ss,outs) ->
-         (flip foldMap (SeqFlow.sumIn ss) $ \s ->
-            splitStructEqs dtime (SeqFlow.flowSum s)
-               SeqFlow.flowEnergyIn SeqFlow.flowXIn $ Map.elems ins)
+         (flip foldMap (Quant.sumIn ss) $ \s ->
+            splitStructEqs dtime (Quant.flowSum s)
+               Quant.flowEnergyIn Quant.flowXIn $ Map.elems ins)
          <>
-         (flip foldMap (SeqFlow.sumOut ss) $ \s ->
-            splitStructEqs dtime (SeqFlow.flowSum s)
-               SeqFlow.flowEnergyOut SeqFlow.flowXOut $ Map.elems outs))
+         (flip foldMap (Quant.sumOut ss) $ \s ->
+            splitStructEqs dtime (Quant.flowSum s)
+               Quant.flowEnergyOut Quant.flowXOut $ Map.elems outs))
       (Gr.graphMap topo)
 
 fromEdge ::
    (Sys.Value mode x, Product x, Record rec) =>
    Expr mode rec s x ->
-   SeqFlow.Flow (Expr mode rec s x) ->
+   Quant.Flow (Expr mode rec s x) ->
    System mode s
 fromEdge dtime
-      (SeqFlow.Flow {
-         SeqFlow.flowEnergyOut = eout,
-         SeqFlow.flowPowerOut = pout,
-         SeqFlow.flowEnergyIn = ein,
-         SeqFlow.flowPowerIn = pin,
-         SeqFlow.flowEta = eta
+      (Quant.Flow {
+         Quant.flowEnergyOut = eout,
+         Quant.flowPowerOut = pout,
+         Quant.flowEnergyIn = ein,
+         Quant.flowPowerIn = pin,
+         Quant.flowEta = eta
       }) =
    (eout =&= dtime ~* pout) <>
    (ein  =&= dtime ~* pin)  <>
@@ -130,11 +130,11 @@ fromSums ::
     ra ~ Expr mode rec s a,
     rv ~ Expr mode rec s v) =>
    Bool ->
-   SeqFlow.Sums ra rv ->
+   Quant.Sums ra rv ->
    System mode s
 fromSums equalInOutSums s =
-   let sumIn  = SeqFlow.sumIn s
-       sumOut = SeqFlow.sumOut s
+   let sumIn  = Quant.sumIn s
+       sumOut = Quant.sumOut s
    in  (fold $
           guard equalInOutSums
           >>
@@ -148,13 +148,13 @@ equalSums ::
    (Sys.Value mode a, Sys.Value mode v, Record rec,
     ra ~ Expr mode rec s a,
     rv ~ Expr mode rec s v) =>
-   SeqFlow.Sum ra rv ->
-   SeqFlow.Sum ra rv ->
+   Quant.Sum ra rv ->
+   Quant.Sum ra rv ->
    System mode s
 equalSums x y =
-   (SeqFlow.flowSum x =&= SeqFlow.flowSum y)
+   (Quant.flowSum x =&= Quant.flowSum y)
    <>
-   (SeqFlow.carrySum x =&= SeqFlow.carrySum y)
+   (Quant.carrySum x =&= Quant.carrySum y)
 
 fromSum ::
    (Verify.LocalVar mode a, Sum a, a ~ Scalar v,
@@ -162,19 +162,19 @@ fromSum ::
     Record rec,
     ra ~ Expr mode rec s a,
     rv ~ Expr mode rec s v) =>
-   Maybe (SeqFlow.Sum ra rv) ->
+   Maybe (Quant.Sum ra rv) ->
    System mode s
 fromSum =
-   foldMap $ \s -> SeqFlow.carrySum s =&= Arith.integrate (SeqFlow.flowSum s)
+   foldMap $ \s -> Quant.carrySum s =&= Arith.integrate (Quant.flowSum s)
 
 splitStructEqs ::
    (Verify.LocalVar mode x, Product x, Record rec,
     rx ~ Expr mode rec s x) =>
    rx ->
    rx ->
-   (SeqFlow.Flow rx -> rx) ->
-   (SeqFlow.Flow rx -> rx) ->
-   [SeqFlow.Flow rx] ->
+   (Quant.Flow rx -> rx) ->
+   (Quant.Flow rx -> rx) ->
+   [Quant.Flow rx] ->
    System mode s
 splitStructEqs dtime varsum energy xfactor =
    foldMap (splitFactors varsum energy (Arith.constOne dtime) xfactor)
@@ -184,27 +184,30 @@ splitStructEqs dtime varsum energy xfactor =
 
 fromInStorages ::
    (Verify.LocalVar mode x, Constant x, Record rec,
-    rx ~ SysRecord.Expr mode rec s x) =>
-   rx -> [SeqFlow.Carry rx] ->
+    rx ~ SysRecord.Expr mode rec s x,
+    Quant.Carry carry) =>
+   rx -> [carry rx] ->
    System mode s
 fromInStorages stoutsum outs =
-   splitStoreEqs stoutsum SeqFlow.carryEnergy SeqFlow.carryXOut outs
+   splitStoreEqs stoutsum Quant.carryEnergy Quant.carryXOut outs
 
 fromOutStorages ::
    (Verify.LocalVar mode x, Constant x, Record rec,
-    rx ~ SysRecord.Expr mode rec s x) =>
-   rx -> [SeqFlow.Carry rx] ->
+    rx ~ SysRecord.Expr mode rec s x,
+    Quant.Carry carry) =>
+   rx -> [carry rx] ->
    System mode s
 fromOutStorages stinsum ins =
-   splitStoreEqs stinsum SeqFlow.carryEnergy SeqFlow.carryXIn ins
+   splitStoreEqs stinsum Quant.carryEnergy Quant.carryXIn ins
 
 splitStoreEqs ::
    (Verify.LocalVar mode x, Constant x, Record rec,
-    rx ~ Expr mode rec s x) =>
+    rx ~ Expr mode rec s x,
+    Quant.Carry carry) =>
    rx ->
-   (SeqFlow.Carry rx -> rx) ->
-   (SeqFlow.Carry rx -> rx) ->
-   [SeqFlow.Carry rx] ->
+   (carry rx -> rx) ->
+   (carry rx -> rx) ->
+   [carry rx] ->
    System mode s
 splitStoreEqs varsum energy xfactor =
    foldMap (splitFactors varsum energy Arith.one xfactor)
