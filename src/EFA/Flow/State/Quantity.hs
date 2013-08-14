@@ -14,9 +14,8 @@ import qualified EFA.Graph.StateFlow.Environment as StateEnv
 import qualified EFA.Graph.StateFlow.Index as StateIdx
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as TD
-import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph as Gr
-import EFA.Graph.Topology (FlowTopology, ClassifiedTopology, StateFlowGraph)
+import EFA.Graph.Topology (ClassifiedTopology, StateFlowGraph)
 
 import EFA.Equation.Arithmetic ((~+), (~/))
 import EFA.Equation.Result (Result)
@@ -473,18 +472,6 @@ xMap divide sumMap =
              Just s -> divide e s)
 
 
-stateFlow ::
-   (Ord node, Ord nodeLabel, Arith.Product a) =>
-   SequData (Topology node nodeLabel) ->
-   Env.Complete node a a ->
-   (Map Idx.State (Topology node nodeLabel),
-    StateEnv.Complete node a a)
-stateFlow sq env =
-   case stateMaps sq of
-      (stateMap, secMap) ->
-         (stateMap, envFromSequenceEnv secMap env)
-
-
 
 stateFromClassTopo ::
    (Ord node) =>
@@ -519,33 +506,4 @@ getStorageSequences =
          Map.mapMaybe TD.maybeStorage $ Gr.nodeLabels g)
 
 
-{- |
-Insert all possible storage edges.
--}
-stateGraphAllStorageEdges ::
-   (Ord node) =>
-   SequData (FlowTopology node) ->
-   StateFlowGraph node
-stateGraphAllStorageEdges sd =
-   Flow.insEdges (fmap (storageEdges . Map.mapMaybe id) tracks) $
-   Flow.insNodes (Map.keys tracks) $
-   Fold.fold $ Map.mapWithKey stateFromClassTopo sq
-  where sq = fmap TD.classifyStorages $ fst $ stateMaps sd
-        tracks = getStorageSequences sq
 
-{- |
-Insert only the storage edges that have counterparts in the sequence flow graph.
--}
-stateGraphActualStorageEdges ::
-   (Ord node) =>
-   SequData (FlowTopology node) ->
-   StateFlowGraph node
-stateGraphActualStorageEdges sd =
-   Flow.insEdges
-      (fmap (map (mapStorageEdge "stateGraph" secMap) .
-             Flow.storageEdges . Map.mapMaybe id) tracks) $
-   Flow.insNodes (Map.keys tracks) $
-   Fold.fold $ Map.mapWithKey stateFromClassTopo stateMap
-  where sq = fmap TD.classifyStorages sd
-        (stateMap, secMap) = stateMaps sq
-        tracks = Flow.getStorageSequences sq
