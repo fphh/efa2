@@ -20,7 +20,6 @@ import EFA.Graph.Topology (ClassifiedTopology, StateFlowGraph)
 import EFA.Equation.Arithmetic ((~+), (~/))
 import EFA.Equation.Result (Result)
 
-import qualified EFA.Signal.SequenceData as SD
 import EFA.Signal.SequenceData (SequData)
 
 import qualified EFA.Utility.Map as MapU
@@ -150,7 +149,7 @@ traverseStorages f =
 
 
 
-type Topology node nodeLabel = Gr.Graph node Gr.EitherEdge nodeLabel ()
+type Topology node nodeLabel = Gr.Graph node Gr.DirEdge nodeLabel ()
 
 _states ::
    (Ord node, Ord nodeLabel) =>
@@ -177,7 +176,7 @@ identify k = do
 
 stateMaps ::
    (Ord node, Ord nodeLabel) =>
-   SequData (Topology node nodeLabel) ->
+   Map Idx.Section (Topology node nodeLabel) ->
    (Map Idx.State (Topology node nodeLabel),
     Map Idx.Section Idx.State)
 stateMaps sq =
@@ -187,7 +186,7 @@ stateMaps sq =
       (\(sec,g) -> do
          i <- identify g
          return (Map.singleton i g, Map.singleton sec i)) $
-   SD.mapWithSection (,) sq
+   Map.mapWithKey (,) sq
 
 
 type
@@ -201,22 +200,23 @@ fromSequenceFlowGen ::
    (a -> a -> a) ->
    a ->
    Bool ->
-   Map Idx.Section Idx.State ->
    SeqFlowQuant.Graph node a v ->
    CumGraph node a
-fromSequenceFlowGen integrate add zero allStEdges secMap gr =
-   let sts =
+fromSequenceFlowGen integrate add zero allStEdges gr =
+   let sq = SeqFlowQuant.sequence gr
+       secMap =
+          snd $ stateMaps $
+          fmap (Gr.mapEdge (const ()) . Gr.mapNode (const ()) . snd . snd) sq
+       sts =
           flip cumulateSequence secMap
              (\(dtime0, gr0) (dtime1, gr1) ->
                 (add dtime0 dtime1,
-                 Gr.checkedZipWith "StateFlow.fromSequenceFlowActualSE"
+                 Gr.checkedZipWith "StateFlow.fromSequenceFlow"
                     (addSums add)
                     (liftA2 add)
                     gr0 gr1)) $
-          fmap (mapSnd $ Gr.mapEdge $ cumFromFlow) $
-          fmap snd $
-          SeqFlowQuant.mapSequence id integrate $
-          SeqFlowQuant.sequence gr
+          fmap ((mapSnd $ Gr.mapEdge $ cumFromFlow) . snd) $
+          SeqFlowQuant.mapSequence id integrate sq
    in  StateFlow.Graph {
           storages =
              Map.mapWithKey
@@ -506,4 +506,23 @@ getStorageSequences =
          Map.mapMaybe TD.maybeStorage $ Gr.nodeLabels g)
 
 
+{- |
+If allStEdges
+  Then: Insert all possible storage edges.
+  Else: Insert only the storage edges that have counterparts in the sequence flow graph.
+-}
+fromSequenceFlow ::
+   (Ord node, Arith.Constant a, a ~ Arith.Scalar v, Arith.Integrate v) =>
+   Bool ->
+   SeqFlowQuant.Graph node a v ->
+   CumGraph node a
+fromSequenceFlow =
+   fromSequenceFlowGen Arith.integrate (~+) Arith.zero
 
+fromSequenceFlowResult ::
+   (Ord node, Arith.Constant a, a ~ Arith.Scalar v, Arith.Integrate v) =>
+   Bool ->
+   SeqFlowQuant.Graph node (Result a) (Result v) ->
+   CumGraph node (Result a)
+fromSequenceFlowResult =
+   fromSequenceFlowGen (fmap Arith.integrate) (liftA2 (~+)) (pure Arith.zero)
