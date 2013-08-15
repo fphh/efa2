@@ -31,23 +31,20 @@ import EFA.Flow.EquationSystem
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Variable as Var
+import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.SystemRecord as SysRecord
+import qualified EFA.Equation.Arithmetic as Arith
+import EFA.Equation.Result(Result(..))
 import EFA.Equation.SystemRecord
           (System(System), Record, Wrap(Wrap, unwrap))
-
-import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Topology.Node as Node
-
-import EFA.Report.FormatValue (FormatValue)
-
-import qualified EFA.Equation.Arithmetic as Arith
-import qualified EFA.Equation.Result as Result
 import EFA.Equation.Arithmetic
           (Sum, (~+), (~-),
            Product, (~*), (~/),
            Constant, zero,
            Integrate, Scalar, integrate)
-import EFA.Equation.Result(Result(..))
+
+import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Graph.Topology.Node as Node
 
 import qualified EFA.Utility.Map as MapU
 import EFA.Utility ((>>!))
@@ -74,7 +71,7 @@ import Control.Category ((.))
 import qualified Data.Map as Map
 
 import Data.Map (Map)
-import Data.Traversable (Traversable, traverse, for)
+import Data.Traversable (Traversable, traverse)
 import Data.Foldable (foldMap, fold)
 import Data.Monoid (Monoid, (<>), mempty, mappend, mconcat)
 import Data.Tuple.HT (mapFst)
@@ -178,19 +175,6 @@ sqrt ::
    RecordExpression mode rec node s a v x ->
    RecordExpression mode rec node s a v x
 sqrt = liftF P.sqrt
-
-
-globalVariable ::
-   (Record rec, Verify.GlobalVar mode a (Record.ToIndex rec) var node,
-    Sum a, FormatValue (var node)) =>
-   var node ->
-   WriterT (System mode s) (ST s) (SysRecord.Variable mode rec s a)
-globalVariable var = do
-   vars <-
-      lift $ for Record.indices $ \recIdx ->
-         Verify.globalVariableDyn $ Idx.Record recIdx var
-   tell $ SysRecord.rules vars
-   return vars
 
 
 infix 0 =.=, =%=
@@ -450,8 +434,8 @@ variables =
    SeqFlow.traverseGraph id id
    .
    SeqFlow.mapGraphWithVar
-      (\var _ -> globalVariable var)
-      (\var _ -> globalVariable var)
+      (\var _ -> EqSys.globalVariable var)
+      (\var _ -> EqSys.globalVariable var)
 
 query ::
    (Traversable rec) =>

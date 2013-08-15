@@ -6,19 +6,22 @@ module EFA.Flow.EquationSystem where
 
 import qualified EFA.Flow.Quantity as Quant
 
+import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.SystemRecord as SysRecord
-import EFA.Equation.SystemRecord (Expr, Record, Wrap(Wrap))
-
-import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph as Gr
-
 import qualified EFA.Equation.Arithmetic as Arith
+import EFA.Equation.SystemRecord (Expr, Record, Wrap(Wrap))
 import EFA.Equation.Arithmetic
           (Sum, (~+),
            Product, (~*),
            Constant,
            Integrate, Scalar)
+
+import qualified EFA.Graph.Topology.Node as Node
+import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Graph as Gr
+
+import EFA.Report.FormatValue (FormatValue)
 
 import EFA.Utility ((>>!))
 
@@ -37,7 +40,7 @@ import Control.Applicative (Applicative, pure, liftA2)
 import qualified Data.Map as Map
 import qualified Data.NonEmpty as NonEmpty
 
-import Data.Traversable (Traversable, sequenceA)
+import Data.Traversable (Traversable, sequenceA, for)
 import Data.Foldable (foldMap, fold)
 import Data.Monoid (Monoid, (<>), mempty, mappend)
 
@@ -59,6 +62,19 @@ infix 0 =&=
    Expr mode rec s a ->
    System mode s
 x =&= y  =  System $ tell $ SysRecord.equal x y
+
+
+globalVariable ::
+   (Record rec, Verify.GlobalVar mode a (Record.ToIndex rec) var node,
+    Sum a, FormatValue (var node)) =>
+   var node ->
+   Writer mode s (SysRecord.Variable mode rec s a)
+globalVariable var = do
+   vars <-
+      lift $ for Record.indices $ \recIdx ->
+         Verify.globalVariableDyn $ Idx.Record recIdx var
+   tell $ SysRecord.rules vars
+   return vars
 
 
 localVariable ::
