@@ -44,6 +44,7 @@ module EFA.Flow.Sequence.Quantity (
    Lookup, lookup,
    LookupScalar, lookupScalar,
    LookupSignal, lookupSignal,
+   Env.Environment, Env.Element, Env.switchPart,
    ) where
 
 

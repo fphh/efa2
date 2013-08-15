@@ -29,7 +29,6 @@ import EFA.Flow.EquationSystem
           (fromTopology, splitStoreEqs, withLocalVar, (=&=))
 
 import qualified EFA.Equation.Record as Record
-import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.SystemRecord as SysRecord
@@ -216,28 +215,28 @@ infix 0 =.=, =%=
 infix 0 =%%=, .=, %=, ?=
 
 (=%%=) ::
-   (Node.C node, SeqFlow.Lookup idx, Env.Element idx a v ~ x,
+   (Node.C node, SeqFlow.Lookup idx, SeqFlow.Element idx a v ~ x,
     Record rec, Sys.Value mode x) =>
    idx node -> idx node ->
    EquationSystem mode rec node s a v
 x =%%= y  =  variableRecord x =%= variableRecord y
 
 (.=) ::
-   (Node.C node, SeqFlow.Lookup idx, Env.Element idx a v ~ x,
+   (Node.C node, SeqFlow.Lookup idx, SeqFlow.Element idx a v ~ x,
     Record rec, Sys.Value mode x) =>
    Record.Indexed rec (idx node) -> x ->
    EquationSystem mode rec node s a v
 evar .= val  =  variable evar =.= constant val
 
 (%=) ::
-   (Node.C node, SeqFlow.Lookup idx, Env.Element idx a v ~ x,
+   (Node.C node, SeqFlow.Lookup idx, SeqFlow.Element idx a v ~ x,
     Record rec, Sys.Value mode x) =>
    idx node -> rec x ->
    EquationSystem mode rec node s a v
 evar %= val  =  variableRecord evar =%= constantRecord val
 
 (?=) ::
-   (Node.C node, SeqFlow.Lookup idx, Env.Element idx a v ~ x,
+   (Node.C node, SeqFlow.Lookup idx, SeqFlow.Element idx a v ~ x,
     Record rec, Sys.Value mode x) =>
    idx node -> rec (Result x) ->
    EquationSystem mode rec node s a v
@@ -272,13 +271,13 @@ newtype
    Lookup rec node s a v idx env =
       Lookup {
          getLookup ::
-            (Env.Environment idx ~ env) =>
+            (SeqFlow.Environment idx ~ env) =>
             idx node ->
             SeqFlow.Graph node
                (SysRecord.Variable mode rec s a)
                (SysRecord.Variable mode rec s v) ->
             Maybe
-               (SysRecord.Variable mode rec s (Env.Element idx a v))
+               (SysRecord.Variable mode rec s (SeqFlow.Element idx a v))
       }
 
 lookup ::
@@ -288,16 +287,16 @@ lookup ::
       (SysRecord.Variable mode rec s a)
       (SysRecord.Variable mode rec s v) ->
    Maybe
-      (SysRecord.Variable mode rec s (Env.Element idx a v))
+      (SysRecord.Variable mode rec s (SeqFlow.Element idx a v))
 lookup =
    getLookup $
-   Env.switchPart
+   SeqFlow.switchPart
       (Lookup $ SeqFlow.lookup)
       (Lookup $ SeqFlow.lookup)
 
 
 variableRecord ::
-   (Node.C node, SeqFlow.Lookup idx, Env.Element idx a v ~ x, Record rec) =>
+   (Node.C node, SeqFlow.Lookup idx, SeqFlow.Element idx a v ~ x, Record rec) =>
    idx node -> RecordExpression mode rec node s a v x
 variableRecord idx =
    Bookkeeping $
@@ -309,7 +308,7 @@ variableRecord idx =
        lookup idx)
 
 variable ::
-   (Node.C node, SeqFlow.Lookup idx, Env.Element idx a v ~ x, Record rec) =>
+   (Node.C node, SeqFlow.Lookup idx, SeqFlow.Element idx a v ~ x, Record rec) =>
    Record.Indexed rec (idx node) ->
    Expression mode rec node s a v x
 variable (Idx.Record recIdx idx) =
