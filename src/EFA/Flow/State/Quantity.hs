@@ -1,4 +1,6 @@
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 module EFA.Flow.State.Quantity (
    Graph, StateFlow.states, StateFlow.storages,
    Topology, States, Storages,
@@ -18,6 +20,24 @@ module EFA.Flow.State.Quantity (
 
    fromSequenceFlow,
    fromSequenceFlowResult,
+
+   lookupPower,
+   lookupEnergy,
+   lookupX,
+   lookupEta,
+   lookupDTime,
+   lookupSum,
+
+   lookupStEnergy,
+   lookupStX,
+   lookupStInSum,
+   lookupStOutSum,
+   lookupSums,
+
+   Lookup, lookup,
+   LookupScalar, lookupScalar,
+   LookupSignal, lookupSignal,
+   Environment, Element, Env.switchPart,
    ) where
 
 import qualified EFA.Flow.Quantity as Quant
@@ -27,10 +47,13 @@ import EFA.Flow.State (states, storages)
 import EFA.Flow.Quantity
           (Sums(..), Sum(..), Flow(..), mapSums, traverseSums, (<#>))
 
+import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Variable as Var
 
+import qualified EFA.Graph.StateFlow.Index as StateIdx
 import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Gr
 
 import EFA.Equation.Arithmetic ((~+))
@@ -48,6 +71,7 @@ import qualified Data.Stream as Stream; import Data.Stream (Stream)
 
 import qualified Data.Foldable as Fold
 import Control.Applicative (Applicative, pure, liftA2, (<*>), (<$>))
+import Control.Monad (mplus, (<=<))
 import Data.Traversable (Traversable, traverse, foldMapDefault)
 import Data.Foldable (Foldable, foldMap, fold)
 import Data.Tuple.HT (mapSnd, mapPair)
@@ -336,6 +360,174 @@ mapStorageEdge caller secMap (Idx.StorageEdge from to) =
    Idx.StorageEdge
       (fmap (MapU.checkedLookup (caller ++ " from") secMap) from)
       (fmap (MapU.checkedLookup (caller ++ " to")   secMap) to)
+
+
+lookupPower ::
+   (Ord node) => StateIdx.Power node -> Graph node a v -> Maybe v
+lookupPower =
+   lookupStruct flowPowerOut flowPowerIn (\(Idx.Power se) -> se)
+
+lookupEnergy ::
+   (Ord node) => StateIdx.Energy node -> Graph node a v -> Maybe v
+lookupEnergy =
+   lookupStruct flowEnergyOut flowEnergyIn (\(Idx.Energy se) -> se)
+
+lookupX ::
+   (Ord node) => StateIdx.X node -> Graph node a v -> Maybe v
+lookupX =
+   lookupStruct flowXOut flowXIn (\(Idx.X se) -> se)
+
+lookupStruct ::
+   (Ord node) =>
+   (Flow v -> v) ->
+   (Flow v -> v) ->
+   (idx node -> Idx.StructureEdge node) ->
+   Idx.InState idx node -> Graph node a v -> Maybe v
+lookupStruct fieldOut fieldIn unpackIdx =
+   withTopology $ \idx topo ->
+      case unpackIdx idx of
+         se ->
+            mplus
+               (fmap fieldOut $
+                Gr.lookupEdge (Topo.dirEdgeFromStructureEdge se) topo)
+               (fmap fieldIn $
+                Gr.lookupEdge (Topo.dirEdgeFromStructureEdge $ Idx.flip se) topo)
+
+
+lookupEta :: (Ord node) => StateIdx.Eta node -> Graph node a v -> Maybe v
+lookupEta =
+   withTopology $ \(Idx.Eta se) topo ->
+      fmap flowEta $ Gr.lookupEdge (Topo.dirEdgeFromStructureEdge se) topo
+
+
+lookupSum :: (Ord node) => StateIdx.Sum node -> Graph node a v -> Maybe v
+lookupSum =
+   withTopology $ \(Idx.Sum dir node) topo -> do
+      sums <- Gr.lookupNode node topo
+      fmap flowSum $
+         case dir of
+            Idx.In  -> sumIn sums
+            Idx.Out -> sumOut sums
+
+
+type FlowTopology node a v = Gr.Graph node Gr.DirEdge (Sums a v) (Flow v)
+
+withTopology ::
+   (idx node -> FlowTopology node a v -> Maybe r) ->
+   Idx.InState idx node ->
+   Graph node a v ->
+   Maybe r
+withTopology f (Idx.InPart state idx) g =
+   f idx . snd =<< seqLookup state g
+
+
+lookupDTime :: StateIdx.DTime node -> Graph node a v -> Maybe v
+lookupDTime (Idx.InPart state Idx.DTime) =
+   fmap fst . seqLookup state
+
+
+lookupStEnergy ::
+   (Ord node) => StateIdx.StEnergy node -> Graph node a v -> Maybe a
+lookupStEnergy (Idx.ForNode (Idx.StEnergy se) node) g = do
+   (_,edges) <- Map.lookup node $ storages g
+   fmap carryEnergy $ Map.lookup se edges
+
+lookupStX ::
+   (Ord node) => StateIdx.StX node -> Graph node a v -> Maybe a
+lookupStX (Idx.ForNode (Idx.StX se) node) g = do
+   (_,edges) <- Map.lookup node $ storages g
+   Idx.withStorageEdgeFromTrans
+      (fmap carryXIn  . flip Map.lookup edges)
+      (fmap carryXOut . flip Map.lookup edges)
+      se
+
+lookupStInSum ::
+   (Ord node) => StateIdx.StInSum node -> Graph node a v -> Maybe a
+lookupStInSum (Idx.ForNode (Idx.StInSum aug) node) g =
+   case aug of
+      Idx.Exit -> do
+         ((_,exit),_) <- Map.lookup node $ storages g
+         return exit
+      Idx.NoExit state ->
+         fmap carrySum . sumOut =<< lookupSums (Idx.stateNode state node) g
+
+lookupStOutSum ::
+   (Ord node) => StateIdx.StOutSum node -> Graph node a v -> Maybe a
+lookupStOutSum (Idx.ForNode (Idx.StOutSum aug) node) g =
+   case aug of
+      Idx.Init -> do
+         ((init,_),_) <- Map.lookup node $ storages g
+         return init
+      Idx.NoInit state ->
+         fmap carrySum . sumIn =<< lookupSums (Idx.stateNode state node) g
+
+lookupSums ::
+   (Ord node) =>
+   Idx.StateNode node -> Graph node a v -> Maybe (Sums a v)
+lookupSums (Idx.PartNode state node) =
+   Gr.lookupNode node . snd <=< seqLookup state
+
+seqLookup ::
+   Idx.State -> Graph node a v -> Maybe (v, FlowTopology node a v)
+seqLookup state = Map.lookup state . states
+
+
+type Element idx a v = Env.PartElement (Environment idx) a v
+
+class (Env.AccessPart (Environment idx), Var.Index idx) => Lookup idx where
+   type Environment idx :: * -> * -> *
+   lookup ::
+      (Ord node) =>
+      idx node -> Graph node a v -> Maybe (Element idx a v)
+
+instance (LookupSignal idx) => Lookup (Idx.InState idx) where
+   type Environment (Idx.InState idx) = Env.Signal
+   lookup = lookupSignal
+
+instance (LookupScalar idx) => Lookup (Idx.ForNode idx) where
+   type Environment (Idx.ForNode idx) = Env.Scalar
+   lookup = lookupScalar
+
+
+class (Var.SignalIndex idx) => LookupSignal idx where
+   lookupSignal ::
+      (Ord node) => Idx.InState idx node -> Graph node a v -> Maybe v
+
+instance LookupSignal Idx.Energy where
+   lookupSignal = lookupEnergy
+
+instance LookupSignal Idx.Power where
+   lookupSignal = lookupPower
+
+instance LookupSignal Idx.Eta where
+   lookupSignal = lookupEta
+
+instance LookupSignal Idx.DTime where
+   lookupSignal = lookupDTime
+
+instance LookupSignal Idx.X where
+   lookupSignal = lookupX
+
+instance LookupSignal Idx.Sum where
+   lookupSignal = lookupSum
+
+
+class (Var.ScalarIndex idx) => LookupScalar idx where
+   lookupScalar ::
+      (Ord node) => Idx.ForNode idx node -> Graph node a v -> Maybe a
+
+instance LookupScalar (Idx.StEnergy Idx.State) where
+   lookupScalar = lookupStEnergy
+
+instance LookupScalar (Idx.StX Idx.State) where
+   lookupScalar = lookupStX
+
+instance LookupScalar (Idx.StInSum Idx.State) where
+   lookupScalar = lookupStInSum
+
+instance LookupScalar (Idx.StOutSum Idx.State) where
+   lookupScalar = lookupStOutSum
+
 
 
 {- |
