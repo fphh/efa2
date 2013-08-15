@@ -6,10 +6,12 @@ import qualified EFA.Flow.Sequence.Quantity as SeqFlowQuant
 import qualified EFA.Flow.State as StateFlow
 import EFA.Flow.State (states, storages)
 import EFA.Flow.Quantity
-          (Sums(..), Sum(..), Flow(..), mapSums, traverseSums)
+          (Sums(..), Sum(..), Flow(..), mapSums, traverseSums, (<#>))
 
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Arithmetic as Arith
+import qualified EFA.Equation.Variable as Var
+
 import qualified EFA.Graph.StateFlow.Environment as StateEnv
 import qualified EFA.Graph.StateFlow.Index as StateIdx
 import qualified EFA.Graph.Topology.Index as Idx
@@ -31,7 +33,7 @@ import qualified Data.Set as Set
 import qualified Data.Stream as Stream; import Data.Stream (Stream)
 
 import qualified Data.Foldable as Fold
-import Control.Applicative (Applicative, pure, liftA2, (<*>), (<|>))
+import Control.Applicative (Applicative, pure, liftA2, (<*>), (<$>), (<|>))
 import Data.Traversable (Traversable, traverse, foldMapDefault)
 import Data.Foldable (Foldable, foldMap, fold)
 import Data.Tuple.HT (mapSnd, mapPair)
@@ -526,3 +528,48 @@ fromSequenceFlowResult ::
    CumGraph node (Result a)
 fromSequenceFlowResult =
    fromSequenceFlowGen (fmap Arith.integrate) (liftA2 (~+)) (pure Arith.zero)
+
+
+
+mapGraphWithVar ::
+   (Ord node) =>
+   (Var.ForNodeStateScalar node -> a0 -> a1) ->
+   (Var.InStateSignal node -> v0 -> v1) ->
+   Graph node a0 v0 ->
+   Graph node a1 v1
+mapGraphWithVar f g gr =
+   StateFlow.Graph {
+      storages = mapStoragesWithVar f $ storages gr,
+      states   = mapStatesWithVar f g $ states gr
+   }
+
+mapStoragesWithVar ::
+   (Ord node) =>
+   (Var.ForNodeStateScalar node -> a0 -> a1) ->
+   Storages node a0 ->
+   Storages node a1
+mapStoragesWithVar f =
+   Map.mapWithKey $ \node ((init, exit), edges) ->
+      ((f (Idx.StOutSum Idx.Init <#> node) init,
+        f (Idx.StInSum  Idx.Exit <#> node) exit),
+       Map.mapWithKey
+          (\edge ->
+             liftA2 f (Idx.ForNode <$> (carryVars <*> pure edge) <*> pure node))
+          edges)
+
+carryVars :: Carry (Idx.StorageEdge part node -> Var.Scalar part node)
+carryVars =
+   Carry {
+      carryEnergy = Var.scalarIndex . Idx.StEnergy,
+      carryXOut = Var.scalarIndex . Idx.StX . Idx.storageTransFromEdge,
+      carryXIn = Var.scalarIndex . Idx.StX . Idx.flip . Idx.storageTransFromEdge
+   }
+
+mapStatesWithVar ::
+   (Ord node) =>
+   (Var.ForNodeStateScalar node -> a0 -> a1) ->
+   (Var.InStateSignal node -> v0 -> v1) ->
+   States node a0 v0 ->
+   States node a1 v1
+mapStatesWithVar f g =
+   Map.mapWithKey $ Quant.mapFlowWithVar f g
