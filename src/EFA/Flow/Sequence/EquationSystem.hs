@@ -22,12 +22,11 @@ module EFA.Flow.Sequence.EquationSystem (
 
    ) where
 
+import qualified EFA.Flow.Sequence.Quantity as SeqFlow
+
 import qualified EFA.Flow.EquationSystem as EqSys
 import EFA.Flow.EquationSystem
           (fromTopology, splitStoreEqs, withLocalVar, (=&=))
-
-import qualified EFA.Flow.Sequence.Quantity as SeqFlow
-import qualified EFA.Flow.Sequence as SeqFlowPlain
 
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
@@ -443,7 +442,7 @@ variables ::
    (Node.C node, Record rec, Sum a, Sum v,
     Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeSectionScalar node,
     Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node) =>
-   SeqFlowPlain.RangeGraph node ->
+   SeqFlow.Graph node ai vi ->
    WriterT (System mode s) (ST s)
       (SeqFlow.Graph node
          (SysRecord.Variable mode rec s a)
@@ -452,10 +451,8 @@ variables =
    SeqFlow.traverseGraph id id
    .
    SeqFlow.mapGraphWithVar
-      (\var () -> globalVariable var)
-      (\var () -> globalVariable var)
-   .
-   SeqFlow.graphFromPlain
+      (\var _ -> globalVariable var)
+      (\var _ -> globalVariable var)
 
 query ::
    (Traversable rec) =>
@@ -479,7 +476,7 @@ setup ::
     Product v, Integrate v,
     Record rec, Node.C node) =>
    Bool ->
-   SeqFlowPlain.RangeGraph node ->
+   SeqFlow.Graph node ai vi ->
    EquationSystem mode rec node s a v ->
    ST s
       (SeqFlow.Graph node
@@ -500,7 +497,7 @@ solveGen ::
     Product v, Integrate v,
     Record rec, Node.C node) =>
    Bool ->
-   SeqFlowPlain.RangeGraph node ->
+   SeqFlow.Graph node ai vi ->
    (forall s. EquationSystem Verify.Ignore rec node s a v) ->
    SeqFlow.Graph node (rec (Result a)) (rec (Result v))
 solveGen equalInOutSums gr sys = runST $ do
@@ -512,7 +509,7 @@ solve ::
    (Constant a, a ~ Scalar v,
     Product v, Integrate v,
     Record rec, Node.C node) =>
-   SeqFlowPlain.RangeGraph node ->
+   SeqFlow.Graph node ai vi ->
    (forall s. EquationSystem Verify.Ignore rec node s a v) ->
    SeqFlow.Graph node (rec (Result a)) (rec (Result v))
 solve = solveGen True
@@ -521,7 +518,7 @@ solveFromMeasurement ::
    (Constant a, a ~ Scalar v,
     Product v, Integrate v,
     Record rec, Node.C node) =>
-   SeqFlowPlain.RangeGraph node ->
+   SeqFlow.Graph node ai vi ->
    (forall s. EquationSystem Verify.Ignore rec node s a v) ->
    SeqFlow.Graph node (rec (Result a)) (rec (Result v))
 solveFromMeasurement = solveGen False
@@ -532,7 +529,7 @@ solveTracked ::
     Verify.GlobalVar (Verify.Track output) v recIdx Var.InSectionSignal node,
     Product v, Integrate v,
     Record rec, Record.ToIndex rec ~ recIdx, Node.C node) =>
-   SeqFlowPlain.RangeGraph node ->
+   SeqFlow.Graph node ai vi ->
    (forall s. EquationSystem (Verify.Track output) rec node s a v) ->
    (ME.Exceptional
       (Verify.Exception output)
