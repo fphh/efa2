@@ -1,5 +1,24 @@
 {-# LANGUAGE TypeFamilies #-}
-module EFA.Flow.State.Quantity where
+module EFA.Flow.State.Quantity (
+   Graph, StateFlow.states, StateFlow.storages,
+   Topology, States, Storages,
+   Sums(..), Sum(..), Carry(..), Flow(..),
+
+   mapGraph,
+   mapStorages,
+   mapStates,
+
+   traverseGraph,
+   traverseStorages,
+   traverseStates,
+
+   mapGraphWithVar,
+   mapStoragesWithVar,
+   mapStatesWithVar,
+
+   fromSequenceFlow,
+   fromSequenceFlowResult,
+   ) where
 
 import qualified EFA.Flow.Quantity as Quant
 import qualified EFA.Flow.Sequence.Quantity as SeqFlowQuant
@@ -8,18 +27,13 @@ import EFA.Flow.State (states, storages)
 import EFA.Flow.Quantity
           (Sums(..), Sum(..), Flow(..), mapSums, traverseSums, (<#>))
 
-import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Variable as Var
 
-import qualified EFA.Graph.StateFlow.Environment as StateEnv
-import qualified EFA.Graph.StateFlow.Index as StateIdx
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph as Gr
-import EFA.Graph.Topology (ClassifiedTopology, StateFlowGraph)
 
-import EFA.Equation.Arithmetic ((~+), (~/))
+import EFA.Equation.Arithmetic ((~+))
 import EFA.Equation.Result (Result)
 
 import EFA.Signal.SequenceData (SequData)
@@ -33,7 +47,7 @@ import qualified Data.Set as Set
 import qualified Data.Stream as Stream; import Data.Stream (Stream)
 
 import qualified Data.Foldable as Fold
-import Control.Applicative (Applicative, pure, liftA2, (<*>), (<$>), (<|>))
+import Control.Applicative (Applicative, pure, liftA2, (<*>), (<$>))
 import Data.Traversable (Traversable, traverse, foldMapDefault)
 import Data.Foldable (Foldable, foldMap, fold)
 import Data.Tuple.HT (mapSnd, mapPair)
@@ -269,7 +283,7 @@ allStorageEdges stores =
 
 data Cum v =
    Cum {
-      cumEnergyOut, cumEnergyIn :: v
+      _cumEnergyOut, _cumEnergyIn :: v
    }
 
 instance Functor Cum where
@@ -314,52 +328,6 @@ cumulateSequence add secMap =
 
 
 
-envFromSequenceEnv ::
-   (Ord node, Arith.Product a) =>
-   Map Idx.Section Idx.State ->
-   Env.Complete node a a ->
-   StateEnv.Complete node a a
-envFromSequenceEnv secMap (Env.Complete scalar signal) =
-   StateEnv.Complete
-      (scalarEnvFromSequenceEnv (~/) (~+) secMap scalar)
-      (signalEnvFromSequenceEnv (~/) (~+) secMap signal)
-
-envFromSequenceEnvResult ::
-   (Ord node, Arith.Product a) =>
-   Map Idx.Section Idx.State ->
-   Env.Complete node (Result a) (Result a) ->
-   StateEnv.Complete node (Result a) (Result a)
-envFromSequenceEnvResult secMap (Env.Complete scalar signal) =
-   StateEnv.Complete
-      (scalarEnvFromSequenceEnv (liftA2 (~/)) (liftA2 (~+)) secMap scalar)
-      (signalEnvFromSequenceEnv (liftA2 (~/)) (liftA2 (~+)) secMap signal)
-
-scalarEnvFromSequenceEnv ::
-   (Ord node) =>
-   (a -> a -> a) ->
-   (a -> a -> a) ->
-   Map Idx.Section Idx.State ->
-   Env.Scalar node a ->
-   StateEnv.Scalar node a
-scalarEnvFromSequenceEnv divide add secMap (Env.Scalar _me _st se _sx sis sos) =
-   let eMap =
-          flip (cumulateScalarMap add) se
-             (\(Idx.StEnergy e) ->
-                Idx.StEnergy $ mapStorageEdge "cumulate StEnergyMap" secMap e)
-       inSumMap =
-          flip (cumulateScalarMap add) sis
-             (\(Idx.StInSum aug) ->
-                Idx.StInSum $
-                fmap (MapU.checkedLookup "cumulate StInSumMap" secMap) aug)
-       outSumMap =
-          flip (cumulateScalarMap add) sos
-             (\(Idx.StOutSum aug) ->
-                Idx.StOutSum $
-                fmap (MapU.checkedLookup "cumulate StOutSumMap" secMap) aug)
-   in  StateEnv.Scalar
-          eMap (stXMap divide inSumMap outSumMap eMap)
-          inSumMap outSumMap
-
 mapStorageEdge ::
    (Ord sec, Show sec, Show state) =>
    String -> Map sec state ->
@@ -368,144 +336,6 @@ mapStorageEdge caller secMap (Idx.StorageEdge from to) =
    Idx.StorageEdge
       (fmap (MapU.checkedLookup (caller ++ " from") secMap) from)
       (fmap (MapU.checkedLookup (caller ++ " to")   secMap) to)
-
-cumulateScalarMap ::
-   (Ord node, Ord (stateIdx node)) =>
-   (a -> a -> a) ->
-   (secIdx node -> stateIdx node) ->
-   Map (Idx.ForNode secIdx node) a ->
-   Map (Idx.ForNode stateIdx node) a
-cumulateScalarMap add f =
-   Map.mapKeysWith add
-      (\(Idx.ForNode aug node) -> Idx.ForNode (f aug) node)
-
-stXMap ::
-   (Ord node) =>
-   (a -> a -> a) ->
-   Map (StateIdx.StInSum node) a ->
-   Map (StateIdx.StOutSum node) a ->
-   Map (StateIdx.StEnergy node) a ->
-   Map (StateIdx.StX node) a
-stXMap divide inSumMap outSumMap =
-   fold .
-   Map.mapWithKey
-      (\(Idx.ForNode (Idx.StEnergy edge@(Idx.StorageEdge from to)) node) e ->
-         let stx = Idx.ForNode (Idx.StX (Idx.storageTransFromEdge edge)) node
-         in  Map.singleton stx
-                (divide e $
-                 Map.findWithDefault (error "StateFlow.stXMap from")
-                    (Idx.ForNode (Idx.StOutSum from) node) outSumMap)
-             `Map.union`
-             Map.singleton (Idx.flip stx)
-                (divide e $
-                 Map.findWithDefault (error "StateFlow.stXMap from")
-                    (Idx.ForNode (Idx.StInSum to) node) inSumMap))
-
-
-signalEnvFromSequenceEnv ::
-   (Ord node) =>
-   (a -> a -> a) ->
-   (a -> a -> a) ->
-   Map Idx.Section Idx.State ->
-   Env.Signal node a ->
-   StateEnv.Signal node a
-signalEnvFromSequenceEnv divide add secMap (Env.Signal e _p _n dt _x s) =
-   let eState = cumulateSignalMap add secMap e
-       dtState = cumulateSignalMap add secMap dt
-       sumState = cumulateSignalMap add secMap s
-   in  StateEnv.Signal
-          eState
-          (powerMap divide dtState eState)
-          (etaMap divide eState)
-          dtState
-          (xMap divide sumState eState)
-          sumState
-
-cumulateSignalMap ::
-   (Ord (idx node)) =>
-   (a -> a -> a) ->
-   Map Idx.Section Idx.State ->
-   Map (Idx.InSection idx node) a ->
-   Map (Idx.InState idx node) a
-cumulateSignalMap add secMap =
-   Map.mapKeysWith add
-      (\(Idx.InPart sec idx) ->
-         Idx.InPart (MapU.checkedLookup "cumulateSignalMap" secMap sec) idx)
-
-powerMap ::
-   (Ord node) =>
-   (a -> a -> a) ->
-   Map (StateIdx.DTime node) a ->
-   Map (StateIdx.Energy node) a ->
-   Map (StateIdx.Power node) a
-powerMap divide dtMap eMap =
-   StateEnv.uncurrySignal $
-   Map.intersectionWith
-      (\dt ->
-         Map.mapKeys (\(Idx.Energy e) -> Idx.Power e) . fmap (flip divide dt))
-      (Map.mapKeys (\(Idx.InPart state Idx.DTime) -> state) dtMap)
-      (StateEnv.currySignal eMap)
-
-etaMap ::
-   (Ord node) =>
-   (a -> a -> a) ->
-   Map (StateIdx.Energy node) a -> Map (StateIdx.Eta node) a
-etaMap divide eMap =
-   Map.mapKeys (Idx.liftInState (\(Idx.Energy e) -> Idx.Eta e)) $
-   Map.intersectionWith divide (Map.mapKeys Idx.flip eMap) eMap
-
-xMap ::
-   (Ord node) =>
-   (a -> a -> a) ->
-   Map (StateIdx.Sum node) a ->
-   Map (StateIdx.Energy node) a ->
-   Map (StateIdx.X node) a
-xMap divide sumMap =
-   Map.mapKeys (Idx.liftInState (\(Idx.Energy e) -> Idx.X e)) .
-   Map.mapWithKey
-      (\(Idx.InPart state (Idx.Energy (Idx.StructureEdge from _to))) e ->
-          {-
-          If both In and Out sum are present, then they must be equal.
-          -}
-          case Map.lookup (Idx.InPart state (Idx.Sum Idx.In  from)) sumMap
-               <|>
-               Map.lookup (Idx.InPart state (Idx.Sum Idx.Out from)) sumMap of
-             Nothing -> error "StateFlow.xMap: unavailable Sum value"
-             Just s -> divide e s)
-
-
-
-stateFromClassTopo ::
-   (Ord node) =>
-   Idx.State -> ClassifiedTopology node -> StateFlowGraph node
-stateFromClassTopo state =
-   Gr.ixmap
-      (Idx.PartNode (Idx.augment state))
-      (TD.FlowEdge . TD.StructureEdge . Idx.InPart state)
-
-
-storageEdges ::
-   Map Idx.State TD.StoreDir -> [Idx.StorageEdge Idx.State node]
-storageEdges stores =
-   case Map.partition (TD.In ==) stores of
-      (ins, outs) ->
-         liftA2 Idx.StorageEdge
-            (Idx.Init : map Idx.NoInit (Map.keys ins))
-            (Idx.Exit : map Idx.NoExit (Map.keys outs))
-
-getStorageSequences ::
-   (Ord node) =>
-   Map Idx.State (TD.ClassifiedTopology node) ->
-   Map node (Map Idx.State (Maybe TD.StoreDir))
-getStorageSequences =
-   Map.unionsWith (Map.unionWith (error "duplicate section for node"))
-   .
-   Map.elems
-   .
-   Map.mapWithKey
-      (\s g ->
-         fmap (Map.singleton s) $
-         Map.mapMaybe TD.maybeStorage $ Gr.nodeLabels g)
 
 
 {- |
