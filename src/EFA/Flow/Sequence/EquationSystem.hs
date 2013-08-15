@@ -9,8 +9,8 @@ module EFA.Flow.Sequence.EquationSystem (
 
    constant,
    constantRecord,
-   liftF, liftF2,
-   sqrt,
+   EqSys.liftF, EqSys.liftF2,
+   EqSys.sqrt,
 
    Record, Wrap(Wrap, unwrap),
 
@@ -26,30 +26,26 @@ import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 
 import qualified EFA.Flow.EquationSystem as EqSys
 import EFA.Flow.EquationSystem
-          (fromTopology, splitStoreEqs, withLocalVar, (=&=))
+          (constant, constantRecord, join, fromTopology,
+           splitStoreEqs, withLocalVar, (=&=), (=%=), (=.=))
 
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.SystemRecord as SysRecord
-import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Result(Result(..))
 import EFA.Equation.SystemRecord
           (System(System), Record, Wrap(Wrap, unwrap))
 import EFA.Equation.Arithmetic
           (Sum, (~+), (~-),
-           Product, (~*), (~/),
-           Constant, zero,
-           Integrate, Scalar, integrate)
+           Product, Constant, Integrate, Scalar)
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 
 import qualified EFA.Utility.Map as MapU
-import EFA.Utility ((>>!))
 
-import UniqueLogic.ST.TF.Expression ((=:=))
 import qualified UniqueLogic.ST.TF.Expression as Expr
 import qualified UniqueLogic.ST.TF.System as Sys
 
@@ -58,142 +54,42 @@ import qualified Data.Accessor.Basic as Accessor
 import qualified Control.Monad.Exception.Synchronous as ME
 import qualified Control.Monad.Trans.Reader as MR
 import qualified Control.Monad.Trans.Class as MT
-import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
-import Control.Monad.Trans.Writer (WriterT, runWriterT, tell)
+import Control.Monad.Trans.Writer (WriterT, runWriterT)
 
 import Control.Monad.ST (ST, runST)
-import Control.Monad (liftM2)
 
-import Control.Applicative (Applicative, pure, liftA, liftA2)
-import Control.Category ((.))
+import Control.Applicative (Applicative, pure, liftA2)
 
 import qualified Data.Map as Map
 
 import Data.Map (Map)
 import Data.Traversable (Traversable, traverse)
 import Data.Foldable (foldMap, fold)
-import Data.Monoid (Monoid, (<>), mempty, mappend, mconcat)
+import Data.Monoid (Monoid, (<>), mconcat)
 import Data.Tuple.HT (mapFst)
 
 import qualified Prelude as P
-import Prelude hiding (lookup, init, sqrt, (.))
+import Prelude hiding (lookup, init)
 
 
 type
-   BK mode rec node s a v =
-      ReaderT
-         (SeqFlow.Graph node
-            (SysRecord.Variable mode rec s a)
-            (SysRecord.Variable mode rec s v))
-         (WriterT (System mode s) (ST s))
-
-
-type Expr mode = Expr.T mode
+   Graph mode rec node s a v =
+      SeqFlow.Graph node
+         (SysRecord.Variable mode rec s a)
+         (SysRecord.Variable mode rec s v)
 
 type
    Expression mode rec node s a v x =
-      Bookkeeping mode rec node s a v (Expr mode s x)
+      EqSys.Expression mode (Graph mode rec node s a v) s x
 
 type
    RecordExpression mode rec node s a v x =
-      Bookkeeping mode rec node s a v (SysRecord.Expr mode rec s x)
+      EqSys.RecordExpression mode (Graph mode rec node s a v) rec s x
 
-
-newtype
-   Bookkeeping mode rec node s a v x =
-      Bookkeeping (BK mode rec node s a v x)
-   deriving (Functor, Applicative)
-
-newtype
+type
    EquationSystem mode rec node s a v =
-      EquationSystem {runEquationSystem :: BK mode rec node s a v ()}
-
-instance Monoid (EquationSystem mode rec node s a v) where
-   mempty = EquationSystem $ return ()
-   mappend (EquationSystem x) (EquationSystem y) =
-      EquationSystem $ x >>! y
-
-
-
-liftF ::
-   (Sys.Value mode y, Record rec, Sum y) =>
-   (x -> y) ->
-   RecordExpression mode rec node s a v x ->
-   RecordExpression mode rec node s a v y
-liftF = liftA . SysRecord.lift1 . Expr.fromRule2 . Sys.assignment2
-
-liftF2 ::
-   (Sys.Value mode z, Record rec, Sum z) =>
-   (x -> y -> z) ->
-   RecordExpression mode rec node s a v x ->
-   RecordExpression mode rec node s a v y ->
-   RecordExpression mode rec node s a v z
-liftF2 = liftA2 . SysRecord.lift2 . Expr.fromRule3 . Sys.assignment3
-
-
-instance (Sum x) => Sum (Bookkeeping mode rec node s a v x) where
-   (~+) = liftA2 (~+)
-   (~-) = liftA2 (~-)
-   negate = fmap Arith.negate
-
-instance (Product x) => Product (Bookkeeping mode rec node s a v x) where
-   (~*) = liftA2 (~*)
-   (~/) = liftA2 (~/)
-   recip = fmap Arith.recip
-   constOne = fmap Arith.constOne
-
-instance (Constant x) => Constant (Bookkeeping mode rec node s a v x) where
-   zero = pure zero
-   fromInteger  = pure . Arith.fromInteger
-   fromRational = pure . Arith.fromRational
-
-instance (Integrate x) => Integrate (Bookkeeping mode rec node s a v x) where
-   type Scalar (Bookkeeping mode rec node s a v x) =
-           Bookkeeping mode rec node s a v (Scalar x)
-   integrate = fmap integrate
-
-
-
-instance (Num x) => Num (Bookkeeping mode rec node s a v x) where
-   fromInteger = pure . fromInteger
-
-   (*) = liftA2 (*)
-   (+) = liftA2 (+)
-   (-) = liftA2 (-)
-
-   abs = fmap abs
-   signum = fmap signum
-
-
-instance (Fractional x) => Fractional (Bookkeeping mode rec node s a v x) where
-   fromRational = pure . fromRational
-   (/) = liftA2 (/)
-
-sqrt ::
-   (Sys.Value mode x, Sum x, Floating x, Record rec) =>
-   RecordExpression mode rec node s a v x ->
-   RecordExpression mode rec node s a v x
-sqrt = liftF P.sqrt
-
-
-infix 0 =.=, =%=
-
-(=.=) ::
-   (Sys.Value mode x) =>
-   Expression mode rec node s a v x ->
-   Expression mode rec node s a v x ->
-   EquationSystem mode rec node s a v
-(Bookkeeping xs) =.= (Bookkeeping ys) =
-   EquationSystem $ lift . tell . System =<< liftM2 (=:=) xs ys
-
-(=%=) ::
-   (Sys.Value mode x, Record rec) =>
-   RecordExpression mode rec node s a v x ->
-   RecordExpression mode rec node s a v x ->
-   EquationSystem mode rec node s a v
-(Bookkeeping xs) =%= (Bookkeeping ys) =
-   EquationSystem $ lift . tell =<< liftM2 SysRecord.equal xs ys
+      EqSys.VariableSystem mode (Graph mode rec node s a v) s
 
 
 infix 0 =%%=, .=, %=, ?=
@@ -233,23 +129,6 @@ evar ?= val  =
           (Wrap val))
       (variableRecord evar)
 
-join ::
-   Bookkeeping mode rec node s a v (EquationSystem mode rec node s a v) ->
-   EquationSystem mode rec node s a v
-join (Bookkeeping m) =
-   EquationSystem $ m >>= \(EquationSystem sys) -> sys
-
-
-constant ::
-   (Sys.Value mode x) =>
-   x -> Expression mode rec node s a v x
-constant = pure . Expr.constant
-
-constantRecord ::
-   (Sys.Value mode x, Record rec) =>
-   rec x -> RecordExpression mode rec node s a v x
-constantRecord = pure . Wrap . fmap Expr.constant
-
 
 newtype
    Lookup rec node s a v idx env =
@@ -283,7 +162,7 @@ variableRecord ::
    (Node.C node, SeqFlow.Lookup idx, SeqFlow.Element idx a v ~ x, Record rec) =>
    idx node -> RecordExpression mode rec node s a v x
 variableRecord idx =
-   Bookkeeping $
+   EqSys.Context $
    MR.asks
       (maybe
          (error "EquationSystem.variableRecord: unknown variable")
@@ -471,7 +350,7 @@ setup equalInOutSums gr given = do
       runWriterT $ do
          vars <- variables gr
          EqSys.runSystem $ fromGraph equalInOutSums vars
-         runReaderT (runEquationSystem given) vars
+         runReaderT (EqSys.runVariableSystem given) vars
          return vars
    return (vars, eqs)
 
