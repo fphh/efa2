@@ -69,12 +69,11 @@ import qualified Data.Map as Map; import Data.Map (Map)
 import qualified Data.Set as Set
 import qualified Data.Stream as Stream; import Data.Stream (Stream)
 
-import qualified Data.Foldable as Fold
 import Control.Applicative (Applicative, pure, liftA2, (<*>), (<$>))
 import Control.Monad (mplus, (<=<))
 import Data.Traversable (Traversable, traverse, foldMapDefault)
-import Data.Foldable (Foldable, foldMap, fold)
-import Data.Tuple.HT (mapSnd, mapPair)
+import Data.Foldable (Foldable, foldMap)
+import Data.Tuple.HT (mapSnd)
 import Data.Maybe (isJust, fromMaybe)
 
 import Prelude hiding (lookup, init, seq, sequence, sin, sum)
@@ -217,16 +216,10 @@ identify k = do
 stateMaps ::
    (Ord node, Ord nodeLabel) =>
    Map Idx.Section (Topology node nodeLabel) ->
-   (Map Idx.State (Topology node nodeLabel),
-    Map Idx.Section Idx.State)
-stateMaps sq =
-   mapPair (fold, fold) $ unzip $ Fold.toList $
-   flip MS.evalState (Map.empty, Stream.iterate succ $ Idx.State 0) $
-   traverse
-      (\(sec,g) -> do
-         i <- identify g
-         return (Map.singleton i g, Map.singleton sec i)) $
-   Map.mapWithKey (,) sq
+   Map Idx.Section Idx.State
+stateMaps =
+   flip MS.evalState (Map.empty, Stream.iterate succ $ Idx.State 0) .
+   traverse identify
 
 
 type
@@ -245,7 +238,7 @@ fromSequenceFlowGen ::
 fromSequenceFlowGen integrate add zero allStEdges gr =
    let sq = SeqFlowQuant.sequence gr
        secMap =
-          snd $ stateMaps $
+          stateMaps $
           fmap (Gr.mapEdge (const ()) . Gr.mapNode (const ()) . snd . snd) sq
        sts =
           flip cumulateSequence secMap
