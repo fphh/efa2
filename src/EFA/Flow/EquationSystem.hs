@@ -210,7 +210,7 @@ fromInStorages ::
    rx -> [carry rx] ->
    System mode s
 fromInStorages stoutsum outs =
-   splitStoreEqs stoutsum Quant.carryEnergy Quant.carryXOut outs
+   splitScalarEqs stoutsum Quant.carryEnergy Quant.carryXOut outs
 
 fromOutStorages ::
    (Verify.LocalVar mode x, Constant x, Record rec,
@@ -219,18 +219,17 @@ fromOutStorages ::
    rx -> [carry rx] ->
    System mode s
 fromOutStorages stinsum ins =
-   splitStoreEqs stinsum Quant.carryEnergy Quant.carryXIn ins
+   splitScalarEqs stinsum Quant.carryEnergy Quant.carryXIn ins
 
-splitStoreEqs ::
+splitScalarEqs ::
    (Verify.LocalVar mode x, Constant x, Record rec,
-    rx ~ Expr mode rec s x,
-    Quant.Carry carry) =>
+    rx ~ Expr mode rec s x) =>
    rx ->
    (carry rx -> rx) ->
    (carry rx -> rx) ->
    [carry rx] ->
    System mode s
-splitStoreEqs varsum energy xfactor =
+splitScalarEqs varsum energy xfactor =
    foldMap (splitFactors varsum energy Arith.one xfactor)
    .
    NonEmpty.fetch

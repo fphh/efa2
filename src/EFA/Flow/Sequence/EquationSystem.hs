@@ -27,7 +27,7 @@ import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.EquationSystem as EqSys
 import EFA.Flow.EquationSystem
           (constant, constantRecord, join, fromTopology,
-           splitStoreEqs, withLocalVar, (=&=), (=%=), (=.=))
+           splitScalarEqs, withLocalVar, (=&=), (=%=), (=.=))
 
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Verify as Verify
@@ -295,7 +295,7 @@ fromOutStorages ::
    EqSys.System mode s
 fromOutStorages stinsum ins =
    (withLocalVar $ \s ->
-      splitStoreEqs s SeqFlow.carryMaxEnergy SeqFlow.carryXIn ins)
+      splitScalarEqs s SeqFlow.carryMaxEnergy SeqFlow.carryXIn ins)
    <>
    EqSys.fromOutStorages stinsum ins
 
