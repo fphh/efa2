@@ -80,12 +80,18 @@ formatTimeNode (Idx.PartNode s n) =
    Format.part s `Format.sectionNode` Node.subscript n
 
 
+formatStructureLink ::
+   (Format output, Node.C node) =>
+   Idx.StructureEdge node -> output
+formatStructureLink (Idx.StructureEdge x y) =
+   Node.subscript x `Format.link` Node.subscript y
+
 formatStructureEdge ::
    (Format output, Node.C node) =>
    Format.EdgeVar -> Idx.StructureEdge node -> output
-formatStructureEdge e (Idx.StructureEdge x y) =
+formatStructureEdge e se =
    Format.subscript (Format.edgeIdent e) $
-   Node.subscript x `Format.link` Node.subscript y
+   formatStructureLink se
 
 instance (Node.C node) => FormatValue (Idx.Energy node) where
    formatValue (Idx.Energy e) = formatStructureEdge Format.Energy e
@@ -103,10 +109,9 @@ instance (Node.C node) => FormatValue (Idx.X node) where
 formatStructureSecEdge ::
    (Format output, Format.Part part, Node.C node) =>
    Format.EdgeVar -> Idx.StructureEdge node -> part -> output
-formatStructureSecEdge e (Idx.StructureEdge x y) s =
+formatStructureSecEdge e se s =
    Format.subscript (Format.edgeIdent e) $
-   Format.part s `Format.sectionNode`
-      (Node.subscript x `Format.link` Node.subscript y)
+   Format.part s `Format.sectionNode` formatStructureLink se
 
 formatStorageEdge ::
    (Format.Part sec, Format output, Node.C node) =>
