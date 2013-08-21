@@ -21,6 +21,9 @@ module EFA.Flow.State.Quantity (
    fromSequenceFlow,
    fromSequenceFlowResult,
 
+   cumFromFlow,
+   flowResultFromCum,
+
    lookupPower,
    lookupEnergy,
    lookupX,
@@ -57,7 +60,7 @@ import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Gr
 
 import EFA.Equation.Arithmetic ((~+))
-import EFA.Equation.Result (Result)
+import EFA.Equation.Result (Result(Determined, Undetermined))
 
 import EFA.Signal.SequenceData (SequData)
 
@@ -300,7 +303,7 @@ allStorageEdges stores =
 
 data Cum v =
    Cum {
-      _cumEnergyOut, _cumEnergyIn :: v
+      cumEnergyOut, cumEnergyIn :: v
    }
 
 instance Functor Cum where
@@ -316,6 +319,13 @@ cumFromFlow flow =
    Cum
       (SeqFlowQuant.flowEnergyOut flow)
       (SeqFlowQuant.flowEnergyIn flow)
+
+flowResultFromCum :: Cum v -> Flow (Result v)
+flowResultFromCum cum =
+   (pure Undetermined) {
+      SeqFlowQuant.flowEnergyOut = Determined $ cumEnergyOut cum,
+      SeqFlowQuant.flowEnergyIn  = Determined $ cumEnergyIn  cum
+   }
 
 
 

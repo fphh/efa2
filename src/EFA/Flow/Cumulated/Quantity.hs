@@ -10,6 +10,8 @@ module EFA.Flow.Cumulated.Quantity (
    fromSequenceFlow,
    fromSequenceFlowResult,
 
+   flowResultFromCum,
+
    lookupPower,
    lookupEnergy,
    lookupX,
@@ -26,7 +28,7 @@ import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic ((~+))
-import EFA.Equation.Result (Result)
+import EFA.Equation.Result (Result(Determined, Undetermined))
 
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Gr
@@ -117,7 +119,7 @@ type
 
 data Cum a =
    Cum {
-      _cumTime, _cumEnergyOut, _cumEnergyIn :: a
+      cumDTime, cumEnergyOut, cumEnergyIn :: a
    }
 
 instance Functor Cum where
@@ -140,6 +142,14 @@ cumFromFlowGraph time =
       (\(SeqFlow.Sums i o) ->
          Sums (fmap SeqFlow.flowSum i) (fmap SeqFlow.flowSum o)) .
    Gr.mapEdge (cumFromFlow time)
+
+flowResultFromCum :: Cum a -> Flow (Result a)
+flowResultFromCum cum =
+   (pure Undetermined) {
+      flowEnergyOut = Determined $ cumEnergyOut cum,
+      flowEnergyIn  = Determined $ cumEnergyIn  cum,
+      flowDTime     = Determined $ cumDTime cum
+   }
 
 
 fromSequenceFlowGen ::
