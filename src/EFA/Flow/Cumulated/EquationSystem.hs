@@ -207,14 +207,13 @@ fromSums equalInOutSums s =
 variables ::
    (Node.C node, Record rec, Sum a,
     Verify.GlobalVar mode a (Record.ToIndex rec) Var.Any node) =>
-   CumFlow.Graph node ai ->
-   WriterT (System mode s) (ST s)
+   CumFlow.Graph node (rec (Result a)) ->
+   EqSys.Writer mode s
       (CumFlow.Graph node (SysRecord.Variable mode rec s a))
 variables =
    CumFlow.traverseGraph id
    .
-   CumFlow.mapGraphWithVar
-      (\var _ -> EqSys.globalVariable var)
+   CumFlow.mapGraphWithVar EqSys.globalVariableFromResult
 
 query ::
    (Traversable rec) =>
@@ -228,7 +227,7 @@ setup ::
    (Verify.GlobalVar mode a (Record.ToIndex rec) Var.Any node,
     Constant a, Record rec, Node.C node) =>
    Bool ->
-   CumFlow.Graph node ai ->
+   CumFlow.Graph node (rec (Result a)) ->
    EquationSystem mode rec node s a ->
    ST s
       (CumFlow.Graph node (SysRecord.Variable mode rec s a),
@@ -245,7 +244,7 @@ setup equalInOutSums gr given = do
 solveGen ::
    (Constant a, Record rec, Node.C node) =>
    Bool ->
-   CumFlow.Graph node ai ->
+   CumFlow.Graph node (rec (Result a)) ->
    (forall s. EquationSystem Verify.Ignore rec node s a) ->
    CumFlow.Graph node (rec (Result a))
 solveGen equalInOutSums gr sys = runST $ do
@@ -255,14 +254,14 @@ solveGen equalInOutSums gr sys = runST $ do
 
 solve ::
    (Constant a, Record rec, Node.C node) =>
-   CumFlow.Graph node ai ->
+   CumFlow.Graph node (rec (Result a)) ->
    (forall s. EquationSystem Verify.Ignore rec node s a) ->
    CumFlow.Graph node (rec (Result a))
 solve = solveGen True
 
 solveFromMeasurement ::
    (Constant a, Record rec, Node.C node) =>
-   CumFlow.Graph node ai ->
+   CumFlow.Graph node (rec (Result a)) ->
    (forall s. EquationSystem Verify.Ignore rec node s a) ->
    CumFlow.Graph node (rec (Result a))
 solveFromMeasurement = solveGen False
@@ -270,7 +269,7 @@ solveFromMeasurement = solveGen False
 solveTracked ::
    (Verify.GlobalVar (Verify.Track output) a recIdx Var.Any node, Constant a,
     Record rec, Record.ToIndex rec ~ recIdx, Node.C node) =>
-   CumFlow.Graph node ai ->
+   CumFlow.Graph node (rec (Result a)) ->
    (forall s. EquationSystem (Verify.Track output) rec node s a) ->
    (ME.Exceptional
       (Verify.Exception output)

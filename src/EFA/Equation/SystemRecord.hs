@@ -5,6 +5,7 @@ module EFA.Equation.SystemRecord where
 
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Arithmetic as Arith
+import EFA.Equation.Result (Result(..))
 import EFA.Equation.Arithmetic
           (Sum, (~+), (~-),
            Product, (~*), (~/),
@@ -14,10 +15,11 @@ import EFA.Equation.Arithmetic
 import EFA.Utility ((>>!))
 
 import qualified UniqueLogic.ST.TF.Expression as Expr
+import qualified UniqueLogic.ST.TF.Rule as Rule
 import qualified UniqueLogic.ST.TF.System as Sys
 import UniqueLogic.ST.TF.Expression ((=:=))
 
-import Control.Applicative (Applicative, pure, liftA3)
+import Control.Applicative (Applicative, pure, liftA2, liftA3)
 
 import qualified Data.Foldable as Fold
 import Data.Traversable (Traversable)
@@ -165,3 +167,14 @@ instance
       Integrate (Wrap rec v) where
    type Scalar (Wrap rec v) = Wrap rec (Scalar v)
    integrate = lift1 integrate
+
+
+equalResult ::
+   (Record rec, Sys.Value mode a) =>
+   Variable mode rec s a -> rec (Result a) ->
+   System mode s
+equalResult evar val =
+   Fold.fold $
+   liftA2
+      (\var -> Fold.foldMap (\x -> System $ Rule.equ var =<< Sys.constant x))
+      evar val

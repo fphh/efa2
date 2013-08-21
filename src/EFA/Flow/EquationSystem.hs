@@ -11,6 +11,7 @@ import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.SystemRecord as SysRecord
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.SystemRecord (Expr, Record, Wrap(Wrap))
+import EFA.Equation.Result (Result)
 import EFA.Equation.Arithmetic
           (Sum, (~+), (~-),
            Product, (~*), (~/),
@@ -80,6 +81,16 @@ globalVariable var = do
          Verify.globalVariableDyn $ Idx.Record recIdx var
    tell $ SysRecord.rules vars
    return vars
+
+globalVariableFromResult ::
+   (Record rec, Verify.GlobalVar mode a (Record.ToIndex rec) var node,
+    Sum a, FormatValue (var node)) =>
+   var node -> rec (Result a) ->
+   Writer mode s (SysRecord.Variable mode rec s a)
+globalVariableFromResult varIdx val = do
+   var <- globalVariable varIdx
+   tell (SysRecord.equalResult var val)
+   return var
 
 
 localVariable ::

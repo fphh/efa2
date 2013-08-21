@@ -233,8 +233,8 @@ variables ::
    (Node.C node, Record rec, Sum a, Sum v,
     Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeStateScalar node,
     Verify.GlobalVar mode v (Record.ToIndex rec) Var.InStateSignal node) =>
-   StateFlow.Graph node ai vi ->
-   WriterT (System mode s) (ST s)
+   StateFlow.Graph node (rec (Result a)) (rec (Result v)) ->
+   EqSys.Writer mode s
       (StateFlow.Graph node
          (SysRecord.Variable mode rec s a)
          (SysRecord.Variable mode rec s v))
@@ -242,8 +242,8 @@ variables =
    StateFlow.traverseGraph id id
    .
    StateFlow.mapGraphWithVar
-      (\var _ -> EqSys.globalVariable var)
-      (\var _ -> EqSys.globalVariable var)
+      EqSys.globalVariableFromResult
+      EqSys.globalVariableFromResult
 
 query ::
    (Traversable rec) =>
@@ -267,7 +267,7 @@ setup ::
     Product v, Integrate v,
     Record rec, Node.C node) =>
    Bool ->
-   StateFlow.Graph node ai vi ->
+   StateFlow.Graph node (rec (Result a)) (rec (Result v)) ->
    EquationSystem mode rec node s a v ->
    ST s
       (StateFlow.Graph node
@@ -288,7 +288,7 @@ solveGen ::
     Product v, Integrate v,
     Record rec, Node.C node) =>
    Bool ->
-   StateFlow.Graph node ai vi ->
+   StateFlow.Graph node (rec (Result a)) (rec (Result v)) ->
    (forall s. EquationSystem Verify.Ignore rec node s a v) ->
    StateFlow.Graph node (rec (Result a)) (rec (Result v))
 solveGen equalInOutSums gr sys = runST $ do
@@ -300,7 +300,7 @@ solve ::
    (Constant a, a ~ Scalar v,
     Product v, Integrate v,
     Record rec, Node.C node) =>
-   StateFlow.Graph node ai vi ->
+   StateFlow.Graph node (rec (Result a)) (rec (Result v)) ->
    (forall s. EquationSystem Verify.Ignore rec node s a v) ->
    StateFlow.Graph node (rec (Result a)) (rec (Result v))
 solve = solveGen True
@@ -309,7 +309,7 @@ solveFromMeasurement ::
    (Constant a, a ~ Scalar v,
     Product v, Integrate v,
     Record rec, Node.C node) =>
-   StateFlow.Graph node ai vi ->
+   StateFlow.Graph node (rec (Result a)) (rec (Result v)) ->
    (forall s. EquationSystem Verify.Ignore rec node s a v) ->
    StateFlow.Graph node (rec (Result a)) (rec (Result v))
 solveFromMeasurement = solveGen False
@@ -320,7 +320,7 @@ solveTracked ::
     Verify.GlobalVar (Verify.Track output) v recIdx Var.InStateSignal node,
     Product v, Integrate v,
     Record rec, Record.ToIndex rec ~ recIdx, Node.C node) =>
-   StateFlow.Graph node ai vi ->
+   StateFlow.Graph node (rec (Result a)) (rec (Result v)) ->
    (forall s. EquationSystem (Verify.Track output) rec node s a v) ->
    (ME.Exceptional
       (Verify.Exception output)
