@@ -52,8 +52,8 @@ import qualified Data.Accessor.Basic as Accessor
 import qualified Control.Monad.Exception.Synchronous as ME
 import qualified Control.Monad.Trans.Reader as MR
 import qualified Control.Monad.Trans.Class as MT
-import Control.Monad.Trans.Reader (ReaderT, runReaderT)
-import Control.Monad.Trans.Writer (WriterT, runWriterT)
+import Control.Monad.Trans.Reader (runReaderT)
+import Control.Monad.Trans.Writer (runWriterT)
 
 import Control.Monad.ST (ST, runST)
 
