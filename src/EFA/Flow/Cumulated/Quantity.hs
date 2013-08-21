@@ -198,22 +198,27 @@ lookupStruct ::
    CumIdx.Direction ->
    CumIdx.StructureEdge node ->
    Graph node a -> Maybe a
-lookupStruct fieldOut fieldIn dir se =
-   fmap
+lookupStruct fieldOut fieldIn dir =
+   lookupEdge
       (case dir of
          CumIdx.Out -> fieldOut
          CumIdx.In  -> fieldIn)
-   .
-   Gr.lookupEdge (Topo.dirEdgeFromStructureEdge se)
 
 
 lookupEta :: (Ord node) => CumIdx.Eta node -> Graph node a -> Maybe a
-lookupEta (CumIdx.Eta se) =
-   fmap flowEta . Gr.lookupEdge (Topo.dirEdgeFromStructureEdge se)
+lookupEta (CumIdx.Eta se) = lookupEdge flowEta se
 
 lookupDTime :: (Ord node) => CumIdx.DTime node -> Graph node a -> Maybe a
-lookupDTime (CumIdx.DTime se) =
-   fmap flowDTime . Gr.lookupEdge (Topo.dirEdgeFromStructureEdge se)
+lookupDTime (CumIdx.DTime se) = lookupEdge flowDTime se
+
+lookupEdge ::
+   Ord n =>
+   (el -> a) ->
+   CumIdx.StructureEdge n ->
+   Gr.Graph n Gr.DirEdge nl el ->
+   Maybe a
+lookupEdge f se =
+   fmap f . Gr.lookupEdge (Topo.dirEdgeFromStructureEdge se)
 
 
 lookupSum :: (Ord node) => CumIdx.Sum node -> Graph node a -> Maybe a
