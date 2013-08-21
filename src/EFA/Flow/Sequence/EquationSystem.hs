@@ -1,7 +1,6 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE Rank2Types #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module EFA.Flow.Sequence.EquationSystem (
    EquationSystem, Expression, RecordExpression,
 
