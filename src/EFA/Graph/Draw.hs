@@ -878,7 +878,7 @@ lookupFormatAssign opts mp makeIdx x =
             (optRecordIndex opts $
              if optVariableIndex opts
                then Var.formatIndex idx
-               else Format.edgeIdent $ Format.edgeVar idx)
+               else Format.edgeIdent idx)
             (lookupFormat opts mp idx)
 
 sequFlowGraphWithEnv ::
@@ -1037,8 +1037,7 @@ dotFromCumEdge env (e, ()) =
               formatEner (Idx.flip se) :
               []
         formatEner idx =
-           Format.assign
-              (Format.edgeIdent Format.Energy)
+           Format.assign Format.energy
               (maybe
                   (error $ "could not find cumulated energy index")
                   formatValue $

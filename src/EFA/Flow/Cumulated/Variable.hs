@@ -47,13 +47,13 @@ class FormatIndex idx where
       idx node -> output
 
 instance FormatIndex Idx.Energy where
-   formatIndex (Idx.Energy d e) = formatEdge Format.Energy d e
+   formatIndex (Idx.Energy d e) = formatEdge Format.energy d e
 
 instance FormatIndex Idx.Power where
-   formatIndex (Idx.Power d e) = formatEdge Format.Power d e
+   formatIndex (Idx.Power d e) = formatEdge Format.power d e
 
 instance FormatIndex Idx.X where
-   formatIndex (Idx.X d e) = formatEdge Format.X d e
+   formatIndex (Idx.X d e) = formatEdge Format.xfactor d e
 
 instance FormatIndex Idx.Sum where
    formatIndex (Idx.Sum dir n) =
@@ -67,7 +67,7 @@ instance FormatIndex Idx.DTime where
 
 formatEdge ::
    (Format output, Node.C node) =>
-   Format.EdgeVar -> Idx.Direction -> Idx.StructureEdge node -> output
+   output -> Idx.Direction -> Idx.StructureEdge node -> output
 formatEdge e d se =
-   Format.subscript (Format.edgeIdent e) $
+   Format.subscript e $
    Format.direction d `Format.connect` formatStructureLink se
