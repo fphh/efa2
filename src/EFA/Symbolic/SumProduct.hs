@@ -245,7 +245,7 @@ format f =
        power e t =
           case e of
              1 -> t
-             _ -> Format.power t e
+             _ -> Format.intPower t e
 
    in  term
 

@@ -77,7 +77,7 @@ class Format output where
    dtime, signalSum, scalarSum, storage :: output
    parenthesize, negate, recip :: output -> output
    plus, minus, multiply :: output -> output -> output
-   power :: output -> Integer -> output
+   intPower :: output -> Integer -> output
    showRaw :: output -> String
 
 instance Format ASCII where
@@ -139,7 +139,7 @@ instance Format ASCII where
    plus (ASCII x) (ASCII y) = ASCII $ x ++ " + " ++ y
    minus (ASCII x) (ASCII y) = ASCII $ x ++ " - " ++ y
    multiply (ASCII x) (ASCII y) = ASCII $ x ++ " * " ++ y
-   power (ASCII x) n = ASCII $ x ++ "^" ++ showsPrec 10 n ""
+   intPower (ASCII x) n = ASCII $ x ++ "^" ++ showsPrec 10 n ""
    showRaw (ASCII x) = x
 
 instance Format Unicode where
@@ -205,7 +205,7 @@ instance Format Unicode where
    plus (Unicode x) (Unicode y) = Unicode $ x ++ " + " ++ y
    minus (Unicode x) (Unicode y) = Unicode $ x ++ " - " ++ y
    multiply (Unicode x) (Unicode y) = Unicode $ x ++ "\xb7" ++ y
-   power (Unicode x) n =
+   intPower (Unicode x) n =
       -- writing many digits in superscript looks ugly in a monospace font
       let super c =
              case c of
@@ -316,7 +316,7 @@ instance Format Latex where
    plus (Latex x) (Latex y) = Latex $ x ++ " + " ++ y
    minus (Latex x) (Latex y) = Latex $ x ++ " - " ++ y
    multiply (Latex x) (Latex y) = Latex $ x ++ " \\cdot " ++ y
-   power (Latex x) n = Latex $ x ++ "^{" ++ show n ++ "}"
+   intPower (Latex x) n = Latex $ x ++ "^{" ++ show n ++ "}"
    showRaw (Latex x) = x
 
 
