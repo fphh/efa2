@@ -595,4 +595,4 @@ mapSequenceWithVar ::
    Sequence node a1 v1
 mapSequenceWithVar f g =
    Map.mapWithKey $ \sec (rng, timeGr) ->
-      (rng, Quant.mapFlowWithVar f g sec timeGr)
+      (rng, Quant.mapFlowTopologyWithVar f g sec timeGr)

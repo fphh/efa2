@@ -100,14 +100,14 @@ traverseSum f g (Sum cs fs) =
    liftA2 Sum (f cs) (g fs)
 
 
-mapFlowWithVar ::
+mapFlowTopologyWithVar ::
    (Ord node) =>
    (Var.ForNodeScalar part node -> a0 -> a1) ->
    (Var.InPartSignal part node -> v0 -> v1) ->
    part ->
    (v0, Gr.Graph node Gr.DirEdge (Sums a0 v0) (Flow v0)) ->
    (v1, Gr.Graph node Gr.DirEdge (Sums a1 v1) (Flow v1))
-mapFlowWithVar f g part (dtime, gr) =
+mapFlowTopologyWithVar f g part (dtime, gr) =
    (g (part <~> Idx.DTime) dtime,
     Gr.mapNodeWithKey
        (\n (Sums {sumIn = sin, sumOut = sout}) ->

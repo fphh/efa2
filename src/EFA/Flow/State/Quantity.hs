@@ -597,4 +597,4 @@ mapStatesWithVar ::
    States node a0 v0 ->
    States node a1 v1
 mapStatesWithVar f g =
-   Map.mapWithKey $ Quant.mapFlowWithVar f g
+   Map.mapWithKey $ Quant.mapFlowTopologyWithVar f g
