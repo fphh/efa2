@@ -1,21 +1,38 @@
+{-# LANGUAGE TypeFamilies #-}
 module EFA.Flow.Draw (
-  pdf, png, xterm,
-  eps, plain, svg,
-  fig, dot,
-  title, bgcolour,
+   pdf, png, xterm,
+   eps, plain, svg,
+   fig, dot,
+   title, bgcolour,
 
-  cumulatedFlow,
+   stateFlowGraph,
 
-  topologyWithEdgeLabels,
-  topology,
-  flowTopologies,
-  ) where
+   Options, optionsDefault,
+   absoluteVariable, deltaVariable,
+   showVariableIndex, hideVariableIndex,
+   showStorageEdge, hideStorageEdge,
+   showStorage, hideStorage,
+   showEtaNode, hideEtaNode,
 
+   cumulatedFlow,
+
+   topologyWithEdgeLabels,
+   topology,
+   flowTopologies,
+   ) where
+
+import qualified EFA.Flow.State.Quantity as StateFlowQuant
 import qualified EFA.Flow.Cumulated.Quantity as CumFlowQuant
+import qualified EFA.Flow.Quantity as FlowQuant
+
+import qualified EFA.Flow.State as StateFlow
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
-import EFA.Report.Format (Unicode(Unicode, unUnicode))
+import EFA.Report.Format (Format, Unicode(Unicode, unUnicode))
+
+import qualified EFA.Equation.Variable as Var
+
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
@@ -28,7 +45,7 @@ import Data.GraphViz (
           GraphvizCanvas(Xlib), runGraphvizCanvas,
           GraphvizCommand(Dot), runGraphvizCommand,
           GraphvizOutput(..),
-          GraphID(Int),
+          GraphID(Int, Str),
           GlobalAttributes(GraphAttrs),
           DotEdge(DotEdge),
           DotGraph(DotGraph),
@@ -56,17 +73,23 @@ import qualified Data.Map as Map
 import qualified Data.List as List
 
 import Data.Map (Map)
-import Data.Foldable (Foldable, fold)
+import Data.Foldable (Foldable, foldMap, fold)
+import Data.Maybe (maybeToList)
+import Data.Tuple.HT (mapFst, mapFst3, mapSnd)
+import Data.Monoid ((<>))
 
-import Control.Monad (void)
 import Control.Category ((.))
+import Control.Monad (void, mplus)
 
-import Prelude hiding (reverse, (.))
+import Prelude hiding (reverse, init, (.))
 
 
 
 structureEdgeColour :: Attribute
 structureEdgeColour = Color [RGB 0 0 200]
+
+storageEdgeColour :: Attribute
+storageEdgeColour = Color [RGB 200 0 0]
 
 shape :: Topo.NodeType a -> Viz.Shape
 shape Topo.Crossing = Viz.PlainText
@@ -85,6 +108,94 @@ nodeAttrs :: Topo.NodeType a -> Attribute -> [Attribute]
 nodeAttrs nt label =
   [ label, Viz.Style [Viz.SItem Viz.Filled []],
     Viz.Shape (shape nt), color nt ]
+
+
+data Triple a = Triple a a a
+
+instance Foldable Triple where
+   foldMap f (Triple pre eta suc) = f pre <> f eta <> f suc
+
+data StructureEdgeLabel =
+     HideEtaNode [Unicode]
+   | ShowEtaNode (Triple [Unicode])
+
+
+dotFromStateFlowGraph ::
+   (NodeType node) =>
+   StateFlow.Graph node Gr.EitherEdge
+      String Unicode Unicode Unicode
+      StructureEdgeLabel [Unicode] ->
+   DotGraph T.Text
+dotFromStateFlowGraph g =
+   dotDirGraph $
+   DotStmts {
+      attrStmts = [],
+      subGraphs =
+         (Map.elems $
+          Map.mapWithKey dotFromPartGraph $
+          StateFlow.states g)
+         ++
+         (dotFromInitExitNodes
+             (Idx.NoExit Idx.Init :: Idx.AugmentedState,
+              Idx.Exit :: Idx.AugmentedState) $
+          fmap fst $ StateFlow.storages g),
+      nodeStmts = [],
+      edgeStmts = dotFromStorageEdges $ fmap snd $ StateFlow.storages g
+   }
+
+
+dotFromInitExitNodes ::
+   (Part part, NodeType node) =>
+   (Idx.Augmented part, Idx.Augmented part) ->
+   Map node (Unicode, Unicode) ->
+   [DotSubGraph T.Text]
+dotFromInitExitNodes (init, exit) initExit =
+   dotFromInitOrExitNodes init "Init" (fmap fst initExit) :
+   dotFromInitOrExitNodes exit "Exit" (fmap snd initExit) :
+   []
+
+dotFromInitOrExitNodes ::
+   (Part part, NodeType node) =>
+   Idx.Augmented part ->
+   String ->
+   Map node Unicode ->
+   DotSubGraph T.Text
+dotFromInitOrExitNodes part name initExit =
+   DotSG True (Just $ Str $ T.pack $ dotIdentFromAugmented part) $
+   DotStmts
+      [GraphAttrs [labelFromString name]]
+      []
+      (Map.elems $ Map.mapWithKey (dotFromAugNode part) initExit)
+      []
+
+
+dotFromPartGraph ::
+   (Part part, NodeType node) =>
+   part ->
+   (String,
+    Gr.Graph node Gr.EitherEdge Unicode StructureEdgeLabel) ->
+   DotSubGraph T.Text
+dotFromPartGraph current (subtitle, gr) =
+   let (etaNodes,edges) =
+          fold $
+          Map.mapWithKey
+             (\e labels ->
+                case labels of
+                   ShowEtaNode l ->
+                      mapFst (:[]) $ dotFromStructureEdgeEta current e l
+                   HideEtaNode l ->
+                      ([], [dotFromStructureEdge current e l])) $
+          Gr.edgeLabels gr
+   in  DotSG True (Just $ Str $ T.pack $ dotIdentFromPart current) $
+       DotStmts
+          [GraphAttrs [labelFromString subtitle]]
+          []
+          ((Map.elems $
+            Map.mapWithKey (dotFromAugNode (Idx.augment current)) $
+            Gr.nodeLabels gr)
+           ++
+           etaNodes)
+          edges
 
 
 graphStatementsAcc ::
@@ -123,6 +234,68 @@ xterm :: DotGraph T.Text -> IO ()
 xterm g = void $ runGraphvizCanvas Dot g Xlib
 
 
+dotFromAugNode ::
+   (Part part, NodeType node) =>
+   Idx.Augmented part -> node -> Unicode -> DotNode T.Text
+dotFromAugNode part n label =
+   DotNode
+      (dotIdentFromAugNode $ Idx.PartNode part n)
+      (nodeAttrs (nodeType n) $ labelFromUnicode label)
+
+
+dotFromStructureEdge ::
+   (Node.C node, Part part) =>
+   part -> Gr.EitherEdge node -> [Unicode] -> DotEdge T.Text
+dotFromStructureEdge part e label =
+   let (DirEdge x y, dir, ord) = orientFlowEdge $ Idx.InPart part e
+   in  DotEdge
+          (dotIdentFromPartNode x) (dotIdentFromPartNode y)
+          [labelFromLines $ order ord label,
+           Viz.Dir dir, structureEdgeColour]
+
+dotFromStructureEdgeEta ::
+   (Node.C node, Part part) =>
+   part -> Gr.EitherEdge node ->
+   Triple [Unicode] ->
+   (DotNode T.Text, [DotEdge T.Text])
+dotFromStructureEdgeEta part e label =
+   let (DirEdge x y, dir, ord) = orientFlowEdge $ Idx.InPart part e
+       Triple pre eta suc = order ord label
+       did = dotIdentFromEtaNode x y
+   in  (DotNode did [labelFromLines eta],
+        [DotEdge
+            (dotIdentFromPartNode x) did
+            [labelFromLines pre,
+             Viz.Dir dir, structureEdgeColour],
+         DotEdge
+            did (dotIdentFromPartNode y)
+            [labelFromLines suc,
+             Viz.Dir dir, structureEdgeColour]])
+
+dotFromStorageEdges ::
+   (Node.C node, Part part) =>
+   Map node (Map (Idx.StorageEdge part node) [Unicode]) ->
+   [DotEdge T.Text]
+dotFromStorageEdges =
+   fold .
+   Map.mapWithKey
+      (\node ->
+         Map.elems .
+         Map.mapWithKey
+            (\edge -> dotFromStorageEdge (Idx.ForNode edge node)))
+
+dotFromStorageEdge ::
+   (Node.C node, Part part) =>
+   Idx.ForNode (Idx.StorageEdge part) node ->
+   [Unicode] -> DotEdge T.Text
+dotFromStorageEdge e lns =
+   DotEdge
+      (dotIdentFromAugNode $ Idx.storageEdgeFrom e)
+      (dotIdentFromAugNode $ Idx.storageEdgeTo   e)
+      [labelFromLines lns, Viz.Dir Viz.Forward,
+       storageEdgeColour, Viz.Constraint True]
+
+
 labelFromLines :: [Unicode] -> Attribute
 labelFromLines = labelFromString . concatMap (++"\\l") . map unUnicode
 
@@ -142,6 +315,30 @@ instance Part Idx.Section where
 instance Part Idx.State where
    dotIdentFromPart (Idx.State s) = show s
 
+
+dotIdentFromPartNode ::
+   (Part part, Node.C node) => Idx.PartNode part node -> T.Text
+dotIdentFromPartNode (Idx.PartNode s n) =
+   T.pack $ "s" ++ dotIdentFromPart s ++ "n" ++ Node.dotId n
+
+dotIdentFromAugNode ::
+   (Part part, Node.C node) => Idx.AugNode part node -> T.Text
+dotIdentFromAugNode (Idx.PartNode b n) =
+   T.pack $ "s" ++ dotIdentFromAugmented b ++ "n" ++ Node.dotId n
+
+dotIdentFromAugmented :: (Part part) => Idx.Augmented part -> String
+dotIdentFromAugmented =
+   Idx.switchAugmented "init" "exit" dotIdentFromPart
+
+
+dotIdentFromEtaNode ::
+   (Node.C node, Part part) =>
+   Idx.PartNode part node -> Idx.PartNode part node -> T.Text
+dotIdentFromEtaNode (Idx.PartNode s x) (Idx.PartNode _s y) =
+   T.pack $
+      "s" ++ dotIdentFromPart s ++
+      "x" ++ Node.dotId x ++
+      "y" ++ Node.dotId y
 
 dotIdentFromNode :: (Node.C node) => node -> T.Text
 dotIdentFromNode n = T.pack $ Node.dotId n
@@ -230,9 +427,27 @@ class Reverse s where
 instance Reverse [s] where
    reverse = List.reverse
 
+instance (Reverse a) => Reverse (Triple a) where
+   reverse (Triple pre eta suc) =
+      Triple (reverse suc) (reverse eta) (reverse pre)
+
 
 data Order = Id | Reverse deriving (Eq, Show)
 
+order :: Reverse s => Order -> s -> s
+order Id = id
+order Reverse = reverse
+
+
+orientFlowEdge ::
+   (Ord node) =>
+   Idx.InPart part Gr.EitherEdge node ->
+   (DirEdge (Idx.PartNode part node), Viz.DirType, Order)
+orientFlowEdge (Idx.InPart sec e) =
+   mapFst3 (fmap (Idx.PartNode sec)) $
+   case e of
+      Gr.EUnDirEdge ue -> (orientUndirEdge ue, Viz.NoDir, Id)
+      Gr.EDirEdge de -> orientDirEdge de
 
 orientEdge ::
    (Ord node) =>
@@ -279,11 +494,172 @@ showType typ =
       Topo.NoRestriction -> "NoRestriction"
 
 
+formatNodeType ::
+   (Format output, StorageLabel store) =>
+   Topo.NodeType store -> output
+formatNodeType = Format.literal . showType
+
 formatTypedNode ::
    (Node.C node, StorageLabel store) =>
    (node, Topo.NodeType store) -> Unicode
 formatTypedNode (n, l) =
    Unicode $ unUnicode (Node.display n) ++ " - " ++ showType l
+
+
+data Options output =
+   Options {
+      optRecordIndex :: output -> output,
+      optVariableIndex :: Bool,
+      optStorageEdge :: Bool,
+      optStorage :: Bool,
+      optEtaNode :: Bool
+   }
+
+optionsDefault :: Format output => Options output
+optionsDefault =
+   Options {
+      optRecordIndex = id,
+      optVariableIndex = False,
+      optStorageEdge = True,
+      optStorage = False,
+      optEtaNode = False
+   }
+
+absoluteVariable, deltaVariable,
+   showVariableIndex, hideVariableIndex,
+   showStorageEdge, hideStorageEdge,
+   showStorage, hideStorage,
+   showEtaNode, hideEtaNode
+   :: Format output => Options output -> Options output
+absoluteVariable opts =
+   opts { optRecordIndex = Format.record Idx.Absolute }
+
+deltaVariable opts =
+   opts { optRecordIndex = Format.record Idx.Delta }
+
+showVariableIndex opts = opts { optVariableIndex = True }
+hideVariableIndex opts = opts { optVariableIndex = False }
+
+{-
+If storage edges are shown then the subgraphs are not aligned vertically.
+-}
+showStorageEdge opts = opts { optStorageEdge = True }
+hideStorageEdge opts = opts { optStorageEdge = False }
+
+showStorage opts = opts { optStorage = True }
+hideStorage opts = opts { optStorage = False }
+
+showEtaNode opts = opts { optEtaNode = True }
+hideEtaNode opts = opts { optEtaNode = False }
+
+
+
+stateFlowGraph ::
+   (FormatValue a, FormatValue v, NodeType node) =>
+   Options Unicode -> StateFlowQuant.Graph node a v -> DotGraph T.Text
+stateFlowGraph opts =
+   dotFromStateFlowGraph
+   .
+   (\gr ->
+      StateFlow.Graph {
+         StateFlowQuant.storages =
+            Map.mapWithKey
+               (\node ((init,exit), edges) ->
+                  ((stateNodeShow node (Just init),
+                    stateNodeShow node (Just exit)),
+                   Map.mapWithKey (storageEdgeStateShow opts node) edges)) $
+            StateFlowQuant.storages gr,
+         StateFlowQuant.states =
+            Map.mapWithKey
+               (\state (dt,topo) ->
+                  (show state ++ " / Time " ++ unUnicode (formatValue dt),
+                   Gr.mapEdgesMaybe (Just . Gr.EDirEdge) $
+                   Gr.mapNodeWithKey
+                      (\node sums ->
+                         stateNodeShow node $
+                         fmap StateFlowQuant.carrySum $
+                         mplus
+                            (StateFlowQuant.sumOut sums)
+                            (StateFlowQuant.sumIn sums)) $
+                   Gr.mapEdgeWithKey
+                      (\edge ->
+                         if optEtaNode opts
+                           then ShowEtaNode . structureEdgeShowEta opts state edge
+                           else HideEtaNode . structureEdgeShow opts state edge)
+                      topo)) $
+            StateFlowQuant.states gr
+      })
+   .
+   (\g ->
+      if optStorageEdge opts
+        then g
+        else g {StateFlowQuant.storages =
+                  fmap (mapSnd $ const Map.empty) $
+                  StateFlowQuant.storages g})
+
+
+stateNodeShow ::
+   (NodeType node, FormatValue a, Format output) =>
+   node -> Maybe a -> output
+stateNodeShow node msum =
+   case nodeType node of
+      ty ->
+         Format.lines $
+         Node.display node :
+         formatNodeType ty :
+            case ty of
+               Topo.Storage _ -> maybeToList $ fmap formatValue msum
+               _ -> []
+
+storageEdgeStateShow ::
+   (Format.Part part, Format.StorageIdx var, var ~ Var.Scalar part,
+    Node.C node, FormatValue a, Format output) =>
+   Options output ->
+   node ->
+   Idx.StorageEdge part node ->
+   StateFlowQuant.Carry a ->
+   [output]
+storageEdgeStateShow opts node edge carry =
+   case StateFlowQuant.mapCarryWithVar
+           (formatAssignWithOpts opts) node edge carry of
+      labels ->
+         StateFlowQuant.carryEnergy labels :
+         StateFlowQuant.carryXOut labels :
+         StateFlowQuant.carryXIn labels :
+         []
+
+structureEdgeShow ::
+   (Node.C node, Ord part, FormatValue a, Format.Part part, Format output) =>
+   Options output ->
+   part -> Gr.DirEdge node ->
+   FlowQuant.Flow a -> [output]
+structureEdgeShow opts part edge flow =
+   case FlowQuant.mapFlowWithVar (formatAssignWithOpts opts) part edge flow of
+      labels ->
+         FlowQuant.flowEnergyOut labels :
+         FlowQuant.flowXOut labels :
+         FlowQuant.flowEta labels :
+         FlowQuant.flowXIn labels :
+         FlowQuant.flowEnergyIn labels :
+         []
+
+structureEdgeShowEta ::
+   (Node.C node, Ord part, FormatValue a, Format.Part part, Format output) =>
+   Options output ->
+   part -> Gr.DirEdge node ->
+   FlowQuant.Flow a -> Triple [output]
+structureEdgeShowEta opts part edge flow =
+   case FlowQuant.mapFlowWithVar (formatAssignWithOpts opts) part edge flow of
+      labels ->
+         Triple
+            (FlowQuant.flowEnergyOut labels :
+             FlowQuant.flowXOut labels :
+             [])
+            (formatValue (FlowQuant.flowEta flow) :
+             [])
+            (FlowQuant.flowXIn labels :
+             FlowQuant.flowEnergyIn labels :
+             [])
 
 
 cumulatedFlow ::
@@ -294,8 +670,7 @@ cumulatedFlow =
    graph .
    Gr.mapNodeWithKey (const . dotFromCumNode) .
    Gr.mapEdge (labelFromLines . Fold.toList) .
-   CumFlowQuant.mapGraphWithVar
-      (\var val -> Format.assign (formatValue var) (formatValue val))
+   CumFlowQuant.mapGraphWithVar formatAssign
 
 
 dotFromCumNode ::
@@ -347,3 +722,21 @@ dotDirGraph stmts =
       graphID = Just (Int 1),
       graphStatements = stmts
    }
+
+
+formatAssign ::
+   (FormatValue var, FormatValue a, Format output) =>
+   var -> a -> output
+formatAssign var val =
+   Format.assign (formatValue var) (formatValue val)
+
+formatAssignWithOpts ::
+   (Node.C node, Var.FormatIndex idx, Format.EdgeIdx idx,
+    FormatValue a, Format output) =>
+   Options output -> idx node -> a -> output
+formatAssignWithOpts opts idx val =
+   Format.assign
+      (if optVariableIndex opts
+         then Var.formatIndex idx
+         else Format.edgeIdent idx)
+      (formatValue val)

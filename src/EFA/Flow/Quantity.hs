@@ -123,13 +123,15 @@ mapFlowTopologyWithVar f g part (dtime, gr) =
                       (f (Idx.StInSum (Idx.NoExit part) <#> n) cs)
                       (g (part <~> Idx.Sum Idx.Out n) fs)
           }) $
-    Gr.mapEdgeWithKey
-       (\e ->
-          liftA2 g
-             (Idx.InPart part <$>
-              (flowVars <*> pure (Topo.structureEdgeFromDirEdge e))))
-       gr)
+    Gr.mapEdgeWithKey (mapFlowWithVar g part) gr)
 
+mapFlowWithVar ::
+   (Idx.InPart part Var.Signal node -> v0 -> v1) ->
+   part -> Gr.DirEdge node -> Flow v0 -> Flow v1
+mapFlowWithVar f part e =
+   liftA2 f
+      (Idx.InPart part <$>
+       (flowVars <*> pure (Topo.structureEdgeFromDirEdge e)))
 
 flowVars :: Flow (Idx.StructureEdge node -> Var.Signal node)
 flowVars =

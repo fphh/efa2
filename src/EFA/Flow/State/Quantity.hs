@@ -18,6 +18,8 @@ module EFA.Flow.State.Quantity (
    mapStoragesWithVar,
    mapStatesWithVar,
 
+   mapCarryWithVar,
+
    fromSequenceFlow,
    fromSequenceFlowResult,
 
@@ -577,10 +579,13 @@ mapStoragesWithVar f =
    Map.mapWithKey $ \node ((init, exit), edges) ->
       ((f (Idx.StOutSum Idx.Init <#> node) init,
         f (Idx.StInSum  Idx.Exit <#> node) exit),
-       Map.mapWithKey
-          (\edge ->
-             liftA2 f (Idx.ForNode <$> (carryVars <*> pure edge) <*> pure node))
-          edges)
+       Map.mapWithKey (mapCarryWithVar f node) edges)
+
+mapCarryWithVar ::
+   (Idx.ForNode (Var.Scalar part) node -> a0 -> a1) ->
+   node -> Idx.StorageEdge part node -> Carry a0 -> Carry a1
+mapCarryWithVar f node edge =
+   liftA2 f (Idx.ForNode <$> (carryVars <*> pure edge) <*> pure node)
 
 carryVars :: Carry (Idx.StorageEdge part node -> Var.Scalar part node)
 carryVars =
