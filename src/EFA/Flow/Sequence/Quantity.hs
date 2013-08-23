@@ -332,17 +332,13 @@ lookupStruct fieldOut fieldIn unpackIdx =
       case unpackIdx idx of
          se ->
             mplus
-               (fmap fieldOut $
-                Gr.lookupEdge (Topo.dirEdgeFromStructureEdge se) topo)
-               (fmap fieldIn $
-                Gr.lookupEdge (Topo.dirEdgeFromStructureEdge $ Idx.flip se) topo)
+               (Quant.lookupEdge fieldOut se topo)
+               (Quant.lookupEdge fieldIn (Idx.flip se) topo)
 
 
 lookupEta :: (Ord node) => XIdx.Eta node -> Graph node a v -> Maybe v
 lookupEta =
-   withTopology $ \(Idx.Eta se) topo ->
-      fmap flowEta $ Gr.lookupEdge (Topo.dirEdgeFromStructureEdge se) topo
-
+   withTopology $ \(Idx.Eta se) -> Quant.lookupEdge flowEta se
 
 lookupSum :: (Ord node) => XIdx.Sum node -> Graph node a v -> Maybe v
 lookupSum =

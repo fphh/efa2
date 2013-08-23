@@ -58,7 +58,6 @@ import qualified EFA.Equation.Variable as Var
 
 import qualified EFA.Graph.StateFlow.Index as StateIdx
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Gr
 
 import EFA.Equation.Arithmetic ((~+))
@@ -393,16 +392,13 @@ lookupStruct fieldOut fieldIn unpackIdx =
       case unpackIdx idx of
          se ->
             mplus
-               (fmap fieldOut $
-                Gr.lookupEdge (Topo.dirEdgeFromStructureEdge se) topo)
-               (fmap fieldIn $
-                Gr.lookupEdge (Topo.dirEdgeFromStructureEdge $ Idx.flip se) topo)
+               (Quant.lookupEdge fieldOut se topo)
+               (Quant.lookupEdge fieldIn (Idx.flip se) topo)
 
 
 lookupEta :: (Ord node) => StateIdx.Eta node -> Graph node a v -> Maybe v
 lookupEta =
-   withTopology $ \(Idx.Eta se) topo ->
-      fmap flowEta $ Gr.lookupEdge (Topo.dirEdgeFromStructureEdge se) topo
+   withTopology $ \(Idx.Eta se) -> Quant.lookupEdge flowEta se
 
 
 lookupSum :: (Ord node) => StateIdx.Sum node -> Graph node a v -> Maybe v

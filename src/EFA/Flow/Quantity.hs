@@ -146,6 +146,16 @@ flowVars =
    }
 
 
+lookupEdge ::
+   Ord n =>
+   (el -> a) ->
+   Idx.StructureEdge n ->
+   Gr.Graph n Gr.DirEdge nl el ->
+   Maybe a
+lookupEdge f se =
+   fmap f . Gr.lookupEdge (Topo.dirEdgeFromStructureEdge se)
+
+
 (<#>) ::
    (Var.ScalarIndex idx, Var.ScalarPart idx ~ part) =>
    idx node -> node -> Var.ForNodeScalar part node
