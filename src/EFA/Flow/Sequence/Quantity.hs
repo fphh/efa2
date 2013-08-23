@@ -24,8 +24,6 @@ module EFA.Flow.Sequence.Quantity (
    mapStoragesWithVar,
    mapSequenceWithVar,
 
-   dirFromFlowGraph,
-
    lookupPower,
    lookupEnergy,
    lookupX,
@@ -71,7 +69,6 @@ import qualified Data.Foldable as Fold
 
 import Data.Traversable (Traversable, traverse, foldMapDefault)
 import Data.Foldable (Foldable)
-import Data.Tuple.HT (mapSnd)
 import Data.Maybe (fromMaybe)
 import Data.Monoid (mempty, (<>))
 
@@ -82,12 +79,13 @@ type
    Storages node a = SeqFlow.Storages node a a a (Carry a)
 
 type
-   Sequence node a v = SeqFlow.Sequence node Gr.DirEdge v (Sums a v) (Flow v)
+   Sequence node a v =
+      SeqFlow.Sequence node Gr.EitherEdge v (Sums a v) (Maybe (Flow v))
 
 type
    Graph node a v =
-      SeqFlow.Graph node Gr.DirEdge
-         v (Sums a v) a a a (Flow v) (Carry a)
+      SeqFlow.Graph node Gr.EitherEdge
+         v (Sums a v) a a a (Maybe (Flow v)) (Carry a)
 
 data Carry a =
    Carry {
@@ -141,7 +139,7 @@ mapSequence f g =
          (rng,
           (g dt,
            Gr.mapNode (mapSums f g) $
-           Gr.mapEdge (fmap g) gr)))
+           Gr.mapEdge (fmap $ fmap g) gr)))
 
 mapStorages ::
    (a0 -> a1) ->
@@ -174,7 +172,7 @@ traverseSequence f g =
       (\(rng, (dt, gr)) ->
          fmap ((,) rng) $
          liftA2 (,) (g dt)
-            (Gr.traverse (traverseSums f g) (traverse g) gr))
+            (Gr.traverse (traverseSums f g) (traverse $ traverse g) gr))
 
 traverseStorages ::
    (Applicative f) =>
@@ -246,7 +244,7 @@ envFromSequence =
    Map.mapWithKey
       (\sec (_rng, (dtime, topo)) ->
          let nls = Gr.nodeLabels topo
-             els = Gr.edgeLabels topo
+             els = Gr.edgeLabels $ Quant.dirFromFlowGraph topo
              sumOutMap = Map.mapMaybe sumOut nls
              sumInMap  = Map.mapMaybe sumIn nls
          in  ((Map.mapKeys (Idx.ForNode $ Idx.StInSum $ Idx.NoExit sec) $
@@ -487,19 +485,8 @@ graphFromPlain ::
 graphFromPlain g =
    SeqFlow.Graph {
       storages = storagesFromPlain $ SeqFlow.storages g,
-      sequence =
-         sequenceFromPlain $
-         fmap (mapSnd (mapSnd dirFromFlowGraph)) $ SeqFlow.sequence g
+      sequence = sequenceFromPlain $ SeqFlow.sequence g
    }
-
-dirFromFlowGraph ::
-   (Ord n) =>
-   Gr.Graph n Gr.EitherEdge nl el -> Gr.Graph n Gr.DirEdge nl el
-dirFromFlowGraph =
-   Gr.mapEdgesMaybe $ \ee ->
-      case ee of
-         Gr.EDirEdge de -> Just de
-         Gr.EUnDirEdge _ -> Nothing
 
 
 storagesFromPlain ::
@@ -516,7 +503,7 @@ storagesFromPlain =
 
 sequenceFromPlain ::
    (Ord node) =>
-   SeqFlow.Sequence node Gr.DirEdge ()
+   SeqFlow.Sequence node Gr.EitherEdge ()
       (Topo.NodeType (Maybe Topo.StoreDir)) () ->
    Sequence node () ()
 sequenceFromPlain =
@@ -541,7 +528,11 @@ sequenceFromPlain =
                     Topo.Crossing -> bothSum
                     Topo.DeadNode -> noSum
                     Topo.NoRestriction -> bothSum) $
-           Gr.mapEdge (const $ pure ()) gr)
+           Gr.mapEdgeWithKey
+              (\ee _ ->
+                 case ee of
+                    Gr.EUnDirEdge _ -> Nothing
+                    Gr.EDirEdge _ -> Just $ pure ()) gr)
 
 
 

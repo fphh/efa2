@@ -573,7 +573,6 @@ stateFlowGraph opts =
             Map.mapWithKey
                (\state (dt,topo) ->
                   (show state ++ " / Time " ++ unUnicode (formatValue dt),
-                   Gr.mapEdgesMaybe (Just . Gr.EDirEdge) $
                    Gr.mapNodeWithKey
                       (\node sums ->
                          stateNodeShow node $
@@ -631,9 +630,10 @@ storageEdgeStateShow opts node edge carry =
 structureEdgeShow ::
    (Node.C node, Ord part, FormatValue a, Format.Part part, Format output) =>
    Options output ->
-   part -> Gr.DirEdge node ->
-   FlowQuant.Flow a -> [output]
-structureEdgeShow opts part edge flow =
+   part -> Gr.EitherEdge node ->
+   Maybe (FlowQuant.Flow a) -> [output]
+structureEdgeShow opts part =
+   FlowQuant.switchEdgeFlow (const []) $ \edge flow ->
    case FlowQuant.mapFlowWithVar (formatAssignWithOpts opts) part edge flow of
       labels ->
          FlowQuant.flowEnergyOut labels :
@@ -646,9 +646,10 @@ structureEdgeShow opts part edge flow =
 structureEdgeShowEta ::
    (Node.C node, Ord part, FormatValue a, Format.Part part, Format output) =>
    Options output ->
-   part -> Gr.DirEdge node ->
-   FlowQuant.Flow a -> Triple [output]
-structureEdgeShowEta opts part edge flow =
+   part -> Gr.EitherEdge node ->
+   Maybe (FlowQuant.Flow a) -> Triple [output]
+structureEdgeShowEta opts part =
+   FlowQuant.switchEdgeFlow (const $ Triple [] [] []) $ \edge flow ->
    case FlowQuant.mapFlowWithVar (formatAssignWithOpts opts) part edge flow of
       labels ->
          Triple

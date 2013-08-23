@@ -13,13 +13,18 @@ import qualified Data.Foldable as Fold
 
 import Data.Traversable (Traversable, traverse, foldMapDefault)
 import Data.Foldable (Foldable)
+import Data.Maybe (fromMaybe)
 
 import Prelude hiding (lookup, init, sin, sum)
 
 
 type
-   Topology node a v =
+   DirTopology node a v =
       Gr.Graph node Gr.DirEdge (Sums a v) (Flow v)
+
+type
+   Topology node a v =
+      Gr.Graph node Gr.EitherEdge (Sums a v) (Maybe (Flow v))
 
 data Flow v =
    Flow {
@@ -105,8 +110,8 @@ mapFlowTopologyWithVar ::
    (Var.ForNodeScalar part node -> a0 -> a1) ->
    (Var.InPartSignal part node -> v0 -> v1) ->
    part ->
-   (v0, Gr.Graph node Gr.DirEdge (Sums a0 v0) (Flow v0)) ->
-   (v1, Gr.Graph node Gr.DirEdge (Sums a1 v1) (Flow v1))
+   (v0, Gr.Graph node Gr.EitherEdge (Sums a0 v0) (Maybe (Flow v0))) ->
+   (v1, Gr.Graph node Gr.EitherEdge (Sums a1 v1) (Maybe (Flow v1)))
 mapFlowTopologyWithVar f g part (dtime, gr) =
    (g (part <~> Idx.DTime) dtime,
     Gr.mapNodeWithKey
@@ -123,7 +128,24 @@ mapFlowTopologyWithVar f g part (dtime, gr) =
                       (f (Idx.StInSum (Idx.NoExit part) <#> n) cs)
                       (g (part <~> Idx.Sum Idx.Out n) fs)
           }) $
-    Gr.mapEdgeWithKey (mapFlowWithVar g part) gr)
+    Gr.mapEdgeWithKey (liftEdgeFlow $ mapFlowWithVar g part) gr)
+
+liftEdgeFlow ::
+   (Gr.DirEdge node -> flow0 -> flow1) ->
+   Gr.EitherEdge node -> Maybe flow0 -> Maybe flow1
+liftEdgeFlow f =
+   switchEdgeFlow (const Nothing) (\edge flow -> Just $ f edge flow)
+
+switchEdgeFlow ::
+   (Gr.UnDirEdge node -> a) ->
+   (Gr.DirEdge node -> flow -> a) ->
+   Gr.EitherEdge node -> Maybe flow -> a
+switchEdgeFlow f _ (Gr.EUnDirEdge edge) Nothing = f edge
+switchEdgeFlow _ f (Gr.EDirEdge edge) (Just flow) = f edge flow
+switchEdgeFlow _ _ _ _ =
+   error $
+      "switchEdgeFlow: undirEdge's flow must be Nothing," ++
+      " dirEdge's flow must be Just"
 
 mapFlowWithVar ::
    (Idx.InPart part Var.Signal node -> v0 -> v1) ->
@@ -150,10 +172,30 @@ lookupEdge ::
    Ord n =>
    (el -> a) ->
    Idx.StructureEdge n ->
-   Gr.Graph n Gr.DirEdge nl el ->
+   Gr.Graph n Gr.EitherEdge nl (Maybe el) ->
    Maybe a
 lookupEdge f se =
-   fmap f . Gr.lookupEdge (Topo.dirEdgeFromStructureEdge se)
+   fmap (maybe (error "lookupEdge: directed edge must have Just label") f) .
+   Gr.lookupEdge (Gr.EDirEdge $ Topo.dirEdgeFromStructureEdge se)
+
+
+dirFromGraph ::
+   (Ord n) =>
+   Gr.Graph n Gr.EitherEdge nl el -> Gr.Graph n Gr.DirEdge nl el
+dirFromGraph =
+   Gr.mapEdgesMaybe $ \ee ->
+      case ee of
+         Gr.EDirEdge de -> Just de
+         Gr.EUnDirEdge _ -> Nothing
+
+dirFromFlowGraph ::
+   (Ord n) =>
+   Gr.Graph n Gr.EitherEdge nl (Maybe el) -> Gr.Graph n Gr.DirEdge nl el
+dirFromFlowGraph =
+   Gr.mapEdge
+      (fromMaybe (error "dirFromFlowGraph: directed edge must have Just label"))
+   .
+   dirFromGraph
 
 
 (<#>) ::

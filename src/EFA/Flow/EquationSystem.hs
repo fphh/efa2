@@ -117,7 +117,7 @@ fromTopology ::
     Record rec, Node.C node) =>
    Bool ->
    Expr mode rec s v ->
-   Quant.Topology node
+   Quant.DirTopology node
       (Expr mode rec s a)
       (Expr mode rec s v) ->
    System mode s

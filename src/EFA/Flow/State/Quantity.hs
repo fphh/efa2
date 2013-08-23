@@ -88,12 +88,13 @@ type
    Storages node a = StateFlow.Storages node a a (Carry a)
 
 type
-   States node a v = StateFlow.States node Gr.DirEdge v (Sums a v) (Flow v)
+   States node a v =
+      StateFlow.States node Gr.EitherEdge v (Sums a v) (Maybe (Flow v))
 
 type
    Graph node a v =
-      StateFlow.Graph node Gr.DirEdge
-         v (Sums a v) a a (Flow v) (Carry a)
+      StateFlow.Graph node Gr.EitherEdge
+         v (Sums a v) a a (Maybe (Flow v)) (Carry a)
 
 data Carry a =
    Carry {
@@ -146,7 +147,7 @@ mapStates f g =
       (\(dt, gr) ->
          (g dt,
           Gr.mapNode (mapSums f g) $
-          Gr.mapEdge (fmap g) gr))
+          Gr.mapEdge (fmap $ fmap g) gr))
 
 mapStorages ::
    (a0 -> a1) ->
@@ -177,7 +178,7 @@ traverseStates f g =
    traverse
       (\(dt, gr) ->
          liftA2 (,) (g dt)
-            (Gr.traverse (traverseSums f g) (traverse g) gr))
+            (Gr.traverse (traverseSums f g) (traverse $ traverse g) gr))
 
 traverseStorages ::
    (Applicative f) =>
@@ -192,7 +193,7 @@ traverseStorages f =
 
 
 
-type Topology node nodeLabel = Gr.Graph node Gr.DirEdge nodeLabel ()
+type Topology node nodeLabel = Gr.Graph node Gr.EitherEdge nodeLabel ()
 
 _states ::
    (Ord node, Ord nodeLabel) =>
@@ -228,7 +229,7 @@ stateMaps =
 
 type
    CumGraph node a =
-      StateFlow.Graph node Gr.DirEdge a (Sums a a) a a (Cum a) a
+      StateFlow.Graph node Gr.EitherEdge a (Sums a a) a a (Maybe (Cum a)) a
 
 
 fromSequenceFlowGen ::
@@ -250,9 +251,9 @@ fromSequenceFlowGen integrate add zero allStEdges gr =
                 (add dtime0 dtime1,
                  Gr.checkedZipWith "StateFlow.fromSequenceFlow"
                     (addSums add)
-                    (liftA2 add)
+                    (liftA2 (liftA2 add))
                     gr0 gr1)) $
-          fmap ((mapSnd $ Gr.mapEdge $ cumFromFlow) . snd) $
+          fmap ((mapSnd $ Gr.mapEdge $ fmap cumFromFlow) . snd) $
           SeqFlowQuant.mapSequence id integrate sq
    in  StateFlow.Graph {
           storages =
@@ -286,7 +287,7 @@ cumulateStorageEdges add secMap =
 sumsMap ::
    (Ord node) =>
    node ->
-   StateFlow.States node Gr.DirEdge v (Sums a v) (Cum v) ->
+   StateFlow.States node Gr.EitherEdge v (Sums a v) (Maybe (Cum v)) ->
    Map Idx.State (Sums a v)
 sumsMap node =
    fmap (fromMaybe (error "node not in sequence") .
@@ -411,7 +412,8 @@ lookupSum =
             Idx.Out -> sumOut sums
 
 
-type FlowTopology node a v = Gr.Graph node Gr.DirEdge (Sums a v) (Flow v)
+type FlowTopology node a v =
+        Gr.Graph node Gr.EitherEdge (Sums a v) (Maybe (Flow v))
 
 withTopology ::
    (idx node -> FlowTopology node a v -> Maybe r) ->
@@ -578,7 +580,7 @@ mapStoragesWithVar f =
        Map.mapWithKey (mapCarryWithVar f node) edges)
 
 mapCarryWithVar ::
-   (Idx.ForNode (Var.Scalar part) node -> a0 -> a1) ->
+   (Var.ForNodeScalar part node -> a0 -> a1) ->
    node -> Idx.StorageEdge part node -> Carry a0 -> Carry a1
 mapCarryWithVar f node edge =
    liftA2 f (Idx.ForNode <$> (carryVars <*> pure edge) <*> pure node)
