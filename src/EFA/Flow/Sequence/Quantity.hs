@@ -24,6 +24,8 @@ module EFA.Flow.Sequence.Quantity (
    mapStoragesWithVar,
    mapSequenceWithVar,
 
+   mapCarryWithVar,
+
    lookupPower,
    lookupEnergy,
    lookupX,
@@ -560,10 +562,13 @@ mapStoragesWithVar f =
        Map.mapWithKey
           (\bnd a -> f (Idx.Storage bnd <#> node) a)
           bnds,
-       Map.mapWithKey
-          (\edge ->
-             liftA2 f (Idx.ForNode <$> (carryVars <*> pure edge) <*> pure node))
-          edges)
+       Map.mapWithKey (mapCarryWithVar f node) edges)
+
+mapCarryWithVar ::
+   (Var.ForNodeSectionScalar node -> a0 -> a1) ->
+   node -> XIdx.StorageEdge node -> Carry a0 -> Carry a1
+mapCarryWithVar f node edge =
+   liftA2 f (Idx.ForNode <$> (carryVars <*> pure edge) <*> pure node)
 
 carryVars :: Carry (XIdx.StorageEdge node -> Var.Scalar Idx.Section node)
 carryVars =
