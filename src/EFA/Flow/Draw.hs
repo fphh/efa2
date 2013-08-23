@@ -42,9 +42,6 @@ import EFA.Graph.Topology (FlowTopology)
 import EFA.Graph (DirEdge(DirEdge))
 
 import Data.GraphViz (
-          GraphvizCanvas(Xlib), runGraphvizCanvas,
-          GraphvizCommand(Dot), runGraphvizCommand,
-          GraphvizOutput(..),
           GraphID(Int, Str),
           GlobalAttributes(GraphAttrs),
           DotEdge(DotEdge),
@@ -60,6 +57,7 @@ import Data.GraphViz.Attributes.Complete (
           Attribute(Color, FillColor), Color(RGB),
           )
 
+import qualified Data.GraphViz.Commands as VizCmd
 import qualified Data.GraphViz.Attributes.Complete as Viz
 import qualified Data.GraphViz.Attributes.Colors as Colors
 import qualified Data.GraphViz.Attributes.Colors.X11 as X11Colors
@@ -222,16 +220,21 @@ bgcolour c =
 
 
 pdf, png, eps, svg, plain, fig, dot :: FilePath -> DotGraph T.Text -> IO ()
-pdf file g = void $ runGraphvizCommand Dot g Pdf file
-png file g = void $ runGraphvizCommand Dot g Png file
-eps file g = void $ runGraphvizCommand Dot g Eps file
-svg file g = void $ runGraphvizCommand Dot g Svg file
-plain file g = void $ runGraphvizCommand Dot g Plain file
-fig file g = void $ runGraphvizCommand Dot g Fig file
-dot file g = void $ runGraphvizCommand Dot g DotOutput file
+pdf   = runGraphvizCommand VizCmd.Pdf
+png   = runGraphvizCommand VizCmd.Png
+eps   = runGraphvizCommand VizCmd.Eps
+svg   = runGraphvizCommand VizCmd.Svg
+fig   = runGraphvizCommand VizCmd.Fig
+dot   = runGraphvizCommand VizCmd.DotOutput
+plain = runGraphvizCommand VizCmd.Plain
+
+runGraphvizCommand ::
+   VizCmd.GraphvizOutput -> FilePath -> DotGraph T.Text -> IO ()
+runGraphvizCommand target path g =
+   void $ VizCmd.runGraphvizCommand VizCmd.Dot g target path
 
 xterm :: DotGraph T.Text -> IO ()
-xterm g = void $ runGraphvizCanvas Dot g Xlib
+xterm g = void $ VizCmd.runGraphvizCanvas VizCmd.Dot g VizCmd.Xlib
 
 
 dotFromAugNode ::
