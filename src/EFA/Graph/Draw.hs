@@ -757,7 +757,7 @@ formatNodeStorage ::
 formatNodeStorage opts st sis sos mBeforeBnd (Idx.PartNode aug nid, ty) =
    Format.lines $
    Node.display nid :
-   Format.words [formatNodeType ty] :
+   formatNodeType ty :
       case ty of
          Storage dir ->
             case (aug, mBeforeBnd) of
@@ -835,7 +835,7 @@ formatStateNode ::
 formatStateNode opts sis sos (augNode@(Idx.PartNode _aug nid), ty) =
    Format.lines $
    Node.display nid :
-   Format.words [formatNodeType ty] :
+   formatNodeType ty :
       case ty of
          Storage dir ->
             case Topo.viewNodeDir (augNode, dir) of
