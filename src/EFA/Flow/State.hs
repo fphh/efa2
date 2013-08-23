@@ -3,7 +3,6 @@ module EFA.Flow.State where
 import qualified EFA.Graph.StateFlow.Index as XIdx
 
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Gr
 
 import Data.Map (Map)
@@ -28,13 +27,3 @@ data
          storages :: Storages node initLabel exitLabel storageLabel,
          states :: States node structEdge stateLabel nodeLabel structLabel
       }
-
-type
-   RangeGraph node =
-      Graph
-         node Gr.EitherEdge ()
-         (Topo.NodeType (Maybe Topo.StoreDir))
-         InitIn ExitOut () ()
-
-data InitIn  = InitIn
-data ExitOut = ExitOut
