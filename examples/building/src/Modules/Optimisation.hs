@@ -12,7 +12,7 @@ import qualified EFA.Application.AbsoluteState as EqGen
 import qualified EFA.Application.OneStorage as One
 import qualified EFA.Application.Utility as AppUt
 
-import qualified EFA.Application.IndexState as XIdx
+import qualified EFA.Graph.StateFlow.Index as XIdx
 import EFA.Application.AbsoluteState ((.=))
 
 import qualified EFA.Graph.StateFlow.Environment as SFEnv

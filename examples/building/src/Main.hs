@@ -15,7 +15,7 @@ import Modules.System(Node(..))
 
 -- import EFA.Utility.Async (concurrentlyMany_)
 
-import qualified EFA.Application.IndexState as XIdxState
+import qualified EFA.Graph.StateFlow.Index as StateIdx
 import qualified EFA.Application.OneStorage as One
 
 import qualified EFA.Application.Sweep as Sweep
@@ -181,7 +181,7 @@ optimalEtasWithPowers params forceFactor env =
                 res = map g ps
                 g p = (p, h p optEtaEnv)
                 h (n0, n1) = Map.mapMaybe (fmap (fmap (AppUt.lookupDetPowerState q)))
-                  where q = XIdxState.power state n0 n1
+                  where q = StateIdx.power state n0 n1
 
 ------------------------------------------------------------------------
 
