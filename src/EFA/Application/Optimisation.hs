@@ -1,7 +1,6 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 
 module EFA.Application.Optimisation where
 
@@ -103,19 +102,16 @@ givenAverageWithoutStateX stateToRemove (EqEnvState.Complete scalar signal) =
 
 
 givenAverageWithoutState ::
-  forall node v a.
   (Eq v, EqArith.Sum v, Node.C node, Ord node, Eq a, EqArith.Sum a) =>
   TIdx.State ->
   EqEnvState.Complete node a v ->
   EqEnvState.Complete node a v
 givenAverageWithoutState _stateToRemove (EqEnvState.Complete scalar signal) =
-  (mempty :: EqEnvState.Complete node (Data Nil d) (Data Nil d)) {
-    EqEnvState.signal =
-      mempty { EqEnvState.etaMap = EqEnvState.etaMap signal,
+  EqEnvState.Complete
+    ( mempty { EqEnvState.stXMap = EqEnvState.stXMap scalar } )
+    ( mempty { EqEnvState.etaMap = EqEnvState.etaMap signal,
                EqEnvState.xMap   = EqEnvState.xMap signal,
-               EqEnvState.dtimeMap = EqEnvState.dtimeMap signal },
-    EqEnvState.scalar =
-      mempty { EqEnvState.stXMap = EqEnvState.stXMap scalar } }
+               EqEnvState.dtimeMap = EqEnvState.dtimeMap signal } )
 --  where f :: TIdx.InState idx node -> v -> Bool
 --        f (TIdx.InPart state _) _ = state /= stateToRemove
 
@@ -143,20 +139,16 @@ givenForOptimisation stateFlowGraph env etaAssign etaFunc state commonGiven give
 
 
 initialEnv ::
-  forall node d.
-  (Ord node, Num d, Fractional d, Show node) =>
+  (Ord node, Fractional d, Show node) =>
   node ->
   TD.StateFlowGraph node ->
   EqEnvState.Complete node (Data Nil d) (Data Nil d)
 initialEnv _xStorageEdgesNode g =
-  -- @HT: Warum braucht das aeussere mempty die Typsignatur?
-  (mempty :: EqEnvState.Complete node (Data Nil d) (Data Nil d)) {
-    EqEnvState.signal =
-      mempty { EqEnvState.etaMap = Map.fromList $ zip es $ repeat (Data 0.5),
+  EqEnvState.Complete
+    ( mempty { EqEnvState.stXMap = Map.fromList stxs } )
+    ( mempty { EqEnvState.etaMap = Map.fromList $ zip es $ repeat (Data 0.5),
                EqEnvState.xMap = Map.fromList xs,
-               EqEnvState.dtimeMap = Map.fromList $ zip dts $ repeat (Data 1) },
-    EqEnvState.scalar =
-      mempty { EqEnvState.stXMap = Map.fromList stxs } }
+               EqEnvState.dtimeMap = Map.fromList $ zip dts $ repeat (Data 1) } )
   where gdir = TD.dirFromFlowGraph g
 
         es = mapMaybe f $ Graph.edges gdir
