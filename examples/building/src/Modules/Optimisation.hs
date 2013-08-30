@@ -20,12 +20,14 @@ import EFA.Equation.Result (Result(..))
 import qualified EFA.Flow.State.Index as XIdx
 
 import qualified EFA.Graph.StateFlow.Environment as StateEnv
-import qualified EFA.Graph.Topology.Index as TIdx
+import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Signal.Data as Data
 import EFA.Signal.Data (Data(..), Nil)
---import qualified EFA.Utility.Stream as Stream
---import EFA.Utility.Stream (Stream((:~)))
+
+import qualified EFA.Utility.Stream as Stream
+import EFA.Utility.Stream (Stream((:~)))
+
 import Data.Map (Map)
 import Data.Monoid (mconcat, (<>))
 import Data.Foldable (foldMap)
@@ -33,17 +35,15 @@ import Data.Maybe (catMaybes, isJust)
 --import Data.List (filter)
 
 
-state0, state1, state2, state3 :: TIdx.State
-state0 = TIdx.State 0
-state1 = TIdx.State 1
-state2 = TIdx.State 2
-state3 = TIdx.State 3
+state0, state1, state2, state3 :: Idx.State
+state0 :~ state1 :~ state2 :~ state3 :~ _ = Stream.enumFrom $ Idx.State 0
+
 
 type Env a = StateEnv.Complete Node (Data Nil a) (Data Nil a)
 --type EnvResultData a = StateEnv.Complete Node (Result (Data Nil a)) (Result (Data Nil a))
 type EnvResult a = StateEnv.Complete Node (Result a) (Result a)
 
-type EqSystemData a = 
+type EqSystemData a =
   forall s. EqGen.EquationSystem System.Node s (Data Nil a) (Data Nil a)
 
 type EtaAssignMap node =
@@ -52,14 +52,14 @@ type EtaAssignMap node =
 solve ::
   (Ord a, Fractional a, Show a, EqArith.Sum a, EqArith.Constant a) =>
   TD.StateFlowGraph Node ->
-  (TIdx.State -> EtaAssignMap Node) ->
+  (Idx.State -> EtaAssignMap Node) ->
   Map String (a -> a) ->
   Env a ->
-  TIdx.State ->
+  Idx.State ->
   a -> a -> a -> a -> EnvResult a
 solve stateFlowGraph etaAssign etaFunc env state pLocal pRest pWater pGas =
   envGetData $ EqGen.solveSimple $
-    AppOpt.givenForOptimisation 
+    AppOpt.givenForOptimisation
       stateFlowGraph
       env
       etaAssign
@@ -70,7 +70,7 @@ solve stateFlowGraph etaAssign etaFunc env state pLocal pRest pWater pGas =
       (givenSecDOF state (Data pWater) (Data pGas))
 
 givenSecLoad :: (Eq a, EqArith.Sum a) =>
-                TIdx.State ->
+                Idx.State ->
                 Data Nil a ->
                 Data Nil a ->
                 EqSystemData a
@@ -80,7 +80,7 @@ givenSecLoad state pLocal pRest =  mconcat $
    []
 
 givenSecDOF :: (Eq a, EqArith.Sum a) =>
-                TIdx.State ->
+                Idx.State ->
                Data Nil a ->
                Data Nil a ->
                EqSystemData a
@@ -99,19 +99,19 @@ commonGiven =
    where f st = (XIdx.dTime st .= Data 1)
                 <> (XIdx.energy state0 Water Network
                      EqGen.=%%= XIdx.energy st Water Network)
-         idx = take 20 [TIdx.State 1 ..]
+         idx = take 20 [Idx.State 1 ..]
 --
 --   mconcat $
 --   (XIdx.dTime state0 .= Data 1) :
 --   (XIdx.dTime state4 .= Data 1) :
-   -- ((XIdx.stEnergy TIdx.Init TIdx.Exit Water) EqGen.=%%= (XIdx.energy state1 Water Network)) :
+   -- ((XIdx.stEnergy Idx.Init Idx.Exit Water) EqGen.=%%= (XIdx.energy state1 Water Network)) :
 
 --   (XIdx.energy state0 Water Network EqGen.=%%= XIdx.energy state4 Water Network) :
 
 
 
---   (XIdx.storage TIdx.initial Wasser .= Data 0) :
---   (XIdx.storage TIdx.initial Batterie .= Data 0) :
+--   (XIdx.storage Idx.initial Wasser .= Data 0) :
+--   (XIdx.storage Idx.initial Batterie .= Data 0) :
 --   (XIdx.energy state0 Wasser Network =%%= XIdx.energy state1 Wasser Network) :
 --   (XIdx.energy state0 Batterie LocalNetwork =%%= XIdx.energy state1 LocalNetwork Batterie) :
 --   []
@@ -157,7 +157,7 @@ condition :: (Show b) => StateEnv.Complete Node b (Result Double) -> Bool
 condition env =
   all (>0) $ catMaybes $ takeWhile isJust $ cnlst ++ nlnlst
 --  all (>0) $ catMaybes $ filter isJust $ cnlst ++ nlnlst
-  where idx = [TIdx.State 0 ..]
+  where idx = [Idx.State 0 ..]
         coalNetworkFunc state =
           AppUt.lookupEnergyStateMaybe (XIdx.energy state Coal Network) env
         networkLocalNetworkFunc state =
