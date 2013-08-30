@@ -13,20 +13,19 @@ import Modules.System(Node(..))
 
 -- import EFA.Utility.Async (concurrentlyMany_)
 
-import qualified EFA.Graph.StateFlow.Index as StateIdx
 import qualified EFA.Application.OneStorage as One
-
 import qualified EFA.Application.Sweep as Sweep
-import qualified EFA.Application.Utility as AppUt
 import qualified EFA.Application.Optimisation as AppOpt
 import qualified EFA.Application.Simulation as AppSim
 import qualified EFA.Application.Index as XIdx
 import qualified EFA.Application.Absolute as AppAbs
+import qualified EFA.Application.Utility as AppUt
 
+import qualified EFA.Graph.StateFlow.Index as StateIdx
+import qualified EFA.Graph.StateFlow.Environment as StateEnv
+import qualified EFA.Graph.StateFlow as StateFlow
 import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Graph.Flow as Flow
-import qualified EFA.Graph.StateFlow as StateFlow
-import qualified EFA.Graph.StateFlow.Environment as SFEnv
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Topology.Index as TIdx
 import qualified EFA.Graph.Topology.Node as Node
@@ -153,7 +152,7 @@ unzip3Map m = (Map.map fst3 m, Map.map snd3 m, Map.map thd3 m)
 optimalEtasWithPowers ::
   One.OptimalEnvParams Node Double ->
   One.SocDrive Double ->
-  SFEnv.Complete Node (Data Nil Double) (Data Nil Double) ->
+  StateEnv.Complete Node (Data Nil Double) (Data Nil Double) ->
   One.OptimalEtaWithEnv Node Double
 optimalEtasWithPowers params forceFactor env =
   Map.foldWithKey f Map.empty op
@@ -192,7 +191,7 @@ optimalEtasWithPowers params forceFactor env =
 -- | Warning -- only works for one section in env
 envToPowerRecord ::
   Sig.TSignal [] Double ->
-  SFEnv.Complete System.Node (Result (Data  Nil Double)) (Result (Data ([] :> Nil) Double)) ->
+  StateEnv.Complete System.Node (Result (Data  Nil Double)) (Result (Data ([] :> Nil) Double)) ->
   Record.PowerRecord System.Node [] Double
 envToPowerRecord time env =
   (Seq.addZeroCrossings
@@ -200,8 +199,8 @@ envToPowerRecord time env =
   . Map.map i
   . Map.mapKeys h 
   . Map.filterWithKey p
-  . SFEnv.powerMap
-  . SFEnv.signal) env
+  . StateEnv.powerMap
+  . StateEnv.signal) env
   where p (TIdx.InPart st _) _ = st == TIdx.State 0
         h (TIdx.InPart _ (TIdx.Power edge)) = TIdx.PPos edge
 
@@ -291,9 +290,9 @@ solveAndCalibrateAvgEffWithGraph ::
   Sig.PSignal [] Double ->
   Map String (Double -> Double) ->
   ( Topo.StateFlowGraph Node,
-    SFEnv.Complete Node (Data Nil Double) (Data Nil Double) ) ->
+    StateEnv.Complete Node (Data Nil Double) (Data Nil Double) ) ->
   IO ( Topo.StateFlowGraph Node,
-    SFEnv.Complete Node (Data Nil Double) (Data Nil Double) )
+    StateEnv.Complete Node (Data Nil Double) (Data Nil Double) )
 solveAndCalibrateAvgEffWithGraph time prest plocal etaMap (stateFlowGraph, env) = do
   let sectionFilterTime ::  TC Scalar (Typ A T Tt) (Data Nil Double)
       sectionFilterTime = Sig.toScalar 0
@@ -357,7 +356,7 @@ solveAndCalibrateAvgEffWithGraph time prest plocal etaMap (stateFlowGraph, env) 
 
       stateFlowEnvWithGraph ::
         ( Topo.StateFlowGraph Node,
-          SFEnv.Complete Node (Data Nil Double) (Data Nil Double) )
+          StateEnv.Complete Node (Data Nil Double) (Data Nil Double) )
 
       stateFlowEnvWithGraph =
         let sequ = Flow.genSequFlowTops System.topology (fst flowStatesWithAdj)
@@ -366,7 +365,7 @@ solveAndCalibrateAvgEffWithGraph time prest plocal etaMap (stateFlowGraph, env) 
             e = second (fmap Arith.integrate) envLocal
             sm = snd $ StateFlow.stateMaps sequ
         in  ( StateFlow.stateGraphAllStorageEdges sequ,
-              SFEnv.mapMaybe Result.toMaybe Result.toMaybe $
+              StateEnv.mapMaybe Result.toMaybe Result.toMaybe $
                 StateFlow.envFromSequenceEnvResult sm e)
 
   Draw.xterm $ Draw.stateFlowGraph (fst stateFlowEnvWithGraph)
@@ -385,9 +384,9 @@ solveAndCalibrateAvgEff ::
   (Sig.TSignal [] Double, [Sig.PSignal [] Double]) ->
   Map String (Double -> Double) ->
   ( Topo.StateFlowGraph Node,
-    SFEnv.Complete Node (Data Nil Double) (Data Nil Double) ) ->
+    StateEnv.Complete Node (Data Nil Double) (Data Nil Double) ) ->
   [(Topo.StateFlowGraph Node,
-    SFEnv.Complete Node (Data Nil Double) (Data Nil Double))]
+    StateEnv.Complete Node (Data Nil Double) (Data Nil Double))]
 solveAndCalibrateAvgEff sigs etaMap envWithGraph =
   List.iterate ( -- fmap (AppOpt.givenAverageWithoutState Optimisation.state0)
                  solveAndCalibrateAvgEffWithGraph sigs etaMap) 
