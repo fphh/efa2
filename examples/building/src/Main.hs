@@ -94,7 +94,7 @@ legend _ = "Undefined"
 
 scaleTableEta :: Map String (Double, Double)
 scaleTableEta = Map.fromList $
-  ("storage",     (3, 0.8)) :
+  ("storage",     (3, 1)) :
   ("gas",         (3, 0.4)) :
   ("transformer", (3.0, 0.95)) :
   ("coal",        (10, 0.46)) :
@@ -115,12 +115,17 @@ rest =  [0.2, 0.6]
 water = [0.3, 0.7]
 gas =   [0.4, 0.8]
 -}
-
+{-
 local = [0.2, 0.7, 1.0, 1.9, 3]
 rest =  [0.2, 0.7, 0.8, 1.9, 3]
 water = [0.2, 0.3, 0.9, 1.9, 3]
 gas =   [0.2, 0.7, 1.1, 2.7, 3]
+-}
 
+local = [0.2, 3]
+rest =  [0.2, 3]
+water = [-0.3, 0.3, 0.7]
+gas =   [0.4, 3]
 
 sweepPts :: Sweep.Points Double
 sweepPts = Sweep.Points [local, rest] [water, gas]

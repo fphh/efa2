@@ -9,7 +9,7 @@ import qualified Modules.System as System
 import Modules.System (Node(..))
 
 import qualified EFA.Application.AbsoluteState as EqGen
-import qualified EFA.Application.OneStorage as One
+-- import qualified EFA.Application.OneStorage as One
 import qualified EFA.Application.Utility as AppUt
 
 import qualified EFA.Application.IndexState as XIdx
@@ -23,17 +23,18 @@ import qualified EFA.Graph.Topology.Index as TIdx
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Signal.Data as Data
 import EFA.Signal.Data (Data(..), Nil)
-import qualified EFA.Utility.Stream as Stream
-import EFA.Utility.Stream (Stream((:~)))
+--import qualified EFA.Utility.Stream as Stream
+--import EFA.Utility.Stream (Stream((:~)))
 import Data.Map (Map)
-import Data.Monoid (mempty, mconcat, (<>))
+import Data.Monoid (mconcat, (<>))
 import Data.Foldable (foldMap)
 import Data.Maybe (catMaybes, isJust)
+--import Data.List (filter)
 
 import qualified EFA.Application.Optimisation as AppOpt
 
 
-import Debug.Trace
+--import Debug.Trace
 
 state0, state1, state2, state3 :: TIdx.State
 state0 = TIdx.State 0
@@ -158,6 +159,7 @@ case socDrive of
 condition :: (Show b) => SFEnv.Complete Node b (Result Double) -> Bool
 condition env =
   all (>0) $ catMaybes $ takeWhile isJust $ cnlst ++ nlnlst
+--  all (>0) $ catMaybes $ filter isJust $ cnlst ++ nlnlst
   where idx = [TIdx.State 0 ..]
         coalNetworkFunc state =
           AppUt.lookupEnergyStateMaybe (XIdx.energy state Coal Network) env

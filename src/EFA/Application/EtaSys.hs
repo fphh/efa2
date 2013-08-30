@@ -1,7 +1,7 @@
 
 module EFA.Application.EtaSys where
 
-import qualified EFA.Application.Index as XIdx
+--import qualified EFA.Application.Index as XIdx
 import qualified EFA.Application.IndexState as XIdxState
 
 import qualified EFA.Application.Utility as AppUt
