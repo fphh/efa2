@@ -36,7 +36,7 @@ import qualified EFA.Equation.Variable as Var
 import qualified EFA.Signal.SequenceData as SD
 import EFA.Signal.Signal (SignalIdx(SignalIdx))
 
-import qualified EFA.Application.Index as XIdx
+import qualified EFA.Flow.Sequence.Index as XIdx
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo

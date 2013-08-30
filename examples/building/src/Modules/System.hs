@@ -1,5 +1,13 @@
 module Modules.System where
 
+import qualified EFA.Application.Utility as AppUt
+
+import EFA.Application.Utility (select) -- makeEdges,
+import EFA.Application.Optimisation (etaOverPowerInState, etaOverPowerOutState)
+
+import qualified EFA.Flow.Sequence.Index as SeqIdx
+import qualified EFA.Flow.State.Index as StateIdx
+
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 
 import qualified EFA.Graph.Topology.Node as Node
@@ -15,15 +23,6 @@ import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as TIdx
 
 --import EFA.Signal.Signal ((.+), (./))
-
-import qualified EFA.Application.Utility as AppUt
-
-import EFA.Application.Utility (select) -- makeEdges,
-import qualified EFA.Application.Index as XIdx
-import qualified EFA.Graph.StateFlow.Index as StateIdx
-import EFA.Application.Optimisation (etaOverPowerInState, etaOverPowerOutState)
-
--- import qualified Modules.Utility as ModUt
 
 import EFA.Signal.Record (SigId(..))
 
@@ -69,10 +68,10 @@ edgeNames = Map.fromList el
         f (x, y, lab, _, _) = (if x<y then (x, y) else (y,x), lab)
 
 
-powerPositonNames :: Map (XIdx.PPos Node) SigId
+powerPositonNames :: Map (SeqIdx.PPos Node) SigId
 powerPositonNames = Map.fromList $ concat $ map f edgeList
-  where f (n1,n2,_,l1,l2) = [(XIdx.ppos n1 n2, SigId $ "Power-"++l1),
-                             (XIdx.ppos n2 n1, SigId $ "Power-"++l2)]
+  where f (n1,n2,_,l1,l2) = [(SeqIdx.ppos n1 n2, SigId $ "Power-"++l1),
+                             (SeqIdx.ppos n2 n1, SigId $ "Power-"++l2)]
 
 
 flowStates :: [TD.FlowTopology Node]

@@ -43,7 +43,7 @@ module EFA.Graph.StateFlow.EquationSystem (
   ) where
 
 import qualified EFA.Graph.StateFlow.Environment as Env
-import qualified EFA.Graph.StateFlow.Index as XIdx
+import qualified EFA.Flow.State.Index as XIdx
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node

@@ -4,8 +4,9 @@
 
 module Modules.Plots where
 
-import qualified EFA.Application.Index as XIdx
 import qualified EFA.Application.AssignMap as AssignMap
+
+import qualified EFA.Flow.Sequence.Index as SeqIdx
 
 import qualified EFA.Signal.PlotIO as PlotIO
 import qualified EFA.Signal.Record as Record
@@ -69,7 +70,7 @@ operation ti term opts rList  (plotTitle, (idx,idy)) = mapM_ f rList
 reportStack::(Num a, Node.C node, Ord i, Ord a, FormatValue a,
                                FormatValue i) =>
                               String
-                              -> XIdx.Energy node
+                              -> SeqIdx.Energy node
                               -> a
                               -> Env.Complete
                                    node t (EqRecord.Absolute (Result.Result (Stack.Stack i a)))

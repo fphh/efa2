@@ -3,7 +3,7 @@
 
 module EFA.Graph.Flow where
 
-import qualified EFA.Application.Index as XIdx
+import qualified EFA.Flow.Sequence.Index as XIdx
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo

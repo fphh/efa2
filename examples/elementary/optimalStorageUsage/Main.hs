@@ -6,10 +6,11 @@
 module Main where
 
 import qualified EFA.Application.Absolute as EqGen
-import qualified EFA.Application.Index as XIdx
 import EFA.Application.Absolute ( (.=), (=%%=), (=.=) )
 import EFA.Application.EtaSys (etaSys)
 import EFA.Application.Utility (makeEdges)
+
+import qualified EFA.Flow.Sequence.Index as XIdx
 
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Index as TIdx

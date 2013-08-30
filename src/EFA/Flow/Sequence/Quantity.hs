@@ -49,12 +49,11 @@ module EFA.Flow.Sequence.Quantity (
 
 
 import qualified EFA.Flow.Quantity as Quant
+import qualified EFA.Flow.Sequence.Index as SeqIdx
 import qualified EFA.Flow.Sequence as SeqFlow
 import EFA.Flow.Sequence (sequence, storages)
 import EFA.Flow.Quantity
           (Topology, Sums(..), Sum(..), Flow(..), mapSums, traverseSums, (<#>))
-
-import qualified EFA.Application.Index as XIdx
 
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Variable as Var
@@ -224,9 +223,9 @@ envFromStorages =
             Env.storageMap =
                nodeMap node Idx.Storage storage,
             Env.stOutSumMap =
-               Map.singleton (XIdx.stOutSum XIdx.initSection node) init,
+               Map.singleton (SeqIdx.stOutSum SeqIdx.initSection node) init,
             Env.stInSumMap =
-               Map.singleton (XIdx.stInSum  XIdx.exitSection node) exit
+               Map.singleton (SeqIdx.stInSum  SeqIdx.exitSection node) exit
          })
 
 nodeMap ::
@@ -277,7 +276,7 @@ envFromSequence =
                         fmap flowSum sumInMap)
                        (Map.mapKeys (Idx.InPart sec . Idx.Sum Idx.Out) $
                         fmap flowSum sumOutMap),
-                 Env.dtimeMap = Map.singleton (XIdx.dTime sec) dtime
+                 Env.dtimeMap = Map.singleton (SeqIdx.dTime sec) dtime
               }))
 
 edgeMap ::
@@ -307,17 +306,17 @@ graphFromEnv (Env.Complete envScalar envSignal) =
 
 
 lookupPower ::
-   (Ord node) => XIdx.Power node -> Graph node a v -> Maybe v
+   (Ord node) => SeqIdx.Power node -> Graph node a v -> Maybe v
 lookupPower =
    lookupStruct flowPowerOut flowPowerIn (\(Idx.Power se) -> se)
 
 lookupEnergy ::
-   (Ord node) => XIdx.Energy node -> Graph node a v -> Maybe v
+   (Ord node) => SeqIdx.Energy node -> Graph node a v -> Maybe v
 lookupEnergy =
    lookupStruct flowEnergyOut flowEnergyIn (\(Idx.Energy se) -> se)
 
 lookupX ::
-   (Ord node) => XIdx.X node -> Graph node a v -> Maybe v
+   (Ord node) => SeqIdx.X node -> Graph node a v -> Maybe v
 lookupX =
    lookupStruct flowXOut flowXIn (\(Idx.X se) -> se)
 
@@ -336,11 +335,11 @@ lookupStruct fieldOut fieldIn unpackIdx =
                (Quant.lookupEdge fieldIn (Idx.flip se) topo)
 
 
-lookupEta :: (Ord node) => XIdx.Eta node -> Graph node a v -> Maybe v
+lookupEta :: (Ord node) => SeqIdx.Eta node -> Graph node a v -> Maybe v
 lookupEta =
    withTopology $ \(Idx.Eta se) -> Quant.lookupEdge flowEta se
 
-lookupSum :: (Ord node) => XIdx.Sum node -> Graph node a v -> Maybe v
+lookupSum :: (Ord node) => SeqIdx.Sum node -> Graph node a v -> Maybe v
 lookupSum =
    withTopology $ \(Idx.Sum dir node) topo -> do
       sums <- Gr.lookupNode node topo
@@ -359,31 +358,31 @@ withTopology f (Idx.InPart sec idx) g =
    f idx . snd =<< seqLookup sec g
 
 
-lookupDTime :: XIdx.DTime node -> Graph node a v -> Maybe v
+lookupDTime :: SeqIdx.DTime node -> Graph node a v -> Maybe v
 lookupDTime (Idx.InPart sec Idx.DTime) =
    fmap fst . seqLookup sec
 
 
 lookupStorage ::
-   (Ord node) => XIdx.Storage node -> Graph node a v -> Maybe a
+   (Ord node) => SeqIdx.Storage node -> Graph node a v -> Maybe a
 lookupStorage (Idx.ForNode (Idx.Storage bnd) node) g = do
    (_,stores,_) <- Map.lookup node $ storages g
    Map.lookup bnd stores
 
 lookupMaxEnergy ::
-   (Ord node) => XIdx.MaxEnergy node -> Graph node a v -> Maybe a
+   (Ord node) => SeqIdx.MaxEnergy node -> Graph node a v -> Maybe a
 lookupMaxEnergy (Idx.ForNode (Idx.MaxEnergy se) node) g = do
    (_,_,edges) <- Map.lookup node $ storages g
    fmap carryMaxEnergy $ Map.lookup se edges
 
 lookupStEnergy ::
-   (Ord node) => XIdx.StEnergy node -> Graph node a v -> Maybe a
+   (Ord node) => SeqIdx.StEnergy node -> Graph node a v -> Maybe a
 lookupStEnergy (Idx.ForNode (Idx.StEnergy se) node) g = do
    (_,_,edges) <- Map.lookup node $ storages g
    fmap carryEnergy $ Map.lookup se edges
 
 lookupStX ::
-   (Ord node) => XIdx.StX node -> Graph node a v -> Maybe a
+   (Ord node) => SeqIdx.StX node -> Graph node a v -> Maybe a
 lookupStX (Idx.ForNode (Idx.StX se) node) g = do
    (_,_,edges) <- Map.lookup node $ storages g
    Idx.withStorageEdgeFromTrans
@@ -392,7 +391,7 @@ lookupStX (Idx.ForNode (Idx.StX se) node) g = do
       se
 
 lookupStInSum ::
-   (Ord node) => XIdx.StInSum node -> Graph node a v -> Maybe a
+   (Ord node) => SeqIdx.StInSum node -> Graph node a v -> Maybe a
 lookupStInSum (Idx.ForNode (Idx.StInSum aug) node) g =
    case aug of
       Idx.Exit -> do
@@ -402,7 +401,7 @@ lookupStInSum (Idx.ForNode (Idx.StInSum aug) node) g =
          fmap carrySum . sumOut =<< lookupSums (Idx.secNode sec node) g
 
 lookupStOutSum ::
-   (Ord node) => XIdx.StOutSum node -> Graph node a v -> Maybe a
+   (Ord node) => SeqIdx.StOutSum node -> Graph node a v -> Maybe a
 lookupStOutSum (Idx.ForNode (Idx.StOutSum aug) node) g =
    case aug of
       Idx.Init -> do
@@ -566,11 +565,11 @@ mapStoragesWithVar f =
 
 mapCarryWithVar ::
    (Var.ForNodeSectionScalar node -> a0 -> a1) ->
-   node -> XIdx.StorageEdge node -> Carry a0 -> Carry a1
+   node -> SeqIdx.StorageEdge node -> Carry a0 -> Carry a1
 mapCarryWithVar f node edge =
    liftA2 f (Idx.ForNode <$> (carryVars <*> pure edge) <*> pure node)
 
-carryVars :: Carry (XIdx.StorageEdge node -> Var.Scalar Idx.Section node)
+carryVars :: Carry (SeqIdx.StorageEdge node -> Var.Scalar Idx.Section node)
 carryVars =
    Carry {
       carryMaxEnergy = Var.scalarIndex . Idx.MaxEnergy,

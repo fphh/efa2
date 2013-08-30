@@ -5,10 +5,10 @@
 module EFA.Application.Optimisation where
 
 import qualified EFA.Application.AbsoluteState as EqGenState
-
-import qualified EFA.Graph.StateFlow.Index as StateIdx
-import qualified EFA.Application.Index as XIdx
 import EFA.Application.AbsoluteState ( (=.=) )
+
+import qualified EFA.Flow.State.Index as StateIdx
+import qualified EFA.Flow.Sequence.Index as SeqIdx
 
 import qualified EFA.Signal.Data as Data
 import EFA.Signal.Data (Data(..), Nil) --,(:>))
@@ -16,7 +16,6 @@ import EFA.Signal.Data (Data(..), Nil) --,(:>))
 import qualified EFA.Equation.Arithmetic as EqArith
 
 import qualified EFA.Graph.StateFlow.Environment as EqEnvState
-import qualified EFA.Graph.StateFlow.Index as SFIdx
 import qualified EFA.Graph.Topology.Index as TIdx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as TD
@@ -43,13 +42,13 @@ etaOverPowerOutState =
    TIdx.liftInState $ \(TIdx.Eta e) -> TIdx.Power e
 
 -- | Function to specifiy that an efficiency function in etaAssign is to be looked up with input power
-etaOverPowerIn :: XIdx.Eta node -> XIdx.Power node
+etaOverPowerIn :: SeqIdx.Eta node -> SeqIdx.Power node
 etaOverPowerIn =
    TIdx.liftInSection $ \(TIdx.Eta e) -> TIdx.Power $ TIdx.flip e
 
--- | Function to specifiy that an efficiency function 
+-- | Function to specifiy that an efficiency function
 -- | in etaAssign is to be looked up with output power
-etaOverPowerOut :: XIdx.Eta node -> XIdx.Power node
+etaOverPowerOut :: SeqIdx.Eta node -> SeqIdx.Power node
 etaOverPowerOut =
    TIdx.liftInSection $ \(TIdx.Eta e) -> TIdx.Power e
 
@@ -148,7 +147,7 @@ initialEnv _xStorageEdgesNode g =
         state (TD.FlowEdge (TD.StructureEdge (TIdx.InPart s _))) = Just s
         state _ = Nothing
         node (TIdx.PartNode _ n) = n
-        f e = fmap (\s -> SFIdx.eta s (node $ Graph.from e) (node $ Graph.to e)) (state e)
+        f e = fmap (\s -> StateIdx.eta s (node $ Graph.from e) (node $ Graph.to e)) (state e)
 
 
         nodestate (TIdx.PartNode (TIdx.NoExit (TIdx.NoInit s)) _) = Just s
@@ -158,9 +157,9 @@ initialEnv _xStorageEdgesNode g =
         h n (ins, _, outs) acc =
           flip (maybe acc) (nodestate n) $
             \st ->
-              let x = SFIdx.x st (node n) . node
+              let x = StateIdx.x st (node n) . node
                   il = map x $ filter ((nstate n ==) . nstate) (Set.toList ins)
-                  ol = map x $ filter ((nstate n ==) . nstate) (Set.toList outs) 
+                  ol = map x $ filter ((nstate n ==) . nstate) (Set.toList outs)
               in  filter (not . null) [il, ol] ++ acc
 
         xs = concatMap xfactors $ Map.foldWithKey h [] ns
@@ -177,15 +176,15 @@ initialEnv _xStorageEdgesNode g =
         nstate (TIdx.PartNode s _) = s
 
         hstx n (ins, _, outs) acc =
-          let stx = SFIdx.stx 
+          let stx = StateIdx.stx
                     . flip TIdx.PartNode (node n)
                     . TIdx.StorageTrans (nstate n) . nstate
               il = map stx (Set.toList ins)
-              ol = map stx (Set.toList outs) 
+              ol = map stx (Set.toList outs)
           in  filter (not . null) [il, ol] ++ acc
         stxs = concatMap xfactors $ Map.foldWithKey hstx [] sts
 
-        dts = map SFIdx.dTime
+        dts = map StateIdx.dTime
               $ Set.toList
               $ Set.fromList
               $ mapMaybe nodestate

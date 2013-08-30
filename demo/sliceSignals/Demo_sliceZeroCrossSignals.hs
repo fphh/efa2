@@ -4,19 +4,18 @@
 
 module Main where
 
-import qualified EFA.Application.Index as XIdx
+import qualified EFA.Flow.Sequence.Index as XIdx
 import qualified EFA.Graph.Topology.Node as Node
 
-import qualified EFA.Signal.Signal as S
-import EFA.Signal.Sequence
-import EFA.Signal.SequenceData
+import qualified EFA.Signal.Signal as Signal
+import EFA.Signal.Sequence (genSequ, addZeroCrossings)
+import EFA.Signal.SequenceData (SequData)
 import EFA.Signal.Record (Record(Record), PowerRecord)
 import EFA.Signal.Data ((:>), Nil, Data)
 
-import EFA.Utility (idxList)
-
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
+import EFA.Utility (idxList)
 
 import qualified Data.Map as Map
 import Data.Map (Map)
@@ -26,16 +25,16 @@ import Data.Map (Map)
 node0, node1 :: Node.Int
 node0 :~ node1 :~ _ = Stream.enumFrom minBound
 
-time :: S.TC s t (Data ([] :> Nil) Double)
-time = S.fromList [0, 10..50]
+time :: Signal.TC s t (Data ([] :> Nil) Double)
+time = Signal.fromList [0, 10..50]
 
 t :: String
 t = "zero crossing"
 
-p :: S.TC s t (Data ([] :> Nil) Double)
-p = S.fromList [2, 2, 2, -2, -2]
+p :: Signal.TC s t (Data ([] :> Nil) Double)
+p = Signal.fromList [2, 2, 2, -2, -2]
 
-pmap :: Map (XIdx.PPos Node.Int) (S.TC s t (Data ([] :> Nil) Double))
+pmap :: Map (XIdx.PPos Node.Int) (Signal.TC s t (Data ([] :> Nil) Double))
 pmap = Map.fromListWith
          (error "duplicate keys")
          [(XIdx.ppos node0 node1,  p)]
@@ -44,7 +43,7 @@ pmap = Map.fromListWith
 titleList :: [String]
 titleList = [t]
 
-pmapList :: [Map (XIdx.PPos Node.Int) (S.TC s t (Data ([] :> Nil) Double))]
+pmapList :: [Map (XIdx.PPos Node.Int) (Signal.TC s t (Data ([] :> Nil) Double))]
 pmapList = [pmap]
 
 recList :: [PowerRecord Node.Int [] Double]

@@ -1,6 +1,6 @@
 module EFA.Flow.Sequence where
 
-import qualified EFA.Application.Index as XIdx
+import qualified EFA.Flow.Sequence.Index as XIdx
 
 import qualified EFA.Graph.Flow as Flow
 

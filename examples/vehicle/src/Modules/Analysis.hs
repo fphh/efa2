@@ -11,7 +11,7 @@ import qualified Modules.System as System
 import qualified Modules.Signals as Signals
 
 import qualified EFA.Application.Absolute as EqAbs
-import qualified EFA.Application.Index as XIdx
+import qualified EFA.Flow.Sequence.Index as XIdx
 
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Variable as Var

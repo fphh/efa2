@@ -1,4 +1,4 @@
-module EFA.Application.Index where
+module EFA.Flow.Sequence.Index where
 
 import qualified EFA.Graph.Topology.Index as Idx
 

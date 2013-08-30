@@ -8,7 +8,6 @@ import qualified Modules.System as System
 import Modules.System (Node(..))
 
 import qualified EFA.Application.Absolute as EqGen
-import qualified EFA.Application.Index as XIdx
 --import qualified EFA.Application.EtaSys as ES
 import qualified EFA.Application.Sweep as Sweep
 
@@ -17,6 +16,8 @@ import EFA.Application.Absolute ( (.=), (=%%=), (=.=) )
 import qualified EFA.Equation.Environment as EqEnv
 import qualified EFA.Equation.Arithmetic as EqArith
 import EFA.Equation.Result (Result(..))
+
+import qualified EFA.Flow.Sequence.Index as XIdx
 
 import qualified EFA.Graph.Topology.Index as TIdx
 import qualified EFA.Graph.Flow as Flow

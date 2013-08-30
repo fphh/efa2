@@ -4,8 +4,7 @@ module Modules.Utility where
 
 import qualified Modules.System as System
 
---import qualified EFA.Application.Index as XIdx
-import qualified EFA.Graph.Topology.Index as TIdx
+import qualified EFA.Graph.Topology.Index as Idx
 
 import qualified EFA.Equation.Environment as EqEnv
 import EFA.Equation.Result (Result(..))
@@ -28,13 +27,13 @@ envToPowerRecord :: EqEnv.Complete
                       System.Node
                       (Result (Data  Nil a))
                       (Result (Data (v :> Nil) a)) ->
-                    Sig.TSignal v a -> TIdx.Section ->
+                    Sig.TSignal v a -> Idx.Section ->
                     Record.PowerRecord System.Node v a
 envToPowerRecord env time sec =
   Record.Record time
     (Map.map i $ Map.mapKeys h $ Map.filterWithKey p $ EqEnv.powerMap $ EqEnv.signal env)
-  where p (TIdx.InPart section (TIdx.Power _)) _  =  section == sec
-        h (TIdx.InPart _ (TIdx.Power edge))  =  TIdx.PPos edge
+  where p (Idx.InPart section (Idx.Power _)) _  =  section == sec
+        h (Idx.InPart _ (Idx.Power edge))  =  Idx.PPos edge
 
         i (Determined dat) = Sig.TC dat
         i Undetermined =

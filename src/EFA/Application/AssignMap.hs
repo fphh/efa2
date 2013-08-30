@@ -7,7 +7,7 @@ import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Stack as Stack
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Record as EqRecord
-import qualified EFA.Application.Index as XIdx
+import qualified EFA.Flow.Sequence.Index as SeqIdx
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Report.Format as Format
@@ -136,7 +136,7 @@ stripSection =
 
 lookupStack ::
    (Ord i, Node.C node) =>
-   XIdx.Energy node ->
+   SeqIdx.Energy node ->
    Env.Complete
       node t (EqRecord.Absolute (Result.Result (Stack.Stack i a))) ->
    Map.Map (IndexSet i) a

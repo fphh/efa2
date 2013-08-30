@@ -1,6 +1,6 @@
 module EFA.Flow.State where
 
-import qualified EFA.Graph.StateFlow.Index as XIdx
+import qualified EFA.Flow.State.Index as XIdx
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph as Gr

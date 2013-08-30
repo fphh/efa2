@@ -1,20 +1,21 @@
 module Main where
 
-import qualified EFA.Application.Index as XIdx
+import qualified EFA.Application.Absolute as EqGen
 import EFA.Application.Utility (makeEdges, constructSeqTopo)
 import EFA.Application.Absolute ((=<>))
 
-import qualified EFA.Symbolic.SumProduct as SumProduct
-import qualified EFA.Application.Absolute as EqGen
+import qualified EFA.Flow.Sequence.Index as XIdx
 
-import qualified EFA.Utility.Stream as Stream
-import EFA.Utility.Stream (Stream((:~)))
+import qualified EFA.Symbolic.SumProduct as SumProduct
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Graph as Gr
+
+import qualified EFA.Utility.Stream as Stream
+import EFA.Utility.Stream (Stream((:~)))
 
 import Data.Monoid (mempty)
 

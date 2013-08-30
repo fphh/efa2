@@ -1,9 +1,10 @@
 module Main where
 
-import qualified EFA.Application.Index as XIdx
 import qualified EFA.Application.Absolute as EqGen
 import EFA.Application.Utility ( makeEdges, constructSeqTopo )
 import EFA.Application.Absolute ( (.=) )
+
+import qualified EFA.Flow.Sequence.Index as XIdx
 
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology.Index as Idx

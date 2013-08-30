@@ -9,10 +9,11 @@ import qualified Modules.Analysis as Analysis
 import qualified Modules.Signals as Signals
 -- import qualified Modules.Plots as Plots
 
-import qualified EFA.Application.Index as XIdx
 -- import qualified EFA.Application.AssignMap as AssignMap
 import EFA.Application.Utility (checkDetermined)
 -- import EFA.Application.Absolute ((.=))
+
+import qualified EFA.Flow.Sequence.Index as SeqIdx
 
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.PlotIO as PlotIO
@@ -91,7 +92,7 @@ plotList = [
   ]
 
 -- List of Operation Point Plots
-etaList :: [(String,(XIdx.PPos System.Node,XIdx.PPos System.Node,XIdx.PPos System.Node))]
+etaList :: [(String,(SeqIdx.PPos System.Node,SeqIdx.PPos System.Node,SeqIdx.PPos System.Node))]
 etaList = [
   ("Engine and Generator", Signals.etaEngineGenerator),
   ("Motor and Gearbox", Signals.etaMotorGearbox)
@@ -135,7 +136,7 @@ sectionStackRow_filterEnergy = (10^(5::Integer))
 cumStack_filterEnergy :: Double
 cumStack_filterEnergy = (1^^(-1::Integer))
 
-energyIndexSec :: XIdx.Energy System.Node
+energyIndexSec :: SeqIdx.Energy System.Node
 energyIndexSec = Idx.InPart (Idx.Section 7) energyIndex
 
 energyIndex :: Idx.Energy System.Node
@@ -176,7 +177,7 @@ sectionStackRow_filterEnergy = (10^(5::Integer))
 cumStack_filterEnergy :: Double
 cumStack_filterEnergy = (1^^(-1::Integer))
 
-energyIndexSec :: XIdx.Energy System.Node
+energyIndexSec :: SeqIdx.Energy System.Node
 energyIndexSec = Idx.InPart (Idx.Section 8) energyIndex
 
 energyIndex :: Idx.Energy System.Node
@@ -223,7 +224,7 @@ sectionStackRow_filterEnergy = (10^(5::Integer))
 cumStack_filterEnergy :: Double
 cumStack_filterEnergy = (1^^(-1::Integer))
 
-energyIndexSec :: XIdx.Energy System.Node
+energyIndexSec :: SeqIdx.Energy System.Node
 energyIndexSec = Idx.InPart (Idx.Section 18) energyIndex
 
 energyIndex :: Idx.Energy System.Node
@@ -423,7 +424,7 @@ main = do
 
 
 {-     ++ [mapM_ (Plot.stackIOfromEnv  "Energy Flow Change at Tank in Section 6"
-         (XIdx.energy (Idx.Section 6) System.Tank System.ConBattery) 1)
+         (SeqIdx.energy (Idx.Section 6) System.Tank System.ConBattery) 1)
          (zip deltasetsX differenceExtEnvs)]-}
 {-
      ++ [print $    -- AssignMap.threshold 0.001 $

@@ -6,7 +6,7 @@ module Modules.Signals where
 
 import Modules.System (Node(..))
 
-import qualified EFA.Application.Index as XIdx
+import qualified EFA.Flow.Sequence.Index as XIdx
 
 import EFA.Signal.Record (SigId(SigId),
                           getSig,getTime,extractLogSignals,

@@ -44,7 +44,7 @@ module EFA.Equation.System (
   Result(..),
   ) where
 
-import qualified EFA.Application.Index as XIdx
+import qualified EFA.Flow.Sequence.Index as XIdx
 
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env

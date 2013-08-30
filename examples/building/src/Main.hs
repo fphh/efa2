@@ -17,17 +17,17 @@ import qualified EFA.Application.OneStorage as One
 import qualified EFA.Application.Sweep as Sweep
 import qualified EFA.Application.Optimisation as AppOpt
 import qualified EFA.Application.Simulation as AppSim
-import qualified EFA.Application.Index as XIdx
 import qualified EFA.Application.Absolute as AppAbs
 import qualified EFA.Application.Utility as AppUt
 
-import qualified EFA.Graph.StateFlow.Index as StateIdx
+import qualified EFA.Flow.Sequence.Index as SeqIdx
+import qualified EFA.Flow.State.Index as StateIdx
 import qualified EFA.Graph.StateFlow.Environment as StateEnv
 import qualified EFA.Graph.StateFlow as StateFlow
 import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology as Topo
-import qualified EFA.Graph.Topology.Index as TIdx
+import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 
 import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
@@ -201,8 +201,8 @@ envToPowerRecord time env =
   . Map.filterWithKey p
   . StateEnv.powerMap
   . StateEnv.signal) env
-  where p (TIdx.InPart st _) _ = st == TIdx.State 0
-        h (TIdx.InPart _ (TIdx.Power edge)) = TIdx.PPos edge
+  where p (Idx.InPart st _) _ = st == Idx.State 0
+        h (Idx.InPart _ (Idx.Power edge)) = Idx.PPos edge
 
         i (Determined dat) = Sig.TC dat
         i Undetermined =
@@ -215,7 +215,7 @@ external ::
   Flow.RangeGraph node ->
   SD.SequData
     (Record.Record Sig.Signal Sig.FSignal
-      (Typ A T Tt) (Typ A F Tt) (TIdx.PPos node) v a a) ->
+      (Typ A T Tt) (Typ A F Tt) (Idx.PPos node) v a a) ->
   EqEnv.Complete node (Result (Data Nil a)) (Result (Data (v :> Nil) a))
 
 external initSto sfTopo sfRec =
@@ -224,7 +224,7 @@ external initSto sfTopo sfRec =
   (AppAbs.fromEnvSignal $ AppAbs.envFromFlowRecord (fmap Record.diffTime sfRec))
   <> foldMap f initSto
   where f (st, val) = 
-          TIdx.absolute (XIdx.storage TIdx.initial st) .= Data val
+          Idx.absolute (SeqIdx.storage Idx.initial st) .= Data val
 
 varRestPower', varLocalPower' :: [[Double]]
 (varLocalPower', varRestPower') = CT.varMat local rest
@@ -251,7 +251,7 @@ to2DMatrix =
         f _ _ = error $ "to2DMatrix: more than two values in the key of map"
 
 optimalMaps :: (Num a, Ord a, Ord node) =>
-  Map TIdx.State (Map (node, node) (Map [a] (a, a))) ->
+  Map Idx.State (Map (node, node) (Map [a] (a, a))) ->
   ( Sig.NSignal2 V.Vector V.Vector a,
     Sig.UTSignal2 V.Vector V.Vector a,
     Map (node, node) (Sig.PSignal2 V.Vector V.Vector a) )
@@ -266,7 +266,7 @@ optimalMaps =
         g st (eta, power) = (eta, st, power)
         h (eta, st, power) =
           (to2DMatrix eta, to2DMatrix (Map.map unpackState st), to2DMatrix power)
-        unpackState (TIdx.State s) = fromIntegral s
+        unpackState (Idx.State s) = fromIntegral s
 
 
 givenSignals ::
@@ -280,7 +280,7 @@ givenSignals time optps ns =
   $ Record.Record time
   $ Map.fromList
   $ Map.foldWithKey g ns' optps
-  where fromto n0 n1 = TIdx.PPos $ TIdx.StructureEdge n0 n1
+  where fromto n0 n1 = Idx.PPos $ Idx.StructureEdge n0 n1
         ns' = map (\(n0, n1, sig) -> (fromto n0 n1, sig)) ns
         g (n0, n1) sig = ((fromto n0 n1, sig):)
 
@@ -308,7 +308,7 @@ solveAndCalibrateAvgEffWithGraph time prest plocal etaMap (stateFlowGraph, env) 
           stateFlowGraph
 
       optEtaWithPowers ::
-        Map TIdx.State (Map (Node, Node) (Map [Double] (Double, Double)))
+        Map Idx.State (Map (Node, Node) (Map [Double] (Double, Double)))
       optEtaWithPowers = optimalEtasWithPowers optParams force env
       (_optEta, _optState, optPower) = optimalMaps optEtaWithPowers
 

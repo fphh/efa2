@@ -8,17 +8,18 @@ module Modules.Optimisation where
 import qualified Modules.System as System
 import Modules.System (Node(..))
 
+import qualified EFA.Application.Optimisation as AppOpt
 import qualified EFA.Application.AbsoluteState as EqGen
 -- import qualified EFA.Application.OneStorage as One
 import qualified EFA.Application.Utility as AppUt
-
-import qualified EFA.Graph.StateFlow.Index as XIdx
 import EFA.Application.AbsoluteState ((.=))
 
-import qualified EFA.Graph.StateFlow.Environment as SFEnv
 import qualified EFA.Equation.Arithmetic as EqArith
 import EFA.Equation.Result (Result(..))
 
+import qualified EFA.Flow.State.Index as XIdx
+
+import qualified EFA.Graph.StateFlow.Environment as StateEnv
 import qualified EFA.Graph.Topology.Index as TIdx
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Signal.Data as Data
@@ -31,10 +32,6 @@ import Data.Foldable (foldMap)
 import Data.Maybe (catMaybes, isJust)
 --import Data.List (filter)
 
-import qualified EFA.Application.Optimisation as AppOpt
-
-
---import Debug.Trace
 
 state0, state1, state2, state3 :: TIdx.State
 state0 = TIdx.State 0
@@ -42,9 +39,9 @@ state1 = TIdx.State 1
 state2 = TIdx.State 2
 state3 = TIdx.State 3
 
-type Env a = SFEnv.Complete Node (Data Nil a) (Data Nil a)
---type EnvResultData a = SFEnv.Complete Node (Result (Data Nil a)) (Result (Data Nil a))
-type EnvResult a = SFEnv.Complete Node (Result a) (Result a)
+type Env a = StateEnv.Complete Node (Data Nil a) (Data Nil a)
+--type EnvResultData a = StateEnv.Complete Node (Result (Data Nil a)) (Result (Data Nil a))
+type EnvResult a = StateEnv.Complete Node (Result a) (Result a)
 
 type EqSystemData a = 
   forall s. EqGen.EquationSystem System.Node s (Data Nil a) (Data Nil a)
@@ -126,10 +123,10 @@ commonGiven =
 -- | Unpack scalar result values in env from Data constructor
 envGetData ::
   (Ord node) =>
-  SFEnv.Complete node (Result (Data.Data va a)) (Result (Data.Data vv v)) ->
-  SFEnv.Complete node (Result (Data.Apply va a)) (Result (Data.Apply vv v))
+  StateEnv.Complete node (Result (Data.Data va a)) (Result (Data.Data vv v)) ->
+  StateEnv.Complete node (Result (Data.Apply va a)) (Result (Data.Apply vv v))
 envGetData =
-  SFEnv.completeFMap (fmap Data.getData) (fmap Data.getData)
+  StateEnv.completeFMap (fmap Data.getData) (fmap Data.getData)
 
 
 {-
@@ -139,7 +136,7 @@ data SocDrive a = NoDrive
 
 -}
 
---forcing :: One.SocDrive Double -> SFEnv.Complete Node b (Result Double) -> Double
+--forcing :: One.SocDrive Double -> StateEnv.Complete Node b (Result Double) -> Double
 --forcing socDrive env = 0
 {-
 case socDrive of
@@ -151,12 +148,12 @@ case socDrive of
 -}
 -----------------------------------------------------------------------------
 
---condition :: SFEnv.Complete Node b (Result Double) -> Bool
+--condition :: StateEnv.Complete Node b (Result Double) -> Bool
 --condition env = True
 
 
 
-condition :: (Show b) => SFEnv.Complete Node b (Result Double) -> Bool
+condition :: (Show b) => StateEnv.Complete Node b (Result Double) -> Bool
 condition env =
   all (>0) $ catMaybes $ takeWhile isJust $ cnlst ++ nlnlst
 --  all (>0) $ catMaybes $ filter isJust $ cnlst ++ nlnlst

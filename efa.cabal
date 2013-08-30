@@ -103,7 +103,6 @@ Library
     EFA.Graph.Flow
     EFA.Graph.CumulatedFlow
     EFA.Graph.StateFlow
-    EFA.Graph.StateFlow.Index
     EFA.Graph.StateFlow.Environment
     EFA.Graph.StateFlow.EquationSystem
     EFA.Equation.System
@@ -117,9 +116,11 @@ Library
     EFA.Equation.Pair
     EFA.Equation.Verify
     EFA.Flow.Sequence
+    EFA.Flow.Sequence.Index
     EFA.Flow.Sequence.Quantity
     EFA.Flow.Sequence.EquationSystem
     EFA.Flow.State
+    EFA.Flow.State.Index
     EFA.Flow.State.Quantity
     EFA.Flow.State.EquationSystem
     EFA.Flow.Cumulated.Index
@@ -133,7 +134,6 @@ Library
     EFA.Application.Symbolic
     EFA.Application.NestedDelta
     EFA.Application.AssignMap
-    EFA.Application.Index
     EFA.Application.Tree
     EFA.Application.EtaSys
     EFA.Application.Balance

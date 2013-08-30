@@ -4,11 +4,11 @@
 module Main where
 
 import qualified EFA.Application.Absolute as EqSys
-import qualified EFA.Application.Index as XIdx
 import EFA.Application.Absolute ((.=), (=.=))
 import EFA.Application.Utility (constructSeqTopo, makeEdges)
 
 import qualified EFA.Equation.Environment as Env
+import qualified EFA.Flow.Sequence.Index as XIdx
 
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as Idx

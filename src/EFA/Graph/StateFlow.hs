@@ -4,7 +4,7 @@ module EFA.Graph.StateFlow where
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Graph.StateFlow.Environment as StateEnv
-import qualified EFA.Graph.StateFlow.Index as StateIdx
+import qualified EFA.Flow.State.Index as StateIdx
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Flow as Flow

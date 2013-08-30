@@ -47,6 +47,7 @@ module EFA.Flow.State.Quantity (
 
 import qualified EFA.Flow.Quantity as Quant
 import qualified EFA.Flow.Sequence.Quantity as SeqFlowQuant
+import qualified EFA.Flow.State.Index as StateIdx
 import qualified EFA.Flow.State as StateFlow
 import EFA.Flow.State (states, storages)
 import EFA.Flow.Quantity
@@ -56,7 +57,6 @@ import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Variable as Var
 
-import qualified EFA.Graph.StateFlow.Index as StateIdx
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph as Gr
 

@@ -5,8 +5,9 @@ import qualified Modules.Signals as Signals
 import qualified Modules.System as System
 import qualified Modules.Analysis as Analysis
 
-import qualified EFA.Application.Index as XIdx
 import EFA.Application.Utility (checkDetermined)
+
+import qualified EFA.Flow.Sequence.Index as XIdx
 
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Environment as Env

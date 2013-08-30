@@ -17,8 +17,8 @@ import EFA.Application.AbsoluteState ( (=.=) )
 import qualified EFA.Equation.Arithmetic as EqArith
 import EFA.Equation.Result(Result)
 
+import qualified EFA.Flow.State.Index as StateIdx
 import qualified EFA.Graph.StateFlow.Environment as EqEnv
-import qualified EFA.Graph.StateFlow.Index as StateIdx
 import qualified EFA.Graph.StateFlow as StateFlow
 
 import qualified EFA.Graph.Topology.Index as TIdx

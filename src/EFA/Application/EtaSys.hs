@@ -2,7 +2,7 @@
 module EFA.Application.EtaSys where
 
 
-import qualified EFA.Graph.StateFlow.Index as StateIdx
+import qualified EFA.Flow.State.Index as StateIdx
 
 import qualified EFA.Application.Utility as AppUt
 

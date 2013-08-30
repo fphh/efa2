@@ -8,7 +8,6 @@ module EFA.Application.AbsoluteState (
 
 -- import as  import qualified EFA.Application.AbsoluteState as AbsoluteState
 
---import qualified EFA.Application.Index as XIdx
 import qualified EFA.Application.Symbolic as Symbolic
 
 import qualified EFA.Equation.Record as Record

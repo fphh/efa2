@@ -3,7 +3,6 @@ module Main where
 
 import qualified EFA.Application.NestedDelta as NestedDelta
 import qualified EFA.Application.AssignMap as AssignMap
-import qualified EFA.Application.Index as XIdx
 import qualified EFA.Application.Symbolic as Symbolic
 import EFA.Application.NestedDelta
           (ParameterRecord,
@@ -11,13 +10,15 @@ import EFA.Application.NestedDelta
            beforeDelta, extrudeStart,
            (<&), (<&>), (&>), (&&>), (?=))
 import EFA.Application.Utility (makeEdges, constructSeqTopo)
-import EFA.Equation.Result (Result)
+
+import qualified EFA.Flow.Sequence.Index as XIdx
 
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Arithmetic as Arith
+import EFA.Equation.Result (Result)
 
 import qualified EFA.Symbolic.SumProduct as SumProduct
 import qualified EFA.Symbolic.OperatorTree as Op

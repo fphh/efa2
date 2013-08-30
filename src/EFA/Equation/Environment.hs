@@ -4,7 +4,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 module EFA.Equation.Environment where
 
-import qualified EFA.Application.Index as XIdx
+import qualified EFA.Flow.Sequence.Index as XIdx
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Equation.Variable as Var

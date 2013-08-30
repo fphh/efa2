@@ -16,16 +16,17 @@ import Modules.Optimisation (EnvDouble, sec0,sec1, SocDrive(..), lookupDetPower,
 import EFA.Application.Optimisation as AppOpt (etaOverPowerIn,etaOverPowerOut)
 import qualified EFA.Application.Sweep as Sweep
 
-import Modules.Utility as ModUt
+import qualified Modules.Utility as ModUt
 -- import Modules.Utility(getEtas, getPowerSignals,select)
 
 --import qualified EFA.Application.EtaSys as ES
-import qualified EFA.Application.Index as XIdx
 import qualified EFA.Application.Absolute as EqGen
 import EFA.Application.Utility (select)
 import qualified EFA.Application.Utility as AppUt
 --import qualified EFA.Application.Optimisation as AppOpt
 --import qualified EFA.Application.Sweep as Sweep
+
+import qualified EFA.Flow.Sequence.Index as XIdx
 
 import qualified EFA.Graph.Topology.Index as TIdx
 import qualified EFA.Graph.Topology as TD
@@ -456,7 +457,7 @@ main = do
          (_, powerSignalSolar) :
          (_, powerSignalHouse) :
          (_, powerSignalIndustry) : _
-           = getPowerSignals tabPower ["wind", "solar", "house", "industry"]
+           = ModUt.getPowerSignals tabPower ["wind", "solar", "house", "industry"]
 
 
        powerSignalRest = Sig.scale restPowerScale powerSignalWind

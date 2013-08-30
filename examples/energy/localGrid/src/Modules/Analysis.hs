@@ -10,8 +10,9 @@ import qualified Modules.System as System
 import qualified Modules.Signals as Signals
 --import Modules.System (Node(..))
 
-import qualified EFA.Application.Index as XIdx
 import qualified EFA.Application.Absolute as EqAbs
+
+import qualified EFA.Flow.Sequence.Index as SeqIdx
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as TD
@@ -145,7 +146,7 @@ makeGivenFromExternal :: (Vec.Zipper v,
                          EqGen.EquationSystem Ignore rec System.Node s Double d
 
 makeGivenFromExternal idx sf =
-   (Idx.Record idx (XIdx.storage Idx.initial System.Water) .= initStorage)
+   (Idx.Record idx (SeqIdx.storage Idx.initial System.Water) .= initStorage)
    <> fold (SD.mapWithSection f sf)
    where f sec (Record t xs) =
            (Idx.Record idx (Idx.InPart sec Idx.DTime) .=
@@ -180,7 +181,7 @@ makeGivenFromExternal2 ::
    SD.SequData (FlowRecord System.Node v d) ->
    EqAbs.EquationSystem System.Node s (Data Nil d) (Data (v D.:> Nil) d)
 makeGivenFromExternal2 sf =
-      (Idx.absolute (XIdx.storage Idx.initial System.Water) .= Data initStorage) <>
+      (Idx.absolute (SeqIdx.storage Idx.initial System.Water) .= Data initStorage) <>
       (EqAbs.fromEnvSignal $ EqAbs.envFromFlowRecord (fmap Record.diffTime sf))
 
 ---------------------------------------------------------------------------------------------------

@@ -27,7 +27,7 @@ module EFA.Signal.PlotIO (
    ) where
 
 import qualified EFA.Application.AssignMap as AssignMap
-import qualified EFA.Application.Index as XIdx
+import qualified EFA.Flow.Sequence.Index as XIdx
 
 import qualified EFA.Signal.Plot as Plot
 import qualified EFA.Signal.Signal as Sig

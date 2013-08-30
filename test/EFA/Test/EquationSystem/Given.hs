@@ -4,7 +4,7 @@
 module EFA.Test.EquationSystem.Given where
 
 import qualified EFA.Application.Absolute as EqAbs
-import qualified EFA.Application.Index as XIdx
+import qualified EFA.Flow.Sequence.Index as XIdx
 import EFA.Application.Utility ( makeEdges, constructSeqTopo )
 
 import qualified EFA.Equation.System as EqGen

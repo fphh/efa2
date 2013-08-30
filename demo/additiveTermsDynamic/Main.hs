@@ -3,10 +3,11 @@ module Main where
 
 import qualified EFA.Application.AssignMap as AssignMap
 import qualified EFA.Application.Absolute as EqGen
-import qualified EFA.Application.Index as XIdx
 import qualified EFA.Application.Symbolic as Symbolic
 import EFA.Application.Utility (makeEdges, constructSeqTopo)
 import EFA.Application.Absolute ((.=))
+
+import qualified EFA.Flow.Sequence.Index as XIdx
 
 import qualified EFA.Symbolic.Variable as SymVar
 import qualified EFA.Symbolic.SumProduct as SumProduct

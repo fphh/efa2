@@ -1,9 +1,10 @@
 module Main where
 
 import qualified EFA.Application.Absolute as EqGen
-import qualified EFA.Application.Index as XIdx
 import EFA.Application.Utility ( makeEdges )
 import EFA.Application.Absolute ( (.=) )
+
+import qualified EFA.Flow.Sequence.Index as XIdx
 
 import qualified EFA.Graph.StateFlow as StateFlow
 import qualified EFA.Graph.Flow as Flow

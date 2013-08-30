@@ -6,7 +6,7 @@ module EFA.Application.Absolute (
    (=.=),
    ) where
 
-import qualified EFA.Application.Index as XIdx
+import qualified EFA.Flow.Sequence.Index as SeqIdx
 import qualified EFA.Application.Symbolic as Symbolic
 
 import qualified EFA.Equation.Record as Record
@@ -173,7 +173,7 @@ envFromFlowRecord =
       (\section (SigRecord.Record times signals) ->
          mempty {
             Env.dtimeMap =
-               Map.singleton (XIdx.dTime section) (Signal.unpack times),
+               Map.singleton (SeqIdx.dTime section) (Signal.unpack times),
             Env.powerMap =
                Map.mapKeys
                   (\(Idx.PPos x) -> Idx.InPart section $ Idx.Power x) $

@@ -9,7 +9,7 @@ import Modules.System (Node(..))
 import Modules.Utility as ModUt
 
 import qualified EFA.Application.Absolute as EqGen
-import qualified EFA.Application.Index as XIdx
+import qualified EFA.Flow.Sequence.Index as XIdx
 
 import qualified EFA.Graph.Draw as Draw
 

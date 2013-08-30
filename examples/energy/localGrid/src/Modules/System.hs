@@ -1,15 +1,14 @@
 module Modules.System where
 
+import qualified EFA.Application.Utility as AppUt
+
+import qualified EFA.Flow.Sequence.Index as XIdx
+
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph as Gr
-
-import qualified EFA.Application.Index as XIdx
--- import EFA.Application.Utility (makeEdges, select)
-
-import EFA.Application.Utility as AppUt
 
 import EFA.Signal.Record (SigId(..))
 
@@ -93,7 +92,7 @@ flowStates = StateAnalysis.advanced topology
 ----------------------------------------------------------------------
 -- | Topology for Optimisation
 topologyOpt :: TD.Topology Node
-topologyOpt = Gr.fromList ns (makeEdges es)
+topologyOpt = Gr.fromList ns (AppUt.makeEdges es)
   where ns = [(Coal, TD.AlwaysSource),
               (Gas, TD.Source),
               (Water, TD.storage),
@@ -126,4 +125,4 @@ edgeNamesOpt = Map.fromList el
 -- | SequenceTopology for Optimisation
 
 seqTopoOpt :: Flow.RangeGraph Node
-seqTopoOpt = Flow.sequenceGraph (select flowStatesOpt [4,0])
+seqTopoOpt = Flow.sequenceGraph (AppUt.select flowStatesOpt [4,0])

@@ -1,8 +1,9 @@
 module Main where
 
-import qualified EFA.Application.Index as XIdx
 import qualified EFA.Application.Symbolic as Symbolic
 import EFA.Application.Symbolic ((=<>))
+
+import qualified EFA.Flow.Sequence.Index as XIdx
 
 import qualified EFA.Symbolic.SumProduct as SumProduct
 

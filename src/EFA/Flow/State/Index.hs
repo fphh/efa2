@@ -1,4 +1,4 @@
-module EFA.Graph.StateFlow.Index where
+module EFA.Flow.State.Index where
 
 import qualified EFA.Graph.Topology.Index as Idx
 

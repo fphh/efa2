@@ -2,8 +2,9 @@
 
 module Modules.System where
 
-import qualified EFA.Application.Index as XIdx
 import EFA.Application.Utility (makeEdges)
+
+import qualified EFA.Flow.Sequence.Index as SeqIdx
 
 import EFA.Signal.Record (SigId(..))
 
@@ -63,19 +64,19 @@ edgeNames = Map.fromList el
         f (x, y, lab, _, _) = ((x, y), lab)
 
 
-powerPositonNames :: Map (XIdx.PPos Node) SigId
+powerPositonNames :: Map (SeqIdx.PPos Node) SigId
 powerPositonNames = Map.fromList $ concat $ map f edgeList
-  where f (n1,n2,_,l1,l2) = [(XIdx.ppos n1 n2, SigId $ "Power-"++l1),
-                             (XIdx.ppos n2 n1, SigId $ "Power-"++l2)]
+  where f (n1,n2,_,l1,l2) = [(SeqIdx.ppos n1 n2, SigId $ "Power-"++l1),
+                             (SeqIdx.ppos n2 n1, SigId $ "Power-"++l2)]
 
-showPowerId :: XIdx.PPos Node -> String
+showPowerId :: SeqIdx.PPos Node -> String
 showPowerId ppos = f (Map.lookup  ppos powerPositonNames)
   where
     f (Just sid) = show sid
     f Nothing = (show ppos)
 
 
-convertPowerId :: XIdx.PPos Node -> SigId
+convertPowerId :: SeqIdx.PPos Node -> SigId
 convertPowerId ppos =  f (Map.lookup  ppos powerPositonNames)
   where
     f (Just sid) = sid
