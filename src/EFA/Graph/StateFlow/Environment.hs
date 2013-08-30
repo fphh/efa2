@@ -406,6 +406,26 @@ filter f g (Complete scalar0 signal0) =
    Complete (scalarFilter f scalar0) (signalFilter g signal0)
 
 
+signalMapMaybe ::
+   Ord node =>
+   (a -> Maybe b) -> Signal node a -> Signal node b
+signalMapMaybe f = signalLift1 (Map.mapMaybe f)
+
+scalarMapMaybe ::
+   Ord node =>
+   (a -> Maybe b) -> Scalar node a -> Scalar node b
+scalarMapMaybe f = scalarLift1 (Map.mapMaybe f)
+
+mapMaybe ::
+   Ord node =>
+   (a0 -> Maybe a1) ->
+   (v0 -> Maybe v1) ->
+   Complete node a0 v0 ->
+   Complete node a1 v1
+mapMaybe f g (Complete scalar0 signal0) =
+   Complete (scalarMapMaybe f scalar0) (signalMapMaybe g signal0)
+
+
 currySignal ::
    (Ord (idx node)) =>
    Map (Idx.InState idx node) v -> Map Idx.State (Map (idx node) v)

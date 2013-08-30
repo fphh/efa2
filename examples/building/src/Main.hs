@@ -1,6 +1,4 @@
 {-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE TupleSections #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE FlexibleContexts #-}
 
 module Main where
@@ -53,10 +51,11 @@ import qualified EFA.IO.TableParser as Table
 import qualified EFA.Equation.System as EqGen; import EFA.Equation.System ((.=))
 import qualified EFA.Equation.Environment as EqEnv
 import qualified EFA.Equation.Record as EqRecord
+import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.Arithmetic as Arith
-import EFA.Equation.Result (Result(..), isDet)
+import EFA.Equation.Result (Result(..))
 
-import EFA.Utility.Bifunctor (bimap, second)
+import EFA.Utility.Bifunctor (second)
 
 import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
 import qualified Graphics.Gnuplot.Graph.ThreeDimensional as Graph3D
@@ -366,10 +365,8 @@ solveAndCalibrateAvgEffWithGraph time prest plocal etaMap (stateFlowGraph, env) 
                            (Seq.makeSeqFlowTopology sequ) (snd flowStatesWithAdj)
             e = second (fmap Arith.integrate) envLocal
             sm = snd $ StateFlow.stateMaps sequ
-            unDet (Determined x) = x
-            unDet _ = error "solveAndCalibrateAvgEffWithGraph: undetermined value"
         in  ( StateFlow.stateGraphAllStorageEdges sequ,
-              bimap unDet unDet $ SFEnv.filter isDet isDet $
+              SFEnv.mapMaybe Result.toMaybe Result.toMaybe $
                 StateFlow.envFromSequenceEnvResult sm e)
 
   Draw.xterm $ Draw.stateFlowGraph (fst stateFlowEnvWithGraph)
