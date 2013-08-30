@@ -21,6 +21,7 @@ module EFA.Graph (
    mapNode, mapNodeWithInOut, mapNodeWithKey,
    mapEdge, mapEdgeWithKey,
    traverseNode, traverseEdge, traverse,
+   checkedZipWith,
    empty,
    union,
    lookupNode, lookupEdge,
@@ -46,9 +47,9 @@ module EFA.Graph (
    InOut,
    ) where
 
--- import qualified EFA.Utility as MapU
-import qualified EFA.Utility.TotalMap as TMap
 import qualified EFA.Utility.TypeConstructor as TC
+import qualified EFA.Utility.TotalMap as TMap
+import qualified EFA.Utility.Map as MapU
 
 import qualified Data.Set as Set
 import qualified Data.Map as Map
@@ -308,6 +309,27 @@ instance
       Monoid (Graph node edge nodeLabel edgeLabel) where
    mempty = empty
    mappend = union
+
+
+{- |
+Node and edge sets must be equal.
+-}
+checkedZipWith ::
+   (Edge edge, Ord (edge node), Ord node) =>
+   MapU.Caller ->
+   (nodeLabel0 -> nodeLabel1 -> nodeLabel2) ->
+   (edgeLabel0 -> edgeLabel1 -> edgeLabel2) ->
+   Graph node edge nodeLabel0 edgeLabel0 ->
+   Graph node edge nodeLabel1 edgeLabel1 ->
+   Graph node edge nodeLabel2 edgeLabel2
+checkedZipWith caller f g (Graph ns0) (Graph ns1) =
+   Graph $
+   MapU.checkedZipWith (caller ++ " node")
+      (\(ins0, n0, outs0) (ins1, n1, outs1) ->
+         (MapU.checkedZipWith (caller ++ " ins") g ins0 ins1,
+          f n0 n1,
+          MapU.checkedZipWith (caller ++ " outs") g outs0 outs1))
+      ns0 ns1
 
 
 {-

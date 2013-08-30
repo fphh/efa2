@@ -30,7 +30,7 @@ Flag buildTools
 
 Library
   Build-Depends:
-    graphviz >=2999.13 && <2999.15,
+    graphviz >=2999.13 && <2999.17,
     gnuplot >=0.5.2 && <0.6,
     colour >=2.3 && <2.4,
     vector ==0.9.*,
@@ -52,7 +52,7 @@ Library
     unique-logic-tf >= 0.4 && < 0.5,
     parsec >=3.1 && <3.2,
     filepath >=1.3 && <1.4,
-    base ==4.5.*
+    base >=4.5 && <4.7
   Hs-Source-Dirs:      src
   GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs
   Exposed-Modules:
@@ -106,8 +106,6 @@ Library
     EFA.Graph.StateFlow.Index
     EFA.Graph.StateFlow.Environment
     EFA.Graph.StateFlow.EquationSystem
-    EFA.Graph.SequenceFlow
-    EFA.Graph.SequenceFlow.Quantity
     EFA.Equation.System
     EFA.Equation.Result
     EFA.Equation.Environment
@@ -118,6 +116,17 @@ Library
     EFA.Equation.Stack
     EFA.Equation.Pair
     EFA.Equation.Verify
+    EFA.Flow.Sequence
+    EFA.Flow.Sequence.Quantity
+    EFA.Flow.Sequence.EquationSystem
+    EFA.Flow.State
+    EFA.Flow.State.Quantity
+    EFA.Flow.State.EquationSystem
+    EFA.Flow.Cumulated.Index
+    EFA.Flow.Cumulated.Variable
+    EFA.Flow.Cumulated.Quantity
+    EFA.Flow.Cumulated.EquationSystem
+    EFA.Flow.Draw
     EFA.Application.Utility
     EFA.Application.Absolute
     EFA.Application.AbsoluteState
@@ -132,6 +141,10 @@ Library
     EFA.Application.Sweep
     EFA.Application.Simulation
     EFA.Application.OneStorage
+  Other-Modules:
+    EFA.Equation.SystemRecord
+    EFA.Flow.Quantity
+    EFA.Flow.EquationSystem
 
 
 -- sollte man auf Cabal-Test umstellen,

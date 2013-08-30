@@ -768,7 +768,7 @@ formatNodeStorage ::
 formatNodeStorage opts st sis sos mBeforeBnd (Idx.PartNode aug nid, ty) =
    Format.lines $
    Node.display nid :
-   Format.words [formatNodeType ty] :
+   formatNodeType ty :
       case ty of
          Storage dir ->
             case (aug, mBeforeBnd) of
@@ -846,7 +846,7 @@ formatStateNode ::
 formatStateNode opts sis sos (augNode@(Idx.PartNode _aug nid), ty) =
    Format.lines $
    Node.display nid :
-   Format.words [formatNodeType ty] :
+   formatNodeType ty :
       case ty of
          Storage dir ->
             case Topo.viewNodeDir (augNode, dir) of
@@ -889,7 +889,7 @@ lookupFormatAssign opts mp makeIdx x =
             (optRecordIndex opts $
              if optVariableIndex opts
                then Var.formatIndex idx
-               else Format.edgeIdent $ Format.edgeVar idx)
+               else Format.edgeIdent idx)
             (lookupFormat opts mp idx)
 
 sequFlowGraphWithEnv ::
@@ -1048,8 +1048,7 @@ dotFromCumEdge env (e, ()) =
               formatEner (Idx.flip se) :
               []
         formatEner idx =
-           Format.assign
-              (Format.edgeIdent Format.Energy)
+           Format.assign Format.energy
               (maybe
                   (error $ "could not find cumulated energy index")
                   formatValue $

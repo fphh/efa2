@@ -148,3 +148,24 @@ instance FormatSignalIndex Signal where
 
 instance (Format.Part part) => FormatScalarIndex (Scalar part) where
    formatScalarIndex edge node = formatScalarValue (Idx.ForNode edge node)
+
+
+instance Format.StructureIdx Signal where
+   structureIdent (Idx.InPart _part var) =
+      case var of
+         Energy _idx -> Format.energy
+         Power _idx -> Format.power
+         Eta _idx -> Format.eta
+         X _idx -> Format.xfactor
+         DTime _idx -> Format.dtime
+         Sum _idx -> Format.signalSum
+
+instance Format.StorageIdx (Scalar part) where
+   storageIdent (Idx.ForNode var _node) =
+      case var of
+         MaxEnergy _idx -> Format.maxEnergy
+         StEnergy _idx -> Format.energy
+         StX _idx -> Format.xfactor
+         StInSum _idx -> Format.scalarSum
+         StOutSum _idx -> Format.scalarSum
+         Storage _idx -> Format.storage

@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-module EFA.Graph.SequenceFlow.Quantity (
+module EFA.Flow.Sequence.Quantity (
    Graph, SeqFlow.sequence, SeqFlow.storages,
    Topology, Sequence, Storages,
    Sums(..), Sum(..), Carry(..), Flow(..),
@@ -24,7 +24,7 @@ module EFA.Graph.SequenceFlow.Quantity (
    mapStoragesWithVar,
    mapSequenceWithVar,
 
-   dirFromFlowGraph,
+   mapCarryWithVar,
 
    lookupPower,
    lookupEnergy,
@@ -44,29 +44,33 @@ module EFA.Graph.SequenceFlow.Quantity (
    Lookup, lookup,
    LookupScalar, lookupScalar,
    LookupSignal, lookupSignal,
+   Env.Environment, Env.Element, Env.switchPart,
    ) where
+
+
+import qualified EFA.Flow.Quantity as Quant
+import qualified EFA.Flow.Sequence as SeqFlow
+import EFA.Flow.Sequence (sequence, storages)
+import EFA.Flow.Quantity
+          (Topology, Sums(..), Sum(..), Flow(..), mapSums, traverseSums, (<#>))
 
 import qualified EFA.Application.Index as XIdx
 
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Variable as Var
 
-import qualified EFA.Graph.SequenceFlow as SeqFlow
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Gr
 
-import EFA.Graph.SequenceFlow (sequence, storages)
-
 import Control.Monad (mplus, (<=<))
-import Control.Applicative (Applicative, pure, liftA2, liftA3, (<*>), (<$))
+import Control.Applicative (Applicative, pure, liftA2, liftA3, (<*>), (<$>), (<$))
 
 import qualified Data.Map as Map ; import Data.Map (Map)
 import qualified Data.Foldable as Fold
 
 import Data.Traversable (Traversable, traverse, foldMapDefault)
 import Data.Foldable (Foldable)
-import Data.Tuple.HT (mapSnd)
 import Data.Maybe (fromMaybe)
 import Data.Monoid (mempty, (<>))
 
@@ -77,49 +81,32 @@ type
    Storages node a = SeqFlow.Storages node a a a (Carry a)
 
 type
-   Topology node a v =
-      Gr.Graph node Gr.DirEdge (Sums a v) (Flow v)
-
-type
-   Sequence node a v = SeqFlow.Sequence node Gr.DirEdge v (Sums a v) (Flow v)
+   Sequence node a v =
+      SeqFlow.Sequence node Gr.EitherEdge v (Sums a v) (Maybe (Flow v))
 
 type
    Graph node a v =
-      SeqFlow.Graph node Gr.DirEdge
-         v (Sums a v) a a a (Flow v) (Carry a)
+      SeqFlow.Graph node Gr.EitherEdge
+         v (Sums a v) a a a (Maybe (Flow v)) (Carry a)
 
 data Carry a =
    Carry {
       carryMaxEnergy, carryEnergy, carryXOut, carryXIn :: a
    }
 
-data Flow v =
-   Flow {
-      flowPowerOut, flowEnergyOut, flowXOut,
-      flowEta,
-      flowXIn, flowEnergyIn, flowPowerIn :: v
-   }
 
-data Sums a v =
-   Sums { sumIn, sumOut :: Maybe (Sum a v) }
-
-data Sum a v =
-   Sum { carrySum :: a, flowSum :: v }
+instance Quant.Carry Carry where
+   carryEnergy = carryEnergy
+   carryXOut   = carryXOut
+   carryXIn    = carryXIn
 
 
 instance Functor Carry where
    fmap f (Carry me e xout xin) =
       Carry (f me) (f e) (f xout) (f xin)
 
-instance Functor Flow where
-   fmap f (Flow pout eout xout eta xin ein pin) =
-      Flow (f pout) (f eout) (f xout) (f eta) (f xin) (f ein) (f pin)
-
 
 instance Foldable Carry where
-   foldMap = foldMapDefault
-
-instance Foldable Flow where
    foldMap = foldMapDefault
 
 
@@ -127,23 +114,11 @@ instance Traversable Carry where
    traverse f (Carry me e xout xin) =
       pure Carry <*> f me <*> f e <*> f xout <*> f xin
 
-instance Traversable Flow where
-   traverse f (Flow pout eout xout eta xin ein pin) =
-      pure Flow <*> f pout <*> f eout <*> f xout <*> f eta <*> f xin <*> f ein <*> f pin
-
 
 instance Applicative Carry where
    pure a = Carry a a a a
    Carry fme fe fxout fxin <*> Carry me e xout xin =
       Carry (fme me) (fe e) (fxout xout) (fxin xin)
-
-instance Applicative Flow where
-   pure a = Flow a a a a a a a
-   Flow fpout feout fxout feta fxin fein fpin
-         <*> Flow pout eout xout eta xin ein pin =
-      Flow
-         (fpout pout) (feout eout) (fxout xout)
-         (feta eta) (fxin xin) (fein ein) (fpin pin)
 
 
 mapGraph ::
@@ -166,27 +141,7 @@ mapSequence f g =
          (rng,
           (g dt,
            Gr.mapNode (mapSums f g) $
-           Gr.mapEdge (fmap g) gr)))
-
-mapSums ::
-   (a0 -> a1) ->
-   (v0 -> v1) ->
-   Sums a0 v0 -> Sums a1 v1
-mapSums f g s =
-   Sums {
-      sumIn  = fmap (mapSum f g) $ sumIn  s,
-      sumOut = fmap (mapSum f g) $ sumOut s
-   }
-
-mapSum ::
-   (a0 -> a1) ->
-   (v0 -> v1) ->
-   Sum a0 v0 -> Sum a1 v1
-mapSum f g s =
-   Sum {
-      carrySum = f $ carrySum s,
-      flowSum  = g $ flowSum  s
-   }
+           Gr.mapEdge (fmap $ fmap g) gr)))
 
 mapStorages ::
    (a0 -> a1) ->
@@ -219,25 +174,7 @@ traverseSequence f g =
       (\(rng, (dt, gr)) ->
          fmap ((,) rng) $
          liftA2 (,) (g dt)
-            (Gr.traverse (traverseSums f g) (traverse g) gr))
-
-traverseSums ::
-   (Applicative f) =>
-   (a0 -> f a1) ->
-   (v0 -> f v1) ->
-   Sums a0 v0 -> f (Sums a1 v1)
-traverseSums f g (Sums i o) =
-   liftA2 Sums
-      (traverse (traverseSum f g) i)
-      (traverse (traverseSum f g) o)
-
-traverseSum ::
-   (Applicative f) =>
-   (a0 -> f a1) ->
-   (v0 -> f v1) ->
-   Sum a0 v0 -> f (Sum a1 v1)
-traverseSum f g (Sum cs fs) =
-   liftA2 Sum (f cs) (g fs)
+            (Gr.traverse (traverseSums f g) (traverse $ traverse g) gr))
 
 traverseStorages ::
    (Applicative f) =>
@@ -309,7 +246,7 @@ envFromSequence =
    Map.mapWithKey
       (\sec (_rng, (dtime, topo)) ->
          let nls = Gr.nodeLabels topo
-             els = Gr.edgeLabels topo
+             els = Gr.edgeLabels $ Quant.dirFromFlowGraph topo
              sumOutMap = Map.mapMaybe sumOut nls
              sumInMap  = Map.mapMaybe sumIn nls
          in  ((Map.mapKeys (Idx.ForNode $ Idx.StInSum $ Idx.NoExit sec) $
@@ -395,17 +332,13 @@ lookupStruct fieldOut fieldIn unpackIdx =
       case unpackIdx idx of
          se ->
             mplus
-               (fmap fieldOut $
-                Gr.lookupEdge (Topo.dirEdgeFromStructureEdge se) topo)
-               (fmap fieldIn $
-                Gr.lookupEdge (Topo.dirEdgeFromStructureEdge $ Idx.flip se) topo)
+               (Quant.lookupEdge fieldOut se topo)
+               (Quant.lookupEdge fieldIn (Idx.flip se) topo)
 
 
 lookupEta :: (Ord node) => XIdx.Eta node -> Graph node a v -> Maybe v
 lookupEta =
-   withTopology $ \(Idx.Eta se) topo ->
-      fmap flowEta $ Gr.lookupEdge (Topo.dirEdgeFromStructureEdge se) topo
-
+   withTopology $ \(Idx.Eta se) -> Quant.lookupEdge flowEta se
 
 lookupSum :: (Ord node) => XIdx.Sum node -> Graph node a v -> Maybe v
 lookupSum =
@@ -554,19 +487,8 @@ graphFromPlain ::
 graphFromPlain g =
    SeqFlow.Graph {
       storages = storagesFromPlain $ SeqFlow.storages g,
-      sequence =
-         sequenceFromPlain $
-         fmap (mapSnd (mapSnd dirFromFlowGraph)) $ SeqFlow.sequence g
+      sequence = sequenceFromPlain $ SeqFlow.sequence g
    }
-
-dirFromFlowGraph ::
-   (Ord n) =>
-   Gr.Graph n Gr.EitherEdge nl el -> Gr.Graph n Gr.DirEdge nl el
-dirFromFlowGraph =
-   Gr.mapEdgesMaybe $ \ee ->
-      case ee of
-         Gr.EDirEdge de -> Just de
-         Gr.EUnDirEdge _ -> Nothing
 
 
 storagesFromPlain ::
@@ -583,7 +505,7 @@ storagesFromPlain =
 
 sequenceFromPlain ::
    (Ord node) =>
-   SeqFlow.Sequence node Gr.DirEdge ()
+   SeqFlow.Sequence node Gr.EitherEdge ()
       (Topo.NodeType (Maybe Topo.StoreDir)) () ->
    Sequence node () ()
 sequenceFromPlain =
@@ -608,7 +530,11 @@ sequenceFromPlain =
                     Topo.Crossing -> bothSum
                     Topo.DeadNode -> noSum
                     Topo.NoRestriction -> bothSum) $
-           Gr.mapEdge (const $ pure ()) gr)
+           Gr.mapEdgeWithKey
+              (\ee _ ->
+                 case ee of
+                    Gr.EUnDirEdge _ -> Nothing
+                    Gr.EDirEdge _ -> Just $ pure ()) gr)
 
 
 
@@ -630,22 +556,28 @@ mapStoragesWithVar ::
    Storages node a0 ->
    Storages node a1
 mapStoragesWithVar f =
-   let applyScalar idx node = f $ Idx.ForNode (Var.scalarIndex idx) node
-   in  Map.mapWithKey $ \node ((init, exit), bnds, edges) ->
-          ((applyScalar (Idx.StOutSum Idx.initSection) node init,
-            applyScalar (Idx.StInSum  Idx.exitSection) node exit),
-           Map.mapWithKey
-              (\bnd a -> applyScalar (Idx.Storage bnd) node a)
-              bnds,
-           Map.mapWithKey
-              (\edge carry ->
-                 Carry {
-                    carryMaxEnergy = applyScalar (Idx.MaxEnergy edge),
-                    carryEnergy = applyScalar (Idx.StEnergy edge),
-                    carryXOut = applyScalar (Idx.StX $ Idx.storageTransFromEdge edge),
-                    carryXIn = applyScalar (Idx.StX $ Idx.flip $ Idx.storageTransFromEdge edge)
-                 } <*> pure node <*> carry)
-              edges)
+   Map.mapWithKey $ \node ((init, exit), bnds, edges) ->
+      ((f (Idx.StOutSum Idx.Init <#> node) init,
+        f (Idx.StInSum  Idx.Exit <#> node) exit),
+       Map.mapWithKey
+          (\bnd a -> f (Idx.Storage bnd <#> node) a)
+          bnds,
+       Map.mapWithKey (mapCarryWithVar f node) edges)
+
+mapCarryWithVar ::
+   (Var.ForNodeSectionScalar node -> a0 -> a1) ->
+   node -> XIdx.StorageEdge node -> Carry a0 -> Carry a1
+mapCarryWithVar f node edge =
+   liftA2 f (Idx.ForNode <$> (carryVars <*> pure edge) <*> pure node)
+
+carryVars :: Carry (XIdx.StorageEdge node -> Var.Scalar Idx.Section node)
+carryVars =
+   Carry {
+      carryMaxEnergy = Var.scalarIndex . Idx.MaxEnergy,
+      carryEnergy = Var.scalarIndex . Idx.StEnergy,
+      carryXOut = Var.scalarIndex . Idx.StX . Idx.storageTransFromEdge,
+      carryXIn = Var.scalarIndex . Idx.StX . Idx.flip . Idx.storageTransFromEdge
+   }
 
 mapSequenceWithVar ::
    (Ord node) =>
@@ -654,38 +586,5 @@ mapSequenceWithVar ::
    Sequence node a0 v0 ->
    Sequence node a1 v1
 mapSequenceWithVar f g =
-   let applyScalar idx = f $ Idx.liftForNode Var.scalarIndex idx
-       applySignal idx = g $ Idx.liftInPart Var.signalIndex idx
-       applyFlow idx sec e =
-          g $ Idx.InPart sec $ Var.signalIndex $ idx $
-          Topo.structureEdgeFromDirEdge e
-
-   in  Map.mapWithKey $ \sec (rng, (dtime, gr)) ->
-          (,) rng $
-          (applySignal (XIdx.dTime sec) dtime,
-           Gr.mapNodeWithKey
-              (\n (Sums {sumIn = sin, sumOut = sout}) ->
-                 Sums {
-                    sumIn =
-                       flip fmap sin $ \(Sum {carrySum = cs, flowSum = fs}) ->
-                          Sum
-                             (applyScalar (XIdx.stOutSum sec n) cs)
-                             (applySignal (XIdx.inSum sec n) fs),
-                    sumOut =
-                       flip fmap sout $ \(Sum {carrySum = cs, flowSum = fs}) ->
-                          Sum
-                             (applyScalar (XIdx.stInSum sec n) cs)
-                             (applySignal (XIdx.outSum sec n) fs)
-                 }) $
-           Gr.mapEdgeWithKey
-              (\e flow ->
-                 Flow {
-                    flowPowerOut = applyFlow Idx.Power,
-                    flowPowerIn = applyFlow (Idx.Power . Idx.flip),
-                    flowEnergyOut = applyFlow Idx.Energy,
-                    flowEnergyIn = applyFlow (Idx.Energy . Idx.flip),
-                    flowXOut = applyFlow Idx.X,
-                    flowXIn = applyFlow (Idx.X . Idx.flip),
-                    flowEta = applyFlow Idx.Eta
-                 } <*> pure sec <*> pure e <*> flow)
-              gr)
+   Map.mapWithKey $ \sec (rng, timeGr) ->
+      (rng, Quant.mapFlowTopologyWithVar f g sec timeGr)

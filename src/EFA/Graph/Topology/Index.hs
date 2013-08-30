@@ -298,6 +298,10 @@ maybeExitNode (PartNode aug node) =
 
 
 
+stateNode :: State -> node -> StateNode node
+stateNode = PartNode
+
+
 
 -- * Edge indices
 

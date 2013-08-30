@@ -80,62 +80,66 @@ formatTimeNode (Idx.PartNode s n) =
    Format.part s `Format.sectionNode` Node.subscript n
 
 
-formatStructureEdge ::
+formatStructureLink ::
    (Format output, Node.C node) =>
-   Format.EdgeVar -> Idx.StructureEdge node -> output
-formatStructureEdge e (Idx.StructureEdge x y) =
-   Format.subscript (Format.edgeIdent e) $
+   Idx.StructureEdge node -> output
+formatStructureLink (Idx.StructureEdge x y) =
    Node.subscript x `Format.link` Node.subscript y
 
+formatStructureEdge ::
+   (Format output, Node.C node) =>
+   output -> Idx.StructureEdge node -> output
+formatStructureEdge e se =
+   Format.subscript e $ formatStructureLink se
+
 instance (Node.C node) => FormatValue (Idx.Energy node) where
-   formatValue (Idx.Energy e) = formatStructureEdge Format.Energy e
+   formatValue (Idx.Energy e) = formatStructureEdge Format.energy e
 
 instance (Node.C node) => FormatValue (Idx.Power node) where
-   formatValue (Idx.Power e) = formatStructureEdge Format.Power e
+   formatValue (Idx.Power e) = formatStructureEdge Format.power e
 
 instance (Node.C node) => FormatValue (Idx.Eta node) where
-   formatValue (Idx.Eta e) = formatStructureEdge Format.Eta e
+   formatValue (Idx.Eta e) = formatStructureEdge Format.eta e
 
 instance (Node.C node) => FormatValue (Idx.X node) where
-   formatValue (Idx.X e) = formatStructureEdge Format.X e
+   formatValue (Idx.X e) = formatStructureEdge Format.xfactor e
 
 
 formatStructureSecEdge ::
    (Format output, Format.Part part, Node.C node) =>
-   Format.EdgeVar -> Idx.StructureEdge node -> part -> output
-formatStructureSecEdge e (Idx.StructureEdge x y) s =
-   Format.subscript (Format.edgeIdent e) $
-   Format.part s `Format.sectionNode`
-      (Node.subscript x `Format.link` Node.subscript y)
+   output -> Idx.StructureEdge node -> part -> output
+formatStructureSecEdge e se s =
+   Format.subscript e $
+   Format.part s `Format.sectionNode` formatStructureLink se
 
 formatStorageEdge ::
    (Format.Part sec, Format output, Node.C node) =>
-   Format.EdgeVar -> Idx.StorageEdge sec node -> node -> output
+   output -> Idx.StorageEdge sec node -> node -> output
 formatStorageEdge e (Idx.StorageEdge s0 s1) n =
-   Format.subscript (Format.edgeIdent e) $
+   Format.subscript e $
    (Format.initOrOther s0 `Format.link` Format.otherOrExit s1)
       `Format.sectionNode` Node.subscript n
 
 formatStorageTrans ::
    (Format.Part sec, Format output, Node.C node) =>
-   Format.EdgeVar -> Idx.StorageTrans sec node -> node -> output
+   output -> Idx.StorageTrans sec node -> node -> output
 formatStorageTrans e (Idx.StorageTrans s0 s1) n =
-   Format.subscript (Format.edgeIdent e) $
+   Format.subscript e $
    (Format.augmented s0 `Format.link` Format.augmented s1)
       `Format.sectionNode` Node.subscript n
 
 
 instance FormatSignalIndex Idx.Energy where
-   formatSignalIndex (Idx.Energy e) = formatStructureSecEdge Format.Energy e
+   formatSignalIndex (Idx.Energy e) = formatStructureSecEdge Format.energy e
 
 instance FormatSignalIndex Idx.Power where
-   formatSignalIndex (Idx.Power e) = formatStructureSecEdge Format.Power e
+   formatSignalIndex (Idx.Power e) = formatStructureSecEdge Format.power e
 
 instance FormatSignalIndex Idx.Eta where
-   formatSignalIndex (Idx.Eta e) = formatStructureSecEdge Format.Eta e
+   formatSignalIndex (Idx.Eta e) = formatStructureSecEdge Format.eta e
 
 instance FormatSignalIndex Idx.X where
-   formatSignalIndex (Idx.X e) = formatStructureSecEdge Format.X e
+   formatSignalIndex (Idx.X e) = formatStructureSecEdge Format.xfactor e
 
 instance FormatSignalIndex Idx.DTime where
    formatSignalIndex Idx.DTime s =
@@ -149,7 +153,7 @@ instance FormatSignalIndex Idx.Sum where
 
 
 instance FormatScalarIndex Idx.MaxEnergy where
-   formatScalarIndex (Idx.MaxEnergy e) = formatStorageEdge Format.MaxEnergy e
+   formatScalarIndex (Idx.MaxEnergy e) = formatStorageEdge Format.maxEnergy e
 
 instance FormatScalarIndex Idx.Storage where
    formatScalarIndex (Idx.Storage bnd) n =
@@ -157,10 +161,10 @@ instance FormatScalarIndex Idx.Storage where
       formatBoundaryNode (Idx.PartNode bnd n)
 
 instance (Format.Part sec) => FormatScalarIndex (Idx.StEnergy sec) where
-   formatScalarIndex (Idx.StEnergy e) = formatStorageEdge Format.Energy e
+   formatScalarIndex (Idx.StEnergy e) = formatStorageEdge Format.energy e
 
 instance (Format.Part sec) => FormatScalarIndex (Idx.StX sec) where
-   formatScalarIndex (Idx.StX e) = formatStorageTrans Format.X e
+   formatScalarIndex (Idx.StX e) = formatStorageTrans Format.xfactor e
 
 instance (Format.Part sec) => FormatScalarIndex (Idx.StInSum sec) where
    formatScalarIndex (Idx.StInSum s) n =

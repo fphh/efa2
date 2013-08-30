@@ -35,8 +35,6 @@ newtype Latex = Latex { unLatex :: String }
 
 -- * class for unified handling of ASCII, Unicode and LaTeX output
 
-data EdgeVar = Energy | MaxEnergy | Power | Eta | X
-
 {-
 We need the ConstOne function in the solver
 in order to create a signal for the sum of split factors,
@@ -73,11 +71,11 @@ class Format output where
    sectionNode :: output -> output -> output
    direction :: Idx.Direction -> output
    delta :: output -> output
-   edgeIdent :: EdgeVar -> output
+   energy, maxEnergy, power, xfactor, eta :: output
    dtime, signalSum, scalarSum, storage :: output
    parenthesize, negate, recip :: output -> output
    plus, minus, multiply :: output -> output -> output
-   power :: output -> Integer -> output
+   intPower :: output -> Integer -> output
    showRaw :: output -> String
 
 instance Format ASCII where
@@ -120,14 +118,11 @@ instance Format ASCII where
 
    direction = ASCII . directionShort
    delta (ASCII s) = ASCII $ 'd':s
-   edgeIdent e =
-      ASCII $
-      case e of
-         Energy -> "E"
-         MaxEnergy -> "Em"
-         Power -> "P"
-         X -> "x"
-         Eta -> "n"
+   energy = ASCII "E"
+   maxEnergy = ASCII "Em"
+   power = ASCII "P"
+   xfactor = ASCII "x"
+   eta = ASCII "n"
    dtime = ASCII "dt"
    signalSum = ASCII "SS"
    scalarSum = ASCII "Ss"
@@ -139,7 +134,7 @@ instance Format ASCII where
    plus (ASCII x) (ASCII y) = ASCII $ x ++ " + " ++ y
    minus (ASCII x) (ASCII y) = ASCII $ x ++ " - " ++ y
    multiply (ASCII x) (ASCII y) = ASCII $ x ++ " * " ++ y
-   power (ASCII x) n = ASCII $ x ++ "^" ++ showsPrec 10 n ""
+   intPower (ASCII x) n = ASCII $ x ++ "^" ++ showsPrec 10 n ""
    showRaw (ASCII x) = x
 
 instance Format Unicode where
@@ -186,14 +181,11 @@ instance Format Unicode where
 
    direction = Unicode . directionShort
    delta (Unicode s) = Unicode $ deltaChar:s
-   edgeIdent e =
-      Unicode $
-      case e of
-         Energy -> "E"
-         MaxEnergy -> "\xCA"
-         Power -> "P"
-         X -> "x"
-         Eta -> "\x03B7"
+   energy = Unicode "E"
+   maxEnergy = Unicode "\xCA"
+   power = Unicode "P"
+   xfactor = Unicode "x"
+   eta = Unicode "\x03B7"
    dtime = Unicode "dt"
    signalSum = Unicode "\x03A3"
    scalarSum = Unicode "\x03C3"
@@ -205,7 +197,7 @@ instance Format Unicode where
    plus (Unicode x) (Unicode y) = Unicode $ x ++ " + " ++ y
    minus (Unicode x) (Unicode y) = Unicode $ x ++ " - " ++ y
    multiply (Unicode x) (Unicode y) = Unicode $ x ++ "\xb7" ++ y
-   power (Unicode x) n =
+   intPower (Unicode x) n =
       -- writing many digits in superscript looks ugly in a monospace font
       let super c =
              case c of
@@ -297,14 +289,11 @@ instance Format Latex where
 
    direction = Latex . directionShort
    delta (Latex s) = Latex $ "\\Delta " ++ s
-   edgeIdent e =
-      Latex $
-      case e of
-         Energy -> "E"
-         MaxEnergy -> "\\^E"
-         Power -> "P"
-         X -> "x"
-         Eta -> "\\eta"
+   energy = Latex "E"
+   maxEnergy = Latex "\\^E"
+   power = Latex "P"
+   xfactor = Latex "x"
+   eta = Latex "\\eta"
    dtime = Latex "\\dif t"
    signalSum = Latex "\\Sigma"
    scalarSum = Latex "\\sigma"
@@ -316,7 +305,7 @@ instance Format Latex where
    plus (Latex x) (Latex y) = Latex $ x ++ " + " ++ y
    minus (Latex x) (Latex y) = Latex $ x ++ " - " ++ y
    multiply (Latex x) (Latex y) = Latex $ x ++ " \\cdot " ++ y
-   power (Latex x) n = Latex $ x ++ "^{" ++ show n ++ "}"
+   intPower (Latex x) n = Latex $ x ++ "^{" ++ show n ++ "}"
    showRaw (Latex x) = x
 
 
@@ -359,24 +348,32 @@ instance Record rec => Record (Idx.ExtDelta rec) where
    record (Idx.ExtDelta d r) = recordDelta d . record r
 
 
-class EdgeIdx idx where edgeVar :: idx node -> EdgeVar
+class EdgeIdx idx where
+   edgeIdent ::
+      Format output => idx node -> output
 
 instance StructureIdx idx => EdgeIdx (Idx.InPart part idx) where
-   edgeVar = structureVar
+   edgeIdent = structureIdent
 
-class StructureIdx idx where structureVar :: Idx.InPart part idx node -> EdgeVar
-instance StructureIdx Idx.Energy where structureVar _ = Energy
-instance StructureIdx Idx.Power where structureVar _ = Power
-instance StructureIdx Idx.Eta where structureVar _ = Eta
-instance StructureIdx Idx.X where structureVar _ = X
+class StructureIdx idx where
+   structureIdent ::
+      Format output => Idx.InPart part idx node -> output
+
+instance StructureIdx Idx.Energy where structureIdent _ = energy
+instance StructureIdx Idx.Power where structureIdent _ = power
+instance StructureIdx Idx.Eta where structureIdent _ = eta
+instance StructureIdx Idx.X where structureIdent _ = xfactor
 
 instance StorageIdx idx => EdgeIdx (Idx.ForNode idx) where
-   edgeVar = storageVar
+   edgeIdent = storageIdent
 
-class StorageIdx idx where storageVar :: Idx.ForNode idx node -> EdgeVar
-instance StorageIdx Idx.MaxEnergy where storageVar _ = MaxEnergy
-instance StorageIdx (Idx.StEnergy sec) where storageVar _ = Energy
-instance StorageIdx (Idx.StX sec) where storageVar _ = X
+class StorageIdx idx where
+   storageIdent ::
+      Format output => Idx.ForNode idx node -> output
+
+instance StorageIdx Idx.MaxEnergy where storageIdent _ = maxEnergy
+instance StorageIdx (Idx.StEnergy sec) where storageIdent _ = energy
+instance StorageIdx (Idx.StX sec) where storageIdent _ = xfactor
 
 
 directionShort :: Idx.Direction -> String
