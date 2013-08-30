@@ -1,20 +1,21 @@
 {-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE TupleSections #-}
 
 module EFA.Application.Sweep where
+
+import qualified EFA.Application.EtaSys as ES
 
 import qualified EFA.Signal.Signal as Sig
 --import qualified EFA.Signal.Data as Data
 
 import qualified EFA.Equation.Environment as EqEnv
-import qualified EFA.Graph.StateFlow.Environment as EqEnvState
 import EFA.Equation.Result (Result)
 
-import qualified EFA.Application.EtaSys as ES
+import qualified EFA.Graph.StateFlow.Environment as StateEnv
+
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology as TD
 
@@ -115,8 +116,8 @@ optimalSolution2DState ::
   ES.ConditionState node a v ->
   ES.ForcingState node a v ->
   TD.StateFlowGraph node ->
-  Sig.UTSignal2 V.Vector V.Vector (EqEnvState.Complete node a (Result v)) ->
-  Maybe (v, EqEnvState.Complete node a (Result v))
+  Sig.UTSignal2 V.Vector V.Vector (StateEnv.Complete node a (Result v)) ->
+  Maybe (v, StateEnv.Complete node a (Result v))
 optimalSolution2DState cond forcing topo sigEnvs = liftA2 (,) etaMax env
   where etaSys = Sig.map (ES.objectiveFunctionState cond forcing topo) sigEnvs
         etaMax = Sig.fromScalar $ Sig.maximum etaSys
@@ -129,11 +130,10 @@ optimalSolutionState ::
   ES.ConditionState node a v ->
   ES.ForcingState node a v ->
   TD.StateFlowGraph node ->
-  [EqEnvState.Complete node a (Result v)] ->
-  Maybe (v, EqEnvState.Complete node a (Result v))
+  [StateEnv.Complete node a (Result v)] ->
+  Maybe (v, StateEnv.Complete node a (Result v))
 optimalSolutionState cond forcing topo envs =
-  case es of
+  case mapMaybe f envs of
        [] -> Nothing
        fs -> Just $ List.maximumBy (compare `on` fst) fs
-  where es = mapMaybe f envs
-        f e = fmap (,e) $ ES.objectiveFunctionState cond forcing topo e
+  where f e = fmap (flip (,) e) $ ES.objectiveFunctionState cond forcing topo e
