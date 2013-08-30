@@ -5,41 +5,36 @@
 module EFA.Application.Simulation where
 
 --import qualified EFA.Application.Absolute as EqGen
+--import qualified EFA.Application.Optimisation as AppOpt
+--import qualified EFA.Application.Utility as AppUt
 import qualified EFA.Application.AbsoluteState as EqGen
 
-
-import qualified EFA.Application.IndexState as XIdx
-
 import EFA.Application.AbsoluteState ( (=.=) )
---import EFA.Application.AbsoluteState ( (=.=) )
---import qualified EFA.Application.Utility as AppUt
 
-import qualified EFA.Signal.Data as Data
-import EFA.Signal.Data (Data(..), Nil,(:>))
+--import qualified EFA.Equation.Environment as EqEnv
+--import qualified EFA.Equation.Record as EqRecord
+--import qualified EFA.Equation.Verify as Verify
+import qualified EFA.Equation.Arithmetic as EqArith
+import EFA.Equation.Result(Result)
+
+import qualified EFA.Graph.StateFlow.Environment as EqEnv
+import qualified EFA.Graph.StateFlow.Index as StateIdx
+import qualified EFA.Graph.StateFlow as StateFlow
 
 import qualified EFA.Graph.Topology.Index as TIdx
 --import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
-import qualified EFA.Graph.StateFlow.Environment as EqEnv
-import qualified EFA.Graph.StateFlow as StateFlow
 
---import qualified EFA.Equation.Environment as EqEnv
---import qualified EFA.Equation.Record as EqRecord
+import qualified EFA.Signal.Data as Data
+import EFA.Signal.Data (Data(..), Nil,(:>))
 
 import qualified EFA.Signal.Vector as SV
 import qualified EFA.Signal.Base as Base
 import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.SequenceData as SD
-
---import qualified EFA.Application.Optimisation as AppOpt
-
-
---import qualified EFA.Equation.Verify as Verify
-import qualified EFA.Equation.Arithmetic as EqArith
-import EFA.Equation.Result(Result)
 
 
 import qualified Data.Map as Map
@@ -53,7 +48,7 @@ eqs = Simulation.givenSimulate etaAssign etaFunc $
              SD.SequData [SD.Section (TIdx.Section 0) undefined rec]
 -}
 
-type EtaAssignMap node = Map (XIdx.Eta node) (String, String, XIdx.Eta node -> XIdx.Power node)
+type EtaAssignMap node = Map (StateIdx.Eta node) (String, String, StateIdx.Eta node -> StateIdx.Power node)
 
 solve :: (Node.C node,
           Eq (v a),
@@ -82,8 +77,8 @@ solve topology etaAssign etaFunc powerRecord = EqGen.solveSimple $
 
 
 givenSimulate ::
- (Num a, Eq a, Show a, Fractional a, Ord a,Ord node,Node.C node,
-  Base.BSum a, EqArith.Sum a,EqArith.Constant a,
+ (Eq a, Show a, Fractional a, Ord a, Ord node, Node.C node,
+  Base.BSum a, EqArith.Sum a, EqArith.Constant a,
   Eq (v a),
   SV.Zipper v,SV.FromList v,SV.Len (v a),
   SV.Singleton v,
@@ -96,18 +91,18 @@ givenSimulate ::
   (forall s . EqGen.EquationSystem node s (Data Nil a) (Data (v :> Nil) a))
 
 givenSimulate stateFlowGraph etaAssign etaFunc powerRecord =
---  (XIdx.storage TIdx.initial Water EqGen..= Data 0) <>
+--  (StateIdx.storage TIdx.initial Water EqGen..= Data 0) <>
    --Fold.fold (SD.mapWithSection f sf)
   (EqGen.fromGraph True $ TD.dirFromFlowGraph (stateFlowGraph)) <>
    f powerRecord
    where f (Record.Record t xs) =
-           (XIdx.dTime (TIdx.State 0) EqGen..=
+           (StateIdx.dTime (TIdx.State 0) EqGen..=
              (Data  $ SV.fromList $ replicate (Sig.len t) 1))
            <> makeEtaFuncGiven etaAssign (TIdx.State 0) etaFunc
            <> Fold.fold (Map.mapWithKey g xs)
            where
              g (TIdx.PPos (TIdx.StructureEdge p0 p1)) p =
-                   (XIdx.power (TIdx.State 0)  p0 p1 EqGen..= Sig.unpack p)
+                   (StateIdx.power (TIdx.State 0)  p0 p1 EqGen..= Sig.unpack p)
 
 -- | Generate given equations using efficiency curves or functions for a specified section
 makeEtaFuncGiven ::

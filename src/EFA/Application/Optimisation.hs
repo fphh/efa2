@@ -1,52 +1,44 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 
 module EFA.Application.Optimisation where
 
---import qualified EFA.Application.Absolute as EqGen
 import qualified EFA.Application.AbsoluteState as EqGenState
 
+import qualified EFA.Graph.StateFlow.Index as StateIdx
 import qualified EFA.Application.Index as XIdx
-import qualified EFA.Application.IndexState as XIdxState
---import EFA.Application.Absolute ( (=.=) )
 import EFA.Application.AbsoluteState ( (=.=) )
---import qualified EFA.Application.Absolute as AppAbs
 
 import qualified EFA.Signal.Data as Data
 import EFA.Signal.Data (Data(..), Nil) --,(:>))
 
-import qualified EFA.Graph as Graph
-import qualified EFA.Graph.Topology.Index as TIdx
---import qualified EFA.Graph.Flow as Flow
-import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph.Topology as TD
-import qualified EFA.Graph.StateFlow.Environment as EqEnvState
---import qualified EFA.Equation.Environment as EqEnv
---import qualified EFA.Equation.Record as EqRecord
-import qualified EFA.Graph.StateFlow.Index as SFIdx
-
 import qualified EFA.Equation.Arithmetic as EqArith
 
+import qualified EFA.Graph.StateFlow.Environment as EqEnvState
+import qualified EFA.Graph.StateFlow.Index as SFIdx
+import qualified EFA.Graph.Topology.Index as TIdx
+import qualified EFA.Graph.Topology.Node as Node
+import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph as Graph
 
-import qualified Data.Map as Map
 import qualified Data.Foldable as Fold
+import qualified Data.Map as Map
+import qualified Data.Set as Set
 import Data.Map (Map)
 import Data.Monoid((<>),mempty)
 import Data.Maybe (mapMaybe)
-import qualified Data.Set as Set
 
 -- | TODO Functios below could ventually be moved to a module Application/Given
 
 
 -- | Function to specifiy that an efficiency function in etaAssign is to be looked up with input power
-etaOverPowerInState :: XIdxState.Eta node -> XIdxState.Power node
+etaOverPowerInState :: StateIdx.Eta node -> StateIdx.Power node
 etaOverPowerInState =
    TIdx.liftInState $ \(TIdx.Eta e) -> TIdx.Power $ TIdx.flip e
 
 -- | Function to specifiy that an efficiency function in etaAssign is to be looked up with output power
-etaOverPowerOutState :: XIdxState.Eta node -> XIdxState.Power node
+etaOverPowerOutState :: StateIdx.Eta node -> StateIdx.Power node
 etaOverPowerOutState =
    TIdx.liftInState $ \(TIdx.Eta e) -> TIdx.Power e
 
@@ -62,8 +54,8 @@ etaOverPowerOut =
    TIdx.liftInSection $ \(TIdx.Eta e) -> TIdx.Power e
 
 type EtaAssignMap node =
-  Map (XIdxState.Eta node)
-      (String, String, XIdxState.Eta node -> XIdxState.Power node)
+  Map (StateIdx.Eta node)
+      (String, String, StateIdx.Eta node -> StateIdx.Power node)
 
 
 -- | Generate given equations using efficiency curves or functions for a specified section
@@ -103,19 +95,16 @@ givenAverageWithoutStateX stateToRemove (EqEnvState.Complete scalar signal) =
 
 
 givenAverageWithoutState ::
-  forall node v a.
   (Eq v, EqArith.Sum v, Node.C node, Ord node, Eq a, EqArith.Sum a) =>
   TIdx.State ->
   EqEnvState.Complete node a v ->
   EqEnvState.Complete node a v
 givenAverageWithoutState _stateToRemove (EqEnvState.Complete scalar signal) =
-  (mempty :: EqEnvState.Complete node (Data Nil d) (Data Nil d)) {
-    EqEnvState.signal =
-      mempty { EqEnvState.etaMap = EqEnvState.etaMap signal,
+  EqEnvState.Complete
+    ( mempty { EqEnvState.stXMap = EqEnvState.stXMap scalar } )
+    ( mempty { EqEnvState.etaMap = EqEnvState.etaMap signal,
                EqEnvState.xMap   = EqEnvState.xMap signal,
-               EqEnvState.dtimeMap = EqEnvState.dtimeMap signal },
-    EqEnvState.scalar =
-      mempty { EqEnvState.stXMap = EqEnvState.stXMap scalar } }
+               EqEnvState.dtimeMap = EqEnvState.dtimeMap signal } )
 --  where f :: TIdx.InState idx node -> v -> Bool
 --        f (TIdx.InPart state _) _ = state /= stateToRemove
 
@@ -143,20 +132,16 @@ givenForOptimisation stateFlowGraph env etaAssign etaFunc state commonGiven give
 
 
 initialEnv ::
-  forall node d.
-  (Ord node, Num d, Fractional d, Show node) =>
+  (Ord node, Fractional d, Show node) =>
   node ->
   TD.StateFlowGraph node ->
   EqEnvState.Complete node (Data Nil d) (Data Nil d)
 initialEnv _xStorageEdgesNode g =
-  -- @HT: Warum braucht das aeussere mempty die Typsignatur?
-  (mempty :: EqEnvState.Complete node (Data Nil d) (Data Nil d)) {
-    EqEnvState.signal =
-      mempty { EqEnvState.etaMap = Map.fromList $ zip es $ repeat (Data 0.5),
+  EqEnvState.Complete
+    ( mempty { EqEnvState.stXMap = Map.fromList stxs } )
+    ( mempty { EqEnvState.etaMap = Map.fromList $ zip es $ repeat (Data 0.5),
                EqEnvState.xMap = Map.fromList xs,
-               EqEnvState.dtimeMap = Map.fromList $ zip dts $ repeat (Data 1) },
-    EqEnvState.scalar =
-      mempty { EqEnvState.stXMap = Map.fromList stxs } }
+               EqEnvState.dtimeMap = Map.fromList $ zip dts $ repeat (Data 1) } )
   where gdir = TD.dirFromFlowGraph g
 
         es = mapMaybe f $ Graph.edges gdir

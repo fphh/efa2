@@ -1,8 +1,8 @@
 
 module EFA.Application.EtaSys where
 
---import qualified EFA.Application.Index as XIdx
-import qualified EFA.Application.IndexState as XIdxState
+
+import qualified EFA.Graph.StateFlow.Index as StateIdx
 
 import qualified EFA.Application.Utility as AppUt
 
@@ -95,12 +95,12 @@ etaSysState topo env = liftA2 (/) (sumRes sinks) (sumRes sources)
 
         sinkEnergies
           (TD.FlowEdge (TD.StructureEdge (Idx.InPart sec (Gr.DirEdge a b)))) =
-            Just $ AppUt.lookupAbsEnergyState "etaSys, sinkEnergies" env (XIdxState.energy sec b a)
+            Just $ AppUt.lookupAbsEnergyState "etaSys, sinkEnergies" env (StateIdx.energy sec b a)
         sinkEnergies _ = Nothing
 
         sourceEnergies
           (TD.FlowEdge (TD.StructureEdge (Idx.InPart sec (Gr.DirEdge a b)))) =
-            Just $ AppUt.lookupAbsEnergyState "etaSys, sourceEnergies" env (XIdxState.energy sec a b)
+            Just $ AppUt.lookupAbsEnergyState "etaSys, sourceEnergies" env (StateIdx.energy sec a b)
         sourceEnergies _ = Nothing
 
 

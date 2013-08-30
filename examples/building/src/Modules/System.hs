@@ -20,7 +20,7 @@ import qualified EFA.Application.Utility as AppUt
 
 import EFA.Application.Utility (select) -- makeEdges,
 import qualified EFA.Application.Index as XIdx
-import qualified EFA.Application.IndexState as XIdxState
+import qualified EFA.Graph.StateFlow.Index as StateIdx
 import EFA.Application.Optimisation (etaOverPowerInState, etaOverPowerOutState)
 
 -- import qualified Modules.Utility as ModUt
@@ -90,24 +90,24 @@ stateFlowGraph =
 
 etaAssignState ::
   TIdx.State ->
-  Map (XIdxState.Eta Node) (String, String, XIdxState.Eta Node -> XIdxState.Power Node)
+  Map (StateIdx.Eta Node) (String, String, StateIdx.Eta Node -> StateIdx.Power Node)
 etaAssignState sec = Map.fromList $
-  (XIdxState.eta sec Water Network, ( "storage", "storage", etaOverPowerInState)) :
-  (XIdxState.eta sec Network Water, ( "storage", "storage", etaOverPowerOutState)) :
+  (StateIdx.eta sec Water Network, ( "storage", "storage", etaOverPowerInState)) :
+  (StateIdx.eta sec Network Water, ( "storage", "storage", etaOverPowerOutState)) :
 
-  (XIdxState.eta sec Coal Network, ( "coal", "coal", etaOverPowerInState)) :
-  (XIdxState.eta sec Network Coal, ( "coal", "coal", etaOverPowerOutState)) :
+  (StateIdx.eta sec Coal Network, ( "coal", "coal", etaOverPowerInState)) :
+  (StateIdx.eta sec Network Coal, ( "coal", "coal", etaOverPowerOutState)) :
 
-  (XIdxState.eta sec Gas LocalNetwork, ( "gas", "gas", etaOverPowerInState)) :
-  (XIdxState.eta sec LocalNetwork Gas, ( "gas", "gas", etaOverPowerOutState)) :
+  (StateIdx.eta sec Gas LocalNetwork, ( "gas", "gas", etaOverPowerInState)) :
+  (StateIdx.eta sec LocalNetwork Gas, ( "gas", "gas", etaOverPowerOutState)) :
 
-  (XIdxState.eta sec Network LocalNetwork, ( "transformer", "transformer", etaOverPowerInState)) :
-  (XIdxState.eta sec LocalNetwork Network, ( "transformer", "transformer", etaOverPowerOutState)) :
+  (StateIdx.eta sec Network LocalNetwork, ( "transformer", "transformer", etaOverPowerInState)) :
+  (StateIdx.eta sec LocalNetwork Network, ( "transformer", "transformer", etaOverPowerOutState)) :
 
-  (XIdxState.eta sec LocalNetwork LocalRest, ( "local", "local", etaOverPowerInState)) :
-  (XIdxState.eta sec LocalRest LocalNetwork, ( "local", "local", etaOverPowerOutState)) :
+  (StateIdx.eta sec LocalNetwork LocalRest, ( "local", "local", etaOverPowerInState)) :
+  (StateIdx.eta sec LocalRest LocalNetwork, ( "local", "local", etaOverPowerOutState)) :
 
-  (XIdxState.eta sec Network Rest, ( "rest", "rest", etaOverPowerInState)) :
-  (XIdxState.eta sec Rest Network, ( "rest", "rest", etaOverPowerOutState)) :
+  (StateIdx.eta sec Network Rest, ( "rest", "rest", etaOverPowerInState)) :
+  (StateIdx.eta sec Rest Network, ( "rest", "rest", etaOverPowerOutState)) :
 
   []
