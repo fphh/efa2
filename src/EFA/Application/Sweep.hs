@@ -20,12 +20,16 @@ import qualified EFA.Graph.Topology as TD
 
 import Control.Applicative (liftA2)
 
+import qualified Data.Traversable as Trav
 import qualified Data.List as List
 import qualified Data.Map as Map; import Data.Map (Map)
 
 import qualified Data.Vector as V
+import Data.Traversable (Traversable, traverse)
+import Data.Foldable (Foldable, foldMap)
 import Data.Function (on)
 import Data.Maybe (mapMaybe)
+import Data.Monoid ((<>))
 
 -- | Map a two dimensional load room (varX, varY) and find per load situation
 -- | the optimal solution in the 2d-solution room (two degrees of freevarOptX varOptY)
@@ -59,29 +63,29 @@ doubleSweep fsolve varOptX varOptY varX varY =
 
 -}
 
-class Sweep a b c where
-      sweep :: (a -> b) -> [a] -> c
+data Pair f g a =
+  Pair {
+    fstRecord :: f a,
+    sndRecord :: g a
+  }
 
-instance (Sweep a b c) => Sweep a (a -> b) c where
-         sweep f (x:xs) = sweep (f x) xs
-         sweep _ _ = error "sweep: How many arguments did you supply?"
+instance (Functor f, Functor g) => Functor (Pair f g) where
+  fmap f (Pair xs ys) = Pair (fmap f xs) (fmap f ys)
 
-instance Sweep a b b where
-         sweep f [x] = f x
-         sweep _ _ = error "sweep: How many arguments did you supply?"
+instance (Foldable f, Foldable g) => Foldable (Pair f g) where
+  foldMap f (Pair xs ys) = foldMap f xs <> foldMap f ys
 
-data Points v = Points {
-  fstPoints :: [[v]],
-  sndPoints :: [[v]] } deriving (Show)
+instance (Traversable f, Traversable g) => Traversable (Pair f g) where
+  traverse f (Pair xs ys) = liftA2 Pair (traverse f xs) (traverse f ys)
+
+type Points f g v = Pair f g [v]
 
 
 doubleSweep ::
-  (Ord a, Sweep a b c) => (a -> b) -> Points a -> Map [a] [c]
-doubleSweep f (Points xs ys) = List.foldl' h Map.empty $ map g vs
-  where vs = sequence (xs ++ ys)
-        len = length xs
-        g bs = (take len bs, sweep f bs)
-        h acc (k, v) = Map.insertWith' (++) k [v] acc
+  (Traversable f, Traversable g, Ord (f a)) =>
+  (Pair f g a -> b) -> Points f g a -> Map (f a) [b]
+doubleSweep f =
+  Map.fromListWith (++) . map (\xy -> (fstRecord xy, [f xy])) . Trav.sequence
 
 -- verallgemeinern für n states
 combineOptimalMaps ::

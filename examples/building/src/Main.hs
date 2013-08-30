@@ -8,7 +8,7 @@ import qualified Modules.System as System
 import qualified Modules.Optimisation as Optimisation
 
 
-import Modules.Optimisation(EnvResult)
+import Modules.Optimisation(EnvResult, Param2)
 import Modules.System(Node(..))
 
 -- import EFA.Utility.Async (concurrentlyMany_)
@@ -62,7 +62,10 @@ import qualified Graphics.Gnuplot.Graph.ThreeDimensional as Graph3D
 
 import qualified Data.Map as Map; import Data.Map (Map)
 import qualified Data.Vector as V
+import qualified Data.NonEmpty as NonEmpty
+import qualified Data.Empty as Empty
 
+import Data.NonEmpty ((!:))
 import Data.Monoid ((<>))
 import Data.Tuple.HT (fst3, snd3, thd3)
 import Data.Foldable (foldMap)
@@ -125,8 +128,8 @@ rest =  [0.2, 3]
 water = [-0.3, 0.3, 0.7]
 gas =   [0.4, 3]
 
-sweepPts :: Sweep.Points Double
-sweepPts = Sweep.Points [local, rest] [water, gas]
+sweepPts :: Sweep.Points Param2 Param2 Double
+sweepPts = Sweep.Pair (local !: rest !: Empty.Cons) (water !: gas !: Empty.Cons)
 
 optimalPower :: One.OptimalPower Node
 optimalPower =
@@ -150,10 +153,10 @@ unzip3Map m = (Map.map fst3 m, Map.map snd3 m, Map.map thd3 m)
 -- @HT Hier wollen wir unabhaengig von Node und Double werden
 -- also z.B. nur Typvariablen node und v sollen vorkommen.
 optimalEtasWithPowers ::
-  One.OptimalEnvParams Node Double ->
+  One.OptimalEnvParams Node Param2 Param2 Double ->
   One.SocDrive Double ->
   StateEnv.Complete Node (Data Nil Double) (Data Nil Double) ->
-  One.OptimalEtaWithEnv Node Double
+  One.OptimalEtaWithEnv Node Param2 Double
 optimalEtasWithPowers params forceFactor env =
   Map.foldWithKey f Map.empty op
   where op = One.optimalPowers params
@@ -170,7 +173,7 @@ optimalEtasWithPowers params forceFactor env =
                     env
                     state
 
-                envsSweep :: Map [Double] [EnvResult Double]
+                envsSweep :: Map (Param2 Double) [EnvResult Double]
                 envsSweep =
                   Sweep.doubleSweep solveFunc (One.points params)
 
@@ -243,15 +246,14 @@ varLocalPower = Sig.fromList2 varLocalPower'
 to2DMatrix ::
   (Vec.Storage v1 a, Vec.Storage v2 (v1 a),
   Vec.FromList v1, Vec.FromList v2, Ord a) =>
-  Map [a] a ->
+  Map (NonEmpty.T f a) a ->
   TC tr (Typ x y z)  (Data (v2 :> v1 :> Nil) a)
 to2DMatrix =
-  Sig.fromList2 . map snd . Map.toList . Map.foldWithKey f Map.empty 
-  where f [line, _] v = Map.insertWith (++) line [v]
-        f _ _ = error $ "to2DMatrix: more than two values in the key of map"
+  Sig.fromList2 . Map.elems .
+  Map.mapKeysWith (++) (\(NonEmpty.Cons line _) -> line) . fmap (:[])
 
-optimalMaps :: (Num a, Ord a, Ord node) =>
-  Map Idx.State (Map (node, node) (Map [a] (a, a))) ->
+optimalMaps :: (Num a, Ord a, Ord (f a), Ord node) =>
+  Map Idx.State (Map (node, node) (Map (NonEmpty.T f a) (a, a))) ->
   ( Sig.NSignal2 V.Vector V.Vector a,
     Sig.UTSignal2 V.Vector V.Vector a,
     Map (node, node) (Sig.PSignal2 V.Vector V.Vector a) )
@@ -308,7 +310,7 @@ solveAndCalibrateAvgEffWithGraph time prest plocal etaMap (stateFlowGraph, env) 
           stateFlowGraph
 
       optEtaWithPowers ::
-        Map Idx.State (Map (Node, Node) (Map [Double] (Double, Double)))
+        Map Idx.State (Map (Node, Node) (Map (Param2 Double) (Double, Double)))
       optEtaWithPowers = optimalEtasWithPowers optParams force env
       (_optEta, _optState, optPower) = optimalMaps optEtaWithPowers
 

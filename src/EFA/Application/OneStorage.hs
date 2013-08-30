@@ -39,10 +39,10 @@ optimalPower = Map.fromList
           Map.insertWith' (++) s (map (uncurry (XIdxState.power s)) lst)
 -}
 
-type OptimalEtaWithEnv node v = Map Idx.State (Map (node, node) (Map [v] (v, v)))
+type OptimalEtaWithEnv node f v = Map Idx.State (Map (node, node) (Map (f v) (v, v)))
 
-data OptimalEnvParams node v = OptimalEnvParams {
+data OptimalEnvParams node f g v = OptimalEnvParams {
   etaMap :: Map String (v -> v),
-  points :: Sweep.Points v,
+  points :: Sweep.Points f g v,
   optimalPowers :: OptimalPower node,
   stateFlowGraph :: StateFlowGraph node }

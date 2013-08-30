@@ -8,6 +8,7 @@ module Modules.Optimisation where
 import qualified Modules.System as System
 import Modules.System (Node(..))
 
+import qualified EFA.Application.Sweep as Sweep
 import qualified EFA.Application.Optimisation as AppOpt
 import qualified EFA.Application.AbsoluteState as EqGen
 -- import qualified EFA.Application.OneStorage as One
@@ -28,6 +29,8 @@ import EFA.Signal.Data (Data(..), Nil)
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
 
+import qualified Data.NonEmpty as NonEmpty
+import qualified Data.Empty as Empty
 import Data.Map (Map)
 import Data.Monoid (mconcat, (<>))
 import Data.Foldable (foldMap)
@@ -49,6 +52,10 @@ type EqSystemData a =
 type EtaAssignMap node =
   Map (XIdx.Eta node) (String, String, XIdx.Eta node -> XIdx.Power node)
 
+type Param2 = NonEmpty.T (NonEmpty.T Empty.T)
+
+type Param2x2 = Sweep.Pair Param2 Param2
+
 solve ::
   (Ord a, Fractional a, Show a, EqArith.Sum a, EqArith.Constant a) =>
   TD.StateFlowGraph Node ->
@@ -56,8 +63,11 @@ solve ::
   Map String (a -> a) ->
   Env a ->
   Idx.State ->
-  a -> a -> a -> a -> EnvResult a
-solve stateFlowGraph etaAssign etaFunc env state pLocal pRest pWater pGas =
+  Param2x2 a -> EnvResult a
+solve stateFlowGraph etaAssign etaFunc env state
+  (Sweep.Pair
+    (NonEmpty.Cons pLocal (NonEmpty.Cons pRest Empty.Cons))
+    (NonEmpty.Cons pWater (NonEmpty.Cons pGas  Empty.Cons))) =
   envGetData $ EqGen.solveSimple $
     AppOpt.givenForOptimisation
       stateFlowGraph
