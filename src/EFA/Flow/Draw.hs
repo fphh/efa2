@@ -27,9 +27,6 @@ import qualified EFA.Flow.State.Quantity as StateFlowQuant
 import qualified EFA.Flow.Cumulated.Quantity as CumFlowQuant
 import qualified EFA.Flow.Quantity as FlowQuant
 
-import qualified EFA.Flow.Sequence as SeqFlow
-import qualified EFA.Flow.State as StateFlow
-
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
 import EFA.Report.Format (Format, Unicode(Unicode, unUnicode))
@@ -78,7 +75,7 @@ import qualified Data.List as List
 import Data.Map (Map)
 import Data.Foldable (Foldable, foldMap, fold)
 import Data.Maybe (maybeToList)
-import Data.Tuple.HT (mapFst, mapFst3, fst3, snd3, thd3)
+import Data.Tuple.HT (mapFst, mapFst3, snd3)
 import Data.Monoid ((<>))
 
 import Control.Category ((.))
@@ -123,59 +120,36 @@ data StructureEdgeLabel =
    | ShowEtaNode (Triple [Unicode])
 
 
-dotFromSeqFlowGraph ::
-   (NodeType node) =>
-   SeqFlow.Graph node Gr.EitherEdge
-      String Unicode Unicode Unicode Unicode
-      StructureEdgeLabel [Unicode] ->
+dotFromFlowGraph ::
+   (Part part, NodeType node) =>
+   Map node
+      ((Unicode, Unicode),
+       Map (Idx.StorageEdge part node) [Unicode]) ->
+   Map part (String, Gr.Graph node Gr.EitherEdge Unicode StructureEdgeLabel) ->
    DotGraph T.Text
-dotFromSeqFlowGraph g =
+dotFromFlowGraph sts sq =
    dotDirGraph $
    DotStmts {
       attrStmts = [],
       subGraphs =
-         (Map.elems $
-          Map.mapWithKey (\sec -> dotFromPartGraph sec . snd) $
-          SeqFlow.sequence g)
+         (Map.elems $ Map.mapWithKey dotFromPartGraph sq)
          ++
-         (dotFromInitExitNodes
-             (Idx.NoExit Idx.Init :: Idx.AugmentedState,
-              Idx.Exit :: Idx.AugmentedState) $
-          fmap fst3 $ SeqFlow.storages g),
+         dotFromInitExitNodes sq
+            (Idx.NoExit Idx.Init, Idx.Exit)
+            (fmap fst sts),
       nodeStmts = [],
-      edgeStmts = dotFromStorageEdges $ fmap thd3 $ SeqFlow.storages g
+      edgeStmts = dotFromStorageEdges $ fmap snd sts
    }
 
-dotFromStateFlowGraph ::
-   (NodeType node) =>
-   StateFlow.Graph node Gr.EitherEdge
-      String Unicode Unicode Unicode
-      StructureEdgeLabel [Unicode] ->
-   DotGraph T.Text
-dotFromStateFlowGraph g =
-   dotDirGraph $
-   DotStmts {
-      attrStmts = [],
-      subGraphs =
-         (Map.elems $
-          Map.mapWithKey dotFromPartGraph $
-          StateFlow.states g)
-         ++
-         (dotFromInitExitNodes
-             (Idx.NoExit Idx.Init :: Idx.AugmentedState,
-              Idx.Exit :: Idx.AugmentedState) $
-          fmap fst $ StateFlow.storages g),
-      nodeStmts = [],
-      edgeStmts = dotFromStorageEdges $ fmap snd $ StateFlow.storages g
-   }
 
 
 dotFromInitExitNodes ::
    (Part part, NodeType node) =>
+   map part dummy ->
    (Idx.Augmented part, Idx.Augmented part) ->
    Map node (Unicode, Unicode) ->
    [DotSubGraph T.Text]
-dotFromInitExitNodes (init, exit) initExit =
+dotFromInitExitNodes _ (init, exit) initExit =
    dotFromInitOrExitNodes init "Init" (fmap fst initExit) :
    dotFromInitOrExitNodes exit "Exit" (fmap snd initExit) :
    []
@@ -588,53 +562,45 @@ hideEtaNode opts = opts { optEtaNode = False }
 sequFlowGraph ::
    (FormatValue a, FormatValue v, NodeType node) =>
    Options Unicode -> SeqFlowQuant.Graph node a v -> DotGraph T.Text
-sequFlowGraph opts =
-   dotFromSeqFlowGraph
-   .
-   (\gr ->
-      SeqFlow.Graph {
-         SeqFlowQuant.storages =
-            Map.mapWithKey
-               (\node ((init,exit), bnds, edges) ->
-                  ((stateNodeShow node (Just init),
-                    stateNodeShow node (Just exit)),
-                   fmap formatValue bnds,
-                   if optStorageEdge opts
-                     then Map.mapWithKey (storageEdgeSeqShow opts node) edges
-                     else Map.empty)) $
-            SeqFlowQuant.storages gr,
-         SeqFlowQuant.sequence =
-            snd $
-            Map.mapAccumWithKey
-               (\before sec (rng, (dt,topo)) ->
-                  (,) (Idx.afterSection sec) $
-                  (,) rng $
-                  (show sec ++
-                   " / Range " ++ formatRange rng ++
-                   " / Time " ++ unUnicode (formatValue dt),
-                   Gr.mapNodeWithKey
-                      (\node sums ->
-                         formatNodeStorage opts node
-                            (let content bnd =
-                                    Map.findWithDefault undefined bnd $
-                                    maybe undefined snd3 $
-                                    Map.lookup node $
-                                    SeqFlowQuant.storages gr
-                             in  (content before,
-                                  content $ Idx.afterSection sec))
-                            (fmap SeqFlowQuant.carrySum $
-                             SeqFlowQuant.sumOut sums)
-                            (fmap SeqFlowQuant.carrySum $
-                             SeqFlowQuant.sumIn sums)) $
-                   Gr.mapEdgeWithKey
-                      (\edge ->
-                         if optEtaNode opts
-                           then ShowEtaNode . structureEdgeShowEta opts sec edge
-                           else HideEtaNode . structureEdgeShow opts sec edge)
-                      topo))
-               Idx.initial $
-            SeqFlowQuant.sequence gr
-      })
+sequFlowGraph opts gr =
+   dotFromFlowGraph
+      (Map.mapWithKey
+          (\node ((init,exit), _bnds, edges) ->
+             ((stateNodeShow node (Just init),
+               stateNodeShow node (Just exit)),
+              if optStorageEdge opts
+                then Map.mapWithKey (storageEdgeSeqShow opts node) edges
+                else Map.empty)) $
+       SeqFlowQuant.storages gr)
+      (snd $
+       Map.mapAccumWithKey
+          (\before sec (rng, (dt,topo)) ->
+             (,) (Idx.afterSection sec) $
+             (show sec ++
+              " / Range " ++ formatRange rng ++
+              " / Time " ++ unUnicode (formatValue dt),
+              Gr.mapNodeWithKey
+                 (\node sums ->
+                    formatNodeStorage opts node
+                       (let content bnd =
+                               Map.findWithDefault (error "no storage content") bnd $
+                               maybe (error "missing node") snd3 $
+                               Map.lookup node $
+                               SeqFlowQuant.storages gr
+                        in  (content before,
+                             content $ Idx.afterSection sec))
+                       (fmap SeqFlowQuant.carrySum $
+                        SeqFlowQuant.sumOut sums)
+                       (fmap SeqFlowQuant.carrySum $
+                        SeqFlowQuant.sumIn sums)) $
+              Gr.mapEdgeWithKey
+                 (\edge ->
+                    if optEtaNode opts
+                      then ShowEtaNode . structureEdgeShowEta opts sec edge
+                      else HideEtaNode . structureEdgeShow opts sec edge)
+                 topo))
+          Idx.initial $
+       SeqFlowQuant.sequence gr)
 
 
 formatRange :: SD.Range -> String
@@ -690,39 +656,33 @@ formatStorageEquation (before, after) sin sout =
 stateFlowGraph ::
    (FormatValue a, FormatValue v, NodeType node) =>
    Options Unicode -> StateFlowQuant.Graph node a v -> DotGraph T.Text
-stateFlowGraph opts =
-   dotFromStateFlowGraph
-   .
-   (\gr ->
-      StateFlow.Graph {
-         StateFlowQuant.storages =
-            Map.mapWithKey
-               (\node ((init,exit), edges) ->
-                  ((stateNodeShow node (Just init),
-                    stateNodeShow node (Just exit)),
-                   if optStorageEdge opts
-                     then Map.mapWithKey (storageEdgeStateShow opts node) edges
-                     else Map.empty)) $
-            StateFlowQuant.storages gr,
-         StateFlowQuant.states =
-            Map.mapWithKey
-               (\state (dt,topo) ->
-                  (show state ++ " / Time " ++ unUnicode (formatValue dt),
-                   Gr.mapNodeWithKey
-                      (\node sums ->
-                         stateNodeShow node $
-                         fmap StateFlowQuant.carrySum $
-                         mplus
-                            (StateFlowQuant.sumOut sums)
-                            (StateFlowQuant.sumIn sums)) $
-                   Gr.mapEdgeWithKey
-                      (\edge ->
-                         if optEtaNode opts
-                           then ShowEtaNode . structureEdgeShowEta opts state edge
-                           else HideEtaNode . structureEdgeShow opts state edge)
-                      topo)) $
-            StateFlowQuant.states gr
-      })
+stateFlowGraph opts gr =
+   dotFromFlowGraph
+      (Map.mapWithKey
+          (\node ((init,exit), edges) ->
+             ((stateNodeShow node (Just init),
+               stateNodeShow node (Just exit)),
+              if optStorageEdge opts
+                then Map.mapWithKey (storageEdgeStateShow opts node) edges
+                else Map.empty)) $
+       StateFlowQuant.storages gr)
+      (Map.mapWithKey
+          (\state (dt,topo) ->
+             (show state ++ " / Time " ++ unUnicode (formatValue dt),
+              Gr.mapNodeWithKey
+                 (\node sums ->
+                    stateNodeShow node $
+                    fmap StateFlowQuant.carrySum $
+                    mplus
+                       (StateFlowQuant.sumOut sums)
+                       (StateFlowQuant.sumIn sums)) $
+              Gr.mapEdgeWithKey
+                 (\edge ->
+                    if optEtaNode opts
+                      then ShowEtaNode . structureEdgeShowEta opts state edge
+                      else HideEtaNode . structureEdgeShow opts state edge)
+                 topo)) $
+       StateFlowQuant.states gr)
 
 stateNodeShow ::
    (NodeType node, FormatValue a, Format output) =>
