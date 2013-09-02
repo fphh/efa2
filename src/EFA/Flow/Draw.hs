@@ -78,7 +78,7 @@ import qualified Data.List as List
 import Data.Map (Map)
 import Data.Foldable (Foldable, foldMap, fold)
 import Data.Maybe (maybeToList)
-import Data.Tuple.HT (mapFst, mapSnd, mapFst3, mapThd3, fst3, snd3, thd3)
+import Data.Tuple.HT (mapFst, mapFst3, fst3, snd3, thd3)
 import Data.Monoid ((<>))
 
 import Control.Category ((.))
@@ -599,7 +599,9 @@ sequFlowGraph opts =
                   ((stateNodeShow node (Just init),
                     stateNodeShow node (Just exit)),
                    fmap formatValue bnds,
-                   Map.mapWithKey (storageEdgeSeqShow opts node) edges)) $
+                   if optStorageEdge opts
+                     then Map.mapWithKey (storageEdgeSeqShow opts node) edges
+                     else Map.empty)) $
             SeqFlowQuant.storages gr,
          SeqFlowQuant.sequence =
             snd $
@@ -633,13 +635,6 @@ sequFlowGraph opts =
                Idx.initial $
             SeqFlowQuant.sequence gr
       })
-   .
-   (\g ->
-      if optStorageEdge opts
-        then g
-        else g {SeqFlowQuant.storages =
-                  fmap (mapThd3 $ const Map.empty) $
-                  SeqFlowQuant.storages g})
 
 
 formatRange :: SD.Range -> String
@@ -705,7 +700,9 @@ stateFlowGraph opts =
                (\node ((init,exit), edges) ->
                   ((stateNodeShow node (Just init),
                     stateNodeShow node (Just exit)),
-                   Map.mapWithKey (storageEdgeStateShow opts node) edges)) $
+                   if optStorageEdge opts
+                     then Map.mapWithKey (storageEdgeStateShow opts node) edges
+                     else Map.empty)) $
             StateFlowQuant.storages gr,
          StateFlowQuant.states =
             Map.mapWithKey
@@ -726,14 +723,6 @@ stateFlowGraph opts =
                       topo)) $
             StateFlowQuant.states gr
       })
-   .
-   (\g ->
-      if optStorageEdge opts
-        then g
-        else g {StateFlowQuant.storages =
-                  fmap (mapSnd $ const Map.empty) $
-                  StateFlowQuant.storages g})
-
 
 stateNodeShow ::
    (NodeType node, FormatValue a, Format output) =>
