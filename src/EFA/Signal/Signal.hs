@@ -1226,7 +1226,8 @@ instance
          tableSubTitle = ""
       }
      where td = TableData {
-                   tableBody = fmap (fmap (toDoc id . f) ) (readNested2 toCells xss),
+                   tableBody =
+                      readNested2 (fmap (fmap (toDoc id . f)) . toCells) xss,
                    titleRow = [],
                    titleCols = [],
                    endCols = []
