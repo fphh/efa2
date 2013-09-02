@@ -162,7 +162,7 @@ Executable test-efa
       containers,
       explicit-exception,
       utility-ht,
-      template-haskell ==2.7.*,
+      template-haskell >=2.7 && <2.9,
       base
   Else
     Buildable: False
