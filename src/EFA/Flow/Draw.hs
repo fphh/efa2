@@ -78,7 +78,7 @@ import qualified Data.List as List
 import Data.Map (Map)
 import Data.Foldable (Foldable, foldMap, fold)
 import Data.Maybe (maybeToList)
-import Data.Tuple.HT (mapFst, mapSnd, mapFst3, mapThd3, fst3, thd3)
+import Data.Tuple.HT (mapFst, mapSnd, mapFst3, mapThd3, fst3, snd3, thd3)
 import Data.Monoid ((<>))
 
 import Control.Category ((.))
@@ -602,25 +602,35 @@ sequFlowGraph opts =
                    Map.mapWithKey (storageEdgeSeqShow opts node) edges)) $
             SeqFlowQuant.storages gr,
          SeqFlowQuant.sequence =
-            Map.mapWithKey
-               (\sec (rng, (dt,topo)) ->
+            snd $
+            Map.mapAccumWithKey
+               (\before sec (rng, (dt,topo)) ->
+                  (,) (Idx.afterSection sec) $
                   (,) rng $
                   (show sec ++
                    " / Range " ++ formatRange rng ++
                    " / Time " ++ unUnicode (formatValue dt),
                    Gr.mapNodeWithKey
                       (\node sums ->
-                         stateNodeShow node $
-                         fmap SeqFlowQuant.carrySum $
-                         mplus
-                            (SeqFlowQuant.sumOut sums)
-                            (SeqFlowQuant.sumIn sums)) $
+                         formatNodeStorage opts node
+                            (let content bnd =
+                                    Map.findWithDefault undefined bnd $
+                                    maybe undefined snd3 $
+                                    Map.lookup node $
+                                    SeqFlowQuant.storages gr
+                             in  (content before,
+                                  content $ Idx.afterSection sec))
+                            (fmap SeqFlowQuant.carrySum $
+                             SeqFlowQuant.sumOut sums)
+                            (fmap SeqFlowQuant.carrySum $
+                             SeqFlowQuant.sumIn sums)) $
                    Gr.mapEdgeWithKey
                       (\edge ->
                          if optEtaNode opts
                            then ShowEtaNode . structureEdgeShowEta opts sec edge
                            else HideEtaNode . structureEdgeShow opts sec edge)
-                      topo)) $
+                      topo))
+               Idx.initial $
             SeqFlowQuant.sequence gr
       })
    .
@@ -635,6 +645,52 @@ sequFlowGraph opts =
 formatRange :: SD.Range -> String
 formatRange (SignalIdx from, SignalIdx to) =
    show from ++ "-" ++ show to
+
+formatNodeStorage ::
+   (FormatValue a, Format output, NodeType node) =>
+   Options output ->
+   node ->
+   (a, a) -> Maybe a -> Maybe a -> output
+formatNodeStorage opts node beforeAfter sin sout =
+   case nodeType node of
+      ty ->
+         Format.lines $
+         Node.display node :
+         formatNodeType ty :
+            case ty of
+               Topo.Storage _ ->
+                  if optStorage opts
+                    then formatStorageUpdate sin sout
+                    else formatStorageEquation beforeAfter sin sout
+               _ -> []
+
+
+formatStorageUpdate ::
+   (FormatValue a, Format output) =>
+   Maybe a -> Maybe a -> [output]
+formatStorageUpdate sin sout =
+   case (sin, sout) of
+      (Just a,  Nothing) -> [formatValue a]
+      (Nothing, Just a)  -> [formatValue a]
+      (Nothing, Nothing) -> []
+      (Just _,  Just _)  ->
+         error "formatStorageUpdate: storage cannot be both input and output"
+
+
+formatStorageEquation ::
+   (FormatValue a, Format output) =>
+   (a, a) -> Maybe a -> Maybe a -> [output]
+formatStorageEquation (before, after) sin sout =
+   formatValue before :
+   (case (sin, sout) of
+      (Just a,  Nothing) -> [Format.plus  Format.empty $ formatValue a]
+      (Nothing, Just a)  -> [Format.minus Format.empty $ formatValue a]
+      (Nothing, Nothing) -> []
+      (Just _,  Just _)  ->
+         error "formatStorageEquation: storage cannot be both input and output") ++
+   Format.assign Format.empty (formatValue after) :
+   []
+
 
 stateFlowGraph ::
    (FormatValue a, FormatValue v, NodeType node) =>
