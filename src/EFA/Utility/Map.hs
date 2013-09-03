@@ -8,7 +8,7 @@ import Data.Set (Set)
 import Data.Map (Map)
 import Data.Tuple.HT (swap)
 
-import Prelude hiding (curry, uncurry)
+import Prelude hiding (curry, uncurry, flip)
 
 
 -- | New improved ugly version with caller function name
@@ -81,3 +81,16 @@ uncurry caller f =
    Map.unionsWith (error $ caller ++ ".uncurry: duplicate key") .
    Map.elems .
    Map.mapWithKey (Map.mapKeys . f)
+
+flip ::
+   (Ord k0, Ord k1) =>
+   Map k0 (Map k1 a) -> Map k1 (Map k0 a)
+flip =
+   Map.unionsWith (Map.unionWith (error $ "Map.flip: duplicate key")) .
+   concat .
+   Map.elems .
+   Map.mapWithKey
+      (\k0 ->
+         Map.elems .
+         Map.mapWithKey
+            (\k1 a -> Map.singleton k1 $ Map.singleton k0 a))

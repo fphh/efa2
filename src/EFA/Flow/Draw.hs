@@ -43,6 +43,7 @@ import qualified EFA.Graph as Gr
 import EFA.Graph.Topology (FlowTopology)
 import EFA.Graph (DirEdge(DirEdge))
 
+import qualified EFA.Utility.Map as MapU
 import Data.GraphViz (
           GraphID(Int, Str),
           GlobalAttributes(GraphAttrs),
@@ -81,7 +82,7 @@ import Data.Monoid ((<>))
 import Control.Category ((.))
 import Control.Monad (void, mplus)
 
-import Prelude hiding (sin, reverse, init, (.))
+import Prelude hiding (sin, reverse, init, sequence, (.))
 
 
 
@@ -90,6 +91,9 @@ structureEdgeColour = Color [RGB 0 0 200]
 
 storageEdgeColour :: Attribute
 storageEdgeColour = Color [RGB 200 0 0]
+
+contentEdgeColour :: Attribute
+contentEdgeColour = Color [RGB 0 200 0]
 
 shape :: Topo.NodeType a -> Viz.Shape
 shape Topo.Crossing = Viz.PlainText
@@ -122,12 +126,13 @@ data StructureEdgeLabel =
 
 dotFromFlowGraph ::
    (Part part, NodeType node) =>
+   ([DotSubGraph T.Text], [DotEdge T.Text]) ->
    Map node
       ((Unicode, Unicode),
        Map (Idx.StorageEdge part node) [Unicode]) ->
    Map part (String, Gr.Graph node Gr.EitherEdge Unicode StructureEdgeLabel) ->
    DotGraph T.Text
-dotFromFlowGraph sts sq =
+dotFromFlowGraph (contentGraphs, contentEdges) sts sq =
    dotDirGraph $
    DotStmts {
       attrStmts = [],
@@ -136,11 +141,50 @@ dotFromFlowGraph sts sq =
          ++
          dotFromInitExitNodes sq
             (Idx.NoExit Idx.Init, Idx.Exit)
-            (fmap fst sts),
+            (fmap fst sts)
+         ++
+         contentGraphs,
       nodeStmts = [],
-      edgeStmts = dotFromStorageEdges $ fmap snd sts
+      edgeStmts =
+         (dotFromStorageEdges $ fmap snd sts)
+         ++
+         contentEdges
    }
 
+
+dotFromStorageGraphs ::
+   (Node.C node, FormatValue a, Ord (edge node), Gr.Edge edge) =>
+   Map node ((a,a), Map Idx.Boundary a) ->
+   Map Idx.Section (Gr.Graph node edge (FlowQuant.Sums a v) edgeLabel) ->
+   ([DotSubGraph T.Text], [DotEdge T.Text])
+dotFromStorageGraphs storages sequence =
+   (Map.elems $ Map.mapWithKey dotFromStorageGraph $
+    fmap (fmap formatValue) $ MapU.flip $ fmap snd storages,
+    fold $ snd $
+    Map.mapAccumWithKey
+       (\before current gr ->
+          (Idx.afterSection current,
+           dotFromContentEdge (Just before) (Idx.augment current) $
+           Map.toList $ Gr.nodeLabels gr))
+       Idx.initial sequence)
+
+dotFromStorageGraph ::
+   (Node.C node) =>
+   Idx.Boundary -> Map node Unicode ->
+   DotSubGraph T.Text
+dotFromStorageGraph bnd ns =
+   DotSG True
+      (Just $ Str $ T.pack $ "b" ++ dotIdentFromBoundary bnd) $
+   DotStmts
+      [GraphAttrs [labelFromString $ "After " ++
+       case bnd of
+          Idx.Following Idx.Init -> "Init"
+          Idx.Following (Idx.NoInit (Idx.Section s)) -> show s]]
+      []
+      (Map.elems $
+       Map.mapWithKey
+          (\node -> dotFromBndNode (Idx.PartNode bnd node)) ns)
+      []
 
 
 dotFromInitExitNodes ::
@@ -247,6 +291,14 @@ dotFromAugNode part n label =
       (dotIdentFromAugNode $ Idx.PartNode part n)
       (nodeAttrs (nodeType n) $ labelFromUnicode label)
 
+dotFromBndNode ::
+   (Node.C node) =>
+   Idx.BndNode node -> Unicode -> DotNode T.Text
+dotFromBndNode n label =
+   DotNode
+      (dotIdentFromBndNode n)
+      (nodeAttrs (Topo.Storage ()) $
+       labelFromUnicode label)
 
 dotFromStructureEdge ::
    (Node.C node, Part part) =>
@@ -300,6 +352,39 @@ dotFromStorageEdge e lns =
       [labelFromLines lns, Viz.Dir Viz.Forward,
        storageEdgeColour, Viz.Constraint True]
 
+dotFromContentEdge ::
+   (Node.C node) =>
+   Maybe Idx.Boundary ->
+   Idx.AugmentedSection ->
+   [(node, FlowQuant.Sums a v)] ->
+   [DotEdge T.Text]
+dotFromContentEdge mbefore aug ns =
+   let dotEdge from to =
+          DotEdge from to [Viz.Dir Viz.Forward, contentEdgeColour]
+   in  concatMap
+          (\(n, sums) ->
+             let sn = Idx.PartNode aug n
+                 withBefore f =
+                    foldMap (\before -> f $ Idx.PartNode before n) mbefore
+                 withCurrent f =
+                    foldMap (\current -> f $ Idx.PartNode current n) $
+                    Idx.boundaryFromAugSection aug
+             in  (withBefore $ \from ->
+                  withCurrent $ \to ->
+                  [dotEdge (dotIdentFromBndNode from) (dotIdentFromBndNode to)])
+                 ++
+                 case (FlowQuant.sumIn sums, FlowQuant.sumOut sums) of
+                    (Nothing, Nothing) -> []
+                    (Just _, Nothing) ->
+                       withCurrent $ \bn ->
+                          [dotEdge (dotIdentFromAugNode sn) (dotIdentFromBndNode bn)]
+                    (Nothing, Just _) ->
+                       withBefore $ \bn ->
+                          [dotEdge (dotIdentFromBndNode bn) (dotIdentFromAugNode sn)]
+                    (Just _, Just _) -> error "storage cannot be both In and Out") $
+      ns
+
+
 
 labelFromLines :: [Unicode] -> Attribute
 labelFromLines = labelFromString . concatMap (++"\\l") . map unUnicode
@@ -335,6 +420,15 @@ dotIdentFromAugmented :: (Part part) => Idx.Augmented part -> String
 dotIdentFromAugmented =
    Idx.switchAugmented "init" "exit" dotIdentFromPart
 
+dotIdentFromBndNode :: (Node.C node) => Idx.BndNode node -> T.Text
+dotIdentFromBndNode (Idx.PartNode b n) =
+   T.pack $ "b" ++ dotIdentFromBoundary b ++ "n" ++ Node.dotId n
+
+dotIdentFromBoundary :: Idx.Boundary -> String
+dotIdentFromBoundary (Idx.Following a) =
+   case a of
+      Idx.Init -> "init"
+      Idx.NoInit s -> dotIdentFromPart s
 
 dotIdentFromEtaNode ::
    (Node.C node, Part part) =>
@@ -564,6 +658,13 @@ sequFlowGraph ::
    Options Unicode -> SeqFlowQuant.Graph node a v -> DotGraph T.Text
 sequFlowGraph opts gr =
    dotFromFlowGraph
+      (if optStorage opts
+         then
+            dotFromStorageGraphs
+               (fmap (\(initExit, contents, _) -> (initExit, contents)) $
+                SeqFlowQuant.storages gr)
+               (fmap (snd . snd) $ SeqFlowQuant.sequence gr)
+         else ([], []))
       (Map.mapWithKey
           (\node ((init,exit), _bnds, edges) ->
              ((stateNodeShow node (Just init),
@@ -658,6 +759,7 @@ stateFlowGraph ::
    Options Unicode -> StateFlowQuant.Graph node a v -> DotGraph T.Text
 stateFlowGraph opts gr =
    dotFromFlowGraph
+      ([], [])
       (Map.mapWithKey
           (\node ((init,exit), edges) ->
              ((stateNodeShow node (Just init),
