@@ -471,35 +471,34 @@ dotFromTopology edgeLabels g =
    }
 
 dotFromTopoNode ::
-  (Node.C node, StorageLabel store) =>
-  Gr.LNode node (Topo.NodeType store) -> DotNode T.Text
+   (Node.C node, StorageLabel store) =>
+   Gr.LNode node (Topo.NodeType store) -> DotNode T.Text
 dotFromTopoNode (x, typ) =
-  DotNode
-    (dotIdentFromNode x)
-    (nodeAttrs typ $ labelFromUnicode $ Node.display x)
+   DotNode
+      (dotIdentFromNode x)
+      (nodeAttrs typ $ labelFromUnicode $ Node.display x)
 
 dotFromTopoEdge ::
-  (Node.C node) =>
-  Map (node, node) String ->
-  DirEdge node -> DotEdge T.Text
+   (Node.C node) =>
+   Map (node, node) String ->
+   DirEdge node -> DotEdge T.Text
 dotFromTopoEdge edgeLabels e =
-  case orientDirEdge e of
-     (DirEdge x y, _, _) ->
-           let lab = T.pack $ fold $ Map.lookup (x, y) edgeLabels
-           in  DotEdge
-                 (dotIdentFromNode x)
-                 (dotIdentFromNode y)
-                 [ Viz.Dir Viz.NoDir, structureEdgeColour,
-                   Viz.Label $ Viz.StrLabel lab, Viz.EdgeTooltip lab ]
+   case orientDirEdge e of
+      (DirEdge x y, _, _) ->
+         let lab = T.pack $ fold $ Map.lookup (x, y) edgeLabels
+         in  DotEdge
+                (dotIdentFromNode x)
+                (dotIdentFromNode y)
+                [ Viz.Dir Viz.NoDir, structureEdgeColour,
+                  Viz.Label $ Viz.StrLabel lab, Viz.EdgeTooltip lab ]
 
 
 flowTopologies ::
    (Node.C node) =>
    [FlowTopology node] -> DotGraph T.Text
-flowTopologies ts = DotGraph False True Nothing stmts
-   where stmts = DotStmts attrs subgs [] []
-         subgs = zipWith dotFromFlowTopology [0..] ts
-         attrs = []
+flowTopologies ts =
+   DotGraph False True Nothing $
+   DotStmts [] (zipWith dotFromFlowTopology [0..] ts) [] []
 
 dotFromFlowTopology ::
    (Node.C node) =>
