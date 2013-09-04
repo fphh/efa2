@@ -16,7 +16,7 @@ import EFA.Signal.Data (Data(..), Nil) --,(:>))
 import qualified EFA.Equation.Arithmetic as EqArith
 
 import qualified EFA.Graph.StateFlow.Environment as EqEnvState
-import qualified EFA.Graph.Topology.Index as TIdx
+import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Graph
@@ -36,23 +36,23 @@ import Data.Maybe (mapMaybe)
 -- | Function to specifiy that an efficiency function in etaAssign is to be looked up with input power
 etaOverPowerInState :: StateIdx.Eta node -> StateIdx.Power node
 etaOverPowerInState =
-   TIdx.liftInState $ \(TIdx.Eta e) -> TIdx.Power $ TIdx.flip e
+   Idx.liftInState $ \(Idx.Eta e) -> Idx.Power $ Idx.flip e
 
 -- | Function to specifiy that an efficiency function in etaAssign is to be looked up with output power
 etaOverPowerOutState :: StateIdx.Eta node -> StateIdx.Power node
 etaOverPowerOutState =
-   TIdx.liftInState $ \(TIdx.Eta e) -> TIdx.Power e
+   Idx.liftInState $ \(Idx.Eta e) -> Idx.Power e
 
 -- | Function to specifiy that an efficiency function in etaAssign is to be looked up with input power
 etaOverPowerIn :: SeqIdx.Eta node -> SeqIdx.Power node
 etaOverPowerIn =
-   TIdx.liftInSection $ \(TIdx.Eta e) -> TIdx.Power $ TIdx.flip e
+   Idx.liftInSection $ \(Idx.Eta e) -> Idx.Power $ Idx.flip e
 
 -- | Function to specifiy that an efficiency function
 -- | in etaAssign is to be looked up with output power
 etaOverPowerOut :: SeqIdx.Eta node -> SeqIdx.Power node
 etaOverPowerOut =
-   TIdx.liftInSection $ \(TIdx.Eta e) -> TIdx.Power e
+   Idx.liftInSection $ \(Idx.Eta e) -> Idx.Power e
 
 type EtaAssignMap node =
   Map (StateIdx.Eta node)
@@ -63,8 +63,8 @@ type EtaAssignMap node =
 makeEtaFuncGiven ::
    (Fractional a, Ord a, Show a, EqArith.Sum a,
     Data.Apply c a ~ v, Eq v, Data.ZipWith c, Data.Storage c a, Node.C node) =>
-   (TIdx.State -> EtaAssignMap node) ->
-   TIdx.State ->
+   (Idx.State -> EtaAssignMap node) ->
+   Idx.State ->
    Map String (a -> a) ->
    EqGenState.EquationSystem node s x (Data c a)
 makeEtaFuncGiven etaAssign state etaFunc = Fold.fold $ Map.mapWithKey f (etaAssign state)
@@ -80,7 +80,7 @@ makeEtaFuncGiven etaAssign state etaFunc = Fold.fold $ Map.mapWithKey f (etaAssi
 -- | removes values in section x and generate given equations
 givenAverageWithoutStateX ::
   (Eq v, EqArith.Sum v, Node.C node, Ord node,Eq a, EqArith.Sum a) =>
-  TIdx.State ->
+  Idx.State ->
   EqEnvState.Complete node a v  ->
   EqGenState.EquationSystem node s a v
 givenAverageWithoutStateX stateToRemove (EqEnvState.Complete scalar signal) =
@@ -91,13 +91,13 @@ givenAverageWithoutStateX stateToRemove (EqEnvState.Complete scalar signal) =
    (EqGenState.fromMap $ EqEnvState.stXMap scalar)
 --   (EqGenState.fromMap $ EqEnvState.stInSumMap scalar) <>
 --   (EqGenState.fromMap $ EqEnvState.stOutSumMap scalar)
-   where f :: TIdx.InState idx node -> v -> Bool
-         f (TIdx.InPart state _) _ = state /= stateToRemove
+   where f :: Idx.InState idx node -> v -> Bool
+         f (Idx.InPart state _) _ = state /= stateToRemove
 
 
 givenAverageWithoutState ::
   (Eq v, EqArith.Sum v, Node.C node, Ord node, Eq a, EqArith.Sum a) =>
-  TIdx.State ->
+  Idx.State ->
   EqEnvState.Complete node a v ->
   EqEnvState.Complete node a v
 givenAverageWithoutState _stateToRemove (EqEnvState.Complete scalar signal) =
@@ -106,8 +106,8 @@ givenAverageWithoutState _stateToRemove (EqEnvState.Complete scalar signal) =
     ( mempty { EqEnvState.etaMap = EqEnvState.etaMap signal,
                EqEnvState.xMap   = EqEnvState.xMap signal,
                EqEnvState.dtimeMap = EqEnvState.dtimeMap signal } )
---  where f :: TIdx.InState idx node -> v -> Bool
---        f (TIdx.InPart state _) _ = state /= stateToRemove
+--  where f :: Idx.InState idx node -> v -> Bool
+--        f (Idx.InPart state _) _ = state /= stateToRemove
 
 
 givenForOptimisation ::
@@ -115,9 +115,9 @@ givenForOptimisation ::
   Ord a, Show a, EqArith.Sum a, Ord node) =>
   Topo.StateFlowGraph node ->
   EqEnvState.Complete node (Data Nil a) (Data Nil a)  ->
-  (TIdx.State -> EtaAssignMap node) ->
+  (Idx.State -> EtaAssignMap node) ->
   Map String (a -> a) ->
-  TIdx.State ->
+  Idx.State ->
   EqGenState.EquationSystem node s (Data Nil a) (Data Nil a) ->
   EqGenState.EquationSystem node s (Data Nil a) (Data Nil a) ->
   EqGenState.EquationSystem node s (Data Nil a) (Data Nil a) ->
@@ -146,14 +146,14 @@ initialEnv _xStorageEdgesNode g =
   where gdir = Topo.dirFromFlowGraph g
 
         es = mapMaybe f $ Graph.edges gdir
-        state (Topo.FlowEdge (Topo.StructureEdge (TIdx.InPart s _))) = Just s
+        state (Topo.FlowEdge (Topo.StructureEdge (Idx.InPart s _))) = Just s
         state _ = Nothing
-        node (TIdx.PartNode _ n) = n
+        node (Idx.PartNode _ n) = n
         f e = fmap (\s -> StateIdx.eta s (node $ Graph.from e) (node $ Graph.to e)) (state e)
 
 
-        nodestate (TIdx.PartNode p _) =
-           TIdx.switchAugmented Nothing Nothing Just p
+        nodestate (Idx.PartNode p _) =
+           Idx.switchAugmented Nothing Nothing Just p
 
         ns = Graph.nodes gdir
         h n (ins, _, outs) =
@@ -172,12 +172,12 @@ initialEnv _xStorageEdgesNode g =
               $ Graph.nodes
               $ Graph.lefilter (\(e, ()) -> Topo.isStorageEdge e) gdir
 
-        nstate (TIdx.PartNode s _) = s
+        nstate (Idx.PartNode s _) = s
 
         hstx n (ins, _, outs) =
           let stx = StateIdx.stx
-                    . flip TIdx.PartNode (node n)
-                    . TIdx.StorageTrans (nstate n) . nstate
+                    . flip Idx.PartNode (node n)
+                    . Idx.StorageTrans (nstate n) . nstate
           in  map stx $ Set.toList ins ++ Set.toList outs
         stxs = foldMap xfactors $ Map.mapWithKey hstx sts
 
@@ -189,12 +189,12 @@ initialEnv _xStorageEdgesNode g =
 
 {-
         stKeys = Map.foldWithKey q [] $ Graph.nodes gdir
-        q (TIdx.PartNode (TIdx.NoExit TIdx.Init) n) (_, _, outs) =
+        q (Idx.PartNode (Idx.NoExit Idx.Init) n) (_, _, outs) =
           (map (flip qf n) (Set.toList outs) ++)
         q _ _ = id
 
-        qf (TIdx.PartNode TIdx.Exit _) =
-          TIdx.ForNode (TIdx.StEnergy (TIdx.StorageEdge TIdx.Init TIdx.Exit))
-        qf (TIdx.PartNode (TIdx.NoExit (TIdx.NoInit s)) _) =
-          TIdx.ForNode (TIdx.StEnergy (TIdx.StorageEdge TIdx.Init (TIdx.NoExit s)))
+        qf (Idx.PartNode Idx.Exit _) =
+          Idx.ForNode (Idx.StEnergy (Idx.StorageEdge Idx.Init Idx.Exit))
+        qf (Idx.PartNode (Idx.NoExit (Idx.NoInit s)) _) =
+          Idx.ForNode (Idx.StEnergy (Idx.StorageEdge Idx.Init (Idx.NoExit s)))
 -}

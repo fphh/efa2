@@ -20,7 +20,7 @@ import qualified EFA.Graph.Flow as Flow
 --import qualified EFA.Signal.Record as Rec
 --import qualified EFA.Signal.Typ as Typ
 --import qualified EFA.Signal.Vector as Vec
-import qualified EFA.Graph.Topology.Index as TIdx
+import qualified EFA.Graph.Topology.Index as Idx
 
 --import EFA.Signal.Signal ((.+), (./))
 
@@ -88,7 +88,7 @@ stateFlowGraph =
   $ AppUt.select flowStates [0, 4]
 
 etaAssignState ::
-  TIdx.State ->
+  Idx.State ->
   Map (StateIdx.Eta Node) (String, String, StateIdx.Eta Node -> StateIdx.Power Node)
 etaAssignState sec = Map.fromList $
   (StateIdx.eta sec Water Network, ( "storage", "storage", etaOverPowerInState)) :

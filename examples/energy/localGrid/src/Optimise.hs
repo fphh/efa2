@@ -26,7 +26,7 @@ import qualified EFA.Application.Utility as AppUt
 
 import qualified EFA.Flow.Sequence.Index as XIdx
 
-import qualified EFA.Graph.Topology.Index as TIdx
+import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Draw as Draw
@@ -121,7 +121,7 @@ scaleTableEta = Map.fromList $
 -- ################### Efficiency Curves
 
 etaAssign ::
-  TIdx.Section ->
+  Idx.Section ->
   Map (XIdx.Eta Node) (String, String, XIdx.Eta Node -> XIdx.Power Node)
 etaAssign sec = Map.fromList $
   (XIdx.eta sec Water Network, ( "storage", "storage", etaOverPowerIn)) :
@@ -319,15 +319,15 @@ makePics eqs tabEta socDrive = t
 
 stateFlow2SequFlow :: (Ord node) => Topo.StateFlowGraph node -> Topo.SequFlowGraph node
 stateFlow2SequFlow = Graph.ixmap f g
-  where f :: TIdx.AugNode TIdx.State node -> TIdx.AugNode TIdx.Section node
-        f (TIdx.PartNode TIdx.Exit x) = TIdx.PartNode TIdx.Exit x
-        f (TIdx.PartNode (TIdx.NoExit TIdx.Init) x) =
-          TIdx.PartNode (TIdx.NoExit TIdx.Init) x
-        f (TIdx.PartNode (TIdx.NoExit (TIdx.NoInit (TIdx.State i))) x) =
-          TIdx.PartNode (TIdx.NoExit (TIdx.NoInit (TIdx.Section i))) x
+  where f :: Idx.AugNode Idx.State node -> Idx.AugNode Idx.Section node
+        f (Idx.PartNode Idx.Exit x) = Idx.PartNode Idx.Exit x
+        f (Idx.PartNode (Idx.NoExit Idx.Init) x) =
+          Idx.PartNode (Idx.NoExit Idx.Init) x
+        f (Idx.PartNode (Idx.NoExit (Idx.NoInit (Idx.State i))) x) =
+          Idx.PartNode (Idx.NoExit (Idx.NoInit (Idx.Section i))) x
 
-        g :: Topo.FlowEdge Graph.EitherEdge (TIdx.AugNode TIdx.State node) ->
-             Topo.FlowEdge Graph.EitherEdge (TIdx.AugNode TIdx.Section node)
+        g :: Topo.FlowEdge Graph.EitherEdge (Idx.AugNode Idx.State node) ->
+             Topo.FlowEdge Graph.EitherEdge (Idx.AugNode Idx.Section node)
         g = undefined
 
 
@@ -343,19 +343,19 @@ stateEnv2SequEnv (StFlEnv.Complete scal sig) =
                   (Map.mapKeys h c)
                   undefined
 
-      f (TIdx.ForNode (TIdx.StEnergy (TIdx.StorageEdge
-          (TIdx.NoInit (TIdx.State i))
-          (TIdx.NoExit (TIdx.State j)))) b) =
-        (TIdx.ForNode (TIdx.StEnergy (TIdx.StorageEdge
-          (TIdx.NoInit (TIdx.Section i))
-          (TIdx.NoExit (TIdx.Section j)))) b)
+      f (Idx.ForNode (Idx.StEnergy (Idx.StorageEdge
+          (Idx.NoInit (Idx.State i))
+          (Idx.NoExit (Idx.State j)))) b) =
+        (Idx.ForNode (Idx.StEnergy (Idx.StorageEdge
+          (Idx.NoInit (Idx.Section i))
+          (Idx.NoExit (Idx.Section j)))) b)
 
-      g (TIdx.ForNode (TIdx.StX (TIdx.StorageTrans
-          (TIdx.NoExit (TIdx.NoInit (TIdx.State i)))
-          (TIdx.NoExit (TIdx.NoInit (TIdx.State j))))) b) =
-        (TIdx.ForNode (TIdx.StX (TIdx.StorageTrans
-          (TIdx.NoExit (TIdx.NoInit (TIdx.Section i)))
-          (TIdx.NoExit (TIdx.NoInit (TIdx.Section j))))) b)
+      g (Idx.ForNode (Idx.StX (Idx.StorageTrans
+          (Idx.NoExit (Idx.NoInit (Idx.State i)))
+          (Idx.NoExit (Idx.NoInit (Idx.State j))))) b) =
+        (Idx.ForNode (Idx.StX (Idx.StorageTrans
+          (Idx.NoExit (Idx.NoInit (Idx.Section i)))
+          (Idx.NoExit (Idx.NoInit (Idx.Section j))))) b)
 
       h = undefined
 
@@ -601,10 +601,10 @@ main = do
            -- Record.diffTime $
            -- Record.rmap (Sig.changeSignalType . Sig.deltaMap (\x y -> (x+y)/2)) $
            Record.Record time' $
-           Map.fromList [(TIdx.PPos (TIdx.StructureEdge Rest Network), powerSignalRest),
-                       (TIdx.PPos (TIdx.StructureEdge LocalRest LocalNetwork), powerSignalLocal),
-                       (TIdx.PPos (TIdx.StructureEdge Network Water), powerSignalWater),
-                       (TIdx.PPos (TIdx.StructureEdge LocalNetwork Gas), powerSignalGas)
+           Map.fromList [(Idx.PPos (Idx.StructureEdge Rest Network), powerSignalRest),
+                       (Idx.PPos (Idx.StructureEdge LocalRest LocalNetwork), powerSignalLocal),
+                       (Idx.PPos (Idx.StructureEdge Network Water), powerSignalWater),
+                       (Idx.PPos (Idx.StructureEdge LocalNetwork Gas), powerSignalGas)
                       ]
 
 
@@ -613,8 +613,8 @@ main = do
            -- Record.diffTime $
            -- Record.rmap (Sig.changeSignalType . Sig.deltaMap (\x y -> (x+y)/2)) $
            Record.Record time' $
-           Map.fromList [(TIdx.PPos (TIdx.StructureEdge Rest Network), powerSignalRest),
-                       (TIdx.PPos (TIdx.StructureEdge LocalRest LocalNetwork), powerSignalLocal)
+           Map.fromList [(Idx.PPos (Idx.StructureEdge Rest Network), powerSignalRest),
+                       (Idx.PPos (Idx.StructureEdge LocalRest LocalNetwork), powerSignalLocal)
                       ]
 
 {-
@@ -633,17 +633,17 @@ main = do
 
      eqs :: EqGen.EquationSystem Node s (Data Nil Double) (Data ([] :> Nil) Double)
      eqs = Optimisation.givenSimulate etaAssign etaFunc $
-             SD.SequData [SD.Section (TIdx.Section 0) undefined rec]
+             SD.SequData [SD.Section (Idx.Section 0) undefined rec]
 
      envSim = EqGen.solve seqTopoSim eqs
 
 
      -- | extract power record from simulation env to allow subsequent EFA
-     powerRecSim = ModUt.envToPowerRecord envSim time (TIdx.Section 0)
+     powerRecSim = ModUt.envToPowerRecord envSim time (Idx.Section 0)
 
      -- | flip signs of power signals at water edge, as edge flips direction between state 0 and 4
-     flipwater (TIdx.PPos (TIdx.StructureEdge Network Water)) x = Sig.neg x
-     flipwater (TIdx.PPos (TIdx.StructureEdge Water Network)) x = Sig.neg x
+     flipwater (Idx.PPos (Idx.StructureEdge Network Water)) x = Sig.neg x
+     flipwater (Idx.PPos (Idx.StructureEdge Water Network)) x = Sig.neg x
      flipwater _ x = x
      powerRecSimCorr = Record.rmapWithKey flipwater powerRecSim
 

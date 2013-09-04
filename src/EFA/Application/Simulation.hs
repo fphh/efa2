@@ -21,7 +21,7 @@ import qualified EFA.Flow.State.Index as StateIdx
 import qualified EFA.Graph.StateFlow.Environment as EqEnv
 import qualified EFA.Graph.StateFlow as StateFlow
 
-import qualified EFA.Graph.Topology.Index as TIdx
+import qualified EFA.Graph.Topology.Index as Idx
 --import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
@@ -45,7 +45,7 @@ import Data.Monoid((<>))
 {-
 eqs :: EqGen.EquationSystem Node s (Data Nil Double) (Data ([] :> Nil) Double)
 eqs = Simulation.givenSimulate etaAssign etaFunc $
-             SD.SequData [SD.Section (TIdx.Section 0) undefined rec]
+             SD.SequData [SD.Section (Idx.Section 0) undefined rec]
 -}
 
 type EtaAssignMap node = Map (StateIdx.Eta node) (String, String, StateIdx.Eta node -> StateIdx.Power node)
@@ -64,7 +64,7 @@ solve :: (Node.C node,
           SV.FromList v,
           Base.BSum a) =>
          Topo.Topology node ->
-         (TIdx.State ->  EtaAssignMap node) ->
+         (Idx.State ->  EtaAssignMap node) ->
          Map String (a -> a) ->
          Record.PowerRecord node v a ->
          EqEnv.Complete node (Result (Data Nil a)) (Result (Data (v :> Nil) a))
@@ -85,31 +85,31 @@ givenSimulate ::
   SV.Walker v,
   SV.Storage v a) =>
   Topo.StateFlowGraph node ->
-  (TIdx.State ->  EtaAssignMap node) ->
+  (Idx.State ->  EtaAssignMap node) ->
   Map String (a -> a) ->
   Record.PowerRecord node v a ->
   (forall s . EqGen.EquationSystem node s (Data Nil a) (Data (v :> Nil) a))
 
 givenSimulate stateFlowGraph etaAssign etaFunc powerRecord =
---  (StateIdx.storage TIdx.initial Water EqGen..= Data 0) <>
+--  (StateIdx.storage Idx.initial Water EqGen..= Data 0) <>
    --Fold.fold (SD.mapWithSection f sf)
   (EqGen.fromGraph True $ Topo.dirFromFlowGraph (stateFlowGraph)) <>
    f powerRecord
    where f (Record.Record t xs) =
-           (StateIdx.dTime (TIdx.State 0) EqGen..=
+           (StateIdx.dTime (Idx.State 0) EqGen..=
              (Data  $ SV.fromList $ replicate (Sig.len t) 1))
-           <> makeEtaFuncGiven etaAssign (TIdx.State 0) etaFunc
+           <> makeEtaFuncGiven etaAssign (Idx.State 0) etaFunc
            <> Fold.fold (Map.mapWithKey g xs)
            where
-             g (TIdx.PPos (TIdx.StructureEdge p0 p1)) p =
-                   (StateIdx.power (TIdx.State 0)  p0 p1 EqGen..= Sig.unpack p)
+             g (Idx.PPos (Idx.StructureEdge p0 p1)) p =
+                   (StateIdx.power (Idx.State 0)  p0 p1 EqGen..= Sig.unpack p)
 
 -- | Generate given equations using efficiency curves or functions for a specified section
 makeEtaFuncGiven ::
    (Fractional a, Ord a, Show a, EqArith.Sum a,
     Data.Apply c a ~ v, Eq v, Data.ZipWith c, Data.Storage c a, Node.C node) =>
-   (TIdx.State -> EtaAssignMap node) ->
-   TIdx.State ->
+   (Idx.State -> EtaAssignMap node) ->
+   Idx.State ->
    Map String (a -> a) ->
    EqGen.EquationSystem node s x (Data c a)
 makeEtaFuncGiven etaAssign state etaFunc = Fold.fold $ Map.mapWithKey f (etaAssign state)
@@ -127,8 +127,8 @@ makeEtaFuncGiven etaAssign state etaFunc = Fold.fold $ Map.mapWithKey f (etaAssi
 makeEtaFuncGiven ::
    (Fractional a, Ord a, Show a, EqArith.Sum a,
     Data.Apply c a ~ v, Eq v, Data.ZipWith c, Data.Storage c a, Node.C node) =>
-   (TIdx.Section -> EtaAssignMap node) ->
-   TIdx.Section ->
+   (Idx.Section -> EtaAssignMap node) ->
+   Idx.Section ->
    Map String (a -> a) ->
    EqGen.EquationSystem node s x (Data c a)
 makeEtaFuncGiven etaAssign sec etaFunc = Fold.fold $ Map.mapWithKey f (etaAssign sec)

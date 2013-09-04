@@ -13,7 +13,7 @@ import EFA.Application.Utility (makeEdges)
 import qualified EFA.Flow.Sequence.Index as XIdx
 
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
-import qualified EFA.Graph.Topology.Index as TIdx
+import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Draw as Draw
@@ -51,8 +51,8 @@ import Data.Foldable (foldMap)
 import Debug.Trace (trace)
 
 
-sec0, sec1 :: TIdx.Section
-sec0 :~ sec1 :~ _ = Stream.enumFrom $ TIdx.Section 0
+sec0, sec1 :: Idx.Section
+sec0 :~ sec1 :~ _ = Stream.enumFrom $ Idx.Section 0
 
 
 
@@ -113,7 +113,7 @@ commonEnv =
    mconcat $
    (XIdx.dTime sec0 .= 1) :
    (XIdx.dTime sec1 .= 1) :
-   (XIdx.storage TIdx.initial storage .= 0) :
+   (XIdx.storage Idx.initial storage .= 0) :
    (XIdx.power sec0 storage crossing =%%= XIdx.power sec1 storage crossing) :
    []
 
@@ -225,13 +225,13 @@ sectionHU ss bf = ws
 
 
 commonEnvHU ::
-  [TIdx.Section] ->
+  [Idx.Section] ->
   EqGen.EquationSystem Node.Int s (Data Nil Double) (Data ([] :> Nil) Double)
 commonEnvHU _ =
   -- (foldMap (uncurry f) $ zip ss (tail ss))
   -- <>
   ( mconcat $
-    (XIdx.storage TIdx.initial storage .= D.fromList 20.0) :
+    (XIdx.storage Idx.initial storage .= D.fromList 20.0) :
     [] )
 {-
   where f sec0 sec1 =
@@ -240,7 +240,7 @@ commonEnvHU _ =
 -}
 
 givenEnvHUSec ::
-  (TIdx.Section, Sig.PSignal [] Double) ->
+  (Idx.Section, Sig.PSignal [] Double) ->
   EqGen.EquationSystem Node.Int s (Data Nil Double) (Data ([] :> Nil) Double)
 givenEnvHUSec (sec, Sig.TC sig) =
   mconcat $
@@ -280,7 +280,7 @@ givenEnvHU ::
   [Sig.PSignal [] Double] ->
   EqGen.EquationSystem Node.Int s (Data Nil Double) (Data ([] :> Nil) Double)
 givenEnvHU xs =
-  let ys = zip (map TIdx.Section [0..]) xs
+  let ys = zip (map Idx.Section [0..]) xs
   in  commonEnvHU (map fst ys)
       <>
       (foldMap givenEnvHUSec ys)
@@ -306,16 +306,16 @@ etaSys (_, topo) env = sum sinks / sum sources
         p = (> 0) .
             Set.size .
             Set.filter
-              (\(Topo.FlowEdge (Topo.StructureEdge (TIdx.InPart _ e))) -> Topo.isActive e)
+              (\(Topo.FlowEdge (Topo.StructureEdge (Idx.InPart _ e))) -> Topo.isActive e)
 
         sinkEnergies acc
-          (Topo.FlowEdge (Topo.StructureEdge (TIdx.InPart sec
+          (Topo.FlowEdge (Topo.StructureEdge (Idx.InPart sec
                        (Gr.EDirEdge (Gr.DirEdge a b))))) =
             acc + lookUp "etaSys" env (XIdx.energy sec b a)
         sinkEnergies = error "etaSys: sinkEnergies"
 
         sourceEnergies acc
-          (Topo.FlowEdge (Topo.StructureEdge (TIdx.InPart sec
+          (Topo.FlowEdge (Topo.StructureEdge (Idx.InPart sec
                        (Gr.EDirEdge (Gr.DirEdge a b))))) =
             acc + lookUp "etaSys" env (XIdx.energy sec a b)
 -}

@@ -19,7 +19,7 @@ import EFA.Equation.Result (Result(..))
 
 import qualified EFA.Flow.Sequence.Index as XIdx
 
-import qualified EFA.Graph.Topology.Index as TIdx
+import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Flow as Flow
 
 import qualified EFA.Application.Utility as AppUt
@@ -44,14 +44,14 @@ import Data.Monoid (mconcat, (<>))
 --import Control.Applicative (liftA2)
 
 
-sec0, sec1 :: TIdx.Section
-sec0 :~ sec1 :~ _ = Stream.enumFrom $ TIdx.Section 0
+sec0, sec1 :: Idx.Section
+sec0 :~ sec1 :~ _ = Stream.enumFrom $ Idx.Section 0
 
 type EtaAssignMap =
         Map (XIdx.Eta Node) (String, String, XIdx.Eta Node -> XIdx.Power Node)
 
 type SolveFunc a =
-  (TIdx.Section -> EtaAssignMap) ->
+  (Idx.Section -> EtaAssignMap) ->
   Map String (a -> a) ->
   Data Nil a ->
   Data Nil a ->
@@ -69,7 +69,7 @@ commonGiven =
    mconcat $
    (XIdx.dTime sec0 .= Data 1) :
    (XIdx.dTime sec1 .= Data 1) :
-   (XIdx.storage TIdx.initial Water .= Data 0) :
+   (XIdx.storage Idx.initial Water .= Data 0) :
    (XIdx.energy sec0 Water Network =%%= XIdx.energy sec1 Water Network) :
    []
 
@@ -106,7 +106,7 @@ solveCharge eqs etaAssign etaFunc pRest pRestLocal pWater pGas =
 
 givenCharging ::
   (Ord a, Fractional a, Show a, EqArith.Sum a) =>
-  (TIdx.Section -> EtaAssignMap) ->
+  (Idx.Section -> EtaAssignMap) ->
   Map String (a -> a) ->
   Data Nil a ->
   Data Nil a ->
@@ -148,7 +148,7 @@ solveDischarge eqs etaAssign etaFunc pRest pRestLocal pWater pGas =
 
 givenDischarging ::
   (Eq a, Num a, Show a, EqArith.Sum a, Fractional a,Ord a) =>
-  (TIdx.Section -> EtaAssignMap) ->
+  (Idx.Section -> EtaAssignMap) ->
   Map String (a -> a) ->
   Data Nil a ->
   Data Nil a ->
@@ -184,13 +184,13 @@ givenSimulate ::
   SV.Singleton v,
   SV.Walker v,
   SV.Storage v a) =>
-  (TIdx.Section -> EtaAssignMap) ->
+  (Idx.Section -> EtaAssignMap) ->
   Map String (a -> a) ->
   SD.SequData (Record.PowerRecord Node v a) ->
   EqGen.EquationSystem Node s (Data Nil a) (Data (v :> Nil) a)
 
 givenSimulate etaAssign etaFunc sf =
-  (XIdx.storage TIdx.initial Water .= Data 0)
+  (XIdx.storage Idx.initial Water .= Data 0)
    <> Fold.fold (SD.mapWithSection f sf)
    where f sec (Record.Record t xs) =
            (XIdx.dTime sec .=
@@ -198,7 +198,7 @@ givenSimulate etaAssign etaFunc sf =
            <> etaGiven (etaAssign sec) etaFunc
            <> Fold.fold (Map.mapWithKey g xs)
            where
-             g (TIdx.PPos (TIdx.StructureEdge p0 p1)) p =
+             g (Idx.PPos (Idx.StructureEdge p0 p1)) p =
                    (XIdx.power sec p0 p1 .= Sig.unpack p)
 
 
