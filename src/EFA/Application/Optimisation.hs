@@ -24,7 +24,9 @@ import qualified EFA.Graph as Graph
 import qualified Data.Foldable as Fold
 import qualified Data.Map as Map
 import qualified Data.Set as Set
+import Data.Foldable (foldMap)
 import Data.Map (Map)
+import Data.Tuple.HT (snd3)
 import Data.Monoid((<>),mempty)
 import Data.Maybe (mapMaybe)
 
@@ -150,39 +152,34 @@ initialEnv _xStorageEdgesNode g =
         f e = fmap (\s -> StateIdx.eta s (node $ Graph.from e) (node $ Graph.to e)) (state e)
 
 
-        nodestate (TIdx.PartNode (TIdx.NoExit (TIdx.NoInit s)) _) = Just s
-        nodestate _ = Nothing
+        nodestate (TIdx.PartNode p _) =
+           TIdx.switchAugmented Nothing Nothing Just p
 
         ns = Graph.nodes gdir
-        h n (ins, _, outs) acc =
-          flip (maybe acc) (nodestate n) $
+        h n (ins, _, outs) =
+          flip foldMap (nodestate n) $
             \st ->
               let x = StateIdx.x st (node n) . node
-                  il = map x $ filter ((nstate n ==) . nstate) (Set.toList ins)
-                  ol = map x $ filter ((nstate n ==) . nstate) (Set.toList outs)
-              in  filter (not . null) [il, ol] ++ acc
+              in  map x $ filter ((nstate n ==) . nstate) $
+                  Set.toList ins ++ Set.toList outs
 
-        xs = concatMap xfactors $ Map.foldWithKey h [] ns
+        xs = foldMap xfactors $ Map.mapWithKey h ns
 
         -- @HT numerisch ok?
         xfactors ys = zip ys (repeat $ Data (1/(fromIntegral $ length ys)))
 
-        isStorage (_, nt, _) = TD.isStorage nt
-
-        sts = Map.filter isStorage
+        sts = Map.filter (TD.isStorage . snd3)
               $ Graph.nodes
               $ Graph.lefilter (\(e, ()) -> TD.isStorageEdge e) gdir
 
         nstate (TIdx.PartNode s _) = s
 
-        hstx n (ins, _, outs) acc =
+        hstx n (ins, _, outs) =
           let stx = StateIdx.stx
                     . flip TIdx.PartNode (node n)
                     . TIdx.StorageTrans (nstate n) . nstate
-              il = map stx (Set.toList ins)
-              ol = map stx (Set.toList outs)
-          in  filter (not . null) [il, ol] ++ acc
-        stxs = concatMap xfactors $ Map.foldWithKey hstx [] sts
+          in  map stx $ Set.toList ins ++ Set.toList outs
+        stxs = foldMap xfactors $ Map.mapWithKey hstx sts
 
         dts = map StateIdx.dTime
               $ Set.toList
