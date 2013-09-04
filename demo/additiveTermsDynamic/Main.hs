@@ -4,7 +4,9 @@ module Main where
 import qualified EFA.Application.AssignMap as AssignMap
 import qualified EFA.Application.Absolute as EqGen
 import qualified EFA.Application.Symbolic as Symbolic
-import EFA.Application.Utility (makeEdges, constructSeqTopo)
+import qualified EFA.Application.Topology.LinearTwo as LinearTwo
+import EFA.Application.Topology.LinearTwo (Node, node0, node1, node2)
+import EFA.Application.Utility (constructSeqTopo)
 import EFA.Application.Absolute ((.=))
 
 import qualified EFA.Flow.Sequence.Index as XIdx
@@ -19,14 +21,8 @@ import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Stack (Stack)
 
-import qualified EFA.Utility.Stream as Stream
-import EFA.Utility.Stream (Stream((:~)))
-
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Draw as Draw
-import qualified EFA.Graph as Gr
 
 import qualified EFA.Signal.PlotIO as PlotIO
 
@@ -42,33 +38,22 @@ import qualified System.IO as IO
 sec0 :: Idx.Section
 sec0 = Idx.Section 0
 
-node0, node1, node2 :: Node.Int
-node0 :~ node1 :~ node2 :~ _ = Stream.enumFrom minBound
 
-
-topoLinear :: Topo.Topology Node.Int
-topoLinear = Gr.fromList ns (makeEdges es)
-  where ns = [(node0, Node.Source),
-              (node1, Node.Crossing),
-              (node2, Node.Sink)]
-        es = [(node0, node1), (node1, node2)]
-
-
-type SignalTerm = Symbolic.SignalTerm Idx.Delta SumProduct.Term Node.Int
-type ScalarTerm = Symbolic.ScalarTerm Idx.Delta SumProduct.Term Node.Int
+type SignalTerm = Symbolic.SignalTerm Idx.Delta SumProduct.Term Node
+type ScalarTerm = Symbolic.ScalarTerm Idx.Delta SumProduct.Term Node
 
 
 type
    EquationSystemSymbolic s =
-      EqGen.EquationSystem Node.Int s
-         (Stack (Var.SectionAny Node.Int) ScalarTerm)
-         (Stack (Var.SectionAny Node.Int) SignalTerm)
+      EqGen.EquationSystem Node s
+         (Stack (Var.SectionAny Node) ScalarTerm)
+         (Stack (Var.SectionAny Node) SignalTerm)
 
 infixr 6 *=<>, -=<>
 
 (*=<>) ::
-   (Ord (idx Node.Int), FormatSignalIndex idx, Env.AccessSignalMap idx) =>
-   Idx.InSection idx Node.Int ->
+   (Ord (idx Node), FormatSignalIndex idx, Env.AccessSignalMap idx) =>
+   Idx.InSection idx Node ->
    EquationSystemSymbolic s -> EquationSystemSymbolic s
 idx *=<> eqsys =
    (idx .= (Stack.singleton $ SymVar.varSymbol $ Idx.before idx))
@@ -76,8 +61,8 @@ idx *=<> eqsys =
    eqsys
 
 (-=<>) ::
-   (Ord (idx Node.Int), FormatSignalIndex idx, Env.AccessSignalMap idx) =>
-   Idx.InSection idx Node.Int -> EquationSystemSymbolic s -> EquationSystemSymbolic s
+   (Ord (idx Node), FormatSignalIndex idx, Env.AccessSignalMap idx) =>
+   Idx.InSection idx Node -> EquationSystemSymbolic s -> EquationSystemSymbolic s
 idx -=<> eqsys =
    (idx .=
       let var = Var.index idx
@@ -103,7 +88,7 @@ givenSymbolic =
 mainSymbolic :: IO ()
 mainSymbolic = do
 
-   let seqTopo = constructSeqTopo topoLinear [0]
+   let seqTopo = constructSeqTopo LinearTwo.topology [0]
    let env = EqGen.solve seqTopo givenSymbolic
 
    putStrLn $ Format.unUnicode $ formatValue env
@@ -115,13 +100,13 @@ mainSymbolic = do
 
 type
    EquationSystemNumeric s =
-      EqGen.EquationSystem Node.Int s
-         (Stack (Var.SectionAny Node.Int) Double)
-         (Stack (Var.SectionAny Node.Int) Double)
+      EqGen.EquationSystem Node s
+         (Stack (Var.SectionAny Node) Double)
+         (Stack (Var.SectionAny Node) Double)
 
 deltaPair ::
-   (Ord (idx Node.Int), FormatSignalIndex idx, Env.AccessSignalMap idx) =>
-   Idx.InSection idx Node.Int -> Double -> Double -> EquationSystemNumeric s
+   (Ord (idx Node), FormatSignalIndex idx, Env.AccessSignalMap idx) =>
+   Idx.InSection idx Node -> Double -> Double -> EquationSystemNumeric s
 deltaPair idx before delta =
    idx .= Stack.deltaPair (Var.Signal $ Var.index idx) before delta
 
@@ -137,7 +122,7 @@ givenNumeric =
    mempty
 
 
-eout :: XIdx.Energy Node.Int
+eout :: XIdx.Energy Node
 eout = XIdx.energy sec0 node2 node1
 
 
@@ -145,7 +130,7 @@ eout = XIdx.energy sec0 node2 node1
 mainNumeric :: IO ()
 mainNumeric = do
 
-   let seqTopo = constructSeqTopo topoLinear [0]
+   let seqTopo = constructSeqTopo LinearTwo.topology [0]
        Env.Complete _scalarEnv signalEnv = EqGen.solve seqTopo givenNumeric
 
    case Map.lookup eout (Env.energyMap signalEnv) of

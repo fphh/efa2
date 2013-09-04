@@ -4,12 +4,14 @@ module Main where
 import qualified EFA.Application.NestedDelta as NestedDelta
 import qualified EFA.Application.AssignMap as AssignMap
 import qualified EFA.Application.Symbolic as Symbolic
+import qualified EFA.Application.Topology.LinearTwo as LinearTwo
+import EFA.Application.Topology.LinearTwo (Node, node0, node1, node2)
 import EFA.Application.NestedDelta
           (ParameterRecord,
            givenParameterSymbol, givenParameterNumber,
            beforeDelta, extrudeStart,
            (<&), (<&>), (&>), (&&>), (?=))
-import EFA.Application.Utility (makeEdges, constructSeqTopo)
+import EFA.Application.Utility (constructSeqTopo)
 
 import qualified EFA.Flow.Sequence.Index as XIdx
 
@@ -24,14 +26,8 @@ import qualified EFA.Symbolic.SumProduct as SumProduct
 import qualified EFA.Symbolic.OperatorTree as Op
 import qualified EFA.Symbolic.Mixed as Term
 
-import qualified EFA.Utility.Stream as Stream
-import EFA.Utility.Stream (Stream((:~)))
-
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Draw as Draw
-import qualified EFA.Graph as Gr
 
 import qualified EFA.Signal.PlotIO as PlotIO
 
@@ -50,20 +46,9 @@ import Data.Monoid (mempty, (<>))
 sec0 :: Idx.Section
 sec0 = Idx.Section 0
 
-node0, node1, node2 :: Node.Int
-node0 :~ node1 :~ node2 :~ _ = Stream.enumFrom minBound
 
-
-topoLinear :: Topo.Topology Node.Int
-topoLinear = Gr.fromList ns (makeEdges es)
-  where ns = [(node0, Node.Source),
-              (node1, Node.Crossing),
-              (node2, Node.Sink)]
-        es = [(node0, node1), (node1, node2)]
-
-
-type SignalTerm = Symbolic.SignalTerm Idx.Delta SumProduct.Term Node.Int
-type ScalarTerm = Symbolic.ScalarTerm Idx.Delta SumProduct.Term Node.Int
+type SignalTerm = Symbolic.SignalTerm Idx.Delta SumProduct.Term Node
+type ScalarTerm = Symbolic.ScalarTerm Idx.Delta SumProduct.Term Node
 
 type IdxMultiDelta = Idx.ExtDelta (Idx.ExtDelta (Idx.ExtDelta Idx.Absolute))
 type RecMultiDelta = Record.ExtDelta (Record.ExtDelta (Record.ExtDelta Record.Absolute))
@@ -71,7 +56,7 @@ type RecMultiDelta = Record.ExtDelta (Record.ExtDelta (Record.ExtDelta Record.Ab
 type
    EquationSystemSymbolic s =
       EqGen.EquationSystem Symbolic.Ignore
-         RecMultiDelta Node.Int s ScalarTerm SignalTerm
+         RecMultiDelta Node s ScalarTerm SignalTerm
 
 
 
@@ -102,18 +87,18 @@ absoluteRecord ::
 absoluteRecord = NestedDelta.absoluteRecord absolute
 
 
-eout, ein :: XIdx.Energy Node.Int
+eout, ein :: XIdx.Energy Node
 ein  = XIdx.energy sec0 node0 node1
 eout = XIdx.energy sec0 node2 node1
 
-eta0, eta1 :: XIdx.Eta Node.Int
+eta0, eta1 :: XIdx.Eta Node
 eta0 = XIdx.eta sec0 node0 node1
 eta1 = XIdx.eta sec0 node1 node2
 
 
 termFromIndex ::
    IdxMultiDelta ->
-   [Idx.Record Idx.Delta (Var.InSectionSignal Node.Int)]
+   [Idx.Record Idx.Delta (Var.InSectionSignal Node)]
 termFromIndex
       (Idx.ExtDelta r2 (Idx.ExtDelta r1 (Idx.ExtDelta r0 Idx.Absolute))) =
    Idx.Record r2 (Var.index ein) :
@@ -162,7 +147,7 @@ simplifiedSummands =
 mainSymbolic :: IO ()
 mainSymbolic = do
 
-   let seqTopo = constructSeqTopo topoLinear [0]
+   let seqTopo = constructSeqTopo LinearTwo.topology [0]
    let (Env.Complete scalarEnv signalEnv) =
           EqGen.solve seqTopo givenSymbolic
 
@@ -181,7 +166,7 @@ mainSymbolic = do
 type
    EquationSystemNumeric s =
       EqGen.EquationSystem Symbolic.Ignore
-         RecMultiDelta Node.Int s Double Double
+         RecMultiDelta Node s Double Double
 
 
 _givenNumeric :: EquationSystemNumeric s
@@ -213,7 +198,7 @@ givenNumeric =
 mainNumeric :: IO ()
 mainNumeric = do
 
-   let seqTopo = constructSeqTopo topoLinear [0]
+   let seqTopo = constructSeqTopo LinearTwo.topology [0]
        Env.Complete _scalarEnv signalEnv = EqGen.solve seqTopo givenNumeric
 
    case Map.lookup eout (Env.energyMap signalEnv) of
