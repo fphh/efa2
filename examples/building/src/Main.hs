@@ -30,9 +30,6 @@ import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 
-import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
---import qualified Graphics.Gnuplot.Terminal.PostScript as PostScript
-
 import qualified EFA.Signal.Signal as Sig; import EFA.Signal.Signal (TC,Scalar)
 import qualified EFA.Signal.PlotIO as PlotIO
 import qualified EFA.Signal.Record as Record
@@ -56,6 +53,7 @@ import EFA.Equation.Result (Result(..))
 
 import EFA.Utility.Bifunctor (second)
 
+import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
 import qualified Graphics.Gnuplot.Graph.ThreeDimensional as Graph3D
 
@@ -158,12 +156,12 @@ optimalEtasWithPowers ::
   StateEnv.Complete Node (Data Nil Double) (Data Nil Double) ->
   One.OptimalEtaWithEnv Node Param2 Double
 optimalEtasWithPowers params forceFactor env =
-  Map.foldWithKey f Map.empty op
+  Map.mapWithKey f op
   where op = One.optimalPowers params
         forcing = One.noforcing forceFactor
         stateFlowGraph = One.stateFlowGraph params
         etaMap = One.etaMap params
-        f state ps acc = Map.insert state (Map.fromList res) acc
+        f state ps = Map.fromList res
           where 
                 solveFunc =
                   Optimisation.solve
