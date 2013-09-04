@@ -3,7 +3,7 @@ module Main where
 
 import qualified EFA.Application.Absolute as EqGen
 import EFA.Application.Absolute ((.=), (=.=))
-import EFA.Application.Utility (makeEdges, constructSeqTopo)
+import EFA.Application.Utility (topologyFromEdges, constructSeqTopo)
 
 import qualified EFA.Flow.Sequence.Index as XIdx
 
@@ -15,7 +15,6 @@ import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Draw as Draw
-import qualified EFA.Graph as Gr
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
@@ -34,37 +33,36 @@ sec0 :: Idx.Section
 sec0 :~ _ = Stream.enumFrom $ Idx.Section 0
 
 
-data Node = Sink | Source | C Int deriving (Eq, Ord, Show)
+data Node = Sink | Source | Crossing Int deriving (Eq, Ord, Show)
 
 instance Enum Node where
-         fromEnum Sink = 0
-         fromEnum Source = 1
-         fromEnum (C x) = x+2
+   fromEnum Sink = 0
+   fromEnum Source = 1
+   fromEnum (Crossing x) = x+2
 
-         toEnum 0 = Sink
-         toEnum 1 = Source
-         toEnum x = C (x-2)
+   toEnum 0 = Sink
+   toEnum 1 = Source
+   toEnum x = Crossing (x-2)
 
 instance Node.C Node where
    display Sink = Format.literal "Sink"
    display Source = Format.literal "Source"
-   display (C c) = Format.integer $ fromIntegral c
+   display (Crossing c) = Format.integer $ fromIntegral c
 
    subscript = Node.subscriptDefault
    dotId = Node.dotIdDefault
+   typ Sink = Node.AlwaysSink
+   typ Source = Node.AlwaysSource
+   typ (Crossing _) = Node.Crossing
 
 c0, c1, c2, c3 :: Node
-c0 :~ c1 :~ c2 :~ c3 :~ _ = Stream.enumFrom $ C 0
+c0 :~ c1 :~ c2 :~ c3 :~ _ = fmap Crossing $ Stream.enumFrom 0
 
 topo :: Topo.Topology Node
-topo = Gr.fromList nodes (makeEdges edges)
-  where nodes
-          = [(c0, Node.Crossing), (c1, Node.Crossing), (c2, Node.Crossing),
-             (c3, Node.Crossing), (Sink, Node.AlwaysSink),
-             (Source, Node.AlwaysSource)]
-        edges
-          = [(Source, c0), (c0, c1), (c1, c2), (c2, Sink), (c0, c3),
-             (c3, c2)]
+topo =
+   topologyFromEdges
+      [(Source, c0), (c0, c1), (c1, c2), (c2, Sink),
+       (c0, c3), (c3, c2)]
 
 seqTopo :: Flow.RangeGraph Node
 seqTopo = constructSeqTopo topo [0]

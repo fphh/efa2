@@ -125,7 +125,7 @@ data StructureEdgeLabel =
 
 
 dotFromFlowGraph ::
-   (Part part, NodeType node) =>
+   (Part part, Node.C node) =>
    ([DotSubGraph T.Text], [DotEdge T.Text]) ->
    Map node
       ((Unicode, Unicode),
@@ -188,7 +188,7 @@ dotFromStorageGraph bnd ns =
 
 
 dotFromInitExitNodes ::
-   (Part part, NodeType node) =>
+   (Part part, Node.C node) =>
    map part dummy ->
    (Idx.Augmented part, Idx.Augmented part) ->
    Map node (Unicode, Unicode) ->
@@ -199,7 +199,7 @@ dotFromInitExitNodes _ (init, exit) initExit =
    []
 
 dotFromInitOrExitNodes ::
-   (Part part, NodeType node) =>
+   (Part part, Node.C node) =>
    Idx.Augmented part ->
    String ->
    Map node Unicode ->
@@ -214,7 +214,7 @@ dotFromInitOrExitNodes part name initExit =
 
 
 dotFromPartGraph ::
-   (Part part, NodeType node) =>
+   (Part part, Node.C node) =>
    part ->
    (String,
     Gr.Graph node Gr.EitherEdge Unicode StructureEdgeLabel) ->
@@ -284,12 +284,12 @@ xterm g = void $ VizCmd.runGraphvizCanvas VizCmd.Dot g VizCmd.Xlib
 
 
 dotFromAugNode ::
-   (Part part, NodeType node) =>
+   (Part part, Node.C node) =>
    Idx.Augmented part -> node -> Unicode -> DotNode T.Text
 dotFromAugNode part n label =
    DotNode
       (dotIdentFromAugNode $ Idx.PartNode part n)
-      (nodeAttrs (nodeType n) $ labelFromUnicode label)
+      (nodeAttrs (Node.typ n) $ labelFromUnicode label)
 
 dotFromBndNode ::
    (Node.C node) =>
@@ -653,7 +653,7 @@ hideEtaNode opts = opts { optEtaNode = False }
 
 
 sequFlowGraph ::
-   (FormatValue a, FormatValue v, NodeType node) =>
+   (FormatValue a, FormatValue v, Node.C node) =>
    Options Unicode -> SeqFlowQuant.Graph node a v -> DotGraph T.Text
 sequFlowGraph opts gr =
    dotFromFlowGraph
@@ -708,12 +708,12 @@ formatRange (SignalIdx from, SignalIdx to) =
    show from ++ "-" ++ show to
 
 formatNodeStorage ::
-   (FormatValue a, Format output, NodeType node) =>
+   (FormatValue a, Format output, Node.C node) =>
    Options output ->
    node ->
    (a, a) -> Maybe a -> Maybe a -> output
 formatNodeStorage opts node beforeAfter sin sout =
-   case nodeType node of
+   case Node.typ node of
       ty ->
          Format.lines $
          Node.display node :
@@ -754,7 +754,7 @@ formatStorageEquation (before, after) sin sout =
 
 
 stateFlowGraph ::
-   (FormatValue a, FormatValue v, NodeType node) =>
+   (FormatValue a, FormatValue v, Node.C node) =>
    Options Unicode -> StateFlowQuant.Graph node a v -> DotGraph T.Text
 stateFlowGraph opts gr =
    dotFromFlowGraph
@@ -786,10 +786,10 @@ stateFlowGraph opts gr =
        StateFlowQuant.states gr)
 
 stateNodeShow ::
-   (NodeType node, FormatValue a, Format output) =>
+   (Node.C node, FormatValue a, Format output) =>
    node -> Maybe a -> output
 stateNodeShow node msum =
-   case nodeType node of
+   case Node.typ node of
       ty ->
          Format.lines $
          Node.display node :
@@ -868,7 +868,7 @@ structureEdgeShowEta opts part =
 
 
 cumulatedFlow ::
-   (NodeType node, FormatValue a) =>
+   (Node.C node, FormatValue a) =>
    CumFlowQuant.Graph node a ->
    DotGraph T.Text
 cumulatedFlow =
@@ -879,14 +879,10 @@ cumulatedFlow =
 
 
 dotFromCumNode ::
-   (NodeType node) =>
+   (Node.C node) =>
    node -> Viz.Attributes
 dotFromCumNode x =
-   nodeAttrs (nodeType x) $ labelFromUnicode $ Node.display x
-
-
-class Node.C node => NodeType node where
-   nodeType :: node -> Node.Type ()
+   nodeAttrs (Node.typ x) $ labelFromUnicode $ Node.display x
 
 
 graph ::

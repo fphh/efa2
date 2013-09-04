@@ -2,7 +2,7 @@
 
 module Modules.System where
 
-import EFA.Application.Utility (makeEdges)
+import EFA.Application.Utility (makeTopology)
 
 import qualified EFA.Flow.Sequence.Index as SeqIdx
 
@@ -11,38 +11,49 @@ import EFA.Signal.Record (SigId(..))
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
-import qualified EFA.Graph as Gr
 
 import qualified Data.Map as Map
 import Data.Map (Map)
 
 
-data Node = Tank | EngineFlange | ConBattery | Battery | ConES | MotorFlange | ConFrontBrakes | Chassis | Resistance | ElectricSystem | FrontBrakes | VehicleInertia | RearBrakes deriving (Eq, Ord, Enum, Show)
+data Node =
+     Tank
+--   | EngineFlange
+   | ConBattery
+   | Battery
+   | ConES
+--   | MotorFlange
+   | ConFrontBrakes
+   | Chassis
+   | Resistance
+   | ElectricSystem
+   | FrontBrakes
+   | VehicleInertia
+   | RearBrakes
+   deriving (Eq, Ord, Enum, Show)
 
 instance Node.C Node where
    display = Node.displayDefault
    subscript = Node.subscriptDefault
    dotId = Node.dotIdDefault
+   typ t =
+      case t of
+         Tank -> Node.Source
+         ConBattery -> Node.Crossing
+         Battery -> Node.storage
+         ConES -> Node.Crossing
+         ConFrontBrakes -> Node.Crossing
+         Chassis -> Node.Crossing
+         Resistance -> Node.Sink
+         ElectricSystem -> Node.Sink
+         FrontBrakes -> Node.Sink
+         RearBrakes -> Node.Sink
+         VehicleInertia -> Node.storage
 
 ----------------------------------------------------------------------
 -- * Define System Topology
 topology :: Topo.Topology Node
-topology = Gr.fromList ns (makeEdges es)
-  where ns = [(Tank, Node.Source),
-              (ConBattery, Node.Crossing),
-              (Battery, Node.storage),
-              (ConES, Node.Crossing),
-              (ConFrontBrakes, Node.Crossing),
-              (Chassis, Node.Crossing),
-              (Resistance, Node.Sink),
-              (ElectricSystem, Node.Sink),      -- vehicle electric system
-              (FrontBrakes, Node.Sink),
-              (RearBrakes, Node.Sink),
-              (VehicleInertia, Node.storage)]
-
-        --extract edge Info
-        es = map f edgeList
-          where f (n1,n2,_,_,_) = (n1,n2)
+topology = makeTopology edgeList
 
 -- Define Edges with all their Properties
 edgeList :: [(Node, Node, String, String, String)]

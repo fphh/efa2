@@ -27,29 +27,24 @@ import EFA.Equation.Result (Result(..))
 
 import EFA.Report.FormatValue (FormatValue)
 
+import qualified EFA.Utility.Map as MapU
 import EFA.Utility.Map (checkedLookup)
 import EFA.Utility (myShowList)
 
+import qualified Data.Set as Set
 import qualified Data.Map as Map
 import Data.Map (Map)
 
-{-
-makeNode :: Int -> Idx.Node
-makeNode = Idx.Node
+import Data.Foldable (foldMap)
 
-makeNodes :: [(Int, Node.Type)] -> [Gr.LNode Idx.Node Node.Type]
-makeNodes ns = map f ns
-  where f (n, ty) = (makeNode n, ty)
--}
 
-makeEdges :: [(node, node)] -> [Gr.LEdge Gr.DirEdge node ()]
-makeEdges = map (\(a, b) -> (Gr.DirEdge a b, ()))
+topologyFromEdges ::
+   Node.C node => [(node, node)] -> Topo.Topology node
+topologyFromEdges es =
+   Gr.fromMap
+      (MapU.fromSet Node.typ $ foldMap (\(x,y) -> Set.fromList [x,y]) es)
+      (Map.fromList $ map (\(a, b) -> (Gr.DirEdge a b, ())) es)
 
-{-
-makeSimpleEdges :: [(Int, Int)] -> [Gr.LEdge Idx.Node ()]
-makeSimpleEdges es = map f es
-  where f (a, b) = (Gr.Edge (Idx.Node a) (Idx.Node b), ())
--}
 
 -- @HT neue Utility Funktionen für Topologie-Definition, bitte prüfen
 type EdgeLabel = String
@@ -58,18 +53,12 @@ type PPosLabel = String
 type LabeledEdgeList node = [(node, node, EdgeLabel, PPosLabel, PPosLabel)]
 type PPosLableMap node = Map (SeqIdx.PPos node) String
 
--- | Generate Topology with simple edge List
-makeTopologySimple ::
-   (Ord node) =>
-   [(node, Node.Type ())] ->  [(node,node)] -> Topo.Topology node
-makeTopologySimple ns es = Gr.fromList ns (makeEdges es)
-
 -- | Generate Topology from labeled edge List
 makeTopology ::
-   (Ord node) =>
-   [(node, Node.Type ())] ->  LabeledEdgeList node -> Topo.Topology node
-makeTopology ns es = Gr.fromList ns (makeEdges $ map f es)
-  where  f (n1,n2,_,_,_) = (n1,n2)
+   (Node.C node) =>
+   LabeledEdgeList node -> Topo.Topology node
+makeTopology =
+   topologyFromEdges . map (\(n1,n2,_,_,_) -> (n1,n2))
 
 
 -- | Edge Label map used for displaying topology with labeled edges

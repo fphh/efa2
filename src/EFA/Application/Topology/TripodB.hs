@@ -1,10 +1,9 @@
 module EFA.Application.Topology.TripodB where
 
-import EFA.Application.Utility ( makeEdges, )
+import EFA.Application.Utility ( topologyFromEdges )
 
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
-import qualified EFA.Graph as Gr
 
 
 data Node = Node0 | Node1 | Node2 | Node3 deriving (Show, Eq, Ord, Enum)
@@ -27,11 +26,13 @@ instance Node.C Node where
    subscript = Node.subscriptDefault
    dotId = Node.dotIdDefault
 
+   typ Node0 = Node.Source
+   typ Node1 = Node.Crossing
+   typ Node2 = Node.Sink
+   typ Node3 = Node.storage
+
 
 topology :: Topo.Topology Node
-topology = Gr.fromList ns (makeEdges es)
-  where ns = [ (Node0, Node.Source),
-               (Node1, Node.Crossing),
-               (Node2, Node.Sink),
-               (Node3, Node.storage) ]
-        es = [(Node0, Node1), (Node1, Node3), (Node1, Node2)]
+topology =
+   topologyFromEdges
+      [(Node0, Node1), (Node1, Node3), (Node1, Node2)]

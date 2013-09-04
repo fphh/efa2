@@ -11,7 +11,7 @@ import EFA.Signal.Data (Data, (:>), Nil)
 
 import qualified EFA.Application.Absolute as EqGen
 import EFA.Application.Absolute ( (.=), (=.=) )
-import EFA.Application.Utility ( makeEdges, constructSeqTopo )
+import EFA.Application.Utility ( topologyFromEdges, constructSeqTopo )
 
 import qualified EFA.Flow.Sequence.Index as XIdx
 
@@ -22,7 +22,6 @@ import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Draw as Draw
-import qualified EFA.Graph as Gr
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
@@ -39,17 +38,15 @@ sec0, sec1, sec2, sec3, sec4 :: Idx.Section
 sec0 :~ sec1 :~ sec2 :~ sec3 :~ sec4 :~ _ = Stream.enumFrom $ Idx.Section 0
 
 node0, node1, node2, node3 :: Node.Int
-node0 :~ node1 :~ node2 :~ node3 :~ _ = Stream.enumFrom $ Node.Int 0
-
+node0 = Node.intNoRestriction 0
+node1 = Node.intCrossing 0
+node2 = Node.intNoRestriction 1
+node3 = Node.intNoRestriction 2
 
 
 topoDreibein :: Topo.Topology Node.Int
-topoDreibein = Gr.fromList ns (makeEdges es)
-  where ns = [ (node0, Node.NoRestriction),
-               (node1, Node.Crossing),
-               (node2, Node.NoRestriction),
-               (node3, Node.NoRestriction) ]
-        es = [(node0, node1), (node1, node2), (node1, node3)]
+topoDreibein =
+   topologyFromEdges [(node0, node1), (node1, node2), (node1, node3)]
 
 
 

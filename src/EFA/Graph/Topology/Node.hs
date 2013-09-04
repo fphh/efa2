@@ -1,5 +1,7 @@
 module EFA.Graph.Topology.Node where
 
+import qualified EFA.Graph.Topology.Node.Int as NodeInt
+
 import qualified EFA.Report.Format as Format
 import EFA.Report.Format (Format)
 
@@ -15,6 +17,7 @@ class Ord node => C node where
    display :: Format output => node -> output
    subscript :: Format output => node -> output
    dotId :: node -> P.String
+   typ :: node -> Type ()
 
 displayDefault :: (Show node, Format output) => node -> output
 displayDefault = Format.literal . show
@@ -39,8 +42,8 @@ data
       deriving (Show, Eq, Ord)
 
 instance Functor Type where
-   fmap f typ =
-      case typ of
+   fmap f t =
+      case t of
          Storage a     -> Storage $ f a
          Sink          -> Sink
          AlwaysSink    -> AlwaysSink
@@ -50,6 +53,17 @@ instance Functor Type where
          DeadNode      -> DeadNode
          NoRestriction -> NoRestriction
 
+formatType :: Format output => Type () -> output
+formatType t =
+   case t of
+      Storage ()    -> Format.nodeStorage
+      Sink          -> Format.nodeSink
+      AlwaysSink    -> Format.nodeAlwaysSink
+      Source        -> Format.nodeSource
+      AlwaysSource  -> Format.nodeAlwaysSource
+      Crossing      -> Format.nodeCrossing
+      DeadNode      -> Format.nodeDeadNode
+      NoRestriction -> Format.nodeNoRestriction
 
 
 class StorageLabel a where
@@ -83,28 +97,86 @@ storage :: Type ()
 storage = Storage ()
 
 
-
-newtype Int = Int Word deriving (Show, Eq, Ord, Bounded)
-
-instance Enum Int where
-   toEnum n =
-      if n >=0
-        then Int $ fromIntegral n
-        else error "Node.Int.toEnum: negative number"
-   fromEnum (Int n) =
-      if n <= fromIntegral (maxBound::P.Int)
-        then fromIntegral n
-        else error "Node.Int.fromEnum: number too big"
+data
+   Int =
+        IntStorage       NodeInt.Storage
+      | IntSink          NodeInt.Sink
+      | IntAlwaysSink    NodeInt.AlwaysSink
+      | IntSource        NodeInt.Source
+      | IntAlwaysSource  NodeInt.AlwaysSource
+      | IntCrossing      NodeInt.Crossing
+      | IntDeadNode      NodeInt.DeadNode
+      | IntNoRestriction NodeInt.NoRestriction
+   deriving (Show, Eq, Ord)
 
 instance C Int where
-   display (Int n) = Format.integer $ fromIntegral n
-   subscript (Int n) = Format.integer $ fromIntegral n
-   dotId (Int n) = show n
+   display = intDisplay
+   subscript = intDisplay
+   dotId node =
+      case node of
+         IntStorage       (NodeInt.Storage       n) -> "st"  ++ show n
+         IntSink          (NodeInt.Sink          n) -> "si"  ++ show n
+         IntAlwaysSink    (NodeInt.AlwaysSink    n) -> "asi" ++ show n
+         IntSource        (NodeInt.Source        n) -> "so"  ++ show n
+         IntAlwaysSource  (NodeInt.AlwaysSource  n) -> "aso" ++ show n
+         IntCrossing      (NodeInt.Crossing      n) -> "cr"  ++ show n
+         IntDeadNode      (NodeInt.DeadNode      n) -> "dn"  ++ show n
+         IntNoRestriction (NodeInt.NoRestriction n) -> "nr"  ++ show n
+   typ node =
+      case node of
+         IntStorage       _ -> Storage ()
+         IntSink          _ -> Sink
+         IntAlwaysSink    _ -> AlwaysSink
+         IntSource        _ -> Source
+         IntAlwaysSource  _ -> AlwaysSource
+         IntCrossing      _ -> Crossing
+         IntDeadNode      _ -> DeadNode
+         IntNoRestriction _ -> NoRestriction
+
+intDisplay :: Format output => Int -> output
+intDisplay node =
+   let fmt :: Format output => output -> Word -> output
+       fmt t n = Format.nodeInt t (Format.integer $ fromIntegral n)
+   in  case node of
+          IntStorage       (NodeInt.Storage       n) -> fmt Format.nodeStorage       n
+          IntSink          (NodeInt.Sink          n) -> fmt Format.nodeSink          n
+          IntAlwaysSink    (NodeInt.AlwaysSink    n) -> fmt Format.nodeAlwaysSink    n
+          IntSource        (NodeInt.Source        n) -> fmt Format.nodeSource        n
+          IntAlwaysSource  (NodeInt.AlwaysSource  n) -> fmt Format.nodeAlwaysSource  n
+          IntCrossing      (NodeInt.Crossing      n) -> fmt Format.nodeCrossing      n
+          IntDeadNode      (NodeInt.DeadNode      n) -> fmt Format.nodeDeadNode      n
+          IntNoRestriction (NodeInt.NoRestriction n) -> fmt Format.nodeNoRestriction n
+
+class ConsInt node where consInt :: node -> Int
+
+instance ConsInt NodeInt.Storage       where consInt = IntStorage
+instance ConsInt NodeInt.Sink          where consInt = IntSink
+instance ConsInt NodeInt.AlwaysSink    where consInt = IntAlwaysSink
+instance ConsInt NodeInt.Source        where consInt = IntSource
+instance ConsInt NodeInt.AlwaysSource  where consInt = IntAlwaysSource
+instance ConsInt NodeInt.Crossing      where consInt = IntCrossing
+instance ConsInt NodeInt.DeadNode      where consInt = IntDeadNode
+instance ConsInt NodeInt.NoRestriction where consInt = IntNoRestriction
+
+intStorage, intSink, intAlwaysSink, intSource, intAlwaysSource,
+   intCrossing, intDeadNode, intNoRestriction :: Word -> Int
+intStorage       n = IntStorage       (NodeInt.Storage n)
+intSink          n = IntSink          (NodeInt.Sink n)
+intAlwaysSink    n = IntAlwaysSink    (NodeInt.AlwaysSink n)
+intSource        n = IntSource        (NodeInt.Source n)
+intAlwaysSource  n = IntAlwaysSource  (NodeInt.AlwaysSource n)
+intCrossing      n = IntCrossing      (NodeInt.Crossing n)
+intDeadNode      n = IntDeadNode      (NodeInt.DeadNode n)
+intNoRestriction n = IntNoRestriction (NodeInt.NoRestriction n)
 
 
-newtype String = String P.String deriving (Show, Eq, Ord)
+
+data String = String (Type ()) P.String deriving (Show, Eq, Ord)
 
 instance C String where
-   display (String str) = Format.literal str
-   subscript (String str) = Format.literal str
-   dotId (String str) = str
+   display (String t str) =
+      Format.nodeString (formatType t) (Format.literal str)
+   subscript (String t str) =
+      Format.nodeString (formatType t) (Format.literal str)
+   dotId (String t str) = show t ++ "-" ++ str
+   typ (String t _str) = t

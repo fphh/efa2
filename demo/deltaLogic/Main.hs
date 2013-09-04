@@ -12,9 +12,6 @@ import qualified EFA.Equation.Record as Record
 import EFA.Equation.System ((=%=))
 import EFA.Equation.Arithmetic ((~*))
 
-import qualified EFA.Utility.Stream as Stream
-import EFA.Utility.Stream (Stream((:~)))
-
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 
@@ -29,7 +26,8 @@ sec0 :: Idx.Section
 sec0 = Idx.Section 0
 
 node0, node1 :: Node.Int
-node0 :~ node1 :~ _ = Stream.enumFrom minBound
+node0 = Node.intSource 0
+node1 = Node.intSink 0
 
 
 {-

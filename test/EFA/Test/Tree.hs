@@ -13,10 +13,10 @@ import qualified EFA.Graph.Topology as Topo
 tree :: Topo.Topology Node
 tree =
    Tree.toGraph $
-   Tree.storage node3
-      <+ (Tree.crossing node2
-             <+ Tree.sink node1
-             <+ Tree.source node0)
+   Tree.cons node3
+      <+ (Tree.cons node2
+             <+ Tree.cons node1
+             <+ Tree.cons node0)
 
 
 runTests :: IO ()

@@ -62,6 +62,17 @@ class Format output where
    assign :: output -> output -> output
    pair :: output -> output -> output
 
+   nodeInt :: output -> output -> output
+   nodeString :: output -> output -> output
+   nodeStorage :: output
+   nodeSink :: output
+   nodeAlwaysSink :: output
+   nodeSource :: output
+   nodeAlwaysSource :: output
+   nodeCrossing :: output
+   nodeDeadNode :: output
+   nodeNoRestriction :: output
+
    function :: Function -> output -> output
    integral :: output -> output
    recordDelta :: Idx.Delta -> output -> output
@@ -96,6 +107,17 @@ instance Format ASCII where
       ASCII $ lhs ++ " = " ++ rhs
    pair (ASCII lhs) (ASCII rhs) =
       ASCII $ "(" ++ lhs ++ ", " ++ rhs ++ ")"
+
+   nodeInt (ASCII typ) (ASCII num) = ASCII $ typ++num
+   nodeString (ASCII typ) (ASCII num) = ASCII $ typ++"-"++num
+   nodeStorage = ASCII "St"
+   nodeSink = ASCII "Si"
+   nodeAlwaysSink = ASCII "ASi"
+   nodeSource = ASCII "So"
+   nodeAlwaysSource = ASCII "ASo"
+   nodeCrossing = ASCII "C"
+   nodeDeadNode = ASCII "D"
+   nodeNoRestriction = ASCII "Any"
 
    function f (ASCII rest) =
       ASCII $
@@ -159,6 +181,17 @@ instance Format Unicode where
       Unicode $ lhs ++ " = " ++ rhs
    pair (Unicode lhs) (Unicode rhs) =
       Unicode $ "(" ++ lhs ++ ", " ++ rhs ++ ")"
+
+   nodeInt (Unicode typ) (Unicode num) = Unicode $ typ++num
+   nodeString (Unicode typ) (Unicode num) = Unicode $ typ++"-"++num
+   nodeStorage = Unicode "St"
+   nodeSink = Unicode "Si"
+   nodeAlwaysSink = Unicode "ASi"
+   nodeSource = Unicode "So"
+   nodeAlwaysSource = Unicode "ASo"
+   nodeCrossing = Unicode "C"
+   nodeDeadNode = Unicode "D"
+   nodeNoRestriction = Unicode "Any"
 
    function f (Unicode rest) =
       Unicode $
@@ -261,6 +294,17 @@ instance Format Latex where
       Latex $ lhs ++ " = " ++ rhs
    pair (Latex lhs) (Latex rhs) =
       Latex $ "(" ++ lhs ++ ", " ++ rhs ++ ")"
+
+   nodeInt (Latex typ) (Latex num) = Latex $ typ++num
+   nodeString (Latex typ) (Latex num) = Latex $ typ++"-"++num
+   nodeStorage = Latex "St"
+   nodeSink = Latex "Si"
+   nodeAlwaysSink = Latex "ASi"
+   nodeSource = Latex "So"
+   nodeAlwaysSource = Latex "ASo"
+   nodeCrossing = Latex "C"
+   nodeDeadNode = Latex "D"
+   nodeNoRestriction = Latex "Any"
 
    function f (Latex rest) =
       Latex $

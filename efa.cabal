@@ -99,6 +99,7 @@ Library
     EFA.Graph.Topology
     EFA.Graph.Topology.Index
     EFA.Graph.Topology.Node
+    EFA.Graph.Topology.Node.Int
     EFA.Graph.Topology.StateAnalysis
     EFA.Graph.Flow
     EFA.Graph.CumulatedFlow

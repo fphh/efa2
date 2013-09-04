@@ -10,10 +10,9 @@ import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Draw as Draw
-import qualified EFA.Graph as Gr
 import qualified EFA.Report.Format as Format
 import qualified EFA.Utility.Stream as Stream
-import EFA.Application.Utility (makeEdges)
+import EFA.Application.Utility (topologyFromEdges)
 import EFA.Utility.Async (concurrentlyMany_)
 import EFA.Utility.Stream (Stream((:~)))
 
@@ -25,25 +24,22 @@ sec0 :~ _ = Stream.enumFrom $ Idx.Section 0
 -- Vordefinierte Knoten Int
 
 node00, node01 :: Node.Int
-node00 :~ node01 :~ _ = Stream.enumFrom minBound
+node00 = Node.intAlwaysSink 0
+node01 = Node.intAlwaysSource 0
 
 topo0 :: Topo.Topology Node.Int
-topo0 = Gr.fromList nodes (makeEdges edges)
-  where nodes = [(node00, Node.AlwaysSink), (node01, Node.AlwaysSource)]
-        edges = [(node00, node01)]
+topo0 = topologyFromEdges [(node00, node01)]
 
 
 -------------------------------------------------
 -- Vordefinierte Knoten String
 
 node10, node11 :: Node.String
-node10 = Node.String "node10"
-node11 = Node.String "node11"
+node10 = Node.String Node.AlwaysSink "node10"
+node11 = Node.String Node.AlwaysSource "node11"
 
 topo1 :: Topo.Topology Node.String
-topo1 = Gr.fromList nodes (makeEdges edges)
-  where nodes = [(node10, Node.AlwaysSink), (node11, Node.AlwaysSource)]
-        edges = [(node10, node11)]
+topo1 = topologyFromEdges [(node10, node11)]
 
 
 -------------------------------------------------
@@ -55,11 +51,11 @@ instance Node.C NodeAB where
    display = Node.displayDefault
    subscript = Node.subscriptDefault
    dotId = Node.dotIdDefault
+   typ A = Node.AlwaysSink
+   typ B = Node.AlwaysSource
 
 topo2 :: Topo.Topology NodeAB
-topo2 = Gr.fromList nodes (makeEdges edges)
-  where nodes = [(A, Node.AlwaysSink), (B, Node.AlwaysSource)]
-        edges = [(A, B)]
+topo2 = topologyFromEdges [(A, B)]
 
 -------------------------------------------------
 -- Selbstdefinierte Knoten mit selbstdefinierter Anzeigefunktion
@@ -73,11 +69,11 @@ instance Node.C Node where
    subscript = Node.subscriptDefault
    dotId = Node.dotIdDefault
 
+   typ Sink   = Node.AlwaysSink
+   typ Source = Node.AlwaysSource
 
 topo3 :: Topo.Topology Node
-topo3 = Gr.fromList nodes (makeEdges edges)
-  where nodes = [(Sink, Node.AlwaysSink), (Source, Node.AlwaysSource)]
-        edges = [(Source, Sink)]
+topo3 = topologyFromEdges [(Source, Sink)]
 
 -------------------------------------------------
 

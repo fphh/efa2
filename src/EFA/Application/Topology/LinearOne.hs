@@ -1,10 +1,9 @@
 module EFA.Application.Topology.LinearOne where
 
-import EFA.Application.Utility ( makeEdges, )
+import EFA.Application.Utility ( topologyFromEdges )
 
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
-import qualified EFA.Graph as Gr
 
 
 data Node = Sink | Source deriving (Ord, Eq, Enum, Show)
@@ -14,8 +13,9 @@ instance Node.C Node where
    subscript = Node.subscriptDefault
    dotId = Node.dotIdDefault
 
+   typ Source = Node.AlwaysSource
+   typ Sink   = Node.AlwaysSink
+
 
 topology :: Topo.Topology Node
-topology = Gr.fromList nodes (makeEdges edges)
-  where nodes = [(Sink, Node.AlwaysSink), (Source, Node.AlwaysSource)]
-        edges = [(Sink, Source)]
+topology = topologyFromEdges [(Sink, Source)]

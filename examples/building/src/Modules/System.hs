@@ -30,29 +30,38 @@ import EFA.Signal.Record (SigId(..))
 import qualified Data.Map as Map
 import Data.Map (Map)
 
-data Node = Coal | Oil | Gas |
-            Sun | Wind | Water |
-            Network | Transformer | LocalNetwork |
-            HouseHold | Industry |
-            Rest | LocalRest deriving (Eq, Ord, Enum, Show)
+data Node =
+     Coal
+--   | Oil
+   | Gas
+--   | Sun
+--   | Wind
+   | Water
+   | Network
+--   | Transformer
+   | LocalNetwork
+--   | HouseHold
+--   | Industry
+   | Rest
+   | LocalRest
+   deriving (Eq, Ord, Enum, Show)
 
 instance Node.C Node where
    display = Node.displayDefault
    subscript = Node.subscriptDefault
    dotId = Node.dotIdDefault
+   typ t =
+      case t of
+         Coal -> Node.AlwaysSource
+         Gas -> Node.Source
+         Water -> Node.storage
+         Network -> Node.Crossing
+         Rest -> Node.AlwaysSink
+         LocalNetwork -> Node.Crossing
+         LocalRest -> Node.AlwaysSink
 
 topology :: Topo.Topology Node
-topology = AppUt.makeTopology nodeList edgeList
-
-nodeList :: [(Node,Node.Type ())]
-nodeList = [(Coal, Node.AlwaysSource),
-            (Gas, Node.Source),
-            (Water, Node.storage),
-            (Network,Node.Crossing),
-            (Rest, Node.AlwaysSink),
-            (LocalNetwork,Node.Crossing),
-            (LocalRest, Node.AlwaysSink)]
-
+topology = AppUt.makeTopology edgeList
 
 edgeList :: AppUt.LabeledEdgeList Node
 edgeList = [(Coal, Network, "CoalPlant", "Coal","ElCoal"),

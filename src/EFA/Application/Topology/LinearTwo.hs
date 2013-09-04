@@ -1,10 +1,9 @@
 module EFA.Application.Topology.LinearTwo where
 
-import EFA.Application.Utility ( makeEdges, )
+import EFA.Application.Utility ( topologyFromEdges )
 
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
-import qualified EFA.Graph as Gr
 
 import qualified EFA.Report.Format as Format
 
@@ -22,10 +21,10 @@ instance Node.C Node where
    subscript = Format.integer . fromIntegral . fromEnum
    dotId = Node.dotIdDefault
 
+   typ Source   = Node.AlwaysSource
+   typ Crossing = Node.Crossing
+   typ Sink     = Node.AlwaysSink
+
 
 topology :: Topo.Topology Node
-topology = Gr.fromList ns (makeEdges es)
-  where ns = [(node0, Node.Source),
-              (node1, Node.Crossing),
-              (node2, Node.Sink)]
-        es = [(node0, node1), (node1, node2)]
+topology = topologyFromEdges [(node0, node1), (node1, node2)]

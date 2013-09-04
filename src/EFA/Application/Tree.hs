@@ -15,21 +15,8 @@ data Tree node nodeLabel =
 toGraph :: Tree node (Node.Type ()) -> Topo.Topology node
 toGraph (Tree _ graph) = graph
 
-cons :: Ord node => node -> nodeLabel -> Tree node nodeLabel
-cons node label = Tree node $ Gr.insNode (node, label) Gr.empty
-
-
-storage, sink, alwaysSink, source, alwaysSource,
-   crossing, deadNode, noRestriction ::
-      Ord node => node -> Tree node (Node.Type ())
-storage       = flip cons Node.storage
-sink          = flip cons Node.Sink
-alwaysSink    = flip cons Node.AlwaysSink
-source        = flip cons Node.Source
-alwaysSource  = flip cons Node.AlwaysSource
-crossing      = flip cons Node.Crossing
-deadNode      = flip cons Node.DeadNode
-noRestriction = flip cons Node.NoRestriction
+cons :: Node.C node => node -> Tree node (Node.Type ())
+cons node = Tree node $ Gr.insNode (node, Node.typ node) Gr.empty
 
 
 

@@ -1,34 +1,31 @@
 module Main where
 
-import EFA.Application.Utility (makeEdges)
+import EFA.Application.Utility (topologyFromEdges)
 
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Graph.Flow as Flow
-import qualified EFA.Graph as Gr
 
 import qualified EFA.Signal.SequenceData as SD
 
-import qualified EFA.Utility.Stream as Stream
-import EFA.Utility.Stream (Stream((:~)))
 import EFA.Utility.Async (concurrentlyMany_)
 
 import Data.List.HT (chop)
 import Data.Char (isSpace)
 
 node0, node1, node2, node3 :: Node.Int
-node0 :~ node1 :~ node2 :~ node3 :~ _ = Stream.enumFrom minBound
+node0 = Node.intNoRestriction 0
+node1 = Node.intNoRestriction 1
+node2 = Node.intCrossing 0
+node3 = Node.intStorage 0
 
 
 topoDreibein :: Topo.Topology Node.Int
-topoDreibein = Gr.fromList ns (makeEdges es)
-  where ns = [ (node0, Node.NoRestriction),
-               (node1, Node.NoRestriction),
-               (node2, Node.Crossing),
-               (node3, Node.storage) ]
-        es = [ (node0, node2), (node1, node2), (node2, node3) ]
+topoDreibein =
+   topologyFromEdges
+      [ (node0, node2), (node1, node2), (node2, node3) ]
 
 
 interactIO :: String -> (String -> IO a) -> IO a

@@ -3,7 +3,6 @@
 module Main where
 
 import qualified EFA.Flow.Sequence.Index as XIdx
-import qualified EFA.Graph.Topology.Node as Node
 
 import qualified EFA.Signal.Signal as S
 import EFA.Signal.Record
@@ -16,11 +15,6 @@ import qualified Data.Map as Map
 
 
 data Node = Node0 | Node1 deriving (Eq, Ord, Enum, Show)
-
-instance Node.C Node where
-   display = Node.displayDefault
-   subscript = Node.subscriptDefault
-   dotId = Node.dotIdDefault
 
 
 l :: [Double]
