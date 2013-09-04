@@ -1,18 +1,16 @@
 module Main where
 
+import qualified EFA.Application.Topology.TripodA as Tripod
 import qualified EFA.Application.Absolute as EqGen
-import EFA.Application.Utility ( makeEdges, constructSeqTopo )
+import EFA.Application.Topology.TripodA (Node, node0, node1, node2, node3)
+import EFA.Application.Utility (constructSeqTopo )
 import EFA.Application.Absolute ( (.=) )
 
 import qualified EFA.Flow.Sequence.Index as XIdx
 
-import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Draw as Draw
-import qualified EFA.Graph as Gr
 
-import qualified EFA.Report.Format as Format
 import qualified Data.GraphViz.Attributes.Colors.X11 as Colors
 
 import qualified EFA.Utility.Stream as Stream
@@ -24,33 +22,6 @@ import Data.Monoid (mconcat)
 sec0, sec1, sec2, sec3, sec4 :: Idx.Section
 sec0 :~ sec1 :~ sec2 :~ sec3 :~ sec4 :~ _ = Stream.enumFrom $ Idx.Section 0
 
-node0, node1, node2, node3 :: Node
-node0 :~ node1 :~ node2 :~ node3 :~ _ = Stream.enumFrom $ Node 0
-
-newtype Node = Node Int deriving (Show, Eq, Ord)
-
-instance Enum Node where
-         toEnum = Node
-         fromEnum (Node n) = n
-
-instance Node.C Node where
-   display (Node 0) = Format.literal "null"
-   display (Node 1) = Format.literal "eins"
-   display (Node 2) = Format.literal "zwei"
-   display (Node 3) = Format.literal "drei"
-   display n = Format.literal $ show n
-
-   subscript (Node n) = Format.literal $ show n
-   dotId = Node.dotIdDefault
-
-
-topoDreibein :: Topo.Topology Node
-topoDreibein = Gr.fromList ns (makeEdges es)
-  where ns = [(node0, Node.Source),
-              (node1, Node.Sink),
-              (node2, Node.Crossing),
-              (node3, Node.storage)]
-        es = [(node0, node2), (node1, node2), (node2, node3)]
 
 given :: EqGen.EquationSystem Node s Double Double
 given =
@@ -82,11 +53,14 @@ given =
 main :: IO ()
 main = do
 
-  let seqTopo = constructSeqTopo topoDreibein [1, 0, 1]
+  let seqTopo = constructSeqTopo Tripod.topology [1, 0, 1]
       env = EqGen.solve seqTopo given
 
   Draw.xterm $
     Draw.bgcolour Colors.Burlywood1 $
     Draw.title "Dies ist der Titel!" $
-    Draw.sequFlowGraphAbsWithEnv seqTopo env
+    Draw.sequFlowGraphWithEnv
+       (Draw.hideEtaNode $ Draw.showStorage $ Draw.showStorageEdge $
+        Draw.hideVariableIndex $ Draw.optionsDefault)
+       seqTopo env
 

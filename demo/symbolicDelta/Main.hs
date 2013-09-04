@@ -1,8 +1,10 @@
 module Main where
 
+import qualified EFA.Application.Topology.TripodA as Tripod
 import qualified EFA.Application.Symbolic as Symbolic
+import EFA.Application.Topology.TripodA (Node, node0, node1, node2, node3)
 import EFA.Application.Symbolic ((=<>), (.=))
-import EFA.Application.Utility (makeEdges, constructSeqTopo)
+import EFA.Application.Utility (constructSeqTopo)
 
 import qualified EFA.Flow.Sequence.Index as XIdx
 
@@ -14,13 +16,7 @@ import qualified EFA.Equation.Record as Record
 import EFA.Equation.Arithmetic (zero)
 
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Draw as Draw
-import qualified EFA.Graph as Gr
-
-import qualified EFA.Utility.Stream as Stream
-import EFA.Utility.Stream (Stream((:~)))
 
 import Data.Monoid (mempty, (<>))
 
@@ -28,25 +24,13 @@ import Data.Monoid (mempty, (<>))
 sec0 :: Idx.Section
 sec0 = Idx.Section 0
 
-node0, node1, node2, node3 :: Node.Int
-node0 :~ node1 :~ node2 :~ node3 :~ _ = Stream.enumFrom minBound
-
-
-topoDreibein :: Topo.Topology Node.Int
-topoDreibein = Gr.fromList ns (makeEdges es)
-  where ns = [(node0, Node.Source),
-              (node1, Node.Sink),
-              (node2, Node.Crossing),
-              (node3, Node.storage)]
-        es = [(node0, node2), (node1, node2), (node2, node3)]
-
 
 {-
 Use SumProduct.Term here since it simplifies automatically.
 -}
 given ::
    Symbolic.EquationSystem Symbolic.Ignore
-      Record.Delta Node.Int s SumProduct.Term
+      Record.Delta Node s SumProduct.Term
 given =
    (Idx.delta (XIdx.dTime sec0) .= zero) <>
 
@@ -75,7 +59,7 @@ given =
 main :: IO ()
 main = do
 
-  let seqTopo = constructSeqTopo topoDreibein [1]
+  let seqTopo = constructSeqTopo Tripod.topology [1]
       env = EqGen.solve seqTopo given
 
   -- Draw.xterm $ Draw.sequFlowGraphAbsWithEnv seqTopo env

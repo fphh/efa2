@@ -1,7 +1,9 @@
 module Main where
 
+import qualified EFA.Application.Topology.TripodA as Tripod
 import qualified EFA.Application.Absolute as EqGen
-import EFA.Application.Utility ( makeEdges, constructSeqTopo )
+import EFA.Application.Topology.TripodA (Node, node0, node1, node2, node3)
+import EFA.Application.Utility ( constructSeqTopo )
 import EFA.Application.Absolute ( (.=) )
 
 import qualified EFA.Flow.Sequence.Index as XIdx
@@ -9,11 +11,8 @@ import qualified EFA.Flow.Sequence.Index as XIdx
 import qualified EFA.Signal.Data as Data
 import EFA.Signal.Data (Data(Data))
 
-import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Draw as Draw
-import qualified EFA.Graph as Gr
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
@@ -24,17 +23,6 @@ import Data.Monoid (mconcat)
 sec0, sec1, sec2, sec3, sec4 :: Idx.Section
 sec0 :~ sec1 :~ sec2 :~ sec3 :~ sec4 :~ _ = Stream.enumFrom $ Idx.Section 0
 
-node0, node1, node2, node3 :: Node.Int
-node0 :~ node1 :~ node2 :~ node3 :~ _ = Stream.enumFrom $ minBound
-
-
-topoDreibein :: Topo.Topology Node.Int
-topoDreibein = Gr.fromList ns (makeEdges es)
-  where ns = [(node0, Node.Source),
-              (node1, Node.Sink),
-              (node2, Node.Crossing),
-              (node3, Node.storage)]
-        es = [(node0, node2), (node1, node2), (node2, node3)]
 
 signal :: [a] -> Data.List a
 signal = Data
@@ -43,7 +31,7 @@ scalar :: a -> Data.Scalar a
 scalar = Data
 
 
-given :: EqGen.EquationSystem Node.Int s (Data.Scalar Double) (Data.List Double)
+given :: EqGen.EquationSystem Node s (Data.Scalar Double) (Data.List Double)
 given =
    mconcat $
 
@@ -71,7 +59,7 @@ given =
 main :: IO ()
 main = do
 
-  let seqTopo = constructSeqTopo topoDreibein [1, 0, 1]
+  let seqTopo = constructSeqTopo Tripod.topology [1, 0, 1]
       env = EqGen.solve seqTopo given
 
   Draw.xterm $ Draw.sequFlowGraphAbsWithEnv seqTopo env

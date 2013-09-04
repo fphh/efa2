@@ -141,6 +141,7 @@ Library
     EFA.Application.Sweep
     EFA.Application.Simulation
     EFA.Application.OneStorage
+    EFA.Application.Topology.TripodA
   Other-Modules:
     EFA.Equation.SystemRecord
     EFA.Flow.Quantity
