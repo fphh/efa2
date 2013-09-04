@@ -37,7 +37,7 @@ instance Node.C Node where
 
 linearOne :: TD.Topology Node
 linearOne = Gr.fromList nodes (makeEdges edges)
-  where nodes = [(Sink, TD.AlwaysSink), (Source, TD.AlwaysSource)]
+  where nodes = [(Sink, Node.AlwaysSink), (Source, Node.AlwaysSource)]
         edges = [(Source, Sink)]
 
 seqTopo :: Flow.RangeGraph Node

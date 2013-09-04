@@ -659,10 +659,10 @@ fromNodes equalInOutSums =
                       (NonEmpty.fetch edges)
 
             in  case nodeType of
-                   TD.Crossing ->
+                   Node.Crossing ->
                       mwhen equalInOutSums $
                       withSecNode $ \sn -> insum sn =%= outsum sn
-                   TD.Storage dir ->
+                   Node.Storage dir ->
                       flip foldMap (TD.viewNodeDir (an,dir)) $ \view ->
                          case view of
                             TD.ViewNodeIn rn ->

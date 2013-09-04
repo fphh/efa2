@@ -4,7 +4,6 @@
 module EFA.Graph.Topology (
        NLabel (..), LNode, LDirNode, StNode,
        LEdge, LDirEdge,
-       NodeType (..), storage,
        EdgeType (..),
        FlowEdge (FlowEdge),
        Topology,
@@ -35,6 +34,7 @@ module EFA.Graph.Topology (
        ) where
 
 import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph as Gr
 import EFA.Graph (Graph)
 
@@ -46,60 +46,31 @@ import Data.Ord.HT (comparing)
 import Data.Eq.HT (equating)
 import Data.Monoid ((<>))
 
-import qualified Test.QuickCheck as QC
 
-
-type LNode a = Gr.LNode (Idx.AugSecNode a) (NodeType ())
+type LNode a = Gr.LNode (Idx.AugSecNode a) (Node.Type ())
 type LEdge a = Gr.LEdge (FlowEdge Gr.EitherEdge) (Idx.AugSecNode a) ()
 type LDirNode part a = StNode part (Maybe StoreDir) a
 type LDirEdge a = Gr.LEdge Gr.DirEdge (Idx.AugSecNode a) ()
-type StNode part store a = Gr.LNode (Idx.AugNode part a) (NodeType store)
-
-data
-   NodeType a =
-        Storage a
-      | Sink
-      | AlwaysSink
-      | Source
-      | AlwaysSource
-      | Crossing
-      | DeadNode
-      | NoRestriction
-      deriving (Show, Eq, Ord)
-
-instance Functor NodeType where
-   fmap f typ =
-      case typ of
-         Storage a     -> Storage $ f a
-         Sink          -> Sink
-         AlwaysSink    -> AlwaysSink
-         Source        -> Source
-         AlwaysSource  -> AlwaysSource
-         Crossing      -> Crossing
-         DeadNode      -> DeadNode
-         NoRestriction -> NoRestriction
-
-storage :: NodeType ()
-storage = Storage ()
+type StNode part store a = Gr.LNode (Idx.AugNode part a) (Node.Type store)
 
 
-isStorage :: NodeType sl -> Bool
+isStorage :: Node.Type sl -> Bool
 isStorage nt =
    case nt of
-      Storage _ -> True
+      Node.Storage _ -> True
       _ -> False
 
-maybeStorage :: NodeType sl -> Maybe sl
+maybeStorage :: Node.Type sl -> Maybe sl
 maybeStorage nt =
    case nt of
-      Storage x -> Just x
+      Node.Storage x -> Just x
       _ -> Nothing
 
 
-newtype NLabel = NLabel { nodeType :: NodeType () } deriving (Show, Eq, Ord)
+newtype NLabel = NLabel { nodeType :: Node.Type () } deriving (Show, Eq, Ord)
 
 defaultNLabel :: NLabel
-defaultNLabel = NLabel NoRestriction
+defaultNLabel = NLabel Node.NoRestriction
 
 
 isActive :: Gr.EitherEdge node -> Bool
@@ -201,26 +172,26 @@ instance Init (Idx.Init part) where
 Should Topology have an UnDirEdge?
 UnDirEdge could be read as "canonically oriented" edge.
 -}
-type Topology a = Graph a Gr.DirEdge (NodeType ()) ()
+type Topology a = Graph a Gr.DirEdge (Node.Type ()) ()
 
-type FlowTopology a = Graph a Gr.EitherEdge (NodeType ()) ()
+type FlowTopology a = Graph a Gr.EitherEdge (Node.Type ()) ()
 
 type
    ClassifiedTopology a =
-      Graph a Gr.EitherEdge (NodeType (Maybe StoreDir)) ()
+      Graph a Gr.EitherEdge (Node.Type (Maybe StoreDir)) ()
 
 
 type
    FlowGraph sec node =
       Graph
          (Idx.AugNode sec node) (FlowEdge Gr.EitherEdge)
-         (NodeType (Maybe StoreDir)) ()
+         (Node.Type (Maybe StoreDir)) ()
 
 type
    DirFlowGraph sec node =
       Graph
          (Idx.AugNode sec node) (FlowEdge Gr.DirEdge)
-         (NodeType (Maybe StoreDir)) ()
+         (Node.Type (Maybe StoreDir)) ()
 
 
 type SequFlowGraph node = FlowGraph Idx.Section node
@@ -300,31 +271,3 @@ viewNodeDir (node, mdir) =
          Out ->
             maybe (error "Init node must be In storage") ViewNodeOut $
             Idx.maybeInitNode node
-
-
-
-class StorageLabel a where
-   arbitraryStorageLabel :: QC.Gen a
-
-instance StorageLabel () where
-   arbitraryStorageLabel = return ()
-
-
-instance StorageLabel a => QC.Arbitrary (NodeType a) where
-   arbitrary =
-      QC.oneof $
-      (fmap Storage arbitraryStorageLabel :) $
-      map return $
-         Sink :
-         AlwaysSink :
-         Source :
-         AlwaysSource :
-         Crossing :
-         DeadNode :
-         NoRestriction :
-         []
-
-   shrink NoRestriction = []
-   shrink AlwaysSink = [Sink]
-   shrink AlwaysSource = [Source]
-   shrink _ = [NoRestriction]

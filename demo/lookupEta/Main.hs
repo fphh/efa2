@@ -33,7 +33,7 @@ sink :~ (source :~ _) = Stream.enumFrom $ Node.Int 0
 
 linearOne :: TD.Topology Node.Int
 linearOne = Gr.fromList nodes (makeEdges edges)
-  where nodes = [(sink, TD.AlwaysSink), (source, TD.AlwaysSource)]
+  where nodes = [(sink, Node.AlwaysSink), (source, Node.AlwaysSource)]
         edges = [(source, sink)]
 
 seqTopo :: Flow.RangeGraph Node.Int

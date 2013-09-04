@@ -59,9 +59,9 @@ c0 :~ c1 :~ c2 :~ c3 :~ _ = Stream.enumFrom $ C 0
 topo :: TD.Topology Node
 topo = Gr.fromList nodes (makeEdges edges)
   where nodes
-          = [(c0, TD.Crossing), (c1, TD.Crossing), (c2, TD.Crossing),
-             (c3, TD.Crossing), (Sink, TD.AlwaysSink),
-             (Source, TD.AlwaysSource)]
+          = [(c0, Node.Crossing), (c1, Node.Crossing), (c2, Node.Crossing),
+             (c3, Node.Crossing), (Sink, Node.AlwaysSink),
+             (Source, Node.AlwaysSource)]
         edges
           = [(Source, c0), (c0, c1), (c1, c2), (c2, Sink), (c0, c3),
              (c3, c2)]

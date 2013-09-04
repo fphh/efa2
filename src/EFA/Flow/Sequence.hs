@@ -5,6 +5,7 @@ import qualified EFA.Flow.Sequence.Index as XIdx
 import qualified EFA.Graph.Flow as Flow
 
 import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Gr
 import EFA.Graph.Topology (FlowTopology)
@@ -47,7 +48,7 @@ type
    RangeGraph node =
       Graph
          node Gr.EitherEdge ()
-         (Topo.NodeType (Maybe Topo.StoreDir))
+         (Node.Type (Maybe Topo.StoreDir))
          InitIn ExitOut () () ()
 
 data InitIn  = InitIn

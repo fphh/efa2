@@ -1,5 +1,6 @@
 module EFA.Application.Tree where
 
+import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph as Gr
 import EFA.Graph (Graph)
@@ -11,7 +12,7 @@ data Tree node nodeLabel =
    Tree node (Graph node Gr.DirEdge nodeLabel ())
 
 
-toGraph :: Tree node (TD.NodeType ()) -> TD.Topology node
+toGraph :: Tree node (Node.Type ()) -> TD.Topology node
 toGraph (Tree _ graph) = graph
 
 cons :: Ord node => node -> nodeLabel -> Tree node nodeLabel
@@ -20,15 +21,15 @@ cons node label = Tree node $ Gr.insNode (node, label) Gr.empty
 
 storage, sink, alwaysSink, source, alwaysSource,
    crossing, deadNode, noRestriction ::
-      Ord node => node -> Tree node (TD.NodeType ())
-storage       = flip cons TD.storage
-sink          = flip cons TD.Sink
-alwaysSink    = flip cons TD.AlwaysSink
-source        = flip cons TD.Source
-alwaysSource  = flip cons TD.AlwaysSource
-crossing      = flip cons TD.Crossing
-deadNode      = flip cons TD.DeadNode
-noRestriction = flip cons TD.NoRestriction
+      Ord node => node -> Tree node (Node.Type ())
+storage       = flip cons Node.storage
+sink          = flip cons Node.Sink
+alwaysSink    = flip cons Node.AlwaysSink
+source        = flip cons Node.Source
+alwaysSource  = flip cons Node.AlwaysSource
+crossing      = flip cons Node.Crossing
+deadNode      = flip cons Node.DeadNode
+noRestriction = flip cons Node.NoRestriction
 
 
 

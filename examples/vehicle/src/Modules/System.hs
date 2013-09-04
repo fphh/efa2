@@ -28,17 +28,17 @@ instance Node.C Node where
 -- * Define System Topology
 topology :: TD.Topology Node
 topology = Gr.fromList ns (makeEdges es)
-  where ns = [(Tank, TD.Source),
-              (ConBattery, TD.Crossing),
-              (Battery, TD.storage),
-              (ConES, TD.Crossing),
-              (ConFrontBrakes, TD.Crossing),
-              (Chassis, TD.Crossing),
-              (Resistance, TD.Sink),
-              (ElectricSystem, TD.Sink),      -- vehicle electric system
-              (FrontBrakes, TD.Sink),
-              (RearBrakes, TD.Sink),
-              (VehicleInertia, TD.storage)]
+  where ns = [(Tank, Node.Source),
+              (ConBattery, Node.Crossing),
+              (Battery, Node.storage),
+              (ConES, Node.Crossing),
+              (ConFrontBrakes, Node.Crossing),
+              (Chassis, Node.Crossing),
+              (Resistance, Node.Sink),
+              (ElectricSystem, Node.Sink),      -- vehicle electric system
+              (FrontBrakes, Node.Sink),
+              (RearBrakes, Node.Sink),
+              (VehicleInertia, Node.storage)]
 
         --extract edge Info
         es = map f edgeList

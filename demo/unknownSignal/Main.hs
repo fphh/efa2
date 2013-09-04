@@ -45,10 +45,10 @@ node0 :~ node1 :~ node2 :~ node3 :~ _ = Stream.enumFrom $ Node.Int 0
 
 topoDreibein :: TD.Topology Node.Int
 topoDreibein = Gr.fromList ns (makeEdges es)
-  where ns = [ (node0, TD.NoRestriction),
-               (node1, TD.Crossing),
-               (node2, TD.NoRestriction),
-               (node3, TD.NoRestriction) ]
+  where ns = [ (node0, Node.NoRestriction),
+               (node1, Node.Crossing),
+               (node2, Node.NoRestriction),
+               (node3, Node.NoRestriction) ]
         es = [(node0, node1), (node1, node2), (node1, node3)]
 
 

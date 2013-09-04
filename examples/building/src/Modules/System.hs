@@ -44,14 +44,14 @@ instance Node.C Node where
 topology :: TD.Topology Node
 topology = AppUt.makeTopology nodeList edgeList
 
-nodeList :: [(Node,TD.NodeType ())]
-nodeList = [(Coal, TD.AlwaysSource),
-            (Gas, TD.Source),
-            (Water, TD.storage),
-            (Network,TD.Crossing),
-            (Rest, TD.AlwaysSink),
-            (LocalNetwork,TD.Crossing),
-            (LocalRest, TD.AlwaysSink)]
+nodeList :: [(Node,Node.Type ())]
+nodeList = [(Coal, Node.AlwaysSource),
+            (Gas, Node.Source),
+            (Water, Node.storage),
+            (Network,Node.Crossing),
+            (Rest, Node.AlwaysSink),
+            (LocalNetwork,Node.Crossing),
+            (LocalRest, Node.AlwaysSink)]
 
 
 edgeList :: AppUt.LabeledEdgeList Node

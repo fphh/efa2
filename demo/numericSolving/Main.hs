@@ -46,10 +46,10 @@ instance Node.C Node where
 
 topoDreibein :: TD.Topology Node
 topoDreibein = Gr.fromList ns (makeEdges es)
-  where ns = [(node0, TD.Source),
-              (node1, TD.Sink),
-              (node2, TD.Crossing),
-              (node3, TD.storage)]
+  where ns = [(node0, Node.Source),
+              (node1, Node.Sink),
+              (node2, Node.Crossing),
+              (node3, Node.storage)]
         es = [(node0, node2), (node1, node2), (node2, node3)]
 
 given :: EqGen.EquationSystem Node s Double Double

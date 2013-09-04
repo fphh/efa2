@@ -61,10 +61,10 @@ source :~ crossing :~ sink :~ storage :~ _ = Stream.enumFrom minBound
 
 topoDreibein :: TD.Topology Node.Int
 topoDreibein = Gr.fromList ns (makeEdges es)
-  where ns = [ (source, TD.Source),
-               (crossing, TD.Crossing),
-               (sink, TD.Sink),
-               (storage, TD.Storage ()) ]
+  where ns = [ (source, Node.Source),
+               (crossing, Node.Crossing),
+               (sink, Node.Sink),
+               (storage, Node.Storage ()) ]
         es = [ (source, crossing),
                (crossing, sink),
                (crossing, storage) ]
@@ -172,13 +172,13 @@ givenSec1Mean psink _ =
 
 etaSys2 ::
   (Ord (edge k), Ord k, Show k, Show (edge k), Show t2, Gr.Edge edge) =>
-  (t1, Gr.Graph k edge (TD.NodeType t2) edgeLabel) -> t -> a
+  (t1, Gr.Graph k edge (Node.Type t2) edgeLabel) -> t -> a
 etaSys2 (_, topo) _ = trace (show sinks) undefined
   where sinks = Map.filter isSink $ Gr.nodeEdges topo
         isSink (_, el, x) =
           case el of
-               TD.AlwaysSource -> Set.size x > 0
-               TD.Source -> Set.size x > 0
+               Node.AlwaysSource -> Set.size x > 0
+               Node.Source -> Set.size x > 0
                _ -> False
 
 sinkRange :: [Double]
@@ -295,12 +295,12 @@ etaSys (_, topo) env = sum sinks / sum sources
         sinks = map (Set.foldl sinkEnergies 0 . fst3) $ filter isActiveSink m
         sources = map (Set.foldl sourceEnergies 0 . thd3) $ filter isActiveSource m
 
-        isActiveSink (ns, TD.AlwaysSink, _) = p ns
-        isActiveSink (ns, TD.Sink, _) = p ns
+        isActiveSink (ns, Node.AlwaysSink, _) = p ns
+        isActiveSink (ns, Node.Sink, _) = p ns
         isActiveSink _ = False
 
-        isActiveSource (_, TD.AlwaysSource, ns) = p ns
-        isActiveSource (_, TD.Source, ns) = p ns
+        isActiveSource (_, Node.AlwaysSource, ns) = p ns
+        isActiveSource (_, Node.Source, ns) = p ns
         isActiveSource _ = False
 
         p = (> 0) .

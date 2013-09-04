@@ -6,6 +6,7 @@ module EFA.Graph.Flow where
 import qualified EFA.Flow.Sequence.Index as XIdx
 
 import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Gr
 import EFA.Graph.Topology
@@ -258,8 +259,8 @@ insNodes storages =
    Gr.insNodes $
       concatMap
          (\n ->
-            [(Idx.initAugNode n, Topo.Storage $ Just Topo.In),
-             (Idx.exitAugNode n, Topo.Storage $ Just Topo.Out)])
+            [(Idx.initAugNode n, Node.Storage $ Just Topo.In),
+             (Idx.exitAugNode n, Node.Storage $ Just Topo.Out)])
          storages
 
 {-

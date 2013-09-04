@@ -29,7 +29,7 @@ node00 :~ node01 :~ _ = Stream.enumFrom minBound
 
 topo0 :: TD.Topology Node.Int
 topo0 = Gr.fromList nodes (makeEdges edges)
-  where nodes = [(node00, TD.AlwaysSink), (node01, TD.AlwaysSource)]
+  where nodes = [(node00, Node.AlwaysSink), (node01, Node.AlwaysSource)]
         edges = [(node00, node01)]
 
 
@@ -42,7 +42,7 @@ node11 = Node.String "node11"
 
 topo1 :: TD.Topology Node.String
 topo1 = Gr.fromList nodes (makeEdges edges)
-  where nodes = [(node10, TD.AlwaysSink), (node11, TD.AlwaysSource)]
+  where nodes = [(node10, Node.AlwaysSink), (node11, Node.AlwaysSource)]
         edges = [(node10, node11)]
 
 
@@ -58,7 +58,7 @@ instance Node.C NodeAB where
 
 topo2 :: TD.Topology NodeAB
 topo2 = Gr.fromList nodes (makeEdges edges)
-  where nodes = [(A, TD.AlwaysSink), (B, TD.AlwaysSource)]
+  where nodes = [(A, Node.AlwaysSink), (B, Node.AlwaysSource)]
         edges = [(A, B)]
 
 -------------------------------------------------
@@ -76,7 +76,7 @@ instance Node.C Node where
 
 topo3 :: TD.Topology Node
 topo3 = Gr.fromList nodes (makeEdges edges)
-  where nodes = [(Sink, TD.AlwaysSink), (Source, TD.AlwaysSource)]
+  where nodes = [(Sink, Node.AlwaysSink), (Source, Node.AlwaysSource)]
         edges = [(Source, Sink)]
 
 -------------------------------------------------

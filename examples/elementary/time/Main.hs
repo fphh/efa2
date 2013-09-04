@@ -44,10 +44,10 @@ instance Node.C Node where
 
 topoDreibein :: TD.Topology Node
 topoDreibein = Gr.fromList ns (makeEdges es)
-  where ns = [ (N0, TD.Source),
-               (N1, TD.Crossing),
-               (N2, TD.Sink),
-               (N3, TD.storage) ]
+  where ns = [ (N0, Node.Source),
+               (N1, Node.Crossing),
+               (N2, Node.Sink),
+               (N3, Node.storage) ]
         es = [(N0, N1), (N1, N3), (N1, N2)]
 
 seqTopo :: Flow.RangeGraph Node

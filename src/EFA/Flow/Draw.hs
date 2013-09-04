@@ -95,20 +95,20 @@ storageEdgeColour = Color [RGB 200 0 0]
 contentEdgeColour :: Attribute
 contentEdgeColour = Color [RGB 0 200 0]
 
-shape :: Topo.NodeType a -> Viz.Shape
-shape Topo.Crossing = Viz.PlainText
-shape Topo.Source = Viz.DiamondShape
-shape Topo.AlwaysSource = Viz.MDiamond
-shape Topo.Sink = Viz.BoxShape
-shape Topo.AlwaysSink = Viz.MSquare
-shape (Topo.Storage _) = Viz.Ellipse
+shape :: Node.Type a -> Viz.Shape
+shape Node.Crossing = Viz.PlainText
+shape Node.Source = Viz.DiamondShape
+shape Node.AlwaysSource = Viz.MDiamond
+shape Node.Sink = Viz.BoxShape
+shape Node.AlwaysSink = Viz.MSquare
+shape (Node.Storage _) = Viz.Ellipse
 shape _ = Viz.BoxShape
 
-color :: Topo.NodeType a -> Attribute
-color (Topo.Storage _) = FillColor [RGB 251 177 97] -- ghlightorange
+color :: Node.Type a -> Attribute
+color (Node.Storage _) = FillColor [RGB 251 177 97] -- ghlightorange
 color _ = FillColor [RGB 136 215 251]  -- ghverylightblue
 
-nodeAttrs :: Topo.NodeType a -> Attribute -> [Attribute]
+nodeAttrs :: Node.Type a -> Attribute -> [Attribute]
 nodeAttrs nt label =
   [ label, Viz.Style [Viz.SItem Viz.Filled []],
     Viz.Shape (shape nt), color nt ]
@@ -297,7 +297,7 @@ dotFromBndNode ::
 dotFromBndNode n label =
    DotNode
       (dotIdentFromBndNode n)
-      (nodeAttrs (Topo.Storage ()) $
+      (nodeAttrs (Node.Storage ()) $
        labelFromUnicode label)
 
 dotFromStructureEdge ::
@@ -472,7 +472,7 @@ dotFromTopology edgeLabels g =
 
 dotFromTopoNode ::
    (Node.C node, StorageLabel store) =>
-   Gr.LNode node (Topo.NodeType store) -> DotNode T.Text
+   Gr.LNode node (Node.Type store) -> DotNode T.Text
 dotFromTopoNode (x, typ) =
    DotNode
       (dotIdentFromNode x)
@@ -579,27 +579,27 @@ instance Show a => StorageLabel (Maybe a) where
    formatStorageLabel (Just dir) = " " ++ show dir
 
 
-showType :: StorageLabel store => Topo.NodeType store -> String
+showType :: StorageLabel store => Node.Type store -> String
 showType typ =
    case typ of
-      Topo.Storage store -> "Storage" ++ formatStorageLabel store
-      Topo.Sink          -> "Sink"
-      Topo.AlwaysSink    -> "AlwaysSink"
-      Topo.Source        -> "Source"
-      Topo.AlwaysSource  -> "AlwaysSource"
-      Topo.Crossing      -> "Crossing"
-      Topo.DeadNode      -> "DeadNode"
-      Topo.NoRestriction -> "NoRestriction"
+      Node.Storage store -> "Storage" ++ formatStorageLabel store
+      Node.Sink          -> "Sink"
+      Node.AlwaysSink    -> "AlwaysSink"
+      Node.Source        -> "Source"
+      Node.AlwaysSource  -> "AlwaysSource"
+      Node.Crossing      -> "Crossing"
+      Node.DeadNode      -> "DeadNode"
+      Node.NoRestriction -> "NoRestriction"
 
 
 formatNodeType ::
    (Format output, StorageLabel store) =>
-   Topo.NodeType store -> output
+   Node.Type store -> output
 formatNodeType = Format.literal . showType
 
 formatTypedNode ::
    (Node.C node, StorageLabel store) =>
-   (node, Topo.NodeType store) -> Unicode
+   (node, Node.Type store) -> Unicode
 formatTypedNode (n, l) =
    Unicode $ unUnicode (Node.display n) ++ " - " ++ showType l
 
@@ -719,7 +719,7 @@ formatNodeStorage opts node beforeAfter sin sout =
          Node.display node :
          formatNodeType ty :
             case ty of
-               Topo.Storage _ ->
+               Node.Storage _ ->
                   if optStorage opts
                     then formatStorageUpdate sin sout
                     else formatStorageEquation beforeAfter sin sout
@@ -795,7 +795,7 @@ stateNodeShow node msum =
          Node.display node :
          formatNodeType ty :
             case ty of
-               Topo.Storage _ -> maybeToList $ fmap formatValue msum
+               Node.Storage _ -> maybeToList $ fmap formatValue msum
                _ -> []
 
 storageEdgeSeqShow ::
@@ -886,7 +886,7 @@ dotFromCumNode x =
 
 
 class Node.C node => NodeType node where
-   nodeType :: node -> Topo.NodeType ()
+   nodeType :: node -> Node.Type ()
 
 
 graph ::

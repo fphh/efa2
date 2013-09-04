@@ -5,8 +5,10 @@ import qualified EFA.Flow.Sequence.Index as SeqIdx
 import qualified EFA.Flow.State.Index as StateIdx
 import qualified EFA.Graph.StateFlow.Environment as StateEnv
 import qualified EFA.Graph.Flow as Flow
+
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph as Gr
 
@@ -35,7 +37,7 @@ import Data.Map (Map)
 makeNode :: Int -> Idx.Node
 makeNode = Idx.Node
 
-makeNodes :: [(Int, TD.NodeType)] -> [Gr.LNode Idx.Node TD.NodeType]
+makeNodes :: [(Int, Node.Type)] -> [Gr.LNode Idx.Node Node.Type]
 makeNodes ns = map f ns
   where f (n, ty) = (makeNode n, ty)
 -}
@@ -57,11 +59,15 @@ type LabeledEdgeList node = [(node, node, EdgeLabel, PPosLabel, PPosLabel)]
 type PPosLableMap node = Map (SeqIdx.PPos node) String
 
 -- | Generate Topology with simple edge List
-makeTopologySimple ::  (Ord node) => [(node,TD.NodeType ())] ->  [(node,node)] -> TD.Topology node
+makeTopologySimple ::
+   (Ord node) =>
+   [(node, Node.Type ())] ->  [(node,node)] -> TD.Topology node
 makeTopologySimple ns es = Gr.fromList ns (makeEdges es)
 
 -- | Generate Topology from labeled edge List
-makeTopology ::  (Ord node) => [(node,TD.NodeType ())] ->  LabeledEdgeList node -> TD.Topology node
+makeTopology ::
+   (Ord node) =>
+   [(node, Node.Type ())] ->  LabeledEdgeList node -> TD.Topology node
 makeTopology ns es = Gr.fromList ns (makeEdges $ map f es)
   where  f (n1,n2,_,_,_) = (n1,n2)
 

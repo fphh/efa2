@@ -59,6 +59,7 @@ import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Variable as Var
 
 import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Gr
 
@@ -505,7 +506,7 @@ storagesFromPlain =
 sequenceFromPlain ::
    (Ord node) =>
    SeqFlow.Sequence node Gr.EitherEdge ()
-      (Topo.NodeType (Maybe Topo.StoreDir)) () ->
+      (Node.Type (Maybe Topo.StoreDir)) () ->
    Sequence node () ()
 sequenceFromPlain =
    let sum = Sum () ()
@@ -519,16 +520,16 @@ sequenceFromPlain =
            Gr.mapNode
               (\nt ->
                  case nt of
-                    Topo.Storage Nothing -> noSum
-                    Topo.Storage (Just Topo.In) -> inSum
-                    Topo.Storage (Just Topo.Out) -> outSum
-                    Topo.Sink -> inSum
-                    Topo.AlwaysSink -> inSum
-                    Topo.Source -> outSum
-                    Topo.AlwaysSource -> outSum
-                    Topo.Crossing -> bothSum
-                    Topo.DeadNode -> noSum
-                    Topo.NoRestriction -> bothSum) $
+                    Node.Storage Nothing -> noSum
+                    Node.Storage (Just Topo.In) -> inSum
+                    Node.Storage (Just Topo.Out) -> outSum
+                    Node.Sink -> inSum
+                    Node.AlwaysSink -> inSum
+                    Node.Source -> outSum
+                    Node.AlwaysSource -> outSum
+                    Node.Crossing -> bothSum
+                    Node.DeadNode -> noSum
+                    Node.NoRestriction -> bothSum) $
            Gr.mapEdgeWithKey
               (\ee _ ->
                  case ee of

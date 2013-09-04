@@ -11,8 +11,9 @@ import qualified EFA.Graph.StateFlow.Environment as EqEnvState
 
 import EFA.Equation.Result (Result(..))
 
-import qualified EFA.Graph.Topology as TD
 import qualified EFA.Graph.Topology.Index as Idx
+import qualified EFA.Graph.Topology.Node as Node
+import qualified EFA.Graph.Topology as TD
 
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph as Gr
@@ -48,12 +49,12 @@ etaSys (_, topo) env = liftA2 (/) (sumRes sinks) (sumRes sources)
 
         sumRes = fmap sum . sequenceA
 
-        isActiveSink (ns, TD.AlwaysSink, _) = hasStructureEdge ns
-        isActiveSink (ns, TD.Sink, _) = hasStructureEdge ns
+        isActiveSink (ns, Node.AlwaysSink, _) = hasStructureEdge ns
+        isActiveSink (ns, Node.Sink, _) = hasStructureEdge ns
         isActiveSink _ = False
 
-        isActiveSource (_, TD.AlwaysSource, ns) = hasStructureEdge ns
-        isActiveSource (_, TD.Source, ns) = hasStructureEdge ns
+        isActiveSource (_, Node.AlwaysSource, ns) = hasStructureEdge ns
+        isActiveSource (_, Node.Source, ns) = hasStructureEdge ns
         isActiveSource _ = False
 
         sinkEnergies
@@ -85,12 +86,12 @@ etaSysState topo env = liftA2 (/) (sumRes sinks) (sumRes sources)
 
         sumRes = fmap sum . sequenceA
 
-        isActiveSink (ns, TD.AlwaysSink, _) = hasStructureEdge ns
-        isActiveSink (ns, TD.Sink, _) = hasStructureEdge ns
+        isActiveSink (ns, Node.AlwaysSink, _) = hasStructureEdge ns
+        isActiveSink (ns, Node.Sink, _) = hasStructureEdge ns
         isActiveSink _ = False
 
-        isActiveSource (_, TD.AlwaysSource, ns) = hasStructureEdge ns
-        isActiveSource (_, TD.Source, ns) = hasStructureEdge ns
+        isActiveSource (_, Node.AlwaysSource, ns) = hasStructureEdge ns
+        isActiveSource (_, Node.Source, ns) = hasStructureEdge ns
         isActiveSource _ = False
 
         sinkEnergies

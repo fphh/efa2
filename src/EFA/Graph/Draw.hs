@@ -43,7 +43,7 @@ import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.CumulatedFlow as Cum
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph as Gr
-import EFA.Graph.Topology (NodeType(Storage), FlowTopology)
+import EFA.Graph.Topology (FlowTopology)
 import EFA.Graph (DirEdge(DirEdge))
 
 import qualified EFA.Utility.TotalMap as TMap
@@ -105,20 +105,20 @@ storageEdgeColour = Color [RGB 200 0 0]
 contentEdgeColour :: Attribute
 contentEdgeColour = Color [RGB 0 200 0]
 
-shape :: NodeType a -> Viz.Shape
-shape Topo.Crossing = Viz.PlainText
-shape Topo.Source = Viz.DiamondShape
-shape Topo.AlwaysSource = Viz.MDiamond
-shape Topo.Sink = Viz.BoxShape
-shape Topo.AlwaysSink = Viz.MSquare
-shape (Topo.Storage _) = Viz.Ellipse
+shape :: Node.Type a -> Viz.Shape
+shape Node.Crossing = Viz.PlainText
+shape Node.Source = Viz.DiamondShape
+shape Node.AlwaysSource = Viz.MDiamond
+shape Node.Sink = Viz.BoxShape
+shape Node.AlwaysSink = Viz.MSquare
+shape (Node.Storage _) = Viz.Ellipse
 shape _ = Viz.BoxShape
 
-color :: NodeType a -> Attribute
-color (Topo.Storage _) = FillColor [RGB 251 177 97] -- ghlightorange
+color :: Node.Type a -> Attribute
+color (Node.Storage _) = FillColor [RGB 251 177 97] -- ghlightorange
 color _ = FillColor [RGB 136 215 251]  -- ghverylightblue
 
-mkNodeAttrs :: NodeType a -> Attribute -> [Attribute]
+mkNodeAttrs :: Node.Type a -> Attribute -> [Attribute]
 mkNodeAttrs nodeType label =
   [ label, Viz.Style [Viz.SItem Viz.Filled []],
     Viz.Shape (shape nodeType), color nodeType ]
@@ -388,7 +388,7 @@ dotFromBndNode ::
 dotFromBndNode nshow n =
   DotNode
     (dotIdentFromBndNode n)
-    (mkNodeAttrs (Topo.Storage ()) $
+    (mkNodeAttrs (Node.Storage ()) $
      labelFromUnicode $ nshow n)
 
 dotFromStructureEdge ::
@@ -568,7 +568,7 @@ dotFromTopology edgeLabels g =
 
 dotFromTopoNode ::
   (Node.C node, StorageLabel store) =>
-  Gr.LNode node (Topo.NodeType store) -> DotNode T.Text
+  Gr.LNode node (Node.Type store) -> DotNode T.Text
 dotFromTopoNode (x, typ) =
   DotNode
     (dotIdentFromNode x)
@@ -686,27 +686,27 @@ instance Show a => StorageLabel (Maybe a) where
    formatStorageLabel (Just dir) = " " ++ show dir
 
 
-showType :: StorageLabel store => NodeType store -> String
+showType :: StorageLabel store => Node.Type store -> String
 showType typ =
    case typ of
-      Topo.Storage store -> "Storage" ++ formatStorageLabel store
-      Topo.Sink          -> "Sink"
-      Topo.AlwaysSink    -> "AlwaysSink"
-      Topo.Source        -> "Source"
-      Topo.AlwaysSource  -> "AlwaysSource"
-      Topo.Crossing      -> "Crossing"
-      Topo.DeadNode      -> "DeadNode"
-      Topo.NoRestriction -> "NoRestriction"
+      Node.Storage store -> "Storage" ++ formatStorageLabel store
+      Node.Sink          -> "Sink"
+      Node.AlwaysSink    -> "AlwaysSink"
+      Node.Source        -> "Source"
+      Node.AlwaysSource  -> "AlwaysSource"
+      Node.Crossing      -> "Crossing"
+      Node.DeadNode      -> "DeadNode"
+      Node.NoRestriction -> "NoRestriction"
 
 
 formatNodeType ::
    (Format output, StorageLabel store) =>
-   NodeType store -> output
+   Node.Type store -> output
 formatNodeType = Format.literal . showType
 
 formatTypedNode ::
    (Node.C node, StorageLabel store) =>
-   (node, NodeType store) -> Unicode
+   (node, Node.Type store) -> Unicode
 formatTypedNode (n, l) =
    Unicode $ unUnicode (Node.display n) ++ " - " ++ showType l
 
@@ -770,7 +770,7 @@ formatNodeStorage opts st sis sos mBeforeBnd (Idx.PartNode aug nid, ty) =
    Node.display nid :
    formatNodeType ty :
       case ty of
-         Storage dir ->
+         Node.Storage dir ->
             case (aug, mBeforeBnd) of
                (Idx.Exit, Just _) ->
                   [lookupFormat opts sis $ XIdx.stInSum XIdx.exitSection nid]
@@ -848,7 +848,7 @@ formatStateNode opts sis sos (augNode@(Idx.PartNode _aug nid), ty) =
    Node.display nid :
    formatNodeType ty :
       case ty of
-         Storage dir ->
+         Node.Storage dir ->
             case Topo.viewNodeDir (augNode, dir) of
                Nothing -> []
                Just (Topo.ViewNodeIn (Idx.PartNode part node)) ->

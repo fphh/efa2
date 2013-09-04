@@ -34,16 +34,16 @@ instance Node.C Node where
 topology :: TD.Topology Node
 topology = AppUt.makeTopology nodeList edgeList
 
-nodeList :: [(Node,TD.NodeType ())]
-nodeList = [(Coal, TD.AlwaysSource),
-            (Gas, TD.Source),
-            (Water, TD.storage),
-            (Sun, TD.Source),
-            (Wind, TD.Source),
-            (Network, TD.Crossing),
-            (LocalNetwork,TD.Crossing),
-            (HouseHold, TD.AlwaysSink),
-            (Industry, TD.AlwaysSink)]
+nodeList :: [(Node,Node.Type ())]
+nodeList = [(Coal, Node.AlwaysSource),
+            (Gas, Node.Source),
+            (Water, Node.storage),
+            (Sun, Node.Source),
+            (Wind, Node.Source),
+            (Network, Node.Crossing),
+            (LocalNetwork,Node.Crossing),
+            (HouseHold, Node.AlwaysSink),
+            (Industry, Node.AlwaysSink)]
 
 edgeList :: AppUt.LabeledEdgeList Node
 edgeList = [(Coal, Network, "CoalPlant", "Coal","ElCoal"),
@@ -93,13 +93,13 @@ flowStates = StateAnalysis.advanced topology
 -- | Topology for Optimisation
 topologyOpt :: TD.Topology Node
 topologyOpt = Gr.fromList ns (AppUt.makeEdges es)
-  where ns = [(Coal, TD.AlwaysSource),
-              (Gas, TD.Source),
-              (Water, TD.storage),
-              (Network,TD.Crossing),
-              (Rest, TD.AlwaysSink),
-              (LocalNetwork,TD.Crossing),
-              (LocalRest, TD.AlwaysSink)]
+  where ns = [(Coal, Node.AlwaysSource),
+              (Gas, Node.Source),
+              (Water, Node.storage),
+              (Network,Node.Crossing),
+              (Rest, Node.AlwaysSink),
+              (LocalNetwork,Node.Crossing),
+              (LocalRest, Node.AlwaysSink)]
 
         es = map f edgeListOpt
           where f (n1,n2,_,_,_) = (n1,n2)

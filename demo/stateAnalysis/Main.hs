@@ -20,10 +20,10 @@ instance Node.C Node where
 
 topoDreibein :: TD.Topology Node
 topoDreibein = Gr.fromList ns (makeEdges es)
-  where ns = [(N0, TD.Source),
-              (N1, TD.Sink),
-              (N2, TD.Crossing),
-              (N3, TD.storage)]
+  where ns = [(N0, Node.Source),
+              (N1, Node.Sink),
+              (N2, Node.Crossing),
+              (N3, Node.storage)]
         es = [(N0, N2), (N1, N2), (N2, N3)]
 
 
