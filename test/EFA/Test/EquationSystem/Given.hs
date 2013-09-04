@@ -3,9 +3,12 @@
 
 module EFA.Test.EquationSystem.Given where
 
+import qualified EFA.Application.Topology.TripodA as Tripod
 import qualified EFA.Application.Absolute as EqAbs
+import EFA.Application.Topology.TripodA (Node, node0, node1, node2, node3)
+import EFA.Application.Utility ( constructSeqTopo )
+
 import qualified EFA.Flow.Sequence.Index as XIdx
-import EFA.Application.Utility ( makeEdges, constructSeqTopo )
 
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Verify as Verify
@@ -23,10 +26,7 @@ import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
 
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Flow as Flow
-import qualified EFA.Graph as Gr
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue)
@@ -52,20 +52,9 @@ bndi, bnd0, bnd1, bnd2, bnd3, bnd4 :: Idx.Boundary
 bndi :~ bnd0 :~ bnd1 :~ bnd2 :~ bnd3 :~ bnd4 :~ _ =
    Stream.enumFrom $ Idx.initial
 
-node0, node1, node2, node3 :: Node.Int
-node0 :~ node1 :~ node2 :~ node3 :~ _ = Stream.enumFrom minBound
 
-topoDreibein :: Topo.Topology Node.Int
-topoDreibein = Gr.fromList ns (makeEdges es)
-  where ns = [(node0, Node.Source),
-              (node1, Node.Sink),
-              (node2, Node.Crossing),
-              (node3, Node.storage)]
-        es = [(node0, node2), (node1, node2), (node2, node3)]
-
-
-seqTopo :: Flow.RangeGraph Node.Int
-seqTopo = constructSeqTopo topoDreibein [1, 0, 1]
+seqTopo :: Flow.RangeGraph Node
+seqTopo = constructSeqTopo Tripod.topology [1, 0, 1]
 
 
 -- Hilfsfunktion, um das testGiven-Gleichungssystem zu bauen.
@@ -73,7 +62,7 @@ seqTopo = constructSeqTopo topoDreibein [1, 0, 1]
 -- Es muessen noch die richtigen Werte eingetragen werden.
 
 toTestGiven ::
-  Env.Complete Node.Int
+  Env.Complete Node
     (Record.Absolute (Result Rational))
     (Record.Absolute (Result Rational)) ->
   String
@@ -110,7 +99,7 @@ toTestGiven (Env.Complete scal sig) =
 testEnv, solvedEnv ::
   (ME.Exceptional
      (Verify.Exception Format.Unicode)
-     (Env.Complete Node.Int
+     (Env.Complete Node
         (Record.Absolute (Result Rational))
         (Record.Absolute (Result Rational))),
    Verify.Assigns Format.Unicode)
@@ -146,9 +135,9 @@ infix 0 .=
 
 (.=) ::
   (Arith.Constant x, x ~ Env.Element idx TrackedScalar TrackedSignal,
-   Verify.GlobalVar (Verify.Track Format.Unicode) x Idx.Absolute (Var.Type idx) Node.Int,
-   Env.AccessMap idx, Ord (idx Node.Int), FormatValue (idx Node.Int)) =>
-   idx Node.Int -> Rational ->
+   Verify.GlobalVar (Verify.Track Format.Unicode) x Idx.Absolute (Var.Type idx) Node,
+   Env.AccessMap idx, Ord (idx Node), FormatValue (idx Node)) =>
+   idx Node -> Rational ->
    EquationSystem s
 evar .= val  =
    EqGen.variable (Idx.absolute evar)
@@ -156,13 +145,13 @@ evar .= val  =
    EqGen.constant (Arith.fromRational val)
 
 
-type TrackedSignal = Pair.T (EqAbs.SignalTerm Term Node.Int) Rational
-type TrackedScalar = Pair.T (EqAbs.ScalarTerm Term Node.Int) Rational
+type TrackedSignal = Pair.T (EqAbs.SignalTerm Term Node) Rational
+type TrackedScalar = Pair.T (EqAbs.ScalarTerm Term Node) Rational
 
 type EquationSystem s =
         EqGen.EquationSystem
            (Verify.Track Format.Unicode)
-           Record.Absolute Node.Int s TrackedScalar TrackedSignal
+           Record.Absolute Node s TrackedScalar TrackedSignal
 
 originalGiven :: EquationSystem s
 originalGiven =

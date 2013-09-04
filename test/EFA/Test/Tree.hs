@@ -2,32 +2,16 @@ module EFA.Test.Tree where
 
 import qualified EFA.TestUtility as Test
 
+import qualified EFA.Application.Topology.TripodA as Tripod
 import qualified EFA.Application.Tree as Tree
-import EFA.Application.Utility ( makeEdges )
+import EFA.Application.Topology.TripodA (Node, node0, node1, node2, node3)
 import EFA.Application.Tree ( (<+) )
 
-import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
-import qualified EFA.Graph as Gr
-
-import qualified EFA.Utility.Stream as Stream
-import EFA.Utility.Stream (Stream((:~)))
 
 
-node0, node1, node2, node3 :: Node.Int
-node0 :~ node1 :~ node2 :~ node3 :~ _ = Stream.enumFrom minBound
-
-
-topoDreibein :: Topo.Topology Node.Int
-topoDreibein = Gr.fromList ns (makeEdges es)
-  where ns = [(node0, Node.Source),
-              (node1, Node.Sink),
-              (node2, Node.Crossing),
-              (node3, Node.storage)]
-        es = [(node0, node2), (node1, node2), (node2, node3)]
-
-treeDreibein :: Topo.Topology Node.Int
-treeDreibein =
+tree :: Topo.Topology Node
+tree =
    Tree.toGraph $
    Tree.storage node3
       <+ (Tree.crossing node2
@@ -38,4 +22,4 @@ treeDreibein =
 runTests :: IO ()
 runTests =
    Test.single "Tree syntax" $
-      topoDreibein == treeDreibein
+      Tripod.topology == tree
