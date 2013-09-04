@@ -17,7 +17,7 @@ import EFA.Equation.Result (Result)
 import qualified EFA.Graph.StateFlow.Environment as StateEnv
 
 import qualified EFA.Graph.Flow as Flow
-import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.Topology as Topo
 
 import Control.Applicative (liftA2)
 
@@ -115,7 +115,7 @@ optimalSolution2DState ::
   (Fractional v, Ord node, Show node, Show v, Ord v, Eq a) =>
   ES.ConditionState node a v ->
   ES.ForcingState node a v ->
-  TD.StateFlowGraph node ->
+  Topo.StateFlowGraph node ->
   Sig.UTSignal2 V.Vector V.Vector (StateEnv.Complete node a (Result v)) ->
   Maybe (v, StateEnv.Complete node a (Result v))
 optimalSolution2DState cond forcing topo sigEnvs = liftA2 (,) etaMax env
@@ -129,7 +129,7 @@ optimalSolutionState ::
   (Ord v, Fractional v, Ord node, Show node, Show v) =>
   ES.ConditionState node a v ->
   ES.ForcingState node a v ->
-  TD.StateFlowGraph node ->
+  Topo.StateFlowGraph node ->
   [StateEnv.Complete node a (Result v)] ->
   Maybe (v, StateEnv.Complete node a (Result v))
 optimalSolutionState cond forcing topo envs =

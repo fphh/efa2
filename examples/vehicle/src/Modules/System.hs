@@ -10,7 +10,7 @@ import EFA.Signal.Record (SigId(..))
 
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Gr
 
 import qualified Data.Map as Map
@@ -26,7 +26,7 @@ instance Node.C Node where
 
 ----------------------------------------------------------------------
 -- * Define System Topology
-topology :: TD.Topology Node
+topology :: Topo.Topology Node
 topology = Gr.fromList ns (makeEdges es)
   where ns = [(Tank, Node.Source),
               (ConBattery, Node.Crossing),
@@ -85,5 +85,5 @@ convertPowerId ppos =  f (Map.lookup  ppos powerPositonNames)
 ----------------------------------------------------------------------
 -- * Calculate Flow States
 
-flowStates :: [TD.FlowTopology Node]
+flowStates :: [Topo.FlowTopology Node]
 flowStates = StateAnalysis.advanced topology

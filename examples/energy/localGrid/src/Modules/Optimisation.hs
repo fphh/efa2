@@ -93,7 +93,7 @@ eqs ::
   (a ~ EqArith.Scalar v, Eq a,
    Eq v, EqArith.Product a, EqArith.Product v, EqArith.Integrate v) =>
   EqGen.EquationSystem Node s a v
-eqs = EqGen.fromGraph True (TD.dirFromFlowGraph (snd System.seqTopoOpt))
+eqs = EqGen.fromGraph True (Topo.dirFromFlowGraph (snd System.seqTopoOpt))
 -}
 
 solveCharge ::

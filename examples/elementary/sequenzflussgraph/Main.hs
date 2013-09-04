@@ -4,7 +4,7 @@ import EFA.Application.Utility (makeEdges)
 
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph as Gr
@@ -22,7 +22,7 @@ node0, node1, node2, node3 :: Node.Int
 node0 :~ node1 :~ node2 :~ node3 :~ _ = Stream.enumFrom minBound
 
 
-topoDreibein :: TD.Topology Node.Int
+topoDreibein :: Topo.Topology Node.Int
 topoDreibein = Gr.fromList ns (makeEdges es)
   where ns = [ (node0, Node.NoRestriction),
                (node1, Node.NoRestriction),
@@ -54,7 +54,7 @@ readNum s =
 select :: [topo] -> [Int] -> [topo]
 select ts = map (ts!!)
 
-drawSeqGraph :: [TD.FlowTopology Node.Int] ->  IO ()
+drawSeqGraph :: [Topo.FlowTopology Node.Int] ->  IO ()
 drawSeqGraph sol = do
    xs <- parse `fmap`
            prompt "Gib kommagetrennt die gewuenschten Sektionsindices ein: "

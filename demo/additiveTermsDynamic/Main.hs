@@ -24,7 +24,7 @@ import EFA.Utility.Stream (Stream((:~)))
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Graph as Gr
 
@@ -46,7 +46,7 @@ node0, node1, node2 :: Node.Int
 node0 :~ node1 :~ node2 :~ _ = Stream.enumFrom minBound
 
 
-topoLinear :: TD.Topology Node.Int
+topoLinear :: Topo.Topology Node.Int
 topoLinear = Gr.fromList ns (makeEdges es)
   where ns = [(node0, Node.Source),
               (node1, Node.Crossing),

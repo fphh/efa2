@@ -18,7 +18,7 @@ import qualified EFA.Equation.Arithmetic as EqArith
 import qualified EFA.Graph.StateFlow.Environment as EqEnvState
 import qualified EFA.Graph.Topology.Index as TIdx
 import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Graph
 
 import qualified Data.Foldable as Fold
@@ -113,7 +113,7 @@ givenAverageWithoutState _stateToRemove (EqEnvState.Complete scalar signal) =
 givenForOptimisation ::
   (EqArith.Constant a, Node.C node, Fractional a,
   Ord a, Show a, EqArith.Sum a, Ord node) =>
-  TD.StateFlowGraph node ->
+  Topo.StateFlowGraph node ->
   EqEnvState.Complete node (Data Nil a) (Data Nil a)  ->
   (TIdx.State -> EtaAssignMap node) ->
   Map String (a -> a) ->
@@ -125,7 +125,7 @@ givenForOptimisation ::
 
 givenForOptimisation stateFlowGraph env etaAssign etaFunc state commonGiven givenLoad givenDOF =
   commonGiven <>
-  EqGenState.fromGraph True (TD.dirFromFlowGraph stateFlowGraph) <>
+  EqGenState.fromGraph True (Topo.dirFromFlowGraph stateFlowGraph) <>
   makeEtaFuncGiven etaAssign state etaFunc <>
   givenAverageWithoutStateX state env <>
   givenLoad <>
@@ -135,7 +135,7 @@ givenForOptimisation stateFlowGraph env etaAssign etaFunc state commonGiven give
 initialEnv ::
   (Ord node, Fractional d, Show node) =>
   node ->
-  TD.StateFlowGraph node ->
+  Topo.StateFlowGraph node ->
   EqEnvState.Complete node (Data Nil d) (Data Nil d)
 initialEnv _xStorageEdgesNode g =
   EqEnvState.Complete
@@ -143,10 +143,10 @@ initialEnv _xStorageEdgesNode g =
     ( mempty { EqEnvState.etaMap = Map.fromList $ zip es $ repeat (Data 0.5),
                EqEnvState.xMap = Map.fromList xs,
                EqEnvState.dtimeMap = Map.fromList $ zip dts $ repeat (Data 1) } )
-  where gdir = TD.dirFromFlowGraph g
+  where gdir = Topo.dirFromFlowGraph g
 
         es = mapMaybe f $ Graph.edges gdir
-        state (TD.FlowEdge (TD.StructureEdge (TIdx.InPart s _))) = Just s
+        state (Topo.FlowEdge (Topo.StructureEdge (TIdx.InPart s _))) = Just s
         state _ = Nothing
         node (TIdx.PartNode _ n) = n
         f e = fmap (\s -> StateIdx.eta s (node $ Graph.from e) (node $ Graph.to e)) (state e)
@@ -168,9 +168,9 @@ initialEnv _xStorageEdgesNode g =
         -- @HT numerisch ok?
         xfactors ys = zip ys (repeat $ Data (1/(fromIntegral $ length ys)))
 
-        sts = Map.filter (TD.isStorage . snd3)
+        sts = Map.filter (Topo.isStorage . snd3)
               $ Graph.nodes
-              $ Graph.lefilter (\(e, ()) -> TD.isStorageEdge e) gdir
+              $ Graph.lefilter (\(e, ()) -> Topo.isStorageEdge e) gdir
 
         nstate (TIdx.PartNode s _) = s
 

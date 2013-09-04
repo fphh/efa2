@@ -27,7 +27,7 @@ import qualified EFA.Application.Utility as AppUt
 import qualified EFA.Flow.Sequence.Index as XIdx
 
 import qualified EFA.Graph.Topology.Index as TIdx
-import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Draw as Draw
 --import qualified EFA.Graph as Graph
@@ -317,7 +317,7 @@ makePics eqs tabEta socDrive = t
 
 -- Alternative Approch to get StateFlowGraph Data
 
-stateFlow2SequFlow :: (Ord node) => TD.StateFlowGraph node -> TD.SequFlowGraph node
+stateFlow2SequFlow :: (Ord node) => Topo.StateFlowGraph node -> Topo.SequFlowGraph node
 stateFlow2SequFlow = Graph.ixmap f g
   where f :: TIdx.AugNode TIdx.State node -> TIdx.AugNode TIdx.Section node
         f (TIdx.PartNode TIdx.Exit x) = TIdx.PartNode TIdx.Exit x
@@ -326,8 +326,8 @@ stateFlow2SequFlow = Graph.ixmap f g
         f (TIdx.PartNode (TIdx.NoExit (TIdx.NoInit (TIdx.State i))) x) =
           TIdx.PartNode (TIdx.NoExit (TIdx.NoInit (TIdx.Section i))) x
 
-        g :: TD.FlowEdge Graph.EitherEdge (TIdx.AugNode TIdx.State node) ->
-             TD.FlowEdge Graph.EitherEdge (TIdx.AugNode TIdx.Section node)
+        g :: Topo.FlowEdge Graph.EitherEdge (TIdx.AugNode TIdx.State node) ->
+             Topo.FlowEdge Graph.EitherEdge (TIdx.AugNode TIdx.Section node)
         g = undefined
 
 
@@ -376,7 +376,7 @@ main = do
          (a ~ EqArith.Scalar v, Eq a, EqArith.Constant a,
          Eq v, EqArith.Product a, EqArith.Product v, EqArith.Integrate v) =>
          EqGen.EquationSystem Node s a v
-       eqs = EqGen.fromGraph True (TD.dirFromFlowGraph (snd System.seqTopoOpt))
+       eqs = EqGen.fromGraph True (Topo.dirFromFlowGraph (snd System.seqTopoOpt))
 
        plotwaterpng n pic =
          PlotIO.surfaceWithOpts "Optimal Water Power"
@@ -443,7 +443,7 @@ main = do
          (a ~ EqArith.Scalar v, Eq a, Eq v,
           EqArith.Constant a, EqArith.Product v, EqArith.Integrate v) =>
          EqGen.EquationSystem Node s a v
-       eqsys = EqGen.fromGraph True (TD.dirFromFlowGraph (snd System.seqTopoOpt))
+       eqsys = EqGen.fromGraph True (Topo.dirFromFlowGraph (snd System.seqTopoOpt))
 
    -- |Import Efficiency Curves
    let etaFunc = CT.makeEtaFunctions2D scaleTableEta tabEta

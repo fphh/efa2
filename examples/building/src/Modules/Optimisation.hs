@@ -22,7 +22,7 @@ import qualified EFA.Flow.State.Index as XIdx
 
 import qualified EFA.Graph.StateFlow.Environment as StateEnv
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Signal.Data as Data
 import EFA.Signal.Data (Data(..), Nil)
 
@@ -58,7 +58,7 @@ type Param2x2 = Sweep.Pair Param2 Param2
 
 solve ::
   (Ord a, Fractional a, Show a, EqArith.Sum a, EqArith.Constant a) =>
-  TD.StateFlowGraph Node ->
+  Topo.StateFlowGraph Node ->
   (Idx.State -> EtaAssignMap Node) ->
   Map String (a -> a) ->
   Env a ->

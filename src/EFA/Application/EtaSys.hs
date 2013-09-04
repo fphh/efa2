@@ -13,7 +13,7 @@ import EFA.Equation.Result (Result(..))
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.Topology as Topo
 
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph as Gr
@@ -41,8 +41,8 @@ etaSys ::
 etaSys (_, topo) env = liftA2 (/) (sumRes sinks) (sumRes sources)
   where m = Map.elems $
             Gr.nodeEdges $
-            Gr.lefilter (TD.isStructureEdge . fst) $
-            TD.dirFromFlowGraph topo
+            Gr.lefilter (Topo.isStructureEdge . fst) $
+            Topo.dirFromFlowGraph topo
 
         sinks = concatMap (mapMaybe sinkEnergies . Set.toList . fst3) $ filter isActiveSink m
         sources = concatMap (mapMaybe sourceEnergies . Set.toList . thd3) $ filter isActiveSource m
@@ -59,27 +59,27 @@ etaSys (_, topo) env = liftA2 (/) (sumRes sinks) (sumRes sources)
 
         sinkEnergies
 
-          (TD.FlowEdge (TD.StructureEdge e)) =
+          (Topo.FlowEdge (Topo.StructureEdge e)) =
             Just $ AppUt.lookupAbsEnergy "etaSys, sinkEnergies" env $ Idx.flip $
-            Idx.liftInPart (Idx.Energy . TD.structureEdgeFromDirEdge) e
+            Idx.liftInPart (Idx.Energy . Topo.structureEdgeFromDirEdge) e
         sinkEnergies _ = Nothing
 
         sourceEnergies
-          (TD.FlowEdge (TD.StructureEdge e)) =
+          (Topo.FlowEdge (Topo.StructureEdge e)) =
             Just $ AppUt.lookupAbsEnergy "etaSys, sourceEnergies" env $
-            Idx.liftInPart (Idx.Energy . TD.structureEdgeFromDirEdge) e
+            Idx.liftInPart (Idx.Energy . Topo.structureEdgeFromDirEdge) e
 
         sourceEnergies _ = Nothing
 
 etaSysState ::
   (Show a, Fractional a, Show node, Ord node) =>
-  TD.StateFlowGraph node ->
+  Topo.StateFlowGraph node ->
   EqEnvState.Complete node b (Result a) -> Result a
 etaSysState topo env = liftA2 (/) (sumRes sinks) (sumRes sources)
   where m = Map.elems $
             Gr.nodeEdges $
-            Gr.lefilter (TD.isStructureEdge . fst) $
-            TD.dirFromFlowGraph topo
+            Gr.lefilter (Topo.isStructureEdge . fst) $
+            Topo.dirFromFlowGraph topo
 
         sinks = concatMap (mapMaybe sinkEnergies . Set.toList . fst3) $ filter isActiveSink m
         sources = concatMap (mapMaybe sourceEnergies . Set.toList . thd3) $ filter isActiveSource m
@@ -95,12 +95,12 @@ etaSysState topo env = liftA2 (/) (sumRes sinks) (sumRes sources)
         isActiveSource _ = False
 
         sinkEnergies
-          (TD.FlowEdge (TD.StructureEdge (Idx.InPart sec (Gr.DirEdge a b)))) =
+          (Topo.FlowEdge (Topo.StructureEdge (Idx.InPart sec (Gr.DirEdge a b)))) =
             Just $ AppUt.lookupAbsEnergyState "etaSys, sinkEnergies" env (StateIdx.energy sec b a)
         sinkEnergies _ = Nothing
 
         sourceEnergies
-          (TD.FlowEdge (TD.StructureEdge (Idx.InPart sec (Gr.DirEdge a b)))) =
+          (Topo.FlowEdge (Topo.StructureEdge (Idx.InPart sec (Gr.DirEdge a b)))) =
             Just $ AppUt.lookupAbsEnergyState "etaSys, sourceEnergies" env (StateIdx.energy sec a b)
         sourceEnergies _ = Nothing
 
@@ -112,7 +112,7 @@ detEtaSys topo = AppUt.checkDetermined "detEtaSys" . etaSys topo
 
 detEtaSysState ::
   (Fractional v, Ord node, Show node, Show v) =>
-  TD.StateFlowGraph node -> EqEnvState.Complete node a (Result v) -> v
+  Topo.StateFlowGraph node -> EqEnvState.Complete node a (Result v) -> v
 detEtaSysState topo =
   AppUt.checkDetermined "detEtaSysState\n" . etaSysState topo
 
@@ -141,7 +141,7 @@ objectiveFunctionState ::
   (Fractional v, Show v, Num v, Ord node, Show node) =>
   ConditionState node a v ->
   ForcingState node a v ->
-  TD.StateFlowGraph node ->
+  Topo.StateFlowGraph node ->
   EqEnvState.Complete node a (Result v) ->
   Maybe v
 objectiveFunctionState cond forcing topo env =

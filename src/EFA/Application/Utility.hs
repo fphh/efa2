@@ -9,7 +9,7 @@ import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Gr
 
 import qualified EFA.Signal.SequenceData as SD
@@ -61,13 +61,13 @@ type PPosLableMap node = Map (SeqIdx.PPos node) String
 -- | Generate Topology with simple edge List
 makeTopologySimple ::
    (Ord node) =>
-   [(node, Node.Type ())] ->  [(node,node)] -> TD.Topology node
+   [(node, Node.Type ())] ->  [(node,node)] -> Topo.Topology node
 makeTopologySimple ns es = Gr.fromList ns (makeEdges es)
 
 -- | Generate Topology from labeled edge List
 makeTopology ::
    (Ord node) =>
-   [(node, Node.Type ())] ->  LabeledEdgeList node -> TD.Topology node
+   [(node, Node.Type ())] ->  LabeledEdgeList node -> Topo.Topology node
 makeTopology ns es = Gr.fromList ns (makeEdges $ map f es)
   where  f (n1,n2,_,_,_) = (n1,n2)
 
@@ -85,7 +85,7 @@ makePPosLabelMap edgeList = Map.fromList $ concat $ map f edgeList
 
 constructSeqTopo ::
    (Ord node, Show node) =>
-   TD.Topology node -> [Int] -> Flow.RangeGraph node
+   Topo.Topology node -> [Int] -> Flow.RangeGraph node
 constructSeqTopo topo =
   Flow.sequenceGraph .
   fmap (StateAnalysis.bruteForce topo !!) .

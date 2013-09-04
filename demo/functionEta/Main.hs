@@ -12,7 +12,7 @@ import qualified EFA.Equation.Environment as Env
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Gr
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
@@ -35,7 +35,7 @@ instance Node.C Node where
    dotId = Node.dotIdDefault
 
 
-linearOne :: TD.Topology Node
+linearOne :: Topo.Topology Node
 linearOne = Gr.fromList nodes (makeEdges edges)
   where nodes = [(Sink, Node.AlwaysSink), (Source, Node.AlwaysSource)]
         edges = [(Source, Sink)]

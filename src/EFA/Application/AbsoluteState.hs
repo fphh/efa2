@@ -33,7 +33,7 @@ import qualified EFA.Symbolic.Variable as SymVar
 --import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.Topology as Topo
 
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Utility (Pointed)
@@ -60,7 +60,7 @@ solve ::
     Eq v, Arith.Product v, Arith.Integrate v,
     Node.C node) =>
 --   Flow.RangeGraph node ->
-   TD.StateFlowGraph node ->
+   Topo.StateFlowGraph node ->
   (forall s. EquationSystem node s a v) ->
    EqEnv.Complete node (Result a) (Result v)
 solve graph sys =
@@ -81,7 +81,7 @@ fromGraph:: (Arith.Constant a, a ~ Arith.Scalar v, Eq v,
              Eq a, Arith.Product v,
              Arith.Product a, Arith.Integrate v, Node.C node) =>
             Bool ->
-            TD.DirStateFlowGraph node ->
+            Topo.DirStateFlowGraph node ->
             EquationSystem node s a v
 fromGraph = EqGen.fromGraph
 

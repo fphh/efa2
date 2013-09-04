@@ -47,7 +47,7 @@ import qualified EFA.Flow.State.Index as XIdx
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Gr
 import EFA.Graph.Topology (StateFlowGraph)
 
@@ -538,7 +538,7 @@ fromGraph ::
    Verify.GlobalVar mode v (Record.ToIndex rec) Var.InStateSignal node, Product v, Integrate v,
    Record rec, Node.C node) =>
   Bool ->
-  TD.DirStateFlowGraph node -> EquationSystem mode rec node s a v
+  Topo.DirStateFlowGraph node -> EquationSystem mode rec node s a v
 fromGraph equalInOutSums g = mconcat $
   fromEdges (Gr.edges g) :
   fromNodes equalInOutSums g :
@@ -550,24 +550,24 @@ fromEdges ::
   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeStateScalar node, Sum a,
    Verify.GlobalVar mode v (Record.ToIndex rec) Var.InStateSignal node,
    Product v, Record rec, Node.C node) =>
-  [TD.FlowEdge Gr.DirEdge (Idx.AugStateNode node)] ->
+  [Topo.FlowEdge Gr.DirEdge (Idx.AugStateNode node)] ->
   EquationSystem mode rec node s a v
 fromEdges =
    foldMap $ \se ->
-      case TD.edgeType se of
-         TD.StructureEdge edge@(Idx.InPart s _) ->
+      case Topo.edgeType se of
+         Topo.StructureEdge edge@(Idx.InPart s _) ->
             let equ xy = energy xy =%= dtime s ~* power xy
-                e = Idx.liftInPart TD.structureEdgeFromDirEdge edge
+                e = Idx.liftInPart Topo.structureEdgeFromDirEdge edge
             in  equ e <> equ (Idx.flip e) <>
                 (power (Idx.flip e) =%= eta e ~* power e)
-         TD.StorageEdge _ -> mempty
+         Topo.StorageEdge _ -> mempty
 
 fromNodes ::
   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeStateScalar node, Constant a, a ~ Scalar v,
    Verify.GlobalVar mode v (Record.ToIndex rec) Var.InStateSignal node, Product v, Integrate v,
    Record rec, Node.C node) =>
   Bool ->
-  TD.DirStateFlowGraph node -> EquationSystem mode rec node s a v
+  Topo.DirStateFlowGraph node -> EquationSystem mode rec node s a v
 fromNodes equalInOutSums =
   fold . Map.mapWithKey f . Gr.nodeEdges
    where f an@(Idx.PartNode part node) (ins, nodeType, outs) =
@@ -579,11 +579,11 @@ fromNodes equalInOutSums =
                    ListHT.unzipEithers .
                    map
                       (\edge ->
-                         case TD.edgeType edge of
-                            TD.StructureEdge e ->
+                         case Topo.edgeType edge of
+                            Topo.StructureEdge e ->
                                Left $
-                               Idx.liftInPart TD.structureEdgeFromDirEdge e
-                            TD.StorageEdge e -> Right e) .
+                               Idx.liftInPart Topo.structureEdgeFromDirEdge e
+                            Topo.StorageEdge e -> Right e) .
                    Set.toList
 
                 (outsStruct, outsStore) = partition outs
@@ -605,14 +605,14 @@ fromNodes equalInOutSums =
                       mwhen equalInOutSums $
                       withStateNode $ \sn -> insum sn =%= outsum sn
                    Node.Storage dir ->
-                      flip foldMap (TD.viewNodeDir (an,dir)) $ \view ->
+                      flip foldMap (Topo.viewNodeDir (an,dir)) $ \view ->
                          case view of
-                            TD.ViewNodeIn rn ->
+                            Topo.ViewNodeIn rn ->
                                 splitStoreEqs (stoutsum rn) id outsStore
                                 <>
                                 (withStateNode $ \sn ->
                                     stoutsum rn =%= integrate (insum sn))
-                            TD.ViewNodeOut rn ->
+                            Topo.ViewNodeOut rn ->
                                 splitStoreEqs (stinsum rn) Idx.flip insStore
                                 <>
                                 (withStateNode $ \sn ->
@@ -699,7 +699,7 @@ solve ::
   (forall s. EquationSystem Verify.Ignore rec node s a v) ->
   Env.Complete node (rec (Result a)) (rec (Result v))
 solve g given =
-  solveSimple (given <> fromGraph True (TD.dirFromFlowGraph g))
+  solveSimple (given <> fromGraph True (Topo.dirFromFlowGraph g))
 
 solveTracked ::
   (Verify.GlobalVar (Verify.Track output) a (Record.ToIndex rec) Var.ForNodeStateScalar node,
@@ -714,7 +714,7 @@ solveTracked ::
      (Env.Complete node (rec (Result a)) (rec (Result v))),
    Verify.Assigns output)
 solveTracked g given =
-  solveSimpleTracked (given <> fromGraph True (TD.dirFromFlowGraph g))
+  solveSimpleTracked (given <> fromGraph True (Topo.dirFromFlowGraph g))
 
 
 --------------------------------------------------------------------
@@ -728,4 +728,4 @@ solveFromMeasurement ::
   (forall s. EquationSystem Verify.Ignore rec node s a v) ->
   Env.Complete node (rec (Result a)) (rec (Result v))
 solveFromMeasurement g given =
-  solveSimple (given <> fromGraph False (TD.dirFromFlowGraph g))
+  solveSimple (given <> fromGraph False (Topo.dirFromFlowGraph g))

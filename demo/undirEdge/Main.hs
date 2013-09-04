@@ -9,7 +9,7 @@ import qualified EFA.Flow.Sequence.Index as XIdx
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Graph as Gr
 
@@ -26,7 +26,7 @@ node0, node1, node2, node3 :: Node.Int
 node0 :~ node1 :~ node2 :~ node3 :~ _ = Stream.enumFrom minBound
 
 
-topoDreibein :: TD.Topology Node.Int
+topoDreibein :: Topo.Topology Node.Int
 topoDreibein = Gr.fromList ns (makeEdges es)
   where ns = [(node0, Node.Source),
               (node1, Node.Sink),

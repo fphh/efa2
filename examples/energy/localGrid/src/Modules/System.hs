@@ -6,7 +6,7 @@ import qualified EFA.Flow.Sequence.Index as XIdx
 
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph as Gr
 
@@ -31,7 +31,7 @@ instance Node.C Node where
 ----------------------------------------------------------------------
 -- * Define System Topology
 
-topology :: TD.Topology Node
+topology :: Topo.Topology Node
 topology = AppUt.makeTopology nodeList edgeList
 
 nodeList :: [(Node,Node.Type ())]
@@ -83,7 +83,7 @@ convertPowerId ppos =  f (Map.lookup  ppos powerPositonNames)
 ----------------------------------------------------------------------
 -- * Calculate Flow States
 
-flowStates :: [TD.FlowTopology Node]
+flowStates :: [Topo.FlowTopology Node]
 flowStates = StateAnalysis.advanced topology
 
 
@@ -91,7 +91,7 @@ flowStates = StateAnalysis.advanced topology
 
 ----------------------------------------------------------------------
 -- | Topology for Optimisation
-topologyOpt :: TD.Topology Node
+topologyOpt :: Topo.Topology Node
 topologyOpt = Gr.fromList ns (AppUt.makeEdges es)
   where ns = [(Coal, Node.AlwaysSource),
               (Gas, Node.Source),
@@ -113,7 +113,7 @@ edgeListOpt = [(Coal, Network, "CoalPlant", "Coal","ElCoal"),
                (Gas, LocalNetwork,"GasPlant","Gas","ElGas"),
                (LocalNetwork, LocalRest, "toLocalRest", "toLocalRest", "toLocalRest")]
 
-flowStatesOpt :: [TD.FlowTopology Node]
+flowStatesOpt :: [Topo.FlowTopology Node]
 flowStatesOpt = StateAnalysis.advanced topologyOpt
 
 edgeNamesOpt :: Map (Node, Node) String

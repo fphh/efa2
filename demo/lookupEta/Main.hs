@@ -13,7 +13,7 @@ import qualified EFA.Flow.Sequence.Index as XIdx
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Gr
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
@@ -31,7 +31,7 @@ sec0 :~ _ = Stream.enumFrom $ Idx.Section 0
 sink, source :: Node.Int
 sink :~ (source :~ _) = Stream.enumFrom $ Node.Int 0
 
-linearOne :: TD.Topology Node.Int
+linearOne :: Topo.Topology Node.Int
 linearOne = Gr.fromList nodes (makeEdges edges)
   where nodes = [(sink, Node.AlwaysSink), (source, Node.AlwaysSource)]
         edges = [(source, sink)]

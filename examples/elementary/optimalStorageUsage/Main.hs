@@ -15,7 +15,7 @@ import qualified EFA.Flow.Sequence.Index as XIdx
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Index as TIdx
 import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph as Gr
@@ -59,7 +59,7 @@ sec0 :~ sec1 :~ _ = Stream.enumFrom $ TIdx.Section 0
 source, crossing, sink, storage :: Node.Int
 source :~ crossing :~ sink :~ storage :~ _ = Stream.enumFrom minBound
 
-topoDreibein :: TD.Topology Node.Int
+topoDreibein :: Topo.Topology Node.Int
 topoDreibein = Gr.fromList ns (makeEdges es)
   where ns = [ (source, Node.Source),
                (crossing, Node.Crossing),
@@ -306,16 +306,16 @@ etaSys (_, topo) env = sum sinks / sum sources
         p = (> 0) .
             Set.size .
             Set.filter
-              (\(TD.FlowEdge (TD.StructureEdge (TIdx.InPart _ e))) -> TD.isActive e)
+              (\(Topo.FlowEdge (Topo.StructureEdge (TIdx.InPart _ e))) -> Topo.isActive e)
 
         sinkEnergies acc
-          (TD.FlowEdge (TD.StructureEdge (TIdx.InPart sec
+          (Topo.FlowEdge (Topo.StructureEdge (TIdx.InPart sec
                        (Gr.EDirEdge (Gr.DirEdge a b))))) =
             acc + lookUp "etaSys" env (XIdx.energy sec b a)
         sinkEnergies = error "etaSys: sinkEnergies"
 
         sourceEnergies acc
-          (TD.FlowEdge (TD.StructureEdge (TIdx.InPart sec
+          (Topo.FlowEdge (Topo.StructureEdge (TIdx.InPart sec
                        (Gr.EDirEdge (Gr.DirEdge a b))))) =
             acc + lookUp "etaSys" env (XIdx.energy sec a b)
 -}

@@ -24,7 +24,7 @@ import qualified EFA.Graph.StateFlow as StateFlow
 import qualified EFA.Graph.Topology.Index as TIdx
 --import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 
 import qualified EFA.Signal.Data as Data
@@ -63,7 +63,7 @@ solve :: (Node.C node,
           SV.Len (v a),
           SV.FromList v,
           Base.BSum a) =>
-         TD.Topology node ->
+         Topo.Topology node ->
          (TIdx.State ->  EtaAssignMap node) ->
          Map String (a -> a) ->
          Record.PowerRecord node v a ->
@@ -84,7 +84,7 @@ givenSimulate ::
   SV.Singleton v,
   SV.Walker v,
   SV.Storage v a) =>
-  TD.StateFlowGraph node ->
+  Topo.StateFlowGraph node ->
   (TIdx.State ->  EtaAssignMap node) ->
   Map String (a -> a) ->
   Record.PowerRecord node v a ->
@@ -93,7 +93,7 @@ givenSimulate ::
 givenSimulate stateFlowGraph etaAssign etaFunc powerRecord =
 --  (StateIdx.storage TIdx.initial Water EqGen..= Data 0) <>
    --Fold.fold (SD.mapWithSection f sf)
-  (EqGen.fromGraph True $ TD.dirFromFlowGraph (stateFlowGraph)) <>
+  (EqGen.fromGraph True $ Topo.dirFromFlowGraph (stateFlowGraph)) <>
    f powerRecord
    where f (Record.Record t xs) =
            (StateIdx.dTime (TIdx.State 0) EqGen..=

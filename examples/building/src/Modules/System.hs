@@ -11,7 +11,7 @@ import qualified EFA.Flow.State.Index as StateIdx
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 
 import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.StateFlow as StateFlow
 --import qualified EFA.Graph as Gr
 import qualified EFA.Graph.Flow as Flow
@@ -41,7 +41,7 @@ instance Node.C Node where
    subscript = Node.subscriptDefault
    dotId = Node.dotIdDefault
 
-topology :: TD.Topology Node
+topology :: Topo.Topology Node
 topology = AppUt.makeTopology nodeList edgeList
 
 nodeList :: [(Node,Node.Type ())]
@@ -74,7 +74,7 @@ powerPositonNames = Map.fromList $ concat $ map f edgeList
                              (SeqIdx.ppos n2 n1, SigId $ "Power-"++l2)]
 
 
-flowStates :: [TD.FlowTopology Node]
+flowStates :: [Topo.FlowTopology Node]
 flowStates = StateAnalysis.advanced topology
 
 
@@ -82,7 +82,7 @@ seqTopology :: Flow.RangeGraph Node
 seqTopology = Flow.sequenceGraph (select flowStates [0, 4])
 
 
-stateFlowGraph :: TD.StateFlowGraph Node
+stateFlowGraph :: Topo.StateFlowGraph Node
 stateFlowGraph =
   StateFlow.stateGraphAllStorageEdges
   $ AppUt.select flowStates [0, 4]

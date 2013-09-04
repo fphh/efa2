@@ -4,7 +4,7 @@ module Main where
 
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Draw as Draw
-import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Gr
 import EFA.Application.Utility (makeEdges)
 
@@ -18,7 +18,7 @@ instance Node.C Node where
    dotId = Node.dotIdDefault
 
 
-topoDreibein :: TD.Topology Node
+topoDreibein :: Topo.Topology Node
 topoDreibein = Gr.fromList ns (makeEdges es)
   where ns = [(N0, Node.Source),
               (N1, Node.Sink),

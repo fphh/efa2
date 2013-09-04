@@ -13,7 +13,7 @@ import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Graph as Gr
 
@@ -56,7 +56,7 @@ instance Node.C Node where
 c0, c1, c2, c3 :: Node
 c0 :~ c1 :~ c2 :~ c3 :~ _ = Stream.enumFrom $ C 0
 
-topo :: TD.Topology Node
+topo :: Topo.Topology Node
 topo = Gr.fromList nodes (makeEdges edges)
   where nodes
           = [(c0, Node.Crossing), (c1, Node.Crossing), (c2, Node.Crossing),

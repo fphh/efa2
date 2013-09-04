@@ -4,7 +4,7 @@ module EFA.Graph.CumulatedFlow where
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Gr
 
 import EFA.Equation.Arithmetic ((~+))
@@ -28,7 +28,7 @@ type EnergyMap node a = Map (Idx.Energy node) a
 
 getRelativeDir ::
   (Ord x) =>
-  TD.Topology x -> Gr.DirEdge x -> RelativeDir
+  Topo.Topology x -> Gr.DirEdge x -> RelativeDir
 getRelativeDir g e =
   case Gr.edgeLabels g of
     es ->
@@ -44,8 +44,8 @@ getRelativeDir g e =
 cumulatedEnergyFlow ::
   (Arith.Integrate v, Arith.Sum a, Arith.Scalar v ~ a, Arith.Constant a,
    Ord node) =>
-  TD.Topology node ->
-  TD.DirSequFlowGraph node ->
+  Topo.Topology node ->
+  Topo.DirSequFlowGraph node ->
   Env.Complete node (Result a) (Result v) ->
   ( EnergyMap node (Result a), EnergyMap node (Result a) )
 cumulatedEnergyFlow topo seqTopo env =
@@ -53,9 +53,9 @@ cumulatedEnergyFlow topo seqTopo env =
   where cum = Map.unionsWith (liftA2 (~+))
         em = Env.energyMap $ Env.signal env
         f e =
-          case TD.edgeType e of
-             TD.StructureEdge (Idx.InPart sec de) ->
-                let se = TD.structureEdgeFromDirEdge de
+          case Topo.edgeType e of
+             Topo.StructureEdge (Idx.InPart sec de) ->
+                let se = Topo.structureEdgeFromDirEdge de
                     idx1 = Idx.Energy se
                     idx2 = Idx.Energy $ Idx.flip se
 
@@ -82,12 +82,12 @@ cumulatedEnergyFlow topo seqTopo env =
 cumulate ::
   (Arith.Integrate v, Arith.Sum a, Arith.Scalar v ~ a, Arith.Constant a,
    Ord node) =>
-  TD.Topology node ->
-  (ranges, TD.SequFlowGraph node) ->
+  Topo.Topology node ->
+  (ranges, Topo.SequFlowGraph node) ->
   Env.Complete node (Result a) (Result v) ->
-  ( ( TD.Topology node, EnergyMap node (Result a) ),
-    ( TD.Topology node, EnergyMap node (Result a) ) )
+  ( ( Topo.Topology node, EnergyMap node (Result a) ),
+    ( Topo.Topology node, EnergyMap node (Result a) ) )
 cumulate topo (_rngs, seqTopo) env =
   ( (topo, withDirEnv), (Gr.reverse topo, againstDirEnv) )
   where (withDirEnv, againstDirEnv) =
-           cumulatedEnergyFlow topo (TD.dirFromFlowGraph seqTopo) env
+           cumulatedEnergyFlow topo (Topo.dirFromFlowGraph seqTopo) env

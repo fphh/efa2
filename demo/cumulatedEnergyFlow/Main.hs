@@ -8,7 +8,7 @@ import qualified EFA.Flow.Sequence.Index as XIdx
 
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Graph as Gr
 
@@ -45,7 +45,7 @@ instance Node.C Node where
    dotId = Node.dotIdDefault
 
 
-topoDreibein :: TD.Topology Node
+topoDreibein :: Topo.Topology Node
 topoDreibein = Gr.fromList ns (makeEdges es)
   where ns = [(node0, Node.Source),
               (node1, Node.Sink),

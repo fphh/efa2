@@ -1,7 +1,7 @@
 module EFA.Application.Tree where
 
 import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Gr
 import EFA.Graph (Graph)
 
@@ -12,7 +12,7 @@ data Tree node nodeLabel =
    Tree node (Graph node Gr.DirEdge nodeLabel ())
 
 
-toGraph :: Tree node (Node.Type ()) -> TD.Topology node
+toGraph :: Tree node (Node.Type ()) -> Topo.Topology node
 toGraph (Tree _ graph) = graph
 
 cons :: Ord node => node -> nodeLabel -> Tree node nodeLabel

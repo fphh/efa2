@@ -57,7 +57,7 @@ import EFA.Equation.SystemRecord
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Gr
 
 import EFA.Report.FormatValue (FormatValue)
@@ -596,7 +596,7 @@ fromGraph ::
    Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node, Product v, Integrate v,
    Record rec, Node.C node) =>
   Bool ->
-  TD.DirSequFlowGraph node -> EquationSystem mode rec node s a v
+  Topo.DirSequFlowGraph node -> EquationSystem mode rec node s a v
 fromGraph equalInOutSums g = mconcat $
   fromEdges (Gr.edges g) :
   fromNodes equalInOutSums g :
@@ -609,24 +609,24 @@ fromEdges ::
   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeSectionScalar node, Sum a,
    Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node,
    Product v, Record rec, Node.C node) =>
-  [TD.FlowEdge Gr.DirEdge (Idx.AugSecNode node)] ->
+  [Topo.FlowEdge Gr.DirEdge (Idx.AugSecNode node)] ->
   EquationSystem mode rec node s a v
 fromEdges =
    foldMap $ \se ->
-      case TD.edgeType se of
-         TD.StructureEdge edge@(Idx.InPart s _) ->
+      case Topo.edgeType se of
+         Topo.StructureEdge edge@(Idx.InPart s _) ->
             let equ xy = energy xy =%= dtime s ~* power xy
-                e = Idx.liftInPart TD.structureEdgeFromDirEdge edge
+                e = Idx.liftInPart Topo.structureEdgeFromDirEdge edge
             in  equ e <> equ (Idx.flip e) <>
                 (power (Idx.flip e) =%= eta e ~* power e)
-         TD.StorageEdge _ -> mempty
+         Topo.StorageEdge _ -> mempty
 
 fromNodes ::
   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeSectionScalar node, Constant a, a ~ Scalar v,
    Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node, Product v, Integrate v,
    Record rec, Node.C node) =>
   Bool ->
-  TD.DirSequFlowGraph node -> EquationSystem mode rec node s a v
+  Topo.DirSequFlowGraph node -> EquationSystem mode rec node s a v
 fromNodes equalInOutSums =
   fold . Map.mapWithKey f . Gr.nodeEdges
    where f an (ins, nodeType, outs) =
@@ -637,11 +637,11 @@ fromNodes equalInOutSums =
                    ListHT.unzipEithers .
                    map
                       (\edge ->
-                         case TD.edgeType edge of
-                            TD.StructureEdge e ->
+                         case Topo.edgeType edge of
+                            Topo.StructureEdge e ->
                                Left $
-                               Idx.liftInPart TD.structureEdgeFromDirEdge e
-                            TD.StorageEdge e -> Right e) .
+                               Idx.liftInPart Topo.structureEdgeFromDirEdge e
+                            Topo.StorageEdge e -> Right e) .
                    Set.toList
 
                 (outsStruct, outsStore) = partition outs
@@ -663,16 +663,16 @@ fromNodes equalInOutSums =
                       mwhen equalInOutSums $
                       withSecNode $ \sn -> insum sn =%= outsum sn
                    Node.Storage dir ->
-                      flip foldMap (TD.viewNodeDir (an,dir)) $ \view ->
+                      flip foldMap (Topo.viewNodeDir (an,dir)) $ \view ->
                          case view of
-                            TD.ViewNodeIn rn ->
+                            Topo.ViewNodeIn rn ->
                                 fromInStorages rn outsStore
                                 <>
                                 splitStoreEqs (stoutsum rn) stEnergy id outsStore
                                 <>
                                 (withSecNode $ \sn ->
                                     stoutsum rn =%= integrate (insum sn))
-                            TD.ViewNodeOut rn ->
+                            Topo.ViewNodeOut rn ->
                                 (withLocalVar $ \s ->
                                    splitStoreEqs s maxEnergy Idx.flip insStore)
                                 <>
@@ -692,21 +692,21 @@ fromStorageSequences ::
   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeSectionScalar node, Sum a, a ~ Scalar v,
    Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node, Product v, Integrate v,
    Record rec, Node.C node) =>
-  TD.DirSequFlowGraph node -> EquationSystem mode rec node s a v
+  Topo.DirSequFlowGraph node -> EquationSystem mode rec node s a v
 fromStorageSequences =
    let f xs =
           let charge old now (Idx.PartNode aug n, dir) =
                  case (aug, dir) of
-                    (Idx.Exit, Just TD.Out) ->
+                    (Idx.Exit, Just Topo.Out) ->
                        old =%= withNode stinsum Idx.Exit n
-                    (Idx.NoExit Idx.Init, Just TD.In) ->
+                    (Idx.NoExit Idx.Init, Just Topo.In) ->
                        now =%= withNode stoutsum Idx.Init n
                     (Idx.NoExit (Idx.NoInit sec), _) ->
                        now =%=
                        case dir of
                           Nothing -> old
-                          Just TD.In  -> old ~+ withNode stoutsum (Idx.NoInit sec) n
-                          Just TD.Out -> old ~- withNode stinsum  (Idx.NoExit sec) n
+                          Just Topo.In  -> old ~+ withNode stoutsum (Idx.NoInit sec) n
+                          Just Topo.Out -> old ~- withNode stinsum  (Idx.NoExit sec) n
                     _ -> error "inconsistency between section and storage direction"
               storages =
                  map
@@ -725,13 +725,13 @@ withNode f sec node = f $ Idx.PartNode sec node
 -- Storages must not have more than one in or out edge.
 getStorageSequences ::
   (Node.C node) =>
-  TD.DirSequFlowGraph node ->
-  Map node (Map (Idx.AugSecNode node) (Maybe TD.StoreDir))
+  Topo.DirSequFlowGraph node ->
+  Map node (Map (Idx.AugSecNode node) (Maybe Topo.StoreDir))
 getStorageSequences =
   MapU.curry "EquationSystem.getStorageSequences"
     (\bn@(Idx.PartNode _ n) -> (n, bn))
   .
-  Map.mapMaybe TD.maybeStorage . Gr.nodeLabels
+  Map.mapMaybe Topo.maybeStorage . Gr.nodeLabels
 
 
 fromInStorages ::
@@ -823,7 +823,7 @@ solve ::
   (forall s. EquationSystem Verify.Ignore rec node s a v) ->
   Env.Complete node (rec (Result a)) (rec (Result v))
 solve (_rngs, g) given =
-  solveSimple (given <> fromGraph True (TD.dirFromFlowGraph g))
+  solveSimple (given <> fromGraph True (Topo.dirFromFlowGraph g))
 
 solveTracked ::
   (Verify.GlobalVar (Verify.Track output) a (Record.ToIndex rec) Var.ForNodeSectionScalar node,
@@ -838,7 +838,7 @@ solveTracked ::
      (Env.Complete node (rec (Result a)) (rec (Result v))),
    Verify.Assigns output)
 solveTracked (_rngs, g) given =
-  solveSimpleTracked (given <> fromGraph True (TD.dirFromFlowGraph g))
+  solveSimpleTracked (given <> fromGraph True (Topo.dirFromFlowGraph g))
 
 
 --------------------------------------------------------------------
@@ -852,4 +852,4 @@ solveFromMeasurement ::
   (forall s. EquationSystem Verify.Ignore rec node s a v) ->
   Env.Complete node (rec (Result a)) (rec (Result v))
 solveFromMeasurement (_rngs, g) given =
-  solveSimple (given <> fromGraph False (TD.dirFromFlowGraph g))
+  solveSimple (given <> fromGraph False (Topo.dirFromFlowGraph g))

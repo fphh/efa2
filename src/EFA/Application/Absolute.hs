@@ -27,7 +27,7 @@ import EFA.Signal.Data (Data, Nil, (:>))
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.Topology as Topo
 
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Utility (Pointed)
@@ -74,7 +74,7 @@ fromGraph ::
    Eq a, Arith.Product v,
    Arith.Product a, Arith.Integrate v, Node.C node) =>
   Bool ->
-  TD.DirSequFlowGraph node -> EquationSystem node s a v
+  Topo.DirSequFlowGraph node -> EquationSystem node s a v
 fromGraph = EqGen.fromGraph
 
 constant :: x -> Expression node s a v x

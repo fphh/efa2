@@ -6,7 +6,7 @@ import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Graph.StateFlow.Environment as StateEnv
 import qualified EFA.Flow.State.Index as StateIdx
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph as Gr
 import EFA.Graph.Topology
@@ -252,13 +252,13 @@ stateFromClassTopo ::
 stateFromClassTopo state =
    Gr.ixmap
       (Idx.PartNode (Idx.augment state))
-      (TD.FlowEdge . TD.StructureEdge . Idx.InPart state)
+      (Topo.FlowEdge . Topo.StructureEdge . Idx.InPart state)
 
 
 storageEdges ::
-   Map Idx.State TD.StoreDir -> [Idx.StorageEdge Idx.State node]
+   Map Idx.State Topo.StoreDir -> [Idx.StorageEdge Idx.State node]
 storageEdges stores =
-   case Map.partition (TD.In ==) stores of
+   case Map.partition (Topo.In ==) stores of
       (ins, outs) ->
          liftA2 Idx.StorageEdge
             (Idx.Init : map Idx.NoInit (Map.keys ins))
@@ -266,8 +266,8 @@ storageEdges stores =
 
 getStorageSequences ::
    (Ord node) =>
-   Map Idx.State (TD.ClassifiedTopology node) ->
-   Map node (Map Idx.State (Maybe TD.StoreDir))
+   Map Idx.State (Topo.ClassifiedTopology node) ->
+   Map node (Map Idx.State (Maybe Topo.StoreDir))
 getStorageSequences =
    Map.unionsWith (Map.unionWith (error "duplicate section for node"))
    .
@@ -276,7 +276,7 @@ getStorageSequences =
    Map.mapWithKey
       (\s g ->
          fmap (Map.singleton s) $
-         Map.mapMaybe TD.maybeStorage $ Gr.nodeLabels g)
+         Map.mapMaybe Topo.maybeStorage $ Gr.nodeLabels g)
 
 
 {- |
@@ -290,7 +290,7 @@ stateGraphAllStorageEdges sd =
    Flow.insEdges (fmap (storageEdges . Map.mapMaybe id) tracks) $
    Flow.insNodes (Map.keys tracks) $
    Fold.fold $ Map.mapWithKey stateFromClassTopo sq
-  where sq = fmap TD.classifyStorages $ fst $ stateMaps sd
+  where sq = fmap Topo.classifyStorages $ fst $ stateMaps sd
         tracks = getStorageSequences sq
 
 {- |
@@ -306,6 +306,6 @@ stateGraphActualStorageEdges sd =
              Flow.storageEdges . Map.mapMaybe id) tracks) $
    Flow.insNodes (Map.keys tracks) $
    Fold.fold $ Map.mapWithKey stateFromClassTopo stateMap
-  where sq = fmap TD.classifyStorages sd
+  where sq = fmap Topo.classifyStorages sd
         (stateMap, secMap) = stateMaps sq
         tracks = Flow.getStorageSequences sq

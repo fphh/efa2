@@ -8,7 +8,7 @@ module Main where
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Graph as Gr
 import qualified EFA.Report.Format as Format
@@ -27,7 +27,7 @@ sec0 :~ _ = Stream.enumFrom $ Idx.Section 0
 node00, node01 :: Node.Int
 node00 :~ node01 :~ _ = Stream.enumFrom minBound
 
-topo0 :: TD.Topology Node.Int
+topo0 :: Topo.Topology Node.Int
 topo0 = Gr.fromList nodes (makeEdges edges)
   where nodes = [(node00, Node.AlwaysSink), (node01, Node.AlwaysSource)]
         edges = [(node00, node01)]
@@ -40,7 +40,7 @@ node10, node11 :: Node.String
 node10 = Node.String "node10"
 node11 = Node.String "node11"
 
-topo1 :: TD.Topology Node.String
+topo1 :: Topo.Topology Node.String
 topo1 = Gr.fromList nodes (makeEdges edges)
   where nodes = [(node10, Node.AlwaysSink), (node11, Node.AlwaysSource)]
         edges = [(node10, node11)]
@@ -56,7 +56,7 @@ instance Node.C NodeAB where
    subscript = Node.subscriptDefault
    dotId = Node.dotIdDefault
 
-topo2 :: TD.Topology NodeAB
+topo2 :: Topo.Topology NodeAB
 topo2 = Gr.fromList nodes (makeEdges edges)
   where nodes = [(A, Node.AlwaysSink), (B, Node.AlwaysSource)]
         edges = [(A, B)]
@@ -74,7 +74,7 @@ instance Node.C Node where
    dotId = Node.dotIdDefault
 
 
-topo3 :: TD.Topology Node
+topo3 :: Topo.Topology Node
 topo3 = Gr.fromList nodes (makeEdges edges)
   where nodes = [(Sink, Node.AlwaysSink), (Source, Node.AlwaysSource)]
         edges = [(Source, Sink)]

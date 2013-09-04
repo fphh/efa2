@@ -15,7 +15,7 @@ import qualified EFA.Application.Absolute as EqAbs
 import qualified EFA.Flow.Sequence.Index as SeqIdx
 
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Flow as Flow
 
 -- import qualified EFA.Utility.Stream as Stream
@@ -60,7 +60,7 @@ import Data.Foldable (fold)
 -------------------------------------------------------------------------------------------------
 -- ## Preprocessing of Signals
 
-pre :: TD.Topology System.Node
+pre :: Topo.Topology System.Node
       -> Double
       -> TC Scalar (Typ A T Tt) (Data Nil Double)
       -> TC Scalar (Typ A F Tt) (Data Nil Double)

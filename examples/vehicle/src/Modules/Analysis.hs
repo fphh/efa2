@@ -54,7 +54,7 @@ import EFA.Report.FormatValue (FormatValue, FormatSignalIndex)
 
 import qualified EFA.Graph.Topology.Node as TDNode
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Topology as TD
+import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Flow as Flow
 import qualified Data.Map as Map ; import Data.Map (Map)
 import Data.Monoid ((<>),mempty)
@@ -80,7 +80,7 @@ sec2 = Idx.Section 2
 -------------------------------------------------------------------------------------------------
 -- ## Preprocessing of Signals
 
-pre :: TD.Topology System.Node
+pre :: Topo.Topology System.Node
       -> Double
       -> TC Scalar (Typ A T Tt) (Data Nil Double)
       -> TC Scalar (Typ A F Tt) (Data Nil Double)
