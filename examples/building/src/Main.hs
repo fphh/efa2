@@ -273,16 +273,10 @@ givenSignals ::
   Ord node =>
   Sig.TSignal [] Double ->
   Map (node, node) (Sig.PSignal [] Double) ->
-  [(node, node, Sig.PSignal [] Double)] ->
   Record.PowerRecord node [] Double
-givenSignals time optps ns =
-  Seq.addZeroCrossings
-  $ Record.Record time
-  $ Map.fromList
-  $ Map.foldWithKey g ns' optps
-  where fromto n0 n1 = Idx.PPos $ Idx.StructureEdge n0 n1
-        ns' = map (\(n0, n1, sig) -> (fromto n0 n1, sig)) ns
-        g (n0, n1) sig = ((fromto n0 n1, sig):)
+givenSignals time =
+  Seq.addZeroCrossings . Record.Record time .
+  Map.mapKeys (\(n0,n1) -> Idx.PPos $ Idx.StructureEdge n0 n1)
 
 solveAndCalibrateAvgEffWithGraph ::
   Sig.TSignal [] Double ->
@@ -321,9 +315,13 @@ solveAndCalibrateAvgEffWithGraph time prest plocal etaMap (stateFlowGraph, env) 
 
 
       givenSigs :: Record.PowerRecord Node [] Double
-      givenSigs = givenSignals time optPowerInterp $
-        (LocalRest, LocalNetwork, plocal) :
-        (Rest, Network, prest) : []
+      givenSigs =
+        givenSignals time $
+        Map.union optPowerInterp $
+        Map.fromList $
+          ((LocalRest, LocalNetwork), plocal) :
+          ((Rest, Network), prest) :
+          []
 
       envSims =
         AppSim.solve
