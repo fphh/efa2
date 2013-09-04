@@ -18,7 +18,8 @@ testgit:
 	 rm -r $(TESTDIR)/)
 
 testgit-first:
-	(export EFA=$$PWD && cd /tmp/ && git clone $$EFA $(TESTDIR) && cabal install --enable-documentation --disable-shared --disable-library-profiling $(TESTDIR)/)
+	(export EFA=$$PWD && cd /tmp/ && git clone $$EFA $(TESTDIR) && cd $(TESTDIR) && \
+	 cabal configure --disable-shared --disable-library-profiling && cabal build)
 
 testgit-again:
 	(export EFA=$$PWD && cd /tmp/$(TESTDIR)/ && git pull $$EFA && cabal build && cabal haddock)
