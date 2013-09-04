@@ -1,9 +1,11 @@
 -- | Demonstriert, wie man ein eta als Funktion definiert.
 module Main where
 
+import qualified EFA.Application.Topology.LinearOne as LinearOne
 import qualified EFA.Application.Absolute as EqGen
+import EFA.Application.Topology.LinearOne (Node(Sink, Source))
 import EFA.Application.Absolute ((.=), (=.=))
-import EFA.Application.Utility (constructSeqTopo, makeEdges)
+import EFA.Application.Utility (constructSeqTopo)
 
 import qualified EFA.Flow.Sequence.Index as XIdx
 
@@ -11,9 +13,6 @@ import qualified EFA.Equation.Environment as Env
 
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph.Topology as Topo
-import qualified EFA.Graph as Gr
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
 import EFA.Utility.Map (checkedLookup)
@@ -27,21 +26,9 @@ import Data.Monoid (mconcat, (<>))
 sec0 :: Idx.Section
 sec0 :~ _ = Stream.enumFrom $ Idx.Section 0
 
-data Node = Sink | Source deriving (Eq, Ord, Enum, Show)
-
-instance Node.C Node where
-   display = Node.displayDefault
-   subscript = Node.subscriptDefault
-   dotId = Node.dotIdDefault
-
-
-linearOne :: Topo.Topology Node
-linearOne = Gr.fromList nodes (makeEdges edges)
-  where nodes = [(Sink, Node.AlwaysSink), (Source, Node.AlwaysSource)]
-        edges = [(Source, Sink)]
 
 seqTopo :: Flow.RangeGraph Node
-seqTopo = constructSeqTopo linearOne [0]
+seqTopo = constructSeqTopo LinearOne.topology [0]
 
 enRange :: [Double]
 enRange = 0.01:[0.5, 1 .. 9]
