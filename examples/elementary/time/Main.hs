@@ -1,9 +1,10 @@
 
-
 module Main where
 
+import qualified EFA.Application.Topology.TripodB as Tripod
 import qualified EFA.Application.Absolute as EqGen
-import EFA.Application.Utility ( makeEdges, constructSeqTopo, )
+import EFA.Application.Topology.TripodB (Node, node0, node1, node2, node3)
+import EFA.Application.Utility ( constructSeqTopo, )
 import EFA.Application.Absolute ((.=), (=.=))
 
 import qualified EFA.Flow.Sequence.Index as XIdx
@@ -18,10 +19,7 @@ import EFA.Utility.Stream (Stream((:~)))
 
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Draw as Draw
-import qualified EFA.Graph as Gr
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (formatValue)
 
@@ -34,24 +32,8 @@ sec0, sec1, sec2, sec3, sec4 :: Idx.Section
 sec0 :~ sec1 :~ sec2 :~ sec3 :~ sec4 :~ _ = Stream.enumFrom $ Idx.Section 0
 
 
-data Node = N0 | N1 | N2 | N3 deriving (Show, Eq, Enum, Ord)
-
-instance Node.C Node where
-   display = Node.displayDefault
-   subscript = Node.subscriptDefault
-   dotId = Node.dotIdDefault
-
-
-topoDreibein :: Topo.Topology Node
-topoDreibein = Gr.fromList ns (makeEdges es)
-  where ns = [ (N0, Node.Source),
-               (N1, Node.Crossing),
-               (N2, Node.Sink),
-               (N3, Node.storage) ]
-        es = [(N0, N1), (N1, N3), (N1, N2)]
-
 seqTopo :: Flow.RangeGraph Node
-seqTopo = constructSeqTopo topoDreibein [0, 4]
+seqTopo = constructSeqTopo Tripod.topology [0, 4]
 
 
 type Expr s a = EqGen.Expression Node s a a a
@@ -81,29 +63,29 @@ n5 = EqGen.liftF $ \x -> x/sqrt(1+(x+2)*(x+2))
 
 n01, n12, n13, n31, p10, p12, p21, p13, p31 ::
    (Eq a, Arith.Sum a) => Idx.Section -> Expr s a
-n01 sec = EqGen.variable $ XIdx.eta sec N0 N1
-n12 sec = EqGen.variable $ XIdx.eta sec N1 N2
-n13 sec = EqGen.variable $ XIdx.eta sec N1 N3
-n31 sec = EqGen.variable $ XIdx.eta sec N3 N1
-p10 sec = EqGen.variable $ XIdx.power sec N1 N0
-p12 sec = EqGen.variable $ XIdx.power sec N1 N2
-p21 sec = EqGen.variable $ XIdx.power sec N2 N1
-p13 sec = EqGen.variable $ XIdx.power sec N1 N3
-p31 sec = EqGen.variable $ XIdx.power sec N3 N1
+n01 sec = EqGen.variable $ XIdx.eta sec node0 node1
+n12 sec = EqGen.variable $ XIdx.eta sec node1 node2
+n13 sec = EqGen.variable $ XIdx.eta sec node1 node3
+n31 sec = EqGen.variable $ XIdx.eta sec node3 node1
+p10 sec = EqGen.variable $ XIdx.power sec node1 node0
+p12 sec = EqGen.variable $ XIdx.power sec node1 node2
+p21 sec = EqGen.variable $ XIdx.power sec node2 node1
+p13 sec = EqGen.variable $ XIdx.power sec node1 node3
+p31 sec = EqGen.variable $ XIdx.power sec node3 node1
 
 --esto :: Expr s Double
 esto :: XIdx.StEnergy Node
-esto = XIdx.stEnergy XIdx.initSection sec1 N3
+esto = XIdx.stEnergy XIdx.initSection sec1 node3
 
 ein, eout0, eout1 :: XIdx.Energy Node
-ein = XIdx.energy sec0 N0 N1
-eout0 = XIdx.energy sec0 N2 N1
-eout1 = XIdx.energy sec1 N2 N1
+ein = XIdx.energy sec0 node0 node1
+eout0 = XIdx.energy sec0 node2 node1
+eout1 = XIdx.energy sec1 node2 node1
 
 
 sto0, sto1 :: XIdx.Storage Node
-sto0 = XIdx.storage (Idx.afterSection sec0) N3
-sto1 = XIdx.storage (Idx.afterSection sec1) N3
+sto0 = XIdx.storage (Idx.afterSection sec0) node3
+sto1 = XIdx.storage (Idx.afterSection sec1) node3
 
 
 given :: Double -> Double -> EqGen.EquationSystem Node s Double Double
@@ -113,16 +95,16 @@ given _x t =
   <> (n12 sec1 =.= 1) -- n5 (p12 sec1))
   <> (n13 sec0 =.= 1) -- n1 (p12 sec0))
   <> (n31 sec1 =.= 1) -- n1 (p31 sec1))
-  <> (EqGen.variable (XIdx.energy sec1 N3 N1)
-        =.= EqGen.variable (XIdx.energy sec0 N3 N1))
+  <> (EqGen.variable (XIdx.energy sec1 node3 node1)
+        =.= EqGen.variable (XIdx.energy sec0 node3 node1))
   <> (EqGen.variable (XIdx.dTime sec0) + EqGen.variable (XIdx.dTime sec1) =.= 12.1)
 
   <> (XIdx.dTime sec0 .= t)
-  <> (XIdx.storage Idx.initial N3 .= 10)
+  <> (XIdx.storage Idx.initial node3 .= 10)
 
-  -- <> (edgeVar EqGen.xfactor sec0 N1 N2 .= x)
-  <> (XIdx.power sec0 N2 N1 .= 10)
-  <> (XIdx.power sec1 N2 N1 .= 10)
+  -- <> (edgeVar EqGen.xfactor sec0 node1 node2 .= x)
+  <> (XIdx.power sec0 node2 node1 .= 10)
+  <> (XIdx.power sec1 node2 node1 .= 10)
 
 {-
 t0range, t1range, xrange, erange :: [Double]

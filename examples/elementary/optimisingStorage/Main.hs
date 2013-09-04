@@ -1,18 +1,17 @@
 {-# LANGUAGE TypeFamilies #-}
 module Main where
 
-import qualified EFA.Flow.Sequence.Index as XIdx
+import qualified EFA.Application.Topology.TripodB as Tripod
 import qualified EFA.Application.Absolute as EqGen
+import EFA.Application.Topology.TripodB (Node, node0, node1, node2, node3)
 import EFA.Application.Absolute ((=.=))
-import EFA.Application.Utility
-  ( makeEdges, constructSeqTopo, checkDetermined )
+import EFA.Application.Utility ( constructSeqTopo, checkDetermined )
+
+import qualified EFA.Flow.Sequence.Index as XIdx
 
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Draw as Draw
-import qualified EFA.Graph as Gr
 
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Result as R
@@ -52,25 +51,8 @@ sec0, sec1 :: Idx.Section
 sec0 :~ sec1 :~ _ = Stream.enumFrom $ Idx.Section 0
 
 
-data Node = N0 | N1 | N2 | N3 deriving (Show, Eq, Ord, Enum)
-
-
-instance Node.C Node where
-   display = Node.displayDefault
-   subscript = Node.subscriptDefault
-   dotId = Node.dotIdDefault
-
-
-topoDreibein :: Topo.Topology Node
-topoDreibein = Gr.fromList ns (makeEdges es)
-  where ns = [ (N0, Node.Source),
-               (N1, Node.Crossing),
-               (N2, Node.Sink),
-               (N3, Node.storage) ]
-        es = [(N0, N1), (N1, N3), (N1, N2)]
-
 seqTopo :: Flow.RangeGraph Node
-seqTopo = constructSeqTopo topoDreibein [0, 4]
+seqTopo = constructSeqTopo Tripod.topology [0, 4]
 
 
 type Expr s a = EqGen.Expression Node s Double Double a
@@ -84,29 +66,29 @@ etaf =
 
 n01, n12, n13, n31, p10, p21, e31, e21, p31, p13 ::
   Idx.Section -> Expr s Double
-n01 sec = EqGen.variable $ XIdx.eta sec N0 N1
-n12 sec = EqGen.variable $ XIdx.eta sec N1 N2
-n13 sec = EqGen.variable $ XIdx.eta sec N1 N3
-n31 sec = EqGen.variable $ XIdx.eta sec N3 N1
-p10 sec = EqGen.variable $ XIdx.power sec N1 N0
-p21 sec = EqGen.variable $ XIdx.power sec N2 N1
-e31 sec = EqGen.variable $ XIdx.energy sec N3 N1
-e21 sec = EqGen.variable $ XIdx.energy sec N2 N1
+n01 sec = EqGen.variable $ XIdx.eta sec node0 node1
+n12 sec = EqGen.variable $ XIdx.eta sec node1 node2
+n13 sec = EqGen.variable $ XIdx.eta sec node1 node3
+n31 sec = EqGen.variable $ XIdx.eta sec node3 node1
+p10 sec = EqGen.variable $ XIdx.power sec node1 node0
+p21 sec = EqGen.variable $ XIdx.power sec node2 node1
+e31 sec = EqGen.variable $ XIdx.energy sec node3 node1
+e21 sec = EqGen.variable $ XIdx.energy sec node2 node1
 
-p31 sec = EqGen.variable $ XIdx.power sec N3 N1
-p13 sec = EqGen.variable $ XIdx.power sec N1 N3
+p31 sec = EqGen.variable $ XIdx.power sec node3 node1
+p13 sec = EqGen.variable $ XIdx.power sec node1 node3
 
 
 stoinit :: Expr s Double
-stoinit = EqGen.variable $ XIdx.storage Idx.initial N3
+stoinit = EqGen.variable $ XIdx.storage Idx.initial node3
 
 ein, eout0, eout1 :: XIdx.Energy Node
-ein = XIdx.energy sec0 N0 N1
-eout0 = XIdx.energy sec0 N2 N1
-eout1 = XIdx.energy sec1 N2 N1
+ein = XIdx.energy sec0 node0 node1
+eout0 = XIdx.energy sec0 node2 node1
+eout1 = XIdx.energy sec1 node2 node1
 
 e33 :: Expr s Double
-e33 = EqGen.variable $ XIdx.stEnergy XIdx.initSection sec1 N3
+e33 = EqGen.variable $ XIdx.stEnergy XIdx.initSection sec1 node3
 
 time :: Idx.Section -> Expr s Double
 time = EqGen.variable . XIdx.dTime
@@ -326,25 +308,25 @@ main = do
       varLoss = varE01 .- varEout
 
       -- Get more Env values
-      varN13 = getSignalVarEta varEnvs (XIdx.eta sec0 N1 N3)
-      varN31 = getSignalVarEta varEnvs (XIdx.eta sec1 N3 N1)
-      varN01 = getSignalVarEta varEnvs (XIdx.eta sec0 N0 N1)
+      varN13 = getSignalVarEta varEnvs (XIdx.eta sec0 node1 node3)
+      varN31 = getSignalVarEta varEnvs (XIdx.eta sec1 node3 node1)
+      varN01 = getSignalVarEta varEnvs (XIdx.eta sec0 node0 node1)
 
-      varP31_0 = getSignalVarPower varEnvs (XIdx.power sec0 N3 N1)
-      varP31_1 = getSignalVarPower varEnvs (XIdx.power sec1 N3 N1)
+      varP31_0 = getSignalVarPower varEnvs (XIdx.power sec0 node3 node1)
+      varP31_1 = getSignalVarPower varEnvs (XIdx.power sec1 node3 node1)
 
 
-      varP13_0 = getSignalVarPower varEnvs (XIdx.power sec0 N1 N3)
-      varP13_1 = getSignalVarPower varEnvs (XIdx.power sec1 N1 N3)
+      varP13_0 = getSignalVarPower varEnvs (XIdx.power sec0 node1 node3)
+      varP13_1 = getSignalVarPower varEnvs (XIdx.power sec1 node1 node3)
 
-      varP10 = getSignalVarPower varEnvs (XIdx.power sec0 N1 N0)
-      varP01 = getSignalVarPower varEnvs (XIdx.power sec0 N0 N1)
+      varP10 = getSignalVarPower varEnvs (XIdx.power sec0 node1 node0)
+      varP01 = getSignalVarPower varEnvs (XIdx.power sec0 node0 node1)
 
-      varE10 = getSignalVarEnergy varEnvs (XIdx.energy sec0 N1 N0)
-      varE01 = getSignalVarEnergy varEnvs (XIdx.energy sec0 N0 N1)
+      varE10 = getSignalVarEnergy varEnvs (XIdx.energy sec0 node1 node0)
+      varE01 = getSignalVarEnergy varEnvs (XIdx.energy sec0 node0 node1)
 
-      varPout0 = getSignalVarPower varEnvs (XIdx.power sec0 N2 N1)
-      varPout1 = getSignalVarPower varEnvs (XIdx.power sec1 N2 N1)
+      varPout0 = getSignalVarPower varEnvs (XIdx.power sec0 node2 node1)
+      varPout1 = getSignalVarPower varEnvs (XIdx.power sec1 node2 node1)
 
       -- create curve of n01 in used power range
       p10Lin = S.concat varP10

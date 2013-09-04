@@ -5,27 +5,27 @@
 
 module Main where
 
+import qualified EFA.Application.Topology.TripodB as Tripod
 import qualified EFA.Application.Absolute as EqGen
+import EFA.Application.Topology.TripodB (Node, source, crossing, sink, storage)
 import EFA.Application.Absolute ( (.=), (=%%=), (=.=) )
 import EFA.Application.EtaSys (etaSys)
-import EFA.Application.Utility (makeEdges)
 
 import qualified EFA.Flow.Sequence.Index as XIdx
 
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph as Gr
 
 import qualified EFA.Signal.Signal as Sig
-import EFA.Signal.Typ(Typ,A,P,Tt)
 import qualified EFA.Signal.ConvertTable as Table
 import qualified EFA.Signal.SequenceData as SD
 import qualified EFA.Signal.Data as D
 import qualified EFA.Signal.PlotIO as PlotIO
+import EFA.Signal.Typ (Typ,A,P,Tt)
 import EFA.Signal.Data (Data, Nil, (:>))
 
 import qualified EFA.Equation.Record as EqRec
@@ -55,30 +55,14 @@ sec0, sec1 :: Idx.Section
 sec0 :~ sec1 :~ _ = Stream.enumFrom $ Idx.Section 0
 
 
-
-source, crossing, sink, storage :: Node.Int
-source :~ crossing :~ sink :~ storage :~ _ = Stream.enumFrom minBound
-
-topoDreibein :: Topo.Topology Node.Int
-topoDreibein = Gr.fromList ns (makeEdges es)
-  where ns = [ (source, Node.Source),
-               (crossing, Node.Crossing),
-               (sink, Node.Sink),
-               (storage, Node.Storage ()) ]
-        es = [ (source, crossing),
-               (crossing, sink),
-               (crossing, storage) ]
-
-
-
 select :: [topo] -> [Int] -> SD.SequData topo
 select ts = SD.fromList . map (ts !!)
 
-seqTopoFunc :: [Int] -> Flow.RangeGraph Node.Int
+seqTopoFunc :: [Int] -> Flow.RangeGraph Node
 seqTopoFunc states = Flow.sequenceGraph (select sol states)
-  where sol = StateAnalysis.advanced topoDreibein
+  where sol = StateAnalysis.advanced Tripod.topology
 
-seqTopo :: Flow.RangeGraph Node.Int
+seqTopo :: Flow.RangeGraph Node
 seqTopo = seqTopoFunc [0, 3]
 
 
@@ -108,7 +92,7 @@ lookupSoCr = Sig.fromSample . Sig.interp1Lin "lookupSoCr" xs ys . Sig.toSample
         xs = Sig.fromList [0 .. 60]
         ys = Sig.fromList [0.40, 0.41 .. 1]
 
-commonEnv :: EqGen.EquationSystem Node.Int s Double Double
+commonEnv :: EqGen.EquationSystem Node s Double Double
 commonEnv =
    mconcat $
    (XIdx.dTime sec0 .= 1) :
@@ -118,7 +102,7 @@ commonEnv =
    []
 
 givenSec0Mean ::
-  Double -> Double -> EqGen.EquationSystem Node.Int s Double Double
+  Double -> Double -> EqGen.EquationSystem Node s Double Double
 givenSec0Mean psink _ =
    (commonEnv <>) $
    mconcat $
@@ -142,7 +126,7 @@ givenSec0Mean psink _ =
    []
 
 givenSec1Mean ::
-  Double -> Double -> EqGen.EquationSystem Node.Int s Double Double
+  Double -> Double -> EqGen.EquationSystem Node s Double Double
 givenSec1Mean psink _ =
    (commonEnv <>) $
    mconcat $
@@ -226,7 +210,7 @@ sectionHU ss bf = ws
 
 commonEnvHU ::
   [Idx.Section] ->
-  EqGen.EquationSystem Node.Int s (Data Nil Double) (Data ([] :> Nil) Double)
+  EqGen.EquationSystem Node s (Data Nil Double) (Data ([] :> Nil) Double)
 commonEnvHU _ =
   -- (foldMap (uncurry f) $ zip ss (tail ss))
   -- <>
@@ -241,7 +225,7 @@ commonEnvHU _ =
 
 givenEnvHUSec ::
   (Idx.Section, Sig.PSignal [] Double) ->
-  EqGen.EquationSystem Node.Int s (Data Nil Double) (Data ([] :> Nil) Double)
+  EqGen.EquationSystem Node s (Data Nil Double) (Data ([] :> Nil) Double)
 givenEnvHUSec (sec, Sig.TC sig) =
   mconcat $
   (XIdx.dTime sec .= D.map (const 1.0) sig) :
@@ -278,7 +262,7 @@ givenEnvHUSec (sec, Sig.TC sig) =
 
 givenEnvHU ::
   [Sig.PSignal [] Double] ->
-  EqGen.EquationSystem Node.Int s (Data Nil Double) (Data ([] :> Nil) Double)
+  EqGen.EquationSystem Node s (Data Nil Double) (Data ([] :> Nil) Double)
 givenEnvHU xs =
   let ys = zip (map Idx.Section [0..]) xs
   in  commonEnvHU (map fst ys)
@@ -334,7 +318,7 @@ lookUp caller env n =
 
 etaSysHU ::
   EqEnv.Complete
-    Node.Int
+    Node
     (EqRec.Absolute (Result Double))
     (EqRec.Absolute (Result Double)) ->
   Double
