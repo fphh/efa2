@@ -127,11 +127,8 @@ variableRecord ::
 variableRecord idx =
    EqSys.Context $
    MR.asks
-      (maybe
-         (error "EquationSystem.variableRecord: unknown variable")
-         (Wrap . fmap Expr.fromVariable)
-       .
-       CumFlow.lookup idx)
+      (Wrap . fmap Expr.fromVariable .
+       Var.checkedLookup "variableRecord: unknown variable" CumFlow.lookup idx)
 
 variable ::
    (Node.C node, CumFlow.Lookup idx, Record rec) =>

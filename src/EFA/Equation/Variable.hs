@@ -169,3 +169,11 @@ instance Format.StorageIdx (Scalar part) where
          StInSum _idx -> Format.scalarSum
          StOutSum _idx -> Format.scalarSum
          Storage _idx -> Format.storage
+
+
+checkedLookup ::
+   (Node.C node, FormatIndex idx) =>
+   String -> (idx node -> t -> Maybe b) -> idx node -> t -> b
+checkedLookup name lk idx gr =
+   maybe (error $ name ++ " " ++ Format.unUnicode (formatIndex idx)) id $
+   lk idx gr

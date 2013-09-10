@@ -65,6 +65,8 @@ import EFA.Equation.Result (Result(Determined, Undetermined))
 
 import EFA.Signal.SequenceData (SequData)
 
+import qualified EFA.Report.FormatValue as FormatValue
+
 import qualified EFA.Utility.Map as MapU
 
 import qualified Control.Monad.Trans.State as MS
@@ -477,17 +479,23 @@ seqLookup state = Map.lookup state . states
 
 type Element idx a v = Env.PartElement (Environment idx) a v
 
-class (Env.AccessPart (Environment idx), Var.Index idx) => Lookup idx where
+class
+   (Env.AccessPart (Environment idx), Var.Index idx, Var.FormatIndex idx) =>
+      Lookup idx where
    type Environment idx :: * -> * -> *
    lookup ::
       (Ord node) =>
       idx node -> Graph node a v -> Maybe (Element idx a v)
 
-instance (LookupSignal idx) => Lookup (Idx.InState idx) where
+instance
+   (LookupSignal idx, FormatValue.FormatSignalIndex idx) =>
+      Lookup (Idx.InState idx) where
    type Environment (Idx.InState idx) = Env.Signal
    lookup = lookupSignal
 
-instance (LookupScalar idx) => Lookup (Idx.ForNode idx) where
+instance
+   (LookupScalar idx, FormatValue.FormatScalarIndex idx) =>
+      Lookup (Idx.ForNode idx) where
    type Environment (Idx.ForNode idx) = Env.Scalar
    lookup = lookupScalar
 

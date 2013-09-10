@@ -157,6 +157,12 @@ lookup =
       (Lookup $ SeqFlow.lookup)
       (Lookup $ SeqFlow.lookup)
 
+checkedLookup ::
+   (Node.C node, Var.FormatIndex idx) =>
+   String -> (idx node -> t -> Maybe b) -> idx node -> t -> b
+checkedLookup name =
+   Var.checkedLookup ("EquationSystem." ++ name)
+
 
 variableRecord ::
    (Node.C node, SeqFlow.Lookup idx, SeqFlow.Element idx a v ~ x, Record rec) =>
@@ -164,11 +170,8 @@ variableRecord ::
 variableRecord idx =
    EqSys.Context $
    MR.asks
-      (maybe
-         (error "EquationSystem.variableRecord: unknown variable")
-         (Wrap . fmap Expr.fromVariable)
-       .
-       lookup idx)
+      (Wrap . fmap Expr.fromVariable .
+       checkedLookup "variableRecord: unknown variable" lookup idx)
 
 variable ::
    (Node.C node, SeqFlow.Lookup idx, SeqFlow.Element idx a v ~ x, Record rec) =>
@@ -210,11 +213,11 @@ fromStorageSequences ::
    EqSys.System mode s
 fromStorageSequences g =
    let stoutsum sec node =
-          maybe (error "fromStorageSequences inStorages") id $
-          SeqFlow.lookupStOutSum (Idx.ForNode (Idx.StOutSum sec) node) g
+          checkedLookup "fromStorageSequences inStorages"
+             SeqFlow.lookupStOutSum (Idx.ForNode (Idx.StOutSum sec) node) g
        stinsum sec node =
-          maybe (error "fromStorageSequences outStorages") id $
-          SeqFlow.lookupStInSum (Idx.ForNode (Idx.StInSum sec) node) g
+          checkedLookup "fromStorageSequences outStorages"
+             SeqFlow.lookupStInSum (Idx.ForNode (Idx.StInSum sec) node) g
        f node (initExit, storageMap, edges) =
           fromStorageSequence g node initExit storageMap
           <>

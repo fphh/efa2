@@ -7,6 +7,8 @@ import EFA.Report.Format (Format)
 import EFA.Report.FormatValue
           (FormatValue, formatValue, formatStructureLink)
 
+import Data.Maybe (fromMaybe)
+
 
 data Any node =
      Energy (Idx.Energy node)
@@ -34,7 +36,7 @@ instance (Node.C node) => FormatValue (Any node) where
       case var of
          Energy idx -> formatIndex idx
          Power idx -> formatIndex idx
-         Eta idx -> formatValue idx
+         Eta idx -> formatIndex idx
          X idx -> formatIndex idx
          DTime idx -> formatIndex idx
          Sum idx -> formatIndex idx
@@ -64,6 +66,10 @@ instance FormatIndex Idx.DTime where
    formatIndex (Idx.DTime e) =
       Format.subscript Format.dtime $ formatStructureLink e
 
+instance FormatIndex Idx.Eta where
+   formatIndex (Idx.Eta se) =
+      Format.subscript Format.eta $ formatStructureLink se
+
 
 formatEdge ::
    (Format output, Node.C node) =>
@@ -71,3 +77,11 @@ formatEdge ::
 formatEdge e d se =
    Format.subscript e $
    Format.direction d `Format.connect` formatStructureLink se
+
+
+checkedLookup ::
+   (Node.C node, FormatIndex idx) =>
+   String -> (idx node -> t -> Maybe b) -> idx node -> t -> b
+checkedLookup name lk idx gr =
+   fromMaybe (error $ name ++ " " ++ Format.unUnicode (formatIndex idx)) $
+   lk idx gr

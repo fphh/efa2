@@ -234,7 +234,7 @@ lookupSum (CumIdx.Sum dir node) =
    Gr.lookupNode node
 
 
-class (CumVar.Index idx) => Lookup idx where
+class (CumVar.Index idx, CumVar.FormatIndex idx) => Lookup idx where
    lookup ::
       (Ord node) => idx node -> Graph node a -> Maybe a
 

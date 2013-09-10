@@ -63,6 +63,7 @@ import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Gr
 
+import qualified EFA.Report.FormatValue as FormatValue
 import Control.Monad (mplus, (<=<))
 import Control.Applicative (Applicative, pure, liftA2, liftA3, (<*>), (<$>), (<$))
 
@@ -71,7 +72,6 @@ import qualified Data.Foldable as Fold
 
 import Data.Traversable (Traversable, traverse, foldMapDefault)
 import Data.Foldable (Foldable)
-import Data.Maybe (fromMaybe)
 import Data.Monoid (mempty, (<>))
 
 import Prelude hiding (lookup, init, seq, sequence, sin, sum)
@@ -292,17 +292,17 @@ edgeMap sec f =
 
 
 graphFromEnv ::
-   (Ord node) =>
+   (Node.C node) =>
    Env.Complete node a v ->
    SeqFlow.RangeGraph node -> Graph node a v
 graphFromEnv (Env.Complete envScalar envSignal) =
    mapGraphWithVar
       (\idx () ->
-         fromMaybe (error "graphFromEnv.lookupScalar") $
-         Env.lookupScalar idx envScalar)
+         Var.checkedLookup "graphFromEnv.lookupScalar"
+            Env.lookupScalar idx envScalar)
       (\idx () ->
-         fromMaybe (error "graphFromEnv.lookupSignal") $
-         Env.lookupSignal idx envSignal) .
+         Var.checkedLookup "graphFromEnv.lookupSignal"
+            Env.lookupSignal idx envSignal) .
    graphFromPlain
 
 
@@ -422,15 +422,21 @@ seqLookup ::
 seqLookup sec = fmap snd . Map.lookup sec . sequence
 
 
-class (Env.AccessPart (Env.Environment idx), Var.Index idx) => Lookup idx where
+class
+   (Env.AccessPart (Env.Environment idx), Var.Index idx, Var.FormatIndex idx) =>
+      Lookup idx where
    lookup ::
       (Ord node) =>
       idx node -> Graph node a v -> Maybe (Env.Element idx a v)
 
-instance (LookupSignal idx) => Lookup (Idx.InSection idx) where
+instance
+   (LookupSignal idx, FormatValue.FormatSignalIndex idx) =>
+      Lookup (Idx.InSection idx) where
    lookup = lookupSignal
 
-instance (LookupScalar idx) => Lookup (Idx.ForNode idx) where
+instance
+   (LookupScalar idx, FormatValue.FormatScalarIndex idx) =>
+      Lookup (Idx.ForNode idx) where
    lookup = lookupScalar
 
 
