@@ -510,9 +510,9 @@ sequenceFromPlain ::
    Sequence node () ()
 sequenceFromPlain =
    let sum = Sum () ()
-       inSum   = Sums { sumIn = Nothing,  sumOut = Nothing }
-       outSum  = Sums { sumIn = Just sum, sumOut = Nothing }
-       noSum   = Sums { sumIn = Nothing,  sumOut = Just sum }
+       noSum   = Sums { sumIn = Nothing,  sumOut = Nothing }
+       inSum   = Sums { sumIn = Just sum, sumOut = Nothing }
+       outSum  = Sums { sumIn = Nothing,  sumOut = Just sum }
        bothSum = Sums { sumIn = Just sum, sumOut = Just sum }
    in  Map.map $ \(rng, ((), gr)) ->
           (,) rng $
