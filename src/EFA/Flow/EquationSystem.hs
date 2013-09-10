@@ -152,7 +152,7 @@ fromEdge dtime
       }) =
    (eout =&= dtime ~* pout) <>
    (ein  =&= dtime ~* pin)  <>
-   (pout =&= eta ~* pin)
+   (pin  =&= eta ~* pout)
 
 
 fromSums ::
