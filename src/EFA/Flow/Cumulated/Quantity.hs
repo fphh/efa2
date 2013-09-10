@@ -106,7 +106,7 @@ mapGraph f =
 
 
 traverseGraph ::
-   (Applicative f) =>
+   (Applicative f, Ord node) =>
    (a0 -> f a1) ->
    Graph node a0 -> f (Graph node a1)
 traverseGraph f =

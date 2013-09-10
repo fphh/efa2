@@ -213,7 +213,7 @@ variables =
    CumFlow.mapGraphWithVar EqSys.globalVariableFromResult
 
 query ::
-   (Traversable rec) =>
+   (Node.C node, Record rec) =>
    CumFlow.Graph node (SysRecord.Variable mode rec s a) ->
    ST s (CumFlow.Graph node (rec (Result a)))
 query =

@@ -155,7 +155,7 @@ mapStorages f =
 
 
 traverseGraph ::
-   (Applicative f) =>
+   (Applicative f, Ord node) =>
    (a0 -> f a1) ->
    (v0 -> f v1) ->
    Graph node a0 v0 -> f (Graph node a1 v1)
@@ -165,7 +165,7 @@ traverseGraph f g (SeqFlow.Graph sts seq) =
       (traverseSequence f g $ seq)
 
 traverseSequence ::
-   (Applicative f) =>
+   (Applicative f, Ord node) =>
    (a0 -> f a1) ->
    (v0 -> f v1) ->
    Sequence node a0 v0 -> f (Sequence node a1 v1)
@@ -177,7 +177,7 @@ traverseSequence f g =
             (Gr.traverse (traverseSums f g) (traverse $ traverse g) gr))
 
 traverseStorages ::
-   (Applicative f) =>
+   (Applicative f, Ord node) =>
    (a0 -> f a1) ->
    Storages node a0 -> f (Storages node a1)
 traverseStorages f =

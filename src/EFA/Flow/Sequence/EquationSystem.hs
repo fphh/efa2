@@ -321,7 +321,7 @@ variables =
       EqSys.globalVariableFromResult
 
 query ::
-   (Traversable rec) =>
+   (Node.C node, Record rec) =>
    SeqFlow.Graph node
       (SysRecord.Variable mode rec s a)
       (SysRecord.Variable mode rec s v) ->

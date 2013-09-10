@@ -56,7 +56,7 @@ import qualified Data.Map as Map
 import qualified Data.Traversable as Trav
 import qualified Data.Foldable as Fold
 import Control.Monad (liftM2)
-import Control.Applicative (Applicative, pure, liftA3)
+import Control.Applicative (Applicative, pure, liftA2, liftA3)
 import Data.Foldable (Foldable, foldMap)
 import Data.Set (Set)
 import Data.Map (Map)
@@ -679,7 +679,7 @@ mapGraph f g = map f (mkInOutGraphFormat g)
 Same restrictions as in 'traverse'.
 -}
 traverseNode ::
-   (Applicative f) =>
+   (Applicative f, Ord n, Ord (e n), Edge e) =>
    (nl0 -> f nl1) -> Graph n e nl0 el -> f (Graph n e nl1 el)
 traverseNode f = traverse f pure
 
@@ -687,22 +687,28 @@ traverseNode f = traverse f pure
 Same restrictions as in 'traverse'.
 -}
 traverseEdge ::
-   (Applicative f) =>
+   (Applicative f, Ord n, Ord (e n), Edge e) =>
    (el0 -> f el1) -> Graph n e nl el0 -> f (Graph n e nl el1)
 traverseEdge f = traverse pure f
 
 {- |
 Don't rely on a particular order of traversal!
-Due to the current implementation all edges are accessed twice.
-Don't rely on this behaviour!
-That is, the actions should be commutative and non-destructive.
 -}
-traverse ::
-   (Applicative f) =>
+traverse, _traverseNaive ::
+   (Applicative f, Ord n, Ord (e n), Edge e) =>
    (nl0 -> f nl1) ->
    (el0 -> f el1) ->
    Graph n e nl0 el0 -> f (Graph n e nl1 el1)
-traverse fn fe =
+traverse fn fe gr =
+   liftA2 fromMap
+      (Trav.traverse fn $ nodeLabels gr)
+      (Trav.traverse fe $ edgeLabels gr)
+
+{-
+Due to the current implementation all edges are accessed twice.
+That is, the actions should be commutative and non-destructive.
+-}
+_traverseNaive fn fe =
    fmap Graph .
    Trav.traverse
       (\(ins,n,outs) ->
