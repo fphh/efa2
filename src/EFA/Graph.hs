@@ -343,7 +343,7 @@ nodeLabels = fmap snd3 . nodes
 
 lookupEdge :: (Edge e, Ord (e n), Ord n) => e n -> Graph n e nl el -> Maybe el
 lookupEdge e (Graph g) =
-   Map.lookup e . fst3 =<< Map.lookup (from e) g
+   Map.lookup e . thd3 =<< Map.lookup (from e) g
 
 isEmpty :: Graph n e nl el -> Bool
 isEmpty = Map.null . graphMap
