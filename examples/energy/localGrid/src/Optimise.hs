@@ -9,20 +9,15 @@ module Main where
 import qualified Modules.System as System
 import qualified Modules.Optimisation as Optimisation
 import qualified Modules.Analysis as Analysis
+import qualified Modules.Utility as ModUt
 import Modules.System (Node(..))
 import Modules.Optimisation (EnvDouble, sec0,sec1, SocDrive(..), lookupDetPower, condition, forcing )
-import EFA.Application.Optimisation as AppOpt (etaOverPowerIn,etaOverPowerOut)
+
 import qualified EFA.Application.Sweep as Sweep
-
-import qualified Modules.Utility as ModUt
--- import Modules.Utility(getEtas, getPowerSignals,select)
-
---import qualified EFA.Application.EtaSys as ES
-import qualified EFA.Application.Absolute as EqGen
-import EFA.Application.Utility (select)
 import qualified EFA.Application.Utility as AppUt
---import qualified EFA.Application.Optimisation as AppOpt
---import qualified EFA.Application.Sweep as Sweep
+import qualified EFA.Application.Absolute as EqGen
+import EFA.Application.Optimisation (etaOverPowerIn, etaOverPowerOut)
+import EFA.Application.Utility (select)
 
 import qualified EFA.Flow.Sequence.Index as XIdx
 

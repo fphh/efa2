@@ -10,6 +10,7 @@ import qualified EFA.Application.Absolute as EqGen
 import EFA.Application.Topology.TripodB (Node, source, crossing, sink, storage)
 import EFA.Application.Absolute ( (.=), (=%%=), (=.=) )
 import EFA.Application.EtaSys (etaSys)
+import EFA.Application.Utility (select)
 
 import qualified EFA.Flow.Sequence.Index as XIdx
 
@@ -22,7 +23,6 @@ import qualified EFA.Graph as Gr
 
 import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.ConvertTable as Table
-import qualified EFA.Signal.SequenceData as SD
 import qualified EFA.Signal.Data as D
 import qualified EFA.Signal.PlotIO as PlotIO
 import EFA.Signal.Typ (Typ,A,P,Tt)
@@ -54,9 +54,6 @@ import Debug.Trace (trace)
 sec0, sec1 :: Idx.Section
 sec0 :~ sec1 :~ _ = Stream.enumFrom $ Idx.Section 0
 
-
-select :: [topo] -> [Int] -> SD.SequData topo
-select ts = SD.fromList . map (ts !!)
 
 seqTopoFunc :: [Int] -> Flow.RangeGraph Node
 seqTopoFunc states = Flow.sequenceGraph (select sol states)

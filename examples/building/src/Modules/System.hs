@@ -93,8 +93,7 @@ seqTopology = Flow.sequenceGraph (select flowStates [0, 4])
 
 stateFlowGraph :: Topo.StateFlowGraph Node
 stateFlowGraph =
-  StateFlow.stateGraphAllStorageEdges
-  $ AppUt.select flowStates [0, 4]
+  StateFlow.stateGraphAllStorageEdges $ select flowStates [0, 4]
 
 etaAssignState ::
   Idx.State ->
