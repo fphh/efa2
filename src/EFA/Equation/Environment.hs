@@ -436,8 +436,7 @@ filter ::
    (v -> Bool) ->
    Complete node a v ->
    Complete node a v
-filter f g (Complete scalar0 signal0) =
-   Complete (scalarFilter f scalar0) (signalFilter g signal0)
+filter f g = lift1 (scalarFilter f) (signalFilter g)
 
 signalFilterWithKey ::
    Ord node =>
