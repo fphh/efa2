@@ -39,7 +39,7 @@ import qualified EFA.Utility.Map as MapU
 
 import qualified Data.Map as Map
 
-import Control.Applicative (Applicative, pure, liftA2, (<*>))
+import Control.Applicative (Applicative, pure, liftA2, (<*>), (<|>))
 import Control.Monad ((<=<))
 import Data.Traversable (Traversable, traverse, foldMapDefault)
 import Data.Foldable (Foldable, foldMap)
@@ -179,10 +179,17 @@ addCumGraph ::
 addCumGraph add x y =
    Gr.fromMap
       (MapU.checkedZipWith "addCumGraph"
-         (liftA2 add)
+         (addSums add)
          (Gr.nodeLabels x) (Gr.nodeLabels y))
       (Map.unionWith (liftA2 add)
          (Gr.edgeLabels x) (Gr.edgeLabels y))
+
+addSums :: (a -> a -> a) -> Sums a -> Sums a -> Sums a
+addSums add (Sums i0 o0) (Sums i1 o1) =
+   Sums (addMaybe add i0 i1) (addMaybe add o0 o1)
+
+addMaybe :: (a -> a -> a) -> Maybe a -> Maybe a -> Maybe a
+addMaybe add x y = liftA2 add x y <|> x <|> y
 
 
 lookupPower ::
