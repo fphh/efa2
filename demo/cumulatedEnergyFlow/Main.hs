@@ -1,29 +1,33 @@
 module Main where
 
 import qualified EFA.Application.Topology.TripodA as Tripod
-import qualified EFA.Application.Absolute as EqGen
 import EFA.Application.Topology.TripodA (Node, node0, node1, node2, node3)
-import EFA.Application.Utility ( constructSeqTopo )
-import EFA.Application.Absolute ( (.=) )
+import EFA.Application.Utility ( seqFlowGraphFromStates )
 
+import qualified EFA.Flow.Cumulated.Absolute as CumEqSys
+import qualified EFA.Flow.Cumulated.Quantity as Cumulated
+
+import qualified EFA.Flow.Sequence.Absolute as EqSys
+import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence.Index as XIdx
+import qualified EFA.Flow.Draw as Draw
+import EFA.Flow.Sequence.Absolute ( (.=) )
 
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Draw as Draw
-import EFA.Graph.CumulatedFlow (cumulate)
+import qualified EFA.Graph as Gr
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Async (concurrentlyMany_)
 import EFA.Utility.Stream (Stream((:~)))
 
-import Data.Monoid (Monoid, mconcat)
+import Data.Monoid (Monoid, mconcat, mempty)
 
 
 sec0, sec1, sec2 :: Idx.Section
 sec0 :~ sec1 :~ sec2 :~ _ = Stream.enumFrom $ Idx.Section 0
 
 
-given :: EqGen.EquationSystem Node s Double Double
+given :: EqSys.EquationSystemIgnore Node s Double Double
 given =
    mconcat $
 
@@ -63,11 +67,17 @@ given =
 main :: IO ()
 main = do
 
-  let seqTopo = constructSeqTopo Tripod.topology [1, 0, 1]
-      env = EqGen.solve seqTopo given
-      (with, against) = cumulate Tripod.topology seqTopo env
+   let solved =
+          EqSys.solve
+             (seqFlowGraphFromStates Tripod.topology [1, 0, 1])
+             given
+       cum =
+          Gr.mapEdge Cumulated.flowResultFromCumResult $
+          Cumulated.fromSequenceFlowResult $ SeqFlow.sequence solved
+       cumSolved = CumEqSys.solve cum mempty
 
-  concurrentlyMany_ $ map Draw.xterm [
-    Draw.sequFlowGraphAbsWithEnv seqTopo env,
-    uncurry Draw.cumulatedFlow with,
-    uncurry Draw.cumulatedFlow against ]
+   concurrentlyMany_ $ map Draw.xterm $
+      Draw.sequFlowGraph Draw.optionsDefault solved :
+      Draw.cumulatedFlow cum :
+      Draw.cumulatedFlow cumSolved :
+      []
