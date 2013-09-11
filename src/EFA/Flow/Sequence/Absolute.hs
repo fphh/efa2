@@ -43,6 +43,15 @@ type
       EqSys.Expression mode Record.Absolute node s a v x
 
 
+type
+   EquationSystemIgnore node s a v =
+      EqSys.EquationSystem Verify.Ignore Record.Absolute node s a v
+
+type
+   ExpressionIgnore node s a v x =
+      EqSys.Expression Verify.Ignore Record.Absolute node s a v x
+
+
 solve ::
    (Eq a, Arith.Constant a, a ~ Arith.Scalar v,
     Eq v, Arith.Product v, Arith.Integrate v,
