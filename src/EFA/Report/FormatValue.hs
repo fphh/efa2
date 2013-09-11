@@ -53,7 +53,9 @@ instance
       FormatValue (Idx.InPart part idx node) where
    formatValue (Idx.InPart s idx) = formatSignalIndex idx s
 
-instance (FormatScalarIndex idx, Node.C node) => FormatValue (Idx.ForNode idx node) where
+instance
+   (FormatScalarIndex idx, Node.C node) =>
+      FormatValue (Idx.ForNode idx node) where
    formatValue (Idx.ForNode idx n) = formatScalarIndex idx n
 
 
