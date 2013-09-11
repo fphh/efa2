@@ -24,7 +24,6 @@ import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Arithmetic as Arith
-import EFA.Equation.SystemRecord (Record)
 import EFA.Equation.System ((.=))
 import EFA.Equation.Result (Result(..))
 
@@ -33,8 +32,6 @@ import EFA.Report.FormatValue (FormatValue)
 import qualified EFA.Utility.Map as MapU
 import EFA.Utility.Map (checkedLookup)
 import EFA.Utility (myShowList)
-
-import Control.Applicative (pure)
 
 import qualified Data.Set as Set
 import qualified Data.Map as Map
@@ -78,7 +75,7 @@ makePPosLabelMap edgeList = Map.fromList $ concat $ map f edgeList
                              (SeqIdx.ppos n2 n1, l2)]
 
 constructSeqTopo ::
-   (Ord node, Show node) =>
+   (Ord node) =>
    Topo.Topology node -> [Int] -> Flow.RangeGraph node
 constructSeqTopo topo =
   Flow.sequenceGraph .
@@ -86,12 +83,11 @@ constructSeqTopo topo =
   SD.fromList
 
 seqFlowGraphFromStates ::
-   (Ord node, Show node, Record rec) =>
+   (Ord node) =>
    Topo.Topology node -> [Int] ->
-   SeqFlowQuant.Graph node (rec (Result a)) (rec (Result v))
+   SeqFlowQuant.Graph node (Result a) (Result v)
 seqFlowGraphFromStates topo =
-   SeqFlowQuant.mapGraph
-      (const $ pure Undetermined) (const $ pure Undetermined) .
+   SeqFlowQuant.mapGraph (\() -> Undetermined) (\() -> Undetermined) .
    SeqFlowQuant.graphFromPlain .
    SeqFlow.sequenceGraph .
    fmap (StateAnalysis.bruteForce topo !!) .

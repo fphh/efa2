@@ -4,19 +4,16 @@
 module EFA.Test.EquationSystem.Given where
 
 import qualified EFA.Application.Topology.TripodA as Tripod
-import qualified EFA.Application.Absolute as EqAbs
 import EFA.Application.Topology.TripodA (Node, node0, node1, node2, node3)
 import EFA.Application.Utility ( seqFlowGraphFromStates )
 
-import qualified EFA.Flow.Sequence.EquationSystem as EqGen
+import qualified EFA.Flow.Sequence.Absolute as EqSys
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence.Index as XIdx
-import EFA.Flow.Sequence.EquationSystem ( (=.=) )
 
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Pair as Pair
 import qualified EFA.Equation.Arithmetic as Arith
-import qualified EFA.Equation.Record as Record
 import EFA.Equation.Result (Result(..))
 
 import EFA.Symbolic.SumProduct ( Term )
@@ -49,9 +46,7 @@ bndi :~ bnd0 :~ bnd1 :~ bnd2 :~ bnd3 :~ bnd4 :~ _ =
    Stream.enumFrom $ Idx.initial
 
 
-flowGraph ::
-   SeqFlow.Graph Node
-      (Record.Absolute (Result a)) (Record.Absolute (Result v))
+flowGraph :: SeqFlow.Graph Node (Result a) (Result v)
 flowGraph = seqFlowGraphFromStates Tripod.topology [1, 0, 1]
 
 
@@ -63,21 +58,18 @@ flowGraph = seqFlowGraphFromStates Tripod.topology [1, 0, 1]
 ME.switch undefined (putStrLn . toTestGiven) $ fst testEnv
 -}
 toTestGiven ::
-   SeqFlow.Graph Node
-      (Record.Absolute (Result Rational))
-      (Record.Absolute (Result Rational)) ->
-   String
+   SeqFlow.Graph Node (Result Rational) (Result Rational) -> String
 toTestGiven gr =
    "testGiven :: EquationSystem s\n" ++
    "testGiven = mconcat $\n" ++
    appEndo
       (SeqFlow.foldMap Endo Endo $ SeqFlow.mapGraphWithVar g g gr)
       "   []"
-  where g :: (Show idx, Show a) => idx -> Record.Absolute (Result a) -> ShowS
+  where g :: (Show idx, Show a) => idx -> Result a -> ShowS
         g idx v =
            showString "   ((" . shows idx .
            showString ") .= " . showValue v . showString ") :\n"
-        showValue (Record.Absolute v) =
+        showValue v =
           case v of
             Determined x -> shows x
             Undetermined -> showString "?"
@@ -87,30 +79,25 @@ toTestGiven gr =
 testEnv, solvedEnv ::
    (ME.Exceptional
       (Verify.Exception Format.Unicode)
-      (SeqFlow.Graph Node
-         (Record.Absolute (Result Rational))
-         (Record.Absolute (Result Rational))),
+      (SeqFlow.Graph Node (Result Rational) (Result Rational)),
     Verify.Assigns Format.Unicode)
 testEnv =
    mapFst (fmap numericEnv) $
-   EqGen.solveTracked flowGraph testGiven
-
-undet :: Record.Absolute (Result a)
-undet = Record.Absolute Undetermined
+   EqSys.solveTracked flowGraph testGiven
 
 solvedEnv =
    mapFst (fmap numericEnv) $
-   EqGen.solveTracked flowGraph originalGiven
+   EqSys.solveTracked flowGraph originalGiven
 
 numericEnv ::
    SeqFlow.Graph node
-      (Record.Absolute (Result (Pair.T at an)))
-      (Record.Absolute (Result (Pair.T vt vn))) ->
+      (Result (Pair.T at an))
+      (Result (Pair.T vt vn)) ->
    SeqFlow.Graph node
-      (Record.Absolute (Result an))
-      (Record.Absolute (Result vn))
+      (Result an)
+      (Result vn)
 numericEnv =
-   SeqFlow.mapGraph (fmap $ fmap Pair.second) (fmap $ fmap Pair.second)
+   SeqFlow.mapGraph (fmap Pair.second) (fmap Pair.second)
 
 
 infix 0 .=
@@ -118,21 +105,19 @@ infix 0 .=
 (.=) ::
    (Arith.Constant x, FormatValue x, Verify.LabeledNumber x,
     x ~ SeqFlow.Element idx TrackedScalar TrackedSignal,
-    FormatValue (idx Node), SeqFlow.Lookup idx) =>
+    SeqFlow.Lookup idx) =>
    idx Node -> Rational -> EquationSystem s
 evar .= val  =
-   EqGen.variable (Idx.absolute evar)
-   =.=
-   EqGen.constant (Arith.fromRational val)
+   evar EqSys..= Arith.fromRational val
 
 
-type TrackedSignal = Pair.T (EqAbs.SignalTerm Term Node) Rational
-type TrackedScalar = Pair.T (EqAbs.ScalarTerm Term Node) Rational
+type TrackedSignal = Pair.T (EqSys.SignalTerm Term Node) Rational
+type TrackedScalar = Pair.T (EqSys.ScalarTerm Term Node) Rational
 
 type EquationSystem s =
-        EqGen.EquationSystem
+        EqSys.EquationSystem
            (Verify.Track Format.Unicode)
-           Record.Absolute Node s TrackedScalar TrackedSignal
+           Node s TrackedScalar TrackedSignal
 
 originalGiven :: EquationSystem s
 originalGiven =

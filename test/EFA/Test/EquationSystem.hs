@@ -6,7 +6,7 @@ import EFA.TestUtility as Test
 
 import qualified EFA.Test.EquationSystem.Given as Given
 
-import qualified EFA.Flow.Sequence.EquationSystem as EqGen
+import qualified EFA.Flow.Sequence.Absolute as EqSys
 import qualified EFA.Flow.Sequence.AssignMap as AssignMap
 import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Draw as Draw
@@ -85,7 +85,7 @@ consistency :: IO ()
 consistency =
   Test.singleIO "Check consistency of the equation system for sequence flow graphs." $ do
   env <- fmap Given.numericEnv $ checkException $
-    EqGen.solveTracked Given.flowGraph Given.testGiven
+    EqSys.solveTracked Given.flowGraph Given.testGiven
   testEnv <- checkException Given.testEnv
   -- showDifferences testEnv env
   return $ testEnv == env
