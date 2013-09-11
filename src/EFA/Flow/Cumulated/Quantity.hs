@@ -11,6 +11,7 @@ module EFA.Flow.Cumulated.Quantity (
    fromSequenceFlowResult,
 
    flowResultFromCum,
+   flowResultFromCumResult,
 
    lookupPower,
    lookupEnergy,
@@ -148,11 +149,15 @@ cumFromFlowGraph time =
    Quant.dirFromFlowGraph
 
 flowResultFromCum :: Cum a -> Flow (Result a)
-flowResultFromCum cum =
+flowResultFromCum =
+   flowResultFromCumResult . fmap Determined
+
+flowResultFromCumResult :: Cum (Result a) -> Flow (Result a)
+flowResultFromCumResult cum =
    (pure Undetermined) {
-      flowEnergyOut = Determined $ cumEnergyOut cum,
-      flowEnergyIn  = Determined $ cumEnergyIn  cum,
-      flowDTime     = Determined $ cumDTime cum
+      flowEnergyOut = cumEnergyOut cum,
+      flowEnergyIn  = cumEnergyIn  cum,
+      flowDTime     = cumDTime cum
    }
 
 
