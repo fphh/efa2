@@ -75,7 +75,7 @@ import qualified Data.List as List
 import Data.Map (Map)
 import Data.Foldable (Foldable, foldMap, fold)
 import Data.Maybe (maybeToList)
-import Data.Tuple.HT (mapFst, mapSnd, mapFst3, snd3)
+import Data.Tuple.HT (mapFst, mapFst3, snd3)
 import Data.Monoid ((<>))
 
 import Control.Category ((.))
@@ -879,57 +879,52 @@ cumulatedFlow ::
 cumulatedFlow =
    graph .
    Gr.mapNodeWithKey (const . dotFromCumNode) .
-   Gr.mapEdge
-      (\flow ->
-         (CumFlowQuant.flowDTime flow,
-          map ($flow) $
-             CumFlowQuant.flowPowerOut :
-             CumFlowQuant.flowEnergyOut :
-             CumFlowQuant.flowXOut :
-             CumFlowQuant.flowEta :
-             CumFlowQuant.flowXIn :
-             CumFlowQuant.flowEnergyIn :
-             CumFlowQuant.flowPowerIn :
-             [])) .
+   Gr.mapEdgeWithKey
+      (\e flow ->
+         dotFromCumEdge e (CumFlowQuant.flowDTime flow) $
+         map ($flow) $
+            CumFlowQuant.flowPowerOut :
+            CumFlowQuant.flowEnergyOut :
+            CumFlowQuant.flowXOut :
+            CumFlowQuant.flowEta :
+            CumFlowQuant.flowXIn :
+            CumFlowQuant.flowEnergyIn :
+            CumFlowQuant.flowPowerIn :
+            []) .
    CumFlowQuant.mapGraphWithVar formatAssign
 
 
 dotFromCumNode ::
    (Node.C node) =>
-   node -> Viz.Attributes
-dotFromCumNode x =
-   nodeAttrs (Node.typ x) $ labelFromUnicode $ Node.display x
+   node -> DotNode T.Text
+dotFromCumNode n =
+   DotNode (dotIdentFromNode n) $
+   nodeAttrs (Node.typ n) $ labelFromUnicode $ Node.display n
+
+dotFromCumEdge ::
+   (Node.C node) =>
+   Gr.DirEdge node -> Unicode -> [Unicode] -> DotEdge T.Text
+dotFromCumEdge e hd label =
+   case orientDirEdge e of
+      (DirEdge x y, dir, ord) ->
+         DotEdge
+            (dotIdentFromNode x) (dotIdentFromNode y)
+            [labelFromLines $ hd : order ord label,
+             Viz.Dir dir, structureEdgeColour]
 
 
 graph ::
    (Node.C node) =>
-   Gr.Graph node Gr.DirEdge Viz.Attributes (Unicode, [Unicode]) ->
+   Gr.Graph node Gr.DirEdge (DotNode T.Text) (DotEdge T.Text) ->
    DotGraph T.Text
 graph g =
    dotDirGraph $
    DotStmts {
       attrStmts = [],
       subGraphs = [],
-      nodeStmts = map dotFromNode $ Gr.labNodes g,
-      edgeStmts = map dotFromEdge $ Gr.labEdges g
+      nodeStmts = map snd $ Gr.labNodes g,
+      edgeStmts = map snd $ Gr.labEdges g
    }
-
-dotFromNode ::
-   (Node.C node) =>
-   Gr.LNode node Viz.Attributes -> DotNode T.Text
-dotFromNode (n, attrs) =
-   DotNode (dotIdentFromNode n) attrs
-
-dotFromEdge ::
-   (Node.C node) =>
-   Gr.LEdge Gr.DirEdge node (Unicode, [Unicode]) -> DotEdge T.Text
-dotFromEdge (e, label) =
-   case orientDirEdge e of
-      (DirEdge x y, dir, ord) ->
-         DotEdge
-            (dotIdentFromNode x) (dotIdentFromNode y)
-            [labelFromLines $ uncurry (:) $ mapSnd (order ord) label,
-             Viz.Dir dir, structureEdgeColour]
 
 
 dotDirGraph :: DotStatements str -> DotGraph str
