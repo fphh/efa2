@@ -165,7 +165,8 @@ dotFromStorageGraphs storages sequence =
        (\before current gr ->
           (Idx.afterSection current,
            dotFromContentEdge (Just before) (Idx.augment current) $
-           Map.toList $ Gr.nodeLabels gr))
+           Map.filterWithKey (\node _ -> Node.typ node == Node.Storage ()) $
+           Gr.nodeLabels gr))
        Idx.initial sequence)
 
 dotFromStorageGraph ::
@@ -356,13 +357,14 @@ dotFromContentEdge ::
    (Node.C node) =>
    Maybe Idx.Boundary ->
    Idx.AugmentedSection ->
-   [(node, FlowQuant.Sums a v)] ->
+   Map node (FlowQuant.Sums a v) ->
    [DotEdge T.Text]
-dotFromContentEdge mbefore aug ns =
+dotFromContentEdge mbefore aug =
    let dotEdge from to =
           DotEdge from to [Viz.Dir Viz.Forward, contentEdgeColour]
-   in  concatMap
-          (\(n, sums) ->
+   in  fold .
+       Map.mapWithKey
+          (\n sums ->
              let sn = Idx.PartNode aug n
                  withBefore f =
                     foldMap (\before -> f $ Idx.PartNode before n) mbefore
@@ -381,8 +383,7 @@ dotFromContentEdge mbefore aug ns =
                     (Nothing, Just _) ->
                        withBefore $ \bn ->
                           [dotEdge (dotIdentFromBndNode bn) (dotIdentFromAugNode sn)]
-                    (Just _, Just _) -> error "storage cannot be both In and Out") $
-      ns
+                    (Just _, Just _) -> error "storage cannot be both In and Out")
 
 
 
