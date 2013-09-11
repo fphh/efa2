@@ -82,7 +82,7 @@ import Data.Monoid ((<>))
 import Control.Category ((.))
 import Control.Monad (void, mplus)
 
-import Prelude hiding (sin, reverse, init, sequence, (.))
+import Prelude hiding (sin, reverse, init, last, sequence, (.))
 
 
 
@@ -160,11 +160,17 @@ dotFromStorageGraphs ::
 dotFromStorageGraphs storages sequence =
    (Map.elems $ Map.mapWithKey dotFromStorageGraph $
     fmap (fmap formatValue) $ MapU.flip $ fmap snd storages,
-    fold $ snd $
+    (\(last, inner) ->
+       dotFromContentEdge Nothing Idx.initSection
+          (fmap (const $ Just Topo.In) storages) ++
+       dotFromContentEdge (Just last) Idx.exitSection
+          (fmap (const $ Just Topo.Out) storages) ++
+       fold inner) $
     Map.mapAccumWithKey
        (\before current gr ->
           (Idx.afterSection current,
            dotFromContentEdge (Just before) (Idx.augment current) $
+           fmap FlowQuant.dirFromSums $
            Map.filterWithKey (\node _ -> Node.typ node == Node.Storage ()) $
            Gr.nodeLabels gr))
        Idx.initial sequence)
@@ -357,14 +363,14 @@ dotFromContentEdge ::
    (Node.C node) =>
    Maybe Idx.Boundary ->
    Idx.AugmentedSection ->
-   Map node (FlowQuant.Sums a v) ->
+   Map node (Maybe Topo.StoreDir) ->
    [DotEdge T.Text]
 dotFromContentEdge mbefore aug =
    let dotEdge from to =
           DotEdge from to [Viz.Dir Viz.Forward, contentEdgeColour]
    in  fold .
        Map.mapWithKey
-          (\n sums ->
+          (\n dir ->
              let sn = Idx.PartNode aug n
                  withBefore f =
                     foldMap (\before -> f $ Idx.PartNode before n) mbefore
@@ -375,15 +381,14 @@ dotFromContentEdge mbefore aug =
                   withCurrent $ \to ->
                   [dotEdge (dotIdentFromBndNode from) (dotIdentFromBndNode to)])
                  ++
-                 case (FlowQuant.sumIn sums, FlowQuant.sumOut sums) of
-                    (Nothing, Nothing) -> []
-                    (Just _, Nothing) ->
+                 case dir of
+                    Nothing -> []
+                    Just Topo.In ->
                        withCurrent $ \bn ->
                           [dotEdge (dotIdentFromAugNode sn) (dotIdentFromBndNode bn)]
-                    (Nothing, Just _) ->
+                    Just Topo.Out ->
                        withBefore $ \bn ->
-                          [dotEdge (dotIdentFromBndNode bn) (dotIdentFromAugNode sn)]
-                    (Just _, Just _) -> error "storage cannot be both In and Out")
+                          [dotEdge (dotIdentFromBndNode bn) (dotIdentFromAugNode sn)])
 
 
 

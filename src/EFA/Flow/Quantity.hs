@@ -201,6 +201,15 @@ dirFromFlowGraph =
    dirFromGraph
 
 
+dirFromSums :: Sums a v -> Maybe Topo.StoreDir
+dirFromSums sums =
+   case (sumIn sums, sumOut sums) of
+      (Nothing, Nothing) -> Nothing
+      (Just _, Nothing) -> Just Topo.In
+      (Nothing, Just _) -> Just Topo.Out
+      (Just _, Just _) -> error "storage cannot be both In and Out"
+
+
 (<#>) ::
    (Var.ScalarIndex idx, Var.ScalarPart idx ~ part) =>
    idx node -> node -> Var.ForNodeScalar part node
