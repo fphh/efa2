@@ -15,6 +15,7 @@ module EFA.Flow.Sequence.Quantity (
 
    envFromGraph,
    graphFromEnv,
+   toAssignMap,
 
    graphFromPlain,
    storagesFromPlain,
@@ -49,9 +50,11 @@ module EFA.Flow.Sequence.Quantity (
    formatAssigns,
    ) where
 
-import qualified EFA.Flow.Quantity as Quant
+import qualified EFA.Flow.Sequence.AssignMap as AssignMap
 import qualified EFA.Flow.Sequence.Index as SeqIdx
 import qualified EFA.Flow.Sequence as SeqFlow
+import qualified EFA.Flow.Quantity as Quant
+import EFA.Flow.Sequence.AssignMap (AssignMap)
 import EFA.Flow.Sequence (sequence, storages)
 import EFA.Flow.Quantity
           (Topology, Sums(..), Sum(..), Flow(..), mapSums, traverseSums, (<#>))
@@ -309,6 +312,14 @@ graphFromEnv (Env.Complete envScalar envSignal) =
          Var.checkedLookup "graphFromEnv.lookupSignal"
             Env.lookupSignal idx envSignal) .
    graphFromPlain
+
+
+toAssignMap ::
+   (Node.C node) =>
+   Graph node a v -> AssignMap node a v
+toAssignMap =
+   fold .
+   mapGraphWithVar AssignMap.scalarSingleton AssignMap.signalSingleton
 
 
 lookupPower ::
