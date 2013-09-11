@@ -130,6 +130,7 @@ Library
     EFA.Flow.Cumulated.Variable
     EFA.Flow.Cumulated.Quantity
     EFA.Flow.Cumulated.EquationSystem
+    EFA.Flow.Cumulated.Absolute
     EFA.Flow.Draw
     EFA.Application.Utility
     EFA.Application.Absolute
