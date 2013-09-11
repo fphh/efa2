@@ -19,8 +19,8 @@ import EFA.Utility.Stream (Stream((:~)))
 import Data.Monoid (mconcat)
 
 
-sec0, sec1, sec2, sec3, sec4 :: Idx.Section
-sec0 :~ sec1 :~ sec2 :~ sec3 :~ sec4 :~ _ = Stream.enumFrom $ Idx.Section 0
+sec0, sec1, sec2 :: Idx.Section
+sec0 :~ sec1 :~ sec2 :~ _ = Stream.enumFrom $ Idx.Section 0
 
 
 given :: EqGen.EquationSystem Node s Double Double
@@ -40,11 +40,8 @@ given =
 
    (XIdx.power sec1 node3 node2 .= 5) :
    (XIdx.power sec2 node3 node2 .= 6) :
-   (XIdx.power sec3 node3 node2 .= 7) :
-   (XIdx.power sec4 node3 node2 .= 8) :
 
    (XIdx.eta sec0 node3 node2 .= 0.25) :
-   (XIdx.eta sec0 node2 node3 .= 0.25) :
    (XIdx.eta sec0 node2 node1 .= 0.5) :
    (XIdx.eta sec0 node0 node2 .= 0.75) :
    []
