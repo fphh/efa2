@@ -45,8 +45,9 @@ module EFA.Flow.Sequence.Quantity (
    LookupScalar, lookupScalar,
    LookupSignal, lookupSignal,
    Env.Environment, Env.Element, Env.switchPart,
-   ) where
 
+   formatAssigns,
+   ) where
 
 import qualified EFA.Flow.Quantity as Quant
 import qualified EFA.Flow.Sequence.Index as SeqIdx
@@ -64,6 +65,10 @@ import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Gr
 
 import qualified EFA.Report.FormatValue as FormatValue
+import EFA.Report.FormatValue (FormatValue, formatAssign)
+import EFA.Report.Format (Format)
+
+import qualified Control.Monad.Trans.Writer as MW
 import Control.Monad (mplus, (<=<))
 import Control.Applicative (Applicative, pure, liftA2, liftA3, (<*>), (<$>), (<$))
 
@@ -72,7 +77,7 @@ import qualified Data.Foldable as Fold
 
 import Data.Traversable (Traversable, traverse, foldMapDefault)
 import Data.Foldable (Foldable)
-import Data.Monoid (mempty, (<>))
+import Data.Monoid (Monoid, mempty, (<>))
 
 import Prelude hiding (lookup, init, seq, sequence, sin, sum)
 
@@ -594,3 +599,22 @@ mapSequenceWithVar ::
 mapSequenceWithVar f g =
    Map.mapWithKey $ \sec (rng, timeGr) ->
       (rng, Quant.mapFlowTopologyWithVar f g sec timeGr)
+
+
+formatAssigns ::
+   (Node.C node, FormatValue a, FormatValue v, Format output) =>
+   Graph node a v -> [output]
+formatAssigns =
+   foldMap (:[]) (:[]) .
+   mapGraphWithVar formatAssign formatAssign
+
+foldMap ::
+   (Node.C node, Monoid w) =>
+   (a -> w) -> (v -> w) -> Graph node a v -> w
+foldMap fa fv =
+   fold . mapGraph fa fv
+
+fold ::
+   (Node.C node, Monoid w) =>
+   Graph node w w -> w
+fold = MW.execWriter . traverseGraph MW.tell MW.tell

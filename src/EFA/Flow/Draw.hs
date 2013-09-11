@@ -28,7 +28,7 @@ import qualified EFA.Flow.Cumulated.Quantity as CumFlowQuant
 import qualified EFA.Flow.Quantity as FlowQuant
 
 import qualified EFA.Report.Format as Format
-import EFA.Report.FormatValue (FormatValue, formatValue)
+import EFA.Report.FormatValue (FormatValue, formatValue, formatAssign)
 import EFA.Report.Format (Format, Unicode(Unicode, unUnicode))
 
 import qualified EFA.Equation.Variable as Var
@@ -924,12 +924,6 @@ dotDirGraph stmts =
       graphStatements = stmts
    }
 
-
-formatAssign ::
-   (FormatValue var, FormatValue a, Format output) =>
-   var -> a -> output
-formatAssign var val =
-   Format.assign (formatValue var) (formatValue val)
 
 formatAssignWithOpts ::
    (Node.C node, Var.FormatIndex idx, Format.EdgeIdx idx,

@@ -188,3 +188,10 @@ formatChar = Format.literal . (:[])
 instance FormatValue a => FormatValue (Result a) where
   formatValue Undetermined = Format.undetermined
   formatValue (Determined a) = formatValue a
+
+
+formatAssign ::
+   (FormatValue var, FormatValue a, Format output) =>
+   var -> a -> output
+formatAssign var val =
+   Format.assign (formatValue var) (formatValue val)
