@@ -101,6 +101,7 @@ data Carry a =
    Carry {
       carryMaxEnergy, carryEnergy, carryXOut, carryXIn :: a
    }
+   deriving (Eq)
 
 
 instance Quant.Carry Carry where

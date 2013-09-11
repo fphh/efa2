@@ -43,6 +43,7 @@ data
          storages :: Storages node initLabel exitLabel boundaryLabel storageLabel,
          sequence :: Sequence node structEdge sectionLabel nodeLabel structLabel
       }
+   deriving (Eq)
 
 type
    RangeGraph node =

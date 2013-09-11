@@ -32,12 +32,15 @@ data Flow v =
       flowEta,
       flowXIn, flowEnergyIn, flowPowerIn :: v
    }
+   deriving (Eq)
 
 data Sums a v =
    Sums { sumIn, sumOut :: Maybe (Sum a v) }
+   deriving (Eq)
 
 data Sum a v =
    Sum { carrySum :: a, flowSum :: v }
+   deriving (Eq)
 
 
 class Functor f => Carry f where
