@@ -69,14 +69,13 @@ import qualified Data.Accessor.Basic as Accessor
 
 import qualified Data.Text.Lazy as T
 
-import qualified Data.Foldable as Fold
 import qualified Data.Map as Map
 import qualified Data.List as List
 
 import Data.Map (Map)
 import Data.Foldable (Foldable, foldMap, fold)
 import Data.Maybe (maybeToList)
-import Data.Tuple.HT (mapFst, mapFst3, snd3)
+import Data.Tuple.HT (mapFst, mapSnd, mapFst3, snd3)
 import Data.Monoid ((<>))
 
 import Control.Category ((.))
@@ -880,7 +879,18 @@ cumulatedFlow ::
 cumulatedFlow =
    graph .
    Gr.mapNodeWithKey (const . dotFromCumNode) .
-   Gr.mapEdge (labelFromLines . Fold.toList) .
+   Gr.mapEdge
+      (\flow ->
+         (CumFlowQuant.flowDTime flow,
+          map ($flow) $
+             CumFlowQuant.flowPowerOut :
+             CumFlowQuant.flowEnergyOut :
+             CumFlowQuant.flowXOut :
+             CumFlowQuant.flowEta :
+             CumFlowQuant.flowXIn :
+             CumFlowQuant.flowEnergyIn :
+             CumFlowQuant.flowPowerIn :
+             [])) .
    CumFlowQuant.mapGraphWithVar formatAssign
 
 
@@ -893,7 +903,7 @@ dotFromCumNode x =
 
 graph ::
    (Node.C node) =>
-   Gr.Graph node Gr.DirEdge Viz.Attributes Attribute ->
+   Gr.Graph node Gr.DirEdge Viz.Attributes (Unicode, [Unicode]) ->
    DotGraph T.Text
 graph g =
    dotDirGraph $
@@ -912,13 +922,14 @@ dotFromNode (n, attrs) =
 
 dotFromEdge ::
    (Node.C node) =>
-   Gr.LEdge Gr.DirEdge node Attribute -> DotEdge T.Text
+   Gr.LEdge Gr.DirEdge node (Unicode, [Unicode]) -> DotEdge T.Text
 dotFromEdge (e, label) =
    case orientDirEdge e of
-      (DirEdge x y, dir, _) ->
+      (DirEdge x y, dir, ord) ->
          DotEdge
             (dotIdentFromNode x) (dotIdentFromNode y)
-            [label, Viz.Dir dir, structureEdgeColour]
+            [labelFromLines $ uncurry (:) $ mapSnd (order ord) label,
+             Viz.Dir dir, structureEdgeColour]
 
 
 dotDirGraph :: DotStatements str -> DotGraph str
