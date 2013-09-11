@@ -6,14 +6,17 @@ import EFA.TestUtility as Test
 
 import qualified EFA.Test.EquationSystem.Given as Given
 
+import qualified EFA.Flow.Sequence.EquationSystem as EqGen
+import qualified EFA.Flow.Sequence.AssignMap as AssignMap
+import qualified EFA.Flow.Sequence.Quantity as SeqFlow
+import qualified EFA.Flow.Draw as Draw
+
 import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Equation.System as EqGen
-import qualified EFA.Equation.Environment as Env
+
 import qualified EFA.Equation.Verify as Verify
-import qualified EFA.Graph.Draw as Draw
 
 import qualified EFA.Report.Format as Format
-import EFA.Report.FormatValue (FormatValue, formatValue)
+import EFA.Report.FormatValue (FormatValue)
 
 import EFA.Utility.Async (concurrentlyMany_)
 
@@ -58,29 +61,31 @@ correctness =
 
 showDifferences ::
   (Node.C node, FormatValue a, FormatValue v, Eq a, Eq v) =>
-  Env.Complete node a v ->
-  Env.Complete node a v ->
+  SeqFlow.Graph node a v ->
+  SeqFlow.Graph node a v ->
   IO ()
 showDifferences testEnv env = do
-  putStrLn "Assignments in expected Env but not in computed one:"
-  putStrLn $ Format.unUnicode $ formatValue $
-     Env.difference testEnv env
+  let testAM = SeqFlow.toAssignMap testEnv
+  let am     = SeqFlow.toAssignMap env
+  putStrLn "Expected assignments that are not computed:"
+  putStrLn $ Format.unUnicode $ Format.lines $ AssignMap.format $
+     AssignMap.difference testAM am
 
-  putStrLn "Assignments in computed Env but not in expected one:"
-  putStrLn $ Format.unUnicode $ formatValue $
-     Env.difference env testEnv
+  putStrLn "Computed assignments that are not expected:"
+  putStrLn $ Format.unUnicode $ Format.lines $ AssignMap.format $
+     AssignMap.difference am testAM
 
-  putStrLn "Conflicts between expected and computed Env:"
-  putStrLn $ Format.unUnicode $ formatValue $
-     Env.filter (uncurry (/=)) (uncurry (/=)) $
-     Env.intersectionWith (,) (,) testEnv env
+  putStrLn "Conflicts between expected and computed assignments:"
+  putStrLn $ Format.unUnicode $ Format.lines $ AssignMap.format $
+     AssignMap.filter (uncurry (/=)) (uncurry (/=)) $
+     AssignMap.intersectionWith (,) (,) testAM am
 
 
 consistency :: IO ()
 consistency =
   Test.singleIO "Check consistency of the equation system for sequence flow graphs." $ do
   env <- fmap Given.numericEnv $ checkException $
-    EqGen.solveTracked Given.seqTopo Given.testGiven
+    EqGen.solveTracked Given.flowGraph Given.testGiven
   testEnv <- checkException Given.testEnv
   -- showDifferences testEnv env
   return $ testEnv == env
@@ -104,7 +109,7 @@ main = do
   concurrentlyMany_ [
     Draw.xterm $
       Draw.title "Aktuell berechnet" $
-      Draw.sequFlowGraphAbsWithEnv Given.seqTopo env,
+      Draw.sequFlowGraph Draw.optionsDefault env,
     Draw.xterm $
       Draw.title "Zielvorgabe" $
-      Draw.sequFlowGraphAbsWithEnv Given.seqTopo testEnv ]
+      Draw.sequFlowGraph Draw.optionsDefault testEnv ]

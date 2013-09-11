@@ -13,6 +13,9 @@ module EFA.Flow.Sequence.Quantity (
    traverseStorages,
    traverseSequence,
 
+   foldMap,
+   fold,
+
    envFromGraph,
    graphFromEnv,
    toAssignMap,

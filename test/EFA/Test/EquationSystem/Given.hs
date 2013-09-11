@@ -6,37 +6,33 @@ module EFA.Test.EquationSystem.Given where
 import qualified EFA.Application.Topology.TripodA as Tripod
 import qualified EFA.Application.Absolute as EqAbs
 import EFA.Application.Topology.TripodA (Node, node0, node1, node2, node3)
-import EFA.Application.Utility ( constructSeqTopo )
+import EFA.Application.Utility ( seqFlowGraphFromStates )
 
+import qualified EFA.Flow.Sequence.EquationSystem as EqGen
+import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence.Index as XIdx
+import EFA.Flow.Sequence.EquationSystem ( (=.=) )
 
-import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Verify as Verify
-import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Pair as Pair
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Record as Record
-import qualified EFA.Equation.Environment as Env
 import EFA.Equation.Result (Result(..))
-import EFA.Equation.System ( (=.=) )
 
 import EFA.Symbolic.SumProduct ( Term )
 
-import qualified EFA.Utility.Stream as Stream
-import EFA.Utility.Stream (Stream((:~)))
-
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Flow as Flow
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue)
 
+import qualified EFA.Utility.Stream as Stream
+import EFA.Utility.Stream (Stream((:~)))
+
 import qualified Control.Monad.Exception.Synchronous as ME
 
-import qualified Data.Map as M
-
 import Data.Tuple.HT (mapFst)
-import Data.Monoid (mconcat)
+import Data.Monoid (Endo(Endo), appEndo, mconcat)
 
 
 sec0, sec1, sec2, sec3, sec4 :: Idx.Section
@@ -53,42 +49,34 @@ bndi :~ bnd0 :~ bnd1 :~ bnd2 :~ bnd3 :~ bnd4 :~ _ =
    Stream.enumFrom $ Idx.initial
 
 
-seqTopo :: Flow.RangeGraph Node
-seqTopo = constructSeqTopo Tripod.topology [1, 0, 1]
+flowGraph ::
+   SeqFlow.Graph Node
+      (Record.Absolute (Result a)) (Record.Absolute (Result v))
+flowGraph = seqFlowGraphFromStates Tripod.topology [1, 0, 1]
 
 
 -- Hilfsfunktion, um das testGiven-Gleichungssystem zu bauen.
 -- Man übergibt ein gelöstes Env.
 -- Es muessen noch die richtigen Werte eingetragen werden.
 
+{-
+ME.switch undefined (putStrLn . toTestGiven) $ fst testEnv
+-}
 toTestGiven ::
-  Env.Complete Node
-    (Record.Absolute (Result Rational))
-    (Record.Absolute (Result Rational)) ->
-  String
-toTestGiven (Env.Complete scal sig) =
-  "testGiven :: EqGen.EquationSystem Node s Rational Rational\n" ++
-  "testGiven = mconcat $\n" ++
-  (
-    g (Env.powerMap sig) .
-    g (Env.energyMap sig) .
-    g (Env.etaMap sig) .
-    g (Env.dtimeMap sig) .
-    g (Env.xMap sig) .
-    g (Env.sumMap sig) .
-    g (Env.maxEnergyMap scal) .
-    g (Env.storageMap scal) .
-    g (Env.stEnergyMap scal) .
-    g (Env.stXMap scal) .
-    g (Env.stInSumMap scal) .
-    g (Env.stOutSumMap scal) .
-    id $ "  []")
-  where g :: (Show k, Show a) => M.Map k (Record.Absolute (Result a)) -> ShowS
-        g =
-          flip $ M.foldWithKey $
-            \idx v ->
-              showString "  ((" . shows idx .
-              showString ") .= " . showValue v . showString ") :\n"
+   SeqFlow.Graph Node
+      (Record.Absolute (Result Rational))
+      (Record.Absolute (Result Rational)) ->
+   String
+toTestGiven gr =
+   "testGiven :: EquationSystem s\n" ++
+   "testGiven = mconcat $\n" ++
+   appEndo
+      (SeqFlow.foldMap Endo Endo $ SeqFlow.mapGraphWithVar g g gr)
+      "   []"
+  where g :: (Show idx, Show a) => idx -> Record.Absolute (Result a) -> ShowS
+        g idx v =
+           showString "   ((" . shows idx .
+           showString ") .= " . showValue v . showString ") :\n"
         showValue (Record.Absolute v) =
           case v of
             Determined x -> shows x
@@ -97,48 +85,41 @@ toTestGiven (Env.Complete scal sig) =
 
 -- Nicht alle Werte sind von originalGiven berechenbar.
 testEnv, solvedEnv ::
-  (ME.Exceptional
-     (Verify.Exception Format.Unicode)
-     (Env.Complete Node
-        (Record.Absolute (Result Rational))
-        (Record.Absolute (Result Rational))),
-   Verify.Assigns Format.Unicode)
+   (ME.Exceptional
+      (Verify.Exception Format.Unicode)
+      (SeqFlow.Graph Node
+         (Record.Absolute (Result Rational))
+         (Record.Absolute (Result Rational))),
+    Verify.Assigns Format.Unicode)
 testEnv =
-  mapFst (fmap
-    (Env.insert (XIdx.inSum sec1 node1) undet .
-     Env.insert (XIdx.eta sec1 node2 node1) undet .
-     Env.insert (XIdx.power sec1 node1 node2) undet .
-     Env.insert (XIdx.energy sec1 node1 node2) undet .
-     numericEnv)) $
-  EqGen.solveSimpleTracked testGiven
+   mapFst (fmap numericEnv) $
+   EqGen.solveTracked flowGraph testGiven
 
 undet :: Record.Absolute (Result a)
 undet = Record.Absolute Undetermined
 
 solvedEnv =
-  mapFst (fmap numericEnv) $
-  EqGen.solveTracked seqTopo originalGiven
+   mapFst (fmap numericEnv) $
+   EqGen.solveTracked flowGraph originalGiven
 
 numericEnv ::
-  (Ord node) =>
-  Env.Complete node
-    (Record.Absolute (Result (Pair.T at an)))
-    (Record.Absolute (Result (Pair.T vt vn))) ->
-  Env.Complete node
-    (Record.Absolute (Result an))
-    (Record.Absolute (Result vn))
+   SeqFlow.Graph node
+      (Record.Absolute (Result (Pair.T at an)))
+      (Record.Absolute (Result (Pair.T vt vn))) ->
+   SeqFlow.Graph node
+      (Record.Absolute (Result an))
+      (Record.Absolute (Result vn))
 numericEnv =
-  Env.completeFMap (fmap $ fmap Pair.second) (fmap $ fmap Pair.second)
+   SeqFlow.mapGraph (fmap $ fmap Pair.second) (fmap $ fmap Pair.second)
 
 
 infix 0 .=
 
 (.=) ::
-  (Arith.Constant x, x ~ Env.Element idx TrackedScalar TrackedSignal,
-   Verify.GlobalVar (Verify.Track Format.Unicode) x Idx.Absolute (Var.Type idx) Node,
-   Env.AccessMap idx, Ord (idx Node), FormatValue (idx Node)) =>
-   idx Node -> Rational ->
-   EquationSystem s
+   (Arith.Constant x, FormatValue x, Verify.LabeledNumber x,
+    x ~ SeqFlow.Element idx TrackedScalar TrackedSignal,
+    FormatValue (idx Node), SeqFlow.Lookup idx) =>
+   idx Node -> Rational -> EquationSystem s
 evar .= val  =
    EqGen.variable (Idx.absolute evar)
    =.=
