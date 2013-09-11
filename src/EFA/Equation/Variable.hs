@@ -39,11 +39,11 @@ data Scalar part node =
      deriving (Show, Eq, Ord)
 
 
-type InPartSignal part  = Idx.InPart part Signal
-type InSectionSignal = Idx.InSection Signal
-type InStateSignal   = Idx.InState Signal
+type InPartSignal part = Idx.InPart part Signal
+type InSectionSignal   = Idx.InSection Signal
+type InStateSignal     = Idx.InState Signal
 
-type ForNodeScalar part = Idx.ForNode (Scalar part)
+type ForNodeScalar part   = Idx.ForNode (Scalar part)
 type ForNodeSectionScalar = ForNodeScalar Idx.Section
 type ForNodeStateScalar   = ForNodeScalar Idx.State
 
