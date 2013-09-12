@@ -18,8 +18,8 @@ import EFA.Utility.Stream (Stream((:~)))
 import Data.Monoid (mconcat)
 
 
-sec0, sec1, sec2, sec3, sec4 :: Idx.Section
-sec0 :~ sec1 :~ sec2 :~ sec3 :~ sec4 :~ _ = Stream.enumFrom $ Idx.Section 0
+sec0, sec1 :: Idx.Section
+sec0 :~ sec1 :~ _ = Stream.enumFrom $ Idx.Section 0
 
 
 given :: EqGen.EquationSystem Node s Double Double

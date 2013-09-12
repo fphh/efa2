@@ -20,8 +20,8 @@ import EFA.Utility.Stream (Stream((:~)))
 import Data.Monoid (mconcat)
 
 
-sec0, sec1, sec2, sec3, sec4 :: Idx.Section
-sec0 :~ sec1 :~ sec2 :~ sec3 :~ sec4 :~ _ = Stream.enumFrom $ Idx.Section 0
+sec0, sec1, sec2 :: Idx.Section
+sec0 :~ sec1 :~ sec2 :~ _ = Stream.enumFrom $ Idx.Section 0
 
 
 signal :: [a] -> Data.List a

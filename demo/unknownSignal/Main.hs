@@ -23,9 +23,6 @@ import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Draw as Draw
 
-import qualified EFA.Utility.Stream as Stream
-import EFA.Utility.Stream (Stream((:~)))
-
 import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 import EFA.Utility.Async (concurrentlyMany_)
 
@@ -34,8 +31,8 @@ import qualified Data.Map as Map
 import Data.Monoid (mconcat)
 
 
-sec0, sec1, sec2, sec3, sec4 :: Idx.Section
-sec0 :~ sec1 :~ sec2 :~ sec3 :~ sec4 :~ _ = Stream.enumFrom $ Idx.Section 0
+sec0 :: Idx.Section
+sec0 = Idx.Section 0
 
 node0, node1, node2, node3 :: Node.Int
 node0 = Node.intNoRestriction 0
