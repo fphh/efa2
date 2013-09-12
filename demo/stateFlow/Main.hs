@@ -1,19 +1,16 @@
 module Main where
 
 import qualified EFA.Application.Topology.TripodA as Tripod
-import qualified EFA.Application.Absolute as EqGen
 import EFA.Application.Topology.TripodA (Node, node0, node1, node2, node3)
-import EFA.Application.Absolute ( (.=) )
+import EFA.Application.Utility (seqFlowGraphFromStates)
 
+import qualified EFA.Flow.State.Quantity as StateFlow
+import qualified EFA.Flow.Sequence.Absolute as EqSys
 import qualified EFA.Flow.Sequence.Index as XIdx
+import qualified EFA.Flow.Draw as Draw
+import EFA.Flow.Sequence.Absolute ( (.=) )
 
-import qualified EFA.Graph.StateFlow as StateFlow
-import qualified EFA.Graph.Flow as Flow
-import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Draw as Draw
-
-import qualified EFA.Signal.SequenceData as SD
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Async (concurrentlyMany_)
@@ -26,7 +23,7 @@ sec0, sec1, sec2 :: Idx.Section
 sec0 :~ sec1 :~ sec2 :~ _ = Stream.enumFrom $ Idx.Section 0
 
 
-given :: EqGen.EquationSystem Node s Double Double
+given :: EqSys.EquationSystemIgnore Node s Double Double
 given =
    mconcat $
 
@@ -71,19 +68,16 @@ stateEnv ::
 main :: IO ()
 main = do
 
-  let sequ =
-        fmap (StateAnalysis.bruteForce Tripod.topology !!) $
-        SD.fromList [1, 0, 1]
-      sequFlowGraph = Flow.sequenceGraph sequ
-      env = EqGen.solve sequFlowGraph given
+   let sequFlowGraph =
+          EqSys.solve
+             (seqFlowGraphFromStates Tripod.topology [1, 0, 1])
+             given
 
-      stateFlowGraph =
-        StateFlow.stateGraphActualStorageEdges sequ
-      stateFlowEnv =
-        StateFlow.envFromSequenceEnvResult
-          (snd $ StateFlow.stateMaps sequ) env
+       stateFlowGraph =
+          StateFlow.flowGraphFromCumResult $
+          StateFlow.fromSequenceFlowResult False sequFlowGraph
 
-  concurrentlyMany_ $ map Draw.xterm $
-    Draw.sequFlowGraphAbsWithEnv sequFlowGraph env :
-    Draw.stateFlowGraphWithEnv Draw.optionsDefault stateFlowGraph stateFlowEnv :
-    []
+   concurrentlyMany_ $ map Draw.xterm $
+      Draw.sequFlowGraph Draw.optionsDefault sequFlowGraph :
+      Draw.stateFlowGraph Draw.optionsDefault stateFlowGraph :
+      []

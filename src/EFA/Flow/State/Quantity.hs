@@ -5,6 +5,7 @@ module EFA.Flow.State.Quantity (
    Graph, StateFlow.states, StateFlow.storages,
    Topology, States, Storages,
    Sums(..), Sum(..), Carry(..), Flow(..),
+   CumGraph, Cum(..),
 
    mapGraph,
    mapStorages,
@@ -25,6 +26,9 @@ module EFA.Flow.State.Quantity (
 
    cumFromFlow,
    flowResultFromCum,
+   flowResultFromCumResult,
+
+   flowGraphFromCumResult,
 
    lookupPower,
    lookupEnergy,
@@ -325,12 +329,33 @@ cumFromFlow flow =
       (SeqFlowQuant.flowEnergyIn flow)
 
 flowResultFromCum :: Cum v -> Flow (Result v)
-flowResultFromCum cum =
+flowResultFromCum =
+   flowResultFromCumResult . fmap Determined
+
+flowResultFromCumResult :: Cum (Result v) -> Flow (Result v)
+flowResultFromCumResult cum =
    (pure Undetermined) {
-      SeqFlowQuant.flowEnergyOut = Determined $ cumEnergyOut cum,
-      SeqFlowQuant.flowEnergyIn  = Determined $ cumEnergyIn  cum
+      SeqFlowQuant.flowEnergyOut = cumEnergyOut cum,
+      SeqFlowQuant.flowEnergyIn  = cumEnergyIn  cum
    }
 
+carryResultFromResult :: Result a -> Carry (Result a)
+carryResultFromResult e =
+   (pure Undetermined) {
+      carryEnergy = e
+   }
+
+flowGraphFromCumResult ::
+   CumGraph node (Result a) -> Graph node (Result a) (Result a)
+flowGraphFromCumResult gr =
+   StateFlow.Graph {
+      StateFlow.storages =
+         fmap (mapSnd (fmap carryResultFromResult)) $
+         StateFlow.storages gr,
+      StateFlow.states =
+         fmap (mapSnd (Gr.mapEdge (fmap flowResultFromCumResult))) $
+         StateFlow.states gr
+   }
 
 
 addSums ::
