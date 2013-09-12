@@ -1,6 +1,5 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE Rank2Types #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE FlexibleContexts #-}
 module EFA.Flow.Sequence.Absolute (
    module EFA.Flow.Sequence.Absolute,
@@ -16,7 +15,6 @@ import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import EFA.Flow.Sequence.EquationSystem ((=.=))
 
 import qualified EFA.Equation.Record as Record
-import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Arithmetic as Arith
@@ -85,7 +83,7 @@ constant ::
 constant = EqSys.constant
 
 variable ::
-   (Sys.Value mode x, x ~ Env.Element idx a v,
+   (Sys.Value mode x, x ~ SeqFlow.Element idx a v,
     SeqFlow.Lookup idx, Node.C node) =>
    idx node -> Expression mode node s a v x
 variable = EqSys.variable . Idx.absolute
@@ -117,14 +115,14 @@ type VarTerm var term node = SymVar.VarTerm var Idx.Absolute term node
 infix 0 .=, =%%=
 
 (.=) ::
-   (Sys.Value mode x, x ~ Env.Element idx a v,
+   (Sys.Value mode x, x ~ SeqFlow.Element idx a v,
     SeqFlow.Lookup idx, Node.C node) =>
    idx node -> x -> EquationSystem mode node s a v
 evar .= val  =  variable evar =.= constant val
 
 
 (=%%=) ::
-   (Sys.Value mode x, x ~ Env.Element idx a v,
+   (Sys.Value mode x, x ~ SeqFlow.Element idx a v,
     SeqFlow.Lookup idx, Node.C node) =>
    idx node -> idx node -> EquationSystem mode node s a v
 (=%%=) = (EqSys.=%%=)
