@@ -126,6 +126,7 @@ Library
     EFA.Flow.State.Index
     EFA.Flow.State.Quantity
     EFA.Flow.State.EquationSystem
+    EFA.Flow.State.Absolute
     EFA.Flow.Cumulated.Index
     EFA.Flow.Cumulated.Variable
     EFA.Flow.Cumulated.Quantity

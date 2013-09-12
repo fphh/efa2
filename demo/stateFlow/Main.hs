@@ -4,6 +4,7 @@ import qualified EFA.Application.Topology.TripodA as Tripod
 import EFA.Application.Topology.TripodA (Node, node0, node1, node2, node3)
 import EFA.Application.Utility (seqFlowGraphFromStates)
 
+import qualified EFA.Flow.State.Absolute as StateEqSys
 import qualified EFA.Flow.State.Quantity as StateFlow
 import qualified EFA.Flow.Sequence.Absolute as EqSys
 import qualified EFA.Flow.Sequence.Index as XIdx
@@ -16,7 +17,7 @@ import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Async (concurrentlyMany_)
 import EFA.Utility.Stream (Stream((:~)))
 
-import Data.Monoid (Monoid, mconcat)
+import Data.Monoid (Monoid, mconcat, mempty)
 
 
 sec0, sec1, sec2 :: Idx.Section
@@ -80,4 +81,6 @@ main = do
    concurrentlyMany_ $ map Draw.xterm $
       Draw.sequFlowGraph Draw.optionsDefault sequFlowGraph :
       Draw.stateFlowGraph Draw.optionsDefault stateFlowGraph :
+      Draw.stateFlowGraph Draw.optionsDefault
+         (StateEqSys.solve stateFlowGraph mempty) :
       []
