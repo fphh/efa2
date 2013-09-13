@@ -4,19 +4,19 @@ import qualified EFA.Application.Topology.TripodA as Tripod
 import qualified EFA.Application.Symbolic as Symbolic
 import EFA.Application.Topology.TripodA (Node, node0, node1, node2, node3)
 import EFA.Application.Symbolic ((=<>), (.=))
-import EFA.Application.Utility (constructSeqTopo)
+import EFA.Application.Utility (seqFlowGraphRecordFromStates)
 
+import qualified EFA.Flow.Sequence.EquationSystem as EqSys
+import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence.Index as XIdx
+import qualified EFA.Flow.Draw as Draw
 
 import qualified EFA.Symbolic.SumProduct as SumProduct
 
-import qualified EFA.Equation.Environment as Env
-import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Record as Record
 import EFA.Equation.Arithmetic (zero)
 
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Draw as Draw
 
 import Data.Monoid (mempty, (<>))
 
@@ -57,11 +57,8 @@ given =
 
 
 main :: IO ()
-main = do
-
-  let seqTopo = constructSeqTopo Tripod.topology [1]
-      env = EqGen.solve seqTopo given
-
-  -- Draw.xterm $ Draw.sequFlowGraphAbsWithEnv seqTopo env
-  Draw.xterm $ Draw.sequFlowGraphDeltaWithEnv seqTopo $
-     Env.completeFMap Record.delta Record.delta env
+main =
+   Draw.xterm $
+      Draw.sequFlowGraph (Draw.deltaVariable Draw.optionsDefault) $
+      SeqFlow.mapGraph Record.delta Record.delta $
+      EqSys.solve (seqFlowGraphRecordFromStates Tripod.topology [1]) given

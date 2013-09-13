@@ -11,14 +11,16 @@ import EFA.Application.NestedDelta
            givenParameterSymbol, givenParameterNumber,
            beforeDelta, extrudeStart,
            (<&), (<&>), (&>), (&&>), (?=))
-import EFA.Application.Utility (constructSeqTopo)
+import EFA.Application.Utility (seqFlowGraphRecordFromStates)
 
+import qualified EFA.Flow.Sequence.AssignMap as SeqFlowAssignMap
+import qualified EFA.Flow.Sequence.EquationSystem as EqSys
+import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence.Index as XIdx
+import qualified EFA.Flow.Draw as Draw
 
-import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Record as Record
-import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Result (Result)
 
@@ -27,7 +29,6 @@ import qualified EFA.Symbolic.OperatorTree as Op
 import qualified EFA.Symbolic.Mixed as Term
 
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Draw as Draw
 
 import qualified EFA.Signal.PlotIO as PlotIO
 
@@ -55,7 +56,7 @@ type RecMultiDelta = Record.ExtDelta (Record.ExtDelta (Record.ExtDelta Record.Ab
 
 type
    EquationSystemSymbolic s =
-      EqGen.EquationSystem Symbolic.Ignore
+      EqSys.EquationSystem Symbolic.Ignore
          RecMultiDelta Node s ScalarTerm SignalTerm
 
 
@@ -147,25 +148,25 @@ simplifiedSummands =
 mainSymbolic :: IO ()
 mainSymbolic = do
 
-   let seqTopo = constructSeqTopo LinearTwo.topology [0]
-   let (Env.Complete scalarEnv signalEnv) =
-          EqGen.solve seqTopo givenSymbolic
+   let solved =
+          EqSys.solve
+             (seqFlowGraphRecordFromStates LinearTwo.topology [0])
+             givenSymbolic
 
-   putStrLn $ Format.unUnicode $ formatValue $
-      Env.Complete
-         (fmap Record.summands scalarEnv)
-         (fmap simplifiedSummands signalEnv)
+   putStrLn $ Format.unUnicode $ Format.lines $
+      SeqFlowAssignMap.format $ SeqFlow.toAssignMap $
+      SeqFlow.mapGraph Record.summands simplifiedSummands solved
 
-   Draw.xterm $
-     Draw.sequFlowGraphAbsWithEnv seqTopo $
-       Env.Complete
-         (fmap (Record.Absolute . Record.summands) scalarEnv)
-         (fmap (Record.Absolute . simplifiedSummands) signalEnv)
+   Draw.xterm $ Draw.sequFlowGraph Draw.optionsDefault $
+      SeqFlow.mapGraph
+         (Record.Absolute . Record.summands)
+         (Record.Absolute . simplifiedSummands)
+         solved
 
 
 type
    EquationSystemNumeric s =
-      EqGen.EquationSystem Symbolic.Ignore
+      EqSys.EquationSystem Symbolic.Ignore
          RecMultiDelta Node s Double Double
 
 
@@ -198,10 +199,12 @@ givenNumeric =
 mainNumeric :: IO ()
 mainNumeric = do
 
-   let seqTopo = constructSeqTopo LinearTwo.topology [0]
-       Env.Complete _scalarEnv signalEnv = EqGen.solve seqTopo givenNumeric
+   let solved =
+          EqSys.solve
+             (seqFlowGraphRecordFromStates LinearTwo.topology [0])
+             givenNumeric
 
-   case Map.lookup eout (Env.energyMap signalEnv) of
+   case SeqFlow.lookupEnergy eout solved of
       Nothing -> error "undefined E_2_1"
       Just x -> do
          let assigns =

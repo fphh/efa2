@@ -1,23 +1,26 @@
+{-# LANGUAGE Rank2Types #-}
 module Main where
 
-import EFA.Application.Topology.LinearOne (Node(Source, Sink))
-
+import qualified EFA.Application.Topology.LinearOne as Linear
 import qualified EFA.Application.Symbolic as Symbolic
+import EFA.Application.Topology.LinearOne (Node(Source, Sink))
 import EFA.Application.Symbolic ((=<>))
+import EFA.Application.Utility (seqFlowGraphRecordFromStates)
 
+import qualified EFA.Flow.Sequence.AssignMap as AssignMap
+import qualified EFA.Flow.Sequence.EquationSystem as EqSys
+import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence.Index as XIdx
+import EFA.Flow.Sequence.EquationSystem ((=%=))
 
 import qualified EFA.Symbolic.SumProduct as SumProduct
 
-import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Record as Record
-import EFA.Equation.System ((=%=))
 import EFA.Equation.Arithmetic ((~*))
 
 import qualified EFA.Graph.Topology.Index as Idx
 
 import qualified EFA.Report.Format as Format
-import EFA.Report.FormatValue (FormatValue, formatValue)
 
 import qualified System.IO as IO
 import Data.Monoid (mempty, (<>))
@@ -48,16 +51,25 @@ given =
    mempty
 
 sys =
-   (EqGen.variableRecord (XIdx.power sec0 node1 node0) =%=
-      EqGen.variableRecord (XIdx.eta sec0 node0 node1) ~*
-      EqGen.variableRecord (XIdx.power sec0 node0 node1))
+   EqSys.variableRecord (XIdx.power sec0 node1 node0) =%=
+      EqSys.variableRecord (XIdx.eta sec0 node0 node1) ~*
+      EqSys.variableRecord (XIdx.power sec0 node0 node1)
+
+run ::
+   (forall s.
+    Symbolic.EquationSystem Symbolic.Ignore
+       Record.Delta Node s SumProduct.Term) ->
+   IO ()
+run x =
+   putStrLn $ Format.unUnicode $ Format.lines $
+   AssignMap.format $ SeqFlow.toAssignMap $
+   EqSys.solve (seqFlowGraphRecordFromStates Linear.topology [0]) x
 
 
 main :: IO ()
 main = do
    IO.hSetEncoding IO.stdout IO.utf8
-   putStr $ Format.unUnicode $ formatValue $ EqGen.solveSimple given
-   putStrLn ""
-   putStr $ Format.unUnicode $ formatValue $ EqGen.solveSimple (given <> sys)
-   putStrLn ""
-   putStr $ Format.unUnicode $ formatValue $ EqGen.solveSimple (sys <> given)
+
+   run given
+   run (given <> sys)
+   run (sys <> given)

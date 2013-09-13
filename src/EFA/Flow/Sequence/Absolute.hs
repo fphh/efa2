@@ -18,10 +18,12 @@ import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Arithmetic as Arith
-import EFA.Equation.Result(Result(..))
+import EFA.Equation.Result (Result(..))
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
+
+import EFA.Utility (Pointed)
 
 import qualified UniqueLogic.ST.TF.Expression as Expr
 import qualified UniqueLogic.ST.TF.System as Sys
@@ -29,6 +31,7 @@ import qualified UniqueLogic.ST.TF.System as Sys
 import qualified Control.Monad.Exception.Synchronous as ME
 
 import Control.Applicative (liftA, liftA2)
+import Data.Monoid ((<>))
 import Data.Tuple.HT (mapFst)
 
 
@@ -110,6 +113,42 @@ type ScalarTerm term node = Symbolic.ScalarTerm Idx.Absolute term node
 type ScalarAtom term node = Symbolic.ScalarAtom Idx.Absolute term node
 
 type VarTerm var term node = SymVar.VarTerm var Idx.Absolute term node
+
+type
+   SymbolicEquationSystem mode node s term =
+      Symbolic.EquationSystem mode Record.Absolute node s term
+
+type
+   SymbolicEquationSystemIgnore node s term =
+      SymbolicEquationSystem Verify.Ignore node s term
+
+symbol ::
+   (SymVar.Symbol var, Pointed term) =>
+   var node -> VarTerm var term node
+symbol = SymVar.symbol . Idx.absolute
+
+givenSymbol ::
+   (Sys.Value mode t, t ~ VarTerm var term node,
+    t ~ SeqFlow.Element idx (ScalarTerm term node) (SignalTerm term node),
+    Pointed term, Var.Type idx ~ var, SymVar.Symbol var,
+    SeqFlow.Lookup idx, Node.C node) =>
+   idx node ->
+   SymbolicEquationSystem mode node s term
+givenSymbol idx =
+   idx .= symbol (Var.index idx)
+
+
+infixr 6 =<>
+
+(=<>) ::
+   (Sys.Value mode t, t ~ VarTerm var term node,
+    t ~ SeqFlow.Element idx (ScalarTerm term node) (SignalTerm term node),
+    Pointed term, Var.Type idx ~ var, SymVar.Symbol var,
+    SeqFlow.Lookup idx, Node.C node) =>
+    idx node ->
+    SymbolicEquationSystem mode node s term ->
+    SymbolicEquationSystem mode node s term
+idx =<> eqsys = givenSymbol idx <> eqsys
 
 
 infix 0 .=, =%%=

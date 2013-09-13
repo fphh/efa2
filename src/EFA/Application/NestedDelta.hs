@@ -4,7 +4,10 @@ module EFA.Application.NestedDelta (
    (?=),
    ) where
 
-import qualified EFA.Equation.System as EqGen
+import qualified EFA.Flow.Sequence.EquationSystem as EqSys
+import qualified EFA.Flow.Sequence.Quantity as SeqFlow
+import EFA.Flow.Sequence.EquationSystem ((?=))
+
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Arithmetic as Arith
@@ -12,10 +15,9 @@ import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Symbolic.Variable as SymVar
 import EFA.Equation.Result (Result(Determined, Undetermined))
-import EFA.Equation.System ((?=))
 
 import qualified EFA.Graph.Topology.Index as Idx
-import EFA.Report.FormatValue (FormatValue)
+import qualified EFA.Graph.Topology.Node as Node
 import EFA.Utility (Pointed)
 
 import qualified Data.NonEmpty as NonEmpty
@@ -149,8 +151,8 @@ parameterSymbol ::
    (Pointed term,
     t ~ SymVar.VarTerm var Idx.Delta term node,
     Eq t, Arith.Sum t, Arith.Constant t,
-    Ord (idx node),
-    Var.Type idx ~ var, SymVar.Symbol var, Env.AccessMap idx) =>
+    Node.C node,
+    Var.Type idx ~ var, SymVar.Symbol var, SeqFlow.Lookup idx) =>
 
    OuterExtrusion rec t ->
    idx node -> rec (Result t)
@@ -164,8 +166,8 @@ absoluteSymbol ::
    (Pointed term,
     t ~ SymVar.VarTerm var Idx.Delta term node,
     Eq t, Arith.Sum t, Arith.Constant t,
-    Ord (idx node),
-    Var.Type idx ~ var, SymVar.Symbol var, Env.AccessMap idx) =>
+    Node.C node,
+    Var.Type idx ~ var, SymVar.Symbol var, SeqFlow.Lookup idx) =>
 
    InnerExtrusion rec t ->
    idx node -> rec (Result t)
@@ -189,28 +191,28 @@ absoluteRecord = runInnerExtrusion
 
 givenParameterSymbol ::
    (Verify.GlobalVar mode t recIdx var node,
-    EqGen.Record rec, Record.ToIndex rec ~ recIdx,
+    EqSys.Record rec, Record.ToIndex rec ~ recIdx,
     Pointed term,
     t ~ SymVar.VarTerm var Idx.Delta term node,
     Eq t, Arith.Sum t, Arith.Constant t,
     t ~ Env.Element idx scalar signal,
-    Ord (idx node), FormatValue (idx node),
-    Var.Type idx ~ var, SymVar.Symbol var, Env.AccessMap idx) =>
+    Node.C node,
+    Var.Type idx ~ var, SymVar.Symbol var, SeqFlow.Lookup idx) =>
 
    idx node ->
    OuterExtrusion rec t ->
-   EqGen.EquationSystem mode rec node s scalar signal
+   EqSys.EquationSystem mode rec node s scalar signal
 givenParameterSymbol idx param =
    idx ?= parameterSymbol param idx
 
 
 givenParameterNumber ::
    (Verify.GlobalVar mode x recIdx var node,
-    EqGen.Record rec, Record.ToIndex rec ~ recIdx, Var.Type idx ~ var,
+    EqSys.Record rec, Record.ToIndex rec ~ recIdx, Var.Type idx ~ var,
     Eq x, Arith.Sum x, x ~ Env.Element idx a v,
-    Ord (idx node), FormatValue (idx node), Env.AccessMap idx, Var.Index idx) =>
+    Node.C node, SeqFlow.Lookup idx) =>
    idx node -> x -> x ->
    OuterExtrusion rec x ->
-   EqGen.EquationSystem mode rec node s a v
+   EqSys.EquationSystem mode rec node s a v
 givenParameterNumber idx x y param =
    idx ?= parameterRecord param x y

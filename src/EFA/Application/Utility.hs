@@ -37,6 +37,7 @@ import qualified Data.Set as Set
 import qualified Data.Map as Map
 import Data.Map (Map)
 
+import Control.Applicative (pure)
 import Data.Foldable (foldMap)
 
 
@@ -88,6 +89,21 @@ seqFlowGraphFromStates ::
    SeqFlowQuant.Graph node (Result a) (Result v)
 seqFlowGraphFromStates topo =
    SeqFlowQuant.mapGraph (\() -> Undetermined) (\() -> Undetermined) .
+   seqFlowGraphUnitFromStates topo
+
+seqFlowGraphRecordFromStates ::
+   (Ord node, EqGen.Record rec) =>
+   Topo.Topology node -> [Int] ->
+   SeqFlowQuant.Graph node (rec (Result a)) (rec (Result v))
+seqFlowGraphRecordFromStates topo =
+   SeqFlowQuant.mapGraph (\() -> pure Undetermined) (\() -> pure Undetermined) .
+   seqFlowGraphUnitFromStates topo
+
+seqFlowGraphUnitFromStates ::
+   (Ord node) =>
+   Topo.Topology node -> [Int] ->
+   SeqFlowQuant.Graph node () ()
+seqFlowGraphUnitFromStates topo =
    SeqFlowQuant.graphFromPlain .
    SeqFlow.sequenceGraph .
    fmap (StateAnalysis.bruteForce topo !!) .

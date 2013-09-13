@@ -1,17 +1,17 @@
 module Main where
 
 import qualified EFA.Application.Topology.TripodA as Tripod
-import qualified EFA.Application.Absolute as EqGen
 import EFA.Application.Topology.TripodA (Node, node0, node1, node2, node3)
-import EFA.Application.Utility (constructSeqTopo)
-import EFA.Application.Absolute ((=<>))
+import EFA.Application.Utility (seqFlowGraphFromStates)
 
+import qualified EFA.Flow.Sequence.Absolute as EqSys
 import qualified EFA.Flow.Sequence.Index as XIdx
+import qualified EFA.Flow.Draw as Draw
+import EFA.Flow.Sequence.Absolute ((=<>))
 
 import qualified EFA.Symbolic.SumProduct as SumProduct
 
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Draw as Draw
 
 import Data.Monoid (mempty)
 
@@ -21,7 +21,7 @@ sec0 = Idx.Section 0
 
 
 given ::
-   EqGen.SymbolicEquationSystem Node s SumProduct.Term
+   EqSys.SymbolicEquationSystemIgnore Node s SumProduct.Term
 given =
    XIdx.dTime sec0 =<>
 
@@ -38,9 +38,6 @@ given =
 
 
 main :: IO ()
-main = do
-
-  let seqTopo = constructSeqTopo Tripod.topology [1]
-      env = EqGen.solve seqTopo given
-
-  Draw.xterm $ Draw.sequFlowGraphAbsWithEnv seqTopo env
+main =
+   Draw.xterm $ Draw.sequFlowGraph Draw.optionsDefault $
+      EqSys.solve (seqFlowGraphFromStates Tripod.topology [1]) given

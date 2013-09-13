@@ -7,17 +7,14 @@ module EFA.Application.Absolute (
    ) where
 
 import qualified EFA.Flow.Sequence.Index as SeqIdx
-import qualified EFA.Application.Symbolic as Symbolic
 
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Environment as Env
-import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Verify as Verify
 import EFA.Equation.System ((=.=))
 import EFA.Equation.Result(Result(..))
 
-import qualified EFA.Symbolic.Variable as SymVar
 
 import qualified EFA.Signal.Record as SigRecord
 import qualified EFA.Signal.SequenceData as SD
@@ -30,7 +27,6 @@ import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 
 import qualified EFA.Equation.Arithmetic as Arith
-import EFA.Utility (Pointed)
 
 import EFA.Report.FormatValue (FormatValue)
 
@@ -101,48 +97,6 @@ liftF2 ::
   Expression node s a v y ->
   Expression node s a v z
 liftF2 = liftA2 . Expr.fromRule3 . Sys.assignment3
-
-
-
-type SignalTerm term node = Symbolic.SignalTerm Idx.Absolute term node
-type ScalarTerm term node = Symbolic.ScalarTerm Idx.Absolute term node
-type ScalarAtom term node = Symbolic.ScalarAtom Idx.Absolute term node
-
-type VarTerm var term node = SymVar.VarTerm var Idx.Absolute term node
-
-type
-   SymbolicEquationSystem node s term =
-      Symbolic.EquationSystem Verify.Ignore Record.Absolute node s term
-
-symbol ::
-   (SymVar.Symbol var, Pointed term) =>
-   var node -> VarTerm var term node
-symbol = SymVar.symbol . Idx.absolute
-
-givenSymbol ::
-  (t ~ VarTerm var term node,
-   Eq t, Arith.Sum t,
-   t ~ Env.Element idx (ScalarTerm term node) (SignalTerm term node),
-   Ord (idx node), FormatValue (idx node), Pointed term,
-   Var.Type idx ~ var, SymVar.Symbol var, Env.AccessMap idx) =>
-  idx node ->
-  SymbolicEquationSystem node s term
-givenSymbol idx =
-   idx .= symbol (Var.index idx)
-
-
-infixr 6 =<>
-
-(=<>) ::
-  (t ~ VarTerm var term node,
-   Eq t, Arith.Sum t,
-   t ~ Env.Element idx (ScalarTerm term node) (SignalTerm term node),
-   Ord (idx node), FormatValue (idx node), Pointed term,
-   Var.Type idx ~ var, SymVar.Symbol var, Env.AccessMap idx) =>
-   idx node ->
-   SymbolicEquationSystem node s term ->
-   SymbolicEquationSystem node s term
-idx =<> eqsys = givenSymbol idx <> eqsys
 
 
 infix 0 .=, =%%=

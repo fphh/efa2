@@ -2,14 +2,17 @@
 module Main where
 
 import qualified EFA.Application.AssignMap as AssignMap
-import qualified EFA.Application.Absolute as EqGen
 import qualified EFA.Application.Symbolic as Symbolic
 import qualified EFA.Application.Topology.LinearTwo as LinearTwo
 import EFA.Application.Topology.LinearTwo (Node, node0, node1, node2)
-import EFA.Application.Utility (constructSeqTopo)
-import EFA.Application.Absolute ((.=))
+import EFA.Application.Utility (seqFlowGraphFromStates)
 
+import qualified EFA.Flow.Sequence.AssignMap as SeqFlowAssignMap
+import qualified EFA.Flow.Sequence.Absolute as EqSys
+import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence.Index as XIdx
+import qualified EFA.Flow.Draw as Draw
+import EFA.Flow.Sequence.Absolute ((.=))
 
 import qualified EFA.Symbolic.Variable as SymVar
 import qualified EFA.Symbolic.SumProduct as SumProduct
@@ -17,12 +20,10 @@ import qualified EFA.Symbolic.SumProduct as SumProduct
 import qualified EFA.Equation.Stack as Stack
 import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.Variable as Var
-import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Stack (Stack)
 
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Draw as Draw
 
 import qualified EFA.Signal.PlotIO as PlotIO
 
@@ -45,14 +46,14 @@ type ScalarTerm = Symbolic.ScalarTerm Idx.Delta SumProduct.Term Node
 
 type
    EquationSystemSymbolic s =
-      EqGen.EquationSystem Node s
+      EqSys.EquationSystemIgnore Node s
          (Stack (Var.SectionAny Node) ScalarTerm)
          (Stack (Var.SectionAny Node) SignalTerm)
 
 infixr 6 *=<>, -=<>
 
 (*=<>) ::
-   (Ord (idx Node), FormatSignalIndex idx, Env.AccessSignalMap idx) =>
+   (Ord (idx Node), FormatSignalIndex idx, SeqFlow.LookupSignal idx) =>
    Idx.InSection idx Node ->
    EquationSystemSymbolic s -> EquationSystemSymbolic s
 idx *=<> eqsys =
@@ -61,7 +62,7 @@ idx *=<> eqsys =
    eqsys
 
 (-=<>) ::
-   (Ord (idx Node), FormatSignalIndex idx, Env.AccessSignalMap idx) =>
+   (Ord (idx Node), FormatSignalIndex idx, SeqFlow.LookupSignal idx) =>
    Idx.InSection idx Node -> EquationSystemSymbolic s -> EquationSystemSymbolic s
 idx -=<> eqsys =
    (idx .=
@@ -88,24 +89,25 @@ givenSymbolic =
 mainSymbolic :: IO ()
 mainSymbolic = do
 
-   let seqTopo = constructSeqTopo LinearTwo.topology [0]
-   let env = EqGen.solve seqTopo givenSymbolic
+   let solved =
+          EqSys.solve
+             (seqFlowGraphFromStates LinearTwo.topology [0])
+             givenSymbolic
 
-   putStrLn $ Format.unUnicode $ formatValue env
+   putStrLn $ Format.unUnicode $ Format.lines $
+      SeqFlowAssignMap.format $ SeqFlow.toAssignMap solved
 
-   Draw.xterm $
-     Draw.sequFlowGraphAbsWithEnv seqTopo env
-
+   Draw.xterm $ Draw.sequFlowGraph Draw.optionsDefault solved
 
 
 type
    EquationSystemNumeric s =
-      EqGen.EquationSystem Node s
+      EqSys.EquationSystemIgnore Node s
          (Stack (Var.SectionAny Node) Double)
          (Stack (Var.SectionAny Node) Double)
 
 deltaPair ::
-   (Ord (idx Node), FormatSignalIndex idx, Env.AccessSignalMap idx) =>
+   (Ord (idx Node), FormatSignalIndex idx, SeqFlow.LookupSignal idx) =>
    Idx.InSection idx Node -> Double -> Double -> EquationSystemNumeric s
 deltaPair idx before delta =
    idx .= Stack.deltaPair (Var.Signal $ Var.index idx) before delta
@@ -130,10 +132,10 @@ eout = XIdx.energy sec0 node2 node1
 mainNumeric :: IO ()
 mainNumeric = do
 
-   let seqTopo = constructSeqTopo LinearTwo.topology [0]
-       Env.Complete _scalarEnv signalEnv = EqGen.solve seqTopo givenNumeric
+   let solved =
+          EqSys.solve (seqFlowGraphFromStates LinearTwo.topology [0]) givenNumeric
 
-   case Map.lookup eout (Env.energyMap signalEnv) of
+   case SeqFlow.lookupEnergy eout solved of
       Nothing -> error "undefined E_2_1"
       Just d ->
          case d of
