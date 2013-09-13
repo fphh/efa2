@@ -943,7 +943,8 @@ formatAssignWithOpts ::
    Options output -> idx node -> a -> output
 formatAssignWithOpts opts idx val =
    Format.assign
-      (if optVariableIndex opts
+      (optRecordIndex opts $
+       if optVariableIndex opts
          then Var.formatIndex idx
          else Format.edgeIdent idx)
       (formatValue val)
