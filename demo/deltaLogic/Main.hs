@@ -1,5 +1,7 @@
 module Main where
 
+import EFA.Application.Topology.LinearOne (Node(Source, Sink))
+
 import qualified EFA.Application.Symbolic as Symbolic
 import EFA.Application.Symbolic ((=<>))
 
@@ -13,7 +15,6 @@ import EFA.Equation.System ((=%=))
 import EFA.Equation.Arithmetic ((~*))
 
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Topology.Node as Node
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
@@ -25,9 +26,9 @@ import Data.Monoid (mempty, (<>))
 sec0 :: Idx.Section
 sec0 = Idx.Section 0
 
-node0, node1 :: Node.Int
-node0 = Node.intSource 0
-node1 = Node.intSink 0
+node0, node1 :: Node
+node0 = Source
+node1 = Sink
 
 
 {-
@@ -35,7 +36,7 @@ Use SumProduct.Term here since it simplifies automatically.
 -}
 given, sys ::
    Symbolic.EquationSystem Symbolic.Ignore
-      Record.Delta Node.Int s SumProduct.Term
+      Record.Delta Node s SumProduct.Term
 given =
    Idx.before (XIdx.power sec0 node0 node1) =<>
    Idx.before (XIdx.eta sec0 node0 node1) =<>
