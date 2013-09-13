@@ -156,7 +156,7 @@ fromTopology ::
 fromTopology equalInOutSums topo =
    foldMap fromEdge (Gr.edgeLabels topo)
    <>
-   foldMap (fromSums equalInOutSums) (Gr.nodeLabels topo)
+   fold (Map.mapWithKey (fromSums equalInOutSums) $ Gr.nodeLabels topo)
    <>
    foldMap
       (\(ins,ss,outs) ->
@@ -188,15 +188,16 @@ fromEdge
 
 
 fromSums ::
-   (Verify.LocalVar mode a, Sum a, Record rec) =>
+   (Node.C node, Verify.LocalVar mode a, Sum a, Record rec) =>
    Bool ->
+   node ->
    CumFlow.Sums (SysRecord.Expr mode rec s a) ->
    EqSys.System mode s
-fromSums equalInOutSums s =
+fromSums equalInOutSums node s =
    let sumIn  = CumFlow.sumIn s
        sumOut = CumFlow.sumOut s
    in  fold $
-          guard equalInOutSums
+          guard (equalInOutSums && Node.typ node /= Node.Storage ())
           >>
           liftA2 (=&=) sumIn sumOut
 
