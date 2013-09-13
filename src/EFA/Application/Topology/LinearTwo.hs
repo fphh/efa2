@@ -11,9 +11,9 @@ import qualified EFA.Report.Format as Format
 data Node = Sink | Crossing | Source deriving (Eq, Ord, Enum, Show)
 
 node0, node1, node2 :: Node
-node0 = Sink
+node0 = Source
 node1 = Crossing
-node2 = Source
+node2 = Sink
 
 
 instance Node.C Node where
