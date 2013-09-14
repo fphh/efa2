@@ -30,6 +30,8 @@ module EFA.Flow.Sequence.Quantity (
 
    mapCarryWithVar,
 
+   Quant.liftEdgeFlow,
+
    lookupPower,
    lookupEnergy,
    lookupX,

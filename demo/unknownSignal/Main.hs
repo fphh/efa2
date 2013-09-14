@@ -3,32 +3,35 @@
 
 module Main where
 
+import EFA.Application.Utility ( topologyFromEdges, seqFlowGraphFromStates )
+
 import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.PlotIO as PlotIO
 import qualified EFA.Signal.Record as Rec
 import qualified EFA.Signal.Data as Data
 import EFA.Signal.Data (Data, (:>), Nil)
 
-import qualified EFA.Application.Absolute as EqGen
-import EFA.Application.Absolute ( (.=), (=.=) )
-import EFA.Application.Utility ( topologyFromEdges, constructSeqTopo )
-
+import qualified EFA.Flow.Sequence.Absolute as EqSys
+import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence.Index as XIdx
+import qualified EFA.Flow.Draw as Draw
+import EFA.Flow.Sequence.Absolute ((.=), (=.=))
 
-import qualified EFA.Equation.Result as Res
-import qualified EFA.Equation.Environment as Env
+import qualified EFA.Equation.Result as Result
 
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
-import qualified EFA.Graph.Draw as Draw
+import qualified EFA.Graph as Graph
 
 import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 import EFA.Utility.Async (concurrentlyMany_)
+import EFA.Utility.Map (checkedLookup)
 
 import qualified Data.Map as Map
 
-import Data.Monoid (mconcat)
+import Data.Foldable (foldMap, fold)
+import Data.Monoid (mconcat, (<>))
 
 
 sec0 :: Idx.Section
@@ -70,59 +73,70 @@ node2Sig' = [1, 2, 0, -2, -3, -4, -5, -3, 0,  1,  2, 3, 1, 0, -1, -2, -1,  0]
 
 eta01 :: Double -> Double
 eta01 x = if x < 0 then 1/n else n
-  where n = 0.5
+   where n = 0.5
 
 eta12 :: Double -> Double
 eta12 x = if x < 0 then 1/n else n
-  where n = 0.4
+   where n = 0.4
 
 eta13 :: Double -> Double
 eta13 x = if x < 0 then 1/n else n
-  where n = 0.7
+   where n = 0.7
 
 
-env :: EqGen.EquationSystem Node.Int s (Data Nil Double) (Data ([] :> Nil) Double)
-env =
-  mconcat $
-  (XIdx.dTime sec0 .= Data.map (const 1) sig0) :
-  (XIdx.power sec0 node0 node1 .= sig0) :
-  (XIdx.power sec0 node2 node1 .= sig2) :
+given ::
+   EqSys.EquationSystemIgnore Node.Int s
+      (Data Nil Double) (Data ([] :> Nil) Double)
+given =
+   mconcat $
+   (XIdx.dTime sec0 .= Data.map (const 1) sig0) :
+   (XIdx.power sec0 node0 node1 .= sig0) :
+   (XIdx.power sec0 node2 node1 .= sig2) :
 
-  ((EqGen.variable $ XIdx.eta sec0 node0 node1) =.=
-    EqGen.liftF (Data.map eta01) (EqGen.variable $ XIdx.power sec0 node0 node1)) :
+   ((EqSys.variable $ XIdx.eta sec0 node0 node1) =.=
+     EqSys.liftF (Data.map eta01) (EqSys.variable $ XIdx.power sec0 node0 node1)) :
 
-  ((EqGen.variable $ XIdx.eta sec0 node1 node2) =.=
-    EqGen.liftF (Data.map eta12) (EqGen.variable $ XIdx.power sec0 node2 node1)) :
+   ((EqSys.variable $ XIdx.eta sec0 node1 node2) =.=
+     EqSys.liftF (Data.map eta12) (EqSys.variable $ XIdx.power sec0 node2 node1)) :
 
-  ((EqGen.variable $ XIdx.eta sec0 node1 node3) =.=
-    EqGen.liftF (Data.map eta13) (EqGen.variable $ XIdx.power sec0 node1 node3)) :
+   ((EqSys.variable $ XIdx.eta sec0 node1 node3) =.=
+     EqSys.liftF (Data.map eta13) (EqSys.variable $ XIdx.power sec0 node1 node3)) :
 
-  []
-  where sig0 = Sig.unpack node0Sig
-        sig2 = Sig.unpack node2Sig
+   []
+   where sig0 = Sig.unpack node0Sig
+         sig2 = Sig.unpack node2Sig
+
 
 main :: IO ()
-main = do
+main =
+   case seqFlowGraphFromStates topoDreibein [0] of
+      flowGraph -> do
 
+         let rec :: Rec.PowerRecord Node.Int [] Double
+             rec =
+                Rec.Record time $
+                Map.mapMaybe (fmap Sig.TC . Result.toMaybe) $
+                foldMap fold $
+                Map.mapWithKey
+                   (SeqFlow.liftEdgeFlow $
+                    \e flow ->
+                       case Topo.structureEdgeFromDirEdge e of
+                          se ->
+                             Map.singleton (Idx.PPos se)
+                                (SeqFlow.flowEnergyOut flow)
+                             <>
+                             Map.singleton (Idx.PPos $ Idx.flip se)
+                                (SeqFlow.flowEnergyIn flow)) $
+                Graph.edgeLabels $ snd $ snd $
+                flip (checkedLookup "rec") sec0 $
+                SeqFlow.sequence $ EqSys.solve flowGraph given
 
-  let seqTopo = constructSeqTopo topoDreibein [0]
+         concurrentlyMany_ [
+            PlotIO.record "Power Signals" DefaultTerm.cons show id rec,
+            PlotIO.recordList_extract "Power Signals" DefaultTerm.cons show id
+               [(Rec.Name "bla", rec)]
+               [ XIdx.ppos node1 node0,
+                 XIdx.ppos node1 node2,
+                 XIdx.ppos node1 node3 ],
 
-      e = EqGen.solve seqTopo env
-      pm = Env.powerMap (Env.signal e)
-
-      rec :: Rec.PowerRecord Node.Int [] Double
-      rec = Rec.Record time (Map.mapKeys f $ Map.mapMaybe g pm)
-
-      f (Idx.InPart _ (Idx.Power edge)) = Idx.PPos edge
-
-      g (Res.Determined dat) = Just $ Sig.TC dat
-      g _ = Nothing
-
-  concurrentlyMany_ [
-    PlotIO.record "Power Signals" DefaultTerm.cons show id rec,
-    PlotIO.recordList_extract "Power Signals" DefaultTerm.cons show id [(Rec.Name "bla", rec)]
-                              [ Idx.PPos (Idx.StructureEdge node1 node0),
-                                Idx.PPos (Idx.StructureEdge node1 node2),
-                                Idx.PPos (Idx.StructureEdge node1 node3) ],
-
-    Draw.xterm $ Draw.sequFlowGraph seqTopo ]
+            Draw.xterm $ Draw.sequFlowGraph Draw.optionsDefault flowGraph ]
