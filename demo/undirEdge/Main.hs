@@ -2,15 +2,15 @@
 module Main where
 
 import qualified EFA.Application.Topology.TripodA as Tripod
-import qualified EFA.Application.Absolute as EqGen
 import EFA.Application.Topology.TripodA (Node, node0, node1, node2, node3)
-import EFA.Application.Utility (constructSeqTopo)
-import EFA.Application.Absolute ((.=))
+import EFA.Application.Utility (seqFlowGraphFromStates)
 
+import qualified EFA.Flow.Sequence.Absolute as EqSys
 import qualified EFA.Flow.Sequence.Index as XIdx
+import qualified EFA.Flow.Draw as Draw
+import EFA.Flow.Sequence.Absolute ((.=))
 
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Draw as Draw
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
@@ -22,7 +22,7 @@ sec0, sec1 :: Idx.Section
 sec0 :~ sec1 :~ _ = Stream.enumFrom $ Idx.Section 0
 
 
-given :: EqGen.EquationSystem Node s Double Double
+given :: EqSys.EquationSystemIgnore Node s Double Double
 given =
    mconcat $
 
@@ -44,9 +44,8 @@ given =
    []
 
 main :: IO ()
-main = do
-
-  let seqTopo = constructSeqTopo Tripod.topology [2, 3]
-      env = EqGen.solve seqTopo given
-
-  Draw.xterm $ Draw.sequFlowGraphAbsWithEnv seqTopo env
+main =
+   Draw.xterm $ Draw.sequFlowGraph Draw.optionsDefault $
+      EqSys.solve
+         (seqFlowGraphFromStates Tripod.topology [2, 3])
+         given

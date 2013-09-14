@@ -1,18 +1,18 @@
 module Main where
 
 import qualified EFA.Application.Topology.TripodA as Tripod
-import qualified EFA.Application.Absolute as EqGen
 import EFA.Application.Topology.TripodA (Node, node0, node1, node2, node3)
-import EFA.Application.Utility ( constructSeqTopo )
-import EFA.Application.Absolute ( (.=) )
+import EFA.Application.Utility ( seqFlowGraphFromStates )
 
+import qualified EFA.Flow.Sequence.Absolute as EqSys
 import qualified EFA.Flow.Sequence.Index as XIdx
+import qualified EFA.Flow.Draw as Draw
+import EFA.Flow.Sequence.Absolute ((.=))
 
 import qualified EFA.Signal.Data as Data
 import EFA.Signal.Data (Data(Data))
 
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Draw as Draw
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
@@ -31,7 +31,9 @@ scalar :: a -> Data.Scalar a
 scalar = Data
 
 
-given :: EqGen.EquationSystem Node s (Data.Scalar Double) (Data.List Double)
+given ::
+   EqSys.EquationSystemIgnore Node s
+      (Data.Scalar Double) (Data.List Double)
 given =
    mconcat $
 
@@ -50,17 +52,14 @@ given =
    (XIdx.power sec2 node3 node2 .= signal [6, 6]) :
 
    (XIdx.eta sec0 node3 node2 .= signal [0.25, 0.25, 0.25]) :
-   (XIdx.eta sec0 node2 node3 .= signal [0.25, 0.25, 0.25]) :
    (XIdx.eta sec0 node2 node1 .= signal [0.50, 0.50, 0.50]) :
    (XIdx.eta sec0 node0 node2 .= signal [0.75, 0.75, 0.75]) :
    []
 
 
 main :: IO ()
-main = do
-
-  let seqTopo = constructSeqTopo Tripod.topology [1, 0, 1]
-      env = EqGen.solve seqTopo given
-
-  Draw.xterm $ Draw.sequFlowGraphAbsWithEnv seqTopo env
-
+main =
+   Draw.xterm $ Draw.sequFlowGraph Draw.optionsDefault $
+      EqSys.solve
+         (seqFlowGraphFromStates Tripod.topology [1, 0, 1])
+         given
