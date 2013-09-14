@@ -1,24 +1,24 @@
 
 module Main where
 
-import qualified EFA.Application.Absolute as EqGen
-import EFA.Application.Absolute ((.=), (=.=))
-import EFA.Application.Utility (topologyFromEdges, constructSeqTopo)
+import EFA.Application.Utility (topologyFromEdges, seqFlowGraphFromStates)
 
+import qualified EFA.Flow.Sequence.Absolute as EqSys
+import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence.Index as XIdx
+import qualified EFA.Flow.Draw as Draw
+import EFA.Flow.Sequence.Absolute ((.=), (=.=))
 
-import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Arithmetic as Arith
+import qualified EFA.Equation.Variable as Var
+import EFA.Equation.Result (Result)
 
-import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
-import qualified EFA.Graph.Draw as Draw
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
-import EFA.Utility.Map (checkedLookup)
 import EFA.Utility.Async (concurrentlyMany_)
 
 import qualified EFA.Report.Format as Format
@@ -64,10 +64,10 @@ topo =
       [(Source, c0), (c0, c1), (c1, c2), (c2, Sink),
        (c0, c3), (c3, c2)]
 
-seqTopo :: Flow.RangeGraph Node
-seqTopo = constructSeqTopo topo [0]
+flowGraph :: SeqFlow.Graph Node (Result a) (Result v)
+flowGraph = seqFlowGraphFromStates topo [0]
 
-given :: Double -> Double -> EqGen.EquationSystem Node s Double Double
+given :: Double -> Double -> EqSys.EquationSystemIgnore Node s Double Double
 given e x =
    mconcat $
    (XIdx.dTime sec0 .= 1) :
@@ -79,24 +79,24 @@ given e x =
    (XIdx.eta sec0 c2 Sink .= 1) : []
 
 
-type Expr s a v x = EqGen.Expression Node s a v x
+type Expr s a v x = EqSys.ExpressionIgnore Node s a v x
 
 c02, c04 :: (Eq v, Arith.Sum v) => Expr s a v v
-c02 = EqGen.variable $ XIdx.power sec0 c0 c1
-c04 = EqGen.variable $ XIdx.power sec0 c0 c3
+c02 = EqSys.variable $ XIdx.power sec0 c0 c1
+c04 = EqSys.variable $ XIdx.power sec0 c0 c3
 
 n12, n14 :: (Eq v, Arith.Sum v) => Expr s a v v
-n12 = EqGen.variable $ XIdx.eta sec0 c0 c1
-n14 = EqGen.variable $ XIdx.eta sec0 c0 c3
+n12 = EqSys.variable $ XIdx.eta sec0 c0 c1
+n14 = EqSys.variable $ XIdx.eta sec0 c0 c3
 
 n1, n2 :: (Fractional x) => Expr s a v x -> Expr s a v x
 n1 p = -0.012 * (p - 12) * (p - 3) + 0.5
 n2 p = -0.021 * (p - 12) * p
 
-etas :: EqGen.EquationSystem Node s Double Double
+etas :: EqSys.EquationSystemIgnore Node s Double Double
 etas =
-  (n12 =.= n1 c02)
-  <> (n14 =.= n2 c04)
+   (n12 =.= n1 c02) <>
+   (n14 =.= n2 c04)
 
 
 xRange :: [Double]
@@ -113,17 +113,15 @@ ein  = XIdx.energy sec0 Source c0
 
 solve :: Double -> Double -> String
 solve e x =
-  let emap =
-         Env.energyMap $ Env.signal $ EqGen.solve seqTopo (etas <> given e x)
-  in  show e ++ " " ++ show x ++ " " ++
-      Format.unUnicode (formatValue
-         (liftA2 (/)
-             (checkedLookup "solve" emap eout)
-             (checkedLookup "solve" emap ein)))
+   let emap idx =
+          Var.checkedLookup "solve" SeqFlow.lookupEnergy idx $
+          EqSys.solve flowGraph (etas <> given e x)
+   in  show e ++ " " ++ show x ++ " " ++
+       Format.unUnicode (formatValue (liftA2 (/) (emap eout) (emap ein)))
 
 main :: IO ()
 main =
-  concurrentlyMany_ [
-    Draw.xterm $ Draw.topology topo,
-    putStrLn $ unlines $ map (\e -> unlines $ map (solve e) xRange) enRange
-  ]
+   concurrentlyMany_ [
+      Draw.xterm $ Draw.topology topo,
+      putStrLn $ unlines $ map (\e -> unlines $ map (solve e) xRange) enRange
+   ]

@@ -462,7 +462,9 @@ instance
    lookup = lookupScalar
 
 
-class (Var.SignalIndex idx) => LookupSignal idx where
+class
+   (Var.SignalIndex idx, FormatValue.FormatSignalIndex idx) =>
+      LookupSignal idx where
    lookupSignal ::
       (Ord node) => Idx.InSection idx node -> Graph node a v -> Maybe v
 
@@ -485,7 +487,9 @@ instance LookupSignal Idx.Sum where
    lookupSignal = lookupSum
 
 
-class (Var.ScalarIndex idx) => LookupScalar idx where
+class
+   (Var.ScalarIndex idx, FormatValue.FormatScalarIndex idx) =>
+      LookupScalar idx where
    lookupScalar ::
       (Ord node) => Idx.ForNode idx node -> Graph node a v -> Maybe a
 

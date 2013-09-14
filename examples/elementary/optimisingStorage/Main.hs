@@ -2,20 +2,20 @@
 module Main where
 
 import qualified EFA.Application.Topology.TripodB as Tripod
-import qualified EFA.Application.Absolute as EqGen
 import EFA.Application.Topology.TripodB (Node, node0, node1, node2, node3)
-import EFA.Application.Absolute ((=.=))
-import EFA.Application.Utility ( constructSeqTopo, checkDetermined )
+import EFA.Application.Utility ( seqFlowGraphFromStates, checkDetermined )
 
+import qualified EFA.Flow.Sequence.Absolute as EqSys
+import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence.Index as XIdx
+import qualified EFA.Flow.Draw as Draw
+import EFA.Flow.Sequence.Absolute ((=.=))
 
-import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph.Draw as Draw
 
-import qualified EFA.Equation.Environment as Env
-import qualified EFA.Equation.Result as R
+import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Arithmetic as Arith
+import EFA.Equation.Result (Result)
 
 import qualified EFA.Signal.PlotIO as PlotIO
 import qualified EFA.Signal.ConvertTable as Table
@@ -29,13 +29,11 @@ import EFA.Signal.Base(Val)
 import qualified EFA.Report.Report as Rep
 
 import qualified EFA.Utility.Stream as Stream
-import EFA.Utility.Map (checkedLookup)
 import EFA.Utility.Async (concurrentlyMany_)
 import EFA.Utility.Stream (Stream((:~)))
 
 import qualified Graphics.Gnuplot.Terminal.WXT as WXT
 
-import qualified Data.Accessor.Basic as Accessor
 import qualified Data.Vector.Unboxed as UV
 
 import Control.Category ((.))
@@ -51,36 +49,36 @@ sec0, sec1 :: Idx.Section
 sec0 :~ sec1 :~ _ = Stream.enumFrom $ Idx.Section 0
 
 
-seqTopo :: Flow.RangeGraph Node
-seqTopo = constructSeqTopo Tripod.topology [0, 4]
+flowGraph :: SeqFlow.Graph Node (Result a) (Result v)
+flowGraph = seqFlowGraphFromStates Tripod.topology [0, 4]
 
 
-type Expr s a = EqGen.Expression Node s Double Double a
+type Expr s a = EqSys.ExpressionIgnore Node s Double Double a
 type ExpVar s = Expr s Double
 
 etaf :: (Arith.Sum a, Floating a) => Expr s a -> Expr s a
 etaf =
-   EqGen.liftF $ \x ->
+   EqSys.liftF $ \x ->
       let y = x/100
       in  1/((y+sqrt(y*y+4*y))/(2*y))
 
 n01, n12, n13, n31, p10, p21, e31, e21, p31, p13 ::
   Idx.Section -> Expr s Double
-n01 sec = EqGen.variable $ XIdx.eta sec node0 node1
-n12 sec = EqGen.variable $ XIdx.eta sec node1 node2
-n13 sec = EqGen.variable $ XIdx.eta sec node1 node3
-n31 sec = EqGen.variable $ XIdx.eta sec node3 node1
-p10 sec = EqGen.variable $ XIdx.power sec node1 node0
-p21 sec = EqGen.variable $ XIdx.power sec node2 node1
-e31 sec = EqGen.variable $ XIdx.energy sec node3 node1
-e21 sec = EqGen.variable $ XIdx.energy sec node2 node1
+n01 sec = EqSys.variable $ XIdx.eta sec node0 node1
+n12 sec = EqSys.variable $ XIdx.eta sec node1 node2
+n13 sec = EqSys.variable $ XIdx.eta sec node1 node3
+n31 sec = EqSys.variable $ XIdx.eta sec node3 node1
+p10 sec = EqSys.variable $ XIdx.power sec node1 node0
+p21 sec = EqSys.variable $ XIdx.power sec node2 node1
+e31 sec = EqSys.variable $ XIdx.energy sec node3 node1
+e21 sec = EqSys.variable $ XIdx.energy sec node2 node1
 
-p31 sec = EqGen.variable $ XIdx.power sec node3 node1
-p13 sec = EqGen.variable $ XIdx.power sec node1 node3
+p31 sec = EqSys.variable $ XIdx.power sec node3 node1
+p13 sec = EqSys.variable $ XIdx.power sec node1 node3
 
 
 stoinit :: Expr s Double
-stoinit = EqGen.variable $ XIdx.storage Idx.initial node3
+stoinit = EqSys.variable $ XIdx.storage Idx.initial node3
 
 ein, eout0, eout1 :: XIdx.Energy Node
 ein = XIdx.energy sec0 node0 node1
@@ -88,10 +86,10 @@ eout0 = XIdx.energy sec0 node2 node1
 eout1 = XIdx.energy sec1 node2 node1
 
 e33 :: Expr s Double
-e33 = EqGen.variable $ XIdx.stEnergy XIdx.initSection sec1 node3
+e33 = EqSys.variable $ XIdx.stEnergy XIdx.initSection sec1 node3
 
 time :: Idx.Section -> Expr s Double
-time = EqGen.variable . XIdx.dTime
+time = EqSys.variable . XIdx.dTime
 
 
 -- maybe move this to Utility module
@@ -102,7 +100,7 @@ f ::
    (Arith.Sum a, Floating a) =>
    Expr s a -> Expr s a -> Expr s a
 f =
-   EqGen.liftF2 $ \r x ->
+   EqSys.liftF2 $ \r x ->
       let -- r = 0.9
           ui = 200
       in  x/(x + r*((ui - sqrt(ui^!2 - 4*r*x)) / 2*r)^!2)
@@ -112,9 +110,9 @@ f =
 given :: Val ->
          Val ->
          Val ->
-         EqGen.EquationSystem Node s Val Val
+         EqSys.EquationSystemIgnore Node s Val Val
 given y' p' nParam' =
-  (stoinit =.= EqGen.constant 3)
+  (stoinit =.= EqSys.constant 3)
 
   <> (p21 sec0 =.= p)
   <> (e21 sec0 =.= (1-y)*(t*p))
@@ -128,47 +126,46 @@ given y' p' nParam' =
   <> (p21 sec1 =.= p)
   <> (n12 sec1 =.= 1)
   <> (n31 sec1 =.= fn31_p13 nParam (p13 sec1))
-  where y = EqGen.constant y'
-        nParam = EqGen.constant nParam'
-        t = EqGen.constant 1
-        p = EqGen.constant p'
+  where y = EqSys.constant y'
+        nParam = EqSys.constant nParam'
+        t = EqSys.constant 1
+        p = EqSys.constant p'
 
 
-type AbsoluteResult = R.Result Val
+type AbsoluteResult = Result Val
 
 -- | r is inner Resistance of Battery
 solve ::
    Val -> Val -> Val ->
-   Env.Complete Node AbsoluteResult AbsoluteResult
-solve nPar y p = EqGen.solve seqTopo (given y p nPar)
+   SeqFlow.Graph Node AbsoluteResult AbsoluteResult
+solve nPar y p = EqSys.solve flowGraph (given y p nPar)
 
 
 -- | Checked Lookup
 getSignalVar ::
-   (Ord (idx Node), Show (idx Node), Env.AccessSignalMap idx,
+   (SeqFlow.LookupSignal idx,
     Show a, UV.Unbox a) =>
-   [[Env.Complete Node (R.Result a) (R.Result a)]] ->
+   [[SeqFlow.Graph Node (Result a) (Result a)]] ->
    Idx.InSection idx Node -> Test2 (Typ A u Tt) a
 getSignalVar varEnvs idx =
    S.changeSignalType $ S.fromList2 $
    map (map (checkDetermined "getSignalVar" .
-             flip (checkedLookup "getSignalVar") idx .
-             Accessor.get Env.accessMap)) $
+             Var.checkedLookup "getSignalVar" SeqFlow.lookupSignal idx)) $
    varEnvs
 
 
 getSignalVarEnergy ::
-   [[Env.Complete Node AbsoluteResult AbsoluteResult]] ->
+   [[SeqFlow.Graph Node AbsoluteResult AbsoluteResult]] ->
    XIdx.Energy Node -> Test2 (Typ A F Tt) Val
 getSignalVarEnergy = getSignalVar
 
 getSignalVarPower ::
-   [[Env.Complete Node AbsoluteResult AbsoluteResult]] ->
+   [[SeqFlow.Graph Node AbsoluteResult AbsoluteResult]] ->
    XIdx.Power Node -> Test2 (Typ A P Tt) Val
 getSignalVarPower = getSignalVar
 
 getSignalVarEta ::
-   [[Env.Complete Node AbsoluteResult AbsoluteResult]] ->
+   [[SeqFlow.Graph Node AbsoluteResult AbsoluteResult]] ->
    XIdx.Eta Node -> Test2 (Typ A N Tt) Val
 getSignalVarEta = getSignalVar
 
@@ -214,21 +211,21 @@ varY = S.fromList2 varY'
 p_ic_fw = S.fromList [0,0.1 .. 1] :: S.Signal (Typ UT UT UT) Double
 eta_ic = S.fromList [0,0.7,0.9,0.95,0.97,1,0.97,0.95,0.9,0.85,0.8] :: S.Signal (Typ UT UT UT) Double
 feta_ic :: ExpVar s -> ExpVar s
-feta_ic (EqGen.ExprWithVars x) = EqGen.constant y
+feta_ic (EqSys.ExprWithVars x) = EqSys.constant y
   where (S.TC (D.Data y)) = S.interp1Lin (p_ic_fw.*eta_ic) eta_ic x
 -}
 
 -- | ic-engine - relative variable efficiency (max = 1) of an ic engine type fuel converter: n01 as function of p10
 fn01_p10_ic :: ExpVar s -> ExpVar s
 fn01_p10_ic =
-   EqGen.liftF $ \x ->
+   EqSys.liftF $ \x ->
       let y = x
       in  1/((y+sqrt(y*y+4*y))/(2*y))
 
 -- | fuel cell - relative variable efficiency fuel cell type
 fn01_p10_fc :: ExpVar s ->  ExpVar s ->  ExpVar s
 fn01_p10_fc =
-   EqGen.liftF2 $ \x r ->
+   EqSys.liftF2 $ \x r ->
       let ui = 1
       in  x/(x + r*((ui - sqrt(ui^!2 - 4*r*x)) / 2*r)^!2)
 
@@ -242,7 +239,7 @@ fn01_p10 = fn01_p10_ic  -- Choose fuel converter type here
 -- | variable efficiency of energy storage in discharging mode as function of n31 over p13
 fn31_p13_ba :: ExpVar s ->  ExpVar s ->  ExpVar s
 fn31_p13_ba =
-   EqGen.liftF2 $ \ r x ->
+   EqSys.liftF2 $ \ r x ->
       let ui = 1
       in  nsto_const*x/(x + r*((ui - sqrt(ui^!2 - 4*r*x)) / 2*r)^!2)
 
@@ -268,14 +265,14 @@ fn13_p31_HC _ _ = 0.99
 -- |  compareable to ic engine
 fn31_p13_EF :: ExpVar s ->  ExpVar s ->  ExpVar s
 fn31_p13_EF =
-   EqGen.liftF2 $ \_ x ->
+   EqSys.liftF2 $ \_ x ->
       let y = x
       in  1/((y+sqrt(y*y+4*y))/(2*y))
 
 -- |  compareable to ic engine
 fn13_p31_EF :: ExpVar s ->  ExpVar s ->  ExpVar s
 fn13_p31_EF =
-   EqGen.liftF2 $ \_ x ->
+   EqSys.liftF2 $ \_ x ->
       let y=x
       in  1/((y+sqrt(y*y+4*y))/(2*y))
 
@@ -430,6 +427,6 @@ main = do
 
   concurrentlyMany_ $
     map ( Draw.xterm
-          . Draw.title "Topolog"
-          . Draw.sequFlowGraphAbsWithEnv seqTopo )
+          . Draw.title "Topology"
+          . Draw.sequFlowGraph Draw.optionsDefault )
         [envhh,envhl, envlh, envll]
