@@ -39,6 +39,8 @@ import EFA.Utility.Async (concurrentlyMany_)
 
 import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
 
+import qualified Data.NonEmpty.Mixed as NonEmptyMixed
+import qualified Data.NonEmpty as NonEmpty
 import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -197,13 +199,10 @@ borderFunc ss xs p =
            zip (Sig.toList ss) (Sig.toList xs)
 
 sectionHU ::
-  Sig.PSignal [] d -> (d -> Int) -> [(Int, Sig.PSignal [] d)]
-sectionHU ss bf = ws
-  where ts = Sig.toList ss
-        us = List.groupBy (equating fst) $ zip (map bf ts) ts
-        ws = map f us
-        f ((s, w):xs) = (s, Sig.fromList (w:(map snd xs)))
-        f _ = error "sectionHU: Unbekannter Fehler!"
+  (d -> Int) -> Sig.PSignal [] d -> [(Int, Sig.PSignal [] d)]
+sectionHU bf =
+  map (\(NonEmpty.Cons (s, w) xs) -> (s, Sig.fromList (w : map snd xs))) .
+  NonEmptyMixed.groupBy (equating fst) . map (\s -> (bf s, s)) . Sig.toList
 
 
 commonEnvHU ::
@@ -382,7 +381,7 @@ main = do
 
       optimalState = Sig.map bf hypotheticalUsage
 
-      secHU = sectionHU hypotheticalUsage bf
+      secHU = sectionHU bf hypotheticalUsage
 
       (secs, secSigsHU) = unzip secHU
       seqTopoHU = seqTopoFunc secs
