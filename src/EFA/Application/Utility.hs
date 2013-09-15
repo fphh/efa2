@@ -52,7 +52,7 @@ type EdgeLabel = String
 type PPosLabel = String
 
 type LabeledEdgeList node = [(node, node, EdgeLabel, PPosLabel, PPosLabel)]
-type PPosLableMap node = Map (SeqIdx.PPos node) String
+type PPosLabelMap node = Map (SeqIdx.PPos node) String
 
 -- | Generate Topology from labeled edge List
 makeTopology ::
@@ -68,8 +68,8 @@ makeEdgeNameMap edgeList = Map.fromList $ map f edgeList
   where f (x, y, lab, _, _) = ((x, y), lab)
 
 -- | Generate Label Map for Power Positions
-makePPosLabelMap :: (Ord node) => LabeledEdgeList node -> PPosLableMap node
-makePPosLabelMap edgeList = Map.fromList $ concat $ map f edgeList
+makePPosLabelMap :: (Ord node) => LabeledEdgeList node -> PPosLabelMap node
+makePPosLabelMap edgeList = Map.fromList $ concatMap f edgeList
   where f (n1,n2,_,l1,l2) = [(SeqIdx.ppos n1 n2, l1),
                              (SeqIdx.ppos n2 n1, l2)]
 
