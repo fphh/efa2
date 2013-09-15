@@ -28,7 +28,7 @@ import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Signal.PlotIO as PlotIO
 
 import qualified EFA.Report.Format as Format
-import EFA.Report.FormatValue (FormatSignalIndex, FormatValue, formatValue)
+import EFA.Report.FormatValue (FormatValue, formatValue)
 
 import qualified Data.Map as Map
 import Data.Monoid (mempty, (<>))
@@ -53,7 +53,7 @@ type
 infixr 6 *=<>, -=<>
 
 (*=<>) ::
-   (Ord (idx Node), FormatSignalIndex idx, SeqFlow.LookupSignal idx) =>
+   (SeqFlow.LookupSignal idx) =>
    Idx.InSection idx Node ->
    EquationSystemSymbolic s -> EquationSystemSymbolic s
 idx *=<> eqsys =
@@ -62,7 +62,7 @@ idx *=<> eqsys =
    eqsys
 
 (-=<>) ::
-   (Ord (idx Node), FormatSignalIndex idx, SeqFlow.LookupSignal idx) =>
+   (SeqFlow.LookupSignal idx) =>
    Idx.InSection idx Node -> EquationSystemSymbolic s -> EquationSystemSymbolic s
 idx -=<> eqsys =
    (idx .=
@@ -107,7 +107,7 @@ type
          (Stack (Var.SectionAny Node) Double)
 
 deltaPair ::
-   (Ord (idx Node), FormatSignalIndex idx, SeqFlow.LookupSignal idx) =>
+   (SeqFlow.LookupSignal idx) =>
    Idx.InSection idx Node -> Double -> Double -> EquationSystemNumeric s
 deltaPair idx before delta =
    idx .= Stack.deltaPair (Var.Signal $ Var.index idx) before delta
