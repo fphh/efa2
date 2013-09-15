@@ -66,6 +66,20 @@ formatType t =
       NoRestriction -> Format.nodeNoRestriction
 
 
+isSink, isSource :: Type () -> Bool
+isSink t =
+   case t of
+      AlwaysSink -> True
+      Sink -> True
+      _ -> False
+
+isSource t =
+   case t of
+      AlwaysSource -> True
+      Source -> True
+      _ -> False
+
+
 class StorageLabel a where
    arbitraryStorageLabel :: QC.Gen a
 

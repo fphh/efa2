@@ -132,6 +132,7 @@ Library
     EFA.Flow.Cumulated.Quantity
     EFA.Flow.Cumulated.EquationSystem
     EFA.Flow.Cumulated.Absolute
+    EFA.Flow.SystemEta
     EFA.Flow.Draw
     EFA.Application.Utility
     EFA.Application.Absolute
