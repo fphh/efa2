@@ -2,13 +2,13 @@
 module EFA.Application.EtaSys where
 
 
-import qualified EFA.Flow.State.Index as StateIdx
-
 import qualified EFA.Application.Utility as AppUt
 
-import qualified EFA.Equation.Environment as EqEnv
+import qualified EFA.Flow.State.Index as StateIdx
+
 import qualified EFA.Graph.StateFlow.Environment as EqEnvState
 
+import qualified EFA.Equation.Environment as EqEnv
 import EFA.Equation.Result (Result(..))
 
 import qualified EFA.Graph.Topology.Index as Idx
@@ -27,6 +27,7 @@ import Control.Applicative (liftA2)
 import Data.Traversable (sequenceA)
 import Data.Maybe (mapMaybe)
 
+import Data.Maybe.HT (toMaybe)
 import Data.Tuple.HT (fst3, thd3)
 
 
@@ -58,7 +59,6 @@ etaSys (_, topo) env = liftA2 (/) (sumRes sinks) (sumRes sources)
         isActiveSource _ = False
 
         sinkEnergies
-
           (Topo.FlowEdge (Topo.StructureEdge e)) =
             Just $ AppUt.lookupAbsEnergy "etaSys, sinkEnergies" env $ Idx.flip $
             Idx.liftInPart (Idx.Energy . Topo.structureEdgeFromDirEdge) e
@@ -114,7 +114,7 @@ detEtaSysState ::
   (Fractional v, Ord node, Show node, Show v) =>
   Topo.StateFlowGraph node -> EqEnvState.Complete node a (Result v) -> v
 detEtaSysState topo =
-  AppUt.checkDetermined "detEtaSysState\n" . etaSysState topo
+  AppUt.checkDetermined "detEtaSysState" . etaSysState topo
 
 
 type Condition node a v = EqEnv.Complete node a (Result v) -> Bool
@@ -132,9 +132,7 @@ objectiveFunction ::
   EqEnv.Complete node a (Result v) ->
   Maybe v
 objectiveFunction cond forcing topo env =
-  case cond env of
-       True -> Just $ detEtaSys topo env + forcing env
-       False -> Nothing
+   toMaybe (cond env) $ detEtaSys topo env + forcing env
 
 
 objectiveFunctionState ::
@@ -145,6 +143,4 @@ objectiveFunctionState ::
   EqEnvState.Complete node a (Result v) ->
   Maybe v
 objectiveFunctionState cond forcing topo env =
-  case cond env of
-       True -> Just $ detEtaSysState topo env + forcing env
-       False -> Nothing
+   toMaybe (cond env) $ detEtaSysState topo env + forcing env
