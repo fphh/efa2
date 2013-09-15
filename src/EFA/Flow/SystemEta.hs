@@ -11,6 +11,8 @@ import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic ((~+), (~/))
 import EFA.Equation.Result (Result(..))
 
+import EFA.Utility.Map (Caller)
+
 import qualified EFA.Graph as Graph
 
 import qualified Data.Set as Set
@@ -49,9 +51,10 @@ etaSys gr =
 
 detEtaSys ::
    (Node.C node, Arith.Product v) =>
+   Caller ->
    SeqFlow.Graph node a (Result v) -> v
-detEtaSys =
-   checkDetermined "detEtaSys" . etaSys
+detEtaSys caller =
+   checkDetermined (caller ++ ".detEtaSys") . etaSys
 
 
 type Condition node a v = SeqFlow.Graph node a (Result v) -> Bool
@@ -66,4 +69,4 @@ objectiveFunction ::
    SeqFlow.Graph node a (Result v) ->
    Maybe v
 objectiveFunction cond forcing env =
-   toMaybe (cond env) $ detEtaSys env ~+ forcing env
+   toMaybe (cond env) $ detEtaSys "objectiveFunction" env ~+ forcing env

@@ -342,8 +342,8 @@ main = do
       varY :: Sig.XSignal2 [] [] Double
       varY = Sig.fromList2 varY'
 
-      f0 x y = detEtaSys $ EqSys.solve flowGraph $ givenSec0Mean x y
-      f1 x y = detEtaSys $ EqSys.solve flowGraph $ givenSec1Mean x y
+      f0 x y = detEtaSys "sec0" $ EqSys.solve flowGraph $ givenSec0Mean x y
+      f1 x y = detEtaSys "sec1" $ EqSys.solve flowGraph $ givenSec1Mean x y
 
       env0 = EqSys.solve flowGraph $ givenSec0Mean 4.0 0.4
       env1 = EqSys.solve flowGraph $ givenSec1Mean 3.0 0.3
