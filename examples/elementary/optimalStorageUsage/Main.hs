@@ -6,19 +6,20 @@
 module Main where
 
 import qualified EFA.Application.Topology.TripodB as Tripod
-import qualified EFA.Application.Absolute as EqGen
 import EFA.Application.Topology.TripodB (Node, source, crossing, sink, storage)
-import EFA.Application.Absolute ( (.=), (=%%=), (=.=) )
-import EFA.Application.EtaSys (etaSys)
 import EFA.Application.Utility (select)
 
+import qualified EFA.Flow.Sequence.Absolute as EqSys
+import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence.Index as XIdx
+import qualified EFA.Flow.Sequence as SeqFlowPlain
+import qualified EFA.Flow.Draw as Draw
+import EFA.Flow.Sequence.Absolute ((.=), (=%%=), (=.=))
+import EFA.Flow.SystemEta (detEtaSys)
 
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph.Draw as Draw
-import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph as Gr
 
 import qualified EFA.Signal.Signal as Sig
@@ -29,12 +30,13 @@ import EFA.Signal.Typ (Typ,A,P,Tt)
 import EFA.Signal.Data (Data, Nil, (:>))
 
 import qualified EFA.Equation.Record as EqRec
-import qualified EFA.Equation.Environment as EqEnv
+import qualified EFA.Equation.Variable as Var
 import EFA.Equation.Result (Result(..))
+
+import qualified EFA.Report.Format as Format
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))
-import EFA.Utility.Map (checkedLookup)
 import EFA.Utility.Async (concurrentlyMany_)
 
 import qualified Graphics.Gnuplot.Terminal.Default as DefaultTerm
@@ -58,12 +60,15 @@ sec0, sec1 :: Idx.Section
 sec0 :~ sec1 :~ _ = Stream.enumFrom $ Idx.Section 0
 
 
-seqTopoFunc :: [Int] -> Flow.RangeGraph Node
-seqTopoFunc states = Flow.sequenceGraph (select sol states)
-  where sol = StateAnalysis.advanced Tripod.topology
+flowGraphFunc :: [Int] -> SeqFlow.Graph Node (Result a) (Result v)
+flowGraphFunc =
+   SeqFlow.graphFromPlain .
+   SeqFlowPlain.sequenceGraph .
+   -- Gefaehrlich: man darf sich nicht auf eine spezielle Reihenfolge verlassen!
+   select (StateAnalysis.advanced Tripod.topology)
 
-seqTopo :: Flow.RangeGraph Node
-seqTopo = seqTopoFunc [0, 3]
+flowGraph :: SeqFlow.Graph Node (Result a) (Result v)
+flowGraph = flowGraphFunc [0, 3]
 
 
 lookupStCrDown :: Double -> Double
@@ -92,7 +97,7 @@ lookupSoCr = Sig.fromSample . Sig.interp1Lin "lookupSoCr" xs ys . Sig.toSample
         xs = Sig.fromList [0 .. 60]
         ys = Sig.fromList [0.40, 0.41 .. 1]
 
-commonEnv :: EqGen.EquationSystem Node s Double Double
+commonEnv :: EqSys.EquationSystemIgnore Node s Double Double
 commonEnv =
    mconcat $
    (XIdx.dTime sec0 .= 1) :
@@ -102,7 +107,7 @@ commonEnv =
    []
 
 givenSec0Mean ::
-  Double -> Double -> EqGen.EquationSystem Node s Double Double
+  Double -> Double -> EqSys.EquationSystemIgnore Node s Double Double
 givenSec0Mean psink _ =
    (commonEnv <>) $
    mconcat $
@@ -117,16 +122,16 @@ givenSec0Mean psink _ =
 
    (XIdx.eta sec0 crossing storage .= 0.6) :
 
-   ((EqGen.variable $ XIdx.eta sec1 storage crossing) =.=
-     EqGen.liftF lookupStCrUp (EqGen.variable $ XIdx.power sec1 crossing storage)) :
+   ((EqSys.variable $ XIdx.eta sec1 storage crossing) =.=
+     EqSys.liftF lookupStCrUp (EqSys.variable $ XIdx.power sec1 crossing storage)) :
 
-   ((EqGen.variable $ XIdx.eta sec1 crossing sink) =.=
-     EqGen.liftF lookupCrSi (EqGen.variable $ XIdx.power sec1 sink crossing)) :
+   ((EqSys.variable $ XIdx.eta sec1 crossing sink) =.=
+     EqSys.liftF lookupCrSi (EqSys.variable $ XIdx.power sec1 sink crossing)) :
 
    []
 
 givenSec1Mean ::
-  Double -> Double -> EqGen.EquationSystem Node s Double Double
+  Double -> Double -> EqSys.EquationSystemIgnore Node s Double Double
 givenSec1Mean psink _ =
    (commonEnv <>) $
    mconcat $
@@ -141,14 +146,14 @@ givenSec1Mean psink _ =
    (XIdx.eta sec1 storage crossing .= 0.85) :
 
 
-   ((EqGen.variable $ XIdx.eta sec0 crossing storage) =.=
-     EqGen.liftF lookupStCrDown (EqGen.variable $ XIdx.power sec0 storage crossing)) :
+   ((EqSys.variable $ XIdx.eta sec0 crossing storage) =.=
+     EqSys.liftF lookupStCrDown (EqSys.variable $ XIdx.power sec0 storage crossing)) :
 
-   ((EqGen.variable $ XIdx.eta sec0 crossing sink) =.=
-     EqGen.liftF lookupCrSi (EqGen.variable $ XIdx.power sec0 sink crossing)) :
+   ((EqSys.variable $ XIdx.eta sec0 crossing sink) =.=
+     EqSys.liftF lookupCrSi (EqSys.variable $ XIdx.power sec0 sink crossing)) :
 
-   ((EqGen.variable $ XIdx.eta sec0 source crossing) =.=
-     EqGen.liftF lookupSoCr (EqGen.variable $ XIdx.power sec0 crossing source)) :
+   ((EqSys.variable $ XIdx.eta sec0 source crossing) =.=
+     EqSys.liftF lookupSoCr (EqSys.variable $ XIdx.power sec0 crossing source)) :
 
    []
 
@@ -207,7 +212,7 @@ sectionHU bf =
 
 commonEnvHU ::
   [Idx.Section] ->
-  EqGen.EquationSystem Node s (Data Nil Double) (Data ([] :> Nil) Double)
+  EqSys.EquationSystemIgnore Node s (Data Nil Double) (Data ([] :> Nil) Double)
 commonEnvHU _ =
   -- (foldMap (uncurry f) $ zip ss (tail ss))
   -- <>
@@ -222,7 +227,7 @@ commonEnvHU _ =
 
 givenEnvHUSec ::
   (Idx.Section, Sig.PSignal [] Double) ->
-  EqGen.EquationSystem Node s (Data Nil Double) (Data ([] :> Nil) Double)
+  EqSys.EquationSystemIgnore Node s (Data Nil Double) (Data ([] :> Nil) Double)
 givenEnvHUSec (sec, Sig.TC sig) =
   mconcat $
   (XIdx.dTime sec .= D.map (const 1.0) sig) :
@@ -231,46 +236,46 @@ givenEnvHUSec (sec, Sig.TC sig) =
   -- Warunung: Ueberschreibt:
   (XIdx.x sec crossing sink .= D.map (const 0.3) sig) :
 
-  ((EqGen.variable $ XIdx.eta sec crossing sink) =.=
-    EqGen.liftF (D.map lookupCrSi) (EqGen.variable $ XIdx.power sec sink crossing)) :
+  ((EqSys.variable $ XIdx.eta sec crossing sink) =.=
+    EqSys.liftF (D.map lookupCrSi) (EqSys.variable $ XIdx.power sec sink crossing)) :
 
 {-
-  ((EqGen.variable $ XIdx.eta sec  crossing storage) =.=
-    EqGen.liftF (D.map lookupStCrDown)
-                (EqGen.variable $ XIdx.power sec storage crossing)) :
+  ((EqSys.variable $ XIdx.eta sec  crossing storage) =.=
+    EqSys.liftF (D.map lookupStCrDown)
+                (EqSys.variable $ XIdx.power sec storage crossing)) :
 
 -}
 
   -- invertieren!!! TODO!!!
-  ((EqGen.variable $ XIdx.eta sec  crossing storage) =.=
-    EqGen.liftF (D.map lookupStCrDown)
-                (EqGen.variable $ XIdx.power sec crossing storage)) :
+  ((EqSys.variable $ XIdx.eta sec  crossing storage) =.=
+    EqSys.liftF (D.map lookupStCrDown)
+                (EqSys.variable $ XIdx.power sec crossing storage)) :
 
 
-  ((EqGen.variable $ XIdx.eta sec  storage crossing) =.=
-    EqGen.liftF (D.map lookupStCrUp)
-                (EqGen.variable $ XIdx.power sec crossing storage)) :
+  ((EqSys.variable $ XIdx.eta sec  storage crossing) =.=
+    EqSys.liftF (D.map lookupStCrUp)
+                (EqSys.variable $ XIdx.power sec crossing storage)) :
 
-  ((EqGen.variable $ XIdx.eta sec  source crossing) =.=
-     EqGen.liftF (D.map lookupSoCr)
-                 (EqGen.variable $ XIdx.power sec crossing source)) :
+  ((EqSys.variable $ XIdx.eta sec  source crossing) =.=
+     EqSys.liftF (D.map lookupSoCr)
+                 (EqSys.variable $ XIdx.power sec crossing source)) :
   []
 
 
 givenEnvHU ::
   [Sig.PSignal [] Double] ->
-  EqGen.EquationSystem Node s (Data Nil Double) (Data ([] :> Nil) Double)
+  EqSys.EquationSystemIgnore Node s (Data Nil Double) (Data ([] :> Nil) Double)
 givenEnvHU xs =
   let ys = zip (map Idx.Section [0..]) xs
   in  commonEnvHU (map fst ys)
       <>
-      (foldMap givenEnvHUSec ys)
+      foldMap givenEnvHUSec ys
 
 {-
 etaSys ::
   (Show a, Num a, Fractional a, Show node, Ord node) =>
   Flow.RangeGraph node ->
-  EqEnv.Complete node b (EqRec.Absolute (Result a)) -> a
+  SeqFlow.Graph node b (EqRec.Absolute (Result a)) -> a
 etaSys (_, topo) env = sum sinks / sum sources
   where m = Map.elems $ Gr.nodeEdges topo
         sinks = map (Set.foldl sinkEnergies 0 . fst3) $ filter isActiveSink m
@@ -302,19 +307,18 @@ etaSys (_, topo) env = sum sinks / sum sources
 -}
 
 lookUp ::
-  (Ord node, Show node, Show t) =>
+  (Node.C node, Show v) =>
   String ->
-  EqEnv.Complete node b (EqRec.Absolute (Result t)) ->
-  XIdx.Energy node -> t
+  SeqFlow.Graph node a (EqRec.Absolute (Result v)) ->
+  XIdx.Energy node -> v
 lookUp caller env n =
-  case checkedLookup caller
-         (EqEnv.energyMap $ EqEnv.signal env) n of
-       EqRec.Absolute (Determined x) -> x
-       _ -> error (show n ++ "\n" ++ show (EqEnv.energyMap $ EqEnv.signal env))
+  case Var.checkedLookup caller SeqFlow.lookupEnergy n env of
+    EqRec.Absolute (Determined x) -> x
+    _ -> error (caller ++ ": undetermined " ++ Format.unUnicode (Var.formatIndex n))
 
 
 etaSysHU ::
-  EqEnv.Complete
+  SeqFlow.Graph
     Node
     (EqRec.Absolute (Result Double))
     (EqRec.Absolute (Result Double)) ->
@@ -338,14 +342,11 @@ main = do
       varY :: Sig.XSignal2 [] [] Double
       varY = Sig.fromList2 varY'
 
-      getDet (Determined x) = x
-      getDet _ = error "getDet"
+      f0 x y = detEtaSys $ EqSys.solve flowGraph $ givenSec0Mean x y
+      f1 x y = detEtaSys $ EqSys.solve flowGraph $ givenSec1Mean x y
 
-      f0 x y = getDet $ etaSys seqTopo $ EqGen.solve seqTopo $ givenSec0Mean x y
-      f1 x y = getDet $ etaSys seqTopo $ EqGen.solve seqTopo $ givenSec1Mean x y
-
-      env0 = EqGen.solve seqTopo $ givenSec0Mean 4.0 0.4
-      env1 = EqGen.solve seqTopo $ givenSec1Mean 3.0 0.3
+      env0 = EqSys.solve flowGraph $ givenSec0Mean 4.0 0.4
+      env1 = EqSys.solve flowGraph $ givenSec1Mean 3.0 0.3
 
       etaSys0, etaSys1 :: Sig.NSignal2 [] [] Double
       etaSys0 = Sig.fromList2 $ zipWith (zipWith f0) varX' varY'
@@ -384,9 +385,8 @@ main = do
       secHU = sectionHU bf hypotheticalUsage
 
       (secs, secSigsHU) = unzip secHU
-      seqTopoHU = seqTopoFunc secs
 
-      envHU = EqGen.solve seqTopoHU $ givenEnvHU secSigsHU
+      envHU = EqSys.solve (flowGraphFunc secs) $ givenEnvHU secSigsHU
 
       f 0 = "Laden"
       f 1 = "Entladen"
@@ -405,15 +405,19 @@ main = do
   concurrentlyMany_ [
 
     Draw.xterm $
-      Draw.title "Section 0 Mean" $ Draw.sequFlowGraphAbsWithEnv seqTopo env0,
+      Draw.title "Section 0 Mean" $
+        Draw.sequFlowGraph Draw.optionsDefault env0,
     Draw.xterm $
-      Draw.title "Section 1 Mean" $ Draw.sequFlowGraphAbsWithEnv seqTopo env1,
+      Draw.title "Section 1 Mean" $
+        Draw.sequFlowGraph Draw.optionsDefault env1,
 
-    Draw.xterm $ Draw.sequFlowGraph seqTopo,
+    Draw.xterm $
+      Draw.sequFlowGraph Draw.optionsDefault
+        (flowGraph :: SeqFlow.Graph Node (Result Double) (Result Double)),
 
     Draw.xterm $
       Draw.title "Hypothetical Usage Sequence Flow Graph" $
-      Draw.sequFlowGraphAbsWithEnv seqTopoHU envHU,
+      Draw.sequFlowGraph Draw.optionsDefault envHU,
 
 
     PlotIO.xy "Test" DefaultTerm.cons id g sinkRangeSig2
@@ -443,7 +447,7 @@ main2 :: IO ()
 main2 = do
   let y = 1
 
-      f e x = lookUp "f" (EqGen.solve seqTopo $ givenSec0Mean x y) e
+      f e x = lookUp "f" (EqSys.solve flowGraph $ givenSec0Mean x y) e
       esc1 = XIdx.energy sec1 sink crossing
       ecs1 = XIdx.energy sec1 crossing sink
       estc1 = XIdx.energy sec1 storage crossing
@@ -462,7 +466,7 @@ main2 = do
       ecst0Sig = Sig.fromList $ map (f ecst0) sinkRange
       eSourceSig = Sig.fromList $ map (f eSource) sinkRange
 
-      h x = etaSys seqTopo $ EqGen.solve seqTopo $ givenSec0Mean x y
+      h x = etaSys flowGraph $ EqSys.solve flowGraph $ givenSec0Mean x y
       etaSysSig = Sig.fromList $ map h sinkRange
 
       g 0 = "Sec 1, sink crossing"
@@ -475,5 +479,5 @@ main2 = do
   concurrentlyMany_ [
     PlotIO.xy "Test" DefaultTerm.cons id g sinkRangeSig
               [ esc1Sig, ecs1Sig, estc1Sig, ecst0Sig, etaSysSig, eSourceSig],
-    Draw.xterm $ Draw.sequFlowGraph seqTopo ]
+    Draw.xterm $ Draw.sequFlowGraph flowGraph ]
 -}
