@@ -2,16 +2,21 @@ module Main where
 
 import EFA.Application.Utility (topologyFromEdges, select)
 
+import qualified EFA.Flow.Sequence.Quantity as SeqFlow
+import qualified EFA.Flow.Sequence as SeqFlowPlain
+import qualified EFA.Flow.Draw as Draw
+
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
-import qualified EFA.Graph.Draw as Draw
-import qualified EFA.Graph.Flow as Flow
+
+import EFA.Equation.Result (Result(Undetermined))
 
 import EFA.Utility.Async (concurrentlyMany_)
 
 import Data.List.HT (chop)
 import Data.Char (isSpace)
+
 
 node0, node1, node2, node3 :: Node.Int
 node0 = Node.intNoRestriction 0
@@ -28,8 +33,8 @@ topoDreibein =
 
 interactIO :: String -> (String -> IO a) -> IO a
 interactIO qstr f = do
-  putStrLn qstr
-  f =<< getLine
+   putStrLn qstr
+   f =<< getLine
 
 prompt :: String -> IO String
 prompt qstr = putStrLn qstr >> getLine
@@ -51,14 +56,19 @@ drawSeqGraph sol = do
    xs <- parse `fmap`
            prompt "Gib kommagetrennt die gewuenschten Sektionsindices ein: "
    Draw.xterm $
-     Draw.sequFlowGraph $
-       (Flow.sequenceGraph (select sol xs))
+      Draw.sequFlowGraph Draw.optionsDefault $
+      SeqFlow.mapGraph
+         (\() -> Undetermined :: Result Double)
+         (\() -> Undetermined :: Result Double) $
+      SeqFlow.graphFromPlain $
+      SeqFlowPlain.sequenceGraph $ select sol xs
 
 
 main :: IO ()
 main = do
-  let sol = StateAnalysis.advanced topoDreibein
+   let sol = StateAnalysis.advanced topoDreibein
 
-  concurrentlyMany_ [
-    Draw.xterm $ Draw.flowTopologies sol,
-    drawSeqGraph sol ]
+   concurrentlyMany_ $
+      (Draw.xterm $ Draw.flowTopologies sol) :
+      drawSeqGraph sol :
+      []
