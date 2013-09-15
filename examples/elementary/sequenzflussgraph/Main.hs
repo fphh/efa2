@@ -10,7 +10,7 @@ import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 
-import EFA.Equation.Result (Result(Undetermined))
+import EFA.Equation.Result (Result)
 
 import EFA.Utility.Async (concurrentlyMany_)
 
@@ -58,8 +58,8 @@ drawSeqGraph sol = do
    Draw.xterm $
       Draw.sequFlowGraph Draw.optionsDefault $
       SeqFlow.mapGraph
-         (\() -> Undetermined :: Result Double)
-         (\() -> Undetermined :: Result Double) $
+         (\a -> a :: Result Double)
+         (\v -> v :: Result Double) $
       SeqFlow.graphFromPlain $
       SeqFlowPlain.sequenceGraph $ select sol xs
 

@@ -20,6 +20,7 @@ module EFA.Flow.Sequence.Quantity (
    graphFromEnv,
    toAssignMap,
 
+   Unknown(..),
    graphFromPlain,
    storagesFromPlain,
    sequenceFromPlain,
@@ -64,8 +65,10 @@ import EFA.Flow.Sequence (sequence, storages)
 import EFA.Flow.Quantity
           (Topology, Sums(..), Sum(..), Flow(..), mapSums, traverseSums, (<#>))
 
+import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Variable as Var
+import EFA.Equation.Result (Result(Undetermined))
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
@@ -311,10 +314,10 @@ graphFromEnv ::
    SeqFlow.RangeGraph node -> Graph node a v
 graphFromEnv (Env.Complete envScalar envSignal) =
    mapGraphWithVar
-      (\idx () ->
+      (\idx Irrelevant ->
          Var.checkedLookup "graphFromEnv.lookupScalar"
             Env.lookupScalar idx envScalar)
-      (\idx () ->
+      (\idx Irrelevant ->
          Var.checkedLookup "graphFromEnv.lookupSignal"
             Env.lookupSignal idx envSignal) .
    graphFromPlain
@@ -512,10 +515,30 @@ instance LookupScalar (Idx.StOutSum Idx.Section) where
    lookupScalar = lookupStOutSum
 
 
+class Unknown a where
+   unknown :: a
+
+data Irrelevant = Irrelevant
+
+instance Unknown Irrelevant where
+   unknown = Irrelevant
+
+instance Unknown (Result a) where
+   unknown = Undetermined
+
+instance Unknown a => Unknown (Record.Absolute a) where
+   unknown = pure unknown
+
+instance Unknown a => Unknown (Record.Delta a) where
+   unknown = pure unknown
+
+instance (Applicative rec, Unknown a) => Unknown (Record.ExtDelta rec a) where
+   unknown = pure unknown
+
 
 graphFromPlain ::
-   (Ord node) =>
-   SeqFlow.RangeGraph node -> Graph node () ()
+   (Ord node, Unknown a, Unknown v) =>
+   SeqFlow.RangeGraph node -> Graph node a v
 graphFromPlain g =
    SeqFlow.Graph {
       storages = storagesFromPlain $ SeqFlow.storages g,
@@ -524,31 +547,31 @@ graphFromPlain g =
 
 
 storagesFromPlain ::
-   (Ord node) =>
+   (Ord node, Unknown a) =>
    SeqFlow.Storages node SeqFlow.InitIn SeqFlow.ExitOut () () ->
-   Storages node ()
+   Storages node a
 storagesFromPlain =
    Map.map $
       \(_initExit, bnds, edges) ->
-         (((), ()),
-          () <$ bnds,
-          pure () <$ edges)
+         ((unknown, unknown),
+          unknown <$ bnds,
+          pure unknown <$ edges)
 
 
 sequenceFromPlain ::
-   (Ord node) =>
+   (Ord node, Unknown a, Unknown v) =>
    SeqFlow.Sequence node Gr.EitherEdge ()
       (Node.Type (Maybe Topo.StoreDir)) () ->
-   Sequence node () ()
+   Sequence node a v
 sequenceFromPlain =
-   let sum = Sum () ()
+   let sum = Sum unknown unknown
        noSum   = Sums { sumIn = Nothing,  sumOut = Nothing }
        inSum   = Sums { sumIn = Just sum, sumOut = Nothing }
        outSum  = Sums { sumIn = Nothing,  sumOut = Just sum }
        bothSum = Sums { sumIn = Just sum, sumOut = Just sum }
    in  Map.map $ \(rng, ((), gr)) ->
           (,) rng $
-          ((),
+          (unknown,
            Gr.mapNode
               (\nt ->
                  case nt of
@@ -566,7 +589,7 @@ sequenceFromPlain =
               (\ee _ ->
                  case ee of
                     Gr.EUnDirEdge _ -> Nothing
-                    Gr.EDirEdge _ -> Just $ pure ()) gr)
+                    Gr.EDirEdge _ -> Just $ pure unknown) gr)
 
 
 

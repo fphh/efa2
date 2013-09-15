@@ -5,7 +5,7 @@ import qualified EFA.Application.Topology.LinearOne as Linear
 import qualified EFA.Application.Symbolic as Symbolic
 import EFA.Application.Topology.LinearOne (Node(Source, Sink))
 import EFA.Application.Symbolic ((=<>))
-import EFA.Application.Utility (seqFlowGraphRecordFromStates)
+import EFA.Application.Utility (seqFlowGraphFromStates)
 
 import qualified EFA.Flow.Sequence.AssignMap as AssignMap
 import qualified EFA.Flow.Sequence.EquationSystem as EqSys
@@ -63,7 +63,7 @@ run ::
 run x =
    putStrLn $ Format.unUnicode $ Format.lines $
    AssignMap.format $ SeqFlow.toAssignMap $
-   EqSys.solve (seqFlowGraphRecordFromStates Linear.topology [0]) x
+   EqSys.solve (seqFlowGraphFromStates Linear.topology [0]) x
 
 
 main :: IO ()

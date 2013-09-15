@@ -20,7 +20,6 @@ import qualified EFA.Signal.Data as Data
 import qualified EFA.Equation.Record as EqRecord
 import qualified EFA.Equation.Environment as EqEnv
 import qualified EFA.Equation.System as EqGen
-import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Arithmetic as Arith
@@ -37,7 +36,6 @@ import qualified Data.Set as Set
 import qualified Data.Map as Map
 import Data.Map (Map)
 
-import Control.Applicative (pure)
 import Data.Foldable (foldMap)
 
 
@@ -84,26 +82,10 @@ constructSeqTopo topo =
   SD.fromList
 
 seqFlowGraphFromStates ::
-   (Ord node) =>
+   (Ord node, SeqFlowQuant.Unknown a, SeqFlowQuant.Unknown v) =>
    Topo.Topology node -> [Int] ->
-   SeqFlowQuant.Graph node (Result a) (Result v)
+   SeqFlowQuant.Graph node a v
 seqFlowGraphFromStates topo =
-   SeqFlowQuant.mapGraph (\() -> Undetermined) (\() -> Undetermined) .
-   seqFlowGraphUnitFromStates topo
-
-seqFlowGraphRecordFromStates ::
-   (Ord node, EqGen.Record rec) =>
-   Topo.Topology node -> [Int] ->
-   SeqFlowQuant.Graph node (rec (Result a)) (rec (Result v))
-seqFlowGraphRecordFromStates topo =
-   SeqFlowQuant.mapGraph (\() -> pure Undetermined) (\() -> pure Undetermined) .
-   seqFlowGraphUnitFromStates topo
-
-seqFlowGraphUnitFromStates ::
-   (Ord node) =>
-   Topo.Topology node -> [Int] ->
-   SeqFlowQuant.Graph node () ()
-seqFlowGraphUnitFromStates topo =
    SeqFlowQuant.graphFromPlain .
    SeqFlow.sequenceGraph .
    fmap (StateAnalysis.bruteForce topo !!) .
@@ -117,8 +99,8 @@ select ts = SD.fromList . map (ts !!)
 checkDetermined :: String -> Result a -> a
 checkDetermined name rx =
    case rx of
-      Result.Undetermined -> error $ "undetermined " ++ name
-      Result.Determined x -> x
+      Undetermined -> error $ "undetermined " ++ name
+      Determined x -> x
 
 
 {-
