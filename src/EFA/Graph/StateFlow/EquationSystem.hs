@@ -48,7 +48,7 @@ import qualified EFA.Flow.State.Index as XIdx
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
-import qualified EFA.Graph as Gr
+import qualified EFA.Graph as Graph
 import EFA.Graph.Topology (StateFlowGraph)
 
 import qualified EFA.Equation.Record as Record
@@ -540,7 +540,7 @@ fromGraph ::
   Bool ->
   Topo.DirStateFlowGraph node -> EquationSystem mode rec node s a v
 fromGraph equalInOutSums g = mconcat $
-  fromEdges (Gr.edges g) :
+  fromEdges (Graph.edges g) :
   fromNodes equalInOutSums g :
   []
 
@@ -550,7 +550,7 @@ fromEdges ::
   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeStateScalar node, Sum a,
    Verify.GlobalVar mode v (Record.ToIndex rec) Var.InStateSignal node,
    Product v, Record rec, Node.C node) =>
-  [Topo.FlowEdge Gr.DirEdge (Idx.AugStateNode node)] ->
+  [Topo.FlowEdge Graph.DirEdge (Idx.AugStateNode node)] ->
   EquationSystem mode rec node s a v
 fromEdges =
    foldMap $ \se ->
@@ -569,7 +569,7 @@ fromNodes ::
   Bool ->
   Topo.DirStateFlowGraph node -> EquationSystem mode rec node s a v
 fromNodes equalInOutSums =
-  fold . Map.mapWithKey f . Gr.nodeEdges
+  fold . Map.mapWithKey f . Graph.nodeEdges
    where f an@(Idx.PartNode part node) (ins, nodeType, outs) =
             let withStateNode g =
                    Idx.switchAugmented mempty mempty

@@ -3,7 +3,7 @@ module EFA.Test.StateAnalysis where
 
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 
-import qualified EFA.Graph as Gr
+import qualified EFA.Graph as Graph; import EFA.Graph (Graph)
 import EFA.Graph.Topology (Topology)
 import qualified EFA.Utility.Map as MapU
 
@@ -25,9 +25,9 @@ newtype ArbTopology node = ArbTopology (Topology node)
 
 instance (QC.Arbitrary node, Ord node) => QC.Arbitrary (ArbTopology node) where
    shrink (ArbTopology g) =
-      case Gr.nodeSet g of
+      case Graph.nodeSet g of
          ns ->
-            map (ArbTopology . flip Gr.delNodeSet g .
+            map (ArbTopology . flip Graph.delNodeSet g .
                  S.difference ns . S.fromList) $
             QC.shrink $ S.toList ns
    arbitrary = do
@@ -38,8 +38,8 @@ instance (QC.Arbitrary node, Ord node) => QC.Arbitrary (ArbTopology node) where
          Fold.foldMap (Fold.foldMap S.singleton) $
          M.keys edges
       return $ ArbTopology $
-         Gr.fromMap nodes $
-         M.mapKeys (\(Gr.UnDirEdge x y) -> Gr.DirEdge x y) edges
+         Graph.fromMap nodes $
+         M.mapKeys (\(Graph.UnDirEdge x y) -> Graph.DirEdge x y) edges
 
 
 prop_branchAndBound :: (Eq node, Ord node) => ArbTopology node -> Bool
@@ -54,10 +54,10 @@ Instead I use this function locally for 'Key.sort'.
 -}
 graphIdent ::
    (Ord node) =>
-   Gr.Graph node Gr.EitherEdge nodeLabel edgeLabel ->
+   Graph node Graph.EitherEdge nodeLabel edgeLabel ->
    (M.Map node nodeLabel,
-    M.Map (Gr.EitherEdge node) edgeLabel)
-graphIdent g = (Gr.nodeLabels g, Gr.edgeLabels g)
+    M.Map (Graph.EitherEdge node) edgeLabel)
+graphIdent g = (Graph.nodeLabels g, Graph.edgeLabels g)
 
 {-
 I do not convert to Set, but use 'sort' in order to check for duplicates.

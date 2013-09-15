@@ -73,7 +73,7 @@ import EFA.Equation.Result (Result(Undetermined))
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
-import qualified EFA.Graph as Gr
+import qualified EFA.Graph as Graph
 
 import qualified EFA.Report.FormatValue as FormatValue
 import EFA.Report.FormatValue (FormatValue, formatAssign)
@@ -98,11 +98,11 @@ type
 
 type
    Sequence node a v =
-      SeqFlow.Sequence node Gr.EitherEdge v (Sums a v) (Maybe (Flow v))
+      SeqFlow.Sequence node Graph.EitherEdge v (Sums a v) (Maybe (Flow v))
 
 type
    Graph node a v =
-      SeqFlow.Graph node Gr.EitherEdge
+      SeqFlow.Graph node Graph.EitherEdge
          v (Sums a v) a a a (Maybe (Flow v)) (Carry a)
 
 data Carry a =
@@ -157,8 +157,8 @@ mapSequence f g =
       (\(rng, (dt, gr)) ->
          (rng,
           (g dt,
-           Gr.mapNode (mapSums f g) $
-           Gr.mapEdge (fmap $ fmap g) gr)))
+           Graph.mapNode (mapSums f g) $
+           Graph.mapEdge (fmap $ fmap g) gr)))
 
 mapStorages ::
    (a0 -> a1) ->
@@ -191,7 +191,7 @@ traverseSequence f g =
       (\(rng, (dt, gr)) ->
          fmap ((,) rng) $
          liftA2 (,) (g dt)
-            (Gr.traverse (traverseSums f g) (traverse $ traverse g) gr))
+            (Graph.traverse (traverseSums f g) (traverse $ traverse g) gr))
 
 traverseStorages ::
    (Applicative f, Ord node) =>
@@ -262,8 +262,8 @@ envFromSequence =
    Fold.fold .
    Map.mapWithKey
       (\sec (_rng, (dtime, topo)) ->
-         let nls = Gr.nodeLabels topo
-             els = Gr.edgeLabels $ Quant.dirFromFlowGraph topo
+         let nls = Graph.nodeLabels topo
+             els = Graph.edgeLabels $ Quant.dirFromFlowGraph topo
              sumOutMap = Map.mapMaybe sumOut nls
              sumInMap  = Map.mapMaybe sumIn nls
          in  ((Map.mapKeys (Idx.ForNode $ Idx.StInSum $ Idx.NoExit sec) $
@@ -301,7 +301,7 @@ edgeMap ::
    (Ord part, Ord (idx node)) =>
    part ->
    (Idx.StructureEdge node -> idx node) ->
-   Map (Gr.DirEdge node) a ->
+   Map (Graph.DirEdge node) a ->
    Map (Idx.InPart part idx node) a
 edgeMap sec f =
    Map.mapKeys
@@ -368,7 +368,7 @@ lookupEta =
 lookupSum :: (Ord node) => SeqIdx.Sum node -> Graph node a v -> Maybe v
 lookupSum =
    withTopology $ \(Idx.Sum dir node) topo -> do
-      sums <- Gr.lookupNode node topo
+      sums <- Graph.lookupNode node topo
       fmap flowSum $
          case dir of
             Idx.In  -> sumIn sums
@@ -440,7 +440,7 @@ lookupSums ::
    (Ord node) =>
    Idx.SecNode node -> Graph node a v -> Maybe (Sums a v)
 lookupSums (Idx.PartNode sec node) =
-   Gr.lookupNode node . snd <=< seqLookup sec
+   Graph.lookupNode node . snd <=< seqLookup sec
 
 seqLookup ::
    Idx.Section -> Graph node a v -> Maybe (v, Topology node a v)
@@ -560,7 +560,7 @@ storagesFromPlain =
 
 sequenceFromPlain ::
    (Ord node, Unknown a, Unknown v) =>
-   SeqFlow.Sequence node Gr.EitherEdge ()
+   SeqFlow.Sequence node Graph.EitherEdge ()
       (Node.Type (Maybe Topo.StoreDir)) () ->
    Sequence node a v
 sequenceFromPlain =
@@ -572,7 +572,7 @@ sequenceFromPlain =
    in  Map.map $ \(rng, ((), gr)) ->
           (,) rng $
           (unknown,
-           Gr.mapNode
+           Graph.mapNode
               (\nt ->
                  case nt of
                     Node.Storage Nothing -> noSum
@@ -585,11 +585,11 @@ sequenceFromPlain =
                     Node.Crossing -> bothSum
                     Node.DeadNode -> noSum
                     Node.NoRestriction -> bothSum) $
-           Gr.mapEdgeWithKey
+           Graph.mapEdgeWithKey
               (\ee _ ->
                  case ee of
-                    Gr.EUnDirEdge _ -> Nothing
-                    Gr.EDirEdge _ -> Just $ pure unknown) gr)
+                    Graph.EUnDirEdge _ -> Nothing
+                    Graph.EDirEdge _ -> Just $ pure unknown) gr)
 
 
 

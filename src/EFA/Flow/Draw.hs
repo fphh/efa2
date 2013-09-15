@@ -39,7 +39,7 @@ import EFA.Signal.Signal (SignalIdx(SignalIdx))
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
-import qualified EFA.Graph as Gr
+import qualified EFA.Graph as Graph; import EFA.Graph (Graph)
 import EFA.Graph.Topology (FlowTopology)
 import EFA.Graph (DirEdge(DirEdge))
 
@@ -129,7 +129,7 @@ dotFromFlowGraph ::
    Map node
       ((Unicode, Unicode),
        Map (Idx.StorageEdge part node) [Unicode]) ->
-   Map part (String, Gr.Graph node Gr.EitherEdge Unicode StructureEdgeLabel) ->
+   Map part (String, Graph node Graph.EitherEdge Unicode StructureEdgeLabel) ->
    DotGraph T.Text
 dotFromFlowGraph (contentGraphs, contentEdges) sts sq =
    dotDirGraph $
@@ -152,9 +152,9 @@ dotFromFlowGraph (contentGraphs, contentEdges) sts sq =
 
 
 dotFromStorageGraphs ::
-   (Node.C node, FormatValue a, Ord (edge node), Gr.Edge edge) =>
+   (Node.C node, FormatValue a, Ord (edge node), Graph.Edge edge) =>
    Map node ((a,a), Map Idx.Boundary a) ->
-   Map Idx.Section (Gr.Graph node edge (FlowQuant.Sums a v) edgeLabel) ->
+   Map Idx.Section (Graph node edge (FlowQuant.Sums a v) edgeLabel) ->
    ([DotSubGraph T.Text], [DotEdge T.Text])
 dotFromStorageGraphs storages sequence =
    (Map.elems $ Map.mapWithKey dotFromStorageGraph $
@@ -171,7 +171,7 @@ dotFromStorageGraphs storages sequence =
            dotFromContentEdge (Just before) (Idx.augment current) $
            fmap FlowQuant.dirFromSums $
            Map.filterWithKey (\node _ -> Node.typ node == Node.Storage ()) $
-           Gr.nodeLabels gr))
+           Graph.nodeLabels gr))
        Idx.initial sequence)
 
 dotFromStorageGraph ::
@@ -223,7 +223,7 @@ dotFromPartGraph ::
    (Part part, Node.C node) =>
    part ->
    (String,
-    Gr.Graph node Gr.EitherEdge Unicode StructureEdgeLabel) ->
+    Graph node Graph.EitherEdge Unicode StructureEdgeLabel) ->
    DotSubGraph T.Text
 dotFromPartGraph current (subtitle, gr) =
    let (etaNodes,edges) =
@@ -235,14 +235,14 @@ dotFromPartGraph current (subtitle, gr) =
                       mapFst (:[]) $ dotFromStructureEdgeEta current e l
                    HideEtaNode l ->
                       ([], [dotFromStructureEdge current e l])) $
-          Gr.edgeLabels gr
+          Graph.edgeLabels gr
    in  DotSG True (Just $ Str $ T.pack $ dotIdentFromPart current) $
        DotStmts
           [GraphAttrs [labelFromString subtitle]]
           []
           ((Map.elems $
             Map.mapWithKey (dotFromAugNode (Idx.augment current)) $
-            Gr.nodeLabels gr)
+            Graph.nodeLabels gr)
            ++
            etaNodes)
           edges
@@ -308,7 +308,7 @@ dotFromBndNode n label =
 
 dotFromStructureEdge ::
    (Node.C node, Part part) =>
-   part -> Gr.EitherEdge node -> [Unicode] -> DotEdge T.Text
+   part -> Graph.EitherEdge node -> [Unicode] -> DotEdge T.Text
 dotFromStructureEdge part e label =
    let (DirEdge x y, dir, ord) = orientFlowEdge $ Idx.InPart part e
    in  DotEdge
@@ -318,7 +318,7 @@ dotFromStructureEdge part e label =
 
 dotFromStructureEdgeEta ::
    (Node.C node, Part part) =>
-   part -> Gr.EitherEdge node ->
+   part -> Graph.EitherEdge node ->
    Triple [Unicode] ->
    (DotNode T.Text, [DotEdge T.Text])
 dotFromStructureEdgeEta part e label =
@@ -470,14 +470,14 @@ dotFromTopology edgeLabels g =
          DotStmts {
             attrStmts = [],
             subGraphs = [],
-            nodeStmts = map dotFromTopoNode $ Gr.labNodes g,
-            edgeStmts = map (dotFromTopoEdge edgeLabels) $ Gr.edges g
+            nodeStmts = map dotFromTopoNode $ Graph.labNodes g,
+            edgeStmts = map (dotFromTopoEdge edgeLabels) $ Graph.edges g
          }
    }
 
 dotFromTopoNode ::
    (Node.C node, StorageLabel store) =>
-   Gr.LNode node (Node.Type store) -> DotNode T.Text
+   Graph.LNode node (Node.Type store) -> DotNode T.Text
 dotFromTopoNode (x, typ) =
    DotNode
       (dotIdentFromNode x)
@@ -512,8 +512,8 @@ dotFromFlowTopology ident topo =
    DotSG True (Just (Int ident)) $
    DotStmts
       [GraphAttrs [labelFromString $ show ident]] []
-      (map mkNode $ Gr.labNodes topo)
-      (map mkEdge $ Gr.edges topo)
+      (map mkNode $ Graph.labNodes topo)
+      (map mkEdge $ Graph.edges topo)
   where idf x = T.pack $ show ident ++ "_" ++ Node.dotId x
         mkNode x@(n, t) =
            DotNode (idf n)
@@ -544,24 +544,24 @@ order Reverse = reverse
 
 orientFlowEdge ::
    (Ord node) =>
-   Idx.InPart part Gr.EitherEdge node ->
+   Idx.InPart part Graph.EitherEdge node ->
    (DirEdge (Idx.PartNode part node), Viz.DirType, Order)
 orientFlowEdge (Idx.InPart sec e) =
    mapFst3 (fmap (Idx.PartNode sec)) $
    case e of
-      Gr.EUnDirEdge ue -> (orientUndirEdge ue, Viz.NoDir, Id)
-      Gr.EDirEdge de -> orientDirEdge de
+      Graph.EUnDirEdge ue -> (orientUndirEdge ue, Viz.NoDir, Id)
+      Graph.EDirEdge de -> orientDirEdge de
 
 orientEdge ::
    (Ord node) =>
-   Gr.EitherEdge node -> (DirEdge node, Viz.DirType, Order)
+   Graph.EitherEdge node -> (DirEdge node, Viz.DirType, Order)
 orientEdge e =
    case e of
-      Gr.EUnDirEdge ue -> (orientUndirEdge ue, Viz.NoDir, Id)
-      Gr.EDirEdge de -> orientDirEdge de
+      Graph.EUnDirEdge ue -> (orientUndirEdge ue, Viz.NoDir, Id)
+      Graph.EDirEdge de -> orientDirEdge de
 
-orientUndirEdge :: Ord node => Gr.UnDirEdge node -> DirEdge node
-orientUndirEdge (Gr.UnDirEdge x y) = DirEdge x y
+orientUndirEdge :: Ord node => Graph.UnDirEdge node -> DirEdge node
+orientUndirEdge (Graph.UnDirEdge x y) = DirEdge x y
 
 orientDirEdge ::
    (Ord node) =>
@@ -684,7 +684,7 @@ sequFlowGraph opts gr =
              (show sec ++
               " / Range " ++ formatRange rng ++
               " / Time " ++ unUnicode (formatValue dt),
-              Gr.mapNodeWithKey
+              Graph.mapNodeWithKey
                  (\node sums ->
                     formatNodeStorage opts node
                        (let content bnd =
@@ -698,7 +698,7 @@ sequFlowGraph opts gr =
                         SeqFlowQuant.sumOut sums)
                        (fmap SeqFlowQuant.carrySum $
                         SeqFlowQuant.sumIn sums)) $
-              Gr.mapEdgeWithKey
+              Graph.mapEdgeWithKey
                  (\edge ->
                     if optEtaNode opts
                       then ShowEtaNode . structureEdgeShowEta opts sec edge
@@ -775,14 +775,14 @@ stateFlowGraph opts gr =
       (Map.mapWithKey
           (\state (dt,topo) ->
              (show state ++ " / Time " ++ unUnicode (formatValue dt),
-              Gr.mapNodeWithKey
+              Graph.mapNodeWithKey
                  (\node sums ->
                     stateNodeShow node $
                     fmap StateFlowQuant.carrySum $
                     mplus
                        (StateFlowQuant.sumOut sums)
                        (StateFlowQuant.sumIn sums)) $
-              Gr.mapEdgeWithKey
+              Graph.mapEdgeWithKey
                  (\edge ->
                     if optEtaNode opts
                       then ShowEtaNode . structureEdgeShowEta opts state edge
@@ -839,7 +839,7 @@ storageEdgeStateShow opts node edge carry =
 structureEdgeShow ::
    (Node.C node, Ord part, FormatValue a, Format.Part part, Format output) =>
    Options output ->
-   part -> Gr.EitherEdge node ->
+   part -> Graph.EitherEdge node ->
    Maybe (FlowQuant.Flow a) -> [output]
 structureEdgeShow opts part =
    FlowQuant.switchEdgeFlow (const []) $ \edge flow ->
@@ -855,7 +855,7 @@ structureEdgeShow opts part =
 structureEdgeShowEta ::
    (Node.C node, Ord part, FormatValue a, Format.Part part, Format output) =>
    Options output ->
-   part -> Gr.EitherEdge node ->
+   part -> Graph.EitherEdge node ->
    Maybe (FlowQuant.Flow a) -> Triple [output]
 structureEdgeShowEta opts part =
    FlowQuant.switchEdgeFlow (const $ Triple [] [] []) $ \edge flow ->
@@ -878,8 +878,8 @@ cumulatedFlow ::
    DotGraph T.Text
 cumulatedFlow =
    graph .
-   Gr.mapNodeWithKey (const . dotFromCumNode) .
-   Gr.mapEdgeWithKey
+   Graph.mapNodeWithKey (const . dotFromCumNode) .
+   Graph.mapEdgeWithKey
       (\e flow ->
          dotFromCumEdge e (CumFlowQuant.flowDTime flow) $
          map ($flow) $
@@ -903,7 +903,7 @@ dotFromCumNode n =
 
 dotFromCumEdge ::
    (Node.C node) =>
-   Gr.DirEdge node -> Unicode -> [Unicode] -> DotEdge T.Text
+   Graph.DirEdge node -> Unicode -> [Unicode] -> DotEdge T.Text
 dotFromCumEdge e hd label =
    case orientDirEdge e of
       (DirEdge x y, dir, ord) ->
@@ -915,15 +915,15 @@ dotFromCumEdge e hd label =
 
 graph ::
    (Node.C node) =>
-   Gr.Graph node Gr.DirEdge (DotNode T.Text) (DotEdge T.Text) ->
+   Graph node Graph.DirEdge (DotNode T.Text) (DotEdge T.Text) ->
    DotGraph T.Text
 graph g =
    dotDirGraph $
    DotStmts {
       attrStmts = [],
       subGraphs = [],
-      nodeStmts = map snd $ Gr.labNodes g,
-      edgeStmts = map snd $ Gr.labEdges g
+      nodeStmts = map snd $ Graph.labNodes g,
+      edgeStmts = map snd $ Graph.labEdges g
    }
 
 

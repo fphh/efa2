@@ -8,7 +8,7 @@ import qualified EFA.Flow.Sequence.Index as XIdx
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
-import qualified EFA.Graph as Gr
+import qualified EFA.Graph as Graph
 import EFA.Graph.Topology
           (Topology, FlowTopology, ClassifiedTopology, SequFlowGraph)
 import EFA.Graph (DirEdge(DirEdge), labNodes)
@@ -53,7 +53,7 @@ getEdgeState :: (Fractional a,
                  SV.Storage v Sign,
                  SV.Singleton v) =>
                 Topology node -> FlowRecord node v a -> EdgeStates node
-getEdgeState topo rec = EdgeStates $ MapU.fromSet f $ Gr.edgeSet topo
+getEdgeState topo rec = EdgeStates $ MapU.fromSet f $ Graph.edgeSet topo
   where
     f (DirEdge n1 n2) =
           case sigSign $ S.sum s1 of
@@ -118,7 +118,7 @@ adjustSigns topo (FlowState state) (Record dt flow) =
               Map.insert ppos (flow ! ppos)
                 $ Map.insert ppos' (flow ! ppos') acc
                 where ppos' = Idx.flip ppos
-            uniquePPos = foldl h Map.empty (Gr.edges topo)
+            uniquePPos = foldl h Map.empty (Graph.edges topo)
               where h acc (DirEdge idx1 idx2) =
                       Map.insert ppos (state ! ppos) acc
                       where ppos = XIdx.ppos idx1 idx2
@@ -135,7 +135,7 @@ adjustSignsIgnoreUnknownPPos topo (FlowState state) (Record dt flow) =
             g ppos si acc =
               foldr (f flow $ (modify .) . Map.lookup) acc [ppos, Idx.flip ppos]
                 where modify = case si of { NSign -> fmap neg; _ -> id }
-            uniquePPos = foldr h Map.empty (Gr.edges topo)
+            uniquePPos = foldr h Map.empty (Graph.edges topo)
               where h (DirEdge idx1 idx2) =
                       f state Map.lookup (XIdx.ppos idx1 idx2)
 
@@ -172,31 +172,31 @@ genFlowTopology ::
   (Ord node, Show node) =>
   Topology node -> FlowState node -> FlowTopology node
 genFlowTopology topo (FlowState fs) =
-   Gr.fromList (labNodes topo) $ map (flip (,) ()) $
+   Graph.fromList (labNodes topo) $ map (flip (,) ()) $
    map
       (\(DirEdge idx1 idx2) ->
          case fs ! XIdx.ppos idx1 idx2 of
-            PSign -> Gr.EDirEdge $ DirEdge idx1 idx2
-            NSign -> Gr.EDirEdge $ DirEdge idx2 idx1
-            ZSign -> Gr.EUnDirEdge $ Gr.UnDirEdge idx1 idx2) $
-   Gr.edges topo
+            PSign -> Graph.EDirEdge $ DirEdge idx1 idx2
+            NSign -> Graph.EDirEdge $ DirEdge idx2 idx1
+            ZSign -> Graph.EUnDirEdge $ Graph.UnDirEdge idx1 idx2) $
+   Graph.edges topo
    where (!) = checkedLookup "Flow.genFlowTopology"
 
 genFlowTopologyIgnoreUnknownPPos ::
   (Ord node, Show node) =>
   Topology node -> FlowState node -> FlowTopology node
 genFlowTopologyIgnoreUnknownPPos topo (FlowState fs) =
-   Gr.fromList (labNodes topo) $ map (flip (,) ()) $
+   Graph.fromList (labNodes topo) $ map (flip (,) ()) $
    map
       (\(DirEdge idx1 idx2) ->
-        let deflt = Gr.EUnDirEdge $ Gr.UnDirEdge idx1 idx2
+        let deflt = Graph.EUnDirEdge $ Graph.UnDirEdge idx1 idx2
         in  maybe deflt
               (\si -> case si of
-                           PSign -> Gr.EDirEdge $ DirEdge idx1 idx2
-                           NSign -> Gr.EDirEdge $ DirEdge idx2 idx1
+                           PSign -> Graph.EDirEdge $ DirEdge idx1 idx2
+                           NSign -> Graph.EDirEdge $ DirEdge idx2 idx1
                            ZSign -> deflt) $
               Map.lookup (XIdx.ppos idx1 idx2) fs) $
-   Gr.edges topo
+   Graph.edges topo
 
 
 
@@ -204,7 +204,7 @@ sectionFromClassTopo ::
   (Ord node) =>
   Idx.Section -> ClassifiedTopology node -> SequFlowGraph node
 sectionFromClassTopo sec =
-   Gr.ixmap
+   Graph.ixmap
       (Idx.PartNode (Idx.augment sec))
       (Topo.FlowEdge . Topo.StructureEdge . Idx.InPart sec)
 
@@ -233,11 +233,11 @@ getStorageSequences =
    SD.mapWithSection
       (\s g ->
          fmap (Map.singleton s) $
-         Map.mapMaybe Topo.maybeStorage $ Gr.nodeLabels g)
+         Map.mapMaybe Topo.maybeStorage $ Graph.nodeLabels g)
 
 type RangeGraph node = (Map Idx.Section SD.Range, SequFlowGraph node)
 
-type FlowEdge = Topo.FlowEdge Gr.EitherEdge
+type FlowEdge = Topo.FlowEdge Graph.EitherEdge
 type AugNode sec = Idx.PartNode (Idx.Augmented sec)
 
 insEdges ::
@@ -246,7 +246,7 @@ insEdges ::
    Topo.FlowGraph sec node ->
    Topo.FlowGraph sec node
 insEdges =
-   Gr.insEdges .
+   Graph.insEdges .
    map (flip (,) () . Topo.FlowEdge . Topo.StorageEdge) . Fold.fold .
    Map.mapWithKey (map . flip Idx.ForNode)
 
@@ -256,7 +256,7 @@ insNodes ::
    Topo.FlowGraph sec node ->
    Topo.FlowGraph sec node
 insNodes storages =
-   Gr.insNodes $
+   Graph.insNodes $
       concatMap
          (\n ->
             [(Idx.initAugNode n, Node.Storage $ Just Topo.In),

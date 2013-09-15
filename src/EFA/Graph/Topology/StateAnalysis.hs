@@ -8,7 +8,7 @@ module EFA.Graph.Topology.StateAnalysis (
 
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
-import qualified EFA.Graph as Gr
+import qualified EFA.Graph as Graph; import EFA.Graph (Graph)
 import EFA.Graph.Topology (FlowTopology, Topology)
 
 import qualified EFA.Utility.Map as MapU
@@ -45,7 +45,7 @@ checkNodeType _ _ _ = False
 -- Because of extend, we only have to deal with Dir edges here!
 checkNode :: (Ord node) => FlowTopology node -> node -> Bool
 checkNode topo x =
-   case Map.lookup x $ Gr.graphMap topo of
+   case Map.lookup x $ Graph.graphMap topo of
       Nothing -> error "checkNode: node not in graph"
       Just (pre, node, suc) ->
          checkNodeType node
@@ -72,7 +72,7 @@ checkIncompleteNodeType typ complete sucActive preActive =
 
 checkCountNode :: (Ord node) => CountTopology node -> node -> Bool
 checkCountNode topo x =
-   case Map.lookup x $ Gr.graphMap topo of
+   case Map.lookup x $ Graph.graphMap topo of
       Nothing -> error "checkNode: node not in graph"
       Just (pre, (node, nadj), suc) ->
          checkIncompleteNodeType node
@@ -80,46 +80,46 @@ checkCountNode topo x =
             (anyActive suc)
             (anyActive pre)
 
-anyActive :: Map (Gr.EitherEdge node) () -> Bool
+anyActive :: Map (Graph.EitherEdge node) () -> Bool
 anyActive = Fold.any Topo.isActive . Map.keysSet
 
 admissibleCountTopology :: (Ord node) => CountTopology node -> Bool
 admissibleCountTopology topo =
-   Fold.all (checkCountNode topo) $ Gr.nodeSet topo
+   Fold.all (checkCountNode topo) $ Graph.nodeSet topo
 
 
 type NumberOfAdj = Int
 type CountTopology node =
-        Gr.Graph node Gr.EitherEdge (NodeType, NumberOfAdj) ()
+        Graph node Graph.EitherEdge (NodeType, NumberOfAdj) ()
 
 insEdge ::
    Ord node =>
-   Gr.EitherEdge node -> CountTopology node -> CountTopology node
-insEdge e = Gr.insEdge (e, ())
+   Graph.EitherEdge node -> CountTopology node -> CountTopology node
+insEdge e = Graph.insEdge (e, ())
 
 insEdgeSet ::
    Ord node =>
-   Set (Gr.EitherEdge node) -> CountTopology node -> CountTopology node
-insEdgeSet e = Gr.insEdgeSet (MapU.fromSet (const ()) e)
+   Set (Graph.EitherEdge node) -> CountTopology node -> CountTopology node
+insEdgeSet e = Graph.insEdgeSet (MapU.fromSet (const ()) e)
 
 graphFromMap ::
-   (Gr.Edge e, Ord (e n), Ord n) =>
-   Map n nl -> Set (e n) -> Gr.Graph n e nl ()
+   (Graph.Edge e, Ord (e n), Ord n) =>
+   Map n nl -> Set (e n) -> Graph n e nl ()
 graphFromMap ns es =
-   Gr.fromMap ns (MapU.fromSet (const ()) es)
+   Graph.fromMap ns (MapU.fromSet (const ()) es)
 
 
-edgeOrients :: Ord node => Gr.DirEdge node -> [Gr.EitherEdge node]
-edgeOrients (Gr.DirEdge x y) =
-   (Gr.EDirEdge $ Gr.DirEdge x y) :
-   (Gr.EDirEdge $ Gr.DirEdge y x) : -- x and y swapped!
-   (Gr.EUnDirEdge $ Gr.unDirEdge x y) :
+edgeOrients :: Ord node => Graph.DirEdge node -> [Graph.EitherEdge node]
+edgeOrients (Graph.DirEdge x y) =
+   (Graph.EDirEdge $ Graph.DirEdge x y) :
+   (Graph.EDirEdge $ Graph.DirEdge y x) : -- x and y swapped!
+   (Graph.EUnDirEdge $ Graph.unDirEdge x y) :
    []
 
 admissibleEdges ::
    (Ord node) =>
    LNEdge node -> CountTopology node ->
-   [(Gr.EitherEdge node, CountTopology node)]
+   [(Graph.EitherEdge node, CountTopology node)]
 admissibleEdges e0 g0 = do
    e1 <- edgeOrients e0
    let g1 = insEdge e1 g0
@@ -129,17 +129,17 @@ admissibleEdges e0 g0 = do
 expand :: (Ord node) => LNEdge node -> CountTopology node -> [CountTopology node]
 expand e g = map snd $ admissibleEdges e g
 
-splitNodesEdges :: (Ord node) => Topology node -> (CountTopology node, [Gr.DirEdge node])
+splitNodesEdges :: (Ord node) => Topology node -> (CountTopology node, [Graph.DirEdge node])
 splitNodesEdges topo =
-   (Gr.fromMap
-       (Map.map (\(pre,l,suc) -> (l, Set.size pre + Set.size suc)) $ Gr.nodes topo)
+   (Graph.fromMap
+       (Map.map (\(pre,l,suc) -> (l, Set.size pre + Set.size suc)) $ Graph.nodes topo)
        Map.empty,
-    Gr.edges topo)
+    Graph.edges topo)
 
 
 newtype
    Alternatives node =
-      Alternatives {getAlternatives :: [Gr.EitherEdge node]}
+      Alternatives {getAlternatives :: [Graph.EitherEdge node]}
 
 instance Eq  (Alternatives a) where (==)     =  equating  (void . getAlternatives)
 instance Ord (Alternatives a) where compare  =  comparing (void . getAlternatives)
@@ -165,7 +165,7 @@ recoursePrioEdge origTopo =
                     Set.foldl
                        (\q e -> PSQ.adjust (const $ alternatives e newTopo) e q)
                        remQueue $
-                    Fold.foldMap (Gr.adjEdges origTopo) bestEdge)
+                    Fold.foldMap (Graph.adjEdges origTopo) bestEdge)
    in  recourse
 
 
@@ -189,7 +189,7 @@ data
    Cluster node =
       Cluster {
          clusterNodes :: Set node,
-         clusterEdges :: [Set (Gr.EitherEdge node)]
+         clusterEdges :: [Set (Graph.EitherEdge node)]
       }
 
 
@@ -202,7 +202,7 @@ emptyCluster g =
 
 singletonCluster ::
    (Ord node) =>
-   CountTopology node -> Gr.DirEdge node -> Cluster node
+   CountTopology node -> Graph.DirEdge node -> Cluster node
 singletonCluster g e =
    Cluster
       (Fold.foldMap Set.singleton e)
@@ -239,7 +239,7 @@ mergeSmallestClusters topo queue0 =
          case PQ.minView queue1 of
             Nothing ->
                Left $
-               map (\es -> Gr.mapNode fst $ insEdgeSet es topo) $
+               map (\es -> Graph.mapNode fst $ insEdgeSet es topo) $
                clusterEdges c0
             Just (c1, queue2) -> Right $
                let c2 = mergeCluster topo c0 c1
@@ -255,7 +255,7 @@ data ShortestList a b =
 
 smallestCluster ::
    Cluster node -> b ->
-   ShortestList (Set (Gr.EitherEdge node)) b
+   ShortestList (Set (Graph.EitherEdge node)) b
 smallestCluster = ShortestList . clusterEdges
 
 {- |
@@ -293,7 +293,7 @@ mergeMinimizingClusterPairs topo (NonEmpty.Cons p ps) =
    case NonEmpty.fetch ps of
       Nothing ->
          Left $
-         map (\es -> Gr.mapNode fst $ insEdgeSet es topo) $
+         map (\es -> Graph.mapNode fst $ insEdgeSet es topo) $
          clusterEdges p
       Just partition0 ->
          Right $
@@ -322,7 +322,7 @@ mergeMinimizingCluster topo (NonEmpty.Cons p ps) =
    case NonEmpty.fetch ps of
       Nothing ->
          Left $
-         map (\es -> Gr.mapNode fst $ insEdgeSet es topo) $
+         map (\es -> Graph.mapNode fst $ insEdgeSet es topo) $
          clusterEdges p
       Just partition0 ->
          let (c0,partition1) =
@@ -339,15 +339,15 @@ mergeMinimizingCluster topo (NonEmpty.Cons p ps) =
              NonEmpty.removeEach partition1
 
 
-type LNEdge node = Gr.DirEdge node
+type LNEdge node = Graph.DirEdge node
 
 -- * various algorithms
 
 bruteForce :: (Ord node) => Topology node -> [FlowTopology node]
 bruteForce topo =
-   filter (\g -> Fold.all (checkNode g) $ Gr.nodeSet g) .
-   map (graphFromMap (Gr.nodeLabels topo) . Set.fromList) $
-   mapM edgeOrients $ Gr.edges topo
+   filter (\g -> Fold.all (checkNode g) $ Graph.nodeSet g) .
+   map (graphFromMap (Graph.nodeLabels topo) . Set.fromList) $
+   mapM edgeOrients $ Graph.edges topo
 
 {-
 This algorithm is made after reading R. Birds "Making a Century"
@@ -355,7 +355,7 @@ in Pearls of Functional Algorithm Design.
 -}
 branchAndBound :: (Ord node) => Topology node -> [FlowTopology node]
 branchAndBound topo =
-   map (Gr.mapNode fst) $
+   map (Graph.mapNode fst) $
    uncurry (foldM (flip expand)) $
    splitNodesEdges topo
 
@@ -364,7 +364,7 @@ prioritized topo =
    let (cleanTopo, es) = splitNodesEdges topo
    in  guard (admissibleCountTopology cleanTopo)
        >>
-       (map (Gr.mapNode fst . fst) $
+       (map (Graph.mapNode fst . fst) $
         recoursePrioEdge topo $
         (cleanTopo,
          PSQ.fromList $ map (\e -> e PSQ.:-> alternatives e cleanTopo) es))

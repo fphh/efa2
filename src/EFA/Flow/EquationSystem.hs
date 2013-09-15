@@ -20,7 +20,7 @@ import EFA.Equation.Arithmetic
 
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph as Gr
+import qualified EFA.Graph as Graph
 
 import EFA.Report.FormatValue (FormatValue)
 
@@ -122,9 +122,9 @@ fromTopology ::
       (Expr mode rec s v) ->
    System mode s
 fromTopology equalInOutSums dtime topo =
-   foldMap (fromEdge dtime) (Gr.edgeLabels topo)
+   foldMap (fromEdge dtime) (Graph.edgeLabels topo)
    <>
-   foldMap (fromSums equalInOutSums) (Gr.nodeLabels topo)
+   foldMap (fromSums equalInOutSums) (Graph.nodeLabels topo)
    <>
    foldMap
       (\(ins,ss,outs) ->
@@ -135,7 +135,7 @@ fromTopology equalInOutSums dtime topo =
          (flip foldMap (Quant.sumOut ss) $ \s ->
             splitStructEqs dtime (Quant.flowSum s)
                Quant.flowEnergyOut Quant.flowXOut $ Map.elems outs))
-      (Gr.graphMap topo)
+      (Graph.graphMap topo)
 
 fromEdge ::
    (Sys.Value mode x, Product x, Record rec) =>

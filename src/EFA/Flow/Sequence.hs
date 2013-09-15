@@ -7,7 +7,7 @@ import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
-import qualified EFA.Graph as Gr
+import qualified EFA.Graph as Graph
 import EFA.Graph.Topology (FlowTopology)
 
 import qualified EFA.Signal.SequenceData as SD
@@ -33,7 +33,7 @@ type
    Sequence node structEdge sectionLabel nodeLabel structLabel =
       Map Idx.Section
          (SD.Range,
-          (sectionLabel, Gr.Graph node structEdge nodeLabel structLabel))
+          (sectionLabel, Graph.Graph node structEdge nodeLabel structLabel))
 
 data
    Graph node structEdge
@@ -48,7 +48,7 @@ data
 type
    RangeGraph node =
       Graph
-         node Gr.EitherEdge ()
+         node Graph.EitherEdge ()
          (Node.Type (Maybe Topo.StoreDir))
          InitIn ExitOut () () ()
 
@@ -99,7 +99,7 @@ structure (rngs, g) =
              Map.intersectionWith (,) rngs $
              fmap ((,) ()) $
              Map.intersectionWith
-                (\ns es -> Gr.fromList ns $ map (flip (,) ()) es)
+                (\ns es -> Graph.fromList ns $ map (flip (,) ()) es)
                 nodes structEdges
        }
 
@@ -119,7 +119,7 @@ storageMapFromList secs =
 groupEdges ::
    (Ord part, Ord node) =>
    Topo.FlowGraph part node ->
-   (Map part [Gr.EitherEdge node],
+   (Map part [Graph.EitherEdge node],
     Map node [Idx.StorageEdge part node])
 groupEdges =
    mapPair (Map.unionsWith (++), Map.unionsWith (++)) .
@@ -131,11 +131,11 @@ groupEdges =
                Left (Map.singleton s [se])
             Topo.StorageEdge (Idx.ForNode se n) ->
                Right (Map.singleton n [se])) .
-   Gr.edges
+   Graph.edges
 
 groupNodes ::
-   (Ord (e (Idx.AugNode part node)), Ord part, Ord node, Gr.Edge e) =>
-   Gr.Graph (Idx.AugNode part node) e nl el ->
+   (Ord (e (Idx.AugNode part node)), Ord part, Ord node, Graph.Edge e) =>
+   Graph.Graph (Idx.AugNode part node) e nl el ->
    Map part [(node, nl)]
 groupNodes =
    Map.fromListWith (++) .
@@ -144,4 +144,4 @@ groupNodes =
          Idx.switchAugmented Nothing Nothing
             (\part -> Just (part, [(node, label)]))
             aug) .
-   Gr.labNodes
+   Graph.labNodes

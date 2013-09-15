@@ -42,7 +42,7 @@ import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.CumulatedFlow as Cum
 import qualified EFA.Graph.Flow as Flow
-import qualified EFA.Graph as Gr
+import qualified EFA.Graph as Graph; import EFA.Graph (Graph)
 import EFA.Graph.Topology (FlowTopology)
 import EFA.Graph (DirEdge(DirEdge))
 
@@ -131,8 +131,8 @@ instance Foldable Triple where
 
 
 data StructureEdgeShow part node =
-     HideEtaNode (Idx.InPart part Gr.EitherEdge node -> [Unicode])
-   | ShowEtaNode (Idx.InPart part Gr.EitherEdge node -> Triple [Unicode])
+     HideEtaNode (Idx.InPart part Graph.EitherEdge node -> [Unicode])
+   | ShowEtaNode (Idx.InPart part Graph.EitherEdge node -> Triple [Unicode])
 
 type StorageEdgeShow part node =
         Idx.ForNode (Idx.StorageEdge part) node -> [Unicode]
@@ -203,7 +203,7 @@ dotFromSectionGraph ::
   StructureEdgeShow Idx.Section node ->
   Maybe Idx.Boundary ->
   (Idx.AugmentedSection,
-   ([Idx.InSection Gr.EitherEdge node],
+   ([Idx.InSection Graph.EitherEdge node],
     [Topo.StNode Idx.Section store node])) ->
   DotSubGraph T.Text
 dotFromSectionGraph rngs mtshow nshow structEShow
@@ -284,7 +284,7 @@ dotFromStateGraph ::
   (Topo.StNode Idx.State store node -> Unicode) ->
   StructureEdgeShow Idx.State node ->
   (Idx.AugmentedState,
-   ([Idx.InState Gr.EitherEdge node],
+   ([Idx.InState Graph.EitherEdge node],
     [Topo.StNode Idx.State store node])) ->
   DotSubGraph T.Text
 dotFromStateGraph mtshow nshow structEShow (current, (es, ns)) =
@@ -313,7 +313,7 @@ dotFromStateGraph mtshow nshow structEShow (current, (es, ns)) =
 groupEdges ::
    (Ord part, Ord node) =>
    Topo.FlowGraph part node ->
-   (Map (Idx.Augmented part) [Idx.InPart part Gr.EitherEdge node],
+   (Map (Idx.Augmented part) [Idx.InPart part Graph.EitherEdge node],
     [Idx.ForNode (Idx.StorageEdge part) node])
 groupEdges =
    mapFst (Map.fromListWith (++)) .
@@ -324,16 +324,16 @@ groupEdges =
             Topo.StructureEdge se@(Idx.InPart s _) ->
                Left (Idx.augment s, [se])
             Topo.StorageEdge se -> Right se) .
-   Gr.edges
+   Graph.edges
 
 groupNodes ::
-   (Ord (e (Idx.PartNode part node)), Ord part, Ord node, Gr.Edge e) =>
-   Gr.Graph (Idx.PartNode part node) e nl el ->
+   (Ord (e (Idx.PartNode part node)), Ord part, Ord node, Graph.Edge e) =>
+   Graph (Idx.PartNode part node) e nl el ->
    Map part [(Idx.PartNode part node, nl)]
 groupNodes =
    Map.fromListWith (++) .
    map (\nl@(Idx.PartNode s _, _) -> (s, [nl])) .
-   Gr.labNodes
+   Graph.labNodes
 
 
 graphStatementsAcc ::
@@ -393,8 +393,8 @@ dotFromBndNode nshow n =
 
 dotFromStructureEdge ::
   (Node.C node, Part part) =>
-  (Idx.InPart part Gr.EitherEdge node -> [Unicode]) ->
-  Idx.InPart part Gr.EitherEdge node -> DotEdge T.Text
+  (Idx.InPart part Graph.EitherEdge node -> [Unicode]) ->
+  Idx.InPart part Graph.EitherEdge node -> DotEdge T.Text
 dotFromStructureEdge eshow e =
    DotEdge
       (dotIdentFromPartNode x) (dotIdentFromPartNode y)
@@ -404,8 +404,8 @@ dotFromStructureEdge eshow e =
 
 dotFromStructureEdgeEta ::
   (Node.C node, Part part) =>
-  (Idx.InPart part Gr.EitherEdge node -> Triple [Unicode]) ->
-  Idx.InPart part Gr.EitherEdge node ->
+  (Idx.InPart part Graph.EitherEdge node -> Triple [Unicode]) ->
+  Idx.InPart part Graph.EitherEdge node ->
   (DotNode T.Text, [DotEdge T.Text])
 dotFromStructureEdgeEta eshow e =
    let (DirEdge x y, dir, ord) = orientFlowEdge e
@@ -560,15 +560,15 @@ dotFromTopology edgeLabels g =
       DotStmts {
         attrStmts = [],
         subGraphs = [],
-        nodeStmts = map dotFromTopoNode $ Gr.labNodes g,
-        edgeStmts = map (dotFromTopoEdge edgeLabels) $ Gr.edges g
+        nodeStmts = map dotFromTopoNode $ Graph.labNodes g,
+        edgeStmts = map (dotFromTopoEdge edgeLabels) $ Graph.edges g
       }
   }
 
 
 dotFromTopoNode ::
   (Node.C node, StorageLabel store) =>
-  Gr.LNode node (Node.Type store) -> DotNode T.Text
+  Graph.LNode node (Node.Type store) -> DotNode T.Text
 dotFromTopoNode (x, typ) =
   DotNode
     (dotIdentFromNode x)
@@ -606,8 +606,8 @@ dotFromFlowTopology ident topo =
   DotSG True (Just (Int ident)) $
   DotStmts
     [GraphAttrs [labelFromString $ show ident]] []
-    (map mkNode $ Gr.labNodes topo)
-    (map mkEdge $ Gr.edges topo)
+    (map mkNode $ Graph.labNodes topo)
+    (map mkEdge $ Graph.edges topo)
   where idf x = T.pack $ show ident ++ "_" ++ Node.dotId x
         mkNode x@(n, t) =
            DotNode (idf n)
@@ -646,24 +646,24 @@ order Reverse = reverse
 
 orientFlowEdge ::
    (Ord node) =>
-   Idx.InPart part Gr.EitherEdge node ->
+   Idx.InPart part Graph.EitherEdge node ->
    (DirEdge (Idx.PartNode part node), Viz.DirType, Order)
 orientFlowEdge (Idx.InPart sec e) =
    mapFst3 (fmap (Idx.PartNode sec)) $
    case e of
-      Gr.EUnDirEdge ue -> (orientUndirEdge ue, Viz.NoDir, Id)
-      Gr.EDirEdge de -> orientDirEdge de
+      Graph.EUnDirEdge ue -> (orientUndirEdge ue, Viz.NoDir, Id)
+      Graph.EDirEdge de -> orientDirEdge de
 
 orientEdge ::
    (Ord node) =>
-   Gr.EitherEdge node -> (DirEdge node, Viz.DirType, Order)
+   Graph.EitherEdge node -> (DirEdge node, Viz.DirType, Order)
 orientEdge e =
    case e of
-      Gr.EUnDirEdge ue -> (orientUndirEdge ue, Viz.NoDir, Id)
-      Gr.EDirEdge de -> orientDirEdge de
+      Graph.EUnDirEdge ue -> (orientUndirEdge ue, Viz.NoDir, Id)
+      Graph.EDirEdge de -> orientDirEdge de
 
-orientUndirEdge :: Ord node => Gr.UnDirEdge node -> DirEdge node
-orientUndirEdge (Gr.UnDirEdge x y) = DirEdge x y
+orientUndirEdge :: Ord node => Graph.UnDirEdge node -> DirEdge node
+orientUndirEdge (Graph.UnDirEdge x y) = DirEdge x y
 
 orientDirEdge ::
    (Ord node) =>
@@ -989,8 +989,8 @@ structureEdgeShow opts e x n =
 
       structEShowEta (Idx.InPart sec ee) =
          case ee of
-            Gr.EUnDirEdge _ -> Triple [] [] []
-            Gr.EDirEdge de ->
+            Graph.EUnDirEdge _ -> Triple [] [] []
+            Graph.EDirEdge de ->
                case Idx.InPart sec (Topo.structureEdgeFromDirEdge de) of
                   edge ->
                     Triple
@@ -1002,8 +1002,8 @@ structureEdgeShow opts e x n =
 
       structEShow (Idx.InPart sec ee) =
          case ee of
-            Gr.EUnDirEdge _ -> []
-            Gr.EDirEdge de ->
+            Graph.EUnDirEdge _ -> []
+            Graph.EDirEdge de ->
                case Idx.InPart sec (Topo.structureEdgeFromDirEdge de) of
                   edge ->
                      formatEnergy edge :
@@ -1028,14 +1028,14 @@ cumulatedFlow g env =
       DotStmts {
         attrStmts = [],
         subGraphs = [],
-        nodeStmts = map dotFromTopoNode $ Gr.labNodes g,
-        edgeStmts = map (dotFromCumEdge env) $ Gr.labEdges g
+        nodeStmts = map dotFromTopoNode $ Graph.labNodes g,
+        edgeStmts = map (dotFromCumEdge env) $ Graph.labEdges g
       }
 
 dotFromCumEdge ::
   (FormatValue a, Node.C node) =>
    Cum.EnergyMap node a ->
-   Gr.LEdge Gr.DirEdge node () -> DotEdge T.Text
+   Graph.LEdge Graph.DirEdge node () -> DotEdge T.Text
 dotFromCumEdge env (e, ()) =
    DotEdge
       (dotIdentFromNode x) (dotIdentFromNode y)

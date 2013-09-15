@@ -3,7 +3,7 @@ module EFA.Flow.State where
 import qualified EFA.Flow.State.Index as XIdx
 
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph as Gr
+import qualified EFA.Graph as Graph
 
 import Data.Map (Map)
 
@@ -17,7 +17,7 @@ type
 type
    States node structEdge stateLabel nodeLabel structLabel =
       Map Idx.State
-         (stateLabel, Gr.Graph node structEdge nodeLabel structLabel)
+         (stateLabel, Graph.Graph node structEdge nodeLabel structLabel)
 
 data
    Graph node structEdge

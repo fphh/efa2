@@ -14,7 +14,7 @@ import qualified EFA.Flow.Draw as Draw
 import EFA.Flow.Sequence.Absolute ( (.=) )
 
 import qualified EFA.Graph.Topology.Index as Idx
-import qualified EFA.Graph as Gr
+import qualified EFA.Graph as Graph
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Async (concurrentlyMany_)
@@ -72,7 +72,7 @@ main = do
              (seqFlowGraphFromStates Tripod.topology [1, 0, 1])
              given
        cum =
-          Gr.mapEdge Cumulated.flowResultFromCumResult $
+          Graph.mapEdge Cumulated.flowResultFromCumResult $
           Cumulated.fromSequenceFlowResult $ SeqFlow.sequence solved
        cumSolved = CumEqSys.solve cum mempty
 

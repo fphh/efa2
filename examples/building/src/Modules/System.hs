@@ -13,7 +13,6 @@ import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.StateFlow as StateFlow
---import qualified EFA.Graph as Gr
 import qualified EFA.Graph.Flow as Flow
 --import qualified EFA.Signal.SequenceData as SD
 --import qualified EFA.Signal.Base as Base

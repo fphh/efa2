@@ -5,7 +5,7 @@ import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
-import qualified EFA.Graph as Gr
+import qualified EFA.Graph as Graph
 
 import EFA.Equation.Arithmetic ((~+))
 import EFA.Equation.Result (Result(Undetermined, Determined))
@@ -28,13 +28,13 @@ type EnergyMap node a = Map (Idx.Energy node) a
 
 getRelativeDir ::
   (Ord x) =>
-  Topo.Topology x -> Gr.DirEdge x -> RelativeDir
+  Topo.Topology x -> Graph.DirEdge x -> RelativeDir
 getRelativeDir g e =
-  case Gr.edgeLabels g of
+  case Graph.edgeLabels g of
     es ->
       if Map.member e es
          then WithTopoDir
-         else if Map.member (Gr.reverseEdge e) es
+         else if Map.member (Graph.reverseEdge e) es
                  then AgainstTopoDir
                  else error "getTopologyDir: edge not found"
 
@@ -49,7 +49,7 @@ cumulatedEnergyFlow ::
   Env.Complete node (Result a) (Result v) ->
   ( EnergyMap node (Result a), EnergyMap node (Result a) )
 cumulatedEnergyFlow topo seqTopo env =
-   mapPair (cum, cum) $ unzip $ mapMaybe f $ Gr.edges seqTopo
+   mapPair (cum, cum) $ unzip $ mapMaybe f $ Graph.edges seqTopo
   where cum = Map.unionsWith (liftA2 (~+))
         em = Env.energyMap $ Env.signal env
         f e =
@@ -88,6 +88,6 @@ cumulate ::
   ( ( Topo.Topology node, EnergyMap node (Result a) ),
     ( Topo.Topology node, EnergyMap node (Result a) ) )
 cumulate topo (_rngs, seqTopo) env =
-  ( (topo, withDirEnv), (Gr.reverse topo, againstDirEnv) )
+  ( (topo, withDirEnv), (Graph.reverse topo, againstDirEnv) )
   where (withDirEnv, againstDirEnv) =
            cumulatedEnergyFlow topo (Topo.dirFromFlowGraph seqTopo) env

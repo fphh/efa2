@@ -58,7 +58,7 @@ import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
-import qualified EFA.Graph as Gr
+import qualified EFA.Graph as Graph
 
 import EFA.Report.FormatValue (FormatValue)
 
@@ -598,7 +598,7 @@ fromGraph ::
   Bool ->
   Topo.DirSequFlowGraph node -> EquationSystem mode rec node s a v
 fromGraph equalInOutSums g = mconcat $
-  fromEdges (Gr.edges g) :
+  fromEdges (Graph.edges g) :
   fromNodes equalInOutSums g :
   fromStorageSequences g :
   []
@@ -609,7 +609,7 @@ fromEdges ::
   (Verify.GlobalVar mode a (Record.ToIndex rec) Var.ForNodeSectionScalar node, Sum a,
    Verify.GlobalVar mode v (Record.ToIndex rec) Var.InSectionSignal node,
    Product v, Record rec, Node.C node) =>
-  [Topo.FlowEdge Gr.DirEdge (Idx.AugSecNode node)] ->
+  [Topo.FlowEdge Graph.DirEdge (Idx.AugSecNode node)] ->
   EquationSystem mode rec node s a v
 fromEdges =
    foldMap $ \se ->
@@ -628,7 +628,7 @@ fromNodes ::
   Bool ->
   Topo.DirSequFlowGraph node -> EquationSystem mode rec node s a v
 fromNodes equalInOutSums =
-  fold . Map.mapWithKey f . Gr.nodeEdges
+  fold . Map.mapWithKey f . Graph.nodeEdges
    where f an (ins, nodeType, outs) =
             let msn = Idx.secNodeFromBndNode =<< Idx.bndNodeFromAugNode an
                 withSecNode = flip foldMap msn
@@ -731,7 +731,7 @@ getStorageSequences =
   MapU.curry "EquationSystem.getStorageSequences"
     (\bn@(Idx.PartNode _ n) -> (n, bn))
   .
-  Map.mapMaybe Topo.maybeStorage . Gr.nodeLabels
+  Map.mapMaybe Topo.maybeStorage . Graph.nodeLabels
 
 
 fromInStorages ::

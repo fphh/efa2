@@ -11,7 +11,7 @@ import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
-import qualified EFA.Graph as Gr
+import qualified EFA.Graph as Graph
 
 import qualified EFA.Signal.SequenceData as SD
 import qualified EFA.Signal.Data as Data
@@ -41,9 +41,9 @@ import Data.Foldable (foldMap)
 topologyFromEdges ::
    Node.C node => [(node, node)] -> Topo.Topology node
 topologyFromEdges es =
-   Gr.fromMap
+   Graph.fromMap
       (MapU.fromSet Node.typ $ foldMap (\(x,y) -> Set.fromList [x,y]) es)
-      (Map.fromList $ map (\(a, b) -> (Gr.DirEdge a b, ())) es)
+      (Map.fromList $ map (\(a, b) -> (Graph.DirEdge a b, ())) es)
 
 
 -- @HT neue Utility Funktionen für Topologie-Definition, bitte prüfen

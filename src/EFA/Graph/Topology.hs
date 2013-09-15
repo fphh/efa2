@@ -35,7 +35,7 @@ module EFA.Graph.Topology (
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph as Gr
+import qualified EFA.Graph as Graph
 import EFA.Graph (Graph)
 
 
@@ -47,11 +47,11 @@ import Data.Eq.HT (equating)
 import Data.Monoid ((<>))
 
 
-type LNode a = Gr.LNode (Idx.AugSecNode a) (Node.Type ())
-type LEdge a = Gr.LEdge (FlowEdge Gr.EitherEdge) (Idx.AugSecNode a) ()
+type LNode a = Graph.LNode (Idx.AugSecNode a) (Node.Type ())
+type LEdge a = Graph.LEdge (FlowEdge Graph.EitherEdge) (Idx.AugSecNode a) ()
 type LDirNode part a = StNode part (Maybe StoreDir) a
-type LDirEdge a = Gr.LEdge Gr.DirEdge (Idx.AugSecNode a) ()
-type StNode part store a = Gr.LNode (Idx.AugNode part a) (Node.Type store)
+type LDirEdge a = Graph.LEdge Graph.DirEdge (Idx.AugSecNode a) ()
+type StNode part store a = Graph.LNode (Idx.AugNode part a) (Node.Type store)
 
 
 isStorage :: Node.Type sl -> Bool
@@ -73,11 +73,11 @@ defaultNLabel :: NLabel
 defaultNLabel = NLabel Node.NoRestriction
 
 
-isActive :: Gr.EitherEdge node -> Bool
-isActive (Gr.EUnDirEdge _) = False
-isActive (Gr.EDirEdge _) = True
+isActive :: Graph.EitherEdge node -> Bool
+isActive (Graph.EUnDirEdge _) = False
+isActive (Graph.EDirEdge _) = True
 
-isInactive :: Gr.EitherEdge node -> Bool
+isInactive :: Graph.EitherEdge node -> Bool
 isInactive = not . isActive
 
 
@@ -101,20 +101,20 @@ data FlowEdge structEdge augNode =
            }
 
 
-instance Gr.Edge structEdge => Foldable (FlowEdge structEdge) where
-   foldMap f e = f (Gr.from e) <> f (Gr.to e)
+instance Graph.Edge structEdge => Foldable (FlowEdge structEdge) where
+   foldMap f e = f (Graph.from e) <> f (Graph.to e)
 
-instance Gr.Edge structEdge => Gr.Edge (FlowEdge structEdge) where
+instance Graph.Edge structEdge => Graph.Edge (FlowEdge structEdge) where
    from (FlowEdge e) =
       case e of
          StructureEdge (Idx.InPart sec se) ->
-            augNode (Idx.augment sec) $ Gr.from se
+            augNode (Idx.augment sec) $ Graph.from se
          StorageEdge (Idx.ForNode (Idx.StorageEdge sec _) node) ->
             augNode (Idx.allowExit sec) node
    to (FlowEdge e) =
       case e of
          StructureEdge (Idx.InPart sec se) ->
-            augNode (Idx.augment sec) $ Gr.to se
+            augNode (Idx.augment sec) $ Graph.to se
          StorageEdge (Idx.ForNode (Idx.StorageEdge _ sec) node) ->
             augNode (Idx.allowInit sec) node
 
@@ -172,25 +172,25 @@ instance Init (Idx.Init part) where
 Should Topology have an UnDirEdge?
 UnDirEdge could be read as "canonically oriented" edge.
 -}
-type Topology a = Graph a Gr.DirEdge (Node.Type ()) ()
+type Topology a = Graph a Graph.DirEdge (Node.Type ()) ()
 
-type FlowTopology a = Graph a Gr.EitherEdge (Node.Type ()) ()
+type FlowTopology a = Graph a Graph.EitherEdge (Node.Type ()) ()
 
 type
    ClassifiedTopology a =
-      Graph a Gr.EitherEdge (Node.Type (Maybe StoreDir)) ()
+      Graph a Graph.EitherEdge (Node.Type (Maybe StoreDir)) ()
 
 
 type
    FlowGraph sec node =
       Graph
-         (Idx.AugNode sec node) (FlowEdge Gr.EitherEdge)
+         (Idx.AugNode sec node) (FlowEdge Graph.EitherEdge)
          (Node.Type (Maybe StoreDir)) ()
 
 type
    DirFlowGraph sec node =
       Graph
-         (Idx.AugNode sec node) (FlowEdge Gr.DirEdge)
+         (Idx.AugNode sec node) (FlowEdge Graph.DirEdge)
          (Node.Type (Maybe StoreDir)) ()
 
 
@@ -204,9 +204,9 @@ type DirStateFlowGraph node = DirFlowGraph Idx.State node
 pathExists :: (Ord a) => a -> a -> Topology a -> Bool
 pathExists src dst =
    let go topo a =
-          not (Gr.isEmpty topo) &&
+          not (Graph.isEmpty topo) &&
           (a==dst ||
-           (any (go (Gr.delNode a topo)) $ Gr.suc topo a))
+           (any (go (Graph.delNode a topo)) $ Graph.suc topo a))
    in  flip go src
 
 {-
@@ -222,20 +222,20 @@ dirFromFlowGraph ::
    (Ord part, Ord node) =>
    FlowGraph part node -> DirFlowGraph part node
 dirFromFlowGraph =
-   Gr.mapEdgesMaybe $ \fe ->
+   Graph.mapEdgesMaybe $ \fe ->
       case edgeType fe of
          StorageEdge se -> Just $ FlowEdge $ StorageEdge se
          StructureEdge (Idx.InPart sec ee) ->
             case ee of
-               Gr.EDirEdge de ->
+               Graph.EDirEdge de ->
                   Just $ FlowEdge $ StructureEdge $ Idx.InPart sec de
-               Gr.EUnDirEdge _ -> Nothing
+               Graph.EUnDirEdge _ -> Nothing
 
-structureEdgeFromDirEdge :: Gr.DirEdge node -> Idx.StructureEdge node
-structureEdgeFromDirEdge (Gr.DirEdge x y) = Idx.StructureEdge x y
+structureEdgeFromDirEdge :: Graph.DirEdge node -> Idx.StructureEdge node
+structureEdgeFromDirEdge (Graph.DirEdge x y) = Idx.StructureEdge x y
 
-dirEdgeFromStructureEdge :: Idx.StructureEdge node -> Gr.DirEdge node
-dirEdgeFromStructureEdge (Idx.StructureEdge x y) = Gr.DirEdge x y
+dirEdgeFromStructureEdge :: Idx.StructureEdge node -> Graph.DirEdge node
+dirEdgeFromStructureEdge (Idx.StructureEdge x y) = Graph.DirEdge x y
 
 
 data StoreDir = In | Out deriving (Eq, Ord, Show)
@@ -249,7 +249,7 @@ classifyStorages ::
    (Ord node) =>
    FlowTopology node -> ClassifiedTopology node
 classifyStorages =
-   Gr.mapNodeWithInOut
+   Graph.mapNodeWithInOut
       (\(pre, (_n, nt), suc) ->
          let maybeDir es cls =
                 toMaybe (any (isActive . fst) es) cls

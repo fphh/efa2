@@ -3,7 +3,7 @@ module EFA.Flow.Quantity where
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
-import qualified EFA.Graph as Gr
+import qualified EFA.Graph as Graph; import EFA.Graph (Graph)
 
 import qualified EFA.Equation.Variable as Var
 
@@ -20,11 +20,11 @@ import Prelude hiding (lookup, init, sin, sum)
 
 type
    DirTopology node a v =
-      Gr.Graph node Gr.DirEdge (Sums a v) (Flow v)
+      Graph node Graph.DirEdge (Sums a v) (Flow v)
 
 type
    Topology node a v =
-      Gr.Graph node Gr.EitherEdge (Sums a v) (Maybe (Flow v))
+      Graph node Graph.EitherEdge (Sums a v) (Maybe (Flow v))
 
 data Flow v =
    Flow {
@@ -113,11 +113,11 @@ mapFlowTopologyWithVar ::
    (Var.ForNodeScalar part node -> a0 -> a1) ->
    (Var.InPartSignal part node -> v0 -> v1) ->
    part ->
-   (v0, Gr.Graph node Gr.EitherEdge (Sums a0 v0) (Maybe (Flow v0))) ->
-   (v1, Gr.Graph node Gr.EitherEdge (Sums a1 v1) (Maybe (Flow v1)))
+   (v0, Graph node Graph.EitherEdge (Sums a0 v0) (Maybe (Flow v0))) ->
+   (v1, Graph node Graph.EitherEdge (Sums a1 v1) (Maybe (Flow v1)))
 mapFlowTopologyWithVar f g part (dtime, gr) =
    (g (part <~> Idx.DTime) dtime,
-    Gr.mapNodeWithKey
+    Graph.mapNodeWithKey
        (\n (Sums {sumIn = sin, sumOut = sout}) ->
           Sums {
              sumIn =
@@ -131,20 +131,20 @@ mapFlowTopologyWithVar f g part (dtime, gr) =
                       (f (Idx.StInSum (Idx.NoExit part) <#> n) cs)
                       (g (part <~> Idx.Sum Idx.Out n) fs)
           }) $
-    Gr.mapEdgeWithKey (liftEdgeFlow $ mapFlowWithVar g part) gr)
+    Graph.mapEdgeWithKey (liftEdgeFlow $ mapFlowWithVar g part) gr)
 
 liftEdgeFlow ::
-   (Gr.DirEdge node -> flow0 -> flow1) ->
-   Gr.EitherEdge node -> Maybe flow0 -> Maybe flow1
+   (Graph.DirEdge node -> flow0 -> flow1) ->
+   Graph.EitherEdge node -> Maybe flow0 -> Maybe flow1
 liftEdgeFlow f =
    switchEdgeFlow (const Nothing) (\edge flow -> Just $ f edge flow)
 
 switchEdgeFlow ::
-   (Gr.UnDirEdge node -> a) ->
-   (Gr.DirEdge node -> flow -> a) ->
-   Gr.EitherEdge node -> Maybe flow -> a
-switchEdgeFlow f _ (Gr.EUnDirEdge edge) Nothing = f edge
-switchEdgeFlow _ f (Gr.EDirEdge edge) (Just flow) = f edge flow
+   (Graph.UnDirEdge node -> a) ->
+   (Graph.DirEdge node -> flow -> a) ->
+   Graph.EitherEdge node -> Maybe flow -> a
+switchEdgeFlow f _ (Graph.EUnDirEdge edge) Nothing = f edge
+switchEdgeFlow _ f (Graph.EDirEdge edge) (Just flow) = f edge flow
 switchEdgeFlow _ _ _ _ =
    error $
       "switchEdgeFlow: undirEdge's flow must be Nothing," ++
@@ -152,7 +152,7 @@ switchEdgeFlow _ _ _ _ =
 
 mapFlowWithVar ::
    (Idx.InPart part Var.Signal node -> v0 -> v1) ->
-   part -> Gr.DirEdge node -> Flow v0 -> Flow v1
+   part -> Graph.DirEdge node -> Flow v0 -> Flow v1
 mapFlowWithVar f part e =
    liftA2 f
       (Idx.InPart part <$>
@@ -175,27 +175,27 @@ lookupEdge ::
    Ord n =>
    (el -> a) ->
    Idx.StructureEdge n ->
-   Gr.Graph n Gr.EitherEdge nl (Maybe el) ->
+   Graph n Graph.EitherEdge nl (Maybe el) ->
    Maybe a
 lookupEdge f se =
    fmap (maybe (error "lookupEdge: directed edge must have Just label") f) .
-   Gr.lookupEdge (Gr.EDirEdge $ Topo.dirEdgeFromStructureEdge se)
+   Graph.lookupEdge (Graph.EDirEdge $ Topo.dirEdgeFromStructureEdge se)
 
 
 dirFromGraph ::
    (Ord n) =>
-   Gr.Graph n Gr.EitherEdge nl el -> Gr.Graph n Gr.DirEdge nl el
+   Graph n Graph.EitherEdge nl el -> Graph n Graph.DirEdge nl el
 dirFromGraph =
-   Gr.mapEdgesMaybe $ \ee ->
+   Graph.mapEdgesMaybe $ \ee ->
       case ee of
-         Gr.EDirEdge de -> Just de
-         Gr.EUnDirEdge _ -> Nothing
+         Graph.EDirEdge de -> Just de
+         Graph.EUnDirEdge _ -> Nothing
 
 dirFromFlowGraph ::
    (Ord n) =>
-   Gr.Graph n Gr.EitherEdge nl (Maybe el) -> Gr.Graph n Gr.DirEdge nl el
+   Graph n Graph.EitherEdge nl (Maybe el) -> Graph n Graph.DirEdge nl el
 dirFromFlowGraph =
-   Gr.mapEdge
+   Graph.mapEdge
       (fromMaybe (error "dirFromFlowGraph: directed edge must have Just label"))
    .
    dirFromGraph

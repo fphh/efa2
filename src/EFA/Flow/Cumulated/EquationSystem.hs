@@ -41,7 +41,7 @@ import EFA.Equation.Arithmetic
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph as Gr
+import qualified EFA.Graph as Graph
 
 import qualified UniqueLogic.ST.TF.Expression as Expr
 import qualified UniqueLogic.ST.TF.System as Sys
@@ -154,9 +154,9 @@ fromTopology ::
    CumFlow.Graph node (SysRecord.Expr mode rec s a) ->
    EqSys.System mode s
 fromTopology equalInOutSums topo =
-   foldMap fromEdge (Gr.edgeLabels topo)
+   foldMap fromEdge (Graph.edgeLabels topo)
    <>
-   fold (Map.mapWithKey (fromSums equalInOutSums) $ Gr.nodeLabels topo)
+   fold (Map.mapWithKey (fromSums equalInOutSums) $ Graph.nodeLabels topo)
    <>
    foldMap
       (\(ins,ss,outs) ->
@@ -167,7 +167,7 @@ fromTopology equalInOutSums topo =
          (flip foldMap (CumFlow.sumOut ss) $ \s ->
             EqSys.splitScalarEqs s
                CumFlow.flowEnergyOut CumFlow.flowXOut $ Map.elems outs))
-      (Gr.graphMap topo)
+      (Graph.graphMap topo)
 
 fromEdge ::
    (Sys.Value mode a, Product a, Record rec) =>

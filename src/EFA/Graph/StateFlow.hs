@@ -8,7 +8,7 @@ import qualified EFA.Flow.State.Index as StateIdx
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Flow as Flow
-import qualified EFA.Graph as Gr
+import qualified EFA.Graph as Graph; import EFA.Graph (Graph)
 import EFA.Graph.Topology
           (FlowTopology, ClassifiedTopology, StateFlowGraph)
 
@@ -34,7 +34,7 @@ import Data.Tuple.HT (mapPair)
 
 
 
-type Topology node nodeLabel = Gr.Graph node Gr.EitherEdge nodeLabel ()
+type Topology node nodeLabel = Graph node Graph.EitherEdge nodeLabel ()
 
 states ::
    (Ord node, Ord nodeLabel) =>
@@ -250,7 +250,7 @@ stateFromClassTopo ::
   (Ord node) =>
   Idx.State -> ClassifiedTopology node -> StateFlowGraph node
 stateFromClassTopo state =
-   Gr.ixmap
+   Graph.ixmap
       (Idx.PartNode (Idx.augment state))
       (Topo.FlowEdge . Topo.StructureEdge . Idx.InPart state)
 
@@ -276,7 +276,7 @@ getStorageSequences =
    Map.mapWithKey
       (\s g ->
          fmap (Map.singleton s) $
-         Map.mapMaybe Topo.maybeStorage $ Gr.nodeLabels g)
+         Map.mapMaybe Topo.maybeStorage $ Graph.nodeLabels g)
 
 
 {- |

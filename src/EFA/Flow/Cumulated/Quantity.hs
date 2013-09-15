@@ -33,7 +33,7 @@ import EFA.Equation.Arithmetic ((~+))
 import EFA.Equation.Result (Result(Determined, Undetermined))
 
 import qualified EFA.Graph.Topology as Topo
-import qualified EFA.Graph as Gr
+import qualified EFA.Graph as Graph
 
 import qualified EFA.Utility.Map as MapU
 
@@ -49,7 +49,7 @@ import Prelude hiding (lookup, init, seq, sequence, sin, sum)
 
 type
    Graph node a =
-      Gr.Graph node Gr.DirEdge (Sums a) (Flow a)
+      Graph.Graph node Graph.DirEdge (Sums a) (Flow a)
 
 data Sums a =
    Sums { sumIn, sumOut :: Maybe a }
@@ -103,7 +103,7 @@ mapGraph ::
    (a0 -> a1) ->
    Graph node a0 -> Graph node a1
 mapGraph f =
-   Gr.mapEdge (fmap f) . Gr.mapNode (fmap f)
+   Graph.mapEdge (fmap f) . Graph.mapNode (fmap f)
 
 
 traverseGraph ::
@@ -111,13 +111,13 @@ traverseGraph ::
    (a0 -> f a1) ->
    Graph node a0 -> f (Graph node a1)
 traverseGraph f =
-   Gr.traverse (traverse f) (traverse f)
+   Graph.traverse (traverse f) (traverse f)
 
 
 
 type
    CumGraph node a =
-      Gr.Graph node Gr.DirEdge (Sums a) (Cum a)
+      Graph.Graph node Graph.DirEdge (Sums a) (Cum a)
 
 data Cum a =
    Cum {
@@ -142,10 +142,10 @@ cumFromFlowGraph ::
    (Ord node) =>
    a -> SeqFlow.Topology node a a -> CumGraph node a
 cumFromFlowGraph time =
-   Gr.mapNode
+   Graph.mapNode
       (\(SeqFlow.Sums i o) ->
          Sums (fmap SeqFlow.flowSum i) (fmap SeqFlow.flowSum o)) .
-   Gr.mapEdge (cumFromFlow time) .
+   Graph.mapEdge (cumFromFlow time) .
    Quant.dirFromFlowGraph
 
 flowResultFromCum :: Cum a -> Flow (Result a)
@@ -177,12 +177,12 @@ addCumGraph ::
    (a -> a -> a) ->
    CumGraph node a -> CumGraph node a -> CumGraph node a
 addCumGraph add x y =
-   Gr.fromMap
+   Graph.fromMap
       (MapU.checkedZipWith "addCumGraph"
          (addSums add)
-         (Gr.nodeLabels x) (Gr.nodeLabels y))
+         (Graph.nodeLabels x) (Graph.nodeLabels y))
       (Map.unionWith (liftA2 add)
-         (Gr.edgeLabels x) (Gr.edgeLabels y))
+         (Graph.edgeLabels x) (Graph.edgeLabels y))
 
 addSums :: (a -> a -> a) -> Sums a -> Sums a -> Sums a
 addSums add (Sums i0 o0) (Sums i1 o1) =
@@ -231,10 +231,10 @@ lookupEdge ::
    Ord n =>
    (el -> a) ->
    CumIdx.StructureEdge n ->
-   Gr.Graph n Gr.DirEdge nl el ->
+   Graph.Graph n Graph.DirEdge nl el ->
    Maybe a
 lookupEdge f se =
-   fmap f . Gr.lookupEdge (Topo.dirEdgeFromStructureEdge se)
+   fmap f . Graph.lookupEdge (Topo.dirEdgeFromStructureEdge se)
 
 
 lookupSum :: (Ord node) => CumIdx.Sum node -> Graph node a -> Maybe a
@@ -243,7 +243,7 @@ lookupSum (CumIdx.Sum dir node) =
       CumIdx.In  -> sumIn
       CumIdx.Out -> sumOut)
    <=<
-   Gr.lookupNode node
+   Graph.lookupNode node
 
 
 class (CumVar.Index idx, CumVar.FormatIndex idx) => Lookup idx where
@@ -290,10 +290,10 @@ mapGraphWithVar ::
    Graph node a0 ->
    Graph node a1
 mapGraphWithVar f =
-   Gr.mapNodeWithKey
+   Graph.mapNodeWithKey
       (\n -> liftA2 f (sumsVars <*> pure n))
    .
-   Gr.mapEdgeWithKey
+   Graph.mapEdgeWithKey
       (\e ->
          liftA2 f
             (flowVars <*> pure (Topo.structureEdgeFromDirEdge e)))

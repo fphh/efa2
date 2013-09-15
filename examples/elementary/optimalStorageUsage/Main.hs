@@ -20,7 +20,7 @@ import EFA.Flow.SystemEta (detEtaSys)
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
-import qualified EFA.Graph as Gr
+import qualified EFA.Graph as Graph; import EFA.Graph (Graph)
 
 import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.ConvertTable as Table
@@ -160,10 +160,10 @@ givenSec1Mean psink _ =
 
 
 etaSys2 ::
-  (Ord (edge k), Ord k, Show k, Show (edge k), Show t2, Gr.Edge edge) =>
-  (t1, Gr.Graph k edge (Node.Type t2) edgeLabel) -> t -> a
+  (Ord (edge k), Ord k, Show k, Show (edge k), Show t2, Graph.Edge edge) =>
+  (t1, Graph k edge (Node.Type t2) edgeLabel) -> t -> a
 etaSys2 (_, topo) _ = trace (show sinks) undefined
-  where sinks = Map.filter isSink $ Gr.nodeEdges topo
+  where sinks = Map.filter isSink $ Graph.nodeEdges topo
         isSink (_, el, x) =
           case el of
                Node.AlwaysSource -> Set.size x > 0
@@ -277,7 +277,7 @@ etaSys ::
   Flow.RangeGraph node ->
   SeqFlow.Graph node b (EqRec.Absolute (Result a)) -> a
 etaSys (_, topo) env = sum sinks / sum sources
-  where m = Map.elems $ Gr.nodeEdges topo
+  where m = Map.elems $ Graph.nodeEdges topo
         sinks = map (Set.foldl sinkEnergies 0 . fst3) $ filter isActiveSink m
         sources = map (Set.foldl sourceEnergies 0 . thd3) $ filter isActiveSource m
 
@@ -296,13 +296,13 @@ etaSys (_, topo) env = sum sinks / sum sources
 
         sinkEnergies acc
           (Topo.FlowEdge (Topo.StructureEdge (Idx.InPart sec
-                       (Gr.EDirEdge (Gr.DirEdge a b))))) =
+                       (Graph.EDirEdge (Graph.DirEdge a b))))) =
             acc + lookUp "etaSys" env (XIdx.energy sec b a)
         sinkEnergies = error "etaSys: sinkEnergies"
 
         sourceEnergies acc
           (Topo.FlowEdge (Topo.StructureEdge (Idx.InPart sec
-                       (Gr.EDirEdge (Gr.DirEdge a b))))) =
+                       (Graph.EDirEdge (Graph.DirEdge a b))))) =
             acc + lookUp "etaSys" env (XIdx.energy sec a b)
 -}
 

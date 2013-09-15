@@ -16,7 +16,7 @@ import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 
 import qualified EFA.Graph.Flow as Flow
-import qualified EFA.Graph as Gr
+import qualified EFA.Graph as Graph
 
 import qualified Data.Set as Set
 import qualified Data.Map as Map
@@ -41,8 +41,8 @@ etaSys ::
   EqEnv.Complete node b (Result a) -> Result a
 etaSys (_, topo) env = liftA2 (/) (sumRes sinks) (sumRes sources)
   where m = Map.elems $
-            Gr.nodeEdges $
-            Gr.lefilter (Topo.isStructureEdge . fst) $
+            Graph.nodeEdges $
+            Graph.lefilter (Topo.isStructureEdge . fst) $
             Topo.dirFromFlowGraph topo
 
         sinks = concatMap (mapMaybe sinkEnergies . Set.toList . fst3) $ filter isActiveSink m
@@ -77,8 +77,8 @@ etaSysState ::
   EqEnvState.Complete node b (Result a) -> Result a
 etaSysState topo env = liftA2 (/) (sumRes sinks) (sumRes sources)
   where m = Map.elems $
-            Gr.nodeEdges $
-            Gr.lefilter (Topo.isStructureEdge . fst) $
+            Graph.nodeEdges $
+            Graph.lefilter (Topo.isStructureEdge . fst) $
             Topo.dirFromFlowGraph topo
 
         sinks = concatMap (mapMaybe sinkEnergies . Set.toList . fst3) $ filter isActiveSink m
@@ -95,12 +95,12 @@ etaSysState topo env = liftA2 (/) (sumRes sinks) (sumRes sources)
         isActiveSource _ = False
 
         sinkEnergies
-          (Topo.FlowEdge (Topo.StructureEdge (Idx.InPart sec (Gr.DirEdge a b)))) =
+          (Topo.FlowEdge (Topo.StructureEdge (Idx.InPart sec (Graph.DirEdge a b)))) =
             Just $ AppUt.lookupAbsEnergyState "etaSys, sinkEnergies" env (StateIdx.energy sec b a)
         sinkEnergies _ = Nothing
 
         sourceEnergies
-          (Topo.FlowEdge (Topo.StructureEdge (Idx.InPart sec (Gr.DirEdge a b)))) =
+          (Topo.FlowEdge (Topo.StructureEdge (Idx.InPart sec (Graph.DirEdge a b)))) =
             Just $ AppUt.lookupAbsEnergyState "etaSys, sourceEnergies" env (StateIdx.energy sec a b)
         sourceEnergies _ = Nothing
 
