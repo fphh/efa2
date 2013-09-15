@@ -47,6 +47,7 @@ import Data.Eq.HT (equating)
 import Data.Ord (comparing)
 import Data.Monoid (mconcat, (<>))
 import Data.Foldable (foldMap)
+import Data.Tuple.HT (swap)
 
 import Debug.Trace (trace)
 
@@ -190,10 +191,10 @@ borderFunc ss xs p =
   case dropWhile ((< p) . fst) zs of
        (_, s):_ -> s
        _ -> error $ "Power " ++ show p ++ " out of range " ++ show zs
-  where ts = zip (Sig.toList ss) (Sig.toList xs)
-        ys = map f (List.groupBy (\x y -> fst x == fst y) ts)
-        f as = case last as of (a, b) -> (b, a)
-        zs = List.sortBy (comparing fst) ys
+  where zs =
+           List.sortBy (comparing fst) $
+           map (swap . last) $ List.groupBy (equating fst) $
+           zip (Sig.toList ss) (Sig.toList xs)
 
 sectionHU ::
   Sig.PSignal [] d -> (d -> Int) -> [(Int, Sig.PSignal [] d)]
