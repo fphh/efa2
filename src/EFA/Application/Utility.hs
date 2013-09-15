@@ -6,7 +6,6 @@ import qualified EFA.Flow.Sequence.Index as SeqIdx
 import qualified EFA.Flow.Sequence as SeqFlow
 import qualified EFA.Flow.State.Index as StateIdx
 import qualified EFA.Graph.StateFlow.Environment as StateEnv
-import qualified EFA.Graph.Flow as Flow
 
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Index as Idx
@@ -23,8 +22,8 @@ import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Arithmetic as Arith
+import EFA.Equation.Result (Result(Determined, Undetermined))
 import EFA.Equation.System ((.=))
-import EFA.Equation.Result (Result(..))
 
 import EFA.Report.FormatValue (FormatValue)
 
@@ -72,14 +71,6 @@ makePPosLabelMap :: (Ord node) => LabeledEdgeList node -> PPosLabelMap node
 makePPosLabelMap edgeList = Map.fromList $ concatMap f edgeList
   where f (n1,n2,_,l1,l2) = [(SeqIdx.ppos n1 n2, l1),
                              (SeqIdx.ppos n2 n1, l2)]
-
-constructSeqTopo ::
-   (Ord node) =>
-   Topo.Topology node -> [Int] -> Flow.RangeGraph node
-constructSeqTopo topo =
-  Flow.sequenceGraph .
-  fmap (StateAnalysis.bruteForce topo !!) .
-  SD.fromList
 
 seqFlowGraphFromStates ::
    (Ord node, SeqFlowQuant.Unknown a, SeqFlowQuant.Unknown v) =>
