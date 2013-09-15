@@ -578,10 +578,10 @@ sequenceFromPlain =
                     Node.Storage Nothing -> noSum
                     Node.Storage (Just Topo.In) -> inSum
                     Node.Storage (Just Topo.Out) -> outSum
-                    Node.Sink -> inSum
-                    Node.AlwaysSink -> inSum
-                    Node.Source -> outSum
-                    Node.AlwaysSource -> outSum
+                    Node.Sink -> outSum
+                    Node.AlwaysSink -> outSum
+                    Node.Source -> inSum
+                    Node.AlwaysSource -> inSum
                     Node.Crossing -> bothSum
                     Node.DeadNode -> noSum
                     Node.NoRestriction -> bothSum) $
