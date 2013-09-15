@@ -14,8 +14,8 @@ import qualified EFA.Flow.Sequence.Quantity as SeqFlow
 import qualified EFA.Flow.Sequence.Index as XIdx
 import qualified EFA.Flow.Sequence as SeqFlowPlain
 import qualified EFA.Flow.Draw as Draw
+import EFA.Flow.Sequence.SystemEta (detEtaSys)
 import EFA.Flow.Sequence.Absolute ((.=), (=%%=), (=.=))
-import EFA.Flow.SystemEta (detEtaSys)
 
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Index as Idx
