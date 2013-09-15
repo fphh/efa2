@@ -31,7 +31,7 @@ hasStructureEdge = not . Set.null
 
 
 etaSys ::
-   (Node.C node, Arith.Product v) =>
+   (Node.C node, Arith.Constant v) =>
    SeqFlow.Graph node a (Result v) -> Result v
 etaSys gr =
    let sq = fmap (Graph.nodeLabels . snd . snd) $ SeqFlow.sequence gr
@@ -44,13 +44,14 @@ etaSys gr =
              (Map.mapMaybe SeqFlow.sumOut .
               Map.filterWithKey (\node _ -> Node.isSource $ Node.typ node)) sq
        sumRes =
-          foldl1 (liftA2 (~+)) . map SeqFlow.flowSum . foldMap Map.elems
+          foldl (liftA2 (~+)) (Determined Arith.zero) .
+          map SeqFlow.flowSum . foldMap Map.elems
 
    in  liftA2 (~/) (sumRes sinks) (sumRes sources)
 
 
 detEtaSys ::
-   (Node.C node, Arith.Product v) =>
+   (Node.C node, Arith.Constant v) =>
    Caller ->
    SeqFlow.Graph node a (Result v) -> v
 detEtaSys caller =
@@ -63,7 +64,7 @@ type Forcing node a v = SeqFlow.Graph node a (Result v) -> v
 
 
 objectiveFunction ::
-   (Node.C node, Arith.Product v) =>
+   (Node.C node, Arith.Constant v) =>
    Condition node a v ->
    Forcing node a v ->
    SeqFlow.Graph node a (Result v) ->
