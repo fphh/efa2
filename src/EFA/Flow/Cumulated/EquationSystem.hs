@@ -37,10 +37,11 @@ import EFA.Equation.Result (Result(..))
 import EFA.Equation.SystemRecord
           (System(System), Record, Wrap(Wrap, unwrap))
 import EFA.Equation.Arithmetic
-          (Sum, Product, Constant, (~*))
+          (Sum, Product, Constant, (~+), (~*))
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
+import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Graph
 
 import qualified UniqueLogic.ST.TF.Expression as Expr
@@ -155,6 +156,13 @@ fromTopology ::
    EqSys.System mode s
 fromTopology equalInOutSums topo =
    foldMap fromEdge (Graph.edgeLabels topo)
+   <>
+   (EqSys.withLocalVar $ \totalTime ->
+      foldMap (totalTime =&=) $
+      Map.mapKeysWith (~+)
+         ((\e -> min e (Idx.flip e)) . Topo.structureEdgeFromDirEdge) $
+      fmap CumFlow.flowDTime $
+      Graph.edgeLabels topo)
    <>
    fold (Map.mapWithKey (fromSums equalInOutSums) $ Graph.nodeLabels topo)
    <>
