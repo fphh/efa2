@@ -106,11 +106,11 @@ lists :: Plot2D.T Double Double
 lists =
   Plot2D.list Graph2D.lines [(1, 200.0), (2.7, 160), (4, 700)]
 
+plot :: Plot2D.T Double Double
+plot = Plot.xy id time $ map (Plot.label "bla") [pSig1, pSig2]
+
 main :: IO ()
 main = do
-
-  let plot :: Plot2D.T Double Double
-      plot = Plot.xy id (const "bla") time [pSig1, pSig2]
 
   concurrentlyMany_ [
 

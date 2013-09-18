@@ -371,7 +371,7 @@ main = do
 
   PlotIO.surface "P01" plotTerm (\_ -> "")  varX varY varP01
 
-  PlotIO.xy "N01 - Curve"  plotTerm id (\_ -> "efficiency N01") p10Lin' n01Lin'
+  PlotIO.xy "N01 - Curve" plotTerm id p10Lin' $ PlotIO.label "efficiency N01" n01Lin'
 
   -- Plots to check variable efficiency at storage -- charging
   PlotIO.surface "P13_0 - externe Ladeleistung" plotTerm (\_ -> "") varX varY varP13_0
@@ -381,7 +381,7 @@ main = do
   Rep.report [] ("varP31_0",varP31_0)
 
   PlotIO.surface "N13 - Charging" plotTerm (\_ -> "") varP31_0 varY varN13
-  PlotIO.xy "N13 - Charging"  plotTerm id (\_ -> "efficiency N13") varP31_0 varN13
+  PlotIO.xy "N13 - Charging"  plotTerm id varP31_0 (PlotIO.label "efficiency N13" varN13)
   Rep.report  [] ("N13 - Charging",varN13)
 
 
@@ -393,7 +393,7 @@ main = do
 
   Rep.report  [] ("N31 - Discharging",varN31)
   PlotIO.surface  "N31 - Discharging" plotTerm (\_ -> "")  varP13_1 varY varN31
-  PlotIO.xy "N31 - Discharging" plotTerm id (\_ -> "efficiency N31") varP13_1 varN31
+  PlotIO.xy "N31 - Discharging" plotTerm id varP13_1 $ PlotIO.label "efficiency N31" varN31
 
 
   -- Check Losses
@@ -408,12 +408,12 @@ main = do
   PlotIO.surface "Loss" plotTerm (\_ -> "") varX varY varLoss
 
   -- System loss in curves over split variation for multiple resistance values
-  PlotIO.xy "Loss"  plotTerm id (\_ -> "Loss") varX varLoss
+  PlotIO.xy "Loss"  plotTerm id varX $ PlotIO.label "Loss" varLoss
 
   -- Total System Efficiency
   Rep.report  [] ("EtaSys",etaSysVar)
   PlotIO.surface "EtaSys" plotTerm (\_ -> "") varX varY etaSysVar
-  PlotIO.xy "EtaSys" plotTerm id (\_ -> "EtaSys") varX etaSysVar -- System efficiency in curves over split variation for multiple resistance values
+  PlotIO.xy "EtaSys" plotTerm id varX $ PlotIO.label "EtaSys" etaSysVar -- System efficiency in curves over split variation for multiple resistance values
 
 -- ##################################
 

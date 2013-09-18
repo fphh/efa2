@@ -392,16 +392,6 @@ main = do
       f 1 = "Entladen"
       f _ = error "f"
 
-      g 0 = "Laden"
-      g 1 = "Entladen"
-      g 2 = "maxEtaLinear"
-      g 3 = "Zustand"
-      g _ = error "g"
-
-      h 0 = "Hypothetical Usage"
-      h 1 = "Optimal State"
-      h _ = error "h"
-
   concurrentlyMany_ [
 
     Draw.xterm $
@@ -420,14 +410,17 @@ main = do
       Draw.sequFlowGraph Draw.optionsDefault envHU,
 
 
-    PlotIO.xy "Test" DefaultTerm.cons id g sinkRangeSig2
-              [ maxEtaSys0, maxEtaSys1,
-                maxEtaLinear,
-                Sig.setType $ Sig.map fromIntegral maxEtaSysStateLinear],
+    PlotIO.xy "Test" DefaultTerm.cons id sinkRangeSig2 [
+      PlotIO.label "Laden"        maxEtaSys0,
+      PlotIO.label "Entladen"     maxEtaSys1,
+      PlotIO.label "maxEtaLinear" maxEtaLinear,
+      PlotIO.label "Zustand" $ Sig.setType $
+        Sig.map fromIntegral maxEtaSysStateLinear ],
 
 
-    PlotIO.xy "Optimale Zustände" DefaultTerm.cons id h sinkRangeSig
-              [hypotheticalUsage, Sig.map fromIntegral optimalState],
+    PlotIO.xy "Optimale Zustände" DefaultTerm.cons id sinkRangeSig [
+      PlotIO.label "Hypothetical Usage" hypotheticalUsage,
+      PlotIO.label "Optimal State" $ Sig.map fromIntegral optimalState ],
 
 
     PlotIO.surface "Test" DefaultTerm.cons f varX varY [etaSys0, etaSys1],

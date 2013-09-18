@@ -23,8 +23,8 @@ plot2D ::
   ( S.PSignal [] Double,
     NonEmpty.T [] (S.NSignal [] Double) ) -> IO ()
 plot2D (x, y) =
-  PlotIO.xy "test" Def.cons id (const "eta") x $
-  NonEmpty.flatten y
+  PlotIO.xy "test" Def.cons id x $
+  fmap (PlotIO.label "eta") $ NonEmpty.flatten y
 
 
 main :: IO ()

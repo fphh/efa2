@@ -3,6 +3,7 @@
 
 -- | Module to offer most common plots
 module EFA.Signal.PlotIO (
+   Plot.Labeled, Plot.label,
    signal,
    xy,
    surface, surfaceWithOpts,
@@ -132,9 +133,9 @@ combineWith f ti terminal opts legend x y z0 z1 =
 
 xy ::
    (Plot.XY tcX tcY, Terminal.C term) =>
-   String -> term -> (LineSpec.T -> LineSpec.T)-> (Int -> String) -> tcX -> tcY -> IO ()
-xy ti terminal opts legend x y =
-   Plot.run terminal (Plot.xyFrameAttr ti x y) (Plot.xy opts legend x y)
+   String -> term -> (LineSpec.T -> LineSpec.T)-> tcX -> tcY -> IO ()
+xy ti terminal opts x y =
+   Plot.run terminal (Plot.xyFrameAttr ti x y) (Plot.xy opts x y)
 
 
 -- | Plotting Records ---------------------------------------------------------------
@@ -472,9 +473,9 @@ etaDistr1Dim :: (Fractional d,
 etaDistr1Dim ti p n pDist fDist nDist =
   Plot.run DefaultTerm.cons
   (Plot.xyFrameAttr ti p n) $
-  Plot.xy id (\_ -> "Efficiency Operation Points over Power")  p n <>
-  Plot.xy id (\_ -> "Averaged Efficiency over Power") pDist nDist <>
-  Plot.xy id (\_ -> "Input Energy Distribution over Power") pDist fDist
+  Plot.xy id p (Plot.label "Efficiency Operation Points over Power" n) <>
+  Plot.xy id pDist (Plot.label "Averaged Efficiency over Power" nDist) <>
+  Plot.xy id pDist (Plot.label "Input Energy Distribution over Power" fDist)
 
 
 -- | Plot efficiency distribution from List of Records

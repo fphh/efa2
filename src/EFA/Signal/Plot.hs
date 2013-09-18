@@ -13,6 +13,7 @@ module EFA.Signal.Plot (
    paletteGH, paletteGray, paletteHSV,
    Signal,
    Value,
+   Labeled, label,
    xy,
    xyBasic,
    xyStyle,
@@ -256,6 +257,18 @@ paletteHSV ::
 paletteHSV =
   Opts.add (Opt.custom "palette" "") ["model HSV defined ( 0 0 1 1, 1 1 1 1 )"]
 
+
+data Labeled tc = Labeled String tc
+
+label :: String -> tc -> Labeled tc
+label = Labeled
+
+instance (AxisLabel tc) => AxisLabel (Labeled tc) where
+   type Value (Labeled tc) = Value tc
+   genAxLabel (Labeled _lab x) = genAxLabel x
+
+
+
 xyStyle ::
    (LineSpec.T -> LineSpec.T) -> Plot2D.T x y -> Plot2D.T x y
 xyStyle opts =
@@ -268,8 +281,9 @@ xyStyle opts =
 
 
 class (AxisLabel tcX, AxisLabel tcY) => XY tcX tcY where
-   xy :: (LineSpec.T -> LineSpec.T) ->
-         (Int -> String) -> tcX -> tcY -> Plot2D.T (Value tcX) (Value tcY)
+   xy ::
+      (LineSpec.T -> LineSpec.T) ->
+      tcX -> tcY -> Plot2D.T (Value tcX) (Value tcY)
 
 xyBasic ::
    (TDisp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 x,
@@ -291,7 +305,16 @@ instance
     Atom.C y, Tuple.C y, Fractional y) =>
    XY (TC s t1 (Data (v1 :> Nil) x))
       (TC s t2 (Data (v2 :> Nil) y)) where
-   xy opts legend = xyBasic ((LineSpec.title $ legend 0) . opts)
+   xy = xyBasic
+
+instance
+   (TDisp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 x,
+    TDisp t2, SV.Walker v2, SV.FromList v2, SV.Storage v2 y,
+    Atom.C x, Tuple.C x, Fractional x,
+    Atom.C y, Tuple.C y, Fractional y) =>
+   XY (TC s t1 (Data (v1 :> Nil) x))
+      (Labeled (TC s t2 (Data (v2 :> Nil) y))) where
+   xy opts x (Labeled lab y) = xyBasic (LineSpec.title lab . opts) x y
 
 instance
    ( TDisp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 x,
@@ -300,11 +323,19 @@ instance
      Atom.C y, Tuple.C y, Fractional y ) =>
    XY (TC s t1 (Data (v1 :> Nil) x))
       [TC s t2 (Data (v2 :> Nil) y)] where
-   xy opts legend x ys =
-      mconcat $
-      zipWith
-         (\ n y -> xyBasic ((LineSpec.title $ legend n) . opts) x y)
-         [(0::Int)..] ys
+   xy opts x = foldMap (xyBasic opts x)
+
+instance
+   ( TDisp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 x,
+     TDisp t2, SV.Walker v2, SV.FromList v2, SV.Storage v2 y,
+     Atom.C x, Tuple.C x, Fractional x,
+     Atom.C y, Tuple.C y, Fractional y ) =>
+   XY (TC s t1 (Data (v1 :> Nil) x))
+      [Labeled (TC s t2 (Data (v2 :> Nil) y))] where
+   xy opts x ys =
+      foldMap
+         (\ (Labeled lab y) -> xyBasic (LineSpec.title lab . opts) x y)
+         ys
 
 instance
    (TDisp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 x,
@@ -313,11 +344,21 @@ instance
     Atom.C y, Tuple.C y, Fractional y) =>
    XY [TC s t1 (Data (v1 :> Nil) x)]
       [TC s t2 (Data (v2 :> Nil) y)] where
-   xy opts legend xs ys =
+   xy opts xs ys =
+      mconcat $ zipWith (xyBasic opts) xs ys
+
+instance
+   (TDisp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 x,
+    TDisp t2, SV.Walker v2, SV.FromList v2, SV.Storage v2 y,
+    Atom.C x, Tuple.C x, Fractional x,
+    Atom.C y, Tuple.C y, Fractional y) =>
+   XY [TC s t1 (Data (v1 :> Nil) x)]
+      [Labeled (TC s t2 (Data (v2 :> Nil) y))] where
+   xy opts xs ys =
       mconcat $
-      zipWith3
-         (\ n x y -> xyBasic ((LineSpec.title $ legend n) . opts) x y)
-         [(0::Int)..] xs ys
+      zipWith
+         (\ x (Labeled lab y) -> xyBasic (LineSpec.title lab . opts) x y)
+         xs ys
 
 
 instance
@@ -328,13 +369,11 @@ instance
     Atom.C y, Tuple.C y, Fractional y) =>
    XY (TC s t1 (Data (v1 :> Nil) x))
       (TC s t2 (Data (v3 :> v2 :> Nil) y)) where
-   xy opts legend x y = xy opts legend x (toSigList y)
+   xy opts x y = xy opts x (toSigList y)
 
 instance
-   (TDisp t1,
-    TDisp t2,
-    SV.Walker v1,
-    SV.Walker v3,
+   (TDisp t1, SV.Walker v1,
+    TDisp t2, SV.Walker v3,
     SV.FromList v1, SV.Storage v1 x,
     SV.FromList v3, SV.Storage v3 y,
     SV.FromList v2, SV.Storage v2 (v1 x),
@@ -344,7 +383,22 @@ instance
    XY
       (TC s t1 (Data (v2 :> v1 :> Nil) x))
       (TC s t2 (Data (v4 :> v3 :> Nil) y)) where
-   xy opts legend x y = xy opts legend (toSigList x) (toSigList y)
+   xy opts x y = xy opts (toSigList x) (toSigList y)
+
+instance
+   (TDisp t1, SV.Walker v1,
+    TDisp t2, SV.Walker v3,
+    SV.FromList v1, SV.Storage v1 x,
+    SV.FromList v3, SV.Storage v3 y,
+    SV.FromList v2, SV.Storage v2 (v1 x),
+    SV.FromList v4, SV.Storage v4 (v3 y),
+    Atom.C x, Tuple.C x, Fractional x,
+    Atom.C y, Tuple.C y, Fractional y) =>
+   XY
+      (TC s t1 (Data (v2 :> v1 :> Nil) x))
+      (Labeled (TC s t2 (Data (v4 :> v3 :> Nil) y))) where
+   xy opts x (Labeled lab y) =
+      xy opts (toSigList x) (map (Labeled lab) $ toSigList y)
 
 
 -- | Plotting Records ---------------------------------------------------------------
