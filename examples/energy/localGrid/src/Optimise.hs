@@ -95,14 +95,6 @@ frameOpts =
   Plot.xyzlabel "Rest Power [W]" "Local Power [W]" "" .
   Plot.paletteGH
 
-noLegend :: Int -> String
-noLegend =  (const "")
-
-legend :: Int -> String
-legend 0 = "Laden"
-legend 1 = "Entladen"
-legend _ = "Undefined"
-
 scaleTableEta :: Map String (Double, Double)
 scaleTableEta = Map.fromList $
   ("storage",     (1, 0.8)) :
@@ -378,7 +370,7 @@ main = do
            --(PNG.cons ("waterpics/optimal_water_power" ++ printf "%02d" n ++ ".png"))
            DefaultTerm.cons
            id
-           frameOpts noLegend varRestPower varLocalPower
+           frameOpts varRestPower varLocalPower
            pic
 
 
@@ -387,7 +379,7 @@ main = do
            --(PNG.cons ("gaspics/optimal_gas_power" ++ printf "%02d" n ++ ".png"))
            DefaultTerm.cons
            id
-           frameOpts noLegend varRestPower varLocalPower
+           frameOpts varRestPower varLocalPower
            pic
 
 
@@ -396,14 +388,14 @@ main = do
            --(PNG.cons ("statepics/state_matrix" ++ printf "%02d" n ++ ".png"))
            DefaultTerm.cons
            id
-           frameOpts noLegend varRestPower varLocalPower
+           frameOpts varRestPower varLocalPower
            pic
 
        plotetasyspng n pic =
          PlotIO.surfaceWithOpts "System Efficiency [%]"
            (PNG.cons ("etasys/etasys" ++ printf "%02d" n ++ ".png"))
            id
-           frameOpts noLegend varRestPower varLocalPower
+           frameOpts varRestPower varLocalPower
            pic
 
 
@@ -698,37 +690,37 @@ main = do
 -}
      Draw.xterm $ Draw.sequFlowGraph System.seqTopoOpt,
 
-     PlotIO.surfaceWithOpts "Optimal System Efficiency" DefaultTerm.cons id frameOpts noLegend varRestPower varLocalPower etaSysMax,
+     PlotIO.surfaceWithOpts "Optimal System Efficiency" DefaultTerm.cons id frameOpts varRestPower varLocalPower etaSysMax,
 
 
-     PlotIO.surfaceWithOpts "Optimal State" DefaultTerm.cons id frameOpts noLegend varRestPower varLocalPower maxEtaSysState,
+     PlotIO.surfaceWithOpts "Optimal State" DefaultTerm.cons id frameOpts varRestPower varLocalPower maxEtaSysState,
 
-     PlotIO.surfaceWithOpts "Charging Optimal System Efficiency " DefaultTerm.cons id frameOpts noLegend varRestPower varLocalPower maxETACharge,
-     PlotIO.surfaceWithOpts "Discharging Optimal System Efficiency " DefaultTerm.cons id frameOpts noLegend varRestPower varLocalPower maxETADischarge,
+     PlotIO.surfaceWithOpts "Charging Optimal System Efficiency " DefaultTerm.cons id frameOpts varRestPower varLocalPower maxETACharge,
+     PlotIO.surfaceWithOpts "Discharging Optimal System Efficiency " DefaultTerm.cons id frameOpts varRestPower varLocalPower maxETADischarge,
 
-     --PlotIO.surface "Discharging Optimal System Efficiency " DefaultTerm.cons id noLegend varRestPower varLocalPower maxETADischarge,
-
-
-
-     PlotIO.surfaceWithOpts "Charging Optimal Gas Power" DefaultTerm.cons id frameOpts noLegend varRestPower varLocalPower powerGasChargeOpt,
-     PlotIO.surfaceWithOpts "Charging Optimal Water Power" DefaultTerm.cons id frameOpts noLegend varRestPower varLocalPower powerWaterChargeOpt,
+     --PlotIO.surface "Discharging Optimal System Efficiency " DefaultTerm.cons id varRestPower varLocalPower maxETADischarge,
 
 
---     PlotIO.surface "Discharging" DefaultTerm.cons id noLegend varRestPower varLocalPower maxETADischarge,
+
+     PlotIO.surfaceWithOpts "Charging Optimal Gas Power" DefaultTerm.cons id frameOpts varRestPower varLocalPower powerGasChargeOpt,
+     PlotIO.surfaceWithOpts "Charging Optimal Water Power" DefaultTerm.cons id frameOpts varRestPower varLocalPower powerWaterChargeOpt,
 
 
-     PlotIO.surfaceWithOpts "Discharging Optimal Gas Power " DefaultTerm.cons id frameOpts noLegend varRestPower varLocalPower powerGasDischargeOpt,
-     PlotIO.surfaceWithOpts "Discharging Optimal Water Power " DefaultTerm.cons id frameOpts noLegend varRestPower varLocalPower powerWaterDischargeOpt,
-
-     PlotIO.surfaceWithOpts "Optimal Water Power" DefaultTerm.cons id frameOpts noLegend varRestPower varLocalPower optWater,
-     PlotIO.surfaceWithOpts "Optimal Gas Power" DefaultTerm.cons id frameOpts noLegend varRestPower varLocalPower optGas,
+--     PlotIO.surface "Discharging" DefaultTerm.cons id varRestPower varLocalPower maxETADischarge,
 
 
-     PlotIO.surfaceWithOpts "Transformer Power Charge HV " DefaultTerm.cons id frameOpts noLegend varRestPower varLocalPower powerTransformerChargeOpt,
-     PlotIO.surfaceWithOpts "Transformer Power DisCharge HV" DefaultTerm.cons id frameOpts noLegend varRestPower varLocalPower powerTransformerDischargeOpt,
+     PlotIO.surfaceWithOpts "Discharging Optimal Gas Power " DefaultTerm.cons id frameOpts varRestPower varLocalPower powerGasDischargeOpt,
+     PlotIO.surfaceWithOpts "Discharging Optimal Water Power " DefaultTerm.cons id frameOpts varRestPower varLocalPower powerWaterDischargeOpt,
 
-     PlotIO.surfaceWithOpts "Transformer Power Charge LV " DefaultTerm.cons id frameOpts noLegend varRestPower varLocalPower powerTransformerChargeOptLV,
-     PlotIO.surfaceWithOpts "Transformer Power DisCharge LV" DefaultTerm.cons id frameOpts noLegend varRestPower varLocalPower powerTransformerDischargeOptLV,
+     PlotIO.surfaceWithOpts "Optimal Water Power" DefaultTerm.cons id frameOpts varRestPower varLocalPower optWater,
+     PlotIO.surfaceWithOpts "Optimal Gas Power" DefaultTerm.cons id frameOpts varRestPower varLocalPower optGas,
+
+
+     PlotIO.surfaceWithOpts "Transformer Power Charge HV " DefaultTerm.cons id frameOpts varRestPower varLocalPower powerTransformerChargeOpt,
+     PlotIO.surfaceWithOpts "Transformer Power DisCharge HV" DefaultTerm.cons id frameOpts varRestPower varLocalPower powerTransformerDischargeOpt,
+
+     PlotIO.surfaceWithOpts "Transformer Power Charge LV " DefaultTerm.cons id frameOpts varRestPower varLocalPower powerTransformerChargeOptLV,
+     PlotIO.surfaceWithOpts "Transformer Power DisCharge LV" DefaultTerm.cons id frameOpts varRestPower varLocalPower powerTransformerDischargeOptLV,
 
      -- PlotIO.xy "Operation" DefaultTerm.cons id show powerSignalRest powerSignalLocal,
 

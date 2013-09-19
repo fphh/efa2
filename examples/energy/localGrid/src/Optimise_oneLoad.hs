@@ -6,8 +6,8 @@ import qualified Modules.Optimisation as Optimisation
 import qualified Modules.System as System
 import Modules.Optimisation (sec0,sec1)
 import Modules.System (Node(..))
-import Modules.Utility as ModUt
 
+import qualified EFA.Application.Utility as ModUt
 import qualified EFA.Application.Absolute as EqGen
 import qualified EFA.Flow.Sequence.Index as XIdx
 
@@ -75,14 +75,6 @@ varWaterPower = Sig.fromList2 varWaterPower'
 
 varGasPower :: Sig.PSignal2 [] [] Double
 varGasPower = Sig.fromList2 varGasPower'
-
-noLegend :: Int -> String
-noLegend =  (const "")
-
-legend :: Int -> String
-legend 0 = "Laden"
-legend 1 = "Entladen"
-legend _ = "Undefined"
 
 legendEnergy :: Int -> String
 legendEnergy 0 = "eRest0"
@@ -174,10 +166,10 @@ main = do
      eCoalCharge1 = Sig.setType $ Sig.map (ModUt.lookupAbsEnergy (XIdx.energy sec1 Coal Network)) envsCharge
 
      eRestCharge1 :: Sig.FTestRow2 [] [] Double
-     eRestCharge1 = Sig.setType $ Sig.map (lookupAbsEnergy (XIdx.energy sec1 Rest Network)) envsCharge
+     eRestCharge1 = Sig.setType $ Sig.map (ModUt.lookupAbsEnergy (XIdx.energy sec1 Rest Network)) envsCharge
 
      eRestLocalCharge1 :: Sig.FTestRow2 [] [] Double
-     eRestLocalCharge1 = Sig.setType $ Sig.map (lookupAbsEnergy (XIdx.energy sec1 LocalRest LocalNetwork)) envsCharge
+     eRestLocalCharge1 = Sig.setType $ Sig.map (ModUt.lookupAbsEnergy (XIdx.energy sec1 LocalRest LocalNetwork)) envsCharge
 
      eGasDischarge0 :: Sig.FTestRow2 [] [] Double
      eGasDischarge0 = Sig.setType $ Sig.map (ModUt.lookupAbsEnergy (XIdx.energy sec0 Gas LocalNetwork)) envsDischarge
@@ -297,21 +289,23 @@ powerLoeDischarge =  Sig.setType $ Sig.map (\x -> gasPower L.!! x) $ indexLoeDis
      Draw.sequFlowGraphAbsWithEnv System.seqTopoOpt $
      EqGen.solve System.seqTopoOpt $ Optimisation.givenDischarging etaWaterCharge etaCoal etaGas etaTransHL 1 1 1 1,
 
-     PlotIO.surface "Optimiere Laden - eRestCharge0" DefaultTerm.cons id (const "") varWaterPower varGasPower eRestCharge0,
-     PlotIO.surface "Optimiere Laden - eRestCharge1" DefaultTerm.cons id (const "") varWaterPower varGasPower eRestCharge0,
-     PlotIO.surface "Optimiere Laden - eRestLocalCharge0" DefaultTerm.cons id (const "") varWaterPower varGasPower eRestLocalCharge0,
-     PlotIO.surface "Optimiere Laden - eRestLocalCharge1" DefaultTerm.cons id (const "") varWaterPower varGasPower eRestLocalCharge1,
+     PlotIO.surface "Optimiere Laden - eRestCharge0" DefaultTerm.cons id varWaterPower varGasPower eRestCharge0,
+     PlotIO.surface "Optimiere Laden - eRestCharge1" DefaultTerm.cons id varWaterPower varGasPower eRestCharge0,
+     PlotIO.surface "Optimiere Laden - eRestLocalCharge0" DefaultTerm.cons id varWaterPower varGasPower eRestLocalCharge0,
+     PlotIO.surface "Optimiere Laden - eRestLocalCharge1" DefaultTerm.cons id varWaterPower varGasPower eRestLocalCharge1,
 
 
-     PlotIO.surface "System Efficiency Charging" DefaultTerm.cons id (const "") varWaterPower varGasPower etaSysDischarge,
-     PlotIO.surface "System Efficiency Discharging" DefaultTerm.cons id (const "") varWaterPower varGasPower etaSysCharge,
-     PlotIO.surface "System Efficiency Charging and Discharging" DefaultTerm.cons id legend varWaterPower varGasPower [etaSysCharge, etaSysDischarge]]
+     PlotIO.surface "System Efficiency Charging" DefaultTerm.cons id varWaterPower varGasPower etaSysDischarge,
+     PlotIO.surface "System Efficiency Discharging" DefaultTerm.cons id varWaterPower varGasPower etaSysCharge,
+     PlotIO.surface "System Efficiency Charging and Discharging" DefaultTerm.cons id varWaterPower varGasPower
+       [PlotIO.label "Laden" etaSysCharge,
+        PlotIO.label "Entladen" etaSysDischarge]]
 {-
-    PlotIO.surface "Maximum System Efficiency " DefaultTerm.cons id noLegend varWaterPower varGasPower etaSysMax,
-    PlotIO.surface "Maximum System Efficiency " DefaultTerm.cons id noLegend varWaterPower varGasPower maxEtaSysState,
-    PlotIO.xy "Efficiency on Loe" DefaultTerm.cons id noLegend varWaterPowerSig [etaLoeCharge, etaLoeDischarge],
-    PlotIO.xy "Loe Index" DefaultTerm.cons id noLegend varWaterPowerSig [indexLoeChargePlot, indexLoeDischargePlot],
-    PlotIO.xy "Loe GasPower" DefaultTerm.cons id noLegend varWaterPowerSig [powerLoeCharge, powerLoeDischarge]
+    PlotIO.surface "Maximum System Efficiency " DefaultTerm.cons id varWaterPower varGasPower etaSysMax,
+    PlotIO.surface "Maximum System Efficiency " DefaultTerm.cons id varWaterPower varGasPower maxEtaSysState,
+    PlotIO.xy "Efficiency on Loe" DefaultTerm.cons id varWaterPowerSig [etaLoeCharge, etaLoeDischarge],
+    PlotIO.xy "Loe Index" DefaultTerm.cons id varWaterPowerSig [indexLoeChargePlot, indexLoeDischargePlot],
+    PlotIO.xy "Loe GasPower" DefaultTerm.cons id varWaterPowerSig [powerLoeCharge, powerLoeDischarge]
     ]
 
 -}

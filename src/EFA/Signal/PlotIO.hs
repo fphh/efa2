@@ -101,18 +101,18 @@ surfaceWithOpts ::
   (LineSpec.T -> LineSpec.T) ->
   (Opts.T (Graph3D.T (Plot.Value tcX) (Plot.Value tcY) (Plot.Value tcZ)) ->
     Opts.T (Graph3D.T (Plot.Value tcX) (Plot.Value tcY) (Plot.Value tcZ))) ->
-  (Int -> String) ->
   tcX -> tcY -> tcZ -> IO ()
-surfaceWithOpts ti terminal opts fopts legend x y z =
-  Plot.run terminal (fopts $ Plot.xyFrameAttr ti x y)
-                    (Plot.surface opts legend x y z)
+surfaceWithOpts ti terminal opts fopts x y z =
+  Plot.run terminal
+    (fopts $ Plot.xyFrameAttr ti x y)
+    (Plot.surface opts x y z)
 
 surface ::
   (Plot.Surface tcX tcY tcZ, Terminal.C term) =>
   String -> term ->
-  (Int -> String) ->
   tcX -> tcY -> tcZ -> IO ()
-surface ti terminal legend x y z = surfaceWithOpts ti terminal id id legend x y z
+surface ti terminal x y z =
+  surfaceWithOpts ti terminal id id x y z
 
 {-
 combineWith ::

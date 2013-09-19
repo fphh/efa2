@@ -17,7 +17,7 @@ plot3D ::
   ( S.UTSignal2 [] [] Double,
     S.PSignal2 [] [] Double,
     S.NSignal2 [] [] Double ) -> IO ()
-plot3D (x, y, z) = PlotIO.surface "test" Def.cons (\_->"") x y z
+plot3D (x, y, z) = PlotIO.surface "test" Def.cons x y z
 
 plot2D ::
   ( S.PSignal [] Double,

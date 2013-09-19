@@ -388,9 +388,10 @@ main = do
 
       envHU = EqSys.solve (flowGraphFunc secs) $ givenEnvHU secSigsHU
 
-      f 0 = "Laden"
-      f 1 = "Entladen"
-      f _ = error "f"
+      labeledEtaSys =
+        PlotIO.label "Laden" etaSys0 :
+        PlotIO.label "Entladen" etaSys1 :
+        []
 
   concurrentlyMany_ [
 
@@ -423,17 +424,17 @@ main = do
       PlotIO.label "Optimal State" $ Sig.map fromIntegral optimalState ],
 
 
-    PlotIO.surface "Test" DefaultTerm.cons f varX varY [etaSys0, etaSys1],
+    PlotIO.surface "Test" DefaultTerm.cons varX varY labeledEtaSys,
     PlotIO.surface "Systemwirkungsgrad Entladen"
-                   DefaultTerm.cons (const "") varX varY etaSys0,
+                   DefaultTerm.cons varX varY etaSys0,
     PlotIO.surface "Systemwirkungsgrad Laden"
-                   DefaultTerm.cons (const "") varX varY etaSys1,
+                   DefaultTerm.cons varX varY etaSys1,
     PlotIO.surface "Systemwirkungsgrad Laden und Entladen"
-                   DefaultTerm.cons f varX varY [etaSys0, etaSys1],
+                   DefaultTerm.cons varX varY labeledEtaSys,
     PlotIO.surface "Maximaler Systemwirkungsgrad"
-
-                   DefaultTerm.cons (const "Max") varX varY maxEtaSys,
-    PlotIO.surface "Test" DefaultTerm.cons (const "Max") varX varY maxEtaSysState ]
+                   DefaultTerm.cons varX varY (PlotIO.label "Max" maxEtaSys),
+    PlotIO.surface "Test"
+                   DefaultTerm.cons varX varY (PlotIO.label "Max" maxEtaSysState) ]
 
 {-
 main2 :: IO ()
