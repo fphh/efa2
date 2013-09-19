@@ -6,6 +6,7 @@
 module Main where
 
 import qualified EFA.Application.Topology.TripodB as Tripod
+import qualified EFA.Application.Plot as PlotIO
 import EFA.Application.Topology.TripodB (Node, source, crossing, sink, storage)
 import EFA.Application.Utility (select)
 
@@ -25,7 +26,6 @@ import qualified EFA.Graph as Graph; import EFA.Graph (Graph)
 import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.ConvertTable as Table
 import qualified EFA.Signal.Data as D
-import qualified EFA.Signal.PlotIO as PlotIO
 import EFA.Signal.Typ (Typ,A,P,Tt)
 import EFA.Signal.Data (Data, Nil, (:>))
 

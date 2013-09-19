@@ -1,8 +1,9 @@
 
 module Main where
 
+import qualified EFA.Application.Plot as PlotIO
+
 import qualified EFA.IO.TableParser as Table
-import qualified EFA.Signal.PlotIO as PlotIO
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.ConvertTable as CT
 import EFA.Utility.Map (checkedLookup)

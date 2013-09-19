@@ -16,6 +16,7 @@ import Modules.Optimisation (EnvDouble, sec0,sec1, SocDrive(..), lookupDetPower,
 import qualified EFA.Application.Sweep as Sweep
 import qualified EFA.Application.Utility as AppUt
 import qualified EFA.Application.Absolute as EqGen
+import qualified EFA.Application.Plot as PlotIO
 import EFA.Application.Optimisation (etaOverPowerIn, etaOverPowerOut)
 import EFA.Application.Utility (select)
 
@@ -33,7 +34,6 @@ import qualified EFA.Equation.Environment as EqEnv
 import EFA.Equation.Result (Result(..))
 
 import qualified EFA.Signal.Record as Record
-import qualified EFA.Signal.PlotIO as PlotIO
 import qualified EFA.Signal.Plot as Plot
 --import qualified EFA.Signal.Data as Data
 import qualified EFA.Signal.ConvertTable as CT
@@ -709,17 +709,17 @@ main = do
 --     PlotIO.surface "Discharging" DefaultTerm.cons id varRestPower varLocalPower maxETADischarge,
 
 
-     PlotIO.surfaceWithOpts "Discharging Optimal Gas Power " DefaultTerm.cons id frameOpts varRestPower varLocalPower powerGasDischargeOpt,
-     PlotIO.surfaceWithOpts "Discharging Optimal Water Power " DefaultTerm.cons id frameOpts varRestPower varLocalPower powerWaterDischargeOpt,
+     PlotIO.surfaceWithOpts "Discharging Optimal Gas Power" DefaultTerm.cons id frameOpts varRestPower varLocalPower powerGasDischargeOpt,
+     PlotIO.surfaceWithOpts "Discharging Optimal Water Power" DefaultTerm.cons id frameOpts varRestPower varLocalPower powerWaterDischargeOpt,
 
      PlotIO.surfaceWithOpts "Optimal Water Power" DefaultTerm.cons id frameOpts varRestPower varLocalPower optWater,
      PlotIO.surfaceWithOpts "Optimal Gas Power" DefaultTerm.cons id frameOpts varRestPower varLocalPower optGas,
 
 
-     PlotIO.surfaceWithOpts "Transformer Power Charge HV " DefaultTerm.cons id frameOpts varRestPower varLocalPower powerTransformerChargeOpt,
+     PlotIO.surfaceWithOpts "Transformer Power Charge HV" DefaultTerm.cons id frameOpts varRestPower varLocalPower powerTransformerChargeOpt,
      PlotIO.surfaceWithOpts "Transformer Power DisCharge HV" DefaultTerm.cons id frameOpts varRestPower varLocalPower powerTransformerDischargeOpt,
 
-     PlotIO.surfaceWithOpts "Transformer Power Charge LV " DefaultTerm.cons id frameOpts varRestPower varLocalPower powerTransformerChargeOptLV,
+     PlotIO.surfaceWithOpts "Transformer Power Charge LV" DefaultTerm.cons id frameOpts varRestPower varLocalPower powerTransformerChargeOptLV,
      PlotIO.surfaceWithOpts "Transformer Power DisCharge LV" DefaultTerm.cons id frameOpts varRestPower varLocalPower powerTransformerDischargeOptLV,
 
      -- PlotIO.xy "Operation" DefaultTerm.cons id show powerSignalRest powerSignalLocal,

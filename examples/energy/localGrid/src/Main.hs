@@ -5,6 +5,7 @@ import qualified Modules.Signals as Signals
 import qualified Modules.System as System
 import qualified Modules.Analysis as Analysis
 
+import qualified EFA.Application.Plot as PlotIO
 import EFA.Application.Utility (checkDetermined)
 
 import qualified EFA.Flow.Sequence.Index as XIdx
@@ -16,7 +17,6 @@ import EFA.Equation.Result (Result)
 
 import qualified EFA.Signal.SequenceData as SD
 import qualified EFA.Signal.Record as Record
-import qualified EFA.Signal.PlotIO as PlotIO
 import EFA.Signal.Signal (TC(..), Scalar,toScalar)
 import EFA.Signal.Data (Data(..), Nil, (:>))
 import EFA.Signal.Typ (Typ, F, T, A, Tt)

@@ -9,6 +9,8 @@ import Modules.System (Node(..))
 
 import qualified EFA.Application.Utility as ModUt
 import qualified EFA.Application.Absolute as EqGen
+import qualified EFA.Application.Plot as PlotIO
+
 import qualified EFA.Flow.Sequence.Index as XIdx
 
 import qualified EFA.Graph.Draw as Draw
@@ -16,7 +18,6 @@ import qualified EFA.Graph.Draw as Draw
 import EFA.Utility.Async (concurrentlyMany_)
 
 import qualified EFA.Signal.ConvertTable as CT
-import qualified EFA.Signal.PlotIO as PlotIO
 import qualified EFA.Signal.Signal as Sig
 
 import qualified EFA.Equation.Environment as EqEnv

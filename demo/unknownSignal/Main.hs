@@ -3,10 +3,10 @@
 
 module Main where
 
+import qualified EFA.Application.Plot as PlotIO
 import EFA.Application.Utility ( topologyFromEdges, seqFlowGraphFromStates )
 
 import qualified EFA.Signal.Signal as Sig
-import qualified EFA.Signal.PlotIO as PlotIO
 import qualified EFA.Signal.Record as Rec
 import qualified EFA.Signal.Data as Data
 import EFA.Signal.Data (Data, (:>), Nil)

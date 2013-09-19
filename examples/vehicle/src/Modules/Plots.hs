@@ -5,10 +5,10 @@
 module Modules.Plots where
 
 import qualified EFA.Application.AssignMap as AssignMap
+import qualified EFA.Application.Plot as PlotIO
 
 import qualified EFA.Flow.Sequence.Index as SeqIdx
 
-import qualified EFA.Signal.PlotIO as PlotIO
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Vector as V
 

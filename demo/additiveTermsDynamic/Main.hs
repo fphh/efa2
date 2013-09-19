@@ -4,6 +4,7 @@ module Main where
 import qualified EFA.Application.AssignMap as AssignMap
 import qualified EFA.Application.Symbolic as Symbolic
 import qualified EFA.Application.Topology.LinearTwo as LinearTwo
+import qualified EFA.Application.Plot as PlotIO
 import EFA.Application.Topology.LinearTwo (Node, node0, node1, node2)
 import EFA.Application.Utility (seqFlowGraphFromStates)
 
@@ -24,8 +25,6 @@ import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Stack (Stack)
 
 import qualified EFA.Graph.Topology.Index as Idx
-
-import qualified EFA.Signal.PlotIO as PlotIO
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)

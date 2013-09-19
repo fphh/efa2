@@ -18,6 +18,7 @@ import qualified EFA.Application.Sweep as Sweep
 import qualified EFA.Application.Optimisation as AppOpt
 import qualified EFA.Application.Simulation as AppSim
 import qualified EFA.Application.Absolute as AppAbs
+import qualified EFA.Application.Plot as PlotIO
 import qualified EFA.Application.Utility as AppUt
 
 import qualified EFA.Flow.Sequence.Index as SeqIdx
@@ -31,7 +32,6 @@ import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 
 import qualified EFA.Signal.Signal as Sig; import EFA.Signal.Signal (TC,Scalar)
-import qualified EFA.Signal.PlotIO as PlotIO
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Sequence as Seq
 import qualified EFA.Signal.SequenceData as SD

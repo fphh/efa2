@@ -2,7 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 
 -- | Module to offer most common plots
-module EFA.Signal.PlotIO (
+module EFA.Application.Plot (
    Plot.Labeled, Plot.label,
    signal,
    xy,

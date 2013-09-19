@@ -82,7 +82,6 @@ Library
     EFA.Signal.SignalFill
     EFA.Signal.Sequence
     EFA.Signal.Colour
-    EFA.Signal.PlotIO
     EFA.Signal.Plot
     EFA.Signal.ConvertTable
     EFA.Symbolic.OperatorTree
@@ -142,6 +141,7 @@ Library
     EFA.Application.Symbolic
     EFA.Application.NestedDelta
     EFA.Application.AssignMap
+    EFA.Application.Plot
     EFA.Application.Tree
     EFA.Application.EtaSys
     EFA.Application.Balance

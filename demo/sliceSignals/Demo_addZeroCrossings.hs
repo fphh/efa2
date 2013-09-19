@@ -2,9 +2,10 @@
 
 module Main where
 
+import qualified EFA.Application.Plot as PlotIO
+
 import qualified EFA.Flow.Sequence.Index as XIdx
 
-import qualified EFA.Signal.PlotIO as PlotIO
 import EFA.Signal.Sequence
 import EFA.Signal.Record
 import EFA.Signal.Signal as S

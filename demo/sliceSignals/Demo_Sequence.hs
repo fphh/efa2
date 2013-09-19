@@ -3,6 +3,8 @@
 
 module Main where
 
+import qualified EFA.Application.Plot as PlotIO
+
 import qualified EFA.Flow.Sequence.Index as XIdx
 
 import qualified EFA.Signal.Signal as S
@@ -10,12 +12,8 @@ import qualified EFA.Signal.Sequence as Sequ
 
 import EFA.Signal.SequenceData (SequData)
 import EFA.Signal.Record (PowerRecord, Record(Record))
-
-
-
 import EFA.Signal.Signal (PSigL, (.++))
 import EFA.Signal.Base (Val)
-import qualified EFA.Signal.PlotIO as PlotIO
 
 import qualified Data.Map as Map
 import Data.Map (Map)
