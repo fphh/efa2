@@ -304,15 +304,6 @@ instance
     Atom.C x, Tuple.C x, Fractional x,
     Atom.C y, Tuple.C y, Fractional y) =>
    XY (TC s t1 (Data (v1 :> Nil) x))
-      (TC s t2 (Data (v2 :> Nil) y)) where
-   xy = xyBasic
-
-instance
-   (TDisp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 x,
-    TDisp t2, SV.Walker v2, SV.FromList v2, SV.Storage v2 y,
-    Atom.C x, Tuple.C x, Fractional x,
-    Atom.C y, Tuple.C y, Fractional y) =>
-   XY (TC s t1 (Data (v1 :> Nil) x))
       (Labeled (TC s t2 (Data (v2 :> Nil) y))) where
    xy opts x (Labeled lab y) = xyBasic (LineSpec.title lab . opts) x y
 
@@ -322,30 +313,10 @@ instance
      Atom.C x, Tuple.C x, Fractional x,
      Atom.C y, Tuple.C y, Fractional y ) =>
    XY (TC s t1 (Data (v1 :> Nil) x))
-      [TC s t2 (Data (v2 :> Nil) y)] where
-   xy opts x = foldMap (xyBasic opts x)
-
-instance
-   ( TDisp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 x,
-     TDisp t2, SV.Walker v2, SV.FromList v2, SV.Storage v2 y,
-     Atom.C x, Tuple.C x, Fractional x,
-     Atom.C y, Tuple.C y, Fractional y ) =>
-   XY (TC s t1 (Data (v1 :> Nil) x))
       [Labeled (TC s t2 (Data (v2 :> Nil) y))] where
-   xy opts x ys =
+   xy opts x =
       foldMap
          (\ (Labeled lab y) -> xyBasic (LineSpec.title lab . opts) x y)
-         ys
-
-instance
-   (TDisp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 x,
-    TDisp t2, SV.Walker v2, SV.FromList v2, SV.Storage v2 y,
-    Atom.C x, Tuple.C x, Fractional x,
-    Atom.C y, Tuple.C y, Fractional y) =>
-   XY [TC s t1 (Data (v1 :> Nil) x)]
-      [TC s t2 (Data (v2 :> Nil) y)] where
-   xy opts xs ys =
-      mconcat $ zipWith (xyBasic opts) xs ys
 
 instance
    (TDisp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 x,
@@ -359,31 +330,6 @@ instance
       zipWith
          (\ x (Labeled lab y) -> xyBasic (LineSpec.title lab . opts) x y)
          xs ys
-
-
-instance
-   (TDisp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 x,
-    TDisp t2, SV.Walker v2, SV.FromList v2, SV.Storage v2 y,
-    SV.FromList v3, SV.Storage v3 (v2 y),
-    Atom.C x, Tuple.C x, Fractional x,
-    Atom.C y, Tuple.C y, Fractional y) =>
-   XY (TC s t1 (Data (v1 :> Nil) x))
-      (TC s t2 (Data (v3 :> v2 :> Nil) y)) where
-   xy opts x y = xy opts x (toSigList y)
-
-instance
-   (TDisp t1, SV.Walker v1,
-    TDisp t2, SV.Walker v3,
-    SV.FromList v1, SV.Storage v1 x,
-    SV.FromList v3, SV.Storage v3 y,
-    SV.FromList v2, SV.Storage v2 (v1 x),
-    SV.FromList v4, SV.Storage v4 (v3 y),
-    Atom.C x, Tuple.C x, Fractional x,
-    Atom.C y, Tuple.C y, Fractional y) =>
-   XY
-      (TC s t1 (Data (v2 :> v1 :> Nil) x))
-      (TC s t2 (Data (v4 :> v3 :> Nil) y)) where
-   xy opts x y = xy opts (toSigList x) (toSigList y)
 
 instance
    (TDisp t1, SV.Walker v1,
