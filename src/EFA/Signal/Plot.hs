@@ -175,17 +175,6 @@ instance
    signal opts x =
       fmap (signalStyle opts) $ Plot2D.list Graph2D.listLines $ getData x
 
-instance (Signal tc) => Signal [tc]  where
-   signal opts =  foldMap (signal opts)
-
-instance
-   (TDisp t,
-    SV.Walker v1, SV.FromList v1, SV.Storage v1 y,
-    SV.FromList v2, SV.Storage v2 (v1 y),
-    Atom.C y, Tuple.C y, Fractional y) =>
-      Signal (TC s t (Data (v2 :> v1 :> Nil) y))  where
-   signal opts x = signal opts $ toSigList x
-
 
 -- | Plotting Signals against each other, can be also used for time plots and curves over power -----------------------------
 
