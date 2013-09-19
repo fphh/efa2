@@ -5,9 +5,10 @@
 
 module Main where
 
-import qualified EFA.Application.Topology.TripodB as Tripod
+import qualified EFA.Example.Topology.TripodB as Tripod
+import EFA.Example.Topology.TripodB (Node, source, crossing, sink, storage)
+
 import qualified EFA.Application.Plot as PlotIO
-import EFA.Application.Topology.TripodB (Node, source, crossing, sink, storage)
 import EFA.Application.Utility (select)
 
 import qualified EFA.Flow.Sequence.Absolute as EqSys

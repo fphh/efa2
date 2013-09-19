@@ -2,8 +2,8 @@
 
 module Main where
 
-import qualified EFA.Application.Topology.LinearOne as LinearOne
-import EFA.Application.Topology.LinearOne (Node(Sink, Source))
+import qualified EFA.Example.Topology.LinearOne as LinearOne
+import EFA.Example.Topology.LinearOne (Node(Sink, Source))
 import EFA.Application.Utility (seqFlowGraphFromStates, checkDetermined)
 
 import qualified EFA.Flow.Sequence.Absolute as EqSys

@@ -1,8 +1,9 @@
 
 module Main where
 
-import qualified EFA.Application.Topology.TripodB as Tripod
-import EFA.Application.Topology.TripodB (Node, node0, node1, node2, node3)
+import qualified EFA.Example.Topology.TripodB as Tripod
+import EFA.Example.Topology.TripodB (Node, node0, node1, node2, node3)
+
 import EFA.Application.Utility ( seqFlowGraphFromStates, )
 
 import qualified EFA.Flow.Sequence.Absolute as EqSys

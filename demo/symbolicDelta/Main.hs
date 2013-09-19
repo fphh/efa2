@@ -1,8 +1,9 @@
 module Main where
 
-import qualified EFA.Application.Topology.TripodA as Tripod
+import qualified EFA.Example.Topology.TripodA as Tripod
+import EFA.Example.Topology.TripodA (Node, node0, node1, node2, node3)
+
 import qualified EFA.Application.Symbolic as Symbolic
-import EFA.Application.Topology.TripodA (Node, node0, node1, node2, node3)
 import EFA.Application.Symbolic ((=<>), (.=))
 import EFA.Application.Utility (seqFlowGraphFromStates)
 

@@ -3,8 +3,9 @@
 
 module EFA.Test.EquationSystem.Given where
 
-import qualified EFA.Application.Topology.TripodA as Tripod
-import EFA.Application.Topology.TripodA (Node, node0, node1, node2, node3)
+import qualified EFA.Example.Topology.TripodA as Tripod
+import EFA.Example.Topology.TripodA (Node, node0, node1, node2, node3)
+
 import EFA.Application.Utility ( seqFlowGraphFromStates )
 
 import qualified EFA.Flow.Sequence.Absolute as EqSys

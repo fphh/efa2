@@ -1,9 +1,10 @@
 {-# LANGUAGE Rank2Types #-}
 module Main where
 
-import qualified EFA.Application.Topology.LinearOne as Linear
+import qualified EFA.Example.Topology.LinearOne as Linear
+import EFA.Example.Topology.LinearOne (Node(Source, Sink))
+
 import qualified EFA.Application.Symbolic as Symbolic
-import EFA.Application.Topology.LinearOne (Node(Source, Sink))
 import EFA.Application.Symbolic ((=<>))
 import EFA.Application.Utility (seqFlowGraphFromStates)
 

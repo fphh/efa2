@@ -149,10 +149,10 @@ Library
     EFA.Application.Sweep
     EFA.Application.Simulation
     EFA.Application.OneStorage
-    EFA.Application.Topology.LinearOne
-    EFA.Application.Topology.LinearTwo
-    EFA.Application.Topology.TripodA
-    EFA.Application.Topology.TripodB
+    EFA.Example.Topology.LinearOne
+    EFA.Example.Topology.LinearTwo
+    EFA.Example.Topology.TripodA
+    EFA.Example.Topology.TripodB
   Other-Modules:
     EFA.Equation.SystemRecord
     EFA.Flow.Quantity

@@ -1,12 +1,13 @@
 {-# LANGUAGE TypeFamilies #-}
 module Main where
 
+import qualified EFA.Example.Topology.LinearTwo as LinearTwo
+import EFA.Example.Topology.LinearTwo (Node, node0, node1, node2)
+
 import qualified EFA.Application.NestedDelta as NestedDelta
 import qualified EFA.Application.AssignMap as AssignMap
 import qualified EFA.Application.Symbolic as Symbolic
-import qualified EFA.Application.Topology.LinearTwo as LinearTwo
 import qualified EFA.Application.Plot as PlotIO
-import EFA.Application.Topology.LinearTwo (Node, node0, node1, node2)
 import EFA.Application.NestedDelta
           (ParameterRecord,
            givenParameterSymbol, givenParameterNumber,

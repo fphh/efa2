@@ -1,4 +1,4 @@
-module EFA.Application.Topology.LinearOne where
+module EFA.Example.Topology.LinearOne where
 
 import EFA.Application.Utility ( topologyFromEdges )
 
