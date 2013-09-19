@@ -298,6 +298,18 @@ xyBasic opts x y =
    fmap (Graph2D.lineSpec $ opts xyLineSpec) $
    Plot2D.list Graph2D.lines $ zip (getData x) (getData y)
 
+xyLabeled ::
+   (TDisp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 x,
+    TDisp t2, SV.Walker v2, SV.FromList v2, SV.Storage v2 y,
+    Atom.C x, Tuple.C x, Fractional x,
+    Atom.C y, Tuple.C y, Fractional y) =>
+   (LineSpec.T -> LineSpec.T) ->
+   TC s t1 (Data (v1 :> Nil) x) ->
+   Labeled (TC s t2 (Data (v2 :> Nil) y)) ->
+   Plot2D.T x y
+xyLabeled opts x (Labeled lab y) =
+   xyBasic (LineSpec.title lab . opts) x y
+
 instance
    (TDisp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 x,
     TDisp t2, SV.Walker v2, SV.FromList v2, SV.Storage v2 y,
@@ -305,7 +317,7 @@ instance
     Atom.C y, Tuple.C y, Fractional y) =>
    XY (TC s t1 (Data (v1 :> Nil) x))
       (Labeled (TC s t2 (Data (v2 :> Nil) y))) where
-   xy opts x (Labeled lab y) = xyBasic (LineSpec.title lab . opts) x y
+   xy = xyLabeled
 
 instance
    ( TDisp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 x,
@@ -314,9 +326,7 @@ instance
      Atom.C y, Tuple.C y, Fractional y ) =>
    XY (TC s t1 (Data (v1 :> Nil) x))
       [Labeled (TC s t2 (Data (v2 :> Nil) y))] where
-   xy opts x =
-      foldMap
-         (\ (Labeled lab y) -> xyBasic (LineSpec.title lab . opts) x y)
+   xy opts x = foldMap (xyLabeled opts x)
 
 instance
    (TDisp t1, SV.Walker v1, SV.FromList v1, SV.Storage v1 x,
@@ -326,10 +336,7 @@ instance
    XY [TC s t1 (Data (v1 :> Nil) x)]
       [Labeled (TC s t2 (Data (v2 :> Nil) y))] where
    xy opts xs ys =
-      mconcat $
-      zipWith
-         (\ x (Labeled lab y) -> xyBasic (LineSpec.title lab . opts) x y)
-         xs ys
+      mconcat $ zipWith (xyLabeled opts) xs ys
 
 instance
    (TDisp t1, SV.Walker v1,
@@ -343,8 +350,11 @@ instance
    XY
       (TC s t1 (Data (v2 :> v1 :> Nil) x))
       (Labeled (TC s t2 (Data (v4 :> v3 :> Nil) y))) where
-   xy opts x (Labeled lab y) =
-      xy opts (toSigList x) (map (Labeled lab) $ toSigList y)
+   xy opts xs (Labeled lab ys) =
+      mconcat $
+      zipWith
+         (\x y -> xyLabeled opts x (Labeled lab y))
+         (toSigList xs) (toSigList ys)
 
 
 -- | Plotting Records ---------------------------------------------------------------
