@@ -19,10 +19,15 @@ testgit:
 
 testgit-first:
 	(export EFA=$$PWD && cd /tmp/ && git clone $$EFA $(TESTDIR) && cd $(TESTDIR) && \
-	 cabal configure --disable-shared --disable-library-profiling && cabal build)
+	 cabal configure --disable-shared --disable-library-profiling)
+	make testgit-run
 
 testgit-again:
-	(export EFA=$$PWD && cd /tmp/$(TESTDIR)/ && git pull $$EFA && cabal build && cabal haddock)
+	(export EFA=$$PWD && cd /tmp/$(TESTDIR)/ && git pull $$EFA)
+	make testgit-run
+
+testgit-run:
+	(export EFA=$$PWD && cd /tmp/$(TESTDIR)/ && cabal build && cabal haddock && ./dist/build/test-efa/test-efa)
 
 testgit-revert:
 	(cd /tmp/$(TESTDIR)/ && git reset HEAD^ && git checkout -f)
