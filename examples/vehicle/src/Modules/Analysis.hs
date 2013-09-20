@@ -37,11 +37,7 @@ import EFA.Signal.Record (SignalRecord, FlowRecord,
                           SignalRecord, getTime, newTimeBase)
 
 
-import EFA.Signal.Sequence (-- genSequenceSignal,
-                            addZeroCrossings,
-                            genSequ,
-                           -- sectionRecordsFromSequence
-                           )
+import EFA.Signal.Chop (addZeroCrossings, genSequ)
 
 --import qualified EFA.Equation.Arithmetic as Arith
 

@@ -3,7 +3,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module EFA.Signal.Sequence where
+module EFA.Signal.Chop where
 
 
 import qualified EFA.Graph.Flow as Flow
@@ -159,7 +159,7 @@ genSequ pRec =
         ((lastSec,sequ),(lastRSec,seqRSig)) = recyc rTail rHead (((S.SignalIdx 0, S.SignalIdx 0),[]),(Record.singleton $ rHead,[]))
           where
             (rHead, rTail) = maybe err id $ Record.viewL rSig
-            err = error ("Error in EFA.Signal.Sequence/genSequence, case 1 - empty rSig")
+            err = error ("Error in EFA.Signal.Chop/genSequence, case 1 - empty rSig")
 
         recyc ::
            Record.Sig -> Record.Samp1 ->
@@ -171,7 +171,7 @@ genSequ pRec =
           (Record.len rsig) >=2 = recyc rTail x2 (g $ stepDetect x1 x2, f $ stepDetect x1 x2)
           where
             (x2, rTail) = maybe err id $ Record.viewL rsig
-            err = error ("Error in EFA.Signal.Sequence/genSequence, case 2 - empty rSig")
+            err = error ("Error in EFA.Signal.Chop/genSequence, case 2 - empty rSig")
             xs1 = Record.singleton x1
             xs2 = Record.singleton x2
 

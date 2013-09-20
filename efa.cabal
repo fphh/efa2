@@ -80,7 +80,7 @@ Library
     EFA.Signal.Record
     EFA.Signal.Signal
     EFA.Signal.SignalFill
-    EFA.Signal.Sequence
+    EFA.Signal.Chop
     EFA.Signal.Colour
     EFA.Signal.Plot
     EFA.Signal.ConvertTable

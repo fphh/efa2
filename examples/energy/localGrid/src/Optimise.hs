@@ -40,7 +40,7 @@ import qualified EFA.Signal.ConvertTable as CT
 import qualified EFA.Signal.Vector as SV
 import qualified EFA.Signal.SequenceData as SD
 import qualified EFA.Signal.Signal as Sig
-import EFA.Signal.Sequence (makeSeqFlowTopology, addZeroCrossings, genSequ,)
+import EFA.Signal.Chop (makeSeqFlowTopology, addZeroCrossings, genSequ,)
 import EFA.Signal.Signal (TC,Scalar)
 import EFA.Signal.Data (Data(Data), Nil, (:>))-- getData)
 import EFA.Signal.Typ (Typ, F, T, A, Tt) --,UT)

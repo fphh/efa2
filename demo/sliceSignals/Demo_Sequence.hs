@@ -8,7 +8,7 @@ import qualified EFA.Application.Plot as PlotIO
 import qualified EFA.Flow.Sequence.Index as XIdx
 
 import qualified EFA.Signal.Signal as S
-import qualified EFA.Signal.Sequence as Sequ
+import qualified EFA.Signal.Chop as Chop
 
 import EFA.Signal.SequenceData (SequData)
 import EFA.Signal.Record (PowerRecord, Record(Record))
@@ -58,12 +58,12 @@ pMap =
 
 pRec, pRec0 :: (PowerRecord Int [] Val)
 pRec = Record (S.fromList time) pMap
-pRec0 = Sequ.addZeroCrossings pRec
+pRec0 = Chop.addZeroCrossings pRec
 
 sequRecA, sequRecB :: SequData (PowerRecord Int [] Val)
-sequRecA = Sequ.genSequ pRec0
+sequRecA = Chop.genSequ pRec0
 
-sequRecB = Sequ.chopAtZeroCrossingsPowerRecord pRec
+sequRecB = Chop.chopAtZeroCrossingsPowerRecord pRec
 
 
 main :: IO ()

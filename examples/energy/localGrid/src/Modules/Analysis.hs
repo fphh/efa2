@@ -45,11 +45,7 @@ import EFA.Signal.Record (SignalRecord, FlowRecord,
                           Record(Record), PowerRecord,
                           SignalRecord, getTime, newTimeBase)
 
-import EFA.Signal.Sequence (-- genSequenceSignal,
-                            addZeroCrossings,
-                            genSequ,
-                           -- sectionRecordsFromSequence
-                           )
+import EFA.Signal.Chop (addZeroCrossings, genSequ)
 
 import qualified Data.Map as Map
 import Data.Monoid ((<>))

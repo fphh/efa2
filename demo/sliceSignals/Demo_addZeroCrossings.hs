@@ -7,7 +7,7 @@ import qualified EFA.Application.Plot as PlotIO
 import qualified EFA.Flow.Sequence.Index as XIdx
 
 import qualified EFA.Signal.Signal as S
-import EFA.Signal.Sequence (addZeroCrossings)
+import EFA.Signal.Chop (addZeroCrossings)
 import EFA.Signal.Record (Record(Record), PowerRecord)
 import EFA.Signal.Signal (TSigL, PSigL)
 import EFA.Signal.Base (Val)

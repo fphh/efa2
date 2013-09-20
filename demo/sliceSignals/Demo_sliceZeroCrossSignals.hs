@@ -7,7 +7,7 @@ module Main where
 import qualified EFA.Flow.Sequence.Index as XIdx
 
 import qualified EFA.Signal.Signal as Signal
-import EFA.Signal.Sequence (genSequ, addZeroCrossings)
+import EFA.Signal.Chop (genSequ, addZeroCrossings)
 import EFA.Signal.SequenceData (SequData)
 import EFA.Signal.Record (Record(Record), PowerRecord)
 import EFA.Signal.Data ((:>), Nil, Data)

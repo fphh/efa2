@@ -33,7 +33,7 @@ import qualified EFA.Graph.Topology.Node as Node
 
 import qualified EFA.Signal.Signal as Sig; import EFA.Signal.Signal (TC,Scalar)
 import qualified EFA.Signal.Record as Record
-import qualified EFA.Signal.Sequence as Seq
+import qualified EFA.Signal.Chop as Chop
 import qualified EFA.Signal.SequenceData as SD
 import qualified EFA.Signal.ConvertTable as CT
 import qualified EFA.Signal.Vector as Vec
@@ -195,7 +195,7 @@ envToPowerRecord ::
   StateEnv.Complete System.Node (Result (Data  Nil Double)) (Result (Data ([] :> Nil) Double)) ->
   Record.PowerRecord System.Node [] Double
 envToPowerRecord time env =
-  (Seq.addZeroCrossings
+  (Chop.addZeroCrossings
   . Record.Record time
   . Map.map i
   . Map.mapKeys h 
@@ -275,7 +275,7 @@ givenSignals ::
   Map (node, node) (Sig.PSignal [] Double) ->
   Record.PowerRecord node [] Double
 givenSignals time =
-  Seq.addZeroCrossings . Record.Record time .
+  Chop.addZeroCrossings . Record.Record time .
   Map.mapKeys (\(n0,n1) -> Idx.PPos $ Idx.StructureEdge n0 n1)
 
 solveAndCalibrateAvgEffWithGraph ::
@@ -333,7 +333,7 @@ solveAndCalibrateAvgEffWithGraph time prest plocal etaMap (stateFlowGraph, env) 
       recZeroCross = envToPowerRecord time envSims
 
       sequencePowers :: SD.SequData (Record.PowerRecord System.Node [] Double)
-      sequencePowers = Seq.genSequ recZeroCross
+      sequencePowers = Chop.genSequ recZeroCross
 
       sequenceFlowsFilt :: SD.SequData (Record.FlowRecord Node [] Double)
       sequenceFlowsFilt =
@@ -359,7 +359,7 @@ solveAndCalibrateAvgEffWithGraph time prest plocal etaMap (stateFlowGraph, env) 
       stateFlowEnvWithGraph =
         let sequ = Flow.genSequFlowTops System.topology (fst flowStatesWithAdj)
             envLocal = external initStorage 
-                           (Seq.makeSeqFlowTopology sequ) (snd flowStatesWithAdj)
+                           (Chop.makeSeqFlowTopology sequ) (snd flowStatesWithAdj)
             e = second (fmap Arith.integrate) envLocal
             sm = snd $ StateFlow.stateMaps sequ
         in  ( StateFlow.stateGraphAllStorageEdges sequ,
