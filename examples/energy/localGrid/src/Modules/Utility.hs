@@ -7,12 +7,12 @@ import qualified Modules.System as System
 import qualified EFA.Graph.Topology.Index as Idx
 
 import qualified EFA.Equation.Environment as EqEnv
-import EFA.Equation.Result (Result(..))
+import EFA.Equation.Result (Result(Determined, Undetermined))
 
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.ConvertTable as CT
-import EFA.Signal.Data (Data(..), Nil, (:>))
+import EFA.Signal.Data (Data, Nil, (:>))
 
 import qualified EFA.IO.TableParserTypes as TPT
 

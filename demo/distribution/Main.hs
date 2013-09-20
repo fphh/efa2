@@ -9,7 +9,7 @@ module Main where
 import qualified EFA.Signal.Signal as S
 
 import qualified EFA.Signal.Vector as V
-import EFA.Signal.Data (Data(..),(:>),Nil)
+import EFA.Signal.Data (Data(Data), (:>), Nil)
 import EFA.Signal.Base (BSum)
 
 import Control.Applicative (liftA2)

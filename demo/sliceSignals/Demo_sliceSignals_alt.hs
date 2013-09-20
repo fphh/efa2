@@ -7,10 +7,10 @@ module Main where
 import qualified EFA.Flow.Sequence.Index as XIdx
 
 import qualified EFA.Signal.Signal as S
-import EFA.Signal.Sequence
-import EFA.Signal.SequenceData
-import EFA.Signal.Record
-import EFA.Signal.Data ((:>), Nil, Data)
+import EFA.Signal.Sequence (addZeroCrossings, genSequ)
+import EFA.Signal.SequenceData (SequData)
+import EFA.Signal.Record (PowerRecord, Record(Record))
+import EFA.Signal.Data (Data, Nil, (:>))
 
 import EFA.Report.Report (ROpt(RAll), report)
 

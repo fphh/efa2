@@ -16,7 +16,7 @@ import qualified EFA.Application.Utility as AppUt
 import EFA.Application.AbsoluteState ((.=))
 
 import qualified EFA.Equation.Arithmetic as EqArith
-import EFA.Equation.Result (Result(..))
+import EFA.Equation.Result (Result)
 
 import qualified EFA.Flow.State.Index as XIdx
 
@@ -24,7 +24,7 @@ import qualified EFA.Graph.StateFlow.Environment as StateEnv
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Signal.Data as Data
-import EFA.Signal.Data (Data(..), Nil)
+import EFA.Signal.Data (Data(Data), Nil)
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))

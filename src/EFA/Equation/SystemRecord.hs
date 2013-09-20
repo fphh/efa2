@@ -5,7 +5,7 @@ module EFA.Equation.SystemRecord where
 
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Arithmetic as Arith
-import EFA.Equation.Result (Result(..))
+import EFA.Equation.Result (Result)
 import EFA.Equation.Arithmetic
           (Sum, (~+), (~-),
            Product, (~*), (~/),

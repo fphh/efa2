@@ -2,7 +2,7 @@ module Modules.System where
 
 import qualified EFA.Application.Utility as AppUt
 
-import EFA.Application.Utility (select) -- makeEdges,
+import EFA.Application.Utility (select)
 import EFA.Application.Optimisation (etaOverPowerInState, etaOverPowerOutState)
 
 import qualified EFA.Flow.Sequence.Index as SeqIdx
@@ -23,7 +23,7 @@ import qualified EFA.Graph.Topology.Index as Idx
 
 --import EFA.Signal.Signal ((.+), (./))
 
-import EFA.Signal.Record (SigId(..))
+import EFA.Signal.Record (SigId(SigId))
 
 
 import qualified Data.Map as Map

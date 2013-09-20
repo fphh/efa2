@@ -6,7 +6,7 @@ import EFA.Application.Utility (makeTopology)
 
 import qualified EFA.Flow.Sequence.Index as SeqIdx
 
-import EFA.Signal.Record (SigId(..))
+import EFA.Signal.Record (SigId(SigId))
 
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 import qualified EFA.Graph.Topology.Node as Node

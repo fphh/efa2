@@ -18,7 +18,7 @@ import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Arithmetic as Arith
-import EFA.Equation.Result (Result(..))
+import EFA.Equation.Result (Result)
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node

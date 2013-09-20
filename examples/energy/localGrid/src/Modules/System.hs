@@ -9,7 +9,7 @@ import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Flow as Flow
 
-import EFA.Signal.Record (SigId(..))
+import EFA.Signal.Record (SigId(SigId))
 
 import qualified Data.Map as Map
 import Data.Map (Map)

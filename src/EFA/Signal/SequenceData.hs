@@ -12,7 +12,7 @@ import qualified EFA.Signal.Vector as V
 import qualified EFA.Signal.Record as Record
 
 import qualified EFA.Report.Report as Report
-import EFA.Report.Report (Table(..), TableData(..), toDoc, autoFormat)
+import EFA.Report.Report (Table, toDoc, autoFormat)
 import EFA.Report.Typ (TDisp)
 import EFA.Report.Base (DispStorage1)
 
@@ -186,21 +186,21 @@ instance
 
 instance ToTable Range where
    toTable _os (ti, xs) =
-      [Table {
-         tableTitle = "Sequence: " ++ ti,
-         tableData = td,
-         tableFormat = autoFormat td,
-         tableSubTitle = ""}]
+      [Report.Table {
+         Report.tableTitle = "Sequence: " ++ ti,
+         Report.tableData = td,
+         Report.tableFormat = autoFormat td,
+         Report.tableSubTitle = ""}]
       where
-         td = TableData {
-                 tableBody = [Fold.toList $ fmap f xs],
-                 titleRow  = [
+         td = Report.TableData {
+                 Report.tableBody = [Fold.toList $ fmap f xs],
+                 Report.titleRow  = [
                     map (toDoc id) $
                        "Section:" :
                        (Fold.toList $
                         mapWithSection (\(Idx.Section x) _ -> "Sec" ++ show x) xs)],
-                 titleCols = [[toDoc id "Index"]],
-                 endCols  = []
+                 Report.titleCols = [[toDoc id "Index"]],
+                 Report.endCols  = []
               }
 
          -- f :: Range -> TableData

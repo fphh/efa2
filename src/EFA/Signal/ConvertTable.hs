@@ -8,7 +8,7 @@ import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.Vector as SV
 import EFA.Signal.Data (Data, Nil, (:>))
 
-import EFA.IO.TableParserTypes (T(..))
+import EFA.IO.TableParserTypes (T(T))
 import qualified EFA.IO.TableParserTypes as TPT
 
 import qualified EFA.Signal.Base as Base

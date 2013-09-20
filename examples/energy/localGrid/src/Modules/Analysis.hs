@@ -8,7 +8,6 @@ module Modules.Analysis where
 -- * Example Specific Imports
 import qualified Modules.System as System
 import qualified Modules.Signals as Signals
---import Modules.System (Node(..))
 
 import qualified EFA.Application.Absolute as EqAbs
 
@@ -27,7 +26,7 @@ import qualified EFA.Equation.Arithmetic as Arith
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Record as EqRecord
 -- import qualified EFA.Equation.Stack as Stack
-import EFA.Equation.Result (Result(..))
+import EFA.Equation.Result (Result)
 import EFA.Equation.Verify (Ignore)
 import EFA.Equation.System ((.=))
 -- import EFA.Equation.Stack (Stack)
@@ -38,8 +37,8 @@ import qualified EFA.Signal.Vector as Vec
 import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.Base as B
 import qualified EFA.Signal.Data as D
-import EFA.Signal.Signal (TC(..), Scalar)
-import EFA.Signal.Data (Data(..), Nil)
+import EFA.Signal.Signal (TC, Scalar)
+import EFA.Signal.Data (Data(Data), Nil)
 import EFA.Signal.Typ (Typ, F, T, A, Tt)
 
 import EFA.Signal.Record (SignalRecord, FlowRecord,

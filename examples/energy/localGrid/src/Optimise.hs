@@ -31,7 +31,7 @@ import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Equation.Arithmetic as EqArith
 import qualified EFA.Equation.Environment as EqEnv
 --import qualified EFA.Equation.Record as EqRec
-import EFA.Equation.Result (Result(..))
+import EFA.Equation.Result (Result)
 
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Plot as Plot
@@ -42,11 +42,11 @@ import qualified EFA.Signal.SequenceData as SD
 import qualified EFA.Signal.Signal as Sig
 import EFA.Signal.Sequence (makeSeqFlowTopology, addZeroCrossings, genSequ,)
 import EFA.Signal.Signal (TC,Scalar)
-import EFA.Signal.Data (Data(..), Nil, (:>))-- getData)
+import EFA.Signal.Data (Data(Data), Nil, (:>))-- getData)
 import EFA.Signal.Typ (Typ, F, T, A, Tt) --,UT)
 
 import EFA.Utility.Async (concurrentlyMany_)
-import EFA.Report.Report(report,ROpt(..))
+import EFA.Report.Report(report, ROpt(RAll))
 
 import qualified EFA.IO.TableParser as Table
 import qualified EFA.IO.TableParserTypes as TPT

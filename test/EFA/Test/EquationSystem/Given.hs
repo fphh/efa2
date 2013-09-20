@@ -15,7 +15,7 @@ import qualified EFA.Flow.Sequence.Index as XIdx
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Pair as Pair
 import qualified EFA.Equation.Arithmetic as Arith
-import EFA.Equation.Result (Result(..))
+import EFA.Equation.Result (Result(Determined, Undetermined))
 
 import EFA.Symbolic.SumProduct ( Term )
 

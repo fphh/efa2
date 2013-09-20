@@ -4,7 +4,7 @@ import EFA.Graph.Topology (StateFlowGraph)
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.StateFlow.Environment as StateEnv
 
-import EFA.Equation.Result (Result(..))
+import EFA.Equation.Result (Result)
 
 
 import qualified EFA.Application.Sweep as Sweep

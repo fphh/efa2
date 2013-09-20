@@ -20,10 +20,11 @@ import EFA.Signal.SequenceData (SequData(..), Sequ, Range)
 
 
 
-import EFA.Signal.Record (Record(..), PowerRecord, FlowRecord)
+import EFA.Signal.Record (Record(Record), PowerRecord, FlowRecord)
 
 import EFA.Signal.Base
-          (Val, Sign(..), ZeroCrossing(..))
+          (Val, Sign(PSign, NSign, ZSign),
+           ZeroCrossing(NoCrossing, ZeroCrossing))
 import EFA.Signal.Signal
           (TC(TC),  TSigL, TZeroSamp1L, TZeroSamp, TSamp, PSamp, PSigL,
            DTSamp, PSamp2LL, Samp, Samp1L,

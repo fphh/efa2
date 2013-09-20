@@ -32,7 +32,7 @@ import EFA.Signal.Data (Data, Nil, (:>))
 
 import qualified EFA.Equation.Record as EqRec
 import qualified EFA.Equation.Variable as Var
-import EFA.Equation.Result (Result(..))
+import EFA.Equation.Result (Result(Determined))
 
 import qualified EFA.Report.Format as Format
 

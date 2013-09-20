@@ -22,7 +22,7 @@ import qualified EFA.Signal.Signal as Sig
 
 import qualified EFA.Equation.Environment as EqEnv
 import qualified EFA.Equation.Record as EqRec
-import EFA.Equation.Result (Result(..))
+import EFA.Equation.Result (Result(Determined, Undetermined))
 
 import qualified EFA.IO.TableParser as Table
 

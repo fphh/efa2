@@ -33,7 +33,7 @@ import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Verify as Verify
 import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.SystemRecord as SysRecord
-import EFA.Equation.Result (Result(..))
+import EFA.Equation.Result (Result)
 import EFA.Equation.SystemRecord
           (System(System), Record, Wrap(Wrap, unwrap))
 import EFA.Equation.Arithmetic

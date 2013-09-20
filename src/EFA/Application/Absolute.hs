@@ -13,7 +13,7 @@ import qualified EFA.Equation.System as EqGen
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Verify as Verify
 import EFA.Equation.System ((=.=))
-import EFA.Equation.Result(Result(..))
+import EFA.Equation.Result (Result)
 
 
 import qualified EFA.Signal.Record as SigRecord

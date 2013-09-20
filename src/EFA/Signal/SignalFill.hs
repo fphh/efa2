@@ -15,7 +15,7 @@ import EFA.Signal.Signal
 
 import qualified EFA.Signal.Data as D
 import EFA.Signal.Data (Data, Nil, Zip)
-import EFA.Signal.Base (BSum(..), BProd(..))
+import EFA.Signal.Base (BSum((..+), (..-)), BProd((..*), (../)))
 import EFA.Signal.Typ (TSum, TProd)
 
 import Data.Function (($))

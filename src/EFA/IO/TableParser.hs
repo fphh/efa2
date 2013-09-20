@@ -2,7 +2,7 @@
 
 module EFA.IO.TableParser (EFA.IO.TableParser.read, write) where
 
-import EFA.IO.TableParserTypes (Map, T (..))
+import EFA.IO.TableParserTypes (Map, T(T))
 import EFA.IO.Parser (number, eol)
 
 import qualified System.IO as IO

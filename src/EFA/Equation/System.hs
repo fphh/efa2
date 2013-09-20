@@ -69,7 +69,7 @@ import EFA.Equation.Arithmetic
            Product, (~*), (~/),
            Constant, zero,
            Integrate, Scalar, integrate)
-import EFA.Equation.Result(Result(..))
+import EFA.Equation.Result(Result)
 
 import qualified EFA.Utility.Map as MapU
 import EFA.Utility ((>>!))

@@ -4,7 +4,7 @@ module EFA.Equation.Result where
 
 import Control.Applicative (Applicative, pure, (<*>))
 import Data.Foldable (Foldable, foldMap)
-import Data.Monoid (mempty, Monoid(..))
+import Data.Monoid (mempty)
 
 
 data Result a = Undetermined

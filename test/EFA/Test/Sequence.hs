@@ -8,7 +8,7 @@ import qualified EFA.Signal.Sequence as Seq
 -- import qualified EFA.Signal.SequenceData as SeqData
 
 import qualified EFA.Signal.Signal as S
-import EFA.Signal.Record (PowerRecord, Record (..))
+import EFA.Signal.Record (PowerRecord, Record(Record))
 import EFA.Signal.Base (Val)
 
 import qualified Data.Foldable as Fold

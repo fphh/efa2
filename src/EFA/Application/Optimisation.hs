@@ -11,7 +11,7 @@ import qualified EFA.Flow.State.Index as StateIdx
 import qualified EFA.Flow.Sequence.Index as SeqIdx
 
 import qualified EFA.Signal.Data as Data
-import EFA.Signal.Data (Data(..), Nil) --,(:>))
+import EFA.Signal.Data (Data(Data), Nil)
 
 import qualified EFA.Equation.Arithmetic as EqArith
 

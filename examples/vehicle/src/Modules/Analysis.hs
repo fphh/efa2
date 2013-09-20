@@ -20,7 +20,7 @@ import qualified EFA.Equation.Stack as Stack
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Record as EqRecord
 import EFA.Equation.Arithmetic ((~*))
-import EFA.Equation.Result (Result(..))
+import EFA.Equation.Result (Result)
 import EFA.Equation.Stack (Stack)
 import EFA.Equation.Verify (Ignore)
 import EFA.Equation.System ((.=))
@@ -46,8 +46,8 @@ import EFA.Signal.Sequence (-- genSequenceSignal,
 --import qualified EFA.Equation.Arithmetic as Arith
 
 --import qualified EFA.Signal.Signal as Sig
-import EFA.Signal.Signal (TC(..), Scalar)
-import EFA.Signal.Data (Data(..), Nil)
+import EFA.Signal.Signal (TC, Scalar)
+import EFA.Signal.Data (Data, Nil)
 import EFA.Signal.Typ (Typ, F, T, A, Tt)
 
 import EFA.Report.FormatValue (FormatValue, FormatSignalIndex)

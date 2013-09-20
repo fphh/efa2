@@ -4,7 +4,7 @@ import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Report.Format as Format
 import EFA.Report.Format (Format)
-import EFA.Equation.Result (Result(..))
+import EFA.Equation.Result (Result(Determined, Undetermined))
 
 import qualified Data.NonEmpty as NonEmpty
 import Data.Foldable (Foldable, toList)

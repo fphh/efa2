@@ -28,7 +28,7 @@ import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.Topology.StateAnalysis as StateAnalysis
 
 import qualified EFA.Signal.Data as Data
-import EFA.Signal.Data (Data(..), Nil,(:>))
+import EFA.Signal.Data (Data(Data), Nil,(:>))
 
 import qualified EFA.Signal.Vector as SV
 import qualified EFA.Signal.Base as Base

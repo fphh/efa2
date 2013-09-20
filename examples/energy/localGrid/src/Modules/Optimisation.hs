@@ -15,7 +15,7 @@ import EFA.Application.Absolute ( (.=), (=%%=), (=.=) )
 
 import qualified EFA.Equation.Environment as EqEnv
 import qualified EFA.Equation.Arithmetic as EqArith
-import EFA.Equation.Result (Result(..))
+import EFA.Equation.Result (Result)
 
 import qualified EFA.Flow.Sequence.Index as XIdx
 
@@ -31,7 +31,7 @@ import qualified EFA.Signal.Data as Data
 import qualified EFA.Signal.Base as Base
 import qualified EFA.Signal.Vector as SV
 
-import EFA.Signal.Data (Data(..), Nil, (:>))
+import EFA.Signal.Data (Data(Data), Nil, (:>))
 
 import qualified EFA.Utility.Stream as Stream
 import EFA.Utility.Stream (Stream((:~)))

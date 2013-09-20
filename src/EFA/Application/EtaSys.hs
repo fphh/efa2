@@ -9,7 +9,7 @@ import qualified EFA.Flow.State.Index as StateIdx
 import qualified EFA.Graph.StateFlow.Environment as EqEnvState
 
 import qualified EFA.Equation.Environment as EqEnv
-import EFA.Equation.Result (Result(..))
+import EFA.Equation.Result (Result)
 
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node

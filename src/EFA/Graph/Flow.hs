@@ -20,8 +20,8 @@ import EFA.Signal.SequenceData (SequData)
 import EFA.Signal.Record
           (Record(Record), FlowState(FlowState), FlowRecord,
            getSig, rmapWithKey)
-import EFA.Signal.Signal (fromScalar, sigSign, neg, TC(..))
-import EFA.Signal.Data(Data(..), Nil, (:>))
+import EFA.Signal.Signal (fromScalar, sigSign, neg, TC(TC))
+import EFA.Signal.Data (Data(Data), Nil, (:>))
 import EFA.Signal.Base (Sign(PSign, NSign, ZSign),BSum, DArith0)
 
 import qualified EFA.Utility.Map as MapU

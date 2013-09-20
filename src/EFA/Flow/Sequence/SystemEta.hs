@@ -10,7 +10,7 @@ import qualified EFA.Graph.Topology.Node as Node
 
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Arithmetic ((~+))
-import EFA.Equation.Result (Result(..))
+import EFA.Equation.Result (Result)
 
 import EFA.Utility.Map (Caller)
 

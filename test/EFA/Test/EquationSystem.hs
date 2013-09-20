@@ -2,7 +2,7 @@
 
 module EFA.Test.EquationSystem where
 
-import EFA.TestUtility as Test
+import qualified EFA.TestUtility as Test
 
 import qualified EFA.Test.EquationSystem.Given as Given
 

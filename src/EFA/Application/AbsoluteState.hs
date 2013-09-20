@@ -21,7 +21,7 @@ import qualified EFA.Equation.Verify as Verify
 --import EFA.Equation.System ((=.=))
 import EFA.Graph.StateFlow.EquationSystem ((=.=))
 
-import EFA.Equation.Result(Result(..))
+import EFA.Equation.Result(Result)
 
 import qualified EFA.Symbolic.Variable as SymVar
 

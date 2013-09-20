@@ -39,7 +39,7 @@ import qualified EFA.Signal.ConvertTable as CT
 import qualified EFA.Signal.Vector as Vec
 import qualified EFA.Signal.Base as Base
 
-import EFA.Signal.Data (Data(..), Nil, (:>))
+import EFA.Signal.Data (Data(Data), Nil, (:>))
 import EFA.Signal.Typ (Typ, F, T, A, Tt)
 
 import qualified EFA.IO.TableParser as Table
@@ -49,7 +49,7 @@ import qualified EFA.Equation.Environment as EqEnv
 import qualified EFA.Equation.Record as EqRecord
 import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.Arithmetic as Arith
-import EFA.Equation.Result (Result(..))
+import EFA.Equation.Result (Result(Determined, Undetermined))
 
 import EFA.Utility.Bifunctor (second)
 

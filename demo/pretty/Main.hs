@@ -5,11 +5,11 @@ module Main where
 import qualified EFA.Flow.Sequence.Index as XIdx
 
 import qualified EFA.Signal.Signal as S
-import EFA.Signal.Record
+import EFA.Signal.Record (PowerRecord, Record(Record))
+import EFA.Signal.Data (Data, Nil, (:>))
 import EFA.Signal.Typ (Typ, A, P, Tt)
-import EFA.Signal.Data ((:>), Nil, Data)
 
-import EFA.Report.Report (report, ROpt(..))
+import EFA.Report.Report (ROpt(RVertical), report)
 
 import qualified Data.Map as Map
 
