@@ -189,7 +189,7 @@ Executable test-efa
     EFA.Test.Tree
     EFA.TestUtility
 
-Executable example-sequenzflussgraph
+Executable example-sequence-flow-graph
   Main-Is: examples/elementary/sequenzflussgraph/Main.hs
   GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
   If flag(buildExamples)
@@ -200,7 +200,7 @@ Executable example-sequenzflussgraph
   Else
     Buildable: False
 
-Executable example-optimisingstorage
+Executable example-optimising-storage
   Main-Is: examples/elementary/optimisingStorage/Main.hs
   GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
   If flag(buildExamples)
@@ -214,7 +214,7 @@ Executable example-optimisingstorage
   Else
     Buildable: False
 
-Executable example-optimalStorageUsage
+Executable example-optimal-storage-usage
   Main-Is: examples/elementary/optimalStorageUsage/Main.hs
   GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
   If flag(buildExamples)
@@ -257,7 +257,7 @@ Executable example-vehicle
     Buildable: False
 
 
-Executable example-energy
+Executable example-local-grid
   Hs-Source-Dirs: examples/energy/localGrid/src
   Main-Is: Main.hs
   Other-Modules:
@@ -279,7 +279,7 @@ Executable example-energy
     Buildable: False
 
 
-Executable optimise-energy
+Executable example-local-grid-optimise
   Hs-Source-Dirs: examples/energy/localGrid/src
   Main-Is: Optimise.hs
   Other-Modules:
@@ -333,7 +333,7 @@ Executable example-time
   Else
     Buildable: False
 
-Executable example-twoways
+Executable example-two-ways
   Main-Is: examples/elementary/twoWays/Main.hs
   GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
   If flag(buildExamples)
@@ -345,7 +345,7 @@ Executable example-twoways
 
 
 
-Executable demo-numericSolving
+Executable demo-numeric-solving
   Main-Is: demo/numericSolving/Main.hs
   GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
   If flag(buildDemos)
@@ -356,7 +356,7 @@ Executable demo-numericSolving
   Else
     Buildable: False
 
-Executable demo-signalSolving
+Executable demo-signal-solving
   Main-Is: demo/signalSolving/Main.hs
   GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
   If flag(buildDemos)
@@ -366,7 +366,7 @@ Executable demo-signalSolving
   Else
     Buildable: False
 
-Executable demo-unknownSignal
+Executable demo-unknown-signal
   Main-Is: demo/unknownSignal/Main.hs
   GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
   If flag(buildDemos)
@@ -395,7 +395,7 @@ Executable demo-tables
 
 
 
-Executable demo-symbolicSolving
+Executable demo-symbolic-solving
   Main-Is: demo/symbolicSolving/Main.hs
   GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
   If flag(buildDemos)
@@ -405,7 +405,7 @@ Executable demo-symbolicSolving
   Else
     Buildable: False
 
-Executable demo-symbolicDelta
+Executable demo-symbolic-delta
   Main-Is: demo/symbolicDelta/Main.hs
   GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
   If flag(buildDemos)
@@ -444,8 +444,8 @@ Executable demo-additive-terms-static
   Else
     Buildable: False
 
-Executable demo-signalcalc
-  Main-Is: demo/Signal/Main.hs
+Executable demo-signal-calc
+  Main-Is: demo/signal/Main.hs
   GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
   If flag(buildDemos)
     Build-Depends:
@@ -471,7 +471,7 @@ Executable demo-sequence
   Else
     Buildable: False
 
-Executable demo-addzerocrossings
+Executable demo-add-zerocrossings
   Main-Is: demo/sliceSignals/Demo_addZeroCrossings.hs
   GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
   If flag(buildDemos)
@@ -485,7 +485,7 @@ Executable demo-addzerocrossings
   Else
     Buildable: False
 
-Executable demo-slicesignals-alt
+Executable demo-slice-signals-alt
   Main-Is: demo/sliceSignals/Demo_sliceSignals_alt.hs
   GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
   If flag(buildDemos)
@@ -498,7 +498,7 @@ Executable demo-slicesignals-alt
   Else
     Buildable: False
 
-Executable demo-slicesignals
+Executable demo-slice-signals
   Main-Is: demo/sliceSignals/Demo_sliceSignals.hs
   GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
   If flag(buildDemos)
@@ -511,7 +511,7 @@ Executable demo-slicesignals
   Else
     Buildable: False
 
-Executable demo-slicezerocrosssignals
+Executable demo-slice-zerocross-signals
   Main-Is: demo/sliceSignals/Demo_sliceZeroCrossSignals.hs
   GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
   If flag(buildDemos)
@@ -524,7 +524,7 @@ Executable demo-slicezerocrosssignals
   Else
     Buildable: False
 
-Executable demo-undiredge
+Executable demo-undir-edge
   Main-Is: demo/undirEdge/Main.hs
   GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
   If flag(buildDemos)
@@ -534,8 +534,8 @@ Executable demo-undiredge
   Else
     Buildable: False
 
-Executable demo-csvimport
-  Main-Is: demo/CSVImport/Main.hs
+Executable demo-csv-import
+  Main-Is: demo/csvImport/Main.hs
   GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
   If flag(buildDemos)
     Build-Depends:
@@ -545,8 +545,8 @@ Executable demo-csvimport
   Else
     Buildable: False
 
-Executable demo-pltimport
-  Main-Is: demo/PLTImport/Main.hs
+Executable demo-plt-import
+  Main-Is: demo/pltImport/Main.hs
   GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
   If flag(buildDemos)
     Build-Depends:
@@ -555,8 +555,8 @@ Executable demo-pltimport
   Else
     Buildable: False
 
-Executable demo-asciiimport
-  Main-Is: demo/ASCIIImport/Main.hs
+Executable demo-ascii-import
+  Main-Is: demo/asciiImport/Main.hs
   GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
   If flag(buildDemos)
     Build-Depends:
@@ -586,7 +586,7 @@ Executable demo-pretty
   Else
     Buildable: False
 
-Executable demo-nodedefinition
+Executable demo-node-definition
   Main-Is: demo/nodeDefinition/Main.hs
   GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
   If flag(buildDemos)
@@ -597,7 +597,7 @@ Executable demo-nodedefinition
   Else
     Buildable: False
 
-Executable demo-stateanalysis
+Executable demo-state-analysis
   Main-Is: demo/stateAnalysis/Main.hs
   GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
   If flag(buildDemos)
@@ -608,7 +608,7 @@ Executable demo-stateanalysis
   Else
     Buildable: False
 
-Executable demo-functioneta
+Executable demo-function-eta
   Main-Is: demo/functionEta/Main.hs
   GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
   If flag(buildDemos)
@@ -618,7 +618,7 @@ Executable demo-functioneta
   Else
     Buildable: False
 
-Executable demo-lookupeta
+Executable demo-lookup-eta
   Main-Is: demo/lookupEta/Main.hs
   GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
   If flag(buildDemos)
@@ -628,7 +628,7 @@ Executable demo-lookupeta
   Else
     Buildable: False
 
-Executable demo-deltaLogic
+Executable demo-delta-logic
   Main-Is: demo/deltaLogic/Main.hs
   GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
   If flag(buildDemos)
@@ -638,8 +638,8 @@ Executable demo-deltaLogic
   Else
     Buildable: False
 
-Executable demo-cumulatedEnergyFlow
-  Main-Is: demo/cumulatedEnergyFlow/Main.hs
+Executable demo-cumulated-flow
+  Main-Is: demo/cumulatedFlow/Main.hs
   GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
   If flag(buildDemos)
     Build-Depends:
@@ -648,7 +648,7 @@ Executable demo-cumulatedEnergyFlow
   Else
     Buildable: False
 
-Executable demo-stateFlow
+Executable demo-state-flow
   Main-Is: demo/stateFlow/Main.hs
   GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
   If flag(buildDemos)
