@@ -31,7 +31,7 @@ import EFA.Equation.Verify (Ignore)
 import EFA.Equation.System ((.=))
 -- import EFA.Equation.Stack (Stack)
 
-import qualified EFA.Signal.SequenceData as Sequ
+import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Vector as Vec
 import qualified EFA.Signal.Signal as Sig

@@ -34,7 +34,7 @@ module EFA.Signal.Plot (
    genAxLabel
    ) where
 
-import qualified EFA.Signal.SequenceData as Sequ
+import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Data as D
 import qualified EFA.Signal.Vector as SV

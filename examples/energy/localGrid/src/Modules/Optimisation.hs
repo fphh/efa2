@@ -24,7 +24,7 @@ import qualified EFA.Graph.Flow as Flow
 
 import qualified EFA.Application.Utility as AppUt
 
-import qualified EFA.Signal.SequenceData as Sequ
+import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.Data as Data

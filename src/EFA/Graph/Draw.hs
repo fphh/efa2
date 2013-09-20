@@ -33,7 +33,7 @@ import qualified EFA.Graph.StateFlow.Environment as StateEnv
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Variable as Var
 
-import qualified EFA.Signal.SequenceData as Sequ
+import qualified EFA.Signal.Sequence as Sequ
 import EFA.Signal.Signal (SignalIdx(SignalIdx))
 
 import qualified EFA.Flow.Sequence.Index as XIdx

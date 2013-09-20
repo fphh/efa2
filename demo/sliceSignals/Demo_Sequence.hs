@@ -9,7 +9,7 @@ import qualified EFA.Flow.Sequence.Index as XIdx
 
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Chop as Chop
-import qualified EFA.Signal.SequenceData as Sequ
+import qualified EFA.Signal.Sequence as Sequ
 
 import EFA.Signal.Record (PowerRecord, Record(Record))
 import EFA.Signal.Signal (PSigL, (.++))

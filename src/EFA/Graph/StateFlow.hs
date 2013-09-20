@@ -15,7 +15,7 @@ import EFA.Graph.Topology
 import EFA.Equation.Arithmetic ((~+), (~/))
 import EFA.Equation.Result (Result)
 
-import qualified EFA.Signal.SequenceData as Sequ
+import qualified EFA.Signal.Sequence as Sequ
 
 import qualified EFA.Utility.Map as MapU
 

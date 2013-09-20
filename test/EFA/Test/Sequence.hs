@@ -3,7 +3,7 @@
 
 module EFA.Test.Sequence where
 
-import qualified EFA.Signal.SequenceData as Sequ
+import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Signal.Chop as Chop
 import qualified EFA.Signal.Signal as S
 import EFA.Signal.Record (PowerRecord, Record(Record))

@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeFamilies #-}
 
-module EFA.Signal.SequenceData where
+module EFA.Signal.Sequence where
 
 import qualified EFA.Graph.Topology.Index as Idx
 

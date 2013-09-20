@@ -32,7 +32,7 @@ import qualified EFA.Flow.Sequence.Index as XIdx
 
 import qualified EFA.Signal.Plot as Plot
 import qualified EFA.Signal.Signal as Sig
-import qualified EFA.Signal.SequenceData as Sequ
+import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Signal.Vector as SV
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Base as Base

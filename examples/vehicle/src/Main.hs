@@ -17,7 +17,7 @@ import EFA.Application.Utility (checkDetermined)
 import qualified EFA.Flow.Sequence.Index as SeqIdx
 
 import qualified EFA.Signal.Record as Record
-import qualified EFA.Signal.SequenceData as Sequ
+import qualified EFA.Signal.Sequence as Sequ
 -- import qualified EFA.Signal.Plot as Plot
 import EFA.Signal.Chop (makeSeqFlowTopology)
 import EFA.Signal.Signal (TC, Scalar,toScalar)

@@ -73,7 +73,7 @@ Library
     EFA.Utility.Trace
     EFA.Utility.TypeConstructor
     EFA.Signal.Base
-    EFA.Signal.SequenceData
+    EFA.Signal.Sequence
     EFA.Signal.Typ
     EFA.Signal.Data
     EFA.Signal.Vector

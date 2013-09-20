@@ -38,7 +38,7 @@ import qualified EFA.Signal.Plot as Plot
 --import qualified EFA.Signal.Data as Data
 import qualified EFA.Signal.ConvertTable as CT
 import qualified EFA.Signal.Vector as SV
-import qualified EFA.Signal.SequenceData as Sequ
+import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Signal.Signal as Sig
 import EFA.Signal.Chop (makeSeqFlowTopology, addZeroCrossings, genSequ,)
 import EFA.Signal.Signal (TC,Scalar)

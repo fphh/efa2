@@ -15,7 +15,7 @@ import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Record as EqRecord
 import EFA.Equation.Result (Result)
 
-import qualified EFA.Signal.SequenceData as Sequ
+import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Signal.Record as Record
 import EFA.Signal.Signal (TC, Scalar, toScalar)
 import EFA.Signal.Data (Data, Nil, (:>))

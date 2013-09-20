@@ -34,7 +34,7 @@ import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Signal.Signal as Sig; import EFA.Signal.Signal (TC,Scalar)
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Chop as Chop
-import qualified EFA.Signal.SequenceData as Sequ
+import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Signal.ConvertTable as CT
 import qualified EFA.Signal.Vector as Vec
 import qualified EFA.Signal.Base as Base

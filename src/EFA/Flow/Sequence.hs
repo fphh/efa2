@@ -10,7 +10,7 @@ import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Graph
 import EFA.Graph.Topology (FlowTopology)
 
-import qualified EFA.Signal.SequenceData as Sequ
+import qualified EFA.Signal.Sequence as Sequ
 
 import qualified Data.Map as Map ; import Data.Map (Map)
 import qualified Data.Foldable as Fold

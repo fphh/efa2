@@ -33,7 +33,7 @@ import EFA.Report.Format (Format, Unicode(Unicode, unUnicode))
 
 import qualified EFA.Equation.Variable as Var
 
-import qualified EFA.Signal.SequenceData as Sequ
+import qualified EFA.Signal.Sequence as Sequ
 import EFA.Signal.Signal (SignalIdx(SignalIdx))
 
 import qualified EFA.Graph.Topology.Index as Idx

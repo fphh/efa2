@@ -15,7 +15,7 @@ import EFA.Graph (DirEdge(DirEdge), labNodes)
 
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Vector as SV
-import qualified EFA.Signal.SequenceData as Sequ
+import qualified EFA.Signal.Sequence as Sequ
 import EFA.Signal.Record
           (Record(Record), FlowState(FlowState), FlowRecord,
            getSig, rmapWithKey)

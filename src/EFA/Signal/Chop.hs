@@ -9,14 +9,14 @@ module EFA.Signal.Chop where
 import qualified EFA.Graph.Flow as Flow
 import EFA.Graph.Topology (Topology, FlowTopology)
 
-import qualified EFA.Signal.SequenceData as Sequ
+import qualified EFA.Signal.Sequence as Sequ
 
 import qualified EFA.Signal.Base as SB
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Vector as V
 import qualified EFA.Signal.Record as Record
 
-import EFA.Signal.SequenceData (Range)
+import EFA.Signal.Sequence (Range)
 
 
 

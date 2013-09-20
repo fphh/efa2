@@ -65,7 +65,7 @@ import EFA.Flow.Sequence (sequence, storages)
 import EFA.Flow.Quantity
           (Topology, Sums(..), Sum(..), Flow(..), mapSums, traverseSums, (<#>))
 
-import qualified EFA.Signal.SequenceData as Sequ
+import qualified EFA.Signal.Sequence as Sequ
 
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env

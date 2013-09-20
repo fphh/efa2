@@ -17,7 +17,7 @@ import EFA.Equation.Result (Result)
 
 
 import qualified EFA.Signal.Record as SigRecord
-import qualified EFA.Signal.SequenceData as Sequ
+import qualified EFA.Signal.Sequence as Sequ
 import qualified EFA.Signal.Signal as Signal
 import EFA.Signal.Data (Data, Nil, (:>))
 
