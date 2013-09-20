@@ -6,7 +6,6 @@
 module Modules.Optimisation where
 
 import qualified Modules.System as System
-import Modules.System (Node(..))
 
 import qualified EFA.Application.Sweep as Sweep
 import qualified EFA.Application.Optimisation as AppOpt
@@ -42,9 +41,9 @@ state0, state1, state2, state3 :: Idx.State
 state0 :~ state1 :~ state2 :~ state3 :~ _ = Stream.enumFrom $ Idx.State 0
 
 
-type Env a = StateEnv.Complete Node (Data Nil a) (Data Nil a)
+type Env a = StateEnv.Complete System.Node (Data Nil a) (Data Nil a)
 --type EnvResultData a = StateEnv.Complete Node (Result (Data Nil a)) (Result (Data Nil a))
-type EnvResult a = StateEnv.Complete Node (Result a) (Result a)
+type EnvResult a = StateEnv.Complete System.Node (Result a) (Result a)
 
 type EqSystemData a =
   forall s. EqGen.EquationSystem System.Node s (Data Nil a) (Data Nil a)
@@ -58,8 +57,8 @@ type Param2x2 = Sweep.Pair Param2 Param2
 
 solve ::
   (Ord a, Fractional a, Show a, EqArith.Sum a, EqArith.Constant a) =>
-  Topo.StateFlowGraph Node ->
-  (Idx.State -> EtaAssignMap Node) ->
+  Topo.StateFlowGraph System.Node ->
+  (Idx.State -> EtaAssignMap System.Node) ->
   Map String (a -> a) ->
   Env a ->
   Idx.State ->
@@ -85,8 +84,8 @@ givenSecLoad :: (Eq a, EqArith.Sum a) =>
                 Data Nil a ->
                 EqSystemData a
 givenSecLoad state pLocal pRest =  mconcat $
-   (XIdx.power state LocalRest LocalNetwork .= pLocal) :
-   (XIdx.power state Rest Network .= pRest) :
+   (XIdx.power state System.LocalRest System.LocalNetwork .= pLocal) :
+   (XIdx.power state System.Rest System.Network .= pRest) :
    []
 
 givenSecDOF :: (Eq a, EqArith.Sum a) =>
@@ -95,8 +94,8 @@ givenSecDOF :: (Eq a, EqArith.Sum a) =>
                Data Nil a ->
                EqSystemData a
 givenSecDOF state pWater pGas =  mconcat $
-   (XIdx.power state Network Water .= pWater) :
-   (XIdx.power state LocalNetwork Gas .= pGas) :
+   (XIdx.power state System.Network System.Water .= pWater) :
+   (XIdx.power state System.LocalNetwork System.Gas .= pGas) :
    []
 
 
@@ -107,8 +106,8 @@ commonGiven ::
 commonGiven =
    foldMap f idx
    where f st = (XIdx.dTime st .= Data 1)
-                <> (XIdx.energy state0 Water Network
-                     EqGen.=%%= XIdx.energy st Water Network)
+                <> (XIdx.energy state0 System.Water System.Network
+                     EqGen.=%%= XIdx.energy st System.Water System.Network)
          idx = take 20 [Idx.State 1 ..]
 --
 --   mconcat $
@@ -163,15 +162,17 @@ case socDrive of
 
 
 
-condition :: (Show b) => StateEnv.Complete Node b (Result Double) -> Bool
+condition :: (Show b) => StateEnv.Complete System.Node b (Result Double) -> Bool
 condition env =
   all (>0) $ catMaybes $ takeWhile isJust $ cnlst ++ nlnlst
 --  all (>0) $ catMaybes $ filter isJust $ cnlst ++ nlnlst
   where idx = [Idx.State 0 ..]
         coalNetworkFunc state =
-          AppUt.lookupEnergyStateMaybe (XIdx.energy state Coal Network) env
+          AppUt.lookupEnergyStateMaybe
+            (XIdx.energy state System.Coal System.Network) env
         networkLocalNetworkFunc state =
-          AppUt.lookupEnergyStateMaybe (XIdx.energy state Network LocalNetwork) env
+          AppUt.lookupEnergyStateMaybe
+            (XIdx.energy state System.Network System.LocalNetwork) env
 
         cnlst = map coalNetworkFunc idx
         nlnlst = map networkLocalNetworkFunc idx

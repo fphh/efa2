@@ -10,8 +10,14 @@ import qualified Modules.System as System
 import qualified Modules.Optimisation as Optimisation
 import qualified Modules.Analysis as Analysis
 import qualified Modules.Utility as ModUt
-import Modules.System (Node(..))
-import Modules.Optimisation (EnvDouble, sec0,sec1, SocDrive(..), lookupDetPower, condition, forcing )
+import Modules.System (
+   Node (
+      Coal, Gas, Water,
+      Network, LocalNetwork,
+      Rest, LocalRest
+   ))
+import Modules.Optimisation
+   (EnvDouble, sec0,sec1, lookupDetPower, condition, forcing)
 
 import qualified EFA.Application.Sweep as Sweep
 import qualified EFA.Application.Utility as AppUt
@@ -225,12 +231,12 @@ maxOptChargeFunc, maxOptDischargeFunc ::
 maxOptChargeFunc socDrive =
   maybe (error "maxOptChargeFunc") id .
   Sweep.optimalSolution2D condition
-    (forcing $ ChargeDrive socDrive) System.seqTopoOpt
+    (forcing $ Optimisation.ChargeDrive socDrive) System.seqTopoOpt
 
 maxOptDischargeFunc socDrive =
   maybe (error "maxOptDischargeFunc") id .
   Sweep.optimalSolution2D condition
-    (forcing $ DischargeDrive socDrive) System.seqTopoOpt
+    (forcing $ Optimisation.DischargeDrive socDrive) System.seqTopoOpt
 
 makePics ::
   (forall s. EqGen.EquationSystem Node s (Data Nil Double) (Data Nil Double)) ->

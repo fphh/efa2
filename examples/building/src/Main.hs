@@ -9,7 +9,7 @@ import qualified Modules.Optimisation as Optimisation
 
 
 import Modules.Optimisation(EnvResult, Param2)
-import Modules.System(Node(..))
+import Modules.System (Node)
 
 -- import EFA.Utility.Async (concurrentlyMany_)
 
@@ -132,7 +132,7 @@ sweepPts = Sweep.Pair (local !: rest !: Empty.Cons) (water !: gas !: Empty.Cons)
 optimalPower :: One.OptimalPower Node
 optimalPower =
   One.optimalPower [(Optimisation.state0, lst), (Optimisation.state1, lst)]
-  where lst = [(Network, Water), (LocalNetwork, Gas)]
+  where lst = [(System.Network, System.Water), (System.LocalNetwork, System.Gas)]
 
 force :: One.SocDrive Double
 force = One.ChargeDrive 0
@@ -319,8 +319,8 @@ solveAndCalibrateAvgEffWithGraph time prest plocal etaMap (stateFlowGraph, env) 
         givenSignals time $
         Map.union optPowerInterp $
         Map.fromList $
-          ((LocalRest, LocalNetwork), plocal) :
-          ((Rest, Network), prest) :
+          ((System.LocalRest, System.LocalNetwork), plocal) :
+          ((System.Rest, System.Network), prest) :
           []
 
       envSims =

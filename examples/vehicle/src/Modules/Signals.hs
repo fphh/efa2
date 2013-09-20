@@ -4,7 +4,13 @@
 
 module Modules.Signals where
 
-import Modules.System (Node(..))
+import Modules.System (
+   Node (
+      Tank, ConBattery, Battery,
+      ConES, ConFrontBrakes,
+      Chassis, Resistance, ElectricSystem,
+      FrontBrakes, VehicleInertia, RearBrakes
+   ))
 
 import qualified EFA.Flow.Sequence.Index as XIdx
 
@@ -245,8 +251,16 @@ xyGenerator = (SigId "engine1._speed_log", SigId "generator._torque_log")
 xyMotor :: (SigId,SigId)
 xyMotor = (SigId "motor._speed_log", SigId "motor._torque_log")
 
-etaEngineGenerator :: (XIdx.PPos Node,XIdx.PPos Node,XIdx.PPos Node)
-etaEngineGenerator = (XIdx.ppos  Tank ConBattery, XIdx.ppos ConBattery Tank, XIdx.ppos ConBattery Tank)
+etaEngineGenerator ::
+   (XIdx.PPos Node, XIdx.PPos Node, XIdx.PPos Node)
+etaEngineGenerator =
+   (XIdx.ppos Tank ConBattery,
+    XIdx.ppos ConBattery Tank,
+    XIdx.ppos ConBattery Tank)
 
-etaMotorGearbox :: (XIdx.PPos Node,XIdx.PPos Node,XIdx.PPos Node)
-etaMotorGearbox = (XIdx.ppos ConES ConFrontBrakes, XIdx.ppos ConFrontBrakes ConES, XIdx.ppos ConFrontBrakes ConES)
+etaMotorGearbox ::
+   (XIdx.PPos Node, XIdx.PPos Node, XIdx.PPos Node)
+etaMotorGearbox =
+   (XIdx.ppos ConES ConFrontBrakes,
+    XIdx.ppos ConFrontBrakes ConES,
+    XIdx.ppos ConFrontBrakes ConES)

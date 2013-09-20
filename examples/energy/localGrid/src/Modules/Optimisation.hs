@@ -5,7 +5,12 @@
 module Modules.Optimisation where
 
 import qualified Modules.System as System
-import Modules.System (Node(..))
+import Modules.System (
+   Node (
+      Coal, Gas, Water,
+      Network, LocalNetwork,
+      Rest, LocalRest
+   ))
 
 import qualified EFA.Application.Absolute as EqGen
 --import qualified EFA.Application.EtaSys as ES

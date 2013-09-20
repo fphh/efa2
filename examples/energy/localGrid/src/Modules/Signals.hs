@@ -4,7 +4,12 @@
 
 module Modules.Signals where
 
-import Modules.System (Node(..))
+import Modules.System (
+   Node (
+      Coal, Gas, Sun, Wind, Water,
+      Industry, HouseHold,
+      Network, LocalNetwork
+   ))
 
 import qualified EFA.Flow.Sequence.Index as XIdx
 
