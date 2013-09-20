@@ -34,14 +34,13 @@ module EFA.Signal.Plot (
    genAxLabel
    ) where
 
-import qualified EFA.Signal.SequenceData as SD
+import qualified EFA.Signal.SequenceData as Sequ
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Data as D
 import qualified EFA.Signal.Vector as SV
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Colour as Colour
 
-import EFA.Signal.SequenceData (SequData)
 import EFA.Signal.Record (Record(Record))
 import EFA.Signal.Signal (TC, toSigList, getDisplayType)
 import EFA.Signal.Data (Data, (:>), Nil, NestedList)
@@ -418,10 +417,10 @@ sequence :: (Fractional d2, Fractional d1, Ord id,
             (id -> String) ->
             (LineSpec.T -> LineSpec.T) ->
             (Int -> LineSpec.T -> LineSpec.T) ->
-            SequData (Record s1 s2 typ1 typ2 id v d1 d2) ->
+            Sequ.List (Record s1 s2 typ1 typ2 id v d1 d2) ->
             Plot2D.T d1 d2
-sequence showKey opts varOpts (SD.SequData xs) =
-  Fold.fold $ zipWith (\(SD.Section s _ x) k -> record (\key -> show "Sec " ++ show s ++ "-" ++ showKey key) ((varOpts k). opts) x) xs [0..]
+sequence showKey opts varOpts (Sequ.List xs) =
+  Fold.fold $ zipWith (\(Sequ.Section s _ x) k -> record (\key -> show "Sec " ++ show s ++ "-" ++ showKey key) ((varOpts k). opts) x) xs [0..]
 
 -- | Plotting Stacks ---------------------------------------------------------------
 

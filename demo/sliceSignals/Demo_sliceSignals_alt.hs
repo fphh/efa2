@@ -6,9 +6,9 @@ module Main where
 
 import qualified EFA.Flow.Sequence.Index as XIdx
 
+import qualified EFA.Signal.SequenceData as Sequ
 import qualified EFA.Signal.Signal as S
 import EFA.Signal.Chop (addZeroCrossings, genSequ)
-import EFA.Signal.SequenceData (SequData)
 import EFA.Signal.Record (PowerRecord, Record(Record))
 import EFA.Signal.Data (Data, Nil, (:>))
 
@@ -40,7 +40,7 @@ rec, rec0 :: PowerRecord Node [] Double
 rec = Record time pmap
 rec0 = addZeroCrossings rec
 
-sequ :: SequData (PowerRecord Node [] Double)
+sequ :: Sequ.List (PowerRecord Node [] Double)
 sequ = genSequ rec0
 
 main :: IO ()

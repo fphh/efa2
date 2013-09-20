@@ -65,7 +65,7 @@ import EFA.Flow.Sequence (sequence, storages)
 import EFA.Flow.Quantity
           (Topology, Sums(..), Sum(..), Flow(..), mapSums, traverseSums, (<#>))
 
-import qualified EFA.Signal.SequenceData as SD
+import qualified EFA.Signal.SequenceData as Sequ
 
 import qualified EFA.Equation.Record as Record
 import qualified EFA.Equation.Environment as Env
@@ -446,7 +446,7 @@ lookupSums (Idx.PartNode sec node) =
 
 seqLookup ::
    Idx.Section -> Graph node a v -> Maybe (v, Topology node a v)
-seqLookup sec = SD.lookup sec . sequence
+seqLookup sec = Sequ.lookup sec . sequence
 
 
 class

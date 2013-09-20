@@ -10,7 +10,7 @@ import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Graph
 import EFA.Graph.Topology (FlowTopology)
 
-import qualified EFA.Signal.SequenceData as SD
+import qualified EFA.Signal.SequenceData as Sequ
 
 import qualified Data.Map as Map ; import Data.Map (Map)
 import qualified Data.Foldable as Fold
@@ -31,7 +31,7 @@ type
 
 type
    Sequence node structEdge sectionLabel nodeLabel structLabel =
-      SD.Map
+      Sequ.Map
          (sectionLabel, Graph.Graph node structEdge nodeLabel structLabel)
 
 data
@@ -61,16 +61,16 @@ So kann man beim Initialisieren auch Werte zuweisen.
 -}
 sequenceGraph ::
    (Ord node) =>
-   SD.SequData (FlowTopology node) -> RangeGraph node
+   Sequ.List (FlowTopology node) -> RangeGraph node
 sequenceGraph sd =
    let sq = fmap Topo.classifyStorages sd
    in  Graph {
           storages =
              fmap
-                (storageMapFromList (Fold.toList $ SD.mapWithSection const sq) .
+                (storageMapFromList (Fold.toList $ Sequ.mapWithSection const sq) .
                  Flow.storageEdges . Map.mapMaybe id) $
              Flow.getStorageSequences sq,
-          sequence = SD.toMap $ fmap ((,) ()) sq
+          sequence = Sequ.toMap $ fmap ((,) ()) sq
        }
 
 flatten ::

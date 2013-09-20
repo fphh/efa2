@@ -13,7 +13,7 @@ import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph as Graph
 
-import qualified EFA.Signal.SequenceData as SD
+import qualified EFA.Signal.SequenceData as Sequ
 import qualified EFA.Signal.Data as Data
 
 import qualified EFA.Equation.Record as EqRecord
@@ -80,11 +80,11 @@ seqFlowGraphFromStates topo =
    SeqFlowQuant.graphFromPlain .
    SeqFlow.sequenceGraph .
    fmap (StateAnalysis.bruteForce topo !!) .
-   SD.fromList
+   Sequ.fromList
 
 
-select :: [topo] -> [Int] -> SD.SequData topo
-select ts = SD.fromList . map (ts !!)
+select :: [topo] -> [Int] -> Sequ.List topo
+select ts = Sequ.fromList . map (ts !!)
 
 
 checkDetermined :: String -> Result a -> a

@@ -3,9 +3,8 @@
 
 module EFA.Test.Sequence where
 
-import EFA.Signal.SequenceData (SequData(..))
+import qualified EFA.Signal.SequenceData as Sequ
 import qualified EFA.Signal.Chop as Chop
-
 import qualified EFA.Signal.Signal as S
 import EFA.Signal.Record (PowerRecord, Record(Record))
 import EFA.Signal.Base (Val)
@@ -29,7 +28,7 @@ prop_chopMatchingCutsApprox ::
   forall node. (Ord node) =>
   PowerRecord node [] Val -> Bool
 prop_chopMatchingCutsApprox prec =
-   case Chop.chopAtZeroCrossingsPowerRecord prec :: SequData (PowerRecord node [] Val) of
+   case Chop.chopAtZeroCrossingsPowerRecord prec :: Sequ.List (PowerRecord node [] Val) of
        xs ->
           eqAdjacent
              (\(Record xt xm)
@@ -43,7 +42,7 @@ prop_chopMatchingCutsApprox prec =
 prop_chopProjectiveApprox ::
   forall node. (Ord node) => PowerRecord node [] Val -> Bool
 prop_chopProjectiveApprox prec =
-   let secs :: SequData (PowerRecord node [] Val)
+   let secs :: Sequ.List (PowerRecord node [] Val)
        secs = Chop.chopAtZeroCrossingsPowerRecord prec
    in  Chop.approxSequPwrRecord (1e-8)
           secs
@@ -54,7 +53,7 @@ prop_chopMatchingCutsExact ::
   forall node. (Ord node) => PowerRecord node [] Rational -> Bool
 prop_chopMatchingCutsExact prec =
    case Chop.chopAtZeroCrossingsPowerRecord prec
-         :: SequData (PowerRecord node [] Rational) of
+         :: Sequ.List (PowerRecord node [] Rational) of
       xs ->
          eqAdjacent
             (\(Record xt xm)
@@ -67,14 +66,14 @@ prop_chopMatchingCutsExact prec =
 prop_chopProjectiveExact ::
   forall node. (Ord node) => PowerRecord node [] Rational -> Bool
 prop_chopProjectiveExact prec =
-   let secs :: SequData (PowerRecord node [] Rational)
+   let secs :: Sequ.List (PowerRecord node [] Rational)
        secs = Chop.chopAtZeroCrossingsPowerRecord prec
    in  secs
        ==
        (Chop.chopAtZeroCrossingsPowerRecord $
         Chop.concatPowerRecords secs)
 
-eqAdjacent :: (a -> a -> Bool) -> SequData a -> Bool
+eqAdjacent :: (a -> a -> Bool) -> Sequ.List a -> Bool
 eqAdjacent f =
    and . ListHT.mapAdjacent f . Fold.toList
 

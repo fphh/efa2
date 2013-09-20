@@ -17,7 +17,7 @@ import EFA.Equation.Result (Result)
 
 
 import qualified EFA.Signal.Record as SigRecord
-import qualified EFA.Signal.SequenceData as SD
+import qualified EFA.Signal.SequenceData as Sequ
 import qualified EFA.Signal.Signal as Signal
 import EFA.Signal.Data (Data, Nil, (:>))
 
@@ -119,11 +119,11 @@ evar .= val  =  variable evar =.= EqGen.constant val
 
 envFromFlowRecord ::
    (Ord node) =>
-   SD.SequData (SigRecord.DTimeFlowRecord node v a) ->
+   Sequ.List (SigRecord.DTimeFlowRecord node v a) ->
    Env.Signal node (Data (v :> Nil) a)
 envFromFlowRecord =
    fold .
-   SD.mapWithSection
+   Sequ.mapWithSection
       (\section (SigRecord.Record times signals) ->
          mempty {
             Env.dtimeMap =

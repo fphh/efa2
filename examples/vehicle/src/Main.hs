@@ -17,7 +17,7 @@ import EFA.Application.Utility (checkDetermined)
 import qualified EFA.Flow.Sequence.Index as SeqIdx
 
 import qualified EFA.Signal.Record as Record
-import qualified EFA.Signal.SequenceData as SD
+import qualified EFA.Signal.SequenceData as Sequ
 -- import qualified EFA.Signal.Plot as Plot
 import EFA.Signal.Chop (makeSeqFlowTopology)
 import EFA.Signal.Signal (TC, Scalar,toScalar)
@@ -142,8 +142,8 @@ energyIndexSec = Idx.InPart (Idx.Section 7) energyIndex
 energyIndex :: Idx.Energy System.Node
 energyIndex  = Idx.Energy $ Idx.StructureEdge System.Tank System.ConBattery
 
-sectionMapping :: [SD.SequData a] -> [SD.SequData a]
-sectionMapping = map (SD.reIndex [1,2,7,8,16,17,19::Int])
+sectionMapping :: [Sequ.List a] -> [Sequ.List a]
+sectionMapping = map (Sequ.reIndex [1,2,7,8,16,17,19::Int])
 
 
 -- | B. Generator läuft am Anfang kurz
@@ -188,7 +188,7 @@ sectionMapping :: [Int]
 sectionMapping = [1,2,7,8,16,17,19]
 -}
 
-sectionMapping :: [SequData a] -> [SequData a]
+sectionMapping :: [Sequ.List a] -> [Sequ.List a]
 sectionMapping = id
 
 
@@ -231,8 +231,8 @@ energyIndex :: Idx.Energy System.Node
 --energyIndex  = Idx.Energy $ Idx.StructureEdge System.Tank System.ConBattery
 energyIndex  = Idx.Energy $ Idx.StructureEdge System.Battery System.ConBattery
 
-sectionMapping :: [SD.SequData a] -> [SD.SequData a]
-sectionMapping = map (SD.reIndex [8,11,13,14,18,32,37::Int])
+sectionMapping :: [Sequ.List a] -> [Sequ.List a]
+sectionMapping = map (Sequ.reIndex [8,11,13,14,18,32,37::Int])
 
 
 --------------------------------------------------------------------

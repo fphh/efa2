@@ -38,7 +38,7 @@ import qualified EFA.Signal.Plot as Plot
 --import qualified EFA.Signal.Data as Data
 import qualified EFA.Signal.ConvertTable as CT
 import qualified EFA.Signal.Vector as SV
-import qualified EFA.Signal.SequenceData as SD
+import qualified EFA.Signal.SequenceData as Sequ
 import qualified EFA.Signal.Signal as Sig
 import EFA.Signal.Chop (makeSeqFlowTopology, addZeroCrossings, genSequ,)
 import EFA.Signal.Signal (TC,Scalar)
@@ -620,7 +620,7 @@ main = do
 
      eqs :: EqGen.EquationSystem Node s (Data Nil Double) (Data ([] :> Nil) Double)
      eqs = Optimisation.givenSimulate etaAssign etaFunc $
-             SD.SequData [SD.Section (Idx.Section 0) undefined rec]
+             Sequ.List [Sequ.Section (Idx.Section 0) undefined rec]
 
      envSim = EqGen.solve seqTopoSim eqs
 
@@ -643,15 +643,15 @@ main = do
      sectionFilterEnergy ::  TC Scalar (Typ A F Tt) (Data Nil Double)
      sectionFilterEnergy = Sig.toScalar 0
 
-     sequencePowers :: SD.SequData (Record.PowerRecord System.Node [] Double)
+     sequencePowers :: Sequ.List (Record.PowerRecord System.Node [] Double)
      sequencePowers = genSequ rec0
      (_, sequenceFlowsFilt) =
-         SD.unzip $
-         SD.filter (Record.major sectionFilterEnergy sectionFilterTime . snd) $
+         Sequ.unzip $
+         Sequ.filter (Record.major sectionFilterEnergy sectionFilterTime . snd) $
          fmap (\x -> (x, Record.partIntegrate x)) sequencePowers
 
      (flowStates, adjustedFlows) =
-         SD.unzip $
+         Sequ.unzip $
          fmap
          (\state ->
            let flowState = Flow.genFlowState state

@@ -25,11 +25,6 @@ import EFA.Equation.Result(Result)
 
 import qualified EFA.Symbolic.Variable as SymVar
 
---import qualified EFA.Signal.Record as SigRecord
---import qualified EFA.Signal.SequenceData as SD
---import qualified EFA.Signal.Signal as Signal
---import EFA.Signal.Data (Data, Nil, (:>))
-
 --import qualified EFA.Graph.Flow as Flow
 import qualified EFA.Graph.Topology.Index as Idx
 import qualified EFA.Graph.Topology.Node as Node
@@ -172,25 +167,6 @@ evar .= val  =  variable evar =.= EqGen.constant val
 (=%%=) = (EqGen.=%%=)
 
 
-{-
-envFromFlowRecord ::
-   (Ord node) =>
-   SD.SequData (SigRecord.DTimeFlowRecord node v a) ->
-   EqEnv.Signal node (Data (v :> Nil) a)
-envFromFlowRecord =
-   fold .
-   SD.mapWithSection
-      (\section (SigRecord.Record times signals) ->
-         mempty {
-            EqEnv.dtimeMap =
-               Map.singleton (XIdx.dTime section) (Signal.unpack times),
-            EqEnv.powerMap =
-               Map.mapKeys
-                  (\(Idx.PPos x) -> Idx.InPart section $ Idx.Power x) $
-               fmap Signal.unpack signals
-         })
-
--}
 fromEnvScalar ::
    (Eq a, Arith.Sum a, Node.C node) =>
    EqEnv.Scalar node a ->

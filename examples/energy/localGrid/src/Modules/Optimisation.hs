@@ -24,7 +24,7 @@ import qualified EFA.Graph.Flow as Flow
 
 import qualified EFA.Application.Utility as AppUt
 
-import qualified EFA.Signal.SequenceData as SD
+import qualified EFA.Signal.SequenceData as Sequ
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.Data as Data
@@ -186,12 +186,12 @@ givenSimulate ::
   SV.Storage v a) =>
   (Idx.Section -> EtaAssignMap) ->
   Map String (a -> a) ->
-  SD.SequData (Record.PowerRecord Node v a) ->
+  Sequ.List (Record.PowerRecord Node v a) ->
   EqGen.EquationSystem Node s (Data Nil a) (Data (v :> Nil) a)
 
 givenSimulate etaAssign etaFunc sf =
   (XIdx.storage Idx.initial Water .= Data 0)
-   <> Fold.fold (SD.mapWithSection f sf)
+   <> Fold.fold (Sequ.mapWithSection f sf)
    where f sec (Record.Record t xs) =
            (XIdx.dTime sec .=
              (Data  $ SV.fromList $ replicate (Sig.len t) 1))

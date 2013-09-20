@@ -14,7 +14,6 @@ import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph.Topology as Topo
 import qualified EFA.Graph.StateFlow as StateFlow
 import qualified EFA.Graph.Flow as Flow
---import qualified EFA.Signal.SequenceData as SD
 --import qualified EFA.Signal.Base as Base
 --import qualified EFA.Signal.Record as Rec
 --import qualified EFA.Signal.Typ as Typ

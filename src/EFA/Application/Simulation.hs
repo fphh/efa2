@@ -34,7 +34,7 @@ import qualified EFA.Signal.Vector as SV
 import qualified EFA.Signal.Base as Base
 import qualified EFA.Signal.Signal as Sig
 import qualified EFA.Signal.Record as Record
-import qualified EFA.Signal.SequenceData as SD
+import qualified EFA.Signal.SequenceData as Sequ
 
 
 import qualified Data.Map as Map
@@ -42,11 +42,6 @@ import qualified Data.Foldable as Fold
 import Data.Map (Map)
 import Data.Monoid((<>))
 
-{-
-eqs :: EqGen.EquationSystem Node s (Data Nil Double) (Data ([] :> Nil) Double)
-eqs = Simulation.givenSimulate etaAssign etaFunc $
-             SD.SequData [SD.Section (Idx.Section 0) undefined rec]
--}
 
 type EtaAssignMap node = Map (StateIdx.Eta node) (String, String, StateIdx.Eta node -> StateIdx.Power node)
 
@@ -72,7 +67,7 @@ solve topology etaAssign etaFunc powerRecord = EqGen.solveSimple $
                                               givenSimulate stateFlowGraph etaAssign etaFunc powerRecord
   where
     -- | Build Sequenceflow graph for simulation
-    stateFlowGraph = StateFlow.stateGraphActualStorageEdges $ fmap (flowStates !!) $ SD.fromList [0]
+    stateFlowGraph = StateFlow.stateGraphActualStorageEdges $ fmap (flowStates !!) $ Sequ.fromList [0]
     flowStates = StateAnalysis.advanced topology
 
 
@@ -91,8 +86,6 @@ givenSimulate ::
   (forall s . EqGen.EquationSystem node s (Data Nil a) (Data (v :> Nil) a))
 
 givenSimulate stateFlowGraph etaAssign etaFunc powerRecord =
---  (StateIdx.storage Idx.initial Water EqGen..= Data 0) <>
-   --Fold.fold (SD.mapWithSection f sf)
   (EqGen.fromGraph True $ Topo.dirFromFlowGraph (stateFlowGraph)) <>
    f powerRecord
    where f (Record.Record t xs) =

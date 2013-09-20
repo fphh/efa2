@@ -15,8 +15,7 @@ import EFA.Graph (DirEdge(DirEdge), labNodes)
 
 import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Vector as SV
-import qualified EFA.Signal.SequenceData as SD
-import EFA.Signal.SequenceData (SequData)
+import qualified EFA.Signal.SequenceData as Sequ
 import EFA.Signal.Record
           (Record(Record), FlowState(FlowState), FlowRecord,
            getSig, rmapWithKey)
@@ -143,7 +142,7 @@ adjustSignsIgnoreUnknownPPos topo (FlowState state) (Record dt flow) =
 -- | Function to calculate flow states for the whole sequence
 genSequFState ::
   (SV.Walker v, SV.Storage v a, BSum a, Fractional a, Ord a) =>
-  SequData (FlowRecord node v a) -> SequData (FlowState node)
+  Sequ.List (FlowRecord node v a) -> Sequ.List (FlowState node)
 genSequFState sqFRec = fmap genFlowState sqFRec
 
 -- | Function to extract the flow state out of a Flow Record
@@ -156,12 +155,12 @@ genFlowState (Record _time flowMap) =
 -- | Function to generate Flow Topologies for all Sections
 genSequFlowTops ::
   (Ord node, Show node) =>
-  Topology node -> SequData (FlowState node) -> SequData (FlowTopology node)
+  Topology node -> Sequ.List (FlowState node) -> Sequ.List (FlowTopology node)
 genSequFlowTops topo = fmap (genFlowTopology topo)
 
 genSequFlowTopsIgnoreUnknownPPos ::
   (Ord node, Show node) =>
-  Topology node -> SequData (FlowState node) -> SequData (FlowTopology node)
+  Topology node -> Sequ.List (FlowState node) -> Sequ.List (FlowTopology node)
 genSequFlowTopsIgnoreUnknownPPos topo =
   fmap (genFlowTopologyIgnoreUnknownPPos topo)
 
@@ -223,19 +222,19 @@ storageEdges stores = do
 
 getStorageSequences ::
    (Ord node) =>
-   SequData (Topo.ClassifiedTopology node) ->
+   Sequ.List (Topo.ClassifiedTopology node) ->
    Map node (Map Idx.Section (Maybe Topo.StoreDir))
 getStorageSequences =
    Map.unionsWith (Map.unionWith (error "duplicate section for node"))
    .
    Fold.toList
    .
-   SD.mapWithSection
+   Sequ.mapWithSection
       (\s g ->
          fmap (Map.singleton s) $
          Map.mapMaybe Topo.maybeStorage $ Graph.nodeLabels g)
 
-type RangeGraph node = (Map Idx.Section SD.Range, SequFlowGraph node)
+type RangeGraph node = (Map Idx.Section Sequ.Range, SequFlowGraph node)
 
 type FlowEdge = Topo.FlowEdge Graph.EitherEdge
 type AugNode sec = Idx.PartNode (Idx.Augmented sec)
@@ -270,15 +269,15 @@ So kann man beim Initialisieren auch Werte zuweisen.
 -}
 sequenceGraph ::
    (Ord node) =>
-   SequData (FlowTopology node) ->
+   Sequ.List (FlowTopology node) ->
    RangeGraph node
 sequenceGraph sd =
-   (,) (Fold.fold $ SD.mapWithSectionRange (\s rng _ -> Map.singleton s rng) sq) $
+   (,) (Fold.fold $ Sequ.mapWithSectionRange (\s rng _ -> Map.singleton s rng) sq) $
    insEdges
       (fmap storageEdges $
        -- Map.filter (not . Map.null) $   -- required?
        fmap (Map.mapMaybe id) tracks) $
    insNodes (Map.keys tracks) $
-   Fold.fold $ SD.mapWithSection sectionFromClassTopo sq
+   Fold.fold $ Sequ.mapWithSection sectionFromClassTopo sq
   where sq = fmap Topo.classifyStorages sd
         tracks = getStorageSequences sq

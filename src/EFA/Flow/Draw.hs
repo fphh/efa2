@@ -33,7 +33,7 @@ import EFA.Report.Format (Format, Unicode(Unicode, unUnicode))
 
 import qualified EFA.Equation.Variable as Var
 
-import qualified EFA.Signal.SequenceData as SD
+import qualified EFA.Signal.SequenceData as Sequ
 import EFA.Signal.Signal (SignalIdx(SignalIdx))
 
 import qualified EFA.Graph.Topology.Index as Idx
@@ -708,8 +708,8 @@ sequFlowGraph opts gr =
        SeqFlowQuant.sequence gr)
 
 
-formatRange :: SD.Range -> String
-formatRange (SD.Range (SignalIdx from) (SignalIdx to)) =
+formatRange :: Sequ.Range -> String
+formatRange (Sequ.Range (SignalIdx from) (SignalIdx to)) =
    show from ++ "-" ++ show to
 
 formatNodeStorage ::

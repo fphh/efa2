@@ -38,7 +38,7 @@ Sequence Vector to Store Section Data
 
 It could also be a Map, but we need the laziness of the list type.
 -}
-newtype SequData a = SequData [Section a] deriving (Show, Eq)
+newtype List a = List [Section a] deriving (Show, Eq)
 
 data Section a = Section Idx.Section Range a
    deriving (Eq, Show)
@@ -52,16 +52,16 @@ rangeSingleton n = Range n n
 rangeIsSingleton :: Range -> Bool
 rangeIsSingleton (Range from to) = from==to
 
-type instance D.Value (SequData a) = D.Value a
+type instance D.Value (List a) = D.Value a
 
-instance Functor SequData where
-   fmap f (SequData xs) = SequData (map (fmap f) xs)
+instance Functor List where
+   fmap f (List xs) = List (map (fmap f) xs)
 
-instance Foldable SequData where
+instance Foldable List where
    foldMap = foldMapDefault
 
-instance Traversable SequData where
-   sequenceA (SequData xs) = fmap SequData $ traverse sequenceA xs
+instance Traversable List where
+   sequenceA (List xs) = fmap List $ traverse sequenceA xs
 
 
 instance Functor Section where
@@ -73,29 +73,21 @@ instance Foldable Section where
 instance Traversable Section where
    sequenceA (Section s rng a) = fmap (Section s rng) a
 
-{-
-fromList :: [a] -> SequData a
-fromList =
-   SequData .
-   zipWith
-      (\s -> Section (Idx.Section s) (case S.SignalIdx $ fromIntegral s of r -> (r,r)))
-      [0 ..]
--}
 
-fromList :: [a] -> SequData a
+fromList :: [a] -> List a
 fromList =
-   SequData .
+   List .
    zipWith
       (\s ->
          Section (Idx.Section s)
             (rangeSingleton $ S.SignalIdx $ fromIntegral s))
       [0 ..]
 
-fromRangeList :: [(Range, a)] -> SequData a
+fromRangeList :: [(Range, a)] -> List a
 fromRangeList =
-   SequData . zipWith (uncurry . Section) [Idx.Section 0 ..]
+   List . zipWith (uncurry . Section) [Idx.Section 0 ..]
 
-fromLengthList :: [(Int, a)] -> SequData a
+fromLengthList :: [(Int, a)] -> List a
 fromLengthList =
    fromRangeList . snd .
    List.mapAccumL
@@ -105,9 +97,9 @@ fromLengthList =
       (S.SignalIdx 0)
 
 
-unzip :: SequData (a, b) -> (SequData a, SequData b)
-unzip (SequData xs) =
-   mapPair (SequData, SequData) $ List.unzip $
+unzip :: List (a, b) -> (List a, List b)
+unzip (List xs) =
+   mapPair (List, List) $ List.unzip $
    map (\x -> (fmap fst x, fmap snd x)) xs
 
 
@@ -116,53 +108,53 @@ type Map a = Map.Map Idx.Section (Range, a)
 lookup :: Idx.Section -> Map a -> Maybe a
 lookup sec = fmap snd . Map.lookup sec
 
-toMap :: SequData a -> Map a
-toMap (SequData xs) =
+toMap :: List a -> Map a
+toMap (List xs) =
    Map.fromListWith (error "duplicate section") $
    map (\(Section sec rng a) -> (sec, (rng, a))) xs
 
-fromMap :: Map a -> SequData a
+fromMap :: Map a -> List a
 fromMap =
-   SequData .
+   List .
    map (\(sec, (rng, a)) -> Section sec rng a) .
    Map.toList
 
 
-mapWithSection :: (Idx.Section -> a -> b) -> SequData a -> SequData b
-mapWithSection f (SequData xs) =
-   SequData $ map (\(Section s rng a) -> Section s rng $ f s a) xs
+mapWithSection :: (Idx.Section -> a -> b) -> List a -> List b
+mapWithSection f (List xs) =
+   List $ map (\(Section s rng a) -> Section s rng $ f s a) xs
 
 mapWithSectionRange ::
-   (Idx.Section -> Range -> a -> b) -> SequData a -> SequData b
-mapWithSectionRange f (SequData xs) =
-   SequData $ map (\(Section s rng a) -> Section s rng $ f s rng a) xs
+   (Idx.Section -> Range -> a -> b) -> List a -> List b
+mapWithSectionRange f (List xs) =
+   List $ map (\(Section s rng a) -> Section s rng $ f s rng a) xs
 
 
 -- | Get Number of Sections after cutting
-length :: SequData a -> Int
-length (SequData xs) = List.length xs
+length :: List a -> Int
+length (List xs) = List.length xs
 
 -- | Filter Sequence and SequenceData with a filter function
 -- | Allows to e.g. filter Sequ and SequPwrRecord
-filter :: (a -> Bool) -> SequData a -> SequData a
-filter f (SequData xs) =
-   SequData $ List.filter (\(Section _ _ a) -> f a) xs
+filter :: (a -> Bool) -> List a -> List a
+filter f (List xs) =
+   List $ List.filter (\(Section _ _ a) -> f a) xs
 
 
-filterRange :: (Range -> Bool) -> SequData a -> SequData a
-filterRange f (SequData xs) =
-   SequData $ List.filter (\(Section _ rng _) -> f rng) xs
+filterRange :: (Range -> Bool) -> List a -> List a
+filterRange f (List xs) =
+   List $ List.filter (\(Section _ rng _) -> f rng) xs
 
-partition :: (a -> Bool) -> SequData a -> (SequData a, SequData a)
-partition f (SequData xs) =
-   mapPair (SequData, SequData) $
+partition :: (a -> Bool) -> List a -> (List a, List a)
+partition f (List xs) =
+   mapPair (List, List) $
    ListHT.partition (\(Section _ _ a) -> f a) xs
 
 
 class ToTable a where
-   toTable :: Report.ROpts -> (String, SequData a) -> [Table]
+   toTable :: Report.ROpts -> (String, List a) -> [Table]
 
-instance ToTable a => Report.ToTable (SequData a) where
+instance ToTable a => Report.ToTable (List a) where
    toTable = toTable
 
 
@@ -213,6 +205,6 @@ instance ToTable Range where
 
 {-# DEPRECATED reIndex "pg: new Index type required which shows the reIndexing" #-}
 
-reIndex :: [Int] -> SequData a -> SequData a
-reIndex xs (SequData ys) = SequData (zipWith f xs ys)
+reIndex :: [Int] -> List a -> List a
+reIndex xs (List ys) = List (zipWith f xs ys)
   where f newIdx (Section (Idx.Section _) range a) = Section (Idx.Section $ fromIntegral newIdx) range a

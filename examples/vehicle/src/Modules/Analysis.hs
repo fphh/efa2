@@ -25,7 +25,7 @@ import EFA.Equation.Stack (Stack)
 import EFA.Equation.Verify (Ignore)
 import EFA.Equation.System ((.=))
 
-import qualified EFA.Signal.SequenceData as SD
+import qualified EFA.Signal.SequenceData as Sequ
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Vector as Vec
 import qualified EFA.Signal.Signal as Sig
@@ -81,9 +81,9 @@ pre :: Topo.Topology System.Node
       -> TC Scalar (Typ A T Tt) (Data Nil Double)
       -> TC Scalar (Typ A F Tt) (Data Nil Double)
       -> SignalRecord [] Double
-      -> (SD.SequData (PowerRecord System.Node [] Double),
-         SD.SequData (FlowRecord System.Node [] Double),
-         SD.SequData (Record.FlowState System.Node),
+      -> (Sequ.List (PowerRecord System.Node [] Double),
+         Sequ.List (FlowRecord System.Node [] Double),
+         Sequ.List (Record.FlowState System.Node),
          PowerRecord System.Node [] Double,
          SignalRecord [] Double)
 
@@ -106,18 +106,18 @@ pre topology epsZero epsT epsE rawSignals =
     -- * Cut Signals and filter on low time sektions
 
 
-    sequencePowers :: SD.SequData (PowerRecord System.Node [] Double)
+    sequencePowers :: Sequ.List (PowerRecord System.Node [] Double)
     sequencePowers = genSequ powerSignals0
 
     ---------------------------------------------------------------------------------------
     -- * Integrate Power and Sections on maximum Energyflow
     (sequencePowersFilt, sequenceFlowsFilt) =
-      SD.unzip $
-      SD.filter (Record.major epsE epsT . snd) $
+      Sequ.unzip $
+      Sequ.filter (Record.major epsE epsT . snd) $
       fmap (\x -> (x, Record.partIntegrate x)) sequencePowers
 
     (flowStates, adjustedFlows) =
-      SD.unzip $
+      Sequ.unzip $
       fmap
       (\state ->
         let flowState = Flow.genFlowState state
@@ -152,7 +152,7 @@ external :: (Eq d,
              B.BSum d,
              Vec.FromList v, Arith.Scalar d ~ Double) =>
             Flow.RangeGraph System.Node ->
-            SD.SequData (FlowRecord System.Node v d) ->
+            Sequ.List (FlowRecord System.Node v d) ->
             Env.Complete System.Node (Result Double) (Result d)
 external sequenceFlowTopology sequFlowRecord =
   Env.completeFMap EqRecord.unAbsolute EqRecord.unAbsolute $
@@ -174,13 +174,13 @@ makeGivenFromExternal :: (Vec.Zipper v,
                           EqGen.Record rec,
                           idx ~ EqRecord.ToIndex rec) =>
                          idx ->
-                         SD.SequData (FlowRecord System.Node v d) ->
+                         Sequ.List (FlowRecord System.Node v d) ->
                          EqGen.EquationSystem Ignore rec System.Node s Double d
 
 makeGivenFromExternal idx sf =
    (Idx.Record idx (XIdx.storage Idx.initial System.Battery) .= initStorage)
    <> (Idx.Record idx (XIdx.storage Idx.initial System.VehicleInertia) .= 0)
-   <> fold (SD.mapWithSection f sf)
+   <> fold (Sequ.mapWithSection f sf)
    where f sec (Record t xs) =
            (Idx.Record idx (Idx.InPart sec Idx.DTime) .=
               Arith.integrate (Sig.toList $ Sig.delta t)) <>
@@ -193,7 +193,7 @@ external2 ::
    (Eq a, Eq (v a), Vec.Singleton v, Vec.Storage v a, Vec.Walker v,
     TDNode.C node, Arith.Constant a, B.BSum a, Vec.Zipper v) =>
    Flow.RangeGraph node ->
-   SD.SequData
+   Sequ.List
       (Record Sig.Signal Sig.FSignal
           (Typ A T Tt)
           (Typ A F Tt)
@@ -215,7 +215,7 @@ makeGivenFromExternal2 ::
    (Eq (v a), TDNode.C node, Arith.Sum a, Vec.Zipper v,
     Vec.Walker v, Vec.Storage v a, Vec.Singleton v,
     B.BSum a) =>
-   SD.SequData (FlowRecord node v a) ->
+   Sequ.List (FlowRecord node v a) ->
    EqAbs.EquationSystem node s (Data Nil a) (Data (v D.:> Nil) a)
 makeGivenFromExternal2 =
    EqAbs.fromEnvSignal . EqAbs.envFromFlowRecord . fmap Record.diffTime
@@ -267,8 +267,8 @@ delta :: (Vec.Zipper v1, Vec.Zipper v2,
           Arith.Integrate d,
           Arith.Scalar d ~ Double) =>
          Flow.RangeGraph System.Node
-         -> SD.SequData (FlowRecord System.Node v1 d)
-         -> SD.SequData (FlowRecord System.Node v2 d)
+         -> Sequ.List (FlowRecord System.Node v1 d)
+         -> Sequ.List (FlowRecord System.Node v2 d)
          -> Env.Complete
          System.Node
          (EqRecord.Delta (Result Double))

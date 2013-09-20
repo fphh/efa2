@@ -32,12 +32,11 @@ import qualified EFA.Flow.Sequence.Index as XIdx
 
 import qualified EFA.Signal.Plot as Plot
 import qualified EFA.Signal.Signal as Sig
-import qualified EFA.Signal.SequenceData as SD
+import qualified EFA.Signal.SequenceData as Sequ
 import qualified EFA.Signal.Vector as SV
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Base as Base
 import EFA.Signal.Record (Record)
-import EFA.Signal.SequenceData (SequData)
 
 import qualified EFA.Report.Format as Format
 import EFA.Report.FormatValue (FormatValue, formatValue)
@@ -315,11 +314,11 @@ sequenceFrame ::
     Tuple.C d, Atom.C d) =>
    String ->
    (LineSpec.T -> LineSpec.T) ->
-   SequData (Record s1 s2 t1 t2 id v d d) ->
-   SequData (Frame.T (Graph2D.T d d))
+   Sequ.List (Record s1 s2 t1 t2 id v d d) ->
+   Sequ.List (Frame.T (Graph2D.T d d))
 
 sequenceFrame ti opts =
-   SD.mapWithSection
+   Sequ.mapWithSection
       (\x ->
          Frame.cons (recordFrame ("Sequence " ++ ti ++ ", Record of " ++ show x)) .
          record opts)
@@ -345,9 +344,9 @@ sequence ::
    term ->
    (id -> String) ->
    (LineSpec.T -> LineSpec.T) ->
-   SequData (Record s1 s2 t1 t2 id v d1 d2) -> IO ()
+   Sequ.List (Record s1 s2 t1 t2 id v d1 d2) -> IO ()
 sequence ti term showKey opts =
-  Fold.sequence_ .  SD.mapWithSection (\ x -> record (ti ++ " - "++ show x) term showKey opts)
+  Fold.sequence_ .  Sequ.mapWithSection (\ x -> record (ti ++ " - "++ show x) term showKey opts)
    -- (Plot.plotSync term) . sequenceFrame ti opts
 
 sequenceSplit ::
@@ -371,10 +370,10 @@ sequenceSplit ::
    term ->
    (id -> String) ->
    (LineSpec.T -> LineSpec.T) ->
-   SequData (Record s1 s2 t1 t2 id v d1 d2) -> IO ()
+   Sequ.List (Record s1 s2 t1 t2 id v d1 d2) -> IO ()
 sequenceSplit n ti term showKey opts =
    Fold.sequence_ .
-   SD.mapWithSection (\ x -> recordSplit n (ti ++ " - "++ show x) term showKey opts)
+   Sequ.mapWithSection (\ x -> recordSplit n (ti ++ " - "++ show x) term showKey opts)
 
 -- | Plotting Stacks ---------------------------------------------------------------
 

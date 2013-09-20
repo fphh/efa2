@@ -33,7 +33,7 @@ import qualified EFA.Graph.StateFlow.Environment as StateEnv
 import qualified EFA.Equation.Environment as Env
 import qualified EFA.Equation.Variable as Var
 
-import qualified EFA.Signal.SequenceData as SD
+import qualified EFA.Signal.SequenceData as Sequ
 import EFA.Signal.Signal (SignalIdx(SignalIdx))
 
 import qualified EFA.Flow.Sequence.Index as XIdx
@@ -197,7 +197,7 @@ dotFromSequFlowGraph (rngs, g)
 
 dotFromSectionGraph ::
   (Node.C node) =>
-  Map Idx.Section SD.Range ->
+  Map Idx.Section Sequ.Range ->
   Maybe (Idx.Section -> Unicode) ->
   (Maybe Idx.Boundary -> Topo.StNode Idx.Section store node -> Unicode) ->
   StructureEdgeShow Idx.Section node ->
@@ -227,7 +227,7 @@ dotFromSectionGraph rngs mtshow nshow structEShow
            Idx.switchAugmented "Init" "Exit" $ \s ->
                  show s ++
                  (case Map.lookup s rngs of
-                     Just (SD.Range (SignalIdx from) (SignalIdx to)) ->
+                     Just (Sequ.Range (SignalIdx from) (SignalIdx to)) ->
                         " / Range " ++ show from ++ "-" ++ show to
                      Nothing -> error $ "missing range for " ++ show s) ++
                  (flip foldMap mtshow $ \tshow ->

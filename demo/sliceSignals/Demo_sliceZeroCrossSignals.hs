@@ -6,9 +6,9 @@ module Main where
 
 import qualified EFA.Flow.Sequence.Index as XIdx
 
+import qualified EFA.Signal.SequenceData as Sequ
 import qualified EFA.Signal.Signal as Signal
 import EFA.Signal.Chop (genSequ, addZeroCrossings)
-import EFA.Signal.SequenceData (SequData)
 import EFA.Signal.Record (Record(Record), PowerRecord)
 import EFA.Signal.Data ((:>), Nil, Data)
 
@@ -50,14 +50,10 @@ recList :: [PowerRecord Node [] Double]
 recList = map (Record time) pmapList
 
 list ::
-  [(Int, (String, (PowerRecord Node [] Double, SequData (PowerRecord Node [] Double))))]
+  [(Int, (String, (PowerRecord Node [] Double, Sequ.List (PowerRecord Node [] Double))))]
 list = idxList $
   zip titleList
       (zip recList (map (genSequ . addZeroCrossings) recList))
-
--- f ::
---   (Num a, Show a2, Show a1, Show a) =>
---   (a, ([Char], (SequData (PowerRecord Node [] Double), (a1, a2)))) -> IO ()
 
 f ::
    (Num a, Ord nty, Show seq, Show nty, Show a) =>

@@ -15,8 +15,7 @@ import EFA.Graph.Topology
 import EFA.Equation.Arithmetic ((~+), (~/))
 import EFA.Equation.Result (Result)
 
-import qualified EFA.Signal.SequenceData as SD
-import EFA.Signal.SequenceData (SequData)
+import qualified EFA.Signal.SequenceData as Sequ
 
 import qualified EFA.Utility.Map as MapU
 
@@ -38,7 +37,7 @@ type Topology node nodeLabel = Graph node Graph.EitherEdge nodeLabel ()
 
 states ::
    (Ord node, Ord nodeLabel) =>
-   SequData (Topology node nodeLabel) ->
+   Sequ.List (Topology node nodeLabel) ->
    Map (Topology node nodeLabel) Idx.State
 states =
    Map.fromAscList .
@@ -61,7 +60,7 @@ identify k = do
 
 stateMaps ::
    (Ord node, Ord nodeLabel) =>
-   SequData (Topology node nodeLabel) ->
+   Sequ.List (Topology node nodeLabel) ->
    (Map Idx.State (Topology node nodeLabel),
     Map Idx.Section Idx.State)
 stateMaps sq =
@@ -71,7 +70,7 @@ stateMaps sq =
       (\(sec,g) -> do
          i <- identify g
          return (Map.singleton i g, Map.singleton sec i)) $
-   SD.mapWithSection (,) sq
+   Sequ.mapWithSection (,) sq
 
 envFromSequenceEnv ::
    (Ord node, Arith.Product a) =>
@@ -235,7 +234,7 @@ xMap divide sumMap =
 
 stateFlow ::
    (Ord node, Ord nodeLabel, Arith.Product a) =>
-   SequData (Topology node nodeLabel) ->
+   Sequ.List (Topology node nodeLabel) ->
    Env.Complete node a a ->
    (Map Idx.State (Topology node nodeLabel),
     StateEnv.Complete node a a)
@@ -284,7 +283,7 @@ Insert all possible storage edges.
 -}
 stateGraphAllStorageEdges ::
    (Ord node) =>
-   SequData (FlowTopology node) ->
+   Sequ.List (FlowTopology node) ->
    StateFlowGraph node
 stateGraphAllStorageEdges sd =
    Flow.insEdges (fmap (storageEdges . Map.mapMaybe id) tracks) $
@@ -298,7 +297,7 @@ Insert only the storage edges that have counterparts in the sequence flow graph.
 -}
 stateGraphActualStorageEdges ::
    (Ord node) =>
-   SequData (FlowTopology node) ->
+   Sequ.List (FlowTopology node) ->
    StateFlowGraph node
 stateGraphActualStorageEdges sd =
    Flow.insEdges

@@ -67,7 +67,7 @@ import qualified EFA.Graph as Graph
 import EFA.Equation.Arithmetic ((~+))
 import EFA.Equation.Result (Result(Determined, Undetermined))
 
-import EFA.Signal.SequenceData (SequData)
+import qualified EFA.Signal.SequenceData as Sequ
 
 import qualified EFA.Report.FormatValue as FormatValue
 
@@ -203,7 +203,7 @@ type Topology node nodeLabel = Graph.Graph node Graph.EitherEdge nodeLabel ()
 
 _states ::
    (Ord node, Ord nodeLabel) =>
-   SequData (Topology node nodeLabel) ->
+   Sequ.List (Topology node nodeLabel) ->
    Map (Topology node nodeLabel) Idx.State
 _states =
    Map.fromAscList .

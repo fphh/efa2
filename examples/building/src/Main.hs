@@ -34,7 +34,7 @@ import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Signal.Signal as Sig; import EFA.Signal.Signal (TC,Scalar)
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Chop as Chop
-import qualified EFA.Signal.SequenceData as SD
+import qualified EFA.Signal.SequenceData as Sequ
 import qualified EFA.Signal.ConvertTable as CT
 import qualified EFA.Signal.Vector as Vec
 import qualified EFA.Signal.Base as Base
@@ -214,7 +214,7 @@ external ::
   Vec.Walker v, Vec.Singleton v, Vec.Storage v a, Node.C node) =>
   [(node, a)] ->
   Flow.RangeGraph node ->
-  SD.SequData
+  Sequ.List
     (Record.Record Sig.Signal Sig.FSignal
       (Typ A T Tt) (Typ A F Tt) (Idx.PPos node) v a a) ->
   EqEnv.Complete node (Result (Data Nil a)) (Result (Data (v :> Nil) a))
@@ -332,21 +332,21 @@ solveAndCalibrateAvgEffWithGraph time prest plocal etaMap (stateFlowGraph, env) 
 
       recZeroCross = envToPowerRecord time envSims
 
-      sequencePowers :: SD.SequData (Record.PowerRecord System.Node [] Double)
+      sequencePowers :: Sequ.List (Record.PowerRecord System.Node [] Double)
       sequencePowers = Chop.genSequ recZeroCross
 
-      sequenceFlowsFilt :: SD.SequData (Record.FlowRecord Node [] Double)
+      sequenceFlowsFilt :: Sequ.List (Record.FlowRecord Node [] Double)
       sequenceFlowsFilt =
         snd
-        $ SD.unzip
-        $ SD.filter (Record.major sectionFilterEnergy sectionFilterTime . snd)
+        $ Sequ.unzip
+        $ Sequ.filter (Record.major sectionFilterEnergy sectionFilterTime . snd)
         $ fmap (\x -> (x, Record.partIntegrate x)) sequencePowers
 
       flowStatesWithAdj ::
-        ( SD.SequData (Record.FlowState Node), 
-          SD.SequData (Record.FlowRecord Node [] Double) )
+        ( Sequ.List (Record.FlowState Node),
+          Sequ.List (Record.FlowRecord Node [] Double) )
       flowStatesWithAdj =
-        SD.unzip
+        Sequ.unzip
         $ fmap (\rec ->
                  let flowState = Flow.genFlowState rec
                  in  (flowState, Flow.adjustSigns System.topology flowState rec))
