@@ -31,9 +31,8 @@ type
 
 type
    Sequence node structEdge sectionLabel nodeLabel structLabel =
-      Map Idx.Section
-         (SD.Range,
-          (sectionLabel, Graph.Graph node structEdge nodeLabel structLabel))
+      SD.Map
+         (sectionLabel, Graph.Graph node structEdge nodeLabel structLabel)
 
 data
    Graph node structEdge
