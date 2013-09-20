@@ -190,7 +190,7 @@ Executable test-efa
     EFA.TestUtility
 
 Executable example-sequence-flow-graph
-  Main-Is: examples/elementary/sequenzflussgraph/Main.hs
+  Main-Is: examples/elementary/sequenceFlowGraph/Main.hs
   GHC-Options: -Wall -fwarn-incomplete-uni-patterns -fwarn-tabs -fwarn-missing-import-lists
   If flag(buildExamples)
     Build-Depends:
