@@ -37,10 +37,7 @@ import qualified Graphics.Gnuplot.Terminal.WXT as WXT
 
 import qualified Data.Vector.Unboxed as UV
 
-import Control.Category ((.))
 import Data.Monoid ((<>))
-
-import Prelude hiding ((.))
 
 
 plotTerm :: WXT.T
