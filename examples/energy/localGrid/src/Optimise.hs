@@ -80,9 +80,9 @@ plotTerm :: DefaultTerm.T
 plotTerm = DefaultTerm.cons
 
 colours :: [Colors.X11Color]
-colours = [ Colors.White,	
-            Colors.Gray90,	
-            Colors.Gray80,	
+colours = [ Colors.White,
+            Colors.Gray90,
+            Colors.Gray80,
             Colors.Gray70 ]
 
 frameOpts ::
