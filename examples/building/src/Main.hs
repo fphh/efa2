@@ -162,7 +162,7 @@ optimalEtasWithPowers params forceFactor env =
         stateFlowGraph = One.stateFlowGraph params
         etaMap = One.etaMap params
         f state ps = Map.fromList res
-          where 
+          where
                 solveFunc =
                   Optimisation.solve
                     stateFlowGraph
@@ -176,7 +176,7 @@ optimalEtasWithPowers params forceFactor env =
                   Sweep.doubleSweep solveFunc (One.points params)
 
                 optEtaEnv = for envsSweep $
-                  Sweep.optimalSolutionState 
+                  Sweep.optimalSolutionState
                     --One.nocondition
                     Optimisation.condition
                     forcing
@@ -198,7 +198,7 @@ envToPowerRecord time env =
   (Chop.addZeroCrossings
   . Record.Record time
   . Map.map i
-  . Map.mapKeys h 
+  . Map.mapKeys h
   . Map.filterWithKey p
   . StateEnv.powerMap
   . StateEnv.signal) env
@@ -224,7 +224,7 @@ external initSto sfTopo sfRec =
   EqGen.solveFromMeasurement sfTopo $
   (AppAbs.fromEnvSignal $ AppAbs.envFromFlowRecord (fmap Record.diffTime sfRec))
   <> foldMap f initSto
-  where f (st, val) = 
+  where f (st, val) =
           Idx.absolute (SeqIdx.storage Idx.initial st) .= Data val
 
 varRestPower', varLocalPower' :: [[Double]]
@@ -295,7 +295,7 @@ solveAndCalibrateAvgEffWithGraph time prest plocal etaMap (stateFlowGraph, env) 
       sectionFilterEnergy = Sig.toScalar 0
 
       optParams =
-        One.OptimalEnvParams 
+        One.OptimalEnvParams
           etaMap
           sweepPts
           optimalPower
@@ -358,7 +358,7 @@ solveAndCalibrateAvgEffWithGraph time prest plocal etaMap (stateFlowGraph, env) 
 
       stateFlowEnvWithGraph =
         let sequ = Flow.genSequFlowTops System.topology (fst flowStatesWithAdj)
-            envLocal = external initStorage 
+            envLocal = external initStorage
                            (Chop.makeSeqFlowTopology sequ) (snd flowStatesWithAdj)
             e = second (fmap Arith.integrate) envLocal
             sm = snd $ StateFlow.stateMaps sequ
@@ -387,7 +387,7 @@ solveAndCalibrateAvgEff ::
     StateEnv.Complete Node (Data Nil Double) (Data Nil Double))]
 solveAndCalibrateAvgEff sigs etaMap envWithGraph =
   List.iterate ( -- fmap (AppOpt.givenAverageWithoutState Optimisation.state0)
-                 solveAndCalibrateAvgEffWithGraph sigs etaMap) 
+                 solveAndCalibrateAvgEffWithGraph sigs etaMap)
                envWithGraph
 -}
 
