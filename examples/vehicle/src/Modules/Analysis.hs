@@ -109,10 +109,6 @@ pre topology epsZero epsT epsE rawSignals =
     sequencePowers :: SD.SequData (PowerRecord System.Node [] Double)
     sequencePowers = genSequ powerSignals0
 
-    -- create sequence signal
-    -- let sequSig = Sig.scale (genSequenceSignal sequ) 10 :: Sig.UTSigL  --  (10  ^^ (-12::Int))
-    -- let sequenceSignals = sectionRecordsFromSequence signals0 sequ
-
     ---------------------------------------------------------------------------------------
     -- * Integrate Power and Sections on maximum Energyflow
     (sequencePowersFilt, sequenceFlowsFilt) =

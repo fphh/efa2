@@ -16,7 +16,7 @@ import qualified EFA.Signal.Signal as S
 import qualified EFA.Signal.Vector as V
 import qualified EFA.Signal.Record as Record
 
-import EFA.Signal.SequenceData (SequData(..), Sequ, Range)
+import EFA.Signal.SequenceData (SequData(..), Range)
 
 
 
@@ -748,18 +748,3 @@ extractCuttingTimes:: (Ord a,
                       SequData (PowerRecord node v a) ->
                       SequData (S.Scal (Typ A T Tt) a, S.Scal (Typ A T Tt) a)
 extractCuttingTimes = fmap Record.getTimeWindow
-
-
-
-{-# DEPRECATED sectionRecordsFromSequence "better use fmap (Record.slice rec)" #-}
--- | Create SequencePowerRecord by extracting Slices from Indices given by Sequence
-sectionRecordsFromSequence ::  (V.Slice v, V.Storage v d) => Record s1 s2 t1 t2 id v d d -> Sequ -> SequData (Record s1 s2 t1 t2 id v d d)
-sectionRecordsFromSequence rec = fmap (Record.slice rec)
-
-
--- | Generate Time Signal with Sequence Number to allow Plotting
-genSequenceSignal :: (V.FromList v, V.Storage v a, Num a) => Sequ -> S.UTSignal v a
-genSequenceSignal xs = S.fromList $ Fold.foldMap f xs
-  where
-    f (S.SignalIdx idx1, S.SignalIdx idx2) = [1] ++ replicate (idx2-idx1-1) 0 ++ [-1]
-

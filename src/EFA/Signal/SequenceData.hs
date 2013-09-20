@@ -34,7 +34,6 @@ import Prelude hiding (unzip, length, filter,zip)
 -----------------------------------------------------------------------------------
 -- Section and Sequence -- Structures to handle Sequence Information and Data
 -- | Section analysis result
-type Sequ = SequData Range
 type Range = (SignalIdx, SignalIdx)
 
 {- |
