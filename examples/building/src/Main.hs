@@ -69,6 +69,7 @@ import Data.Tuple.HT (fst3, snd3, thd3)
 import Data.Foldable (foldMap)
 
 import Control.Functor.HT (for)
+import Control.Monad (void, (>=>))
 
 
 frameOpts ::
@@ -391,6 +392,10 @@ solveAndCalibrateAvgEff sigs etaMap envWithGraph =
                envWithGraph
 -}
 
+nestM :: (Monad m) => Int -> (a -> m a) -> a -> m a
+nestM n act = foldr (>=>) return (replicate n act)
+
+
 main :: IO()
 main = do
 
@@ -411,25 +416,7 @@ main = do
       plocal = Sig.offset 0.4 $ Sig.scale localScale $
         psolar Sig..+ Sig.makeDelta phouse Sig..+ Sig.makeDelta pindustry
 
-
-  new1 <- solveAndCalibrateAvgEffWithGraph
-            time prest plocal
-            etaMap
-            (System.stateFlowGraph, initEnv)
-
-  new2 <- solveAndCalibrateAvgEffWithGraph
-            time prest plocal
-            etaMap
-            new1
-
-  new3 <- solveAndCalibrateAvgEffWithGraph
-            time prest plocal
-            etaMap
-            new2
-
-  _ <- solveAndCalibrateAvgEffWithGraph
-            time prest plocal
-            etaMap
-            new3
-
-  return ()
+  void $
+     nestM 4
+        (solveAndCalibrateAvgEffWithGraph time prest plocal etaMap)
+        (System.stateFlowGraph, initEnv)
