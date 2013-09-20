@@ -33,8 +33,8 @@ import Data.Tuple.HT (mapFst)
 import Data.Monoid (Endo(Endo), appEndo, mconcat)
 
 
-sec0, sec1, sec2, sec3, sec4 :: Idx.Section
-sec0 :~ sec1 :~ sec2 :~ sec3 :~ sec4 :~ _ = Stream.enumFrom $ Idx.Section 0
+sec0, sec1, sec2 :: Idx.Section
+sec0 :~ sec1 :~ sec2 :~ _ = Stream.enumFrom $ Idx.Section 0
 
 seci :: Idx.InitOrSection
 seci = XIdx.initSection
@@ -42,8 +42,8 @@ seci = XIdx.initSection
 sece :: Idx.SectionOrExit
 sece = XIdx.exitSection
 
-bndi, bnd0, bnd1, bnd2, bnd3, bnd4 :: Idx.Boundary
-bndi :~ bnd0 :~ bnd1 :~ bnd2 :~ bnd3 :~ bnd4 :~ _ =
+bndi, bnd0, bnd1, bnd2 :: Idx.Boundary
+bndi :~ bnd0 :~ bnd1 :~ bnd2 :~ _ =
    Stream.enumFrom $ Idx.initial
 
 
