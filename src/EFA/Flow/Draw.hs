@@ -709,7 +709,7 @@ sequFlowGraph opts gr =
 
 
 formatRange :: SD.Range -> String
-formatRange (SignalIdx from, SignalIdx to) =
+formatRange (SD.Range (SignalIdx from) (SignalIdx to)) =
    show from ++ "-" ++ show to
 
 formatNodeStorage ::

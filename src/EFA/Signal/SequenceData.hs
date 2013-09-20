@@ -1,6 +1,4 @@
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE FlexibleInstances #-}
-
 
 module EFA.Signal.SequenceData where
 
@@ -34,7 +32,6 @@ import Prelude hiding (unzip, length, filter,zip)
 -----------------------------------------------------------------------------------
 -- Section and Sequence -- Structures to handle Sequence Information and Data
 -- | Section analysis result
-type Range = (SignalIdx, SignalIdx)
 
 {- |
 Sequence Vector to Store Section Data
@@ -45,6 +42,15 @@ newtype SequData a = SequData [Section a] deriving (Show, Eq)
 
 data Section a = Section Idx.Section Range a
    deriving (Eq, Show)
+
+data Range = Range SignalIdx SignalIdx
+   deriving (Eq, Show)
+
+rangeSingleton :: SignalIdx -> Range
+rangeSingleton n = Range n n
+
+rangeIsSingleton :: Range -> Bool
+rangeIsSingleton (Range from to) = from==to
 
 type instance D.Value (SequData a) = D.Value a
 
@@ -80,8 +86,9 @@ fromList :: [a] -> SequData a
 fromList =
    SequData .
    zipWith
-      (\s -> let sidx = S.SignalIdx $ fromIntegral s
-             in  Section (Idx.Section s) (sidx, sidx))
+      (\s ->
+         Section (Idx.Section s)
+            (rangeSingleton $ S.SignalIdx $ fromIntegral s))
       [0 ..]
 
 fromRangeList :: [(Range, a)] -> SequData a
@@ -94,7 +101,7 @@ fromLengthList =
    List.mapAccumL
       (\(S.SignalIdx idx) (len, x) ->
          (S.SignalIdx $ idx+len-1,
-          ((S.SignalIdx idx, S.SignalIdx $ idx+len-1), x)))
+          (Range (S.SignalIdx idx) (S.SignalIdx $ idx+len-1), x)))
       (S.SignalIdx 0)
 
 
@@ -203,7 +210,7 @@ instance ToTable Range where
               }
 
          -- f :: Range -> TableData
-         f (i1, i2) = toDoc id $ show i1 ++ " - " ++ show i2
+         f (Range i1 i2) = toDoc id $ show i1 ++ " - " ++ show i2
 
 
 {-# DEPRECATED reIndex "pg: new Index type required which shows the reIndexing" #-}

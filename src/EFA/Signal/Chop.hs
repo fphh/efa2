@@ -156,7 +156,10 @@ genSequ pRec =
         inc (S.SignalIdx idx) = S.SignalIdx (idx+1)
 
         pRecs = map (rsig2SecRecord pRec) (seqRSig ++ [lastRSec])
-        ((lastSec,sequ),(lastRSec,seqRSig)) = recyc rTail rHead (((S.SignalIdx 0, S.SignalIdx 0),[]),(Record.singleton $ rHead,[]))
+        ((lastSec,sequ),(lastRSec,seqRSig)) =
+           recyc rTail rHead
+              ((SD.rangeSingleton (S.SignalIdx 0), []),
+               (Record.singleton $ rHead, []))
           where
             (rHead, rTail) = maybe err id $ Record.viewL rSig
             err = error ("Error in EFA.Signal.Chop/genSequence, case 1 - empty rSig")
@@ -167,7 +170,7 @@ genSequ pRec =
            ((Range, [Range]), (Record.Sig, [Record.Sig]))
 
         -- Incoming rSig is at least two samples long -- detect changes
-        recyc rsig x1 (((lastIdx,idx),sq),(secRSig, sqRSig)) |
+        recyc rsig x1 (((SD.Range lastIdx idx),sq),(secRSig, sqRSig)) |
           (Record.len rsig) >=2 = recyc rTail x2 (g $ stepDetect x1 x2, f $ stepDetect x1 x2)
           where
             (x2, rTail) = maybe err id $ Record.viewL rsig
@@ -183,14 +186,14 @@ genSequ pRec =
 
             g :: EventType -> (Range, [Range])
 
-            g LeftEvent = ((idx, inc idx), sq ++ [(lastIdx, idx)])
-            g RightEvent = ((inc idx, inc idx), sq ++ [(lastIdx, inc idx)])
-            g MixedEvent = ((inc idx, inc idx), sq ++ [(lastIdx, idx)] ++ [(idx, inc idx)])
-            g NoEvent = ((lastIdx, inc idx), sq)
+            g LeftEvent = (SD.Range idx (inc idx), sq ++ [SD.Range lastIdx idx])
+            g RightEvent = (SD.Range (inc idx) (inc idx), sq ++ [SD.Range lastIdx (inc idx)])
+            g MixedEvent = (SD.Range (inc idx) (inc idx), sq ++ [SD.Range lastIdx idx] ++ [SD.Range idx (inc idx)])
+            g NoEvent = (SD.Range lastIdx (inc idx), sq)
 
         -- Incoming rList is only one Point long -- append last sample to last section
-        recyc rsig _ (((lastIdx,idx),sq),(secRSig, sqRSig)) | (Record.len rsig) >=1 =
-               (((lastIdx, inc idx),sq),(secRSig .++ rsig, sqRSig))
+        recyc rsig _ ((SD.Range lastIdx idx, sq), (secRSig, sqRSig)) | (Record.len rsig) >=1 =
+               ((SD.Range lastIdx (inc idx), sq), (secRSig .++ rsig, sqRSig))
 
         -- Incoming rList is empty -- return result
         recyc _ _ acc = acc
@@ -201,7 +204,7 @@ removeNilSections ::
    SequData (PowerRecord node v a) ->
    SequData (PowerRecord node v a)
 removeNilSections =
-   SD.filterRange (uncurry (/=))
+   SD.filterRange (not . SD.rangeIsSingleton)
 
 
 -- | Function to detect and classify a step over several signals

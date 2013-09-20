@@ -227,7 +227,7 @@ dotFromSectionGraph rngs mtshow nshow structEShow
            Idx.switchAugmented "Init" "Exit" $ \s ->
                  show s ++
                  (case Map.lookup s rngs of
-                     Just (SignalIdx from, SignalIdx to) ->
+                     Just (SD.Range (SignalIdx from) (SignalIdx to)) ->
                         " / Range " ++ show from ++ "-" ++ show to
                      Nothing -> error $ "missing range for " ++ show s) ++
                  (flip foldMap mtshow $ \tshow ->
