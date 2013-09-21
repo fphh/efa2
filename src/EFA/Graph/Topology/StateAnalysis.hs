@@ -79,22 +79,27 @@ checkIncompleteNodeType typ complete sucActive preActive =
       Node.NoRestriction -> True
       Node.DeadNode -> not sucActive && not preActive
 
+checkCountInOut ::
+   (Ord node) =>
+   InOut node (NodeType, NumberOfAdj) -> Bool
+checkCountInOut (pre, (node, nadj), suc) =
+   checkIncompleteNodeType node
+      (Map.size pre + Map.size suc == nadj)
+      (anyActive suc)
+      (anyActive pre)
+
 checkCountNode :: (Ord node) => CountTopology node -> node -> Bool
 checkCountNode topo x =
    case Map.lookup x $ Graph.graphMap topo of
-      Nothing -> error "checkNode: node not in graph"
-      Just (pre, (node, nadj), suc) ->
-         checkIncompleteNodeType node
-            (Map.size pre + Map.size suc == nadj)
-            (anyActive suc)
-            (anyActive pre)
+      Nothing -> error "checkCountNode: node not in graph"
+      Just inOut -> checkCountInOut inOut
 
 anyActive :: Map (Graph.EitherEdge node) () -> Bool
 anyActive = Fold.any Topo.isActive . Map.keysSet
 
 admissibleCountTopology :: (Ord node) => CountTopology node -> Bool
 admissibleCountTopology topo =
-   Fold.all (checkCountNode topo) $ Graph.nodeSet topo
+   Fold.all checkCountInOut $ Graph.graphMap topo
 
 
 type NumberOfAdj = Int
