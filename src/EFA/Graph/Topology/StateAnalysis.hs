@@ -146,10 +146,14 @@ admissibleEdges e0 g0 = do
    guard $ Fold.all (checkCountNode g1) e0
    return (e1, g1)
 
-expand :: (Ord node) => LNEdge node -> CountTopology node -> [CountTopology node]
+expand ::
+   (Ord node) =>
+   LNEdge node -> CountTopology node -> [CountTopology node]
 expand e g = map snd $ admissibleEdges e g
 
-splitNodesEdges :: (Ord node) => Topology node -> (CountTopology node, [Graph.DirEdge node])
+splitNodesEdges ::
+   (Ord node) =>
+   Topology node -> (CountTopology node, [Graph.DirEdge node])
 splitNodesEdges topo =
    (Graph.fromMap
        (Map.map (\(pre,l,suc) -> (l, Set.size pre + Set.size suc)) $ Graph.nodes topo)
