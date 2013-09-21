@@ -108,6 +108,12 @@ graphFromMap ::
 graphFromMap ns es =
    Graph.fromMap ns (MapU.fromSet (const ()) es)
 
+replaceEdges ::
+   (Ord n, Ord (e0 n), Ord (e1 n), Graph.Edge e0, Graph.Edge e1) =>
+   Graph n e0 nl el -> [e1 n] -> Graph n e1 nl ()
+replaceEdges topo edges =
+   graphFromMap (Graph.nodeLabels topo) $ Set.fromList edges
+
 
 edgeOrients :: Ord node => Graph.DirEdge node -> [Graph.EitherEdge node]
 edgeOrients (Graph.DirEdge x y) =
@@ -346,7 +352,7 @@ type LNEdge node = Graph.DirEdge node
 bruteForce :: (Ord node) => Topology node -> [FlowTopology node]
 bruteForce topo =
    filter (\g -> Fold.all (checkNode g) $ Graph.nodeSet g) .
-   map (graphFromMap (Graph.nodeLabels topo) . Set.fromList) $
+   map (replaceEdges topo) $
    mapM edgeOrients $ Graph.edges topo
 
 {-
