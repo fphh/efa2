@@ -32,7 +32,9 @@ instance (QC.Arbitrary node, Ord node) => QC.Arbitrary (ArbTopology node) where
             QC.shrink $ S.toList ns
    arbitrary = do
       edges <-
-         fmap (M.fromList . take maxArbEdges) QC.arbitrary
+         fmap
+            (M.fromList . take maxArbEdges . filter (not . Graph.isLoop . fst))
+            QC.arbitrary
       nodes <-
          sequenceA $ MapU.fromSet (const QC.arbitrary) $
          Fold.foldMap (Fold.foldMap S.singleton) $

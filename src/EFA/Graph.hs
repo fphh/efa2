@@ -45,6 +45,7 @@ module EFA.Graph (
    fromList, fromMap,
    nodes, nodeSet, nodeEdges,
    InOut,
+   isLoop,
    ) where
 
 import qualified EFA.Utility.TypeConstructor as TC
@@ -714,3 +715,7 @@ _traverseNaive fn fe =
       (\(ins,n,outs) ->
          liftA3 (,,) (Trav.traverse fe ins) (fn n) (Trav.traverse fe outs)) .
    graphMap
+
+
+isLoop :: (Edge edge, Eq node) => edge node -> Bool
+isLoop e = from e == to e
