@@ -23,8 +23,6 @@ import EFA.Signal.Typ (Typ, F, T, A, Tt)
 
 import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Graph.Flow as Flow
-import EFA.Graph.Topology (isStructureEdge)
-import EFA.Graph (lefilter)
 
 import qualified EFA.Utility as Utility
 import EFA.Utility.Async (concurrentlyMany_)
@@ -39,7 +37,6 @@ import System.Environment (getEnv)
 import System.FilePath ((</>))
 
 import qualified Data.Map as Map
-import Data.Tuple.HT (mapSnd)
 import Control.Monad (when)
 
 
@@ -127,24 +124,21 @@ process rawSignals =
 
       sequenceFlowsFilt = sectionMapping sequenceFlowsFiltUnmapped
 
-      sequenceFlowTopology =
+      sequenceFlowGraph =
         Flow.sequenceGraph $
         Flow.genSequFlowTops System.topology $
         sectionMapping flowStatesUnmapped
-
-      sectionTopos =
-        mapSnd (lefilter (isStructureEdge .fst)) sequenceFlowTopology
 
       externalEnv =
         Env.completeFMap
           (checkDetermined "external scalar")
           (checkDetermined "external signal") $
-        Analysis.external  sequenceFlowTopology sequenceFlowsFilt
+        Analysis.external  sequenceFlowGraph sequenceFlowsFilt
       externalSignalEnv =
-        Analysis.external2 sequenceFlowTopology sequenceFlowsFilt
+        Analysis.external2 sequenceFlowGraph sequenceFlowsFilt
 
   in  (allSignals, externalEnv, externalSignalEnv,
-       powerSignals, sectionTopos)
+       powerSignals, sequenceFlowGraph)
 
 
 importDataset :: FilePath -> IO (Record.SignalRecord [] Double)
@@ -160,10 +154,10 @@ main = do
   rawSignalsB <- importDataset $ datasetPath datasetB
 
   let (allSignalsA, externalEnvA, externalSignalEnvA,
-       powerSignalsA, sectionToposA) = process rawSignalsA
+       powerSignalsA, seqFlowGraphA) = process rawSignalsA
 
       (allSignalsB, externalEnvB, _externalSignalEnvB,
-       powerSignalsB, _sectionToposB) = process rawSignalsB
+       powerSignalsB, _seqFlowGraphB) = process rawSignalsB
 
       externalDeltaEnv =
         Env.intersectionWith
@@ -181,12 +175,18 @@ main = do
           Draw.xterm $
           Draw.title ti $
           Draw.bgcolour c $
-          Draw.sequFlowGraphDeltaWithEnv topo env
+          Draw.sequFlowGraphWithEnv
+             (Draw.hideStorageEdge $
+              Draw.absoluteVariable Draw.optionsDefault)
+             topo env
       drawAbs (Record.Name ti) topo env c =
           Draw.xterm $
           Draw.title ti $
           Draw.bgcolour c $
-          Draw.sequFlowGraphAbsWithEnv topo env
+          Draw.sequFlowGraphWithEnv
+             (Draw.hideStorageEdge $
+              Draw.deltaVariable Draw.optionsDefault)
+             topo env
 
   concurrentlyMany_ $ [
     -- Topologie
@@ -232,7 +232,7 @@ main = do
 -- * Draw Section flows
 
     ++ [drawAbs (datasetName datasetA)
-          sectionToposA
+          seqFlowGraphA
           externalEnvA
           (datasetColor datasetA)]
 
@@ -241,7 +241,7 @@ main = do
 
     ++ ignore
        [drawDelta deltasetName
-          sectionToposA
+          seqFlowGraphA
           externalDeltaEnv
           Colors.Gray90]
 
@@ -249,6 +249,6 @@ main = do
 -- * Draw Section flows
 
     ++ [drawAbs (Record.Name "Signal")
-         sectionToposA
+         seqFlowGraphA
          (Env.completeFMap id (fmap (fmap Arith.integrate)) externalSignalEnvA)
          (datasetColor datasetA)]
