@@ -202,6 +202,9 @@ untilLeft f =
              Right a1 -> go a1
    in  go
 
+
+-- * clustering
+
 {-
 The edge set in all list elements must be equal if neglecting edge orientation.
 
