@@ -25,7 +25,7 @@ import qualified EFA.Graph.Topology.Node as Node
 import qualified EFA.Graph as Graph; import EFA.Graph (Graph)
 
 import qualified EFA.Signal.Signal as Sig
-import qualified EFA.Signal.ConvertTable as Table
+import qualified EFA.Signal.ConvertTable as CT
 import qualified EFA.Signal.Data as D
 import EFA.Signal.Typ (Typ,A,P,Tt)
 import EFA.Signal.Data (Data, Nil, (:>))
@@ -178,7 +178,7 @@ ratioRange :: [Double]
 ratioRange = [0.1] -- , 0.2 .. 0.9]
 
 varX', varY' :: [[Double]]
-(varX', varY') = Table.varMat sinkRange ratioRange
+(varX', varY') = CT.varMat sinkRange ratioRange
 
 hypotheticalUsage :: Sig.PSignal [] Double
 hypotheticalUsage = Sig.fromList [

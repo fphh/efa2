@@ -19,7 +19,7 @@ import qualified EFA.Equation.Variable as Var
 import qualified EFA.Equation.Arithmetic as Arith
 import EFA.Equation.Result (Result)
 
-import qualified EFA.Signal.ConvertTable as Table
+import qualified EFA.Signal.ConvertTable as CT
 import qualified EFA.Signal.Signal as S
 -- import qualified EFA.Signal.Data as D
 
@@ -192,7 +192,7 @@ nsto_const = 0.95
 
 -- | Choose Variation here
 varX',varY' :: [[Double]]
-(varX', varY') = Table.varMat yrange prange
+(varX', varY') = CT.varMat yrange prange
 
 -- | Set the type for Graph Display here -- take UT for Resistance
 
