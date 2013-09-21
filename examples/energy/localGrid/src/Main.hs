@@ -20,7 +20,6 @@ import qualified EFA.Signal.Record as Record
 import EFA.Signal.Signal (TC, Scalar, toScalar)
 import EFA.Signal.Data (Data, Nil, (:>))
 import EFA.Signal.Typ (Typ, F, T, A, Tt)
-import EFA.Signal.Chop (makeSeqFlowTopology)
 
 import qualified EFA.Graph.Draw as Draw
 import qualified EFA.Graph.Flow as Flow
@@ -128,11 +127,10 @@ process rawSignals =
 
       sequenceFlowsFilt = sectionMapping sequenceFlowsFiltUnmapped
 
-      flowStates = sectionMapping flowStatesUnmapped
-
-      flowTopos = Flow.genSequFlowTops System.topology flowStates
-
-      sequenceFlowTopology = makeSeqFlowTopology flowTopos
+      sequenceFlowTopology =
+        Flow.sequenceGraph $
+        Flow.genSequFlowTops System.topology $
+        sectionMapping flowStatesUnmapped
 
       sectionTopos =
         mapSnd (lefilter (isStructureEdge .fst)) sequenceFlowTopology
