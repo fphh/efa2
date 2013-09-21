@@ -46,15 +46,20 @@ checkNodeType Node.DeadNode False False = True
 checkNodeType (Node.Storage _) _ _ = True
 checkNodeType _ _ _ = False
 
+
+type InOut node nodeLabel =
+        (Map (Graph.EitherEdge node) (),
+         nodeLabel,
+         Map (Graph.EitherEdge node) ())
+
 -- Because of extend, we only have to deal with Dir edges here!
-checkNode :: (Ord node) => FlowTopology node -> node -> Bool
-checkNode topo x =
-   case Map.lookup x $ Graph.graphMap topo of
-      Nothing -> error "checkNode: node not in graph"
-      Just (pre, node, suc) ->
-         checkNodeType node
-            (anyActive suc)
-            (anyActive pre)
+checkInOut ::
+   (Ord node) =>
+   InOut node (Node.Type ()) -> Bool
+checkInOut (pre, node, suc) =
+   checkNodeType node
+      (anyActive suc)
+      (anyActive pre)
 
 
 infix 1 `implies`
@@ -423,7 +428,7 @@ setCoverDirEdges topo =
 
 bruteForce :: (Ord node) => Topology node -> [FlowTopology node]
 bruteForce topo =
-   filter (\g -> Fold.all (checkNode g) $ Graph.nodeSet g) .
+   filter (Fold.all checkInOut . Graph.graphMap) .
    map (replaceEdges topo) $
    mapM edgeOrients $ Graph.edges topo
 
