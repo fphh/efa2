@@ -4,6 +4,7 @@ module EFA.Graph.Topology.StateAnalysis (
    branchAndBound,
    prioritized,
    clustering, clusteringGreedy, clusteringMinimizing,
+   setCover,
    ) where
 
 import qualified EFA.Graph.Topology.Node as Node
@@ -13,8 +14,11 @@ import EFA.Graph.Topology (FlowTopology, Topology)
 
 import qualified EFA.Utility.Map as MapU
 
+import qualified Math.SetCover.Exact as SetCover
+
 import qualified Data.Map as Map; import Data.Map (Map)
 import qualified Data.Set as Set; import Data.Set (Set)
+import qualified Data.Traversable as Trav
 import qualified Data.Foldable as Fold
 import qualified Data.NonEmpty as NonEmpty
 import qualified Data.FingerTree.PSQueue as PSQ
@@ -347,6 +351,74 @@ mergeMinimizingCluster topo (NonEmpty.Cons p ps) =
 
 type LNEdge node = Graph.DirEdge node
 
+
+-- * set covering
+
+{- |
+Formulate the problem as exact set cover problem.
+Every node can choose the tail (Topo.Out) or head (Topo.In) of an edge.
+This is expressed by 'setCoverDirEdges'.
+The set cover algorithm finds a solution
+where for each edge a tail and a head is chosen by the connected nodes.
+If both tail and head are not assigned to nodes
+then the undirected edges jump in.
+This is expressed by 'setCoverUnDirEdges'.
+Additionally, 'setCoverDirEdges' needs to add a node identification
+in order to make sure that every node is considered only once.
+-}
+data SetCoverItem node =
+     SetCoverNode node
+   | SetCoverEdge (Graph.DirEdge node) Topo.StoreDir
+   deriving (Eq, Ord)
+
+setCoverUnDirEdges, setCoverDirEdges ::
+   (Ord node) =>
+   Topology node ->
+   [SetCover.Assign [Graph.EitherEdge node] (Set (SetCoverItem node))]
+setCoverUnDirEdges topo =
+   Map.elems $
+   Map.mapWithKey
+      (\e _ ->
+         SetCover.assign
+            [Graph.EUnDirEdge $ Graph.unDirEdge (Graph.from e) (Graph.to e)]
+            (Set.fromList [SetCoverEdge e Topo.In, SetCoverEdge e Topo.Out])) $
+   Graph.edgeLabels topo
+
+setCoverDirEdges topo =
+   Fold.fold $
+   Map.mapWithKey
+      (\node (pre, nt, suc) ->
+         map
+            (\edges ->
+               SetCover.assign
+                  (map (Graph.EDirEdge . fst) $ Map.elems edges)
+                  (Set.fromList $
+                   SetCoverNode node :
+                      (map (uncurry SetCoverEdge) $
+                       Map.toList $ fmap snd edges))) $
+         filter
+            (\edges ->
+               checkNodeType nt
+                  (not $ Map.null $ Map.filter ((Topo.Out ==) . snd) edges)
+                  (not $ Map.null $ Map.filter ((Topo.In  ==) . snd) edges)) $
+         map (Map.mapMaybe id) $
+         Trav.sequenceA $
+         Map.unionWith (error "setCover: duplicate edge")
+            (Map.mapWithKey
+               (\e _ ->
+                  [Nothing, Just (e, Topo.Out),
+                   Just (Graph.reverseEdge e, Topo.In)])
+               suc)
+            (Map.mapWithKey
+               (\e _ ->
+                  [Nothing, Just (e, Topo.In),
+                   Just (Graph.reverseEdge e, Topo.Out)])
+               pre)
+         ) $
+   Graph.graphMap topo
+
+
+
 -- * various algorithms
 
 bruteForce :: (Ord node) => Topology node -> [FlowTopology node]
@@ -397,6 +469,12 @@ clustering topo =
    in  untilLeft (mergeMinimizingCluster cleanTopo) $
        emptyCluster cleanTopo !:
           map (singletonCluster cleanTopo) es
+
+setCover :: (Ord node) => Topology node -> [FlowTopology node]
+setCover topo =
+   map (replaceEdges topo . concat) $
+   SetCover.partitions $ setCoverUnDirEdges topo ++ setCoverDirEdges topo
+
 
 advanced :: (Ord node) => Topology node -> [FlowTopology node]
 advanced = clustering

@@ -34,6 +34,7 @@ Library
     gnuplot >=0.5.2 && <0.6,
     colour >=2.3 && <2.4,
     vector ==0.9.*,
+    set-cover >=0.0.3 && <0.1,
     fingertree-psqueue >=0.3 && <0.4,
     fingertree >=0.0 && <0.1,
     text ==0.11.*,

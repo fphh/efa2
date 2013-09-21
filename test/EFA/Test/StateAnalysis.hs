@@ -90,6 +90,12 @@ prop_clusteringMinimizing (ArbTopology g) =
    ==
    Key.sort graphIdent (StateAnalysis.clusteringMinimizing g)
 
+prop_setCover :: ArbTopology Node -> Bool
+prop_setCover (ArbTopology g) =
+   Key.sort graphIdent (StateAnalysis.branchAndBound g)
+   ==
+   Key.sort graphIdent (StateAnalysis.setCover g)
+
 
 speed_bruteForce :: ArbTopology Node -> Bool
 speed_bruteForce (ArbTopology g) =
@@ -106,6 +112,10 @@ speed_prioritized (ArbTopology g) =
 speed_clustering :: ArbTopology Node -> Bool
 speed_clustering (ArbTopology g) =
    StateAnalysis.clustering g == StateAnalysis.clustering g
+
+speed_setCover :: ArbTopology Node -> Bool
+speed_setCover (ArbTopology g) =
+   StateAnalysis.setCover g == StateAnalysis.setCover g
 
 
 runTests :: IO Bool
