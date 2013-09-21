@@ -11,10 +11,11 @@ import qualified Data.List as L
 import qualified Data.Map as Map
 
 import Text.ParserCombinators.Parsec
+          (Parser, skipMany, many, many1, endBy, sepEndBy1, between,
+           noneOf, oneOf, char, string, eof, lookAhead, parse, (<|>))
+
 import Control.Applicative (Applicative, liftA, liftA2, (*>), (<*))
 import Control.Monad (forM_, void)
-
-import Prelude as P
 
 
 read :: FilePath -> IO (Map Double)
