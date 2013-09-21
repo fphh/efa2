@@ -4,10 +4,12 @@ module Modules.Utility where
 
 import qualified Modules.System as System
 
+import EFA.Application.Utility (checkDetermined)
+
 import qualified EFA.Graph.Topology.Index as Idx
 
 import qualified EFA.Equation.Environment as EqEnv
-import EFA.Equation.Result (Result(Determined, Undetermined))
+import EFA.Equation.Result (Result)
 
 import qualified EFA.Signal.Record as Record
 import qualified EFA.Signal.Signal as Sig
@@ -31,13 +33,10 @@ envToPowerRecord :: EqEnv.Complete
                     Record.PowerRecord System.Node v a
 envToPowerRecord env time sec =
   Record.Record time
-    (Map.map i $ Map.mapKeys h $ Map.filterWithKey p $ EqEnv.powerMap $ EqEnv.signal env)
+    (Map.map (Sig.TC . checkDetermined "envToPowerRecord") $
+     Map.mapKeys h $ Map.filterWithKey p $ EqEnv.powerMap $ EqEnv.signal env)
   where p (Idx.InPart section (Idx.Power _)) _  =  section == sec
         h (Idx.InPart _ (Idx.Power edge))  =  Idx.PPos edge
-
-        i (Determined dat) = Sig.TC dat
-        i Undetermined =
-          error "Modules.Utility.envToPowerRecord - undetermined data"
 
 
 -- | no checkedLookup because this would require Show (a -> a)

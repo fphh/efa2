@@ -49,7 +49,7 @@ import qualified EFA.Equation.Environment as EqEnv
 import qualified EFA.Equation.Record as EqRecord
 import qualified EFA.Equation.Result as Result
 import qualified EFA.Equation.Arithmetic as Arith
-import EFA.Equation.Result (Result(Determined, Undetermined))
+import EFA.Equation.Result (Result)
 
 import EFA.Utility.Bifunctor (second)
 
@@ -198,17 +198,13 @@ envToPowerRecord ::
 envToPowerRecord time env =
   (Chop.addZeroCrossings
   . Record.Record time
-  . Map.map i
+  . Map.map (Sig.TC . AppUt.checkDetermined "envToPowerRecord")
   . Map.mapKeys h
   . Map.filterWithKey p
   . StateEnv.powerMap
   . StateEnv.signal) env
   where p (Idx.InPart st _) _ = st == Idx.State 0
         h (Idx.InPart _ (Idx.Power edge)) = Idx.PPos edge
-
-        i (Determined dat) = Sig.TC dat
-        i Undetermined =
-          error "envToPowerRecord - undetermined data"
 
 external ::
   (Eq (v a), Arith.Constant a, Base.BSum a, Vec.Zipper v,

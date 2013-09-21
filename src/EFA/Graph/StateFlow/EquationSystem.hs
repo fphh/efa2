@@ -60,12 +60,13 @@ import EFA.Equation.SystemRecord
           (System(System), Record, Wrap(Wrap, unwrap))
 
 import qualified EFA.Equation.Arithmetic as Arith
+import qualified EFA.Equation.Result as Result
 import EFA.Equation.Arithmetic
           (Sum, (~+), (~-),
            Product, (~*), (~/),
            Constant, zero,
            Integrate, Scalar, integrate)
-import EFA.Equation.Result(Result(Determined, Undetermined))
+import EFA.Equation.Result (Result)
 
 import EFA.Report.FormatValue (FormatValue)
 
@@ -649,7 +650,7 @@ queryEnv ::
   (Traversable env, Traversable rec) =>
   env (SysRecord.Variable mode rec s a) -> ST s (env (rec (Result a)))
 queryEnv =
-  traverse (traverse (fmap (maybe Undetermined Determined) . Sys.query))
+  traverse (traverse (fmap Result.fromMaybe . Sys.query))
 
 solveSimple ::
   (Record rec, Node.C node) =>
