@@ -42,7 +42,9 @@ instance (QC.Arbitrary node, Ord node) => QC.Arbitrary (ArbTopology node) where
          M.mapKeys (\(Graph.UnDirEdge x y) -> Graph.DirEdge x y) edges
 
 
-prop_branchAndBound :: (Ord node) => ArbTopology node -> Bool
+type Node = Int
+
+prop_branchAndBound :: ArbTopology Node -> Bool
 prop_branchAndBound (ArbTopology g) =
    StateAnalysis.bruteForce g == StateAnalysis.branchAndBound g
 
@@ -62,44 +64,44 @@ graphIdent g = (Graph.nodeLabels g, Graph.edgeLabels g)
 {-
 I do not convert to Set, but use 'sort' in order to check for duplicates.
 -}
-prop_prioritized :: (Ord node) => ArbTopology node -> Bool
+prop_prioritized :: ArbTopology Node -> Bool
 prop_prioritized (ArbTopology g) =
    Key.sort graphIdent (StateAnalysis.branchAndBound g)
    ==
    Key.sort graphIdent (StateAnalysis.prioritized g)
 
-prop_clustering :: (Ord node) => ArbTopology node -> Bool
+prop_clustering :: ArbTopology Node -> Bool
 prop_clustering (ArbTopology g) =
    Key.sort graphIdent (StateAnalysis.branchAndBound g)
    ==
    Key.sort graphIdent (StateAnalysis.clustering g)
 
-prop_clusteringGreedy :: (Ord node) => ArbTopology node -> Bool
+prop_clusteringGreedy :: ArbTopology Node -> Bool
 prop_clusteringGreedy (ArbTopology g) =
    Key.sort graphIdent (StateAnalysis.branchAndBound g)
    ==
    Key.sort graphIdent (StateAnalysis.clusteringGreedy g)
 
-prop_clusteringMinimizing :: (Ord node) => ArbTopology node -> Bool
+prop_clusteringMinimizing :: ArbTopology Node -> Bool
 prop_clusteringMinimizing (ArbTopology g) =
    Key.sort graphIdent (StateAnalysis.branchAndBound g)
    ==
    Key.sort graphIdent (StateAnalysis.clusteringMinimizing g)
 
 
-speed_bruteForce :: (Ord node) => ArbTopology node -> Bool
+speed_bruteForce :: ArbTopology Node -> Bool
 speed_bruteForce (ArbTopology g) =
    StateAnalysis.bruteForce g == StateAnalysis.bruteForce g
 
-speed_branchAndBound :: (Ord node) => ArbTopology node -> Bool
+speed_branchAndBound :: ArbTopology Node -> Bool
 speed_branchAndBound (ArbTopology g) =
    StateAnalysis.branchAndBound g == StateAnalysis.branchAndBound g
 
-speed_prioritized :: (Ord node) => ArbTopology node -> Bool
+speed_prioritized :: ArbTopology Node -> Bool
 speed_prioritized (ArbTopology g) =
    StateAnalysis.prioritized g == StateAnalysis.prioritized g
 
-speed_clustering :: (Ord node) => ArbTopology node -> Bool
+speed_clustering :: ArbTopology Node -> Bool
 speed_clustering (ArbTopology g) =
    StateAnalysis.clustering g == StateAnalysis.clustering g
 
