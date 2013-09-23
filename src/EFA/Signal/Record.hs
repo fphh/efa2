@@ -616,14 +616,15 @@ singleton (t,ps) = (S.singleton t, S.singleton ps)
 -- * Conversion between Signal and Power Record
 
 -- | Convert a power record to a signal record
-powerToSignal :: (Show id) =>  PowerRecord id v d -> SignalRecord v d
-powerToSignal (Record time m) = (Record time $
-                                   Map.mapKeys (\x -> SigId $ show x) $
-                                   Map.map S.untype m)
+powerToSignal :: (Show id) => PowerRecord id v d -> SignalRecord v d
+powerToSignal (Record time m) =
+   Record time $
+   Map.mapKeys (\x -> SigId $ show x) $
+   Map.map S.untype m
 
 -- | Plot Records with readible keys
 powerToSignalWithFunct ::
-   (Ord node, Show node,Show (v d)) =>
+   (Ord node, Show node, Show (v d)) =>
    (Idx.PPos node -> SigId) -> PowerRecord node v d -> SignalRecord v d
 powerToSignalWithFunct funct rec = map S.untype $ mapKeys funct rec
 
@@ -690,7 +691,10 @@ sumFlowRecord :: (V.FromList v,
                   V.Singleton v,
                   BSum d,
                   BProd d d) => FlowRecord node v d -> FlowRecord node v d
-sumFlowRecord (Record time pmap) = Record (S.fromList $ [head $ S.toList time, last $ S.toList time]) (Map.map (S.fromList . (\x -> [x]) . S.fromScalar . S.sum) pmap)
+sumFlowRecord (Record time pmap) =
+   Record
+      (S.fromList $ [head $ S.toList time, last $ S.toList time])
+      (Map.map (S.fromList . (\x -> [x]) . S.fromScalar . S.sum) pmap)
 
 
 {-
