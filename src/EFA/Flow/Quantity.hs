@@ -89,6 +89,27 @@ mapSum f g s =
    }
 
 
+zipWithSums ::
+   (a0 -> a1 -> a2) ->
+   (v0 -> v1 -> v2) ->
+   Sums a0 v0 -> Sums a1 v1 -> Sums a2 v2
+zipWithSums f g s0 s1 =
+   Sums {
+      sumIn  = liftA2 (zipWithSum f g) (sumIn  s0) (sumIn  s1),
+      sumOut = liftA2 (zipWithSum f g) (sumOut s0) (sumOut s1)
+   }
+
+zipWithSum ::
+   (a0 -> a1 -> a2) ->
+   (v0 -> v1 -> v2) ->
+   Sum a0 v0 -> Sum a1 v1 -> Sum a2 v2
+zipWithSum f g s0 s1 =
+   Sum {
+      carrySum = f (carrySum s0) (carrySum s1),
+      flowSum  = g (flowSum  s0) (flowSum  s1)
+   }
+
+
 traverseSums ::
    (Applicative f) =>
    (a0 -> f a1) ->

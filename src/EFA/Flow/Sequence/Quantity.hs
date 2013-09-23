@@ -9,6 +9,10 @@ module EFA.Flow.Sequence.Quantity (
    mapStorages,
    mapSequence,
 
+   checkedZipWithGraph,
+   checkedZipWithSequence,
+   checkedZipWithStorages,
+
    traverseGraph,
    traverseStorages,
    traverseSequence,
@@ -63,7 +67,8 @@ import qualified EFA.Flow.Quantity as Quant
 import EFA.Flow.Sequence.AssignMap (AssignMap)
 import EFA.Flow.Sequence (sequence, storages)
 import EFA.Flow.Quantity
-          (Topology, Sums(..), Sum(..), Flow(..), mapSums, traverseSums, (<#>))
+          (Topology, Sums(..), Sum(..), Flow(..),
+           mapSums, zipWithSums, traverseSums, (<#>))
 
 import qualified EFA.Signal.Sequence as Sequ
 
@@ -80,6 +85,9 @@ import qualified EFA.Graph as Graph
 import qualified EFA.Report.FormatValue as FormatValue
 import EFA.Report.FormatValue (FormatValue, formatAssign)
 import EFA.Report.Format (Format)
+
+import qualified EFA.Utility.Map as MapU
+import EFA.Utility.Map (Caller)
 
 import qualified Control.Monad.Trans.Writer as MW
 import Control.Monad (mplus, (<=<))
@@ -171,6 +179,57 @@ mapStorages f =
          ((f init, f exit),
           fmap f storage,
           fmap (fmap f) edges))
+
+
+checkedZipWithGraph ::
+   (Ord node) =>
+   Caller ->
+   (a0 -> a1 -> a2) ->
+   (v0 -> v1 -> v2) ->
+   Graph node a0 v0 ->
+   Graph node a1 v1 ->
+   Graph node a2 v2
+checkedZipWithGraph caller f g gr0 gr1 =
+   SeqFlow.Graph {
+      sequence = checkedZipWithSequence caller f g (sequence gr0) (sequence gr1),
+      storages = checkedZipWithStorages caller f   (storages gr0) (storages gr1)
+   }
+
+checkedZipWithSequence ::
+   (Ord node) =>
+   Caller ->
+   (a0 -> a1 -> a2) ->
+   (v0 -> v1 -> v2) ->
+   Sequence node a0 v0 ->
+   Sequence node a1 v1 ->
+   Sequence node a2 v2
+checkedZipWithSequence caller f g =
+   MapU.checkedZipWith (caller++".checkedZipWithSequence")
+      (\(rng0, (dt0, gr0)) (rng1, (dt1, gr1)) ->
+         (if rng0==rng1 then rng0 else error (caller++".equalRange"),
+          (g dt0 dt1,
+           Graph.checkedZipWith
+              (caller++".checkedZipWithSequence.section")
+              (zipWithSums f g)
+              (liftA2 $ liftA2 g)
+              gr0 gr1)))
+
+checkedZipWithStorages ::
+   (Ord node) =>
+   Caller ->
+   (a0 -> a1 -> a2) ->
+   Storages node a0 ->
+   Storages node a1 ->
+   Storages node a2
+checkedZipWithStorages caller f =
+   MapU.checkedZipWith (caller++".checkedZipWithStorages")
+      (\((init0, exit0), storage0, edges0)
+        ((init1, exit1), storage1, edges1) ->
+         ((f init0 init1, f exit0 exit1),
+          MapU.checkedZipWith (caller++".checkedZipWithStorages.storage")
+             f storage0 storage1,
+          MapU.checkedZipWith(caller++".checkedZipWithStorages.edges")
+             (liftA2 f) edges0 edges1))
 
 
 traverseGraph ::
