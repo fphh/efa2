@@ -57,6 +57,9 @@ sum sec dir = Idx.InPart sec . Idx.Sum dir
 ppos :: node -> node -> Idx.PPos node
 ppos a b = Idx.PPos $ Idx.StructureEdge a b
 
+powerFromPPos :: Idx.State -> Idx.PPos node -> Power node
+powerFromPPos state (Idx.PPos e) = Idx.InPart state $ Idx.Power e
+
 
 initSection :: Idx.Init Idx.State
 initSection = Idx.Init

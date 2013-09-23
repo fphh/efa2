@@ -201,10 +201,9 @@ givenSimulate etaAssign etaFunc sf =
            (XIdx.dTime sec .=
              (Data  $ SV.fromList $ replicate (Sig.len t) 1))
            <> etaGiven (etaAssign sec) etaFunc
-           <> Fold.fold (Map.mapWithKey g xs)
-           where
-             g (Idx.PPos (Idx.StructureEdge p0 p1)) p =
-                   (XIdx.power sec p0 p1 .= Sig.unpack p)
+           <> Fold.fold
+                (Map.mapWithKey (\ppos p ->
+                  XIdx.powerFromPPos sec ppos .= Sig.unpack p) xs)
 
 
 -- | Avoid invalid solution by assigning NaN, which hits last in maximum

@@ -94,8 +94,9 @@ givenSimulate stateFlowGraph etaAssign etaFunc powerRecord =
            <> makeEtaFuncGiven etaAssign (Idx.State 0) etaFunc
            <> Fold.fold (Map.mapWithKey g xs)
            where
-             g (Idx.PPos (Idx.StructureEdge p0 p1)) p =
-                   (StateIdx.power (Idx.State 0)  p0 p1 EqGen..= Sig.unpack p)
+             g ppos p =
+                (StateIdx.powerFromPPos (Idx.State 0) ppos
+                   EqGen..= Sig.unpack p)
 
 -- | Generate given equations using efficiency curves or functions for a specified section
 makeEtaFuncGiven ::

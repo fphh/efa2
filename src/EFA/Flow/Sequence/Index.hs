@@ -103,6 +103,12 @@ storage = Idx.ForNode . Idx.Storage
 ppos :: node -> node -> Idx.PPos node
 ppos a b = Idx.PPos $ Idx.StructureEdge a b
 
+powerFromPPos :: Idx.Section -> Idx.PPos node -> Power node
+powerFromPPos sec (Idx.PPos e) = Idx.InPart sec $ Idx.Power e
+
+energyFromPPos :: Idx.Section -> Idx.PPos node -> Energy node
+energyFromPPos sec (Idx.PPos e) = Idx.InPart sec $ Idx.Energy e
+
 
 initSection :: Idx.InitOrSection
 initSection = Idx.Init

@@ -143,8 +143,8 @@ makeGivenFromExternal idx sf =
            (Idx.Record idx (Idx.InPart sec Idx.DTime) .=
               Arith.integrate (Sig.toList $ Sig.delta t)) <>
            fold (Map.mapWithKey g xs)
-           where g (Idx.PPos p) e =
-                    Idx.Record idx (Idx.InPart sec (Idx.Energy p)) .=
+           where g ppos e =
+                    Idx.Record idx (SeqIdx.energyFromPPos sec ppos) .=
                        Arith.integrate (Sig.toList e)
 
 external2 ::
