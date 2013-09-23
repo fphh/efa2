@@ -64,6 +64,18 @@ solve graph sys =
    SeqFlow.mapGraph Record.unAbsolute Record.unAbsolute $
    EqSys.solve (SeqFlow.mapGraph Record.Absolute Record.Absolute graph) sys
 
+solveFromMeasurement ::
+   (Eq a, Arith.Constant a, a ~ Arith.Scalar v,
+    Eq v, Arith.Product v, Arith.Integrate v,
+    Node.C node) =>
+   SeqFlow.Graph node (Result a) (Result v) ->
+   (forall s. EquationSystem Verify.Ignore node s a v) ->
+   SeqFlow.Graph node (Result a) (Result v)
+solveFromMeasurement graph sys =
+   SeqFlow.mapGraph Record.unAbsolute Record.unAbsolute $
+   EqSys.solveFromMeasurement
+      (SeqFlow.mapGraph Record.Absolute Record.Absolute graph) sys
+
 solveTracked ::
    (Verify.GlobalVar (Verify.Track output) a Idx.Absolute Var.ForNodeSectionScalar node,
     Arith.Constant a, a ~ Arith.Scalar v,
